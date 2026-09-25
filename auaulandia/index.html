@@ -4871,7 +4871,7 @@
        matriculado, já lançado nos Lançamentos daquele dia. -->
   <div id="dxModal" onclick="if(event.target===this)dxFechar()">
     <div class="rep-card">
-      <div class="rep-tit">Marcar reposição ou dia extra — escolha o dia em que ele vem</div>
+      <div class="rep-tit" id="dxTitulo">Marcar reposição ou dia extra — escolha o dia em que ele vem</div>
       <div class="rep-sub">O tutor avisou que o peludinho vem num dia que não é o dele. Eu confiro o <strong>crédito de reposição</strong> e digo se o dia é <strong>reposição</strong> (não se cobra) ou <strong>avulso</strong> (diária a mais). Nada é gravado antes do botão.</div>
 
       <label class="rep-lb">Qual peludinho?</label>
@@ -6374,7 +6374,7 @@
     atrasado:'Tutor não conseguiu trazer', outro:'Outro',
     fora:'Tutor está fora', zeluz:'Zêluz fechada',
     reposicao:'Veio repor', estorno:'Estorno',
-    hospedagem:'Usada em hospedagem' };
+    hospedagem:'Usada em hospedagem', troca:'Troca de dia' };
   function repLancamentos(p){
     try{ const o=(REPO_CACHE[pelKey(p)]||{}).lancamentos||{};
       return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); })
@@ -6803,6 +6803,18 @@
     var cred=L.filter(function(l){ return l.tipo==='credito' && l.volta===dia && !anulado[l._id]; })[0];
     if(!cred){ alert('Não achei a reposição marcada para '+repBRdata(dia)+'. Atualize a tela.'); return; }
     var passou=dia<repHojeISO();
+    if(repTrocaViva(cred) && !passou){
+      var dz=repTrocaComoDesfaz(cred);
+      if(!await zPergunta('Desfazer a troca de '+pelNome(p)+'?',
+        [(repEhFemea(p)?'Ela':'Ele')+' não vem mais '+repNoDia(dia)+'.', dz.texto],
+        {sim:'Desfazer a troca', nao:'Manter a troca'})) return;
+      repTrocaDesfazer(p, cred, dia, dz).then(function(){
+        if(typeof zAlertao==='function') zAlertao('TROCA DESFEITA', [pelNome(p)+' não vem '+repNoDia(dia)+'.', dz.texto], {botao:'Fechar'});
+        try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
+        setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 400);
+      }).catch(function(e){ alert('Não consegui desfazer a troca: '+((e&&e.message)||e)+'\n\nNada foi mudado.'); });
+      return;
+    }
     if(!await zPergunta('Desmarcar a reposição de '+pelNome(p)+' '+repNoDia(dia)+'?',
       ['A reposição continua valendo — só o dia sai. Ela volta a ficar sem dia marcado.']
         .concat(passou?[]:['A planilha daquele dia deixa de receber a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).']),
@@ -6875,6 +6887,12 @@
     ta.select(); try{ document.execCommand('copy'); }catch(e){ /* navegador sem permissão: o texto fica selecionado para copiar à mão */ }
     var t=btn.textContent; btn.textContent='✅ Copiado!'; setTimeout(function(){ btn.textContent=t; },1600);
   }
+  // A troca que ele faz HOJE (ou no dia `dia`): o crédito vivo da troca marcado para aquele dia.
+  function repTrocaDoDia(p, dia){
+    try{ var L=repLancamentos(p)||[], an=repAnulados(L);
+      return L.filter(function(l){ return l.volta===dia && !an[l._id] && repTrocaViva(l); })[0]||null;
+    }catch(e){ return null; }
+  }
   // ---- Consumo ----
   async function repUsar(i){
     const p=PELUDINHOS[i]; if(!p) return;
@@ -6884,6 +6902,18 @@
     // Dia prometido numa hospedagem que ainda aguarda resposta não pode ser gasto aqui sem
     // que a recepção saiba: se o tutor fechar depois, faltaria dia para a reserva.
     const presos=repReservado(p,'');
+    const tcHoje=repTrocaDoDia(p, repHojeISO());
+    if(tcHoje){
+      if(!await zPergunta(pelNome(p)+' veio hoje pela TROCA?',
+        ['No lugar de '+repBRdata(tcHoje.troca.de)+'. Não é reposição: as reposições '+(repEhFemea(p)?'dela':'dele')+' continuam '+(s-1)+'.'],
+        {sim:'Veio', nao:'Não veio'})) return;
+      repGravar(p,{tipo:'uso', data:repHojeISO(), motivo:'troca', obs:'Veio pela troca de '+repBRdata(tcHoje.troca.de)}).then(function(){
+        if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — veio pela troca de '+repBRdata(tcHoje.troca.de), {});
+        if(typeof zAlertao==='function') zAlertao('TROCA CUMPRIDA', [pelNome(p)+' veio hoje, no lugar de '+repBRdata(tcHoje.troca.de)+'.', 'As reposições continuam '+(s-1)+'.'], {botao:'Fechar'});
+        setTimeout(renderReposicao, 300);
+      }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
+      return;
+    }
     if(!await zPergunta('Marcar reposição de '+pelNome(p)+'?',
       ['Ele veio REPOR hoje.', 'Saldo agora: '+s+'. Depois de marcar: '+(s-1)+'.'].concat(
         presos>0?[(presos+' '+(presos===1?'dia dele está reservado':'dias dele estão reservados')
@@ -6929,6 +6959,35 @@
   // Nada é apagado: o uso devolvido fica riscado no Extrato com o dia; o dia que estava
   // marcado fica no próprio crédito (volta_desmarcada), com quem e quando.
   var REP_OBS_LANC='Reposição lançada nos Lançamentos do dia';
+  // DESFAZER A TROCA — o que acontece com a falta avisada do dia de origem. Pura.
+  //  · o crédito NASCEU da troca e o dia de origem ainda não passou → estorna: ele volta a vir
+  //    naquele dia, e a falta avisada sai da planilha;
+  //  · o dia de origem JÁ PASSOU (ele de fato não veio) → a falta fica e vira reposição sem dia;
+  //  · a falta já existia antes da troca (o tutor tinha avisado) → a falta fica.
+  function repTrocaComoDesfaz(cred, hoje){
+    hoje=hoje||repHojeISO();
+    var de=String(((cred||{}).troca||{}).de||(cred||{}).data||'');
+    var nasceu=!!(cred && cred.motivo==='troca');
+    if(nasceu && de>=hoje) return {estorna:true, texto:'Volta a vir '+repNoDia(de)+': a falta avisada sai.'};
+    if(nasceu) return {estorna:false, texto:'O dia '+repBRdata(de)+' já passou: a falta avisada fica e vira reposição sem dia.'};
+    return {estorna:false, texto:'A falta de '+repBRdata(de)+', que o tutor já tinha avisado, continua.'};
+  }
+  function repTrocaDesfazer(p, cred, dia, dz){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    dz=dz||repTrocaComoDesfaz(cred);
+    var quemD=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
+    var pr=dz.estorna
+      ? repGravar(p,{tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:cred._id, obs:'Troca desfeita'})
+      : DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+cred._id).update({volta:'', volta_desmarcada:{dia:dia, quem:quemD, ts:Date.now(), motivo:'troca desfeita'}});
+    return pr.then(function(){
+      if(typeof audit==='function') audit('reposicao-troca-desfeita', pelNome(p)+': troca de '+repBRdata((cred.troca||{}).de||cred.data)+' para '+repBRdata(dia)+' desfeita'
+        +(dz.estorna?' (a falta avisada saiu)':' (a falta avisada ficou)'), {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+      return true;
+    });
+  }
+  // A TROCA VIVA (QA15): o crédito da troca enquanto o dia marcado é o da própria troca. Se
+  // a data sai (desmarcar) ou muda (remarcar a que venceu), ele volta a ser reposição comum.
+  function repTrocaViva(l){ return !!(l && l.tipo==='credito' && l.troca && l.volta && l.troca.para===l.volta); }
   function repAnulados(L){
     var a={}; (L||[]).forEach(function(l){ if(l&&l.tipo==='estorno'&&l.estornaId) a[l.estornaId]=true; });
     return a;
@@ -7447,8 +7506,8 @@
     try{
       repAgendadosPara(dia).forEach(function(o){
         var ehTroca=false;
-        try{ ehTroca=(repLancamentos(o.p)||[]).some(function(l){ return l&&l.tipo==='credito'&&l.volta===dia&&l.troca; }); }catch(e){ ehTroca=false; } /* silencioso de propósito: sem o extrato, conta como reposição — a vaga é a mesma */
-        add(pelNome(o.p), ehTroca?'troca':'reposicao', 'agenda', (typeof pelKey==='function')?pelKey(o.p):'');
+        try{ var _L=repLancamentos(o.p)||[], _an=repAnulados(_L); ehTroca=_L.some(function(l){ return l&&l.volta===dia&&!_an[l._id]&&repTrocaViva(l); }); }catch(e){ ehTroca=false; } /* silencioso de propósito: sem o extrato, conta como reposição — a vaga é a mesma */
+        add(pelNome(o.p), ehTroca?'troca':'reposicao', 'agenda', (!ehTroca && typeof pelKey==='function')?pelKey(o.p):'');
       });
     }catch(e){ _logFalhaGrav('ocupantesDoDia (agendados)', e); }
     var c=REP_PLAN_CACHE[dia]||{};
@@ -7888,6 +7947,10 @@
     var ehAvulso=(ped.tipo==='avulso');
     var ehTroca=!ehAvulso && !!(pay.troca && /^\d{4}-\d{2}-\d{2}$/.test(pay.troca.de||''));
     var valor=Math.round(pay.valor_cent||0) || diariaAvulsaCent(p);
+    if(ehTroca){
+      var vt=dxVeredito(p, dia, {de:pay.troca.de});
+      if(!vt.ok){ alert('Esta troca não vale mais: '+vt.motivo+'\n\nO pedido continua em aberto — recuse-o, ou combine outro dia com a recepção.'); return; }
+    }
     if(!await zPergunta('Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?',
       ['O dia está com '+v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+'.',
        ehAvulso?('Vai entrar como AVULSO nos Lançamentos do dia '+fmtBR(dia)+' — '+fmtCent(valor)
@@ -7979,7 +8042,7 @@
       h+='<div class="vg-ped"><div><strong>'+escAttr(o.pet||'')+'</strong>'
         +'<small>'+esc(fmtBR(o._dia))+' · '+esc((o.tipo==='avulso')
             ?('avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'')+(pay.matriculado?' (matriculado)':' (não matriculado)'))
-            :'reposição')
+            :((pay.troca&&pay.troca.de)?('troca (no lugar de '+fmtBR(pay.troca.de).slice(0,5)+')'):'reposição'))
         +' · pedido por '+esc(o.quem||'-')+'</small>'
         +(jaTem?('<small>nesse dia já estão: '+esc(jaTem)+'</small>'):'')+'</div>'
         +(pode?('<div class="vg-acoes">'
@@ -8015,8 +8078,13 @@
   // novo. As reposições que ele já tinha não são tocadas, e a mensagem fala em troca.
   var dxTroca=false, dxDe='';
   function dxTrocaAtual(){ return dxTroca?{de:dxDe}:null; }
+  var DX_TIT_PADRAO='Marcar reposição ou dia extra — escolha o dia em que ele vem';
+  function dxTituloPintar(){
+    var t=document.getElementById('dxTitulo'); if(t) t.textContent=dxTroca?'Troca de dia — o dia em que ele não vem e o dia em que vem':DX_TIT_PADRAO;
+  }
   function dxTrocaMudou(){
     var c=document.getElementById('dxTroca'); dxTroca=!!(c&&c.checked);
+    dxTituloPintar();
     var b=document.getElementById('dxTrocaBox'); if(b) b.style.display=dxTroca?'block':'none';
     dxDe=String(((document.getElementById('dxDe')||{}).value)||'').trim();
     dxPintar();
@@ -8029,6 +8097,7 @@
       var _c=document.getElementById('dxTroca'); if(_c) _c.checked=dxTroca;
       var _d=document.getElementById('dxDe'); if(_d) _d.value='';
       var _b=document.getElementById('dxTrocaBox'); if(_b) _b.style.display=dxTroca?'block':'none';
+      dxTituloPintar();
     }catch(e){ /* enfeite de tela: sem os campos, a troca fica desligada */ }
     var el=document.getElementById('dxModal'); if(!el) return;
     el.classList.add('on');
@@ -8103,7 +8172,7 @@
     var dias=[]; try{ dias=pelDias(p)||[]; }catch(e){ dias=[]; }
     var semDe=trocaDiaSemana(de);
     var nomeDia=function(d){ return (typeof DIA_FULL!=='undefined'&&DIA_FULL[d])||d; };
-    if(dias.indexOf(semDe)<0){ out.motivo=pelNome(p)+' não vem na '+String(nomeDia(semDe)).toLowerCase()+' — '+repBRdata(de)+' não é dia '+(ele==='ela'?'dela':'dele')+' para trocar.'; return out; }
+    if(dias.indexOf(semDe)<0){ out.motivo=pelNome(p)+' não vem '+repNoDia(de)+' — não é dia '+(ele==='ela'?'dela':'dele')+' para trocar.'; return out; }
     if(dias.indexOf(sem)>=0){ out.motivo=pelNome(p)+' já vem na '+String(nomeDia(sem)).toLowerCase()+' — '+repBRdata(dia)+' já é dia '+(ele==='ela'?'dela':'dele')+'.'; return out; }
     var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){ L=[]; }
     var an=repAnulados(L);
@@ -8112,7 +8181,8 @@
     // Já ocupa o dia novo? Se for a reposição que a recepção marcou antes de o tutor dizer
     // "é troca", ela CONVERTE (a data sai dela e a reposição volta a ficar sem dia). Outra coisa
     // (avulso, troca antiga da Lista de troca, lançamento à mão) não se converte sozinha.
-    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===dia&&!l.troca; })[0]||null;
+    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===dia&&!repTrocaViva(l); })[0]||null;
+    var faltaDe=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de; })[0]||null;
     var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
     var noDia=v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; });
     if(noDia && !marcada){
@@ -8120,7 +8190,7 @@
       out.motivo=pelNome(p)+' já está '+(ele==='ela'?'marcada':'marcado')+' em '+repBRdata(dia)+' (avulso, troca da Lista de troca ou lançamento). Desfaça lá primeiro e faça a troca de novo.';
       return out;
     }
-    out.converte=marcada?marcada._id:'';
+    out.converte=(marcada && !(faltaDe && faltaDe._id===marcada._id))?marcada._id:'';
     out.ok=true; out.tipo='troca';
     return out;
   }
@@ -8136,7 +8206,7 @@
     var troca={de:de, para:para, quem:quem, ts:agora};
     var base='daycare/reposicao/'+pelKey(p)+'/lancamentos', up={};
     var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de; })[0]||null;
-    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===para&&!l.troca; })[0]||null;
+    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===para&&!repTrocaViva(l); })[0]||null;
     if(marcada && !(falta && marcada._id===falta._id)){
       up[marcada._id+'/volta']='';
       up[marcada._id+'/volta_desmarcada']={dia:para, quem:quem, ts:agora, motivo:'virou troca (no lugar de '+repBRdata(de)+')'};
@@ -8360,7 +8430,7 @@
       const podeDesm=repPodeLancar();
       const agTxt=ag.length?('<div class="rp-sub" style="color:var(--gold);font-weight:700">Vem repor em '
         +ag.slice(0,3).map(function(d){
-          var tc=repLancamentos(o.p).filter(function(l){ return l.tipo==='credito'&&l.volta===d&&l.troca; })[0];
+          var tc=repLancamentos(o.p).filter(function(l){ return l.volta===d&&repTrocaViva(l); })[0];
           return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+')'):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
             +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'):'');
         }).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
@@ -34531,9 +34601,15 @@
     // A LIGAÇÃO com o lançamento (25/set/2026): tirar a Reposição dos Lançamentos do dia
     // devolve exatamente ESTE uso — sem ela, o dia saía da planilha e o saldo não voltava.
     if(lancId) uso.lanc={dia:dia, id:String(lancId)};
+    var tcDia=repTrocaDoDia(p, dia);
+    if(tcDia) uso.motivo='troca';
     return repGravar(p,uso).then(function(){
       if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — abatida pelo lançamento de Reposição do dia '+dia, {});
       var dep=Math.max(0, saldoAntes-1);
+      if(tcDia){
+        if(typeof zAlertao==='function') zAlertao('TROCA CUMPRIDA', [pelNome(p)+' está na Reposição de '+repBRdata(dia)+' pela troca (no lugar de '+repBRdata(tcDia.troca.de)+').', 'Não é reposição: as reposições continuam '+dep+'.'], {botao:'Fechar'});
+        return true;
+      }
       repMsgModal('✅ Reposição lançada e abatida',
         [pelNome(p)+' usou 1 reposição em '+repBRdata(dia)+'. Saldo: era '+saldoAntes+', ficou '+dep+'.',
          'O abatimento no Banco de Reposições já está feito — não marque o uso de novo na tela de Reposições.'],
@@ -40082,8 +40158,8 @@
     try{ if(typeof orcFechado==='function' && orcFechado(iso)) return false; }
     catch(e){} /* silencioso de propósito: sem a tabela de feriados vale o calendário comum */
     try{
-      var avisou=((typeof repLancamentos==='function')?(repLancamentos(p)||[]):[])
-        .some(function(l){ return l && l.tipo==='credito' && l.data===iso; });
+      var _La=((typeof repLancamentos==='function')?(repLancamentos(p)||[]):[]), _ana=repAnulados(_La);
+      var avisou=_La.some(function(l){ return l && l.tipo==='credito' && l.data===iso && !_ana[l._id]; });
       if(avisou) return false;                       // falta avisada: ele não vem nesse dia
     }catch(e){} /* silencioso de propósito: sem os lançamentos de reposição vale o que se sabe */
     var vem=!!veio;
@@ -40172,7 +40248,7 @@
       var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&l.data===iso&&!an[l._id]; })[0]||null;
       var repor=((typeof repAgendaDe==='function')?(repAgendaDe(p)||[]):[]).indexOf(iso)>=0;
       // TROCA DE DIA (25/set/2026): o crédito da troca diz "troca", não "reposição".
-      var trocaCred=L.filter(function(l){ return l&&l.tipo==='credito'&&l.volta===iso&&l.troca&&!an[l._id]; })[0]||null;
+      var trocaCred=L.filter(function(l){ return l&&l.volta===iso&&!an[l._id]&&(typeof repTrocaViva==='function')&&repTrocaViva(l); })[0]||null;
       var porque='';
       if(!fixo){
         if(repor) porque=trocaCred?('troca (no lugar de '+fmtBR(trocaCred.troca.de||trocaCred.data).slice(0,5)+')'):'reposição';
@@ -40186,7 +40262,7 @@
       if(fixo && (falta || trocouDaqui[pk])){
         var t=trocouDaqui[pk];
         base.motivo=t ? ('trocou para '+fmtBR(t.para).slice(0,5))
-                      : ((falta.troca&&falta.volta)
+                      : (((typeof repTrocaViva==='function')&&repTrocaViva(falta))
                         ? ('trocou para '+fmtBR(falta.volta).slice(0,5))
                         : (('falta avisada — '+((typeof REP_MOTIVOS!=='undefined'&&REP_MOTIVOS[falta.motivo])||falta.motivo||'sem motivo'))
                           +((falta&&falta.volta)?(' · repõe em '+fmtBR(falta.volta).slice(0,5)):'')));
@@ -40829,9 +40905,9 @@
           out.reposicao.push(dashNomePlanilha(p));
         // --- Falta avisada: o dia que gerou o crédito da reposição é o dia da falta
         try{
-          if(!ehMorador) (repLancamentos(p)||[]).forEach(function(l){
-            if(l && l.tipo==='credito' && l.data===iso) out.faltas.push(dashNomePlanilha(p));
-          });
+          if(!ehMorador){ var _Lf=repLancamentos(p)||[], _anf=repAnulados(_Lf); _Lf.forEach(function(l){
+            if(l && l.tipo==='credito' && l.data===iso && !_anf[l._id]) out.faltas.push(dashNomePlanilha(p));
+          }); }
         }catch(e){ _logFalhaGrav('dashAutoCalcular', e); }
         // --- Aniversariante (o app sabe de todos, inclusive dos próximos dias)
         var nasc=String(ex.nasc||p.nasc||'').slice(0,10);
@@ -41089,7 +41165,7 @@
       var escolha=await new Promise(function(ok){
         zEscolha('Tirar '+reg.valor+' de '+it.t+'?',
           linhasTirar.concat([pelNome(rDev.p)+' também está '+(repEhFemea(rDev.p)?'marcada':'marcado')+' para '+repBRdata(diaR)+' na tela de Reposições.']),
-          [{t:'Tirar e desmarcar '+dCur+' (o tutor não vem)', cor:'#234D67', fn:function(){ ok('ambos'); }},
+          [{t:(repTrocaViva(credDia)?('Tirar e desfazer a troca de '+dCur):('Tirar e desmarcar '+dCur+' (o tutor não vem)')), cor:'#234D67', fn:function(){ ok('ambos'); }},
            {t:'Tirar só o lançamento (a marcação de '+dCur+' continua)', cor:'#7C8B99', fn:function(){ ok('so'); }},
            {t:'Manter', cor:'#1E8449', fn:function(){ ok(null); }}],
           {corTitulo:'#234D67'});
@@ -41101,7 +41177,10 @@
       if(rDev && rDev.uso){
         var pD=rDev.p, sD=rDev.saldo, livresD=0;
         try{ livresD=repLivresSemDia(pD, (desmarcarTambem && diaR>=repHojeISO())?-1:0)+1; }catch(e){ livresD=0; }
-        if(desmarcarTambem) DB.ref('daycare/reposicao/'+pelKey(pD)+'/lancamentos/'+credDia._id).update({volta:'',
+        if(desmarcarTambem && repTrocaViva(credDia)) repTrocaDesfazer(pD, credDia, diaR).catch(function(e){
+            _logFalhaGrav('desfazer a troca de '+pelNome(pD)+' ('+diaR+')', e);
+            if(typeof zAlertao==='function') zAlertao('⚠ A TROCA DE '+repBRdata(diaR)+' CONTINUA', ['Tela de Reposições › «desmarcar» ao lado de '+repBRdata(diaR)+'.'], {botao:'Vou desfazer'}); });
+        else if(desmarcarTambem) DB.ref('daycare/reposicao/'+pelKey(pD)+'/lancamentos/'+credDia._id).update({volta:'',
           volta_desmarcada:{dia:diaR, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now(), motivo:'tirada dos Lançamentos do dia'}})
           .catch(function(e){ _logFalhaGrav('desmarcar a reposição tirada de '+pelNome(pD)+' ('+diaR+')', e);
             if(typeof zAlertao==='function') zAlertao('⚠ A MARCAÇÃO DE '+repBRdata(diaR)+' CONTINUA', ['Tela de Reposições › «desmarcar» ao lado de '+repBRdata(diaR)+' — senão a planilha a recebe de novo.'], {botao:'Vou desmarcar'}); });
