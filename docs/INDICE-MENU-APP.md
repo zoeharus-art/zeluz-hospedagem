@@ -95,6 +95,25 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (K) Orçamentos de hospedagem → Check-in
+
+> **Adriana, 25/set/2026:** *"O Pingo já foi embora, já foi feito o check-out dele, e ele continua aparecendo em Estadias fechadas. Era para ele ter ido para Já hospedados. Elizabeth, Pipoca hoje — precisariam de já ir para o check-in direto, assim como o Camus. Poder dar entrada pelo orçamento de hospedagem ou também no check-in. Aqui só está aparecendo a Pipoca do João."*
+
+**O Pingo em "Estadias fechadas".**
+- **A causa:** o cliente novo entra no orçamento com a chave provisória `avulso__nome__tutor`. A estadia nasce, no check-in, com a chave do cadastro, e a comparação parava no "avulso". O check-in dele nunca era reconhecido, e o card ficava em "Estadias fechadas" até a saída passar.
+- **Agora:** os dois lados são escritos do mesmo jeito antes de comparar (sem o "avulso__", sem acento, sem caixa), e ele desce para "Já hospedados / passadas". Xará de outro tutor continua sendo outro FILHOt.
+
+**O Camus e a Elizabeth fora do Check-in.**
+- **A causa:** a lista "sem check-in" nasce da planilha, e o orçamento fechado de cliente novo nem sempre casa com um cadastro lá.
+- **Agora:** o **topo do Check-in** tem o cartão **"Chegam pelos orçamentos fechados"**, lido direto dos orçamentos:
+  - só os fechados com a entrada até hoje, a saída ainda por vir e o FILHOt ainda sem check-in;
+  - quem devia ter entrado antes aparece com o aviso em vermelho;
+  - "Fazer check-in" abre a ficha com as datas do orçamento, pelo mesmo atalho da tela de Orçamentos;
+  - enquanto as estadias carregam, o cartão não aparece, para ninguém ser chamado a um segundo check-in;
+  - ele se refaz sozinho quando um check-in é salvo.
+
+O check-in do corpo e o de pertences não foram tocados. A ficha do check-in da hospedagem também não: só entrou o cartão no alto.
+
 ### (J) Reposição: marcar e desmarcar já avisam o tutor
 
 > **Adriana, 25/set/2026:** *"Assinalei a marcação que a tutora pediu para agendar na segunda 28/09 a reposição, e não deu nenhuma mensagem para enviar ao tutor! Precisa ter a mensagem que com a marcação ficará 1 reposição… Caso o tutor desmarque, temos que voltar e desmarcar, e o saldo volta!"*
@@ -120,7 +139,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 52 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 56 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.

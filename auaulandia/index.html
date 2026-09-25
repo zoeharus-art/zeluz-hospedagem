@@ -3539,6 +3539,9 @@
       <!-- A FILA DAS PERNOITES DO DAY CARE (Adriana, 23/set/2026). Fica ANTES de tudo: quem
            abre o Check-in vê quem ficou para dormir sem precisar rolar nem buscar nome. -->
       <div id="ciPernoitesDia"></div>
+      <!-- OS ORÇAMENTOS FECHADOS QUE CHEGAM HOJE (Adriana, 25/set/2026): "já era para aparecer
+           no check-in para o pessoal dar entrada — pelo orçamento ou pelo check-in". -->
+      <div id="ciOrcHoje"></div>
       <div class="role-note"><span data-icon="paw"></span><span><strong>Check-in da estadia.</strong> Busque o FILHOt que está chegando. No retorno, a ficha já vem pré-preenchida da última estadia — a Consultora só confere e ajusta. Se for a primeira vez dele na Zêluz, use <strong>Novo Hóspede</strong>.</span></div>
       <div class="card">
         <div class="field"><label>Quem está chegando?</label>
@@ -13787,6 +13790,65 @@
       try{ orcCarregarEstadias(); }catch(e){} /* silencioso de propósito: o estado do botão é informação extra — falhar não pode derrubar a lista */
     }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (orcCarregarLista)', e); });
   }
+  /* ===== QUEM CHEGA HOJE PELOS ORÇAMENTOS FECHADOS (Adriana, 25/set/2026) ============
+   * "Elizabeth, Pipoca hoje — precisariam de já ir para o check-in direto, assim como o
+   *  Camus, para o pessoal já dar entrada. Poder dar entrada pelo orçamento de hospedagem ou
+   *  também no check-in. Porque ele já é um hóspede. Aqui só está aparecendo a Pipoca do João."
+   * A lista de "sem check-in" do Check-in nasce da planilha — e o orçamento fechado de um
+   * cliente novo nem sempre casa com um cadastro lá. Agora o Check-in também lê a fonte: os
+   * orçamentos FECHADOS com entrada até hoje, saída ainda por vir e FILHOt sem check-in.
+   * O botão é o mesmo atalho do orçamento (orcAbrirCheckin): abre com as datas dele. */
+  // Função PURA: recebe os orçamentos, as estadias e o dia; devolve [{id, o, pet, atrasado}].
+  function orcChegamHoje(lista, estadias, hoje){
+    var out=[];
+    Object.keys(lista||{}).forEach(function(id){
+      var o=(lista||{})[id]||{};
+      if((o.status||'')!=='fechado') return;
+      var ent=String(o.entrada||''), sai=String(o.saida||'');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(ent) || ent>hoje) return;      // ainda não chegou o dia
+      if(/^\d{4}-\d{2}-\d{2}$/.test(sai) && sai<=hoje) return;      // a estadia já acabou
+      (o.pets||[]).forEach(function(pet){
+        if(!pet) return;
+        if(orcCheckinJaFeito(estadias, pet, o)) return;                // já está na casa
+        out.push({id:id, o:o, pet:pet, atrasado:(ent<hoje)});
+      });
+    });
+    return out.sort(function(a,b){ return (a.o.entrada<b.o.entrada)?-1:((a.o.entrada>b.o.entrada)?1:0); });
+  }
+  var __ciOrcLido=false;
+  function ciOrcHojeCarregar(){
+    if(!DB) return;
+    DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
+      ORC_LISTA_CACHE=s.val()||{}; __ciOrcLido=true;
+      ciOrcHojeRender();
+    }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (ciOrcHojeCarregar)', e); });
+  }
+  function ciOrcHojeRender(){
+    var el=document.getElementById('ciOrcHoje'); if(!el) return;
+    if(!__ciOrcLido){ el.innerHTML=''; return; }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    // Estadias ainda descendo: sem elas, TODO hóspede pareceria "sem check-in" — melhor não
+    // mostrar nada por um instante do que mandar fazer um segundo check-in.
+    var lidas=(typeof CF_ESTADIAS_LIDO!=='undefined' && CF_ESTADIAS_LIDO);
+    if(!lidas && ORC_ESTADIAS_CACHE===null){ el.innerHTML=''; return; }
+    var est=lidas?(EST_TODAS||{}):(ORC_ESTADIAS_CACHE||{});
+    var L=orcChegamHoje(ORC_LISTA_CACHE, est, hoje);
+    if(!L.length){ el.innerHTML=''; return; }
+    el.innerHTML='<div class="card" style="border-left:4px solid var(--z-blue)">'
+      +'<h2 style="font-size:17px">Chegam pelos orçamentos fechados ('+L.length+')</h2>'
+      +'<div class="hint">A reserva já está fechada: toque em <strong>Fazer check-in</strong> — a ficha abre com as datas do orçamento.</div>'
+      +'<div style="margin-top:10px">'+L.map(function(x){
+        var nome=x.pet.nome||'?', tutor=x.pet.tutor||x.o.tutor||'';
+        return '<div style="border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px;background:var(--z-cream-warm)">'
+          +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(nome)
+          +(tutor?(' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">· tutor: '+escAttr(tutor)+'</span>'):'')+'</div>'
+          +'<div class="hint" style="margin-top:2px">'+orcBR(x.o.entrada||'')+' a '+orcBR(x.o.saida||'')
+          +(x.atrasado?(' · <strong style="color:var(--crm-critico)">a entrada era '+orcBR(x.o.entrada)+' e ainda não tem check-in</strong>'):'')
+          +'</div>'
+          +'<button type="button" class="btn btn-primary" style="margin-top:9px;width:100%" onclick="orcAbrirCheckin(\''+jsAspas(x.id)+'\',\''+jsAspas(String(x.pet.key||''))+'\')">Fazer check-in</button>'
+          +'</div>';
+      }).join('')+'</div></div>';
+  }
   // ===== A TELA DE ORÇAMENTO VIROU QUATRO SEÇÕES RECOLHIDAS (Adriana, 17/set/2026) ===
   // Ditado por ela: "seções fechadas, como a Conferência do check-in: cada seção mostra só
   // o título com a contagem e abre ao toque, para ninguém ficar procurando." E a regra que
@@ -14422,9 +14484,25 @@
   // O MESMO FILHOt em dois orçamentos. Reaproveita o orcChavePet (a dupla nome+tutor do
   // check-in); quando um dos lados não tem chave, tolera o tutor escrito curto num e
   // inteiro no outro ("Luciana" × "Luciana Couto Renno" são a mesma pessoa).
+  // O CLIENTE NOVO TAMBÉM É RECONHECIDO (Adriana, 25/set/2026: "o Pingo já foi embora, já foi
+  // feito o check-out dele, e ele continua aparecendo em Estadias fechadas"). O FILHOt sem
+  // cadastro entra no orçamento com a chave provisória "avulso__nome__tutor"; no check-in
+  // nasce a ficha, e a estadia leva a chave do cadastro ("nome__tutor", com acento). A
+  // comparação parava no "avulso" — o check-in nunca era reconhecido, e o card ficava em
+  // "Estadias fechadas" até a data de saída passar. Aqui os dois lados são escritos do mesmo
+  // jeito antes de comparar: sem o "avulso__", sem acento, sem caixa.
+  function orcChaveComparavel(k){
+    k=String(k||'');
+    if(k.indexOf('avulso__')===0) k=k.slice(8);
+    var nrm=(typeof jsNorm==='function')?jsNorm:function(x){ return String(x||'').toLowerCase().trim(); };
+    var par=k.split('__');
+    return nrm(par[0]||'')+'__'+nrm(par.slice(1).join('__').replace(/-/g,' '));
+  }
   function orcMesmoPetEm(a, oa, b, ob){
     var ka=orcChavePet(a, oa), kb=orcChavePet(b, ob);
     if(!ka||!kb) return false;
+    if(ka===kb) return true;
+    ka=orcChaveComparavel(ka); kb=orcChaveComparavel(kb);
     if(ka===kb) return true;
     var pa=ka.split('__'), pb=kb.split('__');
     if(pa[0]!==pb[0]||!pa[0]) return false;                     // nomes diferentes: nem discute
@@ -42529,6 +42607,7 @@
     // A fila das pernoites do Day Care: o cartão do alto da tela nasce dela.
     try{ if(typeof pernCartaoRender==='function') pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     try{ if(typeof pernFilaGarantir==='function') pernFilaGarantir(null, true); }catch(e){} /* silencioso de propósito: sem a fila o cartão diz "conferindo" e a próxima abertura lê de novo */
+    try{ if(typeof ciOrcHojeCarregar==='function') ciOrcHojeCarregar(); }catch(e){} /* silencioso de propósito: sem os orçamentos o cartão só não aparece — a busca continua */
     renderCiBusca();
     setTimeout(function(){ try{ b&&b.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },120);
   }
@@ -45603,6 +45682,8 @@
       if(!atual || (e._ts||0)>(atual.e._ts||0)) CF_ESTADIAS[k]={id:id,e:e};
     });
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // Quem acabou de fazer check-in sai do cartão "Chegam pelos orçamentos fechados" (25/set).
+    try{ if(typeof ciOrcHojeRender==='function') ciOrcHojeRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     // Item 3 — ocorrência registrada em qualquer aparelho chega viva na Recepção (badge + lista).
     try{ if(typeof atualizarBadgeRecepcao==='function') atualizarBadgeRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     try{ var vr=document.getElementById('v-recepcao'); if(vr&&vr.classList.contains('active')&&typeof renderOcorrenciasRecepcao==='function') renderOcorrenciasRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */

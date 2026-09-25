@@ -639,6 +639,33 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
   }
 });
 
+// ================================================================== Orçamento → Check-in (25/set)
+console.log('\nOrçamentos de hospedagem — o cliente novo é reconhecido e quem chega aparece no Check-in');
+prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o caso do Pingo)', () => {
+  ctx.__o = { status: 'fechado', entrada: '2026-09-20', saida: '2026-09-27', tutor: 'Maria Luísa',
+    pets: [{ key: 'avulso__pingo__maria luisa', nome: 'Pingo', tutor: 'Maria Luísa' }] };
+  ctx.__E = { e1: { refKey: 'pingo__maria luísa', nome: 'Pingo', tutor: 'Maria Luísa', entrada: '2026-09-20', saida: '2026-09-25', status: 'finalizada' } };
+  assert.strictEqual(run('orcCheckinFeitoNoOrcamento(__o, __E)'), true);
+  assert.strictEqual(run("orcGrupoDe(__o, '2026-09-25', orcCheckinFeitoNoOrcamento(__o, __E))"), 3, 'desce para "Já hospedados / passadas"');
+});
+prova('xará de outro tutor NÃO conta como o mesmo FILHOt', () => {
+  assert.strictEqual(run("orcMesmoPetEm({key:'avulso__pingo__maria luisa'}, {}, {key:'pingo__carla'}, {})"), false);
+});
+prova('Check-in mostra quem chega hoje pelos orçamentos fechados — e não quem já entrou, nem quem chega depois', () => {
+  ctx.__L = {
+    camus:   { status: 'fechado', entrada: '2026-09-25', saida: '2026-09-28', pets: [{ key: 'avulso__camus__ana', nome: 'Camus', tutor: 'Ana' }] },
+    eliz:    { status: 'fechado', entrada: '2026-09-24', saida: '2026-09-30', pets: [{ key: 'elizabeth__rui', nome: 'Elizabeth', tutor: 'Rui' }] },
+    pipoca:  { status: 'fechado', entrada: '2026-09-25', saida: '2026-09-26', pets: [{ key: 'pipoca__joao', nome: 'Pipoca', tutor: 'João' }] },
+    depois:  { status: 'fechado', entrada: '2026-10-02', saida: '2026-10-05', pets: [{ key: 'luna__bia', nome: 'Luna', tutor: 'Bia' }] },
+    aguard:  { status: 'aguardando', entrada: '2026-09-25', saida: '2026-09-27', pets: [{ key: 'bob__ze', nome: 'Bob', tutor: 'Zé' }] },
+    acabou:  { status: 'fechado', entrada: '2026-09-20', saida: '2026-09-25', pets: [{ key: 'rex__lia', nome: 'Rex', tutor: 'Lia' }] },
+  };
+  ctx.__E = { e1: { refKey: 'pipoca__joao', nome: 'Pipoca', tutor: 'João', entrada: '2026-09-25', saida: '2026-09-26' } };
+  const L = JSON.parse(JSON.stringify(run("orcChegamHoje(__L, __E, '2026-09-25')")));
+  igual(L.map((x) => x.pet.nome), ['Elizabeth', 'Camus']);
+  assert.strictEqual(L[0].atrasado, true, 'a Elizabeth devia ter entrado ontem: aparece com o aviso');
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
