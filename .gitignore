@@ -30,3 +30,9 @@ serviceAccount*.json
 
 # Retrato do banco para os testes (baixado da VPS uma vez por dia — nunca versionar)
 tests/.retrato/
+
+# === Servidor da senha (Fase 0, 25/set/2026) ===
+# As dependências se instalam na VPS; os dois arquivos secretos moram SÓ lá (/etc/zeluz/).
+servidor-senha/node_modules/
+conta-servico*.json
+senhas-fixas.json

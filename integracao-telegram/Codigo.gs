@@ -466,6 +466,24 @@ function _fbLer(caminho, token) {
   }
 }
 
+/* Feriados (Fase 0, 25/set/2026). A lista que vale é a do banco, a MESMA que a Gestão edita
+ * no app (Configurações › Orçamento), em auaulandia/config/orcamento/feriados. Enquanto a
+ * Gestão nunca tiver salvado essa lista, vale a de fábrica abaixo — espelho fiel de
+ * ORC_FERIADOS_PADRAO, em auaulandia/index.html. Se um dia elas discordarem, o banco vence. */
+var FERIADOS_PADRAO = {
+  '2026-01-01':1, '2026-02-16':1, '2026-02-17':1, '2026-04-03':1, '2026-04-21':1, '2026-05-01':1,
+  '2026-06-04':1, '2026-08-15':1, '2026-09-07':1, '2026-10-12':1, '2026-11-02':1, '2026-11-15':1,
+  '2026-11-20':1, '2026-12-08':1, '2026-12-25':1,
+  '2027-01-01':1, '2027-02-08':1, '2027-02-09':1, '2027-03-26':1, '2027-04-21':1, '2027-05-01':1,
+  '2027-05-27':1, '2027-08-15':1, '2027-09-07':1, '2027-10-12':1, '2027-11-02':1, '2027-11-15':1,
+  '2027-11-20':1, '2027-12-08':1, '2027-12-25':1
+};
+function _ehFeriado(dia, token) {
+  var doBanco = _fbLer('auaulandia/config/orcamento/feriados', token);
+  var lista = (doBanco && typeof doBanco === 'object') ? doBanco : FERIADOS_PADRAO;
+  return !!lista[dia];
+}
+
 function _fbGravar(caminho, obj, token) {
   // O comportamento de envio não muda: a ponte já mandou a mensagem antes de chegar aqui.
   // O que muda é que a falha DEIXA RASTRO. Antes, o catch vazio engolia o erro e a trava
@@ -540,6 +558,11 @@ function vigiaFalta12h() {
 
   var token = _fbToken();
   if (!token) return;                                                 // sem token, não inventa
+
+  // FERIADO (Fase 0, 25/set/2026): feriado não é dia de Day Care, então não há falta a
+  // fechar. Sem isto, num feriado sem ninguém com o app aberto, a Gestão recebia a cobrança
+  // "ninguém fechou o dia" à toa.
+  if (_ehFeriado(dia, token)) return;
 
   // Já cobrado hoje? A cobrança tem trava própria — a do fechamento é outra coisa e
   // não pode ser tocada por aqui, senão a ponte "fecharia" um dia que ninguém fechou.

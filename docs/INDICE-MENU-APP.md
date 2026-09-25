@@ -1,6 +1,99 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21 e 24/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24 e 25/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
+
+> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Nada aqui foi publicado ainda:** a versão fica no branch até a Adriana aprovar a publicação, porque o sistema está em uso.
+
+> **Adriana, 25/set/2026:** *"Eu clico aqui, vermífugo, Simba, nada acontece."* · *"Vermífugo: duas doses com 21 dias de intervalo, depois 4 meses; opção de dose única; exame de fezes com data e resultado."* · *"Banhos recorrentes: só quem tem banho fixo."*
+
+### (A) O remédio lançado na recepção entra no alarme e no vigia
+
+**Antes:** o remédio lançado em **Lançamentos do dia › Medicação** ia para a planilha e para a TV, mas não entrava no registro de doses. Ficavam de fora três coisas:
+- o alarme no celular;
+- o "Dei agora";
+- o vigia do servidor.
+
+Só entrava a dose do check-in de pertences.
+
+**Agora:** lançamento de Medicação de **hoje**, com a ficha casada e horário, vira dose esperada (`medDosesDosLancamentos`).
+- Se o check-in de pertences já tem a mesma dose no mesmo horário, ela **não entra duas vezes**.
+- Lançar ou tirar o remédio refaz a agenda na hora.
+
+### (B) Feriado: a falta automática das 12h não marca a turma inteira
+
+**Antes:** num feriado, a falta das 12h marcava como "faltou" todo mundo da turma. O vigia da ponte do Telegram também avisava a falta.
+
+**Agora:**
+- O app lê a lista de feriados, a mesma do orçamento (`auaulandia/config/orcamento/feriados`), e não marca falta em feriado.
+- A ponte (`integracao-telegram/Codigo.gs`, `_ehFeriado`) também pula o feriado. **Ela precisa ser republicada no Apps Script.**
+
+### (C) Vencimentos: o toque abre o quadro ALI, e o cartão só fecha com a ficha em dia
+
+| O quê | Antes | Agora |
+|---|---|---|
+| Tocar no nome no resumo do topo ("Vermífugo: Simba") | o quadro abria no cartão, lá embaixo: parecia que o toque não fazia nada | o quadro abre **logo abaixo da linha tocada** |
+| Dois FILHOts com o mesmo nome (tutores diferentes) | o segundo sumia do resumo | aparecem os dois (a conferência é pela chave) |
+| "Nunca fez — quer fazer aqui" | fechava o assunto e **não lançava nada** | dois botões, cada um lança o vermífugo e o carrapaticida nos Lançamentos do dia; a vacina em aberto vira recado para a veterinária no dia dele:<br>• "Nunca fez — fazer aqui, **está na bolsa**";<br>• "Nunca fez — fazer aqui, **pegar na loja**" |
+| "Sim, a ficha foi atualizada" | fechava o cartão sem conferir a ficha | **só fecha se a ficha estiver em dia**. Se ainda há vacina, vermífugo ou carrapaticida vencido ou nunca registrado, abre o quadro de gravar a data e diz o que falta |
+
+Ficam de fora dessa trava:
+- o que é opcional: coleira, escova, exame de fezes e 2ª dose;
+- o assunto em que o tutor disse "Não quer agora".
+
+Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **volta aberto**, com a linha explicando.
+
+### (D) Vermífugo no quadro rápido (sem abrir a ficha)
+
+- **Dose única** ou **2 doses (repete em 21 dias)**, escolhido na hora de gravar. Com 2 doses:
+  - a 2ª fica prevista em 21 dias;
+  - o próximo vermífugo vem 4 meses depois da 2ª.
+- Gravar a **2ª dose** recalcula o próximo vermífugo **a partir dela**. Antes, a data ia para um campo que a conta não lia.
+  - 2ª dose antes da 1ª é recusada.
+  - "Não vai ter 2ª dose" passa para dose única.
+- **Exame de fezes** no mesmo quadro: data, próxima em 4 meses e **resultado**. Fica recolhido: toca-se para abrir.
+- **Regra "vermífugo OU exame de fezes": vale o mais recente** (`vermOuFezes`).
+  - Antes, qualquer exame registrado, de qualquer ano, dispensava o vermífugo para sempre. Quem tinha um exame antigo e um vermífugo novo **não devia nenhum dos dois**, e o vermífugo vencia em silêncio.
+  - A regra é a mesma na Prevenção, nos Vencimentos e na ficha.
+
+### (E) Hospedagem: pernoite de ontem e hóspede recorrente
+
+- **Pernoite lançada ontem e sem check-in** continua aparecendo, com a data da noite, por até 3 dias. Aparece em três lugares:
+  - no Check-in;
+  - na mesa do dia;
+  - no painel da Márcia.
+
+  "Fazer o check-in desta noite" abre com a entrada **naquela noite**. "Tutor buscou, cancelar" pede o motivo, como sempre.
+- **Hóspede sem check-in** agora confere as **datas** da estadia. Antes, qualquer estadia antiga, de qualquer mês, contava como check-in feito, e o cliente recorrente nunca aparecia. Estadia cancelada não conta.
+
+### (F) Banhos recorrentes: só quem tem banho fixo
+
+- A lista abre só com quem tem banho fixo. Conta tanto o gravado quanto o ligado no rascunho: a linha recém-ligada não some no meio da edição.
+- A busca procura em **todos** os ativos, para incluir alguém novo.
+- O botão **"Mostrar também quem não tem banho fixo"** mostra a casa inteira.
+
+### (G) Segurança (P0 da auditoria)
+
+- **Servidor da senha (Rota A)** pronto em `servidor-senha/`:
+  - confere o PIN no servidor da Kairós e devolve o token com o papel;
+  - tem freio contra quem tenta adivinhar;
+  - mantém a trava de aparelho;
+  - deixa rastro sem guardar a senha.
+
+  **Ainda não está no ar:** a instalação na VPS e as etapas seguintes estão em `servidor-senha/LEIA-ME.md`.
+- As senhas reais **saíram dos 24 arquivos de teste**. Agora vêm do ambiente: `ZELUZ_SENHA_DIRETORIA`, `ZELUZ_SENHA_GESTAO` e `ZELUZ_SENHA_PLANTAO`.
+- O rastro da auditoria sai sempre no formato que o banco aceita (`_audNormalizar`). Antes, um registro sem `quem` e `role` voltava para o bolso a cada reenvio, para sempre.
+
+### Provas
+
+Todas rodam sem rede e sem dado de cliente:
+- `node tests/fase0-ciclo-fechado.test.js`: 29 provas;
+- `node tests/servidor-senha.test.js`: 10 provas.
+
+O harness completo precisa do retrato da VPS e não rodou nesta sessão.
+
+---
 
 ## O que mudou em 24/set/2026 (v 2026-09-24-08)
 

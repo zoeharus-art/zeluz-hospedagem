@@ -5857,10 +5857,37 @@
         // equipe aprende a ignorar, e aí o vermelho de verdade também passa batido.
         if(h.mascote) return;
         var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
-        if(k && !(CF_ESTADIAS||{})[k]) out.push(h);
+        var dia=(typeof dataKeyAtual==='function')?dataKeyAtual():'';
+        if(k && !hospTemEstadiaNoDia(k, dia)) out.push(h);
       });
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     return out;
+  }
+  /* A ESTADIA GRAVADA COBRE ESTA NOITE? (Fase 0, 25/set/2026)
+   * CF_ESTADIAS guarda a estadia MAIS RECENTE de cada FILHOt — de qualquer data. O hóspede
+   * que já tinha vindo em agosto contava como "com check-in" em setembro, e o alerta nunca
+   * acendia para quem é recorrente: justamente o cliente mais fiel dormia sem ficha da
+   * noite (comida, remédio) e sem valor lançado. Agora a conta confere as DATAS: a entrada
+   * até esta noite e a saída a partir dela. Estadia cancelada não conta. Estadia antiga,
+   * sem data de entrada, vale como antes (não se inventa alerta sobre dado que não existe). */
+  function estadiaCobreDia(e, dia){
+    e=e||{};
+    if(String(e.status||'')==='cancelada') return false;
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
+    var ent=String(e.entrada||''), sai=String(e.saida||'');
+    if(!iso.test(String(dia||'')) || !iso.test(ent)) return true;
+    if(ent>dia) return false;                        // estadia de outra vinda, mais para a frente
+    if(iso.test(sai) && sai<dia) return false;       // a estadia acabou antes desta noite
+    return true;
+  }
+  function hospTemEstadiaNoDia(k, dia){
+    if(!k) return false;
+    var reg=(CF_ESTADIAS||{})[k];
+    if(reg && estadiaCobreDia(reg.e, dia)) return true;
+    // A mais recente pode ser OUTRA vinda (uma reserva já lançada para a semana que vem):
+    // procura nas outras estadias do mesmo FILHOt antes de acusar falta.
+    var T=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS:{};
+    return Object.keys(T).some(function(id){ var e=T[id]||{}; return e.refKey===k && estadiaCobreDia(e, dia); });
   }
   // Uma conta só, para o menu e para o painel do Início não discordarem entre si.
   function contarPendencias(){
@@ -6140,11 +6167,17 @@
     // PERNOITES DO DAY CARE (Adriana, 23/set/2026). O número é o total do dia; a frase
     // embaixo diz quantas ainda esperam o check-in — que é o que precisa de alguém.
     var pc=(typeof pernContagem==='function')?pernContagem():null;
-    var quadroPern=mesaBox(pc===null?null:pc.total,'Pernoites de hoje',
-      (pc&&pc.semCheckin)
-        ? (pc.semCheckin+' sem check-in — sem ficha o plantão não sabe o que dar de comer nem que remédio dar')
-        : 'ficaram para dormir — todas já com check-in feito',
-      (pc&&pc.semCheckin)?'#B3261E':'#2E7D8A', ir('checkin'));
+    // As noites de dias anteriores sem check-in (Fase 0, 25/set/2026) entram na conta do
+    // quadro: sem isso ele dizia zero no dia seguinte, e a noite ficava sem ficha e sem valor.
+    var pAnt=(pc&&pc.anteriores)||0;
+    var quadroPern=mesaBox(pc===null?null:(pc.total+pAnt),'Pernoites de hoje',
+      (pAnt
+        ? (pAnt+(pAnt===1?' de dia anterior':' de dias anteriores')+' sem check-in'
+           +((pc&&pc.semCheckin)?(' e '+pc.semCheckin+' de hoje'):'')+' — a noite ficou sem ficha e sem valor')
+        : ((pc&&pc.semCheckin)
+          ? (pc.semCheckin+' sem check-in — sem ficha o plantão não sabe o que dar de comer nem que remédio dar')
+          : 'ficaram para dormir — todas já com check-in feito')),
+      ((pc&&pc.semCheckin)||pAnt)?'#B3261E':'#2E7D8A', ir('checkin'));
     // PERGUNTAR HOJE (Adriana, 24/set/2026): quem JÁ está na casa e tem algo vencendo antes
     // de voltar. É o quadro que morre no fim do dia — amanhã ele não está mais aqui.
     var ha=null; try{ ha=(typeof hojeAnteciparContagem==='function')?hojeAnteciparContagem():null; }
@@ -10553,6 +10586,22 @@
   // celulares abertos ao mesmo tempo não escreverem a lista duas vezes.
   const CK_HORA_TURMA=7;
   var _turmaGravada='';
+  // ===== FERIADOS ANTES DE FECHAR O DIA (Fase 0, 25/set/2026) =========================
+  // Os feriados nacionais e de BH já vêm no código (ORC_FERIADOS_PADRAO). Os que a Gestão
+  // acrescenta (recesso, datas próprias da Zêluz) moram no banco e só desciam quando alguém
+  // abria o Orçamento. A falta automática e a fotografia da turma rodam em QUALQUER aparelho
+  // — inclusive no que nunca abriu o Orçamento —, por isso buscam a lista uma vez por sessão
+  // antes de decidir. Leitura que falha não trava o dia: vale a lista do código.
+  var __feriadoConferido={};
+  var __orcFeriadosLendo=null;
+  function orcFeriadosGarantir(){
+    if(orcFeriadosCfg || !DB) return Promise.resolve();
+    if(__orcFeriadosLendo) return __orcFeriadosLendo;
+    __orcFeriadosLendo=DB.ref('auaulandia/config/orcamento/feriados').once('value').then(function(s){
+      var v=s.val(); if(v && typeof v==='object' && !orcFeriadosCfg) orcFeriadosCfg=v;
+    }).catch(function(e){ _logLeituraFalhou('auaulandia/config/orcamento/feriados (orcFeriadosGarantir)', e); });
+    return __orcFeriadosLendo;
+  }
   function turmaFotoTrava(dia){ return 'daycare/turma/'+dia; }
   function gravarTurmaDoDia(){
     if(!DB) return Promise.resolve();
@@ -10566,6 +10615,9 @@
     if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !PELUDINHOS.length) return Promise.resolve();
     const hoje=dcDataKey();
     if(_turmaGravada===hoje) return Promise.resolve();   // este aparelho já gravou hoje
+    // FERIADO (Fase 0, 25/set/2026): feriado não é dia de Day Care — não há turma esperada.
+    if(!__feriadoConferido[hoje]) return orcFeriadosGarantir().then(function(){ __feriadoConferido[hoje]=true; return gravarTurmaDoDia(); });
+    if(typeof orcEhFeriado==='function' && orcEhFeriado(hoje)){ _turmaGravada=hoje; return Promise.resolve(); }
     return DB.ref(turmaFotoTrava(hoje)).once('value').then(function(s){
       if(s.val()){ _turmaGravada=hoje; return; }         // outro aparelho já gravou
       const chaves=[];
@@ -10597,6 +10649,25 @@
     if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !PELUDINHOS.length) return Promise.resolve();
     const hoje=dcDataKey();
     if(_faltaAutoFeita===hoje) return Promise.resolve(); // este aparelho já confirmou hoje
+    // FERIADO (Fase 0, 25/set/2026). A conta pulava só sábado e domingo: num feriado de
+    // semana, o primeiro aparelho aberto (até o da plantonista) marcava a turma INTEIRA como
+    // "faltou" e abria pendências de prevenção para todo mundo. A lista de feriados é a
+    // MESMA do Orçamento, que a Gestão edita. No feriado, a trava do dia é gravada com o
+    // nome do feriado: o vigia das 12h15 (ponte do Telegram) vê o dia fechado e não cobra a
+    // Gestão por um fechamento que não existe.
+    if(!__feriadoConferido[hoje]) return orcFeriadosGarantir().then(function(){ __feriadoConferido[hoje]=true; return aplicarFaltaAutomatica(); });
+    var __feriado=(typeof orcEhFeriado==='function')?orcEhFeriado(hoje):'';
+    if(__feriado){
+      return DB.ref(faltaAutoTrava(hoje)).transaction(function(atual){
+        if(atual) return;                                 // alguém já fechou o dia
+        return { ts:Date.now(), por:'sistema', feriado:String(__feriado), quantos:0,
+                 hora:(typeof horaAgora==='function'?horaAgora():'') };
+      }).then(function(res){
+        _faltaAutoFeita=hoje;
+        if(res && res.committed && typeof audit==='function')
+          audit('falta-automatica','dia não fechado: feriado ('+__feriado+') — ninguém recebeu falta',{assinou:'sistema'});
+      }).catch(function(e){ _logFalhaGrav('registrar o feriado na trava da falta automática', e); });
+    }
     return DB.ref(faltaAutoTrava(hoje)).once('value').then(function(s){
       if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
       return Promise.all([
@@ -15634,7 +15705,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-24-08';
+  const APP_VERSAO='2026-09-25-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19164,9 +19235,53 @@
               });
             });
           });
-        }).catch(function(e){ _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); }).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); });
+          return v;
+        // Leitura que falhou conta como falha (Fase 0, 25/set/2026): antes, o med-dia que não
+        // desceu deixava o retrato do vigia "completo", e o servidor achava que não havia dose.
+        }).catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); return {}; })
+        // O remédio lançado na recepção (Lançamentos do dia › Medicação) entra na MESMA fila.
+        // A regra está em medDosesDosLancamentos, logo abaixo.
+        .then(function(medDia){
+          return DB.ref('daycare/dashboard/'+dcDataKey()+'/medicacao').once('value').then(function(s2){
+            medDosesDosLancamentos(s2.val()||{}, medDia||{}).forEach(function(d){ MED_AGENDA_TODOS.push(d); });
+          }).catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/dashboard/…/medicacao (carregarAgendaMedTodos)', e); });
+        }).then(function(){ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); });
       } else { if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); medVigiaGravar(); }
     });
+  }
+  // ===== O REMÉDIO LANÇADO NA RECEPÇÃO TAMBÉM TOCA O ALARME (Fase 0, 25/set/2026) ====
+  // Auditoria de 25/set/2026: o item "Medicação" dos Lançamentos do dia ia à planilha e à
+  // TV ("Hora Medicação"), mas não entrava nesta fila. Sem alarme no celular de quem dá o
+  // remédio, sem "Dei agora" e sem o vigia do servidor. A dose do check-in de pertences
+  // (daycare/med-dia) sempre entrou; a lançada na recepção, não.
+  // Regra: lançamento de Medicação de HOJE, com a ficha casada (`chave`) e horário, vira
+  // uma dose esperada. Se o check-in de pertences do MESMO FILHOt já tem dose no MESMO
+  // horário, é a mesma dose escrita duas vezes e não entra de novo: alarme em dobro deixaria
+  // a segunda "atrasada" para sempre, e o vigia cobraria uma dose que foi dada.
+  // Função PURA: é ela que o teste morde (tests/fase0-ciclo-fechado.test.js).
+  function medHoraHHMM(h){
+    var m=/^(\d{1,2}):(\d{2})/.exec(String(h||'').trim());
+    return m?(String(m[1]).padStart(2,'0')+':'+m[2]):'';
+  }
+  function medDosesDosLancamentos(lancs, medDia){
+    var out=[];
+    Object.keys(lancs||{}).forEach(function(id){
+      var r=(lancs||{})[id]||{};
+      var chave=String(r.chave||'').trim();
+      var hora=medHoraHHMM(r.hora);
+      if(!chave || !hora) return;                  // sem ficha ou sem hora: não há de quem nem quando
+      var ja=((medDia||{})[chave]||{}).itens||{};
+      var mesmoHorario=Object.keys(ja).some(function(i){
+        return ((ja[i]||{}).horarios||[]).some(function(x){ return medHoraHHMM(x)===hora; });
+      });
+      if(mesmoHorario) return;
+      var det=r.det||{};
+      var nome=String(det.qual||'').trim()||String(r.valor||'').trim();
+      out.push({hospNome:String(r.valor||'').split(' (')[0].trim(), key:'dc__'+chave, itemId:'lanc_'+id,
+        nome:nome, q:'', u:'', local:'Day Care',
+        obs:'lançado na recepção'+(det.onde?(' · '+String(det.onde).toLowerCase()):''), horario:hora});
+    });
+    return out;
   }
   // O retrato do dia para o vigia do servidor: dose esperada por dose esperada. A ponte
   // (vigiaMedicacao no Apps Script) lê isto e cobra o que passou de 30 min sem registro —
@@ -20671,6 +20786,40 @@
     if(/^\d{4}-\d{2}-\d{2}$/.test(dada) && dada>=t) return '';   // já foi dada: acabou
     return addDiasISO(t, VERMIF_2A_DOSE);
   }
+  // ===== "VERMÍFUGO OU EXAME DE FEZES" — UMA regra, num lugar só (Fase 0, 25/set/2026) =====
+  // Adriana, 25/set: "vacinas, vermífugo ou exame de fezes, e carrapaticida são
+  // obrigatórios". Quem fez um não deve o outro — mas vale O MAIS RECENTE dos dois. Antes,
+  // qualquer exame de fezes registrado, de qualquer ano, dispensava o vermífugo para
+  // sempre; e quem tinha vermífugo registrado não via o exame. Resultado: o FILHOt com um
+  // exame antigo e um vermífugo novo não devia NENHUM dos dois — e o vermífugo vencia em
+  // silêncio. Agora: o que foi feito por último é o caminho que a ficha acompanha.
+  // Devolve 'verm', 'fezes' ou '' (nenhum dos dois registrado).
+  function vermOuFezes(ex){
+    ex=ex||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
+    var vt=String(ex.verm_t||ex.vermifugo_t||'');
+    if(!iso.test(vt)){
+      // Só o "vence em" digitado da carteira: a dose foi 4 meses antes.
+      var vp=String(ex.verm_p||ex.vermifugo_p||'');
+      vt=iso.test(vp)?addDiasISO(vp,-VERMIF_PROX):'';
+    }
+    var d2=String(ex.verm_dose2_t||'');
+    if(iso.test(d2) && d2>vt) vt=d2;
+    var ft=String(ex.fezes_t||'');
+    if(!iso.test(ft)){ var fp=String(ex.fezes_p||''); ft=iso.test(fp)?addDiasISO(fp,-FEZES_PROX):''; }
+    if(!vt && !ft) return '';
+    if(!ft) return 'verm';
+    if(!vt) return 'fezes';
+    return (ft>vt)?'fezes':'verm';                   // empate: o vermífugo, que é a regra da casa
+  }
+  // Este item da prevenção está DISPENSADO pela regra "vermífugo ou exame"?
+  function prevDispensadoPorExame(ex, it){
+    if(!it) return false;
+    var cam=vermOuFezes(ex);
+    if(it.dispensaSe==='fezes_t') return cam==='fezes';
+    if(it.k==='fezes_p') return cam!=='fezes';       // sem exame registrado, o exame não é cobrado
+    return false;
+  }
   // A data que a ficha MOSTRA como 2ª dose: a que foi dada, se houver; senão a prevista.
   function vermDose2Data(ex){
     ex=ex||{};
@@ -20857,7 +21006,7 @@
     const venc=[], sem=[];
     PREV_ITENS.forEach(function(it){
       if(grupo && it.grupo!==grupo) return;
-      if(it.dispensaSe && ex[it.dispensaSe]) return; // exame de fezes dispensa vermífugo
+      if(prevDispensadoPorExame(ex, it)) return;     // vermífugo OU exame de fezes: vale o mais recente
       const v=prevValor(ex, it);
       if(!v){ if(!it.opcional) sem.push(it.nome); return; }
       if(prevDataQuebrada(v)) return;                // dado quebrado não é vencimento
@@ -20932,9 +21081,8 @@
     janela=(janela==null)?prevJanela():janela;
     var out=[];
     PREV_ITENS.forEach(function(it){
-      // "ou é vermífugo ou exame" — quem tem um não deve o outro.
-      if(it.dispensaSe && ex[it.dispensaSe]) return;
-      if(it.k==='fezes_p' && prevValor(ex,{k:'verm_p',alt:'vermifugo_p'})) return;
+      // "ou é vermífugo ou exame" — quem tem um não deve o outro; vale o mais recente.
+      if(prevDispensadoPorExame(ex, it)) return;
       var v=prevValor(ex, it);
       // Data impossível: sai da conta de vencido e vira um aviso próprio, para alguém
       // abrir a ficha e corrigir o ano.
@@ -21790,25 +21938,40 @@
   // NADA grava sozinho: cada caminho tem o seu botão, e o botão é a ação explícita.
   var PREV_CORRIGE_ABERTO='';   // 'chave|item' do painel aberto — um por vez em toda a tela
   var PREV_CORRIGE_OK={};       // o que acabou de ser atualizado, para a tela confirmar
+  // DE ONDE veio o toque, dentro da mesma tela (Fase 0, 25/set/2026). Na tela Vencimentos o
+  // mesmo FILHOt aparece duas vezes: no resumo do topo ("Vermífugo: Simba · Lana") e no
+  // cartão dele, lá embaixo. O painel só era desenhado no cartão — quem tocava no nome do
+  // topo não via nada mudar, e achava que o botão não funcionava (Adriana, 25/set: "eu
+  // clico aqui, vermífugo, Simba, nada acontece"). Agora o painel abre ONDE foi o toque, e
+  // só lá (dois painéis com os mesmos campos confundiriam qual data foi digitada).
+  var PREV_CORRIGE_ORIGEM='';   // '' = o lugar de sempre; 'resumo' = o resumo do topo da Vencimentos
   function prevCorrigePode(){ return podePapel('prevencao-lancar-na-tela'); }
   function prevCorrigeAlvo(chave,k){ return String(chave||'')+'|'+String(k||''); }
+  // O painel deste FILHOt deve ser desenhado NESTE lugar? (resumo × cartão)
+  function prevCorrigeAbertoAqui(chave, origem){
+    if(!PREV_CORRIGE_ABERTO) return false;
+    if(String(PREV_CORRIGE_ABERTO).split('|')[0]!==String(chave||'')) return false;
+    return String(PREV_CORRIGE_ORIGEM||'')===String(origem||'');
+  }
   // O chip. Sem permissão (monitor, plantonista) ele continua sendo o texto de sempre.
-  function prevCorrigeChip(chave, k, texto, tela, estilo){
+  // `origem` (opcional): em que parte da tela ele está — o painel abre ali.
+  function prevCorrigeChip(chave, k, texto, tela, estilo, origem){
     estilo=String(estilo||'');
     // Quem só LÊ recebe a mesma etiqueta, no mesmo lugar — sem o lápis e sem a borda de
     // "toque aqui". A tabela da Prevenção fica igual para todo mundo; o que muda é poder
     // gravar (24/set/2026).
     if(!k || !chave || !prevCorrigePode())
       return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-weight:800;'+estilo+'">'+escAttr(texto)+'</span>';
-    var aberto=(PREV_CORRIGE_ABERTO===prevCorrigeAlvo(chave,k));
+    origem=String(origem||'');
+    var aberto=(PREV_CORRIGE_ABERTO===prevCorrigeAlvo(chave,k)) && (String(PREV_CORRIGE_ORIGEM||'')===origem);
     return '<button type="button" class="prev-corrige-chip"'
       +' style="padding:2px 9px;border-radius:999px;border:1.5px '+(aberto?'solid':'dashed')+' currentColor;'
       +'background-color:transparent;cursor:pointer;font:inherit;font-weight:800;'+estilo+'"'
       +' title="Toque para atualizar a data sem sair desta tela"'
-      +' onclick="prevCorrigeAbrir(\''+jsAspas(chave)+'\',\''+jsAspas(k)+'\',\''+tela+'\')">'
+      +' onclick="prevCorrigeAbrir(\''+jsAspas(chave)+'\',\''+jsAspas(k)+'\',\''+tela+'\',\''+jsAspas(origem)+'\')">'
       +escAttr(texto)+' ✎</button>';
   }
-  function prevCorrigeAbrir(chave,k,tela){
+  function prevCorrigeAbrir(chave,k,tela,origem){
     if(!prevCorrigePode()){
       if(typeof zAlertao==='function') zAlertao('QUEM ATUALIZA A PREVENÇÃO É O BALCÃO',
         ['A data de vacina, vermífugo, carrapaticida, coleira e escova é atualizada pela recepção (Consultoras de Bem-Estar), pela Supervisão ou pela Gestão — são elas que falam com o tutor e veem a carteirinha.',
@@ -21816,10 +21979,15 @@
       return;
     }
     var alvo=prevCorrigeAlvo(chave,k);
-    PREV_CORRIGE_ABERTO=(PREV_CORRIGE_ABERTO===alvo)?'':alvo;
+    origem=String(origem||'');
+    // Tocar de novo no MESMO chip, no MESMO lugar, fecha. Tocar no mesmo item em outro
+    // lugar da tela muda o painel para lá.
+    var fechar=(PREV_CORRIGE_ABERTO===alvo && String(PREV_CORRIGE_ORIGEM||'')===origem);
+    PREV_CORRIGE_ABERTO=fechar?'':alvo;
+    PREV_CORRIGE_ORIGEM=fechar?'':origem;
     prevCorrigeRedesenhar(tela);
   }
-  function prevCorrigeFechar(tela){ PREV_CORRIGE_ABERTO=''; prevCorrigeRedesenhar(tela); }
+  function prevCorrigeFechar(tela){ PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM=''; prevCorrigeRedesenhar(tela); }
   // Redesenha a tela de onde o toque veio, guardando a rolagem — a lição de 22/ago/2026:
   // "clica em comprimido e a tela sobe. Não pode ter esses erros."
   function prevCorrigeRedesenhar(tela){
@@ -21874,9 +22042,11 @@
     });
     return achou;
   }
-  // O painel embutido, logo abaixo dos chips daquele FILHOt.
-  function prevCorrigePainelHTML(chave, tela, hoje){
+  // O painel embutido, logo abaixo dos chips daquele FILHOt. `origem` (opcional, Fase 0,
+  // 25/set/2026): só desenha no lugar onde o toque aconteceu (ver PREV_CORRIGE_ORIGEM).
+  function prevCorrigePainelHTML(chave, tela, hoje, origem){
     if(!PREV_CORRIGE_ABERTO || !prevCorrigePode()) return '';
+    if(!prevCorrigeAbertoAqui(chave, origem)) return '';
     var par=String(PREV_CORRIGE_ABERTO).split('|');
     if(par[0]!==String(chave||'')) return '';
     var k=par[1]||''; if(!k) return '';
@@ -21892,21 +22062,75 @@
       +'<div class="hint" style="margin-top:2px">O que você gravar aqui vai para a <strong>ficha do FILHOt</strong> e vale em todas as telas. Não precisa abrir a ficha.</div>';
     if(it.nomeK) h+='<div style="margin-top:8px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Nome do produto / vacina</label>'
       +'<input class="cad-in" id="prevCorrN_'+id+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac" style="margin:0;width:100%;max-width:280px"></div>';
+    // O VERMÍFUGO NO PAINEL RÁPIDO (Fase 0, 25/set/2026 — Adriana: "duas doses com 21 dias
+    // de intervalo, depois 4 meses; opção de dose única; exame de fezes com data e
+    // resultado"). A ficha já sabia tudo isso; o painel rápido, não — e quem atualizava daqui
+    // gravava sempre como dose única, sem 2ª dose e sem o exame.
+    h+=prevCorrigeVermHTML(k, ex, id, ka, tela);
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px">'
       +'<button type="button" class="btn btn-gold" style="padding:8px 16px;font-size:13px;font-weight:800" onclick="prevCorrigeFeitoHoje(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Feito hoje</button>'
       +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Feito em…</label>'
       +'<input type="date" class="cad-in" id="prevCorrT_'+id+'" style="margin:0" min="2015-01-01" max="'+escAttr(hoje)+'" onkeydown="return dataSoNoCalendario(event)"></div>'
       +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeFeitoEm(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Gravar esta data</button>'
       +'</div>';
-    if(podeVencManual()) h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)">'
+    // A 2ª dose é CONTA (vermDose2Prevista), não campo: um "Vence em" digitado nela seria
+    // gravado e ignorado — a tela diria "gravado" e nada mudaria.
+    if(podeVencManual() && typeof it.calc!=='function') h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)">'
       +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Vence em… (a data da carteira)</label>'
       +'<input type="date" class="cad-in" id="prevCorrV_'+id+'" value="'+escAttr(ex[k]||'')+'" style="margin:0" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
       +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeVenceEm(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Gravar o vencimento</button>'
       +'<div class="hint" style="width:100%;margin:0">Se você só sabe quando vence, digite em <strong>&laquo;Vence em&raquo;</strong> — não precisa da data em que tomou.</div></div>';
-    if(dias) h+='<div class="hint" style="margin-top:6px">Vale '+dias+' dia'+(dias>1?'s':'')
+    if(dias && k!=='verm_p') h+='<div class="hint" style="margin-top:6px">Vale '+dias+' dia'+(dias>1?'s':'')
       +' — a próxima data sai sozinha da data em que foi feito.</div>';
+    h+=prevCorrigeFezesHTML(k, ex, id, ka, tela, hoje);
     h+='<div style="margin-top:7px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeFechar(\''+tela+'\')">fechar</button></div>';
     return h+'</div>';
+  }
+  // O pedaço do vermífugo dentro do painel: o esquema (dose única × 2 doses) antes do
+  // "Feito hoje", e a frase da 2ª dose. Nada aqui grava sozinho — quem grava é o botão.
+  function prevCorrigeVermHTML(k, ex, id, ka, tela){
+    ex=ex||{};
+    var rot='display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--z-blue);cursor:pointer';
+    if(k==='verm_p'){
+      var duas=(ex.verm_doses==='2 doses');
+      return '<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px">Como é este vermífugo?</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE1_'+id+'"'+(duas?'':' checked')+'> Dose única</label>'
+        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE2_'+id+'"'+(duas?' checked':'')+'> 2 doses (repete em 21 dias)</label>'
+        +'</div>'
+        +'<div class="hint" style="margin-top:4px">Dose única: o próximo vem em 4 meses. Duas doses: a 2ª vem 21 dias depois da 1ª, e o próximo, 4 meses depois da 2ª.</div></div>';
+    }
+    if(k==='verm_dose2_p'){
+      var t=String(ex.verm_t||''), prev=vermDose2Prevista(ex);
+      return '<div class="hint" style="margin-top:8px">'
+        +(t?('1ª dose em '+escAttr(fmtBR(t))+(prev?(' — a 2ª estava prevista para '+escAttr(fmtBR(prev))):'')+'. '):'')
+        +'Ao gravar a 2ª dose, o próximo vermífugo passa a contar 4 meses <strong>a partir dela</strong>.</div>'
+        +'<div style="margin-top:6px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeDoseUnica(\''+ka+'\',\''+tela+'\')">Não vai ter 2ª dose — passar para dose única</button></div>';
+    }
+    return '';
+  }
+  // O EXAME DE FEZES no painel. No vermífugo ele entra como a outra saída da regra ("ou
+  // vermífugo, ou exame de fezes"); no próprio exame, é só o campo do resultado.
+  function prevCorrigeFezesHTML(k, ex, id, ka, tela, hoje){
+    ex=ex||{};
+    var lb='display:block;font-size:11px;font-weight:800;color:var(--muted)';
+    var res='<div><label style="'+lb+'">Resultado</label>'
+      +'<input class="cad-in" id="prevCorrR_'+id+'" value="'+escAttr(k==='fezes_p'?(ex.fezes_res||''):'')+'" placeholder="Ex: negativo para giárdia e vermes" style="margin:0;width:100%;max-width:280px"></div>';
+    if(k==='fezes_p')
+      return '<div style="margin-top:8px">'+res+'<div class="hint" style="margin-top:3px">O resultado vai junto quando você grava a data acima.</div></div>';
+    if(k!=='verm_p') return '';
+    // Recolhido por padrão (25/set/2026 — Adriana: "está tudo muito burocrático, visualmente
+    // complexo, principalmente para celular"). Quem precisa toca e abre; quem não precisa
+    // não rola por ele.
+    return '<details style="margin-top:10px;padding-top:9px;border-top:1px dashed var(--line)">'
+      +'<summary style="font-size:13px;font-weight:800;color:var(--z-blue);cursor:pointer">Fez exame de fezes em vez do vermífugo?</summary>'
+      +'<div class="hint" style="margin-top:4px">Vale o que foi feito por último: com o exame registrado, o vermífugo sai da lista até o exame vencer (4 meses).</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:7px">'
+      +'<div><label style="'+lb+'">Exame feito em…</label>'
+      +'<input type="date" class="cad-in" id="prevCorrF_'+id+'" style="margin:0" min="2015-01-01" max="'+escAttr(hoje||hojeISO())+'" onkeydown="return dataSoNoCalendario(event)"></div>'
+      +res
+      +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeExameFezes(\''+ka+'\',\''+tela+'\')">Gravar o exame</button>'
+      +'</div></details>';
   }
   // ---- os três caminhos, todos passando pela MESMA porta de gravação ----------------
   function prevCorrigeFeitoHoje(chave,k,tela){ prevCorrigeGravarFeito(chave,k,hojeISO(),tela); }
@@ -21938,12 +22162,51 @@
       var nm=String(((document.getElementById('prevCorrN_'+id)||{}).value)||'').trim();
       if(nm) patch[it.nomeK]=nm;
     }
-    if(k==='verm_p' && ex.verm_doses==='2 doses'){
+    // O esquema escolhido no painel manda (dose única × 2 doses). Sem escolha na tela, vale
+    // o que a ficha já dizia.
+    var esquema=ex.verm_doses||'';
+    if(k==='verm_p'){
+      var e1=document.getElementById('prevCorrE1_'+id), e2=document.getElementById('prevCorrE2_'+id);
+      if(e2 && e2.checked===true) esquema='2 doses';
+      else if(e1 && e1.checked===true) esquema='Dose única';
+      if(esquema && esquema!==ex.verm_doses) patch.verm_doses=esquema;
+    }
+    if(k==='verm_dose2_p'){
+      // A 2ª DOSE DADA manda sobre a prevista: o próximo vermífugo conta 4 meses a partir
+      // dela (a mesma conta do Salvar da ficha, vermDose2Data). Antes, o painel gravava a
+      // data num campo que a conta não lia — e o próximo vermífugo ficava onde estava.
+      var t1=String(ex.verm_t||'');
+      if(/^\d{4}-\d{2}-\d{2}$/.test(t1) && dt<t1){
+        if(typeof zAlertao==='function') zAlertao('Essa data não faz sentido',
+          ['A 2ª dose ('+fmtBR(dt)+') ficou antes da 1ª ('+fmtBR(t1)+').',
+           'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.'],{botao:'Vou corrigir'});
+        return;
+      }
+      delete patch[it.base];
+      patch.verm_dose2_t=dt; patch.verm_2a=dt;
+      patch.verm_p=addDiasISO(dt, VERMIF_PROX);
+      if(ex.verm_p_manual) patch.verm_p_manual='';
+      setPelExtra(p, patch);
+      prevCorrigeRegistrar(p, chave, k, it, ex.verm_p||'', patch.verm_p,
+        '2ª dose dada em '+fmtBR(dt), tela,
+        (pelNome(p)||'')+' — 2ª dose do vermífugo gravada; o próximo vermífugo vence em '+fmtBR(patch.verm_p));
+      return;
+    }
+    if(k==='fezes_p'){
+      var rf=String(((document.getElementById('prevCorrR_'+id)||{}).value)||'').trim();
+      if(rf) patch.fezes_res=rf;
+    }
+    if(k==='verm_p' && esquema==='2 doses'){
       // Vermífugo em 2 doses: a 1ª dose é esta, e a 2ª volta a ser a PREVISTA de 21 dias —
       // a que estava registrada era da rodada anterior (mesma regra do Salvar da ficha).
       var d2=addDiasISO(dt, VERMIF_2A_DOSE);
       patch.verm_dose2_t=''; patch.verm_2a=d2;
       patch[k]=addDiasISO(d2, VERMIF_PROX);
+    } else if(k==='verm_p'){
+      // Dose única: não existe 2ª dose — a de uma rodada anterior sai junto (a mesma regra
+      // do Salvar da ficha quando volta para "Dose única").
+      patch.verm_dose2_t=''; patch.verm_2a='';
+      patch[k]=addDiasISO(dt, VERMIF_PROX);
     } else {
       var dias=prevCorrigeDias(it, ex);
       patch[k]=dias?addDiasISO(dt,dias):'';
@@ -21972,17 +22235,57 @@
     prevAuditManual(p, k, de, v);
     prevCorrigeRegistrar(p, chave, k, it, de, v, 'vencimento digitado à mão', tela);
   }
+  // "Não vai ter 2ª dose": o esquema vira dose única e o próximo vermífugo volta a contar
+  // 4 meses da 1ª dose (a mesma regra do Salvar da ficha).
+  function prevCorrigeDoseUnica(chave, tela){
+    if(!prevCorrigePode()) return;
+    var p=prevCorrigePetDe(chave); if(!p) return;
+    var ex=pelExtra(p)||{};
+    var patch={verm_doses:'Dose única', verm_dose2_t:'', verm_2a:''};
+    var t1=String(ex.verm_t||'');
+    if(/^\d{4}-\d{2}-\d{2}$/.test(t1)){
+      patch.verm_p=addDiasISO(t1, VERMIF_PROX);
+      if(ex.verm_p_manual) patch.verm_p_manual='';
+    }
+    setPelExtra(p, patch);
+    prevCorrigeRegistrar(p, chave, 'verm_dose2_p', prevCorrigeItemDe('verm_dose2_p'), ex.verm_p||'', patch.verm_p||ex.verm_p||'',
+      'passou para dose única', tela,
+      (pelNome(p)||'')+' — vermífugo em dose única'+(patch.verm_p?('; o próximo vence em '+fmtBR(patch.verm_p)):''));
+  }
+  // O exame de fezes gravado pelo painel do vermífugo: data, próxima (4 meses) e resultado.
+  function prevCorrigeExameFezes(chave, tela){
+    if(!prevCorrigePode()) return;
+    var p=prevCorrigePetDe(chave); if(!p) return;
+    var id=String(chave)+'_verm_p';
+    var dt=String(((document.getElementById('prevCorrF_'+id)||{}).value)||'').trim();
+    var res=String(((document.getElementById('prevCorrR_'+id)||{}).value)||'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)){ try{ alert('Escolha a data em que o exame foi feito.'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ return; }
+    if(dt>hojeISO()){
+      if(typeof zAlertao==='function') zAlertao('Essa data não faz sentido',
+        ['A data do exame está no futuro.'],{botao:'Vou corrigir'});
+      return;
+    }
+    var ex=pelExtra(p)||{};
+    var patch={fezes_t:dt, fezes_p:addDiasISO(dt, FEZES_PROX)};
+    if(res) patch.fezes_res=res;
+    if(ex.fezes_p_manual) patch.fezes_p_manual='';
+    if(ex.fezes_afazer) patch.fezes_afazer='';
+    setPelExtra(p, patch);
+    prevCorrigeRegistrar(p, chave, 'fezes_p', prevCorrigeItemDe('fezes_p'), ex.fezes_p||'', patch.fezes_p,
+      'exame de fezes feito em '+fmtBR(dt)+(res?(' — '+res):''), tela);
+  }
   // A porta única do rastro e da confirmação: um lugar só para os três caminhos.
-  function prevCorrigeRegistrar(p, chave, k, it, de, para, comoTexto, tela){
+  // `textoOk` (opcional): a frase da confirmação verde, quando a padrão não serve.
+  function prevCorrigeRegistrar(p, chave, k, it, de, para, comoTexto, tela, textoOk){
     var nome=(it&&it.nome)||k;
     try{ if(typeof audit==='function') audit('prevencao-atualizada-na-tela',
       (pelNome(p)||'')+': '+nome+' — '+comoTexto+', vence em '+(para?fmtBR(para):'—')
       +' (antes '+(de?fmtBR(de):'sem data')+'), atualizado na tela '+prevCorrigeTelaNome(tela),
       {alvo:chave, item:k, de:de||'', para:para||'', pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     PREV_CORRIGE_OK[prevCorrigeAlvo(chave,k)]={ts:Date.now(), ate:para||'',
-      texto:(pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')
-        +(comoTexto==='vencimento digitado à mão'?' (marcado à mão)':'')};
-    PREV_CORRIGE_ABERTO='';
+      texto:textoOk||((pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')
+        +(comoTexto==='vencimento digitado à mão'?' (marcado à mão)':''))};
+    PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
     prevCorrigeRedesenhar(tela);
   }
   function prevEdicaoHTML(o){
@@ -22501,7 +22804,9 @@
       +escAttr(dataCurtaBusca(a.data))+')';
   }
   function blocoVerm(ex){
-    const fez=!!ex.fezes_t;
+    // A nota segue a MESMA regra das listas (vermOuFezes, 25/set/2026): o exame só
+    // dispensa o vermífugo quando é o mais recente dos dois.
+    const fez=!!ex.fezes_t && vermOuFezes(ex)==='fezes';
     const duas=(ex.verm_doses==='2 doses');
     const d2prev=(ex.verm_t&&duas)?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
     // A 2ª dose DADA manda sobre a prevista (Adriana, 21/set/2026): se a repetição saiu com
@@ -33688,6 +33993,12 @@
           try{ pernGravarDoLancamento(valorBase, reg, dashDia()); }
           catch(e){ _logFalhaGrav('pôr a pernoite de '+valorBase+' na fila do check-in', e); }
         }
+        // MEDICAÇÃO (Fase 0, 25/set/2026): o remédio lançado para HOJE entra na fila do
+        // alarme na hora — sem esperar a próxima leitura da agenda.
+        if(k==='medicacao' && dashDia()===dcDataKey()){
+          try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+          catch(e){ _logFalhaGrav('rearmar o alarme do remédio lançado de '+valorBase, e); }
+        }
         dashEspelhar(k, ref.key, reg, 'lancar');
         return true;
       }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); return false; });
@@ -34501,11 +34812,23 @@
   // foi feito. A conversa é outra — pedir a data ou a carteirinha —, e por isso as respostas
   // são outras. "Vai mandar a data/carteirinha" abre a pergunta da ficha na hora: a data
   // nova só existe com o tutor.
+  // "NUNCA FEZ — QUER FAZER AQUI" LANÇA DE VERDADE (Fase 0, 25/set/2026). A auditoria de
+  // 25/set achou este "sim" do tutor sumindo: o botão fechava o assunto e não lançava nada,
+  // não avisava a veterinária e não perguntava a ficha. Virou dois botões, com a MESMA
+  // pergunta de sempre — de onde sai o produto — e o MESMO lançamento automático do
+  // vermífugo e do carrapaticida vencidos (vencLancarAuto). Vacina em aberto não se lança
+  // na planilha: vira o recado para a veterinária, no dia dele (`vetDia`).
   var VENC_RESPOSTAS_ABERTO=[
-    {v:'ab_data',  t:'Vai mandar a data ou a carteirinha', cor:'#234D67', fecha:true, ficha:true},
-    {v:'ab_fazer', t:'Nunca fez — quer fazer aqui',        cor:'#1E8449', fecha:true},
-    {v:'sem',      t:'Não respondeu',                      cor:'#6b5f4b', fecha:false},
-    {v:'nao',      t:'Não quer agora',                     cor:'#B3261E', fecha:true}
+    {v:'ab_data',  t:'Vai mandar a data ou a carteirinha',     cor:'#234D67', fecha:true, ficha:true},
+    {v:'ab_bolsa', t:'Nunca fez — fazer aqui, está na bolsa',  cor:'#1E8449', fecha:true, lanca:'NA BOLSA', vetDia:true},
+    {v:'ab_loja',  t:'Nunca fez — fazer aqui, pegar na loja',  cor:'#8A6D1F', fecha:true, lanca:'LOJA', vetDia:true},
+    {v:'sem',      t:'Não respondeu',                          cor:'#6b5f4b', fecha:false},
+    {v:'nao',      t:'Não quer agora',                         cor:'#B3261E', fecha:true}
+  ];
+  // O botão antigo não aparece mais, mas o banco tem respostas gravadas com ele — e quem lê
+  // o histórico precisa entender o que está escrito lá.
+  var VENC_RESPOSTAS_ANTIGAS=[
+    {v:'ab_fazer', t:'Nunca fez — quer fazer aqui', cor:'#1E8449', fecha:true}
   ];
   // Os botões DAQUELE assunto, já sem o que não cabe no dia-alvo.
   // `o` (24/set/2026): com o FILHOt na mão, "Aplicar no dia dele" também vale num dia SEM
@@ -34528,7 +34851,8 @@
         || VENC_RESPOSTAS_VACINA.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_HOJE.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_HOJE_VACINA.filter(function(x){ return x.v===v; })[0]
-        || VENC_RESPOSTAS_ABERTO.filter(function(x){ return x.v===v; })[0] || null;
+        || VENC_RESPOSTAS_ABERTO.filter(function(x){ return x.v===v; })[0]
+        || VENC_RESPOSTAS_ANTIGAS.filter(function(x){ return x.v===v; })[0] || null;
   }
   // Os rótulos antigos continuam legíveis: o banco tem respostas gravadas antes de 21/set
   // ('zeluz', 'vet', 'casa') e quem lê o histórico precisa entender o que está escrito lá.
@@ -34703,9 +35027,8 @@
     if(!lim) return [];
     var out=[], abertos=[];
     (PREV_ITENS||[]).forEach(function(it){
-      // "ou é vermífugo ou exame de fezes" — quem tem um não deve o outro (a regra do cadastro).
-      if(it.dispensaSe && ex[it.dispensaSe]) return;
-      if(it.k==='fezes_p' && prevValor(ex,{k:'verm_p',alt:'vermifugo_p'})) return;
+      // "ou é vermífugo ou exame de fezes" — quem tem um não deve o outro; vale o mais recente.
+      if(prevDispensadoPorExame(ex, it)) return;
       var v=prevValor(ex, it);
       var marca=it.coleira?String(ex.col_nome||'').trim():'';
       if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){
@@ -35729,15 +36052,20 @@
     // período que o tutor escolheu. É o MESMO caminho que já existia; o que mudou foi só
     // a porta de entrada (o período agora está no próprio botão de resposta).
     var vetReg=null;
-    if(vencTipoBase(tipo)==='vacina' && def.periodo){
-      var vacs=vencItensDoTipo(o,'vacina');
+    // Vacina que NUNCA foi registrada e o tutor quer fazer aqui (Fase 0, 25/set/2026): mesma
+    // conversa com a veterinária, no dia dele.
+    var __vacAberto=(vencTipoBase(tipo)==='aberto' && def.vetDia)
+      ? vencItensDoTipo(o,'aberto').filter(function(x){ return !!VENC_VACINA_NOME[x.k]; }) : [];
+    if((vencTipoBase(tipo)==='vacina' && def.periodo) || __vacAberto.length){
+      var vacs=__vacAberto.length?__vacAberto:vencItensDoTipo(o,'vacina');
+      var __periodo=def.periodo||'no dia dele';
       var femeaV=/^f/i.test(String(o.sexo||''));
       var hojeV=(typeof zHojeISO==='function')?zHojeISO():'';
-      vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:def.periodo,
+      vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:__periodo,
               vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
               // "no dia dele" agora sabe QUAL dia é (24/set/2026): numa quinta, o dia do
               // cartão não é dia dela — o combinado é o próximo dia dele que também seja.
-              dia:def.hoje?dia:(def.periodo==='no dia dele'
+              dia:def.hoje?dia:(__periodo==='no dia dele'
                                   ? vencDiaAgendado(o, dia, hojeV)
                                   : (proximoDiaVet(hojeV)||dia)),
               quem:quem, ts:agora};
@@ -36186,8 +36514,66 @@
       return Object.keys(resps).some(function(t){ return vencPerguntaFichaResp((resps[t]||{}).v, dia, hoje); });
     return vencPerguntaFichaResp(r.resposta, dia, hoje);
   }
+  /* ====================================================================================
+   * O CARTÃO SÓ FECHA COM A FICHA EM DIA (Fase 0, 25/set/2026)
+   * O "Sim, a ficha foi atualizada" fechava o cartão com um toque — e nada conferia a
+   * ficha. A auditoria de 25/set achou o buraco: o cartão sumia, a data velha ficava na
+   * ficha e o FILHOt só voltava a aparecer no próximo dia dele (quando voltava). Agora o
+   * "Sim" confere a ficha antes de gravar: se ainda há vacina, vermífugo ou carrapaticida
+   * vencido ou nunca registrado, ele NÃO fecha — abre o quadro de gravar a data no próprio
+   * cartão e diz o que falta.
+   * Ficam de fora da trava: o que é opcional (coleira, escova, exame de fezes, 2ª dose —
+   * Adriana, 25/set: "coleira e escova opcionais") e o assunto em que o tutor disse "Não
+   * quer agora" (a ficha continua igual, e está certo: é a resposta dele).
+   * ================================================================================== */
+  // A resposta deixa a ficha como está? Só o "Não quer agora" (e o que não diz nada à
+  // ficha: sem data nova, sem lançamento, sem período da veterinária).
+  function vencRespNaoMudaFicha(v){
+    v=String(v||''); if(!v||v==='sem') return false;
+    var d=vencRespDef(v);
+    if(!d) return false;                                     // resposta antiga desconhecida: confere a ficha
+    return d.fecha!==false && !d.ficha && !d.lanca && !d.periodo && !d.vetDia;
+  }
+  // Os itens que a ficha AINDA deve — vencidos ou nunca registrados, obrigatórios, fora do
+  // assunto em que o tutor recusou. Função pura: recebe o cartão (o) e o registro (r).
+  function vencFichaAindaDeve(o, r){
+    r=r||{};
+    var resps=r.respostas||{};
+    var recusou={};
+    Object.keys(resps).forEach(function(t){
+      if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1;
+    });
+    if(!Object.keys(resps).length && vencRespNaoMudaFicha(r.resposta)) return [];
+    return (((o&&o.itens))||[]).filter(function(x){
+      if(!x || !(x.atrasado || x.sem_registro)) return false;
+      if((prevCorrigeItemDe(x.k)||{}).opcional) return false;
+      return !recusou[vencTipoDoItemObj(x)];
+    });
+  }
   function vencFicha(chave, sim){
     var o=vencAchar(chave); if(!o) return;
+    if(sim){
+      var deve=vencFichaAindaDeve(o, vencRegDe(chave)||{});
+      if(deve.length){
+        var hojeF=(typeof zHojeISO==='function')?zHojeISO():'';
+        var podeGravar=prevCorrigePode();
+        if(podeGravar){
+          PREV_CORRIGE_ABERTO=prevCorrigeAlvo(chave, deve[0].k); PREV_CORRIGE_ORIGEM='';
+          vencRender();
+          try{ var el=document.getElementById('prevCorrige_'+String(chave)+'_'+deve[0].k);
+               if(el&&el.scrollIntoView) el.scrollIntoView({block:'center'}); }
+          catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+        }
+        if(typeof zAlertao==='function') zAlertao('A FICHA AINDA NÃO ESTÁ EM DIA',
+          ['A ficha de '+o.nome+' ainda mostra: '+vencJuntar(deve.map(function(x){ return vencFraseItem(x, hojeF); }))+'.',
+           podeGravar
+             ? 'Grave a data no quadro que abriu no cartão, logo abaixo dos itens. Com a ficha em dia, o cartão fecha.'
+             : 'Quem grava a data é a recepção, a Supervisão ou a Gestão.',
+           'Se o tutor ainda não mandou a data, toque em "Não" — o cartão continua na fila, e ninguém esquece.'],
+          {botao:'Entendi'});
+        return;
+      }
+    }
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var reg={quem:quem, ts:Date.now()};
     if(sim) vencGravar(chave, {ficha_atualizada:reg, ficha_falta:null},
@@ -36420,12 +36806,17 @@
   // Função PURA: recebe a lista do dia e devolve as linhas com os nomes, sem repetir nome
   // dentro de uma linha. É ela que o harness morde.
   function vencResumoGrupos(L){
-    var por={}, alvo={};
+    var por={}, alvo={}, visto={};
     (L||[]).forEach(function(o){
       (((o&&o.itens))||[]).forEach(function(x){
         var f=vencResumoFamilia(x);
-        por[f]=por[f]||[]; alvo[f]=alvo[f]||[];
-        if(por[f].indexOf(o.nome)<0){
+        por[f]=por[f]||[]; alvo[f]=alvo[f]||[]; visto[f]=visto[f]||{};
+        // Um nome por FILHOt em cada linha. A conferência é pela CHAVE (nome + tutor), não
+        // pelo nome: dois Thor de tutores diferentes com o vermífugo vencido são dois, e o
+        // segundo sumia do resumo (Fase 0, 25/set/2026).
+        var qual=String((o&&o.chave)||(o&&o.nome)||'');
+        if(!visto[f][qual]){
+          visto[f][qual]=1;
           por[f].push(o.nome);
           // `alvos` anda ao lado de `nomes`, na MESMA ordem: é o que deixa o nome desta
           // linha virar botão de atualizar a data (24/set/2026). `nomes` fica como estava
@@ -36455,16 +36846,24 @@
       +'</div>'
       +'<div class="hint" style="margin-top:2px">Por tipo de pendência, quem está devendo. Os cartões, com a mensagem pronta de cada um, vêm logo abaixo.</div>';
     G.forEach(function(g){
+      // O toque no nome ABRE O PAINEL AQUI, logo abaixo desta linha — origem 'resumo'. Antes
+      // o painel só aparecia no cartão, lá embaixo, e o toque parecia não fazer nada
+      // (Adriana, 25/set/2026: "eu clico aqui, vermífugo, Simba, nada acontece").
       var linha=(g.alvos&&g.alvos.length)
-        ? g.alvos.map(function(a){ return prevCorrigeChip(a.chave, a.k, a.nome, 'venc', 'font-size:13.5px;color:var(--z-blue)'); })
+        ? g.alvos.map(function(a){ return prevCorrigeChip(a.chave, a.k, a.nome, 'venc', 'font-size:13.5px;color:var(--z-blue)', 'resumo'); })
                  .join(' <span style="color:var(--muted)">·</span> ')
         : escAttr(g.nomes.join(' · '));
+      var aberto=null;
+      if(PREV_CORRIGE_ORIGEM==='resumo')
+        (g.alvos||[]).forEach(function(a){ if(!aberto && prevCorrigeAlvo(a.chave,a.k)===PREV_CORRIGE_ABERTO) aberto=a; });
       h+='<div style="margin-top:9px">'
         +'<div style="font-size:12.5px;font-weight:800;color:'
         +(g.v==='aberto'?'#1F5F69':'var(--z-blue)')+'">'+escAttr(g.rotulo)
         +' <span style="opacity:.65">('+g.nomes.length+')</span></div>'
         +'<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.8;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
-        +linha+'</div></div>';
+        +linha+'</div>'
+        +(aberto?prevCorrigePainelHTML(aberto.chave,'venc',hoje,'resumo'):'')
+        +'</div>';
     });
     return h+'<textarea id="vencResumoTxt" class="gest-txt" rows="8" style="width:100%;display:none;margin-top:10px"></textarea></div>';
   }
@@ -36566,7 +36965,11 @@
   function vencCartaoHTML(o, dia, hoje){
     var r=vencRegDe(o.chave)||{};
     var resp=String(r.resposta||'');
-    var fechado=!!r.ficha_atualizada;
+    // Fechado só com a ficha EM DIA (Fase 0, 25/set/2026). Um "Sim" gravado antes da trava
+    // — ou em outro aparelho, com a versão velha — não esconde o que a ficha ainda deve: o
+    // cartão volta aberto, com uma linha dizendo por quê.
+    var deveF=r.ficha_atualizada?vencFichaAindaDeve(o, r):[];
+    var fechado=!!r.ficha_atualizada && !deveF.length;
     var ka=jsAspas(o.chave);
     if(fechado){
       return '<div class="card" id="vencCard_'+escAttr(o.chave)+'" style="border-left:4px solid var(--crm-ok)">'
@@ -36582,6 +36985,11 @@
       +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
       +(o.tutor?(' · tutor: '+escAttr(o.tutor)):'')+'</span></div>';
     if(o.tel) h+='<div class="hint" style="margin:2px 0 0"><a href="tel:'+escAttr(o.tel)+'" style="color:var(--z-blue);font-weight:800">'+escAttr(o.tel)+'</a></div>';
+    if(r.ficha_atualizada && deveF.length)
+      h+='<div class="hint" style="margin:6px 0 0;color:var(--crm-atencao-text);font-weight:700">'
+        +escAttr((r.ficha_atualizada.quem||'Alguém')+' marcou a ficha como atualizada, mas ela ainda mostra: '
+          +vencJuntar(deveF.map(function(x){ return vencFraseItem(x, hoje); }))+'. O cartão continua aberto até a data entrar na ficha.')
+        +'</div>';
     // O remédio de uso contínuo entra no cartão (22/set/2026): quem fala com o tutor sobre
     // vacina também precisa saber que este FILHOt é cardíaco — é a mesma conversa.
     h+=medLinhaDoPel(o.p,'Uso contínuo, do cadastro. Confirme com o tutor se continua igual.');
@@ -37968,12 +38376,27 @@
     }
     return BANHO_RASC[chave];
   }
+  /* SÓ QUEM TEM BANHO FIXO (Fase 0, 25/set/2026 — Adriana: "Banhos recorrentes mostra só
+   * quem tem banho fixo, com busca e um botão para mostrar os outros"). A lista abria com
+   * TODOS os FILHOts da casa, e quem procurava os combinados rolava por dezenas de linhas
+   * sem banho. Agora abre só com quem tem o banho ligado (gravado OU ligado no rascunho —
+   * a linha que acabou de ser ligada não pode sumir no meio da edição). Para incluir
+   * alguém: a busca procura em TODOS os ativos. O botão mostra a casa inteira. */
+  var BANHO_MOSTRAR_TODOS=false;
+  function banhosTemFixo(p){
+    var b=null; try{ b=banhoRecDe(p); }catch(e){ b=null; } /* silencioso de propósito: sem o combinado lido, vale o rascunho */
+    if(b && b.ativo) return true;
+    try{ banhoRascCarregar(); }catch(e){} /* silencioso de propósito: sem rascunho guardado vale o que está na ficha */
+    var r=(BANHO_RASC||{})[banhosChave(p)];
+    return !!(r && r.ativo);
+  }
+  function banhosMostrarTodos(v){ BANHO_MOSTRAR_TODOS=!!v; banhosRenderLista(); }
   function banhosLista(){
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)) return [];
     var q=(typeof jsNorm==='function')?jsNorm(BANHO_BUSCA||''):String(BANHO_BUSCA||'').toLowerCase();
     return PELUDINHOS.filter(function(p){ return !(typeof pelInativo==='function' && pelInativo(p)); })
       .filter(function(p){
-        if(!q) return true;
+        if(!q) return BANHO_MOSTRAR_TODOS || banhosTemFixo(p);
         try{ return (typeof termosBuscaPel==='function')?(termosBuscaPel(p).indexOf(q)>=0):(jsNorm(p.n||'').indexOf(q)>=0); }
         catch(e){ return true; } /* silencioso de propósito: sem a busca, a lista sai inteira */
       })
@@ -38012,7 +38435,11 @@
       +'Não lança em feriado, nem em dia de falta avisada, nem para quem não vem naquele dia — e some se ele for marcado como faltou na chamada. '
       +'<strong>Nada é gravado antes de você tocar em Salvar</strong> na linha.</div>'
       +(pode?'':'<div class="hint" style="margin-top:6px;color:var(--crm-atencao-text);font-weight:700">Aqui você só lê: quem combina banho com o tutor é a Central Zêluz, a Supervisão ou a Gestão.</div>')
-      +'<input class="cad-in" id="banhosBusca" style="margin-top:9px" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" value="'+escAttr(BANHO_BUSCA)+'" oninput="banhosBuscar(this.value)">'
+      +'<input class="cad-in" id="banhosBusca" style="margin-top:9px" placeholder="Buscar o FILHOt pelo nome (procura em todos)…" autocomplete="off" value="'+escAttr(BANHO_BUSCA)+'" oninput="banhosBuscar(this.value)">'
+      +'<label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;font-weight:700;color:var(--z-blue);cursor:pointer">'
+      +'<input type="checkbox" id="banhosTodos"'+(BANHO_MOSTRAR_TODOS?' checked':'')+' onchange="banhosMostrarTodos(this.checked)" style="width:20px;height:20px;margin:0">'
+      +'Mostrar também quem não tem banho fixo</label>'
+      +'<div class="hint" style="margin-top:3px">A lista mostra só quem tem banho fixo. Para incluir alguém, busque o nome.</div>'
       +'</div>'
       +'<div id="banhosLista"></div>';
     banhosRenderLista();
@@ -38020,7 +38447,14 @@
   function banhosRenderLista(){
     var el=document.getElementById('banhosLista'); if(!el) return;
     var L=banhosLista();
-    if(!L.length){ el.innerHTML='<div class="card"><div class="hint">Nenhum FILHOt com esse nome na busca.</div></div>'; return; }
+    if(!L.length){
+      el.innerHTML='<div class="card"><div class="hint">'
+        +((BANHO_BUSCA||BANHO_MOSTRAR_TODOS)
+          ? 'Nenhum FILHOt com esse nome na busca.'
+          : 'Ninguém com banho fixo ainda. Busque o nome de um FILHOt acima para ligar o banho dele.')
+        +'</div></div>';
+      return;
+    }
     el.innerHTML='<div class="card" style="padding-top:6px">'
       +L.map(function(p){ return '<div class="banho-linha" id="banhoL_'+escAttr(banhosChave(p))+'">'+banhosLinhaHTML(p)+'</div>'; }).join('')
       +'</div>';
@@ -38679,6 +39113,11 @@
       // Tirou a pernoite da lista do dia: a fila do check-in não pode continuar pedindo o
       // check-in de uma noite que ninguém vai fazer.
       if(k==='pernoite'){ try{ pernRetirarDoLancamento(reg, dashDia()); }catch(e){ _logFalhaGrav('retirar a pernoite da fila do check-in', e); } }
+      // Tirou o remédio de hoje: o alarme dele sai junto (Fase 0, 25/set/2026).
+      if(k==='medicacao' && dashDia()===dcDataKey()){
+        try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+        catch(e){ _logFalhaGrav('desarmar o alarme do remédio tirado', e); }
+      }
       dashEspelhar(k,id,reg,'remover');
     }).catch(function(e){ alert('Não removeu: '+((e&&e.message)||e)); });
   }
@@ -38717,9 +39156,76 @@
   }
   // O nome limpo, sem o detalhe entre parênteses que a lista do dia mostra.
   function pernNomeLimpo(v){ return String(v==null?'':v).replace(/\s*\([^)]*\)\s*$/,'').trim(); }
+  /* ====================================================================================
+   * A PERNOITE DE ONTEM QUE FICOU SEM CHECK-IN (Fase 0, 25/set/2026)
+   * A fila só olhava HOJE. A pernoite lançada ontem e sem check-in sumia de todas as telas
+   * à meia-noite — e com ela a ficha da noite (comida, remédio) e o valor a cobrar. A
+   * auditoria de 25/set achou o furo. Agora os últimos PERN_DIAS_ATRAS dias também são
+   * lidos (uma vez por dia, por aparelho), e o que ficou "aguardando" continua na tela,
+   * com a data da noite, até alguém fazer o check-in daquela noite ou dizer o que houve.
+   * ================================================================================== */
+  var PERN_DIAS_ATRAS=3;
+  var PERN_ATRAS=null;          // [{_dia,_chave,...}] ainda aguardando; null = ainda não li
+  var PERN_ATRAS_LIDO_EM='';    // o dia (hoje) em que a varredura foi feita
+  // Função PURA: recebe {dia:{chave:registro}} e devolve o que ainda espera check-in, dos
+  // dias ANTERIORES a hoje, da noite mais antiga para a mais nova.
+  function pernAtrasadasDeDias(regsPorDia, hoje){
+    var out=[];
+    Object.keys(regsPorDia||{}).forEach(function(dia){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(dia) || !(dia<hoje)) return;
+      var doDia=regsPorDia[dia]||{};
+      Object.keys(doDia).forEach(function(ch){
+        var r=doDia[ch]||{};
+        if(String(r.status||'aguardando')!=='aguardando') return;
+        out.push(Object.assign({}, r, {_dia:dia, _chave:ch}));
+      });
+    });
+    return out.sort(function(a,b){ return (a._dia<b._dia)?-1:((a._dia>b._dia)?1:((a.ts||0)-(b.ts||0))); });
+  }
+  function pernAtrasCarregar(forcar){
+    var hoje=pernHoje();
+    if(!DB||!hoje) return Promise.resolve(null);
+    if(!forcar && PERN_ATRAS!==null && PERN_ATRAS_LIDO_EM===hoje) return Promise.resolve(PERN_ATRAS);
+    var dias=[];
+    for(var i=1;i<=PERN_DIAS_ATRAS;i++){ var d=addDiasISO(hoje,-i); if(d) dias.push(d); }
+    var falhou=false;
+    return Promise.all(dias.map(function(d){
+      return DB.ref(pernNo(d)).once('value').then(function(s){ return [d, s.val()||{}]; })
+        .catch(function(e){ falhou=true; _logLeituraFalhou(pernNo(d)+' (pernAtrasCarregar)', e); return [d, {}]; });
+    })).then(function(pares){
+      var regs={}; pares.forEach(function(par){ regs[par[0]]=par[1]; });
+      // Leitura que falhou não vira "nenhuma atrasada": fica null e a próxima abertura tenta de novo.
+      PERN_ATRAS=falhou?null:pernAtrasadasDeDias(regs, hoje);
+      PERN_ATRAS_LIDO_EM=falhou?'':hoje;
+      try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ var _c=document.getElementById('poCardPernoitesBox'); if(_c && typeof poCardPernoites==='function') _c.innerHTML=poCardPernoites(); }
+      catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ if(typeof mesaRender==='function' && document.getElementById('mesaRoot')) mesaRender(); }
+      catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      return PERN_ATRAS;
+    });
+  }
+  // A noite, em português: "ontem (24/09)", "terça (22/09)".
+  function pernNoiteTexto(dia){
+    var hoje=pernHoje();
+    var br=((typeof fmtBR==='function')?fmtBR(dia):dia)||dia;
+    var curta=String(br).slice(0,5);
+    if(addDiasISO(hoje,-1)===dia) return 'ontem ('+curta+')';
+    var nomes=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+    var w=''; try{ w=nomes[new Date(dia+'T12:00:00').getDay()]||''; }catch(e){ w=''; } /* silencioso de propósito: sem o dia da semana vale só a data */
+    return (w?(w+' '):'')+'('+curta+')';
+  }
+  function pernAtrasDe(dia, chave){
+    return (PERN_ATRAS||[]).filter(function(r){ return r._dia===dia && r._chave===chave; })[0]||null;
+  }
+  function pernAtrasTirar(dia, chave){
+    if(PERN_ATRAS) PERN_ATRAS=PERN_ATRAS.filter(function(r){ return !(r._dia===dia && r._chave===chave); });
+  }
   function pernFilaCarregar(dia, aoChegar){
     dia=dia||pernHoje();
     if(!DB){ if(typeof aoChegar==='function') aoChegar(); return Promise.resolve({}); }
+    // Quem lê o dia de hoje lê também as noites que ficaram para trás (uma vez por dia).
+    if(dia===pernHoje()){ try{ pernAtrasCarregar(false); }catch(e){ _logLeituraFalhou('pernoites dos dias anteriores', e); } }
     return DB.ref(pernNo(dia)).once('value').then(function(s){
       PERN_FILA=s.val()||{}; PERN_FILA_DIA=dia; PERN_FILA_LIDO=true;
       try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -38754,7 +39260,9 @@
     if(!PERN_FILA_LIDO || PERN_FILA_DIA!==pernHoje()) return null;
     var viva=pernLista().filter(function(r){ return String(r.status||'aguardando')!=='cancelado'; });
     var esp=viva.filter(function(r){ return String(r.status||'aguardando')==='aguardando'; });
-    return {total:viva.length, semCheckin:esp.length, feitos:viva.length-esp.length};
+    // `anteriores`: noites de dias passados ainda sem check-in (null = ainda não li).
+    return {total:viva.length, semCheckin:esp.length, feitos:viva.length-esp.length,
+            anteriores:(PERN_ATRAS===null)?null:PERN_ATRAS.length};
   }
   // Passou da hora de fechar e ainda há pernoite sem check-in? O aviso NÃO depende de alguém
   // abrir a tela certa: ele aparece no Check-in E no Dashboard da Márcia.
@@ -38763,6 +39271,15 @@
     var agora=new Date();
     if(agora.getHours()<PERN_HORA_ALERTA) return [];
     return pernLista('aguardando');
+  }
+  // As noites que ficaram para trás não esperam as 19h: já passaram.
+  function pernAnterioresAlertaHTML(){
+    var A=PERN_ATRAS||[]; if(!A.length) return '';
+    return '<div class="dc-faltas" style="margin:10px 0;border-color:var(--crm-critico)">'
+      +'<strong>Pernoite de dia anterior sem check-in: '
+      +escAttr(A.map(function(r){ return pernNomeLimpo(r.nome)+' — '+pernNoiteTexto(r._dia); }).join(', '))+'.</strong>'
+      +'<div style="font-weight:600;margin-top:4px">A noite aconteceu e não tem ficha nem valor lançado. Faça o check-in daquela noite '
+      +'(a data já vem certa) — ou, se o tutor buscou, toque em &laquo;Tutor buscou, cancelar&raquo; e escreva o que houve.</div></div>';
   }
   function pernAlertaHTML(){
     var L=pernAtrasadas(); if(!L.length) return '';
@@ -38846,13 +39363,39 @@
     var el=document.getElementById('ciPernoitesDia'); if(!el) return;
     el.innerHTML=pernCartaoHTML();
   }
+  // O bloco das noites que ficaram para trás — ANTES do de hoje: é o mais antigo que pede
+  // alguém primeiro.
+  function pernAnterioresHTML(){
+    var A=PERN_ATRAS||[]; if(!A.length) return '';
+    var h='<div class="card" style="border-left:4px solid var(--crm-critico)">'
+      +'<h2 style="font-size:17px">Pernoites de dias anteriores sem check-in ('+A.length+')</h2>'
+      +'<div class="hint">A noite já aconteceu e ficou sem ficha e sem valor. O check-in abre com a data daquela noite.</div>'
+      +'<div style="margin-top:10px">';
+    A.forEach(function(r){
+      var ch=escAttr(String(r._chave||'')).replace(/'/g,'&#39;'), di=escAttr(r._dia);
+      h+='<div style="border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px;background:var(--z-cream-warm)">'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(pernNomeLimpo(r.nome))
+        +' <span style="font-size:12.5px;color:var(--crm-critico)">— noite de '+escAttr(pernNoiteTexto(r._dia))+'</span></div>'
+        +'<div class="hint" style="margin-top:2px">'+escAttr(r.motivo||'motivo não declarado')
+        +(r.quem?(' · lançado por '+escAttr(r.quem)):'')+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+        +'<button type="button" class="btn btn-primary" style="flex:1 1 200px" onclick="pernFazerCheckin(\''+ch+'\',\''+di+'\')">Fazer o check-in desta noite</button>'
+        +'<button type="button" class="btn" style="flex:0 1 auto;background:var(--z-cream);border:1.5px solid var(--crm-critico);color:var(--crm-critico);font-weight:800" onclick="pernCancelar(\''+ch+'\',\''+di+'\')">Tutor buscou, cancelar</button>'
+        +'</div></div>';
+    });
+    return h+'</div></div>';
+  }
   function pernCartaoHTML(){
     var hoje=pernHoje();
+    var ant=pernAnterioresHTML();
     if(!PERN_FILA_LIDO || PERN_FILA_DIA!==hoje)
-      return '<div class="card"><div class="hint">Conferindo as pernoites lançadas no Day Care…</div></div>';
+      return ant+'<div class="card"><div class="hint">Conferindo as pernoites lançadas no Day Care…</div></div>';
     var esp=pernLista('aguardando');
     var feitos=pernLista('checkin_feito').length;
-    if(!esp.length && !feitos) return '';
+    if(!esp.length && !feitos) return ant;
+    return ant+pernCartaoHojeHTML(hoje, esp, feitos);
+  }
+  function pernCartaoHojeHTML(hoje, esp, feitos){
     var diaBR=(typeof repBRdata==='function')?repBRdata(hoje):hoje;
     var h='<div class="card" style="border-left:4px solid var(--z-gold)">'
       +'<h2 style="font-size:17px">🌙 Pernoites do Day Care de '+escAttr(diaBR)+' ('+esp.length+')</h2>'
@@ -38913,8 +39456,10 @@
     }
     return i;
   }
-  function pernFazerCheckin(chave){
-    var r=(PERN_FILA||{})[chave]; if(!r) return;
+  // `dia` (opcional, Fase 0): a noite de um dia anterior — a entrada é aquela noite.
+  function pernFazerCheckin(chave, dia){
+    var anterior=!!(dia && dia!==pernHoje());
+    var r=anterior?pernAtrasDe(dia, chave):(PERN_FILA||{})[chave]; if(!r) return;
     var i=pernFichaIndiceDe(Object.assign({_chave:chave}, r));
     if(i<0){
       if(typeof zAlertao==='function') zAlertao('NÃO ACHEI A FICHA DESTE FILHOt',
@@ -38923,9 +39468,10 @@
         {botao:'Vou buscar o nome'});
       return;
     }
-    var hoje=pernHoje(), amanha=(typeof ciMaisUmDia==='function')?ciMaisUmDia(hoje):'';
+    var noite=anterior?dia:pernHoje();
+    var amanha=(typeof ciMaisUmDia==='function')?ciMaisUmDia(noite):addDiasISO(noite,1);
     var pk=''; try{ pk=pelKey(PELUDINHOS[i]); }catch(e){ pk=''; }
-    PERN_CI_PENDENTE={chave:chave, petKey:pk, entrada:hoje, saida:amanha};
+    PERN_CI_PENDENTE={chave:chave, petKey:pk, entrada:noite, saida:amanha, dia:noite};
     try{ if(typeof irParaView==='function') irParaView('checkin'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     ciEscolher(i);
     pernAplicarNoCheckin();
@@ -38947,13 +39493,14 @@
   // O check-in foi salvo: a fila fecha, guardando QUAL estadia nasceu dela.
   function pernMarcarCheckinFeito(estadiaId){
     if(!PERN_CI_PENDENTE || !DB) return Promise.resolve(false);
-    var ch=PERN_CI_PENDENTE.chave, dia=PERN_FILA_DIA||pernHoje();
+    var ch=PERN_CI_PENDENTE.chave, dia=PERN_CI_PENDENTE.dia||PERN_FILA_DIA||pernHoje();
     var up={ status:'checkin_feito', estadiaId:String(estadiaId||''),
              checkin_quem:(typeof quemSou==='function'?quemSou():'-'), checkin_ts:Date.now() };
     PERN_CI_PENDENTE=null;
     return DB.ref(pernNo(dia)+'/'+ch).update(up).then(function(){
       if(PERN_FILA_DIA===dia && PERN_FILA[ch]) Object.assign(PERN_FILA[ch], up);
-      try{ if(typeof audit==='function') audit('pernoite-daycare','check-in de pernoite feito — estadia '+up.estadiaId,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      pernAtrasTirar(dia, ch);
+      try{ if(typeof audit==='function') audit('pernoite-daycare','check-in de pernoite feito — estadia '+up.estadiaId+(dia!==pernHoje()?(' (noite de '+dia+')'):''),{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
       try{ pernCartaoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       return true;
     }).catch(function(e){
@@ -38969,8 +39516,9 @@
   }
   // ---- o tutor veio buscar ----------------------------------------------------------
   // Cancelar é decisão, não acidente: pede o motivo escrito e grava QUEM cancelou.
-  function pernCancelar(chave){
-    var r=(PERN_FILA||{})[chave]; if(!r) return;
+  function pernCancelar(chave, diaOpc){
+    var anterior=!!(diaOpc && diaOpc!==pernHoje());
+    var r=anterior?pernAtrasDe(diaOpc, chave):(PERN_FILA||{})[chave]; if(!r) return;
     if(typeof zTexto!=='function'){ return; }
     zTexto('Cancelar a pernoite de '+pernNomeLimpo(r.nome||'')+'?',
       ['O tutor veio buscar, ou a pernoite não vai acontecer? Escreva o que houve — é isso que responde, depois, por que a noite não foi cobrada.',
@@ -38980,11 +39528,12 @@
        erro:'Escreva pelo menos 4 letras dizendo o que houve.'})
     .then(function(motivo){
       if(motivo===null||!DB) return;
-      var dia=PERN_FILA_DIA||pernHoje();
+      var dia=anterior?diaOpc:(PERN_FILA_DIA||pernHoje());
       var up={ status:'cancelado', cancel_motivo:String(motivo||'').trim(),
                cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now() };
       DB.ref(pernNo(dia)+'/'+chave).update(up).then(function(){
-        if(PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up);
+        if(anterior) pernAtrasTirar(dia, chave);
+        else if(PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up);
         try{ if(typeof audit==='function') audit('pernoite-daycare','cancelou a pernoite de '+pernNomeLimpo(r.nome||'')+' — '+up.cancel_motivo,{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
         pernCartaoRender();
         try{ if(typeof renderDash==='function') renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -40220,24 +40769,36 @@
     var seq=Promise.resolve(), n=0;
     f.forEach(function(it){
       seq=seq.then(function(){
-        var r=Object.assign({}, it.rec, {reenviado:true, motivoFalha:it.motivo});
+        var r=_audNormalizar(Object.assign({}, it.rec, {reenviado:true, motivoFalha:it.motivo}));
         return DB.ref('daycare/auditoria/'+it.dia).push(r).then(function(){ n++; })
           .catch(function(e){ _audGuardarNoBolso(it.dia, it.rec, (e&&e.message)||String(e)); });
       });
     });
     return seq.then(function(){ return n; });
   }
+  // O banco (regras v2) só aceita a entrada com ts NÚMERO e quem/role/acao TEXTO. Um `meta`
+  // que trouxesse um desses campos em outro formato — ou o registro de falha, que nascia sem
+  // quem e sem role — era recusado e voltava para o bolso a cada reenvio, para sempre
+  // (Fase 0, 25/set/2026). Aqui o formato é garantido antes de sair.
+  function _audNormalizar(rec){
+    rec=rec||{};
+    rec.ts=Number(rec.ts)||Date.now();
+    rec.quem=String(rec.quem==null?'-':rec.quem)||'-';
+    rec.role=String(rec.role==null?'-':rec.role)||'-';
+    rec.acao=String(rec.acao==null?'-':rec.acao)||'-';
+    return rec;
+  }
   function audit(acao, detalhe, meta){
     try{
       const u=_sessao();
       const dia=_audKey();
-      const rec=Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{});
+      const rec=_audNormalizar(Object.assign({ ts:Date.now(), hora:horaAgora(), quem:(u.nome||'-'), role:(u.role||'-'), acao:acao||'', detalhe:(detalhe==null?'':String(detalhe)) }, meta||{}));
       if(!DB){ _audGuardarNoBolso(dia, rec, 'banco reconectando'); return; }
       DB.ref('daycare/auditoria/'+dia).push(rec).catch(function(e){ _audGuardarNoBolso(dia, rec, (e&&e.message)||String(e)); });
     }catch(e){
       // Aqui NÃO se chama _logFalhaGrav: ele grava pelo próprio audit, e a falha entraria em
       // roda-viva. O rastro vai direto para o bolso local, que o _audReenviarBolso reenvia.
-      try{ _audGuardarNoBolso(_audKey(), { ts:Date.now(), acao:'audit-FALHOU',
+      try{ _audGuardarNoBolso(_audKey(), { ts:Date.now(), quem:'-', role:'-', acao:'audit-FALHOU',
         detalhe:'não consegui montar o rastro de "'+String(acao||'')+'"' }, (e&&e.message)||String(e)); }catch(_){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     }
   }
@@ -49550,7 +50111,20 @@
     var C=(typeof pernContagem==='function')?pernContagem():null;
     if(C===null) return h+poSemLeituraHTML('as pernoites lançadas hoje')
       +poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
-    if(!C.total) return h+poVazioHTML('Nenhuma pernoite lançada hoje.','Quando a recepção lançar uma em Lançamentos do dia, ela aparece aqui e no Check-in.')
+    // As noites de dias anteriores sem check-in vêm primeiro (Fase 0, 25/set/2026).
+    var ANT=(typeof PERN_ATRAS!=='undefined' && PERN_ATRAS)?PERN_ATRAS:[];
+    if(ANT.length){
+      h+='<div class="pm-lista">';
+      ANT.slice(0,4).forEach(function(r){
+        h+='<div class="pm-li"><span class="pm-badge pm-b-critico">noite sem check-in</span>'
+          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+'</b>'
+          +'<span>'+esc('noite de '+pernNoiteTexto(r._dia)+' — '+(r.motivo||'motivo não declarado'))+'</span></div></div>';
+      });
+      h+='</div>';
+      if(ANT.length>4) h+='<p class="pm-sub" style="margin-top:10px">Mais '
+        +pmPlural(ANT.length-4,'noite','noites')+' de dias anteriores sem check-in.</p>';
+    }
+    if(!C.total) return h+(ANT.length?'':poVazioHTML('Nenhuma pernoite lançada hoje.','Quando a recepção lançar uma em Lançamentos do dia, ela aparece aqui e no Check-in.'))
       +poIrHTML('checkin','Abrir o Check-in da hospedagem')+'</article>';
     h+='<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:14px">'
       +'<div><div class="pm-kpi hero" data-pm-alvo="'+C.total+'">0</div>'

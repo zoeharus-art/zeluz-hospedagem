@@ -263,11 +263,17 @@ function guardaDeEscrita() {
 // é cadastrado no banco, em daycare/config/monitores — é de lá que descobrimos as senhas de
 // monitor, veterinária, recepção (consultora) e supervisão.
 
-const SENHAS_FIXAS = {
-  gestao: { senha: '0902', quem: 'Márcia · Gestora', origem: 'senha fixa no HTML' },
-  diretoria: { senha: '1101', quem: 'Adriana · Gestão Total', origem: 'senha fixa no HTML (role=gestao + souAdriana, que o app trata como Diretoria)' },
-  plantonista: { senha: '1001', quem: 'Plantonista', origem: 'senha fixa no HTML' }
+// As senhas NÃO ficam no repositório (público). Fase 0, 25/set/2026: vêm do ambiente —
+// ZELUZ_SENHA_GESTAO, ZELUZ_SENHA_DIRETORIA e ZELUZ_SENHA_PLANTAO. Sem a variável, o papel
+// é pulado com o motivo escrito (o mesmo caminho de quando não há senha no cadastro).
+const _senhaDoAmbiente = (v) => String(process.env[v] || '');
+const SENHAS_FIXAS_TODAS = {
+  gestao: { senha: _senhaDoAmbiente('ZELUZ_SENHA_GESTAO'), quem: 'Márcia · Gestora', origem: 'senha fixa no HTML' },
+  diretoria: { senha: _senhaDoAmbiente('ZELUZ_SENHA_DIRETORIA'), quem: 'Adriana · Gestão Total', origem: 'senha fixa no HTML (role=gestao + souAdriana, que o app trata como Diretoria)' },
+  plantonista: { senha: _senhaDoAmbiente('ZELUZ_SENHA_PLANTAO'), quem: 'Plantonista', origem: 'senha fixa no HTML' }
 };
+const SENHAS_FIXAS = {};
+Object.keys(SENHAS_FIXAS_TODAS).forEach((p) => { if (SENHAS_FIXAS_TODAS[p].senha) SENHAS_FIXAS[p] = SENHAS_FIXAS_TODAS[p]; });
 
 // Quem "está no turno" quando a senha é de POSTO. O app pede este nome na porta de entrada
 // desde 29/ago/2026 — posto não assina nada, pessoa assina.
