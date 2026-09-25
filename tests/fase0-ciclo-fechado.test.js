@@ -1187,6 +1187,92 @@ prova('QA NOVO-1/B2 — a conversa irmã respondida fecha o assunto em TODAS as 
     '"Não respondeu" gravado na irmã (dado antigo) não fecha');
 });
 
+// ================================================================== Fechamento por assunto (25/set)
+console.log('\nFechamento por assunto — a ficha resolve o assunto, a conversa dele fecha');
+const FA_EM_DIA = { vac_mult_p: '2027-05-10', vac_gripe_p: '2027-05-10', vac_raiva_p: '2027-05-10', verm_p: '2027-05-10', ecto_p: '2027-05-10', escova_p: '2027-05-10' };
+prova('pura: resolvido é o assunto conversado que não tem mais item no cartão do dia', () => {
+  run("__bk12={hz:zHojeISO}; zHojeISO=function(){ return '2026-09-21'; };");
+  try {
+    const r = { enviadas: { antip: { ts: 1 }, vacina: { ts: 1 } }, respostas: { antip: { v: 'casa' } } };
+    const ficha = Object.assign({}, FA_EM_DIA, { verm_p: '2027-01-20', vac_raiva_p: '2026-09-24' });
+    const res = JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(ficha) + ',' + JSON.stringify(r) + ",'2026-09-22','2026-09-21')")));
+    assert.deepStrictEqual(res, ['antip'], 'o vermífugo resolvido fecha; a raiva continua');
+    const ja = Object.assign({}, r, { fechados: { antip: { ts: 1 } } });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(ficha) + ',' + JSON.stringify(ja) + ",'2026-09-22','2026-09-21')"))), [], 'o que já fechou não fecha de novo');
+    // a pergunta "fazer hoje?" (ant_antip) é do mesmo assunto
+    const r2 = { enviadas: { ant_antip: { ts: 1 } } };
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(FA_EM_DIA) + ',' + JSON.stringify(r2) + ",'2026-09-21','2026-09-21')"))), ['antip']);
+    // assunto que só nasceu (nunca conversado) não é "fechado": ele nem existia
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(FA_EM_DIA) + ",{},'2026-09-22','2026-09-21')"))), []);
+  } finally { run('zHojeISO=__bk12.hz;'); }
+});
+prova('o assunto fechado pela ficha sai de todas as telas: estado, Respostas pendentes e recado da veterinária', () => {
+  assert.strictEqual(run("vencEstadoTipo({enviadas:{antip:{ts:1}}, fechados:{antip:{ts:2}}}, 'antip', Date.now())"), 'fechado');
+  assert.strictEqual(run("vencEstadoTipo({enviadas:{ant_antip:{ts:1}}, fechados:{antip:{ts:2}}}, 'ant_antip', Date.now())"), 'fechado', 'a pergunta "fazer hoje?" do mesmo assunto também');
+  assert.notStrictEqual(run("vencEstadoTipo({enviadas:{vacina:{ts:1}}, fechados:{antip:{ts:2}}}, 'vacina', Date.now())"), 'fechado', 'outro assunto segue aberto');
+  const agora = Date.UTC(2026, 8, 24, 18);
+  const regs = { '2026-09-22': { thor__bia: { pet: 'Thor', enviadas: { antip: { ts: agora - 50 * 3600000 }, vacina: { ts: agora - 50 * 3600000 } }, fechados: { antip: { ts: agora - 3600000 } } } } };
+  const L = JSON.parse(JSON.stringify(run('vencPendLista(' + JSON.stringify(regs) + ", '2026-09-24', " + agora + ')')));
+  assert.deepStrictEqual(L.map((x) => x.tipo), ['vacina'], 'só a vacina continua sendo cobrada');
+});
+provaAsync('gravar a data de prevenção na ficha fecha os assuntos resolvidos, em cada dia de conversa (e não os outros)', async () => {
+  run(`__bk13={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, au:audit, vre:vencRender, vrq:vencRedesenharQuadros, qs:quemSou, hz:zHojeISO, pe:pelExtra};
+    __grav13=[];
+    DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      update:function(v){ __grav13.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    zHojeISO=function(){ return '2026-09-21'; };
+    __P13={n:'Thor', tutor:'Bia'}; __K13=dcKey('Thor','Bia');
+    pelExtra=function(){ return ${JSON.stringify(Object.assign({}, FA_EM_DIA, { verm_p: '2026-09-10', vac_raiva_p: '2026-09-24' }))}; };
+    VENC_REG=null; VENC_REG_DIA='';
+    VENC_PEND={'2026-09-15':{}, '2026-09-22':{}, '2026-09-23':{}};
+    VENC_PEND['2026-09-15'][__K13]={enviadas:{antip:{ts:1}}};
+    VENC_PEND['2026-09-22'][__K13]={enviadas:{antip:{ts:1}, vacina:{ts:1}}};
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; quemSou=function(){ return 'Ana'; };`);
+  try {
+    run("vencFecharAssuntosPelaFicha(__P13, {verm_p:'2027-01-20', verm_t:'2026-09-21'})");
+    for (let i = 0; i < 30; i++) await Promise.resolve();
+    const g = JSON.parse(JSON.stringify(run('__grav13')));
+    assert.deepStrictEqual(g.map((x) => x.p.split('/')[2]).sort(), ['2026-09-15', '2026-09-22'], 'os dois dias com conversa do vermífugo');
+    g.forEach((x) => {
+      assert.deepStrictEqual(Object.keys(x.v.fechados), ['antip'], 'só o vermífugo fecha; a vacina segue');
+      assert.strictEqual(x.v.fechados.antip.quem, 'Ana');
+      assert.strictEqual(x.v.fechados.antip.via, 'ficha');
+    });
+  } finally { run('DB=__bk13.db; VENC_REG=__bk13.vr; VENC_REG_DIA=__bk13.vrd; VENC_PEND=__bk13.vp; audit=__bk13.au; vencRender=__bk13.vre; vencRedesenharQuadros=__bk13.vrq; quemSou=__bk13.qs; zHojeISO=__bk13.hz; pelExtra=__bk13.pe;'); }
+});
+
+prova('recado da veterinária: sai com a vacina resolvida; fica quando só o "em aberto" fechou e a vacina ainda deve', () => {
+  run(`__bk14={vr:VENC_REG, vrd:VENC_REG_DIA, vda:vencDiaAlvo, fd:vencFichaDeveAgora};
+    vencDiaAlvo=function(){ return '2026-09-22'; }; VENC_REG_DIA='2026-09-22';
+    __vet={pet:'Thor', vacinas:'Raiva', dia:'2026-09-22', periodo:'no dia dele'};`);
+  try {
+    run("VENC_REG={thor__bia:{vet:__vet, fechados:{vacina:{ts:1}}}}; vencFichaDeveAgora=function(){ return []; };");
+    assert.strictEqual(run('vencVetAvisos().length'), 0, 'vacina resolvida: sem recado');
+    run("VENC_REG={thor__bia:{vet:__vet, fechados:{aberto:{ts:1}}}}; vencFichaDeveAgora=function(){ return [{k:'vac_raiva_p', vacina:true, atrasado:true}]; };");
+    assert.strictEqual(run('vencVetAvisos().length'), 1, 'data velha da carteirinha: a vacina continua a aplicar');
+    run("vencFichaDeveAgora=function(){ return []; };");
+    assert.strictEqual(run('vencVetAvisos().length'), 0, '"em aberto" fechado e nenhuma vacina devendo: sem recado');
+  } finally { run('VENC_REG=__bk14.vr; VENC_REG_DIA=__bk14.vrd; vencDiaAlvo=__bk14.vda; vencFichaDeveAgora=__bk14.fd;'); }
+});
+provaAsync('gravar prevenção na ficha dispara o fechamento por assunto — só depois de gravar, e só com campo de prevenção', async () => {
+  run(`__bk15={db:DB, vf:vencFecharAssuntosPelaFicha, pb:pelCamposBarrados, ge:document.getElementById};
+    __chamou15=[];
+    vencFecharAssuntosPelaFicha=function(p, patch){ __chamou15.push(Object.keys(patch).join(',')); };
+    pelCamposBarrados=function(){ return []; };
+    document.getElementById=function(){ return null; };
+    __ok15=true;
+    DB={ref:function(){ return { update:function(){ return __ok15?Promise.resolve():Promise.reject(new Error('negado')); } }; }};`);
+  try {
+    run("setPelExtra({n:'Thor', tutor:'Bia'}, {verm_p:'2027-01-20'})");
+    run("setPelExtra({n:'Thor', tutor:'Bia'}, {obs:'come devagar'})");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__chamou15'))), ['verm_p'], 'só a gravação de prevenção dispara');
+    run("__chamou15=[]; __ok15=false; setPelExtra({n:'Thor', tutor:'Bia'}, {ecto_p:'2027-01-20'})");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__chamou15'))), [], 'gravação que falhou não fecha nada');
+  } finally { run('DB=__bk15.db; vencFecharAssuntosPelaFicha=__bk15.vf; pelCamposBarrados=__bk15.pb; document.getElementById=__bk15.ge;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

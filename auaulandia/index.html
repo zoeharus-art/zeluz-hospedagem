@@ -20608,6 +20608,15 @@
       return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
     }
     const s=document.getElementById('pel-saved'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
+    // FECHAMENTO POR ASSUNTO (25/set/2026): data de prevenção gravada, de qualquer tela, confere
+    // se algum assunto conversado com o tutor ficou resolvido. Só depois da gravação dar certo.
+    if(patch && Object.keys(patch).some(function(c){ return /_(p|t|doses|res)$/.test(c) || c==='col_nome'; })){
+      _pFicha.then(function(res){
+        if(!res || !res.ok) return;
+        try{ if(typeof vencFecharAssuntosPelaFicha==='function') vencFecharAssuntosPelaFicha(p, patch); }
+        catch(e){ _logFalhaGrav('fechar assuntos pela ficha '+k, e); }
+      });
+    }
     return _pFicha;
   }
   // ===== "NÃO TEM" NA FICHA (Adriana, 17/set/2026) ================================
@@ -35884,6 +35893,9 @@
   function vencEstadoTipo(r, tipo, agora, deve){
     r=r||{};
     if(r.ficha_atualizada && !(Array.isArray(deve) && deve.length)) return 'fechado';
+    // FECHADO POR ASSUNTO (Adriana, 25/set/2026): a ficha resolveu este assunto — a data nova
+    // do vermífugo fecha a conversa do vermífugo, mesmo com a vacina ainda no cartão.
+    if(tipo && (r.fechados||{})[vencTipoBase(tipo)]) return 'fechado';
     // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
     // respondida: o tutor já disse o que fazer — este assunto está fechado em todas as telas.
     if(tipo){
@@ -36467,7 +36479,7 @@
   // leitura: o "Mandei" da vacina feito no balcão sumia quando a recepção tocava o do
   // vermífugo. Agora, antes de gravar, o mapa é relido do banco (uma leitura pequena) e só
   // o assunto que ESTE toque mudou entra por cima. O formato gravado não muda.
-  var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto'];
+  var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto','fechados'];
   var VENC_FILA_GRAV={};      // {dia|chave: promessa} — a fila das gravações de cada registro
   // Pura: o mapa do banco (fresco), o que este aparelho tinha (velho) e o que ele quer (novo).
   // Entra por cima só o assunto que mudou de velho para novo; o que sumiu de velho para novo
@@ -36571,6 +36583,53 @@
     });
     VENC_FILA_GRAV[filaK]=agora.then(function(){}, function(){});
     return agora;
+  }
+  // ===== FECHAMENTO POR ASSUNTO (Adriana, 25/set/2026: "pode seguir com o fechamento por assunto")
+  // Antes, a conversa com o tutor só fechava pelo "Sim" do cartão inteiro — e o cartão só sai
+  // quando TUDO está em dia. A conversa do vermífugo ficava sendo cobrada enquanto a vacina
+  // continuasse no cartão, mesmo com o vermífugo já registrado na ficha. Agora cada ASSUNTO
+  // fecha sozinho quando a ficha deixa de ter item dele no cartão daquele dia: grava
+  // fechados/{assunto} = {quem, ts, via:'ficha'} no MESMO registro da conversa.
+  // Pura: os assuntos conversados (e ainda não fechados) que não têm mais item no cartão.
+  function vencAssuntosResolvidos(ex, r, dia, hoje){
+    r=r||{};
+    var conv={};
+    ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
+      Object.keys(r[c]||{}).forEach(function(t){ var b=vencTipoBase(t); if(b) conv[b]=1; });
+    });
+    var ja=r.fechados||{};
+    var itens=[];
+    try{ itens=vencItensDe(ex||{}, dia, vencMargem(), hoje, {incluirSemRegistro:true})||[]; }
+    catch(e){ return []; } /* silencioso de propósito: ficha estranha não fecha nada */
+    var tem={};
+    itens.forEach(function(x){ tem[vencTipoDoItemObj(x)]=1; });
+    return Object.keys(conv).filter(function(t){ return !ja[t] && !tem[t]; });
+  }
+  // Varre os dias em memória em que houve conversa com o tutor deste FILHOt e fecha o que a
+  // ficha resolveu. `patch` é o que acabou de ser gravado: o cadastro em memória só recebe a
+  // data nova do banco ~90 ms depois, e sem ela o app olharia a ficha velha.
+  function vencFecharAssuntosPelaFicha(p, patch){
+    if(!DB || !p) return;
+    var chave=(typeof dcKey==='function')?dcKey(p.n, p.tutor):''; if(!chave) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var ex=Object.assign({}, ((typeof pelExtra==='function')?pelExtra(p):{})||{}, patch||{});
+    var dias={};
+    Object.keys(VENC_PEND||{}).forEach(function(d){ if((VENC_PEND[d]||{})[chave]) dias[d]=1; });
+    if(VENC_REG && VENC_REG_DIA && VENC_REG[chave]) dias[VENC_REG_DIA]=1;
+    var quem=(typeof quemSou==='function'?quemSou():'-');
+    var nome=((typeof pelNome==='function')?pelNome(p):'')||p.n||'';
+    var tutor=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
+    Object.keys(dias).sort().forEach(function(dia){
+      var r=vencRegDeDia(dia, chave); if(!r) return;
+      var res=vencAssuntosResolvidos(ex, r, dia, hoje);
+      if(!res.length) return;
+      var fech=Object.assign({}, r.fechados||{});
+      res.forEach(function(t){ fech[t]={quem:quem, ts:Date.now(), via:'ficha'}; });
+      vencGravar(chave, {fechados:fech},
+        'a ficha de '+nome+' resolveu '+vencJuntar(res.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); }))
+        +' — a conversa com o tutor sobre isso fechou (dia '+dia+')',
+        {nome:nome, tutor:tutor, itens:[]}, dia, true);
+    });
   }
   // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
   // UMA marca por assunto (21/set/2026): quem mandou a de vacina e ainda não mandou a do
@@ -37098,6 +37157,17 @@
       var r=VENC_REG[ch]||{};
       if(!r.vet) return;
       if(r.ficha_atualizada && !(vencSimComTrava(r) && vencFichaDeveAgora(ch, r, dia).length)) return;
+      // A vacina foi resolvida na ficha (assunto fechado por assunto): não há o que avisar. O
+      // "em aberto" fechado só tira o recado se nenhuma vacina ficou devendo — registrar a data
+      // VELHA da carteirinha fecha o "em aberto", mas a vacina continua vencida e a aplicar.
+      var fe=r.fechados||{};
+      if(fe.vacina) return;
+      if(fe.aberto){
+        var vacDeve=true;
+        try{ vacDeve=vencFichaDeveAgora(ch, {}, dia).some(function(x){ return x && x.vacina; }); }
+        catch(e){ vacDeve=true; } /* silencioso de propósito: na dúvida, o recado fica */
+        if(!vacDeve) return;
+      }
       out.push(Object.assign({chave:ch}, r.vet));
     });
     return out;
@@ -39142,7 +39212,8 @@
             enviada:env?{quem:String(env.quem||''), ts:Number(env.ts||0)}:null,
             resposta:rt?{v:String(rt.v||''), rotulo:vencRespRotulo(rt.v)||String(rt.v||''), quem:String(rt.quem||''), ts:Number(rt.ts||0)}:null,
             cobrancas:vencCobrancasDe(r, t).length, tentativas:vencTentativasDe(r, t).length,
-            estado:estado, ficha_atualizada:!!r.ficha_atualizada};
+            estado:estado, ficha_atualizada:!!r.ficha_atualizada,
+            resolvido:((r.fechados||{})[vencTipoBase(t)])?{quem:String(((r.fechados||{})[vencTipoBase(t)]).quem||''), ts:Number(((r.fechados||{})[vencTipoBase(t)]).ts||0)}:null};
           out.conversas.push(c);
         });
       });
@@ -39309,6 +39380,7 @@
         +(c.resposta?(' · <strong>Resposta:</strong> '+escAttr(c.resposta.rotulo)+(c.resposta.ts?(' ('+quando(c.resposta)+')'):'')):'')
         +(c.cobrancas?(' · '+c.cobrancas+(c.cobrancas>1?' cobranças':' cobrança')):'')
         +(c.tentativas?(' · '+c.tentativas+(c.tentativas>1?' tentativas sem resposta':' tentativa sem resposta')):'')
+        +(c.resolvido?(' · <strong>resolvido na ficha</strong> ('+quando(c.resolvido)+')'):'')
         +(c.ficha_atualizada?' · ficha atualizada':'')
         +'</div></div>';
     });

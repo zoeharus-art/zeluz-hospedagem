@@ -95,6 +95,25 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (Q) Fechamento por assunto
+
+> **Adriana, 25/set/2026:** *"Pode seguir com o fechamento por assunto."*
+
+**Antes:** a conversa com o tutor só fechava pelo "Sim" do cartão inteiro, e o cartão só sai quando tudo está em dia. Se o vermífugo já estava registrado na ficha, mas a vacina continuava no cartão, a conversa do vermífugo **continuava sendo cobrada**.
+
+**Agora:** cada **assunto** fecha sozinho quando a ficha deixa de ter item dele no cartão daquele dia.
+
+| O quê | Como |
+|---|---|
+| Quando | toda vez que uma data de prevenção é gravada na ficha, de qualquer tela (quadro do cartão, aba Prevenção, lançamentos), e só depois de a gravação dar certo |
+| Onde fica registrado | no mesmo registro da conversa: `daycare/vencimentos/{dia}/{chave}/fechados/{assunto}` = quem, quando e `via: ficha`. Vale para todos os dias em que houve conversa sobre aquele assunto |
+| O que fecha | só o assunto que **foi conversado** com o tutor (mandado, respondido, cobrado ou tentado) e que não tem mais item dele no cartão. A pergunta "fazer hoje?" do mesmo assunto fecha junto |
+| O que continua aberto | todo assunto com item ainda no cartão (a vacina continua sendo cobrada) e o assunto que ainda nem foi mandado |
+| Em todas as telas | cartão de Vencimentos, calendário, contagens, Respostas pendentes, Quem chamar hoje, Hoje na Zêluz e aba Com o tutor, que mostra "**resolvido na ficha** (quem, quando)" |
+| Recado da veterinária | sai quando a vacina foi resolvida na ficha. Quando só o "em aberto" fechou (por exemplo, com a data velha da carteirinha) e a vacina ainda deve, o recado **fica** |
+
+O fechamento do cartão inteiro (o "Sim" e o fechamento pelo quadro com o cartão vazio) continua como estava.
+
 ### (P) Ficha única: aba "Com o tutor" na ficha do FILHOt
 
 > **Adriana, 25/set/2026:** *"Pensando que no futuro humanos, máquina e um agente vão utilizar essas informações: menos cliques, que vá tudo para uma ficha única do cliente e que a informação não se perca."*
@@ -278,7 +297,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 96 provas (com os cenários A, B, D, F, G, H e I do fechamento);
+- `node tests/fase0-ciclo-fechado.test.js`: 101 provas (com os cenários A, B, D, F, G, H e I do fechamento pelo quadro e o fechamento por assunto);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:
