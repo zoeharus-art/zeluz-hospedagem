@@ -95,6 +95,24 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (R) Reposição: tirar, devolver ao saldo e remarcar
+
+> **Adriana, 25/set/2026:** *"Uma tutora cancelou a reposição da Safira na quarta e não consigo remarcar e nem cancelar. Preciso de poder tirar a reposição e ela voltar para a quantidade que o tutor tem! Com o dia que foi remarcada."*
+
+**Três becos sem saída, fechados:**
+
+| Onde | Antes | Agora |
+|---|---|---|
+| **Lançamentos do dia › Reposição › Tirar** | o lançamento abatia 1 do Banco de Reposições; tirar tirava da planilha, mas o saldo **não voltava** | a confirmação diz "a reposição volta para o saldo: era N, fica N+1"; tirar devolve o uso daquele lançamento e sai a mensagem pronta para o tutor ("a reposição … que estava marcada para quarta-feira, 30/09, foi desmarcada") |
+| **Reposições › Extrato** | só o crédito tinha botão («Estornar»); um uso cancelado não tinha como voltar | o uso tem **«Devolver»** (pede o motivo). O uso da hospedagem (orçamento) não tem: quem o desfaz é o próprio orçamento |
+| **Reposições › a marcada para um dia que já passou** | sumia da tela e prendia o crédito: não dava para desmarcar nem remarcar («Marcar reposição» dizia "Não achei um crédito sem dia marcado") | aparece em vermelho: "Estava marcada para 23/09 e ela não repôs · desmarcar". «Marcar reposição» remarca a mesma reposição |
+
+- **Nada é apagado:** o uso devolvido fica riscado no Extrato; a devolução aparece como "+1 DEVOLVIDA", com o motivo e "devolveu a reposição de dd/mm".
+- **O dia fica guardado:** o crédito mostra no Extrato "marcada para dd/mm", "desmarcada de dd/mm (por quem)" ou "estava marcada para dd/mm e foi remarcada para dd/mm (por quem)".
+- **Ligação nova:** o uso criado pelos Lançamentos do dia guarda `lanc:{dia, id}` do lançamento. Os antigos, sem ligação, são achados pelo dia e pelo texto "Reposição lançada nos Lançamentos do dia".
+- **Celular:** na lista de Reposições, os botões descem para baixo do texto (antes espremiam o nome até virar uma coluna de uma palavra).
+- **Onde está no código:** `repUsoDoLancamento`, `repUsoDevolvivel`, `repVoltasVencidas`, `repDevolverUso`, `repDevolverUsoGravar`, `dashRepDoLancamento`, `repExtratoDesmarcada`; `dashRemover`, `dashRepAbater`, `repCreditoLivre`, `repAgendarVolta`, `repDesmarcar`, `renderReposicao` e `repAbrirExtrato` ajustadas.
+
 ### (Q) Fechamento por assunto
 
 > **Adriana, 25/set/2026:** *"Pode seguir com o fechamento por assunto."*
@@ -304,7 +322,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 113 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 121 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

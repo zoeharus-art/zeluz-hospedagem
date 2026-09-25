@@ -639,6 +639,141 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
   }
 });
 
+// ================================================================== Reposição — tirar, devolver e remarcar (Safira, 25/set)
+console.log('\nReposição — a tutora cancelou: tirar, devolver ao saldo e remarcar, com o dia guardado');
+prova('pura: o uso que o lançamento abateu — pela ligação; nos antigos, pelo dia e pelo texto', () => {
+  const L = [
+    { _id: 'u1', tipo: 'uso', data: '2026-09-23', obs: 'Reposição lançada nos Lançamentos do dia', lanc: { dia: '2026-09-23', id: 'L1' } },
+    { _id: 'u2', tipo: 'uso', data: '2026-09-23', obs: 'Reposição lançada nos Lançamentos do dia' },
+    { _id: 'u3', tipo: 'uso', data: '2026-09-23', obs: '' },
+  ];
+  assert.strictEqual(run('repUsoDoLancamento(' + JSON.stringify(L) + ",'2026-09-23','L1')._id"), 'u1', 'pela ligação');
+  assert.strictEqual(run('repUsoDoLancamento(' + JSON.stringify(L) + ",'2026-09-23','L9')._id"), 'u2', 'antigo: pelo dia e pelo texto do abatimento');
+  assert.strictEqual(run('repUsoDoLancamento(' + JSON.stringify(L.concat([{ _id: 'e1', tipo: 'estorno', estornaId: 'u2' }])) + ",'2026-09-23','L9')"), null, 'já devolvido não volta duas vezes');
+  assert.strictEqual(run('repUsoDoLancamento(' + JSON.stringify(L) + ",'2026-09-24','L9')"), null, 'outro dia: não é dele');
+});
+prova('pura: o uso da hospedagem (orc-…) não se devolve por fora; o devolvido também não', () => {
+  assert.strictEqual(run("repUsoDevolvivel({_id:'u1', tipo:'uso'}, {})"), true);
+  assert.strictEqual(run("repUsoDevolvivel({_id:'orc-abc-1', tipo:'uso'}, {})"), false, 'quem desfaz é o orçamento');
+  assert.strictEqual(run("repUsoDevolvivel({_id:'u1', tipo:'uso'}, {u1:true})"), false);
+  assert.strictEqual(run("repUsoDevolvivel({_id:'c1', tipo:'credito'}, {})"), false);
+});
+prova('pura: a reposição marcada para um dia que JÁ PASSOU, sem uso naquele dia, aparece (a da Safira)', () => {
+  const V = (L) => JSON.parse(JSON.stringify(run('repVoltasVencidas(' + JSON.stringify(L) + ",'2026-09-25')"))).map((l) => l._id);
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', data: '2026-09-10', volta: '2026-09-23' }]), ['c1'], 'marcada para quarta, não veio');
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', volta: '2026-09-23' }, { _id: 'u1', tipo: 'uso', data: '2026-09-23' }]), [], 'repôs naquele dia');
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', data: '2026-09-01', volta: '2026-09-23' }, { _id: 'c2', tipo: 'credito', data: '2026-09-02', volta: '2026-09-23' }, { _id: 'u1', tipo: 'uso', data: '2026-09-23' }]), ['c2'], 'duas marcadas, um uso: uma pendurada');
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', volta: '2026-09-23' }, { _id: 'u1', tipo: 'uso', data: '2026-09-23' }, { _id: 'e1', tipo: 'estorno', estornaId: 'u1' }]), ['c1'], 'uso devolvido: a marcada volta a aparecer');
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', volta: '2026-09-30' }]), [], 'dia que ainda vem: é "Vem repor em"');
+  assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', volta: '2026-09-23' }, { _id: 'e1', tipo: 'estorno', estornaId: 'c1' }]), [], 'crédito estornado não conta');
+});
+prova('remarcar: sem crédito livre, «Marcar reposição» usa a marcada que já passou', () => {
+  run(`__bkR1={l:repLancamentos, h:repHojeISO}; repHojeISO=function(){ return '2026-09-25'; };`);
+  try {
+    run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };`);
+    assert.strictEqual(run('repCreditoLivre({})._id'), 'c1', 'antes: "Não achei um crédito sem dia marcado"');
+    run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}, {_id:'c2', tipo:'credito', data:'2026-09-12'}]; };`);
+    assert.strictEqual(run('repCreditoLivre({})._id'), 'c2', 'havendo crédito sem dia, ele vem primeiro');
+    run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'}]; };`);
+    assert.strictEqual(run('repCreditoLivre({})'), null, 'a marcada para um dia que ainda vem não é roubada');
+  } finally { run('repLancamentos=__bkR1.l; repHojeISO=__bkR1.h;'); }
+});
+provaAsync('remarcar guarda o dia que estava marcado (com quem e para quando)', async () => {
+  const B = bancoFalso({});
+  ctx.__B = B;
+  run(`__bkR2={db:DB, l:repLancamentos, au:audit}; DB=__B; audit=function(){};
+       repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };`);
+  try {
+    await run("repAgendarVolta({n:'Safira', tutor:'Bia'}, 'c1', '2026-09-30', null)");
+    assert.strictEqual(B.gravado.v.volta, '2026-09-30');
+    assert.strictEqual(B.gravado.v.volta_desmarcada.dia, '2026-09-23', 'o dia antigo fica no crédito');
+    assert.ok(/remarcada para 30\/09\/2026/.test(B.gravado.v.volta_desmarcada.motivo), B.gravado.v.volta_desmarcada.motivo);
+    assert.strictEqual(run("repExtratoDesmarcada({dia:'2026-09-23', motivo:'remarcada para 30/09/2026', quem:'Ana'})"),
+      ' · estava marcada para 23/09/2026 e foi remarcada para 30/09/2026 (por Ana)');
+    assert.strictEqual(run("repExtratoDesmarcada({dia:'2026-09-23', quem:'Ana'})"), ' · desmarcada de 23/09/2026 (por Ana)');
+  } finally { run('DB=__bkR2.db; repLancamentos=__bkR2.l; audit=__bkR2.au;'); }
+});
+provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (e a mensagem sai pronta)', async () => {
+  run(`__bkR3={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, zp:zPergunta, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
+         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra};
+    __rm3=[]; __push3=[]; __msg3=null; __perg3=null;
+    DB={ref:function(p){ return {
+      remove:function(){ __rm3.push(p); return Promise.resolve(); },
+      push:function(v){ __push3.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve({key:'e9'}); } }; }};
+    DASH_DADOS={reposicao:{L1:{valor:'Safira/Spitz', chave:'safira__bia'}}};
+    dashDia=function(){ return '2026-09-30'; }; repHojeISO=function(){ return '2026-09-25'; };
+    dashItem=function(){ return {t:'Reposição'}; };
+    zPergunta=function(t, linhas){ __perg3=linhas; return Promise.resolve(true); };
+    renderDash=function(){}; audit=function(){}; dashEspelhar=function(){};
+    repMsgModal=function(t, l, texto){ __msg3={t:t, l:l, texto:texto}; };
+    pelExtra=function(){ return {sexo:'Fêmea'}; };
+    prevCorrigePetDe=function(ch){ return ch==='safira__bia' ? {n:'Safira', tutor:'Bia'} : null; };
+    repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10'},
+      {_id:'u1', tipo:'uso', data:'2026-09-30', obs:'Reposição lançada nos Lançamentos do dia', lanc:{dia:'2026-09-30', id:'L1'}}]; };
+    repSaldo=function(){ return 0; }; repLivresSemDia=function(){ return 0; };`);
+  try {
+    await run("dashRemover('reposicao','L1')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const perg = JSON.parse(JSON.stringify(run('__perg3')));
+    assert.ok(perg.some((t) => /volta para o saldo de Safira: era 0, fica 1/.test(t)), JSON.stringify(perg));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__rm3'))).length, 1, 'saiu dos Lançamentos do dia');
+    const push = JSON.parse(JSON.stringify(run('__push3')));
+    assert.strictEqual(push.length, 1, 'uma devolução');
+    assert.ok(/daycare\/reposicao\/.+\/lancamentos/.test(push[0].p));
+    assert.strictEqual(push[0].v.tipo, 'estorno');
+    assert.strictEqual(push[0].v.estornaId, 'u1', 'aponta para o uso do lançamento');
+    assert.strictEqual(push[0].v.dia_devolvido, '2026-09-30', 'com o dia');
+    const msg = run('__msg3');
+    assert.ok(msg && /devolvida/.test(msg.t), msg && msg.t);
+    assert.ok(/a reposição da Safira que estava marcada para quarta-feira, 30\/09, foi desmarcada/.test(msg.texto), msg && msg.texto);
+    assert.ok(/fica 1 reposição para marcar/.test(msg.texto), msg.texto);
+    // sem abatimento (lançado "sem abater"): tira da lista e NÃO mexe no saldo
+    run(`__push3=[]; __rm3=[]; DASH_DADOS={reposicao:{L2:{valor:'Safira/Spitz', chave:'safira__bia'}}};
+      repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10'}]; };`);
+    await run("dashRemover('reposicao','L2')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run('__rm3.length'), 1);
+    assert.strictEqual(run('__push3.length'), 0, 'nada a devolver');
+    assert.ok(JSON.parse(JSON.stringify(run('__perg3'))).some((t) => /Não achei o abatimento/.test(t)));
+  } finally { run('DB=__bkR3.db; DASH_DADOS=__bkR3.dd; dashDia=__bkR3.di; dashItem=__bkR3.it; zPergunta=__bkR3.zp; renderDash=__bkR3.rd; audit=__bkR3.au; dashEspelhar=__bkR3.esp; repMsgModal=__bkR3.mm; repLancamentos=__bkR3.l; repSaldo=__bkR3.s; repLivresSemDia=__bkR3.lsd; prevCorrigePetDe=__bkR3.pc; repHojeISO=__bkR3.h; pelExtra=__bkR3.pe;'); }
+});
+provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo e o dia', async () => {
+  run(`__bkR4={db:DB, p:PELUDINHOS, l:repLancamentos, s:repSaldo, pl:repPodeLancar, zt:zTexto, mm:repMsgModal, rr:renderReposicao, ae:repAbrirExtrato, au:audit, lsd:repLivresSemDia, h:repHojeISO, pe:pelExtra};
+    __push4=[]; __msg4=null;
+    DB={ref:function(p){ return { push:function(v){ __push4.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve({key:'e1'}); } }; }};
+    PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; repHojeISO=function(){ return '2026-09-25'; }; pelExtra=function(){ return {sexo:'Fêmea'}; };
+    repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10'}, {_id:'u1', tipo:'uso', data:'2026-09-23', obs:''},
+      {_id:'orc-x-1', tipo:'uso', data:'2026-09-20'}]; };
+    repSaldo=function(){ return 0; }; repPodeLancar=function(){ return true; }; repLivresSemDia=function(){ return 0; };
+    zTexto=function(){ return Promise.resolve('a tutora cancelou'); };
+    repMsgModal=function(t, l, texto){ __msg4={t:t, l:l, texto:texto}; }; renderReposicao=function(){}; repAbrirExtrato=function(){}; audit=function(){};`);
+  try {
+    await run("repDevolverUso(0,'u1')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const push = JSON.parse(JSON.stringify(run('__push4')));
+    assert.strictEqual(push.length, 1);
+    assert.strictEqual(push[0].v.estornaId, 'u1');
+    assert.strictEqual(push[0].v.obs, 'a tutora cancelou');
+    assert.strictEqual(push[0].v.dia_devolvido, '2026-09-23');
+    assert.ok(/Saldo agora: 1/.test(JSON.stringify(run('__msg4').l)));
+    run('__push4=[];');
+    await run("repDevolverUso(0,'orc-x-1')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.strictEqual(run('__push4.length'), 0, 'o da hospedagem não se devolve por aqui');
+  } finally { run('DB=__bkR4.db; PELUDINHOS=__bkR4.p; repLancamentos=__bkR4.l; repSaldo=__bkR4.s; repPodeLancar=__bkR4.pl; zTexto=__bkR4.zt; repMsgModal=__bkR4.mm; renderReposicao=__bkR4.rr; repAbrirExtrato=__bkR4.ae; audit=__bkR4.au; repLivresSemDia=__bkR4.lsd; repHojeISO=__bkR4.h; pelExtra=__bkR4.pe;'); }
+});
+provaAsync('o lançamento de Reposição guarda de qual lançamento veio o uso', async () => {
+  run(`__bkR5={g:repGravar, di:dashDia, mm:repMsgModal, au:audit}; __u5=null;
+    repGravar=function(p, reg){ __u5=JSON.parse(JSON.stringify(reg)); return Promise.resolve(); };
+    dashDia=function(){ return '2026-09-30'; }; repMsgModal=function(){}; audit=function(){};`);
+  try {
+    await run("dashRepAbater({n:'Safira', tutor:'Bia'}, 2, 'L7')");
+    const u = JSON.parse(JSON.stringify(run('__u5')));
+    assert.deepStrictEqual(u.lanc, { dia: '2026-09-30', id: 'L7' });
+    assert.strictEqual(u.obs, 'Reposição lançada nos Lançamentos do dia', 'o texto de sempre (o harness v-06 e os antigos dependem dele)');
+  } finally { run('repGravar=__bkR5.g; dashDia=__bkR5.di; repMsgModal=__bkR5.mm; audit=__bkR5.au;'); }
+});
+
 // ================================================================== Orçamento → Check-in (25/set)
 console.log('\nOrçamentos de hospedagem — o cliente novo é reconhecido e quem chega aparece no Check-in');
 prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o caso do Pingo)', () => {
