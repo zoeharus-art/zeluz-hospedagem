@@ -23814,6 +23814,14 @@
     try{
       if(pelAtualIdx==null) return;
       const ativa=(document.querySelector('.ppanel2.active')||{}).id||'ps-ident';
+      // O RASCUNHO de Medicamentos (QA B-N3, 25/set/2026): o que a pessoa está digitando e
+      // ainda não salvou mora só na tela. Guardamos os nós como estão (com os valores dentro)
+      // e os recolocamos depois do redesenho — senão a dose mudada sumia sem aviso.
+      let medVelho=null, medAcoesVelho=null;
+      if(ativa==='ps-med'){
+        const mi=document.getElementById('fmedItens');
+        if(mi && mi.children && mi.children.length){ medVelho=mi; medAcoesVelho=document.getElementById('fmedAcoes'); }
+      }
       // Redesenhar a ficha NÃO pode mandar a pessoa de volta ao topo (Adriana, 25/ago/2026).
       const y=(window.pageYOffset||document.documentElement.scrollTop||0);
       abrirPeludinho(pelAtualIdx);
@@ -23823,7 +23831,14 @@
       // aba presa em "Montando…" depois de qualquer redesenho da ficha.
       try{
         if(ativa==='ps-tutor' && typeof fichaTutorRender==='function') fichaTutorRender();
-        if(ativa==='ps-med' && typeof fmedRender==='function') fmedRender();
+        if(ativa==='ps-med'){
+          const mn=document.getElementById('fmedItens');
+          if(medVelho && mn && mn.parentNode){
+            mn.parentNode.replaceChild(medVelho, mn);
+            const an=document.getElementById('fmedAcoes');
+            if(medAcoesVelho && an && an.parentNode) an.parentNode.replaceChild(medAcoesVelho, an);
+          } else if(typeof fmedRender==='function') fmedRender();
+        }
       }catch(e){ /* silencioso de propósito: redesenho de aba — a ficha já está na tela */ }
       try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -34689,6 +34704,7 @@
         .catch(function(e){ _logLeituraFalhou('daycare/chamada/ (pendCarregar)', e); })
     ]).then(function(){
       try{ pendAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      try{ if(typeof fichaTutorRedesenhar==='function') fichaTutorRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de aba */ }
       return PEND_ABERTAS;
     });
   }
@@ -36235,6 +36251,7 @@
       .then(function(s){
         VENC_PEND=s.val()||{}; VENC_PEND_QUANDO=Date.now(); VENC_PEND_LENDO=false;
         try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+        try{ if(typeof fichaTutorRedesenhar==='function') fichaTutorRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de aba */ }
         try{ if(typeof mesaRender==='function' && document.getElementById('mesaRoot')) mesaRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
         try{ vencPcQuadro('pcCardPend', vencPendCardHTML()); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
         return VENC_PEND;
@@ -39056,15 +39073,35 @@
       });
       // O que ESPERA resposta é o mesmo das Respostas pendentes e do Quem chamar hoje — uma
       // régua só (vencPendLista), com as conversas daqui para mostrar quem mandou e quando.
+      // Só os registros DESTE FILHOt (QA B-N5): a régua é a mesma, sem varrer a casa inteira.
+      var soEle={};
+      Object.keys(VENC_PEND).forEach(function(d2){
+        var r2=(VENC_PEND[d2]||{})[chave];
+        if(r2){ soEle[d2]={}; soEle[d2][chave]=r2; }
+      });
       var P=null;
-      try{ P=vencPendLista(VENC_PEND, hoje, agora); }
+      try{ P=vencPendLista(soEle, hoje, agora); }
       catch(e){ P=null; } /* silencioso de propósito: sem a lista, nada é afirmado como pendente */
+      // A conversa mais nova de cada assunto, mandada — a mesma regra do Quem chamar hoje: a
+      // velha, com uma nova do mesmo assunto depois dela, deixa de ser cobrada.
+      var maisNova={};
+      out.conversas.forEach(function(c){
+        var b=vencTipoBase(c.tipo), ts=(c.enviada&&c.enviada.ts)||0;
+        if(ts>(maisNova[b]||0)) maisNova[b]=ts;
+      });
+      var naLista={};
       (P||[]).forEach(function(x){
-        if(x.chave!==chave) return;
         var c=out.conversas.filter(function(y){ return y.dia===x.dia && y.tipo===x.tipo; })[0];
         if(!c) return;
-        c.estado=x.estado;
+        if((maisNova[vencTipoBase(x.tipo)]||0)>Number(x.enviadaTs||0)){ c.estado='substituida'; naLista[x.dia+'|'+x.tipo]=1; return; }
+        c.estado=x.estado; naLista[x.dia+'|'+x.tipo]=1;
         out.esperando.push(c);
+      });
+      // O que o cálculo do registro dava como pendente mas a régua das listas não conta (o
+      // registro antigo, de antes das mensagens por assunto) sai marcado — o campo que um
+      // agente lê não pode contradizer a lista (QA B-N6).
+      out.conversas.forEach(function(c){
+        if((c.estado==='aguardando'||c.estado==='cobrar') && !naLista[c.dia+'|'+c.tipo]) c.estado='legado';
       });
     }
     return out;
@@ -39095,8 +39132,19 @@
   function fichaTutorAtiva(p){
     try{
       var sec=document.getElementById('ps-tutor');
-      return !!(sec && sec.classList.contains('active') && pelAtual===p);
+      // offsetParent null = a ficha saiu da tela (QA B-N4): as tentativas param.
+      return !!(sec && sec.classList.contains('active') && sec.offsetParent!==null && pelAtual===p);
     }catch(e){ return false; }
+  }
+  // A leitura chegou por OUTRA tela (QA B-N1): a aba aberta se atualiza sozinha. Só quando o
+  // dado agora está em mão — leitura que falhou não religa as tentativas (senão viraria laço).
+  function fichaTutorRedesenhar(){
+    try{
+      if(typeof pelAtual==='undefined' || !pelAtual || !fichaTutorAtiva(pelAtual)) return;
+      if(VENC_PEND===null || typeof PEND_ABERTAS==='undefined' || PEND_ABERTAS===null) return;
+      FT_TENT={p:null, n:0};
+      if(!FT_LENDO) fichaTutorRender();
+    }catch(e){ /* silencioso de propósito: redesenho de aba */ }
   }
   function fichaTutorLer(p, d){
     if(FT_TENT.p!==p) FT_TENT={p:p, n:0};
@@ -39111,7 +39159,11 @@
     var antes=JSON.stringify([d.lido, d.conversas, d.pendencias]);
     Promise.all(falta).then(function(){
       FT_LENDO=false;
-      if(!fichaTutorAtiva(p)) return;
+      if(!fichaTutorAtiva(p)){
+        // Outra ficha abriu enquanto esta lia (QA B-N1): a aba dela pode estar esperando.
+        try{ if(pelAtual && pelAtual!==p && fichaTutorAtiva(pelAtual)) fichaTutorRender(); }catch(e){ /* silencioso de propósito */ }
+        return;
+      }
       var d2=fichaUnicaDados(p);
       if(JSON.stringify([d2.lido, d2.conversas, d2.pendencias])!==antes){ fichaTutorRender(); return; }
       if(d2.lido.conversas && d2.lido.pendencias) return;          // leu e nada mudou: para aqui
@@ -39127,7 +39179,7 @@
     var raiz=document.getElementById('fichaTutorRoot'); if(!raiz) return;
     if(manual) FT_TENT={p:null, n:0};
     if(!fichaTutorPode()){
-      raiz.innerHTML='<div class="card"><div class="hint">A conversa com o tutor é das Consultoras de Bem-Estar, da Supervisão e da Gestão.</div></div>';
+      raiz.innerHTML='<div class="card"><div class="hint">A conversa com o tutor é das Consultoras de Bem-Estar, da Supervisão, da Gestão e da Diretoria.</div></div>';
       return;
     }
     var p=(typeof pelAtual!=='undefined')?pelAtual:null;
@@ -44834,7 +44886,7 @@
   // O toque SÓ adiciona (25/set/2026). Antes, o campo de texto ganhava o foco e o teclado
   // subia a cada item — "precisa colocar manual os pertences, digitar". A cor é um toque na
   // linha; escrever é opcional e fica para quem quiser.
-  function ciAddPertUnit(k){ const uid=ciUid(); ciPertSel.push({uid:uid,k:k,nome:ciPertNome(k),spec:''}); ciDrawPert(); }
+  function ciAddPertUnit(k){ const uid=ciUid(); ciPertSel.push({uid:uid,k:k,nome:ciPertNome(k),spec:'',corSel:''}); ciDrawPert(); }
   // O atalho da ficha: rola até o cartão descontando o que fica preso no topo (a barra azul
   // do celular e o título da tela) — senão o título do cartão nasce escondido embaixo deles.
   function ciIrPara(id){
@@ -44865,7 +44917,9 @@
   var CI_PERT_SEM_COR={racao:1, natural:1, petisco:1, tapete:1};
   function ciPertCorPede(k){ return !CI_PERT_SEM_COR[String(k||'')]; }
   // As palavras que a regra da última letra erra (QA, 25/set/2026).
-  var CI_PERT_GENERO={pijama:'m', sofa:'m', mapa:'m', dia:'m', rede:'f', chave:'f', tag:'f', manta:'f', mochila:'f', cobertor:'m'};
+  var CI_PERT_GENERO={pijama:'m', pijaminha:'m', sofa:'m', mapa:'m', dia:'m', rede:'f', chave:'f', tag:'f', manta:'f', mochila:'f', cobertor:'m'};
+  // As palavras que QUALIFICAM a cor: "rosa choque", "verde água", "azul marinho", "azul bebê".
+  var CI_PERT_QUALIF=['choque','agua','bebe','marinho','claro','clara','escuro','escura','pastel','neon','royal','turquesa','petroleo','gelo','chumbo','mescla','mesclado','mesclada','fosco','fosca','metalico','metalica','cru','crua','militar','musgo','oliva','vinho','queimado','queimada'];
   // Qual das quatro formas: 0 masc · 1 fem · 2 masc plural · 3 fem plural. "Coleira", "Cama",
   // "Bolsa / mala", "Guia", "Roupa": feminino; "Peitoral", "Pote", "Brinquedo": masculino. Para
   // o item novo do banco, a lista acima e a regra da última letra (a, ção, gem); plural pelo "s".
@@ -44898,8 +44952,11 @@
       if(t===n){ achou=n; return true; }
       if(t.indexOf(n+' ')===0){
         var prox=spec.slice(n.length).trim();
-        if(/^[A-ZÀ-Ý]/.test(prox)){ achou=n; return true; }
-        return true;                                            // cor seguida de palavra minúscula: é texto dela
+        var proxN=jsNorm(prox.split(/\s+/)[0]||'');
+        // "Rosa Choque", "Verde Água", "Azul Marinho": a palavra de depois QUALIFICA a cor — é
+        // tudo texto dela (QA B-N2). Só marca de verdade ("vermelha Zeedog") conta.
+        if(/^[A-ZÀ-Ý]/.test(prox) && CI_PERT_QUALIF.indexOf(proxN)<0){ achou=n; return true; }
+        return true;                                            // cor seguida de palavra minúscula ou qualificador: é texto dela
       }
       return false;
     });

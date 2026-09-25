@@ -906,7 +906,8 @@ prova('QA B1 — gênero e plural dos itens novos do banco', () => {
   const html = (nome) => run("ciPertCorHTML({uid:'a', k:'x', nome:" + JSON.stringify(nome) + ", spec:''})");
   assert.ok(/>vermelho</.test(html('Pijama')) && !/>vermelha</.test(html('Pijama')), 'pijama: masculino');
   assert.ok(/>vermelha</.test(html('Rede')), 'rede: feminino');
-  assert.ok(/>vermelhas</.test(html('Meias')) && /Botinhas/.test('Botinhas') && />vermelhas</.test(html('Botinhas')), 'meias, botinhas: feminino plural');
+  assert.ok(/>vermelhas</.test(html('Meias')) && />vermelhas</.test(html('Botinhas')), 'meias, botinhas: feminino plural');
+  assert.ok(/>vermelho</.test(html('Pijaminha')) && !/>vermelha</.test(html('Pijaminha')), 'pijaminha: masculino');
   assert.ok(/>azuis</.test(html('Brinquedos')) && />vermelhos</.test(html('Brinquedos')), 'brinquedos: masculino plural');
 });
 provaAsync('QA A1 — a aba Com o tutor NÃO entra em laço quando a primeira leitura ainda está em curso', async () => {
@@ -1073,6 +1074,30 @@ provaAsync('QA N5 — dois "Mandei" rápidos no mesmo aparelho: o segundo espera
     const env = JSON.parse(JSON.stringify(run("__loja8['daycare/vencimentos/2026-09-28/thor__bia/enviadas']")));
     assert.deepStrictEqual(Object.keys(env).sort(), ['antip', 'vacina']);
   } finally { run('DB=__bk8.db; VENC_REG=__bk8.vr; VENC_REG_DIA=__bk8.vrd; VENC_PEND=__bk8.vp; audit=__bk8.au; vencRender=__bk8.vre; vencRedesenharQuadros=__bk8.vrq;'); }
+});
+
+// ================================================================== Re-QA da 6ª rodada (25/set)
+console.log('\nRe-QA da 6ª rodada — ficha e check-in');
+prova('QA B-N2 — "Rosa Choque", "Verde Água", "Azul Marinho" escritos com maiúscula não são trocados', () => {
+  [['Rosa Choque', 'azul', 'azul Rosa Choque'], ['Verde Água', 'azul', 'azul Verde Água'], ['Azul Marinho', 'preta', 'preta Azul Marinho'],
+   ['Rosa Choque', '', 'Rosa Choque'], ['vermelha Zeedog', 'azul', 'azul Zeedog']]
+    .forEach(([spec, cor, esperado]) => assert.strictEqual(run('ciPertComCor(' + JSON.stringify(spec) + ',' + JSON.stringify(cor) + ')'), esperado, spec));
+});
+prova('QA B-N6 — o estado de cada conversa não contradiz a lista: "legado" e "substituída"', () => {
+  run(`__bk9={vp:VENC_PEND, pa:PEND_ABERTAS, hz:zHojeISO, pe:pelExtra};
+    zHojeISO=function(){ return '2026-09-24'; }; pelExtra=function(){ return {}; };
+    __K9=dcKey('Lua','Rita');
+    VENC_PEND={}; PEND_ABERTAS={};
+    VENC_PEND['2026-09-10']={}; VENC_PEND['2026-09-10'][__K9]={msg_enviada:{quem:'x', ts:${Date.UTC(2026, 8, 9, 12)}}};
+    VENC_PEND['2026-09-22']={}; VENC_PEND['2026-09-22'][__K9]={enviadas:{antip:{quem:'a', ts:${Date.UTC(2026, 8, 21, 12)}}}};
+    VENC_PEND['2026-09-24']={}; VENC_PEND['2026-09-24'][__K9]={enviadas:{ant_antip:{quem:'b', ts:${Date.UTC(2026, 8, 24, 12)}}}};`);
+  try {
+    const d = JSON.parse(JSON.stringify(run("fichaUnicaDados({n:'Lua', tutor:'Rita'}, " + Date.UTC(2026, 8, 24, 18) + ')')));
+    const est = {}; d.conversas.forEach((c) => { est[c.dia + '|' + c.tipo] = c.estado; });
+    assert.strictEqual(est['2026-09-10|'], 'legado', 'registro antigo fora da régua das listas');
+    assert.strictEqual(est['2026-09-22|antip'], 'substituida', 'a de 22/09 tem uma mais nova do mesmo assunto');
+    assert.deepStrictEqual(d.esperando.map((c) => c.dia + '|' + c.tipo), ['2026-09-24|ant_antip']);
+  } finally { run('VENC_PEND=__bk9.vp; PEND_ABERTAS=__bk9.pa; zHojeISO=__bk9.hz; pelExtra=__bk9.pe;'); }
 });
 
 // ------------------------------------------------ o fim

@@ -121,6 +121,7 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 | **M2:** a aba ficava presa em "Montando…" quando a ficha se redesenhava | a ficha redesenhada desenha a aba de novo (vale também para Medicamentos, que tinha o mesmo defeito) |
 | **M3:** a aba e as Respostas pendentes discordavam sobre o que espera resposta | "Esperando resposta" usa a mesma régua das Respostas pendentes, com a trava da ficha |
 | **M4:** trocar a cor podia estragar o que foi escrito ("rosa choque" virava "azul choque") | a cor só troca a que o próprio seletor pôs; o que foi escrito à mão fica intacto e a cor entra na frente. O seletor acompanha o que se digita |
+| Re-QA da 6ª rodada: **CONCERNS — pode publicar**, com 7 ressalvas baixas, todas corrigidas | a aba se atualiza sozinha quando a leitura chega por outra tela; as tentativas param quando a ficha sai da tela; "Rosa Choque", "Verde Água" e "Azul Marinho" escritos à mão não são trocados; o rascunho de Medicamentos sobrevive ao redesenho da ficha; abrir a ficha voltou a ser leve (a régua olha só os registros deste FILHOt); o estado de cada conversa marca "legado" e "substituída" em vez de contradizer a lista; textos |
 | Baixos | gênero e plural dos itens novos ("pijama vermelho", "meias vermelhas"), rolagem da barra "Ir para" sem folga a mais, registros antigos (sem assunto, só com a ficha atualizada), aba e linha só para quem fala com o tutor, "ela/ele" conforme o FILHOt, "são dois itens", atalho "Medicação" |
 
 ### (O) Check-in da hospedagem no celular: pertences sem digitar
@@ -277,7 +278,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 90 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 92 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
@@ -292,6 +293,7 @@ O harness completo precisa do retrato da VPS e não rodou nesta sessão.
 | 4ª (orçamento e reposição) | **CONCERNS — pode publicar** | M1, M2 e B1 a B5, todos corrigidos (ver K) |
 | 5ª (Turma, WhatsApp, Quem chamar hoje) | **FAIL** → corrigido | A1, A2, M1 a M6 e os baixos, todos corrigidos (ver N) |
 | 6ª (check-in no celular e ficha única) | **FAIL** (ficha) · CONCERNS (check-in) → corrigido | A1, M1 a M4 e os baixos, todos corrigidos (ver P) |
+| Re-QA da 6ª | **CONCERNS — pode publicar** | 7 ressalvas baixas, corrigidas (ver P) |
 
 Destino de cada ressalva da 3ª rodada:
 - **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";
