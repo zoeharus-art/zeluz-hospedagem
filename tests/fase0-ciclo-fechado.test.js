@@ -710,6 +710,27 @@ prova('a próxima ocorrência do dia: numa sexta, "Sexta" é hoje e "Segunda" é
   assert.strictEqual(run("turmaIsoDoDia('seg', '2026-09-25')"), '2026-09-28');
 });
 
+// ================================================================== WhatsApp em um toque (25/set)
+console.log('\nWhatsApp em um toque — abre a conversa do tutor e já marca "Mandei"');
+prova('o link leva o número do tutor (com o 55) e a mensagem', () => {
+  assert.strictEqual(run("zWhatsLink('+55 (31) 99999-0000', 'Oi, Ana')"), 'https://wa.me/5531999990000?text=Oi%2C%20Ana');
+  assert.strictEqual(run("zWhatsLink('31999990000', 'x')"), 'https://wa.me/5531999990000?text=x', 'sem o país: o 55 entra');
+  assert.strictEqual(run("zWhatsLink('', 'x')"), 'https://wa.me/?text=x', 'sem telefone: o WhatsApp abre para escolher o contato');
+});
+prova('"Mandar no WhatsApp" dos Vencimentos abre a conversa com o texto da caixa e marca "Mandei"', () => {
+  run(`__bkp={ge:document.getElementById, va:vencAchar, vm:vencMandei, wo:window.open};
+       __abriu=null; __marcou=null;
+       document.getElementById=function(id){ return id==='vencMsg_thor__bia__vacina'?{value:'Oi, Bia! A vacina…'}:null; };
+       vencAchar=function(){ return {tel:'+5531988887777', nome:'Thor'}; };
+       vencMandei=function(c,t){ __marcou=c+'|'+t; };
+       window.open=function(u){ __abriu=u; return {}; };`);
+  try {
+    run("vencWhats('thor__bia','vacina')");
+    assert.ok(/^https:\/\/wa\.me\/5531988887777\?text=Oi%2C%20Bia/.test(run('__abriu')), run('__abriu'));
+    assert.strictEqual(run('__marcou'), 'thor__bia|vacina');
+  } finally { run('document.getElementById=__bkp.ge; vencAchar=__bkp.va; vencMandei=__bkp.vm; window.open=__bkp.wo;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

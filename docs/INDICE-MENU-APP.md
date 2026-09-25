@@ -95,6 +95,23 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (M) WhatsApp em um toque
+
+> **Adriana, 25/set/2026:** *"Ele só deu um clique, copia a mensagem, já manda automaticamente e a gente já resolve."*
+
+Onde havia mensagem pronta para o tutor, o botão principal agora é **Mandar no WhatsApp**. Ele abre a conversa **do tutor** (o telefone da ficha, com o 55) com a mensagem já escrita, incluindo o que a Consultora editou na caixa. Falta só tocar em enviar.
+
+| Onde | O toque também… |
+|---|---|
+| Vencimentos: mensagem de cada assunto | marca **Mandei** (eram três toques: Copiar, colar, Mandei) |
+| Vencimentos: cobrança ("Cobrar no WhatsApp") | marca **Cobrei** |
+| Hoje na Zêluz: "Perguntar hoje" (ele está aqui) | marca **Mandei** |
+| Reposição: lançada, marcada, desmarcada, usada e abatida | abre a conversa com a mensagem |
+
+- **Copiar** continua ali, ao lado, para quem manda por outro caminho.
+- **Sem telefone na ficha**, o WhatsApp abre para escolher o contato.
+- **O app não envia sozinho.** Isso depende da API do WhatsApp, que é decisão futura. Quem envia é a Consultora.
+
 ### (L) Turminhas → Turma do dia (lista enxuta, com Excel e PDF)
 
 > **Adriana, 25/set/2026:** *"Não precisa aparecer o quadro imenso de peludinhos. O Boris trocou a sexta pela quarta (dia 23) e aparece lá — já era esperado que ele não viria. Preciso conseguir baixar em Excel ou PDF quem vem em cada dia, para mandar mensagens e cobrar vermífugo, vacina etc., junto com quem marcou reposição."*
@@ -157,7 +174,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 59 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 61 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.

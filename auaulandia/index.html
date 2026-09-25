@@ -6638,7 +6638,7 @@
                   +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[])
         .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
                   +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[]),
-        repMensagem(p,'credito',_info));
+        repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
       soltar();
@@ -6751,14 +6751,34 @@
       repMsgModal('✅ Reposição desmarcada',
         [pelNome(p)+' não vem mais repor '+repNoDia(dia)+'.',
          'A reposição continua valendo: '+(livres===1?'1 reposição':(livres+' reposições'))+' sem dia marcado.'],
-        repMensagem(p,'desmarcada',{volta:dia, livres:livres}));
+        repMensagem(p,'desmarcada',{volta:dia, livres:livres}), repTelDe(p));
       try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
       setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 400);
     }).catch(function(e){ alert('Não consegui desmarcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
   }
+  /* ===== WHATSAPP EM UM TOQUE (Adriana, 25/set/2026) ================================
+   * "Ele só deu um clique, copia a mensagem, já manda automaticamente e a gente já resolve."
+   * O toque abre a conversa DO TUTOR (o telefone da ficha) com a mensagem já escrita — falta
+   * só o "enviar". Sem telefone na ficha, o WhatsApp abre para escolher o contato. O app não
+   * manda sozinho (isso é a API do WhatsApp, decisão futura da Adriana): quem manda é a
+   * Consultora, com a mensagem na tela dela. A janela abre PRIMEIRO, dentro do toque — o
+   * celular bloqueia janela aberta depois de uma espera. */
+  function zWhatsLink(tel, texto){
+    var d=String(tel||'').replace(/\D/g,'');
+    if(d && d.length>=10 && d.length<=11) d='55'+d;           // número sem o país
+    return 'https://wa.me/'+(d||'')+'?text='+encodeURIComponent(String(texto||''));
+  }
+  function zWhatsAbrir(tel, texto){
+    try{ window.open(zWhatsLink(tel, texto), '_blank'); return true; }
+    catch(e){ _logFalhaGrav('abrir o WhatsApp', e); return false; }
+  }
+  function repTelDe(p){ try{ return (typeof poTelDoTutor==='function')?poTelDoTutor(p):''; }catch(e){ return ''; } }
   // Modal com a confirmação em cima e a mensagem pronta embaixo — a consultora copia e
   // manda no WhatsApp. Mesmo desenho do zAlertao, mas com textarea (o zAlertao escapa HTML).
-  function repMsgModal(titulo, linhas, texto){
+  // `tel` (opcional, 25/set/2026): o telefone do tutor — o botão abre a conversa dele.
+  var REP_MSG_TEL='';
+  function repMsgModal(titulo, linhas, texto, tel){
+    REP_MSG_TEL=String(tel||'');
     var old=document.getElementById('repMsgBox'); if(old) old.remove();
     var esc2=function(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
     var d=document.createElement('div'); d.id='repMsgBox';
@@ -6770,7 +6790,9 @@
       +'<div style="font-size:11.5px;font-weight:800;color:#7C8B99;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px">Mensagem para o tutor — copie e mande no WhatsApp</div>'
       +'<textarea id="repMsgTxt" readonly rows="8" style="width:100%;border:1.5px solid #e6dfd0;border-radius:12px;padding:10px;font-family:inherit;font-size:14px;color:#234D67;background:#fff">'+esc2(texto)+'</textarea>'
       +'<button type="button" style="width:100%;margin-top:8px;border:0;border-radius:12px;background:#DEB428;color:#234D67;font-family:inherit;font-weight:800;font-size:16px;padding:13px;cursor:pointer"'
-      +' onclick="repCopiarMsg(this)">📋 Copiar mensagem</button>'
+      +' onclick="zWhatsAbrir(REP_MSG_TEL, (document.getElementById(\'repMsgTxt\')||{}).value||\'\')">Mandar no WhatsApp</button>'
+      +'<button type="button" style="width:100%;margin-top:8px;border:1.5px solid #e6dfd0;border-radius:12px;background:#fff;color:#234D67;font-family:inherit;font-weight:800;font-size:15px;padding:11px;cursor:pointer"'
+      +' onclick="repCopiarMsg(this)">Copiar mensagem</button>'
       +'</div>'
       +'<div style="padding:0 20px 18px"><button type="button" style="width:100%;border:0;border-radius:12px;background:#234D67;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:13px;cursor:pointer"'
       +' onclick="document.getElementById(\'repMsgBox\').remove()">Fechar</button></div></div>';
@@ -6804,7 +6826,7 @@
       var _sd=Math.max(0, s-1);   // s foi lido antes de gravar; o cache ainda não desceu
       repMsgModal('✅ Reposição usada',
         [pelNome(p)+' repôs hoje. Saldo agora: '+_sd+'.'],
-        repMensagem(p,'uso',{saldo:_sd}));
+        repMensagem(p,'uso',{saldo:_sd}), repTelDe(p));
       setTimeout(renderReposicao, 300);
     }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
   }
@@ -7971,7 +7993,7 @@
            'Não se cobra nada: é reposição. A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).',
            'Se o tutor desmarcar: tela de Reposições › «desmarcar» ao lado da data — a reposição volta a ficar sem dia.']
           .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
-          repMensagem(p,'agendada',{volta:dia, livres:livresDepois}));
+          repMensagem(p,'agendada',{volta:dia, livres:livresDepois}), repTelDe(p));
         vagasCarregarDia(dia, true).then(function(){
           try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
         });
@@ -34075,7 +34097,7 @@
       repMsgModal('✅ Reposição lançada e abatida',
         [pelNome(p)+' usou 1 reposição em '+repBRdata(dia)+'. Saldo: era '+saldoAntes+', ficou '+dep+'.',
          'O abatimento no Banco de Reposições já está feito — não marque o uso de novo na tela de Reposições.'],
-        dashRepMensagemTutor(p, saldoAntes, dia));
+        dashRepMensagemTutor(p, saldoAntes, dia), repTelDe(p));
       return true;
     }).catch(function(e){
       // O lançamento entrou; o abatimento é que falhou. Isso NUNCA fica mudo: o saldo
@@ -35592,6 +35614,24 @@
   }
   // Copiar é sempre a mesma coisa: tenta a área de transferência e, se o navegador recusar,
   // seleciona o texto no próprio campo — nunca deixa a pessoa sem a mensagem na mão.
+  // UM TOQUE (25/set/2026): abre o WhatsApp do tutor com a mensagem da caixa (a que ela pode
+  // ter editado) e já marca "Mandei" — eram três toques: Copiar, colar, Mandei.
+  function vencWhats(chave, tipo){
+    var ta=document.getElementById('vencMsg_'+chave+'__'+tipo);
+    var txt=ta?String(ta.value||''):'';
+    if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
+    var o=vencAchar(chave);
+    zWhatsAbrir((o&&o.tel)||'', txt);
+    vencMandei(chave, tipo);
+  }
+  function vencWhatsCobranca(chave, tipo, dia){
+    var ta=document.getElementById('vencMsg_'+chave+'__cob-'+tipo);
+    var txt=ta?String(ta.value||''):'';
+    if(!txt){ alert('Não achei a cobrança. Abra a tela de novo.'); return; }
+    var o=null; try{ o=vencObjDe(chave, dia); }catch(e){ o=null; } /* silencioso de propósito: sem o cartão, o WhatsApp abre para escolher o contato */
+    zWhatsAbrir((o&&o.tel)||'', txt);
+    vencCobrei(chave, tipo, dia);
+  }
   function vencCopiar(chave, tipo, btn){
     var ta=document.getElementById('vencMsg_'+chave+'__'+tipo);
     var txt=ta?String(ta.value||''):'';
@@ -37368,7 +37408,8 @@
       h+='<textarea class="gest-txt" id="vencMsg_'+escAttr(o.chave)+'__'+escAttr(m.tipo)+'" rows="7" style="width:100%">'
         +escAttr(m.texto)+'</textarea>'
         +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
-        +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencCopiar(\''+ka+'\',\''+m.tipo+'\',this)">Copiar mensagem</button>'
+        +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencWhats(\''+ka+'\',\''+m.tipo+'\')">Mandar no WhatsApp</button>'
+        +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencCopiar(\''+ka+'\',\''+m.tipo+'\',this)">Copiar</button>'
         +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencMandei(\''+ka+'\',\''+m.tipo+'\')">'
         +(jaFoi?'Mandei de novo':'Mandei')+'</button></div>';
       if(jaFoi) h+='<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">Mandada por '
@@ -37439,7 +37480,8 @@
       +'<textarea class="gest-txt" id="'+idc+'" rows="4" style="width:100%;margin-top:7px">'
       +escAttr(vencMsgCobranca(o, tipo, dia, hoje))+'</textarea>'
       +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
-      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencCopiar(\''+ka+'\',\'cob-'+escAttr(tipo)+'\',this)">Copiar a cobrança</button>'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="vencWhatsCobranca(\''+ka+'\',\''+escAttr(tipo)+'\',\''+escAttr(dia)+'\')">Cobrar no WhatsApp</button>'
+      +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vencCopiar(\''+ka+'\',\'cob-'+escAttr(tipo)+'\',this)">Copiar</button>'
       +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:#E08856;color:#FFFDF6;border:none" onclick="vencCobrei(\''+ka+'\',\''+escAttr(tipo)+'\',\''+escAttr(dia)+'\')">Cobrei</button>'
       +'</div></div>';
   }
@@ -37956,6 +37998,13 @@
   }
   // Copiar é sempre a mesma coisa: tenta a área de transferência e, se o navegador recusar,
   // seleciona o texto no próprio campo — nunca deixa a pessoa sem a mensagem na mão.
+  function hojeWhats(chave, tipo, tel){
+    var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
+    var txt=ta?String(ta.value||''):'';
+    if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
+    zWhatsAbrir(tel||'', txt);
+    hojeMandei(chave, tipo);
+  }
   function hojeCopiarMsg(chave, tipo, btn){
     var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
     var txt=ta?String(ta.value||''):'';
@@ -38003,7 +38052,8 @@
     h+='<textarea class="gest-txt" id="hojeMsg_'+escAttr(o.chave)+'__'+escAttr(tipo)+'" rows="7" style="width:100%;margin-top:8px">'
       +escAttr(msg)+'</textarea>'
       +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
-      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="hojeCopiarMsg(\'' + ka + '\',\'' + escAttr(tipo) + '\',this)">Copiar a mensagem</button>'
+      +'<button type="button" class="btn btn-gold" style="padding:7px 15px;font-size:13px;font-weight:800" onclick="hojeWhats(\'' + ka + '\',\'' + escAttr(tipo) + '\',\'' + jsAspas(o.tel||'') + '\')">Mandar no WhatsApp</button>'
+      +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="hojeCopiarMsg(\'' + ka + '\',\'' + escAttr(tipo) + '\',this)">Copiar</button>'
       +'<button type="button" class="btn" style="padding:7px 15px;font-size:13px;font-weight:800;background:'
       +(vencMandada(reg||{}, t)?'var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)':'var(--z-blue);color:var(--z-cream);border:none')
       +'" onclick="hojeMandei(\'' + ka + '\',\'' + escAttr(tipo) + '\')">'
