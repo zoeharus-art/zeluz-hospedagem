@@ -580,6 +580,58 @@ provaAsync('R-CANCEL — se outro aparelho já fez o check-in, o cancelar desist
   } finally { run('DB=__bkpDB; zTexto=__bkpZT; zAlertao=__bkpZA; pernHoje=__bkpPH; PERN_ATRAS=__bkpPA;'); }
 });
 
+// ================================================================== Reposição (25/set)
+console.log('\nReposição — marcar e desmarcar já saem com a mensagem para o tutor');
+prova('"segunda-feira, 28/09": o dia como a consultora fala', () => {
+  assert.strictEqual(run("repDiaSemanaComData('2026-09-28')"), 'segunda-feira, 28/09');
+});
+prova('marcar: a mensagem diz o dia e quantas ficam sem dia (1, várias, nenhuma)', () => {
+  ctx.__p = { n: 'Luna', tutor: 'Ana Souza' };
+  run(`__bkpPE=pelExtra; pelExtra=function(){ return {sexo:'Fêmea'}; };`);
+  try {
+    const m1 = run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:1})");
+    assert.ok(/Oi, Ana, como está\?/.test(m1));
+    assert.ok(/a reposição da Luna ficou marcada para segunda-feira, 28\/09/.test(m1), m1);
+    assert.ok(/fica 1 reposição ainda sem dia/.test(m1));
+    assert.ok(/ficam 2 reposições ainda sem dia/.test(run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:2})")));
+    assert.ok(/todas as reposições da Luna já têm dia/.test(run("repMensagem(__p, 'agendada', {volta:'2026-09-28', livres:0})")));
+    const d = run("repMensagem(__p, 'desmarcada', {volta:'2026-09-28', livres:2})");
+    assert.ok(/estava marcada para segunda-feira, 28\/09 foi desmarcada/.test(d), d);
+    assert.ok(/ficam 2 reposições para marcar/.test(d));
+  } finally { run('pelExtra=__bkpPE;'); }
+});
+prova('a conta das que ficam sem dia desconta a marcação que acabou de ser gravada', () => {
+  run(`__bkpS=repSaldo; __bkpA=repAgendaDe; repSaldo=function(){ return 2; }; repAgendaDe=function(){ return []; };`);
+  try {
+    assert.strictEqual(run('repLivresSemDia({}, +1)'), 1, '2 reposições, 1 marcada agora → fica 1');
+    run("repAgendaDe=function(){ return ['2026-09-28']; };");
+    assert.strictEqual(run('repLivresSemDia({}, -1)'), 2, 'desmarcou a única → voltam as 2');
+    run("repAgendaDe=function(){ return ['2026-09-28','2026-10-02','2026-10-05']; };");
+    assert.strictEqual(run('repLivresSemDia({}, 0)'), 0, 'nunca negativo');
+  } finally { run('repSaldo=__bkpS; repAgendaDe=__bkpA;'); }
+});
+provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai pronta', async () => {
+  const B = bancoFalso({});
+  ctx.__B = B;
+  run(`__bkpDB=DB; __bkpP=PELUDINHOS; __bkpL=repLancamentos; __bkpPL=repPodeLancar; __bkpZP=zPergunta; __bkpMM=repMsgModal; __bkpRR=renderReposicao; __bkpS=repSaldo;
+       __msg=null; DB=__B; PELUDINHOS=[{n:'Luna', tutor:'Ana'}];
+       repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-22', volta:'2026-09-28'}]; };
+       repSaldo=function(){ return 1; };
+       repPodeLancar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };
+       repMsgModal=function(t, l, texto){ __msg={t:t, texto:texto}; }; renderReposicao=function(){};`);
+  try {
+    await run("repDesmarcar(0, '2026-09-28')");
+    await new Promise((r) => setTimeout(r, 20));
+    assert.strictEqual(B.gravado.v.volta, '', 'a data saiu');
+    assert.strictEqual(B.gravado.v.volta_desmarcada.dia, '2026-09-28', 'o dia desmarcado fica guardado');
+    const msg = run('__msg');
+    assert.ok(msg && /desmarcada/.test(msg.t));
+    assert.ok(/fica 1 reposição para marcar/.test(msg.texto), msg && msg.texto);
+  } finally {
+    run('DB=__bkpDB; PELUDINHOS=__bkpP; repLancamentos=__bkpL; repPodeLancar=__bkpPL; zPergunta=__bkpZP; repMsgModal=__bkpMM; renderReposicao=__bkpRR; repSaldo=__bkpS;');
+  }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

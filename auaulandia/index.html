@@ -6664,6 +6664,24 @@
         +saldo+(saldo===1?' reposição':' reposições')
         +(qtd>1?', com as de hoje, ':', com a de hoje, ') + ref + '.';
       if(info.volta) corpo+='\n\nO dia de repor já ficou combinado: '+repBRdata(info.volta)+'.';
+    }else if(modo==='agendada' || modo==='desmarcada'){
+      // MARCAR E DESMARCAR TAMBÉM AVISAM O TUTOR (Adriana, 25/set/2026): "Assinalei a
+      // marcação que a tutora pediu para segunda 28/09 e não deu nenhuma mensagem para
+      // enviar ao tutor! Precisa ter a mensagem que, com a marcação, ficará 1 reposição…
+      // Caso o tutor desmarque, desmarcamos e o saldo volta!" `livres` = reposições dele
+      // ainda SEM dia marcado, já contando esta marcação (ou esta desmarcação).
+      var dia=repDiaSemanaComData(info.volta);
+      var livres=Math.max(0, Number(info.livres)||0);
+      if(modo==='agendada'){
+        corpo='Passando para confirmar: a reposição d'+o+' '+nome+' ficou marcada para '+dia+'.';
+        corpo+=livres
+          ? ('\n\nCom essa marcação, '+(livres===1?'fica 1 reposição':('ficam '+livres+' reposições'))+' ainda sem dia.')
+          : ('\n\nCom essa marcação, todas as reposições d'+o+' '+nome+' já têm dia.');
+      }else{
+        corpo='Passando para confirmar: a reposição d'+o+' '+nome+' que estava marcada para '+dia+' foi desmarcada.';
+        corpo+='\n\nEla continua valendo: '+(livres===1?'fica 1 reposição':('ficam '+livres+' reposições'))
+          +' para marcar quando for melhor para vocês.';
+      }
     }else{
       corpo='Passando para dizer que '+o+' '+nome+' usou hoje uma reposição.';
       if(saldo>1) corpo+=' Agora restam '+saldo+' reposições.';
@@ -6671,6 +6689,50 @@
       else corpo+=' Com essa, as reposições terminaram — qualquer falta avisada gera uma nova.';
     }
     return ola+'\n\n'+corpo+'\n\nEssa mensagem é para que possamos controlar juntas. 💛';
+  }
+  // "segunda-feira, 28/09" — é como a consultora fala com o tutor.
+  function repDiaSemanaComData(iso){
+    var n=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var w=''; try{ w=n[new Date(String(iso)+'T12:00:00').getDay()]||''; }catch(e){ w=''; } /* silencioso de propósito: sem o dia da semana vale só a data */
+    var br=repBRdata(iso);
+    return (w?(w+', '):'')+String(br).slice(0,5);
+  }
+  // Quantas reposições dele ainda não têm dia marcado. `ajuste`: a marcação (+1) ou a
+  // desmarcação (−1) que acabou de ser gravada — o cache local só atualiza quando o banco
+  // responde, e a mensagem não pode sair com o número velho.
+  function repLivresSemDia(p, ajuste){
+    var saldo=0, marcadas=0;
+    try{ saldo=repSaldo(p); marcadas=(repAgendaDe(p)||[]).length; }catch(e){ /* cache ainda não desceu: a conta sai com zero, nunca negativa */ }
+    return Math.max(0, saldo-(marcadas+(Number(ajuste)||0)));
+  }
+  // DESMARCAR. O tutor desistiu do dia combinado: a data sai do crédito (que continua dele),
+  // a planilha daquele dia deixa de receber a Reposição na próxima conferência, as vagas do
+  // dia se abrem — e a mensagem para o tutor sai pronta. Nada é apagado: o dia que estava
+  // marcado fica guardado no próprio crédito (volta_desmarcada), com quem e quando.
+  async function repDesmarcar(i, dia){
+    var p=PELUDINHOS[i]; if(!p) return;
+    if(!repPodeLancar()){ alert('Quem marca e desmarca reposição é a recepção, a Supervisão ou a Gestão.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return; }
+    var L=repLancamentos(p)||[];
+    var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+    var cred=L.filter(function(l){ return l.tipo==='credito' && l.volta===dia && !anulado[l._id]; })[0];
+    if(!cred){ alert('Não achei a reposição marcada para '+repBRdata(dia)+'. Atualize a tela.'); return; }
+    if(!await zPergunta('Desmarcar a reposição de '+pelNome(p)+' em '+repDiaSemanaComData(dia)+'?',
+      ['A reposição continua valendo — só o dia sai. Ela volta a ficar sem dia marcado.',
+       'A planilha daquele dia deixa de receber a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).'],
+      {sim:'Desmarcar', nao:'Manter o dia'})) return;
+    var livres=repLivresSemDia(p, -1);
+    var up={volta:'', volta_desmarcada:{dia:dia, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()}};
+    DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+cred._id).update(up).then(function(){
+      if(typeof audit==='function') audit('reposicao-desmarcada', pelNome(p)+' não vem mais repor em '+repBRdata(dia),
+        {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+      repMsgModal('✅ Reposição desmarcada',
+        [pelNome(p)+' não vem mais repor em '+repDiaSemanaComData(dia)+'.',
+         'A reposição continua valendo: '+(livres===1?'1 reposição':(livres+' reposições'))+' sem dia marcado.'],
+        repMensagem(p,'desmarcada',{volta:dia, livres:livres}));
+      try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
+      setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 400);
+    }).catch(function(e){ alert('Não consegui desmarcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
   }
   // Modal com a confirmação em cima e a mensagem pronta embaixo — a consultora copia e
   // manda no WhatsApp. Mesmo desenho do zAlertao, mas com textarea (o zAlertao escapa HTML).
@@ -7875,11 +7937,22 @@
     if(v.tipo==='reposicao'){
       var cred=repCreditoLivre(p);
       if(!cred){ solta(); diz('Não achei um crédito sem dia marcado para agendar. Abra o Extrato dele e confira.'); return; }
+      // Contado ANTES de gravar: o cache local só soma a marcação quando o banco responde.
+      var livresDepois=repLivresSemDia(p, +1);
       repAgendarVolta(p, cred._id, dia, aut).then(function(){
-        pronto([pelNome(p)+' vem repor em '+fmtBR(dia)+' — usando a falta de '+repBRdata(cred.data)+'.',
-          'Não se cobra nada: é reposição.',
-          'A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).']
-          .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]));
+        // A MENSAGEM PRONTA PARA O TUTOR, na hora (Adriana, 25/set/2026) — e não só quando
+        // ele vem repor. É agora que a consultora está com o telefone na mão.
+        repAuditDiaDele(p, dia);
+        solta(); dxFechar();
+        repMsgModal('✅ Reposição marcada',
+          [pelNome(p)+' vem repor em '+repDiaSemanaComData(dia)+' — usando a falta de '+repBRdata(cred.data)+'.',
+           'Não se cobra nada: é reposição. A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).',
+           'Se o tutor desmarcar: tela de Reposições › «desmarcar» ao lado da data — a reposição volta a ficar sem dia.']
+          .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
+          repMensagem(p,'agendada',{volta:dia, livres:livresDepois}));
+        vagasCarregarDia(dia, true).then(function(){
+          try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
+        });
       }).catch(falhou);
       return;
     }
@@ -7948,8 +8021,14 @@
     el.innerHTML=lista.map(function(o){
       const ult=repLancamentos(o.p)[0];
       const ag=repAgendaDe(o.p);
+      // Cada data marcada tem o seu «desmarcar» (25/set/2026): o tutor desiste, a data sai e
+      // a reposição volta a ficar sem dia — com a mensagem pronta para ele.
+      const podeDesm=repPodeLancar();
       const agTxt=ag.length?('<div class="rp-sub" style="color:var(--gold);font-weight:700">Vem repor em '
-        +ag.slice(0,3).map(repBRdata).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
+        +ag.slice(0,3).map(function(d){
+          return repBRdata(d)+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
+            +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'):'');
+        }).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
         +(ag[0]===hojeISO?' — é HOJE':'')+'</div>'):'';
       // Dias presos numa reserva de hospedagem que ainda aguarda resposta: continuam sendo
       // dele (o saldo não caiu), mas já estão prometidos — não podem ser gastos duas vezes.

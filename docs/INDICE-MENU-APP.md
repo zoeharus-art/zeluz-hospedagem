@@ -95,6 +95,17 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (J) Reposição: marcar e desmarcar já avisam o tutor
+
+> **Adriana, 25/set/2026:** *"Assinalei a marcação que a tutora pediu para agendar na segunda 28/09 a reposição, e não deu nenhuma mensagem para enviar ao tutor! Precisa ter a mensagem que com a marcação ficará 1 reposição… Caso o tutor desmarque, temos que voltar e desmarcar, e o saldo volta!"*
+
+| O quê | Antes | Agora |
+|---|---|---|
+| **Marcar a reposição** (tela de Reposições › "Marcar reposição") | o aviso "DIA EXTRA MARCADO", sem mensagem para o tutor. A mensagem só existia ao lançar a falta e quando ele vinha repor | abre a mesma caixa verde de mensagem pronta: "a reposição da Luna ficou marcada para segunda-feira, 28/09. Com essa marcação, fica 1 reposição ainda sem dia" |
+| **Desmarcar** | não existia | cada data em "Vem repor em…" tem **desmarcar**. A data sai do crédito e a reposição continua valendo, sem dia. O dia desmarcado fica guardado no crédito (`volta_desmarcada`), com quem e quando. A planilha daquele dia deixa de receber a Reposição na próxima conferência e as vagas se abrem. Sai a mensagem para o tutor: "continua valendo: fica 1 reposição para marcar" |
+
+O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A mensagem fala de "quantas ficam **sem dia**", que é o que o tutor precisa saber.
+
 ### (I) Correções do QA Gate (Elo 6), antes de publicar
 
 | Achado | Correção |
@@ -109,7 +120,7 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 48 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 52 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
