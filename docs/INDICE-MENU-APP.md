@@ -95,6 +95,26 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (S) Troca de dia: falta avisada no dia dele e Reposição no novo
+
+> **Adriana, 25/set/2026:** *"O tutor está querendo trocar o dia tal e vir no outro… não quero usar a reposição, eu quero trocar o dia… A troca pedida do dia tal pro dia tal foi feita. Coco Chanel da Juliana e Billy Paul da Juliana precisam estar com falta avisada na terça-feira e ir direto para reposição na quarta."*
+
+**Onde:** Reposições › «Marcar reposição» › marcar **"É troca de dia"** e dizer em que dia dele ele NÃO vem. O «+ Marcar troca» da Lista de troca abre a mesma tela, já com a troca marcada.
+
+| O quê | Como |
+|---|---|
+| O que grava | um crédito próprio da troca: `data` = o dia dele (falta avisada), `volta` = o dia novo (Reposição), `motivo:'troca'`, `troca:{de, para, quem, ts}`. Se o tutor já tinha avisado a falta daquele dia, a troca usa aquela falta |
+| As reposições que ele já tinha | não são usadas: a troca não depende de saldo e nunca vira avulso |
+| Já estava marcada como reposição no dia novo | converte: a reposição marcada volta a ficar sem dia (o dia fica guardado em `volta_desmarcada`, "virou troca") |
+| Planilha | falta avisada no dia dele e Reposição no dia novo, pela conferência automática |
+| Turma | no dia dele: "trocou para 30/09"; no dia novo: "troca (no lugar de 29/09)". Vagas e lista de Reposições dizem "troca" |
+| Mensagem para o tutor | "Passando para confirmar: a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita. A Coco Chanel vem na quarta-feira, 30/09." — não fala em reposição |
+| Dia lotado | «Avisar a Márcia» leva a troca dentro do pedido; quando ela autoriza, o app faz a troca inteira |
+| Não deixa | o dia que sai não é dia dele; o dia novo já é dia dele; o dia que sai já passou (use «+ Falta»); os dois dias iguais; a mesma troca duas vezes; o dia novo ocupado por avulso ou por troca antiga (desfaça lá primeiro) |
+| Trocas antigas da Lista de troca | continuam na lista, com o × para cancelar. Elas só ocupavam a vaga (sem falta avisada e fora da planilha): para Coco Chanel e Billy Paul, cancele a antiga e faça a troca de novo |
+
+- **Onde está no código:** `dxVereditoTroca`, `repTrocaGravar`, `repTrocaFeitaModal`, `dxTrocaMudou`, `dxTrocaAtual`; `dxVeredito`, `dxConfirmar`, `dxPedir`, `vagasAutorizar`, `repMensagem` ('troca'), `turmaListaDoDia`, `ocupantesDoDia`, `renderReposicao` e `trocaAbrirLancar` ajustadas.
+
 ### (R) Reposição: tirar, devolver ao saldo e remarcar
 
 > **Adriana, 25/set/2026:** *"Uma tutora cancelou a reposição da Safira na quarta e não consigo remarcar e nem cancelar. Preciso de poder tirar a reposição e ela voltar para a quantidade que o tutor tem! Com o dia que foi remarcada."*
@@ -322,7 +342,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 121 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 126 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

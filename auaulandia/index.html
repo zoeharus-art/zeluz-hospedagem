@@ -1727,6 +1727,11 @@
   .rep-previa{margin-top:11px;background:var(--z-cream-warm);border:1.5px solid var(--line);
     border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--z-blue);font-weight:600;line-height:1.5}
   .rep-previa b{color:var(--z-gold-deep)}
+  /* TROCA DE DIA no «Marcar reposição» (25/set/2026) */
+  .dx-troca-lb{display:flex;gap:10px;align-items:flex-start;margin-top:12px;background:var(--z-cream-warm);
+    border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--z-blue);
+    font-weight:600;line-height:1.45;cursor:pointer}
+  .dx-troca-lb input{width:20px;height:20px;flex:0 0 auto;margin-top:1px;accent-color:var(--z-blue)}
   .rep-warn{min-height:20px;font-size:13px;font-weight:700;color:var(--crm-critico);margin-top:10px}
   .rep-btns{display:flex;gap:10px;margin-top:14px}
   .rep-cancel,.rep-ok{flex:1;border-radius:12px;padding:13px;font-family:var(--font-ui);font-weight:700;
@@ -4877,6 +4882,12 @@
       <label class="rep-lb">Em que dia ele vem?</label>
       <input type="date" class="rep-in" id="dxData" min="2015-01-01" max="2035-12-31" onchange="dxDiaMudou()" onkeydown="return dataSoNoCalendario(event)">
 
+      <label class="dx-troca-lb"><input type="checkbox" id="dxTroca" onchange="dxTrocaMudou()"><span>É <strong>troca de dia</strong>: o tutor não quer usar reposição — ele deixa de vir num dia dele e vem neste.</span></label>
+      <div id="dxTrocaBox" style="display:none">
+        <label class="rep-lb">Em que dia dele ele NÃO vem?</label>
+        <input type="date" class="rep-in" id="dxDe" min="2015-01-01" max="2035-12-31" onchange="dxTrocaMudou()" onkeydown="return dataSoNoCalendario(event)">
+      </div>
+
       <div id="dxVeredito" style="margin-top:4px"></div>
       <div id="dxVagas"></div>
 
@@ -6721,6 +6732,13 @@
         +saldo+(saldo===1?' reposição':' reposições')
         +(qtd>1?', com as de hoje, ':', com a de hoje, ') + ref + '.';
       if(info.volta) corpo+='\n\nO dia de repor já ficou combinado: '+repBRdata(info.volta)+'.';
+    }else if(modo==='troca'){
+      // TROCA DE DIA (Adriana, 25/set/2026): "A troca pedida do dia tal pro dia tal foi
+      // feita." Não fala em reposição — o tutor escolheu trocar, não usar reposição.
+      var dSem=function(iso){ return String(repDiaSemanaComData(iso)).split(',')[0]; };
+      var dCur=function(iso){ return String(repBRdata(iso)).slice(0,5); };
+      corpo='Passando para confirmar: a troca pedida do dia '+dCur(info.de)+' ('+dSem(info.de)+') para o dia '
+        +dCur(info.para)+' ('+dSem(info.para)+') foi feita. '+(f?'A ':'O ')+nome+' vem '+repNoDia(info.para)+'.';
     }else if(modo==='agendada' || modo==='desmarcada'){
       // MARCAR E DESMARCAR TAMBÉM AVISAM O TUTOR (Adriana, 25/set/2026): "Assinalei a
       // marcação que a tutora pediu para segunda 28/09 e não deu nenhuma mensagem para
@@ -7292,39 +7310,13 @@
   function trocaPodeMexer(){ const r=document.body.dataset.role||'';
     return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
   // Marcar a troca com o tutor no telefone: quem, para quando e por quê.
-  async function trocaAbrirLancar(){
+  function trocaAbrirLancar(){
     if(!trocaPodeMexer()){ alert('Só a Recepção, a Supervisão ou a Gestão marcam troca.'); return; }
-    const nome=((await zTexto('Marcar troca — qual FILHOt?',
-      ['Escreva o nome (ou nome e tutor, se houver xará).'],
-      {rotulo:'Nome do FILHOt', botao:'Continuar', cor:'#234D67', minimo:2}))||'').trim();
-    if(!nome) return;
-    const achados=PELUDINHOS.filter(function(x){ return !pelInativo(x) && termosBuscaPel(x).indexOf(jsNorm(nome))>=0; });
-    if(!achados.length){ alert('Não achei "'+nome+'" no cadastro.'); return; }
-    if(achados.length>1){
-      alert('Achei mais de um:\n\n'+achados.slice(0,6).map(function(x){ return '· '+pelNome(x)+' — '+(x.tutor||'sem tutor'); }).join('\n')
-        +'\n\nEscreva o nome com o tutor para eu saber qual é.');
-      return;
-    }
-    const p=achados[0];
-    const jaVem=(pelDias(p)||[]).map(function(d){ return DIA_FULL[d]||d; }).join(', ')||'nenhum dia fixo';
-    const para=((await zTexto('Troca de '+pelNome(p),
-      ['Para qual dia ele vem? Escreva no formato aaaa-mm-dd.', 'Dias em que ele já vem: '+jaVem],
-      {rotulo:'Dia da troca', dica:'aaaa-mm-dd', botao:'Continuar', cor:'#234D67', minimo:8}))||'').trim();
-    if(!para) return;
-    const erro=trocaValidar(p,para);
-    if(erro){ alert(erro); return; }
-    const livres=trocaVagasLivres(para);
-    const aviso=livres>0
-      ? 'Há '+livres+' vaga(s) livre(s) em '+fmtBR(para)+' — dá para marcar na hora.'
-      : 'SEM VAGA em '+fmtBR(para)+'. Vai virar um PEDIDO para a Gestora avaliar.';
-    const motivo=((await zTexto('Por que a troca?',
-      ['Por exemplo: viagem do tutor, consulta, cio.', aviso],
-      {rotulo:'Motivo da troca', botao:'Marcar a troca', cor:'#234D67'}))||'').trim();
-    trocaLancar(p,'',para,motivo).then(function(reg){
-      alert(reg.status==='confirmada'
-        ? 'Troca marcada: '+pelNome(p)+' vem em '+fmtBR(para)+'.\n\nSobraram '+trocaVagasLivres(para)+' vaga(s) nesse dia.'
-        : 'Pedido enviado para a Gestora.\n\n'+fmtBR(para)+' já está com as '+vagasLimite()+' vagas cheias. Ela avalia a matilha e o comportamento antes de abrir mais uma.');
-    }).catch(function(e){ alert(e.message||'Não consegui marcar.'); });
+    // TROCA DE DIA (25/set/2026): a troca passou a ser FALTA AVISADA no dia dele + REPOSIÇÃO
+    // no dia novo, pela mesma porta do «Marcar reposição» — já aberta em modo troca. A troca
+    // antiga (só a vaga, sem a falta avisada) deixava o FILHOt na turma do dia dele e fora da
+    // planilha. As trocas antigas continuam na lista, com o × para cancelar.
+    dxAbrir(null, {troca:true});
   }
   /* ====================================================================================
    * AS VAGAS DO DIA, A CONFIRMAÇÃO NA PLANILHA E O DIA EXTRA — Adriana, 21/set/2026
@@ -7444,7 +7436,9 @@
     // 1) reposição AGENDADA pelo tutor — já está na memória do app, não custa leitura.
     try{
       repAgendadosPara(dia).forEach(function(o){
-        add(pelNome(o.p), 'reposicao', 'agenda', (typeof pelKey==='function')?pelKey(o.p):'');
+        var ehTroca=false;
+        try{ ehTroca=(repLancamentos(o.p)||[]).some(function(l){ return l&&l.tipo==='credito'&&l.volta===dia&&l.troca; }); }catch(e){ ehTroca=false; } /* silencioso de propósito: sem o extrato, conta como reposição — a vaga é a mesma */
+        add(pelNome(o.p), ehTroca?'troca':'reposicao', 'agenda', (typeof pelKey==='function')?pelKey(o.p):'');
       });
     }catch(e){ _logFalhaGrav('ocupantesDoDia (agendados)', e); }
     var c=REP_PLAN_CACHE[dia]||{};
@@ -7882,18 +7876,21 @@
     }
     var v=vagasDoDia(dia), pay=ped.payload||{};
     var ehAvulso=(ped.tipo==='avulso');
+    var ehTroca=!ehAvulso && !!(pay.troca && /^\d{4}-\d{2}-\d{2}$/.test(pay.troca.de||''));
     var valor=Math.round(pay.valor_cent||0) || diariaAvulsaCent(p);
     if(!await zPergunta('Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?',
       ['O dia está com '+v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+'.',
        ehAvulso?('Vai entrar como AVULSO nos Lançamentos do dia '+fmtBR(dia)+' — '+fmtCent(valor)
                  +(pay.matriculado?' (matriculado)':' (não matriculado)')+'.')
-              :('Vai ficar combinado que '+(ped.pet||'')+' repõe em '+fmtBR(dia)+'.'),
+              :(ehTroca?('Vai ficar feita a TROCA: '+(ped.pet||'')+' não vem em '+fmtBR(pay.troca.de)+' e vem em '+fmtBR(dia)+'.')
+                       :('Vai ficar combinado que '+(ped.pet||'')+' repõe em '+fmtBR(dia)+'.')),
        'Fica registrado que a autorização foi sua.'],
       {sim:'Autorizar', nao:'Não autorizar'})) return;
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     var aut={quem:quem, ts:Date.now()};
-    var acao;
+    var acao, trocaR=null;
     if(ehAvulso) acao=dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut);
+    else if(ehTroca) acao=repTrocaGravar(p, pay.troca.de, dia, aut).then(function(r){ trocaR=r; return true; });
     else {
       // O crédito da falta JÁ existe (foi lançado quando a recepção pediu o encaixe): aqui
       // só se marca o dia de repor nele. Se a chave se perdeu, procura-se um crédito sem
@@ -7914,8 +7911,9 @@
       return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave)
         .update({status:'autorizado', autorizado_por:quem, autorizado_ts:aut.ts}).then(function(){
           if(typeof audit==='function') audit('vaga-autorizada',
-            (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' ('+(ehAvulso?'avulso':'reposição')+')',
+            (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' ('+(ehAvulso?'avulso':(ehTroca?'troca de '+repBRdata(pay.troca.de):'reposição'))+')',
             {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
+          if(ehTroca){ repTrocaFeitaModal(p, pay.troca.de, dia, trocaR, aut); return true; }
           var l=[(ped.pet||'')+' está encaixado em '+fmtBR(dia)+'.'];
           if(ehAvulso) l.push('Entrou nos Lançamentos do dia como Avulso — '+fmtCent(valor)+' — e vai para a planilha e para a TV.');
           else l.push('O dia de repor ficou combinado. A recepção já vê na tela de Reposições.');
@@ -8001,9 +7999,27 @@
    * entra no crédito que ele já tem); NÃO tem → avulso, com o preço de matriculado ou de
    * não matriculado. Nada grava antes do Confirmar. */
   var dxPel=null, dxDia='';
-  function dxAbrir(pel){
+  // TROCA DE DIA (Adriana, 25/set/2026): "O tutor está querendo trocar o dia tal e vir no
+  // outro… não quero usar a reposição, eu quero trocar o dia." A troca é FALTA AVISADA no dia
+  // dele e REPOSIÇÃO no dia novo — com um crédito próprio, que nasce da falta e é usado no dia
+  // novo. As reposições que ele já tinha não são tocadas, e a mensagem fala em troca.
+  var dxTroca=false, dxDe='';
+  function dxTrocaAtual(){ return dxTroca?{de:dxDe}:null; }
+  function dxTrocaMudou(){
+    var c=document.getElementById('dxTroca'); dxTroca=!!(c&&c.checked);
+    var b=document.getElementById('dxTrocaBox'); if(b) b.style.display=dxTroca?'block':'none';
+    dxDe=String(((document.getElementById('dxDe')||{}).value)||'').trim();
+    dxPintar();
+  }
+  function dxAbrir(pel, op){
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o dia extra.'); return; }
     dxPel=pel||null; dxDia='';
+    dxTroca=!!(op&&op.troca); dxDe='';
+    try{
+      var _c=document.getElementById('dxTroca'); if(_c) _c.checked=dxTroca;
+      var _d=document.getElementById('dxDe'); if(_d) _d.value='';
+      var _b=document.getElementById('dxTrocaBox'); if(_b) _b.style.display=dxTroca?'block':'none';
+    }catch(e){ /* enfeite de tela: sem os campos, a troca fica desligada */ }
     var el=document.getElementById('dxModal'); if(!el) return;
     el.classList.add('on');
     var v=function(id,val){ var x=document.getElementById(id); if(x) x.value=val; };
@@ -8041,7 +8057,7 @@
     dxPintar();
   }
   // A DECISÃO, em função pura: nada de tela, nada de banco. É ela que o harness prova.
-  function dxVeredito(p, dia){
+  function dxVeredito(p, dia, troca){
     var out={ok:false, tipo:'', saldo:0, livre:0, valor_cent:0, matriculado:false, motivo:'', jaTem:false};
     if(!p){ out.motivo='Escolha o peludinho primeiro.'; return out; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')){ out.motivo='Escolha o dia em que ele vem.'; return out; }
@@ -8052,6 +8068,7 @@
     try{ out.saldo=repSaldo(p); }catch(e){ out.saldo=0; }
     try{ out.livre=repDisponivel(p,''); }catch(e){ out.livre=out.saldo; }
     out.matriculado=dcMatriculado(p);
+    if(troca) return dxVereditoTroca(p, dia, troca, out, hoje, sem);
     var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
     if(v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; })){
       out.jaTem=true;
@@ -8064,8 +8081,94 @@
     out.valor_cent=diariaAvulsaCent(p);
     return out;
   }
+  // A TROCA: o dia dele em que ele não vem (de) e o dia novo (para). Pura no que decide.
+  function dxVereditoTroca(p, dia, troca, out, hoje, sem){
+    out.troca=true;
+    var de=String((troca&&troca.de)||'');
+    out.de=de;
+    var ele=(typeof repEhFemea==='function'&&repEhFemea(p))?'ela':'ele';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(de)){ out.motivo='Diga também em que dia '+ele+' NÃO vem — é esse o dia que sai na troca.'; return out; }
+    if(hoje && de<hoje){ out.motivo='O dia '+repBRdata(de)+' já passou. Para uma falta que já aconteceu, use «+ Falta».'; return out; }
+    if(de===dia){ out.motivo='Os dois dias são o mesmo. Escolha o dia em que '+ele+' vem e o dia em que não vem.'; return out; }
+    var dias=[]; try{ dias=pelDias(p)||[]; }catch(e){ dias=[]; }
+    var semDe=trocaDiaSemana(de);
+    var nomeDia=function(d){ return (typeof DIA_FULL!=='undefined'&&DIA_FULL[d])||d; };
+    if(dias.indexOf(semDe)<0){ out.motivo=pelNome(p)+' não vem na '+String(nomeDia(semDe)).toLowerCase()+' — '+repBRdata(de)+' não é dia '+(ele==='ela'?'dela':'dele')+' para trocar.'; return out; }
+    if(dias.indexOf(sem)>=0){ out.motivo=pelNome(p)+' já vem na '+String(nomeDia(sem)).toLowerCase()+' — '+repBRdata(dia)+' já é dia '+(ele==='ela'?'dela':'dele')+'.'; return out; }
+    var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){ L=[]; }
+    var an=repAnulados(L);
+    var jaFeita=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.troca&&l.data===de&&l.volta===dia; })[0];
+    if(jaFeita){ out.motivo='Essa troca já está feita: '+repBRdata(de)+' → '+repBRdata(dia)+'.'; return out; }
+    // Já ocupa o dia novo? Se for a reposição que a recepção marcou antes de o tutor dizer
+    // "é troca", ela CONVERTE (a data sai dela e a reposição volta a ficar sem dia). Outra coisa
+    // (avulso, troca antiga da Lista de troca, lançamento à mão) não se converte sozinha.
+    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===dia&&!l.troca; })[0]||null;
+    var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
+    var noDia=v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; });
+    if(noDia && !marcada){
+      out.jaTem=true;
+      out.motivo=pelNome(p)+' já está '+(ele==='ela'?'marcada':'marcado')+' em '+repBRdata(dia)+' (avulso, troca da Lista de troca ou lançamento). Desfaça lá primeiro e faça a troca de novo.';
+      return out;
+    }
+    out.converte=marcada?marcada._id:'';
+    out.ok=true; out.tipo='troca';
+    return out;
+  }
+  // Grava a TROCA num update só: o crédito da falta do dia dele (o que já existia, se o tutor
+  // tinha avisado antes, ou um novo) recebe o dia novo e a marca `troca`; a reposição que a
+  // recepção tinha marcado para o dia novo, se houver, volta a ficar sem dia. Nada é apagado:
+  // o dia que saía de cada crédito fica em volta_desmarcada.
+  function repTrocaGravar(p, de, para, aut){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    if(!p) return Promise.reject(new Error('sem o peludinho'));
+    var L=repLancamentos(p)||[], an=repAnulados(L);
+    var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), agora=Date.now();
+    var troca={de:de, para:para, quem:quem, ts:agora};
+    var base='daycare/reposicao/'+pelKey(p)+'/lancamentos', up={};
+    var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de; })[0]||null;
+    var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===para&&!l.troca; })[0]||null;
+    if(marcada && !(falta && marcada._id===falta._id)){
+      up[marcada._id+'/volta']='';
+      up[marcada._id+'/volta_desmarcada']={dia:para, quem:quem, ts:agora, motivo:'virou troca (no lugar de '+repBRdata(de)+')'};
+    }
+    var credId;
+    if(falta){
+      credId=falta._id;
+      if(falta.volta && falta.volta!==para) up[credId+'/volta_desmarcada']={dia:falta.volta, quem:quem, ts:agora, motivo:'remarcada para '+repBRdata(para)};
+      up[credId+'/volta']=para; up[credId+'/volta_por']=quem; up[credId+'/volta_ts']=agora; up[credId+'/troca']=troca;
+      if(aut) up[credId+'/autorizacao']=aut;
+    } else {
+      credId=DB.ref(base).push().key;
+      var reg={tipo:'credito', data:de, motivo:'troca', obs:'Troca de dia pedida pelo tutor', volta:para, troca:troca, quem:quem, ts:agora};
+      if(aut) reg.autorizacao=aut;
+      up[credId]=reg;
+    }
+    return DB.ref(base).update(up).then(function(){
+      if(typeof audit==='function') audit('reposicao-troca', pelNome(p)+': troca de '+repBRdata(de)+' para '+repBRdata(para)
+        +(marcada?' (a reposição marcada para '+repBRdata(para)+' voltou a ficar sem dia)':'')+(aut?(' — encaixe autorizado por '+(aut.quem||'-')):''),
+        {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+      return {credId:credId, convertida:!!(marcada && !(falta && marcada._id===falta._id)), faltaExistia:!!falta};
+    });
+  }
+  // As linhas da confirmação e a mensagem para o tutor — as mesmas pela recepção e pela Márcia.
+  function repTrocaFeitaModal(p, de, para, r, aut){
+    var ela=(typeof repEhFemea==='function'&&repEhFemea(p));
+    repMsgModal('✅ Troca de dia feita',
+      [pelNome(p)+' não vem '+repNoDia(de)+', e vem '+repNoDia(para)+'.',
+       'Na planilha: falta avisada em '+repBRdata(de)+' e Reposição em '+repBRdata(para)+' (na próxima conferência, até '+DASH_AUTO_MIN+' min).',
+       'As reposições que '+(ela?'ela':'ele')+' já tinha continuam as mesmas.']
+        .concat((r&&r.convertida)?['A reposição que estava marcada para '+repBRdata(para)+' voltou a ficar sem dia.']:[])
+        .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
+      repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
+  }
   function dxVeredictoHTML(v){
     if(!v.ok) return v.motivo?('<div class="vg-ok"><span>'+esc(v.motivo)+'</span></div>'):'';
+    if(v.tipo==='troca'){
+      return '<div class="rep-previa"><strong>TROCA DE DIA: não vem '+esc(repNoDia(v.de))+', e vem '+esc(repNoDia(dxDia))+'.</strong> '
+        +'Na planilha: <b>falta avisada</b> em '+esc(repBRdata(v.de))+' e <b>Reposição</b> em '+esc(repBRdata(dxDia))+'. '
+        +'As reposições que já tinha ('+v.saldo+') não são usadas.'
+        +(v.converte?(' A reposição que estava marcada para '+esc(repBRdata(dxDia))+' volta a ficar sem dia.'):'')+'</div>';
+    }
     if(v.tipo==='reposicao'){
       return '<div class="rep-previa"><strong>Ele tem '+v.livre+' dia'+(v.livre===1?'':'s')
         +' de reposição: este dia é <b>REPOSIÇÃO</b></strong> — não se cobra nada. '
@@ -8080,10 +8183,11 @@
       +' como Avulso — vai para a planilha e para a TV.</div>';
   }
   function dxBotaoRotulo(){
-    var v=dxVeredito(dxPel, dxDia);
+    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual());
     if(!v.ok) return 'Confirmar';
     var vg=vagasDoDia(dxDia);
     if(vg.cheio && vagasPodeEncaixar()) return 'Márcia autorizou';
+    if(v.tipo==='troca') return 'Fazer a troca';
     // Dia que já é dele: o botão passa a pedir a confirmação com todas as letras.
     if(repEhDiaDele(dxPel, dxDia)) return REP_DIA_DELE_BOTAO;
     if(v.tipo==='avulso') return 'Lançar o avulso';
@@ -8099,7 +8203,7 @@
           +(dcMatriculado(dxPel)?'matriculado':'sem plano ativo')+'</span>';
       } else { e.style.display='none'; e.innerHTML=''; }
     }
-    var v=dxVeredito(dxPel, dxDia);
+    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual());
     var vd=document.getElementById('dxVeredito'); if(vd) vd.innerHTML=dxVeredictoHTML(v);
     var vgEl=document.getElementById('dxVagas');
     // A faixa do "dia dele" vem PRIMEIRO: é o erro que ela quis evitar, não um detalhe.
@@ -8114,7 +8218,7 @@
   function dxConfirmar(){
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
     var diz=function(t){ if(w) w.textContent=t; };
-    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia);
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
     if(!v.ok){ diz(v.motivo); return; }
     var vg=vagasDoDia(dia);
     if(!vg.lido){ diz('Ainda estou conferindo as vagas de '+repBRdata(dia)+'. Espere um instante e confirme de novo.'); return; }
@@ -8137,6 +8241,17 @@
       });
     };
     var falhou=function(e){ solta(); diz('Não consegui: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.'); };
+    if(v.tipo==='troca'){
+      repTrocaGravar(p, v.de, dia, aut).then(function(r){
+        repAuditDiaDele(p, dia);
+        solta(); dxFechar();
+        repTrocaFeitaModal(p, v.de, dia, r, aut);
+        vagasCarregarDia(dia, true).then(function(){
+          try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
+        });
+      }).catch(falhou);
+      return;
+    }
     if(v.tipo==='reposicao'){
       var cred=repCreditoLivre(p);
       if(!cred){ solta(); diz('Não achei um crédito sem dia marcado para agendar. Abra o Extrato dele e confira.'); return; }
@@ -8172,16 +8287,21 @@
   // autorizar. Mais nada é gravado agora — o dia continua lotado.
   function dxPedir(){
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
-    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia);
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
     if(!v.ok){ if(w) w.textContent=v.motivo; return; }
-    var cred=(v.tipo==='avulso')?null:repCreditoLivre(p);
+    var cred=(v.tipo==='avulso'||v.tipo==='troca')?null:repCreditoLivre(p);
+    // A troca pede a vaga como reposição (é o que ela ocupa), com a troca dentro: quando a
+    // Márcia autoriza, o app faz a troca inteira — falta avisada e Reposição.
     var pay=(v.tipo==='avulso')
       ? {valor_cent:v.valor_cent, matriculado:!!v.matriculado}
-      : {credito_id:(cred&&cred._id)||'', data:(cred&&cred.data)||'', volta:dia};
-    vagasPedir(dia, p, v.tipo, pay).then(function(){
+      : ((v.tipo==='troca') ? {volta:dia, troca:{de:v.de, para:dia}}
+        : {credito_id:(cred&&cred._id)||'', data:(cred&&cred.data)||'', volta:dia});
+    vagasPedir(dia, p, (v.tipo==='troca')?'reposicao':v.tipo, pay).then(function(){
       dxFechar();
-      var l=['A Márcia recebeu o pedido de encaixe de '+pelNome(p)+' em '+fmtBR(dia)+'.',
-        'Nada foi lançado ainda: quando ela autorizar, o app lança sozinho e a recepção vê na tela de Reposições.'];
+      var l=['A Márcia recebeu o pedido de encaixe de '+pelNome(p)+' em '+fmtBR(dia)+(v.tipo==='troca'?(' (troca: no lugar de '+fmtBR(v.de)+')'):'')+'.',
+        (v.tipo==='troca')
+          ? 'Nada foi lançado ainda: quando ela autorizar, o app faz a troca sozinho — falta avisada em '+fmtBR(v.de)+' e Reposição em '+fmtBR(dia)+'.'
+          : 'Nada foi lançado ainda: quando ela autorizar, o app lança sozinho e a recepção vê na tela de Reposições.'];
       if(typeof zAlertao==='function') zAlertao('PEDIDO ENVIADO À MÁRCIA', l, {botao:'Fechar'});
       else alert(l.join('\n'));
     }).catch(function(e){
@@ -8230,7 +8350,8 @@
       const podeDesm=repPodeLancar();
       const agTxt=ag.length?('<div class="rp-sub" style="color:var(--gold);font-weight:700">Vem repor em '
         +ag.slice(0,3).map(function(d){
-          return repBRdata(d)+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
+          var tc=repLancamentos(o.p).filter(function(l){ return l.tipo==='credito'&&l.volta===d&&l.troca; })[0];
+          return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+')'):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
             +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'):'');
         }).join(' · ')+(ag.length>3?(' e mais '+(ag.length-3)):'')
         +(ag[0]===hojeISO?' — é HOJE':'')+'</div>'):'';
@@ -40040,9 +40161,11 @@
       var an=anulados(L);
       var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&l.data===iso&&!an[l._id]; })[0]||null;
       var repor=((typeof repAgendaDe==='function')?(repAgendaDe(p)||[]):[]).indexOf(iso)>=0;
+      // TROCA DE DIA (25/set/2026): o crédito da troca diz "troca", não "reposição".
+      var trocaCred=L.filter(function(l){ return l&&l.tipo==='credito'&&l.volta===iso&&l.troca&&!an[l._id]; })[0]||null;
       var porque='';
       if(!fixo){
-        if(repor) porque='reposição';
+        if(repor) porque=trocaCred?('troca (no lugar de '+fmtBR(trocaCred.troca.de||trocaCred.data).slice(0,5)+')'):'reposição';
         else if(trocouPraCa[pk]) porque='troca'+(trocouPraCa[pk].de?(' (no lugar de '+fmtBR(trocouPraCa[pk].de).slice(0,5)+')'):'');
         else if((f.avulsos||{})[ck]) porque='avulso';
         else return;                                                          // não é deste dia
@@ -40053,8 +40176,10 @@
       if(fixo && (falta || trocouDaqui[pk])){
         var t=trocouDaqui[pk];
         base.motivo=t ? ('trocou para '+fmtBR(t.para).slice(0,5))
-                      : ('falta avisada — '+((typeof REP_MOTIVOS!=='undefined'&&REP_MOTIVOS[falta.motivo])||falta.motivo||'sem motivo'))
-                        +((falta&&falta.volta)?(' · repõe em '+fmtBR(falta.volta).slice(0,5)):'');
+                      : ((falta.troca&&falta.volta)
+                        ? ('trocou para '+fmtBR(falta.volta).slice(0,5))
+                        : (('falta avisada — '+((typeof REP_MOTIVOS!=='undefined'&&REP_MOTIVOS[falta.motivo])||falta.motivo||'sem motivo'))
+                          +((falta&&falta.volta)?(' · repõe em '+fmtBR(falta.volta).slice(0,5)):'')));
         naoVem.push(base); return;
       }
       if(visto[ck]) return; visto[ck]=1;

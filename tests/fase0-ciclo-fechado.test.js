@@ -774,6 +774,120 @@ provaAsync('o lançamento de Reposição guarda de qual lançamento veio o uso',
   } finally { run('repGravar=__bkR5.g; dashDia=__bkR5.di; repMsgModal=__bkR5.mm; audit=__bkR5.au;'); }
 });
 
+// ================================================================== Troca de dia (Coco Chanel e Billy Paul, 25/set)
+console.log('\nTroca de dia — falta avisada no dia dele, Reposição no novo, sem gastar as reposições');
+const TROCA_STUBS = `__bkT={pd:pelDias, rl:repLancamentos, vd:vagasDoDia, dm:dcMatriculado, rs:repSaldo, rdi:repDisponivel, hz:zHojeISO, pe:pelExtra};
+  pelDias=function(){ return ['ter']; }; dcMatriculado=function(){ return true; }; repSaldo=function(){ return 2; }; repDisponivel=function(){ return 2; };
+  zHojeISO=function(){ return '2026-09-25'; }; pelExtra=function(){ return {sexo:'Fêmea'}; };
+  vagasDoDia=function(){ return {reposicao:__VR||[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };
+  __VR=[]; __LT=[]; repLancamentos=function(){ return __LT; };`;
+const TROCA_VOLTA = 'pelDias=__bkT.pd; repLancamentos=__bkT.rl; vagasDoDia=__bkT.vd; dcMatriculado=__bkT.dm; repSaldo=__bkT.rs; repDisponivel=__bkT.rdi; zHojeISO=__bkT.hz; pelExtra=__bkT.pe;';
+prova('o veredito da troca: não pede reposição, valida os dois dias e converte a reposição já marcada', () => {
+  run(TROCA_STUBS);
+  try {
+    const V = (de, para) => JSON.parse(JSON.stringify(run("dxVeredito({n:'Coco Chanel', tutor:'Juliana'}, '" + para + "', {de:'" + de + "'})")));
+    let v = V('2026-09-29', '2026-09-30');
+    assert.strictEqual(v.ok, true, v.motivo);
+    assert.strictEqual(v.tipo, 'troca', 'é troca, não reposição nem avulso');
+    assert.strictEqual(v.de, '2026-09-29');
+    assert.ok(!v.converte);
+    run('repSaldo=function(){ return 0; }; repDisponivel=function(){ return 0; };');
+    assert.strictEqual(V('2026-09-29', '2026-09-30').tipo, 'troca', 'sem reposição nenhuma, a troca continua sendo troca (não vira avulso)');
+    assert.ok(/NÃO vem/.test(V('', '2026-09-30').motivo), 'pede o dia em que ela não vem');
+    assert.ok(/não vem na quarta/.test(V('2026-09-30', '2026-10-01').motivo), 'o dia que sai tem de ser dia dela');
+    run("pelDias=function(){ return ['ter','qua']; };");
+    assert.ok(/já vem na quarta/.test(V('2026-09-29', '2026-09-30').motivo), 'o dia novo não pode ser dia dela');
+    run("pelDias=function(){ return ['ter']; };");
+    assert.ok(/já passou/.test(V('2026-09-22', '2026-09-30').motivo));
+    // a recepção já tinha marcado a reposição para quarta (usando uma reposição dela): converte
+    run("__VR=['Coco Chanel/Spitz']; __LT=[{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'}];");
+    v = V('2026-09-29', '2026-09-30');
+    assert.strictEqual(v.ok, true, v.motivo);
+    assert.strictEqual(v.converte, 'c1');
+    // já feita
+    run("__LT=[{_id:'c2', tipo:'credito', data:'2026-09-29', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}}];");
+    assert.ok(/já está feita/.test(V('2026-09-29', '2026-09-30').motivo));
+    // ocupada por outra coisa (avulso/troca antiga): não converte sozinha
+    run("__LT=[];");
+    assert.ok(/Desfaça lá primeiro/.test(V('2026-09-29', '2026-09-30').motivo));
+    // sem troca, o veredito de sempre (o harness v-33 depende dele)
+    run("__VR=[]; repSaldo=function(){ return 2; }; repDisponivel=function(){ return 2; };");
+    assert.strictEqual(JSON.parse(JSON.stringify(run("dxVeredito({n:'Coco Chanel', tutor:'Juliana'}, '2026-09-30')"))).tipo, 'reposicao');
+  } finally { run(TROCA_VOLTA); }
+});
+provaAsync('gravar a troca: crédito próprio (falta no dia dela, volta no novo); a reposição marcada volta a ficar sem dia', async () => {
+  run(TROCA_STUBS + `__bkT2={db:DB, au:audit}; audit=function(){}; __up=null; __upP='';
+    DB={ref:function(p){ return { push:function(){ return {key:'NOVO'}; }, update:function(v){ __upP=p; __up=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};`);
+  try {
+    run("__LT=[{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'}];");
+    let r = await run("repTrocaGravar({n:'Coco Chanel', tutor:'Juliana'}, '2026-09-29', '2026-09-30', null)");
+    let up = JSON.parse(JSON.stringify(run('__up')));
+    assert.ok(/daycare\/reposicao\/.+\/lancamentos$/.test(run('__upP')));
+    assert.strictEqual(up.NOVO.tipo, 'credito');
+    assert.strictEqual(up.NOVO.data, '2026-09-29', 'falta avisada na terça');
+    assert.strictEqual(up.NOVO.volta, '2026-09-30', 'Reposição na quarta');
+    assert.strictEqual(up.NOVO.motivo, 'troca');
+    assert.deepStrictEqual([up.NOVO.troca.de, up.NOVO.troca.para], ['2026-09-29', '2026-09-30']);
+    assert.strictEqual(up['c1/volta'], '', 'a reposição que estava marcada volta a ficar sem dia');
+    assert.ok(/virou troca/.test(up['c1/volta_desmarcada'].motivo) && up['c1/volta_desmarcada'].dia === '2026-09-30');
+    assert.strictEqual(JSON.parse(JSON.stringify(r)).convertida, true);
+    // o tutor já tinha avisado a falta da terça: a troca usa aquela falta
+    run("__LT=[{_id:'f1', tipo:'credito', data:'2026-09-29', motivo:'viagem'}];");
+    r = await run("repTrocaGravar({n:'Coco Chanel', tutor:'Juliana'}, '2026-09-29', '2026-09-30', {quem:'Márcia', ts:1})");
+    up = JSON.parse(JSON.stringify(run('__up')));
+    assert.ok(!up.NOVO, 'nenhum crédito novo');
+    assert.strictEqual(up['f1/volta'], '2026-09-30');
+    assert.strictEqual(up['f1/troca'].de, '2026-09-29');
+    assert.strictEqual(up['f1/autorizacao'].quem, 'Márcia');
+  } finally { run(TROCA_VOLTA + ' DB=__bkT2.db; audit=__bkT2.au;'); }
+});
+prova('a mensagem da troca fala em troca — não em reposição', () => {
+  run(`__bkT3={pe:pelExtra}; pelExtra=function(){ return {sexo:'Fêmea'}; };`);
+  try {
+    const m = run("repMensagem({n:'Coco Chanel', tutor:'Juliana Prado'}, 'troca', {de:'2026-09-29', para:'2026-09-30'})");
+    assert.ok(/^Oi, Juliana, como está\?/.test(m), m);
+    assert.ok(/a troca pedida do dia 29\/09 \(terça-feira\) para o dia 30\/09 \(quarta-feira\) foi feita\. A Coco Chanel vem na quarta-feira, 30\/09\./.test(m), m);
+    assert.ok(!/reposi/i.test(m), 'nenhuma palavra sobre reposição');
+  } finally { run('pelExtra=__bkT3.pe;'); }
+});
+prova('turma: na terça "trocou para 30/09"; na quarta vem "troca (no lugar de 29/09)"; a planilha recebe falta e Reposição', () => {
+  run(`__bkT4={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, te:poTelDoTutor, rs:repSaldo, pi:pelInativo, mz:ehMoradorZeluz, P:PELUDINHOS, hz:zHojeISO};
+       pelDias=function(p){ return p.dias||[]; }; pelInativo=function(){ return false; }; ehMoradorZeluz=function(){ return false; };
+       repLancamentos=function(p){ return p.lanc||[]; }; repAgendaDe=function(p){ return (p.lanc||[]).filter(function(l){ return l.volta; }).map(function(l){ return l.volta; }); };
+       pelExtra=function(){ return {}; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 3; }; zHojeISO=function(){ return '2026-09-25'; };
+       __P=[{n:'Coco Chanel', raca:'Spitz', tutor:'Juliana', dias:['ter'], lanc:[{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}}]}];
+       PELUDINHOS=__P;`);
+  try {
+    const ter = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-29', {pets:__P, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-09-25'})")));
+    assert.deepStrictEqual(ter.vem.map((o) => o.nome), [], 'sai da turma de terça');
+    assert.strictEqual(ter.naoVem[0].motivo, 'trocou para 30/09');
+    const qua = JSON.parse(JSON.stringify(run("turmaListaDoDia('2026-09-30', {pets:__P, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-09-25'})")));
+    assert.strictEqual(qua.vem[0].porque, 'troca (no lugar de 29/09)');
+    const pTer = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-09-29')")));
+    const pQua = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-09-30')")));
+    assert.ok(pTer.faltas.some((n) => /Coco Chanel/.test(n)), 'terça: Faltas Avisadas');
+    assert.ok(pQua.reposicao.some((n) => /Coco Chanel/.test(n)), 'quarta: Reposição');
+  } finally { run('pelDias=__bkT4.pd; repLancamentos=__bkT4.rl; repAgendaDe=__bkT4.ra; pelExtra=__bkT4.pe; poTelDoTutor=__bkT4.te; repSaldo=__bkT4.rs; pelInativo=__bkT4.pi; ehMoradorZeluz=__bkT4.mz; PELUDINHOS=__bkT4.P; zHojeISO=__bkT4.hz;'); }
+});
+provaAsync('dia lotado: a Márcia autoriza e o app faz a troca inteira', async () => {
+  run(`__bkT5={pp:vagasPodeEncaixar, pd:vagasPedidoDe, pc:repPelaChave, vd:vagasDoDia, zp:zPergunta, tg:repTrocaGravar, fm:repTrocaFeitaModal, db:DB, au:audit};
+    __tg=null; __fm=0;
+    vagasPodeEncaixar=function(){ return true; };
+    vagasPedidoDe=function(){ return {pet:'Coco Chanel', tipo:'reposicao', payload:{volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}}}; };
+    repPelaChave=function(){ return {n:'Coco Chanel', tutor:'Juliana'}; };
+    vagasDoDia=function(){ return {usadas:5, limite:5}; };
+    zPergunta=function(){ return Promise.resolve(true); };
+    repTrocaGravar=function(p, de, para, aut){ __tg={de:de, para:para, aut:!!aut}; return Promise.resolve({convertida:false}); };
+    repTrocaFeitaModal=function(){ __fm++; }; audit=function(){};
+    DB={ref:function(){ return { update:function(){ return Promise.resolve(); } }; }};`);
+  try {
+    await run("vagasAutorizar('2026-09-30', 'coco')");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__tg'))), { de: '2026-09-29', para: '2026-09-30', aut: true });
+    assert.strictEqual(run('__fm'), 1, 'a mensagem da troca sai pronta');
+  } finally { run('vagasPodeEncaixar=__bkT5.pp; vagasPedidoDe=__bkT5.pd; repPelaChave=__bkT5.pc; vagasDoDia=__bkT5.vd; zPergunta=__bkT5.zp; repTrocaGravar=__bkT5.tg; repTrocaFeitaModal=__bkT5.fm; DB=__bkT5.db; audit=__bkT5.au;'); }
+});
+
 // ================================================================== Orçamento → Check-in (25/set)
 console.log('\nOrçamentos de hospedagem — o cliente novo é reconhecido e quem chega aparece no Check-in');
 prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o caso do Pingo)', () => {
