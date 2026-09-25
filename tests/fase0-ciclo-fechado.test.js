@@ -1292,6 +1292,11 @@ prova('recado da veterinária: sai com a vacina resolvida; fica quando só o "em
     assert.strictEqual(run('vencVetAvisos().length'), 1, 'data velha da carteirinha: a vacina continua a aplicar');
     run("vencFichaDeveAgora=function(){ return []; };");
     assert.strictEqual(run('vencVetAvisos().length'), 0, '"em aberto" fechado e nenhuma vacina devendo: sem recado');
+    // QA11: o recado combinado DEPOIS do fechamento (a pergunta "fazer hoje?" mandada depois) é outro — fica
+    run("VENC_REG={thor__bia:{vet:Object.assign({ts:9}, __vet), fechados:{vacina:{ts:5}}}};");
+    assert.strictEqual(run('vencVetAvisos().length'), 1, 'recado novo, depois do fechamento: fica');
+    run("VENC_REG={thor__bia:{vet:Object.assign({ts:3}, __vet), fechados:{vacina:{ts:5}}}};");
+    assert.strictEqual(run('vencVetAvisos().length'), 0, 'recado de antes do fechamento: sai');
   } finally { run('VENC_REG=__bk14.vr; VENC_REG_DIA=__bk14.vrd; vencDiaAlvo=__bk14.vda; vencFichaDeveAgora=__bk14.fd;'); }
 });
 provaAsync('gravar prevenção na ficha dispara o fechamento por assunto — só depois de gravar, e só com campo de prevenção', async () => {
@@ -1488,6 +1493,62 @@ provaAsync('MÉDIO-2 / BAIXO-1 (QA10) — reabrir apaga o fechamento do quadro; 
     assert.strictEqual(g.length, 1, 'depois que a anterior chegou, a conta viu o que reabrir');
     assert.deepStrictEqual(g[0].v.fechados, {});
   } finally { run('DB=__bk22.db; VENC_REG=__bk22.vr; VENC_REG_DIA=__bk22.vrd; VENC_PEND=__bk22.vp; VENC_PEND_QUANDO=__bk22.vpq; VENC_PEND_LENDO=__bk22.vpl; audit=__bk22.au; vencRender=__bk22.vre; vencRedesenharQuadros=__bk22.vrq2; quemSou=__bk22.qs; zHojeISO=__bk22.hz; pelExtra=__bk22.pe; vencAtualizarBadge=__bk22.vab; VENC_FILA_GRAV=__bk22.fg;'); }
+});
+
+// ================================================================== QA11 — 4ª rodada (sugestão do revisor)
+console.log('\nQA11 — o cartão do quadro reabre pela própria régua; a pergunta que nunca saiu não é conversa');
+provaAsync('QA11 — reabrir o cartão do quadro sem assunto fechado pela ficha (item nunca conversado; conta fundida)', async () => {
+  run(`__bk23={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, vpq:VENC_PEND_QUANDO, vpl:VENC_PEND_LENDO, au:audit, vre:vencRender, vrq2:vencRedesenharQuadros, qs:quemSou, hz:zHojeISO, pe:pelExtra, vab:vencAtualizarBadge, fg:VENC_FILA_GRAV};
+    __grav23=[]; __K23=dcKey('Thor','Bia'); __P23={n:'Thor', tutor:'Bia'};
+    DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      update:function(v){ __grav23.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    zHojeISO=function(){ return '2026-09-21'; };
+    VENC_REG=null; VENC_REG_DIA=''; VENC_PEND_LENDO=false; VENC_FILA_GRAV={};
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; vencAtualizarBadge=function(){}; quemSou=function(){ return 'Ana'; };`);
+  const esperar = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); return JSON.parse(JSON.stringify(run('__grav23'))); };
+  try {
+    // S2 — a escova (nunca conversada) foi gravada pelo quadro e fechou o cartão; era de outro
+    // FILHOt e volta para 25/09, dentro do cartão de 22/09: o cartão reabre, o antip fica fechado
+    run(`pelExtra=function(){ return ${JSON.stringify(Object.assign({}, FA_EM_DIA, { escova_p: '2026-09-25' }))}; };
+      VENC_PEND={'2026-09-22':{}}; VENC_PEND_QUANDO=Date.now();
+      VENC_PEND['2026-09-22'][__K23]={enviadas:{antip:{ts:1}}, fechados:{antip:{quem:'Ana', ts:3, via:'ficha'}}, ficha_atualizada:{quem:'Ana', ts:4, via:'quadro'}};`);
+    run("vencFecharAssuntosPelaFicha(__P23, {escova_p:'2026-09-25'})");
+    let g = await esperar();
+    assert.strictEqual(g.length, 1, 'S2: gravou a reabertura do cartão');
+    assert.ok('ficha_atualizada' in g[0].v && g[0].v.ficha_atualizada === null, 'S2: o cartão fechado pelo quadro reabre');
+    assert.ok(!('fechados' in g[0].v), 'S2: o assunto do vermífugo continua fechado (nada a mexer)');
+    // S3 — "gravar e logo corrigir" fundidos numa conta só: nenhum fechados foi gravado, mas o
+    // quadro fechou na hora. A vacina volta a dever (24/09): o cartão reabre (o recado volta)
+    run(`__grav23=[]; pelExtra=function(){ return ${JSON.stringify(Object.assign({}, FA_EM_DIA, { vac_raiva_p: '2026-09-24' }))}; };
+      VENC_PEND['2026-09-22'][__K23]={enviadas:{vacina:{ts:1}}, respostas:{vacina:{v:'zeluz', ts:2}}, vet:{pet:'Thor', vacinas:'Antirrábica'}, ficha_atualizada:{quem:'Ana', ts:4, via:'quadro'}};`);
+    run("vencFecharAssuntosPelaFicha(__P23, {vac_raiva_p:'2026-09-24'})");
+    g = await esperar();
+    assert.strictEqual(g.length, 1, 'S3: gravou');
+    assert.ok(g[0].v.ficha_atualizada === null, 'S3: o cartão do quadro reabre mesmo sem assunto fechado pela ficha');
+    // e o "Sim" da pessoa continua intocado
+    run(`__grav23=[]; VENC_PEND['2026-09-22'][__K23]={enviadas:{vacina:{ts:1}}, ficha_atualizada:{quem:'Bia', ts:4}};`);
+    run("vencFecharAssuntosPelaFicha(__P23, {vac_raiva_p:'2026-09-24'})");
+    g = await esperar();
+    assert.strictEqual(g.length, 0, 'S3: o "Sim" da pessoa não é desfeito');
+  } finally { run('DB=__bk23.db; VENC_REG=__bk23.vr; VENC_REG_DIA=__bk23.vrd; VENC_PEND=__bk23.vp; VENC_PEND_QUANDO=__bk23.vpq; VENC_PEND_LENDO=__bk23.vpl; audit=__bk23.au; vencRender=__bk23.vre; vencRedesenharQuadros=__bk23.vrq2; quemSou=__bk23.qs; zHojeISO=__bk23.hz; pelExtra=__bk23.pe; vencAtualizarBadge=__bk23.vab; VENC_FILA_GRAV=__bk23.fg;'); }
+});
+prova('QA11 — S5: o fechamento pela ficha não esconde a pergunta "fazer hoje?" que nunca saiu (nem a que saiu depois)', () => {
+  const est = (r, t) => run('vencEstadoTipo(' + JSON.stringify(r) + ",'" + t + "', 1000)");
+  const base = { enviadas: { antip: { ts: 1 } }, fechados: { antip: { quem: 'Ana', ts: 5, via: 'ficha' } } };
+  assert.strictEqual(est(base, 'antip'), 'fechado', 'a mensagem do dia fecha, como sempre');
+  assert.strictEqual(est(base, 'ant_antip'), 'amandar', 'a pergunta que nunca saiu continua "a mandar"');
+  assert.strictEqual(est(Object.assign({}, base, { enviadas: { antip: { ts: 1 }, ant_antip: { ts: 3 } } }), 'ant_antip'), 'fechado', 'a pergunta que já tinha saído fecha junto (AC3)');
+  assert.notStrictEqual(est(Object.assign({}, base, { enviadas: { antip: { ts: 1 }, ant_antip: { ts: 9 } } }), 'ant_antip'), 'fechado', 'a pergunta mandada DEPOIS espera a resposta');
+  // e, resolvida na ficha, a pergunta mandada depois fecha de novo
+  run("__bk24={hz:zHojeISO}; zHojeISO=function(){ return '2026-09-21'; };");
+  try {
+    const r = Object.assign({}, base, { enviadas: { antip: { ts: 1 }, ant_antip: { ts: 9 } } });
+    const res = JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(FA_EM_DIA) + ',' + JSON.stringify(r) + ",'2026-09-22','2026-09-21')")));
+    assert.deepStrictEqual(res, ['antip'], 'conversa depois do fechamento: fecha de novo quando a ficha resolve');
+    const res2 = JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(FA_EM_DIA) + ',' + JSON.stringify(base) + ",'2026-09-22','2026-09-21')")));
+    assert.deepStrictEqual(res2, [], 'sem conversa nova, não grava de novo');
+  } finally { run('zHojeISO=__bk24.hz;'); }
 });
 
 // ------------------------------------------------ o fim

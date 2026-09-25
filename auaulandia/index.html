@@ -22662,6 +22662,12 @@
     try{ prevCorrigeFecharConversa(p, chave); }catch(e){ /* silencioso de propósito: fechar é consequência — a data já está gravada */ }
     prevCorrigeRedesenhar(tela);
   }
+  // Fecha SÓ quando o CARTÃO DO DIA FICOU VAZIO — que é quando ele some da lista e leva o
+  // "Sim" junto (QA, 25/set/2026, duas rodadas). Qualquer item ainda no cartão segura:
+  // a vacina em aberto numa conversa de vermífugo, a escova vencida, a vacina autorizada
+  // para a veterinária, o assunto que ainda NEM FOI MANDADO ao tutor. Enquanto o cartão
+  // estiver na tela, quem fecha é a pessoa, pelo "Sim". Só o assunto que o tutor recusou
+  // ("Não quer agora") não segura. A régua é vencQuadroSegura — a mesma que o reabre (QA11).
   function prevCorrigeFecharConversa(p, chave){
     if(!DB || !p || typeof vencRegDeDia!=='function') return;
     // A chave dos Vencimentos é a dcKey — a Prevenção chama com a pelKey (QA, B1).
@@ -22681,30 +22687,30 @@
       if(!r || r.ficha_atualizada) return;
       var conversou=Object.keys(r.enviadas||{}).length || Object.keys(r.respostas||{}).length || r.msg_enviada || r.resposta;
       if(!conversou) return;
-      // Fecha SÓ quando o CARTÃO DO DIA FICOU VAZIO — que é quando ele some da lista e leva o
-      // "Sim" junto (QA, 25/set/2026, duas rodadas). Qualquer item ainda no cartão segura:
-      // a vacina em aberto numa conversa de vermífugo, a escova vencida, a vacina autorizada
-      // para a veterinária, o assunto que ainda NEM FOI MANDADO ao tutor. Enquanto o cartão
-      // estiver na tela, quem fecha é a pessoa, pelo "Sim". Só o assunto que o tutor recusou
-      // ("Não quer agora") não segura.
-      var itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true});
-      // QA8: a pergunta "fazer hoje?" tem janela própria (até a próxima vinda, + folga).
-      try{
-        var _antT={};
-        ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){ Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) _antT[vencTipoBase(t)]=1; }); });
-        // QA10: aqui é o cartão INTEIRO (ficha_atualizada fecha também as perguntas "fazer hoje?"
-        // ainda não mandadas) — segura tudo o que a pergunta de hoje cobre, perguntado ou não.
-        if(Object.keys(_antT).length || dia===hoje) itensN=itensN.concat((hojeAntecipar(exN, p, dia, r)||{}).itens||[]);
-      }catch(e){ return; } /* silencioso de propósito: na dúvida não fecha */
-      var resps=r.respostas||{}, recusou={};
-      Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
-      if(itensN.some(function(x){ return !recusou[vencTipoDoItemObj(x)]; })) return;
+      if(vencQuadroSegura(exN, p, dia, r, hoje)!==false) return; /* null = não sei: na dúvida não fecha */
       var quem=(typeof quemSou==='function'?quemSou():'-');
       var nome=((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'';
       vencGravar(chave, {ficha_atualizada:{quem:quem, ts:Date.now(), via:'quadro'}, ficha_falta:null},
         'com a última data gravada pelo quadro, nada mais a combinar com o tutor de '+nome+' — o assunto fechou (dia '+dia+')',
         {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||(p&&p.tutor)||'', itens:[], silencioso:true}, dia, true);
     });
+  }
+  // A régua do cartão INTEIRO: true = segura; false = vazio; null = não sei.
+  function vencQuadroSegura(exN, p, dia, r, hoje){
+    r=r||{};
+    var itensN=[];
+    try{
+      itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true})||[];
+      // QA8: a pergunta "fazer hoje?" tem janela própria (até a próxima vinda, + folga).
+      var _antT={};
+      ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){ Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) _antT[vencTipoBase(t)]=1; }); });
+      // QA10: é o cartão INTEIRO (ficha_atualizada fecha também as perguntas "fazer hoje?"
+      // ainda não mandadas) — segura tudo o que a pergunta de hoje cobre, perguntado ou não.
+      if(Object.keys(_antT).length || dia===hoje) itensN=itensN.concat((hojeAntecipar(exN, p, dia, r)||{}).itens||[]);
+    }catch(e){ return null; } /* silencioso de propósito: quem chama decide o lado seguro */
+    var resps=r.respostas||{}, recusou={};
+    Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
+    return itensN.some(function(x){ return !recusou[vencTipoDoItemObj(x)]; });
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
@@ -35903,7 +35909,7 @@
     if(r.ficha_atualizada && !(Array.isArray(deve) && deve.length)) return 'fechado';
     // FECHADO POR ASSUNTO (Adriana, 25/set/2026): a ficha resolveu este assunto — a data nova
     // do vermífugo fecha a conversa do vermífugo, mesmo com a vacina ainda no cartão.
-    if(tipo && (r.fechados||{})[vencTipoBase(tipo)]) return 'fechado';
+    if(tipo && vencFechadoCobre(r, tipo, (r.fechados||{})[vencTipoBase(tipo)])) return 'fechado';
     // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
     // respondida: o tutor já disse o que fazer — este assunto está fechado em todas as telas.
     if(tipo){
@@ -35918,6 +35924,34 @@
     if(!ts) return 'aguardando';
     agora=agora||Date.now();
     return ((agora-ts)>=vencPrazoCobrancaMs())?'cobrar':'aguardando';
+  }
+  // QA11: o fechamento pela ficha cobre a conversa que JÁ existia quando foi gravado. A
+  // pergunta "fazer hoje?" que nunca saiu não é conversa (continua "a mandar" enquanto for
+  // oferecida), e a que saiu DEPOIS é outra conversa (espera a resposta ou o próximo fechamento).
+  function vencConversaTs(r, tipo){
+    r=r||{}; var out=[], semTs=false;
+    ['enviadas','respostas'].forEach(function(c){ var x=(r[c]||{})[tipo]; if(x){ if(Number(x.ts)>0) out.push(Number(x.ts)); else semTs=true; } });
+    ['cobrancas','tentativas'].forEach(function(c){ var L=(r[c]||{})[tipo]; if(Array.isArray(L)) L.forEach(function(x){ if(x){ if(Number(x.ts)>0) out.push(Number(x.ts)); else semTs=true; } }); });
+    return {ts:out, semTs:semTs};
+  }
+  function vencFechadoCobre(r, tipo, fe){
+    if(!fe) return false;
+    if(!vencEhAntecipado(tipo)) return true;              // a mensagem do dia: como sempre foi
+    var c=vencConversaTs(r, tipo);
+    if(c.semTs) return true;                              // registro sem hora: fica como estava
+    var lim=Number(fe.ts||0);
+    return c.ts.some(function(t){ return t<=lim; });      // nunca saiu, ou saiu depois: não cobre
+  }
+  // Houve conversa sobre o assunto `base` DEPOIS do fechamento (a pergunta mandada depois)?
+  function vencConversaDepoisDe(r, base, lim){
+    r=r||{}; var achou=false;
+    ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
+      Object.keys(r[c]||{}).forEach(function(t){
+        if(achou || vencTipoBase(t)!==base) return;
+        var x=r[c][t]; (Array.isArray(x)?x:[x]).forEach(function(y){ if(y && Number(y.ts)>lim) achou=true; });
+      });
+    });
+    return achou;
   }
   // Os assuntos deste FILHOt que ainda esperam resposta. A ficha atualizada fecha tudo —
   // é ela que encerra o cartão, como sempre foi.
@@ -36611,7 +36645,9 @@
     var ja=r.fechados||{};
     var tem=vencAssuntosComItem(ex, r, dia, hoje, p);
     if(!tem) return [];
-    return Object.keys(conv).filter(function(t){ return !ja[t] && !tem[t]; });
+    return Object.keys(conv).filter(function(t){
+      return !tem[t] && (!ja[t] || vencConversaDepoisDe(r, t, Number(ja[t].ts||0)));
+    });
   }
   // Os assuntos que ainda TÊM item: o cartão do dia e, quando houve a pergunta "fazer hoje?",
   // o que ELA pergunta (a mesma régua de hojeAntecipar, só dos assuntos perguntados) — QA8/QA9. Data apagada não resolve: o item que
@@ -36643,7 +36679,20 @@
   // O que a FICHA fechou e voltou a dever (a data foi corrigida para trás): reabre.
   function vencAssuntosReabertos(ex, r, dia, hoje, p){
     var fe=(r||{}).fechados||{};
-    var tem=vencAssuntosComItem(ex, r, dia, hoje, p);
+    // QA11: a pergunta "fazer hoje?" mandada DEPOIS do fechamento é outra conversa — a janela
+    // dela não reabre o que a ficha já tinha resolvido (só a data corrigida reabre).
+    var rR=Object.assign({}, r||{});
+    ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
+      var m=(r||{})[c]; if(!m||typeof m!=='object') return;
+      var n={};
+      Object.keys(m).forEach(function(t){
+        var f=fe[vencTipoBase(t)];
+        if(f && vencEhAntecipado(t) && !vencFechadoCobre(r, t, f)) return;
+        n[t]=m[t];
+      });
+      rR[c]=n;
+    });
+    var tem=vencAssuntosComItem(ex, rR, dia, hoje, p);
     if(!tem) return [];
     return Object.keys(fe).filter(function(t){ return fe[t] && fe[t].via==='ficha' && tem[t]; });
   }
@@ -36699,20 +36748,25 @@
       var r=vencRegDeDia(dia, chave); if(!r) return;
       var res=vencAssuntosResolvidos(ex, r, dia, hoje, p);
       var reab=vencAssuntosReabertos(ex, r, dia, hoje, p);
-      if(!res.length && !reab.length) return;
+      // QA11: o cartão inteiro fechado pelo QUADRO volta quando a MESMA régua volta a segurar —
+      // também o item nunca conversado e a conta de "gravar e logo corrigir" fundida numa só.
+      var quadroVolta=!!(r.ficha_atualizada && r.ficha_atualizada.via==='quadro' && vencQuadroSegura(ex, p, dia, r, hoje)===true);
+      if(!res.length && !reab.length && !quadroVolta) return;
       var fech=Object.assign({}, r.fechados||{});
       res.forEach(function(t){ fech[t]={quem:quem, ts:Date.now(), via:'ficha'}; });
       reab.forEach(function(t){ delete fech[t]; });
       var rots=function(l){ return vencJuntar(l.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); })); };
       // O rastro diz o que a conta viu — "não tem mais pendência de …" — e não "resolveu":
       // o rótulo é do ASSUNTO inteiro (vermífugo, carrapaticida e coleira), não do campo gravado.
-      var gr={fechados:fech};
-      // QA10: o cartão inteiro fechado pelo QUADRO também foi a ficha que fechou — a data
+      var gr=(res.length||reab.length)?{fechados:fech}:{};
+      // QA10/QA11: o cartão inteiro fechado pelo QUADRO também foi a ficha que fechou — a data
       // corrigida para trás o reabre junto (senão o recado da veterinária não volta).
-      if(reab.length && r.ficha_atualizada && r.ficha_atualizada.via==='quadro') gr.ficha_atualizada=null;
+      var desfazQ=(reab.length || quadroVolta) && r.ficha_atualizada && r.ficha_atualizada.via==='quadro';
+      if(desfazQ) gr.ficha_atualizada=null;
       vencGravar(chave, gr,
         (res.length?('a ficha de '+nome+' não tem mais pendência de '+rots(res)+' no cartão — a conversa com o tutor sobre isso fechou'):'')
         +(reab.length?((res.length?'; ':'')+'a ficha de '+nome+' voltou a ter pendência de '+rots(reab)+' — a conversa reabriu'):'')
+        +((desfazQ&&!reab.length)?((res.length?'; ':'')+'a ficha de '+nome+' voltou a ter item no cartão — o cartão fechado pelo quadro reabriu'):'')
         +' (dia '+dia+')',
         {nome:nome, tutor:tutor, itens:[], silencioso:true}, dia, true);
     });
@@ -37247,7 +37301,8 @@
       // "em aberto" fechado só tira o recado se nenhuma vacina ficou devendo — registrar a data
       // VELHA da carteirinha fecha o "em aberto", mas a vacina continua vencida e a aplicar.
       var fe=r.fechados||{};
-      if(fe.vacina) return;
+      // QA11: o recado combinado DEPOIS do fechamento (a pergunta "fazer hoje?" mandada depois) é outro.
+      if(fe.vacina && !(Number((r.vet||{}).ts||0)>Number(fe.vacina.ts||0))) return;
       if(fe.aberto){
         var vacDeve=true;
         try{ vacDeve=vencFichaDeveAgora(ch, {}, dia).some(function(x){ return x && x.vacina; }); }
@@ -39299,7 +39354,7 @@
             resposta:rt?{v:String(rt.v||''), rotulo:vencRespRotulo(rt.v)||String(rt.v||''), quem:String(rt.quem||''), ts:Number(rt.ts||0)}:null,
             cobrancas:vencCobrancasDe(r, t).length, tentativas:vencTentativasDe(r, t).length,
             estado:estado, ficha_atualizada:!!r.ficha_atualizada,
-            resolvido:((r.fechados||{})[vencTipoBase(t)])?{quem:String(((r.fechados||{})[vencTipoBase(t)]).quem||''), ts:Number(((r.fechados||{})[vencTipoBase(t)]).ts||0)}:null};
+            resolvido:vencFechadoCobre(r, t, (r.fechados||{})[vencTipoBase(t)])?{quem:String(((r.fechados||{})[vencTipoBase(t)]).quem||''), ts:Number(((r.fechados||{})[vencTipoBase(t)]).ts||0)}:null};
           out.conversas.push(c);
         });
       });
