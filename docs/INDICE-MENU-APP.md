@@ -109,10 +109,26 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 41 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 48 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.
+
+**QA Gate (Elo 6):** três rodadas por agente independente.
+
+| Rodada | Veredito | O que achou |
+|---|---|---|
+| 1ª | FAIL | dose em dobro, alarme de quem faltou, check-in em dobro da pernoite |
+| 2ª | FAIL | a junção de remédio olhava só o horário; o cancelar da noite anterior não gravava |
+| 3ª | **CONCERNS — pode publicar** | ressalvas |
+
+Destino de cada ressalva da 3ª rodada:
+- **C1:** o exemplo do campo agora pede o nome do remédio primeiro: "Ex.: Otomax — gotas no ouvido, 2x ao dia";
+- **C2:** nome genérico não junta doses;
+- **C3:** o "Sim" antigo continua fechando em todas as telas;
+- **C4:** fica como está (só leitura).
+
+Nenhuma função do check-in do corpo, de pertences ou da hospedagem foi alterada.
 
 ---
 

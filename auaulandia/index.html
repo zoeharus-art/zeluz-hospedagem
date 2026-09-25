@@ -19320,14 +19320,20 @@
   // ou mais, que não seja palavra de forma ("gotas", "pomada", "colírio"…). Na dúvida, NÃO
   // junta: duas doses na tela incomodam; uma dose sumida machuca.
   var MED_PALAVRAS_DE_FORMA={gota:1,gotas:1,pomada:1,colirio:1,comprimido:1,comprimidos:1,capsula:1,capsulas:1,
-    remedio:1,vitamina:1,xarope:1,spray:1,solucao:1,suspensao:1,injecao:1,shampoo:1,creme:1,oleo:1,
-    suplemento:1,antibiotico:1,antialergico:1,pasta:1,gel:1,sache:1,dose:1,meio:1,medicacao:1};
+    remedio:1,remedios:1,vitamina:1,vitaminas:1,xarope:1,spray:1,solucao:1,suspensao:1,injecao:1,shampoo:1,creme:1,oleo:1,
+    suplemento:1,antibiotico:1,antialergico:1,pasta:1,gel:1,sache:1,dose:1,meio:1,medicacao:1,
+    probiotico:1,floral:1,florais:1,homeopatia:1,homeopatico:1,analgesico:1,anti:1,inflamatorio:1,
+    antiinflamatorio:1,fitoterapico:1,de:1,do:1,da:1,dos:1,das:1,no:1,na:1,para:1,com:1,e:1};
+  // Palavra que diz o QUE é (tem letra e não é palavra de forma) — "Apoquel", "Otomax".
+  function medPalavraDeNome(w){ return /[a-z]/.test(w) && !MED_PALAVRAS_DE_FORMA[w]; }
   function medPalavras(t){ return jsNorm(String(t||'')).replace(/[^a-z0-9 ]/g,' ').split(' ').filter(Boolean); }
   function medMesmoRemedio(a, b){
     var A=medPalavras(a), B=medPalavras(b);
     if(!A.length || !B.length) return false;
     var curta=(A.length<=B.length)?A:B, longa=(A.length<=B.length)?B:A;
-    if(curta.every(function(w, i){ return longa[i]===w; })) return true;
+    // O começo só vale se tiver o NOME de um remédio: "Comprimido", "Remédio" e "1" são
+    // começo de qualquer coisa (QA, C2).
+    if(curta.some(medPalavraDeNome) && curta.every(function(w, i){ return longa[i]===w; })) return true;
     return A[0]===B[0] && A[0].length>=5 && !MED_PALAVRAS_DE_FORMA[A[0]];
   }
   function medMesmaDose(lanc, dc){
@@ -32605,7 +32611,9 @@
     // horário". O horário é o que faz o alarme tocar na TV — quem dá o remédio precisa saber
     // a hora, senão o FILHOt toma duas vezes ou nenhuma.
     {k:'medicacao',     t:'Medicação',                  col:'Medicação',                      colHora:'Hora Medicação', hora:true, icone:'💉', campos:[
-      {c:'qual', rot:'Qual remédio e como dar', texto:true, obrig:true, ph:'Ex.: gotas no ouvido, 2x ao dia'},
+      // O NOME do remédio primeiro (QA da Fase 0): é pelo nome que o alarme junta esta dose
+      // com a do check-in de pertences — "gotas no ouvido" não diz qual remédio é.
+      {c:'qual', rot:'Qual remédio e como dar', texto:true, obrig:true, ph:'Ex.: Otomax — gotas no ouvido, 2x ao dia'},
       {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     // campos → a tela PERGUNTA antes de deixar lançar; obrig:true não deixa passar em branco
     {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', campos:[
@@ -35514,7 +35522,10 @@
       .filter(function(t){ return vencEstadoTipo(r, t, agora, deve)!=='fechado'; });
   }
   // O que a ficha ainda deve, só quando há um "Sim" gravado (o único caso em que importa).
-  function vencDeveDe(o, r){ return (r && r.ficha_atualizada)?vencFichaAindaDeve(o, r):null; }
+  function vencDeveDe(o, r){ return vencSimComTrava(r)?vencFichaAindaDeve(o, r):null; }
+  // O "Sim" gravado a partir da trava (25/set/2026). O de antes continua fechando, em TODAS as
+  // telas — cartão, calendário, quadro, Respostas pendentes e recado da vet (QA, C3).
+  function vencSimComTrava(r){ return !!(r && r.ficha_atualizada && Number(r.ficha_atualizada.ts||0)>=VENC_TRAVA_SIM_DESDE); }
   // O mesmo, para quem só tem a chave e o dia (as Respostas pendentes, o recado da vet): lê
   // a ficha de AGORA. FILHOt que saiu do cadastro não deve nada aqui.
   // 25/set/2026, 00h00 (horário de Brasília): a partir daqui o "Sim" passa pela trava da ficha.
@@ -35928,8 +35939,7 @@
         // O "Sim" gravado ANTES da trava (25/set/2026) continua fechando o histórico: reabrir de
         // uma vez 30 dias de cartões antigos encheria as Respostas pendentes de "COBRAR" velho
         // no dia da publicação (re-QA). O "Sim" de agora em diante já passa pela trava.
-        var deveP=(r.ficha_atualizada && Number(r.ficha_atualizada.ts||0)>=VENC_TRAVA_SIM_DESDE)
-          ? vencFichaDeveAgora(chave, r, dia) : (r.ficha_atualizada?[]:null);
+        var deveP=vencSimComTrava(r) ? vencFichaDeveAgora(chave, r, dia) : (r.ficha_atualizada?[]:null);
         if(r.ficha_atualizada && !deveP.length) return;      // assunto fechado (e a ficha em dia)
         var env=r.enviadas||{};
         Object.keys(env).forEach(function(tipo){
@@ -36612,7 +36622,7 @@
     Object.keys(VENC_REG||{}).forEach(function(ch){
       var r=VENC_REG[ch]||{};
       if(!r.vet) return;
-      if(r.ficha_atualizada && !vencFichaDeveAgora(ch, r, dia).length) return;
+      if(r.ficha_atualizada && !(vencSimComTrava(r) && vencFichaDeveAgora(ch, r, dia).length)) return;
       out.push(Object.assign({chave:ch}, r.vet));
     });
     return out;
@@ -37098,7 +37108,7 @@
     // Fechado só com a ficha EM DIA (Fase 0, 25/set/2026). Um "Sim" gravado antes da trava
     // — ou em outro aparelho, com a versão velha — não esconde o que a ficha ainda deve: o
     // cartão volta aberto, com uma linha dizendo por quê.
-    var deveF=r.ficha_atualizada?vencFichaAindaDeve(o, r):[];
+    var deveF=vencSimComTrava(r)?vencFichaAindaDeve(o, r):[];
     var fechado=!!r.ficha_atualizada && !deveF.length;
     var ka=jsAspas(o.chave);
     if(fechado){

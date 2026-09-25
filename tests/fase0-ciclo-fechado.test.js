@@ -248,10 +248,17 @@ prova('"Não quer agora" deixa a ficha como está — aquele assunto não trava 
 
 prova('QA M1 — "Sim" antigo com a ficha devendo: o assunto NÃO conta como respondido', () => {
   ctx.__o = { chave: 'simba__ana', nome: 'Simba', itens: [{ k: 'vac_mult_p', atrasado: true, vence: '2026-09-10' }] };
-  ctx.__r = { ficha_atualizada: { quem: 'X', ts: 1 }, enviadas: { vacina: { ts: 1, quem: 'X' } } };
-  assert.strictEqual(run("vencEstadoTipo(__r, 'vacina', 2)"), 'fechado', 'sem saber da ficha, vale como sempre');
-  assert.notStrictEqual(run("vencEstadoTipo(__r, 'vacina', 2, vencFichaAindaDeve(__o, __r))"), 'fechado');
-  assert.strictEqual(run('vencAbertosDe(__o, __r, 2).length'), 1, 'o cartão, o selo e o quadro contam o assunto aberto');
+  const DEPOIS = Date.UTC(2026, 8, 25, 12, 0, 0);
+  ctx.__r = { ficha_atualizada: { quem: 'X', ts: DEPOIS }, enviadas: { vacina: { ts: DEPOIS, quem: 'X' } } };
+  assert.strictEqual(run("vencEstadoTipo(__r, 'vacina', " + (DEPOIS + 1) + ")"), 'fechado', 'sem saber da ficha, vale como sempre');
+  assert.notStrictEqual(run("vencEstadoTipo(__r, 'vacina', " + (DEPOIS + 1) + ", vencFichaAindaDeve(__o, __r))"), 'fechado');
+  assert.strictEqual(run('vencAbertosDe(__o, __r, ' + (DEPOIS + 1) + ').length'), 1, 'o cartão, o selo e o quadro contam o assunto aberto');
+});
+prova('QA C3 — "Sim" gravado ANTES de 25/set continua fechando em todas as telas (sem leva de COBRAR antigo)', () => {
+  ctx.__o = { chave: 'simba__ana', nome: 'Simba', itens: [{ k: 'vac_mult_p', atrasado: true, vence: '2026-09-10' }] };
+  ctx.__r = { ficha_atualizada: { quem: 'X', ts: Date.UTC(2026, 8, 20) }, enviadas: { vacina: { ts: 1, quem: 'X' } } };
+  assert.strictEqual(run('vencAbertosDe(__o, __r, Date.now()).length'), 0);
+  assert.strictEqual(run('vencDeveDe(__o, __r)'), null);
 });
 prova('QA B3 — a resposta antiga "Nunca fez — quer fazer aqui" não passa como "Não quer agora"', () => {
   ctx.__o = { chave: 'simba__ana', nome: 'Simba', itens: [{ k: 'verm_p', sem_registro: true }] };
@@ -498,6 +505,13 @@ prova('R1 — Colírio da recepção já dado + pertences com Apoquel e Colírio
 });
 prova('R2 — Apoquel dos pertences + Colírio lançado na recepção no mesmo horário: DUAS doses', () => {
   igual(juntar(DC('08:00', 'Apoquel'), LANC('08:00', 'Colírio')).sort(), ['lanc_a1@08:00', 'medicacao_0@08:00']);
+});
+prova('QA C2 — nome genérico não serve de começo ("Comprimido", "Remédio", "1", "Probiótico…")', () => {
+  assert.ok(!run("medMesmoRemedio('Comprimido', 'Comprimido de Apoquel')"));
+  assert.ok(!run("medMesmoRemedio('Remédio', 'Remédio do fígado')"));
+  assert.ok(!run("medMesmoRemedio('1', '1 comprimido de Apoquel')"));
+  assert.ok(!run("medMesmoRemedio('Probiótico Vetnil', 'Probiótico Organnact')"));
+  assert.ok(run("medMesmoRemedio('Otomax', 'Otomax — gotas no ouvido, 2x ao dia')"), 'o exemplo novo do campo junta');
 });
 prova('R3 — palavra de forma não junta remédios diferentes ("Pomada…", "Gotas…")', () => {
   assert.ok(!run("medMesmoRemedio('Pomada Nebacetin', 'Pomada oftálmica Epitezan')"));
