@@ -33217,7 +33217,15 @@
   ];
   var DASH_SHAM_ONDE=[
     {v:'NA RECEPÇÃO', t:'Está na recepção'},
-    {v:'NA BOLSA',    t:'Está na bolsa dele'}
+    {v:'NA BOLSA',    t:'Está na bolsa dele'},
+    // "Ou o shampoo está aqui embaixo na loja" (Adriana, 25/set/2026).
+    {v:'NA LOJA',     t:'Está aqui na loja'}
+  ];
+  // QUAL shampoo (Adriana, 25/set/2026): "diversos peludinhos do Day Care usam shampoo
+  // hipoalergênico, medicamentoso e tudo mais". Opcional: o nome vai no campo ao lado.
+  var DASH_SHAM_TIPO=[
+    {v:'HIPOALERGÊNICO', t:'Hipoalergênico'},
+    {v:'MEDICAMENTOSO',  t:'Medicamentoso'}
   ];
   // A coleira pode ter sido COMPRADA aqui — e aí não "veio" de lugar nenhum: saiu da
   // loja (Adriana, 17/set/2026). É a mesma pergunta de origem, com a resposta que faltava.
@@ -33285,6 +33293,10 @@
       // só faz sentido perguntar onde está se ele TEM shampoo — trazido de casa ou comprado
       // aqui na loja. Senão a planilha diria "SEM SHAMPOO · NA BOLSA", que é uma frase que
       // não quer dizer nada. Duas respostas liberam a pergunta — daí a lista no `v`.
+      // Qual é e o nome (25/set/2026) — opcionais, entre o "trouxe" e o "onde": a planilha
+      // lê "(SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)" e quem desce já leva o certo.
+      {c:'tipo', rot:'Qual shampoo? (opcional)',        ops:DASH_SHAM_TIPO, dep:{c:'sham', v:['SHAMPOO','LOJA']}},
+      {c:'nome', rot:'Nome do shampoo (opcional)',       texto:true, ph:'Ex.: Cloresten', dep:{c:'sham', v:['SHAMPOO','LOJA']}},
       {c:'onde', rot:'Onde está o shampoo?',   ops:DASH_SHAM_ONDE, obrig:true, dep:{c:'sham', v:['SHAMPOO','LOJA']}}]},
     {k:'vet',           t:'Veterinário',                col:'Veterinário',                    colHora:'Hora Veterinário',hora:true, icone:'🩺'},
     {k:'saicedo',       t:'Sai mais cedo',              col:'Peludinho que sairá cedo',       colHora:'Hora Saída Cedo', hora:true, icone:'🚶'},
@@ -33939,6 +33951,10 @@
     // já vem escrito, com a hora derivada da refeição. A recepção só confirma ONDE está o
     // remédio (bolsa ou recepção) — não precisa decorar nem copiar da ficha.
     try{ medPreMarcarLanc(k); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir o lançamento à mão */
+    // BANHO (Adriana, 25/set/2026): "a maioria a gente já sabe — o shampoo está na bolsa que o
+    // tutor manda, ou está aqui na loja". Escolhido o FILHOt, o shampoo gravado no banho fixo
+    // dele já vem marcado. É rascunho: nada vai para o banco antes do Lançar.
+    try{ banhoPreMarcarLanc(k); }catch(e){} /* silencioso de propósito: a sugestão é ajuda — falhar aqui não pode impedir o lançamento à mão */
     var b=document.getElementById('dashB_'+k); if(b) b.value='';
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
@@ -34018,6 +34034,18 @@
     itens.forEach(function(it){ medHorariosDe(it).forEach(function(h){ if(h&&horas.indexOf(h)<0) horas.push(h); }); });
     horas.sort();
     return t+(horas.length?(' · às '+horas.join(' e ')):'');
+  }
+  function banhoPreMarcarLanc(k){
+    if(k!=='banho') return;
+    var p=vermFilhotDe(k); if(!p) return;
+    var br=banhoRecDe(p); if(!br || !br.sham) return;
+    var d=dashDet(k);
+    d.sham=br.sham;
+    if(br.sham!=='SEM SHAMPOO'){
+      if(br.tipo) d.tipo=br.tipo;
+      if(br.nome) d.nome=br.nome;
+      if(br.onde) d.onde=br.onde;
+    }
   }
   function medPreMarcarLanc(k){
     if(k!=='medicacao') return;
@@ -38177,7 +38205,7 @@
     // precisa saber que ele já tem banho marcado — é a mesma conversa, e evita remarcar.
     try{
       var _bf=(typeof banhoRecFraseDia==='function')?banhoRecFraseDia(o.p, dia, hoje):'';
-      if(_bf) h+='<div class="med-linha">'+escAttr(_bf)+'</div>';
+      if(_bf) h+='<div class="med-linha">'+escAttr(_bf+banhoRecShampooFrase(banhoRecDe(o.p)))+'</div>';
     }catch(e){} /* silencioso de propósito: sem o combinado o cartão sai igual ao de antes */
     // os itens, com a data — é o que ela dita ao tutor
     h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">';
@@ -39083,6 +39111,9 @@
       var banho='';
       try{ banho=(typeof banhoRecFraseDia==='function')?banhoRecFraseDia(p, hoje, hoje):''; }
       catch(e){ banho=''; } /* silencioso de propósito: sem o combinado a lista segue igual */
+      // O shampoo vai junto (25/set/2026): quem desce com ele para o banho já leva o certo.
+      try{ if(banho) banho+=banhoRecShampooFrase(banhoRecDe(p)); }
+      catch(e){ /* silencioso de propósito: sem o shampoo a frase do banho segue igual */ }
       var pend=hojePendDe(chave);
       var respostas=resp[chave]||[];
       // "APROVEITANDO QUE ELE ESTÁ AQUI" (24/set/2026): o que vence DEPOIS de hoje e ANTES
@@ -40062,6 +40093,7 @@
             hora:(typeof horaOk==='function'&&horaOk(br.hora))?br.hora:String(br.hora||''),
             desde:String(br.desde||'').slice(0,10),
             sham:String(br.sham||''), onde:String(br.onde||''), obs:String(br.obs||''),
+            tipo:String(br.tipo||''), nome:String(br.nome||''),
             excecoes:(br.excecoes&&typeof br.excecoes==='object')?br.excecoes:{}};
   }
   function banhoRecDe(p){
@@ -40126,8 +40158,21 @@
     if(!br) return '';
     var partes=[];
     if(br.sham) partes.push(String(br.sham).toUpperCase());
-    if(br.onde && br.sham && br.sham!=='SEM SHAMPOO') partes.push(String(br.onde).toUpperCase());
+    var temProprio=!!(br.sham && br.sham!=='SEM SHAMPOO');
+    // Qual é e o nome (25/set/2026), na MESMA ordem do lançamento à mão.
+    if(temProprio && br.tipo) partes.push(String(br.tipo).toUpperCase());
+    if(temProprio && br.nome) partes.push(String(br.nome).trim().replace(/\s+/g,' ').toUpperCase());
+    if(br.onde && temProprio) partes.push(String(br.onde).toUpperCase());
     return partes.length?(' ('+partes.join(' · ')+')'):'';
+  }
+  // " · shampoo medicamentoso Cloresten — está na bolsa" — para quem está no balcão ou desce
+  // com o FILHOt para o banho (Adriana, 25/set/2026: "para o pessoal já descer com o shampoo
+  // se ele vem na bolsa"). Vazio quando ele usa o da casa.
+  function banhoRecShampooFrase(br){
+    if(!br || !br.sham || br.sham==='SEM SHAMPOO') return '';
+    var qual=[br.tipo?String(br.tipo).toLowerCase():'', br.nome?String(br.nome).trim():''].filter(Boolean).join(' ');
+    var onde={'NA BOLSA':'está na bolsa', 'NA LOJA':'está aqui na loja', 'NA RECEPÇÃO':'está na recepção'}[br.onde]||'';
+    return ' · shampoo '+(br.sham==='LOJA'?'da loja':'próprio')+(qual?(' '+qual):'')+(onde?(' — '+onde):'');
   }
   function banhoRecValorPlanilha(p, br){
     var base=(typeof dashNomePlanilha==='function')?dashNomePlanilha(p):((p&&p.n)||'');
@@ -40557,6 +40602,10 @@
       h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Shampoo</span>'
         +DASH_SHAM.map(function(o){ return banhosBtn(r.sham===o.v, o.t, 'banhosSet(\''+ka+'\',\'sham\',\''+jsAspas(o.v)+'\')', pode); }).join('')+'</div>';
       if(r.sham==='SHAMPOO'||r.sham==='LOJA'){
+        h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Qual</span>'
+          +DASH_SHAM_TIPO.map(function(o){ return banhosBtn(r.tipo===o.v, o.t, 'banhosSet(\''+ka+'\',\'tipo\',\''+jsAspas(o.v)+'\')', pode); }).join('')
+          +'<input class="cad-in" style="flex:1;min-width:150px" maxlength="40" placeholder="Nome (ex.: Cloresten)" value="'+escAttr(r.nome||'')+'"'+(pode?'':' disabled')
+          +' onchange="banhosSet(\''+ka+'\',\'nome\',this.value)"></div>';
         h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Onde está</span>'
           +DASH_SHAM_ONDE.map(function(o){ return banhosBtn(r.onde===o.v, o.t, 'banhosSet(\''+ka+'\',\'onde\',\''+jsAspas(o.v)+'\')', pode); }).join('')+'</div>';
       }
@@ -40617,8 +40666,11 @@
     var r=banhosRasc(chave);
     if(campo==='hora') valor=(typeof normHora==='function')?(normHora(valor)||String(valor||'')):String(valor||'');
     if(campo==='desde') valor=String(valor||'').slice(0,10);
+    // "Qual" é opcional: tocar de novo no mesmo desmarca.
+    if(campo==='tipo' && r.tipo===valor) valor='';
+    if(campo==='nome') valor=String(valor||'').trim().replace(/\s+/g,' ').slice(0,40);
     r[campo]=valor;
-    if(campo==='sham' && valor==='SEM SHAMPOO') r.onde='';
+    if(campo==='sham' && valor==='SEM SHAMPOO'){ r.onde=''; r.tipo=''; r.nome=''; }
     // Escolheu o dia e o "a partir de" é anterior: a data anda para a PRÓXIMA ocorrência
     // daquele dia — é o que ela quis dizer com "a partir de 01/10, às quintas".
     if(campo==='dia'){
@@ -40635,7 +40687,7 @@
     if(!(typeof horaOk==='function'?horaOk(r.hora):/^\d{2}:\d{2}$/.test(r.hora||''))) return 'escolha a HORA do banho — é ela que faz o alarme tocar na TV.';
     if(!/^\d{4}-\d{2}-\d{2}$/.test(r.desde||'')) return 'informe A PARTIR DE quando esse combinado vale.';
     if(!r.sham) return 'diga se ele traz shampoo, compra na loja ou vem sem.';
-    if((r.sham==='SHAMPOO'||r.sham==='LOJA') && !r.onde) return 'diga ONDE está o shampoo (na recepção ou na bolsa).';
+    if((r.sham==='SHAMPOO'||r.sham==='LOJA') && !r.onde) return 'diga ONDE está o shampoo (na bolsa, aqui na loja ou na recepção).';
     return '';
   }
   function banhosSalvar(chave){
@@ -40650,9 +40702,10 @@
     var novo=r.ativo
       ? {ativo:true, freq:r.freq, dia:r.dia, hora:r.hora, desde:r.desde, sham:r.sham,
          onde:((r.sham==='SEM SHAMPOO')?'':r.onde), obs:r.obs||'',
+         tipo:((r.sham==='SEM SHAMPOO')?'':(r.tipo||'')), nome:((r.sham==='SEM SHAMPOO')?'':(r.nome||'')),
          excecoes:(antes&&antes.excecoes)?antes.excecoes:{}}
       : {ativo:false, freq:r.freq, dia:r.dia||'', hora:r.hora||'', desde:r.desde||'', sham:r.sham||'',
-         onde:r.onde||'', obs:r.obs||'', excecoes:(antes&&antes.excecoes)?antes.excecoes:{}};
+         onde:r.onde||'', obs:r.obs||'', tipo:r.tipo||'', nome:r.nome||'', excecoes:(antes&&antes.excecoes)?antes.excecoes:{}};
     var depoisTxt=novo.ativo?(banhoRecTexto(novo)+banhoRecDetalhe(novo)+' desde '+novo.desde):'sem banho fixo';
     BANHO_MSG[chave]={cor:'var(--muted)', txt:'Salvando…'};
     banhosRenderLinha(chave);

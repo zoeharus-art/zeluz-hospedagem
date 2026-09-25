@@ -95,6 +95,19 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 - Foto de ficha que existe não é candidata: o Thor novo vai para "precisa fotografar".
 - Card novo **"Duas fichas com a MESMA foto"**: mostra as fichas que ficaram com a foto copiada antes desta correção. A foto certa se tira em «Trocar».
 
+### (T) Banho fixo: o shampoo vai junto (qual, nome e onde está)
+
+> **Adriana, 25/set/2026:** *"Temos diversos peludinhos do Day Care que usam shampoo hipoalergênico, shampoo medicamentoso e tudo mais, e que o tutor já manda na mochila ou fica aqui… essa informação precisa ir junto para o dashboard, para o pessoal já descer com o shampoo… o shampoo está na bolsa que o tutor manda, ou está aqui embaixo na loja. Essa informação precisa ficar."*
+
+| Onde | O que mudou |
+|---|---|
+| **Banhos recorrentes** (a linha do FILHOt) | depois de "Shampoo" (trouxe o dele / comprou na loja), a linha pergunta **Qual** (Hipoalergênico, Medicamentoso; tocar de novo desmarca) e o **nome** (ex.: Cloresten), e **Onde está** ganhou **"Está aqui na loja"**, ao lado de "na bolsa dele" e "na recepção". Fica gravado no combinado (`banho_rec.tipo`, `banho_rec.nome`) |
+| **Planilha e TV** | a célula do banho leva tudo: `Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)`. Sem qual/nome, sai igual ao de antes: `(SHAMPOO · NA RECEPÇÃO)` |
+| **Lançamentos do dia › Banho** | os mesmos campos (qual e nome, opcionais) e o mesmo "aqui na loja". Escolhido o FILHOt, **o shampoo gravado no banho fixo dele já vem marcado** — é rascunho, a recepção só confere e lança |
+| **Hoje na Zêluz e Vencimentos** | "🛁 banho hoje 10:00 (fixo) · shampoo próprio medicamentoso Cloresten — está na bolsa". Quem usa o da casa não ganha aviso |
+
+- **Onde está no código:** `DASH_SHAM_TIPO`, `DASH_SHAM_ONDE` (NA LOJA), item `banho` de `DASH_ITENS` (campos `tipo` e `nome`), `banhoRecNormal`, `banhoRecDetalhe`, `banhoRecShampooFrase`, `banhoPreMarcarLanc`, `banhosLinhaHTML`, `banhosSet`, `banhosValidar`, `banhosSalvar`.
+
 ### (S) Troca de dia: falta avisada no dia dele e Reposição no novo
 
 > **Adriana, 25/set/2026:** *"O tutor está querendo trocar o dia tal e vir no outro… não quero usar a reposição, eu quero trocar o dia… A troca pedida do dia tal pro dia tal foi feita. Coco Chanel da Juliana e Billy Paul da Juliana precisam estar com falta avisada na terça-feira e ir direto para reposição na quarta."*
@@ -349,7 +362,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 134 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
+- `node tests/fase0-ciclo-fechado.test.js`: 138 provas (com os cenários A, B, D, F, G, H, I, J, K, L e M do fechamento pelo quadro e o fechamento por assunto, incluindo os achados do QA8 ao QA12);
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 **Harness completo** (`node tests/harness.js`). Ele precisa do retrato da VPS, que não é acessível daqui. Por isso rodou com um **retrato sintético**, só numa cópia, com o bloco das provas de dado real desligado. O mesmo retrato foi usado nas duas versões:

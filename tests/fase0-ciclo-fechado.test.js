@@ -1057,6 +1057,63 @@ provaAsync('QA15 — a Márcia autoriza tarde: a troca que não vale mais (o dia
   } finally { run('vagasPodeEncaixar=__bkQ8.pp; vagasPedidoDe=__bkQ8.pd; repPelaChave=__bkQ8.pc; zPergunta=__bkQ8.zp; repTrocaGravar=__bkQ8.tg; DB=__bkQ8.db; audit=__bkQ8.au; alert=__bkQ8.al;' + TROCA_VOLTA); }
 });
 
+// ================================================================== Banho fixo: o shampoo vai junto (25/set)
+console.log('\nBanho fixo — qual shampoo, o nome e onde está vão para a planilha, a TV e a Hoje na Zêluz');
+prova('o detalhe da planilha leva qual é, o nome e onde está — no MESMO formato do lançamento à mão', () => {
+  const D = (br) => run('banhoRecDetalhe(' + JSON.stringify(br) + ')');
+  assert.strictEqual(D({ sham: 'SHAMPOO', onde: 'NA RECEPÇÃO' }), ' (SHAMPOO · NA RECEPÇÃO)', 'sem qual/nome: igual ao de antes (harness v-48)');
+  assert.strictEqual(D({ sham: 'SHAMPOO', tipo: 'MEDICAMENTOSO', nome: ' cloresten ', onde: 'NA BOLSA' }), ' (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)');
+  assert.strictEqual(D({ sham: 'LOJA', tipo: 'HIPOALERGÊNICO', onde: 'NA LOJA' }), ' (LOJA · HIPOALERGÊNICO · NA LOJA)');
+  assert.strictEqual(D({ sham: 'SEM SHAMPOO', tipo: 'MEDICAMENTOSO', nome: 'x', onde: 'NA BOLSA' }), ' (SEM SHAMPOO)', 'sem shampoo próprio, nada de qual/onde');
+  run(`__bkS1={dd:DASH_DET}; DASH_DET={banho:{sham:'SHAMPOO', tipo:'MEDICAMENTOSO', nome:'cloresten', onde:'NA BOLSA'}};`);
+  try {
+    assert.strictEqual(run("dashDetTexto('banho')"), ' (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)', 'o lançamento à mão sai igual ao fixo');
+    run(`DASH_DET={banho:{sham:'SHAMPOO', onde:'NA RECEPÇÃO'}};`);
+    assert.strictEqual(run("dashDetTexto('banho')"), ' (SHAMPOO · NA RECEPÇÃO)', 'qual e nome são opcionais');
+    assert.ok(run("DASH_SHAM_ONDE.some(function(o){ return o.v==='NA LOJA'; })"), '"aqui na loja" é um lugar');
+  } finally { run('DASH_DET=__bkS1.dd;'); }
+});
+prova('a frase para quem desce com ele: "shampoo próprio medicamentoso Cloresten — está na bolsa"', () => {
+  const F = (br) => run('banhoRecShampooFrase(' + JSON.stringify(br) + ')');
+  assert.strictEqual(F({ sham: 'SHAMPOO', tipo: 'MEDICAMENTOSO', nome: 'Cloresten', onde: 'NA BOLSA' }), ' · shampoo próprio medicamentoso Cloresten — está na bolsa');
+  assert.strictEqual(F({ sham: 'LOJA', onde: 'NA LOJA' }), ' · shampoo da loja — está aqui na loja');
+  assert.strictEqual(F({ sham: 'SEM SHAMPOO' }), '', 'o da casa não precisa de aviso');
+  assert.strictEqual(F(null), '');
+});
+prova('lançar o banho do dia: o shampoo gravado no banho fixo já vem marcado', () => {
+  run(`__bkS2={dd:DASH_DET, si:DASH_SEL_I, P:PELUDINHOS, pe:pelExtra};
+    PELUDINHOS=[{n:'Lana', tutor:'Bia'}]; DASH_SEL_I={banho:0}; DASH_DET={banho:{}};
+    pelExtra=function(){ return {banho_rec:{ativo:true, freq:'semanal', dia:'qui', hora:'10:00', desde:'2026-10-01', sham:'SHAMPOO', tipo:'HIPOALERGÊNICO', nome:'Episoothe', onde:'NA BOLSA'}}; };`);
+  try {
+    run("banhoPreMarcarLanc('banho')");
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('DASH_DET.banho'))), { sham: 'SHAMPOO', tipo: 'HIPOALERGÊNICO', nome: 'Episoothe', onde: 'NA BOLSA' });
+    run("DASH_DET={banho:{}}; pelExtra=function(){ return {}; }; banhoPreMarcarLanc('banho');");
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('DASH_DET.banho'))), {}, 'sem banho fixo, nada vem marcado');
+  } finally { run('DASH_DET=__bkS2.dd; DASH_SEL_I=__bkS2.si; PELUDINHOS=__bkS2.P; pelExtra=__bkS2.pe;'); }
+});
+provaAsync('Banhos recorrentes: salvar grava qual e o nome (e "sem shampoo" apaga os dois)', async () => {
+  run(`__bkS3={pd:banhosPelDe, pe:banhosPodeEditar, rl:banhosRenderLinha, sp:setPelExtra, au:audit, pc:banhoAutoPedirConferencia, rp:renderPel, ex:pelExtra};
+    __sp=null; banhosPelDe=function(){ return {n:'Lana', tutor:'Bia'}; }; banhosPodeEditar=function(){ return true; };
+    banhosRenderLinha=function(){}; audit=function(){}; banhoAutoPedirConferencia=function(){}; renderPel=function(){};
+    pelExtra=function(){ return {}; };
+    setPelExtra=function(p, patch){ __sp=JSON.parse(JSON.stringify(patch)); return Promise.resolve({ok:true}); };
+    banhoRascCarregar();   /* o rascunho do aparelho é lido UMA vez — depois, o que a prova põe vale */
+    BANHO_RASC['lana__bia']={ativo:true, freq:'semanal', dia:'qui', hora:'10:00', desde:'2026-10-01', sham:'SHAMPOO', onde:'NA LOJA', tipo:'', nome:'', obs:''};`);
+  try {
+    run("banhosSet('lana__bia','tipo','MEDICAMENTOSO'); banhosSet('lana__bia','nome','  Cloresten   2% ');");
+    run("banhosSalvar('lana__bia')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const br = JSON.parse(JSON.stringify(run('__sp'))).banho_rec;
+    assert.strictEqual(br.tipo, 'MEDICAMENTOSO');
+    assert.strictEqual(br.nome, 'Cloresten 2%');
+    assert.strictEqual(br.onde, 'NA LOJA');
+    run("BANHO_RASC['lana__bia']={ativo:true, freq:'semanal', dia:'qui', hora:'10:00', desde:'2026-10-01', sham:'SHAMPOO', onde:'NA BOLSA', tipo:'MEDICAMENTOSO', nome:'X', obs:''}; banhosSet('lana__bia','tipo','MEDICAMENTOSO');");
+    assert.strictEqual(run("BANHO_RASC['lana__bia'].tipo"), '', 'tocar de novo no mesmo desmarca');
+    run("banhosSet('lana__bia','sham','SEM SHAMPOO')");
+    assert.deepStrictEqual([run("BANHO_RASC['lana__bia'].onde"), run("BANHO_RASC['lana__bia'].nome")], ['', '']);
+  } finally { run("delete BANHO_RASC['lana__bia']; banhosPelDe=__bkS3.pd; banhosPodeEditar=__bkS3.pe; banhosRenderLinha=__bkS3.rl; setPelExtra=__bkS3.sp; audit=__bkS3.au; banhoAutoPedirConferencia=__bkS3.pc; renderPel=__bkS3.rp; pelExtra=__bkS3.ex;"); }
+});
+
 // ================================================================== Orçamento → Check-in (25/set)
 console.log('\nOrçamentos de hospedagem — o cliente novo é reconhecido e quem chega aparece no Check-in');
 prova('cliente novo (avulso) com check-in feito SAI de "Estadias fechadas" (o caso do Pingo)', () => {
