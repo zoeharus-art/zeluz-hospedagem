@@ -1165,6 +1165,15 @@ provaAsync('a ficha ficou em dia pelo quadro: fecha só quando nada conversado f
     cenario(Object.assign({}, emDia, { ecto_p: '2026-09-10', escova_p: '2026-09-01' }), { ecto_p: '2026-12-10' },
       { enviadas: { antip: { quem: 'x', ts: 1 }, escova: { quem: 'x', ts: 1 } }, respostas: { escova: { v: 'nao', quem: 'y', ts: 2 } } });
     assert.strictEqual((await esperar()).length, 1, 'G: a escova recusada não segura');
+    // I — vermífugo e raiva vencendo na semana, só a mensagem do vermífugo saiu: a vacina ainda
+    // NEM FOI MANDADA e continua no cartão — NÃO fecha (QA da re-revisão)
+    cenario(Object.assign({}, emDia, { ecto_p: '2026-12-10', verm_p: '2026-09-24', vac_raiva_p: '2026-09-25' }), { verm_p: '2027-01-20' },
+      { enviadas: { antip: { quem: 'x', ts: 1 } } });
+    assert.strictEqual((await esperar()).length, 0, 'I: a vacina a mandar segura');
+    // H — a escova conversada é gravada, mas o vermífugo vencido (nunca conversado) continua: NÃO fecha
+    cenario(Object.assign({}, emDia, { ecto_p: '2026-12-10', verm_p: '2026-09-10', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
+      { enviadas: { escova: { quem: 'x', ts: 1 } } });
+    assert.strictEqual((await esperar()).length, 0, 'H: com a ficha ainda devendo, não fecha');
     // D — sem conversa nenhuma: não grava
     cenario(Object.assign({}, emDia, { ecto_p: '2026-09-10' }), { ecto_p: '2026-12-10' }, {});
     assert.strictEqual((await esperar()).length, 0, 'D: sem conversa, nada a fechar');
@@ -1174,6 +1183,8 @@ prova('QA NOVO-1/B2 — a conversa irmã respondida fecha o assunto em TODAS as 
   assert.strictEqual(run("vencEstadoTipo({enviadas:{ant_antip:{ts:1}}, respostas:{antip:{v:'casa'}}}, 'ant_antip', Date.now())"), 'fechado');
   assert.strictEqual(run("vencEstadoTipo({enviadas:{antip:{ts:1}}, respostas:{ant_antip:{v:'nao'}}}, 'antip', Date.now())"), 'fechado');
   assert.notStrictEqual(run("vencEstadoTipo({enviadas:{antip:{ts:1}}, respostas:{vacina:{v:'x'}}}, 'antip', Date.now())"), 'fechado');
+  assert.notStrictEqual(run("vencEstadoTipo({enviadas:{antip:{ts:1}}, respostas:{ant_antip:{v:'sem'}}}, 'antip', Date.now())"), 'fechado',
+    '"Não respondeu" gravado na irmã (dado antigo) não fecha');
 });
 
 // ------------------------------------------------ o fim

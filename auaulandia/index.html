@@ -22672,17 +22672,16 @@
       if(!r || r.ficha_atualizada) return;
       var conversou=Object.keys(r.enviadas||{}).length || Object.keys(r.respostas||{}).length || r.msg_enviada || r.resposta;
       if(!conversou) return;
-      // Fecha SÓ quando nenhum assunto conversado com o tutor ainda tem item no cartão do dia
-      // (QA A1): a vacina em aberto numa conversa de vermífugo, a escova vencida, a vacina
-      // autorizada para a veterinária — tudo isso segue aberto. O assunto que o tutor recusou
-      // ("Não quer agora") não segura o fechamento. Registro antigo, sem assunto: qualquer item
-      // ainda no cartão segura.
+      // Fecha SÓ quando o CARTÃO DO DIA FICOU VAZIO — que é quando ele some da lista e leva o
+      // "Sim" junto (QA, 25/set/2026, duas rodadas). Qualquer item ainda no cartão segura:
+      // a vacina em aberto numa conversa de vermífugo, a escova vencida, a vacina autorizada
+      // para a veterinária, o assunto que ainda NEM FOI MANDADO ao tutor. Enquanto o cartão
+      // estiver na tela, quem fecha é a pessoa, pelo "Sim". Só o assunto que o tutor recusou
+      // ("Não quer agora") não segura.
       var itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true});
-      var resps=r.respostas||{}, conv={};
-      Object.keys(r.enviadas||{}).concat(Object.keys(resps)).forEach(function(t){ conv[vencTipoBase(t)]=1; });
-      Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) delete conv[vencTipoBase(t)]; });
-      var semAssunto=!Object.keys(r.enviadas||{}).length && !Object.keys(resps).length;
-      if(itensN.some(function(x){ return semAssunto || conv[vencTipoDoItemObj(x)]; })) return;
+      var resps=r.respostas||{}, recusou={};
+      Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
+      if(itensN.some(function(x){ return !recusou[vencTipoDoItemObj(x)]; })) return;
       var quem=(typeof quemSou==='function'?quemSou():'-');
       var nome=((typeof pelNome==='function')?pelNome(p):'')||(p&&p.n)||'';
       vencGravar(chave, {ficha_atualizada:{quem:quem, ts:Date.now(), via:'quadro'}, ficha_falta:null},
@@ -35887,7 +35886,10 @@
     if(r.ficha_atualizada && !(Array.isArray(deve) && deve.length)) return 'fechado';
     // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
     // respondida: o tutor já disse o que fazer — este assunto está fechado em todas as telas.
-    if(tipo && vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo))) return 'fechado';
+    if(tipo){
+      var irma=vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo));
+      if(irma && vencRespFecha(irma.v)) return 'fechado';
+    }
     var rt=vencRespostaDe(r, tipo);
     if(rt){ if(vencRespFecha(rt.v)) return 'fechado'; }
     else if(!r.respostas && vencRespFecha(r.resposta)) return 'fechado';
@@ -36332,7 +36334,8 @@
           // A conversa IRMÃ do mesmo dia (a mensagem do dia × a pergunta "fazer hoje?") já foi
           // respondida (QA NOVO-1): o tutor já disse o que fazer — cobrar a outra seria pedir
           // de novo o que ele respondeu. Vale nos dois sentidos.
-          if(vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo))) return;
+          var __irma=vencRespostaDe(r, vencEhAntecipado(tipo)?vencTipoBase(tipo):hojeTipoAnt(tipo));
+          if(__irma && vencRespFecha(__irma.v)) return;
           if(st!=='cobrar' && st!=='aguardando') return;      // só o que FOI mandado e não teve resposta
           // O assunto ANTECIPADO tem retrato próprio (itens_ant): os itens dele vencem
           // DEPOIS do dia, e o retrato do dia não os conhece.
