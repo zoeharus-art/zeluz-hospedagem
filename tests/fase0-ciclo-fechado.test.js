@@ -1574,6 +1574,10 @@ prova('QA12-A — o recado da vacina NUNCA registrada não some porque o assunto
     assert.strictEqual(run('vencVetAvisos().length'), 0, 'o que ainda deve não é a vacina do recado: sai');
     run("vencFichaDeveAgora=function(){ return []; };");
     assert.strictEqual(run('vencVetAvisos().length'), 0, 'nenhuma vacina devendo: sai');
+    // QA13: o tutor mudou a Gripe para "Não quer agora" — a recusa conta (a ficha é lida com o registro)
+    run("vencFichaDeveAgora=function(ch, r){ return (((r||{}).respostas||{}).vacina||{}).v==='nao' ? [] : [{k:'vac_gripe_p', vacina:true, sem_registro:true}]; };");
+    run("VENC_REG={thor__bia:{vet:__vet25, fechados:{vacina:{ts:5}}, respostas:{vacina:{v:'nao', ts:6}}}};");
+    assert.strictEqual(run('vencVetAvisos().length'), 0, 'recusada pelo tutor: o recado sai');
   } finally { run('VENC_REG=__bk25.vr; VENC_REG_DIA=__bk25.vrd; vencDiaAlvo=__bk25.vda; vencFichaDeveAgora=__bk25.fd;'); }
 });
 prova('QA12-B — o quadro não fecha na véspera o cartão de amanhã enquanto a pergunta "fazer hoje?" dele tiver item', () => {

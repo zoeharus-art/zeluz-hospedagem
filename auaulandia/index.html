@@ -37310,7 +37310,7 @@
         // assunto vacina — gravar a antirrábica do cartão não o tira enquanto ELA ainda deve.
         var emAberto=true;
         try{ var nomesV=String((r.vet||{}).vacinas||'');
-             emAberto=vencFichaDeveAgora(ch, {}, dia).some(function(x){ return x && x.vacina && x.sem_registro && nomesV.indexOf(VENC_VACINA_NOME[x.k]||x.nome)>=0; }); }
+             emAberto=vencFichaDeveAgora(ch, r, dia).some(function(x){ return x && x.vacina && x.sem_registro && nomesV.indexOf(VENC_VACINA_NOME[x.k]||x.nome)>=0; }); }
         catch(e){ emAberto=true; } /* silencioso de propósito: na dúvida, o recado fica */
         if(!emAberto) return;
       }
