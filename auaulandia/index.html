@@ -19268,9 +19268,9 @@
    *   · DOSE EM DOBRO. A recepção lança o Apoquel das 8h, a Zelosa dá e toca "Dei"; às 8h30
    *     sai o check-in de pertences com o mesmo Apoquel. Eram dois códigos de dose: o alarme
    *     voltava a tocar e o vigia cobrava a Gestão por uma dose já dada. Agora as duas portas
-   *     são UMA dose quando é o mesmo FILHOt e o mesmo horário, ou o mesmo remédio com até
+   *     são UMA dose quando é o mesmo FILHOt e o MESMO remédio (pelo nome), com até
    *     MED_JUNTAR_MIN de diferença. Fica a que já tem registro de "dei"; sem registro, a do
-   *     check-in de pertences (a de sempre).
+   *     check-in de pertences (a de sempre). Nome diferente, mesmo horário: duas doses.
    *   · QUEM FALTOU. O lançamento fica no dia quando o FILHOt falta (vira pendência) — mas
    *     remédio para quem não está na casa não pode tocar alarme nem cobrar ninguém. Quem
    *     está "faltou" na chamada sai da fila.
@@ -19313,28 +19313,40 @@
     });
     return out;
   }
-  // É o MESMO remédio? Nome igual, ou a mesma primeira palavra (com 4 letras ou mais):
-  // "Apoquel" e "Apoquel 5,4 mg, meio comprimido" são o mesmo; "Ômega" e "Omega 3" também.
+  // É o MESMO remédio? Só pelo NOME — o horário sozinho não diz nada (o re-QA de 25/set
+  // provou: "Colírio 08:00" da recepção se juntava ao "Apoquel 08:00" dos pertences, e o
+  // Apoquel perdia o alarme). Vale: o nome igual; um nome que é o COMEÇO do outro, palavra
+  // por palavra ("Apoquel" × "Apoquel 5,4 mg"); ou a mesma primeira palavra, com 5 letras
+  // ou mais, que não seja palavra de forma ("gotas", "pomada", "colírio"…). Na dúvida, NÃO
+  // junta: duas doses na tela incomodam; uma dose sumida machuca.
+  var MED_PALAVRAS_DE_FORMA={gota:1,gotas:1,pomada:1,colirio:1,comprimido:1,comprimidos:1,capsula:1,capsulas:1,
+    remedio:1,vitamina:1,xarope:1,spray:1,solucao:1,suspensao:1,injecao:1,shampoo:1,creme:1,oleo:1,
+    suplemento:1,antibiotico:1,antialergico:1,pasta:1,gel:1,sache:1,dose:1,meio:1,medicacao:1};
+  function medPalavras(t){ return jsNorm(String(t||'')).replace(/[^a-z0-9 ]/g,' ').split(' ').filter(Boolean); }
   function medMesmoRemedio(a, b){
-    var na=jsNorm(String(a||'')), nb=jsNorm(String(b||''));
-    if(!na || !nb) return false;
-    if(na===nb) return true;
-    var pa=na.split(' ')[0].replace(/[^a-z0-9]/g,''), pb=nb.split(' ')[0].replace(/[^a-z0-9]/g,'');
-    return pa.length>=4 && pa===pb;
+    var A=medPalavras(a), B=medPalavras(b);
+    if(!A.length || !B.length) return false;
+    var curta=(A.length<=B.length)?A:B, longa=(A.length<=B.length)?B:A;
+    if(curta.every(function(w, i){ return longa[i]===w; })) return true;
+    return A[0]===B[0] && A[0].length>=5 && !MED_PALAVRAS_DE_FORMA[A[0]];
   }
   function medMesmaDose(lanc, dc){
     if(!lanc || !dc || lanc.key!==dc.key) return false;
     var ml=medMinutosDe(lanc.horario), md=medMinutosDe(dc.horario);
     if(ml===null || md===null) return false;
-    if(ml===md) return true;                        // mesmo FILHOt, mesmo horário: a mesma dose
     return Math.abs(ml-md)<=MED_JUNTAR_MIN && medMesmoRemedio(lanc.nome, dc.nome);
   }
   function medJuntarDoDia(dcDoses, lancDoses, log){
     var dada=function(d){ var L=((log||{})[d.key])||{}; return !!L[magDoseId(d.itemId, d.horario)]; };
     var usadas={}, fora={}, out=[];
     (lancDoses||[]).forEach(function(l){
-      var par=-1;
-      (dcDoses||[]).forEach(function(d, i){ if(par<0 && !usadas[i] && medMesmaDose(l, d)) par=i; });
+      // O par é o do MESMO remédio mais perto no horário — nunca o primeiro que aparecer.
+      var par=-1, melhor=1e9;
+      (dcDoses||[]).forEach(function(d, i){
+        if(usadas[i] || !medMesmaDose(l, d)) return;
+        var dif=Math.abs(medMinutosDe(l.horario)-medMinutosDe(d.horario));
+        if(dif<melhor){ melhor=dif; par=i; }
+      });
       if(par<0){ out.push(l); return; }
       usadas[par]=1;
       // A que já tem "dei" registrado manda: é ela que o alarme e o vigia conferem.
@@ -25045,6 +25057,7 @@
   // dia VELHO é desligado — nó de ontem escutando é download que ninguém lê.
   var _chamadaVivaDia='';
   function chamadaNo(dia){ return 'daycare/chamada/'+(dia||dcDataKey()); }
+  var __chamadaVivaAnterior=null, __chamadaVivaReler=null;
   function chamadaVivaLigar(){
     if(!DB) return null;
     var dia=dcDataKey();
@@ -25067,9 +25080,18 @@
       // O remédio lançado na recepção sai da fila do alarme de quem está "faltou" — venha a
       // falta da chamada, do check-in do corpo ou da falta automática (QA da Fase 0). É aqui,
       // na chamada viva, e não dentro do check-in, de propósito: o check-in fica intocado.
+      // E o contrário: quem SAIU de "faltou" (a falta automática das 12h e ele chegou às 13h)
+      // traz a dose de volta — em todo aparelho, não só no que desmarcou (re-QA de 25/set).
       try{
         if(typeof medTirarDosesDeQuemFaltou==='function')
           Object.keys(dcChamada||{}).forEach(function(k){ if(dcChamada[k]==='faltou') medTirarDosesDeQuemFaltou(k); });
+        var voltou=Object.keys(__chamadaVivaAnterior||{}).some(function(k){
+          return __chamadaVivaAnterior[k]==='faltou' && (dcChamada||{})[k]!=='faltou'; });
+        __chamadaVivaAnterior=Object.assign({}, dcChamada||{});
+        if(voltou && typeof carregarAgendaMedTodos==='function'){
+          if(__chamadaVivaReler) clearTimeout(__chamadaVivaReler);
+          __chamadaVivaReler=setTimeout(function(){ __chamadaVivaReler=null; carregarAgendaMedTodos(); }, 2000);
+        }
       }catch(e){ _logFalhaGrav('a fila do remédio de quem faltou (chamada viva)', e); }
     });
   }
@@ -35495,6 +35517,8 @@
   function vencDeveDe(o, r){ return (r && r.ficha_atualizada)?vencFichaAindaDeve(o, r):null; }
   // O mesmo, para quem só tem a chave e o dia (as Respostas pendentes, o recado da vet): lê
   // a ficha de AGORA. FILHOt que saiu do cadastro não deve nada aqui.
+  // 25/set/2026, 00h00 (horário de Brasília): a partir daqui o "Sim" passa pela trava da ficha.
+  var VENC_TRAVA_SIM_DESDE=Date.UTC(2026,8,25,3,0,0);
   function vencFichaDeveAgora(chave, r, dia){
     try{
       var p=prevCorrigePetDe(chave); if(!p) return [];
@@ -35901,7 +35925,11 @@
       var doDia=regs[dia]||{};
       Object.keys(doDia).forEach(function(chave){
         var r=doDia[chave]||{};
-        var deveP=r.ficha_atualizada?vencFichaDeveAgora(chave, r, dia):null;
+        // O "Sim" gravado ANTES da trava (25/set/2026) continua fechando o histórico: reabrir de
+        // uma vez 30 dias de cartões antigos encheria as Respostas pendentes de "COBRAR" velho
+        // no dia da publicação (re-QA). O "Sim" de agora em diante já passa pela trava.
+        var deveP=(r.ficha_atualizada && Number(r.ficha_atualizada.ts||0)>=VENC_TRAVA_SIM_DESDE)
+          ? vencFichaDeveAgora(chave, r, dia) : (r.ficha_atualizada?[]:null);
         if(r.ficha_atualizada && !deveP.length) return;      // assunto fechado (e a ficha em dia)
         var env=r.enviadas||{};
         Object.keys(env).forEach(function(tipo){
@@ -39748,10 +39776,16 @@
       // "cancelado" não pode cair por cima de uma noite que tem ficha e valor.
       var gravar=anterior
         ? DB.ref(pernNo(dia)+'/'+chave).transaction(function(cur){
-            if(!cur || String(cur.status||'aguardando')!=='aguardando') return;   // desiste
+            // `null` na primeira volta quer dizer "ainda não sei" (o nó não está em memória):
+            // devolver null faz o banco responder com o valor de verdade e a função rodar de
+            // novo. Desistir aqui abortava sempre, sem nunca perguntar ao servidor — o mesmo
+            // defeito do planilha_ok de 03/set (re-QA de 25/set).
+            if(cur===null) return null;
+            if(String(cur.status||'aguardando')!=='aguardando') return;           // desiste
             return Object.assign({}, cur, up);
           }).then(function(res){
-            if(res && res.committed) return true;
+            var v=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null;
+            if(res && res.committed && v && v.status==='cancelado') return true;
             pernAtrasTirar(dia, chave); pernCartaoRender();
             if(typeof zAlertao==='function') zAlertao('ESTA NOITE JÁ FOI RESOLVIDA',
               ['Outro aparelho resolveu a noite de '+pernNoiteTexto(dia)+' enquanto você escrevia. Nada foi cancelado.'],{botao:'Entendi', ok:true});

@@ -486,7 +486,89 @@ prova('a foto copiada por engano aparece: duas fichas com a MESMA foto', () => {
   } finally { run('PELUDINHOS=__bkpP; FOTOS=__bkpF; pelInativo=__bkpI;'); }
 });
 
+// ================================================================== re-QA de 25/set
+console.log('\nRe-QA — a junção é pelo NOME do remédio; o cancelar confere o banco');
+const DC2 = { tico__joana: { nome: 'Tico', itens: {
+  m0: { nome: 'Apoquel', dose: '1 comp', horarios: ['08:00'] },
+  m1: { nome: 'Colírio Maxitrol', dose: '1 gota', horarios: ['08:00'] } } } };
+prova('R1 — Colírio da recepção já dado + pertences com Apoquel e Colírio às 8h: o Apoquel NÃO some e o colírio não toca de novo', () => {
+  const log = { dc__tico__joana: { 'lanc_a1_08-00': { quem: 'Zelosa' } } };
+  const r = juntar(DC2, LANC('08:00', 'Colírio Maxitrol, 1 gota em cada olho'), log).sort();
+  igual(r, ['lanc_a1@08:00', 'm0@08:00']);
+});
+prova('R2 — Apoquel dos pertences + Colírio lançado na recepção no mesmo horário: DUAS doses', () => {
+  igual(juntar(DC('08:00', 'Apoquel'), LANC('08:00', 'Colírio')).sort(), ['lanc_a1@08:00', 'medicacao_0@08:00']);
+});
+prova('R3 — palavra de forma não junta remédios diferentes ("Pomada…", "Gotas…")', () => {
+  assert.ok(!run("medMesmoRemedio('Pomada Nebacetin', 'Pomada oftálmica Epitezan')"));
+  assert.ok(!run("medMesmoRemedio('Gotas Otomax no ouvido', 'Gotas de colírio')"));
+  assert.ok(run("medMesmoRemedio('Apoquel 5,4 mg meio comprimido', 'Apoquel 5,4mg')"), 'mesmo remédio escrito diferente');
+});
+
+// O banco de mentira da transação: a 1ª volta vem com `null` (o nó não está em memória),
+// como no SDK de verdade; devolver algo que não seja `undefined` faz o "servidor" responder.
+function bancoFalso(servidor) {
+  const gravado = { v: servidor, tx: 0 };
+  return {
+    gravado,
+    ref() {
+      return {
+        once() { return Promise.resolve({ val: () => gravado.v }); },
+        update(x) { gravado.v = Object.assign({}, gravado.v || {}, x); return Promise.resolve(); },
+        transaction(fn) {
+          gravado.tx++;
+          const local = fn(null);
+          if (local === undefined) return Promise.resolve({ committed: false, snapshot: { val: () => null } });
+          const r = fn(gravado.v == null ? null : JSON.parse(JSON.stringify(gravado.v)));
+          if (r === undefined) return Promise.resolve({ committed: false, snapshot: { val: () => gravado.v } });
+          gravado.v = r;
+          return Promise.resolve({ committed: true, snapshot: { val: () => r } });
+        },
+      };
+    },
+  };
+}
+// Uma de cada vez: as provas trocam o banco e as janelas do app, e duas ao mesmo tempo
+// pisariam uma na outra.
+let fila = Promise.resolve();
+function provaAsync(nome, fn) {
+  fila = fila.then(() => fn().then(() => { ok++; console.log('  ✓ ' + nome); },
+    (e) => { falhas.push(nome + ' — ' + e.message); console.log('  ✗ ' + nome + '\n      ' + e.message); }));
+}
+provaAsync('R-CANCEL — "Tutor buscou, cancelar" de noite anterior GRAVA (a transação pergunta ao banco)', async () => {
+  const B = bancoFalso({ nome: 'Thor', status: 'aguardando', chave: 'thor__bia' });
+  ctx.__B = B;
+  run(`__bkpDB=DB; __bkpZT=zTexto; __bkpZA=zAlertao; __bkpPH=pernHoje; __bkpPA=PERN_ATRAS; __alertas=[];
+       DB=__B; zTexto=function(){ return Promise.resolve('a tutora buscou às 18h40'); };
+       zAlertao=function(t){ __alertas.push(t); }; pernHoje=function(){ return '2026-09-25'; };
+       PERN_ATRAS=[{_dia:'2026-09-24', _chave:'thor__bia', chave:'thor__bia', nome:'Thor'}];`);
+  try {
+    run("pernCancelar('thor__bia','2026-09-24')");
+    await new Promise((r) => setImmediate(r)); await new Promise((r) => setTimeout(r, 20));
+    assert.strictEqual(B.gravado.v.status, 'cancelado', 'a noite ficou cancelada no banco');
+    assert.strictEqual(B.gravado.v.cancel_motivo, 'a tutora buscou às 18h40');
+    assert.strictEqual(run('__alertas.length'), 0, 'nenhum aviso falso de "já foi resolvida"');
+  } finally { run('DB=__bkpDB; zTexto=__bkpZT; zAlertao=__bkpZA; pernHoje=__bkpPH; PERN_ATRAS=__bkpPA;'); }
+});
+provaAsync('R-CANCEL — se outro aparelho já fez o check-in, o cancelar desiste e diz a verdade', async () => {
+  const B = bancoFalso({ nome: 'Thor', status: 'aguardando', chave: 'thor__bia' });
+  ctx.__B = B;
+  run(`__bkpDB=DB; __bkpZT=zTexto; __bkpZA=zAlertao; __bkpPH=pernHoje; __bkpPA=PERN_ATRAS; __alertas=[];
+       DB=__B; zAlertao=function(t){ __alertas.push(t); }; pernHoje=function(){ return '2026-09-25'; };
+       // enquanto a Zelosa escreve o motivo, outro aparelho faz o check-in
+       zTexto=function(){ __B.gravado.v.status='checkin_feito'; return Promise.resolve('a tutora buscou'); };
+       PERN_ATRAS=[{_dia:'2026-09-24', _chave:'thor__bia', chave:'thor__bia', nome:'Thor'}];`);
+  try {
+    run("pernCancelar('thor__bia','2026-09-24')");
+    await new Promise((r) => setTimeout(r, 20));
+    assert.strictEqual(B.gravado.v.status, 'checkin_feito', 'o check-in não foi apagado');
+    assert.ok(run('__alertas.join(" ")').indexOf('JÁ FOI RESOLVIDA') >= 0);
+  } finally { run('DB=__bkpDB; zTexto=__bkpZT; zAlertao=__bkpZA; pernHoje=__bkpPH; PERN_ATRAS=__bkpPA;'); }
+});
+
 // ------------------------------------------------ o fim
-console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
-falhas.forEach((f) => console.log('  - ' + f));
-process.exit(falhas.length ? 1 : 0);
+fila.then(() => {
+  console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
+  falhas.forEach((f) => console.log('  - ' + f));
+  process.exit(falhas.length ? 1 : 0);
+});
