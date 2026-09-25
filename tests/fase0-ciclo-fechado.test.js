@@ -1174,6 +1174,20 @@ provaAsync('a ficha ficou em dia pelo quadro: fecha só quando nada conversado f
     cenario(Object.assign({}, emDia, { ecto_p: '2026-12-10', verm_p: '2026-09-10', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
       { enviadas: { escova: { quem: 'x', ts: 1 } } });
     assert.strictEqual((await esperar()).length, 0, 'H: com a ficha ainda devendo, não fecha');
+    // J — QA8: a pergunta "fazer hoje?" do carrapaticida (que vence 02/10, fora do cartão do
+    // dia 22) espera resposta e ele só volta em 05/10 (feriado no meio). Gravar a escova esvazia
+    // o cartão do dia, mas a janela da pergunta ainda tem o carrapaticida: NÃO fecha.
+    run("__pv11=proximaVindaDe; proximaVindaDe=function(){ return '2026-10-05'; };");
+    try {
+      cenario(Object.assign({}, emDia, { ecto_p: '2026-10-02', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
+        { enviadas: { ant_antip: { quem: 'x', ts: 1 }, escova: { quem: 'x', ts: 1 } } });
+      assert.strictEqual((await esperar()).length, 0, 'J: a janela do "fazer hoje?" segura');
+      // e quando a próxima vinda é antes do vencimento, a pergunta não tem mais o que segurar
+      run("proximaVindaDe=function(){ return '2026-09-29'; };");
+      cenario(Object.assign({}, emDia, { ecto_p: '2026-10-02', escova_p: '2026-09-01' }), { escova_p: '2026-12-01' },
+        { enviadas: { ant_antip: { quem: 'x', ts: 1 }, escova: { quem: 'x', ts: 1 } } });
+      assert.strictEqual((await esperar()).length, 1, 'J2: fora da janela, o cartão vazio fecha');
+    } finally { run('proximaVindaDe=__pv11;'); }
     // D — sem conversa nenhuma: não grava
     cenario(Object.assign({}, emDia, { ecto_p: '2026-09-10' }), { ecto_p: '2026-12-10' }, {});
     assert.strictEqual((await esperar()).length, 0, 'D: sem conversa, nada a fechar');
@@ -1271,6 +1285,84 @@ provaAsync('gravar prevenção na ficha dispara o fechamento por assunto — só
     for (let i = 0; i < 10; i++) await Promise.resolve();
     assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__chamou15'))), [], 'gravação que falhou não fecha nada');
   } finally { run('DB=__bk15.db; vencFecharAssuntosPelaFicha=__bk15.vf; pelCamposBarrados=__bk15.pb; document.getElementById=__bk15.ge;'); }
+});
+
+// ================================================================== QA8 — o fechamento por assunto
+console.log('\nQA8 — fechamento por assunto: janela do "fazer hoje?", reabrir, varredura e data apagada');
+prova('ALTO-1 — a pergunta "fazer hoje?" não fecha enquanto o item ainda está na janela dela (semana de feriado)', () => {
+  run(`__bk16={hz:zHojeISO, vm:vencMargem, pv:proximaVindaDe};
+    zHojeISO=function(){ return '2026-10-05'; }; vencMargem=function(){ return 3; };
+    proximaVindaDe=function(){ return '2026-10-19'; };`);
+  try {
+    // hoje 05/10, ele só volta 19/10 (12/10 é feriado); o carrapaticida vence 15/10 e a pergunta
+    // "fazer hoje?" dele espera resposta; a recepção grava a ESCOVA
+    const ficha = Object.assign({}, FA_EM_DIA, { ecto_p: '2026-10-15', escova_p: '2027-01-05' });
+    const r = { enviadas: { ant_antip: { ts: 1 }, escova: { ts: 1 } } };
+    const P = "{n:'Thor', tutor:'Bia'}";
+    const res = JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(ficha) + ',' + JSON.stringify(r) + ",'2026-10-05','2026-10-05'," + P + ')')));
+    assert.deepStrictEqual(res, ['escova'], 'fecha só a escova; o carrapaticida segue na janela da pergunta');
+    // variante vacina: "Pode aplicar hoje" respondido, a raiva vence 16/10 — gravar a escova não tira o recado
+    const fv = Object.assign({}, FA_EM_DIA, { vac_raiva_p: '2026-10-16', escova_p: '2027-01-05' });
+    const rv = { enviadas: { ant_vacina: { ts: 1 }, escova: { ts: 1 } }, respostas: { ant_vacina: { v: 'manhã', ts: 2 } } };
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(fv) + ',' + JSON.stringify(rv) + ",'2026-10-05','2026-10-05'," + P + ')'))), ['escova']);
+    // o carrapaticida gravado: aí sim a pergunta fecha
+    const ok = Object.assign({}, ficha, { ecto_p: '2027-01-05' });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(ok) + ',' + JSON.stringify(r) + ",'2026-10-05','2026-10-05'," + P + ')'))).sort(), ['antip', 'escova']);
+  } finally { run('zHojeISO=__bk16.hz; vencMargem=__bk16.vm; proximaVindaDe=__bk16.pv;'); }
+});
+prova('MÉDIO-2 — a data corrigida para trás reabre o que a FICHA fechou (e só o que a ficha fechou)', () => {
+  run("__bk17={hz:zHojeISO}; zHojeISO=function(){ return '2026-09-21'; };");
+  try {
+    const ficha = Object.assign({}, FA_EM_DIA, { verm_p: '2026-09-10' });
+    const r = { enviadas: { antip: { ts: 1 } }, fechados: { antip: { quem: 'Ana', ts: 2, via: 'ficha' } } };
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosReabertos(' + JSON.stringify(ficha) + ',' + JSON.stringify(r) + ",'2026-09-22','2026-09-21')"))), ['antip']);
+    const outro = { enviadas: { antip: { ts: 1 } }, fechados: { antip: { quem: 'Ana', ts: 2, via: 'outro' } } };
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosReabertos(' + JSON.stringify(ficha) + ',' + JSON.stringify(outro) + ",'2026-09-22','2026-09-21')"))), [], 'o que não foi a ficha que fechou, a ficha não reabre');
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosReabertos(' + JSON.stringify(FA_EM_DIA) + ',' + JSON.stringify(r) + ",'2026-09-22','2026-09-21')"))), [], 'ficha em dia: continua fechado');
+  } finally { run('zHojeISO=__bk17.hz;'); }
+});
+prova('BAIXO — data APAGADA não é "resolvido": o item que virou "em aberto" segura o assunto conversado', () => {
+  run("__bk18={hz:zHojeISO}; zHojeISO=function(){ return '2026-09-21'; };");
+  try {
+    const semVerm = Object.assign({}, FA_EM_DIA); delete semVerm.verm_p;
+    const r = { enviadas: { antip: { ts: 1 } }, itens: [{ k: 'verm_p', v: '2026-09-10' }] };
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('vencAssuntosResolvidos(' + JSON.stringify(semVerm) + ',' + JSON.stringify(r) + ",'2026-09-22','2026-09-21')"))), []);
+  } finally { run('zHojeISO=__bk18.hz;'); }
+});
+provaAsync('MÉDIO-3 — aparelho sem varredura: lê os dias do banco antes de fechar; e a data corrigida reabre gravando', async () => {
+  run(`__bk19={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, vpq:VENC_PEND_QUANDO, au:audit, vre:vencRender, vrq:vencRedesenharQuadros, qs:quemSou, hz:zHojeISO, pe:pelExtra, vab:vencAtualizarBadge};
+    __grav19=[]; __K19=dcKey('Thor','Bia'); __P19={n:'Thor', tutor:'Bia'};
+    __faixa19={'2026-09-22':{}}; __faixa19['2026-09-22'][__K19]={enviadas:{antip:{ts:1}, vacina:{ts:1}}};
+    __falha19=false;
+    DB={ref:function(p){ return {
+      orderByKey:function(){ return { startAt:function(){ return { endAt:function(){ return { once:function(){ return Promise.resolve({val:function(){ return __faixa19; }}); } }; } }; } }; },
+      once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      update:function(v){ if(__falha19) return Promise.reject(new Error('sem rede')); __grav19.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
+    zHojeISO=function(){ return '2026-09-21'; };
+    pelExtra=function(){ return ${JSON.stringify(Object.assign({}, FA_EM_DIA, { verm_p: '2026-09-10', vac_raiva_p: '2026-09-24' }))}; };
+    VENC_REG=null; VENC_REG_DIA=''; VENC_PEND=null; VENC_PEND_QUANDO=0;
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; vencAtualizarBadge=function(){}; quemSou=function(){ return 'Ana'; };`);
+  const esperar = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); return JSON.parse(JSON.stringify(run('__grav19'))); };
+  try {
+    run("vencFecharAssuntosPelaFicha(__P19, {verm_p:'2027-01-20'})");
+    let g = await esperar();
+    assert.strictEqual(g.length, 1, 'leu a faixa do banco e fechou');
+    assert.deepStrictEqual(Object.keys(g[0].v.fechados), ['antip']);
+    assert.ok(g[0].p.indexOf('2026-09-22') > 0);
+    // a recepção errou de FILHOt e volta o "Vence em" para 10/09: reabre (o fechados some)
+    run("__grav19=[]; VENC_PEND['2026-09-22'][__K19].fechados={antip:{quem:'Ana', ts:2, via:'ficha'}};");
+    run("vencFecharAssuntosPelaFicha(__P19, {verm_p:'2026-09-10'})");
+    g = await esperar();
+    assert.strictEqual(g.length, 1, 'gravou a reabertura');
+    assert.deepStrictEqual(g[0].v.fechados, {}, 'o assunto voltou a ser cobrado');
+    // falha do fechamento automático: sem alerta de "tente de novo" para quem salvou a ficha
+    run("__grav19=[]; __alertas19=0; __za19=zAlertao; zAlertao=function(){ __alertas19++; }; __falha19=true; VENC_PEND['2026-09-22'][__K19].fechados={};");
+    try {
+      run("vencFecharAssuntosPelaFicha(__P19, {verm_p:'2027-01-20'})");
+      await esperar();
+      assert.strictEqual(run('__alertas19'), 0, 'falha automática não assusta quem salvou a ficha');
+    } finally { run('zAlertao=__za19;'); }
+  } finally { run('DB=__bk19.db; VENC_REG=__bk19.vr; VENC_REG_DIA=__bk19.vrd; VENC_PEND=__bk19.vp; VENC_PEND_QUANDO=__bk19.vpq; audit=__bk19.au; vencRender=__bk19.vre; vencRedesenharQuadros=__bk19.vrq; quemSou=__bk19.qs; zHojeISO=__bk19.hz; pelExtra=__bk19.pe; vencAtualizarBadge=__bk19.vab;'); }
 });
 
 // ------------------------------------------------ o fim

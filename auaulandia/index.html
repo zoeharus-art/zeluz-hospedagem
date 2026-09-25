@@ -22688,6 +22688,13 @@
       // estiver na tela, quem fecha é a pessoa, pelo "Sim". Só o assunto que o tutor recusou
       // ("Não quer agora") não segura.
       var itensN=vencItensDe(exN, dia, vencMargem(), hoje, {incluirSemRegistro:true});
+      // QA8: a pergunta "fazer hoje?" tem janela própria (até a próxima vinda, + folga).
+      try{
+        var _ant=['enviadas','respostas','cobrancas','tentativas'].some(function(c){ return Object.keys(r[c]||{}).some(vencEhAntecipado); });
+        var _prox=_ant?proximaVindaDe(p, dia):null;
+        var _teto=_prox?addDiasISO(_prox, hojeFolgaAntecipar()-1):'';
+        if(_teto) itensN=itensN.concat(vencItensDe(exN, _teto, 0, hoje)||[]);
+      }catch(e){ return; } /* silencioso de propósito: na dúvida não fecha */
       var resps=r.respostas||{}, recusou={};
       Object.keys(resps).forEach(function(t){ if(vencRespNaoMudaFicha((resps[t]||{}).v)) recusou[vencTipoBase(t)]=1; });
       if(itensN.some(function(x){ return !recusou[vencTipoDoItemObj(x)]; })) return;
@@ -36575,6 +36582,9 @@
       return true;
     }).catch(function(e){
       _logFalhaGrav('daycare/vencimentos/'+dia+'/'+chave+' ('+(rotuloAudit||'gravar')+')', e);
+      // Gravação AUTOMÁTICA (o fechamento por assunto, QA8): quem salvou a ficha salvou com
+      // sucesso — o alerta de "tente de novo" confundiria. Fica o rastro no log de falhas.
+      if(o && o.silencioso) return false;
       if(typeof zAlertao==='function') zAlertao('NÃO consegui gravar',
         ['O erro foi: '+((e&&e.message)||e),
          'Nada mudou — o cartão continua aberto. Tente de novo em instantes.'],{botao:'Entendi'});
@@ -36591,24 +36601,65 @@
   // fecha sozinho quando a ficha deixa de ter item dele no cartão daquele dia: grava
   // fechados/{assunto} = {quem, ts, via:'ficha'} no MESMO registro da conversa.
   // Pura: os assuntos conversados (e ainda não fechados) que não têm mais item no cartão.
-  function vencAssuntosResolvidos(ex, r, dia, hoje){
+  function vencAssuntosResolvidos(ex, r, dia, hoje, p){
     r=r||{};
     var conv={};
     ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
       Object.keys(r[c]||{}).forEach(function(t){ var b=vencTipoBase(t); if(b) conv[b]=1; });
     });
     var ja=r.fechados||{};
-    var itens=[];
-    try{ itens=vencItensDe(ex||{}, dia, vencMargem(), hoje, {incluirSemRegistro:true})||[]; }
-    catch(e){ return []; } /* silencioso de propósito: ficha estranha não fecha nada */
-    var tem={};
-    itens.forEach(function(x){ tem[vencTipoDoItemObj(x)]=1; });
+    var tem=vencAssuntosComItem(ex, r, dia, hoje, p);
+    if(!tem) return [];
     return Object.keys(conv).filter(function(t){ return !ja[t] && !tem[t]; });
+  }
+  // Os assuntos que ainda TÊM item: o cartão do dia e, quando houve a pergunta "fazer hoje?",
+  // a janela dela (até a próxima vinda, + folga) — QA8. Data apagada não resolve: o item que
+  // virou "em aberto" segura o assunto em que foi conversado. null = não sei (não fecha nada).
+  function vencAssuntosComItem(ex, r, dia, hoje, p){
+    r=r||{};
+    var itens=[];
+    try{
+      itens=vencItensDe(ex||{}, dia, vencMargem(), hoje, {incluirSemRegistro:true})||[];
+      var temAnt=false;
+      ['enviadas','respostas','cobrancas','tentativas'].forEach(function(c){
+        Object.keys(r[c]||{}).forEach(function(t){ if(vencEhAntecipado(t)) temAnt=true; });
+      });
+      if(temAnt && p && typeof proximaVindaDe==='function'){
+        var prox=proximaVindaDe(p, dia);
+        var teto=prox?addDiasISO(prox, hojeFolgaAntecipar()-1):'';
+        if(teto) itens=itens.concat(vencItensDe(ex||{}, teto, 0, hoje)||[]);
+      }
+    }catch(e){ return null; } /* silencioso de propósito: ficha estranha não fecha nada */
+    var snapK={};
+    (Array.isArray(r.itens)?r.itens:[]).concat(Array.isArray(r.itens_ant)?r.itens_ant:[])
+      .forEach(function(x){ if(x&&x.k&&!x.sem_registro) snapK[x.k]=1; });
+    var semSnap=!Object.keys(snapK).length;
+    var tem={};
+    itens.forEach(function(x){
+      tem[vencTipoDoItemObj(x)]=1;
+      if(x && x.sem_registro && (semSnap || snapK[x.k])) tem[vencTipoDoItem(x.k)]=1;
+    });
+    return tem;
+  }
+  // O que a FICHA fechou e voltou a dever (a data foi corrigida para trás): reabre.
+  function vencAssuntosReabertos(ex, r, dia, hoje, p){
+    var fe=(r||{}).fechados||{};
+    var tem=vencAssuntosComItem(ex, r, dia, hoje, p);
+    if(!tem) return [];
+    return Object.keys(fe).filter(function(t){ return fe[t] && fe[t].via==='ficha' && tem[t]; });
   }
   // Varre os dias em memória em que houve conversa com o tutor deste FILHOt e fecha o que a
   // ficha resolveu. `patch` é o que acabou de ser gravado: o cadastro em memória só recebe a
   // data nova do banco ~90 ms depois, e sem ela o app olharia a ficha velha.
   function vencFecharAssuntosPelaFicha(p, patch){
+    if(!DB || !p) return;
+    // QA8: a varredura pode não existir neste aparelho (só abriu a Prevenção) ou estar velha
+    // (a conversa nasceu depois em outro aparelho). A leitura tem trava própria de 2 min.
+    var pr=null; try{ pr=(typeof vencPendCarregar==='function')?vencPendCarregar():null; }catch(e){ pr=null; } /* silencioso de propósito: sem a leitura vale a memória */
+    if(pr && typeof pr.then==='function') pr.then(function(){ vencFecharAssuntosFazer(p, patch); }, function(){ vencFecharAssuntosFazer(p, patch); });
+    else vencFecharAssuntosFazer(p, patch);
+  }
+  function vencFecharAssuntosFazer(p, patch){
     if(!DB || !p) return;
     var chave=(typeof dcKey==='function')?dcKey(p.n, p.tutor):''; if(!chave) return;
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
@@ -36621,14 +36672,20 @@
     var tutor=((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'';
     Object.keys(dias).sort().forEach(function(dia){
       var r=vencRegDeDia(dia, chave); if(!r) return;
-      var res=vencAssuntosResolvidos(ex, r, dia, hoje);
-      if(!res.length) return;
+      var res=vencAssuntosResolvidos(ex, r, dia, hoje, p);
+      var reab=vencAssuntosReabertos(ex, r, dia, hoje, p);
+      if(!res.length && !reab.length) return;
       var fech=Object.assign({}, r.fechados||{});
       res.forEach(function(t){ fech[t]={quem:quem, ts:Date.now(), via:'ficha'}; });
+      reab.forEach(function(t){ delete fech[t]; });
+      var rots=function(l){ return vencJuntar(l.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); })); };
+      // O rastro diz o que a conta viu — "não tem mais pendência de …" — e não "resolveu":
+      // o rótulo é do ASSUNTO inteiro (vermífugo, carrapaticida e coleira), não do campo gravado.
       vencGravar(chave, {fechados:fech},
-        'a ficha de '+nome+' resolveu '+vencJuntar(res.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); }))
-        +' — a conversa com o tutor sobre isso fechou (dia '+dia+')',
-        {nome:nome, tutor:tutor, itens:[]}, dia, true);
+        (res.length?('a ficha de '+nome+' não tem mais pendência de '+rots(res)+' no cartão — a conversa com o tutor sobre isso fechou'):'')
+        +(reab.length?((res.length?'; ':'')+'a ficha de '+nome+' voltou a ter pendência de '+rots(reab)+' — a conversa reabriu'):'')
+        +' (dia '+dia+')',
+        {nome:nome, tutor:tutor, itens:[], silencioso:true}, dia, true);
     });
   }
   // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
