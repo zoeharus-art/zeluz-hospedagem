@@ -1035,6 +1035,46 @@ prova('Turma do dia — troca ainda PEDIDA (sem o sim da Gestora) não muda a tu
   } finally { run('pelDias=__bkt.pd; repLancamentos=__bkt.rl; repAgendaDe=__bkt.ra; pelExtra=__bkt.pe; pelInativo=__bkt.pi; ehMoradorZeluz=__bkt.mz;'); }
 });
 
+// ================================================================== Re-QA da 5ª rodada (25/set)
+console.log('\nRe-QA da 5ª rodada — nada repetido, nada apagado');
+prova('QA N2 — mandada a pergunta nova, a cobrança da velha NÃO volta para a lista', () => {
+  run(CT_BKP + `VENC_PEND={'2026-09-23':{'mel__ana':{pet:'Mel', tutor:'Ana', enviadas:{ant_antip:{quem:'x', ts:${AGORA - 30 * 3600000}}}}},
+                 '2026-09-24':{'mel__ana':{pet:'Mel', tutor:'Ana', enviadas:{ant_antip:{quem:'y', ts:${AGORA - 60000}}}}}, '2026-09-25':{}};
+    __MEL.antReg=VENC_PEND['2026-09-24']['mel__ana'];`);
+  try {
+    const d = JSON.parse(JSON.stringify(run('contatosDados(' + AGORA + ')')));
+    assert.deepStrictEqual(d.aqui.map((x) => x.chave), [], 'a pergunta de hoje já saiu');
+    assert.deepStrictEqual(d.cobrar.map((x) => x.chave), [], 'e a cobrança de ontem não volta');
+  } finally { run(CT_VOLTA); }
+});
+prova('QA N4 — a conversa do dia respondida fecha o "fazer hoje?"; a pergunta de hoje respondida mostra a resposta', () => {
+  assert.strictEqual(run("hojeVesperaTratou({enviadas:{ant_antip:{ts:1}, antip:{ts:2}}, respostas:{antip:{v:'casa'}}}, 'antip')"), true);
+  assert.strictEqual(run("hojeVesperaTratou({enviadas:{ant_antip:{ts:1}}, respostas:{ant_antip:{v:'nao'}, antip:{v:'casa'}}}, 'antip')"), false);
+});
+prova('QA N5 — cobranças do mesmo assunto em dois aparelhos: ficam as duas', () => {
+  const r = JSON.parse(JSON.stringify(run(`vencMesclarMapa({antip:[{quem:'Ana', ts:1}]}, {}, {antip:[{quem:'Bia', ts:2}]})`)));
+  assert.deepStrictEqual(r.antip.map((x) => x.quem), ['Ana', 'Bia']);
+  const r2 = JSON.parse(JSON.stringify(run(`vencMesclarMapa({antip:[{quem:'Ana', ts:1}]}, {antip:[{quem:'Ana', ts:1}]}, {antip:[{quem:'Ana', ts:1},{quem:'Ana', ts:5}]})`)));
+  assert.deepStrictEqual(r2.antip.map((x) => x.ts), [1, 5], 'sem repetir');
+});
+provaAsync('QA N5 — dois "Mandei" rápidos no mesmo aparelho: o segundo espera o primeiro e nenhum some', async () => {
+  run(`__bk8={db:DB, vr:VENC_REG, vrd:VENC_REG_DIA, vp:VENC_PEND, au:audit, vre:vencRender, vrq:vencRedesenharQuadros};
+    __loja8={};
+    DB={ref:function(p){ return {
+      once:function(){ return new Promise(function(ok){ Promise.resolve().then(function(){ return null; }).then(function(){ var v=__loja8[p]; ok({val:function(){ return v===undefined?null:JSON.parse(JSON.stringify(v)); }}); }); }); },
+      update:function(v){ return new Promise(function(ok){ Promise.resolve().then(function(){ return null; }).then(function(){ Object.keys(v).forEach(function(k){ __loja8[p+'/'+k]=JSON.parse(JSON.stringify(v[k])); }); ok(); }); }); } }; }};
+    VENC_REG={}; VENC_REG_DIA='2026-09-28'; VENC_PEND=null;
+    audit=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){};`);
+  try {
+    const o = "{nome:'Thor', tutor:'Bia', itens:[]}";
+    const p1 = run(`vencGravar('thor__bia', {enviadas:{vacina:{quem:'A', ts:1}}}, 't1', ${o}, '2026-09-28')`);
+    const p2 = run(`vencGravar('thor__bia', {enviadas:{antip:{quem:'A', ts:2}}}, 't2', ${o}, '2026-09-28')`);
+    await p1; await p2;
+    const env = JSON.parse(JSON.stringify(run("__loja8['daycare/vencimentos/2026-09-28/thor__bia/enviadas']")));
+    assert.deepStrictEqual(Object.keys(env).sort(), ['antip', 'vacina']);
+  } finally { run('DB=__bk8.db; VENC_REG=__bk8.vr; VENC_REG_DIA=__bk8.vrd; VENC_PEND=__bk8.vp; audit=__bk8.au; vencRender=__bk8.vre; vencRedesenharQuadros=__bk8.vrq;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

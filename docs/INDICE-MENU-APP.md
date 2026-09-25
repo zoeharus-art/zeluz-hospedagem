@@ -170,7 +170,7 @@ Medido a 375 px de largura, antes da mudança:
 
 | Achado | Correção |
 |---|---|
-| **A1:** três checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos`, o contador "(2 · 2 hoje)", o botão direto, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp" |
+| **A1:** dez checagens do harness e dois scripts de captura esperavam as telas antigas | atualizados: a chave `contatos` (lista do Time, subgrupo do Day Care, acesso esperado, 40 itens no menu), o contador "(2 · 2 hoje)", o botão direto, a janela das buscas em `vencGravar`, as Turminhas abrindo a Turma do dia e o "Cobrar no WhatsApp". **Conferido:** o harness completo, rodado com um retrato sintético, dá as mesmas 26 falhas da versão de antes da branch (todas por falta de dado no retrato) e nenhuma nova |
 | **A2:** com dois aparelhos, a lista lia uma cópia velha: o mesmo pedido saía de novo, e o toque **apagava o "Mandei" do outro aparelho** | antes de gravar envios, respostas, cobranças, tentativas e o lançamento automático, o app **relê do banco** aquele mapa e soma só o assunto do toque (vale para todas as telas). A lista relê o dia ao abrir |
 | **M1:** Vencimentos › Hoje oferecia de novo o que o "fazer hoje?" já tinha perguntado | o cartão do próprio dia também avisa; e a pergunta de hoje não some depois |
 | **M2:** a cobrança de ontem e a pergunta de hoje sobre o mesmo item apareciam juntas | a pergunta nova substitui a cobrança da velha |
@@ -178,6 +178,7 @@ Medido a 375 px de largura, antes da mudança:
 | **M4:** cada abertura relia centenas de KB | no máximo uma releitura a cada 30 s |
 | **M5:** janela do WhatsApp bloqueada era marcada como "mandada" | nada é marcado, e a tela avisa |
 | **M6:** o contador pesava a cada marcação da chamada | a conta espera 300 ms e junta as rajadas |
+| Re-QA (N2 a N6) | a cobrança velha também sai quando a pergunta nova **já foi mandada**; a lista usa a leitura mais nova das duas; a conversa do dia respondida fecha o "fazer hoje?"; o desfazer usa a memória de depois do "sim"; cobranças e tentativas de dois aparelhos somam; dois toques rápidos gravam em fila, sem um apagar o outro |
 | Baixos | concordância no Excel da Turma ("1 vem"), frase da mensagem mista sem generalizar o prazo, subtítulo do quadro, "Nada a mandar para o próximo dia", troca ainda pedida não muda a turma, feriado avisado na Turma, Excel e PDF da Turma (com telefones) só para quem fala com o tutor, botão direto espera os textos de Configurações, "Ver a resposta" com o assunto fechado |
 
 **Mensagens novas em Configurações › Mensagens prontas** (editáveis, com `{itens}` obrigatório):
@@ -276,7 +277,7 @@ O saldo de reposição não muda ao marcar: o crédito só sai quando ele vem. A
 ### Provas
 
 Todas rodam sem rede e sem dado de cliente:
-- `node tests/fase0-ciclo-fechado.test.js`: 86 provas;
+- `node tests/fase0-ciclo-fechado.test.js`: 90 provas;
 - `node tests/servidor-senha.test.js`: 11 provas.
 
 O harness completo precisa do retrato da VPS e não rodou nesta sessão.

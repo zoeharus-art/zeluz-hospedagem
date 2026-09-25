@@ -34953,7 +34953,8 @@
   // O dia que a tela está mostrando. '' = o próximo dia de Day Care (o "amanhã" dela).
   var VENC_DIA_SEL='';
   var VENC_REG=null;         // daycare/vencimentos/{dia} — null = ainda não li (nunca afirmar zero)
-  var VENC_REG_DIA='';       // de que dia é o VENC_REG que está em memória
+  var VENC_REG_DIA='';
+  var VENC_REG_QUANDO=0;     // quando o VENC_REG foi lido (a lista de contatos usa a leitura mais nova)       // de que dia é o VENC_REG que está em memória
   var VENC_LENDO=false;      // uma leitura de cada vez (os quadros dos dashboards também pedem)
   var VENC_CFG=null;         // daycare/config/textos/vencimento — null = ainda não li
   var VENC_ABERTO={};        // {chave:true} — o bloco "Pode fazer na Zêluz" aberto. NADA gravado.
@@ -35974,7 +35975,7 @@
     dia=dia||vencDiaAlvo();
     if(!DB||!dia) return Promise.resolve(null);
     return DB.ref('daycare/vencimentos/'+dia).once('value').then(function(s){
-      VENC_REG=s.val()||{}; VENC_REG_DIA=dia;
+      VENC_REG=s.val()||{}; VENC_REG_DIA=dia; VENC_REG_QUANDO=Date.now();
       try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
       return VENC_REG;
     }).catch(function(e){ _logLeituraFalhou('daycare/vencimentos/'+dia+' (vencCarregar)', e); return null; });
@@ -36394,6 +36395,7 @@
   // vermífugo. Agora, antes de gravar, o mapa é relido do banco (uma leitura pequena) e só
   // o assunto que ESTE toque mudou entra por cima. O formato gravado não muda.
   var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto'];
+  var VENC_FILA_GRAV={};      // {dia|chave: promessa} — a fila das gravações de cada registro
   // Pura: o mapa do banco (fresco), o que este aparelho tinha (velho) e o que ele quer (novo).
   // Entra por cima só o assunto que mudou de velho para novo; o que sumiu de velho para novo
   // sai (é o "desfazer"); o resto fica como o banco diz.
@@ -36402,7 +36404,17 @@
     velho=(velho&&typeof velho==='object')?velho:{};
     novo=(novo&&typeof novo==='object')?novo:{};
     Object.keys(novo).forEach(function(t){
-      if(JSON.stringify(novo[t])!==JSON.stringify(velho[t])) out[t]=novo[t];
+      if(JSON.stringify(novo[t])===JSON.stringify(velho[t])) return;
+      // LISTAS (cobranças, tentativas) só crescem: soma o que o banco já tem com o que este
+      // toque acrescentou, sem repetir (QA N5) — dois aparelhos cobrando o mesmo assunto
+      // ficam os dois no histórico.
+      if(Array.isArray(novo[t]) && Array.isArray(out[t])){
+        var chaveDe=function(x){ return (x&&x.ts)+'|'+(x&&x.quem); };
+        var tem={}; out[t].forEach(function(x){ tem[chaveDe(x)]=1; });
+        out[t]=out[t].concat(novo[t].filter(function(x){ return !tem[chaveDe(x)]; }));
+        return;
+      }
+      out[t]=novo[t];
     });
     Object.keys(velho).forEach(function(t){ if(!(t in novo)) delete out[t]; });
     return out;
@@ -36426,11 +36438,17 @@
     var dia=diaOpc||vencDiaAlvo();
     if(!DB||!dia||!chave) return Promise.resolve(false);
     var o=oOpc||vencAchar(chave, dia);
+    // O retrato em que QUEM CHAMOU se baseou: é contra ele que se mede o que mudou.
     var antesMem=vencRegDeDia(dia, chave)||{};
     var campos=VENC_MAPAS_POR_ASSUNTO.filter(function(c){
       return patch && patch[c] && typeof patch[c]==='object' && !Array.isArray(patch[c]);
     });
-    return vencLerMapas(dia, chave, campos).then(function(frescos){
+    // Uma gravação por vez em cada registro (QA N5): o segundo toque rápido espera o primeiro
+    // e relê o banco DEPOIS dele — sem isto, os dois liam o mesmo mapa e o segundo apagava o
+    // que o primeiro tinha gravado.
+    var filaK=dia+'|'+chave;
+    var antes=VENC_FILA_GRAV[filaK]||Promise.resolve();
+    var agora=antes.then(function(){ return vencLerMapas(dia, chave, campos); }).then(function(frescos){
     var reg=Object.assign({}, patch);
     if(frescos) campos.forEach(function(c){
       // undefined = a releitura falhou: fica o mapa montado pela memória, como antes.
@@ -36466,6 +36484,8 @@
       return false;
     });
     });
+    VENC_FILA_GRAV[filaK]=agora.then(function(){}, function(){});
+    return agora;
   }
   // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
   // UMA marca por assunto (21/set/2026): quem mandou a de vacina e ainda não mandou a do
@@ -36723,8 +36743,11 @@
     ).then(function(sim){
       if(!sim) return false;
       return vencAutoRemoverLancamentos(auto).then(function(res){
-        var resps=Object.assign({}, r.respostas||{}); delete resps[tipo];
-        var autos=Object.assign({}, r.auto||{}); delete autos[tipo];
+        // A memória de DEPOIS do "sim" (QA N5): durante a pergunta ela pode ter sido relida e
+        // trazido a resposta de outro aparelho — montar pelo retrato de antes a apagaria.
+        var rAgora=vencRegDeDia(dia, chave)||r;
+        var resps=Object.assign({}, rAgora.respostas||{}); delete resps[tipo];
+        var autos=Object.assign({}, rAgora.auto||{}); delete autos[tipo];
         return vencGravar(chave, {respostas:resps, auto:autos},
           'DESFEZ a resposta de '+o.nome+' sobre '+rot+' (dia '+dia+')'
           +(res.tirados.length?(' — tirou dos Lançamentos do dia '+auto.dia+': '+res.tirados.join(' · ')):' — não havia lançamento a tirar')
@@ -38085,7 +38108,9 @@
     // A pergunta de HOJE já saiu (ou foi respondida): ela continua de pé, mesmo que depois
     // alguém tenha mandado a mensagem do dia pelo cartão de Vencimentos (QA M1).
     var ta=hojeTipoAnt(tipoBase);
-    if((r.enviadas||{})[ta] || vencRespostaDe(r, ta)) return false;
+    if(vencRespostaDe(r, ta)) return false;              // a pergunta de hoje foi respondida: o bloco mostra a resposta
+    if(vencRespostaDe(r, tipoBase)) return true;         // a conversa do dia foi respondida (QA N4): nada a perguntar
+    if((r.enviadas||{})[ta]) return false;               // a pergunta de hoje saiu e espera resposta
     if(vencMandada(r, tipoBase) || vencRespostaDe(r, tipoBase)) return true;
     // O cartão respondido pelo caminho antigo (resposta do cartão inteiro, sem assunto).
     return !r.respostas && !!r.resposta;
@@ -38733,7 +38758,11 @@
     out.dia=dia;
     // A varredura (relida ao abrir a tela) vem antes da cópia do dia, que pode ser a da
     // entrada no app (QA A2). As duas recebem as gravações deste aparelho na hora.
+    // A leitura MAIS NOVA das duas (QA N3): a do dia é relida a cada abertura; a varredura, no
+    // máximo a cada 30 s. As duas recebem as gravações deste aparelho na hora.
+    var regNovo=(VENC_REG && VENC_REG_DIA===dia && (!VENC_PEND || VENC_REG_QUANDO>=VENC_PEND_QUANDO));
     var regDia=function(chave){
+      if(regNovo) return VENC_REG[chave]||{};
       if(VENC_PEND && VENC_PEND[dia]) return VENC_PEND[dia][chave]||{};
       if(VENC_REG && VENC_REG_DIA===dia) return VENC_REG[chave]||{};
       return {};
@@ -38771,8 +38800,21 @@
       // mesmo dia, é ruído para o tutor.
       var novas={};
       out.aqui.concat(out.amanha).forEach(function(x){ novas[x.chave+'|'+vencTipoBase(x.tipo)]=1; });
+      // …e também quando a pergunta nova JÁ SAIU (QA N2): a conversa mais nova do mesmo
+      // assunto, em qualquer dia da varredura, manda — a velha deixa de ser cobrada.
+      var maisNova={};
+      Object.keys(VENC_PEND||{}).forEach(function(d){
+        Object.keys((VENC_PEND[d])||{}).forEach(function(ch){
+          var env=((VENC_PEND[d][ch])||{}).enviadas||{};
+          Object.keys(env).forEach(function(t){
+            var k=ch+'|'+vencTipoBase(t), ts=Number((env[t]||{}).ts||0);
+            if(ts>(maisNova[k]||0)) maisNova[k]=ts;
+          });
+        });
+      });
       P.forEach(function(x){
         if(novas[x.chave+'|'+vencTipoBase(x.tipo)]) return;
+        if((maisNova[x.chave+'|'+vencTipoBase(x.tipo)]||0)>Number(x.enviadaTs||0)) return;
         if(x.estado!=='cobrar'){ out.aguardando++; return; }
         out.cobrar.push({grupo:'cobrar', chave:x.chave, tipo:x.tipo, dia:x.dia, nome:vencPendNome(x),
           tutor:x.tutor||'', rotulo:x.rotulo||'', espera:vencEspera(x.ts, agora),
@@ -41649,7 +41691,7 @@
       if(!v) vazio=vazio||x.rot;
       reg[x.k]=v;
     });
-    if(vazio){ diz('A mensagem &ldquo;'+vazio+'&rdquo; está em branco. Use o botão de fábrica se quiser recomeçar. Nada foi salvo.','var(--crm-critico)'); return; }
+    if(vazio){ diz('A mensagem “'+vazio+'” está em branco. Use o botão de fábrica se quiser recomeçar. Nada foi salvo.','var(--crm-critico)'); return; }
     if(reg.vacina.indexOf('{vacina}')<0 || reg.vacina_creche.indexOf('{vacina}')<0
        || String(reg.vacina_agendar||'').indexOf('{vacina}')<0){
       diz('As três mensagens de vacina precisam conter {vacina} — é ele que diz ao tutor QUAL vacina está vencendo. Nada foi salvo.','var(--crm-critico)'); return; }

@@ -5010,7 +5010,9 @@ async function main() {
           ['vencLancarConfirmado', 'vencPerguntaFicha'], ['vencFicha', 'vencReabrir']]
           .every(([a, b]) => /quemSou\(\)/.test(corpo(a, b)));
         // …e a porta única de escrita sempre deixa rastro de auditoria (que também assina).
-        const comRastro = /function vencGravar\([\s\S]{0,1800}?audit\('vence-amanha', rotuloAudit, \{alvo:chave/.test(html);
+        // 25/set/2026 (QA A2): vencGravar passou a reler o mapa do banco antes de gravar e
+        // cresceu — a janela da busca acompanha.
+        const comRastro = /function vencGravar\([\s\S]{0,2600}?audit\('vence-amanha', rotuloAudit, \{alvo:chave/.test(html);
         return comQuem && comRastro;
       })());
     check('v-28 · abrir a tela não escreve uma linha: vencAbrir só lê',
@@ -5035,7 +5037,7 @@ async function main() {
       && (html.match(/vencRedesenhoAuto\(\)/g) || []).length === 5
       && !/setTimeout\(function\(\)\{ try\{ if\(document\.getElementById\('vencRoot'\)\) vencRender\(\); \}/.test(html));
     check('v-28 · e os GESTOS continuam redesenhando na hora — quem tocou num botão vê o que mudou',
-      /function vencGravar\([\s\S]{0,1800}?vencRender\(\);/.test(html));
+      /function vencGravar\([\s\S]{0,2600}?vencRender\(\);/.test(html));
     if (typeof ctx.vencRedesenhoAuto === 'function') {
       const geAuto = ctx.document.getElementById;
       const raizAuto = { innerHTML: '', contains: (el) => el === ctx.__focoAuto };
@@ -5978,7 +5980,7 @@ async function main() {
     // que não tem data-v porque a tela ainda não existe.
     check('menu: o subgrupo Day Care da Central traz o dia do auluno e, no fim, Planos e cobranças',
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)) === JSON.stringify(
-        ['hoje', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
+        ['hoje', 'contatos', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(vsDe(fatia('c-daycare', 'operacao'), true)));
     check('menu: os itens do Day Care da Central estão em ordem alfabética até o rótulo Planos e cobranças',
       (() => {
@@ -13786,7 +13788,7 @@ async function main() {
     // alfabético; "Planos e cobranças" continua sendo o RÓTULO do fim.
     check('5 · "Planos e cobranças" continua INTEIRO no fim do Day Care, agora com Peso, Pesquisa e Prevenção antes dele',
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))) === JSON.stringify(
-        ['c-daycare', 'hoje', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
+        ['c-daycare', 'hoje', 'contatos', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos', 'emporio', 'reposicao', 'renovacao']),
       JSON.stringify(ordemCentral.slice(ordemCentral.indexOf('c-daycare'))));
 
     // ---- 6: a pesquisa com a família ----
@@ -13816,7 +13818,7 @@ async function main() {
       conferencia: 'so-conferencia', hospedes: 'so-hosp', hospedagem: '', gestdia: 'so-gestao',
       checkout: '', abertura: 'so-abertura', checkin: '', checkoutconf: 'so-conf-saida',
       orcamento: 'so-recepcao', recepcao: 'so-recepcao', cuidadovet: 'so-vet', emporio: 'so-emporio',
-      reposicao: 'so-recepcao', dashdc: 'so-recepcao', banhos: 'so-recepcao', pendencias: '', vencimentos: '', hoje: '', ficha: 'so-gestao', vacinas: 'so-gestao',
+      reposicao: 'so-recepcao', dashdc: 'so-recepcao', banhos: 'so-recepcao', pendencias: '', vencimentos: '', hoje: '', contatos: '', ficha: 'so-gestao', vacinas: 'so-gestao',
       alergia: 'so-gestao', peso: 'so-pesa', renovacao: 'so-gestao',
       acerto: 'so-master', ritmo: 'so-gestao', eahist: 'so-gestao', pessoas: 'so-master',
       planodia: '', config: 'so-master', agenda: '', relatorios: 'so-gestao', sair: ''
@@ -14424,7 +14426,8 @@ async function main() {
       check('v-13 · a barra de etapas só existe na ENTRADA — o check-out do corpinho fica como era',
         /function ckTemEtapas\(\)\{ return ckEhEntrada\(\); \}/.test(html));
       check('v-13 · Protocolos entrou DENTRO de Configurações — nenhum item novo no menu',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 39
+        // 25/set/2026: o 40º item é o Quem chamar hoje (contatos) — nenhum outro entrou.
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 40
         && !/data-v="protocolos"/.test(html)
         && html.indexOf('id="protoWrap"') > html.indexOf('id="v-config"')
         && html.indexOf('id="protoWrap"') < html.indexOf('id="v-orcamento"'));
@@ -14661,7 +14664,7 @@ async function main() {
         && /function protoTreinoVirar\(id\)\{[\s\S]{0,900}DB\.ref\('daycare\/config\/treinamento\/'\+id\)\.set\(reg\)/.test(html),
         JSON.stringify(html.match(/DB\.ref\('daycare\/config\/treinamento[^)]*\)\.[a-z]+\(/g) || []));
       check('v-14 · e nenhum item novo no menu: o acesso é exatamente o mesmo de antes',
-        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 39 && !/data-v="treinamento"/.test(html));
+        [...html.matchAll(/<a data-v="[a-z-]+"/g)].length === 40 && !/data-v="treinamento"/.test(html));
 
       // ---- as medidas do molde: o polegar acha sem procurar ----
       check('v-14 · as medidas do molde: ação a partir de 22 px, leitura a partir de 18 px, Feito com 58 px',
