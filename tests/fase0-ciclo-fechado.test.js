@@ -2347,6 +2347,62 @@ prova('QA19 M4 — véspera respondida: o "fazer hoje?" não pergunta de novo ne
   assert.deepStrictEqual(ja.itens.map((x) => x.k), ['ecto_p'], 'a pergunta de hoje já respondida continua (o bloco mostra a resposta)');
 });
 
+// ================================================================== o Plantão não apaga a ficha
+console.log('\nPlantão — "Editar cadastro" grava só o que mudou, na ficha-mestre (auditoria de dados, 27/set/2026)');
+prova('cadDiferenca: só o campo mudado, e nunca vazio por cima de valor', () => {
+  igual(run("cadDiferenca({sexo:'Macho', chip:'', nasc:'2020-05-01'}, {sexo:'Macho', chip:'963', nasc:''})"), { chip: '963' });
+  igual(run("cadDiferenca({raca:'Shih Tzu'}, {raca:'Lhasa Apso'})"), { raca: 'Lhasa Apso' });
+  igual(run("cadDiferenca({}, {sexo:'', castrado:''})"), {});
+});
+const PLANTAO_STUBS = `__bkPl={ge:document.getElementById, sv:segVal, ss:setSeg, ah:atualizarHeader, rh:renderHosp, fd:fotoDe, db:DB, ch:currentHosp,
+    pc:pelCadCache, cc:cadCache, kf:__cadKeyFixa, ca:__cadAberto, au:audit};
+  __els={}; __seg={}; __grav=[]; __aud=[]; __dbVals={};
+  document.getElementById=function(id){ return __els[id]||(__els[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+  segVal=function(id){ return __seg[id]||''; }; setSeg=function(id,v){ __seg[id]=v||''; };
+  atualizarHeader=function(){}; renderHosp=function(){}; fotoDe=function(){ return ''; };
+  audit=function(a,b,c){ __aud.push({a:a,b:b,c:c}); };
+  DB={ref:function(p){ return {
+    update:function(v){ __grav.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); },
+    once:function(){ return Promise.resolve({val:function(){ return __dbVals[p]||null; }}); } }; }};`;
+const PLANTAO_VOLTA = `document.getElementById=__bkPl.ge; segVal=__bkPl.sv; setSeg=__bkPl.ss; atualizarHeader=__bkPl.ah; renderHosp=__bkPl.rh;
+  fotoDe=__bkPl.fd; DB=__bkPl.db; currentHosp=__bkPl.ch; pelCadCache=__bkPl.pc; cadCache=__bkPl.cc; __cadKeyFixa=__bkPl.kf; __cadAberto=__bkPl.ca; audit=__bkPl.au;`;
+provaAsync('E1 — digitar o microchip no Plantão grava SÓ o microchip (a ficha mantém dias, sexo, castração e nascimento)', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={};
+      pelCadCache={tico__joana:{nome:'Tico', tutor:'Joana', sexo:'Macho', castrado:'Sim', nasc:'2020-05-01', dias:['seg','qua'], raca:'Shih Tzu'}};
+      __dbVals['daycare/cadastro/tico__joana']=pelCadCache.tico__joana;
+      carregarCadastro();`);
+    assert.strictEqual(run("__seg['hf-sexo']"), 'Macho', 'o formulário abre com a ficha-mestre, não com o espelho vazio');
+    assert.strictEqual(run("__els['hf-nasc'].value"), '01/05/2020');
+    run("__els['hf-chip'].value='963000111222333'; onCadGravar();");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.deepStrictEqual(g.map((x) => x.p).sort(), ['auaulandia/cadastro/tico__joana', 'daycare/cadastro/tico__joana']);
+    g.forEach((x) => assert.deepStrictEqual(x.v, { chip: '963000111222333' }, 'só o campo mudado; nada de dias, sexo ou nascimento vazios'));
+    assert.strictEqual(run("__els['hf-chip'].value"), '963000111222333', 'a leitura atrasada do banco não atropela o que foi digitado');
+    run('__grav=[]; onCadGravar();');
+    assert.strictEqual(run('__grav.length'), 0, 'salvar de novo sem mudança não grava nada');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('nome apagado no Plantão não apaga o nome da ficha', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __els['hf-nome-edit']={value:'  '}; onCadNome();`);
+    assert.strictEqual(run('__grav.length'), 0);
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('alergia de hóspede sem ficha ligada: a tela avisa em vermelho e o rastro chega à Gestão', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    assert.strictEqual(run('__grav.length'), 0, 'sem chave, não grava em ficha nenhuma (xará herdaria)');
+    assert.ok(/SÓ NESTE aparelho/.test(run("__els['hf-alergia-st'].textContent")), 'avisa onde registrar');
+    const a = JSON.parse(JSON.stringify(run('__aud')));
+    assert.ok(a.some((x) => x.a === 'alergia-sem-ficha' && /Pipa \(Fulana\) — alergia: frango/.test(x.b)), JSON.stringify(a));
+  } finally { run(PLANTAO_VOLTA); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

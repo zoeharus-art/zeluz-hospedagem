@@ -8882,6 +8882,18 @@
       if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},{[campo]:val});
     } else {
       setInfo(currentHosp,{[campo]:val});
+      // SEM FICHA LIGADA, A ALERGIA NÃO PODE FICAR CALADA (auditoria de dados, 27/set/2026).
+      // O hóspede que veio só da planilha não tem a chave da ficha: a anotação ficava no
+      // aparelho de quem digitou, e o celular da manhã, a ficha e o Day Care não sabiam. Ligar
+      // pelo nome seria pior (xarás herdariam a alergia do outro). A tela diz, em vermelho,
+      // onde registrar de verdade — e o rastro chega à Gestão.
+      if(String(val||'').trim()){
+        _hfAlergiaSt('var(--crm-critico)','⚠ Anotado SÓ NESTE aparelho: este hóspede não está ligado a uma ficha. '
+          +'Abra o FILHOt pelo Cadastro de Peludinhos e registre a '+(campo==='restricao'?'restrição':'alergia')+' lá, para valer em todos os aparelhos.');
+        try{ if(typeof audit==='function') audit('alergia-sem-ficha',
+          (currentHosp.nome||'')+(currentHosp.tutor?(' ('+currentHosp.tutor+')'):'')+' — '+(campo==='restricao'?'restrição':'alergia')+': '+String(val).slice(0,120),
+          {pet:currentHosp.nome||'', campo:campo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      }
     }
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(currentHosp)):'';
     renderHosp();
@@ -9755,23 +9767,51 @@
   var __cadKeyFixa=null, __cadTimer=null;
   function fixarCadKey(h){ try{ __cadKeyFixa=(typeof cadKey==='function')?cadKey(h):null; }catch(e){ __cadKeyFixa=null; } }
   function onCad(){ clearTimeout(__cadTimer); __cadTimer=setTimeout(onCadGravar, 900); }
+  // ===== O PLANTÃO NÃO APAGA A FICHA (auditoria de dados, 27/set/2026) ================
+  // Adriana, 27/set: "reveja as conexões... o banco de dados precisa ser o mesmo, para tudo."
+  // A auditoria achou o único ponto em que uma área APAGAVA dado da outra: o "Editar cadastro"
+  // do Plantão abria com o espelho auaulandia/cadastro (não com a ficha) e, a cada tecla,
+  // gravava o formulário INTEIRO na ficha-mestre daycare/cadastro: `dias:""` (o campo nem
+  // existe nesta tela), e sexo, castração e nascimento vazios quando o espelho não os tinha.
+  // O auluno "corrigido" no Plantão sumia da chamada e do almoço do Day Care.
+  // Agora: (1) o formulário abre com a ficha-mestre por cima do espelho; (2) grava SÓ o campo
+  // que a pessoa mudou; (3) nunca grava `dias`; (4) nunca grava vazio por cima de valor.
+  var __cadAberto=null, __cadGravouDesdeAbrir=false;
+  // O que está na tela, no mesmo formato em que se grava (a comparação é sempre igual com igual).
+  function cadFormLer(){
+    var _v=function(id){ return String(((document.getElementById(id)||{}).value)||'').trim(); };
+    var rawNasc=_v('hf-nasc');
+    return { nasc:(parseNascToISO(rawNasc)||rawNasc), idadeAprox:_v('hf-idadeaprox'), raca:_v('hfRaca'),
+      corPelo:_v('hf-corpelo'), sexo:segVal('hf-sexo'), castrado:segVal('hf-cast'), tutor:_v('hf-tutor'), chip:_v('hf-chip') };
+  }
+  // Pura: só o que mudou em relação ao que abriu — e nunca um vazio por cima de um valor.
+  // Apagar um dado da ficha é decisão de quem está na ficha, não um efeito colateral daqui.
+  function cadDiferenca(antes, agora){
+    antes=antes||{}; var d={};
+    Object.keys(agora||{}).forEach(function(k){
+      var a=String(antes[k]==null?'':antes[k]), n=String(agora[k]==null?'':agora[k]);
+      if(n===a) return;
+      if(!n && a) return;
+      d[k]=agora[k];
+    });
+    return d;
+  }
   function onCadGravar(){
     if(!currentHosp) return;
-    const rawNasc=document.getElementById('hf-nasc').value;
-    const nasc=parseNascToISO(rawNasc) || rawNasc.trim(); // guarda ISO quando válida; mantém o que foi digitado enquanto incompleta
-    document.getElementById('hf-idade').value=calcIdade(nasc);
-    const dias=[].slice.call(document.querySelectorAll('#hf-dias .chip.on')).map(c=>c.textContent.trim()).join(',');
-    const nomeEdit=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
-    const cad={ nome:nomeEdit, nasc:nasc, idadeAprox:((document.getElementById('hf-idadeaprox')||{}).value||'').trim(), raca:document.getElementById('hfRaca').value||'', corPelo:((document.getElementById('hf-corpelo')||{}).value||'').trim(), sexo:segVal('hf-sexo'),
-      castrado:segVal('hf-cast'), tutor:document.getElementById('hf-tutor').value||'', chip:document.getElementById('hf-chip').value||'', dias:dias };
+    const cadTela=cadFormLer();
+    document.getElementById('hf-idade').value=calcIdade(cadTela.nasc);
+    const cad=cadDiferenca(__cadAberto||{}, cadTela);
+    if(!Object.keys(cad).length){ atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela)); return; }
     setInfo(currentHosp,cad);
     // Chave FIXA da ficha aberta — nunca recalculada a partir do que está sendo digitado.
     var _ck=__cadKeyFixa||cadKey(currentHosp);
-    if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(daycare)',e)); } // cadastro ÚNICO: espelha no mestre do Day Care
+    if(DB){ DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(daycare)',e)); } // cadastro ÚNICO: espelha no mestre do Day Care — só o que mudou
+    __cadAberto=Object.assign({}, __cadAberto||{}, cad);
+    __cadGravouDesdeAbrir=true;
     if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
     // reflete a edição no card do Plantão na hora (antes só atualizava a ficha aberta)
     try{ if(currentHosp){ if(cad.raca) currentHosp.raca=cad.raca; if(cad.tutor) currentHosp.tutor=cad.tutor; } }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    atualizarHeader(cad);
+    atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela));
     try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   }
   // Editar o nome do FILHOt — só Gestão/Supervisão (o card-cadastro já é restrito a esses perfis).
@@ -9779,6 +9819,9 @@
   function onCadNome(){
     if(!currentHosp) return;
     const v=((document.getElementById('hf-nome-edit')||{}).value||'').trim();
+    // Campo apagado não apaga o nome da ficha (27/set/2026): o FILHOt ficaria sem nome em
+    // todas as telas no meio da digitação. O nome novo grava quando houver letra.
+    if(!v) return;
     setInfo(currentHosp,{nome:v});
     // Chave FIXA, como no onCadGravar: recalcular aqui recriaria a fábrica de duplicados
     // pelo campo do nome (Adriana, 29/ago/2026).
@@ -9800,17 +9843,37 @@
     document.getElementById('hfRaca').value=cad.raca||(currentHosp&&currentHosp.raca)||'';
     setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
     document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
-    document.getElementById('hf-chip').value=cad.chip||'';
+    document.getElementById('hf-chip').value=cad.chip||cad.microchip||'';
     const b=document.getElementById('hf-brinq'); if(b) b.value=cad.brinquedos||'';
     { const _f=cad.foto||((currentHosp&&typeof fotoDe==='function')?fotoDe(currentHosp):''); const av=document.getElementById('hf-av'); if(av&&_f){ av.style.backgroundImage=`url('${_f}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; } }
     atualizarHeader(cad);
+    // O ponto de partida da comparação: o que a pessoa VIU ao abrir (onCadGravar grava só a diferença).
+    __cadAberto=cadFormLer();
   }
   function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||''; setInfo(currentHosp,{brinquedos:v}); if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({brinquedos:v}).catch(e=>_logFalhaGrav('brinquedos',e)); }
+  // A FICHA-MESTRE MANDA (27/set/2026): o espelho auaulandia/cadastro é a cópia antiga do
+  // Plantão; a ficha daycare/cadastro é a que o Day Care, o check-in e o almoço leem. O
+  // formulário abre com a ficha por cima do espelho — e a leitura do banco só redesenha se a
+  // pessoa ainda não começou a digitar (antes, a resposta atrasada atropelava o que ela escrevia).
+  function cadMestreDe(k){ try{ return (typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k])||{}; }catch(e){ return {}; } }
   function carregarCadastro(){
     if(!currentHosp) return;
     fotoPendente=null;
-    aplicarCadastro(getCad(currentHosp));
-    if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).once('value').then(s=>{ if(s.val()) aplicarCadastro(s.val()); }).catch(function(e){ _logLeituraFalhou('auaulandia/cadastro/ (carregarCadastro)', e); });
+    __cadGravouDesdeAbrir=false;
+    var _k=__cadKeyFixa||cadKey(currentHosp);
+    aplicarCadastro(Object.assign({}, getCad(currentHosp), cadMestreDe(_k)));
+    if(DB){
+      var _h=currentHosp;
+      Promise.all([
+        DB.ref('auaulandia/cadastro/'+cadKey(_h)).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; }),
+        DB.ref('daycare/cadastro/'+_k).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; })
+      ]).then(function(r){
+        if(currentHosp!==_h) return;                                                   // já abriu outro FILHOt
+        // Já está digitando, ou já gravou algo depois de abrir: a leitura é mais velha que a tela.
+        if(__cadGravouDesdeAbrir || Object.keys(cadDiferenca(__cadAberto||{}, cadFormLer())).length) return;
+        aplicarCadastro(Object.assign({}, getCad(_h), r[0], r[1]));
+      }).catch(function(e){ _logLeituraFalhou('cadastro (carregarCadastro)', e); });
+    }
   }
 
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----

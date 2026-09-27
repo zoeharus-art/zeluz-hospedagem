@@ -31,6 +31,20 @@
 - Na **Conferência do check-in**, Comida é item crítico, como a ração e a comida natural antigas. Remédios não vira trava nova: cada remédio já é conferido em "Etiquetar remédio".
 - **Onde está no código:** `CI_PERT_DEFAULT`, `CI_PERT_ANTIGOS`, `ciPertOrdem`, `ciDrawPert`, `carregarPertBanco`, `ciPertDef`, `ciPertAntigoParaComida`, `ciFaltando`, `cfListaItens`.
 
+### (W) Plantão: "Editar cadastro" não apaga mais a ficha
+
+> **Adriana, 27/set/2026:** *"Reveja as conexões, elas estão conversando? Dado do hóspede, dos aulunos e etc... o banco de dados precisa ser o mesmo, para tudo."* A auditoria de dados (`aios-zeluz/docs/zeluz/auaulandia/AUDITORIA-DADOS-27set2026.md`) achou o único ponto em que uma área **apagava** dado da outra.
+
+| O quê | Antes | Agora |
+|---|---|---|
+| Abrir "Editar cadastro" no card do Plantão | abria com a cópia antiga do Plantão (`auaulandia/cadastro`), muitas vezes sem sexo, castração e nascimento | abre com a **ficha-mestre** (`daycare/cadastro`) por cima da cópia |
+| Digitar um campo | a cada tecla, gravava o formulário **inteiro** na ficha: `dias:""` (o campo nem existe nesta tela), sexo, castração e nascimento vazios. O auluno "corrigido" sumia da chamada e do almoço | grava **só o campo que mudou**; nunca grava `dias`; nunca grava vazio por cima de valor |
+| Leitura do banco chegando depois | atropelava o que a pessoa estava digitando | só redesenha se a pessoa ainda não mexeu |
+| Apagar o nome no campo | gravava nome vazio na ficha | não grava; o nome novo grava quando houver letra |
+| Alergia de hóspede sem ficha ligada (veio só da planilha) | ficava calada, só no aparelho de quem digitou | continua anotada, mas a tela avisa **em vermelho** para registrar pelo Cadastro de Peludinhos, e o rastro (`alergia-sem-ficha`) chega à Gestão |
+
+- **Onde está no código:** `cadFormLer`, `cadDiferenca`, `onCadGravar`, `onCadNome`, `aplicarCadastro`, `carregarCadastro`, `cadMestreDe`, `setHospAlergia`.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
