@@ -4,7 +4,7 @@
 
 ## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
 
-> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Nada aqui foi publicado ainda:** a versão fica no branch até a Adriana aprovar a publicação, porque o sistema está em uso.
+> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Publicado em 27/set/2026** (merge do pull request #1 pela Adriana), junto com as seções (Q) a (T). Depois de publicar, falta carimbar a versão (`node tools/carimbar-versao.js 2026-09-25-01`).
 
 > **Adriana, 25/set/2026:** *"Eu clico aqui, vermífugo, Simba, nada acontece."* · *"Vermífugo: duas doses com 21 dias de intervalo, depois 4 meses; opção de dose única; exame de fezes com data e resultado."* · *"Banhos recorrentes: só quem tem banho fixo."*
 
