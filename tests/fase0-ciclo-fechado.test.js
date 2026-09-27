@@ -2255,7 +2255,10 @@ prova('"venceu em" — tudo vencido: a data é a do vencimento, não o dia dele 
   assert.ok(ant.indexOf('Passando para lembrar que venceu em 15/09 o vermífugo da Cookie.') > 0, ant);
   assert.ok(ant.indexOf('Podemos fazer amanhã?') > 0, 'o {quando} do fecho continua sendo o dia dela aqui');
   const dois = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
-  assert.ok(dois.indexOf('venceram em 12/09 e 15/09 o carrapaticida e o vermífugo da Cookie') > 0, dois);
+  // datas diferentes (QA19 M2): cada item diz a sua; mesma data: uma frase só, no plural
+  assert.ok(dois.indexOf('o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09.') > 0, dois);
+  const mesma = msg({ verm_p: '2026-09-12', verm_t: '2026-05-15', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+  assert.ok(mesma.indexOf('venceram em 12/09 o carrapaticida e o vermífugo da Cookie') > 0, mesma);
 });
 prova('"venceu em" — "nesse dia" continua com um dia escrito antes (texto da creche)', () => {
   const t = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-25');
@@ -2302,13 +2305,46 @@ prova('a grade tem só Comida, Remédios, Mochila, Cama, Guia e Outro — na ord
     assert.ok(lista.indexOf('value="casaco vermelho"') > 0, 'o que estava escrito na estadia antiga continua');
   } finally { run('document.getElementById=__bkPert.ge; ciPertBanco=__bkPert.pb; ciPertSel=__bkPert.ps;'); }
 });
-prova('na Conferência, Comida e Remédios são itens críticos (como a ração e a comida natural antigas)', () => {
+prova('na Conferência, Comida é item crítico (como a ração e a comida natural antigas); Remédios não vira trava nova (QA19 B5)', () => {
   run(`__bkCf=cfEstadia; cfEstadia={pertences:[{uid:'a',k:'comida',nome:'Comida',spec:'ração'},{uid:'b',k:'remedios',nome:'Remédios',spec:'Apoquel'},
     {uid:'c',k:'mochila',nome:'Mochila',spec:''},{uid:'d',k:'racao',nome:'Ração',spec:'Royal'}], medicacao:[], ficha:{}};`);
   try {
     const it = JSON.parse(JSON.stringify(run('cfListaItens()'))).filter((x) => x.tipo === 'pertence');
-    igual(it.map((x) => [x.label, x.critico]), [['Comida — ração', true], ['Remédios — Apoquel', true], ['Mochila', false], ['Ração — Royal', true]]);
+    igual(it.map((x) => [x.label, x.critico]), [['Comida — ração', true], ['Remédios — Apoquel', false], ['Mochila', false], ['Ração — Royal', true]]);
   } finally { run('cfEstadia=__bkCf;'); }
+});
+
+prova('QA19 M3 — "Outro" sem descrição não deixa salvar o check-in; com descrição, deixa', () => {
+  run(`__bkO={ps:ciPertSel};`);
+  try {
+    run(`ciPertSel=[{uid:'o1',k:'outro',nome:'Outro',spec:'  '}];`);
+    assert.ok(run('ciFaltando()').some((f) => f.f === 'ciCardPert' && /Outro/.test(f.t)), 'pede para escrever o que é');
+    run(`ciPertSel=[{uid:'o1',k:'outro',nome:'Outro',spec:'cobertor azul'}];`);
+    assert.ok(!run('ciFaltando()').some((f) => f.f === 'ciCardPert'), 'descrito, não pede mais nada nos pertences');
+  } finally { run('ciPertSel=__bkO.ps;'); }
+});
+prova('QA19 B4 — no pré-preenchimento, a Ração e a Comida natural da última estadia viram Comida (com o que estava escrito)', () => {
+  const e = JSON.parse(JSON.stringify(run(`ciPertAntigoParaComida({pertences:[{uid:'a',k:'racao',nome:'Ração',spec:'Royal Canin'},
+    {uid:'b',k:'natural',nome:'Comida natural',spec:''},{uid:'c',k:'mochila',nome:'Mochila',spec:'azul'}]})`)));
+  igual(e.pertences.map((p) => [p.k, p.nome, p.spec]), [['comida', 'Comida', 'Ração Royal Canin'], ['comida', 'Comida', 'Comida natural'], ['mochila', 'Mochila', 'azul']]);
+  assert.strictEqual(e.pertences[0].uid, 'a', 'o uid fica (a Conferência guarda o V verde por uid)');
+});
+prova('QA19 B7 — sem o banco carregado, o nome do item continua certo ("Remédios", nunca "remedios")', () => {
+  run('__bkB=ciPertBanco; ciPertBanco=[];');
+  try { assert.strictEqual(run("ciPertNome('remedios')"), 'Remédios'); assert.strictEqual(run("ciPertNome('racao')"), 'Ração'); }
+  finally { run('ciPertBanco=__bkB;'); }
+});
+prova('QA19 M4 — véspera respondida: o "fazer hoje?" não pergunta de novo nem o que ainda vai vencer (decisão de 27/set)', () => {
+  const ex = JSON.stringify({ ecto_p: '2026-10-01' });
+  const p = JSON.stringify({ n: 'Cookie', tutor: 'Ana', dias: ['ter', 'sex'] });
+  const sem = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', null)`)));
+  assert.deepStrictEqual(sem.itens.map((x) => x.k), ['ecto_p'], 'sem véspera, pergunta (como antes)');
+  const resp = JSON.stringify({ respostas: { antip: { v: 'sim', ts: 1 } } });
+  const com = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${resp})`)));
+  assert.deepStrictEqual(com.itens.map((x) => x.k), [], 'véspera respondida: não pergunta de novo');
+  const hojeResp = JSON.stringify({ respostas: { antip: { v: 'sim', ts: 1 }, ant_antip: { v: 'sim', ts: 2 } } });
+  const ja = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${hojeResp})`)));
+  assert.deepStrictEqual(ja.itens.map((x) => x.k), ['ecto_p'], 'a pergunta de hoje já respondida continua (o bloco mostra a resposta)');
 });
 
 // ------------------------------------------------ o fim

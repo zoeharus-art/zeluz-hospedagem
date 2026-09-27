@@ -15,8 +15,10 @@
 | Um vencido e outro por vencer | "amanhã vencem o vermífugo e o carrapaticida" | "o vermífugo da Cookie venceu em 15/09 e o carrapaticida vence em 28/09" |
 | O que ainda vai vencer | igual | igual |
 
+- Vencidos em **datas diferentes** também dizem cada um a sua data (QA19): "o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09". Na mesma data, uma frase só: "venceram em 12/09 o carrapaticida e o vermífugo".
 - Vale para os textos de Configurações › Mensagens prontas escritos com "vence {quando}", "{quando} vence" ou "{vencer} {dia}". O "{quando}" do fecho ("Podemos fazer {quando}?") continua sendo o dia dele aqui.
-- "Como ela estará conosco **nesse dia**" ganha o dia escrito, porque o dia saiu da frase anterior.
+- O aviso amarelo do cartão ("Aqui há o que JÁ venceu") só aparece quando a frase não traz a data do que venceu (texto escrito de outro jeito).
+- "Como ela estará conosco **nesse dia**" (ou "neste dia", "naquele dia") ganha o dia escrito, porque o dia saiu da frase anterior.
 - **Onde está no código:** `vencTextoPassado`, `vencTextoMisto`, chamadas em `vencMensagemDe`.
 
 ### (V) Pertences da hospedagem: os cinco de sempre, e descrever
@@ -24,13 +26,15 @@
 - A grade tem só **Comida, Remédios, Mochila, Cama, Guia** (na ordem dela) e **Outro**. Tocou duas vezes, são dois itens.
 - Cada item marcado ganha **uma linha para descrever** (cor, marca, quantidade), com um exemplo no próprio campo. Saíram a caixa de 17 cores, o banco de itens e o "Gerenciar itens do banco".
 - Estadia antiga (coleira, peitoral, ração, roupa...) continua abrindo com os nomes que tinha, depois dos cinco.
-- Na **Conferência do check-in**, Comida e Remédios são itens críticos, como a ração e a comida natural antigas.
-- **Onde está no código:** `CI_PERT_DEFAULT`, `CI_PERT_ANTIGOS`, `ciPertOrdem`, `ciDrawPert`, `carregarPertBanco`, `cfListaItens`.
+- **"Outro" sem descrição não deixa salvar**: ninguém saberia o que devolver.
+- Na **última estadia pré-preenchida**, "Ração" e "Comida natural" viram **Comida**, com o que estava escrito ("Ração Royal Canin"). Corrigir ou acrescentar numa estadia que já existe não muda nada.
+- Na **Conferência do check-in**, Comida é item crítico, como a ração e a comida natural antigas. Remédios não vira trava nova: cada remédio já é conferido em "Etiquetar remédio".
+- **Onde está no código:** `CI_PERT_DEFAULT`, `CI_PERT_ANTIGOS`, `ciPertOrdem`, `ciDrawPert`, `carregarPertBanco`, `ciPertDef`, `ciPertAntigoParaComida`, `ciFaltando`, `cfListaItens`.
 
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
-- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já era assim; ficou decidido.
+- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já valia para o que tinha vencido; o QA19 mostrou que o que ainda ia vencer (ex.: carrapaticida de quinta, com ele aqui na terça) era perguntado de novo. **Agora vale para os dois** (`hojeAntecipar`).
 
 ## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
 

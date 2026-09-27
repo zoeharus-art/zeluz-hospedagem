@@ -16333,10 +16333,12 @@ async function main() {
     // mundo nesta tela já está atrasado — a frase pronta soa como se fosse vencer amanhã.
     // O texto é dela e não se redige; o app DIZ isso a quem vai mandar, com as datas de
     // verdade, na caixa que ela pode editar antes de copiar.
-    check('v-31 · quando o item JÁ venceu, o cartão avisa antes de a consultora mandar',
+    // 27/set/2026 (story 6.6): a frase de fábrica passou a dizer "venceu em" + a data sozinha.
+    // O aviso continua para o que a frase NÃO traz com a data (texto escrito à mão).
+    check('v-31 · quando o item JÁ venceu e a frase não diz a data, o cartão avisa antes de a consultora mandar',
       html.indexOf('Aqui há o que JÁ venceu: ') > 0
-      && html.indexOf('A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.') > 0
-      && /if\(\(m\.itens\|\|\[\]\)\.some\(function\(x\)\{ return x\.atrasado; \}\)\)/.test(html));
+      && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
+      && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
     check('v-31 · a versão carimbada desta entrega é a 2026-09-27-01',
       /const APP_VERSAO='2026-09-27-01';/.test(html));

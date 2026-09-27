@@ -3471,7 +3471,7 @@
     #v-checkin .ci-av{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;flex:0 0 auto;background-size:cover;background-position:center}
     #v-checkin .ci-h-nome{font-size:20px;font-weight:800;color:var(--z-blue)}
     #v-checkin .ci-h-meta{font-size:13px;color:var(--muted);font-weight:600}
-    /* Banco de pertences — grade de tipos (3 colunas, A→Z) + lista de unidades adicionadas */
+    /* Pertences — os cinco de sempre + Outro (27/set/2026) e a lista para descrever cada um */
     #v-checkin .pert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
     #v-checkin .pert-chip-manage{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;border:1.5px solid var(--crm-critico);border-radius:12px;background:rgba(192,57,43,.05);color:var(--z-blue);font-family:var(--font-ui);font-weight:700;font-size:13px}
     #v-checkin .pert-chip-manage .pcm-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -4604,7 +4604,7 @@
         <strong>{valor_escova}</strong> o preço da troca de escova &middot;
         <strong>{fecho}</strong> a frase da autorização, escrita no último campo.<br>
         Escreva sempre no <strong>singular</strong>: com duas vacinas vencendo, o app troca sozinho &ldquo;a vacina de&rdquo; por &ldquo;as vacinas de&rdquo; e &ldquo;vence&rdquo; por &ldquo;vencem&rdquo;.<br>
-        O que <strong>já venceu</strong> diz a data em que venceu: &ldquo;vence {quando}&rdquo;, &ldquo;{quando} vence&rdquo; e &ldquo;{vencer} {dia}&rdquo; viram sozinhos &ldquo;venceu em 15/09&rdquo;. Com um item vencido e outro ainda por vencer, cada um diz a sua data (&ldquo;o vermífugo venceu em 15/09 e o carrapaticida vence em 28/09&rdquo;).<br>
+        O que <strong>já venceu</strong> diz a data em que venceu: &ldquo;vence {quando}&rdquo;, &ldquo;{quando} vence&rdquo; e &ldquo;{vencer} {dia}&rdquo; viram sozinhos &ldquo;venceu em 15/09&rdquo;. Com um item vencido e outro ainda por vencer (ou vencidos em datas diferentes), cada um diz a sua data (&ldquo;o vermífugo venceu em 15/09 e o carrapaticida vence em 28/09&rdquo;) — nos textos escritos como os de fábrica. Texto escrito de outro jeito continua como está, e o cartão avisa quando a frase não traz a data do que já venceu.<br>
         Aqui também mora a folga: quantos dias antes do vencimento o FILHOt já entra na lista.</div>
       <div id="cfgVencWrap" style="margin-top:12px"><div class="hint">Carregando as mensagens prontas&hellip;</div></div>
     </div>
@@ -36152,7 +36152,7 @@
       .replace(/\{vencer\}\s+\{dia\}/gi, troca)
       .replace(/\bvencem?\s+\{quando\}/gi, troca)
       .replace(/\{quando\}\s+vencem?\b/gi, function(){ tirouDia=true; return novo; });
-    if(tirouDia) txt=txt.replace(/\bnesse dia\b/gi, '{dia}');
+    if(tirouDia) txt=txt.replace(/\b(?:nesse|neste|naquele)\s+dia\b/gi, '{dia}');
     return txt;
   }
   // MISTURADO: um item já venceu e outro ainda vai vencer. "Amanhã vencem o vermífugo e o
@@ -36180,7 +36180,7 @@
       .replace(/\{quando\}\s+vencem?\s+\{item\}\s+\{dofilhot\}/gi, function(){ tirouDia=true; return vencJuntar(outros); })
       .replace(/\{item\}\s+\{vencer\}\s+\{dia\}/gi, function(){ tirouDia=true; return vencJuntar(outrosSemDo); });
     // O mesmo cuidado de vencTextoPassado: "nesse dia" precisa de um dia escrito antes.
-    if(tirouDia) txt=txt.replace(/\bnesse dia\b/gi, '{dia}');
+    if(tirouDia) txt=txt.replace(/\b(?:nesse|neste|naquele)\s+dia\b/gi, '{dia}');
     return txt;
   }
   // A MENSAGEM DE UM ASSUNTO. Pura no que importa: recebe o FILHOt, o assunto, os itens
@@ -36212,7 +36212,15 @@
     // para o passado; misturado, o presente é o que não mente sobre nenhum deles.
     var todosAtrasados=itens.length>0 && itens.every(function(x){ return x&&x.atrasado; });
     // E o que já venceu diz QUANDO venceu (Adriana, 27/set/2026) — ver vencTextoPassado.
-    if(todosAtrasados) txt=vencTextoPassado(txt, itens, hoje);
+    // Datas diferentes (QA19 M2): "venceram em 12/09 e 15/09 o carrapaticida, a coleira e o
+    // vermífugo" não diz qual venceu quando — cada item diz a sua data, como no misturado.
+    // Texto num formato que o misturado não reconhece cai na forma única de vencTextoPassado.
+    var datasVenc={};
+    itens.forEach(function(x){ if(x&&x.atrasado) datasVenc[x.vence]=1; });
+    if(todosAtrasados){
+      var _mi=(Object.keys(datasVenc).length>1)?vencTextoMisto(txt, itens, hoje):txt;
+      txt=(_mi!==txt)?_mi:vencTextoPassado(txt, itens, hoje);
+    }
     else if(itens.some(function(x){ return x&&x.atrasado; })) txt=vencTextoMisto(txt, itens, hoje);
     txt=txt
       .replace(/\{tutor\}/gi, tutor)
@@ -38339,12 +38347,16 @@
       // existe justamente para quem está atrasado), a frase pronta soa como se fosse vencer
       // amanhã. O texto é dela e não se redige; o que o app faz é DIZER isso a quem vai
       // mandar, com as datas de verdade na mão, na caixa que ela pode editar antes de copiar.
-      if((m.itens||[]).some(function(x){ return x.atrasado; }))
+      // 27/set/2026: a frase de fábrica passou a dizer "venceu em 15/09" sozinha
+      // (vencTextoPassado / vencTextoMisto). O aviso fica só para o que a frase ainda NÃO
+      // traz com a data — texto escrito à mão num formato que o app não reconhece.
+      var _semData=(m.itens||[]).filter(function(x){
+        return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0; });
+      if(_semData.length)
         h+='<div class="hint" style="margin-bottom:5px;color:var(--crm-atencao-text);font-weight:700">'
           +'Aqui há o que JÁ venceu: '
-          +escAttr(vencJuntar((m.itens||[]).filter(function(x){ return x.atrasado; })
-            .map(function(x){ return vencFraseItem(x, hoje); })))
-          +'. A frase pronta fala em &ldquo;vence&rdquo; — confira antes de mandar.</div>';
+          +escAttr(vencJuntar(_semData.map(function(x){ return vencFraseItem(x, hoje); })))
+          +'. A frase pronta não diz a data em que venceu — confira antes de mandar.</div>';
       // HOJE JÁ SE PERGUNTOU com ele na casa (25/set/2026): o atrasado passou a ser pergunta
       // em Hoje na Zêluz. Mandar amanhã a mesma coisa, sem saber, é o tutor recebendo duas
       // vezes o mesmo pedido — o cartão avisa, e quem manda decide.
@@ -38874,6 +38886,13 @@
       // tratou do assunto para hoje (saiu ou foi respondida): perguntar de novo, no mesmo
       // dia, a mesma coisa, é ruído para o tutor — e a cobrança daquela já tem o seu lugar.
       if(!(x.vence>hoje)) return !hojeVesperaTratou(regHoje, vencTipoDoItemObj(x));
+      // O QUE AINDA VAI VENCER — Adriana, 27/set/2026, confirmou: "se o tutor já respondeu a
+      // mensagem da véspera, a pergunta 'fazer hoje?' deixa de aparecer" (QA19 M4). Antes,
+      // só o que já tinha vencido respeitava a véspera: o carrapaticida que vence na quinta
+      // era perguntado de novo na terça, com a resposta de segunda já registrada. A pergunta
+      // de HOJE que já foi respondida continua (o bloco mostra a resposta).
+      var _tb=vencTipoDoItemObj(x);
+      if(regHoje && vencRespostaDe(regHoje, _tb) && !vencRespostaDe(regHoje, hojeTipoAnt(_tb))) return false;
       return true;
     });
     return {proxima:proxima, folga:folga, teto:teto, itens:itens};
@@ -44523,7 +44542,7 @@
     {k:'mochila',nome:'Mochila',spec:'Ex.: mochila azul com patinhas'},
     {k:'cama',nome:'Cama',spec:'Ex.: cama cinza, tamanho M'},
     {k:'guia',nome:'Guia',spec:'Ex.: guia vermelha, com peitoral'},
-    {k:'outro',nome:'Outro',spec:'O que é e como é (ex.: cobertor azul)'}
+    {k:'outro',nome:'Outro',spec:'O que é (ex.: cobertor azul)'}
   ];
   // Os nomes das chaves antigas, para a estadia de antes continuar legível (e o placeholder
   // certo, se alguém reabrir uma estadia antiga para corrigir).
@@ -45746,7 +45765,10 @@
 
   // ---- Pertences (grade de tipos A→Z + várias unidades por tipo, editáveis) ----
   function ciUid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-  function ciPertDef(k){ return ciPertBanco.find(function(o){ return o.k===k; })||null; }
+  // Sem o banco carregado ainda, os nomes de fábrica respondem (QA19 B7): o toque nunca
+  // grava a chave crua ("remedios") como nome.
+  function ciPertDef(k){ return ciPertBanco.find(function(o){ return o.k===k; })
+    ||CI_PERT_DEFAULT.concat(CI_PERT_ANTIGOS).find(function(o){ return o.k===k; })||null; }
   function ciPertNome(k){ const o=ciPertDef(k); return o?o.nome:k; }
   function ciPertSpecPh(k){ const o=ciPertDef(k); return o?o.spec:'Especificação (cor, marca, material)'; }
   function ciPertBancoSorted(){ return ciPertBanco.slice().sort(function(a,b){ return jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt'); }); }
@@ -45976,8 +45998,24 @@
     DB.ref('auaulandia/estadias').orderByChild('refKey').equalTo(key).limitToLast(1).once('value').then(function(s){
       const v=s.val()||{}; const ids=Object.keys(v);
       if(!ids.length){ aplicarPlano(); return; }
-      return Promise.resolve(ciAplicarEstadiaNaFicha(v[ids[ids.length-1]]||{}, 'Ficha pré-preenchida da última estadia — confira e ajuste.')).then(aplicarPlano);
+      return Promise.resolve(ciAplicarEstadiaNaFicha(ciPertAntigoParaComida(v[ids[ids.length-1]]||{}), 'Ficha pré-preenchida da última estadia — confira e ajuste.')).then(aplicarPlano);
     }).catch(function(e){ _logLeituraFalhou('auaulandia/estadias (ciPreencherUltimaEstadia)', e); aplicarPlano(); });
+  }
+  // SÓ NO PRÉ-PREENCHIMENTO da última estadia (QA19 B4): "Ração — Royal" e "Comida natural"
+  // da vez anterior viram o item Comida de hoje, com o que estava escrito. Sem isso, a mesma
+  // sacola entraria duas vezes (Ração e Comida) e seria etiquetada duas vezes. Corrigir ou
+  // acrescentar numa estadia que já existe NÃO passa por aqui: lá o registro fica como está.
+  function ciPertAntigoParaComida(e){
+    e=e||{};
+    if(!Array.isArray(e.pertences)||!e.pertences.length) return e;
+    var copia=Object.assign({}, e);
+    copia.pertences=e.pertences.map(function(p){
+      if(!p||(p.k!=='racao'&&p.k!=='natural')) return p;
+      var nomeAnt=String(p.nome||((p.k==='racao')?'Ração':'Comida natural')).trim();
+      var spec=String(p.spec||'').trim();
+      return Object.assign({}, p, {k:'comida', nome:'Comida', spec:(nomeAnt+(spec?(' '+spec):'')).trim()});
+    });
+    return copia;
   }
   // Joga uma estadia inteira nos campos do Check-in (usado tanto para pré-preencher da última
   // vez quanto para ACRESCENTAR na estadia em curso — item 6).
@@ -46442,6 +46480,10 @@
       const chk=document.getElementById('ciGateChk');
       if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
     }
+    // "Outro" sem descrição sairia "Outro" na Conferência, no Check-out e no PDF — ninguém
+    // saberia o que devolver (QA19 M3).
+    if((ciPertSel||[]).some(function(p){ return p&&p.k==='outro'&&!String(p.spec||'').trim(); }))
+      F.push({t:'Nos pertences, você marcou "Outro": escreva o que é (ex.: cobertor azul).', f:'ciCardPert'});
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
     if(!semTutor){
       if(!((document.getElementById('ciAssinaNome')||{}).value||'').trim())
@@ -48666,9 +48708,10 @@
   function cfListaItens(){
     var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
     var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
-    // Comida e remédio são críticos: sem eles, a estadia não tem como seguir (27/set/2026:
-    // "comida" e "remédios" são dois dos cinco pertences de sempre).
-    var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural'||p.k==='comida'||p.k==='remedios')}; });
+    // Comida é crítica, como a ração e a comida natural que ela substitui (27/set/2026). O
+    // remédio já é conferido item a item em "Etiquetar remédio" — o pertence "Remédios" não
+    // vira uma segunda trava para a mesma caixa (QA19 B5).
+    var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural'||p.k==='comida')}; });
     // Comida natural do check-in — item CRÍTICO na conferência (aparece para ser conferido item a item).
     var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
     if(a.comida&&a.comida.qtd){
