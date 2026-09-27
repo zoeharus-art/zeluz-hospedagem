@@ -1,0 +1,17 @@
+{
+  "name": "zeluz-servidor-senha",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Confere a senha da equipe no servidor (VPS Kairós) e devolve o token do Firebase com o papel — Rota A, Fase 0 do PRD-006.",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js",
+    "test": "node ../tests/servidor-senha.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

@@ -43,7 +43,9 @@ const APP = 'auaulandia/index.html';
 const PORTA = Number(process.env.CAP_PORTA) || 8815;
 const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9015;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v27');
-const SENHA_DIRETORIA = '1101';
+// A senha NÃO fica no repositório (público). Fase 0, 25/set/2026: vem do ambiente.
+const SENHA_DIRETORIA = process.env.ZELUZ_SENHA_DIRETORIA || '';
+if (!SENHA_DIRETORIA) { console.error('Defina ZELUZ_SENHA_DIRETORIA (a senha da Diretoria) antes de rodar esta captura.'); process.exit(1); }
 
 // A pendência de exemplo: o Batata existe no retrato (daycare/cadastro/batata__roberta) e é
 // o FILHOt da frase dela. Vermífugo lançado no dia 18/09, dia em que ele não veio.

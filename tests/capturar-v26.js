@@ -42,7 +42,9 @@ const RAIZ = path.join(__dirname, '..');
 const APP = 'auaulandia/index.html';
 const EMU_PORTA = Number(process.env.CAP_EMU_PORTA) || 9014;
 const SAIDA = path.join(RAIZ, 'docs', 'capturas-v26');
-const SENHA_DIRETORIA = '1101';
+// A senha NÃO fica no repositório (público). Fase 0, 25/set/2026: vem do ambiente.
+const SENHA_DIRETORIA = process.env.ZELUZ_SENHA_DIRETORIA || '';
+if (!SENHA_DIRETORIA) { console.error('Defina ZELUZ_SENHA_DIRETORIA (a senha da Diretoria) antes de rodar esta captura.'); process.exit(1); }
 const CHAVE_PEL = 'cookie__yara';          // a Cookie da Yara — plano, dias às terças e uma irmã
 const ANO = new Date().getFullYear();
 const DIA_UM = ANO + '-09-18';             // 18/09 do ano corrente: o meio do mês dela
