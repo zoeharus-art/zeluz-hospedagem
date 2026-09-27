@@ -48,7 +48,7 @@
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
-- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já valia para o que tinha vencido; o QA19 mostrou que o que ainda ia vencer (ex.: carrapaticida de quinta, com ele aqui na terça) era perguntado de novo. **Agora vale para os dois** (`hojeAntecipar`).
+- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já valia para o que tinha vencido; o QA19 mostrou que o que ainda ia vencer (ex.: carrapaticida de quinta, com ele aqui na terça) era perguntado de novo. **Agora vale para os dois**, mas só para o item que a mensagem da véspera levou: o que nunca foi dito ao tutor continua sendo perguntado (`hojeAntecipar`, QA20).
 
 ## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
 
