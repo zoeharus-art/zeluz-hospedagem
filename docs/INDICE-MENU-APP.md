@@ -41,9 +41,14 @@
 | Digitar um campo | a cada tecla, gravava o formulário **inteiro** na ficha: `dias:""` (o campo nem existe nesta tela), sexo, castração e nascimento vazios. O auluno "corrigido" sumia da chamada e do almoço | grava **só o campo que mudou**; nunca grava `dias`; nunca grava vazio por cima de valor |
 | Leitura do banco chegando depois | atropelava o que a pessoa estava digitando | só redesenha se a pessoa ainda não mexeu |
 | Apagar o nome no campo | gravava nome vazio na ficha | não grava; o nome novo grava quando houver letra |
-| Alergia de hóspede sem ficha ligada (veio só da planilha) | ficava calada, só no aparelho de quem digitou | continua anotada, mas a tela avisa **em vermelho** para registrar pelo Cadastro de Peludinhos, e o rastro (`alergia-sem-ficha`) chega à Gestão |
+| Alergia de hóspede sem ficha ligada (veio só da planilha) | ficava calada, só no aparelho de quem digitou | continua anotada, mas a tela avisa **em vermelho** onde registrar, e o rastro (`alergia-sem-ficha`) chega à Gestão. Quem edita fichas lê "registre pelo Cadastro de Peludinhos"; quem não edita (Monitora) lê "avise a Gestão ou a Supervisão". O aviso some ao trocar de hóspede e ao apagar a alergia |
+| Nascimento digitado pela metade ("01/05/2") ou no futuro | ia para a ficha numa pausa da digitação | só grava a data completa e possível (a mesma régua da ficha) |
+| FILHOt da base fixa do Day Care (lista no código) | o formulário abria sem raça, tutor e nascimento dele | abre com a base fixa + o que foi gravado; um vazio gravado não encobre valor de outra fonte |
+| Microchip | "sem microchip" aparecia como número no campo; o número digitado ficava ao lado de um "não tem" antigo | o campo mostra só número; o número grava também onde o "não tem" mora |
+| Trocar de hóspede, fechar o card ou tocar em Salvar logo depois de digitar | a edição esperava 0,9 s e podia se perder | grava na hora. Se a pessoa apagou um campo, o botão avisa que apagar é pela ficha (ou pela Gestão) |
 
-- **Onde está no código:** `cadFormLer`, `cadDiferenca`, `onCadGravar`, `onCadNome`, `aplicarCadastro`, `carregarCadastro`, `cadMestreDe`, `setHospAlergia`.
+- **Onde está no código:** `cadFormLer`, `cadDiferenca`, `onCadGravar`, `cadGravarAgora`, `onCad`, `onCadNome`, `aplicarCadastro`, `carregarCadastro`, `cadMestreDe`, `cadSoCheios`, `setHospAlergia`, `abrirPlantao`, `toggleCadastro`.
+- **Ficou para depois (story 6.7):** chave da ficha sem o recurso do primeiro nome (M4b); trocar o tutor pelo Plantão (M5, decisão da Adriana).
 
 ### Decisões registradas (sem mudança de código)
 
