@@ -2602,22 +2602,33 @@ prova('QA22 — fechar o card grava o que estava esperando', () => {
     assert.strictEqual(run("__els['card-cadastro'].style.display"), 'none');
   } finally { run('setTimeout=__stQ9; __cadTimer=null;'); run(PLANTAO_VOLTA); }
 });
-prova('QA22/QA23 — microchip anda em par: toda gravação da ficha leva chip e microchip juntos', () => {
-  igual(run("zChipPar({microchip:'98100'})"), { microchip: '98100', chip: '98100' });
-  igual(run("zChipPar({microchip:Z_NAO_TEM})"), { microchip: 'nao-tem', chip: '' });
-  igual(run("zChipPar({microchip:''})"), { microchip: '', chip: '' });
-  igual(run("zChipPar({chip:'77'})"), { chip: '77', microchip: '77' });
-  igual(run("zChipPar({raca:'SRD'})"), { raca: 'SRD' });
-  assert.strictEqual(run("(function(){ var p={microchip:'1'}; zChipPar(p); return Object.keys(p).join(); })()"), 'microchip', 'o patch de quem chamou não muda');
-  run(`__bkQ10={db:DB, ce:canEditPel, pa:pelAtual}; __gQ10=[];
-    DB={ref:function(p){ return {update:function(v){ __gQ10.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
+prova('QA22–QA24 — microchip: toda edição humana grava chip e microchip juntos', () => {
+  igual(run("zChipPatch('98100')"), { microchip: '98100', chip: '98100' });
+  igual(run("zChipPatch(Z_NAO_TEM)"), { microchip: 'nao-tem', chip: '' });
+  igual(run("zChipPatch('')"), { microchip: '', chip: '' });
+  run(`__bkQ10={sp:setPelExtra, pa:pelAtual, rf:renderPelFicha, au:audit};
+    __pQ10=[]; setPelExtra=function(p,patch){ __pQ10.push(JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };
+    renderPelFicha=function(){}; audit=function(){}; pelAtual={n:'Tico', tutor:'Joana'};`);
+  try {
+    run('pelChipNaoTemGravar(); pelChipNaoTemLimpar();');
+    const ps = JSON.parse(JSON.stringify(run('__pQ10')));
+    assert.strictEqual(ps[0].microchip, 'nao-tem'); assert.strictEqual(ps[0].chip, '');
+    assert.strictEqual(ps[1].microchip, ''); assert.strictEqual(ps[1].chip, '');
+    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(ps[0]) + '))'), '', 'o "não tem" vale sobre o número antigo');
+    assert.ok(/onchange="setPelExtra\(pelAtual,zChipPatch\(this\.value\)\)"/.test(fs.readFileSync(APP, 'utf8')), 'o campo do Cadastro grava os dois');
+  } finally { run('setPelExtra=__bkQ10.sp; pelAtual=__bkQ10.pa; renderPelFicha=__bkQ10.rf; audit=__bkQ10.au;'); }
+});
+prova('QA24 — texto da IA ou da resposta do tutor em "Microchip" nunca troca nem apaga o número verdadeiro', () => {
+  run(`__bkQ11={db:DB, ce:canEditPel}; __gQ11=[];
+    DB={ref:function(p){ return {update:function(v){ __gQ11.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); }}; }};
     canEditPel=function(){ return true; };`);
   try {
-    run(`setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:Z_NAO_TEM, microchip_nao_tem:{quem:'x', ts:1}});`);
-    const g = JSON.parse(JSON.stringify(run('__gQ10')));
-    assert.ok(g.length === 1 && g[0].v.chip === '' && g[0].v.microchip === 'nao-tem', JSON.stringify(g));
-    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(g[0].v) + '))'), '', 'o "não tem" vale sobre o número antigo');
-  } finally { run('DB=__bkQ10.db; canEditPel=__bkQ10.ce; pelAtual=__bkQ10.pa;'); }
+    run(`setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:'Tem microchip sim, no pescoço'});
+      setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:null});`);
+    const g = JSON.parse(JSON.stringify(run('__gQ11')));
+    assert.ok(g.length === 2 && g.every((x) => !Object.prototype.hasOwnProperty.call(x, 'chip')), JSON.stringify(g));
+    assert.strictEqual(run("zChipNumero({chip:'963000111222333', microchip:'Tem microchip sim, no pescoço'})"), '963000111222333');
+  } finally { run('DB=__bkQ11.db; canEditPel=__bkQ11.ce;'); }
 });
 prova('QA23 — o Plantão mostra o microchip da ficha-mestre, mesmo apagado ou "não tem"', () => {
   run(PLANTAO_STUBS);
@@ -2630,6 +2641,17 @@ prova('QA23 — o Plantão mostra o microchip da ficha-mestre, mesmo apagado ou 
     assert.strictEqual(run("__els['hf-chip'].value"), '', 'número apagado na ficha: não volta');
     run(`pelCadCache={tico__joana:{chip:'555', microchip:'555'}}; carregarCadastro();`);
     assert.strictEqual(run("__els['hf-chip'].value"), '555', 'número trocado na ficha: aparece o novo');
+  } finally { run(PLANTAO_VOLTA); }
+});
+provaAsync('QA24 — a leitura do banco também respeita o microchip da ficha-mestre', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      __dbVals['auaulandia/cadastro/'+cadKey(currentHosp)]={chip:'963000111222333'};
+      __dbVals['daycare/cadastro/tico__joana']={chip:'', microchip:Z_NAO_TEM};
+      carregarCadastro();`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hf-chip'].value"), '', 'a cópia do Plantão não traz de volta o número');
   } finally { run(PLANTAO_VOLTA); }
 });
 prova('QA23 — o microchip anotado neste aparelho não encobre a ficha-mestre nos cards', () => {
@@ -2658,6 +2680,11 @@ prova('QA23 — FILHOt novo no check-in com o mesmo nome e tutor de outro (raça
     assert.strictEqual(run('__gQ13.length'), 0, 'nada vai para a ficha da Mel que já existe');
     assert.strictEqual(run('PELUDINHOS.length'), n0, 'não duplica a Mel na lista');
     assert.ok(/Já existe "Mel"/.test(run('__elsQ13.ciNovoWarn.innerHTML')), run('__elsQ13.ciNovoWarn.innerHTML'));
+    run(`__elsQ13.ciNovoNome.value='Nina'; __elsQ13.ciNovoTutor.value='Bia'; __elsQ13.ciNovoRaca.value='SRD'; __gQ13=[];
+      __rcQ13=[]; DB={ref:function(p){ return {update:function(v){ __rcQ13.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); }}; }};
+      ciCriarNovoHospede(null);`);
+    const rc = JSON.parse(JSON.stringify(run('__rcQ13')));
+    assert.ok(rc.length === 1 && !('chip' in rc[0]) && !('microchip' in rc[0]), 'sem número, não grava chip nem microchip: ' + JSON.stringify(rc));
   } finally { run('PELUDINHOS.length=0; __bkQ13.pl.forEach(function(p){ PELUDINHOS.push(p); }); DB=__bkQ13.db; document.getElementById=__bkQ13.ge; gateCadastro=__bkQ13.gc; ciEscolher=__bkQ13.ce; audit=__bkQ13.au; setSeg=__bkQ13.ss;'); }
 });
 

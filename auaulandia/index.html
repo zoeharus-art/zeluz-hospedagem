@@ -9241,6 +9241,13 @@
     return zEhNaoTem(v)?'':v;
   }
   function zChipNaoTem(ex){ return zEhNaoTem(ex&&ex.microchip) || zEhNaoTem(ex&&ex.chip); }
+  // O microchip mora em dois campos (`chip` e `microchip`) e a leitura prefere `chip`: um
+  // número antigo em `chip` encobria a correção, o apagamento e o "não tem" feitos na ficha.
+  // Toda edição HUMANA do número (campo do Cadastro, "não tem", desfazer, check-in, Plantão)
+  // grava os dois juntos (QA22 a QA24, 27/set/2026). As telas da IA e da resposta do tutor,
+  // que gravam texto livre, NÃO passam por aqui de propósito: texto do tutor nunca troca
+  // nem apaga um número verdadeiro.
+  function zChipPatch(v){ v=(v==null?'':String(v).trim()); return {microchip:v, chip:(zEhNaoTem(v)?'':v)}; }
   // Respondido = tem número OU alguém já disse que não tem. Só o não-respondido é cobrado.
   function zChipRespondido(ex){ return !!zChipNumero(ex) || zChipNaoTem(ex); }
   // O selo do "não tem" de restrição/alergia: {quem, ts}. É ele que permite CONFIRMAR
@@ -21086,21 +21093,6 @@
       return true;
     });
   }
-  // MICROCHIP ANDA EM PAR (QA22/QA23, 27/set/2026): o Cadastro gravava só `microchip`, o
-  // Plantão e o check-in só `chip`, e a leitura (zChipNumero) prefere `chip`. Um número
-  // antigo em `chip` encobria a correção, o apagamento e o "não tem" feitos na ficha.
-  // Toda gravação que passa pelo setPelExtra leva os dois juntos; o "não tem" mora só
-  // em `microchip` (em `chip` fica vazio). Devolve uma CÓPIA: o patch de quem chamou não muda.
-  function zChipPar(patch){
-    if(!patch || typeof patch!=='object') return patch;
-    var temM=Object.prototype.hasOwnProperty.call(patch,'microchip');
-    var temC=Object.prototype.hasOwnProperty.call(patch,'chip');
-    if(temM===temC) return patch;
-    var out=Object.assign({}, patch);
-    if(temM) out.chip=(patch.microchip==null)?patch.microchip:(zEhNaoTem(patch.microchip)?'':patch.microchip);
-    else out.microchip=patch.chip;
-    return out;
-  }
   function setPelExtra(p,patch){
     // Porteiro: a tela já esconde os campos, mas esconder não é impedir.
     var _barrados=pelCamposBarrados(patch);
@@ -21109,7 +21101,6 @@
       try{ alert('A ficha do FILHOt só é alterada pela recepção (consultoras), pela Supervisão ou pela Gestão.\n\nVocê pode registrar o peso e trocar a foto. O resto — nome, raça, tutor, telefone — é cadastro do cliente.'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
     }
-    patch=zChipPar(patch);
     const k=pelKey(p);
     // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
     // ela é pesada e tem nó próprio, que só desce quando muda.
@@ -21195,7 +21186,7 @@
   function pelChipNaoTemGravar(){
     if(!pelAtual) return;
     var quem=(typeof quemSou==='function')?quemSou():'-';
-    setPelExtra(pelAtual, {microchip:Z_NAO_TEM, microchip_nao_tem:{quem:quem, ts:Date.now()}});
+    setPelExtra(pelAtual, Object.assign(zChipPatch(Z_NAO_TEM), {microchip_nao_tem:{quem:quem, ts:Date.now()}}));
     if(typeof audit==='function') audit('cadastro-microchip-nao-tem',
       ((typeof pelNome==='function')?pelNome(pelAtual):'')+' — registrado que não tem microchip',
       {alvo:(typeof pelKey==='function'?pelKey(pelAtual):''), quem:quem});
@@ -21203,7 +21194,7 @@
   }
   function pelChipNaoTemLimpar(){
     if(!pelAtual) return;
-    setPelExtra(pelAtual, {microchip:'', microchip_nao_tem:null});
+    setPelExtra(pelAtual, Object.assign(zChipPatch(''), {microchip_nao_tem:null}));
     try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
   }
   // Marca/desmarca uma refeição na Alimentação. Guarda como texto legível ("Almoço · Jantar"),
@@ -24585,7 +24576,7 @@
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelNasc(this.value,this)" min="${nascMinISO()}" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
-          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(zChipNumero(ex))}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,{microchip:this.value})">${iaRevMarcaFicha(p,'microchip')}${pelChipNaoTemHTML(ex)}</div>
+          <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(zChipNumero(ex))}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,zChipPatch(this.value))">${iaRevMarcaFicha(p,'microchip')}${pelChipNaoTemHTML(ex)}</div>
           <div class="field"><label>Tutor 1 (nome)</label>${can
             ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
             : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
@@ -44996,7 +44987,7 @@
     var p=(typeof ciPelAtual!=='undefined'&&ciPelAtual)?ciPelAtual:null;
     if(!p){ _st('var(--crm-critico)','Abra a ficha de um FILHOt primeiro.'); return; }
     var quem=(typeof quemSou==='function')?quemSou():'-';
-    var patch={microchip:Z_NAO_TEM, microchip_nao_tem:{quem:quem, ts:Date.now()}};
+    var patch=Object.assign(zChipPatch(Z_NAO_TEM), {microchip_nao_tem:{quem:quem, ts:Date.now()}});   // os dois campos (QA22)
     if(btn) btn.disabled=true;
     _st('var(--muted)','Salvando…');
     var pr; try{ pr=setPelExtra(p, patch); }catch(e){ pr=Promise.resolve({ok:false, erro:e}); }
@@ -45023,6 +45014,7 @@
       var el=document.getElementById('ciCadF_'+f.c); var v=el?(el.value||'').trim():'';
       if(v){ patch[f.c]=v; n++; }
     });
+    if(patch.chip) Object.assign(patch, zChipPatch(patch.chip));   // o número vai para os dois campos (QA24)
     if(!n){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Preencha ao menos um campo antes de salvar.'; } return; }
     // As DUAS gravações viram promessa e ficam guardadas: o "✅ salvo" lá embaixo só sai
     // depois que ambas confirmarem. Antes a tela dizia "✅ N campo(s) salvo(s)" na mesma
@@ -45372,14 +45364,14 @@
       return;
     }
     if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||btn.textContent; }
-    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:nasc,idadeAprox:idadeAprox,corPelo:corPelo,sexo:sexo,castrado:castrado,peso:peso,chip:chip,dias:[]};
-    if(chip) novo.microchip=chip;   // o par do microchip anda junto; vazio não grava nada (QA23)
+    const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:nasc,idadeAprox:idadeAprox,corPelo:corPelo,sexo:sexo,castrado:castrado,peso:peso,dias:[]};
+    if(chip) Object.assign(novo, zChipPatch(chip));   // os dois campos juntos; sem número, nenhum dos dois (QA23/QA24)
     const key=pelKey(novo);
     PELUDINHOS.push(novo);
     PELUDINHOS.sort(function(a,b){ return jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)); });
     // Cadastro-mestre COMPLETO (mesmos campos do Day Care) — vale no Day Care e na AuAulândia
-    const regCad={_novo:true,n:nome,tutor:tutor,raca:raca,nasc:nasc,idadeAprox:idadeAprox,corPelo:corPelo,sexo:sexo,castrado:castrado,peso:peso,chip:chip,dias:[],freq:''};
-    if(chip) regCad.microchip=chip;
+    const regCad={_novo:true,n:nome,tutor:tutor,raca:raca,nasc:nasc,idadeAprox:idadeAprox,corPelo:corPelo,sexo:sexo,castrado:castrado,peso:peso,dias:[],freq:''};
+    if(chip) Object.assign(regCad, zChipPatch(chip));
     try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(regCad)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
     if(typeof DB!=='undefined'&&DB) DB.ref('daycare/cadastro/'+key).update(regCad).catch(function(e){ _logFalhaGrav('daycare/cadastro/ (ciCriarNovoHospede)', e); });
     if(typeof pelCadCache!=='undefined') pelCadCache[key]=Object.assign({},pelCadCache[key]||{},regCad);

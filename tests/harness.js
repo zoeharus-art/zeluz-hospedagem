@@ -7317,8 +7317,10 @@ async function main() {
 
   console.log('Ficha sem repeticao + aba Exames do corpo (01/set):');
   {
+    // 27/set/2026 (story 6.7, QA24): o campo grava o número nos dois campos (zChipPatch);
+    // continua aparecendo UMA vez.
     check('Microchip aparece UMA vez na ficha (em Identificacao)',
-      (html.match(/onchange="setPelExtra\(pelAtual,\{microchip:this\.value\}\)"/g)||[]).length === 1);
+      (html.match(/onchange="setPelExtra\(pelAtual,zChipPatch\(this\.value\)\)"/g)||[]).length === 1);
     check('o bloco ALIMENTACAO mora em Rotina & Alimentacao (nao em Atencao & Cuidados)',
       html.indexOf('almoço em campo almoço') > 0 &&
       /Xixi e cocô[\s\S]{0,900}ALIMENTAÇÃO — o que e quanto ele come/.test(html));
