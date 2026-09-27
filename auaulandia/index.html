@@ -3789,12 +3789,9 @@
 
       <div class="card" id="ciCardPert">
         <h2>Pertences</h2>
-        <div class="hint">Toque no que o tutor trouxe — <strong>tocou duas vezes, são dois itens</strong> (ex.: 2 roupas). A <strong>cor é um toque</strong>, na própria linha; o detalhe por escrito é opcional. Não achou na lista? Acrescente lá embaixo — vai para o banco e aparece para todos.</div>
-        <button type="button" class="ci-toggle-novo" id="ciPertManageBtn" style="margin-top:0;display:none" onclick="ciTogglePertManage()"><span data-icon="paw"></span><span id="ciPertManageTxt">Gerenciar itens do banco (editar / excluir)</span></button>
+        <div class="hint">Toque no que o tutor trouxe e <strong>descreva</strong> na linha que aparece: cor, marca, quantidade. <strong>Tocou duas vezes, são dois itens.</strong> Trouxe outra coisa? Toque em <strong>Outro</strong> e escreva o que é. A dose do remédio vai em Medicação; a quantidade da comida, em Alimentação.</div>
         <div id="ciPertGrid" class="pert-grid"></div>
         <div id="ciPertSel"></div>
-        <div class="field" style="margin-top:12px"><label>Acrescentar item ao banco de pertences</label>
-          <div style="display:flex;gap:8px"><input class="cad-in" id="ciPertNovo" placeholder="Ex: Cobertor" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ciAddPertItem();}"><button class="btn btn-gold" style="flex:0 0 auto" onclick="ciAddPertItem()">Adicionar</button></div></div>
       </div>
 
       <div class="card" id="ciCardAssina">
@@ -4607,6 +4604,7 @@
         <strong>{valor_escova}</strong> o preço da troca de escova &middot;
         <strong>{fecho}</strong> a frase da autorização, escrita no último campo.<br>
         Escreva sempre no <strong>singular</strong>: com duas vacinas vencendo, o app troca sozinho &ldquo;a vacina de&rdquo; por &ldquo;as vacinas de&rdquo; e &ldquo;vence&rdquo; por &ldquo;vencem&rdquo;.<br>
+        O que <strong>já venceu</strong> diz a data em que venceu: &ldquo;vence {quando}&rdquo;, &ldquo;{quando} vence&rdquo; e &ldquo;{vencer} {dia}&rdquo; viram sozinhos &ldquo;venceu em 15/09&rdquo;. Com um item vencido e outro ainda por vencer, cada um diz a sua data (&ldquo;o vermífugo venceu em 15/09 e o carrapaticida vence em 28/09&rdquo;).<br>
         Aqui também mora a folga: quantos dias antes do vencimento o FILHOt já entra na lista.</div>
       <div id="cfgVencWrap" style="margin-top:12px"><div class="hint">Carregando as mensagens prontas&hellip;</div></div>
     </div>
@@ -16348,7 +16346,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-25-01';
+  const APP_VERSAO='2026-09-27-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -36128,6 +36126,63 @@
   function vencTemVacina(o){
     return !!(o&&o.itens&&o.itens.some(function(x){ return x.vacina; }));
   }
+  // ===== O QUE JÁ VENCEU DIZ QUANDO VENCEU (Adriana, 27/set/2026) ===================
+  // Pergunta: "Quando o item já venceu, a mensagem ao tutor diz 'venceu em 15/09' em vez de
+  // 'vence 15/09'?" — "sim". O {vencer} já punha o verbo no passado, mas a data colada nele
+  // era o dia DELE aqui ({dia} ou {quando}): saía "a vacina de Raiva venceu hoje" para uma
+  // vacina vencida desde 10/09. Quando TODOS os itens da mensagem já venceram, o verbo que
+  // está colado ao dia vira "venceu em" + a data do vencimento, em qualquer das formas
+  // escritas nos textos: "{vencer} {dia}", "vence {quando}" e "{quando} vence". O {quando}
+  // que sobra em outro lugar (o fecho "Podemos fazer {quando}?") continua sendo o dia dele.
+  // "Como ele estará conosco NESSE dia" perderia o dia a que se refere — vira o {dia}.
+  function vencTextoPassado(txt, itens, hoje){
+    var datas=[];
+    (itens||[]).forEach(function(x){
+      var d=vencData(x&&x.vence, hoje);
+      if(d && datas.indexOf(d)<0) datas.push(d);
+    });
+    txt=String(txt||'');
+    if(!datas.length) return txt;
+    var verbo=((itens||[]).length>1)?'venceram':'venceu';
+    var novo=verbo+' em '+vencJuntar(datas);
+    var Novo=novo.charAt(0).toUpperCase()+novo.slice(1);
+    var tirouDia=false;
+    function troca(m){ tirouDia=true; return /^V/.test(m)?Novo:novo; }
+    txt=txt
+      .replace(/\{vencer\}\s+\{dia\}/gi, troca)
+      .replace(/\bvencem?\s+\{quando\}/gi, troca)
+      .replace(/\{quando\}\s+vencem?\b/gi, function(){ tirouDia=true; return novo; });
+    if(tirouDia) txt=txt.replace(/\bnesse dia\b/gi, '{dia}');
+    return txt;
+  }
+  // MISTURADO: um item já venceu e outro ainda vai vencer. "Amanhã vencem o vermífugo e o
+  // carrapaticida" mentiria sobre o vermífugo vencido desde 15/09. Nas frases de fábrica, a
+  // parte "o que vence e quando" vira a verdade de cada item, com a data dele: "o vermífugo
+  // da Cookie venceu em 15/09 e o carrapaticida vence em 28/09". Texto escrito à mão num
+  // formato que o app não reconhece continua como está: melhor a frase dela do que uma
+  // frase quebrada.
+  function vencTextoMisto(txt, itens, hoje){
+    itens=itens||[];
+    function cap(m, s){ return /^[A-Z]/.test(m)?(s.charAt(0).toUpperCase()+s.slice(1)):s; }
+    function quando(x){ return (x.atrasado?' venceu em ':' vence em ')+vencData(x.vence, hoje); }
+    var vacinas=itens.map(function(x, i){
+      var nome=VENC_VACINA_NOME[x.k]||x.nome||'';
+      return (i===0?('a vacina de '+nome+' {dofilhot}'):('a de '+nome))+quando(x);
+    });
+    var outros=itens.map(function(x, i){
+      return vencNomeComArtigo(x)+(i===0?' {dofilhot}':'')+quando(x);
+    });
+    var outrosSemDo=itens.map(function(x){ return vencNomeComArtigo(x)+quando(x); });
+    var tirouDia=false;
+    txt=String(txt||'')
+      .replace(/\b[Aa]s?\s+vacinas?\s+de\s+\{vacina\}\s+\{dofilhot\}\s+(?:vencem?\s+\{quando\}|\{vencer\}\s+\{dia\})/g,
+        function(m){ tirouDia=true; return cap(m, vencJuntar(vacinas)); })
+      .replace(/\{quando\}\s+vencem?\s+\{item\}\s+\{dofilhot\}/gi, function(){ tirouDia=true; return vencJuntar(outros); })
+      .replace(/\{item\}\s+\{vencer\}\s+\{dia\}/gi, function(){ tirouDia=true; return vencJuntar(outrosSemDo); });
+    // O mesmo cuidado de vencTextoPassado: "nesse dia" precisa de um dia escrito antes.
+    if(tirouDia) txt=txt.replace(/\bnesse dia\b/gi, '{dia}');
+    return txt;
+  }
   // A MENSAGEM DE UM ASSUNTO. Pura no que importa: recebe o FILHOt, o assunto, os itens
   // daquele assunto, o dia-alvo e o dia de hoje — e devolve o texto pronto. É ela que o
   // harness morde.
@@ -36156,6 +36211,9 @@
     // "venceu" x "vence" — e no plural. Só quando TODOS os itens já venceram a frase vai
     // para o passado; misturado, o presente é o que não mente sobre nenhum deles.
     var todosAtrasados=itens.length>0 && itens.every(function(x){ return x&&x.atrasado; });
+    // E o que já venceu diz QUANDO venceu (Adriana, 27/set/2026) — ver vencTextoPassado.
+    if(todosAtrasados) txt=vencTextoPassado(txt, itens, hoje);
+    else if(itens.some(function(x){ return x&&x.atrasado; })) txt=vencTextoMisto(txt, itens, hoje);
     txt=txt
       .replace(/\{tutor\}/gi, tutor)
       .replace(/\{dofilhot\}/gi, (femea?'da ':'do ')+(o.nome||''))
@@ -44451,19 +44509,30 @@
   }
   let ciPertBanco=[];            // banco de pertences (default + custom do Firebase)
   let ciPertSel=[];              // unidades adicionadas nesta estadia: [{uid,k,nome,spec}] — permite vários do mesmo tipo
+  // ===== PERTENCES: O QUE O TUTOR TRAZ DE VERDADE (Adriana, 27/set/2026) ================
+  // "Precisa refazer, está muito difícil — acho melhor em pertences descrever, está muito
+  //  ruim aquele monte de opção. Geralmente o que trazem: comida, remédios, mochila, cama,
+  //  guia. Basicamente isso!" Eram 12 tipos em ordem alfabética, mais o banco de cada um e
+  //  17 cores numa caixa de seleção. Ficam os cinco que ela ditou, NA ORDEM dela, e o
+  //  "Outro" para o que for raro. O resto se DESCREVE, com as palavras de quem recebe.
+  // A estadia antiga (coleira, peitoral, ração...) continua abrindo com os nomes que tinha:
+  // cada item guarda o próprio nome, e o banco antigo ainda é lido para o nome das chaves.
   const CI_PERT_DEFAULT=[
-    {k:'coleira',nome:'Coleira',spec:'Cor e marca (ex: vermelha Zeedog)'},
-    {k:'guia',nome:'Guia',spec:'Cor e marca'},
-    {k:'peitoral',nome:'Peitoral',spec:'Cor e marca'},
-    {k:'roupa',nome:'Roupa',spec:'Ex: vestido rosa, casaco de frio vermelho'},
-    {k:'cama',nome:'Cama',spec:'Cor e tamanho'},
-    {k:'bolsa',nome:'Bolsa / mala',spec:'Cor e marca'},
-    {k:'racao',nome:'Ração',spec:'Marca'},
-    {k:'natural',nome:'Comida natural',spec:'Marca'},
-    {k:'pote',nome:'Pote',spec:'Material e cor (ex: inox rosa)'},
-    {k:'petisco',nome:'Petiscos',spec:'Marca'},
-    {k:'brinquedo',nome:'Brinquedo',spec:'Qual'},
-    {k:'tapete',nome:'Tapete higiênico',spec:'Marca / quantidade'}
+    {k:'comida',nome:'Comida',spec:'Ex.: ração Royal Canin, 1 pacote'},
+    {k:'remedios',nome:'Remédios',spec:'Ex.: Apoquel, 1 caixa'},
+    {k:'mochila',nome:'Mochila',spec:'Ex.: mochila azul com patinhas'},
+    {k:'cama',nome:'Cama',spec:'Ex.: cama cinza, tamanho M'},
+    {k:'guia',nome:'Guia',spec:'Ex.: guia vermelha, com peitoral'},
+    {k:'outro',nome:'Outro',spec:'O que é e como é (ex.: cobertor azul)'}
+  ];
+  // Os nomes das chaves antigas, para a estadia de antes continuar legível (e o placeholder
+  // certo, se alguém reabrir uma estadia antiga para corrigir).
+  const CI_PERT_ANTIGOS=[
+    {k:'coleira',nome:'Coleira',spec:'Cor e marca'}, {k:'peitoral',nome:'Peitoral',spec:'Cor e marca'},
+    {k:'roupa',nome:'Roupa',spec:'Ex.: casaco vermelho'}, {k:'bolsa',nome:'Bolsa / mala',spec:'Cor e marca'},
+    {k:'racao',nome:'Ração',spec:'Marca'}, {k:'natural',nome:'Comida natural',spec:'Marca'},
+    {k:'pote',nome:'Pote',spec:'Material e cor'}, {k:'petisco',nome:'Petiscos',spec:'Marca'},
+    {k:'brinquedo',nome:'Brinquedo',spec:'Qual'}, {k:'tapete',nome:'Tapete higiênico',spec:'Marca / quantidade'}
   ];
   function ciSlug(s){ return jsNorm(s).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('item-'+Date.now()); }
   function ciKey(){ if(!ciHosp) return ''; return (typeof medAgendaKey==='function')?medAgendaKey(ciHosp):String(ciHosp.refKey||((ciHosp.nome||'')+'__'+(ciHosp.tutor||''))).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
@@ -44551,8 +44620,10 @@
     renderCiBusca();
     setTimeout(function(){ try{ b&&b.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },120);
   }
+  // O banco guarda os nomes (os cinco de hoje, os antigos e os que a equipe criou) só para
+  // a estadia antiga continuar legível. A GRADE mostra apenas CI_PERT_DEFAULT (ciDrawPert).
   function carregarPertBanco(){
-    ciPertBanco=CI_PERT_DEFAULT.map(function(o){ return Object.assign({},o); });
+    ciPertBanco=CI_PERT_DEFAULT.concat(CI_PERT_ANTIGOS).map(function(o){ return Object.assign({},o); });
     if(!DB) return;
     DB.ref('auaulandia/pertences-banco').once('value').then(function(s){
       const v=s.val()||{};
@@ -45697,30 +45768,26 @@
     const t=document.getElementById('ciPertManageTxt'); if(t) t.textContent=ciPertManage?'Concluir gerenciamento':'Gerenciar itens do banco (editar / excluir)';
     ciDrawPert();
   }
+  // A ordem da lista de baixo segue a da grade (a ordem dela); item antigo vem depois, A→Z.
+  function ciPertOrdem(k){ for(var i=0;i<CI_PERT_DEFAULT.length;i++){ if(CI_PERT_DEFAULT[i].k===k) return i; } return CI_PERT_DEFAULT.length; }
   function ciDrawPert(){
     const grid=document.getElementById('ciPertGrid');
-    const manage=ciPertManage&&canEditCheckinMed();
-    if(grid){ grid.innerHTML=ciPertBancoSorted().map(function(o){
+    if(grid){ grid.innerHTML=CI_PERT_DEFAULT.map(function(o){
       const n=ciPertSel.filter(function(p){ return p.k===o.k; }).length;
-      if(manage){
-        // Modo gerenciar: editar o nome e excluir o item do banco (não adiciona ao tocar).
-        return '<div class="pert-chip pert-chip-manage">'+
-          '<span class="pcm-nome">'+esc(o.nome)+'</span>'+
-          '<span class="pcm-acts"><button type="button" class="pcm-edit" title="Editar nome" onclick="ciRenomearPertBanco(\''+o.k+'\')">✎</button>'+
-          '<button type="button" class="pcm-del" title="Excluir do banco" onclick="ciExcluirPertBanco(\''+o.k+'\')">&#10005;</button></span>'+
-        '</div>';
-      }
       return '<button type="button" class="pert-chip'+(n?' on':'')+'" onclick="ciAddPertUnit(\''+o.k+'\')">'+esc(o.nome)+(n?' <span class="pert-chip-n">'+n+'</span>':'')+'</button>';
     }).join(''); }
     const list=document.getElementById('ciPertSel'); if(!list) return;
-    if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada adicionado ainda. Toque nos itens acima — pode adicionar vários do mesmo tipo (ex: 2 peitorais).</div>'; return; }
-    const sorted=ciPertSel.slice().sort(function(a,b){ return jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt'); });
+    if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada marcado ainda. Toque no que o tutor trouxe.</div>'; return; }
+    const sorted=ciPertSel.slice().sort(function(a,b){
+      return (ciPertOrdem(a.k)-ciPertOrdem(b.k)) || jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt');
+    });
+    // Uma linha por item: o nome e o campo para DESCREVER. Sem a caixa de 17 cores — a cor
+    // se escreve junto ("mochila azul com patinhas"), do jeito que a pessoa fala.
     list.innerHTML=sorted.map(function(p){
       const same=ciPertSel.filter(function(x){ return x.k===p.k; }); const multi=same.length>1; const idx=same.indexOf(p)+1;
       return '<div class="pert-row" data-uid="'+p.uid+'">'+
         '<div class="pert-row-nome">'+esc(p.nome)+(multi?' <span class="pert-row-n">#'+idx+'</span>':'')+'</div>'+
-        ciPertCorHTML(p)+
-        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertCorPede(p.k)?'Detalhe (opcional): marca, estampa…':ciPertSpecPh(p.k))+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
+        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertSpecPh(p.k))+'" aria-label="Descreva '+escAttr(p.nome)+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
         '<button type="button" class="pert-row-del" title="Remover" aria-label="Remover" onclick="ciRemovePertUnit(\''+p.uid+'\')">&#10005;</button>'+
       '</div>';
     }).join('');
@@ -48599,7 +48666,9 @@
   function cfListaItens(){
     var pert=Array.isArray(cfEstadia.pertences)?cfEstadia.pertences:[];
     var meds=Array.isArray(cfEstadia.medicacao)?cfEstadia.medicacao:[];
-    var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural')}; });
+    // Comida e remédio são críticos: sem eles, a estadia não tem como seguir (27/set/2026:
+    // "comida" e "remédios" são dois dos cinco pertences de sempre).
+    var itens=pert.map(function(p){ return {tipo:'pertence', k:(p.uid||p.k), label:p.nome+(p.spec?(' — '+p.spec):''), critico:(p.k==='racao'||p.k==='natural'||p.k==='comida'||p.k==='remedios')}; });
     // Comida natural do check-in — item CRÍTICO na conferência (aparece para ser conferido item a item).
     var a=(cfEstadia.ficha&&cfEstadia.ficha.alim)||{};
     if(a.comida&&a.comida.qtd){

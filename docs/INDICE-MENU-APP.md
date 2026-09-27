@@ -1,6 +1,36 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24 e 25/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25 e 27/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 27/set/2026 (v 2026-09-27-01)
+
+> **Adriana, 27/set/2026**, respondendo às decisões pendentes: *"1 — sim, tem que refazer depois de 4 meses · 2 — sim · 3 — sim · 4 — não entendi. Precisa refazer, está muito difícil. Acho melhor em pertences descrever, está muito ruim aquele monte de opção. Geralmente o que trazem: comida, remédios, mochila, cama, guia. Basicamente isso!"*
+
+### (U) Mensagem ao tutor: o que já venceu diz "venceu em" e a data
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Tudo o que a mensagem cobra já venceu | "a vacina de Raiva da Cookie **venceu hoje**" (a data era o dia dela aqui, não a do vencimento) | "a vacina de Raiva da Cookie **venceu em 10/09**" |
+| Vermífugo vencido, na véspera | "amanhã vence o vermífugo" | "venceu em 15/09 o vermífugo da Cookie" |
+| Um vencido e outro por vencer | "amanhã vencem o vermífugo e o carrapaticida" | "o vermífugo da Cookie venceu em 15/09 e o carrapaticida vence em 28/09" |
+| O que ainda vai vencer | igual | igual |
+
+- Vale para os textos de Configurações › Mensagens prontas escritos com "vence {quando}", "{quando} vence" ou "{vencer} {dia}". O "{quando}" do fecho ("Podemos fazer {quando}?") continua sendo o dia dele aqui.
+- "Como ela estará conosco **nesse dia**" ganha o dia escrito, porque o dia saiu da frase anterior.
+- **Onde está no código:** `vencTextoPassado`, `vencTextoMisto`, chamadas em `vencMensagemDe`.
+
+### (V) Pertences da hospedagem: os cinco de sempre, e descrever
+
+- A grade tem só **Comida, Remédios, Mochila, Cama, Guia** (na ordem dela) e **Outro**. Tocou duas vezes, são dois itens.
+- Cada item marcado ganha **uma linha para descrever** (cor, marca, quantidade), com um exemplo no próprio campo. Saíram a caixa de 17 cores, o banco de itens e o "Gerenciar itens do banco".
+- Estadia antiga (coleira, peitoral, ração, roupa...) continua abrindo com os nomes que tinha, depois dos cinco.
+- Na **Conferência do check-in**, Comida e Remédios são itens críticos, como a ração e a comida natural antigas.
+- **Onde está no código:** `CI_PERT_DEFAULT`, `CI_PERT_ANTIGOS`, `ciPertOrdem`, `ciDrawPert`, `carregarPertBanco`, `cfListaItens`.
+
+### Decisões registradas (sem mudança de código)
+
+- **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
+- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já era assim; ficou decidido.
 
 ## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
 

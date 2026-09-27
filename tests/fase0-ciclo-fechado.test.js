@@ -2230,6 +2230,87 @@ provaAsync('QA12-C — relógio adiantado no aparelho da pergunta: o fechamento 
   } finally { run('DB=__bk27.db; VENC_REG=__bk27.vr; VENC_REG_DIA=__bk27.vrd; VENC_PEND=__bk27.vp; VENC_PEND_QUANDO=__bk27.vpq; VENC_PEND_LENDO=__bk27.vpl; audit=__bk27.au; vencRender=__bk27.vre; vencRedesenharQuadros=__bk27.vrq2; quemSou=__bk27.qs; zHojeISO=__bk27.hz; pelExtra=__bk27.pe; vencAtualizarBadge=__bk27.vab; VENC_FILA_GRAV=__bk27.fg;'); }
 });
 
+// ================================================================== decisões de 27/set/2026
+console.log('\nDecisões da Adriana, 27/set/2026 — exame de fezes e "venceu em"');
+const MSG_O = (ex, alvo, dias) => `({chave:'cookie__ana', p:{n:'Cookie', tutor:'Ana Paula', dias:${JSON.stringify(dias || [])}},
+  nome:'Cookie', tutor:'Ana Paula', sexo:'F', itens:vencItensDe(${JSON.stringify(ex)}, '${alvo}', 7, '2026-09-24')})`;
+const msg = (ex, tipo, alvo, dias) => run(`vencMensagemDe(${MSG_O(ex, alvo, dias)}, '${tipo}', null, '${alvo}', '2026-09-24')`);
+prova('B2 — exame de fezes depois da 1ª dose dispensa a 2ª; o exame renova em 4 meses (decisão: "sim, tem que refazer depois de 4 meses")', () => {
+  const ex = { verm_t: '2026-09-01', verm_doses: '2 doses', fezes_t: '2026-09-10' };
+  const it = run("PREV_ITENS.filter(function(x){ return x.k==='verm_dose2_p'; })[0]");
+  ctx.__ex = ex; ctx.__it = it;
+  assert.strictEqual(run('prevDispensadoPorExame(__ex, __it)'), true, 'a 2ª dose não é cobrada');
+  assert.strictEqual(run("vermOuFezes(__ex)"), 'fezes');
+  assert.strictEqual(run("addDiasISO('2026-09-10', FEZES_PROX)"), '2027-01-08', 'o exame volta a ser cobrado 120 dias depois');
+  ctx.__ex2 = { verm_t: '2026-09-01', verm_doses: '2 doses', fezes_t: '2026-08-20' };
+  assert.strictEqual(run('prevDispensadoPorExame(__ex2, __it)'), false, 'exame ANTES da 1ª dose não dispensa a 2ª');
+});
+prova('"venceu em" — tudo vencido: a data é a do vencimento, não o dia dele aqui', () => {
+  const vac = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-24');
+  assert.ok(vac.indexOf('a vacina de Raiva da Cookie venceu em 10/09.') > 0, vac);
+  const agd = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Raiva da Cookie venceu em 10/09.') > 0, agd);
+  assert.ok(agd.indexOf('venceu hoje') < 0, 'nunca "venceu hoje" para o que venceu em 10/09');
+  const ant = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('Passando para lembrar que venceu em 15/09 o vermífugo da Cookie.') > 0, ant);
+  assert.ok(ant.indexOf('Podemos fazer amanhã?') > 0, 'o {quando} do fecho continua sendo o dia dela aqui');
+  const dois = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+  assert.ok(dois.indexOf('venceram em 12/09 e 15/09 o carrapaticida e o vermífugo da Cookie') > 0, dois);
+});
+prova('"venceu em" — "nesse dia" continua com um dia escrito antes (texto da creche)', () => {
+  const t = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-25');
+  assert.ok(t.indexOf('venceu em 10/09. Como ela estará conosco amanhã, sexta-feira (25/09),') > 0, t);
+  assert.ok(t.indexOf('nesse dia') < 0, t);
+});
+prova('"venceu em" — misturado: cada item diz a sua data, sem fingir que o vencido vence amanhã', () => {
+  const ant = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-28' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('o vermífugo da Cookie venceu em 15/09 e o carrapaticida vence em 28/09.') > 0, ant);
+  assert.ok(ant.indexOf('amanhã vencem') < 0, ant);
+  const vac = msg({ vac_gripe_p: '2026-09-10', vac_raiva_p: '2026-09-28' }, 'vacina', '2026-09-25');
+  assert.ok(vac.indexOf('a vacina de Gripe da Cookie venceu em 10/09 e a de Raiva vence em 28/09. Como ela estará conosco amanhã, sexta-feira (25/09),') > 0, vac);
+  const agd = msg({ vac_gripe_p: '2026-09-10', vac_raiva_p: '2026-09-28' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Gripe da Cookie venceu em 10/09 e a de Raiva vence em 28/09.') > 0, agd);
+});
+prova('"venceu em" — o que ainda vai vencer continua exatamente como antes', () => {
+  const ant = msg({ ecto_p: '2026-09-28' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('Passando para lembrar que amanhã vence o carrapaticida da Cookie.') > 0, ant);
+  const agd = msg({ vac_raiva_p: '2026-09-26' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Raiva da Cookie vence hoje, quinta-feira (24/09)') > 0, agd);
+});
+
+// ================================================================== pertences da hospedagem
+console.log('\nPertences da hospedagem — os cinco que ela ditou, e descrever (27/set/2026)');
+prova('a grade tem só Comida, Remédios, Mochila, Cama, Guia e Outro — na ordem dela, sem banco e sem caixa de cores', () => {
+  igual(run('CI_PERT_DEFAULT.map(function(o){ return o.k; })'), ['comida', 'remedios', 'mochila', 'cama', 'guia', 'outro']);
+  ctx.__els = { ciPertGrid: { innerHTML: '' }, ciPertSel: { innerHTML: '' } };
+  run(`__bkPert={ge:document.getElementById, pb:ciPertBanco, ps:ciPertSel};
+    document.getElementById=function(id){ return __els[id]||null; };
+    carregarPertBanco();
+    ciPertBanco.push({k:'cobertor-xadrez', nome:'Cobertor xadrez', spec:'x'});   // item criado pela equipe no banco antigo
+    ciPertSel=[{uid:'u1',k:'roupa',nome:'Roupa',spec:'casaco vermelho'},{uid:'u2',k:'mochila',nome:'Mochila',spec:''},{uid:'u3',k:'comida',nome:'Comida',spec:'ração 2 kg'}];
+    ciDrawPert();`);
+  try {
+    const grid = ctx.__els.ciPertGrid.innerHTML;
+    const chips = (grid.match(/<button type="button" class="pert-chip[^"]*"[^>]*>([^<]+)/g) || []).map((c) => c.replace(/^.*>/, '').trim());
+    igual(chips, ['Comida', 'Remédios', 'Mochila', 'Cama', 'Guia', 'Outro']);
+    assert.ok(grid.indexOf('Cobertor') < 0 && grid.indexOf('Peitoral') < 0, 'o banco antigo não volta para a grade');
+    const lista = ctx.__els.ciPertSel.innerHTML;
+    assert.ok(lista.indexOf('pert-row-cor') < 0, 'sem a caixa de 17 cores');
+    assert.ok(lista.indexOf('Comida') < lista.indexOf('Mochila') && lista.indexOf('Mochila') < lista.indexOf('Roupa'),
+      'a lista segue a ordem dela; o item antigo (Roupa) vem depois, com o nome que tinha');
+    assert.ok(lista.indexOf('placeholder="Ex.: mochila azul com patinhas"') > 0, 'o campo pede para descrever, com exemplo');
+    assert.ok(lista.indexOf('value="casaco vermelho"') > 0, 'o que estava escrito na estadia antiga continua');
+  } finally { run('document.getElementById=__bkPert.ge; ciPertBanco=__bkPert.pb; ciPertSel=__bkPert.ps;'); }
+});
+prova('na Conferência, Comida e Remédios são itens críticos (como a ração e a comida natural antigas)', () => {
+  run(`__bkCf=cfEstadia; cfEstadia={pertences:[{uid:'a',k:'comida',nome:'Comida',spec:'ração'},{uid:'b',k:'remedios',nome:'Remédios',spec:'Apoquel'},
+    {uid:'c',k:'mochila',nome:'Mochila',spec:''},{uid:'d',k:'racao',nome:'Ração',spec:'Royal'}], medicacao:[], ficha:{}};`);
+  try {
+    const it = JSON.parse(JSON.stringify(run('cfListaItens()'))).filter((x) => x.tipo === 'pertence');
+    igual(it.map((x) => [x.label, x.critico]), [['Comida — ração', true], ['Remédios — Apoquel', true], ['Mochila', false], ['Ração — Royal', true]]);
+  } finally { run('cfEstadia=__bkCf;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
