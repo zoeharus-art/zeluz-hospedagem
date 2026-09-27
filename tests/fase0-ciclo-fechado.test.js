@@ -2618,6 +2618,27 @@ prova('QA22–QA24 — microchip: toda edição humana grava chip e microchip ju
     assert.ok(/onchange="setPelExtra\(pelAtual,zChipPatch\(this\.value\)\)"/.test(fs.readFileSync(APP, 'utf8')), 'o campo do Cadastro grava os dois');
   } finally { run('setPelExtra=__bkQ10.sp; pelAtual=__bkQ10.pa; renderPelFicha=__bkQ10.rf; audit=__bkQ10.au;'); }
 });
+prova('QA25 — check-in: "cadastro faltando", "sem microchip" e FILHOt novo gravam chip e microchip juntos', () => {
+  run(`__bkQ14={sp:setPelExtra, cp:ciPelAtual, cf:cadastroFaltando, ge:document.getElementById, db:DB, au:audit, gc:gateCadastro, ce:ciEscolher, ss:setSeg, pl:PELUDINHOS.slice()};
+    __pQ14=[]; setPelExtra=function(p,patch){ __pQ14.push(JSON.parse(JSON.stringify(patch))); return new Promise(function(){}); };
+    __elsQ14={}; document.getElementById=function(id){ return __elsQ14[id]||(__elsQ14[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+    __rcQ14=[]; DB={ref:function(p){ return {update:function(v){ __rcQ14.push({p:p, v:JSON.parse(JSON.stringify(v))}); return new Promise(function(){}); }}; }};
+    audit=function(){}; gateCadastro=function(){ return true; }; ciEscolher=function(){}; setSeg=function(){};
+    ciPelAtual={n:'Tico', tutor:'Joana'}; cadastroFaltando=function(){ return [{c:'chip'}]; };`);
+  try {
+    run(`document.getElementById('ciCadF_chip').value='98100'; try{ ciSalvarCadastroFalta(); }catch(e){}
+      try{ ciMarcarSemMicrochip(null); }catch(e){}`);
+    const ps = JSON.parse(JSON.stringify(run('__pQ14')));
+    assert.ok(ps[0] && ps[0].chip === '98100' && ps[0].microchip === '98100', '"cadastro faltando": ' + JSON.stringify(ps[0]));
+    assert.ok(ps[1] && ps[1].microchip === 'nao-tem' && ps[1].chip === '', '"sem microchip": ' + JSON.stringify(ps[1]));
+    run(`document.getElementById('ciNovoNome').value='Zuzu'; document.getElementById('ciNovoTutor').value='Lia';
+      document.getElementById('ciNovoRaca').value='SRD'; document.getElementById('ciNovoChip').value='77001'; __rcQ14=[];
+      ciCriarNovoHospede(null);`);
+    const rc = JSON.parse(JSON.stringify(run("__rcQ14.filter(function(x){ return /^daycare\\/cadastro\\//.test(x.p); })")));
+    assert.ok(rc.length === 1 && rc[0].v.chip === '77001' && rc[0].v.microchip === '77001', 'FILHOt novo: ' + JSON.stringify(rc));
+  } finally { run(`setPelExtra=__bkQ14.sp; ciPelAtual=__bkQ14.cp; cadastroFaltando=__bkQ14.cf; document.getElementById=__bkQ14.ge; DB=__bkQ14.db;
+    audit=__bkQ14.au; gateCadastro=__bkQ14.gc; ciEscolher=__bkQ14.ce; setSeg=__bkQ14.ss; PELUDINHOS.length=0; __bkQ14.pl.forEach(function(p){ PELUDINHOS.push(p); });`); }
+});
 prova('QA24 — texto da IA ou da resposta do tutor em "Microchip" nunca troca nem apaga o número verdadeiro', () => {
   run(`__bkQ11={db:DB, ce:canEditPel}; __gQ11=[];
     DB={ref:function(p){ return {update:function(v){ __gQ11.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); }}; }};
