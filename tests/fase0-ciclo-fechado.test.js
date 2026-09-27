@@ -2346,6 +2346,21 @@ prova('QA19 M4 — véspera respondida: o "fazer hoje?" não pergunta de novo ne
   const ja = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${hojeResp})`)));
   assert.deepStrictEqual(ja.itens.map((x) => x.k), ['ecto_p'], 'a pergunta de hoje já respondida continua (o bloco mostra a resposta)');
 });
+prova('QA20 L1 — a véspera só segura o item que ela LEVOU: o que nunca foi dito ao tutor continua sendo perguntado', () => {
+  const ex = JSON.stringify({ ecto_p: '2026-10-01', verm_p: '2026-09-20' });
+  const p = JSON.stringify({ n: 'Cookie', tutor: 'Ana', dias: ['ter', 'sex'] });
+  const soVerm = JSON.stringify({ respostas: { antip: { v: 'bolsa', ts: 1 } }, itens: [{ k: 'verm_p', vence: '2026-09-20', atrasado: true }] });
+  const r = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${soVerm})`)));
+  assert.deepStrictEqual(r.itens.map((x) => x.k), ['ecto_p'], 'o vermífugo (levado e respondido) sai; o carrapaticida (nunca dito) fica');
+});
+prova('QA20 L2 — texto à mão com um segundo "vence {quando}": ele também vira "venceu em"', () => {
+  run(`__bkCfg=VENC_CFG; VENC_CFG={antip:'Passando para lembrar que {quando} vence {item} {dofilhot}. Se o vermífugo vence {quando}, podemos fazer?'};`);
+  try {
+    const t = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+    assert.ok(t.indexOf('o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09.') > 0, t);
+    assert.ok(t.indexOf('vence amanhã') < 0 && t.indexOf('vencem amanhã') < 0, t);
+  } finally { run('VENC_CFG=__bkCfg;'); }
+});
 
 // ================================================================== o Plantão não apaga a ficha
 console.log('\nPlantão — "Editar cadastro" grava só o que mudou, na ficha-mestre (auditoria de dados, 27/set/2026)');

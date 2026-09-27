@@ -4604,7 +4604,7 @@
         <strong>{valor_escova}</strong> o preço da troca de escova &middot;
         <strong>{fecho}</strong> a frase da autorização, escrita no último campo.<br>
         Escreva sempre no <strong>singular</strong>: com duas vacinas vencendo, o app troca sozinho &ldquo;a vacina de&rdquo; por &ldquo;as vacinas de&rdquo; e &ldquo;vence&rdquo; por &ldquo;vencem&rdquo;.<br>
-        O que <strong>já venceu</strong> diz a data em que venceu: &ldquo;vence {quando}&rdquo;, &ldquo;{quando} vence&rdquo; e &ldquo;{vencer} {dia}&rdquo; viram sozinhos &ldquo;venceu em 15/09&rdquo;. Com um item vencido e outro ainda por vencer (ou vencidos em datas diferentes), cada um diz a sua data (&ldquo;o vermífugo venceu em 15/09 e o carrapaticida vence em 28/09&rdquo;) — nos textos escritos como os de fábrica. Texto escrito de outro jeito continua como está, e o cartão avisa quando a frase não traz a data do que já venceu.<br>
+        O que <strong>já venceu</strong> diz a data em que venceu: &ldquo;vence {quando}&rdquo;, &ldquo;{quando} vence&rdquo; e &ldquo;{vencer} {dia}&rdquo; viram sozinhos &ldquo;venceu em 15/09&rdquo;. Com um item vencido e outro ainda por vencer (ou vencidos em datas diferentes), cada um diz a sua data (&ldquo;o vermífugo venceu em 15/09 e o carrapaticida vence em 28/09&rdquo;) — nos textos escritos como os de fábrica. Em texto escrito de outro jeito, o app troca só o que reconhece, e o cartão avisa quando a frase não traz a data do que já venceu.<br>
         Aqui também mora a folga: quantos dias antes do vencimento o FILHOt já entra na lista.</div>
       <div id="cfgVencWrap" style="margin-top:12px"><div class="hint">Carregando as mensagens prontas&hellip;</div></div>
     </div>
@@ -36282,7 +36282,9 @@
     itens.forEach(function(x){ if(x&&x.atrasado) datasVenc[x.vence]=1; });
     if(todosAtrasados){
       var _mi=(Object.keys(datasVenc).length>1)?vencTextoMisto(txt, itens, hoje):txt;
-      txt=(_mi!==txt)?_mi:vencTextoPassado(txt, itens, hoje);
+      // O passado corre DEPOIS do misto (QA20 L2): a frase que o misto trocou já não tem
+      // marcador, e um segundo "vence {quando}" escrito à mão também vira "venceu em".
+      txt=vencTextoPassado(_mi, itens, hoje);
     }
     else if(itens.some(function(x){ return x&&x.atrasado; })) txt=vencTextoMisto(txt, itens, hoje);
     txt=txt
@@ -38954,8 +38956,17 @@
       // só o que já tinha vencido respeitava a véspera: o carrapaticida que vence na quinta
       // era perguntado de novo na terça, com a resposta de segunda já registrada. A pergunta
       // de HOJE que já foi respondida continua (o bloco mostra a resposta).
+      // Só o item que a véspera LEVOU (QA20 L1): o carrapaticida que vence depois da janela da
+      // véspera nunca foi dito ao tutor — escondê-lo pelo assunto o faria chegar vencido. O
+      // retrato do que foi mandado mora no registro (`itens`, vencSnapItens); registro antigo,
+      // sem retrato, fica com a régua do assunto.
       var _tb=vencTipoDoItemObj(x);
-      if(regHoje && vencRespostaDe(regHoje, _tb) && !vencRespostaDe(regHoje, hojeTipoAnt(_tb))) return false;
+      if(regHoje && vencRespostaDe(regHoje, _tb) && !vencRespostaDe(regHoje, hojeTipoAnt(_tb))){
+        var _levou=Array.isArray(regHoje.itens)
+          ? regHoje.itens.some(function(y){ return y && y.k===x.k; })
+          : true;
+        if(_levou) return false;
+      }
       return true;
     });
     return {proxima:proxima, folga:folga, teto:teto, itens:itens};
