@@ -2587,6 +2587,8 @@ prova('QA22 — o botão Salvar diz o que gravou e o que não gravou', () => {
   const t = (r) => run('cadTextoSalvar(' + JSON.stringify(r) + ')');
   assert.strictEqual(t({ gravou: true }), '✅ Salvo');
   assert.strictEqual(t({ gravou: false }), '✅ Cadastro salvo');
+  assert.strictEqual(t({ gravou: false, recusados: ['nasc'] }), '⚠ Data de nascimento incompleta: não gravou a data. Confira', 'nada gravou: não diz "salvo"');
+  assert.strictEqual(t({ gravou: true, recusados: ['nasc'] }), '✅ Salvo. Data de nascimento incompleta: não gravou a data. Confira');
   assert.ok(/^✅ Salvo\. Para apagar, use o Cadastro de Peludinhos$/.test(t({ gravou: true, apagados: 1 })), t({ gravou: true, apagados: 1 }));
 });
 prova('QA22 — fechar o card grava o que estava esperando', () => {
@@ -2600,18 +2602,63 @@ prova('QA22 — fechar o card grava o que estava esperando', () => {
     assert.strictEqual(run("__els['card-cadastro'].style.display"), 'none');
   } finally { run('setTimeout=__stQ9; __cadTimer=null;'); run(PLANTAO_VOLTA); }
 });
-prova('QA22 — microchip: o Cadastro grava chip e microchip juntos (um número antigo não encobre o "não tem")', () => {
-  run(`__bkQ10={sp:setPelExtra, pa:pelAtual, rf:renderPelFicha, au:audit};
-    __pQ10=[]; setPelExtra=function(p,patch){ __pQ10.push(JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };
-    renderPelFicha=function(){}; audit=function(){}; pelAtual={n:'Tico', tutor:'Joana'};`);
+prova('QA22/QA23 — microchip anda em par: toda gravação da ficha leva chip e microchip juntos', () => {
+  igual(run("zChipPar({microchip:'98100'})"), { microchip: '98100', chip: '98100' });
+  igual(run("zChipPar({microchip:Z_NAO_TEM})"), { microchip: 'nao-tem', chip: '' });
+  igual(run("zChipPar({microchip:''})"), { microchip: '', chip: '' });
+  igual(run("zChipPar({chip:'77'})"), { chip: '77', microchip: '77' });
+  igual(run("zChipPar({raca:'SRD'})"), { raca: 'SRD' });
+  assert.strictEqual(run("(function(){ var p={microchip:'1'}; zChipPar(p); return Object.keys(p).join(); })()"), 'microchip', 'o patch de quem chamou não muda');
+  run(`__bkQ10={db:DB, ce:canEditPel, pa:pelAtual}; __gQ10=[];
+    DB={ref:function(p){ return {update:function(v){ __gQ10.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
+    canEditPel=function(){ return true; };`);
   try {
-    run('pelChipNaoTemGravar(); pelChipNaoTemLimpar();');
-    const ps = JSON.parse(JSON.stringify(run('__pQ10')));
-    assert.strictEqual(ps[0].microchip, 'nao-tem'); assert.strictEqual(ps[0].chip, '');
-    assert.strictEqual(ps[1].microchip, ''); assert.strictEqual(ps[1].chip, '');
-    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(ps[0]) + '))'), '', 'o "não tem" vale sobre o número antigo');
-    assert.ok(/setPelExtra\(pelAtual,\{microchip:this\.value, chip:this\.value\}\)/.test(fs.readFileSync(APP, 'utf8')), 'o campo do Cadastro grava os dois');
-  } finally { run('setPelExtra=__bkQ10.sp; pelAtual=__bkQ10.pa; renderPelFicha=__bkQ10.rf; audit=__bkQ10.au;'); }
+    run(`setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:Z_NAO_TEM, microchip_nao_tem:{quem:'x', ts:1}});`);
+    const g = JSON.parse(JSON.stringify(run('__gQ10')));
+    assert.ok(g.length === 1 && g[0].v.chip === '' && g[0].v.microchip === 'nao-tem', JSON.stringify(g));
+    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(g[0].v) + '))'), '', 'o "não tem" vale sobre o número antigo');
+  } finally { run('DB=__bkQ10.db; canEditPel=__bkQ10.ce; pelAtual=__bkQ10.pa;'); }
+});
+prova('QA23 — o Plantão mostra o microchip da ficha-mestre, mesmo apagado ou "não tem"', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana';
+      cadCache={}; cadCache[cadKey(currentHosp)]={chip:'963000111222333'};
+      pelCadCache={tico__joana:{chip:'', microchip:Z_NAO_TEM}}; DB=null; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '', '"não tem" na ficha: o número antigo da cópia não aparece');
+    run(`pelCadCache={tico__joana:{chip:'', microchip:''}}; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '', 'número apagado na ficha: não volta');
+    run(`pelCadCache={tico__joana:{chip:'555', microchip:'555'}}; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '555', 'número trocado na ficha: aparece o novo');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA23 — o microchip anotado neste aparelho não encobre a ficha-mestre nos cards', () => {
+  run(`__bkQ12={ls:localStorage, pc:pelCadCache}; __locQ12={};
+    localStorage={getItem:function(k){ return __locQ12[k]||null; }, setItem:function(k,v){ __locQ12[k]=v; }, removeItem:function(){}};`);
+  try {
+    run(`__hQ12={nome:'Tico', tutor:'Joana'}; setInfo(__hQ12, {chip:'963000111222333'});
+      pelCadCache={tico__joana:{chip:'', microchip:Z_NAO_TEM}};`);
+    assert.strictEqual(run('chipDe(__hQ12)'), '');
+    assert.strictEqual(run('zChipNaoTem(extraDoHosp(__hQ12))'), true);
+    run(`pelCadCache={};`);
+    assert.strictEqual(run('chipDe(__hQ12)'), '963000111222333', 'sem ficha-mestre, vale o que foi anotado aqui');
+  } finally { run('localStorage=__bkQ12.ls; pelCadCache=__bkQ12.pc;'); }
+});
+prova('QA23 — FILHOt novo no check-in com o mesmo nome e tutor de outro (raça diferente) não grava por cima', () => {
+  run(`__bkQ13={pl:PELUDINHOS.slice(), db:DB, ge:document.getElementById, gc:gateCadastro, ce:ciEscolher, au:audit, ss:setSeg};
+    setSeg=function(){};
+    __elsQ13={ciNovoNome:{value:'Mel'}, ciNovoTutor:{value:'Ana'}, ciNovoRaca:{value:'Poodle'}, ciNovoWarn:{textContent:'', innerHTML:''}};
+    document.getElementById=function(id){ return __elsQ13[id]||(__elsQ13[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+    gateCadastro=function(){ return true; }; ciEscolher=function(){}; audit=function(){}; __gQ13=[];
+    DB={ref:function(p){ return {update:function(v){ __gQ13.push(p); return Promise.resolve(); }}; }};
+    PELUDINHOS.push({n:'Mel', tutor:'Ana', raca:'Shih Tzu', dias:['seg']});`);
+  try {
+    const n0 = run('PELUDINHOS.length');
+    run('ciCriarNovoHospede(null);');
+    assert.strictEqual(run('__gQ13.length'), 0, 'nada vai para a ficha da Mel que já existe');
+    assert.strictEqual(run('PELUDINHOS.length'), n0, 'não duplica a Mel na lista');
+    assert.ok(/Já existe "Mel"/.test(run('__elsQ13.ciNovoWarn.innerHTML')), run('__elsQ13.ciNovoWarn.innerHTML'));
+  } finally { run('PELUDINHOS.length=0; __bkQ13.pl.forEach(function(p){ PELUDINHOS.push(p); }); DB=__bkQ13.db; document.getElementById=__bkQ13.ge; gateCadastro=__bkQ13.gc; ciEscolher=__bkQ13.ce; audit=__bkQ13.au; setSeg=__bkQ13.ss;'); }
 });
 
 // ------------------------------------------------ o fim
