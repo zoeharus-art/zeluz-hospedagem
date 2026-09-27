@@ -2370,7 +2370,7 @@ prova('cadDiferenca: só o campo mudado, e nunca vazio por cima de valor', () =>
   igual(run("cadDiferenca({}, {sexo:'', castrado:''})"), {});
 });
 const PLANTAO_STUBS = `__bkPl={ge:document.getElementById, sv:segVal, ss:setSeg, ah:atualizarHeader, rh:renderHosp, fd:fotoDe, db:DB, ch:currentHosp,
-    pc:pelCadCache, cc:cadCache, kf:__cadKeyFixa, ca:__cadAberto, au:audit};
+    pc:pelCadCache, cc:cadCache, kf:__cadKeyFixa, ca:(typeof __cadAberto!=='undefined'?__cadAberto:null), au:audit};
   __els={}; __seg={}; __grav=[]; __aud=[]; __dbVals={};
   document.getElementById=function(id){ return __els[id]||(__els[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
   segVal=function(id){ return __seg[id]||''; }; setSeg=function(id,v){ __seg[id]=v||''; };
@@ -2504,6 +2504,114 @@ provaAsync('QA21 B5 — a leitura atrasada não atropela o que está sendo digit
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.strictEqual(run("__els['hfRaca'].value"), 'Poodle', 'a ficha do Tico não cai na tela do Bolt');
   } finally { run('try{ if(__cadTimer){ clearTimeout(__cadTimer); __cadTimer=null; } }catch(e){}'); run(PLANTAO_VOLTA); }
+});
+
+// QA22 (27/set/2026): a verificação das correções do QA21
+console.log('\nPlantão — correções do QA22');
+prova('QA22 — o toque abre o FILHOt tocado, mesmo quando a gravação pendente reordena a lista', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ1=setTimeout; setTimeout=function(){ return 7; }; __bkHsQ1=hospedes;
+      __olga={nome:'Olga', tutor:'Rita'}; __zeca={nome:'Zeca', tutor:'Rui'};
+      hospedes=[{nome:'Nelson', tutor:'Ana'}, {nome:'Nelson Silva', tutor:'Ana'}, __olga, __zeca];
+      renderHosp=function(){ hospedes=[hospedes[0], __olga, __zeca]; };   // a gravação junta os dois Nelson
+      currentHosp=hospedes[0]; __cadKeyFixa='nelson__ana'; __cadAberto={};
+      document.getElementById('hf-chip').value='555'; onCad();
+      try{ abrirPlantao(2); }catch(e){}`);
+    assert.strictEqual(run('currentHosp===__olga'), true, 'tocou na Olga: abre a Olga');
+  } finally { run('setTimeout=__stQ1; __cadTimer=null; hospedes=__bkHsQ1;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — alergia e restrição sem ficha: apagar uma não esconde o aviso da outra', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__lsQ3=localStorage; __locQ3={}; localStorage={getItem:function(k){ return __locQ3[k]||null; }, setItem:function(k,v){ __locQ3[k]=v; }, removeItem:function(){}};
+      currentHosp={nome:'Pipa', tutor:'Fulana'};
+      setHospAlergia('alergia','frango'); setHospAlergia('restricao','sem grãos'); setHospAlergia('restricao','');`);
+    const t = run("__els['hf-alergia-st'].textContent");
+    assert.ok(/SÓ NESTE aparelho/.test(t) && /a alergia/.test(t), 'a alergia continua só neste aparelho: ' + t);
+    run(`setHospAlergia('alergia','');`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'as duas vazias: o aviso some');
+  } finally { run('localStorage=__lsQ3;'); run(PLANTAO_VOLTA); }
+});
+provaAsync('QA22 — a resposta atrasada da gravação da alergia não pinta a tela de outro hóspede', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__rejQ4=null; DB={ref:function(){ return {update:function(){ return new Promise(function(ok,no){ __rejQ4=no; }); }}; }};
+      currentHosp={nome:'Tico', tutor:'Joana', refKey:'tico__joana'}; setHospAlergia('alergia','frango');
+      currentHosp={nome:'Bolt', tutor:'Ana'}; document.getElementById('hf-alergia-st').textContent='';
+      __rejQ4(new Error('sem rede'));`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'a tela do Bolt não recebe o "NÃO salvou" do Tico');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA22 — trocar o dia com a ficha aberta grava o que estava esperando os 0,9 s', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ5=setTimeout; setTimeout=function(){ return 7; }; cadCache={}; pelCadCache={};
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad(); carregarCadastro();`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.some((x) => x.p === 'daycare/cadastro/tico__joana' && x.v.raca === 'Lhasa Apso'), JSON.stringify(g));
+  } finally { run('setTimeout=__stQ5; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — ano com 2 dígitos no meio da digitação não grava; ao sair do campo, a data completa grava', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ6=setTimeout; __tQ6=[]; setTimeout=function(fn){ __tQ6.push(fn); return 7; };
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={};
+      document.getElementById('hf-nasc').value='15/03/19';`);
+    const r = JSON.parse(JSON.stringify(run('cadGravarAgora()')));
+    assert.strictEqual(run('__grav.length'), 0, '"15/03/19" não vira 2019 na ficha');
+    assert.deepStrictEqual(r.recusados, ['nasc']);
+    assert.ok(/Data de nascimento incompleta/.test(run('cadTextoSalvar(' + JSON.stringify(r) + ')')));
+    run(`normalizarNasc(); __tQ6.forEach(function(f){ f(); });`);
+    assert.strictEqual(run("__els['hf-nasc'].value"), '15/03/2019');
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.length === 2 && g.every((x) => x.v.nasc === '2019-03-15'), JSON.stringify(g));
+    assert.strictEqual(run('__cadTimer'), null, 'o relógio que disparou fica zerado');
+  } finally { run('setTimeout=__stQ6; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — sem banco, o Salvar diz que não salvou, e a próxima tentativa grava', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__dbQ7=DB; DB=null; currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; __rQ7=cadGravarAgora();`);
+    assert.strictEqual(run('__rQ7.semBanco'), true);
+    assert.ok(/não salvou/.test(run('cadTextoSalvar(__rQ7)')));
+    run('DB=__dbQ7; __rQ7=cadGravarAgora();');
+    assert.strictEqual(run('__rQ7.gravou'), true, 'a mudança não se perdeu: grava na volta do banco');
+    assert.ok(JSON.parse(JSON.stringify(run('__grav'))).some((x) => x.v.raca === 'Lhasa Apso'));
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA22 — o botão Salvar diz o que gravou e o que não gravou', () => {
+  const t = (r) => run('cadTextoSalvar(' + JSON.stringify(r) + ')');
+  assert.strictEqual(t({ gravou: true }), '✅ Salvo');
+  assert.strictEqual(t({ gravou: false }), '✅ Cadastro salvo');
+  assert.ok(/^✅ Salvo\. Para apagar, use o Cadastro de Peludinhos$/.test(t({ gravou: true, apagados: 1 })), t({ gravou: true, apagados: 1 }));
+});
+prova('QA22 — fechar o card grava o que estava esperando', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ9=setTimeout; setTimeout=function(){ return 7; };
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('card-cadastro').style.display='block';
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad(); toggleCadastro();`);
+    assert.ok(JSON.parse(JSON.stringify(run('__grav'))).some((x) => x.v.raca === 'Lhasa Apso'));
+    assert.strictEqual(run("__els['card-cadastro'].style.display"), 'none');
+  } finally { run('setTimeout=__stQ9; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — microchip: o Cadastro grava chip e microchip juntos (um número antigo não encobre o "não tem")', () => {
+  run(`__bkQ10={sp:setPelExtra, pa:pelAtual, rf:renderPelFicha, au:audit};
+    __pQ10=[]; setPelExtra=function(p,patch){ __pQ10.push(JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };
+    renderPelFicha=function(){}; audit=function(){}; pelAtual={n:'Tico', tutor:'Joana'};`);
+  try {
+    run('pelChipNaoTemGravar(); pelChipNaoTemLimpar();');
+    const ps = JSON.parse(JSON.stringify(run('__pQ10')));
+    assert.strictEqual(ps[0].microchip, 'nao-tem'); assert.strictEqual(ps[0].chip, '');
+    assert.strictEqual(ps[1].microchip, ''); assert.strictEqual(ps[1].chip, '');
+    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(ps[0]) + '))'), '', 'o "não tem" vale sobre o número antigo');
+    assert.ok(/setPelExtra\(pelAtual,\{microchip:this\.value, chip:this\.value\}\)/.test(fs.readFileSync(APP, 'utf8')), 'o campo do Cadastro grava os dois');
+  } finally { run('setPelExtra=__bkQ10.sp; pelAtual=__bkQ10.pa; renderPelFicha=__bkQ10.rf; audit=__bkQ10.au;'); }
 });
 
 // ------------------------------------------------ o fim
