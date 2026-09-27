@@ -2394,7 +2394,8 @@ provaAsync('E1 — digitar o microchip no Plantão grava SÓ o microchip (a fich
     for (let i = 0; i < 20; i++) await Promise.resolve();
     const g = JSON.parse(JSON.stringify(run('__grav')));
     assert.deepStrictEqual(g.map((x) => x.p).sort(), ['auaulandia/cadastro/tico__joana', 'daycare/cadastro/tico__joana']);
-    g.forEach((x) => assert.deepStrictEqual(x.v, { chip: '963000111222333' }, 'só o campo mudado; nada de dias, sexo ou nascimento vazios'));
+    // O número vai também para `microchip`, onde o "sem microchip" mora (QA21 B1).
+    g.forEach((x) => assert.deepStrictEqual(x.v, { chip: '963000111222333', microchip: '963000111222333' }, 'só o campo mudado; nada de dias, sexo ou nascimento vazios'));
     assert.strictEqual(run("__els['hf-chip'].value"), '963000111222333', 'a leitura atrasada do banco não atropela o que foi digitado');
     run('__grav=[]; onCadGravar();');
     assert.strictEqual(run('__grav.length'), 0, 'salvar de novo sem mudança não grava nada');
@@ -2416,6 +2417,93 @@ prova('alergia de hóspede sem ficha ligada: a tela avisa em vermelho e o rastro
     const a = JSON.parse(JSON.stringify(run('__aud')));
     assert.ok(a.some((x) => x.a === 'alergia-sem-ficha' && /Pipa \(Fulana\) — alergia: frango/.test(x.b)), JSON.stringify(a));
   } finally { run(PLANTAO_VOLTA); }
+});
+
+// QA21 (27/set/2026): o que a 1ª revisão do Plantão achou
+console.log('\nPlantão — correções do QA21');
+prova('QA21 M1 — trocar de hóspede limpa o aviso da alergia do anterior; apagar a alergia apaga o aviso', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    assert.ok(/SÓ NESTE aparelho/.test(run("__els['hf-alergia-st'].textContent")));
+    run(`setHospAlergia('alergia','');`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'apagou a alergia: o aviso some');
+    run(`setHospAlergia('alergia','frango'); __bkHs=hospedes; hospedes=[{nome:'Bolt', tutor:'Ana'}];
+      try{ abrirPlantao(0); }catch(e){} hospedes=__bkHs;`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'o aviso da Pipa não fica na tela do Bolt');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 M2 — quem não edita fichas recebe a instrução certa (avisar a Gestão)', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__bkCe=canEditPel; canEditPel=function(){ return false; };
+      currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    const t = run("__els['hf-alergia-st'].textContent");
+    assert.ok(/Avise a Gestão ou a Supervisão/.test(t) && !/Cadastro de Peludinhos/.test(t), t);
+    run(`canEditPel=function(){ return true; }; setHospAlergia('restricao','sem frango');`);
+    assert.ok(/Cadastro de Peludinhos e registre a restrição/.test(run("__els['hf-alergia-st'].textContent")));
+  } finally { run('canEditPel=__bkCe;'); run(PLANTAO_VOLTA); }
+});
+prova('QA21 M3 — nascimento incompleto ou impossível não vai para a ficha', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={nasc:'2020-05-01'};
+      document.getElementById('hf-nasc').value='01/05/2'; onCadGravar();`);
+    assert.strictEqual(run('__grav.length'), 0, 'data pela metade não grava');
+    run(`document.getElementById('hf-nasc').value='01/05/2099'; onCadGravar();`);
+    assert.strictEqual(run('__grav.length'), 0, 'data no futuro não grava');
+    run(`document.getElementById('hf-nasc').value='03/06/2021'; onCadGravar();`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.length === 2 && g.every((x) => x.v.nasc === '2021-06-03'), JSON.stringify(g));
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 M4 — FILHOt da base fixa abre com raça, tutor e nascimento; vazio gravado não encobre valor', () => {
+  run(PLANTAO_STUBS);
+  try {
+    const p = run('JSON.parse(JSON.stringify(PELUDINHOS[0]))');
+    const k = run('pelKey(PELUDINHOS[0])');
+    run(`pelCadCache={}; pelCadCache[${JSON.stringify(k)}]={raca:'', sexo:'Fêmea'};`);
+    const m = JSON.parse(JSON.stringify(run(`cadMestreDe(${JSON.stringify(k)})`)));
+    assert.strictEqual(m.raca, p.raca, 'raça da base fixa, apesar do "" gravado');
+    assert.strictEqual(m.tutor, p.tutor);
+    assert.strictEqual(m.nasc, p.nasc);
+    assert.strictEqual(m.sexo, 'Fêmea', 'o que foi gravado vale por cima da base');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 B1 — "sem microchip" não aparece como número no campo', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`aplicarCadastro({microchip:Z_NAO_TEM});`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '');
+    run(`aplicarCadastro({microchip:'98100'});`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '98100');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 B3 — trocar de hóspede antes dos 0,9 s grava o que foi digitado no anterior', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stB3=setTimeout; setTimeout=function(){ return 7; };   // o relógio de 0,9 s fica pendente
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad();
+      __bkHs=hospedes; hospedes=[{nome:'Bolt', tutor:'Ana'}]; try{ abrirPlantao(0); }catch(e){} hospedes=__bkHs;`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.some((x) => x.p === 'daycare/cadastro/tico__joana' && x.v.raca === 'Lhasa Apso'), JSON.stringify(g));
+    assert.strictEqual(run('__cadTimer'), null, 'o relógio pendente foi desligado');
+  } finally { run('setTimeout=__stB3; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+provaAsync('QA21 B5 — a leitura atrasada não atropela o que está sendo digitado (sem salvar) nem cai no hóspede seguinte', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      __dbVals['daycare/cadastro/tico__joana']={raca:'Shih Tzu', sexo:'Macho'};
+      carregarCadastro(); document.getElementById('hfRaca').value='Lhas';`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hfRaca'].value"), 'Lhas', 'o que está sendo digitado continua na tela');
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      carregarCadastro(); currentHosp={nome:'Bolt', tutor:'Ana'}; __cadKeyFixa='bolt__ana'; document.getElementById('hfRaca').value='Poodle';`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hfRaca'].value"), 'Poodle', 'a ficha do Tico não cai na tela do Bolt');
+  } finally { run('try{ if(__cadTimer){ clearTimeout(__cadTimer); __cadTimer=null; } }catch(e){}'); run(PLANTAO_VOLTA); }
 });
 
 // ------------------------------------------------ o fim

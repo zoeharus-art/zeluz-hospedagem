@@ -3267,7 +3267,7 @@
           <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
           <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
         </div>
-        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="onCad();this.textContent='✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',1500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
+        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="var _r=cadGravarAgora();this.textContent=(_r&&_r.apagados)?((typeof canEditPel==='function'&&canEditPel())?'Para apagar, use o Cadastro de Peludinhos':'Para apagar, avise a Gestão'):'✅ Cadastro salvo';setTimeout(()=>this.textContent='Salvar cadastro',2500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
       </div>
       <datalist id="racasList"></datalist>
 
@@ -8887,9 +8887,15 @@
       // aparelho de quem digitou, e o celular da manhã, a ficha e o Day Care não sabiam. Ligar
       // pelo nome seria pior (xarás herdariam a alergia do outro). A tela diz, em vermelho,
       // onde registrar de verdade — e o rastro chega à Gestão.
+      if(!String(val||'').trim()) _hfAlergiaSt('', '');
       if(String(val||'').trim()){
+        var _oq=(campo==='restricao'?'restrição':'alergia');
+        // Quem recebe o FILHOt (a Monitora) não abre o Cadastro de Peludinhos: a instrução
+        // muda conforme quem está com o aparelho na mão (QA21 M2).
         _hfAlergiaSt('var(--crm-critico)','⚠ Anotado SÓ NESTE aparelho: este hóspede não está ligado a uma ficha. '
-          +'Abra o FILHOt pelo Cadastro de Peludinhos e registre a '+(campo==='restricao'?'restrição':'alergia')+' lá, para valer em todos os aparelhos.');
+          +((typeof canEditPel==='function' && canEditPel())
+            ? ('Abra o FILHOt pelo Cadastro de Peludinhos e registre a '+_oq+' lá, para valer em todos os aparelhos.')
+            : ('Avise a Gestão ou a Supervisão para registrar a '+_oq+' na ficha — o aviso já foi para a Gestão.')));
         try{ if(typeof audit==='function') audit('alergia-sem-ficha',
           (currentHosp.nome||'')+(currentHosp.tutor?(' ('+currentHosp.tutor+')'):'')+' — '+(campo==='restricao'?'restrição':'alergia')+': '+String(val).slice(0,120),
           {pet:currentHosp.nome||'', campo:campo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
@@ -9605,6 +9611,10 @@
 
   let currentHosp=null;
   function abrirPlantao(i){
+    // O que ficou digitado no hóspede anterior grava antes da troca (QA21 B3), e o aviso
+    // da alergia do anterior não fica na tela deste (QA21 M1).
+    try{ if(currentHosp && __cadTimer) cadGravarAgora(); }catch(e){} /* silencioso de propósito: gravação de conveniência — o erro real já vai para _logFalhaGrav */
+    try{ _hfAlergiaSt('', ''); }catch(e){} /* silencioso de propósito: limpeza de tela */
     const h=hospedes[i]; currentHosp=h;
     if(typeof fixarCadKey==='function') fixarCadKey(h);   // trava a chave do cadastro desta ficha
     const info=getInfo(h);
@@ -9683,7 +9693,7 @@
     document.getElementById('hf-meta').innerHTML=`${v?v+' · ':''}<strong>${currentHosp.mascote?'Moradora':(currentHosp.hospede?'Hóspede':(currentHosp.pernoite?'Pernoite':'Hóspede'))}</strong> · ${currentHosp.mascote?'Nossa Zelozinha':(_tutor2?'Tutor: '+_tutor2:'Tutor a confirmar')}`;
   }
   function onChip(v){ onCad(); }
-  function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
+  function toggleCadastro(){ const c=document.getElementById('card-cadastro'); if(!c) return; if(c.style.display==='block' && __cadTimer){ try{ cadGravarAgora(); }catch(e){} /* silencioso de propósito: o erro real já vai para _logFalhaGrav */ } c.style.display=(c.style.display==='block'?'none':'block'); if(c.style.display==='block') c.scrollIntoView({behavior:'smooth',block:'center'}); }
   // ---- Cadastro do peludinho (só Gestão edita) ----
   // ===== ITEM 14 (Adriana 02/ago/2026) — a foto do Ozzy Spitz mostrava o Ozzy Lhasa ==========
   // A estadia guarda o tutor COMPLETO ("Zuleica Reis Avila"); o cadastro-mestre foi importado
@@ -9766,7 +9776,7 @@
   // e a gravação espera a pessoa parar de digitar (0,9s).
   var __cadKeyFixa=null, __cadTimer=null;
   function fixarCadKey(h){ try{ __cadKeyFixa=(typeof cadKey==='function')?cadKey(h):null; }catch(e){ __cadKeyFixa=null; } }
-  function onCad(){ clearTimeout(__cadTimer); __cadTimer=setTimeout(onCadGravar, 900); }
+  function onCad(){ clearTimeout(__cadTimer); __cadTimer=setTimeout(function(){ __cadTimer=null; onCadGravar(); }, 900); }
   // ===== O PLANTÃO NÃO APAGA A FICHA (auditoria de dados, 27/set/2026) ================
   // Adriana, 27/set: "reveja as conexões... o banco de dados precisa ser o mesmo, para tudo."
   // A auditoria achou o único ponto em que uma área APAGAVA dado da outra: o "Editar cadastro"
@@ -9801,7 +9811,15 @@
     const cadTela=cadFormLer();
     document.getElementById('hf-idade').value=calcIdade(cadTela.nasc);
     const cad=cadDiferenca(__cadAberto||{}, cadTela);
-    if(!Object.keys(cad).length){ atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela)); return; }
+    // O que a pessoa APAGOU não grava (nunca vazio por cima de valor) — e o botão diz isso.
+    var _apagados=Object.keys(cadTela).filter(function(k){ return !cadTela[k] && (__cadAberto||{})[k]; }).length;
+    // Nascimento só entra na ficha COMPLETO e POSSÍVEL (QA21 M3), pela mesma régua do
+    // setPelNasc: "01/05/2" numa pausa de digitação, ou 2099, não viram a data da ficha.
+    if(cad.nasc!==undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(cad.nasc) && nascPlausivel(cad.nasc))) delete cad.nasc;
+    // Número de microchip é uma resposta: grava também em `microchip`, onde o "sem microchip"
+    // mora — senão a ficha diria, ao mesmo tempo, o número e "não tem" (QA21 B1).
+    if(cad.chip) cad.microchip=cad.chip;
+    if(!Object.keys(cad).length){ atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela)); return {apagados:_apagados}; }
     setInfo(currentHosp,cad);
     // Chave FIXA da ficha aberta — nunca recalculada a partir do que está sendo digitado.
     var _ck=__cadKeyFixa||cadKey(currentHosp);
@@ -9813,6 +9831,13 @@
     try{ if(currentHosp){ if(cad.raca) currentHosp.raca=cad.raca; if(cad.tutor) currentHosp.tutor=cad.tutor; } }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela));
     try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    return {apagados:_apagados};
+  }
+  // Grava AGORA o que estava esperando os 0,9 s (QA21 B3): trocar de hóspede, fechar o card
+  // ou tocar em Salvar logo depois de digitar não perde a edição.
+  function cadGravarAgora(){
+    if(__cadTimer){ clearTimeout(__cadTimer); __cadTimer=null; }
+    return onCadGravar();
   }
   // Editar o nome do FILHOt — só Gestão/Supervisão (o card-cadastro já é restrito a esses perfis).
   // O nome editado VENCE na exibição; o vínculo interno dos dados (relatórios/fotos) continua pela etiqueta original — nada se desliga.
@@ -9843,7 +9868,7 @@
     document.getElementById('hfRaca').value=cad.raca||(currentHosp&&currentHosp.raca)||'';
     setSeg('hf-sexo',cad.sexo); setSeg('hf-cast',cad.castrado);
     document.getElementById('hf-tutor').value=cad.tutor||(currentHosp&&currentHosp.tutor)||'';
-    document.getElementById('hf-chip').value=cad.chip||cad.microchip||'';
+    document.getElementById('hf-chip').value=zChipNumero(cad)||'';
     const b=document.getElementById('hf-brinq'); if(b) b.value=cad.brinquedos||'';
     { const _f=cad.foto||((currentHosp&&typeof fotoDe==='function')?fotoDe(currentHosp):''); const av=document.getElementById('hf-av'); if(av&&_f){ av.style.backgroundImage=`url('${_f}')`; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; av.textContent=''; } }
     atualizarHeader(cad);
@@ -9855,7 +9880,20 @@
   // Plantão; a ficha daycare/cadastro é a que o Day Care, o check-in e o almoço leem. O
   // formulário abre com a ficha por cima do espelho — e a leitura do banco só redesenha se a
   // pessoa ainda não começou a digitar (antes, a resposta atrasada atropelava o que ela escrevia).
-  function cadMestreDe(k){ try{ return (typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k])||{}; }catch(e){ return {}; } }
+  // Só o que tem valor: um "" gravado na ficha não encobre o valor de outra fonte (QA21 M4c).
+  function cadSoCheios(o){ var out={}; Object.keys(o||{}).forEach(function(c){ var v=o[c]; if(v!=null && v!=='') out[c]=v; }); return out; }
+  // A ficha RESOLVIDA, como o resto do app a enxerga (QA21 M4a): a base fixa do código
+  // (PELUDINHOS: nome, raça, tutor, nascimento) e, por cima, o que foi gravado na ficha.
+  function cadMestreDe(k){
+    var out={};
+    try{
+      var p=(typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS))
+        ? PELUDINHOS.filter(function(x){ return x && pelKey(x)===k; })[0] : null;
+      if(p) out=cadSoCheios({nome:p.n, raca:p.raca, tutor:p.tutor, nasc:p.nasc});
+    }catch(e){} /* silencioso de propósito: sem a base fixa vale o que foi gravado */
+    try{ if(typeof pelCadCache!=='undefined' && pelCadCache) out=Object.assign(out, cadSoCheios(pelCadCache[k])); }catch(e){} /* silencioso de propósito: sem o cache vale a base */
+    return out;
+  }
   function carregarCadastro(){
     if(!currentHosp) return;
     fotoPendente=null;
@@ -9871,7 +9909,7 @@
         if(currentHosp!==_h) return;                                                   // já abriu outro FILHOt
         // Já está digitando, ou já gravou algo depois de abrir: a leitura é mais velha que a tela.
         if(__cadGravouDesdeAbrir || Object.keys(cadDiferenca(__cadAberto||{}, cadFormLer())).length) return;
-        aplicarCadastro(Object.assign({}, getCad(_h), r[0], r[1]));
+        aplicarCadastro(Object.assign({}, getCad(_h), r[0], cadMestreDe(_k), cadSoCheios(r[1])));
       }).catch(function(e){ _logLeituraFalhou('cadastro (carregarCadastro)', e); });
     }
   }
