@@ -2820,11 +2820,14 @@ const BF_STUBS = `__bkBF={P:PELUDINHOS, pe:pelExtra, rl:repLancamentos, db:DB, d
       return Promise.resolve({val:function(){ return v===undefined?null:v; }}); } }; }};
   __bkCP=carregarPlanilhaDia; __planOk=true; __plan={lida:true, dia:'2026-09-28', banho:[], faltas:[]};
   carregarPlanilhaDia=function(){ return Promise.resolve(__planOk?__plan:{lida:false, banho:[], faltas:[]}); };
-  BANHO_FALTA=[]; BANHO_FALTA_DEC={}; BANHO_FALTA_DIA=''; BANHO_FALTA_VISTO={}; BANHO_FALTA_TRAVA={}; BANHO_FALTA_CHEGOU=[]; BANHO_FALTA_FILA=[];`;
+  __bkBF.viu=BANHO_FALTA_VIU; __bkBF.lido=BANHO_FALTA_LIDO; __bkBF.fs=fetchSheet;
+  BANHO_FALTA=[]; BANHO_FALTA_DEC={}; BANHO_FALTA_DIA=''; BANHO_FALTA_VISTO={}; BANHO_FALTA_TRAVA={}; BANHO_FALTA_CHEGOU=[]; BANHO_FALTA_FILA=[];
+  BANHO_FALTA_VIU={}; BANHO_FALTA_LIDO={lanc:0, plan:0};`;
 const BF_VOLTA = `PELUDINHOS=__bkBF.P; pelExtra=__bkBF.pe; repLancamentos=__bkBF.rl; DB=__bkBF.db; dashEspelhar=__bkBF.de; setPelExtra=__bkBF.sp;
   banhoAutoPedirConferencia=__bkBF.ac; zAlertao=__bkBF.za; zEscolha=__bkBF.ze; repPodeLancar=__bkBF.rp; audit=__bkBF.au; hojeRedesenhar=__bkBF.hr;
   renderDash=__bkBF.rd; pessoaDoTurno=__bkBF.pt; dcChamada=__bkBF.dc; setTimeout=__bkBF.st; document.getElementById=__bkBF.ge; BANHO_FALTA=__bkBF.bf; BANHO_FALTA_DEC=__bkBF.bd;
-  BANHO_FALTA_DIA=__bkBF.bdia; BANHO_FALTA_VISTO=__bkBF.bv; BANHO_FALTA_TRAVA=__bkBF.bt; BANHO_FALTA_CHEGOU=__bkBF.bc; BANHO_FALTA_FILA=__bkBF.fi; planDia=__bkBF.pl; carregarPlanilhaDia=__bkCP;`;
+  BANHO_FALTA_DIA=__bkBF.bdia; BANHO_FALTA_VISTO=__bkBF.bv; BANHO_FALTA_TRAVA=__bkBF.bt; BANHO_FALTA_CHEGOU=__bkBF.bc; BANHO_FALTA_FILA=__bkBF.fi; planDia=__bkBF.pl; carregarPlanilhaDia=__bkCP;
+  BANHO_FALTA_VIU=__bkBF.viu; BANHO_FALTA_LIDO=__bkBF.lido; fetchSheet=__bkBF.fs;`;
 const tick = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 const MEL_FIXO = `__extra.Mel={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'09:00', desde:'2026-09-01'}};`;
 prova('lista: todos os banhos do dia; fixo com banho escrito à mão; linha do lançamento não duplica; falta avisada no app e na planilha', () => {
@@ -2929,10 +2932,11 @@ provaAsync('"ainda vem": no banho fixo grava o "manter"; se a ficha recusar, avi
     assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'mantido');
     const pel = JSON.parse(JSON.stringify(run('__pel')));
     assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].manter === true, JSON.stringify(pel));
-    run(`delete __banco['daycare/banho-falta/${dia}/${kM}']; __pelOk=false; __alertas=[];`);
+    run(`delete __banco['daycare/banho-falta/${dia}/${kM}']; __pelOk=false; __alertas=[]; BANHO_FALTA_VISTO['${dia}|${kM}']=1;`);
     await run(`banhoFaltaManter({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
     await tick();
     assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'falhou');
+    assert.strictEqual(run(`BANHO_FALTA_VISTO['${dia}|${kM}']`), undefined, 'a pergunta volta neste aparelho (QA31)');
     assert.ok(/NÃO SEGUREI O BANHO FIXO/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
   } finally { run(BF_VOLTA); }
 });
@@ -3067,15 +3071,38 @@ provaAsync('QA30 — "ainda vem" que falhou volta a perguntar e ganha o botão; 
     assert.ok(/NÃO CONSEGUI REGISTRAR/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
   } finally { run(BF_VOLTA); }
 });
-prova('QA30 — liberado mas ainda na planilha: o cartão diz e a pergunta volta; "veio" vence a falta avisada; hora do fixo com lançamento', () => {
+prova('QA30/QA31 — liberado mas ainda na planilha só com leitura NOVA: o cartão diz e a pergunta volta; "veio" vence a falta avisada; hora do fixo com lançamento', () => {
   run(BF_STUBS);
   try {
     const dia = run('dcDataKey()');
     run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'15:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'15:00'}], porque:'faltou'}];
-      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={jas:{decisao:'liberado', quem:'Márcia'}};`);
-    assert.ok(/ainda aparece na planilha/.test(run('banhoFaltaCardHTML()')) && /Liberar o horário/.test(run('banhoFaltaCardHTML()')));
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={jas:{decisao:'liberado', quem:'Márcia', ts:5}};`);
+    const card = () => run('banhoFaltaCardHTML()');
+    // sem saber quando soube da liberação: a planilha na memória pode ser velha
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), card());
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 0, 'planilha de antes: não pergunta de novo');
+    // planilha pedida ANTES de este aparelho saber da liberação: também não acusa
+    run(`BANHO_FALTA_VIU['${dia}|jas']={ts:5, em:Date.now()}; BANHO_FALTA_LIDO={lanc:0, plan:Date.now()-1000};`);
+    assert.ok(!/ainda aparece/.test(card()), card());
+    // pedida 30 s depois: ainda na folga da TV
+    run(`BANHO_FALTA_LIDO={lanc:0, plan:BANHO_FALTA_VIU['${dia}|jas'].em+30000};`);
+    assert.ok(!/ainda aparece/.test(card()), 'dentro da folga de 1 minuto');
+    // pedida mais de 1 minuto depois, com o banho lá: acusa, e a pergunta volta dizendo quem liberou
+    run(`BANHO_FALTA_LIDO={lanc:0, plan:BANHO_FALTA_VIU['${dia}|jas'].em+61000};`);
+    assert.ok(/ainda aparece na planilha/.test(card()) && /Liberar o horário/.test(card()), card());
     run(`banhoFaltaPerguntar('${dia}');`);
     assert.strictEqual(run('__esc.length'), 1, 'ainda está na planilha: pergunta de novo');
+    assert.ok(run('__esc[0].l').some((x) => /Márcia já liberou o horário, mas o banho ainda aparece na planilha/.test(x)), JSON.stringify(run('__esc[0].l')));
+    // a liberação foi refeita (outro ts): o que este aparelho sabia não vale mais
+    run(`BANHO_FALTA_DEC.jas.ts=6;`);
+    assert.ok(!/ainda aparece/.test(card()), 'decisão refeita: espera saber dela');
+    // lançamento: vale a leitura do banco pedida depois de saber (a mesma conferência conta)
+    const pura = (lanc, plan) => run(`banhoFaltaAindaNaPlanilha({chave:'x', lancs:${lanc ? '[{id:1}]' : '[]'}, txts:${plan ? '[{txt:1}]' : '[]'}}, {decisao:'liberado', ts:7}, {ts:7, em:1000}, {lanc:${lanc || 0}, plan:${plan || 0}})`);
+    igual(pura(1000, 0), true, 'lançamento lido na mesma conferência em que soube');
+    igual(pura(999, 0), false, 'lançamento lido antes');
+    igual(pura(0, 61000), true);
+    igual(pura(0, 60999), false);
     const kB = run("dcKey('Bolt','Rui')");
     run(`__lancR.Bolt=[{_id:'c1', tipo:'credito', data:'2026-09-28', motivo:'viagem'}];`);
     igual(JSON.parse(JSON.stringify(run(`banhoFaltaQuem('2026-09-28', {'${kB}':'veio'}, [{p:{n:'Bolt', tutor:'Rui'}}])`))), {}, 'avisou e veio: não faltou');
@@ -3084,6 +3111,130 @@ prova('QA30 — liberado mas ainda na planilha: o cartão diz e a pergunta volta
     const L = JSON.parse(JSON.stringify(run(`banhoFaltaLista('2026-09-28', {'${kM}':'faltou'}, {L1:{chave:'${kM}', valor:'MEL HIDRATAÇÃO', hora:'15:00'}}, [], [])`)));
     igual(L.map((o) => [o.hora, o.origem, !!o.fixo]), [['09:00 e 15:00', 'lancamento', true]], 'o horário do fixo entra junto do lançamento');
   } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — leitura VERDADEIRA da planilha e ponte lenta: depois de liberar não acusa "ainda aparece"; outro aparelho com planilha velha também não; leitura nova com o banho lá acusa, e Liberar de novo funciona', async () => {
+  run(BF_STUBS);
+  run(`carregarPlanilhaDia=__bkCP; __linhas=[];
+    fetchSheet=function(){ var d=new Date(), dt='Date('+d.getFullYear()+','+d.getMonth()+','+d.getDate()+')';
+      return Promise.resolve({cols:[{label:'Data'},{label:'Banho'},{label:'Hora Banho'}],
+        rows:__linhas.map(function(l){ return {c:[{v:dt},{v:l[0]},{v:l[1]}]}; })}); };`);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    const dec = `__banco['daycare/banho-falta/${dia}/${kJ}']`;
+    const rodarTimers = () => run('var __t=__timers.splice(0); __t.forEach(function(f){ f(); });');
+    const card = () => run('banhoFaltaCardHTML()');
+    run(`__linhas=[['JASMINE','Date(1899,11,30,15,0,0)']]; dcChamada={}; dcChamada['${kJ}']='faltou';`);
+    await run('carregarPlanilhaDia()'); await tick();
+    assert.ok(run('planDia.lida') && run('planDia.banho.length') === 1 && run('planDia.banho[0].hora') === '15:00' && run('planDia.lidaEm') > 0, 'a leitura verdadeira acha o banho e carimba a hora do pedido');
+    run('__timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.strictEqual(run('BANHO_FALTA.length'), 1);
+    // a ponte demora: a remoção só responde quando a prova mandar
+    run(`__pontePend=[]; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({acao:acao, valor:reg.valor}); return new Promise(function(res){ __pontePend.push(res); }); };`);
+    const p = run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run('__pontePend.length'), 1, 'a ponte foi chamada e está demorando');
+    rodarTimers(); await tick();   // a conferência que a releitura agendou roda ANTES da resposta da ponte
+    assert.strictEqual(run(dec + '.decisao'), 'liberando');
+    run(`__linhas=[]; __pontePend[0]({ok:true, removidos:1});`); await p; await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'liberado');
+    assert.strictEqual(run('planDia.banho.length'), 0, 'a memória deste aparelho acompanha a saída');
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), card());
+    run('BANHO_FALTA_VISTO={}; __esc=[];');
+    rodarTimers(); await tick();   // a lista se refaz depois do sucesso
+    assert.ok(run('BANHO_FALTA.length') === 1 && run('BANHO_FALTA[0].soDecisao') === true, 'a lista refeita não tem mais o banho dela');
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()) && run('__esc.length') === 0, card());
+    // OUTRO APARELHO: leu a planilha às 8h (com o banho) e só agora vê o "liberado"
+    run(`BANHO_FALTA_VIU={}; BANHO_FALTA_VISTO={}; __esc=[]; __linhas=[['JASMINE','Date(1899,11,30,15,0,0)']];`);
+    await run('carregarPlanilhaDia()'); await tick();
+    run('planDia.lidaEm=Date.now()-2*3600000; __timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), 'planilha de antes: ' + card());
+    assert.strictEqual(run('__esc.length'), 0, 'planilha de antes: a pergunta não volta');
+    // leitura nova, mais de 1 minuto depois de saber, e o banho continua lá: acusa e pergunta
+    run(`BANHO_FALTA_VIU['${dia}|${kJ}'].em-=120000;`);
+    await run('carregarPlanilhaDia()'); await tick();
+    run('__timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/ainda aparece na planilha/.test(card()), card());
+    assert.strictEqual(run('__esc.length'), 1, 'a pergunta volta');
+    // Liberar de novo FUNCIONA (não responde "já foi decidido")
+    const ts1 = run(dec + '.ts');
+    run(`__esp=[]; __alertas=[]; __espResp={ok:true, removidos:1}; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({acao:acao, valor:reg.valor}); return Promise.resolve(__espResp); };`);
+    run('__esc[0].fn[0]();'); await tick(); await tick();
+    assert.ok(run('__esp').some((x) => x.acao === 'remover' && x.valor === 'JASMINE'), JSON.stringify(run('__esp')));
+    assert.ok(run(dec + '.decisao') === 'liberado' && run(dec + '.ts') !== ts1, 'liberado de novo');
+    assert.ok(!run('__alertas').some((a) => /JÁ FOI DECIDIDO/.test(a.t)), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — chegou com a pergunta aberta: nada sai; planilha de outro dia não serve; leitura que falha não apaga a planilha boa; "Ainda vem" do cartão sobre um liberado com banho de volta; refeito por outro: já decidido', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    const dec = `__banco['daycare/banho-falta/${dia}/${kJ}']`;
+    const oJ = `{chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[{id:'L1', reg:{chave:'${kJ}', valor:'JASMINE', hora:'10:00'}}], txts:[], porque:'faltou'}`;
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={chave:'${kJ}', valor:'JASMINE', hora:'10:00'}; __banco['daycare/chamada/${dia}/${kJ}']='veio'; __plan.dia='${dia}';`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0 && run(dec) === undefined, 'chegou: nada sai e nada é decidido');
+    assert.ok(/JASMINE CHEGOU/.test(run('__alertas[0].t')) && /o banho das 10:00 continua/.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    // planilha lida de OUTRO dia: não serve para liberar
+    run(`delete __banco['daycare/chamada/${dia}/${kJ}']; __alertas=[]; __plan.dia='2026-01-01';`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'falhou');
+    assert.ok(/ler a planilha/.test(run('__alertas[0].l[0]')) && run('__rmBF.length') === 0);
+    // a releitura falhou: a planilha que este aparelho já tinha continua (avulso, reposição, despertador)
+    run(`carregarPlanilhaDia=function(){ planDia={banho:[], faltas:[], avulso:[], lida:false, erro:'x'}; return Promise.resolve(planDia); };
+      planDia={lida:true, dia:'${dia}', banho:[{p:{n:'Bolt', tutor:'Rui'}, hora:'11:30', txt:'BOLT'}], avulso:[{txt:'MEL'}], faltas:[]}; __alertas=[];`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.ok(run('planDia.lida') && run('planDia.banho.length') === 1 && run('planDia.avulso.length') === 1, 'a planilha boa continua');
+    assert.strictEqual(run(dec + '.decisao'), 'falhou');
+    // liberado, e o banho foi lançado de novo (leitura nova do banco): "Ainda vem" no cartão grava "mantido"
+    run(`carregarPlanilhaDia=function(){ return Promise.resolve(__plan); }; __plan.dia='${dia}'; __plan.banho=[];
+      ${dec}={decisao:'liberado', quem:'Carla', ts:111}; BANHO_FALTA_DEC={}; BANHO_FALTA_DEC['${kJ}']={decisao:'liberado', quem:'Carla', ts:111};
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA=[${oJ}]; BANHO_FALTA_VIU['${dia}|${kJ}']={ts:111, em:Date.now()-1000}; BANHO_FALTA_LIDO={lanc:Date.now(), plan:0};
+      __rmBF=[]; __esp=[]; __alertas=[];`);
+    assert.ok(/ainda aparece na planilha/.test(run('banhoFaltaCardHTML()')), run('banhoFaltaCardHTML()'));
+    run(`banhoFaltaManterUI('${kJ}');`); await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'mantido', 'o botão do cartão chama o "ainda vem", sobre o liberado que este aparelho viu');
+    assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0, '"ainda vem" não tira nada');
+    // outro aparelho refez a liberação (outro ts): este não passa por cima
+    run(`${dec}={decisao:'liberado', quem:'Bia', ts:222}; BANHO_FALTA_DEC['${kJ}']={decisao:'liberado', quem:'Carla', ts:111}; __alertas=[];`);
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.ok(/JÁ FOI DECIDIDO/.test(run('__alertas[0].t')) && run(dec + '.quem') === 'Bia', JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — "liberando" recente de outro aparelho: relê de novo quando ficar preso, e não pergunta o que ele já liberou', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE'}], porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
+      BANHO_FALTA_DEC={jas:{decisao:'liberando', quem:'Eu', ts:Date.now()-10*60000}};
+      __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberando', quem:'Bia', ts:Date.now()}; banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 0, 'a Bia está liberando agora: não pergunta');
+    assert.strictEqual(run('BANHO_FALTA[0].__relido'), undefined, 'a marca da releitura sai');
+    // 6 minutos depois, pelo relógio deste aparelho; a Bia já terminou
+    run(`BANHO_FALTA_DEC.jas.ts=Date.now()-6*60000; __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Bia', ts:Date.now()};
+      banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 0, 'relê de novo e vê o "liberado": não pergunta');
+    assert.strictEqual(run('BANHO_FALTA_DEC.jas.decisao'), 'liberado');
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — releitura forçada durante outra leitura da planilha: relê de novo quando ela terminar (e só uma vez)', async () => {
+  run(`__bkGP={cp:carregarPlanilhaDia, eh:ehHoje, cl:dcCarregarLancamentos, db:DB, rd:dcRedesenharAtividade, pc:_planCarregando, pn:_planDeNovo, pd:planDia};
+    __gpN=0; __gpRes=[]; carregarPlanilhaDia=function(){ __gpN++; return new Promise(function(r){ __gpRes.push(r); }); };
+    ehHoje=function(){ return true; }; dcCarregarLancamentos=function(){}; DB=null; dcRedesenharAtividade=function(){};
+    _planCarregando=false; _planDeNovo=false;`);
+  try {
+    run('dcGarantirPlanilha(true); dcGarantirPlanilha(true);');
+    assert.strictEqual(run('__gpN'), 1, 'uma leitura por vez');
+    run('__gpRes[0]();'); await tick();
+    assert.strictEqual(run('__gpN'), 2, 'a leitura que estava em curso pode ter saído antes da mudança: relê');
+    run('__gpRes[1]();'); await tick();
+    assert.strictEqual(run('__gpN'), 2, 'sem laço');
+    run('planDia={lida:true, banho:[], faltas:[]}; dcGarantirPlanilha(false);');
+    assert.strictEqual(run('__gpN'), 2, 'sem forçar e lida há pouco: não relê');
+  } finally { run('carregarPlanilhaDia=__bkGP.cp; ehHoje=__bkGP.eh; dcCarregarLancamentos=__bkGP.cl; DB=__bkGP.db; dcRedesenharAtividade=__bkGP.rd; _planCarregando=__bkGP.pc; _planDeNovo=__bkGP.pn; planDia=__bkGP.pd;'); }
 });
 prova('despertador: não chama quem faltou nem quem avisou a falta, e sai da tela quando a falta é marcada', () => {
   run(`__bkDB={pr:papelRecebeAlarme, eh:ehHoje, pd:planDia, db:despBaixa, md:mostrarDespertador, dc:dcChamada, dn:despNaTela, rl:repLancamentos, ge:document.getElementById, bf:BANHO_FALTA};
@@ -3120,7 +3271,10 @@ prova('ligações: a chamada viva, o Hoje na Zêluz, a planilha, a falta avisada
     const src = fs.readFileSync(APP, 'utf8');
     assert.ok(/planDia=out;[\s\S]{0,400}banhoFaltaAgendar\(\)/.test(src), 'a leitura da planilha agenda a conferência');
     assert.ok(/regs\.some\(function\(r\)\{ return r\.data===dcDataKey\(\); \}\) && typeof banhoFaltaAgendar==='function'\) banhoFaltaAgendar\(\)/.test(src), 'a falta avisada de hoje agenda a conferência');
-    assert.ok(/if\(k==='banho'\)\{ try\{ if\(typeof dcGarantirPlanilha==='function'\) dcGarantirPlanilha\(true\); \}/.test(src), 'tirar um banho à mão relê a planilha (e o cartão se acerta)');
+    assert.ok(/var _espRem=dashEspelhar\(k,id,reg,'remover'\);[\s\S]{0,400}if\(k==='banho'\)\{[\s\S]{0,300}dcGarantirPlanilha\(true\)[\s\S]{0,200}Promise\.resolve\(_espRem\)\.then\(_relerPlan, _relerPlan\)/.test(src),
+      'tirar um banho à mão relê a planilha DEPOIS de a ponte tirar a linha (QA31)');
+    const rem = src.slice(src.indexOf('async function dashRemover('), src.indexOf('var _espRem=dashEspelhar(k,id,reg,\'remover\');'));
+    assert.ok(!/dcGarantirPlanilha\(true\)/.test(rem), 'nenhuma releitura antes da ponte');
     assert.ok(/function hojeCarregar\(\)\{[\s\S]{0,300}dcGarantirPlanilha\(\)/.test(src), 'o Hoje na Zêluz lê a planilha do dia');
   } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; BANHO_FALTA_CHEGOU=__bkLG.bc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
 });

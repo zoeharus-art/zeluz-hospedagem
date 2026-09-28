@@ -78,14 +78,26 @@
 | Liberar o horário | não existia | tira o banho do dia da planilha e da TV: lançamento sai dos Lançamentos do dia; banho fixo vira "pular só este dia"; digitado na planilha sai pela ponte |
 | Vários aparelhos | — | quem decidir primeiro vale; os outros veem "JÁ FOI DECIDIDO" e quem decidiu (`daycare/banho-falta/{dia}/{chave}`) |
 | Outro cartaz aberto (check-in, pagamento, mensagem ao tutor) | — | o aviso do banho espera e aparece depois; nunca apaga o que a recepção está fazendo |
-| A planilha não confirmou | — | não diz "liberado": avisa para tirar à mão, e o botão continua no cartão |
-| "Ainda vem" | — | o horário fica com ele. No banho fixo, o automático deixa o banho na planilha mesmo com a falta. O botão de liberar continua no cartão |
+| Ao tocar em Liberar | — | o app **relê na hora** a planilha e os Lançamentos do dia. Se não conseguir ler a planilha, diz "NÃO LIBEREI O HORÁRIO" e pede para tirar à mão ou tentar de novo; nunca diz "liberado" sem ler. Se a leitura falha, a planilha que o aparelho já tinha continua (avulso, reposição, despertador) |
+| O banho já tinha saído (tirado à mão) | — | "já não estava na planilha nem nos Lançamentos do dia: o horário já está livre" |
+| Chegou com a pergunta aberta | — | antes de tirar, o app olha a chamada de agora: se ela diz "veio", nada sai, e o cartaz "JASMINE CHEGOU" diz que o banho continua |
+| Nada saiu (ponte fora do ar) | — | "falhou", com o motivo; o botão continua no cartão |
+| Parte saiu, e a planilha não confirmou o resto | — | fica "liberado", com o aviso "PARTE NÃO SAIU DA PLANILHA"; no cartão: "horário liberado · a planilha não confirmou: tire à mão" |
+| Liberado, mas uma leitura **nova** ainda mostra o banho (lançado de novo, ou a ponte não tirou) | — | o cartão diz "liberado por Márcia, mas o banho ainda aparece na planilha", e a pergunta volta dizendo quem liberou. **Liberar** e **Ainda vem** funcionam de novo. Só conta leitura pedida depois de o aparelho saber da liberação (a planilha, com 1 minuto de folga para a TV): uma planilha lida antes, como a das 8h, nunca acusa |
+| "Ainda vem" | — | o horário fica com ele. No banho fixo, o automático deixa o banho na planilha mesmo com a falta. O botão de liberar continua no cartão. Se não conseguir gravar, fica "não deu certo", a pergunta volta e o cartão ganha o botão **Ainda vem** |
+| Avisou a falta, mas veio | — | a chamada "veio" vence a falta avisada (do app e da coluna da planilha): não pergunta |
+| "Liberando" que não terminou (o aparelho caiu no meio) | — | depois de 5 minutos volta a ficar em aberto; antes de perguntar, o app relê a decisão (se outro aparelho terminou, não pergunta) |
+| Tirar o banho à mão (Lançamentos do dia › Banho › tirar) | — | depois de a ponte tirar a linha, o app relê a planilha, e o cartão se acerta |
 | Liberado e depois chegou | — | o cartão avisa: "chegou depois de o horário ser liberado: se ainda for tomar banho, lance de novo" |
 | Hoje na Zêluz | — | cartão "Banho de quem faltou", com o botão de liberar e o que foi decidido |
 | Despertador do banho | chamava para descer com quem faltou | não chama quem faltou nem quem avisou a falta, e some da tela quando a falta é marcada |
 
 - **Por que não tira sozinho:** a falta automática das 12h também marca quem ainda chega à tarde para o banho. Quem decide é a recepção.
-- **Onde está no código:** `banhoFaltaQuem`, `banhoFaltaLista`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaReivindicar`, `banhoFaltaExecutar`, `banhoFaltaManter`, `banhoFaltaCardHTML`; ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia` e `repConfirmar`; `checarDespertadorBanho`; `banhoAutoPodeNoDia` respeita o "manter" do dia; `banhosGravarExcecao` devolve a promessa.
+- **Onde está no código:**
+  - `banhoFaltaQuem`, `banhoFaltaLista`, `banhoFaltaMontar`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaReivindicar`, `banhoFaltaExecutar`, `banhoFaltaReler`, `banhoFaltaVeioAgora`, `banhoFaltaManter`, `banhoFaltaCardHTML`;
+  - "ainda na planilha" só com leitura nova: `banhoFaltaAindaNaPlanilha`, `BANHO_FALTA_VIU`, `BANHO_FALTA_LIDO` e o carimbo `planDia.lidaEm`;
+  - ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia`, `repConfirmar`, `hojeCarregar` e `dashRemover`; `dcGarantirPlanilha(true)` com outra leitura em curso relê quando ela terminar;
+  - `checarDespertadorBanho`; `banhoAutoPodeNoDia` respeita o "manter" do dia; `banhosGravarExcecao` devolve a promessa.
 
 ### Decisões registradas (sem mudança de código)
 
