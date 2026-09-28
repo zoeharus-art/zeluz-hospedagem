@@ -58,10 +58,11 @@
 
 | Situação | Antes | Agora |
 |---|---|---|
-| Reposições › **Lançar reposição**: falta de um dia com o **dia de repor** já combinado | a mensagem dizia "está com 1 reposição, com a de hoje, referente ao dia 02/10/2026. O dia de repor já ficou combinado: 01/10/2026" | a mensagem fala em **troca**: "Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02/10 para quinta-feira, dia 01/10." O que é gravado não muda: falta avisada no dia dele e reposição no dia novo |
+| Reposições › **Lançar reposição**: falta de um dia com o **dia de repor** já combinado | a mensagem dizia "está com 1 reposição, com a de hoje, referente ao dia 02/10/2026. O dia de repor já ficou combinado: 01/10/2026" | a mensagem fala em **troca**: "Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02/10 para quinta-feira, dia 01/10." A planilha e o saldo não mudam (falta avisada no dia dele e reposição no dia novo). O lançamento ganha a mesma marca da "Marcar troca": no dia novo, o app mostra "troca cumprida" e não oferece a mensagem "usou uma reposição" |
 | Troca de dia (Marcar reposição ou dia extra › Troca de dia) | "a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita" | o mesmo texto novo, nas palavras dela |
 | Falta lançada para outro dia, sem dia de repor | "com a de hoje, referente ao dia 02/10/2026" (errado: a falta não era de hoje) | "contando a do dia 02/10/2026". "Com a de hoje" só quando a falta é de hoje |
-| Período (férias, viagem) com o dia de volta marcado | reposição | continua reposição |
+| Período (férias, viagem) com o dia de volta marcado, mesmo que renda um dia só | reposição | continua reposição |
+| Falta de um dia que já passou, lançada com o dia de repor | reposição | continua reposição (a troca é sempre de hoje em diante, como na "Marcar troca") |
 
 - **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar`.
 
