@@ -6678,6 +6678,8 @@
       // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
       repAuditDiaDele(p, voltaEfetiva);
       repFechar(); soltar();
+      // Falta avisada para HOJE: se ele tinha banho hoje, a recepção é avisada (28/set/2026).
+      try{ if(regs.some(function(r){ return r.data===dcDataKey(); }) && typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){} /* silencioso de propósito: o aviso volta na próxima mudança da chamada */
       // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
       // vaga: vai com a chave do crédito que acabou de nascer, para a autorização da Márcia
       // já marcar o dia nele — sem a recepção ter de lançar nada de novo.
@@ -19911,6 +19913,7 @@
       });
       planDia=out;
       try{ checarDespertadorBanho(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ // não esperar o próximo tique de 30s
+      try{ if(typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){} /* silencioso de propósito: o aviso do banho de quem faltou volta na próxima leitura */
     }catch(e){
       // planilha fora do ar não pode parar o almoço — o app segue com marcação manual
       planDia=Object.assign(zerar,{erro:'Não consegui ler a planilha agora. O que estiver marcado no app continua valendo.'});
@@ -20013,6 +20016,8 @@
       for(const it of fila){
         const k=dcKey(it.p.n,it.p.tutor);
         if(despBaixa[k]) continue;
+        // Quem faltou não desce para o banho: o despertador não chama (Adriana, 28/set/2026).
+        if(typeof dcChamada!=='undefined' && dcChamada && dcChamada[k]==='faltou') continue;
         const m=minutosAte(it.hora);
         if(m===null) continue;
         if(m<=DESP_ANTES_MIN && m>=-15){ mostrarDespertador(it); return; } // -15: atrasado ainda avisa
@@ -20020,6 +20025,179 @@
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
   }
   setInterval(checarDespertadorBanho, 30000);
+
+  // ===== BANHO DE QUEM FALTOU (Adriana, 28/set/2026, caso da Jasmine) ================
+  // "A Jasmine não veio hoje, tinha banho agendado. Tem que, de alguma forma, tirar o
+  //  horário do banho e avisar: a peluda não veio. Porque está aqui o horário dela e a gente
+  //  deixa de marcar um outro banho."
+  // Faltou (chamada, falta automática das 12h ou falta avisada) e tinha banho no dia: a
+  // recepção recebe o aviso com "Liberar o horário", e o mesmo aviso fica no Hoje na Zêluz.
+  // O app NÃO tira sozinho: a falta das 12h também marca quem ainda vai chegar para o banho
+  // da tarde — quem decide é quem está na recepção. A decisão fica em
+  // daycare/banho-falta/{dia}/{chave} e vale para todos os aparelhos.
+  var BANHO_FALTA=[], BANHO_FALTA_DEC={}, BANHO_FALTA_DIA='', BANHO_FALTA_VISTO={}, __banhoFaltaT=null, __banhoFaltaAberto=false;
+  function banhoFaltaNo(dia){ return 'daycare/banho-falta/'+dia; }
+  function banhoFaltaPel(chave){ try{ return banhosPelDe(chave); }catch(e){ return null; } }
+  // Pura: quem faltou e tinha banho no dia. `chamada` = a chamada do dia; `lancs` = os banhos
+  // dos Lançamentos do dia (daycare/dashboard/{dia}/banho); `planBanho` = os banhos lidos da
+  // planilha. Um item por FILHOt: {chave, nome, hora, origem, id?, reg?, txt?, fixo?, porque}.
+  function banhoFaltaLista(dia, chamada, lancs, planBanho){
+    chamada=chamada||{}; lancs=lancs||{}; planBanho=planBanho||[];
+    var faltou={};
+    Object.keys(chamada).forEach(function(k){ if(chamada[k]==='faltou') faltou[k]='faltou'; });
+    (typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS)?PELUDINHOS:[]).forEach(function(p){
+      try{
+        var k=dcKey(p.n,p.tutor); if(!k || faltou[k]) return;
+        var L=repLancamentos(p)||[], an=repAnulados(L);
+        if(L.some(function(l){ return l && l.tipo==='credito' && !an[l._id] && l.data===dia; })) faltou[k]='avisada';
+      }catch(e){} /* silencioso de propósito: sem o extrato dele, vale a chamada */
+    });
+    var out=[], por={};
+    var nomeDe=function(k, alt){ var p=banhoFaltaPel(k); return (p && typeof pelNome==='function')?pelNome(p):(alt||k); };
+    Object.keys(lancs).forEach(function(id){
+      var r=lancs[id]||{}, k=String(r.chave||'');
+      if(!k || !faltou[k] || por[k]) return;
+      por[k]={chave:k, nome:nomeDe(k, r.valor), hora:r.hora||'', origem:'lancamento', id:id, reg:r, porque:faltou[k]};
+      out.push(por[k]);
+    });
+    planBanho.forEach(function(it){
+      if(!it || !it.p) return;
+      var k=dcKey(it.p.n, it.p.tutor);
+      if(!k || !faltou[k] || por[k]) return;
+      por[k]={chave:k, nome:nomeDe(k, it.p.n), hora:it.hora||'', origem:'planilha', txt:it.txt||'', porque:faltou[k]};
+      out.push(por[k]);
+    });
+    // Banho fixo: o automático escreveu na planilha. "Liberar" grava a exceção do dia, e o
+    // automático tira o que ele mesmo escreveu (e não põe de volta se ela chegar depois).
+    Object.keys(faltou).forEach(function(k){
+      var p=banhoFaltaPel(k); if(!p) return;
+      var br=null; try{ br=banhoRecDe(p); }catch(e){ br=null; }
+      if(!br || !br.ativo || !banhoRecValeNoDia(br, dia)) return;
+      var hora=''; try{ hora=banhoRecHoraNoDia(br, dia)||''; }catch(e){ hora=''; }
+      if(por[k]){ if(por[k].origem!=='lancamento'){ por[k].fixo=true; if(!por[k].hora) por[k].hora=hora; } return; }
+      por[k]={chave:k, nome:nomeDe(k, p.n), hora:hora, origem:'fixo', fixo:true, porque:faltou[k]};
+      out.push(por[k]);
+    });
+    return out.sort(function(a,b){ return String(a.hora||'99').localeCompare(String(b.hora||'99')); });
+  }
+  function banhoFaltaAgendar(){
+    if(__banhoFaltaT) clearTimeout(__banhoFaltaT);
+    __banhoFaltaT=setTimeout(function(){ __banhoFaltaT=null; banhoFaltaVerificar(); }, 1500);
+  }
+  function banhoFaltaVerificar(){
+    if(!DB) return Promise.resolve([]);
+    var dia=dcDataKey();
+    var ler=function(no){ return DB.ref(no).once('value').then(function(s){ return (s && s.val && s.val())||{}; }).catch(function(){ return {}; }); };
+    return Promise.all([ler('daycare/dashboard/'+dia+'/banho'), ler(banhoFaltaNo(dia))]).then(function(r){
+      if(dcDataKey()!==dia) return [];
+      var planB=(typeof planDia!=='undefined' && planDia && planDia.lida && planDia.dia===dia)?(planDia.banho||[]):[];
+      BANHO_FALTA=banhoFaltaLista(dia, (typeof dcChamada!=='undefined'?dcChamada:{}), r[0], planB);
+      BANHO_FALTA_DEC=r[1]||{}; BANHO_FALTA_DIA=dia;
+      try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      banhoFaltaPerguntar(dia);
+      return BANHO_FALTA;
+    });
+  }
+  function banhoFaltaTexto(o){
+    var p=banhoFaltaPel(o.chave), f=!!(p && typeof repEhFemea==='function' && repEhFemea(p));
+    return {f:f, titulo:(o.nome+(f?' NÃO VEIO':' NÃO VEIO')+(o.hora?(' — TINHA BANHO ÀS '+o.hora):' — TINHA BANHO HOJE')).toUpperCase()};
+  }
+  // Um aviso por vez, uma vez por aparelho; quem decide primeiro vale para todos.
+  function banhoFaltaPerguntar(dia){
+    if(__banhoFaltaAberto) return;
+    if(!(typeof repPodeLancar==='function' && repPodeLancar())) return;   // só quem cuida dos lançamentos
+    var o=BANHO_FALTA.filter(function(x){ return !BANHO_FALTA_DEC[x.chave] && !BANHO_FALTA_VISTO[dia+'|'+x.chave]; })[0];
+    if(!o || typeof zEscolha!=='function') return;
+    BANHO_FALTA_VISTO[dia+'|'+o.chave]=1; __banhoFaltaAberto=true;
+    var t=banhoFaltaTexto(o), ela=t.f?'ela':'ele', Ela=t.f?'Ela':'Ele';
+    var proximo=function(){ __banhoFaltaAberto=false; setTimeout(function(){ banhoFaltaPerguntar(dia); }, 400); };
+    zEscolha(t.titulo,
+      [(o.porque==='avisada'?'O tutor avisou a falta de hoje.':'Está como "faltou" na chamada de hoje.')
+        +' O horário do banho continua na planilha e na TV, e ninguém marca outro banho nele.',
+       'Liberar tira o banho '+(o.fixo?'fixo só de hoje (o combinado continua)':'de hoje')+' da planilha e da TV. O horário fica livre para outro banho.',
+       'Se '+ela+' ainda vem (chega mais tarde), toque em «'+Ela+' ainda vem».'],
+      [{t:'Liberar o horário', cor:'#234D67', fn:function(){ banhoFaltaExecutar(o, dia).then(proximo, proximo); }},
+       {t:Ela+' ainda vem', cor:'#1E8449', fn:function(){ banhoFaltaDecidir(o, dia, 'mantido').then(proximo, proximo); }},
+       {t:'Decidir depois', cor:'#7C8B99', fn:proximo}],
+      {corTitulo:'#234D67', rodape:'O aviso também fica no Hoje na Zêluz, com o botão de liberar.'});
+  }
+  function banhoFaltaDecidir(o, dia, decisao){
+    var reg={decisao:decisao, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-'),
+             ts:Date.now(), hora:o.hora||'', origem:o.origem};
+    BANHO_FALTA_DEC[o.chave]=reg;
+    try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    if(!DB) return Promise.resolve(false);
+    return DB.ref(banhoFaltaNo(dia)+'/'+o.chave).set(reg).then(function(){
+      if(typeof audit==='function') audit('banho-falta', o.nome+(decisao==='liberado'?' faltou — horário do banho liberado':' faltou — banho mantido (ainda vem)')
+        +(o.hora?(' ('+o.hora+')'):''), {alvo:o.chave, pet:o.nome});
+      return true;
+    }).catch(function(e){ _logFalhaGrav('banho de quem faltou ('+o.chave+')', e); return false; });
+  }
+  // Tira o banho do dia pelo caminho de onde ele veio.
+  function banhoFaltaExecutar(o, dia){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var feito;
+    if(o.origem==='lancamento'){
+      feito=DB.ref('daycare/dashboard/'+dia+'/banho/'+o.id).remove().then(function(){
+        try{ if(dia===dashDia() && DASH_DADOS.banho) delete DASH_DADOS.banho[o.id]; renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        return dashEspelhar('banho', o.id, o.reg||{}, 'remover', dia);
+      });
+    } else if(o.fixo){
+      // A mesma porta do "Pular só este dia" dos Banhos recorrentes: grava a exceção e pede
+      // a conferência da planilha, que tira o que o automático escreveu.
+      feito=banhosGravarExcecao(o.chave, dia, {pular:true, motivo:'faltou', quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()},
+        'pulou o banho de '+((typeof fmtBR==='function'?fmtBR(dia):'')||dia)+' (faltou)').then(function(ok){
+        if(!ok) throw new Error('não consegui gravar na ficha o "pular" do banho fixo');
+        return {ok:true};
+      });
+    } else {
+      // Escrito direto na planilha: a ponte tira pela frase da célula.
+      feito=dashEspelhar('banho', '', {valor:o.txt||'', hora:o.hora||''}, 'remover', dia);
+    }
+    return feito.then(function(r){
+      return banhoFaltaDecidir(o, dia, 'liberado').then(function(){
+        var naPlanilha=!(r && r.ok===false);
+        if(typeof zAlertao==='function') zAlertao(naPlanilha?'✅ HORÁRIO LIBERADO':'⚠ SAIU DO APP, MAS NÃO DA PLANILHA',
+          naPlanilha
+            ? [o.nome+' não tem mais banho '+(o.hora?('às '+o.hora+' '):'')+'hoje. O horário está livre para outro banho.']
+            : [o.nome+' saiu dos Lançamentos do dia, mas a planilha não confirmou: '+((r&&r.erro)||'a ponte não respondeu')+'.',
+               'Tire o banho da planilha à mão, para a TV não chamar.'],
+          {botao:'Fechar'});
+      });
+    }).catch(function(e){
+      _logFalhaGrav('liberar o banho de '+o.nome, e);
+      if(typeof zAlertao==='function') zAlertao('⚠ NÃO LIBEREI O HORÁRIO', ['Não consegui tirar o banho de '+o.nome+': '+((e&&e.message)||e)+'.',
+        'Tente de novo pelo Hoje na Zêluz, ou tire em Lançamentos do dia › Banho.'], {botao:'Entendi'});
+    });
+  }
+  function banhoFaltaLiberarUI(chave){
+    var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
+    if(!(typeof repPodeLancar==='function' && repPodeLancar())){ alert('Só a recepção, a Gestão ou a Supervisão liberam o horário do banho.'); return; }
+    banhoFaltaExecutar(o, dcDataKey());
+  }
+  // O cartão no Hoje na Zêluz: quem faltou com banho, e o que foi decidido.
+  function banhoFaltaCardHTML(){
+    if(BANHO_FALTA_DIA!==dcDataKey() || !BANHO_FALTA.length) return '';
+    var pode=(typeof repPodeLancar==='function' && repPodeLancar());
+    var h='<div class="card" style="border-left:4px solid var(--crm-atencao-text)">'
+      +'<h2 style="font-size:17px;margin-bottom:2px">Banho de quem faltou</h2>'
+      +'<div class="hint">Faltou hoje e tinha banho marcado. Liberar tira o banho da planilha e da TV, e o horário fica livre para outro banho.</div>';
+    BANHO_FALTA.forEach(function(o){
+      var d=BANHO_FALTA_DEC[o.chave];
+      var situ=d
+        ? (d.decisao==='liberado'
+            ? '<span style="color:var(--crm-ok);font-weight:800">horário liberado'+(d.quem?(' por '+escAttr(d.quem)):'')+'</span>'
+            : '<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span>')
+        : (pode
+            ? '<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:13px" data-k="'+escAttr(o.chave)+'" onclick="banhoFaltaLiberarUI(this.dataset.k)">Liberar o horário</button>'
+            : '<span style="color:var(--crm-atencao-text);font-weight:700">aguardando a recepção</span>');
+      h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
+        +'<strong style="color:var(--z-blue)">'+escAttr(o.nome)+'</strong>'
+        +'<span class="hint" style="margin:0">'+(o.hora?('banho às '+escAttr(o.hora)):'banho hoje')+(o.fixo?' (fixo)':'')+' · '
+        +(o.porque==='avisada'?'falta avisada':'faltou')+'</span>'+situ+'</div>';
+    });
+    return h+'</div>';
+  }
 
   // ===== DESPERTADOR DA MEDICAÇÃO =====
   // Mesmo padrão do despertador do banho, mas para os horários da Agenda de Medicação — e mais
@@ -26013,6 +26191,8 @@
       try{ if((dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeAtualizarBadge==='function') hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+      // Faltou e tinha banho hoje: a recepção é avisada para liberar o horário (28/set/2026).
+      try{ if(typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){ /* silencioso de propósito: o aviso volta na próxima mudança da chamada */ }
       // O remédio lançado na recepção sai da fila do alarme de quem está "faltou" — venha a
       // falta da chamada, do check-in do corpo ou da falta automática (QA da Fase 0). É aqui,
       // na chamada viva, e não dentro do check-in, de propósito: o check-in fica intocado.
@@ -39649,7 +39829,8 @@
       +'</div>'
       +'<textarea id="hojeTxt" readonly style="display:none;width:100%;margin-top:9px;min-height:130px;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px"></textarea>'
       +'</div>'
-      +prevCorrigeOkHTML();
+      +prevCorrigeOkHTML()
+      +((typeof banhoFaltaCardHTML==='function')?banhoFaltaCardHTML():'');
     if(!L.length){
       h+='<div class="card"><h2 style="font-size:17px">Ninguém marcado na casa ainda</h2>'
         +'<div class="hint">A lista se enche sozinha conforme a Chamada e o Check-in do corpo acontecem — não é preciso reabrir a tela. '
@@ -41058,24 +41239,26 @@
   }
   // ---- as exceções de UM dia -----------------------------------------------------------
   function banhosGravarExcecao(chave, dia, valor, frase){
-    var p=banhosPelDe(chave); if(!p) return;
-    var br=banhoRecDe(p); if(!br||!br.ativo) return;
+    var p=banhosPelDe(chave); if(!p) return Promise.resolve(false);
+    var br=banhoRecDe(p); if(!br||!br.ativo) return Promise.resolve(false);
     var exc=Object.assign({}, br.excecoes||{});
     if(valor===null) delete exc[dia]; else exc[dia]=valor;
     var novo=Object.assign({}, br, {excecoes:exc});
     BANHO_MSG[chave]={cor:'var(--muted)', txt:'Salvando…'};
     banhosRenderLinha(chave);
-    Promise.resolve(setPelExtra(p,{banho_rec:novo})).then(function(res){
-      if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return; }
+    return Promise.resolve(setPelExtra(p,{banho_rec:novo})).then(function(res){
+      if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return false; }
       if(typeof audit==='function') audit('banho-recorrente', frase,
         {alvo:chave, pet:((typeof pelNome==='function')?pelNome(p):'')||p.n||'', quem:(typeof quemSou==='function'?quemSou():'-')});
       BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:'✅ '+frase};
       banhosRenderLinha(chave);
       banhoAutoPedirConferencia();   // a planilha se acerta em instantes, numa passada só
+      return true;
     }).catch(function(e){
       _logFalhaGrav('exceção do banho fixo em '+dia, e);
       BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((e&&e.message)||e)+'. Tente de novo.'};
       banhosRenderLinha(chave);
+      return false;
     });
   }
   async function banhosPular(chave){
