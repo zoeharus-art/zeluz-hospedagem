@@ -2794,115 +2794,144 @@ prova('QA23 — FILHOt novo no check-in com o mesmo nome e tutor de outro (raça
 });
 
 // ================================================================== banho de quem faltou
-console.log('\nBanho de quem faltou — liberar o horário e avisar (Adriana, 28/set/2026, caso da Jasmine; QA28)');
+console.log('\nBanho de quem faltou — liberar o horário e avisar (Adriana, 28/set/2026, caso da Jasmine; QA28, QA29)');
 const BF_STUBS = `__bkBF={P:PELUDINHOS, pe:pelExtra, rl:repLancamentos, db:DB, de:dashEspelhar, sp:setPelExtra, ac:banhoAutoPedirConferencia,
     za:zAlertao, ze:zEscolha, rp:repPodeLancar, au:audit, hr:hojeRedesenhar, rd:renderDash, pt:pessoaDoTurno, dc:dcChamada, st:setTimeout,
-    ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DEC, bdia:BANHO_FALTA_DIA, bv:BANHO_FALTA_VISTO, bt:BANHO_FALTA_TRAVA, bc:BANHO_FALTA_CHEGOU};
+    ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DEC, bdia:BANHO_FALTA_DIA, bv:BANHO_FALTA_VISTO, bt:BANHO_FALTA_TRAVA, bc:BANHO_FALTA_CHEGOU, fi:BANHO_FALTA_FILA, pl:planDia};
   __jas={n:'Jasmine', tutor:'Ana', dias:['seg']}; __bol={n:'Bolt', tutor:'Rui', dias:['seg']}; __mel={n:'Mel', tutor:'Lia', dias:['seg']};
   PELUDINHOS=[__jas, __bol, __mel];
   __extra={}; pelExtra=function(p){ return (p&&__extra[p.n])||{}; };
   __lancR={}; repLancamentos=function(p){ return __lancR[p.n]||[]; };
   __esp=[]; __espResp={ok:true, removidos:1}; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({k:k,id:id,valor:reg.valor,hora:reg.hora,acao:acao,dia:dia}); return Promise.resolve(__espResp); };
-  __pel=[]; setPelExtra=function(p,patch){ __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); return Promise.resolve({ok:true}); };
-  banhoAutoPedirConferencia=function(){}; __alertas=[]; zAlertao=function(t,l,op){ __alertas.push({t:t, l:l}); if(op&&op.aoFechar) __aoFechar=op.aoFechar; };
+  __pel=[]; __pelOk=true; setPelExtra=function(p,patch){ __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); return Promise.resolve(__pelOk?{ok:true}:{ok:false, erro:'barrado'}); };
+  banhoAutoPedirConferencia=function(){}; __alertas=[]; __aoFechar=null;
+  zAlertao=function(t,l,op){ __alertas.push({t:t, l:l}); __aoFechar=(op&&op.aoFechar)||null; };
   __esc=[]; zEscolha=function(t,l,b){ __esc.push({t:t, l:l, b:b.map(function(x){ return x.t; }), fn:b.map(function(x){ return x.fn; })}); };
   __pode=true; repPodeLancar=function(){ return __pode; }; audit=function(){}; hojeRedesenhar=function(){}; renderDash=function(){};
-  pessoaDoTurno=function(){ return 'Márcia'; }; setTimeout=function(){ return 0; };
+  pessoaDoTurno=function(){ return 'Márcia'; }; __timers=[]; setTimeout=function(fn){ __timers.push(fn); return 0; };
   __cartaz=false; document.getElementById=function(id){ if(id==='zAlertaoBox'||id==='repMsgBox') return __cartaz?{}:null; return {style:{}, value:'', textContent:'', innerHTML:''}; };
-  __banco={}; __gravBF=[]; __rmBF=[]; DB={ref:function(p){ return {
+  __banco={}; __gravBF=[]; __rmBF=[]; __txErro=null; DB={ref:function(p){ return {
     set:function(v){ __banco[p]=JSON.parse(JSON.stringify(v)); __gravBF.push({p:p, v:__banco[p]}); return Promise.resolve(); },
-    remove:function(){ __rmBF.push(p); return Promise.resolve(); },
-    transaction:function(fn){ var r=fn(__banco[p]===undefined?null:__banco[p]);
+    remove:function(){ __rmBF.push(p); delete __banco[p]; return Promise.resolve(); },
+    transaction:function(fn){ if(__txErro) return Promise.reject(new Error(__txErro)); var r=fn(__banco[p]===undefined?null:__banco[p]);
       if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __banco[p]; }}});
       __banco[p]=JSON.parse(JSON.stringify(r)); return Promise.resolve({committed:true, snapshot:{val:function(){ return __banco[p]; }}}); },
-    once:function(){ return Promise.resolve({val:function(){ return null; }}); } }; }};
-  BANHO_FALTA=[]; BANHO_FALTA_DEC={}; BANHO_FALTA_DIA=''; BANHO_FALTA_VISTO={}; BANHO_FALTA_TRAVA={}; BANHO_FALTA_CHEGOU=[];`;
+    once:function(){ var v=__banco[p]; if(v===undefined){ var pre=p+'/', o=null; Object.keys(__banco).forEach(function(k){ if(k.indexOf(pre)===0){ o=o||{}; o[k.slice(pre.length)]=__banco[k]; } }); v=o; }
+      return Promise.resolve({val:function(){ return v===undefined?null:v; }}); } }; }};
+  BANHO_FALTA=[]; BANHO_FALTA_DEC={}; BANHO_FALTA_DIA=''; BANHO_FALTA_VISTO={}; BANHO_FALTA_TRAVA={}; BANHO_FALTA_CHEGOU=[]; BANHO_FALTA_FILA=[];`;
 const BF_VOLTA = `PELUDINHOS=__bkBF.P; pelExtra=__bkBF.pe; repLancamentos=__bkBF.rl; DB=__bkBF.db; dashEspelhar=__bkBF.de; setPelExtra=__bkBF.sp;
   banhoAutoPedirConferencia=__bkBF.ac; zAlertao=__bkBF.za; zEscolha=__bkBF.ze; repPodeLancar=__bkBF.rp; audit=__bkBF.au; hojeRedesenhar=__bkBF.hr;
   renderDash=__bkBF.rd; pessoaDoTurno=__bkBF.pt; dcChamada=__bkBF.dc; setTimeout=__bkBF.st; document.getElementById=__bkBF.ge; BANHO_FALTA=__bkBF.bf; BANHO_FALTA_DEC=__bkBF.bd;
-  BANHO_FALTA_DIA=__bkBF.bdia; BANHO_FALTA_VISTO=__bkBF.bv; BANHO_FALTA_TRAVA=__bkBF.bt; BANHO_FALTA_CHEGOU=__bkBF.bc;`;
-const tick = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
-prova('quem faltou e tinha banho: lançamento (todos os do dia), planilha, banho fixo, falta avisada no app e na coluna da planilha', () => {
+  BANHO_FALTA_DIA=__bkBF.bdia; BANHO_FALTA_VISTO=__bkBF.bv; BANHO_FALTA_TRAVA=__bkBF.bt; BANHO_FALTA_CHEGOU=__bkBF.bc; BANHO_FALTA_FILA=__bkBF.fi; planDia=__bkBF.pl;`;
+const tick = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
+const MEL_FIXO = `__extra.Mel={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'09:00', desde:'2026-09-01'}};`;
+prova('lista: todos os banhos do dia; fixo com banho escrito à mão; linha do lançamento não duplica; falta avisada no app e na planilha', () => {
   run(BF_STUBS);
   try {
     const dia = '2026-09-28';   // segunda
-    run(`__extra.Mel={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'14:00', desde:'2026-09-01'}};
-      __lancR.Bolt=[{_id:'c1', tipo:'credito', data:'${dia}', motivo:'viagem'}];`);
-    const kJ = run("dcKey('Jasmine','Ana')");
-    const chamada = { [kJ]: 'faltou', [run("dcKey('Mel','Lia')")]: 'faltou' };
+    run(MEL_FIXO + `__lancR.Bolt=[{_id:'c1', tipo:'credito', data:'${dia}', motivo:'viagem'}];`);
+    const kJ = run("dcKey('Jasmine','Ana')"), kM = run("dcKey('Mel','Lia')");
+    const vf = run("banhoRecValorPlanilha(__mel, banhoRecDe(__mel))");
+    const chamada = { [kJ]: 'faltou', [kM]: 'faltou' };
     const lancs = { L1: { chave: kJ, valor: 'JASMINE', hora: '10:00' }, L2: { chave: kJ, valor: 'JASMINE (hidratação)', hora: '15:00' } };
-    const plan = [{ p: { n: 'Bolt', tutor: 'Rui' }, hora: '11:30', txt: 'BOLT' }, { p: { n: 'Jasmine', tutor: 'Ana' }, hora: '10:00', txt: 'JASMINE' }];
+    const plan = [{ p: { n: 'Bolt', tutor: 'Rui' }, hora: '11:30', txt: 'BOLT' }, { p: { n: 'Jasmine', tutor: 'Ana' }, hora: '10:00', txt: 'JASMINE' },
+      { p: { n: 'Mel', tutor: 'Lia' }, hora: '09:00', txt: vf }, { p: { n: 'Mel', tutor: 'Lia' }, hora: '16:00', txt: 'MEL TOSA' }];
     const L = JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', ${JSON.stringify(chamada)}, ${JSON.stringify(lancs)}, ${JSON.stringify(plan)}, [])`)));
-    igual(L.map((o) => [o.nome, o.hora, o.origem, o.porque, !!o.fixo, o.lancs.length, o.txts.length]), [
-      ['Jasmine', '10:00 e 15:00', 'lancamento', 'faltou', false, 2, 0],
-      ['Bolt', '11:30', 'planilha', 'avisada', false, 0, 1],
-      ['Mel', '14:00', 'fixo', 'faltou', true, 0, 0]]);
-    // a coluna "Faltas Avisadas" da planilha também conta (QA28)
+    igual(L.map((o) => [o.nome, o.hora, o.origem, o.porque, !!o.fixo, o.lancs.length, o.txts.map((x) => x.txt)]), [
+      ['Mel', '09:00 e 16:00', 'planilha', 'faltou', true, 0, ['MEL TOSA']],
+      ['Jasmine', '10:00 e 15:00', 'lancamento', 'faltou', false, 2, []],
+      ['Bolt', '11:30', 'planilha', 'avisada', false, 0, ['BOLT']]]);
     run('__lancR={};');
     const L2 = JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', {}, {}, ${JSON.stringify(plan.slice(0, 1))}, [{p:{n:'Bolt', tutor:'Rui'}, txt:'BOLT'}])`)));
-    igual(L2.map((o) => [o.nome, o.porque]), [['Bolt', 'avisada']]);
+    igual(L2.map((o) => [o.nome, o.porque]), [['Bolt', 'avisada']], 'a coluna "Faltas Avisadas" da planilha conta');
     igual(JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', {}, ${JSON.stringify(lancs)}, [], [])`))), [], 'ninguém faltou: nada a liberar');
   } finally { run(BF_VOLTA); }
 });
-provaAsync('liberar: tira os banhos do dia pelo caminho de cada um, e só diz "liberado" quando a planilha confirmou', async () => {
+provaAsync('Jasmine: liberar e reler — continua "horário liberado" enquanto falta; "chegou depois" só quando a chamada diz "veio"', async () => {
   run(BF_STUBS);
   try {
-    const dia = '2026-09-28';
-    const kJ = run("dcKey('Jasmine','Ana')");
-    run(`__extra.Mel={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'14:00', desde:'2026-09-01'}};`);
-    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00 e 15:00', origem:'lancamento', lancs:[{id:'L1', reg:{valor:'JASMINE', hora:'10:00'}}, {id:'L2', reg:{valor:'JASMINE (hidratação)', hora:'15:00'}}], txts:[], fixo:false}, '${dia}')`);
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={chave:'${kJ}', valor:'JASMINE', hora:'15:00'}; dcChamada={}; dcChamada['${kJ}']='faltou';
+      planDia={lida:true, dia:'${dia}', banho:[{p:{n:'Jasmine', tutor:'Ana'}, hora:'15:00', txt:'JASMINE'}], faltas:[]};`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.strictEqual(run('BANHO_FALTA.length'), 1);
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kJ}'].decisao`), 'liberado');
+    // a planilha foi relida: o banho saiu dela
+    run(`planDia.banho=[];`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/horário liberado por Márcia/.test(run('banhoFaltaCardHTML()')), 'continua no cartão como liberado');
+    assert.ok(!/chegou depois/.test(run('banhoFaltaCardHTML()')), 'não diz "chegou depois" enquanto ela falta');
+    // a falta foi desfeita, mas ela ainda não chegou: nem "liberado" na lista, nem "chegou depois"
+    run(`delete dcChamada['${kJ}'];`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(!/chegou depois/.test(run('banhoFaltaCardHTML()')), 'sem "veio" na chamada, não diz que chegou');
+    run(`dcChamada['${kJ}']='veio';`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/chegou depois de o horário das 15:00 ser liberado/.test(run('banhoFaltaCardHTML()')), run('banhoFaltaCardHTML()'));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('liberar: só diz "liberado" quando algo saiu; parte saiu = liberado com aviso; nada saiu = "falhou" com o botão', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')"), kB = run("dcKey('Bolt','Rui')");
+    run(MEL_FIXO);
+    const lanc = (id) => `{id:'${id}', reg:{valor:'JASMINE', hora:'10:00'}}`;
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={valor:'JASMINE'}; __banco['daycare/dashboard/${dia}/banho/L2']={valor:'JASMINE'};`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[${lanc('L1')}, ${lanc('L2')}], txts:[], fixo:false}, '${dia}')`);
     await tick();
     igual(JSON.parse(JSON.stringify(run('__rmBF'))).sort(), ['daycare/dashboard/' + dia + '/banho/L1', 'daycare/dashboard/' + dia + '/banho/L2']);
     assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kJ}'].decisao`), 'liberado');
-    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kJ}'].quem`), 'Márcia');
     assert.ok(/HORÁRIO LIBERADO/.test(run('__alertas[0].t')));
-    // banho fixo: o "pular" do dia, pela porta dos Banhos recorrentes
-    await run(`banhoFaltaExecutar({chave:dcKey('Mel','Lia'), nome:'Mel', hora:'14:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
+    // lançamento que alguém já tirou à mão: não é erro
+    run(`__alertas=[]; __rmBF=[]; delete __banco['daycare/banho-falta/${dia}/${kJ}'];`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[${lanc('L7')}], txts:[], fixo:false}, '${dia}')`);
     await tick();
-    const pel = JSON.parse(JSON.stringify(run('__pel')));
-    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].pular === true && pel[0].patch.banho_rec.excecoes[dia].motivo === 'faltou', JSON.stringify(pel));
-    // escrito direto na planilha, com a ponte fora do ar: NÃO grava "liberado"; o botão continua
-    run(`__esp=[]; __alertas=[]; __espResp={ok:false, erro:'a ponte não respondeu'};`);
-    await run(`banhoFaltaExecutar({chave:dcKey('Bolt','Rui'), nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[{txt:'BOLT', hora:'11:30'}], fixo:false}, '${dia}')`);
-    await tick();
-    const e = JSON.parse(JSON.stringify(run('__esp')));
-    assert.ok(e.length === 1 && e[0].acao === 'remover' && e[0].valor === 'BOLT', JSON.stringify(e));
-    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/'+dcKey('Bolt','Rui')].decisao`), 'falhou');
-    assert.ok(/NÃO LIBEREI/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
-    // a ponte respondeu, mas não achou a linha (texto mudado à mão): também não é "liberado"
-    run(`__alertas=[]; __espResp={ok:true, removidos:0};`);
-    await run(`banhoFaltaExecutar({chave:dcKey('Bolt','Rui'), nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[{txt:'BOLT', hora:'11:30'}], fixo:false}, '${dia}')`);
-    await tick();
-    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/'+dcKey('Bolt','Rui')].decisao`), 'falhou');
-    // lançamento que saiu do app, mas a planilha não confirmou: "liberado", com o aviso de tirar à mão
-    run(`__alertas=[]; __espResp={ok:false, erro:'sem rede'}; delete __banco['daycare/banho-falta/${dia}/${kJ}'];`);
-    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[{id:'L9', reg:{valor:'JASMINE', hora:'10:00'}}], txts:[], fixo:false}, '${dia}')`);
+    assert.ok(run('__rmBF.length') === 0 && /HORÁRIO LIBERADO/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
+    // a ponte respondeu ok mas não achou a linha (removidos 0) no lançamento: liberado, com o aviso
+    run(`__alertas=[]; __espResp={ok:true, removidos:0}; __banco['daycare/dashboard/${dia}/banho/L3']={valor:'JASMINE'}; delete __banco['daycare/banho-falta/${dia}/${kJ}'];`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[${lanc('L3')}], txts:[], fixo:false}, '${dia}')`);
     await tick();
     assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kJ}'].planilha_ok`), false);
-    assert.ok(/NÃO DA PLANILHA/.test(run('__alertas[0].t')));
+    assert.ok(/PARTE NÃO SAIU/.test(run('__alertas[0].t')));
+    // ponte antiga (sem "removidos"): vale o ok
+    run(`__alertas=[]; __espResp={ok:true};`);
+    await run(`banhoFaltaExecutar({chave:'${kB}', nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[{txt:'BOLT', hora:'11:30'}], fixo:false}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kB}'].decisao`), 'liberado');
+    // escrito na planilha, ponte fora do ar: "falhou", sem ponto duplo na frase
+    run(`__alertas=[]; __espResp={ok:false, erro:'nada chega à planilha nem à TV.'}; delete __banco['daycare/banho-falta/${dia}/${kB}'];`);
+    await run(`banhoFaltaExecutar({chave:'${kB}', nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[{txt:'BOLT', hora:'11:30'}], fixo:false}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kB}'].decisao`), 'falhou');
+    assert.ok(/NÃO LIBEREI/.test(run('__alertas[0].t')) && !/TV\.\./.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    // banho fixo: o "pular" do dia
+    run(`__alertas=[]; __espResp={ok:true, removidos:1};`);
+    await run(`banhoFaltaExecutar({chave:dcKey('Mel','Lia'), nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
+    await tick();
+    const pel = JSON.parse(JSON.stringify(run('__pel')));
+    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].pular === true, JSON.stringify(pel));
   } finally { run(BF_VOLTA); }
 });
-provaAsync('dois aparelhos: quem decide primeiro vale; o segundo vê quem decidiu e não tira de novo', async () => {
+provaAsync('"ainda vem": no banho fixo grava o "manter"; se a ficha recusar, avisa e volta a ficar em aberto', async () => {
   run(BF_STUBS);
   try {
-    const dia = '2026-09-28';
-    run(`__banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Carla', ts:Date.now()};`);
-    await run(`banhoFaltaManter({chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    const dia = '2026-09-28', kM = run("dcKey('Mel','Lia')");
+    run(MEL_FIXO);
+    await run(`banhoFaltaManter({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
     await tick();
-    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/jas'].decisao`), 'liberado', '"ainda vem" não desfaz o que outro aparelho liberou');
-    assert.ok(/JÁ FOI DECIDIDO/.test(run('__alertas[0].t')) && /Carla já liberou/.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
-    run('__alertas=[]; __rmBF=[];');
-    await run(`banhoFaltaExecutar({chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[{id:'L1', reg:{valor:'JASMINE'}}], txts:[], fixo:false}, '${dia}')`);
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'mantido');
+    const pel = JSON.parse(JSON.stringify(run('__pel')));
+    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].manter === true, JSON.stringify(pel));
+    run(`delete __banco['daycare/banho-falta/${dia}/${kM}']; __pelOk=false; __alertas=[];`);
+    await run(`banhoFaltaManter({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
     await tick();
-    assert.strictEqual(run('__rmBF.length'), 0, 'liberar de novo não tira nada');
-    // "ainda vem" sobre nada: grava; e depois "liberar" ainda pode (o botão continua no cartão)
-    await run(`banhoFaltaManter({chave:'mel', nome:'Mel', hora:'14:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
-    await tick();
-    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/mel'].decisao`), 'mantido');
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'falhou');
+    assert.ok(/NÃO SEGUREI O BANHO FIXO/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
   } finally { run(BF_VOLTA); }
 });
-prova('banho fixo com "ainda vem": o automático deixa o banho na planilha mesmo com a falta', () => {
-  run(`__bkBM={pe:pelExtra, dc:dcChamada, rl:repLancamentos, hz:zHojeISO};
+prova('banho fixo com "ainda vem": o automático deixa o banho na planilha mesmo com a falta; feriado continua vencendo', () => {
+  run(`__bkBM={pe:pelExtra, dc:dcChamada, rl:repLancamentos, hz:zHojeISO, of:orcFechado};
     zHojeISO=function(){ return '2026-09-28'; }; repLancamentos=function(){ return []; };
     __exBM={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'14:00', desde:'2026-09-01'}}; pelExtra=function(){ return __exBM; };
     dcChamada={}; dcChamada[dcKey('Mel','Lia')]='faltou';`);
@@ -2910,49 +2939,97 @@ prova('banho fixo com "ainda vem": o automático deixa o banho na planilha mesmo
     igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), false, 'faltou: o fixo sai');
     run(`__exBM.banho_rec.excecoes={'2026-09-28':{manter:true, motivo:'ainda vem'}};`);
     igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), true, '"ainda vem": o fixo fica');
-  } finally { run('pelExtra=__bkBM.pe; dcChamada=__bkBM.dc; repLancamentos=__bkBM.rl; zHojeISO=__bkBM.hz;'); }
+    run(`orcFechado=function(){ return true; };`);
+    igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), false, 'feriado vence o "manter"');
+  } finally { run('pelExtra=__bkBM.pe; dcChamada=__bkBM.dc; repLancamentos=__bkBM.rl; zHojeISO=__bkBM.hz; orcFechado=__bkBM.of;'); }
 });
-prova('o aviso não atropela outro cartaz, aparece só para quem cuida dos lançamentos, e não volta depois de decidido', () => {
+provaAsync('dois aparelhos e dois toques: quem decide primeiro vale; "ainda vem" sobre "ainda vem" não regrava; dois toques tiram uma vez', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28';
+    run(`__banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Carla', ts:Date.now()};`);
+    await run(`banhoFaltaManter({chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/jas'].decisao`), 'liberado');
+    assert.ok(/JÁ FOI DECIDIDO/.test(run('__alertas[0].t')) && /Carla já liberou/.test(run('__alertas[0].l[0]')));
+    run(`__banco['daycare/banho-falta/${dia}/bol']={decisao:'mantido', quem:'Carla', ts:1}; __alertas=[];`);
+    await run(`banhoFaltaManter({chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    await tick();
+    assert.ok(run(`__banco['daycare/banho-falta/${dia}/bol'].quem`) === 'Carla' && /JÁ FOI DECIDIDO/.test(run('__alertas[0].t')), '"ainda vem" sobre "ainda vem" não regrava');
+    run(`__rmBF=[]; __alertas=[]; __banco['daycare/dashboard/${dia}/banho/L1']={valor:'X'};`);
+    const o = `{chave:'xx', nome:'Xuxa', hora:'10:00', origem:'lancamento', lancs:[{id:'L1', reg:{valor:'X'}}], txts:[], fixo:false}`;
+    await Promise.all([run(`banhoFaltaExecutar(${o}, '${dia}')`), run(`banhoFaltaExecutar(${o}, '${dia}')`)]);
+    await tick();
+    assert.strictEqual(run('__rmBF.length'), 1, 'toque duplo: uma remoção só');
+    assert.ok(!JSON.stringify(run('__alertas')).includes('JÁ FOI DECIDIDO'), 'o segundo toque é ignorado em silêncio, sem "já foi decidido" para quem tocou');
+    // falha da transação (sem conexão): avisa, não fica mudo
+    run(`__txErro='sem conexão'; __alertas=[];`);
+    await run(`banhoFaltaExecutar({chave:'yy', nome:'Yuri', hora:'', origem:'planilha', lancs:[], txts:[{txt:'YURI'}], fixo:false}, '${dia}')`);
+    await tick();
+    assert.ok(/NÃO CONSEGUI REGISTRAR/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('"liberando" preso há mais de 5 minutos: o cartão mostra o botão, a pergunta volta, e liberar funciona', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'10:00'}], fixo:false, porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={jas:{decisao:'liberando', quem:'Carla', ts:Date.now()}};`);
+    assert.ok(/liberando…/.test(run('banhoFaltaCardHTML()')) && !/Liberar o horário/.test(run('banhoFaltaCardHTML()')), 'recente: em andamento');
+    run(`BANHO_FALTA_DEC.jas.ts=Date.now()-10*60000; __banco['daycare/banho-falta/${dia}/jas']=BANHO_FALTA_DEC.jas;`);
+    assert.ok(/a liberação não terminou/.test(run('banhoFaltaCardHTML()')) && /Liberar o horário/.test(run('banhoFaltaCardHTML()')));
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 1, 'a pergunta volta');
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/jas'].decisao`), 'liberado');
+  } finally { run(BF_VOLTA); }
+});
+prova('nenhum cartaz do banho apaga outro: a pergunta e o resultado esperam a tela ficar livre; "visto" só na escolha', () => {
   run(BF_STUBS);
   try {
     const dia = run('dcDataKey()');
     run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[], txts:[], porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
       __cartaz=true; banhoFaltaPerguntar('${dia}');`);
-    assert.strictEqual(run('__esc.length'), 0, 'outro cartaz aberto: o aviso espera');
-    run(`__cartaz=false; __pode=false; banhoFaltaPerguntar('${dia}');`);
-    assert.strictEqual(run('__esc.length'), 0, 'monitora não recebe o aviso');
-    run(`__pode=true; banhoFaltaPerguntar('${dia}');`);
-    const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
-    assert.ok(esc.length === 1 && /JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00/.test(esc[0].t), JSON.stringify(esc));
-    igual(esc[0].b, ['Liberar o horário', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: texto neutro');
-    assert.ok(esc[0].l.some((x) => /Se ainda vier \(chegar mais tarde\)/.test(x)), JSON.stringify(esc[0].l));
-    run('__esc[0].fn[2]();');   // Decidir depois
+    assert.strictEqual(run('__esc.length'), 0, 'outro cartaz aberto: a pergunta espera');
+    run(`banhoFaltaMostrar('✅ HORÁRIO LIBERADO', ['x'], {});`);
+    assert.ok(run('__alertas.length') === 0 && run('BANHO_FALTA_FILA.length') === 1, 'o resultado vai para a fila');
+    run(`__cartaz=false; banhoFaltaTique();`);
+    assert.ok(run('__alertas.length') === 1 && run('BANHO_FALTA_FILA.length') === 0, 'tela livre: o relógio mostra o resultado');
+    assert.strictEqual(run('__esc.length'), 0, 'e a pergunta só depois do "Fechar"');
+    run(`__aoFechar(); __timers.forEach(function(f){ f(); }); __timers=[];`);
+    assert.strictEqual(run('__esc.length'), 1, 'fechou: agora vem a pergunta');
     run(`banhoFaltaPerguntar('${dia}');`);
-    assert.strictEqual(run('__esc.length'), 1, 'decidir depois: não repete no aparelho');
-    run(`BANHO_FALTA_VISTO={}; BANHO_FALTA_DEC={jas:{decisao:'mantido', quem:'Márcia'}}; banhoFaltaPerguntar('${dia}');`);
-    assert.strictEqual(run('__esc.length'), 1, 'alguém já decidiu: não pergunta de novo');
+    assert.strictEqual(run('__esc.length'), 2, 'outro cartaz tomou a tela sem escolha: a pergunta volta');
+    run(`__esc[1].fn[2](); banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 2, '"Decidir depois": não repete no aparelho');
+    run(`__pode=false; BANHO_FALTA_VISTO={}; banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 2, 'monitora não recebe o aviso');
+    assert.ok(/setInterval\(banhoFaltaTique, 60000\)/.test(fs.readFileSync(APP, 'utf8')), 'o relógio de 1 minuto está ligado');
   } finally { run(BF_VOLTA); }
 });
-prova('Hoje na Zêluz: o cartão mostra o botão, o que foi decidido, e quem chegou depois de liberado', () => {
+prova('Hoje na Zêluz: textos neutros, botão em "ainda vem" e em "falhou"', () => {
   run(BF_STUBS);
   try {
     const dia = run('dcDataKey()');
     run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'},
         {chave:'mel', nome:'Mel', hora:'14:00', origem:'fixo', fixo:true, porque:'avisada'},
-        {chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', porque:'faltou'}];
-      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={mel:{decisao:'liberado', quem:'Márcia'}, bol:{decisao:'mantido', quem:'Carla'}};
-      BANHO_FALTA_CHEGOU=[{chave:'tob', nome:'Toby', hora:'09:00'}];`);
+        {chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', porque:'faltou'},
+        {chave:'tob', nome:'Toby', hora:'12:00', origem:'planilha', porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={mel:{decisao:'liberado', quem:'Márcia'}, bol:{decisao:'mantido', quem:'Carla'}, tob:{decisao:'falhou', msg:'a ponte não respondeu'}};`);
     const h = run('banhoFaltaCardHTML()');
-    assert.ok(/Banho de quem faltou/.test(h) && /Jasmine/.test(h) && /banho às 10:00/.test(h), h);
     assert.ok(/horário liberado por Márcia/.test(h) && /\(fixo\)/.test(h) && /falta avisada/.test(h), h);
-    assert.ok(/Carla disse que ainda vem/.test(h) && (h.match(/Liberar o horário/g) || []).length === 2, '"ainda vem" continua com o botão de liberar');
-    assert.ok(/Toby/.test(h) && /chegou depois de o horário das 09:00 ser liberado/.test(h), h);
+    assert.ok(/Carla disse que ainda vem/.test(h) && /não deu certo: a ponte não respondeu/.test(h) && (h.match(/Liberar o horário/g) || []).length === 3, h);
     run(`BANHO_FALTA_DIA='2026-01-01';`);
     assert.strictEqual(run('banhoFaltaCardHTML()'), '', 'lista de outro dia não aparece');
+    run(`BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; BANHO_FALTA=[BANHO_FALTA[0]]; banhoFaltaPerguntar('${dia}');`);
+    const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
+    assert.ok(/JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00/.test(esc[0].t));
+    igual(esc[0].b, ['Liberar o horário', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
+    assert.ok(esc[0].l.some((x) => /Se ainda vier \(chegar mais tarde\)/.test(x)));
   } finally { run(BF_VOLTA); }
 });
-prova('o despertador do banho não chama quem faltou nem quem avisou a falta', () => {
-  run(`__bkDB={pr:papelRecebeAlarme, eh:ehHoje, pd:planDia, db:despBaixa, md:mostrarDespertador, dc:dcChamada, dn:despNaTela, rl:repLancamentos};
+prova('despertador: não chama quem faltou nem quem avisou a falta, e sai da tela quando a falta é marcada', () => {
+  run(`__bkDB={pr:papelRecebeAlarme, eh:ehHoje, pd:planDia, db:despBaixa, md:mostrarDespertador, dc:dcChamada, dn:despNaTela, rl:repLancamentos, ge:document.getElementById, bf:BANHO_FALTA};
     papelRecebeAlarme=function(){ return true; }; ehHoje=function(){ return true; }; despBaixa={}; despNaTela=null; __desp=[];
     repLancamentos=function(){ return []; };
     mostrarDespertador=function(it){ __desp.push(it.p.n); };
@@ -2965,10 +3042,14 @@ prova('o despertador do banho não chama quem faltou nem quem avisou a falta', (
     assert.strictEqual(run('__desp.length'), 0, 'falta avisada na planilha: não toca');
     run(`planDia.faltas=[]; checarDespertadorBanho();`);
     assert.strictEqual(run('__desp.length'), 1, 'veio: toca como sempre');
-  } finally { run('papelRecebeAlarme=__bkDB.pr; ehHoje=__bkDB.eh; planDia=__bkDB.pd; despBaixa=__bkDB.db; mostrarDespertador=__bkDB.md; dcChamada=__bkDB.dc; despNaTela=__bkDB.dn; repLancamentos=__bkDB.rl;'); }
+    run(`__elD={style:{display:'block'}}; document.getElementById=function(id){ return id==='despBanho'?__elD:null; };
+      despNaTela=dcKey('Jasmine','Ana'); BANHO_FALTA=[{chave:despNaTela}];`);
+    assert.strictEqual(run('banhoFaltaDespertadorFora()'), true);
+    assert.ok(run('__elD.style.display') === 'none' && run('despNaTela') === null, 'o despertador da tela some');
+  } finally { run('papelRecebeAlarme=__bkDB.pr; ehHoje=__bkDB.eh; planDia=__bkDB.pd; despBaixa=__bkDB.db; mostrarDespertador=__bkDB.md; dcChamada=__bkDB.dc; despNaTela=__bkDB.dn; repLancamentos=__bkDB.rl; document.getElementById=__bkDB.ge; BANHO_FALTA=__bkDB.bf;'); }
 });
-prova('ligações: a chamada viva e o Hoje na Zêluz chamam o banho de quem faltou', () => {
-  run(`__bkLG={zv:zMapaVivo, ag:banhoFaltaAgendar, hl:hojeLista, ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DIA, bdc:BANHO_FALTA_DEC, cv:_chamadaVivaDia, rd:renderDaycare, rp:repPodeLancar, db:DB};
+prova('ligações: a chamada viva, o Hoje na Zêluz, a planilha, a falta avisada e o "tirar" à mão chamam o banho de quem faltou', () => {
+  run(`__bkLG={zv:zMapaVivo, ag:banhoFaltaAgendar, hl:hojeLista, ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DIA, bdc:BANHO_FALTA_DEC, bc:BANHO_FALTA_CHEGOU, cv:_chamadaVivaDia, rd:renderDaycare, rp:repPodeLancar, db:DB};
     DB={ref:function(){ return {}; }};
     __cbLG=null; zMapaVivo=function(p, n, cb){ __cbLG=cb; return null; }; __agLG=0; banhoFaltaAgendar=function(){ __agLG++; };
     renderDaycare=function(){}; repPodeLancar=function(){ return true; };`);
@@ -2976,13 +3057,14 @@ prova('ligações: a chamada viva e o Hoje na Zêluz chamam o banho de quem falt
     run(`_chamadaVivaDia=null; chamadaVivaLigar(); if(__cbLG) __cbLG({x:'faltou'});`);
     assert.strictEqual(run('__agLG'), 1, 'a mudança da chamada agenda a conferência do banho');
     run(`__rootLG={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__rootLG:null; }; hojeLista=function(){ return []; };
-      BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'}]; BANHO_FALTA_DIA=dcDataKey(); BANHO_FALTA_DEC={};
+      BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'}]; BANHO_FALTA_DIA=dcDataKey(); BANHO_FALTA_DEC={}; BANHO_FALTA_CHEGOU=[];
       try{ hojeRender(); }catch(e){ __errLG=String(e); }`);
     assert.ok(/Banho de quem faltou/.test(run('__rootLG.innerHTML')), 'o cartão entra no Hoje na Zêluz ' + run("typeof __errLG!=='undefined'?__errLG:''"));
     const src = fs.readFileSync(APP, 'utf8');
     assert.ok(/planDia=out;[\s\S]{0,400}banhoFaltaAgendar\(\)/.test(src), 'a leitura da planilha agenda a conferência');
     assert.ok(/regs\.some\(function\(r\)\{ return r\.data===dcDataKey\(\); \}\) && typeof banhoFaltaAgendar==='function'\) banhoFaltaAgendar\(\)/.test(src), 'a falta avisada de hoje agenda a conferência');
-  } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
+    assert.ok(/if\(k==='banho'\)\{ try\{ if\(typeof banhoFaltaAgendar==='function'\) banhoFaltaAgendar\(\); \}/.test(src), 'tirar um banho à mão atualiza o cartão');
+  } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; BANHO_FALTA_CHEGOU=__bkLG.bc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
