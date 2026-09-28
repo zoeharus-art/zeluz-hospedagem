@@ -76,12 +76,16 @@
 |---|---|---|
 | Faltou (chamada, falta automática das 12h ou falta avisada) e tinha banho no dia | o banho lançado ou digitado ficava na planilha e na TV; só o banho fixo saía, em silêncio; ninguém era avisado | quem cuida dos lançamentos recebe "JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00", com **Liberar o horário**, **Ela ainda vem** e **Decidir depois** |
 | Liberar o horário | não existia | tira o banho do dia da planilha e da TV: lançamento sai dos Lançamentos do dia; banho fixo vira "pular só este dia"; digitado na planilha sai pela ponte |
-| Vários aparelhos | — | quem decidir primeiro encerra a pergunta nos outros (`daycare/banho-falta/{dia}/{chave}`) |
+| Vários aparelhos | — | quem decidir primeiro vale; os outros veem "JÁ FOI DECIDIDO" e quem decidiu (`daycare/banho-falta/{dia}/{chave}`) |
+| Outro cartaz aberto (check-in, pagamento, mensagem ao tutor) | — | o aviso do banho espera e aparece depois; nunca apaga o que a recepção está fazendo |
+| A planilha não confirmou | — | não diz "liberado": avisa para tirar à mão, e o botão continua no cartão |
+| "Ainda vem" | — | o horário fica com ele. No banho fixo, o automático deixa o banho na planilha mesmo com a falta. O botão de liberar continua no cartão |
+| Liberado e depois chegou | — | o cartão avisa: "chegou depois de o horário ser liberado: se ainda for tomar banho, lance de novo" |
 | Hoje na Zêluz | — | cartão "Banho de quem faltou", com o botão de liberar e o que foi decidido |
-| Despertador do banho | chamava para descer com quem faltou | não chama quem faltou |
+| Despertador do banho | chamava para descer com quem faltou | não chama quem faltou nem quem avisou a falta, e some da tela quando a falta é marcada |
 
 - **Por que não tira sozinho:** a falta automática das 12h também marca quem ainda chega à tarde para o banho. Quem decide é a recepção.
-- **Onde está no código:** `banhoFaltaLista`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaExecutar`, `banhoFaltaCardHTML`; ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia` e `repConfirmar`; `checarDespertadorBanho`; `banhosGravarExcecao` devolve a promessa.
+- **Onde está no código:** `banhoFaltaQuem`, `banhoFaltaLista`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaReivindicar`, `banhoFaltaExecutar`, `banhoFaltaManter`, `banhoFaltaCardHTML`; ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia` e `repConfirmar`; `checarDespertadorBanho`; `banhoAutoPodeNoDia` respeita o "manter" do dia; `banhosGravarExcecao` devolve a promessa.
 
 ### Decisões registradas (sem mudança de código)
 
