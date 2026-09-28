@@ -63,8 +63,10 @@
 | Falta lançada para outro dia, sem dia de repor | "com a de hoje, referente ao dia 02/10/2026" (errado: a falta não era de hoje) | "contando a do dia 02/10/2026". "Com a de hoje" só quando a falta é de hoje |
 | Período (férias, viagem) com o dia de volta marcado, mesmo que renda um dia só | reposição | continua reposição |
 | Falta de um dia que já passou, lançada com o dia de repor | reposição | continua reposição (a troca é sempre de hoje em diante, como na "Marcar troca") |
+| Dia novo que já é dia dele, dia novo no sábado ou domingo, ou falta num dia que não é dele | reposição | continua reposição (as mesmas regras da "Marcar troca") |
+| Desfazer uma troca lançada pela tela de Reposição, antes do dia | a falta ficava e virava reposição sem dia | a falta sai e ele volta a vir no dia dele, igual à "Marcar troca" |
 
-- **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar`.
+- **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar` (marca `troca` e `nasceu_troca` no crédito), `repTrocaComoDesfaz`.
 
 ### Decisões registradas (sem mudança de código)
 
