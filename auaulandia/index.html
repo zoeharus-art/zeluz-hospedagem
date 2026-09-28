@@ -20333,7 +20333,15 @@
     return banhoFaltaReivindicar(o, dia, 'mantido', banhoFaltaRefazer(o)).then(function(res){
       if(!res.ok){ banhoFaltaJaDecidido(o, res.outro); return false; }
       if(typeof audit==='function') audit('banho-falta', o.nome+' faltou — banho mantido (ainda vem)'+(o.hora?(' ('+o.hora+')'):''), {alvo:o.chave, pet:o.nome});
-      if(!o.fixo){ banhoFaltaSeguir(dia); return true; }
+      // Banho fixo já liberado (o "pular" do dia gravado): a lista não o vê mais como fixo, mas
+      // o "ainda vem" precisa trocar o "pular" pelo "manter" — senão o automático tira o
+      // banho de novo (QA32).
+      var fixoHoje=!!o.fixo;
+      if(!fixoHoje){
+        try{ var _pM=banhoFaltaPel(o.chave), _brM=_pM?banhoRecDe(_pM):null; fixoHoje=!!(_brM && _brM.ativo && banhoRecCaiNoDia(_brM, dia)); }
+        catch(e){ fixoHoje=false; } /* sem a ficha dele, não há banho fixo a segurar */
+      }
+      if(!fixoHoje){ banhoFaltaSeguir(dia); return true; }
       return banhosGravarExcecao(o.chave, dia, {manter:true, motivo:'ainda vem', quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()},
           'manteve o banho de '+((typeof fmtBR==='function'?fmtBR(dia):'')||dia)+' (ainda vem)').then(function(ok){
         if(ok){ banhoFaltaSeguir(dia); return true; }
@@ -20364,8 +20372,9 @@
     // não perde o banho (QA31).
     return banhoFaltaVeioAgora(o, dia).then(function(veio){
       if(veio){
-        banhoFaltaMostrar(String(o.nome+' chegou').toUpperCase(), ['A chamada de hoje diz que '+o.nome+' veio: o banho'+(o.hora?(' das '+o.hora):'')+' continua.',
-          'Se não for tomar banho, tire em Lançamentos do dia › Banho.'], {botao:'Fechar'});
+        var dois=/ e /.test(o.hora||'');
+        banhoFaltaMostrar(String(o.nome+' chegou').toUpperCase(), ['A chamada de hoje diz que '+o.nome+' veio: '+(dois?'os banhos':'o banho')+(o.hora?(' das '+o.hora):'')+(dois?' continuam.':' continua.'),
+          'Se não for tomar banho, tire à mão: '+banhoFaltaOndeTirar(o)+'.'], {botao:'Fechar'});
         banhoFaltaAgendar();
         return false;
       }
@@ -20415,7 +20424,7 @@
         if(!saiu){
           return banhoFaltaGravarDecisao(o, dia, Object.assign({}, res.reg, {decisao:'falhou', acao:'liberar', ts:Date.now(), msg:falha?falha.msg:''})).then(function(){
             banhoFaltaMostrar('⚠ NÃO LIBEREI O HORÁRIO', ['Não consegui tirar o banho de '+o.nome+': '+(falha?falha.msg:'nada saiu')+'.',
-              'O banho continua na planilha. Tente de novo pelo Hoje na Zêluz, ou tire em Lançamentos do dia › Banho.'], {botao:'Entendi'});
+              'O banho continua na planilha. Tente de novo pelo Hoje na Zêluz, ou tire à mão: '+banhoFaltaOndeTirar(o)+'.'], {botao:'Entendi'});
             return false;
           });
         }
@@ -20444,6 +20453,15 @@
       });
       });
     }
+  }
+  // Onde tirar à mão, conforme de onde vem cada banho (QA32): lançamento, banho fixo ou
+  // escrito direto na planilha.
+  function banhoFaltaOndeTirar(o){
+    var l=[];
+    if((o.lancs||[]).length) l.push('Lançamentos do dia › Banho');
+    if(o.fixo) l.push('Banhos recorrentes › Pular o próximo');
+    if((o.txts||[]).length || !l.length) l.push('direto na planilha');
+    return l.join(' e ');
   }
   // A chamada de agora diz "veio"? Lê do banco; sem conseguir ler, vale a que está na memória.
   function banhoFaltaVeioAgora(o, dia){
