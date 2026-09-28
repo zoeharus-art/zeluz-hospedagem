@@ -68,6 +68,21 @@
 
 - **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar` (marca `troca` e `nasceu_troca` no crédito), `repTrocaComoDesfaz`.
 
+### (Y) Banho de quem faltou: a recepção é avisada e libera o horário (28/set/2026)
+
+> **Adriana, 28/set/2026 (caso da Jasmine):** *"A Jasmine não veio hoje, tinha banho agendado para ela. Tem que, de alguma forma, tirar o horário do banho e avisar. […] Porque está aqui o horário dela e a gente deixa de marcar um outro banho."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Faltou (chamada, falta automática das 12h ou falta avisada) e tinha banho no dia | o banho lançado ou digitado ficava na planilha e na TV; só o banho fixo saía, em silêncio; ninguém era avisado | quem cuida dos lançamentos recebe "JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00", com **Liberar o horário**, **Ela ainda vem** e **Decidir depois** |
+| Liberar o horário | não existia | tira o banho do dia da planilha e da TV: lançamento sai dos Lançamentos do dia; banho fixo vira "pular só este dia"; digitado na planilha sai pela ponte |
+| Vários aparelhos | — | quem decidir primeiro encerra a pergunta nos outros (`daycare/banho-falta/{dia}/{chave}`) |
+| Hoje na Zêluz | — | cartão "Banho de quem faltou", com o botão de liberar e o que foi decidido |
+| Despertador do banho | chamava para descer com quem faltou | não chama quem faltou |
+
+- **Por que não tira sozinho:** a falta automática das 12h também marca quem ainda chega à tarde para o banho. Quem decide é a recepção.
+- **Onde está no código:** `banhoFaltaLista`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaExecutar`, `banhoFaltaCardHTML`; ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia` e `repConfirmar`; `checarDespertadorBanho`; `banhosGravarExcecao` devolve a promessa.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
