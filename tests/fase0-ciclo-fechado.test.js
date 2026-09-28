@@ -931,6 +931,13 @@ prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai c
   igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
   igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
   igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
+  run(`__bkT7=zHojeISO; zHojeISO=function(){ return '2026-09-28'; };`);
+  try {
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), false, 'falta de dia que já passou: reposição');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-28', volta:'2026-09-29'})"), true, 'falta de hoje com dia combinado: troca');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-07', volta:'2026-10-20', periodo:true})"), false, 'período que rende um dia: reposição');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-01', volta:'2026-10-01'})"), false);
+  } finally { run('zHojeISO=__bkT7;'); }
   run(`__bkT5={pe:pelExtra}; pelExtra=function(){ return {sexo:'Macho'}; };`);
   try {
     const m = run("repMensagem({n:'Bis Leon', tutor:'Bruno Souza'}, 'troca', {de:'2026-10-02', para:'2026-10-01'})");
@@ -938,8 +945,50 @@ prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai c
     assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(m), m);
     assert.ok(!/reposi/i.test(m) && !/de hoje/.test(m), m);
   } finally { run('pelExtra=__bkT5.pe;'); }
-  // o botão da tela de reposição usa a mensagem de troca nesse caso
-  assert.ok(/_troca\?repMensagem\(p,'troca',\{de:_info\.data, para:_info\.volta\}\):repMensagem\(p,'credito',_info\)/.test(fs.readFileSync(APP, 'utf8')));
+});
+provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; lotado, falta que já passou e período continuam reposição', async () => {
+  run(`__bkR={ge:document.getElementById, mm:repMsgModal, rg:repGravar, au:audit, ad:repAuditDiaDele, rf:repFechar, rr:renderReposicao,
+      vp:vagasPedir, tl:repTelDe, hz:zHojeISO, rs:repSaldo, vd:vagasDoDia, ve:vagasPodeEncaixar, pt:pessoaDoTurno, pe:pelExtra, dq:repDiasQueViria,
+      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual};
+    __elsR={}; document.getElementById=function(id){ return __elsR[id]||(__elsR[id]={value:'', textContent:'', innerHTML:'', style:{}, disabled:false}); };
+    __capR=[]; repMsgModal=function(t,l,x){ __capR.push({t:t, l:l, x:x}); };
+    __gravR=[]; repGravar=function(p,r){ __gravR.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__gravR.length}); };
+    audit=function(){}; repAuditDiaDele=function(){}; repFechar=function(){}; renderReposicao=function(){};
+    vagasPedir=function(){ return Promise.resolve(); }; repTelDe=function(){ return ''; };
+    zHojeISO=function(){ return '2026-09-28'; }; repSaldo=function(){ return 0; };
+    __cheioR=false; __podeR=false; vagasDoDia=function(){ return {lido:true, cheio:__cheioR}; }; vagasPodeEncaixar=function(){ return __podeR; };
+    pessoaDoTurno=function(){ return 'Márcia'; }; pelExtra=function(){ return {sexo:'Macho'}; };
+    __diasR=[]; repDiasQueViria=function(){ return __diasR; };`);
+  const caso = async (cfg) => {
+    run(`__elsR={}; __capR=[]; __gravR=[]; __cheioR=${!!cfg.cheio}; __podeR=false; __diasR=${JSON.stringify(cfg.dias || [])};
+      document.getElementById('repData').value=${JSON.stringify(cfg.data || '')}; document.getElementById('repVolta').value=${JSON.stringify(cfg.volta || '')};
+      document.getElementById('repDe').value=${JSON.stringify(cfg.de || '')}; document.getElementById('repAte').value=${JSON.stringify(cfg.ate || '')};
+      repPelSel={n:'Bis Leon', tutor:'Bruno Souza'}; repModoAtual=${JSON.stringify(cfg.modo || 'dia')}; repMotivoAtual='outro';
+      repConfirmar({});`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    return { g: JSON.parse(JSON.stringify(run('__gravR'))), c: JSON.parse(JSON.stringify(run('__capR'))) };
+  };
+  try {
+    let r = await caso({ data: '2026-10-02', volta: '2026-10-01' });
+    assert.ok(r.g.length === 1 && r.g[0].troca && r.g[0].troca.de === '2026-10-02' && r.g[0].troca.para === '2026-10-01', 'Bis: grava a marca de troca ' + JSON.stringify(r.g));
+    assert.strictEqual(run('repTrocaViva(' + JSON.stringify(r.g[0]) + ')'), true, 'no dia 01/10 o app reconhece a troca ("troca cumprida")');
+    assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(r.c[0].x), r.c[0].x);
+    assert.ok(/TROCA de dia/.test(r.c[0].l[0]) && r.c[0].t === '✅ Reposição lançada', JSON.stringify(r.c[0].l));
+    r = await caso({ data: '2026-10-02', volta: '2026-10-01', cheio: true });
+    assert.ok(!r.g[0].troca && /contando a do dia 02\/10\/2026/.test(r.c[0].x), 'dia de repor lotado, sem agendar: reposição ' + r.c[0].x);
+    r = await caso({ data: '2026-09-25', volta: '2026-09-29' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'falta de dia que já passou: reposição ' + r.c[0].x);
+    r = await caso({ data: '2026-10-01', volta: '2026-10-01' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'dia de repor igual ao da falta: reposição');
+    r = await caso({ modo: 'periodo', de: '2026-10-05', ate: '2026-10-11', dias: ['2026-10-07'], volta: '2026-10-20' });
+    assert.ok(r.g.length === 1 && !r.g[0].troca && !/troca/i.test(r.c[0].x), 'período que rende um dia só: reposição ' + r.c[0].x);
+    r = await caso({ modo: 'periodo', de: '2026-09-28', ate: '2026-10-02', dias: ['2026-09-28', '2026-09-30'] });
+    assert.ok(/com as de hoje, referentes ao período de 28\/09\/2026 a 02\/10\/2026/.test(r.c[0].x), r.c[0].x);
+  } finally {
+    run(`document.getElementById=__bkR.ge; repMsgModal=__bkR.mm; repGravar=__bkR.rg; audit=__bkR.au; repAuditDiaDele=__bkR.ad; repFechar=__bkR.rf;
+      renderReposicao=__bkR.rr; vagasPedir=__bkR.vp; repTelDe=__bkR.tl; zHojeISO=__bkR.hz; repSaldo=__bkR.rs; vagasDoDia=__bkR.vd;
+      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt;`);
+  }
 });
 prova('reposição: "com a de hoje" só quando a falta é de hoje', () => {
   run(`__bkT6={pe:pelExtra, rh:repHojeISO}; pelExtra=function(){ return {sexo:'Macho'}; }; repHojeISO=function(){ return '2026-09-28'; };`);

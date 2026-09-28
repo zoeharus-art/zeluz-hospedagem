@@ -6647,6 +6647,9 @@
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
       regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
+      if(repLancEhTroca({qtd:1, data:d, volta:voltaEfetiva})){
+        regs[0].troca={de:d, para:voltaEfetiva, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()};
+      }
     } else {
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
@@ -6685,9 +6688,10 @@
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
       var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
-      var _troca=repLancEhTroca(_info);
+      var _troca=!!(regs.length===1 && regs[0].troca);
       repMsgModal('✅ Reposição lançada',
-        (_troca?['O tutor trocou o dia: não vem em '+repBRdata(_info.data)+' e vem em '+repBRdata(_info.volta)+'. A mensagem ao tutor fala em troca, não em reposição.']:[]).concat(
+        (_troca?['Para o tutor é TROCA de dia: não vem em '+repBRdata(_info.data)+' e vem em '+repBRdata(_info.volta)+'. '
+          +'Aqui fica como sempre: falta avisada no dia dele e reposição no dia novo. No dia novo, o app mostra "troca cumprida".']:[]).concat(
         [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
          'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
         .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
@@ -6711,9 +6715,17 @@
   // ficha, fecho com o coração amarelo. A consultora copia e manda — o app nunca envia
   // sozinho para o tutor.
   // FALTA DE UM DIA COM O DIA DE REPOR JÁ COMBINADO É TROCA (Adriana, 28/set/2026, caso do
-  // Bis): "o tutor está trocando o dia, ele não tem uma reposição". Para o tutor, a mensagem
-  // fala em troca. Período (férias, viagem) com o dia de volta marcado continua reposição.
-  function repLancEhTroca(info){ info=info||{}; return (info.qtd||1)===1 && !!info.volta && !!info.data && info.volta!==info.data; }
+  // Bis): "o tutor está trocando o dia, ele não tem uma reposição". Grava a mesma marca da
+  // "Marcar troca" (no dia novo, "TROCA CUMPRIDA", sem mensagem de reposição) e a mensagem
+  // ao tutor fala em troca. NÃO é troca (QA26): período (férias, viagem), mesmo que renda
+  // um dia só; falta de dia que já passou (a mesma regra do dxVereditoTroca); dia de repor
+  // igual ao da falta.
+  function repLancEhTroca(info){
+    info=info||{};
+    if((info.qtd||1)!==1 || info.periodo) return false;
+    if(!info.volta || !info.data || info.volta===info.data) return false;
+    return info.data>=repHojeISO();
+  }
   function repMensagem(p, modo, info){
     info=info||{};
     var ex={}; try{ ex=(typeof pelExtra==='function'?pelExtra(p):{})||{}; }catch(e){ /* sem extra, a mensagem sai no neutro — melhor que não sair */ }
