@@ -922,9 +922,35 @@ prova('a mensagem da troca fala em troca — não em reposição', () => {
   try {
     const m = run("repMensagem({n:'Coco Chanel', tutor:'Juliana Prado'}, 'troca', {de:'2026-09-29', para:'2026-09-30'})");
     assert.ok(/^Oi, Juliana, como está\?/.test(m), m);
-    assert.ok(/a troca pedida do dia 29\/09 \(terça-feira\) para o dia 30\/09 \(quarta-feira\) foi feita\. A Coco Chanel vem na quarta-feira, 30\/09\./.test(m), m);
+    // Texto da Adriana, 28/set/2026 (antes: "a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita").
+    assert.ok(/Conforme pedido, estamos fazendo a troca da Coco Chanel do dia 29\/09 para quarta-feira, dia 30\/09\./.test(m), m);
     assert.ok(!/reposi/i.test(m), 'nenhuma palavra sobre reposição');
   } finally { run('pelExtra=__bkT3.pe;'); }
+});
+prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai como TROCA na mensagem ao tutor', () => {
+  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
+  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
+  igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
+  run(`__bkT5={pe:pelExtra}; pelExtra=function(){ return {sexo:'Macho'}; };`);
+  try {
+    const m = run("repMensagem({n:'Bis Leon', tutor:'Bruno Souza'}, 'troca', {de:'2026-10-02', para:'2026-10-01'})");
+    assert.ok(/^Oi, Bruno, como está\?/.test(m), m);
+    assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(m), m);
+    assert.ok(!/reposi/i.test(m) && !/de hoje/.test(m), m);
+  } finally { run('pelExtra=__bkT5.pe;'); }
+  // o botão da tela de reposição usa a mensagem de troca nesse caso
+  assert.ok(/_troca\?repMensagem\(p,'troca',\{de:_info\.data, para:_info\.volta\}\):repMensagem\(p,'credito',_info\)/.test(fs.readFileSync(APP, 'utf8')));
+});
+prova('reposição: "com a de hoje" só quando a falta é de hoje', () => {
+  run(`__bkT6={pe:pelExtra, rh:repHojeISO}; pelExtra=function(){ return {sexo:'Macho'}; }; repHojeISO=function(){ return '2026-09-28'; };`);
+  try {
+    const hoje = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:1, data:'2026-09-28', saldo:2})");
+    assert.ok(/está com 2 reposições, com a de hoje, referente ao dia 28\/09\/2026\./.test(hoje), hoje);
+    const outro = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:1, data:'2026-10-02', saldo:1})");
+    assert.ok(/está com 1 reposição, contando a do dia 02\/10\/2026\./.test(outro) && !/de hoje/.test(outro), outro);
+    const per = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:5, de:'2026-10-05', ate:'2026-10-09', saldo:5})");
+    assert.ok(/contando as do período de 05\/10\/2026 a 09\/10\/2026\./.test(per), per);
+  } finally { run('pelExtra=__bkT6.pe; repHojeISO=__bkT6.rh;'); }
 });
 prova('turma: na terça "trocou para 30/09"; na quarta vem "troca (no lugar de 29/09)"; a planilha recebe falta e Reposição', () => {
   run(`__bkT4={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, te:poTelDoTutor, rs:repSaldo, pi:pelInativo, mz:ehMoradorZeluz, P:PELUDINHOS, hz:zHojeISO};

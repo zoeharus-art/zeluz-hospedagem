@@ -6685,14 +6685,16 @@
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
       var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
+      var _troca=repLancEhTroca(_info);
       repMsgModal('✅ Reposição lançada',
+        (_troca?['O tutor trocou o dia: não vem em '+repBRdata(_info.data)+' e vem em '+repBRdata(_info.volta)+'. A mensagem ao tutor fala em troca, não em reposição.']:[]).concat(
         [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
          'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
         .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
                   +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[])
         .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
-                  +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[]),
-        repMensagem(p,'credito',_info), repTelDe(p));
+                  +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[])),
+        _troca?repMensagem(p,'troca',{de:_info.data, para:_info.volta}):repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
       soltar();
@@ -6708,6 +6710,10 @@
   // O padrão da casa vem do empMensagem: "Oi, {tutor}, como está?", flexão pelo sexo da
   // ficha, fecho com o coração amarelo. A consultora copia e manda — o app nunca envia
   // sozinho para o tutor.
+  // FALTA DE UM DIA COM O DIA DE REPOR JÁ COMBINADO É TROCA (Adriana, 28/set/2026, caso do
+  // Bis): "o tutor está trocando o dia, ele não tem uma reposição". Para o tutor, a mensagem
+  // fala em troca. Período (férias, viagem) com o dia de volta marcado continua reposição.
+  function repLancEhTroca(info){ info=info||{}; return (info.qtd||1)===1 && !!info.volta && !!info.data && info.volta!==info.data; }
   function repMensagem(p, modo, info){
     info=info||{};
     var ex={}; try{ ex=(typeof pelExtra==='function'?pelExtra(p):{})||{}; }catch(e){ /* sem extra, a mensagem sai no neutro — melhor que não sair */ }
@@ -6722,21 +6728,25 @@
     var ola='Oi'+(tutor?(', '+tutor):'')+', como está?';
     var corpo='';
     if(modo==='credito'){
-      var qtd=info.qtd||1;
-      var ref=(qtd>1 && info.de && info.ate)
-        ? ('referentes ao período de '+repBRdata(info.de)+' a '+repBRdata(info.ate))
-        : ('referente ao dia '+repBRdata(info.data||repHojeISO()));
+      var qtd=info.qtd||1, _hj=repHojeISO();
+      // "Com a de hoje" só quando a falta é de HOJE (Adriana, 28/set/2026: a falta do Bis
+      // era do dia 02/10 e a mensagem dizia "com a de hoje"). Falta de outro dia: "contando".
+      var _per=(qtd>1 && info.de && info.ate);
+      var _hoje=_per ? (info.de<=_hj && _hj<=info.ate) : ((info.data||_hj)===_hj);
+      var ref=_per
+        ? ((_hoje?', com as de hoje, referentes ao período de ':', contando as do período de ')+repBRdata(info.de)+' a '+repBRdata(info.ate))
+        : ((_hoje?', com a de hoje, referente ao dia ':', contando a do dia ')+repBRdata(info.data||_hj));
       corpo='Passando para dizer que '+o+' '+nome+' está com '
-        +saldo+(saldo===1?' reposição':' reposições')
-        +(qtd>1?', com as de hoje, ':', com a de hoje, ') + ref + '.';
+        +saldo+(saldo===1?' reposição':' reposições') + ref + '.';
       if(info.volta) corpo+='\n\nO dia de repor já ficou combinado: '+repBRdata(info.volta)+'.';
     }else if(modo==='troca'){
-      // TROCA DE DIA (Adriana, 25/set/2026): "A troca pedida do dia tal pro dia tal foi
-      // feita." Não fala em reposição — o tutor escolheu trocar, não usar reposição.
+      // TROCA DE DIA. Não fala em reposição: o tutor escolheu trocar, não usar reposição.
+      // Texto da Adriana, 28/set/2026 (caso do Bis): "Conforme pedido, estamos fazendo a
+      // troca do Bis do dia 2 de outubro para quinta-feira, dia 1 de outubro."
       var dSem=function(iso){ return String(repDiaSemanaComData(iso)).split(',')[0]; };
       var dCur=function(iso){ return String(repBRdata(iso)).slice(0,5); };
-      corpo='Passando para confirmar: a troca pedida do dia '+dCur(info.de)+' ('+dSem(info.de)+') para o dia '
-        +dCur(info.para)+' ('+dSem(info.para)+') foi feita. '+(f?'A ':'O ')+nome+' vem '+repNoDia(info.para)+'.';
+      corpo='Conforme pedido, estamos fazendo a troca d'+o+' '+nome+' do dia '+dCur(info.de)
+        +' para '+dSem(info.para)+', dia '+dCur(info.para)+'.';
     }else if(modo==='troca-desfeita'){
       // DESFAZER A TROCA (QA16): a mensagem fala da troca. Reposição só aparece quando ela
       // existe de verdade — o dia de origem já passou, ou a falta já tinha sido avisada.
