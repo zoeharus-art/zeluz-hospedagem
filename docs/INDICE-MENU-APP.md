@@ -1,4 +1,4 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25 e 27/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27 e 28/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
@@ -51,6 +51,19 @@
 
 - **Onde está no código:** `cadFormLer`, `cadDiferenca`, `onCadGravar`, `cadGravarAgora`, `cadTextoSalvar`, `onCad`, `onCadNome`, `normalizarNasc`, `aplicarCadastro`, `carregarCadastro`, `cadMestreDe`, `cadSoCheios`, `setHospAlergia`, `abrirPlantao`, `toggleCadastro`; microchip: `zChipPatch` (campo do Cadastro, `pelChipNaoTemGravar`, `pelChipNaoTemLimpar`, `ciMarcarSemMicrochip`, `ciSalvarCadastroFalta`, `ciCriarNovoHospede`), `cadChipDoMestre`, `cadMestreBruto`, `extraDoHosp`; check-in: `ciCriarNovoHospede`.
 - **Ficou para depois (story 6.7):** chave da ficha sem o recurso do primeiro nome (M4b); trocar o tutor pelo Plantão (M5, decisão da Adriana).
+
+### (X) Reposição: falta com o dia de repor já combinado é troca na mensagem ao tutor (28/set/2026)
+
+> **Adriana, 28/set/2026 (caso do Bis Leon):** *"O tutor está trocando o dia, ele não tem uma reposição. […] Conforme pedido, estamos fazendo a troca do Bis do dia 2 de outubro para quinta-feira, dia 1 de outubro."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Reposições › **Lançar reposição**: falta de um dia com o **dia de repor** já combinado | a mensagem dizia "está com 1 reposição, com a de hoje, referente ao dia 02/10/2026. O dia de repor já ficou combinado: 01/10/2026" | a mensagem fala em **troca**: "Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02/10 para quinta-feira, dia 01/10." O que é gravado não muda: falta avisada no dia dele e reposição no dia novo |
+| Troca de dia (Marcar reposição ou dia extra › Troca de dia) | "a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita" | o mesmo texto novo, nas palavras dela |
+| Falta lançada para outro dia, sem dia de repor | "com a de hoje, referente ao dia 02/10/2026" (errado: a falta não era de hoje) | "contando a do dia 02/10/2026". "Com a de hoje" só quando a falta é de hoje |
+| Período (férias, viagem) com o dia de volta marcado | reposição | continua reposição |
+
+- **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar`.
 
 ### Decisões registradas (sem mudança de código)
 
