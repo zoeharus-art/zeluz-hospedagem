@@ -6647,8 +6647,14 @@
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
       regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
-      if(repLancEhTroca({qtd:1, data:d, volta:voltaEfetiva})){
+      // As mesmas regras da "Marcar troca" (QA27): o dia que sai é dia dele, o dia novo não é,
+      // e o dia novo não é sábado nem domingo. Fora disso, continua reposição.
+      var _wV=-1; try{ _wV=new Date(voltaEfetiva+'T12:00:00').getDay(); }catch(e){ _wV=-1; } /* silencioso de propósito: sem o dia da semana, não é troca */
+      if(repLancEhTroca({qtd:1, data:d, volta:voltaEfetiva}) && repEhDiaDele(p,d) && !repEhDiaDele(p,voltaEfetiva) && _wV>0 && _wV<6){
         regs[0].troca={de:d, para:voltaEfetiva, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()};
+        // Nasceu como troca: desfazer antes do dia estorna a falta, igual à "Marcar troca" (QA27).
+        // Fica fora do objeto `troca`, que o repTrocaGravar reescreve numa remarcação.
+        regs[0].nasceu_troca=true;
       }
     } else {
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
@@ -6690,14 +6696,17 @@
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
       var _troca=!!(regs.length===1 && regs[0].troca);
       repMsgModal('✅ Reposição lançada',
-        (_troca?['Para o tutor é TROCA de dia: não vem em '+repBRdata(_info.data)+' e vem em '+repBRdata(_info.volta)+'. '
-          +'Aqui fica como sempre: falta avisada no dia dele e reposição no dia novo. No dia novo, o app mostra "troca cumprida".']:[]).concat(
-        [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
-         'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
-        .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
-                  +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[])
+        (_troca
+          ? ['Para o tutor é TROCA de dia: não vem em '+repBRdata(_info.data)+' e vem em '+repBRdata(_info.volta)+'. '
+              +'Aqui fica como sempre: falta avisada no dia '+(repEhFemea(p)?'dela':'dele')+' e reposição no dia novo.',
+             'Quando '+(repEhFemea(p)?'ela':'ele')+' vier em '+repBRdata(_info.volta)+', marque em Reposições: o app registra como troca cumprida.'
+              +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]
+          : [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
+             'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
+            .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
+                  +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[]))
         .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
-                  +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[])),
+                  +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[]),
         _troca?repMensagem(p,'troca',{de:_info.data, para:_info.volta}):repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
@@ -7001,7 +7010,7 @@
   function repTrocaComoDesfaz(cred, hoje){
     hoje=hoje||repHojeISO();
     var de=String(((cred||{}).troca||{}).de||(cred||{}).data||'');
-    var nasceu=!!(cred && cred.motivo==='troca');
+    var nasceu=!!(cred && (cred.motivo==='troca' || cred.nasceu_troca));   // nasceu_troca: troca lançada pela tela de Reposição (QA27)
     if(nasceu && de>=hoje) return {estorna:true, texto:'Volta a vir '+repNoDia(de)+': a falta avisada sai.'};
     if(nasceu) return {estorna:false, texto:'O dia '+repBRdata(de)+' já passou: a falta avisada fica e vira reposição sem dia.'};
     return {estorna:false, texto:'A falta de '+repBRdata(de)+', que o tutor já tinha avisado, continua.'};

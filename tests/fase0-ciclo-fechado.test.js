@@ -949,7 +949,8 @@ prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai c
 provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; lotado, falta que já passou e período continuam reposição', async () => {
   run(`__bkR={ge:document.getElementById, mm:repMsgModal, rg:repGravar, au:audit, ad:repAuditDiaDele, rf:repFechar, rr:renderReposicao,
       vp:vagasPedir, tl:repTelDe, hz:zHojeISO, rs:repSaldo, vd:vagasDoDia, ve:vagasPodeEncaixar, pt:pessoaDoTurno, pe:pelExtra, dq:repDiasQueViria,
-      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual};
+      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual, pd:pelDias};
+    __diasDele=['sex']; pelDias=function(){ return __diasDele; };   // o Bis vem às sextas
     __elsR={}; document.getElementById=function(id){ return __elsR[id]||(__elsR[id]={value:'', textContent:'', innerHTML:'', style:{}, disabled:false}); };
     __capR=[]; repMsgModal=function(t,l,x){ __capR.push({t:t, l:l, x:x}); };
     __gravR=[]; repGravar=function(p,r){ __gravR.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__gravR.length}); };
@@ -960,7 +961,7 @@ provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; l
     pessoaDoTurno=function(){ return 'Márcia'; }; pelExtra=function(){ return {sexo:'Macho'}; };
     __diasR=[]; repDiasQueViria=function(){ return __diasR; };`);
   const caso = async (cfg) => {
-    run(`__elsR={}; __capR=[]; __gravR=[]; __cheioR=${!!cfg.cheio}; __podeR=false; __diasR=${JSON.stringify(cfg.dias || [])};
+    run(`__elsR={}; __capR=[]; __gravR=[]; __cheioR=${!!cfg.cheio}; __podeR=false; __diasR=${JSON.stringify(cfg.dias || [])}; __diasDele=${JSON.stringify(cfg.diasDele || ['sex'])};
       document.getElementById('repData').value=${JSON.stringify(cfg.data || '')}; document.getElementById('repVolta').value=${JSON.stringify(cfg.volta || '')};
       document.getElementById('repDe').value=${JSON.stringify(cfg.de || '')}; document.getElementById('repAte').value=${JSON.stringify(cfg.ate || '')};
       repPelSel={n:'Bis Leon', tutor:'Bruno Souza'}; repModoAtual=${JSON.stringify(cfg.modo || 'dia')}; repMotivoAtual='outro';
@@ -973,7 +974,15 @@ provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; l
     assert.ok(r.g.length === 1 && r.g[0].troca && r.g[0].troca.de === '2026-10-02' && r.g[0].troca.para === '2026-10-01', 'Bis: grava a marca de troca ' + JSON.stringify(r.g));
     assert.strictEqual(run('repTrocaViva(' + JSON.stringify(r.g[0]) + ')'), true, 'no dia 01/10 o app reconhece a troca ("troca cumprida")');
     assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(r.c[0].x), r.c[0].x);
-    assert.ok(/TROCA de dia/.test(r.c[0].l[0]) && r.c[0].t === '✅ Reposição lançada', JSON.stringify(r.c[0].l));
+    assert.ok(/TROCA de dia/.test(r.c[0].l[0]) && /troca cumprida/.test(r.c[0].l[1]) && r.c[0].t === '✅ Reposição lançada', JSON.stringify(r.c[0].l));
+    assert.strictEqual(r.g[0].nasceu_troca, true, 'a marca de nascimento fica no crédito');
+    igual(run('repTrocaComoDesfaz(' + JSON.stringify(r.g[0]) + ", '2026-09-28').estorna"), true, 'desfazer antes do dia estorna a falta, igual à "Marcar troca"');
+    r = await caso({ data: '2026-10-02', volta: '2026-10-01', diasDele: ['qui', 'sex'] });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'o dia novo já é dia dele: reposição');
+    r = await caso({ data: '2026-10-02', volta: '2026-10-03' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'dia novo no sábado: reposição');
+    r = await caso({ data: '2026-09-30', volta: '2026-10-01' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'a falta não é num dia dele: reposição');
     r = await caso({ data: '2026-10-02', volta: '2026-10-01', cheio: true });
     assert.ok(!r.g[0].troca && /contando a do dia 02\/10\/2026/.test(r.c[0].x), 'dia de repor lotado, sem agendar: reposição ' + r.c[0].x);
     r = await caso({ data: '2026-09-25', volta: '2026-09-29' });
@@ -987,7 +996,7 @@ provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; l
   } finally {
     run(`document.getElementById=__bkR.ge; repMsgModal=__bkR.mm; repGravar=__bkR.rg; audit=__bkR.au; repAuditDiaDele=__bkR.ad; repFechar=__bkR.rf;
       renderReposicao=__bkR.rr; vagasPedir=__bkR.vp; repTelDe=__bkR.tl; zHojeISO=__bkR.hz; repSaldo=__bkR.rs; vagasDoDia=__bkR.vd;
-      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt;`);
+      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt; pelDias=__bkR.pd;`);
   }
 });
 prova('reposição: "com a de hoje" só quando a falta é de hoje', () => {
