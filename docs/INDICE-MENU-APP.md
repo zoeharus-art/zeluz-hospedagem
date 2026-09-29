@@ -314,6 +314,12 @@
   - **Salvar o bloco da ficha** sem duração conhecida (sem produto, ou "Outro" sem os dias) não apaga mais a próxima data.
   - **Textos com os números da lista:** "Pipeta dura N dias", o aviso "Escolha o produto", "1 dia" no singular e "Quantos dias protege o produto X?". Sem produto, o painel diz "Escolha o produto: a duração depende dele." (antes, "Vale 30 dias").
   - **Tutor com "&" no nome:** o painel acha o campo do produto.
+- **Ajustes do QA45:**
+  - **"Não sei qual foi" deixa a ficha sem produto** (antes, o produto de antes ficava, e o Salvar seguinte da ficha refazia a conta com ele, por exemplo 90 dias do Bravecto). O rastro diz "produto não informado — prazo mais curto".
+  - **A ficha aberta pela Prevenção** ("Feito em" e o recálculo do "Vale até") conta pelo produto da ficha: Bravecto 90 dias, não 30.
+  - **Salvar o bloco da ficha com dose nova e sem produto** pede o produto antes de gravar, como o painel.
+  - **A lista é gravada com `update`,** e só depois de ter sido lida do banco. Um produto que outro aparelho acrescentou não some; um aparelho que não conseguiu ler a lista salva as coleiras e avisa que a lista não foi salva.
+  - **O nome** tem até 40 letras, e o que precisa sair aparece entre « ».
 - **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ECTO_FORA`, `ectoCfgAplicar`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `ectoMaisCurto`, `ectoExemplos`, `ectoNomeProblema`, `ectoFraseDias`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora num nó só dela, `daycare/config/prevencao-ectos` (QA41): um aparelho ainda na versão antiga regrava `daycare/config/prevencao` inteiro ao salvar as coleiras, e apagaria a lista se ela morasse ali.
 - **Harness:** duas checagens mudaram de propósito. A v-16 continua exigindo o `set` das coleiras com as mesmas três chaves e passa a exigir também o `set` da lista no nó dela. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
 

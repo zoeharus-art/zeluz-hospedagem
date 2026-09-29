@@ -22112,6 +22112,9 @@
   // valendo para as fichas que já têm esse produto — senão a conta delas zerava e o
   // FILHOt saía da cobrança sem ninguém ver.
   var ECTO_FORA={};
+  // A lista do banco já foi lida neste aparelho? Sem ela, o Salvar das Configurações não
+  // grava a lista (gravaria a de fábrica por cima da da Gestão — QA45).
+  var ECTO_CFG_LIDO=false;
   function ectoComprimidos(){
     var novos=Object.keys(ECTO_DUR).filter(function(k){ return k!=='Pipeta' && ECTO_FABRICA.indexOf(k)<0 && !ECTO_FORA[k] && (parseInt(ECTO_DUR[k],10)||0)>0; })
       .sort(function(a,b){ return jsNorm(a).localeCompare(jsNorm(b),'pt'); });
@@ -22137,7 +22140,7 @@
   // espaço, "-" e "+", e o que sobrar é dito, nunca apagado em silêncio.
   function ectoNomeProblema(nome){
     var ruins=[]; String(nome||'').replace(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9 +\-]/g, function(c){ if(ruins.indexOf(c)<0) ruins.push(c); return c; });
-    return ruins.join(' ');
+    return ruins.map(function(c){ return '«'+c+'»'; }).join(' ');
   }
   // A frase "Vale N dias" do painel rápido, do produto que está escolhido.
   function ectoFraseDias(prod, dOutro){
@@ -22305,7 +22308,7 @@
     // A lista de carrapaticidas mora num nó só dela: o Salvar da Prevenção de um aparelho
     // ainda na versão antiga regrava 'prevencao' inteiro e apagaria a lista (QA41).
     var _ectos=DB.ref('daycare/config/prevencao-ectos').once('value')
-      .then(function(s){ ectoCfgAplicar((s&&s.val())||{}); })
+      .then(function(s){ ectoCfgAplicar((s&&s.val())||{}); ECTO_CFG_LIDO=true; })
       .catch(function(e){ _logLeituraFalhou('daycare/config/prevencao-ectos (prevCfgCarregar)', e); });
     return Promise.all([DB.ref('daycare/config/prevencao').once('value'), _ectos]).then(function(r){
       var s=r[0];
@@ -23558,7 +23561,8 @@
       var alvo=document.getElementById('prevP_'+chave+'_'+k);
       // A coleira não tem prazo fixo — depende da marca e da configuração (prevDiasDoItem).
       var _p=prevPetDe(chave);
-      var _dias=prevDiasDoItem(it, _p?(pelExtra(_p)||{}):{});
+      // O carrapaticida conta pelo produto da ficha (Bravecto 90), não pelos 30 do item (QA45).
+      var _dias=prevCorrigeDias(it, _p?(pelExtra(_p)||{}):{});
       if(!alvo||!dt||!_dias) return;
       alvo.value=addDiasISO(dt,_dias);
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -23619,7 +23623,7 @@
     // Se o "Vale até" ficou com um valor ANTERIOR à data que acabou de ser lançada, ele é
     // resto da ficha velha — recalcula. Data futura escrita à mão é respeitada.
     // A coleira não tem prazo fixo: prevDiasDoItem lê a marca e a configuração.
-    var _dias=prevDiasDoItem(it, pelExtra(p)||{});
+    var _dias=prevCorrigeDias(it, pelExtra(p)||{});   // carrapaticida: pelo produto da ficha (QA45)
     var calc=(_dias?addDiasISO(dt,_dias):'');
     var proxFinal=(prox && prox>dt) ? prox : (calc||prox||'');
     var nomeItem=it.nome||'este item';
@@ -23993,8 +23997,11 @@
            'Nada foi gravado ainda.'],{botao:'Escolher'});
         return;
       }
-      // "Não sei qual foi": conta o prazo mais curto e não inventa produto na ficha.
-      if(__ec.prod!=='?'){
+      // "Não sei qual foi": conta o prazo mais curto e a ficha fica SEM produto (QA45) —
+      // manter o de antes (ex.: Bravecto) faria o próximo Salvar da ficha refazer a conta
+      // com 90 dias e desfazer a proteção dos 30.
+      if(__ec.prod==='?'){ patch.ecto_prod=''; patch.ecto_tipo=''; patch.ecto_outro_dias=''; }
+      else {
         patch.ecto_prod=__ec.prod;
         patch.ecto_tipo=(__ec.prod==='Pipeta')?'Pipeta':'Comprimido';
         if(__ec.prod==='Outro') patch.ecto_outro_dias=String(__ec.dias);
@@ -24010,7 +24017,7 @@
     if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
     setPelExtra(p, patch);
     prevCorrigeRegistrar(p, chave, k, it, de, patch[k]||'',
-      'feito em '+fmtBR(dt), tela);
+      'feito em '+fmtBR(dt)+((k==='ecto_p' && patch.ecto_prod==='' && patch.ecto_tipo==='')?' (produto não informado — prazo mais curto)':''), tela);
   }
   function prevCorrigeVenceEm(chave,k,tela){
     if(!prevCorrigePode() || !podeVencManual()) return;
@@ -24525,6 +24532,14 @@
     };
     // Sem duração conhecida (sem produto, ou "Outro" sem os dias), a próxima data que já
     // estava fica: apagá-la tirava o FILHOt da cobrança em silêncio (QA41).
+    // Dose nova sem duração conhecida: pede o produto antes de gravar, como o painel (QA45).
+    if(b==='ecto' && ex.ecto_t && Object.prototype.hasOwnProperty.call(pend,'ecto_t') && !ectoDur(ex)){
+      if(typeof zAlertao==='function') zAlertao(ex.ecto_prod==='Outro'?'DIGA QUANTOS DIAS ELE DURA':'ESCOLHA O PRODUTO',
+        [ex.ecto_prod==='Outro'?'Com "Outro", escreva quantos dias o produto protege.':('A duração depende dele: '+ectoExemplos()+'.'),
+         'Se o tutor não sabe, toque no carrapaticida em Prevenção ou em Vencimentos e escolha "Não sei qual foi".',
+         'Nada foi gravado ainda.'],{botao:'Escolher'});
+      return;
+    }
     if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex);
       if(ex.ecto_t && d) patch.ecto_p=addDiasISO(ex.ecto_t,d); else if(!ex.ecto_t) patch.ecto_p=''; }
     if(b==='col' && pbContaManda('col_p',['col_t'])){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
@@ -43769,7 +43784,7 @@
         +'</div>';
     });
     h+='</div><div class="cad-grid2" style="margin-top:8px">'
-      +'<div><label class="cad-lb">Produto novo</label><input class="cad-in" id="cfgPrevEctoNovo" placeholder="Ex.: NexGard Spectra" autocomplete="off"></div>'
+      +'<div><label class="cad-lb">Produto novo</label><input class="cad-in" id="cfgPrevEctoNovo" placeholder="Ex.: NexGard Spectra" autocomplete="off" maxlength="40"></div>'
       +'<div><label class="cad-lb">Protege quantos dias?</label><input class="cad-in" inputmode="numeric" id="cfgPrevEctoNovoDias" placeholder="Ex.: 30"></div>'
       +'</div><div class="hint" style="margin-top:3px">Preencha os dois e toque em Salvar: o produto entra na lista de todo mundo. O nome leva só letras, números, espaço, "-" e "+".</div>';
     var fora=Object.keys(ECTO_FORA).sort();
@@ -43795,6 +43810,7 @@
       var ruim=ectoNomeProblema(nome);
       if(!nome) erro=erro||'Escreva o nome do produto novo.';
       else if(ruim) erro=erro||('O nome do produto leva só letras, números, espaço, "-" e "+". Tire: '+ruim);
+      else if(nome.length>40) erro=erro||'O nome do produto pode ter até 40 letras.';
       else if(!(nd>0)) erro=erro||('Quantos dias protege o produto '+nome+'? Precisa ser um número maior que zero.');
       else if(jsNorm(nome)==='outro') erro=erro||'"Outro" já existe na lista: dê o nome do produto.';
       else {
@@ -43849,21 +43865,28 @@
     // conta já feita, que o resto do app (e qualquer aparelho ainda na versão antiga) lê.
     // A lista de carrapaticidas vai para o nó dela (QA41): 'prevencao' continua com as
     // mesmas três chaves de antes, e um aparelho na versão antiga não apaga a lista.
+    // update, e não set (QA45): um produto que outro aparelho acrescentou depois que esta
+    // tela abriu continua lá. Tirar da lista nunca apaga (vira "fora"), então nada se perde.
+    var _gravaEctos=ECTO_CFG_LIDO;
     Promise.all([DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias}),
-                 DB.ref('daycare/config/prevencao-ectos').set(ectos)]).then(function(){
+                 _gravaEctos?DB.ref('daycare/config/prevencao-ectos').update(ectos):Promise.resolve()]).then(function(){
       // Vale na hora, sem recarregar: quem acabou de mudar precisa VER a mudança.
       COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
       Object.keys(coleiras).forEach(function(k){ COLEIRA_DUR[k]=coleiras[k].dias; });
       AVISO_COLEIRA_APOS=apos;
       AVISO_COLEIRA_DIAS=dias;
       // A lista inteira é a da tela; o que saiu fica fora das escolhas, com a duração guardada.
-      ectoCfgAplicar(ectos);
+      // Depois relê o banco, para trazer o que outro aparelho tenha acrescentado.
+      if(_gravaEctos){ ectoCfgAplicar(ectos); try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: a releitura é bônus; o que esta tela gravou já vale */ }
       try{ if(typeof audit==='function') audit('config-prevencao',
         'coleiras: '+marcas.map(function(m){ return m+' '+(coleiras[m]?coleiras[m].dias:'—')+'d'; }).join(' · ')
         +' | 1º aviso: '+apM+' meses e '+apD+' dias de uso (= '+a1+' dias antes) · destaque: '+a2+' dias antes'
         +' | carrapaticidas: '+Object.keys(ectos).map(function(k){ return k+' '+ectos[k].dias+'d'+(ectos[k].fora?' (fora da lista)':''); }).join(' · '), {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. A Prevenção e o Dashboard das Consultoras já estão usando estes números.'; }
       cfgPrevRender();
+      // A tela redesenhada ganha o aviso de volta: a lista não foi gravada.
+      if(!_gravaEctos){ var st2=document.getElementById('cfgPrevSt');
+        if(st2){ st2.style.color='var(--crm-critico)'; st2.textContent='✓ Coleiras salvas. A lista de carrapaticidas NÃO foi salva: não consegui lê-la do banco. Recarregue o app e salve de novo.'; } }
       try{ var v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevencao==='function') renderPrevencao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/prevencao (cfgPrevSalvar)', e);

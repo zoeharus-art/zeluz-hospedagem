@@ -15210,7 +15210,9 @@ async function main() {
       // (prevencao-ectos). 'prevencao' continua com as mesmas três chaves — assim o Salvar
       // de um aparelho ainda na versão antiga não apaga os produtos que a Gestão acrescentou.
       && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html)
-      && /DB\.ref\('daycare\/config\/prevencao-ectos'\)\.set\(ectos\)/.test(html));
+      // QA45: com update (produto que outro aparelho acrescentou não some), e só depois de a
+      // lista ter sido lida do banco (_gravaEctos).
+      && /_gravaEctos\?DB\.ref\('daycare\/config\/prevencao-ectos'\)\.update\(ectos\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
     // Reescrito em 15/set/2026 (v-18): a CEO escolheu, entre as três variantes desenhadas
