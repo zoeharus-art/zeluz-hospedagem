@@ -15212,7 +15212,7 @@ async function main() {
       && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html)
       // QA45: com update (produto que outro aparelho acrescentou não some), e só depois de a
       // lista ter sido lida do banco (_gravaEctos).
-      && /_gravaEctos\?DB\.ref\('daycare\/config\/prevencao-ectos'\)\.update\(ectos\)/.test(html));
+      && /_gravaEctos\?DB\.ref\('daycare\/config\/prevencao-ectos'\)\.update\(_updEctos\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
     // Reescrito em 15/set/2026 (v-18): a CEO escolheu, entre as três variantes desenhadas

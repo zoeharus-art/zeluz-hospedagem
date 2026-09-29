@@ -23858,7 +23858,8 @@
       +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Qual produto?</label>'
       +'<select class="cad-in" id="prevCorrP_'+id+'" style="margin:0" onchange="prevCorrigeEctoMudou(\''+idJs+'\')'+(extraOnchange?(';'+extraOnchange):'')+'">'+ops+'</select></div>'
       +'<div id="prevCorrDW_'+id+'" style="'+(atual==='Outro'?'':'display:none')+'"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Dura quantos dias?</label>'
-      +'<input class="cad-in" id="prevCorrD_'+id+'" inputmode="numeric" value="'+escAttr(String(dAtual))+'" placeholder="Ex.: 90" style="margin:0;width:90px"></div>'
+      +'<input class="cad-in" id="prevCorrD_'+id+'" inputmode="numeric" value="'+escAttr(String(dAtual))+'" placeholder="Ex.: 90" style="margin:0;width:90px"'
+        +(extraOnchange?(' oninput="'+extraOnchange+'"'):'')+'></div>'
       +'</div>';
   }
   function prevCorrigeEctoMudou(id){
@@ -24105,7 +24106,7 @@
       {alvo:chave, item:k, de:de||'', para:para||'', pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     PREV_CORRIGE_OK[prevCorrigeAlvo(chave,k)]={ts:Date.now(), ate:para||'',
       texto:textoOk||((pelNome(p)||'')+' — '+nome+' em dia até '+(para?fmtBR(para):'—')
-        +(comoTexto==='vencimento digitado à mão'?' (marcado à mão)':''))};
+        +(String(comoTexto||'').indexOf('vencimento digitado à mão')===0?' (marcado à mão)':''))};
     PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
     // A FICHA FICOU EM DIA PELO QUADRO (25/set/2026): o cartão de Vencimentos some da lista
     // quando não há mais o que cobrar — e, com ele, o botão "Sim". Sem isto a conversa com o
@@ -24550,15 +24551,17 @@
     // Sem duração conhecida (sem produto, ou "Outro" sem os dias), a próxima data que já
     // estava fica: apagá-la tirava o FILHOt da cobrança em silêncio (QA41).
     // Dose nova sem duração conhecida: pede o produto antes de gravar, como o painel (QA45).
-    if(b==='ecto' && ex.ecto_t && Object.prototype.hasOwnProperty.call(pend,'ecto_t') && !ectoDur(ex)
-       && !Object.prototype.hasOwnProperty.call(pend,'ecto_p')){   // o "Vence em" digitado agora manda (QA47 B4)
+    // O "Vence em" da carteira digitado neste Salvar (não vazio) manda, e fica marcado à mão (QA47 B4, QA48 F2/F3).
+    var _ectoManualAgora=(b==='ecto' && !!pend.ecto_p && !ectoDur(ex));
+    if(b==='ecto' && ex.ecto_t && Object.prototype.hasOwnProperty.call(pend,'ecto_t') && !ectoDur(ex) && !_ectoManualAgora){
       if(typeof zAlertao==='function') zAlertao(ex.ecto_prod==='Outro'?'DIGA QUANTOS DIAS ELE DURA':'ESCOLHA O PRODUTO',
         [ex.ecto_prod==='Outro'?'Com "Outro", escreva quantos dias o produto protege.':('A duração depende dele: '+ectoExemplos()+'.'),
          'Se o tutor não sabe, toque no carrapaticida em Prevenção ou em Vencimentos e escolha "Não sei qual foi". Se você tem a data da carteira, digite-a em «Vence em».',
          'Nada foi gravado ainda.'],{botao:'Escolher'});
       return;
     }
-    if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex);
+    if(_ectoManualAgora){ patch.ecto_p=pend.ecto_p; patch.ecto_p_manual=true; }
+    else if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex);
       if(ex.ecto_t && d) patch.ecto_p=addDiasISO(ex.ecto_t,d); else if(!ex.ecto_t) patch.ecto_p=''; }
     if(b==='col' && pbContaManda('col_p',['col_t'])){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
     if(b==='verm'){
@@ -43825,10 +43828,10 @@
     R.lista.forEach(function(pr, i){
       var sai=document.getElementById('cfgPrevEctoSai_'+i);
       // Tirar da lista não apaga: guarda a duração, marcada como fora (QA41).
-      if(sai && sai.checked){ ectos[pr]={dias:parseInt(R.dur[pr],10)||0, fora:true}; return; }
+      if(sai && sai.checked){ ectos[pr]={dias:parseInt(R.dur[pr],10)||0, fora:true, so:'tirar'}; return; }
       var v=parseInt(String((document.getElementById('cfgPrevEcto_'+i)||{}).value||'').replace(/\D/g,''),10);
       if(!(v>0)){ erro=erro||('Quantos dias protege o produto '+pr+'? Precisa ser um número maior que zero.'); return; }
-      if(v!==(parseInt(R.dur[pr],10)||0)) ectos[pr]={dias:v};
+      if(v!==(parseInt(R.dur[pr],10)||0)) ectos[pr]={dias:v, so:'numero'};
     });
     var nome=String((document.getElementById('cfgPrevEctoNovo')||{}).value||'').trim().replace(/\s+/g,' ');
     var nd=parseInt(String((document.getElementById('cfgPrevEctoNovoDias')||{}).value||'').replace(/\D/g,''),10);
@@ -43841,7 +43844,7 @@
       else if(jsNorm(nome)==='outro') erro=erro||'"Outro" já existe na lista: dê o nome do produto.';
       else {
         var ja=Object.keys(R.dur).concat(Object.keys(ectos)).filter(function(k){ return jsNorm(k)===jsNorm(nome); })[0];
-        ectos[ja||nome]={dias:nd};
+        ectos[ja||nome]={dias:nd, so:'lista'};
       }
     }
     return erro?{erro:erro}:{ectos:ectos, lido:R.lido};
@@ -43894,8 +43897,17 @@
     // update, e não set (QA45): um produto que outro aparelho acrescentou depois que esta
     // tela abriu continua lá. Tirar da lista nunca apaga (vira "fora"), então nada se perde.
     var _mudouEctos=Object.keys(ectos).length>0, _gravaEctos=!!ecR.lido && _mudouEctos;
+    // Caminho por campo (QA48 F6): mudar o número grava SÓ o número — se outro aparelho tirou o
+    // produto da lista, ele continua fora. Tirar grava o "fora"; escrever em "Produto novo" o
+    // põe de volta na lista.
+    var _updEctos={};
+    Object.keys(ectos).forEach(function(k){
+      var o=ectos[k]; _updEctos[k+'/dias']=o.dias;
+      if(o.so==='tirar') _updEctos[k+'/fora']=true;
+      else if(o.so==='lista') _updEctos[k+'/fora']=null;
+    });
     Promise.all([DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias}),
-                 _gravaEctos?DB.ref('daycare/config/prevencao-ectos').update(ectos):Promise.resolve()]).then(function(){
+                 _gravaEctos?DB.ref('daycare/config/prevencao-ectos').update(_updEctos):Promise.resolve()]).then(function(){
       // Vale na hora, sem recarregar: quem acabou de mudar precisa VER a mudança.
       COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
       Object.keys(coleiras).forEach(function(k){ COLEIRA_DUR[k]=coleiras[k].dias; });
@@ -43906,10 +43918,13 @@
       if(_gravaEctos){
         // Vale na hora: a lista na memória com as mudanças desta tela por cima.
         var _mem={}; Object.keys(ECTO_DUR).forEach(function(k){ _mem[k]=ECTO_FORA[k]?{dias:ECTO_DUR[k], fora:true}:{dias:ECTO_DUR[k]}; });
-        Object.keys(ectos).forEach(function(k){ _mem[k]=ectos[k]; });
+        Object.keys(ectos).forEach(function(k){ var o=ectos[k];
+          _mem[k]={dias:o.dias, fora:(o.so==='tirar') || (o.so==='numero' && !!ECTO_FORA[k])}; });
         ectoCfgAplicar(_mem);
-        // Depois relê o banco (o que outro aparelho mudou) e, se a tela ainda está aberta, redesenha.
-        try{ var _rl=prevCfgCarregar(); if(_rl && _rl.then) _rl.then(function(){ try{ if(document.getElementById('cfgPrevSt')) cfgPrevRender(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }); }catch(e){} /* silencioso de propósito: a releitura é bônus; o que esta tela gravou já vale */
+        // Depois relê o banco (o que outro aparelho mudou). A tela NÃO é redesenhada de novo:
+        // apagaria o que a pessoa já está digitando (QA48 F5). O retrato da tela continua o do
+        // desenho, então o próximo Salvar grava só o que ela mudar.
+        try{ prevCfgCarregar(); }catch(e){} /* silencioso de propósito: a releitura é bônus; o que esta tela gravou já vale */
       }
       try{ if(typeof audit==='function') audit('config-prevencao',
         'coleiras: '+marcas.map(function(m){ return m+' '+(coleiras[m]?coleiras[m].dias:'—')+'d'; }).join(' · ')
@@ -43920,7 +43935,9 @@
       cfgPrevRender();
       // A tela redesenhada ganha o aviso de volta: a lista não foi gravada.
       if(_mudouEctos && !_gravaEctos){ var st2=document.getElementById('cfgPrevSt');
-        if(st2){ st2.style.color='var(--crm-critico)'; st2.textContent='✓ Coleiras salvas. A lista de carrapaticidas NÃO foi salva: não consegui lê-la do banco. Recarregue o app e salve de novo.'; } }
+        if(st2){ st2.style.color='var(--crm-critico)'; st2.textContent=ECTO_CFG_LIDO
+          ? '✓ Coleiras salvas. A lista de carrapaticidas NÃO foi salva: ela chegou do banco depois que a tela abriu. A tela foi atualizada — confira os números e salve de novo.'
+          : '✓ Coleiras salvas. A lista de carrapaticidas NÃO foi salva: não consegui lê-la do banco. Recarregue o app e salve de novo.'; } }
       try{ var v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevencao==='function') renderPrevencao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     }).catch(function(e){
       _logFalhaGrav('daycare/config/prevencao (cfgPrevSalvar)', e);

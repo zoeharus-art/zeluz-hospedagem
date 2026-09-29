@@ -325,6 +325,11 @@
   - **"Não sei qual foi" com "Gravar o vencimento"** também deixa a ficha sem produto.
   - **Salvar o bloco da ficha** com a data da carteira digitada em «Vence em» no mesmo Salvar não é barrado por falta de produto.
   - **Configurações › Prevenção** lê os campos pela lista que estava na tela e grava só o que mudou. O número ou o "fora" que outro aparelho mudou continua valendo. A tela desenhada antes de a lista chegar do banco não grava a lista. O rastro só fala da lista quando ela foi gravada.
+- **Ajustes do QA48:**
+  - na ficha aberta pela Prevenção, os **dias do "Outro"** também refazem o "Vale até" enquanto são digitados (antes, a data do produto anterior ficava e a cobrança vinha tarde);
+  - o **«Vence em» da carteira** digitado no mesmo Salvar de uma dose nova, sem produto, é gravado e fica marcado "à mão". Apagado (vazio), o Salvar pede o produto;
+  - a **confirmação verde** continua dizendo "(marcado à mão)" com "Não sei qual foi";
+  - **Configurações:** mudar o número grava só o número (se outro aparelho tirou o produto da lista, ele continua fora). Salvar sem mudar a lista não regrava o nó. A releitura depois de salvar não redesenha a tela, para não apagar o que está sendo digitado. Quando a lista chega depois de a tela abrir, o aviso manda conferir e salvar de novo, sem recarregar.
 - **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ECTO_FORA`, `ectoCfgAplicar`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `ectoMaisCurto`, `ectoExemplos`, `ectoNomeProblema`, `ectoFraseDias`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora num nó só dela, `daycare/config/prevencao-ectos` (QA41): um aparelho ainda na versão antiga regrava `daycare/config/prevencao` inteiro ao salvar as coleiras, e apagaria a lista se ela morasse ali.
 - **Harness:** duas checagens mudaram de propósito. A v-16 continua exigindo o `set` das coleiras com as mesmas três chaves e passa a exigir também o `set` da lista no nó dela. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
 
