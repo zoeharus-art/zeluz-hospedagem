@@ -166,6 +166,23 @@
 - **Rastro:** cada reposição grava "a conferência repôs na planilha …" na auditoria.
 - **Onde está no código:** `dashPonteChamar` (fila) e `dashPonteChamarJa`; `dashAutoSincronizar`, passo 3; `integracao-daycare/Codigo.gs`, `_umPorVez`.
 
+### (AD) Check-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (29/set/2026)
+
+> **Adriana, 29/set/2026 (foto do check-in no celular):** *"É impossível conseguir salvar o que está ocorrendo! Precisa facilitar o processo. […] Tem um botão mudou, e outro que nem tem como ler!"*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Faixa "Confirme com o tutor: é isso mesmo?" de cada remédio que veio da ficha | o botão tocado ficava creme sobre creme, sem dar para ler | fica verde (Confirmado) ou marrom (Mudou), com letra creme e um ✓ na frente |
+
+- **O que o check-in pede antes de salvar** (cada item vira vermelho, com a frase do que fazer, e a tela rola até o primeiro):
+  - data de entrada;
+  - pelo menos uma refeição com o que ele come;
+  - cada remédio da ficha com **Confirmado** ou **Mudou**;
+  - a caixinha da conferência de segurança da medicação;
+  - "Outro" nos pertences descrito;
+  - o nome de quem entrega e a assinatura com o dedo (ou "O tutor não veio").
+- **Onde está no código:** `.ci-med-conf button.on` (CSS) e `ciMedConfSet`.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
