@@ -3684,6 +3684,7 @@ provaAsync('a janela "já está hospedado" oferece SUBSTITUIR; ele pede o motivo
     const g = run('__gravSub');
     assert.ok(g.length === 1 && g[0].m === 'corrigir' && g[0].id === 'est1', JSON.stringify(g));
     assert.ok(/substituiu o check-in: a medicação estava errada/.test(g[0].c.motivo) && g[0].c.quem === 'Adriana', JSON.stringify(g[0].c));
+    assert.strictEqual(run('__pacSub.substituir'), true, 'o pacote vai marcado: a assinatura nova também é gravada');
     assert.ok(g[0].c.diff.some((x) => /Medicação REMOVIDA: Apoquel/.test(x)) && g[0].c.diff.some((x) => /Medicação NOVA: Enalapril/.test(x)), JSON.stringify(g[0].c.diff));
     assert.ok(run('ciCorrigindoId') === null, 'a tela não fica presa no modo corrigir');
     // sem motivo: nada é gravado
@@ -3691,6 +3692,27 @@ provaAsync('a janela "já está hospedado" oferece SUBSTITUIR; ele pede o motivo
     await run('ciSubstituirExistente(__ativaSub, __pacSub)');
     assert.strictEqual(run('__gravSub.length'), 0);
   } finally { run('zTexto=__bkSub.zt; __ciGravar=__bkSub.gr; __ciTravar=__bkSub.tr; quemSou=__bkSub.qs; audit=__bkSub.au; ciHosp=__bkSub.h;'); }
+});
+provaAsync('QA42 — cancelar "quem recebeu" no SUBSTITUIR (ou no Corrigir/Acrescentar) não grava NADA: nem a estadia, nem a agenda; o prazo de 25 s fica parado durante a pergunta', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
+  assert.ok(cor.indexOf('await ciQuemRecebeu(chegouNovo') > 0 && cor.indexOf('await ciQuemRecebeu(chegouNovo') < cor.indexOf('ops.push(ref.update(_upCorr))')
+    && cor.indexOf('ops.push(ref.update(_upCorr))') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir: pergunta, depois estadia, depois agenda');
+  const acr = src.slice(src.indexOf("    else if(modo==='acrescentar'){"), src.indexOf("    else if(modo==='acrescentar'){") + 6000);
+  assert.ok(acr.indexOf('await ciQuemRecebeu(novosItens)') > 0 && acr.indexOf('await ciQuemRecebeu(novosItens)') < acr.indexOf('ops.push(ref.update({'), 'acrescentar: pergunta antes de gravar');
+  assert.ok(/async function ciQuemRecebeu\(itens, op\)\{[\s\S]{0,700}clearTimeout\(__ciTimerPreso\)/.test(src), 'o prazo para durante a pergunta');
+  run(`__bkQ42={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){};
+    __escQ42=[]; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? {nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[], ficha:{}} : {}; }}); },
+      update:function(v){ __escQ42.push(['update', p]); return Promise.resolve(); },
+      set:function(v){ __escQ42.push(['set', p]); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve(null); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}, temMed:true, key:'toshi__ana', substituir:true, correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    igual(JSON.parse(JSON.stringify(run('__escQ42'))), [], 'cancelou: nenhuma escrita no banco');
+  } finally { run('DB=__bkQ42.db; ciQuemRecebeu=__bkQ42.qr; ciHosp=__bkQ42.h; __ciTravar=__bkQ42.tr; audit=__bkQ42.au;'); }
 });
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');

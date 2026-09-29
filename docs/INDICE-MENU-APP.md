@@ -206,6 +206,10 @@
 
 - **SUBSTITUIR** pede o motivo (na própria página) e grava pelo mesmo caminho do Corrigir: a estadia passa a ter o que está na tela, a agenda de medicação passa a ser exatamente a desta tela (o remédio errado sai, nada fica em dobro) e o de antes fica no histórico da estadia (`correcoes`), com quem, quando e o motivo. A ficha em PDF sai como em todo salvar.
 - **Onde está no código:** `ciSubstituirExistente` e a janela em `ciSalvar`.
+- **Ajustes do QA42 (valem também para o Corrigir e o Acrescentar):**
+  - a pergunta "quem recebeu" vem **antes** de gravar qualquer coisa. Cancelada, nada é escrito: nem a estadia, nem a agenda. Antes, a estadia ia com o remédio novo e a agenda ficava com o antigo, com a tela dizendo "nada foi salvo";
+  - o prazo de 25 segundos do Salvar fica parado enquanto a pessoa escreve o nome;
+  - no SUBSTITUIR, a pergunta é "Quem recebeu do tutor o que está nesta tela?", e a assinatura nova e quem entregou também são gravadas.
 
 ### Decisões registradas (sem mudança de código)
 

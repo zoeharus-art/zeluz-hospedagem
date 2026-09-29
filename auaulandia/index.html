@@ -47744,7 +47744,7 @@
     const antes={ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''};
     pacote.correcao={motivo:'substituiu o check-in: '+motivo, quem:(typeof quemSou==='function'?quemSou():'-'),
                      diff:ciDiffCorrecao(antes, pacote.dados, pacote.meds)};
-    try{ if(typeof audit==='function') audit('checkin-substituido', motivo, {pet:(ciHosp&&ciHosp.nome)||'', id:ativa.id, feito_por:e.criado_por||''}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    pacote.substituir=true;   // grava também a assinatura nova (QA42 F3); o rastro sai no sucesso
     // Sem ligar o modo Corrigir da tela: se a gravação falhar, o próximo Salvar volta a
     // perguntar o que fazer, em vez de cobrar campos de correção que não estão na tela.
     __ciTravar(true);
@@ -47813,9 +47813,14 @@
   // Regra dela: material novo SEMPRE chega na recepção. A exceção é urgência em fim de semana
   // ou feriado, sem recepção na casa — aí monitor ou plantonista recebe e lança. Por isso o
   // campo não pergunta o papel: pergunta o NOME de quem pegou na mão. Login é papel, não pessoa.
-  async function ciQuemRecebeu(itens){
-    var titulo='CHEGOU MATERIAL NOVO';
-    var linhas=itens.concat(['Quem RECEBEU isto na porta? Escreva o nome da pessoa.',
+  async function ciQuemRecebeu(itens, op){
+    op=op||{};
+    // O prazo de 25 s do Salvar é da GRAVAÇÃO, não de quem está escrevendo o nome: ele fica
+    // parado aqui e volta a contar quando a resposta chega (QA42 — o alerta do prazo
+    // fechava esta pergunta no meio e o salvamento ficava pela metade).
+    try{ clearTimeout(__ciTimerPreso); }catch(e){} /* silencioso de propósito: sem prazo armado, nada a parar */
+    var titulo=op.titulo||'CHEGOU MATERIAL NOVO';
+    var linhas=itens.concat(op.linhas||['Quem RECEBEU isto na porta? Escreva o nome da pessoa.',
                              'Se foi você mesma, escreva o seu nome.']);
     for(var t=0;t<3;t++){
       var q=((await zTexto(titulo, linhas,
@@ -47826,7 +47831,7 @@
           {sim:'Cancelar o lançamento', nao:'Voltar e escrever o nome'})) { continue; }
         return null;
       }
-      if(/[a-zA-ZÀ-ÿ]{2,}/.test(q)&&q.length>=3) return q;
+      if(/[a-zA-ZÀ-ÿ]{2,}/.test(q)&&q.length>=3){ try{ __ciTravar(true); }catch(e){} /* silencioso de propósito: religa o prazo da gravação */ return q; }
       titulo='Precisa ser um NOME DE GENTE';
       linhas=['Não vale ponto, traço ou uma letra só.'].concat(itens)
              .concat(['Quem recebeu isto na porta?']);
@@ -47855,19 +47860,6 @@
       // SUBSTITUI. É a diferença que faz a correção existir: aqui a medicação e a
       // alimentação erradas SAEM, em vez de conviverem com as certas.
       ref=DB.ref('auaulandia/estadias/'+estadiaId);
-      const hist=Array.isArray(antes.correcoes)?antes.correcoes.slice():[];
-      hist.push({ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
-                  motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[],
-                  antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], entrada:antes.entrada||'', saida:antes.saida||'' } });
-      ops.push(ref.update({
-        entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
-        pertences:dados.pertences, medicacao:ciMedsToLista(meds),
-        gate_conferido:P.temMed,
-        // Corrigir SUBSTITUI: se o "sem ração" saiu da tela, ele sai da estadia também.
-        alimentacao:(P.alimSem||null),
-        correcoes:hist, _ts:Date.now(),
-        _ultimaEdicao:{quem:(P.correcao&&P.correcao.quem)||quemSou(), ts:Date.now(), corrigiu:(P.correcao&&P.correcao.diff)||[]}
-      }));
       // ===== RESOLVIDO NÃO VOLTA PARA A CONFERÊNCIA (Adriana, 12/ago/2026) ==============
       // "O Otávio viu que faltou a roupa, escreveu que faltou, a Amanda corrigiu e disse:
       //  resolvido. No entanto isso voltou à conferência do check-in, está dando retrabalho.
@@ -47896,7 +47888,11 @@
       P.chegouNovo=chegouNovo;
       if(chegouNovo.length){
         // Material novo de verdade → volta para a fila, com o nome do que chegou e de quem recebeu.
-        var _rec=await ciQuemRecebeu(chegouNovo);
+        // A pergunta vem ANTES de qualquer gravação (QA42): cancelada, nada foi escrito —
+        // nem a estadia, nem a agenda. Antes, a estadia já ia com o remédio novo e a agenda
+        // ficava com o antigo, e a tela dizia "nada foi salvo".
+        var _rec=await ciQuemRecebeu(chegouNovo, P.substituir?{titulo:'QUEM RECEBEU DO TUTOR O QUE ESTÁ NESTA TELA?',
+          linhas:['Escreva o nome de quem recebeu o material e ouviu o tutor. Se foi você, escreva o seu nome.']}:null);
         if(_rec===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
         P.recebidoPor=_rec;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
@@ -47914,6 +47910,23 @@
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia/resolvidos/'+_sol.quando).set(_sol));
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({ ultima_solucao:_sol }));
       }
+      // A estadia só é regravada DEPOIS da pergunta "quem recebeu" (QA42).
+      const hist=Array.isArray(antes.correcoes)?antes.correcoes.slice():[];
+      hist.push({ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
+                  motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[],
+                  antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], entrada:antes.entrada||'', saida:antes.saida||'' } });
+      const _upCorr={
+        entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
+        pertences:dados.pertences, medicacao:ciMedsToLista(meds),
+        gate_conferido:P.temMed,
+        // Corrigir SUBSTITUI: se o "sem ração" saiu da tela, ele sai da estadia também.
+        alimentacao:(P.alimSem||null),
+        correcoes:hist, _ts:Date.now(),
+        _ultimaEdicao:{quem:(P.correcao&&P.correcao.quem)||quemSou(), ts:Date.now(), corrigiu:(P.correcao&&P.correcao.diff)||[]}
+      };
+      // SUBSTITUIR troca também quem assinou e a assinatura: a tela exigiu as novas (QA42 F3).
+      if(P.substituir){ _upCorr.assinatura=P.sig||null; _upCorr.assinado_por=assinado||null; _upCorr.entregaSemTutor=!!P.semTutor; _upCorr.quemDeixou=(P.quemDeixou||null); }
+      ops.push(ref.update(_upCorr));
       // A agenda de medicação é reescrita do zero: se um remédio saiu, o alarme dele
       // precisa sumir junto — senão o despertador continua tocando por um remédio que
       // não existe mais.
@@ -47955,6 +47968,14 @@
       const _agoraCh={}; (dados.pertences||[]).forEach(function(p){ _agoraCh[chaveP(p)]=1; });
       P.naoRemovidos=pertAntes.filter(function(p){ return !_agoraCh[chaveP(p)]; })
                               .map(function(p){ return (p.nome||p.k||'item')+(p.spec?(' — '+p.spec):''); });
+      // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
+      // sabendo O QUE chegou e QUEM pegou na mão. A pergunta vem ANTES de gravar (QA42).
+      var _rec2=null;
+      if(novosItens.length){
+        _rec2=await ciQuemRecebeu(novosItens);
+        if(_rec2===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
+        P.recebidoPor=_rec2;
+      }
       ops.push(ref.update({
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:pertFinal, medicacao:medAntes.concat(medNovas),
@@ -47964,12 +47985,7 @@
         alimentacao:(P.alimSem||antes.alimentacao||null),
         _ts:Date.now(), _ultimaEdicao:{quem:quemSou(), ts:Date.now(), acrescentou:novosItens}
       }));
-      // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
-      // sabendo O QUE chegou e QUEM pegou na mão.
       if(novosItens.length){
-        var _rec2=await ciQuemRecebeu(novosItens);
-        if(_rec2===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
-        P.recebidoPor=_rec2;
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
           concluida:false, reaberta_em:Date.now(), reaberta_por:quemSou(),
           recebido_por:_rec2, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
