@@ -4253,7 +4253,7 @@ prova('painel rápido (Prevenção e Vencimentos): o produto escolhido manda na 
   assert.strictEqual(run(`prevCorrigeEctoHTML('verm_p', {}, 'x')`), '', 'só no carrapaticida');
 });
 prova('Configurações › Prevenção: a lista de carrapaticidas lê a tela, acrescenta, tira o novo e recusa número ruim', () => {
-  run(`__bkCE={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR['Credeli Plus']=30;
+  run(`__bkCE={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR['Credeli Plus']=30; CFG_ECTO_TELA=null;
     __camposCE={}; ectoProdutosLista().forEach(function(pr,i){ __camposCE['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
     document.getElementById=function(id){ return __camposCE[id]||null; };`);
   try {
@@ -4262,7 +4262,8 @@ prova('Configurações › Prevenção: a lista de carrapaticidas lê a tela, ac
       __camposCE.cfgPrevEctoNovo={value:'Simparic Trio'}; __camposCE.cfgPrevEctoNovoDias={value:'35'};`);
     const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
     // tirar da lista não apaga: a duração fica guardada, marcada como fora (QA41)
-    assert.ok(r.ectos && r.ectos.Bravecto.dias === 84 && r.ectos['Credeli Plus'].fora === true && r.ectos['Credeli Plus'].dias === 30 && r.ectos['Simparic Trio'].dias === 35 && !r.ectos['Simparic Trio'].fora && r.ectos.Pipeta.dias === 30, JSON.stringify(r));
+    // só o que mudou vai para o banco (QA47): a Pipeta, igual, não é regravada
+    assert.ok(r.ectos && r.ectos.Bravecto.dias === 84 && r.ectos['Credeli Plus'].fora === true && r.ectos['Credeli Plus'].dias === 30 && r.ectos['Simparic Trio'].dias === 35 && !r.ectos['Simparic Trio'].fora && !r.ectos.Pipeta, JSON.stringify(r));
     run(`__camposCE.cfgPrevEctoNovoDias={value:''};`);
     assert.ok(/Quantos dias protege o produto Simparic Trio\?/.test(run('cfgPrevEctoDaTela().erro')));
     // a lista mora num nó só dela: o Salvar de um aparelho na versão antiga regrava 'prevencao' e não a apaga (QA41)
@@ -4272,7 +4273,7 @@ prova('Configurações › Prevenção: a lista de carrapaticidas lê a tela, ac
   } finally { run('document.getElementById=__bkCE.ge; ECTO_DUR=__bkCE.ed; ectoDashOpsRefazer();'); }
 });
 prova('QA41 — o nome do produto só leva letras, números, espaço, "-" e "+"; o que sobra é dito, nunca apagado em silêncio; maiúscula não duplica', () => {
-  run(`__bkN={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA};
+  run(`__bkN={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; CFG_ECTO_TELA=null;
     __camposN={}; ectoProdutosLista().forEach(function(pr,i){ __camposN['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
     document.getElementById=function(id){ return __camposN[id]||null; };`);
   try {
@@ -4350,7 +4351,8 @@ provaAsync('QA41 — produto tirado da lista: some das escolhas, mas a ficha que
     run(`__bkF.ge=document.getElementById; __cF={}; ectoProdutosLista().forEach(function(pr,i){ __cF['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
       document.getElementById=function(id){ return __cF[id]||null; };`);
     const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
-    assert.ok(r.ectos.Revolution && r.ectos.Revolution.fora === true && r.ectos.Revolution.dias === 35, JSON.stringify(r));
+    // o Salvar seguinte não mexe no que está fora (o update deixa como está no banco — QA47)
+    assert.ok(!r.ectos.Revolution && r.lido === true, JSON.stringify(r));
     // e volta à lista quando escrevem o nome de novo
     run(`__cF.cfgPrevEctoNovo={value:'revolution'}; __cF.cfgPrevEctoNovoDias={value:'35'};`);
     const r2 = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
@@ -4390,7 +4392,9 @@ prova('QA41 — "Não sei qual foi" conta o prazo mais curto e não inventa prod
     });
     comFicha({ ecto_prod: 'Simparic' }, { 'prevCorrP_simba__ana_ecto_p': { value: '?' }, 'prevCorrV_simba__ana_ecto_p': { value: '2026-12-18' } }, () => {
       run("prevCorrigeVenceEm('simba__ana','ecto_p','venc')");
-      assert.ok(!('ecto_prod' in run('__patch')), '"não sei" não apaga nem troca o produto');
+      const p = run('__patch');
+      assert.ok(p.ecto_prod === '' && p.ecto_tipo === '' && p.ecto_p === '2026-12-18', '"não sei" deixa a ficha sem produto também aqui (QA47 B5): ' + JSON.stringify(p));
+      assert.ok(/produto não informado/.test(run('__reg[2]')), run('__reg[2]'));
     });
   } finally { run('podeVencManual=__bkVM.pv; prevAuditManual=__bkVM.am;'); }
   // frases: sem produto não diz "Vale 30 dias"; os números vêm da lista
@@ -4408,7 +4412,8 @@ prova('QA41 — "Não sei qual foi" conta o prazo mais curto e não inventa prod
   } finally { run('ECTO_DUR=__bkT.ed; ectoDashOpsRefazer();'); }
 });
 provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) e salvar o bloco da ficha sem duração não apaga a próxima data', async () => {
-  run(`__bkS={ge:document.getElementById, db:DB, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, au:audit, cr:cfgPrevRender};
+  run(`__bkS={ge:document.getElementById, db:DB, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, au:audit, cr:cfgPrevRender, pc:prevCfgCarregar}; CFG_ECTO_TELA=null;
+    __pcS=0; prevCfgCarregar=function(){ __pcS++; return Promise.resolve(null); };
     __cS={cfgPrevAposMeses:{value:'7'}, cfgPrevAposDias:{value:'0'}, cfgPrevAviso2:{value:'7'}, cfgPrevSt:{style:{}, textContent:''}};
     Object.keys(COLEIRA_DUR_PADRAO).forEach(function(m){ __cS['cfgPrevCol_'+m]={value:String(COLEIRA_DUR[m])}; });
     ectoProdutosLista().forEach(function(pr,i){ __cS['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
@@ -4425,18 +4430,24 @@ provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) 
     for (let i = 0; i < 10; i++) await Promise.resolve();
     const g = JSON.parse(JSON.stringify(run('__setS')));
     assert.ok(g['daycare/config/prevencao-ectos'] && g['daycare/config/prevencao-ectos'][0] === 'update' && g['daycare/config/prevencao-ectos'][1].Bravecto.dias === 84
+      && !g['daycare/config/prevencao-ectos'][1].Pipeta && g['daycare/config/prevencao-ectos'][1]['NexGard Spectra'].dias === 30
       && g['daycare/config/prevencao'][0] === 'set' && !('ectos' in g['daycare/config/prevencao'][1]), JSON.stringify(g));
+    assert.strictEqual(run('__pcS'), 1, 'relê o banco depois de salvar');
     assert.ok(run('ECTO_DUR.Bravecto') === 84 && run(`ectoProdutosLista().indexOf('NexGard Spectra')`) >= 0, 'vale na hora');
     assert.ok(run(`dashItem('carrapaticida').campos[0].ops`).some((o) => o.t === 'Bravecto · 84 dias'), 'e nos Lançamentos do dia');
     // aparelho que não conseguiu ler a lista do banco: salva as coleiras e NÃO grava a lista de fábrica por cima (QA45)
-    run(`ECTO_CFG_LIDO=false; __setS={}; ECTO_DUR=Object.assign({}, __bkS.ed); ectoDashOpsRefazer();
-      ectoProdutosLista().forEach(function(pr,i){ __cS['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; }); __cS.cfgPrevEctoNovo={value:''}; __cS.cfgPrevEctoNovoDias={value:''};`);
+    // a tela foi desenhada ANTES de a lista chegar do banco; a leitura chega depois, e o Salvar
+    // continua sem gravar a lista (ela seria a de fábrica por cima da da Gestão — QA47 B2)
+    run(`ECTO_CFG_LIDO=false; __setS={}; ECTO_DUR=Object.assign({}, __bkS.ed); ECTO_FORA={}; ectoDashOpsRefazer(); CFG_ECTO_TELA=cfgEctoRetrato(); ECTO_CFG_LIDO=true;
+      ectoProdutosLista().forEach(function(pr,i){ __cS['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; }); __cS.cfgPrevEctoNovo={value:''}; __cS.cfgPrevEctoNovoDias={value:''};
+      __cS['cfgPrevEcto_'+ectoProdutosLista().indexOf('Simparic')].value='40';`);
     run('cfgPrevSalvar()');
     for (let i = 0; i < 10; i++) await Promise.resolve();
     const g2 = JSON.parse(JSON.stringify(run('__setS')));
     assert.ok(g2['daycare/config/prevencao'] && !g2['daycare/config/prevencao-ectos'], JSON.stringify(g2));
     assert.ok(/lista de carrapaticidas NÃO foi salva/.test(run('__cS.cfgPrevSt.textContent')), run('__cS.cfgPrevSt.textContent'));
-  } finally { run('document.getElementById=__bkS.ge; DB=__bkS.db; ECTO_DUR=__bkS.ed; ECTO_FORA=__bkS.fo; ECTO_CFG_LIDO=__bkS.li; audit=__bkS.au; cfgPrevRender=__bkS.cr; ectoDashOpsRefazer();'); }
+    assert.strictEqual(run('ECTO_DUR.Simparic'), 35, 'a lista não salva não vale na memória');
+  } finally { run('document.getElementById=__bkS.ge; DB=__bkS.db; ECTO_DUR=__bkS.ed; ECTO_FORA=__bkS.fo; ECTO_CFG_LIDO=__bkS.li; audit=__bkS.au; cfgPrevRender=__bkS.cr; prevCfgCarregar=__bkS.pc; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
   // a ficha: bloco salvo mudando só o nome, sem produto → a próxima data que existia fica
   run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender};
     pelAtual={n:'Simba', tutor:'Ana'}; PB_PEND={ecto:{ecto_nome:'Frontline'}};
@@ -4482,6 +4493,80 @@ prova('QA45 — a ficha aberta pela Prevenção ("Feito em" e o recálculo) cont
     let visto = null; new Function('prevCorrigeEctoMudou', onc)((x) => { visto = x; });
     assert.strictEqual('prevCorrP_' + visto, sel, onc + ' × ' + sel);
   } finally { run('PREV_CORRIGE_ABERTO=__bkPa.ab; prevCorrigePode=__bkPa.po; prevCorrigeAbertoAqui=__bkPa.aq; prevCorrigePetDe=__bkPa.pd; pelExtra=__bkPa.pe;'); }
+});
+prova('QA47 — a ficha aberta pela Prevenção mostra "Qual produto?" e conta pelo escolhido (a dose de hoje foi outra: Credelli 30, não Bravecto 90); sem produto, pede', () => {
+  run(`__bkQ={pd:prevPetDe, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, st:setTimeout, hj:hojeISO, za:zAlertao};
+    prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; __exQ={ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; pelExtra=function(){ return __exQ; };
+    __patchQ=null; setPelExtra=function(p, patch){ __patchQ=patch; }; audit=function(){}; setTimeout=function(){ return 0; }; hojeISO=function(){ return '2026-09-25'; };
+    __alQ=[]; zAlertao=function(t){ __alQ.push(t); };
+    __cQ={'prevT_ant_ecto_p':{value:'2026-09-20'}, 'prevQ_ant_ecto_p':{value:''}, 'prevP_ant_ecto_p':{value:''}, 'prevCorrP_ed_ant_ecto_p':{value:'Credelli'}};
+    document.getElementById=function(id){ return __cQ[id]||null; };`);
+  try {
+    run(`prevRecalcular('ant','ecto_p')`);
+    assert.strictEqual(run(`__cQ['prevP_ant_ecto_p'].value`), '2026-10-20', 'o recálculo usa o produto escolhido');
+    run(`__cQ['prevP_ant_ecto_p'].value=''; prevLancar('ant','ecto_p')`);
+    const p = run('__patchQ');
+    assert.ok(p && p.ecto_p === '2026-10-20' && p.ecto_prod === 'Credelli' && p.ecto_tipo === 'Comprimido', JSON.stringify(p));
+    // "Não sei": prazo mais curto e a ficha sem produto
+    run(`__cQ['prevCorrP_ed_ant_ecto_p'].value='?'; __cQ['prevP_ant_ecto_p'].value=''; __patchQ=null; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ.ecto_p') === '2026-10-20' && run('__patchQ.ecto_prod') === '', JSON.stringify(run('__patchQ')));
+    // sem produto na tela e na ficha: pede e não grava
+    run(`__exQ={}; __cQ['prevCorrP_ed_ant_ecto_p'].value=''; __patchQ=null; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ') === null && run('__alQ[0]') === 'ESCOLHA O PRODUTO', JSON.stringify(run('__alQ')));
+    // "Outro" sem os dias: pede os dias
+    run(`__cQ['prevCorrP_ed_ant_ecto_p'].value='Outro'; __alQ=[]; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ') === null && run('__alQ[0]') === 'DIGA QUANTOS DIAS ELE DURA');
+  } finally { run('prevPetDe=__bkQ.pd; pelExtra=__bkQ.pe; setPelExtra=__bkQ.sp; document.getElementById=__bkQ.ge; audit=__bkQ.au; setTimeout=__bkQ.st; hojeISO=__bkQ.hj; zAlertao=__bkQ.za;'); }
+  // o editor desenha o seletor, com o produto da ficha escolhido e o recálculo no toque
+  run(`__bkQ2={pe:pelExtra}; pelExtra=function(){ return {ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; };`);
+  let h = '';
+  try { h = run(`prevEdicaoHTML({p:{n:'Antônio', tutor:'Ana'}})`); } finally { run('pelExtra=__bkQ2.pe;'); }
+  assert.ok(/<select class="cad-in" id="prevCorrP_ed_antônio__ana_ecto_p"[^>]*onchange="prevCorrigeEctoMudou\('ed_antônio__ana_ecto_p'\);prevRecalcular\('antônio__ana','ecto_p'\)">/.test(h), 'seletor com recálculo');
+  assert.ok(/<option value="Bravecto" selected>Bravecto · 90 dias<\/option>/.test(h) && /id="prevCorrDH_ed_antônio__ana_ecto_p"[^>]*>Vale 90 dias/.test(h));
+});
+prova('QA47 — Configurações: o Salvar lê pela lista que estava NA TELA e grava só o que mudou (uma releitura no meio não embaralha); a marca "lida" nasce falsa e fica falsa se a leitura falha', () => {
+  run(`__bkT={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, li:ECTO_CFG_LIDO};
+    ECTO_CFG_LIDO=true; CFG_ECTO_TELA=null; cfgPrevEctoHTML();
+    __cT={}; CFG_ECTO_TELA.lista.forEach(function(pr,i){ __cT['cfgPrevEcto_'+i]={value:String(CFG_ECTO_TELA.dur[pr])}; });
+    document.getElementById=function(id){ return __cT[id]||null; };
+    // enquanto a tela está aberta, a releitura traz um produto novo (Alfa 21) e o Bravecto 84 de outro aparelho
+    ectoCfgAplicar({Alfa:{dias:21}, Bravecto:{dias:84}});`);
+  try {
+    const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    assert.ok(r.ectos && Object.keys(r.ectos).length === 0 && !r.erro, 'nada mudou na tela: nada a gravar (o 84 e o Alfa de outro aparelho ficam) — ' + JSON.stringify(r));
+    run(`__cT['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Simparic')].value='40';`);
+    igual(JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela().ectos'))), { Simparic: { dias: 40 } });
+  } finally { run('document.getElementById=__bkT.ge; ECTO_DUR=__bkT.ed; ECTO_FORA=__bkT.fo; ECTO_CFG_LIDO=__bkT.li; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/var ECTO_CFG_LIDO=false;/.test(src), 'nasce falsa');
+  assert.ok(/<input class="cad-in" id="cfgPrevEctoNovo"[^>]*maxlength="40">/.test(src), 'o campo tem o limite');
+});
+provaAsync('QA47 — leitura recusada deixa a marca falsa; o "Não sei" do painel usa o prazo mais curto da lista, não 30 fixo; o Salvar da ficha com o "Vence em" digitado não é barrado', async () => {
+  run(`__bkU={db:DB, li:ECTO_CFG_LIDO, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; ECTO_CFG_LIDO=false;
+    DB={ref:function(p){ return {once:function(){ return p==='daycare/config/prevencao-ectos' ? Promise.reject(new Error('permissão')) : Promise.resolve({val:function(){ return {coleiras:{}}; }}); }}; }};`);
+  try {
+    await run('prevCfgCarregar()');
+    assert.strictEqual(run('ECTO_CFG_LIDO'), false);
+  } finally { run('DB=__bkU.db; ECTO_CFG_LIDO=__bkU.li;'); }
+  run(`ECTO_DUR['Curto Um']=21; ectoDashOpsRefazer();`);
+  try {
+    comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: '?' } }, () => {
+      run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+      assert.strictEqual(run('__patch.ecto_p'), '2026-10-16', '21 dias');
+    });
+  } finally { run('ECTO_DUR=__bkU.ed; ECTO_FORA=__bkU.fo; ectoDashOpsRefazer();'); }
+  run(`__bkV={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, za:zAlertao};
+    pelAtual={n:'Simba', tutor:'Ana'}; __alV=[]; zAlertao=function(t){ __alV.push(t); };
+    PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true};
+    pbEx=function(){ return __exV; }; pelExtra=function(){ return __exV; }; __patchV=null; setPelExtra=function(p, patch){ __patchV=patch; }; pbRender=function(){};`);
+  try {
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela */ }
+    assert.ok(run('__patchV') && run('__patchV.ecto_p') === '2026-12-18' && !run('__alV').length, JSON.stringify([run('__patchV'), run('__alV')]));
+    // e o "Outro" sem dias pede os dias
+    run(`PB_PEND={ecto:{ecto_t:'2026-09-20'}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'Outro', ecto_t:'2026-09-20'}; __patchV=null; __alV=[];`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
+    assert.ok(run('__patchV') === null && run('__alV[0]') === 'DIGA QUANTOS DIAS ELE DURA', JSON.stringify(run('__alV')));
+  } finally { run('pelAtual=__bkV.pa; PB_PEND=__bkV.pp; pbEx=__bkV.pe; pelExtra=__bkV.pX; setPelExtra=__bkV.sp; pbRender=__bkV.pr; zAlertao=__bkV.za;'); }
 });
 // ================================================================== escovação no Day Care
 console.log('\nEscovação: quem não escova no Day Care sai da cobrança; "tinha em casa" e "não autorizou" põem a próxima troca em 3 meses (Adriana, 29/set/2026)');
