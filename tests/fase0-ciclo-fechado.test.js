@@ -3714,6 +3714,37 @@ provaAsync('QA42 — cancelar "quem recebeu" no SUBSTITUIR (ou no Corrigir/Acres
     igual(JSON.parse(JSON.stringify(run('__escQ42'))), [], 'cancelou: nenhuma escrita no banco');
   } finally { run('DB=__bkQ42.db; ciQuemRecebeu=__bkQ42.qr; ciHosp=__bkQ42.h; __ciTravar=__bkQ42.tr; audit=__bkQ42.au;'); }
 });
+provaAsync('QA43 — o SUBSTITUIR guarda no histórico a assinatura e os pertences de antes; a Conferência diz "SUBSTITUIU O CHECK-IN"; errar o nome repete a pergunta certa; a pergunta tem rede de 10 min', async () => {
+  run(`__bkQ43={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __upQ43={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1'
+        ? {nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[{uid:'p1', n:'Caminha'}], ficha:{}, assinatura:'data:image/png;base64,ANTIGA', assinado_por:'Márcia', entregaSemTutor:false, quemDeixou:null} : null; }}); },
+      update:function(v){ __upQ43[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}, temMed:true, key:'toshi__ana', substituir:true, sig:'data:image/png;base64,NOVA', assina:'Ana Tutora', correcao:{motivo:'substituiu o check-in: remédio errado', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    const up = run(`__upQ43['auaulandia/estadias/est1']`);
+    assert.ok(up && up.assinatura === 'data:image/png;base64,NOVA', 'a assinatura nova vai para a estadia');
+    const ant = up.correcoes[up.correcoes.length - 1].antes;
+    assert.ok(ant.assinatura === 'data:image/png;base64,ANTIGA' && ant.assinado_por === 'Márcia' && ant.entregaSemTutor === false && ant.pertences[0].n === 'Caminha', JSON.stringify(ant));
+    const conf = run(`__upQ43['auaulandia/estadias/est1/conferencia']`);
+    assert.ok(conf && /^SUBSTITUIU O CHECK-IN — Medicação: Enalapril · recebido por Ana$/.test(conf.reaberta_motivo), JSON.stringify(conf));
+  } finally { run('DB=__bkQ43.db; ciQuemRecebeu=__bkQ43.qr; ciHosp=__bkQ43.h; __ciTravar=__bkQ43.tr; audit=__bkQ43.au; quemSou=__bkQ43.qs; ciCorrigindoId=null;'); }
+  // errar o nome: a 2ª pergunta continua sendo a do SUBSTITUIR; e o relógio de 10 min fica armado durante a pergunta
+  run(`__bkQ43b={zt:zTexto, st:setTimeout, tr:__ciTravar, sv:__ciSalvando};
+    __pergQ43=[]; __respQ43=['.', 'Ana']; zTexto=function(t, l){ __pergQ43.push([t, l.join(' | ')]); return Promise.resolve(__respQ43.shift()); };
+    __tmQ43=[]; setTimeout=function(fn, ms){ __tmQ43.push(ms); return 9; }; __ciTravar=function(){};`);
+  try {
+    const r = await run(`ciQuemRecebeu(['Medicação: Enalapril'], {titulo:'QUEM RECEBEU DO TUTOR O QUE ESTÁ NESTA TELA?', linhas:['Escreva o nome de quem recebeu o material e ouviu o tutor.']})`);
+    assert.strictEqual(r, 'Ana');
+    const pg = JSON.parse(JSON.stringify(run('__pergQ43')));
+    assert.ok(pg.length === 2 && /ouviu o tutor/.test(pg[1][1]) && !/na porta/.test(pg[1][1]), JSON.stringify(pg));
+    igual(JSON.parse(JSON.stringify(run('__tmQ43'))), [600000]);
+  } finally { run('zTexto=__bkQ43b.zt; setTimeout=__bkQ43b.st; __ciTravar=__bkQ43b.tr; __ciSalvando=__bkQ43b.sv;'); }
+});
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
 prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {

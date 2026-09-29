@@ -47819,6 +47819,14 @@
     // parado aqui e volta a contar quando a resposta chega (QA42 — o alerta do prazo
     // fechava esta pergunta no meio e o salvamento ficava pela metade).
     try{ clearTimeout(__ciTimerPreso); }catch(e){} /* silencioso de propósito: sem prazo armado, nada a parar */
+    // Rede de segurança longa (QA43): se outro aviso tirar esta pergunta da tela, a resposta
+    // nunca chega — em 10 minutos o botão Salvar volta, sem ter gravado nada.
+    try{ __ciTimerPreso=setTimeout(function(){
+      if(!__ciSalvando) return;
+      __ciTravar(false);
+      var _stq=document.getElementById('ci-status');
+      if(_stq){ _stq.style.color='var(--crm-atencao-text)'; _stq.textContent='Nada foi salvo — a pergunta de quem recebeu ficou sem resposta. Toque em "Salvar no sistema" de novo.'; }
+    }, 600000); }catch(e){} /* silencioso de propósito: sem relógio, fica como antes */
     var titulo=op.titulo||'CHEGOU MATERIAL NOVO';
     var linhas=itens.concat(op.linhas||['Quem RECEBEU isto na porta? Escreva o nome da pessoa.',
                              'Se foi você mesma, escreva o seu nome.']);
@@ -47834,7 +47842,7 @@
       if(/[a-zA-ZÀ-ÿ]{2,}/.test(q)&&q.length>=3){ try{ __ciTravar(true); }catch(e){} /* silencioso de propósito: religa o prazo da gravação */ return q; }
       titulo='Precisa ser um NOME DE GENTE';
       linhas=['Não vale ponto, traço ou uma letra só.'].concat(itens)
-             .concat(['Quem recebeu isto na porta?']);
+             .concat(op.linhas||['Quem recebeu isto na porta?']);
     }
     return null;
   }
@@ -47898,7 +47906,7 @@
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
           concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
           recebido_por:_rec, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
-          reaberta_motivo:'CHEGOU MATERIAL NOVO — '+chegouNovo.join(' · ')+' · recebido por '+_rec
+          reaberta_motivo:(P.substituir?'SUBSTITUIU O CHECK-IN — ':'CHEGOU MATERIAL NOVO — ')+chegouNovo.join(' · ')+' · recebido por '+_rec
         }));
       } else {
         // Nada novo entrou: a conferência CONTINUA como estava e a solução fica anexada,
@@ -47915,6 +47923,11 @@
       hist.push({ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
                   motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[],
                   antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], entrada:antes.entrada||'', saida:antes.saida||'' } });
+      // SUBSTITUIR troca a assinatura e os pertences: os de antes ficam no histórico (QA43).
+      if(P.substituir){ const _ant=hist[hist.length-1].antes;
+        _ant.assinatura=antes.assinatura||null; _ant.assinado_por=antes.assinado_por||null;
+        _ant.entregaSemTutor=!!antes.entregaSemTutor; _ant.quemDeixou=antes.quemDeixou||null;
+        _ant.pertences=antes.pertences||[]; }
       const _upCorr={
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:dados.pertences, medicacao:ciMedsToLista(meds),
@@ -48079,11 +48092,11 @@
       let _tit='', _linhas=[], _rodape='', _botao='Fechar';
       if(modo==='corrigir'){
         ciCorrigindoId=null; window.__ciAntes=null;
-        _tit='✅ CORREÇÃO SALVA — '+_petTit;
+        _tit=(P.substituir?'✅ CHECK-IN SUBSTITUÍDO — ':'✅ CORREÇÃO SALVA — ')+_petTit;
         _linhas=((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']).slice();
         _rodape='Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
                +((P.chegouNovo&&P.chegouNovo.length)
-                  ? ('CHEGOU MATERIAL NOVO ('+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
+                  ? ((P.substituir?'SUBSTITUIU O CHECK-IN (':'CHEGOU MATERIAL NOVO (')+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
                   : 'RESOLVIDO — não volta para a Conferência. A solução ficou anexada e segue para o Check-out.')
                +' O alarme da medicação já foi refeito.';
       }
