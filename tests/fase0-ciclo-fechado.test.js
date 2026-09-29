@@ -4200,6 +4200,73 @@ prova('QA39 — a comida só dobra confirmada E sem nada faltando', () => {
     run(`__probAF=[{t:'x', f:'ciRefBlocos'}]; ciAlimConfRender();`); assert.strictEqual(run('__detAF.style.display'), '', 'faltando algo: aberto');
   } finally { run('document.getElementById=__bkAF.ge; ciAlimProblemas=__bkAF.ap; ciAlimResumoFrase=__bkAF.rf; CI_ALIM_CONF=__bkAF.cf;'); }
 });
+// ================================================================== carrapaticida: a duração vem do produto
+console.log('\nCarrapaticida: a duração vem do produto, e a lista se edita sem programador (Adriana, 29/set/2026, Bravecto do Antônio)');
+prova('a lista de fábrica, com a duração na frente, na ficha e nos Lançamentos do dia', () => {
+  igual(JSON.parse(JSON.stringify(run('ECTO_DUR'))), { Pipeta: 30, Bravecto: 90, Credelli: 30, Simparic: 35, Nexgard: 30 });
+  igual(run('ectoProdutosLista()'), ['Pipeta', 'Bravecto', 'Credelli', 'Simparic', 'Nexgard']);
+  assert.strictEqual(run(`ectoRotulo('Bravecto')`), 'Bravecto · 90 dias');
+  const it = run(`dashItem('carrapaticida')`);
+  assert.ok(it.campos[0].c === 'prod' && !it.campos[0].obrig && it.campos[0].ops.map((o) => o.t).indexOf('Simparic · 35 dias') >= 0, JSON.stringify(it.campos[0]));
+  assert.ok(it.campos.some((c) => c.c === 'qtd' && c.obrig), 'o resto do lançamento não muda');
+  assert.ok(/Bravecto · 90d/.test(run(`blocoEcto({ecto_tipo:'Comprimido'})`)), 'a ficha mostra os comprimidos da lista');
+});
+provaAsync('a Gestão acrescenta um produto e muda uma duração: vale na ficha, no painel e no lançamento, sem recarregar', async () => {
+  run(`__bkEc={db:DB, ed:Object.assign({}, ECTO_DUR)};
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return {coleiras:{}, ectos:{'NexGard Spectra':{dias:30}, Bravecto:{dias:84}}}; }}); }}; }};`);
+  try {
+    await run('prevCfgCarregar()');
+    assert.ok(run(`ECTO_DUR['NexGard Spectra']`) === 30 && run(`ECTO_DUR.Bravecto`) === 84 && run(`ECTO_DUR.Simparic`) === 35, JSON.stringify(run('ECTO_DUR')));
+    igual(run('ectoProdutosLista()'), ['Pipeta', 'Bravecto', 'Credelli', 'Simparic', 'Nexgard', 'NexGard Spectra']);
+    assert.ok(run(`dashItem('carrapaticida').campos[0].ops`).some((o) => o.t === 'NexGard Spectra · 30 dias'), 'o botão novo nos Lançamentos do dia');
+    assert.ok(/NexGard Spectra · 30d/.test(run(`blocoEcto({ecto_tipo:'Comprimido'})`)));
+    assert.strictEqual(run(`ectoDur({ecto_prod:'NexGard Spectra'})`), 30, 'a conta da ficha usa o número da lista');
+  } finally { run('DB=__bkEc.db; ECTO_DUR=__bkEc.ed; ectoDashOpsRefazer();'); }
+});
+prova('painel rápido (Prevenção e Vencimentos): o produto escolhido manda na conta; sem produto, não grava com 30 dias por engano', () => {
+  // Bravecto hoje, numa ficha sem produto: vence em 90 dias, e o produto vai para a ficha
+  comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Bravecto' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p && p.ecto_t === '2026-09-25' && p.ecto_p === '2026-12-24' && p.ecto_prod === 'Bravecto' && p.ecto_tipo === 'Comprimido', JSON.stringify(p));
+  });
+  // sem produto na tela e na ficha: pede o produto e não grava
+  comFicha({}, {}, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    assert.ok(run('__patch') === null && /ESCOLHA O PRODUTO/.test(run('__alertas[0]')), JSON.stringify(run('__alertas')));
+  });
+  // sem escolher no painel, vale o produto da ficha (Simparic, 35 dias)
+  comFicha({ ecto_prod: 'Simparic', ecto_tipo: 'Comprimido' }, {}, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    assert.strictEqual(run('__patch.ecto_p'), '2026-10-30');
+  });
+  // Outro: o número digitado
+  comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Outro' }, 'prevCorrD_simba__ana_ecto_p': { value: '60' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p.ecto_prod === 'Outro' && p.ecto_outro_dias === '60' && p.ecto_p === '2026-11-24', JSON.stringify(p));
+  });
+  // o painel mostra os produtos com a duração, com o da ficha já escolhido
+  const h = run(`prevCorrigeEctoHTML('ecto_p', {ecto_prod:'Nexgard'}, 'x')`);
+  assert.ok(/<option value="Nexgard" selected>Nexgard · 30 dias<\/option>/.test(h) && /Bravecto · 90 dias/.test(h) && /Outro \(dizer quantos dias\)/.test(h), h);
+  assert.strictEqual(run(`prevCorrigeEctoHTML('verm_p', {}, 'x')`), '', 'só no carrapaticida');
+});
+prova('Configurações › Prevenção: a lista de carrapaticidas lê a tela, acrescenta, tira o novo e recusa número ruim', () => {
+  run(`__bkCE={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR['Credeli Plus']=30;
+    __camposCE={}; ectoProdutosLista().forEach(function(pr,i){ __camposCE['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
+    document.getElementById=function(id){ return __camposCE[id]||null; };`);
+  try {
+    const iBrav = run(`ectoProdutosLista().indexOf('Bravecto')`), iNovo = run(`ectoProdutosLista().indexOf('Credeli Plus')`);
+    run(`__camposCE['cfgPrevEcto_${iBrav}'].value='84'; __camposCE['cfgPrevEctoSai_${iNovo}']={checked:true};
+      __camposCE.cfgPrevEctoNovo={value:'Simparic Trio'}; __camposCE.cfgPrevEctoNovoDias={value:'35'};`);
+    const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    assert.ok(r.ectos && r.ectos.Bravecto.dias === 84 && !r.ectos['Credeli Plus'] && r.ectos['Simparic Trio'].dias === 35 && r.ectos.Pipeta.dias === 30, JSON.stringify(r));
+    run(`__camposCE.cfgPrevEctoNovoDias={value:''};`);
+    assert.ok(/Quantos dias o Simparic Trio protege/.test(run('cfgPrevEctoDaTela().erro')));
+    assert.ok(/\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias, ectos:ectos\}\)/.test(fs.readFileSync(APP, 'utf8')), 'o Salvar grava a lista junto das coleiras (o set não pode apagá-la)');
+    assert.ok(/cfgPrevEctoHTML\(\)/.test(fs.readFileSync(APP, 'utf8')), 'a lista aparece na tela de Configurações › Prevenção');
+  } finally { run('document.getElementById=__bkCE.ge; ECTO_DUR=__bkCE.ed; ectoDashOpsRefazer();'); }
+});
 // ================================================================== escovação no Day Care
 console.log('\nEscovação: quem não escova no Day Care sai da cobrança; "tinha em casa" e "não autorizou" põem a próxima troca em 3 meses (Adriana, 29/set/2026)');
 prova('quem não escova no Day Care não é cobrado da troca de escova em lugar nenhum; quem escova (ou não respondeu) continua como antes', () => {

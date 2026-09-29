@@ -295,6 +295,20 @@
   - o painel "Lance aqui mesmo" da Prevenção diz "não escova no Day Care — fora da cobrança";
   - a resposta antiga ("Vai aplicar em casa") num cartão de escova continua legível.
 
+### (AG) Carrapaticida: a duração vem do produto, e a lista se edita sem programador (29/set/2026)
+
+> **Adriana, 29/set/2026 (Bravecto do Antônio):** *"Bravecto é um medicamento que dura 90 dias. Credeli dura 30 dias. Simparic, 35. NexGard, 30. […] Quando é comprimido, eu preciso ter uma barra na frente para colocar qual o tempo de durabilidade daquele produto. […] Quando a gente já sabe o Bravecto, é isso e pronto. Mas cada vez mais sai produtos."* Seguiu com as respostas recomendadas.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Configurações › Prevenção | só as coleiras | **"Carrapaticida — cada produto protege quantos dias?"**: Pipeta 30, Bravecto 90, Credelli 30, Simparic 35, Nexgard 30, cada um com o número editável; **Produto novo** + **Protege quantos dias?** acrescenta; o produto novo pode sair da lista. Fica no rastro (`config-prevencao`) |
+| Ficha › Prevenção › Ectoparasitas | quatro comprimidos fixos no código | os comprimidos da lista, com a duração no botão ("Bravecto · 90d") |
+| Painel rápido (toque no item em Prevenção, Vencimentos e Hoje na Zêluz) | a conta usava o produto da ficha; sem produto, **30 dias** (o Bravecto era cobrado 2 meses antes) | **"Qual produto?"**, com a duração na frente ("Bravecto · 90 dias"), já com o da ficha escolhido. O produto vai para a ficha junto com a data. Sem produto na tela e na ficha, o painel pede o produto e não grava. "Outro" pede quantos dias |
+| Lançamentos do dia › Carrapaticida | quanto foi dado e observação | **"Qual produto?"** (opcional) com a duração na frente; escolhido, entra no texto da planilha e da TV |
+
+- **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora em `daycare/config/prevencao/ectos`.
+- **Harness:** duas checagens mudaram de propósito. A v-16 passa a exigir a lista (`ectos`) no mesmo `set` das coleiras. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

@@ -15206,7 +15206,9 @@ async function main() {
       && /audit\('config-prevencao'/.test(html)
       // Reescrito em 15/set/2026 (v-17): o no passou a gravar TAMBEM avisoApos (meses e dias
       // de uso, do jeito que a Adriana fala). avisoColeiraDias continua gravado, ja derivado.
-      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html));
+      // Story 6.11 (29/set/2026): o mesmo nó grava também a lista de carrapaticidas (ectos) —
+      // sem ela no set, salvar as coleiras apagaria os produtos que a Gestão acrescentou.
+      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias, ectos:ectos\}\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
     // Reescrito em 15/set/2026 (v-18): a CEO escolheu, entre as três variantes desenhadas
@@ -21429,6 +21431,9 @@ async function main() {
       // "Feito em…" — a data que o tutor disse
       zerar47({});
       campos47['prevCorrT_' + chave47 + '_ecto_p'] = { value: '2026-09-10' };
+      // Story 6.11 (29/set/2026): sem produto na ficha, o painel pede o produto — a duração
+      // depende dele (Bravecto 90, pipeta 30). Aqui a pessoa escolhe a pipeta.
+      campos47['prevCorrP_' + chave47 + '_ecto_p'] = { value: 'Pipeta' };
       ctx.PREV_CORRIGE_ABERTO = chave47 + '|ecto_p';
       ctx.prevCorrigeFeitoEm(chave47, 'ecto_p', 'venc');
       check('v-47 · "Feito em…" grava a data escolhida e recalcula a próxima (pipeta, 30 dias)',
@@ -21437,6 +21442,7 @@ async function main() {
       check('v-47 · e redesenha a tela de onde o toque veio — aqui, os Vencimentos',
         grav47.indexOf('REDESENHOU:venc') >= 0, JSON.stringify(grav47.slice(-3)));
       delete campos47['prevCorrT_' + chave47 + '_ecto_p'];
+      delete campos47['prevCorrP_' + chave47 + '_ecto_p'];
 
       // "Vence em…" — a data da carteira, digitada à mão
       zerar47({ ecto_p: '2026-09-08' });
