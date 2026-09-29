@@ -1,10 +1,346 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24 e 25/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27 e 28/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 27/set/2026 (v 2026-09-27-01)
+
+> **Adriana, 27/set/2026**, respondendo às decisões pendentes: *"1 — sim, tem que refazer depois de 4 meses · 2 — sim · 3 — sim · 4 — não entendi. Precisa refazer, está muito difícil. Acho melhor em pertences descrever, está muito ruim aquele monte de opção. Geralmente o que trazem: comida, remédios, mochila, cama, guia. Basicamente isso!"*
+
+### (U) Mensagem ao tutor: o que já venceu diz "venceu em" e a data
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Tudo o que a mensagem cobra já venceu | "a vacina de Raiva da Cookie **venceu hoje**" (a data era o dia dela aqui, não a do vencimento) | "a vacina de Raiva da Cookie **venceu em 10/09**" |
+| Vermífugo vencido, na véspera | "amanhã vence o vermífugo" | "venceu em 15/09 o vermífugo da Cookie" |
+| Um vencido e outro por vencer | "amanhã vencem o vermífugo e o carrapaticida" | "o vermífugo da Cookie venceu em 15/09 e o carrapaticida vence em 28/09" |
+| O que ainda vai vencer | igual | igual |
+
+- Vencidos em **datas diferentes** também dizem cada um a sua data (QA19): "o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09". Na mesma data, uma frase só: "venceram em 12/09 o carrapaticida e o vermífugo".
+- Vale para os textos de Configurações › Mensagens prontas escritos com "vence {quando}", "{quando} vence" ou "{vencer} {dia}". O "{quando}" do fecho ("Podemos fazer {quando}?") continua sendo o dia dele aqui.
+- O aviso amarelo do cartão ("Aqui há o que JÁ venceu") só aparece quando a frase não traz a data do que venceu (texto escrito de outro jeito).
+- "Como ela estará conosco **nesse dia**" (ou "neste dia", "naquele dia") ganha o dia escrito, porque o dia saiu da frase anterior.
+- **Onde está no código:** `vencTextoPassado`, `vencTextoMisto`, chamadas em `vencMensagemDe`.
+
+### (V) Pertences da hospedagem: os cinco de sempre, e descrever
+
+- A grade tem só **Comida, Remédios, Mochila, Cama, Guia** (na ordem dela) e **Outro**. Tocou duas vezes, são dois itens.
+- Cada item marcado ganha **uma linha para descrever** (cor, marca, quantidade), com um exemplo no próprio campo. Saíram a caixa de 17 cores, o banco de itens e o "Gerenciar itens do banco".
+- Estadia antiga (coleira, peitoral, ração, roupa...) continua abrindo com os nomes que tinha, depois dos cinco.
+- **"Outro" sem descrição não deixa salvar**: ninguém saberia o que devolver.
+- Na **última estadia pré-preenchida**, "Ração" e "Comida natural" viram **Comida**, com o que estava escrito ("Ração Royal Canin"). Corrigir ou acrescentar numa estadia que já existe não muda nada.
+- Na **Conferência do check-in**, Comida é item crítico, como a ração e a comida natural antigas. Remédios não vira trava nova: cada remédio já é conferido em "Etiquetar remédio".
+- **Onde está no código:** `CI_PERT_DEFAULT`, `CI_PERT_ANTIGOS`, `ciPertOrdem`, `ciDrawPert`, `carregarPertBanco`, `ciPertDef`, `ciPertAntigoParaComida`, `ciFaltando`, `cfListaItens`.
+
+### (W) Plantão: "Editar cadastro" não apaga mais a ficha
+
+> **Adriana, 27/set/2026:** *"Reveja as conexões, elas estão conversando? Dado do hóspede, dos aulunos e etc... o banco de dados precisa ser o mesmo, para tudo."* A auditoria de dados (`aios-zeluz/docs/zeluz/auaulandia/AUDITORIA-DADOS-27set2026.md`) achou o único ponto em que uma área **apagava** dado da outra.
+
+| O quê | Antes | Agora |
+|---|---|---|
+| Abrir "Editar cadastro" no card do Plantão | abria com a cópia antiga do Plantão (`auaulandia/cadastro`), muitas vezes sem sexo, castração e nascimento | abre com a **ficha-mestre** (`daycare/cadastro`) por cima da cópia |
+| Digitar um campo | a cada tecla, gravava o formulário **inteiro** na ficha: `dias:""` (o campo nem existe nesta tela), sexo, castração e nascimento vazios. O auluno "corrigido" sumia da chamada e do almoço | grava **só o campo que mudou**; nunca grava `dias`; nunca grava vazio por cima de valor |
+| Leitura do banco chegando depois | atropelava o que a pessoa estava digitando | só redesenha se a pessoa ainda não mexeu |
+| Apagar o nome no campo | gravava nome vazio na ficha | não grava; o nome novo grava quando houver letra |
+| Alergia de hóspede sem ficha ligada (veio só da planilha) | ficava calada, só no aparelho de quem digitou | continua anotada, mas a tela avisa **em vermelho** onde registrar, e o rastro (`alergia-sem-ficha`) chega à Gestão. Quem edita fichas lê "registre pelo Cadastro de Peludinhos"; quem não edita (Monitora) lê "avise a Gestão ou a Supervisão". O aviso some ao trocar de hóspede e quando alergia e restrição estão as duas vazias. A resposta atrasada de uma gravação só aparece na tela de quem gravou |
+| Nascimento digitado pela metade ("01/05/2", "15/03/19") ou no futuro | ia para a ficha numa pausa da digitação | só grava a data completa (ano com 4 dígitos) e possível, a mesma régua da ficha. Ao sair do campo, "15/03/19" vira "15/03/2019" e grava |
+| FILHOt da base fixa do Day Care (lista no código) | o formulário abria sem raça, tutor e nascimento dele | abre com a base fixa + o que foi gravado; um vazio gravado não encobre valor de outra fonte |
+| Microchip | "sem microchip" aparecia como número no campo; o Cadastro gravava num campo (`microchip`) e o Plantão e o check-in em outro (`chip`), e um número antigo encobria a correção, o apagamento e o "não tem" feitos no Cadastro | o campo mostra só número. **Os dois campos andam juntos** em toda edição feita por uma pessoa (campo do Cadastro, "não tem", desfazer, check-in, FILHOt novo e Plantão). A Mesa da IA e a resposta do tutor gravam texto livre só em `microchip` e nunca trocam o número; o "Editar cadastro" do Plantão respeita o microchip da ficha-mestre mesmo apagado ou "não tem"; nos cards, o que foi anotado no aparelho não encobre a ficha |
+| Check-in: "Novo Hóspede" com o mesmo nome e tutor de um FILHOt que já existe, raça diferente | gravava por cima da ficha existente, com dias vazios (o auluno saía da chamada do Day Care) | bloqueia e orienta: buscar o FILHOt acima ou diferenciar o nome (ex.: "Mel Poodle") |
+| Trocar de hóspede, trocar o dia, fechar o card ou tocar em Salvar logo depois de digitar | a edição esperava 0,9 s e podia se perder | grava na hora |
+| Botão "Salvar cadastro" | dizia "salvo" mesmo quando nada gravava | diz o que aconteceu: "Salvo", "Data de nascimento incompleta: não gravou a data. Confira", "Para apagar, use o Cadastro de Peludinhos" (ou "avise a Gestão") e, sem conexão, "Sem conexão: não salvou" (a próxima tentativa grava). Quando nada gravou, começa com "⚠" e não diz "salvo" |
+
+- **Onde está no código:** `cadFormLer`, `cadDiferenca`, `onCadGravar`, `cadGravarAgora`, `cadTextoSalvar`, `onCad`, `onCadNome`, `normalizarNasc`, `aplicarCadastro`, `carregarCadastro`, `cadMestreDe`, `cadSoCheios`, `setHospAlergia`, `abrirPlantao`, `toggleCadastro`; microchip: `zChipPatch` (campo do Cadastro, `pelChipNaoTemGravar`, `pelChipNaoTemLimpar`, `ciMarcarSemMicrochip`, `ciSalvarCadastroFalta`, `ciCriarNovoHospede`), `cadChipDoMestre`, `cadMestreBruto`, `extraDoHosp`; check-in: `ciCriarNovoHospede`.
+- **Ficou para depois (story 6.7):** chave da ficha sem o recurso do primeiro nome (M4b); trocar o tutor pelo Plantão (M5, decisão da Adriana).
+
+### (X) Reposição: falta com o dia de repor já combinado é troca na mensagem ao tutor (28/set/2026)
+
+> **Adriana, 28/set/2026 (caso do Bis Leon):** *"O tutor está trocando o dia, ele não tem uma reposição. […] Conforme pedido, estamos fazendo a troca do Bis do dia 2 de outubro para quinta-feira, dia 1 de outubro."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Reposições › **Lançar reposição**: falta de um dia com o **dia de repor** já combinado | a mensagem dizia "está com 1 reposição, com a de hoje, referente ao dia 02/10/2026. O dia de repor já ficou combinado: 01/10/2026" | a mensagem fala em **troca**: "Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02/10 para quinta-feira, dia 01/10." A planilha e o saldo não mudam (falta avisada no dia dele e reposição no dia novo). O lançamento ganha a mesma marca da "Marcar troca": no dia novo, o app mostra "troca cumprida" e não oferece a mensagem "usou uma reposição" |
+| Troca de dia (Marcar reposição ou dia extra › Troca de dia) | "a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita" | o mesmo texto novo, nas palavras dela |
+| Falta lançada para outro dia, sem dia de repor | "com a de hoje, referente ao dia 02/10/2026" (errado: a falta não era de hoje) | "contando a do dia 02/10/2026". "Com a de hoje" só quando a falta é de hoje |
+| Período (férias, viagem) com o dia de volta marcado, mesmo que renda um dia só | reposição | continua reposição |
+| Falta de um dia que já passou, lançada com o dia de repor | reposição | continua reposição (a troca é sempre de hoje em diante, como na "Marcar troca") |
+| Dia novo que já é dia dele, dia novo no sábado ou domingo, ou falta num dia que não é dele | reposição | continua reposição (as mesmas regras da "Marcar troca") |
+| Desfazer uma troca lançada pela tela de Reposição, antes do dia | a falta ficava e virava reposição sem dia | a falta sai e ele volta a vir no dia dele, igual à "Marcar troca" |
+
+- **Onde está no código:** `repLancEhTroca`, `repMensagem` (modos `troca` e `credito`), `repConfirmar` (marca `troca` e `nasceu_troca` no crédito), `repTrocaComoDesfaz`.
+
+### (Y) Banho de quem faltou: a recepção é avisada e libera o horário (28/set/2026)
+
+> **Adriana, 28/set/2026 (caso da Jasmine):** *"A Jasmine não veio hoje, tinha banho agendado para ela. Tem que, de alguma forma, tirar o horário do banho e avisar. […] Porque está aqui o horário dela e a gente deixa de marcar um outro banho."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Faltou (chamada, falta automática das 12h ou falta avisada) e tinha banho no dia | o banho lançado ou digitado ficava na planilha e na TV; só o banho fixo saía, em silêncio; ninguém era avisado | quem cuida dos lançamentos recebe "JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00", com **Liberar o horário**, **Ela ainda vem** e **Decidir depois** |
+| Liberar o horário | não existia | tira o banho do dia da planilha e da TV: lançamento sai dos Lançamentos do dia; banho fixo vira "pular só este dia"; digitado na planilha sai pela ponte |
+| Vários aparelhos | — | quem decidir primeiro vale; os outros veem "JÁ FOI DECIDIDO" e quem decidiu (`daycare/banho-falta/{dia}/{chave}`) |
+| Outro cartaz aberto (check-in, pagamento, mensagem ao tutor) | — | o aviso do banho espera e aparece depois; nunca apaga o que a recepção está fazendo |
+| Ao tocar em Liberar | — | o app **relê na hora** a planilha e os Lançamentos do dia. Se não conseguir ler a planilha, diz "NÃO LIBEREI O HORÁRIO" e pede para tirar à mão ou tentar de novo; nunca diz "liberado" sem ler. Se a leitura falha, a planilha que o aparelho já tinha continua (avulso, reposição, despertador) |
+| O banho já tinha saído (tirado à mão) | — | "já não estava na planilha nem nos Lançamentos do dia: o horário já está livre" |
+| Chegou com a pergunta aberta | — | antes de tirar, o app olha a chamada de agora no banco (sem conseguir ler, a da memória): se ela diz "veio", nada sai, e o cartaz "JASMINE CHEGOU" diz que o banho continua e onde tirar à mão, se não for tomar banho |
+| Nada saiu (ponte fora do ar) | — | "falhou", com o motivo e onde tirar à mão, conforme a origem: Lançamentos do dia › Banho, Banhos recorrentes › Pular o próximo, ou direto na planilha; o botão continua no cartão |
+| Parte saiu, e a planilha não confirmou o resto | — | fica "liberado", com o aviso "PARTE NÃO SAIU DA PLANILHA"; no cartão: "horário liberado · a planilha não confirmou: tire à mão" |
+| Liberado, mas uma leitura **nova** ainda mostra o banho (lançado de novo, ou a ponte não tirou) | — | o cartão diz "liberado por Márcia, mas o banho ainda aparece na planilha", e a pergunta volta dizendo quem liberou. **Liberar** e **Ainda vem** funcionam de novo (no banho fixo, o "Ainda vem" troca o "pular" do dia pelo "manter"). Só conta leitura pedida depois de o aparelho saber da liberação (a planilha, com 1 minuto de folga para a TV): uma planilha lida antes, como a das 8h, nunca acusa |
+| "Ainda vem" | — | o horário fica com ele. No banho fixo, o automático deixa o banho na planilha mesmo com a falta. O botão de liberar continua no cartão. Se não conseguir gravar, fica "não deu certo", a pergunta volta e o cartão ganha o botão **Ainda vem** |
+| Avisou a falta, mas veio | — | a chamada "veio" vence a falta avisada (do app e da coluna da planilha): não pergunta |
+| "Liberando" que não terminou (o aparelho caiu no meio) | — | depois de 5 minutos volta a ficar em aberto; antes de perguntar, o app relê a decisão (se outro aparelho terminou, não pergunta) |
+| Tirar o banho à mão (Lançamentos do dia › Banho › tirar) | — | depois de a ponte tirar a linha, o app relê a planilha, e o cartão se acerta |
+| Liberado e depois chegou | — | o cartão avisa: "chegou depois de o horário ser liberado: se ainda for tomar banho, lance de novo" |
+| Hoje na Zêluz | — | cartão "Banho de quem faltou", com o botão de liberar e o que foi decidido |
+| Despertador do banho | chamava para descer com quem faltou | não chama quem faltou nem quem avisou a falta, e some da tela quando a falta é marcada |
+
+- **Por que não tira sozinho:** a falta automática das 12h também marca quem ainda chega à tarde para o banho. Quem decide é a recepção.
+- **Onde está no código:**
+  - `banhoFaltaQuem`, `banhoFaltaLista`, `banhoFaltaMontar`, `banhoFaltaVerificar`, `banhoFaltaPerguntar`, `banhoFaltaReivindicar`, `banhoFaltaExecutar`, `banhoFaltaReler`, `banhoFaltaVeioAgora`, `banhoFaltaManter`, `banhoFaltaCardHTML`;
+  - "ainda na planilha" só com leitura nova: `banhoFaltaAindaNaPlanilha`, `BANHO_FALTA_VIU`, `BANHO_FALTA_LIDO` e o carimbo `planDia.lidaEm`;
+  - ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia`, `repConfirmar`, `hojeCarregar` e `dashRemover`; `dcGarantirPlanilha(true)` com outra leitura em curso relê quando ela terminar;
+  - `checarDespertadorBanho`; `banhoAutoPodeNoDia` respeita o "manter" do dia; `banhosGravarExcecao` devolve a promessa.
+
+### (Z) Orçamento fechado que a planilha recusou: a tela diz o motivo (29/set/2026)
+
+> **Adriana, 29/set/2026 (orçamento da Frida, tutora Ana Carolina):** *"Fui fechar um orçamento de hospedagem […] e ele deu uma mensagem que não entrou para a planilha, que tem que conferir com a gestão por causa da ponte."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| A ponte da planilha de Hospedagem recusou o "Fechou" | "FECHADO — MAS A PLANILHA RECUSOU", com a linha "Frida/Ana Carolina:" vazia: o motivo que a ponte manda se perdia | a linha diz o motivo, em palavras de quem opera (abaixo), e o motivo fica gravado na lista ("NÃO entrou na planilha — motivo") |
+| Palavra-chave diferente | — | "a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script." |
+| Apps Script sem a PONTE_SENHA | — | "falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script." |
+| A ponte respondeu com uma página (URL mudou ou falta autorização) | — | "a ponte respondeu com uma página, e não com os dados: a URL mudou ou o Apps Script pede nova autorização." |
+| O que fazer | "Lance à mão nas duas abas e avise a Gestão" | "O orçamento está salvo como FECHADO. Mostre este motivo à Gestão: acertada a ponte, toque em «reenviar» na lista de Orçamentos." E o aviso: se lançar à mão, não reenviar (a reserva entraria duas vezes) |
+
+- **Onde está no código:** `orcPonteMotivo` e `orcEnviarPlanilha`; a ponte é `integracao-planilha/Codigo.gs` (`doPost` devolve `{ok:false, erro}`).
+- **O conserto da ponte é na configuração** (a Gestão): Configurações › Valores da hospedagem › Ponte com a planilha (Testar agora, Palavra-chave, Salvar ponte) e, no Apps Script, Propriedades do script › PONTE_SENHA.
+- **O Testar agora confere só a URL.** Ele não manda a palavra-chave: com a palavra-chave errada ou sem a PONTE_SENHA, ele diz "✅ A ponte está de pé" do mesmo jeito. A palavra-chave só se confirma no **reenviar** do orçamento.
+- **O reenviar não duplica** o FILHOt que já tinha entrado: a ponte responde "já estava lá". Só duplica se alguém lançou à mão com outro texto.
+- **Ajustes do QA38:**
+  - o **cancelamento** recusado também diz o motivo;
+  - se a resposta repetir a palavra-chave, ela aparece como •••;
+  - "excedido!" não ganha ponto depois da exclamação;
+  - o aviso de ponte sem configuração aponta para Configurações › Valores da hospedagem.
+
+### (AA) Queda de conexão com a planilha não é "a planilha recusou" (29/set/2026)
+
+> **Adriana, 29/set/2026 (banho fixo da Cristal, foto de Lançamentos do dia):** *"Banho recorrente não apareceu, o que houve?"* A linha dizia "a planilha recusou — Failed to fetch". Depois de entender a causa: *"Pode trocar a frase do banho."*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Lançamentos do dia, linha do automático (banho fixo, reposição, falta avisada, adaptação) | "a planilha recusou — Failed to fetch", em vermelho | "a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min", em dourado |
+| Reposições, linha do crédito | "NÃO foi para a planilha — Failed to fetch" | "NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min", com o botão **tentar de novo** |
+| Botão **Conferir a planilha agora** com a conexão caída | "✅ 0 posto(s) · 0 tirado(s) em 15 dia(s)", como se tivesse dado certo | "⚠ não consegui ler a planilha: a conexão com a planilha caiu" (ou "não consegui ler 2 de 15 dia(s)") |
+| Recusa de verdade (coluna que não existe, palavra-chave) | "a planilha recusou — motivo" | igual: o motivo da ponte continua aparecendo, em vermelho |
+
+- **Conta como queda:**
+  - "Failed to fetch" (Chrome);
+  - "Load failed", "connection was lost", "appears to be offline", "request timed out" e "conexão de rede" (Safari e iPhone);
+  - "NetworkError" (Firefox);
+  - "a ponte não respondeu", inclusive o prazo de 12 s.
+- **Por que "em até 10 min":** a conferência automática (`dashAutoLigar` › `dashAutoRodar`) roda a cada 5 minutos enquanto algum aparelho estiver com o app aberto. A trava de 5 minutos, porém, conta do fim da passada anterior. Com um aparelho só, a volta logo depois da queda pula, e a seguinte confere (QA34). O botão **Conferir a planilha agora**, no alto de Lançamentos do dia, adianta a conferência.
+- **Onde está no código:** `repPlanEhQuedaConexao`, `repPlanQuedaTexto`, `repPlanLinhaHTML`, `dashAutoLinhas`, `dashAutoRodarAgora` (conta os dias que não leu) e `dashAutoBotao`.
+
+### (AB) O automático nunca tira da planilha o que a recepção lançou à mão (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Cadastrei hoje no lançamento do dia banho da Cristal, banho do Ozzy, da Charlotte e da Repolho. No dashboard só aparece a Repolho e a Charlotte. Precisamos de rever isso urgente."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Banho fixo que deixa de valer no dia (a falta do meio-dia, falta avisada, "pular", feriado) e a recepção lançou o mesmo FILHOt à mão | o automático tirava da planilha a linha com o nome dele, que era a da recepção (com o mesmo texto, a ponte não duplica: a célula é uma só), e o FILHOt sumia da TV | a linha da recepção fica, e o automático larga o registro dela. Se ainda houver a célula do banho fixo com outro texto, só ela sai, para o FILHOt não aparecer duas vezes |
+| O mesmo caso, sem lançamento à mão | o banho fixo sai da planilha e da TV | igual |
+| Não deu para ler os Lançamentos do dia naquela passada | — | o automático não tira nada e tenta na próxima passada |
+
+- **Por que só a Cristal e o Ozzy:** eles têm banho fixo, e a Charlotte e a Repolho não. O automático só tira o que ele mesmo pôs, e ele contava a linha da recepção como sua, porque compara pelo primeiro nome.
+- **Vale para as quatro colunas do automático que também se lançam à mão:** Banho, Reposição, Faltas Avisadas e Adaptação.
+- **Onde está no código:** `dashAutoSincronizar`, que lê `daycare/dashboard/{dia}` junto com a planilha e o registro, e o passo "2) foi este mecanismo que pôs e não vale mais".
+- **A troca do shampoo** (passo 1) também não troca a célula cujo texto é igual ao que a recepção lançou (QA35).
+
+### (AC) Todo lançamento do dia chega à TV (29/set/2026)
+
+> **Adriana, 29/set/2026 (fotos de Lançamentos do dia e da TV: Banho com 4 no app e 2 na TV):** *"Reveja todos os lançamentos do dia, porque isso é obrigatório que a gente tenha no dashboard."*
+
+| Onde falhava | Antes | Agora |
+|---|---|---|
+| Dois lançamentos quase juntos (o Ozzy e a Charlotte, 15:30) | a ponte grava na "primeira célula vazia do dia": os dois pedidos escolhiam a mesma célula, o segundo apagava o primeiro, e os dois respondiam ok | neste aparelho, lançar e tirar vão **um de cada vez** (`dashPonteChamar`, fila); entre aparelhos, a ponte tem uma **trava** (versão 7 de `integracao-daycare/Codigo.gs`, que precisa ser publicada) |
+| O automático mandava vários banhos fixos ao mesmo tempo | a mesma corrida | entram na mesma fila |
+| Um lançamento do app que sumiu da planilha, por qualquer motivo | ficava fora da TV sem ninguém saber: o app dizia que tinha ido | a **conferência** (em até cerca de 12 minutos, com algum aparelho aberto, ou na hora, pelo botão **Conferir a planilha agora**) compara os Lançamentos do dia de hoje e dos próximos 14 dias com a planilha e manda de novo o que falta, com a hora |
+| O automático e a pessoa ao mesmo tempo | o automático empurrava dezenas de escritas para a fila, e o lançamento da recepção esperava atrás delas | o automático manda uma por vez, e a pessoa entra na próxima vaga (QA36) |
+
+- **Como a conferência sabe que já está lá:** o mesmo texto na coluna; ou, fora de Medicação e Veterinário (onde um FILHOt tem vários no dia), uma linha da **mesma ficha**. A Luna/SRD volta mesmo com a Luna/Poodle na coluna; as gotas das 16:00 voltam mesmo com o Apoquel do meio-dia lá.
+- **O que a conferência não repõe:**
+  - lançamento de menos de 2 minutos, cujo envio pode estar a caminho;
+  - o mesmo FILHOt que já está na coluna com outro texto (não entra uma segunda linha);
+  - item que não vai para a planilha (Pernoite);
+  - lançamento que esgotou as 5 tentativas ou cuja coluna não existe: esses continuam com o botão **reenviar**.
+- **Tirado durante a conferência não volta:** ela relê o lançamento antes de repor. Se ele for tirado enquanto a ponte grava, a conferência desfaz o que escreveu.
+- **O que foi tirado pelo app** ("tirar", ou "Liberar o horário" do banho de quem faltou) sai também dos Lançamentos: a conferência não põe de volta. Quem apaga uma linha direto na planilha vê a linha voltar; o caminho certo é o "tirar" do app.
+- **Rastro:** cada reposição grava na auditoria "a conferência repôs na planilha …", com o nome do item e o dia.
+- **Ordem para publicar:** primeiro o Merge e **recarregar o app em todos os aparelhos**. Depois, a ponte nova no Apps Script: com a ponte nova e um aparelho no app antigo, as escritas do automático antigo esbarram na trava (QA36).
+- **Onde está no código:** `dashPonteChamar` (fila) e `dashPonteChamarJa`; `dashAutoSincronizar`, passo 3; `integracao-daycare/Codigo.gs`, `_umPorVez`.
+
+### (AD) Check-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (29/set/2026)
+
+> **Adriana, 29/set/2026 (foto do check-in no celular):** *"É impossível conseguir salvar o que está ocorrendo! Precisa facilitar o processo. […] Tem um botão mudou, e outro que nem tem como ler!"*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Faixa "Confirme com o tutor: é isso mesmo?" de cada remédio que veio da ficha | o botão tocado ficava creme sobre creme, sem dar para ler | fica verde (Confirmado) ou marrom (Mudou), com letra creme e um ✓ na frente |
+
+- **O que o check-in pede antes de salvar** (cada item vira vermelho, com a frase do que fazer, e a tela rola até o primeiro):
+  - data de entrada;
+  - pelo menos uma refeição com o que ele come;
+  - cada remédio da ficha com **Confirmado** ou **Mudou**;
+  - a caixinha da conferência de segurança da medicação;
+  - "Outro" nos pertences descrito;
+  - o nome de quem entrega e a assinatura com o dedo (ou "O tutor não veio").
+- **Onde está no código:** `.ci-med-conf button.on` (CSS) e `ciMedConfSet`.
+
+### (AE) Check-in rápido da hospedagem (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Checkin de entrada do peludo na hospedagem! É impossível conseguir salvar […] Precisa facilitar o processo. Está difícil demais!"* Pedidos dela: pertences só em texto, coleira nas primeiras linhas, "está em uso de alguma medicação?" (o kit de emergência não conta), comida, tela mais curta. Ela autorizou seguir com as respostas recomendadas.
+
+**A ordem nova da tela** é a da conversa com o tutor: FILHOt › coleira › alergia › medicação em uso › comida › pertences › datas (hospedagem ou pernoite, datas, observações, banho de saída) › assinatura. Os atalhos do alto seguem a mesma ordem.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Coleira | não existia | **"Está com coleira antipulga ou repelente?"** Sim ou Não; com Sim, **"Qual?"** (Seresto, Scalibor…). Fica na estadia e sai no PDF, no resumo do WhatsApp e na Conferência. A ficha do FILHOt não muda. Não trava o salvar |
+| Medicação | a lista aparecia sempre, com uma linha em branco | a pergunta **"Está em uso de alguma medicação?"** vem primeiro, e sem resposta o check-in não salva. **Não:** a lista some, nada liga alarme, e os remédios da ficha ficam como "já não toma mais" (terminam ontem, com o nome de quem ouviu do tutor, o mesmo registro do "Parou" da aba Medicamentos). **Sim:** abrem nome, dose e horários. Com remédio na ficha, a resposta já vem Sim |
+| Remédios da ficha | Confirmado ou Mudou, um por um | continua, e há o botão **"Tudo igual — confirmar todos (N)"** para quando o tutor diz que nada mudou |
+| Kit de emergência | ia como remédio e ligava alarme | a tela diz: não é medicação em uso, escreva em Pertences |
+| Comida | todos os campos sempre abertos | quando o que a ficha diz é **Confirmado**, o detalhe dobra e fica a frase do plano; **Mudou** abre tudo. Os rótulos: "O que come e quanto, em CADA refeição" e "Quanto trouxe de ração (g)" |
+| Pertences | grade com Comida, Remédios, Mochila, Cama, Guia e Outro, e uma linha para cada | **um campo de texto:** "comida (ração Royal, 1 pacote), cama rosa, sacola verde…". Cada item, por linha ou por vírgula, vira um item na Conferência, no Check-out e no PDF; embaixo aparece como o app separou. Comida continua crítica na Conferência |
+| Vermelho do que falta | tocar em Confirmado ou Mudou apagava o vermelho de TODOS os bloqueios | sai só o vermelho do que foi respondido, e o botão conta o que ainda falta. O problema de cada remédio fica na linha dele |
+| Quem não pode confirmar remédio | alerta nativo, que o celular pode esconder | aviso na própria página, dizendo quem pode confirmar |
+
+- **O que o check-in pede antes de salvar,** na ordem da tela:
+  1. a resposta "está em uso de alguma medicação?";
+  2. com Sim: cada remédio completo, os da ficha com Confirmado ou Mudou, e a caixinha da conferência de segurança;
+  3. pelo menos uma refeição com o que ele come (e, na pernoite, Confirmado ou Mudou na comida);
+  4. "Outro" de estadia antiga descrito;
+  5. a data de entrada, o nome de quem entrega e a assinatura (ou "O tutor não veio").
+- **Estadia antiga** abre com os pertences como texto, um por linha; sem mexer, volta igual, com o V verde da Conferência.
+- **Onde está no código:** `ciColeira*`, `ciMedEmUso`, `ciMedEmUsoChange`, `ciMedTudoIgual`, `ciMedNaoEmUso`, `ciMedMarcarParou`, `ciPertPartes`, `ciPertTipo`, `ciPertDoTexto`, `ciAlimProblemas`, `ciMedLinhaDoProblema` e `zLimparFaltaEm`.
+- **Ajustes do QA39 (a medicação em primeiro lugar):**
+  - o **"Não" só vale quando alguém toca nele neste check-in.** O "Não" que volta de uma estadia salva (Corrigir, Acrescentar) é só a resposta de antes: com remédio em vigor na lista (a veterinária pode ter começado um depois), a resposta volta "Sim" e a lista aparece;
+  - o "Não" para os remédios que estavam **na tela** e as cópias repetidas deles, que a tela não mostra (QA44: antes parava também o remédio que a veterinária começou enquanto a recepção fazia o check-in);
+  - no **Corrigir**, o "Não" não apaga mais a agenda: quem parou fica em "já não toma mais", com o histórico;
+  - no **Acrescentar**, não dá para dizer "Não" com remédio na lista: o aviso manda usar o Corrigir;
+  - só o remédio **em vigor** vem para a lista e para o "Tudo igual" (o que já parou, foi suspenso ou acabou fica de fora);
+  - o vermelho do remédio fica **na faixa Confirmado/Mudou** (e, nos outros problemas, no nome), e dois remédios de mesmo nome ficam cada um na sua linha;
+  - pertences: número só completa o item quando é quantidade ("ração, 2 kg"); "2 brinquedos" e "1 manta" são itens; "pote de comida", "cama de fibra natural" e "kit de banho" não viram comida nem remédio; "marmitas", "alimento úmido" viram comida; a comida aparece marcada "(comida: etiquetar)" na lista;
+  - editar a descrição de um pertence antigo conserva o item (não vira material novo na Conferência);
+  - o cartaz da correção fala a coleira e a medicação em uso em português.
+- **Ajustes do QA44:**
+  - **ACRESCENTAR pela janela "JÁ ESTÁ HOSPEDADO"** com "Não" nesta tela e remédio no check-in que já existe não grava: o aviso manda usar SUBSTITUIR (`ciAcrescentarBarrado`);
+  - a pergunta do salvar **"tomava X — não toma mais?"** não pergunta mais pelo remédio que já parou ou já terminou;
+  - **Corrigir e SUBSTITUIR com "Sim"** reescrevem só os remédios em vigor: os de "já não toma mais" e os suspensos pela veterinária ficam na agenda, com o histórico;
+  - **pertences:** "guia vermelha, 2 kg de ração" são dois itens, e a comida continua crítica na Conferência; peso ("2 kg") e marca de ração conhecida (Royal Canin, Golden, Premier…) contam como comida; no Acrescentar, o item novo ganha uid próprio (antes, dois itens andavam juntos na Conferência); reescrever a linha de um item da grade antiga não vira "material novo";
+  - textos: "Nenhum alarme deles toca" com mais de um remédio; no Acrescentar, o caminho para dizer que parou é "saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada".
+- **Ajustes do QA46:**
+  - **Corrigir e SUBSTITUIR com "Sim"** tiram da agenda só o que a tela carregou e a pessoa tirou, com as cópias repetidas. O que a veterinária parou depois fica parado, mesmo com o remédio na tela, e o que ela começou depois fica (`CI_MED_CARREGADOS`);
+  - **"➕ Acrescentar"** do quadro do alto, com "Não" e remédio gravado na estadia, também não grava: o aviso manda usar Corrigir. A regra agora está dentro da gravação;
+  - **"tomava X — não toma mais?"** volta a perguntar pelo remédio que terminou por data durante a última estadia, mas não pelo que terminou antes dela nem pelo que está em "já não toma mais";
+  - o **"Não" não regrava** o remédio que alguém já parou;
+  - **pertences:** "ração úmida, 3 latas" é um item só. Antiparasitário por faixa de peso ("Bravecto 20-40 kg") é remédio. "areia 4 kg" e "caixa de transporte" não são comida. Suplementos (condroitina, ômega, vitamina) são remédio;
+  - **textos no plural** quando há mais de um remédio ("eles continuariam lá", "os remédios ficam").
+- **Ajustes do QA49:**
+  - **Corrigir com "Sim":** o remédio que a veterinária parou ou apagou depois de a lista carregar sai também da estadia e do PDF. O aviso final diz qual foi ("Mexido pela veterinária enquanto você corrigia — ficou como ela deixou"). Se a lista de remédios não chegou a carregar, nada que está em vigor sai da agenda: ninguém viu;
+  - a **lista que volta depois de trocar de FILHOt** é ignorada (não entra na tela do outro);
+  - **"tomava X?"** pergunta só pelo que terminou durante a última estadia (entre a entrada e a saída);
+  - **pertences:** "caixa de sachês" continua comida (crítica na Conferência); "caixa de transporte" e "caixa de areia" são objeto. "guia vermelha, 3 latas" são dois itens. "Golden 10-15 kg" é comida. "NexGard 10,1-25 kg" não se parte na vírgula.
+
+### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
+
+> **Adriana, 29/set/2026 (Toshi):** *"Preciso cancelar o check-in que a Márcia fez do Toshi, urgente, e ele não me dá a opção. Foi errado, tem que ter a opção… não pode duplicar! Principalmente isso é medicação!"*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Salvar › janela "JÁ ESTÁ HOSPEDADO" | Acrescentar (soma: o remédio errado continua) · Criar 2º (duplica) · Cancelar | Acrescentar · **✎ SUBSTITUIR o que já existe pelo desta tela** · Criar 2º (duplica) · Cancelar |
+| Quadro amarelo "já está hospedado", no alto do check-in | Acrescentar · Corrigir | igual, com a frase: "Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha SUBSTITUIR." |
+
+- **SUBSTITUIR** pede o motivo (na própria página) e grava pelo mesmo caminho do Corrigir: a estadia passa a ter o que está na tela, a agenda de medicação passa a ser exatamente a desta tela (o remédio errado sai, nada fica em dobro) e o de antes fica no histórico da estadia (`correcoes`), com quem, quando e o motivo. A ficha em PDF sai como em todo salvar.
+- **Onde está no código:** `ciSubstituirExistente` e a janela em `ciSalvar`.
+- **Ajustes do QA42 (valem também para o Corrigir e o Acrescentar):**
+  - a pergunta "quem recebeu" vem **antes** de gravar qualquer coisa. Cancelada, nada é escrito: nem a estadia, nem a agenda. Antes, a estadia ia com o remédio novo e a agenda ficava com o antigo, com a tela dizendo "nada foi salvo";
+  - o prazo de 25 segundos do Salvar fica parado enquanto a pessoa escreve o nome;
+  - no SUBSTITUIR, a pergunta é "Quem recebeu do tutor o que está nesta tela?", e a assinatura nova e quem entregou também são gravadas.
+- **Ajustes do QA43:**
+  - no SUBSTITUIR, a assinatura, quem assinou e os pertences de antes ficam no histórico da estadia (antes, a assinatura antiga sumia);
+  - a Conferência e o aviso final dizem "SUBSTITUIU O CHECK-IN", e não "chegou material novo";
+  - quem erra o nome vê de novo a mesma pergunta do SUBSTITUIR;
+  - se outro aviso tirar a pergunta "quem recebeu" da tela, em 10 minutos o botão Salvar volta, sem ter gravado nada.
+
+### (AF) Escovação: quem escova no Day Care e as duas saídas da troca (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Nem todo mundo escova dente, então nem todo mundo vai ter escova de dente. Ou não escova porque não deixa, ou não escova porque o tutor não compra pasta com a gente."* E: *"Troca de escova tem que colocar se escova dente no Day Care ou não! […] E precisa ter se o cliente tinha em casa! Ou não autorizou a troca. Aí deixamos para daqui a 3 meses! Automaticamente."* Seguiu com as respostas recomendadas.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Ficha › Prevenção › Saúde e rotina | só as datas da troca de escova | **"Escova os dentes no Day Care?"** Sim ou Não. Com Não: **"Por que não escova?"** Não deixa · O tutor não compra a pasta · Outro (com o motivo escrito) |
+| Cobrança da troca de escova (Prevenção, Vencimentos, Hoje na Zêluz, mensagem ao tutor) | todo FILHOt com a troca vencida era cobrado | quem **não escova** no Day Care sai de toda cobrança; a data antiga fica na ficha |
+| Ficha, logo abaixo | — | **"Troca de escova de hoje":** "O tutor tinha em casa (já trocou)" e "O tutor não autorizou a troca". Os dois põem a próxima troca daqui a 3 meses, sozinha |
+| Vencimentos › troca de escova (botões da resposta do tutor) | Vai aplicar em casa · Vai mandar na bolsa · Pegar na loja · Não respondeu · Não quer agora | Vai mandar na bolsa · Pegar na loja · **Tinha em casa (já trocou)** · **Não autorizou a troca** · Não respondeu |
+
+- **"Tinha em casa"** vale como troca de hoje: a última troca passa a ser hoje e a próxima, daqui a 90 dias.
+- **"Não autorizou"** só adia: a última troca continua a que era, e o "vence em" passa a ser daqui a 90 dias (marcado como data à mão).
+- **Só na ficha:** nenhum dos dois vai para a planilha nem para a TV, porque não é troca feita aqui. Fica o rastro com quem registrou e quando.
+- **Onde está no código:** `escovaNaoEscova`, `prevForaDaCobranca`, `escovaFichaHTML`, `escovaDcSet`, `escovaMotivoSet`, `escovaPatchTresMeses`, `escovaTresMeses`, `VENC_ESCOVA_EXTRAS` e `vencRespostasEscova`.
+- **Harness:** a checagem v-32 ("o quadro das respostas pendentes traz os CINCO botões") mudou de propósito: o cartão dela é de troca de escova, e os botões da escova agora são outros. Continuam cinco.
+- **Ajustes do QA40:**
+  - o "Não" também fecha a conversa da escova que já tinha sido mandada ao tutor;
+  - **uma fonte só:** o "Não" tira o chip "Escova de dentes" das atividades (a lista de escovação dos monitores) e o "Sim" põe; marcar o chip à mão numa ficha com "Não" volta para "Sim";
+  - quem não pode mudar a ficha recebe aviso na página e nada é gravado (nem nos Vencimentos);
+  - a ficha se redesenha depois de responder;
+  - o "vence em" da troca adiada diz "Adiada: o tutor não autorizou a troca em …";
+  - o painel "Lance aqui mesmo" da Prevenção diz "não escova no Day Care — fora da cobrança";
+  - a resposta antiga ("Vai aplicar em casa") num cartão de escova continua legível.
+
+### (AG) Carrapaticida: a duração vem do produto, e a lista se edita sem programador (29/set/2026)
+
+> **Adriana, 29/set/2026 (Bravecto do Antônio):** *"Bravecto é um medicamento que dura 90 dias. Credeli dura 30 dias. Simparic, 35. NexGard, 30. […] Quando é comprimido, eu preciso ter uma barra na frente para colocar qual o tempo de durabilidade daquele produto. […] Quando a gente já sabe o Bravecto, é isso e pronto. Mas cada vez mais sai produtos."* Seguiu com as respostas recomendadas.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Configurações › Prevenção | só as coleiras | **"Carrapaticida — cada produto protege quantos dias?"**: Pipeta 30, Bravecto 90, Credelli 30, Simparic 35, Nexgard 30, cada um com o número editável; **Produto novo** + **Protege quantos dias?** acrescenta; o produto novo pode sair da lista (a duração fica guardada para as fichas que já têm). Fica no rastro (`config-prevencao`) |
+| Ficha › Prevenção › Ectoparasitas | quatro comprimidos fixos no código | os comprimidos da lista, com a duração no botão ("Bravecto · 90d") |
+| Painel rápido (toque no item em Prevenção, Vencimentos e Hoje na Zêluz) | a conta usava o produto da ficha; sem produto, **30 dias** (o Bravecto era cobrado 2 meses antes) | **"Qual produto?"**, com a duração na frente ("Bravecto · 90 dias"), já com o da ficha escolhido. O produto vai para a ficha junto com a data. Sem produto na tela e na ficha, o painel pede o produto e não grava; se o tutor não sabe, "Não sei qual foi" conta o prazo mais curto. "Outro" pede quantos dias |
+| Lançamentos do dia › Carrapaticida | quanto foi dado e observação | **"Qual produto?"** (opcional) com a duração na frente; escolhido, entra no texto da planilha e da TV |
+
+- **Ajustes do QA41:**
+  - **Nome do produto novo:** só letras, números, espaço, "-" e "+". O que sobrar (ponto, barra, aspas, apóstrofo, parênteses, "<") é dito na tela ("Tire: …"), nunca apagado em silêncio: esses caracteres quebravam o botão da ficha, o botão dos Lançamentos do dia ou a leitura da planilha. "bravecto" é o Bravecto de sempre, não um segundo produto.
+  - **Tirar da lista não apaga:** o produto some das escolhas, mas a duração continua valendo para as fichas que já têm. Na ficha e no painel ele aparece marcado "(saiu da lista)". Em Configurações aparece a linha "Fora da lista"; para voltar, basta escrever o nome em "Produto novo".
+  - **"Não sei qual foi"** no painel rápido: conta o prazo mais curto da lista (hoje, 30 dias) e não grava produto na ficha. Cobrar cedo protege; cobrar tarde deixa o FILHOt sem proteção. **Decisão aplicada pela recomendação; a Adriana pode mudar.**
+  - **"Gravar o vencimento"** leva também o produto escolhido.
+  - **Salvar o bloco da ficha** sem duração conhecida (sem produto, ou "Outro" sem os dias) não apaga mais a próxima data.
+  - **Textos com os números da lista:** "Pipeta dura N dias", o aviso "Escolha o produto", "1 dia" no singular e "Quantos dias protege o produto X?". Sem produto, o painel diz "Escolha o produto: a duração depende dele." (antes, "Vale 30 dias").
+  - **Tutor com "&" no nome:** o painel acha o campo do produto.
+- **Ajustes do QA45:**
+  - **"Não sei qual foi" deixa a ficha sem produto** (antes, o produto de antes ficava, e o Salvar seguinte da ficha refazia a conta com ele, por exemplo 90 dias do Bravecto). O rastro diz "produto não informado — prazo mais curto".
+  - **A ficha aberta pela Prevenção** ("Feito em" e o recálculo do "Vale até") conta pelo produto da ficha: Bravecto 90 dias, não 30.
+  - **Salvar o bloco da ficha com dose nova e sem produto** pede o produto antes de gravar, como o painel.
+  - **A lista é gravada com `update`,** e só depois de ter sido lida do banco. Um produto que outro aparelho acrescentou não some; um aparelho que não conseguiu ler a lista salva as coleiras e avisa que a lista não foi salva.
+  - **O nome** tem até 40 letras, e o que precisa sair aparece entre « ».
+- **Ajustes do QA47:**
+  - **A ficha aberta pela Prevenção** (toque no nome em Prevenção) mostra **"Qual produto?"** no carrapaticida, com o da ficha já escolhido e a frase "Vale N dias". Trocar o produto refaz o "Vale até" na hora. O Salvar grava o produto junto e, sem produto, pede o produto, como o painel. Antes, contava em silêncio pelo produto da ficha e cobrava tarde quando a dose do dia era outra.
+  - **"Não sei qual foi" com "Gravar o vencimento"** também deixa a ficha sem produto.
+  - **Salvar o bloco da ficha** com a data da carteira digitada em «Vence em» no mesmo Salvar não é barrado por falta de produto.
+  - **Configurações › Prevenção** lê os campos pela lista que estava na tela e grava só o que mudou. O número ou o "fora" que outro aparelho mudou continua valendo. A tela desenhada antes de a lista chegar do banco não grava a lista. O rastro só fala da lista quando ela foi gravada.
+- **Ajustes do QA48:**
+  - na ficha aberta pela Prevenção, os **dias do "Outro"** também refazem o "Vale até" enquanto são digitados (antes, a data do produto anterior ficava e a cobrança vinha tarde);
+  - o **«Vence em» da carteira** digitado no mesmo Salvar de uma dose nova, sem produto, é gravado e fica marcado "à mão". Apagado (vazio), o Salvar pede o produto;
+  - a **confirmação verde** continua dizendo "(marcado à mão)" com "Não sei qual foi";
+  - **Configurações:** mudar o número grava só o número (se outro aparelho tirou o produto da lista, ele continua fora). Salvar sem mudar a lista não regrava o nó. A releitura depois de salvar não redesenha a tela, para não apagar o que está sendo digitado. Quando a lista chega depois de a tela abrir, o aviso manda conferir e salvar de novo, sem recarregar.
+- **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ECTO_FORA`, `ectoCfgAplicar`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `ectoMaisCurto`, `ectoExemplos`, `ectoNomeProblema`, `ectoFraseDias`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora num nó só dela, `daycare/config/prevencao-ectos` (QA41): um aparelho ainda na versão antiga regrava `daycare/config/prevencao` inteiro ao salvar as coleiras, e apagaria a lista se ela morasse ali.
+- **Harness:** duas checagens mudaram de propósito. A v-16 continua exigindo o `set` das coleiras com as mesmas três chaves e passa a exigir também o `set` da lista no nó dela. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
+
+### Decisões registradas (sem mudança de código)
+
+- **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
+- **Tutor que respondeu a mensagem da véspera** não recebe de novo a pergunta "fazer hoje?" sobre o mesmo assunto. Já valia para o que tinha vencido; o QA19 mostrou que o que ainda ia vencer (ex.: carrapaticida de quinta, com ele aqui na terça) era perguntado de novo. **Agora vale para os dois**, mas só para o item que a mensagem da véspera levou: o que nunca foi dito ao tutor continua sendo perguntado (`hojeAntecipar`, QA20).
+
 ## O que mudou em 25/set/2026 (v 2026-09-25-01) — Fase 0 do "ciclo fechado"
 
-> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Nada aqui foi publicado ainda:** a versão fica no branch até a Adriana aprovar a publicação, porque o sistema está em uso.
+> **Origem:** auditoria completa de 25/set/2026 e PRD-006 ("nada fica sem cobrar, nada fica esquecido"). A Adriana respondeu "ok" para todas as recomendações e autorizou a Fase 0. **Publicado em 27/set/2026** (merge do pull request #1 pela Adriana), junto com as seções (Q) a (T). Depois de publicar, falta carimbar a versão (`node tools/carimbar-versao.js 2026-09-25-01`).
 
 > **Adriana, 25/set/2026:** *"Eu clico aqui, vermífugo, Simba, nada acontece."* · *"Vermífugo: duas doses com 21 dias de intervalo, depois 4 meses; opção de dose única; exame de fezes com data e resultado."* · *"Banhos recorrentes: só quem tem banho fixo."*
 

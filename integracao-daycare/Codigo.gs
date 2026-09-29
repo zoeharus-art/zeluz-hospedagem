@@ -1,6 +1,13 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 7 (29/set/2026) — UMA ESCRITA POR VEZ. lancar() grava na "primeira célula vazia
+ *                           do dia": dois pedidos ao mesmo tempo (dois aparelhos, ou o
+ *                           automático junto com a recepção) escolhiam a MESMA célula, e o
+ *                           segundo apagava o primeiro, os dois respondendo ok. Foi assim
+ *                           que o Ozzy sumiu da TV com a Charlotte no lugar (Adriana,
+ *                           29/set/2026). Lançar e tirar agora passam por uma trava
+ *                           (LockService) e gravam antes de soltá-la.
  * Versão 6 (21/set/2026) — coluna "Troca de Escova". A escova de dentes do FILHOt é
  *                           prevenção, e a recepção precisa lançá-la no dia, como já
  *                           lança a troca de coleira. Sem hora: o que importa é que foi
@@ -133,16 +140,33 @@ function doPost(e) {
     var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (String(d.token || '') !== _senha()) return _json({ ok: false, erro: 'token invalido' });
     var acao = String(d.acao || 'lancar');
-    if (acao === 'garantirColunas') return _json(garantirColunas());
+    // Mexer na estrutura também espera a vez (QA36): duas criações ao mesmo tempo duplicavam
+    // coluna ou deslocavam a coluna de um lançamento em curso. `lancar` chama garantirColunas
+    // por dentro, já com a trava na mão — por isso a trava fica aqui, na porta, e não lá.
+    if (acao === 'garantirColunas') return _json(_umPorVez(function () { return garantirColunas(); }));
     if (acao === 'diagnostico')     return _json(diagnostico());
-    if (acao === 'removerColunas')  return _json(removerColunas(d));
-    if (acao === 'criarMeses')      return _json(criarMeses(d));
-    if (acao === 'lancar')          return _json(lancar(d));
-    if (acao === 'remover')         return _json(remover(d));
+    if (acao === 'removerColunas')  return _json(_umPorVez(function () { return removerColunas(d); }));
+    if (acao === 'criarMeses')      return _json(_umPorVez(function () { return criarMeses(d); }));
+    if (acao === 'lancar')          return _json(_umPorVez(function () { return lancar(d); }));
+    if (acao === 'remover')         return _json(_umPorVez(function () { return remover(d); }));
     if (acao === 'lerDia')          return _json(lerDia(d));
     return _json({ ok: false, erro: 'acao desconhecida: ' + acao });
   } catch (err) {
     return _json({ ok: false, erro: String(err) });
+  }
+}
+
+/** Uma escrita por vez (versão 7): espera até 10 s pela vez — o app desiste em 12 s, e um
+ *  pedido que ele já abandonou não pode gravar depois (QA36). Sem a vez, diz que a planilha
+ *  está ocupada — o app mostra "NÃO foi para a TV" e a conferência tenta de novo. Grava
+ *  (flush) antes de soltar, mesmo quando dá erro no meio. */
+function _umPorVez(fn) {
+  var trava = LockService.getScriptLock();
+  if (!trava.tryLock(10000)) return { ok: false, erro: 'a planilha está ocupada; tente de novo em instantes' };
+  try {
+    return fn();
+  } finally {
+    try { SpreadsheetApp.flush(); } finally { trava.releaseLock(); }
   }
 }
 

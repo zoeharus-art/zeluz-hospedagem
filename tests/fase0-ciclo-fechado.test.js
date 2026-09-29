@@ -310,14 +310,14 @@ function comFicha(ex, campos, fn) {
   run(`
     __bkp = {pd: prevCorrigePetDe, pe: pelExtra, sp: setPelExtra, pp: prevCorrigePode, rg: prevCorrigeRegistrar,
              ge: document.getElementById, hj: hojeISO, za: (typeof zAlertao==='function'?zAlertao:null)};
-    __alertas = [];
+    __alertas = []; __alertasL = [];
     prevCorrigePetDe = function(){ return {n:'Simba', tutor:'Ana'}; };
     pelExtra = function(){ return __ex; };
     setPelExtra = function(p, patch){ __patch = patch; };
     prevCorrigePode = function(){ return true; };
     prevCorrigeRegistrar = function(){ __reg = Array.prototype.slice.call(arguments, 4); };
     hojeISO = function(){ return '2026-09-25'; };
-    zAlertao = function(t){ __alertas.push(t); };
+    zAlertao = function(t, l){ __alertas.push(t); __alertasL.push(l); };
     document.getElementById = function(id){ return Object.prototype.hasOwnProperty.call(__campos, id) ? __campos[id] : null; };
   `);
   try { fn(); } finally {
@@ -547,7 +547,7 @@ function bancoFalso(servidor) {
 let fila = Promise.resolve();
 function provaAsync(nome, fn) {
   fila = fila.then(() => fn().then(() => { ok++; console.log('  ✓ ' + nome); },
-    (e) => { falhas.push(nome + ' — ' + e.message); console.log('  ✗ ' + nome + '\n      ' + e.message); }));
+    (e) => { falhas.push(nome + ' — ' + e.message); console.log("  ✗ " + nome + "\n      " + e.message + (process.env.PILHA ? "\n" + e.stack : "")); }));
 }
 provaAsync('R-CANCEL — "Tutor buscou, cancelar" de noite anterior GRAVA (a transação pergunta ao banco)', async () => {
   const B = bancoFalso({ nome: 'Thor', status: 'aguardando', chave: 'thor__bia' });
@@ -922,9 +922,93 @@ prova('a mensagem da troca fala em troca — não em reposição', () => {
   try {
     const m = run("repMensagem({n:'Coco Chanel', tutor:'Juliana Prado'}, 'troca', {de:'2026-09-29', para:'2026-09-30'})");
     assert.ok(/^Oi, Juliana, como está\?/.test(m), m);
-    assert.ok(/a troca pedida do dia 29\/09 \(terça-feira\) para o dia 30\/09 \(quarta-feira\) foi feita\. A Coco Chanel vem na quarta-feira, 30\/09\./.test(m), m);
+    // Texto da Adriana, 28/set/2026 (antes: "a troca pedida do dia 29/09 (terça-feira) para o dia 30/09 (quarta-feira) foi feita").
+    assert.ok(/Conforme pedido, estamos fazendo a troca da Coco Chanel do dia 29\/09 para quarta-feira, dia 30\/09\./.test(m), m);
     assert.ok(!/reposi/i.test(m), 'nenhuma palavra sobre reposição');
   } finally { run('pelExtra=__bkT3.pe;'); }
+});
+prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai como TROCA na mensagem ao tutor', () => {
+  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
+  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
+  igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
+  run(`__bkT7=zHojeISO; zHojeISO=function(){ return '2026-09-28'; };`);
+  try {
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), false, 'falta de dia que já passou: reposição');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-28', volta:'2026-09-29'})"), true, 'falta de hoje com dia combinado: troca');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-07', volta:'2026-10-20', periodo:true})"), false, 'período que rende um dia: reposição');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-01', volta:'2026-10-01'})"), false);
+  } finally { run('zHojeISO=__bkT7;'); }
+  run(`__bkT5={pe:pelExtra}; pelExtra=function(){ return {sexo:'Macho'}; };`);
+  try {
+    const m = run("repMensagem({n:'Bis Leon', tutor:'Bruno Souza'}, 'troca', {de:'2026-10-02', para:'2026-10-01'})");
+    assert.ok(/^Oi, Bruno, como está\?/.test(m), m);
+    assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(m), m);
+    assert.ok(!/reposi/i.test(m) && !/de hoje/.test(m), m);
+  } finally { run('pelExtra=__bkT5.pe;'); }
+});
+provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; lotado, falta que já passou e período continuam reposição', async () => {
+  run(`__bkR={ge:document.getElementById, mm:repMsgModal, rg:repGravar, au:audit, ad:repAuditDiaDele, rf:repFechar, rr:renderReposicao,
+      vp:vagasPedir, tl:repTelDe, hz:zHojeISO, rs:repSaldo, vd:vagasDoDia, ve:vagasPodeEncaixar, pt:pessoaDoTurno, pe:pelExtra, dq:repDiasQueViria,
+      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual, pd:pelDias};
+    __diasDele=['sex']; pelDias=function(){ return __diasDele; };   // o Bis vem às sextas
+    __elsR={}; document.getElementById=function(id){ return __elsR[id]||(__elsR[id]={value:'', textContent:'', innerHTML:'', style:{}, disabled:false}); };
+    __capR=[]; repMsgModal=function(t,l,x){ __capR.push({t:t, l:l, x:x}); };
+    __gravR=[]; repGravar=function(p,r){ __gravR.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__gravR.length}); };
+    audit=function(){}; repAuditDiaDele=function(){}; repFechar=function(){}; renderReposicao=function(){};
+    vagasPedir=function(){ return Promise.resolve(); }; repTelDe=function(){ return ''; };
+    zHojeISO=function(){ return '2026-09-28'; }; repSaldo=function(){ return 0; };
+    __cheioR=false; __podeR=false; vagasDoDia=function(){ return {lido:true, cheio:__cheioR}; }; vagasPodeEncaixar=function(){ return __podeR; };
+    pessoaDoTurno=function(){ return 'Márcia'; }; pelExtra=function(){ return {sexo:'Macho'}; };
+    __diasR=[]; repDiasQueViria=function(){ return __diasR; };`);
+  const caso = async (cfg) => {
+    run(`__elsR={}; __capR=[]; __gravR=[]; __cheioR=${!!cfg.cheio}; __podeR=false; __diasR=${JSON.stringify(cfg.dias || [])}; __diasDele=${JSON.stringify(cfg.diasDele || ['sex'])};
+      document.getElementById('repData').value=${JSON.stringify(cfg.data || '')}; document.getElementById('repVolta').value=${JSON.stringify(cfg.volta || '')};
+      document.getElementById('repDe').value=${JSON.stringify(cfg.de || '')}; document.getElementById('repAte').value=${JSON.stringify(cfg.ate || '')};
+      repPelSel={n:'Bis Leon', tutor:'Bruno Souza'}; repModoAtual=${JSON.stringify(cfg.modo || 'dia')}; repMotivoAtual='outro';
+      repConfirmar({});`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    return { g: JSON.parse(JSON.stringify(run('__gravR'))), c: JSON.parse(JSON.stringify(run('__capR'))) };
+  };
+  try {
+    let r = await caso({ data: '2026-10-02', volta: '2026-10-01' });
+    assert.ok(r.g.length === 1 && r.g[0].troca && r.g[0].troca.de === '2026-10-02' && r.g[0].troca.para === '2026-10-01', 'Bis: grava a marca de troca ' + JSON.stringify(r.g));
+    assert.strictEqual(run('repTrocaViva(' + JSON.stringify(r.g[0]) + ')'), true, 'no dia 01/10 o app reconhece a troca ("troca cumprida")');
+    assert.ok(/Conforme pedido, estamos fazendo a troca do Bis Leon do dia 02\/10 para quinta-feira, dia 01\/10\./.test(r.c[0].x), r.c[0].x);
+    assert.ok(/TROCA de dia/.test(r.c[0].l[0]) && /troca cumprida/.test(r.c[0].l[1]) && r.c[0].t === '✅ Reposição lançada', JSON.stringify(r.c[0].l));
+    assert.strictEqual(r.g[0].nasceu_troca, true, 'a marca de nascimento fica no crédito');
+    igual(run('repTrocaComoDesfaz(' + JSON.stringify(r.g[0]) + ", '2026-09-28').estorna"), true, 'desfazer antes do dia estorna a falta, igual à "Marcar troca"');
+    r = await caso({ data: '2026-10-02', volta: '2026-10-01', diasDele: ['qui', 'sex'] });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'o dia novo já é dia dele: reposição');
+    r = await caso({ data: '2026-10-02', volta: '2026-10-03' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'dia novo no sábado: reposição');
+    r = await caso({ data: '2026-09-30', volta: '2026-10-01' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'a falta não é num dia dele: reposição');
+    r = await caso({ data: '2026-10-02', volta: '2026-10-01', cheio: true });
+    assert.ok(!r.g[0].troca && /contando a do dia 02\/10\/2026/.test(r.c[0].x), 'dia de repor lotado, sem agendar: reposição ' + r.c[0].x);
+    r = await caso({ data: '2026-09-25', volta: '2026-09-29' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'falta de dia que já passou: reposição ' + r.c[0].x);
+    r = await caso({ data: '2026-10-01', volta: '2026-10-01' });
+    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'dia de repor igual ao da falta: reposição');
+    r = await caso({ modo: 'periodo', de: '2026-10-05', ate: '2026-10-11', dias: ['2026-10-07'], volta: '2026-10-20' });
+    assert.ok(r.g.length === 1 && !r.g[0].troca && !/troca/i.test(r.c[0].x), 'período que rende um dia só: reposição ' + r.c[0].x);
+    r = await caso({ modo: 'periodo', de: '2026-09-28', ate: '2026-10-02', dias: ['2026-09-28', '2026-09-30'] });
+    assert.ok(/com as de hoje, referentes ao período de 28\/09\/2026 a 02\/10\/2026/.test(r.c[0].x), r.c[0].x);
+  } finally {
+    run(`document.getElementById=__bkR.ge; repMsgModal=__bkR.mm; repGravar=__bkR.rg; audit=__bkR.au; repAuditDiaDele=__bkR.ad; repFechar=__bkR.rf;
+      renderReposicao=__bkR.rr; vagasPedir=__bkR.vp; repTelDe=__bkR.tl; zHojeISO=__bkR.hz; repSaldo=__bkR.rs; vagasDoDia=__bkR.vd;
+      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt; pelDias=__bkR.pd;`);
+  }
+});
+prova('reposição: "com a de hoje" só quando a falta é de hoje', () => {
+  run(`__bkT6={pe:pelExtra, rh:repHojeISO}; pelExtra=function(){ return {sexo:'Macho'}; }; repHojeISO=function(){ return '2026-09-28'; };`);
+  try {
+    const hoje = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:1, data:'2026-09-28', saldo:2})");
+    assert.ok(/está com 2 reposições, com a de hoje, referente ao dia 28\/09\/2026\./.test(hoje), hoje);
+    const outro = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:1, data:'2026-10-02', saldo:1})");
+    assert.ok(/está com 1 reposição, contando a do dia 02\/10\/2026\./.test(outro) && !/de hoje/.test(outro), outro);
+    const per = run("repMensagem({n:'Bis Leon', tutor:'Bruno'}, 'credito', {qtd:5, de:'2026-10-05', ate:'2026-10-09', saldo:5})");
+    assert.ok(/contando as do período de 05\/10\/2026 a 09\/10\/2026\./.test(per), per);
+  } finally { run('pelExtra=__bkT6.pe; repHojeISO=__bkT6.rh;'); }
 });
 prova('turma: na terça "trocou para 30/09"; na quarta vem "troca (no lugar de 29/09)"; a planilha recebe falta e Reposição', () => {
   run(`__bkT4={pd:pelDias, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, te:poTelDoTutor, rs:repSaldo, pi:pelInativo, mz:ehMoradorZeluz, P:PELUDINHOS, hz:zHojeISO};
@@ -2230,6 +2314,2477 @@ provaAsync('QA12-C — relógio adiantado no aparelho da pergunta: o fechamento 
   } finally { run('DB=__bk27.db; VENC_REG=__bk27.vr; VENC_REG_DIA=__bk27.vrd; VENC_PEND=__bk27.vp; VENC_PEND_QUANDO=__bk27.vpq; VENC_PEND_LENDO=__bk27.vpl; audit=__bk27.au; vencRender=__bk27.vre; vencRedesenharQuadros=__bk27.vrq2; quemSou=__bk27.qs; zHojeISO=__bk27.hz; pelExtra=__bk27.pe; vencAtualizarBadge=__bk27.vab; VENC_FILA_GRAV=__bk27.fg;'); }
 });
 
+// ================================================================== decisões de 27/set/2026
+console.log('\nDecisões da Adriana, 27/set/2026 — exame de fezes e "venceu em"');
+const MSG_O = (ex, alvo, dias) => `({chave:'cookie__ana', p:{n:'Cookie', tutor:'Ana Paula', dias:${JSON.stringify(dias || [])}},
+  nome:'Cookie', tutor:'Ana Paula', sexo:'F', itens:vencItensDe(${JSON.stringify(ex)}, '${alvo}', 7, '2026-09-24')})`;
+const msg = (ex, tipo, alvo, dias) => run(`vencMensagemDe(${MSG_O(ex, alvo, dias)}, '${tipo}', null, '${alvo}', '2026-09-24')`);
+prova('B2 — exame de fezes depois da 1ª dose dispensa a 2ª; o exame renova em 4 meses (decisão: "sim, tem que refazer depois de 4 meses")', () => {
+  const ex = { verm_t: '2026-09-01', verm_doses: '2 doses', fezes_t: '2026-09-10' };
+  const it = run("PREV_ITENS.filter(function(x){ return x.k==='verm_dose2_p'; })[0]");
+  ctx.__ex = ex; ctx.__it = it;
+  assert.strictEqual(run('prevDispensadoPorExame(__ex, __it)'), true, 'a 2ª dose não é cobrada');
+  assert.strictEqual(run("vermOuFezes(__ex)"), 'fezes');
+  assert.strictEqual(run("addDiasISO('2026-09-10', FEZES_PROX)"), '2027-01-08', 'o exame volta a ser cobrado 120 dias depois');
+  ctx.__ex2 = { verm_t: '2026-09-01', verm_doses: '2 doses', fezes_t: '2026-08-20' };
+  assert.strictEqual(run('prevDispensadoPorExame(__ex2, __it)'), false, 'exame ANTES da 1ª dose não dispensa a 2ª');
+});
+prova('"venceu em" — tudo vencido: a data é a do vencimento, não o dia dele aqui', () => {
+  const vac = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-24');
+  assert.ok(vac.indexOf('a vacina de Raiva da Cookie venceu em 10/09.') > 0, vac);
+  const agd = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Raiva da Cookie venceu em 10/09.') > 0, agd);
+  assert.ok(agd.indexOf('venceu hoje') < 0, 'nunca "venceu hoje" para o que venceu em 10/09');
+  const ant = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('Passando para lembrar que venceu em 15/09 o vermífugo da Cookie.') > 0, ant);
+  assert.ok(ant.indexOf('Podemos fazer amanhã?') > 0, 'o {quando} do fecho continua sendo o dia dela aqui');
+  const dois = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+  // datas diferentes (QA19 M2): cada item diz a sua; mesma data: uma frase só, no plural
+  assert.ok(dois.indexOf('o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09.') > 0, dois);
+  const mesma = msg({ verm_p: '2026-09-12', verm_t: '2026-05-15', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+  assert.ok(mesma.indexOf('venceram em 12/09 o carrapaticida e o vermífugo da Cookie') > 0, mesma);
+});
+prova('"venceu em" — "nesse dia" continua com um dia escrito antes (texto da creche)', () => {
+  const t = msg({ vac_raiva_p: '2026-09-10' }, 'vacina', '2026-09-25');
+  assert.ok(t.indexOf('venceu em 10/09. Como ela estará conosco amanhã, sexta-feira (25/09),') > 0, t);
+  assert.ok(t.indexOf('nesse dia') < 0, t);
+});
+prova('"venceu em" — misturado: cada item diz a sua data, sem fingir que o vencido vence amanhã', () => {
+  const ant = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-28' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('o vermífugo da Cookie venceu em 15/09 e o carrapaticida vence em 28/09.') > 0, ant);
+  assert.ok(ant.indexOf('amanhã vencem') < 0, ant);
+  const vac = msg({ vac_gripe_p: '2026-09-10', vac_raiva_p: '2026-09-28' }, 'vacina', '2026-09-25');
+  assert.ok(vac.indexOf('a vacina de Gripe da Cookie venceu em 10/09 e a de Raiva vence em 28/09. Como ela estará conosco amanhã, sexta-feira (25/09),') > 0, vac);
+  const agd = msg({ vac_gripe_p: '2026-09-10', vac_raiva_p: '2026-09-28' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Gripe da Cookie venceu em 10/09 e a de Raiva vence em 28/09.') > 0, agd);
+});
+prova('"venceu em" — o que ainda vai vencer continua exatamente como antes', () => {
+  const ant = msg({ ecto_p: '2026-09-28' }, 'antip', '2026-09-25');
+  assert.ok(ant.indexOf('Passando para lembrar que amanhã vence o carrapaticida da Cookie.') > 0, ant);
+  const agd = msg({ vac_raiva_p: '2026-09-26' }, 'vacina', '2026-09-24', ['qui', 'sex']);
+  assert.ok(agd.indexOf('A vacina de Raiva da Cookie vence hoje, quinta-feira (24/09)') > 0, agd);
+});
+
+// ================================================================== pertences da hospedagem
+console.log('\nPertences da hospedagem — os cinco que ela ditou, e descrever (27/set/2026)');
+prova('check-in rápido: pertences só com texto — cada item por linha ou vírgula vira um item, com o tipo pelas palavras; a linha que não mudou conserva o item (e o V verde)', () => {
+  ctx.__els = { ciPertTexto: { value: '' }, ciPertSel: { innerHTML: '' } };
+  run(`__bkPert={ge:document.getElementById, ps:ciPertSel};
+    document.getElementById=function(id){ return __els[id]||__bkPert.ge.call(document, id); };`);
+  try {
+    // o exemplo da Adriana, mais a comida com vírgula dentro dos parênteses e o número que completa
+    run(`ciPertDoTexto('comida (ração Royal, 1 pacote), cama (rosa, com zíper), sacola verde\\nguia vermelha; bolsinha de remédios de emergência\\nração Golden, 2 pacotes');`);
+    const it = JSON.parse(JSON.stringify(run('ciPertSel')));
+    igual(it.map((p) => [p.k, p.nome]), [['comida', 'Comida (ração Royal, 1 pacote)'], ['cama', 'Cama (rosa, com zíper)'], ['mochila', 'Sacola verde'],
+      ['guia', 'Guia vermelha'], ['remedios', 'Bolsinha de remédios de emergência'], ['comida', 'Ração Golden, 2 pacotes']]);
+    assert.ok(/6 itens para conferir/.test(ctx.__els.ciPertSel.innerHTML), 'mostra como separou: ' + ctx.__els.ciPertSel.innerHTML);
+    // a linha que não mudou é o MESMO item (a Conferência guarda o V verde pelo uid)
+    const uidCama = it[1].uid;
+    run(`ciPertDoTexto('comida (ração Royal, 1 pacote), cama (rosa, com zíper), sacola verde, cobertor xadrez');`);
+    const it2 = JSON.parse(JSON.stringify(run('ciPertSel')));
+    assert.strictEqual(it2[1].uid, uidCama, 'a cama continua sendo a mesma');
+    igual(it2.map((p) => p.k), ['comida', 'cama', 'mochila', 'outro']);
+    // estadia antiga (grade de antes) abre como texto e, sem mexer, volta igual — com os nomes e o uid que tinha
+    run(`ciRenderPert([{uid:'u1',k:'roupa',nome:'Roupa',spec:'casaco vermelho, de lã'},{uid:'u2',k:'mochila',nome:'Mochila',spec:''}]);`);
+    assert.strictEqual(ctx.__els.ciPertTexto.value, 'Roupa — casaco vermelho, de lã\nMochila');
+    run(`ciPertDoTexto(__els.ciPertTexto.value);`);
+    igual(JSON.parse(JSON.stringify(run('ciColetarPert()'))).map((p) => [p.uid, p.k, p.nome, p.spec]),
+      [['u1', 'roupa', 'Roupa', 'casaco vermelho, de lã'], ['u2', 'mochila', 'Mochila', '']]);
+    // o item escrito não trava o salvar como "Outro sem descrição"
+    run(`ciPertSel=[{uid:'x',k:'outro',nome:'Cobertor xadrez',spec:''}];`);
+    assert.ok(!run('ciFaltando()').some((f) => f.f === 'ciCardPert'), 'escrito é descrito');
+  } finally { run('document.getElementById=__bkPert.ge; ciPertSel=__bkPert.ps;'); }
+});
+prova('check-in rápido: a tela na ordem da conversa com o tutor — coleira, alergia, medicação em uso, comida, pertences, datas e assinatura', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const ordem = ['id="ciCardColeira"', '<h2>Restrição / Alergia</h2>', 'id="ciCardMed"', 'id="ciCardAlim"', 'id="ciCardPert"', 'id="ciCardDatas"', 'id="ciCardAssina"'].map((m) => src.indexOf(m));
+  assert.ok(ordem.every((x, i) => x > 0 && (i === 0 || x > ordem[i - 1])), JSON.stringify(ordem));
+  assert.ok(/Está com coleira antipulga ou repelente\?/.test(src) && /id="ciColeiraQual"/.test(src), 'a coleira, com o "Qual?"');
+  assert.ok(/Está em uso de alguma medicação\?/.test(src) && /não<\/strong> é medicação em uso: escreva em Pertences/.test(src), 'a pergunta e o kit de emergência');
+  assert.ok(/O que come e quanto, em CADA refeição/.test(src) && /Quanto trouxe de ração \(g\)/.test(src), 'comida: o que come, quanto e quanto trouxe');
+  assert.ok(src.indexOf('id="ciPertGrid"') < 0 && /id="ciPertTexto"/.test(src), 'pertences: um campo de texto, sem a grade');
+  // a coleira e a resposta da medicação saem no PDF, no resumo e na Conferência
+  for (const onde of ["{k:'Coleira antipulga ou repelente', v:ciColeiraTexto(d.ficha.coleira)}", "L.push('Coleira antipulga ou repelente: '+ciColeiraTexto(d.ficha.coleira))", '<strong>Coleira antipulga ou repelente:</strong>'])
+    assert.ok(src.indexOf(onde) > 0, onde);
+  igual([run(`ciColeiraTexto({tem:'Sim', qual:'Seresto'})`), run(`ciColeiraTexto({tem:'Sim', qual:''})`), run(`ciColeiraTexto({tem:'Não'})`), run('ciColeiraTexto(null)')],
+    ['Sim — Seresto', 'Sim (qual não foi dito)', 'Não', '']);
+});
+provaAsync('check-in rápido: "Está em uso de alguma medicação?" — sem resposta não salva; "Não" não liga alarme e marca os da ficha como "já não toma mais"; "Tudo igual" confirma todos', async () => {
+  run(`__bkMU={sv:segVal, ge:document.getElementById, qsa:document.querySelectorAll, qs:document.querySelector, ce:canEditCheckinMed, qs2:quemSou, za:zAlertao, db:DB, au:audit, cm:carregarAgendaMedTodos};
+    __segMU={}; segVal=function(id){ return __segMU[id]||''; };
+    canEditCheckinMed=function(){ return true; }; quemSou=function(){ return 'Márcia'; }; audit=function(){}; carregarAgendaMedTodos=function(){};
+    __alMU=[]; zAlertao=function(t){ __alMU.push(t); };
+    __linha=function(id, nome){ var faixaBts=[]; var el={dataset:{id:id, daficha:'1', conf:''},
+        querySelector:function(sel){ if(sel==='[data-c=m]') return {value:nome}; if(sel==='.ci-med-conf button[data-cf="ok"]') return faixaBts[0]; if(sel==='.ci-med-conf') return __faixa; if(sel.indexOf('[data-c=')===0) return {value:''}; return null; },
+        querySelectorAll:function(){ return []; }, closest:function(){ return el; }};
+      var __faixa={classList:{toggle:function(){}}, querySelectorAll:function(){ return faixaBts; }, querySelector:function(){ return {textContent:''}; }};
+      faixaBts.push({dataset:{cf:'ok'}, textContent:'Confirmado', classList:{toggle:function(){}}, closest:function(){ return el; }});
+      faixaBts.push({dataset:{cf:'mudou'}, textContent:'Mudou', classList:{toggle:function(){}}, closest:function(){ return el; }});
+      return el; };
+    __linhasMU=[__linha('a1','Apoquel'), __linha('a2','Enalapril')];
+    __elsMU={ciMedEmUso:{}, ciMedTudoIgual:{innerHTML:''}, ciMedEmUsoBox:{style:{}}, 'ci-med-status':{style:{}, textContent:''}, ciMeds:{querySelector:function(){ return {}; }}};
+    document.getElementById=function(id){ return __elsMU[id]||__bkMU.ge.call(document, id); };
+    document.querySelectorAll=function(sel){ return /data-daficha/.test(sel)||/#ciMeds \.magitem/.test(sel) ? __linhasMU : []; };`);
+  try {
+    // sem resposta: o salvar pede, e é a primeira coisa da lista
+    let f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.strictEqual(f[0].f, 'ciMedEmUso', JSON.stringify(f.map((x) => x.t)));
+    // "Tudo igual — confirmar todos (2)" e o toque confirma os dois
+    run(`__segMU.ciMedEmUso='Sim'; ciMedTudoIgualRender();`);
+    assert.ok(/Tudo igual — confirmar todos \(2\)/.test(run('__elsMU.ciMedTudoIgual.innerHTML')));
+    run('ciMedTudoIgual();');
+    igual([run('__linhasMU[0].dataset.conf'), run('__linhasMU[1].dataset.conf')], ['ok', 'ok']);
+    assert.strictEqual(run('__elsMU.ciMedTudoIgual.innerHTML'), '', 'confirmados, o botão sai');
+    // sem permissão: aviso na página (não o alert nativo) e nada muda
+    run(`__linhasMU[0].dataset.conf=''; canEditCheckinMed=function(){ return false; }; ciMedTudoIgual();`);
+    assert.ok(run('__alMU.length') === 1 && /SÓ QUEM CUIDA DA MEDICAÇÃO/.test(run('__alMU[0]')) && run('__linhasMU[0].dataset.conf') === '');
+    run('canEditCheckinMed=function(){ return true; };');
+    // "Não": nada vai para a estadia nem para o alarme, e a validação da ficha não cobra
+    run(`__segMU.ciMedEmUso='Não';`);
+    // o "Não" que só voltou da estadia (ninguém tocou) não marca nada como "parou" (QA39 A1)
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [], 'sem toque, nada para');
+    run('ciMedEmUsoChange(true);');
+    igual(JSON.parse(JSON.stringify(run('ciColetarMeds()'))), {});
+    igual(JSON.parse(JSON.stringify(run('ciValidarMeds({})'))), []);
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Apoquel' }, { id: 'a2', nome: 'Enalapril' }]);
+    f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.ok(!f.some((x) => x.f === 'ciMedEmUso' || x.f === 'ciMeds' || x.f === 'ciGate'), JSON.stringify(f.map((x) => x.t)));
+    // ao salvar: "já não toma mais", terminando ONTEM (o despertador não chama hoje), com quem e o motivo
+    run(`__gravMU={}; __agMU={a1:{nome:'Apoquel', continuo:true, historico:[{acao:'Criou'}]}, a2:{nome:'Enalapril', continuo:true, historico:[{acao:'Criou'}]},
+        a1b:{nome:'Apoquel', continuo:true, historico:[]}, velho:{nome:'Antibiótico', continuo:false, dataFim:'2020-01-01'}};
+      DB={ref:function(p){ return {
+        once:function(){ var id=p.split('/').pop(); return Promise.resolve({val:function(){ return (p.slice(-6)==='/itens') ? __agMU : __agMU[id]; }}); },
+        update:function(v){ __gravMU[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};`);
+    const feitos = await run(`ciMedMarcarParou('bia__lola', ciMedNaoEmUso())`);
+    igual(JSON.parse(JSON.stringify(feitos)), ['Apoquel', 'Enalapril', 'Apoquel'], 'todos em vigor, inclusive a cópia repetida (QA39 A2); o que já tinha acabado fica como está');
+    const g = run(`__gravMU['auaulandia/medicacao-agenda/bia__lola/itens/a1']`);
+    const ontem = run(`addDiasISO(zHojeISO(),-1)`);
+    assert.ok(g.continuo === false && g.dataFim === ontem && g.paradoEm.quem === 'Márcia' && /não está em uso/.test(g.paradoEm.motivo)
+      && g.historico.length === 2 && /Parou de tomar/.test(g.historico[1].acao), JSON.stringify(g));
+    assert.ok(!run(`medVigenteEm(__gravMU['auaulandia/medicacao-agenda/bia__lola/itens/a1'], zHojeISO())`), 'hoje o alarme não toca');
+    // "Sim" sem remédio escrito: pede o remédio ou o Não
+    run(`__segMU.ciMedEmUso='Sim'; __linhasMU=[];`);
+    f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.ok(f.some((x) => x.f === 'ciMeds' && /ou toque em Não/.test(x.t)), JSON.stringify(f.map((x) => x.t)));
+  } finally { run(`segVal=__bkMU.sv; document.getElementById=__bkMU.ge; document.querySelectorAll=__bkMU.qsa; document.querySelector=__bkMU.qs; canEditCheckinMed=__bkMU.ce; quemSou=__bkMU.qs2; zAlertao=__bkMU.za; DB=__bkMU.db; audit=__bkMU.au; carregarAgendaMedTodos=__bkMU.cm;`); }
+});
+prova('check-in rápido (QA37): responder um remédio tira o vermelho SÓ dele; o problema de cada remédio fica na linha dele', () => {
+  run(`__bkZ={zm:Z_FALTA_MARCADOS, qsa:document.querySelectorAll, qs:document.querySelectorAll};
+    __cls=function(){ var c={}; return {add:function(x){ c[x]=1; }, remove:function(x){ delete c[x]; }, contains:function(x){ return !!c[x]; }, _c:c}; };
+    __a={classList:__cls(), nextElementSibling:null, contains:function(o){ return o===__a; }};
+    __b={classList:__cls(), nextElementSibling:null, contains:function(o){ return o===__b; }};
+    __a.classList.add('z-falta'); __b.classList.add('z-falta');
+    Z_FALTA_MARCADOS=[__a, __b];
+    __btn={dataset:{zLabel:'Salvar'}, textContent:'Faltam 2 · Salvar'};
+    document.querySelectorAll=function(sel){ return sel==='.z-btn-falta' ? [__btn] : []; };
+    zLimparFaltaEm(__a);`);
+  try {
+    assert.ok(!run(`__a.classList.contains('z-falta')`) && run(`__b.classList.contains('z-falta')`), 'o outro bloqueio continua vermelho');
+    assert.strictEqual(run('__btn.textContent'), 'Falta 1 · Salvar');
+    // o problema com o nome do remédio aponta para a linha dele
+    run(`__nm=[{value:'Apoquel'},{value:''},{value:'Apoquel'}]; __fx=[{},{},{}];
+      __lin=__nm.map(function(n,i){ return {dataset:{daficha:(i!==1?'1':'')}, querySelector:function(sel){ return sel==='[data-c=m]'?n:(sel==='.ci-med-conf'?__fx[i]:null); }}; });
+      document.querySelectorAll=function(sel){ return /magitem/.test(sel) ? __lin : []; };`);
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel": toque na MEDIDA (comprimido, ml, gota, pomada...).')===__nm[0]`), 'o nome do remédio da linha');
+    assert.ok(run(`ciMedLinhaDoProblema('escreva o NOME do medicamento ou suplemento por extenso.')===__nm[1]`));
+    assert.ok(run(`ciMedLinhaDoProblema('outra frase')===null`));
+    // dois Apoquel (manhã e noite): o 2º problema vai para a 2ª linha (QA39 A6); o "veio da ficha" vai para a faixa (A5)
+    run(`__us={};`);
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.', __us)===__fx[0]`));
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.', __us)===__fx[2]`));
+  } finally { run('Z_FALTA_MARCADOS=__bkZ.zm; document.querySelectorAll=__bkZ.qsa;'); }
+});
+prova('na Conferência, Comida é item crítico (como a ração e a comida natural antigas); Remédios não vira trava nova (QA19 B5)', () => {
+  run(`__bkCf=cfEstadia; cfEstadia={pertences:[{uid:'a',k:'comida',nome:'Comida',spec:'ração'},{uid:'b',k:'remedios',nome:'Remédios',spec:'Apoquel'},
+    {uid:'c',k:'mochila',nome:'Mochila',spec:''},{uid:'d',k:'racao',nome:'Ração',spec:'Royal'}], medicacao:[], ficha:{}};`);
+  try {
+    const it = JSON.parse(JSON.stringify(run('cfListaItens()'))).filter((x) => x.tipo === 'pertence');
+    igual(it.map((x) => [x.label, x.critico]), [['Comida — ração', true], ['Remédios — Apoquel', false], ['Mochila', false], ['Ração — Royal', true]]);
+  } finally { run('cfEstadia=__bkCf;'); }
+});
+
+prova('QA19 M3 — "Outro" sem descrição não deixa salvar o check-in; com descrição, deixa', () => {
+  run(`__bkO={ps:ciPertSel};`);
+  try {
+    run(`ciPertSel=[{uid:'o1',k:'outro',nome:'Outro',spec:'  '}];`);
+    assert.ok(run('ciFaltando()').some((f) => f.f === 'ciCardPert' && /Outro/.test(f.t)), 'pede para escrever o que é');
+    run(`ciPertSel=[{uid:'o1',k:'outro',nome:'Outro',spec:'cobertor azul'}];`);
+    assert.ok(!run('ciFaltando()').some((f) => f.f === 'ciCardPert'), 'descrito, não pede mais nada nos pertences');
+  } finally { run('ciPertSel=__bkO.ps;'); }
+});
+prova('QA19 B4 — no pré-preenchimento, a Ração e a Comida natural da última estadia viram Comida (com o que estava escrito)', () => {
+  const e = JSON.parse(JSON.stringify(run(`ciPertAntigoParaComida({pertences:[{uid:'a',k:'racao',nome:'Ração',spec:'Royal Canin'},
+    {uid:'b',k:'natural',nome:'Comida natural',spec:''},{uid:'c',k:'mochila',nome:'Mochila',spec:'azul'}]})`)));
+  igual(e.pertences.map((p) => [p.k, p.nome, p.spec]), [['comida', 'Comida', 'Ração Royal Canin'], ['comida', 'Comida', 'Comida natural'], ['mochila', 'Mochila', 'azul']]);
+  assert.strictEqual(e.pertences[0].uid, 'a', 'o uid fica (a Conferência guarda o V verde por uid)');
+});
+prova('QA19 B7 — sem o banco carregado, o nome do item continua certo ("Remédios", nunca "remedios")', () => {
+  run('__bkB=ciPertBanco; ciPertBanco=[];');
+  try { assert.strictEqual(run("ciPertNome('remedios')"), 'Remédios'); assert.strictEqual(run("ciPertNome('racao')"), 'Ração'); }
+  finally { run('ciPertBanco=__bkB;'); }
+});
+prova('QA19 M4 — véspera respondida: o "fazer hoje?" não pergunta de novo nem o que ainda vai vencer (decisão de 27/set)', () => {
+  const ex = JSON.stringify({ ecto_p: '2026-10-01' });
+  const p = JSON.stringify({ n: 'Cookie', tutor: 'Ana', dias: ['ter', 'sex'] });
+  const sem = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', null)`)));
+  assert.deepStrictEqual(sem.itens.map((x) => x.k), ['ecto_p'], 'sem véspera, pergunta (como antes)');
+  const resp = JSON.stringify({ respostas: { antip: { v: 'sim', ts: 1 } } });
+  const com = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${resp})`)));
+  assert.deepStrictEqual(com.itens.map((x) => x.k), [], 'véspera respondida: não pergunta de novo');
+  const hojeResp = JSON.stringify({ respostas: { antip: { v: 'sim', ts: 1 }, ant_antip: { v: 'sim', ts: 2 } } });
+  const ja = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${hojeResp})`)));
+  assert.deepStrictEqual(ja.itens.map((x) => x.k), ['ecto_p'], 'a pergunta de hoje já respondida continua (o bloco mostra a resposta)');
+});
+prova('QA20 L1 — a véspera só segura o item que ela LEVOU: o que nunca foi dito ao tutor continua sendo perguntado', () => {
+  const ex = JSON.stringify({ ecto_p: '2026-10-01', verm_p: '2026-09-20' });
+  const p = JSON.stringify({ n: 'Cookie', tutor: 'Ana', dias: ['ter', 'sex'] });
+  const soVerm = JSON.stringify({ respostas: { antip: { v: 'bolsa', ts: 1 } }, itens: [{ k: 'verm_p', vence: '2026-09-20', atrasado: true }] });
+  const r = JSON.parse(JSON.stringify(run(`hojeAntecipar(${ex}, ${p}, '2026-09-29', ${soVerm})`)));
+  assert.deepStrictEqual(r.itens.map((x) => x.k), ['ecto_p'], 'o vermífugo (levado e respondido) sai; o carrapaticida (nunca dito) fica');
+});
+prova('QA20 L2 — texto à mão com um segundo "vence {quando}": ele também vira "venceu em"', () => {
+  run(`__bkCfg=VENC_CFG; VENC_CFG={antip:'Passando para lembrar que {quando} vence {item} {dofilhot}. Se o vermífugo vence {quando}, podemos fazer?'};`);
+  try {
+    const t = msg({ verm_p: '2026-09-15', verm_t: '2026-05-18', ecto_p: '2026-09-12' }, 'antip', '2026-09-25');
+    assert.ok(t.indexOf('o carrapaticida da Cookie venceu em 12/09 e o vermífugo venceu em 15/09.') > 0, t);
+    assert.ok(t.indexOf('vence amanhã') < 0 && t.indexOf('vencem amanhã') < 0, t);
+  } finally { run('VENC_CFG=__bkCfg;'); }
+});
+
+// ================================================================== o Plantão não apaga a ficha
+console.log('\nPlantão — "Editar cadastro" grava só o que mudou, na ficha-mestre (auditoria de dados, 27/set/2026)');
+prova('cadDiferenca: só o campo mudado, e nunca vazio por cima de valor', () => {
+  igual(run("cadDiferenca({sexo:'Macho', chip:'', nasc:'2020-05-01'}, {sexo:'Macho', chip:'963', nasc:''})"), { chip: '963' });
+  igual(run("cadDiferenca({raca:'Shih Tzu'}, {raca:'Lhasa Apso'})"), { raca: 'Lhasa Apso' });
+  igual(run("cadDiferenca({}, {sexo:'', castrado:''})"), {});
+});
+const PLANTAO_STUBS = `__bkPl={ge:document.getElementById, sv:segVal, ss:setSeg, ah:atualizarHeader, rh:renderHosp, fd:fotoDe, db:DB, ch:currentHosp,
+    pc:pelCadCache, cc:cadCache, kf:__cadKeyFixa, ca:(typeof __cadAberto!=='undefined'?__cadAberto:null), au:audit};
+  __els={}; __seg={}; __grav=[]; __aud=[]; __dbVals={};
+  document.getElementById=function(id){ return __els[id]||(__els[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+  segVal=function(id){ return __seg[id]||''; }; setSeg=function(id,v){ __seg[id]=v||''; };
+  atualizarHeader=function(){}; renderHosp=function(){}; fotoDe=function(){ return ''; };
+  audit=function(a,b,c){ __aud.push({a:a,b:b,c:c}); };
+  DB={ref:function(p){ return {
+    update:function(v){ __grav.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); },
+    once:function(){ return Promise.resolve({val:function(){ return __dbVals[p]||null; }}); } }; }};`;
+const PLANTAO_VOLTA = `document.getElementById=__bkPl.ge; segVal=__bkPl.sv; setSeg=__bkPl.ss; atualizarHeader=__bkPl.ah; renderHosp=__bkPl.rh;
+  fotoDe=__bkPl.fd; DB=__bkPl.db; currentHosp=__bkPl.ch; pelCadCache=__bkPl.pc; cadCache=__bkPl.cc; __cadKeyFixa=__bkPl.kf; __cadAberto=__bkPl.ca; audit=__bkPl.au;`;
+provaAsync('E1 — digitar o microchip no Plantão grava SÓ o microchip (a ficha mantém dias, sexo, castração e nascimento)', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={};
+      pelCadCache={tico__joana:{nome:'Tico', tutor:'Joana', sexo:'Macho', castrado:'Sim', nasc:'2020-05-01', dias:['seg','qua'], raca:'Shih Tzu'}};
+      __dbVals['daycare/cadastro/tico__joana']=pelCadCache.tico__joana;
+      carregarCadastro();`);
+    assert.strictEqual(run("__seg['hf-sexo']"), 'Macho', 'o formulário abre com a ficha-mestre, não com o espelho vazio');
+    assert.strictEqual(run("__els['hf-nasc'].value"), '01/05/2020');
+    run("__els['hf-chip'].value='963000111222333'; onCadGravar();");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.deepStrictEqual(g.map((x) => x.p).sort(), ['auaulandia/cadastro/tico__joana', 'daycare/cadastro/tico__joana']);
+    // O número vai também para `microchip`, onde o "sem microchip" mora (QA21 B1).
+    g.forEach((x) => assert.deepStrictEqual(x.v, { chip: '963000111222333', microchip: '963000111222333' }, 'só o campo mudado; nada de dias, sexo ou nascimento vazios'));
+    assert.strictEqual(run("__els['hf-chip'].value"), '963000111222333', 'a leitura atrasada do banco não atropela o que foi digitado');
+    run('__grav=[]; onCadGravar();');
+    assert.strictEqual(run('__grav.length'), 0, 'salvar de novo sem mudança não grava nada');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('nome apagado no Plantão não apaga o nome da ficha', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __els['hf-nome-edit']={value:'  '}; onCadNome();`);
+    assert.strictEqual(run('__grav.length'), 0);
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('alergia de hóspede sem ficha ligada: a tela avisa em vermelho e o rastro chega à Gestão', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    assert.strictEqual(run('__grav.length'), 0, 'sem chave, não grava em ficha nenhuma (xará herdaria)');
+    assert.ok(/SÓ NESTE aparelho/.test(run("__els['hf-alergia-st'].textContent")), 'avisa onde registrar');
+    const a = JSON.parse(JSON.stringify(run('__aud')));
+    assert.ok(a.some((x) => x.a === 'alergia-sem-ficha' && /Pipa \(Fulana\) — alergia: frango/.test(x.b)), JSON.stringify(a));
+  } finally { run(PLANTAO_VOLTA); }
+});
+
+// QA21 (27/set/2026): o que a 1ª revisão do Plantão achou
+console.log('\nPlantão — correções do QA21');
+prova('QA21 M1 — trocar de hóspede limpa o aviso da alergia do anterior; apagar a alergia apaga o aviso', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    assert.ok(/SÓ NESTE aparelho/.test(run("__els['hf-alergia-st'].textContent")));
+    run(`setHospAlergia('alergia','');`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'apagou a alergia: o aviso some');
+    run(`setHospAlergia('alergia','frango'); __bkHs=hospedes; hospedes=[{nome:'Bolt', tutor:'Ana'}];
+      try{ abrirPlantao(0); }catch(e){} hospedes=__bkHs;`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'o aviso da Pipa não fica na tela do Bolt');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 M2 — quem não edita fichas recebe a instrução certa (avisar a Gestão)', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__bkCe=canEditPel; canEditPel=function(){ return false; };
+      currentHosp={nome:'Pipa', tutor:'Fulana'}; setHospAlergia('alergia','frango');`);
+    const t = run("__els['hf-alergia-st'].textContent");
+    assert.ok(/Avise a Gestão ou a Supervisão/.test(t) && !/Cadastro de Peludinhos/.test(t), t);
+    run(`canEditPel=function(){ return true; }; setHospAlergia('restricao','sem frango');`);
+    assert.ok(/Cadastro de Peludinhos e registre a restrição/.test(run("__els['hf-alergia-st'].textContent")));
+  } finally { run('canEditPel=__bkCe;'); run(PLANTAO_VOLTA); }
+});
+prova('QA21 M3 — nascimento incompleto ou impossível não vai para a ficha', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={nasc:'2020-05-01'};
+      document.getElementById('hf-nasc').value='01/05/2'; onCadGravar();`);
+    assert.strictEqual(run('__grav.length'), 0, 'data pela metade não grava');
+    run(`document.getElementById('hf-nasc').value='01/05/2099'; onCadGravar();`);
+    assert.strictEqual(run('__grav.length'), 0, 'data no futuro não grava');
+    run(`document.getElementById('hf-nasc').value='03/06/2021'; onCadGravar();`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.length === 2 && g.every((x) => x.v.nasc === '2021-06-03'), JSON.stringify(g));
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 M4 — FILHOt da base fixa abre com raça, tutor e nascimento; vazio gravado não encobre valor', () => {
+  run(PLANTAO_STUBS);
+  try {
+    const p = run('JSON.parse(JSON.stringify(PELUDINHOS[0]))');
+    const k = run('pelKey(PELUDINHOS[0])');
+    run(`pelCadCache={}; pelCadCache[${JSON.stringify(k)}]={raca:'', sexo:'Fêmea'};`);
+    const m = JSON.parse(JSON.stringify(run(`cadMestreDe(${JSON.stringify(k)})`)));
+    assert.strictEqual(m.raca, p.raca, 'raça da base fixa, apesar do "" gravado');
+    assert.strictEqual(m.tutor, p.tutor);
+    assert.strictEqual(m.nasc, p.nasc);
+    assert.strictEqual(m.sexo, 'Fêmea', 'o que foi gravado vale por cima da base');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 B1 — "sem microchip" não aparece como número no campo', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`aplicarCadastro({microchip:Z_NAO_TEM});`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '');
+    run(`aplicarCadastro({microchip:'98100'});`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '98100');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA21 B3 — trocar de hóspede antes dos 0,9 s grava o que foi digitado no anterior', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stB3=setTimeout; setTimeout=function(){ return 7; };   // o relógio de 0,9 s fica pendente
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad();
+      __bkHs=hospedes; hospedes=[{nome:'Bolt', tutor:'Ana'}]; try{ abrirPlantao(0); }catch(e){} hospedes=__bkHs;`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.some((x) => x.p === 'daycare/cadastro/tico__joana' && x.v.raca === 'Lhasa Apso'), JSON.stringify(g));
+    assert.strictEqual(run('__cadTimer'), null, 'o relógio pendente foi desligado');
+  } finally { run('setTimeout=__stB3; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+provaAsync('QA21 B5 — a leitura atrasada não atropela o que está sendo digitado (sem salvar) nem cai no hóspede seguinte', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      __dbVals['daycare/cadastro/tico__joana']={raca:'Shih Tzu', sexo:'Macho'};
+      carregarCadastro(); document.getElementById('hfRaca').value='Lhas';`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hfRaca'].value"), 'Lhas', 'o que está sendo digitado continua na tela');
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      carregarCadastro(); currentHosp={nome:'Bolt', tutor:'Ana'}; __cadKeyFixa='bolt__ana'; document.getElementById('hfRaca').value='Poodle';`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hfRaca'].value"), 'Poodle', 'a ficha do Tico não cai na tela do Bolt');
+  } finally { run('try{ if(__cadTimer){ clearTimeout(__cadTimer); __cadTimer=null; } }catch(e){}'); run(PLANTAO_VOLTA); }
+});
+
+// QA22 (27/set/2026): a verificação das correções do QA21
+console.log('\nPlantão — correções do QA22');
+prova('QA22 — o toque abre o FILHOt tocado, mesmo quando a gravação pendente reordena a lista', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ1=setTimeout; setTimeout=function(){ return 7; }; __bkHsQ1=hospedes;
+      __olga={nome:'Olga', tutor:'Rita'}; __zeca={nome:'Zeca', tutor:'Rui'};
+      hospedes=[{nome:'Nelson', tutor:'Ana'}, {nome:'Nelson Silva', tutor:'Ana'}, __olga, __zeca];
+      renderHosp=function(){ hospedes=[hospedes[0], __olga, __zeca]; };   // a gravação junta os dois Nelson
+      currentHosp=hospedes[0]; __cadKeyFixa='nelson__ana'; __cadAberto={};
+      document.getElementById('hf-chip').value='555'; onCad();
+      try{ abrirPlantao(2); }catch(e){}`);
+    assert.strictEqual(run('currentHosp===__olga'), true, 'tocou na Olga: abre a Olga');
+  } finally { run('setTimeout=__stQ1; __cadTimer=null; hospedes=__bkHsQ1;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — alergia e restrição sem ficha: apagar uma não esconde o aviso da outra', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__lsQ3=localStorage; __locQ3={}; localStorage={getItem:function(k){ return __locQ3[k]||null; }, setItem:function(k,v){ __locQ3[k]=v; }, removeItem:function(){}};
+      currentHosp={nome:'Pipa', tutor:'Fulana'};
+      setHospAlergia('alergia','frango'); setHospAlergia('restricao','sem grãos'); setHospAlergia('restricao','');`);
+    const t = run("__els['hf-alergia-st'].textContent");
+    assert.ok(/SÓ NESTE aparelho/.test(t) && /a alergia/.test(t), 'a alergia continua só neste aparelho: ' + t);
+    run(`setHospAlergia('alergia','');`);
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'as duas vazias: o aviso some');
+  } finally { run('localStorage=__lsQ3;'); run(PLANTAO_VOLTA); }
+});
+provaAsync('QA22 — a resposta atrasada da gravação da alergia não pinta a tela de outro hóspede', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__rejQ4=null; DB={ref:function(){ return {update:function(){ return new Promise(function(ok,no){ __rejQ4=no; }); }}; }};
+      currentHosp={nome:'Tico', tutor:'Joana', refKey:'tico__joana'}; setHospAlergia('alergia','frango');
+      currentHosp={nome:'Bolt', tutor:'Ana'}; document.getElementById('hf-alergia-st').textContent='';
+      __rejQ4(new Error('sem rede'));`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hf-alergia-st'].textContent"), '', 'a tela do Bolt não recebe o "NÃO salvou" do Tico');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA22 — trocar o dia com a ficha aberta grava o que estava esperando os 0,9 s', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ5=setTimeout; setTimeout=function(){ return 7; }; cadCache={}; pelCadCache={};
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad(); carregarCadastro();`);
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.some((x) => x.p === 'daycare/cadastro/tico__joana' && x.v.raca === 'Lhasa Apso'), JSON.stringify(g));
+  } finally { run('setTimeout=__stQ5; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — ano com 2 dígitos no meio da digitação não grava; ao sair do campo, a data completa grava', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ6=setTimeout; __tQ6=[]; setTimeout=function(fn){ __tQ6.push(fn); return 7; };
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={};
+      document.getElementById('hf-nasc').value='15/03/19';`);
+    const r = JSON.parse(JSON.stringify(run('cadGravarAgora()')));
+    assert.strictEqual(run('__grav.length'), 0, '"15/03/19" não vira 2019 na ficha');
+    assert.deepStrictEqual(r.recusados, ['nasc']);
+    assert.ok(/Data de nascimento incompleta/.test(run('cadTextoSalvar(' + JSON.stringify(r) + ')')));
+    run(`normalizarNasc(); __tQ6.forEach(function(f){ f(); });`);
+    assert.strictEqual(run("__els['hf-nasc'].value"), '15/03/2019');
+    const g = JSON.parse(JSON.stringify(run('__grav')));
+    assert.ok(g.length === 2 && g.every((x) => x.v.nasc === '2019-03-15'), JSON.stringify(g));
+    assert.strictEqual(run('__cadTimer'), null, 'o relógio que disparou fica zerado');
+  } finally { run('setTimeout=__stQ6; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22 — sem banco, o Salvar diz que não salvou, e a próxima tentativa grava', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__dbQ7=DB; DB=null; currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('hfRaca').value='Lhasa Apso'; __rQ7=cadGravarAgora();`);
+    assert.strictEqual(run('__rQ7.semBanco'), true);
+    assert.ok(/não salvou/.test(run('cadTextoSalvar(__rQ7)')));
+    run('DB=__dbQ7; __rQ7=cadGravarAgora();');
+    assert.strictEqual(run('__rQ7.gravou'), true, 'a mudança não se perdeu: grava na volta do banco');
+    assert.ok(JSON.parse(JSON.stringify(run('__grav'))).some((x) => x.v.raca === 'Lhasa Apso'));
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA22 — o botão Salvar diz o que gravou e o que não gravou', () => {
+  const t = (r) => run('cadTextoSalvar(' + JSON.stringify(r) + ')');
+  assert.strictEqual(t({ gravou: true }), '✅ Salvo');
+  assert.strictEqual(t({ gravou: false }), '✅ Cadastro salvo');
+  assert.strictEqual(t({ gravou: false, recusados: ['nasc'] }), '⚠ Data de nascimento incompleta: não gravou a data. Confira', 'nada gravou: não diz "salvo"');
+  assert.strictEqual(t({ gravou: true, recusados: ['nasc'] }), '✅ Salvo. Data de nascimento incompleta: não gravou a data. Confira');
+  assert.ok(/^✅ Salvo\. Para apagar, use o Cadastro de Peludinhos$/.test(t({ gravou: true, apagados: 1 })), t({ gravou: true, apagados: 1 }));
+});
+prova('QA22 — fechar o card grava o que estava esperando', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`__stQ9=setTimeout; setTimeout=function(){ return 7; };
+      currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; __cadAberto={raca:'Shih Tzu'};
+      document.getElementById('card-cadastro').style.display='block';
+      document.getElementById('hfRaca').value='Lhasa Apso'; onCad(); toggleCadastro();`);
+    assert.ok(JSON.parse(JSON.stringify(run('__grav'))).some((x) => x.v.raca === 'Lhasa Apso'));
+    assert.strictEqual(run("__els['card-cadastro'].style.display"), 'none');
+  } finally { run('setTimeout=__stQ9; __cadTimer=null;'); run(PLANTAO_VOLTA); }
+});
+prova('QA22–QA24 — microchip: toda edição humana grava chip e microchip juntos', () => {
+  igual(run("zChipPatch('98100')"), { microchip: '98100', chip: '98100' });
+  igual(run("zChipPatch(Z_NAO_TEM)"), { microchip: 'nao-tem', chip: '' });
+  igual(run("zChipPatch('')"), { microchip: '', chip: '' });
+  run(`__bkQ10={sp:setPelExtra, pa:pelAtual, rf:renderPelFicha, au:audit};
+    __pQ10=[]; setPelExtra=function(p,patch){ __pQ10.push(JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };
+    renderPelFicha=function(){}; audit=function(){}; pelAtual={n:'Tico', tutor:'Joana'};`);
+  try {
+    run('pelChipNaoTemGravar(); pelChipNaoTemLimpar();');
+    const ps = JSON.parse(JSON.stringify(run('__pQ10')));
+    assert.strictEqual(ps[0].microchip, 'nao-tem'); assert.strictEqual(ps[0].chip, '');
+    assert.strictEqual(ps[1].microchip, ''); assert.strictEqual(ps[1].chip, '');
+    assert.strictEqual(run("zChipNumero(Object.assign({chip:'111'}, " + JSON.stringify(ps[0]) + '))'), '', 'o "não tem" vale sobre o número antigo');
+    assert.ok(/onchange="setPelExtra\(pelAtual,zChipPatch\(this\.value\)\)"/.test(fs.readFileSync(APP, 'utf8')), 'o campo do Cadastro grava os dois');
+  } finally { run('setPelExtra=__bkQ10.sp; pelAtual=__bkQ10.pa; renderPelFicha=__bkQ10.rf; audit=__bkQ10.au;'); }
+});
+prova('QA25 — check-in: "cadastro faltando", "sem microchip" e FILHOt novo gravam chip e microchip juntos', () => {
+  run(`__bkQ14={sp:setPelExtra, cp:ciPelAtual, cf:cadastroFaltando, ge:document.getElementById, db:DB, au:audit, gc:gateCadastro, ce:ciEscolher, ss:setSeg, pl:PELUDINHOS.slice()};
+    __pQ14=[]; setPelExtra=function(p,patch){ __pQ14.push(JSON.parse(JSON.stringify(patch))); return new Promise(function(){}); };
+    __elsQ14={}; document.getElementById=function(id){ return __elsQ14[id]||(__elsQ14[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+    __rcQ14=[]; DB={ref:function(p){ return {update:function(v){ __rcQ14.push({p:p, v:JSON.parse(JSON.stringify(v))}); return new Promise(function(){}); }}; }};
+    audit=function(){}; gateCadastro=function(){ return true; }; ciEscolher=function(){}; setSeg=function(){};
+    ciPelAtual={n:'Tico', tutor:'Joana'}; cadastroFaltando=function(){ return [{c:'chip'}]; };`);
+  try {
+    run(`document.getElementById('ciCadF_chip').value='98100'; try{ ciSalvarCadastroFalta(); }catch(e){}
+      try{ ciMarcarSemMicrochip(null); }catch(e){}`);
+    const ps = JSON.parse(JSON.stringify(run('__pQ14')));
+    assert.ok(ps[0] && ps[0].chip === '98100' && ps[0].microchip === '98100', '"cadastro faltando": ' + JSON.stringify(ps[0]));
+    assert.ok(ps[1] && ps[1].microchip === 'nao-tem' && ps[1].chip === '', '"sem microchip": ' + JSON.stringify(ps[1]));
+    run(`document.getElementById('ciNovoNome').value='Zuzu'; document.getElementById('ciNovoTutor').value='Lia';
+      document.getElementById('ciNovoRaca').value='SRD'; document.getElementById('ciNovoChip').value='77001'; __rcQ14=[];
+      ciCriarNovoHospede(null);`);
+    const rc = JSON.parse(JSON.stringify(run("__rcQ14.filter(function(x){ return /^daycare\\/cadastro\\//.test(x.p); })")));
+    assert.ok(rc.length === 1 && rc[0].v.chip === '77001' && rc[0].v.microchip === '77001', 'FILHOt novo: ' + JSON.stringify(rc));
+  } finally { run(`setPelExtra=__bkQ14.sp; ciPelAtual=__bkQ14.cp; cadastroFaltando=__bkQ14.cf; document.getElementById=__bkQ14.ge; DB=__bkQ14.db;
+    audit=__bkQ14.au; gateCadastro=__bkQ14.gc; ciEscolher=__bkQ14.ce; setSeg=__bkQ14.ss; PELUDINHOS.length=0; __bkQ14.pl.forEach(function(p){ PELUDINHOS.push(p); });`); }
+});
+prova('QA24 — texto da IA ou da resposta do tutor em "Microchip" nunca troca nem apaga o número verdadeiro', () => {
+  run(`__bkQ11={db:DB, ce:canEditPel}; __gQ11=[];
+    DB={ref:function(p){ return {update:function(v){ __gQ11.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); }}; }};
+    canEditPel=function(){ return true; };`);
+  try {
+    run(`setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:'Tem microchip sim, no pescoço'});
+      setPelExtra({n:'Tico', tutor:'Joana'}, {microchip:null});`);
+    const g = JSON.parse(JSON.stringify(run('__gQ11')));
+    assert.ok(g.length === 2 && g.every((x) => !Object.prototype.hasOwnProperty.call(x, 'chip')), JSON.stringify(g));
+    assert.strictEqual(run("zChipNumero({chip:'963000111222333', microchip:'Tem microchip sim, no pescoço'})"), '963000111222333');
+  } finally { run('DB=__bkQ11.db; canEditPel=__bkQ11.ce;'); }
+});
+prova('QA23 — o Plantão mostra o microchip da ficha-mestre, mesmo apagado ou "não tem"', () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana';
+      cadCache={}; cadCache[cadKey(currentHosp)]={chip:'963000111222333'};
+      pelCadCache={tico__joana:{chip:'', microchip:Z_NAO_TEM}}; DB=null; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '', '"não tem" na ficha: o número antigo da cópia não aparece');
+    run(`pelCadCache={tico__joana:{chip:'', microchip:''}}; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '', 'número apagado na ficha: não volta');
+    run(`pelCadCache={tico__joana:{chip:'555', microchip:'555'}}; carregarCadastro();`);
+    assert.strictEqual(run("__els['hf-chip'].value"), '555', 'número trocado na ficha: aparece o novo');
+  } finally { run(PLANTAO_VOLTA); }
+});
+provaAsync('QA24 — a leitura do banco também respeita o microchip da ficha-mestre', async () => {
+  run(PLANTAO_STUBS);
+  try {
+    run(`currentHosp={nome:'Tico', tutor:'Joana'}; __cadKeyFixa='tico__joana'; cadCache={}; pelCadCache={};
+      __dbVals['auaulandia/cadastro/'+cadKey(currentHosp)]={chip:'963000111222333'};
+      __dbVals['daycare/cadastro/tico__joana']={chip:'', microchip:Z_NAO_TEM};
+      carregarCadastro();`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.strictEqual(run("__els['hf-chip'].value"), '', 'a cópia do Plantão não traz de volta o número');
+  } finally { run(PLANTAO_VOLTA); }
+});
+prova('QA23 — o microchip anotado neste aparelho não encobre a ficha-mestre nos cards', () => {
+  run(`__bkQ12={ls:localStorage, pc:pelCadCache}; __locQ12={};
+    localStorage={getItem:function(k){ return __locQ12[k]||null; }, setItem:function(k,v){ __locQ12[k]=v; }, removeItem:function(){}};`);
+  try {
+    run(`__hQ12={nome:'Tico', tutor:'Joana'}; setInfo(__hQ12, {chip:'963000111222333'});
+      pelCadCache={tico__joana:{chip:'', microchip:Z_NAO_TEM}};`);
+    assert.strictEqual(run('chipDe(__hQ12)'), '');
+    assert.strictEqual(run('zChipNaoTem(extraDoHosp(__hQ12))'), true);
+    run(`pelCadCache={};`);
+    assert.strictEqual(run('chipDe(__hQ12)'), '963000111222333', 'sem ficha-mestre, vale o que foi anotado aqui');
+  } finally { run('localStorage=__bkQ12.ls; pelCadCache=__bkQ12.pc;'); }
+});
+prova('QA23 — FILHOt novo no check-in com o mesmo nome e tutor de outro (raça diferente) não grava por cima', () => {
+  run(`__bkQ13={pl:PELUDINHOS.slice(), db:DB, ge:document.getElementById, gc:gateCadastro, ce:ciEscolher, au:audit, ss:setSeg};
+    setSeg=function(){};
+    __elsQ13={ciNovoNome:{value:'Mel'}, ciNovoTutor:{value:'Ana'}, ciNovoRaca:{value:'Poodle'}, ciNovoWarn:{textContent:'', innerHTML:''}};
+    document.getElementById=function(id){ return __elsQ13[id]||(__elsQ13[id]={value:'', style:{}, textContent:'', innerHTML:''}); };
+    gateCadastro=function(){ return true; }; ciEscolher=function(){}; audit=function(){}; __gQ13=[];
+    DB={ref:function(p){ return {update:function(v){ __gQ13.push(p); return Promise.resolve(); }}; }};
+    PELUDINHOS.push({n:'Mel', tutor:'Ana', raca:'Shih Tzu', dias:['seg']});`);
+  try {
+    const n0 = run('PELUDINHOS.length');
+    run('ciCriarNovoHospede(null);');
+    assert.strictEqual(run('__gQ13.length'), 0, 'nada vai para a ficha da Mel que já existe');
+    assert.strictEqual(run('PELUDINHOS.length'), n0, 'não duplica a Mel na lista');
+    assert.ok(/Já existe "Mel"/.test(run('__elsQ13.ciNovoWarn.innerHTML')), run('__elsQ13.ciNovoWarn.innerHTML'));
+    run(`__elsQ13.ciNovoNome.value='Nina'; __elsQ13.ciNovoTutor.value='Bia'; __elsQ13.ciNovoRaca.value='SRD'; __gQ13=[];
+      __rcQ13=[]; DB={ref:function(p){ return {update:function(v){ __rcQ13.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); }}; }};
+      ciCriarNovoHospede(null);`);
+    const rc = JSON.parse(JSON.stringify(run('__rcQ13')));
+    assert.ok(rc.length === 1 && !('chip' in rc[0]) && !('microchip' in rc[0]), 'sem número, não grava chip nem microchip: ' + JSON.stringify(rc));
+  } finally { run('PELUDINHOS.length=0; __bkQ13.pl.forEach(function(p){ PELUDINHOS.push(p); }); DB=__bkQ13.db; document.getElementById=__bkQ13.ge; gateCadastro=__bkQ13.gc; ciEscolher=__bkQ13.ce; audit=__bkQ13.au; setSeg=__bkQ13.ss;'); }
+});
+
+// ================================================================== banho de quem faltou
+console.log('\nBanho de quem faltou — liberar o horário e avisar (Adriana, 28/set/2026, caso da Jasmine; QA28, QA29)');
+const BF_STUBS = `__bkBF={P:PELUDINHOS, pe:pelExtra, rl:repLancamentos, db:DB, de:dashEspelhar, sp:setPelExtra, ac:banhoAutoPedirConferencia,
+    za:zAlertao, ze:zEscolha, rp:repPodeLancar, au:audit, hr:hojeRedesenhar, rd:renderDash, pt:pessoaDoTurno, dc:dcChamada, st:setTimeout,
+    ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DEC, bdia:BANHO_FALTA_DIA, bv:BANHO_FALTA_VISTO, bt:BANHO_FALTA_TRAVA, bc:BANHO_FALTA_CHEGOU, fi:BANHO_FALTA_FILA, pl:planDia};
+  __jas={n:'Jasmine', tutor:'Ana', dias:['seg']}; __bol={n:'Bolt', tutor:'Rui', dias:['seg']}; __mel={n:'Mel', tutor:'Lia', dias:['seg']};
+  PELUDINHOS=[__jas, __bol, __mel];
+  __extra={}; pelExtra=function(p){ return (p&&__extra[p.n])||{}; };
+  __lancR={}; repLancamentos=function(p){ return __lancR[p.n]||[]; };
+  __esp=[]; __espResp={ok:true, removidos:1}; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({k:k,id:id,valor:reg.valor,hora:reg.hora,acao:acao,dia:dia}); return Promise.resolve(__espResp); };
+  __pel=[]; __pelOk=true; setPelExtra=function(p,patch){ __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); return Promise.resolve(__pelOk?{ok:true}:{ok:false, erro:'barrado'}); };
+  banhoAutoPedirConferencia=function(){}; __alertas=[]; __aoFechar=null;
+  zAlertao=function(t,l,op){ __alertas.push({t:t, l:l}); __aoFechar=(op&&op.aoFechar)||null; };
+  __esc=[]; zEscolha=function(t,l,b){ __esc.push({t:t, l:l, b:b.map(function(x){ return x.t; }), fn:b.map(function(x){ return x.fn; })}); };
+  __pode=true; repPodeLancar=function(){ return __pode; }; audit=function(){}; hojeRedesenhar=function(){}; renderDash=function(){};
+  pessoaDoTurno=function(){ return 'Márcia'; }; __timers=[]; setTimeout=function(fn){ __timers.push(fn); return 0; };
+  __cartaz=false; document.getElementById=function(id){ if(id==='zAlertaoBox'||id==='repMsgBox') return __cartaz?{}:null; return {style:{}, value:'', textContent:'', innerHTML:''}; };
+  __banco={}; __gravBF=[]; __rmBF=[]; __txErro=null; DB={ref:function(p){ return {
+    set:function(v){ __banco[p]=JSON.parse(JSON.stringify(v)); __gravBF.push({p:p, v:__banco[p]}); return Promise.resolve(); },
+    remove:function(){ __rmBF.push(p); delete __banco[p]; return Promise.resolve(); },
+    transaction:function(fn){ if(__txErro) return Promise.reject(new Error(__txErro)); var r=fn(__banco[p]===undefined?null:__banco[p]);
+      if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __banco[p]; }}});
+      __banco[p]=JSON.parse(JSON.stringify(r)); return Promise.resolve({committed:true, snapshot:{val:function(){ return __banco[p]; }}}); },
+    once:function(){ var v=__banco[p]; if(v===undefined){ var pre=p+'/', o=null; Object.keys(__banco).forEach(function(k){ if(k.indexOf(pre)===0){ o=o||{}; o[k.slice(pre.length)]=__banco[k]; } }); v=o; }
+      return Promise.resolve({val:function(){ return v===undefined?null:v; }}); } }; }};
+  __bkCP=carregarPlanilhaDia; __planOk=true; __plan={lida:true, dia:'2026-09-28', banho:[], faltas:[]};
+  carregarPlanilhaDia=function(){ return Promise.resolve(__planOk?__plan:{lida:false, banho:[], faltas:[]}); };
+  __bkBF.viu=BANHO_FALTA_VIU; __bkBF.lido=BANHO_FALTA_LIDO; __bkBF.fs=fetchSheet;
+  BANHO_FALTA=[]; BANHO_FALTA_DEC={}; BANHO_FALTA_DIA=''; BANHO_FALTA_VISTO={}; BANHO_FALTA_TRAVA={}; BANHO_FALTA_CHEGOU=[]; BANHO_FALTA_FILA=[];
+  BANHO_FALTA_VIU={}; BANHO_FALTA_LIDO={lanc:0, plan:0};`;
+const BF_VOLTA = `PELUDINHOS=__bkBF.P; pelExtra=__bkBF.pe; repLancamentos=__bkBF.rl; DB=__bkBF.db; dashEspelhar=__bkBF.de; setPelExtra=__bkBF.sp;
+  banhoAutoPedirConferencia=__bkBF.ac; zAlertao=__bkBF.za; zEscolha=__bkBF.ze; repPodeLancar=__bkBF.rp; audit=__bkBF.au; hojeRedesenhar=__bkBF.hr;
+  renderDash=__bkBF.rd; pessoaDoTurno=__bkBF.pt; dcChamada=__bkBF.dc; setTimeout=__bkBF.st; document.getElementById=__bkBF.ge; BANHO_FALTA=__bkBF.bf; BANHO_FALTA_DEC=__bkBF.bd;
+  BANHO_FALTA_DIA=__bkBF.bdia; BANHO_FALTA_VISTO=__bkBF.bv; BANHO_FALTA_TRAVA=__bkBF.bt; BANHO_FALTA_CHEGOU=__bkBF.bc; BANHO_FALTA_FILA=__bkBF.fi; planDia=__bkBF.pl; carregarPlanilhaDia=__bkCP;
+  BANHO_FALTA_VIU=__bkBF.viu; BANHO_FALTA_LIDO=__bkBF.lido; fetchSheet=__bkBF.fs;`;
+const tick = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
+const MEL_FIXO = `__extra.Mel={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'09:00', desde:'2026-09-01'}};`;
+prova('lista: todos os banhos do dia; fixo com banho escrito à mão; linha do lançamento não duplica; falta avisada no app e na planilha', () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28';   // segunda
+    run(MEL_FIXO + `__lancR.Bolt=[{_id:'c1', tipo:'credito', data:'${dia}', motivo:'viagem'}];`);
+    const kJ = run("dcKey('Jasmine','Ana')"), kM = run("dcKey('Mel','Lia')");
+    const vf = run("banhoRecValorPlanilha(__mel, banhoRecDe(__mel))");
+    const chamada = { [kJ]: 'faltou', [kM]: 'faltou' };
+    const lancs = { L1: { chave: kJ, valor: 'JASMINE', hora: '10:00' }, L2: { chave: kJ, valor: 'JASMINE (hidratação)', hora: '15:00' } };
+    const plan = [{ p: { n: 'Bolt', tutor: 'Rui' }, hora: '11:30', txt: 'BOLT' }, { p: { n: 'Jasmine', tutor: 'Ana' }, hora: '10:00', txt: 'JASMINE' },
+      { p: { n: 'Mel', tutor: 'Lia' }, hora: '09:00', txt: vf }, { p: { n: 'Mel', tutor: 'Lia' }, hora: '16:00', txt: 'MEL TOSA' }];
+    const L = JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', ${JSON.stringify(chamada)}, ${JSON.stringify(lancs)}, ${JSON.stringify(plan)}, [])`)));
+    igual(L.map((o) => [o.nome, o.hora, o.origem, o.porque, !!o.fixo, o.lancs.length, o.txts.map((x) => x.txt)]), [
+      ['Mel', '09:00 e 16:00', 'planilha', 'faltou', true, 0, ['MEL TOSA']],
+      ['Jasmine', '10:00 e 15:00', 'lancamento', 'faltou', false, 2, []],
+      ['Bolt', '11:30', 'planilha', 'avisada', false, 0, ['BOLT']]]);
+    run('__lancR={};');
+    const L2 = JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', {}, {}, ${JSON.stringify(plan.slice(0, 1))}, [{p:{n:'Bolt', tutor:'Rui'}, txt:'BOLT'}])`)));
+    igual(L2.map((o) => [o.nome, o.porque]), [['Bolt', 'avisada']], 'a coluna "Faltas Avisadas" da planilha conta');
+    igual(JSON.parse(JSON.stringify(run(`banhoFaltaLista('${dia}', {}, ${JSON.stringify(lancs)}, [], [])`))), [], 'ninguém faltou: nada a liberar');
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('Jasmine: liberar e reler — continua "horário liberado" enquanto falta; "chegou depois" só quando a chamada diz "veio"', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={chave:'${kJ}', valor:'JASMINE', hora:'15:00'}; dcChamada={}; dcChamada['${kJ}']='faltou';
+      planDia={lida:true, dia:'${dia}', banho:[{p:{n:'Jasmine', tutor:'Ana'}, hora:'15:00', txt:'JASMINE'}], faltas:[]}; __plan=planDia;`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.strictEqual(run('BANHO_FALTA.length'), 1);
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kJ}'].decisao`), 'liberado');
+    // a planilha foi relida: o banho saiu dela
+    run(`planDia.banho=[];`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/horário liberado por Márcia/.test(run('banhoFaltaCardHTML()')), 'continua no cartão como liberado');
+    assert.ok(!/chegou depois/.test(run('banhoFaltaCardHTML()')), 'não diz "chegou depois" enquanto ela falta');
+    // a falta foi desfeita, mas ela ainda não chegou: nem "liberado" na lista, nem "chegou depois"
+    run(`delete dcChamada['${kJ}'];`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(!/chegou depois/.test(run('banhoFaltaCardHTML()')), 'sem "veio" na chamada, não diz que chegou');
+    run(`dcChamada['${kJ}']='veio';`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/chegou depois de o horário das 15:00 ser liberado/.test(run('banhoFaltaCardHTML()')), run('banhoFaltaCardHTML()'));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('liberar relê a planilha e os lançamentos: só diz "liberado" quando algo saiu; parte = aviso; nada = "falhou"; sem ler = "falhou"', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')"), kB = run("dcKey('Bolt','Rui')"), kM = run("dcKey('Mel','Lia')");
+    run(MEL_FIXO);
+    const dec = (k) => `__banco['daycare/banho-falta/${dia}/${k}']`;
+    const exec = (k, nome) => run(`banhoFaltaExecutar({chave:'${k}', nome:'${nome}', hora:'', origem:'', lancs:[], txts:[], porque:'faltou'}, '${dia}')`);
+    // dois lançamentos + a linha que eles escreveram na planilha
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={chave:'${kJ}', valor:'JASMINE', hora:'10:00'};
+      __banco['daycare/dashboard/${dia}/banho/L2']={chave:'${kJ}', valor:'JASMINE (hidratação)', hora:'15:00'};
+      __plan.banho=[{p:{n:'Jasmine', tutor:'Ana'}, hora:'10:00', txt:'JASMINE'}];`);
+    await exec(kJ, 'Jasmine'); await tick();
+    igual(JSON.parse(JSON.stringify(run('__rmBF'))).sort(), ['daycare/dashboard/' + dia + '/banho/L1', 'daycare/dashboard/' + dia + '/banho/L2']);
+    assert.strictEqual(run(dec(kJ) + '.decisao'), 'liberado');
+    assert.ok(/HORÁRIO LIBERADO/.test(run('__alertas[0].t')) && /10:00 e 15:00/.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    // relido agora e sem banho dele (já tirado à mão): "já não estava", sem chamar a ponte
+    run(`__alertas=[]; __rmBF=[]; __esp=[]; __plan.banho=[]; delete ${dec(kJ)};`);
+    await exec(kJ, 'Jasmine'); await tick();
+    assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0 && /já não estava na planilha/.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    // a planilha não pôde ser lida agora: NUNCA "liberado"
+    run(`__alertas=[]; __planOk=false; delete ${dec(kJ)};`);
+    await exec(kJ, 'Jasmine'); await tick();
+    assert.strictEqual(run(dec(kJ) + '.decisao'), 'falhou');
+    assert.ok(/NÃO LIBEREI/.test(run('__alertas[0].t')) && /ler a planilha/.test(run('__alertas[0].l[0]')));
+    run('__planOk=true;');
+    // a ponte respondeu ok mas não achou a linha (removidos 0) no lançamento: liberado, com o aviso
+    run(`__alertas=[]; __espResp={ok:true, removidos:0}; __banco['daycare/dashboard/${dia}/banho/L3']={chave:'${kJ}', valor:'JASMINE', hora:'10:00'}; delete ${dec(kJ)};`);
+    await exec(kJ, 'Jasmine'); await tick();
+    assert.strictEqual(run(dec(kJ) + '.planilha_ok'), false);
+    assert.ok(/PARTE NÃO SAIU/.test(run('__alertas[0].t')));
+    // escrito na planilha, ponte antiga (sem "removidos"): vale o ok
+    run(`__alertas=[]; __espResp={ok:true}; __plan.banho=[{p:{n:'Bolt', tutor:'Rui'}, hora:'11:30', txt:'BOLT'}];`);
+    await exec(kB, 'Bolt'); await tick();
+    assert.strictEqual(run(dec(kB) + '.decisao'), 'liberado');
+    // escrito na planilha, ponte fora do ar: "falhou", sem ponto duplo na frase
+    run(`__alertas=[]; __espResp={ok:false, erro:'nada chega à planilha nem à TV.'}; delete ${dec(kB)};`);
+    await exec(kB, 'Bolt'); await tick();
+    assert.strictEqual(run(dec(kB) + '.decisao'), 'falhou');
+    assert.ok(/NÃO LIBEREI/.test(run('__alertas[0].t')) && !/TV\.\./.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    // banho fixo: o "pular" do dia
+    run(`__alertas=[]; __espResp={ok:true, removidos:1}; __plan.banho=[];`);
+    await exec(kM, 'Mel'); await tick();
+    const pel = JSON.parse(JSON.stringify(run('__pel')));
+    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].pular === true, JSON.stringify(pel));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('"ainda vem": no banho fixo grava o "manter"; se a ficha recusar, avisa e volta a ficar em aberto', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28', kM = run("dcKey('Mel','Lia')");
+    run(MEL_FIXO);
+    await run(`banhoFaltaManter({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'mantido');
+    const pel = JSON.parse(JSON.stringify(run('__pel')));
+    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[dia].manter === true, JSON.stringify(pel));
+    run(`delete __banco['daycare/banho-falta/${dia}/${kM}']; __pelOk=false; __alertas=[]; BANHO_FALTA_VISTO['${dia}|${kM}']=1;`);
+    await run(`banhoFaltaManter({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', lancs:[], txts:[], fixo:true}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/${kM}'].decisao`), 'falhou');
+    assert.strictEqual(run(`BANHO_FALTA_VISTO['${dia}|${kM}']`), undefined, 'a pergunta volta neste aparelho (QA31)');
+    assert.ok(/NÃO SEGUREI O BANHO FIXO/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+prova('banho fixo com "ainda vem": o automático deixa o banho na planilha mesmo com a falta; feriado continua vencendo', () => {
+  run(`__bkBM={pe:pelExtra, dc:dcChamada, rl:repLancamentos, hz:zHojeISO, of:orcFechado};
+    zHojeISO=function(){ return '2026-09-28'; }; repLancamentos=function(){ return []; };
+    __exBM={banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'14:00', desde:'2026-09-01'}}; pelExtra=function(){ return __exBM; };
+    dcChamada={}; dcChamada[dcKey('Mel','Lia')]='faltou';`);
+  try {
+    igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), false, 'faltou: o fixo sai');
+    run(`__exBM.banho_rec.excecoes={'2026-09-28':{manter:true, motivo:'ainda vem'}};`);
+    igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), true, '"ainda vem": o fixo fica');
+    run(`orcFechado=function(){ return true; };`);
+    igual(run("banhoAutoPodeNoDia({n:'Mel', tutor:'Lia'}, '2026-09-28', true)"), false, 'feriado vence o "manter"');
+  } finally { run('pelExtra=__bkBM.pe; dcChamada=__bkBM.dc; repLancamentos=__bkBM.rl; zHojeISO=__bkBM.hz; orcFechado=__bkBM.of;'); }
+});
+provaAsync('dois aparelhos e dois toques: quem decide primeiro vale; "ainda vem" sobre "ainda vem" não regrava; dois toques tiram uma vez', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = '2026-09-28';
+    run(`__banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Carla', ts:Date.now()};`);
+    await run(`banhoFaltaManter({chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/jas'].decisao`), 'liberado');
+    assert.ok(/JÁ FOI DECIDIDO/.test(run('__alertas[0].t')) && /Carla já liberou/.test(run('__alertas[0].l[0]')));
+    run(`__banco['daycare/banho-falta/${dia}/bol']={decisao:'mantido', quem:'Carla', ts:1}; __alertas=[];`);
+    await run(`banhoFaltaManter({chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    await tick();
+    assert.ok(run(`__banco['daycare/banho-falta/${dia}/bol'].quem`) === 'Carla' && /JÁ FOI DECIDIDO/.test(run('__alertas[0].t')), '"ainda vem" sobre "ainda vem" não regrava');
+    run(`__rmBF=[]; __alertas=[]; __banco['daycare/dashboard/${dia}/banho/L1']={chave:'xx', valor:'X'};`);
+    const o = `{chave:'xx', nome:'Xuxa', hora:'10:00', origem:'lancamento', lancs:[{id:'L1', reg:{valor:'X'}}], txts:[], fixo:false}`;
+    await Promise.all([run(`banhoFaltaExecutar(${o}, '${dia}')`), run(`banhoFaltaExecutar(${o}, '${dia}')`)]);
+    await tick();
+    assert.strictEqual(run('__rmBF.length'), 1, 'toque duplo: uma remoção só');
+    assert.ok(!JSON.stringify(run('__alertas')).includes('JÁ FOI DECIDIDO'), 'o segundo toque é ignorado em silêncio, sem "já foi decidido" para quem tocou');
+    // falha da transação (sem conexão): avisa, não fica mudo
+    run(`__txErro='sem conexão'; __alertas=[];`);
+    await run(`banhoFaltaExecutar({chave:'yy', nome:'Yuri', hora:'', origem:'planilha', lancs:[], txts:[{txt:'YURI'}], fixo:false}, '${dia}')`);
+    await tick();
+    assert.ok(/NÃO CONSEGUI REGISTRAR/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('"liberando" preso há mais de 5 minutos: o cartão mostra o botão, a pergunta volta, e liberar funciona', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'10:00'}], fixo:false, porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={jas:{decisao:'liberando', quem:'Carla', ts:Date.now()}};`);
+    assert.ok(/liberando…/.test(run('banhoFaltaCardHTML()')) && !/Liberar o horário/.test(run('banhoFaltaCardHTML()')), 'recente: em andamento');
+    run(`BANHO_FALTA_DEC.jas.ts=Date.now()-10*60000; __banco['daycare/banho-falta/${dia}/jas']=BANHO_FALTA_DEC.jas;`);
+    assert.ok(/a liberação não terminou/.test(run('banhoFaltaCardHTML()')) && /Liberar o horário/.test(run('banhoFaltaCardHTML()')));
+    run(`__plan.dia='${dia}'; __plan.banho=[{p:{n:'Jas', tutor:''}, hora:'10:00', txt:'JASMINE'}]; banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 1, 'a pergunta volta (depois de reler a decisão)');
+    // outro aparelho já liberou: a releitura evita a pergunta falsa
+    run(`__esc=[]; BANHO_FALTA_VISTO={}; BANHO_FALTA_DEC.jas={decisao:'liberando', quem:'Carla', ts:Date.now()-10*60000};
+      __itemJ=BANHO_FALTA[0]; BANHO_FALTA=[Object.assign({}, __itemJ, {txts:[], soDecisao:true})];   // a planilha já foi relida sem a linha
+      __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Carla', ts:Date.now()}; banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 0, 'já liberado em outro aparelho: não pergunta');
+    run(`BANHO_FALTA=[__itemJ]; __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberando', quem:'Carla', ts:Date.now()-10*60000};`);
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${dia}/jas'].decisao`), 'liberado');
+  } finally { run(BF_VOLTA); }
+});
+prova('nenhum cartaz do banho apaga outro: a pergunta e o resultado esperam a tela ficar livre; "visto" só na escolha', () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[], txts:[], porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
+      __cartaz=true; banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 0, 'outro cartaz aberto: a pergunta espera');
+    run(`banhoFaltaMostrar('✅ HORÁRIO LIBERADO', ['x'], {});`);
+    assert.ok(run('__alertas.length') === 0 && run('BANHO_FALTA_FILA.length') === 1, 'o resultado vai para a fila');
+    run(`__cartaz=false; banhoFaltaTique();`);
+    assert.ok(run('__alertas.length') === 1 && run('BANHO_FALTA_FILA.length') === 0, 'tela livre: o relógio mostra o resultado');
+    assert.strictEqual(run('__esc.length'), 0, 'e a pergunta só depois do "Fechar"');
+    run(`__aoFechar(); __timers.forEach(function(f){ f(); }); __timers=[];`);
+    assert.strictEqual(run('__esc.length'), 1, 'fechou: agora vem a pergunta');
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 2, 'outro cartaz tomou a tela sem escolha: a pergunta volta');
+    run(`__esc[1].fn[2](); banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 2, '"Decidir depois": não repete no aparelho');
+    run(`__pode=false; BANHO_FALTA_VISTO={}; banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 2, 'monitora não recebe o aviso');
+    assert.ok(/setInterval\(banhoFaltaTique, 60000\)/.test(fs.readFileSync(APP, 'utf8')), 'o relógio de 1 minuto está ligado');
+  } finally { run(BF_VOLTA); }
+});
+prova('Hoje na Zêluz: textos neutros, botão em "ainda vem" e em "falhou"', () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'},
+        {chave:'mel', nome:'Mel', hora:'14:00', origem:'fixo', fixo:true, porque:'avisada'},
+        {chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', porque:'faltou'},
+        {chave:'tob', nome:'Toby', hora:'12:00', origem:'planilha', porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={mel:{decisao:'liberado', quem:'Márcia'}, bol:{decisao:'mantido', quem:'Carla'}, tob:{decisao:'falhou', msg:'a ponte não respondeu'}};`);
+    const h = run('banhoFaltaCardHTML()');
+    assert.ok(/horário liberado por Márcia/.test(h) && /\(fixo\)/.test(h) && /falta avisada/.test(h), h);
+    assert.ok(/Carla disse que ainda vem/.test(h) && /não deu certo: a ponte não respondeu/.test(h) && (h.match(/Liberar o horário/g) || []).length === 3, h);
+    run(`BANHO_FALTA_DIA='2026-01-01';`);
+    assert.strictEqual(run('banhoFaltaCardHTML()'), '', 'lista de outro dia não aparece');
+    run(`BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; BANHO_FALTA=[BANHO_FALTA[0]]; banhoFaltaPerguntar('${dia}');`);
+    const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
+    assert.ok(/JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00/.test(esc[0].t));
+    igual(esc[0].b, ['Liberar o horário', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
+    assert.ok(esc[0].l.some((x) => /Se ainda vier \(chegar mais tarde\)/.test(x)));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA30 — "ainda vem" que falhou volta a perguntar e ganha o botão; "já foi decidido" espera a tela; falha ao registrar avisa', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    igual(run("banhoFaltaEmAberto({decisao:'falhou', acao:'manter'})"), true, '"ainda vem" que falhou fica em aberto');
+    igual(run("banhoFaltaEmAberto({decisao:'falhou', acao:'liberar'})"), false);
+    run(`BANHO_FALTA=[{chave:'mel', nome:'Mel', hora:'09:00', origem:'fixo', fixo:true, lancs:[], txts:[], porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
+      BANHO_FALTA_DEC={mel:{decisao:'falhou', acao:'manter', msg:'não consegui segurar o banho fixo na ficha'}};`);
+    const h = run('banhoFaltaCardHTML()');
+    assert.ok(/banhoFaltaManterUI/.test(h) && /Ainda vem/.test(h), h);
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 1, 'a pergunta volta');
+    // "já foi decidido" com outro cartaz aberto: vai para a fila
+    run(`__cartaz=true; banhoFaltaJaDecidido({chave:'x', nome:'Xuxa'}, {decisao:'liberado', quem:'Carla'});`);
+    assert.ok(run('__alertas.length') === 0 && run('BANHO_FALTA_FILA.length') === 1);
+    // resultado de outro dia não aparece
+    run(`__cartaz=false; BANHO_FALTA_FILA[0].dia='2026-01-01'; __esc=[]; BANHO_FALTA_VISTO={}; BANHO_FALTA=[]; banhoFaltaTique();`);
+    assert.ok(run('__alertas.length') === 0 && run('BANHO_FALTA_FILA.length') === 0, 'a fila de ontem é descartada');
+    // "ainda vem" com a transação falhando: avisa
+    run(`__txErro='sem conexão'; __alertas=[];`);
+    await run(`banhoFaltaManter({chave:'jj', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[], fixo:false}, '${dia}')`);
+    await tick();
+    assert.ok(/NÃO CONSEGUI REGISTRAR/.test(run('__alertas[0].t')), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+prova('QA30/QA31 — liberado mas ainda na planilha só com leitura NOVA: o cartão diz e a pergunta volta; "veio" vence a falta avisada; hora do fixo com lançamento', () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'15:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'15:00'}], porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={jas:{decisao:'liberado', quem:'Márcia', ts:5}};`);
+    const card = () => run('banhoFaltaCardHTML()');
+    // sem saber quando soube da liberação: a planilha na memória pode ser velha
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), card());
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 0, 'planilha de antes: não pergunta de novo');
+    // planilha pedida ANTES de este aparelho saber da liberação: também não acusa
+    run(`BANHO_FALTA_VIU['${dia}|jas']={ts:5, em:Date.now()}; BANHO_FALTA_LIDO={lanc:0, plan:Date.now()-1000};`);
+    assert.ok(!/ainda aparece/.test(card()), card());
+    // pedida 30 s depois: ainda na folga da TV
+    run(`BANHO_FALTA_LIDO={lanc:0, plan:BANHO_FALTA_VIU['${dia}|jas'].em+30000};`);
+    assert.ok(!/ainda aparece/.test(card()), 'dentro da folga de 1 minuto');
+    // pedida mais de 1 minuto depois, com o banho lá: acusa, e a pergunta volta dizendo quem liberou
+    run(`BANHO_FALTA_LIDO={lanc:0, plan:BANHO_FALTA_VIU['${dia}|jas'].em+61000};`);
+    assert.ok(/ainda aparece na planilha/.test(card()) && /Liberar o horário/.test(card()), card());
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.strictEqual(run('__esc.length'), 1, 'ainda está na planilha: pergunta de novo');
+    assert.ok(run('__esc[0].l').some((x) => /Márcia já liberou o horário, mas o banho ainda aparece na planilha/.test(x)), JSON.stringify(run('__esc[0].l')));
+    // a liberação foi refeita (outro ts): o que este aparelho sabia não vale mais
+    run(`BANHO_FALTA_DEC.jas.ts=6;`);
+    assert.ok(!/ainda aparece/.test(card()), 'decisão refeita: espera saber dela');
+    // lançamento: vale a leitura do banco pedida depois de saber (a mesma conferência conta)
+    const pura = (lanc, plan) => run(`banhoFaltaAindaNaPlanilha({chave:'x', lancs:${lanc ? '[{id:1}]' : '[]'}, txts:${plan ? '[{txt:1}]' : '[]'}}, {decisao:'liberado', ts:7}, {ts:7, em:1000}, {lanc:${lanc || 0}, plan:${plan || 0}})`);
+    igual(pura(1000, 0), true, 'lançamento lido na mesma conferência em que soube');
+    igual(pura(999, 0), false, 'lançamento lido antes');
+    igual(pura(0, 61000), true);
+    igual(pura(0, 60999), false);
+    const kB = run("dcKey('Bolt','Rui')");
+    run(`__lancR.Bolt=[{_id:'c1', tipo:'credito', data:'2026-09-28', motivo:'viagem'}];`);
+    igual(JSON.parse(JSON.stringify(run(`banhoFaltaQuem('2026-09-28', {'${kB}':'veio'}, [{p:{n:'Bolt', tutor:'Rui'}}])`))), {}, 'avisou e veio: não faltou');
+    run(MEL_FIXO);
+    const kM = run("dcKey('Mel','Lia')");
+    const L = JSON.parse(JSON.stringify(run(`banhoFaltaLista('2026-09-28', {'${kM}':'faltou'}, {L1:{chave:'${kM}', valor:'MEL HIDRATAÇÃO', hora:'15:00'}}, [], [])`)));
+    igual(L.map((o) => [o.hora, o.origem, !!o.fixo]), [['09:00 e 15:00', 'lancamento', true]], 'o horário do fixo entra junto do lançamento');
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — leitura VERDADEIRA da planilha e ponte lenta: depois de liberar não acusa "ainda aparece"; outro aparelho com planilha velha também não; leitura nova com o banho lá acusa, e Liberar de novo funciona', async () => {
+  run(BF_STUBS);
+  run(`carregarPlanilhaDia=__bkCP; __linhas=[];
+    fetchSheet=function(){ var d=new Date(), dt='Date('+d.getFullYear()+','+d.getMonth()+','+d.getDate()+')';
+      return Promise.resolve({cols:[{label:'Data'},{label:'Banho'},{label:'Hora Banho'}],
+        rows:__linhas.map(function(l){ return {c:[{v:dt},{v:l[0]},{v:l[1]}]}; })}); };`);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    const dec = `__banco['daycare/banho-falta/${dia}/${kJ}']`;
+    const rodarTimers = () => run('var __t=__timers.splice(0); __t.forEach(function(f){ f(); });');
+    const card = () => run('banhoFaltaCardHTML()');
+    run(`__linhas=[['JASMINE','Date(1899,11,30,15,0,0)']]; dcChamada={}; dcChamada['${kJ}']='faltou';`);
+    await run('carregarPlanilhaDia()'); await tick();
+    assert.ok(run('planDia.lida') && run('planDia.banho.length') === 1 && run('planDia.banho[0].hora') === '15:00' && run('planDia.lidaEm') > 0, 'a leitura verdadeira acha o banho e carimba a hora do pedido');
+    run('__timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.strictEqual(run('BANHO_FALTA.length'), 1);
+    // a ponte demora: a remoção só responde quando a prova mandar
+    run(`__pontePend=[]; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({acao:acao, valor:reg.valor}); return new Promise(function(res){ __pontePend.push(res); }); };`);
+    const p = run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.strictEqual(run('__pontePend.length'), 1, 'a ponte foi chamada e está demorando');
+    rodarTimers(); await tick();   // a conferência que a releitura agendou roda ANTES da resposta da ponte
+    assert.strictEqual(run(dec + '.decisao'), 'liberando');
+    run(`__linhas=[]; __pontePend[0]({ok:true, removidos:1});`); await p; await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'liberado');
+    assert.strictEqual(run('planDia.banho.length'), 0, 'a memória deste aparelho acompanha a saída');
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), card());
+    run('BANHO_FALTA_VISTO={}; __esc=[];');
+    rodarTimers(); await tick();   // a lista se refaz depois do sucesso
+    assert.ok(run('BANHO_FALTA.length') === 1 && run('BANHO_FALTA[0].soDecisao') === true, 'a lista refeita não tem mais o banho dela');
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()) && run('__esc.length') === 0, card());
+    // OUTRO APARELHO: leu a planilha às 8h (com o banho) e só agora vê o "liberado"
+    run(`BANHO_FALTA_VIU={}; BANHO_FALTA_VISTO={}; __esc=[]; __linhas=[['JASMINE','Date(1899,11,30,15,0,0)']];`);
+    await run('carregarPlanilhaDia()'); await tick();
+    run('planDia.lidaEm=Date.now()-2*3600000; __timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/horário liberado por Márcia/.test(card()) && !/ainda aparece/.test(card()), 'planilha de antes: ' + card());
+    assert.strictEqual(run('__esc.length'), 0, 'planilha de antes: a pergunta não volta');
+    // leitura nova, mais de 1 minuto depois de saber, e o banho continua lá: acusa e pergunta
+    run(`BANHO_FALTA_VIU['${dia}|${kJ}'].em-=120000;`);
+    await run('carregarPlanilhaDia()'); await tick();
+    run('__timers=[];');
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/ainda aparece na planilha/.test(card()), card());
+    assert.strictEqual(run('__esc.length'), 1, 'a pergunta volta');
+    // Liberar de novo FUNCIONA (não responde "já foi decidido")
+    const ts1 = run(dec + '.ts');
+    run(`__esp=[]; __alertas=[]; __espResp={ok:true, removidos:1}; dashEspelhar=function(k,id,reg,acao,dia){ __esp.push({acao:acao, valor:reg.valor}); return Promise.resolve(__espResp); };`);
+    run('__esc[0].fn[0]();'); await tick(); await tick();
+    assert.ok(run('__esp').some((x) => x.acao === 'remover' && x.valor === 'JASMINE'), JSON.stringify(run('__esp')));
+    assert.ok(run(dec + '.decisao') === 'liberado' && run(dec + '.ts') !== ts1, 'liberado de novo');
+    assert.ok(!run('__alertas').some((a) => /JÁ FOI DECIDIDO/.test(a.t)), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31/QA32 — chegou com a pergunta aberta: nada sai (a chamada do banco manda; sem ler, a da memória); planilha de outro dia não serve; leitura que falha não apaga a planilha boa; "Ainda vem" sobre um liberado com banho de volta; refeito por outro: já decidido', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    const dec = `__banco['daycare/banho-falta/${dia}/${kJ}']`;
+    const oJ = `{chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[{id:'L1', reg:{chave:'${kJ}', valor:'JASMINE', hora:'10:00'}}], txts:[], porque:'faltou'}`;
+    run(`__banco['daycare/dashboard/${dia}/banho/L1']={chave:'${kJ}', valor:'JASMINE', hora:'10:00'}; __banco['daycare/chamada/${dia}/${kJ}']='veio'; __plan.dia='${dia}';`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0 && run(dec) === undefined, 'chegou: nada sai e nada é decidido');
+    assert.ok(/JASMINE CHEGOU/.test(run('__alertas[0].t')) && /o banho das 10:00 continua/.test(run('__alertas[0].l[0]')), JSON.stringify(run('__alertas')));
+    assert.ok(/tire à mão: Lançamentos do dia › Banho\.$/.test(run('__alertas[0].l[1]')), run('__alertas[0].l[1]'));
+    // sem conseguir ler a chamada do banco: vale a da memória ("veio" → nada sai)
+    run(`__refCh=DB.ref; DB.ref=function(p){ var r=__refCh(p); if(p.indexOf('daycare/chamada/')===0) r.once=function(){ return Promise.reject(new Error('sem rede')); }; return r; };
+      dcChamada={}; dcChamada['${kJ}']='veio'; __alertas=[];`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.ok(/JASMINE CHEGOU/.test(run('__alertas[0].t')) && run(dec) === undefined, 'sem ler o banco, a memória "veio" segura');
+    run(`DB.ref=__refCh; dcChamada={};`);
+    // a chamada do banco diz "faltou" e a memória diz "veio": vale o banco (a planilha de OUTRO dia não serve para liberar)
+    run(`__banco['daycare/chamada/${dia}/${kJ}']='faltou'; dcChamada['${kJ}']='veio'; __alertas=[]; __plan.dia='2026-01-01';`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'falhou', '"faltou" no banco: segue para liberar (e para na planilha de outro dia)');
+    assert.ok(/ler a planilha/.test(run('__alertas[0].l[0]')) && run('__rmBF.length') === 0);
+    run(`dcChamada={};`);
+    // a releitura falhou: a planilha que este aparelho já tinha continua (avulso, reposição, despertador)
+    run(`carregarPlanilhaDia=function(){ planDia={banho:[], faltas:[], avulso:[], lida:false, erro:'x'}; return Promise.resolve(planDia); };
+      planDia={lida:true, dia:'${dia}', banho:[{p:{n:'Bolt', tutor:'Rui'}, hora:'11:30', txt:'BOLT'}], avulso:[{txt:'MEL'}], faltas:[]}; __alertas=[];`);
+    await run(`banhoFaltaExecutar(${oJ}, '${dia}')`); await tick();
+    assert.ok(run('planDia.lida') && run('planDia.banho.length') === 1 && run('planDia.avulso.length') === 1, 'a planilha boa continua');
+    assert.strictEqual(run(dec + '.decisao'), 'falhou');
+    // liberado, e o banho foi lançado de novo (leitura nova do banco): "Ainda vem" no cartão grava "mantido"
+    run(`carregarPlanilhaDia=function(){ return Promise.resolve(__plan); }; __plan.dia='${dia}'; __plan.banho=[];
+      ${dec}={decisao:'liberado', quem:'Carla', ts:111}; BANHO_FALTA_DEC={}; BANHO_FALTA_DEC['${kJ}']={decisao:'liberado', quem:'Carla', ts:111};
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA=[${oJ}]; BANHO_FALTA_VIU['${dia}|${kJ}']={ts:111, em:Date.now()-1000}; BANHO_FALTA_LIDO={lanc:Date.now(), plan:0};
+      __rmBF=[]; __esp=[]; __alertas=[];`);
+    assert.ok(/ainda aparece na planilha/.test(run('banhoFaltaCardHTML()')), run('banhoFaltaCardHTML()'));
+    run(`banhoFaltaPerguntar('${dia}');`);
+    assert.ok(run('__esc.length') === 1 && run('__esc[0].b[1]') === 'Ainda vem', JSON.stringify(run('__esc')));
+    run('__esc[0].fn[1]();'); await tick();
+    assert.strictEqual(run(dec + '.decisao'), 'mantido', '"ainda vem" da pergunta vale sobre o liberado que este aparelho viu');
+    assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0, '"ainda vem" não tira nada');
+    // o botão "Ainda vem" do cartão (depois de um "ainda vem" que falhou) chama o "ainda vem", nunca o liberar
+    run(`${dec}={decisao:'falhou', acao:'manter', quem:'Carla', ts:333}; BANHO_FALTA_DEC['${kJ}']={decisao:'falhou', acao:'manter', quem:'Carla', ts:333};`);
+    assert.ok(/banhoFaltaManterUI/.test(run('banhoFaltaCardHTML()')));
+    run(`banhoFaltaManterUI('${kJ}');`); await tick();
+    assert.ok(run(dec + '.decisao') === 'mantido' && run('__rmBF.length') === 0 && run('__esp.length') === 0, 'o botão do cartão grava "mantido" e não tira nada');
+    // outro aparelho refez a liberação (outro ts): este não passa por cima
+    run(`${dec}={decisao:'liberado', quem:'Bia', ts:222}; BANHO_FALTA_DEC['${kJ}']={decisao:'liberado', quem:'Carla', ts:111}; __alertas=[];`);
+    await run(`banhoFaltaExecutar(BANHO_FALTA[0], '${dia}')`); await tick();
+    assert.ok(/JÁ FOI DECIDIDO/.test(run('__alertas[0].t')) && run(dec + '.quem') === 'Bia', JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA32 — outro aparelho vê o "liberado" e o banho lançado de novo na MESMA conferência: acusa; "Ela ainda vem" no banho fixo já liberado troca o "pular" pelo "manter"; "não liberei" diz onde tirar', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()'), kJ = run("dcKey('Jasmine','Ana')");
+    // a leitura das decisões demora uns milissegundos (relógio de verdade, de fora da caixa): o
+    // "soube" é a hora do PEDIDO da conferência
+    ctx.__atraso = (fn, ms) => setTimeout(fn, ms);
+    run(`__banco['daycare/dashboard/${dia}/banho/L9']={chave:'${kJ}', valor:'JASMINE', hora:'15:00'};
+      __banco['daycare/banho-falta/${dia}/${kJ}']={decisao:'liberado', quem:'Márcia', ts:77};
+      dcChamada={}; dcChamada['${kJ}']='faltou'; planDia={lida:true, dia:'${dia}', banho:[], faltas:[]};
+      __refBF=DB.ref; DB.ref=function(p){ var r=__refBF(p); if(p==='daycare/banho-falta/${dia}'){ var o1=r.once; r.once=function(){ return new Promise(function(res){ __atraso(function(){ res(o1()); }, 8); }); }; } return r; };`);
+    await run('banhoFaltaVerificar()'); await tick();
+    assert.ok(/ainda aparece na planilha/.test(run('banhoFaltaCardHTML()')), 'lançado de novo, visto na mesma conferência: ' + run('banhoFaltaCardHTML()'));
+    run('DB.ref=__refBF;');
+    // banho fixo já liberado (o "pular" do dia na ficha); a linha do automático ainda aparece numa leitura nova
+    const d2 = '2026-09-28', kM = run("dcKey('Mel','Lia')");
+    run(MEL_FIXO);
+    const vf = run("banhoRecValorPlanilha(__mel, banhoRecDe(__mel))");
+    run(`__extra.Mel.banho_rec.excecoes={'${d2}':{pular:true, motivo:'faltou'}};
+      __banco['daycare/banho-falta/${d2}/${kM}']={decisao:'liberado', quem:'Márcia', ts:88};
+      BANHO_FALTA_DIA='${d2}'; BANHO_FALTA_DEC={}; BANHO_FALTA_DEC['${kM}']={decisao:'liberado', quem:'Márcia', ts:88};
+      BANHO_FALTA_VIU={}; BANHO_FALTA_VIU['${d2}|${kM}']={ts:88, em:Date.now()-120000}; BANHO_FALTA_LIDO={lanc:0, plan:Date.now()};
+      BANHO_FALTA=banhoFaltaLista('${d2}', {'${kM}':'faltou'}, {}, [{p:{n:'Mel', tutor:'Lia'}, hora:'09:00', txt:${JSON.stringify(vf)}}], []); __pel=[];`);
+    assert.ok(run('BANHO_FALTA.length') === 1 && run('BANHO_FALTA[0].fixo') === false && run('banhoFaltaAinda(BANHO_FALTA[0])') === true, 'com o "pular", a lista vê a linha como texto');
+    await run(`banhoFaltaManter(BANHO_FALTA[0], '${d2}')`); await tick();
+    assert.strictEqual(run(`__banco['daycare/banho-falta/${d2}/${kM}'].decisao`), 'mantido');
+    const pel = JSON.parse(JSON.stringify(run('__pel')));
+    assert.ok(pel.length === 1 && pel[0].patch.banho_rec.excecoes[d2].manter === true && !pel[0].patch.banho_rec.excecoes[d2].pular, 'o "manter" substitui o "pular": ' + JSON.stringify(pel));
+    // "não liberei" com banho fixo e escrito na planilha: diz onde tirar à mão
+    run(`__alertas=[]; __extra.Mel.banho_rec.excecoes={}; __pelOk=false; __espResp={ok:false, erro:'a ponte não respondeu'};
+      __plan.dia='${d2}'; __plan.banho=[{p:{n:'Mel', tutor:'Lia'}, hora:'16:00', txt:'MEL TOSA'}]; delete __banco['daycare/banho-falta/${d2}/${kM}'];`);
+    await run(`banhoFaltaExecutar({chave:'${kM}', nome:'Mel', hora:'09:00', origem:'fixo', fixo:true, lancs:[], txts:[], porque:'faltou'}, '${d2}')`); await tick();
+    assert.ok(/NÃO LIBEREI/.test(run('__alertas[0].t')) && /tire à mão: Banhos recorrentes › Pular o próximo e direto na planilha\.$/.test(run('__alertas[0].l[1]')), JSON.stringify(run('__alertas')));
+  } finally { run(BF_VOLTA); delete ctx.__atraso; }
+});
+provaAsync('QA31 — "liberando" recente de outro aparelho: relê de novo quando ficar preso, e não pergunta o que ele já liberou', async () => {
+  run(BF_STUBS);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE'}], porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
+      BANHO_FALTA_DEC={jas:{decisao:'liberando', quem:'Eu', ts:Date.now()-10*60000}};
+      __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberando', quem:'Bia', ts:Date.now()}; banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 0, 'a Bia está liberando agora: não pergunta');
+    assert.strictEqual(run('BANHO_FALTA[0].__relido'), undefined, 'a marca da releitura sai');
+    // 6 minutos depois, pelo relógio deste aparelho; a Bia já terminou
+    run(`BANHO_FALTA_DEC.jas.ts=Date.now()-6*60000; __banco['daycare/banho-falta/${dia}/jas']={decisao:'liberado', quem:'Bia', ts:Date.now()};
+      banhoFaltaPerguntar('${dia}');`);
+    await tick();
+    assert.strictEqual(run('__esc.length'), 0, 'relê de novo e vê o "liberado": não pergunta');
+    assert.strictEqual(run('BANHO_FALTA_DEC.jas.decisao'), 'liberado');
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('QA31 — releitura forçada durante outra leitura da planilha: relê de novo quando ela terminar (e só uma vez)', async () => {
+  run(`__bkGP={cp:carregarPlanilhaDia, eh:ehHoje, cl:dcCarregarLancamentos, db:DB, rd:dcRedesenharAtividade, pc:_planCarregando, pn:_planDeNovo, pd:planDia};
+    __gpN=0; __gpRes=[]; carregarPlanilhaDia=function(){ __gpN++; return new Promise(function(r){ __gpRes.push(r); }); };
+    ehHoje=function(){ return true; }; dcCarregarLancamentos=function(){}; DB=null; dcRedesenharAtividade=function(){};
+    _planCarregando=false; _planDeNovo=false;`);
+  try {
+    run('dcGarantirPlanilha(true); dcGarantirPlanilha(true);');
+    assert.strictEqual(run('__gpN'), 1, 'uma leitura por vez');
+    run('__gpRes[0]();'); await tick();
+    assert.strictEqual(run('__gpN'), 2, 'a leitura que estava em curso pode ter saído antes da mudança: relê');
+    run('__gpRes[1]();'); await tick();
+    assert.strictEqual(run('__gpN'), 2, 'sem laço');
+    run('planDia={lida:true, banho:[], faltas:[]}; dcGarantirPlanilha(false);');
+    assert.strictEqual(run('__gpN'), 2, 'sem forçar e lida há pouco: não relê');
+  } finally { run('carregarPlanilhaDia=__bkGP.cp; ehHoje=__bkGP.eh; dcCarregarLancamentos=__bkGP.cl; DB=__bkGP.db; dcRedesenharAtividade=__bkGP.rd; _planCarregando=__bkGP.pc; _planDeNovo=__bkGP.pn; planDia=__bkGP.pd;'); }
+});
+prova('despertador: não chama quem faltou nem quem avisou a falta, e sai da tela quando a falta é marcada', () => {
+  run(`__bkDB={pr:papelRecebeAlarme, eh:ehHoje, pd:planDia, db:despBaixa, md:mostrarDespertador, dc:dcChamada, dn:despNaTela, rl:repLancamentos, ge:document.getElementById, bf:BANHO_FALTA};
+    papelRecebeAlarme=function(){ return true; }; ehHoje=function(){ return true; }; despBaixa={}; despNaTela=null; __desp=[];
+    repLancamentos=function(){ return []; };
+    mostrarDespertador=function(it){ __desp.push(it.p.n); };
+    var _d=new Date(Date.now()+2*60000), _h=String(_d.getHours()).padStart(2,'0')+':'+String(_d.getMinutes()).padStart(2,'0');
+    planDia={lida:true, banho:[{p:{n:'Jasmine', tutor:'Ana'}, hora:_h}], faltas:[]};`);
+  try {
+    run(`dcChamada={}; dcChamada[dcKey('Jasmine','Ana')]='faltou'; checarDespertadorBanho();`);
+    assert.strictEqual(run('__desp.length'), 0, 'faltou: não toca');
+    run(`dcChamada={}; planDia.faltas=[{p:{n:'Jasmine', tutor:'Ana'}}]; checarDespertadorBanho();`);
+    assert.strictEqual(run('__desp.length'), 0, 'falta avisada na planilha: não toca');
+    run(`planDia.faltas=[]; checarDespertadorBanho();`);
+    assert.strictEqual(run('__desp.length'), 1, 'veio: toca como sempre');
+    run(`__elD={style:{display:'block'}}; document.getElementById=function(id){ return id==='despBanho'?__elD:null; };
+      despNaTela=dcKey('Jasmine','Ana'); BANHO_FALTA=[{chave:despNaTela}];`);
+    assert.strictEqual(run('banhoFaltaDespertadorFora()'), true);
+    assert.ok(run('__elD.style.display') === 'none' && run('despNaTela') === null, 'o despertador da tela some');
+  } finally { run('papelRecebeAlarme=__bkDB.pr; ehHoje=__bkDB.eh; planDia=__bkDB.pd; despBaixa=__bkDB.db; mostrarDespertador=__bkDB.md; dcChamada=__bkDB.dc; despNaTela=__bkDB.dn; repLancamentos=__bkDB.rl; document.getElementById=__bkDB.ge; BANHO_FALTA=__bkDB.bf;'); }
+});
+prova('ligações: a chamada viva, o Hoje na Zêluz, a planilha, a falta avisada e o "tirar" à mão chamam o banho de quem faltou', () => {
+  run(`__bkLG={zv:zMapaVivo, ag:banhoFaltaAgendar, hl:hojeLista, ge:document.getElementById, bf:BANHO_FALTA, bd:BANHO_FALTA_DIA, bdc:BANHO_FALTA_DEC, bc:BANHO_FALTA_CHEGOU, cv:_chamadaVivaDia, rd:renderDaycare, rp:repPodeLancar, db:DB};
+    DB={ref:function(){ return {}; }};
+    __cbLG=null; zMapaVivo=function(p, n, cb){ __cbLG=cb; return null; }; __agLG=0; banhoFaltaAgendar=function(){ __agLG++; };
+    renderDaycare=function(){}; repPodeLancar=function(){ return true; };`);
+  try {
+    run(`_chamadaVivaDia=null; chamadaVivaLigar(); if(__cbLG) __cbLG({x:'faltou'});`);
+    assert.strictEqual(run('__agLG'), 1, 'a mudança da chamada agenda a conferência do banho');
+    run(`__rootLG={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__rootLG:null; }; hojeLista=function(){ return []; };
+      BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'}]; BANHO_FALTA_DIA=dcDataKey(); BANHO_FALTA_DEC={}; BANHO_FALTA_CHEGOU=[];
+      try{ hojeRender(); }catch(e){ __errLG=String(e); }`);
+    assert.ok(/Banho de quem faltou/.test(run('__rootLG.innerHTML')), 'o cartão entra no Hoje na Zêluz ' + run("typeof __errLG!=='undefined'?__errLG:''"));
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/planDia=out;[\s\S]{0,400}banhoFaltaAgendar\(\)/.test(src), 'a leitura da planilha agenda a conferência');
+    assert.ok(/regs\.some\(function\(r\)\{ return r\.data===dcDataKey\(\); \}\) && typeof banhoFaltaAgendar==='function'\) banhoFaltaAgendar\(\)/.test(src), 'a falta avisada de hoje agenda a conferência');
+    assert.ok(/var _espRem=dashEspelhar\(k,id,reg,'remover'\);[\s\S]{0,400}if\(k==='banho'\)\{[\s\S]{0,300}dcGarantirPlanilha\(true\)[\s\S]{0,200}Promise\.resolve\(_espRem\)\.then\(_relerPlan, _relerPlan\)/.test(src),
+      'tirar um banho à mão relê a planilha DEPOIS de a ponte tirar a linha (QA31)');
+    const rem = src.slice(src.indexOf('async function dashRemover('), src.indexOf('var _espRem=dashEspelhar(k,id,reg,\'remover\');'));
+    assert.ok(!/dcGarantirPlanilha\(true\)/.test(rem), 'nenhuma releitura antes da ponte');
+    assert.ok(/function hojeCarregar\(\)\{[\s\S]{0,300}dcGarantirPlanilha\(\)/.test(src), 'o Hoje na Zêluz lê a planilha do dia');
+  } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; BANHO_FALTA_CHEGOU=__bkLG.bc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
+});
+// ================================================================== orçamento: o motivo da recusa da ponte
+console.log('\nOrçamento fechado que a planilha recusou: a tela diz o motivo (Adriana, 29/set/2026, caso da Frida)');
+provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página no lugar dos dados, outro) e orienta a reenviar sem duplicar', async () => {
+  run(`__bkOP={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlertao, fe:(typeof fetch!=='undefined'?fetch:undefined)};
+    ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Carolina', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000}};
+    orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'tk-SEGREDO-4471'};
+    __upOP=[]; DB={ref:function(p){ return {update:function(v){ __upOP.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
+    __alOP=[]; zAlertao=function(t,l,op){ __alOP.push({t:t, l:l, r:(op&&op.rodape)||''}); };
+    __respOP=''; __corpoOP=[]; fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(__respOP); }}); };`);
+  try {
+    const caso = async (resp) => { run(`__alOP=[]; __upOP=[]; __respOP=${JSON.stringify(resp)};`); run(`orcEnviarPlanilha('frida')`); for (let i = 0; i < 60; i++) await Promise.resolve(); return { al: run('__alOP[0]'), up: run('__upOP[0]') }; };
+    let r = await caso(JSON.stringify({ ok: false, erro: 'token invalido' }));
+    assert.ok(/PLANILHA RECUSOU/.test(r.al.t), JSON.stringify(r));
+    assert.ok(/^Frida\/Ana Carolina: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script\.$/.test(r.al.l[0]), r.al.l[0]);
+    assert.ok(/salvo como FECHADO/.test(r.al.l[1]) && /reenviar/.test(r.al.l[1]) && /duas vezes/.test(r.al.r), JSON.stringify(r.al));
+    assert.ok(r.up.v.planilha_ok === false && /palavra-chave/.test(r.up.v.planilha_msg), 'o motivo fica gravado para a lista (NÃO entrou na planilha — motivo)');
+    assert.strictEqual(run('__corpoOP[0].token'), 'tk-SEGREDO-4471', 'a palavra-chave vai no pedido');
+    r = await caso(JSON.stringify({ ok: false, erro: 'PONTE_SENHA não configurada nas Propriedades do script' }));
+    assert.ok(/falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script/.test(r.al.l[0]), r.al.l[0]);
+    r = await caso('<!DOCTYPE html><html><body>Autorização necessária</body></html>');
+    assert.ok(/respondeu com uma página, e não com os dados/.test(r.al.l[0]), r.al.l[0]);
+    r = await caso('\n  <html><body>Entrar com o Google</body></html>');
+    assert.ok(/respondeu com uma página, e não com os dados/.test(r.al.l[0]), 'página com linha em branco antes (QA38 F4): ' + r.al.l[0]);
+    // A resposta que repete o pedido não mostra a palavra-chave, nem na tela nem na lista (QA38 F5)
+    r = await caso('{"token":"tk-SEGREDO-4471","acao":"reservar"} rejeitado');
+    assert.ok(/•••/.test(r.al.l[0]) && !/tk-SEGREDO-4471/.test(JSON.stringify(r)), 'nem na janela, nem no planilha_msg: ' + JSON.stringify(r));
+    r = await caso(JSON.stringify({ ok: false, erro: 'Limite diário excedido!' }));
+    assert.ok(/: Limite diário excedido!$/.test(r.al.l[0]), 'sem ponto depois da exclamação (QA38 F6): ' + r.al.l[0]);
+    r = await caso(JSON.stringify({ ok: false, erro: 'Exception: planilha trancada.' }));
+    assert.ok(/^Frida\/Ana Carolina: Exception: planilha trancada\.$/.test(r.al.l[0]), 'outro motivo aparece como veio, sem ponto dobrado: ' + r.al.l[0]);
+    r = await caso('');
+    assert.ok(/sem dizer o motivo/.test(r.al.l[0]), r.al.l[0]);
+    // deu certo: igual a antes
+    r = await caso(JSON.stringify({ ok: true, calendario: '3 noites', financeiro: 'linha 12' }));
+    assert.ok(/LANÇADO NA PLANILHA/.test(r.al.t) && r.up.v.planilha_ok === true && r.up.v.planilha_msg === 'Frida/Ana Carolina: 3 noites · linha 12', JSON.stringify(r));
+    // Dois FILHOts: um entrou, o outro foi recusado — cada um com o SEU motivo (QA38 F4)
+    run(`ORC_LISTA_CACHE.duas={pets:[{nome:'Nala', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000},{nome:'Irma', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000}], entrada:'2026-10-01', saida:'2026-10-03', noites:2, total_cent:60000};
+      __alOP=[]; __upOP=[]; __filaOP=[${JSON.stringify(JSON.stringify({ ok: true, calendario: '2 noites', financeiro: 'linha 20' }))}, ${JSON.stringify(JSON.stringify({ ok: false, erro: 'Exception: Lock timeout' }))}];
+      fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); var t=__filaOP.shift(); return Promise.resolve({text:function(){ return Promise.resolve(t); }}); };
+      orcEnviarPlanilha('duas');`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    assert.strictEqual(run('__alOP[0].l[0]'), 'Nala/Bia: 2 noites · linha 20 | Irma/Bia: Exception: Lock timeout.', run('__alOP[0].l[0]'));
+    // O cancelamento recusado também diz o motivo (QA38 F1)
+    run(`__alOP=[]; __upOP=[]; orcNoitesDeOutraReserva=(function(f){ __bkOP.nr=f; return function(){ return []; }; })(orcNoitesDeOutraReserva);
+      orcCarregarLista=(function(f){ __bkOP.cl=f; return function(){}; })(orcCarregarLista);
+      fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(${JSON.stringify(JSON.stringify({ ok: false, erro: 'token invalido' }))}); }}); };
+      orcTirarDaPlanilha('frida', 'Márcia', '29/09/2026');`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    assert.ok(/PLANILHA RECUSOU/.test(run('__alOP[0].t')) && /^Frida\/Ana Carolina: a palavra-chave guardada no app não bate/.test(run('__alOP[0].l[0]')), JSON.stringify(run('__alOP[0]')));
+    assert.ok(/palavra-chave/.test(run('__upOP[0].v.cancelado_planilha_msg')), 'o motivo fica gravado no cancelamento');
+    // Em nenhum lugar a palavra-chave aparece: nem nas janelas, nem no que foi gravado
+    assert.ok(!/tk-SEGREDO-4471/.test(JSON.stringify(run('__alOP')) + JSON.stringify(run('__upOP'))), 'a palavra-chave não vaza');
+  } finally { run(`ORC_LISTA_CACHE=__bkOP.oc; orcSheetsCfg=__bkOP.sc; DB=__bkOP.db; zAlertao=__bkOP.za; fetch=__bkOP.fe; if(__bkOP.nr) orcNoitesDeOutraReserva=__bkOP.nr; if(__bkOP.cl) orcCarregarLista=__bkOP.cl;`); }
+});
+// ================================================================== queda de conexão não é recusa
+console.log('\nQueda de conexão com a planilha não é "a planilha recusou" (Adriana, 29/set/2026, banho fixo da Cristal)');
+prova('o automático diz que a conexão caiu e que tenta de novo sozinho; recusa de verdade continua "a planilha recusou"; Reposições com a mesma régua', () => {
+  const dia = run('zHojeISO()');
+  run(`__bkQC={c:REP_PLAN_CACHE['${dia}']};`);
+  try {
+    const v = 'Cristal/Yorkshire (SEM SHAMPOO)';
+    const ch = run(`vagasNomeChave(${JSON.stringify(v)})`);
+    const set = (tipo, chave, lista, msg) => run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{${tipo}:${JSON.stringify(lista)}, _estado_v:1,
+      _estado:{${tipo}:{${JSON.stringify(chave)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
+    const linha = () => run(`dashAutoLinhas('banho', '${dia}', null).html`);
+    ['Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'a ponte não respondeu em 12s', '',
+     'The network connection was lost.', 'The Internet connection appears to be offline.', 'The request timed out.', 'A conexão de rede foi perdida.'].forEach((m) => {
+      set('banho', ch, [v], m);
+      const h = linha();
+      // "em até 10 min": com um aparelho só, a volta seguinte à queda ainda cai na trava de 5 min e pula (QA34)
+      assert.ok(/color:var\(--z-gold-deep\)[^>]*>a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(h) && !/recusou/.test(h)
+        && !/Failed to fetch|Load failed|NetworkError|connection was lost/.test(h), 'queda (' + (m || 'sem motivo') + '), em dourado: ' + h);
+    });
+    set('banho', ch, [v], 'a coluna não existe');
+    assert.ok(/color:var\(--crm-critico\)[^>]*>a planilha recusou — a coluna não existe/.test(linha()), 'recusa de verdade, em vermelho: ' + linha());
+    ['Upload failed', 'o tutor não respondeu', 'token invalido'].forEach((m) => igual(run(`repPlanEhQuedaConexao(${JSON.stringify(m)})`), false, 'não é queda: ' + m));
+    // Reposições: a mesma régua na linha do crédito
+    const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda' };
+    const chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
+    set('faltas', chP, [], 'Failed to fetch');
+    let l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(l) && /tentar de novo/.test(l) && !/Failed to fetch/.test(l), l);
+    set('faltas', chP, [], 'a planilha não tem a coluna Faltas Avisadas');
+    l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
+    assert.ok(/NÃO foi para a planilha — a planilha não tem a coluna Faltas Avisadas/.test(l), l);
+    igual(run("repPlanEhQuedaConexao('token invalido')"), false);
+  } finally { run(`if(__bkQC.c) REP_PLAN_CACHE['${dia}']=__bkQC.c; else delete REP_PLAN_CACHE['${dia}'];`); }
+});
+provaAsync('o botão "Conferir a planilha agora" não diz ✅ quando não conseguiu ler a planilha (QA34)', async () => {
+  run(`__bkCB={pp:dashPontePronta, sy:dashAutoSincronizar, db:DB, dc:dashCarregar};
+    dashPontePronta=function(){ return Promise.resolve({url:'x'}); }; dashCarregar=function(){};
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return 0; }}); }}; }};
+    __syOk=0; __syN=0; dashAutoSincronizar=function(d){ __syN++; return Promise.resolve(__syN<=__syOk ? {ok:true, dia:d, posto:1, tirado:0} : {ok:false, erro:'Failed to fetch'}); };`);
+  try {
+    const dias = run('DASH_AUTO_DIAS+1');
+    const botao = async (ok) => { run(`__syOk=${ok}; __syN=0; __bt={textContent:'Conferir a planilha agora', disabled:false};`); run('dashAutoBotao(__bt)'); for (let i = 0; i < 80; i++) await Promise.resolve(); return run('__bt.textContent'); };
+    assert.strictEqual(await botao(0), '⚠ não consegui ler a planilha: a conexão com a planilha caiu');
+    assert.strictEqual(await botao(dias - 1), '⚠ não consegui ler 1 de ' + dias + ' dia(s): a conexão com a planilha caiu');
+    assert.strictEqual(await botao(dias), '✅ ' + dias + ' posto(s) · 0 tirado(s) em ' + dias + ' dia(s)', 'tudo lido: como antes');
+  } finally { run('dashPontePronta=__bkCB.pp; dashAutoSincronizar=__bkCB.sy; DB=__bkCB.db; dashCarregar=__bkCB.dc;'); }
+});
+// ================================================================== o automático não apaga o que a recepção lançou
+console.log('\nO automático nunca tira da planilha o banho lançado à mão (Adriana, 29/set/2026, Cristal e Ozzy)');
+provaAsync('banho fixo que deixou de valer: o automático não tira a linha que a recepção lançou à mão; sem lançamento, tira como antes; sem ler os lançamentos, não tira nada', async () => {
+  run(`__bkAS={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit};
+    audit=function(){};
+    __ponteAS=[]; __planAS={}; dashPonteChamar=function(c){ __ponteAS.push(JSON.parse(JSON.stringify(c)));
+      if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planAS}); return Promise.resolve({ok:true, removidos:1}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };
+    __bancoAS={}; __falhaMao=false; __gravAS={};
+    DB={ref:function(p){ return {
+      once:function(){ if(__falhaMao && p.indexOf('daycare/dashboard/')===0 && p.split('/').length===3) return Promise.reject(new Error('sem rede'));
+        var v=__bancoAS[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __gravAS[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      update:function(v){ __gravAS[p]=Object.assign({}, __gravAS[p]||{}, v); return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29';
+    // Sem lançamento à mão, a célula na planilha é a que o automático escreveu (o texto do registro).
+    const prepara = (mao) => run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:[${mao ? "'Cristal/Yorkshire'" : "'Cristal/Yorkshire (SEM SHAMPOO)'"}]};
+      __bancoAS={}; __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
+      ${mao ? `__bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', chave:dcKey('Cristal','Ana')}}};` : ''}`);
+    const tirou = () => run('__ponteAS').filter((c) => c.acao === 'remover');
+    // 1) a recepção lançou o banho da Cristal à mão; o banho fixo dela deixou de valer (ex.: falta do meio-dia)
+    prepara(true);
+    let r = await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(r && r.ok, JSON.stringify(r));
+    igual(tirou(), [], 'a linha lançada à mão fica na planilha');
+    igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), [], 'e o automático larga a linha: é da recepção agora');
+    // 2) sem lançamento à mão: o banho fixo que não vale mais sai, como antes
+    prepara(false);
+    await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(tirou().length === 1 && tirou()[0].valor === 'Cristal/Yorkshire (SEM SHAMPOO)' && tirou()[0].coluna === 'Banho' && tirou()[0].colunaHora === 'Hora Banho', JSON.stringify(tirou()));
+    // 3) não deu para ler os Lançamentos do dia: não tira nada agora, e guarda para a próxima passada
+    prepara(false); run('__falhaMao=true;');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou(), [], 'sem saber o que a recepção lançou, não apaga');
+    igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'a próxima passada tenta de novo');
+    run('__falhaMao=false;');
+    // 4) lançado à mão em OUTRO item (Reposição) não protege o Banho
+    prepara(false); run(`__bancoAS['daycare/dashboard/${dia}']={reposicao:{R1:{valor:'Cristal/Yorkshire', ts:1}}};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(tirou().length === 1 && tirou()[0].coluna === 'Banho', 'outro item não protege: ' + JSON.stringify(tirou()));
+    // 5) Reposição: a mesma regra (lançada à mão fica; sem lançamento, sai)
+    const repo = async (mao) => {
+      run(`__ponteAS=[]; __gravAS={}; __planAS={'Reposição':['Lanna/SRD']}; __bancoAS={};
+        __bancoAS['daycare/dashboard-auto/${dia}']={reposicao:['Lanna/SRD']};
+        ${mao ? `__bancoAS['daycare/dashboard/${dia}']={reposicao:{R1:{valor:'Lanna/SRD', ts:1}}};` : ''}`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      return tirou();
+    };
+    igual(await repo(true), [], 'Reposição lançada à mão fica');
+    assert.ok((await repo(false)).length === 1, 'Reposição do automático que não vale mais sai');
+    // 6) duas células do mesmo FILHOt: a da recepção (outro texto) fica e a do banho fixo sai — sem ele aparecer duas vezes (QA35 B1)
+    prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou().map((c) => c.valor), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'só a célula do automático sai');
+    // 7) a troca do shampoo não troca a célula que a recepção lançou com o texto antigo (QA35 B2)
+    run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)']}; __bancoAS={};
+      __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
+      __bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'14:00', ts:1}}};
+      dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=['Cristal/Yorkshire (SHAMPOO NA BOLSA)']; o._horas={banho:{}}; return o; };`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(run('__ponteAS').filter((c) => c.acao !== 'lerDia'), [], 'a célula da recepção não é trocada pelo shampoo novo do combinado');
+    const semFixo = () => run(`dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };`);
+    const comFixo = () => run(`dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=['Cristal/Yorkshire (SEM SHAMPOO)']; o._horas={banho:{}}; return o; };`);
+    // 8) QA37 P1: sem lançamento no app, a linha que uma pessoa escreveu DIRETO na planilha fica; só sai o texto do automático
+    semFixo(); prepara(false); run(`__planAS={Banho:['Cristal - Yorkshire (escrita na planilha)']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou(), [], 'a célula escrita à mão na planilha não sai');
+    // 9) QA37: a ponte falhou ao tirar — o registro guarda, e a próxima passada tenta de novo (sem célula órfã)
+    semFixo(); prepara(false);
+    run(`__pcAS=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='remover'){ __ponteAS.push(c); return Promise.resolve({ok:false, erro:'a ponte não respondeu'}); } return __pcAS(c); };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'falhou ao tirar: continua no registro');
+      prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'com lançamento à mão, também');
+    } finally { run('dashPonteChamar=__pcAS;'); }
+    const lancou = () => run('__ponteAS').filter((c) => c.acao === 'lancar').map((c) => c.valor);
+    // 10) QA37 P3: o banho fixo vale, a planilha está vazia e a recepção lançou à mão — o automático não escreve o dele por cima
+    comFixo(); prepara(true); run(`__planAS={};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(lancou().filter((v) => /SEM SHAMPOO/.test(v)), [], 'vale a linha da recepção (o passo 3 a repõe)');
+    // ... mas o lançamento à mão que esgotou as tentativas não segura o banho fixo
+    comFixo(); prepara(true); run(`__planAS={}; __bancoAS['daycare/dashboard/${dia}'].banho.L1.planilha_desisti=true;`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(lancou(), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'desistiu do lançamento à mão: o banho fixo vai');
+    // 11) QA37 P2: a célula do automático e a da recepção, com o banho fixo valendo — sai a do automático
+    comFixo(); prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou().map((c) => c.valor), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'o FILHOt aparece uma vez só');
+    igual(lancou(), [], 'e nada é escrito por cima');
+  } finally { run('dashPonteChamar=__bkAS.pc; dashAutoCalcular=__bkAS.calc; DB=__bkAS.db; audit=__bkAS.au;'); }
+});
+// ================================================================== todo lançamento do dia está na planilha
+console.log('\nTodo lançamento do dia chega à TV: uma escrita por vez e a conferência repõe o que sumiu (Adriana, 29/set/2026)');
+provaAsync('neste aparelho, lançar e tirar vão um de cada vez para a ponte (o Ozzy e a Charlotte não caem na mesma célula); ler não espera na fila', async () => {
+  run(`__bkPF={ja:dashPonteChamarJa}; __ordemPF=[]; __resPF=[];
+    dashPonteChamarJa=function(c){ __ordemPF.push('começa '+c.valor); return new Promise(function(res){ __resPF.push(function(){ __ordemPF.push('termina '+c.valor); res({ok:true}); }); }); };`);
+  try {
+    run(`__p1=dashPonteChamar({acao:'lancar', valor:'Ozzy'}); __p2=dashPonteChamar({acao:'lancar', valor:'Charlotte'}); __p3=dashPonteChamar({acao:'lerDia', valor:'leitura'});`);
+    await tick();
+    igual(run('__ordemPF').slice().sort(), ['começa Ozzy', 'começa leitura'], 'a Charlotte espera o Ozzy terminar; a leitura não espera');
+    // cada "começa" empilhou o seu "termina" na mesma ordem: termina o do Ozzy
+    run("__resPF[__ordemPF.indexOf('começa Ozzy')]();"); await tick();
+    igual(run('__ordemPF').slice(-2), ['termina Ozzy', 'começa Charlotte'], 'a Charlotte só começa depois de o Ozzy terminar');
+    // um pedido que falha não trava a fila
+    run(`dashPonteChamarJa=function(c){ __ordemPF.push('falha '+c.valor); return Promise.reject(new Error('x')); };`);
+    run('__resPF.forEach(function(f){ try{ f(); }catch(e){} });'); await tick();
+    run(`__p4=dashPonteChamar({acao:'remover', valor:'Cristal'}).catch(function(){}); __p5=dashPonteChamar({acao:'lancar', valor:'Repolho'}).catch(function(){});`);
+    await tick();
+    assert.ok(run('__ordemPF').includes('falha Cristal') && run('__ordemPF').includes('falha Repolho'), JSON.stringify(run('__ordemPF')));
+  } finally { run('dashPonteChamarJa=__bkPF.ja; DASH_PONTE_FILA=Promise.resolve();'); }
+});
+provaAsync('a conferência repõe na planilha o lançamento à mão que sumiu (com a hora), uma vez por FILHOt, e deixa em paz o recém-lançado e o que já está lá', async () => {
+  run(`__bkRM={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit, es:dashEspelhar};
+    audit=function(){}; __espRM=[];
+    dashEspelhar=function(k,id,reg,acao,dia){ __espRM.push({k:k, id:id, valor:reg.valor, hora:reg.hora, acao:acao, dia:dia}); return Promise.resolve({ok:true}); };
+    dashPonteChamar=function(c){ if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planRM}); return Promise.resolve({ok:true}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };
+    __bancoRM={}; __gravRM={};
+    __lerRM=function(p){ if(__bancoRM[p]!==undefined) return __bancoRM[p];
+      var base=Object.keys(__bancoRM).filter(function(b){ return p.indexOf(b+'/')===0; })[0]; if(!base) return undefined;
+      var v=__bancoRM[base]; p.slice(base.length+1).split('/').forEach(function(s){ v=(v&&typeof v==='object')?v[s]:undefined; }); return v; };
+    DB={ref:function(p){ return {
+      once:function(){ var v=__lerRM(p); return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __gravRM[p]=v; return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29', velho = 'Date.now()-10*60000';
+    run(`__planRM={'Banho':['Charlotte/Norfolk (SEM SHAMPOO)', 'Repolho - Zelosinha/SRD (SEM SHAMPOO)'], 'Veterinário':[]};
+      __bancoRM['daycare/dashboard/${dia}']={
+        banho:{L1:{valor:'Ozzy/Norfolk (SEM SHAMPOO)', hora:'15:30', ts:${velho}}, L2:{valor:'Charlotte/Norfolk (SEM SHAMPOO)', hora:'15:30', ts:${velho}},
+               L3:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'16:00', ts:${velho}}, L4:{valor:'Repolho - Zelosinha/SRD', hora:'11:00', ts:${velho}},
+               L5:{valor:'Bolt/SRD', hora:'17:00', ts:Date.now()}, L6:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'16:00', ts:${velho}}},
+        vet:{V1:{valor:'Mel/SRD', hora:'10:00', ts:${velho}}},
+        pernoite:{P1:{valor:'Toshi/SRD', ts:${velho}}}};`);
+    const r = await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const esp = run('__espRM').map((x) => [x.k, x.valor, x.hora, x.acao, x.dia]).sort();
+    igual(esp, [['banho', 'Cristal/Yorkshire (SEM SHAMPOO)', '16:00', 'lancar', dia], ['banho', 'Ozzy/Norfolk (SEM SHAMPOO)', '15:30', 'lancar', dia],
+      ['vet', 'Mel/SRD', '10:00', 'lancar', dia]],
+      'volta: Ozzy, Cristal (uma vez só) e o veterinário da Mel; ficam: Charlotte (está lá), Repolho (está lá com outro texto), Bolt (lançado agora) e a pernoite (não vai para a planilha)');
+    assert.ok(r.posto >= 3, 'o resumo conta o que voltou: ' + JSON.stringify(r));
+  } finally { run('dashPonteChamar=__bkRM.pc; dashAutoCalcular=__bkRM.calc; DB=__bkRM.db; audit=__bkRM.au; dashEspelhar=__bkRM.es;'); }
+});
+provaAsync('QA36 — a conferência relê antes de repor (tirado durante não volta; tirado enquanto a ponte gravava é desfeito), compara pela ficha, respeita Medicação/Veterinário, pula quem esgotou as tentativas e manda o automático um por vez', async () => {
+  run(`__bkQ36={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit, es:dashEspelhar};
+    audit=function(){}; __espQ=[]; __ponteQ=[]; __noAr=0; __maxNoAr=0; __antesDeRepor=null; __depoisDeGravar=null; __querQ=[];
+    dashEspelhar=function(k,id,reg,acao,dia){ __espQ.push({k:k, id:id, valor:reg.valor}); if(__depoisDeGravar) __depoisDeGravar(k,id);
+      return Promise.resolve({ok:true}); };
+    dashPonteChamar=function(c){ __ponteQ.push(c); if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planQ});
+      __noAr++; __maxNoAr=Math.max(__maxNoAr,__noAr); return new Promise(function(res){ Promise.resolve().then(function(){ __noAr--; res({ok:true, removidos:1}); }); }); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=__querQ||[]; o._horas={banho:{}}; return o; };
+    __bancoQ={}; __ler=function(p){ if(__bancoQ[p]!==undefined) return __bancoQ[p];
+      var base=Object.keys(__bancoQ).filter(function(b){ return p.indexOf(b+'/')===0; })[0]; if(!base) return undefined;
+      var v=__bancoQ[base]; p.slice(base.length+1).split('/').forEach(function(s){ v=(v&&typeof v==='object')?v[s]:undefined; }); return v; };
+    DB={ref:function(p){ return {
+      once:function(){ if(__antesDeRepor && p.split('/').length===5) __antesDeRepor(p); var v=__ler(p); return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29', velho = 'Date.now()-10*60000';
+    const passa = async (plan, mao, auto) => {
+      run(`__espQ=[]; __ponteQ=[]; __planQ=${JSON.stringify(plan)}; __bancoQ={}; __bancoQ['daycare/dashboard/${dia}']=${mao};
+        __bancoQ['daycare/dashboard-auto/${dia}']=${JSON.stringify(auto || {})};`);
+      await run(`dashAutoSincronizar('${dia}')`); await tick();
+      return run('__espQ').map((x) => x.valor);
+    };
+    // M-2: a Luna/SRD some e a Luna/Poodle está lá — são FILHOts diferentes; o 2º remédio da Mel volta
+    run(`PELUDINHOS.push({n:'Luna', tutor:'Ana', raca:'SRD'}, {n:'Luna', tutor:'Bia', raca:'Poodle'});`);
+    const kLuna = run("dcKey('Luna','Ana')");
+    let v = await passa({ 'Banho': ['Luna/Poodle'], 'Medicação': ['Mel/SRD (APOQUEL · NA BOLSA)'] },
+      `{banho:{B1:{valor:'Luna/SRD', chave:'${kLuna}', hora:'10:00', ts:${velho}}},
+        medicacao:{M1:{valor:'Mel/SRD (APOQUEL · NA BOLSA)', hora:'12:00', ts:${velho}}, M2:{valor:'Mel/SRD (GOTAS OUVIDO · NA RECEPÇÃO)', hora:'16:00', ts:${velho}}}}`);
+    igual(v.sort(), ['Luna/SRD', 'Mel/SRD (GOTAS OUVIDO · NA RECEPÇÃO)'], 'a Luna/SRD e as gotas das 16:00 voltam; o Apoquel, que está lá, não');
+    // B5: esgotou as tentativas ou a coluna não existe: fica com o "reenviar"
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Bolt/SRD', ts:${velho}, planilha_desisti:true}, B2:{valor:'Toby/SRD', ts:${velho}, planilha_ok:false, planilha_msg:'a aba nao tem a coluna "Banho"'}}}`);
+    igual(v, [], 'desistido e sem coluna não entram na conferência');
+    // M-1: tirado DURANTE a conferência (entre a leitura do dia e a reposição): não volta
+    run(`__antesDeRepor=function(p){ delete __bancoQ['daycare/dashboard/${dia}'].banho.B1; };`);
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Ozzy/Norfolk', hora:'15:30', ts:${velho}}}}`);
+    igual(v, [], 'tirado durante a passada: não volta');
+    run('__antesDeRepor=null;');
+    // M-1: tirado ENQUANTO a ponte gravava: a passada desfaz o que escreveu
+    run(`__depoisDeGravar=function(k,id){ delete __bancoQ['daycare/dashboard/${dia}'][k][id]; };`);
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Ozzy/Norfolk', hora:'15:30', ts:${velho}}}}`);
+    await tick();
+    assert.ok(v.length === 1 && run('__ponteQ').some((c) => c.acao === 'remover' && c.valor === 'Ozzy/Norfolk' && c.coluna === 'Banho' && c.colunaHora === 'Hora Banho'), JSON.stringify(run('__ponteQ')));
+    run('__depoisDeGravar=null;');
+    // item com título diferente da coluna (Troca de escova → "Troca de Escova"): procura pela COLUNA
+    v = await passa({ 'Troca de Escova': ['Mel/SRD (NA BOLSA)'] }, `{escova:{E1:{valor:'Mel/SRD (NA BOLSA)', ts:${velho}}}}`);
+    igual(v, [], 'está na coluna "Troca de Escova": não repõe (nem grava rastro falso)');
+    // B1: o automático manda um por vez (a pessoa entra na próxima vaga)
+    run(`__querQ=['Ana/SRD','Bia/SRD','Cris/SRD','Duda/SRD']; __maxNoAr=0;`);
+    await passa({ 'Banho': [] }, '{}', {});
+    assert.strictEqual(run('__maxNoAr'), 1, 'o automático nunca tem mais de um pedido no ar');
+    run('__querQ=[];');
+    // B8: a célula do automático que sai nesta passada não conta como "o FILHOt está lá"
+    run(`__querQ=[];`);
+    v = await passa({ 'Banho': ['Cristal/Yorkshire (SEM SHAMPOO)'] },
+      `{banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', ts:${velho}}}}`, { banho: ['Cristal/Yorkshire (SEM SHAMPOO)'] });
+    assert.ok(run('__ponteQ').some((c) => c.acao === 'remover' && c.valor === 'Cristal/Yorkshire (SEM SHAMPOO)'), 'o banho fixo que não vale mais sai');
+    igual(v, ['Cristal/Yorkshire'], 'e o lançamento à mão volta na MESMA passada, sem ficar um ciclo fora da TV');
+  } finally { run('PELUDINHOS.splice(PELUDINHOS.length-2, 2); dashPonteChamar=__bkQ36.pc; dashAutoCalcular=__bkQ36.calc; DB=__bkQ36.db; audit=__bkQ36.au; dashEspelhar=__bkQ36.es;'); }
+});
+provaAsync('QA36 — com a ponte ainda chegando do banco, dois pedidos na fila não se travam', async () => {
+  run(`__bkPP={pr:dashPontePronta, dp:DASH_PONTE, ft:(typeof fetch!=='undefined'?fetch:undefined)};
+    DASH_PONTE=null; __prontaRes=[]; dashPontePronta=function(){ return new Promise(function(r){ __prontaRes.push(r); }); };
+    __fetchN=0; fetch=function(){ __fetchN++; return Promise.resolve({text:function(){ return Promise.resolve('{"ok":true}'); }}); };`);
+  try {
+    run(`__r1=null; __r2=null; dashPonteChamar({acao:'lancar', valor:'A'}).then(function(x){ __r1=x; }); dashPonteChamar({acao:'lancar', valor:'B'}).then(function(x){ __r2=x; });`);
+    await tick();
+    run(`DASH_PONTE={url:'https://script.google.com/macros/s/x/exec', token:'t'}; __prontaRes.forEach(function(r){ r(DASH_PONTE); });`);
+    for (let i = 0; i < 5; i++) await tick();
+    assert.ok(run('__r1') && run('__r1').ok && run('__r2') && run('__r2').ok && run('__fetchN') === 2, 'os dois chegam: ' + JSON.stringify([run('__r1'), run('__r2'), run('__fetchN')]));
+  } finally { run('dashPontePronta=__bkPP.pr; DASH_PONTE=__bkPP.dp; fetch=__bkPP.ft; DASH_PONTE_FILA=Promise.resolve();'); }
+});
+prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes de soltar a trava; sem a vez, diz que está ocupada', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'integracao-daycare', 'Codigo.gs'), 'utf8');
+  assert.ok(/acao === 'lancar'\)\s+return _json\(_umPorVez\(function \(\) \{ return lancar\(d\); \}\)\)/.test(src), 'lancar passa pela trava');
+  assert.ok(/acao === 'remover'\)\s+return _json\(_umPorVez\(function \(\) \{ return remover\(d\); \}\)\)/.test(src), 'remover passa pela trava');
+  const ctxG = vm.createContext({ console, JSON, String, Object, Array, Math, Date, Number, RegExp });
+  vm.runInContext(src, ctxG);
+  const log = [];
+  ctxG.SpreadsheetApp = { flush() { log.push('flush'); } };
+  ctxG.LockService = { getScriptLock() { return { tryLock(ms) { log.push('tryLock ' + ms); return ctxG.__vez; }, releaseLock() { log.push('solta'); } }; } };
+  ctxG.__vez = true;
+  const r1 = vm.runInContext("_umPorVez(function(){ return {ok:true, linha:7}; })", ctxG);
+  assert.ok(r1.ok && r1.linha === 7, JSON.stringify(r1));
+  assert.deepStrictEqual(log.splice(0), ['tryLock 10000', 'flush', 'solta'], 'espera no máximo 10 s: o app desiste em 12 s');
+  assert.throws(() => vm.runInContext("_umPorVez(function(){ throw new Error('planilha'); })", ctxG));
+  assert.deepStrictEqual(log.splice(0), ['tryLock 10000', 'flush', 'solta'], 'erro no meio: grava o que já foi e solta a trava do mesmo jeito');
+  for (const acao of ['garantirColunas', 'removerColunas', 'criarMeses'])
+    assert.ok(new RegExp("acao === '" + acao + "'\\)\\s+return _json\\(_umPorVez\\(").test(src), acao + ' também espera a vez (QA36)');
+  ctxG.__vez = false;
+  const r3 = vm.runInContext("_umPorVez(function(){ return {ok:true}; })", ctxG);
+  assert.ok(r3.ok === false && /ocupada/.test(r3.erro), JSON.stringify(r3));
+});
+// ================================================================== check-in que já existe e está errado: substituir
+console.log('\nO check-in que já existe está errado: SUBSTITUIR pelo da tela, sem duplicar (Adriana, 29/set/2026, Toshi)');
+provaAsync('a janela "já está hospedado" oferece SUBSTITUIR; ele pede o motivo e grava pelo caminho do Corrigir (a agenda passa a ser a da tela)', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/\{t:'✎ SUBSTITUIR o que já existe pelo desta tela', cor:'#234D67', fn:function\(\)\{ ciSubstituirExistente\(ativa, pacote\); \}\}/.test(src), 'o botão está na janela');
+  assert.ok(src.indexOf("t:'✅ ACRESCENTAR ao check-in que já existe'") < src.indexOf("t:'✎ SUBSTITUIR o que já existe pelo desta tela'")
+    && src.indexOf("t:'✎ SUBSTITUIR o que já existe pelo desta tela'") < src.indexOf("t:'Criar mesmo assim um 2º check-in (duplica)'"), 'a ordem: acrescentar, substituir, duplicar');
+  run(`__bkSub={zt:zTexto, gr:__ciGravar, tr:__ciTravar, qs:quemSou, au:audit, h:ciHosp};
+    ciHosp={nome:'Toshi', tutor:'Ana'}; quemSou=function(){ return 'Adriana'; }; audit=function(){};
+    __ciTravar=function(){}; __gravSub=[]; __ciGravar=function(m, id, P){ __gravSub.push({m:m, id:id, c:JSON.parse(JSON.stringify(P.correcao||null))}); };
+    __motSub='a medicação estava errada'; zTexto=function(){ return Promise.resolve(__motSub); };
+    __ativaSub={id:'est1', e:{criado_por:'Márcia · Gestora', entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[], medicacao:[{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}]}};
+    __pacSub={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}};`);
+  try {
+    await run('ciSubstituirExistente(__ativaSub, __pacSub)');
+    const g = run('__gravSub');
+    assert.ok(g.length === 1 && g[0].m === 'corrigir' && g[0].id === 'est1', JSON.stringify(g));
+    assert.ok(/substituiu o check-in: a medicação estava errada/.test(g[0].c.motivo) && g[0].c.quem === 'Adriana', JSON.stringify(g[0].c));
+    assert.strictEqual(run('__pacSub.substituir'), true, 'o pacote vai marcado: a assinatura nova também é gravada');
+    assert.ok(g[0].c.diff.some((x) => /Medicação REMOVIDA: Apoquel/.test(x)) && g[0].c.diff.some((x) => /Medicação NOVA: Enalapril/.test(x)), JSON.stringify(g[0].c.diff));
+    assert.ok(run('ciCorrigindoId') === null, 'a tela não fica presa no modo corrigir');
+    // sem motivo: nada é gravado
+    run(`__gravSub=[]; zTexto=function(){ return Promise.resolve(null); };`);
+    await run('ciSubstituirExistente(__ativaSub, __pacSub)');
+    assert.strictEqual(run('__gravSub.length'), 0);
+  } finally { run('zTexto=__bkSub.zt; __ciGravar=__bkSub.gr; __ciTravar=__bkSub.tr; quemSou=__bkSub.qs; audit=__bkSub.au; ciHosp=__bkSub.h;'); }
+});
+provaAsync('QA42 — cancelar "quem recebeu" no SUBSTITUIR (ou no Corrigir/Acrescentar) não grava NADA: nem a estadia, nem a agenda; o prazo de 25 s fica parado durante a pergunta', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
+  assert.ok(cor.indexOf('await ciQuemRecebeu(chegouNovo') > 0 && cor.indexOf('await ciQuemRecebeu(chegouNovo') < cor.indexOf('ops.push(ref.update(_upCorr))')
+    && cor.indexOf('ops.push(ref.update(_upCorr))') < cor.lastIndexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir: pergunta, depois estadia, depois agenda');
+  const acr = src.slice(src.indexOf("    else if(modo==='acrescentar'){"), src.indexOf("    else if(modo==='acrescentar'){") + 6000);
+  assert.ok(acr.indexOf('await ciQuemRecebeu(novosItens)') > 0 && acr.indexOf('await ciQuemRecebeu(novosItens)') < acr.indexOf('ops.push(ref.update({'), 'acrescentar: pergunta antes de gravar');
+  assert.ok(/async function ciQuemRecebeu\(itens, op\)\{[\s\S]{0,700}clearTimeout\(__ciTimerPreso\)/.test(src), 'o prazo para durante a pergunta');
+  run(`__bkQ42={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){};
+    __escQ42=[]; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? {nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[], ficha:{}} : {}; }}); },
+      update:function(v){ __escQ42.push(['update', p]); return Promise.resolve(); },
+      set:function(v){ __escQ42.push(['set', p]); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve(null); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}, temMed:true, key:'toshi__ana', substituir:true, correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    igual(JSON.parse(JSON.stringify(run('__escQ42'))), [], 'cancelou: nenhuma escrita no banco');
+  } finally { run('DB=__bkQ42.db; ciQuemRecebeu=__bkQ42.qr; ciHosp=__bkQ42.h; __ciTravar=__bkQ42.tr; audit=__bkQ42.au;'); }
+});
+provaAsync('QA43 — o SUBSTITUIR guarda no histórico a assinatura e os pertences de antes; a Conferência diz "SUBSTITUIU O CHECK-IN"; errar o nome repete a pergunta certa; a pergunta tem rede de 10 min', async () => {
+  run(`__bkQ43={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __upQ43={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1'
+        ? {nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[{uid:'p1', n:'Caminha'}], ficha:{}, assinatura:'data:image/png;base64,ANTIGA', assinado_por:'Márcia', entregaSemTutor:false, quemDeixou:null} : null; }}); },
+      update:function(v){ __upQ43[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}, temMed:true, key:'toshi__ana', substituir:true, sig:'data:image/png;base64,NOVA', assina:'Ana Tutora', correcao:{motivo:'substituiu o check-in: remédio errado', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    const up = run(`__upQ43['auaulandia/estadias/est1']`);
+    assert.ok(up && up.assinatura === 'data:image/png;base64,NOVA', 'a assinatura nova vai para a estadia');
+    const ant = up.correcoes[up.correcoes.length - 1].antes;
+    assert.ok(ant.assinatura === 'data:image/png;base64,ANTIGA' && ant.assinado_por === 'Márcia' && ant.entregaSemTutor === false && ant.pertences[0].n === 'Caminha', JSON.stringify(ant));
+    const conf = run(`__upQ43['auaulandia/estadias/est1/conferencia']`);
+    assert.ok(conf && /^SUBSTITUIU O CHECK-IN — Medicação: Enalapril · recebido por Ana$/.test(conf.reaberta_motivo), JSON.stringify(conf));
+  } finally { run('DB=__bkQ43.db; ciQuemRecebeu=__bkQ43.qr; ciHosp=__bkQ43.h; __ciTravar=__bkQ43.tr; audit=__bkQ43.au; quemSou=__bkQ43.qs; ciCorrigindoId=null;'); }
+  // errar o nome: a 2ª pergunta continua sendo a do SUBSTITUIR; e o relógio de 10 min fica armado durante a pergunta
+  run(`__bkQ43b={zt:zTexto, st:setTimeout, tr:__ciTravar, sv:__ciSalvando};
+    __pergQ43=[]; __respQ43=['.', 'Ana']; zTexto=function(t, l){ __pergQ43.push([t, l.join(' | ')]); return Promise.resolve(__respQ43.shift()); };
+    __tmQ43=[]; setTimeout=function(fn, ms){ __tmQ43.push(ms); return 9; }; __ciTravar=function(){};`);
+  try {
+    const r = await run(`ciQuemRecebeu(['Medicação: Enalapril'], {titulo:'QUEM RECEBEU DO TUTOR O QUE ESTÁ NESTA TELA?', linhas:['Escreva o nome de quem recebeu o material e ouviu o tutor.']})`);
+    assert.strictEqual(r, 'Ana');
+    const pg = JSON.parse(JSON.stringify(run('__pergQ43')));
+    assert.ok(pg.length === 2 && /ouviu o tutor/.test(pg[1][1]) && !/na porta/.test(pg[1][1]), JSON.stringify(pg));
+    igual(JSON.parse(JSON.stringify(run('__tmQ43'))), [600000]);
+  } finally { run('zTexto=__bkQ43b.zt; setTimeout=__bkQ43b.st; __ciTravar=__bkQ43b.tr; __ciSalvando=__bkQ43b.sv;'); }
+});
+prova('QA39 — o "Não" só vale quando alguém toca nele agora; não para remédio da veterinária; não apaga a agenda no corrigir; só o que está em vigor vem para a lista', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  // em vigor: não suspenso, não parado, sem fim no passado
+  igual([run(`ciMedEmVigor({continuo:true})`), run(`ciMedEmVigor({suspenso:true})`), run(`ciMedEmVigor({paradoEm:{}})`),
+    run(`ciMedEmVigor({dataFim:'2020-01-01'})`), run(`ciMedEmVigor({dataFim:'2099-01-01'})`)], [true, false, false, false, true]);
+  assert.ok(/Object\.keys\(itens\)\.filter\(function\(id\)\{ return ciMedEmVigor\(itens\[id\]\); \}\)/.test(src), 'a lista do check-in só traz o que está em vigor');
+  assert.ok(/if\(!ciMedEmUso\(\) \|\| \(ciMedEmUso\(\)==='Não' && !CI_MED_NAO_TOCADO\)\) setSeg\('ciMedEmUso','Sim'\);/.test(src), 'com remédio em vigor, a resposta vem Sim (e o "Não" que só voltou da estadia não esconde)');
+  assert.ok(/if\(!MED_GATE_ULTIMO\['auaulandia\|'\+key\] && ciMedEmUso\(\)!=='Não'\)\{/.test(src), 'com "Não", o salvar não repergunta "tomava X?"');
+  const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
+  assert.ok(cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') > 0
+    && cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') < cor.lastIndexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
+  assert.ok(/if\(P\.medParou && P\.medParou\.length\)\{/.test(src), 'e marca "já não toma mais" também no corrigir');
+  run(`__bkN={sv:segVal, ss:setSeg, ge:document.getElementById, qsa:document.querySelectorAll, ce:canEditCheckinMed, za:zAlertao, ed:ciEditandoId, ca:ciColeiraAplicar, ch:ciMedEmUsoChange};
+    __sgN={ciMedEmUso:''}; segVal=function(id){ return __sgN[id]||''; }; setSeg=function(id,v){ __sgN[id]=v; };
+    __alN=[]; zAlertao=function(t){ __alN.push(t); }; canEditCheckinMed=function(){ return true; };
+    __rowsN=[{dataset:{id:'a1', daficha:'1', conf:''}, querySelector:function(){ return {value:'Antibiótico X'}; }}];
+    document.querySelectorAll=function(sel){ return /magitem/.test(sel) ? __rowsN : []; };
+    document.getElementById=function(id){ return {style:{}, querySelector:function(){ return {}; }, innerHTML:'', textContent:''}; };`);
+  try {
+    // A1: reabrir uma estadia que foi "Não", com remédio em vigor na lista (a veterinária começou depois) → volta "Sim"
+    run(`__colN=null; ciColeiraAplicar=function(c){ __colN=c; }; ciRespostasDaEstadia({ficha:{medEmUso:'Não', coleira:{tem:'Sim', qual:'Seresto'}}, medicacao:[]});`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && run('__colN.qual') === 'Seresto', 'a resposta e a coleira voltam, e o remédio em vigor não fica escondido');
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [], 'nada para sem alguém tocar em "Não"');
+    // sem remédio em vigor, o "Não" volta como era
+    run(`__rowsN=[]; ciRespostasDaEstadia({ficha:{medEmUso:'Não'}});`);
+    assert.strictEqual(run('__sgN.ciMedEmUso'), 'Não');
+    run(`__rowsN=[{dataset:{id:'a1', daficha:'1', conf:''}, querySelector:function(){ return {value:'Antibiótico X'}; }}];`);
+    // A7: no acrescentar, tocar "Não" com remédio na lista → volta para Sim, com o caminho certo
+    run(`ciEditandoId='est1'; __sgN.ciMedEmUso='Não'; __alN=[]; ciMedEmUsoChange(true);`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && /USE CORRIGIR/.test(run('__alN[0]')) && run('ciMedNaoEmUso().length') === 0);
+    run(`ciEditandoId=null;`);
+    // sem permissão: o "Não" volta para "Sim" com aviso na página
+    run(`canEditCheckinMed=function(){ return false; }; __sgN.ciMedEmUso='Não'; __alN=[]; ciMedEmUsoChange(true);`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && /SÓ QUEM CUIDA DA MEDICAÇÃO/.test(run('__alN[0]')));
+    run(`canEditCheckinMed=function(){ return true; };`);
+    // o toque de verdade: agora sim, "parou"
+    run(`__sgN.ciMedEmUso='Não'; ciMedEmUsoChange(true);`);
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Antibiótico X' }]);
+    // "Tudo igual" não passa por cima de quem tocou em "Mudou"
+    run(`__sgN.ciMedEmUso='Sim'; __bkN.cs=ciMedConfSet; __csN=[]; ciMedConfSet=function(b, v){ __csN.push(v); b.__el.dataset.conf=v; };
+      __rowsN=[{dataset:{id:'m1', daficha:'1', conf:'mudou'}}, {dataset:{id:'m2', daficha:'1', conf:''}}];
+      __rowsN.forEach(function(r){ var bt={__el:r}; r.querySelector=function(){ return bt; }; }); ciMedTudoIgual();`);
+    assert.strictEqual(run('__rowsN[0].dataset.conf'), 'mudou', 'o "Mudou" fica');
+    igual([run('__rowsN[1].dataset.conf'), run('__csN.length')], ['ok', 1], 'só o que faltava é confirmado');
+    run('ciMedConfSet=__bkN.cs;');
+  } finally { run('segVal=__bkN.sv; setSeg=__bkN.ss; document.getElementById=__bkN.ge; document.querySelectorAll=__bkN.qsa; canEditCheckinMed=__bkN.ce; zAlertao=__bkN.za; ciEditandoId=__bkN.ed; ciColeiraAplicar=__bkN.ca; CI_MED_NAO_TOCADO=false;'); }
+});
+provaAsync('QA44 — o "Não" para só o remédio que estava na tela (e as cópias dele); o que a veterinária começou continua tocando', async () => {
+  run(`__bkN1={db:DB, au:audit, cg:(typeof carregarAgendaMedTodos==='function'?carregarAgendaMedTodos:null), qs:quemSou};
+    audit=function(){}; carregarAgendaMedTodos=function(){}; quemSou=function(){ return 'Márcia'; };
+    __agN1={a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true},
+            a1b:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true},
+            o1:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            v1:{nome:'Prednisolona', q:'1', u:'comprimido', horarios:['09:00'], continuo:true},
+            x1:{nome:'Antigo', q:'1', u:'comprimido', horarios:['10:00'], paradoEm:{data:'2026-01-01'}}};
+    __upN1=[]; DB={ref:function(p){ return {
+      once:function(){ var id=p.split('/').pop(); return Promise.resolve({val:function(){ return p.slice(-6)==='/itens'?__agN1:(__agN1[id]||null); }}); },
+      update:function(v){ __upN1.push(p.split('/').pop()); return Promise.resolve(); } }; }};`);
+  try {
+    const feitos = await run(`ciMedMarcarParou('toshi__ana', [{id:'a1', nome:'Apoquel'}, {id:'o1', nome:'Ômega 3'}])`);
+    igual(JSON.parse(JSON.stringify(run('__upN1'))).sort(), ['a1', 'a1b', 'o1'], 'a Prednisolona (v1) não para; o parado (x1) não é tocado');
+    assert.strictEqual(feitos.length, 3);
+  } finally { run('DB=__bkN1.db; audit=__bkN1.au; if(__bkN1.cg) carregarAgendaMedTodos=__bkN1.cg; quemSou=__bkN1.qs;'); }
+  // o aviso na tela: "deles" com mais de um, sem prometer "cópias"
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/Nenhum alarme '\+\(nomes\.length>1\?'deles':'dele'\)\+' toca\./.test(src));
+  // N2: ACRESCENTAR pelo cartaz com "Não" e remédio no check-in que já existe não grava
+  const acr = src.slice(src.indexOf("{t:'✅ ACRESCENTAR ao check-in que já existe'"), src.indexOf("{t:'✎ SUBSTITUIR o que já existe pelo desta tela'"));
+  assert.ok(acr.indexOf("if(ciAcrescentarBarrado(ativa, pacote, 'substituir')) return;") > 0 && acr.indexOf("if(ciAcrescentarBarrado(ativa, pacote, 'substituir')) return;") < acr.indexOf("__ciGravar('acrescentar', ativa.id, pacote)"), 'a regra vem antes de gravar');
+  run(`__bkN2={za:zAlertao, ge:document.getElementById}; __alN2=[]; zAlertao=function(t){ __alN2.push(t); }; __stN2={style:{}, textContent:''};
+    document.getElementById=function(id){ return id==='ci-status'?__stN2:null; };`);
+  try {
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[{nome:'Apoquel'}]}}, {medEmUsoNao:true})`), true);
+    assert.ok(run('__alN2[0]') === 'PARA DIZER QUE PAROU, USE SUBSTITUIR' && /use SUBSTITUIR/.test(run('__stN2.textContent')));
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[{nome:'Apoquel'}]}}, {medEmUsoNao:false})`), false, 'com "Sim", acrescenta');
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[]}}, {medEmUsoNao:true})`), false, 'sem remédio lá, não há contradição');
+  } finally { run('zAlertao=__bkN2.za; document.getElementById=__bkN2.ge;'); }
+  // N7: o caminho que existe de verdade no modo acrescentar
+  assert.ok(/saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada/.test(src));
+});
+provaAsync('QA44 — "tomava X?" não pergunta pelo que já parou ou terminou', async () => {
+  run(`__bkN4={db:DB, me:medEstadiaEncerrada}; medEstadiaEncerrada=function(){ return Promise.resolve(true); };
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){
+      if(p==='auaulandia/estadias/e0/entrada') return '2026-09-01';
+      return {estadiaId:'e0', itens:{
+      a:{nome:'Apoquel', continuo:false, dataFim:'2026-09-28', paradoEm:{data:'2026-09-29'}},
+      b:{nome:'Ômega 3', continuo:true},
+      c:{nome:'Antibiótico', continuo:false, dataFim:'2026-01-10'},
+      e:{nome:'Prednisolona', continuo:false, dataFim:'2026-09-05'},
+      d:{nome:'Carprofeno', suspenso:true}}}; }}); }}; }};`);
+  try {
+    const l = await run(`medAnterioresDe('auaulandia', 'toshi__ana')`);
+    // o que terminou DURANTE a última estadia (entrada 01/09, "tomar até" 05/09) ainda é pergunta (QA46 M6)
+    igual(l.map((x) => x.nome), ['Ômega 3', 'Prednisolona']);
+  } finally { run('DB=__bkN4.db; medEstadiaEncerrada=__bkN4.me;'); }
+});
+provaAsync('QA44 — Corrigir com "Sim" reescreve só o que está em vigor: "já não toma mais" e suspenso pela veterinária ficam; roupa antiga reescrita não é material novo; Acrescentar dá uid novo', async () => {
+  run(`__bkN5={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __estN5={nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[{uid:'u-r', k:'roupa', nome:'Roupa', spec:'casaco'}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}], ficha:{}};
+    __agN5={old1:{nome:'Apoquel', continuo:true}, p1:{nome:'Ômega 3', continuo:false, dataFim:'2026-09-01', paradoEm:{data:'2026-09-02'}}, s1:{nome:'Carprofeno', suspenso:true}};
+    __escN5={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estN5 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agN5 : null); }}); },
+      update:function(v){ __escN5[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escN5['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    __qrN5=[]; ciQuemRecebeu=function(itens){ __qrN5.push(itens); return Promise.resolve('Ana'); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-r', k:'outro', nome:'Casaco vermelho de lã', spec:''}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}]},
+      meds:{m1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]},
+      medCarregados:{ids:{old1:1}, sigs:{}}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag = run(`__escN5['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag, JSON.stringify(Object.keys(run('__escN5'))));
+    const nomes = Object.keys(ag).map((k) => ag[k].nome).sort();
+    igual(nomes, ['Apoquel', 'Carprofeno', 'Ômega 3']);
+    assert.ok(!ag.old1 && ag.p1 && ag.p1.paradoEm && ag.s1 && ag.s1.suspenso, JSON.stringify(ag));
+    igual(JSON.parse(JSON.stringify(run('__qrN5'))), [], 'a roupa antiga reescrita como "Casaco…" não é material novo');
+  } finally { run('ciCorrigindoId=null;'); }
+  try {
+    run(`__escN5={}; __qrN5=[];
+      __ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-moch', k:'mochila', nome:'Mochila — azul marinho'}]},
+        meds:{}, temMed:false, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const up = run(`__escN5['auaulandia/estadias/est1']`);
+    assert.ok(up && Array.isArray(up.pertences), JSON.stringify(Object.keys(run('__escN5'))));
+    const uids = up.pertences.map((x) => x.uid);
+    assert.ok(uids.length === 3 && new Set(uids).size === 3, 'uids: ' + JSON.stringify(uids));
+  } finally { run('DB=__bkN5.db; ciQuemRecebeu=__bkN5.qr; ciHosp=__bkN5.h; __ciTravar=__bkN5.tr; audit=__bkN5.au; quemSou=__bkN5.qs;'); }
+});
+prova('QA44 — pertences: "2 kg de ração" depois de outra coisa é item próprio (comida continua crítica); peso e marca de ração são comida; o "Não" limpa o vermelho escondido', () => {
+  igual(run(`ciPertPartes('guia vermelha, 2 kg de ração')`), ['guia vermelha', '2 kg de ração']);
+  igual(run(`ciPertPartes('cama rosa, 2 pacotes de petisco')`), ['cama rosa', '2 pacotes de petisco']);
+  igual(run(`ciPertPartes('sacola verde, 3 latas de patê')`), ['sacola verde', '3 latas de patê']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg, cama rosa')`), ['ração Golden, 2 kg', 'cama rosa']);
+  igual(run(`ciPertPartes('ração Royal, 1 pacote por dia')`), ['ração Royal, 1 pacote por dia']);
+  igual(['2 kg de ração', 'Royal Canin 2 kg', 'Golden 15 kg', 'Premier 500 g', 'guia vermelha', 'Apoquel 16 mg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'comida', 'comida', 'guia', 'outro']);
+  // M27 do QA44: tocar "Não" tira o vermelho da lista escondida e da conferência de segurança
+  run(`__bkM27={eu:ciMedEmUso, fl:ciMedFichaLinhas, zl:zLimparFaltaEm, ge:document.getElementById, tr:ciMedTudoIgualRender};
+    ciMedEmUso=function(){ return 'Não'; }; ciMedFichaLinhas=function(){ return []; }; __zlM27=[]; zLimparFaltaEm=function(a){ __zlM27.push(a); };
+    document.getElementById=function(){ return null; }; ciMedTudoIgualRender=function(){};`);
+  try {
+    run('ciMedEmUsoChange(true);');
+    const zl = JSON.parse(JSON.stringify(run('__zlM27')));
+    assert.ok(zl.indexOf('ciMedEmUsoBox') >= 0 && zl.indexOf('ciGate') >= 0, JSON.stringify(zl));
+  } finally { run('ciMedEmUso=__bkM27.eu; ciMedFichaLinhas=__bkM27.fl; zLimparFaltaEm=__bkM27.zl; document.getElementById=__bkM27.ge; ciMedTudoIgualRender=__bkM27.tr; CI_MED_NAO_TOCADO=false;'); }
+});
+provaAsync('QA46 — Corrigir com "Sim": o que a veterinária parou depois fica parado (mesmo com o mesmo remédio na tela) e o que ela começou depois fica; só sai o que a pessoa viu e tirou', async () => {
+  run(`__bkM2={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __estM2={nome:'Toshi', medicacao:[{nome:'Apoquel'}, {nome:'Ômega 3'}], pertences:[], ficha:{}};
+    // a tela carregou Apoquel (ap), Ômega (om) e a cópia repetida do Ômega (om2); depois a vet PAROU o Apoquel e COMEÇOU a Prednisolona (pr)
+    __agM2={ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}},
+            om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            om2:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            pr:{nome:'Prednisolona', q:'1', u:'comprimido', horarios:['09:00'], continuo:true}};
+    __escM2={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estM2 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agM2 : null); }}); },
+      update:function(v){ __escM2[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escM2['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    // "Tudo igual": a tela manda Apoquel e Ômega com os ids que carregou
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}, om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}},
+      temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]},
+      medCarregados:{ids:{ap:1, om:1}, sigs:(function(){ var o={}; o[medAssinatura({nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true})]=1; o[medAssinatura(__agM2.om)]=1; return o; })()}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag = run(`__escM2['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag, JSON.stringify(Object.keys(run('__escM2'))));
+    assert.ok(ag.ap && ag.ap.paradoEm && ag.ap.continuo === false, 'o Apoquel parado pela vet continua parado: ' + JSON.stringify(ag.ap));
+    assert.ok(ag.pr && ag.pr.nome === 'Prednisolona', 'a Prednisolona começada depois fica');
+    assert.ok(ag.om && !ag.om2, 'a cópia repetida do que a tela carregou sai: ' + JSON.stringify(Object.keys(ag)));
+  } finally { run('ciCorrigindoId=null;'); }
+  // sem registro do que a tela carregou (a lista não chegou a carregar), ninguém viu nada: nada em vigor sai (QA49 B6)
+  try {
+    run(`__escM2={}; __ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag2 = run(`__escM2['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag2 && ag2.pr && ag2.ap && ag2.om && ag2.om2, JSON.stringify(Object.keys(ag2 || {})));
+  } finally { run('ciCorrigindoId=null;'); }
+  // Corrigir com "Não" e sem remédio na tela: a agenda não é regravada (QA39 A3, agora com prova de comportamento — QA46 M3)
+  try {
+    run(`__escM2={}; __ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    assert.ok(!Object.keys(run('__escM2')).some((k) => /^SET .*\/itens$/.test(k)), JSON.stringify(Object.keys(run('__escM2'))));
+  } finally { run('ciCorrigindoId=null;'); }
+  // Acrescentar com "Não" e remédio gravado na estadia: não grava, pela tela de acrescentar também (QA46 M1)
+  run(`__bkM1={za:zAlertao, ed:ciEditandoId}; __alM1=[]; zAlertao=function(t, l){ __alM1.push([t, l.join(' | ')]); }; ciEditandoId='est1'; __escM2={};`);
+  try {
+    run(`__ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    igual(Object.keys(run('__escM2')), [], 'nada gravado');
+    const al = JSON.parse(JSON.stringify(run('__alM1')));
+    assert.ok(al[0][0] === 'PARA DIZER QUE PAROU, USE CORRIGIR' && /remédios \(Apoquel, Ômega 3\)/.test(al[0][1]) && /eles continuariam lá/.test(al[0][1]) && /os remédios ficam/.test(al[0][1]), JSON.stringify(al));
+  } finally { run('zAlertao=__bkM1.za; ciEditandoId=__bkM1.ed; DB=__bkM2.db; ciQuemRecebeu=__bkM2.qr; ciHosp=__bkM2.h; __ciTravar=__bkM2.tr; audit=__bkM2.au; quemSou=__bkM2.qs;'); }
+});
+prova('QA46 — o Salvar leva a resposta da medicação num lugar só: quem parou, o "Não" e o que a tela carregou', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/const pacote=Object\.assign\(\{ dados:dados,[^;]*\},\s*ciMedPacoteCampos\(\)\);/.test(src), 'o pacote usa ciMedPacoteCampos');
+  run(`__bkPC={eu:ciMedEmUso, ne:ciMedNaoEmUso, ca:CI_MED_CARREGADOS}; ciMedEmUso=function(){ return 'Não'; }; ciMedNaoEmUso=function(){ return [{id:'a1', nome:'Apoquel'}]; };
+    CI_MED_CARREGADOS={ids:{a1:1}, sigs:{x:1}};`);
+  try {
+    const c = JSON.parse(JSON.stringify(run('ciMedPacoteCampos()')));
+    igual(c, { medParou: [{ id: 'a1', nome: 'Apoquel' }], medEmUsoNao: true, medCarregados: { ids: { a1: 1 }, sigs: { x: 1 } } });
+    run(`ciMedEmUso=function(){ return 'Sim'; }; CI_MED_CARREGADOS=null;`);
+    const c2 = JSON.parse(JSON.stringify(run('ciMedPacoteCampos()')));
+    assert.ok(c2.medEmUsoNao === false && c2.medCarregados === null, JSON.stringify(c2));
+  } finally { run('ciMedEmUso=__bkPC.eu; ciMedNaoEmUso=__bkPC.ne; CI_MED_CARREGADOS=__bkPC.ca;'); }
+});
+provaAsync('QA46 — o "Não" não sobrescreve o que a veterinária já parou; pertences: "ração úmida, 3 latas" é um item; peso sozinho e marca sozinha são comida; antiparasitário por faixa de peso é remédio', async () => {
+  run(`__bkOb={db:DB, au:audit, cg:(typeof carregarAgendaMedTodos==='function'?carregarAgendaMedTodos:null), qs:quemSou};
+    audit=function(){}; carregarAgendaMedTodos=function(){}; quemSou=function(){ return 'Márcia'; };
+    __agOb={a1:{nome:'Apoquel', continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}}}; __upOb=[];
+    DB={ref:function(p){ return {
+      once:function(){ var id=p.split('/').pop(); return p.slice(-6)==='/itens' ? Promise.reject(new Error('rede')) : Promise.resolve({val:function(){ return __agOb[id]||null; }}); },
+      update:function(v){ __upOb.push(p); return Promise.resolve(); } }; }};`);
+  try {
+    await run(`ciMedMarcarParou('toshi__ana', [{id:'a1', nome:'Apoquel'}])`);
+    igual(JSON.parse(JSON.stringify(run('__upOb'))), [], 'a leitura da agenda falhou, e o parado pela vet não é regravado');
+  } finally { run('DB=__bkOb.db; audit=__bkOb.au; if(__bkOb.cg) carregarAgendaMedTodos=__bkOb.cg; quemSou=__bkOb.qs;'); }
+  igual(run(`ciPertPartes('ração úmida, 3 latas')`), ['ração úmida, 3 latas']);
+  igual(run(`ciPertPartes('sachê Whiskas, 3 sachês por dia')`), ['sachê Whiskas, 3 sachês por dia']);
+  igual(run(`ciPertPartes('mochila, 3 latas de patê')`), ['mochila', '3 latas de patê']);
+  assert.strictEqual(run(`ciPertTipo('comprimido 10 a 20 kg')`), 'remedios', 'faixa de peso sem nome de produto');
+  // a tela registra o que carregou da agenda (ids e assinaturas) — é o que o Corrigir usa para não tirar o que ninguém viu
+  run(`__bkPM={db:DB, ck:ciKey, am:ciAddMed, ch:ciMedEmUsoChange, ge:document.getElementById, eu:ciMedEmUso, ca:CI_MED_CARREGADOS};
+    ciKey=function(){ return 'toshi__ana'; }; ciAddMed=function(){}; ciMedEmUsoChange=function(){}; ciMedEmUso=function(){ return 'Sim'; };
+    document.getElementById=function(id){ return id==='ciMeds' ? {innerHTML:''} : null; }; CI_MED_CARREGADOS=null;
+    __agPM={a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}, x1:{nome:'Antigo', paradoEm:{data:'2026-01-01'}}};
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return __agPM; }}); }}; }};`);
+  try {
+    run('ciPreencherMedicacao();');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const c = run('CI_MED_CARREGADOS');
+    assert.ok(c && c.ids.a1 === 1 && !c.ids.x1 && c.sigs[run(`medAssinatura(__agPM.a1)`)] === 1, JSON.stringify(c));
+  } finally { run('DB=__bkPM.db; ciKey=__bkPM.ck; ciAddMed=__bkPM.am; ciMedEmUsoChange=__bkPM.ch; document.getElementById=__bkPM.ge; ciMedEmUso=__bkPM.eu; CI_MED_CARREGADOS=__bkPM.ca;'); }
+  igual(['Pacote 2 kg', 'Royal Canin', 'Bravecto 20-40 kg', 'NexGard 10,1-25 kg', 'Simparic 20 kg', 'areia 4 kg', 'caixa de transporte 5 kg', 'Condroitina 500 g', 'Ômega 3 500 mg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'remedios', 'remedios', 'remedios', 'outro', 'outro', 'remedios', 'remedios']);
+});
+provaAsync('QA49 — Corrigir: o remédio que a veterinária parou ou apagou depois de a lista carregar sai também da estadia e do PDF, com aviso; o botão destrava quando o Acrescentar é barrado', async () => {
+  run(`__bkQ9={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __trQ9=[]; __ciTravar=function(v){ __trQ9.push(v); }; quemSou=function(){ return 'Adriana'; };
+    __estQ9={nome:'Toshi', medicacao:[{nome:'Apoquel'}, {nome:'Ômega 3'}, {nome:'Vitamina C'}], pertences:[], ficha:{}};
+    // a tela carregou ap, om e vc; depois a vet PAROU o ap e APAGOU a vc
+    __agQ9={ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}},
+            om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}};
+    __escQ9={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estQ9 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agQ9 : null); }}); },
+      update:function(v){ __escQ9[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escQ9['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    run(`__pQ9={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}, om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00']}, vc:{nome:'Vitamina C', q:'1', u:'comprimido', horarios:['10:00']}},
+      temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}, medCarregados:{ids:{ap:1, om:1, vc:1}, sigs:{}}};
+      __ciGravar('corrigir', 'est1', __pQ9);`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    const est = run(`__escQ9['auaulandia/estadias/est1']`);
+    assert.ok(est && est.medicacao.map((m) => m.nome).join() === 'Ômega 3', 'a estadia (e o PDF) fica só com o Ômega: ' + JSON.stringify(est && est.medicacao));
+    const ag = run(`__escQ9['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag && ag.ap && ag.ap.paradoEm && ag.om && !ag.vc, JSON.stringify(ag));
+    igual(JSON.parse(JSON.stringify(run('__pQ9.medVetMudou'))), ['Apoquel (parado)', 'Vitamina C (apagado)']);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/if\(P\.medVetMudou && P\.medVetMudou\.length\) _linhas\.push\('Mexido pela veterinária enquanto você corrigia — ficou como ela deixou: '/.test(src), 'o aviso final diz qual foi');
+  } finally { run('ciCorrigindoId=null;'); }
+  // Acrescentar barrado dentro do gravar: o botão destrava e o status diz o caminho (QA49 Y3/Y6)
+  run(`__bkQ9b={za:zAlertao, ed:ciEditandoId, ge:document.getElementById}; zAlertao=function(){}; ciEditandoId='est1'; __trQ9=[]; __escQ9={};
+    __stQ9={style:{}, textContent:''}; document.getElementById=function(id){ return id==='ci-status'?__stQ9:null; };`);
+  try {
+    run(`__ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    assert.ok(run('__trQ9').indexOf(false) >= 0, 'o botão destrava: ' + JSON.stringify(run('__trQ9')));
+    assert.strictEqual(run('__stQ9.textContent'), 'Nada foi salvo — para dizer que parou, use Corrigir.');
+  } finally { run('zAlertao=__bkQ9b.za; ciEditandoId=__bkQ9b.ed; document.getElementById=__bkQ9b.ge; DB=__bkQ9.db; ciQuemRecebeu=__bkQ9.qr; ciHosp=__bkQ9.h; __ciTravar=__bkQ9.tr; audit=__bkQ9.au; quemSou=__bkQ9.qs;'); }
+  // abrir outro FILHOt zera o registro
+  assert.ok(/setSeg\('ciMedEmUso',''\); CI_MED_NAO_TOCADO=false; CI_MED_CARREGADOS=null;/.test(fs.readFileSync(APP, 'utf8')));
+});
+provaAsync('QA49 — a lista que volta depois de trocar de FILHOt é ignorada; "tomava X?" só pelo que terminou DURANTE a última estadia (entre a entrada e a saída), com o cache ou lendo o banco, e pergunta por tudo se a leitura falha', async () => {
+  run(`__bkT4={db:DB, ck:ciKey, am:ciAddMed, ch:ciMedEmUsoChange, ge:document.getElementById, eu:ciMedEmUso, ca:CI_MED_CARREGADOS};
+    __chaveT4='toto__ana'; ciKey=function(){ return __chaveT4; }; __amT4=0; ciAddMed=function(){ __amT4++; }; ciMedEmUsoChange=function(){}; ciMedEmUso=function(){ return 'Sim'; };
+    document.getElementById=function(id){ return id==='ciMeds' ? {innerHTML:''} : null; }; CI_MED_CARREGADOS=null;
+    __resT4=null; DB={ref:function(){ return {once:function(){ return new Promise(function(r){ __resT4=r; }); }}; }};`);
+  try {
+    run('ciPreencherMedicacao();');
+    run(`__chaveT4='mel__bia'; __resT4({val:function(){ return {a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}}; }});`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.ok(run('CI_MED_CARREGADOS') === null && run('__amT4') === 0, 'a lista do Totó não entra na tela da Mel');
+  } finally { run('DB=__bkT4.db; ciKey=__bkT4.ck; ciAddMed=__bkT4.am; ciMedEmUsoChange=__bkT4.ch; document.getElementById=__bkT4.ge; ciMedEmUso=__bkT4.eu; CI_MED_CARREGADOS=__bkT4.ca;'); }
+  const itens = `{estadiaId:'e0', itens:{
+    b:{nome:'Ômega 3', continuo:true},
+    c:{nome:'Antes', continuo:false, dataFim:'2026-07-20'},
+    e:{nome:'Durante', continuo:false, dataFim:'2026-08-03'},
+    f:{nome:'Depois', continuo:false, dataFim:'2026-09-10'}}}`;
+  run(`__bkM6={db:DB, me:medEstadiaEncerrada, et:(typeof EST_TODAS!=='undefined'?EST_TODAS:undefined)}; medEstadiaEncerrada=function(){ return Promise.resolve(true); };
+    __lidosM6=[]; __falhaM6=false;
+    DB={ref:function(p){ return {once:function(){ __lidosM6.push(p);
+      if(p==='auaulandia/estadias/e0/entrada') return __falhaM6?Promise.reject(new Error('rede')):Promise.resolve({val:function(){ return '2026-08-01'; }});
+      if(p==='auaulandia/estadias/e0/saida') return __falhaM6?Promise.reject(new Error('rede')):Promise.resolve({val:function(){ return '2026-08-05'; }});
+      return Promise.resolve({val:function(){ return ${itens}; }}); }}; }};`);
+  try {
+    run(`EST_TODAS={};`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Durante'], 'lendo o banco');
+    run(`EST_TODAS={e0:{entrada:'2026-08-01', saida:'2026-08-05'}}; __lidosM6=[];`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Durante'], 'com o cache');
+    assert.ok(!run('__lidosM6').some((p) => /\/(entrada|saida)$/.test(p)), 'com o cache, sem leitura extra');
+    run(`EST_TODAS={}; __falhaM6=true;`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Antes', 'Durante', 'Depois'], 'sem as datas, pergunta por tudo');
+  } finally { run('DB=__bkM6.db; medEstadiaEncerrada=__bkM6.me; EST_TODAS=__bkM6.et;'); }
+});
+prova('QA49 — pertences: "caixa de sachês" é comida e "caixa de transporte" não; "guia vermelha, 3 latas" são dois itens; "Golden 10-15 kg" é comida; a vírgula decimal não parte o item', () => {
+  igual(['caixa de sachês', 'caixinha de patê', 'caixa de ração', 'caixa de transporte 5 kg', 'caixa de areia', 'caixa de remédios', 'Golden 10-15 kg', 'Premier porte médio 10 a 25 kg', 'Bravecto 20-40 kg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'comida', 'outro', 'outro', 'remedios', 'comida', 'comida', 'remedios']);
+  igual(run(`ciPertPartes('guia vermelha, 3 latas')`), ['guia vermelha', '3 latas']);
+  igual(run(`ciPertPartes('mochila, 3 sachês')`), ['mochila', '3 sachês']);
+  igual(run(`ciPertPartes('ração úmida, 3 latas')`), ['ração úmida, 3 latas']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg')`), ['ração Golden, 2 kg']);
+  igual(run(`ciPertPartes('NexGard 10,1-25 kg, mochila')`), ['NexGard 10,1-25 kg', 'mochila']);
+  assert.strictEqual(run(`ciPertTipo(ciPertPartes('NexGard 10,1-25 kg')[0])`), 'remedios');
+});
+prova('QA39 — pertences: número só completa o item quando é quantidade; o tipo acerta objetos com "comida" no nome; a descrição editada conserva o item; a correção fala português', () => {
+  igual(run(`ciPertPartes('sacola verde, 2 brinquedos de pelúcia, 1 manta')`), ['sacola verde', '2 brinquedos de pelúcia', '1 manta']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg, cama rosa')`), ['ração Golden, 2 kg', 'cama rosa']);
+  const tipos = ['Royal Canin ração 2 kg', 'marmitas de frango', 'alimento úmido', 'pote de comida', 'cama de fibra natural', 'kit de banho', 'kit de emergência', 'bolsinha de remédios', 'sacola com ração']
+    .map((t) => run(`ciPertTipo(${JSON.stringify(t)})`));
+  igual(tipos, ['comida', 'comida', 'comida', 'outro', 'cama', 'outro', 'remedios', 'remedios', 'comida']);
+  // a descrição de um item antigo editada: o mesmo item (tipo e uid), não "material novo"
+  run(`__bkPE={ge:document.getElementById, ps:ciPertSel}; document.getElementById=function(){ return null; };
+    ciPertSel=[{uid:'u1', k:'roupa', nome:'Roupa', spec:'casaco vermelho'}];
+    ciPertDoTexto('Roupa — casaco azul');`);
+  try {
+    const it = JSON.parse(JSON.stringify(run('ciPertSel')));
+    assert.ok(it.length === 1 && it[0].uid === 'u1' && it[0].k === 'roupa', JSON.stringify(it));
+  } finally { run('document.getElementById=__bkPE.ge; ciPertSel=__bkPE.ps;'); }
+  const d = run(`ciDiffCorrecao({ficha:{coleira:{tem:'Não'}, medEmUso:'Sim'}}, {ficha:{coleira:{tem:'Sim', qual:'Seresto'}, medEmUso:'Não'}}, {})`);
+  assert.ok(d.some((x) => /^Coleira antipulga ou repelente: "Não" → "Sim — Seresto"/.test(x)) && d.some((x) => /^Medicação em uso: "Sim" → "Não"/.test(x)), JSON.stringify(d));
+});
+prova('QA39 — a comida só dobra confirmada E sem nada faltando', () => {
+  run(`__bkAF={ge:document.getElementById, ap:ciAlimProblemas, rf:ciAlimResumoFrase, cf:CI_ALIM_CONF};
+    __detAF={style:{display:''}}; __confAF={innerHTML:''};
+    document.getElementById=function(id){ return id==='ciAlimDetalhe'?__detAF:(id==='ciAlimConfirma'?__confAF:null); };
+    ciAlimResumoFrase=function(){ return 'Café: 50g de ração'; }; CI_ALIM_CONF='confirmado';
+    __probAF=[]; ciAlimProblemas=function(){ return __probAF; };`);
+  try {
+    run('ciAlimConfRender();'); assert.strictEqual(run('__detAF.style.display'), 'none', 'confirmado e completo: dobra');
+    run(`__probAF=[{t:'x', f:'ciRefBlocos'}]; ciAlimConfRender();`); assert.strictEqual(run('__detAF.style.display'), '', 'faltando algo: aberto');
+  } finally { run('document.getElementById=__bkAF.ge; ciAlimProblemas=__bkAF.ap; ciAlimResumoFrase=__bkAF.rf; CI_ALIM_CONF=__bkAF.cf;'); }
+});
+// ================================================================== carrapaticida: a duração vem do produto
+console.log('\nCarrapaticida: a duração vem do produto, e a lista se edita sem programador (Adriana, 29/set/2026, Bravecto do Antônio)');
+prova('a lista de fábrica, com a duração na frente, na ficha e nos Lançamentos do dia', () => {
+  igual(JSON.parse(JSON.stringify(run('ECTO_DUR'))), { Pipeta: 30, Bravecto: 90, Credelli: 30, Simparic: 35, Nexgard: 30 });
+  igual(run('ectoProdutosLista()'), ['Pipeta', 'Bravecto', 'Credelli', 'Simparic', 'Nexgard']);
+  assert.strictEqual(run(`ectoRotulo('Bravecto')`), 'Bravecto · 90 dias');
+  const it = run(`dashItem('carrapaticida')`);
+  assert.ok(it.campos[0].c === 'prod' && !it.campos[0].obrig && it.campos[0].ops.map((o) => o.t).indexOf('Simparic · 35 dias') >= 0, JSON.stringify(it.campos[0]));
+  assert.ok(it.campos.some((c) => c.c === 'qtd' && c.obrig), 'o resto do lançamento não muda');
+  assert.ok(/Bravecto · 90d/.test(run(`blocoEcto({ecto_tipo:'Comprimido'})`)), 'a ficha mostra os comprimidos da lista');
+});
+provaAsync('a Gestão acrescenta um produto e muda uma duração: vale na ficha, no painel e no lançamento, sem recarregar', async () => {
+  run(`__bkEc={db:DB, ed:Object.assign({}, ECTO_DUR)};
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){
+      return p==='daycare/config/prevencao-ectos' ? {'NexGard Spectra':{dias:30}, Bravecto:{dias:84}} : {coleiras:{}}; }}); }}; }};`);
+  try {
+    await run('prevCfgCarregar()');
+    assert.ok(run(`ECTO_DUR['NexGard Spectra']`) === 30 && run(`ECTO_DUR.Bravecto`) === 84 && run(`ECTO_DUR.Simparic`) === 35, JSON.stringify(run('ECTO_DUR')));
+    igual(run('ectoProdutosLista()'), ['Pipeta', 'Bravecto', 'Credelli', 'Simparic', 'Nexgard', 'NexGard Spectra']);
+    assert.ok(run(`dashItem('carrapaticida').campos[0].ops`).some((o) => o.t === 'NexGard Spectra · 30 dias'), 'o botão novo nos Lançamentos do dia');
+    assert.ok(/NexGard Spectra · 30d/.test(run(`blocoEcto({ecto_tipo:'Comprimido'})`)));
+    assert.strictEqual(run(`ectoDur({ecto_prod:'NexGard Spectra'})`), 30, 'a conta da ficha usa o número da lista');
+  } finally { run('DB=__bkEc.db; ECTO_DUR=__bkEc.ed; ectoDashOpsRefazer();'); }
+});
+prova('painel rápido (Prevenção e Vencimentos): o produto escolhido manda na conta; sem produto, não grava com 30 dias por engano', () => {
+  // Bravecto hoje, numa ficha sem produto: vence em 90 dias, e o produto vai para a ficha
+  comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Bravecto' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p && p.ecto_t === '2026-09-25' && p.ecto_p === '2026-12-24' && p.ecto_prod === 'Bravecto' && p.ecto_tipo === 'Comprimido', JSON.stringify(p));
+  });
+  // sem produto na tela e na ficha: pede o produto e não grava
+  comFicha({}, {}, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    assert.ok(run('__patch') === null && /ESCOLHA O PRODUTO/.test(run('__alertas[0]')), JSON.stringify(run('__alertas')));
+  });
+  // sem escolher no painel, vale o produto da ficha (Simparic, 35 dias)
+  comFicha({ ecto_prod: 'Simparic', ecto_tipo: 'Comprimido' }, {}, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    assert.strictEqual(run('__patch.ecto_p'), '2026-10-30');
+  });
+  // Outro: o número digitado
+  comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Outro' }, 'prevCorrD_simba__ana_ecto_p': { value: '60' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p.ecto_prod === 'Outro' && p.ecto_outro_dias === '60' && p.ecto_p === '2026-11-24', JSON.stringify(p));
+  });
+  // o painel mostra os produtos com a duração, com o da ficha já escolhido
+  const h = run(`prevCorrigeEctoHTML('ecto_p', {ecto_prod:'Nexgard'}, 'x')`);
+  assert.ok(/<option value="Nexgard" selected>Nexgard · 30 dias<\/option>/.test(h) && /Bravecto · 90 dias/.test(h) && /Outro \(dizer quantos dias\)/.test(h), h);
+  assert.strictEqual(run(`prevCorrigeEctoHTML('verm_p', {}, 'x')`), '', 'só no carrapaticida');
+});
+prova('Configurações › Prevenção: a lista de carrapaticidas lê a tela, acrescenta, tira o novo e recusa número ruim', () => {
+  run(`__bkCE={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR['Credeli Plus']=30; CFG_ECTO_TELA=null;
+    __camposCE={}; ectoProdutosLista().forEach(function(pr,i){ __camposCE['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
+    document.getElementById=function(id){ return __camposCE[id]||null; };`);
+  try {
+    const iBrav = run(`ectoProdutosLista().indexOf('Bravecto')`), iNovo = run(`ectoProdutosLista().indexOf('Credeli Plus')`);
+    run(`__camposCE['cfgPrevEcto_${iBrav}'].value='84'; __camposCE['cfgPrevEctoSai_${iNovo}']={checked:true};
+      __camposCE.cfgPrevEctoNovo={value:'Simparic Trio'}; __camposCE.cfgPrevEctoNovoDias={value:'35'};`);
+    const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    // tirar da lista não apaga: a duração fica guardada, marcada como fora (QA41)
+    // só o que mudou vai para o banco (QA47): a Pipeta, igual, não é regravada
+    assert.ok(r.ectos && r.ectos.Bravecto.dias === 84 && r.ectos['Credeli Plus'].fora === true && r.ectos['Credeli Plus'].dias === 30 && r.ectos['Simparic Trio'].dias === 35 && !r.ectos['Simparic Trio'].fora && !r.ectos.Pipeta, JSON.stringify(r));
+    run(`__camposCE.cfgPrevEctoNovoDias={value:''};`);
+    assert.ok(/Quantos dias protege o produto Simparic Trio\?/.test(run('cfgPrevEctoDaTela().erro')));
+    // a lista mora num nó só dela: o Salvar de um aparelho na versão antiga regrava 'prevencao' e não a apaga (QA41)
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\),\s+_gravaEctos\?DB\.ref\('daycare\/config\/prevencao-ectos'\)\.update\(_updEctos\)/.test(src), 'dois nós; a lista com update por campo (QA45, QA48)');
+    assert.ok(/cfgPrevEctoHTML\(\)/.test(fs.readFileSync(APP, 'utf8')), 'a lista aparece na tela de Configurações › Prevenção');
+  } finally { run('document.getElementById=__bkCE.ge; ECTO_DUR=__bkCE.ed; ectoDashOpsRefazer();'); }
+});
+prova('QA41 — o nome do produto só leva letras, números, espaço, "-" e "+"; o que sobra é dito, nunca apagado em silêncio; maiúscula não duplica', () => {
+  run(`__bkN={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; CFG_ECTO_TELA=null;
+    __camposN={}; ectoProdutosLista().forEach(function(pr,i){ __camposN['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
+    document.getElementById=function(id){ return __camposN[id]||null; };`);
+  try {
+    const tenta = (nome) => { run(`__camposN.cfgPrevEctoNovo={value:${JSON.stringify(nome)}}; __camposN.cfgPrevEctoNovoDias={value:'60'};`); return JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()'))); };
+    for (const [nome, tira] of [["Advocate D'Or", "«'»"], ['Revolution "Plus"', '«"»'], ['Simparic (10 a 20 kg)', '«(» «)»'], ['Simparic Trio 2.0', '«.»'], ['Bravecto 1/2', '«/»'], ['<b>Negrito</b>', '«<» «>» «/»']]) {
+      const r = tenta(nome);
+      assert.ok(r.erro && r.erro.indexOf('Tire: ' + tira) >= 0 && !r.ectos, nome + ' → ' + JSON.stringify(r));
+    }
+    for (const nome of ['NexGard Spectra', 'Credéli Plus', 'Simparic Trio 20-40', 'Frontline Plus+']) {
+      const r = tenta(nome);
+      assert.ok(r.ectos && r.ectos[nome] && r.ectos[nome].dias === 60, nome + ' → ' + JSON.stringify(r));
+    }
+    // "bravecto" é o Bravecto de sempre, com o número novo — não vira um segundo produto
+    const r = tenta('bravecto');
+    assert.ok(r.ectos.Bravecto.dias === 60 && !r.ectos.bravecto, JSON.stringify(r));
+    // até 40 letras (a chave do banco tem limite; QA45)
+    assert.ok(/até 40 letras/.test(tenta('A'.repeat(41)).erro || '') && tenta('A'.repeat(40)).ectos, 'limite de 40');
+    assert.strictEqual(run(`ectoRotulo('Pipeta')`), 'Pipeta · 30 dias');
+    run(`ECTO_DUR['Teste Um']=1;`);
+    assert.strictEqual(run(`ectoRotulo('Teste Um')`), 'Teste Um · 1 dia', 'sem "1 dias"');
+  } finally { run('document.getElementById=__bkN.ge; ECTO_DUR=__bkN.ed; ECTO_FORA=__bkN.fo; ectoDashOpsRefazer();'); }
+});
+prova('QA41 — nome com aspas ou "<" gravado por outro caminho não quebra o botão da ficha nem vira código na tela; o id com "&" acha o campo', () => {
+  run(`__bkE={ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR["Advocate D'Or"]=60; ECTO_DUR['<img src=x>']=45;`);
+  try {
+    const h = run(`blocoEcto({ecto_tipo:'Comprimido', ecto_prod:"Advocate D'Or"})`);
+    assert.ok(h.indexOf('<img src=x>') < 0 && h.indexOf('&lt;img src=x>') >= 0, 'o nome é texto, não código');
+    const des = (a) => a.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');   // o que o navegador faz com o atributo
+    const clicks = [...h.matchAll(/onclick="([^"]*)"/g)].map((m) => des(m[1]));
+    assert.ok(clicks.length >= 6, clicks.length);
+    for (const c of clicks) new Function('pick', 'pbSet', c);   // compila: nenhum botão quebrado
+    const doD = clicks.filter((c) => c.indexOf('Advocate') >= 0)[0];
+    const seen = []; new Function('pick', 'pbSet', doD)(() => {}, (b, o) => seen.push(o.ecto_prod));
+    igual(seen, ["Advocate D'Or"]);
+    // Lançamentos do dia: o valor do botão vai escapado
+    assert.ok(/onclick="dashSetDet\(\\''\+it\.k\+'\\',\\''\+c\.c\+'\\',\\''\+jsAspas\(o\.v\)\+'\\'\)"/.test(fs.readFileSync(APP, 'utf8')), 'dashSetDet com jsAspas');
+    // o painel: id com "&" (tutor "Ana & Rui") — o onchange procura o mesmo id que o select tem
+    const idCru = 'antônio__ana & rui_ecto_p';
+    const hp = run(`prevCorrigeEctoHTML('ecto_p', {}, escAttr(${JSON.stringify(idCru)}), jsAspas(${JSON.stringify(idCru)}))`);
+    const idSel = des(/<select class="cad-in" id="([^"]*)"/.exec(hp)[1]);
+    const onch = des(/onchange="([^"]*)"/.exec(hp)[1]);
+    assert.strictEqual(idSel, 'prevCorrP_' + idCru);
+    assert.strictEqual(onch, "prevCorrigeEctoMudou('" + idCru + "')");
+    // e o painel inteiro, como a tela desenha
+    run(`__bkPn={ab:PREV_CORRIGE_ABERTO, po:prevCorrigePode, aq:prevCorrigeAbertoAqui, pd:prevCorrigePetDe, pe:pelExtra};
+      PREV_CORRIGE_ABERTO='antônio__ana & rui|ecto_p'; prevCorrigePode=function(){ return true; }; prevCorrigeAbertoAqui=function(){ return true; };
+      prevCorrigePetDe=function(){ return {n:'Antônio', tutor:'Ana & Rui'}; }; pelExtra=function(){ return {}; };`);
+    try {
+      const hpp = run(`prevCorrigePainelHTML('antônio__ana & rui', 'venc', '2026-09-25')`);
+      const sel2 = des(/<select class="cad-in" id="([^"]*)"/.exec(hpp)[1]);
+      const onc2 = des(/onchange="(prevCorrigeEctoMudou[^"]*)"/.exec(hpp)[1]);
+      assert.strictEqual(onc2, "prevCorrigeEctoMudou('" + sel2.replace(/^prevCorrP_/, '') + "')", 'o onchange acha o select: ' + onc2 + ' × ' + sel2);
+    } finally { run('PREV_CORRIGE_ABERTO=__bkPn.ab; prevCorrigePode=__bkPn.po; prevCorrigeAbertoAqui=__bkPn.aq; prevCorrigePetDe=__bkPn.pd; pelExtra=__bkPn.pe;'); }
+  } finally { run('ECTO_DUR=__bkE.ed; ectoDashOpsRefazer();'); }
+});
+provaAsync('QA41 — produto tirado da lista: some das escolhas, mas a ficha que já tem continua com a duração dele, marcado "saiu da lista"', async () => {
+  run(`__bkF={db:DB, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, li:ECTO_CFG_LIDO}; ECTO_CFG_LIDO=false;
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){
+      return p==='daycare/config/prevencao-ectos' ? {'Revolution':{dias:35, fora:true}, 'NexGard Spectra':{dias:30}} : {coleiras:{}}; }}); }}; }};`);
+  try {
+    await run('prevCfgCarregar()');
+    assert.strictEqual(run('ECTO_CFG_LIDO'), true, 'a lista do banco foi lida: o Salvar pode gravá-la');
+    igual(run('ectoProdutosLista()'), ['Pipeta', 'Bravecto', 'Credelli', 'Simparic', 'Nexgard', 'NexGard Spectra']);
+    assert.ok(!run(`dashItem('carrapaticida').campos[0].ops`).some((o) => /REVOLUTION/.test(o.v)), 'não é oferecido no lançamento');
+    assert.strictEqual(run(`ectoDur({ecto_prod:'Revolution'})`), 35, 'a conta da ficha continua');
+    const hp = run(`prevCorrigeEctoHTML('ecto_p', {ecto_prod:'Revolution'}, 'x')`);
+    assert.ok(/<option value="Revolution" selected>Revolution · 35 dias \(saiu da lista\)<\/option>/.test(hp), hp);
+    assert.ok(/Revolution · 35d \(saiu da lista\)/.test(run(`blocoEcto({ecto_tipo:'Comprimido', ecto_prod:'Revolution'})`)));
+    comFicha({ ecto_prod: 'Revolution', ecto_tipo: 'Comprimido' }, {}, () => {
+      run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+      assert.ok(run('__patch') && run('__patch.ecto_p') === '2026-10-30', JSON.stringify(run('__patch')) + ' ' + JSON.stringify(run('__alertas')));
+    });
+    // a tela de Configurações mostra o que está fora e o Salvar seguinte não o perde
+    assert.ok(/Fora da lista \(continuam valendo para as fichas que já têm\): Revolution · 35 dias/.test(run('cfgPrevEctoHTML()')));
+    run(`__bkF.ge=document.getElementById; __cF={}; ectoProdutosLista().forEach(function(pr,i){ __cF['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
+      document.getElementById=function(id){ return __cF[id]||null; };`);
+    const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    // o Salvar seguinte não mexe no que está fora (o update deixa como está no banco — QA47)
+    assert.ok(!r.ectos.Revolution && r.lido === true, JSON.stringify(r));
+    // e volta à lista quando escrevem o nome de novo
+    run(`__cF.cfgPrevEctoNovo={value:'revolution'}; __cF.cfgPrevEctoNovoDias={value:'35'};`);
+    const r2 = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    assert.ok(r2.ectos.Revolution && !r2.ectos.Revolution.fora && !r2.ectos.revolution, JSON.stringify(r2));
+    run('document.getElementById=__bkF.ge;');
+  } finally { run('DB=__bkF.db; ECTO_DUR=__bkF.ed; ECTO_FORA=__bkF.fo; ECTO_CFG_LIDO=__bkF.li; ectoDashOpsRefazer();'); }
+});
+prova('QA41 — "Não sei qual foi" conta o prazo mais curto e não inventa produto; "Gravar o vencimento" leva o produto escolhido; Pipeta grava tipo Pipeta; frases com os números da lista', () => {
+  // "Não sei qual foi": a ficha fica SEM produto (QA45) — o Bravecto de antes refaria a conta com 90 dias no próximo Salvar
+  comFicha({ ecto_prod: 'Bravecto', ecto_tipo: 'Comprimido' }, { 'prevCorrP_simba__ana_ecto_p': { value: '?' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p && p.ecto_t === '2026-09-25' && p.ecto_p === '2026-10-25' && p.ecto_prod === '' && p.ecto_tipo === '' && p.ecto_outro_dias === '', JSON.stringify(p));
+    assert.ok(/produto não informado — prazo mais curto/.test(run('__reg[2]')), 'o rastro diz: ' + run('__reg[2]'));
+  });
+  // o prazo mais curto é o da lista, sem os que saíram (QA45)
+  run(`__bkMC={ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; ECTO_DUR['Curto Um']=21;`);
+  try {
+    assert.strictEqual(run('ectoMaisCurto()'), 21);
+    run(`ECTO_FORA={'Curto Um':true};`);
+    assert.strictEqual(run('ectoMaisCurto()'), 30, 'o que saiu da lista não conta');
+    // e o que volta à lista deixa de estar fora neste aparelho
+    run(`ectoCfgAplicar({'Curto Um':{dias:21}});`);
+    assert.ok(!run(`ECTO_FORA['Curto Um']`) && run(`ectoProdutosLista().indexOf('Curto Um')`) >= 0, 'voltou');
+  } finally { run('ECTO_DUR=__bkMC.ed; ECTO_FORA=__bkMC.fo; ectoDashOpsRefazer();'); }
+  comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Pipeta' } }, () => {
+    run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+    const p = run('__patch');
+    assert.ok(p.ecto_prod === 'Pipeta' && p.ecto_tipo === 'Pipeta' && p.ecto_p === '2026-10-25', JSON.stringify(p));
+  });
+  run(`__bkVM={pv:podeVencManual, am:prevAuditManual}; podeVencManual=function(){ return true; }; prevAuditManual=function(){};`);
+  try {
+    comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: 'Bravecto' }, 'prevCorrV_simba__ana_ecto_p': { value: '2026-12-18' } }, () => {
+      run("prevCorrigeVenceEm('simba__ana','ecto_p','venc')");
+      const p = run('__patch');
+      assert.ok(p && p.ecto_p === '2026-12-18' && p.ecto_p_manual === true && p.ecto_prod === 'Bravecto' && p.ecto_tipo === 'Comprimido', JSON.stringify(p));
+    });
+    comFicha({ ecto_prod: 'Simparic' }, { 'prevCorrP_simba__ana_ecto_p': { value: '?' }, 'prevCorrV_simba__ana_ecto_p': { value: '2026-12-18' } }, () => {
+      run("prevCorrigeVenceEm('simba__ana','ecto_p','venc')");
+      const p = run('__patch');
+      assert.ok(p.ecto_prod === '' && p.ecto_tipo === '' && p.ecto_p === '2026-12-18', '"não sei" deixa a ficha sem produto também aqui (QA47 B5): ' + JSON.stringify(p));
+      assert.ok(/produto não informado/.test(run('__reg[2]')), run('__reg[2]'));
+    });
+  } finally { run('podeVencManual=__bkVM.pv; prevAuditManual=__bkVM.am;'); }
+  // frases: sem produto não diz "Vale 30 dias"; os números vêm da lista
+  assert.strictEqual(run(`ectoFraseDias('', 0)`), 'Escolha o produto: a duração depende dele.');
+  assert.ok(/^Vale 90 dias/.test(run(`ectoFraseDias('Bravecto', 0)`)) && /^Vale 30 dias, o prazo mais curto/.test(run(`ectoFraseDias('?', 0)`)));
+  assert.ok(/prevCorrDH_'\+id\+'" style="margin-top:6px">'\s*\+escAttr\(ectoFraseDias\(/.test(fs.readFileSync(APP, 'utf8')), 'o painel usa a frase do produto');
+  run(`__bkT={ed:Object.assign({}, ECTO_DUR)}; ECTO_DUR.Pipeta=28; ECTO_DUR.Bravecto=84;`);
+  try {
+    assert.ok(/Pipeta dura 28 dias/.test(run(`blocoEcto({ecto_tipo:'Pipeta', ecto_prod:'Pipeta'})`)));
+    assert.strictEqual(run('ectoExemplos()'), 'Bravecto 84 dias, Pipeta 28 dias, Simparic 35 dias');
+    comFicha({}, {}, () => {
+      run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+      assert.ok(run('__patch') === null && /Bravecto 84 dias/.test(JSON.stringify(run('__alertasL'))), 'o aviso usa a lista');
+    });
+  } finally { run('ECTO_DUR=__bkT.ed; ectoDashOpsRefazer();'); }
+});
+provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) e salvar o bloco da ficha sem duração não apaga a próxima data', async () => {
+  run(`__bkS={ge:document.getElementById, db:DB, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, au:audit, cr:cfgPrevRender, pc:prevCfgCarregar}; CFG_ECTO_TELA=null;
+    __pcS=0; prevCfgCarregar=function(){ __pcS++; return Promise.resolve(null); };
+    __cS={cfgPrevAposMeses:{value:'7'}, cfgPrevAposDias:{value:'0'}, cfgPrevAviso2:{value:'7'}, cfgPrevSt:{style:{}, textContent:''}};
+    Object.keys(COLEIRA_DUR_PADRAO).forEach(function(m){ __cS['cfgPrevCol_'+m]={value:String(COLEIRA_DUR[m])}; });
+    ectoProdutosLista().forEach(function(pr,i){ __cS['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; });
+    __cS['cfgPrevEcto_'+ectoProdutosLista().indexOf('Bravecto')].value='84';
+    __cS.cfgPrevEctoNovo={value:'NexGard Spectra'}; __cS.cfgPrevEctoNovoDias={value:'30'};
+    document.getElementById=function(id){ return __cS[id]||null; };
+    audit=function(){}; cfgPrevRender=function(){};
+    __bkS.li=ECTO_CFG_LIDO; ECTO_CFG_LIDO=true;
+    __setS={}; DB={ref:function(p){ return {
+      set:function(v){ __setS[p]=['set', JSON.parse(JSON.stringify(v))]; return Promise.resolve(); },
+      update:function(v){ __setS[p]=['update', JSON.parse(JSON.stringify(v))]; return Promise.resolve(); } }; }};`);
+  try {
+    run('cfgPrevSalvar()');
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const g = JSON.parse(JSON.stringify(run('__setS')));
+    // por campo (QA48 F6): o número muda só o número; o produto novo entra na lista (fora: null)
+    igual(g['daycare/config/prevencao-ectos'], ['update', { 'Bravecto/dias': 84, 'NexGard Spectra/dias': 30, 'NexGard Spectra/fora': null }]);
+    assert.ok(true
+      && g['daycare/config/prevencao'][0] === 'set' && !('ectos' in g['daycare/config/prevencao'][1]), JSON.stringify(g));
+    assert.strictEqual(run('__pcS'), 1, 'relê o banco depois de salvar');
+    assert.ok(run('ECTO_DUR.Bravecto') === 84 && run(`ectoProdutosLista().indexOf('NexGard Spectra')`) >= 0, 'vale na hora');
+    assert.ok(run(`dashItem('carrapaticida').campos[0].ops`).some((o) => o.t === 'Bravecto · 84 dias'), 'e nos Lançamentos do dia');
+    // aparelho que não conseguiu ler a lista do banco: salva as coleiras e NÃO grava a lista de fábrica por cima (QA45)
+    // a tela foi desenhada ANTES de a lista chegar do banco; a leitura chega depois, e o Salvar
+    // continua sem gravar a lista (ela seria a de fábrica por cima da da Gestão — QA47 B2)
+    run(`ECTO_CFG_LIDO=false; __setS={}; ECTO_DUR=Object.assign({}, __bkS.ed); ECTO_FORA={}; ectoDashOpsRefazer(); CFG_ECTO_TELA=cfgEctoRetrato(); ECTO_CFG_LIDO=true;
+      ectoProdutosLista().forEach(function(pr,i){ __cS['cfgPrevEcto_'+i]={value:String(ECTO_DUR[pr])}; }); __cS.cfgPrevEctoNovo={value:''}; __cS.cfgPrevEctoNovoDias={value:''};
+      __cS['cfgPrevEcto_'+ectoProdutosLista().indexOf('Simparic')].value='40';`);
+    run('cfgPrevSalvar()');
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const g2 = JSON.parse(JSON.stringify(run('__setS')));
+    assert.ok(g2['daycare/config/prevencao'] && !g2['daycare/config/prevencao-ectos'], JSON.stringify(g2));
+    assert.ok(/lista de carrapaticidas NÃO foi salva/.test(run('__cS.cfgPrevSt.textContent')), run('__cS.cfgPrevSt.textContent'));
+    assert.strictEqual(run('ECTO_DUR.Simparic'), 35, 'a lista não salva não vale na memória');
+  } finally { run('document.getElementById=__bkS.ge; DB=__bkS.db; ECTO_DUR=__bkS.ed; ECTO_FORA=__bkS.fo; ECTO_CFG_LIDO=__bkS.li; audit=__bkS.au; cfgPrevRender=__bkS.cr; prevCfgCarregar=__bkS.pc; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
+  // a ficha: bloco salvo mudando só o nome, sem produto → a próxima data que existia fica
+  run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender};
+    pelAtual={n:'Simba', tutor:'Ana'}; PB_PEND={ecto:{ecto_nome:'Frontline'}};
+    __exP={ecto_t:'2026-09-01', ecto_p:'2026-10-01', ecto_nome:'Frontline'};
+    pbEx=function(){ return __exP; }; pelExtra=function(){ return __exP; };
+    __patchP=null; setPelExtra=function(p, patch){ __patchP=patch; }; pbRender=function(){};`);
+  try {
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela; o que interessa é o que foi gravado */ }
+    const pt = run('__patchP');
+    assert.ok(pt && !('ecto_p' in pt), 'não apaga: ' + JSON.stringify(pt));
+    run(`PB_PEND={ecto:{ecto_t:''}}; __exP={ecto_t:'', ecto_p:'2026-10-01'}; __patchP=null;`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
+    assert.strictEqual(run('__patchP.ecto_p'), '', 'sem a última aplicação, a conta some como antes');
+    // dose nova (ecto_t mudou) sem produto: pede o produto e não grava nada (QA45)
+    run(`__bkP.za=zAlertao; __alP=[]; zAlertao=function(t){ __alP.push(t); };
+      PB_PEND={ecto:{ecto_t:'2026-09-20'}}; __exP={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-10-01'}; __patchP=null;`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
+    assert.ok(run('__patchP') === null && run('__alP[0]') === 'ESCOLHA O PRODUTO', JSON.stringify([run('__patchP'), run('__alP')]));
+    run('zAlertao=__bkP.za;');
+  } finally { run('pelAtual=__bkP.pa; PB_PEND=__bkP.pp; pbEx=__bkP.pe; pelExtra=__bkP.pX; setPelExtra=__bkP.sp; pbRender=__bkP.pr;'); }
+});
+prova('QA45 — a ficha aberta pela Prevenção ("Feito em" e o recálculo) conta pelo produto: Bravecto 90 dias, não 30; o tutor com apóstrofo acha o campo do produto', () => {
+  run(`__bkL={pd:prevPetDe, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, st:setTimeout, hj:hojeISO};
+    prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; pelExtra=function(){ return {ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; };
+    __patchL=null; setPelExtra=function(p, patch){ __patchL=patch; }; audit=function(){}; setTimeout=function(){ return 0; }; hojeISO=function(){ return '2026-09-25'; };
+    __cL={'prevT_ant_ecto_p':{value:'2026-09-20'}, 'prevQ_ant_ecto_p':{value:''}, 'prevP_ant_ecto_p':{value:''}};
+    document.getElementById=function(id){ return __cL[id]||null; };`);
+  try {
+    run(`prevRecalcular('ant','ecto_p')`);
+    assert.strictEqual(run(`__cL['prevP_ant_ecto_p'].value`), '2026-12-19', 'recálculo com 90 dias');
+    run(`__cL['prevP_ant_ecto_p'].value=''; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchL') && run('__patchL.ecto_p') === '2026-12-19', JSON.stringify(run('__patchL')));
+  } finally { run('prevPetDe=__bkL.pd; pelExtra=__bkL.pe; setPelExtra=__bkL.sp; document.getElementById=__bkL.ge; audit=__bkL.au; setTimeout=__bkL.st; hojeISO=__bkL.hj;'); }
+  // tutor "Ana D'Ávila": o onchange do painel acha o mesmo id do select (QA45)
+  const des = (a) => a.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+  run(`__bkPa={ab:PREV_CORRIGE_ABERTO, po:prevCorrigePode, aq:prevCorrigeAbertoAqui, pd:prevCorrigePetDe, pe:pelExtra};
+    PREV_CORRIGE_ABERTO="antônio__ana d'ávila|ecto_p"; prevCorrigePode=function(){ return true; }; prevCorrigeAbertoAqui=function(){ return true; };
+    prevCorrigePetDe=function(){ return {n:'Antônio', tutor:"Ana D'Ávila"}; }; pelExtra=function(){ return {}; };`);
+  try {
+    const hpp = run(`prevCorrigePainelHTML("antônio__ana d'ávila", 'venc', '2026-09-25')`);
+    const sel = des(/<select class="cad-in" id="([^"]*)"/.exec(hpp)[1]);
+    const onc = des(/onchange="(prevCorrigeEctoMudou[^"]*)"/.exec(hpp)[1]);
+    let visto = null; new Function('prevCorrigeEctoMudou', onc)((x) => { visto = x; });
+    assert.strictEqual('prevCorrP_' + visto, sel, onc + ' × ' + sel);
+  } finally { run('PREV_CORRIGE_ABERTO=__bkPa.ab; prevCorrigePode=__bkPa.po; prevCorrigeAbertoAqui=__bkPa.aq; prevCorrigePetDe=__bkPa.pd; pelExtra=__bkPa.pe;'); }
+});
+prova('QA47 — a ficha aberta pela Prevenção mostra "Qual produto?" e conta pelo escolhido (a dose de hoje foi outra: Credelli 30, não Bravecto 90); sem produto, pede', () => {
+  run(`__bkQ={pd:prevPetDe, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, st:setTimeout, hj:hojeISO, za:zAlertao};
+    prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; __exQ={ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; pelExtra=function(){ return __exQ; };
+    __patchQ=null; setPelExtra=function(p, patch){ __patchQ=patch; }; audit=function(){}; setTimeout=function(){ return 0; }; hojeISO=function(){ return '2026-09-25'; };
+    __alQ=[]; zAlertao=function(t){ __alQ.push(t); };
+    __cQ={'prevT_ant_ecto_p':{value:'2026-09-20'}, 'prevQ_ant_ecto_p':{value:''}, 'prevP_ant_ecto_p':{value:''}, 'prevCorrP_ed_ant_ecto_p':{value:'Credelli'}};
+    document.getElementById=function(id){ return __cQ[id]||null; };`);
+  try {
+    run(`prevRecalcular('ant','ecto_p')`);
+    assert.strictEqual(run(`__cQ['prevP_ant_ecto_p'].value`), '2026-10-20', 'o recálculo usa o produto escolhido');
+    run(`__cQ['prevP_ant_ecto_p'].value=''; prevLancar('ant','ecto_p')`);
+    const p = run('__patchQ');
+    assert.ok(p && p.ecto_p === '2026-10-20' && p.ecto_prod === 'Credelli' && p.ecto_tipo === 'Comprimido', JSON.stringify(p));
+    // "Não sei": prazo mais curto e a ficha sem produto
+    run(`__cQ['prevCorrP_ed_ant_ecto_p'].value='?'; __cQ['prevP_ant_ecto_p'].value=''; __patchQ=null; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ.ecto_p') === '2026-10-20' && run('__patchQ.ecto_prod') === '', JSON.stringify(run('__patchQ')));
+    // sem produto na tela e na ficha: pede e não grava
+    run(`__exQ={}; __cQ['prevCorrP_ed_ant_ecto_p'].value=''; __patchQ=null; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ') === null && run('__alQ[0]') === 'ESCOLHA O PRODUTO', JSON.stringify(run('__alQ')));
+    // "Outro" sem os dias: pede os dias
+    run(`__cQ['prevCorrP_ed_ant_ecto_p'].value='Outro'; __alQ=[]; prevLancar('ant','ecto_p')`);
+    assert.ok(run('__patchQ') === null && run('__alQ[0]') === 'DIGA QUANTOS DIAS ELE DURA');
+  } finally { run('prevPetDe=__bkQ.pd; pelExtra=__bkQ.pe; setPelExtra=__bkQ.sp; document.getElementById=__bkQ.ge; audit=__bkQ.au; setTimeout=__bkQ.st; hojeISO=__bkQ.hj; zAlertao=__bkQ.za;'); }
+  // o editor desenha o seletor, com o produto da ficha escolhido e o recálculo no toque
+  run(`__bkQ2={pe:pelExtra}; pelExtra=function(){ return {ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; };`);
+  let h = '';
+  try { h = run(`prevEdicaoHTML({p:{n:'Antônio', tutor:'Ana'}})`); } finally { run('pelExtra=__bkQ2.pe;'); }
+  assert.ok(/<select class="cad-in" id="prevCorrP_ed_antônio__ana_ecto_p"[^>]*onchange="prevCorrigeEctoMudou\('ed_antônio__ana_ecto_p'\);prevRecalcular\('antônio__ana','ecto_p'\)">/.test(h), 'seletor com recálculo');
+  assert.ok(/<option value="Bravecto" selected>Bravecto · 90 dias<\/option>/.test(h) && /id="prevCorrDH_ed_antônio__ana_ecto_p"[^>]*>Vale 90 dias/.test(h));
+});
+prova('QA47 — Configurações: o Salvar lê pela lista que estava NA TELA e grava só o que mudou (uma releitura no meio não embaralha); a marca "lida" nasce falsa e fica falsa se a leitura falha', () => {
+  run(`__bkT={ge:document.getElementById, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, li:ECTO_CFG_LIDO};
+    ECTO_CFG_LIDO=true; CFG_ECTO_TELA=null; cfgPrevEctoHTML();
+    __cT={}; CFG_ECTO_TELA.lista.forEach(function(pr,i){ __cT['cfgPrevEcto_'+i]={value:String(CFG_ECTO_TELA.dur[pr])}; });
+    document.getElementById=function(id){ return __cT[id]||null; };
+    // enquanto a tela está aberta, a releitura traz um produto novo (Alfa 21) e o Bravecto 84 de outro aparelho
+    ectoCfgAplicar({Alfa:{dias:21}, Bravecto:{dias:84}});`);
+  try {
+    const r = JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela()')));
+    assert.ok(r.ectos && Object.keys(r.ectos).length === 0 && !r.erro, 'nada mudou na tela: nada a gravar (o 84 e o Alfa de outro aparelho ficam) — ' + JSON.stringify(r));
+    run(`__cT['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Simparic')].value='40';`);
+    igual(JSON.parse(JSON.stringify(run('cfgPrevEctoDaTela().ectos'))), { Simparic: { dias: 40, so: 'numero' } });
+  } finally { run('document.getElementById=__bkT.ge; ECTO_DUR=__bkT.ed; ECTO_FORA=__bkT.fo; ECTO_CFG_LIDO=__bkT.li; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/var ECTO_CFG_LIDO=false;/.test(src), 'nasce falsa');
+  assert.ok(/<input class="cad-in" id="cfgPrevEctoNovo"[^>]*maxlength="40">/.test(src), 'o campo tem o limite');
+});
+provaAsync('QA47 — leitura recusada deixa a marca falsa; o "Não sei" do painel usa o prazo mais curto da lista, não 30 fixo; o Salvar da ficha com o "Vence em" digitado não é barrado', async () => {
+  run(`__bkU={db:DB, li:ECTO_CFG_LIDO, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; ECTO_CFG_LIDO=false;
+    DB={ref:function(p){ return {once:function(){ return p==='daycare/config/prevencao-ectos' ? Promise.reject(new Error('permissão')) : Promise.resolve({val:function(){ return {coleiras:{}}; }}); }}; }};`);
+  try {
+    await run('prevCfgCarregar()');
+    assert.strictEqual(run('ECTO_CFG_LIDO'), false);
+  } finally { run('DB=__bkU.db; ECTO_CFG_LIDO=__bkU.li;'); }
+  run(`ECTO_DUR['Curto Um']=21; ectoDashOpsRefazer();`);
+  try {
+    comFicha({}, { 'prevCorrP_simba__ana_ecto_p': { value: '?' } }, () => {
+      run("prevCorrigeGravarFeito('simba__ana','ecto_p','2026-09-25','venc')");
+      assert.strictEqual(run('__patch.ecto_p'), '2026-10-16', '21 dias');
+    });
+  } finally { run('ECTO_DUR=__bkU.ed; ECTO_FORA=__bkU.fo; ectoDashOpsRefazer();'); }
+  run(`__bkV={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, za:zAlertao};
+    pelAtual={n:'Simba', tutor:'Ana'}; __alV=[]; zAlertao=function(t){ __alV.push(t); };
+    PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true};
+    pbEx=function(){ return __exV; }; pelExtra=function(){ return __exV; }; __patchV=null; setPelExtra=function(p, patch){ __patchV=patch; }; pbRender=function(){};`);
+  try {
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela */ }
+    assert.ok(run('__patchV') && run('__patchV.ecto_p') === '2026-12-18' && !run('__alV').length, JSON.stringify([run('__patchV'), run('__alV')]));
+    // e o "Outro" sem dias pede os dias
+    run(`PB_PEND={ecto:{ecto_t:'2026-09-20'}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'Outro', ecto_t:'2026-09-20'}; __patchV=null; __alV=[];`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
+    assert.ok(run('__patchV') === null && run('__alV[0]') === 'DIGA QUANTOS DIAS ELE DURA', JSON.stringify(run('__alV')));
+  } finally { run('pelAtual=__bkV.pa; PB_PEND=__bkV.pp; pbEx=__bkV.pe; pelExtra=__bkV.pX; setPelExtra=__bkV.sp; pbRender=__bkV.pr; zAlertao=__bkV.za;'); }
+});
+provaAsync('QA48 — os dias do "Outro" refazem o "Vale até"; o "Vence em" da carteira digitado agora manda e fica marcado à mão (vazio não passa); a confirmação diz "(marcado à mão)"; textos com a saída', async () => {
+  // F1: o campo dos dias do "Outro" também chama o recálculo, na ficha aberta pela Prevenção
+  run(`__bkF1={pe:pelExtra}; pelExtra=function(){ return {ecto_prod:'Outro', ecto_tipo:'Comprimido', ecto_outro_dias:'45'}; };`);
+  let h = '';
+  try { h = run(`prevEdicaoHTML({p:{n:'Antônio', tutor:'Ana'}})`); } finally { run('pelExtra=__bkF1.pe;'); }
+  assert.ok(/<input class="cad-in" id="prevCorrD_ed_antônio__ana_ecto_p"[^>]*oninput="prevRecalcular\('antônio__ana','ecto_p'\)">/.test(h), 'os dias refazem a conta');
+  assert.ok(!/id="prevCorrD_simba__ana_ecto_p"[^>]*oninput/.test(run(`prevCorrigeEctoHTML('ecto_p', {ecto_prod:'Outro'}, 'simba__ana_ecto_p')`)), 'o painel rápido não ganha recálculo (conta no Feito hoje)');
+  // e a conta: data → Outro → 45 → recálculo dá +45
+  run(`__bkF1b={pd:prevPetDe, pe:pelExtra, ge:document.getElementById};
+    prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; pelExtra=function(){ return {ecto_prod:'Bravecto', ecto_tipo:'Comprimido'}; };
+    __cF1={'prevT_ant_ecto_p':{value:'2026-09-20'}, 'prevP_ant_ecto_p':{value:'2026-12-19'}, 'prevCorrP_ed_ant_ecto_p':{value:'Outro'}, 'prevCorrD_ed_ant_ecto_p':{value:'45'}};
+    document.getElementById=function(id){ return __cF1[id]||null; };`);
+  try {
+    run(`prevRecalcular('ant','ecto_p')`);
+    assert.strictEqual(run(`__cF1['prevP_ant_ecto_p'].value`), '2026-11-04');
+  } finally { run('prevPetDe=__bkF1b.pd; pelExtra=__bkF1b.pe; document.getElementById=__bkF1b.ge;'); }
+  // F2/F3: o bloco da ficha
+  run(`__bkF2={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, za:zAlertao};
+    pelAtual={n:'Simba', tutor:'Ana'}; __alF2=[]; zAlertao=function(t, l){ __alF2.push([t, (l||[]).join(' | ')]); };
+    pbEx=function(){ return __exF2; }; pelExtra=function(){ return __exF2; }; __patchF2=null; setPelExtra=function(p, patch){ __patchF2=patch; }; pbRender=function(){};`);
+  try {
+    run(`PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:'2026-11-28'}}; __exF2={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-11-28'};`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela */ }
+    assert.ok(run('__patchF2') && run('__patchF2.ecto_p') === '2026-11-28' && run('__patchF2.ecto_p_manual') === true, JSON.stringify(run('__patchF2')));
+    // "Vence em" apagado no mesmo Salvar de uma última nova, sem produto: pede o produto (não some da cobrança)
+    run(`PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:''}}; __exF2={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:''}; __patchF2=null; __alF2=[];`);
+    try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
+    const al = JSON.parse(JSON.stringify(run('__alF2')));
+    assert.ok(run('__patchF2') === null && al[0][0] === 'ESCOLHA O PRODUTO' && /«Vence em»/.test(al[0][1]) && /Não sei qual foi/.test(al[0][1]), JSON.stringify(al));
+  } finally { run('pelAtual=__bkF2.pa; PB_PEND=__bkF2.pp; pbEx=__bkF2.pe; pelExtra=__bkF2.pX; setPelExtra=__bkF2.sp; pbRender=__bkF2.pr; zAlertao=__bkF2.za;'); }
+  // o alerta da ficha aberta pela Prevenção diz a saída "Não sei qual foi"
+  run(`__bkF3={pd:prevPetDe, pe:pelExtra, ge:document.getElementById, za:zAlertao, hj:hojeISO};
+    prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; pelExtra=function(){ return {}; }; hojeISO=function(){ return '2026-09-25'; };
+    __alF3=[]; zAlertao=function(t, l){ __alF3.push([t, (l||[]).join(' | ')]); };
+    __cF3={'prevT_ant_ecto_p':{value:'2026-09-20'}, 'prevQ_ant_ecto_p':{value:''}, 'prevP_ant_ecto_p':{value:''}, 'prevCorrP_ed_ant_ecto_p':{value:''}};
+    document.getElementById=function(id){ return __cF3[id]||null; };`);
+  try {
+    run(`prevLancar('ant','ecto_p')`);
+    assert.ok(/Não sei qual foi/.test(run('__alF3[0][1]')), JSON.stringify(run('__alF3')));
+  } finally { run('prevPetDe=__bkF3.pd; pelExtra=__bkF3.pe; document.getElementById=__bkF3.ge; zAlertao=__bkF3.za; hojeISO=__bkF3.hj;'); }
+  // F4: a confirmação verde com "Não sei" no "Gravar o vencimento" continua "(marcado à mão)"
+  // Q38: "Outro" sem os dias não é gravado como produto pelo "Gravar o vencimento"
+  run(`__bkF4={pv:podeVencManual, am:prevAuditManual}; podeVencManual=function(){ return true; }; prevAuditManual=function(){};`);
+  try {
+    comFicha({ ecto_prod: 'Simparic' }, { 'prevCorrP_simba__ana_ecto_p': { value: '?' }, 'prevCorrV_simba__ana_ecto_p': { value: '2026-12-18' } }, () => {
+      run(`__bkF4.rg=prevCorrigeRegistrar; prevCorrigeRegistrar=__bkp.rg; __okF4=null;`);
+      try {
+        run("prevCorrigeVenceEm('simba__ana','ecto_p','venc')");
+        assert.ok(/\(marcado à mão\)/.test(run(`PREV_CORRIGE_OK[prevCorrigeAlvo('simba__ana','ecto_p')].texto`)), run(`PREV_CORRIGE_OK[prevCorrigeAlvo('simba__ana','ecto_p')].texto`));
+      } finally { run('prevCorrigeRegistrar=__bkF4.rg;'); }
+    });
+    comFicha({ ecto_prod: 'Simparic' }, { 'prevCorrP_simba__ana_ecto_p': { value: 'Outro' }, 'prevCorrD_simba__ana_ecto_p': { value: '' }, 'prevCorrV_simba__ana_ecto_p': { value: '2026-12-18' } }, () => {
+      run("prevCorrigeVenceEm('simba__ana','ecto_p','venc')");
+      assert.ok(!('ecto_prod' in run('__patch')), '"Outro" sem os dias não troca o produto: ' + JSON.stringify(run('__patch')));
+    });
+  } finally { run('podeVencManual=__bkF4.pv; prevAuditManual=__bkF4.am;'); }
+});
+provaAsync('QA48 — Configurações: salvar sem mudar a lista não grava o nó nem fala dela no rastro; o rastro diz o que mudou ou "NÃO salva"; a releitura não redesenha; o aviso certo quando a lista chegou depois', async () => {
+  run(`__bkG={ge:document.getElementById, db:DB, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA, au:audit, cr:cfgPrevRender, pc:prevCfgCarregar, li:ECTO_CFG_LIDO};
+    __auG=[]; audit=function(t, txt){ __auG.push(String(txt||'')); }; __crG=0; cfgPrevRender=function(){ __crG++; };
+    __pcG=0; prevCfgCarregar=function(){ __pcG++; return Promise.resolve(null); };
+    __cG={cfgPrevAposMeses:{value:'7'}, cfgPrevAposDias:{value:'0'}, cfgPrevAviso2:{value:'7'}, cfgPrevSt:{style:{}, textContent:''}};
+    Object.keys(COLEIRA_DUR_PADRAO).forEach(function(m){ __cG['cfgPrevCol_'+m]={value:String(COLEIRA_DUR[m])}; });
+    document.getElementById=function(id){ return __cG[id]||null; };
+    __setG={}; DB={ref:function(p){ return {
+      set:function(v){ __setG[p]=['set', JSON.parse(JSON.stringify(v))]; return Promise.resolve(); },
+      update:function(v){ __setG[p]=['update', JSON.parse(JSON.stringify(v))]; return Promise.resolve(); } }; }};
+    __prepG=function(lido){ ECTO_CFG_LIDO=lido; CFG_ECTO_TELA=cfgEctoRetrato(); CFG_ECTO_TELA.lista.forEach(function(pr,i){ __cG['cfgPrevEcto_'+i]={value:String(CFG_ECTO_TELA.dur[pr])}; });
+      __cG.cfgPrevEctoNovo={value:''}; __cG.cfgPrevEctoNovoDias={value:''}; __setG={}; __auG=[]; __crG=0; __pcG=0; __cG.cfgPrevSt={style:{}, textContent:''}; };`);
+  const salva = async () => { run('cfgPrevSalvar()'); for (let i = 0; i < 10; i++) await Promise.resolve(); };
+  try {
+    // sem mudança na lista: só as coleiras; o rastro não fala de carrapaticida
+    run('__prepG(true);'); await salva();
+    let g = JSON.parse(JSON.stringify(run('__setG')));
+    assert.ok(g['daycare/config/prevencao'] && !g['daycare/config/prevencao-ectos'], JSON.stringify(g));
+    assert.ok(!/carrapaticidas/.test(run('__auG[0]')), run('__auG[0]'));
+    // com mudança: grava por campo e o rastro diz o que mudou; relê o banco sem redesenhar de novo
+    run(`__prepG(true); __cG['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Simparic')].value='40';`); await salva();
+    g = JSON.parse(JSON.stringify(run('__setG')));
+    igual(g['daycare/config/prevencao-ectos'], ['update', { 'Simparic/dias': 40 }]);
+    assert.ok(/carrapaticidas mudados: Simparic 40d/.test(run('__auG[0]')), run('__auG[0]'));
+    igual([run('__pcG'), run('__crG')], [1, 1], 'uma releitura e UM desenho só');
+    // tela desenhada antes de a lista chegar: sem mudança, nenhum aviso; com mudança, "NÃO salva" no rastro e na tela
+    run(`__prepG(false);`); await salva();
+    assert.ok(!/NÃO foi salva/.test(run('__cG.cfgPrevSt.textContent')) && !/carrapaticidas/.test(run('__auG[0]')), 'sem mudança, sem aviso');
+    run(`__prepG(false); __cG['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Simparic')].value='41';`); await salva();
+    assert.ok(!JSON.parse(JSON.stringify(run('__setG')))['daycare/config/prevencao-ectos'] && /lista NÃO salva/.test(run('__auG[0]')), run('__auG[0]'));
+    assert.ok(/não consegui lê-la do banco/.test(run('__cG.cfgPrevSt.textContent')), run('__cG.cfgPrevSt.textContent'));
+    // a lista chegou depois de a tela abrir: o aviso não manda recarregar
+    run(`__prepG(false); __cG['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Simparic')].value='42'; ECTO_CFG_LIDO=true;`); await salva();
+    assert.ok(/chegou do banco depois que a tela abriu/.test(run('__cG.cfgPrevSt.textContent')), run('__cG.cfgPrevSt.textContent'));
+    // tirar grava o "fora"; mudar só o número de um produto que está fora deixa fora
+    run(`__prepG(true); ECTO_DUR['Xavier']=45; ECTO_FORA={}; CFG_ECTO_TELA=cfgEctoRetrato(); CFG_ECTO_TELA.lista.forEach(function(pr,i){ __cG['cfgPrevEcto_'+i]={value:String(CFG_ECTO_TELA.dur[pr])}; });
+      __cG['cfgPrevEctoSai_'+CFG_ECTO_TELA.lista.indexOf('Xavier')]={checked:true};`); await salva();
+    igual(JSON.parse(JSON.stringify(run('__setG')))['daycare/config/prevencao-ectos'], ['update', { 'Xavier/dias': 45, 'Xavier/fora': true }]);
+    assert.ok(run(`!!ECTO_FORA['Xavier']`), 'fora também na memória');
+    // outro aparelho tirou a Xavier depois que esta tela abriu; aqui só mudaram o número: grava só o número e ela continua fora
+    run(`__prepG(true); ECTO_DUR['Xavier']=45; ECTO_FORA={}; CFG_ECTO_TELA=cfgEctoRetrato(); CFG_ECTO_TELA.lista.forEach(function(pr,i){ __cG['cfgPrevEcto_'+i]={value:String(CFG_ECTO_TELA.dur[pr])}; });
+      Object.keys(__cG).forEach(function(k){ if(k.indexOf('cfgPrevEctoSai_')===0) delete __cG[k]; });
+      ECTO_FORA={Xavier:true}; __cG['cfgPrevEcto_'+CFG_ECTO_TELA.lista.indexOf('Xavier')].value='50';`); await salva();
+    igual(JSON.parse(JSON.stringify(run('__setG')))['daycare/config/prevencao-ectos'], ['update', { 'Xavier/dias': 50 }]);
+    assert.ok(run(`!!ECTO_FORA['Xavier'] && ECTO_DUR['Xavier']===50`), 'continua fora, com o número novo');
+  } finally { run('document.getElementById=__bkG.ge; DB=__bkG.db; ECTO_DUR=__bkG.ed; ECTO_FORA=__bkG.fo; audit=__bkG.au; cfgPrevRender=__bkG.cr; prevCfgCarregar=__bkG.pc; ECTO_CFG_LIDO=__bkG.li; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
+});
+// ================================================================== escovação no Day Care
+console.log('\nEscovação: quem não escova no Day Care sai da cobrança; "tinha em casa" e "não autorizou" põem a próxima troca em 3 meses (Adriana, 29/set/2026)');
+prova('quem não escova no Day Care não é cobrado da troca de escova em lugar nenhum; quem escova (ou não respondeu) continua como antes', () => {
+  const hoje = run('zHojeISO()');
+  const venceu = run(`addDiasISO(zHojeISO(),-3)`);
+  const ex = (dc) => `{escova_t:'${run(`addDiasISO(zHojeISO(),-93)`)}', escova_p:'${venceu}'${dc ? `, escova_dc:'${dc}'` : ''}}`;
+  const temEscova = (dc) => ({
+    faltas: run(`prevFaltasDe(${ex(dc)}, 0)`).some((f) => f.k === 'escova_p'),
+    venc: run(`vencItensDe(${ex(dc)}, '${hoje}', 0, '${hoje}')`).some((f) => f.k === 'escova_p'),
+    pend: run(`prevPendencias(${ex(dc)}, 'saude')`).venc.some((f) => /escova/i.test(f.nome)),
+  });
+  igual(temEscova(''), { faltas: true, venc: true, pend: true });
+  igual(temEscova('Sim'), { faltas: true, venc: true, pend: true });
+  igual(temEscova('Não'), { faltas: false, venc: false, pend: false });
+  // a regra do vermífugo ou exame continua a mesma
+  assert.strictEqual(run(`prevForaDaCobranca({escova_dc:'Não'}, PREV_ITENS.filter(function(x){ return x.k==='verm_p'; })[0])`), false);
+  // a ficha: a pergunta, o motivo só com Não, e as duas saídas da troca só para quem escova
+  const h1 = run(`escovaFichaHTML({})`), h2 = run(`escovaFichaHTML({escova_dc:'Não', escova_dc_motivo:'Outro', escova_dc_outro:'tem gengivite'})`);
+  assert.ok(/Escova os dentes no Day Care\?/.test(h1) && /id="escovaDcMotivoBox" style="display:none"/.test(h1) && /tinha em casa \(já trocou\)/.test(h1) && /não autorizou a troca/.test(h1), h1);
+  assert.ok(/id="escovaDcMotivoBox" style=""/.test(h2) && /O tutor não compra a pasta/.test(h2) && /value="tem gengivite"/.test(h2) && !/não autorizou a troca/.test(h2), h2);
+});
+provaAsync('"tinha em casa" vale como troca de hoje; "não autorizou" adia — nos dois a próxima fica em 3 meses, só na ficha; e a cobrança dos Vencimentos tem as duas saídas', async () => {
+  const hoje = run('zHojeISO()'), prox = run(`addDiasISO(zHojeISO(),90)`);
+  const casa = JSON.parse(JSON.stringify(run(`escovaPatchTresMeses('casa', zHojeISO(), 'Márcia')`)));
+  assert.ok(casa.escova_t === hoje && casa.escova_p === prox && casa.escova_p_manual === '' && casa.escova_ult.como === 'casa' && casa.escova_ult.quem === 'Márcia', JSON.stringify(casa));
+  const nao = JSON.parse(JSON.stringify(run(`escovaPatchTresMeses('nao', zHojeISO(), 'Márcia')`)));
+  assert.ok(nao.escova_t === undefined && nao.escova_p === prox && nao.escova_p_manual === true && nao.escova_ult.como === 'nao', JSON.stringify(nao));
+  // depois do "não autorizou", a troca vencida some da cobrança até daqui a 3 meses
+  const exNao = `Object.assign({escova_t:'${run(`addDiasISO(zHojeISO(),-120)`)}', escova_p:'${run(`addDiasISO(zHojeISO(),-30)`)}'}, ${JSON.stringify(nao)})`;
+  assert.ok(!run(`prevFaltasDe(${exNao}, 0)`).some((f) => f.k === 'escova_p'), 'adiada');
+  // os botões da cobrança: na escova, as duas saídas no lugar de "Vai aplicar em casa" e "Não quer agora"
+  const vs = (t) => run(`vencRespostasDe('${t}', '${hoje}').map(function(x){ return x.v; })`);
+  igual(vs('escova'), ['bolsa', 'loja', 'esc_casa', 'esc_nao', 'sem']);
+  igual(vs('antip'), ['casa', 'bolsa', 'loja', 'sem', 'nao']);
+  assert.ok(run(`vencRespostasDe(HOJE_ANT_PREF+'escova', '${hoje}').map(function(x){ return x.v; }).join()`).indexOf('esc_nao') >= 0, 'também na antecipação');
+  assert.ok(run(`vencRespFecha('esc_nao')`) && run(`vencRespRotulo('esc_casa')`) === 'Tinha em casa (já trocou)');
+  // a resposta põe a próxima troca na ficha do FILHOt do cartão
+  run(`__bkEsc={db:DB, vg:vencGravar, vd:vencAutoDesmanchar, vo:vencObjDe, vr:vencRegDeDia, et:escovaTresMeses, qs:quemSou};
+    DB={}; quemSou=function(){ return 'Márcia'; };
+    vencGravar=function(){ return Promise.resolve(true); }; vencAutoDesmanchar=function(){ return Promise.resolve(); };
+    vencObjDe=function(){ return {chave:'lola__bia', p:{n:'Lola', tutor:'Bia'}, nome:'Lola', itens:[]}; }; vencRegDeDia=function(){ return {}; };
+    __escChamou=[]; escovaTresMeses=function(como, p){ __escChamou.push([como, p.n]); return Promise.resolve({ok:true}); };`);
+  try {
+    const ok = await run(`vencResponderTipo('lola__bia', 'escova', 'esc_nao', '${hoje}')`);
+    assert.ok(ok === true, String(ok));
+    igual(JSON.parse(JSON.stringify(run('__escChamou'))), [['nao', 'Lola']]);
+  } finally { run('DB=__bkEsc.db; vencGravar=__bkEsc.vg; vencAutoDesmanchar=__bkEsc.vd; vencObjDe=__bkEsc.vo; vencRegDeDia=__bkEsc.vr; escovaTresMeses=__bkEsc.et; quemSou=__bkEsc.qs;'); }
+});
+provaAsync('QA40 — o "Não" fecha a conversa já mandada e acerta o chip da atividade; sem permissão nada muda; a ficha recusada não vira sucesso; os textos dizem o que houve', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/c==='col_nome' \|\| c==='escova_dc'; \}\)\)\{\s*_pFicha\.then/.test(src), 'gravar escova_dc passa pelo fechamento das conversas');
+  igual(JSON.parse(JSON.stringify(run(`escovaDcPatch('Não', ['aucademia','escova'])`))), { escova_dc: 'Não', atividades: ['aucademia'] });
+  igual(JSON.parse(JSON.stringify(run(`escovaDcPatch('Sim', ['aucademia'])`))), { escova_dc: 'Sim', atividades: ['aucademia', 'escova'] });
+  run(`__bkQ40={cp:canEditPel, sp:setPelExtra, za:zAlertao, au:audit, pa:pelAtual, rf:renderPelFicha};
+    __alQ40=[]; zAlertao=function(t){ __alQ40.push(t); }; __audQ40=[]; audit=function(a,b){ __audQ40.push(b); };
+    __grQ40=[]; setPelExtra=function(p, patch){ __grQ40.push(patch); return Promise.resolve(__respQ40); }; renderPelFicha=function(){};
+    pelAtual={n:'Lola', tutor:'Bia'};`);
+  try {
+    // sem permissão: nem grava, nem deixa rastro
+    run(`canEditPel=function(){ return false; }; __respQ40={ok:true};`);
+    const r1 = await run(`escovaTresMeses('nao')`);
+    assert.ok(r1.ok === false && run('__grQ40.length') === 0 && run('__audQ40.length') === 0 && /SÓ QUEM CUIDA DA FICHA/.test(run('__alQ40[0]')), JSON.stringify(r1));
+    run(`__bkQ40b={db:DB, vg:vencGravar, vr:vencRegDeDia}; DB={}; __vgQ40=0; vencGravar=function(){ __vgQ40++; return Promise.resolve(true); }; vencRegDeDia=function(){ return {}; };`);
+    try {
+      const r2 = await run(`vencResponderTipo('lola__bia', 'escova', 'esc_casa', zHojeISO(), {chave:'lola__bia', p:{n:'Lola', tutor:'Bia'}, nome:'Lola', itens:[]})`);
+      assert.ok(r2 === false && run('__vgQ40') === 0, 'nos Vencimentos, sem permissão, a resposta não é gravada');
+    } finally { run('DB=__bkQ40b.db; vencGravar=__bkQ40b.vg; vencRegDeDia=__bkQ40b.vr;'); }
+    // com permissão, mas a ficha recusou: não diz "próxima troca", não deixa rastro de sucesso
+    run(`canEditPel=function(){ return true; }; __alQ40=[]; __respQ40={ok:false, erro:new Error('banco reconectando')};`);
+    const r3 = await run(`escovaTresMeses('nao')`);
+    assert.ok(r3.ok === false && run('__audQ40.length') === 0 && /NÃO FOI ATUALIZADA/.test(run('__alQ40[0]')), JSON.stringify(run('__alQ40')));
+  } finally { run('canEditPel=__bkQ40.cp; setPelExtra=__bkQ40.sp; zAlertao=__bkQ40.za; audit=__bkQ40.au; pelAtual=__bkQ40.pa; renderPelFicha=__bkQ40.rf;'); }
+  // o "vence em" diz que foi adiado, e não "digitado à mão"
+  const h = run(`prevVenceCampoHTML({escova_p:'2026-12-28', escova_p_manual:true, escova_t:'2026-06-01', escova_ult:{como:'nao', data:'2026-09-29'}}, 'escova_p', 'escova_t', '')`);
+  assert.ok(/Adiada: o tutor não autorizou a troca em 29\/09\/2026/.test(h) && !/Data digitada à mão/.test(h), h);
+  // a resposta antiga ("Vai aplicar em casa") num cartão de escova continua legível
+  const hr = run(`vencRespostasHTML({p:{}, nome:'Lola', itens:[]}, {respostas:{escova:{v:'casa', quem:'Amanda', ts:0}}}, 'escova', zHojeISO(), 'lola__bia')`);
+  assert.ok(/Resposta registrada: “Vai aplicar em casa”/.test(hr), hr.slice(0, 300));
+});
+// ================================================================== check-in da hospedagem: o botão escolhido se lê
+console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
+prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const regra = (sel) => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(src); return m ? m[1] : ''; };
+  const on = regra('.ci-med-conf button.on');
+  assert.ok(on && !/background:currentColor/.test(on) && /color:var\(--z-cream\)/.test(on) && /background:var\(--z-blue\)/.test(on), 'regra: ' + on);
+  assert.ok(/background:#1E8449/.test(regra('.ci-med-conf.ok button.on')), 'confirmado: verde');
+  assert.ok(/background:#8E4A16/.test(regra('.ci-med-conf.mudou button.on')), 'mudou: marrom');
+  // Contraste de verdade (QA37): letra creme #FFFDF6, 12,5 px — não é texto grande, precisa de 4,5:1.
+  const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const razao = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const sel of ['.ci-med-conf.ok button.on', '.ci-med-conf.mudou button.on']) {
+    const bg = (/background:(#[0-9A-Fa-f]{6})/.exec(regra(sel)) || [])[1];
+    assert.ok(bg && razao(bg, '#FFFDF6') >= 4.5, sel + ': ' + bg + ' dá ' + (bg ? razao(bg, '#FFFDF6').toFixed(2) : '?') + ':1');
+  }
+  const faixaOk = (/color:(#[0-9A-Fa-f]{6})/.exec(regra('.ci-med-conf.ok')) || [])[1];
+  assert.ok(faixaOk && razao(faixaOk, '#FFFDF6') >= 4.5, 'a frase da faixa verde: ' + faixaOk);
+  run(`__bkCF={cp:canEditCheckinMed, qs:quemSou};
+    canEditCheckinMed=function(){ return true; }; quemSou=function(){ return 'Márcia'; };
+    __btsCF=[{dataset:{cf:'ok'}, textContent:'Confirmado', classList:{_c:{}, toggle:function(c,v){ this._c[c]=v; }}},
+             {dataset:{cf:'mudou'}, textContent:'Mudou', classList:{_c:{}, toggle:function(c,v){ this._c[c]=v; }}}];
+    __spanCF={textContent:''};
+    __faixaCF={classList:{toggle:function(){}}, querySelectorAll:function(){ return __btsCF; }, querySelector:function(){ return __spanCF; }};
+    __elCF={dataset:{}, querySelector:function(){ return __faixaCF; }};
+    ciMedConfSet({closest:function(){ return __elCF; }}, 'ok');`);
+  try {
+    igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['✓ Confirmado', 'Mudou']);
+    assert.ok(/Confirmado com o tutor por Márcia/.test(run('__spanCF.textContent')) && run('__elCF.dataset.conf') === 'ok');
+    run(`ciMedConfSet({closest:function(){ return __elCF; }}, 'mudou');`);
+    igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['Confirmado', '✓ Mudou']);
+  } finally { run('canEditCheckinMed=__bkCF.cp; quemSou=__bkCF.qs;'); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
