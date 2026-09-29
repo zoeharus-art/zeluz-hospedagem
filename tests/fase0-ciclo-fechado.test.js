@@ -3421,7 +3421,8 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
       update:function(v){ __gravAS[p]=Object.assign({}, __gravAS[p]||{}, v); return Promise.resolve(); } }; }};`);
   try {
     const dia = '2026-09-29';
-    const prepara = (mao) => run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:['Cristal/Yorkshire']};
+    // Sem lançamento à mão, a célula na planilha é a que o automático escreveu (o texto do registro).
+    const prepara = (mao) => run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:[${mao ? "'Cristal/Yorkshire'" : "'Cristal/Yorkshire (SEM SHAMPOO)'"}]};
       __bancoAS={}; __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
       ${mao ? `__bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', chave:dcKey('Cristal','Ana')}}};` : ''}`);
     const tirou = () => run('__ponteAS').filter((c) => c.acao === 'remover');
@@ -3434,7 +3435,7 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
     // 2) sem lançamento à mão: o banho fixo que não vale mais sai, como antes
     prepara(false);
     await run(`dashAutoSincronizar('${dia}')`);
-    assert.ok(tirou().length === 1 && tirou()[0].valor === 'Cristal/Yorkshire' && tirou()[0].coluna === 'Banho' && tirou()[0].colunaHora === 'Hora Banho', JSON.stringify(tirou()));
+    assert.ok(tirou().length === 1 && tirou()[0].valor === 'Cristal/Yorkshire (SEM SHAMPOO)' && tirou()[0].coluna === 'Banho' && tirou()[0].colunaHora === 'Hora Banho', JSON.stringify(tirou()));
     // 3) não deu para ler os Lançamentos do dia: não tira nada agora, e guarda para a próxima passada
     prepara(false); run('__falhaMao=true;');
     await run(`dashAutoSincronizar('${dia}')`);
@@ -3466,6 +3467,36 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
       dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=['Cristal/Yorkshire (SHAMPOO NA BOLSA)']; o._horas={banho:{}}; return o; };`);
     await run(`dashAutoSincronizar('${dia}')`);
     igual(run('__ponteAS').filter((c) => c.acao !== 'lerDia'), [], 'a célula da recepção não é trocada pelo shampoo novo do combinado');
+    const semFixo = () => run(`dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };`);
+    const comFixo = () => run(`dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=['Cristal/Yorkshire (SEM SHAMPOO)']; o._horas={banho:{}}; return o; };`);
+    // 8) QA37 P1: sem lançamento no app, a linha que uma pessoa escreveu DIRETO na planilha fica; só sai o texto do automático
+    semFixo(); prepara(false); run(`__planAS={Banho:['Cristal - Yorkshire (escrita na planilha)']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou(), [], 'a célula escrita à mão na planilha não sai');
+    // 9) QA37: a ponte falhou ao tirar — o registro guarda, e a próxima passada tenta de novo (sem célula órfã)
+    semFixo(); prepara(false);
+    run(`__pcAS=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='remover'){ __ponteAS.push(c); return Promise.resolve({ok:false, erro:'a ponte não respondeu'}); } return __pcAS(c); };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'falhou ao tirar: continua no registro');
+      prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'com lançamento à mão, também');
+    } finally { run('dashPonteChamar=__pcAS;'); }
+    const lancou = () => run('__ponteAS').filter((c) => c.acao === 'lancar').map((c) => c.valor);
+    // 10) QA37 P3: o banho fixo vale, a planilha está vazia e a recepção lançou à mão — o automático não escreve o dele por cima
+    comFixo(); prepara(true); run(`__planAS={};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(lancou().filter((v) => /SEM SHAMPOO/.test(v)), [], 'vale a linha da recepção (o passo 3 a repõe)');
+    // ... mas o lançamento à mão que esgotou as tentativas não segura o banho fixo
+    comFixo(); prepara(true); run(`__planAS={}; __bancoAS['daycare/dashboard/${dia}'].banho.L1.planilha_desisti=true;`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(lancou(), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'desistiu do lançamento à mão: o banho fixo vai');
+    // 11) QA37 P2: a célula do automático e a da recepção, com o banho fixo valendo — sai a do automático
+    comFixo(); prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou().map((c) => c.valor), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'o FILHOt aparece uma vez só');
+    igual(lancou(), [], 'e nada é escrito por cima');
   } finally { run('dashPonteChamar=__bkAS.pc; dashAutoCalcular=__bkAS.calc; DB=__bkAS.db; audit=__bkAS.au;'); }
 });
 // ================================================================== todo lançamento do dia está na planilha
@@ -3618,8 +3649,17 @@ prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e let
   const regra = (sel) => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(src); return m ? m[1] : ''; };
   const on = regra('.ci-med-conf button.on');
   assert.ok(on && !/background:currentColor/.test(on) && /color:var\(--z-cream\)/.test(on) && /background:var\(--z-blue\)/.test(on), 'regra: ' + on);
-  assert.ok(/background:var\(--crm-ok\)/.test(regra('.ci-med-conf.ok button.on')), 'confirmado: verde');
+  assert.ok(/background:#1E8449/.test(regra('.ci-med-conf.ok button.on')), 'confirmado: verde');
   assert.ok(/background:#8E4A16/.test(regra('.ci-med-conf.mudou button.on')), 'mudou: marrom');
+  // Contraste de verdade (QA37): letra creme #FFFDF6, 12,5 px — não é texto grande, precisa de 4,5:1.
+  const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const razao = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const sel of ['.ci-med-conf.ok button.on', '.ci-med-conf.mudou button.on']) {
+    const bg = (/background:(#[0-9A-Fa-f]{6})/.exec(regra(sel)) || [])[1];
+    assert.ok(bg && razao(bg, '#FFFDF6') >= 4.5, sel + ': ' + bg + ' dá ' + (bg ? razao(bg, '#FFFDF6').toFixed(2) : '?') + ':1');
+  }
+  const faixaOk = (/color:(#[0-9A-Fa-f]{6})/.exec(regra('.ci-med-conf.ok')) || [])[1];
+  assert.ok(faixaOk && razao(faixaOk, '#FFFDF6') >= 4.5, 'a frase da faixa verde: ' + faixaOk);
   run(`__bkCF={cp:canEditCheckinMed, qs:quemSou};
     canEditCheckinMed=function(){ return true; }; quemSou=function(){ return 'Márcia'; };
     __btsCF=[{dataset:{cf:'ok'}, textContent:'Confirmado', classList:{_c:{}, toggle:function(c,v){ this._c[c]=v; }}},

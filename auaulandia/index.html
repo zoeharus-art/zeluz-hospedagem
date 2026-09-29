@@ -1392,7 +1392,7 @@
   .ci-med-conf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;margin-bottom:8px;
     border-radius:10px;background:rgba(222,180,40,.18);border:1.5px solid var(--z-gold);
     font-size:12.5px;font-weight:800;color:var(--z-blue)}
-  .ci-med-conf.ok{background:rgba(30,132,73,.12);border-color:var(--crm-ok);color:var(--crm-ok)}
+  .ci-med-conf.ok{background:rgba(30,132,73,.12);border-color:var(--crm-ok);color:#1A7340}
   .ci-med-conf.mudou{background:rgba(224,136,86,.16);border-color:#E08856;color:#8E4A16}
   .ci-med-conf button{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;
     padding:6px 13px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
@@ -1400,7 +1400,7 @@
      `color` creme na MESMA regra — o currentColor vira o creme, e o botão ficava creme sobre
      creme, sem dar para ler (Adriana, 29/set/2026, check-in da hospedagem). */
   .ci-med-conf button.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
-  .ci-med-conf.ok button.on{background:var(--crm-ok);border-color:var(--crm-ok)}
+  .ci-med-conf.ok button.on{background:#1E8449;border-color:#1E8449}
   .ci-med-conf.mudou button.on{background:#8E4A16;border-color:#8E4A16}
   /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
@@ -41927,12 +41927,15 @@
       DB.ref('daycare/dashboard/'+iso).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; }).catch(function(){ return null; })
     ]).then(function(r){
       var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
-      var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={}, maoTxt={};
+      var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={}, maoTxt={}, maoVivo={};
       if(maoLida) Object.keys(r[2]||{}).forEach(function(kk){
         var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
         Object.keys(itens).forEach(function(id){
           var val=(itens[id]||{}).valor, c=dashAutoNomeChave(val);
           if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; maoTxt[kk]=maoTxt[kk]||{}; maoTxt[kk][jsNorm(String(val))]=1; }
+          // VIVO = o passo 3 repõe se sumir (não esgotou as tentativas, a coluna existe). É a
+          // palavra da recepção que fica na planilha: o automático não põe outra por cima (QA37).
+          if(c && !dashPlanFilaMorto(itens[id]) && !dashPlanFilaSemColuna((itens[id]||{}).planilha_msg)){ maoVivo[kk]=maoVivo[kk]||{}; maoVivo[kk][c]=1; }
         });
       });
       if(!(r[0]&&r[0].ok)){
@@ -41979,6 +41982,11 @@
         // 1) falta na planilha → lançar
         quer.forEach(function(v){
           var __ch=dashAutoNomeChave(v);
+          // A recepção lançou o mesmo FILHOt nesta coluna (QA37 P2/P3): vale a linha dela. Se
+          // ela não está na planilha, o passo 3 a repõe nesta mesma passada; o automático não
+          // escreve a dele junto, senão o FILHOt apareceria duas vezes na TV.
+          var __maoVivo=!!(maoVivo[k] && maoVivo[k][__ch]);
+          if(atualCh[__ch]===undefined && __maoVivo){ marcar(k, v, true, ''); return; }
           if(atualCh[__ch]!==undefined){
             // O MESMO FILHOt já está na planilha. Se a célula é a que ESTE mecanismo escreveu e
             // o combinado mudou (o shampoo do banho fixo, 25/set/2026), a velha sai e a nova
@@ -41986,8 +41994,8 @@
             // escreveu continua intocado (não está no registro do automático).
             var __nv=jsNorm(v), __mesmos=atual.filter(function(a){ return dashAutoNomeChave(a)===__ch; });
             var __jaNovo=__mesmos.some(function(a){ return jsNorm(a)===__nv; });
-            var __velhos=DASH_AUTO_COLS_HORA[k]
-              ? __mesmos.filter(function(a){ return jsNorm(a)!==__nv && antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); })
+            var __velhos=(DASH_AUTO_COLS_HORA[k] || __maoVivo)
+              ? __mesmos.filter(function(a){ return (jsNorm(a)!==__nv || __maoVivo) && (jsNorm(a)===__nv || antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); }))
                   && !((maoTxt[k]||{})[jsNorm(a)]); })   // texto igual ao lançado à mão: é da recepção (QA35)
               : [];
             if(!__velhos.length){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
@@ -42005,7 +42013,7 @@
                   manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat(__naoSaiu);
                   return (x&&!x.ok)?x:{ok:false, erro:'não consegui tirar da planilha o que estava escrito antes'};
                 }
-                if(__jaNovo) return {ok:true, jaEstava:true};          // a recepção já lançou o texto novo à mão
+                if(__jaNovo || __maoVivo) return {ok:true, jaEstava:true};   // a recepção já lançou à mão: vale a linha dela
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
                   .then(function(y){ if(y&&y.ok) resumo.posto++; return y; });
               })
@@ -42034,17 +42042,21 @@
           if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]){
             var __meu=atual.filter(function(a){ return jsNorm(a)===jsNorm(String(v)) && !((maoTxt[k]||{})[jsNorm(a)]); })[0];
             if(__meu){ marcarSaindo(col, __meu); tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__meu})
-              .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }); }); }
+              .then(function(x){ if(x&&x.ok) resumo.tirado++; else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); }); }
             return;
           }
           // Não deu para ler os Lançamentos do dia: não tira nada agora; a próxima passada tenta.
           if(!maoLida){ manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return; }
           // Tira a hora junto: banho cancelado que deixasse "10:00" na planilha faria a TV
           // tocar o alarme de um banho que não existe mais.
-          var __sai=atualCh[dashAutoNomeChave(v)]; marcarSaindo(col, __sai);
+          // Só sai a célula que ESTE mecanismo escreveu, pelo texto (QA37 P1). A linha escrita
+          // direto na planilha, com o mesmo FILHOt e outro texto, é de uma pessoa: fica.
+          var __sai=atual.filter(function(a){ return jsNorm(a)===jsNorm(String(v)); })[0];
+          if(__sai===undefined) return;
+          marcarSaindo(col, __sai);
           tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col,
                                         colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__sai})
-            .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }); });
+            .then(function(x){ if(x&&x.ok) resumo.tirado++; else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); });
         });
         novoRegistro[k]=quer;
       });
