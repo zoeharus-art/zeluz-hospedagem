@@ -21768,7 +21768,8 @@
     const s=document.getElementById('pel-saved'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
     // FECHAMENTO POR ASSUNTO (25/set/2026): data de prevenção gravada, de qualquer tela, confere
     // se algum assunto conversado com o tutor ficou resolvido. Só depois da gravação dar certo.
-    if(patch && Object.keys(patch).some(function(c){ return /_(p|t|doses|res)$/.test(c) || c==='col_nome'; })){
+    // "Não escova no Day Care" (29/set/2026, QA40) também fecha a conversa da escova já mandada.
+    if(patch && Object.keys(patch).some(function(c){ return /_(p|t|doses|res)$/.test(c) || c==='col_nome' || c==='escova_dc'; })){
       _pFicha.then(function(res){
         if(!res || !res.ok) return;
         try{ if(typeof vencFecharAssuntosPelaFicha==='function') vencFecharAssuntosPelaFicha(p, patch); }
@@ -21977,7 +21978,10 @@
   function toggleAtivPel(s){ if(!canEditPel()||!pelAtual) return;
     const arr=pelAtividades(pelAtual).slice(); const i=arr.indexOf(s);
     if(i>=0) arr.splice(i,1); else arr.push(s);
-    setPelExtra(pelAtual,{atividades:arr});
+    var _pAtiv={atividades:arr};
+    // Escova de dentes marcada à mão numa ficha que dizia "não escova": vale o chip (29/set/2026).
+    if(s==='escova' && i<0 && String((pelExtra(pelAtual)||{}).escova_dc||'')==='Não') _pAtiv.escova_dc='Sim';
+    setPelExtra(pelAtual,_pAtiv);
     const w=document.getElementById('pelAtivsEdit'); if(w) w.innerHTML=ativsEditInner(pelAtual);
     try{ if(typeof renderAtual==='function') renderAtual(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
   // ===== RENOMEAR NÃO PODE CRIAR OUTRO FILHOt (Adriana, 04/ago/2026: "temos 4 Stopa") =====
@@ -22379,15 +22383,44 @@
     u=u||{};
     return ((u.como==='casa')?'o tutor tinha em casa':'o tutor não autorizou')+(u.data?(' em '+fmtBR(u.data)):'')+(u.quem?(', por '+u.quem):'');
   }
+  // Quem pode mudar a ficha (QA40 L4): sem permissão, avisa na página e não grava nada —
+  // nem o rastro, que diria o que não aconteceu.
+  function escovaPode(){
+    if(typeof canEditPel==='function' && !canEditPel()){
+      zAlertao('SÓ QUEM CUIDA DA FICHA MUDA A ESCOVAÇÃO', ['Quem atualiza a ficha é a Consultora, a Supervisão ou a Gestão.'], {botao:'Entendi'});
+      return false;
+    }
+    return true;
+  }
+  function escovaFalhaTexto(r){
+    var e=String((r&&r.erro&&(r.erro.message||r.erro))||'');
+    return /reconectando|conex/i.test(e)
+      ? ['A internet do aparelho caiu: nada foi gravado.', 'Tente de novo em instantes.']
+      : ['Motivo: '+(e||'a gravação foi recusada')+'.'];
+  }
+  // UMA fonte só (QA40 M2, resposta recomendada): o chip "Escova de dentes" das atividades
+  // é a mesma coisa que esta pergunta. "Não" tira o FILHOt da atividade de escovação dos
+  // monitores; "Sim" põe. Marcar o chip à mão continua valendo (toggleAtivPel).
+  function escovaDcPatch(v, atividades){
+    var arr=(atividades||[]).slice(), i=arr.indexOf('escova');
+    if(v==='Não' && i>=0) arr.splice(i,1);
+    if(v==='Sim' && i<0) arr.push('escova');
+    return {escova_dc:v, atividades:arr};
+  }
   function escovaDcSet(v){
     if(!pelAtual) return;
-    var patch={escova_dc:v};
-    setPelExtra(pelAtual, patch);
+    if(!escovaPode()){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return; }
+    var p=pelAtual;
+    var patch=escovaDcPatch(v, (typeof pelAtividades==='function')?pelAtividades(p):[]);
+    Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return; }
+      try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v, {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(p===pelAtual){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+    });
     var box=document.getElementById('escovaDcMotivoBox'); if(box) box.style.display=(v==='Não')?'':'none';
-    try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v, {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
   }
   function escovaMotivoSet(v){
-    if(!pelAtual) return;
+    if(!pelAtual || !escovaPode()) return;
     setPelExtra(pelAtual, {escova_dc_motivo:v});
     var box=document.getElementById('escovaDcOutroBox'); if(box) box.style.display=(v==='Outro')?'':'none';
   }
@@ -22404,19 +22437,23 @@
   }
   function escovaTresMeses(como, p){
     p=p||pelAtual; if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(!escovaPode()) return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
     var hoje=zHojeISO(), quem=(typeof quemSou==='function'?quemSou():'-');
     var patch=escovaPatchTresMeses(como, hoje, quem);
     return Promise.resolve(setPelExtra(p, patch)).then(function(r){
       if(r && r.ok===false){
-        zAlertao('A FICHA NÃO FOI ATUALIZADA', ['Motivo: '+((r&&r.erro)||'a gravação foi recusada')+'.', 'Quem atualiza a ficha é a Consultora, a Supervisão ou a Gestão.'], {botao:'Entendi'});
+        zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'});
         return r;
       }
       try{ if(typeof audit==='function') audit('ficha-escova',
         'troca de escova: '+(como==='casa'?'o tutor tinha em casa (já trocou)':'o tutor não autorizou')+' — próxima em '+fmtBR(patch.escova_p),
         {alvo:pelKey(p), pet:pelNome(p), quem:quem}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
-      if(p===pelAtual && typeof zAlertao==='function') zAlertao('✅ PRÓXIMA TROCA EM '+fmtBR(patch.escova_p),
-        [(como==='casa'?'O tutor tinha em casa: vale como troca de hoje.':'O tutor não autorizou: a troca foi adiada.'), 'A cobrança volta sozinha daqui a 3 meses.'],
-        {ok:true, botao:'Fechar'});
+      if(p===pelAtual){
+        try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — o dado já está gravado */
+        if(typeof zAlertao==='function') zAlertao('✅ PRÓXIMA TROCA EM '+fmtBR(patch.escova_p),
+          [(como==='casa'?'O tutor tinha em casa: vale como troca de hoje.':'O tutor não autorizou: a troca foi adiada.'), 'A cobrança volta sozinha daqui a 3 meses.'],
+          {ok:true, botao:'Fechar'});
+      }
       return r||{ok:true};
     });
   }
@@ -22559,7 +22596,7 @@
     var v=ex[campoP]||'', manual=!!ex[campoP+'_manual'];
     var semUltima=!/^\d{4}-\d{2}-\d{2}$/.test(String(ex[campoT]||''));
     var notas=[];
-    if(manual) notas.push('Data digitada à mão.');
+    if(manual) notas.push(prevNotaManual(ex, campoP));
     else if(opc.calcTexto) notas.push(opc.calcTexto);
     // Sem a data em que tomou, a tela DIZ isso — e não inventa uma para trás.
     if(semUltima) notas.push('última: não informada');
@@ -22577,6 +22614,13 @@
     return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label>'
       +'<input type="date" class="cad-in" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
       +hint+aviso+'</div>';
+  }
+  // A nota da data à mão. A troca de escova adiada porque o tutor não autorizou diz isso,
+  // e não "digitada à mão" (QA40 L3).
+  function prevNotaManual(ex, campoP){
+    var u=(campoP==='escova_p')?((ex||{}).escova_ult||null):null;
+    if(u && u.como==='nao') return 'Adiada: o tutor não autorizou a troca'+(u.data?(' em '+fmtBR(u.data)):'')+'.';
+    return 'Data digitada à mão.';
   }
   // Grava o "Vence em" digitado. `bloco` = bloco da ficha que tem Salvar (a data entra na
   // fila dele, como os campos vizinhos, e só vai para o banco no Salvar). Sem bloco, grava
@@ -23960,6 +24004,9 @@
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
     var linha=function(it){
+      // Quem não escova no Day Care: a troca de escova não é cobrada aqui também (QA40 L6).
+      if(it.k==='escova_p' && escovaNaoEscova(ex))
+        return '<div style="border-top:1px solid var(--line);padding:9px 0;font-size:13px;color:var(--muted)"><strong>'+escAttr(it.nome)+':</strong> não escova no Day Care — fora da cobrança.</div>';
       var feito=ex[it.base]||'', prox=ex[it.k]||'';
       var por=ex[it.k.replace(/_p$/,'')+'_por']||'';
       var atrasado=venceuISO(prox);
@@ -38225,6 +38272,13 @@
       if(Array.isArray(__ra.itens_ant)) o=Object.assign({}, o, {itens:__ra.itens_ant});
     }
     var def=vencRespDef(v)||{};
+    // "Tinha em casa" e "não autorizou" mudam a FICHA: sem permissão, nem a resposta é
+    // gravada — senão o cartão fecharia com a ficha dizendo outra coisa (QA40 L4).
+    if(def.escova3m && typeof canEditPel==='function' && !canEditPel()){
+      if(typeof zAlertao==='function') zAlertao('SÓ QUEM CUIDA DA FICHA REGISTRA ESTA RESPOSTA',
+        ['"'+def.t+'" muda a data da próxima troca na ficha.', 'Quem atualiza a ficha é a Consultora, a Supervisão ou a Gestão.'], {botao:'Entendi'});
+      return Promise.resolve(false);
+    }
     var rot=String(vencRotuloTipo(tipo)).toLowerCase();
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var agora=Date.now();
@@ -39392,6 +39446,9 @@
     h+='</div>';
     if(rt&&rt.quem) h+='<div class="hint" style="margin-top:4px">Registrado por '+escAttr(rt.quem)
       +(rt.ts?(' às '+vencHora(rt.ts)):'')+'.</div>';
+    // A resposta gravada que não tem mais botão (versão antiga): a tela diz qual foi (QA40 L7).
+    if(atual && !vencRespostasDe(tipo, dia, o).some(function(x){ return vencRespEh(atual, x.v); }) && vencRespRotulo(atual))
+      h+='<div class="hint" style="margin-top:4px">Resposta registrada: “'+escAttr(vencRespRotulo(atual))+'”.</div>';
     h+=vencAutoLancadoHTML(o, r, tipo, dia, ka);
     return h+'</div>';
   }

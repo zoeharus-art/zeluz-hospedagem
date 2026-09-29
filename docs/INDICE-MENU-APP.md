@@ -286,6 +286,14 @@
 - **Só na ficha:** nenhum dos dois vai para a planilha nem para a TV, porque não é troca feita aqui. Fica o rastro com quem registrou e quando.
 - **Onde está no código:** `escovaNaoEscova`, `prevForaDaCobranca`, `escovaFichaHTML`, `escovaDcSet`, `escovaMotivoSet`, `escovaPatchTresMeses`, `escovaTresMeses`, `VENC_ESCOVA_EXTRAS` e `vencRespostasEscova`.
 - **Harness:** a checagem v-32 ("o quadro das respostas pendentes traz os CINCO botões") mudou de propósito: o cartão dela é de troca de escova, e os botões da escova agora são outros. Continuam cinco.
+- **Ajustes do QA40:**
+  - o "Não" também fecha a conversa da escova que já tinha sido mandada ao tutor;
+  - **uma fonte só:** o "Não" tira o chip "Escova de dentes" das atividades (a lista de escovação dos monitores) e o "Sim" põe; marcar o chip à mão numa ficha com "Não" volta para "Sim";
+  - quem não pode mudar a ficha recebe aviso na página e nada é gravado (nem nos Vencimentos);
+  - a ficha se redesenha depois de responder;
+  - o "vence em" da troca adiada diz "Adiada: o tutor não autorizou a troca em …";
+  - o painel "Lance aqui mesmo" da Prevenção diz "não escova no Day Care — fora da cobrança";
+  - a resposta antiga ("Vai aplicar em casa") num cartão de escova continua legível.
 
 ### Decisões registradas (sem mudança de código)
 

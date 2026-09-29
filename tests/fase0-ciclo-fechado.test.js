@@ -4248,6 +4248,37 @@ provaAsync('"tinha em casa" vale como troca de hoje; "não autorizou" adia — n
     igual(JSON.parse(JSON.stringify(run('__escChamou'))), [['nao', 'Lola']]);
   } finally { run('DB=__bkEsc.db; vencGravar=__bkEsc.vg; vencAutoDesmanchar=__bkEsc.vd; vencObjDe=__bkEsc.vo; vencRegDeDia=__bkEsc.vr; escovaTresMeses=__bkEsc.et; quemSou=__bkEsc.qs;'); }
 });
+provaAsync('QA40 — o "Não" fecha a conversa já mandada e acerta o chip da atividade; sem permissão nada muda; a ficha recusada não vira sucesso; os textos dizem o que houve', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/c==='col_nome' \|\| c==='escova_dc'; \}\)\)\{\s*_pFicha\.then/.test(src), 'gravar escova_dc passa pelo fechamento das conversas');
+  igual(JSON.parse(JSON.stringify(run(`escovaDcPatch('Não', ['aucademia','escova'])`))), { escova_dc: 'Não', atividades: ['aucademia'] });
+  igual(JSON.parse(JSON.stringify(run(`escovaDcPatch('Sim', ['aucademia'])`))), { escova_dc: 'Sim', atividades: ['aucademia', 'escova'] });
+  run(`__bkQ40={cp:canEditPel, sp:setPelExtra, za:zAlertao, au:audit, pa:pelAtual, rf:renderPelFicha};
+    __alQ40=[]; zAlertao=function(t){ __alQ40.push(t); }; __audQ40=[]; audit=function(a,b){ __audQ40.push(b); };
+    __grQ40=[]; setPelExtra=function(p, patch){ __grQ40.push(patch); return Promise.resolve(__respQ40); }; renderPelFicha=function(){};
+    pelAtual={n:'Lola', tutor:'Bia'};`);
+  try {
+    // sem permissão: nem grava, nem deixa rastro
+    run(`canEditPel=function(){ return false; }; __respQ40={ok:true};`);
+    const r1 = await run(`escovaTresMeses('nao')`);
+    assert.ok(r1.ok === false && run('__grQ40.length') === 0 && run('__audQ40.length') === 0 && /SÓ QUEM CUIDA DA FICHA/.test(run('__alQ40[0]')), JSON.stringify(r1));
+    run(`__bkQ40b={db:DB, vg:vencGravar, vr:vencRegDeDia}; DB={}; __vgQ40=0; vencGravar=function(){ __vgQ40++; return Promise.resolve(true); }; vencRegDeDia=function(){ return {}; };`);
+    try {
+      const r2 = await run(`vencResponderTipo('lola__bia', 'escova', 'esc_casa', zHojeISO(), {chave:'lola__bia', p:{n:'Lola', tutor:'Bia'}, nome:'Lola', itens:[]})`);
+      assert.ok(r2 === false && run('__vgQ40') === 0, 'nos Vencimentos, sem permissão, a resposta não é gravada');
+    } finally { run('DB=__bkQ40b.db; vencGravar=__bkQ40b.vg; vencRegDeDia=__bkQ40b.vr;'); }
+    // com permissão, mas a ficha recusou: não diz "próxima troca", não deixa rastro de sucesso
+    run(`canEditPel=function(){ return true; }; __alQ40=[]; __respQ40={ok:false, erro:new Error('banco reconectando')};`);
+    const r3 = await run(`escovaTresMeses('nao')`);
+    assert.ok(r3.ok === false && run('__audQ40.length') === 0 && /NÃO FOI ATUALIZADA/.test(run('__alQ40[0]')), JSON.stringify(run('__alQ40')));
+  } finally { run('canEditPel=__bkQ40.cp; setPelExtra=__bkQ40.sp; zAlertao=__bkQ40.za; audit=__bkQ40.au; pelAtual=__bkQ40.pa; renderPelFicha=__bkQ40.rf;'); }
+  // o "vence em" diz que foi adiado, e não "digitado à mão"
+  const h = run(`prevVenceCampoHTML({escova_p:'2026-12-28', escova_p_manual:true, escova_t:'2026-06-01', escova_ult:{como:'nao', data:'2026-09-29'}}, 'escova_p', 'escova_t', '')`);
+  assert.ok(/Adiada: o tutor não autorizou a troca em 29\/09\/2026/.test(h) && !/Data digitada à mão/.test(h), h);
+  // a resposta antiga ("Vai aplicar em casa") num cartão de escova continua legível
+  const hr = run(`vencRespostasHTML({p:{}, nome:'Lola', itens:[]}, {respostas:{escova:{v:'casa', quem:'Amanda', ts:0}}}, 'escova', zHojeISO(), 'lola__bia')`);
+  assert.ok(/Resposta registrada: “Vai aplicar em casa”/.test(hr), hr.slice(0, 300));
+});
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
 prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {

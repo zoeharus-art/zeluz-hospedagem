@@ -16724,7 +16724,8 @@ async function main() {
         // próxima troca na ficha, em 3 meses. Continuam cinco botões.
         check('v-32 · o quadro das respostas pendentes traz os CINCO botões, ali mesmo',
           ['Tinha em casa (já trocou)', 'Vai mandar na bolsa', 'Pegar na loja', 'Não respondeu', 'Não autorizou a troca']
-            .every((t) => quadro32.indexOf('>' + t + '</button>') > 0),
+            .every((t) => quadro32.indexOf('>' + t + '</button>') > 0)
+          && ['Vai aplicar em casa', 'Não quer agora'].every((t) => quadro32.indexOf('>' + t + '</button>') < 0),
           quadro32.slice(0, 400));
         check('v-32 · e cada botão grava direto do dashboard, com o dia daquele cartão',
           quadro32.indexOf("vencResponderTipo('otavio__marcela','escova','bolsa','2026-09-16')") > 0,
