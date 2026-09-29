@@ -3696,7 +3696,7 @@
       <div class="card" id="ciCardMed">
         <h2>Medicação e suplementos</h2>
         <div class="field"><label>Está em uso de alguma medicação?</label>
-          <div class="seg" id="ciMedEmUso" data-single><button onclick="pick(this);ciMedEmUsoChange()">Não</button><button onclick="pick(this);ciMedEmUsoChange()">Sim</button></div>
+          <div class="seg" id="ciMedEmUso" data-single><button onclick="pick(this);ciMedEmUsoChange(true)">Não</button><button onclick="pick(this);ciMedEmUsoChange(true)">Sim</button></div>
           <div class="hint" style="margin-top:4px">Remédio de <strong>emergência</strong> (o kit que o tutor manda só por precaução) <strong>não</strong> é medicação em uso: escreva em Pertences. Suplemento de todo dia conta como Sim.</div></div>
         <div id="ciMedEmUsoBox" style="display:none">
           <div class="hint">Cada medicamento ou suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários</strong>. É isso que toca o despertador da AuAulândia.</div>
@@ -45916,7 +45916,7 @@
     ciRenderPert({});
     // coleira e "está em uso de alguma medicação?": em branco — é o tutor quem responde
     try{ ciColeiraAplicar(null); }catch(e){} /* silencioso de propósito: tela sem o cartão da coleira */
-    setSeg('ciMedEmUso','');
+    setSeg('ciMedEmUso',''); CI_MED_NAO_TOCADO=false;
     var _meb=document.getElementById('ciMedEmUsoBox'); if(_meb) _meb.style.display='none';
     // medicação vazia por padrão (1 linha, que só aparece com "Sim")
     document.getElementById('ciMeds').innerHTML=''; ciAddMed();
@@ -46631,7 +46631,7 @@
     if(txt) txt.textContent=(estado==='ok')
       ? 'Confirmado com o tutor por '+quemSou()+' — segue igual.'
       : 'Mudou: corrija abaixo. Ao salvar, a ficha do FILHOt é atualizada junto.';
-    try{ if(typeof zLimparFaltaEm==='function') zLimparFaltaEm(el); }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
+    try{ if(typeof zLimparFaltaEm==='function'){ zLimparFaltaEm(el); var _mf=el.querySelector('.ci-med-conf'); if(_mf) zLimparFaltaEm(_mf); } }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
     try{ ciMedTudoIgualRender(); }catch(e){} /* silencioso de propósito: redesenho do botão — o estado já está na linha */
   }
   function ciMedSemPermissao(){
@@ -46647,7 +46647,11 @@
   // medicação em uso: vai escrito em Pertences.
   function ciMedEmUso(){ try{ return (typeof segVal==='function'?segVal('ciMedEmUso'):'')||''; }catch(e){ return ''; } } /* sem a pergunta na tela (outra tela, teste), vale a lista como está */
   function ciMedFichaLinhas(){ try{ return Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem[data-daficha="1"]')); }catch(e){ return []; } } /* sem a lista na tela, não há linha da ficha */
-  function ciMedEmUsoChange(){
+  // O "Não" só vale como "parou" quando uma PESSOA tocou nele neste check-in (QA39 A1). O
+  // "Não" que volta de uma estadia já salva (corrigir, acrescentar) é só a resposta de antes:
+  // aplicá-lo de novo pararia o remédio que a veterinária começou depois.
+  var CI_MED_NAO_TOCADO=false;
+  function ciMedEmUsoChange(porToque){
     var v=ciMedEmUso();
     var ficha=ciMedFichaLinhas();
     if(v==='Não' && ficha.length && typeof canEditCheckinMed==='function' && !canEditCheckinMed()){
@@ -46655,6 +46659,16 @@
       ciMedSemPermissao();
       v='Sim';
     }
+    // Acrescentar SOMA — nunca tira. Dizer ali que parou esconderia a lista e deixaria a
+    // estadia dizendo duas coisas (QA39 A7). Para tirar remédio, é o Corrigir.
+    if(v==='Não' && porToque && ficha.length && typeof ciEditandoId!=='undefined' && ciEditandoId){
+      setSeg('ciMedEmUso','Sim'); v='Sim';
+      zAlertao('PARA DIZER QUE PAROU, USE CORRIGIR', ['Aqui você está ACRESCENTANDO ao check-in que já existe: nada sai dele.',
+        'Para tirar remédio, volte e toque em ✎ Corrigir informação errada, no quadro do alto.'], {botao:'Entendi'});
+    }
+    if(porToque) CI_MED_NAO_TOCADO=(v==='Não');
+    // Com "Não", o vermelho da lista escondida e da conferência de segurança sai junto (QA39 A10).
+    if(v==='Não'){ try{ zLimparFaltaEm('ciMedEmUsoBox'); zLimparFaltaEm('ciGate'); }catch(e){} /* silencioso de propósito: limpar marcação de falta */ }
     var box=document.getElementById('ciMedEmUsoBox'); if(box) box.style.display=(v==='Sim')?'block':'none';
     if(v==='Sim'){
       var w=document.getElementById('ciMeds');
@@ -46666,7 +46680,7 @@
         var nomes=ficha.map(function(el){ return ((el.querySelector('[data-c=m]')||{}).value||'').trim(); }).filter(Boolean);
         ms.style.color='var(--crm-atencao-text)';
         ms.textContent='Ao salvar, '+(nomes.length>1?('os remédios da ficha ('+nomes.join(', ')+') ficam'):('o remédio da ficha ('+(nomes[0]||'sem nome')+') fica'))
-          +' como "já não toma mais", com o seu nome. Nenhum alarme toca.';
+          +' como "já não toma mais", com o seu nome — inclusive as cópias repetidas. Nenhum alarme dele toca.';
       } else if(v==='Não'){ ms.style.color='var(--muted)'; ms.textContent='Sem medicação nesta estadia: nenhum alarme toca.'; }
       else if(ficha.length){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme com o tutor: Confirmado ou Mudou em cada item, ou "Tudo igual" se nada mudou. O check-in não fecha sem isso.'; }
       else ms.textContent='';
@@ -46692,19 +46706,36 @@
   }
   // Os remédios da ficha que o tutor disse que NÃO estão em uso: {id, nome}. É isto que o
   // salvar marca como "já não toma mais" (o mesmo registro do "Parou" da aba Medicamentos).
+  // Só quando uma pessoa tocou em "Não" agora, e não no acrescentar (QA39 A1 e A7).
   function ciMedNaoEmUso(){
-    if(ciMedEmUso()!=='Não') return [];
+    if(ciMedEmUso()!=='Não' || !CI_MED_NAO_TOCADO) return [];
+    if(typeof ciEditandoId!=='undefined' && ciEditandoId) return [];
     return ciMedFichaLinhas().map(function(el){ return {id:el.dataset.id||'', nome:((el.querySelector('[data-c=m]')||{}).value||'').trim()}; })
       .filter(function(x){ return x.id; });
+  }
+  // O remédio que ainda vale: não suspenso, não parado, sem fim no passado (QA39 A4). É só
+  // ele que vem para a lista do check-in, liga o "Sim" sozinho e entra no "Tudo igual".
+  function ciMedEmVigor(it, hoje){
+    it=it||{}; hoje=hoje||zHojeISO();
+    if(it.suspenso || it.paradoEm) return false;
+    if(!it.continuo && it.dataFim && String(it.dataFim)<hoje) return false;
+    return true;
   }
   // O mesmo registro do "Parou" da aba Medicamentos (fmedParou): nada é apagado, o item
   // desce para "Já não toma mais", com quem ouviu do tutor, quando e por quê. Termina ONTEM,
   // para o despertador não chamar hoje.
+  // "Não está em uso de nenhuma medicação" vale para TODOS os itens em vigor da agenda,
+  // inclusive a cópia repetida que a tela não mostra (QA39 A2). `lista` só diz que houve o "Não".
   function ciMedMarcarParou(key, lista){
     if(!DB || !key || !(lista&&lista.length)) return Promise.resolve([]);
     var quem=(typeof quemSou==='function'?quemSou():'-'), hoje=zHojeISO(), ontem=addDiasISO(hoje,-1)||hoje;
     var motivo='no check-in da hospedagem, o tutor disse que não está em uso';
-    return Promise.all(lista.map(function(x){
+    return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(sAll){
+      var todos=(sAll&&sAll.val&&sAll.val())||{};
+      return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje); })
+        .map(function(id){ return {id:id, nome:String((todos[id]||{}).nome||'')}; });
+    }).catch(function(e){ _logFalhaGrav('ler a agenda para marcar "já não toma mais"', e); return lista; }).then(function(alvos){
+    return Promise.all(alvos.map(function(x){
       var no='auaulandia/medicacao-agenda/'+key+'/itens/'+x.id;
       return DB.ref(no).once('value').then(function(s){
         var it=(s&&s.val&&s.val())||null; if(!it) return null;
@@ -46721,6 +46752,7 @@
         {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||''), quem:quem});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       return feitos;
+    });
     });
   }
   function ciMedConfirmar(btn){ ciMedConfSet(btn,'ok'); }
@@ -46823,7 +46855,7 @@
       // DADO ANTIGO JÁ DUPLICADO: a agenda da Lisa chegava com 4 VitaC iguais. A tela mostra
       // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
       // banco com rastro. A Consultora não precisa mais apagar linha por linha.
-      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens);
+      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); });
       if(!ids.length) return;
       const wrap=document.getElementById('ciMeds'); if(!wrap) return; wrap.innerHTML='';
       // Os de USO CONTÍNUO vêm primeiro: são o que a aba Medicamentos da ficha guarda e o
@@ -46835,7 +46867,8 @@
       const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme com o tutor: Confirmado ou Mudou em cada item, ou "Tudo igual" se nada mudou. O check-in não fecha sem isso.'; }
       // Com remédio na ficha, a pergunta já vem "Sim" (se ninguém respondeu ainda): a lista
       // aparece para confirmar. O tutor diz que parou? Um toque em "Não".
-      if(!ciMedEmUso()) setSeg('ciMedEmUso','Sim');
+      // Um "Não" que só voltou da estadia salva (ninguém tocou agora) não esconde remédio em vigor.
+      if(!ciMedEmUso() || (ciMedEmUso()==='Não' && !CI_MED_NAO_TOCADO)) setSeg('ciMedEmUso','Sim');
       ciMedEmUsoChange();
     }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (ciPreencherMedicacao)', e); });
   }
@@ -46900,9 +46933,15 @@
   function ciPertLinha(p){ return String((p&&p.nome)||'').trim()+((p&&p.spec)?(' — '+String(p.spec).trim()):''); }
   function ciPertTipo(txt){
     var n=jsNorm(String(txt||''));
-    if(/\b(racao|racoes|comida|comidinha|natural|sache|saches|lata|latas|pate)\b/.test(n)) return 'comida';
-    if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit)\b/.test(n)) return 'remedios';
     var w=(n.split(/\s+/)[0]||'');
+    // Objeto que não é comida nem remédio, mesmo com a palavra no meio (QA39 A9): "pote de
+    // comida", "cama de fibra natural", "kit de banho", "brinquedo de ração".
+    if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
+    if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
+    if(/^(pote|potes|tigela|comedouro|bebedouro|brinquedo|brinquedos|manta|cobertor|roupa|roupinha|toalha|escova|tapete)$/.test(w)) return 'outro';
+    if(w==='kit' && !/\b(remedio|remedios|medicacao|medicamento|medicamentos|emergencia|primeiros)\b/.test(n)) return 'outro';
+    if(/\b(racao|racoes|comida|comidas|comidinha|natural|sache|saches|lata|latas|pate|alimento|alimentos|marmita|marmitas|umido|umida|petisco|petiscos|biscoito|biscoitos)\b/.test(n)) return 'comida';
+    if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit|emergencia|suplemento|suplementos)\b/.test(n)) return 'remedios';
     if(/^(mochila|bolsa|bolsinha|sacola|sacolinha|mala|necessaire)$/.test(w)) return 'mochila';
     if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
     if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
@@ -46925,7 +46964,10 @@
       ped.push(cur);
       var daLinha=[];
       ped.map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(x){
-        if(/^\d/.test(x) && daLinha.length) daLinha[daLinha.length-1]+=', '+x; else daLinha.push(x);
+        // "ração Royal, 1 pacote": só QUANTIDADE completa o de antes (QA39 A8). "2 brinquedos"
+        // e "1 manta" são itens.
+        if(daLinha.length && /^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i.test(x)) daLinha[daLinha.length-1]+=', '+x;
+        else daLinha.push(x);
       });
       daLinha.forEach(function(x){ out.push(x); });
     });
@@ -46937,7 +46979,13 @@
       var ix=-1;
       for(var i=0;i<antes.length;i++){ if(!usado[i] && jsNorm(ciPertLinha(antes[i]))===jsNorm(parte)){ ix=i; break; } }
       if(ix>=0){ usado[ix]=1; novos.push(antes[ix]); return; }
-      novos.push({uid:ciUid(), k:ciPertTipo(parte), nome:(parte.charAt(0).toUpperCase()+parte.slice(1)), spec:''});
+      // Editou a descrição de um item que já estava (mesma primeira palavra): é o MESMO item —
+      // conserva o tipo e o uid, e não vira "material novo" na Conferência (QA39 A11).
+      var pw=jsNorm(parte).split(/\s+/)[0]||'';
+      for(var j=0;j<antes.length;j++){ if(!usado[j] && pw && (jsNorm(ciPertLinha(antes[j])).split(/\s+/)[0]||'')===pw){ ix=j; break; } }
+      var nome=(parte.charAt(0).toUpperCase()+parte.slice(1));
+      if(ix>=0){ usado[ix]=1; novos.push({uid:antes[ix].uid, k:antes[ix].k, nome:nome, spec:''}); return; }
+      novos.push({uid:ciUid(), k:ciPertTipo(parte), nome:nome, spec:''});
     });
     ciPertSel=novos;
     ciPertMostrar();
@@ -46947,7 +46995,7 @@
     var list=document.getElementById('ciPertSel'); if(!list) return;
     if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada escrito ainda.</div>'; return; }
     list.innerHTML='<div class="hint" style="margin-top:6px"><strong>'+ciPertSel.length+(ciPertSel.length>1?' itens':' item')+' para conferir:</strong> '
-      +ciPertSel.map(function(p){ return esc(ciPertLinha(p)); }).join(' · ')+'</div>';
+      +ciPertSel.map(function(p){ return esc(ciPertLinha(p))+((p.k==='comida')?' <strong>(comida: etiquetar)</strong>':''); }).join(' · ')+'</div>';
   }
   function ciDrawPert(){
     var ta=document.getElementById('ciPertTexto');
@@ -47283,6 +47331,10 @@
       var f=(e&&e.ficha)||{};
       ciColeiraAplicar(f.coleira||null);
       var r=f.medEmUso||((Array.isArray(e&&e.medicacao)&&e.medicacao.length)?'Sim':'');
+      // Com remédio em vigor na lista (a veterinária pode ter começado um depois), a resposta
+      // volta "Sim": a lista aparece e ninguém para remédio sem ver (QA39 A1).
+      if(r==='Não' && ciMedFichaLinhas().length) r='Sim';
+      CI_MED_NAO_TOCADO=false;
       if(r){ setSeg('ciMedEmUso', r); ciMedEmUsoChange(); }
     }catch(x){ _logFalhaGrav('ciRespostasDaEstadia', x); }
   }
@@ -47298,6 +47350,8 @@
       cmp('Entrada', antes.entrada, dados.entrada);
       cmp('Saída', antes.saida, dados.saida);
       Object.keys(Object.assign({},a,b)).forEach(function(k){
+        if(k==='coleira'){ cmp('Coleira antipulga ou repelente', (typeof ciColeiraTexto==='function'?ciColeiraTexto(a[k]):''), (typeof ciColeiraTexto==='function'?ciColeiraTexto(b[k]):'')); return; }
+        if(k==='medEmUso'){ cmp('Medicação em uso', a[k]||'', b[k]||''); return; }
         if(k==='alim'){ cmp('Alimentação', JSON.stringify(a[k]||{}), JSON.stringify(b[k]||{})); return; }
         cmp(k, a[k], b[k]);
       });
@@ -47625,15 +47679,25 @@
   }
   // A linha do remédio citado no começo da frase ("Apoquel": ...). É ela que fica vermelha,
   // com a frase logo embaixo — e não a lista inteira, com as frases empilhadas no fim (QA37).
-  function ciMedLinhaDoProblema(txt){
+  // `usados` (QA39 A6): dois remédios de mesmo nome (manhã e noite) — o 2º problema vai para a
+  // 2ª linha, e não os dois para a 1ª. O problema "veio da ficha" aponta para a faixa
+  // Confirmado/Mudou (QA39 A5): a linha tem 1.600 px no celular, e a frase ficava longe dela.
+  function ciMedLinhaDoProblema(txt, usados){
     try{
+      usados=usados||{};
       const linhas=Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem'));
       const nomeDe=function(el){ return jsNorm(((el.querySelector('[data-c=m]')||{}).value)||''); };
-      const m=/^"([^"]+)"/.exec(String(txt||''));
-      if(m) return linhas.filter(function(el){ return nomeDe(el)===jsNorm(m[1]); })[0]||null;
-      if(/NOME/.test(String(txt||''))) return linhas.filter(function(el){ return !nomeDe(el); })[0]||null;
+      const t=String(txt||''), m=/^"([^"]+)"/.exec(t), ficha=/veio da ficha/.test(t);
+      let cand=[];
+      if(m) cand=linhas.filter(function(el){ return nomeDe(el)===jsNorm(m[1]) && (!ficha || el.dataset.daficha==='1'); });
+      else if(/NOME/.test(t)) cand=linhas.filter(function(el){ return !nomeDe(el); });
+      const ch=(ficha?'f|':'i|')+(m?jsNorm(m[1]):'');
+      const el=cand[usados[ch]||0]||cand[cand.length-1]||null;
+      usados[ch]=(usados[ch]||0)+1;
+      if(!el) return null;
+      if(ficha) return el.querySelector('.ci-med-conf')||el;
+      return el.querySelector('[data-c=m]')||el;
     }catch(e){ return null; } /* sem a linha, vale o bloco inteiro — como antes */
-    return null;
   }
   function ciFaltando(){
     const F=[]; // {texto, foco} — NA ORDEM DA TELA: a rolagem vai ao primeiro
@@ -47648,7 +47712,8 @@
     // 'ciMedLista' não existe no HTML — o campo real é 'ciMeds'. Com o id errado, o motor do
     // "o que falta" não achava o bloco e caía no aviso escrito, justamente na medicação, que
     // é onde mais se erra (a Giullian bateu 3 vezes seguidas nisto em 13/ago, com a Lisa).
-    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:(ciMedLinhaDoProblema(p)||'ciMeds')}); });
+    const _usados={};
+    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:(ciMedLinhaDoProblema(p, _usados)||'ciMeds')}); });
     if(Object.keys(meds).length>0){
       const chk=document.getElementById('ciGateChk');
       if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
@@ -47936,7 +48001,7 @@
     // a ficha: é o que aconteceu HOJE, e a ficha continua dizendo o que ele come de verdade.
     const alimSem=(typeof ciAlimSemRacaoEstadia==='function')?ciAlimSemRacaoEstadia():null;
     const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem,
-                   medParou:ciMedNaoEmUso() };
+                   medParou:ciMedNaoEmUso(), medEmUsoNao:(ciMedEmUso()==='Não') };
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
     // Modo CORRIGIR: não checa duplicidade (a estadia é conhecida) e exige o motivo antes
@@ -48214,6 +48279,9 @@
       // Deduplicado por assinatura antes de escrever: corrigir REESCREVE o nó, então é aqui
       // que o dado antigo repetido (os 4 VitaC da Lisa) para de voltar (24/set/2026).
       var _medsCorr=P.temMed?medDedupe(meds):{sai:[],itens:null,nomes:[]};
+      // "Não está em uso" no corrigir NÃO apaga a agenda (QA39 A3): quem parou fica em "já não
+      // toma mais", com o histórico — é o ciMedMarcarParou, depois de salvar, que marca.
+      if(!P.temMed && P.medEmUsoNao){ /* nada a reescrever */ } else
       // Lê ANTES de reescrever só para poder DIZER o que sumiu: reescrever o nó em silêncio
       // faria um remédio desaparecer sem ninguém saber por quê.
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
@@ -48320,7 +48388,7 @@
       __ciTravar(false); ciSalvoAgora=true;
       // "Não está em uso": os remédios da ficha ficam como "já não toma mais", com quem ouviu
       // do tutor. No corrigir a agenda já foi reescrita acima.
-      if(P.medParou && P.medParou.length && modo!=='corrigir'){
+      if(P.medParou && P.medParou.length){
         try{ ciMedMarcarParou(key, P.medParou); }catch(e){ _logFalhaGrav('marcar os remédios que o tutor disse que não estão em uso', e); }
       }
       // ===== A FICHA APRENDE O QUE ELE COME (Adriana, 23/set/2026) =================

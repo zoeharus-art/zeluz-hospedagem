@@ -220,6 +220,16 @@
   5. a data de entrada, o nome de quem entrega e a assinatura (ou "O tutor não veio").
 - **Estadia antiga** abre com os pertences como texto, um por linha; sem mexer, volta igual, com o V verde da Conferência.
 - **Onde está no código:** `ciColeira*`, `ciMedEmUso`, `ciMedEmUsoChange`, `ciMedTudoIgual`, `ciMedNaoEmUso`, `ciMedMarcarParou`, `ciPertPartes`, `ciPertTipo`, `ciPertDoTexto`, `ciAlimProblemas`, `ciMedLinhaDoProblema` e `zLimparFaltaEm`.
+- **Ajustes do QA39 (a medicação em primeiro lugar):**
+  - o **"Não" só vale quando alguém toca nele neste check-in.** O "Não" que volta de uma estadia salva (Corrigir, Acrescentar) é só a resposta de antes: com remédio em vigor na lista (a veterinária pode ter começado um depois), a resposta volta "Sim" e a lista aparece;
+  - o "Não" para **todos** os remédios em vigor da agenda, inclusive as cópias repetidas que a tela não mostra;
+  - no **Corrigir**, o "Não" não apaga mais a agenda: quem parou fica em "já não toma mais", com o histórico;
+  - no **Acrescentar**, não dá para dizer "Não" com remédio na lista: o aviso manda usar o Corrigir;
+  - só o remédio **em vigor** vem para a lista e para o "Tudo igual" (o que já parou, foi suspenso ou acabou fica de fora);
+  - o vermelho do remédio fica **na faixa Confirmado/Mudou** (e, nos outros problemas, no nome), e dois remédios de mesmo nome ficam cada um na sua linha;
+  - pertences: número só completa o item quando é quantidade ("ração, 2 kg"); "2 brinquedos" e "1 manta" são itens; "pote de comida", "cama de fibra natural" e "kit de banho" não viram comida nem remédio; "marmitas", "alimento úmido" viram comida; a comida aparece marcada "(comida: etiquetar)" na lista;
+  - editar a descrição de um pertence antigo conserva o item (não vira material novo na Conferência);
+  - o cartaz da correção fala a coleira e a medicação em uso em português.
 
 ### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
 

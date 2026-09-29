@@ -2441,17 +2441,22 @@ provaAsync('check-in rápido: "Está em uso de alguma medicação?" — sem resp
     run('canEditCheckinMed=function(){ return true; };');
     // "Não": nada vai para a estadia nem para o alarme, e a validação da ficha não cobra
     run(`__segMU.ciMedEmUso='Não';`);
+    // o "Não" que só voltou da estadia (ninguém tocou) não marca nada como "parou" (QA39 A1)
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [], 'sem toque, nada para');
+    run('ciMedEmUsoChange(true);');
     igual(JSON.parse(JSON.stringify(run('ciColetarMeds()'))), {});
     igual(JSON.parse(JSON.stringify(run('ciValidarMeds({})'))), []);
     igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Apoquel' }, { id: 'a2', nome: 'Enalapril' }]);
     f = JSON.parse(JSON.stringify(run('ciFaltando()')));
     assert.ok(!f.some((x) => x.f === 'ciMedEmUso' || x.f === 'ciMeds' || x.f === 'ciGate'), JSON.stringify(f.map((x) => x.t)));
     // ao salvar: "já não toma mais", terminando ONTEM (o despertador não chama hoje), com quem e o motivo
-    run(`__gravMU={}; DB={ref:function(p){ return {
-        once:function(){ return Promise.resolve({val:function(){ return {nome:p.indexOf('a1')>0?'Apoquel':'Enalapril', continuo:true, historico:[{acao:'Criou'}]}; }}); },
+    run(`__gravMU={}; __agMU={a1:{nome:'Apoquel', continuo:true, historico:[{acao:'Criou'}]}, a2:{nome:'Enalapril', continuo:true, historico:[{acao:'Criou'}]},
+        a1b:{nome:'Apoquel', continuo:true, historico:[]}, velho:{nome:'Antibiótico', continuo:false, dataFim:'2020-01-01'}};
+      DB={ref:function(p){ return {
+        once:function(){ var id=p.split('/').pop(); return Promise.resolve({val:function(){ return (p.slice(-6)==='/itens') ? __agMU : __agMU[id]; }}); },
         update:function(v){ __gravMU[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};`);
     const feitos = await run(`ciMedMarcarParou('bia__lola', ciMedNaoEmUso())`);
-    igual(JSON.parse(JSON.stringify(feitos)), ['Apoquel', 'Enalapril']);
+    igual(JSON.parse(JSON.stringify(feitos)), ['Apoquel', 'Enalapril', 'Apoquel'], 'todos em vigor, inclusive a cópia repetida (QA39 A2); o que já tinha acabado fica como está');
     const g = run(`__gravMU['auaulandia/medicacao-agenda/bia__lola/itens/a1']`);
     const ontem = run(`addDiasISO(zHojeISO(),-1)`);
     assert.ok(g.continuo === false && g.dataFim === ontem && g.paradoEm.quem === 'Márcia' && /não está em uso/.test(g.paradoEm.motivo)
@@ -2477,11 +2482,16 @@ prova('check-in rápido (QA37): responder um remédio tira o vermelho SÓ dele; 
     assert.ok(!run(`__a.classList.contains('z-falta')`) && run(`__b.classList.contains('z-falta')`), 'o outro bloqueio continua vermelho');
     assert.strictEqual(run('__btn.textContent'), 'Falta 1 · Salvar');
     // o problema com o nome do remédio aponta para a linha dele
-    run(`__lin=[{querySelector:function(){ return {value:'Apoquel'}; }},{querySelector:function(){ return {value:''}; }}];
+    run(`__nm=[{value:'Apoquel'},{value:''},{value:'Apoquel'}]; __fx=[{},{},{}];
+      __lin=__nm.map(function(n,i){ return {dataset:{daficha:(i!==1?'1':'')}, querySelector:function(sel){ return sel==='[data-c=m]'?n:(sel==='.ci-med-conf'?__fx[i]:null); }}; });
       document.querySelectorAll=function(sel){ return /magitem/.test(sel) ? __lin : []; };`);
-    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel": toque na MEDIDA (comprimido, ml, gota, pomada...).')===__lin[0]`));
-    assert.ok(run(`ciMedLinhaDoProblema('escreva o NOME do medicamento ou suplemento por extenso.')===__lin[1]`));
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel": toque na MEDIDA (comprimido, ml, gota, pomada...).')===__nm[0]`), 'o nome do remédio da linha');
+    assert.ok(run(`ciMedLinhaDoProblema('escreva o NOME do medicamento ou suplemento por extenso.')===__nm[1]`));
     assert.ok(run(`ciMedLinhaDoProblema('outra frase')===null`));
+    // dois Apoquel (manhã e noite): o 2º problema vai para a 2ª linha (QA39 A6); o "veio da ficha" vai para a faixa (A5)
+    run(`__us={};`);
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.', __us)===__fx[0]`));
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.', __us)===__fx[2]`));
   } finally { run('Z_FALTA_MARCADOS=__bkZ.zm; document.querySelectorAll=__bkZ.qsa;'); }
 });
 prova('na Conferência, Comida é item crítico (como a ração e a comida natural antigas); Remédios não vira trava nova (QA19 B5)', () => {
@@ -3839,6 +3849,77 @@ provaAsync('QA43 — o SUBSTITUIR guarda no histórico a assinatura e os pertenc
     assert.ok(pg.length === 2 && /ouviu o tutor/.test(pg[1][1]) && !/na porta/.test(pg[1][1]), JSON.stringify(pg));
     igual(JSON.parse(JSON.stringify(run('__tmQ43'))), [600000]);
   } finally { run('zTexto=__bkQ43b.zt; setTimeout=__bkQ43b.st; __ciTravar=__bkQ43b.tr; __ciSalvando=__bkQ43b.sv;'); }
+});
+prova('QA39 — o "Não" só vale quando alguém toca nele agora; não para remédio da veterinária; não apaga a agenda no corrigir; só o que está em vigor vem para a lista', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  // em vigor: não suspenso, não parado, sem fim no passado
+  igual([run(`ciMedEmVigor({continuo:true})`), run(`ciMedEmVigor({suspenso:true})`), run(`ciMedEmVigor({paradoEm:{}})`),
+    run(`ciMedEmVigor({dataFim:'2020-01-01'})`), run(`ciMedEmVigor({dataFim:'2099-01-01'})`)], [true, false, false, false, true]);
+  assert.ok(/Object\.keys\(itens\)\.filter\(function\(id\)\{ return ciMedEmVigor\(itens\[id\]\); \}\)/.test(src), 'a lista do check-in só traz o que está em vigor');
+  assert.ok(/if\(!ciMedEmUso\(\) \|\| \(ciMedEmUso\(\)==='Não' && !CI_MED_NAO_TOCADO\)\) setSeg\('ciMedEmUso','Sim'\);/.test(src), 'com remédio em vigor, a resposta vem Sim (e o "Não" que só voltou da estadia não esconde)');
+  assert.ok(/if\(!MED_GATE_ULTIMO\['auaulandia\|'\+key\] && ciMedEmUso\(\)!=='Não'\)\{/.test(src), 'com "Não", o salvar não repergunta "tomava X?"');
+  const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
+  assert.ok(cor.indexOf('if(!P.temMed && P.medEmUsoNao){ /* nada a reescrever */ } else') > 0
+    && cor.indexOf('if(!P.temMed && P.medEmUsoNao)') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
+  assert.ok(/if\(P\.medParou && P\.medParou\.length\)\{/.test(src), 'e marca "já não toma mais" também no corrigir');
+  run(`__bkN={sv:segVal, ss:setSeg, ge:document.getElementById, qsa:document.querySelectorAll, ce:canEditCheckinMed, za:zAlertao, ed:ciEditandoId, ca:ciColeiraAplicar, ch:ciMedEmUsoChange};
+    __sgN={ciMedEmUso:''}; segVal=function(id){ return __sgN[id]||''; }; setSeg=function(id,v){ __sgN[id]=v; };
+    __alN=[]; zAlertao=function(t){ __alN.push(t); }; canEditCheckinMed=function(){ return true; };
+    __rowsN=[{dataset:{id:'a1', daficha:'1', conf:''}, querySelector:function(){ return {value:'Antibiótico X'}; }}];
+    document.querySelectorAll=function(sel){ return /magitem/.test(sel) ? __rowsN : []; };
+    document.getElementById=function(id){ return {style:{}, querySelector:function(){ return {}; }, innerHTML:'', textContent:''}; };`);
+  try {
+    // A1: reabrir uma estadia que foi "Não", com remédio em vigor na lista (a veterinária começou depois) → volta "Sim"
+    run(`__colN=null; ciColeiraAplicar=function(c){ __colN=c; }; ciRespostasDaEstadia({ficha:{medEmUso:'Não', coleira:{tem:'Sim', qual:'Seresto'}}, medicacao:[]});`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && run('__colN.qual') === 'Seresto', 'a resposta e a coleira voltam, e o remédio em vigor não fica escondido');
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [], 'nada para sem alguém tocar em "Não"');
+    // sem remédio em vigor, o "Não" volta como era
+    run(`__rowsN=[]; ciRespostasDaEstadia({ficha:{medEmUso:'Não'}});`);
+    assert.strictEqual(run('__sgN.ciMedEmUso'), 'Não');
+    run(`__rowsN=[{dataset:{id:'a1', daficha:'1', conf:''}, querySelector:function(){ return {value:'Antibiótico X'}; }}];`);
+    // A7: no acrescentar, tocar "Não" com remédio na lista → volta para Sim, com o caminho certo
+    run(`ciEditandoId='est1'; __sgN.ciMedEmUso='Não'; __alN=[]; ciMedEmUsoChange(true);`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && /USE CORRIGIR/.test(run('__alN[0]')) && run('ciMedNaoEmUso().length') === 0);
+    run(`ciEditandoId=null;`);
+    // sem permissão: o "Não" volta para "Sim" com aviso na página
+    run(`canEditCheckinMed=function(){ return false; }; __sgN.ciMedEmUso='Não'; __alN=[]; ciMedEmUsoChange(true);`);
+    assert.ok(run('__sgN.ciMedEmUso') === 'Sim' && /SÓ QUEM CUIDA DA MEDICAÇÃO/.test(run('__alN[0]')));
+    run(`canEditCheckinMed=function(){ return true; };`);
+    // o toque de verdade: agora sim, "parou"
+    run(`__sgN.ciMedEmUso='Não'; ciMedEmUsoChange(true);`);
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Antibiótico X' }]);
+    // "Tudo igual" não passa por cima de quem tocou em "Mudou"
+    run(`__sgN.ciMedEmUso='Sim'; __rowsN=[{dataset:{id:'m1', daficha:'1', conf:'mudou'}, querySelector:function(){ return null; }}]; ciMedTudoIgual();`);
+    assert.strictEqual(run('__rowsN[0].dataset.conf'), 'mudou');
+  } finally { run('segVal=__bkN.sv; setSeg=__bkN.ss; document.getElementById=__bkN.ge; document.querySelectorAll=__bkN.qsa; canEditCheckinMed=__bkN.ce; zAlertao=__bkN.za; ciEditandoId=__bkN.ed; ciColeiraAplicar=__bkN.ca; CI_MED_NAO_TOCADO=false;'); }
+});
+prova('QA39 — pertences: número só completa o item quando é quantidade; o tipo acerta objetos com "comida" no nome; a descrição editada conserva o item; a correção fala português', () => {
+  igual(run(`ciPertPartes('sacola verde, 2 brinquedos de pelúcia, 1 manta')`), ['sacola verde', '2 brinquedos de pelúcia', '1 manta']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg, cama rosa')`), ['ração Golden, 2 kg', 'cama rosa']);
+  const tipos = ['Royal Canin ração 2 kg', 'marmitas de frango', 'alimento úmido', 'pote de comida', 'cama de fibra natural', 'kit de banho', 'kit de emergência', 'bolsinha de remédios', 'sacola com ração']
+    .map((t) => run(`ciPertTipo(${JSON.stringify(t)})`));
+  igual(tipos, ['comida', 'comida', 'comida', 'outro', 'cama', 'outro', 'remedios', 'remedios', 'comida']);
+  // a descrição de um item antigo editada: o mesmo item (tipo e uid), não "material novo"
+  run(`__bkPE={ge:document.getElementById, ps:ciPertSel}; document.getElementById=function(){ return null; };
+    ciPertSel=[{uid:'u1', k:'roupa', nome:'Roupa', spec:'casaco vermelho'}];
+    ciPertDoTexto('Roupa — casaco azul');`);
+  try {
+    const it = JSON.parse(JSON.stringify(run('ciPertSel')));
+    assert.ok(it.length === 1 && it[0].uid === 'u1' && it[0].k === 'roupa', JSON.stringify(it));
+  } finally { run('document.getElementById=__bkPE.ge; ciPertSel=__bkPE.ps;'); }
+  const d = run(`ciDiffCorrecao({ficha:{coleira:{tem:'Não'}, medEmUso:'Sim'}}, {ficha:{coleira:{tem:'Sim', qual:'Seresto'}, medEmUso:'Não'}}, {})`);
+  assert.ok(d.some((x) => /^Coleira antipulga ou repelente: "Não" → "Sim — Seresto"/.test(x)) && d.some((x) => /^Medicação em uso: "Sim" → "Não"/.test(x)), JSON.stringify(d));
+});
+prova('QA39 — a comida só dobra confirmada E sem nada faltando', () => {
+  run(`__bkAF={ge:document.getElementById, ap:ciAlimProblemas, rf:ciAlimResumoFrase, cf:CI_ALIM_CONF};
+    __detAF={style:{display:''}}; __confAF={innerHTML:''};
+    document.getElementById=function(id){ return id==='ciAlimDetalhe'?__detAF:(id==='ciAlimConfirma'?__confAF:null); };
+    ciAlimResumoFrase=function(){ return 'Café: 50g de ração'; }; CI_ALIM_CONF='confirmado';
+    __probAF=[]; ciAlimProblemas=function(){ return __probAF; };`);
+  try {
+    run('ciAlimConfRender();'); assert.strictEqual(run('__detAF.style.display'), 'none', 'confirmado e completo: dobra');
+    run(`__probAF=[{t:'x', f:'ciRefBlocos'}]; ciAlimConfRender();`); assert.strictEqual(run('__detAF.style.display'), '', 'faltando algo: aberto');
+  } finally { run('document.getElementById=__bkAF.ge; ciAlimProblemas=__bkAF.ap; ciAlimResumoFrase=__bkAF.rf; CI_ALIM_CONF=__bkAF.cf;'); }
 });
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
