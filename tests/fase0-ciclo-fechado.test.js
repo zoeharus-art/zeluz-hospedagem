@@ -3405,6 +3405,43 @@ provaAsync('o botão "Conferir a planilha agora" não diz ✅ quando não conseg
     assert.strictEqual(await botao(dias), '✅ ' + dias + ' posto(s) · 0 tirado(s) em ' + dias + ' dia(s)', 'tudo lido: como antes');
   } finally { run('dashPontePronta=__bkCB.pp; dashAutoSincronizar=__bkCB.sy; DB=__bkCB.db; dashCarregar=__bkCB.dc;'); }
 });
+// ================================================================== o automático não apaga o que a recepção lançou
+console.log('\nO automático nunca tira da planilha o banho lançado à mão (Adriana, 29/set/2026, Cristal e Ozzy)');
+provaAsync('banho fixo que deixou de valer: o automático não tira a linha que a recepção lançou à mão; sem lançamento, tira como antes; sem ler os lançamentos, não tira nada', async () => {
+  run(`__bkAS={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit};
+    audit=function(){};
+    __ponteAS=[]; __planAS={}; dashPonteChamar=function(c){ __ponteAS.push(JSON.parse(JSON.stringify(c)));
+      if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planAS}); return Promise.resolve({ok:true, removidos:1}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };
+    __bancoAS={}; __falhaMao=false; __gravAS={};
+    DB={ref:function(p){ return {
+      once:function(){ if(__falhaMao && p.indexOf('daycare/dashboard/')===0 && p.split('/').length===3) return Promise.reject(new Error('sem rede'));
+        var v=__bancoAS[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __gravAS[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      update:function(v){ __gravAS[p]=Object.assign({}, __gravAS[p]||{}, v); return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29';
+    const prepara = (mao) => run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:['Cristal/Yorkshire']};
+      __bancoAS={}; __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
+      ${mao ? `__bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', chave:'cristal'}}};` : ''}`);
+    const tirou = () => run('__ponteAS').filter((c) => c.acao === 'remover');
+    // 1) a recepção lançou o banho da Cristal à mão; o banho fixo dela deixou de valer (ex.: falta do meio-dia)
+    prepara(true);
+    let r = await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(r && r.ok, JSON.stringify(r));
+    igual(tirou(), [], 'a linha lançada à mão fica na planilha');
+    igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), [], 'e o automático larga a linha: é da recepção agora');
+    // 2) sem lançamento à mão: o banho fixo que não vale mais sai, como antes
+    prepara(false);
+    await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(tirou().length === 1 && tirou()[0].valor === 'Cristal/Yorkshire' && tirou()[0].coluna === 'Banho' && tirou()[0].colunaHora === 'Hora Banho', JSON.stringify(tirou()));
+    // 3) não deu para ler os Lançamentos do dia: não tira nada agora, e guarda para a próxima passada
+    prepara(false); run('__falhaMao=true;');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou(), [], 'sem saber o que a recepção lançou, não apaga');
+    igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'a próxima passada tenta de novo');
+  } finally { run('dashPonteChamar=__bkAS.pc; dashAutoCalcular=__bkAS.calc; DB=__bkAS.db; audit=__bkAS.au;'); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

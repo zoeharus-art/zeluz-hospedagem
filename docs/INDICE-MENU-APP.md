@@ -133,6 +133,20 @@
 - **Por que "em até 10 min":** a conferência automática (`dashAutoLigar` › `dashAutoRodar`) roda a cada 5 minutos enquanto algum aparelho estiver com o app aberto. A trava de 5 minutos, porém, conta do fim da passada anterior. Com um aparelho só, a volta logo depois da queda pula, e a seguinte confere (QA34). O botão **Conferir a planilha agora**, no alto de Lançamentos do dia, adianta a conferência.
 - **Onde está no código:** `repPlanEhQuedaConexao`, `repPlanQuedaTexto`, `repPlanLinhaHTML`, `dashAutoLinhas`, `dashAutoRodarAgora` (conta os dias que não leu) e `dashAutoBotao`.
 
+### (AB) O automático nunca tira da planilha o que a recepção lançou à mão (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Cadastrei hoje no lançamento do dia banho da Cristal, banho do Ozzy, da Charlotte e da Repolho. No dashboard só aparece a Repolho e a Charlotte. Precisamos de rever isso urgente."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| Banho fixo que deixa de valer no dia (a falta do meio-dia, falta avisada, "pular", feriado) e a recepção lançou o mesmo FILHOt à mão | o automático tirava da planilha a linha com o nome dele, que era a da recepção (a ponte não duplica: a célula é uma só), e o FILHOt sumia da TV | a linha fica; o automático larga o registro dela, porque ela é da recepção |
+| O mesmo caso, sem lançamento à mão | o banho fixo sai da planilha e da TV | igual |
+| Não deu para ler os Lançamentos do dia naquela passada | — | o automático não tira nada e tenta na próxima passada |
+
+- **Por que só a Cristal e o Ozzy:** eles têm banho fixo, e a Charlotte e a Repolho não. O automático só tira o que ele mesmo pôs, e ele contava a linha da recepção como sua, porque compara pelo primeiro nome.
+- **Vale para as quatro colunas do automático que também se lançam à mão:** Banho, Reposição, Faltas Avisadas e Adaptação.
+- **Onde está no código:** `dashAutoSincronizar`, que lê `daycare/dashboard/{dia}` junto com a planilha e o registro, e o passo "2) foi este mecanismo que pôs e não vale mais".
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

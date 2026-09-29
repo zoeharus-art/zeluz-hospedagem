@@ -41901,9 +41901,19 @@
     var noAuto='daycare/dashboard-auto/'+iso;
     return Promise.all([
       dashPonteChamar({acao:'lerDia', dia:iso}),
-      DB.ref(noAuto).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      DB.ref(noAuto).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      // O que a RECEPÇÃO lançou à mão neste dia (Lançamentos do dia). O automático nunca tira
+      // da planilha o que uma pessoa lançou (Adriana, 29/set/2026: "cadastrei o banho da
+      // Cristal e do Ozzy e no dashboard só aparece a Repolho e a Charlotte"). Sem conseguir
+      // ler (null), esta passada não tira nada.
+      DB.ref('daycare/dashboard/'+iso).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; }).catch(function(){ return null; })
     ]).then(function(r){
       var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
+      var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={};
+      if(maoLida) Object.keys(r[2]||{}).forEach(function(kk){
+        var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
+        Object.keys(itens).forEach(function(id){ var c=dashAutoNomeChave((itens[id]||{}).valor); if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; } });
+      });
       if(!(r[0]&&r[0].ok)){
         var erroLer=(r[0]&&r[0].erro)||'não consegui ler o dia na planilha';
         // ⚠ NÃO ficar mudo: quem olha a tela de Reposições precisa saber que aquele dia NÃO
@@ -41989,6 +41999,11 @@
         antes.forEach(function(v){
           if(querCh[dashAutoNomeChave(v)]!==undefined) return;
           if(atualCh[dashAutoNomeChave(v)]===undefined) return;      // já não está na planilha
+          // A mesma linha foi lançada À MÃO nos Lançamentos do dia: é da recepção, fica. A célula
+          // é uma só (a ponte não duplica), e tirá-la apagaria o lançamento dela (29/set/2026).
+          if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]) return;
+          // Não deu para ler os Lançamentos do dia: não tira nada agora; a próxima passada tenta.
+          if(!maoLida){ manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return; }
           // Tira a hora junto: banho cancelado que deixasse "10:00" na planilha faria a TV
           // tocar o alarme de um banho que não existe mais.
           tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col,
