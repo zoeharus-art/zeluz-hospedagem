@@ -270,6 +270,23 @@
   - quem erra o nome vê de novo a mesma pergunta do SUBSTITUIR;
   - se outro aviso tirar a pergunta "quem recebeu" da tela, em 10 minutos o botão Salvar volta, sem ter gravado nada.
 
+### (AF) Escovação: quem escova no Day Care e as duas saídas da troca (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Nem todo mundo escova dente, então nem todo mundo vai ter escova de dente. Ou não escova porque não deixa, ou não escova porque o tutor não compra pasta com a gente."* E: *"Troca de escova tem que colocar se escova dente no Day Care ou não! […] E precisa ter se o cliente tinha em casa! Ou não autorizou a troca. Aí deixamos para daqui a 3 meses! Automaticamente."* Seguiu com as respostas recomendadas.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Ficha › Prevenção › Saúde e rotina | só as datas da troca de escova | **"Escova os dentes no Day Care?"** Sim ou Não. Com Não: **"Por que não escova?"** Não deixa · O tutor não compra a pasta · Outro (com o motivo escrito) |
+| Cobrança da troca de escova (Prevenção, Vencimentos, Hoje na Zêluz, mensagem ao tutor) | todo FILHOt com a troca vencida era cobrado | quem **não escova** no Day Care sai de toda cobrança; a data antiga fica na ficha |
+| Ficha, logo abaixo | — | **"Troca de escova de hoje":** "O tutor tinha em casa (já trocou)" e "O tutor não autorizou a troca". Os dois põem a próxima troca daqui a 3 meses, sozinha |
+| Vencimentos › troca de escova (botões da resposta do tutor) | Vai aplicar em casa · Vai mandar na bolsa · Pegar na loja · Não respondeu · Não quer agora | Vai mandar na bolsa · Pegar na loja · **Tinha em casa (já trocou)** · **Não autorizou a troca** · Não respondeu |
+
+- **"Tinha em casa"** vale como troca de hoje: a última troca passa a ser hoje e a próxima, daqui a 90 dias.
+- **"Não autorizou"** só adia: a última troca continua a que era, e o "vence em" passa a ser daqui a 90 dias (marcado como data à mão).
+- **Só na ficha:** nenhum dos dois vai para a planilha nem para a TV, porque não é troca feita aqui. Fica o rastro com quem registrou e quando.
+- **Onde está no código:** `escovaNaoEscova`, `prevForaDaCobranca`, `escovaFichaHTML`, `escovaDcSet`, `escovaMotivoSet`, `escovaPatchTresMeses`, `escovaTresMeses`, `VENC_ESCOVA_EXTRAS` e `vencRespostasEscova`.
+- **Harness:** a checagem v-32 ("o quadro das respostas pendentes traz os CINCO botões") mudou de propósito: o cartão dela é de troca de escova, e os botões da escova agora são outros. Continuam cinco.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

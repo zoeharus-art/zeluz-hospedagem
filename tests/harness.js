@@ -16719,8 +16719,11 @@ async function main() {
         await ctx.vencPendCarregar(true);
         await drenar(6);
         const quadro32 = ctx.vencPendListaHTML(0);
+        // Story 6.16 (29/set/2026): na TROCA DE ESCOVA, "Vai aplicar em casa" e "Não quer agora"
+        // dão lugar a "Tinha em casa (já trocou)" e "Não autorizou a troca" — os dois põem a
+        // próxima troca na ficha, em 3 meses. Continuam cinco botões.
         check('v-32 · o quadro das respostas pendentes traz os CINCO botões, ali mesmo',
-          ['Vai aplicar em casa', 'Vai mandar na bolsa', 'Pegar na loja', 'Não respondeu', 'Não quer agora']
+          ['Tinha em casa (já trocou)', 'Vai mandar na bolsa', 'Pegar na loja', 'Não respondeu', 'Não autorizou a troca']
             .every((t) => quadro32.indexOf('>' + t + '</button>') > 0),
           quadro32.slice(0, 400));
         check('v-32 · e cada botão grava direto do dashboard, com o dia daquele cartão',

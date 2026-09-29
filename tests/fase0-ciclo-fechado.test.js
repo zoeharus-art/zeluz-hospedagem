@@ -4200,6 +4200,54 @@ prova('QA39 — a comida só dobra confirmada E sem nada faltando', () => {
     run(`__probAF=[{t:'x', f:'ciRefBlocos'}]; ciAlimConfRender();`); assert.strictEqual(run('__detAF.style.display'), '', 'faltando algo: aberto');
   } finally { run('document.getElementById=__bkAF.ge; ciAlimProblemas=__bkAF.ap; ciAlimResumoFrase=__bkAF.rf; CI_ALIM_CONF=__bkAF.cf;'); }
 });
+// ================================================================== escovação no Day Care
+console.log('\nEscovação: quem não escova no Day Care sai da cobrança; "tinha em casa" e "não autorizou" põem a próxima troca em 3 meses (Adriana, 29/set/2026)');
+prova('quem não escova no Day Care não é cobrado da troca de escova em lugar nenhum; quem escova (ou não respondeu) continua como antes', () => {
+  const hoje = run('zHojeISO()');
+  const venceu = run(`addDiasISO(zHojeISO(),-3)`);
+  const ex = (dc) => `{escova_t:'${run(`addDiasISO(zHojeISO(),-93)`)}', escova_p:'${venceu}'${dc ? `, escova_dc:'${dc}'` : ''}}`;
+  const temEscova = (dc) => ({
+    faltas: run(`prevFaltasDe(${ex(dc)}, 0)`).some((f) => f.k === 'escova_p'),
+    venc: run(`vencItensDe(${ex(dc)}, '${hoje}', 0, '${hoje}')`).some((f) => f.k === 'escova_p'),
+    pend: run(`prevPendencias(${ex(dc)}, 'saude')`).venc.some((f) => /escova/i.test(f.nome)),
+  });
+  igual(temEscova(''), { faltas: true, venc: true, pend: true });
+  igual(temEscova('Sim'), { faltas: true, venc: true, pend: true });
+  igual(temEscova('Não'), { faltas: false, venc: false, pend: false });
+  // a regra do vermífugo ou exame continua a mesma
+  assert.strictEqual(run(`prevForaDaCobranca({escova_dc:'Não'}, PREV_ITENS.filter(function(x){ return x.k==='verm_p'; })[0])`), false);
+  // a ficha: a pergunta, o motivo só com Não, e as duas saídas da troca só para quem escova
+  const h1 = run(`escovaFichaHTML({})`), h2 = run(`escovaFichaHTML({escova_dc:'Não', escova_dc_motivo:'Outro', escova_dc_outro:'tem gengivite'})`);
+  assert.ok(/Escova os dentes no Day Care\?/.test(h1) && /id="escovaDcMotivoBox" style="display:none"/.test(h1) && /tinha em casa \(já trocou\)/.test(h1) && /não autorizou a troca/.test(h1), h1);
+  assert.ok(/id="escovaDcMotivoBox" style=""/.test(h2) && /O tutor não compra a pasta/.test(h2) && /value="tem gengivite"/.test(h2) && !/não autorizou a troca/.test(h2), h2);
+});
+provaAsync('"tinha em casa" vale como troca de hoje; "não autorizou" adia — nos dois a próxima fica em 3 meses, só na ficha; e a cobrança dos Vencimentos tem as duas saídas', async () => {
+  const hoje = run('zHojeISO()'), prox = run(`addDiasISO(zHojeISO(),90)`);
+  const casa = JSON.parse(JSON.stringify(run(`escovaPatchTresMeses('casa', zHojeISO(), 'Márcia')`)));
+  assert.ok(casa.escova_t === hoje && casa.escova_p === prox && casa.escova_p_manual === '' && casa.escova_ult.como === 'casa' && casa.escova_ult.quem === 'Márcia', JSON.stringify(casa));
+  const nao = JSON.parse(JSON.stringify(run(`escovaPatchTresMeses('nao', zHojeISO(), 'Márcia')`)));
+  assert.ok(nao.escova_t === undefined && nao.escova_p === prox && nao.escova_p_manual === true && nao.escova_ult.como === 'nao', JSON.stringify(nao));
+  // depois do "não autorizou", a troca vencida some da cobrança até daqui a 3 meses
+  const exNao = `Object.assign({escova_t:'${run(`addDiasISO(zHojeISO(),-120)`)}', escova_p:'${run(`addDiasISO(zHojeISO(),-30)`)}'}, ${JSON.stringify(nao)})`;
+  assert.ok(!run(`prevFaltasDe(${exNao}, 0)`).some((f) => f.k === 'escova_p'), 'adiada');
+  // os botões da cobrança: na escova, as duas saídas no lugar de "Vai aplicar em casa" e "Não quer agora"
+  const vs = (t) => run(`vencRespostasDe('${t}', '${hoje}').map(function(x){ return x.v; })`);
+  igual(vs('escova'), ['bolsa', 'loja', 'esc_casa', 'esc_nao', 'sem']);
+  igual(vs('antip'), ['casa', 'bolsa', 'loja', 'sem', 'nao']);
+  assert.ok(run(`vencRespostasDe(HOJE_ANT_PREF+'escova', '${hoje}').map(function(x){ return x.v; }).join()`).indexOf('esc_nao') >= 0, 'também na antecipação');
+  assert.ok(run(`vencRespFecha('esc_nao')`) && run(`vencRespRotulo('esc_casa')`) === 'Tinha em casa (já trocou)');
+  // a resposta põe a próxima troca na ficha do FILHOt do cartão
+  run(`__bkEsc={db:DB, vg:vencGravar, vd:vencAutoDesmanchar, vo:vencObjDe, vr:vencRegDeDia, et:escovaTresMeses, qs:quemSou};
+    DB={}; quemSou=function(){ return 'Márcia'; };
+    vencGravar=function(){ return Promise.resolve(true); }; vencAutoDesmanchar=function(){ return Promise.resolve(); };
+    vencObjDe=function(){ return {chave:'lola__bia', p:{n:'Lola', tutor:'Bia'}, nome:'Lola', itens:[]}; }; vencRegDeDia=function(){ return {}; };
+    __escChamou=[]; escovaTresMeses=function(como, p){ __escChamou.push([como, p.n]); return Promise.resolve({ok:true}); };`);
+  try {
+    const ok = await run(`vencResponderTipo('lola__bia', 'escova', 'esc_nao', '${hoje}')`);
+    assert.ok(ok === true, String(ok));
+    igual(JSON.parse(JSON.stringify(run('__escChamou'))), [['nao', 'Lola']]);
+  } finally { run('DB=__bkEsc.db; vencGravar=__bkEsc.vg; vencAutoDesmanchar=__bkEsc.vd; vencObjDe=__bkEsc.vo; vencRegDeDia=__bkEsc.vr; escovaTresMeses=__bkEsc.et; quemSou=__bkEsc.qs;'); }
+});
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
 prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {

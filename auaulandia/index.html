@@ -22347,6 +22347,90 @@
     if(it.k==='fezes_p') return cam!=='fezes';       // sem exame registrado, o exame não é cobrado
     return false;
   }
+  // A pergunta da ficha e as duas saídas da troca. Grava direto, como a data da escova.
+  var ESCOVA_MOTIVOS=['Não deixa', 'O tutor não compra a pasta', 'Outro'];
+  function escovaFichaHTML(ex){
+    ex=ex||{};
+    var dc=String(ex.escova_dc||''), mot=String(ex.escova_dc_motivo||'');
+    var bt=function(campo, val, atual, fn){
+      return '<button type="button" class="'+(atual===val?'on':'')+'" onclick="pick(this);'+fn+'(\''+jsAspas(val)+'\')">'+esc(val)+'</button>';
+    };
+    var h='<div class="field" style="margin-top:10px"><label>Escova os dentes no Day Care?</label>'
+      +'<div class="seg gold" data-single id="escovaDcSeg">'+['Sim','Não'].map(function(v){ return bt('escova_dc', v, dc, 'escovaDcSet'); }).join('')+'</div>'
+      +'<div class="hint" style="margin-top:4px">Com <strong>Não</strong>, a troca de escova sai da cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor).</div></div>';
+    h+='<div id="escovaDcMotivoBox" style="'+(dc==='Não'?'':'display:none')+'">'
+      +'<div class="field"><label>Por que não escova?</label>'
+      +'<div class="seg" data-single>'+ESCOVA_MOTIVOS.map(function(v){ return bt('escova_dc_motivo', v, mot, 'escovaMotivoSet'); }).join('')+'</div></div>'
+      +'<div class="field" id="escovaDcOutroBox" style="'+(mot==='Outro'?'':'display:none')+'"><label>Qual o motivo?</label>'
+      +'<input class="cad-in" value="'+escAttr(ex.escova_dc_outro||'')+'" placeholder="Escreva o motivo" onchange="setPelExtra(pelAtual,{escova_dc_outro:this.value.trim()})"></div>'
+      +'</div>';
+    if(dc!=='Não'){
+      var ult=ex.escova_ult||{};
+      h+='<div class="field" style="margin-top:6px"><label>Troca de escova de hoje</label>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        +'<button type="button" class="btn" style="flex:1 1 160px;padding:9px 12px;font-weight:800;border:1.5px solid var(--z-blue);background:var(--z-cream-warm);color:var(--z-blue)" onclick="escovaTresMeses(\'casa\')">O tutor tinha em casa (já trocou)</button>'
+        +'<button type="button" class="btn" style="flex:1 1 160px;padding:9px 12px;font-weight:800;border:1.5px solid #B3261E;background:var(--z-cream-warm);color:#B3261E" onclick="escovaTresMeses(\'nao\')">O tutor não autorizou a troca</button>'
+        +'</div><div class="hint" style="margin-top:4px">Nos dois, a próxima troca fica para daqui a 3 meses, sozinha.'
+        +(ult.data?(' Última: '+esc(escovaUltTexto(ult))+'.'):'')+'</div></div>';
+    }
+    return h;
+  }
+  function escovaUltTexto(u){
+    u=u||{};
+    return ((u.como==='casa')?'o tutor tinha em casa':'o tutor não autorizou')+(u.data?(' em '+fmtBR(u.data)):'')+(u.quem?(', por '+u.quem):'');
+  }
+  function escovaDcSet(v){
+    if(!pelAtual) return;
+    var patch={escova_dc:v};
+    setPelExtra(pelAtual, patch);
+    var box=document.getElementById('escovaDcMotivoBox'); if(box) box.style.display=(v==='Não')?'':'none';
+    try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v, {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+  }
+  function escovaMotivoSet(v){
+    if(!pelAtual) return;
+    setPelExtra(pelAtual, {escova_dc_motivo:v});
+    var box=document.getElementById('escovaDcOutroBox'); if(box) box.style.display=(v==='Outro')?'':'none';
+  }
+  // "O tutor tinha em casa" ou "não autorizou": a próxima troca fica para daqui a 3 meses,
+  // sozinha, SÓ na ficha — não é troca feita aqui, então não vai para a planilha nem para a
+  // TV. "Tinha em casa" é troca feita (a data de hoje vale como a última); "não autorizou"
+  // só adia (a última continua a que era, e o vencimento passa a ser a data nova).
+  // `p` = a ficha (sem `p`, a que está aberta). Devolve o resultado do setPelExtra.
+  function escovaPatchTresMeses(como, hoje, quem){
+    var prox=addDiasISO(hoje, 90);
+    var ult={como:como, data:hoje, quem:quem||'-', ts:Date.now()};
+    if(como==='casa') return {escova_t:hoje, escova_p:prox, escova_p_manual:'', escova_ult:ult};
+    return {escova_p:prox, escova_p_manual:true, escova_ult:ult};
+  }
+  function escovaTresMeses(como, p){
+    p=p||pelAtual; if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    var hoje=zHojeISO(), quem=(typeof quemSou==='function'?quemSou():'-');
+    var patch=escovaPatchTresMeses(como, hoje, quem);
+    return Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(r && r.ok===false){
+        zAlertao('A FICHA NÃO FOI ATUALIZADA', ['Motivo: '+((r&&r.erro)||'a gravação foi recusada')+'.', 'Quem atualiza a ficha é a Consultora, a Supervisão ou a Gestão.'], {botao:'Entendi'});
+        return r;
+      }
+      try{ if(typeof audit==='function') audit('ficha-escova',
+        'troca de escova: '+(como==='casa'?'o tutor tinha em casa (já trocou)':'o tutor não autorizou')+' — próxima em '+fmtBR(patch.escova_p),
+        {alvo:pelKey(p), pet:pelNome(p), quem:quem}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(p===pelAtual && typeof zAlertao==='function') zAlertao('✅ PRÓXIMA TROCA EM '+fmtBR(patch.escova_p),
+        [(como==='casa'?'O tutor tinha em casa: vale como troca de hoje.':'O tutor não autorizou: a troca foi adiada.'), 'A cobrança volta sozinha daqui a 3 meses.'],
+        {ok:true, botao:'Fechar'});
+      return r||{ok:true};
+    });
+  }
+  // ===== QUEM NÃO ESCOVA NO DAY CARE (Adriana, 29/set/2026) ========================
+  // "Nem todo mundo escova dente, então nem todo mundo vai ter escova de dente. Ou não
+  //  escova porque não deixa, ou não escova porque o tutor não compra pasta com a gente."
+  // Com "Escova os dentes no Day Care? Não" na ficha, a troca de escova sai de TODA cobrança
+  // (Prevenção, Vencimentos, Hoje na Zêluz, mensagem ao tutor). A data antiga fica na ficha.
+  function escovaNaoEscova(ex){ return String((ex||{}).escova_dc||'')==='Não'; }
+  // O item está FORA DA COBRANÇA: a regra "vermífugo ou exame" ou quem não escova no Day Care.
+  function prevForaDaCobranca(ex, it){
+    if(prevDispensadoPorExame(ex, it)) return true;
+    return !!(it && it.k==='escova_p' && escovaNaoEscova(ex));
+  }
   // A data que a ficha MOSTRA como 2ª dose: a que foi dada, se houver; senão a prevista.
   function vermDose2Data(ex){
     ex=ex||{};
@@ -22533,7 +22617,7 @@
     const venc=[], sem=[];
     PREV_ITENS.forEach(function(it){
       if(grupo && it.grupo!==grupo) return;
-      if(prevDispensadoPorExame(ex, it)) return;     // vermífugo OU exame de fezes: vale o mais recente
+      if(prevForaDaCobranca(ex, it)) return;         // vermífugo OU exame de fezes; quem não escova no Day Care
       const v=prevValor(ex, it);
       if(!v){ if(!it.opcional) sem.push(it.nome); return; }
       if(prevDataQuebrada(v)) return;                // dado quebrado não é vencimento
@@ -22609,7 +22693,8 @@
     var out=[];
     PREV_ITENS.forEach(function(it){
       // "ou é vermífugo ou exame" — quem tem um não deve o outro; vale o mais recente.
-      if(prevDispensadoPorExame(ex, it)) return;
+      // E quem não escova no Day Care não deve a troca de escova (29/set/2026).
+      if(prevForaDaCobranca(ex, it)) return;
       var v=prevValor(ex, it);
       // Data impossível: sai da conta de vencido e vira um aviso próprio, para alguém
       // abrir a ficha e corrigir o ano.
@@ -25282,6 +25367,7 @@
           <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
           ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
         </div>
+        ${escovaFichaHTML(ex)}
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
@@ -36542,6 +36628,19 @@
     {v:'sem',      t:'Não respondeu',                          cor:'#6b5f4b', fecha:false},
     {v:'nao',      t:'Não quer agora',                         cor:'#B3261E', fecha:true}
   ];
+  // ===== A TROCA DE ESCOVA TEM DUAS SAÍDAS PRÓPRIAS (Adriana, 29/set/2026) ==========
+  // "Precisa ter se o cliente tinha em casa! Ou não autorizou a troca. Aí deixamos para
+  //  daqui a 3 meses! Automaticamente." As duas fecham o assunto e põem a próxima troca na
+  // ficha, daqui a 3 meses (escovaTresMeses). Não vão para a planilha nem para a TV: não é
+  // troca feita aqui. Elas entram no lugar de "Vai aplicar em casa" e "Não quer agora".
+  var VENC_ESCOVA_EXTRAS=[
+    {v:'esc_casa', t:'Tinha em casa (já trocou)', cor:'#234D67', fecha:true, escova3m:'casa'},
+    {v:'esc_nao',  t:'Não autorizou a troca',     cor:'#B3261E', fecha:true, escova3m:'nao'}
+  ];
+  function vencRespostasEscova(L){
+    var sem=L.filter(function(x){ return x.v==='sem'; });
+    return L.filter(function(x){ return x.v!=='casa' && x.v!=='nao' && x.v!=='sem'; }).concat(VENC_ESCOVA_EXTRAS, sem);
+  }
   // O botão antigo não aparece mais, mas o banco tem respostas gravadas com ele — e quem lê
   // o histórico precisa entender o que está escrito lá.
   var VENC_RESPOSTAS_ANTIGAS=[
@@ -36558,6 +36657,7 @@
       ? (vac?VENC_RESPOSTAS_HOJE_VACINA:VENC_RESPOSTAS_HOJE)
       : (vac?VENC_RESPOSTAS_VACINA:VENC_RESPOSTAS);
     var temDiaDele=!!(o && vencProximoVetDele(o.p, diaAlvo));
+    if(vencTipoBase(t)==='escova') L=vencRespostasEscova(L);
     return L.filter(function(x){ return !x.soNoDia || vencEhDiaVet(diaAlvo) || temDiaDele; });
   }
   // A definição de UMA resposta, olhando nas duas tabelas — o histórico de um dia antigo
@@ -36569,6 +36669,7 @@
         || VENC_RESPOSTAS_HOJE.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_HOJE_VACINA.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_ABERTO.filter(function(x){ return x.v===v; })[0]
+        || VENC_ESCOVA_EXTRAS.filter(function(x){ return x.v===v; })[0]
         || VENC_RESPOSTAS_ANTIGAS.filter(function(x){ return x.v===v; })[0] || null;
   }
   // Os rótulos antigos continuam legíveis: o banco tem respostas gravadas antes de 21/set
@@ -36745,7 +36846,8 @@
     var out=[], abertos=[];
     (PREV_ITENS||[]).forEach(function(it){
       // "ou é vermífugo ou exame de fezes" — quem tem um não deve o outro; vale o mais recente.
-      if(prevDispensadoPorExame(ex, it)) return;
+      // E quem não escova no Day Care não deve a troca de escova (29/set/2026).
+      if(prevForaDaCobranca(ex, it)) return;
       var v=prevValor(ex, it);
       var marca=it.coleira?String(ex.col_nome||'').trim():'';
       if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){
@@ -38178,6 +38280,12 @@
       if(!ok) return false;
       if(vetReg) vencAvisarVet(o, vetReg);
       return vencAutoDesmanchar(chave, tipo, dia, o, autoAntes).then(function(){
+        // Troca de escova: "tinha em casa" ou "não autorizou" põem a próxima na ficha.
+        if(def.escova3m){
+          var __pe=(o&&o.p&&(o.p.n||o.p.nome))?o.p:null;
+          if(!__pe){ _logFalhaGrav('troca de escova de '+(o&&o.nome||'')+': ficha não encontrada', new Error('sem ficha')); return true; }
+          return escovaTresMeses(def.escova3m, __pe).then(function(){ return true; });
+        }
         if(!def.lanca) return true;
         return vencLancarAuto(chave, tipo, def.lanca, dia, o);
       });
