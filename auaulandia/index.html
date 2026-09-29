@@ -1396,7 +1396,12 @@
   .ci-med-conf.mudou{background:rgba(224,136,86,.16);border-color:#E08856;color:#8E4A16}
   .ci-med-conf button{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;
     padding:6px 13px;font-size:12.5px;font-weight:800;font-family:var(--font-ui);cursor:pointer}
-  .ci-med-conf button.on{background:currentColor;color:var(--z-cream)}
+  /* O botão escolhido: fundo da cor da faixa e letra creme. Era `background:currentColor` com
+     `color` creme na MESMA regra — o currentColor vira o creme, e o botão ficava creme sobre
+     creme, sem dar para ler (Adriana, 29/set/2026, check-in da hospedagem). */
+  .ci-med-conf button.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  .ci-med-conf.ok button.on{background:var(--crm-ok);border-color:var(--crm-ok)}
+  .ci-med-conf.mudou button.on{background:#8E4A16;border-color:#8E4A16}
   /* Celular: a tabela de 3 colunas não cabe — o nome do remédio ficava cortado.
      Cada linha vira um bloco empilhado, com rótulo em cada campo e botão no tamanho do dedo. */
   @media (max-width:560px){
@@ -46503,7 +46508,11 @@
     const faixa=el.querySelector('.ci-med-conf'); if(!faixa) return;
     faixa.classList.toggle('ok', estado==='ok');
     faixa.classList.toggle('mudou', estado==='mudou');
-    faixa.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.cf===estado); });
+    faixa.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.cf===estado);
+      // O escolhido leva o ✓ na frente: dá para ver de longe qual foi tocado.
+      b.textContent=((b.dataset.cf===estado)?'✓ ':'')+(b.dataset.cf==='ok'?'Confirmado':'Mudou');
+    });
     const txt=faixa.querySelector('span');
     if(txt) txt.textContent=(estado==='ok')
       ? 'Confirmado com o tutor por '+quemSou()+' — segue igual.'

@@ -3535,6 +3535,30 @@ prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes d
   const r3 = vm.runInContext("_umPorVez(function(){ return {ok:true}; })", ctxG);
   assert.ok(r3.ok === false && /ocupada/.test(r3.erro), JSON.stringify(r3));
 });
+// ================================================================== check-in da hospedagem: o botão escolhido se lê
+console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
+prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const regra = (sel) => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(src); return m ? m[1] : ''; };
+  const on = regra('.ci-med-conf button.on');
+  assert.ok(on && !/background:currentColor/.test(on) && /color:var\(--z-cream\)/.test(on) && /background:var\(--z-blue\)/.test(on), 'regra: ' + on);
+  assert.ok(/background:var\(--crm-ok\)/.test(regra('.ci-med-conf.ok button.on')), 'confirmado: verde');
+  assert.ok(/background:#8E4A16/.test(regra('.ci-med-conf.mudou button.on')), 'mudou: marrom');
+  run(`__bkCF={cp:canEditCheckinMed, qs:quemSou};
+    canEditCheckinMed=function(){ return true; }; quemSou=function(){ return 'Márcia'; };
+    __btsCF=[{dataset:{cf:'ok'}, textContent:'Confirmado', classList:{_c:{}, toggle:function(c,v){ this._c[c]=v; }}},
+             {dataset:{cf:'mudou'}, textContent:'Mudou', classList:{_c:{}, toggle:function(c,v){ this._c[c]=v; }}}];
+    __spanCF={textContent:''};
+    __faixaCF={classList:{toggle:function(){}}, querySelectorAll:function(){ return __btsCF; }, querySelector:function(){ return __spanCF; }};
+    __elCF={dataset:{}, querySelector:function(){ return __faixaCF; }};
+    ciMedConfSet({closest:function(){ return __elCF; }}, 'ok');`);
+  try {
+    igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['✓ Confirmado', 'Mudou']);
+    assert.ok(/Confirmado com o tutor por Márcia/.test(run('__spanCF.textContent')) && run('__elCF.dataset.conf') === 'ok');
+    run(`ciMedConfSet({closest:function(){ return __elCF; }}, 'mudou');`);
+    igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['Confirmado', '✓ Mudou']);
+  } finally { run('canEditCheckinMed=__bkCF.cp; quemSou=__bkCF.qs;'); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
