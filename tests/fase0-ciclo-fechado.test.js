@@ -3918,7 +3918,7 @@ provaAsync('QA44 — o "Não" para só o remédio que estava na tela (e as cópi
   assert.ok(/Nenhum alarme '\+\(nomes\.length>1\?'deles':'dele'\)\+' toca\./.test(src));
   // N2: ACRESCENTAR pelo cartaz com "Não" e remédio no check-in que já existe não grava
   const acr = src.slice(src.indexOf("{t:'✅ ACRESCENTAR ao check-in que já existe'"), src.indexOf("{t:'✎ SUBSTITUIR o que já existe pelo desta tela'"));
-  assert.ok(acr.indexOf('if(ciAcrescentarBarrado(ativa, pacote)) return;') > 0 && acr.indexOf('if(ciAcrescentarBarrado(ativa, pacote)) return;') < acr.indexOf("__ciGravar('acrescentar', ativa.id, pacote)"), 'a regra vem antes de gravar');
+  assert.ok(acr.indexOf("if(ciAcrescentarBarrado(ativa, pacote, 'substituir')) return;") > 0 && acr.indexOf("if(ciAcrescentarBarrado(ativa, pacote, 'substituir')) return;") < acr.indexOf("__ciGravar('acrescentar', ativa.id, pacote)"), 'a regra vem antes de gravar');
   run(`__bkN2={za:zAlertao, ge:document.getElementById}; __alN2=[]; zAlertao=function(t){ __alN2.push(t); }; __stN2={style:{}, textContent:''};
     document.getElementById=function(id){ return id==='ci-status'?__stN2:null; };`);
   try {
@@ -3932,14 +3932,18 @@ provaAsync('QA44 — o "Não" para só o remédio que estava na tela (e as cópi
 });
 provaAsync('QA44 — "tomava X?" não pergunta pelo que já parou ou terminou', async () => {
   run(`__bkN4={db:DB, me:medEstadiaEncerrada}; medEstadiaEncerrada=function(){ return Promise.resolve(true); };
-    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){ return {estadiaId:'e0', itens:{
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){
+      if(p==='auaulandia/estadias/e0/entrada') return '2026-09-01';
+      return {estadiaId:'e0', itens:{
       a:{nome:'Apoquel', continuo:false, dataFim:'2026-09-28', paradoEm:{data:'2026-09-29'}},
       b:{nome:'Ômega 3', continuo:true},
       c:{nome:'Antibiótico', continuo:false, dataFim:'2026-01-10'},
+      e:{nome:'Prednisolona', continuo:false, dataFim:'2026-09-05'},
       d:{nome:'Carprofeno', suspenso:true}}}; }}); }}; }};`);
   try {
     const l = await run(`medAnterioresDe('auaulandia', 'toshi__ana')`);
-    igual(l.map((x) => x.nome), ['Ômega 3']);
+    // o que terminou DURANTE a última estadia (entrada 01/09, "tomar até" 05/09) ainda é pergunta (QA46 M6)
+    igual(l.map((x) => x.nome), ['Ômega 3', 'Prednisolona']);
   } finally { run('DB=__bkN4.db; medEstadiaEncerrada=__bkN4.me;'); }
 });
 provaAsync('QA44 — Corrigir com "Sim" reescreve só o que está em vigor: "já não toma mais" e suspenso pela veterinária ficam; roupa antiga reescrita não é material novo; Acrescentar dá uid novo', async () => {
@@ -3991,6 +3995,101 @@ prova('QA44 — pertences: "2 kg de ração" depois de outra coisa é item próp
     const zl = JSON.parse(JSON.stringify(run('__zlM27')));
     assert.ok(zl.indexOf('ciMedEmUsoBox') >= 0 && zl.indexOf('ciGate') >= 0, JSON.stringify(zl));
   } finally { run('ciMedEmUso=__bkM27.eu; ciMedFichaLinhas=__bkM27.fl; zLimparFaltaEm=__bkM27.zl; document.getElementById=__bkM27.ge; ciMedTudoIgualRender=__bkM27.tr; CI_MED_NAO_TOCADO=false;'); }
+});
+provaAsync('QA46 — Corrigir com "Sim": o que a veterinária parou depois fica parado (mesmo com o mesmo remédio na tela) e o que ela começou depois fica; só sai o que a pessoa viu e tirou', async () => {
+  run(`__bkM2={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __estM2={nome:'Toshi', medicacao:[{nome:'Apoquel'}, {nome:'Ômega 3'}], pertences:[], ficha:{}};
+    // a tela carregou Apoquel (ap), Ômega (om) e a cópia repetida do Ômega (om2); depois a vet PAROU o Apoquel e COMEÇOU a Prednisolona (pr)
+    __agM2={ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}},
+            om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            om2:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            pr:{nome:'Prednisolona', q:'1', u:'comprimido', horarios:['09:00'], continuo:true}};
+    __escM2={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estM2 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agM2 : null); }}); },
+      update:function(v){ __escM2[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escM2['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    // "Tudo igual": a tela manda Apoquel e Ômega com os ids que carregou
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}, om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}},
+      temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]},
+      medCarregados:{ids:{ap:1, om:1}, sigs:(function(){ var o={}; o[medAssinatura({nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true})]=1; o[medAssinatura(__agM2.om)]=1; return o; })()}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag = run(`__escM2['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag, JSON.stringify(Object.keys(run('__escM2'))));
+    assert.ok(ag.ap && ag.ap.paradoEm && ag.ap.continuo === false, 'o Apoquel parado pela vet continua parado: ' + JSON.stringify(ag.ap));
+    assert.ok(ag.pr && ag.pr.nome === 'Prednisolona', 'a Prednisolona começada depois fica');
+    assert.ok(ag.om && !ag.om2, 'a cópia repetida do que a tela carregou sai: ' + JSON.stringify(Object.keys(ag)));
+  } finally { run('ciCorrigindoId=null;'); }
+  // sem registro do que a tela carregou (versão antiga do fluxo), vale a regra de antes: sai o que não está na tela
+  try {
+    run(`__escM2={}; __ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag2 = run(`__escM2['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag2 && !ag2.pr && ag2.ap && ag2.om, JSON.stringify(Object.keys(ag2 || {})));
+  } finally { run('ciCorrigindoId=null;'); }
+  // Corrigir com "Não" e sem remédio na tela: a agenda não é regravada (QA39 A3, agora com prova de comportamento — QA46 M3)
+  try {
+    run(`__escM2={}; __ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    assert.ok(!Object.keys(run('__escM2')).some((k) => /^SET .*\/itens$/.test(k)), JSON.stringify(Object.keys(run('__escM2'))));
+  } finally { run('ciCorrigindoId=null;'); }
+  // Acrescentar com "Não" e remédio gravado na estadia: não grava, pela tela de acrescentar também (QA46 M1)
+  run(`__bkM1={za:zAlertao, ed:ciEditandoId}; __alM1=[]; zAlertao=function(t, l){ __alM1.push([t, l.join(' | ')]); }; ciEditandoId='est1'; __escM2={};`);
+  try {
+    run(`__ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    igual(Object.keys(run('__escM2')), [], 'nada gravado');
+    const al = JSON.parse(JSON.stringify(run('__alM1')));
+    assert.ok(al[0][0] === 'PARA DIZER QUE PAROU, USE CORRIGIR' && /remédios \(Apoquel, Ômega 3\)/.test(al[0][1]) && /eles continuariam lá/.test(al[0][1]) && /os remédios ficam/.test(al[0][1]), JSON.stringify(al));
+  } finally { run('zAlertao=__bkM1.za; ciEditandoId=__bkM1.ed; DB=__bkM2.db; ciQuemRecebeu=__bkM2.qr; ciHosp=__bkM2.h; __ciTravar=__bkM2.tr; audit=__bkM2.au; quemSou=__bkM2.qs;'); }
+});
+prova('QA46 — o Salvar leva a resposta da medicação num lugar só: quem parou, o "Não" e o que a tela carregou', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/const pacote=Object\.assign\(\{ dados:dados,[^;]*\},\s*ciMedPacoteCampos\(\)\);/.test(src), 'o pacote usa ciMedPacoteCampos');
+  run(`__bkPC={eu:ciMedEmUso, ne:ciMedNaoEmUso, ca:CI_MED_CARREGADOS}; ciMedEmUso=function(){ return 'Não'; }; ciMedNaoEmUso=function(){ return [{id:'a1', nome:'Apoquel'}]; };
+    CI_MED_CARREGADOS={ids:{a1:1}, sigs:{x:1}};`);
+  try {
+    const c = JSON.parse(JSON.stringify(run('ciMedPacoteCampos()')));
+    igual(c, { medParou: [{ id: 'a1', nome: 'Apoquel' }], medEmUsoNao: true, medCarregados: { ids: { a1: 1 }, sigs: { x: 1 } } });
+    run(`ciMedEmUso=function(){ return 'Sim'; }; CI_MED_CARREGADOS=null;`);
+    const c2 = JSON.parse(JSON.stringify(run('ciMedPacoteCampos()')));
+    assert.ok(c2.medEmUsoNao === false && c2.medCarregados === null, JSON.stringify(c2));
+  } finally { run('ciMedEmUso=__bkPC.eu; ciMedNaoEmUso=__bkPC.ne; CI_MED_CARREGADOS=__bkPC.ca;'); }
+});
+provaAsync('QA46 — o "Não" não sobrescreve o que a veterinária já parou; pertences: "ração úmida, 3 latas" é um item; peso sozinho e marca sozinha são comida; antiparasitário por faixa de peso é remédio', async () => {
+  run(`__bkOb={db:DB, au:audit, cg:(typeof carregarAgendaMedTodos==='function'?carregarAgendaMedTodos:null), qs:quemSou};
+    audit=function(){}; carregarAgendaMedTodos=function(){}; quemSou=function(){ return 'Márcia'; };
+    __agOb={a1:{nome:'Apoquel', continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}}}; __upOb=[];
+    DB={ref:function(p){ return {
+      once:function(){ var id=p.split('/').pop(); return p.slice(-6)==='/itens' ? Promise.reject(new Error('rede')) : Promise.resolve({val:function(){ return __agOb[id]||null; }}); },
+      update:function(v){ __upOb.push(p); return Promise.resolve(); } }; }};`);
+  try {
+    await run(`ciMedMarcarParou('toshi__ana', [{id:'a1', nome:'Apoquel'}])`);
+    igual(JSON.parse(JSON.stringify(run('__upOb'))), [], 'a leitura da agenda falhou, e o parado pela vet não é regravado');
+  } finally { run('DB=__bkOb.db; audit=__bkOb.au; if(__bkOb.cg) carregarAgendaMedTodos=__bkOb.cg; quemSou=__bkOb.qs;'); }
+  igual(run(`ciPertPartes('ração úmida, 3 latas')`), ['ração úmida, 3 latas']);
+  igual(run(`ciPertPartes('sachê Whiskas, 3 sachês por dia')`), ['sachê Whiskas, 3 sachês por dia']);
+  igual(run(`ciPertPartes('mochila, 3 latas de patê')`), ['mochila', '3 latas de patê']);
+  assert.strictEqual(run(`ciPertTipo('comprimido 10 a 20 kg')`), 'remedios', 'faixa de peso sem nome de produto');
+  // a tela registra o que carregou da agenda (ids e assinaturas) — é o que o Corrigir usa para não tirar o que ninguém viu
+  run(`__bkPM={db:DB, ck:ciKey, am:ciAddMed, ch:ciMedEmUsoChange, ge:document.getElementById, eu:ciMedEmUso, ca:CI_MED_CARREGADOS};
+    ciKey=function(){ return 'toshi__ana'; }; ciAddMed=function(){}; ciMedEmUsoChange=function(){}; ciMedEmUso=function(){ return 'Sim'; };
+    document.getElementById=function(id){ return id==='ciMeds' ? {innerHTML:''} : null; }; CI_MED_CARREGADOS=null;
+    __agPM={a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}, x1:{nome:'Antigo', paradoEm:{data:'2026-01-01'}}};
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return __agPM; }}); }}; }};`);
+  try {
+    run('ciPreencherMedicacao();');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const c = run('CI_MED_CARREGADOS');
+    assert.ok(c && c.ids.a1 === 1 && !c.ids.x1 && c.sigs[run(`medAssinatura(__agPM.a1)`)] === 1, JSON.stringify(c));
+  } finally { run('DB=__bkPM.db; ciKey=__bkPM.ck; ciAddMed=__bkPM.am; ciMedEmUsoChange=__bkPM.ch; document.getElementById=__bkPM.ge; ciMedEmUso=__bkPM.eu; CI_MED_CARREGADOS=__bkPM.ca;'); }
+  igual(['Pacote 2 kg', 'Royal Canin', 'Bravecto 20-40 kg', 'NexGard 10,1-25 kg', 'Simparic 20 kg', 'areia 4 kg', 'caixa de transporte 5 kg', 'Condroitina 500 g', 'Ômega 3 500 mg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'remedios', 'remedios', 'remedios', 'outro', 'outro', 'remedios', 'remedios']);
 });
 prova('QA39 — pertences: número só completa o item quando é quantidade; o tipo acerta objetos com "comida" no nome; a descrição editada conserva o item; a correção fala português', () => {
   igual(run(`ciPertPartes('sacola verde, 2 brinquedos de pelúcia, 1 manta')`), ['sacola verde', '2 brinquedos de pelúcia', '1 manta']);

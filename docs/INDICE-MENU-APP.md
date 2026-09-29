@@ -236,6 +236,13 @@
   - **Corrigir e SUBSTITUIR com "Sim"** reescrevem só os remédios em vigor: os de "já não toma mais" e os suspensos pela veterinária ficam na agenda, com o histórico;
   - **pertences:** "guia vermelha, 2 kg de ração" são dois itens, e a comida continua crítica na Conferência; peso ("2 kg") e marca de ração conhecida (Royal Canin, Golden, Premier…) contam como comida; no Acrescentar, o item novo ganha uid próprio (antes, dois itens andavam juntos na Conferência); reescrever a linha de um item da grade antiga não vira "material novo";
   - textos: "Nenhum alarme deles toca" com mais de um remédio; no Acrescentar, o caminho para dizer que parou é "saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada".
+- **Ajustes do QA46:**
+  - **Corrigir e SUBSTITUIR com "Sim"** tiram da agenda só o que a tela carregou e a pessoa tirou, com as cópias repetidas. O que a veterinária parou depois fica parado, mesmo com o remédio na tela, e o que ela começou depois fica (`CI_MED_CARREGADOS`);
+  - **"➕ Acrescentar"** do quadro do alto, com "Não" e remédio gravado na estadia, também não grava: o aviso manda usar Corrigir. A regra agora está dentro da gravação;
+  - **"tomava X — não toma mais?"** volta a perguntar pelo remédio que terminou por data durante a última estadia, mas não pelo que terminou antes dela nem pelo que está em "já não toma mais";
+  - o **"Não" não regrava** o remédio que alguém já parou;
+  - **pertences:** "ração úmida, 3 latas" é um item só. Antiparasitário por faixa de peso ("Bravecto 20-40 kg") é remédio. "areia 4 kg" e "caixa de transporte" não são comida. Suplementos (condroitina, ômega, vitamina) são remédio;
+  - **textos no plural** quando há mais de um remédio ("eles continuariam lá", "os remédios ficam").
 
 ### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
 

@@ -45916,7 +45916,7 @@
     ciRenderPert({});
     // coleira e "está em uso de alguma medicação?": em branco — é o tutor quem responde
     try{ ciColeiraAplicar(null); }catch(e){} /* silencioso de propósito: tela sem o cartão da coleira */
-    setSeg('ciMedEmUso',''); CI_MED_NAO_TOCADO=false;
+    setSeg('ciMedEmUso',''); CI_MED_NAO_TOCADO=false; CI_MED_CARREGADOS=null;
     var _meb=document.getElementById('ciMedEmUsoBox'); if(_meb) _meb.style.display='none';
     // medicação vazia por padrão (1 linha, que só aparece com "Sim")
     document.getElementById('ciMeds').innerHTML=''; ciAddMed();
@@ -46651,6 +46651,16 @@
   // "Não" que volta de uma estadia já salva (corrigir, acrescentar) é só a resposta de antes:
   // aplicá-lo de novo pararia o remédio que a veterinária começou depois.
   var CI_MED_NAO_TOCADO=false;
+  // O que ESTA tela carregou da agenda (ids e assinaturas). O Corrigir só tira da agenda o
+  // que a pessoa viu e tirou; o que a veterinária começou ou parou depois fica (QA46 M2).
+  // null = a tela não chegou a ler a agenda (vale a regra antiga).
+  var CI_MED_CARREGADOS=null;
+  // O que o Salvar leva da medicação: quem parou, o "Não", e o que a tela carregou (QA46 M3 —
+  // num lugar só, com prova de comportamento).
+  function ciMedPacoteCampos(){
+    return { medParou:ciMedNaoEmUso(), medEmUsoNao:(ciMedEmUso()==='Não'),
+             medCarregados:CI_MED_CARREGADOS?JSON.parse(JSON.stringify(CI_MED_CARREGADOS)):null };
+  }
   function ciMedEmUsoChange(porToque){
     var v=ciMedEmUso();
     var ficha=ciMedFichaLinhas();
@@ -46743,6 +46753,7 @@
       var no='auaulandia/medicacao-agenda/'+key+'/itens/'+x.id;
       return DB.ref(no).once('value').then(function(s){
         var it=(s&&s.val&&s.val())||null; if(!it) return null;
+        if(!ciMedEmVigor(it, hoje)) return null;   // já parado ou suspenso por alguém: não sobrescreve (QA46)
         var hist=Array.isArray(it.historico)?it.historico.slice():[];
         hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():''), acao:'Parou de tomar — '+motivo});
         return DB.ref(no).update({continuo:false, dataFim:ontem, historico:hist,
@@ -46860,6 +46871,8 @@
       // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
       // banco com rastro. A Consultora não precisa mais apagar linha por linha.
       const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); });
+      CI_MED_CARREGADOS={ids:{}, sigs:{}};
+      ids.forEach(function(id){ CI_MED_CARREGADOS.ids[id]=1; CI_MED_CARREGADOS.sigs[medAssinatura(itens[id])]=1; });
       if(!ids.length) return;
       const wrap=document.getElementById('ciMeds'); if(!wrap) return; wrap.innerHTML='';
       // Os de USO CONTÍNUO vêm primeiro: são o que a aba Medicamentos da ficha guarda e o
@@ -46942,10 +46955,13 @@
     // comida", "cama de fibra natural", "kit de banho", "brinquedo de ração".
     if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
     if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
-    if(/^(pote|potes|tigela|comedouro|bebedouro|brinquedo|brinquedos|manta|cobertor|roupa|roupinha|toalha|escova|tapete)$/.test(w)) return 'outro';
+    if(/^(pote|potes|tigela|comedouro|bebedouro|brinquedo|brinquedos|manta|cobertor|roupa|roupinha|toalha|escova|tapete|areia|caixa|caixinha|transporte)$/.test(w)) return 'outro';
     if(w==='kit' && !/\b(remedio|remedios|medicacao|medicamento|medicamentos|emergencia|primeiros)\b/.test(n)) return 'outro';
     if(/\b(racao|racoes|comida|comidas|comidinha|natural|sache|saches|lata|latas|pate|alimento|alimentos|marmita|marmitas|umido|umida|petisco|petiscos|biscoito|biscoitos)\b/.test(n)) return 'comida';
-    if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit|emergencia|suplemento|suplementos)\b/.test(n)) return 'remedios';
+    if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit|emergencia|suplemento|suplementos|condroitina|glucosamina|omega|probiotico|probioticos|vitamina|vitaminas)\b/.test(n)) return 'remedios';
+    // Antiparasitário dosado por faixa de peso ("Bravecto 20-40 kg") é remédio, não comida (QA46 M5).
+    if(/\b(bravecto|simparic|nexgard|credeli|credelli|revolution|advocate|frontline|comfortis|capstar|drontal|milbemax|vermifugo|antipulgas?|carrapaticida)\b/.test(n)
+      || /\b\d+([.,]\d+)?\s*(-|a|ate)\s*\d+([.,]\d+)?\s*kg\b/.test(n)) return 'remedios';
     if(/^(mochila|bolsa|bolsinha|sacola|sacolinha|mala|necessaire)$/.test(w)) return 'mochila';
     // Peso ("2 kg", "500 g") ou marca de ração conhecida: é comida (QA44 N6). `soPalavras`
     // ignora esta regra — é o que decide se "2 kg" só completa o item de antes.
@@ -46974,8 +46990,11 @@
         // e "1 manta" são itens.
         // E só quando o pedaço não nomeia outra coisa (QA44 N6): "guia vermelha, 2 kg de ração"
         // são dois itens — e a comida continua crítica na Conferência.
-        if(daLinha.length && /^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i.test(x)
-          && ciPertTipo(x, true)==='outro') daLinha[daLinha.length-1]+=', '+x;
+        // O que sobra depois da quantidade decide (QA46 M4): "3 latas" completa a "ração úmida";
+        // "3 latas de patê" nomeia outra coisa.
+        var _qtdRe=/^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i;
+        var _resto=x.replace(_qtdRe,'').trim();
+        if(daLinha.length && _qtdRe.test(x) && (!_resto || ciPertTipo(_resto, true)==='outro')) daLinha[daLinha.length-1]+=', '+x;
         else daLinha.push(x);
       });
       daLinha.forEach(function(x){ out.push(x); });
@@ -47823,6 +47842,15 @@
       .then(function(s){ return julga(s.val()); })
       .catch(function(e){ _logFalhaGrav('conferir se a estadia '+estadiaId+' já acabou', e); return false; });
   }
+  // A entrada da estadia (para saber o que terminou antes dela). '' quando não se sabe.
+  function medEntradaDaEstadia(estadiaId){
+    if(!estadiaId) return Promise.resolve('');
+    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS && EST_TODAS[estadiaId]) return Promise.resolve(String(EST_TODAS[estadiaId].entrada||'')); }catch(e){} /* silencioso de propósito: sem cache, lê do banco */
+    if(!DB) return Promise.resolve('');
+    return DB.ref('auaulandia/estadias/'+estadiaId+'/entrada').once('value')
+      .then(function(s){ return String((s&&s.val&&s.val())||''); })
+      .catch(function(){ return ''; });   /* sem a data, pergunta por tudo: o lado seguro */
+  }
   function medAnterioresDe(origem, key){
     if(!DB||!key) return Promise.resolve([]);
     if(origem==='auaulandia'){
@@ -47833,12 +47861,19 @@
           return {nome:String(it.nome||'').trim(), item:it, id:id};
         }).filter(function(x){
           // remédio já suspenso pela veterinária não é surpresa: alguém já decidiu por ele.
-          // Nem o que já está em "já não toma mais" ou já terminou (QA44 N4): perguntar de novo
-          // a cada estadia, e uma resposta errada, o ressuscitaria.
-          return x.nome && !x.item.suspenso && (typeof ciMedEmVigor!=='function' || ciMedEmVigor(x.item));
+          // Nem o que já está em "já não toma mais" (QA44 N4): perguntar de novo a cada estadia,
+          // e uma resposta errada, o ressuscitaria.
+          return x.nome && !x.item.suspenso && !x.item.paradoEm;
         });
         if(!lista.length) return [];
-        return medEstadiaEncerrada(no.estadiaId).then(function(acabou){ return acabou?lista:[]; });
+        return medEstadiaEncerrada(no.estadiaId).then(function(acabou){
+          if(!acabou) return [];
+          // O que terminou por data ANTES da última estadia é passado; o que terminou durante
+          // ela (ex.: "tomar até" a saída) ainda é pergunta — o tutor pode continuar dando (QA46 M6).
+          return medEntradaDaEstadia(no.estadiaId).then(function(ent){
+            return lista.filter(function(x){ var it=x.item||{}; return it.continuo || !it.dataFim || !ent || String(it.dataFim)>=ent; });
+          });
+        });
       }).catch(function(e){ _logFalhaGrav('ler o remédio da estadia anterior de '+key, e); return []; });
     }
     return DB.ref('daycare/med-ultimo/'+key).once('value').then(function(s){
@@ -48011,8 +48046,8 @@
     // "Não trouxe a ração, aí vai ter que pegar comida úmida." Vai para a ESTADIA, não para
     // a ficha: é o que aconteceu HOJE, e a ficha continua dizendo o que ele come de verdade.
     const alimSem=(typeof ciAlimSemRacaoEstadia==='function')?ciAlimSemRacaoEstadia():null;
-    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem,
-                   medParou:ciMedNaoEmUso(), medEmUsoNao:(ciMedEmUso()==='Não') };
+    const pacote=Object.assign({ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem },
+                   ciMedPacoteCampos());
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
     // Modo CORRIGIR: não checa duplicidade (a estadia é conhecida) e exige o motivo antes
@@ -48059,7 +48094,7 @@
          'O tutor trouxe mais coisas? ACRESCENTAR. O que já existe está errado? SUBSTITUIR: o desta tela entra no lugar dele, inclusive a medicação — nada fica duplicado.',
          'Criar OUTRO duplica a medicação e os pertences — foi o que aconteceu com o Zeus e com o Ozzy.'],
         [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){
-            if(ciAcrescentarBarrado(ativa, pacote)) return;
+            if(ciAcrescentarBarrado(ativa, pacote, 'substituir')) return;
             __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
           {t:'✎ SUBSTITUIR o que já existe pelo desta tela', cor:'#234D67', fn:function(){ ciSubstituirExistente(ativa, pacote); }},
           {t:'Criar mesmo assim um 2º check-in (duplica)', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
@@ -48195,13 +48230,18 @@
   // Acrescentar SOMA: com "Não está em uso" nesta tela e remédio no check-in que já existe,
   // a estadia diria as duas coisas e o PDF continuaria com a lista (QA44 N2). Aí não grava e
   // mostra o caminho: SUBSTITUIR. Devolve true quando barrou.
-  function ciAcrescentarBarrado(ativa, pacote){
+  // `caminho`: 'substituir' (janela "já está hospedado") ou 'corrigir' (tela de acrescentar).
+  function ciAcrescentarBarrado(ativa, pacote, caminho){
     var medJa=(Array.isArray(ativa&&ativa.e&&ativa.e.medicacao)?ativa.e.medicacao:[]).map(function(m){ return (m&&m.nome)||''; }).filter(Boolean);
     if(!(pacote && pacote.medEmUsoNao && medJa.length)) return false;
-    zAlertao('PARA DIZER QUE PAROU, USE SUBSTITUIR', ['O check-in que já existe tem remédio ('+medJa.join(', ')+'). ACRESCENTAR só soma: ele continuaria lá.',
-      'Toque em Salvar de novo e escolha ✎ SUBSTITUIR: o "Não" desta tela entra no lugar, e o remédio fica como "já não toma mais".'], {botao:'Entendi'});
+    var varios=medJa.length>1, corr=(caminho==='corrigir');
+    zAlertao(corr?'PARA DIZER QUE PAROU, USE CORRIGIR':'PARA DIZER QUE PAROU, USE SUBSTITUIR',
+      ['O check-in que já existe tem '+(varios?'remédios':'remédio')+' ('+medJa.join(', ')+'). ACRESCENTAR só soma: '+(varios?'eles continuariam lá.':'ele continuaria lá.'),
+       corr?('Saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada: '+(varios?'os remédios ficam':'o remédio fica')+' como "já não toma mais".')
+           :('Toque em Salvar de novo e escolha ✎ SUBSTITUIR: o "Não" desta tela entra no lugar, e '+(varios?'os remédios ficam':'o remédio fica')+' como "já não toma mais".')],
+      {botao:'Entendi'});
     var st=document.getElementById('ci-status');
-    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — para dizer que parou, use SUBSTITUIR.'; }
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — para dizer que parou, use '+(corr?'Corrigir':'SUBSTITUIR')+'.'; }
     return true;
   }
   // Grava: 'novo' cria estadia; 'acrescentar' funde na que já existe e REABRE a conferência
@@ -48315,9 +48355,17 @@
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
         var jaLa=s.val()||{}, fica=Object.assign({}, (P.temMed?_medsCorr.itens:null)||{});
         // O que já não está em vigor (parou, suspenso pela veterinária, já terminou) fica como
-        // está: é histórico e não toca. A correção reescreve só o que está em vigor (QA44 N5).
-        var _hojeC=zHojeISO();
-        Object.keys(jaLa).forEach(function(id){ if(fica[id]===undefined && !ciMedEmVigor(jaLa[id], _hojeC)) fica[id]=jaLa[id]; });
+        // está, MESMO que a tela traga o mesmo remédio: a tela só carrega o que está em vigor,
+        // então alguém parou depois (QA44 N5, QA46 M2).
+        // E o que está em vigor e a tela NÃO carregou (a veterinária começou depois) também fica:
+        // só sai o que a pessoa viu e tirou, e as cópias repetidas dele (QA46 M2).
+        var _hojeC=zHojeISO(), _car=P.medCarregados||null;
+        Object.keys(jaLa).forEach(function(id){
+          var it=jaLa[id];
+          if(!ciMedEmVigor(it, _hojeC)){ fica[id]=it; return; }
+          if(fica[id]!==undefined) return;
+          if(_car && !(_car.ids||{})[id] && !(_car.sigs||{})[medAssinatura(it)]) fica[id]=it;
+        });
         var sumiram=Object.keys(jaLa).filter(function(id){ return fica[id]===undefined; });
         return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(Object.keys(fica).length?fica:null).then(function(){
           if(sumiram.length && typeof audit==='function')
@@ -48331,6 +48379,10 @@
       if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:Date.now(), _quem:quemSou() }));
     }
     else if(modo==='acrescentar'){
+      // A mesma regra da janela, aqui dentro, com o que está gravado (QA46 M1): vale também
+      // para o "➕ Acrescentar" do quadro do alto, onde a lista pode vir vazia porque a
+      // veterinária já parou tudo na agenda — e a estadia continuaria com a lista.
+      if(ciAcrescentarBarrado({e:antes}, P, ciEditandoId?'corrigir':'substituir')){ __ciTravar(false); return; }
       ref=DB.ref('auaulandia/estadias/'+estadiaId);
       const pertAntes=Array.isArray(antes.pertences)?antes.pertences:[];
       const chaveP=function(p){ return jsNorm((p&&(p.nome||p.k))||'')+'|'+jsNorm((p&&p.spec)||''); };
