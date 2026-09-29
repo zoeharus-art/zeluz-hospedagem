@@ -7767,6 +7767,12 @@
       return p2(d.getDate())+'/'+p2(d.getMonth()+1)+' '+p2(d.getHours())+':'+p2(d.getMinutes());
     }catch(e){ return ''; }
   }
+  // QUEDA DE CONEXÃO NÃO É RECUSA (Adriana, 29/set/2026, banho fixo da Cristal). A tela dizia
+  // "a planilha recusou — Failed to fetch": em inglês, e dizendo que a planilha disse não,
+  // quando foi a conexão que caiu no meio do envio. A conferência automática lê a planilha
+  // de novo a cada DASH_AUTO_MIN minutos e manda o que falta — então a frase diz isso.
+  function repPlanEhQuedaConexao(msg){ return /failed to fetch|networkerror|network request failed|load failed|não respondeu/i.test(String(msg||'')); }
+  function repPlanQuedaTexto(){ return 'a conexão com a planilha caiu; o app tenta de novo sozinho em até '+DASH_AUTO_MIN+' min'; }
   function repPlanLinhaHTML(p, dia, tipo){
     var rot=(tipo==='faltas')?('Falta avisada de '+repBRdata(dia)):('Reposição em '+repBRdata(dia));
     var e=repPlanEstado(dia, p, tipo);
@@ -7774,7 +7780,7 @@
       +escAttr(dia)+'\',this)">'+rotulo+'</button>'; };
     var cor='var(--muted)', txt='', acao='';
     if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='lançada na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
-    else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='NÃO foi para a planilha — '+e.msg; acao=bt('tentar de novo'); }
+    else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='NÃO foi para a planilha — '+(repPlanEhQuedaConexao(e.msg)?repPlanQuedaTexto():e.msg); acao=bt('tentar de novo'); }
     else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='vai para a planilha em até '+DASH_AUTO_MIN+' min'; acao=bt('Mandar agora'); }
     else if(e.estado==='fora'){ cor='var(--z-gold-deep)';
       txt='fora da conferência automática (ela cuida de hoje até '+repBRdata(repPlanFimJanela())+')'; acao=bt('Mandar agora'); }
@@ -34162,7 +34168,8 @@
       var e=repPlanEstadoNome(dia, v, autoK);
       var cor='var(--muted)', txt='';
       if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
-      else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+(e.msg||'a ponte não respondeu'); }
+      else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){ cor='var(--z-gold-deep)'; txt=repPlanQuedaTexto(); }
+      else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+e.msg; }
       else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
       else if(e.estado==='fora'){ cor='var(--z-gold-deep)'; txt='fora da conferência automática'; }
       else if(e.estado==='antigo'){ cor='var(--z-gold-deep)'; txt='registro anterior a esta versão — não sei dizer'; }

@@ -3358,6 +3358,37 @@ provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página 
     assert.ok(/LANÇADO NA PLANILHA/.test(r.al.t) && r.up.v.planilha_ok === true && r.up.v.planilha_msg === 'Frida/Ana Carolina: 3 noites · linha 12', JSON.stringify(r));
   } finally { run(`ORC_LISTA_CACHE=__bkOP.oc; orcSheetsCfg=__bkOP.sc; DB=__bkOP.db; zAlertao=__bkOP.za; fetch=__bkOP.fe;`); }
 });
+// ================================================================== queda de conexão não é recusa
+console.log('\nQueda de conexão com a planilha não é "a planilha recusou" (Adriana, 29/set/2026, banho fixo da Cristal)');
+prova('o automático diz que a conexão caiu e que tenta de novo sozinho; recusa de verdade continua "a planilha recusou"; Reposições com a mesma régua', () => {
+  const dia = run('zHojeISO()');
+  run(`__bkQC={c:REP_PLAN_CACHE['${dia}']};`);
+  try {
+    const v = 'Cristal/Yorkshire (SEM SHAMPOO)';
+    const ch = run(`vagasNomeChave(${JSON.stringify(v)})`);
+    const set = (tipo, chave, lista, msg) => run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{${tipo}:${JSON.stringify(lista)}, _estado_v:1,
+      _estado:{${tipo}:{${JSON.stringify(chave)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
+    const linha = () => run(`dashAutoLinhas('banho', '${dia}', null).html`);
+    ['Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'a ponte não respondeu em 12s', ''].forEach((m) => {
+      set('banho', ch, [v], m);
+      const h = linha();
+      assert.ok(/a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min/.test(h) && !/recusou/.test(h) && !/Failed to fetch|Load failed|NetworkError/.test(h),
+        'queda (' + (m || 'sem motivo') + '): ' + h);
+    });
+    set('banho', ch, [v], 'a coluna não existe');
+    assert.ok(/a planilha recusou — a coluna não existe/.test(linha()), 'recusa de verdade: ' + linha());
+    // Reposições: a mesma régua na linha do crédito
+    const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda' };
+    const chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
+    set('faltas', chP, [], 'Failed to fetch');
+    let l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min/.test(l) && /tentar de novo/.test(l) && !/Failed to fetch/.test(l), l);
+    set('faltas', chP, [], 'a planilha não tem a coluna Faltas Avisadas');
+    l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
+    assert.ok(/NÃO foi para a planilha — a planilha não tem a coluna Faltas Avisadas/.test(l), l);
+    igual(run("repPlanEhQuedaConexao('token invalido')"), false);
+  } finally { run(`if(__bkQC.c) REP_PLAN_CACHE['${dia}']=__bkQC.c; else delete REP_PLAN_CACHE['${dia}'];`); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

@@ -114,6 +114,20 @@
 - **Onde está no código:** `orcPonteMotivo` e `orcEnviarPlanilha`; a ponte é `integracao-planilha/Codigo.gs` (`doPost` devolve `{ok:false, erro}`).
 - **O conserto da ponte é na configuração** (a Gestão): Configurações › Valores da hospedagem › Ponte com a planilha (Testar agora, Palavra-chave, Salvar ponte) e, no Apps Script, Propriedades do script › PONTE_SENHA.
 
+### (AA) Queda de conexão com a planilha não é "a planilha recusou" (29/set/2026)
+
+> **Adriana, 29/set/2026 (banho fixo da Cristal, foto de Lançamentos do dia):** *"Banho recorrente não apareceu, o que houve?"* A linha dizia "a planilha recusou — Failed to fetch". Depois de entender a causa: *"Pode trocar a frase do banho."*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Lançamentos do dia, linha do automático (banho fixo, reposição, falta avisada, adaptação) | "a planilha recusou — Failed to fetch", em vermelho | "a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min", em dourado |
+| Reposições, linha do crédito | "NÃO foi para a planilha — Failed to fetch" | "NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min", com o botão **tentar de novo** |
+| Recusa de verdade (coluna que não existe, palavra-chave) | "a planilha recusou — motivo" | igual: o motivo da ponte continua aparecendo |
+
+- **Conta como queda:** "Failed to fetch" (Chrome), "Load failed" (Safari), "NetworkError" (Firefox), "a ponte não respondeu" e o prazo de 12 s.
+- **Por que "tenta de novo sozinho" é verdade:** a conferência automática (`dashAutoSincronizar`) lê a planilha a cada 5 minutos, enquanto algum aparelho estiver com o app aberto, e manda o que falta. O botão **Conferir a planilha agora**, no alto de Lançamentos do dia, adianta essa conferência.
+- **Onde está no código:** `repPlanEhQuedaConexao`, `repPlanQuedaTexto`, `repPlanLinhaHTML`, `dashAutoLinhas`.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.
