@@ -120,13 +120,18 @@
 
 | Onde | Antes | Agora |
 |---|---|---|
-| Lançamentos do dia, linha do automático (banho fixo, reposição, falta avisada, adaptação) | "a planilha recusou — Failed to fetch", em vermelho | "a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min", em dourado |
-| Reposições, linha do crédito | "NÃO foi para a planilha — Failed to fetch" | "NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min", com o botão **tentar de novo** |
-| Recusa de verdade (coluna que não existe, palavra-chave) | "a planilha recusou — motivo" | igual: o motivo da ponte continua aparecendo |
+| Lançamentos do dia, linha do automático (banho fixo, reposição, falta avisada, adaptação) | "a planilha recusou — Failed to fetch", em vermelho | "a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min", em dourado |
+| Reposições, linha do crédito | "NÃO foi para a planilha — Failed to fetch" | "NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min", com o botão **tentar de novo** |
+| Botão **Conferir a planilha agora** com a conexão caída | "✅ 0 posto(s) · 0 tirado(s) em 15 dia(s)", como se tivesse dado certo | "⚠ não consegui ler a planilha: a conexão com a planilha caiu" (ou "não consegui ler 2 de 15 dia(s)") |
+| Recusa de verdade (coluna que não existe, palavra-chave) | "a planilha recusou — motivo" | igual: o motivo da ponte continua aparecendo, em vermelho |
 
-- **Conta como queda:** "Failed to fetch" (Chrome), "Load failed" (Safari), "NetworkError" (Firefox), "a ponte não respondeu" e o prazo de 12 s.
-- **Por que "tenta de novo sozinho" é verdade:** a conferência automática (`dashAutoSincronizar`) lê a planilha a cada 5 minutos, enquanto algum aparelho estiver com o app aberto, e manda o que falta. O botão **Conferir a planilha agora**, no alto de Lançamentos do dia, adianta essa conferência.
-- **Onde está no código:** `repPlanEhQuedaConexao`, `repPlanQuedaTexto`, `repPlanLinhaHTML`, `dashAutoLinhas`.
+- **Conta como queda:**
+  - "Failed to fetch" (Chrome);
+  - "Load failed", "connection was lost", "appears to be offline", "request timed out" e "conexão de rede" (Safari e iPhone);
+  - "NetworkError" (Firefox);
+  - "a ponte não respondeu", inclusive o prazo de 12 s.
+- **Por que "em até 10 min":** a conferência automática (`dashAutoLigar` › `dashAutoRodar`) roda a cada 5 minutos enquanto algum aparelho estiver com o app aberto. A trava de 5 minutos, porém, conta do fim da passada anterior. Com um aparelho só, a volta logo depois da queda pula, e a seguinte confere (QA34). O botão **Conferir a planilha agora**, no alto de Lançamentos do dia, adianta a conferência.
+- **Onde está no código:** `repPlanEhQuedaConexao`, `repPlanQuedaTexto`, `repPlanLinhaHTML`, `dashAutoLinhas`, `dashAutoRodarAgora` (conta os dias que não leu) e `dashAutoBotao`.
 
 ### Decisões registradas (sem mudança de código)
 

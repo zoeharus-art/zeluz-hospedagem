@@ -3369,25 +3369,41 @@ prova('o automático diz que a conexão caiu e que tenta de novo sozinho; recusa
     const set = (tipo, chave, lista, msg) => run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{${tipo}:${JSON.stringify(lista)}, _estado_v:1,
       _estado:{${tipo}:{${JSON.stringify(chave)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
     const linha = () => run(`dashAutoLinhas('banho', '${dia}', null).html`);
-    ['Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'a ponte não respondeu em 12s', ''].forEach((m) => {
+    ['Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'a ponte não respondeu em 12s', '',
+     'The network connection was lost.', 'The Internet connection appears to be offline.', 'The request timed out.', 'A conexão de rede foi perdida.'].forEach((m) => {
       set('banho', ch, [v], m);
       const h = linha();
-      assert.ok(/a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min/.test(h) && !/recusou/.test(h) && !/Failed to fetch|Load failed|NetworkError/.test(h),
-        'queda (' + (m || 'sem motivo') + '): ' + h);
+      // "em até 10 min": com um aparelho só, a volta seguinte à queda ainda cai na trava de 5 min e pula (QA34)
+      assert.ok(/color:var\(--z-gold-deep\)[^>]*>a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(h) && !/recusou/.test(h)
+        && !/Failed to fetch|Load failed|NetworkError|connection was lost/.test(h), 'queda (' + (m || 'sem motivo') + '), em dourado: ' + h);
     });
     set('banho', ch, [v], 'a coluna não existe');
-    assert.ok(/a planilha recusou — a coluna não existe/.test(linha()), 'recusa de verdade: ' + linha());
+    assert.ok(/color:var\(--crm-critico\)[^>]*>a planilha recusou — a coluna não existe/.test(linha()), 'recusa de verdade, em vermelho: ' + linha());
+    ['Upload failed', 'o tutor não respondeu', 'token invalido'].forEach((m) => igual(run(`repPlanEhQuedaConexao(${JSON.stringify(m)})`), false, 'não é queda: ' + m));
     // Reposições: a mesma régua na linha do crédito
     const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda' };
     const chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
     set('faltas', chP, [], 'Failed to fetch');
     let l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
-    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 5 min/.test(l) && /tentar de novo/.test(l) && !/Failed to fetch/.test(l), l);
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(l) && /tentar de novo/.test(l) && !/Failed to fetch/.test(l), l);
     set('faltas', chP, [], 'a planilha não tem a coluna Faltas Avisadas');
     l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
     assert.ok(/NÃO foi para a planilha — a planilha não tem a coluna Faltas Avisadas/.test(l), l);
     igual(run("repPlanEhQuedaConexao('token invalido')"), false);
   } finally { run(`if(__bkQC.c) REP_PLAN_CACHE['${dia}']=__bkQC.c; else delete REP_PLAN_CACHE['${dia}'];`); }
+});
+provaAsync('o botão "Conferir a planilha agora" não diz ✅ quando não conseguiu ler a planilha (QA34)', async () => {
+  run(`__bkCB={pp:dashPontePronta, sy:dashAutoSincronizar, db:DB, dc:dashCarregar};
+    dashPontePronta=function(){ return Promise.resolve({url:'x'}); }; dashCarregar=function(){};
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return 0; }}); }}; }};
+    __syOk=0; __syN=0; dashAutoSincronizar=function(d){ __syN++; return Promise.resolve(__syN<=__syOk ? {ok:true, dia:d, posto:1, tirado:0} : {ok:false, erro:'Failed to fetch'}); };`);
+  try {
+    const dias = run('DASH_AUTO_DIAS+1');
+    const botao = async (ok) => { run(`__syOk=${ok}; __syN=0; __bt={textContent:'Conferir a planilha agora', disabled:false};`); run('dashAutoBotao(__bt)'); for (let i = 0; i < 80; i++) await Promise.resolve(); return run('__bt.textContent'); };
+    assert.strictEqual(await botao(0), '⚠ não consegui ler a planilha: a conexão com a planilha caiu');
+    assert.strictEqual(await botao(dias - 1), '⚠ não consegui ler 1 de ' + dias + ' dia(s): a conexão com a planilha caiu');
+    assert.strictEqual(await botao(dias), '✅ ' + dias + ' posto(s) · 0 tirado(s) em ' + dias + ' dia(s)', 'tudo lido: como antes');
+  } finally { run('dashPontePronta=__bkCB.pp; dashAutoSincronizar=__bkCB.sy; DB=__bkCB.db; dashCarregar=__bkCB.dc;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

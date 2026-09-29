@@ -7770,9 +7770,13 @@
   // QUEDA DE CONEXÃO NÃO É RECUSA (Adriana, 29/set/2026, banho fixo da Cristal). A tela dizia
   // "a planilha recusou — Failed to fetch": em inglês, e dizendo que a planilha disse não,
   // quando foi a conexão que caiu no meio do envio. A conferência automática lê a planilha
-  // de novo a cada DASH_AUTO_MIN minutos e manda o que falta — então a frase diz isso.
-  function repPlanEhQuedaConexao(msg){ return /failed to fetch|networkerror|network request failed|load failed|não respondeu/i.test(String(msg||'')); }
-  function repPlanQuedaTexto(){ return 'a conexão com a planilha caiu; o app tenta de novo sozinho em até '+DASH_AUTO_MIN+' min'; }
+  // de novo e manda o que falta — então a frase diz isso. O prazo é de DUAS voltas: com um
+  // aparelho só, a volta seguinte à da queda ainda está dentro da trava de DASH_AUTO_MIN
+  // (contada do FIM da passada) e pula; a outra confere (QA34). Entra o Chrome ("Failed to
+  // fetch"), o Safari ("Load failed", "connection was lost", "appears to be offline", "request
+  // timed out", "conexão de rede"), o Firefox ("NetworkError") e o prazo de 12 s da ponte.
+  function repPlanEhQuedaConexao(msg){ return /failed to fetch|networkerror|network request failed|\bload failed\b|connection was lost|appears to be offline|request timed out|conex[aã]o de rede|ponte não respondeu/i.test(String(msg||'')); }
+  function repPlanQuedaTexto(){ return 'a conexão com a planilha caiu; o app tenta de novo sozinho em até '+(2*DASH_AUTO_MIN)+' min'; }
   function repPlanLinhaHTML(p, dia, tipo){
     var rot=(tipo==='faltas')?('Falta avisada de '+repBRdata(dia)):('Reposição em '+repBRdata(dia));
     var e=repPlanEstado(dia, p, tipo);
@@ -42045,7 +42049,9 @@
       }, Promise.resolve()).then(function(){
         var posto=res.reduce(function(a,x){ return a+((x&&x.posto)||0); },0);
         var tirado=res.reduce(function(a,x){ return a+((x&&x.tirado)||0); },0);
-        return {ok:true, posto:posto, tirado:tirado, dias:dias.length};
+        // Dia que não pôde ser lido NÃO é "✅ 0 posto(s)": o botão diz (QA34, 29/set/2026).
+        var falhas=res.filter(function(x){ return x && x.ok===false; });
+        return {ok:true, posto:posto, tirado:tirado, dias:dias.length, falhas:falhas.length, erroFalha:falhas.length?String(falhas[0].erro||''):''};
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
   }
@@ -42055,9 +42061,12 @@
     var t=btn.textContent; btn.disabled=true; btn.textContent='conferindo a planilha…';
     dashAutoRodar(true).then(function(r){
       btn.disabled=false;
-      btn.textContent=r.ok
-        ? ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s) em '+(r.dias||1)+' dia(s)')
-        : ('❌ '+(r.erro||'não consegui'));
+      var _motivo=function(m){ return (typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) ? 'a conexão com a planilha caiu' : (m||'não consegui'); };
+      btn.textContent=!r.ok
+        ? ('❌ '+_motivo(r.erro))
+        : (r.falhas
+          ? ('⚠ '+(r.falhas===r.dias?'não consegui ler a planilha':('não consegui ler '+r.falhas+' de '+r.dias+' dia(s)'))+': '+_motivo(r.erroFalha))
+          : ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s) em '+(r.dias||1)+' dia(s)'));
       try{ dashCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 8000);
     });
