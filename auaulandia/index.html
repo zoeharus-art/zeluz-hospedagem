@@ -46866,6 +46866,8 @@
   function ciPreencherMedicacao(){
     if(!DB) return; const key=ciKey(); if(!key) return;
     DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+      // A pessoa trocou de FILHOt antes de a leitura voltar: esta lista não é dele (QA49 B7).
+      if(ciKey()!==key) return;
       const brutos=s.val()||{};
       // DADO ANTIGO JÁ DUPLICADO: a agenda da Lisa chegava com 4 VitaC iguais. A tela mostra
       // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
@@ -46955,18 +46957,22 @@
     // comida", "cama de fibra natural", "kit de banho", "brinquedo de ração".
     if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
     if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
-    if(/^(pote|potes|tigela|comedouro|bebedouro|brinquedo|brinquedos|manta|cobertor|roupa|roupinha|toalha|escova|tapete|areia|caixa|caixinha|transporte)$/.test(w)) return 'outro';
+    if(/^(pote|potes|tigela|comedouro|bebedouro|brinquedo|brinquedos|manta|cobertor|roupa|roupinha|toalha|escova|tapete|areia|transporte)$/.test(w)) return 'outro';
     if(w==='kit' && !/\b(remedio|remedios|medicacao|medicamento|medicamentos|emergencia|primeiros)\b/.test(n)) return 'outro';
     if(/\b(racao|racoes|comida|comidas|comidinha|natural|sache|saches|lata|latas|pate|alimento|alimentos|marmita|marmitas|umido|umida|petisco|petiscos|biscoito|biscoitos)\b/.test(n)) return 'comida';
     if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit|emergencia|suplemento|suplementos|condroitina|glucosamina|omega|probiotico|probioticos|vitamina|vitaminas)\b/.test(n)) return 'remedios';
     // Antiparasitário dosado por faixa de peso ("Bravecto 20-40 kg") é remédio, não comida (QA46 M5).
+    // A faixa sozinha não vale para ração de marca ("Golden 10-15 kg" é comida — QA49 B2).
+    var _marcaRacao=/\b(royal canin|golden|premier|farmina|hills|pro ?plan|biofresh|guabi|gran plus|quatree|equilibrio|n ?& ?d)\b/;
     if(/\b(bravecto|simparic|nexgard|credeli|credelli|revolution|advocate|frontline|comfortis|capstar|drontal|milbemax|vermifugo|antipulgas?|carrapaticida)\b/.test(n)
-      || /\b\d+([.,]\d+)?\s*(-|a|ate)\s*\d+([.,]\d+)?\s*kg\b/.test(n)) return 'remedios';
+      || (/\b\d+([.,]\d+)?\s*(-|a|ate)\s*\d+([.,]\d+)?\s*kg\b/.test(n) && !_marcaRacao.test(n))) return 'remedios';
+    // "caixa de sachês" já é comida pela regra acima; o resto ("caixa de transporte", "caixa
+    // de areia") é objeto (QA49 A1).
+    if(/^(caixa|caixinha)$/.test(w)) return 'outro';
     if(/^(mochila|bolsa|bolsinha|sacola|sacolinha|mala|necessaire)$/.test(w)) return 'mochila';
     // Peso ("2 kg", "500 g") ou marca de ração conhecida: é comida (QA44 N6). `soPalavras`
     // ignora esta regra — é o que decide se "2 kg" só completa o item de antes.
-    if(!soPalavras && (/\b\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?)\b/.test(n)
-      || /\b(royal canin|golden|premier|farmina|hills|pro ?plan|biofresh|guabi|gran plus|quatree|equilibrio|n ?& ?d)\b/.test(n))) return 'comida';
+    if(!soPalavras && (/\b\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?)\b/.test(n) || _marcaRacao.test(n))) return 'comida';
     return 'outro';
   }
   // Separa o texto em itens: por linha, por ponto e vírgula e por vírgula fora de parênteses.
@@ -46981,7 +46987,8 @@
       for(var i=0;i<linha.length;i++){
         var c=linha.charAt(i);
         if(c==='(') prof++; else if(c===')') prof=Math.max(0,prof-1);
-        if(c===',' && !prof){ ped.push(cur); cur=''; } else cur+=c;
+        // "NexGard 10,1-25 kg": vírgula entre dígitos é decimal, não separa item (QA49 B3).
+        if(c===',' && !prof && !(/\d/.test(linha.charAt(i-1)) && /\d/.test(linha.charAt(i+1)))){ ped.push(cur); cur=''; } else cur+=c;
       }
       ped.push(cur);
       var daLinha=[];
@@ -46994,7 +47001,11 @@
         // "3 latas de patê" nomeia outra coisa.
         var _qtdRe=/^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i;
         var _resto=x.replace(_qtdRe,'').trim();
-        if(daLinha.length && _qtdRe.test(x) && (!_resto || ciPertTipo(_resto, true)==='outro')) daLinha[daLinha.length-1]+=', '+x;
+        // "guia vermelha, 3 latas" são dois itens: a lata não completa a guia (QA49 B1).
+        var _tq=ciPertTipo(x, true);
+        if(daLinha.length && _qtdRe.test(x)
+           && (_resto ? ciPertTipo(_resto, true)==='outro' : (_tq==='outro' || _tq===ciPertTipo(daLinha[daLinha.length-1]))))
+          daLinha[daLinha.length-1]+=', '+x;
         else daLinha.push(x);
       });
       daLinha.forEach(function(x){ out.push(x); });
@@ -47842,14 +47853,15 @@
       .then(function(s){ return julga(s.val()); })
       .catch(function(e){ _logFalhaGrav('conferir se a estadia '+estadiaId+' já acabou', e); return false; });
   }
-  // A entrada da estadia (para saber o que terminou antes dela). '' quando não se sabe.
-  function medEntradaDaEstadia(estadiaId){
-    if(!estadiaId) return Promise.resolve('');
-    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS && EST_TODAS[estadiaId]) return Promise.resolve(String(EST_TODAS[estadiaId].entrada||'')); }catch(e){} /* silencioso de propósito: sem cache, lê do banco */
-    if(!DB) return Promise.resolve('');
-    return DB.ref('auaulandia/estadias/'+estadiaId+'/entrada').once('value')
-      .then(function(s){ return String((s&&s.val&&s.val())||''); })
-      .catch(function(){ return ''; });   /* sem a data, pergunta por tudo: o lado seguro */
+  // A entrada e a saída da estadia: {entrada, saida}, '' quando não se sabe (QA49 B4).
+  function medPeriodoDaEstadia(estadiaId){
+    var vazio={entrada:'', saida:''};
+    if(!estadiaId) return Promise.resolve(vazio);
+    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS && EST_TODAS[estadiaId]){ var e0=EST_TODAS[estadiaId]; return Promise.resolve({entrada:String(e0.entrada||''), saida:String(e0.saida||'')}); } }catch(e){} /* silencioso de propósito: sem cache, lê do banco */
+    if(!DB) return Promise.resolve(vazio);
+    return Promise.all([DB.ref('auaulandia/estadias/'+estadiaId+'/entrada').once('value'), DB.ref('auaulandia/estadias/'+estadiaId+'/saida').once('value')])
+      .then(function(r){ return {entrada:String((r[0]&&r[0].val&&r[0].val())||''), saida:String((r[1]&&r[1].val&&r[1].val())||'')}; })
+      .catch(function(){ return vazio; });   /* sem as datas, pergunta por tudo: o lado seguro */
   }
   function medAnterioresDe(origem, key){
     if(!DB||!key) return Promise.resolve([]);
@@ -47870,8 +47882,10 @@
           if(!acabou) return [];
           // O que terminou por data ANTES da última estadia é passado; o que terminou durante
           // ela (ex.: "tomar até" a saída) ainda é pergunta — o tutor pode continuar dando (QA46 M6).
-          return medEntradaDaEstadia(no.estadiaId).then(function(ent){
-            return lista.filter(function(x){ var it=x.item||{}; return it.continuo || !it.dataFim || !ent || String(it.dataFim)>=ent; });
+          return medPeriodoDaEstadia(no.estadiaId).then(function(pe){
+            var ent=pe.entrada, sai=pe.saida;
+            return lista.filter(function(x){ var it=x.item||{}, f=String(it.dataFim||'');
+              return it.continuo || !f || !ent || (f>=ent && (!sai || f<=sai)); });
           });
         });
       }).catch(function(e){ _logFalhaGrav('ler o remédio da estadia anterior de '+key, e); return []; });
@@ -48266,6 +48280,24 @@
       // SUBSTITUI. É a diferença que faz a correção existir: aqui a medicação e a
       // alimentação erradas SAEM, em vez de conviverem com as certas.
       ref=DB.ref('auaulandia/estadias/'+estadiaId);
+      // A veterinária parou ou apagou um remédio DEPOIS que a lista carregou (QA49 B5/B8): ele
+      // não volta pela tela. Sai também da estadia e do PDF, e o aviso final diz qual foi.
+      P.medVetMudou=[];
+      if(P.temMed && P.medCarregados && P.medCarregados.ids){
+        let _agAgora=null;
+        try{ const _sAg=await DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value'); _agAgora=(_sAg&&_sAg.val&&_sAg.val())||{}; }
+        catch(e){ _agAgora=null; } /* silencioso de propósito: sem a leitura, vale a tela — a regravação da agenda ainda protege o parado */
+        if(_agAgora){
+          const _hjV=zHojeISO();
+          Object.keys(meds).forEach(function(id){
+            if(!P.medCarregados.ids[id]) return;
+            const ag=_agAgora[id];
+            if(ag && ciMedEmVigor(ag, _hjV)) return;
+            P.medVetMudou.push(String((meds[id]&&meds[id].nome)||'remédio')+(ag?' (parado)':' (apagado)'));
+            delete meds[id];
+          });
+        }
+      }
       // ===== RESOLVIDO NÃO VOLTA PARA A CONFERÊNCIA (Adriana, 12/ago/2026) ==============
       // "O Otávio viu que faltou a roupa, escreveu que faltou, a Amanda corrigiu e disse:
       //  resolvido. No entanto isso voltou à conferência do check-in, está dando retrabalho.
@@ -48364,7 +48396,8 @@
           var it=jaLa[id];
           if(!ciMedEmVigor(it, _hojeC)){ fica[id]=it; return; }
           if(fica[id]!==undefined) return;
-          if(_car && !(_car.ids||{})[id] && !(_car.sigs||{})[medAssinatura(it)]) fica[id]=it;
+          // Sem o registro (a lista não chegou a carregar), ninguém viu nada: nada em vigor sai (QA49 B6).
+          if(!_car || (!(_car.ids||{})[id] && !(_car.sigs||{})[medAssinatura(it)])) fica[id]=it;
         });
         var sumiram=Object.keys(jaLa).filter(function(id){ return fica[id]===undefined; });
         return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(Object.keys(fica).length?fica:null).then(function(){
@@ -48524,6 +48557,7 @@
         ciCorrigindoId=null; window.__ciAntes=null;
         _tit=(P.substituir?'✅ CHECK-IN SUBSTITUÍDO — ':'✅ CORREÇÃO SALVA — ')+_petTit;
         _linhas=((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']).slice();
+        if(P.medVetMudou && P.medVetMudou.length) _linhas.push('Mexido pela veterinária enquanto você corrigia — ficou como ela deixou: '+P.medVetMudou.join(', ')+'.');
         _rodape='Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
                +((P.chegouNovo&&P.chegouNovo.length)
                   ? ((P.substituir?'SUBSTITUIU O CHECK-IN (':'CHEGOU MATERIAL NOVO (')+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')

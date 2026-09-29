@@ -3802,7 +3802,7 @@ provaAsync('QA42 — cancelar "quem recebeu" no SUBSTITUIR (ou no Corrigir/Acres
   const src = fs.readFileSync(APP, 'utf8');
   const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
   assert.ok(cor.indexOf('await ciQuemRecebeu(chegouNovo') > 0 && cor.indexOf('await ciQuemRecebeu(chegouNovo') < cor.indexOf('ops.push(ref.update(_upCorr))')
-    && cor.indexOf('ops.push(ref.update(_upCorr))') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir: pergunta, depois estadia, depois agenda');
+    && cor.indexOf('ops.push(ref.update(_upCorr))') < cor.lastIndexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir: pergunta, depois estadia, depois agenda');
   const acr = src.slice(src.indexOf("    else if(modo==='acrescentar'){"), src.indexOf("    else if(modo==='acrescentar'){") + 6000);
   assert.ok(acr.indexOf('await ciQuemRecebeu(novosItens)') > 0 && acr.indexOf('await ciQuemRecebeu(novosItens)') < acr.indexOf('ops.push(ref.update({'), 'acrescentar: pergunta antes de gravar');
   assert.ok(/async function ciQuemRecebeu\(itens, op\)\{[\s\S]{0,700}clearTimeout\(__ciTimerPreso\)/.test(src), 'o prazo para durante a pergunta');
@@ -3860,7 +3860,7 @@ prova('QA39 — o "Não" só vale quando alguém toca nele agora; não para rem�
   assert.ok(/if\(!MED_GATE_ULTIMO\['auaulandia\|'\+key\] && ciMedEmUso\(\)!=='Não'\)\{/.test(src), 'com "Não", o salvar não repergunta "tomava X?"');
   const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
   assert.ok(cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') > 0
-    && cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
+    && cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') < cor.lastIndexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
   assert.ok(/if\(P\.medParou && P\.medParou\.length\)\{/.test(src), 'e marca "já não toma mais" também no corrigir');
   run(`__bkN={sv:segVal, ss:setSeg, ge:document.getElementById, qsa:document.querySelectorAll, ce:canEditCheckinMed, za:zAlertao, ed:ciEditandoId, ca:ciColeiraAplicar, ch:ciMedEmUsoChange};
     __sgN={ciMedEmUso:''}; segVal=function(id){ return __sgN[id]||''; }; setSeg=function(id,v){ __sgN[id]=v; };
@@ -3958,7 +3958,8 @@ provaAsync('QA44 — Corrigir com "Sim" reescreve só o que está em vigor: "já
     __qrN5=[]; ciQuemRecebeu=function(itens){ __qrN5.push(itens); return Promise.resolve('Ana'); };`);
   try {
     run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-r', k:'outro', nome:'Casaco vermelho de lã', spec:''}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}]},
-      meds:{m1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+      meds:{m1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]},
+      medCarregados:{ids:{old1:1}, sigs:{}}});`);
     for (let i = 0; i < 60; i++) await Promise.resolve();
     const ag = run(`__escN5['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
     assert.ok(ag, JSON.stringify(Object.keys(run('__escN5'))));
@@ -4023,13 +4024,13 @@ provaAsync('QA46 — Corrigir com "Sim": o que a veterinária parou depois fica 
     assert.ok(ag.pr && ag.pr.nome === 'Prednisolona', 'a Prednisolona começada depois fica');
     assert.ok(ag.om && !ag.om2, 'a cópia repetida do que a tela carregou sai: ' + JSON.stringify(Object.keys(ag)));
   } finally { run('ciCorrigindoId=null;'); }
-  // sem registro do que a tela carregou (versão antiga do fluxo), vale a regra de antes: sai o que não está na tela
+  // sem registro do que a tela carregou (a lista não chegou a carregar), ninguém viu nada: nada em vigor sai (QA49 B6)
   try {
     run(`__escM2={}; __ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
       meds:{om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
     for (let i = 0; i < 60; i++) await Promise.resolve();
     const ag2 = run(`__escM2['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
-    assert.ok(ag2 && !ag2.pr && ag2.ap && ag2.om, JSON.stringify(Object.keys(ag2 || {})));
+    assert.ok(ag2 && ag2.pr && ag2.ap && ag2.om && ag2.om2, JSON.stringify(Object.keys(ag2 || {})));
   } finally { run('ciCorrigindoId=null;'); }
   // Corrigir com "Não" e sem remédio na tela: a agenda não é regravada (QA39 A3, agora com prova de comportamento — QA46 M3)
   try {
@@ -4090,6 +4091,86 @@ provaAsync('QA46 — o "Não" não sobrescreve o que a veterinária já parou; p
   } finally { run('DB=__bkPM.db; ciKey=__bkPM.ck; ciAddMed=__bkPM.am; ciMedEmUsoChange=__bkPM.ch; document.getElementById=__bkPM.ge; ciMedEmUso=__bkPM.eu; CI_MED_CARREGADOS=__bkPM.ca;'); }
   igual(['Pacote 2 kg', 'Royal Canin', 'Bravecto 20-40 kg', 'NexGard 10,1-25 kg', 'Simparic 20 kg', 'areia 4 kg', 'caixa de transporte 5 kg', 'Condroitina 500 g', 'Ômega 3 500 mg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
     ['comida', 'comida', 'remedios', 'remedios', 'remedios', 'outro', 'outro', 'remedios', 'remedios']);
+});
+provaAsync('QA49 — Corrigir: o remédio que a veterinária parou ou apagou depois de a lista carregar sai também da estadia e do PDF, com aviso; o botão destrava quando o Acrescentar é barrado', async () => {
+  run(`__bkQ9={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __trQ9=[]; __ciTravar=function(v){ __trQ9.push(v); }; quemSou=function(){ return 'Adriana'; };
+    __estQ9={nome:'Toshi', medicacao:[{nome:'Apoquel'}, {nome:'Ômega 3'}, {nome:'Vitamina C'}], pertences:[], ficha:{}};
+    // a tela carregou ap, om e vc; depois a vet PAROU o ap e APAGOU a vc
+    __agQ9={ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:false, dataFim:'2026-09-01', paradoEm:{quem:'Vet'}},
+            om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true}};
+    __escQ9={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estQ9 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agQ9 : null); }}); },
+      update:function(v){ __escQ9[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escQ9['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    run(`__pQ9={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
+      meds:{ap:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}, om:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00']}, vc:{nome:'Vitamina C', q:'1', u:'comprimido', horarios:['10:00']}},
+      temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}, medCarregados:{ids:{ap:1, om:1, vc:1}, sigs:{}}};
+      __ciGravar('corrigir', 'est1', __pQ9);`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    const est = run(`__escQ9['auaulandia/estadias/est1']`);
+    assert.ok(est && est.medicacao.map((m) => m.nome).join() === 'Ômega 3', 'a estadia (e o PDF) fica só com o Ômega: ' + JSON.stringify(est && est.medicacao));
+    const ag = run(`__escQ9['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag && ag.ap && ag.ap.paradoEm && ag.om && !ag.vc, JSON.stringify(ag));
+    igual(JSON.parse(JSON.stringify(run('__pQ9.medVetMudou'))), ['Apoquel (parado)', 'Vitamina C (apagado)']);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/if\(P\.medVetMudou && P\.medVetMudou\.length\) _linhas\.push\('Mexido pela veterinária enquanto você corrigia — ficou como ela deixou: '/.test(src), 'o aviso final diz qual foi');
+  } finally { run('ciCorrigindoId=null;'); }
+  // Acrescentar barrado dentro do gravar: o botão destrava e o status diz o caminho (QA49 Y3/Y6)
+  run(`__bkQ9b={za:zAlertao, ed:ciEditandoId, ge:document.getElementById}; zAlertao=function(){}; ciEditandoId='est1'; __trQ9=[]; __escQ9={};
+    __stQ9={style:{}, textContent:''}; document.getElementById=function(id){ return id==='ci-status'?__stQ9:null; };`);
+  try {
+    run(`__ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{}, temMed:false, medEmUsoNao:true, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    assert.ok(run('__trQ9').indexOf(false) >= 0, 'o botão destrava: ' + JSON.stringify(run('__trQ9')));
+    assert.strictEqual(run('__stQ9.textContent'), 'Nada foi salvo — para dizer que parou, use Corrigir.');
+  } finally { run('zAlertao=__bkQ9b.za; ciEditandoId=__bkQ9b.ed; document.getElementById=__bkQ9b.ge; DB=__bkQ9.db; ciQuemRecebeu=__bkQ9.qr; ciHosp=__bkQ9.h; __ciTravar=__bkQ9.tr; audit=__bkQ9.au; quemSou=__bkQ9.qs;'); }
+  // abrir outro FILHOt zera o registro
+  assert.ok(/setSeg\('ciMedEmUso',''\); CI_MED_NAO_TOCADO=false; CI_MED_CARREGADOS=null;/.test(fs.readFileSync(APP, 'utf8')));
+});
+provaAsync('QA49 — a lista que volta depois de trocar de FILHOt é ignorada; "tomava X?" só pelo que terminou DURANTE a última estadia (entre a entrada e a saída), com o cache ou lendo o banco, e pergunta por tudo se a leitura falha', async () => {
+  run(`__bkT4={db:DB, ck:ciKey, am:ciAddMed, ch:ciMedEmUsoChange, ge:document.getElementById, eu:ciMedEmUso, ca:CI_MED_CARREGADOS};
+    __chaveT4='toto__ana'; ciKey=function(){ return __chaveT4; }; __amT4=0; ciAddMed=function(){ __amT4++; }; ciMedEmUsoChange=function(){}; ciMedEmUso=function(){ return 'Sim'; };
+    document.getElementById=function(id){ return id==='ciMeds' ? {innerHTML:''} : null; }; CI_MED_CARREGADOS=null;
+    __resT4=null; DB={ref:function(){ return {once:function(){ return new Promise(function(r){ __resT4=r; }); }}; }};`);
+  try {
+    run('ciPreencherMedicacao();');
+    run(`__chaveT4='mel__bia'; __resT4({val:function(){ return {a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true}}; }});`);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.ok(run('CI_MED_CARREGADOS') === null && run('__amT4') === 0, 'a lista do Totó não entra na tela da Mel');
+  } finally { run('DB=__bkT4.db; ciKey=__bkT4.ck; ciAddMed=__bkT4.am; ciMedEmUsoChange=__bkT4.ch; document.getElementById=__bkT4.ge; ciMedEmUso=__bkT4.eu; CI_MED_CARREGADOS=__bkT4.ca;'); }
+  const itens = `{estadiaId:'e0', itens:{
+    b:{nome:'Ômega 3', continuo:true},
+    c:{nome:'Antes', continuo:false, dataFim:'2026-07-20'},
+    e:{nome:'Durante', continuo:false, dataFim:'2026-08-03'},
+    f:{nome:'Depois', continuo:false, dataFim:'2026-09-10'}}}`;
+  run(`__bkM6={db:DB, me:medEstadiaEncerrada, et:(typeof EST_TODAS!=='undefined'?EST_TODAS:undefined)}; medEstadiaEncerrada=function(){ return Promise.resolve(true); };
+    __lidosM6=[]; __falhaM6=false;
+    DB={ref:function(p){ return {once:function(){ __lidosM6.push(p);
+      if(p==='auaulandia/estadias/e0/entrada') return __falhaM6?Promise.reject(new Error('rede')):Promise.resolve({val:function(){ return '2026-08-01'; }});
+      if(p==='auaulandia/estadias/e0/saida') return __falhaM6?Promise.reject(new Error('rede')):Promise.resolve({val:function(){ return '2026-08-05'; }});
+      return Promise.resolve({val:function(){ return ${itens}; }}); }}; }};`);
+  try {
+    run(`EST_TODAS={};`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Durante'], 'lendo o banco');
+    run(`EST_TODAS={e0:{entrada:'2026-08-01', saida:'2026-08-05'}}; __lidosM6=[];`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Durante'], 'com o cache');
+    assert.ok(!run('__lidosM6').some((p) => /\/(entrada|saida)$/.test(p)), 'com o cache, sem leitura extra');
+    run(`EST_TODAS={}; __falhaM6=true;`);
+    igual((await run(`medAnterioresDe('auaulandia', 'toto__ana')`)).map((x) => x.nome), ['Ômega 3', 'Antes', 'Durante', 'Depois'], 'sem as datas, pergunta por tudo');
+  } finally { run('DB=__bkM6.db; medEstadiaEncerrada=__bkM6.me; EST_TODAS=__bkM6.et;'); }
+});
+prova('QA49 — pertences: "caixa de sachês" é comida e "caixa de transporte" não; "guia vermelha, 3 latas" são dois itens; "Golden 10-15 kg" é comida; a vírgula decimal não parte o item', () => {
+  igual(['caixa de sachês', 'caixinha de patê', 'caixa de ração', 'caixa de transporte 5 kg', 'caixa de areia', 'caixa de remédios', 'Golden 10-15 kg', 'Premier porte médio 10 a 25 kg', 'Bravecto 20-40 kg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'comida', 'outro', 'outro', 'remedios', 'comida', 'comida', 'remedios']);
+  igual(run(`ciPertPartes('guia vermelha, 3 latas')`), ['guia vermelha', '3 latas']);
+  igual(run(`ciPertPartes('mochila, 3 sachês')`), ['mochila', '3 sachês']);
+  igual(run(`ciPertPartes('ração úmida, 3 latas')`), ['ração úmida, 3 latas']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg')`), ['ração Golden, 2 kg']);
+  igual(run(`ciPertPartes('NexGard 10,1-25 kg, mochila')`), ['NexGard 10,1-25 kg', 'mochila']);
+  assert.strictEqual(run(`ciPertTipo(ciPertPartes('NexGard 10,1-25 kg')[0])`), 'remedios');
 });
 prova('QA39 — pertences: número só completa o item quando é quantidade; o tipo acerta objetos com "comida" no nome; a descrição editada conserva o item; a correção fala português', () => {
   igual(run(`ciPertPartes('sacola verde, 2 brinquedos de pelúcia, 1 manta')`), ['sacola verde', '2 brinquedos de pelúcia', '1 manta']);

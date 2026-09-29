@@ -243,6 +243,11 @@
   - o **"Não" não regrava** o remédio que alguém já parou;
   - **pertences:** "ração úmida, 3 latas" é um item só. Antiparasitário por faixa de peso ("Bravecto 20-40 kg") é remédio. "areia 4 kg" e "caixa de transporte" não são comida. Suplementos (condroitina, ômega, vitamina) são remédio;
   - **textos no plural** quando há mais de um remédio ("eles continuariam lá", "os remédios ficam").
+- **Ajustes do QA49:**
+  - **Corrigir com "Sim":** o remédio que a veterinária parou ou apagou depois de a lista carregar sai também da estadia e do PDF. O aviso final diz qual foi ("Mexido pela veterinária enquanto você corrigia — ficou como ela deixou"). Se a lista de remédios não chegou a carregar, nada que está em vigor sai da agenda: ninguém viu;
+  - a **lista que volta depois de trocar de FILHOt** é ignorada (não entra na tela do outro);
+  - **"tomava X?"** pergunta só pelo que terminou durante a última estadia (entre a entrada e a saída);
+  - **pertences:** "caixa de sachês" continua comida (crítica na Conferência); "caixa de transporte" e "caixa de areia" são objeto. "guia vermelha, 3 latas" são dois itens. "Golden 10-15 kg" é comida. "NexGard 10,1-25 kg" não se parte na vírgula.
 
 ### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
 
