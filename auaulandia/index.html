@@ -41951,7 +41951,12 @@
         var m=(desejado._horas&&desejado._horas[k])||{};
         return m[dashAutoNomeChave(v)]||'';
       };
-      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0}, manterNoRegistro={};
+      // As tarefas são FUNÇÕES e rodam uma por vez (QA36): empurrar tudo de uma vez para a fila
+      // da ponte deixava o lançamento de uma pessoa esperando atrás de dezenas de escritas do
+      // automático (74 s no 1º passe do dia). Uma por vez, a pessoa entra na próxima vaga.
+      // `saindo` = o que os passos 1 e 2 tiram NESTA passada: o passo 3 não conta como presente.
+      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0}, manterNoRegistro={}, saindo={};
+      var marcarSaindo=function(col, txt){ var c=jsNorm(col); saindo[c]=saindo[c]||{}; saindo[c][jsNorm(String(txt||''))]=1; };
       // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
       // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
       // automático QUERIA escrever — o que não prova nada: a ponte podia ter recusado todas.
@@ -41987,7 +41992,8 @@
               : [];
             if(!__velhos.length){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
             var __naoSaiu=[];
-            tarefas.push(__velhos.reduce(function(fila, velho){
+            __velhos.forEach(function(vv){ marcarSaindo(col, vv); });
+            tarefas.push(function(){ return __velhos.reduce(function(fila, velho){
                 return fila.then(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:velho}); })
                   .then(function(x){ if(x&&x.ok) resumo.tirado++; else __naoSaiu.push(velho); return x; });
               }, Promise.resolve())
@@ -42003,19 +42009,19 @@
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
                   .then(function(y){ if(y&&y.ok) resumo.posto++; return y; });
               })
-              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||''); return x; }));
+              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||''); return x; }); });
             return;
           }
           // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
           // primeiro a ter uma): é ela que faz o alarme tocar na TV.
-          tarefas.push(dashPonteChamar({acao:'lancar', dia:iso, coluna:col,
+          tarefas.push(function(){ return dashPonteChamar({acao:'lancar', dia:iso, coluna:col,
                                         colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
             .then(function(x){
               var ok=!!(x&&x.ok);
               if(ok) resumo.posto++;
               marcar(k, v, ok, (x&&x.erro)||'');
               return x;
-            }));
+            }); });
         });
         // 2) foi este mecanismo que pôs e não vale mais → tirar
         antes.forEach(function(v){
@@ -42027,17 +42033,18 @@
           // com OUTRO texto, só ela sai — senão o FILHOt apareceria duas vezes na TV (QA35).
           if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]){
             var __meu=atual.filter(function(a){ return jsNorm(a)===jsNorm(String(v)) && !((maoTxt[k]||{})[jsNorm(a)]); })[0];
-            if(__meu) tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__meu})
-              .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }));
+            if(__meu){ marcarSaindo(col, __meu); tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__meu})
+              .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }); }); }
             return;
           }
           // Não deu para ler os Lançamentos do dia: não tira nada agora; a próxima passada tenta.
           if(!maoLida){ manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return; }
           // Tira a hora junto: banho cancelado que deixasse "10:00" na planilha faria a TV
           // tocar o alarme de um banho que não existe mais.
-          tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col,
-                                        colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:atualCh[dashAutoNomeChave(v)]})
-            .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }));
+          var __sai=atualCh[dashAutoNomeChave(v)]; marcarSaindo(col, __sai);
+          tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col,
+                                        colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__sai})
+            .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }); });
         });
         novoRegistro[k]=quer;
       });
@@ -42046,38 +42053,62 @@
       // a recepção lançou e não está na coluna dele — duas gravações na mesma célula, uma
       // linha apagada na planilha, o automático de antes — volta, com a hora, pelo mesmo
       // caminho do "reenviar" (dashEspelhar, que regrava o planilha_ok). Lançamento de menos de
-      // 2 minutos fica de fora: o envio dele pode estar a caminho. Confere pelo FILHOt (a chave
-      // do nome): se ele já está na coluna, com outro texto, não entra uma segunda linha.
+      // 2 minutos fica de fora: o envio dele pode estar a caminho.
+      // PRESENTE (QA36): o mesmo texto na coluna; ou, fora de Medicação e Veterinário (onde um
+      // FILHOt tem vários no dia), uma linha que casa com a MESMA ficha — pela chave da ficha
+      // quando os dois lados casam, pelo nome só quando um deles não casa (a Luna/SRD não some
+      // porque a Luna/Poodle está lá). O que os passos 1 e 2 tiram nesta passada não conta.
+      // Lançamento que esgotou as tentativas ou cuja coluna não existe fica com o "reenviar".
       var reporMao=[];
       if(maoLida){
         var colNorm={};
         Object.keys(naPlanilha).forEach(function(t){ colNorm[jsNorm(t)]=(colNorm[jsNorm(t)]||[]).concat(naPlanilha[t]||[]); });
+        var fichaDe=function(txt){ try{ var m=planCasar(String(txt||'')); return (m && m.p && !m.ambiguo)?dcKey(m.p.n, m.p.tutor):''; }catch(e){ return ''; } }; /* sem casamento seguro, vale o nome */
         Object.keys(r[2]||{}).forEach(function(kk){
           var it=(typeof dashItem==='function')?dashItem(kk):null;
           if(!it || !dashVaiParaPlanilha(it)) return;
           var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
-          var temCh={}; (colNorm[jsNorm(it.col)]||[]).forEach(function(v){ temCh[dashAutoNomeChave(v)]=1; });
+          var sai=saindo[jsNorm(it.col)]||{}, soTexto=(kk==='medicacao' || kk==='vet');
+          var linhas=(colNorm[jsNorm(it.col)]||[]).filter(function(v){ return !sai[jsNorm(v)]; })
+            .map(function(v){ return {n:jsNorm(v), f:(soTexto?'':fichaDe(v)), ch:dashAutoNomeChave(v)}; });
+          var presente=function(L){ return linhas.some(function(c){
+            if(c.n===L.n) return true;
+            if(soTexto) return false;
+            return (c.f && L.f) ? (c.f===L.f) : (!!c.ch && c.ch===L.ch);
+          }); };
           Object.keys(itens).forEach(function(id){
             var reg=itens[id]||{};
             if(!String(reg.valor||'').trim()) return;
             if((Date.now()-(Number(reg.ts)||0)) < 120000) return;
-            var ch=dashAutoNomeChave(reg.valor);
-            if(!ch || temCh[ch]) return;
-            temCh[ch]=1;
-            reporMao.push({k:kk, id:id, reg:reg});
+            if(dashPlanFilaMorto(reg) || dashPlanFilaSemColuna(reg.planilha_msg)) return;
+            var L={n:jsNorm(String(reg.valor)), f:(soTexto?'':(reg.chave||fichaDe(reg.valor))), ch:dashAutoNomeChave(reg.valor)};
+            if(presente(L)) return;
+            linhas.push(L);                                   // o mesmo FILHOt não volta duas vezes
+            reporMao.push({k:kk, id:id, reg:reg, it:it});
           });
         });
       }
-      return Promise.all(tarefas).then(function(){
+      return tarefas.reduce(function(fila, f){ return fila.then(function(){ return f(); }); }, Promise.resolve()).then(function(){
         return reporMao.reduce(function(fila, x){
           return fila.then(function(){
-            return Promise.resolve(dashEspelhar(x.k, x.id, x.reg, 'lancar', iso)).then(function(y){
-              if(y && y.ok){
+            // RELÊ o lançamento AGORA (QA36): tirado durante a conferência, não volta.
+            var no='daycare/dashboard/'+iso+'/'+x.k+'/'+x.id;
+            return DB.ref(no).once('value').then(function(sAt){
+              var atual=(sAt && sAt.val && sAt.val())||null;
+              if(!atual || !String(atual.valor||'').trim()) return;
+              return Promise.resolve(dashEspelhar(x.k, x.id, atual, 'lancar', iso)).then(function(y){
+                if(!(y && y.ok)) return;
                 resumo.posto++;
-                try{ if(typeof audit==='function') audit('dashboard-daycare','a conferência repôs na planilha '+(x.reg.valor||'')+' ('+x.k+', '+iso+'): o lançamento estava no app e tinha sumido da planilha',{pet:x.reg.valor||''}); }
+                try{ if(typeof audit==='function') audit('dashboard-daycare','a conferência repôs na planilha '+(atual.valor||'')+' ('+x.it.t+', '+((typeof fmtBR==='function'?fmtBR(iso):'')||iso)+'): estava nos Lançamentos do dia e tinha sumido da planilha',{pet:atual.valor||''}); }
                 catch(e){} /* silencioso de propósito: rastro — o audit() tem bolso próprio */
-              }
-            }, function(e){ _logFalhaGrav('conferência: repor '+(x.reg.valor||'')+' na planilha', e); });
+                if(y.jaEstava) return;
+                // Tirado enquanto a ponte gravava: desfaz o que esta passada escreveu.
+                return DB.ref(no).once('value').then(function(s2){
+                  if(s2 && s2.val && s2.val()) return;
+                  return dashPonteChamar({acao:'remover', dia:iso, coluna:x.it.col, colunaHora:(x.it.colHora||''), valor:atual.valor});
+                });
+              });
+            }).catch(function(e){ _logFalhaGrav('conferência: repor '+(x.reg.valor||'')+' na planilha', e); });
           });
         }, Promise.resolve());
       }).then(function(){

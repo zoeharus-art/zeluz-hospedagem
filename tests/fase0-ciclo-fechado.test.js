@@ -3495,8 +3495,11 @@ provaAsync('a conferência repõe na planilha o lançamento à mão que sumiu (c
     dashPonteChamar=function(c){ if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planRM}); return Promise.resolve({ok:true}); };
     dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };
     __bancoRM={}; __gravRM={};
+    __lerRM=function(p){ if(__bancoRM[p]!==undefined) return __bancoRM[p];
+      var base=Object.keys(__bancoRM).filter(function(b){ return p.indexOf(b+'/')===0; })[0]; if(!base) return undefined;
+      var v=__bancoRM[base]; p.slice(base.length+1).split('/').forEach(function(s){ v=(v&&typeof v==='object')?v[s]:undefined; }); return v; };
     DB={ref:function(p){ return {
-      once:function(){ var v=__bancoRM[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      once:function(){ var v=__lerRM(p); return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
       set:function(v){ __gravRM[p]=v; return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};`);
   try {
     const dia = '2026-09-29', velho = 'Date.now()-10*60000';
@@ -3516,6 +3519,77 @@ provaAsync('a conferência repõe na planilha o lançamento à mão que sumiu (c
     assert.ok(r.posto >= 3, 'o resumo conta o que voltou: ' + JSON.stringify(r));
   } finally { run('dashPonteChamar=__bkRM.pc; dashAutoCalcular=__bkRM.calc; DB=__bkRM.db; audit=__bkRM.au; dashEspelhar=__bkRM.es;'); }
 });
+provaAsync('QA36 — a conferência relê antes de repor (tirado durante não volta; tirado enquanto a ponte gravava é desfeito), compara pela ficha, respeita Medicação/Veterinário, pula quem esgotou as tentativas e manda o automático um por vez', async () => {
+  run(`__bkQ36={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit, es:dashEspelhar};
+    audit=function(){}; __espQ=[]; __ponteQ=[]; __noAr=0; __maxNoAr=0; __antesDeRepor=null; __depoisDeGravar=null; __querQ=[];
+    dashEspelhar=function(k,id,reg,acao,dia){ __espQ.push({k:k, id:id, valor:reg.valor}); if(__depoisDeGravar) __depoisDeGravar(k,id);
+      return Promise.resolve({ok:true}); };
+    dashPonteChamar=function(c){ __ponteQ.push(c); if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planQ});
+      __noAr++; __maxNoAr=Math.max(__maxNoAr,__noAr); return new Promise(function(res){ Promise.resolve().then(function(){ __noAr--; res({ok:true, removidos:1}); }); }); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=__querQ||[]; o._horas={banho:{}}; return o; };
+    __bancoQ={}; __ler=function(p){ if(__bancoQ[p]!==undefined) return __bancoQ[p];
+      var base=Object.keys(__bancoQ).filter(function(b){ return p.indexOf(b+'/')===0; })[0]; if(!base) return undefined;
+      var v=__bancoQ[base]; p.slice(base.length+1).split('/').forEach(function(s){ v=(v&&typeof v==='object')?v[s]:undefined; }); return v; };
+    DB={ref:function(p){ return {
+      once:function(){ if(__antesDeRepor && p.split('/').length===5) __antesDeRepor(p); var v=__ler(p); return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29', velho = 'Date.now()-10*60000';
+    const passa = async (plan, mao, auto) => {
+      run(`__espQ=[]; __ponteQ=[]; __planQ=${JSON.stringify(plan)}; __bancoQ={}; __bancoQ['daycare/dashboard/${dia}']=${mao};
+        __bancoQ['daycare/dashboard-auto/${dia}']=${JSON.stringify(auto || {})};`);
+      await run(`dashAutoSincronizar('${dia}')`); await tick();
+      return run('__espQ').map((x) => x.valor);
+    };
+    // M-2: a Luna/SRD some e a Luna/Poodle está lá — são FILHOts diferentes; o 2º remédio da Mel volta
+    run(`PELUDINHOS.push({n:'Luna', tutor:'Ana', raca:'SRD'}, {n:'Luna', tutor:'Bia', raca:'Poodle'});`);
+    const kLuna = run("dcKey('Luna','Ana')");
+    let v = await passa({ 'Banho': ['Luna/Poodle'], 'Medicação': ['Mel/SRD (APOQUEL · NA BOLSA)'] },
+      `{banho:{B1:{valor:'Luna/SRD', chave:'${kLuna}', hora:'10:00', ts:${velho}}},
+        medicacao:{M1:{valor:'Mel/SRD (APOQUEL · NA BOLSA)', hora:'12:00', ts:${velho}}, M2:{valor:'Mel/SRD (GOTAS OUVIDO · NA RECEPÇÃO)', hora:'16:00', ts:${velho}}}}`);
+    igual(v.sort(), ['Luna/SRD', 'Mel/SRD (GOTAS OUVIDO · NA RECEPÇÃO)'], 'a Luna/SRD e as gotas das 16:00 voltam; o Apoquel, que está lá, não');
+    // B5: esgotou as tentativas ou a coluna não existe: fica com o "reenviar"
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Bolt/SRD', ts:${velho}, planilha_desisti:true}, B2:{valor:'Toby/SRD', ts:${velho}, planilha_ok:false, planilha_msg:'a aba nao tem a coluna "Banho"'}}}`);
+    igual(v, [], 'desistido e sem coluna não entram na conferência');
+    // M-1: tirado DURANTE a conferência (entre a leitura do dia e a reposição): não volta
+    run(`__antesDeRepor=function(p){ delete __bancoQ['daycare/dashboard/${dia}'].banho.B1; };`);
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Ozzy/Norfolk', hora:'15:30', ts:${velho}}}}`);
+    igual(v, [], 'tirado durante a passada: não volta');
+    run('__antesDeRepor=null;');
+    // M-1: tirado ENQUANTO a ponte gravava: a passada desfaz o que escreveu
+    run(`__depoisDeGravar=function(k,id){ delete __bancoQ['daycare/dashboard/${dia}'][k][id]; };`);
+    v = await passa({ 'Banho': [] }, `{banho:{B1:{valor:'Ozzy/Norfolk', hora:'15:30', ts:${velho}}}}`);
+    await tick();
+    assert.ok(v.length === 1 && run('__ponteQ').some((c) => c.acao === 'remover' && c.valor === 'Ozzy/Norfolk' && c.coluna === 'Banho' && c.colunaHora === 'Hora Banho'), JSON.stringify(run('__ponteQ')));
+    run('__depoisDeGravar=null;');
+    // item com título diferente da coluna (Troca de escova → "Troca de Escova"): procura pela COLUNA
+    v = await passa({ 'Troca de Escova': ['Mel/SRD (NA BOLSA)'] }, `{escova:{E1:{valor:'Mel/SRD (NA BOLSA)', ts:${velho}}}}`);
+    igual(v, [], 'está na coluna "Troca de Escova": não repõe (nem grava rastro falso)');
+    // B1: o automático manda um por vez (a pessoa entra na próxima vaga)
+    run(`__querQ=['Ana/SRD','Bia/SRD','Cris/SRD','Duda/SRD']; __maxNoAr=0;`);
+    await passa({ 'Banho': [] }, '{}', {});
+    assert.strictEqual(run('__maxNoAr'), 1, 'o automático nunca tem mais de um pedido no ar');
+    run('__querQ=[];');
+    // B8: a célula do automático que sai nesta passada não conta como "o FILHOt está lá"
+    run(`__querQ=[];`);
+    v = await passa({ 'Banho': ['Cristal/Yorkshire (SEM SHAMPOO)'] },
+      `{banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', ts:${velho}}}}`, { banho: ['Cristal/Yorkshire (SEM SHAMPOO)'] });
+    assert.ok(run('__ponteQ').some((c) => c.acao === 'remover' && c.valor === 'Cristal/Yorkshire (SEM SHAMPOO)'), 'o banho fixo que não vale mais sai');
+    igual(v, ['Cristal/Yorkshire'], 'e o lançamento à mão volta na MESMA passada, sem ficar um ciclo fora da TV');
+  } finally { run('PELUDINHOS.splice(PELUDINHOS.length-2, 2); dashPonteChamar=__bkQ36.pc; dashAutoCalcular=__bkQ36.calc; DB=__bkQ36.db; audit=__bkQ36.au; dashEspelhar=__bkQ36.es;'); }
+});
+provaAsync('QA36 — com a ponte ainda chegando do banco, dois pedidos na fila não se travam', async () => {
+  run(`__bkPP={pr:dashPontePronta, dp:DASH_PONTE, ft:(typeof fetch!=='undefined'?fetch:undefined)};
+    DASH_PONTE=null; __prontaRes=[]; dashPontePronta=function(){ return new Promise(function(r){ __prontaRes.push(r); }); };
+    __fetchN=0; fetch=function(){ __fetchN++; return Promise.resolve({text:function(){ return Promise.resolve('{"ok":true}'); }}); };`);
+  try {
+    run(`__r1=null; __r2=null; dashPonteChamar({acao:'lancar', valor:'A'}).then(function(x){ __r1=x; }); dashPonteChamar({acao:'lancar', valor:'B'}).then(function(x){ __r2=x; });`);
+    await tick();
+    run(`DASH_PONTE={url:'https://script.google.com/macros/s/x/exec', token:'t'}; __prontaRes.forEach(function(r){ r(DASH_PONTE); });`);
+    for (let i = 0; i < 5; i++) await tick();
+    assert.ok(run('__r1') && run('__r1').ok && run('__r2') && run('__r2').ok && run('__fetchN') === 2, 'os dois chegam: ' + JSON.stringify([run('__r1'), run('__r2'), run('__fetchN')]));
+  } finally { run('dashPontePronta=__bkPP.pr; DASH_PONTE=__bkPP.dp; fetch=__bkPP.ft; DASH_PONTE_FILA=Promise.resolve();'); }
+});
 prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes de soltar a trava; sem a vez, diz que está ocupada', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'integracao-daycare', 'Codigo.gs'), 'utf8');
   assert.ok(/acao === 'lancar'\)\s+return _json\(_umPorVez\(function \(\) \{ return lancar\(d\); \}\)\)/.test(src), 'lancar passa pela trava');
@@ -3528,9 +3602,11 @@ prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes d
   ctxG.__vez = true;
   const r1 = vm.runInContext("_umPorVez(function(){ return {ok:true, linha:7}; })", ctxG);
   assert.ok(r1.ok && r1.linha === 7, JSON.stringify(r1));
-  assert.deepStrictEqual(log.splice(0), ['tryLock 25000', 'flush', 'solta']);
+  assert.deepStrictEqual(log.splice(0), ['tryLock 10000', 'flush', 'solta'], 'espera no máximo 10 s: o app desiste em 12 s');
   assert.throws(() => vm.runInContext("_umPorVez(function(){ throw new Error('planilha'); })", ctxG));
-  assert.deepStrictEqual(log.splice(0), ['tryLock 25000', 'solta'], 'erro no meio: a trava é solta do mesmo jeito');
+  assert.deepStrictEqual(log.splice(0), ['tryLock 10000', 'flush', 'solta'], 'erro no meio: grava o que já foi e solta a trava do mesmo jeito');
+  for (const acao of ['garantirColunas', 'removerColunas', 'criarMeses'])
+    assert.ok(new RegExp("acao === '" + acao + "'\\)\\s+return _json\\(_umPorVez\\(").test(src), acao + ' também espera a vez (QA36)');
   ctxG.__vez = false;
   const r3 = vm.runInContext("_umPorVez(function(){ return {ok:true}; })", ctxG);
   assert.ok(r3.ok === false && /ocupada/.test(r3.erro), JSON.stringify(r3));

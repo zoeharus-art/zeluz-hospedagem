@@ -156,14 +156,19 @@
 |---|---|---|
 | Dois lançamentos quase juntos (o Ozzy e a Charlotte, 15:30) | a ponte grava na "primeira célula vazia do dia": os dois pedidos escolhiam a mesma célula, o segundo apagava o primeiro, e os dois respondiam ok | neste aparelho, lançar e tirar vão **um de cada vez** (`dashPonteChamar`, fila); entre aparelhos, a ponte tem uma **trava** (versão 7 de `integracao-daycare/Codigo.gs`, que precisa ser publicada) |
 | O automático mandava vários banhos fixos ao mesmo tempo | a mesma corrida | entram na mesma fila |
-| Um lançamento do app que sumiu da planilha, por qualquer motivo | ficava fora da TV sem ninguém saber: o app dizia que tinha ido | a **conferência** (a cada 5 a 10 minutos, com algum aparelho aberto, ou pelo botão **Conferir a planilha agora**) compara os Lançamentos do dia de hoje e dos próximos 14 dias com a planilha e manda de novo o que falta, com a hora |
+| Um lançamento do app que sumiu da planilha, por qualquer motivo | ficava fora da TV sem ninguém saber: o app dizia que tinha ido | a **conferência** (em até cerca de 12 minutos, com algum aparelho aberto, ou na hora, pelo botão **Conferir a planilha agora**) compara os Lançamentos do dia de hoje e dos próximos 14 dias com a planilha e manda de novo o que falta, com a hora |
+| O automático e a pessoa ao mesmo tempo | o automático empurrava dezenas de escritas para a fila, e o lançamento da recepção esperava atrás delas | o automático manda uma por vez, e a pessoa entra na próxima vaga (QA36) |
 
+- **Como a conferência sabe que já está lá:** o mesmo texto na coluna; ou, fora de Medicação e Veterinário (onde um FILHOt tem vários no dia), uma linha da **mesma ficha**. A Luna/SRD volta mesmo com a Luna/Poodle na coluna; as gotas das 16:00 voltam mesmo com o Apoquel do meio-dia lá.
 - **O que a conferência não repõe:**
   - lançamento de menos de 2 minutos, cujo envio pode estar a caminho;
-  - FILHOt que já está na coluna com outro texto (não entra uma segunda linha);
-  - item que não vai para a planilha (Pernoite).
+  - o mesmo FILHOt que já está na coluna com outro texto (não entra uma segunda linha);
+  - item que não vai para a planilha (Pernoite);
+  - lançamento que esgotou as 5 tentativas ou cuja coluna não existe: esses continuam com o botão **reenviar**.
+- **Tirado durante a conferência não volta:** ela relê o lançamento antes de repor. Se ele for tirado enquanto a ponte grava, a conferência desfaz o que escreveu.
 - **O que foi tirado pelo app** ("tirar", ou "Liberar o horário" do banho de quem faltou) sai também dos Lançamentos: a conferência não põe de volta. Quem apaga uma linha direto na planilha vê a linha voltar; o caminho certo é o "tirar" do app.
-- **Rastro:** cada reposição grava "a conferência repôs na planilha …" na auditoria.
+- **Rastro:** cada reposição grava na auditoria "a conferência repôs na planilha …", com o nome do item e o dia.
+- **Ordem para publicar:** primeiro o Merge e **recarregar o app em todos os aparelhos**. Depois, a ponte nova no Apps Script: com a ponte nova e um aparelho no app antigo, as escritas do automático antigo esbarram na trava (QA36).
 - **Onde está no código:** `dashPonteChamar` (fila) e `dashPonteChamarJa`; `dashAutoSincronizar`, passo 3; `integracao-daycare/Codigo.gs`, `_umPorVez`.
 
 ### (AD) Check-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (29/set/2026)
