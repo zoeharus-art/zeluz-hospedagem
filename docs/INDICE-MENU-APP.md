@@ -139,13 +139,14 @@
 
 | Situação | Antes | Agora |
 |---|---|---|
-| Banho fixo que deixa de valer no dia (a falta do meio-dia, falta avisada, "pular", feriado) e a recepção lançou o mesmo FILHOt à mão | o automático tirava da planilha a linha com o nome dele, que era a da recepção (a ponte não duplica: a célula é uma só), e o FILHOt sumia da TV | a linha fica; o automático larga o registro dela, porque ela é da recepção |
+| Banho fixo que deixa de valer no dia (a falta do meio-dia, falta avisada, "pular", feriado) e a recepção lançou o mesmo FILHOt à mão | o automático tirava da planilha a linha com o nome dele, que era a da recepção (com o mesmo texto, a ponte não duplica: a célula é uma só), e o FILHOt sumia da TV | a linha da recepção fica, e o automático larga o registro dela. Se ainda houver a célula do banho fixo com outro texto, só ela sai, para o FILHOt não aparecer duas vezes |
 | O mesmo caso, sem lançamento à mão | o banho fixo sai da planilha e da TV | igual |
 | Não deu para ler os Lançamentos do dia naquela passada | — | o automático não tira nada e tenta na próxima passada |
 
 - **Por que só a Cristal e o Ozzy:** eles têm banho fixo, e a Charlotte e a Repolho não. O automático só tira o que ele mesmo pôs, e ele contava a linha da recepção como sua, porque compara pelo primeiro nome.
 - **Vale para as quatro colunas do automático que também se lançam à mão:** Banho, Reposição, Faltas Avisadas e Adaptação.
 - **Onde está no código:** `dashAutoSincronizar`, que lê `daycare/dashboard/{dia}` junto com a planilha e o registro, e o passo "2) foi este mecanismo que pôs e não vale mais".
+- **A troca do shampoo** (passo 1) também não troca a célula cujo texto é igual ao que a recepção lançou (QA35).
 
 ### (AC) Todo lançamento do dia chega à TV (29/set/2026)
 

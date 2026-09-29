@@ -41922,10 +41922,13 @@
       DB.ref('daycare/dashboard/'+iso).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; }).catch(function(){ return null; })
     ]).then(function(r){
       var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
-      var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={};
+      var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={}, maoTxt={};
       if(maoLida) Object.keys(r[2]||{}).forEach(function(kk){
         var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
-        Object.keys(itens).forEach(function(id){ var c=dashAutoNomeChave((itens[id]||{}).valor); if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; } });
+        Object.keys(itens).forEach(function(id){
+          var val=(itens[id]||{}).valor, c=dashAutoNomeChave(val);
+          if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; maoTxt[kk]=maoTxt[kk]||{}; maoTxt[kk][jsNorm(String(val))]=1; }
+        });
       });
       if(!(r[0]&&r[0].ok)){
         var erroLer=(r[0]&&r[0].erro)||'não consegui ler o dia na planilha';
@@ -41974,7 +41977,8 @@
             var __nv=jsNorm(v), __mesmos=atual.filter(function(a){ return dashAutoNomeChave(a)===__ch; });
             var __jaNovo=__mesmos.some(function(a){ return jsNorm(a)===__nv; });
             var __velhos=DASH_AUTO_COLS_HORA[k]
-              ? __mesmos.filter(function(a){ return jsNorm(a)!==__nv && antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); }); })
+              ? __mesmos.filter(function(a){ return jsNorm(a)!==__nv && antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); })
+                  && !((maoTxt[k]||{})[jsNorm(a)]); })   // texto igual ao lançado à mão: é da recepção (QA35)
               : [];
             if(!__velhos.length){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
             var __naoSaiu=[];
@@ -42012,9 +42016,16 @@
         antes.forEach(function(v){
           if(querCh[dashAutoNomeChave(v)]!==undefined) return;
           if(atualCh[dashAutoNomeChave(v)]===undefined) return;      // já não está na planilha
-          // A mesma linha foi lançada À MÃO nos Lançamentos do dia: é da recepção, fica. A célula
-          // é uma só (a ponte não duplica), e tirá-la apagaria o lançamento dela (29/set/2026).
-          if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]) return;
+          // O mesmo FILHOt foi lançado À MÃO nos Lançamentos do dia: a linha da recepção fica
+          // (29/set/2026). Com o mesmo texto, a ponte não duplica e a célula é uma só; tirar por
+          // nome apagaria o lançamento dela. Se ainda há a célula que ESTE mecanismo escreveu,
+          // com OUTRO texto, só ela sai — senão o FILHOt apareceria duas vezes na TV (QA35).
+          if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]){
+            var __meu=atual.filter(function(a){ return jsNorm(a)===jsNorm(String(v)) && !((maoTxt[k]||{})[jsNorm(a)]); })[0];
+            if(__meu) tarefas.push(dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__meu})
+              .then(function(x){ if(x&&x.ok) resumo.tirado++; return x; }));
+            return;
+          }
           // Não deu para ler os Lançamentos do dia: não tira nada agora; a próxima passada tenta.
           if(!maoLida){ manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return; }
           // Tira a hora junto: banho cancelado que deixasse "10:00" na planilha faria a TV

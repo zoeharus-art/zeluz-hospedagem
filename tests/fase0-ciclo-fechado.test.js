@@ -3423,7 +3423,7 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
     const dia = '2026-09-29';
     const prepara = (mao) => run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:['Cristal/Yorkshire']};
       __bancoAS={}; __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
-      ${mao ? `__bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', chave:'cristal'}}};` : ''}`);
+      ${mao ? `__bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire', hora:'14:00', chave:dcKey('Cristal','Ana')}}};` : ''}`);
     const tirou = () => run('__ponteAS').filter((c) => c.acao === 'remover');
     // 1) a recepção lançou o banho da Cristal à mão; o banho fixo dela deixou de valer (ex.: falta do meio-dia)
     prepara(true);
@@ -3440,6 +3440,32 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
     await run(`dashAutoSincronizar('${dia}')`);
     igual(tirou(), [], 'sem saber o que a recepção lançou, não apaga');
     igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'a próxima passada tenta de novo');
+    run('__falhaMao=false;');
+    // 4) lançado à mão em OUTRO item (Reposição) não protege o Banho
+    prepara(false); run(`__bancoAS['daycare/dashboard/${dia}']={reposicao:{R1:{valor:'Cristal/Yorkshire', ts:1}}};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(tirou().length === 1 && tirou()[0].coluna === 'Banho', 'outro item não protege: ' + JSON.stringify(tirou()));
+    // 5) Reposição: a mesma regra (lançada à mão fica; sem lançamento, sai)
+    const repo = async (mao) => {
+      run(`__ponteAS=[]; __gravAS={}; __planAS={'Reposição':['Lanna/SRD']}; __bancoAS={};
+        __bancoAS['daycare/dashboard-auto/${dia}']={reposicao:['Lanna/SRD']};
+        ${mao ? `__bancoAS['daycare/dashboard/${dia}']={reposicao:{R1:{valor:'Lanna/SRD', ts:1}}};` : ''}`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      return tirou();
+    };
+    igual(await repo(true), [], 'Reposição lançada à mão fica');
+    assert.ok((await repo(false)).length === 1, 'Reposição do automático que não vale mais sai');
+    // 6) duas células do mesmo FILHOt: a da recepção (outro texto) fica e a do banho fixo sai — sem ele aparecer duas vezes (QA35 B1)
+    prepara(true); run(`__planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)', 'Cristal/Yorkshire']};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(tirou().map((c) => c.valor), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'só a célula do automático sai');
+    // 7) a troca do shampoo não troca a célula que a recepção lançou com o texto antigo (QA35 B2)
+    run(`__ponteAS=[]; __gravAS={}; __planAS={Banho:['Cristal/Yorkshire (SEM SHAMPOO)']}; __bancoAS={};
+      __bancoAS['daycare/dashboard-auto/${dia}']={banho:['Cristal/Yorkshire (SEM SHAMPOO)']};
+      __bancoAS['daycare/dashboard/${dia}']={banho:{L1:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'14:00', ts:1}}};
+      dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=['Cristal/Yorkshire (SHAMPOO NA BOLSA)']; o._horas={banho:{}}; return o; };`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(run('__ponteAS').filter((c) => c.acao !== 'lerDia'), [], 'a célula da recepção não é trocada pelo shampoo novo do combinado');
   } finally { run('dashPonteChamar=__bkAS.pc; dashAutoCalcular=__bkAS.calc; DB=__bkAS.db; audit=__bkAS.au;'); }
 });
 // ================================================================== todo lançamento do dia está na planilha
