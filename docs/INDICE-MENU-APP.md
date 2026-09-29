@@ -195,6 +195,32 @@
   - o nome de quem entrega e a assinatura com o dedo (ou "O tutor não veio").
 - **Onde está no código:** `.ci-med-conf button.on` (CSS) e `ciMedConfSet`.
 
+### (AE) Check-in rápido da hospedagem (29/set/2026)
+
+> **Adriana, 29/set/2026:** *"Checkin de entrada do peludo na hospedagem! É impossível conseguir salvar […] Precisa facilitar o processo. Está difícil demais!"* Pedidos dela: pertences só em texto, coleira nas primeiras linhas, "está em uso de alguma medicação?" (o kit de emergência não conta), comida, tela mais curta. Ela autorizou seguir com as respostas recomendadas.
+
+**A ordem nova da tela** é a da conversa com o tutor: FILHOt › coleira › alergia › medicação em uso › comida › pertences › datas (hospedagem ou pernoite, datas, observações, banho de saída) › assinatura. Os atalhos do alto seguem a mesma ordem.
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Coleira | não existia | **"Está com coleira antipulga ou repelente?"** Sim ou Não; com Sim, **"Qual?"** (Seresto, Scalibor…). Fica na estadia e sai no PDF, no resumo do WhatsApp e na Conferência. A ficha do FILHOt não muda. Não trava o salvar |
+| Medicação | a lista aparecia sempre, com uma linha em branco | a pergunta **"Está em uso de alguma medicação?"** vem primeiro, e sem resposta o check-in não salva. **Não:** a lista some, nada liga alarme, e os remédios da ficha ficam como "já não toma mais" (terminam ontem, com o nome de quem ouviu do tutor, o mesmo registro do "Parou" da aba Medicamentos). **Sim:** abrem nome, dose e horários. Com remédio na ficha, a resposta já vem Sim |
+| Remédios da ficha | Confirmado ou Mudou, um por um | continua, e há o botão **"Tudo igual — confirmar todos (N)"** para quando o tutor diz que nada mudou |
+| Kit de emergência | ia como remédio e ligava alarme | a tela diz: não é medicação em uso, escreva em Pertences |
+| Comida | todos os campos sempre abertos | quando o que a ficha diz é **Confirmado**, o detalhe dobra e fica a frase do plano; **Mudou** abre tudo. Os rótulos: "O que come e quanto, em CADA refeição" e "Quanto trouxe de ração (g)" |
+| Pertences | grade com Comida, Remédios, Mochila, Cama, Guia e Outro, e uma linha para cada | **um campo de texto:** "comida (ração Royal, 1 pacote), cama rosa, sacola verde…". Cada item, por linha ou por vírgula, vira um item na Conferência, no Check-out e no PDF; embaixo aparece como o app separou. Comida continua crítica na Conferência |
+| Vermelho do que falta | tocar em Confirmado ou Mudou apagava o vermelho de TODOS os bloqueios | sai só o vermelho do que foi respondido, e o botão conta o que ainda falta. O problema de cada remédio fica na linha dele |
+| Quem não pode confirmar remédio | alerta nativo, que o celular pode esconder | aviso na própria página, dizendo quem pode confirmar |
+
+- **O que o check-in pede antes de salvar,** na ordem da tela:
+  1. a resposta "está em uso de alguma medicação?";
+  2. com Sim: cada remédio completo, os da ficha com Confirmado ou Mudou, e a caixinha da conferência de segurança;
+  3. pelo menos uma refeição com o que ele come (e, na pernoite, Confirmado ou Mudou na comida);
+  4. "Outro" de estadia antiga descrito;
+  5. a data de entrada, o nome de quem entrega e a assinatura (ou "O tutor não veio").
+- **Estadia antiga** abre com os pertences como texto, um por linha; sem mexer, volta igual, com o V verde da Conferência.
+- **Onde está no código:** `ciColeira*`, `ciMedEmUso`, `ciMedEmUsoChange`, `ciMedTudoIgual`, `ciMedNaoEmUso`, `ciMedMarcarParou`, `ciPertPartes`, `ciPertTipo`, `ciPertDoTexto`, `ciAlimProblemas`, `ciMedLinhaDoProblema` e `zLimparFaltaEm`.
+
 ### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
 
 > **Adriana, 29/set/2026 (Toshi):** *"Preciso cancelar o check-in que a Márcia fez do Toshi, urgente, e ele não me dá a opção. Foi errado, tem que ter a opção… não pode duplicar! Principalmente isso é medicação!"*

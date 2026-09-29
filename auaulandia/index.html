@@ -3636,10 +3636,10 @@
            Um toque leva ao cartão — sem rolar procurando. Nada muda no que se preenche. -->
       <div class="ci-atalhos" aria-label="Ir para">
         <span class="ci-atalhos-rot">Ir para:</span>
-        <button type="button" onclick="ciIrPara('ciCardDatas')">Datas</button>
-        <button type="button" onclick="ciIrPara('ciCardAlim')">Alimentação</button>
         <button type="button" onclick="ciIrPara('ciCardMed')">Medicação</button>
+        <button type="button" onclick="ciIrPara('ciCardAlim')">Alimentação</button>
         <button type="button" onclick="ciIrPara('ciCardPert')">Pertences</button>
+        <button type="button" onclick="ciIrPara('ciCardDatas')">Datas</button>
         <button type="button" onclick="ciIrPara('ciCardAssina')">Assinatura e salvar</button>
       </div>
 
@@ -3663,6 +3663,18 @@
         </div>
       </div>
 
+      <!-- CHECK-IN RÁPIDO (Adriana, 29/set/2026): "é impossível conseguir salvar; precisa
+           facilitar o processo". A ordem nova é a da conversa com o tutor: coleira, alergia,
+           medicação em uso, comida, pertences, datas e assinatura. A coleira antipulga ou o
+           repelente vêm primeiro: fica registrado NESTA estadia (a ficha do FILHOt não muda). -->
+      <div class="card" id="ciCardColeira">
+        <h2>Coleira antipulga ou repelente</h2>
+        <div class="field"><label>Está com coleira antipulga ou repelente?</label>
+          <div class="seg" id="ciColeira" data-single><button onclick="pick(this);ciColeiraChange()">Não</button><button onclick="pick(this);ciColeiraChange()">Sim</button></div></div>
+        <div class="field" id="ciColeiraQualBox" style="display:none;margin-top:8px"><label>Qual?</label>
+          <input class="cad-in" id="ciColeiraQual" placeholder="Ex.: Seresto, Scalibor" autocomplete="off"></div>
+      </div>
+
       <div class="card">
         <h2>Restrição / Alergia</h2>
         <div class="hint">Segurança do FILHOt. Se ele tem QUALQUER restrição ou alergia — alimentar, ambiental, de manejo — registre aqui. Aparece em vermelho para toda a equipe.</div>
@@ -3679,6 +3691,89 @@
             <textarea class="cad-in" id="ciRestricaoTexto" style="min-height:64px" placeholder="Ex: TUDO fora da ração dele · ou: sem frango, sem grãos, não pode subir escada" onchange="ciSalvarRestricao()"></textarea></div>
           <div id="ciRestricaoStatus" style="display:none;font-weight:700;font-size:13px;margin-top:4px"></div>
         </div>
+      </div>
+
+      <div class="card" id="ciCardMed">
+        <h2>Medicação e suplementos</h2>
+        <div class="field"><label>Está em uso de alguma medicação?</label>
+          <div class="seg" id="ciMedEmUso" data-single><button onclick="pick(this);ciMedEmUsoChange()">Não</button><button onclick="pick(this);ciMedEmUsoChange()">Sim</button></div>
+          <div class="hint" style="margin-top:4px">Remédio de <strong>emergência</strong> (o kit que o tutor manda só por precaução) <strong>não</strong> é medicação em uso: escreva em Pertences. Suplemento de todo dia conta como Sim.</div></div>
+        <div id="ciMedEmUsoBox" style="display:none">
+          <div class="hint">Cada medicamento ou suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários</strong>. É isso que toca o despertador da AuAulândia.</div>
+          <div id="ciMedTudoIgual"></div>
+          <div id="ciMeds"></div>
+          <button type="button" class="med-add" onclick="ciAddMedBtn()">+ Acrescentar medicamento ou suplemento</button>
+        </div>
+        <div id="ci-med-status" class="rel-status"></div>
+        <div class="field" style="margin-top:10px"><label>Observação da medicação <span style="font-weight:600;color:var(--muted)">(recados do tutor, remédio de urgência)</span></label><input class="cad-in" id="ciMedObs" placeholder="Ex: tutor mandou Buscopan em caso de urgência — só se necessário" autocomplete="off"></div>
+      </div>
+
+      <div class="card" id="ciCardAlim">
+        <h2>Alimentação</h2>
+        <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
+        <!-- A CONFIRMAÇÃO DO QUE ELE COME (Adriana, 23/set/2026): "essa informação tem que
+             ficar guardada no aplicativo para a gente não refazer o tempo todo. Só confirmar
+             se é isso mesmo, ou se tem diferença." O plano vem da ficha; aqui alguém diz se
+             continua valendo. Na PERNOITE isso é obrigatório — sem a palavra de quem trouxe,
+             o plantão serviria o que o app supôs. -->
+        <div id="ciAlimConfirma"></div>
+        <!-- O detalhe dobra quando o que a ficha diz foi CONFIRMADO (29/set/2026): a frase
+             do plano fica à vista na faixa acima, e "Mudou" abre tudo de novo. -->
+        <div id="ciAlimDetalhe">
+        <div class="field"><label>Tipo</label>
+          <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this);ciAlimTipoChange()">Ração</button><button onclick="pick(this);ciAlimTipoChange()">Comida natural</button><button onclick="pick(this);ciAlimTipoChange()">Ração + natural</button></div></div>
+        <div class="cad-grid">
+          <div class="field"><label>Marca</label><input class="cad-in" id="ciAlimMarca" placeholder="Ex: marca da ração ou da comida natural" autocomplete="off"></div>
+          <div class="field"><label>Medida</label>
+            <div class="seg" id="ciAlimUnid" data-single><button onclick="pick(this)">gramas</button><button onclick="pick(this)">medidor</button><button onclick="pick(this)">lata</button><button onclick="pick(this)">sachê</button></div></div>
+        </div>
+        <!-- CADA refeição tem a SUA quantidade. Tem FILHOt que come ração no café, só comida
+             natural no almoço e ração + iogurte no jantar — e tem quem faça 4, 5 refeições.
+             Por isso a quantidade vive dentro de cada refeição, nunca num campo único. -->
+        <div class="ci-meal-lbl" style="margin-top:10px">O que come e quanto, em CADA refeição</div>
+        <div class="hint" style="margin:-2px 0 8px">Toque na refeição que ele faz e diga a quantidade dela. Cada refeição pode ser diferente — ração, comida natural e um complemento (iogurte, patê, suplemento).</div>
+        <div id="ciRefBlocos"></div>
+        <button type="button" class="btn" onclick="ciAddRefExtra()" style="margin-top:2px">+ Mais refeições</button>
+        <div class="hint" style="margin-top:5px">Para quem faz 4 ou mais refeições: dê um nome (ex.: lanche da tarde), o horário e a quantidade.</div>
+        </div>
+
+        <div class="cad-grid" style="margin-top:12px">
+          <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
+          <div class="field"><label>Quanto trouxe de ração (g) <span style="font-weight:600;color:var(--muted)">— opcional (é pesado na Conferência)</span></label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Opcional — deixe vazio se ainda não pesou" autocomplete="off" oninput="ciCalcRacao()"></div>
+        </div>
+        <div class="cad-grid" id="ciComidaTrazWrap" style="display:none">
+          <div class="field"><label>Quanto trouxe de comida natural (g)</label><input class="cad-in" id="ciComidaTraz" inputmode="numeric" placeholder="Ex: 600" autocomplete="off" oninput="ciCalcRacao()"></div>
+        </div>
+        <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
+
+        <div class="ci-meal-row">
+          <div class="ci-meal-lbl">Dia de Entrada <span class="ci-meal-tag">Dia 1</span> — o FILHOt vai comer nesse dia:</div>
+          <div class="hint" style="margin:-2px 0 6px">Depende da hora que é entregue: se chega à tarde, pode ser só o jantar.</div>
+          <div class="ci-meal-btns" id="ciMealEnt">
+            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
+            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
+            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
+          </div>
+        </div>
+        <div class="ci-meal-row">
+          <div class="ci-meal-lbl">Dia de Saída <span class="ci-meal-tag fim">Último dia</span> — refeições até ir embora:</div>
+          <div class="ci-meal-btns" id="ciMealSai">
+            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
+            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
+            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
+          </div>
+        </div>
+        <div class="ci-alim-summary" id="ciAlimSummary">Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.</div>
+        <div class="field" style="margin-top:10px"><label>Observação da alimentação <span style="font-weight:600;color:var(--muted)">(como dar, misturas, manias)</span></label><input class="cad-in" id="ciAlimObs" placeholder="Ex: dar metade do Veggidente junto com o café; se não comer, misturar patê" autocomplete="off"></div>
+      </div>
+
+      <div class="card" id="ciCardPert">
+        <h2>Pertences</h2>
+        <div class="hint">Escreva o que o tutor trouxe, com cor ou marca: <strong>um item por linha</strong> ou separados por <strong>vírgula</strong>. Cada item vira uma linha para conferir na Conferência e no Check-out. A dose do remédio vai em Medicação; a quantidade da comida, em Alimentação.</div>
+        <textarea class="cad-in" id="ciPertTexto" rows="4" style="min-height:96px" aria-label="Pertences que o tutor trouxe"
+          placeholder="Ex.: comida (ração Royal, 1 pacote), cama rosa, sacola verde, guia vermelha, bolsinha de remédios de emergência"
+          oninput="ciPertDoTexto(this.value)"></textarea>
+        <div id="ciPertSel"></div>
       </div>
 
       <!-- PERNOITE (Adriana, 08/ago/2026). "O tutor já chega de manhã dizendo que só pega amanhã.
@@ -3715,61 +3810,6 @@
         <div class="field" style="margin-top:8px"><input class="cad-in" id="ciObsGeral" placeholder="Ex: tutor pediu para observar se manca à noite · estranha lugar novo, dar atenção" autocomplete="off"></div>
       </div>
 
-      <div class="card" id="ciCardAlim">
-        <h2>Alimentação</h2>
-        <div class="hint">O que ele come nesta estadia. <strong>Nenhuma alimentação pode ser trocada.</strong> Preencha com o tutor — a conferência só pesa a ração e confere se cobre a estadia.</div>
-        <!-- A CONFIRMAÇÃO DO QUE ELE COME (Adriana, 23/set/2026): "essa informação tem que
-             ficar guardada no aplicativo para a gente não refazer o tempo todo. Só confirmar
-             se é isso mesmo, ou se tem diferença." O plano vem da ficha; aqui alguém diz se
-             continua valendo. Na PERNOITE isso é obrigatório — sem a palavra de quem trouxe,
-             o plantão serviria o que o app supôs. -->
-        <div id="ciAlimConfirma"></div>
-        <div class="field"><label>Tipo</label>
-          <div class="seg" id="ciAlimTipo" data-single><button onclick="pick(this);ciAlimTipoChange()">Ração</button><button onclick="pick(this);ciAlimTipoChange()">Comida natural</button><button onclick="pick(this);ciAlimTipoChange()">Ração + natural</button></div></div>
-        <div class="cad-grid">
-          <div class="field"><label>Marca</label><input class="cad-in" id="ciAlimMarca" placeholder="Ex: marca da ração ou da comida natural" autocomplete="off"></div>
-          <div class="field"><label>Medida</label>
-            <div class="seg" id="ciAlimUnid" data-single><button onclick="pick(this)">gramas</button><button onclick="pick(this)">medidor</button><button onclick="pick(this)">lata</button><button onclick="pick(this)">sachê</button></div></div>
-        </div>
-        <!-- CADA refeição tem a SUA quantidade. Tem FILHOt que come ração no café, só comida
-             natural no almoço e ração + iogurte no jantar — e tem quem faça 4, 5 refeições.
-             Por isso a quantidade vive dentro de cada refeição, nunca num campo único. -->
-        <div class="ci-meal-lbl" style="margin-top:10px">Quanto ele come em CADA refeição?</div>
-        <div class="hint" style="margin:-2px 0 8px">Toque na refeição que ele faz e diga a quantidade dela. Cada refeição pode ser diferente — ração, comida natural e um complemento (iogurte, patê, suplemento).</div>
-        <div id="ciRefBlocos"></div>
-        <button type="button" class="btn" onclick="ciAddRefExtra()" style="margin-top:2px">+ Mais refeições</button>
-        <div class="hint" style="margin-top:5px">Para quem faz 4 ou mais refeições: dê um nome (ex.: lanche da tarde), o horário e a quantidade.</div>
-
-        <div class="cad-grid" style="margin-top:12px">
-          <div class="field"><label>Dias (automático)</label><input class="cad-in" id="ciAlimDias" readonly tabindex="-1" placeholder="—" style="background:var(--z-cream-warm)"></div>
-          <div class="field"><label>Ração trazida (g) <span style="font-weight:600;color:var(--muted)">— não obrigatório aqui (é pesado na Conferência)</span></label><input class="cad-in" id="ciAlimTraz" inputmode="numeric" placeholder="Opcional — deixe vazio se ainda não pesou" autocomplete="off" oninput="ciCalcRacao()"></div>
-        </div>
-        <div class="cad-grid" id="ciComidaTrazWrap" style="display:none">
-          <div class="field"><label>Comida natural trazida (g)</label><input class="cad-in" id="ciComidaTraz" inputmode="numeric" placeholder="Ex: 600" autocomplete="off" oninput="ciCalcRacao()"></div>
-        </div>
-        <div class="ci-dias-erro" id="ciDiasErro" style="display:none"></div>
-
-        <div class="ci-meal-row">
-          <div class="ci-meal-lbl">Dia de Entrada <span class="ci-meal-tag">Dia 1</span> — o FILHOt vai comer nesse dia:</div>
-          <div class="hint" style="margin:-2px 0 6px">Depende da hora que é entregue: se chega à tarde, pode ser só o jantar.</div>
-          <div class="ci-meal-btns" id="ciMealEnt">
-            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
-            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
-            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
-          </div>
-        </div>
-        <div class="ci-meal-row">
-          <div class="ci-meal-lbl">Dia de Saída <span class="ci-meal-tag fim">Último dia</span> — refeições até ir embora:</div>
-          <div class="ci-meal-btns" id="ciMealSai">
-            <div class="ci-meal-btn" data-m="cafe" onclick="ciToggleMeal(this)">☕ Café da manhã</div>
-            <div class="ci-meal-btn" data-m="almoco" onclick="ciToggleMeal(this)">🍽️ Almoço</div>
-            <div class="ci-meal-btn" data-m="jantar" onclick="ciToggleMeal(this)">🌙 Jantar</div>
-          </div>
-        </div>
-        <div class="ci-alim-summary" id="ciAlimSummary">Preencha as datas, a quantidade por refeição e marque as refeições para calcular o necessário.</div>
-        <div class="field" style="margin-top:10px"><label>Observação da alimentação <span style="font-weight:600;color:var(--muted)">(como dar, misturas, manias)</span></label><input class="cad-in" id="ciAlimObs" placeholder="Ex: dar metade do Veggidente junto com o café; se não comer, misturar patê" autocomplete="off"></div>
-      </div>
-
       <div class="card">
         <h2>Spa Dermoprotetor</h2>
         <div class="hint">Banho de saída para o FILHOt voltar para casa cuidado e cheiroso.</div>
@@ -3781,22 +3821,6 @@
           <div class="field"><label>Horário do banho</label><input type="time" class="cad-in" id="ciBanhoHora"></div>
           <label class="ci-spa-conf"><input type="checkbox" id="ciBanhoConfirmar" onchange="ciBanhoChange()"><span>O tutor ainda não sabe a hora que chega — deixar <strong>a confirmar</strong></span></label>
         </div>
-      </div>
-
-      <div class="card" id="ciCardMed">
-        <h2>Medicação e suplementos</h2>
-        <div class="hint">Cadastre cada medicamento/suplemento com o <strong>nome</strong>, a <strong>quantidade (número + medida)</strong> e os <strong>horários reais</strong>. Isso alimenta o despertador da AuAulândia. À prova de erro — sem número e medida não salva.</div>
-        <div id="ciMeds"></div>
-        <button type="button" class="med-add" onclick="ciAddMedBtn()">+ Acrescentar medicamento ou suplemento</button>
-        <div id="ci-med-status" class="rel-status"></div>
-        <div class="field" style="margin-top:10px"><label>Observação da medicação <span style="font-weight:600;color:var(--muted)">(recados do tutor, remédio de urgência)</span></label><input class="cad-in" id="ciMedObs" placeholder="Ex: tutor mandou Buscopan em caso de urgência — só se necessário" autocomplete="off"></div>
-      </div>
-
-      <div class="card" id="ciCardPert">
-        <h2>Pertences</h2>
-        <div class="hint">Toque no que o tutor trouxe e <strong>descreva</strong> na linha que aparece: cor, marca, quantidade. <strong>Tocou duas vezes, são dois itens.</strong> Trouxe outra coisa? Toque em <strong>Outro</strong> e escreva o que é. A dose do remédio vai em Medicação; a quantidade da comida, em Alimentação.</div>
-        <div id="ciPertGrid" class="pert-grid"></div>
-        <div id="ciPertSel"></div>
       </div>
 
       <div class="card" id="ciCardAssina">
@@ -21594,6 +21618,27 @@
       b.classList.remove('z-btn-falta');
       if(b.dataset.zLabel){ b.textContent=b.dataset.zLabel; delete b.dataset.zLabel; }
     }); }catch(e){ _logFalhaGrav('zLimparFalta', e); }
+  }
+  // Tira o vermelho de UM lugar só (29/set/2026, QA37). Confirmar um remédio chamava o
+  // zLimparFalta() e apagava o vermelho de TODOS os bloqueios: a pessoa achava que tinha
+  // acabado, tocava em Salvar e o vermelho voltava. Agora sai só o do item respondido (e o
+  // que estiver dentro dele); o botão passa a contar o que ainda falta.
+  function zLimparFaltaEm(alvo){
+    try{
+      var el=_zEl(alvo); if(!el) return;
+      var sai=Z_FALTA_MARCADOS.filter(function(m){ return m===el || (el.contains && el.contains(m)); });
+      sai.forEach(function(m){
+        m.classList.remove('z-falta');
+        var x=m.nextElementSibling;
+        while(x && x.classList && x.classList.contains('z-falta-msg')){ var prox=x.nextElementSibling; x.remove(); x=prox; }
+      });
+      Z_FALTA_MARCADOS=Z_FALTA_MARCADOS.filter(function(m){ return sai.indexOf(m)<0; });
+      if(!Z_FALTA_MARCADOS.length){ zLimparFalta(); return; }
+      var n=Z_FALTA_MARCADOS.filter(function(m,i,a){ return a.indexOf(m)===i; }).length;
+      document.querySelectorAll('.z-btn-falta').forEach(function(b){
+        if(b.dataset.zLabel) b.textContent=(n>1?('Faltam '+n+' · '):'Falta 1 · ')+b.dataset.zLabel;
+      });
+    }catch(e){ _logFalhaGrav('zLimparFaltaEm', e); }
   }
   function _zEl(x){
     try{
@@ -45866,10 +45911,16 @@
     var _stq=document.getElementById('ciSemTutor'); if(_stq) _stq.checked=false; var _qd=document.getElementById('ciQuemDeixou'); if(_qd) _qd.value=''; if(typeof ciSemTutorChange==='function') ciSemTutorChange();
     const st=document.getElementById('ci-status'); if(st) st.textContent='';
     const ms=document.getElementById('ci-med-status'); if(ms) ms.textContent='';
-    // pertences (banco)
+    // pertences (texto)
+    var _ptx=document.getElementById('ciPertTexto'); if(_ptx) _ptx.value='';
     ciRenderPert({});
-    // medicação vazia por padrão (1 linha)
+    // coleira e "está em uso de alguma medicação?": em branco — é o tutor quem responde
+    try{ ciColeiraAplicar(null); }catch(e){} /* silencioso de propósito: tela sem o cartão da coleira */
+    setSeg('ciMedEmUso','');
+    var _meb=document.getElementById('ciMedEmUsoBox'); if(_meb) _meb.style.display='none';
+    // medicação vazia por padrão (1 linha, que só aparece com "Sim")
     document.getElementById('ciMeds').innerHTML=''; ciAddMed();
+    try{ ciMedTudoIgualRender(); }catch(e){} /* silencioso de propósito: redesenho do botão */
     // pré-preenchimento: agenda de medicação viva + última estadia
     ciPreencherMedicacao();
     ciPreencherUltimaEstadia();
@@ -46188,7 +46239,7 @@
     var e=(estado==='mudou')?'mudou':'confirmado';
     CI_ALIM_CONF=(CI_ALIM_CONF===e)?'':e;   // tocar de novo desmarca
     try{ ciAlimConfRender(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-    try{ if(typeof zLimparFalta==='function') zLimparFalta(); }catch(x){} /* silencioso de propósito: tira o vermelho do gate assim que ele é respondido */
+    try{ if(typeof zLimparFaltaEm==='function') zLimparFaltaEm('ciAlimConfirma'); }catch(x){} /* silencioso de propósito: tira o vermelho SÓ desta faixa (QA37) */
   }
   // "Não trouxe a ração, aí vai ter que pegar comida úmida." É de HOJE: fica na ESTADIA,
   // com quem disse e quando. A ficha continua dizendo o que ele come de verdade.
@@ -46250,6 +46301,15 @@
              +'Vale só para ESTA estadia — a ficha dele continua dizendo o que ele come de verdade. '
              +'O plantão vai ver <strong>SEM RAÇÃO — comida úmida da casa</strong> no jantar e no café.</div>'):'');
     el.innerHTML=h+'</div>';
+    // CHECK-IN RÁPIDO (29/set/2026): confirmado o que a ficha diz, o detalhe dobra — a frase
+    // do plano fica na faixa, e "Mudou" abre tudo. Com algo faltando na comida, fica aberto.
+    try{
+      var det=document.getElementById('ciAlimDetalhe');
+      if(det){
+        var dobra=(CI_ALIM_CONF==='confirmado' && !!resumo && !(typeof ciAlimProblemas==='function' && ciAlimProblemas().length));
+        det.style.display=dobra?'none':'';
+      }
+    }catch(e){} /* silencioso de propósito: enfeite de tela — com erro, o detalhe fica aberto como antes */
   }
   // Grava o plano na FICHA. Só quem edita ficha grava — o porteiro é o mesmo do cadastro
   // (setPelExtra). Sem permissão, o check-in segue normal e a auditoria diz por que a ficha
@@ -46554,7 +46614,9 @@
       +'</div>';
   }
   function ciMedConfSet(btn, estado){
-    if(!canEditCheckinMed()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária confirmam medicação no check-in.'); return; }
+    // Aviso na própria página (QA37): o alert() nativo pode ser suprimido no celular, e aí
+    // o toque não fazia nada e ninguém sabia por quê.
+    if(!canEditCheckinMed()){ ciMedSemPermissao(); return; }
     const el=btn.closest('.magitem'); if(!el) return;
     el.dataset.conf=estado;
     const faixa=el.querySelector('.ci-med-conf'); if(!faixa) return;
@@ -46569,7 +46631,97 @@
     if(txt) txt.textContent=(estado==='ok')
       ? 'Confirmado com o tutor por '+quemSou()+' — segue igual.'
       : 'Mudou: corrija abaixo. Ao salvar, a ficha do FILHOt é atualizada junto.';
-    try{ if(typeof zLimparFalta==='function') zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
+    try{ if(typeof zLimparFaltaEm==='function') zLimparFaltaEm(el); }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
+    try{ ciMedTudoIgualRender(); }catch(e){} /* silencioso de propósito: redesenho do botão — o estado já está na linha */
+  }
+  function ciMedSemPermissao(){
+    zAlertao('SÓ QUEM CUIDA DA MEDICAÇÃO CONFIRMA',
+      ['Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária confirmam a medicação no check-in.',
+       'Chame uma delas para confirmar com o tutor. O resto do check-in continua preenchido.'],
+      {botao:'Entendi'});
+  }
+  // ===== CHECK-IN RÁPIDO: "ESTÁ EM USO DE ALGUMA MEDICAÇÃO?" (Adriana, 29/set/2026) ====
+  // A pergunta vem antes da lista. "Não": a lista some e nada liga alarme. "Sim": abrem nome,
+  // dose e horários. Com remédio na ficha, a resposta já vem "Sim" e a lista aparece para
+  // confirmar — um a um ou todos de uma vez ("Tudo igual"). O kit de emergência não é
+  // medicação em uso: vai escrito em Pertences.
+  function ciMedEmUso(){ try{ return (typeof segVal==='function'?segVal('ciMedEmUso'):'')||''; }catch(e){ return ''; } } /* sem a pergunta na tela (outra tela, teste), vale a lista como está */
+  function ciMedFichaLinhas(){ try{ return Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem[data-daficha="1"]')); }catch(e){ return []; } } /* sem a lista na tela, não há linha da ficha */
+  function ciMedEmUsoChange(){
+    var v=ciMedEmUso();
+    var ficha=ciMedFichaLinhas();
+    if(v==='Não' && ficha.length && typeof canEditCheckinMed==='function' && !canEditCheckinMed()){
+      setSeg('ciMedEmUso','Sim');
+      ciMedSemPermissao();
+      v='Sim';
+    }
+    var box=document.getElementById('ciMedEmUsoBox'); if(box) box.style.display=(v==='Sim')?'block':'none';
+    if(v==='Sim'){
+      var w=document.getElementById('ciMeds');
+      if(w && !w.querySelector('.magitem')) ciAddMed();
+    }
+    var ms=document.getElementById('ci-med-status');
+    if(ms){
+      if(v==='Não' && ficha.length){
+        var nomes=ficha.map(function(el){ return ((el.querySelector('[data-c=m]')||{}).value||'').trim(); }).filter(Boolean);
+        ms.style.color='var(--crm-atencao-text)';
+        ms.textContent='Ao salvar, '+(nomes.length>1?('os remédios da ficha ('+nomes.join(', ')+') ficam'):('o remédio da ficha ('+(nomes[0]||'sem nome')+') fica'))
+          +' como "já não toma mais", com o seu nome. Nenhum alarme toca.';
+      } else if(v==='Não'){ ms.style.color='var(--muted)'; ms.textContent='Sem medicação nesta estadia: nenhum alarme toca.'; }
+      else if(ficha.length){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme com o tutor: Confirmado ou Mudou em cada item, ou "Tudo igual" se nada mudou. O check-in não fecha sem isso.'; }
+      else ms.textContent='';
+    }
+    try{ if(typeof zLimparFaltaEm==='function') zLimparFaltaEm('ciMedEmUso'); }catch(e){} /* silencioso de propósito: limpar marcação de falta — falhar não muda dado nenhum */
+    ciMedTudoIgualRender();
+  }
+  function ciMedTudoIgualRender(){
+    var box=document.getElementById('ciMedTudoIgual'); if(!box) return;
+    var falta=ciMedFichaLinhas().filter(function(el){ return !el.dataset.conf; });
+    if(ciMedEmUso()==='Não' || !falta.length){ box.innerHTML=''; return; }
+    box.innerHTML='<button type="button" class="btn" style="width:100%;padding:12px 14px;font-size:14.5px;font-weight:800;border:1.5px solid #1E8449;background:#1E8449;color:var(--z-cream)" onclick="ciMedTudoIgual()">'
+      +'Tudo igual — confirmar todos ('+falta.length+')</button>'
+      +'<div class="hint" style="margin:5px 0 10px">Quando o tutor disser que nada mudou: nome, dose e horários iguais aos da ficha. Se algo mudou, toque em <strong>Mudou</strong> só naquele.</div>';
+  }
+  function ciMedTudoIgual(){
+    if(typeof canEditCheckinMed==='function' && !canEditCheckinMed()){ ciMedSemPermissao(); return; }
+    ciMedFichaLinhas().forEach(function(el){
+      if(el.dataset.conf) return;
+      var b=el.querySelector('.ci-med-conf button[data-cf="ok"]'); if(b) ciMedConfSet(b,'ok');
+    });
+    ciMedTudoIgualRender();
+  }
+  // Os remédios da ficha que o tutor disse que NÃO estão em uso: {id, nome}. É isto que o
+  // salvar marca como "já não toma mais" (o mesmo registro do "Parou" da aba Medicamentos).
+  function ciMedNaoEmUso(){
+    if(ciMedEmUso()!=='Não') return [];
+    return ciMedFichaLinhas().map(function(el){ return {id:el.dataset.id||'', nome:((el.querySelector('[data-c=m]')||{}).value||'').trim()}; })
+      .filter(function(x){ return x.id; });
+  }
+  // O mesmo registro do "Parou" da aba Medicamentos (fmedParou): nada é apagado, o item
+  // desce para "Já não toma mais", com quem ouviu do tutor, quando e por quê. Termina ONTEM,
+  // para o despertador não chamar hoje.
+  function ciMedMarcarParou(key, lista){
+    if(!DB || !key || !(lista&&lista.length)) return Promise.resolve([]);
+    var quem=(typeof quemSou==='function'?quemSou():'-'), hoje=zHojeISO(), ontem=addDiasISO(hoje,-1)||hoje;
+    var motivo='no check-in da hospedagem, o tutor disse que não está em uso';
+    return Promise.all(lista.map(function(x){
+      var no='auaulandia/medicacao-agenda/'+key+'/itens/'+x.id;
+      return DB.ref(no).once('value').then(function(s){
+        var it=(s&&s.val&&s.val())||null; if(!it) return null;
+        var hist=Array.isArray(it.historico)?it.historico.slice():[];
+        hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():''), acao:'Parou de tomar — '+motivo});
+        return DB.ref(no).update({continuo:false, dataFim:ontem, historico:hist,
+          paradoEm:{quem:quem, data:hoje, quando:(typeof agoraBR==='function'?agoraBR():''), ts:Date.now(), motivo:motivo}})
+          .then(function(){ return x.nome||x.id; });
+      }).catch(function(e){ _logFalhaGrav('marcar '+(x.nome||x.id)+' como "já não toma mais" no check-in', e); return null; });
+    })).then(function(r){
+      var feitos=r.filter(Boolean);
+      if(feitos.length && typeof audit==='function') audit('ficha-medicamentos',
+        'PAROU DE TOMAR — '+feitos.join(', ')+' — motivo: '+motivo,
+        {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||''), quem:quem});
+      if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+      return feitos;
+    });
   }
   function ciMedConfirmar(btn){ ciMedConfSet(btn,'ok'); }
   function ciMedMudou(btn){ ciMedConfSet(btn,'mudou'); }
@@ -46601,6 +46753,7 @@
   function ciAddMedBtn(){ if(!canEditCheckinMed()){ alert('Apenas a Consultora, a Gestão, a Supervisão ou a Veterinária cadastram medicação no check-in.'); return; } ciAddMed(); }
   function ciColetarMeds(){
     const out={};
+    if(ciMedEmUso()==='Não') return out;   // o tutor disse que não está em uso: nada liga alarme
     document.querySelectorAll('#ciMeds .magitem').forEach(function(el){
       const id=el.dataset.id;
       const nome=(el.querySelector('[data-c=m]').value||'').trim();
@@ -46655,7 +46808,7 @@
     // O que veio da ficha e ninguém confirmou com o tutor: o check-in NÃO fecha assim.
     // A pergunta é a razão de a lista estar aqui — sem resposta, é remédio no chute.
     try{
-      document.querySelectorAll('#ciMeds .magitem[data-daficha="1"]').forEach(function(el){
+      if(ciMedEmUso()!=='Não') document.querySelectorAll('#ciMeds .magitem[data-daficha="1"]').forEach(function(el){
         if(el.dataset.conf) return;
         const n=((el.querySelector('[data-c=m]')||{}).value||'').trim()||'este medicamento';
         probs.push('"'+n+'" veio da ficha: pergunte ao tutor se é isso mesmo e toque em Confirmado ou em Mudou.');
@@ -46679,10 +46832,36 @@
       // agendaId: a linha conserva o id que o remédio JÁ TEM na agenda — é isto que faz o
       // segundo check-in ATUALIZAR o VitaC em vez de criar outro.
       ordenados.forEach(function(id){ ciAddMed(itens[id], {daFicha:true, agendaId:id}); });
-      const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme CADA item com o tutor: Confirmado ou Mudou. O check-in não fecha sem isso.'; }
+      const ms=document.getElementById('ci-med-status'); if(ms){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme com o tutor: Confirmado ou Mudou em cada item, ou "Tudo igual" se nada mudou. O check-in não fecha sem isso.'; }
+      // Com remédio na ficha, a pergunta já vem "Sim" (se ninguém respondeu ainda): a lista
+      // aparece para confirmar. O tutor diz que parou? Um toque em "Não".
+      if(!ciMedEmUso()) setSeg('ciMedEmUso','Sim');
+      ciMedEmUsoChange();
     }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (ciPreencherMedicacao)', e); });
   }
 
+  // ---- Coleira antipulga ou repelente (check-in rápido, 29/set/2026) ----
+  // Fica registrada NESTA estadia: sai no PDF, no resumo e na Conferência. A ficha do FILHOt
+  // não muda — a coleira de hoje pode não ser a da próxima vez.
+  function ciColeiraChange(){
+    var v=(typeof segVal==='function'?segVal('ciColeira'):'')||'';
+    var box=document.getElementById('ciColeiraQualBox'); if(box) box.style.display=(v==='Sim')?'':'none';
+  }
+  function ciColeiraDaTela(){
+    var v=(typeof segVal==='function'?segVal('ciColeira'):'')||'';
+    if(!v) return null;
+    return {tem:v, qual:(v==='Sim')?((((document.getElementById('ciColeiraQual')||{}).value)||'').trim()):''};
+  }
+  function ciColeiraAplicar(c){
+    c=c||{};
+    setSeg('ciColeira', c.tem||'');
+    var q=document.getElementById('ciColeiraQual'); if(q) q.value=c.qual||'';
+    ciColeiraChange();
+  }
+  function ciColeiraTexto(c){
+    if(!c||!c.tem) return '';
+    return (c.tem==='Sim')?('Sim'+(c.qual?(' — '+c.qual):' (qual não foi dito)')):'Não';
+  }
   // ---- Pertences (grade de tipos A→Z + várias unidades por tipo, editáveis) ----
   function ciUid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
   // Sem o banco carregado ainda, os nomes de fábrica respondem (QA19 B7): o toque nunca
@@ -46712,27 +46891,68 @@
   }
   // A ordem da lista de baixo segue a da grade (a ordem dela); item antigo vem depois, A→Z.
   function ciPertOrdem(k){ for(var i=0;i<CI_PERT_DEFAULT.length;i++){ if(CI_PERT_DEFAULT[i].k===k) return i; } return CI_PERT_DEFAULT.length; }
-  function ciDrawPert(){
-    const grid=document.getElementById('ciPertGrid');
-    if(grid){ grid.innerHTML=CI_PERT_DEFAULT.map(function(o){
-      const n=ciPertSel.filter(function(p){ return p.k===o.k; }).length;
-      return '<button type="button" class="pert-chip'+(n?' on':'')+'" onclick="ciAddPertUnit(\''+o.k+'\')">'+esc(o.nome)+(n?' <span class="pert-chip-n">'+n+'</span>':'')+'</button>';
-    }).join(''); }
-    const list=document.getElementById('ciPertSel'); if(!list) return;
-    if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada marcado ainda. Toque no que o tutor trouxe.</div>'; return; }
-    const sorted=ciPertSel.slice().sort(function(a,b){
-      return (ciPertOrdem(a.k)-ciPertOrdem(b.k)) || jsNorm(a.nome||'').localeCompare(jsNorm(b.nome||''),'pt');
+  // ===== PERTENCES SÓ COM TEXTO (Adriana, 29/set/2026: check-in rápido) ==============
+  // "Pertences só texto": um campo, escrito como a gente fala — "comida (ração Royal, 1
+  // pacote), cama rosa, sacola verde". Cada item (por linha ou por vírgula) continua sendo UM
+  // item para a Conferência, o Check-out e o PDF. O tipo vem das palavras: comida continua
+  // crítica na Conferência. A linha que não mudou conserva o item de antes (e o uid, que é
+  // onde a Conferência guarda o V verde).
+  function ciPertLinha(p){ return String((p&&p.nome)||'').trim()+((p&&p.spec)?(' — '+String(p.spec).trim()):''); }
+  function ciPertTipo(txt){
+    var n=jsNorm(String(txt||''));
+    if(/\b(racao|racoes|comida|comidinha|natural|sache|saches|lata|latas|pate)\b/.test(n)) return 'comida';
+    if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit)\b/.test(n)) return 'remedios';
+    var w=(n.split(/\s+/)[0]||'');
+    if(/^(mochila|bolsa|bolsinha|sacola|sacolinha|mala|necessaire)$/.test(w)) return 'mochila';
+    if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
+    if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
+    return 'outro';
+  }
+  // Separa o texto em itens: por linha, por ponto e vírgula e por vírgula fora de parênteses.
+  // "ração Royal, 1 pacote": o pedaço que começa com número completa o de antes. Linha com
+  // " — " (estadia antiga, montada pelo app) fica inteira.
+  function ciPertPartes(txt){
+    var out=[];
+    String(txt||'').split(/\r?\n|;/).forEach(function(linha){
+      linha=linha.trim(); if(!linha) return;
+      if(/\s—\s/.test(linha)){ out.push(linha); return; }
+      var ped=[], cur='', prof=0;
+      for(var i=0;i<linha.length;i++){
+        var c=linha.charAt(i);
+        if(c==='(') prof++; else if(c===')') prof=Math.max(0,prof-1);
+        if(c===',' && !prof){ ped.push(cur); cur=''; } else cur+=c;
+      }
+      ped.push(cur);
+      var daLinha=[];
+      ped.map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(x){
+        if(/^\d/.test(x) && daLinha.length) daLinha[daLinha.length-1]+=', '+x; else daLinha.push(x);
+      });
+      daLinha.forEach(function(x){ out.push(x); });
     });
-    // Uma linha por item: o nome e o campo para DESCREVER. Sem a caixa de 17 cores — a cor
-    // se escreve junto ("mochila azul com patinhas"), do jeito que a pessoa fala.
-    list.innerHTML=sorted.map(function(p){
-      const same=ciPertSel.filter(function(x){ return x.k===p.k; }); const multi=same.length>1; const idx=same.indexOf(p)+1;
-      return '<div class="pert-row" data-uid="'+p.uid+'">'+
-        '<div class="pert-row-nome">'+esc(p.nome)+(multi?' <span class="pert-row-n">#'+idx+'</span>':'')+'</div>'+
-        '<input class="pert-row-spec" value="'+escAttr(p.spec)+'" placeholder="'+escAttr(ciPertSpecPh(p.k))+'" aria-label="Descreva '+escAttr(p.nome)+'" oninput="ciEditPertSpec(\''+p.uid+'\',this.value)">'+
-        '<button type="button" class="pert-row-del" title="Remover" aria-label="Remover" onclick="ciRemovePertUnit(\''+p.uid+'\')">&#10005;</button>'+
-      '</div>';
-    }).join('');
+    return out;
+  }
+  function ciPertDoTexto(txt){
+    var antes=(ciPertSel||[]).slice(), usado={}, novos=[];
+    ciPertPartes(txt).forEach(function(parte){
+      var ix=-1;
+      for(var i=0;i<antes.length;i++){ if(!usado[i] && jsNorm(ciPertLinha(antes[i]))===jsNorm(parte)){ ix=i; break; } }
+      if(ix>=0){ usado[ix]=1; novos.push(antes[ix]); return; }
+      novos.push({uid:ciUid(), k:ciPertTipo(parte), nome:(parte.charAt(0).toUpperCase()+parte.slice(1)), spec:''});
+    });
+    ciPertSel=novos;
+    ciPertMostrar();
+  }
+  // O que vai para a Conferência, item por item — para quem escreveu ver como o app separou.
+  function ciPertMostrar(){
+    var list=document.getElementById('ciPertSel'); if(!list) return;
+    if(!ciPertSel.length){ list.innerHTML='<div class="hint pert-empty">Nada escrito ainda.</div>'; return; }
+    list.innerHTML='<div class="hint" style="margin-top:6px"><strong>'+ciPertSel.length+(ciPertSel.length>1?' itens':' item')+' para conferir:</strong> '
+      +ciPertSel.map(function(p){ return esc(ciPertLinha(p)); }).join(' · ')+'</div>';
+  }
+  function ciDrawPert(){
+    var ta=document.getElementById('ciPertTexto');
+    if(ta && document.activeElement!==ta) ta.value=ciPertSel.map(ciPertLinha).join('\n');
+    ciPertMostrar();
   }
   // O toque SÓ adiciona (25/set/2026). Antes, o campo de texto ganhava o foco e o teclado
   // subia a cada item — "precisa colocar manual os pertences, digitar". A cor é um toque na
@@ -47037,6 +47257,7 @@
     DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
       const e=s.val()||{}; if(!e.nome) return;
       return ciAplicarEstadiaNaFicha(e,'Você está CORRIGINDO o check-in. Ajuste o que estava errado e salve — vou pedir o motivo.').then(function(){
+        ciRespostasDaEstadia(e);
         ciEditandoId=null; ciCorrigindoId=id; ciSalvoAgora=false;
         window.__ciAntes=JSON.parse(JSON.stringify({ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''}));
         const el=document.getElementById('ciJaHospedado');
@@ -47054,6 +47275,16 @@
         window.scrollTo({top:0,behavior:'smooth'});
       });
     }).catch(function(err){ zAlertao('Não consegui abrir o check-in',[String((err&&err.message)||err)]); });
+  }
+  // Reabrir uma estadia (corrigir ou acrescentar) traz de volta a coleira e a resposta da
+  // medicação DESTA estadia. O pré-preenchimento da última estadia NÃO traz: são de hoje.
+  function ciRespostasDaEstadia(e){
+    try{
+      var f=(e&&e.ficha)||{};
+      ciColeiraAplicar(f.coleira||null);
+      var r=f.medEmUso||((Array.isArray(e&&e.medicacao)&&e.medicacao.length)?'Sim':'');
+      if(r){ setSeg('ciMedEmUso', r); ciMedEmUsoChange(); }
+    }catch(x){ _logFalhaGrav('ciRespostasDaEstadia', x); }
   }
   // O que mudou, em português — é isto que a Wandela e o Plantão leem depois.
   function ciDiffCorrecao(antes, dados, meds){
@@ -47085,6 +47316,7 @@
     DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
       const e=s.val()||{}; if(!e.nome) return;
       return ciAplicarEstadiaNaFicha(e,'Você está ACRESCENTANDO no check-in que já existe. Complete o que falta e salve.').then(function(){
+        ciRespostasDaEstadia(e);
         ciEditandoId=id; ciSalvoAgora=false;
         const el=document.getElementById('ciJaHospedado');
         if(el) el.innerHTML='<div style="background:#E8F5EC;border:2px solid #1E8449;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
@@ -47153,6 +47385,10 @@
       ficha:{
         obsGeral:((document.getElementById('ciObsGeral')||{}).value||'').trim(),
         medObs:((document.getElementById('ciMedObs')||{}).value||'').trim(),
+        // Check-in rápido (29/set/2026): a coleira de hoje e a resposta "está em uso de alguma
+        // medicação?" — as duas ficam na estadia, com o PDF e a Conferência lendo daqui.
+        coleira:(typeof ciColeiraDaTela==='function'?ciColeiraDaTela():null),
+        medEmUso:(typeof ciMedEmUso==='function'?(ciMedEmUso()||null):null),
         alim:{ obs:((document.getElementById('ciAlimObs')||{}).value||'').trim(), tipo:segVal('ciAlimTipo'), marca:(document.getElementById('ciAlimMarca').value||'').trim(),
                // A palavra de quem trouxe, no rastro da estadia: confirmou o que a ficha
                // dizia, ou disse que hoje é diferente (Adriana, 23/set/2026). Sem isto, meses
@@ -47374,10 +47610,9 @@
   // Lista TUDO o que falta de uma vez (Adriana: "precisa dizer: falta isso e isso").
   // Antes o app mostrava só o primeiro erro — a pessoa corrigia, tentava de novo, batia no
   // segundo, e desistia achando que tinha salvo.
-  function ciFaltando(){
-    const F=[]; // {texto, foco}
-    const dados=ciColetarFicha();
-    if(!dados.entrada) F.push({t:'Falta a data de ENTRADA da estadia.', f:'ciEntrada'});
+  // A comida que falta (usada no "o que falta" e para saber se o detalhe pode ficar dobrado).
+  function ciAlimProblemas(){
+    const F=[];
     const _ativas=ciRefsAtivas();
     if(!_ativas.length) F.push({t:'Nenhuma refeição foi marcada. Marque o que o FILHOt come (café, almoço, jantar ou refeição extra).', f:'ciRefBlocos'});
     _ativas.forEach(function(r){
@@ -47386,25 +47621,55 @@
     });
     if(ciTemNatural() && _ativas.length && !_ativas.some(function(r){ return ciNum(r.natural)>0; }))
       F.push({t:'Você marcou comida natural, mas não colocou as gramas em nenhuma refeição.', f:'ciRefBlocos'});
+    return F;
+  }
+  // A linha do remédio citado no começo da frase ("Apoquel": ...). É ela que fica vermelha,
+  // com a frase logo embaixo — e não a lista inteira, com as frases empilhadas no fim (QA37).
+  function ciMedLinhaDoProblema(txt){
+    try{
+      const linhas=Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem'));
+      const nomeDe=function(el){ return jsNorm(((el.querySelector('[data-c=m]')||{}).value)||''); };
+      const m=/^"([^"]+)"/.exec(String(txt||''));
+      if(m) return linhas.filter(function(el){ return nomeDe(el)===jsNorm(m[1]); })[0]||null;
+      if(/NOME/.test(String(txt||''))) return linhas.filter(function(el){ return !nomeDe(el); })[0]||null;
+    }catch(e){ return null; } /* sem a linha, vale o bloco inteiro — como antes */
+    return null;
+  }
+  function ciFaltando(){
+    const F=[]; // {texto, foco} — NA ORDEM DA TELA: a rolagem vai ao primeiro
+    const dados=ciColetarFicha();
+    // Medicação em uso: a pergunta é a primeira coisa que o tutor responde (29/set/2026).
+    const emUso=ciMedEmUso();
+    const meds=ciColetarMeds();
+    if(!emUso && document.getElementById('ciMedEmUso'))
+      F.push({t:'Falta responder: ele está em uso de alguma medicação? Toque em Sim ou em Não.', f:'ciMedEmUso'});
+    if(emUso==='Sim' && !Object.keys(meds).length)
+      F.push({t:'Você marcou que ele está em uso de medicação: escreva o remédio (nome, dose e horário) ou toque em Não.', f:'ciMeds'});
+    // 'ciMedLista' não existe no HTML — o campo real é 'ciMeds'. Com o id errado, o motor do
+    // "o que falta" não achava o bloco e caía no aviso escrito, justamente na medicação, que
+    // é onde mais se erra (a Giullian bateu 3 vezes seguidas nisto em 13/ago, com a Lisa).
+    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:(ciMedLinhaDoProblema(p)||'ciMeds')}); });
+    if(Object.keys(meds).length>0){
+      const chk=document.getElementById('ciGateChk');
+      if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
+    }
+    const _alimF=ciAlimProblemas();
+    if(_alimF.length){
+      // O detalhe da comida pode estar dobrado: abre, senão o vermelho ficaria escondido.
+      try{ const _d=document.getElementById('ciAlimDetalhe'); if(_d) _d.style.display=''; }catch(e){} /* silencioso de propósito: enfeite de tela */
+      _alimF.forEach(function(x){ F.push(x); });
+    }
     // ===== A PERNOITE NÃO FECHA SEM A PALAVRA DE QUEM TROUXE (23/set/2026) ==========
     // A pernoite nasce de um dia de Day Care e o plano de comida vem da ficha. Sem alguém
     // dizer "é isso mesmo" ou "mudou", o plantão serviria à noite o que o app SUPÔS — e
     // quem serve não tem como saber que aquele número é herdado.
     if(typeof ciEhPernoite==='function' && ciEhPernoite() && !CI_ALIM_CONF)
       F.push({t:'Falta confirmar a alimentação com quem trouxe: toque em "Confirmado" ou em "Mudou" na faixa da Alimentação.', f:'ciAlimConfirma'});
-    const meds=ciColetarMeds();
-    // 'ciMedLista' não existe no HTML — o campo real é 'ciMeds'. Com o id errado, o motor do
-    // "o que falta" não achava o bloco e caía no aviso escrito, justamente na medicação, que
-    // é onde mais se erra (a Giullian bateu 3 vezes seguidas nisto em 13/ago, com a Lisa).
-    ciValidarMeds(meds).forEach(function(p){ F.push({t:p, f:'ciMeds'}); });
-    if(Object.keys(meds).length>0){
-      const chk=document.getElementById('ciGateChk');
-      if(!chk||!chk.checked) F.push({t:'Falta marcar a conferência de segurança da medicação (você conferiu os remédios com o tutor).', f:'ciGate'});
-    }
     // "Outro" sem descrição sairia "Outro" na Conferência, no Check-out e no PDF — ninguém
-    // saberia o que devolver (QA19 M3).
-    if((ciPertSel||[]).some(function(p){ return p&&p.k==='outro'&&!String(p.spec||'').trim(); }))
+    // saberia o que devolver (QA19 M3). O item escrito no texto livre já é o próprio nome.
+    if((ciPertSel||[]).some(function(p){ return p&&p.k==='outro'&&!String(p.spec||'').trim()&&(!String(p.nome||'').trim()||jsNorm(p.nome)==='outro'); }))
       F.push({t:'Nos pertences, você marcou "Outro": escreva o que é (ex.: cobertor azul).', f:'ciCardPert'});
+    if(!dados.entrada) F.push({t:'Falta a data de ENTRADA da estadia.', f:'ciEntrada'});
     const semTutor=!!(document.getElementById('ciSemTutor')&&document.getElementById('ciSemTutor').checked);
     if(!semTutor){
       if(!((document.getElementById('ciAssinaNome')||{}).value||'').trim())
@@ -47660,7 +47925,9 @@
     // O remédio da estadia anterior (29/ago/2026). Vem ANTES de qualquer gravação: se ele
     // tomava algo que não está aqui, alguém tem de dizer o que houve. Pergunta uma vez só —
     // quando termina (ou quando não há o que perguntar), o próprio Salvar recomeça daqui.
-    if(!MED_GATE_ULTIMO['auaulandia|'+key]){
+    // Com "Não está em uso", a pergunta "tomava X — não toma mais?" já foi respondida pelo
+    // tutor: o salvar marca os remédios da ficha como "já não toma mais" (ciMedMarcarParou).
+    if(!MED_GATE_ULTIMO['auaulandia|'+key] && ciMedEmUso()!=='Não'){
       medGate('auaulandia', key, (ciHosp.nome||''), (ciHosp.tutor||''), medFemea(ciHosp),
         ciMedsToLista(meds), ciMudouDose, function(){ ciSalvar(); });
       return;
@@ -47668,7 +47935,8 @@
     // "Não trouxe a ração, aí vai ter que pegar comida úmida." Vai para a ESTADIA, não para
     // a ficha: é o que aconteceu HOJE, e a ficha continua dizendo o que ele come de verdade.
     const alimSem=(typeof ciAlimSemRacaoEstadia==='function')?ciAlimSemRacaoEstadia():null;
-    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem };
+    const pacote={ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem,
+                   medParou:ciMedNaoEmUso() };
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
     // Modo CORRIGIR: não checa duplicidade (a estadia é conhecida) e exige o motivo antes
@@ -48050,6 +48318,11 @@
     }
     Promise.all(ops).then(function(){
       __ciTravar(false); ciSalvoAgora=true;
+      // "Não está em uso": os remédios da ficha ficam como "já não toma mais", com quem ouviu
+      // do tutor. No corrigir a agenda já foi reescrita acima.
+      if(P.medParou && P.medParou.length && modo!=='corrigir'){
+        try{ ciMedMarcarParou(key, P.medParou); }catch(e){ _logFalhaGrav('marcar os remédios que o tutor disse que não estão em uso', e); }
+      }
       // ===== A FICHA APRENDE O QUE ELE COME (Adriana, 23/set/2026) =================
       // "Isso tem que ficar guardado no aplicativo para a gente não refazer o tempo todo."
       // Grava quando alguém disse que MUDOU, e também na primeira vez em que a ficha ainda
@@ -48274,6 +48547,8 @@
     L.push('Zêluz AuAulândia — Check-in');
     L.push(ciHosp.nome+(ciHosp.tutor?(' · Tutor: '+ciHosp.tutor):''));
     L.push('Estadia: '+ciBRdata(d.entrada)+(d.saida?(' até '+ciBRdata(d.saida)):''));
+    if(d.ficha.coleira&&d.ficha.coleira.tem) L.push('Coleira antipulga ou repelente: '+ciColeiraTexto(d.ficha.coleira));
+    if(d.ficha.medEmUso==='Não') L.push('Medicação em uso: não');
     const a=d.ficha.alim;
     if(a.tipo||a.marca||a.qtd||a.refs){ L.push(''); L.push('Alimentação: '+[a.tipo,a.marca,(a.qtd?(a.qtd+' '+(a.unidade||'')):''),(a.refeicoes?(a.refeicoes+'x/dia'):'')].filter(Boolean).join(' · '));
       var _prTxt=(typeof ciAlimPorRefTexto==='function')?ciAlimPorRefTexto(a):''; if(_prTxt) L.push('Em cada refeição: '+_prTxt);
@@ -48567,7 +48842,9 @@
     S.push({titulo:'ESTADIA', linhas:[
       {k:'Entrada', v:ciBRdata(d.entrada)+(a.dias?('  ('+a.dias+' dia(s))'):'')},
       {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')+(_per?('  ·  '+_per):'')}
-    ].concat(_qd?[{k:'Quem trouxe', v:_qd}]:[])});
+    ].concat(_qd?[{k:'Quem trouxe', v:_qd}]:[])
+     .concat((d.ficha&&d.ficha.coleira&&d.ficha.coleira.tem)?[{k:'Coleira antipulga ou repelente', v:ciColeiraTexto(d.ficha.coleira)}]:[])
+     .concat((d.ficha&&d.ficha.medEmUso==='Não')?[{k:'Medicação em uso', v:'não — o tutor disse que não toma nenhum remédio agora'}]:[])});
     // --- emergência: contatos e identificação (Adriana, 31/ago) ---
     (function(){
       var ex=exH;
@@ -49709,7 +49986,10 @@
     var box=function(tit,inner){ return '<div style="border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:4px">'+tit+'</div>'+inner+'</div>'; };
     var h='';
     // Estadia
-    h+=box('Estadia', '<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>');
+    h+=box('Estadia', '<div style="font-size:13px;color:var(--z-blue-soft)">Entrada: <strong>'+(cfEstadia.entrada?ciBRdata(cfEstadia.entrada):'—')+'</strong> · Saída: <strong>'+(cfEstadia.saida?ciBRdata(cfEstadia.saida):'—')+'</strong>'+(a.dias?(' · '+escAttr(a.dias)+' dia(s)'):'')+'</div>'
+      // Check-in rápido (29/set/2026): a coleira de hoje e a resposta da medicação em uso.
+      +((f.coleira&&f.coleira.tem)?('<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Coleira antipulga ou repelente:</strong> '+escAttr(ciColeiraTexto(f.coleira))+'</div>'):'')
+      +((f.medEmUso==='Não')?'<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Medicação em uso:</strong> não (o tutor disse que não toma nenhum remédio agora)</div>':''));
     // Alimentação
     if(a.tipo||a.marca||a.qtd||a.refs){
       var lin='<div style="font-size:13px;color:var(--z-blue-soft)"><strong>Tipo:</strong> '+escAttr(a.tipo||'—')+(a.marca?(' · Marca: '+escAttr(a.marca)):'')+'</div>';

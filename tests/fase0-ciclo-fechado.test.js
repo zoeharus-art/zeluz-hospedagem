@@ -547,7 +547,7 @@ function bancoFalso(servidor) {
 let fila = Promise.resolve();
 function provaAsync(nome, fn) {
   fila = fila.then(() => fn().then(() => { ok++; console.log('  ✓ ' + nome); },
-    (e) => { falhas.push(nome + ' — ' + e.message); console.log('  ✗ ' + nome + '\n      ' + e.message); }));
+    (e) => { falhas.push(nome + ' — ' + e.message); console.log("  ✗ " + nome + "\n      " + e.message + (process.env.PILHA ? "\n" + e.stack : "")); }));
 }
 provaAsync('R-CANCEL — "Tutor buscou, cancelar" de noite anterior GRAVA (a transação pergunta ao banco)', async () => {
   const B = bancoFalso({ nome: 'Thor', status: 'aguardando', chave: 'thor__bia' });
@@ -2367,27 +2367,122 @@ prova('"venceu em" — o que ainda vai vencer continua exatamente como antes', (
 
 // ================================================================== pertences da hospedagem
 console.log('\nPertences da hospedagem — os cinco que ela ditou, e descrever (27/set/2026)');
-prova('a grade tem só Comida, Remédios, Mochila, Cama, Guia e Outro — na ordem dela, sem banco e sem caixa de cores', () => {
-  igual(run('CI_PERT_DEFAULT.map(function(o){ return o.k; })'), ['comida', 'remedios', 'mochila', 'cama', 'guia', 'outro']);
-  ctx.__els = { ciPertGrid: { innerHTML: '' }, ciPertSel: { innerHTML: '' } };
-  run(`__bkPert={ge:document.getElementById, pb:ciPertBanco, ps:ciPertSel};
-    document.getElementById=function(id){ return __els[id]||null; };
-    carregarPertBanco();
-    ciPertBanco.push({k:'cobertor-xadrez', nome:'Cobertor xadrez', spec:'x'});   // item criado pela equipe no banco antigo
-    ciPertSel=[{uid:'u1',k:'roupa',nome:'Roupa',spec:'casaco vermelho'},{uid:'u2',k:'mochila',nome:'Mochila',spec:''},{uid:'u3',k:'comida',nome:'Comida',spec:'ração 2 kg'}];
-    ciDrawPert();`);
+prova('check-in rápido: pertences só com texto — cada item por linha ou vírgula vira um item, com o tipo pelas palavras; a linha que não mudou conserva o item (e o V verde)', () => {
+  ctx.__els = { ciPertTexto: { value: '' }, ciPertSel: { innerHTML: '' } };
+  run(`__bkPert={ge:document.getElementById, ps:ciPertSel};
+    document.getElementById=function(id){ return __els[id]||__bkPert.ge.call(document, id); };`);
   try {
-    const grid = ctx.__els.ciPertGrid.innerHTML;
-    const chips = (grid.match(/<button type="button" class="pert-chip[^"]*"[^>]*>([^<]+)/g) || []).map((c) => c.replace(/^.*>/, '').trim());
-    igual(chips, ['Comida', 'Remédios', 'Mochila', 'Cama', 'Guia', 'Outro']);
-    assert.ok(grid.indexOf('Cobertor') < 0 && grid.indexOf('Peitoral') < 0, 'o banco antigo não volta para a grade');
-    const lista = ctx.__els.ciPertSel.innerHTML;
-    assert.ok(lista.indexOf('pert-row-cor') < 0, 'sem a caixa de 17 cores');
-    assert.ok(lista.indexOf('Comida') < lista.indexOf('Mochila') && lista.indexOf('Mochila') < lista.indexOf('Roupa'),
-      'a lista segue a ordem dela; o item antigo (Roupa) vem depois, com o nome que tinha');
-    assert.ok(lista.indexOf('placeholder="Ex.: mochila azul com patinhas"') > 0, 'o campo pede para descrever, com exemplo');
-    assert.ok(lista.indexOf('value="casaco vermelho"') > 0, 'o que estava escrito na estadia antiga continua');
-  } finally { run('document.getElementById=__bkPert.ge; ciPertBanco=__bkPert.pb; ciPertSel=__bkPert.ps;'); }
+    // o exemplo da Adriana, mais a comida com vírgula dentro dos parênteses e o número que completa
+    run(`ciPertDoTexto('comida (ração Royal, 1 pacote), cama (rosa, com zíper), sacola verde\\nguia vermelha; bolsinha de remédios de emergência\\nração Golden, 2 pacotes');`);
+    const it = JSON.parse(JSON.stringify(run('ciPertSel')));
+    igual(it.map((p) => [p.k, p.nome]), [['comida', 'Comida (ração Royal, 1 pacote)'], ['cama', 'Cama (rosa, com zíper)'], ['mochila', 'Sacola verde'],
+      ['guia', 'Guia vermelha'], ['remedios', 'Bolsinha de remédios de emergência'], ['comida', 'Ração Golden, 2 pacotes']]);
+    assert.ok(/6 itens para conferir/.test(ctx.__els.ciPertSel.innerHTML), 'mostra como separou: ' + ctx.__els.ciPertSel.innerHTML);
+    // a linha que não mudou é o MESMO item (a Conferência guarda o V verde pelo uid)
+    const uidCama = it[1].uid;
+    run(`ciPertDoTexto('comida (ração Royal, 1 pacote), cama (rosa, com zíper), sacola verde, cobertor xadrez');`);
+    const it2 = JSON.parse(JSON.stringify(run('ciPertSel')));
+    assert.strictEqual(it2[1].uid, uidCama, 'a cama continua sendo a mesma');
+    igual(it2.map((p) => p.k), ['comida', 'cama', 'mochila', 'outro']);
+    // estadia antiga (grade de antes) abre como texto e, sem mexer, volta igual — com os nomes e o uid que tinha
+    run(`ciRenderPert([{uid:'u1',k:'roupa',nome:'Roupa',spec:'casaco vermelho, de lã'},{uid:'u2',k:'mochila',nome:'Mochila',spec:''}]);`);
+    assert.strictEqual(ctx.__els.ciPertTexto.value, 'Roupa — casaco vermelho, de lã\nMochila');
+    run(`ciPertDoTexto(__els.ciPertTexto.value);`);
+    igual(JSON.parse(JSON.stringify(run('ciColetarPert()'))).map((p) => [p.uid, p.k, p.nome, p.spec]),
+      [['u1', 'roupa', 'Roupa', 'casaco vermelho, de lã'], ['u2', 'mochila', 'Mochila', '']]);
+    // o item escrito não trava o salvar como "Outro sem descrição"
+    run(`ciPertSel=[{uid:'x',k:'outro',nome:'Cobertor xadrez',spec:''}];`);
+    assert.ok(!run('ciFaltando()').some((f) => f.f === 'ciCardPert'), 'escrito é descrito');
+  } finally { run('document.getElementById=__bkPert.ge; ciPertSel=__bkPert.ps;'); }
+});
+prova('check-in rápido: a tela na ordem da conversa com o tutor — coleira, alergia, medicação em uso, comida, pertences, datas e assinatura', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const ordem = ['id="ciCardColeira"', '<h2>Restrição / Alergia</h2>', 'id="ciCardMed"', 'id="ciCardAlim"', 'id="ciCardPert"', 'id="ciCardDatas"', 'id="ciCardAssina"'].map((m) => src.indexOf(m));
+  assert.ok(ordem.every((x, i) => x > 0 && (i === 0 || x > ordem[i - 1])), JSON.stringify(ordem));
+  assert.ok(/Está com coleira antipulga ou repelente\?/.test(src) && /id="ciColeiraQual"/.test(src), 'a coleira, com o "Qual?"');
+  assert.ok(/Está em uso de alguma medicação\?/.test(src) && /não<\/strong> é medicação em uso: escreva em Pertences/.test(src), 'a pergunta e o kit de emergência');
+  assert.ok(/O que come e quanto, em CADA refeição/.test(src) && /Quanto trouxe de ração \(g\)/.test(src), 'comida: o que come, quanto e quanto trouxe');
+  assert.ok(src.indexOf('id="ciPertGrid"') < 0 && /id="ciPertTexto"/.test(src), 'pertences: um campo de texto, sem a grade');
+  // a coleira e a resposta da medicação saem no PDF, no resumo e na Conferência
+  for (const onde of ["{k:'Coleira antipulga ou repelente', v:ciColeiraTexto(d.ficha.coleira)}", "L.push('Coleira antipulga ou repelente: '+ciColeiraTexto(d.ficha.coleira))", '<strong>Coleira antipulga ou repelente:</strong>'])
+    assert.ok(src.indexOf(onde) > 0, onde);
+  igual([run(`ciColeiraTexto({tem:'Sim', qual:'Seresto'})`), run(`ciColeiraTexto({tem:'Sim', qual:''})`), run(`ciColeiraTexto({tem:'Não'})`), run('ciColeiraTexto(null)')],
+    ['Sim — Seresto', 'Sim (qual não foi dito)', 'Não', '']);
+});
+provaAsync('check-in rápido: "Está em uso de alguma medicação?" — sem resposta não salva; "Não" não liga alarme e marca os da ficha como "já não toma mais"; "Tudo igual" confirma todos', async () => {
+  run(`__bkMU={sv:segVal, ge:document.getElementById, qsa:document.querySelectorAll, qs:document.querySelector, ce:canEditCheckinMed, qs2:quemSou, za:zAlertao, db:DB, au:audit, cm:carregarAgendaMedTodos};
+    __segMU={}; segVal=function(id){ return __segMU[id]||''; };
+    canEditCheckinMed=function(){ return true; }; quemSou=function(){ return 'Márcia'; }; audit=function(){}; carregarAgendaMedTodos=function(){};
+    __alMU=[]; zAlertao=function(t){ __alMU.push(t); };
+    __linha=function(id, nome){ var faixaBts=[]; var el={dataset:{id:id, daficha:'1', conf:''},
+        querySelector:function(sel){ if(sel==='[data-c=m]') return {value:nome}; if(sel==='.ci-med-conf button[data-cf="ok"]') return faixaBts[0]; if(sel==='.ci-med-conf') return __faixa; if(sel.indexOf('[data-c=')===0) return {value:''}; return null; },
+        querySelectorAll:function(){ return []; }, closest:function(){ return el; }};
+      var __faixa={classList:{toggle:function(){}}, querySelectorAll:function(){ return faixaBts; }, querySelector:function(){ return {textContent:''}; }};
+      faixaBts.push({dataset:{cf:'ok'}, textContent:'Confirmado', classList:{toggle:function(){}}, closest:function(){ return el; }});
+      faixaBts.push({dataset:{cf:'mudou'}, textContent:'Mudou', classList:{toggle:function(){}}, closest:function(){ return el; }});
+      return el; };
+    __linhasMU=[__linha('a1','Apoquel'), __linha('a2','Enalapril')];
+    __elsMU={ciMedEmUso:{}, ciMedTudoIgual:{innerHTML:''}, ciMedEmUsoBox:{style:{}}, 'ci-med-status':{style:{}, textContent:''}, ciMeds:{querySelector:function(){ return {}; }}};
+    document.getElementById=function(id){ return __elsMU[id]||__bkMU.ge.call(document, id); };
+    document.querySelectorAll=function(sel){ return /data-daficha/.test(sel)||/#ciMeds \.magitem/.test(sel) ? __linhasMU : []; };`);
+  try {
+    // sem resposta: o salvar pede, e é a primeira coisa da lista
+    let f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.strictEqual(f[0].f, 'ciMedEmUso', JSON.stringify(f.map((x) => x.t)));
+    // "Tudo igual — confirmar todos (2)" e o toque confirma os dois
+    run(`__segMU.ciMedEmUso='Sim'; ciMedTudoIgualRender();`);
+    assert.ok(/Tudo igual — confirmar todos \(2\)/.test(run('__elsMU.ciMedTudoIgual.innerHTML')));
+    run('ciMedTudoIgual();');
+    igual([run('__linhasMU[0].dataset.conf'), run('__linhasMU[1].dataset.conf')], ['ok', 'ok']);
+    assert.strictEqual(run('__elsMU.ciMedTudoIgual.innerHTML'), '', 'confirmados, o botão sai');
+    // sem permissão: aviso na página (não o alert nativo) e nada muda
+    run(`__linhasMU[0].dataset.conf=''; canEditCheckinMed=function(){ return false; }; ciMedTudoIgual();`);
+    assert.ok(run('__alMU.length') === 1 && /SÓ QUEM CUIDA DA MEDICAÇÃO/.test(run('__alMU[0]')) && run('__linhasMU[0].dataset.conf') === '');
+    run('canEditCheckinMed=function(){ return true; };');
+    // "Não": nada vai para a estadia nem para o alarme, e a validação da ficha não cobra
+    run(`__segMU.ciMedEmUso='Não';`);
+    igual(JSON.parse(JSON.stringify(run('ciColetarMeds()'))), {});
+    igual(JSON.parse(JSON.stringify(run('ciValidarMeds({})'))), []);
+    igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Apoquel' }, { id: 'a2', nome: 'Enalapril' }]);
+    f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.ok(!f.some((x) => x.f === 'ciMedEmUso' || x.f === 'ciMeds' || x.f === 'ciGate'), JSON.stringify(f.map((x) => x.t)));
+    // ao salvar: "já não toma mais", terminando ONTEM (o despertador não chama hoje), com quem e o motivo
+    run(`__gravMU={}; DB={ref:function(p){ return {
+        once:function(){ return Promise.resolve({val:function(){ return {nome:p.indexOf('a1')>0?'Apoquel':'Enalapril', continuo:true, historico:[{acao:'Criou'}]}; }}); },
+        update:function(v){ __gravMU[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};`);
+    const feitos = await run(`ciMedMarcarParou('bia__lola', ciMedNaoEmUso())`);
+    igual(JSON.parse(JSON.stringify(feitos)), ['Apoquel', 'Enalapril']);
+    const g = run(`__gravMU['auaulandia/medicacao-agenda/bia__lola/itens/a1']`);
+    const ontem = run(`addDiasISO(zHojeISO(),-1)`);
+    assert.ok(g.continuo === false && g.dataFim === ontem && g.paradoEm.quem === 'Márcia' && /não está em uso/.test(g.paradoEm.motivo)
+      && g.historico.length === 2 && /Parou de tomar/.test(g.historico[1].acao), JSON.stringify(g));
+    assert.ok(!run(`medVigenteEm(__gravMU['auaulandia/medicacao-agenda/bia__lola/itens/a1'], zHojeISO())`), 'hoje o alarme não toca');
+    // "Sim" sem remédio escrito: pede o remédio ou o Não
+    run(`__segMU.ciMedEmUso='Sim'; __linhasMU=[];`);
+    f = JSON.parse(JSON.stringify(run('ciFaltando()')));
+    assert.ok(f.some((x) => x.f === 'ciMeds' && /ou toque em Não/.test(x.t)), JSON.stringify(f.map((x) => x.t)));
+  } finally { run(`segVal=__bkMU.sv; document.getElementById=__bkMU.ge; document.querySelectorAll=__bkMU.qsa; document.querySelector=__bkMU.qs; canEditCheckinMed=__bkMU.ce; quemSou=__bkMU.qs2; zAlertao=__bkMU.za; DB=__bkMU.db; audit=__bkMU.au; carregarAgendaMedTodos=__bkMU.cm;`); }
+});
+prova('check-in rápido (QA37): responder um remédio tira o vermelho SÓ dele; o problema de cada remédio fica na linha dele', () => {
+  run(`__bkZ={zm:Z_FALTA_MARCADOS, qsa:document.querySelectorAll, qs:document.querySelectorAll};
+    __cls=function(){ var c={}; return {add:function(x){ c[x]=1; }, remove:function(x){ delete c[x]; }, contains:function(x){ return !!c[x]; }, _c:c}; };
+    __a={classList:__cls(), nextElementSibling:null, contains:function(o){ return o===__a; }};
+    __b={classList:__cls(), nextElementSibling:null, contains:function(o){ return o===__b; }};
+    __a.classList.add('z-falta'); __b.classList.add('z-falta');
+    Z_FALTA_MARCADOS=[__a, __b];
+    __btn={dataset:{zLabel:'Salvar'}, textContent:'Faltam 2 · Salvar'};
+    document.querySelectorAll=function(sel){ return sel==='.z-btn-falta' ? [__btn] : []; };
+    zLimparFaltaEm(__a);`);
+  try {
+    assert.ok(!run(`__a.classList.contains('z-falta')`) && run(`__b.classList.contains('z-falta')`), 'o outro bloqueio continua vermelho');
+    assert.strictEqual(run('__btn.textContent'), 'Falta 1 · Salvar');
+    // o problema com o nome do remédio aponta para a linha dele
+    run(`__lin=[{querySelector:function(){ return {value:'Apoquel'}; }},{querySelector:function(){ return {value:''}; }}];
+      document.querySelectorAll=function(sel){ return /magitem/.test(sel) ? __lin : []; };`);
+    assert.ok(run(`ciMedLinhaDoProblema('"Apoquel": toque na MEDIDA (comprimido, ml, gota, pomada...).')===__lin[0]`));
+    assert.ok(run(`ciMedLinhaDoProblema('escreva o NOME do medicamento ou suplemento por extenso.')===__lin[1]`));
+    assert.ok(run(`ciMedLinhaDoProblema('outra frase')===null`));
+  } finally { run('Z_FALTA_MARCADOS=__bkZ.zm; document.querySelectorAll=__bkZ.qsa;'); }
 });
 prova('na Conferência, Comida é item crítico (como a ração e a comida natural antigas); Remédios não vira trava nova (QA19 B5)', () => {
   run(`__bkCf=cfEstadia; cfEstadia={pertences:[{uid:'a',k:'comida',nome:'Comida',spec:'ração'},{uid:'b',k:'remedios',nome:'Remédios',spec:'Apoquel'},
