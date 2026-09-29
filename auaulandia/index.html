@@ -34534,13 +34534,26 @@
       return null;
     });
   }
+  // UMA ESCRITA POR VEZ NA PONTE (Adriana, 29/set/2026: o Ozzy e a Charlotte lançados um
+  // atrás do outro, e só a Charlotte chegou à TV). A ponte grava na "primeira célula vazia do
+  // dia": dois pedidos ao mesmo tempo escolhem a MESMA célula, e o segundo apaga o primeiro —
+  // os dois respondendo ok. Neste aparelho, lançar e tirar entram numa fila (o automático
+  // também, que antes mandava tudo junto); entre aparelhos, quem resolve é a trava da ponte
+  // (integracao-daycare/Codigo.gs, versão 7) e a conferência que repõe o que sumiu.
+  var DASH_PONTE_FILA=Promise.resolve();
   function dashPonteChamar(corpo){
+    if(!(corpo && /^(lancar|remover)$/.test(String(corpo.acao||'')))) return dashPonteChamarJa(corpo);
+    var vez=DASH_PONTE_FILA.then(function(){ return dashPonteChamarJa(corpo); });
+    DASH_PONTE_FILA=vez.then(function(){ return null; }, function(){ return null; });   // falha de um não trava a fila
+    return vez;
+  }
+  function dashPonteChamarJa(corpo){
     if(!(DASH_PONTE&&DASH_PONTE.url)){
       // Ainda não chegou do banco: busca agora e refaz a chamada. Nunca mais responder
       // "não está configurada" para uma ponte que está.
       return dashPontePronta().then(function(c){
         if(!c) return {ok:false, erro:'a ponte com a planilha não está configurada'};
-        return dashPonteChamar(corpo);
+        return dashPonteChamarJa(corpo);
       });
     }
     var c=DASH_PONTE||{};
@@ -42012,7 +42025,46 @@
         });
         novoRegistro[k]=quer;
       });
+      // 3) TODO LANÇAMENTO DO DIA ESTÁ NA PLANILHA (Adriana, 29/set/2026: "reveja todos os
+      // lançamentos do dia, porque isso é obrigatório que a gente tenha no dashboard"). O que
+      // a recepção lançou e não está na coluna dele — duas gravações na mesma célula, uma
+      // linha apagada na planilha, o automático de antes — volta, com a hora, pelo mesmo
+      // caminho do "reenviar" (dashEspelhar, que regrava o planilha_ok). Lançamento de menos de
+      // 2 minutos fica de fora: o envio dele pode estar a caminho. Confere pelo FILHOt (a chave
+      // do nome): se ele já está na coluna, com outro texto, não entra uma segunda linha.
+      var reporMao=[];
+      if(maoLida){
+        var colNorm={};
+        Object.keys(naPlanilha).forEach(function(t){ colNorm[jsNorm(t)]=(colNorm[jsNorm(t)]||[]).concat(naPlanilha[t]||[]); });
+        Object.keys(r[2]||{}).forEach(function(kk){
+          var it=(typeof dashItem==='function')?dashItem(kk):null;
+          if(!it || !dashVaiParaPlanilha(it)) return;
+          var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
+          var temCh={}; (colNorm[jsNorm(it.col)]||[]).forEach(function(v){ temCh[dashAutoNomeChave(v)]=1; });
+          Object.keys(itens).forEach(function(id){
+            var reg=itens[id]||{};
+            if(!String(reg.valor||'').trim()) return;
+            if((Date.now()-(Number(reg.ts)||0)) < 120000) return;
+            var ch=dashAutoNomeChave(reg.valor);
+            if(!ch || temCh[ch]) return;
+            temCh[ch]=1;
+            reporMao.push({k:kk, id:id, reg:reg});
+          });
+        });
+      }
       return Promise.all(tarefas).then(function(){
+        return reporMao.reduce(function(fila, x){
+          return fila.then(function(){
+            return Promise.resolve(dashEspelhar(x.k, x.id, x.reg, 'lancar', iso)).then(function(y){
+              if(y && y.ok){
+                resumo.posto++;
+                try{ if(typeof audit==='function') audit('dashboard-daycare','a conferência repôs na planilha '+(x.reg.valor||'')+' ('+x.k+', '+iso+'): o lançamento estava no app e tinha sumido da planilha',{pet:x.reg.valor||''}); }
+                catch(e){} /* silencioso de propósito: rastro — o audit() tem bolso próprio */
+              }
+            }, function(e){ _logFalhaGrav('conferência: repor '+(x.reg.valor||'')+' na planilha', e); });
+          });
+        }, Promise.resolve());
+      }).then(function(){
         Object.keys(manterNoRegistro).forEach(function(k){ novoRegistro[k]=(novoRegistro[k]||[]).concat(manterNoRegistro[k]); });
         novoRegistro._ts=Date.now();
         novoRegistro._quem=(typeof quemSou==='function'?quemSou():'-');

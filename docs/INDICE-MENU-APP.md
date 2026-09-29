@@ -147,6 +147,24 @@
 - **Vale para as quatro colunas do automático que também se lançam à mão:** Banho, Reposição, Faltas Avisadas e Adaptação.
 - **Onde está no código:** `dashAutoSincronizar`, que lê `daycare/dashboard/{dia}` junto com a planilha e o registro, e o passo "2) foi este mecanismo que pôs e não vale mais".
 
+### (AC) Todo lançamento do dia chega à TV (29/set/2026)
+
+> **Adriana, 29/set/2026 (fotos de Lançamentos do dia e da TV: Banho com 4 no app e 2 na TV):** *"Reveja todos os lançamentos do dia, porque isso é obrigatório que a gente tenha no dashboard."*
+
+| Onde falhava | Antes | Agora |
+|---|---|---|
+| Dois lançamentos quase juntos (o Ozzy e a Charlotte, 15:30) | a ponte grava na "primeira célula vazia do dia": os dois pedidos escolhiam a mesma célula, o segundo apagava o primeiro, e os dois respondiam ok | neste aparelho, lançar e tirar vão **um de cada vez** (`dashPonteChamar`, fila); entre aparelhos, a ponte tem uma **trava** (versão 7 de `integracao-daycare/Codigo.gs`, que precisa ser publicada) |
+| O automático mandava vários banhos fixos ao mesmo tempo | a mesma corrida | entram na mesma fila |
+| Um lançamento do app que sumiu da planilha, por qualquer motivo | ficava fora da TV sem ninguém saber: o app dizia que tinha ido | a **conferência** (a cada 5 a 10 minutos, com algum aparelho aberto, ou pelo botão **Conferir a planilha agora**) compara os Lançamentos do dia de hoje e dos próximos 14 dias com a planilha e manda de novo o que falta, com a hora |
+
+- **O que a conferência não repõe:**
+  - lançamento de menos de 2 minutos, cujo envio pode estar a caminho;
+  - FILHOt que já está na coluna com outro texto (não entra uma segunda linha);
+  - item que não vai para a planilha (Pernoite).
+- **O que foi tirado pelo app** ("tirar", ou "Liberar o horário" do banho de quem faltou) sai também dos Lançamentos: a conferência não põe de volta. Quem apaga uma linha direto na planilha vê a linha voltar; o caminho certo é o "tirar" do app.
+- **Rastro:** cada reposição grava "a conferência repôs na planilha …" na auditoria.
+- **Onde está no código:** `dashPonteChamar` (fila) e `dashPonteChamarJa`; `dashAutoSincronizar`, passo 3; `integracao-daycare/Codigo.gs`, `_umPorVez`.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

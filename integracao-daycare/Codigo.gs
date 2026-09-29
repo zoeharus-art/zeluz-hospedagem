@@ -1,6 +1,13 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
+ * Versão 7 (29/set/2026) — UMA ESCRITA POR VEZ. lancar() grava na "primeira célula vazia
+ *                           do dia": dois pedidos ao mesmo tempo (dois aparelhos, ou o
+ *                           automático junto com a recepção) escolhiam a MESMA célula, e o
+ *                           segundo apagava o primeiro, os dois respondendo ok. Foi assim
+ *                           que o Ozzy sumiu da TV com a Charlotte no lugar (Adriana,
+ *                           29/set/2026). Lançar e tirar agora passam por uma trava
+ *                           (LockService) e gravam antes de soltá-la.
  * Versão 6 (21/set/2026) — coluna "Troca de Escova". A escova de dentes do FILHOt é
  *                           prevenção, e a recepção precisa lançá-la no dia, como já
  *                           lança a troca de coleira. Sem hora: o que importa é que foi
@@ -137,12 +144,26 @@ function doPost(e) {
     if (acao === 'diagnostico')     return _json(diagnostico());
     if (acao === 'removerColunas')  return _json(removerColunas(d));
     if (acao === 'criarMeses')      return _json(criarMeses(d));
-    if (acao === 'lancar')          return _json(lancar(d));
-    if (acao === 'remover')         return _json(remover(d));
+    if (acao === 'lancar')          return _json(_umPorVez(function () { return lancar(d); }));
+    if (acao === 'remover')         return _json(_umPorVez(function () { return remover(d); }));
     if (acao === 'lerDia')          return _json(lerDia(d));
     return _json({ ok: false, erro: 'acao desconhecida: ' + acao });
   } catch (err) {
     return _json({ ok: false, erro: String(err) });
+  }
+}
+
+/** Uma escrita por vez (versão 7): espera até 25 s pela vez; sem a vez, diz que a planilha
+ *  está ocupada — o app mostra "NÃO foi para a TV" e a conferência tenta de novo. */
+function _umPorVez(fn) {
+  var trava = LockService.getScriptLock();
+  if (!trava.tryLock(25000)) return { ok: false, erro: 'a planilha está ocupada; tente de novo em instantes' };
+  try {
+    var r = fn();
+    SpreadsheetApp.flush();   // grava ANTES de soltar: o próximo pedido já lê a célula ocupada
+    return r;
+  } finally {
+    trava.releaseLock();
   }
 }
 

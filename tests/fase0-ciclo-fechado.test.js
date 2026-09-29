@@ -3442,6 +3442,73 @@ provaAsync('banho fixo que deixou de valer: o automático não tira a linha que 
     igual(run(`__gravAS['daycare/dashboard-auto/${dia}'].banho`), ['Cristal/Yorkshire (SEM SHAMPOO)'], 'a próxima passada tenta de novo');
   } finally { run('dashPonteChamar=__bkAS.pc; dashAutoCalcular=__bkAS.calc; DB=__bkAS.db; audit=__bkAS.au;'); }
 });
+// ================================================================== todo lançamento do dia está na planilha
+console.log('\nTodo lançamento do dia chega à TV: uma escrita por vez e a conferência repõe o que sumiu (Adriana, 29/set/2026)');
+provaAsync('neste aparelho, lançar e tirar vão um de cada vez para a ponte (o Ozzy e a Charlotte não caem na mesma célula); ler não espera na fila', async () => {
+  run(`__bkPF={ja:dashPonteChamarJa}; __ordemPF=[]; __resPF=[];
+    dashPonteChamarJa=function(c){ __ordemPF.push('começa '+c.valor); return new Promise(function(res){ __resPF.push(function(){ __ordemPF.push('termina '+c.valor); res({ok:true}); }); }); };`);
+  try {
+    run(`__p1=dashPonteChamar({acao:'lancar', valor:'Ozzy'}); __p2=dashPonteChamar({acao:'lancar', valor:'Charlotte'}); __p3=dashPonteChamar({acao:'lerDia', valor:'leitura'});`);
+    await tick();
+    igual(run('__ordemPF').slice().sort(), ['começa Ozzy', 'começa leitura'], 'a Charlotte espera o Ozzy terminar; a leitura não espera');
+    // cada "começa" empilhou o seu "termina" na mesma ordem: termina o do Ozzy
+    run("__resPF[__ordemPF.indexOf('começa Ozzy')]();"); await tick();
+    igual(run('__ordemPF').slice(-2), ['termina Ozzy', 'começa Charlotte'], 'a Charlotte só começa depois de o Ozzy terminar');
+    // um pedido que falha não trava a fila
+    run(`dashPonteChamarJa=function(c){ __ordemPF.push('falha '+c.valor); return Promise.reject(new Error('x')); };`);
+    run('__resPF.forEach(function(f){ try{ f(); }catch(e){} });'); await tick();
+    run(`__p4=dashPonteChamar({acao:'remover', valor:'Cristal'}).catch(function(){}); __p5=dashPonteChamar({acao:'lancar', valor:'Repolho'}).catch(function(){});`);
+    await tick();
+    assert.ok(run('__ordemPF').includes('falha Cristal') && run('__ordemPF').includes('falha Repolho'), JSON.stringify(run('__ordemPF')));
+  } finally { run('dashPonteChamarJa=__bkPF.ja; DASH_PONTE_FILA=Promise.resolve();'); }
+});
+provaAsync('a conferência repõe na planilha o lançamento à mão que sumiu (com a hora), uma vez por FILHOt, e deixa em paz o recém-lançado e o que já está lá', async () => {
+  run(`__bkRM={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit, es:dashEspelhar};
+    audit=function(){}; __espRM=[];
+    dashEspelhar=function(k,id,reg,acao,dia){ __espRM.push({k:k, id:id, valor:reg.valor, hora:reg.hora, acao:acao, dia:dia}); return Promise.resolve({ok:true}); };
+    dashPonteChamar=function(c){ if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__planRM}); return Promise.resolve({ok:true}); };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o._horas={banho:{}}; return o; };
+    __bancoRM={}; __gravRM={};
+    DB={ref:function(p){ return {
+      once:function(){ var v=__bancoRM[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __gravRM[p]=v; return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-09-29', velho = 'Date.now()-10*60000';
+    run(`__planRM={'Banho':['Charlotte/Norfolk (SEM SHAMPOO)', 'Repolho - Zelosinha/SRD (SEM SHAMPOO)'], 'Veterinário':[]};
+      __bancoRM['daycare/dashboard/${dia}']={
+        banho:{L1:{valor:'Ozzy/Norfolk (SEM SHAMPOO)', hora:'15:30', ts:${velho}}, L2:{valor:'Charlotte/Norfolk (SEM SHAMPOO)', hora:'15:30', ts:${velho}},
+               L3:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'16:00', ts:${velho}}, L4:{valor:'Repolho - Zelosinha/SRD', hora:'11:00', ts:${velho}},
+               L5:{valor:'Bolt/SRD', hora:'17:00', ts:Date.now()}, L6:{valor:'Cristal/Yorkshire (SEM SHAMPOO)', hora:'16:00', ts:${velho}}},
+        vet:{V1:{valor:'Mel/SRD', hora:'10:00', ts:${velho}}},
+        pernoite:{P1:{valor:'Toshi/SRD', ts:${velho}}}};`);
+    const r = await run(`dashAutoSincronizar('${dia}')`);
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const esp = run('__espRM').map((x) => [x.k, x.valor, x.hora, x.acao, x.dia]).sort();
+    igual(esp, [['banho', 'Cristal/Yorkshire (SEM SHAMPOO)', '16:00', 'lancar', dia], ['banho', 'Ozzy/Norfolk (SEM SHAMPOO)', '15:30', 'lancar', dia],
+      ['vet', 'Mel/SRD', '10:00', 'lancar', dia]],
+      'volta: Ozzy, Cristal (uma vez só) e o veterinário da Mel; ficam: Charlotte (está lá), Repolho (está lá com outro texto), Bolt (lançado agora) e a pernoite (não vai para a planilha)');
+    assert.ok(r.posto >= 3, 'o resumo conta o que voltou: ' + JSON.stringify(r));
+  } finally { run('dashPonteChamar=__bkRM.pc; dashAutoCalcular=__bkRM.calc; DB=__bkRM.db; audit=__bkRM.au; dashEspelhar=__bkRM.es;'); }
+});
+prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes de soltar a trava; sem a vez, diz que está ocupada', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'integracao-daycare', 'Codigo.gs'), 'utf8');
+  assert.ok(/acao === 'lancar'\)\s+return _json\(_umPorVez\(function \(\) \{ return lancar\(d\); \}\)\)/.test(src), 'lancar passa pela trava');
+  assert.ok(/acao === 'remover'\)\s+return _json\(_umPorVez\(function \(\) \{ return remover\(d\); \}\)\)/.test(src), 'remover passa pela trava');
+  const ctxG = vm.createContext({ console, JSON, String, Object, Array, Math, Date, Number, RegExp });
+  vm.runInContext(src, ctxG);
+  const log = [];
+  ctxG.SpreadsheetApp = { flush() { log.push('flush'); } };
+  ctxG.LockService = { getScriptLock() { return { tryLock(ms) { log.push('tryLock ' + ms); return ctxG.__vez; }, releaseLock() { log.push('solta'); } }; } };
+  ctxG.__vez = true;
+  const r1 = vm.runInContext("_umPorVez(function(){ return {ok:true, linha:7}; })", ctxG);
+  assert.ok(r1.ok && r1.linha === 7, JSON.stringify(r1));
+  assert.deepStrictEqual(log.splice(0), ['tryLock 25000', 'flush', 'solta']);
+  assert.throws(() => vm.runInContext("_umPorVez(function(){ throw new Error('planilha'); })", ctxG));
+  assert.deepStrictEqual(log.splice(0), ['tryLock 25000', 'solta'], 'erro no meio: a trava é solta do mesmo jeito');
+  ctxG.__vez = false;
+  const r3 = vm.runInContext("_umPorVez(function(){ return {ok:true}; })", ctxG);
+  assert.ok(r3.ok === false && /ocupada/.test(r3.erro), JSON.stringify(r3));
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
