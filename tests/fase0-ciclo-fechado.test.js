@@ -3333,7 +3333,7 @@ console.log('\nOrçamento fechado que a planilha recusou: a tela diz o motivo (A
 provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página no lugar dos dados, outro) e orienta a reenviar sem duplicar', async () => {
   run(`__bkOP={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlertao, fe:(typeof fetch!=='undefined'?fetch:undefined)};
     ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Carolina', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000}};
-    orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'qualquer'};
+    orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'tk-SEGREDO-4471'};
     __upOP=[]; DB={ref:function(p){ return {update:function(v){ __upOP.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
     __alOP=[]; zAlertao=function(t,l,op){ __alOP.push({t:t, l:l, r:(op&&op.rodape)||''}); };
     __respOP=''; __corpoOP=[]; fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(__respOP); }}); };`);
@@ -3344,11 +3344,18 @@ provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página 
     assert.ok(/^Frida\/Ana Carolina: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script\.$/.test(r.al.l[0]), r.al.l[0]);
     assert.ok(/salvo como FECHADO/.test(r.al.l[1]) && /reenviar/.test(r.al.l[1]) && /duas vezes/.test(r.al.r), JSON.stringify(r.al));
     assert.ok(r.up.v.planilha_ok === false && /palavra-chave/.test(r.up.v.planilha_msg), 'o motivo fica gravado para a lista (NÃO entrou na planilha — motivo)');
-    assert.strictEqual(run('__corpoOP[0].token'), 'qualquer', 'a palavra-chave vai no pedido');
+    assert.strictEqual(run('__corpoOP[0].token'), 'tk-SEGREDO-4471', 'a palavra-chave vai no pedido');
     r = await caso(JSON.stringify({ ok: false, erro: 'PONTE_SENHA não configurada nas Propriedades do script' }));
     assert.ok(/falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script/.test(r.al.l[0]), r.al.l[0]);
     r = await caso('<!DOCTYPE html><html><body>Autorização necessária</body></html>');
     assert.ok(/respondeu com uma página, e não com os dados/.test(r.al.l[0]), r.al.l[0]);
+    r = await caso('\n  <html><body>Entrar com o Google</body></html>');
+    assert.ok(/respondeu com uma página, e não com os dados/.test(r.al.l[0]), 'página com linha em branco antes (QA38 F4): ' + r.al.l[0]);
+    // A resposta que repete o pedido não mostra a palavra-chave, nem na tela nem na lista (QA38 F5)
+    r = await caso('{"token":"tk-SEGREDO-4471","acao":"reservar"} rejeitado');
+    assert.ok(/•••/.test(r.al.l[0]) && !/tk-SEGREDO-4471/.test(JSON.stringify(r)), 'nem na janela, nem no planilha_msg: ' + JSON.stringify(r));
+    r = await caso(JSON.stringify({ ok: false, erro: 'Limite diário excedido!' }));
+    assert.ok(/: Limite diário excedido!$/.test(r.al.l[0]), 'sem ponto depois da exclamação (QA38 F6): ' + r.al.l[0]);
     r = await caso(JSON.stringify({ ok: false, erro: 'Exception: planilha trancada.' }));
     assert.ok(/^Frida\/Ana Carolina: Exception: planilha trancada\.$/.test(r.al.l[0]), 'outro motivo aparece como veio, sem ponto dobrado: ' + r.al.l[0]);
     r = await caso('');
@@ -3356,7 +3363,24 @@ provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página 
     // deu certo: igual a antes
     r = await caso(JSON.stringify({ ok: true, calendario: '3 noites', financeiro: 'linha 12' }));
     assert.ok(/LANÇADO NA PLANILHA/.test(r.al.t) && r.up.v.planilha_ok === true && r.up.v.planilha_msg === 'Frida/Ana Carolina: 3 noites · linha 12', JSON.stringify(r));
-  } finally { run(`ORC_LISTA_CACHE=__bkOP.oc; orcSheetsCfg=__bkOP.sc; DB=__bkOP.db; zAlertao=__bkOP.za; fetch=__bkOP.fe;`); }
+    // Dois FILHOts: um entrou, o outro foi recusado — cada um com o SEU motivo (QA38 F4)
+    run(`ORC_LISTA_CACHE.duas={pets:[{nome:'Nala', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000},{nome:'Irma', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000}], entrada:'2026-10-01', saida:'2026-10-03', noites:2, total_cent:60000};
+      __alOP=[]; __upOP=[]; __filaOP=[${JSON.stringify(JSON.stringify({ ok: true, calendario: '2 noites', financeiro: 'linha 20' }))}, ${JSON.stringify(JSON.stringify({ ok: false, erro: 'Exception: Lock timeout' }))}];
+      fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); var t=__filaOP.shift(); return Promise.resolve({text:function(){ return Promise.resolve(t); }}); };
+      orcEnviarPlanilha('duas');`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    assert.strictEqual(run('__alOP[0].l[0]'), 'Nala/Bia: 2 noites · linha 20 | Irma/Bia: Exception: Lock timeout.', run('__alOP[0].l[0]'));
+    // O cancelamento recusado também diz o motivo (QA38 F1)
+    run(`__alOP=[]; __upOP=[]; orcNoitesDeOutraReserva=(function(f){ __bkOP.nr=f; return function(){ return []; }; })(orcNoitesDeOutraReserva);
+      orcCarregarLista=(function(f){ __bkOP.cl=f; return function(){}; })(orcCarregarLista);
+      fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(${JSON.stringify(JSON.stringify({ ok: false, erro: 'token invalido' }))}); }}); };
+      orcTirarDaPlanilha('frida', 'Márcia', '29/09/2026');`);
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    assert.ok(/PLANILHA RECUSOU/.test(run('__alOP[0].t')) && /^Frida\/Ana Carolina: a palavra-chave guardada no app não bate/.test(run('__alOP[0].l[0]')), JSON.stringify(run('__alOP[0]')));
+    assert.ok(/palavra-chave/.test(run('__upOP[0].v.cancelado_planilha_msg')), 'o motivo fica gravado no cancelamento');
+    // Em nenhum lugar a palavra-chave aparece: nem nas janelas, nem no que foi gravado
+    assert.ok(!/tk-SEGREDO-4471/.test(JSON.stringify(run('__alOP')) + JSON.stringify(run('__upOP'))), 'a palavra-chave não vaza');
+  } finally { run(`ORC_LISTA_CACHE=__bkOP.oc; orcSheetsCfg=__bkOP.sc; DB=__bkOP.db; zAlertao=__bkOP.za; fetch=__bkOP.fe; if(__bkOP.nr) orcNoitesDeOutraReserva=__bkOP.nr; if(__bkOP.cl) orcCarregarLista=__bkOP.cl;`); }
 });
 // ================================================================== queda de conexão não é recusa
 console.log('\nQueda de conexão com a planilha não é "a planilha recusou" (Adriana, 29/set/2026, banho fixo da Cristal)');

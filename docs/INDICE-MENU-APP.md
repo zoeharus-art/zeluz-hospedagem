@@ -113,6 +113,13 @@
 
 - **Onde está no código:** `orcPonteMotivo` e `orcEnviarPlanilha`; a ponte é `integracao-planilha/Codigo.gs` (`doPost` devolve `{ok:false, erro}`).
 - **O conserto da ponte é na configuração** (a Gestão): Configurações › Valores da hospedagem › Ponte com a planilha (Testar agora, Palavra-chave, Salvar ponte) e, no Apps Script, Propriedades do script › PONTE_SENHA.
+- **O Testar agora confere só a URL.** Ele não manda a palavra-chave: com a palavra-chave errada ou sem a PONTE_SENHA, ele diz "✅ A ponte está de pé" do mesmo jeito. A palavra-chave só se confirma no **reenviar** do orçamento.
+- **O reenviar não duplica** o FILHOt que já tinha entrado: a ponte responde "já estava lá". Só duplica se alguém lançou à mão com outro texto.
+- **Ajustes do QA38:**
+  - o **cancelamento** recusado também diz o motivo;
+  - se a resposta repetir a palavra-chave, ela aparece como •••;
+  - "excedido!" não ganha ponto depois da exclamação;
+  - o aviso de ponte sem configuração aponta para Configurações › Valores da hospedagem.
 
 ### (AA) Queda de conexão com a planilha não é "a planilha recusou" (29/set/2026)
 

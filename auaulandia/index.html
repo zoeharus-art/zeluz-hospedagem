@@ -15267,7 +15267,9 @@
     }))
       .then(function(js){
         var ok=js.every(function(j){ return j && j.ok; });
-        var msg=js.map(function(j,i){ return nomes[i]+': '+[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '); }).join(' | ');
+        // O cancelamento recusado diz o motivo, como o fechamento (QA38 F1): a palavra-chave
+        // errada que travou a Frida travaria o próximo cancelamento com a linha vazia.
+        var msg=js.map(function(j,i){ return nomes[i]+': '+((j&&j.ok)?[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '):orcPonteMotivo(j, cfg.token)); }).join(' | ');
         DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:ok, cancelado_planilha_msg:msg}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcTirarDaPlanilha)', e); });
         orcCarregarLista();
         if(ok) zAlertao('✅ RESERVA CANCELADA',
@@ -15397,13 +15399,20 @@
   // Frida): a tela dizia só "a planilha recusou — avise a Gestão para conferir a ponte", e o
   // motivo, que a ponte manda em `erro`, se perdia. Sem o motivo, a Gestão não sabe se é a
   // palavra-chave, a URL ou a autorização do Apps Script (integracao-planilha/Codigo.gs).
-  function orcPonteMotivo(j){
+  // `token`: a palavra-chave guardada no app. Se a resposta a repetir (uma URL errada que
+  // devolve o pedido), ela sai mascarada — o motivo vai para a tela e para a lista (QA38 F5).
+  function orcPonteMotivo(j, token){
     if(!j) return 'a ponte não respondeu.';
     var e=String(j.erro||'').trim();
     if(/token invalido/i.test(e)) return 'a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.';
     if(/PONTE_SENHA/.test(e)) return 'falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script.';
     if(/^</.test(e)) return 'a ponte respondeu com uma página, e não com os dados: a URL mudou ou o Apps Script pede nova autorização.';
-    if(e) return e.replace(/[.\s]+$/,'')+'.';
+    if(e){
+      var tk=String(token||'');
+      if(tk.length>=6) e=e.split(tk).join('•••');
+      e=e.replace(/[.\s]+$/,'');
+      return /[!?…]$/.test(e)?e:(e+'.');   // "excedido!" não vira "excedido!." (QA38 F6)
+    }
     var det=[j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ');
     return det || 'a ponte respondeu com erro, sem dizer o motivo.';
   }
@@ -15413,7 +15422,7 @@
     if(!cfg.url){
       zAlertao('FECHADO — MAS A PLANILHA NÃO FOI PREENCHIDA',
         ['A ponte com a planilha ainda não foi configurada neste sistema.'],
-        {botao:'Entendi', rodape:'Enquanto isso, lance à mão nas abas Hospedagem e Calendario Hospedagem para Dash. Para ligar de vez: Orçamento → Tabela e feriados → Ponte com a planilha.'});
+        {botao:'Entendi', rodape:'Enquanto isso, lance à mão nas abas Hospedagem e Calendario Hospedagem para Dash. Para ligar de vez: Configurações › Valores da hospedagem › Ponte com a planilha.'});
       return;
     }
     // ===== CADA FILHOt, UMA LINHA (Adriana, 11/set/2026) ==========================
@@ -15454,7 +15463,7 @@
       .then(function(js){
         var ok=js.every(function(j){ return j && j.ok; });
         var msg=js.map(function(j,i){
-          return (nomes[i]||'')+': '+((j && j.ok) ? [j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ') : orcPonteMotivo(j));
+          return (nomes[i]||'')+': '+((j && j.ok) ? [j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ') : orcPonteMotivo(j, cfg.token));
         }).join(' | ');
         DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
         if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
