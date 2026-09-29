@@ -301,13 +301,21 @@
 
 | Onde | Antes | Agora |
 |---|---|---|
-| Configurações › Prevenção | só as coleiras | **"Carrapaticida — cada produto protege quantos dias?"**: Pipeta 30, Bravecto 90, Credelli 30, Simparic 35, Nexgard 30, cada um com o número editável; **Produto novo** + **Protege quantos dias?** acrescenta; o produto novo pode sair da lista. Fica no rastro (`config-prevencao`) |
+| Configurações › Prevenção | só as coleiras | **"Carrapaticida — cada produto protege quantos dias?"**: Pipeta 30, Bravecto 90, Credelli 30, Simparic 35, Nexgard 30, cada um com o número editável; **Produto novo** + **Protege quantos dias?** acrescenta; o produto novo pode sair da lista (a duração fica guardada para as fichas que já têm). Fica no rastro (`config-prevencao`) |
 | Ficha › Prevenção › Ectoparasitas | quatro comprimidos fixos no código | os comprimidos da lista, com a duração no botão ("Bravecto · 90d") |
-| Painel rápido (toque no item em Prevenção, Vencimentos e Hoje na Zêluz) | a conta usava o produto da ficha; sem produto, **30 dias** (o Bravecto era cobrado 2 meses antes) | **"Qual produto?"**, com a duração na frente ("Bravecto · 90 dias"), já com o da ficha escolhido. O produto vai para a ficha junto com a data. Sem produto na tela e na ficha, o painel pede o produto e não grava. "Outro" pede quantos dias |
+| Painel rápido (toque no item em Prevenção, Vencimentos e Hoje na Zêluz) | a conta usava o produto da ficha; sem produto, **30 dias** (o Bravecto era cobrado 2 meses antes) | **"Qual produto?"**, com a duração na frente ("Bravecto · 90 dias"), já com o da ficha escolhido. O produto vai para a ficha junto com a data. Sem produto na tela e na ficha, o painel pede o produto e não grava; se o tutor não sabe, "Não sei qual foi" conta o prazo mais curto. "Outro" pede quantos dias |
 | Lançamentos do dia › Carrapaticida | quanto foi dado e observação | **"Qual produto?"** (opcional) com a duração na frente; escolhido, entra no texto da planilha e da TV |
 
-- **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora em `daycare/config/prevencao/ectos`.
-- **Harness:** duas checagens mudaram de propósito. A v-16 passa a exigir a lista (`ectos`) no mesmo `set` das coleiras. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
+- **Ajustes do QA41:**
+  - **Nome do produto novo:** só letras, números, espaço, "-" e "+". O que sobrar (ponto, barra, aspas, apóstrofo, parênteses, "<") é dito na tela ("Tire: …"), nunca apagado em silêncio: esses caracteres quebravam o botão da ficha, o botão dos Lançamentos do dia ou a leitura da planilha. "bravecto" é o Bravecto de sempre, não um segundo produto.
+  - **Tirar da lista não apaga:** o produto some das escolhas, mas a duração continua valendo para as fichas que já têm. Na ficha e no painel ele aparece marcado "(saiu da lista)". Em Configurações aparece a linha "Fora da lista"; para voltar, basta escrever o nome em "Produto novo".
+  - **"Não sei qual foi"** no painel rápido: conta o prazo mais curto da lista (hoje, 30 dias) e não grava produto na ficha. Cobrar cedo protege; cobrar tarde deixa o FILHOt sem proteção. **Decisão aplicada pela recomendação; a Adriana pode mudar.**
+  - **"Gravar o vencimento"** leva também o produto escolhido.
+  - **Salvar o bloco da ficha** sem duração conhecida (sem produto, ou "Outro" sem os dias) não apaga mais a próxima data.
+  - **Textos com os números da lista:** "Pipeta dura N dias", o aviso "Escolha o produto", "1 dia" no singular e "Quantos dias protege o produto X?". Sem produto, o painel diz "Escolha o produto: a duração depende dele." (antes, "Vale 30 dias").
+  - **Tutor com "&" no nome:** o painel acha o campo do produto.
+- **Onde está no código:** `ECTO_DUR_PADRAO`, `ECTO_DUR`, `ECTO_FORA`, `ectoCfgAplicar`, `ectoComprimidos`, `ectoProdutosLista`, `ectoRotulo`, `ectoMaisCurto`, `ectoExemplos`, `ectoNomeProblema`, `ectoFraseDias`, `DASH_ECTO_PROD`, `ectoDashOpsRefazer`, `prevCorrigeEctoHTML`, `prevCorrigeEctoDaTela`, `cfgPrevEctoHTML` e `cfgPrevEctoDaTela`. A lista mora num nó só dela, `daycare/config/prevencao-ectos` (QA41): um aparelho ainda na versão antiga regrava `daycare/config/prevencao` inteiro ao salvar as coleiras, e apagaria a lista se ela morasse ali.
+- **Harness:** duas checagens mudaram de propósito. A v-16 continua exigindo o `set` das coleiras com as mesmas três chaves e passa a exigir também o `set` da lista no nó dela. Na v-47 ("Feito em…" do carrapaticida numa ficha sem produto), a pessoa agora escolhe a pipeta no painel.
 
 ### Decisões registradas (sem mudança de código)
 

@@ -22108,14 +22108,57 @@
   var ECTO_DUR=Object.assign({}, ECTO_DUR_PADRAO);
   var ECTO_FABRICA=['Bravecto','Credelli','Simparic','Nexgard'];
   // Os comprimidos da lista, na ordem: os de fábrica e depois os novos, de A a Z.
+  // Produto que a Gestão tirou da lista (QA41): some das escolhas, mas a duração continua
+  // valendo para as fichas que já têm esse produto — senão a conta delas zerava e o
+  // FILHOt saía da cobrança sem ninguém ver.
+  var ECTO_FORA={};
   function ectoComprimidos(){
-    var novos=Object.keys(ECTO_DUR).filter(function(k){ return k!=='Pipeta' && ECTO_FABRICA.indexOf(k)<0 && (parseInt(ECTO_DUR[k],10)||0)>0; })
+    var novos=Object.keys(ECTO_DUR).filter(function(k){ return k!=='Pipeta' && ECTO_FABRICA.indexOf(k)<0 && !ECTO_FORA[k] && (parseInt(ECTO_DUR[k],10)||0)>0; })
       .sort(function(a,b){ return jsNorm(a).localeCompare(jsNorm(b),'pt'); });
     return ECTO_FABRICA.filter(function(k){ return (parseInt(ECTO_DUR[k],10)||0)>0; }).concat(novos);
   }
   // Os produtos para escolher (Pipeta primeiro), com a duração na frente: "Bravecto · 90 dias".
   function ectoProdutosLista(){ return ['Pipeta'].concat(ectoComprimidos()); }
-  function ectoRotulo(prod){ var d=parseInt(ECTO_DUR[prod],10)||0; return prod+(d?(' · '+d+' dias'):''); }
+  function ectoRotulo(prod){ var d=parseInt(ECTO_DUR[prod],10)||0; return prod+(d?(' · '+d+' dia'+(d>1?'s':'')):''); }
+  // O prazo mais curto da lista: é o que vale quando o tutor não sabe qual produto foi —
+  // cobrar cedo protege; cobrar tarde deixa o FILHOt sem proteção.
+  function ectoMaisCurto(){
+    var m=0; ectoProdutosLista().forEach(function(pr){ var d=parseInt(ECTO_DUR[pr],10)||0; if(d>0 && (!m || d<m)) m=d; });
+    return m||30;
+  }
+  // "Bravecto 90 dias, Pipeta 30 dias, Simparic 35 dias" — sempre com os números da lista.
+  function ectoExemplos(){
+    var L=ectoProdutosLista(), pref=['Bravecto','Pipeta','Simparic'].filter(function(x){ return L.indexOf(x)>=0; });
+    L.forEach(function(x){ if(pref.length<3 && pref.indexOf(x)<0) pref.push(x); });
+    return pref.map(function(x){ return ectoRotulo(x).replace(' · ',' '); }).join(', ');
+  }
+  // O nome do produto vira chave no banco, botão e texto da planilha. Ponto, barra, aspas,
+  // parênteses e "<" quebram um desses três (QA41) — então o nome só leva letras, números,
+  // espaço, "-" e "+", e o que sobrar é dito, nunca apagado em silêncio.
+  function ectoNomeProblema(nome){
+    var ruins=[]; String(nome||'').replace(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9 +\-]/g, function(c){ if(ruins.indexOf(c)<0) ruins.push(c); return c; });
+    return ruins.join(' ');
+  }
+  // A frase "Vale N dias" do painel rápido, do produto que está escolhido.
+  function ectoFraseDias(prod, dOutro){
+    if(prod==='?') return 'Vale '+ectoMaisCurto()+' dias, o prazo mais curto da lista — confira o produto com o tutor.';
+    if(prod==='Outro') return dOutro>0?('Vale '+dOutro+' dia'+(dOutro>1?'s':'')+' — a próxima data sai sozinha da data em que foi feito.')
+      :'Vale o número de dias escrito ao lado — a próxima data sai sozinha da data em que foi feito.';
+    var d=parseInt(ECTO_DUR[prod],10)||0;
+    return d?('Vale '+d+' dia'+(d>1?'s':'')+' — a próxima data sai sozinha da data em que foi feito.'):'Escolha o produto: a duração depende dele.';
+  }
+  // A lista gravada pela Gestão (daycare/config/prevencao-ectos) vale por cima da de fábrica.
+  function ectoCfgAplicar(ec){
+    var novoE=Object.assign({}, ECTO_DUR_PADRAO), fora={};
+    Object.keys(ec||{}).forEach(function(k){
+      var o=ec[k], d=parseInt((o&&o.dias!=null)?o.dias:o,10);
+      if(!(d>0)) return;
+      novoE[k]=d;
+      if(o && o.fora && k!=='Pipeta' && ECTO_FABRICA.indexOf(k)<0) fora[k]=true;
+    });
+    ECTO_DUR=novoE; ECTO_FORA=fora;
+    ectoDashOpsRefazer();
+  }
   // Os botões do Lançamento do dia › Carrapaticida. O MESMO array é refeito quando a lista
   // muda (a definição do item guarda a referência dele).
   var DASH_ECTO_PROD=[];
@@ -22259,7 +22302,13 @@
   }
   function prevCfgCarregar(){
     if(!DB) return Promise.resolve(null);
-    return DB.ref('daycare/config/prevencao').once('value').then(function(s){
+    // A lista de carrapaticidas mora num nó só dela: o Salvar da Prevenção de um aparelho
+    // ainda na versão antiga regrava 'prevencao' inteiro e apagaria a lista (QA41).
+    var _ectos=DB.ref('daycare/config/prevencao-ectos').once('value')
+      .then(function(s){ ectoCfgAplicar((s&&s.val())||{}); })
+      .catch(function(e){ _logLeituraFalhou('daycare/config/prevencao-ectos (prevCfgCarregar)', e); });
+    return Promise.all([DB.ref('daycare/config/prevencao').once('value'), _ectos]).then(function(r){
+      var s=r[0];
       var v=s.val()||{};
       var c=v.coleiras||{};
       var novo=Object.assign({}, COLEIRA_DUR_PADRAO);
@@ -22268,14 +22317,6 @@
         if(d>0) novo[k]=d;
       });
       COLEIRA_DUR=novo;
-      // Os carrapaticidas da Gestão (29/set/2026): o de fábrica vale até ela mudar.
-      var ec=v.ectos||{}, novoE=Object.assign({}, ECTO_DUR_PADRAO);
-      Object.keys(ec).forEach(function(k){
-        var d=parseInt((ec[k]&&ec[k].dias!=null)?ec[k].dias:ec[k],10);
-        if(d>0) novoE[k]=d;
-      });
-      ECTO_DUR=novoE;
-      ectoDashOpsRefazer();
       if(Array.isArray(v.avisoColeiraDias)){
         var lim=v.avisoColeiraDias.map(function(n){ return parseInt(n,10)||0; }).filter(function(n){ return n>0; });
         if(lim.length) AVISO_COLEIRA_DIAS=lim.sort(function(x,y){ return y-x; });
@@ -23756,7 +23797,7 @@
     // resultado"). A ficha já sabia tudo isso; o painel rápido, não — e quem atualizava daqui
     // gravava sempre como dose única, sem 2ª dose e sem o exame.
     h+=prevCorrigeVermHTML(k, ex, id, ka, tela);
-    h+=prevCorrigeEctoHTML(k, ex, id);
+    h+=prevCorrigeEctoHTML(k, ex, id, jsAspas(String(chave)+'_'+k));
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:9px">'
       +'<button type="button" class="btn btn-gold" style="padding:8px 16px;font-size:13px;font-weight:800" onclick="prevCorrigeFeitoHoje(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Feito hoje</button>'
       +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Feito em…</label>'
@@ -23770,7 +23811,9 @@
       +'<input type="date" class="cad-in" id="prevCorrV_'+id+'" value="'+escAttr(ex[k]||'')+'" style="margin:0" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
       +'<button type="button" class="btn" style="padding:8px 14px;font-size:12.5px;font-weight:800;background:#fff;color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevCorrigeVenceEm(\''+ka+'\',\''+kk+'\',\''+tela+'\')">Gravar o vencimento</button>'
       +'<div class="hint" style="width:100%;margin:0">Se você só sabe quando vence, digite em <strong>&laquo;Vence em&raquo;</strong> — não precisa da data em que tomou.</div></div>';
-    if(dias && k!=='verm_p') h+='<div class="hint"'+(k==='ecto_p'?(' id="prevCorrDH_'+id+'"'):'')+' style="margin-top:6px">Vale '+dias+' dia'+(dias>1?'s':'')
+    if(k==='ecto_p') h+='<div class="hint" id="prevCorrDH_'+id+'" style="margin-top:6px">'
+      +escAttr(ectoFraseDias(String(ex.ecto_prod||''), parseInt(ex.ecto_outro_dias,10)||0))+'</div>';
+    else if(dias && k!=='verm_p') h+='<div class="hint" style="margin-top:6px">Vale '+dias+' dia'+(dias>1?'s':'')
       +' — a próxima data sai sozinha da data em que foi feito.</div>';
     h+=prevCorrigeFezesHTML(k, ex, id, ka, tela, hoje);
     h+='<div style="margin-top:7px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeFechar(\''+tela+'\')">fechar</button></div>';
@@ -23782,19 +23825,24 @@
   // produto escolhido aqui manda na conta — Bravecto 90 dias, pipeta 30 — e vai para a
   // ficha junto com a data. Sem produto, a conta usava 30 dias e cobrava o Bravecto dois
   // meses antes. A duração aparece na frente; só "Outro" pede o número.
-  function prevCorrigeEctoHTML(k, ex, id){
+  // `idJs`: o id cru, já pronto para ir dentro do onchange (o `id` vem escapado para HTML;
+  // escapar de novo trocava "&" por "&amp;" e o onchange não achava o campo — QA41).
+  function prevCorrigeEctoHTML(k, ex, id, idJs){
     if(k!=='ecto_p') return '';
     ex=ex||{};
+    if(idJs==null) idJs=id;
     var atual=String(ex.ecto_prod||'');
     var lista=ectoProdutosLista();
-    if(atual && atual!=='Outro' && lista.indexOf(atual)<0) lista=lista.concat([atual]);   // produto antigo, que saiu da lista
+    var saiu=(atual && atual!=='Outro' && lista.indexOf(atual)<0);
+    if(saiu) lista=lista.concat([atual]);   // produto que saiu da lista: continua escolhido, com a duração dele
     var ops='<option value="">Escolha o produto…</option>'
-      +lista.map(function(pr){ return '<option value="'+escAttr(pr)+'"'+(pr===atual?' selected':'')+'>'+escAttr(ectoRotulo(pr))+'</option>'; }).join('')
-      +'<option value="Outro"'+(atual==='Outro'?' selected':'')+'>Outro (dizer quantos dias)</option>';
+      +lista.map(function(pr){ return '<option value="'+escAttr(pr)+'"'+(pr===atual?' selected':'')+'>'+escAttr(ectoRotulo(pr))+(saiu&&pr===atual?' (saiu da lista)':'')+'</option>'; }).join('')
+      +'<option value="Outro"'+(atual==='Outro'?' selected':'')+'>Outro (dizer quantos dias)</option>'
+      +'<option value="?">Não sei qual foi (conta '+ectoMaisCurto()+' dias, o mais curto)</option>';
     var dAtual=(atual==='Outro')?(parseInt(ex.ecto_outro_dias,10)||''):'';
     return '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:8px">'
       +'<div><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Qual produto?</label>'
-      +'<select class="cad-in" id="prevCorrP_'+id+'" style="margin:0" onchange="prevCorrigeEctoMudou(\''+jsAspas(id)+'\')">'+ops+'</select></div>'
+      +'<select class="cad-in" id="prevCorrP_'+id+'" style="margin:0" onchange="prevCorrigeEctoMudou(\''+idJs+'\')">'+ops+'</select></div>'
       +'<div id="prevCorrDW_'+id+'" style="'+(atual==='Outro'?'':'display:none')+'"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Dura quantos dias?</label>'
       +'<input class="cad-in" id="prevCorrD_'+id+'" inputmode="numeric" value="'+escAttr(String(dAtual))+'" placeholder="Ex.: 90" style="margin:0;width:90px"></div>'
       +'</div>';
@@ -23805,11 +23853,7 @@
     if(w) w.style.display=(v==='Outro')?'':'none';
     // A frase "Vale N dias" acompanha o produto escolhido — nunca a do produto de antes.
     var dh=document.getElementById('prevCorrDH_'+id);
-    if(dh){
-      var d=parseInt(ECTO_DUR[v],10)||0;
-      dh.textContent=(v==='Outro')?'Vale o número de dias escrito ao lado — a próxima data sai sozinha da data em que foi feito.'
-        :(d?('Vale '+d+' dias — a próxima data sai sozinha da data em que foi feito.'):'Escolha o produto: a duração depende dele.');
-    }
+    if(dh) dh.textContent=ectoFraseDias(v, 0);
   }
   // O produto e a duração escolhidos no painel: {prod, dias}. Sem escolha, o da ficha.
   function prevCorrigeEctoDaTela(id, ex){
@@ -23817,6 +23861,7 @@
     var prod=String(((document.getElementById('prevCorrP_'+id)||{}).value)||'')||String(ex.ecto_prod||'');
     var dias=0;
     if(prod==='Outro') dias=parseInt(String(((document.getElementById('prevCorrD_'+id)||{}).value)||ex.ecto_outro_dias||'').replace(/\D/g,''),10)||0;
+    else if(prod==='?') dias=ectoMaisCurto();
     else if(prod) dias=parseInt(ECTO_DUR[prod],10)||0;
     return {prod:prod, dias:dias};
   }
@@ -23942,14 +23987,18 @@
     } else if(k==='ecto_p'){
       var __ec=prevCorrigeEctoDaTela(id, ex);
       if(!__ec.prod || !__ec.dias){
-        if(typeof zAlertao==='function') zAlertao(!__ec.prod?'ESCOLHA O PRODUTO':'DIGA QUANTOS DIAS ELE DURA',
-          [!__ec.prod?'A duração depende dele: Bravecto 90 dias, pipeta 30, Simparic 35.':'Com "Outro", escreva quantos dias o produto protege.',
+        if(typeof zAlertao==='function') zAlertao(!__ec.prod?'ESCOLHA O PRODUTO':(__ec.prod==='Outro'?'DIGA QUANTOS DIAS ELE DURA':'ESCOLHA O PRODUTO DE NOVO'),
+          [!__ec.prod?('A duração depende dele: '+ectoExemplos()+'. Se o tutor não sabe, escolha "Não sei qual foi".')
+            :(__ec.prod==='Outro'?'Com "Outro", escreva quantos dias o produto protege.':('O '+__ec.prod+' não tem mais duração na lista. Escolha o produto ou "Outro", com os dias.')),
            'Nada foi gravado ainda.'],{botao:'Escolher'});
         return;
       }
-      patch.ecto_prod=__ec.prod;
-      patch.ecto_tipo=(__ec.prod==='Pipeta')?'Pipeta':'Comprimido';
-      if(__ec.prod==='Outro') patch.ecto_outro_dias=String(__ec.dias);
+      // "Não sei qual foi": conta o prazo mais curto e não inventa produto na ficha.
+      if(__ec.prod!=='?'){
+        patch.ecto_prod=__ec.prod;
+        patch.ecto_tipo=(__ec.prod==='Pipeta')?'Pipeta':'Comprimido';
+        if(__ec.prod==='Outro') patch.ecto_outro_dias=String(__ec.dias);
+      }
       patch[k]=addDiasISO(dt, __ec.dias);
     } else {
       var dias=prevCorrigeDias(it, ex);
@@ -23975,6 +24024,15 @@
     var de=ex[k]||'';
     var patch={}; patch[k]=v; patch[k+'_manual']=true;
     if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
+    // O produto escolhido no painel também vai para a ficha (QA41: ficava só a data).
+    if(k==='ecto_p'){
+      var __ecV=prevCorrigeEctoDaTela(id, ex);
+      if(__ecV.prod && __ecV.prod!=='?' && (__ecV.prod!=='Outro' || __ecV.dias)){
+        patch.ecto_prod=__ecV.prod;
+        patch.ecto_tipo=(__ecV.prod==='Pipeta')?'Pipeta':'Comprimido';
+        if(__ecV.prod==='Outro') patch.ecto_outro_dias=String(__ecV.dias);
+      }
+    }
     setPelExtra(p, patch);
     prevAuditManual(p, k, de, v);
     prevCorrigeRegistrar(p, chave, k, it, de, v, 'vencimento digitado à mão', tela);
@@ -24465,7 +24523,10 @@
       if(Object.prototype.hasOwnProperty.call(pend, campoP)) return false;   // acabou de digitar o "Vence em"
       return !prevEraManual(b, campoP);
     };
-    if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex); patch.ecto_p=(ex.ecto_t&&d)?addDiasISO(ex.ecto_t,d):''; }
+    // Sem duração conhecida (sem produto, ou "Outro" sem os dias), a próxima data que já
+    // estava fica: apagá-la tirava o FILHOt da cobrança em silêncio (QA41).
+    if(b==='ecto' && pbContaManda('ecto_p',['ecto_t'])){ var d=ectoDur(ex);
+      if(ex.ecto_t && d) patch.ecto_p=addDiasISO(ex.ecto_t,d); else if(!ex.ecto_t) patch.ecto_p=''; }
     if(b==='col' && pbContaManda('col_p',['col_t'])){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
     if(b==='verm'){
       var vermConta=pbContaManda('verm_p',['verm_t','verm_dose2_t','verm_doses']);
@@ -24527,8 +24588,9 @@
   function ectoDur(ex){ if(ex.ecto_prod==='Outro') return parseInt(ex.ecto_outro_dias,10)||0;
     return ECTO_DUR[ex.ecto_prod]||0; }
   function blocoEcto(ex){
-    const comp=ectoComprimidos();
     const prod=ex.ecto_prod||'', ehPipeta=ex.ecto_tipo==='Pipeta', dur=ectoDur(ex);
+    // O produto da ficha que saiu da lista continua aparecendo, marcado, com a duração dele.
+    const comp=ectoComprimidos().concat((prod && prod!=='Outro' && prod!=='Pipeta' && ectoComprimidos().indexOf(prod)<0)?[prod]:[]);
     const prox=(ex.ecto_t&&dur)?addDiasISO(ex.ecto_t,dur):'';
     return '<div class="prev-bloco" id="pb-ecto">'
       +'<div class="prev-tit">Ectoparasitas (Pulgas e Carrapatos) '+(ex.ecto_p?seloValidade(ex.ecto_p):'')+'</div>'
@@ -24537,9 +24599,9 @@
           +['Pipeta','Comprimido'].map(function(t){ return '<button type="button" class="'+(ex.ecto_tipo===t?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_tipo:\''+t+'\',ecto_prod:\''+(t==='Pipeta'?'Pipeta':'')+'\'})">'+t+'</button>'; }).join('')
         +'</div></div>'
         +(ehPipeta
-          ? '<div class="field"><label>Duração</label><div class="prev-info">Pipeta dura 30 dias</div></div>'
+          ? '<div class="field"><label>Duração</label><div class="prev-info">Pipeta dura '+(parseInt(ECTO_DUR.Pipeta,10)||30)+' dias</div></div>'
           : '<div class="field" style="grid-column:1/-1"><label>Qual comprimido</label><div class="seg gold" data-single>'
-            +comp.concat(['Outro']).map(function(c){ return '<button type="button" class="'+(prod===c?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_prod:\''+c+'\'})">'+c+(ECTO_DUR[c]?' · '+ECTO_DUR[c]+'d':'')+'</button>'; }).join('')
+            +comp.concat(['Outro']).map(function(c){ return '<button type="button" class="'+(prod===c?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_prod:\''+jsAspas(c)+'\'})">'+escAttr(c)+(ECTO_DUR[c]?' · '+ECTO_DUR[c]+'d':'')+(c!=='Outro'&&ectoComprimidos().indexOf(c)<0?' (saiu da lista)':'')+'</button>'; }).join('')
           +'</div></div>')
         +(prod==='Outro'
           ? '<div class="field"><label>Dura quantos dias?</label><input class="cad-in" inputmode="numeric" value="'+escAttr(ex.ecto_outro_dias||'')+'" placeholder="Ex: 90" onchange="pbSet(\'ecto\',{ecto_outro_dias:this.value})"></div>'
@@ -35550,7 +35612,7 @@
         h+='<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '
           +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
           +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'"'
-          +' onclick="dashSetDet(\''+it.k+'\',\''+c.c+'\',\''+String(o.v).replace(/'/g,"\\'")+'\')">'
+          +' onclick="dashSetDet(\''+it.k+'\',\''+c.c+'\',\''+jsAspas(o.v)+'\')">'
           +escAttr(o.t)+'</button>';
       });
       h+='</div>';
@@ -43709,24 +43771,31 @@
     h+='</div><div class="cad-grid2" style="margin-top:8px">'
       +'<div><label class="cad-lb">Produto novo</label><input class="cad-in" id="cfgPrevEctoNovo" placeholder="Ex.: NexGard Spectra" autocomplete="off"></div>'
       +'<div><label class="cad-lb">Protege quantos dias?</label><input class="cad-in" inputmode="numeric" id="cfgPrevEctoNovoDias" placeholder="Ex.: 30"></div>'
-      +'</div><div class="hint" style="margin-top:3px">Preencha os dois e toque em Salvar: o produto entra na lista de todo mundo.</div></div>';
-    return h;
+      +'</div><div class="hint" style="margin-top:3px">Preencha os dois e toque em Salvar: o produto entra na lista de todo mundo. O nome leva só letras, números, espaço, "-" e "+".</div>';
+    var fora=Object.keys(ECTO_FORA).sort();
+    if(fora.length) h+='<div class="hint" style="margin-top:6px">Fora da lista (continuam valendo para as fichas que já têm): '
+      +fora.map(function(k){ return escAttr(ectoRotulo(k)); }).join(' · ')+'. Para voltar, escreva o nome em &laquo;Produto novo&raquo;.</div>';
+    return h+'</div>';
   }
   // Lê a lista da tela. Devolve {ectos} ou {erro}.
   function cfgPrevEctoDaTela(){
     var ectos={}, erro='';
     ectoProdutosLista().forEach(function(pr, i){
       var sai=document.getElementById('cfgPrevEctoSai_'+i);
-      if(sai && sai.checked) return;
+      // Tirar da lista não apaga: guarda a duração, marcada como fora (QA41).
+      if(sai && sai.checked){ ectos[pr]={dias:parseInt(ECTO_DUR[pr],10)||0, fora:true}; return; }
       var v=parseInt(String((document.getElementById('cfgPrevEcto_'+i)||{}).value||'').replace(/\D/g,''),10);
-      if(!(v>0)){ erro=erro||('Quantos dias o '+pr+' protege? Precisa ser um número maior que zero.'); return; }
+      if(!(v>0)){ erro=erro||('Quantos dias protege o produto '+pr+'? Precisa ser um número maior que zero.'); return; }
       ectos[pr]={dias:v};
     });
-    var nome=String((document.getElementById('cfgPrevEctoNovo')||{}).value||'').trim().replace(/[.#$\[\]\/]/g,'');
+    Object.keys(ECTO_FORA).forEach(function(k){ if(!ectos[k] && ECTO_DUR[k]>0) ectos[k]={dias:ECTO_DUR[k], fora:true}; });
+    var nome=String((document.getElementById('cfgPrevEctoNovo')||{}).value||'').trim().replace(/\s+/g,' ');
     var nd=parseInt(String((document.getElementById('cfgPrevEctoNovoDias')||{}).value||'').replace(/\D/g,''),10);
     if(nome || nd){
+      var ruim=ectoNomeProblema(nome);
       if(!nome) erro=erro||'Escreva o nome do produto novo.';
-      else if(!(nd>0)) erro=erro||('Quantos dias o '+nome+' protege? Precisa ser um número maior que zero.');
+      else if(ruim) erro=erro||('O nome do produto leva só letras, números, espaço, "-" e "+". Tire: '+ruim);
+      else if(!(nd>0)) erro=erro||('Quantos dias protege o produto '+nome+'? Precisa ser um número maior que zero.');
       else if(jsNorm(nome)==='outro') erro=erro||'"Outro" já existe na lista: dê o nome do produto.';
       else {
         var ja=Object.keys(ectos).filter(function(k){ return jsNorm(k)===jsNorm(nome); })[0];
@@ -43778,20 +43847,21 @@
     if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Banco reconectando — não salvei. Tente de novo em instantes.'; } return; }
     // Grava os DOIS: avisoApos é o que ela pediu, do jeito que ela fala; avisoColeiraDias é a
     // conta já feita, que o resto do app (e qualquer aparelho ainda na versão antiga) lê.
-    DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias, ectos:ectos}).then(function(){
+    // A lista de carrapaticidas vai para o nó dela (QA41): 'prevencao' continua com as
+    // mesmas três chaves de antes, e um aparelho na versão antiga não apaga a lista.
+    Promise.all([DB.ref('daycare/config/prevencao').set({coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias}),
+                 DB.ref('daycare/config/prevencao-ectos').set(ectos)]).then(function(){
       // Vale na hora, sem recarregar: quem acabou de mudar precisa VER a mudança.
       COLEIRA_DUR=Object.assign({}, COLEIRA_DUR_PADRAO);
       Object.keys(coleiras).forEach(function(k){ COLEIRA_DUR[k]=coleiras[k].dias; });
       AVISO_COLEIRA_APOS=apos;
       AVISO_COLEIRA_DIAS=dias;
-      // A lista inteira é a da tela: o que saiu, saiu (os de fábrica não saem, só mudam de número).
-      ECTO_DUR=Object.assign({}, ECTO_DUR_PADRAO);
-      Object.keys(ectos).forEach(function(k){ ECTO_DUR[k]=ectos[k].dias; });
-      ectoDashOpsRefazer();
+      // A lista inteira é a da tela; o que saiu fica fora das escolhas, com a duração guardada.
+      ectoCfgAplicar(ectos);
       try{ if(typeof audit==='function') audit('config-prevencao',
         'coleiras: '+marcas.map(function(m){ return m+' '+(coleiras[m]?coleiras[m].dias:'—')+'d'; }).join(' · ')
         +' | 1º aviso: '+apM+' meses e '+apD+' dias de uso (= '+a1+' dias antes) · destaque: '+a2+' dias antes'
-        +' | carrapaticidas: '+Object.keys(ectos).map(function(k){ return k+' '+ectos[k].dias+'d'; }).join(' · '), {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        +' | carrapaticidas: '+Object.keys(ectos).map(function(k){ return k+' '+ectos[k].dias+'d'+(ectos[k].fora?' (fora da lista)':''); }).join(' · '), {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✓ Salvo. A Prevenção e o Dashboard das Consultoras já estão usando estes números.'; }
       cfgPrevRender();
       try{ var v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')&&typeof renderPrevencao==='function') renderPrevencao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */

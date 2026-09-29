@@ -15206,9 +15206,11 @@ async function main() {
       && /audit\('config-prevencao'/.test(html)
       // Reescrito em 15/set/2026 (v-17): o no passou a gravar TAMBEM avisoApos (meses e dias
       // de uso, do jeito que a Adriana fala). avisoColeiraDias continua gravado, ja derivado.
-      // Story 6.11 (29/set/2026): o mesmo nó grava também a lista de carrapaticidas (ectos) —
-      // sem ela no set, salvar as coleiras apagaria os produtos que a Gestão acrescentou.
-      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias, ectos:ectos\}\)/.test(html));
+      // Story 6.11 (29/set/2026, QA41): a lista de carrapaticidas vai para um nó só dela
+      // (prevencao-ectos). 'prevencao' continua com as mesmas três chaves — assim o Salvar
+      // de um aparelho ainda na versão antiga não apaga os produtos que a Gestão acrescentou.
+      && /DB\.ref\('daycare\/config\/prevencao'\)\.set\(\{coleiras:coleiras, avisoApos:apos, avisoColeiraDias:dias\}\)/.test(html)
+      && /DB\.ref\('daycare\/config\/prevencao-ectos'\)\.set\(ectos\)/.test(html));
 
     // ─────────────────────────────── 4 · a placa da entrada
     // Reescrito em 15/set/2026 (v-18): a CEO escolheu, entre as três variantes desenhadas
