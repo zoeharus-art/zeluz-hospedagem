@@ -3328,6 +3328,36 @@ prova('ligações: a chamada viva, o Hoje na Zêluz, a planilha, a falta avisada
     assert.ok(/function hojeCarregar\(\)\{[\s\S]{0,300}dcGarantirPlanilha\(\)/.test(src), 'o Hoje na Zêluz lê a planilha do dia');
   } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; BANHO_FALTA_CHEGOU=__bkLG.bc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
 });
+// ================================================================== orçamento: o motivo da recusa da ponte
+console.log('\nOrçamento fechado que a planilha recusou: a tela diz o motivo (Adriana, 29/set/2026, caso da Frida)');
+provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página no lugar dos dados, outro) e orienta a reenviar sem duplicar', async () => {
+  run(`__bkOP={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlertao, fe:(typeof fetch!=='undefined'?fetch:undefined)};
+    ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Carolina', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000}};
+    orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'qualquer'};
+    __upOP=[]; DB={ref:function(p){ return {update:function(v){ __upOP.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
+    __alOP=[]; zAlertao=function(t,l,op){ __alOP.push({t:t, l:l, r:(op&&op.rodape)||''}); };
+    __respOP=''; __corpoOP=[]; fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(__respOP); }}); };`);
+  try {
+    const caso = async (resp) => { run(`__alOP=[]; __upOP=[]; __respOP=${JSON.stringify(resp)};`); run(`orcEnviarPlanilha('frida')`); for (let i = 0; i < 60; i++) await Promise.resolve(); return { al: run('__alOP[0]'), up: run('__upOP[0]') }; };
+    let r = await caso(JSON.stringify({ ok: false, erro: 'token invalido' }));
+    assert.ok(/PLANILHA RECUSOU/.test(r.al.t), JSON.stringify(r));
+    assert.ok(/^Frida\/Ana Carolina: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script\.$/.test(r.al.l[0]), r.al.l[0]);
+    assert.ok(/salvo como FECHADO/.test(r.al.l[1]) && /reenviar/.test(r.al.l[1]) && /duas vezes/.test(r.al.r), JSON.stringify(r.al));
+    assert.ok(r.up.v.planilha_ok === false && /palavra-chave/.test(r.up.v.planilha_msg), 'o motivo fica gravado para a lista (NÃO entrou na planilha — motivo)');
+    assert.strictEqual(run('__corpoOP[0].token'), 'qualquer', 'a palavra-chave vai no pedido');
+    r = await caso(JSON.stringify({ ok: false, erro: 'PONTE_SENHA não configurada nas Propriedades do script' }));
+    assert.ok(/falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script/.test(r.al.l[0]), r.al.l[0]);
+    r = await caso('<!DOCTYPE html><html><body>Autorização necessária</body></html>');
+    assert.ok(/respondeu com uma página, e não com os dados/.test(r.al.l[0]), r.al.l[0]);
+    r = await caso(JSON.stringify({ ok: false, erro: 'Exception: planilha trancada.' }));
+    assert.ok(/^Frida\/Ana Carolina: Exception: planilha trancada\.$/.test(r.al.l[0]), 'outro motivo aparece como veio, sem ponto dobrado: ' + r.al.l[0]);
+    r = await caso('');
+    assert.ok(/sem dizer o motivo/.test(r.al.l[0]), r.al.l[0]);
+    // deu certo: igual a antes
+    r = await caso(JSON.stringify({ ok: true, calendario: '3 noites', financeiro: 'linha 12' }));
+    assert.ok(/LANÇADO NA PLANILHA/.test(r.al.t) && r.up.v.planilha_ok === true && r.up.v.planilha_msg === 'Frida/Ana Carolina: 3 noites · linha 12', JSON.stringify(r));
+  } finally { run(`ORC_LISTA_CACHE=__bkOP.oc; orcSheetsCfg=__bkOP.sc; DB=__bkOP.db; zAlertao=__bkOP.za; fetch=__bkOP.fe;`); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

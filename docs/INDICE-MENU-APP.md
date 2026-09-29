@@ -99,6 +99,21 @@
   - ganchos em `chamadaVivaLigar`, `carregarPlanilhaDia`, `repConfirmar`, `hojeCarregar` e `dashRemover`; `dcGarantirPlanilha(true)` com outra leitura em curso relê quando ela terminar;
   - `checarDespertadorBanho`; `banhoAutoPodeNoDia` respeita o "manter" do dia; `banhosGravarExcecao` devolve a promessa.
 
+### (Z) Orçamento fechado que a planilha recusou: a tela diz o motivo (29/set/2026)
+
+> **Adriana, 29/set/2026 (orçamento da Frida, tutora Ana Carolina):** *"Fui fechar um orçamento de hospedagem […] e ele deu uma mensagem que não entrou para a planilha, que tem que conferir com a gestão por causa da ponte."*
+
+| Situação | Antes | Agora |
+|---|---|---|
+| A ponte da planilha de Hospedagem recusou o "Fechou" | "FECHADO — MAS A PLANILHA RECUSOU", com a linha "Frida/Ana Carolina:" vazia: o motivo que a ponte manda se perdia | a linha diz o motivo, em palavras de quem opera (abaixo), e o motivo fica gravado na lista ("NÃO entrou na planilha — motivo") |
+| Palavra-chave diferente | — | "a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script." |
+| Apps Script sem a PONTE_SENHA | — | "falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script." |
+| A ponte respondeu com uma página (URL mudou ou falta autorização) | — | "a ponte respondeu com uma página, e não com os dados: a URL mudou ou o Apps Script pede nova autorização." |
+| O que fazer | "Lance à mão nas duas abas e avise a Gestão" | "O orçamento está salvo como FECHADO. Mostre este motivo à Gestão: acertada a ponte, toque em «reenviar» na lista de Orçamentos." E o aviso: se lançar à mão, não reenviar (a reserva entraria duas vezes) |
+
+- **Onde está no código:** `orcPonteMotivo` e `orcEnviarPlanilha`; a ponte é `integracao-planilha/Codigo.gs` (`doPost` devolve `{ok:false, erro}`).
+- **O conserto da ponte é na configuração** (a Gestão): Configurações › Valores da hospedagem › Ponte com a planilha (Testar agora, Palavra-chave, Salvar ponte) e, no Apps Script, Propriedades do script › PONTE_SENHA.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

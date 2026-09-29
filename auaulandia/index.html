@@ -15378,6 +15378,20 @@
       };
     });
   }
+  // O MOTIVO DA RECUSA, em palavras de quem opera (Adriana, 29/set/2026, orçamento da
+  // Frida): a tela dizia só "a planilha recusou — avise a Gestão para conferir a ponte", e o
+  // motivo, que a ponte manda em `erro`, se perdia. Sem o motivo, a Gestão não sabe se é a
+  // palavra-chave, a URL ou a autorização do Apps Script (integracao-planilha/Codigo.gs).
+  function orcPonteMotivo(j){
+    if(!j) return 'a ponte não respondeu.';
+    var e=String(j.erro||'').trim();
+    if(/token invalido/i.test(e)) return 'a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.';
+    if(/PONTE_SENHA/.test(e)) return 'falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script.';
+    if(/^</.test(e)) return 'a ponte respondeu com uma página, e não com os dados: a URL mudou ou o Apps Script pede nova autorização.';
+    if(e) return e.replace(/[.\s]+$/,'')+'.';
+    var det=[j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ');
+    return det || 'a ponte respondeu com erro, sem dizer o motivo.';
+  }
   function orcEnviarPlanilha(id){
     var o=ORC_LISTA_CACHE[id]||{};
     var cfg=(orcSheetsCfg||{});
@@ -15424,13 +15438,16 @@
       .then(function(){ return respostas; })
       .then(function(js){
         var ok=js.every(function(j){ return j && j.ok; });
-        var msg=js.map(function(j,i){ return (nomes[i]||'')+': '+[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '); }).join(' | ');
+        var msg=js.map(function(j,i){
+          return (nomes[i]||'')+': '+((j && j.ok) ? [j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ') : orcPonteMotivo(j));
+        }).join(' | ');
         DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
         if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
               [peludoTutor+' — '+orcBR(o.entrada)+' a '+orcBR(o.saida)+' · '+fmtCent(o.total_cent||0)],
               {ok:true, botao:'Fechar', rodape:'Entrou nas duas abas: Hospedagem e Calendario Hospedagem para Dash. O dashboard da Gestão já mostra.'+(msg?(' ('+msg+')'):'')});
-        else zAlertao('FECHADO — MAS A PLANILHA RECUSOU',[msg||'A ponte respondeu com erro.'],
-              {botao:'Entendi', rodape:'Lance à mão nas duas abas e avise a Gestão para conferir a ponte.'});
+        else zAlertao('FECHADO — MAS A PLANILHA RECUSOU',[msg||'A ponte respondeu com erro.',
+               'O orçamento está salvo como FECHADO. Mostre este motivo à Gestão: acertada a ponte, toque em «reenviar» na lista de Orçamentos.'],
+              {botao:'Entendi', rodape:'Se lançar à mão nas duas abas, não toque em «reenviar»: a reserva entraria duas vezes.'});
       })
       .catch(function(e){
         DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:false, planilha_msg:String((e&&e.message)||e)}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
