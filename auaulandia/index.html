@@ -47018,6 +47018,7 @@
         // errada, então precisamos editar". Acrescentar SOMA; corrigir SUBSTITUI — e a
         // medicação errada só sai por aqui.
         +'<button type="button" class="btn" style="width:100%;margin-top:8px;background:#B3261E;color:#fff" onclick="ciCorrigirExistente(\''+escAttr(ativa.id)+'\')">✎ Corrigir informação errada</button>'
+        +'<div style="font-size:12.5px;color:#6b5f4b;font-weight:600;margin-top:6px">Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha <strong>SUBSTITUIR</strong>.</div>'
         +'</div>';
     }).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */;
   }
@@ -47703,11 +47704,19 @@
       if(!ativa){ __ciGravar('novo', null, pacote); return; }
       __ciTravar(false);
       const entTxt=ativa.e.entrada?ciBRdata(ativa.e.entrada):'';
+      // ===== O CHECK-IN QUE JÁ EXISTE ESTAVA ERRADO (Adriana, 29/set/2026, Toshi) ======
+      // "Preciso cancelar o check-in que a Márcia fez, urgente, e ele não me dá a opção. Não
+      //  pode duplicar! Principalmente isso é medicação!" Acrescentar SOMA (o remédio errado
+      // continua) e o 2º check-in DUPLICA. Faltava a terceira saída, no lugar onde a pessoa
+      // está: SUBSTITUIR — o que está na tela entra no lugar do que já existe, inclusive a
+      // medicação (a agenda passa a ser exatamente a desta tela), com o motivo e o rastro.
       zEscolha('⚠️ '+(ciHosp.nome||'Este FILHOt')+' JÁ ESTÁ HOSPEDADO',
         ['Existe um check-in em curso'+(entTxt?(' (entrada '+entTxt+')'):'')+(ativa.e.criado_por?(', feito por '+ativa.e.criado_por):'')+'.',
-         'Se criar OUTRO agora, a medicação e os pertences ficam duplicados — foi o que aconteceu com o Zeus e com o Ozzy.'],
+         'O tutor trouxe mais coisas? ACRESCENTAR. O que já existe está errado? SUBSTITUIR: o desta tela entra no lugar dele, inclusive a medicação — nada fica duplicado.',
+         'Criar OUTRO duplica a medicação e os pertences — foi o que aconteceu com o Zeus e com o Ozzy.'],
         [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){ __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
-          {t:'Criar mesmo assim um 2º check-in separado', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
+          {t:'✎ SUBSTITUIR o que já existe pelo desta tela', cor:'#234D67', fn:function(){ ciSubstituirExistente(ativa, pacote); }},
+          {t:'Criar mesmo assim um 2º check-in (duplica)', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
           {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } }} ]);
     }).catch(function(e){
       // Não deu para conferir duplicidade (rede). Não pode virar beco sem saída: a consultora
@@ -47720,6 +47729,26 @@
           {t:'Salvar assim mesmo', cor:'#DEB428', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
           {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo. A ficha continua aqui — é só tocar em Salvar quando a internet voltar.'; } }} ]);
     });
+  }
+  // SUBSTITUIR: é o "corrigir" com o que está na tela agora. Pede o motivo (na página, nunca
+  // em janela nativa), guarda o antes e o depois na própria estadia e grava pelo mesmo
+  // caminho do Corrigir — que reescreve a agenda de medicação com a desta tela.
+  async function ciSubstituirExistente(ativa, pacote){
+    const st=document.getElementById('ci-status');
+    const motivo=((await zTexto('Por que o check-in que já existe está errado?',
+      ['O desta tela vai para o lugar dele — inclusive a medicação.','O de antes fica guardado no histórico da estadia, com o seu nome e o motivo.'],
+      {rotulo:'Motivo', dica:'Ex.: a medicação estava errada', botao:'Substituir', cor:'#234D67', minimo:3,
+       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o check-in mudou.'}))||'').trim();
+    if(!motivo){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } return; }
+    const e=(ativa&&ativa.e)||{};
+    const antes={ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''};
+    pacote.correcao={motivo:'substituiu o check-in: '+motivo, quem:(typeof quemSou==='function'?quemSou():'-'),
+                     diff:ciDiffCorrecao(antes, pacote.dados, pacote.meds)};
+    try{ if(typeof audit==='function') audit('checkin-substituido', motivo, {pet:(ciHosp&&ciHosp.nome)||'', id:ativa.id, feito_por:e.criado_por||''}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    // Sem ligar o modo Corrigir da tela: se a gravação falhar, o próximo Salvar volta a
+    // perguntar o que fazer, em vez de cobrar campos de correção que não estão na tela.
+    __ciTravar(true);
+    __ciGravar('corrigir', ativa.id, pacote);
   }
   // Desabilita o botão enquanto grava (2 toques = 2 check-ins).
   var CI_BTN_SALVAR_TXT='💾 Salvar e gerar a ficha em PDF';

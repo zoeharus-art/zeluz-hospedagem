@@ -195,6 +195,18 @@
   - o nome de quem entrega e a assinatura com o dedo (ou "O tutor não veio").
 - **Onde está no código:** `.ci-med-conf button.on` (CSS) e `ciMedConfSet`.
 
+### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
+
+> **Adriana, 29/set/2026 (Toshi):** *"Preciso cancelar o check-in que a Márcia fez do Toshi, urgente, e ele não me dá a opção. Foi errado, tem que ter a opção… não pode duplicar! Principalmente isso é medicação!"*
+
+| Onde | Antes | Agora |
+|---|---|---|
+| Salvar › janela "JÁ ESTÁ HOSPEDADO" | Acrescentar (soma: o remédio errado continua) · Criar 2º (duplica) · Cancelar | Acrescentar · **✎ SUBSTITUIR o que já existe pelo desta tela** · Criar 2º (duplica) · Cancelar |
+| Quadro amarelo "já está hospedado", no alto do check-in | Acrescentar · Corrigir | igual, com a frase: "Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha SUBSTITUIR." |
+
+- **SUBSTITUIR** pede o motivo (na própria página) e grava pelo mesmo caminho do Corrigir: a estadia passa a ter o que está na tela, a agenda de medicação passa a ser exatamente a desta tela (o remédio errado sai, nada fica em dobro) e o de antes fica no histórico da estadia (`correcoes`), com quem, quando e o motivo. A ficha em PDF sai como em todo salvar.
+- **Onde está no código:** `ciSubstituirExistente` e a janela em `ciSalvar`.
+
 ### Decisões registradas (sem mudança de código)
 
 - **Exame de fezes depois da 1ª dose dispensa a 2ª dose do vermífugo**, e o exame volta a ser cobrado 4 meses depois (`vermOuFezes`, `FEZES_PROX`). Já era assim; ficou decidido.

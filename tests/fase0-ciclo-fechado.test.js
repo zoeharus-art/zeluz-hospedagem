@@ -3666,6 +3666,32 @@ prova('a ponte do Day Care grava um pedido por vez (LockService) e grava antes d
   const r3 = vm.runInContext("_umPorVez(function(){ return {ok:true}; })", ctxG);
   assert.ok(r3.ok === false && /ocupada/.test(r3.erro), JSON.stringify(r3));
 });
+// ================================================================== check-in que já existe e está errado: substituir
+console.log('\nO check-in que já existe está errado: SUBSTITUIR pelo da tela, sem duplicar (Adriana, 29/set/2026, Toshi)');
+provaAsync('a janela "já está hospedado" oferece SUBSTITUIR; ele pede o motivo e grava pelo caminho do Corrigir (a agenda passa a ser a da tela)', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/\{t:'✎ SUBSTITUIR o que já existe pelo desta tela', cor:'#234D67', fn:function\(\)\{ ciSubstituirExistente\(ativa, pacote\); \}\}/.test(src), 'o botão está na janela');
+  assert.ok(src.indexOf("t:'✅ ACRESCENTAR ao check-in que já existe'") < src.indexOf("t:'✎ SUBSTITUIR o que já existe pelo desta tela'")
+    && src.indexOf("t:'✎ SUBSTITUIR o que já existe pelo desta tela'") < src.indexOf("t:'Criar mesmo assim um 2º check-in (duplica)'"), 'a ordem: acrescentar, substituir, duplicar');
+  run(`__bkSub={zt:zTexto, gr:__ciGravar, tr:__ciTravar, qs:quemSou, au:audit, h:ciHosp};
+    ciHosp={nome:'Toshi', tutor:'Ana'}; quemSou=function(){ return 'Adriana'; }; audit=function(){};
+    __ciTravar=function(){}; __gravSub=[]; __ciGravar=function(m, id, P){ __gravSub.push({m:m, id:id, c:JSON.parse(JSON.stringify(P.correcao||null))}); };
+    __motSub='a medicação estava errada'; zTexto=function(){ return Promise.resolve(__motSub); };
+    __ativaSub={id:'est1', e:{criado_por:'Márcia · Gestora', entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[], medicacao:[{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}]}};
+    __pacSub={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}};`);
+  try {
+    await run('ciSubstituirExistente(__ativaSub, __pacSub)');
+    const g = run('__gravSub');
+    assert.ok(g.length === 1 && g[0].m === 'corrigir' && g[0].id === 'est1', JSON.stringify(g));
+    assert.ok(/substituiu o check-in: a medicação estava errada/.test(g[0].c.motivo) && g[0].c.quem === 'Adriana', JSON.stringify(g[0].c));
+    assert.ok(g[0].c.diff.some((x) => /Medicação REMOVIDA: Apoquel/.test(x)) && g[0].c.diff.some((x) => /Medicação NOVA: Enalapril/.test(x)), JSON.stringify(g[0].c.diff));
+    assert.ok(run('ciCorrigindoId') === null, 'a tela não fica presa no modo corrigir');
+    // sem motivo: nada é gravado
+    run(`__gravSub=[]; zTexto=function(){ return Promise.resolve(null); };`);
+    await run('ciSubstituirExistente(__ativaSub, __pacSub)');
+    assert.strictEqual(run('__gravSub.length'), 0);
+  } finally { run('zTexto=__bkSub.zt; __ciGravar=__bkSub.gr; __ciTravar=__bkSub.tr; quemSou=__bkSub.qs; audit=__bkSub.au; ciHosp=__bkSub.h;'); }
+});
 // ================================================================== check-in da hospedagem: o botão escolhido se lê
 console.log('\nCheck-in da hospedagem: o botão Confirmado/Mudou escolhido dá para ler (Adriana, 29/set/2026)');
 prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e letra creme (não creme sobre creme) e leva o ✓', () => {
