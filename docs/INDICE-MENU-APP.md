@@ -222,7 +222,7 @@
 - **Onde está no código:** `ciColeira*`, `ciMedEmUso`, `ciMedEmUsoChange`, `ciMedTudoIgual`, `ciMedNaoEmUso`, `ciMedMarcarParou`, `ciPertPartes`, `ciPertTipo`, `ciPertDoTexto`, `ciAlimProblemas`, `ciMedLinhaDoProblema` e `zLimparFaltaEm`.
 - **Ajustes do QA39 (a medicação em primeiro lugar):**
   - o **"Não" só vale quando alguém toca nele neste check-in.** O "Não" que volta de uma estadia salva (Corrigir, Acrescentar) é só a resposta de antes: com remédio em vigor na lista (a veterinária pode ter começado um depois), a resposta volta "Sim" e a lista aparece;
-  - o "Não" para **todos** os remédios em vigor da agenda, inclusive as cópias repetidas que a tela não mostra;
+  - o "Não" para os remédios que estavam **na tela** e as cópias repetidas deles, que a tela não mostra (QA44: antes parava também o remédio que a veterinária começou enquanto a recepção fazia o check-in);
   - no **Corrigir**, o "Não" não apaga mais a agenda: quem parou fica em "já não toma mais", com o histórico;
   - no **Acrescentar**, não dá para dizer "Não" com remédio na lista: o aviso manda usar o Corrigir;
   - só o remédio **em vigor** vem para a lista e para o "Tudo igual" (o que já parou, foi suspenso ou acabou fica de fora);
@@ -230,6 +230,12 @@
   - pertences: número só completa o item quando é quantidade ("ração, 2 kg"); "2 brinquedos" e "1 manta" são itens; "pote de comida", "cama de fibra natural" e "kit de banho" não viram comida nem remédio; "marmitas", "alimento úmido" viram comida; a comida aparece marcada "(comida: etiquetar)" na lista;
   - editar a descrição de um pertence antigo conserva o item (não vira material novo na Conferência);
   - o cartaz da correção fala a coleira e a medicação em uso em português.
+- **Ajustes do QA44:**
+  - **ACRESCENTAR pela janela "JÁ ESTÁ HOSPEDADO"** com "Não" nesta tela e remédio no check-in que já existe não grava: o aviso manda usar SUBSTITUIR (`ciAcrescentarBarrado`);
+  - a pergunta do salvar **"tomava X — não toma mais?"** não pergunta mais pelo remédio que já parou ou já terminou;
+  - **Corrigir e SUBSTITUIR com "Sim"** reescrevem só os remédios em vigor: os de "já não toma mais" e os suspensos pela veterinária ficam na agenda, com o histórico;
+  - **pertences:** "guia vermelha, 2 kg de ração" são dois itens, e a comida continua crítica na Conferência; peso ("2 kg") e marca de ração conhecida (Royal Canin, Golden, Premier…) contam como comida; no Acrescentar, o item novo ganha uid próprio (antes, dois itens andavam juntos na Conferência); reescrever a linha de um item da grade antiga não vira "material novo";
+  - textos: "Nenhum alarme deles toca" com mais de um remédio; no Acrescentar, o caminho para dizer que parou é "saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada".
 
 ### (AH) O check-in que já existe está errado: SUBSTITUIR, sem duplicar (29/set/2026)
 

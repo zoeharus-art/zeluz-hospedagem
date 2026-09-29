@@ -3859,8 +3859,8 @@ prova('QA39 — o "Não" só vale quando alguém toca nele agora; não para rem�
   assert.ok(/if\(!ciMedEmUso\(\) \|\| \(ciMedEmUso\(\)==='Não' && !CI_MED_NAO_TOCADO\)\) setSeg\('ciMedEmUso','Sim'\);/.test(src), 'com remédio em vigor, a resposta vem Sim (e o "Não" que só voltou da estadia não esconde)');
   assert.ok(/if\(!MED_GATE_ULTIMO\['auaulandia\|'\+key\] && ciMedEmUso\(\)!=='Não'\)\{/.test(src), 'com "Não", o salvar não repergunta "tomava X?"');
   const cor = src.slice(src.indexOf("    if(modo==='corrigir'){"), src.indexOf("    else if(modo==='acrescentar'){"));
-  assert.ok(cor.indexOf('if(!P.temMed && P.medEmUsoNao){ /* nada a reescrever */ } else') > 0
-    && cor.indexOf('if(!P.temMed && P.medEmUsoNao)') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
+  assert.ok(cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') > 0
+    && cor.indexOf('if(!(!P.temMed && P.medEmUsoNao)){') < cor.indexOf("DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once"), 'corrigir com "Não" não apaga a agenda');
   assert.ok(/if\(P\.medParou && P\.medParou\.length\)\{/.test(src), 'e marca "já não toma mais" também no corrigir');
   run(`__bkN={sv:segVal, ss:setSeg, ge:document.getElementById, qsa:document.querySelectorAll, ce:canEditCheckinMed, za:zAlertao, ed:ciEditandoId, ca:ciColeiraAplicar, ch:ciMedEmUsoChange};
     __sgN={ciMedEmUso:''}; segVal=function(id){ return __sgN[id]||''; }; setSeg=function(id,v){ __sgN[id]=v; };
@@ -3889,9 +3889,108 @@ prova('QA39 — o "Não" só vale quando alguém toca nele agora; não para rem�
     run(`__sgN.ciMedEmUso='Não'; ciMedEmUsoChange(true);`);
     igual(JSON.parse(JSON.stringify(run('ciMedNaoEmUso()'))), [{ id: 'a1', nome: 'Antibiótico X' }]);
     // "Tudo igual" não passa por cima de quem tocou em "Mudou"
-    run(`__sgN.ciMedEmUso='Sim'; __rowsN=[{dataset:{id:'m1', daficha:'1', conf:'mudou'}, querySelector:function(){ return null; }}]; ciMedTudoIgual();`);
-    assert.strictEqual(run('__rowsN[0].dataset.conf'), 'mudou');
+    run(`__sgN.ciMedEmUso='Sim'; __bkN.cs=ciMedConfSet; __csN=[]; ciMedConfSet=function(b, v){ __csN.push(v); b.__el.dataset.conf=v; };
+      __rowsN=[{dataset:{id:'m1', daficha:'1', conf:'mudou'}}, {dataset:{id:'m2', daficha:'1', conf:''}}];
+      __rowsN.forEach(function(r){ var bt={__el:r}; r.querySelector=function(){ return bt; }; }); ciMedTudoIgual();`);
+    assert.strictEqual(run('__rowsN[0].dataset.conf'), 'mudou', 'o "Mudou" fica');
+    igual([run('__rowsN[1].dataset.conf'), run('__csN.length')], ['ok', 1], 'só o que faltava é confirmado');
+    run('ciMedConfSet=__bkN.cs;');
   } finally { run('segVal=__bkN.sv; setSeg=__bkN.ss; document.getElementById=__bkN.ge; document.querySelectorAll=__bkN.qsa; canEditCheckinMed=__bkN.ce; zAlertao=__bkN.za; ciEditandoId=__bkN.ed; ciColeiraAplicar=__bkN.ca; CI_MED_NAO_TOCADO=false;'); }
+});
+provaAsync('QA44 — o "Não" para só o remédio que estava na tela (e as cópias dele); o que a veterinária começou continua tocando', async () => {
+  run(`__bkN1={db:DB, au:audit, cg:(typeof carregarAgendaMedTodos==='function'?carregarAgendaMedTodos:null), qs:quemSou};
+    audit=function(){}; carregarAgendaMedTodos=function(){}; quemSou=function(){ return 'Márcia'; };
+    __agN1={a1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true},
+            a1b:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00'], continuo:true},
+            o1:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00'], continuo:true},
+            v1:{nome:'Prednisolona', q:'1', u:'comprimido', horarios:['09:00'], continuo:true},
+            x1:{nome:'Antigo', q:'1', u:'comprimido', horarios:['10:00'], paradoEm:{data:'2026-01-01'}}};
+    __upN1=[]; DB={ref:function(p){ return {
+      once:function(){ var id=p.split('/').pop(); return Promise.resolve({val:function(){ return p.slice(-6)==='/itens'?__agN1:(__agN1[id]||null); }}); },
+      update:function(v){ __upN1.push(p.split('/').pop()); return Promise.resolve(); } }; }};`);
+  try {
+    const feitos = await run(`ciMedMarcarParou('toshi__ana', [{id:'a1', nome:'Apoquel'}, {id:'o1', nome:'Ômega 3'}])`);
+    igual(JSON.parse(JSON.stringify(run('__upN1'))).sort(), ['a1', 'a1b', 'o1'], 'a Prednisolona (v1) não para; o parado (x1) não é tocado');
+    assert.strictEqual(feitos.length, 3);
+  } finally { run('DB=__bkN1.db; audit=__bkN1.au; if(__bkN1.cg) carregarAgendaMedTodos=__bkN1.cg; quemSou=__bkN1.qs;'); }
+  // o aviso na tela: "deles" com mais de um, sem prometer "cópias"
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/Nenhum alarme '\+\(nomes\.length>1\?'deles':'dele'\)\+' toca\./.test(src));
+  // N2: ACRESCENTAR pelo cartaz com "Não" e remédio no check-in que já existe não grava
+  const acr = src.slice(src.indexOf("{t:'✅ ACRESCENTAR ao check-in que já existe'"), src.indexOf("{t:'✎ SUBSTITUIR o que já existe pelo desta tela'"));
+  assert.ok(acr.indexOf('if(ciAcrescentarBarrado(ativa, pacote)) return;') > 0 && acr.indexOf('if(ciAcrescentarBarrado(ativa, pacote)) return;') < acr.indexOf("__ciGravar('acrescentar', ativa.id, pacote)"), 'a regra vem antes de gravar');
+  run(`__bkN2={za:zAlertao, ge:document.getElementById}; __alN2=[]; zAlertao=function(t){ __alN2.push(t); }; __stN2={style:{}, textContent:''};
+    document.getElementById=function(id){ return id==='ci-status'?__stN2:null; };`);
+  try {
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[{nome:'Apoquel'}]}}, {medEmUsoNao:true})`), true);
+    assert.ok(run('__alN2[0]') === 'PARA DIZER QUE PAROU, USE SUBSTITUIR' && /use SUBSTITUIR/.test(run('__stN2.textContent')));
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[{nome:'Apoquel'}]}}, {medEmUsoNao:false})`), false, 'com "Sim", acrescenta');
+    assert.strictEqual(run(`ciAcrescentarBarrado({e:{medicacao:[]}}, {medEmUsoNao:true})`), false, 'sem remédio lá, não há contradição');
+  } finally { run('zAlertao=__bkN2.za; document.getElementById=__bkN2.ge;'); }
+  // N7: o caminho que existe de verdade no modo acrescentar
+  assert.ok(/saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada/.test(src));
+});
+provaAsync('QA44 — "tomava X?" não pergunta pelo que já parou ou terminou', async () => {
+  run(`__bkN4={db:DB, me:medEstadiaEncerrada}; medEstadiaEncerrada=function(){ return Promise.resolve(true); };
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){ return {estadiaId:'e0', itens:{
+      a:{nome:'Apoquel', continuo:false, dataFim:'2026-09-28', paradoEm:{data:'2026-09-29'}},
+      b:{nome:'Ômega 3', continuo:true},
+      c:{nome:'Antibiótico', continuo:false, dataFim:'2026-01-10'},
+      d:{nome:'Carprofeno', suspenso:true}}}; }}); }}; }};`);
+  try {
+    const l = await run(`medAnterioresDe('auaulandia', 'toshi__ana')`);
+    igual(l.map((x) => x.nome), ['Ômega 3']);
+  } finally { run('DB=__bkN4.db; medEstadiaEncerrada=__bkN4.me;'); }
+});
+provaAsync('QA44 — Corrigir com "Sim" reescreve só o que está em vigor: "já não toma mais" e suspenso pela veterinária ficam; roupa antiga reescrita não é material novo; Acrescentar dá uid novo', async () => {
+  run(`__bkN5={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Toshi', tutor:'Ana', refKey:'toshi__ana'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Adriana'; };
+    __estN5={nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[{uid:'u-r', k:'roupa', nome:'Roupa', spec:'casaco'}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}], ficha:{}};
+    __agN5={old1:{nome:'Apoquel', continuo:true}, p1:{nome:'Ômega 3', continuo:false, dataFim:'2026-09-01', paradoEm:{data:'2026-09-02'}}, s1:{nome:'Carprofeno', suspenso:true}};
+    __escN5={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estN5 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agN5 : null); }}); },
+      update:function(v){ __escN5[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escN5['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    __qrN5=[]; ciQuemRecebeu=function(itens){ __qrN5.push(itens); return Promise.resolve('Ana'); };`);
+  try {
+    run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-r', k:'outro', nome:'Casaco vermelho de lã', spec:''}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}]},
+      meds:{m1:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}}, temMed:true, key:'toshi__ana', correcao:{motivo:'x', quem:'Adriana', diff:[]}});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const ag = run(`__escN5['SET auaulandia/medicacao-agenda/toshi__ana/itens']`);
+    assert.ok(ag, JSON.stringify(Object.keys(run('__escN5'))));
+    const nomes = Object.keys(ag).map((k) => ag[k].nome).sort();
+    igual(nomes, ['Apoquel', 'Carprofeno', 'Ômega 3']);
+    assert.ok(!ag.old1 && ag.p1 && ag.p1.paradoEm && ag.s1 && ag.s1.suspenso, JSON.stringify(ag));
+    igual(JSON.parse(JSON.stringify(run('__qrN5'))), [], 'a roupa antiga reescrita como "Casaco…" não é material novo');
+  } finally { run('ciCorrigindoId=null;'); }
+  try {
+    run(`__escN5={}; __qrN5=[];
+      __ciGravar('acrescentar', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-moch', k:'mochila', nome:'Mochila — azul marinho'}]},
+        meds:{}, temMed:false, key:'toshi__ana'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const up = run(`__escN5['auaulandia/estadias/est1']`);
+    assert.ok(up && Array.isArray(up.pertences), JSON.stringify(Object.keys(run('__escN5'))));
+    const uids = up.pertences.map((x) => x.uid);
+    assert.ok(uids.length === 3 && new Set(uids).size === 3, 'uids: ' + JSON.stringify(uids));
+  } finally { run('DB=__bkN5.db; ciQuemRecebeu=__bkN5.qr; ciHosp=__bkN5.h; __ciTravar=__bkN5.tr; audit=__bkN5.au; quemSou=__bkN5.qs;'); }
+});
+prova('QA44 — pertences: "2 kg de ração" depois de outra coisa é item próprio (comida continua crítica); peso e marca de ração são comida; o "Não" limpa o vermelho escondido', () => {
+  igual(run(`ciPertPartes('guia vermelha, 2 kg de ração')`), ['guia vermelha', '2 kg de ração']);
+  igual(run(`ciPertPartes('cama rosa, 2 pacotes de petisco')`), ['cama rosa', '2 pacotes de petisco']);
+  igual(run(`ciPertPartes('sacola verde, 3 latas de patê')`), ['sacola verde', '3 latas de patê']);
+  igual(run(`ciPertPartes('ração Golden, 2 kg, cama rosa')`), ['ração Golden, 2 kg', 'cama rosa']);
+  igual(run(`ciPertPartes('ração Royal, 1 pacote por dia')`), ['ração Royal, 1 pacote por dia']);
+  igual(['2 kg de ração', 'Royal Canin 2 kg', 'Golden 15 kg', 'Premier 500 g', 'guia vermelha', 'Apoquel 16 mg'].map((t) => run(`ciPertTipo(${JSON.stringify(t)})`)),
+    ['comida', 'comida', 'comida', 'comida', 'guia', 'outro']);
+  // M27 do QA44: tocar "Não" tira o vermelho da lista escondida e da conferência de segurança
+  run(`__bkM27={eu:ciMedEmUso, fl:ciMedFichaLinhas, zl:zLimparFaltaEm, ge:document.getElementById, tr:ciMedTudoIgualRender};
+    ciMedEmUso=function(){ return 'Não'; }; ciMedFichaLinhas=function(){ return []; }; __zlM27=[]; zLimparFaltaEm=function(a){ __zlM27.push(a); };
+    document.getElementById=function(){ return null; }; ciMedTudoIgualRender=function(){};`);
+  try {
+    run('ciMedEmUsoChange(true);');
+    const zl = JSON.parse(JSON.stringify(run('__zlM27')));
+    assert.ok(zl.indexOf('ciMedEmUsoBox') >= 0 && zl.indexOf('ciGate') >= 0, JSON.stringify(zl));
+  } finally { run('ciMedEmUso=__bkM27.eu; ciMedFichaLinhas=__bkM27.fl; zLimparFaltaEm=__bkM27.zl; document.getElementById=__bkM27.ge; ciMedTudoIgualRender=__bkM27.tr; CI_MED_NAO_TOCADO=false;'); }
 });
 prova('QA39 — pertences: número só completa o item quando é quantidade; o tipo acerta objetos com "comida" no nome; a descrição editada conserva o item; a correção fala português', () => {
   igual(run(`ciPertPartes('sacola verde, 2 brinquedos de pelúcia, 1 manta')`), ['sacola verde', '2 brinquedos de pelúcia', '1 manta']);

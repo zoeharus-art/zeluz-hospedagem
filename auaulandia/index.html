@@ -46664,7 +46664,7 @@
     if(v==='Não' && porToque && ficha.length && typeof ciEditandoId!=='undefined' && ciEditandoId){
       setSeg('ciMedEmUso','Sim'); v='Sim';
       zAlertao('PARA DIZER QUE PAROU, USE CORRIGIR', ['Aqui você está ACRESCENTANDO ao check-in que já existe: nada sai dele.',
-        'Para tirar remédio, volte e toque em ✎ Corrigir informação errada, no quadro do alto.'], {botao:'Entendi'});
+        'Para tirar remédio: saia desta tela, abra o FILHOt de novo e toque em ✎ Corrigir informação errada.'], {botao:'Entendi'});
     }
     if(porToque) CI_MED_NAO_TOCADO=(v==='Não');
     // Com "Não", o vermelho da lista escondida e da conferência de segurança sai junto (QA39 A10).
@@ -46680,7 +46680,7 @@
         var nomes=ficha.map(function(el){ return ((el.querySelector('[data-c=m]')||{}).value||'').trim(); }).filter(Boolean);
         ms.style.color='var(--crm-atencao-text)';
         ms.textContent='Ao salvar, '+(nomes.length>1?('os remédios da ficha ('+nomes.join(', ')+') ficam'):('o remédio da ficha ('+(nomes[0]||'sem nome')+') fica'))
-          +' como "já não toma mais", com o seu nome — inclusive as cópias repetidas. Nenhum alarme dele toca.';
+          +' como "já não toma mais", com o seu nome. Nenhum alarme '+(nomes.length>1?'deles':'dele')+' toca.';
       } else if(v==='Não'){ ms.style.color='var(--muted)'; ms.textContent='Sem medicação nesta estadia: nenhum alarme toca.'; }
       else if(ficha.length){ ms.style.color='var(--crm-atencao-text)'; ms.textContent='Medicação que já está na ficha deste FILHOt — confirme com o tutor: Confirmado ou Mudou em cada item, ou "Tudo igual" se nada mudou. O check-in não fecha sem isso.'; }
       else ms.textContent='';
@@ -46724,15 +46724,19 @@
   // O mesmo registro do "Parou" da aba Medicamentos (fmedParou): nada é apagado, o item
   // desce para "Já não toma mais", com quem ouviu do tutor, quando e por quê. Termina ONTEM,
   // para o despertador não chamar hoje.
-  // "Não está em uso de nenhuma medicação" vale para TODOS os itens em vigor da agenda,
-  // inclusive a cópia repetida que a tela não mostra (QA39 A2). `lista` só diz que houve o "Não".
+  // "Não está em uso" vale para os remédios que estavam NA TELA e para as cópias repetidas
+  // deles (mesma assinatura: nome, dose, horários), que a tela não mostra (QA39 A2). Remédio
+  // que ninguém viu — a veterinária começou enquanto a recepção fazia o check-in — continua
+  // tocando (QA44 N1).
   function ciMedMarcarParou(key, lista){
     if(!DB || !key || !(lista&&lista.length)) return Promise.resolve([]);
     var quem=(typeof quemSou==='function'?quemSou():'-'), hoje=zHojeISO(), ontem=addDiasISO(hoje,-1)||hoje;
     var motivo='no check-in da hospedagem, o tutor disse que não está em uso';
     return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(sAll){
       var todos=(sAll&&sAll.val&&sAll.val())||{};
-      return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje); })
+      var ids={}, sigs={};
+      lista.forEach(function(x){ if(x&&x.id){ ids[x.id]=1; if(todos[x.id]) sigs[medAssinatura(todos[x.id])]=1; } });
+      return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje) && (ids[id] || sigs[medAssinatura(todos[id])]); })
         .map(function(id){ return {id:id, nome:String((todos[id]||{}).nome||'')}; });
     }).catch(function(e){ _logFalhaGrav('ler a agenda para marcar "já não toma mais"', e); return lista; }).then(function(alvos){
     return Promise.all(alvos.map(function(x){
@@ -46931,7 +46935,7 @@
   // crítica na Conferência. A linha que não mudou conserva o item de antes (e o uid, que é
   // onde a Conferência guarda o V verde).
   function ciPertLinha(p){ return String((p&&p.nome)||'').trim()+((p&&p.spec)?(' — '+String(p.spec).trim()):''); }
-  function ciPertTipo(txt){
+  function ciPertTipo(txt, soPalavras){
     var n=jsNorm(String(txt||''));
     var w=(n.split(/\s+/)[0]||'');
     // Objeto que não é comida nem remédio, mesmo com a palavra no meio (QA39 A9): "pote de
@@ -46943,8 +46947,10 @@
     if(/\b(racao|racoes|comida|comidas|comidinha|natural|sache|saches|lata|latas|pate|alimento|alimentos|marmita|marmitas|umido|umida|petisco|petiscos|biscoito|biscoitos)\b/.test(n)) return 'comida';
     if(/\b(remedio|remedios|medicacao|medicamento|medicamentos|kit|emergencia|suplemento|suplementos)\b/.test(n)) return 'remedios';
     if(/^(mochila|bolsa|bolsinha|sacola|sacolinha|mala|necessaire)$/.test(w)) return 'mochila';
-    if(/^(cama|caminha|almofada|colchonete)$/.test(w)) return 'cama';
-    if(/^(guia|coleira|peitoral)$/.test(w)) return 'guia';
+    // Peso ("2 kg", "500 g") ou marca de ração conhecida: é comida (QA44 N6). `soPalavras`
+    // ignora esta regra — é o que decide se "2 kg" só completa o item de antes.
+    if(!soPalavras && (/\b\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?)\b/.test(n)
+      || /\b(royal canin|golden|premier|farmina|hills|pro ?plan|biofresh|guabi|gran plus|quatree|equilibrio|n ?& ?d)\b/.test(n))) return 'comida';
     return 'outro';
   }
   // Separa o texto em itens: por linha, por ponto e vírgula e por vírgula fora de parênteses.
@@ -46966,7 +46972,10 @@
       ped.map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(x){
         // "ração Royal, 1 pacote": só QUANTIDADE completa o de antes (QA39 A8). "2 brinquedos"
         // e "1 manta" são itens.
-        if(daLinha.length && /^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i.test(x)) daLinha[daLinha.length-1]+=', '+x;
+        // E só quando o pedaço não nomeia outra coisa (QA44 N6): "guia vermelha, 2 kg de ração"
+        // são dois itens — e a comida continua crítica na Conferência.
+        if(daLinha.length && /^\d+([.,]\d+)?\s*(kg|g|gr|gramas?|quilos?|pacotes?|pct|latas?|sach[eê]s?|potes?|caixas?|ml|litros?|unidades?|un|por[cç](ao|ões|oes)?|refei[cç](ao|ões|oes)?|comprimidos?|doses?)\b/i.test(x)
+          && ciPertTipo(x, true)==='outro') daLinha[daLinha.length-1]+=', '+x;
         else daLinha.push(x);
       });
       daLinha.forEach(function(x){ out.push(x); });
@@ -47823,8 +47832,10 @@
           var it=itens[id]||{};
           return {nome:String(it.nome||'').trim(), item:it, id:id};
         }).filter(function(x){
-          // remédio já suspenso pela veterinária não é surpresa: alguém já decidiu por ele
-          return x.nome && !x.item.suspenso;
+          // remédio já suspenso pela veterinária não é surpresa: alguém já decidiu por ele.
+          // Nem o que já está em "já não toma mais" ou já terminou (QA44 N4): perguntar de novo
+          // a cada estadia, e uma resposta errada, o ressuscitaria.
+          return x.nome && !x.item.suspenso && (typeof ciMedEmVigor!=='function' || ciMedEmVigor(x.item));
         });
         if(!lista.length) return [];
         return medEstadiaEncerrada(no.estadiaId).then(function(acabou){ return acabou?lista:[]; });
@@ -48047,7 +48058,9 @@
         ['Existe um check-in em curso'+(entTxt?(' (entrada '+entTxt+')'):'')+(ativa.e.criado_por?(', feito por '+ativa.e.criado_por):'')+'.',
          'O tutor trouxe mais coisas? ACRESCENTAR. O que já existe está errado? SUBSTITUIR: o desta tela entra no lugar dele, inclusive a medicação — nada fica duplicado.',
          'Criar OUTRO duplica a medicação e os pertences — foi o que aconteceu com o Zeus e com o Ozzy.'],
-        [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){ __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
+        [ {t:'✅ ACRESCENTAR ao check-in que já existe', cor:'#1E8449', fn:function(){
+            if(ciAcrescentarBarrado(ativa, pacote)) return;
+            __ciTravar(true); __ciGravar('acrescentar', ativa.id, pacote); }},
           {t:'✎ SUBSTITUIR o que já existe pelo desta tela', cor:'#234D67', fn:function(){ ciSubstituirExistente(ativa, pacote); }},
           {t:'Criar mesmo assim um 2º check-in (duplica)', cor:'#B3261E', fn:function(){ __ciTravar(true); __ciGravar('novo', null, pacote); }},
           {t:'Cancelar', cor:'#6b5f4b', fn:function(){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } }} ]);
@@ -48179,6 +48192,18 @@
     }
     return null;
   }
+  // Acrescentar SOMA: com "Não está em uso" nesta tela e remédio no check-in que já existe,
+  // a estadia diria as duas coisas e o PDF continuaria com a lista (QA44 N2). Aí não grava e
+  // mostra o caminho: SUBSTITUIR. Devolve true quando barrou.
+  function ciAcrescentarBarrado(ativa, pacote){
+    var medJa=(Array.isArray(ativa&&ativa.e&&ativa.e.medicacao)?ativa.e.medicacao:[]).map(function(m){ return (m&&m.nome)||''; }).filter(Boolean);
+    if(!(pacote && pacote.medEmUsoNao && medJa.length)) return false;
+    zAlertao('PARA DIZER QUE PAROU, USE SUBSTITUIR', ['O check-in que já existe tem remédio ('+medJa.join(', ')+'). ACRESCENTAR só soma: ele continuaria lá.',
+      'Toque em Salvar de novo e escolha ✎ SUBSTITUIR: o "Não" desta tela entra no lugar, e o remédio fica como "já não toma mais".'], {botao:'Entendi'});
+    var st=document.getElementById('ci-status');
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — para dizer que parou, use SUBSTITUIR.'; }
+    return true;
+  }
   // Grava: 'novo' cria estadia; 'acrescentar' funde na que já existe e REABRE a conferência
   // (item 6 — o tutor comprou um suplemento no meio da estadia: entra no MESMO check-in e
   // volta para a Wandela conferir, em vez de virar um cadastro paralelo).
@@ -48215,12 +48240,15 @@
       //
       // O critério é a CONTAGEM POR TIPO (e o nome do remédio), não o texto: assim descrever
       // "roupa bege" numa roupa que já estava não conta como item novo, e remover não reabre.
-      const contaPorTipo=function(arr){ const m={}; (arr||[]).forEach(function(p){ const k=jsNorm((p&&(p.k||p.nome))||''); if(k) m[k]=(m[k]||0)+1; }); return m; };
+      // O tipo antigo da grade ("roupa", "racao") é lido como o tipo novo ("outro", "comida"):
+      // reescrever a linha de um item antigo não vira "material novo" (QA44 N13).
+      const _tipoP=function(p){ const k=jsNorm((p&&p.k)||''); return /^(comida|remedios|mochila|cama|guia|outro)$/.test(k)?k:ciPertTipo((p&&(p.k||p.nome))||''); };
+      const contaPorTipo=function(arr){ const m={}; (arr||[]).forEach(function(p){ const k=_tipoP(p); if(k) m[k]=(m[k]||0)+1; }); return m; };
       const _antesPert=contaPorTipo(antes.pertences), _agoraPert=contaPorTipo(dados.pertences);
       const chegouNovo=[];
       Object.keys(_agoraPert).forEach(function(k){
         if(_agoraPert[k]>(_antesPert[k]||0)){
-          const ex=(dados.pertences||[]).find(function(p){ return jsNorm((p.k||p.nome)||'')===k; });
+          const ex=(dados.pertences||[]).find(function(p){ return _tipoP(p)===k; });
           chegouNovo.push((ex&&(ex.nome||ex.k))||k);
         }
       });
@@ -48281,13 +48309,17 @@
       var _medsCorr=P.temMed?medDedupe(meds):{sai:[],itens:null,nomes:[]};
       // "Não está em uso" no corrigir NÃO apaga a agenda (QA39 A3): quem parou fica em "já não
       // toma mais", com o histórico — é o ciMedMarcarParou, depois de salvar, que marca.
-      if(!P.temMed && P.medEmUsoNao){ /* nada a reescrever */ } else
+      if(!(!P.temMed && P.medEmUsoNao)){
       // Lê ANTES de reescrever só para poder DIZER o que sumiu: reescrever o nó em silêncio
       // faria um remédio desaparecer sem ninguém saber por quê.
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
-        var jaLa=s.val()||{}, fica=(P.temMed?_medsCorr.itens:null)||{};
+        var jaLa=s.val()||{}, fica=Object.assign({}, (P.temMed?_medsCorr.itens:null)||{});
+        // O que já não está em vigor (parou, suspenso pela veterinária, já terminou) fica como
+        // está: é histórico e não toca. A correção reescreve só o que está em vigor (QA44 N5).
+        var _hojeC=zHojeISO();
+        Object.keys(jaLa).forEach(function(id){ if(fica[id]===undefined && !ciMedEmVigor(jaLa[id], _hojeC)) fica[id]=jaLa[id]; });
         var sumiram=Object.keys(jaLa).filter(function(id){ return fica[id]===undefined; });
-        return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(P.temMed?_medsCorr.itens:null).then(function(){
+        return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(Object.keys(fica).length?fica:null).then(function(){
           if(sumiram.length && typeof audit==='function')
             audit('medicacao-agenda-dedupe','a correção do check-in tirou '+sumiram.length+' item(ns) da agenda'
               +(_medsCorr.sai.length?(' — '+_medsCorr.sai.length+' era(m) repetido(s)'):'')
@@ -48295,6 +48327,7 @@
               {alvo:key, pet:ciHosp.nome||'', itens:sumiram.join(' ')});
         });
       }).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (check-in corrigir)', e); }));
+      }
       if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:Date.now(), _quem:quemSou() }));
     }
     else if(modo==='acrescentar'){
@@ -48303,7 +48336,11 @@
       const chaveP=function(p){ return jsNorm((p&&(p.nome||p.k))||'')+'|'+jsNorm((p&&p.spec)||''); };
       const jaTem={}; pertAntes.forEach(function(p){ jaTem[chaveP(p)]=1; });
       (dados.pertences||[]).forEach(function(p){ if(!jaTem[chaveP(p)]) novosItens.push((p.nome||p.k||'item')+(p.spec?(' — '+p.spec):'')); });
-      const pertFinal=pertAntes.concat((dados.pertences||[]).filter(function(p){ return !jaTem[chaveP(p)]; }));
+      // O item novo nunca herda o uid de um que já está lá (QA44 N3): a Conferência guarda o
+      // V verde pelo uid, e duas linhas com a mesma chave andariam juntas.
+      const _uidsAntes={}; pertAntes.forEach(function(p){ if(p&&p.uid) _uidsAntes[p.uid]=1; });
+      const pertFinal=pertAntes.concat((dados.pertences||[]).filter(function(p){ return !jaTem[chaveP(p)]; })
+        .map(function(p){ return (p&&p.uid&&_uidsAntes[p.uid])?Object.assign({}, p, {uid:ciUid()}):p; }));
       const medAntes=Array.isArray(antes.medicacao)?antes.medicacao:[];
       const medNomes={}; medAntes.forEach(function(m){ medNomes[jsNorm(m.nome||'')]=1; });
       const medNovas=ciMedsToLista(meds).filter(function(m){ return !medNomes[jsNorm(m.nome||'')]; });
