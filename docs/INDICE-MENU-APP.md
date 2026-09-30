@@ -37,15 +37,20 @@
 | Quatro tentativas iguais viraram quatro "Renovações anteriores" | cada Confirmar empurrava uma cópia do plano gravado | Confirmar o mesmo plano de novo não empurra cópia; as tentativas iguais que já estão lá aparecem numa linha só, "N vezes iguais (tentativas repetidas)" — nada é apagado do banco |
 
 **As 3 regras do começo do período** (`renovVigenciaComeca`), nesta ordem:
-1. **Corrigir o plano gravado** (a mesma data de pagamento de novo): o período é o que já era.
+1. **Corrigir o plano gravado** (a mesma data de pagamento de novo, ou uma data ainda antes do começo do período gravado): o período é o que já era.
 2. **Renovação antecipada:** o tutor pagou enquanto o plano ainda vale, nos **últimos 15 dias** dele (é quando ele aparece na Renovação de planos). O novo período começa **no dia seguinte ao fim** do atual. Plano até 30/09, pago em 30/09 (ou 20/09): vale de 01/10 até 31/10. Trimestral até 30/09, pago em 25/09: 01/10 a 31/12.
 3. **Fim do mês:** pagamento nos **últimos 7 dias do mês** (de 24/09 em diante, num mês de 30 dias) começa no **dia 1º do mês seguinte**. Até o dia 23, o mês do pagamento continua sendo o 1º mês do plano. Pagou atrasado em 02/10: vale outubro, como sempre.
 
+- **Quando a data sozinha não diz, o Confirmar pergunta** (revisão QA54, dinheiro não se adivinha):
+  - **"Pagamento novo ou correção da data?"**: a data nova fica a até 15 dias da gravada (20/09 → 21/09 num plano de setembro). Uma resposta dá "renovação de 01/10 até 31/10", a outra "fica de 21/09 até 30/09".
+  - **"Este pagamento é de qual período?"**: ficha antiga paga nos últimos dias do mês (o Baque: gravado 30/09 → 30/09). Uma resposta dá "Mês seguinte: de 01/10 até 31/10", a outra "Manter".
+  - A ficha avisa antes: "(O Confirmar vai perguntar…)". Quando a conta vai além do gravado e nada foi mexido, aparece **"Nada foi gravado ainda. Gravado hoje: … A conta de hoje dá …"**.
+- **A trava "nasce vencida"** muda só o período; a data do pagamento (o mês do dinheiro) fica. Depois dela, nenhuma outra pergunta refaz o que a pessoa aceitou.
 - **Quem começa no meio do mês** (opção 1 ou 2) continua com a regra própria, sem mudança.
 - **Onde a pessoa vê:** na ficha, "Vale até" vira "**de 01/10 até 31/10**", com a frase do porquê embaixo; o resumo do Confirmar diz "**Pagamento 30/09 · vale de 01/10 até 31/10**" e o porquê; a mensagem ao tutor, a lista da Renovação, "Renovações anteriores" (com "pago em 30/09"), o Desfazer e a aba Identificação mostram o período.
 - **O Financeiro não muda:** o mês do dinheiro continua sendo o da data do pagamento (regime de caixa, decisão de 02/set/2026). `financeiro-logica.js` não foi tocado.
 - **Onde está no código:** `aplicarRenovacao`, `renovCalcular`, `renovVigenciaComeca`, `renovRegraFimDoMes`, `renovVigenciaFrase`, `renovMesmoPlano`, `renovEdit` (`_inicio_gravado`), `blocoPlano`, `confirmarRenovacao`, `renovHistHTML`, `desfazerRenovacao`, `msgRenovado`, `renderRenovacao`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 14 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês, o Confirmar de verdade com o resumo e a gravação, o histórico agrupado); 11 defeitos plantados, 11 pegos.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 24 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês, o Confirmar de verdade com as perguntas, o resumo e a gravação, a ficha, o histórico); 24 defeitos plantados, 24 pegos.
 
 ## O que mudou em 27/set/2026 (v 2026-09-27-01)
 
