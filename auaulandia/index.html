@@ -5842,8 +5842,10 @@
   function permCarregarConcedidas(){
     if(typeof podePapel!=='function') return;
     try{ if(!podePapel('pendencias-prevencao') && paginaConcedida('pendencias') && typeof pendCarregar==='function') pendCarregar(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
-    try{ if(!podePapel('vencimentos-amanha') && paginaConcedida('vencimentos') && typeof vencGarantir==='function') vencGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
-    try{ if(!podePapel('hoje-na-casa') && paginaConcedida('hoje') && typeof hojeGarantir==='function') hojeGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
+    // O contador do Quem chamar hoje sai das duas leituras (quem está aqui hoje e quem vem no
+    // próximo dia): quem recebeu só essa tela também precisa delas (QA da 6.19, achado 7).
+    try{ if(!podePapel('vencimentos-amanha') && (paginaConcedida('vencimentos')||paginaConcedida('contatos')) && typeof vencGarantir==='function') vencGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
+    try{ if(!podePapel('hoje-na-casa') && (paginaConcedida('hoje')||paginaConcedida('contatos')) && typeof hojeGarantir==='function') hojeGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
   }
   // Senhas só para quem manda de verdade. A Supervisão vê o time e as permissões, mas NÃO
   // as senhas — isso muda no dia em que ela virar gerente (Adriana, 13/ago/2026).
@@ -16982,9 +16984,24 @@
   //  · Abertura do dia: vai para quem abre a casa (Monitor 1);
   //  · Agenda: ainda não existe ("em breve");
   //  · Início: a visão geral do dia vem com o papel (e o monitor não a tem).
-  const NAV_PAGINAS_FORA='Não se concedem por aqui: a mesa de cada papel (O que fazer hoje e os dashboards Meu, Consultoras, Amanda, Márcia e Adriana), '
+  const NAV_PAGINAS_FORA='Não se concedem por aqui: a mesa de cada papel (O que fazer hoje, Meu Dashboard e os dashboards das Consultoras, da Amanda, da Márcia e da Adriana), '
     +'Início (vem com o papel), Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).';
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat((g.itens||[]).map(x=>x.k)),[]);
+  // O QUE O PAPEL JÁ MOSTRA, sem marcação nenhuma (QA da 6.19, achado 1). Vale só para as telas
+  // que SÓ LIBERAM — as 8 de NAV_PAGINAS_SO_LIBERA e as 4 da tabela PERM_MENU (Hoje na Zêluz,
+  // Quem chamar hoje, Pendências de prevenção e Vencimentos): nelas, desmarcar não tira o que o
+  // papel dá, e a tela do Time precisa dizer isso em vez de mostrar o chip apagado. As 8 seguem
+  // a classe do item no menu: so-recepcao e so-gestao aparecem para Consultora e Supervisão;
+  // so-pesa também para a Veterinária (a prova no navegador confere contra o CSS de verdade).
+  function telaVemDoPapel(k, role){
+    var r=String(role||'monitor');
+    var par=PERM_MENU.filter(function(x){ return x[0]===k; })[0];
+    if(par) return !!podePapel(par[1], r);
+    if(NAV_PAGINAS_SO_LIBERA.indexOf(k)<0) return false; // as 16 antigas: só o marcado aparece
+    var comPapel=['consultora','supervisor','gestao','diretoria'];
+    if(k==='peso') comPapel=comPapel.concat(['vet']);
+    return comPapel.indexOf(r)>=0;
+  }
   function monPaginasSet(m){ return Array.isArray(m.paginas)?m.paginas:[]; } // padrão: NADA (a Gestão concede)
   // Marcar uma tela é uma MUDANÇA NÃO SALVA como qualquer outra (30/set/2026): antes o aviso
   // "Há mudanças não salvas" só nascia no nome, na senha e no horário, e a tela acesa parecia
@@ -17014,18 +17031,29 @@
     ATIVS_DC.forEach(function(a){ const on=aset.indexOf(a.s)>=0;
       h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonAtividade('+i+',\''+a.s+'\')">'+a.t+'</span>'; });
     h+='</div>';
-    h+='<div class="hint" style="margin-top:8px">Nada marcado aqui = esta pessoa vê <strong>todas</strong> as atividades do Day Care. Marcar é RESTRINGIR: ela passa a ver só o que estiver aceso.</div>';
+    // QA da 6.19 (achado 2): a dica antiga dizia "nada marcado = vê todas". Não é verdade para
+    // quem entra pelo Time — a lista dela existe sempre, e vazia quer dizer NENHUMA atividade.
+    // Quem lesse e tocasse em "limpar" para liberar tudo tiraria a Chamada e o Almoço do monitor.
+    h+='<div class="hint" style="margin-top:8px">Nada marcado aqui = esta pessoa <strong>não vê nenhuma</strong> atividade do Day Care. Marque o que ela faz (ou toque em marcar todas). As atividades valem na próxima entrada dela com a senha.</div>';
+    // As três funções de tela única ainda não mostram as atividades no menu, mesmo marcadas
+    // (QA da 6.19, achado 3 — pendência registrada na story): o aviso evita marcar em vão.
+    if(['vet','conferencia','plantonista'].indexOf(String(m.role||''))>=0)
+      h+='<div class="hint" style="margin-top:4px">Veterinária, Conferência e Plantonista ainda não veem as atividades do Day Care no menu, mesmo marcadas.</div>';
     return h; };
     NAV_PAGINAS_ALL.forEach(function(g){
       if(g.atividades){ h+=ativHTML(); return; }
       h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">'+g.grp+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
       g.itens.forEach(function(it){ const on=pset.indexOf(it.k)>=0;
-        h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+'</span>'; });
+        // Desmarcada, mas o papel dela já mostra: o chip diz isso, em vez de parecer apagado.
+        const doPapel=!on && telaVemDoPapel(it.k, m.role);
+        h+='<span class="dia'+(on?' on':'')+' clic"'+(doPapel?' style="border-style:dashed" title="Aparece para esta pessoa mesmo desmarcada: o papel dela já mostra esta tela."':'')
+          +' onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+(doPapel?'<span style="font-weight:600;opacity:.75"> · vem com o papel</span>':'')+'</span>'; });
       h+='</div>';
     });
     // O que a marcação faz, dito na própria tela (30/set/2026): a tela acesa aparece para a
     // pessoa E abre para ela, e vale na hora — sem ela sair e entrar de novo.
-    h+='<div class="hint" style="margin-top:10px">Tela acesa = a pessoa vê a tela no menu e consegue abri-la. Depois de marcar, toque em <strong>Salvar colaboradores</strong>: vale na hora, no aparelho dela, sem ela sair e entrar de novo.</div>';
+    h+='<div class="hint" style="margin-top:10px">Tela acesa = a pessoa vê a tela no menu e consegue abri-la. Depois de marcar, toque em <strong>Salvar colaboradores</strong>: as telas valem na hora, no aparelho dela, sem ela sair e entrar de novo. As atividades do Day Care e o papel valem na próxima entrada dela com a senha.</div>';
+    h+='<div class="hint" style="margin-top:4px">Tela com “vem com o papel” aparece para esta pessoa mesmo desmarcada: o papel dela já a mostra.</div>';
     h+='<div class="hint" style="margin-top:4px">'+NAV_PAGINAS_FORA+'</div>';
     h+='</div>';
     return h;
@@ -17048,12 +17076,15 @@
   function permResumoInner(m){
     const rot={}; NAV_PAGINAS_ALL.forEach(function(g){ g.itens.forEach(function(it){ rot[it.k]=it.t; }); });
     const pset=monPaginasSet(m), aset=monAtividadesSet(m);
-    if(!pset.length && !aset.length)
+    // O que o papel já mostra nas telas que só liberam (QA da 6.19): também é "o que ela vê".
+    const doPapel=NAV_PAGINAS_KEYS.filter(function(k){ return pset.indexOf(k)<0 && telaVemDoPapel(k, m.role); });
+    if(!pset.length && !aset.length && !doPapel.length)
       return '<div style="margin-top:8px;background:rgba(222,180,40,.14);border:1px solid var(--z-gold);border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:700;color:var(--z-blue)">'
         +'Sem nenhuma tela liberada — '+escAttr(m.nome||'esta pessoa')+' entra e não vê nada para fazer. Abra as permissões abaixo e marque o que ela faz.</div>';
     const chip=function(t,cor){ return '<span style="display:inline-block;background:'+cor+';border-radius:999px;padding:3px 10px;margin:2px 4px 2px 0;font-size:11.5px;font-weight:700;color:var(--z-blue)">'+escAttr(t)+'</span>'; };
     let h='<div style="margin-top:8px"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Hoje esta pessoa vê</div>';
     h+=pset.map(function(k){ return chip(rot[k]||k, 'rgba(35,77,103,.10)'); }).join('');
+    h+=doPapel.map(function(k){ return chip((rot[k]||k)+' (pelo papel)', 'rgba(35,77,103,.05)'); }).join('');
     if(aset.length){
       const rotA={}; ATIVS_DC.forEach(function(a){ rotA[a.s]=a.t; });
       h+=aset.map(function(s){ return chip('Day Care: '+(rotA[s]||s), 'rgba(222,180,40,.20)'); }).join('');
@@ -17526,8 +17557,18 @@
   // atividade (a lição de 08/ago/2026).
   function permReaplicarDoTime(){
     var u=(typeof usuarioAtual==='function')?usuarioAtual():null;
-    if(!u || !u.monId || u.role==='gestao' || u.role==='diretoria') return;
-    var m=(MONITORES||[]).filter(function(x){ return x && x.id===u.monId; })[0];
+    if(!u || u.role==='gestao' || u.role==='diretoria') return;
+    // Quem entrou pela senha fixa do sistema não tem lista de telas: nada a reler.
+    if(!u.monId && !Array.isArray(u.paginas)) return;
+    var m=null;
+    if(u.monId) m=(MONITORES||[]).filter(function(x){ return x && x.id===u.monId; })[0];
+    else {
+      // Colaborador antigo, sem id no cadastro (QA da 6.19, achado 4): acha pelo nome E pelo
+      // papel — e só quando há UM. Dois com o mesmo nome e papel: não adivinha, espera a senha.
+      var mesmos=(MONITORES||[]).filter(function(x){ return x && !x.id && x.nome && u.nome
+        && jsNorm(x.nome)===jsNorm(u.nome) && String(x.role||'monitor')===String(u.role||''); });
+      if(mesmos.length===1) m=mesmos[0];
+    }
     if(!m) return;
     var novas=Array.isArray(m.paginas)?m.paginas.slice():[];
     if(Array.isArray(u.paginas) && JSON.stringify(novas)===JSON.stringify(u.paginas)) return;
@@ -17595,6 +17636,13 @@
     // Papel aplicado: esconde o cabeçalho que ficou sem item. De novo no quadro seguinte,
     // porque a medição depende do layout já ter assentado (mesma razão do ajustarAcordeoes).
     try{ ajustarSubcabecalhosMenu(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ try{ ajustarSubcabecalhosMenu(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+    // A TELA LIBERADA NO TIME JÁ APARECE NA ENTRADA (QA da 6.19, achado 5). Para quem o papel
+    // esconde os cabeçalhos (a veterinária), a gaveta abria à força e o Peso ficava à vista; com
+    // o cabeçalho de volta, ela nascia fechada e o Peso de todo dia ficava a um toque a mais.
+    // Abre a corrente de cada tela concedida — do item-pai (Vencimentos), a de fora, para a
+    // gaveta dos dias não nascer aberta.
+    try{ document.querySelectorAll('#nav a[data-v][data-concedido="1"]').forEach(function(a){
+      abrirSanfonasDe((a.classList.contains('nav-parent') && a.parentElement) ? a.parentElement.parentElement : a); }); }catch(e){} /* silencioso de propósito: abrir gaveta é conforto — o item continua alcançável pelo cabeçalho */
     // Item 1 — quem recebeu atividade do Day Care (ex.: Almoço) precisa VER a atividade ao
     // entrar. Antes o Day Care ficava fechado na sanfona e a pessoa jurava que "não apareceu".
     try{ if(Array.isArray(u.atividades)&&u.atividades.length){
@@ -26723,6 +26771,18 @@
         var oculto=false;
         try{ oculto=(getComputedStyle(c).display==='none'); }catch(e){} /* silencioso de propósito: sem medir, o cabeçalho fica como estava */
         if(oculto && contarAbaixo(c, true)>0) c.style.setProperty('display','flex','important');
+      });
+      // O RÓTULO DE DENTRO DA GAVETA ("Planos e cobranças", QA da 6.19, achado 6): some quando
+      // nada abaixo dele ficou à mostra — rótulo sem item promete o que não existe.
+      [].slice.call(nav.querySelectorAll('.nav-rotulo')).forEach(function(r){
+        r.style.removeProperty('display');
+        var n=0;
+        for(var el=r.nextElementSibling; el; el=el.nextElementSibling){
+          if(el.classList && (el.classList.contains('nav-rotulo') || el.classList.contains('grp'))) break;
+          var lista=(el.tagName==='A')?[el]:(el.querySelectorAll?[].slice.call(el.querySelectorAll('a')):[]);
+          lista.forEach(function(a){ if(a.offsetParent!==null && !a.classList.contains('nav-parent')) n++; });
+        }
+        if(!n) r.style.display='none';
       });
       dcs.forEach(function(x,i){ x.classList.toggle('dcsub-open', abertas[i]); }); // restaura
       cats.forEach(function(x,i){ x.classList.toggle('acc-open', catsAbertas[i]); });

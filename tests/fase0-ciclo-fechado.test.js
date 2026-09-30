@@ -4815,8 +4815,8 @@ const MENU619 = menuDoHtml(SRC619);
 const NAV619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_ALL)'));
 const CHAVES619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_KEYS)'));
 // O que está no menu e NÃO se concede pelo Time — cada um tem de estar DITO na tela do Time.
-const FORA619 = { inicio: 'Início', mesa: 'O que fazer hoje', painelmeu: 'Meu', consultoras: 'Consultoras',
-  'painel-amanda': 'Amanda', paineloperacao: 'Márcia', 'painel-diretoria': 'Adriana', planodia: 'Escala e plano do dia',
+const FORA619 = { inicio: 'Início', mesa: 'O que fazer hoje', painelmeu: 'Meu Dashboard', consultoras: 'das Consultoras',
+  'painel-amanda': 'da Amanda', paineloperacao: 'da Márcia', 'painel-diretoria': 'da Adriana', planodia: 'Escala e plano do dia',
   acerto: 'Financeiro do plantão', config: 'Configurações (senhas do sistema)', abertura: 'Abertura do dia', agenda: 'Agenda (em breve)' };
 prova('o leitor do menu enxerga o menu de verdade (Lançamentos do dia mora em Central Zêluz › Day Care)', () => {
   const d = MENU619.find((x) => x.k === 'dashdc');
@@ -4972,6 +4972,15 @@ prova('a Gestão salva o Time: o aparelho da veterinária relê AS TELAS DELA e 
     igual(run('__ch619'), [], 'Gestão não é restringida');
     run("__ur619={role:'vet', nome:'Posto', paginas:[]}; __ch619=[]; permReaplicarDoTime();");
     igual(run('__ch619'), [], 'login de posto (sem cadastro no Time): nada muda');
+    // QA da 6.19 (achado 4): colaborador antigo, sem id no cadastro — acha pelo nome e pelo papel
+    run("MONITORES=[{nome:'Ana Vet', role:'vet', paginas:['cuidadovet','dashdc']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619[0]'), 'menu:["cuidadovet","dashdc"]', 'sem id: acha pelo nome e pelo papel');
+    run("MONITORES=[{nome:'Ana Vet', role:'vet', paginas:['hoje']},{nome:'Ana Vet', role:'vet', paginas:['dashdc']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'dois com o mesmo nome e papel: não adivinha');
+    run("MONITORES=[{nome:'Ana Vet', role:'monitor', paginas:['hoje']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'mesmo nome, outro papel: não é ela');
+    run("MONITORES=[{nome:'Recepção', role:'consultora', paginas:['hoje']}]; __ur619={role:'consultora', nome:'Recepção'}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'senha fixa do sistema (sem lista de telas): nunca vira restrita pelo nome');
   } finally {
     run(`usuarioAtual=__bk619r.ua; aplicarPaginasPessoa=__bk619r.ap; aplicarPermMenu=__bk619r.pm; ajustarAcordeoes=__bk619r.aa;
       ajustarSubcabecalhosMenu=__bk619r.as; permCarregarConcedidas=__bk619r.pc; MONITORES=__bk619r.mon; document.body.removeAttribute=__bk619r.ra;`);
@@ -4991,9 +5000,46 @@ prova('marcar uma tela (ou atividade) no Time avisa "Há mudanças não salvas" 
     assert.strictEqual(run('__n619'), 2);
   } finally { run('monMarcarPendente=__bk619t.mp; MONITORES=__bk619t.mon;'); }
 });
+prova('o que o papel já mostra (QA da 6.19): Consultora e Supervisão têm as 12 telas que só liberam; a Veterinária, só o Peso; as 16 antigas nunca "vêm com o papel"', () => {
+  const doPapel = (r) => JSON.parse(run("JSON.stringify(NAV_PAGINAS_KEYS.filter(function(k){ return telaVemDoPapel(k,'" + r + "'); }))"));
+  const DOZE = ['eahist', 'ritmo', 'gestdia', 'hoje', 'contatos', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos'];
+  igual(doPapel('consultora'), DOZE);
+  igual(doPapel('supervisor'), DOZE);
+  igual(doPapel('vet'), ['peso']);
+  ['monitor', 'plantonista', 'conferencia', 'aprendiz'].forEach((r) => igual(doPapel(r), [], r));
+});
+prova('no Time, a tela que vem com o papel aparece como tal (não apagada) e o resumo "Hoje esta pessoa vê" a inclui', () => {
+  const h = run("permEditInner(0,{nome:'Cons Teste', role:'consultora', paginas:['checkin'], atividades:[]})");
+  assert.ok(/toggleMonPagina\(0,'dashdc'\)">Lançamentos do dia<span[^>]*> · vem com o papel<\/span>/.test(h), 'Lançamentos do dia: vem com o papel');
+  assert.ok(/class="dia on clic" onclick="toggleMonPagina\(0,'checkin'\)">Check-in<\/span>/.test(h), 'Check-in marcado');
+  assert.ok(!/toggleMonPagina\(0,'recepcao'\)">Pendências com o tutor<span/.test(h), 'tela antiga desmarcada não "vem com o papel"');
+  const r = run("permResumoInner({nome:'Cons Teste', role:'consultora', paginas:['checkin'], atividades:[]})");
+  assert.ok(/Check-in/.test(r) && /Lançamentos do dia \(pelo papel\)/.test(r) && !/Sem nenhuma tela liberada/.test(r), r.slice(0, 300));
+  const v = run("permResumoInner({nome:'Vet Teste', role:'vet', paginas:[], atividades:[]})");
+  assert.ok(/Peso \(pelo papel\)/.test(v), 'a veterinária sem nada marcado vê o Peso');
+  const n = run("permResumoInner({nome:'Mon Teste', role:'monitor', paginas:[], atividades:[]})");
+  assert.ok(/Sem nenhuma tela liberada/.test(n), 'o monitor sem nada marcado continua com o aviso');
+});
+prova('a dica das atividades diz a verdade: nada marcado = NENHUMA atividade; e avisa quem ainda não as vê no menu', () => {
+  const h = run("permEditInner(0,{nome:'Mon Teste', role:'monitor', paginas:[], atividades:[]})");
+  assert.ok(/Nada marcado aqui = esta pessoa <strong>não vê nenhuma<\/strong> atividade do Day Care/.test(h));
+  assert.ok(!/vê <strong>todas<\/strong> as atividades/.test(h) && !/Marcar é RESTRINGIR/.test(h), 'a dica antiga (falsa) saiu');
+  assert.ok(/As atividades do Day Care e o papel valem na próxima entrada dela com a senha/.test(h));
+  assert.ok(!/ainda não veem as atividades/.test(h), 'para o monitor, o aviso não aparece');
+  assert.ok(/Veterinária, Conferência e Plantonista ainda não veem as atividades do Day Care no menu/.test(run("permEditInner(0,{nome:'V', role:'vet', paginas:[], atividades:[]})")));
+});
+prova('quem recebeu só o Quem chamar hoje tem o contador na entrada (as duas leituras dele descem)', () => comUsuario({ role: 'vet', paginas: ['contatos'] }, 'vet', () => {
+  run(`__bk619c={h:hojeGarantir, v:vencGarantir, p:pendCarregar}; __cg619=[];
+    hojeGarantir=function(){ __cg619.push('hoje'); }; vencGarantir=function(){ __cg619.push('venc'); }; pendCarregar=function(){ __cg619.push('pend'); };`);
+  try { run('permCarregarConcedidas()'); igual(run('__cg619'), ['venc', 'hoje']); }
+  finally { run('hojeGarantir=__bk619c.h; vencGarantir=__bk619c.v; pendCarregar=__bk619c.p;'); }
+}));
+prova('na entrada, as gavetas das telas liberadas já abrem (o Peso da veterinária continua à vista)', () => {
+  assert.ok(/document\.querySelectorAll\('#nav a\[data-v\]\[data-concedido="1"\]'\)\.forEach\(function\(a\)\{\n\s*abrirSanfonasDe\(/.test(SRC619));
+});
 prova('a tela do Time diz como vale (Salvar colaboradores, na hora) e o que não se concede', () => {
   const h = run("permEditInner(0,{nome:'Vet Teste', role:'vet', paginas:['dashdc'], atividades:[]})");
-  assert.ok(/toque em <strong>Salvar colaboradores<\/strong>: vale na hora/.test(h));
+  assert.ok(/toque em <strong>Salvar colaboradores<\/strong>: as telas valem na hora/.test(h));
   assert.ok(h.indexOf(run('NAV_PAGINAS_FORA')) > 0);
   const i1 = h.indexOf('Ecossistema Daycare · AuAulândia'), i2 = h.indexOf('Ecossistema Daycare · Day Care — Atividades'), i3 = h.indexOf('Central Zêluz · Peludinhos');
   assert.ok(i1 > 0 && i1 < i2 && i2 < i3, 'as atividades entre as duas gavetas, como no menu');

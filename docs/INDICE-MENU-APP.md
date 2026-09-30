@@ -17,7 +17,9 @@
 | Marcar uma tela no Time não avisava que faltava salvar | o aviso só nascia no nome, na senha e no horário | marcar tela ou atividade mostra "Há mudanças não salvas" |
 | Depois de salvar, nada mudava no celular da pessoa até ela **sair e entrar de novo** (recarregar não bastava) | as telas eram lidas uma vez, na senha | quando o Time muda no banco, o aparelho relê **as telas dela** e redesenha o menu, sem tirar ninguém da tela (`permReaplicarDoTime`) |
 
-- **Ninguém perde tela no dia da publicação.** As 8 telas novas **só liberam**: marcada, aparece; desmarcada, fica o que o papel já mostrava (a recepção continua com os Lançamentos do dia, a veterinária com o Peso). As 20 de antes continuam com a regra de sempre (quem tem lista vê o marcado).
+- **Ninguém perde tela no dia da publicação.** As 8 telas novas **só liberam**, como já era com Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção e Vencimentos: marcada, aparece; desmarcada, fica o que o papel já mostrava (a recepção continua com os Lançamentos do dia, a veterinária com o Peso). No Time, essas telas aparecem com **"· vem com o papel"** (borda tracejada) quando o papel da pessoa já as mostra, e o resumo "Hoje esta pessoa vê" as lista como "(pelo papel)". As outras 16 continuam com a regra de sempre: quem tem lista vê só o marcado.
+- **A dica das atividades do Day Care estava errada** ("nada marcado = vê todas"): para quem entra pelo Time, nada marcado = **nenhuma** atividade. A dica agora diz isso, e diz que atividades e papel valem na próxima entrada com a senha (só as telas valem na hora).
+- **Na entrada, a gaveta de cada tela liberada já abre** (a veterinária continua com o Peso à vista); o rótulo "Planos e cobranças" some quando nada abaixo dele está à mostra.
 - **Não se concedem pelo Time** (e a própria tela do Time diz isso): a mesa de cada papel (O que fazer hoje e os dashboards Meu, Consultoras, Amanda, Márcia e Adriana), Início, Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).
 - **Achado no caminho:** o monitor e o aprendiz viam os dias dos Vencimentos (Hoje, Segunda...) soltos em Central Zêluz › Day Care, sem ter a tela — o toque dava em "Esta tela é da Central Zêluz". A gaveta volta a sumir junto com o item (`ajustarAcordeoes` respeita `data-acc-perm`).
 - **A conversa com o tutor na ficha** e o **arquivo da turma com telefones** seguem a mesma regra do Hoje na Zêluz e do Quem chamar hoje: quem recebeu uma dessas telas no Time também os tem.
@@ -1366,7 +1368,7 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 
 ## O menu
 
-> **Desde 30/set/2026:** a coluna "Quem vê" é o **piso** (o que o papel mostra). No Time, a Gestão libera qualquer tela da lista para qualquer pessoa, e vale na hora. Não se concedem por lá: Início, O que fazer hoje, os cinco dashboards de papel, Escala e plano do dia, Financeiro do plantão, Configurações, Abertura do dia e Agenda.
+> **Desde 30/set/2026:** no Time, a Gestão libera qualquer tela da lista para qualquer pessoa, e vale na hora. Para as 12 telas que só liberam (Enriquecimento Ambiental, Ritmo do Time, Conferência do dia, Hoje na Zêluz, Quem chamar hoje, Banhos recorrentes, Lançamentos do dia, Pendências de prevenção, Peso, Pesquisa com a Família Multiespécie, Prevenção e Vencimentos), a coluna "Quem vê" é o **piso**. As outras 16 aparecem, para quem tem lista no Time, só se estiverem marcadas. Não se concedem por lá: Início, O que fazer hoje, os cinco dashboards de papel, Escala e plano do dia, Financeiro do plantão, Configurações, Abertura do dia e Agenda.
 
 | Grupo | Título (data-v) | Subtítulo didático | Quem vê (como hoje) |
 |---|---|---|---|

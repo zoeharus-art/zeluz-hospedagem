@@ -132,6 +132,41 @@ const barrada = (t) => /Esta tela é da/.test(t);
       r.itens.indexOf('dashdc') >= 0 && r.itens.indexOf('peso') >= 0, r.itens.join(' '));
     await p.close();
 
+    console.log('\nAjustes do QA da 6.19:');
+    p = await abrirApp(b);
+    r = await entrar(p, { role: 'vet', nome: 'Vet Teste', monId: 'p1', paginas: ['cuidadovet', 'hoje'] });
+    const aberta = await p.evaluate(() => {
+      const acc = document.querySelector('#nav .acc[data-acc="c-daycare"]');
+      const peso = document.querySelector('#nav a[data-v="peso"]');
+      return { dc: !!(acc && acc.classList.contains('acc-open')), peso: !!(peso && peso.offsetParent !== null) };
+    });
+    prova('veterinária com Hoje na Zêluz: a gaveta Day Care já entra aberta e o Peso fica à vista, sem toque', aberta.dc && aberta.peso, JSON.stringify(aberta));
+    const rotuloVet = await p.evaluate(() => { const r = document.querySelector('#nav .nav-rotulo'); return getComputedStyle(r).display; });
+    prova('"Planos e cobranças" não fica órfão para quem não vê a Renovação de planos', rotuloVet === 'none', rotuloVet);
+    await p.close();
+    p = await abrirApp(b);
+    await entrar(p, { role: 'consultora', nome: 'Consultora' });
+    await p.evaluate(() => document.querySelectorAll('#nav .acc').forEach((a) => a.classList.add('acc-open')));
+    const rotuloCons = await p.evaluate(() => { const r = document.querySelector('#nav .nav-rotulo'); return r.offsetParent !== null; });
+    prova('para a consultora (que vê a Renovação), "Planos e cobranças" continua', rotuloCons);
+    // O "vem com o papel" da tela do Time é uma tabela; aqui ela é conferida contra o CSS de verdade.
+    const difs = await p.evaluate(() => {
+      const out = []; const antes = document.body.dataset.role;
+      ['monitor', 'consultora', 'vet', 'conferencia', 'supervisor', 'plantonista', 'aprendiz'].forEach((r) => {
+        document.body.dataset.role = r;
+        NAV_PAGINAS_SO_LIBERA.forEach((k) => {
+          const a = document.querySelector('#nav a[data-v="' + k + '"]'); const inl = a.getAttribute('style');
+          a.removeAttribute('style');
+          const css = getComputedStyle(a).display !== 'none';
+          if (inl !== null) a.setAttribute('style', inl);
+          if (css !== telaVemDoPapel(k, r)) out.push(r + '/' + k + ': CSS ' + css + ' × tabela ' + telaVemDoPapel(k, r));
+        });
+      });
+      document.body.dataset.role = antes; return out;
+    });
+    prova('"vem com o papel" na tela do Time bate com o CSS do menu, papel por papel (7 papéis × 8 telas)', difs.length === 0, difs.join(' | '));
+    await p.close();
+
     console.log('\nA gaveta dos Vencimentos some com o item (achado de 30/set/2026):');
     p = await abrirApp(b);
     r = await entrar(p, { role: 'monitor', nome: 'Monitor', monId: 'p5', paginas: ['hospedagem'] });
