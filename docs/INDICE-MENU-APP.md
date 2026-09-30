@@ -2,7 +2,7 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
-## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê
+## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê; renovação paga antes do fim do plano
 
 > **Adriana, 30/set/2026:** *"Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar hoje, Lançamentos do dia, e o que é ali da Central Zêluz, e não estou conseguindo. Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, mas não deu. Eu preciso de conseguir dar acesso a todas as pessoas que eu quiser. [...] Eu preciso que tudo esteja atualizado."* Story 6.19.
 
@@ -25,6 +25,27 @@
 - **A conversa com o tutor na ficha** e o **arquivo da turma com telefones** seguem a mesma regra do Hoje na Zêluz e do Quem chamar hoje: quem recebeu uma dessas telas no Time também os tem.
 - **Onde está no código:** `NAV_PAGINAS_ALL`, `NAV_PAGINAS_SO_LIBERA`, `NAV_PAGINAS_FORA`, `permEditInner`, `toggleMonPagina`, `paginaConcedida`, `podeTela`, `permCarregarConcedidas`, `permMarcarConcedida`, `aplicarPaginasPessoa`, `aplicarPermMenu`, `ajustarAcordeoes`, `ajustarSubcabecalhosMenu`, `permReaplicarDoTime`, portas em `hojeAbrir`, `contatosAbrir`, `pendAbrir`, `vencAbrir`, `vencRender`, `fichaTutorPode`, `turmaPodeBaixar`.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (20 provas da 6.19, entre elas: cada tela do Time está na mesma gaveta, com o mesmo nome e na mesma ordem do menu lido do próprio HTML; nenhuma tela do menu fica de fora sem aviso) e `tests/menu-concessao-navegador.test.js` (27 provas no navegador, sem banco: a veterinária alcança e abre as telas liberadas; liberar e tirar valem na hora; quem não recebeu nada vê a barra de sempre).
+
+### (Y) Renovação de planos: pagou antes de o plano acabar, vale o período seguinte
+
+> **Adriana, 30/set/2026**, renovando o Baque e o Nelson: *"Eles fizeram o pagamento hoje, 30/09, valor da mensalidade... vai valer do dia 1º/10 até 31/10. E ao confirmar dá 30/09 até 30/09. E não está renovando... quatro renovações aqui que não deram certo. Ela precisa de automaticamente ir. O tutor já pagou."* Story 6.20.
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| Pago em 30/09, o mensal "valia de 30/09 até 30/09" | a data do pagamento era também o começo do plano, e o plano vale até o fim do mês em que começa | o app guarda as duas coisas: **a data do pagamento** (`renov.inicio`, é por ela que o Financeiro conta o mês) e **o começo do período** (`renov.vig_inicio`, quando é outro dia) |
+| Cada Confirmar gravava de novo o mesmo 30/09 e a renovação "não ia" | a conta dava sempre o mesmo vencimento | o período sai de 3 regras (abaixo); e um pagamento novo cuja conta **não estende** o plano pergunta antes: "Começar em 01/10, valendo até 31/10" ou "Manter" |
+| Quatro tentativas iguais viraram quatro "Renovações anteriores" | cada Confirmar empurrava uma cópia do plano gravado | Confirmar o mesmo plano de novo não empurra cópia; as tentativas iguais que já estão lá aparecem numa linha só, "N vezes iguais (tentativas repetidas)" — nada é apagado do banco |
+
+**As 3 regras do começo do período** (`renovVigenciaComeca`), nesta ordem:
+1. **Corrigir o plano gravado** (a mesma data de pagamento de novo): o período é o que já era.
+2. **Renovação antecipada:** o tutor pagou enquanto o plano ainda vale, nos **últimos 15 dias** dele (é quando ele aparece na Renovação de planos). O novo período começa **no dia seguinte ao fim** do atual. Plano até 30/09, pago em 30/09 (ou 20/09): vale de 01/10 até 31/10. Trimestral até 30/09, pago em 25/09: 01/10 a 31/12.
+3. **Fim do mês:** pagamento nos **últimos 7 dias do mês** (de 24/09 em diante, num mês de 30 dias) começa no **dia 1º do mês seguinte**. Até o dia 23, o mês do pagamento continua sendo o 1º mês do plano. Pagou atrasado em 02/10: vale outubro, como sempre.
+
+- **Quem começa no meio do mês** (opção 1 ou 2) continua com a regra própria, sem mudança.
+- **Onde a pessoa vê:** na ficha, "Vale até" vira "**de 01/10 até 31/10**", com a frase do porquê embaixo; o resumo do Confirmar diz "**Pagamento 30/09 · vale de 01/10 até 31/10**" e o porquê; a mensagem ao tutor, a lista da Renovação, "Renovações anteriores" (com "pago em 30/09"), o Desfazer e a aba Identificação mostram o período.
+- **O Financeiro não muda:** o mês do dinheiro continua sendo o da data do pagamento (regime de caixa, decisão de 02/set/2026). `financeiro-logica.js` não foi tocado.
+- **Onde está no código:** `aplicarRenovacao`, `renovCalcular`, `renovVigenciaComeca`, `renovRegraFimDoMes`, `renovVigenciaFrase`, `renovMesmoPlano`, `renovEdit` (`_inicio_gravado`), `blocoPlano`, `confirmarRenovacao`, `renovHistHTML`, `desfazerRenovacao`, `msgRenovado`, `renderRenovacao`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 14 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês, o Confirmar de verdade com o resumo e a gravação, o histórico agrupado); 11 defeitos plantados, 11 pegos.
 
 ## O que mudou em 27/set/2026 (v 2026-09-27-01)
 

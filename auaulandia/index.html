@@ -8714,7 +8714,7 @@
       // plano gravado. Sem deduzir, o dashboard mostraria 96 peludinhos "sem tipo".
       // A duração da vigência diz o compromisso: ~1 mês = mensal, ~3 = trimestral, ~6 = semestral.
       if(!comp){
-        const d=planoPelaVigencia(r.inicio, r.fim);
+        const d=planoPelaVigencia(r.vig_inicio||r.inicio, r.fim);
         if(d) comp=(d.plano==='Silver'?'mensal':(d.plano==='Gold'?'trimestral':'semestral'));
       }
       return comp||'semtipo';
@@ -19163,20 +19163,82 @@
       ? ('opção 1 do meio do mês: '+mP+' inteiro + as diárias de '+mA+' avulsas, pagas à parte')
       : ('opção 2 do meio do mês: '+mP+' inteiro + as diárias de '+mA+' pelo valor do plano');
   }
+  // iniISO é a DATA DO PAGAMENTO (renov.inicio — é por ela que o Financeiro conta o mês,
+  // regime de caixa, decisão de 02/set/2026). O período que o plano cobre começa em
+  // opts.vigInicio quando ele NÃO é o dia do pagamento (renovação paga antes do fim do plano,
+  // ou nos últimos dias do mês); aí fica gravado em renov.vig_inicio.
   function aplicarRenovacao(planoKey, aulas, iniISO, opts){
     const pl=planos()[planoKey]; if(!pl||!iniISO) return null;
     const meses=PLANO_MESES[pl.compromisso]||1;
     const meioMes=!!(opts&&opts.meioMes);
-    const fim=meioMes?fimVigenciaMeioMesISO(iniISO, meses):fimVigenciaISO(iniISO, meses);
-    return { plano:planoKey, aulas:aulas, inicio:iniISO, fim:fim,
+    const vig=(opts&&opts.vigInicio)||iniISO;
+    const fim=meioMes?fimVigenciaMeioMesISO(vig, meses):fimVigenciaISO(vig, meses);
+    const out={ plano:planoKey, aulas:aulas, inicio:iniISO, fim:fim,
              mesRenov:mesAnoDe(fim), quando:hojeISO(),
              mes_cobranca_1:(meioMes?mmMesSeguinteDe(iniISO):'') };
+    if(vig!==iniISO) out.vig_inicio=vig;
+    return out;
+  }
+  // ===== PAGOU A RENOVAÇÃO ANTES DE O PLANO ACABAR (Adriana, 30/set/2026) ==============
+  // "Eles fizeram o pagamento hoje, 30/09, valor da mensalidade... vai valer do dia 1º/10 até
+  //  31/10. E ao confirmar dá 30/09 até 30/09. E não está renovando." A data do pagamento era
+  // também o começo do plano: pago em 30/09, o mensal "valia até o fim de setembro" — 30/09 —
+  // e cada Confirmar gravava de novo o mesmo vencimento. Agora o começo do período sai de três
+  // regras, nesta ordem:
+  //  1. CORREÇÃO do plano gravado (a mesma data de pagamento de novo): o período é o que já era;
+  //  2. RENOVAÇÃO ANTECIPADA: o tutor pagou enquanto o plano ainda vale, nos últimos 15 dias dele
+  //     (é quando ele aparece na Renovação de planos) — o período novo começa no dia seguinte ao
+  //     fim do atual, sem buraco e sem sobreposição;
+  //  3. FIM DO MÊS: pagamento nos últimos 7 dias do mês (do dia 24 em diante, num mês de 30) não
+  //     cobre "o resto deste mês" — o plano começa no dia 1º do mês seguinte.
+  // Quem começa no meio do mês continua com a regra própria (renovMeioMesVale), que não passa
+  // por aqui. O Financeiro não muda: o mês do dinheiro continua sendo o do pagamento.
+  const RENOV_JANELA_ANTECIPADA=15, RENOV_DIAS_FIM_DO_MES=7;
+  function renovDiasEntreISO(a, b){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(a||'')||!/^\d{4}-\d{2}-\d{2}$/.test(b||'')) return null;
+    const x=a.split('-').map(Number), y=b.split('-').map(Number);
+    return Math.round((Date.UTC(y[0],y[1]-1,y[2])-Date.UTC(x[0],x[1]-1,x[2]))/86400000);
+  }
+  function renovPrimeiroDoMesSeguinte(iso){ const m=mmMesSeguinteDe(iso); return m?(m+'-01'):''; }
+  function renovRegraFimDoMes(pagISO){
+    const resto=renovDiasEntreISO(pagISO, fimVigenciaISO(pagISO, 1));
+    return (resto!=null && resto<RENOV_DIAS_FIM_DO_MES)?renovPrimeiroDoMesSeguinte(pagISO):pagISO;
+  }
+  // Devolve {vig, porque}: o dia em que o período começa e a regra que decidiu.
+  function renovVigenciaComeca(r, pagISO){
+    const g=r||{};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(pagISO||'')) return {vig:pagISO, porque:''};
+    // A data de pagamento GRAVADA (renovEdit guarda a de antes do rascunho em _inicio_gravado).
+    const gIni=Object.prototype.hasOwnProperty.call(g,'_inicio_gravado')?g._inicio_gravado:g.inicio;
+    if(gIni && gIni===pagISO){
+      if(g.vig_inicio) return {vig:g.vig_inicio, porque:'gravado'};
+    } else if(/^\d{4}-\d{2}-\d{2}$/.test(g.fim||'') && pagISO<=g.fim){
+      const falta=renovDiasEntreISO(pagISO, g.fim);
+      if(falta!=null && falta<=RENOV_JANELA_ANTECIPADA){
+        const seg=addDiasISO(g.fim, 1);
+        const vig=renovRegraFimDoMes(seg);   // um fim no meio do mês não deixa sobrar só uns dias
+        return {vig:vig, porque:'antecipada'};
+      }
+    }
+    const vig=renovRegraFimDoMes(pagISO);
+    return {vig:vig, porque:(vig!==pagISO?'fim-do-mes':'')};
+  }
+  // A frase que explica por que o período não começa no dia do pagamento — a MESMA na ficha e
+  // no resumo do Confirmar.
+  function renovVigenciaFrase(calc, porque){
+    if(!calc||!calc.vig_inicio) return '';
+    if(porque==='antecipada') return 'pago antes do fim do plano atual: o novo período começa no dia seguinte ao fim, '+fmtBR(calc.vig_inicio);
+    if(porque==='fim-do-mes') return 'pago nos últimos dias do mês: o plano começa em '+fmtBR(calc.vig_inicio);
+    return 'o período começa em '+fmtBR(calc.vig_inicio)+', como já estava gravado';
   }
   // A vigência calculada do jeito certo, de um lugar só: quem desenha a tela, quem confirma
   // e quem grava leem todos a MESMA conta — a regra do meio do mês inclusive.
   function renovCalcular(r, planoKey, aulas, iniISO){
-    return aplicarRenovacao(planoKey, aulas, iniISO,
-      {meioMes: !!renovMeioMesVale(Object.assign({}, r||{}, {inicio:iniISO}))});
+    const meioMes=!!renovMeioMesVale(Object.assign({}, r||{}, {inicio:iniISO}));
+    const v=meioMes?{vig:iniISO, porque:''}:renovVigenciaComeca(r, iniISO);
+    const c=aplicarRenovacao(planoKey, aulas, iniISO, {meioMes:meioMes, vigInicio:v.vig});
+    if(c) Object.defineProperty(c, '_porque', {value:v.porque, enumerable:false});
+    return c;
   }
   // ---- mensagens para o tutor (com emoji: WhatsApp, decisão de Adriana) ----
   // primeiroNome() já existe acima (usado no relatório do tutor)
@@ -19200,7 +19262,7 @@
     const r=renovDe(ex); const aulas=nAulasDe(p);   // aulas = dias marcados (uma verdade só)
     return 'Olá, '+primeiroNome(pelGet(p,'tutor'))+', como está? 💛\n\n'
       +'O plano '+(r.plano||'—')+', de '+aulas+'x por semana, do(a) '+p.n+', foi renovado.\n\n'
-      +'A nova vigência será de '+(r.inicio?fmtBR(r.inicio):'—')+' até '+(r.fim?fmtBR(r.fim):'—')
+      +'A nova vigência será de '+((r.vig_inicio||r.inicio)?fmtBR(r.vig_inicio||r.inicio):'—')+' até '+(r.fim?fmtBR(r.fim):'—')
       +', com próxima renovação prevista para '+(r.mesRenov||'—')+'.\n\n'
       +'Obrigada por confiar na Zêluz para cuidar de quem também faz parte da sua família!\n'
       +'Seguimos sendo a voz do(a) '+p.n+' nessa rotina de bem-estar, saúde, longevidade e muita diversão! 🐾💛';
@@ -19224,6 +19286,9 @@
   // Rascunho de outra ficha nunca vaza para esta (a lei de 19/ago: dado de uma tela só mente).
   function renovEdit(ex){
     var base=Object.assign({}, renovDe(ex));
+    // A data de pagamento que está GRAVADA, antes do rascunho por cima: é assim que a conta
+    // (renovVigenciaComeca) distingue corrigir o plano de hoje de lançar um pagamento novo.
+    Object.defineProperty(base, '_inicio_gravado', {value:(base.inicio||''), enumerable:false});
     var k=renovRascKey();
     if(renovRascunho && k && renovRascunho._k===k)
       Object.keys(renovRascunho).forEach(function(c){ if(c!=='_k') base[c]=renovRascunho[c]; });
@@ -19281,6 +19346,13 @@
   // "Quando errar, eu PRECISO conseguir consertar" (Adriana, 15/set/2026). O renov era um
   // objeto único: gravar em cima apagava o anterior para sempre. Agora toda troca guarda o
   // que saiu em daycare/cadastro/{k}/renov_hist, com quem trocou e quando.
+  // Dois registros do plano dizem a MESMA coisa? (tipo, aulas, nº na família, pagamento e período)
+  function renovMesmoPlano(a, b){
+    a=a||{}; b=b||{};
+    return String(a.plano||'')===String(b.plano||'') && String(a.aulas||'')===String(b.aulas||'')
+      && Number(a.ordemPet||1)===Number(b.ordemPet||1) && String(a.inicio||'')===String(b.inicio||'')
+      && String(a.vig_inicio||'')===String(b.vig_inicio||'') && String(a.fim||'')===String(b.fim||'');
+  }
   function renovHistDe(ex){
     var h=(ex&&ex.renov_hist)||{};
     return Object.keys(h).map(function(id){ return Object.assign({_id:id}, h[id]||{}); })
@@ -19305,12 +19377,25 @@
   function renovPodeDesfazer(){ try{ return canEditPel() && podePapel('ver-plano'); }catch(e){ return false; } }
   function renovHistHTML(ex){
     var hist=renovHistDe(ex); if(!hist.length) return '';
-    var linhas=hist.slice(0,6).map(function(o){
-      var pl=planos()[o.plano]||{};
+    // TENTATIVAS IGUAIS, UMA LINHA SÓ (Adriana, 30/set/2026 — "quatro renovações que não deram
+    // certo"). O Confirmar repetido gravava a mesma vigência de novo e cada vez empurrava uma
+    // cópia para cá. As linhas seguidas que dizem a mesma coisa viram uma, com quantas vezes;
+    // nada é apagado do banco (o rastro fica), só a leitura fica limpa.
+    var grupos=[];
+    hist.forEach(function(o){
+      var ult=grupos[grupos.length-1];
+      if(ult && renovMesmoPlano(ult.o, o)){ ult.n++; return; }
+      grupos.push({o:o, n:1});
+    });
+    var linhas=grupos.slice(0,6).map(function(gr){
+      var o=gr.o, pl=planos()[o.plano]||{};
       var rot=pl.rotulo?(pl.rotulo+' · '+(pl.compromisso||'')):(o.plano||'—');
+      var ini=o.vig_inicio||o.inicio;
       return '<div style="padding:7px 0;border-top:1px dashed var(--z-cream-warm);font-size:12.5px;font-weight:600;color:var(--z-blue)">'
         +'<strong>'+esc(rot)+'</strong> · '+esc(String(o.aulas||'—'))+'x · '
-        +(o.inicio?fmtBR(o.inicio):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
+        +(ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
+        +(o.vig_inicio&&o.inicio?' <span style="font-weight:600;color:var(--muted)">(pago em '+fmtBR(o.inicio)+')</span>':'')
+        +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
         +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
         +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(o.motivo):'')+'</div></div>';
     }).join('');
@@ -19344,9 +19429,9 @@
     const ok=await zPergunta('DESFAZER A ÚLTIMA RENOVAÇÃO',
       [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
        'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+(atual.aulas||'—')+'x · '
-         +(atual.inicio?fmtBR(atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
+         +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
        'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+(ant.aulas||'—')+'x · '
-         +(ant.inicio?fmtBR(ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
+         +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
        'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.'],
       {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
     if(!ok) return;
@@ -19354,6 +19439,7 @@
     await renovHistGravar(k, atual, 'desfeita');
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
+    if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
     await setPelExtra(pelAtual,{renov:volta});
     if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
       .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
@@ -19392,6 +19478,8 @@
     // POR QUE ESTE VENCIMENTO É O DO MÊS SEGUINTE — a ficha diz, ao lado da data
     // (Adriana, 22/set/2026). Vencimento esticado sem explicação parece erro de conta.
     const fraseMMTela=(calc&&regMMTela)?renovMeioMesFrase(regMMTela):'';
+    // O período que NÃO começa no dia do pagamento diz de onde começa e por quê (30/set/2026).
+    const fraseVigTela=(calc&&calc.vig_inicio)?renovVigenciaFrase(calc, calc._porque):'';
     // A categoria escolhida no TOPO da ficha manda aqui. Hóspede e avulso não têm plano
     // mensal — em vez de campos vazios, o bloco explica o que vale para cada um.
     const cat=pelCategoria(p);
@@ -19450,12 +19538,13 @@
             // e não erra. O mês do pagamento conta como o 1º mês do plano.
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
               +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
-              +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano. O vencimento é calculado sozinho — e só grava no Confirmar.</div>':'')+'</div>'
+              +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano — menos quando o tutor paga a renovação antes de o plano atual acabar (o novo período começa no dia seguinte ao fim) ou nos últimos 7 dias do mês (começa no dia 1º do mês seguinte). O vencimento é calculado sozinho — e só grava no Confirmar.</div>':'')+'</div>'
             +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
-              +(fimTela?(fmtBR(fimTela)+(fimTela<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(mesTela||'—')+'</span>'):'preencha o plano e a data do pagamento')
+              +(fimTela?((calc&&calc.vig_inicio?('<span style="font-size:14px;font-weight:700">de '+fmtBR(calc.vig_inicio)+' até </span>'):'')+fmtBR(fimTela)+(fimTela<hojeISO()?' — JÁ VENCIDO':'')+' <span style="font-size:12.5px;font-weight:600;color:var(--muted)">· renova em '+(mesTela||'—')+'</span>'):'preencha o plano e a data do pagamento')
+              +(fraseVigTela?'<div id="planoVigFrase" style="font-size:12px;font-weight:700;color:var(--z-blue);margin-top:4px">('+esc(fraseVigTela)+')</div>':'')
               +(fraseMMTela?'<div id="planoMeioMesFrase" style="font-size:12px;font-weight:700;color:var(--z-blue);margin-top:4px">('+esc(fraseMMTela)+')</div>':'')
               +'</div>'
               +(fimTela&&fimTela<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasce vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. O Confirmar vai perguntar antes de gravar.</div>':'')
@@ -19532,6 +19621,25 @@
          nao:'Manter '+fmtBR(r.inicio)+' mesmo assim'});
       if(usarProx) calc=calcProx;
     }
+    // PAGAMENTO NOVO QUE NÃO ESTENDE O PLANO (Adriana, 30/set/2026). Foi o que aconteceu quatro
+    // vezes com o Baque e o Nelson: o Confirmar gravava de novo o vencimento que já estava, e
+    // a renovação "não ia". Uma data de pagamento NOVA cuja conta termina dentro do plano que já
+    // vale (pago com mais de 15 dias de antecedência, por exemplo) pergunta antes de gravar.
+    if(String(gravado.inicio||'')!==String(r.inicio||'') && /^\d{4}-\d{2}-\d{2}$/.test(gravado.fim||'')
+       && calc.fim && calc.fim<=gravado.fim){
+      const isoSeg=addDiasISO(gravado.fim, 1);
+      const calcSeg=aplicarRenovacao(r.plano, aulas, r.inicio, {vigInicio:isoSeg});
+      if(calcSeg){
+        Object.defineProperty(calcSeg, '_porque', {value:'antecipada', enumerable:false});
+        const seguir=await zPergunta('ESTE PAGAMENTO NÃO ESTENDE O PLANO',
+          ['Data do pagamento: '+fmtBR(r.inicio),
+           'O plano atual já vale até '+fmtBR(gravado.fim)+' — e a conta deste pagamento termina em '+fmtBR(calc.fim)+'.',
+           'Se o tutor pagou o PRÓXIMO período, ele começa no dia seguinte ao fim do atual.'],
+          {sim:'Começar em '+fmtBR(isoSeg)+', valendo até '+fmtBR(calcSeg.fim),
+           nao:'Manter até '+fmtBR(calc.fim)});
+        if(seguir) calc=calcSeg;
+      }
+    }
     // RESUMO ANTES DE GRAVAR. "O sistema inteiro precisa orientar o que fazer" (Adriana).
     // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
     const pl=planos()[r.plano]||{};
@@ -19539,17 +19647,25 @@
     const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
     const linhasPlano=[pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
        'Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt,
-       'Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'),
+       (calc.vig_inicio
+         ? ('Pagamento '+fmtBR(calc.inicio)+' · vale de '+fmtBR(calc.vig_inicio)+' até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))
+         : ('Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))),
        'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')];
     const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
     if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
+    if(calc.vig_inicio) linhasPlano.push('Por quê: '+renovVigenciaFrase(calc, calc._porque)+'.');
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:'Ao confirmar, o plano anterior vai para "Renovações anteriores" — e dá para desfazer.'});
     if(!ok) return;
     const k=pelKey(pelAtual);
-    await renovHistGravar(k, gravado, 'renovação');
     const novo=Object.assign({}, gravado, calc, {aulas:aulas, ordemPet:r.ordemPet||1});
+    // O período que começa no dia do pagamento não herda o começo de outro ciclo.
+    if(!calc.vig_inicio) delete novo.vig_inicio;
+    // Confirmar de novo o MESMO plano (mesmo tipo, aulas, pagamento e período) não é renovação:
+    // não empurra uma cópia para "Renovações anteriores" (Adriana, 30/set/2026 — quatro
+    // tentativas iguais viraram quatro "renovações anteriores" do Baque e do Nelson).
+    if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, 'renovação');
     // Vigência que NÃO é mais do meio do mês não herda o "para onde voltar" da anterior:
     // aquele vencimento já foi para "Renovações anteriores". Herdar faria o Desfazer do
     // meio do mês devolver uma data de outro ciclo (Adriana, 22/set/2026).
@@ -19997,7 +20113,7 @@
     if(!visiveis.length){ el.innerHTML=avisoCarteiraCarregando()+'<div class="hint" style="padding:16px 2px">'+(CARTEIRA_CARREGADA?(ehTipo?('Nenhum peludinho em "'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'" no momento.'):vazio[renovFiltro])                     :'A lista chega assim que o banco responder.')+'</div>'; return; }
     const clsSt={vencido:'vd-venc',vence:'vd-perto',sem:'vd-sem',ok:'vd-ok'};
     el.innerHTML=avisoCarteiraCarregando()+'<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
-      const periodo=(r.inicio&&r.fim)?(fmtBR(r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
+      const periodo=((r.vig_inicio||r.inicio)&&r.fim)?(fmtBR(r.vig_inicio||r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
         +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
@@ -25704,7 +25820,7 @@
                direto, sem escolher plano, sem resumo e sem rastro — a segunda porta que
                deixou a Cookie com plano de 2x e um dia só marcado. Agora só MOSTRAM; quem
                altera é a aba Plano, com Confirmar, histórico e desfazer. Uma porta só. -->
-          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.inicio)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O plano se altera na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&(ex.renov.vig_inicio||ex.renov.inicio))||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O plano se altera na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="font-size:11px;margin-top:3px"><a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a> — com resumo antes de gravar e opção de desfazer.</div></div>
           <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>

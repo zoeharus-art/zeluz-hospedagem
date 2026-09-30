@@ -5045,6 +5045,137 @@ prova('a tela do Time diz como vale (Salvar colaboradores, na hora) e o que não
   assert.ok(i1 > 0 && i1 < i2 && i2 < i3, 'as atividades entre as duas gavetas, como no menu');
   assert.ok(/class="dia on clic" onclick="toggleMonPagina\(0,'dashdc'\)">Lançamentos do dia/.test(h), 'a tela marcada aparece acesa');
 });
+// ================================================================== 6.20 — renovação paga antes do fim
+console.log('\n6.20 — pagou a renovação antes de o plano acabar: vale o período seguinte (Adriana, 30/set/2026)');
+const calc620 = (gravado, pag, plano) => {
+  ctx.__g620 = gravado; ctx.__p620 = pag;
+  return JSON.parse(run(`(function(){ var r=Object.assign({}, __g620);
+    if(__g620 && __g620._rasc){ Object.defineProperty(r,'_inicio_gravado',{value:__g620._rasc, enumerable:false}); r.inicio=__p620; }
+    var c=renovCalcular(r, '${plano || 'Silver'}', 2, __p620);
+    return JSON.stringify({inicio:c.inicio, vig:c.vig_inicio||'', fim:c.fim, porque:c._porque||'', temVig:('vig_inicio' in c)});
+  })()`));
+};
+prova('o caso do Baque e do Nelson: plano até 30/09, pagou em 30/09 → vale de 01/10 até 31/10 (e o pagamento continua 30/09)', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-09-30');
+  igual(c, { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'antecipada', temVig: true });
+});
+prova('o estado em que as 4 tentativas deixaram a ficha (30/09 → 30/09): o mesmo 30/09 agora dá 01/10 a 31/10', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-09-30', fim: '2026-09-30', _rasc: '2026-09-30' }, '2026-09-30');
+  igual(c, { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'fim-do-mes', temVig: true });
+});
+prova('renovação antecipada até 15 dias antes do fim; trimestral renova o trimestre seguinte', () => {
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-09-15').fim, '2026-10-31');
+  const t = calc620({ plano: 'Gold', inicio: '2026-07-01', fim: '2026-09-30', _rasc: '2026-07-01' }, '2026-09-25', 'Gold');
+  igual([t.vig, t.fim], ['2026-10-01', '2026-12-31']);
+});
+prova('pagou atrasado no começo do mês (plano venceu 30/09, pagou 02/10): vale outubro, sem período à parte', () => {
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-10-02'),
+    { inicio: '2026-10-02', vig: '', fim: '2026-10-31', porque: '', temVig: false });
+});
+prova('pagou nos últimos 7 dias do mês com o plano já vencido há tempo: começa no dia 1º do mês seguinte', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-08-03', fim: '2026-08-31', _rasc: '2026-08-03' }, '2026-09-28');
+  igual([c.vig, c.fim, c.porque], ['2026-10-01', '2026-10-31', 'fim-do-mes']);
+  // até o dia 23 de um mês de 30 dias (7 dias ou mais pela frente) o mês do pagamento ainda vale
+  igual(calc620({ plano: 'Silver', inicio: '2026-08-03', fim: '2026-08-31', _rasc: '2026-08-03' }, '2026-09-23').fim, '2026-09-30');
+});
+prova('CORRIGIR o plano gravado (mesma data de pagamento) não empurra o período para frente', () => {
+  // gravado já no modelo novo: pago 30/09, período 01/10–31/10
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', _rasc: '2026-09-30' }, '2026-09-30'),
+    { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'gravado', temVig: true });
+  // gravado antigo e legítimo (pagou 20/09 por setembro): corrigir os dias mantém setembro
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-20', fim: '2026-09-30', _rasc: '2026-09-20' }, '2026-09-20').fim, '2026-09-30');
+  // quem usou o atalho de 30/09 (data 01/10) e depois acerta a data para 30/09: continua outubro
+  igual(calc620({ plano: 'Silver', inicio: '2026-10-01', fim: '2026-10-31', _rasc: '2026-10-01' }, '2026-09-30').fim, '2026-10-31');
+});
+prova('quem começa no meio do mês continua com a regra própria (não passa pela nova)', () => {
+  const c = calc620({ plano: 'Silver', meio_mes: { opcao: 2, inicio: '2026-09-22' } }, '2026-09-22');
+  igual([c.fim, c.vig, c.temVig], ['2026-10-31', '', false]);
+  // mesmo nos últimos dias do mês: entrou em 25/09 pela opção do meio do mês → outubro inteiro (31/10), não novembro
+  const c25 = calc620({ plano: 'Silver', meio_mes: { opcao: 1, inicio: '2026-09-25' } }, '2026-09-25');
+  igual([c25.fim, c25.vig], ['2026-10-31', '']);
+  // e sem plano gravado nenhum, a conta de sempre (a que o harness v-36 prova)
+  igual(calc620({}, '2026-09-22').fim, '2026-09-30');
+});
+// ---- o Confirmar de verdade, com a tela, o resumo e a gravação
+const confirmar620 = async (renovGravado, rascInicio, respostas) => {
+  ctx.__ex620 = { renov: renovGravado }; ctx.__resp620 = respostas.slice();
+  run(`__bk620={pa:pelAtual, pe:pelExtra, pk:pelKey, na:nAulasDe, pd:pelDias, zp:zPergunta, sp:setPelExtra, hg:renovHistGravar,
+      au:audit, rf:renderPelFicha, za:zAlertao, hj:hojeISO, rr:renovRascunho};
+    __log620={perg:[], grav:[], hist:[]};
+    pelAtual={n:'Baque', tutor:'Tutora Teste'}; pelExtra=function(){ return __ex620; }; pelKey=function(){ return 'baque__tutora teste'; };
+    nAulasDe=function(){ return 2; }; pelDias=function(){ return ['ter','qui']; };
+    zPergunta=function(t,l,op){ __log620.perg.push({t:t, l:l, op:op}); return Promise.resolve(__resp620.shift()); };
+    setPelExtra=function(p,o){ __log620.grav.push(JSON.parse(JSON.stringify(o))); __ex620=Object.assign({}, __ex620, o); return Promise.resolve(); };
+    renovHistGravar=function(k,a,m){ __log620.hist.push({a:a, m:m}); return Promise.resolve(); };
+    audit=function(){}; renderPelFicha=function(){}; zAlertao=function(){}; hojeISO=function(){ return '2026-09-30'; };
+    renovRascunho=${rascInicio ? `{_k:'baque__tutora teste', inicio:'${rascInicio}'}` : 'null'};`);
+  try { await run('confirmarRenovacao()'); return JSON.parse(run('JSON.stringify(__log620)')); }
+  finally {
+    run(`pelAtual=__bk620.pa; pelExtra=__bk620.pe; pelKey=__bk620.pk; nAulasDe=__bk620.na; pelDias=__bk620.pd; zPergunta=__bk620.zp;
+      setPelExtra=__bk620.sp; renovHistGravar=__bk620.hg; audit=__bk620.au; renderPelFicha=__bk620.rf; zAlertao=__bk620.za; hojeISO=__bk620.hj; renovRascunho=__bk620.rr;`);
+  }
+};
+provaAsync('Confirmar (Baque): o resumo diz "Pagamento 30/09 · vale de 01/10 até 31/10" e o porquê; grava pagamento, período e fim', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' }, '2026-09-30', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  const txt = L.perg[0].l.join(' | ');
+  assert.ok(/Pagamento 30\/09\/2026 · vale de 01\/10\/2026 até 31\/10\/2026 · renova em outubro de 2026/.test(txt), txt);
+  assert.ok(/Por quê: pago antes do fim do plano atual: o novo período começa no dia seguinte ao fim, 01\/10\/2026\./.test(txt), txt);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.vig_inicio, rv.fim, rv.mesRenov], ['2026-09-30', '2026-10-01', '2026-10-31', 'outubro de 2026']);
+  assert.strictEqual(L.hist.length, 1, 'o plano de setembro vai para "Renovações anteriores"');
+});
+provaAsync('Confirmar de novo o MESMO plano não vira mais uma "renovação anterior"', async () => {
+  const gravado = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' };
+  const L = await confirmar620(gravado, null, [true]);
+  assert.strictEqual(L.hist.length, 0, 'nenhuma cópia empurrada');
+  igual([L.grav[0].renov.vig_inicio, L.grav[0].renov.fim], ['2026-10-01', '2026-10-31']);
+});
+provaAsync('pagamento novo que não estende o plano pergunta antes; aceitar começa no dia seguinte ao fim', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-09-10', [true, true]);
+  assert.strictEqual(L.perg[0].t, 'ESTE PAGAMENTO NÃO ESTENDE O PLANO');
+  assert.ok(/Começar em 01\/10\/2026, valendo até 31\/10\/2026/.test(L.perg[0].op.sim) && /Manter até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual([L.grav[0].renov.inicio, L.grav[0].renov.vig_inicio, L.grav[0].renov.fim], ['2026-09-10', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(gr, '2026-09-10', [false, true]);
+  igual([M.grav[0].renov.fim, 'vig_inicio' in M.grav[0].renov], ['2026-09-30', false], '"Manter" grava o que a conta deu');
+});
+provaAsync('pagamento que começa no próprio dia não guarda "vig_inicio" (nem herda o de outro ciclo)', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31' }, '2026-11-03', [true]);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, 'vig_inicio' in rv], ['2026-11-03', '2026-11-30', false]);
+});
+prova('"Renovações anteriores": as tentativas iguais viram UMA linha, com quantas vezes; o período mostra de quando a quando', () => {
+  const h = { a: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 4, por: 'Adriana' },
+    b: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 3, por: 'Adriana' },
+    c: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 2, por: 'Adriana' },
+    d: { plano: 'Silver', aulas: 2, inicio: '2026-09-02', fim: '2026-09-30', substituidoEm: 1, por: 'Amanda' } };
+  ctx.__h620 = { renov_hist: h };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  let html;
+  try { html = run('renovHistHTML(__h620)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(/Renovações anteriores \(4\)/.test(html), 'o total continua o de verdade');
+  assert.strictEqual((html.match(/30\/09\/2026 → 30\/09\/2026/g) || []).length, 1, 'uma linha só para as 3 iguais');
+  assert.ok(/3 vezes iguais \(tentativas repetidas\)/.test(html) && /02\/09\/2026 → 30\/09\/2026/.test(html));
+  ctx.__h620 = { renov_hist: { x: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', substituidoEm: 1, por: 'A' } } };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  try { html = run('renovHistHTML(__h620)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(/01\/10\/2026 → 31\/10\/2026 <span[^>]*>\(pago em 30\/09\/2026\)/.test(html), html.slice(0, 400));
+});
+prova('a mensagem ao tutor e a lista da Renovação dizem o período (01/10 a 31/10), não o dia do pagamento', () => {
+  ctx.__ex620m = { renov: { plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' } };
+  run(`__bk620m={na:nAulasDe, pg:pelGet}; nAulasDe=function(){ return 2; }; pelGet=function(p,c){ return c==='tutor'?'Tutora Teste':''; };`);
+  try {
+    const m = run("msgRenovado({n:'Baque'}, __ex620m)");
+    assert.ok(/A nova vigência será de 01\/10\/2026 até 31\/10\/2026/.test(m), m);
+  } finally { run('nAulasDe=__bk620m.na; pelGet=__bk620m.pg;'); }
+  assert.ok(/const periodo=\(\(r\.vig_inicio\|\|r\.inicio\)&&r\.fim\)\?\(fmtBR\(r\.vig_inicio\|\|r\.inicio\)/.test(SRC619));
+  assert.ok(/if\(ant\.vig_inicio\) volta\.vig_inicio=ant\.vig_inicio;/.test(SRC619), 'o Desfazer devolve o período com o começo que tinha');
+});
+prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PAGAMENTO (renov.inicio, regime de caixa)', () => {
+  const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin) && !/vig_inicio/.test(fin));
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
