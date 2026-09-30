@@ -5333,7 +5333,7 @@
         try{ if(despNaTela&&despBaixa[despNaTela]) fecharDespertador(null); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ });
       DB.ref('daycare/almoco-cad').on('value', s=>{ almCadCache=s.val()||{}; try{ if(typeof renderAlmStep==='function'&&dcAtiv==='almoco') renderAlmStep(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });   /* o Painel do Dia foi dissolvido em 08/set/2026: quem lê o AUDIT_CFG agora é o quadro de protocolos, redesenhado ao abrir o dashboard */
-      DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });   /* nada de redesenhar o Painel do Dia: ele foi dissolvido em 08/set/2026 */
+      DB.ref('daycare/config/monitores').on('value', s=>{ const v=s.val(); if(Array.isArray(v)&&v.length){ MONITORES=v; } else { MONITORES=MONITORES_DEFAULT.map(m=>Object.assign({},m)); } try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof permReaplicarDoTime==='function') permReaplicarDoTime(); }catch(e){} /* silencioso de propósito: o menu fica como estava — a próxima entrada com a senha aplica de novo */ });   /* nada de redesenhar o Painel do Dia: ele foi dissolvido em 08/set/2026 */
       // Sincronização em tempo real das pernoites/hóspedes manuais entre TODOS os aparelhos.
       // (antes usava .once() e quem já estava com o app aberto não via a inserção do outro celular)
       // Achado 3 (04/set/2026): este redisparo, sem freio, redesceu a planilha a cada
@@ -5784,13 +5784,35 @@
   // "elas precisam entrar e ver"), e a Gestão ainda pode dá-la a alguém cujo papel não a
   // traria. Para todos os itens ANTIGOS do PERM_MENU nada muda: nenhum deles está na lista
   // de concessão, e por isso a segunda metade da conta é sempre falsa para eles.
+  // ===== TELA CONCEDIDA NO MENU (Adriana, 30/set/2026) ==============================
+  // A regra de papel da veterinária (e da conferência e da plantonista) esconde TODO item e
+  // TODO cabeçalho do menu, menos o caminho dela. A tela liberada no Time aparecia, mas solta,
+  // sem o nome da gaveta — e os DIAS dos Vencimentos (Hoje, Segunda...) nem apareciam, porque
+  // não são tela de lista nenhuma: são filhos do item. data-concedido="1" marca o que só está
+  // na barra porque a Gestão liberou; é por ela que o cabeçalho da gaveta volta
+  // (ajustarSubcabecalhosMenu) e que a gaveta escondida pelo papel se abre (ajustarAcordeoes).
+  // Quem não recebeu nada no Time não tem marca nenhuma: a barra dela é a de sempre.
+  function permMarcarConcedida(a, sim){
+    try{
+      if(sim) a.setAttribute('data-concedido','1'); else a.removeAttribute('data-concedido');
+      // Item que é PAI de uma gaveta (Vencimentos): os dias de dentro seguem o pai.
+      var alvo=a.classList.contains('nav-parent')?a.getAttribute('data-acc-toggle'):'';
+      if(!alvo) return;
+      document.querySelectorAll('#nav .acc[data-acc="'+alvo+'"] > .acc-panel > a').forEach(function(f){
+        if(sim){ f.style.setProperty('display','flex','important'); f.setAttribute('data-concedido','1'); }
+        else if(f.getAttribute('data-concedido')==='1'){ f.style.removeProperty('display'); f.removeAttribute('data-concedido'); }
+      });
+    }catch(e){} /* silencioso de propósito: marca de enfeite do menu — falhar aqui não pode interromper a entrada */
+  }
   function aplicarPermMenu(){
     var u=null; try{ u=(typeof usuarioAtual==='function')?usuarioAtual():null; }catch(e){} /* silencioso de propósito: sem sessão legível vale o papel do corpo */
     var pset=(u&&Array.isArray(u.paginas))?u.paginas:[];
     PERM_MENU.forEach(function(par){
       var pode=podePapel(par[1]) || pset.indexOf(par[0])>=0;
+      var soPelaConcessao=(pode && !podePapel(par[1])); // o papel não a daria: veio do Time
       document.querySelectorAll('#nav a[data-v="'+par[0]+'"]').forEach(function(a){
         a.style.setProperty('display', pode?'flex':'none', 'important');
+        permMarcarConcedida(a, soPelaConcessao);
       });
       // ITEM QUE É PAI DE UMA SUB-SANFONA (Vencimentos, 24/set/2026): esconder só o <a>
       // deixaria os DIAS de dentro à mostra para quem não pode ver a tela — e o estado
@@ -5800,6 +5822,28 @@
         g.style.setProperty('display', pode?'':'none', 'important');
       });
     });
+  }
+  // ===== A TELA CONCEDIDA ABRE (Adriana, 30/set/2026) ================================
+  // "Preciso dar acesso à veterinária... Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje,
+  //  Pendências de prevenção, mas não deu." O MENU já fazia a conta de cima (o papel é o
+  // piso, a concessão só libera) e mostrava o item — mas a TELA conferia só o papel e
+  // respondia "Esta tela é da Central Zêluz" a quem a Gestão tinha acabado de liberar. Menu
+  // que mostra uma porta trancada é pior que menu sem a porta. Agora a tela faz a MESMA
+  // conta do menu: o papel dela OU a tela acesa para ela no Time.
+  function paginaConcedida(k){
+    try{ var u=(typeof usuarioAtual==='function')?usuarioAtual():null;
+      return !!(u && Array.isArray(u.paginas) && u.paginas.indexOf(k)>=0); }
+    catch(e){ return false; } /* silencioso de propósito: sem sessão legível, nada foi concedido — vale o papel */
+  }
+  function podeTela(cap, k){ return ((typeof podePapel==='function') && podePapel(cap)) || paginaConcedida(k); }
+  // As listas que dão número aos contadores do menu descem na ENTRADA para quem tem a tela
+  // pelo papel (aplicarLogin). Quem a recebeu no Time precisa do MESMO contador certo na
+  // primeira tela — e só lê aqui o que o papel não leu, para nada descer em dobro.
+  function permCarregarConcedidas(){
+    if(typeof podePapel!=='function') return;
+    try{ if(!podePapel('pendencias-prevencao') && paginaConcedida('pendencias') && typeof pendCarregar==='function') pendCarregar(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
+    try{ if(!podePapel('vencimentos-amanha') && paginaConcedida('vencimentos') && typeof vencGarantir==='function') vencGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
+    try{ if(!podePapel('hoje-na-casa') && paginaConcedida('hoje') && typeof hojeGarantir==='function') hojeGarantir(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
   }
   // Senhas só para quem manda de verdade. A Supervisão vê o time e as permissões, mas NÃO
   // as senhas — isso muda no dia em que ela virar gerente (Adriana, 13/ago/2026).
@@ -16601,7 +16645,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-27-01';
+  const APP_VERSAO='2026-09-30-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16865,87 +16909,105 @@
   // Operação · Relatórios) — ela dá acesso por partes, e a tela do Time precisa falar a
   // mesma língua do sidebar. As CHAVES são as mesmas de antes (nenhuma permissão nova
   // nasceu, nenhuma sumiu): só o agrupamento e os nomes mudaram de roupa.
+  // 30/set/2026 (Adriana): "Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar
+  // hoje, Lançamentos do dia... Eu preciso de conseguir dar acesso a todas as pessoas que eu
+  // quiser... preciso que tudo esteja atualizado." A lista agora segue o sidebar NA ORDEM
+  // dele, gaveta por gaveta (Dashboards › Ecossistema Daycare › Central Zêluz ›
+  // Configurações › Relatórios), com o MESMO nome de cada gaveta e de cada tela. Nenhuma
+  // chave antiga saiu nem mudou de nome: quem já tinha uma tela concedida continua com ela.
+  // Mudou só a gaveta em que quatro delas aparecem aqui (Conferência do check-in, Hóspedes
+  // de hoje, Plantão da noite e Check-out moram em "Ecossistema Daycare › AuAulândia" no
+  // menu, e a lista dizia "Central Zêluz · AuAulândia").
   const NAV_PAGINAS_ALL=[
-    {grp:'Central Zêluz', itens:[ {k:'ficha', t:'Cadastro de Peludinhos'} ]},
+    // 08/set/2026: o "Painel do Dia" saiu do menu (foi dissolvido nos dashboards) e quem
+    // herdou o lugar dele foi a "Linha do tempo do dia". 17/set/2026: ela subiu para
+    // Dashboards. Quem já tinha 'painel' concedido não perdeu nada: a tela continua por link.
+    // Os dashboards que são a MESA de um papel (Meu, Consultoras, Amanda, Márcia, Adriana) e o
+    // "O que fazer hoje" (a mesa da Gestão, da Supervisão e da Recepção) não entram: cada um
+    // monta a fatia daquele papel e confere o papel ao abrir — ver NAV_PAGINAS_FORA.
+    {grp:'Dashboards', itens:[
+      {k:'eahist', t:'Enriquecimento Ambiental'}, {k:'linhadotempo', t:'Linha do tempo do dia'},
+      {k:'ritmo', t:'Ritmo do Time'}
+    ]},
+    {grp:'Ecossistema Daycare · AuAulândia', itens:[
+      {k:'conferencia', t:'Conferência do check-in'}, {k:'hospedes', t:'Hóspedes de hoje'},
+      {k:'hospedagem', t:'Plantão da noite'}, {k:'gestdia', t:'Conferência do dia'},
+      {k:'checkout', t:'Check-out'}
+    ]},
+    // As atividades do Day Care continuam em 'atividades' (a lista ATIVS_DC), e são
+    // desenhadas AQUI, no lugar em que o sidebar as mostra — não mais no fim da tela.
+    {grp:'Ecossistema Daycare · Day Care', itens:[], atividades:true},
+    {grp:'Central Zêluz · Peludinhos', itens:[ {k:'ficha', t:'Cadastro de Peludinhos'} ]},
     {grp:'Central Zêluz · AuAulândia', itens:[
-      {k:'checkin', t:'Check-in'}, {k:'conferencia', t:'Conferência do check-in'},
-      {k:'hospedes', t:'Hóspedes de hoje'}, {k:'cuidadovet', t:'Cuidado Vet'},
-      {k:'hospedagem', t:'Plantão da noite'},
-      {k:'checkout', t:'Check-out'}, {k:'checkoutconf', t:'Check-out com o tutor'},
-      // Faltavam aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
-      // Hospedagem". A tela existia no menu, mas não nesta lista — e o que não está aqui
-      // NÃO PODE ser concedido a ninguém. Tela nova precisa nascer nos dois lugares.
-      {k:'orcamento', t:'Orçamento de hospedagem'}, {k:'recepcao', t:'Pendências com o tutor'}
+      {k:'checkin', t:'Check-in'}, {k:'checkoutconf', t:'Check-out com o tutor'},
+      {k:'recepcao', t:'Pendências com o tutor'}, {k:'cuidadovet', t:'Cuidado Vet'},
+      // Faltava aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
+      // Hospedagem". O que não está nesta lista NÃO PODE ser concedido a ninguém.
+      {k:'orcamento', t:'Orçamento de hospedagem'}
     ]},
     {grp:'Central Zêluz · Day Care', itens:[
-      // 24/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O
-      // rótulo é o MESMO do sidebar, letra por letra: é esta lista que a Gestão lê na tela
-      // do Time, e conceder uma tela com outro nome é conceder uma tela que ninguém acha.
-      {k:'hoje', t:'Hoje na Zêluz'},
-      // 25/set/2026: nasceu nos DOIS lugares de uma vez, com o rótulo do sidebar.
-      {k:'contatos', t:'Quem chamar hoje'},
-      {k:'emporio', t:'Quem não comeu hoje'},
-      // 19/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O que
-      // não está nesta lista NÃO pode ser concedido a ninguém (a lição de 13/ago, com o
-      // Orçamento de hospedagem). O rótulo é o MESMO do sidebar, letra por letra.
-      {k:'pendencias', t:'Pendências de prevenção'},
-      // 21/set/2026: a tela nova nasceu nos DOIS lugares de uma vez — no menu e aqui. O
-      // rótulo é o MESMO do sidebar, letra por letra: é esta lista que a Gestão lê na tela
-      // do Time, e conceder uma tela com outro nome é conceder uma tela que ninguém acha.
-      // 24/set/2026: "Vence amanhã" virou "Vencimentos" (sub-sanfona com os dias da semana).
-      // A CHAVE não mudou — quem já tinha a tela concedida continua com ela. O rótulo aqui
-      // acompanha o do sidebar letra por letra: conceder uma tela com outro nome é conceder
-      // uma tela que ninguém acha.
-      {k:'vencimentos', t:'Vencimentos'},
+      // 24/set, 25/set, 19/set e 21/set/2026: Hoje na Zêluz, Quem chamar hoje, Pendências de
+      // prevenção e Vencimentos nasceram nos DOIS lugares de uma vez, com o rótulo do
+      // sidebar letra por letra. 24/set: "Vence amanhã" virou "Vencimentos" — a CHAVE é a
+      // mesma, quem tinha a tela concedida continua com ela.
+      {k:'hoje', t:'Hoje na Zêluz'}, {k:'contatos', t:'Quem chamar hoje'},
+      {k:'banhos', t:'Banhos recorrentes'}, {k:'dashdc', t:'Lançamentos do dia'},
+      {k:'pendencias', t:'Pendências de prevenção'}, {k:'peso', t:'Peso'},
+      {k:'alergia', t:'Pesquisa com a Família Multiespécie'}, {k:'vacinas', t:'Prevenção'},
+      {k:'vencimentos', t:'Vencimentos'}, {k:'emporio', t:'Quem não comeu hoje'},
       {k:'reposicao', t:'Reposições'}
     ]},
     // 18/set/2026: "Lançar pagamento" saiu do sidebar (Adriana: "delete lançar pagamentos..
-    // inútil"). Ele nunca esteve nesta lista — quem o mostrava era a tabela PERM_MENU, e de
-    // lá ele também saiu. Esta lista continua dizendo o MESMO que o sidebar: em Planos e
-    // cobranças só existe a Renovação de planos. Não recoloque o item aqui.
+    // inútil"). Esta lista continua dizendo o MESMO que o sidebar — em Planos e cobranças só
+    // existe a Renovação de planos. Não recoloque o item aqui.
     {grp:'Central Zêluz · Planos e cobranças', itens:[ {k:'renovacao', t:'Renovação de planos'} ]},
-    // 08/set/2026: o "Painel do Dia" saiu do menu (foi dissolvido nos dashboards) e quem
-    // herdou o lugar dele na Operação foi a "Linha do tempo do dia". Esta lista tem de
-    // dizer o MESMO que o sidebar — conceder uma tela que não existe no menu é conceder
-    // nada. Quem já tinha 'painel' concedido não perde acesso a coisa alguma: a tela
-    // continua existindo por link, e a classe so-master é a mesma nos dois.
-    // 17/set/2026: a categoria "Operação" virou "Configurações" e a "Linha do tempo do dia"
-    // subiu para Dashboards. Esta lista tem de dizer o MESMO que o sidebar — é ela que a
-    // Gestão lê na tela do Time. As CHAVES são as mesmas: nenhuma permissão nasceu, nenhuma
-    // sumiu, ninguém perdeu o que já tinha concedido.
-    {grp:'Dashboards', itens:[ {k:'linhadotempo', t:'Linha do tempo do dia'} ]},
     {grp:'Configurações', itens:[ {k:'pessoas', t:'Time'} ]},
     {grp:'Relatórios', itens:[ {k:'relatorios', t:'Relatórios'} ]}
-    // "Senhas" não entra aqui de propósito: não é item de menu e não se concede a ninguém.
-    // "Configurações" (config) também não: é so-master, e ajuste de sistema não se concede.
-    // Quem vê senhas é só Gestão e Diretoria — a trava está em podeVerSenhas().
-    // "Lançamentos do dia" (dashdc), Prevenção, Peso etc. seguem FORA porque nunca foram
-    // concedíveis daqui — entrar nesta lista é criar permissão nova, e isso é decisão dela.
   ];
-  const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat(g.itens.map(x=>x.k)),[]);
+  // AS TELAS QUE ENTRARAM EM 30/SET/2026 SÓ LIBERAM. Até ontem elas apareciam pelo PAPEL
+  // (Lançamentos do dia para a recepção, Peso para a veterinária...). Se entrassem na
+  // regra antiga desta lista — "quem tem lista vê SÓ o marcado" —, a consultora que já tem
+  // telas marcadas perderia os Lançamentos do dia no dia da publicação, sem ninguém ter
+  // desmarcado nada. Por isso, para estas, vale a regra do PERM_MENU: o papel é o piso e a
+  // marcação só acrescenta. Marcada, a tela aparece para a pessoa; desmarcada, fica o que o
+  // papel dela já mostrava.
+  const NAV_PAGINAS_SO_LIBERA=['eahist','ritmo','gestdia','banhos','dashdc','peso','alergia','vacinas'];
+  // O que está no sidebar e NÃO se concede daqui — dito na própria tela do Time, para a
+  // Gestão não procurar o que não existe.
+  //  · config (Configurações): senhas das pontes e logins — só Gestão e Diretoria;
+  //  · planodia: quem monta a escala é SEMPRE a Márcia (Adriana, 26/ago/2026);
+  //  · acerto e as mesas da Márcia e da Adriana: dinheiro;
+  //  · O que fazer hoje, Meu Dashboard, Consultoras e Amanda: a mesa de um papel, que monta
+  //    a fatia daquele papel e confere o papel ao abrir;
+  //  · Abertura do dia: vai para quem abre a casa (Monitor 1);
+  //  · Agenda: ainda não existe ("em breve");
+  //  · Início: a visão geral do dia vem com o papel (e o monitor não a tem).
+  const NAV_PAGINAS_FORA='Não se concedem por aqui: a mesa de cada papel (O que fazer hoje e os dashboards Meu, Consultoras, Amanda, Márcia e Adriana), '
+    +'Início (vem com o papel), Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).';
+  const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat((g.itens||[]).map(x=>x.k)),[]);
   function monPaginasSet(m){ return Array.isArray(m.paginas)?m.paginas:[]; } // padrão: NADA (a Gestão concede)
+  // Marcar uma tela é uma MUDANÇA NÃO SALVA como qualquer outra (30/set/2026): antes o aviso
+  // "Há mudanças não salvas" só nascia no nome, na senha e no horário, e a tela acesa parecia
+  // valer sozinha — sem o "Salvar colaboradores", a pessoa continuava sem a tela.
   function toggleMonPagina(i,key){ const m=MONITORES[i]; if(!m) return;
     const arr=monPaginasSet(m).slice(); const idx=arr.indexOf(key);
     if(idx>=0) arr.splice(idx,1); else arr.push(key);
-    m.paginas=arr; const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
+    m.paginas=arr; monMarcarPendente(); const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
   function monAtividadesSet(m){ return Array.isArray(m.atividades)?m.atividades:[]; } // padrão: NADA (a Gestão concede)
   function toggleMonAtividade(i,slug){ const m=MONITORES[i]; if(!m) return;
     const arr=monAtividadesSet(m).slice(); const idx=arr.indexOf(slug);
     if(idx>=0) arr.splice(idx,1); else arr.push(slug);
-    m.atividades=arr; const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
+    m.atividades=arr; monMarcarPendente(); const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
   function permEditInner(i,m){
     const pset=monPaginasSet(m), aset=monAtividadesSet(m);
     let h='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--z-line,#e7e0d2)">';
-    NAV_PAGINAS_ALL.forEach(function(g){
-      h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">'+g.grp+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
-      g.itens.forEach(function(it){ const on=pset.indexOf(it.k)>=0;
-        h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+'</span>'; });
-      h+='</div>';
-    });
     // Day Care — TODAS as atividades, inclusive as novas (check-in do corpo e dos pertences).
     // Com "marcar todas" ao lado: quem faz o dia inteiro não precisa de 16 toques.
+    // 30/set/2026: desenhadas no lugar em que o sidebar as mostra (Ecossistema Daycare ›
+    // Day Care), e não mais no fim da tela — a lista do Time segue a ordem do menu.
+    const ativHTML=function(){ let h='';
     h+='<div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px;flex-wrap:wrap">'
-      +'<span style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px">Day Care — Atividades ('+ATIVS_DC.length+')</span>'
+      +'<span style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px">Ecossistema Daycare · Day Care — Atividades ('+ATIVS_DC.length+')</span>'
       +'<button type="button" class="btn" style="padding:4px 10px;font-size:11.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="monTodasAtividades('+i+',true)">marcar todas</button>'
       +'<button type="button" class="btn" style="padding:4px 10px;font-size:11.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="monTodasAtividades('+i+',false)">limpar</button>'
       +'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
@@ -16953,6 +17015,18 @@
       h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonAtividade('+i+',\''+a.s+'\')">'+a.t+'</span>'; });
     h+='</div>';
     h+='<div class="hint" style="margin-top:8px">Nada marcado aqui = esta pessoa vê <strong>todas</strong> as atividades do Day Care. Marcar é RESTRINGIR: ela passa a ver só o que estiver aceso.</div>';
+    return h; };
+    NAV_PAGINAS_ALL.forEach(function(g){
+      if(g.atividades){ h+=ativHTML(); return; }
+      h+='<div style="font-size:11px;font-weight:800;color:var(--z-blue);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px">'+g.grp+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+      g.itens.forEach(function(it){ const on=pset.indexOf(it.k)>=0;
+        h+='<span class="dia'+(on?' on':'')+' clic" onclick="toggleMonPagina('+i+',\''+it.k+'\')">'+it.t+'</span>'; });
+      h+='</div>';
+    });
+    // O que a marcação faz, dito na própria tela (30/set/2026): a tela acesa aparece para a
+    // pessoa E abre para ela, e vale na hora — sem ela sair e entrar de novo.
+    h+='<div class="hint" style="margin-top:10px">Tela acesa = a pessoa vê a tela no menu e consegue abri-la. Depois de marcar, toque em <strong>Salvar colaboradores</strong>: vale na hora, no aparelho dela, sem ela sair e entrar de novo.</div>';
+    h+='<div class="hint" style="margin-top:4px">'+NAV_PAGINAS_FORA+'</div>';
     h+='</div>';
     return h;
   }
@@ -17403,10 +17477,21 @@
     var isChefe=(u&&(u.role==='gestao'||u.role==='diretoria'));
     var restrito=(u&&Array.isArray(u.paginas)&&!isChefe);
     NAV_PAGINAS_KEYS.forEach(function(k){
+      // As telas que entraram na lista em 30/set/2026 SÓ LIBERAM (ver NAV_PAGINAS_SO_LIBERA):
+      // desmarcadas, fica o que o papel já mostrava — ninguém perde tela no dia da publicação.
+      var soLibera=(NAV_PAGINAS_SO_LIBERA.indexOf(k)>=0);
       document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
-        if(!restrito){ a.style.removeProperty('display'); return; } // sem restrição: volta ao CSS do papel
+        a.style.removeProperty('display'); permMarcarConcedida(a, false);
+        if(!restrito) return; // sem restrição: volta ao CSS do papel
         var pode=u.paginas.indexOf(k)>=0;
-        a.style.setProperty('display', pode?'flex':'none', 'important');
+        if(!pode){ if(!soLibera) a.style.setProperty('display','none','important'); return; }
+        // Marcada no Time. Se o papel sozinho já a mostra, nada muda na barra. Se o papel a
+        // esconde (a veterinária só enxerga o caminho dela), é uma tela CONCEDIDA: fica
+        // marcada para o cabeçalho da gaveta aparecer junto (ajustarSubcabecalhosMenu).
+        var papelMostra=true;
+        try{ papelMostra=(getComputedStyle(a).display!=='none'); }catch(e){} /* silencioso de propósito: sem medir, vale "o papel mostra" — a barra fica como sempre foi */
+        a.style.setProperty('display','flex','important');
+        if(!papelMostra) permMarcarConcedida(a, true);
       });
     });
     // Day Care: com permissões granulares, só vê o Day Care quem tiver ao menos 1 atividade.
@@ -17429,6 +17514,33 @@
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     // Decidido quem vê o quê, some com o rótulo que ficou sem nenhum item embaixo.
     try{ if(typeof ajustarSubcabecalhosMenu==='function') ajustarSubcabecalhosMenu(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+  }
+  // ===== A MARCAÇÃO DO TIME VALE NA HORA (Adriana, 30/set/2026) =====================
+  // As telas de cada pessoa eram lidas UMA vez, na senha, e guardadas na sessão do aparelho.
+  // A Gestão liberava uma tela e salvava, e no celular da pessoa nada mudava — nem
+  // recarregando a página, que restaura a MESMA sessão. Só saindo e entrando de novo, e
+  // ninguém sabia disso. Agora, quando o Time muda no banco, o aparelho de quem está usando
+  // relê as telas DELA e redesenha o menu, sem tirar ninguém da tela em que está.
+  // Só as TELAS (paginas): papel, horário e atividades do Day Care continuam valendo a
+  // partir da próxima entrada, como sempre — mexer nelas no meio do almoço reiniciaria a
+  // atividade (a lição de 08/ago/2026).
+  function permReaplicarDoTime(){
+    var u=(typeof usuarioAtual==='function')?usuarioAtual():null;
+    if(!u || !u.monId || u.role==='gestao' || u.role==='diretoria') return;
+    var m=(MONITORES||[]).filter(function(x){ return x && x.id===u.monId; })[0];
+    if(!m) return;
+    var novas=Array.isArray(m.paginas)?m.paginas.slice():[];
+    if(Array.isArray(u.paginas) && JSON.stringify(novas)===JSON.stringify(u.paginas)) return;
+    u.paginas=novas;
+    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+    // A mesma conta do aplicarLogin para o data-scope: quem só tem atividade e nenhuma tela
+    // entra direto na atividade; a primeira tela liberada devolve o menu a essa pessoa.
+    var escopo=(Array.isArray(u.atividades)&&u.atividades.length)?u.atividades:null;
+    if(escopo && !novas.length) document.body.dataset.scope='atividade'; else document.body.removeAttribute('data-scope');
+    try{ aplicarPaginasPessoa(u); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    try{ aplicarPermMenu(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    try{ ajustarAcordeoes(); ajustarSubcabecalhosMenu(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    try{ permCarregarConcedidas(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
   }
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
@@ -17470,6 +17582,9 @@
     // proíbe. A chamada do dia fica viva daqui em diante — o que for marcado depois chega
     // sozinho, sem ninguém reabrir tela nenhuma.
     try{ if(typeof hojeGarantir==='function' && typeof podePapel==='function' && podePapel('hoje-na-casa')) hojeGarantir(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper a entrada */
+    // Quem recebeu Hoje na Zêluz, Pendências de prevenção ou Vencimentos no Time (30/set/2026)
+    // tem o MESMO contador certo na primeira tela — só desce o que o papel não desceu acima.
+    try{ permCarregarConcedidas(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
     // sanfona: preferencia + esconde vazios + garante tela unica. Roda AGORA e DE NOVO no proximo
     // frame: no F5 (sessao restaurada) o aplicarLogin roda antes do navegador desenhar, e ai
     // offsetParent media 0 filhos -> escondia o Day Care por engano. O rAF remede apos o desenho.
@@ -26516,6 +26631,21 @@
     var subs=[].slice.call(document.querySelectorAll('#nav .dcsub'));
     var subsEstava=subs.map(function(x){ return x.classList.contains('dcsub-open'); });
     todas.forEach(function(a){ a.style.display=''; a.classList.add('acc-open'); });
+    // Gaveta que a regra do papel esconde INTEIRA (ex.: Configurações para o monitor) mas que
+    // guarda uma tela liberada no Time (30/set/2026): abre para medir e fica à mostra.
+    var comConcedida=todas.map(function(a){ return !!a.querySelector('[data-concedido="1"]'); });
+    todas.forEach(function(a,i){ if(comConcedida[i]) a.style.setProperty('display','block','important'); });
+    // GAVETA QUE É FILHA DE UM ITEM COM PERMISSÃO (data-acc-perm — os dias dos Vencimentos).
+    // O aplicarPermMenu esconde a gaveta inteira de quem não pode ver a tela, mas a linha de
+    // cima devolvia o display a TODAS — e a medição via os dias à mostra: o monitor enxergava
+    // Hoje, Segunda, Terça... soltos em Central Zêluz › Day Care, e o toque dava em "Esta tela
+    // é da Central Zêluz" (achado em 30/set/2026). Item escondido = gaveta escondida, de novo.
+    var permEscondida=todas.map(function(a){
+      var k=a.getAttribute('data-acc-perm'); if(!k) return false;
+      var pai=a.querySelector(':scope > a[data-v="'+k+'"]');
+      return !!(pai && pai.style.display==='none');
+    });
+    todas.forEach(function(a,i){ if(permEscondida[i]) a.style.setProperty('display','none','important'); });
     subs.forEach(function(x){ x.classList.add('dcsub-open'); });
     // Conta só ITEM de verdade: cabeçalho de sanfona é rótulo, não destino.
     var vistos=todas.map(function(acc){
@@ -26528,7 +26658,9 @@
     subs.forEach(function(x,i){ x.classList.toggle('dcsub-open', subsEstava[i]); });
     todas.forEach(function(acc,i){
       acc.classList.toggle('acc-open', estava[i]);
-      acc.style.display = vistos[i]>0 ? '' : 'none';
+      if(permEscondida[i]) acc.style.setProperty('display','none','important');
+      else if(vistos[i]>0 && comConcedida[i]) acc.style.setProperty('display','block','important');
+      else acc.style.display = vistos[i]>0 ? '' : 'none';
       // Cabeçalho oculto pela regra de papel (vet, conferência, plantonista) mas com filho
       // visível: abre à força, senão o único item que a pessoa usa fica inalcançável.
       var parent=acc.querySelector(':scope > .nav-parent');
@@ -26562,14 +26694,17 @@
       // Limpa a medição anterior ANTES de aferir: trocar de papel tem que poder revelar de novo.
       cabecalhos.forEach(function(c){ c.style.removeProperty('display'); });
 
-      var contarAbaixo=function(c){
+      // soConcedidas: conta só as telas liberadas no Time (data-concedido), para o bloco
+      // de baixo decidir se um cabeçalho oculto pela regra do papel precisa voltar.
+      var contarAbaixo=function(c, soConcedidas){
         var sub=eSub(c), n=0;
         for(var el=c.nextElementSibling; el; el=el.nextElementSibling){
           if(eGrupo(el)){ if(sub||!eSub(el)) break; continue; } // grupo novo encerra a conta
           // Um sub-cabeçalho para no primeiro bloco que tem cabeçalho próprio (ex.: #blocoDaycare):
           // aqueles itens são do OUTRO rótulo, não deste.
           if(sub && el.querySelector && el.querySelector('.grp')) break;
-          var conta=function(a){ return a.offsetParent!==null && !a.classList.contains('nav-parent'); };
+          var conta=function(a){ return a.offsetParent!==null && !a.classList.contains('nav-parent')
+            && (!soConcedidas || !!(a.dataset && a.dataset.concedido==='1')); };
           if(el.tagName==='A'){ if(conta(el)) n++; continue; }
           var dentro=el.querySelectorAll?el.querySelectorAll('a'):[];
           for(var i=0;i<dentro.length;i++){ if(conta(dentro[i])) n++; }
@@ -26578,6 +26713,17 @@
       };
 
       cabecalhos.forEach(function(c){ if(contarAbaixo(c)===0) c.style.display='none'; });
+      // O CABEÇALHO DA TELA LIBERADA NO TIME (Adriana, 30/set/2026). A regra do papel da
+      // veterinária (e da conferência e da plantonista) esconde todo cabeçalho fora do caminho
+      // dela; a tela que a Gestão liberou aparecia solta, sem o nome da gaveta em que mora.
+      // Agora o cabeçalho que tem embaixo uma tela liberada no Time aparece — só ele. Quem não
+      // recebeu nada no Time não tem tela marcada, e a barra dessa pessoa é a de sempre.
+      cabecalhos.forEach(function(c){
+        if(c.style.display==='none') return;
+        var oculto=false;
+        try{ oculto=(getComputedStyle(c).display==='none'); }catch(e){} /* silencioso de propósito: sem medir, o cabeçalho fica como estava */
+        if(oculto && contarAbaixo(c, true)>0) c.style.setProperty('display','flex','important');
+      });
       dcs.forEach(function(x,i){ x.classList.toggle('dcsub-open', abertas[i]); }); // restaura
       cats.forEach(function(x,i){ x.classList.toggle('acc-open', catsAbertas[i]); });
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
@@ -36345,9 +36491,9 @@
     var raiz=document.getElementById('pendRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
     // puder ver lê o porquê — nunca uma tela em branco.
-    if(!podePapel('pendencias-prevencao')){
+    if(!podeTela('pendencias-prevencao','pendencias')){
       raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
-        +'<div class="hint">As pendências de prevenção são resolvidas por quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão.</div></div>';
+        +'<div class="hint">As pendências de prevenção são resolvidas por quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão.</div>'+'<div class="hint" style="margin-top:6px">Se você precisa desta tela, a Gestão pode liberá-la para você no Time.</div>'+'</div>';
       return;
     }
     if(!DB){
@@ -39148,9 +39294,9 @@
     var raiz=document.getElementById('vencRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
     // puder ver lê o porquê — nunca uma tela em branco.
-    if(!podePapel('vencimentos-amanha')){
+    if(!podeTela('vencimentos-amanha','vencimentos')){
       raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
-        +'<div class="hint">Quem fala com o tutor um dia antes são as Consultoras de Bem-Estar, a Supervisão e a Gestão.</div></div>';
+        +'<div class="hint">Quem fala com o tutor um dia antes são as Consultoras de Bem-Estar, a Supervisão e a Gestão.</div>'+'<div class="hint" style="margin-top:6px">Se você precisa desta tela, a Gestão pode liberá-la para você no Time.</div>'+'</div>';
       return;
     }
     if(!DB){
@@ -39363,7 +39509,7 @@
   }
   function vencRender(){
     var raiz=document.getElementById('vencRoot'); if(!raiz) return;
-    if(!podePapel('vencimentos-amanha')) return;              // vencAbrir já escreveu o porquê
+    if(!podeTela('vencimentos-amanha','vencimentos')) return; // vencAbrir já escreveu o porquê
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var dia=vencDiaAlvo();
     // O TÍTULO É O DELA (24/set/2026): "o título 'está vencendo'". O subtítulo diz de quem
@@ -40585,9 +40731,9 @@
     var raiz=document.getElementById('hojeRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que mostra o item no menu. Quem chegar por link direto e não
     // puder ver lê o porquê — nunca uma tela em branco.
-    if(typeof podePapel==='function' && !podePapel('hoje-na-casa')){
+    if(typeof podePapel==='function' && !podeTela('hoje-na-casa','hoje')){
       raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
-        +'<div class="hint">Quem está na Zêluz hoje e o que falta resolver com cada um é trabalho de quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão. No Day Care, a lista de quem veio é a <strong>Chamada</strong>.</div></div>';
+        +'<div class="hint">Quem está na Zêluz hoje e o que falta resolver com cada um é trabalho de quem atende o tutor: as Consultoras de Bem-Estar, a Supervisão e a Gestão. No Day Care, a lista de quem veio é a <strong>Chamada</strong>.</div>'+'<div class="hint" style="margin-top:6px">Se você precisa desta tela, a Gestão pode liberá-la para você no Time.</div>'+'</div>';
       return;
     }
     hojeRender();
@@ -40878,9 +41024,9 @@
   }
   function contatosAbrir(){
     var raiz=document.getElementById('contatosRoot'); if(!raiz) return;
-    if(typeof podePapel==='function' && !podePapel('hoje-na-casa')){
+    if(typeof podePapel==='function' && !podeTela('hoje-na-casa','contatos')){
       raiz.innerHTML='<div class="card"><h2 style="font-size:19px">Esta tela é da Central Zêluz</h2>'
-        +'<div class="hint">Falar com o tutor é trabalho das Consultoras de Bem-Estar, da Supervisão e da Gestão.</div></div>';
+        +'<div class="hint">Falar com o tutor é trabalho das Consultoras de Bem-Estar, da Supervisão e da Gestão.</div>'+'<div class="hint" style="margin-top:6px">Se você precisa desta tela, a Gestão pode liberá-la para você no Time.</div>'+'</div>';
       return;
     }
     contatosRender();
@@ -41072,7 +41218,9 @@
   }
   // A linha do cabeçalho da ficha: bater o olho e saber se há algo em aberto com o tutor.
   // Só com o que JÁ está em memória — abrir a ficha não pode custar leitura nova.
-  function fichaTutorPode(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa'); }catch(e){ return false; } }
+  // 30/set/2026: quem recebeu o Hoje na Zêluz ou o Quem chamar hoje no Time fala com o
+  // tutor pelas mesmas telas — então vê também a conversa dele na ficha.
+  function fichaTutorPode(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa') || paginaConcedida('hoje') || paginaConcedida('contatos'); }catch(e){ return false; } }
   function fichaTutorLinhaHTML(p){
     if(!fichaTutorPode()) return '';
     var d=null;
@@ -41143,7 +41291,7 @@
     var raiz=document.getElementById('fichaTutorRoot'); if(!raiz) return;
     if(manual) FT_TENT={p:null, n:0};
     if(!fichaTutorPode()){
-      raiz.innerHTML='<div class="card"><div class="hint">A conversa com o tutor é das Consultoras de Bem-Estar, da Supervisão, da Gestão e da Diretoria.</div></div>';
+      raiz.innerHTML='<div class="card"><div class="hint">A conversa com o tutor é das Consultoras de Bem-Estar, da Supervisão, da Gestão e da Diretoria — e de quem recebeu Hoje na Zêluz ou Quem chamar hoje no Time.</div></div>';
       return;
     }
     var p=(typeof pelAtual!=='undefined')?pelAtual:null;
@@ -41729,14 +41877,14 @@
   }
   // O arquivo leva o TELEFONE de cada tutor: sai só para quem fala com o tutor (a mesma
   // permissão do Hoje na Zêluz e do Quem chamar hoje). A lista na tela continua para todos.
-  function turmaPodeBaixar(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa'); }catch(e){ return false; } }
+  function turmaPodeBaixar(){ try{ return (typeof podePapel!=='function') || podePapel('hoje-na-casa') || paginaConcedida('hoje') || paginaConcedida('contatos'); }catch(e){ return false; } }
   function turmaExcel(){
-    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão e a Gestão.'); return; }
+    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão, a Gestão e quem recebeu Hoje na Zêluz ou Quem chamar hoje no Time.'); return; }
     var iso=turmaIsoDoDia(TURMA_DIA);
     relEntregar('Zeluz-turma-'+iso+'.xls', turmaDocHTML());
   }
   function turmaPDF(){
-    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão e a Gestão.'); return; }
+    if(!turmaPodeBaixar()){ alert('O arquivo da turma leva o telefone dos tutores: sai para as Consultoras, a Supervisão, a Gestão e quem recebeu Hoje na Zêluz ou Quem chamar hoje no Time.'); return; }
     var w=null; try{ w=window.open('','_blank'); }catch(e){ w=null; } /* silencioso de propósito: o aviso abaixo diz o que fazer */
     if(!w){ alert('O navegador bloqueou a janela. Libere os pop-ups deste site e toque de novo.'); return; }
     w.document.open(); w.document.write(turmaDocHTML()); w.document.close();

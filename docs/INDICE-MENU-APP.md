@@ -1,6 +1,28 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27 e 28/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê
+
+> **Adriana, 30/set/2026:** *"Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar hoje, Lançamentos do dia, e o que é ali da Central Zêluz, e não estou conseguindo. Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, mas não deu. Eu preciso de conseguir dar acesso a todas as pessoas que eu quiser. [...] Eu preciso que tudo esteja atualizado."* Story 6.19.
+
+### (X) A tela liberada no Time aparece, abre e vale na hora
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| O item aparecia, mas a tela respondia "Esta tela é da Central Zêluz" (Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, Vencimentos) | a porta da tela conferia só o PAPEL; o menu já somava a tela liberada | a porta faz a mesma conta do menu: **papel OU tela liberada no Time** (`podeTela`) |
+| O item ficava solto, sem o nome da gaveta; os dias dos Vencimentos (Hoje a Sexta) nem apareciam | a regra de papel da veterinária esconde todo cabeçalho e todo item fora do caminho dela | a tela liberada fica marcada (`data-concedido`) e o cabeçalho da gaveta e os dias vêm junto |
+| Lançamentos do dia, Prevenção, Peso e mais 5 telas não estavam na lista do Time | a lista nunca as teve | entraram: Enriquecimento Ambiental, Ritmo do Time, Conferência do dia, Banhos recorrentes, **Lançamentos do dia**, Peso, Pesquisa com a Família Multiespécie e **Prevenção** |
+| A lista do Time tinha outra ordem e outras gavetas (Conferência do check-in, Hóspedes, Plantão e Check-out em "Central Zêluz · AuAulândia") | foi escrita antes do menu de 17/set | segue o menu **na ordem dele**, gaveta por gaveta, com o mesmo nome; as atividades do Day Care aparecem na gaveta "Ecossistema Daycare · Day Care" |
+| Marcar uma tela no Time não avisava que faltava salvar | o aviso só nascia no nome, na senha e no horário | marcar tela ou atividade mostra "Há mudanças não salvas" |
+| Depois de salvar, nada mudava no celular da pessoa até ela **sair e entrar de novo** (recarregar não bastava) | as telas eram lidas uma vez, na senha | quando o Time muda no banco, o aparelho relê **as telas dela** e redesenha o menu, sem tirar ninguém da tela (`permReaplicarDoTime`) |
+
+- **Ninguém perde tela no dia da publicação.** As 8 telas novas **só liberam**: marcada, aparece; desmarcada, fica o que o papel já mostrava (a recepção continua com os Lançamentos do dia, a veterinária com o Peso). As 20 de antes continuam com a regra de sempre (quem tem lista vê o marcado).
+- **Não se concedem pelo Time** (e a própria tela do Time diz isso): a mesa de cada papel (O que fazer hoje e os dashboards Meu, Consultoras, Amanda, Márcia e Adriana), Início, Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).
+- **Achado no caminho:** o monitor e o aprendiz viam os dias dos Vencimentos (Hoje, Segunda...) soltos em Central Zêluz › Day Care, sem ter a tela — o toque dava em "Esta tela é da Central Zêluz". A gaveta volta a sumir junto com o item (`ajustarAcordeoes` respeita `data-acc-perm`).
+- **A conversa com o tutor na ficha** e o **arquivo da turma com telefones** seguem a mesma regra do Hoje na Zêluz e do Quem chamar hoje: quem recebeu uma dessas telas no Time também os tem.
+- **Onde está no código:** `NAV_PAGINAS_ALL`, `NAV_PAGINAS_SO_LIBERA`, `NAV_PAGINAS_FORA`, `permEditInner`, `toggleMonPagina`, `paginaConcedida`, `podeTela`, `permCarregarConcedidas`, `permMarcarConcedida`, `aplicarPaginasPessoa`, `aplicarPermMenu`, `ajustarAcordeoes`, `ajustarSubcabecalhosMenu`, `permReaplicarDoTime`, portas em `hojeAbrir`, `contatosAbrir`, `pendAbrir`, `vencAbrir`, `vencRender`, `fichaTutorPode`, `turmaPodeBaixar`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (20 provas da 6.19, entre elas: cada tela do Time está na mesma gaveta, com o mesmo nome e na mesma ordem do menu lido do próprio HTML; nenhuma tela do menu fica de fora sem aviso) e `tests/menu-concessao-navegador.test.js` (27 provas no navegador, sem banco: a veterinária alcança e abre as telas liberadas; liberar e tirar valem na hora; quem não recebeu nada vê a barra de sempre).
 
 ## O que mudou em 27/set/2026 (v 2026-09-27-01)
 
@@ -1343,6 +1365,8 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 ---
 
 ## O menu
+
+> **Desde 30/set/2026:** a coluna "Quem vê" é o **piso** (o que o papel mostra). No Time, a Gestão libera qualquer tela da lista para qualquer pessoa, e vale na hora. Não se concedem por lá: Início, O que fazer hoje, os cinco dashboards de papel, Escala e plano do dia, Financeiro do plantão, Configurações, Abertura do dia e Agenda.
 
 | Grupo | Título (data-v) | Subtítulo didático | Quem vê (como hoje) |
 |---|---|---|---|

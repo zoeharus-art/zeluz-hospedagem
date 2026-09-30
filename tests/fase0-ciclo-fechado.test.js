@@ -4785,6 +4785,220 @@ prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e let
     igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['Confirmado', '✓ Mudou']);
   } finally { run('canEditCheckinMed=__bkCF.cp; quemSou=__bkCF.qs;'); }
 });
+// ================================================================== 6.19 — quem pode ver o quê
+console.log('\n6.19 — a tela liberada no Time aparece, abre e vale na hora (Adriana, 30/set/2026)');
+// O menu lido do HTML como o navegador o monta: gaveta dentro de gaveta, com o nome de cada uma.
+function menuDoHtml(src) {
+  const ini = src.indexOf('id="nav"'), fim = src.indexOf('</nav>', ini);
+  const nav = src.slice(ini, fim).replace(/<!--[\s\S]*?-->/g, '');
+  const RE = /<div class="nav-rotulo">([^<]*)<\/div>|<div\b([^>]*)>|<\/div>|<a\b([^>]*)>([\s\S]*?)<\/a>/g;
+  const pilha = [], itens = [];
+  const rotulo = (html) => { const sp = html.match(/<span>([^<]+)<\/span>/g) || []; return sp.length ? sp[sp.length - 1].replace(/<\/?span>/g, '') : ''; };
+  let m;
+  while ((m = RE.exec(nav)) !== null) {
+    if (m[1] !== undefined) { const acc = pilha.filter((e) => e.acc).pop(); if (acc) acc.rotulo = m[1].trim(); continue; }
+    if (m[2] !== undefined) { pilha.push({ acc: /\bclass="acc(\s|")/.test(m[2]), head: null, rotulo: null }); continue; }
+    if (m[0] === '</div>') { pilha.pop(); continue; }
+    const attrs = m[3] || '', txt = rotulo(m[4] || '');
+    if (/\bclass="grp\b/.test(attrs)) { const acc = pilha.filter((e) => e.acc).pop(); if (acc) acc.head = txt; continue; }
+    const v = (/data-v="([^"]+)"/.exec(attrs) || [])[1];
+    if (!v) continue;
+    const caminho = pilha.filter((e) => e.acc && e.head).map((e) => e.head);
+    const dentro = pilha.filter((e) => e.acc).pop();
+    const grupo = !caminho.length ? txt : ((dentro && dentro.rotulo) ? caminho[0] + ' · ' + dentro.rotulo : caminho.join(' · '));
+    itens.push({ k: v, t: txt, grupo });
+  }
+  return itens;
+}
+const SRC619 = fs.readFileSync(APP, 'utf8');
+const MENU619 = menuDoHtml(SRC619);
+const NAV619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_ALL)'));
+const CHAVES619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_KEYS)'));
+// O que está no menu e NÃO se concede pelo Time — cada um tem de estar DITO na tela do Time.
+const FORA619 = { inicio: 'Início', mesa: 'O que fazer hoje', painelmeu: 'Meu', consultoras: 'Consultoras',
+  'painel-amanda': 'Amanda', paineloperacao: 'Márcia', 'painel-diretoria': 'Adriana', planodia: 'Escala e plano do dia',
+  acerto: 'Financeiro do plantão', config: 'Configurações (senhas do sistema)', abertura: 'Abertura do dia', agenda: 'Agenda (em breve)' };
+prova('o leitor do menu enxerga o menu de verdade (Lançamentos do dia mora em Central Zêluz › Day Care)', () => {
+  const d = MENU619.find((x) => x.k === 'dashdc');
+  assert.ok(MENU619.length >= 35 && d && d.t === 'Lançamentos do dia' && d.grupo === 'Central Zêluz · Day Care', JSON.stringify(d));
+  assert.strictEqual(MENU619.find((x) => x.k === 'renovacao').grupo, 'Central Zêluz · Planos e cobranças');
+  assert.strictEqual(MENU619.find((x) => x.k === 'relatorios').grupo, 'Relatórios');
+});
+prova('Lançamentos do dia, Prevenção, Peso, Banhos recorrentes e as outras 4 telas agora se concedem pelo Time', () => {
+  ['dashdc', 'vacinas', 'peso', 'banhos', 'alergia', 'gestdia', 'eahist', 'ritmo'].forEach((k) => assert.ok(CHAVES619.indexOf(k) >= 0, k));
+});
+prova('cada tela do Time está na MESMA gaveta e com o MESMO nome que no menu', () => {
+  const erradas = [];
+  NAV619.forEach((g) => (g.itens || []).forEach((it) => {
+    const doMenu = MENU619.find((x) => x.k === it.k);
+    if (!doMenu) erradas.push(it.k + ': não está no menu');
+    else if (doMenu.t !== it.t || doMenu.grupo !== g.grp) erradas.push(it.k + ': Time "' + g.grp + ' › ' + it.t + '" × menu "' + doMenu.grupo + ' › ' + doMenu.t + '"');
+  }));
+  assert.deepStrictEqual(erradas, []);
+});
+prova('a lista do Time segue a ORDEM do menu, de cima para baixo', () => {
+  const doMenu = MENU619.map((x) => x.k).filter((k) => CHAVES619.indexOf(k) >= 0);
+  assert.deepStrictEqual(CHAVES619, doMenu);
+});
+prova('as atividades do Day Care aparecem no Time na gaveta em que o menu as mostra (a da Abertura do dia)', () => {
+  const g = NAV619.find((x) => x.atividades);
+  assert.ok(g && g.grp === MENU619.find((x) => x.k === 'abertura').grupo, JSON.stringify(g));
+  const ordem = NAV619.map((x) => x.grp);
+  assert.ok(ordem.indexOf(g.grp) === ordem.indexOf('Ecossistema Daycare · AuAulândia') + 1, JSON.stringify(ordem));
+});
+prova('NENHUMA tela do menu fica de fora sem aviso: ou se concede, ou a tela do Time diz que não se concede', () => {
+  const fora = run('NAV_PAGINAS_FORA');
+  const soltas = MENU619.map((x) => x.k).filter((k) => k !== 'sair' && CHAVES619.indexOf(k) < 0 && !FORA619[k]);
+  assert.deepStrictEqual(soltas, [], 'tela nova no menu precisa entrar no Time ou em NAV_PAGINAS_FORA');
+  Object.keys(FORA619).forEach((k) => {
+    assert.ok(MENU619.some((x) => x.k === k), k + ' ainda existe no menu');
+    assert.ok(fora.indexOf(FORA619[k]) >= 0, k + ': "' + FORA619[k] + '" dito na tela do Time');
+  });
+});
+prova('as telas novas SÓ LIBERAM; as 20 antigas continuam com a regra de sempre', () => {
+  const so = JSON.parse(run('JSON.stringify(NAV_PAGINAS_SO_LIBERA)'));
+  assert.deepStrictEqual(so.slice().sort(), ['alergia', 'banhos', 'dashdc', 'eahist', 'gestdia', 'peso', 'ritmo', 'vacinas']);
+  so.forEach((k) => assert.ok(CHAVES619.indexOf(k) >= 0, k));
+});
+// ---- a conta da porta: papel OU tela liberada
+const comUsuario = (u, papel, fn) => {
+  ctx.__u619 = u; const papelAntes = ctx.document.body.dataset.role;
+  run('__bk619u = usuarioAtual; usuarioAtual = function(){ return __u619; };');
+  ctx.document.body.dataset.role = papel;
+  try { return fn(); } finally { run('usuarioAtual = __bk619u;'); ctx.document.body.dataset.role = papelAntes; }
+};
+prova('a veterinária com Hoje na Zêluz liberado passa pela porta do Hoje — e só dele', () => comUsuario({ role: 'vet', paginas: ['hoje', 'dashdc'] }, 'vet', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','hoje')"), true);
+  assert.strictEqual(run("podeTela('hoje-na-casa','contatos')"), false);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), false);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), false);
+}));
+prova('Quem chamar hoje, Pendências e Vencimentos liberados abrem; e quem fala com o tutor vê a conversa na ficha', () => comUsuario({ role: 'vet', paginas: ['contatos', 'pendencias', 'vencimentos'] }, 'vet', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','contatos')"), true);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), true);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), true);
+  assert.strictEqual(run('fichaTutorPode()'), true);
+  assert.strictEqual(run('turmaPodeBaixar()'), true);
+}));
+prova('sem nada liberado, a veterinária continua fora (e o telefone do tutor não sai no arquivo da turma)', () => comUsuario({ role: 'vet', paginas: ['cuidadovet'] }, 'vet', () => {
+  ['hoje', 'contatos'].forEach((k) => assert.strictEqual(run("podeTela('hoje-na-casa','" + k + "')"), false, k));
+  assert.strictEqual(run('fichaTutorPode()'), false);
+  assert.strictEqual(run('turmaPodeBaixar()'), false);
+}));
+prova('o papel continua sendo o piso: a consultora com a lista vazia no Time abre as quatro telas', () => comUsuario({ role: 'consultora', paginas: [] }, 'consultora', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','hoje')"), true);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), true);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), true);
+}));
+prova('a porta de cada tela faz a conta nova (e nenhuma ficou conferindo só o papel)', () => {
+  const corpo = (nome) => { const i = SRC619.indexOf('function ' + nome + '('); return SRC619.slice(i, SRC619.indexOf('\n  function ', i + 10)); };
+  assert.ok(/!podeTela\('hoje-na-casa','hoje'\)/.test(corpo('hojeAbrir')), 'hojeAbrir');
+  assert.ok(/!podeTela\('hoje-na-casa','contatos'\)/.test(corpo('contatosAbrir')), 'contatosAbrir');
+  assert.ok(/!podeTela\('pendencias-prevencao','pendencias'\)/.test(corpo('pendAbrir')), 'pendAbrir');
+  assert.ok(/!podeTela\('vencimentos-amanha','vencimentos'\)/.test(corpo('vencAbrir')), 'vencAbrir');
+  assert.ok(/!podeTela\('vencimentos-amanha','vencimentos'\)\) return;/.test(corpo('vencRender')), 'vencRender');
+  assert.ok(!/!podePapel\('(hoje-na-casa|pendencias-prevencao|vencimentos-amanha)'\)\)\s*(\{|return)/.test(SRC619), 'sobrou porta conferindo só o papel');
+  assert.ok(/a Gestão pode liberá-la para você no Time/.test(corpo('hojeAbrir')), 'quem não pode lê que a Gestão pode liberar');
+});
+prova('a porta da tela barra de verdade quem não tem, e abre para quem recebeu (Hoje, Quem chamar, Pendências, Vencimentos)', () => {
+  const raiz = { innerHTML: '' };
+  const ids = { hojeRoot: 1, contatosRoot: 1, pendRoot: 1, vencRoot: 1 };
+  const bkGE = ctx.document.getElementById;
+  ctx.document.getElementById = function (id) { return ids[id] ? raiz : bkGE.call(this, id); };
+  try {
+    [['hojeAbrir', 'hoje'], ['contatosAbrir', 'contatos'], ['pendAbrir', 'pendencias'], ['vencAbrir', 'vencimentos']].forEach(([fn, k]) => {
+      comUsuario({ role: 'vet', paginas: ['cuidadovet'] }, 'vet', () => { raiz.innerHTML = ''; try { run(fn + '()'); } catch (e) { /* o resto da tela não importa aqui */ } });
+      assert.ok(/Esta tela é da Central Zêluz/.test(raiz.innerHTML), fn + ' sem a tela: barra');
+      comUsuario({ role: 'vet', paginas: ['cuidadovet', k] }, 'vet', () => { raiz.innerHTML = ''; try { run(fn + '()'); } catch (e) { /* o resto da tela não importa aqui */ } });
+      assert.ok(!/Esta tela é da Central Zêluz/.test(raiz.innerHTML), fn + ' com a tela liberada: abre');
+    });
+  } finally { ctx.document.getElementById = bkGE; }
+});
+// ---- o menu: a tela nova SÓ LIBERA, a antiga continua RESTRINGINDO
+const fakeA = (k, css, pai) => ({ dataset: { v: k }, _css: css, _attr: {},
+  style: { _p: {}, setProperty(n, v, i) { this._p[n] = v + (i ? '!' : ''); }, removeProperty(n) { delete this._p[n]; } },
+  setAttribute(n, v) { this._attr[n] = String(v); }, removeAttribute(n) { delete this._attr[n]; },
+  getAttribute(n) { return this._attr[n] === undefined ? (n === 'data-acc-toggle' && pai ? pai : null) : this._attr[n]; },
+  classList: { contains: (c) => (c === 'nav-parent' && !!pai) } });
+const comMenu = (ancoras, fn) => {
+  const bkQSA = ctx.document.querySelectorAll, bkGCS = ctx.getComputedStyle;
+  ctx.document.querySelectorAll = (sel) => { const m = /^#nav a\[data-v="([^"]+)"\]$/.exec(sel); return (m && ancoras[m[1]]) ? [ancoras[m[1]]] : []; };
+  ctx.getComputedStyle = (a) => ({ display: a.style && a.style._p.display ? a.style._p.display.replace('!', '') : (a._css || 'flex') });
+  try { return fn(); } finally { ctx.document.querySelectorAll = bkQSA; ctx.getComputedStyle = bkGCS; }
+};
+prova('consultora com telas marcadas: NÃO perde os Lançamentos do dia nem o Peso no dia da publicação', () => {
+  const A = { checkin: fakeA('checkin', 'flex'), recepcao: fakeA('recepcao', 'flex'), dashdc: fakeA('dashdc', 'flex'), peso: fakeA('peso', 'flex') };
+  comMenu(A, () => { ctx.__uM = { role: 'consultora', paginas: ['checkin'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.checkin.style._p.display, 'flex!');
+  assert.strictEqual(A.recepcao.style._p.display, 'none!', 'tela antiga desmarcada continua escondida (regra de sempre)');
+  assert.strictEqual(A.dashdc.style._p.display, undefined, 'Lançamentos do dia: fica o que o papel mostra');
+  assert.strictEqual(A.peso.style._p.display, undefined, 'Peso: fica o que o papel mostra');
+  assert.ok(!A.checkin._attr['data-concedido'], 'o papel já mostrava o Check-in: não é tela concedida');
+});
+prova('veterinária com Lançamentos do dia liberado: o item aparece e fica marcado como tela CONCEDIDA', () => {
+  const A = { dashdc: fakeA('dashdc', 'none'), cuidadovet: fakeA('cuidadovet', 'flex'), peso: fakeA('peso', 'flex'), hoje: fakeA('hoje', 'none') };
+  comMenu(A, () => { ctx.__uM = { role: 'vet', paginas: ['dashdc', 'cuidadovet'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.dashdc.style._p.display, 'flex!');
+  assert.strictEqual(A.dashdc._attr['data-concedido'], '1');
+  assert.strictEqual(A.cuidadovet.style._p.display, 'flex!');
+  assert.ok(!A.cuidadovet._attr['data-concedido'], 'Cuidado Vet vem do papel');
+  assert.strictEqual(A.peso.style._p.display, undefined, 'o Peso da veterinária continua (vem do papel)');
+  assert.strictEqual(A.hoje.style._p.display, 'none!');
+});
+prova('Gestão e Diretoria: nenhuma marca e nenhuma restrição (voltam ao papel)', () => {
+  const A = { dashdc: fakeA('dashdc', 'flex'), hoje: fakeA('hoje', 'flex') };
+  A.dashdc.style._p.display = 'none!'; A.dashdc._attr['data-concedido'] = '1';
+  comMenu(A, () => { ctx.__uM = { role: 'gestao', paginas: ['hoje'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.dashdc.style._p.display, undefined);
+  assert.ok(!A.dashdc._attr['data-concedido']);
+});
+// ---- vale na hora
+prova('a Gestão salva o Time: o aparelho da veterinária relê AS TELAS DELA e redesenha o menu, sem sair', () => {
+  run(`__bk619r={ua:usuarioAtual, ap:aplicarPaginasPessoa, pm:aplicarPermMenu, aa:ajustarAcordeoes, as:ajustarSubcabecalhosMenu, pc:permCarregarConcedidas, mon:MONITORES, ra:document.body.removeAttribute};
+    __ch619=[]; aplicarPaginasPessoa=function(u){ __ch619.push('menu:'+JSON.stringify(u.paginas)); }; aplicarPermMenu=function(){ __ch619.push('perm'); };
+    ajustarAcordeoes=function(){ __ch619.push('gavetas'); }; ajustarSubcabecalhosMenu=function(){ __ch619.push('cabecalhos'); }; permCarregarConcedidas=function(){ __ch619.push('contadores'); };
+    document.body.removeAttribute=function(){};
+    __ur619={role:'vet', nome:'Vet Teste', monId:'p1', paginas:['cuidadovet']}; usuarioAtual=function(){ return __ur619; };
+    MONITORES=[{id:'p0', nome:'Outra', paginas:['hoje']}, {id:'p1', nome:'Vet Teste', role:'vet', paginas:['cuidadovet','hoje','dashdc']}];`);
+  try {
+    run('permReaplicarDoTime()');
+    igual(run('__ch619'), ['menu:["cuidadovet","hoje","dashdc"]', 'perm', 'gavetas', 'cabecalhos', 'contadores']);
+    igual(run('__ur619.paginas'), ['cuidadovet', 'hoje', 'dashdc']);
+    run('__ch619=[]; permReaplicarDoTime();');
+    igual(run('__ch619'), [], 'nada mudou para ela: nada é redesenhado');
+    run("MONITORES[1].paginas=['cuidadovet']; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), ['menu:["cuidadovet"]', 'perm', 'gavetas', 'cabecalhos', 'contadores'], 'tirar também vale na hora');
+    run("__ur619={role:'gestao', nome:'G', monId:'p1', paginas:[]}; MONITORES[1].paginas=['hoje']; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'Gestão não é restringida');
+    run("__ur619={role:'vet', nome:'Posto', paginas:[]}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'login de posto (sem cadastro no Time): nada muda');
+  } finally {
+    run(`usuarioAtual=__bk619r.ua; aplicarPaginasPessoa=__bk619r.ap; aplicarPermMenu=__bk619r.pm; ajustarAcordeoes=__bk619r.aa;
+      ajustarSubcabecalhosMenu=__bk619r.as; permCarregarConcedidas=__bk619r.pc; MONITORES=__bk619r.mon; document.body.removeAttribute=__bk619r.ra;`);
+  }
+});
+prova('o ouvinte do Time chama a releitura, e a entrada com a senha desce os contadores das telas liberadas', () => {
+  assert.ok(/DB\.ref\('daycare\/config\/monitores'\)\.on\('value'[^\n]*permReaplicarDoTime\(\)/.test(SRC619));
+  assert.ok(/podePapel\('hoje-na-casa'\)\) hojeGarantir\(\); \}catch\(e\)\{\}[^\n]*\n[\s\S]{0,300}?try\{ permCarregarConcedidas\(\); \}/.test(SRC619));
+});
+prova('marcar uma tela (ou atividade) no Time avisa "Há mudanças não salvas" — sem salvar, nada vale', () => {
+  run(`__bk619t={mp:monMarcarPendente, mon:MONITORES}; __n619=0; monMarcarPendente=function(){ __n619++; };
+    MONITORES=[{id:'p1', nome:'Vet Teste', role:'vet', paginas:[], atividades:[]}];`);
+  try {
+    run("toggleMonPagina(0,'dashdc')");
+    assert.strictEqual(run('__n619'), 1); igual(run('MONITORES[0].paginas'), ['dashdc']);
+    run("toggleMonAtividade(0,'almoco')");
+    assert.strictEqual(run('__n619'), 2);
+  } finally { run('monMarcarPendente=__bk619t.mp; MONITORES=__bk619t.mon;'); }
+});
+prova('a tela do Time diz como vale (Salvar colaboradores, na hora) e o que não se concede', () => {
+  const h = run("permEditInner(0,{nome:'Vet Teste', role:'vet', paginas:['dashdc'], atividades:[]})");
+  assert.ok(/toque em <strong>Salvar colaboradores<\/strong>: vale na hora/.test(h));
+  assert.ok(h.indexOf(run('NAV_PAGINAS_FORA')) > 0);
+  const i1 = h.indexOf('Ecossistema Daycare · AuAulândia'), i2 = h.indexOf('Ecossistema Daycare · Day Care — Atividades'), i3 = h.indexOf('Central Zêluz · Peludinhos');
+  assert.ok(i1 > 0 && i1 < i2 && i2 < i3, 'as atividades entre as duas gavetas, como no menu');
+  assert.ok(/class="dia on clic" onclick="toggleMonPagina\(0,'dashdc'\)">Lançamentos do dia/.test(h), 'a tela marcada aparece acesa');
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
