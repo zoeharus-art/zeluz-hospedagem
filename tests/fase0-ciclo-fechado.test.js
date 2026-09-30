@@ -5176,6 +5176,93 @@ prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PA
   const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
   assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin) && !/vig_inicio/.test(fin));
 });
+// ---- QA da 6.20 (FAIL → ajustes): corrigir a data nunca grava o mês errado
+const renov620 = (L) => { const r = L.grav[0] && L.grav[0].renov; return r ? [r.inicio, r.vig_inicio || '', r.fim] : null; };
+provaAsync('K1 — quem usou o atalho (01/10) e relança 30/09: nenhuma pergunta extra, fica 01/10 a 31/10 e o pagamento volta a 30/09', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' }, '2026-09-30', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-30', '2026-10-01', '2026-10-31']);
+});
+provaAsync('K2/X1/X2 — corrigir a data de um pagamento que já cobre outubro (20/09 → 21/09, 30/09 → 22/09) mantém 01/10 a 31/10, sem pergunta', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', vig_inicio: '2026-10-01', fim: '2026-10-31' };
+  const L = await confirmar620(gr, '2026-09-21', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-21', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(Object.assign({}, gr, { inicio: '2026-09-30' }), '2026-09-22', [true]);
+  igual(renov620(M), ['2026-09-22', '2026-10-01', '2026-10-31']);
+});
+provaAsync('X3 — data nova perto da gravada num plano de setembro (20/09 → 21/09): PERGUNTA se é pagamento novo ou correção; as duas respostas gravam certo', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-09-21', [false, true]);
+  assert.strictEqual(L.perg[0].t, 'PAGAMENTO NOVO OU CORREÇÃO DA DATA?');
+  assert.ok(/Pagamento novo: renovação de 01\/10\/2026 até 31\/10\/2026/.test(L.perg[0].op.sim)
+    && /Correção da data: fica de 21\/09\/2026 até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual(renov620(L), ['2026-09-21', '', '2026-09-30'], 'correção: setembro continua setembro');
+  const N = await confirmar620(gr, '2026-09-21', [true, true]);
+  igual(renov620(N), ['2026-09-21', '2026-10-01', '2026-10-31'], 'pagamento novo: outubro');
+  // o Baque de verdade (pagou 02/09, renovou 30/09: 28 dias depois) não cai na pergunta
+  const B = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' }, '2026-09-30', [true]);
+  assert.strictEqual(B.perg.length, 1);
+});
+provaAsync('a ficha que as 4 tentativas deixaram (30/09 → 30/09): o Confirmar pergunta de qual período é; "Mês seguinte" grava 01/10 a 31/10, "Manter" não mexe', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', fim: '2026-09-30' };
+  const L = await confirmar620(gr, null, [true, true]);
+  assert.strictEqual(L.perg[0].t, 'ESTE PAGAMENTO É DE QUAL PERÍODO?');
+  assert.ok(/Mês seguinte: de 01\/10\/2026 até 31\/10\/2026/.test(L.perg[0].op.sim) && /Manter de 30\/09\/2026 até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual(renov620(L), ['2026-09-30', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(gr, null, [false, true]);
+  igual(renov620(M), ['2026-09-30', '', '2026-09-30']);
+  assert.strictEqual(M.hist.length, 0, '"Manter" o mesmo plano não empurra cópia');
+  assert.ok(/É o mesmo plano que já está gravado: nada vai para "Renovações anteriores"\./.test(M.perg[1].op.rodape), M.perg[1].op.rodape);
+});
+provaAsync('K4 — a trava "nasce vencida" e a pergunta do "não estende" não se contradizem; a trava muda só o período (o mês do dinheiro fica)', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-01', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-08-10', [true, true]);
+  assert.strictEqual(L.perg[0].t, 'ATENÇÃO — esta vigência já nasce VENCIDA');
+  assert.strictEqual(L.perg.length, 2, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-08-10', '2026-09-01', '2026-09-30'], 'a data digitada continua sendo o pagamento; o período é o que ela aceitou');
+});
+provaAsync('corrigir a data de pagamento para um dia ANTES da gravada é correção: nada de "não estende" (15/09 → 14/09 num plano de setembro)', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-15', fim: '2026-09-30' }, '2026-09-14', [true, true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-14', '', '2026-09-30']);
+});
+provaAsync('depois da trava "nasce vencida", nenhuma outra pergunta refaz o período que a pessoa aceitou', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-07-01', fim: '2026-09-30' }, '2026-08-10', [true, true, true]);
+  assert.strictEqual(L.perg.length, 2, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-08-10', '2026-09-01', '2026-09-30']);
+});
+prova('a ficha avisa quando mostra um período que NÃO está gravado (e não convida a encolher um plano mais longo)', () => {
+  const tela = (renov) => {
+    ctx.__exT = { renov: renov };
+    run(`__bkT={pa:pelAtual, na:nAulasDe, pd:pelDias, pc:pelCategoria, pk:pelKey, rr:renovRascunho, mm:mmBlocoHTML, hh:renovHistHTML, hj:hojeISO};
+      pelAtual={n:'Baque', tutor:'Tutora Teste'}; nAulasDe=function(){ return 2; }; pelDias=function(){ return ['ter','qui']; };
+      pelCategoria=function(){ return 'auluno'; }; pelKey=function(){ return 'baque__tutora teste'; }; renovRascunho=null;
+      mmBlocoHTML=function(){ return ''; }; renovHistHTML=function(){ return ''; }; hojeISO=function(){ return '2026-09-30'; };`);
+    try { return run("blocoPlano(__exT, {n:'Baque', tutor:'Tutora Teste'})"); }
+    finally { run('pelAtual=__bkT.pa; nAulasDe=__bkT.na; pelDias=__bkT.pd; pelCategoria=__bkT.pc; pelKey=__bkT.pk; renovRascunho=__bkT.rr; mmBlocoHTML=__bkT.mm; renovHistHTML=__bkT.hh; hojeISO=__bkT.hj;'); }
+  };
+  const h = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30' });
+  assert.ok(/id="planoContaDiferente"[^>]*><strong>Nada foi gravado ainda\.<\/strong> Gravado hoje: de 30\/09\/2026 até 30\/09\/2026\. A conta de hoje dá de 01\/10\/2026 até 31\/10\/2026/.test(h), h.slice(h.indexOf('Vale até'), h.indexOf('Vale até') + 900));
+  assert.ok(/id="planoDuvida"/.test(h), 'avisa que o Confirmar vai perguntar');
+  const g = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-05', fim: '2026-10-15' });
+  assert.ok(!/planoContaDiferente/.test(g), 'ficha importada com fim mais longo: sem convite a encolher');
+  const k = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31' });
+  assert.ok(!/planoContaDiferente/.test(k) && /de 01\/10\/2026 até /.test(k), 'gravado certo: sem aviso, com o período');
+});
+prova('virar avulso, hóspede ou morador leva o período junto; a Linha do tempo diz "pago em" e "vale de"', () => {
+  assert.ok(/r\.inicio=''; r\.fim=''; r\.mesRenov=''; r\.aulas=''; delete r\.vig_inicio;/.test(SRC619));
+  assert.ok(/\(novo\.vig_inicio\?\('pago em '\+fmtBR\(novo\.inicio\)\+' · vale de '\+fmtBR\(novo\.vig_inicio\)\)/.test(SRC619));
+});
+prova('"Renovações anteriores" só junta o que saiu pelo MESMO motivo (uma "desfeita" não vira "tentativa repetida" de uma "renovação")', () => {
+  ctx.__h620b = { renov_hist: {
+    a: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 2, por: 'A', motivo: 'desfeita' },
+    b: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 1, por: 'A', motivo: 'renovação' } } };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  let html;
+  try { html = run('renovHistHTML(__h620b)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(!/vezes iguais/.test(html) && (html.match(/30\/09\/2026 → 30\/09\/2026/g) || []).length === 2);
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
