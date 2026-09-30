@@ -45,14 +45,14 @@
   - **"Pagamento novo ou correção da data?"**: a data nova fica a até 15 dias da gravada (20/09 → 21/09 num plano de setembro). Uma resposta dá "renovação de 01/10 até 31/10", a outra "fica de 21/09 até 30/09".
   - **"Este pagamento é de qual período?"**: ficha antiga paga nos últimos dias do mês (o Baque: gravado 30/09 → 30/09). Uma resposta dá "Mês seguinte: de 01/10 até 31/10", a outra "Manter".
   - A ficha avisa antes: "(O Confirmar vai perguntar…)". Quando a conta vai além do gravado e nada foi mexido, aparece **"Nada foi gravado ainda. Gravado hoje: … A conta de hoje dá …"**.
-  - Essas perguntas vêm **antes** da trava "nasce vencida". **"Manter"** numa ficha antiga fica anotado: a ficha para de oferecer o mês seguinte.
+  - Essas perguntas vêm **antes** da trava "nasce vencida". **"Manter"** numa ficha antiga fica anotado: a ficha para de oferecer o mês seguinte. Ficha importada que já vai além do mês seguinte (26/09 → 15/11) não recebe essa pergunta: o resumo do Confirmar mostra o que muda.
 - **A trava "nasce vencida"** (data de pagamento cujo período já passou) oferece **"Voltar e corrigir a data do pagamento"**, sem gravar nada, ou **"Manter DD/MM mesmo assim (o dinheiro conta em {mês})"**. A data do pagamento é o mês do dinheiro no Financeiro, e a trava não a troca mais sozinha. Depois dela, nenhuma outra pergunta refaz o que a pessoa escolheu.
 - **O meio do mês registrado para a família** não estica o plano de um irmão cuja vigência é de outro mês.
 - **Quem começa no meio do mês** (opção 1 ou 2) continua com a regra própria, sem mudança.
 - **Onde a pessoa vê:** na ficha, "Vale até" vira "**de 01/10 até 31/10**", com a frase do porquê embaixo; o resumo do Confirmar diz "**Pagamento 30/09 · vale de 01/10 até 31/10**" e o porquê; a mensagem ao tutor, a lista da Renovação, "Renovações anteriores" (com "pago em 30/09"), o Desfazer e a aba Identificação mostram o período.
 - **O Financeiro não muda:** o mês do dinheiro continua sendo o da data do pagamento (regime de caixa, decisão de 02/set/2026). `financeiro-logica.js` não foi tocado.
 - **Onde está no código:** `aplicarRenovacao`, `renovCalcular`, `renovVigenciaComeca`, `renovRegraFimDoMes`, `renovVigenciaFrase`, `renovMesmoPlano`, `renovEdit` (`_inicio_gravado`), `blocoPlano`, `confirmarRenovacao`, `renovHistHTML`, `desfazerRenovacao`, `msgRenovado`, `renderRenovacao`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 26 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês e o irmão, o Confirmar de verdade com as perguntas na ordem, a trava, o resumo e a gravação, a ficha, o histórico); 30 defeitos plantados, 30 pegos.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 28 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês e o irmão, o Confirmar de verdade com as perguntas na ordem, a trava, o resumo e a gravação, a ficha, o histórico, a ficha importada mais longa); 33 defeitos plantados, 33 pegos. Quatro revisões independentes (QA54 a QA56 e a desta).
 
 ## O que mudou em 27/set/2026 (v 2026-09-27-01)
 

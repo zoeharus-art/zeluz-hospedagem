@@ -5258,6 +5258,18 @@ prova('o meio do mês registrado para a família NÃO estica calado o plano de u
     igual(run("JSON.stringify(mmFimNovoDe({n:'Irmão'}, '2026-09-22', 2))"), JSON.stringify({ de: '2026-09-30', para: '2026-10-31', mesRenov: 'outubro de 2026', mes_cobranca_1: '2026-10' }));
   } finally { run('pelExtra=__bkI.pe; nAulasDe=__bkI.na;'); }
 });
+provaAsync('QA56 — ficha importada mais longa (26/09 → 15/11) reconfirmada: sem pergunta de "Manter" que encurta; a trava diz que substitui o plano que vale', async () => {
+  const P = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-26', fim: '2026-11-15' }, null, [false]);
+  igual(P.perg.map((p) => p.t), ['CONFIRA ANTES DE GRAVAR'], 'só o resumo, que mostra o que muda');
+  const T = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-01', fim: '2026-09-30' }, '2026-08-10', [true]);
+  assert.ok(T.perg[0].l.some((x) => x === 'O plano gravado hoje vale até 30/09/2026 — ao manter, ele é substituído.'), JSON.stringify(T.perg[0].l));
+});
+provaAsync('QA56 — a ficha em que a pessoa escolheu "Manter" continua anotada ao ser reconfirmada com a mesma data', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-26', vig_inicio: '2026-09-26', fim: '2026-09-30' }, null, [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-26', '2026-09-26', '2026-09-30']);
+  assert.strictEqual(L.hist.length, 0);
+});
 prova('a ficha avisa quando mostra um período que NÃO está gravado (e não convida a encolher um plano mais longo)', () => {
   const tela = (renov) => {
     ctx.__exT = { renov: renov };

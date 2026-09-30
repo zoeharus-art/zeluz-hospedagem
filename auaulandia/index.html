@@ -19222,7 +19222,11 @@
       // Registro antigo (sem período próprio) pago nos últimos dias do mês: a conta de hoje
       // dá o mês seguinte, o gravado diz outra coisa. Não empurra calado — pergunta.
       const v3=renovRegraFimDoMes(pagISO);
-      if(v3!==pagISO) return {vig:v3, porque:'fim-do-mes', duvida:{tipo:'gravado-antigo', alt:pagISO}};
+      // Só pergunta quando o gravado é o período CURTO (o erro de 30/set). Ficha importada que já
+      // vai além do mês seguinte (26/09 → 15/11) não ganha um "Manter" que, na verdade, encurta
+      // o plano (QA56): fica a conta de sempre, e o resumo do Confirmar mostra o que muda.
+      if(v3!==pagISO && !(ehISO(g.fim) && g.fim>fimVigenciaISO(v3, 1)))
+        return {vig:v3, porque:'fim-do-mes', duvida:{tipo:'gravado-antigo', alt:pagISO}};
       return {vig:pagISO, porque:''};
     }
     // 2. RENOVAÇÃO ANTECIPADA: pagou enquanto o plano ainda vale, nos últimos 15 dias dele.
@@ -19653,6 +19657,11 @@
       return;
     }
     let jaDecidiu=false;
+    // Ficha em que a pessoa já escolheu "Manter" (período anotado = dia do pagamento) e que é
+    // reconfirmada com a MESMA data — para acertar os dias, por exemplo — continua anotada.
+    // Sem isto a anotação sumia e a ficha voltava a perguntar a cada abertura (QA56).
+    if(!renovVigOutra(calc) && gravado.vig_inicio && gravado.vig_inicio===gravado.inicio
+       && calc.inicio===gravado.inicio && !calc.vig_inicio) calc.vig_inicio=calc.inicio;
     // PAGAMENTO NOVO OU CORREÇÃO? (QA da 6.20). Quando a data sozinha não diz, as duas leituras
     // vão para a tela, com as datas de cada uma — a pessoa escolhe, o app não adivinha dinheiro.
     // Vem ANTES da trava abaixo (QA55): a trava confere a leitura escolhida, e não engole a pergunta.
@@ -19692,8 +19701,10 @@
         ['Data do pagamento: '+fmtBR(calc.inicio),
          'Plano: '+(pl0.rotulo||r.plano)+' ('+(pl0.compromisso||'')+')',
          'Vale até: '+fmtBR(calc.fim)+' — que já passou.',
-         'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.',
-         'Se a data está errada, corrija: é por ela que o Financeiro conta o mês do dinheiro.'],
+         'Assim ele CONTINUA na lista de cobrança, como se não tivesse renovado.']
+         .concat((/^\d{4}-\d{2}-\d{2}$/.test(gravado.fim||'') && gravado.fim!==calc.fim)
+           ? ['O plano gravado hoje vale até '+fmtBR(gravado.fim)+' — ao manter, ele é substituído.'] : [])
+         .concat(['Se a data está errada, corrija: é por ela que o Financeiro conta o mês do dinheiro.']),
         {sim:'Voltar e corrigir a data do pagamento',
          nao:'Manter '+fmtBR(calc.inicio)+' mesmo assim (o dinheiro conta em '+mesAnoDe(calc.inicio)+')'});
       if(corrigir){
