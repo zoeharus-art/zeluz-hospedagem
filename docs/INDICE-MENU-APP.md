@@ -22,6 +22,25 @@
 - **Onde está no código:** `APP_DIA_ABERTO`, `appDiaVelho`, `appDiaVelhoData`, `appDiaVelhoTexto`, `zDiaCheckinAberto`, `zDiaTrabalhoAberto`, `zViradaDoDiaTick`, `zViradaDoDiaVisibilidade`, `zFaixaVersao`, `zMotivoParado` (alarme na tela não é "parado", também para a versão nova), `zRecargaQuandoParado` (com o dia velho, a recarga da versão fica com o vigia do dia), `aplicarVersaoNova` (o toque na faixa com o dia velho avisa em vez de atualizar), `repMandarAgora`, travas em `dashAutoSincronizar`, `dashAutoRodar`, `gravarTurmaDoDia`, `aplicarFaltaAutomatica`; `dashAutoCalcular` (hoje com `turmaDeHoje`), `dashAutoVemNoDia` (`pelDias`), `banhosAvisoDiaSemDaycare`, `banhosSalvar`, `banhosGravarExcecao`.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (13 provas da 6.21; 45 defeitos plantados, 45 pegos). O `tests/harness.js` passou a dizer, nos cenários com relógio de mentira, que o aparelho abriu no dia simulado.
 
+### (AA) Mensagem de renovação: o prazo do plano, "da Amora" e "manter ou aumentar" (v 2026-10-01-02)
+
+> **Adriana, 01/out/2026:** *"Plano Silver, Gold, Black, as pessoas não sabem: é mensal, trimestral ou semestral. [...] Precisa ser fácil, encantadora e não vir com do, da. A Amora é uma menina, a gente já tem esses dados."* Story 6.22.
+
+Ficha › aba **Plano** › **Mensagens para o tutor** ("Plano finalizou — oferecer renovação" e "Renovação confirmada"):
+
+| Antes | Agora |
+|---|---|
+| "no plano Silver" (Gold, Black) | **o prazo:** "Hoje, ela vem uma vez por semana, na quarta, no plano **semestral**." (Silver é mensal, Gold é trimestral, Black é semestral, pela tabela de planos) |
+| "do(a) Amora", "ele(a)" | **pelo sexo da ficha:** "da Amora", "do Nelson", "ela", "ele". Sem o sexo na ficha, a frase usa o nome ("de Bia", "Hoje, Bia vem") |
+| "1x por semana, nos dias quarta" | "**uma vez por semana, na quarta**"; "duas vezes por semana, na segunda e na quarta". Sem dia marcado, vale o nº de aulas do plano; sem nenhum dos dois, a frase não inventa a frequência |
+| "Vamos manter o mesmo plano e os mesmos dias? Ou deseja alterar…" | "**Vamos manter uma vez por semana para a Amora ou vamos aumentar?**" (com cinco vezes, só "Vamos manter…?") |
+| (nada) | **plano mensal** ganha o convite: "E que tal passar para o plano trimestral? A mensalidade fica menor, e o Nelson ainda ganha 10% de desconto na Auaulândia (no semestral, 15%)." Os números saem da tabela de planos do app (a mesma da mensalidade e do orçamento); o que a tabela não confirma não aparece |
+
+- **O resto é o texto da Adriana** (pedido de 15/jul): o parágrafo "O Day Care da Zêluz é muito mais do que companhia: é rotina de movimento, socialização, estímulo cognitivo…" fica como ela escreveu.
+- **Onde está no código:** `msgPlanoFinalizou`, `msgRenovado`, `RENOV_VEZES`, `renovArtigo`, `renovONome`, `renovDoNome`, `renovParaNome`, `renovDiasNa`, `renovPrazo`, `renovAulasMsg`, `renovPct`, `renovConviteTrimestral`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (9 provas da 6.22, entre elas o texto inteiro da Amora e do Nelson; 14 defeitos plantados, 14 pegos).
+- **Ainda diz "plano Silver" ao tutor (fora desta mudança):** o recibo de **Lançar pagamento**.
+
 ## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê; renovação paga antes do fim do plano
 
 > **Adriana, 30/set/2026:** *"Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar hoje, Lançamentos do dia, e o que é ali da Central Zêluz, e não estou conseguindo. Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, mas não deu. Eu preciso de conseguir dar acesso a todas as pessoas que eu quiser. [...] Eu preciso que tudo esteja atualizado."* Story 6.19.

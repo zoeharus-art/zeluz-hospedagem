@@ -16657,7 +16657,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-01-01';
+  const APP_VERSAO='2026-10-01-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -19422,26 +19422,96 @@
   function diasPorExtenso(p){ const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]||x);
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1]; }
+  // ===== A RENOVAÇÃO ENCANTADORA (Adriana, 01/out/2026) ===================================
+  // "Plano Silver, Gold, Black, as pessoas não sabem: é mensal, trimestral ou semestral."
+  // "Precisa ser fácil, encantadora e não vir com do, da: a Amora é uma menina, a gente já tem
+  //  esses dados." "Vamos manter uma vez por semana para a Amora ou vamos aumentar?" E, no plano
+  // mensal, o convite ao trimestral: a mensalidade fica menor e o desconto na Auaulândia é
+  // maior. Os números saem da TABELA de planos do app (a mesma da mensalidade e do orçamento),
+  // nunca do texto. O resto é o texto DELA (pedido de 15/jul), trocando só o que ela pediu (QA61).
+  const RENOV_VEZES={1:'uma vez', 2:'duas vezes', 3:'três vezes', 4:'quatro vezes', 5:'cinco vezes'};
+  // "a"/"o" pelo sexo da ficha; '' quando a ficha não diz — aí a frase usa só o nome, sem "do(a)".
+  function renovArtigo(ex){ const s=String((ex&&ex.sexo)||''); return /^f/i.test(s)?'a':(/^m/i.test(s)?'o':''); }
+  function renovONome(art, nome){ return (art?(art+' '):'')+nome; }             // "a Amora" · "Amora"
+  function renovDoNome(art, nome){ return (art?('d'+art+' '):'de ')+nome; }      // "da Amora" · "de Amora"
+  function renovParaNome(art, nome){ return 'para '+renovONome(art, nome); }     // "para a Amora"
+  function renovMaiuscula(t){ return t?(t.charAt(0).toUpperCase()+t.slice(1)):t; }
+  // "na quarta" · "na segunda e na quarta" · "na segunda, na quarta e na sexta"
+  function renovDiasNa(p){
+    const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]).filter(Boolean).map(x=>'na '+x);
+    if(!d.length) return ''; if(d.length===1) return d[0];
+    return d.slice(0,-1).join(', ')+' e '+d[d.length-1];
+  }
+  // O prazo do plano — 'mensal', 'trimestral', 'semestral' — pela tabela; '' sem plano conhecido.
+  function renovPrazo(r){
+    try{ const c=String(((planos()||{})[r&&r.plano]||{}).compromisso||''); return /^(mensal|trimestral|semestral)$/.test(c)?c:''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem a tabela, a frase sai sem o prazo */
+  }
+  // O convite do plano MENSAL ao trimestral. Só diz o que a tabela confirma: "a mensalidade fica
+  // menor" quando fica mesmo, e o desconto na Auaulândia quando há desconto.
+  // A frequência que a mensagem pode afirmar: os dias marcados na ficha; sem dia marcado, o nº de
+  // aulas gravado no plano; sem nenhum dos dois, 0 — e a frase não inventa "uma vez" (QA61).
+  function renovAulasMsg(p, r){
+    const d=(pelDias(p)||[]).length;
+    if(d) return Math.min(5, d);
+    const a=Number(r&&r.aulas)||0;
+    return (a>=1 && a<=5)?a:0;
+  }
+  function renovPct(n){ return String(n).replace('.', ','); }   // 7.5 → "7,5"
+  function renovConviteTrimestral(r, aulas, art, nome){
+    if(renovPrazo(r)!=='mensal') return '';
+    try{
+      const P=planos()||{}, porPrazo=function(c){ return Object.keys(P).map(function(k){ return P[k]; }).filter(function(x){ return x && x.compromisso===c; })[0]||null; };
+      const atual=P[r.plano]||{}, tri=porPrazo('trimestral'), sem=porPrazo('semestral');
+      if(!tri) return '';
+      const vAt=Number((atual.valores||{})[aulas])||0, vTri=Number((tri.valores||{})[aulas])||0;
+      const menor=(vAt>0 && vTri>0 && vTri<vAt);
+      const offT=Number(tri.hospOff)||0, offS=Number((sem||{}).hospOff)||0;
+      if(!menor && !offT) return '';
+      let t='E que tal passar para o plano trimestral? ';
+      if(menor) t+='A mensalidade fica menor';
+      if(offT){
+        const quem=renovONome(art, nome);
+        t+=(menor?(', e '+quem+' ainda ganha '):(renovMaiuscula(quem)+' ganha '))+renovPct(offT)+'% de desconto na Auaulândia'
+          +(offS>offT?(' (no semestral, '+renovPct(offS)+'%)'):'');
+      }
+      return t+'.';
+    }catch(e){ return ''; } /* silencioso de propósito: sem a tabela, a mensagem sai sem o convite */
+  }
   function msgPlanoFinalizou(p,ex){
-    const r=renovDe(ex); const aulas=nAulasDe(p);   // aulas = dias marcados (uma verdade só)
-    return 'Olá, '+primeiroNome(pelGet(p,'tutor'))+', como está?\n\n'
-      +'O plano de DayCare do(a) '+p.n+' está pronto para ser renovado.\n\n'
-      +'Hoje ele(a) vem '+aulas+'x por semana, nos dias '+(diasPorExtenso(p)||'combinados')+', no plano '+(r.plano||'—')+'.\n\n'
-      +'O DayCare da Zêluz é muito mais do que companhia: é rotina de movimento, socialização, '
+    const r=renovDe(ex), aulas=renovAulasMsg(p, r);
+    const art=renovArtigo(ex), nome=(pelNome(p)||p.n||''), tutor=primeiroNome(pelGet(p,'tutor'));
+    const prazo=renovPrazo(r), vezes=aulas?RENOV_VEZES[aulas]:'', dias=renovDiasNa(p);
+    const ela=art?(art==='a'?'ela':'ele'):nome;
+    // Sem frequência E sem prazo, a frase só repetiria a anterior: fica de fora (QA62).
+    const hoje=vezes
+      ? ('Hoje, '+ela+' vem '+vezes+' por semana'+(dias?(', '+dias):'')+(prazo?(', no plano '+prazo):'')+'.')
+      : (prazo?('Hoje, '+ela+' está no plano '+prazo+'.'):'');
+    let m='Olá'+(tutor?(', '+tutor):'')+', como está?'+(art?(' E '+renovONome(art, nome)+'?'):'')+'\n\n'
+      +'O plano de Day Care '+renovDoNome(art, nome)+' está pronto para ser renovado.\n\n'
+      +(hoje?(hoje+'\n\n'):'')
+      +'O Day Care da Zêluz é muito mais do que companhia: é rotina de movimento, socialização, '
       +'estímulo cognitivo, bem-estar, saúde e muito mais longevidade para o seu FILHOt. É um '
-      +'cuidado que ajuda o(a) '+p.n+' a gastar energia com segurança, conviver com outros '
+      +'cuidado que ajuda '+renovONome(art, nome)+' a gastar energia com segurança, conviver com outros '
       +'peludinhos e manter uma rotina mais equilibrada.\n\n'
-      +'Vamos manter o mesmo plano e os mesmos dias?\n'
-      +'Ou deseja alterar o plano ou os dias da semana do(a) '+p.n+'? 🐾💛';
+      +(vezes
+        ? ('Vamos manter '+vezes+' por semana '+renovParaNome(art, nome)+(aulas>=5?'?':' ou vamos aumentar?'))
+        : ('Vamos manter a rotina '+renovDoNome(art, nome)+' ou vamos aumentar?'));
+    const convite=renovConviteTrimestral(r, aulas, art, nome);
+    if(convite) m+='\n\n'+convite;
+    return m+' 🐾💛';
   }
   function msgRenovado(p,ex){
-    const r=renovDe(ex); const aulas=nAulasDe(p);   // aulas = dias marcados (uma verdade só)
-    return 'Olá, '+primeiroNome(pelGet(p,'tutor'))+', como está? 💛\n\n'
-      +'O plano '+(r.plano||'—')+', de '+aulas+'x por semana, do(a) '+p.n+', foi renovado.\n\n'
-      +'A nova vigência será de '+((r.vig_inicio||r.inicio)?fmtBR(r.vig_inicio||r.inicio):'—')+' até '+(r.fim?fmtBR(r.fim):'—')
-      +', com próxima renovação prevista para '+(r.mesRenov||'—')+'.\n\n'
+    const r=renovDe(ex), aulas=renovAulasMsg(p, r);
+    const art=renovArtigo(ex), nome=(pelNome(p)||p.n||''), tutor=primeiroNome(pelGet(p,'tutor'));
+    const prazo=renovPrazo(r), vezes=aulas?RENOV_VEZES[aulas]:'';
+    const ini=r.vig_inicio||r.inicio;
+    return 'Olá'+(tutor?(', '+tutor):'')+', como está? 💛\n\n'
+      +'O plano '+(prazo?(prazo+' '):'')+'de Day Care '+renovDoNome(art, nome)+(vezes?(', de '+vezes+' por semana,'):'')+' foi renovado.\n\n'
+      +'A nova vigência será de '+(ini?fmtBR(ini):'—')+' até '+(r.fim?fmtBR(r.fim):'—')
+      +(r.mesRenov?(', com próxima renovação prevista para '+r.mesRenov):'')+'.\n\n'
       +'Obrigada por confiar na Zêluz para cuidar de quem também faz parte da sua família!\n'
-      +'Seguimos sendo a voz do(a) '+p.n+' nessa rotina de bem-estar, saúde, longevidade e muita diversão! 🐾💛';
+      +'Seguimos sendo a voz '+renovDoNome(art, nome)+' nessa rotina de bem-estar, saúde, longevidade e muita diversão! 🐾💛';
   }
 
   // ---- aba PLANO na ficha ----

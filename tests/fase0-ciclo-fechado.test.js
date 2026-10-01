@@ -5619,7 +5619,102 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
-  assert.ok(/const APP_VERSAO='2026-10-01-01';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-01-0[12]';/.test(src));
+});
+// ================================================================== 6.22 — a renovação encantadora
+console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
+const msg622 = (fn, pet, ex, tabela) => {
+  ctx.__p622 = pet; ctx.__ex622 = ex; ctx.__tab622 = tabela || null;
+  run(`__bk622={pd:pelDias, pg:pelGet, pc:planosCfg}; pelDias=function(p){ return p.dias||[]; };
+    pelGet=function(p,c){ return c==='tutor'?p.tutor:(c==='n'?(p.nFicha||p.n):''); }; if(__tab622) planosCfg=__tab622;`);
+  try { return run(`${fn}(__p622, __ex622)`); }
+  finally { run('pelDias=__bk622.pd; pelGet=__bk622.pg; planosCfg=__bk622.pc;'); }
+};
+const AMORA = { n: 'Amora', tutor: 'Cristiane Souza', dias: ['qua'] };
+const NELSON = { n: 'Nelson', tutor: 'Fernanda', dias: ['seg', 'qua'] };
+const BIA = { n: 'Bia', tutor: 'Rita', dias: ['seg', 'qua', 'sex'] };
+const PARAGRAFO622 = (quem) => 'O Day Care da Zêluz é muito mais do que companhia: é rotina de movimento, socialização, estímulo cognitivo, bem-estar, saúde e muito mais longevidade para o seu FILHOt. É um cuidado que ajuda ' + quem + ' a gastar energia com segurança, conviver com outros peludinhos e manter uma rotina mais equilibrada.';
+const nada622 = (m) => !/do\(a\)|ele\(a\)|o\(a\)|\bSilver\b|\bGold\b|\bBlack\b|DayCare|\b\dx por semana/.test(m);
+prova('Amora (menina, uma vez por semana, semestral): o texto da Adriana (15/jul) trocando só o que ela pediu em 01/out', () => {
+  const m = msg622('msgPlanoFinalizou', AMORA, { sexo: 'Fêmea', renov: { plano: 'Black', inicio: '2026-10-01', fim: '2027-03-31' } });
+  assert.strictEqual(m, 'Olá, Cristiane, como está? E a Amora?\n\n'
+    + 'O plano de Day Care da Amora está pronto para ser renovado.\n\n'
+    + 'Hoje, ela vem uma vez por semana, na quarta, no plano semestral.\n\n'
+    + PARAGRAFO622('a Amora') + '\n\n'
+    + 'Vamos manter uma vez por semana para a Amora ou vamos aumentar? 🐾💛');
+});
+prova('Nelson (menino, mensal, duas vezes): "do Nelson", "na segunda e na quarta" e o convite ao trimestral com os números da tabela', () => {
+  const m = msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Silver', inicio: '2026-09-30', fim: '2026-10-31' } });
+  assert.ok(m.startsWith('Olá, Fernanda, como está? E o Nelson?\n\nO plano de Day Care do Nelson está pronto para ser renovado.\n\nHoje, ele vem duas vezes por semana, na segunda e na quarta, no plano mensal.\n\n' + PARAGRAFO622('o Nelson')), m);
+  assert.ok(m.endsWith('Vamos manter duas vezes por semana para o Nelson ou vamos aumentar?\n\nE que tal passar para o plano trimestral? A mensalidade fica menor, e o Nelson ainda ganha 10% de desconto na Auaulândia (no semestral, 15%). 🐾💛'), m);
+  assert.ok(nada622(m), m);
+});
+prova('sem o sexo na ficha: nenhum "do(a)" nem "ele(a)" — a frase usa o nome', () => {
+  const m = msg622('msgPlanoFinalizou', BIA, { renov: { plano: 'Gold', inicio: '2026-10-01', fim: '2026-12-31' } });
+  assert.ok(m.startsWith('Olá, Rita, como está?\n\nO plano de Day Care de Bia está pronto para ser renovado.\n\nHoje, Bia vem três vezes por semana, na segunda, na quarta e na sexta, no plano trimestral.\n\n' + PARAGRAFO622('Bia')), m);
+  assert.ok(m.endsWith('Vamos manter três vezes por semana para Bia ou vamos aumentar? 🐾💛'), 'trimestral: sem convite — ' + m);
+  assert.ok(nada622(m), m);
+});
+prova('cinco vezes: só "Vamos manter"; quatro vezes: "ou vamos aumentar?" (QA61)', () => {
+  const m5 = msg622('msgPlanoFinalizou', { n: 'Thor', tutor: 'Ana', dias: ['seg', 'ter', 'qua', 'qui', 'sex'] }, { sexo: 'Macho', renov: { plano: 'Black' } });
+  assert.ok(m5.endsWith('Vamos manter cinco vezes por semana para o Thor? 🐾💛') && !/aumentar/.test(m5), m5);
+  const m4 = msg622('msgPlanoFinalizou', { n: 'Thor', tutor: 'Ana', dias: ['seg', 'ter', 'qua', 'qui'] }, { sexo: 'Macho', renov: { plano: 'Black' } });
+  assert.ok(m4.endsWith('Vamos manter quatro vezes por semana para o Thor ou vamos aumentar? 🐾💛'), m4);
+});
+prova('sem dia marcado: vale o nº de aulas do plano; sem nenhum dos dois, a mensagem não inventa "uma vez" (QA61)', () => {
+  const ma = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black', aulas: 2 } });
+  assert.ok(/Hoje, ela vem duas vezes por semana, no plano semestral\./.test(ma) && /Vamos manter duas vezes por semana para a Lua ou vamos aumentar\?/.test(ma), ma);
+  const m0 = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black' } });
+  assert.ok(/Hoje, ela está no plano semestral\./.test(m0) && /Vamos manter a rotina da Lua ou vamos aumentar\? 🐾💛$/.test(m0) && !/uma vez/.test(m0), m0);
+  const r0 = msg622('msgRenovado', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black', inicio: '2026-10-01', fim: '2027-03-31' } });
+  assert.ok(/O plano semestral de Day Care da Lua foi renovado\./.test(r0) && !/uma vez/.test(r0), r0);
+  // QA62: sem frequência e sem prazo, a frase "Hoje…" fica de fora (não repete a anterior)
+  const mn = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: {} });
+  assert.ok(!/Hoje,/.test(mn) && /está pronto para ser renovado\.\n\nO Day Care da Zêluz/.test(mn), mn);
+  const mx = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: '', dias: ['qua'] }, { sexo: 'Fêmea', renov: {} });
+  assert.ok(/^Olá, como está\? E a Lua\?\n\nO plano de Day Care da Lua está pronto/.test(mx) && /Hoje, ela vem uma vez por semana, na quarta\.\n/.test(mx), 'sem tutor e sem plano: ' + mx);
+});
+prova('o nome vem da ficha (pelNome), não do cadastro importado (QA61)', () => {
+  const m = msg622('msgPlanoFinalizou', { n: 'Amorinha', nFicha: 'Amora', tutor: 'Cristiane', dias: ['qua'] }, { sexo: 'Fêmea', renov: { plano: 'Black' } });
+  assert.ok(/da Amora está pronto/.test(m) && !/Amorinha/.test(m), m);
+});
+prova('o convite ao trimestral só diz o que a tabela de planos confirma', () => {
+  const base = JSON.parse(JSON.stringify(run('PLANOS_PADRAO')));
+  const ex = { sexo: 'Macho', renov: { plano: 'Silver' } };
+  const semDesc = JSON.parse(JSON.stringify(base)); semDesc.Gold.hospOff = 0;
+  assert.ok(msg622('msgPlanoFinalizou', NELSON, ex, semDesc).endsWith('E que tal passar para o plano trimestral? A mensalidade fica menor. 🐾💛'), 'sem desconto: só a mensalidade');
+  const semMenor = JSON.parse(JSON.stringify(base)); semMenor.Gold.valores = Object.assign({}, base.Silver.valores);
+  assert.ok(msg622('msgPlanoFinalizou', NELSON, ex, semMenor).endsWith('E que tal passar para o plano trimestral? O Nelson ganha 10% de desconto na Auaulândia (no semestral, 15%). 🐾💛'), 'mensalidade igual: só o desconto');
+  // QA61: trimestral MAIS CARO não vira "fica menor"
+  const maisCaro = JSON.parse(JSON.stringify(base)); Object.keys(maisCaro.Gold.valores).forEach((k) => { maisCaro.Gold.valores[k] = base.Silver.valores[k] + 1000; });
+  const mc = msg622('msgPlanoFinalizou', NELSON, ex, maisCaro);
+  assert.ok(!/fica menor/.test(mc) && /O Nelson ganha 10% de desconto/.test(mc), 'trimestral mais caro: ' + mc);
+  // QA62: trimestral sem preço para esta frequência não vira "fica menor"
+  const semPreco = JSON.parse(JSON.stringify(base)); delete semPreco.Gold.valores['2'];
+  const sp = msg622('msgPlanoFinalizou', NELSON, ex, semPreco);
+  assert.ok(!/fica menor/.test(sp) && /O Nelson ganha 10% de desconto/.test(sp), 'trimestral sem preço: ' + sp);
+  const nada = JSON.parse(JSON.stringify(semMenor)); nada.Gold.hospOff = 0;
+  assert.ok(!/trimestral\?/.test(msg622('msgPlanoFinalizou', NELSON, ex, nada)), 'nenhuma vantagem: sem convite');
+  const igual = JSON.parse(JSON.stringify(base)); igual.Black.hospOff = 10;
+  const mi = msg622('msgPlanoFinalizou', NELSON, ex, igual);
+  assert.ok(mi.endsWith('10% de desconto na Auaulândia. 🐾💛') && !/no semestral/.test(mi), 'semestral sem desconto maior: não cita — ' + mi);
+  const dec = JSON.parse(JSON.stringify(base)); dec.Gold.hospOff = 7.5;
+  assert.ok(/7,5% de desconto na Auaulândia/.test(msg622('msgPlanoFinalizou', NELSON, ex, dec)), 'decimal com vírgula');
+  assert.ok(!/trimestral\?/.test(msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Black' } })), 'semestral: sem convite');
+});
+prova('"Renovação confirmada": o prazo, "da Amora", a frequência por extenso e o período (01/10 a 31/10)', () => {
+  const m = msg622('msgRenovado', AMORA, { sexo: 'Fêmea', renov: { plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' } });
+  assert.strictEqual(m, 'Olá, Cristiane, como está? 💛\n\n'
+    + 'O plano mensal de Day Care da Amora, de uma vez por semana, foi renovado.\n\n'
+    + 'A nova vigência será de 01/10/2026 até 31/10/2026, com próxima renovação prevista para outubro de 2026.\n\n'
+    + 'Obrigada por confiar na Zêluz para cuidar de quem também faz parte da sua família!\n'
+    + 'Seguimos sendo a voz da Amora nessa rotina de bem-estar, saúde, longevidade e muita diversão! 🐾💛');
+  const b = msg622('msgRenovado', BIA, { renov: { plano: 'Gold', inicio: '2026-10-01', fim: '2026-12-31' } });
+  assert.ok(/O plano trimestral de Day Care de Bia, de três vezes por semana, foi renovado\.\n\nA nova vigência será de 01\/10\/2026 até 31\/12\/2026\.\n\n/.test(b) && nada622(b), b);
+});
+prova('vocabulário da marca nas duas mensagens (Zêluz, Day Care, Auaulândia; nada de "cachorro", "cão", "animal", "dono")', () => {
+  const ms = [msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } }), msg622('msgRenovado', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } })];
+  ms.forEach((m) => { assert.ok(!/cachorro|\bcão\b|\bcães\b|animal|bicho|\bdono\b|Zeluz|Zéluz/i.test(m), m); });
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
