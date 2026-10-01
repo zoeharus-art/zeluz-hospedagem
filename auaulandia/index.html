@@ -7924,6 +7924,14 @@
   // aconteceu. Nada de "toquei e não aconteceu nada".
   function repMandarAgora(dia, btn){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')){ alert('Dia inválido.'); return; }
+    // Aparelho com o dia de ontem (6.21): a conferência não roda aqui — e o alertão diz por quê.
+    if(typeof appDiaVelho==='function' && appDiaVelho()){
+      var _l=['Toque na faixa do topo para atualizar. Depois disso, a conferência com a planilha volta a funcionar neste aparelho.',
+              'Os outros aparelhos conferem a planilha sozinhos enquanto isso.'];
+      if(typeof zAlertao==='function') zAlertao('ESTE APARELHO AINDA ESTÁ COM O DIA '+appDiaVelhoData(), _l, {botao:'Entendi'});
+      else alert(_l.join('\n'));
+      return;
+    }
     var t=btn?btn.textContent:'';
     if(btn){ btn.disabled=true; btn.textContent='mandando…'; }
     var solta=function(){ if(btn){ btn.disabled=false; btn.textContent=t||'Mandar agora'; } };
@@ -11421,6 +11429,7 @@
     if(!DB) return Promise.resolve();
     var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
     if(!r || r==='tutor') return Promise.resolve();      // ninguém logado, ou tutor: não é a casa
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve();  // aberto desde ontem: a turma daqui é a de ontem (01/out/2026)
     const agora=new Date();
     if(agora.getHours()<CK_HORA_TURMA) return Promise.resolve();  // de madrugada a turma ainda não é notícia
     var ds=agora.getDay();
@@ -11455,6 +11464,7 @@
     if(!DB) return Promise.resolve();
     var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
     if(!r || r==='tutor') return Promise.resolve();      // ninguém logado, ou tutor: não fecha o dia da casa
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve();  // aberto desde ontem: a turma daqui é a de ontem (01/out/2026)
     const agora=new Date();
     if(agora.getHours()<CK_HORA_FALTA) return Promise.resolve();   // ainda dá tempo de chegar
     var ds=agora.getDay();
@@ -16647,7 +16657,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-09-30-01';
+  const APP_VERSAO='2026-10-01-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -16670,6 +16680,11 @@
   function zFaixaVersao(acender){
     try{
       var f=document.getElementById('faixaVersaoTopo'); if(!f) return;
+      // O DIA VIROU (01/out/2026): enquanto o aparelho estiver com o dia de ontem, a faixa
+      // fica acesa mesmo com a versão em dia — e diz por quê. O toque é o mesmo: recarregar.
+      var __dia=(typeof appDiaVelho==='function') && appDiaVelho();
+      if(__dia) acender=true;
+      if(acender) f.textContent=__dia?'O dia virou — toque para atualizar':'Nova versão pronta — toque para atualizar';
       f.style.display=acender?'block':'none';
       document.body.style.paddingTop=acender?(f.offsetHeight+'px'):'';
     }catch(e){} /* silencioso de propósito: a faixa é aviso — falhar ao desenhá-la não pode derrubar o vigia da versão */
@@ -16689,6 +16704,10 @@
   // Por que o aparelho está parado — ou '' quando alguém está usando (então não recarrega).
   function zMotivoParado(){
     try{
+      // ALARME NA TELA NÃO É APARELHO PARADO (QA57, 01/out/2026): a dose das 23h55 que ninguém
+      // respondeu toca com a tela trancada; recarregar a página a apagaria, e ela não voltaria.
+      // Vale para a recarga da versão nova também (o mesmo furo existia desde 08/set).
+      if(despMedNaTela || despNaTela) return '';
       if(!inatLogado()) return 'na porta de entrada';
       if(_appTrancado) return 'tela trancada';
       if(document.hidden) return 'aba escondida';
@@ -16705,6 +16724,9 @@
     __recargaTimer=setInterval(function(){
       try{
         if(!__versaoPublicada){ clearInterval(__recargaTimer); __recargaTimer=null; return; }
+        // Dia de ontem (QA59): quem decide é o vigia do dia — ele olha o trabalho aberto, e a
+        // recarga dele já traz a versão nova junto.
+        if(typeof appDiaVelho==='function' && appDiaVelho()) return;
         var motivo=zMotivoParado(); if(!motivo) return;
         clearInterval(__recargaTimer); __recargaTimer=null;
         // Trancado continua trancado depois da recarga — recarregar nunca destranca ninguém.
@@ -16716,11 +16738,128 @@
   }
   // Recarrega furando o cache do navegador — sem isso ele serve a mesma página velha.
   function aplicarVersaoNova(){
+    // O TOQUE NA FAIXA COM O DIA DE ONTEM (QA58, 01/out/2026): com um check-in aberto, abrir o
+    // app num dia novo apaga o rascunho de ontem, com as fotos; sem internet, a página não volta.
+    // O app diz o que fazer em vez de atualizar. (A recarga sozinha já passou por esta conta.)
+    try{
+      if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando){
+        // As duas contas À PARTE (QA59): um alarme na tela, ou o almoço, não pode esconder o
+        // check-in aberto nem a falta de internet.
+        var _ab=zDiaCheckinAberto() ? 'check-in aberto' : ((navigator && navigator.onLine===false) ? 'sem internet' : '');
+        if(_ab){
+          var _t=(_ab==='sem internet') ? 'SEM INTERNET AGORA' : 'SALVE O CHECK-IN ANTES DE ATUALIZAR';
+          var _l=(_ab==='sem internet')
+            ? ['Atualizar sem internet deixaria a tela em branco. Toque na faixa de novo quando a internet voltar.']
+            : ['Há um check-in aberto neste aparelho. Salve o check-in e depois toque na faixa de novo.'];
+          if(typeof zAlertao==='function') zAlertao(_t, _l, {botao:'Entendi'}); else alert(_l.join('\n'));
+          return;
+        }
+      }
+    }catch(e){} /* silencioso de propósito: na dúvida, atualiza como sempre atualizou */
     try{
       var u=location.href.split('#')[0].split('?')[0];
       location.replace(u+'?v='+Date.now());
     }catch(e){ location.reload(true); }
   }
+
+  // ===== O DIA VIROU (Adriana, 01/out/2026) ===========================================
+  // "Acabei de lançar em banhos recorrentes um banho para o Nock da Claudia toda quinta às
+  // 17hs. E não apareceu no Dashboard; a Lana da Marcela também tem banho hoje e não está no
+  // lançamento do dia." O celular que volta do bolso e o computador que passa a noite ligado
+  // NÃO recarregam a página — e o dia da semana do Day Care (HOJE_DIA) é calculado uma vez
+  // só, ao abrir. Na quinta, o aparelho aberto na quarta montava a turma de QUARTA: tirava da
+  // planilha o banho de quinta, fotografava a turma errada e, ao meio-dia, podia marcar falta
+  // em quem nem era do dia. A data em que o app abriu fica guardada aqui. Quando ela deixa de
+  // ser a de hoje, o aparelho (1) acende a faixa do topo, (2) recarrega sozinho quando está
+  // PARADO — a mesma regra da versão nova, nunca com a mão na tela — e (3) até lá não grava
+  // nada do dia (planilha, fotografia da turma, falta automática): os outros aparelhos gravam.
+  var APP_DIA_ABERTO=zHojeISO();
+  function appDiaVelho(){
+    try{ var h=zHojeISO(); return !!(h && APP_DIA_ABERTO && h!==APP_DIA_ABERTO); }
+    catch(e){ return false; } /* silencioso de propósito: sem relógio, vale o aparelho como está */
+  }
+  // "30/09" — o dia em que o aparelho abriu (pode ser antes de ontem, depois de um fim de semana).
+  function appDiaVelhoData(){
+    var d=APP_DIA_ABERTO;
+    try{ d=((typeof fmtBR==='function')?fmtBR(APP_DIA_ABERTO):'')||APP_DIA_ABERTO; }
+    catch(e){ d=APP_DIA_ABERTO; } /* silencioso de propósito: sem a data formatada, vale a crua */
+    return String(d).slice(0,5);
+  }
+  // A frase do bloqueio, a MESMA em toda tela que precisa dizer por que não gravou.
+  function appDiaVelhoTexto(){
+    return 'este aparelho ainda está com o dia '+appDiaVelhoData()+': toque na faixa do topo para atualizar';
+  }
+  // Uma batida do vigia. Devolve o que fez ('' = nada, 'faixa' ou 'recarga') — é a prova
+  // que morde isto (tests/fase0-ciclo-fechado.test.js).
+  // TRABALHO ABERTO (QA57, 01/out/2026): a recarga do dia nunca passa por cima de
+  //  · um alarme na tela (o de remédio que ninguém respondeu sumiria e não voltaria);
+  //  · um check-in aberto — corpo, pertences ou a ficha da hospedagem: ao abrir num dia novo,
+  //    o rascunho de ontem é apagado, com as fotos (o caso Cookie);
+  //  · o almoço;
+  //  · o aparelho sem internet: a página não voltaria (não há cópia guardada no aparelho).
+  // Devolve o motivo, ou '' quando nada está aberto.
+  // O check-in aberto, numa conta só (QA59): o vigia do dia e o toque na faixa usam a MESMA.
+  function zDiaCheckinAberto(){
+    try{ if(ckAtual || ptAtual) return true; }catch(e){} /* silencioso de propósito: sem a tela do check-in carregada, não há check-in aberto */
+    // Ficha da hospedagem (QA58/QA59): a guarda de saída INTEIRA do app — a tela de Check-in
+    // na frente E rascunho que ainda não foi salvo. Depois do Salvar, ou do "Sair e perder o
+    // que preenchi", a ficha continua "aberta" por baixo do menu, e olhar só para ela seguraria
+    // o aparelho para sempre. Fora da tela de Check-in, o rascunho já não volta (abrir a tela
+    // começa pela lista).
+    try{
+      var _vc=document.getElementById('v-checkin');
+      if(_vc && _vc.classList && _vc.classList.contains('active') && typeof ciTemRascunhoNaoSalvo==='function' && ciTemRascunhoNaoSalvo()) return true;
+    }catch(e){} /* silencioso de propósito: idem */
+    return false;
+  }
+  function zDiaTrabalhoAberto(){
+    try{ if(despMedNaTela || despNaTela) return 'alarme na tela'; }catch(e){} /* silencioso de propósito: sem o despertador carregado, não há alarme na tela */
+    if(zDiaCheckinAberto()) return 'check-in aberto';
+    try{ if(typeof almocoEmUso==='function' && almocoEmUso()) return 'almoço'; }catch(e){} /* silencioso de propósito: sem a tela do almoço, não há almoço aberto */
+    try{ if(navigator && navigator.onLine===false) return 'sem internet'; }catch(e){} /* silencioso de propósito: sem a informação, vale a regra do parado */
+    return '';
+  }
+  var __diaRecarregando=false;
+  function zViradaDoDiaTick(motivoExtra){
+    if(__diaRecarregando || !appDiaVelho()) return '';
+    zFaixaVersao(true);
+    if(zDiaTrabalhoAberto()) return 'faixa';   // alarme, check-in, almoço ou sem internet: só a faixa
+    var motivo=zMotivoParado();
+    // Aba escondida NÃO basta para o dia (QA57): no Android e no computador o relógio segue
+    // rodando com a página escondida, e quem saiu 20 segundos para o WhatsApp no meio de um
+    // check-in voltaria para uma tela nova. A decisão fica para a VOLTA (abaixo).
+    if(motivo==='aba escondida') motivo='';
+    // Voltou para o app depois de um tempo fora (o celular que sai do bolso de manhã): o que
+    // estava na tela é de ontem.
+    if(!motivo && motivoExtra) motivo=String(motivoExtra);
+    if(!motivo) return 'faixa';   // alguém usando: só a faixa
+    __diaRecarregando=true;
+    // Trancado continua trancado depois da recarga — recarregar nunca destranca ninguém.
+    try{ if(_appTrancado) sessionStorage.setItem('zeluz_retrancar','1'); }catch(e){} /* silencioso de propósito: sem o sinal, a entrada guardada vale como sempre valeu */
+    try{ if(typeof audit==='function') audit('dia-recarga-automatica', APP_DIA_ABERTO+' → '+zHojeISO(), {motivo:motivo}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    setTimeout(aplicarVersaoNova, 600);   // folga para o rastro sair antes da página ir embora
+    return 'recarga';
+  }
+  try{ setInterval(function(){ try{ zViradaDoDiaTick(); }catch(e){} /* silencioso de propósito: o vigia tenta de novo em 15 s */ }, 15000); }
+  catch(e){} /* silencioso de propósito: sem temporizador, a faixa da versão e o fechar e abrir continuam valendo */
+  // O CELULAR QUE VOLTA DO BOLSO (Adriana, 01/out/2026: "quero que seja basicamente
+  // automático"). Com a página escondida o relógio do celular para; ao voltar, o toque de
+  // "voltei" já conta como uso e a regra do parado não pegaria. Por isso a volta é olhada aqui:
+  // fora por 3 minutos ou mais e o dia virou → atualiza na hora, antes de qualquer toque. Fora
+  // por menos (saiu para responder o WhatsApp no meio de um check-in), só a faixa: nada se perde.
+  var __diaOcultoDesde=0;
+  function zViradaDoDiaVisibilidade(escondida, agora){
+    if(escondida){ __diaOcultoDesde=agora; return ''; }
+    var fora=__diaOcultoDesde?(agora-__diaOcultoDesde):0; __diaOcultoDesde=0;
+    if(fora<RECARGA_PARADO_MS) return '';
+    // No computador, voltar à aba não recarrega (a regra de 17/set: recarregar debaixo de quem
+    // lê é perder o trabalho). Lá vale o resto: trancado ou na porta de entrada, recarrega.
+    return zViradaDoDiaTick((typeof zEhComputador==='function' && zEhComputador()) ? ''
+      : ('voltou para o app depois de '+Math.round(fora/60000)+' min'));
+  }
+  try{ document.addEventListener('visibilitychange', function(){
+    try{ zViradaDoDiaVisibilidade(!!document.hidden, Date.now()); }catch(e){} /* silencioso de propósito: o vigia de 15 s cobre o mesmo dia */
+  }); }catch(e){} /* silencioso de propósito: sem o evento, o vigia de 15 s e a trava de 5 min continuam valendo */
 
   // ===== BATIMENTO DO APARELHO (08/set/2026) ==========================================
   // "Quem está ligado agora, em que versão?" Sem isto, um aparelho esquecido rodando código
@@ -42310,6 +42449,9 @@
            +(banhoRecProxima(salvo, hoje, true)?(' · próximo: '+escAttr(((typeof fmtBR==='function')?fmtBR(banhoRecProxima(salvo,hoje,true)):'')||'')):''))
         : 'Gravado hoje: <strong>sem banho fixo</strong> — o banho dele é lançado à mão, dia a dia.')
       +'</div>';
+    // O DIA EM QUE ELE NÃO VEM (01/out/2026): o motor só lança o banho fixo de quem vem naquele
+    // dia, e a linha não dizia nada — o banho combinado sumia calado. Agora diz, com o que fazer.
+    h+=banhosAvisoDiaSemDaycare(p, aberto?r:salvo);
     if(aberto){
       h+='<div style="margin-top:8px;display:flex;flex-direction:column;gap:7px">';
       h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="cad-lb" style="min-width:74px">Ritmo</span>'
@@ -42372,6 +42514,32 @@
       h+='<div style="margin-top:5px;font-size:13px;font-weight:800;color:var(--crm-atencao-text)">Há uma alteração nesta linha que ainda não foi gravada — confira e toque em Salvar.</div>';
     h+='</div>';
     return h;
+  }
+  // "Pela ficha, Nock não vem ao Day Care na quinta…" — '' quando o dia do banho é dia dele
+  // (ou quando ele mora aqui: morador não vai para a planilha do Day Care).
+  function banhosAvisoDiaSemDaycare(p, br){
+    try{
+      if(!p || !br || !br.ativo || !BANHO_DIA_NOME[br.dia]) return '';
+      if(typeof pelCategoria==='function' && pelCategoria(p)==='morador') return '';
+      var dias=(typeof pelDias==='function')?(pelDias(p)||[]):((p&&p.dias)||[]);
+      if(!Array.isArray(dias) || dias.indexOf(br.dia)>=0) return '';
+      var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
+      var dn=BANHO_DIA_NOME[br.dia];
+      var vem=dias.filter(function(d){ return BANHO_DIA_NOME[d]; }).map(function(d){ return BANHO_DIA_NOME[d]; });
+      var cat=(typeof pelCategoria==='function')?pelCategoria(p):'';
+      // QA57: "marque a quinta na ficha" para quem vem SÓ para o banho faria a falta das 12h
+      // marcar "faltou" (ele não faz check-in no Day Care) — e o banho sairia da planilha. Por
+      // isso o caminho de quem vem só para o banho é o lançamento à mão. Hóspede e avulso não
+      // têm dia fixo para marcar.
+      var fixo=(cat!=='hospede' && cat!=='avulso');
+      return '<div class="hint" style="margin:4px 0 0;color:var(--crm-atencao-text);font-weight:700">⚠ Pela ficha, '+escAttr(nome)
+        +' não vem ao Day Care na '+dn+' ('+(vem.length?('vem: '+escAttr(vem.join(', '))):'nenhum dia marcado')+'). '
+        +'O app só lança o banho fixo em dia de Day Care. '
+        +(fixo
+          ? ('Se vem só para o banho, lance à mão nos Lançamentos do dia; se passou a vir ao Day Care na '+dn+', marque a '+dn+' nos dias da ficha.')
+          : 'Lance o banho à mão nos Lançamentos do dia.')
+        +'</div>';
+    }catch(e){ return ''; } /* silencioso de propósito: sem a ficha lida, a linha sai sem o aviso */
   }
   function banhosLigar(chave, ligado){
     if(!banhosPodeEditar()) return;
@@ -42439,9 +42607,12 @@
       if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return; }
       if(typeof audit==='function') audit('banho-recorrente', antesTxt+' → '+depoisTxt,
         {alvo:chave, pet:((typeof pelNome==='function')?pelNome(p):'')||p.n||'', quem:(typeof quemSou==='function'?quemSou():'-')});
-      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:novo.ativo
-        ? '✅ Salvo — o app lança o banho sozinho na planilha no dia certo. A conferência do dia acontece em instantes.'
-        : '✅ Salvo — este FILHOt não tem mais banho fixo. A conferência do dia acontece em instantes.'};
+      var __velho=(typeof appDiaVelho==='function') && appDiaVelho();
+      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:__velho
+        ? ('✅ Salvo. Este aparelho ainda está com o dia '+appDiaVelhoData()+' e se atualiza sozinho quando ficar parado; aí a planilha se acerta. Para ser agora, toque na faixa do topo.')
+        : (novo.ativo
+          ? '✅ Salvo — o app lança o banho sozinho na planilha no dia certo. A conferência do dia acontece em instantes.'
+          : '✅ Salvo — este FILHOt não tem mais banho fixo. A conferência do dia acontece em instantes.')};
       delete BANHO_RASC[chave]; banhoRascGuardar();   // gravou de verdade: o rascunho morre aqui
       banhosRenderLinha(chave);
       try{ if(typeof renderPel==='function') renderPel(); }
@@ -42479,7 +42650,8 @@
       if(res&&res.ok===false){ BANHO_MSG[chave]={cor:'var(--crm-critico)', txt:'⚠️ Não salvei: '+((res.erro&&res.erro.message)||res.erro||'o banco recusou')}; banhosRenderLinha(chave); return false; }
       if(typeof audit==='function') audit('banho-recorrente', frase,
         {alvo:chave, pet:((typeof pelNome==='function')?pelNome(p):'')||p.n||'', quem:(typeof quemSou==='function'?quemSou():'-')});
-      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:'✅ '+frase};
+      BANHO_MSG[chave]={cor:'var(--crm-ok)', txt:'✅ '+frase
+        +(((typeof appDiaVelho==='function') && appDiaVelho())?('. Este aparelho ainda está com o dia '+appDiaVelhoData()+' e se atualiza sozinho quando ficar parado; para ser agora, toque na faixa do topo.'):'')};
       banhosRenderLinha(chave);
       banhoAutoPedirConferencia();   // a planilha se acerta em instantes, numa passada só
       return true;
@@ -42608,7 +42780,10 @@
     try{
       var d=new Date(iso+'T12:00:00'); if(isNaN(d.getTime())) return false;
       var dia=DASH_SEM[d.getDay()];
-      var dias=(p&&p.dias)||[];
+      // Os dias da FICHA (01/out/2026), os mesmos que o Day Care usa: o p.dias é o do cadastro
+      // importado, e quem teve os dias mudados na ficha tinha o banho de amanhã calculado
+      // pelos dias antigos.
+      var dias=(typeof pelDias==='function')?pelDias(p):((p&&p.dias)||[]);
       return Array.isArray(dias) && dias.indexOf(dia)>=0;
     }catch(e){ return false; }
   }
@@ -42670,7 +42845,11 @@
     var vem={};
     try{
       if(ehHoje && typeof turmaDoDia==='function'){
-        turmaDoDia().forEach(function(o){ if(o&&o.p) vem[pelKey(o.p)]=o.p; });
+        // HOJE é hoje, qualquer que seja a aba aberta no Day Care (01/out/2026): turmaDoDia()
+        // lê a aba (dcDia), e quem deixou a sexta aberta fazia a planilha de hoje sair com a
+        // turma de sexta — tirando o banho fixo de quinta. turmaDeHoje() força o dia de hoje e
+        // devolve a aba como estava (a mesma porta da falta automática, desde 11/ago).
+        ((typeof turmaDeHoje==='function')?turmaDeHoje():turmaDoDia()).forEach(function(o){ if(o&&o.p) vem[pelKey(o.p)]=o.p; });
       } else {
         PELUDINHOS.forEach(function(p){ if(!pelInativo(p) && dashAutoVemNoDia(p,iso)) vem[pelKey(p)]=p; });
       }
@@ -42751,6 +42930,9 @@
   // NUNCA remove o que uma pessoa escreveu — só o que está no registro do automático.
   function dashAutoSincronizar(iso){
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    // Aberto desde ontem (01/out/2026): a turma daqui é a de ontem — escrever agora tiraria da
+    // planilha o banho de hoje. Não grava nada, nem o "_erro": os outros aparelhos conferem.
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve({ok:false, erro:appDiaVelhoTexto()});
     var noAuto='daycare/dashboard-auto/'+iso;
     return Promise.all([
       dashPonteChamar({acao:'lerDia', dia:iso}),
@@ -42991,6 +43173,8 @@
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     if(!hoje) return Promise.resolve({ok:false, erro:'sem data'});
+    // O botão diz o motivo numa linha só, em vez de "não consegui ler 15 de 15 dia(s)".
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve({ok:false, erro:appDiaVelhoTexto()});
     // Espera a ponte chegar do banco antes de decidir que ela não existe.
     return dashPontePronta().then(function(c){
       if(!c) return {ok:false, erro:'a ponte com a planilha não está configurada'};

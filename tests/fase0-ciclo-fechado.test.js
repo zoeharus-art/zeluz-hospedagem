@@ -1265,7 +1265,7 @@ provaAsync('Banhos recorrentes: salvar grava qual e o nome (e "sem shampoo" apag
 
 console.log('\nQA17 — o shampoo mudado chega à planilha dos dias já escritos; parêntese no nome; rascunho antigo');
 provaAsync('QA17 F1 — mudou o shampoo: o automático troca a célula que ELE escreveu (e não toca na da pessoa)', async () => {
-  run(`__bkF1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit};
+  run(`__bkF1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit, ab:APP_DIA_ABERTO}; APP_DIA_ABERTO='2026-09-25';
     __ch=[]; __planilha=['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']; __jaAuto={banho:['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']};
     zHojeISO=function(){ return '2026-09-25'; }; audit=function(){};
     DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return JSON.parse(JSON.stringify(__jaAuto)); }}); },
@@ -1289,10 +1289,10 @@ provaAsync('QA17 F1 — mudou o shampoo: o automático troca a célula que ELE e
     for (let i = 0; i < 40; i++) await Promise.resolve();
     ch = JSON.parse(JSON.stringify(run('__ch'))).filter((c) => c.acao !== 'lerDia');
     assert.deepStrictEqual(ch, [], 'nada removido, nada duplicado');
-  } finally { run('DB=__bkF1.db; dashPonteChamar=__bkF1.pc; dashAutoCalcular=__bkF1.ac; zHojeISO=__bkF1.hz; audit=__bkF1.au;'); }
+  } finally { run('DB=__bkF1.db; dashPonteChamar=__bkF1.pc; dashAutoCalcular=__bkF1.ac; zHojeISO=__bkF1.hz; audit=__bkF1.au; APP_DIA_ABERTO=__bkF1.ab;'); }
 });
 provaAsync('QA18 — a planilha não deixou tirar a célula velha: ela continua no registro e a próxima conferência tenta de novo', async () => {
-  run(`__bkG1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit};
+  run(`__bkG1={db:DB, pc:dashPonteChamar, ac:dashAutoCalcular, hz:zHojeISO, au:audit, ab:APP_DIA_ABERTO}; APP_DIA_ABERTO='2026-09-25';
     __ch=[]; __reg=null; __falhaRem=true; __planilha=['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']; __jaAuto={banho:['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']};
     zHojeISO=function(){ return '2026-09-25'; }; audit=function(){};
     DB={ref:function(p){ return { once:function(){ return Promise.resolve({val:function(){ return JSON.parse(JSON.stringify(__jaAuto)); }}); },
@@ -1316,7 +1316,7 @@ provaAsync('QA18 — a planilha não deixou tirar a célula velha: ela continua 
     for (let i = 0; i < 40; i++) await Promise.resolve();
     const ch = JSON.parse(JSON.stringify(run('__ch'))).filter((c) => c.acao !== 'lerDia').map((c) => c.acao);
     assert.deepStrictEqual(ch, ['remover', 'lancar'], 'tentou de novo e acertou');
-  } finally { run('DB=__bkG1.db; dashPonteChamar=__bkG1.pc; dashAutoCalcular=__bkG1.ac; zHojeISO=__bkG1.hz; audit=__bkG1.au;'); }
+  } finally { run('DB=__bkG1.db; dashPonteChamar=__bkG1.pc; dashAutoCalcular=__bkG1.ac; zHojeISO=__bkG1.hz; audit=__bkG1.au; APP_DIA_ABERTO=__bkG1.ab;'); }
 });
 prova('QA18 — a baixa da hospedagem no dia da troca não "cumpre" a troca', () => {
   run(`__bkG2={l:repLancamentos, h:repHojeISO}; repHojeISO=function(){ return '2026-09-25'; };
@@ -5300,6 +5300,326 @@ prova('"Renovações anteriores" só junta o que saiu pelo MESMO motivo (uma "de
   let html;
   try { html = run('renovHistHTML(__h620b)'); } finally { run('canEditPel=__bk620h.ce;'); }
   assert.ok(!/vezes iguais/.test(html) && (html.match(/30\/09\/2026 → 30\/09\/2026/g) || []).length === 2);
+});
+// ================================================================== 6.21 — o dia virou
+console.log('\n6.21 — O dia virou: o aparelho aberto desde ontem não lança a turma errada (Adriana, 01/out/2026, Nock e Lana)');
+// O relógio do sandbox, preso numa hora: `new Date()` e `Date.now()` devolvem esta hora; com
+// argumentos, o Date de sempre. Devolve a função que solta o relógio.
+const relogio621 = (isoHora) => {
+  ctx.__hora621 = isoHora;
+  run(`__RD621=Date; (function(){ var R=__RD621, t=new R(__hora621).getTime();
+    function F(){ if(!arguments.length) return new R(t); return new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))(); }
+    F.now=function(){ return t; }; F.UTC=R.UTC; F.parse=R.parse; F.prototype=R.prototype; Date=F; })();`);
+  return () => run('Date=__RD621;');
+};
+// Um dia da semana de HOJE_DIA (o do sandbox, calculado ao carregar): a prova não depende do
+// dia em que roda.
+const DIA621 = { seg: '2026-10-05', ter: '2026-10-06', qua: '2026-10-07', qui: '2026-10-08', sex: '2026-10-09' };
+const OUTRA621 = { seg: 'ter', ter: 'qua', qua: 'qui', qui: 'sex', sex: 'seg' };
+const fichas621 = (extra) => run(`
+  __bk621={pi:pelInativo, mz:ehMoradorZeluz, pc:pelCategoria, rl:repLancamentos, ra:repAgendaDe, pe:pelExtra, P:PELUDINHOS, hz:zHojeISO, dd:dcDia, ch:dcChamada, ab:APP_DIA_ABERTO};
+  pelInativo=function(){ return false; }; ehMoradorZeluz=function(){ return false; }; pelCategoria=function(){ return 'auluno'; };
+  repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; dcChamada={};
+  __EX621=${JSON.stringify(extra)};
+  pelExtra=function(p){ return __EX621[dcKey(p.n,p.tutor)]||{}; };`);
+const solta621 = () => run('pelInativo=__bk621.pi; ehMoradorZeluz=__bk621.mz; pelCategoria=__bk621.pc; repLancamentos=__bk621.rl; repAgendaDe=__bk621.ra; pelExtra=__bk621.pe; PELUDINHOS=__bk621.P; zHojeISO=__bk621.hz; dcDia=__bk621.dd; dcChamada=__bk621.ch; APP_DIA_ABERTO=__bk621.ab;');
+prova('o app sabe o dia em que abriu: com a data de hoje, nada muda; com a de ontem, ele diz "ainda está com o dia 30/09"', () => {
+  run('__bk621a={hz:zHojeISO, ab:APP_DIA_ABERTO}; zHojeISO=function(){ return "2026-10-01"; };');
+  try {
+    run('APP_DIA_ABERTO="2026-10-01";');
+    assert.strictEqual(run('appDiaVelho()'), false, 'aberto hoje');
+    run('APP_DIA_ABERTO="2026-09-30";');
+    assert.strictEqual(run('appDiaVelho()'), true, 'aberto ontem');
+    assert.strictEqual(run('appDiaVelhoTexto()'), 'este aparelho ainda está com o dia 30/09: toque na faixa do topo para atualizar');
+    assert.strictEqual(run('repPlanEhQuedaConexao(appDiaVelhoTexto())'), false, 'não é confundido com "a conexão caiu"');
+    // QA57 B1: a virada no MESMO mês (01/10 → 02/10) e no mesmo dia do mês em outro mês
+    run('zHojeISO=function(){ return "2026-10-02"; }; APP_DIA_ABERTO="2026-10-01";');
+    assert.strictEqual(run('appDiaVelho()'), true, '01/10 → 02/10');
+    run('zHojeISO=function(){ return "2026-11-01"; };');
+    assert.strictEqual(run('appDiaVelho()'), true, '01/10 → 01/11');
+    run('zHojeISO=function(){ return "2027-10-01"; };');
+    assert.strictEqual(run('appDiaVelho()'), true, '01/10/2026 → 01/10/2027');
+  } finally { run('zHojeISO=__bk621a.hz; APP_DIA_ABERTO=__bk621a.ab;'); }
+});
+prova('a conta da planilha de HOJE usa a turma de hoje, mesmo com o Day Care aberto na aba de outro dia (Nock e Lana)', () => {
+  const hd = run('HOJE_DIA'), dia = DIA621[hd];
+  fichas621({
+    'nock__claudia': { dias: [hd], banho_rec: { ativo: true, freq: 'semanal', dia: hd, hora: '17:00', desde: '2026-10-01', sham: 'SEM SHAMPOO' } },
+    'lana__marcela': { dias: [hd], banho_rec: { ativo: true, freq: 'semanal', dia: hd, hora: '10:00', desde: '2026-10-01', sham: 'SEM SHAMPOO' } },
+  });
+  try {
+    run(`PELUDINHOS=[{n:'Nock', raca:'Spitz', tutor:'Claudia'}, {n:'Lana', raca:'Spitz', tutor:'Marcela'}];
+      zHojeISO=function(){ return '${dia}'; }; APP_DIA_ABERTO='${dia}';`);
+    run(`dcDia=HOJE_DIA;`);
+    const naAba = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${dia}')`)));
+    run(`dcDia='${OUTRA621[hd]}';`);
+    const outraAba = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${dia}')`)));
+    igual(naAba.banho, ['Nock/Spitz (SEM SHAMPOO)', 'Lana/Spitz (SEM SHAMPOO)'], 'na aba de hoje');
+    igual(outraAba.banho, naAba.banho, 'na aba de outro dia: o mesmo banho');
+    igual(outraAba._horas, naAba._horas, 'e a mesma hora');
+    assert.strictEqual(run('dcDia'), OUTRA621[hd], 'a aba volta como estava');
+  } finally { solta621(); }
+});
+prova('dias futuros pelos dias da FICHA (não pelos do cadastro importado)', () => {
+  fichas621({ 'lana__marcela': { dias: ['ter', 'qui'], banho_rec: { ativo: true, freq: 'quinzenal', dia: 'qui', hora: '10:00', desde: '2026-10-01', sham: 'SEM SHAMPOO' } } });
+  try {
+    run(`PELUDINHOS=[{n:'Lana', raca:'Spitz', tutor:'Marcela', dias:['ter']}]; zHojeISO=function(){ return '2026-09-30'; }; APP_DIA_ABERTO='2026-09-30';`);
+    igual(JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-01')"))).banho, ['Lana/Spitz (SEM SHAMPOO)'], 'quinta 01/10 (base do quinzenal)');
+    igual(JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-08')"))).banho, [], 'quinta 08/10: semana sem banho');
+    igual(JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-15')"))).banho, ['Lana/Spitz (SEM SHAMPOO)'], 'quinta 15/10');
+    assert.strictEqual(run("dashAutoVemNoDia(PELUDINHOS[0], '2026-10-01')"), true, 'quinta vale pela ficha');
+    assert.strictEqual(run("dashAutoVemNoDia(PELUDINHOS[0], '2026-10-02')"), false, 'sexta não é dia dela');
+  } finally { solta621(); }
+});
+provaAsync('aberto desde ontem: a planilha não é tocada (nem a ponte, nem o banco) e o botão diz o motivo', async () => {
+  run(`__bk621b={pc:dashPonteChamar, db:DB, hz:zHojeISO, ab:APP_DIA_ABERTO, pp:dashPontePronta, dc:dashCarregar};
+    __n621={ponte:0, ref:0}; dashPonteChamar=function(){ __n621.ponte++; return Promise.resolve({ok:true, conteudo:{}}); };
+    DB={ref:function(){ __n621.ref++; return {once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); } }; }};
+    dashPontePronta=function(){ return Promise.resolve({url:'x'}); }; dashCarregar=function(){};
+    zHojeISO=function(){ return '2026-10-01'; }; APP_DIA_ABERTO='2026-09-30';`);
+  try {
+    const s = await run("dashAutoSincronizar('2026-10-01')");
+    igual({ ok: s.ok, erro: s.erro }, { ok: false, erro: 'este aparelho ainda está com o dia 30/09: toque na faixa do topo para atualizar' });
+    const r = await run('dashAutoRodar(true)');
+    igual({ ok: r.ok, erro: r.erro }, { ok: false, erro: 'este aparelho ainda está com o dia 30/09: toque na faixa do topo para atualizar' });
+    igual(run('__n621'), { ponte: 0, ref: 0 }, 'nenhuma leitura nem escrita');
+    run("__bt621={textContent:'Conferir a planilha agora', disabled:false}; dashAutoBotao(__bt621);");
+    for (let i = 0; i < 40; i++) await Promise.resolve();
+    assert.strictEqual(run('__bt621.textContent'), '❌ este aparelho ainda está com o dia 30/09: toque na faixa do topo para atualizar');
+    // Aberto hoje: o motor volta a ler a planilha (a trava não pega o aparelho certo).
+    run("APP_DIA_ABERTO='2026-10-01';");
+    await run("dashAutoSincronizar('2026-10-01')");
+    assert.ok(run('__n621.ponte') > 0, 'aberto hoje: a conferência acontece');
+  } finally { run('dashPonteChamar=__bk621b.pc; DB=__bk621b.db; zHojeISO=__bk621b.hz; APP_DIA_ABERTO=__bk621b.ab; dashPontePronta=__bk621b.pp; dashCarregar=__bk621b.dc;'); }
+});
+provaAsync('aberto desde ontem: a fotografia da turma e a falta automática das 12h não gravam nada', async () => {
+  const solta = relogio621('2026-10-01T13:00:00');
+  run(`__bk621c={db:DB, ab:APP_DIA_ABERTO, P:PELUDINHOS, fa:_faltaAutoFeita, tg:_turmaGravada};
+    __ref621=[]; DB={ref:function(p){ __ref621.push(p); return {once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+      transaction:function(){ return Promise.resolve({committed:false}); }, update:function(){ return Promise.resolve(); },
+      remove:function(){ return Promise.resolve(); } }; }};
+    PELUDINHOS=[{n:'Nock', raca:'Spitz', tutor:'Claudia'}]; _faltaAutoFeita=''; _turmaGravada='';`);
+  try {
+    run("APP_DIA_ABERTO='2026-09-30';");
+    await run('gravarTurmaDoDia()'); await run('aplicarFaltaAutomatica()');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    igual(run('__ref621'), [], 'aberto desde ontem: nenhum caminho do banco tocado');
+    // Aberto hoje, o mesmo aparelho segue o caminho de sempre (lê o banco).
+    run("APP_DIA_ABERTO='2026-10-01';");
+    await run('aplicarFaltaAutomatica()');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.ok(run('__ref621.length') > 0, 'aberto hoje: a falta automática segue (' + JSON.stringify(run('__ref621')) + ')');
+  } finally { run('DB=__bk621c.db; APP_DIA_ABERTO=__bk621c.ab; PELUDINHOS=__bk621c.P; _faltaAutoFeita=__bk621c.fa; _turmaGravada=__bk621c.tg;'); solta(); }
+});
+prova('o vigia da virada: parado recarrega uma vez só; com a mão na tela, só acende a faixa ("O dia virou")', () => {
+  run(`__bk621d={hz:zHojeISO, ab:APP_DIA_ABERTO, mp:zMotivoParado, au:audit, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando};
+    __faixa621={style:{}, textContent:'Nova versão pronta — toque para atualizar', offsetHeight:30};
+    document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa621:null; };
+    __aud621=[]; audit=function(t,m){ __aud621.push(t+': '+m); }; __st621=[]; setTimeout=function(f,ms){ __st621.push(ms); return 0; };
+    zHojeISO=function(){ return '2026-10-01'; }; __diaRecarregando=false;`);
+  try {
+    run("APP_DIA_ABERTO='2026-10-01'; zMotivoParado=function(){ return '3 min sem toque'; };");
+    assert.strictEqual(run('zViradaDoDiaTick()'), '', 'aberto hoje: nada');
+    run("APP_DIA_ABERTO='2026-09-30'; zMotivoParado=function(){ return ''; };");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'mão na tela: só a faixa');
+    assert.strictEqual(run('__faixa621.style.display'), 'block');
+    assert.strictEqual(run('__faixa621.textContent'), 'O dia virou — toque para atualizar');
+    igual(run('__st621'), [], 'não recarrega com alguém usando');
+    run('zFaixaVersao(false);');
+    assert.strictEqual(run('__faixa621.style.display'), 'block', 'o vigia da versão não apaga a faixa do dia');
+    run("zMotivoParado=function(){ return '3 min sem toque'; };");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'parado: recarrega');
+    igual(run('__st621'), [600]);
+    igual(run('__aud621'), ['dia-recarga-automatica: 2026-09-30 → 2026-10-01']);
+    assert.strictEqual(run('zViradaDoDiaTick()'), '', 'uma vez só');
+    run("APP_DIA_ABERTO='2026-10-01'; zFaixaVersao(false);");
+    assert.strictEqual(run('__faixa621.style.display'), 'none', 'dia em dia e versão em dia: a faixa apaga');
+  } finally { run('zHojeISO=__bk621d.hz; APP_DIA_ABERTO=__bk621d.ab; zMotivoParado=__bk621d.mp; audit=__bk621d.au; setTimeout=__bk621d.st; document.getElementById=__bk621d.ge; __diaRecarregando=__bk621d.rec;'); }
+});
+prova('o celular que volta do bolso: fora 3 min ou mais e o dia virou, atualiza na hora; fora menos, ou no almoço, só a faixa', () => {
+  run(`__bk621g={hz:zHojeISO, ab:APP_DIA_ABERTO, mp:zMotivoParado, au:audit, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando, al:almocoEmUso, od:__diaOcultoDesde};
+    __faixa621={style:{}, textContent:'', offsetHeight:30};
+    document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa621:null; };
+    __aud621=[]; audit=function(t,m){ __aud621.push(t+': '+m); }; __st621=[]; setTimeout=function(f,ms){ __st621.push(ms); return 0; };
+    zHojeISO=function(){ return '2026-10-01'; }; zMotivoParado=function(){ return ''; }; almocoEmUso=function(){ return false; };`);
+  const T0 = Date.UTC(2026, 9, 1, 10, 0, 0);
+  const volta = (fora) => { run('__diaRecarregando=false; __diaOcultoDesde=0;'); run(`zViradaDoDiaVisibilidade(true, ${T0})`); return run(`zViradaDoDiaVisibilidade(false, ${T0 + fora})`); };
+  try {
+    run("APP_DIA_ABERTO='2026-10-01';");
+    assert.strictEqual(volta(8 * 3600000), '', 'aberto hoje: voltar não recarrega');
+    run("APP_DIA_ABERTO='2026-09-30';");
+    assert.strictEqual(volta(2 * 60000), '', 'fora 2 min (o WhatsApp no meio do check-in): nada');
+    igual(run('__st621'), [], 'e não recarrega');
+    assert.strictEqual(volta(3 * 60000), 'recarga', 'fora 3 min: atualiza');
+    assert.strictEqual(volta(8 * 3600000), 'recarga', 'a noite toda no bolso: atualiza');
+    igual(run('__aud621'), ['dia-recarga-automatica: 2026-09-30 → 2026-10-01', 'dia-recarga-automatica: 2026-09-30 → 2026-10-01']);
+    run('almocoEmUso=function(){ return true; };');
+    assert.strictEqual(volta(8 * 3600000), 'faixa', 'na tela do almoço: só a faixa');
+    run("__diaOcultoDesde=0;");
+    assert.strictEqual(run(`zViradaDoDiaVisibilidade(false, ${T0})`), '', 'mostrar sem ter escondido: nada');
+  } finally { run('zHojeISO=__bk621g.hz; APP_DIA_ABERTO=__bk621g.ab; zMotivoParado=__bk621g.mp; audit=__bk621g.au; setTimeout=__bk621g.st; document.getElementById=__bk621g.ge; __diaRecarregando=__bk621g.rec; almocoEmUso=__bk621g.al; __diaOcultoDesde=__bk621g.od;'); }
+});
+prova('QA57 — a recarga do dia nunca passa por cima de alarme na tela, check-in aberto, almoço, aparelho sem internet nem página escondida; no computador, a volta só acende a faixa', () => {
+  run(`__bk621h={hz:zHojeISO, ab:APP_DIA_ABERTO, au:audit, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando, al:almocoEmUso,
+      od:__diaOcultoDesde, il:inatLogado, tr:_appTrancado, hid:document.hidden, pc:zEhComputador, dm:despMedNaTela, dn:despNaTela, ck:ckAtual, pt:ptAtual, ci:ciPelAtual, on:navigator.onLine,
+      cs:ciSalvoAgora, ch:ciHosp};
+    __faixa621={style:{}, textContent:'', offsetHeight:30}; __ci621={style:{display:'none'}}; __ciEnt621={value:''};
+    __vcAtiva=false; __vc621={classList:{contains:function(c){ return c==='active' && __vcAtiva; }}};
+    document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa621:(id==='ci-ficha'?__ci621:(id==='ciEntrada'?__ciEnt621:(id==='v-checkin'?__vc621:null))); };
+    __aud621=[]; audit=function(t,m){ __aud621.push(t+': '+m); }; __st621=[]; setTimeout=function(f,ms){ __st621.push(ms); return 0; };
+    zHojeISO=function(){ return '2026-10-01'; }; APP_DIA_ABERTO='2026-09-30'; almocoEmUso=function(){ return false; };
+    inatLogado=function(){ return true; }; zEhComputador=function(){ return false; };`);
+  const limpa = () => run(`__diaRecarregando=false; _appTrancado=false; document.hidden=false; despMedNaTela=null; despNaTela=null; ckAtual=null; ptAtual=null; ciPelAtual=null;
+    __ci621.style.display='none'; __ciEnt621.value=''; __vcAtiva=false; ciSalvoAgora=true; ciHosp=null; navigator.onLine=true; almocoEmUso=function(){ return false; }; zEhComputador=function(){ return false; };`);
+  const T0 = Date.UTC(2026, 9, 1, 10, 0, 0);
+  try {
+    // trancado e nada aberto: recarrega (o aparelho da noite)
+    limpa(); run('_appTrancado=true;');
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'trancado e nada aberto');
+    // A1: a dose das 23h55 tocando com a tela trancada
+    limpa(); run("_appTrancado=true; despMedNaTela='lua__ana__d1';");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'alarme de remédio na tela: não recarrega');
+    assert.strictEqual(run('zMotivoParado()'), '', 'e a recarga da versão nova também não');
+    limpa(); run("_appTrancado=true; despNaTela='bia__rita';");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'despertador do banho na tela: não recarrega');
+    // A2b: check-in aberto (corpo, pertences, ficha da hospedagem)
+    limpa(); run("_appTrancado=true; ckAtual={p:{n:'Bia'}};");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'check-in do corpo aberto');
+    limpa(); run("_appTrancado=true; ptAtual={p:{n:'Bia'}};");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'pertences abertos');
+    limpa(); run("_appTrancado=true; ciPelAtual={n:'Bia'}; ciHosp={nome:'Bia'}; ciSalvoAgora=false; __ci621.style.display='block'; __ciEnt621.value='2026-09-30'; __vcAtiva=true;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'ficha do check-in da hospedagem com rascunho não salvo, na tela de Check-in');
+    // QA59 N4: "Sair e perder o que preenchi" — a ficha fica por baixo, com a entrada preenchida, mas a tela é outra
+    limpa(); run("_appTrancado=true; ciPelAtual={n:'Bia'}; ciHosp={nome:'Bia'}; ciSalvoAgora=false; __ci621.style.display='block'; __ciEnt621.value='2026-09-30'; __vcAtiva=false;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'saiu do Check-in pelo menu ("Sair e perder"): atualiza');
+    // QA58 N1: depois do Salvar, a ficha continua "aberta" por baixo do menu — não segura
+    limpa(); run("_appTrancado=true; ciPelAtual={n:'Bia'}; ciHosp={nome:'Bia'}; ciSalvoAgora=true; __ci621.style.display='block'; __ciEnt621.value='2026-09-30'; __vcAtiva=true;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'check-in da hospedagem já salvo: atualiza');
+    limpa(); run("_appTrancado=true; ciPelAtual={n:'Bia'}; ciHosp={nome:'Bia'}; ciSalvoAgora=false; __ci621.style.display='block'; __vcAtiva=true;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'ficha aberta sem nada preenchido: atualiza');
+    limpa(); run("_appTrancado=true; ciPelAtual={n:'Bia'}; ciHosp={nome:'Bia'}; ciSalvoAgora=false; __ci621.style.display='none'; __ciEnt621.value='2026-09-30'; __vcAtiva=true;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'a ficha fechada não segura');
+    // almoço e sem internet
+    limpa(); run("_appTrancado=true; almocoEmUso=function(){ return true; };");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'almoço');
+    limpa(); run("_appTrancado=true; navigator.onLine=false;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'sem internet: a página não voltaria');
+    // A2a: página escondida não recarrega pelo relógio — só na volta, e com 3 min fora
+    limpa(); run('document.hidden=true;');
+    assert.strictEqual(run('zMotivoParado()'), 'aba escondida');
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'faixa', 'escondida: espera a volta');
+    limpa(); run(`zViradaDoDiaVisibilidade(true, ${T0})`);
+    assert.strictEqual(run(`zViradaDoDiaVisibilidade(false, ${T0 + 20000})`), '', 'fora 20 s: nada');
+    limpa(); run(`zViradaDoDiaVisibilidade(true, ${T0}); ckAtual={p:{n:'Bia'}};`);
+    assert.strictEqual(run(`zViradaDoDiaVisibilidade(false, ${T0 + 8 * 3600000})`), 'faixa', 'voltou com o check-in aberto: só a faixa');
+    limpa(); run(`zViradaDoDiaVisibilidade(true, ${T0}); despMedNaTela='lua__ana__d1';`);
+    assert.strictEqual(run(`zViradaDoDiaVisibilidade(false, ${T0 + 8 * 3600000})`), 'faixa', 'voltou com o alarme de remédio na tela: só a faixa');
+    // A2c: computador — a volta só acende a faixa; trancado recarrega
+    limpa(); run(`zEhComputador=function(){ return true; }; zViradaDoDiaVisibilidade(true, ${T0});`);
+    assert.strictEqual(run(`zViradaDoDiaVisibilidade(false, ${T0 + 8 * 3600000})`), 'faixa', 'computador: a volta não recarrega');
+    limpa(); run("zEhComputador=function(){ return true; }; _appTrancado=true;");
+    assert.strictEqual(run('zViradaDoDiaTick()'), 'recarga', 'computador trancado: recarrega');
+    assert.strictEqual(run('zDiaTrabalhoAberto()'), '', 'nada aberto');
+  } finally { run(`zHojeISO=__bk621h.hz; APP_DIA_ABERTO=__bk621h.ab; audit=__bk621h.au; setTimeout=__bk621h.st; document.getElementById=__bk621h.ge;
+      __diaRecarregando=__bk621h.rec; almocoEmUso=__bk621h.al; __diaOcultoDesde=__bk621h.od; inatLogado=__bk621h.il; _appTrancado=__bk621h.tr;
+      document.hidden=__bk621h.hid; zEhComputador=__bk621h.pc; despMedNaTela=__bk621h.dm; despNaTela=__bk621h.dn; ckAtual=__bk621h.ck; ptAtual=__bk621h.pt;
+      ciPelAtual=__bk621h.ci; navigator.onLine=__bk621h.on; ciSalvoAgora=__bk621h.cs; ciHosp=__bk621h.ch;`); }
+});
+prova('QA58 — o toque na faixa com o dia de ontem não atropela check-in aberto nem aparelho sem internet (a versão nova do mesmo dia segue igual)', () => {
+  run(`__bk621j={hz:zHojeISO, ab:APP_DIA_ABERTO, za:zAlertao, rep:location.replace, ck:ckAtual, on:navigator.onLine, rec:__diaRecarregando,
+      dm:despMedNaTela, al:almocoEmUso, vp:__versaoPublicada, rt:__recargaTimer, si:setInterval, ci:clearInterval, mp:zMotivoParado, au:audit};
+    __al621=[]; zAlertao=function(t){ __al621.push(t); }; __rep621=0; location.replace=function(){ __rep621++; };
+    zHojeISO=function(){ return '2026-10-01'; };`);
+  const toque = (aberto, ck, on, rec) => { run(`APP_DIA_ABERTO='${aberto}'; ckAtual=${ck ? "{p:{n:'Bia'}}" : 'null'}; navigator.onLine=${on}; __diaRecarregando=${rec}; __al621=[]; __rep621=0; aplicarVersaoNova();`); return [run('__al621.slice()'), run('__rep621')]; };
+  try {
+    igual(toque('2026-09-30', true, true, false), [['SALVE O CHECK-IN ANTES DE ATUALIZAR'], 0], 'check-in aberto: avisa e não atualiza');
+    igual(toque('2026-09-30', false, false, false), [['SEM INTERNET AGORA'], 0], 'sem internet: avisa e não atualiza');
+    igual(toque('2026-09-30', false, true, false), [[], 1], 'nada aberto: atualiza');
+    igual(toque('2026-10-01', true, true, false), [[], 1], 'mesmo dia (versão nova): atualiza como sempre');
+    igual(toque('2026-09-30', true, true, true), [[], 1], 'a recarga sozinha já fez a conta: segue');
+    // QA59 N5: o alarme na tela (ou o almoço) não esconde o check-in aberto nem a falta de internet
+    run("despMedNaTela='lua__ana__d1';");
+    igual(toque('2026-09-30', true, true, false), [['SALVE O CHECK-IN ANTES DE ATUALIZAR'], 0], 'alarme na tela + check-in aberto');
+    run("despMedNaTela=null; almocoEmUso=function(){ return true; };");
+    igual(toque('2026-09-30', false, false, false), [['SEM INTERNET AGORA'], 0], 'almoço + sem internet');
+    run("almocoEmUso=__bk621j.al;");
+    // QA59 N6: a recarga AUTOMÁTICA da versão, num aparelho com o dia velho, fica com o vigia do dia
+    const versao = (aberto) => {
+      run(`APP_DIA_ABERTO='${aberto}'; ckAtual=null; navigator.onLine=true; __diaRecarregando=false; __rep621=0; __aud621v=[];
+        audit=function(t){ __aud621v.push(t); }; zMotivoParado=function(){ return 'tela trancada'; };
+        __fn621=null; __limpou621=0; setInterval=function(f){ __fn621=f; return 7; }; clearInterval=function(){ __limpou621++; };
+        __versaoPublicada='2026-10-02-01'; __recargaTimer=null; zRecargaQuandoParado(); __fn621();`);
+      return [run('__aud621v.slice()'), run('__limpou621')];
+    };
+    igual(versao('2026-09-30'), [[], 0], 'dia velho: a versão não recarrega por conta própria e o relógio dela continua');
+    igual(versao('2026-10-01'), [['versao-recarga-automatica'], 1], 'mesmo dia: a versão recarrega como sempre');
+  } finally { run(`zHojeISO=__bk621j.hz; APP_DIA_ABERTO=__bk621j.ab; zAlertao=__bk621j.za; location.replace=__bk621j.rep; ckAtual=__bk621j.ck; navigator.onLine=__bk621j.on; __diaRecarregando=__bk621j.rec;
+      despMedNaTela=__bk621j.dm; almocoEmUso=__bk621j.al; __versaoPublicada=__bk621j.vp; __recargaTimer=__bk621j.rt; setInterval=__bk621j.si; clearInterval=__bk621j.ci; zMotivoParado=__bk621j.mp; audit=__bk621j.au;`); }
+});
+provaAsync('QA57 B5 — "Mandar agora" num aparelho com o dia de ontem: o alertão diz o motivo e a conferência não roda aqui', async () => {
+  run(`__bk621i={hz:zHojeISO, ab:APP_DIA_ABERTO, za:zAlertao, sy:dashAutoSincronizar, pp:dashPontePronta};
+    __al621=[]; zAlertao=function(t,l){ __al621.push({t:t, l:l}); }; __sy621=0; dashAutoSincronizar=function(){ __sy621++; return Promise.resolve({ok:true}); };
+    dashPontePronta=function(){ return Promise.resolve({url:'x'}); }; zHojeISO=function(){ return '2026-10-01'; }; APP_DIA_ABERTO='2026-09-30';`);
+  try {
+    run("__bt621m={textContent:'Mandar agora', disabled:false}; repMandarAgora('2026-10-01', __bt621m);");
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    igual(run('__al621'), [{ t: 'ESTE APARELHO AINDA ESTÁ COM O DIA 30/09', l: ['Toque na faixa do topo para atualizar. Depois disso, a conferência com a planilha volta a funcionar neste aparelho.', 'Os outros aparelhos conferem a planilha sozinhos enquanto isso.'] }]);
+    assert.strictEqual(run('__sy621'), 0, 'a conferência não roda neste aparelho');
+    assert.strictEqual(run('__bt621m.disabled'), false, 'o botão não fica preso em "mandando…"');
+  } finally { run('zHojeISO=__bk621i.hz; APP_DIA_ABERTO=__bk621i.ab; zAlertao=__bk621i.za; dashAutoSincronizar=__bk621i.sy; dashPontePronta=__bk621i.pp;'); }
+});
+prova('Banhos recorrentes avisa quando o dia do banho não é dia de Day Care pela ficha', () => {
+  fichas621({});
+  run(`__bk621e={pd:pelDias, pc2:pelCategoria}; pelDias=function(p){ return p.__d||[]; };`);
+  try {
+    const aviso = (d, br, cat) => { run(`pelCategoria=function(){ return '${cat || 'auluno'}'; };`); ctx.__br621 = br; return run(`banhosAvisoDiaSemDaycare({n:'Nock', tutor:'Claudia', __d:${JSON.stringify(d)}}, __br621)`); };
+    const a = aviso(['seg', 'qua'], { ativo: true, dia: 'qui' });
+    assert.ok(/Pela ficha, Nock não vem ao Day Care na quinta \(vem: segunda, quarta\)\. O app só lança o banho fixo em dia de Day Care\. Se vem só para o banho, lance à mão nos Lançamentos do dia; se passou a vir ao Day Care na quinta, marque a quinta nos dias da ficha\./.test(a), a);
+    // QA57 A3: hóspede e avulso não têm dia fixo para marcar — só o lançamento à mão
+    ['hospede', 'avulso'].forEach((c) => {
+      const h = aviso([], { ativo: true, dia: 'qui' }, c);
+      assert.ok(/Lance o banho à mão nos Lançamentos do dia\./.test(h) && !/marque/.test(h), c + ': ' + h);
+    });
+    assert.ok(!/ ele vem/.test(a), 'forma neutra (a Lana é ela)');
+    assert.ok(/nenhum dia marcado/.test(aviso([], { ativo: true, dia: 'sex' })), 'sem dia nenhum na ficha');
+    assert.strictEqual(aviso(['qua', 'qui'], { ativo: true, dia: 'qui' }), '', 'quinta é dia dele: sem aviso');
+    assert.strictEqual(aviso(['seg'], { ativo: false, dia: 'qui' }), '', 'banho desligado: sem aviso');
+    assert.strictEqual(aviso(['seg'], { ativo: true, dia: '' }), '', 'sem dia escolhido: sem aviso');
+    assert.strictEqual(aviso([], { ativo: true, dia: 'qui' }, 'morador'), '', 'morador: não vai para a planilha do Day Care');
+    // A linha da tela mostra o aviso (o que está na tela, gravado ou no rascunho).
+    run(`pelCategoria=function(){ return 'auluno'; }; __EX621={'nock__claudia':{banho_rec:{ativo:true, freq:'semanal', dia:'qui', hora:'17:00', desde:'2026-10-01', sham:'SEM SHAMPOO'}}};`);
+    const linha = run(`banhosLinhaHTML({n:'Nock', tutor:'Claudia', __d:['seg']})`);
+    assert.ok(/Pela ficha, Nock não vem ao Day Care na quinta/.test(linha), 'a linha da tela traz o aviso');
+  } finally { run('pelDias=__bk621e.pd; pelCategoria=__bk621e.pc2;'); solta621(); }
+});
+provaAsync('o "Salvo" do banho fixo, num aparelho aberto desde ontem, diz que ele se atualiza sozinho (e como fazer agora)', async () => {
+  fichas621({});
+  run(`__bk621f={sp:setPelExtra, au:audit, rl:banhosRenderLinha, rp:renderPel, pc:banhoAutoPedirConferencia, ce:canEditPel, P2:PELUDINHOS, lg:_logFalhaGrav};
+    setPelExtra=function(p,o){ __EX621[dcKey(p.n,p.tutor)]=Object.assign({}, __EX621[dcKey(p.n,p.tutor)]||{}, o); return Promise.resolve({ok:true}); };
+    audit=function(){}; banhosRenderLinha=function(){}; renderPel=function(){}; __conf621=0; banhoAutoPedirConferencia=function(){ __conf621++; };
+    canEditPel=function(){ return true; }; _logFalhaGrav=function(){};
+    PELUDINHOS=[{n:'Nock', raca:'Spitz', tutor:'Claudia'}]; zHojeISO=function(){ return '2026-10-01'; };`);
+  try {
+    const salvar = async (aberto) => {
+      run(`APP_DIA_ABERTO='${aberto}'; BANHO_RASC['nock__claudia']={ativo:true, freq:'semanal', dia:'qui', hora:'17:00', desde:'2026-10-01', sham:'SEM SHAMPOO', onde:'', obs:'', tipo:'', nome:'', excecoes:{}};
+        banhosSalvar('nock__claudia');`);
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+      return run("BANHO_MSG['nock__claudia'].txt");
+    };
+    assert.strictEqual(await salvar('2026-09-30'), '✅ Salvo. Este aparelho ainda está com o dia 30/09 e se atualiza sozinho quando ficar parado; aí a planilha se acerta. Para ser agora, toque na faixa do topo.');
+    assert.strictEqual(await salvar('2026-10-01'), '✅ Salvo — o app lança o banho sozinho na planilha no dia certo. A conferência do dia acontece em instantes.');
+    assert.strictEqual(run('__conf621'), 2, 'a conferência continua pedida (os outros aparelhos e este, depois de abrir de novo)');
+  } finally { run('setPelExtra=__bk621f.sp; audit=__bk621f.au; banhosRenderLinha=__bk621f.rl; renderPel=__bk621f.rp; banhoAutoPedirConferencia=__bk621f.pc; canEditPel=__bk621f.ce; _logFalhaGrav=__bk621f.lg;'); solta621(); }
+});
+prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam nas três gravações do dia', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/var motivo=zMotivoParado\(\);[\s\S]{0,700}if\(!motivo\) return 'faixa';/.test(src), 'mesma regra de "parado"');
+  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
+  assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
+  const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
+  assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
+  assert.ok(/const APP_VERSAO='2026-10-01-01';/.test(src));
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
