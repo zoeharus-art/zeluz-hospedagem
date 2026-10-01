@@ -5619,7 +5619,212 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
-  assert.ok(/const APP_VERSAO='2026-10-01-01';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-01-0[123]';/.test(src));
+});
+// ================================================================== 6.22 — a renovação encantadora
+console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
+const msg622 = (fn, pet, ex, tabela) => {
+  ctx.__p622 = pet; ctx.__ex622 = ex; ctx.__tab622 = tabela || null;
+  run(`__bk622={pd:pelDias, pg:pelGet, pc:planosCfg}; pelDias=function(p){ return p.dias||[]; };
+    pelGet=function(p,c){ return c==='tutor'?p.tutor:(c==='n'?(p.nFicha||p.n):''); }; if(__tab622) planosCfg=__tab622;`);
+  try { return run(`${fn}(__p622, __ex622)`); }
+  finally { run('pelDias=__bk622.pd; pelGet=__bk622.pg; planosCfg=__bk622.pc;'); }
+};
+const AMORA = { n: 'Amora', tutor: 'Cristiane Souza', dias: ['qua'] };
+const NELSON = { n: 'Nelson', tutor: 'Fernanda', dias: ['seg', 'qua'] };
+const BIA = { n: 'Bia', tutor: 'Rita', dias: ['seg', 'qua', 'sex'] };
+const PARAGRAFO622 = (quem) => 'O Day Care da Zêluz é muito mais do que companhia: é rotina de movimento, socialização, estímulo cognitivo, bem-estar, saúde e muito mais longevidade para o seu FILHOt. É um cuidado que ajuda ' + quem + ' a gastar energia com segurança, conviver com outros peludinhos e manter uma rotina mais equilibrada.';
+const nada622 = (m) => !/do\(a\)|ele\(a\)|o\(a\)|\bSilver\b|\bGold\b|\bBlack\b|DayCare|\b\dx por semana/.test(m);
+prova('Amora (menina, uma vez por semana, semestral): o texto da Adriana (15/jul) trocando só o que ela pediu em 01/out', () => {
+  const m = msg622('msgPlanoFinalizou', AMORA, { sexo: 'Fêmea', renov: { plano: 'Black', inicio: '2026-10-01', fim: '2027-03-31' } });
+  assert.strictEqual(m, 'Olá, Cristiane, como está? E a Amora?\n\n'
+    + 'O plano de Day Care da Amora está pronto para ser renovado.\n\n'
+    + 'Hoje, ela vem uma vez por semana, na quarta, no plano semestral.\n\n'
+    + PARAGRAFO622('a Amora') + '\n\n'
+    + 'Vamos manter uma vez por semana para a Amora ou vamos aumentar? 🐾💛');
+});
+prova('Nelson (menino, mensal, duas vezes): "do Nelson", "na segunda e na quarta" e o convite ao trimestral com os números da tabela', () => {
+  const m = msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Silver', inicio: '2026-09-30', fim: '2026-10-31' } });
+  assert.ok(m.startsWith('Olá, Fernanda, como está? E o Nelson?\n\nO plano de Day Care do Nelson está pronto para ser renovado.\n\nHoje, ele vem duas vezes por semana, na segunda e na quarta, no plano mensal.\n\n' + PARAGRAFO622('o Nelson')), m);
+  assert.ok(m.endsWith('Vamos manter duas vezes por semana para o Nelson ou vamos aumentar?\n\nE que tal passar para o plano trimestral? A mensalidade fica menor, e o Nelson ainda ganha 10% de desconto na Auaulândia (no semestral, 15%). 🐾💛'), m);
+  assert.ok(nada622(m), m);
+});
+prova('sem o sexo na ficha: nenhum "do(a)" nem "ele(a)" — a frase usa o nome', () => {
+  const m = msg622('msgPlanoFinalizou', BIA, { renov: { plano: 'Gold', inicio: '2026-10-01', fim: '2026-12-31' } });
+  assert.ok(m.startsWith('Olá, Rita, como está?\n\nO plano de Day Care de Bia está pronto para ser renovado.\n\nHoje, Bia vem três vezes por semana, na segunda, na quarta e na sexta, no plano trimestral.\n\n' + PARAGRAFO622('Bia')), m);
+  assert.ok(m.endsWith('Vamos manter três vezes por semana para Bia ou vamos aumentar? 🐾💛'), 'trimestral: sem convite — ' + m);
+  assert.ok(nada622(m), m);
+});
+prova('cinco vezes: só "Vamos manter"; quatro vezes: "ou vamos aumentar?" (QA61)', () => {
+  const m5 = msg622('msgPlanoFinalizou', { n: 'Thor', tutor: 'Ana', dias: ['seg', 'ter', 'qua', 'qui', 'sex'] }, { sexo: 'Macho', renov: { plano: 'Black' } });
+  assert.ok(m5.endsWith('Vamos manter cinco vezes por semana para o Thor? 🐾💛') && !/aumentar/.test(m5), m5);
+  const m4 = msg622('msgPlanoFinalizou', { n: 'Thor', tutor: 'Ana', dias: ['seg', 'ter', 'qua', 'qui'] }, { sexo: 'Macho', renov: { plano: 'Black' } });
+  assert.ok(m4.endsWith('Vamos manter quatro vezes por semana para o Thor ou vamos aumentar? 🐾💛'), m4);
+});
+prova('sem dia marcado: vale o nº de aulas do plano; sem nenhum dos dois, a mensagem não inventa "uma vez" (QA61)', () => {
+  const ma = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black', aulas: 2 } });
+  assert.ok(/Hoje, ela vem duas vezes por semana, no plano semestral\./.test(ma) && /Vamos manter duas vezes por semana para a Lua ou vamos aumentar\?/.test(ma), ma);
+  const m0 = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black' } });
+  assert.ok(/Hoje, ela está no plano semestral\./.test(m0) && /Vamos manter a rotina da Lua ou vamos aumentar\? 🐾💛$/.test(m0) && !/uma vez/.test(m0), m0);
+  const r0 = msg622('msgRenovado', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: { plano: 'Black', inicio: '2026-10-01', fim: '2027-03-31' } });
+  assert.ok(/O plano semestral de Day Care da Lua foi renovado\./.test(r0) && !/uma vez/.test(r0), r0);
+  // QA62: sem frequência e sem prazo, a frase "Hoje…" fica de fora (não repete a anterior)
+  const mn = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: 'Ana', dias: [] }, { sexo: 'Fêmea', renov: {} });
+  assert.ok(!/Hoje,/.test(mn) && /está pronto para ser renovado\.\n\nO Day Care da Zêluz/.test(mn), mn);
+  const mx = msg622('msgPlanoFinalizou', { n: 'Lua', tutor: '', dias: ['qua'] }, { sexo: 'Fêmea', renov: {} });
+  assert.ok(/^Olá, como está\? E a Lua\?\n\nO plano de Day Care da Lua está pronto/.test(mx) && /Hoje, ela vem uma vez por semana, na quarta\.\n/.test(mx), 'sem tutor e sem plano: ' + mx);
+});
+prova('o nome vem da ficha (pelNome), não do cadastro importado (QA61)', () => {
+  const m = msg622('msgPlanoFinalizou', { n: 'Amorinha', nFicha: 'Amora', tutor: 'Cristiane', dias: ['qua'] }, { sexo: 'Fêmea', renov: { plano: 'Black' } });
+  assert.ok(/da Amora está pronto/.test(m) && !/Amorinha/.test(m), m);
+});
+prova('o convite ao trimestral só diz o que a tabela de planos confirma', () => {
+  const base = JSON.parse(JSON.stringify(run('PLANOS_PADRAO')));
+  const ex = { sexo: 'Macho', renov: { plano: 'Silver' } };
+  const semDesc = JSON.parse(JSON.stringify(base)); semDesc.Gold.hospOff = 0;
+  assert.ok(msg622('msgPlanoFinalizou', NELSON, ex, semDesc).endsWith('E que tal passar para o plano trimestral? A mensalidade fica menor. 🐾💛'), 'sem desconto: só a mensalidade');
+  const semMenor = JSON.parse(JSON.stringify(base)); semMenor.Gold.valores = Object.assign({}, base.Silver.valores);
+  assert.ok(msg622('msgPlanoFinalizou', NELSON, ex, semMenor).endsWith('E que tal passar para o plano trimestral? O Nelson ganha 10% de desconto na Auaulândia (no semestral, 15%). 🐾💛'), 'mensalidade igual: só o desconto');
+  // QA61: trimestral MAIS CARO não vira "fica menor"
+  const maisCaro = JSON.parse(JSON.stringify(base)); Object.keys(maisCaro.Gold.valores).forEach((k) => { maisCaro.Gold.valores[k] = base.Silver.valores[k] + 1000; });
+  const mc = msg622('msgPlanoFinalizou', NELSON, ex, maisCaro);
+  assert.ok(!/fica menor/.test(mc) && /O Nelson ganha 10% de desconto/.test(mc), 'trimestral mais caro: ' + mc);
+  // QA62: trimestral sem preço para esta frequência não vira "fica menor"
+  const semPreco = JSON.parse(JSON.stringify(base)); delete semPreco.Gold.valores['2'];
+  const sp = msg622('msgPlanoFinalizou', NELSON, ex, semPreco);
+  assert.ok(!/fica menor/.test(sp) && /O Nelson ganha 10% de desconto/.test(sp), 'trimestral sem preço: ' + sp);
+  const nada = JSON.parse(JSON.stringify(semMenor)); nada.Gold.hospOff = 0;
+  assert.ok(!/trimestral\?/.test(msg622('msgPlanoFinalizou', NELSON, ex, nada)), 'nenhuma vantagem: sem convite');
+  const igual = JSON.parse(JSON.stringify(base)); igual.Black.hospOff = 10;
+  const mi = msg622('msgPlanoFinalizou', NELSON, ex, igual);
+  assert.ok(mi.endsWith('10% de desconto na Auaulândia. 🐾💛') && !/no semestral/.test(mi), 'semestral sem desconto maior: não cita — ' + mi);
+  const dec = JSON.parse(JSON.stringify(base)); dec.Gold.hospOff = 7.5;
+  assert.ok(/7,5% de desconto na Auaulândia/.test(msg622('msgPlanoFinalizou', NELSON, ex, dec)), 'decimal com vírgula');
+  assert.ok(!/trimestral\?/.test(msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Black' } })), 'semestral: sem convite');
+});
+prova('"Renovação confirmada": o prazo, "da Amora", a frequência por extenso e o período (01/10 a 31/10)', () => {
+  const m = msg622('msgRenovado', AMORA, { sexo: 'Fêmea', renov: { plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' } });
+  assert.strictEqual(m, 'Olá, Cristiane, como está? 💛\n\n'
+    + 'O plano mensal de Day Care da Amora, de uma vez por semana, foi renovado.\n\n'
+    + 'A nova vigência será de 01/10/2026 até 31/10/2026, com próxima renovação prevista para outubro de 2026.\n\n'
+    + 'Obrigada por confiar na Zêluz para cuidar de quem também faz parte da sua família!\n'
+    + 'Seguimos sendo a voz da Amora nessa rotina de bem-estar, saúde, longevidade e muita diversão! 🐾💛');
+  const b = msg622('msgRenovado', BIA, { renov: { plano: 'Gold', inicio: '2026-10-01', fim: '2026-12-31' } });
+  assert.ok(/O plano trimestral de Day Care de Bia, de três vezes por semana, foi renovado\.\n\nA nova vigência será de 01\/10\/2026 até 31\/12\/2026\.\n\n/.test(b) && nada622(b), b);
+});
+prova('vocabulário da marca nas duas mensagens (Zêluz, Day Care, Auaulândia; nada de "cachorro", "cão", "animal", "dono")', () => {
+  const ms = [msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } }), msg622('msgRenovado', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } })];
+  ms.forEach((m) => { assert.ok(!/cachorro|\bcão\b|\bcães\b|animal|bicho|\bdono\b|Zeluz|Zéluz/i.test(m), m); });
+});
+// ================================================================== 6.23 — a raça da lista no orçamento
+console.log('\n6.23 — Orçamento: a raça de quem nunca hospedou vem da lista, sem erro de digitação (Adriana, 01/out/2026)');
+prova('a grafia da lista: maiúscula, acento, espaço e hífen não importam; os apelidos da casa levam ao nome certo', () => {
+  const c = (t) => run(`racaCanonica(${JSON.stringify(t)})`);
+  igual([c('westie'), c('WEST TERRIER'), c('West'), c('york'), c('Yorkie'), c('Dash Hound'), c('salsicha'), c('Dachshund')],
+    ['West Terrier', 'West Terrier', 'West Terrier', 'Yorkshire', 'Yorkshire', 'Dachshund (Salsicha)', 'Dachshund (Salsicha)', 'Dachshund (Salsicha)']);
+  igual([c('Spitz'), c('lulu da pomerânia'), c('spitz alemão (lulu da pomerânia)'), c('srd'), c('vira-lata'), c('Shih-Tzu'), c('shitzu'), c('maltes'), c('Maltês')],
+    ['Spitz Alemão (Lulu da Pomerânia)', 'Spitz Alemão (Lulu da Pomerânia)', 'Spitz Alemão (Lulu da Pomerânia)', 'SRD (vira-lata)', 'SRD (vira-lata)', 'Shih Tzu', 'Shih Tzu', 'Maltês', 'Maltês']);
+  igual([c('poodle'), c('Lhasa Apso'), c('pug'), c('Spitz Alemão'), c('Labradorr'), c(''), c('   ')],
+    ['Poodle', 'Lhasa Apso', 'Pug', 'Spitz Alemão (Lulu da Pomerânia)', '', '', '']);
+  // QA63 A4: raças parecidas NÃO viram a raça errada — perguntam
+  igual([c('maltipoo'), c('spitz japonês'), c('Biewer Yorkshire'), c('yorkipoo'), c('Shih-poo'), c('Pastor Alemão')], ['', '', '', '', '', '']);
+  // o nome sem o que vem entre parênteses também vale (raça com parênteses e sem apelido)
+  run("__n623p=RACAS.length; RACAS.push('Poodle Toy (miniatura)');");
+  try { igual([c('poodle toy'), c('Poodle-Toy')], ['Poodle Toy (miniatura)', 'Poodle Toy (miniatura)']); }
+  finally { run('RACAS.length=__n623p;'); }
+  // as raças que ela citou estão todas na lista da casa
+  ['Dachshund (Salsicha)', 'West Terrier', 'Spitz Alemão (Lulu da Pomerânia)', 'Poodle', 'Yorkshire', 'Shih Tzu', 'Maltês', 'SRD (vira-lata)']
+    .forEach((r) => assert.ok(run('RACAS').indexOf(r) >= 0, r));
+});
+prova('as raças do cadastro do Day Care entram na lista, sem repetir a mesma raça com outra grafia', () => {
+  run(`__bk623={P:PELUDINHOS, pg:pelGet, n:RACAS.length, rc:RACAS_CADASTRO, ge:document.getElementById}; RACAS_CADASTRO=[];
+    __dl623={innerHTML:''}; document.getElementById=function(id){ return id==='racasList'?__dl623:null; };
+    pelGet=function(p,c){ return c==='raca'?(p.raca||''):''; };
+    PELUDINHOS=[{n:'A', raca:'Shitzu'}, {n:'B', raca:'Golden Retriever'}, {n:'C', raca:'golden retriever'}, {n:'D', raca:'Beagle'}, {n:'E', raca:''}, {n:'F', raca:'West Terrier'}];`);
+  try {
+    run('orcRacasAtualizar(); orcRacasAtualizar();');
+    const novas = JSON.parse(JSON.stringify(run('RACAS_CADASTRO')));
+    igual(novas, ['Golden Retriever', 'Beagle'], 'só as que ainda não têm nome na lista, uma vez cada');
+    assert.strictEqual(run('RACAS.length'), run('__bk623.n'), 'o RACAS da casa não muda (QA63 A2)');
+    igual(run("racaCanonica('golden retriever')"), 'Golden Retriever', 'a do cadastro vale como da lista');
+    assert.ok(/<option value="Golden Retriever">/.test(run('__dl623.innerHTML')) && /<option value="West Terrier">/.test(run('__dl623.innerHTML')), 'a lista da tela foi refeita');
+  } finally { run('RACAS.length=__bk623.n; RACAS_CADASTRO=__bk623.rc; PELUDINHOS=__bk623.P; pelGet=__bk623.pg; document.getElementById=__bk623.ge;'); }
+});
+prova('QA63 — o cadastro de fábrica (118 FILHOts): nenhuma grafia curta de raça que já está na lista vira sugestão', () => {
+  run(`__bk623f={rc:RACAS_CADASTRO, n:RACAS.length}; RACAS_CADASTRO=[];`);
+  try {
+    run('orcRacasAtualizar()');
+    const novas = JSON.parse(JSON.stringify(run('RACAS_CADASTRO')));
+    ['Lhasa', 'Cocker', 'Cavalier', 'Jack Russell', 'Norfolk', 'Shetland', 'Shiba Inu', 'Westie', 'Shitzu', 'York', 'Spitz', 'SRD']
+      .forEach((r) => assert.ok(novas.every((x) => run(`racaChave(${JSON.stringify(x)})===racaChave(${JSON.stringify(r)})`) === false), r + ' virou sugestão: ' + JSON.stringify(novas)));
+    const c = (t) => run(`racaCanonica(${JSON.stringify(t)})`);
+    igual([c('Lhasa'), c('Cocker'), c('Cavalier'), c('Jack Russell'), c('Norfolk'), c('Shetland'), c('Sheltie'), c('Shiba Inu'), c('bulldog francês')],
+      ['Lhasa Apso', 'Cocker Spaniel', 'Cavalier King Charles', 'Jack Russell Terrier', 'Norfolk Terrier', 'Pastor de Shetland', 'Pastor de Shetland', 'Shiba', 'Buldogue Francês']);
+  } finally { run('RACAS_CADASTRO=__bk623f.rc; RACAS.length=__bk623f.n;'); }
+});
+prova('QA63 — a raça do cadastro não muda o que o app entende como tutor (ehRacaLike) nem quebra a lista (escape)', () => {
+  run(`__bk623g={P:PELUDINHOS, pg:pelGet, rc:RACAS_CADASTRO, ge:document.getElementById};
+    __dl623g={innerHTML:''}; document.getElementById=function(id){ return id==='racasList'?__dl623g:null; };
+    pelGet=function(p,c){ return c==='raca'?(p.raca||''):''; }; RACAS_CADASTRO=[];`);
+  try {
+    const antes = run("ehRacaLike('Herminia')");
+    run(`PELUDINHOS=[{n:'Zuzuxa', raca:'Mini Poodle'}, {n:'X', raca:'"><img src=x onerror=alert(1)>'}, {n:'Y', raca:'Lulu "Anã"'}]; orcRacasAtualizar();`);
+    assert.strictEqual(run("ehRacaLike('Herminia')"), antes, 'o tutor continua tutor');
+    const html = run('__dl623g.innerHTML');
+    assert.ok(!/<img/.test(html) && /<option value="&quot;>&lt;img src=x onerror=alert\(1\)>">/.test(html), 'HTML escapado: ' + html.slice(-300));
+    assert.ok(/<option value="Lulu &quot;Anã&quot;">/.test(html), 'aspas não cortam a sugestão');
+  } finally { run('PELUDINHOS=__bk623g.P; pelGet=__bk623g.pg; RACAS_CADASTRO=__bk623g.rc; document.getElementById=__bk623g.ge;'); }
+});
+provaAsync('"Acrescentar ao orçamento": a grafia da lista entra sozinha; fora da lista, pergunta (Corrigir ou Usar assim mesmo)', async () => {
+  run(`__bk623b={ge:document.getElementById, zp:zPergunta, sel:ORC_SEL, nc:orcNovoComecou, rs:orcRenderSel, oc:orcCalcular, ss:orcAvSexoSet};
+    __campos623={orcAvNome:{value:''}, orcAvTutor:{value:''}, orcAvRaca:{value:'', focus:function(){ __foco623++; }}};
+    __foco623=0; __perg623=[]; __resp623=true;
+    document.getElementById=function(id){ return __campos623[id]||null; };
+    zPergunta=function(t){ __perg623.push(t); return Promise.resolve(__resp623); };
+    ORC_SEL=[]; orcNovoComecou=function(){}; orcRenderSel=function(){}; orcCalcular=function(){}; orcAvSexoSet=function(){};`);
+  const add = async (nome, raca, resp) => {
+    run(`__campos623.orcAvNome.value=${JSON.stringify(nome)}; __campos623.orcAvTutor.value='Renata'; __campos623.orcAvRaca.value=${JSON.stringify(raca)}; __resp623=${resp === undefined ? 'true' : resp}; __perg623=[];`);
+    await run('orcAddAvulso()');
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    return { racas: JSON.parse(JSON.stringify(run('ORC_SEL.map(function(x){ return x.raca; })'))), perg: JSON.parse(JSON.stringify(run('__perg623'))) };
+  };
+  try {
+    let r = await add('Thor', 'westie');
+    igual(r, { racas: ['West Terrier'], perg: [] }, 'westie → West Terrier, sem pergunta');
+    r = await add('Mel', 'spitz alemão (lulu da pomerânia)');
+    igual(r.racas[1], 'Spitz Alemão (Lulu da Pomerânia)', 'a grafia da lista, com os parênteses certos');
+    r = await add('Bob', 'Labradorr', false);
+    igual(r, { racas: ['West Terrier', 'Spitz Alemão (Lulu da Pomerânia)'], perg: ['A RAÇA "Labradorr" NÃO ESTÁ NA LISTA'] }, 'Corrigir: nada entra');
+    assert.ok(run('__foco623') >= 1, 'o cursor volta para a raça');
+    r = await add('Bob', 'cane corso', true);
+    igual(r.racas[2], 'Cane Corso', 'Usar assim mesmo: entra como foi escrita');
+    r = await add('Zeca', '', true);
+    igual(r.racas.length, 3, 'sem raça: continua obrigatória');
+  } finally { run('document.getElementById=__bk623b.ge; zPergunta=__bk623b.zp; ORC_SEL=__bk623b.sel; orcNovoComecou=__bk623b.nc; orcRenderSel=__bk623b.rs; orcCalcular=__bk623b.oc; orcAvSexoSet=__bk623b.ss;'); }
+});
+prova('QA64 — a lista de raças já nasce pronta ao abrir o app, sem repetição; as raças da planilha continuam no RACAS (separação raça × tutor)', () => {
+  // N1: um aparelho novo, com a lista da tela capturada desde o carregamento
+  const sb = makeSandbox(); const dl = { innerHTML: '' };
+  const ge = sb.document.getElementById; sb.document.getElementById = function (id) { return id === 'racasList' ? dl : ge.call(this, id); };
+  const ctx2 = vm.createContext(sb);
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx2, { timeout: 20000 });
+  const n = (dl.innerHTML.match(/<option /g) || []).length;
+  assert.ok(n >= 30 && /<option value="West Terrier">/.test(dl.innerHTML), 'a lista da casa na tela desde o começo: ' + n);
+  // N2: a planilha continua alimentando o RACAS (e o ehRacaLike)
+  run(`__bk623h={n:RACAS.length, rc:RACAS_CADASTRO, ge:document.getElementById}; __dl623h={innerHTML:''};
+    document.getElementById=function(id){ return id==='racasList'?__dl623h:null; };`);
+  try {
+    assert.strictEqual(run("ehRacaLike('Xoloitzcuintle')"), false);
+    run("addRacasAoBanco(['Xoloitzcuintle'])");
+    assert.ok(run("RACAS.indexOf('Xoloitzcuintle')>=0") && run("ehRacaLike('Xoloitzcuintle')") === true, 'a raça da planilha vale para separar raça × tutor');
+    // N4: a mesma raça no cadastro e na planilha aparece uma vez só na tela
+    run("RACAS_CADASTRO=['Golden Retriever']; addRacasAoBanco(['golden retriever']);");
+    assert.strictEqual((run('__dl623h.innerHTML').match(/value="golden retriever"|value="Golden Retriever"/gi) || []).length, 1, 'sem repetição');
+  } finally { run('RACAS.length=__bk623h.n; RACAS_CADASTRO=__bk623h.rc; document.getElementById=__bk623h.ge;'); }
+});
+prova('o campo de raça do "Nunca hospedou?" usa a lista da casa (e a atualiza ao tocar)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/<input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar\(\)">/.test(src));
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
