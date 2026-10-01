@@ -41,6 +41,18 @@ Ficha › aba **Plano** › **Mensagens para o tutor** ("Plano finalizou — ofe
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (9 provas da 6.22, entre elas o texto inteiro da Amora e do Nelson; 14 defeitos plantados, 14 pegos).
 - **Ainda diz "plano Silver" ao tutor (fora desta mudança):** o recibo de **Lançar pagamento**.
 
+### (AB) Orçamento: a raça de quem nunca hospedou vem da lista (v 2026-10-01-03)
+
+> **Adriana, 01/out/2026:** *"Para quem nunca hospedou, a raça, que é obrigatória: ter as principais raças que a gente trabalha já pré-cadastradas, para quando começar a digitar, para não digitarem errado. Dachshund, Westie, Spitz, Poodle, York, Shih Tzu, Maltês, SRD — tudo que já tem cadastrado no Day Care."* Story 6.23.
+
+Orçamento › quadro **"Nunca hospedou? Escreva aqui!"** › **Raça**:
+- **Ao começar a digitar, aparece a lista**: as raças da casa (o mesmo banco do cadastro e do check-in), as da planilha da hospedagem e as do cadastro do Day Care, sem repetir a mesma raça escrita de outro jeito.
+- **A grafia certa entra sozinha**: maiúscula, acento, espaço e hífen não importam ("shih-tzu" vira Shih Tzu). Os apelidos de sempre levam ao nome da lista: westie → West Terrier; york, yorkie → Yorkshire; salsicha, teckel, daschund → Dachshund (Salsicha); spitz, lulu → Spitz Alemão (Lulu da Pomerânia); vira-lata, srd → SRD (vira-lata); shitzu → Shih Tzu; maltes → Maltês; e as grafias curtas do cadastro: lhasa → Lhasa Apso, cocker → Cocker Spaniel, cavalier → Cavalier King Charles, jack russell → Jack Russell Terrier, norfolk → Norfolk Terrier, shetland/sheltie → Pastor de Shetland, shiba inu → Shiba, bulldog francês → Buldogue Francês. Raças parecidas (maltipoo, yorkipoo, spitz japonês, Biewer Yorkshire) não viram a raça errada: perguntam.
+- **As raças do cadastro ficam numa lista à parte** (`RACAS_CADASTRO`): só servem de sugestão e de grafia certa. A lista da casa (`RACAS`), que também ajuda a separar raça de tutor na planilha, não muda. O texto de cada sugestão é escapado (raça com aspas não quebra a lista).
+- **Raça fora da lista pergunta** antes de entrar: "A raça "X" não está na lista", com **Corrigir** ou **Usar assim mesmo**. Raça rara não fica bloqueada; erro de digitação não passa calado.
+- **Onde está no código:** `racaChave`, `RACA_APELIDOS`, `racaCanonica`, `RACAS_CADASTRO`, `racasListaRender`, `orcRacasAtualizar`, `orcAddAvulso`, campo `orcAvRaca` (`list="racasList"`).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.23, inclusive sobre o cadastro de fábrica de 118 FILHOts e a lista pronta ao abrir o app; 19 defeitos plantados, 19 pegos).
+
 ## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê; renovação paga antes do fim do plano
 
 > **Adriana, 30/set/2026:** *"Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar hoje, Lançamentos do dia, e o que é ali da Central Zêluz, e não estou conseguindo. Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, mas não deu. Eu preciso de conseguir dar acesso a todas as pessoas que eu quiser. [...] Eu preciso que tudo esteja atualizado."* Story 6.19.

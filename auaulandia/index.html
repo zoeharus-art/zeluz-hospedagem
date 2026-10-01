@@ -4700,8 +4700,8 @@
           <div><label class="cad-lb">Nome do tutor</label><input class="cad-in" id="orcAvTutor" placeholder="Ex: Renata"></div>
         </div>
         <div style="margin-top:8px"><label class="cad-lb">Raça <span style="color:#b3261e">(obrigatória)</span></label>
-          <input class="cad-in" id="orcAvRaca" placeholder="Ex: Shih Tzu, Westie, SRD…">
-          <div class="hint">Sem a raça, dois FILHOts de mesmo nome viram um só na planilha e no dashboard.</div>
+          <input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar()">
+          <div class="hint">Escolha da lista: ela já tem as raças da casa e as do cadastro, e evita a mesma raça escrita de dois jeitos. Sem a raça, dois FILHOts de mesmo nome viram um só na planilha e no dashboard.</div>
         </div>
         <div style="margin-top:8px"><label class="cad-lb">É macho ou fêmea?</label>
           <div class="orc-temp" id="orcAvSexo" style="grid-template-columns:1fr 1fr">
@@ -5900,12 +5900,72 @@
     'Bichon Frisé','Bichon Havanês','Buldogue Francês','Chihuahua','Pequinês','Papillon','Bolonhês',
     'Coton de Tuléar','King Charles Spaniel','Terrier Tibetano','Spaniel Tibetano','Crista Chinês',
     'Pinscher','Dachshund (Salsicha)','Fox Paulistinha','Cocker Spaniel'];
-  document.getElementById('racasList').innerHTML = RACAS.map(r=>`<option value="${r}">`).join('');
+  // As raças do cadastro do Day Care (6.23) moram À PARTE: o RACAS também decide, em ehRacaLike,
+  // o que é raça e o que é tutor numa linha da planilha — e a foto de quem. Misturar as duas
+  // mudaria esse resultado só no aparelho que abriu o orçamento (QA63).
+  var RACAS_CADASTRO=[];
+  // A lista da tela, num lugar só e com o texto escapado: raça com aspas ou HTML não quebra a
+  // lista nem vira código (QA63).
+  function racasListaRender(){
+    try{
+      var el=document.getElementById('racasList'); if(!el) return;
+      // Sem repetir: a mesma raça vinda do cadastro e depois da planilha aparece uma vez só (QA64).
+      var visto={}, lista=RACAS.concat(RACAS_CADASTRO).filter(function(r){ var k=racaChave(r); if(!k || visto[k]) return false; visto[k]=1; return true; });
+      el.innerHTML=lista.map(function(r){ return '<option value="'+escAttr(r)+'">'; }).join('');
+    }catch(e){} /* silencioso de propósito: sem a lista, o campo continua aceitando o que for digitado */
+  }
+  racasListaRender();
+  // ===== A RAÇA CERTA, SEM ERRO DE DIGITAÇÃO (Adriana, 01/out/2026) ======================
+  // "Ter as principais raças que a gente trabalha já pré-cadastradas, para quando começar a
+  //  digitar, para não digitarem errado. Dachshund, Westie, Spitz, Poodle, York, Shih Tzu,
+  //  Maltês, SRD — tudo que já tem cadastrado no Day Care." A chave compara sem maiúscula,
+  // acento, espaço ou hífen; os apelidos da casa levam ao nome da lista.
+  function racaChave(r){ return String(r==null?'':r).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+  var RACA_APELIDOS={
+    'West Terrier':['westie','west','westterrier','westhighland','westhighlandterrier','westhighlandwhiteterrier'],
+    'Yorkshire':['york','yorkie','yorky','yorkshireterrier'],
+    'Dachshund (Salsicha)':['dachshund','salsicha','teckel','daschund','dachsund','dashund','dashhound','dachshound','daxhund'],
+    'Spitz Alemão (Lulu da Pomerânia)':['spitz','spitzalemao','lulu','luludapomerania','pomerania','spitzalemaoanao'],
+    'SRD (vira-lata)':['srd','viralata','semracadefinida'],
+    'Shih Tzu':['shihtzu','shitzu','shitsu','shihtsu','shizu'],
+    'Maltês':['maltes','maltese'],
+    // Grafias curtas do próprio cadastro (QA63): sem elas, "Lhasa" virava uma raça nova.
+    'Lhasa Apso':['lhasa','lhasaapso','lasa','lhasapso'],
+    'Cocker Spaniel':['cocker','cockerspaniel','cockerspanielingles','cockeringles'],
+    'Cavalier King Charles':['cavalier','cavalierkingcharles','cavalierkingcharlesspaniel'],
+    'Jack Russell Terrier':['jackrussell','jackrusselterrier','jackrussel'],
+    'Norfolk Terrier':['norfolk'],
+    'Pastor de Shetland':['shetland','sheltie','pastorshetland'],
+    'Shiba':['shibainu','shiba'],
+    'Buldogue Francês':['bulldogfrances','buldoguefrances','frenchbulldog']
+  };
+  // O nome da LISTA para o que foi digitado — '' quando não está na lista (nem como apelido).
+  function racaCanonica(txt){
+    var k=racaChave(txt); if(!k) return '';
+    var nomes=Object.keys(RACA_APELIDOS);
+    for(var i=0;i<nomes.length;i++){ if(RACA_APELIDOS[nomes[i]].indexOf(k)>=0) return nomes[i]; }
+    var todas=RACAS.concat(RACAS_CADASTRO);
+    for(var j=0;j<todas.length;j++){ if(racaChave(todas[j])===k) return todas[j]; }
+    // "SRD" para "SRD (vira-lata)": o nome sem o que vem entre parênteses também vale
+    for(var m=0;m<todas.length;m++){ var sem=String(todas[m]).replace(/\s*\(.*\)\s*/g,''); if(sem && racaChave(sem)===k) return todas[m]; }
+    return '';
+  }
+  // As raças do cadastro do Day Care entram na lista — sem repetir a mesma raça com outra grafia.
+  function orcRacasAtualizar(){
+    try{
+      var novas=[];
+      (typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS) ? PELUDINHOS : []).forEach(function(p){
+        var r=String(((typeof pelGet==='function')?pelGet(p,'raca'):'')||(p&&p.raca)||'').trim();
+        if(r && !racaCanonica(r) && novas.every(function(x){ return racaChave(x)!==racaChave(r); })) novas.push(r);
+      });
+      if(novas.length){ RACAS_CADASTRO=RACAS_CADASTRO.concat(novas); racasListaRender(); }
+    }catch(e){} /* silencioso de propósito: sem o cadastro carregado, a lista da casa continua valendo */
+  }
   // Raça que vier da planilha e ainda não estiver no banco → acrescenta sozinha
   function addRacasAoBanco(novas){
     const set=new Set(RACAS.map(r=>r.toLowerCase())); let mudou=false;
     (novas||[]).forEach(r=>{ const v=(r||'').trim(); if(v && !set.has(v.toLowerCase())){ RACAS.push(v); set.add(v.toLowerCase()); mudou=true; } });
-    if(mudou) document.getElementById('racasList').innerHTML = RACAS.map(r=>`<option value="${r}">`).join('');
+    if(mudou) racasListaRender();
   }
 
   // Persistência LOCAL no navegador (para testar hoje, antes do cofre).
@@ -13748,14 +13808,26 @@
       return b.charAt(0).toLocaleUpperCase('pt-BR')+b.slice(1);
     }).join(' ');
   }
-  function orcAddAvulso(){
+  async function orcAddAvulso(){
     var n=nomeProprio(((document.getElementById('orcAvNome')||{}).value||''));
     var t=nomeProprio(((document.getElementById('orcAvTutor')||{}).value||''));
     // A raça é obrigatória para cliente novo (Adriana, 22/ago/2026): é ela que separa a Maya
     // da Carolina da Maya da Luciana na planilha, no dashboard e no cadastro que vem depois.
-    var r=nomeProprio(((document.getElementById('orcAvRaca')||{}).value||''));
+    var rDig=String(((document.getElementById('orcAvRaca')||{}).value||'')).trim();
     if(!n||!t){ alert('Escreva o nome do peludinho e o nome do tutor.'); return; }
-    if(!r){ alert('Falta a raça. Ela é obrigatória para cliente novo — sem ela, dois FILHOts de mesmo nome viram um só.'); try{ document.getElementById('orcAvRaca').focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ return; }
+    if(!rDig){ alert('Falta a raça. Ela é obrigatória para cliente novo — sem ela, dois FILHOts de mesmo nome viram um só.'); try{ document.getElementById('orcAvRaca').focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ return; }
+    // A GRAFIA DA LISTA (01/out/2026): "westie" entra como West Terrier, "shitzu" como Shih Tzu.
+    // Fora da lista, pergunta — raça rara não fica bloqueada, mas o erro de digitação não passa calado.
+    var r=racaCanonica(rDig);
+    if(!r){
+      var usar=true;
+      if(typeof zPergunta==='function') usar=await zPergunta('A RAÇA "'+rDig+'" NÃO ESTÁ NA LISTA',
+        ['Confira a escrita: a lista evita a mesma raça escrita de dois jeitos na planilha e no cadastro.',
+         'Se a raça é essa mesmo, toque em "Usar assim mesmo".'],
+        {sim:'Usar assim mesmo', nao:'Corrigir'});
+      if(!usar){ try{ document.getElementById('orcAvRaca').focus(); }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não muda dado nenhum */ return; }
+      r=nomeProprio(rDig);
+    }
     var key='avulso__'+jsNorm(n)+'__'+jsNorm(t);
     if(ORC_SEL.some(function(s){ return s.key===key; })){ alert('Ele já está neste orçamento.'); return; }
     ORC_SEL.push({key:key, nome:n, tutor:t, raca:r, dias:[], planoKey:'', rotulo:'sem plano', compromisso:'',
@@ -16657,7 +16729,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-01-02';
+  const APP_VERSAO='2026-10-01-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;

@@ -5619,7 +5619,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
-  assert.ok(/const APP_VERSAO='2026-10-01-0[12]';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-01-0[123]';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -5715,6 +5715,116 @@ prova('"Renovação confirmada": o prazo, "da Amora", a frequência por extenso 
 prova('vocabulário da marca nas duas mensagens (Zêluz, Day Care, Auaulândia; nada de "cachorro", "cão", "animal", "dono")', () => {
   const ms = [msg622('msgPlanoFinalizou', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } }), msg622('msgRenovado', NELSON, { sexo: 'Macho', renov: { plano: 'Silver' } })];
   ms.forEach((m) => { assert.ok(!/cachorro|\bcão\b|\bcães\b|animal|bicho|\bdono\b|Zeluz|Zéluz/i.test(m), m); });
+});
+// ================================================================== 6.23 — a raça da lista no orçamento
+console.log('\n6.23 — Orçamento: a raça de quem nunca hospedou vem da lista, sem erro de digitação (Adriana, 01/out/2026)');
+prova('a grafia da lista: maiúscula, acento, espaço e hífen não importam; os apelidos da casa levam ao nome certo', () => {
+  const c = (t) => run(`racaCanonica(${JSON.stringify(t)})`);
+  igual([c('westie'), c('WEST TERRIER'), c('West'), c('york'), c('Yorkie'), c('Dash Hound'), c('salsicha'), c('Dachshund')],
+    ['West Terrier', 'West Terrier', 'West Terrier', 'Yorkshire', 'Yorkshire', 'Dachshund (Salsicha)', 'Dachshund (Salsicha)', 'Dachshund (Salsicha)']);
+  igual([c('Spitz'), c('lulu da pomerânia'), c('spitz alemão (lulu da pomerânia)'), c('srd'), c('vira-lata'), c('Shih-Tzu'), c('shitzu'), c('maltes'), c('Maltês')],
+    ['Spitz Alemão (Lulu da Pomerânia)', 'Spitz Alemão (Lulu da Pomerânia)', 'Spitz Alemão (Lulu da Pomerânia)', 'SRD (vira-lata)', 'SRD (vira-lata)', 'Shih Tzu', 'Shih Tzu', 'Maltês', 'Maltês']);
+  igual([c('poodle'), c('Lhasa Apso'), c('pug'), c('Spitz Alemão'), c('Labradorr'), c(''), c('   ')],
+    ['Poodle', 'Lhasa Apso', 'Pug', 'Spitz Alemão (Lulu da Pomerânia)', '', '', '']);
+  // QA63 A4: raças parecidas NÃO viram a raça errada — perguntam
+  igual([c('maltipoo'), c('spitz japonês'), c('Biewer Yorkshire'), c('yorkipoo'), c('Shih-poo'), c('Pastor Alemão')], ['', '', '', '', '', '']);
+  // o nome sem o que vem entre parênteses também vale (raça com parênteses e sem apelido)
+  run("__n623p=RACAS.length; RACAS.push('Poodle Toy (miniatura)');");
+  try { igual([c('poodle toy'), c('Poodle-Toy')], ['Poodle Toy (miniatura)', 'Poodle Toy (miniatura)']); }
+  finally { run('RACAS.length=__n623p;'); }
+  // as raças que ela citou estão todas na lista da casa
+  ['Dachshund (Salsicha)', 'West Terrier', 'Spitz Alemão (Lulu da Pomerânia)', 'Poodle', 'Yorkshire', 'Shih Tzu', 'Maltês', 'SRD (vira-lata)']
+    .forEach((r) => assert.ok(run('RACAS').indexOf(r) >= 0, r));
+});
+prova('as raças do cadastro do Day Care entram na lista, sem repetir a mesma raça com outra grafia', () => {
+  run(`__bk623={P:PELUDINHOS, pg:pelGet, n:RACAS.length, rc:RACAS_CADASTRO, ge:document.getElementById}; RACAS_CADASTRO=[];
+    __dl623={innerHTML:''}; document.getElementById=function(id){ return id==='racasList'?__dl623:null; };
+    pelGet=function(p,c){ return c==='raca'?(p.raca||''):''; };
+    PELUDINHOS=[{n:'A', raca:'Shitzu'}, {n:'B', raca:'Golden Retriever'}, {n:'C', raca:'golden retriever'}, {n:'D', raca:'Beagle'}, {n:'E', raca:''}, {n:'F', raca:'West Terrier'}];`);
+  try {
+    run('orcRacasAtualizar(); orcRacasAtualizar();');
+    const novas = JSON.parse(JSON.stringify(run('RACAS_CADASTRO')));
+    igual(novas, ['Golden Retriever', 'Beagle'], 'só as que ainda não têm nome na lista, uma vez cada');
+    assert.strictEqual(run('RACAS.length'), run('__bk623.n'), 'o RACAS da casa não muda (QA63 A2)');
+    igual(run("racaCanonica('golden retriever')"), 'Golden Retriever', 'a do cadastro vale como da lista');
+    assert.ok(/<option value="Golden Retriever">/.test(run('__dl623.innerHTML')) && /<option value="West Terrier">/.test(run('__dl623.innerHTML')), 'a lista da tela foi refeita');
+  } finally { run('RACAS.length=__bk623.n; RACAS_CADASTRO=__bk623.rc; PELUDINHOS=__bk623.P; pelGet=__bk623.pg; document.getElementById=__bk623.ge;'); }
+});
+prova('QA63 — o cadastro de fábrica (118 FILHOts): nenhuma grafia curta de raça que já está na lista vira sugestão', () => {
+  run(`__bk623f={rc:RACAS_CADASTRO, n:RACAS.length}; RACAS_CADASTRO=[];`);
+  try {
+    run('orcRacasAtualizar()');
+    const novas = JSON.parse(JSON.stringify(run('RACAS_CADASTRO')));
+    ['Lhasa', 'Cocker', 'Cavalier', 'Jack Russell', 'Norfolk', 'Shetland', 'Shiba Inu', 'Westie', 'Shitzu', 'York', 'Spitz', 'SRD']
+      .forEach((r) => assert.ok(novas.every((x) => run(`racaChave(${JSON.stringify(x)})===racaChave(${JSON.stringify(r)})`) === false), r + ' virou sugestão: ' + JSON.stringify(novas)));
+    const c = (t) => run(`racaCanonica(${JSON.stringify(t)})`);
+    igual([c('Lhasa'), c('Cocker'), c('Cavalier'), c('Jack Russell'), c('Norfolk'), c('Shetland'), c('Sheltie'), c('Shiba Inu'), c('bulldog francês')],
+      ['Lhasa Apso', 'Cocker Spaniel', 'Cavalier King Charles', 'Jack Russell Terrier', 'Norfolk Terrier', 'Pastor de Shetland', 'Pastor de Shetland', 'Shiba', 'Buldogue Francês']);
+  } finally { run('RACAS_CADASTRO=__bk623f.rc; RACAS.length=__bk623f.n;'); }
+});
+prova('QA63 — a raça do cadastro não muda o que o app entende como tutor (ehRacaLike) nem quebra a lista (escape)', () => {
+  run(`__bk623g={P:PELUDINHOS, pg:pelGet, rc:RACAS_CADASTRO, ge:document.getElementById};
+    __dl623g={innerHTML:''}; document.getElementById=function(id){ return id==='racasList'?__dl623g:null; };
+    pelGet=function(p,c){ return c==='raca'?(p.raca||''):''; }; RACAS_CADASTRO=[];`);
+  try {
+    const antes = run("ehRacaLike('Herminia')");
+    run(`PELUDINHOS=[{n:'Zuzuxa', raca:'Mini Poodle'}, {n:'X', raca:'"><img src=x onerror=alert(1)>'}, {n:'Y', raca:'Lulu "Anã"'}]; orcRacasAtualizar();`);
+    assert.strictEqual(run("ehRacaLike('Herminia')"), antes, 'o tutor continua tutor');
+    const html = run('__dl623g.innerHTML');
+    assert.ok(!/<img/.test(html) && /<option value="&quot;>&lt;img src=x onerror=alert\(1\)>">/.test(html), 'HTML escapado: ' + html.slice(-300));
+    assert.ok(/<option value="Lulu &quot;Anã&quot;">/.test(html), 'aspas não cortam a sugestão');
+  } finally { run('PELUDINHOS=__bk623g.P; pelGet=__bk623g.pg; RACAS_CADASTRO=__bk623g.rc; document.getElementById=__bk623g.ge;'); }
+});
+provaAsync('"Acrescentar ao orçamento": a grafia da lista entra sozinha; fora da lista, pergunta (Corrigir ou Usar assim mesmo)', async () => {
+  run(`__bk623b={ge:document.getElementById, zp:zPergunta, sel:ORC_SEL, nc:orcNovoComecou, rs:orcRenderSel, oc:orcCalcular, ss:orcAvSexoSet};
+    __campos623={orcAvNome:{value:''}, orcAvTutor:{value:''}, orcAvRaca:{value:'', focus:function(){ __foco623++; }}};
+    __foco623=0; __perg623=[]; __resp623=true;
+    document.getElementById=function(id){ return __campos623[id]||null; };
+    zPergunta=function(t){ __perg623.push(t); return Promise.resolve(__resp623); };
+    ORC_SEL=[]; orcNovoComecou=function(){}; orcRenderSel=function(){}; orcCalcular=function(){}; orcAvSexoSet=function(){};`);
+  const add = async (nome, raca, resp) => {
+    run(`__campos623.orcAvNome.value=${JSON.stringify(nome)}; __campos623.orcAvTutor.value='Renata'; __campos623.orcAvRaca.value=${JSON.stringify(raca)}; __resp623=${resp === undefined ? 'true' : resp}; __perg623=[];`);
+    await run('orcAddAvulso()');
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    return { racas: JSON.parse(JSON.stringify(run('ORC_SEL.map(function(x){ return x.raca; })'))), perg: JSON.parse(JSON.stringify(run('__perg623'))) };
+  };
+  try {
+    let r = await add('Thor', 'westie');
+    igual(r, { racas: ['West Terrier'], perg: [] }, 'westie → West Terrier, sem pergunta');
+    r = await add('Mel', 'spitz alemão (lulu da pomerânia)');
+    igual(r.racas[1], 'Spitz Alemão (Lulu da Pomerânia)', 'a grafia da lista, com os parênteses certos');
+    r = await add('Bob', 'Labradorr', false);
+    igual(r, { racas: ['West Terrier', 'Spitz Alemão (Lulu da Pomerânia)'], perg: ['A RAÇA "Labradorr" NÃO ESTÁ NA LISTA'] }, 'Corrigir: nada entra');
+    assert.ok(run('__foco623') >= 1, 'o cursor volta para a raça');
+    r = await add('Bob', 'cane corso', true);
+    igual(r.racas[2], 'Cane Corso', 'Usar assim mesmo: entra como foi escrita');
+    r = await add('Zeca', '', true);
+    igual(r.racas.length, 3, 'sem raça: continua obrigatória');
+  } finally { run('document.getElementById=__bk623b.ge; zPergunta=__bk623b.zp; ORC_SEL=__bk623b.sel; orcNovoComecou=__bk623b.nc; orcRenderSel=__bk623b.rs; orcCalcular=__bk623b.oc; orcAvSexoSet=__bk623b.ss;'); }
+});
+prova('QA64 — a lista de raças já nasce pronta ao abrir o app, sem repetição; as raças da planilha continuam no RACAS (separação raça × tutor)', () => {
+  // N1: um aparelho novo, com a lista da tela capturada desde o carregamento
+  const sb = makeSandbox(); const dl = { innerHTML: '' };
+  const ge = sb.document.getElementById; sb.document.getElementById = function (id) { return id === 'racasList' ? dl : ge.call(this, id); };
+  const ctx2 = vm.createContext(sb);
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx2, { timeout: 20000 });
+  const n = (dl.innerHTML.match(/<option /g) || []).length;
+  assert.ok(n >= 30 && /<option value="West Terrier">/.test(dl.innerHTML), 'a lista da casa na tela desde o começo: ' + n);
+  // N2: a planilha continua alimentando o RACAS (e o ehRacaLike)
+  run(`__bk623h={n:RACAS.length, rc:RACAS_CADASTRO, ge:document.getElementById}; __dl623h={innerHTML:''};
+    document.getElementById=function(id){ return id==='racasList'?__dl623h:null; };`);
+  try {
+    assert.strictEqual(run("ehRacaLike('Xoloitzcuintle')"), false);
+    run("addRacasAoBanco(['Xoloitzcuintle'])");
+    assert.ok(run("RACAS.indexOf('Xoloitzcuintle')>=0") && run("ehRacaLike('Xoloitzcuintle')") === true, 'a raça da planilha vale para separar raça × tutor');
+    // N4: a mesma raça no cadastro e na planilha aparece uma vez só na tela
+    run("RACAS_CADASTRO=['Golden Retriever']; addRacasAoBanco(['golden retriever']);");
+    assert.strictEqual((run('__dl623h.innerHTML').match(/value="golden retriever"|value="Golden Retriever"/gi) || []).length, 1, 'sem repetição');
+  } finally { run('RACAS.length=__bk623h.n; RACAS_CADASTRO=__bk623h.rc; document.getElementById=__bk623h.ge;'); }
+});
+prova('o campo de raça do "Nunca hospedou?" usa a lista da casa (e a atualiza ao tocar)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/<input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar\(\)">/.test(src));
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
