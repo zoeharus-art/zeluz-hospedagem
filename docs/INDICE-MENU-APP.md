@@ -1,6 +1,26 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 01/out/2026 (v 2026-10-01-01) — o dia virou: o aparelho aberto desde ontem não lança a turma errada
+
+> **Adriana, 01/out/2026 (quinta), 7h50:** *"Acabei de lançar em banhos recorrentes um banho para o Nock da Claudia toda quinta às 17hs. E não apareceu no Dashboard; a Lana da Marcela também tem banho hoje recorrente e não está no lançamento do dia."* Story 6.21.
+
+### (Z) O aparelho sabe que o dia virou
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| O banho fixo de quinta não ia para a planilha, e o que outro aparelho tinha posto **saía** dela (Lana sumiu dos Lançamentos do dia) | o celular que volta do bolso e o computador ligado a noite toda não recarregam a página; o dia da semana do Day Care (`HOJE_DIA`) é calculado uma vez, ao abrir. Na quinta, o aparelho aberto na quarta montava a turma de **quarta** | o app guarda a data em que abriu (`APP_DIA_ABERTO`). Quando ela deixa de ser a de hoje, **o aparelho se atualiza sozinho**: o que ficou aberto à noite já está trancado (a tela tranca em 5 minutos sem toque, menos na tela do almoço) e atualiza logo depois da meia-noite; o celular que volta do bolso depois de 3 minutos ou mais fora atualiza na hora, antes do primeiro toque. Com alguém usando, aparece a faixa do topo **"O dia virou — toque para atualizar"**, e ele atualiza assim que ficar parado (a mesma regra da versão nova). **Nunca** com alarme na tela (o de remédio das 23h55 que ninguém respondeu), check-in aberto (corpo, pertences, ou a ficha da hospedagem na tela com algo ainda não salvo), almoço ou sem internet; no computador, voltar à aba só acende a faixa. Tocar na faixa com um check-in aberto ou sem internet também não atualiza: o app diz o que fazer |
+| No aparelho aberto desde ontem, a fotografia da turma das 7h e a **falta automática das 12h** usavam a turma de ontem | a mesma conta (`turmaDeHoje()` com o `HOJE_DIA` velho) | enquanto não recarrega, esse aparelho **não grava nada do dia**: nem a planilha, nem a fotografia da turma, nem a falta automática. Os outros aparelhos gravam. O botão **Conferir a planilha agora** e o **Mandar agora** dizem "este aparelho ainda está com o dia 30/09: toque na faixa do topo para atualizar" |
+| Com o Day Care aberto na aba de outro dia (ex.: sexta), a planilha de hoje saía com a turma de sexta | a conta de hoje lia a aba (`turmaDoDia()`), não o dia | a conta de hoje usa a turma de **hoje**, qualquer que seja a aba (`turmaDeHoje()`, a mesma porta da falta automática desde 11/ago) |
+| O banho dos próximos 14 dias saía pelos dias do cadastro importado | o motor lia `p.dias` | lê os dias da **ficha** (`pelDias`), os mesmos do Day Care |
+| Banho fixo combinado num dia em que, pela ficha, o FILHOt não vem ao Day Care sumia calado | o motor só lança o banho de quem vem naquele dia, e a linha não avisava | a linha de **Banhos recorrentes** avisa: "Pela ficha, Nock não vem ao Day Care na quinta (vem: …). O app só lança o banho fixo em dia de Day Care. Se vem só para o banho, lance à mão nos Lançamentos do dia; se passou a vir ao Day Care na quinta, marque a quinta nos dias da ficha." (Marcar a quinta para quem vem só para o banho faria a falta das 12h tirar o banho da planilha.) Nada muda no que é gravado |
+
+- **Ninguém precisa mais fechar e abrir o app** nem tocar em "Conferir a planilha agora": depois de atualizado, o aparelho confere a planilha sozinho (em até 5 minutos; 20 segundos depois de salvar um banho fixo).
+- **O "Salvo" do banho fixo** num aparelho ainda com o dia de ontem diz: "Salvo. Este aparelho ainda está com o dia 30/09 e se atualiza sozinho quando ficar parado; aí a planilha se acerta. Para ser agora, toque na faixa do topo."
+- **Fica para decisão da Adriana:** lançar o banho fixo de quem vem **só para o banho** naquele dia (sem Day Care).
+- **Onde está no código:** `APP_DIA_ABERTO`, `appDiaVelho`, `appDiaVelhoData`, `appDiaVelhoTexto`, `zDiaCheckinAberto`, `zDiaTrabalhoAberto`, `zViradaDoDiaTick`, `zViradaDoDiaVisibilidade`, `zFaixaVersao`, `zMotivoParado` (alarme na tela não é "parado", também para a versão nova), `zRecargaQuandoParado` (com o dia velho, a recarga da versão fica com o vigia do dia), `aplicarVersaoNova` (o toque na faixa com o dia velho avisa em vez de atualizar), `repMandarAgora`, travas em `dashAutoSincronizar`, `dashAutoRodar`, `gravarTurmaDoDia`, `aplicarFaltaAutomatica`; `dashAutoCalcular` (hoje com `turmaDeHoje`), `dashAutoVemNoDia` (`pelDias`), `banhosAvisoDiaSemDaycare`, `banhosSalvar`, `banhosGravarExcecao`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (13 provas da 6.21; 45 defeitos plantados, 45 pegos). O `tests/harness.js` passou a dizer, nos cenários com relógio de mentira, que o aparelho abriu no dia simulado.
 
 ## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê; renovação paga antes do fim do plano
 
