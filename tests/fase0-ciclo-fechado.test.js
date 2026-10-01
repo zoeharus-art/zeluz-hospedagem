@@ -4785,6 +4785,522 @@ prova('o botão escolhido na faixa "Confirme com o tutor" tem fundo de cor e let
     igual([run('__btsCF[0].textContent'), run('__btsCF[1].textContent')], ['Confirmado', '✓ Mudou']);
   } finally { run('canEditCheckinMed=__bkCF.cp; quemSou=__bkCF.qs;'); }
 });
+// ================================================================== 6.19 — quem pode ver o quê
+console.log('\n6.19 — a tela liberada no Time aparece, abre e vale na hora (Adriana, 30/set/2026)');
+// O menu lido do HTML como o navegador o monta: gaveta dentro de gaveta, com o nome de cada uma.
+function menuDoHtml(src) {
+  const ini = src.indexOf('id="nav"'), fim = src.indexOf('</nav>', ini);
+  const nav = src.slice(ini, fim).replace(/<!--[\s\S]*?-->/g, '');
+  const RE = /<div class="nav-rotulo">([^<]*)<\/div>|<div\b([^>]*)>|<\/div>|<a\b([^>]*)>([\s\S]*?)<\/a>/g;
+  const pilha = [], itens = [];
+  const rotulo = (html) => { const sp = html.match(/<span>([^<]+)<\/span>/g) || []; return sp.length ? sp[sp.length - 1].replace(/<\/?span>/g, '') : ''; };
+  let m;
+  while ((m = RE.exec(nav)) !== null) {
+    if (m[1] !== undefined) { const acc = pilha.filter((e) => e.acc).pop(); if (acc) acc.rotulo = m[1].trim(); continue; }
+    if (m[2] !== undefined) { pilha.push({ acc: /\bclass="acc(\s|")/.test(m[2]), head: null, rotulo: null }); continue; }
+    if (m[0] === '</div>') { pilha.pop(); continue; }
+    const attrs = m[3] || '', txt = rotulo(m[4] || '');
+    if (/\bclass="grp\b/.test(attrs)) { const acc = pilha.filter((e) => e.acc).pop(); if (acc) acc.head = txt; continue; }
+    const v = (/data-v="([^"]+)"/.exec(attrs) || [])[1];
+    if (!v) continue;
+    const caminho = pilha.filter((e) => e.acc && e.head).map((e) => e.head);
+    const dentro = pilha.filter((e) => e.acc).pop();
+    const grupo = !caminho.length ? txt : ((dentro && dentro.rotulo) ? caminho[0] + ' · ' + dentro.rotulo : caminho.join(' · '));
+    itens.push({ k: v, t: txt, grupo });
+  }
+  return itens;
+}
+const SRC619 = fs.readFileSync(APP, 'utf8');
+const MENU619 = menuDoHtml(SRC619);
+const NAV619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_ALL)'));
+const CHAVES619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_KEYS)'));
+// O que está no menu e NÃO se concede pelo Time — cada um tem de estar DITO na tela do Time.
+const FORA619 = { inicio: 'Início', mesa: 'O que fazer hoje', painelmeu: 'Meu Dashboard', consultoras: 'das Consultoras',
+  'painel-amanda': 'da Amanda', paineloperacao: 'da Márcia', 'painel-diretoria': 'da Adriana', planodia: 'Escala e plano do dia',
+  acerto: 'Financeiro do plantão', config: 'Configurações (senhas do sistema)', abertura: 'Abertura do dia', agenda: 'Agenda (em breve)' };
+prova('o leitor do menu enxerga o menu de verdade (Lançamentos do dia mora em Central Zêluz › Day Care)', () => {
+  const d = MENU619.find((x) => x.k === 'dashdc');
+  assert.ok(MENU619.length >= 35 && d && d.t === 'Lançamentos do dia' && d.grupo === 'Central Zêluz · Day Care', JSON.stringify(d));
+  assert.strictEqual(MENU619.find((x) => x.k === 'renovacao').grupo, 'Central Zêluz · Planos e cobranças');
+  assert.strictEqual(MENU619.find((x) => x.k === 'relatorios').grupo, 'Relatórios');
+});
+prova('Lançamentos do dia, Prevenção, Peso, Banhos recorrentes e as outras 4 telas agora se concedem pelo Time', () => {
+  ['dashdc', 'vacinas', 'peso', 'banhos', 'alergia', 'gestdia', 'eahist', 'ritmo'].forEach((k) => assert.ok(CHAVES619.indexOf(k) >= 0, k));
+});
+prova('cada tela do Time está na MESMA gaveta e com o MESMO nome que no menu', () => {
+  const erradas = [];
+  NAV619.forEach((g) => (g.itens || []).forEach((it) => {
+    const doMenu = MENU619.find((x) => x.k === it.k);
+    if (!doMenu) erradas.push(it.k + ': não está no menu');
+    else if (doMenu.t !== it.t || doMenu.grupo !== g.grp) erradas.push(it.k + ': Time "' + g.grp + ' › ' + it.t + '" × menu "' + doMenu.grupo + ' › ' + doMenu.t + '"');
+  }));
+  assert.deepStrictEqual(erradas, []);
+});
+prova('a lista do Time segue a ORDEM do menu, de cima para baixo', () => {
+  const doMenu = MENU619.map((x) => x.k).filter((k) => CHAVES619.indexOf(k) >= 0);
+  assert.deepStrictEqual(CHAVES619, doMenu);
+});
+prova('as atividades do Day Care aparecem no Time na gaveta em que o menu as mostra (a da Abertura do dia)', () => {
+  const g = NAV619.find((x) => x.atividades);
+  assert.ok(g && g.grp === MENU619.find((x) => x.k === 'abertura').grupo, JSON.stringify(g));
+  const ordem = NAV619.map((x) => x.grp);
+  assert.ok(ordem.indexOf(g.grp) === ordem.indexOf('Ecossistema Daycare · AuAulândia') + 1, JSON.stringify(ordem));
+});
+prova('NENHUMA tela do menu fica de fora sem aviso: ou se concede, ou a tela do Time diz que não se concede', () => {
+  const fora = run('NAV_PAGINAS_FORA');
+  const soltas = MENU619.map((x) => x.k).filter((k) => k !== 'sair' && CHAVES619.indexOf(k) < 0 && !FORA619[k]);
+  assert.deepStrictEqual(soltas, [], 'tela nova no menu precisa entrar no Time ou em NAV_PAGINAS_FORA');
+  Object.keys(FORA619).forEach((k) => {
+    assert.ok(MENU619.some((x) => x.k === k), k + ' ainda existe no menu');
+    assert.ok(fora.indexOf(FORA619[k]) >= 0, k + ': "' + FORA619[k] + '" dito na tela do Time');
+  });
+});
+prova('as telas novas SÓ LIBERAM; as 20 antigas continuam com a regra de sempre', () => {
+  const so = JSON.parse(run('JSON.stringify(NAV_PAGINAS_SO_LIBERA)'));
+  assert.deepStrictEqual(so.slice().sort(), ['alergia', 'banhos', 'dashdc', 'eahist', 'gestdia', 'peso', 'ritmo', 'vacinas']);
+  so.forEach((k) => assert.ok(CHAVES619.indexOf(k) >= 0, k));
+});
+// ---- a conta da porta: papel OU tela liberada
+const comUsuario = (u, papel, fn) => {
+  ctx.__u619 = u; const papelAntes = ctx.document.body.dataset.role;
+  run('__bk619u = usuarioAtual; usuarioAtual = function(){ return __u619; };');
+  ctx.document.body.dataset.role = papel;
+  try { return fn(); } finally { run('usuarioAtual = __bk619u;'); ctx.document.body.dataset.role = papelAntes; }
+};
+prova('a veterinária com Hoje na Zêluz liberado passa pela porta do Hoje — e só dele', () => comUsuario({ role: 'vet', paginas: ['hoje', 'dashdc'] }, 'vet', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','hoje')"), true);
+  assert.strictEqual(run("podeTela('hoje-na-casa','contatos')"), false);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), false);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), false);
+}));
+prova('Quem chamar hoje, Pendências e Vencimentos liberados abrem; e quem fala com o tutor vê a conversa na ficha', () => comUsuario({ role: 'vet', paginas: ['contatos', 'pendencias', 'vencimentos'] }, 'vet', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','contatos')"), true);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), true);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), true);
+  assert.strictEqual(run('fichaTutorPode()'), true);
+  assert.strictEqual(run('turmaPodeBaixar()'), true);
+}));
+prova('sem nada liberado, a veterinária continua fora (e o telefone do tutor não sai no arquivo da turma)', () => comUsuario({ role: 'vet', paginas: ['cuidadovet'] }, 'vet', () => {
+  ['hoje', 'contatos'].forEach((k) => assert.strictEqual(run("podeTela('hoje-na-casa','" + k + "')"), false, k));
+  assert.strictEqual(run('fichaTutorPode()'), false);
+  assert.strictEqual(run('turmaPodeBaixar()'), false);
+}));
+prova('o papel continua sendo o piso: a consultora com a lista vazia no Time abre as quatro telas', () => comUsuario({ role: 'consultora', paginas: [] }, 'consultora', () => {
+  assert.strictEqual(run("podeTela('hoje-na-casa','hoje')"), true);
+  assert.strictEqual(run("podeTela('pendencias-prevencao','pendencias')"), true);
+  assert.strictEqual(run("podeTela('vencimentos-amanha','vencimentos')"), true);
+}));
+prova('a porta de cada tela faz a conta nova (e nenhuma ficou conferindo só o papel)', () => {
+  const corpo = (nome) => { const i = SRC619.indexOf('function ' + nome + '('); return SRC619.slice(i, SRC619.indexOf('\n  function ', i + 10)); };
+  assert.ok(/!podeTela\('hoje-na-casa','hoje'\)/.test(corpo('hojeAbrir')), 'hojeAbrir');
+  assert.ok(/!podeTela\('hoje-na-casa','contatos'\)/.test(corpo('contatosAbrir')), 'contatosAbrir');
+  assert.ok(/!podeTela\('pendencias-prevencao','pendencias'\)/.test(corpo('pendAbrir')), 'pendAbrir');
+  assert.ok(/!podeTela\('vencimentos-amanha','vencimentos'\)/.test(corpo('vencAbrir')), 'vencAbrir');
+  assert.ok(/!podeTela\('vencimentos-amanha','vencimentos'\)\) return;/.test(corpo('vencRender')), 'vencRender');
+  assert.ok(!/!podePapel\('(hoje-na-casa|pendencias-prevencao|vencimentos-amanha)'\)\)\s*(\{|return)/.test(SRC619), 'sobrou porta conferindo só o papel');
+  assert.ok(/a Gestão pode liberá-la para você no Time/.test(corpo('hojeAbrir')), 'quem não pode lê que a Gestão pode liberar');
+});
+prova('a porta da tela barra de verdade quem não tem, e abre para quem recebeu (Hoje, Quem chamar, Pendências, Vencimentos)', () => {
+  const raiz = { innerHTML: '' };
+  const ids = { hojeRoot: 1, contatosRoot: 1, pendRoot: 1, vencRoot: 1 };
+  const bkGE = ctx.document.getElementById;
+  ctx.document.getElementById = function (id) { return ids[id] ? raiz : bkGE.call(this, id); };
+  try {
+    [['hojeAbrir', 'hoje'], ['contatosAbrir', 'contatos'], ['pendAbrir', 'pendencias'], ['vencAbrir', 'vencimentos']].forEach(([fn, k]) => {
+      comUsuario({ role: 'vet', paginas: ['cuidadovet'] }, 'vet', () => { raiz.innerHTML = ''; try { run(fn + '()'); } catch (e) { /* o resto da tela não importa aqui */ } });
+      assert.ok(/Esta tela é da Central Zêluz/.test(raiz.innerHTML), fn + ' sem a tela: barra');
+      comUsuario({ role: 'vet', paginas: ['cuidadovet', k] }, 'vet', () => { raiz.innerHTML = ''; try { run(fn + '()'); } catch (e) { /* o resto da tela não importa aqui */ } });
+      assert.ok(!/Esta tela é da Central Zêluz/.test(raiz.innerHTML), fn + ' com a tela liberada: abre');
+    });
+  } finally { ctx.document.getElementById = bkGE; }
+});
+// ---- o menu: a tela nova SÓ LIBERA, a antiga continua RESTRINGINDO
+const fakeA = (k, css, pai) => ({ dataset: { v: k }, _css: css, _attr: {},
+  style: { _p: {}, setProperty(n, v, i) { this._p[n] = v + (i ? '!' : ''); }, removeProperty(n) { delete this._p[n]; } },
+  setAttribute(n, v) { this._attr[n] = String(v); }, removeAttribute(n) { delete this._attr[n]; },
+  getAttribute(n) { return this._attr[n] === undefined ? (n === 'data-acc-toggle' && pai ? pai : null) : this._attr[n]; },
+  classList: { contains: (c) => (c === 'nav-parent' && !!pai) } });
+const comMenu = (ancoras, fn) => {
+  const bkQSA = ctx.document.querySelectorAll, bkGCS = ctx.getComputedStyle;
+  ctx.document.querySelectorAll = (sel) => { const m = /^#nav a\[data-v="([^"]+)"\]$/.exec(sel); return (m && ancoras[m[1]]) ? [ancoras[m[1]]] : []; };
+  ctx.getComputedStyle = (a) => ({ display: a.style && a.style._p.display ? a.style._p.display.replace('!', '') : (a._css || 'flex') });
+  try { return fn(); } finally { ctx.document.querySelectorAll = bkQSA; ctx.getComputedStyle = bkGCS; }
+};
+prova('consultora com telas marcadas: NÃO perde os Lançamentos do dia nem o Peso no dia da publicação', () => {
+  const A = { checkin: fakeA('checkin', 'flex'), recepcao: fakeA('recepcao', 'flex'), dashdc: fakeA('dashdc', 'flex'), peso: fakeA('peso', 'flex') };
+  comMenu(A, () => { ctx.__uM = { role: 'consultora', paginas: ['checkin'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.checkin.style._p.display, 'flex!');
+  assert.strictEqual(A.recepcao.style._p.display, 'none!', 'tela antiga desmarcada continua escondida (regra de sempre)');
+  assert.strictEqual(A.dashdc.style._p.display, undefined, 'Lançamentos do dia: fica o que o papel mostra');
+  assert.strictEqual(A.peso.style._p.display, undefined, 'Peso: fica o que o papel mostra');
+  assert.ok(!A.checkin._attr['data-concedido'], 'o papel já mostrava o Check-in: não é tela concedida');
+});
+prova('veterinária com Lançamentos do dia liberado: o item aparece e fica marcado como tela CONCEDIDA', () => {
+  const A = { dashdc: fakeA('dashdc', 'none'), cuidadovet: fakeA('cuidadovet', 'flex'), peso: fakeA('peso', 'flex'), hoje: fakeA('hoje', 'none') };
+  comMenu(A, () => { ctx.__uM = { role: 'vet', paginas: ['dashdc', 'cuidadovet'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.dashdc.style._p.display, 'flex!');
+  assert.strictEqual(A.dashdc._attr['data-concedido'], '1');
+  assert.strictEqual(A.cuidadovet.style._p.display, 'flex!');
+  assert.ok(!A.cuidadovet._attr['data-concedido'], 'Cuidado Vet vem do papel');
+  assert.strictEqual(A.peso.style._p.display, undefined, 'o Peso da veterinária continua (vem do papel)');
+  assert.strictEqual(A.hoje.style._p.display, 'none!');
+});
+prova('Gestão e Diretoria: nenhuma marca e nenhuma restrição (voltam ao papel)', () => {
+  const A = { dashdc: fakeA('dashdc', 'flex'), hoje: fakeA('hoje', 'flex') };
+  A.dashdc.style._p.display = 'none!'; A.dashdc._attr['data-concedido'] = '1';
+  comMenu(A, () => { ctx.__uM = { role: 'gestao', paginas: ['hoje'] }; run('aplicarPaginasPessoa(__uM)'); });
+  assert.strictEqual(A.dashdc.style._p.display, undefined);
+  assert.ok(!A.dashdc._attr['data-concedido']);
+});
+// ---- vale na hora
+prova('a Gestão salva o Time: o aparelho da veterinária relê AS TELAS DELA e redesenha o menu, sem sair', () => {
+  run(`__bk619r={ua:usuarioAtual, ap:aplicarPaginasPessoa, pm:aplicarPermMenu, aa:ajustarAcordeoes, as:ajustarSubcabecalhosMenu, pc:permCarregarConcedidas, mon:MONITORES, ra:document.body.removeAttribute};
+    __ch619=[]; aplicarPaginasPessoa=function(u){ __ch619.push('menu:'+JSON.stringify(u.paginas)); }; aplicarPermMenu=function(){ __ch619.push('perm'); };
+    ajustarAcordeoes=function(){ __ch619.push('gavetas'); }; ajustarSubcabecalhosMenu=function(){ __ch619.push('cabecalhos'); }; permCarregarConcedidas=function(){ __ch619.push('contadores'); };
+    document.body.removeAttribute=function(){};
+    __ur619={role:'vet', nome:'Vet Teste', monId:'p1', paginas:['cuidadovet']}; usuarioAtual=function(){ return __ur619; };
+    MONITORES=[{id:'p0', nome:'Outra', paginas:['hoje']}, {id:'p1', nome:'Vet Teste', role:'vet', paginas:['cuidadovet','hoje','dashdc']}];`);
+  try {
+    run('permReaplicarDoTime()');
+    igual(run('__ch619'), ['menu:["cuidadovet","hoje","dashdc"]', 'perm', 'gavetas', 'cabecalhos', 'contadores']);
+    igual(run('__ur619.paginas'), ['cuidadovet', 'hoje', 'dashdc']);
+    run('__ch619=[]; permReaplicarDoTime();');
+    igual(run('__ch619'), [], 'nada mudou para ela: nada é redesenhado');
+    run("MONITORES[1].paginas=['cuidadovet']; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), ['menu:["cuidadovet"]', 'perm', 'gavetas', 'cabecalhos', 'contadores'], 'tirar também vale na hora');
+    run("__ur619={role:'gestao', nome:'G', monId:'p1', paginas:[]}; MONITORES[1].paginas=['hoje']; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'Gestão não é restringida');
+    run("__ur619={role:'vet', nome:'Posto', paginas:[]}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'login de posto (sem cadastro no Time): nada muda');
+    // QA da 6.19 (achado 4): colaborador antigo, sem id no cadastro — acha pelo nome e pelo papel
+    run("MONITORES=[{nome:'Ana Vet', role:'vet', paginas:['cuidadovet','dashdc']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619[0]'), 'menu:["cuidadovet","dashdc"]', 'sem id: acha pelo nome e pelo papel');
+    run("MONITORES=[{nome:'Ana Vet', role:'vet', paginas:['hoje']},{nome:'Ana Vet', role:'vet', paginas:['dashdc']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'dois com o mesmo nome e papel: não adivinha');
+    run("MONITORES=[{nome:'Ana Vet', role:'monitor', paginas:['hoje']}]; __ur619={role:'vet', nome:'Ana Vet', paginas:['cuidadovet']}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'mesmo nome, outro papel: não é ela');
+    run("MONITORES=[{nome:'Recepção', role:'consultora', paginas:['hoje']}]; __ur619={role:'consultora', nome:'Recepção'}; __ch619=[]; permReaplicarDoTime();");
+    igual(run('__ch619'), [], 'senha fixa do sistema (sem lista de telas): nunca vira restrita pelo nome');
+  } finally {
+    run(`usuarioAtual=__bk619r.ua; aplicarPaginasPessoa=__bk619r.ap; aplicarPermMenu=__bk619r.pm; ajustarAcordeoes=__bk619r.aa;
+      ajustarSubcabecalhosMenu=__bk619r.as; permCarregarConcedidas=__bk619r.pc; MONITORES=__bk619r.mon; document.body.removeAttribute=__bk619r.ra;`);
+  }
+});
+prova('o ouvinte do Time chama a releitura, e a entrada com a senha desce os contadores das telas liberadas', () => {
+  assert.ok(/DB\.ref\('daycare\/config\/monitores'\)\.on\('value'[^\n]*permReaplicarDoTime\(\)/.test(SRC619));
+  assert.ok(/podePapel\('hoje-na-casa'\)\) hojeGarantir\(\); \}catch\(e\)\{\}[^\n]*\n[\s\S]{0,300}?try\{ permCarregarConcedidas\(\); \}/.test(SRC619));
+});
+prova('marcar uma tela (ou atividade) no Time avisa "Há mudanças não salvas" — sem salvar, nada vale', () => {
+  run(`__bk619t={mp:monMarcarPendente, mon:MONITORES}; __n619=0; monMarcarPendente=function(){ __n619++; };
+    MONITORES=[{id:'p1', nome:'Vet Teste', role:'vet', paginas:[], atividades:[]}];`);
+  try {
+    run("toggleMonPagina(0,'dashdc')");
+    assert.strictEqual(run('__n619'), 1); igual(run('MONITORES[0].paginas'), ['dashdc']);
+    run("toggleMonAtividade(0,'almoco')");
+    assert.strictEqual(run('__n619'), 2);
+  } finally { run('monMarcarPendente=__bk619t.mp; MONITORES=__bk619t.mon;'); }
+});
+prova('o que o papel já mostra (QA da 6.19): Consultora e Supervisão têm as 12 telas que só liberam; a Veterinária, só o Peso; as 16 antigas nunca "vêm com o papel"', () => {
+  const doPapel = (r) => JSON.parse(run("JSON.stringify(NAV_PAGINAS_KEYS.filter(function(k){ return telaVemDoPapel(k,'" + r + "'); }))"));
+  const DOZE = ['eahist', 'ritmo', 'gestdia', 'hoje', 'contatos', 'banhos', 'dashdc', 'pendencias', 'peso', 'alergia', 'vacinas', 'vencimentos'];
+  igual(doPapel('consultora'), DOZE);
+  igual(doPapel('supervisor'), DOZE);
+  igual(doPapel('vet'), ['peso']);
+  ['monitor', 'plantonista', 'conferencia', 'aprendiz'].forEach((r) => igual(doPapel(r), [], r));
+});
+prova('no Time, a tela que vem com o papel aparece como tal (não apagada) e o resumo "Hoje esta pessoa vê" a inclui', () => {
+  const h = run("permEditInner(0,{nome:'Cons Teste', role:'consultora', paginas:['checkin'], atividades:[]})");
+  assert.ok(/toggleMonPagina\(0,'dashdc'\)">Lançamentos do dia<span[^>]*> · vem com o papel<\/span>/.test(h), 'Lançamentos do dia: vem com o papel');
+  assert.ok(/class="dia on clic" onclick="toggleMonPagina\(0,'checkin'\)">Check-in<\/span>/.test(h), 'Check-in marcado');
+  assert.ok(!/toggleMonPagina\(0,'recepcao'\)">Pendências com o tutor<span/.test(h), 'tela antiga desmarcada não "vem com o papel"');
+  const r = run("permResumoInner({nome:'Cons Teste', role:'consultora', paginas:['checkin'], atividades:[]})");
+  assert.ok(/Check-in/.test(r) && /Lançamentos do dia \(pelo papel\)/.test(r) && !/Sem nenhuma tela liberada/.test(r), r.slice(0, 300));
+  const v = run("permResumoInner({nome:'Vet Teste', role:'vet', paginas:[], atividades:[]})");
+  assert.ok(/Peso \(pelo papel\)/.test(v), 'a veterinária sem nada marcado vê o Peso');
+  const n = run("permResumoInner({nome:'Mon Teste', role:'monitor', paginas:[], atividades:[]})");
+  assert.ok(/Sem nenhuma tela liberada/.test(n), 'o monitor sem nada marcado continua com o aviso');
+});
+prova('a dica das atividades diz a verdade: nada marcado = NENHUMA atividade; e avisa quem ainda não as vê no menu', () => {
+  const h = run("permEditInner(0,{nome:'Mon Teste', role:'monitor', paginas:[], atividades:[]})");
+  assert.ok(/Nada marcado aqui = esta pessoa <strong>não vê nenhuma<\/strong> atividade do Day Care/.test(h));
+  assert.ok(!/vê <strong>todas<\/strong> as atividades/.test(h) && !/Marcar é RESTRINGIR/.test(h), 'a dica antiga (falsa) saiu');
+  assert.ok(/As atividades do Day Care e o papel valem na próxima entrada dela com a senha/.test(h));
+  assert.ok(!/ainda não veem as atividades/.test(h), 'para o monitor, o aviso não aparece');
+  assert.ok(/Veterinária, Conferência e Plantonista ainda não veem as atividades do Day Care no menu/.test(run("permEditInner(0,{nome:'V', role:'vet', paginas:[], atividades:[]})")));
+});
+prova('quem recebeu só o Quem chamar hoje tem o contador na entrada (as duas leituras dele descem)', () => comUsuario({ role: 'vet', paginas: ['contatos'] }, 'vet', () => {
+  run(`__bk619c={h:hojeGarantir, v:vencGarantir, p:pendCarregar}; __cg619=[];
+    hojeGarantir=function(){ __cg619.push('hoje'); }; vencGarantir=function(){ __cg619.push('venc'); }; pendCarregar=function(){ __cg619.push('pend'); };`);
+  try { run('permCarregarConcedidas()'); igual(run('__cg619'), ['venc', 'hoje']); }
+  finally { run('hojeGarantir=__bk619c.h; vencGarantir=__bk619c.v; pendCarregar=__bk619c.p;'); }
+}));
+prova('na entrada, as gavetas das telas liberadas já abrem (o Peso da veterinária continua à vista)', () => {
+  assert.ok(/document\.querySelectorAll\('#nav a\[data-v\]\[data-concedido="1"\]'\)\.forEach\(function\(a\)\{\n\s*abrirSanfonasDe\(/.test(SRC619));
+});
+prova('a tela do Time diz como vale (Salvar colaboradores, na hora) e o que não se concede', () => {
+  const h = run("permEditInner(0,{nome:'Vet Teste', role:'vet', paginas:['dashdc'], atividades:[]})");
+  assert.ok(/toque em <strong>Salvar colaboradores<\/strong>: as telas valem na hora/.test(h));
+  assert.ok(h.indexOf(run('NAV_PAGINAS_FORA')) > 0);
+  const i1 = h.indexOf('Ecossistema Daycare · AuAulândia'), i2 = h.indexOf('Ecossistema Daycare · Day Care — Atividades'), i3 = h.indexOf('Central Zêluz · Peludinhos');
+  assert.ok(i1 > 0 && i1 < i2 && i2 < i3, 'as atividades entre as duas gavetas, como no menu');
+  assert.ok(/class="dia on clic" onclick="toggleMonPagina\(0,'dashdc'\)">Lançamentos do dia/.test(h), 'a tela marcada aparece acesa');
+});
+// ================================================================== 6.20 — renovação paga antes do fim
+console.log('\n6.20 — pagou a renovação antes de o plano acabar: vale o período seguinte (Adriana, 30/set/2026)');
+const calc620 = (gravado, pag, plano) => {
+  ctx.__g620 = gravado; ctx.__p620 = pag;
+  return JSON.parse(run(`(function(){ var r=Object.assign({}, __g620);
+    if(__g620 && __g620._rasc){ Object.defineProperty(r,'_inicio_gravado',{value:__g620._rasc, enumerable:false}); r.inicio=__p620; }
+    var c=renovCalcular(r, '${plano || 'Silver'}', 2, __p620);
+    return JSON.stringify({inicio:c.inicio, vig:c.vig_inicio||'', fim:c.fim, porque:c._porque||'', temVig:('vig_inicio' in c)});
+  })()`));
+};
+prova('o caso do Baque e do Nelson: plano até 30/09, pagou em 30/09 → vale de 01/10 até 31/10 (e o pagamento continua 30/09)', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-09-30');
+  igual(c, { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'antecipada', temVig: true });
+});
+prova('o estado em que as 4 tentativas deixaram a ficha (30/09 → 30/09): o mesmo 30/09 agora dá 01/10 a 31/10', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-09-30', fim: '2026-09-30', _rasc: '2026-09-30' }, '2026-09-30');
+  igual(c, { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'fim-do-mes', temVig: true });
+});
+prova('renovação antecipada até 15 dias antes do fim; trimestral renova o trimestre seguinte', () => {
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-09-15').fim, '2026-10-31');
+  const t = calc620({ plano: 'Gold', inicio: '2026-07-01', fim: '2026-09-30', _rasc: '2026-07-01' }, '2026-09-25', 'Gold');
+  igual([t.vig, t.fim], ['2026-10-01', '2026-12-31']);
+});
+prova('pagou atrasado no começo do mês (plano venceu 30/09, pagou 02/10): vale outubro, sem período à parte', () => {
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-02', fim: '2026-09-30', _rasc: '2026-09-02' }, '2026-10-02'),
+    { inicio: '2026-10-02', vig: '', fim: '2026-10-31', porque: '', temVig: false });
+});
+prova('pagou nos últimos 7 dias do mês com o plano já vencido há tempo: começa no dia 1º do mês seguinte', () => {
+  const c = calc620({ plano: 'Silver', inicio: '2026-08-03', fim: '2026-08-31', _rasc: '2026-08-03' }, '2026-09-28');
+  igual([c.vig, c.fim, c.porque], ['2026-10-01', '2026-10-31', 'fim-do-mes']);
+  // até o dia 23 de um mês de 30 dias (7 dias ou mais pela frente) o mês do pagamento ainda vale
+  igual(calc620({ plano: 'Silver', inicio: '2026-08-03', fim: '2026-08-31', _rasc: '2026-08-03' }, '2026-09-23').fim, '2026-09-30');
+});
+prova('CORRIGIR o plano gravado (mesma data de pagamento) não empurra o período para frente', () => {
+  // gravado já no modelo novo: pago 30/09, período 01/10–31/10
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', _rasc: '2026-09-30' }, '2026-09-30'),
+    { inicio: '2026-09-30', vig: '2026-10-01', fim: '2026-10-31', porque: 'gravado', temVig: true });
+  // gravado antigo e legítimo (pagou 20/09 por setembro): corrigir os dias mantém setembro
+  igual(calc620({ plano: 'Silver', inicio: '2026-09-20', fim: '2026-09-30', _rasc: '2026-09-20' }, '2026-09-20').fim, '2026-09-30');
+  // quem usou o atalho de 30/09 (data 01/10) e depois acerta a data para 30/09: continua outubro
+  igual(calc620({ plano: 'Silver', inicio: '2026-10-01', fim: '2026-10-31', _rasc: '2026-10-01' }, '2026-09-30').fim, '2026-10-31');
+});
+prova('quem começa no meio do mês continua com a regra própria (não passa pela nova)', () => {
+  const c = calc620({ plano: 'Silver', meio_mes: { opcao: 2, inicio: '2026-09-22' } }, '2026-09-22');
+  igual([c.fim, c.vig, c.temVig], ['2026-10-31', '', false]);
+  // mesmo nos últimos dias do mês: entrou em 25/09 pela opção do meio do mês → outubro inteiro (31/10), não novembro
+  const c25 = calc620({ plano: 'Silver', meio_mes: { opcao: 1, inicio: '2026-09-25' } }, '2026-09-25');
+  igual([c25.fim, c25.vig], ['2026-10-31', '']);
+  // e sem plano gravado nenhum, a conta de sempre (a que o harness v-36 prova)
+  igual(calc620({}, '2026-09-22').fim, '2026-09-30');
+});
+// ---- o Confirmar de verdade, com a tela, o resumo e a gravação
+const confirmar620 = async (renovGravado, rascInicio, respostas) => {
+  ctx.__ex620 = { renov: renovGravado }; ctx.__resp620 = respostas.slice();
+  run(`__bk620={pa:pelAtual, pe:pelExtra, pk:pelKey, na:nAulasDe, pd:pelDias, zp:zPergunta, sp:setPelExtra, hg:renovHistGravar,
+      au:audit, rf:renderPelFicha, za:zAlertao, hj:hojeISO, rr:renovRascunho};
+    __log620={perg:[], grav:[], hist:[]};
+    pelAtual={n:'Baque', tutor:'Tutora Teste'}; pelExtra=function(){ return __ex620; }; pelKey=function(){ return 'baque__tutora teste'; };
+    nAulasDe=function(){ return 2; }; pelDias=function(){ return ['ter','qui']; };
+    zPergunta=function(t,l,op){ __log620.perg.push({t:t, l:l, op:op}); return Promise.resolve(__resp620.shift()); };
+    setPelExtra=function(p,o){ __log620.grav.push(JSON.parse(JSON.stringify(o))); __ex620=Object.assign({}, __ex620, o); return Promise.resolve(); };
+    renovHistGravar=function(k,a,m){ __log620.hist.push({a:a, m:m}); return Promise.resolve(); };
+    audit=function(){}; renderPelFicha=function(){}; zAlertao=function(){}; hojeISO=function(){ return '2026-09-30'; };
+    renovRascunho=${rascInicio ? `{_k:'baque__tutora teste', inicio:'${rascInicio}'}` : 'null'};`);
+  try { await run('confirmarRenovacao()'); return JSON.parse(run('JSON.stringify(__log620)')); }
+  finally {
+    run(`pelAtual=__bk620.pa; pelExtra=__bk620.pe; pelKey=__bk620.pk; nAulasDe=__bk620.na; pelDias=__bk620.pd; zPergunta=__bk620.zp;
+      setPelExtra=__bk620.sp; renovHistGravar=__bk620.hg; audit=__bk620.au; renderPelFicha=__bk620.rf; zAlertao=__bk620.za; hojeISO=__bk620.hj; renovRascunho=__bk620.rr;`);
+  }
+};
+provaAsync('Confirmar (Baque): o resumo diz "Pagamento 30/09 · vale de 01/10 até 31/10" e o porquê; grava pagamento, período e fim', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' }, '2026-09-30', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  const txt = L.perg[0].l.join(' | ');
+  assert.ok(/Pagamento 30\/09\/2026 · vale de 01\/10\/2026 até 31\/10\/2026 · renova em outubro de 2026/.test(txt), txt);
+  assert.ok(/Por quê: pago antes do fim do plano atual: o novo período começa no dia seguinte ao fim, 01\/10\/2026\./.test(txt), txt);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.vig_inicio, rv.fim, rv.mesRenov], ['2026-09-30', '2026-10-01', '2026-10-31', 'outubro de 2026']);
+  assert.strictEqual(L.hist.length, 1, 'o plano de setembro vai para "Renovações anteriores"');
+});
+provaAsync('Confirmar de novo o MESMO plano não vira mais uma "renovação anterior"', async () => {
+  const gravado = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' };
+  const L = await confirmar620(gravado, null, [true]);
+  assert.strictEqual(L.hist.length, 0, 'nenhuma cópia empurrada');
+  igual([L.grav[0].renov.vig_inicio, L.grav[0].renov.fim], ['2026-10-01', '2026-10-31']);
+});
+provaAsync('pagamento novo que não estende o plano pergunta antes; aceitar começa no dia seguinte ao fim', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-09-10', [true, true]);
+  assert.strictEqual(L.perg[0].t, 'ESTE PAGAMENTO NÃO ESTENDE O PLANO');
+  assert.ok(/Começar em 01\/10\/2026, valendo até 31\/10\/2026/.test(L.perg[0].op.sim) && /Manter até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual([L.grav[0].renov.inicio, L.grav[0].renov.vig_inicio, L.grav[0].renov.fim], ['2026-09-10', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(gr, '2026-09-10', [false, true]);
+  igual([M.grav[0].renov.fim, 'vig_inicio' in M.grav[0].renov], ['2026-09-30', false], '"Manter" grava o que a conta deu');
+});
+provaAsync('pagamento que começa no próprio dia não guarda "vig_inicio" (nem herda o de outro ciclo)', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31' }, '2026-11-03', [true]);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, 'vig_inicio' in rv], ['2026-11-03', '2026-11-30', false]);
+});
+prova('"Renovações anteriores": as tentativas iguais viram UMA linha, com quantas vezes; o período mostra de quando a quando', () => {
+  const h = { a: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 4, por: 'Adriana' },
+    b: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 3, por: 'Adriana' },
+    c: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 2, por: 'Adriana' },
+    d: { plano: 'Silver', aulas: 2, inicio: '2026-09-02', fim: '2026-09-30', substituidoEm: 1, por: 'Amanda' } };
+  ctx.__h620 = { renov_hist: h };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  let html;
+  try { html = run('renovHistHTML(__h620)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(/Renovações anteriores \(4\)/.test(html), 'o total continua o de verdade');
+  assert.strictEqual((html.match(/30\/09\/2026 → 30\/09\/2026/g) || []).length, 1, 'uma linha só para as 3 iguais');
+  assert.ok(/3 vezes iguais \(tentativas repetidas\)/.test(html) && /02\/09\/2026 → 30\/09\/2026/.test(html));
+  ctx.__h620 = { renov_hist: { x: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', substituidoEm: 1, por: 'A' } } };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  try { html = run('renovHistHTML(__h620)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(/01\/10\/2026 → 31\/10\/2026 <span[^>]*>\(pago em 30\/09\/2026\)/.test(html), html.slice(0, 400));
+});
+prova('a mensagem ao tutor e a lista da Renovação dizem o período (01/10 a 31/10), não o dia do pagamento', () => {
+  ctx.__ex620m = { renov: { plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', mesRenov: 'outubro de 2026' } };
+  run(`__bk620m={na:nAulasDe, pg:pelGet}; nAulasDe=function(){ return 2; }; pelGet=function(p,c){ return c==='tutor'?'Tutora Teste':''; };`);
+  try {
+    const m = run("msgRenovado({n:'Baque'}, __ex620m)");
+    assert.ok(/A nova vigência será de 01\/10\/2026 até 31\/10\/2026/.test(m), m);
+  } finally { run('nAulasDe=__bk620m.na; pelGet=__bk620m.pg;'); }
+  assert.ok(/const periodo=\(\(r\.vig_inicio\|\|r\.inicio\)&&r\.fim\)\?\(fmtBR\(r\.vig_inicio\|\|r\.inicio\)/.test(SRC619));
+  assert.ok(/if\(ant\.vig_inicio\) volta\.vig_inicio=ant\.vig_inicio;/.test(SRC619), 'o Desfazer devolve o período com o começo que tinha');
+});
+prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PAGAMENTO (renov.inicio, regime de caixa)', () => {
+  const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin) && !/vig_inicio/.test(fin));
+});
+// ---- QA da 6.20 (FAIL → ajustes): corrigir a data nunca grava o mês errado
+const renov620 = (L) => { const r = L.grav[0] && L.grav[0].renov; return r ? [r.inicio, r.vig_inicio || '', r.fim] : null; };
+provaAsync('K1 — quem usou o atalho (01/10) e relança 30/09: nenhuma pergunta extra, fica 01/10 a 31/10 e o pagamento volta a 30/09', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' }, '2026-09-30', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-30', '2026-10-01', '2026-10-31']);
+});
+provaAsync('K2/X1/X2 — corrigir a data de um pagamento que já cobre outubro (20/09 → 21/09, 30/09 → 22/09) mantém 01/10 a 31/10, sem pergunta', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', vig_inicio: '2026-10-01', fim: '2026-10-31' };
+  const L = await confirmar620(gr, '2026-09-21', [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-21', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(Object.assign({}, gr, { inicio: '2026-09-30' }), '2026-09-22', [true]);
+  igual(renov620(M), ['2026-09-22', '2026-10-01', '2026-10-31']);
+});
+provaAsync('X3 — data nova perto da gravada num plano de setembro (20/09 → 21/09): PERGUNTA se é pagamento novo ou correção; as duas respostas gravam certo', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-09-21', [false, true]);
+  assert.strictEqual(L.perg[0].t, 'PAGAMENTO NOVO OU CORREÇÃO DA DATA?');
+  assert.ok(/Pagamento novo: renovação de 01\/10\/2026 até 31\/10\/2026/.test(L.perg[0].op.sim)
+    && /Correção da data: fica de 21\/09\/2026 até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual(renov620(L), ['2026-09-21', '', '2026-09-30'], 'correção: setembro continua setembro');
+  const N = await confirmar620(gr, '2026-09-21', [true, true]);
+  igual(renov620(N), ['2026-09-21', '2026-10-01', '2026-10-31'], 'pagamento novo: outubro');
+  // o Baque de verdade (pagou 02/09, renovou 30/09: 28 dias depois) não cai na pergunta
+  const B = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-02', fim: '2026-09-30' }, '2026-09-30', [true]);
+  assert.strictEqual(B.perg.length, 1);
+});
+provaAsync('a ficha que as 4 tentativas deixaram (30/09 → 30/09): o Confirmar pergunta de qual período é; "Mês seguinte" grava 01/10 a 31/10, "Manter" não mexe', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-30', fim: '2026-09-30' };
+  const L = await confirmar620(gr, null, [true, true]);
+  assert.strictEqual(L.perg[0].t, 'ESTE PAGAMENTO É DE QUAL PERÍODO?');
+  assert.ok(/Mês seguinte: de 01\/10\/2026 até 31\/10\/2026/.test(L.perg[0].op.sim) && /Manter de 30\/09\/2026 até 30\/09\/2026/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  igual(renov620(L), ['2026-09-30', '2026-10-01', '2026-10-31']);
+  const M = await confirmar620(gr, null, [false, true]);
+  igual(renov620(M), ['2026-09-30', '2026-09-30', '2026-09-30'], '"Manter" fica ANOTADO: o período é o próprio gravado');
+  assert.strictEqual(M.hist.length, 0, '"Manter" o mesmo plano não empurra cópia');
+  assert.ok(/É o mesmo plano que já está gravado: nada vai para "Renovações anteriores"\./.test(M.perg[1].op.rodape), M.perg[1].op.rodape);
+  // reaberta depois do "Manter", a ficha não pergunta de novo nem oferece o mês seguinte (QA55)
+  const re = calc620({ plano: 'Silver', inicio: '2026-09-30', vig_inicio: '2026-09-30', fim: '2026-09-30', _rasc: '2026-09-30' }, '2026-09-30');
+  igual([re.fim, re.porque], ['2026-09-30', 'gravado']);
+});
+provaAsync('K4 — a trava "nasce vencida" manda CORRIGIR A DATA (nada é gravado); "Manter" diz em que mês o dinheiro conta e nenhuma pergunta depois o desfaz', async () => {
+  const gr = { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-01', fim: '2026-09-30' };
+  const L = await confirmar620(gr, '2026-08-10', [true, true]);
+  assert.strictEqual(L.perg.length, 1, 'depois de "Voltar e corrigir" não vem resumo nenhum');
+  assert.strictEqual(L.perg[0].t, 'ATENÇÃO — esta vigência já nasce VENCIDA');
+  assert.ok(/Voltar e corrigir a data do pagamento/.test(L.perg[0].op.sim)
+    && /Manter 10\/08\/2026 mesmo assim \(o dinheiro conta em agosto de 2026\)/.test(L.perg[0].op.nao), JSON.stringify(L.perg[0].op));
+  assert.strictEqual(L.grav.length, 0, '"Voltar e corrigir" não grava nada');
+  const M = await confirmar620(gr, '2026-08-10', [false, true]);
+  assert.strictEqual(M.perg.length, 2, JSON.stringify(M.perg.map((p) => p.t)));
+  igual(renov620(M), ['2026-08-10', '', '2026-08-31']);
+});
+provaAsync('corrigir a data de pagamento para um dia ANTES da gravada é correção: nada de "não estende" (15/09 → 14/09 num plano de setembro)', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-15', fim: '2026-09-30' }, '2026-09-14', [true, true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-14', '', '2026-09-30']);
+});
+provaAsync('depois da trava "nasce vencida", nenhuma outra pergunta refaz o período que a pessoa aceitou', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-07-01', fim: '2026-09-30' }, '2026-08-10', [false, true, true]);
+  assert.strictEqual(L.perg.length, 2, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-08-10', '', '2026-08-31']);
+});
+provaAsync('K10 — ficha antiga vencida (28/08 → 31/08) reconfirmada: a pergunta do período vem ANTES da trava, e "Manter" nas duas grava 28/08 → 31/08', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-08-28', fim: '2026-08-31' }, null, [false, false, true]);
+  igual(L.perg.map((p) => p.t), ['ESTE PAGAMENTO É DE QUAL PERÍODO?', 'ATENÇÃO — esta vigência já nasce VENCIDA', 'CONFIRA ANTES DE GRAVAR']);
+  igual(renov620(L), ['2026-08-28', '2026-08-28', '2026-08-31']);
+  // "Mês seguinte" (01/09 → 30/09) também nasce vencido hoje (30/09 não, é hoje): só o resumo
+  const M = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-08-28', fim: '2026-08-31' }, null, [true, true]);
+  igual(renov620(M), ['2026-08-28', '2026-09-01', '2026-09-30']);
+});
+prova('o meio do mês registrado para a família NÃO estica calado o plano de um irmão de outro mês (regressão pega pelo QA55)', () => {
+  ctx.__irm620 = { renov: { plano: 'Silver', aulas: 2, inicio: '2026-09-26', fim: '2026-09-30' } };
+  run('__bkI={pe:pelExtra, na:nAulasDe}; pelExtra=function(){ return __irm620; }; nAulasDe=function(){ return 2; };');
+  try {
+    assert.strictEqual(run("mmFimNovoDe({n:'Irmão'}, '2026-10-05', 2)"), null);
+    // e para quem o meio do mês vale, a conta de sempre continua (22/09, opção 2 → 31/10)
+    ctx.__irm620 = { renov: { plano: 'Silver', aulas: 2, inicio: '2026-09-22', fim: '2026-09-30' } };
+    igual(run("JSON.stringify(mmFimNovoDe({n:'Irmão'}, '2026-09-22', 2))"), JSON.stringify({ de: '2026-09-30', para: '2026-10-31', mesRenov: 'outubro de 2026', mes_cobranca_1: '2026-10' }));
+  } finally { run('pelExtra=__bkI.pe; nAulasDe=__bkI.na;'); }
+});
+provaAsync('QA56 — ficha importada mais longa (26/09 → 15/11) reconfirmada: sem pergunta de "Manter" que encurta; a trava diz que substitui o plano que vale', async () => {
+  const P = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-26', fim: '2026-11-15' }, null, [false]);
+  igual(P.perg.map((p) => p.t), ['CONFIRA ANTES DE GRAVAR'], 'só o resumo, que mostra o que muda');
+  const T = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-01', fim: '2026-09-30' }, '2026-08-10', [true]);
+  assert.ok(T.perg[0].l.some((x) => x === 'O plano gravado hoje vale até 30/09/2026 — ao manter, ele é substituído.'), JSON.stringify(T.perg[0].l));
+});
+provaAsync('QA56 — a ficha em que a pessoa escolheu "Manter" continua anotada ao ser reconfirmada com a mesma data', async () => {
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-26', vig_inicio: '2026-09-26', fim: '2026-09-30' }, null, [true]);
+  assert.strictEqual(L.perg.length, 1, JSON.stringify(L.perg.map((p) => p.t)));
+  igual(renov620(L), ['2026-09-26', '2026-09-26', '2026-09-30']);
+  assert.strictEqual(L.hist.length, 0);
+});
+prova('a ficha avisa quando mostra um período que NÃO está gravado (e não convida a encolher um plano mais longo)', () => {
+  const tela = (renov) => {
+    ctx.__exT = { renov: renov };
+    run(`__bkT={pa:pelAtual, na:nAulasDe, pd:pelDias, pc:pelCategoria, pk:pelKey, rr:renovRascunho, mm:mmBlocoHTML, hh:renovHistHTML, hj:hojeISO};
+      pelAtual={n:'Baque', tutor:'Tutora Teste'}; nAulasDe=function(){ return 2; }; pelDias=function(){ return ['ter','qui']; };
+      pelCategoria=function(){ return 'auluno'; }; pelKey=function(){ return 'baque__tutora teste'; }; renovRascunho=null;
+      mmBlocoHTML=function(){ return ''; }; renovHistHTML=function(){ return ''; }; hojeISO=function(){ return '2026-09-30'; };`);
+    try { return run("blocoPlano(__exT, {n:'Baque', tutor:'Tutora Teste'})"); }
+    finally { run('pelAtual=__bkT.pa; nAulasDe=__bkT.na; pelDias=__bkT.pd; pelCategoria=__bkT.pc; pelKey=__bkT.pk; renovRascunho=__bkT.rr; mmBlocoHTML=__bkT.mm; renovHistHTML=__bkT.hh; hojeISO=__bkT.hj;'); }
+  };
+  const h = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30' });
+  assert.ok(/id="planoContaDiferente"[^>]*><strong>Nada foi gravado ainda\.<\/strong> Gravado hoje: de 30\/09\/2026 até 30\/09\/2026\. A conta de hoje dá de 01\/10\/2026 até 31\/10\/2026/.test(h), h.slice(h.indexOf('Vale até'), h.indexOf('Vale até') + 900));
+  assert.ok(/id="planoDuvida"/.test(h), 'avisa que o Confirmar vai perguntar');
+  const g = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-05', fim: '2026-10-15' });
+  assert.ok(!/planoContaDiferente/.test(g), 'ficha importada com fim mais longo: sem convite a encolher');
+  const k = tela({ plano: 'Silver', aulas: 2, inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31' });
+  assert.ok(!/planoContaDiferente/.test(k) && /de 01\/10\/2026 até /.test(k), 'gravado certo: sem aviso, com o período');
+});
+prova('virar avulso, hóspede ou morador leva o período junto; a Linha do tempo diz "pago em" e "vale de"', () => {
+  assert.ok(/r\.inicio=''; r\.fim=''; r\.mesRenov=''; r\.aulas=''; delete r\.vig_inicio;/.test(SRC619));
+  assert.ok(/\(renovVigOutra\(novo\)\?\('pago em '\+fmtBR\(novo\.inicio\)\+' · vale de '\+fmtBR\(novo\.vig_inicio\)\)/.test(SRC619));
+});
+prova('"Renovações anteriores" só junta o que saiu pelo MESMO motivo (uma "desfeita" não vira "tentativa repetida" de uma "renovação")', () => {
+  ctx.__h620b = { renov_hist: {
+    a: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 2, por: 'A', motivo: 'desfeita' },
+    b: { plano: 'Silver', aulas: 2, inicio: '2026-09-30', fim: '2026-09-30', substituidoEm: 1, por: 'A', motivo: 'renovação' } } };
+  run('__bk620h={ce:canEditPel}; canEditPel=function(){ return true; };');
+  let html;
+  try { html = run('renovHistHTML(__h620b)'); } finally { run('canEditPel=__bk620h.ce;'); }
+  assert.ok(!/vezes iguais/.test(html) && (html.match(/30\/09\/2026 → 30\/09\/2026/g) || []).length === 2);
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

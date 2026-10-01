@@ -1,6 +1,58 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27 e 28/set/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 30/set/2026 (v 2026-09-30-01) — Time › quem pode ver o quê; renovação paga antes do fim do plano
+
+> **Adriana, 30/set/2026:** *"Preciso dar acesso à veterinária a Hoje na Zêluz, Quem chamar hoje, Lançamentos do dia, e o que é ali da Central Zêluz, e não estou conseguindo. Aparece, eu já dei Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, mas não deu. Eu preciso de conseguir dar acesso a todas as pessoas que eu quiser. [...] Eu preciso que tudo esteja atualizado."* Story 6.19.
+
+### (X) A tela liberada no Time aparece, abre e vale na hora
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| O item aparecia, mas a tela respondia "Esta tela é da Central Zêluz" (Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção, Vencimentos) | a porta da tela conferia só o PAPEL; o menu já somava a tela liberada | a porta faz a mesma conta do menu: **papel OU tela liberada no Time** (`podeTela`) |
+| O item ficava solto, sem o nome da gaveta; os dias dos Vencimentos (Hoje a Sexta) nem apareciam | a regra de papel da veterinária esconde todo cabeçalho e todo item fora do caminho dela | a tela liberada fica marcada (`data-concedido`) e o cabeçalho da gaveta e os dias vêm junto |
+| Lançamentos do dia, Prevenção, Peso e mais 5 telas não estavam na lista do Time | a lista nunca as teve | entraram: Enriquecimento Ambiental, Ritmo do Time, Conferência do dia, Banhos recorrentes, **Lançamentos do dia**, Peso, Pesquisa com a Família Multiespécie e **Prevenção** |
+| A lista do Time tinha outra ordem e outras gavetas (Conferência do check-in, Hóspedes, Plantão e Check-out em "Central Zêluz · AuAulândia") | foi escrita antes do menu de 17/set | segue o menu **na ordem dele**, gaveta por gaveta, com o mesmo nome; as atividades do Day Care aparecem na gaveta "Ecossistema Daycare · Day Care" |
+| Marcar uma tela no Time não avisava que faltava salvar | o aviso só nascia no nome, na senha e no horário | marcar tela ou atividade mostra "Há mudanças não salvas" |
+| Depois de salvar, nada mudava no celular da pessoa até ela **sair e entrar de novo** (recarregar não bastava) | as telas eram lidas uma vez, na senha | quando o Time muda no banco, o aparelho relê **as telas dela** e redesenha o menu, sem tirar ninguém da tela (`permReaplicarDoTime`) |
+
+- **Ninguém perde tela no dia da publicação.** As 8 telas novas **só liberam**, como já era com Hoje na Zêluz, Quem chamar hoje, Pendências de prevenção e Vencimentos: marcada, aparece; desmarcada, fica o que o papel já mostrava (a recepção continua com os Lançamentos do dia, a veterinária com o Peso). No Time, essas telas aparecem com **"· vem com o papel"** (borda tracejada) quando o papel da pessoa já as mostra, e o resumo "Hoje esta pessoa vê" as lista como "(pelo papel)". As outras 16 continuam com a regra de sempre: quem tem lista vê só o marcado.
+- **A dica das atividades do Day Care estava errada** ("nada marcado = vê todas"): para quem entra pelo Time, nada marcado = **nenhuma** atividade. A dica agora diz isso, e diz que atividades e papel valem na próxima entrada com a senha (só as telas valem na hora).
+- **Na entrada, a gaveta de cada tela liberada já abre** (a veterinária continua com o Peso à vista); o rótulo "Planos e cobranças" some quando nada abaixo dele está à mostra.
+- **Não se concedem pelo Time** (e a própria tela do Time diz isso): a mesa de cada papel (O que fazer hoje e os dashboards Meu, Consultoras, Amanda, Márcia e Adriana), Início, Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).
+- **Achado no caminho:** o monitor e o aprendiz viam os dias dos Vencimentos (Hoje, Segunda...) soltos em Central Zêluz › Day Care, sem ter a tela — o toque dava em "Esta tela é da Central Zêluz". A gaveta volta a sumir junto com o item (`ajustarAcordeoes` respeita `data-acc-perm`).
+- **A conversa com o tutor na ficha** e o **arquivo da turma com telefones** seguem a mesma regra do Hoje na Zêluz e do Quem chamar hoje: quem recebeu uma dessas telas no Time também os tem.
+- **Onde está no código:** `NAV_PAGINAS_ALL`, `NAV_PAGINAS_SO_LIBERA`, `NAV_PAGINAS_FORA`, `permEditInner`, `toggleMonPagina`, `paginaConcedida`, `podeTela`, `permCarregarConcedidas`, `permMarcarConcedida`, `aplicarPaginasPessoa`, `aplicarPermMenu`, `ajustarAcordeoes`, `ajustarSubcabecalhosMenu`, `permReaplicarDoTime`, portas em `hojeAbrir`, `contatosAbrir`, `pendAbrir`, `vencAbrir`, `vencRender`, `fichaTutorPode`, `turmaPodeBaixar`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (20 provas da 6.19, entre elas: cada tela do Time está na mesma gaveta, com o mesmo nome e na mesma ordem do menu lido do próprio HTML; nenhuma tela do menu fica de fora sem aviso) e `tests/menu-concessao-navegador.test.js` (27 provas no navegador, sem banco: a veterinária alcança e abre as telas liberadas; liberar e tirar valem na hora; quem não recebeu nada vê a barra de sempre).
+
+### (Y) Renovação de planos: pagou antes de o plano acabar, vale o período seguinte
+
+> **Adriana, 30/set/2026**, renovando o Baque e o Nelson: *"Eles fizeram o pagamento hoje, 30/09, valor da mensalidade... vai valer do dia 1º/10 até 31/10. E ao confirmar dá 30/09 até 30/09. E não está renovando... quatro renovações aqui que não deram certo. Ela precisa de automaticamente ir. O tutor já pagou."* Story 6.20.
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| Pago em 30/09, o mensal "valia de 30/09 até 30/09" | a data do pagamento era também o começo do plano, e o plano vale até o fim do mês em que começa | o app guarda as duas coisas: **a data do pagamento** (`renov.inicio`, é por ela que o Financeiro conta o mês) e **o começo do período** (`renov.vig_inicio`, quando é outro dia) |
+| Cada Confirmar gravava de novo o mesmo 30/09 e a renovação "não ia" | a conta dava sempre o mesmo vencimento | o período sai de 3 regras (abaixo); e um pagamento novo cuja conta **não estende** o plano pergunta antes: "Começar em 01/10, valendo até 31/10" ou "Manter" |
+| Quatro tentativas iguais viraram quatro "Renovações anteriores" | cada Confirmar empurrava uma cópia do plano gravado | Confirmar o mesmo plano de novo não empurra cópia; as tentativas iguais que já estão lá aparecem numa linha só, "N vezes iguais (tentativas repetidas)" — nada é apagado do banco |
+
+**As 3 regras do começo do período** (`renovVigenciaComeca`), nesta ordem:
+1. **Corrigir o plano gravado** (a mesma data de pagamento de novo, ou uma data ainda antes do começo do período gravado): o período é o que já era.
+2. **Renovação antecipada:** o tutor pagou enquanto o plano ainda vale, nos **últimos 15 dias** dele (é quando ele aparece na Renovação de planos). O novo período começa **no dia seguinte ao fim** do atual. Plano até 30/09, pago em 30/09 (ou 20/09): vale de 01/10 até 31/10. Trimestral até 30/09, pago em 25/09: 01/10 a 31/12.
+3. **Fim do mês:** pagamento nos **últimos 7 dias do mês** (de 24/09 em diante, num mês de 30 dias) começa no **dia 1º do mês seguinte**. Até o dia 23, o mês do pagamento continua sendo o 1º mês do plano. Pagou atrasado em 02/10: vale outubro, como sempre.
+
+- **Quando a data sozinha não diz, o Confirmar pergunta** (revisão QA54, dinheiro não se adivinha):
+  - **"Pagamento novo ou correção da data?"**: a data nova fica a até 15 dias da gravada (20/09 → 21/09 num plano de setembro). Uma resposta dá "renovação de 01/10 até 31/10", a outra "fica de 21/09 até 30/09".
+  - **"Este pagamento é de qual período?"**: ficha antiga paga nos últimos dias do mês (o Baque: gravado 30/09 → 30/09). Uma resposta dá "Mês seguinte: de 01/10 até 31/10", a outra "Manter".
+  - A ficha avisa antes: "(O Confirmar vai perguntar…)". Quando a conta vai além do gravado e nada foi mexido, aparece **"Nada foi gravado ainda. Gravado hoje: … A conta de hoje dá …"**.
+  - Essas perguntas vêm **antes** da trava "nasce vencida". **"Manter"** numa ficha antiga fica anotado: a ficha para de oferecer o mês seguinte. Ficha importada que já vai além do mês seguinte (26/09 → 15/11) não recebe essa pergunta: o resumo do Confirmar mostra o que muda.
+- **A trava "nasce vencida"** (data de pagamento cujo período já passou) oferece **"Voltar e corrigir a data do pagamento"**, sem gravar nada, ou **"Manter DD/MM mesmo assim (o dinheiro conta em {mês})"**. A data do pagamento é o mês do dinheiro no Financeiro, e a trava não a troca mais sozinha. Depois dela, nenhuma outra pergunta refaz o que a pessoa escolheu.
+- **O meio do mês registrado para a família** não estica o plano de um irmão cuja vigência é de outro mês.
+- **Quem começa no meio do mês** (opção 1 ou 2) continua com a regra própria, sem mudança.
+- **Onde a pessoa vê:** na ficha, "Vale até" vira "**de 01/10 até 31/10**", com a frase do porquê embaixo; o resumo do Confirmar diz "**Pagamento 30/09 · vale de 01/10 até 31/10**" e o porquê; a mensagem ao tutor, a lista da Renovação, "Renovações anteriores" (com "pago em 30/09"), o Desfazer e a aba Identificação mostram o período.
+- **O Financeiro não muda:** o mês do dinheiro continua sendo o da data do pagamento (regime de caixa, decisão de 02/set/2026). `financeiro-logica.js` não foi tocado.
+- **Onde está no código:** `aplicarRenovacao`, `renovCalcular`, `renovVigenciaComeca`, `renovRegraFimDoMes`, `renovVigenciaFrase`, `renovMesmoPlano`, `renovEdit` (`_inicio_gravado`), `blocoPlano`, `confirmarRenovacao`, `renovHistHTML`, `desfazerRenovacao`, `msgRenovado`, `renderRenovacao`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js`, 28 provas da 6.20 (o caso do Baque e do Nelson, o estado em que as 4 tentativas deixaram a ficha, correção, antecipada, fim do mês, meio do mês e o irmão, o Confirmar de verdade com as perguntas na ordem, a trava, o resumo e a gravação, a ficha, o histórico, a ficha importada mais longa); 33 defeitos plantados, 33 pegos. Quatro revisões independentes (QA54 a QA56 e a desta).
 
 ## O que mudou em 27/set/2026 (v 2026-09-27-01)
 
@@ -1343,6 +1395,8 @@ Nunca um filho maior que o pai. Abre só o caminho da tela ativa. A pendência s
 ---
 
 ## O menu
+
+> **Desde 30/set/2026:** no Time, a Gestão libera qualquer tela da lista para qualquer pessoa, e vale na hora. Para as 12 telas que só liberam (Enriquecimento Ambiental, Ritmo do Time, Conferência do dia, Hoje na Zêluz, Quem chamar hoje, Banhos recorrentes, Lançamentos do dia, Pendências de prevenção, Peso, Pesquisa com a Família Multiespécie, Prevenção e Vencimentos), a coluna "Quem vê" é o **piso**. As outras 16 aparecem, para quem tem lista no Time, só se estiverem marcadas. Não se concedem por lá: Início, O que fazer hoje, os cinco dashboards de papel, Escala e plano do dia, Financeiro do plantão, Configurações, Abertura do dia e Agenda.
 
 | Grupo | Título (data-v) | Subtítulo didático | Quem vê (como hoje) |
 |---|---|---|---|
