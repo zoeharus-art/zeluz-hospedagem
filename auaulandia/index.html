@@ -17078,7 +17078,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-05';
+  const APP_VERSAO='2026-10-02-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21283,9 +21283,9 @@
   function banhoFaltaGenero(chave){
     var p=banhoFaltaPel(chave), sx='';
     try{ sx=String(((typeof pelExtra==='function'?pelExtra(p):{})||{}).sexo||''); }catch(e){ sx=''; }
-    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela', aqui:'Ela já está aqui'};
-    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele', aqui:'Ele já está aqui'};
-    return {ainda:'Ainda vem', com:'reservado', aqui:'Já está aqui'};
+    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela', aqui:'Ela está aqui', pron:'ela'};
+    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele', aqui:'Ele está aqui', pron:'ele'};
+    return {ainda:'Ainda vem', com:'reservado', aqui:'Está aqui', pron:''};
   }
   function banhoFaltaPode(){ return (typeof repPodeLancar==='function' && repPodeLancar()); }
   // Outro cartaz aberto na tela? Este módulo ESPERA — nunca apaga o que a recepção está
@@ -21348,10 +21348,10 @@
          ? 'É o banho fixo: ele sai sozinho da planilha quando falta, mas volta se chegar depois.'
          : 'O horário do banho continua na planilha e na TV, e ninguém marca outro banho nele.'),
        'Liberar tira da planilha e da TV só o banho de hoje'+(o.fixo?' (o combinado do banho fixo continua)':'')+'. O horário fica livre para outro banho.',
-       'Se já está aqui, toque em «'+g.aqui+'»: o horário fica '+g.com+' e abre o check-in de entrada, que tira a falta.',
+       'Se já está aqui, toque em «'+g.aqui+'»: '+(g.pron||'o FILHOt')+' volta para a chamada e para o almoço, e o horário fica '+g.com+'.',
        'Se ainda vier (chegar mais tarde), toque em «'+g.ainda+'»: o horário fica '+g.com+'.'].filter(Boolean),
       [{t:'Liberar o horário', cor:'#234D67', fn:function(){ visto(); banhoFaltaExecutar(o, dia); }},
-       {t:g.aqui, cor:'#14532D', fn:function(){ visto(); banhoFaltaJaAqui(o, dia); }},
+       {t:g.aqui, cor:'#14532D', fn:function(){ visto(); banhoFaltaEstaAqui(o, dia); }},
        {t:g.ainda, cor:'#1E8449', fn:function(){ visto(); banhoFaltaManter(o, dia); }},
        {t:'Decidir depois', cor:'#7C8B99', fn:function(){ visto(); banhoFaltaSeguir(dia); }}],
       {corTitulo:'#234D67', rodape:'O aviso também fica no Hoje na Zêluz, com o botão de liberar.'});
@@ -21568,33 +21568,90 @@
       return novo || {chave:o.chave, nome:o.nome, hora:o.hora||'', lancs:[], txts:[], fixo:false, horaFixo:'', origem:o.origem||'', porque:o.porque};
     }).catch(function(){ return null; });
   }
-  // ===== «ELE JÁ ESTÁ AQUI» (Adriana, 02/out/2026: Luna e Pipoca) ======================
-  // "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei".
-  // Chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta. O cartaz só
-  // oferecia "ainda vem", e quem estava com o FILHOt na frente não sabia como tirar a falta.
-  // Agora «Ele já está aqui» segura o banho (o mesmo "manter" do "ainda vem") e abre o
-  // check-in de entrada já nele: é o check-in que tira a falta, e o exame do corpo continua
-  // obrigatório. Nada aqui mexe no check-in; só abre a tela com o nome dele na busca.
+  // ===== «ELE ESTÁ AQUI» (Adriana, 02/out/2026: Luna, Pipoca, Mika e Rafael) ============
+  // "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei" ·
+  // "Mika idem está aqui" · Rafael: "também está aqui — coloque a opção está aqui (para que
+  // se não foi feito o checkin do corpo apareça que tem que fazer!!! e o almoço!!!)".
+  // Chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta: fora da chamada,
+  // fora da lista do almoço. «Ele está aqui» marca VEIO na chamada (o mesmo que o ✓ Veio da
+  // Chamada: volta para o almoço e para as outras listas, o remédio volta para a fila e a
+  // pendência de prevenção avisa a chegada), segura o banho e, se o check-in do corpo de
+  // entrada não foi feito, diz que tem de fazer e leva até ele. O exame continua obrigatório.
+  // Nada aqui mexe no check-in: só lê se ele existe e abre a tela.
   function banhoFaltaIrAoCheckin(o){
     try{
       if(typeof abrirAtividade==='function') abrirAtividade('checkin-corpo');
       var el=document.getElementById('dcBusca');
       if(el){ el.value=String((o&&o.nome)||''); if(typeof onDcBusca==='function') onDcBusca(); }
       return true;
-    }catch(e){ return false; } /* silencioso de propósito: atalho de tela — o banho já foi segurado */
+    }catch(e){ return false; } /* silencioso de propósito: atalho de tela — a presença já foi marcada */
   }
-  function banhoFaltaJaAqui(o, dia){
-    var d=BANHO_FALTA_DEC[o.chave]||{};
-    // Já segurado ("ainda vem"): só falta o check-in. Segurar de novo daria "já decidido".
-    var segurar=(d.decisao==='mantido') ? Promise.resolve(true) : banhoFaltaManter(o, dia);
-    banhoFaltaIrAoCheckin(o);
-    try{ if(typeof audit==='function') audit('banho-falta', o.nome+' já está aqui — abriu o check-in de entrada', {alvo:o.chave, pet:o.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
-    return segurar;
+  function banhoFaltaIrAoAlmoco(){
+    try{ if(typeof abrirAtividade==='function') abrirAtividade('almoco'); return true; }
+    catch(e){ return false; } /* silencioso de propósito: atalho de tela */
   }
-  function banhoFaltaJaAquiUI(chave){
+  // O que a tela diz depois de marcar a presença. Pura: devolve {titulo, linhas, semCheckin}.
+  // `fezCk`: true = o check-in de entrada existe; false = não existe; null = não deu para ler.
+  function banhoFaltaAquiTexto(o, fezCk, g){
+    g=g||{pron:''};
+    var quem=String((o&&o.nome)||'');
+    var banho=(o&&o.hora)?('O banho das '+o.hora+' fica '+(g.com||'reservado')+'.'):'O banho de hoje fica '+(g.com||'reservado')+'.';
+    var almoco='Voltou para a lista do almoço: confira se '+(g.pron||'o FILHOt')+' já almoçou.';
+    if(fezCk===true) return {titulo:quem.toUpperCase()+' ESTÁ NA CHAMADA', semCheckin:false,
+      linhas:['Marcado como "veio" na chamada de hoje.', banho, almoco]};
+    return {titulo:'FALTA O CHECK-IN DO CORPO DE '+quem.toUpperCase(), semCheckin:true,
+      linhas:['Marcado como "veio" na chamada de hoje. '+banho,
+        (fezCk===false ? 'O check-in do corpo de entrada não foi feito: faça agora.'
+                       : 'Não consegui conferir o check-in do corpo de entrada: confira e, se não foi feito, faça agora.'),
+        almoco]};
+  }
+  function banhoFaltaEstaAqui(o, dia){
+    if(!DB) return Promise.resolve(false);
+    var k=String((o&&o.chave)||''); if(!k) return Promise.resolve(false);
+    if(BANHO_FALTA_TRAVA['aqui|'+k]) return Promise.resolve(false);
+    BANHO_FALTA_TRAVA['aqui|'+k]=1;
+    var g=banhoFaltaGenero(k);
+    var antes=(typeof dcChamada==='object' && dcChamada)?dcChamada[k]:undefined;
+    var d=BANHO_FALTA_DEC[k]||{};
+    return DB.ref('daycare/chamada/'+dia+'/'+k).set('veio').then(function(){
+      try{ if(typeof dcChamada==='object' && dcChamada && dia===dcDataKey()) dcChamada[k]='veio'; }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
+      try{ if(typeof audit==='function') audit('chamada', 'marcou presença (está aqui, pelo aviso do banho)', {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      try{ if(typeof pendAvisarChegada==='function') pendAvisarChegada(k); }
+      catch(e){ _logFalhaGrav('as pendências de prevenção de '+k+' (está aqui)', e); }
+      try{ if(antes==='faltou' && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+      catch(e){ _logFalhaGrav('a fila do remédio de '+k+' (está aqui)', e); }
+      // Segura o banho (o mesmo "ainda vem"); já segurado, não regrava.
+      var segurar=(d.decisao==='mantido') ? Promise.resolve(true) : banhoFaltaManter(o, dia);
+      var ler=DB.ref('daycare/checkin-corpo/'+dia+'/'+k).once('value')
+        .then(function(sn){ return !!(sn && sn.val && sn.val()); }).catch(function(){ return null; });
+      return Promise.all([segurar, ler]);
+    }).then(function(r){
+      var fezCk=r[1];
+      try{ if(typeof audit==='function') audit('banho-falta', o.nome+' está aqui — presença marcada'+(fezCk===true?'':' (sem o check-in do corpo de entrada)'), {alvo:k, pet:o.nome}); }catch(e){} /* silencioso de propósito */
+      var t=banhoFaltaAquiTexto(o, fezCk, g);
+      if(!t.semCheckin){ banhoFaltaMostrar('✅ '+t.titulo, t.linhas, {botao:'Entendi', ok:true}); return true; }
+      if(banhoFaltaTemCartaz() || typeof zEscolha!=='function'){
+        banhoFaltaMostrar(t.titulo, t.linhas.concat(['Day Care › Check-in do corpo.']), {botao:'Entendi'});
+        return true;
+      }
+      zEscolha(t.titulo, t.linhas,
+        [{t:'Fazer o check-in agora', cor:'#14532D', fn:function(){ banhoFaltaIrAoCheckin(o); }},
+         {t:'Abrir o almoço', cor:'#234D67', fn:function(){ banhoFaltaIrAoAlmoco(); }},
+         {t:'Depois', cor:'#7C8B99', fn:function(){ banhoFaltaSeguir(dia); }}],
+        {corTitulo:'#B3261E', rodape:(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'))+' também aparece como "ainda sem check-in do corpo" no painel do monitor.'});
+      return true;
+    }).catch(function(e){
+      _logFalhaGrav('presença pelo aviso do banho '+k, e);
+      delete BANHO_FALTA_VISTO[dia+'|'+k];   // nada foi feito: a pergunta volta
+      banhoFaltaMostrar('⚠ A PRESENÇA NÃO FOI MARCADA', ['Não consegui marcar '+o.nome+' na chamada: '+((e&&e.message)||e)+'.',
+        'Marque ✓ Veio em Day Care › Chamada.'], {botao:'Entendi'});
+      return false;
+    }).then(function(v){ delete BANHO_FALTA_TRAVA['aqui|'+k]; return v; });
+  }
+  function banhoFaltaEstaAquiUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
     if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return; }
-    banhoFaltaJaAqui(o, dcDataKey());
+    banhoFaltaEstaAqui(o, dcDataKey());
   }
   function banhoFaltaManterUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
@@ -21614,9 +21671,9 @@
     var botao=function(o){ return pode
       ? '<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:13px" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaLiberarUI(this.dataset.k)">Liberar o horário</button>'
       : '<span style="color:var(--crm-atencao-text);font-weight:700">aguardando a recepção</span>'; };
-    // «Já está aqui» (02/out/2026): ao lado de Liberar, enquanto o horário não foi liberado.
+    // «Está aqui» (02/out/2026): ao lado de Liberar, enquanto o horário não foi liberado.
     var aqui=function(o){ return pode
-      ? ' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaJaAquiUI(this.dataset.k)">'+escAttr(banhoFaltaGenero(o.chave).aqui)+'</button>'
+      ? ' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaEstaAquiUI(this.dataset.k)">'+escAttr(banhoFaltaGenero(o.chave).aqui)+'</button>'
       : ''; };
     var h='<div class="card" style="border-left:4px solid var(--crm-atencao-text)">'
       +'<h2 style="font-size:17px;margin-bottom:2px">Banho de quem faltou</h2>'

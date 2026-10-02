@@ -3151,7 +3151,7 @@ prova('Hoje na Zêluz: textos neutros, botão em "ainda vem" e em "falhou"', () 
     run(`BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; BANHO_FALTA=[BANHO_FALTA[0]]; banhoFaltaPerguntar('${dia}');`);
     const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
     assert.ok(/JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00/.test(esc[0].t));
-    igual(esc[0].b, ['Liberar o horário', 'Já está aqui', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
+    igual(esc[0].b, ['Liberar o horário', 'Está aqui', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
     assert.ok(esc[0].l.some((x) => /Se ainda vier \(chegar mais tarde\)/.test(x)));
   } finally { run(BF_VOLTA); }
 });
@@ -5626,7 +5626,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-5])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-6])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6519,56 +6519,106 @@ provaAsync('6.28 o check-in vem do banco, não da cópia que entrega vazio no er
       'o Toddy (check-in no banco) e o Kiko ("veio" na chamada) ficam fora da falta');
   } finally { solta628(); solta(); }
 });
-// ================================================ 6.29 — «Ele já está aqui» no aviso do banho de quem faltou
-// Adriana, 02/out/2026: "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei".
-// Chegaram sem o check-in de entrada; ao meio-dia, falta. O aviso só oferecia "ainda vem".
-const JA629 = `__abriu629=[]; __bkJA629={aa:abrirAtividade, ob:onDcBusca}; __busca629={value:'', style:{}};
+// ================================================ 6.29 — «Ele está aqui» no aviso do banho de quem faltou
+// Adriana, 02/out/2026: "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei" ·
+// "Mika idem está aqui" · Rafael: "coloque a opção está aqui (para que se não foi feito o checkin do corpo
+// apareça que tem que fazer!!! e o almoço!!!)".
+const JA629 = `__abriu629=[]; __bkJA629={aa:abrirAtividade, ob:onDcBusca, pa:pendAvisarChegada, cm:carregarAgendaMedTodos}; __busca629={value:'', style:{}};
   abrirAtividade=function(s){ __abriu629.push(s); }; onDcBusca=function(){ __abriu629.push('busca:'+__busca629.value); };
   __ge629=document.getElementById; document.getElementById=function(id){ return id==='dcBusca'?__busca629:__ge629(id); };
-  __aud629=[]; audit=function(a,d){ __aud629.push(String(a)+': '+String(d)); };`;
-const JA629_VOLTA = 'abrirAtividade=__bkJA629.aa; onDcBusca=__bkJA629.ob; document.getElementById=__ge629;';
-provaAsync('6.29 o aviso ganha «Ele já está aqui»: segura o banho e abre o check-in de entrada já nele (ela/ele pela ficha)', async () => {
+  __aud629=[]; audit=function(a,d){ __aud629.push(String(a)+': '+String(d)); };
+  __pend629=[]; pendAvisarChegada=function(k){ __pend629.push(k); }; __med629=0; carregarAgendaMedTodos=function(){ __med629++; };`;
+const JA629_VOLTA = 'abrirAtividade=__bkJA629.aa; onDcBusca=__bkJA629.ob; document.getElementById=__ge629; pendAvisarChegada=__bkJA629.pa; carregarAgendaMedTodos=__bkJA629.cm;';
+const bolt629 = (dia, k) => `__extra.Bolt={sexo:'Macho'}; BANHO_FALTA=[{chave:'${k}', nome:'Bolt', hora:'17:00', origem:'lancamento', porque:'faltou', lancs:[], txts:[]}];
+  BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; dcChamada={}; dcChamada['${k}']='faltou';`;
+provaAsync('6.29 «Ele está aqui»: marca VEIO na chamada (volta ao almoço), segura o banho e, sem o check-in do corpo, diz que tem de fazer e leva até ele', async () => {
   run(BF_STUBS); run(JA629);
   try {
-    const dia = run('dcDataKey()');
-    const kP = run("dcKey('Bolt','Rui')");
-    run(`__extra.Bolt={sexo:'Macho'}; BANHO_FALTA=[{chave:'${kP}', nome:'Bolt', hora:'16:30', origem:'lancamento', porque:'faltou', lancs:[], txts:[]}];
-      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; banhoFaltaPerguntar('${dia}');`);
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    run(bolt629(dia, kP) + `banhoFaltaPerguntar('${dia}');`);
     const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {b:x.b, l:x.l}; })')));
-    igual(esc[0].b, ['Liberar o horário', 'Ele já está aqui', 'Ele ainda vem', 'Decidir depois']);
-    assert.ok(esc[0].l.indexOf('Se já está aqui, toque em «Ele já está aqui»: o horário fica com ele e abre o check-in de entrada, que tira a falta.') >= 0, JSON.stringify(esc[0].l));
+    igual(esc[0].b, ['Liberar o horário', 'Ele está aqui', 'Ele ainda vem', 'Decidir depois']);
+    assert.ok(esc[0].l.indexOf('Se já está aqui, toque em «Ele está aqui»: ele volta para a chamada e para o almoço, e o horário fica com ele.') >= 0, JSON.stringify(esc[0].l));
     run('__esc[0].fn[1]();'); await tick();
-    assert.strictEqual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'o banho fica com ele (o mesmo "manter")');
-    igual(run('__abriu629'), ['checkin-corpo', 'busca:Bolt'], 'abre o check-in de ENTRADA com o nome dele na busca');
-    igual(run(`BANHO_FALTA_VISTO['${dia}|${kP}']`), 1, 'a pergunta não volta a aparecer');
-    assert.ok(run('__aud629').some((a) => /^banho-falta: Bolt já está aqui — abriu o check-in de entrada$/.test(a)), JSON.stringify(run('__aud629')));
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio', 'VEIO na chamada de hoje');
+    igual(run(`dcChamada['${kP}']`), 'veio', 'e na chamada deste aparelho (almoço e listas)');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'o banho fica com ele');
+    igual(run('__pend629'), [kP], 'a pendência de prevenção avisa a chegada (como o ✓ Veio da Chamada)');
+    igual(run('__med629'), 1, 'saiu de "faltou": o remédio volta para a fila');
+    igual(run(`BANHO_FALTA_VISTO['${dia}|${kP}']`), 1, 'a pergunta não volta');
+    assert.ok(run('__aud629').indexOf('chamada: marcou presença (está aqui, pelo aviso do banho)') >= 0, JSON.stringify(run('__aud629')));
+    assert.ok(run('__aud629').some((a) => /^banho-falta: Bolt está aqui — presença marcada \(sem o check-in do corpo de entrada\)$/.test(a)), JSON.stringify(run('__aud629')));
     assert.ok(run('__esp.length') === 0 && run('__rmBF.length') === 0, 'nada sai da planilha nem da TV');
-    // ela, pela ficha
-    run(`__extra.Mel={sexo:'Fêmea'};`);
-    igual(run(`banhoFaltaGenero('${run("dcKey('Mel','Lia')")}').aqui`), 'Ela já está aqui');
+    // sem o check-in de entrada: o segundo cartaz diz que tem de fazer
+    const seg = JSON.parse(JSON.stringify(run('__esc.slice(1).map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
+    igual(seg.length, 1, JSON.stringify(seg));
+    igual(seg[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
+    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois']);
+    igual(seg[0].l, ['Marcado como "veio" na chamada de hoje. O banho das 17:00 fica com ele.',
+      'O check-in do corpo de entrada não foi feito: faça agora.', 'Voltou para a lista do almoço: confira se ele já almoçou.']);
+    run('__esc[1].fn[0]();');
+    igual(run('__abriu629'), ['checkin-corpo', 'busca:Bolt'], 'abre o check-in de ENTRADA com o nome dele na busca');
+    run('__abriu629=[]; __esc[1].fn[1]();');
+    igual(run('__abriu629'), ['almoco'], 'e o almoço');
   } finally { run(JA629_VOLTA); run(BF_VOLTA); }
 });
-provaAsync('6.29 já estava segurado ("ainda vem"): «Já está aqui» só abre o check-in, sem o cartaz de "já decidido"; no Hoje na Zêluz, o botão aparece até o horário ser liberado', async () => {
+provaAsync('6.29 com o check-in feito, só confirma; sem conseguir ler o check-in, pede para conferir; a presença que não grava avisa e não segura nada', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    // check-in de entrada feito
+    run(bolt629(dia, kP) + `__banco['daycare/checkin-corpo/${dia}/${kP}']={fim:1}; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['✅ BOLT ESTÁ NA CHAMADA']);
+    igual(al[0].l, ['Marcado como "veio" na chamada de hoje.', 'O banho das 17:00 fica com ele.', 'Voltou para a lista do almoço: confira se ele já almoçou.']);
+    igual(run('__esc.length'), 0, 'sem o cartaz do check-in');
+    // a leitura do check-in falha: o cartaz pede para conferir
+    run(bolt629(dia, kP) + `delete __banco['daycare/checkin-corpo/${dia}/${kP}']; __esc=[]; __dbOk629=DB;
+      DB={ref:function(p){ var r=__dbOk629.ref(p); if(p.indexOf('daycare/checkin-corpo/')===0) r.once=function(){ return Promise.reject(new Error('sem rede')); }; return r; }};`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].l[1]'), 'Não consegui conferir o check-in do corpo de entrada: confira e, se não foi feito, faça agora.');
+    run('DB=__dbOk629;');
+    // a presença não grava: avisa, não segura o banho, não avisa a chegada
+    run(bolt629(dia, kP) + `delete __banco['daycare/chamada/${dia}/${kP}']; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; __alertas=[]; __esc=[]; __pend629=[];
+      BANHO_FALTA_VISTO['${dia}|${kP}']=1;
+      DB={ref:function(p){ var r=__dbOk629.ref(p); if(p.indexOf('daycare/chamada/')===0) r.set=function(){ return Promise.reject(new Error('sem permissão')); }; return r; }};`);
+    igual(await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`), false);
+    await tick();
+    run('DB=__dbOk629;');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['⚠ A PRESENÇA NÃO FOI MARCADA']);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']===undefined`), true, 'o banho não foi segurado sem a presença');
+    igual(run('__pend629'), [], 'sem presença, sem aviso de chegada');
+    igual(run(`dcChamada['${kP}']`), 'faltou', 'a chamada deste aparelho continua como estava');
+    igual(run(`BANHO_FALTA_VISTO['${dia}|${kP}']===undefined`), true, 'nada foi feito: a pergunta volta');
+    // ela e o neutro, pelo texto puro
+    igual(run("banhoFaltaAquiTexto({nome:'Mika', hora:'16:45'}, false, banhoFaltaGenero('x'))").linhas[2], 'Voltou para a lista do almoço: confira se o FILHOt já almoçou.');
+    run(`__extra.Mel={sexo:'Fêmea'};`);
+    igual(run(`banhoFaltaGenero('${run("dcKey('Mel','Lia')")}').aqui`), 'Ela está aqui');
+  } finally { run('if(typeof __dbOk629!=="undefined") DB=__dbOk629;'); run(JA629_VOLTA); run(BF_VOLTA); }
+});
+provaAsync('6.29 já segurado ("ainda vem"): marca VEIO sem regravar o banho; dois toques não marcam duas vezes; no Hoje na Zêluz, o botão aparece até o horário ser liberado, só para quem decide', async () => {
   run(BF_STUBS); run(JA629);
   try {
     const dia = run('dcDataKey()');
     run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'},
         {chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', porque:'faltou'},
         {chave:'mel', nome:'Mel', hora:'14:00', origem:'fixo', fixo:true, porque:'avisada'}];
-      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={bol:{decisao:'mantido', quem:'Carla', ts:5}, mel:{decisao:'liberado', quem:'Márcia'}};`);
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={bol:{decisao:'mantido', quem:'Carla', ts:5}, mel:{decisao:'liberado', quem:'Márcia'}}; dcChamada={};`);
     const h = run('banhoFaltaCardHTML()');
-    const botoes = h.match(/banhoFaltaJaAquiUI\(this\.dataset\.k\)">[^<]+</g) || [];
-    igual(botoes.length, 2, 'Jasmine (sem decisão) e Bolt (ainda vem); a Mel já foi liberada');
-    assert.ok(/data-k="jas" onclick="this\.disabled=true;banhoFaltaJaAquiUI/.test(h) && /data-k="bol" onclick="this\.disabled=true;banhoFaltaJaAquiUI/.test(h) && !/data-k="mel" onclick="this\.disabled=true;banhoFaltaJaAquiUI/.test(h), h);
-    run("__gravBF=[]; __alertas=[]; banhoFaltaJaAquiUI('bol');"); await tick();
-    igual(run('__abriu629'), ['checkin-corpo', 'busca:Bolt']);
-    igual(run(`__banco[banhoFaltaNo('${dia}')+'/bol']===undefined`), true, 'não regrava a decisão');
-    igual(run('__alertas.length'), 0, 'sem cartaz de "já foi decidido"');
+    igual((h.match(/banhoFaltaEstaAquiUI\(this\.dataset\.k\)">[^<]+</g) || []).length, 2, 'Jasmine (sem decisão) e Bolt (ainda vem); a Mel já foi liberada');
+    assert.ok(/data-k="jas" onclick="this\.disabled=true;banhoFaltaEstaAquiUI/.test(h) && /data-k="bol" onclick="this\.disabled=true;banhoFaltaEstaAquiUI/.test(h) && !/data-k="mel" onclick="this\.disabled=true;banhoFaltaEstaAquiUI/.test(h), h);
+    run("__gravBF=[]; __alertas=[]; banhoFaltaEstaAquiUI('bol'); banhoFaltaEstaAquiUI('bol');"); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/bol']`), 'veio');
+    igual(run(`__gravBF.filter(function(g){ return g.p==='daycare/chamada/${dia}/bol'; }).length`), 1, 'dois toques: uma gravação');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/bol']===undefined`), true, 'o "ainda vem" não é regravado');
+    igual(run('__alertas.filter(function(a){ return /já foi decidido|JÁ FOI DECIDIDO/.test(a.t); }).length'), 0, 'sem cartaz de "já foi decidido"');
     // quem não decide o banho não vê o botão e não consegue pelo atalho
-    run('__pode=false; __abriu629=[];');
-    assert.ok(!/banhoFaltaJaAquiUI/.test(run('banhoFaltaCardHTML()')));
-    run(`__al629=[]; __alertOrig629=alert; alert=function(m){ __al629.push(m); }; banhoFaltaJaAquiUI('jas'); alert=__alertOrig629;`);
-    igual(run('__abriu629'), [], 'sem permissão: nada abre');
+    run('__pode=false; __gravBF=[];');
+    assert.ok(!/banhoFaltaEstaAquiUI/.test(run('banhoFaltaCardHTML()')));
+    run(`__al629=[]; __alertOrig629=alert; alert=function(m){ __al629.push(m); }; banhoFaltaEstaAquiUI('jas'); alert=__alertOrig629;`);
+    await tick();
+    igual(run('__gravBF.length'), 0, 'sem permissão: nada grava');
     assert.ok(/Só a recepção, a Gestão ou a Supervisão/.test(run('__al629[0]')));
   } finally { run(JA629_VOLTA); run(BF_VOLTA); }
 });
