@@ -2,24 +2,30 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
-## O que mudou em 02/out/2026 (v 2026-10-02-06) — «Ele está aqui» no aviso do banho de quem faltou
+## O que mudou em 02/out/2026 (v 2026-10-02-08) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
 
 > **Adriana, 02/out/2026** (com as fotos das janelas "NÃO VEIO" da Luna, do Pipoca, da Mika e do Rafael): *"Luna também está aqui! Eu peguei ela!!! eu a levei!"* · *"Pipoca veio! eu o peguei"* · *"Mika idem está aqui"* · *"também está aqui — coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!! e o almoço!!!)"*. Story 6.29.
 
-### (AF) Quem já está aqui volta para a chamada e para o almoço em um toque
+### (AF) Quem já está aqui volta para a chamada em um toque, e o check-in que falta aparece
 
 | O que acontecia | Por quê | Agora |
 |---|---|---|
-| A Luna, o Pipoca, a Mika e o Rafael chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta: fora da chamada e **fora da lista do almoço**. A janela "NÃO VEIO — TINHA BANHO" só oferecia **Liberar o horário**, **Ainda vem** e **Decidir depois** | nenhuma das três tirava a falta; quem tirava era o check-in de entrada ou o ✓ Veio da Chamada, e a janela não dizia isso | a janela ganhou **«Ele está aqui»** (ou **«Ela está aqui»**, pela ficha). Um toque marca **VEIO** na Chamada (ele volta para o almoço e para as outras listas), segura o banho e, **se o check-in do corpo de entrada não foi feito**, avisa "FALTA O CHECK-IN DO CORPO DE …" com **Fazer o check-in agora** (abre o check-in de entrada já com o nome dele) e **Abrir o almoço** |
+| A Luna, o Pipoca, a Mika e o Rafael chegaram sem o check-in de entrada e, ao meio-dia, entraram como **falta na chamada**. A janela "NÃO VEIO — TINHA BANHO" só oferecia **Liberar o horário**, **Ainda vem** e **Decidir depois** | nenhuma das três tirava a falta; quem tirava era o check-in de entrada ou o ✓ Veio da Chamada, e a janela não dizia isso | a janela ganhou **«Ele está aqui»** (ou **«Ela está aqui»**, pela ficha). Um toque marca **VEIO** na Chamada, segura o banho e, **se o check-in do corpo de entrada não foi feito**, avisa "FALTA O CHECK-IN DO CORPO DE …" com **Fazer o check-in agora** (abre o check-in de entrada já com o nome dele) e **Abrir o almoço** |
 
+- **O almoço:** a falta do meio-dia **não** tira ninguém da grade do almoço; só a **falta avisada na planilha** tira. Agora, quem avisou a falta e está como **VEIO** na chamada (veio mesmo assim) **volta para a grade** — a mesma regra do banho. A grade do almoço passou a acompanhar a chamada ao vivo.
 - **O mesmo ✓ Veio da Chamada:** o remédio lançado na recepção volta para a fila do alarme, e a pendência de prevenção avisa a chegada.
-- **Com o check-in já feito,** a tela só confirma: "… ESTÁ NA CHAMADA", com o banho e o lembrete do almoço.
-- **Se a presença não grava** (sem rede), a tela diz "A PRESENÇA NÃO FOI MARCADA", nada é segurado e a pergunta volta.
+- **Com o check-in já feito,** a tela só confirma: "… ESTÁ NA CHAMADA". Sem conseguir ler o check-in: "CONFIRA O CHECK-IN DO CORPO DE …".
+- **Quem tem as atividades limitadas no Time:** a tela só oferece o atalho para o que a pessoa pode abrir; sem o check-in, diz "Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo".
+- **Xarás:** com duas fichas do mesmo nome, o aviso e o cartão mostram o tutor (ou a raça): "BOLT - RUI NÃO VEIO…".
+- **A busca do Check-in do corpo** passou a filtrar a lista na hora (antes ficava presa no nome até outra coisa redesenhar a tela).
+- **A próxima pergunta espera:** com um exame do corpo aberto, o aviso do próximo FILHOt não abre por cima.
+- **Se a presença não grava** (o banco recusou), a tela diz "A PRESENÇA NÃO FOI MARCADA", nada é segurado e a pergunta volta. **Aviso de outro dia** (aparelho que virou a noite aberto): "O DIA VIROU", nada é marcado.
+- **Outro aparelho já liberou o horário:** a tela diz isso, em vez de prometer o banho.
 - **No Hoje na Zêluz,** o cartão "Banho de quem faltou" tem o mesmo botão ao lado de **Liberar o horário**, até o horário ser liberado.
 - **Quem pode:** quem decide o banho de quem faltou (recepção, Supervisão, Gestão, Diretoria).
 - **O exame do corpo continua obrigatório:** sem ele, o FILHOt continua em "ainda sem check-in do corpo" no painel do monitor.
-- **Onde está no código:** `banhoFaltaEstaAqui`, `banhoFaltaEstaAquiUI`, `banhoFaltaAquiTexto`, `banhoFaltaIrAoCheckin`, `banhoFaltaIrAoAlmoco` e o `aqui` de `banhoFaltaGenero`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.29 e 2 provas antigas atualizadas para o botão novo; 25 defeitos plantados, 25 pegos).
+- **Onde está no código:** `banhoFaltaEstaAqui`, `banhoFaltaEstaAquiUI`, `banhoFaltaAquiTexto`, `banhoFaltaNomeVisivel`, `banhoFaltaAtivLiberada`, `banhoFaltaIrAoCheckin`, `banhoFaltaIrAoAlmoco`, `almFaltouAvisada` (grade do almoço) e `onDcBusca`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.29 e 2 provas antigas atualizadas; defeitos plantados: 25 + 22 + 5, todos pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-03, -05 e -07) — quem dormiu aqui ou só está na hospedagem não recebe a falta automática do meio-dia; leitura que falha não vira falta
 
