@@ -5626,7 +5626,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1234])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-5])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6487,7 +6487,7 @@ provaAsync('6.28 a leitura da noite de ontem falhou: o dia NÃO fecha (nenhuma f
   turma628();
   try {
     run('CF_ESTADIAS_LIDO=true; EST_TODAS={};');
-    for (const caminho of ['daycare/pernoites/', 'auaulandia/manuais/', 'auaulandia/removidos/']) {
+    for (const caminho of ['daycare/pernoites/', 'auaulandia/manuais/', 'auaulandia/removidos/', 'daycare/checkin-corpo/', 'daycare/chamada/']) {
       run("_faltaAutoFeita=''; __faltaDormiuLogado='';");
       banco628({}, caminho);
       ctx.__logs628 = []; run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(o){ __logs628.push(o); };');
@@ -6502,6 +6502,21 @@ provaAsync('6.28 a leitura da noite de ontem falhou: o dia NÃO fecha (nenhuma f
     banco628({});
     await run('aplicarFaltaAutomatica()'); await espera628();
     assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'a rede voltou: o dia fecha');
+  } finally { solta628(); solta(); }
+});
+provaAsync('6.28 o check-in vem do banco, não da cópia que entrega vazio no erro: quem fez check-in nunca recebe falta', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    const kToddy = run("dcKey('Toddy','Ana')"), kKiko = run("dcKey('Kiko','Rui')");
+    run('CF_ESTADIAS_LIDO=true; EST_TODAS={};');
+    // zMapaUma entrega vazio quando a leitura falha: não pode ser a fonte do check-in.
+    run('zMapaUma=function(){ return Promise.resolve({}); };');
+    banco628({ ['daycare/checkin-corpo/' + HOJE628]: { [kToddy]: { fim: 1 } }, ['daycare/chamada/' + HOJE628]: { [kKiko]: 'veio' } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const cham = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham[0].v).sort(), [run("dcKey('Romeo','Luciana')"), run("dcKey('Thor','Ana')")].sort(),
+      'o Toddy (check-in no banco) e o Kiko ("veio" na chamada) ficam fora da falta');
   } finally { solta628(); solta(); }
 });
 // ================================================ 6.29 — «Ele já está aqui» no aviso do banho de quem faltou

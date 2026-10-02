@@ -18,7 +18,7 @@
 - **Onde está no código:** `banhoFaltaJaAqui`, `banhoFaltaJaAquiUI`, `banhoFaltaIrAoCheckin` e o `aqui` de `banhoFaltaGenero`.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (2 provas da 6.29 e 2 provas antigas atualizadas para o botão novo; 17 defeitos plantados, 17 pegos).
 
-## O que mudou em 02/out/2026 (v 2026-10-02-03) — quem dormiu aqui não recebe a falta automática do meio-dia
+## O que mudou em 02/out/2026 (v 2026-10-02-03 e 2026-10-02-05) — quem dormiu aqui não recebe a falta automática do meio-dia; leitura que falha não vira falta
 
 > **Adriana, 02/out/2026** (com a foto da janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30"): *"o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve erro e agora também"*. Story 6.28.
 
@@ -32,12 +32,13 @@
   1. a **estadia da hospedagem** (aba Hóspedes, check-in de hospedagem ou de pernoite), menos a cancelada ou recusada;
   2. a **pernoite ou o hóspede lançado no Plantão**, com o número de noites, menos quem a Gestão tirou do dia;
   3. a **pernoite dos Lançamentos do dia** (a fila do check-in de pernoite), menos a cancelada ("Tutor buscou, cancelar").
-- **Se o app não consegue ler a noite de ontem** (sem rede), o dia não fecha naquele momento: ninguém recebe falta, e o app tenta de novo a cada 30 segundos. O aviso das 12h15 no Telegram continua cobrando se o dia não fechar.
+- **Se o app não consegue ler o check-in, a chamada ou a noite de ontem** (sem rede), o dia não fecha naquele momento: ninguém recebe falta, e o app tenta de novo a cada 30 segundos. O aviso das 12h15 no Telegram continua cobrando se o dia não fechar.
+  - Antes (v 2026-10-02-05), a leitura do check-in que falhava chegava **vazia**, e a chamada que falhava também: "ninguém fez check-in" virava falta para a turma inteira, por cima até do "veio" da chamada. Caminho achado depois da Luna, do Pipoca e da Mika (02/out): não confirmado que foi o caso deles; corrigido de qualquer jeito.
 - **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …", com os nomes.
 - **Não muda:** quem passou pelo check-in de entrada, quem já tem marcação na chamada, a falta avisada na planilha, os feriados, o sábado e o domingo.
 - **Hoje (02/out), com o Romeo:** a correção vale do próximo meio-dia em diante. A falta de hoje se desfaz na **Chamada** (tocar **VEIO**), e o banho fica com ele em **«Ele ainda vem»**.
 - **Onde está no código:** `faltaDormiuAqui`, `faltaDormiuEste`, `faltaDormiuLer` e o laço da turma em `aplicarFaltaAutomatica`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (6 provas da 6.28; 26 defeitos plantados, 26 pegos).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.28; 31 defeitos plantados, 31 pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
 

@@ -11887,9 +11887,15 @@
     }
     return DB.ref(faltaAutoTrava(hoje)).once('value').then(function(s){
       if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
+      // AS LEITURAS DO DIA NÃO FALHAM EM SILÊNCIO (02/out/2026: Luna, Pipoca e Mika). Antes,
+      // o check-in vinha de zMapaUma, que entrega VAZIO quando a leitura falha, e a chamada
+      // virava {} no erro: "ninguém fez check-in" e "ninguém tem marcação" viravam falta para
+      // a turma inteira, por cima até do "veio" da chamada. Agora as duas leituras são diretas
+      // (com um ouvinte vivo no mesmo nó, o Firebase serve do que já baixou): falhou alguma,
+      // o dia NÃO fecha agora, e o temporizador de 30 s tenta de novo.
       return Promise.all([
-        zMapaUma('daycare/checkin-corpo/'+hoje).catch(function(){ return {}; }),
-        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; }),
+        DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s1){ return (s1 && s1.val && s1.val())||{}; }),
+        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return (s2 && s2.val && s2.val())||{}; }),
         faltaDormiuLer(hoje)
       ]).then(function(rr){
         const fezCheckin=rr[0], chamada=rr[1], dormiu=rr[2];
@@ -11944,9 +11950,9 @@
         });
       });
     }).catch(function(e){
-      // A leitura de quem dormiu aqui falhou (ou a do check-in): o dia não fecha agora. Um
-      // rastro por dia neste aparelho; o temporizador tenta de novo em 30 s.
-      if(__faltaDormiuLogado!==hoje){ __faltaDormiuLogado=hoje; _logLeituraFalhou('a noite de ontem e o check-in (aplicarFaltaAutomatica)', e); }
+      // Uma leitura do dia falhou (o check-in, a chamada ou a noite de ontem): o dia não fecha
+      // agora. Um rastro por dia neste aparelho; o temporizador tenta de novo em 30 s.
+      if(__faltaDormiuLogado!==hoje){ __faltaDormiuLogado=hoje; _logLeituraFalhou('o check-in, a chamada e a noite de ontem (aplicarFaltaAutomatica)', e); }
     });
   }
   // O relógio passa sozinho: quem já estava com o app aberto às 11h50 não abriria tela
@@ -17072,7 +17078,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-04';
+  const APP_VERSAO='2026-10-02-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
