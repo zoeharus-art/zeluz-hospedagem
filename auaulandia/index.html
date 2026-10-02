@@ -7082,6 +7082,13 @@
     // Dia prometido numa hospedagem que ainda aguarda resposta não pode ser gasto aqui sem
     // que a recepção saiba: se o tutor fechar depois, faltaria dia para a reserva.
     const presos=repReservado(p,'');
+    // 6.25 (QA66): o dia JÁ TEM um uso (Reposição dos Lançamentos do dia, hospedagem, outro
+    // toque): marcar de novo desconta outra reposição. Pergunta antes, nunca em silêncio.
+    if(repDiaTemUso(repLancamentos(p)||[], repHojeISO())){
+      if(!await zPergunta(pelNome(p)+' já tem um uso registrado hoje',
+        ['O Banco de Reposições já descontou um uso de hoje (veja o Extrato).', 'Marcar de novo desconta mais uma reposição.'],
+        {sim:'Marcar mesmo assim', nao:'Não marcar'})) return;
+    }
     const tcHoje=repTrocaDoDia(p, repHojeISO());
     if(tcHoje){
       if(!await zPergunta(pelNome(p)+' veio hoje pela TROCA?',
@@ -7215,14 +7222,230 @@
     var cab=0; try{ cab=repLivresSemDia(p, 0); }catch(e){ cab=0; }
     return repVoltasVencidas(L||repLancamentos(p)||[], hoje).slice(0, Math.max(0, cab));
   }
+  // ===== "ELE VEIO" NO DIA QUE JÁ PASSOU (Adriana, 01/out/2026) ======================
+  // "O Billy Paul estava marcado para 30/09 e aqui diz que ele não repôs. Ele repôs, sim:
+  //  veio no dia 30, tomou banho, fez tudo. Eu tenho que ter a opção de falar que ele veio.
+  //  E tem que configurar melhor como isso vai funcionar."
+  // A troca (ou a reposição marcada) só era dada como cumprida com o toque em "Veio repor
+  // hoje", NO PRÓPRIO DIA. O check-in não contava, e no dia seguinte a única saída era
+  // desmarcar — o que deixava o crédito valendo e o saldo com 1 a mais. Agora:
+  //  · «ele veio» na linha "Estava marcada…" grava o uso COM O DIA MARCADO;
+  //  · do dia seguinte em diante, quem passou pelo check-in daquele dia (ou tem "veio" na
+  //    chamada) tem a baixa feita sozinha — só leitura da chamada e do check-in.
+  // UMA VINDA POR DIA (QA65): o registro mora no nó veio-{dia} do FILHOt, por transação. Duas
+  // marcadas no mesmo dia, dois aparelhos, ou o botão junto com a baixa automática caem no
+  // MESMO nó; e dia que já tem uso vivo (de qualquer caminho) não recebe outro.
+  var REP_VEIO_DIAS=60;          // a baixa automática olha até 60 dias para trás
+  var REP_VEIO_MIN=10;           // e roda, no máximo, de 10 em 10 minutos por aparelho
+  // Pura: o que a chamada e o check-in DAQUELE dia dizem. 'veio' | 'faltou' | ''. Registros
+  // que se contradizem (check-in feito e "faltou" na chamada) dão '': quem decide é a recepção.
+  function repPresencaNoDia(chamada, checkin){
+    var ch=String(chamada||'');
+    if(ch==='faltou') return checkin ? '' : 'faltou';
+    if(ch==='veio' || checkin) return 'veio';
+    return '';
+  }
+  // Pura: o dia já tem uma vinda viva — «Veio repor hoje», Reposição dos Lançamentos do dia,
+  // «ele veio», baixa automática ou dia de hospedagem (orc-…)? Uso devolvido não conta.
+  function repDiaTemUso(L, dia){
+    var an=repAnulados(L);
+    return (L||[]).some(function(l){ return !!(l && l.tipo==='uso' && !an[l._id] && l.data===dia); });
+  }
+  // Pura: o nó do registro da vinda daquele dia — o primeiro livre: veio-{dia}, veio-{dia}-2…
+  // O "-2" só nasce quando a vinda anterior foi devolvida no Extrato e alguém marca de novo.
+  function repVeioChave(dia, L){
+    var ids={}; (L||[]).forEach(function(l){ if(l && l._id) ids[l._id]=1; });
+    var base='veio-'+String(dia||''), k=base, n=1;
+    while(ids[k]){ n++; k=base+'-'+n; }
+    return k;
+  }
+  // Pura (QA66): alguém DEVOLVEU um uso daquele dia — pelo «Devolver» do Extrato, de qualquer
+  // caminho (o «ele veio», a baixa automática, o «Veio repor hoje»). A baixa sozinha não refaz a
+  // decisão de uma pessoa, e nem relê a chamada desse dia.
+  // A única devolução que não conta é a do «Tirar só o lançamento» dos Lançamentos do dia
+  // (so_lancamento): ali saiu só o lançamento repetido, e a vinda continua de verdade.
+  function repVeioDevolvido(L, dia){
+    return (L||[]).some(function(l){ return !!(l && l.tipo==='estorno' && l.dia_devolvido===dia && !l.so_lancamento); });
+  }
+  // Pura: o dia mais antigo que a baixa automática ainda olha.
+  function repVeioCorte(hoje){
+    var d=new Date(String(hoje||'')+'T12:00:00'); if(isNaN(d)) return '';
+    d.setDate(d.getDate()-REP_VEIO_DIAS);
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  }
+  // Pura: a estadia na Auaulândia cobria aquele dia? Hóspede entra na chamada do Day Care
+  // durante a estadia (turmaDoDia): ter "veio" não prova que veio pela reposição (QA65).
+  // Estadia sem data de entrada não conta: não se inventa hospedagem.
+  function repEstadiaCobre(e, dia){
+    e=e||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/, st=String(e.status||'');
+    if(st==='cancelada' || st==='recusada') return false;
+    var ent=String(e.entrada||''), sai=String(e.saida||'');
+    if(!iso.test(String(dia||'')) || !iso.test(ent) || ent>dia) return false;
+    if(iso.test(sai)) return sai>=dia;
+    return (st||'ativa')==='ativa';
+  }
+  function repHospedadoNoDia(p, dia){
+    try{
+      var todas=(typeof EST_TODAS!=='undefined' && EST_TODAS)||{};
+      var pk=pelKey(p), dk=dcKey(p.n, p.tutor);
+      return Object.keys(todas).some(function(id){
+        var e=todas[id]||{};
+        if(!(e.refKey===pk || dcKey(e.nome, e.tutor)===dk)) return false;
+        return repEstadiaCobre(e, dia);
+      });
+    }catch(e){ return true; }       // sem saber, não dá baixa sozinha: fica o botão
+  }
+  // Pura: o uso que «ele veio» (ou a baixa automática) grava para o crédito marcado. O dia é o
+  // MARCADO, não o de hoje: é ele que tira a linha "Estava marcada…" e que o Extrato mostra.
+  function repVeioRegistro(cred, auto, quem, ts){
+    var dia=String((cred&&cred.volta)||'');
+    var troca=repTrocaViva(cred);
+    var de=troca?repBRdata(String(((cred.troca||{}).de)||cred.data||'')).slice(0,5):'';
+    var obs=(auto?'Baixa automática pelo check-in de ':'Marcado depois: veio em ')+repBRdata(dia).slice(0,5)
+      +(troca?(', pela troca de '+de):'');
+    return {tipo:'uso', data:dia, motivo:troca?'troca':'reposicao', obs:obs,
+            credito:String((cred&&cred._id)||''), veio_auto:!!auto, quem:String(quem||'-'), ts:ts||Date.now()};
+  }
+  // Grava uma vez só. true = ESTA chamada gravou; false = o nó já existia (outro aparelho).
+  function repVeioGravar(p, cred, auto, L){
+    if(!p || !cred || !cred._id || !/^\d{4}-\d{2}-\d{2}$/.test(String(cred.volta||''))) return Promise.reject(new Error('sem a reposição marcada'));
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var quem=auto?'sistema':((typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-'));
+    var reg=repVeioRegistro(cred, auto, quem, Date.now());
+    var chave=repVeioChave(cred.volta, L||repLancamentos(p)||[]);
+    return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+chave).transaction(function(atual){
+      if(atual) return;            // já registrado (outro aparelho, o botão ou a baixa automática)
+      return reg;
+    }).then(function(res){ return !!(res && res.committed); });
+  }
+  // A marcada para `dia` que ainda vale e não teve uso naquele dia.
+  function repVeioCredito(p, dia, hoje){
+    try{ return repVoltasVencidasValendo(p, null, hoje||repHojeISO()).filter(function(l){ return l.volta===dia; })[0]||null; }
+    catch(e){ return null; }
+  }
+  // «ele veio» / «ela veio» — na linha "Estava marcada para…".
+  async function repVeioNoDia(i, dia){
+    var p=PELUDINHOS[i]; if(!p) return;
+    if(!repPodeLancar()){ alert('Quem marca a vinda da reposição é a recepção, a Supervisão ou a Gestão.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return; }
+    var hoje=repHojeISO();
+    if(!(String(dia||'')<hoje)){ alert('Este dia ainda não passou. No próprio dia, use «Veio repor hoje».'); return; }
+    var L=repLancamentos(p)||[];
+    var fem=repEhFemea(p), Ele=fem?'Ela':'Ele';
+    var dCurto=repBRdata(dia).slice(0,5);
+    if(repDiaTemUso(L, dia)){
+      if(typeof zAlertao==='function') zAlertao('JÁ HÁ UM USO EM '+dCurto,
+        [pelNome(p)+' já tem um uso registrado em '+dCurto+' (veja o Extrato). Esta é uma 2ª marcação no mesmo dia: toque em «desmarcar» nela.'], {botao:'Fechar'});
+      return;
+    }
+    var cred=repVeioCredito(p, dia, hoje);
+    if(!cred){ alert('Não achei a reposição marcada para '+dCurto+' sem registro de vinda. Atualize a tela.'); return; }
+    var troca=repTrocaViva(cred);
+    var s=repSaldo(p), depois=Math.max(0, s-1);
+    var de=troca?repBRdata(String(((cred.troca||{}).de)||cred.data||'')).slice(0,5):'';
+    var linhas=troca
+      ? ['Pela troca, no lugar de '+de+'.', 'Não é reposição: as reposições '+(fem?'dela':'dele')+' continuam '+depois+'.']
+      : [Ele+' repôs '+repNoDia(dia)+'.', 'Saldo agora: '+s+'. Depois de marcar: '+depois+'.'];
+    if(!await zPergunta(pelNome(p)+' veio '+repNoDia(dia)+'?', linhas, {sim:Ele+' veio', nao:'Voltar'})) return;
+    var gravou=false;
+    try{ gravou=await repVeioGravar(p, cred, false, L); }
+    catch(e){ alert('Não consegui marcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); return; }
+    var redesenhar=function(){ setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300); };
+    if(!gravou){
+      if(typeof zAlertao==='function') zAlertao('JÁ ESTAVA MARCADO', [pelNome(p)+' já tem a vinda de '+dCurto+' registrada, por outro aparelho ou pelo check-in daquele dia.', 'Nada foi gravado de novo.'], {botao:'Fechar'});
+      redesenhar(); return;
+    }
+    if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — veio '+repNoDia(dia)+(troca?(', pela troca de '+de):'')+' (marcado depois)',
+      {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+    if(troca){
+      if(typeof zAlertao==='function') zAlertao('TROCA CUMPRIDA', [pelNome(p)+' veio '+repNoDia(dia)+', no lugar de '+de+'.', 'As reposições continuam '+depois+'.'], {botao:'Fechar'});
+    }else{
+      repMsgModal('✅ Reposição registrada', [pelNome(p)+' repôs '+repNoDia(dia)+'. Saldo agora: '+depois+'.'],
+        (typeof dashRepMensagemTutor==='function')?dashRepMensagemTutor(p, s, dia):repMensagem(p,'uso',{saldo:depois}), repTelDe(p));
+    }
+    redesenhar();
+  }
+  // A BAIXA SOZINHA. Do dia seguinte ao marcado em diante, olha a chamada (e, sem ela, o
+  // check-in) DAQUELE dia de cada marcada que ainda vale. Não dá baixa sozinha quando ter vindo
+  // não prova que veio pela reposição: num dia FIXO dele, ou num dia em que estava HOSPEDADO.
+  // Aí fica o botão. Roda em aparelho de quem lança reposição (recepção, Supervisão, Gestão),
+  // com o cadastro e as estadias já carregados, nunca num aparelho aberto desde ontem.
+  var _repVeioTs=0, _repVeioRodando=false;
+  var REP_VEIO_SEM={};           // {pelKey|dia: true} — já lido nesta sessão, sem "veio": não relê
+  function repBaixaPelaPresenca(forcar){
+    if(!DB) return Promise.resolve({ok:false, motivo:'sem conexão com o banco'});
+    var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
+    if(!r || r==='tutor') return Promise.resolve({ok:false, motivo:'ninguém da casa logado'});
+    if(!repPodeLancar()) return Promise.resolve({ok:false, motivo:'este papel não lança reposição'});
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve({ok:false, motivo:'aparelho aberto desde ontem'});
+    // QA65: PELUDINHOS nunca está vazio (a lista de fábrica vem no código); quem diz que os dias
+    // e a situação de cada ficha chegaram do banco é a carteira. E as estadias (o hóspede do dia).
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return Promise.resolve({ok:false, motivo:'cadastro carregando'});
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return Promise.resolve({ok:false, motivo:'estadias carregando'});
+    if(!REPO_CACHE || !Object.keys(REPO_CACHE).length) return Promise.resolve({ok:false, motivo:'reposições carregando'});
+    if(_repVeioRodando) return Promise.resolve({ok:false, motivo:'já está conferindo'});
+    if(!forcar && _repVeioTs && (Date.now()-_repVeioTs) < REP_VEIO_MIN*60000) return Promise.resolve({ok:true, pulou:true});
+    _repVeioTs=Date.now();
+    var hoje=repHojeISO(), corte=repVeioCorte(hoje), alvos=[];
+    try{
+      var visto={};
+      PELUDINHOS.forEach(function(p){
+        if(!p || pelInativo(p)) return;
+        var L=repLancamentos(p)||[], venc=[];
+        try{ venc=repVoltasVencidasValendo(p, L, hoje)||[]; }catch(e){ venc=[]; }
+        venc.forEach(function(l){
+          if(!(l.volta>=corte)) return;
+          var ch=pelKey(p)+'|'+l.volta;
+          if(visto[ch] || REP_VEIO_SEM[ch]) return;                 // uma vinda por dia; e o já lido sem "veio"
+          visto[ch]=1;
+          if(repDiaTemUso(L, l.volta) || repVeioDevolvido(L, l.volta)) return;   // já tem vinda, ou foi devolvida
+          if(repEhDiaDele(p, l.volta) || repHospedadoNoDia(p, l.volta)) return; // ter vindo não prova a reposição
+          alvos.push({p:p, cred:l, L:L, ch:ch});
+        });
+      });
+    }catch(e){
+      _logFalhaGrav('baixa automática das reposições (montar a lista)', e);
+      return Promise.resolve({ok:false, motivo:String((e&&e.message)||e)});
+    }
+    _repVeioRodando=true;
+    var feitos=[];
+    return alvos.reduce(function(fila, a){
+      return fila.then(function(){
+        var k=dcKey(a.p.n, a.p.tutor), dia=a.cred.volta;
+        // A chamada primeiro: o check-in grava "veio" nela. O check-in só é lido quando a
+        // chamada está vazia — e só o campo `fim`, nunca o registro inteiro (com fotos).
+        return DB.ref('daycare/chamada/'+dia+'/'+k).once('value').then(function(s){
+          var ch=s.val();
+          if(ch) return repPresencaNoDia(ch, null);
+          return DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value').then(function(s2){ return repPresencaNoDia(null, s2.val()); });
+        }).then(function(pres){
+          if(pres!=='veio'){ REP_VEIO_SEM[a.ch]=true; return; }
+          return repVeioGravar(a.p, a.cred, true, a.L).then(function(gravou){
+            if(gravou) feitos.push(pelNome(a.p)+' ('+repBRdata(dia).slice(0,5)+(repTrocaViva(a.cred)?', troca':'')+')');
+          });
+        }).catch(function(e){ _logFalhaGrav('baixa automática da reposição de '+pelNome(a.p)+' ('+dia+')', e); });
+      });
+    }, Promise.resolve()).then(function(){
+      _repVeioRodando=false;
+      if(feitos.length && typeof audit==='function') audit('reposicao-uso', 'baixa automática pelo check-in do dia marcado: '+feitos.join(', '), {assinou:'sistema'});
+      return {ok:true, conferidos:alvos.length, feitos:feitos.length};
+    }, function(e){ _repVeioRodando=false; _logFalhaGrav('baixa automática das reposições', e); return {ok:false, motivo:String((e&&e.message)||e)}; });
+  }
+  // Sozinho: pouco depois de abrir o app e de 10 em 10 minutos. A tela de Reposições também
+  // chama ao desenhar (a trava de 10 minutos impede repetir).
+  setTimeout(function(){ try{ repBaixaPelaPresenca(false); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 30000);
+  setInterval(function(){ try{ repBaixaPelaPresenca(false); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, REP_VEIO_MIN*60000);
   // Chave FIXA, dev-{uso} (QA14, como o est-orc-… dos orçamentos): dois toques ou dois
   // aparelhos devolvendo o mesmo uso escrevem o MESMO nó — o Extrato não mostra duas devoluções.
-  function repDevolverUsoGravar(p, uso, porque){
+  function repDevolverUsoGravar(p, uso, porque, extra){
     if(!p) return Promise.reject(new Error('sem o peludinho'));
     if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
     var reg={tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:uso._id,
       dia_devolvido:String(uso.data||''), obs:String(porque||''),
       quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()};
+    if(extra && extra.so_lancamento) reg.so_lancamento=true;   // 6.25: a vinda continua (ver repVeioDevolvido)
     return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/dev-'+uso._id).set(reg);
   }
   // «Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo.
@@ -8612,6 +8835,9 @@
   }
   function renderReposicao(){
     try{ renderTrocas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // A baixa sozinha pelo check-in do dia marcado (01/out/2026). Assíncrona e com trava de
+    // 10 minutos: o que ela gravar volta pelo ouvinte do banco e redesenha esta tela.
+    try{ repBaixaPelaPresenca(false); }catch(e){ _logFalhaGrav('renderReposicao (baixa pelo check-in)', e); }
     const el=document.getElementById('repLista'); if(!el) return;
     // A CONFIRMAÇÃO DA PLANILHA depende de ler o registro do automático dos dias que estão
     // na tela. Enquanto não chega, cada linha DIZ "conferindo a planilha…" — e quando chega,
@@ -8638,7 +8864,7 @@
       +(vemHoje.length?('<div class="alm-fora" style="margin-top:10px;border-left:4px solid var(--gold)">'
         +'<b>Marcados para repor HOJE ('+vemHoje.length+'):</b> '
         +vemHoje.map(function(o){ return escAttr(pelNome(o.p)); }).join(' · ')
-        +'<br><span style="color:var(--muted)">O tutor escolheu este dia. Se ele vier, marque "Veio repor hoje" — o crédito só sai quando ele aparece.</span></div>'):'');
+        +'<br><span style="color:var(--muted)">O tutor escolheu este dia. O crédito só sai quando ele aparece: marque «Veio repor hoje». Se ninguém marcar, o check-in de hoje dá a baixa sozinho amanhã, menos em dia fixo dele ou em dia de hospedagem.</span></div>'):'');
     const lista=(q?todos.filter(function(o){ return jsNorm([o.p.n,pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
                   :comSaldo).sort(function(a,b){ return b.saldo-a.saldo || jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
     const c=document.getElementById('repCount');
@@ -8660,13 +8886,23 @@
       // A MARCADA QUE JÁ PASSOU sem uso naquele dia (25/set/2026, Safira): antes sumia da tela
       // e prendia o crédito. Aparece, com «desmarcar»; «Marcar reposição» a remarca.
       const venc=repVoltasVencidasValendo(o.p, repLancamentos(o.p), hojeISO);
+      // A FRASE DIZ A VERDADE (Billy Paul, 01/out/2026): o app não sabe se ele "não repôs" —
+      // sabe só que a vinda não foi marcada. «ele veio» grava o uso com o dia marcado. Dia que
+      // já tem vinda e ainda tem marcada (2ª marcação no mesmo dia, QA65) só pode ser desmarcado.
+      const eleV=repEhFemea(o.p)?'ela':'ele';
+      const Lv=repLancamentos(o.p);
+      const lnk=function(fn, dia, rotulo){ return '<button type="button" onclick="'+fn+'('+o.i+',\''+dia+'\')"'
+        +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">'+rotulo+'</button>'; };
       const vencTxt=venc.length?('<div class="rp-sub" style="color:var(--crm-critico);font-weight:700">'
         +venc.slice(0,3).map(function(l){
-          return 'Estava marcada para '+repBRdata(l.volta)+' e '+(repEhFemea(o.p)?'ela':'ele')+' não repôs'
-            +(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+l.volta+'\')"'
-              +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'):'');
+          const tr=repTrocaViva(l)?(' (troca, no lugar de '+repBRdata(String(((l.troca||{}).de)||l.data||'')).slice(0,5)+')'):'';
+          if(repDiaTemUso(Lv, l.volta))
+            return 'Marcada outra vez para '+repBRdata(l.volta)+tr+': esse dia já tem um uso registrado (veja o Extrato)'
+              +(podeDesm?(' · '+lnk('repDesmarcar', l.volta, 'desmarcar')):'');
+          return 'Estava marcada para '+repBRdata(l.volta)+tr+': a vinda não foi marcada'
+            +(podeDesm?(' · '+lnk('repVeioNoDia', l.volta, eleV+' veio')+' · '+lnk('repDesmarcar', l.volta, 'desmarcar')):'');
         }).join(' · ')+(venc.length>3?(' e mais '+(venc.length-3)):'')
-        +'<br><span style="font-weight:600;color:var(--muted)">A reposição continua valendo. Desmarque, ou toque em «Marcar reposição» para escolher o novo dia.</span></div>'):'';
+        +'<br><span style="font-weight:600;color:var(--muted)">Se '+eleV+' veio, toque em «'+eleV+' veio». Se não veio, a reposição continua valendo: desmarque, ou toque em «Marcar reposição» para escolher o novo dia. Quem passou pelo check-in no dia marcado sai daqui sozinho, menos em dia fixo, em dia de hospedagem ou depois de uma vinda devolvida no Extrato.</span></div>'):'';
       // Dias presos numa reserva de hospedagem que ainda aguarda resposta: continuam sendo
       // dele (o saldo não caiu), mas já estão prometidos — não podem ser gastos duas vezes.
       const presos=repReservado(o.p,'');
@@ -11520,6 +11756,137 @@
       }).catch(function(e){ _logFalhaGrav('a fotografia da turma do dia', e); });
     }).catch(function(e){ _logFalhaGrav('ler a fotografia da turma do dia', e); });
   }
+  // ===== QUEM DORMIU AQUI NÃO RECEBE FALTA (Adriana, 02/out/2026, caso do Romeo) ======
+  // "o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve
+  //  erro e agora também" (o Romeo saiu como "não veio — tinha banho às 15:30"). Quem passou a noite na casa não passa pelo check-in de entrada do
+  // Day Care: já estava aqui. A falta das 12h comparava só a turma com o check-in e a
+  // chamada, e marcava "faltou" em quem dormiu aqui — e o banho dele virava "não veio —
+  // liberar o horário". Agora a falta automática pula quem dormiu aqui na noite anterior,
+  // por qualquer uma das três portas onde a noite fica registrada:
+  //   1. a estadia da hospedagem (auaulandia/estadias), menos a cancelada ou recusada;
+  //   2. a pernoite ou o hóspede lançado no Plantão (auaulandia/manuais/{dia}, com as
+  //      noites), menos quem a Gestão tirou do dia (auaulandia/removidos/{ontem});
+  //   3. a pernoite do Lançamento do dia (daycare/pernoites/{ontem}), menos a cancelada.
+  // Ele fica SEM marcação: quem marca é a chamada. O automático só deixa de presumir falta.
+  var FALTA_PERN_MAX_NOITES=7;
+  // Pura: o retrato de quem dormiu na noite que começou em `ontem`. Devolve
+  // {pk:{pelKey:nome}, dc:{dcKey:nome}, nome:{nomeNormalizado:nome}}; `nome` só recebe o
+  // registro sem tutor e sem ficha ligada (a célula "Repolho / SRD"), em que o nome é o
+  // máximo que o dado permite afirmar. Errar para este lado só deixa alguém sem falta
+  // automática — a chamada continua valendo.
+  function faltaDormiuAqui(ontem, estadias, manuais, removidos, pernDc){
+    var out={pk:{}, dc:{}, nome:{}};
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
+    if(!iso.test(String(ontem||''))) return out;
+    var hoje=orcMaisDias(ontem, 1);
+    var norm=function(t){ return jsNorm(String(t||'')); };
+    var por=function(reg, nomeCampo){
+      reg=reg||{};
+      var nome=String(reg[nomeCampo]||reg.nome||'').trim(); if(!nome) return;
+      var tutor=String(reg.tutor||'').trim(), rk=String(reg.refKey||'').trim();
+      if(rk) out.pk[rk.toLowerCase()]=nome;
+      if(tutor) out.dc[dcKey(nome, tutor)]=nome;
+      if(!rk && !tutor) out.nome[norm(nome)]=nome;
+    };
+    Object.keys(estadias||{}).forEach(function(id){
+      var e=(estadias||{})[id]||{};
+      var st=String(e.status||'');
+      if(st==='cancelada' || st==='recusada') return;
+      var ent=String(e.entrada||''), sai=String(e.saida||'');
+      // Check-out feito ANTES da saída prevista (QA71): a saída que vale é o dia do check-out.
+      // Sem isto, quem foi embora em 28/09 com saída marcada para 05/10 "dormia aqui" até lá.
+      var co=(st==='finalizada' && e.checkout && e.checkout.ts) ? faltaDiaLocal(e.checkout.ts) : '';
+      if(co && (!iso.test(sai) || co<sai)) sai=co;
+      if(!iso.test(ent) || ent>ontem) return;               // entrou depois da noite de ontem
+      if(iso.test(sai)){ if(sai<hoje) return; }             // saiu antes desta manhã
+      else if((st||'ativa')!=='ativa') return;              // sem saída: só a que está aberta
+      por(e, 'nome');
+    });
+    // Quem a Gestão tirou do dia, pelo NOME e pelo TUTOR (a mesma chave do Plantão,
+    // hospRemKey): tirar a Maya da Luciana não derruba a noite da Maya da Marcela (QA71).
+    var tirados=[];
+    Object.keys(((removidos||{})[ontem])||{}).forEach(function(k){
+      var v=((removidos||{})[ontem]||{})[k]||{};
+      var n=norm(v.nome||v.n||String(k).split('__')[0]||''), t=norm(v.tutor||'');
+      if(n) tirados.push({n:n, t:t});
+    });
+    var foiTirado=function(m){
+      var n=norm(m.nome), t=norm(m.tutor||'');
+      return tirados.some(function(r){ return r.n===n && (!r.t || !t || r.t===t); });
+    };
+    Object.keys(manuais||{}).forEach(function(dia){
+      if(!iso.test(dia) || dia>ontem) return;
+      Object.keys((manuais||{})[dia]||{}).forEach(function(k){
+        var m=((manuais||{})[dia]||{})[k]||{};
+        if(!m.nome) return;
+        var n=Math.max(1, Math.min(FALTA_PERN_MAX_NOITES, parseInt(m.noites,10)||1));
+        if(orcMaisDias(dia, n-1)<ontem) return;             // a última noite foi antes de ontem
+        if(foiTirado(m)) return;                            // a Gestão tirou do dia
+        por(m, 'nome');
+      });
+    });
+    Object.keys(pernDc||{}).forEach(function(ch){
+      var r=(pernDc||{})[ch]||{};
+      if(String(r.status||'aguardando')==='cancelado') return;
+      var nm=pernNomeLimpo(r.nome||r.valor||'');
+      out.dc[String(ch)]=nm||String(ch);
+      // Sem ficha ligada, a chave é o texto do lançamento (pernChaveDe): vale o nome.
+      if(String(ch).indexOf('__')<0 && nm) out.nome[norm(nm)]=nm;
+    });
+    return out;
+  }
+  // Pura: este FILHOt da turma dormiu aqui? (o retrato vem de faltaDormiuAqui)
+  // `repetidos` = nomes que mais de uma ficha usa: o registro só com o nome não decide por
+  // nenhum deles (as duas Luas, as três Mayas — QA71).
+  function faltaDormiuEste(p, retrato, repetidos){
+    if(!p || !retrato) return false;
+    if(retrato.pk[pelKey(p)]) return true;
+    if(retrato.dc[dcKey(p.n, p.tutor)]) return true;
+    var n=jsNorm(String(p.n||''));
+    if(repetidos && repetidos[n]) return false;
+    return !!retrato.nome[n];
+  }
+  // Pura: os nomes que mais de uma ficha usa.
+  function faltaNomesRepetidos(lista){
+    var vistos={}, rep={};
+    (lista||[]).forEach(function(q){ var n=jsNorm(String((q&&q.n)||'')); if(!n) return; if(vistos[n]) rep[n]=true; vistos[n]=true; });
+    return rep;
+  }
+  // "2026-10-02" do instante `ts`, no relógio daqui.
+  function faltaDiaLocal(ts){
+    var d=new Date(Number(ts)); if(isNaN(d.getTime())) return '';
+    var z=function(x){ return String(x).padStart(2,'0'); };
+    return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+  }
+  // A trava do dia guarda QUEM ficou sem falta automática (dormiu aqui ou está na
+  // hospedagem): as pendências de prevenção não o tratam como "não veio" (QA71).
+  function faltaSemFaltaNaTrava(trava, chave){ var m=trava&&trava.sem_falta; return !!(m && typeof m==='object' && chave && Object.prototype.hasOwnProperty.call(m, chave) && m[chave]); }
+  // Lê as três portas da noite de ontem. Falhou alguma leitura: rejeita, e o dia NÃO fecha
+  // agora — marcar falta em quem dormiu aqui é o erro que esta regra existe para evitar;
+  // o temporizador de 30 s tenta de novo, e o vigia das 12h15 cobra se o dia não fechar.
+  var __faltaDormiuLogado='', __faltaEstLendo=null;
+  function faltaDormiuLer(hoje){
+    var ontem=orcMaisDias(hoje, -1), dias=[];
+    for(var i=0;i<FALTA_PERN_MAX_NOITES;i++) dias.push(orcMaisDias(ontem, -i));   // 7 noites no máximo: ontem e os 6 dias antes
+    var ler=function(caminho){ return DB.ref(caminho).once('value').then(function(s){ return s.val()||{}; }); };
+    // As estadias vêm do ouvinte vivo, ligado no login em todo aparelho. Se ele ainda não
+    // entregou, UMA leitura por sessão (guardada): baixar o nó inteiro a cada volta de 30 s,
+    // enquanto outra leitura falha, custaria centenas de KB por volta (QA71). Sem as
+    // estadias, quem dormiu aqui receberia falta.
+    var lidas=(typeof CF_ESTADIAS_LIDO!=='undefined' && CF_ESTADIAS_LIDO && typeof EST_TODAS!=='undefined' && EST_TODAS);
+    var estadias=lidas ? Promise.resolve(EST_TODAS)
+      : (__faltaEstLendo || (__faltaEstLendo=ler('auaulandia/estadias').catch(function(e){ __faltaEstLendo=null; throw e; })));
+    return Promise.all([
+      Promise.all(dias.map(function(d){ return ler('auaulandia/manuais/'+d).then(function(v){ return [d, v]; }); })),
+      ler('auaulandia/removidos/'+ontem),
+      ler('daycare/pernoites/'+ontem),
+      estadias
+    ]).then(function(r){
+      var manuais={}; r[0].forEach(function(par){ manuais[par[0]]=par[1]; });
+      var removidos={}; removidos[ontem]=r[1];
+      return faltaDormiuAqui(ontem, r[3], manuais, removidos, r[2]);
+    });
+  }
   function aplicarFaltaAutomatica(){
     if(!DB) return Promise.resolve();
     var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
@@ -11554,32 +11921,53 @@
     }
     return DB.ref(faltaAutoTrava(hoje)).once('value').then(function(s){
       if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
+      // AS LEITURAS DO DIA NÃO FALHAM EM SILÊNCIO (02/out/2026: Luna, Pipoca e Mika). Antes,
+      // o check-in vinha de zMapaUma, que entrega VAZIO quando a leitura falha, e a chamada
+      // virava {} no erro: "ninguém fez check-in" e "ninguém tem marcação" viravam falta para
+      // a turma inteira, por cima até do "veio" da chamada. Agora as duas leituras são diretas
+      // (com um ouvinte vivo no mesmo nó, o Firebase serve do que já baixou): falhou alguma,
+      // o dia NÃO fecha agora, e o temporizador de 30 s tenta de novo.
       return Promise.all([
-        zMapaUma('daycare/checkin-corpo/'+hoje).catch(function(){ return {}; }),
-        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; })
+        DB.ref('daycare/checkin-corpo/'+hoje).once('value').then(function(s1){ return (s1 && s1.val && s1.val())||{}; }),
+        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return (s2 && s2.val && s2.val())||{}; }),
+        faltaDormiuLer(hoje)
       ]).then(function(rr){
-        const fezCheckin=rr[0], chamada=rr[1];
-        const marcados=[];
+        const fezCheckin=rr[0], chamada=rr[1], dormiu=rr[2];
+        const marcados=[], dormiramAqui=[], naHospedagem=[], semFalta={};
+        const repetidos=faltaNomesRepetidos(PELUDINHOS);
         turmaDeHoje().forEach(function(o){
           const k=dcKey(o.p.n,o.p.tutor);
           if(fezCheckin[k]) return;                       // passou pelo check-in: está aqui
           if(chamada[k]) return;                          // alguém já marcou algo: não sobrescreve
           if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return;  // mora aqui
           if(typeof faltouHoje==='function' && faltouHoje(o)) return;            // a planilha já avisou
+          if(faltaDormiuEste(o.p, dormiu, repetidos)){ dormiramAqui.push(pelNome(o.p)); semFalta[k]=true; return; }   // dormiu aqui: já estava na casa
+          // SÓ HÓSPEDE (QA71, o "ontem teve erro" do Romeo): está na turma só por causa da
+          // estadia da hospedagem, não é do Day Care neste dia. No dia em que chega, ele não
+          // passa pelo check-in de entrada do Day Care — e recebia falta ao meio-dia.
+          if(o.hospede){ naHospedagem.push(pelNome(o.p)); semFalta[k]=true; return; }
           marcados.push({k:k, nome:pelNome(o.p)});
         });
         // A trava é tomada mesmo quando ninguém faltou: "o dia fechou e todos vieram" é uma
         // resposta, e sem ela os aparelhos releriam o dia inteiro de 30 em 30 segundos.
         return DB.ref(faltaAutoTrava(hoje)).transaction(function(atual){
           if(atual) return;                               // outro aparelho fechou primeiro
-          return { ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
+          var trava={ ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
                    hora:(typeof horaAgora==='function'?horaAgora():''), quantos:marcados.length };
+          if(dormiramAqui.length) trava.dormiram_aqui=dormiramAqui.length;
+          if(naHospedagem.length) trava.na_hospedagem=naHospedagem.length;
+          if(Object.keys(semFalta).length) trava.sem_falta=semFalta;
+          return trava;
         }).then(function(res){
           if(!res || !res.committed) return;
           _faltaAutoFeita=hoje;
+          if(dormiramAqui.length && typeof audit==='function') audit('falta-automatica',
+            'sem falta automática porque dormiram aqui: '+dormiramAqui.join(', '), {assinou:'sistema'});
+          if(naHospedagem.length && typeof audit==='function') audit('falta-automatica',
+            'sem falta automática porque estão na hospedagem (não são do Day Care hoje): '+naHospedagem.join(', '), {assinou:'sistema'});
           if(!marcados.length){
             if(typeof audit==='function') audit('falta-automatica',
-              'dia fechado às '+CK_HORA_FALTA+'h — ninguém ficou sem check-in', {assinou:'sistema'});
+              'dia fechado às '+CK_HORA_FALTA+'h — '+((dormiramAqui.length||naHospedagem.length)?'ninguém recebeu falta':'ninguém ficou sem check-in'), {assinou:'sistema'});
             return;
           }
           const patch={}; marcados.forEach(function(m){ patch[m.k]='faltou'; });
@@ -11604,7 +11992,11 @@
           });
         });
       });
-    }).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (aplicarFaltaAutomatica)', e); });
+    }).catch(function(e){
+      // Uma leitura do dia falhou (o check-in, a chamada ou a noite de ontem): o dia não fecha
+      // agora. Um rastro por dia neste aparelho; o temporizador tenta de novo em 30 s.
+      if(__faltaDormiuLogado!==hoje){ __faltaDormiuLogado=hoje; _logLeituraFalhou('a falta automática do meio-dia (as leituras do dia ou a trava) — aplicarFaltaAutomatica', e); }
+    });
   }
   // O relógio passa sozinho: quem já estava com o app aberto às 11h50 não abriria tela
   // nenhuma ao dar meio-dia. Mesma cadência de 30 s dos despertadores do banho e da
@@ -16729,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-01-03';
+  const APP_VERSAO='2026-10-02-09';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20934,15 +21326,21 @@
   function banhoFaltaGenero(chave){
     var p=banhoFaltaPel(chave), sx='';
     try{ sx=String(((typeof pelExtra==='function'?pelExtra(p):{})||{}).sexo||''); }catch(e){ sx=''; }
-    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela'};
-    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele'};
-    return {ainda:'Ainda vem', com:'reservado'};
+    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela', aqui:'Ela está aqui', pron:'ela'};
+    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele', aqui:'Ele está aqui', pron:'ele'};
+    return {ainda:'Ainda vem', com:'reservado', aqui:'Está aqui', pron:''};
   }
   function banhoFaltaPode(){ return (typeof repPodeLancar==='function' && repPodeLancar()); }
   // Outro cartaz aberto na tela? Este módulo ESPERA — nunca apaga o que a recepção está
   // fazendo (check-in, pagamento, mensagem ao tutor).
   function banhoFaltaTemCartaz(){
-    try{ return !!(document.getElementById('zAlertaoBox') || document.getElementById('repMsgBox')); }
+    // O exame do corpo aberto NA TELA (check-in ou check-out) também conta: a pergunta do
+    // próximo não abre por cima de quem está examinando um FILHOt (QA73). Só na tela: o exame
+    // deixado pela metade (saiu pelo menu) não pode calar o aviso no aparelho inteiro (QA75).
+    try{ return !!(document.getElementById('zAlertaoBox') || document.getElementById('repMsgBox')
+      || (typeof ckAtual!=='undefined' && ckAtual && typeof dcAtiv!=='undefined'
+          && (dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')
+          && (function(){ var v=document.getElementById('v-daycare'); return !!(v && v.classList && v.classList.contains('active')); })())); }
     catch(e){ return true; } /* silencioso de propósito: na dúvida, não abre */
   }
   // Todo cartaz de RESULTADO passa por aqui: com a tela ocupada, entra na fila e aparece
@@ -20992,15 +21390,17 @@
     var g=banhoFaltaGenero(o.chave), jaLib=BANHO_FALTA_DEC[o.chave]||{}, ainda=banhoFaltaAinda(o);
     // "Visto" só quando a pessoa ESCOLHE: se outro cartaz tomar a tela, a pergunta volta.
     var visto=function(){ BANHO_FALTA_VISTO[dia+'|'+o.chave]=1; };
-    zEscolha(String(o.nome+' não veio — '+(o.hora?('tinha banho às '+o.hora):'tinha banho hoje')).toUpperCase(),
+    zEscolha(String(banhoFaltaNomeVisivel(o)+' não veio — '+(o.hora?('tinha banho às '+o.hora):'tinha banho hoje')).toUpperCase(),
       [(o.porque==='avisada'?'O tutor avisou a falta de hoje.':'Está como "faltou" na chamada de hoje.'),
        (ainda ? ((jaLib.quem||'Alguém')+' já liberou o horário, mas o banho ainda aparece na planilha.') : ''),
        (o.origem==='fixo'
          ? 'É o banho fixo: ele sai sozinho da planilha quando falta, mas volta se chegar depois.'
          : 'O horário do banho continua na planilha e na TV, e ninguém marca outro banho nele.'),
        'Liberar tira da planilha e da TV só o banho de hoje'+(o.fixo?' (o combinado do banho fixo continua)':'')+'. O horário fica livre para outro banho.',
+       'Se já está aqui, toque em «'+g.aqui+'»: '+(g.pron||'o FILHOt')+' volta para a chamada (e para a grade do almoço), e o horário fica '+g.com+'.',
        'Se ainda vier (chegar mais tarde), toque em «'+g.ainda+'»: o horário fica '+g.com+'.'].filter(Boolean),
       [{t:'Liberar o horário', cor:'#234D67', fn:function(){ visto(); banhoFaltaExecutar(o, dia); }},
+       {t:g.aqui, cor:'#14532D', fn:function(){ visto(); banhoFaltaEstaAqui(o, dia); }},
        {t:g.ainda, cor:'#1E8449', fn:function(){ visto(); banhoFaltaManter(o, dia); }},
        {t:'Decidir depois', cor:'#7C8B99', fn:function(){ visto(); banhoFaltaSeguir(dia); }}],
       {corTitulo:'#234D67', rodape:'O aviso também fica no Hoje na Zêluz, com o botão de liberar.'});
@@ -21053,14 +21453,19 @@
   }
   // "Ainda vem": o horário fica com ele. No banho fixo, o "manter" do dia faz o automático
   // deixar o banho na planilha mesmo com a falta (banhoAutoPodeNoDia).
-  function banhoFaltaManter(o, dia){
+  function banhoFaltaManter(o, dia, porque){
     if(!DB) return Promise.resolve(false);
     if(BANHO_FALTA_TRAVA[o.chave]) return Promise.resolve(false);
     BANHO_FALTA_TRAVA[o.chave]=1;
     var fim=function(v){ delete BANHO_FALTA_TRAVA[o.chave]; return v; };
     return banhoFaltaReivindicar(o, dia, 'mantido', banhoFaltaRefazer(o)).then(function(res){
+      // «Está aqui» com o "ainda vem" já gravado por outro aparelho: o banho já está segurado,
+      // não há o que avisar (QA73).
+      if(!res.ok && porque==='aqui' && res.outro && res.outro.decisao==='mantido'){
+        BANHO_FALTA_DEC[o.chave]=res.outro; return true;
+      }
       if(!res.ok){ banhoFaltaJaDecidido(o, res.outro); return false; }
-      if(typeof audit==='function') audit('banho-falta', o.nome+' faltou — banho mantido (ainda vem)'+(o.hora?(' ('+o.hora+')'):''), {alvo:o.chave, pet:o.nome});
+      if(typeof audit==='function') audit('banho-falta', o.nome+(porque==='aqui'?' está aqui — banho mantido':' faltou — banho mantido (ainda vem)')+(o.hora?(' ('+o.hora+')'):''), {alvo:o.chave, pet:o.nome});
       // Banho fixo já liberado (o "pular" do dia gravado): a lista não o vê mais como fixo, mas
       // o "ainda vem" precisa trocar o "pular" pelo "manter" — senão o automático tira o
       // banho de novo (QA32).
@@ -21217,6 +21622,134 @@
       return novo || {chave:o.chave, nome:o.nome, hora:o.hora||'', lancs:[], txts:[], fixo:false, horaFixo:'', origem:o.origem||'', porque:o.porque};
     }).catch(function(){ return null; });
   }
+  // ===== «ELE ESTÁ AQUI» (Adriana, 02/out/2026: Luna, Pipoca, Mika e Rafael) ============
+  // "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei" ·
+  // "Mika idem está aqui" · Rafael: "também está aqui — coloque a opção está aqui (para que
+  // se não foi feito o checkin do corpo apareça que tem que fazer!!! e o almoço!!!)".
+  // Chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta: fora da chamada,
+  // fora da lista do almoço. «Ele está aqui» marca VEIO na chamada (o mesmo que o ✓ Veio da
+  // Chamada: volta para o almoço e para as outras listas, o remédio volta para a fila e a
+  // pendência de prevenção avisa a chegada), segura o banho e, se o check-in do corpo de
+  // entrada não foi feito, diz que tem de fazer e leva até ele. O exame continua obrigatório.
+  // Nada aqui mexe no check-in: só lê se ele existe e abre a tela.
+  // O nome que a tela mostra: com o tutor (ou a raça) quando outro FILHOt usa o mesmo nome —
+  // a mesma regra do check-in (nomeDesamb). Duas Lunas não podem virar um toque na errada (QA73).
+  function banhoFaltaNomeVisivel(o){
+    try{
+      var p=banhoFaltaPel(o&&o.chave);
+      if(!p || typeof nomeDesamb!=='function' || typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS)) return String((o&&o.nome)||'');
+      return nomeDesamb({p:p}, PELUDINHOS.map(function(q){ return {p:q}; }));
+    }catch(e){ return String((o&&o.nome)||''); } /* silencioso de propósito: sem a ficha, o nome do aviso */
+  }
+  // Esta pessoa pode abrir a atividade? (Time › atividades). Sem lista, pode tudo (Gestão).
+  // Lista vazia ou sem a atividade: o atalho não é oferecido — abrirAtividade cairia em
+  // outra tela, ou em nenhuma (QA73).
+  function banhoFaltaAtivLiberada(slug){
+    try{ var e=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; return !e || e.indexOf(slug)>=0; }
+    catch(e){ return false; } /* silencioso de propósito: na dúvida, sem atalho */
+  }
+  function banhoFaltaIrAoCheckin(o){
+    if(!banhoFaltaAtivLiberada('checkin-corpo')) return false;
+    try{
+      if(typeof abrirAtividade==='function') abrirAtividade('checkin-corpo');
+      var el=document.getElementById('dcBusca');
+      if(el){ el.value=String((o&&o.nome)||''); if(typeof onDcBusca==='function') onDcBusca(); }
+      return true;
+    }catch(e){ return false; } /* silencioso de propósito: atalho de tela — a presença já foi marcada */
+  }
+  function banhoFaltaIrAoAlmoco(){
+    if(!banhoFaltaAtivLiberada('almoco')) return false;
+    try{ if(typeof abrirAtividade==='function') abrirAtividade('almoco'); return true; }
+    catch(e){ return false; } /* silencioso de propósito: atalho de tela */
+  }
+  // O que a tela diz depois de marcar a presença. Pura: devolve {titulo, linhas, semCheckin}.
+  // `fezCk`: true = o check-in de entrada existe; false = não existe; null = não deu para ler.
+  // `lib`: a decisão do banho que vale agora (outro aparelho pode ter liberado antes).
+  // O almoço: a grade só deixa de fora a falta AVISADA na planilha; a chamada "veio" vence
+  // a falta avisada (a mesma regra do banho, QA30) — então ele está na grade do almoço.
+  function banhoFaltaAquiTexto(o, fezCk, g, lib){
+    g=g||{pron:''};
+    var quem=String((o&&o.nomeVisivel)||(o&&o.nome)||'');
+    var horas=String((o&&o.hora)||''), com=(g.com||'reservado');
+    var banho;
+    if(lib && lib.decisao==='liberado')
+      banho='O horário do banho já tinha sido liberado'+(lib.quem?(' por '+lib.quem):'')+': se ainda for tomar banho, lance de novo nos Lançamentos do dia.';
+    else if(lib && lib.decisao==='liberando')
+      banho='O horário do banho está sendo liberado'+(lib.quem?(' por '+lib.quem):'')+': se ainda for tomar banho, lance de novo nos Lançamentos do dia.';
+    else if(/ e /.test(horas)) banho='Os banhos das '+horas.replace(/ e /g,' e das ')+' ficam '+com+'.';
+    else banho=horas?('O banho das '+horas+' fica '+com+'.'):('O banho de hoje fica '+com+'.');
+    var almoco='Está na grade do almoço: confira se '+(g.pron||'o FILHOt')+' já almoçou.';
+    if(fezCk===true) return {titulo:quem.toUpperCase()+' ESTÁ NA CHAMADA', semCheckin:false,
+      linhas:['Marcado como "veio" na chamada de hoje.', banho, almoco]};
+    if(fezCk===false) return {titulo:'FALTA O CHECK-IN DO CORPO DE '+quem.toUpperCase(), semCheckin:true,
+      linhas:['Marcado como "veio" na chamada de hoje. '+banho, 'O check-in do corpo de entrada não foi feito: faça agora.', almoco]};
+    return {titulo:'CONFIRA O CHECK-IN DO CORPO DE '+quem.toUpperCase(), semCheckin:true,
+      linhas:['Marcado como "veio" na chamada de hoje. '+banho,
+        'Não consegui conferir o check-in do corpo de entrada: confira e, se não foi feito, faça agora.', almoco]};
+  }
+  function banhoFaltaEstaAqui(o, dia){
+    if(!DB) return Promise.resolve(false);
+    var k=String((o&&o.chave)||''); if(!k) return Promise.resolve(false);
+    // Aviso de outro dia (o aparelho ficou aberto na virada): a presença seria gravada no dia
+    // errado (QA73).
+    if(dia!==dcDataKey() || BANHO_FALTA_DIA!==dia){
+      var dAviso=BANHO_FALTA_DIA||dia;   // a data do AVISO, não a do relógio (QA75)
+      banhoFaltaMostrar('O DIA VIROU', ['Este aviso é de '+(((typeof fmtBR==='function')?fmtBR(dAviso):'')||dAviso)+'. Nada foi marcado.',
+        'Feche e abra o app para ver os avisos de hoje.'], {botao:'Entendi'});
+      return Promise.resolve(false);
+    }
+    if(BANHO_FALTA_TRAVA['aqui|'+k]) return Promise.resolve(false);
+    BANHO_FALTA_TRAVA['aqui|'+k]=1;
+    var g=banhoFaltaGenero(k);
+    var antes=(typeof dcChamada==='object' && dcChamada)?dcChamada[k]:undefined;
+    var d=BANHO_FALTA_DEC[k]||{};
+    return DB.ref('daycare/chamada/'+dia+'/'+k).set('veio').then(function(){
+      try{ if(typeof dcChamada==='object' && dcChamada) dcChamada[k]='veio'; }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
+      try{ if(typeof audit==='function') audit('chamada', 'marcou presença (está aqui, pelo aviso do banho)', {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      try{ if(typeof pendAvisarChegada==='function') pendAvisarChegada(k); }
+      catch(e){ _logFalhaGrav('as pendências de prevenção de '+k+' (está aqui)', e); }
+      try{ if(antes==='faltou' && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+      catch(e){ _logFalhaGrav('a fila do remédio de '+k+' (está aqui)', e); }
+      // O almoço deste aparelho, se estiver aberto, se redesenha (a chamada viva faz o mesmo).
+      try{ if(typeof dcAtiv!=='undefined' && dcAtiv==='almoco' && typeof almStep!=='undefined' && almStep==='grade' && typeof renderAlmoco==='function') renderAlmoco(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      // Segura o banho (o mesmo "ainda vem"); já segurado, não regrava.
+      var segurar=(d.decisao==='mantido') ? Promise.resolve(true) : banhoFaltaManter(o, dia, 'aqui');
+      var ler=DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value')
+        .then(function(sn){ return !!(sn && sn.val && sn.val()); }).catch(function(){ return null; });
+      return Promise.all([segurar, ler]);
+    }).then(function(r){
+      var fezCk=r[1];
+      try{ if(typeof audit==='function') audit('banho-falta', o.nome+' está aqui — presença marcada'+(fezCk===true?'':' (sem o check-in do corpo de entrada)'), {alvo:k, pet:o.nome}); }catch(e){} /* silencioso de propósito */
+      var lib=(r[0]===false) ? (BANHO_FALTA_DEC[k]||null) : null;
+      var t=banhoFaltaAquiTexto(Object.assign({}, o, {nomeVisivel:banhoFaltaNomeVisivel(o)}), fezCk, g, lib);
+      if(!t.semCheckin){ banhoFaltaMostrar('✅ '+t.titulo, t.linhas, {botao:'Entendi', ok:true}); return true; }
+      var podeCk=banhoFaltaAtivLiberada('checkin-corpo'), podeAlm=banhoFaltaAtivLiberada('almoco');
+      var linhas=t.linhas.slice();
+      if(!podeCk) linhas.splice(2, 0, 'Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.');
+      var botoes=[];
+      if(podeCk) botoes.push({t:'Fazer o check-in agora', cor:'#14532D', fn:function(){ banhoFaltaIrAoCheckin(o); }});
+      if(podeAlm) botoes.push({t:'Abrir o almoço', cor:'#234D67', fn:function(){ banhoFaltaIrAoAlmoco(); }});
+      if(!botoes.length || banhoFaltaTemCartaz() || typeof zEscolha!=='function'){
+        banhoFaltaMostrar(t.titulo, linhas.concat(podeCk?['Day Care › Check-in do corpo.']:[]), {botao:'Entendi'});
+        return true;
+      }
+      botoes.push({t:'Depois', cor:'#7C8B99', fn:function(){ banhoFaltaSeguir(dia); }});
+      zEscolha(t.titulo, linhas, botoes,
+        {corTitulo:'#B3261E', rodape:(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'))+' também aparece como "ainda sem check-in do corpo" no painel do monitor.'});
+      return true;
+    }).catch(function(e){
+      _logFalhaGrav('presença pelo aviso do banho '+k, e);
+      delete BANHO_FALTA_VISTO[dia+'|'+k];   // nada foi feito: a pergunta volta
+      banhoFaltaMostrar('⚠ A PRESENÇA NÃO FOI MARCADA', ['Não consegui marcar '+o.nome+' na chamada: '+((e&&e.message)||e)+'.',
+        'Marque ✓ Veio em Day Care › Chamada.'], {botao:'Entendi'});
+      return false;
+    }).then(function(v){ delete BANHO_FALTA_TRAVA['aqui|'+k]; return v; });
+  }
+  function banhoFaltaEstaAquiUI(chave){
+    var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
+    if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return; }
+    banhoFaltaEstaAqui(o, dcDataKey());
+  }
   function banhoFaltaManterUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
     if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return; }
@@ -21235,6 +21768,10 @@
     var botao=function(o){ return pode
       ? '<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:13px" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaLiberarUI(this.dataset.k)">Liberar o horário</button>'
       : '<span style="color:var(--crm-atencao-text);font-weight:700">aguardando a recepção</span>'; };
+    // «Está aqui» (02/out/2026): ao lado de Liberar, enquanto o horário não foi liberado.
+    var aqui=function(o){ return pode
+      ? ' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaEstaAquiUI(this.dataset.k)">'+escAttr(banhoFaltaGenero(o.chave).aqui)+'</button>'
+      : ''; };
     var h='<div class="card" style="border-left:4px solid var(--crm-atencao-text)">'
       +'<h2 style="font-size:17px;margin-bottom:2px">Banho de quem faltou</h2>'
       +'<div class="hint">Faltou hoje e tinha banho marcado. Liberar tira o banho da planilha e da TV, e o horário fica livre para outro banho.</div>';
@@ -21246,12 +21783,12 @@
         +(d.planilha_ok===false?' <span style="color:var(--crm-critico);font-weight:700">· a planilha não confirmou: tire à mão</span>':'');
       else if(dec==='liberando' && !banhoFaltaEmAberto(d, agora)) situ='<span style="color:var(--muted);font-weight:700">liberando…</span>';
       else if(dec==='liberando') situ='<span style="color:var(--crm-critico);font-weight:700">a liberação não terminou</span> '+botao(o);
-      else if(dec==='mantido') situ='<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span> '+botao(o);
+      else if(dec==='mantido') situ='<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span> '+botao(o)+aqui(o);
       else if(dec==='falhou') situ='<span style="color:var(--crm-critico);font-weight:700">não deu certo'+(d.msg?(': '+escAttr(d.msg)):'')+'</span> '+botao(o)
         +((d.acao==='manter' && pode)?(' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaManterUI(this.dataset.k)">Ainda vem</button>'):'');
-      else situ=botao(o);
+      else situ=botao(o)+aqui(o);
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
-        +'<strong style="color:var(--z-blue)">'+escAttr(o.nome)+'</strong>'
+        +'<strong style="color:var(--z-blue)">'+escAttr(banhoFaltaNomeVisivel(o))+'</strong>'
         +'<span class="hint" style="margin:0">'+(o.hora?('banho às '+escAttr(o.hora)):'banho hoje')+(o.fixo?' (fixo)':'')+' · '
         +(o.porque==='avisada'?'falta avisada':'faltou')+'</span>'+situ+'</div>';
     });
@@ -27641,6 +28178,8 @@
       // só some nas outras (13/ago): a fonte é uma, e todas bebem dela.
       try{ if(dcAtiv==='chamada') renderDaycare(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar a sincronia */ }
       try{ if((dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo') && typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
+      // A grade do almoço também: quem avisou a falta e veio mesmo assim volta para ela (6.29).
+      try{ if(dcAtiv==='almoco' && typeof almStep!=='undefined' && almStep==='grade' && typeof renderAlmoco==='function') renderAlmoco(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }
       try{ if(typeof hojeAtualizarBadge==='function') hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
       // Faltou e tinha banho hoje: a recepção é avisada para liberar o horário (28/set/2026).
@@ -28214,7 +28753,11 @@
   function seloPlanilha(o){ if(!o||!o.daPlanilha) return '';
     return '<span class="mini-fora">'+(o.daPlanilha==='avulso'?'AVULSO':'REPOSICAO')+'</span>'; }
   function seloForaDia(o){ return o&&o.foraDia?`<span class="mini-fora">NAO E DE ${(DIA_LBL[dcDia]||'HOJE').toUpperCase()}</span>`:''; }
-  function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco(); else renderGenerico(); }
+  function onDcBusca(){ const el=document.getElementById('dcBusca'); dcBuscaVal=el?el.value:''; if(dcAtiv==='chamada')renderDaycare(); else if(dcAtiv==='almoco')renderAlmoco();
+    // O check-in e o check-out do corpo têm tela própria: a busca redesenha ELA, e não a
+    // genérica (QA73: a busca ficava grudada no nome até outro evento redesenhar).
+    else if(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'){ if(typeof ckRedesenharDeFora==='function') ckRedesenharDeFora(); }
+    else renderGenerico(); }
   // ===== CHECK-IN / CHECK-OUT DO CORPO ==================================================
   // O protocolo em papel da Zêluz virou tela (Adriana, 11-12/ago/2026). Regras que vieram dela
   // e do documento impresso:
@@ -34522,6 +35065,8 @@
   // falha vira um aviso visível — porque tela em branco mentindo é pior que erro assumido.
   var almSemRede=false;
   function carregarAlmoco(){
+    // A chamada viva: a grade precisa saber quem está como "veio" (6.29).
+    try{ if(typeof chamadaVivaLigar==='function') chamadaVivaLigar(); }catch(e){} /* silencioso de propósito: sem o vivo, vale a chamada que o aparelho tem */
     function decideStep(){ if(isAprendiz()){ almStep = !prepCompleto()?'prep':(!almExecOk?'exec':'grade'); } else { almStep='grade'; } renderAlmStep(); }
     if(DB){
       almSemRede=false;
@@ -35691,6 +36236,9 @@
       var b=document.getElementById('dashB_'+i.k), h=document.getElementById('dashH_'+i.k);
       var dt=document.getElementById('dashD_'+i.k);
       __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||'', d:(dt&&dt.value)||''};
+      // Horários prontos (QA68): o relógio é a verdade. Mexido sem o "change" (redesenho que
+      // chegou antes), a tela adota a hora dele — o rótulo e os botões nunca contradizem o lançamento.
+      if(h && typeof DASH_HORA==='object' && DASH_HORA && h.value!==String(DASH_HORA[i.k]||'')) DASH_HORA[i.k]=h.value;
     });
     var __diaDash=dashDia();
     el.innerHTML=DASH_ITENS.map(function(it){
@@ -35741,8 +36289,11 @@
           ? dashForaPainelHTML(it)
           : (it.campos&&DASH_SEL[it.k])
           ? dashPainelHTML(it)
-          : ('<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
-             +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
+          // A HORA PRIMEIRO (QA68): no Veterinário, no Sai mais cedo e na Avaliação, tocar no
+          // nome já lança — a hora tem de estar escolhida antes; e, em toda busca com hora, os
+          // nomes sugeridos ficam colados no campo (o teclado do celular não os esconde).
+          : ((it.hora?('<div style="margin-bottom:8px">'+dashHorarioHTML(it.k)+'</div>'):'')
+             +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
              +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
              // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
              // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
@@ -36241,11 +36792,8 @@
         +'</div></div>';
     }
     // O relógio mora aqui dentro, como no Banho: no lugar da busca não existe outro.
-    if(it.hora){
-      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
-        +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px"'
-        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
-    }
+    // Com os horários prontos (02/out/2026).
+    if(it.hora) h+=dashHorarioHTML(k);
     var falta=dashDetFalta(k), valor=dashForaValor(k);
     h+=dashDestinoFraseHTML(it, valor)
       +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
@@ -36289,6 +36837,71 @@
     }
     dashLancar(k, valor);
   }
+  // ===== HORÁRIOS PRONTOS (Adriana, 02/out/2026) ==========================================
+  // "O lançamento do dia, banho, o horário está péssimo para escrever, o horário de veterinário,
+  //  de tudo, está péssimo para poder colocar. Tem que clicar várias vezes, precisa de melhorar
+  //  essa forma. Talvez já vir com horários prontos: 14, 14:15, 14:30, 14:45, 17, 13 horas,
+  //  15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro;
+  //  5 e 45 dá para marcar ainda banho."
+  // Um toque na HORA (8h a 17h) já escolhe a hora cheia; um segundo toque, se precisar, troca
+  // os minutos (de 15 em 15). O banho vai até 17:45; o resto, até 17:30. O que fugir da grade
+  // (7:30, 18:00, o remédio da noite) continua no relógio, em «outro horário».
+  // O relógio (#dashH_{item}) continua sendo o lugar onde a hora mora: quem lança lê dele.
+  var DASH_HORA={}, DASH_HORA_OUTRO={};
+  var DASH_HORA_INI=8, DASH_HORA_FIM={banho:'17:45'}, DASH_HORA_FIM_PADRAO='17:30';
+  function dashHoraFim(k){ return DASH_HORA_FIM[k]||DASH_HORA_FIM_PADRAO; }
+  // Pura: os horários da grade de um item, de 15 em 15 minutos.
+  function dashHoraGrade(k){
+    var out=[], fim=dashHoraFim(k), p2=function(x){ return String(x).padStart(2,'0'); };
+    for(var h=DASH_HORA_INI; h<24; h++){
+      for(var m=0; m<60; m+=15){ var t=p2(h)+':'+p2(m); if(t>fim) return out; out.push(t); }
+    }
+    return out;
+  }
+  function dashHorarioHTML(k){
+    var v=String(DASH_HORA[k]||''), grade=dashHoraGrade(k);
+    var fora=!!v && grade.indexOf(v)<0;
+    var hSel=fora?'':v.slice(0,2);
+    var abrir=fora || !!DASH_HORA_OUTRO[k];
+    var bt=function(rot, on, fn){
+      return '<button type="button" class="btn" style="min-width:52px;min-height:42px;padding:8px 10px;font-size:14px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="'+fn+'">'+rot+'</button>';
+    };
+    var horas=[]; grade.forEach(function(t){ var hh=t.slice(0,2); if(horas.indexOf(hh)<0) horas.push(hh); });
+    var h='<label class="cad-lb" style="margin-top:9px;display:block">Horário'
+      +(v?(': <strong>'+escAttr(v)+'</strong>'):' <span style="color:var(--muted);font-weight:600">— toque na hora</span>')+'</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">'
+      +horas.map(function(hh){ return bt(String(+hh)+'h', hSel===hh, 'dashHoraHora(\''+k+'\',\''+hh+'\')'); }).join('')
+      +'</div>';
+    if(hSel){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
+        +grade.filter(function(t){ return t.slice(0,2)===hSel; })
+          .map(function(t){ return bt(String(+t.slice(0,2))+':'+t.slice(3), v===t, 'dashHoraEscolher(\''+k+'\',\''+t+'\')'); }).join('')
+        +'</div>';
+    }
+    h+='<div style="margin-top:6px'+(abrir?'':';display:none')+'"><span class="hint">Outro horário:</span> '
+      +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px" value="'+escAttr(v)+'"'
+      +' onchange="dashHoraOutro(\''+k+'\',this.value)"></div>';
+    if(!abrir) h+='<button type="button" class="btn" style="background:none;border:none;padding:10px 4px 10px 0;color:var(--z-blue);text-decoration:underline;font-size:13px;font-weight:700"'
+      +' onclick="dashHoraAbrirOutro(\''+k+'\')">outro horário</button>';
+    return h;
+  }
+  function dashHoraAplicar(k, v){
+    DASH_HORA[k]=String(v||'');
+    var el=document.getElementById('dashH_'+k); if(el) el.value=DASH_HORA[k];
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  // A hora: o primeiro toque já vale a hora cheia; tocar de novo na mesma hora não apaga os minutos.
+  function dashHoraHora(k, hh){
+    var v=String(DASH_HORA[k]||'');
+    DASH_HORA_OUTRO[k]=false;
+    if(v.slice(0,2)===hh && dashHoraGrade(k).indexOf(v)>=0) return dashHoraAplicar(k, v);
+    dashHoraAplicar(k, hh+':00');
+  }
+  function dashHoraEscolher(k, t){ DASH_HORA_OUTRO[k]=false; dashHoraAplicar(k, t); }
+  function dashHoraAbrirOutro(k){ DASH_HORA_OUTRO[k]=true; try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }
+  function dashHoraOutro(k, v){ DASH_HORA_OUTRO[k]=true; dashHoraAplicar(k, v); }
   function dashPainelHTML(it){
     var sel=DASH_SEL[it.k]||'', d=dashDet(it.k);
     var h='<div class="pair" style="padding:7px 0;border-bottom:1px solid var(--line)">'
@@ -36297,11 +36910,8 @@
       +' onclick="dashTrocarFilhot(\''+it.k+'\')">trocar</button></span></div>';
     // O relógio entra no painel: sem ele aqui, o banho ficaria com um botão que pede
     // horário e nenhum lugar para escolher (Adriana, 28/ago/2026).
-    if(it.hora){
-      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
-        +'<input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"'
-        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
-    }
+    // Com os horários prontos (02/out/2026).
+    if(it.hora) h+=dashHorarioHTML(it.k);
     // A data de início da adaptação: é ela que dá o dia 1 da contagem de 45 dias corridos
     // (Adriana, 04/set/2026: "começou 04/09 → 04/10 fez um mês, 19/10 faz 45 dias").
     // Já vem com o dia que está sendo lançado — a recepção só mexe se começou antes.
@@ -36752,6 +37362,26 @@
          {t:'Não lançar', fn:function(){}}]);
       return;
     }
+    // O DIA JÁ TEM A VINDA (QA65, 6.25): «Veio repor hoje», «ele veio» ou a baixa automática
+    // pelo check-in já registraram a vinda deste dia. Abater de novo seria tirar duas
+    // reposições por uma vinda. Lança na planilha sem abater, a não ser que a pessoa diga.
+    var diaRep=dashDia(), LRep=[]; try{ LRep=repLancamentos(pRep)||[]; }catch(e){ LRep=[]; }
+    if(repDiaTemUso(LRep, diaRep)){
+      zEscolha(pelNome(pRep)+' já tem um uso registrado em '+repBRdata(diaRep).slice(0,5),
+        ['O Banco de Reposições já descontou um uso deste dia (veja o Extrato dele na tela de Reposições).',
+         'Lançar sem abater escreve na planilha e não desconta de novo.'],
+        [{t:'Lançar sem abater', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM abater (o dia '+diaRep+' já tinha um uso registrado): '+valor,{pet:valor});
+            gravar(false);
+          }},
+         // QA66: "abater mesmo assim" passa pelas MESMAS checagens de saldo e de reserva —
+         // nunca deixa o saldo negativo nem gasta dia prometido sem avisar.
+         {t:'Abater mesmo assim', cor:'#B3261E', fn:function(){ seguirRep(); }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    seguirRep();
+    function seguirRep(){
     var saldoRep=0; try{ saldoRep=repSaldo(pRep); }catch(e){ saldoRep=0; }
     if(saldoRep<=0){
       zEscolha(pelNome(pRep)+' não tem saldo de reposição',
@@ -36782,6 +37412,7 @@
       return;
     }
     gravar(true, pRep, saldoRep);
+    }
   }
   /* ====================================================================================
    * PENDÊNCIAS DE PREVENÇÃO — o que ficou para a próxima vinda (Adriana, 18/set/2026)
@@ -36922,7 +37553,9 @@
     return Promise.all([
       DB.ref('daycare/chamada/'+dia+'/'+chave).once('value').then(function(s){ return s.val()||''; })
         .catch(function(e){ _logLeituraFalhou('daycare/chamada/ (pendAvaliarLancamento)', e); return ''; }),
-      DB.ref(faltaAutoTrava(dia)).once('value').then(function(s){ return !!s.val(); })
+      // O dia fechado conta como "não veio" — menos para quem a falta automática pulou por ter
+      // dormido aqui ou estar na hospedagem (6.28, QA71): ele está na casa, sem marcação.
+      DB.ref(faltaAutoTrava(dia)).once('value').then(function(s){ var v=s.val(); return !!v && !faltaSemFaltaNaTrava(v, chave); })
         .catch(function(e){ _logLeituraFalhou(faltaAutoTrava(dia)+' (pendAvaliarLancamento)', e); return false; })
     ]).then(function(rr){
       if(!pendDeveAbrir(item, rr[0], rr[1])) return false;
@@ -43441,7 +44074,8 @@
           volta_desmarcada:{dia:diaR, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now(), motivo:'tirada dos Lançamentos do dia'}})
           .catch(function(e){ _logFalhaGrav('desmarcar a reposição tirada de '+pelNome(pD)+' ('+diaR+')', e);
             if(typeof zAlertao==='function') zAlertao('⚠ A MARCAÇÃO DE '+repBRdata(diaR)+' CONTINUA', ['Tela de Reposições › «desmarcar» ao lado de '+repBRdata(diaR)+' — senão a planilha a recebe de novo.'], {botao:'Vou desmarcar'}); });
-        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo').then(function(){
+        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo',
+          (credDia && !desmarcarTambem)?{so_lancamento:true}:null).then(function(){
           if(typeof audit==='function') audit('reposicao-devolvida', pelNome(pD)+' — tirada dos Lançamentos do dia '+repBRdata(diaR)+'; a reposição voltou para o saldo',
             {alvo:(typeof dcKey==='function'?dcKey(pD.n,pD.tutor):''), pet:pelNome(pD)});
           if(credDia && !desmarcarTambem){
@@ -45313,6 +45947,15 @@
       +'<div class="ax-q">Respondido por '+escAttr(ch.respondido_por||'Recepção')+'.</div></div>';
     return h;
   }
+  // A falta AVISADA na planilha tira do almoço — menos quem está como "veio" na chamada:
+  // avisou e veio mesmo assim (a mesma regra do banho, QA30). Adriana, 02/out/2026: "coloque
+  // a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que
+  // fazer!!! e o almoço!!!)".
+  function almFaltouAvisada(o){
+    if(!faltouHoje(o)) return false;
+    try{ return !(dcChamada && dcChamada[dcKey(o.p.n, o.p.tutor)]==='veio'); }
+    catch(e){ return true; } /* silencioso de propósito: sem a chamada, vale a planilha */
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     // Quem "não almoça" FICA na grade (Adriana, 04/ago/2026): "por mais que não almocem,
@@ -45321,8 +45964,8 @@
     // Não se aplica." Some da grade só quem FALTOU hoje (não veio).
     const turma=turmaDoDia();
     const foraList=turma.filter(o=>typeof o.i==='number'&&naoAlmoca(o.p));
-    const faltouList=turma.filter(o=>faltouHoje(o)); // falta avisada na planilha
-    const list=ordemAlmoco(turma.filter(o=>!faltouHoje(o)));
+    const faltouList=turma.filter(o=>almFaltouAvisada(o)); // falta avisada na planilha (e não veio)
+    const list=ordemAlmoco(turma.filter(o=>!almFaltouAvisada(o)));
     const t=almTurno||{}; const durAlm=diffMin(t.inicio,t.fim);
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
       <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
