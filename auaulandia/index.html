@@ -35927,6 +35927,9 @@
       var b=document.getElementById('dashB_'+i.k), h=document.getElementById('dashH_'+i.k);
       var dt=document.getElementById('dashD_'+i.k);
       __manter[i.k]={b:(b&&b.value)||'', h:(h&&h.value)||'', d:(dt&&dt.value)||''};
+      // Horários prontos (QA68): o relógio é a verdade. Mexido sem o "change" (redesenho que
+      // chegou antes), a tela adota a hora dele — o rótulo e os botões nunca contradizem o lançamento.
+      if(h && typeof DASH_HORA==='object' && DASH_HORA && h.value!==String(DASH_HORA[i.k]||'')) DASH_HORA[i.k]=h.value;
     });
     var __diaDash=dashDia();
     el.innerHTML=DASH_ITENS.map(function(it){
@@ -35977,8 +35980,11 @@
           ? dashForaPainelHTML(it)
           : (it.campos&&DASH_SEL[it.k])
           ? dashPainelHTML(it)
-          : ('<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
-             +(it.hora?('<div style="margin-top:6px">'+dashHorarioHTML(it.k)+'</div>'):'')
+          // A HORA PRIMEIRO (QA68): nestes itens, tocar no nome já lança — a hora tem de estar
+          // escolhida antes, e os nomes sugeridos ficam colados na busca (o teclado do celular
+          // não os esconde).
+          : ((it.hora?('<div style="margin-bottom:8px">'+dashHorarioHTML(it.k)+'</div>'):'')
+             +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
              +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
              // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
              // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
@@ -36523,9 +36529,11 @@
     dashLancar(k, valor);
   }
   // ===== HORÁRIOS PRONTOS (Adriana, 02/out/2026) ==========================================
-  // "O horário está péssimo para escrever — o do banho, do veterinário, de tudo: tem que
-  //  clicar várias vezes. Já vir com horários prontos: 13, 14, 14:15, 14:30, 14:45, 15… indo
-  //  até 5 e meia; 5 e 45 ainda dá para marcar banho."
+  // "O lançamento do dia, banho, o horário está péssimo para escrever, o horário de veterinário,
+  //  de tudo, está péssimo para poder colocar. Tem que clicar várias vezes, precisa de melhorar
+  //  essa forma. Talvez já vir com horários prontos: 14, 14:15, 14:30, 14:45, 17, 13 horas,
+  //  15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro;
+  //  5 e 45 dá para marcar ainda banho."
   // Um toque na HORA (8h a 17h) já escolhe a hora cheia; um segundo toque, se precisar, troca
   // os minutos (de 15 em 15). O banho vai até 17:45; o resto, até 17:30. O que fugir da grade
   // (7:30, 18:00, o remédio da noite) continua no relógio, em «outro horário».
@@ -36547,7 +36555,7 @@
     var hSel=fora?'':v.slice(0,2);
     var abrir=fora || !!DASH_HORA_OUTRO[k];
     var bt=function(rot, on, fn){
-      return '<button type="button" class="btn" style="min-width:48px;padding:7px 10px;font-size:13px;font-weight:800;border:1.5px solid '
+      return '<button type="button" class="btn" style="min-width:52px;min-height:42px;padding:8px 10px;font-size:14px;font-weight:800;border:1.5px solid '
         +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
         +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="'+fn+'">'+rot+'</button>';
     };
@@ -36566,7 +36574,7 @@
     h+='<div style="margin-top:6px'+(abrir?'':';display:none')+'"><span class="hint">Outro horário:</span> '
       +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px" value="'+escAttr(v)+'"'
       +' onchange="dashHoraOutro(\''+k+'\',this.value)"></div>';
-    if(!abrir) h+='<button type="button" class="btn" style="background:none;border:none;padding:4px 0;color:var(--z-blue);text-decoration:underline;font-size:12px;font-weight:700"'
+    if(!abrir) h+='<button type="button" class="btn" style="background:none;border:none;padding:10px 4px 10px 0;color:var(--z-blue);text-decoration:underline;font-size:13px;font-weight:700"'
       +' onclick="dashHoraAbrirOutro(\''+k+'\')">outro horário</button>';
     return h;
   }

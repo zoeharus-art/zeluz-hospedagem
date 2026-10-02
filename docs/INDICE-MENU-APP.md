@@ -4,7 +4,7 @@
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
 
-> **Adriana, 02/out/2026:** *"O horário está péssimo para escrever — o do banho, do veterinário, de tudo: tem que clicar várias vezes. Já vir com horários prontos: 13, 14, 14:15, 14:30, 14:45, 15… indo até 5 e meia; 5 e 45 ainda dá para marcar banho."* Story 6.26.
+> **Adriana, 02/out/2026:** *"O lançamento do dia, banho, o horário está péssimo para escrever, o horário de veterinário, de tudo, está péssimo para poder colocar. Tem que clicar várias vezes, precisa de melhorar essa forma. Talvez já vir com horários prontos: 14, 14:15, 14:30, 14:45, 17, 13 horas, 15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro; 5 e 45 dá para marcar ainda banho."* Story 6.26.
 
 ### (AD) O horário em um ou dois toques
 
@@ -17,6 +17,8 @@
 - Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
 - A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
 - Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
+- **A hora vem antes da busca** (Veterinário, Sai mais cedo): ali, tocar no nome já lança; a hora fica escolhida antes, e os nomes sugeridos ficam colados na busca, sem o teclado do celular escondê-los.
+- Botões grandes para o dedo (42 px de altura).
 - **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.26; 17 defeitos plantados, 17 pegos).
 
