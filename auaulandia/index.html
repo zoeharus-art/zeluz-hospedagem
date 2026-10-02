@@ -17121,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-08';
+  const APP_VERSAO='2026-10-02-09';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21334,10 +21334,13 @@
   // Outro cartaz aberto na tela? Este módulo ESPERA — nunca apaga o que a recepção está
   // fazendo (check-in, pagamento, mensagem ao tutor).
   function banhoFaltaTemCartaz(){
-    // O exame do corpo aberto (check-in ou check-out) também conta: a pergunta do próximo
-    // não abre por cima de quem está examinando um FILHOt (QA73).
+    // O exame do corpo aberto NA TELA (check-in ou check-out) também conta: a pergunta do
+    // próximo não abre por cima de quem está examinando um FILHOt (QA73). Só na tela: o exame
+    // deixado pela metade (saiu pelo menu) não pode calar o aviso no aparelho inteiro (QA75).
     try{ return !!(document.getElementById('zAlertaoBox') || document.getElementById('repMsgBox')
-      || (typeof ckAtual!=='undefined' && ckAtual)); }
+      || (typeof ckAtual!=='undefined' && ckAtual && typeof dcAtiv!=='undefined'
+          && (dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo')
+          && (function(){ var v=document.getElementById('v-daycare'); return !!(v && v.classList && v.classList.contains('active')); })())); }
     catch(e){ return true; } /* silencioso de propósito: na dúvida, não abre */
   }
   // Todo cartaz de RESULTADO passa por aqui: com a tela ocupada, entra na fila e aparece
@@ -21669,8 +21672,10 @@
     var quem=String((o&&o.nomeVisivel)||(o&&o.nome)||'');
     var horas=String((o&&o.hora)||''), com=(g.com||'reservado');
     var banho;
-    if(lib && (lib.decisao==='liberado' || lib.decisao==='liberando'))
+    if(lib && lib.decisao==='liberado')
       banho='O horário do banho já tinha sido liberado'+(lib.quem?(' por '+lib.quem):'')+': se ainda for tomar banho, lance de novo nos Lançamentos do dia.';
+    else if(lib && lib.decisao==='liberando')
+      banho='O horário do banho está sendo liberado'+(lib.quem?(' por '+lib.quem):'')+': se ainda for tomar banho, lance de novo nos Lançamentos do dia.';
     else if(/ e /.test(horas)) banho='Os banhos das '+horas.replace(/ e /g,' e das ')+' ficam '+com+'.';
     else banho=horas?('O banho das '+horas+' fica '+com+'.'):('O banho de hoje fica '+com+'.');
     var almoco='Está na grade do almoço: confira se '+(g.pron||'o FILHOt')+' já almoçou.';
@@ -21688,7 +21693,8 @@
     // Aviso de outro dia (o aparelho ficou aberto na virada): a presença seria gravada no dia
     // errado (QA73).
     if(dia!==dcDataKey() || BANHO_FALTA_DIA!==dia){
-      banhoFaltaMostrar('O DIA VIROU', ['Este aviso é de '+(((typeof fmtBR==='function')?fmtBR(dia):'')||dia)+'. Nada foi marcado.',
+      var dAviso=BANHO_FALTA_DIA||dia;   // a data do AVISO, não a do relógio (QA75)
+      banhoFaltaMostrar('O DIA VIROU', ['Este aviso é de '+(((typeof fmtBR==='function')?fmtBR(dAviso):'')||dAviso)+'. Nada foi marcado.',
         'Feche e abra o app para ver os avisos de hoje.'], {botao:'Entendi'});
       return Promise.resolve(false);
     }

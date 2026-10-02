@@ -2,7 +2,7 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
-## O que mudou em 02/out/2026 (v 2026-10-02-08) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
+## O que mudou em 02/out/2026 (v 2026-10-02-08 e -09) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
 
 > **Adriana, 02/out/2026** (com as fotos das janelas "NÃO VEIO" da Luna, do Pipoca, da Mika e do Rafael): *"Luna também está aqui! Eu peguei ela!!! eu a levei!"* · *"Pipoca veio! eu o peguei"* · *"Mika idem está aqui"* · *"também está aqui — coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!! e o almoço!!!)"*. Story 6.29.
 
@@ -18,9 +18,9 @@
 - **Quem tem as atividades limitadas no Time:** a tela só oferece o atalho para o que a pessoa pode abrir; sem o check-in, diz "Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo".
 - **Xarás:** com duas fichas do mesmo nome, o aviso e o cartão mostram o tutor (ou a raça): "BOLT - RUI NÃO VEIO…".
 - **A busca do Check-in do corpo** passou a filtrar a lista na hora (antes ficava presa no nome até outra coisa redesenhar a tela).
-- **A próxima pergunta espera:** com um exame do corpo aberto, o aviso do próximo FILHOt não abre por cima.
+- **A próxima pergunta espera:** com um exame do corpo aberto **na tela**, o aviso do próximo FILHOt não abre por cima. O exame deixado pela metade (saiu pelo menu) não cala os avisos do aparelho (v -09).
 - **Se a presença não grava** (o banco recusou), a tela diz "A PRESENÇA NÃO FOI MARCADA", nada é segurado e a pergunta volta. **Aviso de outro dia** (aparelho que virou a noite aberto): "O DIA VIROU", nada é marcado.
-- **Outro aparelho já liberou o horário:** a tela diz isso, em vez de prometer o banho.
+- **Outro aparelho já liberou (ou está liberando) o horário:** a tela diz isso, em vez de prometer o banho.
 - **No Hoje na Zêluz,** o cartão "Banho de quem faltou" tem o mesmo botão ao lado de **Liberar o horário**, até o horário ser liberado.
 - **Quem pode:** quem decide o banho de quem faltou (recepção, Supervisão, Gestão, Diretoria).
 - **O exame do corpo continua obrigatório:** sem ele, o FILHOt continua em "ainda sem check-in do corpo" no painel do monitor.

@@ -5626,7 +5626,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-8])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6785,10 +6785,18 @@ provaAsync('6.29 xarás com o tutor no aviso e no cartão; aviso de outro dia n�
     await tick();
     igual(run('__gravBF.length'), 0);
     igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['O DIA VIROU']);
+    assert.ok(run('__alertas[0].l[0]').indexOf('Este aviso é de '+run(`fmtBR('${dia}')`)) === 0, 'a data é a do aviso, não a do relógio: ' + run('__alertas[0].l[0]'));
+    // pelo cartão do Hoje (o aparelho virou a noite com a lista de ontem): a data é a do aviso
+    run(bolt629(dia, kP) + `BANHO_FALTA_DIA='2026-01-01'; __alertas=[]; __gravBF=[];`);
+    run(`banhoFaltaEstaAquiUI('${kP}');`); await tick();
+    igual(run('__gravBF.length'), 0);
+    igual(run('__alertas[0].l[0]'), 'Este aviso é de 01/01/2026. Nada foi marcado.');
     // outro aparelho já tinha liberado o horário: o texto não promete o banho
     run(bolt629(dia, kP) + `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Carla', ts:9}; __esc=[]; __alertas=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
     igual(run('__esc[0].l[0]'), 'Marcado como "veio" na chamada de hoje. O horário do banho já tinha sido liberado por Carla: se ainda for tomar banho, lance de novo nos Lançamentos do dia.');
+    igual(run("banhoFaltaAquiTexto({nome:'Bolt', hora:'17:00'}, true, {com:'com ele'}, {decisao:'liberando', quem:'Carla'}).linhas[1]"),
+      'O horário do banho está sendo liberado por Carla: se ainda for tomar banho, lance de novo nos Lançamentos do dia.');
     // dois banhos no dia
     igual(run("banhoFaltaAquiTexto({nome:'Luna', hora:'10:00 e 15:30'}, true, {com:'com ela', pron:'ela'}).linhas[1]"), 'Os banhos das 10:00 e das 15:30 ficam com ela.');
     igual(run("banhoFaltaAquiTexto({nome:'Mika', hora:'16:45'}, false, banhoFaltaGenero('x')).linhas[2]"), 'Está na grade do almoço: confira se o FILHOt já almoçou.');
@@ -6843,11 +6851,16 @@ prova('6.29 a busca redesenha o check-in do corpo (não a tela genérica); a pr�
     igual(run('__bu'), ['ck', 'ck', 'generico']);
     igual(run('dcBuscaVal'), 'Luna');
   } finally { run('ckRedesenharDeFora=__bkBu.ck; renderGenerico=__bkBu.rg; dcAtiv=__bkBu.da; document.getElementById=__bkBu.ge; dcBuscaVal="";'); }
-  run(`__bkCa={ca:ckAtual, ge:document.getElementById}; document.getElementById=function(){ return null; };`);
+  run(`__bkCa={ca:ckAtual, ge:document.getElementById, da:dcAtiv}; __vdc={classList:{contains:function(c){ return c==='active' && __vdcAtiva; }}}; __vdcAtiva=true;
+    document.getElementById=function(id){ return id==='v-daycare'?__vdc:null; };`);
   try {
-    run('ckAtual=null;'); igual(run('banhoFaltaTemCartaz()'), false);
-    run("ckAtual={k:'luna'};"); igual(run('banhoFaltaTemCartaz()'), true, 'exame aberto: espera');
-  } finally { run('ckAtual=__bkCa.ca; document.getElementById=__bkCa.ge;'); }
+    run("ckAtual=null; dcAtiv='checkin-corpo';"); igual(run('banhoFaltaTemCartaz()'), false);
+    run("ckAtual={k:'luna'};"); igual(run('banhoFaltaTemCartaz()'), true, 'exame aberto na tela: espera');
+    run("dcAtiv='checkout-corpo';"); igual(run('banhoFaltaTemCartaz()'), true, 'o de saída também');
+    // QA75: o exame deixado pela metade (saiu pelo menu) não cala o aviso no aparelho inteiro
+    run('__vdcAtiva=false;'); igual(run('banhoFaltaTemCartaz()'), false, 'saiu do Day Care: o aviso volta');
+    run("__vdcAtiva=true; dcAtiv='almoco';"); igual(run('banhoFaltaTemCartaz()'), false, 'outra atividade do Day Care: o aviso volta');
+  } finally { run('ckAtual=__bkCa.ca; document.getElementById=__bkCa.ge; dcAtiv=__bkCa.da;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
