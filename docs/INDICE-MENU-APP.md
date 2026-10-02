@@ -43,7 +43,7 @@
 - **Xarás:** o registro que só tem o nome (sem tutor e sem ficha ligada) só decide quando o nome é único no cadastro. Quem a Gestão tira do dia é conferido pelo nome **e** pelo tutor.
 - **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …" e "… porque estão na hospedagem (não são do Day Care hoje): …", com os nomes. Quando ninguém recebe falta por causa disso, o rastro diz "ninguém recebeu falta".
 - **Limites conhecidos:**
-  - a tela do **Check-in do corpo** continua listando quem dormiu aqui em "FALTARAM HOJE … entraram como falta" (é a área protegida do check-in; não foi mexida);
+  - a tela do **Check-in do corpo** continua listando quem dormiu aqui e os só hóspedes do dia em "FALTARAM HOJE … entraram como falta" (é a área protegida do check-in; não foi mexida);
   - uma hospedagem agendada que não aconteceu, ou uma pernoite "aguardando" nunca cancelada, deixa o FILHOt sem a falta automática (a chamada continua valendo).
 - **Não muda:** quem passou pelo check-in de entrada, quem já tem marcação na chamada, a falta avisada na planilha, os feriados, o sábado e o domingo.
 - **Hoje (02/out), com o Romeo:** a correção vale do próximo meio-dia em diante. A falta de hoje se desfaz na **Chamada** (tocar **VEIO**), e o banho fica com ele em **«Ele ainda vem»**.

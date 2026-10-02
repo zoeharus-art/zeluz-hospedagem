@@ -6463,6 +6463,7 @@ provaAsync('6.28 a falta das 12h: quem dormiu aqui (estadia, pernoite do Plantã
     igual(cham.map((e) => e.v), [{ [run("dcKey('Toddy','Ana')")]: 'faltou' }], 'só o Toddy (não dormiu aqui, sem check-in) recebe falta');
     const trava = esc.find((e) => e.o === 'trava').v;
     igual({ quantos: trava.quantos, dormiram_aqui: trava.dormiram_aqui }, { quantos: 1, dormiram_aqui: 3 });
+    igual(Object.keys(trava.sem_falta).sort(), [run("dcKey('Romeo','Luciana')"), kKiko, run("dcKey('Thor','Ana')")].sort(), 'a trava guarda quem dormiu aqui (as pendências não o tratam como "não veio")');
     assert.ok(run('__aud628').some((a) => /^falta-automatica: sem falta automática porque dormiram aqui: Romeo, Kiko, Thor$/.test(a)), JSON.stringify(run('__aud628')));
     assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'o dia fechou');
   } finally { solta628(); solta(); }
@@ -6481,11 +6482,20 @@ provaAsync('6.28 as estadias ainda não chegaram ao aparelho: lê do banco UMA v
       await run('aplicarFaltaAutomatica()'); await espera628();
     } finally { run('_logLeituraFalhou=__lf628;'); }
     igual(run("__lidos628.filter(function(p){ return p==='auaulandia/estadias'; }).length"), 1, 'o nó das estadias desce uma vez, não a cada volta');
+    // a leitura das estadias que FALHA não fica guardada: a volta seguinte tenta de novo
+    run(`__lidosAnt628=__lidos628.length; __faltaEstLendo=null; __falhar628='auaulandia/estadias';`);
+    run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(){};');
+    try {
+      await run('aplicarFaltaAutomatica()'); await espera628();
+      await run('aplicarFaltaAutomatica()'); await espera628();
+    } finally { run('_logLeituraFalhou=__lf628;'); }
+    igual(run("__lidos628.slice(__lidosAnt628).filter(function(p){ return p==='auaulandia/estadias'; }).length"), 2, 'falhou: tenta de novo na volta seguinte');
+    run("__falhar628='daycare/pernoites/';");
     igual(JSON.parse(JSON.stringify(run('__esc628'))), [], 'com a falha, nada gravado');
     // a rede volta: fecha com as estadias já lidas, e o Romeo fica fora da falta
-    run(`__dados628['daycare/pernoites/${ONTEM628}']=null; __falhar628='';`);
+    run(`__dados628['daycare/pernoites/${ONTEM628}']=null; __falhar628=''; __lidosAnt628=__lidos628.length;`);
     await run('aplicarFaltaAutomatica()'); await espera628();
-    igual(run("__lidos628.filter(function(p){ return p==='auaulandia/estadias'; }).length"), 1, 'ainda uma vez só');
+    igual(run("__lidos628.slice(__lidosAnt628).filter(function(p){ return p==='auaulandia/estadias'; }).length"), 1, 'a leitura que falhou não ficou guardada: uma leitura nova, e só uma');
     const cham = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
     igual(Object.keys(cham[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Thor','Ana')"), run("dcKey('Toddy','Ana')")].sort(), 'Romeo fora da falta');
     // com as estadias no aparelho (o ouvinte vivo), o banco não é lido
@@ -6513,7 +6523,19 @@ provaAsync('6.28 só hóspede (na turma pela estadia, não é do Day Care hoje):
     assert.ok(!('dormiram_aqui' in trava), 'ele não dormiu aqui: não entra nessa conta');
     igual(trava.sem_falta, { [run("dcKey('Romeo','Luciana')")]: true }, 'a trava guarda quem ficou sem falta');
     assert.ok(run('__aud628').indexOf('falta-automatica: sem falta automática porque estão na hospedagem (não são do Day Care hoje): Romeo') >= 0, JSON.stringify(run('__aud628')));
-  } finally { run('delete __T628[0].hospede;'); solta628(); solta(); }
+    // a reposição e o avulso da planilha (sem a marca de hóspede) continuam com a regra
+    run(`__T628=[{p:{n:'Romeo', tutor:'Luciana'}, hospede:true}, {p:{n:'Toddy', tutor:'Ana'}, daPlanilha:'reposicao'}, {p:{n:'Kiko', tutor:'Rui'}, avulso:true}];
+      PELUDINHOS=__T628.map(function(o){ return o.p; }); _faltaAutoFeita=''; __aud628=[];`);
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const cham2 = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham2[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Toddy','Ana')")].sort(), 'reposição e avulso recebem falta; só o hóspede fica sem');
+    // só hóspedes sem check-in: o rastro diz "ninguém recebeu falta"
+    run(`__T628=[{p:{n:'Romeo', tutor:'Luciana'}, hospede:true}]; PELUDINHOS=__T628.map(function(o){ return o.p; }); _faltaAutoFeita=''; __aud628=[];`);
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.ok(run('__aud628').indexOf('falta-automatica: dia fechado às 12h — ninguém recebeu falta') >= 0, JSON.stringify(run('__aud628')));
+  } finally { solta628(); solta(); }
 });
 provaAsync('6.28 todos os sem check-in dormiram aqui: o rastro diz "ninguém recebeu falta" (não "ninguém ficou sem check-in"); quem fez check-in e dormiu aqui não entra na conta de quem dormiu', async () => {
   const solta = relogio621(HOJE628 + 'T12:05:00');
@@ -6543,6 +6565,10 @@ prova('6.28 check-out feito antes da saída prevista: a noite é a do check-out;
     c:{refKey:'gil__ana', nome:'Gil', tutor:'Ana', entrada:'2026-09-28', status:'finalizada', checkout:{ts:${tsLocal(ONTEM628, '18:00')}}}
   }, {}, {}, {})`);
   igual(Object.keys(r.pk).sort(), ['rex__ana'], 'o Bob saiu em 28/09 (não dormiu ontem); o Rex saiu hoje de manhã (dormiu); o Gil saiu ontem à tarde (não dormiu)');
+  // o dia do check-out é o do relógio daqui, não o de Greenwich: 23h30 de 01/10 é 01/10
+  igual(run('faltaDiaLocal(new Date(2026, 9, 1, 23, 30).getTime())'), '2026-10-01');
+  igual(run('faltaDiaLocal(new Date(2026, 9, 2, 0, 10).getTime())'), '2026-10-02');
+  igual(run("faltaDiaLocal('x')"), '');
   // xarás: as duas Luas
   assert.ok(!run(`faltaDormiuEste({n:'Luna', tutor:'Eva'}, {pk:{}, dc:{}, nome:{luna:'Luna'}}, faltaNomesRepetidos([{n:'Luna', tutor:'Eva'}, {n:'Luna', tutor:'Carol'}]))`), 'nome repetido: não decide');
   assert.ok(run(`faltaDormiuEste({n:'Luna', tutor:'Eva'}, {pk:{}, dc:{}, nome:{luna:'Luna'}}, faltaNomesRepetidos([{n:'Luna', tutor:'Eva'}, {n:'Mel', tutor:'Carol'}]))`), 'nome único: decide');
@@ -6584,6 +6610,8 @@ provaAsync('6.28 pendências de prevenção: quem ficou sem falta (dormiu aqui o
     igual(run("faltaSemFaltaNaTrava(__trava628p, 'romeo__luciana')"), true);
     igual(run("faltaSemFaltaNaTrava(__trava628p, 'toddy__ana')"), false);
     igual(run("faltaSemFaltaNaTrava(null, 'romeo__luciana')"), false);
+    igual(run("faltaSemFaltaNaTrava(__trava628p, 'constructor')"), false, 'propriedade herdada não conta');
+    igual(run("faltaSemFaltaNaTrava({sem_falta:'romeo__luciana'}, 'romeo__luciana')"), false, 'sem_falta que não é mapa não conta');
     await run(`pendAvaliarLancamento('medicacao', {chave:'romeo__luciana', valor:'Romeo'}, '${HOJE628}')`);
     await run(`pendAvaliarLancamento('medicacao', {chave:'toddy__ana', valor:'Toddy'}, '${HOJE628}')`);
     for (let i = 0; i < 30; i++) await Promise.resolve();

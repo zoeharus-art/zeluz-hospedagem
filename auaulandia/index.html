@@ -11860,7 +11860,7 @@
   }
   // A trava do dia guarda QUEM ficou sem falta automática (dormiu aqui ou está na
   // hospedagem): as pendências de prevenção não o tratam como "não veio" (QA71).
-  function faltaSemFaltaNaTrava(trava, chave){ return !!(trava && trava.sem_falta && chave && trava.sem_falta[chave]); }
+  function faltaSemFaltaNaTrava(trava, chave){ var m=trava&&trava.sem_falta; return !!(m && typeof m==='object' && chave && Object.prototype.hasOwnProperty.call(m, chave) && m[chave]); }
   // Lê as três portas da noite de ontem. Falhou alguma leitura: rejeita, e o dia NÃO fecha
   // agora — marcar falta em quem dormiu aqui é o erro que esta regra existe para evitar;
   // o temporizador de 30 s tenta de novo, e o vigia das 12h15 cobra se o dia não fechar.
