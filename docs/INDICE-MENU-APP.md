@@ -2,6 +2,22 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 02/out/2026 (v 2026-10-02-04) — «Ele já está aqui» no aviso do banho de quem faltou
+
+> **Adriana, 02/out/2026** (com as fotos das janelas "LUNA NÃO VEIO" e "PIPOCA NÃO VEIO"): *"Luna também está aqui! Eu peguei ela!!! eu a levei!"* · *"Pipoca veio! eu o peguei"*. Story 6.29.
+
+### (AF) Quem já está aqui sai da falta em um toque
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| A Luna e o Pipoca chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta. A janela "NÃO VEIO — TINHA BANHO" só oferecia **Liberar o horário**, **Ainda vem** e **Decidir depois** | quem tira a falta é o check-in de entrada, e a janela não dizia isso nem levava até lá | a janela ganhou **«Ele já está aqui»** (ou **«Ela já está aqui»**, pela ficha): o banho fica com ele (o mesmo "ainda vem") e abre o **Day Care › Check-in do corpo** de entrada já com o nome dele na busca. Feito o check-in, a falta sai sozinha |
+
+- **No Hoje na Zêluz,** o cartão "Banho de quem faltou" tem o mesmo botão ao lado de **Liberar o horário**, até o horário ser liberado.
+- **Quem pode:** quem decide o banho de quem faltou (recepção, Supervisão, Gestão, Diretoria).
+- **O exame do corpo continua obrigatório:** o botão só abre a tela; quem tira a falta é o check-in.
+- **Onde está no código:** `banhoFaltaJaAqui`, `banhoFaltaJaAquiUI`, `banhoFaltaIrAoCheckin` e o `aqui` de `banhoFaltaGenero`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (2 provas da 6.29 e 2 provas antigas atualizadas para o botão novo; 17 defeitos plantados, 17 pegos).
+
 ## O que mudou em 02/out/2026 (v 2026-10-02-03) — quem dormiu aqui não recebe a falta automática do meio-dia
 
 > **Adriana, 02/out/2026** (com a foto da janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30"): *"o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve erro e agora também"*. Story 6.28.

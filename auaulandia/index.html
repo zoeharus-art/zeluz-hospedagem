@@ -17072,7 +17072,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-03';
+  const APP_VERSAO='2026-10-02-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21277,9 +21277,9 @@
   function banhoFaltaGenero(chave){
     var p=banhoFaltaPel(chave), sx='';
     try{ sx=String(((typeof pelExtra==='function'?pelExtra(p):{})||{}).sexo||''); }catch(e){ sx=''; }
-    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela'};
-    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele'};
-    return {ainda:'Ainda vem', com:'reservado'};
+    if(/^f/i.test(sx)) return {ainda:'Ela ainda vem', com:'com ela', aqui:'Ela já está aqui'};
+    if(/^m/i.test(sx)) return {ainda:'Ele ainda vem', com:'com ele', aqui:'Ele já está aqui'};
+    return {ainda:'Ainda vem', com:'reservado', aqui:'Já está aqui'};
   }
   function banhoFaltaPode(){ return (typeof repPodeLancar==='function' && repPodeLancar()); }
   // Outro cartaz aberto na tela? Este módulo ESPERA — nunca apaga o que a recepção está
@@ -21342,8 +21342,10 @@
          ? 'É o banho fixo: ele sai sozinho da planilha quando falta, mas volta se chegar depois.'
          : 'O horário do banho continua na planilha e na TV, e ninguém marca outro banho nele.'),
        'Liberar tira da planilha e da TV só o banho de hoje'+(o.fixo?' (o combinado do banho fixo continua)':'')+'. O horário fica livre para outro banho.',
+       'Se já está aqui, toque em «'+g.aqui+'»: o horário fica '+g.com+' e abre o check-in de entrada, que tira a falta.',
        'Se ainda vier (chegar mais tarde), toque em «'+g.ainda+'»: o horário fica '+g.com+'.'].filter(Boolean),
       [{t:'Liberar o horário', cor:'#234D67', fn:function(){ visto(); banhoFaltaExecutar(o, dia); }},
+       {t:g.aqui, cor:'#14532D', fn:function(){ visto(); banhoFaltaJaAqui(o, dia); }},
        {t:g.ainda, cor:'#1E8449', fn:function(){ visto(); banhoFaltaManter(o, dia); }},
        {t:'Decidir depois', cor:'#7C8B99', fn:function(){ visto(); banhoFaltaSeguir(dia); }}],
       {corTitulo:'#234D67', rodape:'O aviso também fica no Hoje na Zêluz, com o botão de liberar.'});
@@ -21560,6 +21562,34 @@
       return novo || {chave:o.chave, nome:o.nome, hora:o.hora||'', lancs:[], txts:[], fixo:false, horaFixo:'', origem:o.origem||'', porque:o.porque};
     }).catch(function(){ return null; });
   }
+  // ===== «ELE JÁ ESTÁ AQUI» (Adriana, 02/out/2026: Luna e Pipoca) ======================
+  // "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei".
+  // Chegaram sem o check-in de entrada e, ao meio-dia, entraram como falta. O cartaz só
+  // oferecia "ainda vem", e quem estava com o FILHOt na frente não sabia como tirar a falta.
+  // Agora «Ele já está aqui» segura o banho (o mesmo "manter" do "ainda vem") e abre o
+  // check-in de entrada já nele: é o check-in que tira a falta, e o exame do corpo continua
+  // obrigatório. Nada aqui mexe no check-in; só abre a tela com o nome dele na busca.
+  function banhoFaltaIrAoCheckin(o){
+    try{
+      if(typeof abrirAtividade==='function') abrirAtividade('checkin-corpo');
+      var el=document.getElementById('dcBusca');
+      if(el){ el.value=String((o&&o.nome)||''); if(typeof onDcBusca==='function') onDcBusca(); }
+      return true;
+    }catch(e){ return false; } /* silencioso de propósito: atalho de tela — o banho já foi segurado */
+  }
+  function banhoFaltaJaAqui(o, dia){
+    var d=BANHO_FALTA_DEC[o.chave]||{};
+    // Já segurado ("ainda vem"): só falta o check-in. Segurar de novo daria "já decidido".
+    var segurar=(d.decisao==='mantido') ? Promise.resolve(true) : banhoFaltaManter(o, dia);
+    banhoFaltaIrAoCheckin(o);
+    try{ if(typeof audit==='function') audit('banho-falta', o.nome+' já está aqui — abriu o check-in de entrada', {alvo:o.chave, pet:o.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return segurar;
+  }
+  function banhoFaltaJaAquiUI(chave){
+    var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
+    if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return; }
+    banhoFaltaJaAqui(o, dcDataKey());
+  }
   function banhoFaltaManterUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
     if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return; }
@@ -21578,6 +21608,10 @@
     var botao=function(o){ return pode
       ? '<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:13px" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaLiberarUI(this.dataset.k)">Liberar o horário</button>'
       : '<span style="color:var(--crm-atencao-text);font-weight:700">aguardando a recepção</span>'; };
+    // «Já está aqui» (02/out/2026): ao lado de Liberar, enquanto o horário não foi liberado.
+    var aqui=function(o){ return pode
+      ? ' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaJaAquiUI(this.dataset.k)">'+escAttr(banhoFaltaGenero(o.chave).aqui)+'</button>'
+      : ''; };
     var h='<div class="card" style="border-left:4px solid var(--crm-atencao-text)">'
       +'<h2 style="font-size:17px;margin-bottom:2px">Banho de quem faltou</h2>'
       +'<div class="hint">Faltou hoje e tinha banho marcado. Liberar tira o banho da planilha e da TV, e o horário fica livre para outro banho.</div>';
@@ -21589,10 +21623,10 @@
         +(d.planilha_ok===false?' <span style="color:var(--crm-critico);font-weight:700">· a planilha não confirmou: tire à mão</span>':'');
       else if(dec==='liberando' && !banhoFaltaEmAberto(d, agora)) situ='<span style="color:var(--muted);font-weight:700">liberando…</span>';
       else if(dec==='liberando') situ='<span style="color:var(--crm-critico);font-weight:700">a liberação não terminou</span> '+botao(o);
-      else if(dec==='mantido') situ='<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span> '+botao(o);
+      else if(dec==='mantido') situ='<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span> '+botao(o)+aqui(o);
       else if(dec==='falhou') situ='<span style="color:var(--crm-critico);font-weight:700">não deu certo'+(d.msg?(': '+escAttr(d.msg)):'')+'</span> '+botao(o)
         +((d.acao==='manter' && pode)?(' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaManterUI(this.dataset.k)">Ainda vem</button>'):'');
-      else situ=botao(o);
+      else situ=botao(o)+aqui(o);
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
         +'<strong style="color:var(--z-blue)">'+escAttr(o.nome)+'</strong>'
         +'<span class="hint" style="margin:0">'+(o.hora?('banho às '+escAttr(o.hora)):'banho hoje')+(o.fixo?' (fixo)':'')+' · '
