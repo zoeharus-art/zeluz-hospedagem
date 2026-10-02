@@ -11756,6 +11756,103 @@
       }).catch(function(e){ _logFalhaGrav('a fotografia da turma do dia', e); });
     }).catch(function(e){ _logFalhaGrav('ler a fotografia da turma do dia', e); });
   }
+  // ===== QUEM DORMIU AQUI NÃO RECEBE FALTA (Adriana, 02/out/2026, caso do Romeo) ======
+  // "o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve
+  //  erro e agora também" (o Romeo saiu como "não veio — tinha banho às 15:30"). Quem passou a noite na casa não passa pelo check-in de entrada do
+  // Day Care: já estava aqui. A falta das 12h comparava só a turma com o check-in e a
+  // chamada, e marcava "faltou" em quem dormiu aqui — e o banho dele virava "não veio —
+  // liberar o horário". Agora a falta automática pula quem dormiu aqui na noite anterior,
+  // por qualquer uma das três portas onde a noite fica registrada:
+  //   1. a estadia da hospedagem (auaulandia/estadias), menos a cancelada ou recusada;
+  //   2. a pernoite ou o hóspede lançado no Plantão (auaulandia/manuais/{dia}, com as
+  //      noites), menos quem a Gestão tirou do dia (auaulandia/removidos/{ontem});
+  //   3. a pernoite do Lançamento do dia (daycare/pernoites/{ontem}), menos a cancelada.
+  // Ele fica SEM marcação: quem marca é a chamada. O automático só deixa de presumir falta.
+  var FALTA_PERN_MAX_NOITES=7;
+  // Pura: o retrato de quem dormiu na noite que começou em `ontem`. Devolve
+  // {pk:{pelKey:nome}, dc:{dcKey:nome}, nome:{nomeNormalizado:nome}}; `nome` só recebe o
+  // registro sem tutor e sem ficha ligada (a célula "Repolho / SRD"), em que o nome é o
+  // máximo que o dado permite afirmar. Errar para este lado só deixa alguém sem falta
+  // automática — a chamada continua valendo.
+  function faltaDormiuAqui(ontem, estadias, manuais, removidos, pernDc){
+    var out={pk:{}, dc:{}, nome:{}};
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
+    if(!iso.test(String(ontem||''))) return out;
+    var hoje=orcMaisDias(ontem, 1);
+    var norm=function(t){ return jsNorm(String(t||'')); };
+    var por=function(reg, nomeCampo){
+      reg=reg||{};
+      var nome=String(reg[nomeCampo]||reg.nome||'').trim(); if(!nome) return;
+      var tutor=String(reg.tutor||'').trim(), rk=String(reg.refKey||'').trim();
+      if(rk) out.pk[rk.toLowerCase()]=nome;
+      if(tutor) out.dc[dcKey(nome, tutor)]=nome;
+      if(!rk && !tutor) out.nome[norm(nome)]=nome;
+    };
+    Object.keys(estadias||{}).forEach(function(id){
+      var e=(estadias||{})[id]||{};
+      var st=String(e.status||'');
+      if(st==='cancelada' || st==='recusada') return;
+      var ent=String(e.entrada||''), sai=String(e.saida||'');
+      if(!iso.test(ent) || ent>ontem) return;               // entrou depois da noite de ontem
+      if(iso.test(sai)){ if(sai<hoje) return; }             // saiu antes desta manhã
+      else if((st||'ativa')!=='ativa') return;              // sem saída: só a que está aberta
+      por(e, 'nome');
+    });
+    var tirados={};
+    Object.keys(((removidos||{})[ontem])||{}).forEach(function(k){
+      var v=((removidos||{})[ontem]||{})[k];
+      tirados[norm((v&&(v.nome||v.n))||k)]=true;
+    });
+    Object.keys(manuais||{}).forEach(function(dia){
+      if(!iso.test(dia) || dia>ontem) return;
+      Object.keys((manuais||{})[dia]||{}).forEach(function(k){
+        var m=((manuais||{})[dia]||{})[k]||{};
+        if(!m.nome) return;
+        var n=Math.max(1, Math.min(FALTA_PERN_MAX_NOITES, parseInt(m.noites,10)||1));
+        if(orcMaisDias(dia, n-1)<ontem) return;             // a última noite foi antes de ontem
+        if(tirados[norm(m.nome)]) return;                   // a Gestão tirou do dia
+        por(m, 'nome');
+      });
+    });
+    Object.keys(pernDc||{}).forEach(function(ch){
+      var r=(pernDc||{})[ch]||{};
+      if(String(r.status||'aguardando')==='cancelado') return;
+      var nm=pernNomeLimpo(r.nome||r.valor||'');
+      out.dc[String(ch)]=nm||String(ch);
+      // Sem ficha ligada, a chave é o texto do lançamento (pernChaveDe): vale o nome.
+      if(String(ch).indexOf('__')<0 && nm) out.nome[norm(nm)]=nm;
+    });
+    return out;
+  }
+  // Pura: este FILHOt da turma dormiu aqui? (o retrato vem de faltaDormiuAqui)
+  function faltaDormiuEste(p, retrato){
+    if(!p || !retrato) return false;
+    if(retrato.pk[pelKey(p)]) return true;
+    if(retrato.dc[dcKey(p.n, p.tutor)]) return true;
+    return !!retrato.nome[jsNorm(String(p.n||''))];
+  }
+  // Lê as três portas da noite de ontem. Falhou alguma leitura: rejeita, e o dia NÃO fecha
+  // agora — marcar falta em quem dormiu aqui é o erro que esta regra existe para evitar;
+  // o temporizador de 30 s tenta de novo, e o vigia das 12h15 cobra se o dia não fechar.
+  var __faltaDormiuLogado='';
+  function faltaDormiuLer(hoje){
+    var ontem=orcMaisDias(hoje, -1), dias=[];
+    for(var i=0;i<=FALTA_PERN_MAX_NOITES;i++) dias.push(orcMaisDias(ontem, -i));
+    var ler=function(caminho){ return DB.ref(caminho).once('value').then(function(s){ return s.val()||{}; }); };
+    // As estadias: as que este aparelho já tem (o ouvinte vivo baixa todas); se ele ainda não
+    // as recebeu, uma leitura só — sem elas, quem dormiu aqui receberia falta.
+    var lidas=(typeof CF_ESTADIAS_LIDO!=='undefined' && CF_ESTADIAS_LIDO && typeof EST_TODAS!=='undefined' && EST_TODAS);
+    return Promise.all([
+      Promise.all(dias.map(function(d){ return ler('auaulandia/manuais/'+d).then(function(v){ return [d, v]; }); })),
+      ler('auaulandia/removidos/'+ontem),
+      ler('daycare/pernoites/'+ontem),
+      lidas?Promise.resolve(EST_TODAS):ler('auaulandia/estadias')
+    ]).then(function(r){
+      var manuais={}; r[0].forEach(function(par){ manuais[par[0]]=par[1]; });
+      var removidos={}; removidos[ontem]=r[1];
+      return faltaDormiuAqui(ontem, r[3], manuais, removidos, r[2]);
+    });
+  }
   function aplicarFaltaAutomatica(){
     if(!DB) return Promise.resolve();
     var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
@@ -11792,27 +11889,33 @@
       if(s.val()){ _faltaAutoFeita=hoje; return; }       // outro aparelho (ou esta sessão) já fechou
       return Promise.all([
         zMapaUma('daycare/checkin-corpo/'+hoje).catch(function(){ return {}; }),
-        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; })
+        DB.ref('daycare/chamada/'+hoje).once('value').then(function(s2){ return s2.val()||{}; }).catch(function(){ return {}; }),
+        faltaDormiuLer(hoje)
       ]).then(function(rr){
-        const fezCheckin=rr[0], chamada=rr[1];
-        const marcados=[];
+        const fezCheckin=rr[0], chamada=rr[1], dormiu=rr[2];
+        const marcados=[], dormiramAqui=[];
         turmaDeHoje().forEach(function(o){
           const k=dcKey(o.p.n,o.p.tutor);
           if(fezCheckin[k]) return;                       // passou pelo check-in: está aqui
           if(chamada[k]) return;                          // alguém já marcou algo: não sobrescreve
           if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return;  // mora aqui
           if(typeof faltouHoje==='function' && faltouHoje(o)) return;            // a planilha já avisou
+          if(faltaDormiuEste(o.p, dormiu)){ dormiramAqui.push(pelNome(o.p)); return; }   // dormiu aqui: já estava na casa
           marcados.push({k:k, nome:pelNome(o.p)});
         });
         // A trava é tomada mesmo quando ninguém faltou: "o dia fechou e todos vieram" é uma
         // resposta, e sem ela os aparelhos releriam o dia inteiro de 30 em 30 segundos.
         return DB.ref(faltaAutoTrava(hoje)).transaction(function(atual){
           if(atual) return;                               // outro aparelho fechou primeiro
-          return { ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
+          var trava={ ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
                    hora:(typeof horaAgora==='function'?horaAgora():''), quantos:marcados.length };
+          if(dormiramAqui.length) trava.dormiram_aqui=dormiramAqui.length;
+          return trava;
         }).then(function(res){
           if(!res || !res.committed) return;
           _faltaAutoFeita=hoje;
+          if(dormiramAqui.length && typeof audit==='function') audit('falta-automatica',
+            'sem falta automática porque dormiram aqui: '+dormiramAqui.join(', '), {assinou:'sistema'});
           if(!marcados.length){
             if(typeof audit==='function') audit('falta-automatica',
               'dia fechado às '+CK_HORA_FALTA+'h — ninguém ficou sem check-in', {assinou:'sistema'});
@@ -11840,7 +11943,11 @@
           });
         });
       });
-    }).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (aplicarFaltaAutomatica)', e); });
+    }).catch(function(e){
+      // A leitura de quem dormiu aqui falhou (ou a do check-in): o dia não fecha agora. Um
+      // rastro por dia neste aparelho; o temporizador tenta de novo em 30 s.
+      if(__faltaDormiuLogado!==hoje){ __faltaDormiuLogado=hoje; _logLeituraFalhou('a noite de ontem e o check-in (aplicarFaltaAutomatica)', e); }
+    });
   }
   // O relógio passa sozinho: quem já estava com o app aberto às 11h50 não abriria tela
   // nenhuma ao dar meio-dia. Mesma cadência de 30 s dos despertadores do banho e da
@@ -16965,7 +17072,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-02';
+  const APP_VERSAO='2026-10-02-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;

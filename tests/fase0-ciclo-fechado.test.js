@@ -5626,7 +5626,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[12])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[123])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6367,6 +6367,142 @@ prova('os três lugares que pedem horário usam os horários prontos (busca, pai
   assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(it.k);') >= 0, 'painel');
   assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(k);') >= 0, 'nome escrito à mão');
   assert.strictEqual((src.match(/type="time" class="cad-in" id="dashH_/g) || []).length, 1, 'o relógio do item só nasce dentro dos horários prontos');
+});
+// ================================================ 6.28 — quem dormiu aqui não recebe falta automática
+// Adriana, 02/out/2026: "o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso!"
+// A falta das 12h marcava "faltou" em quem passou a noite na casa (não passa pelo check-in de
+// entrada do Day Care) e o banho dele virava "não veio — liberar o horário".
+const ONTEM628 = '2026-10-01', HOJE628 = '2026-10-02';
+prova('6.28 a estadia da hospedagem: dormiu na noite de ontem (entrou até ontem, sai hoje ou depois)', () => {
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {
+    a:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'2026-10-01', saida:'2026-10-02', status:'ativa', pernoite:true},
+    b:{refKey:'thor__ana', nome:'Thor', tutor:'Ana', entrada:'2026-09-28', saida:'2026-10-05', status:'ativa'},
+    c:{refKey:'mel__bia', nome:'Mel', tutor:'Bia', entrada:'2026-10-02', saida:'2026-10-04', status:'ativa'},
+    d:{refKey:'kiko__rui', nome:'Kiko', tutor:'Rui', entrada:'2026-09-29', saida:'2026-10-01', status:'finalizada'},
+    e:{refKey:'lua__eva', nome:'Lua', tutor:'Eva', entrada:'2026-09-30', saida:'2026-10-03', status:'cancelada'},
+    f:{refKey:'zeus__ivo', nome:'Zeus', tutor:'Ivo', entrada:'2026-09-30', status:'ativa'},
+    g:{refKey:'nina__gil', nome:'Nina', tutor:'Gil', entrada:'2026-09-30', status:'finalizada'},
+    h:{refKey:'bob__ted', nome:'Bob', tutor:'Ted', entrada:'2026-09-30', saida:'2026-10-03', status:'finalizada'},
+    i:{refKey:'max__leo', nome:'Max', tutor:'Leo', entrada:'2026-09-30', saida:'2026-10-02', status:'recusada'},
+    j:{refKey:'luna__carol', nome:'Luna', entrada:'2026-09-30', saida:'2026-10-02', status:'ativa'},
+    k:{refKey:'sem__data', nome:'Sem', tutor:'Data', status:'ativa'}
+  }, {}, {}, {})`);
+  igual(Object.keys(r.pk).sort(), ['bob__ted', 'luna__carol', 'romeo__luciana', 'thor__ana', 'zeus__ivo'],
+    'Romeo (pernoite de ontem), Thor (no meio da estadia), Zeus (aberta, sem saída), Bob (fez check-out hoje: dormiu aqui) e Luna; a estadia sem entrada não conta');
+  assert.ok(run(`faltaDormiuEste({n:'Luna', tutor:'Carol'}, {pk:{luna__carol:'Luna'}, dc:{}, nome:{}})`), 'a ficha ligada (sem tutor na estadia) também identifica');
+  assert.strictEqual(r.dc[run("dcKey('Romeo','Luciana')")], 'Romeo', 'também pela chave do Day Care');
+});
+prova('6.28 a pernoite do Plantão (manuais, com as noites) e quem a Gestão tirou do dia', () => {
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {}, {
+    '2026-10-01':{x1:{nome:'Romeo', tutor:'Luciana', refKey:'romeo__luciana', noites:1}, x2:{nome:'Pipoca', tutor:'Rita', refKey:'pipoca__rita', hospede:true}, x3:{nome:'Tirado', tutor:'Tom', noites:1}},
+    '2026-09-29':{y1:{nome:'Duo', tutor:'Ana', noites:3}, y2:{nome:'Curto', tutor:'Ana', noites:2}},
+    '2026-10-02':{z1:{nome:'Amanha', tutor:'Ana', noites:1}},
+    '2026-09-30':{w1:{nome:'Repolho', noites:2}}
+  }, {'2026-10-01':{r1:{nome:'Tirado'}}}, {})`);
+  igual(Object.keys(r.dc).map((k) => r.dc[k]).sort(), ['Duo', 'Pipoca', 'Romeo'],
+    'Duo (3 noites desde 29/09 cobre a de 01/10), Pipoca (hóspede lançado em 01/10), Romeo; Curto acabou em 30/09, Tirado saiu do dia, Amanhã ainda não entrou');
+  igual(Object.keys(r.nome), ['repolho'], 'sem tutor e sem ficha, vale o nome');
+});
+prova('6.28 a pernoite do Lançamento do dia (daycare/pernoites/{ontem}): vale menos a cancelada', () => {
+  const kRomeo = run("dcKey('Romeo','Luciana')"), kKiko = run("dcKey('Kiko','Rui')"), kLua = run("dcKey('Lua','Eva')");
+  ctx.__pern628 = { [kRomeo]: { nome: 'Romeo', status: 'aguardando' }, [kKiko]: { nome: 'Kiko (pernoite)', status: 'checkin_feito' },
+    [kLua]: { nome: 'Lua', status: 'cancelado' }, 'fred-sem-ficha': { nome: 'Fred', status: 'aguardando' } };
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628)`);
+  igual(Object.keys(r.dc).sort(), [kKiko, 'fred-sem-ficha', kRomeo].sort());
+  assert.strictEqual(r.dc[kKiko], 'Kiko', 'o nome limpo, sem o parêntese');
+  igual(Object.keys(r.nome), ['fred'], 'sem ficha ligada, a chave é texto: vale o nome');
+  assert.ok(run(`faltaDormiuEste({n:'Fred', tutor:'Rosa'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628))`));
+  assert.ok(!run(`faltaDormiuEste({n:'Lua', tutor:'Eva'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628))`), 'a cancelada não conta');
+  assert.ok(!run(`faltaDormiuEste({n:'Romeo', tutor:'Outra'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, {}))`), 'retrato vazio: ninguém dormiu');
+  igual(run("faltaDormiuAqui('ontem', {a:{nome:'X', tutor:'Y', entrada:'2026-01-01'}}, {}, {}, {})"), { pk: {}, dc: {}, nome: {} }, 'dia inválido: retrato vazio');
+});
+// O banco de mentira da falta automática: guarda as escritas e responde o que mandarmos.
+const banco628 = (dados, falhar) => {
+  ctx.__esc628 = []; ctx.__dados628 = dados; ctx.__falhar628 = falhar || '';
+  run(`__trava628=null; DB={ref:function(p){ return {
+    once:function(){ if(__falhar628 && p.indexOf(__falhar628)===0) return Promise.reject(new Error('sem rede'));
+      if(p.indexOf('daycare/falta-automatica/')===0) return Promise.resolve({val:function(){ return __trava628; }});
+      return Promise.resolve({val:function(){ return __dados628[p]===undefined?null:__dados628[p]; }}); },
+    transaction:function(fn){ var n=fn(__trava628); if(n===undefined) return Promise.resolve({committed:false}); __trava628=n; __esc628.push({o:'trava', p:p, v:n}); return Promise.resolve({committed:true}); },
+    update:function(v){ __esc628.push({o:'update', p:p, v:v}); return Promise.resolve(); },
+    remove:function(){ __esc628.push({o:'remove', p:p}); __trava628=null; return Promise.resolve(); } }; }};`);
+};
+const turma628 = () => run(`
+  __bk628={db:DB, ab:APP_DIA_ABERTO, P:PELUDINHOS, fa:_faltaAutoFeita, td:turmaDoDia, mz:ehMoradorZeluz, fh:faltouHoje,
+    zu:zMapaUma, au:audit, fc:__feriadoConferido, fe:orcEhFeriado, el:EST_TODAS, cl:CF_ESTADIAS_LIDO, md:medTirarDosesDeQuemFaltou,
+    pv:(typeof pendVarrerDia==='function'?pendVarrerDia:null), role:document.body.dataset.role, dl:__faltaDormiuLogado};
+  APP_DIA_ABERTO='${HOJE628}'; document.body.dataset.role='gestao';
+  __T628=[{p:{n:'Romeo', tutor:'Luciana'}}, {p:{n:'Toddy', tutor:'Ana'}}, {p:{n:'Kiko', tutor:'Rui'}}, {p:{n:'Thor', tutor:'Ana'}}];
+  PELUDINHOS=__T628.map(function(o){ return o.p; }); turmaDoDia=function(){ return __T628; };
+  ehMoradorZeluz=function(){ return false; }; faltouHoje=function(){ return false; };
+  zMapaUma=function(){ return Promise.resolve({}); }; __aud628=[]; audit=function(a,d){ __aud628.push(String(a)+': '+String(d)); };
+  __feriadoConferido['${HOJE628}']=true; orcEhFeriado=function(){ return ''; };
+  medTirarDosesDeQuemFaltou=function(){}; if(typeof pendVarrerDia==='function') pendVarrerDia=function(){};
+  _faltaAutoFeita=''; __faltaDormiuLogado='';`);
+const solta628 = () => run(`DB=__bk628.db; APP_DIA_ABERTO=__bk628.ab; PELUDINHOS=__bk628.P; _faltaAutoFeita=__bk628.fa; turmaDoDia=__bk628.td;
+  ehMoradorZeluz=__bk628.mz; faltouHoje=__bk628.fh; zMapaUma=__bk628.zu; audit=__bk628.au; __feriadoConferido=__bk628.fc; orcEhFeriado=__bk628.fe;
+  EST_TODAS=__bk628.el; CF_ESTADIAS_LIDO=__bk628.cl; medTirarDosesDeQuemFaltou=__bk628.md; if(__bk628.pv) pendVarrerDia=__bk628.pv;
+  document.body.dataset.role=__bk628.role; __faltaDormiuLogado=__bk628.dl;`);
+const espera628 = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
+provaAsync('6.28 a falta das 12h: quem dormiu aqui (estadia, pernoite do Plantão ou do Lançamento do dia) fica sem falta; o resto, como sempre', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    const kKiko = run("dcKey('Kiko','Rui')");
+    run(`CF_ESTADIAS_LIDO=true; EST_TODAS={e1:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa', pernoite:true}};`);
+    banco628({ ['daycare/pernoites/' + ONTEM628]: { [kKiko]: { nome: 'Kiko', status: 'aguardando' } },
+      ['auaulandia/manuais/2026-09-30']: { m1: { nome: 'Thor', tutor: 'Ana', refKey: 'thor__ana', noites: 2 } },
+      // O Toddy foi lançado no Plantão ontem, mas a Gestão o tirou do dia: não dormiu aqui.
+      ['auaulandia/manuais/' + ONTEM628]: { m2: { nome: 'Toddy', tutor: 'Ana', refKey: 'toddy__ana', noites: 1 } },
+      ['auaulandia/removidos/' + ONTEM628]: { r1: { nome: 'Toddy' } } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const esc = JSON.parse(JSON.stringify(run('__esc628')));
+    const cham = esc.filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(cham.map((e) => e.v), [{ [run("dcKey('Toddy','Ana')")]: 'faltou' }], 'só o Toddy (não dormiu aqui, sem check-in) recebe falta');
+    const trava = esc.find((e) => e.o === 'trava').v;
+    igual({ quantos: trava.quantos, dormiram_aqui: trava.dormiram_aqui }, { quantos: 1, dormiram_aqui: 3 });
+    assert.ok(run('__aud628').some((a) => /^falta-automatica: sem falta automática porque dormiram aqui: Romeo, Kiko, Thor$/.test(a)), JSON.stringify(run('__aud628')));
+    assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'o dia fechou');
+  } finally { solta628(); solta(); }
+});
+provaAsync('6.28 as estadias ainda não chegaram ao aparelho: lê do banco (e não marca falta em quem dormiu aqui)', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    run('CF_ESTADIAS_LIDO=false; EST_TODAS={};');
+    banco628({ 'auaulandia/estadias': { e1: { refKey: 'romeo__luciana', nome: 'Romeo', tutor: 'Luciana', entrada: ONTEM628, saida: HOJE628, status: 'ativa' } } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const cham = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Thor','Ana')"), run("dcKey('Toddy','Ana')")].sort(), 'Romeo fora da falta');
+    // Com as estadias já no aparelho, a leitura do banco não acontece (o ouvinte vivo já baixou tudo).
+    run(`_faltaAutoFeita=''; CF_ESTADIAS_LIDO=true; EST_TODAS={};`);
+    banco628({});
+    ctx.__lidos628 = []; run('__dbAnt628=DB; DB={ref:function(p){ __lidos628.push(p); return __dbAnt628.ref(p); }};');
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.ok(run('__lidos628').indexOf('auaulandia/estadias') < 0, JSON.stringify(run('__lidos628')));
+  } finally { solta628(); solta(); }
+});
+provaAsync('6.28 a leitura da noite de ontem falhou: o dia NÃO fecha (nenhuma falta, nenhuma trava); um rastro só; na volta da rede, fecha', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    run('CF_ESTADIAS_LIDO=true; EST_TODAS={};');
+    for (const caminho of ['daycare/pernoites/', 'auaulandia/manuais/', 'auaulandia/removidos/']) {
+      run("_faltaAutoFeita=''; __faltaDormiuLogado='';");
+      banco628({}, caminho);
+      ctx.__logs628 = []; run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(o){ __logs628.push(o); };');
+      try {
+        await run('aplicarFaltaAutomatica()'); await espera628();
+        await run('aplicarFaltaAutomatica()'); await espera628();
+      } finally { run('_logLeituraFalhou=__lf628;'); }
+      igual(JSON.parse(JSON.stringify(run('__esc628'))), [], caminho + ': nada gravado');
+      assert.strictEqual(run('_faltaAutoFeita'), '', caminho + ': o dia segue aberto');
+      assert.strictEqual(run('__logs628').length, 1, caminho + ': um rastro por dia, não um a cada 30 s');
+    }
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'a rede voltou: o dia fecha');
+  } finally { solta628(); solta(); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

@@ -2,6 +2,27 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 02/out/2026 (v 2026-10-02-03) — quem dormiu aqui não recebe a falta automática do meio-dia
+
+> **Adriana, 02/out/2026** (com a foto da janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30"): *"o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve erro e agora também"*. Story 6.28.
+
+### (AE) A falta automática das 12h pula quem passou a noite na casa
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| O Romeo dormiu aqui de 01/10 para 02/10 e, ao meio-dia, saiu como **"faltou"** na chamada. A janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30" oferecia **Liberar o horário** do banho dele | a falta automática das 12h compara a turma com o check-in de entrada do Day Care e com a chamada. Quem dormiu aqui não passa pelo check-in de entrada: já estava na casa | a falta automática **pula quem dormiu aqui na noite anterior**. Ele fica sem marcação na chamada; quem marca **VEIO** ou **FALTOU** é a recepção ou o monitor |
+
+- **Onde a noite fica registrada (as três portas valem):**
+  1. a **estadia da hospedagem** (aba Hóspedes, check-in de hospedagem ou de pernoite), menos a cancelada ou recusada;
+  2. a **pernoite ou o hóspede lançado no Plantão**, com o número de noites, menos quem a Gestão tirou do dia;
+  3. a **pernoite dos Lançamentos do dia** (a fila do check-in de pernoite), menos a cancelada ("Tutor buscou, cancelar").
+- **Se o app não consegue ler a noite de ontem** (sem rede), o dia não fecha naquele momento: ninguém recebe falta, e o app tenta de novo a cada 30 segundos. O aviso das 12h15 no Telegram continua cobrando se o dia não fechar.
+- **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …", com os nomes.
+- **Não muda:** quem passou pelo check-in de entrada, quem já tem marcação na chamada, a falta avisada na planilha, os feriados, o sábado e o domingo.
+- **Hoje (02/out), com o Romeo:** a correção vale do próximo meio-dia em diante. A falta de hoje se desfaz na **Chamada** (tocar **VEIO**), e o banho fica com ele em **«Ele ainda vem»**.
+- **Onde está no código:** `faltaDormiuAqui`, `faltaDormiuEste`, `faltaDormiuLer` e o laço da turma em `aplicarFaltaAutomatica`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (6 provas da 6.28; 26 defeitos plantados, 26 pegos).
+
 ## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
 
 > **Adriana, 02/out/2026:** *"O lançamento do dia, banho, o horário está péssimo para escrever, o horário de veterinário, de tudo, está péssimo para poder colocar. Tem que clicar várias vezes, precisa de melhorar essa forma. Talvez já vir com horários prontos: 14, 14:15, 14:30, 14:45, 17, 13 horas, 15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro; 5 e 45 dá para marcar ainda banho."* Story 6.26.
