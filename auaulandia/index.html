@@ -35980,9 +35980,9 @@
           ? dashForaPainelHTML(it)
           : (it.campos&&DASH_SEL[it.k])
           ? dashPainelHTML(it)
-          // A HORA PRIMEIRO (QA68): nestes itens, tocar no nome já lança — a hora tem de estar
-          // escolhida antes, e os nomes sugeridos ficam colados na busca (o teclado do celular
-          // não os esconde).
+          // A HORA PRIMEIRO (QA68): no Veterinário, no Sai mais cedo e na Avaliação, tocar no
+          // nome já lança — a hora tem de estar escolhida antes; e, em toda busca com hora, os
+          // nomes sugeridos ficam colados no campo (o teclado do celular não os esconde).
           : ((it.hora?('<div style="margin-bottom:8px">'+dashHorarioHTML(it.k)+'</div>'):'')
              +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
              +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'

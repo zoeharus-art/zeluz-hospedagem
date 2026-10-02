@@ -17,10 +17,10 @@
 - Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
 - A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
 - Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
-- **A hora vem antes da busca** (Veterinário, Sai mais cedo): ali, tocar no nome já lança; a hora fica escolhida antes, e os nomes sugeridos ficam colados na busca, sem o teclado do celular escondê-los.
+- **A hora vem antes da busca**, em toda busca que pede horário (Banho, Veterinário, Sai mais cedo, Avaliação e Medicação): no Veterinário, no Sai mais cedo e na Avaliação, tocar no nome já lança, então a hora fica escolhida antes; e os nomes sugeridos ficam colados no campo, sem o teclado do celular escondê-los.
 - Botões grandes para o dedo (42 px de altura).
 - **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.26; 17 defeitos plantados, 17 pegos).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.26; 26 defeitos plantados, 26 pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in
 

@@ -6298,6 +6298,7 @@ prova('a tela: as horas 8h a 17h; tocada a hora, os minutos dela; o relógio gua
     const hv = run("dashHorarioHTML('vet')");
     assert.ok(/— toque na hora/.test(hv) && /id="dashH_vet" style="max-width:140px" value=""/.test(hv), 'a hora do banho não gruda no veterinário');
     assert.ok(/min-height:42px/.test(hv), 'botão grande para o dedo');
+    assert.ok(/padding:10px 4px 10px 0;[^"]*" onclick="dashHoraAbrirOutro\('vet'\)">outro horário/.test(hv), 'o link "outro horário" também é fácil de tocar');
     run("DASH_HORA.vet='14:10';");
     const h10 = run("dashHorarioHTML('vet')");
     assert.ok(h10.indexOf('background:var(--z-blue)') < 0 && /<div style="margin-top:6px"><span class="hint">Outro horário:/.test(h10), '14:10 (fora da grade): nada aceso, relógio aberto');
