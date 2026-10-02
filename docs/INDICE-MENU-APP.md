@@ -1,6 +1,30 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01 e 02/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in
+
+> **Adriana, 01/out/2026:** *"Fui procurar o Billy Paul, que ele faltou hoje. E aqui está que ele estava marcado para o dia 30/09 e ele não repôs. Ele repôs, sim. Ele veio no dia 30/09, tomou banho, fez tudo isso. Eu tenho que ter a opção de falar que ele veio. E tem que configurar melhor como isso vai funcionar."* Story 6.25.
+
+### (AC) A troca e a reposição marcadas não dependem mais de lembrar de tocar
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| A troca do Billy Paul (falta na terça 29/09, vinda na quarta 30/09) aparecia no dia seguinte como "Estava marcada para 30/09 e ele não repôs", e a única saída era **desmarcar**, o que deixava a reposição valendo (1 a mais no saldo) | o app só dava a troca ou a reposição marcada como cumprida com o toque em **Veio repor hoje**, no próprio dia. O check-in do dia não contava; e, como o próprio app pôs o Billy Paul na planilha e na TV, parecia resolvido | **Reposições** › a linha diz **"Estava marcada para 30/09/2026 (troca, no lugar de 29/09): a vinda não foi marcada · ele veio · desmarcar"** (ou **ela veio**, pela ficha). **Ele veio** pergunta e grava a vinda **com o dia marcado** (30/09), não com o de hoje |
+| (nada) | — | **A baixa sozinha:** do dia seguinte em diante, o app confere a chamada (e, se ela estiver vazia, o check-in) **daquele** dia. Quem tem "veio" na chamada ou passou pelo check-in tem a troca ou a reposição dada como cumprida sozinha, sem ninguém tocar. "Faltou" na chamada não dá baixa; sem registro nenhum, fica o **ele veio** para a recepção |
+
+- **Troca:** a vinda conta como troca ("TROCA CUMPRIDA"); as reposições do tutor não mudam e nenhuma mensagem de reposição vai para ele.
+- **Reposição:** o saldo desce 1, com a mensagem pronta para o tutor ("como usou 1 em 30/09/2026, ficará com…").
+- **Quando a baixa NÃO é sozinha** (ter vindo não prova que veio pela reposição; fica o botão): num **dia fixo** dele, e num dia em que ele estava **hospedado na Auaulândia** (o hóspede entra na chamada do Day Care durante a estadia).
+- **Uma vinda por dia, nunca duas baixas:** o registro é um só por FILHOt e por dia. Duas marcadas no mesmo dia, dois aparelhos, ou o botão junto com a baixa sozinha dão **uma** vinda. Dia que já tem vinda (por **Veio repor hoje**, pela Reposição dos Lançamentos do dia, pela hospedagem) não recebe outra. Se sobrou uma 2ª marcação nesse dia, a linha diz **"Marcada outra vez para 30/09/2026: esse dia já tem um uso registrado (veja o Extrato) · desmarcar"**.
+- **Vinda devolvida no Extrato** (**Devolver**, de qualquer caminho: **ele veio**, baixa sozinha, **Veio repor hoje**): a linha volta, e **ele veio** pode marcar de novo. A baixa sozinha respeita a devolução de uma pessoa: não refaz nem relê. A única exceção é o **Tirar só o lançamento** dos Lançamentos do dia (sai só o lançamento repetido; a vinda continua, e a baixa sozinha pode acertar).
+- **Lançamentos do dia › Reposição** num dia que já tem um uso: pergunta antes ("Thor já tem um uso registrado em 30/09"), com **Lançar sem abater**, **Abater mesmo assim** ou **Não lançar**. A planilha recebe; o saldo não desce duas vezes sem a pessoa dizer. **Abater mesmo assim** passa pelas mesmas checagens de sempre: sem saldo, avisa "não tem saldo de reposição" (nunca deixa o saldo negativo); com dia reservado em hospedagem, avisa.
+- **Veio repor hoje** num dia que já tem um uso: pergunta antes ("Thor já tem um uso registrado hoje"), com **Marcar mesmo assim** ou **Não marcar**.
+- **Extrato:** a vinda aparece no dia marcado, com "Marcado depois: veio em 30/09, pela troca de 29/09" ou "Baixa automática pelo check-in de 30/09".
+- **Marcados para repor HOJE:** o aviso diz que dá para marcar **Veio repor hoje** e que, se ninguém marcar, o check-in de hoje dá a baixa sozinho no dia seguinte (menos em dia fixo ou de hospedagem).
+- **Quem roda a baixa sozinha:** os aparelhos de quem lança reposição (recepção, Supervisão, Gestão), com o cadastro e as estadias já carregados, pouco depois de abrir o app, de 10 em 10 minutos e ao abrir Reposições. Olha até 60 dias para trás. Nunca num aparelho aberto desde ontem. Do check-in, lê só a hora em que terminou.
+- **Onde está no código:** `repPresencaNoDia`, `repDiaTemUso`, `repVeioChave` (nó `veio-{dia}`, por transação), `repVeioDevolvido`, `repVeioCorte`, `repEstadiaCobre`, `repHospedadoNoDia`, `repVeioRegistro`, `repVeioGravar`, `repVeioCredito`, `repVeioNoDia`, `repBaixaPelaPresenca`, `renderReposicao`, `dashLancar` (Reposição, com `seguirRep`), `repUsar`, `repDevolverUsoGravar` (`so_lancamento`), `dashRemover`. Só leitura de `daycare/chamada/{dia}` e `daycare/checkin-corpo/{dia}/{FILHOt}/fim`: nada muda no check-in.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (21 provas da 6.25; 50 defeitos plantados, 50 pegos).
 
 ## O que mudou em 01/out/2026 (v 2026-10-01-01) — o dia virou: o aparelho aberto desde ontem não lança a turma errada
 

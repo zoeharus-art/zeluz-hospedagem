@@ -109,6 +109,10 @@ try {
 }
 console.log('Script do app carregou no sandbox (sintaxe em dia).\n');
 const run = (codigo) => vm.runInContext(codigo, ctx);
+// A baixa da reposição pelo check-in (6.25) roda sozinha ao desenhar a tela de Reposições.
+// As provas antigas trocam o DB por bancos de mentira e desenham a tela: a trava de 10 minutos
+// já armada aqui a deixa quieta nelas; as provas da 6.25 soltam a trava e chamam com `forcar`.
+run('_repVeioTs=Date.now();');
 // Os objetos criados dentro do sandbox têm OUTRO Object.prototype: compara-se pelo JSON.
 const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)), b, msg);
 
@@ -4450,7 +4454,10 @@ provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) 
     assert.strictEqual(run('ECTO_DUR.Simparic'), 35, 'a lista não salva não vale na memória');
   } finally { run('document.getElementById=__bkS.ge; DB=__bkS.db; ECTO_DUR=__bkS.ed; ECTO_FORA=__bkS.fo; ECTO_CFG_LIDO=__bkS.li; audit=__bkS.au; cfgPrevRender=__bkS.cr; prevCfgCarregar=__bkS.pc; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
   // a ficha: bloco salvo mudando só o nome, sem produto → a próxima data que existia fica
-  run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender};
+  // O "hoje" fica preso em 25/09 (como na QA45): com o relógio de verdade, a partir de 02/10 a
+  // próxima data de 01/10 já está em atraso, e o Salvar pede confirmação antes de gravar.
+  run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, hj:hojeISO};
+    hojeISO=function(){ return '2026-09-25'; };
     pelAtual={n:'Simba', tutor:'Ana'}; PB_PEND={ecto:{ecto_nome:'Frontline'}};
     __exP={ecto_t:'2026-09-01', ecto_p:'2026-10-01', ecto_nome:'Frontline'};
     pbEx=function(){ return __exP; }; pelExtra=function(){ return __exP; };
@@ -4468,7 +4475,7 @@ provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) 
     try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
     assert.ok(run('__patchP') === null && run('__alP[0]') === 'ESCOLHA O PRODUTO', JSON.stringify([run('__patchP'), run('__alP')]));
     run('zAlertao=__bkP.za;');
-  } finally { run('pelAtual=__bkP.pa; PB_PEND=__bkP.pp; pbEx=__bkP.pe; pelExtra=__bkP.pX; setPelExtra=__bkP.sp; pbRender=__bkP.pr;'); }
+  } finally { run('pelAtual=__bkP.pa; PB_PEND=__bkP.pp; pbEx=__bkP.pe; pelExtra=__bkP.pX; setPelExtra=__bkP.sp; pbRender=__bkP.pr; hojeISO=__bkP.hj;'); }
 });
 prova('QA45 — a ficha aberta pela Prevenção ("Feito em" e o recálculo) conta pelo produto: Bravecto 90 dias, não 30; o tutor com apóstrofo acha o campo do produto', () => {
   run(`__bkL={pd:prevPetDe, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, st:setTimeout, hj:hojeISO};
@@ -5618,8 +5625,8 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
-  assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
-  assert.ok(/const APP_VERSAO='2026-10-01-0[123]';/.test(src));
+  assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-01)';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -5825,6 +5832,440 @@ prova('QA64 — a lista de raças já nasce pronta ao abrir o app, sem repetiç�
 prova('o campo de raça do "Nunca hospedou?" usa a lista da casa (e a atualiza ao tocar)', () => {
   const src = fs.readFileSync(APP, 'utf8');
   assert.ok(/<input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar\(\)">/.test(src));
+});
+// ================================================================== 6.25 — "ele veio" no dia que já passou
+console.log('\n6.25 — Reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in (Billy Paul, 01/out/2026)');
+// Banco de mentira que respeita o CAMINHO: é por ele que se prova que o botão e a baixa
+// automática gravam o MESMO nó (veio-{dia}).
+function bancoCaminhos(inicial) {
+  const dados = Object.assign({}, inicial || {});
+  const lidos = [], escritos = [];
+  return {
+    dados, lidos, escritos,
+    ref(caminho) {
+      return {
+        once() { lidos.push(caminho); return Promise.resolve({ val: () => (dados[caminho] === undefined ? null : dados[caminho]) }); },
+        transaction(fn) {
+          const local = fn(null);                                  // 1ª volta: o SDK ainda não leu o nó
+          if (local === undefined) return Promise.resolve({ committed: false });
+          const atual = dados[caminho] === undefined ? null : JSON.parse(JSON.stringify(dados[caminho]));
+          const r = atual === null ? local : fn(atual);              // o servidor responde com o que tem
+          if (r === undefined) return Promise.resolve({ committed: false });
+          dados[caminho] = JSON.parse(JSON.stringify(r)); escritos.push(caminho);
+          return Promise.resolve({ committed: true });
+        },
+        set(v) { dados[caminho] = v; escritos.push(caminho); return Promise.resolve(); },
+        update(v) { dados[caminho] = Object.assign({}, dados[caminho] || {}, v); escritos.push(caminho); return Promise.resolve(); },
+        push(v) {
+          const k = 'L' + (escritos.length + 1), cam = caminho + '/' + k;
+          if (v !== undefined) { dados[cam] = v; escritos.push(cam); return Promise.resolve(); }
+          return { key: k, set(x) { dados[cam] = x; escritos.push(cam); return Promise.resolve(); } };
+        },
+      };
+    },
+  };
+}
+const TROCA625 = { _id: 'c1', tipo: 'credito', data: '2026-09-29', motivo: 'troca', volta: '2026-09-30', troca: { de: '2026-09-29', para: '2026-09-30' } };
+const REPO625 = { _id: 'c2', tipo: 'credito', data: '2026-09-22', motivo: 'cio', volta: '2026-09-30' };
+const NO625 = 'veio-2026-09-30';
+// Os stubs da tela de Reposições, num lugar só (e o retorno de cada um, no finally).
+const STUBS625 = ['DB', 'PELUDINHOS', 'repLancamentos', 'repSaldo', 'repDisponivel', 'repHojeISO', 'repPodeLancar', 'zPergunta', 'zAlertao',
+  'repMsgModal', 'renderReposicao', 'pessoaDoTurno', 'audit', 'pelDias', 'pelInativo', 'appDiaVelho', 'REPO_CACHE', '_logFalhaGrav', 'pelExtra', 'alert',
+  'CARTEIRA_CARREGADA', 'CF_ESTADIAS_LIDO', 'EST_TODAS', 'REP_VEIO_SEM', 'repReservado'];
+function stubs625(extra) {
+  run('__bk625={};' + STUBS625.map((n) => `__bk625.${n}=${n};`).join(''));
+  run(`__pergunta=null; __alertao=null; __modal=null; __alerta=null; __audit=[]; __falhas=[]; __L625={};
+       repHojeISO=function(){ return '2026-10-01'; }; repPodeLancar=function(){ return true; };
+       zPergunta=function(t, l, o){ __pergunta={t:t, l:l, o:o}; return Promise.resolve(__resposta!==false); }; __resposta=true;
+       zAlertao=function(t, l){ __alertao={t:t, l:l}; }; alert=function(t){ __alerta=String(t); };
+       repMsgModal=function(t, l, texto){ __modal={t:t, l:l, texto:texto}; }; renderReposicao=function(){};
+       pessoaDoTurno=function(){ return 'Recepção Teste'; }; audit=function(a, b){ __audit.push(String(b)); };
+       pelExtra=function(p){ return {sexo:(p&&p.sexo)||''}; }; pelInativo=function(p){ return !!(p&&p.inativo); };
+       pelDias=function(p){ return (p&&p.dias)||[]; }; appDiaVelho=function(){ return false; };
+       _logFalhaGrav=function(o, e){ __falhas.push(o+': '+((e&&e.message)||e)); }; REPO_CACHE={x:{}};
+       CARTEIRA_CARREGADA=true; CF_ESTADIAS_LIDO=true; EST_TODAS={}; REP_VEIO_SEM={}; repReservado=function(){ return 0; };
+       repLancamentos=function(p){ return (__L625[p.n]||[]).slice(); };
+       repSaldo=function(p){ var L=__L625[p.n]||[], an={}; L.forEach(function(l){ if(l.tipo==='estorno') an[l.estornaId]=1; });
+         return L.filter(function(l){ return l.tipo==='credito' && !an[l._id]; }).length-L.filter(function(l){ return l.tipo==='uso' && !an[l._id]; }).length; };
+       repDisponivel=function(p){ return repSaldo(p); };
+       _repVeioTs=0; _repVeioRodando=false;` + (extra || ''));
+}
+function desfaz625() { run(STUBS625.map((n) => `${n}=__bk625.${n};`).join('')); }
+const espera = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
+const noDe625 = (i, chave) => 'daycare/reposicao/' + run(`pelKey(PELUDINHOS[${i}])`) + '/lancamentos/' + (chave || NO625);
+
+prova('pura: o que a chamada e o check-in daquele dia dizem', () => {
+  assert.strictEqual(run("repPresencaNoDia('veio', null)"), 'veio');
+  assert.strictEqual(run("repPresencaNoDia(null, 1759223400000)"), 'veio', 'passou pelo check-in, mesmo sem chamada');
+  assert.strictEqual(run("repPresencaNoDia('faltou', null)"), 'faltou');
+  assert.strictEqual(run("repPresencaNoDia('faltou', 1759223400000)"), '', 'registros que se contradizem: decide a recepção');
+  assert.strictEqual(run("repPresencaNoDia(null, null)"), '', 'sem registro nenhum');
+  assert.strictEqual(run("repPresencaNoDia('', undefined)"), '');
+});
+prova('pura: o uso grava o DIA MARCADO (30/09), não o de hoje, e diz de onde veio', () => {
+  ctx.__T = TROCA625; ctx.__R = REPO625;
+  const t = JSON.parse(JSON.stringify(run("repVeioRegistro(__T, false, 'Recepção Teste', 1)")));
+  assert.strictEqual(t.tipo, 'uso'); assert.strictEqual(t.data, '2026-09-30'); assert.strictEqual(t.motivo, 'troca');
+  assert.strictEqual(t.credito, 'c1'); assert.strictEqual(t.veio_auto, false); assert.strictEqual(t.quem, 'Recepção Teste');
+  assert.strictEqual(t.obs, 'Marcado depois: veio em 30/09, pela troca de 29/09');
+  const a = JSON.parse(JSON.stringify(run("repVeioRegistro(__T, true, 'sistema', 1)")));
+  assert.strictEqual(a.obs, 'Baixa automática pelo check-in de 30/09, pela troca de 29/09'); assert.strictEqual(a.veio_auto, true);
+  const r = JSON.parse(JSON.stringify(run("repVeioRegistro(__R, false, 'x', 1)")));
+  assert.strictEqual(r.motivo, 'reposicao'); assert.strictEqual(r.obs, 'Marcado depois: veio em 30/09');
+});
+prova('pura: um nó por DIA (veio-{dia}); depois de uma vinda devolvida, o próximo livre', () => {
+  assert.strictEqual(run("repVeioChave('2026-09-30', [])"), 'veio-2026-09-30');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-30'}])"), 'veio-2026-09-30-2');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-30'},{_id:'veio-2026-09-30-2'}])"), 'veio-2026-09-30-3');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-29'}])"), 'veio-2026-09-30', 'outro dia não ocupa');
+});
+prova('pura: o dia já tem vinda viva (de qualquer caminho); a devolvida não conta', () => {
+  const T = (L) => run('repDiaTemUso(' + JSON.stringify(L) + ", '2026-09-30')");
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-30' }]), true, '«Veio repor hoje» naquele dia');
+  assert.strictEqual(T([{ _id: 'orc-x-1', tipo: 'uso', data: '2026-09-30', motivo: 'hospedagem' }]), true, 'dia de hospedagem');
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-30' }, { _id: 'dev-u1', tipo: 'estorno', estornaId: 'u1' }]), false, 'devolvida');
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-29' }, { _id: 'c1', tipo: 'credito', data: '2026-09-30' }]), false);
+});
+prova('pura: a estadia cobria o dia? (o hóspede entra na chamada do Day Care)', () => {
+  const C = (e) => run('repEstadiaCobre(' + JSON.stringify(e) + ", '2026-09-30')");
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01' }), true);
+  assert.strictEqual(C({ entrada: '2026-09-30', saida: '2026-09-30' }), true);
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01', status: 'cancelada' }), false);
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01', status: 'recusada' }), false);
+  assert.strictEqual(C({ entrada: '2026-10-01', saida: '2026-10-03' }), false, 'começou depois');
+  assert.strictEqual(C({ entrada: '2026-09-20', saida: '2026-09-29' }), false, 'acabou antes');
+  assert.strictEqual(C({ entrada: '2026-09-20' }), true, 'ativa, sem saída');
+  assert.strictEqual(C({ entrada: '2026-09-20', status: 'finalizada' }), false, 'encerrada sem saída anotada: não se inventa');
+  assert.strictEqual(C({ saida: '2026-10-01' }), false, 'sem entrada não conta');
+});
+prova('com o uso do dia marcado, a linha "Estava marcada…" sai e o saldo desce 1', () => {
+  ctx.__T = TROCA625;
+  const L = [TROCA625];
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('repVoltasVencidas(' + JSON.stringify(L) + ",'2026-10-01')"))).map((l) => l._id), ['c1'], 'antes: a do Billy Paul aparece');
+  const uso = Object.assign({ _id: NO625 }, JSON.parse(JSON.stringify(run("repVeioRegistro(__T, false, 'x', 1)"))));
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('repVoltasVencidas(' + JSON.stringify(L.concat([uso])) + ",'2026-10-01')"))), [], 'depois: sai');
+  run(`__bk625s=repLancamentos; repLancamentos=function(){ return ${JSON.stringify(L.concat([uso]))}; };`);
+  try { assert.strictEqual(run('repSaldo({})'), 0, 'a troca cumprida não deixa reposição sobrando'); }
+  finally { run('repLancamentos=__bk625s;'); }
+});
+provaAsync('«ele veio» na troca do Billy Paul: grava o uso de 30/09 no nó veio-2026-09-30 e diz "TROCA CUMPRIDA"', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    const k = noDe625(0);
+    assert.deepStrictEqual(B.escritos, [k], 'um nó só, o do dia');
+    const g = B.dados[k];
+    assert.strictEqual(g.tipo, 'uso'); assert.strictEqual(g.data, '2026-09-30'); assert.strictEqual(g.motivo, 'troca');
+    assert.strictEqual(g.credito, 'c1'); assert.strictEqual(g.quem, 'Recepção Teste'); assert.strictEqual(g.veio_auto, false);
+    const per = run('__pergunta');
+    assert.strictEqual(per.t, 'Billy Paul veio na quarta-feira, 30/09?');
+    assert.strictEqual(per.l[0], 'Pela troca, no lugar de 29/09.', 'a data curta, como no resto da tela');
+    assert.strictEqual(run('__alertao.t'), 'TROCA CUMPRIDA');
+    assert.strictEqual(run('__alertao.l.join(" | ")'), 'Billy Paul veio na quarta-feira, 30/09, no lugar de 29/09. | As reposições continuam 0.');
+    assert.strictEqual(run('__modal'), null, 'troca não manda mensagem de reposição ao tutor');
+    assert.ok(run('__audit.join(" ")').indexOf('marcado depois') >= 0, 'deixa rastro');
+  } finally { desfaz625(); }
+});
+provaAsync('«ele veio» com o cache atrasado (outro aparelho acabou de marcar): nada é regravado, e a frase diz a verdade', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    const k = noDe625(0);
+    B.dados[k] = { tipo: 'uso', data: '2026-09-30', veio_auto: true, obs: 'já estava' };
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado');
+    assert.strictEqual(B.dados[k].obs, 'já estava', 'o registro anterior fica');
+    assert.strictEqual(run('__alertao.t'), 'JÁ ESTAVA MARCADO');
+    assert.strictEqual(run('__alertao.l[0]'), 'Billy Paul já tem a vinda de 30/09 registrada, por outro aparelho ou pelo check-in daquele dia.');
+  } finally { desfaz625(); }
+});
+provaAsync('«ela veio» numa reposição comum: o saldo desce 1, o modal diz o saldo novo e a mensagem diz "usou 1 em 30/09/2026"', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Luna', tutor:'Ana Teste', dias:['seg'], sexo:'Fêmea'}];
+    __L625={'Luna':[${JSON.stringify(REPO625)}, {_id:'c3', tipo:'credito', data:'2026-09-23'}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    const k = noDe625(0);
+    assert.strictEqual(B.dados[k].motivo, 'reposicao'); assert.strictEqual(B.dados[k].data, '2026-09-30');
+    assert.ok(/Ela repôs na quarta-feira, 30\/09/.test(run('__pergunta.l.join(" ")')));
+    assert.strictEqual(run('__pergunta.o.sim'), 'Ela veio', 'o botão do confirmar pela ficha');
+    assert.ok(/Saldo agora: 2\. Depois de marcar: 1\./.test(run('__pergunta.l.join(" ")')));
+    assert.strictEqual(run('__pergunta.l.join(" ")').indexOf('pela troca'), -1);
+    const m = run('__modal');
+    assert.ok(m && /Reposição registrada/.test(m.t), 'o modal com a mensagem pronta');
+    assert.strictEqual(m.l[0], 'Luna repôs na quarta-feira, 30/09. Saldo agora: 1.', 'o saldo DEPOIS de marcar');
+    assert.ok(/usou 1 em 30\/09\/2026, ficará com 1/.test(m.texto), m && m.texto);
+    assert.ok(/a Luna/.test(m.texto), 'o artigo pela ficha');
+  } finally { desfaz625(); }
+});
+provaAsync('«ele veio» não grava: dia que não passou, dia que já tem vinda, saldo já usado, nem quem não lança reposição', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(Object.assign({}, TROCA625, { volta: '2026-10-01', troca: { de: '2026-09-29', para: '2026-10-01' } }))}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-10-01')"); await espera();
+    assert.ok(/ainda não passou/.test(run('__alerta')), 'hoje é «Veio repor hoje»');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}, {_id:'u9', tipo:'uso', data:'2026-09-30'}]}; __alerta=null;`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.strictEqual(run('__alertao.t'), 'JÁ HÁ UM USO EM 30/09', 'já tinha uso naquele dia');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}, {_id:'u8', tipo:'uso', data:'2026-09-25'}]}; __alerta=null;`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.ok(/Não achei a reposição marcada/.test(run('__alerta')), 'saldo já usado: a marcada não vale mais');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}]}; __alerta=null; repPodeLancar=function(){ return false; };`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.ok(/recepção, a Supervisão ou a Gestão/.test(run('__alerta')), 'papel sem reposição');
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado em nenhum dos quatro');
+  } finally { desfaz625(); }
+});
+provaAsync('vinda DEVOLVIDA no Extrato: a linha volta, «ele veio» grava no nó seguinte (-2) e a baixa sozinha não refaz nem relê', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  const usoV = { _id: NO625, tipo: 'uso', data: '2026-09-30', motivo: 'troca', credito: 'c1', veio_auto: true };
+  const dev = { _id: 'dev-' + NO625, tipo: 'estorno', estornaId: NO625, dia_devolvido: '2026-09-30' };
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}];
+    __L625={'Billy Paul':[${JSON.stringify(TROCA625)}, ${JSON.stringify(usoV)}, ${JSON.stringify(dev)}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo(PELUDINHOS[0], null, '2026-10-01')"))).map((l) => l._id), ['c1'], 'a linha volta');
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r.conferidos, 0); assert.deepStrictEqual(B.lidos, [], 'nem lê a chamada'); assert.deepStrictEqual(B.escritos, []);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.deepStrictEqual(B.escritos, [noDe625(0, NO625 + '-2')], 'a pessoa pode marcar de novo');
+    assert.strictEqual(run('__alertao.t'), 'TROCA CUMPRIDA');
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha: o Billy Paul passou pelo check-in em 30/09 e a troca é dada como cumprida — e nunca duas vezes', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[
+      {n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']},
+      {n:'Luna', tutor:'Ana Teste', dias:['qua']},
+      {n:'Thor', tutor:'Bia Teste', dias:['seg']},
+      {n:'Bidu', tutor:'Caio Teste', dias:['seg']},
+      {n:'Kiko', tutor:'Duda Teste', dias:['sex']},
+      {n:'Mel', tutor:'Eva Teste', dias:['seg']},
+      {n:'Duo', tutor:'Fabi Teste', dias:['seg']},
+      {n:'Nina', tutor:'Gil Teste', dias:['seg']},
+      {n:'Lola', tutor:'Hel Teste', dias:['seg']},
+      {n:'Zeca', tutor:'Ivo Teste', dias:['seg'], inativo:true},
+      {n:'Rex', tutor:'Jo Teste', dias:['seg']},
+      {n:'Mimi', tutor:'Kel Teste', dias:['seg']}];
+    __L625={'Billy Paul':[${JSON.stringify(TROCA625)}],
+      'Luna':[${JSON.stringify(REPO625)}],
+      'Thor':[${JSON.stringify(REPO625)}],
+      'Bidu':[${JSON.stringify(REPO625)}],
+      'Kiko':[{_id:'c4', tipo:'credito', data:'2026-07-01', volta:'2026-07-20'}],
+      'Mel':[${JSON.stringify(REPO625)}],
+      'Duo':[{_id:'d1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'d2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}],
+      'Nina':[{_id:'a1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'a2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}, {_id:'u1', tipo:'uso', data:'2026-09-30'}],
+      'Lola':[${JSON.stringify(REPO625)}],
+      'Zeca':[${JSON.stringify(REPO625)}],
+      'Rex':[${JSON.stringify(REPO625)}, {_id:'u7', tipo:'uso', data:'2026-09-25'}],
+      'Mimi':[${JSON.stringify(REPO625)}]};
+    EST_TODAS={e1:{refKey:pelKey(PELUDINHOS[8]), nome:'Lola', tutor:'Hel Teste', entrada:'2026-09-29', saida:'2026-10-01'},
+      e2:{nome:'Mimi', tutor:'Kel Teste', entrada:'2026-09-30', saida:'2026-09-30', status:'finalizada'}};`);
+  try {
+    const dk = (i) => run(`dcKey(PELUDINHOS[${i}].n, PELUDINHOS[${i}].tutor)`);
+    ['Billy Paul', 'Luna', 'Duo', 'Nina', 'Lola', 'Zeca', 'Rex', 'Mimi'].forEach((n) => {
+      const i = run(`PELUDINHOS.map(function(p){ return p.n; }).indexOf('${n}')`);
+      B.dados['daycare/chamada/2026-09-30/' + dk(i)] = 'veio';
+    });
+    B.dados['daycare/chamada/2026-09-30/' + dk(2)] = 'faltou';                     // Thor: faltou na chamada…
+    B.dados['daycare/checkin-corpo/2026-09-30/' + dk(2) + '/fim'] = 1759223700000; // …e um check-in que contradiz: não vale
+    B.dados['daycare/chamada/2026-07-20/' + dk(4)] = 'veio';                       // Kiko: mais de 60 dias
+    B.dados['daycare/checkin-corpo/2026-09-30/' + dk(5) + '/fim'] = 1759223700000; // Mel: só o check-in
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    await espera();
+    assert.deepStrictEqual(B.escritos.slice().sort(), [noDe625(0), noDe625(5), noDe625(6)].sort(),
+      'Billy Paul (chamada), Mel (só check-in) e Duo (UMA baixa para duas marcadas); ficam Luna (dia fixo), Thor (faltou), Bidu (sem registro), Kiko (60 dias), Nina (já veio no dia), Lola e Mimi (hospedadas), Zeca (inativo) e Rex (saldo já usado)');
+    assert.ok(!B.lidos.some((c) => c.indexOf('checkin-corpo') >= 0 && c.indexOf(dk(2)) >= 0), 'com "faltou" na chamada, o check-in nem é lido');
+    const g = B.dados[noDe625(0)];
+    assert.strictEqual(g.veio_auto, true); assert.strictEqual(g.quem, 'sistema'); assert.strictEqual(g.data, '2026-09-30'); assert.strictEqual(g.credito, 'c1');
+    assert.strictEqual(g.obs, 'Baixa automática pelo check-in de 30/09, pela troca de 29/09');
+    assert.strictEqual(r.feitos, 3); assert.strictEqual(r.conferidos, 5, 'só Billy Paul, Thor, Bidu, Mel e Duo são lidos');
+    assert.ok(!B.lidos.some((c) => c.indexOf('2026-07-20') >= 0), 'o dia de julho não é lido');
+    assert.ok(!B.lidos.some((c) => c.indexOf('checkin-corpo') >= 0 && c.indexOf(dk(0)) >= 0), 'com "veio" na chamada, o check-in nem é lido');
+    assert.ok(B.lidos.indexOf('daycare/checkin-corpo/2026-09-30/' + dk(5) + '/fim') >= 0, 'do check-in, só o campo fim');
+    assert.ok(/Billy Paul \(30\/09, troca\)/.test(run('__audit.join(" ")')), 'o rastro diz quem');
+    // 2ª rodada, 11 minutos depois, com o cache JÁ trazendo as vindas gravadas (o ouvinte do banco):
+    // a 2ª marcada do Duo vira "vencida" e mesmo assim não ganha outra baixa (QA65, S1).
+    Object.keys(B.dados).filter((c) => /\/lancamentos\//.test(c)).forEach((c) => {
+      const i = [0, 5, 6].filter((j) => c === noDe625(j))[0];
+      if (i !== undefined) run(`__L625[PELUDINHOS[${i}].n].push(Object.assign({_id:'${NO625}'}, ${JSON.stringify(B.dados[c])}));`);
+    });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo(PELUDINHOS[6], null, '2026-10-01')"))).map((l) => l._id), ['d2'], 'a 2ª marcada do Duo aparece como vencida');
+    B.escritos.length = 0; B.lidos.length = 0;
+    run('_repVeioTs=Date.now()-11*60000;');
+    const r2 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(false)')));
+    assert.deepStrictEqual(B.escritos, [], 'uma vinda, uma baixa'); assert.strictEqual(r2.feitos, 0);
+    assert.deepStrictEqual(B.lidos, [], 'o que já foi lido sem "veio" (Thor, Bidu) não é relido nesta sessão');
+    // E sem forçar, dentro dos 10 minutos, nem confere.
+    const r3 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(false)')));
+    assert.strictEqual(r3.pulou, true);
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha espera: aparelho de ontem, papel sem reposição, tutor, reposições, cadastro ou estadias ainda chegando', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    const ok = async () => JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)'))).ok;
+    run('appDiaVelho=function(){ return true; };'); assert.strictEqual(await ok(), false, 'aparelho aberto desde ontem');
+    run('appDiaVelho=function(){ return false; }; repPodeLancar=function(){ return false; };'); assert.strictEqual(await ok(), false, 'papel');
+    run("repPodeLancar=function(){ return true; }; __bkRole=document.body.dataset.role; document.body.dataset.role='tutor';");
+    try { assert.strictEqual(await ok(), false, 'tutor'); } finally { run('document.body.dataset.role=__bkRole;'); }
+    run('REPO_CACHE={};'); assert.strictEqual(await ok(), false, 'reposições carregando');
+    run('REPO_CACHE={x:{}}; CARTEIRA_CARREGADA=false;'); assert.strictEqual(await ok(), false, 'cadastro carregando (QA65: PELUDINHOS nunca está vazio)');
+    run('CARTEIRA_CARREGADA=true; CF_ESTADIAS_LIDO=false;'); assert.strictEqual(await ok(), false, 'estadias carregando');
+    assert.deepStrictEqual(B.lidos, [], 'nenhuma leitura'); assert.deepStrictEqual(B.escritos, [], 'nenhuma gravação');
+    run('CF_ESTADIAS_LIDO=true;'); assert.strictEqual(await ok(), true, 'com tudo carregado, roda');
+    assert.strictEqual(B.escritos.length, 1);
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha não fica presa em "já está conferindo" depois de um erro', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};
+    pelInativo=function(){ throw new Error('ficha estranha'); };`);
+  try {
+    const r1 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r1.ok, false); assert.ok(run('__falhas.join(" ")').indexOf('ficha estranha') >= 0, 'o erro fica registrado');
+    run('pelInativo=function(){ return false; }; DB={ref:function(){ return {once:function(){ return Promise.reject(new Error("sem rede")); }}; }};');
+    const r2 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r2.ok, true, 'não ficou preso'); assert.strictEqual(r2.feitos, 0);
+    run('DB=__B;');
+    const r3 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.notStrictEqual(r3.motivo, 'já está conferindo');
+  } finally { desfaz625(); }
+});
+provaAsync('devolvida no Extrato (de qualquer caminho) não é refeita pela baixa; a do «Tirar só o lançamento» é', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Rex', tutor:'Jo Teste', dias:['seg']}, {n:'Tom', tutor:'Lu Teste', dias:['seg']}];
+    __L625={'Rex':[${JSON.stringify(REPO625)}, {_id:'u1', tipo:'uso', data:'2026-09-30'}, {_id:'dev-u1', tipo:'estorno', estornaId:'u1', dia_devolvido:'2026-09-30', obs:'a tutora cancelou'}],
+      'Tom':[${JSON.stringify(REPO625)}, {_id:'u2', tipo:'uso', data:'2026-09-30'}, {_id:'dev-u2', tipo:'estorno', estornaId:'u2', dia_devolvido:'2026-09-30', so_lancamento:true}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[1].n, PELUDINHOS[1].tutor)')] = 'veio';
+    await run('repBaixaPelaPresenca(true)'); await espera();
+    assert.deepStrictEqual(B.escritos, [noDe625(1)], 'só o Tom: o lançamento repetido saiu, a vinda continua');
+    assert.strictEqual(run(`repVeioDevolvido(${JSON.stringify([{ tipo: 'estorno', dia_devolvido: '2026-09-30' }])}, '2026-09-30')`), true);
+    assert.strictEqual(run(`repVeioDevolvido(${JSON.stringify([{ tipo: 'estorno', dia_devolvido: '2026-09-30', so_lancamento: true }])}, '2026-09-30')`), false);
+  } finally { desfaz625(); }
+});
+provaAsync('o «Tirar só o lançamento» marca a devolução (so_lancamento); o «Devolver» do Extrato não', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Tom', tutor:'Lu Teste'}];`);
+  try {
+    await run(`repDevolverUsoGravar(PELUDINHOS[0], {_id:'u2', data:'2026-09-30'}, 'tirada', {so_lancamento:true})`);
+    await run(`repDevolverUsoGravar(PELUDINHOS[0], {_id:'u3', data:'2026-09-30'}, 'a tutora cancelou')`);
+    const base = 'daycare/reposicao/' + run('pelKey(PELUDINHOS[0])') + '/lancamentos/';
+    assert.strictEqual(B.dados[base + 'dev-u2'].so_lancamento, true);
+    assert.strictEqual('so_lancamento' in B.dados[base + 'dev-u3'], false);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(src.indexOf("(credDia && !desmarcarTambem)?{so_lancamento:true}:null).then(function(){") >= 0, 'só no «Tirar só o lançamento»');
+  } finally { desfaz625(); }
+});
+provaAsync('«Veio repor hoje» num dia que já tem uso pergunta antes; "Não marcar" não grava', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Thor', tutor:'Bia Teste', dias:['seg']}];
+    __L625={'Thor':[{_id:'c8', tipo:'credito', data:'2026-09-20'}, {_id:'c9', tipo:'credito', data:'2026-09-21'}, {_id:'u5', tipo:'uso', data:'2026-10-01'}]};
+    __resposta=false;`);
+  try {
+    await run('repUsar(0)'); await espera();
+    assert.strictEqual(run('__pergunta.t'), 'Thor já tem um uso registrado hoje');
+    assert.strictEqual(run('__pergunta.o.sim'), 'Marcar mesmo assim');
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado');
+    run(`__L625={'Thor':[{_id:'c8', tipo:'credito', data:'2026-09-20'}]}; __pergunta=null;`);
+    await run('repUsar(0)'); await espera();
+    assert.strictEqual(run('__pergunta.t'), 'Marcar reposição de Thor?', 'sem uso no dia, o fluxo de sempre');
+  } finally { desfaz625(); }
+});
+provaAsync('a estadia que não dá para ler segura a baixa (fica o botão); e a trava solta mesmo quando o próprio registro de erro falha', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};
+    EST_TODAS={}; Object.defineProperty(EST_TODAS, 'e1', {enumerable:true, get:function(){ throw new Error('estadia ilegível'); }});`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r.conferidos, 0); assert.deepStrictEqual(B.escritos, [], 'sem saber da estadia, não dá baixa');
+    // a cadeia inteira falha (leitura recusada E o registro de erro também): a trava não fica presa
+    run(`EST_TODAS={}; _logFalhaGrav=function(){ throw new Error('o registro de erro também falhou'); };
+      DB={ref:function(){ return {once:function(){ return Promise.reject(new Error('sem rede')); }}; }};`);
+    await run('repBaixaPelaPresenca(true)').then(() => {}, () => {});
+    assert.strictEqual(run('_repVeioRodando'), false, 'a trava soltou');
+  } finally { desfaz625(); }
+});
+provaAsync('Reposição lançada à mão num dia que já tem uso: pergunta; "Lançar sem abater" não desconta; "Abater mesmo assim" passa pela checagem de saldo', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  run(`__bk625d={P:PELUDINHOS, R:REPO_CACHE, DB:DB, dd:DASH_DADOS, ds:DASH_DIA_SEL, esp:dashEspelhar, rd:renderDash, au:audit, ze:zEscolha, ab:dashRepAbater, t:DC_DASH_TURMA};
+    PELUDINHOS=[{n:'Thor', raca:'SRD', tutor:'Bia Teste'}];
+    REPO_CACHE={}; REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{c2:${JSON.stringify(REPO625)}, c5:{tipo:'credito', data:'2026-09-10'}, '${NO625}':{tipo:'uso', data:'2026-09-30', veio_auto:true}}};
+    DASH_DADOS={}; DASH_DIA_SEL='2026-09-30'; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
+    dashEspelhar=function(){ return Promise.resolve({ok:true}); }; renderDash=function(){}; audit=function(){};
+    __esc=[]; zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b}); }; __abat=0; dashRepAbater=function(){ __abat++; return Promise.resolve(true); };
+    DB=__B;`);
+  try {
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    const e = run('__esc[0]');
+    assert.ok(e && e.t === 'Thor já tem um uso registrado em 30/09', JSON.stringify(e && e.t));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(e.b.map((x) => x.t))), ['Lançar sem abater', 'Abater mesmo assim', 'Não lançar']);
+    assert.deepStrictEqual(B.escritos, [], 'nada antes de a pessoa escolher');
+    run('__esc[0].b[0].fn()'); await espera();
+    assert.strictEqual(B.escritos.filter((c) => /dashboard\/2026-09-30\/reposicao\//.test(c)).length, 1, 'a planilha recebe');
+    assert.strictEqual(run('__abat'), 0, 'o Banco não desconta de novo');
+    // QA66: «Abater mesmo assim» com saldo 0 cai no cartaz "não tem saldo" (nunca saldo negativo)
+    run(`DASH_DADOS={}; __esc=[]; REPO_CACHE[pelKey(PELUDINHOS[0])].lancamentos.u2={tipo:'uso', data:'2026-09-29'};`);
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    run('__esc[0].b[1].fn()'); await espera();
+    assert.strictEqual(run('__esc.length'), 2); assert.strictEqual(run('__esc[1].t'), 'Thor não tem saldo de reposição');
+    assert.strictEqual(run('__abat'), 0, 'nada abatido sem saldo');
+    // com saldo, «Abater mesmo assim» abate (a pessoa disse)
+    run(`DASH_DADOS={}; __esc=[]; delete REPO_CACHE[pelKey(PELUDINHOS[0])].lancamentos.u2;`);
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    run('__esc[0].b[1].fn()'); await espera();
+    assert.strictEqual(run('__esc.length'), 1, 'sem outro cartaz'); assert.strictEqual(run('__abat'), 1, 'abateu porque a pessoa disse');
+  } finally {
+    run('PELUDINHOS=__bk625d.P; REPO_CACHE=__bk625d.R; DB=__bk625d.DB; DASH_DADOS=__bk625d.dd; DASH_DIA_SEL=__bk625d.ds; dashEspelhar=__bk625d.esp; renderDash=__bk625d.rd; audit=__bk625d.au; zEscolha=__bk625d.ze; dashRepAbater=__bk625d.ab; DC_DASH_TURMA=__bk625d.t;');
+  }
+});
+prova('a tela: «ele veio» ao lado de «desmarcar», a frase sem "não repôs", a baixa ao desenhar e os dois relógios', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const ini = src.indexOf('function renderReposicao(){'), fim = src.indexOf('function repAbrirExtrato(i){');
+  const r = src.slice(ini, fim);
+  assert.ok(r.indexOf('repBaixaPelaPresenca(false)') >= 0, 'a tela chama a baixa');
+  assert.ok(r.indexOf("lnk('repVeioNoDia', l.volta, eleV+' veio')") >= 0, 'o botão passa o dia marcado');
+  assert.ok(r.indexOf("': a vinda não foi marcada'") >= 0);
+  assert.ok(r.indexOf("+' não repôs'") < 0, 'a tela não afirma mais que ele não repôs');
+  assert.ok(/setTimeout\(function\(\)\{ try\{ repBaixaPelaPresenca\(false\); \}[^\n]*\}, 30000\);/.test(src), 'pouco depois de abrir o app');
+  assert.ok(/setInterval\(function\(\)\{ try\{ repBaixaPelaPresenca\(false\); \}[^\n]*\}, REP_VEIO_MIN\*60000\);/.test(src), 'e de 10 em 10 minutos');
+});
+prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «desmarcar»; a 2ª marcada do mesmo dia só desmarca', () => {
+  run(`__bk625r={ge:document.getElementById, L:repLancamentos, S:repSaldo, D:repDisponivel, H:repHojeISO, P:PELUDINHOS, B:repBaixaPelaPresenca, PL:repPodeLancar, V:vagasGarantirDias, PE:pelExtra, I:pelInativo};
+    __el625={innerHTML:''}; document.getElementById=function(id){ return id==='repLista'?__el625:null; };
+    PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}, {n:'Luna', tutor:'Ana Teste', dias:['seg'], sexo:'Fêmea'},
+      {n:'Bis', tutor:'Caio Teste', dias:['seg']}, {n:'Nina', tutor:'Gil Teste', dias:['seg']}];
+    __Lr={'Billy Paul':[${JSON.stringify(TROCA625)}], 'Luna':[${JSON.stringify(REPO625)}],
+      'Bis':[{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-28'}}],
+      'Nina':[{_id:'a1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'a2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}, {_id:'a3', tipo:'credito', data:'2026-09-23'}, {_id:'u1', tipo:'uso', data:'2026-09-30'}]};
+    repLancamentos=function(p){ return (__Lr[p.n]||[]).slice(); };
+    repSaldo=function(p){ var L=__Lr[p.n]||[]; return L.filter(function(l){ return l.tipo==='credito'; }).length-L.filter(function(l){ return l.tipo==='uso'; }).length; };
+    repDisponivel=function(p){ return repSaldo(p); }; repHojeISO=function(){ return '2026-10-01'; };
+    repBaixaPelaPresenca=function(){ return Promise.resolve({}); }; repPodeLancar=function(){ return true; };
+    vagasGarantirDias=function(){}; pelExtra=function(p){ return {sexo:(p&&p.sexo)||''}; }; pelInativo=function(){ return false; };`);
+  try {
+    run('renderReposicao()');
+    const h = run('__el625.innerHTML');
+    const linha = (n) => { const i = h.indexOf('<div class="rp-nome">' + n + '</div>'); return h.slice(i, h.indexOf('<div class="rp-acoes">', i)); };
+    const b = linha('Billy Paul');
+    assert.ok(b.indexOf('Estava marcada para 30/09/2026 (troca, no lugar de 29/09): a vinda não foi marcada · ') >= 0, b.slice(0, 500));
+    assert.ok(/repVeioNoDia\(0,'2026-09-30'\)"[^>]*>ele veio<\/button> · <button type="button" onclick="repDesmarcar\(0,'2026-09-30'\)"[^>]*>desmarcar<\/button>/.test(b));
+    assert.ok(!/não repôs/.test(h));
+    assert.ok(/repVeioNoDia\(1,'2026-09-30'\)"[^>]*>ela veio<\/button>/.test(linha('Luna')), 'ela, pela ficha');
+    assert.ok(linha('Bis').indexOf('(troca') < 0, 'troca remarcada (o dia não é mais o da troca) não leva o rótulo de troca');
+    const n = linha('Nina');
+    assert.ok(n.indexOf('Marcada outra vez para 30/09/2026: esse dia já tem um uso registrado (veja o Extrato) · ') >= 0, n.slice(0, 500));
+    assert.ok(n.indexOf('repVeioNoDia(') < 0 && n.indexOf("repDesmarcar(3,'2026-09-30')") >= 0, 'só desmarcar');
+  } finally {
+    run(`document.getElementById=__bk625r.ge; repLancamentos=__bk625r.L; repSaldo=__bk625r.S; repDisponivel=__bk625r.D; repHojeISO=__bk625r.H;
+      PELUDINHOS=__bk625r.P; repBaixaPelaPresenca=__bk625r.B; repPodeLancar=__bk625r.PL; vagasGarantirDias=__bk625r.V; pelExtra=__bk625r.PE; pelInativo=__bk625r.I;`);
+  }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

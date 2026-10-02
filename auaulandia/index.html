@@ -7082,6 +7082,13 @@
     // Dia prometido numa hospedagem que ainda aguarda resposta não pode ser gasto aqui sem
     // que a recepção saiba: se o tutor fechar depois, faltaria dia para a reserva.
     const presos=repReservado(p,'');
+    // 6.25 (QA66): o dia JÁ TEM um uso (Reposição dos Lançamentos do dia, hospedagem, outro
+    // toque): marcar de novo desconta outra reposição. Pergunta antes, nunca em silêncio.
+    if(repDiaTemUso(repLancamentos(p)||[], repHojeISO())){
+      if(!await zPergunta(pelNome(p)+' já tem um uso registrado hoje',
+        ['O Banco de Reposições já descontou um uso de hoje (veja o Extrato).', 'Marcar de novo desconta mais uma reposição.'],
+        {sim:'Marcar mesmo assim', nao:'Não marcar'})) return;
+    }
     const tcHoje=repTrocaDoDia(p, repHojeISO());
     if(tcHoje){
       if(!await zPergunta(pelNome(p)+' veio hoje pela TROCA?',
@@ -7215,14 +7222,230 @@
     var cab=0; try{ cab=repLivresSemDia(p, 0); }catch(e){ cab=0; }
     return repVoltasVencidas(L||repLancamentos(p)||[], hoje).slice(0, Math.max(0, cab));
   }
+  // ===== "ELE VEIO" NO DIA QUE JÁ PASSOU (Adriana, 01/out/2026) ======================
+  // "O Billy Paul estava marcado para 30/09 e aqui diz que ele não repôs. Ele repôs, sim:
+  //  veio no dia 30, tomou banho, fez tudo. Eu tenho que ter a opção de falar que ele veio.
+  //  E tem que configurar melhor como isso vai funcionar."
+  // A troca (ou a reposição marcada) só era dada como cumprida com o toque em "Veio repor
+  // hoje", NO PRÓPRIO DIA. O check-in não contava, e no dia seguinte a única saída era
+  // desmarcar — o que deixava o crédito valendo e o saldo com 1 a mais. Agora:
+  //  · «ele veio» na linha "Estava marcada…" grava o uso COM O DIA MARCADO;
+  //  · do dia seguinte em diante, quem passou pelo check-in daquele dia (ou tem "veio" na
+  //    chamada) tem a baixa feita sozinha — só leitura da chamada e do check-in.
+  // UMA VINDA POR DIA (QA65): o registro mora no nó veio-{dia} do FILHOt, por transação. Duas
+  // marcadas no mesmo dia, dois aparelhos, ou o botão junto com a baixa automática caem no
+  // MESMO nó; e dia que já tem uso vivo (de qualquer caminho) não recebe outro.
+  var REP_VEIO_DIAS=60;          // a baixa automática olha até 60 dias para trás
+  var REP_VEIO_MIN=10;           // e roda, no máximo, de 10 em 10 minutos por aparelho
+  // Pura: o que a chamada e o check-in DAQUELE dia dizem. 'veio' | 'faltou' | ''. Registros
+  // que se contradizem (check-in feito e "faltou" na chamada) dão '': quem decide é a recepção.
+  function repPresencaNoDia(chamada, checkin){
+    var ch=String(chamada||'');
+    if(ch==='faltou') return checkin ? '' : 'faltou';
+    if(ch==='veio' || checkin) return 'veio';
+    return '';
+  }
+  // Pura: o dia já tem uma vinda viva — «Veio repor hoje», Reposição dos Lançamentos do dia,
+  // «ele veio», baixa automática ou dia de hospedagem (orc-…)? Uso devolvido não conta.
+  function repDiaTemUso(L, dia){
+    var an=repAnulados(L);
+    return (L||[]).some(function(l){ return !!(l && l.tipo==='uso' && !an[l._id] && l.data===dia); });
+  }
+  // Pura: o nó do registro da vinda daquele dia — o primeiro livre: veio-{dia}, veio-{dia}-2…
+  // O "-2" só nasce quando a vinda anterior foi devolvida no Extrato e alguém marca de novo.
+  function repVeioChave(dia, L){
+    var ids={}; (L||[]).forEach(function(l){ if(l && l._id) ids[l._id]=1; });
+    var base='veio-'+String(dia||''), k=base, n=1;
+    while(ids[k]){ n++; k=base+'-'+n; }
+    return k;
+  }
+  // Pura (QA66): alguém DEVOLVEU um uso daquele dia — pelo «Devolver» do Extrato, de qualquer
+  // caminho (o «ele veio», a baixa automática, o «Veio repor hoje»). A baixa sozinha não refaz a
+  // decisão de uma pessoa, e nem relê a chamada desse dia.
+  // A única devolução que não conta é a do «Tirar só o lançamento» dos Lançamentos do dia
+  // (so_lancamento): ali saiu só o lançamento repetido, e a vinda continua de verdade.
+  function repVeioDevolvido(L, dia){
+    return (L||[]).some(function(l){ return !!(l && l.tipo==='estorno' && l.dia_devolvido===dia && !l.so_lancamento); });
+  }
+  // Pura: o dia mais antigo que a baixa automática ainda olha.
+  function repVeioCorte(hoje){
+    var d=new Date(String(hoje||'')+'T12:00:00'); if(isNaN(d)) return '';
+    d.setDate(d.getDate()-REP_VEIO_DIAS);
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  }
+  // Pura: a estadia na Auaulândia cobria aquele dia? Hóspede entra na chamada do Day Care
+  // durante a estadia (turmaDoDia): ter "veio" não prova que veio pela reposição (QA65).
+  // Estadia sem data de entrada não conta: não se inventa hospedagem.
+  function repEstadiaCobre(e, dia){
+    e=e||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/, st=String(e.status||'');
+    if(st==='cancelada' || st==='recusada') return false;
+    var ent=String(e.entrada||''), sai=String(e.saida||'');
+    if(!iso.test(String(dia||'')) || !iso.test(ent) || ent>dia) return false;
+    if(iso.test(sai)) return sai>=dia;
+    return (st||'ativa')==='ativa';
+  }
+  function repHospedadoNoDia(p, dia){
+    try{
+      var todas=(typeof EST_TODAS!=='undefined' && EST_TODAS)||{};
+      var pk=pelKey(p), dk=dcKey(p.n, p.tutor);
+      return Object.keys(todas).some(function(id){
+        var e=todas[id]||{};
+        if(!(e.refKey===pk || dcKey(e.nome, e.tutor)===dk)) return false;
+        return repEstadiaCobre(e, dia);
+      });
+    }catch(e){ return true; }       // sem saber, não dá baixa sozinha: fica o botão
+  }
+  // Pura: o uso que «ele veio» (ou a baixa automática) grava para o crédito marcado. O dia é o
+  // MARCADO, não o de hoje: é ele que tira a linha "Estava marcada…" e que o Extrato mostra.
+  function repVeioRegistro(cred, auto, quem, ts){
+    var dia=String((cred&&cred.volta)||'');
+    var troca=repTrocaViva(cred);
+    var de=troca?repBRdata(String(((cred.troca||{}).de)||cred.data||'')).slice(0,5):'';
+    var obs=(auto?'Baixa automática pelo check-in de ':'Marcado depois: veio em ')+repBRdata(dia).slice(0,5)
+      +(troca?(', pela troca de '+de):'');
+    return {tipo:'uso', data:dia, motivo:troca?'troca':'reposicao', obs:obs,
+            credito:String((cred&&cred._id)||''), veio_auto:!!auto, quem:String(quem||'-'), ts:ts||Date.now()};
+  }
+  // Grava uma vez só. true = ESTA chamada gravou; false = o nó já existia (outro aparelho).
+  function repVeioGravar(p, cred, auto, L){
+    if(!p || !cred || !cred._id || !/^\d{4}-\d{2}-\d{2}$/.test(String(cred.volta||''))) return Promise.reject(new Error('sem a reposição marcada'));
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var quem=auto?'sistema':((typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-'));
+    var reg=repVeioRegistro(cred, auto, quem, Date.now());
+    var chave=repVeioChave(cred.volta, L||repLancamentos(p)||[]);
+    return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+chave).transaction(function(atual){
+      if(atual) return;            // já registrado (outro aparelho, o botão ou a baixa automática)
+      return reg;
+    }).then(function(res){ return !!(res && res.committed); });
+  }
+  // A marcada para `dia` que ainda vale e não teve uso naquele dia.
+  function repVeioCredito(p, dia, hoje){
+    try{ return repVoltasVencidasValendo(p, null, hoje||repHojeISO()).filter(function(l){ return l.volta===dia; })[0]||null; }
+    catch(e){ return null; }
+  }
+  // «ele veio» / «ela veio» — na linha "Estava marcada para…".
+  async function repVeioNoDia(i, dia){
+    var p=PELUDINHOS[i]; if(!p) return;
+    if(!repPodeLancar()){ alert('Quem marca a vinda da reposição é a recepção, a Supervisão ou a Gestão.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return; }
+    var hoje=repHojeISO();
+    if(!(String(dia||'')<hoje)){ alert('Este dia ainda não passou. No próprio dia, use «Veio repor hoje».'); return; }
+    var L=repLancamentos(p)||[];
+    var fem=repEhFemea(p), Ele=fem?'Ela':'Ele';
+    var dCurto=repBRdata(dia).slice(0,5);
+    if(repDiaTemUso(L, dia)){
+      if(typeof zAlertao==='function') zAlertao('JÁ HÁ UM USO EM '+dCurto,
+        [pelNome(p)+' já tem um uso registrado em '+dCurto+' (veja o Extrato). Esta é uma 2ª marcação no mesmo dia: toque em «desmarcar» nela.'], {botao:'Fechar'});
+      return;
+    }
+    var cred=repVeioCredito(p, dia, hoje);
+    if(!cred){ alert('Não achei a reposição marcada para '+dCurto+' sem registro de vinda. Atualize a tela.'); return; }
+    var troca=repTrocaViva(cred);
+    var s=repSaldo(p), depois=Math.max(0, s-1);
+    var de=troca?repBRdata(String(((cred.troca||{}).de)||cred.data||'')).slice(0,5):'';
+    var linhas=troca
+      ? ['Pela troca, no lugar de '+de+'.', 'Não é reposição: as reposições '+(fem?'dela':'dele')+' continuam '+depois+'.']
+      : [Ele+' repôs '+repNoDia(dia)+'.', 'Saldo agora: '+s+'. Depois de marcar: '+depois+'.'];
+    if(!await zPergunta(pelNome(p)+' veio '+repNoDia(dia)+'?', linhas, {sim:Ele+' veio', nao:'Voltar'})) return;
+    var gravou=false;
+    try{ gravou=await repVeioGravar(p, cred, false, L); }
+    catch(e){ alert('Não consegui marcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); return; }
+    var redesenhar=function(){ setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300); };
+    if(!gravou){
+      if(typeof zAlertao==='function') zAlertao('JÁ ESTAVA MARCADO', [pelNome(p)+' já tem a vinda de '+dCurto+' registrada, por outro aparelho ou pelo check-in daquele dia.', 'Nada foi gravado de novo.'], {botao:'Fechar'});
+      redesenhar(); return;
+    }
+    if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — veio '+repNoDia(dia)+(troca?(', pela troca de '+de):'')+' (marcado depois)',
+      {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
+    if(troca){
+      if(typeof zAlertao==='function') zAlertao('TROCA CUMPRIDA', [pelNome(p)+' veio '+repNoDia(dia)+', no lugar de '+de+'.', 'As reposições continuam '+depois+'.'], {botao:'Fechar'});
+    }else{
+      repMsgModal('✅ Reposição registrada', [pelNome(p)+' repôs '+repNoDia(dia)+'. Saldo agora: '+depois+'.'],
+        (typeof dashRepMensagemTutor==='function')?dashRepMensagemTutor(p, s, dia):repMensagem(p,'uso',{saldo:depois}), repTelDe(p));
+    }
+    redesenhar();
+  }
+  // A BAIXA SOZINHA. Do dia seguinte ao marcado em diante, olha a chamada (e, sem ela, o
+  // check-in) DAQUELE dia de cada marcada que ainda vale. Não dá baixa sozinha quando ter vindo
+  // não prova que veio pela reposição: num dia FIXO dele, ou num dia em que estava HOSPEDADO.
+  // Aí fica o botão. Roda em aparelho de quem lança reposição (recepção, Supervisão, Gestão),
+  // com o cadastro e as estadias já carregados, nunca num aparelho aberto desde ontem.
+  var _repVeioTs=0, _repVeioRodando=false;
+  var REP_VEIO_SEM={};           // {pelKey|dia: true} — já lido nesta sessão, sem "veio": não relê
+  function repBaixaPelaPresenca(forcar){
+    if(!DB) return Promise.resolve({ok:false, motivo:'sem conexão com o banco'});
+    var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
+    if(!r || r==='tutor') return Promise.resolve({ok:false, motivo:'ninguém da casa logado'});
+    if(!repPodeLancar()) return Promise.resolve({ok:false, motivo:'este papel não lança reposição'});
+    if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve({ok:false, motivo:'aparelho aberto desde ontem'});
+    // QA65: PELUDINHOS nunca está vazio (a lista de fábrica vem no código); quem diz que os dias
+    // e a situação de cada ficha chegaram do banco é a carteira. E as estadias (o hóspede do dia).
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return Promise.resolve({ok:false, motivo:'cadastro carregando'});
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return Promise.resolve({ok:false, motivo:'estadias carregando'});
+    if(!REPO_CACHE || !Object.keys(REPO_CACHE).length) return Promise.resolve({ok:false, motivo:'reposições carregando'});
+    if(_repVeioRodando) return Promise.resolve({ok:false, motivo:'já está conferindo'});
+    if(!forcar && _repVeioTs && (Date.now()-_repVeioTs) < REP_VEIO_MIN*60000) return Promise.resolve({ok:true, pulou:true});
+    _repVeioTs=Date.now();
+    var hoje=repHojeISO(), corte=repVeioCorte(hoje), alvos=[];
+    try{
+      var visto={};
+      PELUDINHOS.forEach(function(p){
+        if(!p || pelInativo(p)) return;
+        var L=repLancamentos(p)||[], venc=[];
+        try{ venc=repVoltasVencidasValendo(p, L, hoje)||[]; }catch(e){ venc=[]; }
+        venc.forEach(function(l){
+          if(!(l.volta>=corte)) return;
+          var ch=pelKey(p)+'|'+l.volta;
+          if(visto[ch] || REP_VEIO_SEM[ch]) return;                 // uma vinda por dia; e o já lido sem "veio"
+          visto[ch]=1;
+          if(repDiaTemUso(L, l.volta) || repVeioDevolvido(L, l.volta)) return;   // já tem vinda, ou foi devolvida
+          if(repEhDiaDele(p, l.volta) || repHospedadoNoDia(p, l.volta)) return; // ter vindo não prova a reposição
+          alvos.push({p:p, cred:l, L:L, ch:ch});
+        });
+      });
+    }catch(e){
+      _logFalhaGrav('baixa automática das reposições (montar a lista)', e);
+      return Promise.resolve({ok:false, motivo:String((e&&e.message)||e)});
+    }
+    _repVeioRodando=true;
+    var feitos=[];
+    return alvos.reduce(function(fila, a){
+      return fila.then(function(){
+        var k=dcKey(a.p.n, a.p.tutor), dia=a.cred.volta;
+        // A chamada primeiro: o check-in grava "veio" nela. O check-in só é lido quando a
+        // chamada está vazia — e só o campo `fim`, nunca o registro inteiro (com fotos).
+        return DB.ref('daycare/chamada/'+dia+'/'+k).once('value').then(function(s){
+          var ch=s.val();
+          if(ch) return repPresencaNoDia(ch, null);
+          return DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value').then(function(s2){ return repPresencaNoDia(null, s2.val()); });
+        }).then(function(pres){
+          if(pres!=='veio'){ REP_VEIO_SEM[a.ch]=true; return; }
+          return repVeioGravar(a.p, a.cred, true, a.L).then(function(gravou){
+            if(gravou) feitos.push(pelNome(a.p)+' ('+repBRdata(dia).slice(0,5)+(repTrocaViva(a.cred)?', troca':'')+')');
+          });
+        }).catch(function(e){ _logFalhaGrav('baixa automática da reposição de '+pelNome(a.p)+' ('+dia+')', e); });
+      });
+    }, Promise.resolve()).then(function(){
+      _repVeioRodando=false;
+      if(feitos.length && typeof audit==='function') audit('reposicao-uso', 'baixa automática pelo check-in do dia marcado: '+feitos.join(', '), {assinou:'sistema'});
+      return {ok:true, conferidos:alvos.length, feitos:feitos.length};
+    }, function(e){ _repVeioRodando=false; _logFalhaGrav('baixa automática das reposições', e); return {ok:false, motivo:String((e&&e.message)||e)}; });
+  }
+  // Sozinho: pouco depois de abrir o app e de 10 em 10 minutos. A tela de Reposições também
+  // chama ao desenhar (a trava de 10 minutos impede repetir).
+  setTimeout(function(){ try{ repBaixaPelaPresenca(false); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 30000);
+  setInterval(function(){ try{ repBaixaPelaPresenca(false); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, REP_VEIO_MIN*60000);
   // Chave FIXA, dev-{uso} (QA14, como o est-orc-… dos orçamentos): dois toques ou dois
   // aparelhos devolvendo o mesmo uso escrevem o MESMO nó — o Extrato não mostra duas devoluções.
-  function repDevolverUsoGravar(p, uso, porque){
+  function repDevolverUsoGravar(p, uso, porque, extra){
     if(!p) return Promise.reject(new Error('sem o peludinho'));
     if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
     var reg={tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:uso._id,
       dia_devolvido:String(uso.data||''), obs:String(porque||''),
       quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()};
+    if(extra && extra.so_lancamento) reg.so_lancamento=true;   // 6.25: a vinda continua (ver repVeioDevolvido)
     return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/dev-'+uso._id).set(reg);
   }
   // «Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo.
@@ -8612,6 +8835,9 @@
   }
   function renderReposicao(){
     try{ renderTrocas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // A baixa sozinha pelo check-in do dia marcado (01/out/2026). Assíncrona e com trava de
+    // 10 minutos: o que ela gravar volta pelo ouvinte do banco e redesenha esta tela.
+    try{ repBaixaPelaPresenca(false); }catch(e){ _logFalhaGrav('renderReposicao (baixa pelo check-in)', e); }
     const el=document.getElementById('repLista'); if(!el) return;
     // A CONFIRMAÇÃO DA PLANILHA depende de ler o registro do automático dos dias que estão
     // na tela. Enquanto não chega, cada linha DIZ "conferindo a planilha…" — e quando chega,
@@ -8638,7 +8864,7 @@
       +(vemHoje.length?('<div class="alm-fora" style="margin-top:10px;border-left:4px solid var(--gold)">'
         +'<b>Marcados para repor HOJE ('+vemHoje.length+'):</b> '
         +vemHoje.map(function(o){ return escAttr(pelNome(o.p)); }).join(' · ')
-        +'<br><span style="color:var(--muted)">O tutor escolheu este dia. Se ele vier, marque "Veio repor hoje" — o crédito só sai quando ele aparece.</span></div>'):'');
+        +'<br><span style="color:var(--muted)">O tutor escolheu este dia. O crédito só sai quando ele aparece: marque «Veio repor hoje». Se ninguém marcar, o check-in de hoje dá a baixa sozinho amanhã, menos em dia fixo dele ou em dia de hospedagem.</span></div>'):'');
     const lista=(q?todos.filter(function(o){ return jsNorm([o.p.n,pelGet(o.p,'tutor')].join(' ')).indexOf(q)>=0; })
                   :comSaldo).sort(function(a,b){ return b.saldo-a.saldo || jsNorm(pelNome(a.p)).localeCompare(jsNorm(pelNome(b.p))); });
     const c=document.getElementById('repCount');
@@ -8660,13 +8886,23 @@
       // A MARCADA QUE JÁ PASSOU sem uso naquele dia (25/set/2026, Safira): antes sumia da tela
       // e prendia o crédito. Aparece, com «desmarcar»; «Marcar reposição» a remarca.
       const venc=repVoltasVencidasValendo(o.p, repLancamentos(o.p), hojeISO);
+      // A FRASE DIZ A VERDADE (Billy Paul, 01/out/2026): o app não sabe se ele "não repôs" —
+      // sabe só que a vinda não foi marcada. «ele veio» grava o uso com o dia marcado. Dia que
+      // já tem vinda e ainda tem marcada (2ª marcação no mesmo dia, QA65) só pode ser desmarcado.
+      const eleV=repEhFemea(o.p)?'ela':'ele';
+      const Lv=repLancamentos(o.p);
+      const lnk=function(fn, dia, rotulo){ return '<button type="button" onclick="'+fn+'('+o.i+',\''+dia+'\')"'
+        +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">'+rotulo+'</button>'; };
       const vencTxt=venc.length?('<div class="rp-sub" style="color:var(--crm-critico);font-weight:700">'
         +venc.slice(0,3).map(function(l){
-          return 'Estava marcada para '+repBRdata(l.volta)+' e '+(repEhFemea(o.p)?'ela':'ele')+' não repôs'
-            +(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+l.volta+'\')"'
-              +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'):'');
+          const tr=repTrocaViva(l)?(' (troca, no lugar de '+repBRdata(String(((l.troca||{}).de)||l.data||'')).slice(0,5)+')'):'';
+          if(repDiaTemUso(Lv, l.volta))
+            return 'Marcada outra vez para '+repBRdata(l.volta)+tr+': esse dia já tem um uso registrado (veja o Extrato)'
+              +(podeDesm?(' · '+lnk('repDesmarcar', l.volta, 'desmarcar')):'');
+          return 'Estava marcada para '+repBRdata(l.volta)+tr+': a vinda não foi marcada'
+            +(podeDesm?(' · '+lnk('repVeioNoDia', l.volta, eleV+' veio')+' · '+lnk('repDesmarcar', l.volta, 'desmarcar')):'');
         }).join(' · ')+(venc.length>3?(' e mais '+(venc.length-3)):'')
-        +'<br><span style="font-weight:600;color:var(--muted)">A reposição continua valendo. Desmarque, ou toque em «Marcar reposição» para escolher o novo dia.</span></div>'):'';
+        +'<br><span style="font-weight:600;color:var(--muted)">Se '+eleV+' veio, toque em «'+eleV+' veio». Se não veio, a reposição continua valendo: desmarque, ou toque em «Marcar reposição» para escolher o novo dia. Quem passou pelo check-in no dia marcado sai daqui sozinho, menos em dia fixo, em dia de hospedagem ou depois de uma vinda devolvida no Extrato.</span></div>'):'';
       // Dias presos numa reserva de hospedagem que ainda aguarda resposta: continuam sendo
       // dele (o saldo não caiu), mas já estão prometidos — não podem ser gastos duas vezes.
       const presos=repReservado(o.p,'');
@@ -16729,7 +16965,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-01-03';
+  const APP_VERSAO='2026-10-02-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -36752,6 +36988,26 @@
          {t:'Não lançar', fn:function(){}}]);
       return;
     }
+    // O DIA JÁ TEM A VINDA (QA65, 6.25): «Veio repor hoje», «ele veio» ou a baixa automática
+    // pelo check-in já registraram a vinda deste dia. Abater de novo seria tirar duas
+    // reposições por uma vinda. Lança na planilha sem abater, a não ser que a pessoa diga.
+    var diaRep=dashDia(), LRep=[]; try{ LRep=repLancamentos(pRep)||[]; }catch(e){ LRep=[]; }
+    if(repDiaTemUso(LRep, diaRep)){
+      zEscolha(pelNome(pRep)+' já tem um uso registrado em '+repBRdata(diaRep).slice(0,5),
+        ['O Banco de Reposições já descontou um uso deste dia (veja o Extrato dele na tela de Reposições).',
+         'Lançar sem abater escreve na planilha e não desconta de novo.'],
+        [{t:'Lançar sem abater', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM abater (o dia '+diaRep+' já tinha um uso registrado): '+valor,{pet:valor});
+            gravar(false);
+          }},
+         // QA66: "abater mesmo assim" passa pelas MESMAS checagens de saldo e de reserva —
+         // nunca deixa o saldo negativo nem gasta dia prometido sem avisar.
+         {t:'Abater mesmo assim', cor:'#B3261E', fn:function(){ seguirRep(); }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    seguirRep();
+    function seguirRep(){
     var saldoRep=0; try{ saldoRep=repSaldo(pRep); }catch(e){ saldoRep=0; }
     if(saldoRep<=0){
       zEscolha(pelNome(pRep)+' não tem saldo de reposição',
@@ -36782,6 +37038,7 @@
       return;
     }
     gravar(true, pRep, saldoRep);
+    }
   }
   /* ====================================================================================
    * PENDÊNCIAS DE PREVENÇÃO — o que ficou para a próxima vinda (Adriana, 18/set/2026)
@@ -43441,7 +43698,8 @@
           volta_desmarcada:{dia:diaR, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now(), motivo:'tirada dos Lançamentos do dia'}})
           .catch(function(e){ _logFalhaGrav('desmarcar a reposição tirada de '+pelNome(pD)+' ('+diaR+')', e);
             if(typeof zAlertao==='function') zAlertao('⚠ A MARCAÇÃO DE '+repBRdata(diaR)+' CONTINUA', ['Tela de Reposições › «desmarcar» ao lado de '+repBRdata(diaR)+' — senão a planilha a recebe de novo.'], {botao:'Vou desmarcar'}); });
-        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo').then(function(){
+        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo',
+          (credDia && !desmarcarTambem)?{so_lancamento:true}:null).then(function(){
           if(typeof audit==='function') audit('reposicao-devolvida', pelNome(pD)+' — tirada dos Lançamentos do dia '+repBRdata(diaR)+'; a reposição voltou para o saldo',
             {alvo:(typeof dcKey==='function'?dcKey(pD.n,pD.tutor):''), pet:pelNome(pD)});
           if(credDia && !desmarcarTambem){
