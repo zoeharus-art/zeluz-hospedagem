@@ -5626,7 +5626,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-01)';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[12])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6274,6 +6274,72 @@ prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «des
     run(`document.getElementById=__bk625r.ge; repLancamentos=__bk625r.L; repSaldo=__bk625r.S; repDisponivel=__bk625r.D; repHojeISO=__bk625r.H;
       PELUDINHOS=__bk625r.P; repBaixaPelaPresenca=__bk625r.B; repPodeLancar=__bk625r.PL; vagasGarantirDias=__bk625r.V; pelExtra=__bk625r.PE; pelInativo=__bk625r.I;`);
   }
+});
+// ================================================================== 6.26 — horários prontos
+console.log('\n6.26 — Lançamentos do dia: horários prontos em um toque (Adriana, 02/out/2026)');
+prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho vai até 17:45', () => {
+  const g = (k) => JSON.parse(JSON.stringify(run(`dashHoraGrade('${k}')`)));
+  const v = g('vet'), b = g('banho');
+  assert.strictEqual(v[0], '08:00'); assert.strictEqual(v[1], '08:15'); assert.strictEqual(v[v.length - 1], '17:30'); assert.strictEqual(v.length, 39);
+  assert.strictEqual(b[b.length - 1], '17:45'); assert.strictEqual(b.length, 40);
+  ['14:00', '14:15', '14:30', '14:45', '13:00', '15:00', '17:00'].forEach((t) => assert.ok(v.indexOf(t) >= 0, t));
+  ['medicacao', 'saicedo', 'avaliacao'].forEach((k) => assert.strictEqual(g(k).slice(-1)[0], '17:30', k));
+});
+prova('a tela: as horas 8h a 17h; tocada a hora, os minutos dela; o relógio guardado em «outro horário»', () => {
+  run('__bk626={h:DASH_HORA, o:DASH_HORA_OUTRO}; DASH_HORA={}; DASH_HORA_OUTRO={};');
+  try {
+    const h0 = run("dashHorarioHTML('vet')");
+    const horas = (h0.match(/onclick="dashHoraHora\('vet','\d\d'\)">\d+h<\/button>/g) || []).map((x) => x.replace(/.*>(\d+h)<.*/, '$1'));
+    assert.deepStrictEqual(horas, ['8h', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h']);
+    assert.ok(/— toque na hora/.test(h0), 'sem hora escolhida, a tela diz o que fazer');
+    assert.ok(h0.indexOf('dashHoraEscolher(') < 0, 'os minutos só aparecem depois da hora');
+    assert.ok(/<div style="margin-top:6px;display:none"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_vet"/.test(h0), 'o relógio continua, guardado');
+    assert.ok(/onclick="dashHoraAbrirOutro\('vet'\)">outro horário<\/button>/.test(h0));
+    run("DASH_HORA.vet='14:30';");
+    const h1 = run("dashHorarioHTML('vet')");
+    assert.ok(/Horário: <strong>14:30<\/strong>/.test(h1));
+    const mins = (h1.match(/dashHoraEscolher\('vet','14:\d\d'\)">14:\d\d<\/button>/g) || []).map((x) => x.replace(/.*>(14:\d\d)<.*/, '$1'));
+    assert.deepStrictEqual(mins, ['14:00', '14:15', '14:30', '14:45']);
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="dashHoraEscolher\('vet','14:30'\)"/.test(h1), 'o 14:30 aceso');
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="dashHoraHora\('vet','14'\)"/.test(h1), 'o 14h aceso');
+    assert.ok(/id="dashH_vet" style="max-width:140px" value="14:30"/.test(h1), 'o relógio tem a mesma hora (é dele que o lançamento lê)');
+    run("DASH_HORA.vet='17:00'; DASH_HORA.banho='17:00';");
+    assert.ok(run("dashHorarioHTML('vet')").indexOf("'17:45'") < 0, 'o veterinário para em 17:30');
+    assert.ok(run("dashHorarioHTML('banho')").indexOf("dashHoraEscolher('banho','17:45')") >= 0, 'o banho ainda tem 17:45');
+    run("DASH_HORA.medicacao='20:00';");
+    const h2 = run("dashHorarioHTML('medicacao')");
+    assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_medicacao" style="max-width:140px" value="20:00"/.test(h2), 'fora da grade: o relógio aparece aberto, com a hora');
+    assert.ok(h2.indexOf('dashHoraAbrirOutro(') < 0 && h2.indexOf('background:var(--z-blue)') < 0, 'e nenhuma hora acesa');
+  } finally { run('DASH_HORA=__bk626.h; DASH_HORA_OUTRO=__bk626.o;'); }
+});
+prova('os toques: a hora já vale a hora cheia; os minutos trocam; tocar de novo na hora não apaga os minutos; o relógio recebe', () => {
+  run(`__bk626b={h:DASH_HORA, o:DASH_HORA_OUTRO, ge:document.getElementById, rd:renderDash}; DASH_HORA={}; DASH_HORA_OUTRO={};
+    __rel={value:''}; __rd=0; document.getElementById=function(id){ return id==='dashH_vet'?__rel:null; }; renderDash=function(){ __rd++; };`);
+  try {
+    run("dashHoraHora('vet','14')");
+    assert.strictEqual(run('DASH_HORA.vet'), '14:00'); assert.strictEqual(run('__rel.value'), '14:00', 'um toque: 14:00, já no relógio');
+    run("dashHoraEscolher('vet','14:30')");
+    assert.strictEqual(run('__rel.value'), '14:30');
+    run("dashHoraHora('vet','14')");
+    assert.strictEqual(run('__rel.value'), '14:30', 'a mesma hora não apaga os minutos');
+    run("dashHoraHora('vet','15')");
+    assert.strictEqual(run('__rel.value'), '15:00', 'outra hora: hora cheia');
+    run("dashHoraAbrirOutro('vet')"); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), true);
+    run("dashHoraOutro('vet','07:40')");
+    assert.strictEqual(run('DASH_HORA.vet'), '07:40'); assert.strictEqual(run('__rel.value'), '07:40');
+    run("dashHoraHora('vet','09')");
+    assert.strictEqual(run('__rel.value'), '09:00'); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), false, 'voltou para a grade: o relógio se guarda');
+    run("dashHoraAbrirOutro('vet'); dashHoraEscolher('vet','09:15')");
+    assert.strictEqual(run('__rel.value'), '09:15'); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), false, 'escolher os minutos também guarda o relógio');
+    assert.ok(run('__rd') >= 6, 'cada toque redesenha (o botão Lançar e a frase da planilha dizem a hora certa)');
+  } finally { run('DASH_HORA=__bk626b.h; DASH_HORA_OUTRO=__bk626b.o; document.getElementById=__bk626b.ge; renderDash=__bk626b.rd;'); }
+});
+prova('os três lugares que pedem horário usam os horários prontos (busca, painel do FILHOt escolhido e nome escrito à mão)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf("+(it.hora?('<div style=\"margin-top:6px\">'+dashHorarioHTML(it.k)+'</div>'):'')") >= 0, 'busca');
+  assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(it.k);') >= 0, 'painel');
+  assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(k);') >= 0, 'nome escrito à mão');
+  assert.strictEqual((src.match(/type="time" class="cad-in" id="dashH_/g) || []).length, 1, 'o relógio do item só nasce dentro dos horários prontos');
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

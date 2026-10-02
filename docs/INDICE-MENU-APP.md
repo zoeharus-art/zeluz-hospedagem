@@ -2,6 +2,24 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
+
+> **Adriana, 02/out/2026:** *"O horário está péssimo para escrever — o do banho, do veterinário, de tudo: tem que clicar várias vezes. Já vir com horários prontos: 13, 14, 14:15, 14:30, 14:45, 15… indo até 5 e meia; 5 e 45 ainda dá para marcar banho."* Story 6.26.
+
+### (AD) O horário em um ou dois toques
+
+| Antes | Agora |
+|---|---|
+| O relógio do celular, que pede vários toques para chegar à hora | **Botões:** as horas, de **8h a 17h**; um toque já escolhe a hora cheia (14h → 14:00). Logo abaixo, os minutos daquela hora, de 15 em 15 (14:00, 14:15, 14:30, 14:45): um segundo toque, só se precisar |
+
+- **Até onde vai:** o banho até **17:45**; Veterinário, Sai mais cedo, Avaliação e Medicação até **17:30**.
+- **outro horário** abre o relógio de sempre, para o que fugir da grade (7:30, 18:00, o remédio da noite). Uma hora fora da grade já aparece com o relógio aberto.
+- Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
+- A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
+- Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
+- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.26; 17 defeitos plantados, 17 pegos).
+
 ## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in
 
 > **Adriana, 01/out/2026:** *"Fui procurar o Billy Paul, que ele faltou hoje. E aqui está que ele estava marcado para o dia 30/09 e ele não repôs. Ele repôs, sim. Ele veio no dia 30/09, tomou banho, fez tudo isso. Eu tenho que ter a opção de falar que ele veio. E tem que configurar melhor como isso vai funcionar."* Story 6.25.

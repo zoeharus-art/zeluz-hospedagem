@@ -16965,7 +16965,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-01';
+  const APP_VERSAO='2026-10-02-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -35978,7 +35978,7 @@
           : (it.campos&&DASH_SEL[it.k])
           ? dashPainelHTML(it)
           : ('<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
-             +(it.hora?('<div style="margin-top:6px"><label class="cad-lb">Horário</label><input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"></div>'):'')
+             +(it.hora?('<div style="margin-top:6px">'+dashHorarioHTML(it.k)+'</div>'):'')
              +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
              // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
              // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
@@ -36477,11 +36477,8 @@
         +'</div></div>';
     }
     // O relógio mora aqui dentro, como no Banho: no lugar da busca não existe outro.
-    if(it.hora){
-      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
-        +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px"'
-        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
-    }
+    // Com os horários prontos (02/out/2026).
+    if(it.hora) h+=dashHorarioHTML(k);
     var falta=dashDetFalta(k), valor=dashForaValor(k);
     h+=dashDestinoFraseHTML(it, valor)
       +'<button class="btn '+(falta?'btn-gold':'btn-primary')+'" style="margin-top:8px;width:100%"'
@@ -36525,6 +36522,69 @@
     }
     dashLancar(k, valor);
   }
+  // ===== HORÁRIOS PRONTOS (Adriana, 02/out/2026) ==========================================
+  // "O horário está péssimo para escrever — o do banho, do veterinário, de tudo: tem que
+  //  clicar várias vezes. Já vir com horários prontos: 13, 14, 14:15, 14:30, 14:45, 15… indo
+  //  até 5 e meia; 5 e 45 ainda dá para marcar banho."
+  // Um toque na HORA (8h a 17h) já escolhe a hora cheia; um segundo toque, se precisar, troca
+  // os minutos (de 15 em 15). O banho vai até 17:45; o resto, até 17:30. O que fugir da grade
+  // (7:30, 18:00, o remédio da noite) continua no relógio, em «outro horário».
+  // O relógio (#dashH_{item}) continua sendo o lugar onde a hora mora: quem lança lê dele.
+  var DASH_HORA={}, DASH_HORA_OUTRO={};
+  var DASH_HORA_INI=8, DASH_HORA_FIM={banho:'17:45'}, DASH_HORA_FIM_PADRAO='17:30';
+  function dashHoraFim(k){ return DASH_HORA_FIM[k]||DASH_HORA_FIM_PADRAO; }
+  // Pura: os horários da grade de um item, de 15 em 15 minutos.
+  function dashHoraGrade(k){
+    var out=[], fim=dashHoraFim(k), p2=function(x){ return String(x).padStart(2,'0'); };
+    for(var h=DASH_HORA_INI; h<24; h++){
+      for(var m=0; m<60; m+=15){ var t=p2(h)+':'+p2(m); if(t>fim) return out; out.push(t); }
+    }
+    return out;
+  }
+  function dashHorarioHTML(k){
+    var v=String(DASH_HORA[k]||''), grade=dashHoraGrade(k);
+    var fora=!!v && grade.indexOf(v)<0;
+    var hSel=fora?'':v.slice(0,2);
+    var abrir=fora || !!DASH_HORA_OUTRO[k];
+    var bt=function(rot, on, fn){
+      return '<button type="button" class="btn" style="min-width:48px;padding:7px 10px;font-size:13px;font-weight:800;border:1.5px solid '
+        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
+        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="'+fn+'">'+rot+'</button>';
+    };
+    var horas=[]; grade.forEach(function(t){ var hh=t.slice(0,2); if(horas.indexOf(hh)<0) horas.push(hh); });
+    var h='<label class="cad-lb" style="margin-top:9px;display:block">Horário'
+      +(v?(': <strong>'+escAttr(v)+'</strong>'):' <span style="color:var(--muted);font-weight:600">— toque na hora</span>')+'</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">'
+      +horas.map(function(hh){ return bt(String(+hh)+'h', hSel===hh, 'dashHoraHora(\''+k+'\',\''+hh+'\')'); }).join('')
+      +'</div>';
+    if(hSel){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">'
+        +grade.filter(function(t){ return t.slice(0,2)===hSel; })
+          .map(function(t){ return bt(String(+t.slice(0,2))+':'+t.slice(3), v===t, 'dashHoraEscolher(\''+k+'\',\''+t+'\')'); }).join('')
+        +'</div>';
+    }
+    h+='<div style="margin-top:6px'+(abrir?'':';display:none')+'"><span class="hint">Outro horário:</span> '
+      +'<input type="time" class="cad-in" id="dashH_'+k+'" style="max-width:140px" value="'+escAttr(v)+'"'
+      +' onchange="dashHoraOutro(\''+k+'\',this.value)"></div>';
+    if(!abrir) h+='<button type="button" class="btn" style="background:none;border:none;padding:4px 0;color:var(--z-blue);text-decoration:underline;font-size:12px;font-weight:700"'
+      +' onclick="dashHoraAbrirOutro(\''+k+'\')">outro horário</button>';
+    return h;
+  }
+  function dashHoraAplicar(k, v){
+    DASH_HORA[k]=String(v||'');
+    var el=document.getElementById('dashH_'+k); if(el) el.value=DASH_HORA[k];
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  // A hora: o primeiro toque já vale a hora cheia; tocar de novo na mesma hora não apaga os minutos.
+  function dashHoraHora(k, hh){
+    var v=String(DASH_HORA[k]||'');
+    DASH_HORA_OUTRO[k]=false;
+    if(v.slice(0,2)===hh && dashHoraGrade(k).indexOf(v)>=0) return dashHoraAplicar(k, v);
+    dashHoraAplicar(k, hh+':00');
+  }
+  function dashHoraEscolher(k, t){ DASH_HORA_OUTRO[k]=false; dashHoraAplicar(k, t); }
+  function dashHoraAbrirOutro(k){ DASH_HORA_OUTRO[k]=true; try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }
+  function dashHoraOutro(k, v){ DASH_HORA_OUTRO[k]=true; dashHoraAplicar(k, v); }
   function dashPainelHTML(it){
     var sel=DASH_SEL[it.k]||'', d=dashDet(it.k);
     var h='<div class="pair" style="padding:7px 0;border-bottom:1px solid var(--line)">'
@@ -36533,11 +36593,8 @@
       +' onclick="dashTrocarFilhot(\''+it.k+'\')">trocar</button></span></div>';
     // O relógio entra no painel: sem ele aqui, o banho ficaria com um botão que pede
     // horário e nenhum lugar para escolher (Adriana, 28/ago/2026).
-    if(it.hora){
-      h+='<label class="cad-lb" style="margin-top:9px;display:block">Horário</label>'
-        +'<input type="time" class="cad-in" id="dashH_'+it.k+'" style="max-width:140px"'
-        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
-    }
+    // Com os horários prontos (02/out/2026).
+    if(it.hora) h+=dashHorarioHTML(it.k);
     // A data de início da adaptação: é ela que dá o dia 1 da contagem de 45 dias corridos
     // (Adriana, 04/set/2026: "começou 04/09 → 04/10 fez um mês, 19/10 faz 45 dias").
     // Já vem com o dia que está sendo lançado — a recepção só mexe se começou antes.
