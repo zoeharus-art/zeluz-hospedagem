@@ -6221,6 +6221,14 @@ provaAsync('Reposição lançada à mão num dia que já tem uso: pergunta; "Lan
     run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
     run('__esc[0].b[1].fn()'); await espera();
     assert.strictEqual(run('__esc.length'), 1, 'sem outro cartaz'); assert.strictEqual(run('__abat'), 1, 'abateu porque a pessoa disse');
+    // e com o único dia livre reservado em hospedagem, «Abater mesmo assim» avisa a reserva antes (QA67 R24)
+    run(`DASH_DADOS={}; __esc=[]; __abat=0; __bkRes=repReservado; repReservado=function(){ return 2; };`);
+    try {
+      run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+      run('__esc[0].b[1].fn()'); await espera();
+      assert.strictEqual(run('__esc.length'), 2); assert.strictEqual(run('__esc[1].t'), 'Thor tem saldo, mas ele está reservado');
+      assert.strictEqual(run('__abat'), 0, 'nada abatido antes de a pessoa decidir');
+    } finally { run('repReservado=__bkRes;'); }
   } finally {
     run('PELUDINHOS=__bk625d.P; REPO_CACHE=__bk625d.R; DB=__bk625d.DB; DASH_DADOS=__bk625d.dd; DASH_DIA_SEL=__bk625d.ds; dashEspelhar=__bk625d.esp; renderDash=__bk625d.rd; audit=__bk625d.au; zEscolha=__bk625d.ze; dashRepAbater=__bk625d.ab; DC_DASH_TURMA=__bk625d.t;');
   }
