@@ -21,7 +21,7 @@
 - **Onde está no código:** `banhoFaltaEstaAqui`, `banhoFaltaEstaAquiUI`, `banhoFaltaAquiTexto`, `banhoFaltaIrAoCheckin`, `banhoFaltaIrAoAlmoco` e o `aqui` de `banhoFaltaGenero`.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.29 e 2 provas antigas atualizadas para o botão novo; 25 defeitos plantados, 25 pegos).
 
-## O que mudou em 02/out/2026 (v 2026-10-02-03 e 2026-10-02-05) — quem dormiu aqui não recebe a falta automática do meio-dia; leitura que falha não vira falta
+## O que mudou em 02/out/2026 (v 2026-10-02-03, -05 e -07) — quem dormiu aqui ou só está na hospedagem não recebe a falta automática do meio-dia; leitura que falha não vira falta
 
 > **Adriana, 02/out/2026** (com a foto da janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30"): *"o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve erro e agora também"*. Story 6.28.
 
@@ -37,11 +37,18 @@
   3. a **pernoite dos Lançamentos do dia** (a fila do check-in de pernoite), menos a cancelada ("Tutor buscou, cancelar").
 - **Se o app não consegue ler o check-in, a chamada ou a noite de ontem** (sem rede), o dia não fecha naquele momento: ninguém recebe falta, e o app tenta de novo a cada 30 segundos. O aviso das 12h15 no Telegram continua cobrando se o dia não fechar.
   - Antes (v 2026-10-02-05), a leitura do check-in que falhava chegava **vazia**, e a chamada que falhava também: "ninguém fez check-in" virava falta para a turma inteira, por cima até do "veio" da chamada. Caminho achado depois da Luna, do Pipoca e da Mika (02/out): não confirmado que foi o caso deles; corrigido de qualquer jeito.
-- **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …", com os nomes.
+- **Só hóspede (v 2026-10-02-07):** quem está na turma **só por causa da estadia da hospedagem** (não é do Day Care naquele dia) não recebe a falta automática, inclusive no dia em que chega. Era o caminho provável do "ontem teve erro" do Romeo: no dia de entrada, ele não passou pelo check-in de entrada do Day Care e recebeu falta. O aluno do Day Care que tem estadia começando no dia continua com a regra de sempre.
+- **Pendências de prevenção:** quem ficou sem a falta automática (dormiu aqui ou está na hospedagem) não vira "não veio" para o remédio, o vermífugo, a coleira, a escova ou a hidratação lançados depois do meio-dia. A trava do dia guarda quem é (`sem_falta`).
+- **Check-out antes da saída prevista:** a noite que vale é a do check-out. Quem foi embora em 28/09 com saída marcada para 05/10 não "dorme aqui" até 05/10.
+- **Xarás:** o registro que só tem o nome (sem tutor e sem ficha ligada) só decide quando o nome é único no cadastro. Quem a Gestão tira do dia é conferido pelo nome **e** pelo tutor.
+- **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …" e "… porque estão na hospedagem (não são do Day Care hoje): …", com os nomes. Quando ninguém recebe falta por causa disso, o rastro diz "ninguém recebeu falta".
+- **Limites conhecidos:**
+  - a tela do **Check-in do corpo** continua listando quem dormiu aqui em "FALTARAM HOJE … entraram como falta" (é a área protegida do check-in; não foi mexida);
+  - uma hospedagem agendada que não aconteceu, ou uma pernoite "aguardando" nunca cancelada, deixa o FILHOt sem a falta automática (a chamada continua valendo).
 - **Não muda:** quem passou pelo check-in de entrada, quem já tem marcação na chamada, a falta avisada na planilha, os feriados, o sábado e o domingo.
 - **Hoje (02/out), com o Romeo:** a correção vale do próximo meio-dia em diante. A falta de hoje se desfaz na **Chamada** (tocar **VEIO**), e o banho fica com ele em **«Ele ainda vem»**.
 - **Onde está no código:** `faltaDormiuAqui`, `faltaDormiuEste`, `faltaDormiuLer` e o laço da turma em `aplicarFaltaAutomatica`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.28; 31 defeitos plantados, 31 pegos).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (13 provas da 6.28; defeitos plantados: 26 + 5 + 19, todos pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
 
