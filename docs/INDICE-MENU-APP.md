@@ -12,15 +12,18 @@
 
 | Antes | Agora |
 |---|---|
-| "Ragna/Westie · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha | "Ragna/Westie **14:30** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como no banho lançado à mão |
-| A hora mudada na ficha depois do envio ("mudar só o dia" com outra hora, a hora do combinado trocada) **não chegava à planilha**: a TV tocava o alarme na hora velha | A conferência automática percebe que a hora mudou e a ponte **regrava a "Hora Banho"** daquela linha (em até 20 segundos depois de salvar no Banhos recorrentes, ou na volta de 5 minutos) |
+| "Charlotte/Spitz · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha (15:28), não a do banho | "Charlotte/Spitz **(a hora do banho dela)** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como já aparecia no banho lançado à mão (a Ragna, 14:30) |
+| A hora mudada na ficha depois do envio ("mudar só o dia" com outra hora, a hora do combinado trocada) **não chegava à planilha**: a TV tocava o alarme na hora velha | A conferência automática percebe que a hora mudou e a ponte **regrava a "Hora Banho"** daquela linha, na próxima conferência (ela começa 20 segundos depois de salvar no Banhos recorrentes e passa dia por dia; sem isso, na volta de 5 minutos) |
 
 - **A hora da linha é a que foi gravada na planilha** (o registro da conferência guarda, nome por nome, a hora enviada), não uma conta feita a cada redesenho: entre mudar a ficha e a conferência passar, a linha mostra a hora que ainda está na planilha. Sem hora gravada (registro anterior a esta versão, ou banho lançado à mão), a linha fica só com o nome. Vale também para outro dia escolhido no seletor e para dias que já passaram.
 - **Primeira passada depois da publicação:** os banhos fixos já lançados (hoje + 14 dias) recebem a hora uma vez, para o registro passar a guardá-la; depois disso, só quando a hora muda.
 - **O "(enviado em …)"** vale em todas as linhas do automático dos Lançamentos do dia (banho, reposição, falta, adaptação). A tela de Reposições continua com "lançada na planilha ✓ 06/10 15:28".
-- **Não deu para regravar a hora:** a linha diz "a hora 16:15 não foi gravada" (ou "a conexão caiu"), com a hora que continua lá; a próxima passada tenta de novo.
+- **Não deu para regravar a hora:** a linha mostra a hora que continua lá e diz "a planilha recusou — a hora 16:15 não foi gravada", ou, se a conexão caiu, "a hora 16:15 ainda não foi gravada; a conexão com a planilha caiu…"; a próxima passada tenta de novo. Sem conseguir ler os Lançamentos do dia, a conferência não regrava nada (a linha pode ser da recepção).
+- **Aba sem a coluna "Hora Banho":** a ponte grava o nome e avisa; a linha fica só com o nome, e a conferência não insiste a cada 5 minutos.
+- O botão **Conferir agora** diz também quantas horas acertou ("· 2 hora(s) acertada(s)").
+- **Depende da ponte:** a regravação usa o `lancar` da ponte com o mesmo texto, que acerta só a "Hora Banho" daquela linha (`integracao-daycare/Codigo.gs`, desde a versão 5, de 19/set, a da "Hora Medicação"; a publicada é a 6).
 - O banho lançado à mão pela recepção continua com a hora dela: a conferência não mexe.
-- **Onde está no código:** `repPlanHoraNome`, `dashAutoLinhas`; em `dashAutoSincronizar`, `horaAntesDe` e o passo "já está lá" (a hora no `marcar`).
+- **Onde está no código:** `repPlanHoraNome`, `dashAutoLinhas`; em `dashAutoSincronizar`, `horaAntesDe`, `horaAvisoDe` e o passo "já está lá" (a hora e o aviso no `marcar`).
 
 ### (AK) "Escova os dentes aqui?" no painel da troca de escova
 
@@ -30,7 +33,7 @@
 - **O banco recusou:** aparece "A FICHA NÃO FOI ATUALIZADA" e o painel continua aberto, sem confirmação.
 - **Quem pode:** quem atualiza a prevenção na tela (recepção, Supervisão, Gestão).
 - **Onde está no código:** `prevCorrigeEscovaDcHTML`, `prevCorrigeEscovaDc` (usa `escovaDcPatch`, a mesma da ficha).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.34 e 2 da 6.35). Defeitos plantados: 18 na 1ª rodada, todos pegos; 19 na rodada do QA, 18 pegos (o que escapa grava hora vazia em colunas sem hora, que a tela não lê).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.34 e 2 da 6.35). Defeitos plantados: 18 na 1ª rodada, todos pegos; 19 depois do 1º QA, 18 pegos (o que escapa grava hora vazia em colunas sem hora, que a tela não lê); 13 depois do 2º QA (os que escapavam a ele), todos pegos.
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-03) — Ficha › Prevenção: check-up e escova no topo, com as duas datas
 
@@ -45,12 +48,13 @@
 
 - **As duas datas em tudo:** vacinas, carrapaticida, coleira, vermífugo, exame de fezes, check-up e escova têm a data em que foi feito ("Última dose", "Última aplicação", "Deu em", "Último exame", "fez em") e o "Vence em". Gestão, Diretoria e Supervisão podem digitar direto no "Vence em" quando só sabem quando vence.
 - **O vencimento do check-up que vale:** sem "à mão", o mais tarde entre o vencimento gravado e um ano depois da data mais recente — a ficha, os Vencimentos, o Hoje na Zêluz e a mesa "Check-up a marcar" dizem a mesma coisa. Ficha antiga sem vencimento gravado continua sem cobrança. O "Vence em" digitado à mão vale também na mesa "Check-up a marcar".
-- O "fez em" não aceita data futura; o "Vence em" ao lado acompanha na hora a data digitada.
+- O "fez em" não aceita data futura (o campo barra no computador; no celular, o app avisa "ESSA DATA AINDA NÃO CHEGOU" e não grava); o "Vence em" e a nota "Pela conta" ao lado acompanham na hora a data digitada.
+- **Prevenção › editar (o lançamento da tela Prevenção):** o check-up mostra a data mais recente e o vencimento que vale, e o Salvar grava essa data nas três casas (antes mostrava a casa velha como vencida e, ao salvar, apagava o check-up novo).
 - **Vermífugo (a pergunta da Cookie):** o campo "Vence em (próximo vermífugo)" já existia, logo abaixo de "Deu em". Quem **digita** o "Vence em" é a Gestão, a Diretoria e a Supervisão (decisão de 24/set); os outros perfis veem a data, sem campo.
 - A emergência (veterinário de confiança do tutor) continua no topo, logo depois; o peso, no fim.
 - **Onde está no código:** a aba em `abrirPeludinho` (bloco `ps-saude`); `prevCheckupData` (a data mais recente); `prevUltimaDireta` (grava casas juntas).
 - **Onde está no código (QA):** `prevCheckupVence` (lido por `prevValor` e pela mesa do check-up), `junto` no item do check-up em `PREV_ITENS`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.27; defeitos plantados: 12 do dev e 20 do QA, todos os que mudam o comportamento pegos).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.27; defeitos plantados: 12 do dev e 20 do 1º QA, todos os que mudam o comportamento pegos; 5 depois do 2º QA, todos pegos).
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-02) — o alarme de remédio atravessa a meia-noite
 
@@ -65,13 +69,14 @@
 | Alarme mudo sem ninguém saber | O celular só libera o som depois de um toque na página | Se o alarme abre sem som, aparece a faixa **"SEM SOM NESTE APARELHO: toque na tela para o alarme tocar."** O primeiro toque em qualquer lugar destrava o som, e a faixa vira "Som ligado." no mesmo lugar (sumir fazia o botão "Dei o remédio" pular) |
 
 - **A troca espera** quando há ficha do FILHOt aberta, alarme tocando, check-in ou almoço abertos; e não acontece se alguém escolheu outra data na tela.
-- **A dose de ontem adiada na virada:** enquanto o adiar corre (e por 2 minutos depois), a tela espera em ontem; quando o adiar vence, o alarme dela volta a tocar e ela é registrada em ontem. A dose de ontem que ninguém viu nem adiou não volta depois da troca (já era assim; fica para uma story própria).
+- **A dose de ontem adiada na virada:** a tela espera em ontem, e o aparelho não recarrega, **até o alarme dela voltar** (ou até a dose aparecer dada, neste ou em outro aparelho): com o celular na mão, na mesa ou no bolso. Quando o adiar vence, o alarme volta a tocar e a dose é registrada em ontem. Se o remédio sair da agenda e o alarme não puder voltar, a espera acaba 1 hora depois do adiar. A dose de ontem que ninguém viu nem adiou não volta depois da troca (já era assim; fica para uma story própria).
+- O adiado que ainda não voltou também segura a recarga da **versão nova** (como o alarme na tela).
 - A dose dada e o espelho nas fichas irmãs (o mesmo remédio em duas fichas) ficam no **mesmo dia**, mesmo que a tela passe para o dia novo no meio.
 - O Day Care (turma, falta automática, planilha) continua travado até a recarga, como já era: a faixa **"O dia virou — toque para atualizar"** segue acesa.
 - Quem não recebe o alarme (Gestão, recepção, consultoras) recarrega na virada como antes.
 - **Limites conhecidos:** sem internet na virada, a lista de hóspedes de ontem continua até a planilha responder (os remédios seguem os de quem dormiu). O navegador do teste não aplica a regra de som do celular: o "SEM SOM" é a garantia de que ninguém fica sem saber.
-- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo`, `medDiaVelhoAuto` (em `checarDespertadorMed`), `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`, a pergunta em `aplicarVersaoNova`, `_diaLog` em `registrarDoseAgendadaGlobal`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20 do dev e 22 do QA). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07.
+- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo` (com `despMedSnoozePend`, os adiados que ainda não voltaram, e `DIA_ADIADO_TETO_MS`), `medDiaVelhoAuto` (em `checarDespertadorMed`), `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`, a pergunta em `aplicarVersaoNova`, `_diaLog` em `registrarDoseAgendadaGlobal`; `zMotivoParado` e `zViradaDoDiaTick` olham o adiado.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (10 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20 do dev; 22 do 1º QA, dos quais escapam 6 (Q1 equivalente; Q7, Q10, Q11, Q20 e Q22, lacunas baixas); 10 depois do 2º QA, todos pegos). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07. Com a dose adiada às 23:58: na mesa, no bolso e com a página congelada, o alarme volta com a tela em ontem e nada recarrega por cima.
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-01) — Lançamentos do dia: o banho para em 17:30, e a tela não perde o lugar nem o cursor
 
@@ -87,6 +92,7 @@
 - Os horários prontos (seção (AD)) continuam iguais: as horas de 8h a 17h, os minutos de 15 em 15, e «outro horário» para o resto.
 - A rolagem foi testada também sem a âncora do navegador, como no iPhone (o iPhone de verdade não foi testado: vale conferir 2 minutos no celular da recepção).
 - A rolagem que o próprio app faz não conta como "alguém mexeu" (a trava e a recarga do aparelho parado seguem iguais).
+- O campo com o cursor só é a âncora quando está **à vista**: quem subiu até outro cartão continua vendo o mesmo cartão parado (o cursor continua no campo).
 - **Onde está no código:** `dashAncoraGuardar`, `dashAncoraVoltar`, `dashAncoraEscolher`, `dashToqueLigar` (chamadas no começo e no fim de `renderDash`); `DASH_HORA_FIM` vazio.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.31 e 2 provas da 6.26 atualizadas para o 17:30; defeitos plantados: 19 do dev, todos pegos, e 22 do QA, todos os que mudam o comportamento pegos). Teste no Chromium a 375 px, com e sem a âncora do navegador: antes, 4 falhas (cursor perdido, cartão pulando 239 px); depois, 17 de 17.
 
