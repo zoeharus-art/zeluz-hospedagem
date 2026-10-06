@@ -1,6 +1,22 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01 e 02/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02 e 06/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 06/out/2026 (v 2026-10-06-01) — Lançamentos do dia: o banho para em 17:30, e a tela não perde o lugar nem o cursor
+
+> **Adriana, 06/out/2026:** *"Já fiz uma reclamação sobre o horário, para colocar horário de banho em lançamentos do dia. Fica difícil de digitar, toda hora tem que voltar. Então, horário de banho, de veterinário, saída mais cedo, tudo que tem horário, ser mais fácil. Pode ser a marcação mesmo. Horário de banho, por exemplo, a gente pode marcar é, 14, 14h15, 14h30, marcar de 15 em 15 minutos até as 17h30. Último horário, 17h30."* Story 6.31.
+
+### (AG) O último horário é 17:30 em tudo, e a busca não perde o que está sendo digitado
+
+| O que acontecia | Agora |
+|---|---|
+| O banho ia até 17:45 (pedido de 02/out) | **Tudo vai até 17:30**, o banho também. Um banho às 17:45 (fixo ou já lançado) continua valendo: aparece com o relógio aberto, em «outro horário» |
+| Quando chegava um lançamento de outro aparelho, ou a tela se atualizava sozinha, a lista inteira era redesenhada: **a busca perdia o cursor** (o teclado do celular fechava no meio do nome) e, se o lançamento novo era de um cartão de cima, **a tela pulava** (até 239 px no teste) | A tela guarda **o cartão que importa** (o último tocado, até 4 s antes, ou o que está no terço de cima da tela) e **o campo com o cursor**. Depois do redesenho, o cartão volta ao mesmo lugar, sem deslizar, e o cursor volta ao campo, no mesmo ponto do texto |
+
+- Os horários prontos (seção (AD)) continuam iguais: as horas de 8h a 17h, os minutos de 15 em 15, e «outro horário» para o resto.
+- Vale no iPhone também, que não segura a tela sozinho como o Chrome.
+- **Onde está no código:** `dashAncoraGuardar`, `dashAncoraVoltar`, `dashAncoraEscolher`, `dashToqueLigar` (chamadas no começo e no fim de `renderDash`); `DASH_HORA_FIM` vazio.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.31 e 2 provas da 6.26 atualizadas para o 17:30; defeitos plantados: 19, todos pegos). Teste no Chromium a 375 px, com e sem a âncora do navegador: antes, 4 falhas (cursor perdido, cartão pulando 239 px); depois, 17 de 17.
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-08 e -09) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
 
@@ -66,14 +82,14 @@
 |---|---|
 | O relógio do celular, que pede vários toques para chegar à hora | **Botões:** as horas, de **8h a 17h**; um toque já escolhe a hora cheia (14h → 14:00). Logo abaixo, os minutos daquela hora, de 15 em 15 (14:00, 14:15, 14:30, 14:45): um segundo toque, só se precisar |
 
-- **Até onde vai:** o banho até **17:45**; Veterinário, Sai mais cedo, Avaliação e Medicação até **17:30**.
+- **Até onde vai:** tudo até **17:30**, o banho também (desde 06/out, seção (AG); antes, o banho ia até 17:45).
 - **outro horário** abre o relógio de sempre, para o que fugir da grade (7:30, 18:00, o remédio da noite). Uma hora fora da grade já aparece com o relógio aberto.
 - Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
 - A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
 - Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
 - **A hora vem antes da busca**, em toda busca que pede horário (Banho, Veterinário, Sai mais cedo, Avaliação e Medicação): no Veterinário, no Sai mais cedo e na Avaliação, tocar no nome já lança, então a hora fica escolhida antes; e os nomes sugeridos ficam colados no campo, sem o teclado do celular escondê-los.
 - Botões grandes para o dedo (42 px de altura).
-- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
+- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (vazio desde 06/out: todos até 17:30).
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.26; 26 defeitos plantados, 26 pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in

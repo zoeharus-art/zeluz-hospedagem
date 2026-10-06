@@ -17121,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-09';
+  const APP_VERSAO='2026-10-06-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -36215,7 +36215,85 @@
       } else { st.style.color='var(--crm-critico)'; st.textContent='Não consegui: '+((r&&r.erro)||'a ponte não respondeu'); }
     });
   }
+  // ===== A TELA NÃO PULA (Adriana, 06/out/2026) =============================================
+  // "Já fiz uma reclamação sobre o horário [...] Fica difícil de digitar, toda hora tem que
+  // voltar." O redesenho troca a lista inteira (innerHTML) e o navegador perdia o lugar: a cada
+  // toque na hora, ou a cada lançamento chegando de outro aparelho, a tela saltava (até 400 px
+  // no teste a 375 px) e o campo que estava sendo digitado perdia o cursor. Antes de redesenhar,
+  // guarda-se o cartão que importa — o último tocado (até 4 s antes) ou o que está no terço de
+  // cima da tela — e o campo com o cursor; depois, o cartão volta ao mesmo lugar na tela e o
+  // cursor volta ao campo.
+  var DASH_TOQUE={i:-1, ts:0}, DASH_TOQUE_MS=4000;
+  function dashCartoes(el){
+    return el?Array.prototype.filter.call(el.children||[], function(c){ return !!(c.classList&&c.classList.contains('card')); }):[];
+  }
+  function dashToqueLigar(el){
+    if(!el||el.__dashToque||!el.addEventListener) return;
+    el.__dashToque=1;
+    var f=function(ev){
+      var c=(ev.target&&ev.target.closest)?ev.target.closest('.card'):null;
+      while(c && c.parentElement!==el) c=c.parentElement?c.parentElement.closest('.card'):null;
+      if(c){ DASH_TOQUE.i=dashCartoes(el).indexOf(c); DASH_TOQUE.ts=Date.now(); }
+    };
+    el.addEventListener('pointerdown', f, true);
+    el.addEventListener('focusin', f, true);
+  }
+  // Pura: qual cartão segura o lugar. r = [{top, bottom}] na tela, na ordem dos cartões.
+  function dashAncoraEscolher(r, alturaTela, toque, agora){
+    if(toque && toque.i>=0 && toque.i<r.length && (agora-toque.ts)<=DASH_TOQUE_MS) return toque.i;
+    var y=Math.min((alturaTela||0)/3, 200), i;
+    for(i=0; i<r.length; i++){ if(r[i].top<=y && r[i].bottom>y) return i; }
+    for(i=0; i<r.length; i++){ if(r[i].bottom>0) return i; }
+    return -1;
+  }
+  function dashAncoraGuardar(el){
+    try{
+      var cs=dashCartoes(el); if(!cs.length) return null;
+      var r=cs.map(function(c){ var b=c.getBoundingClientRect(); return {top:b.top, bottom:b.bottom}; });
+      // Tela escondida (outra aba aberta): não há lugar a guardar.
+      if(!r.some(function(x){ return x.bottom>x.top; })) return null;
+      var i=dashAncoraEscolher(r, window.innerHeight, DASH_TOQUE, Date.now());
+      var a=document.activeElement, foco=null;
+      if(a && a.id && el.contains(a) && (a.tagName==='INPUT'||a.tagName==='TEXTAREA')){
+        foco={id:a.id, s:null, e:null};
+        try{ foco.s=a.selectionStart; foco.e=a.selectionEnd; }catch(e){} /* silencioso de propósito: o relógio (type=time) não tem seleção */
+      }
+      return {i:i, top:(i>=0?r[i].top:null), foco:foco};
+    }catch(e){ return null; } /* silencioso de propósito: guardar o lugar é conforto; nunca pode impedir o redesenho */
+  }
+  function dashRolagemPai(el){
+    for(var p=el&&el.parentElement; p && p!==document.body && p!==document.documentElement; p=p.parentElement){
+      var o=getComputedStyle(p).overflowY;
+      if((o==='auto'||o==='scroll') && p.scrollHeight>p.clientHeight) return p;
+    }
+    return null;
+  }
+  function dashAncoraVoltar(el, a){
+    if(!a) return;
+    try{
+      if(a.foco){
+        var f=document.getElementById(a.foco.id);
+        if(f && f!==document.activeElement){
+          f.focus({preventScroll:true});
+          if(a.foco.s!=null){ try{ f.setSelectionRange(a.foco.s, a.foco.e); }catch(e){} /* silencioso de propósito: nem todo campo aceita seleção */ }
+        }
+      }
+      if(a.i<0 || a.top==null) return;
+      var c=dashCartoes(el)[a.i]; if(!c) return;
+      var d=c.getBoundingClientRect().top-a.top;
+      if(Math.abs(d)<1) return;
+      // Sem animação: a página tem rolagem suave (tokens do DS) e, aqui, o cartão tem de
+      // simplesmente continuar onde estava — nada pode deslizar debaixo do dedo.
+      var p=dashRolagemPai(el), de=document.documentElement, sb=de.style.scrollBehavior;
+      de.style.scrollBehavior='auto';
+      try{ if(p) p.scrollTop+=d; else window.scrollBy(0, d); }
+      finally{ de.style.scrollBehavior=sb; }
+    }catch(e){} /* silencioso de propósito: devolver o lugar é conforto; nunca pode quebrar a tela */
+  }
   function renderDash(){
+    var __ancEl=document.getElementById('dashBlocos');
+    dashToqueLigar(__ancEl);
+    var __anc=dashAncoraGuardar(__ancEl);
     try{ dashSincronizarSeletor(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     var av=document.getElementById('dashPonteAviso');
     if(av){
@@ -36318,6 +36396,7 @@
       var h=document.getElementById('dashH_'+i.k); if(h&&m.h) h.value=m.h;
       var dt=document.getElementById('dashD_'+i.k); if(dt&&m.d) dt.value=m.d;
     });
+    dashAncoraVoltar(el, __anc);
   }
 
   // ===== O DETALHE QUE VAI JUNTO — Adriana, 26/ago/2026 ===========================
@@ -36844,11 +36923,13 @@
   //  15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro;
   //  5 e 45 dá para marcar ainda banho."
   // Um toque na HORA (8h a 17h) já escolhe a hora cheia; um segundo toque, se precisar, troca
-  // os minutos (de 15 em 15). O banho vai até 17:45; o resto, até 17:30. O que fugir da grade
-  // (7:30, 18:00, o remédio da noite) continua no relógio, em «outro horário».
+  // os minutos (de 15 em 15). Tudo vai até 17:30, o banho também (Adriana, 06/out/2026:
+  // "marcar de 15 em 15 minutos até as 17h30. Último horário, 17h30" — antes o banho ia até
+  // 17:45). O que fugir da grade (7:30, 17:45, 18:00, o remédio da noite) continua no relógio,
+  // em «outro horário».
   // O relógio (#dashH_{item}) continua sendo o lugar onde a hora mora: quem lança lê dele.
   var DASH_HORA={}, DASH_HORA_OUTRO={};
-  var DASH_HORA_INI=8, DASH_HORA_FIM={banho:'17:45'}, DASH_HORA_FIM_PADRAO='17:30';
+  var DASH_HORA_INI=8, DASH_HORA_FIM={}, DASH_HORA_FIM_PADRAO='17:30';
   function dashHoraFim(k){ return DASH_HORA_FIM[k]||DASH_HORA_FIM_PADRAO; }
   // Pura: os horários da grade de um item, de 15 em 15 minutos.
   function dashHoraGrade(k){

@@ -932,11 +932,13 @@ prova('a mensagem da troca fala em troca — não em reposição', () => {
   } finally { run('pelExtra=__bkT3.pe;'); }
 });
 prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai como TROCA na mensagem ao tutor', () => {
-  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
-  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
-  igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
+  // O relógio fica parado em 28/09 (o dia do caso): sem isso, a prova virou bomba-relógio —
+  // em 06/out a falta de 02/10 já tinha passado e a troca virava reposição, como manda a regra.
   run(`__bkT7=zHojeISO; zHojeISO=function(){ return '2026-09-28'; };`);
   try {
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
+    igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
     igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), false, 'falta de dia que já passou: reposição');
     igual(run("repLancEhTroca({qtd:1, data:'2026-09-28', volta:'2026-09-29'})"), true, 'falta de hoje com dia combinado: troca');
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-07', volta:'2026-10-20', periodo:true})"), false, 'período que rende um dia: reposição');
@@ -5626,7 +5628,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6277,11 +6279,11 @@ prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «des
 });
 // ================================================================== 6.26 — horários prontos
 console.log('\n6.26 — Lançamentos do dia: horários prontos em um toque (Adriana, 02/out/2026)');
-prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho vai até 17:45', () => {
+prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho também para em 17:30 (6.31, Adriana 06/out)', () => {
   const g = (k) => JSON.parse(JSON.stringify(run(`dashHoraGrade('${k}')`)));
   const v = g('vet'), b = g('banho');
   assert.strictEqual(v[0], '08:00'); assert.strictEqual(v[1], '08:15'); assert.strictEqual(v[v.length - 1], '17:30'); assert.strictEqual(v.length, 39);
-  assert.strictEqual(b[b.length - 1], '17:45'); assert.strictEqual(b.length, 40);
+  assert.strictEqual(b[b.length - 1], '17:30'); assert.strictEqual(b.length, 39); igual(b, v);
   ['14:00', '14:15', '14:30', '14:45', '13:00', '15:00', '17:00'].forEach((t) => assert.ok(v.indexOf(t) >= 0, t));
   ['medicacao', 'saicedo', 'avaliacao'].forEach((k) => assert.strictEqual(g(k).slice(-1)[0], '17:30', k));
 });
@@ -6314,7 +6316,12 @@ prova('a tela: as horas 8h a 17h; tocada a hora, os minutos dela; o relógio gua
     assert.ok(/id="dashH_vet" style="max-width:140px" value="14:30"/.test(h1), 'o relógio tem a mesma hora (é dele que o lançamento lê)');
     run("DASH_HORA.vet='17:00'; DASH_HORA.banho='17:00';");
     assert.ok(run("dashHorarioHTML('vet')").indexOf("'17:45'") < 0, 'o veterinário para em 17:30');
-    assert.ok(run("dashHorarioHTML('banho')").indexOf("dashHoraEscolher('banho','17:45')") >= 0, 'o banho ainda tem 17:45');
+    const hb17 = run("dashHorarioHTML('banho')");
+    assert.ok(hb17.indexOf("'17:45'") < 0 && hb17.indexOf("dashHoraEscolher('banho','17:30')") >= 0, 'o banho também para em 17:30 (6.31)');
+    run("DASH_HORA.banho='17:45';");
+    const hb1745 = run("dashHorarioHTML('banho')");
+    assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_banho" style="max-width:140px" value="17:45"/.test(hb1745) && hb1745.indexOf('background:var(--z-blue)') < 0,
+      'banho às 17:45 (já lançado ou fixo): fora da grade, o relógio aparece aberto com a hora');
     run("DASH_HORA.medicacao='20:00';");
     const h2 = run("dashHorarioHTML('medicacao')");
     assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_medicacao" style="max-width:140px" value="20:00"/.test(h2), 'fora da grade: o relógio aparece aberto, com a hora');
@@ -6861,6 +6868,95 @@ prova('6.29 a busca redesenha o check-in do corpo (não a tela genérica); a pr�
     run('__vdcAtiva=false;'); igual(run('banhoFaltaTemCartaz()'), false, 'saiu do Day Care: o aviso volta');
     run("__vdcAtiva=true; dcAtiv='almoco';"); igual(run('banhoFaltaTemCartaz()'), false, 'outra atividade do Day Care: o aviso volta');
   } finally { run('ckAtual=__bkCa.ca; document.getElementById=__bkCa.ge; dcAtiv=__bkCa.da;'); }
+});
+// ================================================================== 6.31 — a tela não pula
+console.log('\n6.31 — Lançamentos do dia: o banho para em 17:30 e a tela não perde o lugar nem o cursor (Adriana, 06/out/2026)');
+// Cartões de mentira: cada um sabe onde está na tela. Trocar `__topos` simula o redesenho.
+const ANC631 = `
+  __topos=[]; __sb=[]; __foco=[]; __sel=[];
+  __mkCard=function(i){ return {classList:{contains:function(c){ return c==='card'; }}, __i:i,
+    getBoundingClientRect:function(){ var t=__topos[i]; return {top:t[0], bottom:t[1]}; }}; };
+  __el={children:[], parentElement:null, contains:function(x){ return !!(x&&x.__dentro); },
+    __ouvir:{}, addEventListener:function(ev,f,cap){ this.__ouvir[ev]=f; }};
+  __montar=function(n){ __el.children=[]; for(var i=0;i<n;i++) __el.children.push(__mkCard(i)); };
+  __inp=function(id,s,e){ return {id:id, tagName:'INPUT', __dentro:true, selectionStart:s, selectionEnd:e,
+    focus:function(o){ __foco.push([id, JSON.stringify(o||null)]); }, setSelectionRange:function(a,b){ __sel.push([id,a,b]); }}; };
+  __bk631={sb:window.scrollBy, ih:window.innerHeight, ae:document.activeElement, ge:document.getElementById, de:document.documentElement, t:DASH_TOQUE};
+  window.scrollBy=function(a,b){ __sb.push([a,b,document.documentElement.style.scrollBehavior]); };
+  window.innerHeight=800;
+  document.documentElement={style:{scrollBehavior:''}};
+  DASH_TOQUE={i:-1, ts:0};`;
+const SOLTA631 = `window.scrollBy=__bk631.sb; window.innerHeight=__bk631.ih; document.activeElement=__bk631.ae;
+  document.getElementById=__bk631.ge; document.documentElement=__bk631.de; DASH_TOQUE=__bk631.t;`;
+prova('6.31 qual cartão segura o lugar: o tocado há até 4 s; senão, o do terço de cima da tela; senão, o primeiro visível', () => {
+  const r = JSON.stringify([{ top: -600, bottom: -50 }, { top: -50, bottom: 350 }, { top: 350, bottom: 900 }]);
+  const agora = 1000000;
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:2, ts:${agora - 3999}}, ${agora})`), 2, 'tocado há 4 s: ele');
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:2, ts:${agora - 4001}}, ${agora})`), 1, 'toque velho: o que está a 200 px do topo');
+  igual(run(`dashAncoraEscolher(${r}, 450, {i:-1, ts:0}, ${agora})`), 1, 'tela baixa: um terço da altura (150 px)');
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:7, ts:${agora}}, ${agora})`), 1, 'toque num cartão que não existe mais: ignora');
+  const r2 = JSON.stringify([{ top: -600, bottom: -300 }, { top: 250, bottom: 300 }]);
+  igual(run(`dashAncoraEscolher(${r2}, 800, null, ${agora})`), 1, 'ninguém no ponto: o primeiro visível');
+  igual(run(`dashAncoraEscolher([], 800, null, ${agora})`), -1);
+});
+prova('6.31 o redesenho devolve o cartão ao mesmo lugar, sem animação, e o cursor ao campo que estava sendo digitado', () => {
+  run(ANC631);
+  try {
+    run(`__montar(4); __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__inp('dashB_vet',2,2);`);
+    const a = JSON.parse(JSON.stringify(run('__a=dashAncoraGuardar(__el)')));
+    igual(a, { i: 2, top: 100, foco: { id: 'dashB_vet', s: 2, e: 2 } }, 'guarda o cartão a 200 px do topo e o cursor');
+    // o redesenho: entraram lançamentos acima, o cartão desceu 239 px; o campo é outro objeto
+    run(`__montar(4); __topos=[[-900,-300],[-300,339],[339,939],[939,1500]]; __novo=__inp('dashB_vet',0,0); document.activeElement=null;
+      document.getElementById=function(id){ return id==='dashB_vet'?__novo:null; }; document.documentElement.style.scrollBehavior='smooth';`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 239, 'auto']], 'rola 239 px de volta, com a rolagem suave desligada naquele instante');
+    igual(run('document.documentElement.style.scrollBehavior'), 'smooth', 'e a rolagem suave volta como estava');
+    igual(run('__foco'), [['dashB_vet', '{"preventScroll":true}']], 'o cursor volta ao campo, sem a tela correr até ele');
+    igual(run('__sel'), [['dashB_vet', 2, 2]], 'no mesmo ponto do texto');
+    // cartão já no lugar (o navegador segurou): nada a rolar
+    run(`__sb=[]; __foco=[]; __sel=[]; __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__novo;`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [], 'sem diferença, sem rolar'); igual(run('__foco'), [], 'o campo já tem o cursor: não refoca');
+  } finally { run(SOLTA631); }
+});
+prova('6.31 o que não se guarda: tela escondida, campo de fora da lista, botão; o toque marca o cartão de cima (não o de dentro)', () => {
+  run(ANC631);
+  try {
+    run(`__montar(3); __topos=[[0,0],[0,0],[0,0]]; document.activeElement=__inp('dashB_vet',1,1);`);
+    igual(run('dashAncoraGuardar(__el)'), null, 'aba escondida: nada a guardar');
+    run(`__topos=[[-100,300],[300,700],[700,900]]; document.activeElement={id:'busca-geral', tagName:'INPUT', __dentro:false};`);
+    igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, 'campo fora da lista: não é dela');
+    run(`document.activeElement={id:'x', tagName:'BUTTON', __dentro:true};`);
+    igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, 'botão tocado: não volta o cursor');
+    run('dashAncoraVoltar(__el, null)'); igual(run('__sb'), []);
+    // o toque: o dedo cai num cartão de DENTRO do cartão (bloco do vermífugo); conta o de cima
+    run(`__el.__dashToque=0; dashToqueLigar(__el);
+      __interno={parentElement:__el.children[1], closest:function(){ return __el.children[1]; }};
+      __el.children[1].parentElement=__el; __el.children[1].closest=function(){ return __el.children[1]; };
+      __alvo={closest:function(sel){ return __interno; }};
+      __interno.closest=function(){ return __interno; }; __interno.parentElement=__el.children[1];
+      __el.children[1].parentElement=__el;
+      __alvo.closest=function(){ return __interno; };
+      __interno.parentElement.closest=function(){ return __el.children[1]; };`);
+    run(`(function(){ var c=__el.children[1]; c.parentElement=__el; __interno.parentElement={closest:function(){ return c; }}; })();
+      __el.__ouvir.pointerdown({target:__alvo});`);
+    igual(run('DASH_TOQUE.i'), 1, 'o cartão de cima, o 2º da lista');
+    assert.ok(Date.now() - run('DASH_TOQUE.ts') < 1000);
+    igual(Object.keys(run('__el.__ouvir')).sort(), ['focusin', 'pointerdown'], 'ouve o dedo e o teclado');
+  } finally { run(SOLTA631); }
+});
+prova('6.31 o renderDash guarda o lugar ANTES de trocar a lista e devolve DEPOIS, com o mesmo registro', () => {
+  run(`__bk631r={g:dashAncoraGuardar, v:dashAncoraVoltar, l:dashToqueLigar, ge:document.getElementById}; __ordem=[];
+    __bl={innerHTML:'', set __x(v){}};
+    Object.defineProperty(__bl,'innerHTML',{set:function(v){ __ordem.push('troca'); }, get:function(){ return ''; }});
+    document.getElementById=function(id){ return id==='dashBlocos'?__bl:null; };
+    dashToqueLigar=function(el){ __ordem.push('liga:'+(el===__bl)); };
+    dashAncoraGuardar=function(el){ __ordem.push('guarda:'+(el===__bl)); return {marca:42}; };
+    dashAncoraVoltar=function(el,a){ __ordem.push('volta:'+(el===__bl)+':'+(a&&a.marca)); };`);
+  try {
+    run('renderDash()');
+    igual(run('__ordem'), ['liga:true', 'guarda:true', 'troca', 'volta:true:42']);
+  } finally { run('dashAncoraGuardar=__bk631r.g; dashAncoraVoltar=__bk631r.v; dashToqueLigar=__bk631r.l; document.getElementById=__bk631r.ge;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
