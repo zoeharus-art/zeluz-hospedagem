@@ -17121,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-03';
+  const APP_VERSAO='2026-10-06-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -25083,6 +25083,7 @@
       +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue)">'
       +escAttr((it.nome||k)+' — '+(pelNome(p)||''))+'</div>'
       +'<div class="hint" style="margin-top:2px">O que você gravar aqui vai para a <strong>ficha do FILHOt</strong> e vale em todas as telas. Não precisa abrir a ficha.</div>';
+    h+=prevCorrigeEscovaDcHTML(k, ex, chave, tela);
     if(it.nomeK) h+='<div style="margin-top:8px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Nome do produto / vacina</label>'
       +'<input class="cad-in" id="prevCorrN_'+id+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac" style="margin:0;width:100%;max-width:280px"></div>';
     // O VERMÍFUGO NO PAINEL RÁPIDO (Fase 0, 25/set/2026 — Adriana: "duas doses com 21 dias
@@ -25111,6 +25112,49 @@
     h+=prevCorrigeFezesHTML(k, ex, id, ka, tela, hoje);
     h+='<div style="margin-top:7px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeFechar(\''+tela+'\')">fechar</button></div>';
     return h+'</div>';
+  }
+  // "ELE ESCOVA OS DENTES?" NO PAINEL RÁPIDO (Adriana, 06/out/2026, na Hoje na Zêluz, com a
+  // troca de escova do Antônio "em aberto, nunca registrado": "Tem peludo que não escova dentes
+  // [...] que não deixa. Então, a gente tem que colocar que não deixa. Então, tem que ter opção
+  // aqui [...] Se ele escova, ok. Se ele não escova, a gente não tem como fazer.").
+  // A MESMA pergunta da ficha (escovaDcPatch, 29/set): com Não, a troca de escova sai de toda
+  // cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor); com Sim, o painel
+  // segue aberto para a data da troca.
+  function prevCorrigeEscovaDcHTML(k, ex, chave, tela){
+    if(k!=='escova_p') return '';
+    var dc=String((ex||{}).escova_dc||''), ka=jsAspas(chave);
+    var bt=function(rot, v, mot, on, cor){
+      return '<button type="button" class="btn" style="padding:8px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+cor+';'
+        +(on?('background:'+cor+';color:var(--z-cream)'):('background:#fff;color:'+cor))+'"'
+        +' onclick="prevCorrigeEscovaDc(\''+ka+'\',\''+v+'\',\''+jsAspas(mot)+'\',\''+tela+'\')">'+esc(rot)+'</button>';
+    };
+    return '<div style="margin-top:9px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Ele escova os dentes aqui?</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
+      +bt('Sim, escova', 'Sim', '', dc==='Sim', 'var(--z-blue)')
+      +bt('Não deixa escovar', 'Não', 'Não deixa', false, '#B3261E')
+      +bt('O tutor não compra a pasta', 'Não', 'O tutor não compra a pasta', false, '#B3261E')
+      +'</div><div class="hint" style="margin-top:3px">Com <strong>não</strong>, a troca de escova sai da cobrança, em todas as telas. Dá para mudar depois na ficha › Prevenção.'
+      +(dc==='Sim'?' Ele escova aqui: grave abaixo a data da troca.':'')+'</div></div>';
+  }
+  function prevCorrigeEscovaDc(chave, v, motivo, tela){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
+    var p=prevCorrigePetDe(chave); if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(v!=='Sim' && v!=='Não') return Promise.resolve({ok:false, erro:'resposta inválida'});
+    var patch=escovaDcPatch(v, (typeof pelAtividades==='function')?pelAtividades(p):[]);
+    if(v==='Não') patch.escova_dc_motivo=String(motivo||'');
+    return Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return r; }
+      try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v+((v==='Não'&&motivo)?(' ('+motivo+')'):'')
+        +', atualizado na tela '+prevCorrigeTelaNome(tela), {alvo:chave, pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(v==='Não'){
+        PREV_CORRIGE_OK[prevCorrigeAlvo(chave,'escova_p')]={ts:Date.now(), ate:'',
+          texto:(pelNome(p)||'')+' — não escova aqui ('+(motivo||'não')+'): a troca de escova saiu da cobrança'};
+        PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
+        try{ prevCorrigeFecharConversa(p, chave); }catch(e){ /* silencioso de propósito: fechar é consequência — a resposta já está gravada */ }
+      }
+      prevCorrigeRedesenhar(tela);
+      return r||{ok:true};
+    });
   }
   // O pedaço do vermífugo dentro do painel: o esquema (dose única × 2 doses) antes do
   // "Feito hoje", e a frase da 2ª dose. Nada aqui grava sozinho — quem grava é o botão.
@@ -35878,14 +35922,33 @@
   }
   // As linhas do automático de UM item, já sem quem a recepção lançou à mão (o mesmo FILHOt
   // na mesma coluna é UMA linha, não duas). Devolve quantas são e o HTML.
+  // A HORA DO BANHO FIXO NA LINHA (Adriana, 06/out/2026): "Precisa de aparecer também nos
+  // lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui,
+  // Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o
+  // horário do banho". O registro do automático guarda só os nomes; a hora sai do combinado da
+  // ficha — a MESMA conta (banhoRecHoraNoDia) que escreveu a "Hora Banho" na planilha.
+  function dashAutoHorasBanho(dia){
+    var m={};
+    try{
+      (PELUDINHOS||[]).forEach(function(p){
+        var br=banhoRecDe(p); if(!br || !br.ativo || !banhoRecValeNoDia(br, dia)) return;
+        var h=banhoRecHoraNoDia(br, dia); if(!h) return;
+        m[dashAutoNomeChave(banhoRecValorPlanilha(p, br))]=h;
+      });
+    }catch(e){} /* silencioso de propósito: sem a hora, a linha continua com o nome */
+    return m;
+  }
   function dashAutoLinhas(autoK, dia, jaMao){
     var visto=jaMao||{};
     var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[dashAutoNomeChave(v)]; });
     if(!L.length) return {n:0, html:''};
+    var horas=(autoK==='banho')?dashAutoHorasBanho(dia):{};
     var html=L.map(function(v){
       var e=repPlanEstadoNome(dia, v, autoK);
       var cor='var(--muted)', txt='';
-      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
+      var hr=horas[dashAutoNomeChave(v)]||'';
+      // "enviado em": a hora em que foi para a planilha não se confunde com a hora do banho.
+      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):''); }
       else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){ cor='var(--z-gold-deep)'; txt=repPlanQuedaTexto(); }
       else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+e.msg; }
       else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
@@ -35894,6 +35957,7 @@
       else if(e.estado==='lendo'){ txt='conferindo a planilha…'; }
       return '<div class="pair dash-auto" style="padding:6px 0;border-bottom:1px solid var(--line)">'
         +'<span class="k"><strong>'+escAttr(v)+'</strong>'
+        +(hr?(' <span class="dash-auto-hora" style="color:var(--z-blue-soft);font-weight:800">'+escAttr(hr)+'</span>'):'')
         +' <span class="dash-auto-tag">'+escAttr(DASH_AUTO_TAG[autoK]||'automático')+'</span>'
         +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
         +'</span></div>';

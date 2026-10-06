@@ -7135,6 +7135,95 @@ prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só d
   assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
   assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
 });
+// ================================================================== 6.34 — a hora do banho fixo na linha
+console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora do banho (Adriana, 06/out/2026, Charlotte)');
+const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, c:REP_PLAN_CACHE['2026-10-06']};
+  __ex634={
+    'Charlotte|Bia': {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:30', desde:'2026-09-01', sham:'SEM SHAMPOO'}},
+    'Ragna|Rui':     {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01', sham:'SEM SHAMPOO', excecoes:{'2026-10-06':{hora:'16:15'}}}},
+    'Tico|Ana':      {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'09:00', desde:'2026-09-01', excecoes:{'2026-10-06':{pular:true}}}},
+    'Nina|Lu':       {banho_rec:{ativo:false, freq:'semanal', dia:'ter', hora:'11:00', desde:'2026-09-01'}}
+  };
+  PELUDINHOS=[{n:'Charlotte', raca:'Spitz', tutor:'Bia'}, {n:'Ragna', raca:'Westie', tutor:'Rui'}, {n:'Tico', raca:'SRD', tutor:'Ana'}, {n:'Nina', raca:'SRD', tutor:'Lu'}];
+  pelExtra=function(p){ return __ex634[p.n+'|'+p.tutor]||{}; };`;
+const SOLTA634 = `PELUDINHOS=__bk634.P; pelExtra=__bk634.pe; if(__bk634.c) REP_PLAN_CACHE['2026-10-06']=__bk634.c; else delete REP_PLAN_CACHE['2026-10-06'];`;
+prova('6.34 a hora sai do combinado da ficha, a mesma conta da planilha: exceção do dia vale; pulado e desligado ficam de fora', () => {
+  run(ARMA634);
+  try {
+    const m = JSON.parse(JSON.stringify(run("dashAutoHorasBanho('2026-10-06')")));
+    const ch = (p) => run(`dashAutoNomeChave(banhoRecValorPlanilha(PELUDINHOS[${p}], banhoRecDe(PELUDINHOS[${p}])))`);
+    igual(m[ch(0)], '14:30', 'Charlotte: 14:30');
+    igual(m[ch(1)], '16:15', 'Ragna: a hora mudada só para hoje');
+    igual(Object.keys(m).length, 2, 'Tico (pulado hoje) e Nina (banho fixo desligado) não entram');
+    igual(JSON.parse(JSON.stringify(run("dashAutoHorasBanho('2026-10-07')"))), {}, 'quarta: ninguém tem banho fixo');
+  } finally { run(SOLTA634); }
+});
+prova('6.34 a linha do automático: nome, a hora do banho em destaque e "na planilha ✓ (enviado em …)"', () => {
+  run(ARMA634);
+  try {
+    const v0 = run('banhoRecValorPlanilha(PELUDINHOS[0], banhoRecDe(PELUDINHOS[0]))'), v1 = run('banhoRecValorPlanilha(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]))');
+    const ts = new Date(2026, 9, 6, 15, 28).getTime();
+    run(`REP_PLAN_CACHE['2026-10-06']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v0, v1, 'Zeca/SRD'])}, _estado_v:1,
+      _estado:{banho:{${JSON.stringify(run(`vagasNomeChave(${JSON.stringify(v0)})`))}:{planilha_ok:true, ts:${ts}}}}}};`);
+    const h = run("dashAutoLinhas('banho', '2026-10-06', null).html");
+    const linha = (nome) => h.split('<div class="pair dash-auto"').find((x) => x.indexOf(nome) >= 0) || '';
+    assert.ok(/<strong>Charlotte\/Spitz \(SEM SHAMPOO\)<\/strong> <span class="dash-auto-hora" style="color:var\(--z-blue-soft\);font-weight:800">14:30<\/span> <span class="dash-auto-tag">automático · banho fixo<\/span>/.test(linha('Charlotte')), linha('Charlotte'));
+    assert.ok(/na planilha ✓ \(enviado em 06\/10, 15:28\)/.test(linha('Charlotte')), 'a hora do envio diz que é do envio: ' + linha('Charlotte'));
+    assert.ok(/>16:15<\/span>/.test(linha('Ragna')), 'Ragna com a hora do dia');
+    assert.ok(linha('Zeca').indexOf('dash-auto-hora') < 0, 'sem combinado conhecido: só o nome, sem inventar hora');
+    // outras colunas do automático não ganham hora
+    run(`REP_PLAN_CACHE['2026-10-06'].auto.reposicao=['Charlotte/Spitz'];`);
+    assert.ok(run("dashAutoLinhas('reposicao', '2026-10-06', null).html").indexOf('dash-auto-hora') < 0, 'a reposição não tem hora');
+  } finally { run(SOLTA634); }
+});
+// ================================================================== 6.35 — "ele escova os dentes?" no painel rápido
+console.log('\n6.35 — Hoje na Zêluz (e Vencimentos, Prevenção): "Ele escova os dentes aqui?" no painel da troca de escova (Adriana, 06/out/2026, Antônio)');
+const ARMA635 = `__bk635={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, pa:PREV_CORRIGE_ABERTO, po:PREV_CORRIGE_ORIGEM, ok:PREV_CORRIGE_OK, au:audit, rd:prevCorrigeRedesenhar, fc:prevCorrigeFecharConversa, r:document.body.dataset.role, at:pelAtividades};
+  __ex635={escova_t:'', escova_p:''}; PELUDINHOS=[{n:'Antônio', raca:'Spitz', tutor:'Rita'}];
+  pelExtra=function(){ return __ex635; }; pelAtividades=function(){ return ['escova','agility']; };
+  __sp635=[]; setPelExtra=function(p,patch){ __sp635.push(JSON.parse(JSON.stringify(patch))); Object.assign(__ex635, patch); return Promise.resolve({ok:true}); };
+  __au635=[]; audit=function(t,m){ __au635.push(t+': '+m); }; __rd635=[]; prevCorrigeRedesenhar=function(t){ __rd635.push(t); };
+  __fc635=0; prevCorrigeFecharConversa=function(){ __fc635++; };
+  PREV_CORRIGE_OK={}; document.body.dataset.role='consultora';
+  __ch635=dcKey('Antônio','Rita'); PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; PREV_CORRIGE_ORIGEM='';`;
+const SOLTA635 = `PELUDINHOS=__bk635.P; pelExtra=__bk635.pe; setPelExtra=__bk635.sp; PREV_CORRIGE_ABERTO=__bk635.pa; PREV_CORRIGE_ORIGEM=__bk635.po;
+  PREV_CORRIGE_OK=__bk635.ok; audit=__bk635.au; prevCorrigeRedesenhar=__bk635.rd; prevCorrigeFecharConversa=__bk635.fc; document.body.dataset.role=__bk635.r; pelAtividades=__bk635.at;`;
+prova('6.35 o painel da troca de escova pergunta "Ele escova os dentes aqui?" (Sim · Não deixa escovar · O tutor não compra a pasta); os outros itens, não', () => {
+  run(ARMA635);
+  try {
+    const h = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
+    assert.ok(/Ele escova os dentes aqui\?/.test(h), h.slice(0, 600));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Sim','','hoje'\)">Sim, escova<\/button>/.test(h));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','Não deixa','hoje'\)">Não deixa escovar<\/button>/.test(h));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','O tutor não compra a pasta','hoje'\)">O tutor não compra a pasta<\/button>/.test(h));
+    assert.ok(h.indexOf('Ele escova os dentes aqui?') < h.indexOf('Feito hoje'), 'a pergunta vem antes da data');
+    run("__ex635.escova_dc='Sim';");
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')")), 'o Sim aceso quando a ficha já diz que escova');
+    igual(run("prevCorrigeEscovaDcHTML('verm_p', {}, 'x', 'hoje')"), '', 'vermífugo: sem a pergunta');
+  } finally { run(SOLTA635); }
+});
+provaAsync('6.35 "Não deixa escovar": grava na ficha (como a pergunta da ficha), sai da cobrança, fecha o painel e confirma; "Sim": grava e o painel segue para a data; sem permissão, nada', async () => {
+  run(ARMA635);
+  try {
+    await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+    igual(run('__sp635[0]'), { escova_dc: 'Não', atividades: ['agility'], escova_dc_motivo: 'Não deixa' }, 'sai da escovação dos monitores também');
+    igual(run("prevForaDaCobranca(__ex635, {k:'escova_p'})"), true, 'a troca de escova saiu da cobrança');
+    igual(run('PREV_CORRIGE_ABERTO'), '', 'o painel fecha');
+    igual(run('PREV_CORRIGE_OK[__ch635+"|escova_p"].texto'), 'Antônio — não escova aqui (Não deixa): a troca de escova saiu da cobrança');
+    igual(run('__fc635'), 1, 'a conversa do cartão fecha se ficou vazio'); igual(run('__rd635'), ['hoje']);
+    assert.ok(/^ficha-escova: escova os dentes no Day Care: Não \(Não deixa\), atualizado na tela Hoje na Zêluz$/.test(run('__au635[0]')), run('__au635[0]'));
+    run("PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; pelAtividades=function(){ return ['agility']; };");
+    await run("prevCorrigeEscovaDc(__ch635, 'Sim', '', 'venc')");
+    igual(run('__sp635[1]'), { escova_dc: 'Sim', atividades: ['agility', 'escova'] });
+    igual(run('PREV_CORRIGE_ABERTO'), run('__ch635') + '|escova_p', 'com Sim, o painel segue aberto para a data da troca');
+    igual(run("prevForaDaCobranca(__ex635, {k:'escova_p'})"), false);
+    run("document.body.dataset.role='monitor';");
+    const r = await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+    igual(r && r.ok, false); igual(run('__sp635.length'), 2, 'monitor: nada gravado');
+    run("document.body.dataset.role='consultora';");
+    igual((await run("prevCorrigeEscovaDc(__ch635, 'Talvez', '', 'hoje')")).ok, false, 'resposta fora das duas: nada');
+  } finally { run(SOLTA635); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

@@ -2,6 +2,30 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 06/out/2026 (v 2026-10-06-04) — a hora do banho fixo nos Lançamentos do dia, e "Ele escova os dentes aqui?" no painel rápido
+
+> **Adriana, 06/out/2026:** *"Precisa de aparecer também nos lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui, Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o horário do banho deles. Eu preciso visivelmente esse horário, assim como Ragna, que está aqui às 14h30."* Story 6.34.
+>
+> *"Hoje [na Zêluz], sobre a troca de escova de dente em aberto. Aí tá aqui, nunca registrado. Tem peludo que não escova dentes [...] que não deixa. Então, a gente tem que colocar que não deixa. Então, tem que ter opção aqui, troca de escovas de dente do Antônio. É, ele escova dente? Se ele escova, ok. Se ele não escova, a gente não tem como fazer."* Story 6.35.
+
+### (AJ) A linha do banho fixo diz a hora do banho
+
+| Antes | Agora |
+|---|---|
+| "Charlotte/Spitz · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha | "Charlotte/Spitz **14:30** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como no banho lançado à mão |
+
+- A hora sai do combinado da ficha (Banhos recorrentes), a mesma conta que escreveu a "Hora Banho" na planilha; a hora mudada só para aquele dia vale.
+- **Onde está no código:** `dashAutoHorasBanho`, `dashAutoLinhas`.
+
+### (AK) "Ele escova os dentes aqui?" no painel da troca de escova
+
+- Tocar na troca de escova (por exemplo, "em aberto, nunca registrado") no **Hoje na Zêluz**, nos **Vencimentos** ou na **Prevenção** abre o painel com a pergunta **"Ele escova os dentes aqui?"**: **Sim, escova** · **Não deixa escovar** · **O tutor não compra a pasta**.
+- **Não:** grava na ficha a mesma resposta de Ficha › Prevenção › "Escova os dentes no Day Care?" (com o motivo). A troca de escova sai de toda cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor) e da escovação dos monitores; aparece a confirmação verde.
+- **Sim:** grava e o painel continua aberto para a data da troca (Feito hoje ou Feito em…).
+- **Quem pode:** quem atualiza a prevenção na tela (recepção, Supervisão, Gestão).
+- **Onde está no código:** `prevCorrigeEscovaDcHTML`, `prevCorrigeEscovaDc` (usa `escovaDcPatch`, a mesma da ficha).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (2 provas da 6.34 e 2 da 6.35; defeitos plantados: 18, todos pegos).
+
 ## O que mudou em 06/out/2026 (v 2026-10-06-03) — Ficha › Prevenção: check-up e escova no topo, com as duas datas
 
 > **Adriana, 02/out/2026, na ficha da Cookie:** *"Em cadastro do peludinho, eu tô aqui tentando achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente é um cuidado, né? [...] Então, ter essas duas opções em todos os casos. Para exame, para tudo que a gente precisa de manter ali."* Story 6.27, com as respostas recomendadas, pela autorização do /loop de 06/out.
