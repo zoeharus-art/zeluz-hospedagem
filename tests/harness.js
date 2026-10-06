@@ -14850,11 +14850,12 @@ async function main() {
         return {grav:t.grav.length, push:t.empurrou.length, faltas:t.faltas.length,
                 el:f1?f1.msgs[0].el:'', msg:f1?f1.msgs[0].msg:''};
       }`);
-      check('v-15 · pedir 1x com 3 dias marcados NÃO grava — aponta para os chips do topo',
-        nx.grav === 0 && nx.push === 0 && nx.faltas === 1 && nx.el === 'pelDiasEdit',
+      // 6.37: aponta os dias da própria aba Plano (ou, sem ela na tela, os do alto da ficha).
+      check('v-15 · pedir 1x com 3 dias marcados NÃO grava — aponta para os dias (aba Plano ou topo)',
+        nx.grav === 0 && nx.push === 0 && nx.faltas === 1 && (nx.el === 'planoDiasChips' || nx.el === 'pelDiasEdit'),
         JSON.stringify(nx));
       check('v-15 · e a frase diz o que fazer, com os dias pelo nome',
-        /Marque só 1 dia da semana lá em cima/.test(nx.msg)
+        /Para 1x, desmarque 2 dias aqui embaixo/.test(nx.msg)
         && /Ter, Qui, Sex/.test(nx.msg)
         && /quantidade de dias marcados/.test(nx.msg), nx.msg);
       const nxOk = await monta15(`async function(t){

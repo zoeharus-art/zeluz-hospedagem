@@ -20503,10 +20503,21 @@
     if(!pelAtual) return;
     var atual=(pelDias(pelAtual,'rotina')||[]).length;
     if(atual===n){ try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: enfeite de tela */ renovPlanoRedesenhar(); return; }
-    var msg='Marque '+(n===1?'só 1 dia':n+' dias')+' da semana lá em cima ('+renovDiasTexto(pelAtual)+'). '
-      +'As aulas por semana são sempre a quantidade de dias marcados — é esse número que entra na mensalidade.';
-    if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:msg}], {});
+    // 6.37: diz QUANTOS faltam (ou sobram) e aponta os dias logo abaixo, na própria aba Plano.
+    var dif=n-atual, qt=function(x){ return x===1?'1 dia':(x+' dias'); };
+    var msg=(dif>0?('Para '+n+'x, marque mais '+qt(dif)):('Para '+n+'x, desmarque '+qt(-dif)))+' aqui embaixo ('+renovDiasTexto(pelAtual)+'). '
+      +'A mensalidade segue a quantidade de dias marcados.';
+    if(typeof zFalta==='function') zFalta([{el:(document.getElementById('planoDiasChips')?'planoDiasChips':'pelDiasEdit'), msg:msg}], {});
     else try{ alert(msg); }catch(e){} /* silencioso de propósito: guarda defensiva */
+  }
+  // Os dias da semana dentro da aba Plano (6.37): os MESMOS chips do alto da ficha, maiores para o
+  // toque. Quem não edita a ficha vê os dias, sem tocar.
+  function planoDiasChipsHTML(p){
+    var dias=pelDias(p,'rotina')||[], can=canEditPel();
+    return ORDEM_DIAS.map(function(d){
+      return '<span class="dia'+(dias.indexOf(d)>=0?' on':'')+(can?' clic':'')+'" style="font-size:13px;padding:9px 14px;margin:0"'
+        +(can?(' onclick="toggleDiaPel(\''+d+'\')"'):'')+'>'+DIA_LBL[d]+'</span>';
+    }).join('');
   }
   // Redesenha SÓ o bloco Plano — usado quando os chips de dias mudam, para o seletor Nx
   // espelhar os chips na mesma hora (sem isso a tela ficaria com duas verdades).
@@ -20739,11 +20750,16 @@
           // SELETOR DE AULAS POR SEMANA — atalho e explicação dos chips do topo, nunca uma
           // segunda verdade. Vem ACIMA da data, porque é a primeira coisa a acertar.
           // Com "Mudam durante o plano" (6.30), o atalho dá lugar às linhas de cada mês.
-          : (mudam ? renovMesesHTML(p, r, calc) : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados lá em cima</span></label>'
+          // 6.37 (Adriana, 06/out/2026, Fred: "deseja 2x por semana vou fechar e volta para uma vez"):
+          // os DIAS ficam aqui também, logo abaixo — os mesmos chips do alto da ficha (toggleDiaPel,
+          // uma verdade só). O "2x" diz quantos faltam marcar, e a pessoa marca sem sair da aba.
+          : (mudam ? renovMesesHTML(p, r, calc) : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados</span></label>'
             +'<div class="seg gold" data-single id="planoAulasSeg">'
               +RENOV_NX.map(function(n){ return '<button type="button" class="'+(aulas===n?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
             +'</div>'
-            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Para trocar, marque os dias no alto da ficha.</div></div>')
+            +'<label style="margin-top:10px">Quais dias?</label>'
+            +'<div id="planoDiasChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+planoDiasChipsHTML(p)+'</div>'
+            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Toque nos dias para trocar: são os mesmos do alto da ficha.</div></div>')
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
               +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);renovRascSet({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
