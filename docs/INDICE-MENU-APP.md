@@ -1,6 +1,104 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01 e 02/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 02/out/2026 (v 2026-10-02-08 e -09) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
+
+> **Adriana, 02/out/2026** (com as fotos das janelas "NÃO VEIO" da Luna, do Pipoca, da Mika e do Rafael): *"Luna também está aqui! Eu peguei ela!!! eu a levei!"* · *"Pipoca veio! eu o peguei"* · *"Mika idem está aqui"* · *"também está aqui — coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!! e o almoço!!!)"*. Story 6.29.
+
+### (AF) Quem já está aqui volta para a chamada em um toque, e o check-in que falta aparece
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| A Luna, o Pipoca, a Mika e o Rafael chegaram sem o check-in de entrada e, ao meio-dia, entraram como **falta na chamada**. A janela "NÃO VEIO — TINHA BANHO" só oferecia **Liberar o horário**, **Ainda vem** e **Decidir depois** | nenhuma das três tirava a falta; quem tirava era o check-in de entrada ou o ✓ Veio da Chamada, e a janela não dizia isso | a janela ganhou **«Ele está aqui»** (ou **«Ela está aqui»**, pela ficha). Um toque marca **VEIO** na Chamada, segura o banho e, **se o check-in do corpo de entrada não foi feito**, avisa "FALTA O CHECK-IN DO CORPO DE …" com **Fazer o check-in agora** (abre o check-in de entrada já com o nome dele) e **Abrir o almoço** |
+
+- **O almoço:** a falta do meio-dia **não** tira ninguém da grade do almoço; só a **falta avisada na planilha** tira. Agora, quem avisou a falta e está como **VEIO** na chamada (veio mesmo assim) **volta para a grade** — a mesma regra do banho. A grade do almoço passou a acompanhar a chamada ao vivo.
+- **O mesmo ✓ Veio da Chamada:** o remédio lançado na recepção volta para a fila do alarme, e a pendência de prevenção avisa a chegada.
+- **Com o check-in já feito,** a tela só confirma: "… ESTÁ NA CHAMADA". Sem conseguir ler o check-in: "CONFIRA O CHECK-IN DO CORPO DE …".
+- **Quem tem as atividades limitadas no Time:** a tela só oferece o atalho para o que a pessoa pode abrir; sem o check-in, diz "Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo".
+- **Xarás:** com duas fichas do mesmo nome, o aviso e o cartão mostram o tutor (ou a raça): "BOLT - RUI NÃO VEIO…".
+- **A busca do Check-in do corpo** passou a filtrar a lista na hora (antes ficava presa no nome até outra coisa redesenhar a tela).
+- **A próxima pergunta espera:** com um exame do corpo aberto **na tela**, o aviso do próximo FILHOt não abre por cima. O exame deixado pela metade (saiu pelo menu) não cala os avisos do aparelho (v -09).
+- **Se a presença não grava** (o banco recusou), a tela diz "A PRESENÇA NÃO FOI MARCADA", nada é segurado e a pergunta volta. **Aviso de outro dia** (aparelho que virou a noite aberto): "O DIA VIROU", nada é marcado.
+- **Outro aparelho já liberou (ou está liberando) o horário:** a tela diz isso, em vez de prometer o banho.
+- **No Hoje na Zêluz,** o cartão "Banho de quem faltou" tem o mesmo botão ao lado de **Liberar o horário**, até o horário ser liberado.
+- **Quem pode:** quem decide o banho de quem faltou (recepção, Supervisão, Gestão, Diretoria).
+- **O exame do corpo continua obrigatório:** sem ele, o FILHOt continua em "ainda sem check-in do corpo" no painel do monitor.
+- **Onde está no código:** `banhoFaltaEstaAqui`, `banhoFaltaEstaAquiUI`, `banhoFaltaAquiTexto`, `banhoFaltaNomeVisivel`, `banhoFaltaAtivLiberada`, `banhoFaltaIrAoCheckin`, `banhoFaltaIrAoAlmoco`, `almFaltouAvisada` (grade do almoço) e `onDcBusca`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.29 e 2 provas antigas atualizadas; defeitos plantados: 25 + 22 + 5, todos pegos).
+
+## O que mudou em 02/out/2026 (v 2026-10-02-03, -05 e -07) — quem dormiu aqui ou só está na hospedagem não recebe a falta automática do meio-dia; leitura que falha não vira falta
+
+> **Adriana, 02/out/2026** (com a foto da janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30"): *"o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso! Porque ontem teve erro e agora também"*. Story 6.28.
+
+### (AE) A falta automática das 12h pula quem passou a noite na casa
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| O Romeo dormiu aqui de 01/10 para 02/10 e, ao meio-dia, saiu como **"faltou"** na chamada. A janela "ROMEO NÃO VEIO — TINHA BANHO ÀS 15:30" oferecia **Liberar o horário** do banho dele | a falta automática das 12h compara a turma com o check-in de entrada do Day Care e com a chamada. Quem dormiu aqui não passa pelo check-in de entrada: já estava na casa | a falta automática **pula quem dormiu aqui na noite anterior**. Ele fica sem marcação na chamada; quem marca **VEIO** ou **FALTOU** é a recepção ou o monitor |
+
+- **Onde a noite fica registrada (as três portas valem):**
+  1. a **estadia da hospedagem** (aba Hóspedes, check-in de hospedagem ou de pernoite), menos a cancelada ou recusada;
+  2. a **pernoite ou o hóspede lançado no Plantão**, com o número de noites, menos quem a Gestão tirou do dia;
+  3. a **pernoite dos Lançamentos do dia** (a fila do check-in de pernoite), menos a cancelada ("Tutor buscou, cancelar").
+- **Se o app não consegue ler o check-in, a chamada ou a noite de ontem** (sem rede), o dia não fecha naquele momento: ninguém recebe falta, e o app tenta de novo a cada 30 segundos. O aviso das 12h15 no Telegram continua cobrando se o dia não fechar.
+  - Antes (v 2026-10-02-05), a leitura do check-in que falhava chegava **vazia**, e a chamada que falhava também: "ninguém fez check-in" virava falta para a turma inteira, por cima até do "veio" da chamada. Caminho achado depois da Luna, do Pipoca e da Mika (02/out): não confirmado que foi o caso deles; corrigido de qualquer jeito.
+- **Só hóspede (v 2026-10-02-07):** quem está na turma **só por causa da estadia da hospedagem** (não é do Day Care naquele dia) não recebe a falta automática, inclusive no dia em que chega. Era o caminho provável do "ontem teve erro" do Romeo: no dia de entrada, ele não passou pelo check-in de entrada do Day Care e recebeu falta. O aluno do Day Care que tem estadia começando no dia continua com a regra de sempre.
+- **Pendências de prevenção:** quem ficou sem a falta automática (dormiu aqui ou está na hospedagem) não vira "não veio" para o remédio, o vermífugo, a coleira, a escova ou a hidratação lançados depois do meio-dia. A trava do dia guarda quem é (`sem_falta`).
+- **Check-out antes da saída prevista:** a noite que vale é a do check-out. Quem foi embora em 28/09 com saída marcada para 05/10 não "dorme aqui" até 05/10.
+- **Xarás:** o registro que só tem o nome (sem tutor e sem ficha ligada) só decide quando o nome é único no cadastro. Quem a Gestão tira do dia é conferido pelo nome **e** pelo tutor.
+- **Rastro:** o Painel do Dia registra "sem falta automática porque dormiram aqui: …" e "… porque estão na hospedagem (não são do Day Care hoje): …", com os nomes. Quando ninguém recebe falta por causa disso, o rastro diz "ninguém recebeu falta".
+- **Limites conhecidos:**
+  - a tela do **Check-in do corpo** continua listando quem dormiu aqui e os só hóspedes do dia em "FALTARAM HOJE … entraram como falta" (é a área protegida do check-in; não foi mexida);
+  - uma hospedagem agendada que não aconteceu, ou uma pernoite "aguardando" nunca cancelada, deixa o FILHOt sem a falta automática (a chamada continua valendo).
+- **Não muda:** quem passou pelo check-in de entrada, quem já tem marcação na chamada, a falta avisada na planilha, os feriados, o sábado e o domingo.
+- **Hoje (02/out), com o Romeo:** a correção vale do próximo meio-dia em diante. A falta de hoje se desfaz na **Chamada** (tocar **VEIO**), e o banho fica com ele em **«Ele ainda vem»**.
+- **Onde está no código:** `faltaDormiuAqui`, `faltaDormiuEste`, `faltaDormiuLer` e o laço da turma em `aplicarFaltaAutomatica`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (13 provas da 6.28; defeitos plantados: 26 + 5 + 19, todos pegos).
+
+## O que mudou em 02/out/2026 (v 2026-10-02-02) — horários prontos em um toque nos Lançamentos do dia
+
+> **Adriana, 02/out/2026:** *"O lançamento do dia, banho, o horário está péssimo para escrever, o horário de veterinário, de tudo, está péssimo para poder colocar. Tem que clicar várias vezes, precisa de melhorar essa forma. Talvez já vir com horários prontos: 14, 14:15, 14:30, 14:45, 17, 13 horas, 15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro; 5 e 45 dá para marcar ainda banho."* Story 6.26.
+
+### (AD) O horário em um ou dois toques
+
+| Antes | Agora |
+|---|---|
+| O relógio do celular, que pede vários toques para chegar à hora | **Botões:** as horas, de **8h a 17h**; um toque já escolhe a hora cheia (14h → 14:00). Logo abaixo, os minutos daquela hora, de 15 em 15 (14:00, 14:15, 14:30, 14:45): um segundo toque, só se precisar |
+
+- **Até onde vai:** o banho até **17:45**; Veterinário, Sai mais cedo, Avaliação e Medicação até **17:30**.
+- **outro horário** abre o relógio de sempre, para o que fugir da grade (7:30, 18:00, o remédio da noite). Uma hora fora da grade já aparece com o relógio aberto.
+- Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
+- A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
+- Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
+- **A hora vem antes da busca**, em toda busca que pede horário (Banho, Veterinário, Sai mais cedo, Avaliação e Medicação): no Veterinário, no Sai mais cedo e na Avaliação, tocar no nome já lança, então a hora fica escolhida antes; e os nomes sugeridos ficam colados no campo, sem o teclado do celular escondê-los.
+- Botões grandes para o dedo (42 px de altura).
+- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.26; 26 defeitos plantados, 26 pegos).
+
+## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in
+
+> **Adriana, 01/out/2026:** *"Fui procurar o Billy Paul, que ele faltou hoje. E aqui está que ele estava marcado para o dia 30/09 e ele não repôs. Ele repôs, sim. Ele veio no dia 30/09, tomou banho, fez tudo isso. Eu tenho que ter a opção de falar que ele veio. E tem que configurar melhor como isso vai funcionar."* Story 6.25.
+
+### (AC) A troca e a reposição marcadas não dependem mais de lembrar de tocar
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| A troca do Billy Paul (falta na terça 29/09, vinda na quarta 30/09) aparecia no dia seguinte como "Estava marcada para 30/09 e ele não repôs", e a única saída era **desmarcar**, o que deixava a reposição valendo (1 a mais no saldo) | o app só dava a troca ou a reposição marcada como cumprida com o toque em **Veio repor hoje**, no próprio dia. O check-in do dia não contava; e, como o próprio app pôs o Billy Paul na planilha e na TV, parecia resolvido | **Reposições** › a linha diz **"Estava marcada para 30/09/2026 (troca, no lugar de 29/09): a vinda não foi marcada · ele veio · desmarcar"** (ou **ela veio**, pela ficha). **Ele veio** pergunta e grava a vinda **com o dia marcado** (30/09), não com o de hoje |
+| (nada) | — | **A baixa sozinha:** do dia seguinte em diante, o app confere a chamada (e, se ela estiver vazia, o check-in) **daquele** dia. Quem tem "veio" na chamada ou passou pelo check-in tem a troca ou a reposição dada como cumprida sozinha, sem ninguém tocar. "Faltou" na chamada não dá baixa; sem registro nenhum, fica o **ele veio** para a recepção |
+
+- **Troca:** a vinda conta como troca ("TROCA CUMPRIDA"); as reposições do tutor não mudam e nenhuma mensagem de reposição vai para ele.
+- **Reposição:** o saldo desce 1, com a mensagem pronta para o tutor ("como usou 1 em 30/09/2026, ficará com…").
+- **Quando a baixa NÃO é sozinha** (ter vindo não prova que veio pela reposição; fica o botão): num **dia fixo** dele, e num dia em que ele estava **hospedado na Auaulândia** (o hóspede entra na chamada do Day Care durante a estadia).
+- **Uma vinda por dia, nunca duas baixas:** o registro é um só por FILHOt e por dia. Duas marcadas no mesmo dia, dois aparelhos, ou o botão junto com a baixa sozinha dão **uma** vinda. Dia que já tem vinda (por **Veio repor hoje**, pela Reposição dos Lançamentos do dia, pela hospedagem) não recebe outra. Se sobrou uma 2ª marcação nesse dia, a linha diz **"Marcada outra vez para 30/09/2026: esse dia já tem um uso registrado (veja o Extrato) · desmarcar"**.
+- **Vinda devolvida no Extrato** (**Devolver**, de qualquer caminho: **ele veio**, baixa sozinha, **Veio repor hoje**): a linha volta, e **ele veio** pode marcar de novo. A baixa sozinha respeita a devolução de uma pessoa: não refaz nem relê. A única exceção é o **Tirar só o lançamento** dos Lançamentos do dia (sai só o lançamento repetido; a vinda continua, e a baixa sozinha pode acertar).
+- **Lançamentos do dia › Reposição** num dia que já tem um uso: pergunta antes ("Thor já tem um uso registrado em 30/09"), com **Lançar sem abater**, **Abater mesmo assim** ou **Não lançar**. A planilha recebe; o saldo não desce duas vezes sem a pessoa dizer. **Abater mesmo assim** passa pelas mesmas checagens de sempre: sem saldo, avisa "não tem saldo de reposição" (nunca deixa o saldo negativo); com dia reservado em hospedagem, avisa.
+- **Veio repor hoje** num dia que já tem um uso: pergunta antes ("Thor já tem um uso registrado hoje"), com **Marcar mesmo assim** ou **Não marcar**.
+- **Extrato:** a vinda aparece no dia marcado, com "Marcado depois: veio em 30/09, pela troca de 29/09" ou "Baixa automática pelo check-in de 30/09".
+- **Marcados para repor HOJE:** o aviso diz que dá para marcar **Veio repor hoje** e que, se ninguém marcar, o check-in de hoje dá a baixa sozinho no dia seguinte (menos em dia fixo ou de hospedagem).
+- **Quem roda a baixa sozinha:** os aparelhos de quem lança reposição (recepção, Supervisão, Gestão), com o cadastro e as estadias já carregados, pouco depois de abrir o app, de 10 em 10 minutos e ao abrir Reposições. Olha até 60 dias para trás. Nunca num aparelho aberto desde ontem. Do check-in, lê só a hora em que terminou.
+- **Onde está no código:** `repPresencaNoDia`, `repDiaTemUso`, `repVeioChave` (nó `veio-{dia}`, por transação), `repVeioDevolvido`, `repVeioCorte`, `repEstadiaCobre`, `repHospedadoNoDia`, `repVeioRegistro`, `repVeioGravar`, `repVeioCredito`, `repVeioNoDia`, `repBaixaPelaPresenca`, `renderReposicao`, `dashLancar` (Reposição, com `seguirRep`), `repUsar`, `repDevolverUsoGravar` (`so_lancamento`), `dashRemover`. Só leitura de `daycare/chamada/{dia}` e `daycare/checkin-corpo/{dia}/{FILHOt}/fim`: nada muda no check-in.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (21 provas da 6.25; 50 defeitos plantados, 50 pegos).
 
 ## O que mudou em 01/out/2026 (v 2026-10-01-01) — o dia virou: o aparelho aberto desde ontem não lança a turma errada
 

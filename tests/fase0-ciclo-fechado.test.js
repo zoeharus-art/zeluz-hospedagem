@@ -109,6 +109,10 @@ try {
 }
 console.log('Script do app carregou no sandbox (sintaxe em dia).\n');
 const run = (codigo) => vm.runInContext(codigo, ctx);
+// A baixa da reposição pelo check-in (6.25) roda sozinha ao desenhar a tela de Reposições.
+// As provas antigas trocam o DB por bancos de mentira e desenham a tela: a trava de 10 minutos
+// já armada aqui a deixa quieta nelas; as provas da 6.25 soltam a trava e chamam com `forcar`.
+run('_repVeioTs=Date.now();');
 // Os objetos criados dentro do sandbox têm OUTRO Object.prototype: compara-se pelo JSON.
 const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)), b, msg);
 
@@ -3147,7 +3151,7 @@ prova('Hoje na Zêluz: textos neutros, botão em "ainda vem" e em "falhou"', () 
     run(`BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; BANHO_FALTA=[BANHO_FALTA[0]]; banhoFaltaPerguntar('${dia}');`);
     const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
     assert.ok(/JASMINE NÃO VEIO — TINHA BANHO ÀS 10:00/.test(esc[0].t));
-    igual(esc[0].b, ['Liberar o horário', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
+    igual(esc[0].b, ['Liberar o horário', 'Está aqui', 'Ainda vem', 'Decidir depois'], 'sem o sexo na ficha: neutro');
     assert.ok(esc[0].l.some((x) => /Se ainda vier \(chegar mais tarde\)/.test(x)));
   } finally { run(BF_VOLTA); }
 });
@@ -3307,8 +3311,8 @@ provaAsync('QA31/QA32 — chegou com a pergunta aberta: nada sai (a chamada do b
       __rmBF=[]; __esp=[]; __alertas=[];`);
     assert.ok(/ainda aparece na planilha/.test(run('banhoFaltaCardHTML()')), run('banhoFaltaCardHTML()'));
     run(`banhoFaltaPerguntar('${dia}');`);
-    assert.ok(run('__esc.length') === 1 && run('__esc[0].b[1]') === 'Ainda vem', JSON.stringify(run('__esc')));
-    run('__esc[0].fn[1]();'); await tick();
+    assert.ok(run('__esc.length') === 1 && run('__esc[0].b[2]') === 'Ainda vem', JSON.stringify(run('__esc')));
+    run('__esc[0].fn[2]();'); await tick();
     assert.strictEqual(run(dec + '.decisao'), 'mantido', '"ainda vem" da pergunta vale sobre o liberado que este aparelho viu');
     assert.ok(run('__rmBF.length') === 0 && run('__esp.length') === 0, '"ainda vem" não tira nada');
     // o botão "Ainda vem" do cartão (depois de um "ainda vem" que falhou) chama o "ainda vem", nunca o liberar
@@ -4450,7 +4454,10 @@ provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) 
     assert.strictEqual(run('ECTO_DUR.Simparic'), 35, 'a lista não salva não vale na memória');
   } finally { run('document.getElementById=__bkS.ge; DB=__bkS.db; ECTO_DUR=__bkS.ed; ECTO_FORA=__bkS.fo; ECTO_CFG_LIDO=__bkS.li; audit=__bkS.au; cfgPrevRender=__bkS.cr; prevCfgCarregar=__bkS.pc; CFG_ECTO_TELA=null; ectoDashOpsRefazer();'); }
   // a ficha: bloco salvo mudando só o nome, sem produto → a próxima data que existia fica
-  run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender};
+  // O "hoje" fica preso em 25/09 (como na QA45): com o relógio de verdade, a partir de 02/10 a
+  // próxima data de 01/10 já está em atraso, e o Salvar pede confirmação antes de gravar.
+  run(`__bkP={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, hj:hojeISO};
+    hojeISO=function(){ return '2026-09-25'; };
     pelAtual={n:'Simba', tutor:'Ana'}; PB_PEND={ecto:{ecto_nome:'Frontline'}};
     __exP={ecto_t:'2026-09-01', ecto_p:'2026-10-01', ecto_nome:'Frontline'};
     pbEx=function(){ return __exP; }; pelExtra=function(){ return __exP; };
@@ -4468,7 +4475,7 @@ provaAsync('QA41 — o Salvar das Configurações vale na hora (sem recarregar) 
     try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
     assert.ok(run('__patchP') === null && run('__alP[0]') === 'ESCOLHA O PRODUTO', JSON.stringify([run('__patchP'), run('__alP')]));
     run('zAlertao=__bkP.za;');
-  } finally { run('pelAtual=__bkP.pa; PB_PEND=__bkP.pp; pbEx=__bkP.pe; pelExtra=__bkP.pX; setPelExtra=__bkP.sp; pbRender=__bkP.pr;'); }
+  } finally { run('pelAtual=__bkP.pa; PB_PEND=__bkP.pp; pbEx=__bkP.pe; pelExtra=__bkP.pX; setPelExtra=__bkP.sp; pbRender=__bkP.pr; hojeISO=__bkP.hj;'); }
 });
 prova('QA45 — a ficha aberta pela Prevenção ("Feito em" e o recálculo) conta pelo produto: Bravecto 90 dias, não 30; o tutor com apóstrofo acha o campo do produto', () => {
   run(`__bkL={pd:prevPetDe, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, st:setTimeout, hj:hojeISO};
@@ -5618,8 +5625,8 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
   assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
-  assert.strictEqual(travas.length, 4, 'fotografia da turma, falta automática, dashAutoSincronizar e dashAutoRodar');
-  assert.ok(/const APP_VERSAO='2026-10-01-0[123]';/.test(src));
+  assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -5825,6 +5832,1035 @@ prova('QA64 — a lista de raças já nasce pronta ao abrir o app, sem repetiç�
 prova('o campo de raça do "Nunca hospedou?" usa a lista da casa (e a atualiza ao tocar)', () => {
   const src = fs.readFileSync(APP, 'utf8');
   assert.ok(/<input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar\(\)">/.test(src));
+});
+// ================================================================== 6.25 — "ele veio" no dia que já passou
+console.log('\n6.25 — Reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in (Billy Paul, 01/out/2026)');
+// Banco de mentira que respeita o CAMINHO: é por ele que se prova que o botão e a baixa
+// automática gravam o MESMO nó (veio-{dia}).
+function bancoCaminhos(inicial) {
+  const dados = Object.assign({}, inicial || {});
+  const lidos = [], escritos = [];
+  return {
+    dados, lidos, escritos,
+    ref(caminho) {
+      return {
+        once() { lidos.push(caminho); return Promise.resolve({ val: () => (dados[caminho] === undefined ? null : dados[caminho]) }); },
+        transaction(fn) {
+          const local = fn(null);                                  // 1ª volta: o SDK ainda não leu o nó
+          if (local === undefined) return Promise.resolve({ committed: false });
+          const atual = dados[caminho] === undefined ? null : JSON.parse(JSON.stringify(dados[caminho]));
+          const r = atual === null ? local : fn(atual);              // o servidor responde com o que tem
+          if (r === undefined) return Promise.resolve({ committed: false });
+          dados[caminho] = JSON.parse(JSON.stringify(r)); escritos.push(caminho);
+          return Promise.resolve({ committed: true });
+        },
+        set(v) { dados[caminho] = v; escritos.push(caminho); return Promise.resolve(); },
+        update(v) { dados[caminho] = Object.assign({}, dados[caminho] || {}, v); escritos.push(caminho); return Promise.resolve(); },
+        push(v) {
+          const k = 'L' + (escritos.length + 1), cam = caminho + '/' + k;
+          if (v !== undefined) { dados[cam] = v; escritos.push(cam); return Promise.resolve(); }
+          return { key: k, set(x) { dados[cam] = x; escritos.push(cam); return Promise.resolve(); } };
+        },
+      };
+    },
+  };
+}
+const TROCA625 = { _id: 'c1', tipo: 'credito', data: '2026-09-29', motivo: 'troca', volta: '2026-09-30', troca: { de: '2026-09-29', para: '2026-09-30' } };
+const REPO625 = { _id: 'c2', tipo: 'credito', data: '2026-09-22', motivo: 'cio', volta: '2026-09-30' };
+const NO625 = 'veio-2026-09-30';
+// Os stubs da tela de Reposições, num lugar só (e o retorno de cada um, no finally).
+const STUBS625 = ['DB', 'PELUDINHOS', 'repLancamentos', 'repSaldo', 'repDisponivel', 'repHojeISO', 'repPodeLancar', 'zPergunta', 'zAlertao',
+  'repMsgModal', 'renderReposicao', 'pessoaDoTurno', 'audit', 'pelDias', 'pelInativo', 'appDiaVelho', 'REPO_CACHE', '_logFalhaGrav', 'pelExtra', 'alert',
+  'CARTEIRA_CARREGADA', 'CF_ESTADIAS_LIDO', 'EST_TODAS', 'REP_VEIO_SEM', 'repReservado'];
+function stubs625(extra) {
+  run('__bk625={};' + STUBS625.map((n) => `__bk625.${n}=${n};`).join(''));
+  run(`__pergunta=null; __alertao=null; __modal=null; __alerta=null; __audit=[]; __falhas=[]; __L625={};
+       repHojeISO=function(){ return '2026-10-01'; }; repPodeLancar=function(){ return true; };
+       zPergunta=function(t, l, o){ __pergunta={t:t, l:l, o:o}; return Promise.resolve(__resposta!==false); }; __resposta=true;
+       zAlertao=function(t, l){ __alertao={t:t, l:l}; }; alert=function(t){ __alerta=String(t); };
+       repMsgModal=function(t, l, texto){ __modal={t:t, l:l, texto:texto}; }; renderReposicao=function(){};
+       pessoaDoTurno=function(){ return 'Recepção Teste'; }; audit=function(a, b){ __audit.push(String(b)); };
+       pelExtra=function(p){ return {sexo:(p&&p.sexo)||''}; }; pelInativo=function(p){ return !!(p&&p.inativo); };
+       pelDias=function(p){ return (p&&p.dias)||[]; }; appDiaVelho=function(){ return false; };
+       _logFalhaGrav=function(o, e){ __falhas.push(o+': '+((e&&e.message)||e)); }; REPO_CACHE={x:{}};
+       CARTEIRA_CARREGADA=true; CF_ESTADIAS_LIDO=true; EST_TODAS={}; REP_VEIO_SEM={}; repReservado=function(){ return 0; };
+       repLancamentos=function(p){ return (__L625[p.n]||[]).slice(); };
+       repSaldo=function(p){ var L=__L625[p.n]||[], an={}; L.forEach(function(l){ if(l.tipo==='estorno') an[l.estornaId]=1; });
+         return L.filter(function(l){ return l.tipo==='credito' && !an[l._id]; }).length-L.filter(function(l){ return l.tipo==='uso' && !an[l._id]; }).length; };
+       repDisponivel=function(p){ return repSaldo(p); };
+       _repVeioTs=0; _repVeioRodando=false;` + (extra || ''));
+}
+function desfaz625() { run(STUBS625.map((n) => `${n}=__bk625.${n};`).join('')); }
+const espera = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
+const noDe625 = (i, chave) => 'daycare/reposicao/' + run(`pelKey(PELUDINHOS[${i}])`) + '/lancamentos/' + (chave || NO625);
+
+prova('pura: o que a chamada e o check-in daquele dia dizem', () => {
+  assert.strictEqual(run("repPresencaNoDia('veio', null)"), 'veio');
+  assert.strictEqual(run("repPresencaNoDia(null, 1759223400000)"), 'veio', 'passou pelo check-in, mesmo sem chamada');
+  assert.strictEqual(run("repPresencaNoDia('faltou', null)"), 'faltou');
+  assert.strictEqual(run("repPresencaNoDia('faltou', 1759223400000)"), '', 'registros que se contradizem: decide a recepção');
+  assert.strictEqual(run("repPresencaNoDia(null, null)"), '', 'sem registro nenhum');
+  assert.strictEqual(run("repPresencaNoDia('', undefined)"), '');
+});
+prova('pura: o uso grava o DIA MARCADO (30/09), não o de hoje, e diz de onde veio', () => {
+  ctx.__T = TROCA625; ctx.__R = REPO625;
+  const t = JSON.parse(JSON.stringify(run("repVeioRegistro(__T, false, 'Recepção Teste', 1)")));
+  assert.strictEqual(t.tipo, 'uso'); assert.strictEqual(t.data, '2026-09-30'); assert.strictEqual(t.motivo, 'troca');
+  assert.strictEqual(t.credito, 'c1'); assert.strictEqual(t.veio_auto, false); assert.strictEqual(t.quem, 'Recepção Teste');
+  assert.strictEqual(t.obs, 'Marcado depois: veio em 30/09, pela troca de 29/09');
+  const a = JSON.parse(JSON.stringify(run("repVeioRegistro(__T, true, 'sistema', 1)")));
+  assert.strictEqual(a.obs, 'Baixa automática pelo check-in de 30/09, pela troca de 29/09'); assert.strictEqual(a.veio_auto, true);
+  const r = JSON.parse(JSON.stringify(run("repVeioRegistro(__R, false, 'x', 1)")));
+  assert.strictEqual(r.motivo, 'reposicao'); assert.strictEqual(r.obs, 'Marcado depois: veio em 30/09');
+});
+prova('pura: um nó por DIA (veio-{dia}); depois de uma vinda devolvida, o próximo livre', () => {
+  assert.strictEqual(run("repVeioChave('2026-09-30', [])"), 'veio-2026-09-30');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-30'}])"), 'veio-2026-09-30-2');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-30'},{_id:'veio-2026-09-30-2'}])"), 'veio-2026-09-30-3');
+  assert.strictEqual(run("repVeioChave('2026-09-30', [{_id:'veio-2026-09-29'}])"), 'veio-2026-09-30', 'outro dia não ocupa');
+});
+prova('pura: o dia já tem vinda viva (de qualquer caminho); a devolvida não conta', () => {
+  const T = (L) => run('repDiaTemUso(' + JSON.stringify(L) + ", '2026-09-30')");
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-30' }]), true, '«Veio repor hoje» naquele dia');
+  assert.strictEqual(T([{ _id: 'orc-x-1', tipo: 'uso', data: '2026-09-30', motivo: 'hospedagem' }]), true, 'dia de hospedagem');
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-30' }, { _id: 'dev-u1', tipo: 'estorno', estornaId: 'u1' }]), false, 'devolvida');
+  assert.strictEqual(T([{ _id: 'u1', tipo: 'uso', data: '2026-09-29' }, { _id: 'c1', tipo: 'credito', data: '2026-09-30' }]), false);
+});
+prova('pura: a estadia cobria o dia? (o hóspede entra na chamada do Day Care)', () => {
+  const C = (e) => run('repEstadiaCobre(' + JSON.stringify(e) + ", '2026-09-30')");
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01' }), true);
+  assert.strictEqual(C({ entrada: '2026-09-30', saida: '2026-09-30' }), true);
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01', status: 'cancelada' }), false);
+  assert.strictEqual(C({ entrada: '2026-09-29', saida: '2026-10-01', status: 'recusada' }), false);
+  assert.strictEqual(C({ entrada: '2026-10-01', saida: '2026-10-03' }), false, 'começou depois');
+  assert.strictEqual(C({ entrada: '2026-09-20', saida: '2026-09-29' }), false, 'acabou antes');
+  assert.strictEqual(C({ entrada: '2026-09-20' }), true, 'ativa, sem saída');
+  assert.strictEqual(C({ entrada: '2026-09-20', status: 'finalizada' }), false, 'encerrada sem saída anotada: não se inventa');
+  assert.strictEqual(C({ saida: '2026-10-01' }), false, 'sem entrada não conta');
+});
+prova('com o uso do dia marcado, a linha "Estava marcada…" sai e o saldo desce 1', () => {
+  ctx.__T = TROCA625;
+  const L = [TROCA625];
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('repVoltasVencidas(' + JSON.stringify(L) + ",'2026-10-01')"))).map((l) => l._id), ['c1'], 'antes: a do Billy Paul aparece');
+  const uso = Object.assign({ _id: NO625 }, JSON.parse(JSON.stringify(run("repVeioRegistro(__T, false, 'x', 1)"))));
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(run('repVoltasVencidas(' + JSON.stringify(L.concat([uso])) + ",'2026-10-01')"))), [], 'depois: sai');
+  run(`__bk625s=repLancamentos; repLancamentos=function(){ return ${JSON.stringify(L.concat([uso]))}; };`);
+  try { assert.strictEqual(run('repSaldo({})'), 0, 'a troca cumprida não deixa reposição sobrando'); }
+  finally { run('repLancamentos=__bk625s;'); }
+});
+provaAsync('«ele veio» na troca do Billy Paul: grava o uso de 30/09 no nó veio-2026-09-30 e diz "TROCA CUMPRIDA"', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    const k = noDe625(0);
+    assert.deepStrictEqual(B.escritos, [k], 'um nó só, o do dia');
+    const g = B.dados[k];
+    assert.strictEqual(g.tipo, 'uso'); assert.strictEqual(g.data, '2026-09-30'); assert.strictEqual(g.motivo, 'troca');
+    assert.strictEqual(g.credito, 'c1'); assert.strictEqual(g.quem, 'Recepção Teste'); assert.strictEqual(g.veio_auto, false);
+    const per = run('__pergunta');
+    assert.strictEqual(per.t, 'Billy Paul veio na quarta-feira, 30/09?');
+    assert.strictEqual(per.l[0], 'Pela troca, no lugar de 29/09.', 'a data curta, como no resto da tela');
+    assert.strictEqual(run('__alertao.t'), 'TROCA CUMPRIDA');
+    assert.strictEqual(run('__alertao.l.join(" | ")'), 'Billy Paul veio na quarta-feira, 30/09, no lugar de 29/09. | As reposições continuam 0.');
+    assert.strictEqual(run('__modal'), null, 'troca não manda mensagem de reposição ao tutor');
+    assert.ok(run('__audit.join(" ")').indexOf('marcado depois') >= 0, 'deixa rastro');
+  } finally { desfaz625(); }
+});
+provaAsync('«ele veio» com o cache atrasado (outro aparelho acabou de marcar): nada é regravado, e a frase diz a verdade', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    const k = noDe625(0);
+    B.dados[k] = { tipo: 'uso', data: '2026-09-30', veio_auto: true, obs: 'já estava' };
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado');
+    assert.strictEqual(B.dados[k].obs, 'já estava', 'o registro anterior fica');
+    assert.strictEqual(run('__alertao.t'), 'JÁ ESTAVA MARCADO');
+    assert.strictEqual(run('__alertao.l[0]'), 'Billy Paul já tem a vinda de 30/09 registrada, por outro aparelho ou pelo check-in daquele dia.');
+  } finally { desfaz625(); }
+});
+provaAsync('«ela veio» numa reposição comum: o saldo desce 1, o modal diz o saldo novo e a mensagem diz "usou 1 em 30/09/2026"', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Luna', tutor:'Ana Teste', dias:['seg'], sexo:'Fêmea'}];
+    __L625={'Luna':[${JSON.stringify(REPO625)}, {_id:'c3', tipo:'credito', data:'2026-09-23'}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    const k = noDe625(0);
+    assert.strictEqual(B.dados[k].motivo, 'reposicao'); assert.strictEqual(B.dados[k].data, '2026-09-30');
+    assert.ok(/Ela repôs na quarta-feira, 30\/09/.test(run('__pergunta.l.join(" ")')));
+    assert.strictEqual(run('__pergunta.o.sim'), 'Ela veio', 'o botão do confirmar pela ficha');
+    assert.ok(/Saldo agora: 2\. Depois de marcar: 1\./.test(run('__pergunta.l.join(" ")')));
+    assert.strictEqual(run('__pergunta.l.join(" ")').indexOf('pela troca'), -1);
+    const m = run('__modal');
+    assert.ok(m && /Reposição registrada/.test(m.t), 'o modal com a mensagem pronta');
+    assert.strictEqual(m.l[0], 'Luna repôs na quarta-feira, 30/09. Saldo agora: 1.', 'o saldo DEPOIS de marcar');
+    assert.ok(/usou 1 em 30\/09\/2026, ficará com 1/.test(m.texto), m && m.texto);
+    assert.ok(/a Luna/.test(m.texto), 'o artigo pela ficha');
+  } finally { desfaz625(); }
+});
+provaAsync('«ele veio» não grava: dia que não passou, dia que já tem vinda, saldo já usado, nem quem não lança reposição', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(Object.assign({}, TROCA625, { volta: '2026-10-01', troca: { de: '2026-09-29', para: '2026-10-01' } }))}]};`);
+  try {
+    await run("repVeioNoDia(0, '2026-10-01')"); await espera();
+    assert.ok(/ainda não passou/.test(run('__alerta')), 'hoje é «Veio repor hoje»');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}, {_id:'u9', tipo:'uso', data:'2026-09-30'}]}; __alerta=null;`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.strictEqual(run('__alertao.t'), 'JÁ HÁ UM USO EM 30/09', 'já tinha uso naquele dia');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}, {_id:'u8', tipo:'uso', data:'2026-09-25'}]}; __alerta=null;`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.ok(/Não achei a reposição marcada/.test(run('__alerta')), 'saldo já usado: a marcada não vale mais');
+    run(`__L625={'Billy Paul':[${JSON.stringify(TROCA625)}]}; __alerta=null; repPodeLancar=function(){ return false; };`);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.ok(/recepção, a Supervisão ou a Gestão/.test(run('__alerta')), 'papel sem reposição');
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado em nenhum dos quatro');
+  } finally { desfaz625(); }
+});
+provaAsync('vinda DEVOLVIDA no Extrato: a linha volta, «ele veio» grava no nó seguinte (-2) e a baixa sozinha não refaz nem relê', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  const usoV = { _id: NO625, tipo: 'uso', data: '2026-09-30', motivo: 'troca', credito: 'c1', veio_auto: true };
+  const dev = { _id: 'dev-' + NO625, tipo: 'estorno', estornaId: NO625, dia_devolvido: '2026-09-30' };
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}];
+    __L625={'Billy Paul':[${JSON.stringify(TROCA625)}, ${JSON.stringify(usoV)}, ${JSON.stringify(dev)}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo(PELUDINHOS[0], null, '2026-10-01')"))).map((l) => l._id), ['c1'], 'a linha volta');
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r.conferidos, 0); assert.deepStrictEqual(B.lidos, [], 'nem lê a chamada'); assert.deepStrictEqual(B.escritos, []);
+    await run("repVeioNoDia(0, '2026-09-30')"); await espera();
+    assert.deepStrictEqual(B.escritos, [noDe625(0, NO625 + '-2')], 'a pessoa pode marcar de novo');
+    assert.strictEqual(run('__alertao.t'), 'TROCA CUMPRIDA');
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha: o Billy Paul passou pelo check-in em 30/09 e a troca é dada como cumprida — e nunca duas vezes', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[
+      {n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']},
+      {n:'Luna', tutor:'Ana Teste', dias:['qua']},
+      {n:'Thor', tutor:'Bia Teste', dias:['seg']},
+      {n:'Bidu', tutor:'Caio Teste', dias:['seg']},
+      {n:'Kiko', tutor:'Duda Teste', dias:['sex']},
+      {n:'Mel', tutor:'Eva Teste', dias:['seg']},
+      {n:'Duo', tutor:'Fabi Teste', dias:['seg']},
+      {n:'Nina', tutor:'Gil Teste', dias:['seg']},
+      {n:'Lola', tutor:'Hel Teste', dias:['seg']},
+      {n:'Zeca', tutor:'Ivo Teste', dias:['seg'], inativo:true},
+      {n:'Rex', tutor:'Jo Teste', dias:['seg']},
+      {n:'Mimi', tutor:'Kel Teste', dias:['seg']}];
+    __L625={'Billy Paul':[${JSON.stringify(TROCA625)}],
+      'Luna':[${JSON.stringify(REPO625)}],
+      'Thor':[${JSON.stringify(REPO625)}],
+      'Bidu':[${JSON.stringify(REPO625)}],
+      'Kiko':[{_id:'c4', tipo:'credito', data:'2026-07-01', volta:'2026-07-20'}],
+      'Mel':[${JSON.stringify(REPO625)}],
+      'Duo':[{_id:'d1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'d2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}],
+      'Nina':[{_id:'a1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'a2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}, {_id:'u1', tipo:'uso', data:'2026-09-30'}],
+      'Lola':[${JSON.stringify(REPO625)}],
+      'Zeca':[${JSON.stringify(REPO625)}],
+      'Rex':[${JSON.stringify(REPO625)}, {_id:'u7', tipo:'uso', data:'2026-09-25'}],
+      'Mimi':[${JSON.stringify(REPO625)}]};
+    EST_TODAS={e1:{refKey:pelKey(PELUDINHOS[8]), nome:'Lola', tutor:'Hel Teste', entrada:'2026-09-29', saida:'2026-10-01'},
+      e2:{nome:'Mimi', tutor:'Kel Teste', entrada:'2026-09-30', saida:'2026-09-30', status:'finalizada'}};`);
+  try {
+    const dk = (i) => run(`dcKey(PELUDINHOS[${i}].n, PELUDINHOS[${i}].tutor)`);
+    ['Billy Paul', 'Luna', 'Duo', 'Nina', 'Lola', 'Zeca', 'Rex', 'Mimi'].forEach((n) => {
+      const i = run(`PELUDINHOS.map(function(p){ return p.n; }).indexOf('${n}')`);
+      B.dados['daycare/chamada/2026-09-30/' + dk(i)] = 'veio';
+    });
+    B.dados['daycare/chamada/2026-09-30/' + dk(2)] = 'faltou';                     // Thor: faltou na chamada…
+    B.dados['daycare/checkin-corpo/2026-09-30/' + dk(2) + '/fim'] = 1759223700000; // …e um check-in que contradiz: não vale
+    B.dados['daycare/chamada/2026-07-20/' + dk(4)] = 'veio';                       // Kiko: mais de 60 dias
+    B.dados['daycare/checkin-corpo/2026-09-30/' + dk(5) + '/fim'] = 1759223700000; // Mel: só o check-in
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    await espera();
+    assert.deepStrictEqual(B.escritos.slice().sort(), [noDe625(0), noDe625(5), noDe625(6)].sort(),
+      'Billy Paul (chamada), Mel (só check-in) e Duo (UMA baixa para duas marcadas); ficam Luna (dia fixo), Thor (faltou), Bidu (sem registro), Kiko (60 dias), Nina (já veio no dia), Lola e Mimi (hospedadas), Zeca (inativo) e Rex (saldo já usado)');
+    assert.ok(!B.lidos.some((c) => c.indexOf('checkin-corpo') >= 0 && c.indexOf(dk(2)) >= 0), 'com "faltou" na chamada, o check-in nem é lido');
+    const g = B.dados[noDe625(0)];
+    assert.strictEqual(g.veio_auto, true); assert.strictEqual(g.quem, 'sistema'); assert.strictEqual(g.data, '2026-09-30'); assert.strictEqual(g.credito, 'c1');
+    assert.strictEqual(g.obs, 'Baixa automática pelo check-in de 30/09, pela troca de 29/09');
+    assert.strictEqual(r.feitos, 3); assert.strictEqual(r.conferidos, 5, 'só Billy Paul, Thor, Bidu, Mel e Duo são lidos');
+    assert.ok(!B.lidos.some((c) => c.indexOf('2026-07-20') >= 0), 'o dia de julho não é lido');
+    assert.ok(!B.lidos.some((c) => c.indexOf('checkin-corpo') >= 0 && c.indexOf(dk(0)) >= 0), 'com "veio" na chamada, o check-in nem é lido');
+    assert.ok(B.lidos.indexOf('daycare/checkin-corpo/2026-09-30/' + dk(5) + '/fim') >= 0, 'do check-in, só o campo fim');
+    assert.ok(/Billy Paul \(30\/09, troca\)/.test(run('__audit.join(" ")')), 'o rastro diz quem');
+    // 2ª rodada, 11 minutos depois, com o cache JÁ trazendo as vindas gravadas (o ouvinte do banco):
+    // a 2ª marcada do Duo vira "vencida" e mesmo assim não ganha outra baixa (QA65, S1).
+    Object.keys(B.dados).filter((c) => /\/lancamentos\//.test(c)).forEach((c) => {
+      const i = [0, 5, 6].filter((j) => c === noDe625(j))[0];
+      if (i !== undefined) run(`__L625[PELUDINHOS[${i}].n].push(Object.assign({_id:'${NO625}'}, ${JSON.stringify(B.dados[c])}));`);
+    });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo(PELUDINHOS[6], null, '2026-10-01')"))).map((l) => l._id), ['d2'], 'a 2ª marcada do Duo aparece como vencida');
+    B.escritos.length = 0; B.lidos.length = 0;
+    run('_repVeioTs=Date.now()-11*60000;');
+    const r2 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(false)')));
+    assert.deepStrictEqual(B.escritos, [], 'uma vinda, uma baixa'); assert.strictEqual(r2.feitos, 0);
+    assert.deepStrictEqual(B.lidos, [], 'o que já foi lido sem "veio" (Thor, Bidu) não é relido nesta sessão');
+    // E sem forçar, dentro dos 10 minutos, nem confere.
+    const r3 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(false)')));
+    assert.strictEqual(r3.pulou, true);
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha espera: aparelho de ontem, papel sem reposição, tutor, reposições, cadastro ou estadias ainda chegando', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    const ok = async () => JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)'))).ok;
+    run('appDiaVelho=function(){ return true; };'); assert.strictEqual(await ok(), false, 'aparelho aberto desde ontem');
+    run('appDiaVelho=function(){ return false; }; repPodeLancar=function(){ return false; };'); assert.strictEqual(await ok(), false, 'papel');
+    run("repPodeLancar=function(){ return true; }; __bkRole=document.body.dataset.role; document.body.dataset.role='tutor';");
+    try { assert.strictEqual(await ok(), false, 'tutor'); } finally { run('document.body.dataset.role=__bkRole;'); }
+    run('REPO_CACHE={};'); assert.strictEqual(await ok(), false, 'reposições carregando');
+    run('REPO_CACHE={x:{}}; CARTEIRA_CARREGADA=false;'); assert.strictEqual(await ok(), false, 'cadastro carregando (QA65: PELUDINHOS nunca está vazio)');
+    run('CARTEIRA_CARREGADA=true; CF_ESTADIAS_LIDO=false;'); assert.strictEqual(await ok(), false, 'estadias carregando');
+    assert.deepStrictEqual(B.lidos, [], 'nenhuma leitura'); assert.deepStrictEqual(B.escritos, [], 'nenhuma gravação');
+    run('CF_ESTADIAS_LIDO=true;'); assert.strictEqual(await ok(), true, 'com tudo carregado, roda');
+    assert.strictEqual(B.escritos.length, 1);
+  } finally { desfaz625(); }
+});
+provaAsync('a baixa sozinha não fica presa em "já está conferindo" depois de um erro', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};
+    pelInativo=function(){ throw new Error('ficha estranha'); };`);
+  try {
+    const r1 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r1.ok, false); assert.ok(run('__falhas.join(" ")').indexOf('ficha estranha') >= 0, 'o erro fica registrado');
+    run('pelInativo=function(){ return false; }; DB={ref:function(){ return {once:function(){ return Promise.reject(new Error("sem rede")); }}; }};');
+    const r2 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r2.ok, true, 'não ficou preso'); assert.strictEqual(r2.feitos, 0);
+    run('DB=__B;');
+    const r3 = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.notStrictEqual(r3.motivo, 'já está conferindo');
+  } finally { desfaz625(); }
+});
+provaAsync('devolvida no Extrato (de qualquer caminho) não é refeita pela baixa; a do «Tirar só o lançamento» é', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Rex', tutor:'Jo Teste', dias:['seg']}, {n:'Tom', tutor:'Lu Teste', dias:['seg']}];
+    __L625={'Rex':[${JSON.stringify(REPO625)}, {_id:'u1', tipo:'uso', data:'2026-09-30'}, {_id:'dev-u1', tipo:'estorno', estornaId:'u1', dia_devolvido:'2026-09-30', obs:'a tutora cancelou'}],
+      'Tom':[${JSON.stringify(REPO625)}, {_id:'u2', tipo:'uso', data:'2026-09-30'}, {_id:'dev-u2', tipo:'estorno', estornaId:'u2', dia_devolvido:'2026-09-30', so_lancamento:true}]};`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[1].n, PELUDINHOS[1].tutor)')] = 'veio';
+    await run('repBaixaPelaPresenca(true)'); await espera();
+    assert.deepStrictEqual(B.escritos, [noDe625(1)], 'só o Tom: o lançamento repetido saiu, a vinda continua');
+    assert.strictEqual(run(`repVeioDevolvido(${JSON.stringify([{ tipo: 'estorno', dia_devolvido: '2026-09-30' }])}, '2026-09-30')`), true);
+    assert.strictEqual(run(`repVeioDevolvido(${JSON.stringify([{ tipo: 'estorno', dia_devolvido: '2026-09-30', so_lancamento: true }])}, '2026-09-30')`), false);
+  } finally { desfaz625(); }
+});
+provaAsync('o «Tirar só o lançamento» marca a devolução (so_lancamento); o «Devolver» do Extrato não', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Tom', tutor:'Lu Teste'}];`);
+  try {
+    await run(`repDevolverUsoGravar(PELUDINHOS[0], {_id:'u2', data:'2026-09-30'}, 'tirada', {so_lancamento:true})`);
+    await run(`repDevolverUsoGravar(PELUDINHOS[0], {_id:'u3', data:'2026-09-30'}, 'a tutora cancelou')`);
+    const base = 'daycare/reposicao/' + run('pelKey(PELUDINHOS[0])') + '/lancamentos/';
+    assert.strictEqual(B.dados[base + 'dev-u2'].so_lancamento, true);
+    assert.strictEqual('so_lancamento' in B.dados[base + 'dev-u3'], false);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(src.indexOf("(credDia && !desmarcarTambem)?{so_lancamento:true}:null).then(function(){") >= 0, 'só no «Tirar só o lançamento»');
+  } finally { desfaz625(); }
+});
+provaAsync('«Veio repor hoje» num dia que já tem uso pergunta antes; "Não marcar" não grava', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Thor', tutor:'Bia Teste', dias:['seg']}];
+    __L625={'Thor':[{_id:'c8', tipo:'credito', data:'2026-09-20'}, {_id:'c9', tipo:'credito', data:'2026-09-21'}, {_id:'u5', tipo:'uso', data:'2026-10-01'}]};
+    __resposta=false;`);
+  try {
+    await run('repUsar(0)'); await espera();
+    assert.strictEqual(run('__pergunta.t'), 'Thor já tem um uso registrado hoje');
+    assert.strictEqual(run('__pergunta.o.sim'), 'Marcar mesmo assim');
+    assert.deepStrictEqual(B.escritos, [], 'nada gravado');
+    run(`__L625={'Thor':[{_id:'c8', tipo:'credito', data:'2026-09-20'}]}; __pergunta=null;`);
+    await run('repUsar(0)'); await espera();
+    assert.strictEqual(run('__pergunta.t'), 'Marcar reposição de Thor?', 'sem uso no dia, o fluxo de sempre');
+  } finally { desfaz625(); }
+});
+provaAsync('a estadia que não dá para ler segura a baixa (fica o botão); e a trava solta mesmo quando o próprio registro de erro falha', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  stubs625(`DB=__B; PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}]; __L625={'Billy Paul':[${JSON.stringify(TROCA625)}]};
+    EST_TODAS={}; Object.defineProperty(EST_TODAS, 'e1', {enumerable:true, get:function(){ throw new Error('estadia ilegível'); }});`);
+  try {
+    B.dados['daycare/chamada/2026-09-30/' + run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)')] = 'veio';
+    const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)')));
+    assert.strictEqual(r.conferidos, 0); assert.deepStrictEqual(B.escritos, [], 'sem saber da estadia, não dá baixa');
+    // a cadeia inteira falha (leitura recusada E o registro de erro também): a trava não fica presa
+    run(`EST_TODAS={}; _logFalhaGrav=function(){ throw new Error('o registro de erro também falhou'); };
+      DB={ref:function(){ return {once:function(){ return Promise.reject(new Error('sem rede')); }}; }};`);
+    await run('repBaixaPelaPresenca(true)').then(() => {}, () => {});
+    assert.strictEqual(run('_repVeioRodando'), false, 'a trava soltou');
+  } finally { desfaz625(); }
+});
+provaAsync('Reposição lançada à mão num dia que já tem uso: pergunta; "Lançar sem abater" não desconta; "Abater mesmo assim" passa pela checagem de saldo', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  run(`__bk625d={P:PELUDINHOS, R:REPO_CACHE, DB:DB, dd:DASH_DADOS, ds:DASH_DIA_SEL, esp:dashEspelhar, rd:renderDash, au:audit, ze:zEscolha, ab:dashRepAbater, t:DC_DASH_TURMA};
+    PELUDINHOS=[{n:'Thor', raca:'SRD', tutor:'Bia Teste'}];
+    REPO_CACHE={}; REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{c2:${JSON.stringify(REPO625)}, c5:{tipo:'credito', data:'2026-09-10'}, '${NO625}':{tipo:'uso', data:'2026-09-30', veio_auto:true}}};
+    DASH_DADOS={}; DASH_DIA_SEL='2026-09-30'; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
+    dashEspelhar=function(){ return Promise.resolve({ok:true}); }; renderDash=function(){}; audit=function(){};
+    __esc=[]; zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b}); }; __abat=0; dashRepAbater=function(){ __abat++; return Promise.resolve(true); };
+    DB=__B;`);
+  try {
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    const e = run('__esc[0]');
+    assert.ok(e && e.t === 'Thor já tem um uso registrado em 30/09', JSON.stringify(e && e.t));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(e.b.map((x) => x.t))), ['Lançar sem abater', 'Abater mesmo assim', 'Não lançar']);
+    assert.deepStrictEqual(B.escritos, [], 'nada antes de a pessoa escolher');
+    run('__esc[0].b[0].fn()'); await espera();
+    assert.strictEqual(B.escritos.filter((c) => /dashboard\/2026-09-30\/reposicao\//.test(c)).length, 1, 'a planilha recebe');
+    assert.strictEqual(run('__abat'), 0, 'o Banco não desconta de novo');
+    // QA66: «Abater mesmo assim» com saldo 0 cai no cartaz "não tem saldo" (nunca saldo negativo)
+    run(`DASH_DADOS={}; __esc=[]; REPO_CACHE[pelKey(PELUDINHOS[0])].lancamentos.u2={tipo:'uso', data:'2026-09-29'};`);
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    run('__esc[0].b[1].fn()'); await espera();
+    assert.strictEqual(run('__esc.length'), 2); assert.strictEqual(run('__esc[1].t'), 'Thor não tem saldo de reposição');
+    assert.strictEqual(run('__abat'), 0, 'nada abatido sem saldo');
+    // com saldo, «Abater mesmo assim» abate (a pessoa disse)
+    run(`DASH_DADOS={}; __esc=[]; delete REPO_CACHE[pelKey(PELUDINHOS[0])].lancamentos.u2;`);
+    run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+    run('__esc[0].b[1].fn()'); await espera();
+    assert.strictEqual(run('__esc.length'), 1, 'sem outro cartaz'); assert.strictEqual(run('__abat'), 1, 'abateu porque a pessoa disse');
+    // e com o único dia livre reservado em hospedagem, «Abater mesmo assim» avisa a reserva antes (QA67 R24)
+    run(`DASH_DADOS={}; __esc=[]; __abat=0; __bkRes=repReservado; repReservado=function(){ return 2; };`);
+    try {
+      run("dashLancar('reposicao', 'Thor/SRD', 0)"); await espera();
+      run('__esc[0].b[1].fn()'); await espera();
+      assert.strictEqual(run('__esc.length'), 2); assert.strictEqual(run('__esc[1].t'), 'Thor tem saldo, mas ele está reservado');
+      assert.strictEqual(run('__abat'), 0, 'nada abatido antes de a pessoa decidir');
+    } finally { run('repReservado=__bkRes;'); }
+  } finally {
+    run('PELUDINHOS=__bk625d.P; REPO_CACHE=__bk625d.R; DB=__bk625d.DB; DASH_DADOS=__bk625d.dd; DASH_DIA_SEL=__bk625d.ds; dashEspelhar=__bk625d.esp; renderDash=__bk625d.rd; audit=__bk625d.au; zEscolha=__bk625d.ze; dashRepAbater=__bk625d.ab; DC_DASH_TURMA=__bk625d.t;');
+  }
+});
+prova('a tela: «ele veio» ao lado de «desmarcar», a frase sem "não repôs", a baixa ao desenhar e os dois relógios', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const ini = src.indexOf('function renderReposicao(){'), fim = src.indexOf('function repAbrirExtrato(i){');
+  const r = src.slice(ini, fim);
+  assert.ok(r.indexOf('repBaixaPelaPresenca(false)') >= 0, 'a tela chama a baixa');
+  assert.ok(r.indexOf("lnk('repVeioNoDia', l.volta, eleV+' veio')") >= 0, 'o botão passa o dia marcado');
+  assert.ok(r.indexOf("': a vinda não foi marcada'") >= 0);
+  assert.ok(r.indexOf("+' não repôs'") < 0, 'a tela não afirma mais que ele não repôs');
+  assert.ok(/setTimeout\(function\(\)\{ try\{ repBaixaPelaPresenca\(false\); \}[^\n]*\}, 30000\);/.test(src), 'pouco depois de abrir o app');
+  assert.ok(/setInterval\(function\(\)\{ try\{ repBaixaPelaPresenca\(false\); \}[^\n]*\}, REP_VEIO_MIN\*60000\);/.test(src), 'e de 10 em 10 minutos');
+});
+prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «desmarcar»; a 2ª marcada do mesmo dia só desmarca', () => {
+  run(`__bk625r={ge:document.getElementById, L:repLancamentos, S:repSaldo, D:repDisponivel, H:repHojeISO, P:PELUDINHOS, B:repBaixaPelaPresenca, PL:repPodeLancar, V:vagasGarantirDias, PE:pelExtra, I:pelInativo};
+    __el625={innerHTML:''}; document.getElementById=function(id){ return id==='repLista'?__el625:null; };
+    PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}, {n:'Luna', tutor:'Ana Teste', dias:['seg'], sexo:'Fêmea'},
+      {n:'Bis', tutor:'Caio Teste', dias:['seg']}, {n:'Nina', tutor:'Gil Teste', dias:['seg']}];
+    __Lr={'Billy Paul':[${JSON.stringify(TROCA625)}], 'Luna':[${JSON.stringify(REPO625)}],
+      'Bis':[{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-28'}}],
+      'Nina':[{_id:'a1', tipo:'credito', data:'2026-09-21', volta:'2026-09-30'}, {_id:'a2', tipo:'credito', data:'2026-09-22', volta:'2026-09-30'}, {_id:'a3', tipo:'credito', data:'2026-09-23'}, {_id:'u1', tipo:'uso', data:'2026-09-30'}]};
+    repLancamentos=function(p){ return (__Lr[p.n]||[]).slice(); };
+    repSaldo=function(p){ var L=__Lr[p.n]||[]; return L.filter(function(l){ return l.tipo==='credito'; }).length-L.filter(function(l){ return l.tipo==='uso'; }).length; };
+    repDisponivel=function(p){ return repSaldo(p); }; repHojeISO=function(){ return '2026-10-01'; };
+    repBaixaPelaPresenca=function(){ return Promise.resolve({}); }; repPodeLancar=function(){ return true; };
+    vagasGarantirDias=function(){}; pelExtra=function(p){ return {sexo:(p&&p.sexo)||''}; }; pelInativo=function(){ return false; };`);
+  try {
+    run('renderReposicao()');
+    const h = run('__el625.innerHTML');
+    const linha = (n) => { const i = h.indexOf('<div class="rp-nome">' + n + '</div>'); return h.slice(i, h.indexOf('<div class="rp-acoes">', i)); };
+    const b = linha('Billy Paul');
+    assert.ok(b.indexOf('Estava marcada para 30/09/2026 (troca, no lugar de 29/09): a vinda não foi marcada · ') >= 0, b.slice(0, 500));
+    assert.ok(/repVeioNoDia\(0,'2026-09-30'\)"[^>]*>ele veio<\/button> · <button type="button" onclick="repDesmarcar\(0,'2026-09-30'\)"[^>]*>desmarcar<\/button>/.test(b));
+    assert.ok(!/não repôs/.test(h));
+    assert.ok(/repVeioNoDia\(1,'2026-09-30'\)"[^>]*>ela veio<\/button>/.test(linha('Luna')), 'ela, pela ficha');
+    assert.ok(linha('Bis').indexOf('(troca') < 0, 'troca remarcada (o dia não é mais o da troca) não leva o rótulo de troca');
+    const n = linha('Nina');
+    assert.ok(n.indexOf('Marcada outra vez para 30/09/2026: esse dia já tem um uso registrado (veja o Extrato) · ') >= 0, n.slice(0, 500));
+    assert.ok(n.indexOf('repVeioNoDia(') < 0 && n.indexOf("repDesmarcar(3,'2026-09-30')") >= 0, 'só desmarcar');
+  } finally {
+    run(`document.getElementById=__bk625r.ge; repLancamentos=__bk625r.L; repSaldo=__bk625r.S; repDisponivel=__bk625r.D; repHojeISO=__bk625r.H;
+      PELUDINHOS=__bk625r.P; repBaixaPelaPresenca=__bk625r.B; repPodeLancar=__bk625r.PL; vagasGarantirDias=__bk625r.V; pelExtra=__bk625r.PE; pelInativo=__bk625r.I;`);
+  }
+});
+// ================================================================== 6.26 — horários prontos
+console.log('\n6.26 — Lançamentos do dia: horários prontos em um toque (Adriana, 02/out/2026)');
+prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho vai até 17:45', () => {
+  const g = (k) => JSON.parse(JSON.stringify(run(`dashHoraGrade('${k}')`)));
+  const v = g('vet'), b = g('banho');
+  assert.strictEqual(v[0], '08:00'); assert.strictEqual(v[1], '08:15'); assert.strictEqual(v[v.length - 1], '17:30'); assert.strictEqual(v.length, 39);
+  assert.strictEqual(b[b.length - 1], '17:45'); assert.strictEqual(b.length, 40);
+  ['14:00', '14:15', '14:30', '14:45', '13:00', '15:00', '17:00'].forEach((t) => assert.ok(v.indexOf(t) >= 0, t));
+  ['medicacao', 'saicedo', 'avaliacao'].forEach((k) => assert.strictEqual(g(k).slice(-1)[0], '17:30', k));
+});
+prova('a tela: as horas 8h a 17h; tocada a hora, os minutos dela; o relógio guardado em «outro horário»', () => {
+  run('__bk626={h:DASH_HORA, o:DASH_HORA_OUTRO}; DASH_HORA={}; DASH_HORA_OUTRO={};');
+  try {
+    const h0 = run("dashHorarioHTML('vet')");
+    const horas = (h0.match(/onclick="dashHoraHora\('vet','\d\d'\)">\d+h<\/button>/g) || []).map((x) => x.replace(/.*>(\d+h)<.*/, '$1'));
+    assert.deepStrictEqual(horas, ['8h', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h']);
+    assert.ok(/— toque na hora/.test(h0), 'sem hora escolhida, a tela diz o que fazer');
+    assert.ok(h0.indexOf('dashHoraEscolher(') < 0, 'os minutos só aparecem depois da hora');
+    assert.ok(/<div style="margin-top:6px;display:none"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_vet" style="max-width:140px" value="" onchange="dashHoraOutro\('vet',this\.value\)"><\/div>/.test(h0), 'o relógio continua, guardado, e avisa quando mexem nele');
+    run("DASH_HORA.banho='14:30';");
+    const hv = run("dashHorarioHTML('vet')");
+    assert.ok(/— toque na hora/.test(hv) && /id="dashH_vet" style="max-width:140px" value=""/.test(hv), 'a hora do banho não gruda no veterinário');
+    assert.ok(/min-height:42px/.test(hv), 'botão grande para o dedo');
+    assert.ok(/padding:10px 4px 10px 0;[^"]*" onclick="dashHoraAbrirOutro\('vet'\)">outro horário/.test(hv), 'o link "outro horário" também é fácil de tocar');
+    run("DASH_HORA.vet='14:10';");
+    const h10 = run("dashHorarioHTML('vet')");
+    assert.ok(h10.indexOf('background:var(--z-blue)') < 0 && /<div style="margin-top:6px"><span class="hint">Outro horário:/.test(h10), '14:10 (fora da grade): nada aceso, relógio aberto');
+    run("delete DASH_HORA.vet; delete DASH_HORA.banho;");
+    assert.ok(/onclick="dashHoraAbrirOutro\('vet'\)">outro horário<\/button>/.test(h0));
+    run("DASH_HORA.vet='14:30';");
+    const h1 = run("dashHorarioHTML('vet')");
+    assert.ok(/Horário: <strong>14:30<\/strong>/.test(h1));
+    const mins = (h1.match(/dashHoraEscolher\('vet','14:\d\d'\)">14:\d\d<\/button>/g) || []).map((x) => x.replace(/.*>(14:\d\d)<.*/, '$1'));
+    assert.deepStrictEqual(mins, ['14:00', '14:15', '14:30', '14:45']);
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="dashHoraEscolher\('vet','14:30'\)"/.test(h1), 'o 14:30 aceso');
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="dashHoraHora\('vet','14'\)"/.test(h1), 'o 14h aceso');
+    assert.ok(/id="dashH_vet" style="max-width:140px" value="14:30"/.test(h1), 'o relógio tem a mesma hora (é dele que o lançamento lê)');
+    run("DASH_HORA.vet='17:00'; DASH_HORA.banho='17:00';");
+    assert.ok(run("dashHorarioHTML('vet')").indexOf("'17:45'") < 0, 'o veterinário para em 17:30');
+    assert.ok(run("dashHorarioHTML('banho')").indexOf("dashHoraEscolher('banho','17:45')") >= 0, 'o banho ainda tem 17:45');
+    run("DASH_HORA.medicacao='20:00';");
+    const h2 = run("dashHorarioHTML('medicacao')");
+    assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_medicacao" style="max-width:140px" value="20:00"/.test(h2), 'fora da grade: o relógio aparece aberto, com a hora');
+    assert.ok(h2.indexOf('dashHoraAbrirOutro(') < 0 && h2.indexOf('background:var(--z-blue)') < 0, 'e nenhuma hora acesa');
+  } finally { run('DASH_HORA=__bk626.h; DASH_HORA_OUTRO=__bk626.o;'); }
+});
+prova('os toques: a hora já vale a hora cheia; os minutos trocam; tocar de novo na hora não apaga os minutos; o relógio recebe', () => {
+  run(`__bk626b={h:DASH_HORA, o:DASH_HORA_OUTRO, ge:document.getElementById, rd:renderDash}; DASH_HORA={}; DASH_HORA_OUTRO={};
+    __rel={value:''}; __rd=0; document.getElementById=function(id){ return id==='dashH_vet'?__rel:null; }; renderDash=function(){ __rd++; };`);
+  try {
+    run("dashHoraHora('vet','14')");
+    assert.strictEqual(run('DASH_HORA.vet'), '14:00'); assert.strictEqual(run('__rel.value'), '14:00', 'um toque: 14:00, já no relógio');
+    run("dashHoraEscolher('vet','14:30')");
+    assert.strictEqual(run('__rel.value'), '14:30');
+    run("dashHoraHora('vet','14')");
+    assert.strictEqual(run('__rel.value'), '14:30', 'a mesma hora não apaga os minutos');
+    run("dashHoraHora('vet','15')");
+    assert.strictEqual(run('__rel.value'), '15:00', 'outra hora: hora cheia');
+    run("dashHoraAbrirOutro('vet')"); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), true);
+    run("dashHoraOutro('vet','07:40')");
+    assert.strictEqual(run('DASH_HORA.vet'), '07:40'); assert.strictEqual(run('__rel.value'), '07:40');
+    run("dashHoraOutro('vet','09:10'); dashHoraHora('vet','09')");
+    assert.strictEqual(run('__rel.value'), '09:00', '09:10 fora da grade + toque no 9h = 9:00 (não mantém o fora da grade)');
+    run("dashHoraOutro('vet','07:40'); dashHoraHora('vet','09')");
+    assert.strictEqual(run('__rel.value'), '09:00'); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), false, 'voltou para a grade: o relógio se guarda');
+    run("dashHoraAbrirOutro('vet'); dashHoraEscolher('vet','09:15')");
+    assert.strictEqual(run('__rel.value'), '09:15'); assert.strictEqual(run('DASH_HORA_OUTRO.vet'), false, 'escolher os minutos também guarda o relógio');
+    assert.strictEqual(run('__rd'), 12, 'cada um dos 12 toques redesenha uma vez (o botão Lançar e a frase da planilha dizem a hora certa)');
+    // a hora vai para o relógio ANTES de redesenhar: o redesenho guarda o que está no relógio
+    run(`__ordem=[]; __rel={get value(){ return this._v||''; }, set value(x){ __ordem.push('relógio'); this._v=x; }}; renderDash=function(){ __ordem.push('redesenho'); };`);
+    run("dashHoraEscolher('vet','10:15')");
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__ordem'))), ['relógio', 'redesenho']);
+  } finally { run('DASH_HORA=__bk626b.h; DASH_HORA_OUTRO=__bk626b.o; document.getElementById=__bk626b.ge; renderDash=__bk626b.rd;'); }
+});
+prova('o redesenho adota a hora que está no relógio (QA68: rótulo e botões nunca contradizem o lançamento)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf("if(h && typeof DASH_HORA==='object' && DASH_HORA && h.value!==String(DASH_HORA[i.k]||'')) DASH_HORA[i.k]=h.value;") >= 0);
+  run(`__bk626c={h:DASH_HORA, ge:document.getElementById}; DASH_HORA={vet:'09:45'};
+    __els626={dashH_vet:{value:'15:10'}, dashBlocos:{innerHTML:''}};
+    document.getElementById=function(id){ return __els626[id]||null; };`);
+  try {
+    try { run('renderDash()'); } catch (e) { /* o que interessa é a hora adotada antes de desenhar */ }
+    assert.strictEqual(run('DASH_HORA.vet'), '15:10', 'a tela passa a dizer 15:10, a hora que vai ser lançada');
+    assert.ok(/Horário: <strong>15:10<\/strong>/.test(run('__els626.dashBlocos.innerHTML')), 'e desenha 15:10');
+  } finally { run('DASH_HORA=__bk626c.h; document.getElementById=__bk626c.ge;'); }
+});
+prova('os três lugares que pedem horário usam os horários prontos (busca, painel do FILHOt escolhido e nome escrito à mão)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf(": ((it.hora?('<div style=\"margin-bottom:8px\">'+dashHorarioHTML(it.k)+'</div>'):'')\n             +'<input class=\"cad-in\" id=\"dashB_'+it.k+'\"") >= 0, 'busca: a hora vem ANTES do campo, e os nomes ficam colados nele (QA68)');
+  assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(it.k);') >= 0, 'painel');
+  assert.ok(src.indexOf('    if(it.hora) h+=dashHorarioHTML(k);') >= 0, 'nome escrito à mão');
+  assert.strictEqual((src.match(/type="time" class="cad-in" id="dashH_/g) || []).length, 1, 'o relógio do item só nasce dentro dos horários prontos');
+});
+// ================================================ 6.28 — quem dormiu aqui não recebe falta automática
+// Adriana, 02/out/2026: "o romeu está aqui e dormiu de ontem para hoje. Precisamos rever isso!"
+// A falta das 12h marcava "faltou" em quem passou a noite na casa (não passa pelo check-in de
+// entrada do Day Care) e o banho dele virava "não veio — liberar o horário".
+const ONTEM628 = '2026-10-01', HOJE628 = '2026-10-02';
+prova('6.28 a estadia da hospedagem: dormiu na noite de ontem (entrou até ontem, sai hoje ou depois)', () => {
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {
+    a:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'2026-10-01', saida:'2026-10-02', status:'ativa', pernoite:true},
+    b:{refKey:'thor__ana', nome:'Thor', tutor:'Ana', entrada:'2026-09-28', saida:'2026-10-05', status:'ativa'},
+    c:{refKey:'mel__bia', nome:'Mel', tutor:'Bia', entrada:'2026-10-02', saida:'2026-10-04', status:'ativa'},
+    d:{refKey:'kiko__rui', nome:'Kiko', tutor:'Rui', entrada:'2026-09-29', saida:'2026-10-01', status:'finalizada'},
+    e:{refKey:'lua__eva', nome:'Lua', tutor:'Eva', entrada:'2026-09-30', saida:'2026-10-03', status:'cancelada'},
+    f:{refKey:'zeus__ivo', nome:'Zeus', tutor:'Ivo', entrada:'2026-09-30', status:'ativa'},
+    g:{refKey:'nina__gil', nome:'Nina', tutor:'Gil', entrada:'2026-09-30', status:'finalizada'},
+    h:{refKey:'bob__ted', nome:'Bob', tutor:'Ted', entrada:'2026-09-30', saida:'2026-10-03', status:'finalizada'},
+    i:{refKey:'max__leo', nome:'Max', tutor:'Leo', entrada:'2026-09-30', saida:'2026-10-02', status:'recusada'},
+    j:{refKey:'luna__carol', nome:'Luna', entrada:'2026-09-30', saida:'2026-10-02', status:'ativa'},
+    k:{refKey:'sem__data', nome:'Sem', tutor:'Data', status:'ativa'}
+  }, {}, {}, {})`);
+  igual(Object.keys(r.pk).sort(), ['bob__ted', 'luna__carol', 'romeo__luciana', 'thor__ana', 'zeus__ivo'],
+    'Romeo (pernoite de ontem), Thor (no meio da estadia), Zeus (aberta, sem saída), Bob (fez check-out hoje: dormiu aqui) e Luna; a estadia sem entrada não conta');
+  assert.ok(run(`faltaDormiuEste({n:'Luna', tutor:'Carol'}, {pk:{luna__carol:'Luna'}, dc:{}, nome:{}})`), 'a ficha ligada (sem tutor na estadia) também identifica');
+  assert.strictEqual(r.dc[run("dcKey('Romeo','Luciana')")], 'Romeo', 'também pela chave do Day Care');
+});
+prova('6.28 a pernoite do Plantão (manuais, com as noites) e quem a Gestão tirou do dia', () => {
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {}, {
+    '2026-10-01':{x1:{nome:'Romeo', tutor:'Luciana', refKey:'romeo__luciana', noites:1}, x2:{nome:'Pipoca', tutor:'Rita', refKey:'pipoca__rita', hospede:true}, x3:{nome:'Tirado', tutor:'Tom', noites:1}},
+    '2026-09-29':{y1:{nome:'Duo', tutor:'Ana', noites:3}, y2:{nome:'Curto', tutor:'Ana', noites:2}},
+    '2026-10-02':{z1:{nome:'Amanha', tutor:'Ana', noites:1}},
+    '2026-09-30':{w1:{nome:'Repolho', noites:2}}
+  }, {'2026-10-01':{r1:{nome:'Tirado'}}}, {})`);
+  igual(Object.keys(r.dc).map((k) => r.dc[k]).sort(), ['Duo', 'Pipoca', 'Romeo'],
+    'Duo (3 noites desde 29/09 cobre a de 01/10), Pipoca (hóspede lançado em 01/10), Romeo; Curto acabou em 30/09, Tirado saiu do dia, Amanhã ainda não entrou');
+  igual(Object.keys(r.nome), ['repolho'], 'sem tutor e sem ficha, vale o nome');
+});
+prova('6.28 a pernoite do Lançamento do dia (daycare/pernoites/{ontem}): vale menos a cancelada', () => {
+  const kRomeo = run("dcKey('Romeo','Luciana')"), kKiko = run("dcKey('Kiko','Rui')"), kLua = run("dcKey('Lua','Eva')");
+  ctx.__pern628 = { [kRomeo]: { nome: 'Romeo', status: 'aguardando' }, [kKiko]: { nome: 'Kiko (pernoite)', status: 'checkin_feito' },
+    [kLua]: { nome: 'Lua', status: 'cancelado' }, 'fred-sem-ficha': { nome: 'Fred', status: 'aguardando' } };
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628)`);
+  igual(Object.keys(r.dc).sort(), [kKiko, 'fred-sem-ficha', kRomeo].sort());
+  assert.strictEqual(r.dc[kKiko], 'Kiko', 'o nome limpo, sem o parêntese');
+  igual(Object.keys(r.nome), ['fred'], 'sem ficha ligada, a chave é texto: vale o nome');
+  assert.ok(run(`faltaDormiuEste({n:'Fred', tutor:'Rosa'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628))`));
+  assert.ok(!run(`faltaDormiuEste({n:'Lua', tutor:'Eva'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pern628))`), 'a cancelada não conta');
+  assert.ok(!run(`faltaDormiuEste({n:'Romeo', tutor:'Outra'}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, {}))`), 'retrato vazio: ninguém dormiu');
+  igual(run("faltaDormiuAqui('ontem', {a:{nome:'X', tutor:'Y', entrada:'2026-01-01'}}, {}, {}, {})"), { pk: {}, dc: {}, nome: {} }, 'dia inválido: retrato vazio');
+});
+// O banco de mentira da falta automática: guarda as escritas e responde o que mandarmos.
+const banco628 = (dados, falhar) => {
+  ctx.__esc628 = []; ctx.__dados628 = dados; ctx.__falhar628 = falhar || '';
+  run(`__trava628=null; DB={ref:function(p){ return {
+    once:function(){ if(__falhar628 && p.indexOf(__falhar628)===0) return Promise.reject(new Error('sem rede'));
+      if(p.indexOf('daycare/falta-automatica/')===0) return Promise.resolve({val:function(){ return __trava628; }});
+      return Promise.resolve({val:function(){ return __dados628[p]===undefined?null:__dados628[p]; }}); },
+    transaction:function(fn){ var n=fn(__trava628); if(n===undefined) return Promise.resolve({committed:false}); __trava628=n; __esc628.push({o:'trava', p:p, v:n}); return Promise.resolve({committed:true}); },
+    update:function(v){ __esc628.push({o:'update', p:p, v:v}); return Promise.resolve(); },
+    remove:function(){ __esc628.push({o:'remove', p:p}); __trava628=null; return Promise.resolve(); } }; }};`);
+};
+const turma628 = () => run(`
+  __bk628={db:DB, ab:APP_DIA_ABERTO, P:PELUDINHOS, fa:_faltaAutoFeita, td:turmaDoDia, mz:ehMoradorZeluz, fh:faltouHoje,
+    zu:zMapaUma, au:audit, fc:__feriadoConferido, fe:orcEhFeriado, el:EST_TODAS, cl:CF_ESTADIAS_LIDO, md:medTirarDosesDeQuemFaltou,
+    pv:(typeof pendVarrerDia==='function'?pendVarrerDia:null), role:document.body.dataset.role, dl:__faltaDormiuLogado};
+  APP_DIA_ABERTO='${HOJE628}'; document.body.dataset.role='gestao';
+  __T628=[{p:{n:'Romeo', tutor:'Luciana'}}, {p:{n:'Toddy', tutor:'Ana'}}, {p:{n:'Kiko', tutor:'Rui'}}, {p:{n:'Thor', tutor:'Ana'}}];
+  PELUDINHOS=__T628.map(function(o){ return o.p; }); turmaDoDia=function(){ return __T628; };
+  ehMoradorZeluz=function(){ return false; }; faltouHoje=function(){ return false; };
+  zMapaUma=function(){ return Promise.resolve({}); }; __aud628=[]; audit=function(a,d){ __aud628.push(String(a)+': '+String(d)); };
+  __feriadoConferido['${HOJE628}']=true; orcEhFeriado=function(){ return ''; };
+  medTirarDosesDeQuemFaltou=function(){}; if(typeof pendVarrerDia==='function') pendVarrerDia=function(){};
+  _faltaAutoFeita=''; __faltaDormiuLogado='';`);
+const solta628 = () => run(`DB=__bk628.db; APP_DIA_ABERTO=__bk628.ab; PELUDINHOS=__bk628.P; _faltaAutoFeita=__bk628.fa; turmaDoDia=__bk628.td;
+  ehMoradorZeluz=__bk628.mz; faltouHoje=__bk628.fh; zMapaUma=__bk628.zu; audit=__bk628.au; __feriadoConferido=__bk628.fc; orcEhFeriado=__bk628.fe;
+  EST_TODAS=__bk628.el; CF_ESTADIAS_LIDO=__bk628.cl; medTirarDosesDeQuemFaltou=__bk628.md; if(__bk628.pv) pendVarrerDia=__bk628.pv;
+  document.body.dataset.role=__bk628.role; __faltaDormiuLogado=__bk628.dl;`);
+const espera628 = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
+provaAsync('6.28 a falta das 12h: quem dormiu aqui (estadia, pernoite do Plantão ou do Lançamento do dia) fica sem falta; o resto, como sempre', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    const kKiko = run("dcKey('Kiko','Rui')");
+    run(`CF_ESTADIAS_LIDO=true; EST_TODAS={e1:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa', pernoite:true}};`);
+    // Um xará do Toddy no cadastro: a pernoite lançada só com o texto "Toddy" não decide por nenhum dos dois.
+    run("PELUDINHOS=PELUDINHOS.concat([{n:'Toddy', tutor:'Outra'}]);");
+    banco628({ ['daycare/pernoites/' + ONTEM628]: { [kKiko]: { nome: 'Kiko', status: 'aguardando' }, 'toddy-texto': { nome: 'Toddy', status: 'aguardando' } },
+      ['auaulandia/manuais/2026-09-30']: { m1: { nome: 'Thor', tutor: 'Ana', refKey: 'thor__ana', noites: 2 } },
+      // O Toddy foi lançado no Plantão ontem, mas a Gestão o tirou do dia: não dormiu aqui.
+      ['auaulandia/manuais/' + ONTEM628]: { m2: { nome: 'Toddy', tutor: 'Ana', refKey: 'toddy__ana', noites: 1 } },
+      ['auaulandia/removidos/' + ONTEM628]: { r1: { nome: 'Toddy' } } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const esc = JSON.parse(JSON.stringify(run('__esc628')));
+    const cham = esc.filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(cham.map((e) => e.v), [{ [run("dcKey('Toddy','Ana')")]: 'faltou' }], 'só o Toddy (não dormiu aqui, sem check-in) recebe falta');
+    const trava = esc.find((e) => e.o === 'trava').v;
+    igual({ quantos: trava.quantos, dormiram_aqui: trava.dormiram_aqui }, { quantos: 1, dormiram_aqui: 3 });
+    igual(Object.keys(trava.sem_falta).sort(), [run("dcKey('Romeo','Luciana')"), kKiko, run("dcKey('Thor','Ana')")].sort(), 'a trava guarda quem dormiu aqui (as pendências não o tratam como "não veio")');
+    assert.ok(run('__aud628').some((a) => /^falta-automatica: sem falta automática porque dormiram aqui: Romeo, Kiko, Thor$/.test(a)), JSON.stringify(run('__aud628')));
+    assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'o dia fechou');
+  } finally { solta628(); solta(); }
+});
+provaAsync('6.28 as estadias ainda não chegaram ao aparelho: lê do banco UMA vez por sessão (não a cada volta), e não marca falta em quem dormiu aqui', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    run('CF_ESTADIAS_LIDO=false; EST_TODAS={}; __faltaEstLendo=null;');
+    // 1ª e 2ª voltas: outra leitura falha (pernoites); as estadias descem uma vez só
+    banco628({ 'auaulandia/estadias': { e1: { refKey: 'romeo__luciana', nome: 'Romeo', tutor: 'Luciana', entrada: ONTEM628, saida: HOJE628, status: 'ativa' } } }, 'daycare/pernoites/');
+    ctx.__lidos628 = [];
+    run('__dbAnt628=DB; DB={ref:function(p){ __lidos628.push(p); return __dbAnt628.ref(p); }}; __lf628=_logLeituraFalhou; _logLeituraFalhou=function(){};');
+    try {
+      await run('aplicarFaltaAutomatica()'); await espera628();
+      await run('aplicarFaltaAutomatica()'); await espera628();
+    } finally { run('_logLeituraFalhou=__lf628;'); }
+    igual(run("__lidos628.filter(function(p){ return p==='auaulandia/estadias'; }).length"), 1, 'o nó das estadias desce uma vez, não a cada volta');
+    // a leitura das estadias que FALHA não fica guardada: a volta seguinte tenta de novo
+    run(`__lidosAnt628=__lidos628.length; __faltaEstLendo=null; __falhar628='auaulandia/estadias';`);
+    run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(){};');
+    try {
+      await run('aplicarFaltaAutomatica()'); await espera628();
+      await run('aplicarFaltaAutomatica()'); await espera628();
+    } finally { run('_logLeituraFalhou=__lf628;'); }
+    igual(run("__lidos628.slice(__lidosAnt628).filter(function(p){ return p==='auaulandia/estadias'; }).length"), 2, 'falhou: tenta de novo na volta seguinte');
+    run("__falhar628='daycare/pernoites/';");
+    igual(JSON.parse(JSON.stringify(run('__esc628'))), [], 'com a falha, nada gravado');
+    // a rede volta: fecha com as estadias já lidas, e o Romeo fica fora da falta
+    run(`__dados628['daycare/pernoites/${ONTEM628}']=null; __falhar628=''; __lidosAnt628=__lidos628.length;`);
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    igual(run("__lidos628.slice(__lidosAnt628).filter(function(p){ return p==='auaulandia/estadias'; }).length"), 1, 'a leitura que falhou não ficou guardada: uma leitura nova, e só uma');
+    const cham = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Thor','Ana')"), run("dcKey('Toddy','Ana')")].sort(), 'Romeo fora da falta');
+    // com as estadias no aparelho (o ouvinte vivo), o banco não é lido
+    run(`DB=__dbAnt628; _faltaAutoFeita=''; CF_ESTADIAS_LIDO=true; EST_TODAS={}; __faltaEstLendo=null;`);
+    banco628({});
+    ctx.__lidos628 = []; run('__dbAnt628=DB; DB={ref:function(p){ __lidos628.push(p); return __dbAnt628.ref(p); }};');
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.ok(run('__lidos628').indexOf('auaulandia/estadias') < 0, JSON.stringify(run('__lidos628')));
+  } finally { run('if(typeof __dbAnt628!=="undefined") DB=__dbAnt628; __faltaEstLendo=null;'); solta628(); solta(); }
+});
+provaAsync('6.28 só hóspede (na turma pela estadia, não é do Day Care hoje): sem falta no dia em que chega; o aluno do dia continua com a regra; tudo no rastro e na trava', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    // Romeo entra hoje na hospedagem (não dormiu aqui ontem); está na turma SÓ como hóspede.
+    run(`CF_ESTADIAS_LIDO=true; EST_TODAS={e1:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'${HOJE628}', saida:'2026-10-04', status:'ativa'}};
+      __T628[0].hospede=true;`);
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const esc = JSON.parse(JSON.stringify(run('__esc628')));
+    const cham = esc.filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Thor','Ana')"), run("dcKey('Toddy','Ana')")].sort(), 'o Romeo (só hóspede) fica sem falta; os alunos do dia, com');
+    const trava = esc.find((e) => e.o === 'trava').v;
+    igual({ quantos: trava.quantos, na_hospedagem: trava.na_hospedagem }, { quantos: 3, na_hospedagem: 1 });
+    assert.ok(!('dormiram_aqui' in trava), 'ele não dormiu aqui: não entra nessa conta');
+    igual(trava.sem_falta, { [run("dcKey('Romeo','Luciana')")]: true }, 'a trava guarda quem ficou sem falta');
+    assert.ok(run('__aud628').indexOf('falta-automatica: sem falta automática porque estão na hospedagem (não são do Day Care hoje): Romeo') >= 0, JSON.stringify(run('__aud628')));
+    // a reposição e o avulso da planilha (sem a marca de hóspede) continuam com a regra
+    run(`__T628=[{p:{n:'Romeo', tutor:'Luciana'}, hospede:true}, {p:{n:'Toddy', tutor:'Ana'}, daPlanilha:'reposicao'}, {p:{n:'Kiko', tutor:'Rui'}, avulso:true}];
+      PELUDINHOS=__T628.map(function(o){ return o.p; }); _faltaAutoFeita=''; __aud628=[];`);
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const cham2 = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham2[0].v).sort(), [run("dcKey('Kiko','Rui')"), run("dcKey('Toddy','Ana')")].sort(), 'reposição e avulso recebem falta; só o hóspede fica sem');
+    // só hóspedes sem check-in: o rastro diz "ninguém recebeu falta"
+    run(`__T628=[{p:{n:'Romeo', tutor:'Luciana'}, hospede:true}]; PELUDINHOS=__T628.map(function(o){ return o.p; }); _faltaAutoFeita=''; __aud628=[];`);
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.ok(run('__aud628').indexOf('falta-automatica: dia fechado às 12h — ninguém recebeu falta') >= 0, JSON.stringify(run('__aud628')));
+  } finally { solta628(); solta(); }
+});
+provaAsync('6.28 todos os sem check-in dormiram aqui: o rastro diz "ninguém recebeu falta" (não "ninguém ficou sem check-in"); quem fez check-in e dormiu aqui não entra na conta de quem dormiu', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    const k = (n, t) => run(`dcKey('${n}','${t}')`);
+    run(`CF_ESTADIAS_LIDO=true; EST_TODAS={
+      a:{refKey:'romeo__luciana', nome:'Romeo', tutor:'Luciana', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa'},
+      b:{refKey:'thor__ana', nome:'Thor', tutor:'Ana', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa'}};`);
+    banco628({ ['daycare/checkin-corpo/' + HOJE628]: { [k('Thor', 'Ana')]: { fim: 1 }, [k('Toddy', 'Ana')]: { fim: 1 }, [k('Kiko', 'Rui')]: { fim: 1 } } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const esc = JSON.parse(JSON.stringify(run('__esc628')));
+    igual(esc.filter((e) => e.o === 'update').length, 0, 'ninguém recebe falta');
+    const trava = esc.find((e) => e.o === 'trava').v;
+    igual({ quantos: trava.quantos, dormiram_aqui: trava.dormiram_aqui }, { quantos: 0, dormiram_aqui: 1 }, 'o Thor fez check-in: conta como quem passou pelo check-in, não como "dormiu"');
+    const aud = run('__aud628');
+    assert.ok(aud.indexOf('falta-automatica: sem falta automática porque dormiram aqui: Romeo') >= 0, JSON.stringify(aud));
+    assert.ok(aud.indexOf('falta-automatica: dia fechado às 12h — ninguém recebeu falta') >= 0, JSON.stringify(aud));
+    assert.ok(!aud.some((a) => /ninguém ficou sem check-in/.test(a)), 'sem o rastro que contradiz');
+  } finally { solta628(); solta(); }
+});
+prova('6.28 check-out feito antes da saída prevista: a noite é a do check-out; xarás: o nome sozinho só decide quando é único; a Gestão tira do dia pelo nome e pelo tutor', () => {
+  const tsLocal = (iso, h) => new Date(iso + 'T' + h + ':00').getTime();
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {
+    a:{refKey:'bob__ted', nome:'Bob', tutor:'Ted', entrada:'2026-09-25', saida:'2026-10-05', status:'finalizada', checkout:{ts:${tsLocal('2026-09-28', '09:00')}}},
+    b:{refKey:'rex__ana', nome:'Rex', tutor:'Ana', entrada:'2026-09-28', saida:'2026-10-05', status:'finalizada', checkout:{ts:${tsLocal(HOJE628, '08:40')}}},
+    c:{refKey:'gil__ana', nome:'Gil', tutor:'Ana', entrada:'2026-09-28', status:'finalizada', checkout:{ts:${tsLocal(ONTEM628, '18:00')}}}
+  }, {}, {}, {})`);
+  igual(Object.keys(r.pk).sort(), ['rex__ana'], 'o Bob saiu em 28/09 (não dormiu ontem); o Rex saiu hoje de manhã (dormiu); o Gil saiu ontem à tarde (não dormiu)');
+  // o dia do check-out é o do relógio daqui, não o de Greenwich: 23h30 de 01/10 é 01/10
+  igual(run('faltaDiaLocal(new Date(2026, 9, 1, 23, 30).getTime())'), '2026-10-01');
+  igual(run('faltaDiaLocal(new Date(2026, 9, 2, 0, 10).getTime())'), '2026-10-02');
+  igual(run("faltaDiaLocal('x')"), '');
+  // xarás: as duas Luas
+  assert.ok(!run(`faltaDormiuEste({n:'Luna', tutor:'Eva'}, {pk:{}, dc:{}, nome:{luna:'Luna'}}, faltaNomesRepetidos([{n:'Luna', tutor:'Eva'}, {n:'Luna', tutor:'Carol'}]))`), 'nome repetido: não decide');
+  assert.ok(run(`faltaDormiuEste({n:'Luna', tutor:'Eva'}, {pk:{}, dc:{}, nome:{luna:'Luna'}}, faltaNomesRepetidos([{n:'Luna', tutor:'Eva'}, {n:'Mel', tutor:'Carol'}]))`), 'nome único: decide');
+  igual(run("faltaNomesRepetidos([{n:'Maya'}, {n:'MAYA '}, {n:'Mel'}])"), { maya: true });
+  // removidos pelo nome e pelo tutor
+  const m = run(`faltaDormiuAqui('${ONTEM628}', {}, {'${ONTEM628}':{
+      x1:{nome:'Maya', tutor:'Luciana', noites:1}, x2:{nome:'Maya', tutor:'Marcela', noites:1}, x3:{nome:'Bela', tutor:'Rui', noites:1}}},
+    {'${ONTEM628}':{'maya__luciana':{nome:'Maya', tutor:'Luciana'}, 'bela__':{nome:'Bela'}}}, {})`);
+  igual(Object.keys(m.dc).map((x) => m.dc[x]).sort(), ['Maya'], 'só a Maya da Marcela; a Bela foi tirada sem tutor (vale o nome)');
+  assert.ok(m.dc[run("dcKey('Maya','Marcela')")], 'a da Marcela');
+});
+prova('6.28 bordas que o QA71 achou sem prova: estadia sem status; refKey em maiúsculas; ficha ligada sem tutor fora do nome; 7 noites; pernoite sem nome; ficha sem tutor pela chave do Day Care', () => {
+  const r = run(`faltaDormiuAqui('${ONTEM628}', {
+    a:{refKey:'zeus__ivo', nome:'Zeus', tutor:'Ivo', entrada:'2026-09-30'},
+    b:{refKey:'Romeo__Luciana', nome:'Romeo', tutor:'Luciana', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa'},
+    c:{refKey:'luna__carol', nome:'Luna', entrada:'${ONTEM628}', saida:'${HOJE628}', status:'ativa'}
+  }, {'2026-09-25':{s1:{nome:'Sete', tutor:'Ana', noites:7}}, '2026-09-24':{s2:{nome:'Oito', tutor:'Ana', noites:7}}}, {}, {})`);
+  assert.ok(r.pk.zeus__ivo, 'sem status e sem saída: aberta (ativa)');
+  assert.ok(r.pk.romeo__luciana, 'refKey em maiúsculas vira minúsculas (como a pelKey)');
+  igual(Object.keys(r.nome), [], 'ficha ligada sem tutor não vai para o mapa do nome');
+  assert.ok(r.dc[run("dcKey('Sete','Ana')")] && !r.dc[run("dcKey('Oito','Ana')")], '7 noites desde 25/09 cobrem 01/10; desde 24/09, não');
+  const kFred = run("dcKey('Fred','')");
+  ctx.__pernSem628 = { [kFred]: { status: 'aguardando' } };
+  const q = run(`faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pernSem628)`);
+  igual(q.dc[kFred], kFred, 'pernoite sem nome também conta');
+  assert.ok(run(`faltaDormiuEste({n:'Fred', tutor:''}, faltaDormiuAqui('${ONTEM628}', {}, {}, {}, __pernSem628))`), 'ficha sem tutor casa pela chave do Day Care');
+  // a semana toda de manuais é lida: 7 dias (ontem e os 6 antes), não 8
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf('for(var i=0;i<FALTA_PERN_MAX_NOITES;i++) dias.push(orcMaisDias(ontem, -i));') >= 0);
+});
+provaAsync('6.28 pendências de prevenção: quem ficou sem falta (dormiu aqui ou na hospedagem) não vira "não veio"; os outros, como sempre', async () => {
+  run(`__bk628p={db:DB, pg:pendGravar, za:zAlertao, au:audit, pi:pendIdentidade}; __pg628=[]; __za628=[];
+    pendGravar=function(ch,item,d){ __pg628.push(ch); return Promise.resolve(true); }; zAlertao=function(t){ __za628.push(t); };
+    audit=function(){}; pendIdentidade=function(ch){ return {nome:ch, tutor:''}; };
+    __trava628p={ts:1, quantos:1, sem_falta:{romeo__luciana:true}};
+    DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){
+      if(p.indexOf('daycare/falta-automatica/')===0) return __trava628p; return null; }}); } }; }};`);
+  try {
+    igual(run("faltaSemFaltaNaTrava(__trava628p, 'romeo__luciana')"), true);
+    igual(run("faltaSemFaltaNaTrava(__trava628p, 'toddy__ana')"), false);
+    igual(run("faltaSemFaltaNaTrava(null, 'romeo__luciana')"), false);
+    igual(run("faltaSemFaltaNaTrava(__trava628p, 'constructor')"), false, 'propriedade herdada não conta');
+    igual(run("faltaSemFaltaNaTrava({sem_falta:'romeo__luciana'}, 'romeo__luciana')"), false, 'sem_falta que não é mapa não conta');
+    await run(`pendAvaliarLancamento('medicacao', {chave:'romeo__luciana', valor:'Romeo'}, '${HOJE628}')`);
+    await run(`pendAvaliarLancamento('medicacao', {chave:'toddy__ana', valor:'Toddy'}, '${HOJE628}')`);
+    for (let i = 0; i < 30; i++) await Promise.resolve();
+    igual(run('__pg628'), ['toddy__ana'], 'o Romeo (dormiu aqui) não ganha pendência; o Toddy (sem resposta e o dia fechado) ganha');
+  } finally { run('DB=__bk628p.db; pendGravar=__bk628p.pg; zAlertao=__bk628p.za; audit=__bk628p.au; pendIdentidade=__bk628p.pi;'); }
+});
+provaAsync('6.28 a leitura da noite de ontem falhou: o dia NÃO fecha (nenhuma falta, nenhuma trava); um rastro só; na volta da rede, fecha', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    run('CF_ESTADIAS_LIDO=true; EST_TODAS={};');
+    for (const caminho of ['daycare/pernoites/', 'auaulandia/manuais/', 'auaulandia/removidos/', 'daycare/checkin-corpo/', 'daycare/chamada/']) {
+      run("_faltaAutoFeita=''; __faltaDormiuLogado='';");
+      banco628({}, caminho);
+      ctx.__logs628 = []; run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(o){ __logs628.push(o); };');
+      try {
+        await run('aplicarFaltaAutomatica()'); await espera628();
+        await run('aplicarFaltaAutomatica()'); await espera628();
+      } finally { run('_logLeituraFalhou=__lf628;'); }
+      igual(JSON.parse(JSON.stringify(run('__esc628'))), [], caminho + ': nada gravado');
+      assert.strictEqual(run('_faltaAutoFeita'), '', caminho + ': o dia segue aberto');
+      assert.strictEqual(run('__logs628').length, 1, caminho + ': um rastro por dia, não um a cada 30 s');
+    }
+    banco628({});
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    assert.strictEqual(run('_faltaAutoFeita'), HOJE628, 'a rede voltou: o dia fecha');
+    // no dia seguinte, uma falha nova deixa rastro de novo (um por dia, não um por sessão)
+    solta(); const solta2 = relogio621('2026-10-05T12:05:00');
+    try {
+      run("APP_DIA_ABERTO='2026-10-05'; __feriadoConferido['2026-10-05']=true; _faltaAutoFeita='';");
+      banco628({}, 'daycare/pernoites/');
+      ctx.__logs628 = []; run('__lf628=_logLeituraFalhou; _logLeituraFalhou=function(o){ __logs628.push(o); };');
+      try { await run('aplicarFaltaAutomatica()'); await espera628(); } finally { run('_logLeituraFalhou=__lf628;'); }
+      igual(run('__logs628.length'), 1, 'outro dia: rastro de novo');
+    } finally { solta2(); }
+  } finally { solta628(); try { solta(); } catch (e) { /* já solto */ } }
+});
+provaAsync('6.28 o check-in vem do banco, não da cópia que entrega vazio no erro: quem fez check-in nunca recebe falta', async () => {
+  const solta = relogio621(HOJE628 + 'T12:05:00');
+  turma628();
+  try {
+    const kToddy = run("dcKey('Toddy','Ana')"), kKiko = run("dcKey('Kiko','Rui')");
+    run('CF_ESTADIAS_LIDO=true; EST_TODAS={};');
+    // zMapaUma entrega vazio quando a leitura falha: não pode ser a fonte do check-in.
+    run('zMapaUma=function(){ return Promise.resolve({}); };');
+    banco628({ ['daycare/checkin-corpo/' + HOJE628]: { [kToddy]: { fim: 1 } }, ['daycare/chamada/' + HOJE628]: { [kKiko]: 'veio' } });
+    await run('aplicarFaltaAutomatica()'); await espera628();
+    const cham = JSON.parse(JSON.stringify(run('__esc628'))).filter((e) => e.o === 'update' && e.p === 'daycare/chamada/' + HOJE628);
+    igual(Object.keys(cham[0].v).sort(), [run("dcKey('Romeo','Luciana')"), run("dcKey('Thor','Ana')")].sort(),
+      'o Toddy (check-in no banco) e o Kiko ("veio" na chamada) ficam fora da falta');
+  } finally { solta628(); solta(); }
+});
+// ================================================ 6.29 — «Ele está aqui» no aviso do banho de quem faltou
+// Adriana, 02/out/2026: "Luna também está aqui! Eu peguei ela!!! eu a levei!" · "Pipoca veio! eu o peguei" ·
+// "Mika idem está aqui" · Rafael: "coloque a opção está aqui (para que se não foi feito o checkin do corpo
+// apareça que tem que fazer!!! e o almoço!!!)".
+const JA629 = `__abriu629=[]; __bkJA629={aa:abrirAtividade, ob:onDcBusca, pa:pendAvisarChegada, cm:carregarAgendaMedTodos, ap:atividadesPermitidas}; __busca629={value:'', style:{}};
+  abrirAtividade=function(s){ __abriu629.push(s); }; onDcBusca=function(){ __abriu629.push('busca:'+__busca629.value); };
+  __ativ629=null; atividadesPermitidas=function(){ return __ativ629; };
+  __ge629=document.getElementById; document.getElementById=function(id){ return id==='dcBusca'?__busca629:__ge629(id); };
+  __aud629=[]; audit=function(a,d){ __aud629.push(String(a)+': '+String(d)); };
+  __pend629=[]; pendAvisarChegada=function(k){ __pend629.push(k); }; __med629=0; carregarAgendaMedTodos=function(){ __med629++; };`;
+const JA629_VOLTA = 'abrirAtividade=__bkJA629.aa; onDcBusca=__bkJA629.ob; document.getElementById=__ge629; pendAvisarChegada=__bkJA629.pa; carregarAgendaMedTodos=__bkJA629.cm; atividadesPermitidas=__bkJA629.ap;';
+const bolt629 = (dia, k) => `__extra.Bolt={sexo:'Macho'}; BANHO_FALTA=[{chave:'${k}', nome:'Bolt', hora:'17:00', origem:'lancamento', porque:'faltou', lancs:[], txts:[]}];
+  BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; dcChamada={}; dcChamada['${k}']='faltou';`;
+const fimCk629 = (dia, k) => `__banco['daycare/checkin-corpo/${dia}/${k}/fim']`;
+provaAsync('6.29 «Ele está aqui»: marca VEIO na chamada, segura o banho e, sem o check-in do corpo, diz que tem de fazer e leva até ele', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    run(bolt629(dia, kP) + `banhoFaltaPerguntar('${dia}');`);
+    const esc = JSON.parse(JSON.stringify(run('__esc.map(function(x){ return {b:x.b, l:x.l}; })')));
+    igual(esc[0].b, ['Liberar o horário', 'Ele está aqui', 'Ele ainda vem', 'Decidir depois']);
+    assert.ok(esc[0].l.indexOf('Se já está aqui, toque em «Ele está aqui»: ele volta para a chamada (e para a grade do almoço), e o horário fica com ele.') >= 0, JSON.stringify(esc[0].l));
+    run('__esc[0].fn[1]();'); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio', 'VEIO na chamada de hoje');
+    igual(run(`dcChamada['${kP}']`), 'veio', 'e na chamada deste aparelho');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'o banho fica com ele');
+    igual(run('__pend629'), [kP], 'a pendência de prevenção avisa a chegada (como o ✓ Veio da Chamada)');
+    igual(run('__med629'), 1, 'saiu de "faltou": o remédio volta para a fila');
+    igual(run(`BANHO_FALTA_VISTO['${dia}|${kP}']`), 1, 'a pergunta não volta');
+    assert.ok(run('__aud629').indexOf('chamada: marcou presença (está aqui, pelo aviso do banho)') >= 0, JSON.stringify(run('__aud629')));
+    assert.ok(run('__aud629').indexOf('banho-falta: Bolt está aqui — banho mantido (17:00)') >= 0, 'o rastro do banho diz "está aqui", não "ainda vem"');
+    assert.ok(run('__aud629').some((a) => /^banho-falta: Bolt está aqui — presença marcada \(sem o check-in do corpo de entrada\)$/.test(a)), JSON.stringify(run('__aud629')));
+    assert.ok(run('__esp.length') === 0 && run('__rmBF.length') === 0, 'nada sai da planilha nem da TV');
+    const seg = JSON.parse(JSON.stringify(run('__esc.slice(1).map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
+    igual(seg.length, 1, JSON.stringify(seg));
+    igual(seg[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
+    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois']);
+    igual(seg[0].l, ['Marcado como "veio" na chamada de hoje. O banho das 17:00 fica com ele.',
+      'O check-in do corpo de entrada não foi feito: faça agora.', 'Está na grade do almoço: confira se ele já almoçou.']);
+    run('__esc[1].fn[0]();');
+    igual(run('__abriu629'), ['checkin-corpo', 'busca:Bolt'], 'abre o check-in de ENTRADA com o nome dele na busca');
+    run('__abriu629=[]; __esc[1].fn[1]();');
+    igual(run('__abriu629'), ['almoco'], 'e o almoço');
+    run('__timers=[]; __esc[1].fn[2]();');
+    igual(run('__timers.length'), 1, '«Depois» segue para a próxima pergunta');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); }
+});
+provaAsync('6.29 com o check-in dele feito, só confirma (o de outro FILHOt não conta); sem ler o check-in, pede para conferir; a presença que não grava avisa e não segura nada', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), kJ = run("dcKey('Jasmine','Ana')");
+    // o check-in de OUTRO FILHOt não conta como o dele
+    run(bolt629(dia, kP) + `${fimCk629(dia, kJ)}=123; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].t'), 'FALTA O CHECK-IN DO CORPO DE BOLT');
+    // o check-in de entrada DELE feito: só confirma; e antes não estava "faltou": o remédio não relê
+    run(bolt629(dia, kP) + `${fimCk629(dia, kP)}=456; __alertas=[]; __esc=[]; __med629=0; dcChamada['${kP}']=undefined;`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['✅ BOLT ESTÁ NA CHAMADA']);
+    igual(al[0].l, ['Marcado como "veio" na chamada de hoje.', 'O banho das 17:00 fica com ele.', 'Está na grade do almoço: confira se ele já almoçou.']);
+    igual(run('__esc.length'), 0, 'sem o cartaz do check-in');
+    igual(run('__med629'), 0, 'não estava "faltou": o remédio não é relido');
+    // a leitura do check-in falha: o cartaz pede para conferir
+    run(bolt629(dia, kP) + `delete ${fimCk629(dia, kP)}; __esc=[]; __dbOk629=DB;
+      DB={ref:function(p){ var r=__dbOk629.ref(p); if(p.indexOf('daycare/checkin-corpo/')===0) r.once=function(){ return Promise.reject(new Error('sem rede')); }; return r; }};`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].t'), 'CONFIRA O CHECK-IN DO CORPO DE BOLT');
+    igual(run('__esc[0].l[1]'), 'Não consegui conferir o check-in do corpo de entrada: confira e, se não foi feito, faça agora.');
+    run('DB=__dbOk629;');
+    // a presença não grava: avisa, não segura o banho, não avisa a chegada, a pergunta volta
+    run(bolt629(dia, kP) + `delete __banco['daycare/chamada/${dia}/${kP}']; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; __alertas=[]; __esc=[]; __pend629=[];
+      BANHO_FALTA_VISTO['${dia}|${kP}']=1;
+      DB={ref:function(p){ var r=__dbOk629.ref(p); if(p.indexOf('daycare/chamada/')===0) r.set=function(){ return Promise.reject(new Error('sem permissão')); }; return r; }};`);
+    igual(await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`), false);
+    await tick();
+    run('DB=__dbOk629;');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['⚠ A PRESENÇA NÃO FOI MARCADA']);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']===undefined`), true, 'o banho não foi segurado sem a presença');
+    igual(run('__pend629'), [], 'sem presença, sem aviso de chegada');
+    igual(run(`dcChamada['${kP}']`), 'faltou', 'a chamada deste aparelho continua como estava');
+    igual(run(`BANHO_FALTA_VISTO['${dia}|${kP}']===undefined`), true, 'nada foi feito: a pergunta volta');
+  } finally { run('if(typeof __dbOk629!=="undefined") DB=__dbOk629;'); run(JA629_VOLTA); run(BF_VOLTA); }
+});
+provaAsync('6.29 quem tem as atividades limitadas no Time: o cartaz não oferece o atalho que cairia em outra tela, e diz a quem pedir', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    // nenhuma atividade liberada (o padrão do Time): sem atalhos, só o cartaz com o recado
+    run(bolt629(dia, kP) + `__ativ629=[]; __alertas=[]; __esc=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc.length'), 0, 'sem botões que levariam a outra tela');
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
+    assert.ok(al[0].l.indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0, JSON.stringify(al[0].l));
+    igual(run('banhoFaltaIrAoCheckin(BANHO_FALTA[0])'), false); igual(run('banhoFaltaIrAoAlmoco()'), false);
+    igual(run('__abriu629'), [], 'nada navegou');
+    // só o almoço liberado: «Abrir o almoço» e o recado do check-in
+    run(bolt629(dia, kP) + `__ativ629=['almoco']; __alertas=[]; __esc=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].b'), ['Abrir o almoço', 'Depois']);
+    assert.ok(run('__esc[0].l').indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0);
+    // com o check-in liberado
+    run(bolt629(dia, kP) + `__ativ629=['checkin-corpo']; __esc=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].b'), ['Fazer o check-in agora', 'Depois']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); }
+});
+provaAsync('6.29 xarás com o tutor no aviso e no cartão; aviso de outro dia não grava; outro aparelho já liberou: o texto diz isso; dois banhos no plural', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    run(`PELUDINHOS=PELUDINHOS.concat([{n:'Bolt', tutor:'Ana', dias:['seg']}]);` + bolt629(dia, kP) + `__esc=[]; banhoFaltaPerguntar('${dia}');`);
+    igual(run('__esc[0].t'), 'BOLT - RUI NÃO VEIO — TINHA BANHO ÀS 17:00', 'duas fichas "Bolt": o tutor diz qual');
+    assert.ok(/>Bolt - Rui<\/strong>/.test(run('banhoFaltaCardHTML()')), 'e o cartão do Hoje também');
+    // aviso de outro dia (o aparelho virou a noite aberto): nada grava
+    run(bolt629(dia, kP) + `__alertas=[]; __gravBF=[];`);
+    igual(await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '2026-01-01')`), false);
+    await tick();
+    igual(run('__gravBF.length'), 0);
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['O DIA VIROU']);
+    assert.ok(run('__alertas[0].l[0]').indexOf('Este aviso é de '+run(`fmtBR('${dia}')`)) === 0, 'a data é a do aviso, não a do relógio: ' + run('__alertas[0].l[0]'));
+    // pelo cartão do Hoje (o aparelho virou a noite com a lista de ontem): a data é a do aviso
+    run(bolt629(dia, kP) + `BANHO_FALTA_DIA='2026-01-01'; __alertas=[]; __gravBF=[];`);
+    run(`banhoFaltaEstaAquiUI('${kP}');`); await tick();
+    igual(run('__gravBF.length'), 0);
+    igual(run('__alertas[0].l[0]'), 'Este aviso é de 01/01/2026. Nada foi marcado.');
+    // outro aparelho já tinha liberado o horário: o texto não promete o banho
+    run(bolt629(dia, kP) + `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Carla', ts:9}; __esc=[]; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].l[0]'), 'Marcado como "veio" na chamada de hoje. O horário do banho já tinha sido liberado por Carla: se ainda for tomar banho, lance de novo nos Lançamentos do dia.');
+    igual(run("banhoFaltaAquiTexto({nome:'Bolt', hora:'17:00'}, true, {com:'com ele'}, {decisao:'liberando', quem:'Carla'}).linhas[1]"),
+      'O horário do banho está sendo liberado por Carla: se ainda for tomar banho, lance de novo nos Lançamentos do dia.');
+    // dois banhos no dia
+    igual(run("banhoFaltaAquiTexto({nome:'Luna', hora:'10:00 e 15:30'}, true, {com:'com ela', pron:'ela'}).linhas[1]"), 'Os banhos das 10:00 e das 15:30 ficam com ela.');
+    igual(run("banhoFaltaAquiTexto({nome:'Mika', hora:'16:45'}, false, banhoFaltaGenero('x')).linhas[2]"), 'Está na grade do almoço: confira se o FILHOt já almoçou.');
+    run(`__extra.Mel={sexo:'Fêmea'};`);
+    igual(run(`banhoFaltaGenero('${run("dcKey('Mel','Lia')")}').aqui`), 'Ela está aqui');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); }
+});
+provaAsync('6.29 já segurado ("ainda vem"): marca VEIO sem regravar o banho; dois toques gravam uma vez; no Hoje na Zêluz, o botão só sem decisão ou com "ainda vem", e só para quem decide', async () => {
+  run(BF_STUBS); run(JA629);
+  try {
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'jas', nome:'Jasmine', hora:'10:00', origem:'lancamento', porque:'faltou'},
+        {chave:'bol', nome:'Bolt', hora:'11:30', origem:'planilha', porque:'faltou'},
+        {chave:'mel', nome:'Mel', hora:'14:00', origem:'fixo', fixo:true, porque:'avisada'},
+        {chave:'tob', nome:'Toby', hora:'12:00', origem:'planilha', porque:'faltou'}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={bol:{decisao:'mantido', quem:'Carla', ts:5}, mel:{decisao:'liberado', quem:'Márcia'}, tob:{decisao:'falhou', acao:'manter', msg:'x'}}; dcChamada={};`);
+    const h = run('banhoFaltaCardHTML()');
+    igual((h.match(/banhoFaltaEstaAquiUI\(this\.dataset\.k\)">[^<]+</g) || []).length, 2, 'Jasmine (sem decisão) e Bolt (ainda vem); a Mel foi liberada; o Toby falhou (o cartão oferece de novo o "ainda vem")');
+    assert.ok(/data-k="jas" onclick="this\.disabled=true;banhoFaltaEstaAquiUI/.test(h) && /data-k="bol" onclick="this\.disabled=true;banhoFaltaEstaAquiUI/.test(h), h);
+    run("__gravBF=[]; __alertas=[]; banhoFaltaEstaAquiUI('bol'); banhoFaltaEstaAquiUI('bol');"); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/bol']`), 'veio');
+    igual(run(`__gravBF.filter(function(g){ return g.p==='daycare/chamada/${dia}/bol'; }).length`), 1, 'dois toques: uma gravação');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/bol']===undefined`), true, 'o "ainda vem" não é regravado');
+    igual(run('__alertas.filter(function(a){ return /já foi decidido|JÁ FOI DECIDIDO/.test(a.t); }).length'), 0, 'sem cartaz de "já foi decidido"');
+    run('__pode=false; __gravBF=[];');
+    assert.ok(!/banhoFaltaEstaAquiUI/.test(run('banhoFaltaCardHTML()')));
+    run(`__al629=[]; __alertOrig629=alert; alert=function(m){ __al629.push(m); }; banhoFaltaEstaAquiUI('jas'); alert=__alertOrig629;`);
+    await tick();
+    igual(run('__gravBF.length'), 0, 'sem permissão: nada grava');
+    assert.ok(/Só a recepção, a Gestão ou a Supervisão/.test(run('__al629[0]')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); }
+});
+prova('6.29 o almoço: a falta avisada na planilha tira da grade, menos quem está como "veio" na chamada; a grade fica viva com a chamada', () => {
+  run(`__bkAlm={fh:faltouHoje, dc:dcChamada}; faltouHoje=function(o){ return o.p.n==='Luna' || o.p.n==='Mel'; };
+    dcChamada={}; dcChamada[dcKey('Luna','Ana')]='veio';`);
+  try {
+    igual(run("almFaltouAvisada({p:{n:'Luna', tutor:'Ana'}})"), false, 'avisou e veio mesmo assim: está na grade');
+    igual(run("almFaltouAvisada({p:{n:'Mel', tutor:'Lia'}})"), true, 'avisou e não veio: fora da grade');
+    igual(run("almFaltouAvisada({p:{n:'Toby', tutor:'Rui'}})"), false, 'sem falta avisada: na grade (a falta das 12h não tira do almoço)');
+  } finally { run('faltouHoje=__bkAlm.fh; dcChamada=__bkAlm.dc;'); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf('const faltouList=turma.filter(o=>almFaltouAvisada(o));') >= 0 && src.indexOf('const list=ordemAlmoco(turma.filter(o=>!almFaltouAvisada(o)));') >= 0, 'a grade usa a regra');
+  assert.ok(src.indexOf("try{ if(dcAtiv==='almoco' && typeof almStep!=='undefined' && almStep==='grade' && typeof renderAlmoco==='function') renderAlmoco(); }catch(e){ /* silencioso de propósito: redesenho de tela */ }") >= 0, 'a chamada viva redesenha a grade');
+  assert.ok(/function carregarAlmoco\(\)\{\n    \/\/ A chamada viva[^\n]*\n    try\{ if\(typeof chamadaVivaLigar==='function'\) chamadaVivaLigar\(\); \}/.test(src), 'o almoço liga a chamada viva');
+});
+prova('6.29 a busca redesenha o check-in do corpo (não a tela genérica); a próxima pergunta espera o exame do corpo aberto', () => {
+  run(`__bkBu={ck:ckRedesenharDeFora, rg:renderGenerico, da:dcAtiv, ge:document.getElementById}; __bu=[];
+    ckRedesenharDeFora=function(){ __bu.push('ck'); }; renderGenerico=function(){ __bu.push('generico'); };
+    document.getElementById=function(id){ return id==='dcBusca'?{value:'Luna'}:__bkBu.ge(id); };`);
+  try {
+    run("dcAtiv='checkin-corpo'; onDcBusca();"); run("dcAtiv='checkout-corpo'; onDcBusca();"); run("dcAtiv='livre'; onDcBusca();");
+    igual(run('__bu'), ['ck', 'ck', 'generico']);
+    igual(run('dcBuscaVal'), 'Luna');
+  } finally { run('ckRedesenharDeFora=__bkBu.ck; renderGenerico=__bkBu.rg; dcAtiv=__bkBu.da; document.getElementById=__bkBu.ge; dcBuscaVal="";'); }
+  run(`__bkCa={ca:ckAtual, ge:document.getElementById, da:dcAtiv}; __vdc={classList:{contains:function(c){ return c==='active' && __vdcAtiva; }}}; __vdcAtiva=true;
+    document.getElementById=function(id){ return id==='v-daycare'?__vdc:null; };`);
+  try {
+    run("ckAtual=null; dcAtiv='checkin-corpo';"); igual(run('banhoFaltaTemCartaz()'), false);
+    run("ckAtual={k:'luna'};"); igual(run('banhoFaltaTemCartaz()'), true, 'exame aberto na tela: espera');
+    run("dcAtiv='checkout-corpo';"); igual(run('banhoFaltaTemCartaz()'), true, 'o de saída também');
+    // QA75: o exame deixado pela metade (saiu pelo menu) não cala o aviso no aparelho inteiro
+    run('__vdcAtiva=false;'); igual(run('banhoFaltaTemCartaz()'), false, 'saiu do Day Care: o aviso volta');
+    run("__vdcAtiva=true; dcAtiv='almoco';"); igual(run('banhoFaltaTemCartaz()'), false, 'outra atividade do Day Care: o aviso volta');
+  } finally { run('ckAtual=__bkCa.ca; document.getElementById=__bkCa.ge; dcAtiv=__bkCa.da;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
