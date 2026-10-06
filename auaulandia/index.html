@@ -17121,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-02';
+  const APP_VERSAO='2026-10-06-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -23991,11 +23991,14 @@
   }
   // "Última …" que grava direto (escova e check-up). Refaz a próxima pela conta e desfaz a
   // marca de "à mão" — a última dose manda, e o campo avisa que a data foi recalculada.
-  function prevUltimaDireta(campoT, campoP, dias, valor){
+  // `junto` (opcional): outras casas da ficha que recebem a MESMA data na mesma gravação — o
+  // check-up grava checkup_t e checkup_data juntos, para as três casas antigas não divergirem.
+  function prevUltimaDireta(campoT, campoP, dias, valor, junto){
     if(!pelAtual) return;
     var dt=String(valor||'').trim();
     var ex=pelExtra(pelAtual)||{};
     var patch={}; patch[campoT]=dt;
+    if(junto && typeof junto==='object') Object.keys(junto).forEach(function(k){ patch[k]=dt; });
     patch[campoP]=dt?addDiasISO(dt,dias):'';
     if(ex[campoP+'_manual']){ patch[campoP+'_manual']=''; prevAvisoRecalc(campoP); }
     setPelExtra(pelAtual, patch);
@@ -24185,7 +24188,15 @@
   // "Check-up veterinário"), checkup_t (bloco "Saúde e rotina") e checkup (campo legado,
   // anterior aos dois). A contagem só lia checkup_data — e NEGAVA 30 fichas que TÊM a
   // data (a Becca tem checkup=2024-11-27 e a tela dizia "sem informação"). Uma leitura só:
-  function prevCheckupData(ex){ return (ex&&(ex.checkup_data||ex.checkup_t||ex.checkup))||''; }
+  // 06/out/2026 (6.27): com as três casas preenchidas e diferentes, vale a data MAIS RECENTE —
+  // antes valia a de cima, e um check-up novo lançado embaixo ficava escondido atrás do velho.
+  // Sem nenhuma data válida, a ordem de sempre (checkup_data, checkup_t, checkup).
+  function prevCheckupData(ex){
+    if(!ex) return '';
+    var ds=[ex.checkup_data, ex.checkup_t, ex.checkup].filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }).sort();
+    if(ds.length) return ds[ds.length-1];
+    return ex.checkup_data||ex.checkup_t||ex.checkup||'';
+  }
   // Idade na lista ("quanto mais velho, mais necessário" — Adriana, 08/set). Sem
   // nascimento na ficha, a tela diz que não sabe — nunca inventa uma data.
   function prevCheckupIdade(p){
@@ -26823,11 +26834,25 @@
         <h2 style="font-size:20px">Prevenção</h2>
         <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele — nada grava sozinho, e a tela não sobe.</div>
 
-        <h3 class="cad-sub">Check-up veterinário</h3>
+        <!-- CHECK-UP E ESCOVA NO TOPO (Adriana, 02/out/2026, na ficha da Cookie: "tô aqui tentando
+             achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente
+             é um cuidado" · "ter essas duas opções em todos os casos [...] Para exame, para tudo").
+             O check-up vivia em DOIS lugares da aba, em campos diferentes (o de cima sem "Vence
+             em"); agora é um só, com "Fez em" e "Vence em", e grava as duas casas antigas juntas.
+             A escova, que ficava no fim da aba, sobe para o lado dele. -->
+        <h3 class="cad-sub">Check-up e escova</h3>
+        ${prevAjudaVenceHTML()}
+        ${alertaPrevencao(ex,'saude','Escova e check-up')}
         <div class="cad-grid">
           <div class="field"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
-          <div class="field"><label>Último check-up (data)</label><input type="date" class="cad-in" value="${escAttr(ex.checkup_data||'')}" onchange="setPelExtra(pelAtual,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+          <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
+          ${prevVenceCampoHTML(Object.assign({},ex,{checkup_t:prevCheckupData(ex)}),'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{rot:'Vence em (próximo check-up)', calcTexto:(prevCheckupData(ex)?('Pela conta: '+fmtBR(addDiasISO(prevCheckupData(ex),365))+' · 1 ano.'):'')})}
+          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{rot:'Vence em (próxima troca)', calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
+        </div>
+        ${escovaFichaHTML(ex)}
+        <div class="cad-grid" style="margin-top:12px">
           <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
                emergência — veterinário(a) de confiança do tutor, clínica e endereço.
                Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
@@ -26858,17 +26883,6 @@
         ${blocoVerm(pbEx('verm'))}
         ${blocoFezes(pbEx('fezes'))}
         ${blocoCio(ex,p)}
-
-        <h3 class="cad-sub">Saúde e rotina</h3>
-        ${prevAjudaVenceHTML()}
-        ${alertaPrevencao(ex,'saude','Escova e check-up')}
-        <div class="cad-grid">
-          <div class="field"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          ${prevVenceCampoHTML(ex,'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{calcTexto:(ex.checkup_t?('Pela conta: '+fmtBR(addDiasISO(ex.checkup_t,365))+' · 1 ano.'):'')})}
-          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
-        </div>
-        ${escovaFichaHTML(ex)}
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}

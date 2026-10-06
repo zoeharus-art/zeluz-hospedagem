@@ -7072,6 +7072,69 @@ prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando 
     assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state==='suspended'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som');
   } finally { run('document.getElementById=__bk632s.ge; despMedAC=__bk632s.ac; despMedNaTela=__bk632s.dn; setTimeout=__bk632s.st; bipMedLoopStart=__bk632s.bl;'); }
 });
+// ================================================================== 6.27 — check-up e escova no topo
+console.log('\n6.27 — Ficha › Prevenção: check-up e escova no topo, com "Fez em" e "Vence em" (Adriana, 02/out/2026, na ficha da Cookie)');
+const ficha627 = (ex, papel) => {
+  ctx.__ex627 = ex;
+  run(`__bk627={ge:document.getElementById, pe:pelExtra, P:PELUDINHOS, r:document.body.dataset.role}; __fic627={style:{}, innerHTML:''};
+    document.getElementById=function(id){ return id==='pel-ficha'?__fic627:(id==='pel-lista'?{style:{}}:null); };
+    pelExtra=function(){ return __ex627; }; PELUDINHOS=[{n:'Cookie', raca:'Spitz', tutor:'Ana Teste'}];
+    document.body.dataset.role='${papel || 'gestao'}';`);
+  try { run('abrirPeludinho(0)'); return run('__fic627.innerHTML'); }
+  finally { run('document.getElementById=__bk627.ge; pelExtra=__bk627.pe; PELUDINHOS=__bk627.P; document.body.dataset.role=__bk627.r;'); }
+};
+prova('6.27 a data do check-up: vale a mais recente das três casas; sem data válida, a ordem de sempre', () => {
+  igual(run("prevCheckupData({checkup_data:'2025-03-10', checkup_t:'2025-09-01'})"), '2025-09-01', 'o check-up novo, lançado embaixo, não fica atrás do velho');
+  igual(run("prevCheckupData({checkup_data:'2025-09-01', checkup_t:'2025-03-10', checkup:'2024-11-27'})"), '2025-09-01');
+  igual(run("prevCheckupData({checkup:'2024-11-27'})"), '2024-11-27', 'o campo legado (a Becca)');
+  igual(run("prevCheckupData({checkup_data:'a', checkup_t:'b', checkup:'c'})"), 'a', 'sem data válida: a ordem de sempre');
+  igual(run("prevCheckupData({checkup_data:'quebrada', checkup_t:'2025-01-02'})"), '2025-01-02', 'a data válida vence o texto quebrado');
+  igual(run('prevCheckupData({})'), ''); igual(run('prevCheckupData(null)'), '');
+});
+prova('6.27 "fez em" do check-up grava as casas juntas (checkup_t e checkup_data) e refaz o "vence em"; a escova continua como era', () => {
+  run(`__bk627g={sp:setPelExtra, pe:pelExtra, pa:pelAtual, av:prevAvisoRecalc}; __gr627=[];
+    setPelExtra=function(p,patch){ __gr627.push(JSON.parse(JSON.stringify(patch))); }; prevAvisoRecalc=function(){};
+    pelAtual={n:'Cookie'}; __ex627b={checkup_p:'2026-01-01', checkup_p_manual:true}; pelExtra=function(){ return __ex627b; };`);
+  try {
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-02',{checkup_data:'2026-10-02'})");
+    igual(run('__gr627[0]'), { checkup_t: '2026-10-02', checkup_data: '2026-10-02', checkup_p: '2027-10-02', checkup_p_manual: '' });
+    run("__ex627b={}; prevUltimaDireta('checkup_t','checkup_p',365,'',{checkup_data:''})");
+    igual(run('__gr627[1]'), { checkup_t: '', checkup_data: '', checkup_p: '' }, 'apagar a data apaga as duas casas');
+    run("prevUltimaDireta('escova_t','escova_p',90,'2026-10-01')");
+    igual(run('__gr627[2]'), { escova_t: '2026-10-01', escova_p: '2026-12-30' }, 'a escova: só as dela');
+  } finally { run('setPelExtra=__bk627g.sp; pelExtra=__bk627g.pe; pelAtual=__bk627g.pa; prevAvisoRecalc=__bk627g.av;'); }
+});
+prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só de check-up com "Fez em" e "Vence em", a escova com as duas datas', () => {
+  const h = ficha627({ checkup_data: '2025-03-10', checkup_t: '2025-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', escova_dc: 'Sim' });
+  const i = h.indexOf('<div class="ppanel2" id="ps-saude">'), fim = h.indexOf('<div class="ppanel2" id="ps-med">');
+  assert.ok(i > 0 && fim > i, 'a aba Prevenção desenhou');
+  const aba = h.slice(i, fim);
+  const pos = (t) => aba.indexOf(t);
+  assert.ok(pos('<h3 class="cad-sub">Check-up e escova</h3>') > 0, 'o bloco novo existe');
+  assert.ok(pos('Check-up e escova') < pos('<h3 class="cad-sub">Vacinas</h3>') && pos('Check-up e escova') < pos('<h3 class="cad-sub">Antiparasitários</h3>'), 'no topo, antes das vacinas');
+  assert.ok(aba.indexOf('Saúde e rotina') < 0, 'o bloco do fim saiu');
+  igual((aba.match(/Último check-up/g) || []).length, 1, 'um campo só de check-up (antes eram dois, em casas diferentes)');
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-09-01" onchange="prevUltimaDireta\('checkup_t','checkup_p',365,this\.value,\{checkup_data:this\.value\}\)"/.test(aba), 'mostra a data mais recente e grava as duas casas');
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><input type="date" class="cad-in" value="" onchange="prevVenceManualSet\('checkup_p',this\.value\)"/.test(aba), 'o check-up ganhou o "Vence em" no topo');
+  assert.ok(/Pela conta: 01\/09\/2026 · 1 ano\./.test(aba), 'a conta sai da data mais recente');
+  igual((aba.match(/Última troca de escova de dentes/g) || []).length, 1, 'a escova aparece uma vez');
+  assert.ok(aba.indexOf("onchange=\"prevUltimaDireta('escova_t','escova_p',90,this.value)\"") > 0);
+  assert.ok(/<label>Vence em \(próxima troca\)<\/label><input type="date" class="cad-in" value="2026-10-30"/.test(aba));
+  assert.ok(pos('Última troca de escova de dentes') < pos('Escova os dentes no Day Care?') && pos('Escova os dentes no Day Care?') < pos('<h3 class="cad-sub">Vacinas</h3>'), 'o "Escova no Day Care?" sobe junto');
+  assert.ok(pos('Escova os dentes no Day Care?') < pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'a emergência continua no topo, logo depois');
+  assert.ok(pos('<h3 class="cad-sub">Peso</h3>') > pos('Exame de fezes'), 'o peso continua no fim');
+  // ficha antiga só com a casa de cima (checkup_data): a data aparece, e o "Vence em" não diz "última: não informada"
+  const ho = ficha627({ checkup_data: '2025-03-10' });
+  const abaO = ho.slice(ho.indexOf('<div class="ppanel2" id="ps-saude">'), ho.indexOf('<div class="ppanel2" id="ps-med">'));
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-03-10"/.test(abaO), 'a data antiga aparece no campo único');
+  const ckV = abaO.slice(abaO.indexOf('Vence em (próximo check-up)'), abaO.indexOf('Última troca de escova de dentes'));
+  assert.ok(/Pela conta: 10\/03\/2026 · 1 ano\./.test(ckV) && ckV.indexOf('última: não informada') < 0, ckV);
+  // quem não digita o "Vence em" (decisão de 24/set): vê a data, sem campo
+  const hc = ficha627({ checkup_t: '2025-09-01', checkup_p: '2026-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', verm_t: '2026-07-01', verm_p: '2026-11-01' }, 'consultora');
+  const abaC = hc.slice(hc.indexOf('<div class="ppanel2" id="ps-saude">'), hc.indexOf('<div class="ppanel2" id="ps-med">'));
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
+  assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

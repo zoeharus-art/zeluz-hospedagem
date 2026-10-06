@@ -2,6 +2,23 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 06/out/2026 (v 2026-10-06-03) — Ficha › Prevenção: check-up e escova no topo, com as duas datas
+
+> **Adriana, 02/out/2026, na ficha da Cookie:** *"Em cadastro do peludinho, eu tô aqui tentando achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente é um cuidado, né? [...] Então, ter essas duas opções em todos os casos. Para exame, para tudo que a gente precisa de manter ali."* Story 6.27, com as respostas recomendadas, pela autorização do /loop de 06/out.
+
+### (AI) O que se procura primeiro fica em cima
+
+| Antes | Agora |
+|---|---|
+| A troca de escova ficava no **fim** da aba (Saúde e rotina), depois das vacinas e dos antiparasitários | **Check-up e escova** é o primeiro bloco da Prevenção: check-up, troca de escova e "Escova os dentes no Day Care?" |
+| O check-up aparecia **duas vezes**, em campos diferentes: no topo, só a data (sem "Vence em"); no fim, a data com "Vence em" | **Um campo só:** "Último check-up (fez em)" e "Vence em (próximo check-up)". A data grava as duas casas antigas juntas; com as duas preenchidas e diferentes, vale a **mais recente** |
+
+- **As duas datas em tudo:** vacinas, carrapaticida, coleira, vermífugo, exame de fezes, check-up e escova têm "Fez em" (a última) e "Vence em" (a próxima). Quem só sabe quando vence digita direto no "Vence em".
+- **Vermífugo (a pergunta da Cookie):** o campo "Vence em (próximo vermífugo)" já existia, logo abaixo de "Deu em". Quem **digita** o "Vence em" é a Gestão, a Diretoria e a Supervisão (decisão de 24/set); os outros perfis veem a data, sem campo.
+- A emergência (veterinário de confiança do tutor) continua no topo, logo depois; o peso, no fim.
+- **Onde está no código:** a aba em `abrirPeludinho` (bloco `ps-saude`); `prevCheckupData` (a data mais recente); `prevUltimaDireta` (grava casas juntas).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.27; defeitos plantados: 12, todos pegos).
+
 ## O que mudou em 06/out/2026 (v 2026-10-06-02) — o alarme de remédio atravessa a meia-noite
 
 > **Achado do QA57 (01/out/2026), já existia antes:** "num aparelho que entrou antes da meia-noite, o alarme de remédio não dispara depois da meia-noite". Story 6.32, feita no /loop autorizado pela Adriana em 06/out ("o que está pendente para você ir consertando em loop").
