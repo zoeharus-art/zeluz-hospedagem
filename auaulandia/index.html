@@ -8128,6 +8128,12 @@
     if(r && r.hora_aviso) return '';   // a aba não tem a coluna da hora: a hora não está na planilha
     return (r && typeof r.hora==='string')?r.hora:'';
   }
+  // A aba daquele dia não tem a coluna da hora (a ponte avisou ao gravar): a linha DIZ isso.
+  function repPlanHoraSemColuna(dia, nomeRaca, tipo){
+    var c=REP_PLAN_CACHE[dia]; if(!c) return false;
+    var r=(((c.auto||{})._estado||{})[tipo]||{})[vagasNomeChave(nomeRaca)];
+    return !!(r && r.hora_aviso);
+  }
   function repPlanQuando(ts){
     if(!ts) return '';
     try{
@@ -17223,6 +17229,16 @@
     // app num dia novo apaga o rascunho de ontem, com as fotos; sem internet, a página não volta.
     // O app diz o que fazer em vez de atualizar. (A recarga sozinha já passou por esta conta.)
     try{
+      // UM ALARME ADIADO QUE AINDA NÃO VOLTOU (3ª rodada do QA da 6.32): atualizar agora apaga o
+      // adiar, e a dose não volta a tocar. Pergunta antes — de dia (versão nova) e na virada.
+      if(!__diaRecarregando && !__diaForcarAgora && typeof zDiaAdiadoAtivo==='function' && zDiaAdiadoAtivo(Date.now()) && typeof zEscolha==='function'){
+        zEscolha('HÁ UM REMÉDIO ADIADO',
+          ['Um alarme de remédio foi adiado e ainda não voltou. Atualizar agora apaga o adiar, e a dose não toca de novo.',
+           'Espere o alarme voltar e registre a dose; depois, atualize.'],
+          [{t:'Esperar o alarme', cor:'#234D67', fn:function(){}},
+           {t:'Atualizar mesmo assim', cor:'#6b5f4b', fn:function(){ __diaForcarAgora=true; aplicarVersaoNova(); }}]);
+        return;
+      }
       // DE MADRUGADA, no celular de quem recebe o alarme (QA da 6.32): atualizar agora apaga o
       // toque que libera o som. Pergunta antes; quem quiser, atualiza.
       if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando && !__diaForcarAgora
@@ -17363,6 +17379,9 @@
   // não prender a tela em ontem.
   var DIA_ADIADO_TETO_MS=60*60*1000;
   function zDiaAdiadoAtivo(agora){
+    // Só segura quando o alarme TEM como voltar (3ª rodada do QA da 6.32): com outra data
+    // escolhida na tela, o alarme não toca — segurar deixaria as doses do dia novo caladas.
+    try{ if(!ehHojeAua() && !medDiaVelhoAuto()) return false; }catch(e){} /* silencioso de propósito: na dúvida, segura (o remédio vale mais) */
     try{ return Object.keys(despMedSnoozePend||{}).some(function(k){ return despMedSnoozePend[k]>agora-DIA_ADIADO_TETO_MS; }); }
     catch(e){ return false; } /* silencioso de propósito: sem o adiar carregado, não há alarme adiado */
   }
@@ -22133,6 +22152,15 @@
       if(!papelRecebeAlarmeMed()) return; // vet/consultora/supervisora/conferência não recebem alarme de dose
       var velho=false;
       if(!ehHojeAua()){ if(!medDiaVelhoAuto()) return; velho=true; }
+      // Com a tela em ontem, o adiado de um remédio que saiu da agenda não volta nunca: sai do
+      // pendente, senão seguraria a tela (e as doses do dia novo) até o teto (3ª rodada do QA da 6.32).
+      if(velho){
+        try{
+          var __naFila={};
+          (MED_AGENDA_TODOS||[]).forEach(function(it){ __naFila[it.key+'__'+magDoseId(it.itemId,it.horario)]=1; });
+          Object.keys(despMedSnoozePend||{}).forEach(function(k){ if(!__naFila[k]) delete despMedSnoozePend[k]; });
+        }catch(e){} /* silencioso de propósito: sem a agenda, vale o teto */
+      }
       if(despMedNaTela) return; // já tem um na tela
       if(!MED_AGENDA_TODOS.length||!DB) return;
       medLogHoje().then(function(log){
@@ -24084,6 +24112,12 @@
     if(/^\d{4}-\d{2}-\d{2}$/.test(dt) && dt>zHojeISO()){
       try{ zAlertao('ESSA DATA AINDA NÃO CHEGOU', ['"Fez em" é a data em que foi feito: não pode ser depois de hoje.', 'Nada foi gravado. Escolha a data de novo.'], {botao:'Entendi'}); }
       catch(e){} /* silencioso de propósito: o aviso é reforço — o importante é não gravar */
+      // O campo volta à data gravada (3ª rodada do QA da 6.27): com a data recusada à vista,
+      // parecia que tinha gravado.
+      try{
+        var __ae=document.activeElement, __exF=pelExtra(pelAtual)||{};
+        if(__ae && __ae.tagName==='INPUT' && __ae.value===dt) __ae.value=(campoT==='checkup_t')?prevCheckupData(__exF):String(__exF[campoT]||'');
+      }catch(e){} /* silencioso de propósito: o campo se acerta ao reabrir a ficha */
       return;
     }
     var ex=pelExtra(pelAtual)||{};
@@ -36048,11 +36082,12 @@
       var cor='var(--muted)', txt='';
       var hr=DASH_AUTO_COLS_HORA[autoK]?repPlanHoraNome(dia, v, autoK):'';
       // "enviado em": a hora em que foi para a planilha não se confunde com a hora do banho.
-      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):''); }
+      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):'');
+        if(DASH_AUTO_COLS_HORA[autoK] && repPlanHoraSemColuna(dia, v, autoK)){ cor='var(--z-gold-deep)'; txt+=' — sem a hora: a planilha deste dia não tem a coluna "Hora Banho"'; } }
       else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){
         cor='var(--z-gold-deep)';
         // A hora nova que não chegou (2ª rodada do QA da 6.34): a frase da queda não pode esconder isso.
-        var __pre=/^(a hora |não consegui tirar a hora)/.test(String(e.msg||''))?String(e.msg).split(' — ')[0].replace(' não foi gravada',' ainda não foi gravada'):'';
+        var __pre=/^(a hora |não consegui tirar a hora|o banho saiu da planilha)/.test(String(e.msg||''))?String(e.msg).split(' — ')[0].replace(' não foi gravada',' ainda não foi gravada'):'';
         txt=(__pre?(__pre+'; '):'')+repPlanQuedaTexto();
       }
       else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+e.msg; }
@@ -43860,6 +43895,7 @@
   };
   // A coluna da HORA de cada item que tem hora. Fora daqui, o automático escreve só o nome.
   var DASH_AUTO_COLS_HORA={ banho:'Hora Banho' };
+  var DASH_HORA_AVISO_MS=6*60*60*1000;   // aba sem a coluna da hora: confere de novo a cada 6 h
   // Itens que fazem sentido escrever com antecedência (a Adriana: "já existe reposição
   // lançada lá para frente de tutores super organizados… aniversários já sabemos de todos").
   // O banho fixo entra aqui por definição: ele é combinado justamente para não depender do dia.
@@ -44117,17 +44153,18 @@
         return (r && typeof r.hora==='string')?r.hora:undefined;
       };
       var horaAvisoDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && r.hora_aviso)?String(r.hora_aviso):''; };
+      var horaAvisoTsDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && Number(r.hora_aviso_ts))||0; };
       // `aviso` (2ª rodada do QA da 6.34): a ponte gravou o nome, mas disse que a aba não tem a
       // coluna da hora. A hora fica registrada (para a próxima passada não insistir a cada 5
       // minutos), marcada: a tela não mostra uma hora que não está na planilha.
-      var marcar=function(k, valor, ok, msg, hora, aviso){
+      var marcar=function(k, valor, ok, msg, hora, aviso, avisoTs){
         estado[k]=estado[k]||{};
         var ch=dashAutoNomeChave(valor);
         if(!ch) return;
         estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
         if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string'){
           estado[k][ch].hora=hora;
-          if(aviso) estado[k][ch].hora_aviso=String(aviso);
+          if(aviso){ estado[k][ch].hora_aviso=String(aviso); estado[k][ch].hora_aviso_ts=Number(avisoTs)||Date.now(); }
         }
       };
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
@@ -44164,21 +44201,31 @@
               // da ficha: tira e lança de novo, porque o `lancar` sem hora não limpa a célula.
               var __hq=horasDe(k, v), __ha=horaAntesDe(k, __ch);
               if(DASH_AUTO_COLS_HORA[k] && __jaNovo && !__maoVivo && !((maoTxt[k]||{})[__nv])){
-                if(__ha===__hq){ marcar(k, v, true, '', __hq, horaAvisoDe(k, __ch)); return; }
+                // A aba sem a coluna "Hora Banho" (a ponte avisou): não insiste a cada passada, mas
+                // confere de novo a cada 6 horas — a coluna pode ter sido criada (3ª rodada do QA).
+                var __av=horaAvisoDe(k, __ch), __avTs=horaAvisoTsDe(k, __ch);
+                if(__ha===__hq && (!__av || (Date.now()-__avTs)<DASH_HORA_AVISO_MS)){ marcar(k, v, true, '', __hq, __av, __avTs); return; }
                 // Sem ler os Lançamentos do dia, não se sabe se a linha é da recepção: não mexe
                 // agora; a próxima passada tenta (2ª rodada do QA da 6.34, como o passo 2).
-                if(!maoLida){ marcar(k, v, true, '', __ha); return; }
+                if(!maoLida){ marcar(k, v, true, '', __ha, __av, __avTs); return; }
                 var __colH=DASH_AUTO_COLS_HORA[k];
+                // Ficha sem hora: tira e lança de novo, a não ser que o registro já diga que não há
+                // hora lá — registro sem hora (antigo) também (3ª rodada do QA: a hora velha ficava).
+                var __vaiTirar=(!__hq && __ha!==''), __tirou=false;
                 tarefas.push(function(){
-                  return ((!__hq && __ha)
+                  return (__vaiTirar
                       ? dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:__colH, valor:v})
                       : Promise.resolve({ok:true}))
                     .then(function(x0){
                       if(!(x0&&x0.ok)) return x0;
+                      if(__vaiTirar) __tirou=true;
                       return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:__colH, hora:__hq, valor:v});
                     })
                     .then(function(x){
                       if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq, x.avisoHora); }
+                      // Tirou e não voltou: o banho está fora da planilha até a próxima passada
+                      // (que lança de novo) — a linha diz isso, sem hora.
+                      else if(__tirou) marcar(k, v, false, 'o banho saiu da planilha para acertar a hora e ainda não voltou — '+((x&&x.erro)||'a ponte não respondeu'));
                       // Não deu: a linha diz que a hora nova não chegou, com a hora que continua
                       // gravada; a próxima passada tenta de novo.
                       else marcar(k, v, false, (__hq?('a hora '+__hq+' não foi gravada'):'não consegui tirar a hora da planilha')
