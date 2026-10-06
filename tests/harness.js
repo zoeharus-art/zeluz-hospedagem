@@ -3756,8 +3756,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -4053,8 +4053,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -4437,8 +4437,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -5083,8 +5083,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -14719,7 +14719,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-10-06-06';/.test(html));
+        /const APP_VERSAO='2026-10-06-07';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15541,8 +15541,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15796,8 +15796,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -16099,8 +16099,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -16368,8 +16368,8 @@ async function main() {
       && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
       && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16842,8 +16842,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -17255,8 +17255,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -17572,8 +17572,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -17930,8 +17930,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -18183,8 +18183,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -18401,8 +18401,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -18775,8 +18775,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -19023,8 +19023,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -19473,8 +19473,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -19677,8 +19677,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -19999,8 +19999,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -20284,8 +20284,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -20808,8 +20808,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -21165,8 +21165,8 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -21511,8 +21511,8 @@ async function main() {
         ctx.prevCorrigePetDe(chave47) === pel47
         && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
 
-      check('v-47 · a versão carimbada desta entrega é a 2026-10-06-06',
-        /const APP_VERSAO='2026-10-06-06';/.test(html));
+      check('v-47 · a versão carimbada desta entrega é a 2026-10-06-07',
+        /const APP_VERSAO='2026-10-06-07';/.test(html));
     } finally {
       ctx.document.getElementById = geOrig47;
       ctx.document.body.dataset.role = papelAntes47;
@@ -21975,8 +21975,8 @@ async function main() {
       && /delete BANHO_RASC\[chave\]; banhoRascGuardar\(\);/.test(html)
       && html.indexOf('Há uma alteração nesta linha que ainda não foi gravada') > 0);
 
-    check('v-48 · a versão carimbada desta entrega é a 2026-10-06-06',
-      /const APP_VERSAO='2026-10-06-06';/.test(html));
+    check('v-48 · a versão carimbada desta entrega é a 2026-10-06-07',
+      /const APP_VERSAO='2026-10-06-07';/.test(html));
   }
   console.log('');
 
@@ -22334,6 +22334,156 @@ async function main() {
       && desf49.apagou.indexOf('daycare/cadastro/tâmara__viajante teste/renov_hist/h1') >= 0, JSON.stringify({v: vv49, l: desf49.linhas}));
     check('v-49 · a porta única existe com a assinatura nova, e nAulasDe lê a rotina',
       /function pelDias\(p, quando\)\{/.test(html) && /function nAulasDe\(p\)\{ const d=pelDias\(p,'rotina'\)\|\|\[\];/.test(html));
+  }
+  console.log('');
+
+  // ════════════════════════════════════════════════════════════════════════════════
+  // v-50 (06/out/2026) — FINANCEIRO: O PLANO COM DIAS DIFERENTES EM CADA MÊS SOMA MÊS A MÊS
+  // (Story 6.36, caso da Hopi). Adriana, 05/out: "Ela foi fechado a creche trimestral 718,
+  // mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."
+  //   H3 · com o retrato (e, sem cadastro nele, com um cadastro inventado sobre a lista do
+  //        app), o finResumoMes de 2026-06 a 2026-10 é IGUAL ao do código antes da 6.36
+  //        (cópia congelada em tests/lib) — os totais e a conta inteira, linha por linha;
+  //   H5 · paridade app × Financeiro: o valor do plano (renovValorDoPlano × finValorDoPlano
+  //        e a linha do finResumoMes), os meses e a validade, em 120 combinações.
+  // ════════════════════════════════════════════════════════════════════════════════
+  console.log('v-50 · Financeiro: plano com dias diferentes em cada mês, somado mês a mês (Hopi, 06/out):');
+  {
+    // O Financeiro de ANTES da 6.36: cópia byte a byte do arquivo em 6932426 (blob git d1207be).
+    const ANTES50 = path.join(__dirname, 'lib', 'financeiro-logica-antes-6.36.js');
+    const buf50 = fs.readFileSync(ANTES50);
+    const blob50 = crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob ' + buf50.length + '\0'), buf50])).digest('hex');
+    check('v-50 · H3 — a cópia congelada do Financeiro de antes é o arquivo de 6932426, byte a byte (blob d1207be)',
+      blob50 === 'd1207be14c57b9888cea55c5f54c648cfd6f1868', blob50);
+    const FIN_ANTES50 = require(ANTES50);
+    const [cad50, orc50, pag50] = await Promise.all([
+      dbRead('daycare/cadastro', token), dbRead('auaulandia/orcamentos', token), dbRead('daycare/pagamentos', token)]);
+    const meses50 = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+    // a tabela EM VIGOR e o desconto do plano, como as telas do app entregam (const do app: lidas por dentro do sandbox)
+    const planosApp50 = () => vm.runInContext('planos()', ctx), descApp50 = () => vm.runInContext('DESC_PET_PLANO', ctx);
+    const tabApp50 = { planos: JSON.parse(JSON.stringify(planosApp50())), descontoIrmao: JSON.parse(JSON.stringify(descApp50())) };
+    const compara50 = (dados) => {
+      const difs = [], tot = [];
+      let linhas = 0;
+      meses50.forEach((m) => {
+        ['2026-10-06', '2026-08-31', ''].forEach((h) => {
+          [null, tabApp50].forEach((tab) => {
+            const dd = Object.assign({}, dados, tab || {});
+            const a = FIN_ANTES50.finResumoMes(dd, m, { hoje: h });
+            const b = ctx.finResumoMes(dd, m, { hoje: h });
+            const ta = [a.recebidoTotal, a.aReceberTotal, a.emAtrasoTotal, a.inadimplenciaTotal, a.declaradoTotal].join('/');
+            const tb = [b.recebidoTotal, b.aReceberTotal, b.emAtrasoTotal, b.inadimplenciaTotal, b.declaradoTotal].join('/');
+            if (ta !== tb) difs.push(m + ' ' + h + ' totais ' + ta + ' × ' + tb);
+            else if (JSON.stringify(a) !== JSON.stringify(b)) difs.push(m + ' ' + h + ' (linhas)');
+            if (h === '2026-10-06' && tab) tot.push(m + ' ' + ctx.finBRL(b.aReceberTotal));
+            linhas += a.porFILHOt.length + a.inadimplentes.length + a.semComoCalcular.length;
+          });
+        });
+      });
+      return { difs: difs, tot: tot, linhas: linhas };
+    };
+    // As fichas do retrato que JÁ têm dias por mês (a Hopi, depois que a consultora converter o
+    // plano) são as únicas que a 6.36 muda de propósito: ficam fora da comparação — senão a
+    // prova viraria bomba-relógio no dia da conversão. As outras têm de dar o mesmo de antes.
+    const comDiasMes50 = Object.keys(cad50 || {}).filter((k) => cad50[k] && cad50[k].renov && cad50[k].renov.dias_mes);
+    if (cad50 && Object.keys(cad50).length) {
+      const cadSem50 = {};
+      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
+      const r50 = compara50({ cadastro: cadSem50, orcamentos: orc50 || {}, pagamentos: pag50 || null, irmaos: irmaos || {},
+        peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] });
+      console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
+      check('v-50 · H3 — retrato: o finResumoMes de 2026-06 a 2026-10 é o de antes da 6.36 (totais e linhas, em 3 "hoje") para toda ficha sem dias por mês',
+        r50.difs.length === 0, r50.difs.slice(0, 4).join(' · '));
+    } else {
+      console.log('  retrato sem o nó daycare/cadastro (o sintético da nuvem): a prova usa só o cadastro inventado abaixo.');
+    }
+    // Cadastro INVENTADO sobre a lista que o app traz (os nomes de PELUDINHOS), com todo jeito de
+    // ficha que a conta conhece: os três planos, data torta, sem data, aulas fora da tabela,
+    // Nº na família de todo tipo, irmãos, vencidos, hóspede, avulso, morador, inativo, pagamento
+    // lançado e reserva de hospedagem. Nenhuma ficha tem dias por mês: é o caminho de sempre.
+    let s50 = 50;
+    const sorte50 = () => { s50 = (s50 * 1103515245 + 12345) % 2147483648; return s50 / 2147483648; };
+    const um50 = (l) => l[Math.floor(sorte50() * l.length)];
+    const nomes50 = (Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : []).map((p) => p.n).filter(Boolean);
+    const cadI = {}, irmI = {}, orcI = {}, pagI = {};
+    const mesesI = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+    nomes50.forEach((nm, i) => {
+      const k = (nm + '__inventada ' + (i % 23)).toLowerCase().replace(/[.#$\[\]\/]/g, '-');
+      const r = { plano: um50(['Silver', 'Gold', 'Black', 'Silver', 'Gold', 'Black', 'auaulandia', 'avulso', 'morador', undefined]) };
+      const v = sorte50();
+      if (v > 0.06) r.inicio = um50(mesesI) + '-' + String(1 + Math.floor(sorte50() * 28)).padStart(2, '0'); else if (v > 0.03) r.inicio = '2026-02-30x';
+      if (sorte50() > 0.25) r.aulas = um50([1, 2, 3, 4, 5, 6, '3', 0]);
+      if (sorte50() > 0.4) r.ordemPet = um50([1, 2, 3, 4, '2', 0, null]);
+      if (sorte50() > 0.45 && /^\d{4}-\d{2}-\d{2}$/.test(r.inicio || '')) r.fim = um50(['2026-07-31', '2026-08-31', '2026-09-30', '2026-12-31', '2027-01-31']);
+      if (sorte50() > 0.85) r.plano_deduzido = true;
+      const c = { n: nm, tutor: 'Inventada ' + (i % 23), renov: r };
+      if (sorte50() > 0.2) c.dias = ['seg', 'ter', 'qua', 'qui', 'sex'].filter(() => sorte50() > 0.55);
+      if (sorte50() > 0.94) c.inativo = 'Sim';
+      cadI[k] = c;
+      if (i > 0 && sorte50() > 0.82) irmI['v' + i] = { a: k, b: Object.keys(cadI)[Math.floor(sorte50() * i)] };
+      if (sorte50() > 0.9) { const mp = um50(mesesI); pagI[mp] = pagI[mp] || {}; pagI[mp]['p' + i] = { chave: k, valor_cent: um50([38700, 107700, 61700, 1]), data: mp + '-09' }; }
+      if (sorte50() > 0.92) orcI['o' + i] = { status: um50(['fechado', 'aguardando', 'cancelado']), total_cent: 120000, parcela1_cent: 60000, parcela2_cent: 60000,
+        entrada: um50(mesesI) + '-20', status_em: Date.UTC(2026, 3 + Math.floor(sorte50() * 7), 11, 15), criado_em: Date.UTC(2026, 5, 2, 15), pets: [{ nome: nm }] };
+    });
+    const rI = compara50({ cadastro: cadI, orcamentos: orcI, pagamentos: pagI, irmaos: irmI, peludinhos: ctx.PELUDINHOS || [] });
+    console.log('  cadastro inventado sobre a lista do app: ' + Object.keys(cadI).length + ' fichas · ' + rI.linhas + ' linhas conferidas · a receber: ' + rI.tot.join(' · '));
+    check('v-50 · H3 — cadastro inventado sobre a lista do app (sem dias por mês): o finResumoMes de 2026-06 a 2026-10 é IGUAL ao de antes da 6.36, totais e linhas',
+      rI.difs.length === 0 && Object.keys(cadI).length >= 50 && rI.linhas > 300, rI.difs.slice(0, 4).join(' · ') || (Object.keys(cadI).length + ' fichas, ' + rI.linhas + ' linhas'));
+
+    // ---- H5: paridade app × Financeiro (no MESMO sandbox, como na página) -----------------
+    if (typeof ctx.renovValorDoPlano === 'function' && typeof ctx.finValorDoPlano === 'function') {
+      const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex'];
+      const umMes = () => { const k = 1 + Math.floor(sorte50() * 5); const l = DIAS.slice(), o = []; while (o.length < k) o.push(l.splice(Math.floor(sorte50() * l.length), 1)[0]); return DIAS.filter((d) => o.indexOf(d) >= 0); };
+      const comecos = [['2026-10-05', null], ['2026-03-31', null], ['2026-08-29', null], ['2026-09-26', { vigInicio: '2026-10-01' }], ['2026-09-22', { meioMes: true }], ['2026-12-21', { vigInicio: '2027-01-01' }]];
+      vm.runInContext("__bkp50 = { hz: zHojeISO }; zHojeISO = function(){ return '2026-10-06'; };", ctx);
+      const difs5 = [];
+      let n5 = 0;
+      try {
+        ['Gold', 'Black'].forEach((plano) => {
+          [1, 2, 3].forEach((ordem) => {
+            for (let k = 0; k < 20; k++) {
+              const nm = plano === 'Gold' ? 3 : 6;
+              const dm = []; for (let i = 0; i < nm; i++) dm.push(umMes());
+              const [ini, opts] = comecos[k % comecos.length];
+              const r = JSON.parse(JSON.stringify(ctx.aplicarRenovacao(plano, dm[0].length, ini, opts || undefined)));
+              if (opts && opts.meioMes) r.meio_mes = { opcao: 1, inicio: ini };
+              r.ordemPet = ordem; r.dias_mes = dm;
+              const app = JSON.stringify(ctx.renovValorDoPlano(plano, dm, ordem));
+              const fin = JSON.stringify(ctx.finValorDoPlano(planosApp50(), plano, dm, ordem, descApp50()));
+              if (app !== fin) difs5.push('valor ' + plano + ' ' + ordem + ' ' + JSON.stringify(dm) + ': ' + app + ' × ' + fin);
+              if (JSON.stringify(ctx.renovMesesDoPlano(r)) !== JSON.stringify(ctx.finMesesDoPlano(planosApp50(), r))) difs5.push('meses ' + plano + ' ' + ini);
+              const cad = {}; cad['tâmara__viajante teste'] = { n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], renov: r };
+              const res = ctx.finResumoMes(Object.assign({ cadastro: cad }, tabApp50), ini.slice(0, 7), { hoje: '2026-10-06' });
+              const tot = JSON.parse(app).total;
+              if (!(tot > 0) || !res.porFILHOt[0] || res.porFILHOt[0].valor !== tot || res.aReceberTotal !== tot) difs5.push('linha ' + plano + ' ' + ordem + ' ' + ini + ': ' + tot);
+              n5++;
+            }
+          });
+        });
+        check('v-50 · H5 — paridade: o valor do plano no Financeiro é o "Valor do plano" da aba Plano, centavo por centavo, e os meses são os mesmos (' + n5 + ' combinações: Gold e Black, 1º, 2º e 3º da família)',
+          difs5.length === 0 && n5 >= 50, difs5.slice(0, 3).join(' · '));
+      } finally { vm.runInContext('zHojeISO = __bkp50.hz;', ctx); }
+      // a tabela da story, ao centavo, pela conta do Financeiro (finResumoMes) e pela da aba Plano
+      const hopi = [['seg'], ['seg'], ['seg', 'qua']], black = [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']];
+      const linha50 = (plano, dm, ordem, fim) => {
+        const cad = { 'tâmara__viajante teste': { n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'],
+          renov: { plano: plano, aulas: 1, ordemPet: ordem, inicio: '2026-10-05', fim: fim, dias_mes: dm } } };
+        return ctx.finResumoMes(Object.assign({ cadastro: cad }, tabApp50), '2026-10', { hoje: '2026-10-06' }).porFILHOt[0];
+      };
+      const tab5 = [[linha50('Gold', hopi, 1, '2026-12-31'), 130700, 'R$ 1.307,00'], [linha50('Gold', hopi, 2, '2026-12-31'), 121551, 'R$ 1.215,51'],
+        [linha50('Gold', hopi, 3, '2026-12-31'), 115016, 'R$ 1.150,16'], [linha50('Black', black, 1, '2027-03-31'), 248800, 'R$ 2.488,00']];
+      check('v-50 · H5 — a tabela da story ao centavo: Gold 1x, 1x, 2x — R$ 1.307,00 · R$ 1.215,51 · R$ 1.150,16; Black 4×1x + 2×2x — R$ 2.488,00',
+        tab5.every(([l, v, b]) => l && l.valor === v && ctx.finBRL(l.valor) === b)
+        && tab5[0][0].detalheMeses === '1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00',
+        tab5.map(([l]) => l && ctx.finBRL(l.valor)).join(' · '));
+      // M8 do desenho: preço com centavos — o desconto arredondado EM CADA MÊS (nunca no total)
+      vm.runInContext('__bkp50p = planosCfg; planosCfg = JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1] = 35950; planosCfg.Gold.valores[2] = 58950;', ctx);
+      try {
+        const a = ctx.renovValorDoPlano('Gold', hopi, 2), f = ctx.finValorDoPlano(planosApp50(), 'Gold', hopi, 2, descApp50());
+        check('v-50 · H5 — preço com centavos (Gold 1x R$ 359,50; 2x R$ 589,50), 2º da família: R$ 1.216,92 nas duas contas (no total seria R$ 1.216,91)',
+          a.total === 121692 && f.total === 121692 && JSON.stringify(a) === JSON.stringify(f), a.total + ' × ' + f.total);
+      } finally { vm.runInContext('planosCfg = __bkp50p;', ctx); }
+    } else { check('v-50 · H5 — renovValorDoPlano e finValorDoPlano existem no mesmo sandbox', false, 'função ausente'); }
   }
   console.log('');
 

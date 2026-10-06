@@ -5183,7 +5183,14 @@ prova('a mensagem ao tutor e a lista da Renovação dizem o período (01/10 a 31
 });
 prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PAGAMENTO (renov.inicio, regime de caixa)', () => {
   const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
-  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin) && !/vig_inicio/.test(fin));
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin));
+  // 6.36: o plano com dias diferentes em cada mês também conta o dinheiro pelo mês da DATA DO PAGAMENTO
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === X\.mes\);/.test(fin), 'o plano com dias por mês também é regime de caixa');
+  // 6.36: o começo do PERÍODO (vig_inicio) só entra na conta das DATAS de cada mês do plano
+  // (finMesesDatas, espelho de renovMesesDatas) — nunca no mês do dinheiro.
+  const i36 = fin.indexOf('function finMesesDatas('), j36 = fin.indexOf('\nfunction ', i36 + 10);
+  assert.ok(i36 > 0 && j36 > i36 && /vig_inicio/.test(fin.slice(i36, j36)), 'as datas dos meses começam no começo do período');
+  assert.ok(!/vig_inicio/.test(fin.slice(0, i36) + fin.slice(j36)), 'fora das datas dos meses, o Financeiro não lê o começo do período');
 });
 // ---- QA da 6.20 (FAIL → ajustes): corrigir a data nunca grava o mês errado
 const renov620 = (L) => { const r = L.grav[0] && L.grav[0].renov; return r ? [r.inicio, r.vig_inicio || '', r.fim] : null; };
@@ -8169,6 +8176,375 @@ prova('6.30 — a área protegida e as portas antigas: turmaDeHoje idêntica, gr
   assert.ok(/if\(ant\.dias_mes\) volta\.dias_mes=ant\.dias_mes;/.test(src), 'o Desfazer leva os dias de cada mês');
 });
 // @@630-FIM
+// @@636-INI
+console.log('\n6.36 — Financeiro: o plano com dias diferentes em cada mês soma mês a mês (caso da Hopi, Adriana, 05/out/2026)');
+// "Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."
+// Um sandbox PRÓPRIO, na ordem da página: o financeiro-logica.js ANTES do script grande. O sandbox das provas
+// antigas fica sem o financeiro de propósito (as provas assíncronas lá de cima ainda vão rodar nele).
+// Dado INVENTADO: a «Tâmara», da tutora «Viajante Teste» (a mesma ficha-modelo da 6.30). O relógio fica
+// CONGELADO nestas provas: toda conta recebe o "hoje" na mão, e a tela que lê o relógio tem o dela trocado.
+const FIN_SRC36 = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+const ctx36 = vm.createContext(makeSandbox());
+vm.runInContext(FIN_SRC36, ctx36, { filename: 'financeiro-logica.js' });
+vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx36, { filename: 'index.html#script (6.36)', timeout: 15000 });
+const run36 = (c) => vm.runInContext(c, ctx36);
+const J36 = (c) => JSON.parse(JSON.stringify(run36(c)));
+// O Financeiro de ANTES da 6.36: cópia congelada, byte a byte, do arquivo em 6932426 (blob d1207be). É contra
+// ele que o caminho de sempre (fichas sem dias por mês) se prova IGUAL.
+const FIN_ANTES36 = require('./lib/financeiro-logica-antes-6.36.js');
+const FIN_NOVO36 = require('../auaulandia/financeiro-logica.js');
+const CH36 = 'tâmara__viajante teste';
+const HOPI36 = [['seg'], ['seg'], ['seg', 'qua']];
+const renov36 = (extra) => Object.assign({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31',
+  mesRenov: 'dezembro de 2026', quando: '2026-10-06', dias_mes: HOPI36 }, extra || {});
+const ficha36 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], renov: renov }, extra || {});
+// O pacote que as telas do app entregam ao finResumoMes: a tabela EM VIGOR (planos()) e o desconto do plano.
+const dados36 = (cad, extra) => Object.assign({ cadastro: cad, peludinhos: [], irmaos: {}, orcamentos: {}, pagamentos: null,
+  planos: J36('planos()'), descontoIrmao: J36('DESC_PET_PLANO') }, extra || {});
+const res36 = (dados, mes, hoje) => JSON.parse(JSON.stringify(ctx36.finResumoMes(dados, mes, { hoje: hoje || '2026-10-06' })));
+const cad36 = (renov, extra) => { const c = {}; c[CH36] = ficha36(renov, extra); return c; };
+const FORMATO36 = /R\$ (\d{1,3}(\.\d{3})*),\d{2}/;
+// Todo "R$" do texto é seguido do número no formato completo (R$ 1.307,00) — e há pelo menos um.
+const soFormato36 = (txt) => { const t = String(txt); const todos = (t.match(/R\$/g) || []).length;
+  return todos > 0 && todos === (t.match(/R\$ \d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/g) || []).length; };
+
+prova('6.36 AC1 — a Hopi (Gold, 1º, paga em 05/10/2026): R$ 1.307,00 em outubro, R$ 0,00 em novembro e dezembro (regime de caixa)', () => {
+  const D = dados36(cad36(renov36()));
+  const out = res36(D, '2026-10');
+  igual([out.aReceberTotal, out.declaradoTotal, out.recebidoTotal, out.semComoCalcular.length], [130700, 130700, 0, 0]);
+  igual(out.porFILHOt.length, 1);
+  const L = out.porFILHOt[0];
+  igual([L.chave, L.plano, L.compromisso, L.valor, L.falta, L.pago, L.situacao, L.venceEm], [CH36, 'Gold', 'trimestral', 130700, 130700, 0, 'aberto', '2026-10-05']);
+  igual(L.vigencia, { inicio: '2026-10-05', fim: '2026-12-31' });
+  igual(ctx36.finBRL(L.valor), 'R$ 1.307,00');
+  igual(J36('recQuebra(' + JSON.stringify(out) + ').linhas.trimestral'), { valor: 130700, quantos: 1, deTabela: 0 }, 'Recebimentos do mês: a linha Trimestral');
+  ['2026-11', '2026-12'].forEach((m) => {
+    const r = res36(D, m);
+    igual([r.aReceberTotal, r.declaradoTotal, r.inadimplenciaTotal, r.porFILHOt.length, r.semComoCalcular.length, r.inadimplentes.length], [0, 0, 0, 0, 0, 0], m);
+    igual(ctx36.finBRL(r.aReceberTotal), 'R$ 0,00');
+  });
+  igual(res36(D, '2026-09').porFILHOt.length, 0, 'setembro: nada (o pagamento é de outubro)');
+  // o que a conta de ANTES da 6.36 dizia para a mesma ficha (Mês 1 × 3): R$ 1.077,00 — R$ 230,00 a menos
+  igual(FIN_ANTES36.finResumoMes(D, '2026-10', { hoje: '2026-10-06' }).aReceberTotal, 107700);
+  // "em atraso" é recorte do "a receber": venceu em 05/10 — em 06/10 está em atraso; em 05/10, ainda não
+  igual([out.emAtrasoTotal, res36(D, '2026-10', '2026-10-05').emAtrasoTotal], [130700, 0]);
+  // data vinda da planilha antiga (plano_deduzido): entra no "a receber", NUNCA no "declarado"
+  const ded = res36(dados36(cad36(renov36({ plano_deduzido: true }))), '2026-10');
+  igual([ded.aReceberTotal, ded.declaradoTotal, ded.porFILHOt[0].planoDeduzido], [130700, 0, true]);
+});
+prova('6.36 — meses iguais: a soma mês a mês é a mensalidade × meses do caminho de sempre, ao centavo, com qualquer tabela de desconto', () => {
+  [[{ 2: 7, 3: 12 }, 2], [{ 2: 10, 3: 20 }, 2], [{ 2: 10, 3: 20 }, 3], [{ 2: 10, 3: 20 }, 1]].forEach(([desc, ordem]) => {
+    [['Gold', [['ter', 'qui'], ['ter', 'qui'], ['ter', 'qui']], '2026-12-31'], ['Black', [['seg'], ['seg'], ['seg'], ['seg'], ['seg'], ['seg']], '2027-03-31']].forEach(([plano, dm, fim]) => {
+      const igualMes = res36(dados36(cad36(renov36({ plano: plano, ordemPet: ordem, fim: fim, aulas: dm[0].length, dias_mes: dm })), { descontoIrmao: desc }), '2026-10');
+      const sempre = res36(dados36(cad36(renov36({ plano: plano, ordemPet: ordem, fim: fim, aulas: dm[0].length, dias_mes: null })), { descontoIrmao: desc }), '2026-10');
+      igual(igualMes.porFILHOt[0].valor, sempre.porFILHOt[0].valor, plano + ' ' + ordem + 'º ' + JSON.stringify(desc));
+      igual(igualMes.porFILHOt[0].valor, sempre.porFILHOt[0].mensalidade * dm.length);
+    });
+  });
+  // e o desconto da tabela que a TELA entrega é o que vale (não o de fábrica do Financeiro)
+  igual(res36(dados36(cad36(renov36({ ordemPet: 2 })), { descontoIrmao: { 2: 10, 3: 20 } }), '2026-10').porFILHOt[0].valor, 32310 * 2 + 53010);
+});
+
+prova('6.36 AC2 — ao centavo: Gold 1x, 1x, 2x — 1º R$ 1.307,00 · 2º R$ 1.215,51 · 3º R$ 1.150,16; Black 1x, 1x, 1x, 1x, 2x, 2x, 1º R$ 2.488,00', () => {
+  const casos = [
+    [renov36({ ordemPet: 1 }), 130700, 'R$ 1.307,00', [35900, 35900, 58900]],
+    [renov36({ ordemPet: 2 }), 121551, 'R$ 1.215,51', [33387, 33387, 54777]],
+    [renov36({ ordemPet: 3 }), 115016, 'R$ 1.150,16', [31592, 31592, 51832]],
+    [{ plano: 'Black', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2027-03-31',
+      dias_mes: [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']] }, 248800, 'R$ 2.488,00', [33800, 33800, 33800, 33800, 56800, 56800]],
+  ];
+  casos.forEach(([r, total, brl, porMes]) => {
+    const out = res36(dados36(cad36(r)), '2026-10');
+    igual([out.aReceberTotal, out.declaradoTotal, out.porFILHOt[0].valor], [total, total, total], brl);
+    igual(out.porFILHOt[0].valorPorMes, porMes, brl + ' mês a mês');
+    igual(ctx36.finBRL(out.porFILHOt[0].valor), brl);
+    // conferência à mão, fora do app: cada mês arredondado, depois a soma
+    igual(porMes.reduce((a, b) => a + b, 0), total);
+  });
+  // o desconto do Nº na família também vale quando a FAMÍLIA resolve a ordem (sem ordemPet gravado)
+  const cad = cad36(renov36({ ordemPet: undefined }));
+  delete cad[CH36].renov.ordemPet;
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const fam = res36(dados36(cad, { irmaos: { v1: { a: CH36, b: 'zebra__viajante teste' } } }), '2026-10');
+  const t = fam.porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([t.valor, t.ordemPet, t.resolvidoPorFamilia, fam.ordemFamiliaResolvida], [121551, 2, true, 1], 'a família põe a Tâmara em 2º (a Zebra é a 1ª pelo explícito)');
+});
+
+prova('6.36 AC3 — paridade: o valor do plano no Financeiro é o "Valor do plano" da aba Plano (renovValorDoPlano), centavo por centavo, em 120 combinações; e os meses e a validade são os mesmos do app', () => {
+  let semente = 636;
+  const sorte = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
+  const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex'];
+  const umMes = () => { const k = 1 + Math.floor(sorte() * 5); const s = DIAS.slice(); const o = []; while (o.length < k) o.push(s.splice(Math.floor(sorte() * s.length), 1)[0]); return o; };
+  const ordenar = (m) => DIAS.filter((d) => m.indexOf(d) >= 0);
+  // começos de verdade, gravados pela MESMA função do app (aplicarRenovacao): dia comum, dia 31,
+  // fim de fevereiro, fim do mês (o período começa no dia 1º) e começo no meio do mês
+  const comecos = [['2026-10-05', null], ['2026-01-31', null], ['2027-02-28', null], ['2026-09-25', { vigInicio: '2026-10-01' }], ['2026-09-22', { meioMes: true }]];
+  run36("__bk36z=zHojeISO; zHojeISO=function(){ return '2026-10-06'; };");
+  let n = 0;
+  const difs = [];
+  try {
+    ['Gold', 'Black'].forEach((plano) => {
+      const nm = plano === 'Gold' ? 3 : 6;
+      [1, 2, 3].forEach((ordem) => {
+        for (let k = 0; k < 20; k++) {
+          const dm = []; for (let i = 0; i < nm; i++) dm.push(ordenar(umMes()));
+          const [ini, opts] = comecos[k % comecos.length];
+          ctx36.__a36 = [plano, dm[0].length, ini, opts];
+          const r = J36('aplicarRenovacao(__a36[0], __a36[1], __a36[2], __a36[3]||undefined)');
+          if (opts && opts.meioMes) r.meio_mes = { opcao: 2, inicio: ini };
+          r.ordemPet = ordem; r.dias_mes = dm;
+          ctx36.__r36 = r; ctx36.__dm36 = dm; ctx36.__o36 = ordem;
+          const app = J36('renovValorDoPlano(__r36.plano, __dm36, __o36)');
+          const fin = J36('finValorDoPlano(planos(), __r36.plano, __dm36, __o36, DESC_PET_PLANO)');
+          if (JSON.stringify(app) !== JSON.stringify(fin)) difs.push(['valor', plano, ordem, JSON.stringify(dm), app.total, fin.total]);
+          const mApp = J36('renovMesesDoPlano(__r36)'), mFin = J36('finMesesDoPlano(planos(), __r36)');
+          if (JSON.stringify(mApp) !== JSON.stringify(mFin) || mApp.length !== nm) difs.push(['meses', plano, ini, JSON.stringify(mApp), JSON.stringify(mFin)]);
+          if (run36('renovDiasMesValido(__r36)') !== run36('finDiasMesValidos(planos(), __r36)')) difs.push(['validade', plano, ini]);
+          const cad = {}; cad[CH36] = ficha36(r);
+          const out = res36(dados36(cad), ini.slice(0, 7));
+          const linha = out.porFILHOt[0] || {};
+          if (linha.valor !== app.total || out.aReceberTotal !== app.total || !(app.total > 0)) difs.push(['finResumoMes', plano, ordem, ini, linha.valor, app.total]);
+          if (linha.aulasRotulo !== dm.map((m) => m.length + 'x').join(', ')) difs.push(['rótulo', linha.aulasRotulo]);
+          n++;
+        }
+      });
+    });
+  } finally { run36('zHojeISO=__bk36z;'); }
+  igual(difs, [], 'nenhuma diferença');
+  assert.ok(n >= 50, n + ' combinações');
+  igual(n, 120);
+});
+
+prova('6.36 AC3 — paridade no dado torto e no preço com centavos: o mesmo "vale/não vale" do app; o desconto arredondado EM CADA MÊS (nunca no total)', () => {
+  const tortos = [
+    { dias_mes: [['seg'], ['seg']] }, { dias_mes: [['seg'], [], ['seg', 'qua']] }, { dias_mes: [['sab'], ['seg'], ['seg']] },
+    { plano: 'Silver', fim: '2026-10-31', dias_mes: [['seg', 'qua']] }, { fim: '', dias_mes: HOPI36 }, { dias_mes: 'seg,qua' },
+    { dias_mes: { 0: ['seg'], 1: { a: 'seg' }, 2: ['qua', 'seg', 'qua', 'xyz'] } }, { inicio: '2026-13-05', dias_mes: HOPI36 },
+    { fim: '2026-11-15', dias_mes: HOPI36 }, { vig_inicio: '2027-01-01', dias_mes: HOPI36 }, { dias_mes: [['seg'], null, ['qua']] },
+    { meio_mes: { opcao: 1, inicio: '2026-10-05' }, mes_cobranca_1: '2026-11', fim: '2027-01-31', dias_mes: HOPI36 },
+    { meio_mes: { opcao: 1, inicio: '2026-09-05' }, dias_mes: HOPI36 }, { plano: 'Platina', dias_mes: HOPI36 }, { dias_mes: [] },
+  ];
+  tortos.forEach((x, i) => {
+    ctx36.__r36 = renov36(x);
+    igual(J36('finMesesDoPlano(planos(), __r36)'), J36('renovMesesDoPlano(__r36)'), 'caso ' + i);
+    igual(run36('finDiasMesValidos(planos(), __r36)'), run36('renovDiasMesValido(__r36)'), 'caso ' + i);
+  });
+  // preço quebrado (a Gestão grava centavos): o desconto é arredondado EM CADA MÊS — o mesmo do app
+  run36(`__bk36p=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35950; planosCfg.Gold.valores[2]=58950;`);
+  try {
+    ctx36.__dm36 = HOPI36;
+    igual(J36('renovValorDoPlano("Gold", __dm36, 2).total'), 121692);
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 2, DESC_PET_PLANO)'), J36('renovValorDoPlano("Gold", __dm36, 2)'));
+    const out = res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2026-10');
+    // Math.round(35950 × 0,93) = 33.434 (×2) + Math.round(58950 × 0,93) = 54.824 → 121.692; no total seria 121.691
+    igual([out.porFILHOt[0].valor, out.porFILHOt[0].valorPorMes], [121692, [33434, 33434, 54824]]);
+    igual(ctx36.finBRL(121692), 'R$ 1.216,92');
+    // mês sem preço na tabela: as duas contas dizem o mesmo mês que falta, e total R$ 0,00 (nunca pela metade)
+    run36('delete planosCfg.Gold.valores[2];');
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 1, DESC_PET_PLANO)'), J36('renovValorDoPlano("Gold", __dm36, 1)'));
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 1, DESC_PET_PLANO)'), { total: 0, porMes: [{ aulas: 1, valor: 35950 }, { aulas: 1, valor: 35950 }, { aulas: 2, valor: 0 }], falta: 2 });
+  } finally { run36('planosCfg=__bk36p;'); }
+});
+
+prova('6.36 AC4 — a linha da ficha diz os dias e o valor de cada mês ("1x, 1x, 2x"), no Painel da Diretoria e no Lançar pagamento', () => {
+  const out = res36(dados36(cad36(renov36())), '2026-10');
+  const L = out.porFILHOt[0];
+  igual([L.diasPorMes, L.aulasPorMes, L.valorPorMes, L.aulasRotulo], [true, [1, 1, 2], [35900, 35900, 58900], '1x, 1x, 2x']);
+  igual(L.detalheMeses, '1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00');
+  igual(L.mesesDoPlano, [
+    { n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'], aulas: 1, valor: 35900 },
+    { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'], aulas: 1, valor: 35900 },
+    { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'], aulas: 2, valor: 58900 }]);
+  igual([L.aulas, L.mensalidade], [null, null], 'não existe UMA mensalidade: ninguém multiplica o Mês 1');
+  // Painel da Diretoria › "Maiores valores a receber"
+  const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+  assert.ok(pd.indexOf('plano Gold (trimestral) · dias por mês: 1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00') >= 0, pd.slice(0, 600));
+  assert.ok(pd.indexOf('R$ 1.307,00') >= 0);
+  // Lançar pagamento (fora do menu, código vivo)
+  ctx36.__cad36 = cad36(renov36());
+  run36(`__bk36l={c:pelCadCache, P:PELUDINHOS, s:LP_SEL, k:LP_CACHE, z:zHojeISO};
+    pelCadCache=__cad36; PELUDINHOS=[{n:'Tâmara', tutor:'Viajante Teste', raca:'SRD', dias:['seg']}]; LP_SEL=0;
+    LP_CACHE={quando:1, irm:{}, pag:{}}; zHojeISO=function(){ return '2026-10-06'; };`);
+  try {
+    const lp = run36('lpCobrancaHTML()');
+    assert.ok(/plano Gold \(trimestral\) · dias por mês: 1x, 1x, 2x — R\$ 359,00 \+ R\$ 359,00 \+ R\$ 589,00 · mês 2026-10/.test(lp), lp.slice(0, 700));
+    assert.ok(lp.indexOf('<strong>R$ 1.307,00</strong>') >= 0 && lp.indexOf('Registrar recebimento — R$ 1.307,00') >= 0);
+    assert.ok(lp.indexOf('x por semana') < 0, 'o "Nx por semana" do Mês 1 não aparece no plano que muda por mês');
+    // ficha SEM dias por mês: a linha de sempre ("2x por semana")
+    run36("pelCadCache[" + JSON.stringify(CH36) + "].renov={plano:'Gold', aulas:2, ordemPet:1, inicio:'2026-10-05', fim:'2026-12-31'};");
+    const lp2 = run36('lpCobrancaHTML()');
+    assert.ok(/plano Gold \(trimestral\) · 2x por semana · mês 2026-10/.test(lp2) && lp2.indexOf('dias por mês') < 0, lp2.slice(0, 600));
+  } finally { run36('pelCadCache=__bk36l.c; PELUDINHOS=__bk36l.P; LP_SEL=__bk36l.s; LP_CACHE=__bk36l.k; zHojeISO=__bk36l.z;'); }
+});
+
+prova('6.36 AC5 — vencido sem renovação: o "valor de um mês" é o da ROTINA (os dias do alto da ficha), não o do Mês 1 nem o do último mês', () => {
+  // a Tâmara venceu em 31/12/2026; a rotina dela (chips do alto) é Ter e Qui (2x)
+  const D = dados36(cad36(renov36(), { dias: ['ter', 'qui'] }));
+  const jan = res36(D, '2027-01', '2027-01-10');
+  igual(jan.inadimplentes.length, 1);
+  const v = jan.inadimplentes[0];
+  igual([v.chave, v.venceuEm, v.valorDeUmMes, v.tipo, v.contaEmAReceber, v.pelaRotina], [CH36, '2026-12-31', 58900, 'plano-vencido', false, true]);
+  igual([jan.inadimplenciaTotal, jan.aReceberTotal, jan.semComoCalcular.length], [58900, 0, 0]);
+  igual(FIN_ANTES36.finResumoMes(D, '2027-01', { hoje: '2027-01-10' }).inadimplenciaTotal, 35900, 'antes: o Mês 1 gravado em renov.aulas (1x)');
+  // rotina Seg (1x), 2º da família: R$ 333,87
+  igual(res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2027-02', '2027-02-10').inadimplenciaTotal, 33387);
+  // sem os chips do alto: vale a lista-mestre (peludinhos), como no caminho de sempre
+  const semChips = cad36(renov36()); delete semChips[CH36].dias;
+  igual(res36(dados36(semChips, { peludinhos: [{ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg', 'qua', 'sex'] }] }), '2027-01', '2027-01-10').inadimplenciaTotal, 69900);
+  // sem rotina em lugar nenhum: fora da soma, com o motivo — nunca o Mês 1 no lugar
+  const sem = res36(dados36(semChips), '2027-01', '2027-01-10');
+  igual([sem.inadimplenciaTotal, sem.inadimplentes.length, sem.semComoCalcular.length], [0, 0, 1]);
+  assert.ok(/venceu sem renovação e a ficha não tem os dias da rotina/.test(sem.semComoCalcular[0].motivo), sem.semComoCalcular[0].motivo);
+  // em dezembro (ainda no plano) não há vencido
+  igual(res36(D, '2026-12', '2026-12-20').inadimplentes.length, 0);
+});
+
+prova('6.36 AC6 — dias por mês inválidos vão para "sem como calcular", com o motivo escrito, FORA de toda soma (e o Lançar pagamento diz o motivo)', () => {
+  const tabSem4 = JSON.parse(JSON.stringify(J36('planos()'))); delete tabSem4.Gold.valores[4];
+  const casos = [
+    [{ dias_mes: [['seg'], ['seg']] }, /há dias gravados para 2 meses, mas o plano tem 3 meses/],
+    [{ dias_mes: [['seg'], [], ['seg', 'qua']] }, /o Mês 2 está sem dia da semana válido/],
+    [{ dias_mes: [['seg'], ['seg'], ['sab']] }, /o Mês 3 está sem dia da semana válido/],
+    [{ plano: 'Silver', fim: '2026-10-31', dias_mes: [['seg', 'qua']] }, /plano Silver com dias diferentes em cada mês: só o trimestral e o semestral/],
+    [{ fim: '', dias_mes: HOPI36 }, /as datas dos meses não fecham/],
+    [{ fim: '2026-11-15', dias_mes: HOPI36 }, /as datas dos meses não fecham/],
+    [{ dias_mes: 'seg,qua' }, /não são uma lista de meses/],
+    [{ dias_mes: [['seg'], ['seg'], ['seg', 'ter', 'qua', 'qui']] }, /a tabela de preços não tem valor para Gold com 4 aula\(s\) no Mês 3/, tabSem4],
+  ];
+  casos.forEach(([x, motivo, tab], i) => {
+    const D = dados36(cad36(renov36(x)), tab ? { planos: tab } : null);
+    ['2026-10', '2026-11', '2027-01'].forEach((m) => {
+      const out = res36(D, m, '2027-01-10');
+      igual([out.aReceberTotal, out.declaradoTotal, out.inadimplenciaTotal, out.emAtrasoTotal, out.porFILHOt.length, out.inadimplentes.length],
+        [0, 0, 0, 0, 0, 0], 'caso ' + i + ' em ' + m + ': fora de toda soma');
+      igual(out.semComoCalcular.length, 1, 'caso ' + i);
+      assert.ok(motivo.test(out.semComoCalcular[0].motivo), 'caso ' + i + ': ' + out.semComoCalcular[0].motivo);
+      assert.ok(out.avisos.join(' ').indexOf('ficaram FORA da soma por falta de dado') >= 0);
+      igual(J36('recQuebra(' + JSON.stringify(out) + ')').total, 0);
+    });
+    // o Lançar pagamento não cobra: diz o motivo
+    const cb = J36('lpCobrancaDe(' + JSON.stringify(CH36) + ', ' + JSON.stringify(D) + ', "2026-10-06")');
+    assert.ok(!cb.linha && motivo.test(cb.motivo), JSON.stringify(cb));
+  });
+  // a ficha torta não arrasta as outras: a do lado continua na conta de sempre
+  const cad = cad36(renov36({ dias_mes: [['seg'], ['seg']] }));
+  cad['brisa__teste b'] = { n: 'Brisa', tutor: 'Teste B', dias: ['sex'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const out = res36(dados36(cad), '2026-10');
+  igual([out.aReceberTotal, out.porFILHOt.map((o) => o.chave), out.semComoCalcular.map((o) => o.chave)], [38700, ['brisa__teste b'], [CH36]]);
+});
+
+// O cadastro variado (todo jeito de ficha que a conta conhece) — para provar que o caminho de sempre não mudou.
+function cadastroVariado36(nomes) {
+  let s = 36;
+  const sorte = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  const um = (l) => l[Math.floor(sorte() * l.length)];
+  const cad = {}, irmaos = {}, orc = {}, pag = {};
+  const meses = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
+  nomes.forEach((nm, i) => {
+    const k = (nm + '__tutor ' + (i % 17)).toLowerCase().replace(/[.#$\[\]\/]/g, '-');
+    const plano = um(['Silver', 'Gold', 'Black', 'Silver', 'Gold', 'auaulandia', 'avulso', 'morador', undefined, 'Platina']);
+    const dia = String(1 + Math.floor(sorte() * 28)).padStart(2, '0');
+    const r = { plano: plano };
+    const v = sorte();
+    if (v > 0.08) r.inicio = um(meses) + '-' + dia; else if (v > 0.04) r.inicio = '2026-13-40';
+    if (sorte() > 0.3) r.aulas = um([1, 2, 3, 4, 5, 6, '2', 0]);
+    if (sorte() > 0.4) r.ordemPet = um([1, 2, 3, 4, '2', 0, null]);
+    if (sorte() > 0.5 && r.inicio && /^\d{4}-\d{2}-\d{2}$/.test(r.inicio)) r.fim = um(['2026-08-31', '2026-10-31', '2026-12-31', '2027-01-31', r.inicio]);
+    if (sorte() > 0.85) r.plano_deduzido = true;
+    if (sorte() > 0.9) r.vig_inicio = '2026-10-01';
+    const c = { n: nm, tutor: 'Tutor ' + (i % 17), renov: r };
+    if (sorte() > 0.25) c.dias = ['seg', 'ter', 'qua', 'qui', 'sex'].filter(() => sorte() > 0.6);
+    if (sorte() > 0.93) c.inativo = 'Sim';
+    if (sorte() > 0.95) c.categoria = um(['hospede', 'avulso', 'auluno']);
+    if (sorte() > 0.97) c.renov = null;
+    cad[k] = c;
+    if (i > 0 && sorte() > 0.8) irmaos['v' + i] = { a: k, b: Object.keys(cad)[Math.floor(sorte() * i)] };
+    if (sorte() > 0.85) pag[um(meses)] = Object.assign(pag[um(meses)] || {}, { ['p' + i]: { chave: k, valor_cent: um([38700, 107700, 33387, 5]), data: um(meses) + '-10' } });
+    if (sorte() > 0.9) orc['o' + i] = { status: um(['fechado', 'aguardando', 'cancelado']), total_cent: 90000, parcela1_cent: 45000, parcela2_cent: 45000,
+      entrada: um(meses) + '-15', status_em: Date.UTC(2026, Math.floor(sorte() * 9) + 3, 12, 15), criado_em: Date.UTC(2026, 6, 1, 15), pets: [{ nome: nm }] };
+  });
+  return { cadastro: cad, irmaos: irmaos, orcamentos: orc, pagamentos: pag, peludinhos: nomes.slice(0, 20).map((nm, i) => ({ n: nm, tutor: 'Tutor ' + (i % 17), dias: ['seg', 'qua'] })) };
+}
+const NOMES36 = ['Amora', 'Baque', 'Cacau', 'Duna', 'Faísca', 'Gaia', 'Hércules', 'Íris', 'Jade', 'Kiwi', 'Luna', 'Mel', 'Nino', 'Ônix', 'Paçoca', 'Quindim',
+  'Rubi', 'Sushi', 'Tufo', 'Uva', 'Vento', 'Xodó', 'Yuki', 'Zeca', 'Bolota', 'Caju', 'Dengo', 'Esquilo', 'Fubá', 'Guri', 'Hulk', 'Isca', 'Juju', 'Kika',
+  'Lola', 'Mingau', 'Nescau', 'Oreo', 'Pipoca', 'Quiabo', 'Rabito', 'Sálvia', 'Tico', 'Ursa', 'Valente', 'Wasabi', 'Xerife', 'Yoyo', 'Zuzu', 'Bento',
+  'Chica', 'Dudu', 'Estrela', 'Flor', 'Gordo', 'Hana', 'Ivy', 'Joca', 'Kong', 'Lilo'];
+
+prova('6.36 AC7 — fichas SEM dias por mês: o Financeiro dá EXATAMENTE os mesmos números de antes (60 fichas variadas, 11 meses, 3 "hoje"; a conta inteira, linha por linha)', () => {
+  const D = cadastroVariado36(NOMES36);
+  const difs = [];
+  let linhas = 0;
+  ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'].forEach((m) => {
+    ['', '2026-08-15', '2026-10-06'].forEach((h) => {
+      [null, { planos: J36('planos()'), descontoIrmao: J36('DESC_PET_PLANO') }].forEach((tab) => {
+        const dd = Object.assign({}, D, tab || {});
+        const a = JSON.stringify(FIN_ANTES36.finResumoMes(dd, m, { hoje: h }));
+        const b = JSON.stringify(FIN_NOVO36.finResumoMes(dd, m, { hoje: h }));
+        const c = JSON.stringify(ctx36.finResumoMes(dd, m, { hoje: h }));
+        if (a !== b || a !== c) difs.push(m + ' ' + h);
+        linhas += JSON.parse(a).porFILHOt.length;
+      });
+    });
+  });
+  igual(difs, [], 'nenhum mês diferente');
+  assert.ok(linhas > 100, linhas + ' linhas conferidas');
+  // a conta tem de ter MATÉRIA: linhas de Day Care e de AuAulândia, sem como calcular, vencidos e irmãos
+  const r = FIN_NOVO36.finResumoMes(D, '2026-10', { hoje: '2026-10-06' });
+  assert.ok(r.porFILHOt.some((o) => o.servico === 'daycare') && r.semComoCalcular.length > 0 && r.inadimplentes.length > 0, JSON.stringify([r.porFILHOt.length, r.semComoCalcular.length, r.inadimplentes.length]));
+  // com a Tâmara no meio, as OUTRAS linhas continuam iguais às de antes
+  const comT = Object.assign({}, D, { cadastro: Object.assign({}, D.cadastro, cad36(renov36())) });
+  ['2026-10', '2026-11', '2027-01'].forEach((m) => {
+    const a = FIN_ANTES36.finResumoMes(comT, m, { hoje: '2026-10-06' }), b = FIN_NOVO36.finResumoMes(comT, m, { hoje: '2026-10-06' });
+    const tira = (x) => x.filter((o) => o.chave !== CH36);
+    igual(JSON.parse(JSON.stringify([tira(b.porFILHOt), tira(b.inadimplentes), tira(b.semComoCalcular)])),
+      JSON.parse(JSON.stringify([tira(a.porFILHOt), tira(a.inadimplentes), tira(a.semComoCalcular)])), m);
+  });
+});
+
+prova('6.36 AC8 — "Lançar pagamento" aceita o valor somado mês a mês (R$ 1.307,00) e barra o do Mês 1 × 3; o lançamento quita a cobrança ao centavo', () => {
+  const D = dados36(cad36(renov36()), { pagamentos: {} });
+  ctx36.__d36 = D;
+  const fam = J36('lpCobrancasFamilia(' + JSON.stringify(CH36) + ', __d36, "2026-10-06")');
+  igual([fam.membros.length, fam.membros[0].ref, fam.membros[0].linha.valor, fam.totalValor, fam.totalFalta, fam.abertos], [1, '2026-10', 130700, 130700, 130700, 1]);
+  ctx36.__l36 = fam.membros[0].linha;
+  const reg = J36('lpRegistroDe(__l36, "2026-10", "2026-10-06", "2026-10-06", "pix", "Teste", 1)');
+  assert.ok(!('erro' in reg), JSON.stringify(reg));
+  igual([reg.chave, reg.valor_cent, reg.ref, reg.data, reg.plano, reg.servico], [CH36, 130700, '2026-10', '2026-10-06', 'Gold', 'daycare']);
+  igual(J36('finLancamentoValido(130700, 130700)'), { ok: true });
+  igual(J36('finLancamentoValido(107700, 130700)'), { ok: false, motivo: 'falta R$ 230,00' }, 'o valor do Mês 1 × 3 é barrado');
+  const pago = res36(Object.assign({}, D, { pagamentos: { '2026-10': { x1: reg } } }), '2026-10');
+  igual([pago.recebidoTotal, pago.aReceberTotal, pago.porFILHOt[0].pago, pago.porFILHOt[0].falta, pago.porFILHOt[0].situacao], [130700, 0, 130700, 0, 'pago']);
+  // depois de pago, a tela não oferece de novo
+  ctx36.__d36b = Object.assign({}, D, { pagamentos: { '2026-10': { x1: reg } } });
+  igual(J36('lpCobrancasFamilia(' + JSON.stringify(CH36) + ', __d36b, "2026-10-06").abertos'), 0);
+});
+
+prova('6.36 AC9 — todo valor na tela no formato R$ 1.307,00 (milhar com ponto, decimal com vírgula, centavos sempre)', () => {
+  const casos = [renov36(), renov36({ ordemPet: 2 }), { plano: 'Black', aulas: 1, ordemPet: 3, inicio: '2026-10-05', fim: '2027-03-31',
+    dias_mes: [['seg'], ['seg', 'ter', 'qua', 'qui', 'sex'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua', 'sex']] }];
+  casos.forEach((r) => {
+    const out = res36(dados36(cad36(r)), '2026-10');
+    const L = out.porFILHOt[0];
+    assert.ok(soFormato36(L.detalheMeses) && (L.detalheMeses.match(/R\$/g) || []).length === L.valorPorMes.length, L.detalheMeses);
+    L.valorPorMes.forEach((v) => assert.ok(L.detalheMeses.indexOf(ctx36.finBRL(v)) >= 0));
+    const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+    assert.ok(soFormato36(pd), (pd.match(/R\$[^<]{0,14}/g) || []).join(' | '));
+  });
+  igual([ctx36.finBRL(130700), ctx36.finBRL(121551), ctx36.finBRL(115016), ctx36.finBRL(248800), ctx36.finBRL(33387), ctx36.finBRL(0)],
+    ['R$ 1.307,00', 'R$ 1.215,51', 'R$ 1.150,16', 'R$ 2.488,00', 'R$ 333,87', 'R$ 0,00']);
+  assert.ok(FORMATO36.test('R$ 1.307,00') && !soFormato36('R$ 1307,00') && !soFormato36('R$ 1.307') && !soFormato36('R$ 1,307.00'));
+});
+
+prova('6.36 — o arquivo do dinheiro continua ES5 (roda no tablet velho) e o caminho de sempre está no texto, intocado', () => {
+  assert.ok(!/=>|\bconst\b|\blet\b|`|Object\.assign|\.find\(/.test(FIN_SRC36.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'nada de ES6 fora dos comentários');
+  // o caminho de sempre: a conta de hoje continua lá, linha por linha
+  ['    aulas = finAulasDe(k, cadastro, peludinhos);', '    valorMes = entra ? mensal * (meses || 1) : 0;',
+    '        R.porServico.daycare.declarado += mensal * (meses || 1);', '        valorDeUmMes: mensal,']
+    .forEach((l) => assert.ok(FIN_SRC36.indexOf(l + '\n') > 0, l));
+  // a porta do plano com dias por mês fica ANTES da conta de sempre e sai dela com continue
+  assert.ok(/    if \(r\.dias_mes\) \{\n      finResumoDiasMes\(R, k, c, r, \{[\s\S]{0,260}\}\);\n      continue;\n    \}\n    aulas = finAulasDe/.test(FIN_SRC36));
+});
+// @@636-FIM
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

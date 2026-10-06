@@ -17163,7 +17163,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-06';
+  const APP_VERSAO='2026-10-06-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -54697,7 +54697,10 @@
       if(m.linha){
         h+='<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
           +'<span class="k"><strong style="text-transform:capitalize">'+esc(m.nome)+'</strong> · plano '+esc(m.linha.plano)
-          +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')+' · '+m.linha.aulas+'x por semana'
+          +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')
+          // Plano com dias diferentes em cada mês (6.36): os dias e o valor de cada mês, prontos do
+          // financeiro-logica — o valor cheio abaixo é a soma deles.
+          +(m.linha.detalheMeses?(' · dias por mês: '+esc(m.linha.detalheMeses)):(' · '+m.linha.aulas+'x por semana'))
           +((m.linha.ordemPet>1)?(' · '+m.linha.ordemPet+'º da família, desconto aplicado'):'')
           +' · mês '+esc(m.ref)+'</span>'
           +'<span class="val" style="font-variant-numeric:tabular-nums"><strong>'+esc(finBRL(m.linha.valor))+'</strong> · '
@@ -58256,6 +58259,10 @@
       abertos.slice(0,5).forEach(function(o){
         var vd=(o.servico==='daycare')?'renovacao':'orcamento';
         var rotPlano=(o.servico==='daycare')?('plano '+o.plano+(o.compromisso?(' ('+o.compromisso+')'):'')):'hospedagem';
+        // Plano com dias diferentes em cada mês (6.36): a linha diz os dias e o valor de cada
+        // mês, para quem confere ("1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00"). O texto
+        // vem pronto do financeiro-logica (finBRL) — nenhum número nasce aqui.
+        if(o.servico==='daycare' && o.detalheMeses) rotPlano+=' · dias por mês: '+o.detalheMeses;
         h+='<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(vd)+'\')">'
           +'<span class="pa-li-txt"><b style="text-transform:capitalize">'+esc(o.nome)+'</b>'
           +'<span>'+esc(rotPlano)+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
