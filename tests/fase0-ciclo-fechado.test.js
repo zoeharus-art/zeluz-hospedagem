@@ -7390,6 +7390,239 @@ provaAsync('6.35 "Não deixa escovar": grava na ficha (como a pergunta da ficha)
     igual((await run("prevCorrigeEscovaDc(__ch635, 'Talvez', '', 'hoje')")).ok, false, 'resposta fora das duas: nada');
   } finally { run(SOLTA635); }
 });
+// ================================================================== 6.30 — plano com dias por mês
+console.log('\n6.30 — plano com dias por mês: a Hopi vem 1x nos dois primeiros meses e 2x no último (Adriana, 05/out/2026)');
+// Dado INVENTADO: a «Tâmara», da tutora «Viajante Teste» — Gold pago em 05/10/2026, vale até
+// 31/12/2026, 1º da família, rotina (chips do alto) Seg, e os dias do plano mês a mês:
+// Mês 1 Seg · Mês 2 Seg · Mês 3 Seg e Qua. Feriados de fábrica: 12/10, 02/11, 20/11, 08/12, 25/12.
+const TAMARA630 = { n: 'Tâmara', tutor: 'Viajante Teste', raca: 'SRD', dias: ['seg'] };
+const RENOV630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31',
+  mesRenov: 'dezembro de 2026', quando: '2026-10-06', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] });
+// Arma a ficha no cache do cadastro (a mesma porta que o app lê) e devolve o desarme.
+const arma630 = (renov, extra, hoje) => {
+  ctx.__t630 = Object.assign({}, TAMARA630); ctx.__ex630 = Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], renov: renov }, extra || {});
+  run(`__bk630={cad:pelCadCache, hz:zHojeISO, P:PELUDINHOS}; pelCadCache=Object.assign({}, pelCadCache);
+    pelCadCache[pelKey(__t630)]=__ex630; PELUDINHOS=[__t630]; zHojeISO=function(){ return '${hoje || '2026-12-09'}'; };`);
+};
+const solta630 = () => run('pelCadCache=__bk630.cad; zHojeISO=__bk630.hz; PELUDINHOS=__bk630.P;');
+const J630 = (codigo) => JSON.parse(JSON.stringify(run(codigo)));
+prova('6.30 P1 — os meses do plano saem do início: 05/10–04/11 Seg · 05/11–04/12 Seg · 05/12–31/12 Seg, Qua (o último termina no fim da vigência)', () => {
+  arma630(RENOV630());
+  try {
+    igual(J630('renovMesesDoPlano(__ex630.renov)'), [
+      { n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] },
+      { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] },
+      { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }]);
+  } finally { solta630(); }
+});
+prova('6.30 P2 — pelDias pela data: 07/10 Seg; 09/12 Seg, Qua; 04/01/2027 (plano vencido) a rotina; sem data = hoje; "rotina" = os chips', () => {
+  arma630(RENOV630(), null, '2026-12-09');
+  try {
+    igual(J630("pelDias(__t630, '2026-10-07')"), ['seg']);
+    igual(J630("pelDias(__t630, '2026-12-09')"), ['seg', 'qua']);
+    igual(J630("pelDias(__t630, '2026-11-11')"), ['seg'], 'a quarta do Mês 2 não é dia dela');
+    igual(J630("pelDias(__t630, '2027-01-04')"), ['seg'], 'depois do plano, sem renovação: os dias do alto da ficha');
+    igual(J630('pelDias(__t630)'), ['seg', 'qua'], 'sem data: os dias de HOJE (09/12, Mês 3)');
+    igual(J630("pelDias(__t630, 'rotina')"), ['seg']);
+    igual(J630("pelDiasEm(__t630, '2026-12-09')"), ['seg', 'qua'], 'o apelido pedido na story');
+    run("zHojeISO=function(){ return '2026-11-11'; };");
+    igual(J630('pelDias(__t630)'), ['seg'], 'hoje no Mês 2: Seg');
+  } finally { solta630(); }
+});
+prova('6.30 P3 — ficha SEM dias por mês: pelDias igual ao de sempre em qualquer data, e nAulasDe igual (regressão)', () => {
+  const antiga = (ex, p) => (Array.isArray(ex.dias) ? ex.dias : (Array.isArray(p.dias) ? p.dias : []));
+  const casos = [
+    [{ dias: ['ter', 'qui'], renov: { plano: 'Gold', aulas: 2, inicio: '2026-10-05', fim: '2026-12-31' } }, { n: 'Faísca', tutor: 'Teste A', dias: ['seg'] }],
+    [{ renov: { plano: 'Silver', aulas: 1, inicio: '2026-10-01', fim: '2026-10-31' } }, { n: 'Brisa', tutor: 'Teste B', dias: ['sex'] }],
+    [{ dias: [] }, { n: 'Pingo', tutor: 'Teste C', dias: ['qua'] }],
+    [{}, { n: 'Sem Nada', tutor: 'Teste D' }],
+    [{ dias: ['seg', 'ter', 'qua', 'qui', 'sex'], renov: {} }, { n: 'Todo Dia', tutor: 'Teste E' }],
+  ];
+  run('__bk630r={cad:pelCadCache, hz:zHojeISO}; pelCadCache=Object.assign({}, pelCadCache);');
+  try {
+    casos.forEach(([ex, p]) => {
+      ctx.__exR = ex; ctx.__pR = p;
+      run('pelCadCache[pelKey(__pR)]=__exR;');
+      const esperado = antiga(ex, p);
+      ['2026-10-07', '2026-12-09', '2027-01-04', '2025-03-03', 'rotina', undefined].forEach((q) => {
+        igual(J630('pelDias(__pR' + (q === undefined ? '' : ", '" + q + "'") + ')'), esperado, p.n + ' em ' + q);
+      });
+      ['2026-10-07', '2026-12-09'].forEach((h) => { run("zHojeISO=function(){ return '" + h + "'; };"); igual(J630('pelDias(__pR)'), esperado); });
+      igual(run('nAulasDe(__pR)'), Math.min(5, Math.max(1, esperado.length)) || 1, 'nAulasDe de ' + p.n);
+      assert.strictEqual(run("pelDias(__pR, '2026-12-09')===pelExtra(__pR).dias || !Array.isArray(pelExtra(__pR).dias)"), true, 'a MESMA lista (sem cópia) quando não há dias por mês');
+    });
+  } finally { run('pelCadCache=__bk630r.cad; zHojeISO=__bk630r.hz;'); }
+});
+prova('6.30 P4 — começou no meio do mês (pago 22/09, opção 2, mês cobrado outubro): 22/09–31/10 · 01/11–30/11 · 01/12–31/12', () => {
+  const r = { plano: 'Gold', inicio: '2026-09-22', fim: '2026-12-31', mes_cobranca_1: '2026-10', meio_mes: { opcao: 2, inicio: '2026-09-22' }, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  ctx.__r630 = r;
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2026-09-22|2026-10-31', '2026-11-01|2026-11-30', '2026-12-01|2026-12-31']);
+  // registro do meio do mês ainda sem o mes_cobranca_1 gravado: a âncora é o dia 1º do mês seguinte
+  ctx.__r630 = Object.assign({}, r, { mes_cobranca_1: '' });
+  igual(J630('renovMesesDoPlano(__r630)[1].de'), '2026-11-01');
+});
+prova('6.30 P5 — renovação antecipada / fim do mês (período começa 01/10): os meses coincidem com o calendário', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-09-25', vig_inicio: '2026-10-01', fim: '2026-12-31', dias_mes: [['seg'], ['ter'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2026-10-01|2026-10-31', '2026-11-01|2026-11-30', '2026-12-01|2026-12-31']);
+  ctx.__r630 = { plano: 'Black', inicio: '2026-10-05', fim: '2027-03-31', dias_mes: [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'),
+    ['2026-10-05|2026-11-04', '2026-11-05|2026-12-04', '2026-12-05|2027-01-04', '2027-01-05|2027-02-04', '2027-02-05|2027-03-04', '2027-03-05|2027-03-31'], 'semestral: 6 meses');
+});
+prova('6.30 P6 — dado torto não vale (outro tamanho, mês vazio, só sábado, Silver, sem fim): sem meses, e vale a rotina', () => {
+  const tortos = [
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], [], ['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['sab'], ['seg'], ['seg', 'qua']] },
+    { plano: 'Silver', inicio: '2026-10-05', fim: '2026-10-31', dias_mes: [['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: 'seg,qua' },
+  ];
+  tortos.forEach((r, i) => {
+    arma630(r);
+    try {
+      igual(J630('renovMesesDoPlano(__ex630.renov)'), [], 'caso ' + i);
+      igual(J630("pelDias(__t630, '2026-12-09')"), ['seg'], 'caso ' + i + ': a rotina');
+      assert.strictEqual(run('renovDiasMesValido(__ex630.renov)'), false);
+    } finally { solta630(); }
+  });
+  // o banco devolve objeto de chaves numéricas e dia repetido/fora de ordem: saneia
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: { 0: ['seg'], 1: { a: 'seg' }, 2: ['qua', 'seg', 'qua', 'xyz'] } };
+  igual(J630('renovMesesDoPlano(__r630)[2].dias'), ['seg', 'qua']);
+});
+prova('6.30 P7 — Turma do dia (Turminhas): em 09/12 a Tâmara vem como fixa; na quarta 11/11 (Mês 2), não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  run(`__bk630t={rl:repLancamentos, ra:repAgendaDe, te:poTelDoTutor, rs:repSaldo};
+    repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 0; };`);
+  try {
+    const f = "{pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:0, hoje:'2026-11-09'}";
+    const dez = J630("turmaListaDoDia('2026-12-09', " + f + ')');
+    igual(dez.vem.map((o) => [o.nome, o.porque]), [['Tâmara', '']], 'fixa do dia, sem "reposição"');
+    const nov = J630("turmaListaDoDia('2026-11-11', " + f + ')');
+    igual([nov.vem.length, nov.naoVem.length], [0, 0], 'a quarta do Mês 2 não é dela');
+    igual(J630("turmaListaDoDia('2026-12-07', " + f + ').vem.length'), 1, 'segunda: dela em todos os meses');
+  } finally { run('repLancamentos=__bk630t.rl; repAgendaDe=__bk630t.ra; poTelDoTutor=__bk630t.te; repSaldo=__bk630t.rs;'); solta630(); }
+});
+prova('6.30 P8 — turmaDoDia (a Chamada, o check-in e a TV): a aba da quarta vista na sexta 04/12 já é a quarta 09/12 (Mês 3); vista em 09/11, a quarta 11/11 não tem a Tâmara', () => {
+  arma630(RENOV630(), null, '2026-12-04');
+  run("__bk630d={dc:dcDia, av:dcAvulsos}; dcAvulsos=[]; dcDia='qua';");
+  try {
+    igual(J630('turmaDoDia().map(function(o){ return o.p.n; })'), ['Tâmara'], 'na sexta 04/12 (ainda Mês 2), a aba da quarta é a de 09/12');
+    run("zHojeISO=function(){ return '2026-11-09'; };");
+    igual(J630('turmaDoDia().map(function(o){ return o.p.n; })'), [], 'semana de 09/11: a quarta 11/11 é do Mês 2');
+    igual(J630("turmaDoDia('2026-12-09').map(function(o){ return o.p.n; })"), ['Tâmara'], 'com a data na mão, vale a data');
+    igual(J630("turmaDe('2026-12-09').map(function(o){ return o.p.n; })"), ['Tâmara'], 'turmaDe passa a data');
+    igual(run('dcDia'), 'qua', 'a aba volta como estava');
+    igual(J630("turmaDe('2026-11-11').map(function(o){ return o.p.n; })"), []);
+  } finally { run('dcDia=__bk630d.dc; dcAvulsos=__bk630d.av;'); solta630(); }
+});
+const stubsTroca630 = () => run(`__bk630x={rs:repSaldo, rd:repDisponivel, rt:repTrocasPendentes, dm:dcMatriculado, vd:vagasDoDia, rl:repLancamentos, tc:TROCA_CACHE};
+  repSaldo=function(){ return 2; }; repDisponivel=function(){ return 2; }; repTrocasPendentes=function(){ return 0; }; dcMatriculado=function(){ return true; };
+  vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };
+  repLancamentos=function(){ return []; }; TROCA_CACHE={};`);
+const soltaTroca630 = () => run('repSaldo=__bk630x.rs; repDisponivel=__bk630x.rd; repTrocasPendentes=__bk630x.rt; dcMatriculado=__bk630x.dm; vagasDoDia=__bk630x.vd; repLancamentos=__bk630x.rl; TROCA_CACHE=__bk630x.tc;');
+prova('6.30 P9 — troca de dia pela data: 07/12 → 09/12 "já vem na quarta"; 09/12 → 10/12 vale; 11/11 → 12/11 "não vem na quarta"', () => {
+  arma630(RENOV630(), null, '2026-11-09'); stubsTroca630();
+  try {
+    const V = (de, para) => J630("dxVeredito(__t630, '" + para + "', {de:'" + de + "'})");
+    assert.ok(/já vem na quarta/.test(V('2026-12-07', '2026-12-09').motivo), V('2026-12-07', '2026-12-09').motivo);
+    const ok = V('2026-12-09', '2026-12-10');
+    igual([ok.ok, ok.tipo], [true, 'troca'], ok.motivo);
+    assert.ok(/não vem na quarta/.test(V('2026-11-11', '2026-11-12').motivo), V('2026-11-11', '2026-11-12').motivo);
+    const nov = V('2026-11-30', '2026-12-02');
+    igual([nov.ok, nov.tipo], [true, 'troca'], 'a quarta 02/12 (Mês 2) ainda não é dela: a troca para lá vale');
+  } finally { soltaTroca630(); solta630(); }
+});
+prova('6.30 P10 — "Ele já vem nesse dia" e "é o dia dela" respondem pela data: a quarta do Mês 3 é dela; a do Mês 2, não', () => {
+  arma630(RENOV630(), null, '2026-11-09'); stubsTroca630();
+  try {
+    assert.ok(/já vem nesse dia/.test(run("trocaValidar(__t630, '2026-12-09')")));
+    igual(run("trocaValidar(__t630, '2026-11-11')"), '');
+    igual(run("repEhDiaDele(__t630, '2026-12-09')"), true);
+    igual(run("repEhDiaDele(__t630, '2026-11-11')"), false);
+    igual(run("repEhDiaDele(__t630, '2026-11-16')"), true, 'segunda é dela em todo mês');
+  } finally { soltaTroca630(); solta630(); }
+});
+prova('6.30 P11 — reposição por período (30/11 a 11/12): 30/11 e 07/12 (segundas) e 09/12 (quarta do Mês 3) — a quarta 02/12 não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  try {
+    igual(J630("repDiasQueViria(__t630, '2026-11-30', '2026-12-11')"), ['2026-11-30', '2026-12-07', '2026-12-09']);
+  } finally { solta630(); }
+});
+prova('6.30 P12 — a próxima vinda: depois de 30/11 é 07/12; depois de 07/12 é 09/12 (08/12 é feriado)', () => {
+  arma630(RENOV630(), null, '2026-11-30');
+  run('__bk630a={ra:repAgendaDe}; repAgendaDe=function(){ return []; };');
+  try {
+    igual(run("proximaVindaDe(__t630, '2026-11-30')"), '2026-12-07');
+    igual(run("proximaVindaDe(__t630, '2026-12-07')"), '2026-12-09');
+    igual(run("proximaVindaDe(__t630, '2026-11-09')"), '2026-11-16', 'no Mês 2 a quarta não conta');
+    igual(run("vencProximoDiaDele(__t630, '2026-12-08')"), '2026-12-09', 'a resposta que chega no feriado vai para a quarta do Mês 3');
+    igual(run("vencProximoDiaDele(__t630, '2026-11-10')"), '2026-11-16', 'no Mês 2 a quarta não é dela');
+  } finally { run('repAgendaDe=__bk630a.ra;'); solta630(); }
+});
+prova('6.30 P13 — a planilha do dia (banho fixo e o automático): quarta 09/12 sim; quarta 02/12 não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  try {
+    igual(run("dashAutoVemNoDia(__t630, '2026-12-09')"), true);
+    igual(run("dashAutoVemNoDia(__t630, '2026-12-02')"), false);
+  } finally { solta630(); }
+});
+prova('6.30 P23 — o valor do plano pela tabela, mês a mês: 1º R$ 1.307,00 · 2º R$ 1.215,51 · 3º R$ 1.150,16 · Black R$ 2.488,00; e o desconto é por mês', () => {
+  const V = (plano, dm, ordem) => J630("renovValorDoPlano('" + plano + "', " + JSON.stringify(dm) + ', ' + ordem + ')');
+  const hopi = [['seg'], ['seg'], ['seg', 'qua']];
+  igual(V('Gold', hopi, 1), { total: 130700, porMes: [{ aulas: 1, valor: 35900 }, { aulas: 1, valor: 35900 }, { aulas: 2, valor: 58900 }], falta: -1 });
+  igual(V('Gold', hopi, 2).total, 121551);
+  igual(V('Gold', hopi, 3).total, 115016);
+  igual(V('Black', [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']], 1).total, 248800);
+  igual(run('renovBRL(130700)'), 'R$ 1.307,00');
+  igual(run('renovBRL(121551)'), 'R$ 1.215,51');
+  // preço quebrado (a Gestão grava centavos): o desconto é arredondado EM CADA MÊS, como no Financeiro
+  run(`__bk630p=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35950; planosCfg.Gold.valores[2]=58950;`);
+  try {
+    igual(V('Gold', hopi, 2).total, 121692, 'Math.round(35950×0,93)×2 + Math.round(58950×0,93) = 33.434×2 + 54.824');
+    run('delete planosCfg.Gold.valores[2];');
+    igual(V('Gold', hopi, 1).falta, 2, 'mês sem preço na tabela: a conta não fecha e diz qual mês');
+    igual(V('Gold', hopi, 1).total, 0, 'nunca um total pela metade');
+  } finally { run('planosCfg=__bk630p;'); }
+  igual(V('Gold', [['seg'], [], ['seg']], 1).falta, 1, 'mês sem dia: a conta não fecha');
+});
+prova('6.30 P25 — orçamento de hospedagem de 01/12 a 10/12: a noite de 02/12 (quarta do Mês 2) é diária; a de 09/12 (quarta do Mês 3) é pernoite', () => {
+  arma630(RENOV630(), null, '2026-11-20');
+  const geOrig = ctx.document.getElementById;
+  const els = { orcEntrada: { value: '2026-12-01' }, orcSaida: { value: '2026-12-10' }, orcCardResultado: { style: {} }, orcCardMsg: { style: {} },
+    orcAvisoData: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' }, orcResultado: { innerHTML: '' }, orcMsg: { value: '' } };
+  ctx.document.getElementById = function (id) { return (id in els) ? els[id] : geOrig.call(this, id); };
+  run(`__bk630o={sel:ORC_SEL, rep:ORC_REP, calc:ORC_CALC, aul:ORC_AULUNO, t:ORC_TEMP, man:ORC_TEMP_MANUAL, auto:ORC_TEMP_AUTO, rr:orcRenderResultado, rm:orcRenderMsg, rs:orcRenderSel, nc:orcNovoComecou, hj:hojeISO};
+    ORC_SEL=[]; ORC_REP={}; ORC_AULUNO=true; ORC_TEMP='baixa'; ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
+    orcRenderResultado=function(){}; orcRenderMsg=function(){}; orcRenderSel=function(){}; orcNovoComecou=function(){};
+    hojeISO=function(){ return '2026-11-20'; };`);
+  try {
+    run('orcAdd(pelKey(__t630))');
+    igual(J630('[ORC_SEL.length, ORC_SEL[0].porMes, ORC_SEL[0].dias]'), [1, true, ['seg']], 'a ficha entra marcada como "dias por mês"');
+    const N = J630('ORC_CALC.pets[0].noites.map(function(n){ return n.iso.slice(5)+(n.pernoite?" P":" D"); })');
+    assert.ok(N.indexOf('12-02 D') >= 0, 'quarta 02/12 (Mês 2): diária — ' + N.join(','));
+    assert.ok(N.indexOf('12-09 P') >= 0, 'quarta 09/12 (Mês 3): pernoite — ' + N.join(','));
+    assert.ok(N.indexOf('12-07 P') >= 0 && N.indexOf('12-01 D') >= 0, N.join(','));
+    igual(J630('[ORC_CALC.pets[0].nPer, ORC_CALC.pets[0].nDia]'), [2, 7]);
+    // ficha sem dias por mês: a conta de sempre, pelos dias guardados
+    run("ORC_SEL=[{key:'x__y', nome:'X', tutor:'Y', raca:'SRD', dias:['qua'], trocas:{}, planoKey:'Gold', rotulo:'Gold', compromisso:'trimestral', hospOff:10}]; orcCalcular();");
+    igual(J630('ORC_CALC.pets[0].noites.filter(function(n){ return n.pernoite; }).map(function(n){ return n.iso; })'), ['2026-12-02', '2026-12-09']);
+  } finally {
+    ctx.document.getElementById = geOrig;
+    run('ORC_SEL=__bk630o.sel; ORC_REP=__bk630o.rep; ORC_CALC=__bk630o.calc; ORC_AULUNO=__bk630o.aul; ORC_TEMP=__bk630o.t; ORC_TEMP_MANUAL=__bk630o.man; ORC_TEMP_AUTO=__bk630o.auto; orcRenderResultado=__bk630o.rr; orcRenderMsg=__bk630o.rm; orcRenderSel=__bk630o.rs; orcNovoComecou=__bk630o.nc; hojeISO=__bk630o.hj;');
+    solta630();
+  }
+});
+prova('6.30 P28 — contador das Turminhas por dia: a quarta conta a Tâmara só quando a próxima quarta cai no Mês 3', () => {
+  arma630(RENOV630(), null, '2026-12-07');
+  try {
+    igual(run("nMatriculados('qua')"), 1, 'na segunda 07/12, a próxima quarta é 09/12 (Mês 3)');
+    igual(run("nMatriculados('seg')"), 1);
+    run("zHojeISO=function(){ return '2026-11-30'; };");
+    igual(run("nMatriculados('qua')"), 0, 'em 30/11, a próxima quarta é 02/12 (Mês 2)');
+    igual(J630('gradeAlmocoDados().map(function(x){ return x.dia; })'), ['Segunda'], 'a grade de almoço da semana também');
+  } finally { solta630(); }
+});
+// @@630-FIM
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

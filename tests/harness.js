@@ -4657,8 +4657,11 @@ async function main() {
         const turma28 = ctx.turmaDe('2026-09-22').map((o) => o.p).filter((p) => p && p.n);
         const L28 = ctx.vencLista('2026-09-22');
         console.log('  cadastro real: ' + turma28.length + ' vêm na terça 22/09 · ' + L28.length + ' com algo vencendo');
-        check('v-28 · a turma do dia-alvo sai da MESMA porta do Day Care (turmaDoDia, com a aba trocada)',
-          turma28.length > 0 && /function turmaDe\(iso\)\{[\s\S]{0,420}?dcDia=d; return turmaDoDia\(\);[\s\S]{0,120}?finally\{ dcDia=antes; \}/.test(html));
+        // 6.30 (06/out/2026): a MESMA porta, agora com a data junto — o plano com dias por mês
+        // responde pela data (a quarta do Mês 3 da Hopi não é a quarta do Mês 2). A aba continua
+        // trocada e devolvida.
+        check('v-28 · a turma do dia-alvo sai da MESMA porta do Day Care (turmaDoDia, com a aba trocada e a data junto)',
+          turma28.length > 0 && /function turmaDe\(iso\)\{[\s\S]{0,700}?dcDia=d; return turmaDoDia\(iso\);[\s\S]{0,120}?finally\{ dcDia=antes; \}/.test(html));
         vm.runInContext("__dc28a = dcDia; dcDia = 'qui'; __t28 = turmaDe('2026-09-22'); __dc28b = dcDia; dcDia = __dc28a;", ctx);
         check('v-28 · e a aba do Day Care é DEVOLVIDA como estava (quem estava na quinta continua na quinta)',
           ctx.__dc28b === 'qui', String(ctx.__dc28b));
