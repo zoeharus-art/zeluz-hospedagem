@@ -7248,7 +7248,10 @@ prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só d
   igual((aba.match(/Último check-up/g) || []).length, 1, 'um campo só de check-up (antes eram dois, em casas diferentes)');
   assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-09-01" onchange="prevUltimaDireta\('checkup_t','checkup_p',365,this\.value,\{checkup_data:1,checkup:1\}\)" min="2015-01-01" max="\d{4}-\d{2}-\d{2}"/.test(aba), 'mostra a data mais recente, grava as três casas e não aceita data futura');
   assert.ok(/<div class="field" style="grid-column:1\/-1"><label>Já fez check-up\?<\/label>/.test(aba), '"Já fez check-up?" na linha inteira: os pares fez em | vence em ficam alinhados no computador');
-  assert.ok(pos('Escova e check-up') > 0 && pos('Escova e check-up') < pos('Já fez check-up?') && pos('Já fez check-up?') < pos('Último check-up (fez em)'), 'o alerta do grupo e o "Já fez check-up?" antes do primeiro campo');
+  // O alerta do grupo muda com a data ("em dia" hoje; "URGENTE — vencido" depois que a escova vence):
+  // a prova procura o alerta pela caixa, não pelo texto — senão vira bomba-relógio (achada no QA da 6.34).
+  const alerta = Math.min(...['class="alm-fora"', 'class="dc-faltas"', 'class="dc-meia"'].map((c) => { const x = aba.indexOf(c, pos('Check-up e escova')); return x < 0 ? Infinity : x; }));
+  assert.ok(alerta > 0 && alerta < pos('Já fez check-up?') && pos('Já fez check-up?') < pos('Último check-up (fez em)'), 'o alerta do grupo e o "Já fez check-up?" antes do primeiro campo');
   assert.ok(/<label>Vence em \(próximo check-up\)<\/label><input type="date" class="cad-in" id="prevVence_checkup_p" value="" onchange="prevVenceManualSet\('checkup_p',this\.value\)"/.test(aba), 'o check-up ganhou o "Vence em" no topo');
   assert.ok(/Pela conta: 01\/09\/2026 · 1 ano\./.test(aba), 'a conta sai da data mais recente');
   igual((aba.match(/Última troca de escova de dentes/g) || []).length, 1, 'a escova aparece uma vez');
@@ -7302,8 +7305,11 @@ prova('6.27 (QA) a mesa "Check-up a marcar": o "Vence em" digitado à mão vale;
   } finally { run('PELUDINHOS=__bk627c.P; pelExtra=__bk627c.pe; zHojeISO=__bk627c.hz;'); }
 });
 // ================================================================== 6.34 — a hora do banho fixo na linha
-console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora do banho (Adriana, 06/out/2026, Charlotte)');
-const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, c:REP_PLAN_CACHE['2026-10-06']};
+console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora gravada na planilha (Adriana, 06/out/2026, Charlotte)');
+// O relógio fica parado em 05/10 (QA da 6.34: a prova virava bomba-relógio em 07/10): o dia 06 é
+// futuro para dashAutoCalcular (quem vem sai dos dias da ficha) e está na janela da conferência.
+const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, pd:pelDias, hz:zHojeISO, c6:REP_PLAN_CACHE['2026-10-06'], c13:REP_PLAN_CACHE['2026-10-13']};
+  zHojeISO=function(){ return '2026-10-05'; };
   __ex634={
     'Charlotte|Bia': {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:30', desde:'2026-09-01', sham:'SEM SHAMPOO'}},
     'Ragna|Rui':     {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01', sham:'SEM SHAMPOO', excecoes:{'2026-10-06':{hora:'16:15'}}}},
@@ -7311,36 +7317,123 @@ const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, c:REP_PLAN_CACHE['2026-10-0
     'Nina|Lu':       {banho_rec:{ativo:false, freq:'semanal', dia:'ter', hora:'11:00', desde:'2026-09-01'}}
   };
   PELUDINHOS=[{n:'Charlotte', raca:'Spitz', tutor:'Bia'}, {n:'Ragna', raca:'Westie', tutor:'Rui'}, {n:'Tico', raca:'SRD', tutor:'Ana'}, {n:'Nina', raca:'SRD', tutor:'Lu'}];
-  pelExtra=function(p){ return __ex634[p.n+'|'+p.tutor]||{}; };`;
-const SOLTA634 = `PELUDINHOS=__bk634.P; pelExtra=__bk634.pe; if(__bk634.c) REP_PLAN_CACHE['2026-10-06']=__bk634.c; else delete REP_PLAN_CACHE['2026-10-06'];`;
-prova('6.34 a hora sai do combinado da ficha, a mesma conta da planilha: exceção do dia vale; pulado e desligado ficam de fora', () => {
+  pelExtra=function(p){ return __ex634[p.n+'|'+p.tutor]||{}; }; pelDias=function(){ return ['ter']; };`;
+const SOLTA634 = `PELUDINHOS=__bk634.P; pelExtra=__bk634.pe; pelDias=__bk634.pd; zHojeISO=__bk634.hz;
+  if(__bk634.c6) REP_PLAN_CACHE['2026-10-06']=__bk634.c6; else delete REP_PLAN_CACHE['2026-10-06'];
+  if(__bk634.c13) REP_PLAN_CACHE['2026-10-13']=__bk634.c13; else delete REP_PLAN_CACHE['2026-10-13'];`;
+prova('6.34 a hora que vai para a planilha: exceção do dia vale; pulado e desligado ficam de fora; dois FILHOts com a mesma chave ficam com a hora do primeiro (o da lista)', () => {
   run(ARMA634);
   try {
-    const m = JSON.parse(JSON.stringify(run("dashAutoHorasBanho('2026-10-06')")));
     const ch = (p) => run(`dashAutoNomeChave(banhoRecValorPlanilha(PELUDINHOS[${p}], banhoRecDe(PELUDINHOS[${p}])))`);
-    igual(m[ch(0)], '14:30', 'Charlotte: 14:30');
-    igual(m[ch(1)], '16:15', 'Ragna: a hora mudada só para hoje');
-    igual(Object.keys(m).length, 2, 'Tico (pulado hoje) e Nina (banho fixo desligado) não entram');
-    igual(JSON.parse(JSON.stringify(run("dashAutoHorasBanho('2026-10-07')"))), {}, 'quarta: ninguém tem banho fixo');
+    let o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
+    igual(o._horas.banho[ch(0)], '14:30', 'Charlotte: 14:30');
+    igual(o._horas.banho[ch(1)], '16:15', 'Ragna: a hora mudada só para hoje');
+    igual(Object.keys(o._horas.banho).length, 2, 'Tico (pulado hoje) e Nina (banho fixo desligado) não entram');
+    igual(o.banho.length, 2);
+    // mesma chave (o mesmo Nome/Raça, sem xará reconhecida): a lista fica com o primeiro, e a hora também
+    run(`PELUDINHOS=[{n:'Luna', raca:'Poodle', tutor:'Ana'}, {n:'Luna', raca:'SRD', tutor:'Rui'}];
+      __ex634={'Luna|Ana':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01'}},
+               'Luna|Rui':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:00', desde:'2026-09-01'}}};
+      __xr634=dashXaraDe; dashXaraDe=function(){ return 1; };`);
+    try {
+      o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
+      igual(o.banho.length, 1, 'as duas viram a mesma linha');
+      igual(o._horas.banho[run(`dashAutoNomeChave(${JSON.stringify(o.banho[0])})`)], o.banho[0].indexOf('Poodle') >= 0 ? '10:00' : '14:00', 'a hora é a do nome que ficou na lista');
+    } finally { run('dashXaraDe=__xr634;'); }
   } finally { run(SOLTA634); }
 });
-prova('6.34 a linha do automático: nome, a hora do banho em destaque e "na planilha ✓ (enviado em …)"', () => {
+prova('6.34 a linha do automático: nome, a hora GRAVADA em destaque e "na planilha ✓ (enviado em …)"; sem hora gravada, nada de hora', () => {
   run(ARMA634);
   try {
     const v0 = run('banhoRecValorPlanilha(PELUDINHOS[0], banhoRecDe(PELUDINHOS[0]))'), v1 = run('banhoRecValorPlanilha(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]))');
+    const k = (v) => JSON.stringify(run(`vagasNomeChave(${JSON.stringify(v)})`));
     const ts = new Date(2026, 9, 6, 15, 28).getTime();
+    // Ragna: a ficha diz 16:15 hoje, mas a planilha ainda tem 10:00 (a conferência não passou): a linha diz 10:00
     run(`REP_PLAN_CACHE['2026-10-06']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v0, v1, 'Zeca/SRD'])}, _estado_v:1,
-      _estado:{banho:{${JSON.stringify(run(`vagasNomeChave(${JSON.stringify(v0)})`))}:{planilha_ok:true, ts:${ts}}}}}};`);
+      _estado:{banho:{${k(v0)}:{planilha_ok:true, ts:${ts}, hora:'14:30'}, ${k(v1)}:{planilha_ok:true, ts:${ts}, hora:'10:00'}, ${k('Zeca/SRD')}:{planilha_ok:true, ts:${ts}}}}}};`);
     const h = run("dashAutoLinhas('banho', '2026-10-06', null).html");
     const linha = (nome) => h.split('<div class="pair dash-auto"').find((x) => x.indexOf(nome) >= 0) || '';
     assert.ok(/<strong>Charlotte\/Spitz \(SEM SHAMPOO\)<\/strong> <span class="dash-auto-hora" style="color:var\(--z-blue-soft\);font-weight:800">14:30<\/span> <span class="dash-auto-tag">automático · banho fixo<\/span>/.test(linha('Charlotte')), linha('Charlotte'));
     assert.ok(/na planilha ✓ \(enviado em 06\/10, 15:28\)/.test(linha('Charlotte')), 'a hora do envio diz que é do envio: ' + linha('Charlotte'));
-    assert.ok(/>16:15<\/span>/.test(linha('Ragna')), 'Ragna com a hora do dia');
-    assert.ok(linha('Zeca').indexOf('dash-auto-hora') < 0, 'sem combinado conhecido: só o nome, sem inventar hora');
+    assert.ok(/>10:00<\/span>/.test(linha('Ragna')) && linha('Ragna').indexOf('16:15') < 0, 'Ragna: a hora que está na planilha, não a da ficha: ' + linha('Ragna'));
+    assert.ok(linha('Zeca').indexOf('dash-auto-hora') < 0, 'sem hora gravada: só o nome, sem inventar hora');
+    // outro dia no seletor: vale o registro DAQUELE dia
+    run(`REP_PLAN_CACHE['2026-10-13']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v0])}, _estado_v:1, _estado:{banho:{${k(v0)}:{planilha_ok:true, ts:${ts}, hora:'15:45'}}}}};`);
+    assert.ok(/>15:45<\/span>/.test(run("dashAutoLinhas('banho', '2026-10-13', null).html")), 'dia 13: a hora gravada no dia 13');
+    // a hora vai escapada
+    run(`REP_PLAN_CACHE['2026-10-13'].auto._estado.banho[${k(v0)}].hora='<b>x';`);
+    assert.ok(run("dashAutoLinhas('banho', '2026-10-13', null).html").indexOf('<b>x') < 0, 'hora escapada');
     // outras colunas do automático não ganham hora
-    run(`REP_PLAN_CACHE['2026-10-06'].auto.reposicao=['Charlotte/Spitz'];`);
+    run(`REP_PLAN_CACHE['2026-10-06'].auto.reposicao=['Charlotte/Spitz']; REP_PLAN_CACHE['2026-10-06'].auto._estado.reposicao={${k('Charlotte/Spitz')}:{planilha_ok:true, ts:1, hora:'09:00'}};`);
     assert.ok(run("dashAutoLinhas('reposicao', '2026-10-06', null).html").indexOf('dash-auto-hora') < 0, 'a reposição não tem hora');
+    igual(typeof run('typeof dashAutoHorasBanho'), 'string'); igual(run('typeof dashAutoHorasBanho'), 'undefined', 'a conta da ficha a cada redesenho saiu (era o custo de 100 a 900 ms)');
   } finally { run(SOLTA634); }
+});
+provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda a hora, a ponte regrava a "Hora Banho" (a TV deixa de tocar na hora velha)', async () => {
+  run(`__bk634s={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit};
+    audit=function(){};
+    __p634=[]; __pl634={}; __falha634=''; dashPonteChamar=function(c){ __p634.push(JSON.parse(JSON.stringify(c)));
+      if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__pl634});
+      if(__falha634 && c.acao===__falha634) return Promise.resolve({ok:false, erro:'Failed to fetch'});
+      return Promise.resolve({ok:true, jaEstava:true}); };
+    __hq634='16:15'; __txt634='Charlotte/Spitz (SEM SHAMPOO)';
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=[__txt634]; o._horas={banho:{}}; o._horas.banho[dashAutoNomeChave(__txt634)]=__hq634; return o; };
+    __b634={}; __g634={};
+    DB={ref:function(p){ return {
+      once:function(){ var v=__b634[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __g634[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      update:function(v){ __g634[p]=Object.assign({}, __g634[p]||{}, v); return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-10-06', no = 'daycare/dashboard-auto/' + dia;
+    const ch = run("dashAutoNomeChave('Charlotte/Spitz (SEM SHAMPOO)')");
+    const prepara = (horaAntes, extra) => run(`__p634=[]; __g634={}; __pl634={Banho:['Charlotte/Spitz (SEM SHAMPOO)']}; __b634={};
+      __b634['${no}']={banho:['Charlotte/Spitz (SEM SHAMPOO)'], _estado_v:1, _estado:{banho:{${JSON.stringify(ch)}:{planilha_ok:true, ts:1${horaAntes === undefined ? '' : `, hora:${JSON.stringify(horaAntes)}`}}}}};
+      ${extra || ''}`);
+    const chamadas = () => run('__p634').filter((c) => c.acao !== 'lerDia');
+    const reg = () => run(`__g634['${no}']._estado.banho[${JSON.stringify(ch)}]`);
+    // 1) a planilha tem 14:30, a ficha passou a 16:15 ("mudar só o dia" com outra hora): regrava a hora, o mesmo texto
+    prepara('14:30');
+    let r = await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.valor, c.hora, c.colunaHora]), [['lancar', 'Charlotte/Spitz (SEM SHAMPOO)', '16:15', 'Hora Banho']]);
+    igual([reg().planilha_ok, reg().hora], [true, '16:15'], 'o registro passa a dizer 16:15');
+    igual(r.horas, 1);
+    // 2) a mesma hora: nenhuma chamada
+    prepara('16:15');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas(), [], 'hora igual: a ponte não é chamada');
+    igual(reg().hora, '16:15');
+    // 3) registro sem hora (anterior a esta versão): regrava uma vez, e grava a hora
+    prepara(undefined);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora]), [['lancar', '16:15']]);
+    igual(reg().hora, '16:15');
+    // 4) a hora saiu do combinado: tira e lança de novo, sem hora (o lancar sem hora não limpa a célula)
+    run("__hq634='';"); prepara('14:30');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora || '']), [['remover', ''], ['lancar', '']]);
+    igual(reg().hora, '');
+    run("__hq634='16:15';");
+    // 5) a ponte falhou: a linha diz que a hora nova não foi gravada, com a hora que continua lá; a próxima passada tenta de novo
+    prepara('14:30', "__falha634='lancar';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual([reg().planilha_ok, reg().hora], [false, '14:30']);
+    assert.ok(/^a hora 16:15 não foi gravada — Failed to fetch$/.test(reg().planilha_msg), reg().planilha_msg);
+    run("__falha634='';");
+    // 6) a recepção lançou o mesmo FILHOt à mão: a linha é dela (com a hora dela) — o automático não regrava a hora
+    prepara('14:30', `__b634['daycare/dashboard/${dia}']={banho:{L1:{valor:'Charlotte/Spitz (SEM SHAMPOO)', hora:'11:00', ts:1}}};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().filter((c) => c.acao === 'lancar' && c.hora === '16:15'), [], 'a hora da recepção fica');
+    // 7) lançamento novo: a hora entra no registro
+    prepara(undefined, '__pl634={};');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora]), [['lancar', '16:15']]);
+    igual(reg().hora, '16:15');
+    // 8) o shampoo mudou (sai a célula velha, entra a nova): a hora entra no registro
+    run("__txt634='Charlotte/Spitz (SHAMPOO NA BOLSA)';"); prepara('14:30');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.valor]), [['remover', 'Charlotte/Spitz (SEM SHAMPOO)'], ['lancar', 'Charlotte/Spitz (SHAMPOO NA BOLSA)']]);
+    igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora`), '16:15');
+  } finally { run('dashPonteChamar=__bk634s.pc; dashAutoCalcular=__bk634s.calc; DB=__bk634s.db; audit=__bk634s.au;'); }
 });
 // ================================================================== 6.35 — "ele escova os dentes?" no painel rápido
 console.log('\n6.35 — Hoje na Zêluz (e Vencimentos, Prevenção): "Ele escova os dentes aqui?" no painel da troca de escova (Adriana, 06/out/2026, Antônio)');
@@ -7354,17 +7447,21 @@ const ARMA635 = `__bk635={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, pa:PREV_COR
   __ch635=dcKey('Antônio','Rita'); PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; PREV_CORRIGE_ORIGEM='';`;
 const SOLTA635 = `PELUDINHOS=__bk635.P; pelExtra=__bk635.pe; setPelExtra=__bk635.sp; PREV_CORRIGE_ABERTO=__bk635.pa; PREV_CORRIGE_ORIGEM=__bk635.po;
   PREV_CORRIGE_OK=__bk635.ok; audit=__bk635.au; prevCorrigeRedesenhar=__bk635.rd; prevCorrigeFecharConversa=__bk635.fc; document.body.dataset.role=__bk635.r; pelAtividades=__bk635.at;`;
-prova('6.35 o painel da troca de escova pergunta "Ele escova os dentes aqui?" (Sim · Não deixa escovar · O tutor não compra a pasta); os outros itens, não', () => {
+prova('6.35 o painel da troca de escova pergunta "Escova os dentes aqui?" (Sim · Não deixa escovar · O tutor não compra a pasta); os outros itens, não', () => {
   run(ARMA635);
   try {
     const h = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
-    assert.ok(/Ele escova os dentes aqui\?/.test(h), h.slice(0, 600));
+    assert.ok(/>Escova os dentes aqui\?</.test(h) && !/Ele escova/.test(h), h.slice(0, 600));
     assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Sim','','hoje'\)">Sim, escova<\/button>/.test(h));
     assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','Não deixa','hoje'\)">Não deixa escovar<\/button>/.test(h));
     assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','O tutor não compra a pasta','hoje'\)">O tutor não compra a pasta<\/button>/.test(h));
-    assert.ok(h.indexOf('Ele escova os dentes aqui?') < h.indexOf('Feito hoje'), 'a pergunta vem antes da data');
+    assert.ok(h.indexOf('Escova os dentes aqui?') < h.indexOf('Feito hoje'), 'a pergunta vem antes da data');
+    assert.ok(h.indexOf('grave abaixo a data da troca') < 0, 'sem resposta, sem a dica do Sim');
+    assert.ok(/border:1\.5px solid var\(--crm-critico\)/.test(h) && h.indexOf('#B3261E') < 0, 'a cor do Não é o token da marca');
     run("__ex635.escova_dc='Sim';");
-    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')")), 'o Sim aceso quando a ficha já diz que escova');
+    const hs = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(hs), 'o Sim aceso quando a ficha já diz que escova');
+    assert.ok(/Escova aqui: grave abaixo a data da troca\./.test(hs), 'com Sim, a dica leva à data');
     igual(run("prevCorrigeEscovaDcHTML('verm_p', {}, 'x', 'hoje')"), '', 'vermífugo: sem a pergunta');
   } finally { run(SOLTA635); }
 });
@@ -7377,17 +7474,29 @@ provaAsync('6.35 "Não deixa escovar": grava na ficha (como a pergunta da ficha)
     igual(run('PREV_CORRIGE_ABERTO'), '', 'o painel fecha');
     igual(run('PREV_CORRIGE_OK[__ch635+"|escova_p"].texto'), 'Antônio — não escova aqui (Não deixa): a troca de escova saiu da cobrança');
     igual(run('__fc635'), 1, 'a conversa do cartão fecha se ficou vazio'); igual(run('__rd635'), ['hoje']);
+    assert.ok(/já leem esta resposta\./.test(run('prevCorrigeOkHTML()')), 'a confirmação não fala de data: nenhuma data foi gravada');
     assert.ok(/^ficha-escova: escova os dentes no Day Care: Não \(Não deixa\), atualizado na tela Hoje na Zêluz$/.test(run('__au635[0]')), run('__au635[0]'));
     run("PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; pelAtividades=function(){ return ['agility']; };");
     await run("prevCorrigeEscovaDc(__ch635, 'Sim', '', 'venc')");
     igual(run('__sp635[1]'), { escova_dc: 'Sim', atividades: ['agility', 'escova'] });
     igual(run('PREV_CORRIGE_ABERTO'), run('__ch635') + '|escova_p', 'com Sim, o painel segue aberto para a data da troca');
+    igual(run('__rd635'), ['hoje', 'venc'], 'com Sim, a tela redesenha (o Sim aceso e a dica)');
     igual(run("prevForaDaCobranca(__ex635, {k:'escova_p'})"), false);
     run("document.body.dataset.role='monitor';");
     const r = await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
     igual(r && r.ok, false); igual(run('__sp635.length'), 2, 'monitor: nada gravado');
     run("document.body.dataset.role='consultora';");
     igual((await run("prevCorrigeEscovaDc(__ch635, 'Talvez', '', 'hoje')")).ok, false, 'resposta fora das duas: nada');
+    // o banco recusou: aviso, painel aberto, nada de confirmação verde, de rastro nem de conversa fechada
+    run(`__za635=[]; __bkza635=zAlertao; zAlertao=function(t){ __za635.push(t); }; PREV_CORRIGE_OK={}; __fc635=0; __au635=[];
+      PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; setPelExtra=function(){ return Promise.resolve({ok:false, erro:'PERMISSION_DENIED'}); };`);
+    try {
+      const rf = await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+      igual(rf.ok, false); igual(run('__za635'), ['A FICHA NÃO FOI ATUALIZADA']);
+      igual(run('PREV_CORRIGE_ABERTO'), run('__ch635') + '|escova_p', 'o painel fica aberto');
+      igual(run('Object.keys(PREV_CORRIGE_OK).length'), 0, 'sem confirmação verde');
+      igual([run('__fc635'), run('__au635.length')], [0, 0], 'a conversa não fecha e o rastro não diz que gravou');
+    } finally { run('zAlertao=__bkza635;'); }
   } finally { run(SOLTA635); }
 });
 // ------------------------------------------------ o fim

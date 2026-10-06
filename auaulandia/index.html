@@ -8118,6 +8118,15 @@
     if(!est) return (c.auto||{})._estado_v ? {estado:'espera'} : {estado:'antigo'};
     return {estado:'espera'};
   }
+  // A hora que o automático GRAVOU na planilha para este nome (itens com hora: o banho fixo).
+  // Vale fora da janela também (um dia que já passou): é o que ficou registrado. Sem registro,
+  // ou registro sem hora, devolve '' — a tela não inventa (QA da 6.34).
+  function repPlanHoraNome(dia, nomeRaca, tipo){
+    var c=REP_PLAN_CACHE[dia]; if(!c) return '';
+    var est=((c.auto||{})._estado||{})[tipo]; if(!est) return '';
+    var r=est[vagasNomeChave(nomeRaca)];
+    return (r && typeof r.hora==='string')?r.hora:'';
+  }
   function repPlanQuando(ts){
     if(!ts) return '';
     try{
@@ -25106,7 +25115,10 @@
       +vivos.map(function(c){ var o=PREV_CORRIGE_OK[c]||{};
         return '<div style="font-size:13.5px;font-weight:700;color:var(--crm-ok);margin-top:3px">✓ '
           +escAttr(o.texto||'')+'</div>'; }).join('')
-      +'<div class="hint" style="margin-top:4px">Foi para a ficha do FILHOt — a Prevenção, os Vencimentos e a Hoje na Zêluz já leem esta data.</div></div>';
+      +'<div class="hint" style="margin-top:4px">Foi para a ficha do FILHOt — a Prevenção, os Vencimentos e a Hoje na Zêluz já leem '
+      // A resposta "não escova aqui" (6.35) não grava data: a frase não fala de data (QA da 6.35).
+      +(vivos.every(function(c){ return (PREV_CORRIGE_OK[c]||{}).resposta; })?'esta resposta'
+        :(vivos.some(function(c){ return (PREV_CORRIGE_OK[c]||{}).resposta; })?'o que foi gravado':'esta data'))+'.</div></div>';
   }
   function prevCorrigeItemDe(k){ return (PREV_ITENS||[]).find(function(x){ return x.k===k; })||{}; }
   // Quantos dias o item vale PARA ESTE FILHOt, pela MESMA conta que a ficha mostra. A coleira
@@ -25190,17 +25202,18 @@
     if(k!=='escova_p') return '';
     var dc=String((ex||{}).escova_dc||''), ka=jsAspas(chave);
     var bt=function(rot, v, mot, on, cor){
-      return '<button type="button" class="btn" style="padding:8px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+cor+';'
+      return '<button type="button" class="btn" style="min-height:40px;padding:8px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+cor+';'
         +(on?('background:'+cor+';color:var(--z-cream)'):('background:#fff;color:'+cor))+'"'
         +' onclick="prevCorrigeEscovaDc(\''+ka+'\',\''+v+'\',\''+jsAspas(mot)+'\',\''+tela+'\')">'+esc(rot)+'</button>';
     };
-    return '<div style="margin-top:9px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Ele escova os dentes aqui?</label>'
+    // Sem "Ele": a ficha pode ser de uma FILHOt (QA da 6.35).
+    return '<div style="margin-top:9px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Escova os dentes aqui?</label>'
       +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
       +bt('Sim, escova', 'Sim', '', dc==='Sim', 'var(--z-blue)')
-      +bt('Não deixa escovar', 'Não', 'Não deixa', false, '#B3261E')
-      +bt('O tutor não compra a pasta', 'Não', 'O tutor não compra a pasta', false, '#B3261E')
+      +bt('Não deixa escovar', 'Não', 'Não deixa', false, 'var(--crm-critico)')
+      +bt('O tutor não compra a pasta', 'Não', 'O tutor não compra a pasta', false, 'var(--crm-critico)')
       +'</div><div class="hint" style="margin-top:3px">Com <strong>não</strong>, a troca de escova sai da cobrança, em todas as telas. Dá para mudar depois na ficha › Prevenção.'
-      +(dc==='Sim'?' Ele escova aqui: grave abaixo a data da troca.':'')+'</div></div>';
+      +(dc==='Sim'?' Escova aqui: grave abaixo a data da troca.':'')+'</div></div>';
   }
   function prevCorrigeEscovaDc(chave, v, motivo, tela){
     if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
@@ -25213,7 +25226,7 @@
       try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v+((v==='Não'&&motivo)?(' ('+motivo+')'):'')
         +', atualizado na tela '+prevCorrigeTelaNome(tela), {alvo:chave, pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
       if(v==='Não'){
-        PREV_CORRIGE_OK[prevCorrigeAlvo(chave,'escova_p')]={ts:Date.now(), ate:'',
+        PREV_CORRIGE_OK[prevCorrigeAlvo(chave,'escova_p')]={ts:Date.now(), ate:'', resposta:true,
           texto:(pelNome(p)||'')+' — não escova aqui ('+(motivo||'não')+'): a troca de escova saiu da cobrança'};
         PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
         try{ prevCorrigeFecharConversa(p, chave); }catch(e){ /* silencioso de propósito: fechar é consequência — a resposta já está gravada */ }
@@ -35991,28 +36004,17 @@
   // A HORA DO BANHO FIXO NA LINHA (Adriana, 06/out/2026): "Precisa de aparecer também nos
   // lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui,
   // Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o
-  // horário do banho". O registro do automático guarda só os nomes; a hora sai do combinado da
-  // ficha — a MESMA conta (banhoRecHoraNoDia) que escreveu a "Hora Banho" na planilha.
-  function dashAutoHorasBanho(dia){
-    var m={};
-    try{
-      (PELUDINHOS||[]).forEach(function(p){
-        var br=banhoRecDe(p); if(!br || !br.ativo || !banhoRecValeNoDia(br, dia)) return;
-        var h=banhoRecHoraNoDia(br, dia); if(!h) return;
-        m[dashAutoNomeChave(banhoRecValorPlanilha(p, br))]=h;
-      });
-    }catch(e){} /* silencioso de propósito: sem a hora, a linha continua com o nome */
-    return m;
-  }
+  // horário do banho". A hora é a que o automático GRAVOU na "Hora Banho" (o registro dele,
+  // repPlanHoraNome) — não a conta da ficha: a ficha pode ter mudado depois, e a linha diz
+  // "na planilha ✓" (QA da 6.34). A conferência acerta a planilha quando a ficha muda.
   function dashAutoLinhas(autoK, dia, jaMao){
     var visto=jaMao||{};
     var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[dashAutoNomeChave(v)]; });
     if(!L.length) return {n:0, html:''};
-    var horas=(autoK==='banho')?dashAutoHorasBanho(dia):{};
     var html=L.map(function(v){
       var e=repPlanEstadoNome(dia, v, autoK);
       var cor='var(--muted)', txt='';
-      var hr=horas[dashAutoNomeChave(v)]||'';
+      var hr=DASH_AUTO_COLS_HORA[autoK]?repPlanHoraNome(dia, v, autoK):'';
       // "enviado em": a hora em que foi para a planilha não se confunde com a hora do banho.
       if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):''); }
       else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){ cor='var(--z-gold-deep)'; txt=repPlanQuedaTexto(); }
@@ -43965,9 +43967,11 @@
         if(!ehMorador){
           var _br=banhoRecDe(p);
           if(_br && _br.ativo && banhoRecValeNoDia(_br, iso) && banhoAutoPodeNoDia(p, iso, veio)){
-            var _vb=banhoRecValorPlanilha(p, _br);
+            var _vb=banhoRecValorPlanilha(p, _br), _chb=dashAutoNomeChave(_vb);
             out.banho.push(_vb);
-            out._horas.banho[dashAutoNomeChave(_vb)]=banhoRecHoraNoDia(_br, iso);
+            // Dois FILHOts com a mesma chave: fica a hora do PRIMEIRO, o mesmo que a lista
+            // guarda (o "sem repetidos" abaixo fica com o primeiro) — QA da 6.34.
+            if(out._horas.banho[_chb]===undefined) out._horas.banho[_chb]=banhoRecHoraNoDia(_br, iso);
           }
         }
         // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
@@ -44055,7 +44059,7 @@
       // da ponte deixava o lançamento de uma pessoa esperando atrás de dezenas de escritas do
       // automático (74 s no 1º passe do dia). Uma por vez, a pessoa entra na próxima vaga.
       // `saindo` = o que os passos 1 e 2 tiram NESTA passada: o passo 3 não conta como presente.
-      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0}, manterNoRegistro={}, saindo={};
+      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0, horas:0}, manterNoRegistro={}, saindo={};
       var marcarSaindo=function(col, txt){ var c=jsNorm(col); saindo[c]=saindo[c]||{}; saindo[c][jsNorm(String(txt||''))]=1; };
       // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
       // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
@@ -44063,11 +44067,22 @@
       // Agora, para cada nome, fica gravado se a planilha aceitou (planilha_ok/planilha_msg),
       // e é disto que a tela de Reposições tira o "lançada na planilha ✓".
       var estado={};
-      var marcar=function(k, valor, ok, msg){
+      // A HORA QUE FOI PARA A PLANILHA (QA da 6.34, 06/out/2026). Nos itens com hora (o banho
+      // fixo), o registro guarda também a hora que ESTE mecanismo gravou na "Hora Banho". É ela
+      // que os Lançamentos do dia mostram ao lado do nome — a da planilha, não a da ficha — e é
+      // com ela que a próxima passada percebe que a hora da ficha mudou. Sem `hora`, ninguém
+      // sabe que hora está lá (registro anterior a esta versão, ou a linha é da recepção).
+      var estAntes=(jaAuto && jaAuto._estado && typeof jaAuto._estado==='object')?jaAuto._estado:{};
+      var horaAntesDe=function(k, ch){
+        var r=(estAntes[k]||{})[ch];
+        return (r && typeof r.hora==='string')?r.hora:undefined;
+      };
+      var marcar=function(k, valor, ok, msg, hora){
         estado[k]=estado[k]||{};
         var ch=dashAutoNomeChave(valor);
         if(!ch) return;
         estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
+        if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string') estado[k][ch].hora=hora;
       };
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
         var col=DASH_AUTO_COLS[k];
@@ -44095,8 +44110,37 @@
               ? __mesmos.filter(function(a){ return (jsNorm(a)!==__nv || __maoVivo) && (jsNorm(a)===__nv || antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); }))
                   && !((maoTxt[k]||{})[jsNorm(a)]); })   // texto igual ao lançado à mão: é da recepção (QA35)
               : [];
-            if(!__velhos.length){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
-            var __naoSaiu=[];
+            if(!__velhos.length){
+              // Já está lá. Se é a célula DESTE mecanismo (o mesmo texto, sem lançamento da
+              // recepção) e a hora da ficha não é a que foi gravada — "mudar só o dia" com outra
+              // hora, a hora do combinado trocada, ou registro sem hora —, a ponte regrava: o
+              // `lancar` com o mesmo texto só acerta a "Hora Banho" daquela linha. Hora apagada
+              // da ficha: tira e lança de novo, porque o `lancar` sem hora não limpa a célula.
+              var __hq=horasDe(k, v), __ha=horaAntesDe(k, __ch);
+              if(DASH_AUTO_COLS_HORA[k] && __jaNovo && !__maoVivo && !((maoTxt[k]||{})[__nv])){
+                if(__ha===__hq){ marcar(k, v, true, '', __hq); return; }
+                var __colH=DASH_AUTO_COLS_HORA[k];
+                tarefas.push(function(){
+                  return ((!__hq && __ha)
+                      ? dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:__colH, valor:v})
+                      : Promise.resolve({ok:true}))
+                    .then(function(x0){
+                      if(!(x0&&x0.ok)) return x0;
+                      return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:__colH, hora:__hq, valor:v});
+                    })
+                    .then(function(x){
+                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq); }
+                      // Não deu: a linha diz que a hora nova não chegou, com a hora que continua
+                      // gravada; a próxima passada tenta de novo.
+                      else marcar(k, v, false, 'a hora '+(__hq||'sem hora')+' não foi gravada — '+((x&&x.erro)||'a ponte não respondeu'), __ha);
+                      return x;
+                    });
+                });
+                return;
+              }
+              marcar(k, v, true, ''); return;   // já está lá (de qualquer jeito)
+            }
+            var __naoSaiu=[], __horaFoi;
             __velhos.forEach(function(vv){ marcarSaindo(col, vv); });
             tarefas.push(function(){ return __velhos.reduce(function(fila, velho){
                 return fila.then(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:velho}); })
@@ -44112,9 +44156,9 @@
                 }
                 if(__jaNovo || __maoVivo) return {ok:true, jaEstava:true};   // a recepção já lançou à mão: vale a linha dela
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
-                  .then(function(y){ if(y&&y.ok) resumo.posto++; return y; });
+                  .then(function(y){ if(y&&y.ok){ resumo.posto++; __horaFoi=horasDe(k, v); } return y; });
               })
-              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||''); return x; }); });
+              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi); return x; }); });
             return;
           }
           // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
@@ -44124,7 +44168,7 @@
             .then(function(x){
               var ok=!!(x&&x.ok);
               if(ok) resumo.posto++;
-              marcar(k, v, ok, (x&&x.erro)||'');
+              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined);
               return x;
             }); });
         });
@@ -44231,9 +44275,10 @@
         novoRegistro._estado_v=1;
         novoRegistro._erro=null;            // conferiu o dia: a falha anterior não vale mais
         return DB.ref(noAuto).set(novoRegistro).catch(function(e){ _logFalhaGrav('dashAutoSincronizar', e); }).then(function(){
-          if((resumo.posto||resumo.tirado) && typeof audit==='function')
-            audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)',{});
-          return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado};
+          if((resumo.posto||resumo.tirado||resumo.horas) && typeof audit==='function')
+            audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)'
+              +(resumo.horas?(', '+resumo.horas+' hora(s) acertada(s)'):''),{});
+          return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado, horas:resumo.horas};
         });
       });
     }).catch(function(e){
