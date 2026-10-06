@@ -8128,6 +8128,7 @@
     var c=REP_PLAN_CACHE[dia]; if(!c) return '';
     var est=((c.auto||{})._estado||{})[tipo]; if(!est) return '';
     var r=est[vagasNomeChave(nomeRaca)];
+    if(r && r.hora_aviso) return '';   // a aba não tem a coluna da hora: a hora não está na planilha
     return (r && typeof r.hora==='string')?r.hora:'';
   }
   function repPlanQuando(ts){
@@ -17215,6 +17216,8 @@
       // respondeu toca com a tela trancada; recarregar a página a apagaria, e ela não voltaria.
       // Vale para a recarga da versão nova também (o mesmo furo existia desde 08/set).
       if(despMedNaTela || despNaTela) return '';
+      // O adiado que ainda não voltou também não (2ª rodada do QA da 6.32): a recarga apagaria o adiar.
+      if(typeof zDiaAdiadoAtivo==='function' && zDiaAdiadoAtivo(Date.now())) return '';
       if(!inatLogado()) return 'na porta de entrada';
       if(_appTrancado) return 'tela trancada';
       if(document.hidden) return 'aba escondida';
@@ -17342,6 +17345,9 @@
     if(__diaRecarregando || !appDiaVelho()) return '';
     zFaixaVersao(true);
     if(zDiaTrabalhoAberto()) return 'faixa';   // alarme, check-in, almoço ou sem internet: só a faixa
+    // O alarme adiado que ainda não voltou (2ª rodada do QA da 6.32): recarregar agora apagaria o
+    // adiar, e a dose de ontem nunca mais tocaria. Como o alarme na tela, não é aparelho parado.
+    if(zDiaAdiadoAtivo(Date.now())) return 'faixa';
     // O celular da plantonista não recarrega de madrugada (6.32) — SÓ quando a tela já passou para
     // hoje (QA da 6.32): com a ficha aberta ou outra data escolhida, a tela não passou, e segurar
     // a recarga deixaria o aparelho parado sem alarme nenhum até as 6h.
@@ -17378,12 +17384,15 @@
   //     O resto do dia (turma do Day Care, falta, planilha) continua travado até a recarga das
   //     6h, como já era (a faixa do topo avisa).
   var DIA_TELA_AUTO=APP_DIA_ABERTO, DIA_NOITE_ATE=6, __diaForcarAgora=false;
-  // O ADIADO SEGURA A TROCA enquanto corre e por 2 minutos depois de vencer (QA da 6.32): é o tempo
-  // de o alarme da dose de ontem voltar (o vigia do alarme roda a cada 30 s) e, na tela, segurar
-  // a troca por conta própria. Sem esta folga, a troca passava antes, e a dose nunca voltava.
-  var DIA_ADIADO_FOLGA_MS=2*60*1000;
+  // O ADIADO SEGURA A TROCA E A RECARGA até o alarme dele VOLTAR à tela, ou até a dose aparecer
+  // registrada (2ª rodada do QA da 6.32). A folga fixa de 2 minutos não servia: com o celular no
+  // bolso a página congela, o relógio pula, e a folga já tinha passado quando ela acordava; e a
+  // recarga da virada passava por cima do adiado com o celular parado na mesa. O teto de 1 hora
+  // depois do prazo do adiar é para o adiado que não pode mais voltar (remédio tirado da agenda)
+  // não prender a tela em ontem.
+  var DIA_ADIADO_TETO_MS=60*60*1000;
   function zDiaAdiadoAtivo(agora){
-    try{ return Object.keys(despMedSnooze||{}).some(function(k){ return despMedSnooze[k]>agora-DIA_ADIADO_FOLGA_MS; }); }
+    try{ return Object.keys(despMedSnoozePend||{}).some(function(k){ return despMedSnoozePend[k]>agora-DIA_ADIADO_TETO_MS; }); }
     catch(e){ return false; } /* silencioso de propósito: sem o adiar carregado, não há alarme adiado */
   }
   // Devolve o que fez ('' = nada; 'avancou'; 'espera: <motivo>') — é a prova que morde isto.
@@ -21534,6 +21543,9 @@
   // está na tela, com volume mais alto. Só para quando a pessoa toca "Dei o remédio" ou "ADIAR 5 min".
   // Dose atrasada é segurança: o alarme não some sozinho nem cala sozinho.
   let despMedAC=null, despMedLoopTimer=null, despMedSnooze={};
+  // Os adiados cujo alarme AINDA NÃO VOLTOU à tela (sk → prazo do adiar). É o que segura a virada
+  // do dia (zDiaAdiadoAtivo): sai quando o alarme reabre ou quando a dose aparece registrada.
+  let despMedSnoozePend={};
   // Sirene "despertador antigo": rajada de pulsos alternando 2 tons, volume ALTO e estridente.
   // Toca em loop até uma ação humana ("Dei o remédio" ou "ADIAR 5 min"). Vibra o aparelho junto.
   function bipMedPadrao(ac){
@@ -22501,8 +22513,8 @@
         for(const it of fila){
           const doseId=magDoseId(it.itemId,it.horario);
           const feito=log[it.key]&&log[it.key][doseId];
-          if(feito) continue;
           const sk=it.key+'__'+doseId;
+          if(feito){ delete despMedSnoozePend[sk]; continue; }   // dada (aqui ou em outro aparelho): não segura mais nada
           if(velho){
             // Só a adiada de ontem que já venceu o adiar (o relógio de hoje não serve para ontem).
             if(despMedSnooze[sk] && Date.now()>=despMedSnooze[sk]){ mostrarDespertadorMed(it,doseId); return; }
@@ -22519,6 +22531,7 @@
   function mostrarDespertadorMed(it,doseId){
     const el=document.getElementById('despMed'); if(!el) return;
     despMedNaTela=it.key+'__'+doseId; despMedAtual=it; despMedAtualDoseId=doseId;
+    delete despMedSnoozePend[despMedNaTela];   // o adiado voltou: agora quem segura é o alarme na tela
     const qtd=fmtQtd(it.q,it.u);
     // Item 10 — pomada/aplicação SEM o local é instrução pela metade: a plantonista das 2h da
     // manhã não tem como adivinhar que o Crema 64 da Dolly é no machucado do lado esquerdo do
@@ -22580,6 +22593,7 @@
     if(despMedAtual&&despMedAtualDoseId){
       const sk=despMedAtual.key+'__'+despMedAtualDoseId;
       despMedSnooze[sk]=Date.now()+5*60*1000;
+      despMedSnoozePend[sk]=despMedSnooze[sk];
       if(typeof audit==='function') audit('med-alarme-adiado','adiou o alarme de '+(despMedAtual.nome||'medicação')+' de '+(despMedAtual.hospNome||''),{pet:despMedAtual.hospNome||'',med:despMedAtual.nome||'',horario:despMedAtual.horario||''});
     }
     fecharDespertadorMed();
@@ -24467,7 +24481,8 @@
     else if(opc.calcTexto) notas.push(opc.calcTexto);
     // Sem a data em que tomou, a tela DIZ isso — e não inventa uma para trás.
     if(semUltima) notas.push('última: não informada');
-    var hint=notas.length?('<div class="hint" style="margin-top:3px">'+notas.join(' · ')+'</div>'):'';
+    // Com id (2ª rodada do QA da 6.27): a data digitada em "fez em" refaz esta nota na hora.
+    var hint='<div class="hint" id="prevVenceNota_'+escAttr(campoP)+'" style="margin-top:3px'+(notas.length?'':';display:none')+'">'+notas.join(' · ')+'</div>';
     var mostra=!!PREV_RECALC_AVISO[campoP];
     var aviso='<div class="hint" id="prevRecalc_'+campoP+'" style="margin-top:3px;font-weight:800;color:var(--crm-atencao-text)'
       +(mostra?'':';display:none')+'">'+(mostra?'A próxima foi recalculada pela última dose.':'')+'</div>';
@@ -24518,6 +24533,13 @@
   function prevUltimaDireta(campoT, campoP, dias, valor, junto){
     if(!pelAtual) return;
     var dt=String(valor||'').trim();
+    // Data no futuro não é "fez em" (2ª rodada do QA da 6.27): o `max` do campo segura no
+    // computador, mas o calendário do celular pode deixar passar. Nada é gravado.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dt) && dt>zHojeISO()){
+      try{ zAlertao('ESSA DATA AINDA NÃO CHEGOU', ['"Fez em" é a data em que foi feito: não pode ser depois de hoje.', 'Nada foi gravado. Escolha a data de novo.'], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: o aviso é reforço — o importante é não gravar */
+      return;
+    }
     var ex=pelExtra(pelAtual)||{};
     var patch={}; patch[campoT]=dt;
     if(junto && typeof junto==='object') Object.keys(junto).forEach(function(k){ patch[k]=dt; });
@@ -24528,6 +24550,12 @@
     try{
       var v=document.getElementById('prevVence_'+campoP);
       if(v){ if('value' in v && v.tagName==='INPUT') v.value=patch[campoP]; else v.textContent=patch[campoP]?('vence em '+fmtBR(patch[campoP])):'sem data'; }
+      // e a nota "Pela conta" logo abaixo também (2ª rodada do QA da 6.27)
+      var nt=document.getElementById('prevVenceNota_'+campoP);
+      if(nt){
+        nt.textContent=patch[campoP]?('Pela conta: '+fmtBR(patch[campoP])+' · '+(dias===365?'1 ano':(dias+' dias'))+'.'):'última: não informada';
+        if(nt.style) nt.style.display='';
+      }
     }catch(e){} /* silencioso de propósito: o dado já está gravado; a tela se acerta ao reabrir */
   }
   // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
@@ -26030,6 +26058,10 @@
       if(it.k==='escova_p' && escovaNaoEscova(ex))
         return '<div style="border-top:1px solid var(--line);padding:9px 0;font-size:13px;color:var(--muted)"><strong>'+escAttr(it.nome)+':</strong> não escova no Day Care — fora da cobrança.</div>';
       var feito=ex[it.base]||'', prox=ex[it.k]||'';
+      // O CHECK-UP (2ª rodada do QA da 6.27): a data que vale é a mais recente das três casas, e o
+      // vencimento é o que vale (prevValor). Ler as casas cruas mostrava um check-up velho como
+      // vencido, e o Salvar gravava essa data velha nas três casas — apagando o check-up novo.
+      if(it.k==='checkup_p'){ feito=prevCheckupData(ex)||''; prox=prevValor(ex, it)||''; }
       var por=ex[it.k.replace(/_p$/,'')+'_por']||'';
       var atrasado=venceuISO(prox);
       return '<div style="border-top:1px solid var(--line);padding:9px 0">'
@@ -36484,7 +36516,12 @@
       var hr=DASH_AUTO_COLS_HORA[autoK]?repPlanHoraNome(dia, v, autoK):'';
       // "enviado em": a hora em que foi para a planilha não se confunde com a hora do banho.
       if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):''); }
-      else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){ cor='var(--z-gold-deep)'; txt=repPlanQuedaTexto(); }
+      else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){
+        cor='var(--z-gold-deep)';
+        // A hora nova que não chegou (2ª rodada do QA da 6.34): a frase da queda não pode esconder isso.
+        var __pre=/^(a hora |não consegui tirar a hora)/.test(String(e.msg||''))?String(e.msg).split(' — ')[0].replace(' não foi gravada',' ainda não foi gravada'):'';
+        txt=(__pre?(__pre+'; '):'')+repPlanQuedaTexto();
+      }
       else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+e.msg; }
       else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
       else if(e.estado==='fora'){ cor='var(--z-gold-deep)'; txt='fora da conferência automática'; }
@@ -36942,7 +36979,9 @@
       if(a && a.id && el.contains(a) && (a.tagName==='TEXTAREA' || (a.tagName==='INPUT' && !DASH_CAMPO_DATA.test(String(a.type||''))))){
         foco={id:a.id, s:null, e:null, top:null};
         try{ foco.s=a.selectionStart; foco.e=a.selectionEnd; }catch(e){} /* silencioso de propósito: nem todo campo tem seleção */
-        try{ if(a.getBoundingClientRect) foco.top=a.getBoundingClientRect().top; }catch(e){} /* silencioso de propósito: sem a posição do campo, vale a do cartão */
+        // Só com o campo À VISTA (2ª rodada do QA da 6.31): quem subiu até outro cartão está
+        // olhando outro lugar — segurar o campo escondido fazia a parte visível pular.
+        try{ if(a.getBoundingClientRect){ var __ft=a.getBoundingClientRect().top; if(__ft>=0 && __ft<window.innerHeight) foco.top=__ft; } }catch(e){} /* silencioso de propósito: sem a posição do campo, vale a do cartão */
       }
       return {i:i, top:(i>=0?r[i].top:null), foco:foco};
     }catch(e){ return null; } /* silencioso de propósito: guardar o lugar é conforto; nunca pode impedir o redesenho */
@@ -44602,12 +44641,19 @@
         var r=(estAntes[k]||{})[ch];
         return (r && typeof r.hora==='string')?r.hora:undefined;
       };
-      var marcar=function(k, valor, ok, msg, hora){
+      var horaAvisoDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && r.hora_aviso)?String(r.hora_aviso):''; };
+      // `aviso` (2ª rodada do QA da 6.34): a ponte gravou o nome, mas disse que a aba não tem a
+      // coluna da hora. A hora fica registrada (para a próxima passada não insistir a cada 5
+      // minutos), marcada: a tela não mostra uma hora que não está na planilha.
+      var marcar=function(k, valor, ok, msg, hora, aviso){
         estado[k]=estado[k]||{};
         var ch=dashAutoNomeChave(valor);
         if(!ch) return;
         estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
-        if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string') estado[k][ch].hora=hora;
+        if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string'){
+          estado[k][ch].hora=hora;
+          if(aviso) estado[k][ch].hora_aviso=String(aviso);
+        }
       };
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
         var col=DASH_AUTO_COLS[k];
@@ -44643,7 +44689,10 @@
               // da ficha: tira e lança de novo, porque o `lancar` sem hora não limpa a célula.
               var __hq=horasDe(k, v), __ha=horaAntesDe(k, __ch);
               if(DASH_AUTO_COLS_HORA[k] && __jaNovo && !__maoVivo && !((maoTxt[k]||{})[__nv])){
-                if(__ha===__hq){ marcar(k, v, true, '', __hq); return; }
+                if(__ha===__hq){ marcar(k, v, true, '', __hq, horaAvisoDe(k, __ch)); return; }
+                // Sem ler os Lançamentos do dia, não se sabe se a linha é da recepção: não mexe
+                // agora; a próxima passada tenta (2ª rodada do QA da 6.34, como o passo 2).
+                if(!maoLida){ marcar(k, v, true, '', __ha); return; }
                 var __colH=DASH_AUTO_COLS_HORA[k];
                 tarefas.push(function(){
                   return ((!__hq && __ha)
@@ -44654,10 +44703,11 @@
                       return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:__colH, hora:__hq, valor:v});
                     })
                     .then(function(x){
-                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq); }
+                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq, x.avisoHora); }
                       // Não deu: a linha diz que a hora nova não chegou, com a hora que continua
                       // gravada; a próxima passada tenta de novo.
-                      else marcar(k, v, false, 'a hora '+(__hq||'sem hora')+' não foi gravada — '+((x&&x.erro)||'a ponte não respondeu'), __ha);
+                      else marcar(k, v, false, (__hq?('a hora '+__hq+' não foi gravada'):'não consegui tirar a hora da planilha')
+                        +' — '+((x&&x.erro)||'a ponte não respondeu'), __ha);
                       return x;
                     });
                 });
@@ -44683,7 +44733,7 @@
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
                   .then(function(y){ if(y&&y.ok){ resumo.posto++; __horaFoi=horasDe(k, v); } return y; });
               })
-              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi); return x; }); });
+              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi, x&&x.avisoHora); return x; }); });
             return;
           }
           // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
@@ -44693,7 +44743,7 @@
             .then(function(x){
               var ok=!!(x&&x.ok);
               if(ok) resumo.posto++;
-              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined);
+              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined, x&&x.avisoHora);
               return x;
             }); });
         });
@@ -44844,9 +44894,10 @@
       }, Promise.resolve()).then(function(){
         var posto=res.reduce(function(a,x){ return a+((x&&x.posto)||0); },0);
         var tirado=res.reduce(function(a,x){ return a+((x&&x.tirado)||0); },0);
+        var horas=res.reduce(function(a,x){ return a+((x&&x.horas)||0); },0);
         // Dia que não pôde ser lido NÃO é "✅ 0 posto(s)": o botão diz (QA34, 29/set/2026).
         var falhas=res.filter(function(x){ return x && x.ok===false; });
-        return {ok:true, posto:posto, tirado:tirado, dias:dias.length, falhas:falhas.length, erroFalha:falhas.length?String(falhas[0].erro||''):''};
+        return {ok:true, posto:posto, tirado:tirado, horas:horas, dias:dias.length, falhas:falhas.length, erroFalha:falhas.length?String(falhas[0].erro||''):''};
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
   }
@@ -44861,7 +44912,7 @@
         ? ('❌ '+_motivo(r.erro))
         : (r.falhas
           ? ('⚠ '+(r.falhas===r.dias?'não consegui ler a planilha':('não consegui ler '+r.falhas+' de '+r.dias+' dia(s)'))+': '+_motivo(r.erroFalha))
-          : ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s) em '+(r.dias||1)+' dia(s)'));
+          : ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s)'+(r.horas?(' · '+r.horas+' hora(s) acertada(s)'):'')+' em '+(r.dias||1)+' dia(s)'));
       try{ dashCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 8000);
     });

@@ -6943,6 +6943,14 @@ prova('6.31 (QA) a âncora é o campo com o cursor; o relógio (hora) fica de fo
       document.activeElement=null; document.getElementById=function(id){ return id==='dashB_banho'?__novo:null; };`);
     run('dashAncoraVoltar(__el, __a)');
     igual(run('__sb'), [[0, 34, 'auto']], 'o campo desceu 34 px dentro do mesmo cartão (o topo do cartão nem mexeu): volta 34');
+    // 2ª rodada do QA: o campo com o cursor FORA da tela (a pessoa subiu até outro cartão) não é a âncora — vale o cartão
+    [-136, run('window.innerHeight') + 10].forEach((topo) => {
+      run(`__montar(3); __topos=[[-300,900],[900,1300],[1300,1800]];
+        __campo=__inp('dashB_banho',3,3); __campo.getBoundingClientRect=function(){ return {top:${topo}, bottom:${topo + 40}}; }; document.activeElement=__campo;`);
+      const af = JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)')));
+      igual([af.foco && af.foco.id, af.foco && af.foco.top], ['dashB_banho', null], 'topo ' + topo + ': o cursor volta, mas a âncora é o cartão');
+      assert.ok(af.i >= 0 && af.top != null, 'com o cartão guardado');
+    });
     // o relógio: não guarda o cursor (os números seguintes reescreveriam a hora)
     ['time', 'date', 'datetime-local', 'month', 'week'].forEach((t) => {
       run(`__rel=__inp('dashH_vet',null,null); __rel.type='${t}'; document.activeElement=__rel;`);
@@ -7007,14 +7015,14 @@ prova('6.31 o renderDash guarda o lugar ANTES de trocar a lista e devolve DEPOIS
 // ================================================================== 6.32 — o alarme atravessa a meia-noite
 console.log('\n6.32 — O alarme de remédio atravessa a meia-noite: a tela da hospedagem passa para o dia novo sem recarregar (06/out/2026)');
 const ARMA632 = `__bk632={hz:zHojeISO, sd:selectedDate, dta:DIA_TELA_AUTO, fa:fichaAberta, ch:carregarHospedes, ul:updateDateLabel, au:audit,
-    sn:despMedSnooze, dn:despMedNaTela, ta:zDiaTrabalhoAberto, pr:papelRecebeAlarmeMed, ua:navigator.userActivation};
+    sn:despMedSnooze, sp:despMedSnoozePend, dn:despMedNaTela, ta:zDiaTrabalhoAberto, pr:papelRecebeAlarmeMed, ua:navigator.userActivation};
   __ch632=0; carregarHospedes=function(){ __ch632++; }; __ul632=0; updateDateLabel=function(){ __ul632++; };
   __au632=[]; audit=function(t,m){ __au632.push(t+': '+m); }; fichaAberta=function(){ return __fa632; }; __fa632=false;
-  despMedSnooze={}; despMedNaTela=null;
+  despMedSnooze={}; despMedSnoozePend={}; despMedNaTela=null;
   zHojeISO=function(){ return __hoje632; }; __hoje632='2026-10-07';
   DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);`;
 const SOLTA632 = `zHojeISO=__bk632.hz; selectedDate=__bk632.sd; DIA_TELA_AUTO=__bk632.dta; fichaAberta=__bk632.fa; carregarHospedes=__bk632.ch;
-  updateDateLabel=__bk632.ul; audit=__bk632.au; despMedSnooze=__bk632.sn; despMedNaTela=__bk632.dn; zDiaTrabalhoAberto=__bk632.ta;
+  updateDateLabel=__bk632.ul; audit=__bk632.au; despMedSnooze=__bk632.sn; despMedSnoozePend=__bk632.sp; despMedNaTela=__bk632.dn; zDiaTrabalhoAberto=__bk632.ta;
   papelRecebeAlarmeMed=__bk632.pr; navigator.userActivation=__bk632.ua;`;
 prova('6.32 a tela da hospedagem passa sozinha para o dia novo, sem recarregar: lista, agenda e registro das doses no dia certo', () => {
   // Datas pelo relógio de verdade: o ehHojeAua compara com o agora real.
@@ -7056,11 +7064,15 @@ prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme toc
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: ficha aberta'); igual(run('dataKeyAtual()'), '2026-10-06');
     run("__fa632=false; despMedNaTela='bia__x_23-55';");
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme na tela', 'o remédio das 23:55 ainda tocando é registrado em ontem');
-    run(`despMedNaTela=null; despMedSnooze={'bia__x_23-55': ${agora + 120000}};`);
+    run(`despMedNaTela=null; despMedSnoozePend={'bia__x_23-55': ${agora + 120000}};`);
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'adiado: ele volta em ontem');
-    run(`despMedSnooze={'bia__x_23-55': ${agora - 1000}};`);
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 1000}};`);
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'o adiar venceu há 1 s: espera o alarme voltar (QA)');
-    run(`despMedSnooze={'bia__x_23-55': ${agora - 121000}};`);
+    // 2ª rodada do QA: a página congelada no bolso acorda 10 min depois — o alarme ainda não voltou, a troca espera
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 600000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'acordou 10 min depois do adiar: espera o alarme voltar');
+    // o adiado que não pode mais voltar (remédio tirado da agenda) não prende a tela: teto de 1 hora
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 3601000}};`);
     run("zDiaTrabalhoAberto=function(){ return 'check-in aberto'; };");
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: check-in aberto');
     run("zDiaTrabalhoAberto=function(){ return 'sem internet'; };");
@@ -7196,6 +7208,66 @@ provaAsync('6.32 (QA) a faixa de madrugada: tocar pergunta antes de atualizar (a
     igual(run('__rep632'), 1, '"Atualizar mesmo assim" atualiza');
   } finally { run('APP_DIA_ABERTO=__bk632f.ab; zHojeISO=__bk632f.hz; zEscolha=__bk632f.ze; location.replace=__bk632f.rep; papelRecebeAlarmeMed=__bk632f.pr; navigator.userActivation=__bk632f.ua; selectedDate=__bk632f.sd; __diaRecarregando=__bk632f.rec; __diaForcarAgora=__bk632f.fo; Date=__bk632f.D;'); }
 });
+prova('6.32 (2ª rodada do QA) o adiado segura a recarga da virada até o alarme voltar: celular parado na mesa, de volta do bolso, versão nova', () => {
+  run(ARMA632 + `__bk632r={ab:APP_DIA_ABERTO, mp:zMotivoParado, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando, il:inatLogado, tr:_appTrancado, iu:_inatUltimo, ec:zEhComputador};
+    __faixa632={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632:null; };
+    __st632=[]; setTimeout=function(f,ms){ __st632.push(ms); return 0; }; __diaRecarregando=false;
+    APP_DIA_ABERTO='2026-10-06'; zDiaTrabalhoAberto=function(){ return ''; }; papelRecebeAlarmeMed=function(){ return true; };
+    navigator.userActivation={hasBeenActive:true}; inatLogado=function(){ return true; }; _appTrancado=false; zEhComputador=function(){ return false; };`);
+  try {
+    const agora = Date.now();
+    // a tela ainda em ontem (esperando o adiado), parado há 4 min na mesa
+    run(`selectedDate=new Date(2026,9,6,23,58); _inatUltimo=${agora - 240000};`);
+    igual(run('zMotivoParado()'), '3 min sem toque', 'sem adiado: é aparelho parado');
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 30000}};`);
+    igual(run('zMotivoParado()'), '', 'com o adiado que ainda não voltou, não é parado (a recarga da versão nova também espera)');
+    igual(run('zViradaDoDiaTick()'), 'faixa', 'na mesa: a virada não recarrega por cima do adiado');
+    igual(run(`zViradaDoDiaTick('voltou para o app depois de 10 min')`), 'faixa', 'de volta do bolso: também não');
+    igual(run('__st632'), [], 'nenhuma recarga marcada');
+    // o alarme voltou e foi respondido (o pendente saiu): agora a virada segue a regra de sempre
+    run('despMedSnoozePend={};');
+    igual(run('zViradaDoDiaTick()'), 'recarga', 'sem adiado pendente e parado, com a tela em ontem: recarrega como antes');
+  } finally { run(SOLTA632 + `APP_DIA_ABERTO=__bk632r.ab; zMotivoParado=__bk632r.mp; setTimeout=__bk632r.st; document.getElementById=__bk632r.ge; __diaRecarregando=__bk632r.rec;
+    inatLogado=__bk632r.il; _appTrancado=__bk632r.tr; _inatUltimo=__bk632r.iu; zEhComputador=__bk632r.ec;`); }
+});
+prova('6.32 (2ª rodada do QA) o pendente do adiado: entra ao adiar, sai quando o alarme volta ou quando a dose aparece dada (aqui ou em outro aparelho)', () => {
+  run(ARMA632 + `__bk632p={ag:MED_AGENDA_TODOS, ml:medLogHoje, db:DB, ge:document.getElementById, bl:bipMedLoopStart, bs:bipMedLoopStop, st:setTimeout, ma:despMedAtual, md:despMedAtualDoseId};
+    __desp632p={style:{}, innerHTML:'', querySelector:function(){ return null; }}; document.getElementById=function(id){ return id==='despMed'?__desp632p:null; };
+    bipMedLoopStart=function(){}; bipMedLoopStop=function(){}; setTimeout=function(){ return 0; };
+    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel', hospNome:'Bia'}]; DB={}; papelRecebeAlarmeMed=function(){ return true; };`);
+  try {
+    run("despMedAtual=MED_AGENDA_TODOS[0]; despMedAtualDoseId='x_23-55'; adiarDoseDespertador();");
+    const p = run("despMedSnoozePend['bia__x_23-55']");
+    assert.ok(p && p === run("despMedSnooze['bia__x_23-55']"), 'adiou: pendente com o prazo do adiar');
+    run("mostrarDespertadorMed(MED_AGENDA_TODOS[0], 'x_23-55');");
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'o alarme voltou à tela: sai do pendente');
+    // adiou de novo e a dose foi dada em outro aparelho: a conferência do alarme tira o pendente
+    run("fecharDespertadorMed(); despMedAtual=MED_AGENDA_TODOS[0]; despMedAtualDoseId='x_23-55'; adiarDoseDespertador();");
+    run("selectedDate=new Date(); medLogHoje=function(){ return {then:function(f){ f({bia:{'x_23-55':{quem:'Ana'}}}); return {catch:function(){}}; }}; }; checarDespertadorMed();");
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'dada: não segura mais a virada');
+  } finally { run(SOLTA632 + `MED_AGENDA_TODOS=__bk632p.ag; medLogHoje=__bk632p.ml; DB=__bk632p.db; document.getElementById=__bk632p.ge; bipMedLoopStart=__bk632p.bl; bipMedLoopStop=__bk632p.bs;
+    setTimeout=__bk632p.st; despMedAtual=__bk632p.ma; despMedAtualDoseId=__bk632p.md;`); }
+});
+prova('6.32 (2ª rodada do QA) com a tela em ontem ou em outra data: o alarme não toca a dose adiada fora do dia automático; a faixa diz "toque para atualizar" e o toque não pergunta', () => {
+  const h = (hh) => new Date(2026, 9, 7, hh, 0).getTime();
+  run(ARMA632 + `__bk632o={ab:APP_DIA_ABERTO, ze:zEscolha, rep:location.replace, ge:document.getElementById, rec:__diaRecarregando, fo:__diaForcarAgora, D:Date};
+    APP_DIA_ABERTO='2026-10-06'; __diaRecarregando=false; __diaForcarAgora=false; papelRecebeAlarmeMed=function(){ return true; }; navigator.userActivation={hasBeenActive:true};
+    __esc632o=[]; zEscolha=function(t){ __esc632o.push(t); }; __rep632o=0; location.replace=function(){ __rep632o++; };
+    __faixa632o={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632o:null; };
+    Date=function(a){ return a===undefined?new __bk632o.D(${h(2)}):new __bk632o.D(a); }; Date.now=function(){ return ${h(2)}; };`);
+  try {
+    // R6: a tela que alguém pôs no dia 05 (o dia automático é o 06): a dose adiada não toca ali
+    run(`selectedDate=new __bk632o.D(2026,9,5,10,0); DIA_TELA_AUTO='2026-10-06';`);
+    igual(run('medDiaVelhoAuto()'), false, 'outra data escolhida à mão: o alarme da dose de ontem não é registrado nela');
+    // R16 e R12: tela em ontem (ficha aberta), 02:00
+    run(`selectedDate=new __bk632o.D(2026,9,6,23,0);`);
+    run('zFaixaVersao(true);');
+    igual(run('__faixa632o.textContent'), 'O dia virou — toque para atualizar', 'a tela não passou: a faixa não promete as 6h');
+    run('aplicarVersaoNova()');
+    igual(run('__esc632o'), [], 'e o toque atualiza sem perguntar (a tela em ontem já não toca o alarme de hoje)');
+    igual(run('__rep632o'), 1);
+  } finally { run(SOLTA632 + 'APP_DIA_ABERTO=__bk632o.ab; zEscolha=__bk632o.ze; location.replace=__bk632o.rep; document.getElementById=__bk632o.ge; __diaRecarregando=__bk632o.rec; __diaForcarAgora=__bk632o.fo; Date=__bk632o.D;'); }
+});
 // ================================================================== 6.27 — check-up e escova no topo
 console.log('\n6.27 — Ficha › Prevenção: check-up e escova no topo, com "Fez em" e "Vence em" (Adriana, 02/out/2026, na ficha da Cookie)');
 const ficha627 = (ex, papel) => {
@@ -7304,6 +7376,49 @@ prova('6.27 (QA) a mesa "Check-up a marcar": o "Vence em" digitado à mão vale;
     igual(nomes(c.semInfo), ['D']); igual(c.vencidos.length, 0);
   } finally { run('PELUDINHOS=__bk627c.P; pelExtra=__bk627c.pe; zHojeISO=__bk627c.hz;'); }
 });
+prova('6.27 (2ª rodada do QA) o painel "editar" da Prevenção mostra o check-up que vale; o Salvar sem mexer grava a data mais nova (não apaga o check-up novo)', () => {
+  run(`__bk627e={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, za:zAlertao, rd:prevRedesenhar, st:setTimeout};
+    PELUDINHOS=[{n:'Cookie', raca:'Spitz', tutor:'Ana Teste'}]; __ex627e={checkup_data:'2026-03-01', checkup_t:'2024-01-01', checkup_p:'2025-01-01'};
+    pelExtra=function(){ return __ex627e; }; __gr627e=[]; setPelExtra=function(p,patch){ __gr627e.push(JSON.parse(JSON.stringify(patch))); };
+    audit=function(){}; __za627e=[]; zAlertao=function(t){ __za627e.push(t); }; prevRedesenhar=function(){}; setTimeout=function(){ return 0; };`);
+  try {
+    const ch = run('pelKey(PELUDINHOS[0])');
+    const h = run("prevEdicaoHTML({p:PELUDINHOS[0], nome:'Cookie'})");
+    const ini = h.indexOf('Check-up'), bloco = h.slice(ini, h.indexOf('Salvar Check-up'));
+    assert.ok(bloco.indexOf('id="prevT_' + ch + '_checkup_p" value="2026-03-01"') > 0, 'Feito em: a data mais recente das três casas');
+    assert.ok(bloco.indexOf('id="prevP_' + ch + '_checkup_p" value="2027-03-01"') > 0, 'Vale até: o vencimento que vale');
+    assert.ok(h.indexOf('VENCIDO') < 0 || h.indexOf('VENCIDO') > h.indexOf('Salvar Check-up'), 'o check-up não aparece vencido');
+    // o Salvar sem mexer nas datas (só "Quem fez")
+    const campos = {}; campos['prevT_' + ch + '_checkup_p'] = { value: '2026-03-01' }; campos['prevP_' + ch + '_checkup_p'] = { value: '2027-03-01' }; campos['prevQ_' + ch + '_checkup_p'] = { value: 'Clínica' };
+    ctx.__campos627e = campos; run('document.getElementById=function(id){ return __campos627e[id]||null; };');
+    run(`prevLancar(${JSON.stringify(ch)}, 'checkup_p')`);
+    igual(run('__za627e'), [], 'sem pergunta de atraso');
+    const g = run('__gr627e[0]');
+    igual([g.checkup_t, g.checkup_data, g.checkup, g.checkup_p], ['2026-03-01', '2026-03-01', '2026-03-01', '2027-03-01'], 'as três casas com a data nova — o check-up de 01/03/2026 não é apagado');
+  } finally { run('PELUDINHOS=__bk627e.P; pelExtra=__bk627e.pe; setPelExtra=__bk627e.sp; document.getElementById=__bk627e.ge; audit=__bk627e.au; zAlertao=__bk627e.za; prevRedesenhar=__bk627e.rd; setTimeout=__bk627e.st;'); }
+});
+prova('6.27 (2ª rodada do QA) "fez em" no futuro não grava (o calendário do celular pode passar do max); a nota "Pela conta" acompanha a data; a ficha mostra o vencimento que vale', () => {
+  run(`__bk627f={sp:setPelExtra, pe:pelExtra, pa:pelAtual, av:prevAvisoRecalc, za:zAlertao, ge:document.getElementById, hz:zHojeISO}; __gr627f=[];
+    setPelExtra=function(p,patch){ __gr627f.push(JSON.parse(JSON.stringify(patch))); }; prevAvisoRecalc=function(){}; zHojeISO=function(){ return '2026-10-06'; };
+    pelAtual={n:'Cookie'}; pelExtra=function(){ return {}; }; __za627f=[]; zAlertao=function(t){ __za627f.push(t); };
+    __nt627={textContent:'velha', style:{display:'none'}}; __ve627f={tagName:'INPUT', value:''};
+    document.getElementById=function(id){ return id==='prevVenceNota_checkup_p'?__nt627:(id==='prevVence_checkup_p'?__ve627f:null); };`);
+  try {
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-07',{checkup_data:1,checkup:1})");
+    igual(run('__gr627f.length'), 0, 'amanhã: nada gravado'); igual(run('__za627f'), ['ESSA DATA AINDA NÃO CHEGOU']);
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-06',{checkup_data:1,checkup:1})");
+    igual(run('__gr627f.length'), 1, 'hoje vale');
+    igual(run('__nt627.textContent'), 'Pela conta: 06/10/2027 · 1 ano.', 'a nota acompanha a data digitada'); igual(run('__nt627.style.display'), '');
+    run("document.getElementById=function(id){ return id==='prevVenceNota_escova_p'?__nt627:null; }; prevUltimaDireta('escova_t','escova_p',90,'2026-10-01')");
+    igual(run('__nt627.textContent'), 'Pela conta: 30/12/2026 · 90 dias.');
+  } finally { run('setPelExtra=__bk627f.sp; pelExtra=__bk627f.pe; pelAtual=__bk627f.pa; prevAvisoRecalc=__bk627f.av; zAlertao=__bk627f.za; document.getElementById=__bk627f.ge; zHojeISO=__bk627f.hz;'); }
+  // a ficha: vencimento gravado mais cedo que um ano depois da data mais recente → vale o mais tarde
+  const hv = ficha627({ checkup_data: '2026-03-01', checkup_t: '2024-01-01', checkup_p: '2025-01-01' });
+  assert.ok(/id="prevVence_checkup_p" value="2027-03-01"/.test(hv), 'o "Vence em" da ficha é o que vale, não a casa crua');
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2026-03-01"[^>]*max="\d{4}-\d{2}-\d{2}"/.test(hv), 'o fez em tem o max de hoje');
+  const mx = (hv.match(/value="2026-03-01" onchange="prevUltimaDireta\('checkup_t'[^>]*max="(\d{4}-\d{2}-\d{2})"/) || [])[1];
+  igual(mx, run('zHojeISO()'), 'max = hoje, não 2035');
+});
 // ================================================================== 6.34 — a hora do banho fixo na linha
 console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora gravada na planilha (Adriana, 06/out/2026, Charlotte)');
 // O relógio fica parado em 05/10 (QA da 6.34: a prova virava bomba-relógio em 07/10): o dia 06 é
@@ -7366,6 +7481,16 @@ prova('6.34 a linha do automático: nome, a hora GRAVADA em destaque e "na plani
     // outras colunas do automático não ganham hora
     run(`REP_PLAN_CACHE['2026-10-06'].auto.reposicao=['Charlotte/Spitz']; REP_PLAN_CACHE['2026-10-06'].auto._estado.reposicao={${k('Charlotte/Spitz')}:{planilha_ok:true, ts:1, hora:'09:00'}};`);
     assert.ok(run("dashAutoLinhas('reposicao', '2026-10-06', null).html").indexOf('dash-auto-hora') < 0, 'a reposição não tem hora');
+    // a hora nova que não chegou: a linha diz isso, com a hora que continua lá (queda de conexão e recusa)
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}]={planilha_ok:false, ts:${ts}, hora:'10:00', planilha_msg:'a hora 16:15 não foi gravada — Failed to fetch'};`);
+    let lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/>10:00<\/span>/.test(lr) && /a hora 16:15 ainda não foi gravada; a conexão/.test(lr), lr);
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}].planilha_msg='não consegui tirar a hora da planilha — a ponte não respondeu em 12s';`);
+    lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/não consegui tirar a hora da planilha; a conexão/.test(lr), lr);
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}].planilha_msg='a hora 16:15 não foi gravada — coluna não encontrada';`);
+    lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/a planilha recusou — a hora 16:15 não foi gravada — coluna não encontrada/.test(lr), lr);
     igual(typeof run('typeof dashAutoHorasBanho'), 'string'); igual(run('typeof dashAutoHorasBanho'), 'undefined', 'a conta da ficha a cada redesenho saiu (era o custo de 100 a 900 ms)');
   } finally { run(SOLTA634); }
 });
@@ -7433,6 +7558,46 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
     await run(`dashAutoSincronizar('${dia}')`);
     igual(chamadas().map((c) => [c.acao, c.valor]), [['remover', 'Charlotte/Spitz (SEM SHAMPOO)'], ['lancar', 'Charlotte/Spitz (SHAMPOO NA BOLSA)']]);
     igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora`), '16:15');
+    run("__txt634='Charlotte/Spitz (SEM SHAMPOO)';");
+    // 9) (2ª rodada) só a coluna COM hora é regravada: a reposição que já está lá não ganha um lancar a cada passada
+    run(`__p634=[]; __g634={}; __pl634={'Reposição':['Lanna/SRD']}; __b634={}; __b634['${no}']={reposicao:['Lanna/SRD'], _estado_v:1, _estado:{}};
+      __cbk634=dashAutoCalcular; dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.reposicao=['Lanna/SRD']; o._horas={banho:{}}; return o; };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'reposição já na planilha: nenhuma chamada');
+      assert.ok(!('hora' in run(`__g634['${no}']._estado.reposicao[${JSON.stringify(run("dashAutoNomeChave('Lanna/SRD')"))}]`)), 'e nada de hora no registro dela');
+    } finally { run('dashAutoCalcular=__cbk634;'); }
+    // 10) lançamento novo que a ponte recusou: sem hora no registro (a hora não está na planilha)
+    prepara(undefined, "__pl634={}; __falha634='lancar';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(reg().planilha_ok, false); assert.ok(!('hora' in reg()), 'recusado: sem hora');
+    run("__falha634='';");
+    // 11) hora apagada e o remover falhou: não lança por cima; diz que não tirou a hora, com a hora que continua lá
+    run("__hq634='';"); prepara('14:30', "__falha634='remover';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => c.acao), ['remover'], 'sem o lancar');
+    igual([reg().planilha_ok, reg().hora], [false, '14:30']);
+    assert.ok(/^não consegui tirar a hora da planilha — Failed to fetch$/.test(reg().planilha_msg), reg().planilha_msg);
+    run("__hq634='16:15'; __falha634='';");
+    // 12) sem conseguir ler os Lançamentos do dia: não regrava (a linha pode ser da recepção); a próxima passada tenta
+    prepara('14:30', `__b634['daycare/dashboard/${dia}']=undefined; __bkOnce634=DB.ref; DB.ref=function(p){ var r=__bkOnce634(p); if(p==='daycare/dashboard/${dia}') r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED')); }; return r; };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'nenhuma regravação');
+      igual(reg().hora, '14:30', 'o registro continua com a hora que está lá');
+    } finally { run('DB.ref=__bkOnce634;'); }
+    // 13) a aba não tem a coluna "Hora Banho" (a ponte avisa): o registro marca, a linha não mostra hora, e a próxima passada não insiste
+    run(`__pcbk634=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='lancar'){ __p634.push(JSON.parse(JSON.stringify(c))); return Promise.resolve({ok:true, jaEstava:true, avisoHora:'a aba "Outubro" nao tem a coluna de hora "Hora Banho": a hora nao foi gravada'}); } return __pcbk634(c); };`);
+    try {
+      prepara('14:30');
+      await run(`dashAutoSincronizar('${dia}')`);
+      assert.ok(/nao tem a coluna de hora/.test(reg().hora_aviso), JSON.stringify(reg()));
+      run(`__b634['${no}']=__g634['${no}']; __p634=[];`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'a próxima passada não insiste a cada 5 minutos');
+      run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:__g634['${no}']};`);
+      igual(run(`repPlanHoraNome('${dia}', 'Charlotte/Spitz (SEM SHAMPOO)', 'banho')`), '', 'a linha não mostra a hora que não está na planilha');
+    } finally { run(`dashPonteChamar=__pcbk634; delete REP_PLAN_CACHE['${dia}'];`); }
   } finally { run('dashPonteChamar=__bk634s.pc; dashAutoCalcular=__bk634s.calc; DB=__bk634s.db; audit=__bk634s.au;'); }
 });
 // ================================================================== 6.35 — "ele escova os dentes?" no painel rápido
@@ -7458,6 +7623,10 @@ prova('6.35 o painel da troca de escova pergunta "Escova os dentes aqui?" (Sim �
     assert.ok(h.indexOf('Escova os dentes aqui?') < h.indexOf('Feito hoje'), 'a pergunta vem antes da data');
     assert.ok(h.indexOf('grave abaixo a data da troca') < 0, 'sem resposta, sem a dica do Sim');
     assert.ok(/border:1\.5px solid var\(--crm-critico\)/.test(h) && h.indexOf('#B3261E') < 0, 'a cor do Não é o token da marca');
+    igual((h.match(/min-height:40px;padding:8px 13px/g) || []).length, 3, 'os 3 botões com 40 px de altura (toque)');
+    run("__ex635.escova_dc='Não';");
+    assert.ok(/background:#fff;color:var\(--z-blue\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')")), 'com Não na ficha, o Sim não aparece aceso');
+    run("delete __ex635.escova_dc;");
     run("__ex635.escova_dc='Sim';");
     const hs = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
     assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(hs), 'o Sim aceso quando a ficha já diz que escova');
@@ -7475,6 +7644,11 @@ provaAsync('6.35 "Não deixa escovar": grava na ficha (como a pergunta da ficha)
     igual(run('PREV_CORRIGE_OK[__ch635+"|escova_p"].texto'), 'Antônio — não escova aqui (Não deixa): a troca de escova saiu da cobrança');
     igual(run('__fc635'), 1, 'a conversa do cartão fecha se ficou vazio'); igual(run('__rd635'), ['hoje']);
     assert.ok(/já leem esta resposta\./.test(run('prevCorrigeOkHTML()')), 'a confirmação não fala de data: nenhuma data foi gravada');
+    run("PREV_CORRIGE_OK['outro|verm_p']={ts:Date.now(), ate:'2027-02-06', texto:'Bob — vermífugo feito hoje'};");
+    assert.ok(/já leem o que foi gravado\./.test(run('prevCorrigeOkHTML()')), 'resposta e data juntas: "o que foi gravado"');
+    run("delete PREV_CORRIGE_OK[__ch635+'|escova_p'];");
+    assert.ok(/já leem esta data\./.test(run('prevCorrigeOkHTML()')), 'só data: "esta data", como sempre');
+    run("PREV_CORRIGE_OK={}; PREV_CORRIGE_OK[__ch635+'|escova_p']={ts:Date.now(), ate:'', resposta:true, texto:'x'};");
     assert.ok(/^ficha-escova: escova os dentes no Day Care: Não \(Não deixa\), atualizado na tela Hoje na Zêluz$/.test(run('__au635[0]')), run('__au635[0]'));
     run("PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; pelAtividades=function(){ return ['agility']; };");
     await run("prevCorrigeEscovaDc(__ch635, 'Sim', '', 'venc')");
