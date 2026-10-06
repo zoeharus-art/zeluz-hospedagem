@@ -26,29 +26,35 @@
 - **Onde está no código:** `renovMesesDoPlano`, `renovMesesDatas`, `renovDiasMesSaneado`, `renovDiasNaData`, `renovValorDoPlano` (as contas); `pelDias(p, quando)` (a porta única: sem data = hoje, data = o mês do plano, `'rotina'` = os chips); `nAulasDe` (rotina); `turmaDoDia(iso)`, `turmaDe`, `turmaListaDoDia`, `nMatriculados`, `gradeAlmocoDados`, `relPertencesBranco`; `trocaValidar`, `repEhDiaDele`, `dxVereditoTroca`, `repDiasQueViria`, `proximaVindaDe`, `vencProximoDiaDele`, `dashAutoVemNoDia`, `banhosAvisoDiaSemDaycare`, `orcDiasEfetivosEm`; aba Plano: `renovEdit`, `renovRascSujo`, `renovDiasModoSet`, `renovMesDiaToggle`, `renovMesesHTML`, `blocoPlano`, `confirmarRenovacao`, `renovMesmoPlano`, `renovHistHTML`, `desfazerRenovacao`; chips: `diasEditInner`, `toggleDiaPel`, `pelPlanoMesHoje`; registro: `planoMesComecaHoje`, `planoMesQuemMudaHoje` (no `gravarTurmaDoDia`); reposição: `dashLancar`.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (29 provas da 6.30, bloco "6.30 — plano com dias por mês"); `tests/harness.js` v-49 (13 checagens: a regressão no cadastro do app e a Tâmara inventada na aba Plano, no Confirmar e no Desfazer); defeitos plantados: 38 (os 13 do desenho e 25 a mais), todos pegos; roteiro no navegador a 375 px (24 de 24).
 
-## O que mudou em 06/out/2026 (v 2026-10-06-04) — a hora do banho fixo nos Lançamentos do dia, e "Ele escova os dentes aqui?" no painel rápido
+## O que mudou em 06/out/2026 (v 2026-10-06-04 e -05) — a hora do banho fixo nos Lançamentos do dia, e "Escova os dentes aqui?" no painel rápido
 
 > **Adriana, 06/out/2026:** *"Precisa de aparecer também nos lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui, Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o horário do banho deles. Eu preciso visivelmente esse horário, assim como Ragna, que está aqui às 14h30."* Story 6.34.
 >
 > *"Hoje [na Zêluz], sobre a troca de escova de dente em aberto. Aí tá aqui, nunca registrado. Tem peludo que não escova dentes [...] que não deixa. Então, a gente tem que colocar que não deixa. Então, tem que ter opção aqui, troca de escovas de dente do Antônio. É, ele escova dente? Se ele escova, ok. Se ele não escova, a gente não tem como fazer."* Story 6.35.
 
-### (AJ) A linha do banho fixo diz a hora do banho
+### (AJ) A linha do banho fixo diz a hora do banho — a que está na planilha
 
 | Antes | Agora |
 |---|---|
-| "Charlotte/Spitz · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha | "Charlotte/Spitz **14:30** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como no banho lançado à mão |
+| "Ragna/Westie · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha | "Ragna/Westie **14:30** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como no banho lançado à mão |
+| A hora mudada na ficha depois do envio ("mudar só o dia" com outra hora, a hora do combinado trocada) **não chegava à planilha**: a TV tocava o alarme na hora velha | A conferência automática percebe que a hora mudou e a ponte **regrava a "Hora Banho"** daquela linha (em até 20 segundos depois de salvar no Banhos recorrentes, ou na volta de 5 minutos) |
 
-- A hora sai do combinado da ficha (Banhos recorrentes), a mesma conta que escreveu a "Hora Banho" na planilha; a hora mudada só para aquele dia vale.
-- **Onde está no código:** `dashAutoHorasBanho`, `dashAutoLinhas`.
+- **A hora da linha é a que foi gravada na planilha** (o registro da conferência guarda, nome por nome, a hora enviada), não uma conta feita a cada redesenho: entre mudar a ficha e a conferência passar, a linha mostra a hora que ainda está na planilha. Sem hora gravada (registro anterior a esta versão, ou banho lançado à mão), a linha fica só com o nome. Vale também para outro dia escolhido no seletor e para dias que já passaram.
+- **Primeira passada depois da publicação:** os banhos fixos já lançados (hoje + 14 dias) recebem a hora uma vez, para o registro passar a guardá-la; depois disso, só quando a hora muda.
+- **O "(enviado em …)"** vale em todas as linhas do automático dos Lançamentos do dia (banho, reposição, falta, adaptação). A tela de Reposições continua com "lançada na planilha ✓ 06/10 15:28".
+- **Não deu para regravar a hora:** a linha diz "a hora 16:15 não foi gravada" (ou "a conexão caiu"), com a hora que continua lá; a próxima passada tenta de novo.
+- O banho lançado à mão pela recepção continua com a hora dela: a conferência não mexe.
+- **Onde está no código:** `repPlanHoraNome`, `dashAutoLinhas`; em `dashAutoSincronizar`, `horaAntesDe` e o passo "já está lá" (a hora no `marcar`).
 
-### (AK) "Ele escova os dentes aqui?" no painel da troca de escova
+### (AK) "Escova os dentes aqui?" no painel da troca de escova
 
-- Tocar na troca de escova (por exemplo, "em aberto, nunca registrado") no **Hoje na Zêluz**, nos **Vencimentos** ou na **Prevenção** abre o painel com a pergunta **"Ele escova os dentes aqui?"**: **Sim, escova** · **Não deixa escovar** · **O tutor não compra a pasta**.
-- **Não:** grava na ficha a mesma resposta de Ficha › Prevenção › "Escova os dentes no Day Care?" (com o motivo). A troca de escova sai de toda cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor) e da escovação dos monitores; aparece a confirmação verde.
-- **Sim:** grava e o painel continua aberto para a data da troca (Feito hoje ou Feito em…).
+- Tocar na troca de escova (por exemplo, "em aberto, nunca registrado") no **Hoje na Zêluz**, nos **Vencimentos** ou na **Prevenção** abre o painel com a pergunta **"Escova os dentes aqui?"**: **Sim, escova** · **Não deixa escovar** · **O tutor não compra a pasta**.
+- **Não:** grava na ficha a mesma resposta de Ficha › Prevenção › "Escova os dentes no Day Care?" (com o motivo). A troca de escova sai de toda cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor) e da escovação dos monitores; aparece a confirmação verde ("já leem esta resposta").
+- **Sim:** grava e o painel continua aberto para a data da troca (Feito hoje ou Feito em…), com a dica "Escova aqui: grave abaixo a data da troca."
+- **O banco recusou:** aparece "A FICHA NÃO FOI ATUALIZADA" e o painel continua aberto, sem confirmação.
 - **Quem pode:** quem atualiza a prevenção na tela (recepção, Supervisão, Gestão).
 - **Onde está no código:** `prevCorrigeEscovaDcHTML`, `prevCorrigeEscovaDc` (usa `escovaDcPatch`, a mesma da ficha).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (2 provas da 6.34 e 2 da 6.35; defeitos plantados: 18, todos pegos).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.34 e 2 da 6.35). Defeitos plantados: 18 na 1ª rodada, todos pegos; 19 na rodada do QA, 18 pegos (o que escapa grava hora vazia em colunas sem hora, que a tela não lê).
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-03) — Ficha › Prevenção: check-up e escova no topo, com as duas datas
 
