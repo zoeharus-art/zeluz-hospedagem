@@ -7530,6 +7530,7 @@ prova('6.30 P9 — troca de dia pela data: 07/12 → 09/12 "já vem na quarta"; 
     assert.ok(/não vem na quarta/.test(V('2026-11-11', '2026-11-12').motivo), V('2026-11-11', '2026-11-12').motivo);
     const nov = V('2026-11-30', '2026-12-02');
     igual([nov.ok, nov.tipo], [true, 'troca'], 'a quarta 02/12 (Mês 2) ainda não é dela: a troca para lá vale');
+    assert.ok(/já vem na quarta/.test(V('2026-11-30', '2026-12-09').motivo), 'cada dia pela sua data: a segunda do Mês 2 para a quarta do Mês 3 (que já é dela)');
   } finally { soltaTroca630(); solta630(); }
 });
 prova('6.30 P10 — "Ele já vem nesse dia" e "é o dia dela" respondem pela data: a quarta do Mês 3 é dela; a do Mês 2, não', () => {
@@ -7620,6 +7621,9 @@ prova('6.30 P28 — contador das Turminhas por dia: a quarta conta a Tâmara só
     run("zHojeISO=function(){ return '2026-11-30'; };");
     igual(run("nMatriculados('qua')"), 0, 'em 30/11, a próxima quarta é 02/12 (Mês 2)');
     igual(J630('gradeAlmocoDados().map(function(x){ return x.dia; })'), ['Segunda'], 'a grade de almoço da semana também');
+    run("zHojeISO=function(){ return '2026-12-04'; };");
+    igual(run("nMatriculados('qua')"), 1, 'na sexta 04/12 (ainda Mês 2), a próxima quarta já é 09/12 (Mês 3)');
+    igual(J630('gradeAlmocoDados().map(function(x){ return x.dia; })'), ['Segunda', 'Quarta'], 'e a grade de almoço da semana que vem');
   } finally { solta630(); }
 });
 // ---- a aba Plano, o Confirmar, o Desfazer, os chips e as outras portas (passos 6 a 11)
