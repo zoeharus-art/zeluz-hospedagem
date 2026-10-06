@@ -2,6 +2,22 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 06/out/2026 (v 2026-10-06-07) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
+
+> **Adriana, 06/out/2026,** com a foto do Confirmar do Fred dizendo "1x por semana · Ter": *"Erro - Fred eleonora deseja 2x por semana vou fechar e volta para uma vez"*. Story 6.37.
+
+### (AN) Ficha › Plano › "Quais dias?"
+
+| Antes | Agora |
+|---|---|
+| Tocar em **2x** na aba Plano só mostrava "Marque 2 dias da semana lá em cima" e apontava os chips do alto da ficha; ao fechar o aviso, o seletor voltava para 1x, e o Confirmar gravava 1x | Logo abaixo de "Aulas por semana" aparecem os dias (**Quais dias?** Seg · Ter · Qua · Qui · Sex). Tocar em **2x** diz quantos faltam ("Para 2x, marque mais 1 dia aqui embaixo (hoje está marcado Ter)"); tocar no dia o marca, e o **2x** acende. Pedir menos do que está marcado diz quantos desmarcar |
+
+- Os dias da aba Plano são **os mesmos** do alto da ficha (a mesma gravação, com rastro): marcar num lugar aparece no outro. As aulas por semana continuam sendo a quantidade de dias marcados — é esse número que entra na mensalidade.
+- Os botões dos dias são maiores, para o toque no celular. Quem não edita a ficha vê os dias, sem tocar.
+- Plano com dias diferentes em cada mês (6.30): no modo "Mudam durante o plano", valem as linhas de cada mês (sem mudança).
+- **Onde está no código:** `planoDiasChipsHTML` (os dias na aba), `setRenovAulas` (o aviso), `blocoPlano`; a gravação é a de sempre, `toggleDiaPel`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (1 prova da 6.37; defeitos plantados: 7, todos pegos); `tests/harness.js` v-15 (o aviso aponta os dias da aba ou do alto). Chromium a 375 px (dado inventado): 9 de 9.
+
 ## O que mudou em 06/out/2026 (v 2026-10-06-07) — o Financeiro soma mês a mês o plano com dias diferentes em cada mês (caso da Hopi)
 
 > **Adriana, 05/out/2026:** *"Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."* Story 6.36, continuação da 6.30 (no mesmo pull request), com as respostas recomendadas, pela autorização do /loop de 06/out.

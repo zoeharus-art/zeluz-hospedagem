@@ -9059,6 +9059,46 @@ prova('6.36 — o arquivo do dinheiro continua ES5 (roda no tablet velho) e o ca
   assert.ok(/    if \(r\.dias_mes\) \{\n      finResumoDiasMes\(R, k, c, r, \{[\s\S]{0,260}\}\);\n      continue;\n    \}\n    aulas = finAulasDe/.test(FIN_SRC36));
 });
 // @@636-FIM
+// ================================================================== 6.37 — o "2x" da aba Plano marca os dias ali mesmo
+console.log('\n6.37 — Aba Plano: os dias da semana logo abaixo do "2x" (Adriana, 06/out/2026, Fred)');
+prova('6.37 a aba Plano mostra os dias (os mesmos chips do alto, maiores); o "2x" com 1 dia diz quantos faltam e aponta os dias da aba; tocar no dia grava pela porta de sempre e o 2x acende', () => {
+  run(`__bk637={pa:pelAtual, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, zf:zFalta, au:audit, rp:renderPel, rd:(typeof renderDaycare==='function'?renderDaycare:null), r:document.body.dataset.role, P:PELUDINHOS};
+    PELUDINHOS=[{n:'Fred', raca:'SRD', tutor:'Eleonora Teste'}]; pelAtual=PELUDINHOS[0];
+    __ex637={dias:['ter'], renov:{plano:'Gold', inicio:'2026-10-06', fim:'2026-12-31', aulas:1}}; pelExtra=function(){ return __ex637; };
+    __gr637=[]; setPelExtra=function(p,patch){ __gr637.push(JSON.parse(JSON.stringify(patch))); Object.assign(__ex637, patch); };
+    __zf637=[]; zFalta=function(l){ __zf637.push(l[0]); }; audit=function(){}; renderPel=function(){}; renderDaycare=function(){};
+    __chips637={}; document.getElementById=function(id){ return id==='planoDiasChips'?__chips637:null; };
+    document.body.dataset.role='consultora';`);
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    const box = h.slice(h.indexOf('id="planoDiasChips"'), h.indexOf('</div>', h.indexOf('id="planoDiasChips"')));
+    assert.ok(box.length > 0, 'os dias aparecem na aba Plano');
+    igual((box.match(/<span class="dia/g) || []).length, 5, 'Seg a Sex');
+    assert.ok(/class="dia on clic" style="font-size:13px;padding:9px 14px;margin:0" onclick="toggleDiaPel\('ter'\)">Ter</.test(box), 'a terça acesa, tocável, maior');
+    assert.ok(/class="dia clic"[^>]*onclick="toggleDiaPel\('qua'\)">Qua</.test(box), 'a quarta apagada, tocável');
+    assert.ok(/Toque nos dias para trocar: são os mesmos do alto da ficha\./.test(h));
+    // o "2x" com 1 dia marcado: diz quantos faltam e aponta os dias da aba; nada é gravado
+    run('setRenovAulas(2)');
+    igual(run('__gr637.length'), 0, 'o 2x sozinho não grava');
+    igual(run('__zf637[0].el'), 'planoDiasChips', 'aponta os dias da própria aba');
+    assert.ok(/^Para 2x, marque mais 1 dia aqui embaixo \(hoje está marcado Ter\)\./.test(run('__zf637[0].msg')), run('__zf637[0].msg'));
+    // tocar na quarta: grava pela porta de sempre (toggleDiaPel), e o seletor acende o 2x
+    run("toggleDiaPel('qua')");
+    igual(run('__gr637[0]'), { dias: ['ter', 'qua'], freq: '2x' });
+    assert.ok(/<button type="button" class="on" onclick="setRenovAulas\(2\)">2x<\/button>/.test(run('blocoPlano(pelExtra(pelAtual), pelAtual)')), 'o 2x acende');
+    // pedir menos do que está marcado: diz quantos desmarcar
+    run('__zf637=[]; setRenovAulas(1)');
+    assert.ok(/^Para 1x, desmarque 1 dia aqui embaixo \(hoje estão marcados Ter, Qua\)\./.test(run('__zf637[0].msg')), run('__zf637[0].msg'));
+    // sem a aba Plano na tela, aponta os chips do alto (como antes)
+    run("__zf637=[]; document.getElementById=function(){ return null; }; setRenovAulas(3)");
+    igual(run('__zf637[0].el'), 'pelDiasEdit');
+    // quem não edita a ficha vê os dias, sem tocar
+    run("document.body.dataset.role='monitor';");
+    const hm = run('planoDiasChipsHTML(pelAtual)');
+    assert.ok(hm.indexOf('onclick') < 0 && /class="dia on"/.test(hm), 'monitor: só vê');
+  } finally { run(`pelAtual=__bk637.pa; pelExtra=__bk637.pe; setPelExtra=__bk637.sp; document.getElementById=__bk637.ge; zFalta=__bk637.zf; audit=__bk637.au; renderPel=__bk637.rp;
+    if(__bk637.rd) renderDaycare=__bk637.rd; document.body.dataset.role=__bk637.r; PELUDINHOS=__bk637.P;`); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
