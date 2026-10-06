@@ -8020,9 +8020,11 @@ provaAsync('6.30 P17 — renovação antecipada em 21/12 ("Iguais", Seg): o plan
   assert.ok(L.perg[0].l.indexOf('Plano Gold (trimestral) · 1x por semana · Seg') >= 0, L.perg[0].l.join(' | '));
   igual(L.hist.length, 1, 'o plano com dias por mês vai para "Renovações anteriores"');
   igual(L.hist[0].a.dias_mes, [['seg'], ['seg'], ['seg', 'qua']]);
-  // o plano anterior só vale ANTES de o plano atual começar (um plano novo que começa no meio dele manda)
+  igual(L.perg[0].l.filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026 — a partir de 01/01/2027, vale Seg.'], 'o resumo diz até quando os dias de cada mês continuam valendo');
+  // um plano novo que começa no MEIO do anterior (QA da 6.30, achado 2 — o AC8): antes dele, só o anterior;
+  // na sobreposição, o mês do anterior JUNTO com os dias do plano novo (aqui, a rotina Ter)
   ctx.__r630 = { plano: 'Gold', inicio: '2026-12-10', fim: '2027-02-28', dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] };
-  igual([J630("renovDiasNaData(__r630, '2026-12-09')"), run("renovDiasNaData(__r630, '2026-12-16')")], [['seg', 'qua'], null]);
+  igual([J630("renovDiasNaData(__r630, '2026-12-09', ['ter'])"), J630("renovDiasNaData(__r630, '2026-12-16', ['ter'])")], [['seg', 'qua'], ['seg', 'ter', 'qua']]);
 });
 provaAsync('6.30 P18 — Desfazer a renovação devolve o plano anterior com os dias por mês; a quarta 09/12 volta a ser dela', async () => {
   const novo = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', mesRenov: 'março de 2027',
@@ -8174,6 +8176,339 @@ prova('6.30 — a área protegida e as portas antigas: turmaDeHoje idêntica, gr
   assert.ok(/function blocoPlano\(ex,p\)\{[\s\S]{0,900}?const aulas=nAulasDe\(p\);/.test(src));
   assert.ok(/id="planoComoFazer"[\s\S]{0,260}Primeiro marque os dias da semana lá em cima\. Depois escolha o plano e a data\. Nada é gravado antes do Confirmar\./.test(src));
   assert.ok(/if\(ant\.dias_mes\) volta\.dias_mes=ant\.dias_mes;/.test(src), 'o Desfazer leva os dias de cada mês');
+});
+// ---- QA independente da 6.30 (Quinn, 06/out/2026) e os ajustes ---------------------------------
+// Dado INVENTADO (a «Tâmara» e fichas de brincadeira). As 15 provas "Q" vêm do QA (quinn-provas.js),
+// cada uma presa a um defeito que escapava; as "QA1".."QA7" são as dos achados corrigidos.
+// Várias fichas no cache do cadastro, gravações e perguntas anotadas — e TUDO volta no fim
+// (o sandbox é o mesmo das outras provas).
+const amb630 = async (fichas, hoje, rasc, corpo, resp) => {
+  ctx.__f630 = JSON.parse(JSON.stringify(fichas)); ctx.__h630 = hoje; ctx.__r630q = rasc || null; ctx.__resp630 = (resp || [true, true, true]).slice();
+  run(`__bk630q={cad:pelCadCache, P:PELUDINHOS, pa:pelAtual, hz:zHojeISO, hj:hojeISO, sp:setPelExtra, hg:renovHistGravar, au:audit, zp:zPergunta,
+      za:zAlertao, zf:zFalta, zl:zLimparFalta, rf:renderPelFicha, rp:renderPel, ce:canEditPel, pp:podePapel, mm:mmBlocoHTML,
+      ra:repAgendaDe, rx:relBaixarXLS, db:DB, rr:renovRascunho, pc:pelCategoria, ge:document.getElementById,
+      osel:ORC_SEL, orep:ORC_REP, ocalc:ORC_CALC, oaul:ORC_AULUNO, ot:ORC_TEMP, oman:ORC_TEMP_MANUAL, oauto:ORC_TEMP_AUTO,
+      orr:orcRenderResultado, orm:orcRenderMsg, ors:orcRenderSel, onc:orcNovoComecou};
+    __log630q={grav:[], perg:[], faltas:[], rastro:[], out:null, xls:null};
+    pelCadCache={}; PELUDINHOS=__f630.map(function(f){ return {n:f.n, tutor:f.tutor, raca:'SRD', dias:(f.pdias||[])}; });
+    __f630.forEach(function(f){ var e=JSON.parse(JSON.stringify(f)); delete e.pdias; pelCadCache[pelKey(f)]=e; });
+    pelAtual=PELUDINHOS[0]; zHojeISO=function(){ return __h630; }; hojeISO=zHojeISO;
+    setPelExtra=function(p,o){ __log630q.grav.push(JSON.parse(JSON.stringify(o))); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(o))); return Promise.resolve({ok:true}); };
+    renovHistGravar=function(){ return Promise.resolve(); }; audit=function(a,d){ __log630q.rastro.push(a+' | '+d); };
+    zPergunta=function(t,l,op){ __log630q.perg.push({t:t, l:l, sim:op&&op.sim, nao:op&&op.nao}); return Promise.resolve(__resp630.length?__resp630.shift():true); };
+    zAlertao=function(){}; zFalta=function(l){ __log630q.faltas.push({el:String(l[0].el), msg:l[0].msg}); return true; }; zLimparFalta=function(){};
+    renderPelFicha=function(){}; renderPel=function(){}; canEditPel=function(){ return true; }; podePapel=function(){ return true; }; mmBlocoHTML=function(){ return ''; };
+    repAgendaDe=function(){ return []; }; relBaixarXLS=function(html){ __log630q.xls=String(html); };
+    DB={ref:function(){ return {remove:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); }}; }};
+    renovRascunho=__r630q?Object.assign({_k:pelKey(pelAtual)}, __r630q):null;`);
+  try { await run('(async function(){ ' + corpo + ' })()'); for (let i = 0; i < 40; i++) await Promise.resolve(); return J630('__log630q'); }
+  finally {
+    run(`pelCadCache=__bk630q.cad; PELUDINHOS=__bk630q.P; pelAtual=__bk630q.pa; zHojeISO=__bk630q.hz; hojeISO=__bk630q.hj; setPelExtra=__bk630q.sp;
+      renovHistGravar=__bk630q.hg; audit=__bk630q.au; zPergunta=__bk630q.zp; zAlertao=__bk630q.za; zFalta=__bk630q.zf; zLimparFalta=__bk630q.zl;
+      renderPelFicha=__bk630q.rf; renderPel=__bk630q.rp; canEditPel=__bk630q.ce; podePapel=__bk630q.pp; mmBlocoHTML=__bk630q.mm;
+      repAgendaDe=__bk630q.ra; relBaixarXLS=__bk630q.rx; DB=__bk630q.db; renovRascunho=__bk630q.rr; pelCategoria=__bk630q.pc; document.getElementById=__bk630q.ge;
+      ORC_SEL=__bk630q.osel; ORC_REP=__bk630q.orep; ORC_CALC=__bk630q.ocalc; ORC_AULUNO=__bk630q.oaul; ORC_TEMP=__bk630q.ot; ORC_TEMP_MANUAL=__bk630q.oman; ORC_TEMP_AUTO=__bk630q.oauto;
+      orcRenderResultado=__bk630q.orr; orcRenderMsg=__bk630q.orm; orcRenderSel=__bk630q.ors; orcNovoComecou=__bk630q.onc;`);
+  }
+};
+const HOPI630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-05', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] });
+const ANT630 = () => [{ n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] }, { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] }, { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }];
+const F630 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], sexo: 'Fêmea', renov }, extra || {});
+const resumo630 = (L) => ((L.perg.find((p) => p.t === 'CONFIRA ANTES DE GRAVAR') || {}).l || []);
+// O Financeiro (6.36) lendo o plano gravado — as funções do bloco 6.36 (o sandbox ctx36), ao centavo.
+const fin630 = (renov, mes) => { const o = res36(dados36(cad36(renov)), mes); return { aReceber: o.aReceberTotal, declarado: o.declaradoTotal, linhas: o.porFILHOt.length, sem: o.semComoCalcular.length }; };
+
+// ---- achado 1 (ALTA): corrigir a data do pagamento não apaga os dias de cada mês -----------------
+provaAsync('6.30 QA1a — corrigir a data 05/10 → 02/10 (erro de digitação): a tela continua em "Mudam"; o resumo diz os três meses a partir de 02/10 e "Valor do plano: R$ 1.307,00"; grava os dias de cada mês; a quarta 09/12 continua dela; o Financeiro dá R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02' },
+    `__log630q.out={modo:renovEdit(pelExtra(pelAtual)).dias_modo, tela:blocoPlano(pelExtra(pelAtual), pelAtual)};
+     await confirmarRenovacao(); __log630q.out.d09=pelDias(pelAtual,'2026-12-09'); __log630q.out.d02=pelDias(pelAtual,'2026-12-02');`);
+  igual(L.out.modo, 'mudam', 'a data corrigida do MESMO plano não volta a tela para "Iguais"');
+  assert.ok(/class="on" onclick="renovDiasModoSet\('mudam'\)"/.test(L.out.tela) && /Mês 1 <span[^>]*>· 02\/10 a 01\/11/.test(L.out.tela) && /Mês 3 <span[^>]*>· 02\/12 a 31\/12/.test(L.out.tela), 'a tela mostra os meses com as datas novas');
+  igual(L.perg.map((p) => p.t), ['CONFIRA ANTES DE GRAVAR'], 'mesmo fim (31/12): é correção, sem pergunta');
+  ['Plano Gold (trimestral) · os dias mudam durante o plano', 'Mês 1 · 02/10/2026 a 01/11/2026 · Seg · 1x · R$ 359,00', 'Mês 2 · 02/11/2026 a 01/12/2026 · Seg · 1x · R$ 359,00',
+    'Mês 3 · 02/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00', 'Início 02/10/2026 · vale até 31/12/2026 · renova em dezembro de 2026', 'Valor do plano: R$ 1.307,00 — pago à vista']
+    .forEach((linha) => assert.ok(resumo630(L).indexOf(linha) >= 0, linha + ' — ' + resumo630(L).join(' | ')));
+  assert.ok(!resumo630(L).some((l) => /deixam de valer|continuam valendo/.test(l)), 'o mesmo plano continua com os dias de cada mês: nada a avisar');
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, rv.dias_mes, rv.aulas, 'dias_mes_anterior' in rv], ['2026-10-02', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], 1, false]);
+  igual([L.out.d09, L.out.d02], [['seg', 'qua'], ['seg', 'qua']], 'a quarta 09/12 continua dela; e a 02/12 também: com o início corrigido, o Mês 3 vai de 02/12 a 31/12');
+  // o Financeiro lê o plano gravado: R$ 1.307,00 em outubro (era R$ 1.077,00 com os dias apagados)
+  igual(fin630(rv, '2026-10'), { aReceber: 130700, declarado: 130700, linhas: 1, sem: 0 });
+  igual(ctx36.finBRL(fin630(rv, '2026-10').aReceber), 'R$ 1.307,00');
+  igual([fin630(rv, '2026-11').aReceber, fin630(rv, '2026-12').aReceber], [0, 0], 'novembro e dezembro: R$ 0,00 (regime de caixa)');
+});
+provaAsync('6.30 QA1b — corrigir 05/10 → 06/10 respondendo "Manter até 31/12/2026 (só corrigi a data)": os dias de cada mês continuam (Mês 1 de 06/10 a 05/11), sem plano anterior congelado; o Financeiro, R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-06' },
+    `__log630q.out={modo:renovEdit(pelExtra(pelAtual)).dias_modo}; await confirmarRenovacao(); __log630q.out.d09=pelDias(pelAtual,'2026-12-09');`, [false, true]);
+  igual(L.out.modo, 'mudam', 'o mesmo fim (31/12): a tela já mostra "Mudam"');
+  igual(L.perg.map((p) => [p.t, p.nao]), [['ESTE PAGAMENTO NÃO ESTENDE O PLANO', 'Manter até 31/12/2026 (só corrigi a data)'], ['CONFIRA ANTES DE GRAVAR', 'Voltar e conferir']]);
+  assert.ok(resumo630(L).indexOf('Mês 1 · 06/10/2026 a 05/11/2026 · Seg · 1x · R$ 359,00') >= 0 && resumo630(L).indexOf('Mês 3 · 06/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00') >= 0
+    && resumo630(L).indexOf('Valor do plano: R$ 1.307,00 — pago à vista') >= 0, resumo630(L).join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, rv.dias_mes, 'dias_mes_anterior' in rv, 'vig_inicio' in rv], ['2026-10-06', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], false, false]);
+  igual(L.out.d09, ['seg', 'qua']);
+  igual(fin630(rv, '2026-10').aReceber, 130700);
+});
+provaAsync('6.30 QA1c — 05/10 → 06/10 respondendo "Começar em 01/01/2027" (pagamento novo): o plano novo não herda os dias por mês; o anterior fica congelado; o resumo diz até quando os dias de cada mês do plano atual continuam valendo', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-06' },
+    `await confirmarRenovacao(); __log630q.out={d09:pelDias(pelAtual,'2026-12-09'), j06:pelDias(pelAtual,'2027-01-06')};`, [true, true]);
+  const l = resumo630(L);
+  assert.ok(l.indexOf('Plano Gold (trimestral) · 1x por semana · Seg') >= 0, 'plano novo: "Iguais" (AC8) — ' + l.join(' | '));
+  assert.ok(l.indexOf('Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026 — a partir de 01/01/2027, vale Seg.') >= 0, l.join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.vig_inicio, rv.fim, 'dias_mes' in rv], ['2027-01-01', '2027-03-31', false]);
+  igual(rv.dias_mes_anterior, ANT630());
+  igual(L.out, { d09: ['seg', 'qua'], j06: ['seg'] });
+});
+provaAsync('6.30 QA1d — correção com "Iguais" escolhido na tela: o resumo diz, numa linha obrigatória, que os dias de cada mês deixam de valer e a partir de quando vale a rotina', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02', dias_modo: 'iguais' }, `await confirmarRenovacao(); __log630q.out=pelDias(pelAtual,'2026-12-09');`);
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) deixam de valer — a partir de 02/10/2026 vale Seg.']);
+  igual(['dias_mes' in L.grav[0].renov, 'dias_mes_anterior' in L.grav[0].renov, L.out], [false, false, ['seg']], 'quem escolheu "Iguais" e confirmou: a rotina');
+  // ficha sem dias por mês: nenhuma linha nova no resumo (o caminho de sempre)
+  const S = await amb630([F630(GOLD1X630())], '2026-10-07', { inicio: '2026-10-02' }, 'await confirmarRenovacao();');
+  igual(resumo630(S).filter((x) => /dias de cada mês/.test(x)), []);
+});
+provaAsync('6.30 QA1e — a regra correção × plano novo (renovEhCorrecao): a resposta da pergunta manda; a mesma data, o mesmo fim e o período que não começa depois do gravado são correção; começar depois e terminar em outro dia é plano novo; e na tela "Mudam" de novo numa data corrigida traz os meses gravados, numa data de renovação começa da rotina', async () => {
+  ctx.__g630 = HOPI630();
+  const C = (c, e) => run('renovEhCorrecao(__g630, ' + JSON.stringify(c) + ", '" + (e || '') + "')");
+  igual([C({ inicio: '2026-10-05', fim: '2026-12-31' }), C({ inicio: '2026-10-06', fim: '2026-12-31' }), C({ inicio: '2026-10-02', fim: '2026-12-31' }),
+    C({ inicio: '2026-09-05', fim: '2026-11-30' }), C({ inicio: '2026-12-10', fim: '2027-02-28' }), C({ inicio: '2026-11-25', vig_inicio: '2026-12-01', fim: '2027-02-28' }),
+    C({ inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31' })], [true, true, true, true, false, false, false]);
+  igual([C({ inicio: '2026-12-10', fim: '2027-02-28' }, 'correcao'), C({ inicio: '2026-10-06', fim: '2026-12-31' }, 'novo')], [true, false], 'a resposta da pessoa manda');
+  igual(run("renovEhCorrecao({}, {inicio:'2026-10-06', fim:'2026-12-31'}, '')"), true, 'sem plano gravado não há plano novo para separar');
+  const A = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02' },
+    "renovDiasModoSet('iguais'); var a=renovEdit(pelExtra(pelAtual)).dias_modo; renovDiasModoSet('mudam'); __log630q.out=[a, renovEdit(pelExtra(pelAtual)).dias_mes];");
+  igual(A.out, ['iguais', [['seg'], ['seg'], ['seg', 'qua']]], 'data corrigida: "Mudam" de novo traz os meses gravados');
+  const B = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' },
+    "var a=renovEdit(pelExtra(pelAtual)).dias_modo; renovDiasModoSet('mudam'); __log630q.out=[a, renovEdit(pelExtra(pelAtual)).dias_mes];");
+  igual(B.out, ['iguais', [['seg'], ['seg'], ['seg']]], 'data de renovação: começa em "Iguais" e, ligando "Mudam", da rotina');
+  // a linha do resumo, pura (renovLinhaMesesDoAtual): plano novo com dias por mês na sobreposição; e o plano gravado que já acabou
+  const R = await amb630([F630(HOPI630())], '2027-03-05', null,
+    `var g=renovDe(pelExtra(pelAtual)); __log630q.out=[renovLinhaMesesDoAtual(g, {inicio:'2026-12-10', fim:'2027-02-28'}, false, true, ['seg']),
+      renovLinhaMesesDoAtual(g, {inicio:'2027-03-05', fim:'2027-05-31'}, false, false, ['seg']), renovLinhaMesesDoAtual(g, {inicio:'2026-10-02', fim:'2026-12-31'}, true, true, ['seg']),
+      renovLinhaMesesDoAtual(${JSON.stringify(GOLD1X630())}, {inicio:'2026-12-10', fim:'2027-02-28'}, false, false, ['seg'])];`);
+  igual(R.out, ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) valeram até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, valem os dias de cada mês do plano novo.',
+    'Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) valeram até 31/12/2026 — a partir de 05/03/2027, vale Seg.', '', ''],
+    'em 05/03/2027 o plano gravado já acabou: "valeram"; a correção que continua com os dias de cada mês e a ficha sem dias por mês não ganham linha');
+});
+provaAsync('6.30 QA1f — "Manter … (só corrigi a data)" com a tela em "Iguais" (Black → Gold, 06/10): a resposta é correção — o Confirmar volta para os dias de cada mês gravados (os 3 primeiros), sem plano anterior congelado', async () => {
+  const BL = { plano: 'Black', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2027-03-31', mesRenov: 'março de 2027', quando: '2026-10-05', dias_mes: [['seg'], ['seg'], ['seg', 'qua'], ['seg'], ['seg'], ['seg']] };
+  const L = await amb630([F630(BL)], '2026-10-07', { inicio: '2026-10-06', plano: 'Gold' }, `__log630q.out=renovEdit(pelExtra(pelAtual)).dias_modo; await confirmarRenovacao();`, [false, true]);
+  igual(L.out, 'iguais', 'na tela, a conta lê plano novo (outro fim)');
+  igual(L.perg.map((p) => p.t), ['ESTE PAGAMENTO NÃO ESTENDE O PLANO', 'CONFIRA ANTES DE GRAVAR']);
+  assert.ok(resumo630(L).indexOf('Plano Gold (trimestral) · os dias mudam durante o plano') >= 0 && resumo630(L).indexOf('Mês 3 · 06/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00') >= 0, resumo630(L).join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.plano, rv.dias_mes, 'dias_mes_anterior' in rv], ['Gold', [['seg'], ['seg'], ['seg', 'qua']], false]);
+  // respondendo "Começar em 01/04/2027" (pagamento novo): "Iguais", e os meses do Black continuam até 31/03/2027
+  const N = await amb630([F630(BL)], '2026-10-07', { inicio: '2026-10-06', plano: 'Gold' }, 'await confirmarRenovacao();', [true, true]);
+  igual(['dias_mes' in N.grav[0].renov, N.grav[0].renov.dias_mes_anterior.length], [false, 6]);
+  assert.ok(resumo630(N).indexOf('Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua | Seg | Seg | Seg) continuam valendo até 31/03/2027 — a partir de 01/04/2027, vale Seg.') >= 0, resumo630(N).join(' | '));
+});
+
+// ---- achado 2 (MÉDIA): o AC8 na renovação que começa dentro do plano antigo -----------------------
+provaAsync('6.30 QA2a — caso A: pagamento em 10/12 (o plano novo começa em 10/12, dentro do Mês 3): as quartas 16, 23 e 30/12 continuam dela (o Mês 3 JUNTO com o plano novo); o resumo diz até quando; depois de 31/12, só a rotina', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' },
+    `await confirmarRenovacao(); __log630q.out={}; ['2026-12-02','2026-12-09','2026-12-14','2026-12-16','2026-12-23','2026-12-30','2027-01-04','2027-01-06'].forEach(function(d){ __log630q.out[d]=pelDias(pelAtual,d); });`);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, 'vig_inicio' in rv, rv.fim, 'dias_mes' in rv], ['2026-12-10', false, '2027-02-28', false]);
+  igual(rv.dias_mes_anterior, ANT630());
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, vale Seg.']);
+  igual(L.out, { '2026-12-02': ['seg'], '2026-12-09': ['seg', 'qua'], '2026-12-14': ['seg', 'qua'], '2026-12-16': ['seg', 'qua'], '2026-12-23': ['seg', 'qua'], '2026-12-30': ['seg', 'qua'],
+    '2027-01-04': ['seg'], '2027-01-06': ['seg'] }, 'Mês 2 (até 04/12): Seg; de 05/12 a 31/12 (Mês 3, e de 10/12 junto com o plano novo): Seg, Qua; em 2027, só o plano novo');
+});
+provaAsync('6.30 QA2b — caso A2: pagamento em 25/11 (o plano novo começa em 01/12): 02/12 (Mês 2, Seg) não é quarta dela; 09 e 16/12 são; a Linha do tempo registra em 07/12 "começa hoje o Mês 3 do plano anterior" (e também quando a renovação antecipada vem antes de o último mês começar)', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-11-25', { inicio: '2026-11-25' },
+    `await confirmarRenovacao(); __log630q.out={dias:{}}; ['2026-12-02','2026-12-09','2026-12-16','2026-12-30','2027-01-06'].forEach(function(d){ __log630q.out.dias[d]=pelDias(pelAtual,d); });
+     __log630q.out.m07=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.texto; }); __log630q.out.m09=planoMesQuemMudaHoje('2026-12-09').length;
+     __log630q.out.m01=planoMesQuemMudaHoje('2026-12-01').length;`);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.vig_inicio, rv.fim], ['2026-11-25', '2026-12-01', '2027-02-28']);
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, vale Seg.']);
+  igual(L.out.dias, { '2026-12-02': ['seg'], '2026-12-09': ['seg', 'qua'], '2026-12-16': ['seg', 'qua'], '2026-12-30': ['seg', 'qua'], '2027-01-06': ['seg'] });
+  igual(L.out.m07, ['Tâmara: começa hoje o Mês 3 do plano anterior — passa a vir Seg, Qua (era Seg)']);
+  igual([L.out.m09, L.out.m01], [0, 0], 'uma vez só (07/12, o 1º dia de Day Care do Mês 3); o começo do plano novo não é notícia');
+  // último mês curto (pago em 20/10: Mês 3 de 20/12 a 31/12) e renovação antecipada em 17/12, ANTES de o Mês 3
+  // começar (o plano novo só começa em 01/01/2027): o começo do Mês 3 anterior é registrado na segunda 21/12
+  const P20 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-20', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-20', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  const R = await amb630([F630(P20)], '2026-12-17', { inicio: '2026-12-17' },
+    `await confirmarRenovacao(); __log630q.out=[planoMesQuemMudaHoje('2026-12-21').map(function(m){ return m.texto; }), planoMesQuemMudaHoje('2026-12-20').length, pelDias(pelAtual,'2026-12-23'), pelDias(pelAtual,'2027-01-06')];`);
+  igual([R.grav[0].renov.vig_inicio, R.grav[0].renov.dias_mes_anterior.length], ['2027-01-01', 3]);
+  igual(R.out, [['Tâmara: começa hoje o Mês 3 do plano anterior — passa a vir Seg, Qua (era Seg)'], 0, ['seg', 'qua'], ['seg']]);
+});
+prova('6.30 QA2c — a união na sobreposição (a conta pura): rotina Ter → Seg, Ter, Qua; plano novo com dias por mês → os dois juntos; antes do plano novo, só o anterior; depois do fim do anterior, só o novo', () => {
+  ctx.__u630 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-10', fim: '2027-02-28', dias_mes_anterior: ANT630() };
+  igual([J630("renovDiasNaData(__u630, '2026-12-16', ['ter'])"), J630("renovDiasNaData(__u630, '2026-12-16', ['seg'])"), J630("renovDiasNaData(__u630, '2026-12-16')")],
+    [['seg', 'ter', 'qua'], ['seg', 'qua'], ['seg', 'qua']]);
+  igual([J630("renovDiasNaData(__u630, '2026-12-09', ['ter'])"), run("renovDiasNaData(__u630, '2027-01-05', ['ter'])")], [['seg', 'qua'], null], 'antes do plano novo: só o anterior; depois do anterior: a rotina (null)');
+  ctx.__v630 = Object.assign({}, ctx.__u630, { dias_mes: [['ter'], ['ter'], ['ter', 'qui']] });
+  igual([J630("renovDiasNaData(__v630, '2026-12-16', ['sex'])"), J630("renovDiasNaData(__v630, '2027-01-05', ['sex'])"), J630("renovDiasNaData(__v630, '2027-02-11', ['sex'])")],
+    [['seg', 'ter', 'qua'], ['ter'], ['ter', 'qui']], 'com dias por mês no plano novo: o Mês 1 novo (Ter) junto com o Mês 3 anterior');
+  ctx.__w630 = Object.assign({}, ctx.__u630, { fim: '2026-12-20' });
+  igual(J630("renovDiasNaData(__w630, '2026-12-28', ['ter'])"), ['seg', 'qua'], 'depois do fim do plano novo (dado torto): o anterior sozinho');
+  igual(J630("renovMesNaData(__u630, '2026-12-16', ['ter'])"), { total: 3, anterior: true, n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'ter', 'qua'], junto: true });
+  igual(J630("renovMesNaData(__u630, '2026-12-09', ['ter'])").junto, false);
+  // pela porta única: a rotina (os chips do alto) é o plano novo "Iguais"
+  arma630(Object.assign({}, ctx.__u630), { dias: ['ter'] }, '2026-12-16');
+  try {
+    igual([J630('pelDias(__t630)'), J630("pelDias(__t630, '2026-12-15')"), J630("pelDias(__t630, 'rotina')")], [['seg', 'ter', 'qua'], ['seg', 'ter', 'qua'], ['ter']]);
+  } finally { solta630(); }
+});
+provaAsync('6.30 QA2d — na sobreposição, a faixa dos chips, a Turma do dia e a Reposição nos Lançamentos do dia dizem e seguem "junto com o plano atual"', async () => {
+  const A2 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-25', vig_inicio: '2026-12-01', fim: '2027-02-28', dias_mes_anterior: ANT630() };
+  const L = await amb630([F630(A2)], '2026-12-02', null, `__log630q.out=[diasEditInner(pelAtual)]; zHojeISO=function(){ return '2026-12-16'; }; __log630q.out.push(diasEditInner(pelAtual));`);
+  assert.ok(/Hoje vale o Mês 2 de 3 do plano anterior, junto com o plano atual: Seg\. A partir de 05\/12\/2026: Seg, Qua\. Os dias abaixo são a rotina: valem depois do plano \(a partir de 01\/01\/2027\)\./.test(L.out[0]), L.out[0].slice(0, 400));
+  assert.ok(/Hoje vale o Mês 3 de 3 do plano anterior, junto com o plano atual: Seg, Qua\. Os dias abaixo/.test(L.out[1]), L.out[1].slice(0, 400));
+  arma630(A2, { sexo: 'Fêmea' }, '2026-12-09');
+  run(`__bk630t2={rl:repLancamentos, ra:repAgendaDe, te:poTelDoTutor, rs:repSaldo};
+    repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 0; };`);
+  try {
+    const f = "{pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:0, hoje:'2026-12-09'}";
+    igual(J630("turmaListaDoDia('2026-12-16', " + f + ').vem.map(function(o){ return [o.nome, o.porque]; })'), [['Tâmara', '']], 'a quarta 16/12: fixa do dia');
+    igual(J630("turmaListaDoDia('2026-12-02', " + f + ').vem.length'), 0, 'a quarta 02/12 (Mês 2 anterior, Seg): não');
+    igual(J630("turmaListaDoDia('2027-01-06', " + f + ').vem.length'), 0, 'a quarta 06/01/2027 (só o plano novo, Seg): não');
+  } finally { run('repLancamentos=__bk630t2.rl; repAgendaDe=__bk630t2.ra; poTelDoTutor=__bk630t2.te; repSaldo=__bk630t2.rs;'); solta630(); }
+  const B = bancoCaminhos({}); ctx.__B = B;
+  arma630(A2, { sexo: 'Fêmea' }, '2026-12-16');
+  run(`__bk630l2={R:REPO_CACHE, DB:DB, dd:DASH_DADOS, ds:DASH_DIA_SEL, esp:dashEspelhar, rd:renderDash, au:audit, ze:zEscolha, ab:dashRepAbater, t:DC_DASH_TURMA, pv:pendAvaliarLancamento};
+    REPO_CACHE={}; REPO_CACHE[pelKey(__t630)]={lancamentos:{c1:{tipo:'credito', data:'2026-11-16'}}};
+    DASH_DADOS={}; DASH_DIA_SEL='2026-12-16'; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
+    dashEspelhar=function(){ return Promise.resolve({ok:true}); }; renderDash=function(){}; audit=function(){}; pendAvaliarLancamento=function(){};
+    __esc=[]; zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b}); }; __abat=0; dashRepAbater=function(){ __abat++; return Promise.resolve(true); };
+    DB=__B;`);
+  try {
+    run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    const e = run('__esc[0]');
+    igual(e && e.t, 'Quarta já é dia da Tâmara no plano');
+    assert.ok(/No Mês 3 do plano anterior \(05\/12\/2026 a 31\/12\/2026\), junto com o plano atual, ela vem Seg, Qua\./.test(e.l[0]), JSON.stringify(e.l));
+    igual([B.escritos.length, run('__abat')], [0, 0], 'nada antes de a pessoa escolher');
+  } finally {
+    run('REPO_CACHE=__bk630l2.R; DB=__bk630l2.DB; DASH_DADOS=__bk630l2.dd; DASH_DIA_SEL=__bk630l2.ds; dashEspelhar=__bk630l2.esp; renderDash=__bk630l2.rd; audit=__bk630l2.au; zEscolha=__bk630l2.ze; dashRepAbater=__bk630l2.ab; DC_DASH_TURMA=__bk630l2.t; pendAvaliarLancamento=__bk630l2.pv;');
+    solta630();
+  }
+});
+provaAsync('6.30 QA2e — o Financeiro não lê a união: com ou sem o plano anterior congelado, o finResumoMes de out/2026 a fev/2027 é o mesmo, ao centavo; e o Desfazer do caso A devolve a Hopi com os dias de cada mês e R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' }, 'await confirmarRenovacao();');
+  const com = L.grav[0].renov, sem = Object.assign({}, com); delete sem.dias_mes_anterior;
+  ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02'].forEach((m) => {
+    igual(JSON.stringify(res36(dados36(cad36(com)), m)), JSON.stringify(res36(dados36(cad36(sem)), m)), m);
+  });
+  igual(fin630(com, '2026-12'), { aReceber: 107700, declarado: 107700, linhas: 1, sem: 0 }, 'o plano novo ("Iguais", Gold 1x): R$ 359,00 × 3 = R$ 1.077,00 em dezembro');
+  const D = await amb630([F630(com, { renov_hist: { h1: Object.assign(HOPI630(), { substituidoEm: 1, por: 'Consultora Teste', motivo: 'renovação' }) } })], '2026-12-10', null,
+    "await desfazerRenovacao(); __log630q.out=pelDias(pelAtual,'2026-12-16');");
+  const vv = D.grav[0].renov;
+  igual([vv.inicio, vv.fim, vv.dias_mes, D.out], ['2026-10-05', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], ['seg', 'qua']]);
+  igual(fin630(vv, '2026-10').aReceber, 130700, 'o Desfazer devolve R$ 1.307,00 em outubro');
+});
+
+// ---- achados 6 e 7 (BAIXAS) --------------------------------------------------------------------
+provaAsync('6.30 QA6 — o rótulo "os dias mudam por mês do plano" só enquanto existe mês do plano de hoje em diante: em 22/12 sim; em 10/02/2027 (o plano anterior acabou em 31/12) não, no modal de Reposições e no orçamento; a conta noite a noite continua', async () => {
+  const POS = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: ANT630() };
+  const els = { repEscolhido: { style: {}, innerHTML: '' }, repPelResults: { innerHTML: '' }, repPelBusca: { value: '' }, repFormulario: { style: {} }, repWarn: { textContent: '' } };
+  const corpo = `var ge=document.getElementById; document.getElementById=function(id){ return __els630[id]||ge.call(document, id); };
+    repSaldo=function(){ return 0; }; repPelSel=pelAtual; repMostrarEscolhido(); __log630q.out={rep:__els630.repEscolhido.innerHTML,
+      adiante:pelTemMesDoPlanoAdiante(pelAtual), conta:pelTemDiasPorMes(pelAtual),
+      orc:orcPorMesAviso({key:pelKey(pelAtual), porMes:true}), orcSem:orcPorMesAviso({key:pelKey(pelAtual), porMes:false})};`;
+  run('__bk630r={rs:repSaldo, sel:repPelSel};');
+  try {
+    ctx.__els630 = JSON.parse(JSON.stringify(els));
+    const D = await amb630([F630(POS)], '2026-12-22', null, corpo);
+    assert.ok(/vem Seg, Qua \(hoje — os dias mudam por mês do plano\)/.test(D.out.rep), D.out.rep);
+    igual([D.out.adiante, D.out.conta, D.out.orc, D.out.orcSem], [true, true, true, false]);
+    ctx.__els630 = JSON.parse(JSON.stringify(els));
+    const F = await amb630([F630(POS)], '2027-02-10', null, corpo);
+    assert.ok(/vem Seg ·/.test(F.out.rep) && !/os dias mudam por mês do plano/.test(F.out.rep), F.out.rep);
+    igual([F.out.adiante, F.out.conta, F.out.orc], [false, true, false], 'a conta (pelTemDiasPorMes) continua sabendo do plano anterior; o rótulo, não');
+  } finally { run('repSaldo=__bk630r.rs; repPelSel=__bk630r.sel;'); }
+});
+provaAsync('6.30 QA7 — "Mudam" com os chips do alto vazios não grava: aponta os chips (sem eles, depois do plano o FILHOt some da turma); com os chips marcados, grava', async () => {
+  const G = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' };
+  const L = await amb630([F630(G, { dias: [] })], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([L.grav.length, L.perg.length, L.faltas.length, L.faltas[0].el], [0, 0, 1, 'pelDiasEdit']);
+  assert.ok(/Marque os dias da semana lá em cima: são eles que valem depois do plano/.test(L.faltas[0].msg) && /sai da turma quando o plano acabar/.test(L.faltas[0].msg), L.faltas[0].msg);
+  const M = await amb630([F630(G)], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([M.faltas.length, M.grav.length, M.grav[0].renov.dias_mes], [0, 1, [['seg'], ['seg'], ['seg', 'qua']]]);
+  // a ordem: o mês sem dia é apontado antes dos chips
+  const O = await amb630([F630(G, { dias: [] })], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], [], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual(O.faltas.map((f) => f.el), ['planoMes_1']);
+});
+
+// ---- achado 3: as 15 provas do QA (cada uma morde o defeito que escapava) -------------------------
+provaAsync('6.30 Q2 — correção do mesmo plano: "Iguais" e de volta "Mudam" traz os meses gravados (não a rotina)', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-20', null, "renovDiasModoSet('iguais'); renovDiasModoSet('mudam'); __log630q.out=renovEdit(pelExtra(pelAtual)).dias_mes;");
+  igual(L.out, [['seg'], ['seg'], ['seg', 'qua']]);
+});
+provaAsync('6.30 Q4 — ficha INATIVA com plano por mês não entra no registro do mês novo', async () => {
+  const L = await amb630([F630(HOPI630(), { inativo: 'Sim' }), F630(HOPI630(), { n: 'Ativa', tutor: 'Outra Teste' })], '2026-12-07', null, "__log630q.out=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.nome; });");
+  igual(L.out, ['Ativa']);
+});
+provaAsync('6.30 Q5 — renov.aulas gravado = os dias do Mês 1 mesmo quando a rotina é outra (chips Qua, Sex; Mês 1 Seg)', async () => {
+  const L = await amb630([F630({ plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' }, { dias: ['qua', 'sex'] })], '2026-10-06',
+    { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([L.grav.length, L.grav[0].renov.aulas], [1, 1]);
+});
+provaAsync('6.30 Q6 — Desfazer devolve também o plano anterior congelado (dias_mes_anterior) do plano restaurado', async () => {
+  const B = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes: [['ter'], ['ter'], ['ter', 'qui']], dias_mes_anterior: ANT630() };
+  const L = await amb630([F630({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2027-03-20', vig_inicio: '2027-04-01', fim: '2027-06-30' }, { renov_hist: { h1: Object.assign({}, B, { substituidoEm: 1, por: 'x', motivo: 'renovação' }) } })],
+    '2026-12-28', null, "await desfazerRenovacao(); __log630q.out=pelDias(pelAtual, '2026-12-30');");
+  assert.ok(L.grav[0] && L.grav[0].renov.dias_mes_anterior && L.grav[0].renov.dias_mes_anterior.length === 3, JSON.stringify(L.grav));
+  igual(L.out, ['seg', 'qua']);
+});
+provaAsync('6.30 Q7 — aba Plano, 2º peludinho: R$ 333,87 · R$ 333,87 · R$ 547,77 e "Valor do plano: R$ 1.215,51"', async () => {
+  const L = await amb630([F630(Object.assign(HOPI630(), { ordemPet: 2 }))], '2026-10-06', null, '__log630q.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok((L.out.match(/1x · R\$ 333,87/g) || []).length === 2 && /2x · R\$ 547,77/.test(L.out) && /Valor do plano: R\$ 1\.215,51/.test(L.out));
+});
+provaAsync('6.30 Q8 — resumo do Confirmar, 2º peludinho: "Valor do plano: R$ 1.215,51 — pago à vista, com o desconto do 2º peludinho da família em cada mês"', async () => {
+  const L = await amb630([F630(Object.assign(HOPI630(), { ordemPet: 2 }))], '2026-10-06', null, 'await confirmarRenovacao();');
+  const l = resumo630(L);
+  assert.ok(l.indexOf('Mês 3 · 05/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 547,77') >= 0 && l.some((x) => /^Valor do plano: R\$ 1\.215,51 — pago à vista, com o desconto do 2º peludinho/.test(x)), JSON.stringify(l));
+});
+provaAsync('6.30 Q11 — tabela de pertences EM BRANCO da quarta, gerada na sexta 04/12 (ainda Mês 2): a quarta 09/12 é do Mês 3 e a Tâmara está; gerada em 30/11, não', async () => {
+  let L = await amb630([F630(HOPI630())], '2026-12-04', null, "relPertencesBranco('qua');");
+  assert.ok(/Tâmara/.test(L.xls || ''), 'deveria listar a Tâmara na quarta 09/12');
+  L = await amb630([F630(HOPI630()), F630({}, { n: 'Fixa', tutor: 'Quarta Teste', dias: ['qua'] })], '2026-11-30', null, "relPertencesBranco('qua');");
+  assert.ok(!/Tâmara/.test(L.xls || '') && /Fixa/.test(L.xls || ''));
+});
+provaAsync('6.30 Q13 — reposição por período com os chips vazios: os dias do plano contam (hoje antes do plano)', async () => {
+  const L = await amb630([F630(HOPI630(), { dias: [] })], '2026-10-01', null, "__log630q.out=repDiasQueViria(pelAtual, '2026-10-05', '2026-10-20');");
+  igual(L.out, ['2026-10-05', '2026-10-12', '2026-10-19']);
+});
+provaAsync('6.30 Q14 — próxima vinda com os chips vazios: o 1º dia do plano (05/10)', async () => {
+  const L = await amb630([F630(HOPI630(), { dias: [] })], '2026-10-01', null, "__log630q.out=proximaVindaDe(pelAtual, '2026-10-01');");
+  igual(L.out, '2026-10-05');
+});
+provaAsync('6.30 Q15 — orçamento: a troca pedida (segunda → terça) vale para quem tem dias por mês', async () => {
+  const els = { orcEntrada: { value: '2026-12-01' }, orcSaida: { value: '2026-12-10' }, orcCardResultado: { style: {} }, orcCardMsg: { style: {} }, orcAvisoData: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' }, orcResultado: { innerHTML: '' }, orcMsg: { value: '' } };
+  ctx.__els630 = els;
+  const L = await amb630([F630(HOPI630())], '2026-11-20', null, `var ge=document.getElementById; document.getElementById=function(id){ return __els630[id]||ge.call(document, id); };
+    ORC_SEL=[]; ORC_REP={}; ORC_AULUNO=true; ORC_TEMP='baixa'; ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
+    orcRenderResultado=function(){}; orcRenderMsg=function(){}; orcRenderSel=function(){}; orcNovoComecou=function(){};
+    orcAdd(pelKey(pelAtual)); ORC_SEL[0].trocas={seg:'ter'}; orcCalcular();
+    __log630q.out=ORC_CALC.pets[0].noites.map(function(n){ return n.iso.slice(5)+(n.pernoite?'P':'D'); });`);
+  assert.ok(L.out.indexOf('12-07D') >= 0 && L.out.indexOf('12-08P') >= 0 && L.out.indexOf('12-09P') >= 0, L.out.join(','));
+});
+provaAsync('6.30 Q16 — banho fixo na quarta durante o plano anterior (renovação antecipada): "só depois do plano (a partir de 01/01/2027)"', async () => {
+  const B = { plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg'] }] };
+  const L = await amb630([F630(B, { dias: ['seg', 'qua'] })], '2026-12-22', null, "pelCategoria=function(){ return 'auluno'; }; __log630q.out=banhosAvisoDiaSemDaycare(pelAtual, {ativo:true, dia:'qua'});");
+  assert.ok(/só depois do plano \(a partir de 01\/01\/2027/.test(L.out || ''), L.out);
+});
+prova('6.30 Q18 — âncora no dia 31 ("Manter" em 31/01/2027): 31/01–27/02 · 28/02–30/03 · 31/03–31/03 (soma sempre a partir da âncora)', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2027-01-31', vig_inicio: '2027-01-31', fim: '2027-03-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2027-01-31|2027-02-27', '2027-02-28|2027-03-30', '2027-03-31|2027-03-31']);
+});
+prova('6.30 Q19 — lista MAIOR que o plano (4 meses num trimestral) é dado torto: sem meses, vale a rotina', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua'], ['sex']] };
+  igual(J630('renovMesesDoPlano(__r630)'), []);
+});
+provaAsync('6.30 Q20 — só o plano anterior congelado (janela da renovação antecipada): a próxima vinda olha a data (04/01 é segunda, rotina Ter → 05/01)', async () => {
+  const B = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: ANT630() };
+  const L = await amb630([F630(B, { dias: ['ter'] })], '2026-12-30', null, "__log630q.out=[proximaVindaDe(pelAtual, '2026-12-30'), repDiasQueViria(pelAtual, '2026-12-28', '2027-01-08')];");
+  igual(L.out, ['2027-01-05', ['2026-12-28', '2026-12-30', '2027-01-05']]);
+});
+provaAsync('6.30 Q21 — no dia em que o Mês 1 de uma ficha começa, a outra (Mês 3 começando) ainda é registrada', async () => {
+  const L = await amb630([F630({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-07', fim: '2027-02-28', dias_mes: [['ter'], ['ter'], ['ter', 'qui']] }, { n: 'Nova', tutor: 'Começa Teste' }), F630(HOPI630())],
+    '2026-12-07', null, "__log630q.out=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.nome+' '+m.mes; });");
+  igual(L.out, ['Tâmara 3']);
 });
 // @@630-FIM
 // @@636-INI

@@ -6684,7 +6684,7 @@
     el.innerHTML=escAttr(pelNome(p))+' <span style="font-weight:500;color:var(--muted);font-size:13px">· '
       +escAttr(pelGet(p,'tutor')||'sem tutor')+' · vem '
       +(dias.length?dias.map(function(d){ return DIA_LBL[d]||d; }).join(', '):'sem dias na ficha')
-      +(pelTemDiasPorMes(p)?' (hoje — os dias mudam por mês do plano)':'')
+      +(pelTemMesDoPlanoAdiante(p)?' (hoje — os dias mudam por mês do plano)':'')
       +' · saldo atual <b>'+repSaldo(p)+'</b></span>';
     document.getElementById('repPelResults').innerHTML='';
     document.getElementById('repPelBusca').value='';
@@ -14362,7 +14362,7 @@
     if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
     el.innerHTML=ORC_SEL.map(function(s,i){
       var dias=(s.dias||[]).length?('vem '+s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias no Day Care — todas as noites são diária';
-      if(s.porMes) dias=((s.dias||[]).length?(dias+' hoje — '):'')+'os dias mudam por mês do plano, e a conta segue os dias de cada noite';
+      if(orcPorMesAviso(s)) dias=((s.dias||[]).length?(dias+' hoje — '):'')+'os dias mudam por mês do plano, e a conta segue os dias de cada noite';
       var ord=(i===0?'1º FILHOt':(i+1)+'º FILHOt');
       var aviso=s.semPlano?'<div style="font-size:12.5px;color:var(--crm-critico);font-weight:700;margin-top:2px">Sem plano ativo: sem desconto e sem pernoite. Se ele renovou, atualize a ficha antes de orçar.</div>':'';
       return '<div class="orc-pet"><div style="flex:1"><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
@@ -14416,6 +14416,13 @@
   // em cada mês tem a pernoite decidida pelos dias DAQUELA noite — a quarta do Mês 3 é dia dela
   // (pernoite); a quarta do Mês 2 não é (diária). A troca pedida neste orçamento vale do mesmo jeito.
   // Sem dias por mês, é a conta de sempre.
+  // O rótulo "os dias mudam por mês do plano" só enquanto existe mês do plano de hoje em diante
+  // (QA da 6.30, achado 6); a conta noite a noite continua com s.porMes.
+  function orcPorMesAviso(s){
+    if(!s || !s.porMes) return false;
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===s.key; });
+    return !!(p && pelTemMesDoPlanoAdiante(p));
+  }
   function orcDiasEfetivosEm(s, iso){
     if(!s || !s.porMes) return orcDiasEfetivos(s||{});
     var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===s.key; });
@@ -19848,29 +19855,58 @@
     });
     return out;
   }
+  // A data cai DENTRO do plano atual (do começo do período ao fim)? É a sobreposição com os
+  // meses que ainda faltam do plano anterior.
+  function renovDentroDoPlano(r, iso){
+    const comeco=(r&&(r.vig_inicio||r.inicio))||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(comeco) || iso<comeco) return false;
+    return !(/^\d{4}-\d{2}-\d{2}$/.test((r&&r.fim)||'') && iso>r.fim);
+  }
   // Os dias da semana que valem NUMA DATA pelo plano: o mês do plano atual que contém a data;
-  // senão, o mês do plano anterior (renovação antecipada: os dias que faltam dele continuam
-  // valendo até o fim dele — e só ANTES de o plano atual começar). null = vale a rotina.
-  function renovDiasNaData(r, iso){
+  // senão, o mês do plano anterior (renovação: os dias que faltam dele continuam valendo até o
+  // fim dele). null = vale a rotina.
+  // SOBREPOSIÇÃO (QA da 6.30, achado 2 — o AC8 como está escrito): quando o plano novo começa
+  // DENTRO do plano anterior (pago em 10/12 com o Mês 3 correndo até 31/12), nos dias em que os
+  // dois valem, valem os dias do mês do plano anterior JUNTO com os do plano novo — a união: o
+  // tutor pagou os dois. Fora da sobreposição, cada plano com os seus. `rotina` são os chips do
+  // alto da ficha: os dias do plano novo quando ele não tem dias por mês.
+  function renovDiasNaData(r, iso, rotina){
     if(!r || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+    let novo=null;
     const M=renovMesesDoPlano(r);
-    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate) return M[i].dias;
-    const comeco=r.vig_inicio||r.inicio||'';
-    if(/^\d{4}-\d{2}-\d{2}$/.test(comeco) && iso>=comeco) return null;
+    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate){ novo=M[i].dias; break; }
+    let velho=null;
     const A=renovMesesAnteriores(r);
-    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate) return A[j].dias;
+    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate){ velho=A[j].dias; break; }
+    if(!velho) return novo;
+    if(!renovDentroDoPlano(r, iso)) return velho;            // antes do plano atual: só o anterior
+    const diasNovo=novo||(Array.isArray(rotina)?rotina:[]);
+    return ORDEM_DIAS.filter(function(d){ return velho.indexOf(d)>=0 || diasNovo.indexOf(d)>=0; });
+  }
+  // O mês do plano (atual ou anterior) que vale numa data: {n, de, ate, dias, total, anterior, junto}
+  // ou null. Na sobreposição, é o mês do plano anterior, com os dias JUNTO com os do plano novo
+  // (os mesmos do renovDiasNaData) e junto:true.
+  function renovMesNaData(r, iso, rotina){
+    if(!r || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+    const A=renovMesesAnteriores(r);
+    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate){
+      const junto=renovDentroDoPlano(r, iso);
+      return Object.assign({total:A.length, anterior:true}, A[j], {junto:junto, dias:(junto?(renovDiasNaData(r, iso, rotina)||A[j].dias):A[j].dias)});
+    }
+    const M=renovMesesDoPlano(r);
+    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate) return Object.assign({total:M.length, anterior:false, junto:false}, M[i]);
     return null;
   }
-  // O mês do plano (atual ou anterior) que vale numa data: {n, de, ate, dias, total, anterior} ou null.
-  function renovMesNaData(r, iso){
-    if(!r || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
-    const M=renovMesesDoPlano(r);
-    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate) return Object.assign({total:M.length, anterior:false}, M[i]);
-    const comeco=r.vig_inicio||r.inicio||'';
-    if(/^\d{4}-\d{2}-\d{2}$/.test(comeco) && iso>=comeco) return null;
-    const A=renovMesesAnteriores(r);
-    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate) return Object.assign({total:A.length, anterior:true}, A[j]);
-    return null;
+  // Existe mês do plano (o atual ou o anterior, ainda guardado) de hoje em diante? É o que os
+  // RÓTULOS perguntam ("os dias mudam por mês do plano") — QA da 6.30, achado 6: depois do último
+  // mês, a frase ficava presa enquanto existisse o plano anterior congelado. A CONTA continua
+  // com pelTemDiasPorMes (a baixa automática olha 60 dias para trás).
+  function pelTemMesDoPlanoAdiante(p, hoje){
+    try{
+      if(!pelTemDiasPorMes(p)) return false;
+      const r=renovDe(pelExtra(p)||{}); hoje=hoje||zHojeISO();
+      return renovMesesDoPlano(r).concat(renovMesesAnteriores(r)).some(function(m){ return m.ate>=hoje; });
+    }catch(e){ return false; } /* silencioso de propósito: sem a ficha lida, o rótulo sai sem a frase */
   }
   // A ficha tem plano com dias por mês (o atual ou o anterior, ainda guardado)? Checagem barata:
   // é ela que deixa as fichas de sempre no caminho de sempre.
@@ -20277,16 +20313,63 @@
     if(rasc)
       Object.keys(rasc).forEach(function(c){ if(c!=='_k') base[c]=rasc[c]; });
     // OS DIAS DE CADA MÊS (6.30, caso da Hopi): sem escolha no rascunho, a tela mostra o que
-    // está gravado ("mudam" quando o plano tem dias por mês). Data de pagamento NOVA no
-    // rascunho é outro plano: NÃO herda "mudam" — o arranjo da viagem não se repete sem a
-    // consultora ligar de novo (e o valor do plano não sai errado sem ninguém ver).
+    // está gravado ("mudam" quando o plano tem dias por mês). PLANO NOVO no rascunho (a data do
+    // pagamento é de uma renovação) NÃO herda "mudam" — o arranjo da viagem não se repete sem a
+    // consultora ligar de novo (e o valor do plano não sai errado sem ninguém ver). Mas a data
+    // CORRIGIDA do mesmo plano (05/10 → 02/10: erro de digitação) continua com os dias de cada
+    // mês — QA da 6.30, achado 1: a tela voltava para "Iguais" e o Confirmar apagava as quartas.
     if(!rasc || !('dias_modo' in rasc)){
       var gD=renovDe(ex);
-      var dataNova=!!(rasc && ('inicio' in rasc) && String(rasc.inicio||'')!==String(gD.inicio||''));
-      base.dias_modo=(gD.dias_mes && !dataNova)?'mudam':'iguais';
+      base.dias_modo=(gD.dias_mes && renovRascMesmoPlano(base, gD, rasc))?'mudam':'iguais';
     }
     if(base.dias_modo!=='mudam') delete base.dias_mes;
     return base;
+  }
+  // CORREÇÃO DO MESMO PLANO × PLANO NOVO (QA da 6.30, achado 1). É CORREÇÃO quando: a pessoa
+  // escolheu isso no Confirmar ("Correção da data" ou "Manter … (só corrigi a data)"); a data do
+  // pagamento é a mesma; o plano termina no MESMO dia do gravado (05/10 → 02/10 ou → 06/10:
+  // continua até 31/12); ou o período não começa depois do gravado. É PLANO NOVO quando a pessoa
+  // escolheu "Pagamento novo" / "Começar em …", ou quando o período começa depois do gravado e
+  // termina em outro dia (a renovação). escolha: 'correcao' | 'novo' | ''.
+  function renovEhCorrecao(g, c, escolha){
+    if(escolha==='correcao') return true;
+    if(escolha==='novo') return false;
+    g=g||{}; c=c||{};
+    const ehISO=function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x||''); };
+    const gIni=g.vig_inicio||g.inicio||'', cIni=c.vig_inicio||c.inicio||'';
+    if(!ehISO(gIni) || !ehISO(cIni)) return true;      // sem plano gravado não há "plano novo" para separar
+    if(String(g.inicio||'')===String(c.inicio||'')) return true;
+    if(ehISO(g.fim) && c.fim===g.fim) return true;
+    return cIni<=gIni;
+  }
+  // A linha do resumo do Confirmar sobre os dias de cada mês do plano GRAVADO ('' quando ele não
+  // os tem, ou quando é o mesmo plano que continua com eles). QA da 6.30: achado 1 (a correção que
+  // passa para "Iguais" diz que eles deixam de valer) e achado 2 (a renovação diz até quando eles
+  // continuam valendo — na sobreposição, junto com os do plano novo).
+  function renovLinhaMesesDoAtual(g, c, correcao, novoTemMeses, rotina){
+    const A=renovMesesDoPlano(g||{}); if(!A.length || !c) return '';
+    const rot=A.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ');
+    const ini=c.vig_inicio||c.inicio||'';
+    if(correcao){
+      if(novoTemMeses) return '';
+      return 'Os dias de cada mês do plano atual ('+rot+') deixam de valer — a partir de '+fmtBR(ini)+' vale '+renovDiasRotulo(rotina)+'.';
+    }
+    const fimA=A[A.length-1].ate;
+    const depois=novoTemMeses?'valem os dias de cada mês do plano novo':('vale '+renovDiasRotulo(rotina));
+    const verbo=(fimA<hojeISO())?'valeram':'continuam valendo';
+    if(fimA>=ini)
+      return 'Os dias de cada mês do plano atual ('+rot+') '+verbo+' até '+fmtBR(fimA)+', junto com os do plano novo — a partir de '+fmtBR(addDiasISO(fimA, 1))+', '+depois+'.';
+    return 'Os dias de cada mês do plano atual ('+rot+') '+verbo+' até '+fmtBR(fimA)+' — a partir de '+fmtBR(ini)+', '+depois+'.';
+  }
+  // O rascunho da tela ainda é o MESMO plano gravado? Sem data nova, sim; com data nova, pela
+  // conta da vigência (a mesma da tela e do Confirmar). A pergunta do Confirmar ainda pode
+  // mudar a leitura — e o Confirmar refaz a conta com a resposta.
+  function renovRascMesmoPlano(base, g, rasc){
+    if(!rasc || !('inicio' in rasc) || String(rasc.inicio||'')===String((g&&g.inicio)||'')) return true;
+    let c=null;
+    try{ c=(base && base.plano && base.inicio && planos()[base.plano])?renovCalcular(base, base.plano, 1, base.inicio):null; }
+    catch(e){ c=null; } /* silencioso de propósito: sem a conta da vigência, a data nova vale como plano novo (o caminho de antes) */
+    return !!c && renovEhCorrecao(g, c, '');
   }
   function renovRascSet(patch){
     var k=renovRascKey(); if(!k) return;
@@ -20345,10 +20428,10 @@
     if(modo!=='mudam'){ renovRascSet({dias_modo:'iguais'}); return; }
     if(!n) return;                                   // mensal: um mês, um conjunto de dias
     const k=renovRascKey();
-    const rasc=(renovRascunho && renovRascunho._k===k)?renovRascunho:{};
+    const rasc=(renovRascunho && renovRascunho._k===k)?renovRascunho:null;
     const g=renovDe(ex);
-    const dataNova=('inicio' in rasc) && String(rasc.inicio||'')!==String(g.inicio||'');
-    const fonte=rasc.dias_mes || ((!dataNova && g.dias_mes)?g.dias_mes:null);
+    const mesmoPlano=renovRascMesmoPlano(r, g, rasc);
+    const fonte=(rasc&&rasc.dias_mes) || ((mesmoPlano && g.dias_mes)?g.dias_mes:null);
     renovRascSet({dias_modo:'mudam', dias_mes:renovDiasMesTela(fonte, n, pelDias(pelAtual,'rotina')||[])});
   }
   // Toque num dia de um mês: só o rascunho muda (nada grava antes do Confirmar).
@@ -20718,23 +20801,39 @@
     // OS DIAS MUDAM DURANTE O PLANO (6.30, caso da Hopi): cada mês precisa de pelo menos um dia
     // e de preço na tabela; e "mudam" com todos os meses iguais é o plano de sempre.
     const nMesesC=renovMesesN(r);
-    const mudamC=!!(nMesesC && r.dias_modo==='mudam');
-    const dmC=mudamC?renovDiasMesTela(r.dias_mes, nMesesC, dias):null;
+    let mudamC=!!(nMesesC && r.dias_modo==='mudam');
+    let dmC=mudamC?renovDiasMesTela(r.dias_mes, nMesesC, dias):null;
+    // O modo dos dias foi ESCOLHIDO na tela (tocou em "Iguais"/"Mudam" ou num dia de um mês)? Se
+    // não foi, ele segue a leitura do plano — e o Confirmar refaz depois da pergunta da data.
+    const kC=renovRascKey();
+    const modoEscolhidoC=!!(renovRascunho && kC && renovRascunho._k===kC && ('dias_modo' in renovRascunho));
     const faltaC=function(el, msg){
       if(typeof zFalta==='function') zFalta([{el:el, msg:msg}], {botao:'planoConfirmar'});
       else alert(msg);
     };
-    if(mudamC){
-      const vazio=dmC.findIndex(function(m){ return !m.length; });
-      if(vazio>=0){ faltaC('planoMes_'+vazio, 'Marque pelo menos um dia no Mês '+(vazio+1)+'.'); return; }
-      const vC=renovValorDoPlano(r.plano, dmC, r.ordemPet||1);
+    // Os dias de cada mês fecham? (um dia em cada mês, preço na tabela, meses diferentes)
+    // avisar=false: só responde, sem apontar nada (é o caso da troca de modo depois da pergunta).
+    const mesesFechamC=function(dm, avisar){
+      const vazio=dm.findIndex(function(m){ return !m.length; });
+      if(vazio>=0){ if(avisar) faltaC('planoMes_'+vazio, 'Marque pelo menos um dia no Mês '+(vazio+1)+'.'); return false; }
+      const vC=renovValorDoPlano(r.plano, dm, r.ordemPet||1);
       if(vC.falta>=0){
         const plF=planos()[r.plano]||{};
-        faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dmC[vC.falta].length+'x por semana — confira a tabela comercial.');
-        return;
+        if(avisar) faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dm[vC.falta].length+'x por semana — confira a tabela comercial.');
+        return false;
       }
-      if(dmC.every(function(m){ return m.join(',')===dmC[0].join(','); })){
-        faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias no alto da ficha.');
+      if(dm.every(function(m){ return m.join(',')===dm[0].join(','); })){
+        if(avisar) faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias no alto da ficha.');
+        return false;
+      }
+      return true;
+    };
+    if(mudamC){
+      if(!mesesFechamC(dmC, true)) return;
+      // OS CHIPS DO ALTO TAMBÉM NO "MUDAM" (QA da 6.30, achado 7): são eles que valem depois do
+      // plano. Sem nenhum, quando o plano acaba o FILHOt some da turma sem ninguém ver.
+      if(!dias.length){
+        faltaC('pelDiasEdit', 'Marque os dias da semana lá em cima: são eles que valem depois do plano, se ele não for renovado. Sem nenhum dia marcado, este FILHOt sai da turma quando o plano acabar.');
         return;
       }
     } else if(!dias.length){
@@ -20758,6 +20857,7 @@
       return;
     }
     let jaDecidiu=false;
+    let escolhaC='';   // 6.30: o que a pessoa respondeu sobre a data — 'novo' | 'correcao' | '' (não perguntou)
     // Ficha em que a pessoa já escolheu "Manter" (período anotado = dia do pagamento) e que é
     // reconfirmada com a MESMA data — para acertar os dias, por exemplo — continua anotada.
     // Sem isto a anotação sumia e a ficha voltava a perguntar a cada abertura (QA56).
@@ -20787,6 +20887,9 @@
         // gravado, e a ficha para de oferecer o mês seguinte a cada vez que é aberta.
         if(!ehNovo) calc.vig_inicio=calc.inicio;
       }
+      // 6.30: "Pagamento novo" é plano novo; "Correção da data" é o mesmo plano (os dias de cada
+      // mês continuam). A pergunta da ficha antiga é sobre o MESMO pagamento: correção nas duas.
+      escolhaC=(ehNovo && escolheuRegra)?'novo':'correcao';
       jaDecidiu=true;
     }
     // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026 — caso Beau).
@@ -20835,7 +20938,19 @@
           {sim:'Começar em '+fmtBR(isoSeg)+', valendo até '+fmtBR(calcSeg.fim),
            nao:'Manter até '+fmtBR(calc.fim)+' (só corrigi a data)'});
         if(seguir) calc=calcSeg;
+        escolhaC=seguir?'novo':'correcao';
       }
+    }
+    // CORREÇÃO OU PLANO NOVO, com a resposta da pergunta acima (QA da 6.30, achado 1).
+    const correcaoC=renovEhCorrecao(gravado, calc, escolhaC);
+    // Sem modo escolhido na tela, os dias de cada mês seguem a leitura FINAL: a correção do mesmo
+    // plano continua com os dias de cada mês gravados (Mês 1, 2, 3 contados do início do plano, com
+    // as datas recalculadas); o plano novo começa em "Iguais" (AC8: não herda os dias por mês).
+    if(!modoEscolhidoC && nMesesC){
+      if(correcaoC && !mudamC && gravado.dias_mes && renovDiasMesValido(gravado)){
+        const dmG=renovDiasMesTela(gravado.dias_mes, nMesesC, dias);
+        if(mesesFechamC(dmG, false)){ mudamC=true; dmC=dmG; }
+      } else if(!correcaoC && mudamC){ mudamC=false; dmC=null; }
     }
     // RESUMO ANTES DE GRAVAR. "O sistema inteiro precisa orientar o que fazer" (Adriana).
     // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
@@ -20868,17 +20983,20 @@
     const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
     if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
     if(renovVigOutra(calc)) linhasPlano.push('Por quê: '+renovVigenciaFrase(calc, calc._porque)+'.');
+    // O que acontece com os dias de cada mês do plano GRAVADO — linha obrigatória quando ele os tem
+    // (QA da 6.30, achados 1 e 2): eles nunca somem calados.
+    const linhaMesesAtualC=renovLinhaMesesDoAtual(gravado, calc, correcaoC, mudamC, dias);
+    if(linhaMesesAtualC) linhasPlano.push(linhaMesesAtualC);
     const novo=Object.assign({}, gravado, calc, {aulas:aulasGrava, ordemPet:r.ordemPet||1});
     // O período que começa no dia do pagamento não herda o começo de outro ciclo.
     if(!calc.vig_inicio) delete novo.vig_inicio;
     // OS DIAS DE CADA MÊS (6.30): "Mudam" grava os dias de cada mês; "Iguais" NÃO herda os do
-    // plano gravado (o Object.assign acima herdaria). Na renovação SEGUINTE (o período novo começa
-    // depois do gravado), o plano anterior com dias por mês fica congelado com as datas: os dias
-    // que ainda faltam dele (renovação antecipada) e os passados (a baixa automática olha 60 dias
+    // plano gravado (o Object.assign acima herdaria). Na renovação (plano NOVO, renovEhCorrecao),
+    // o plano anterior com dias por mês fica congelado com as datas: os dias que ainda faltam dele
+    // (inclusive na sobreposição com o plano novo) e os passados (a baixa automática olha 60 dias
     // para trás) continuam certos. Correção do mesmo plano não mexe no anterior.
     if(mudamC) novo.dias_mes=dmC.map(function(m){ return m.slice(); }); else delete novo.dias_mes;
-    const comecoNovoC=String(calc.vig_inicio||calc.inicio||''), comecoGravC=String(gravado.vig_inicio||gravado.inicio||'');
-    if(/^\d{4}-\d{2}-\d{2}$/.test(comecoGravC) && comecoNovoC>comecoGravC){
+    if(!correcaoC){
       const antC=renovMesesDoPlano(gravado);
       if(antC.length) novo.dias_mes_anterior=antC.map(function(m){ return {n:m.n, de:m.de, ate:m.ate, dias:m.dias.slice()}; });
       else delete novo.dias_mes_anterior;
@@ -23577,10 +23695,12 @@
   // pelDias(p, 'AAAA-MM-DD') → os dias que valem NAQUELA data (o mês do plano que a contém);
   // pelDias(p, 'rotina') → os chips do alto da ficha (o que vale fora dos meses do plano).
   // Ficha sem dias por mês (todas as de hoje): a resposta é a de sempre, em qualquer data.
+  // Na sobreposição de um plano novo com os meses que faltam do anterior, valem os dias dos
+  // dois juntos (a rotina entra como os dias do plano novo sem dias por mês) — QA da 6.30.
   function pelDias(p, quando){ const ex=pelExtra(p); const base=Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]);
     if(quando==='rotina' || !ex.renov || !(ex.renov.dias_mes || ex.renov.dias_mes_anterior)) return base;
     const iso=/^\d{4}-\d{2}-\d{2}$/.test(quando||'')?quando:zHojeISO();
-    const achou=renovDiasNaData(ex.renov, iso);
+    const achou=renovDiasNaData(ex.renov, iso, base);
     return achou?achou.slice():base; }
   function pelDiasEm(p, iso){ return pelDias(p, iso); }
   function pelFreq(p){ const n=pelDias(p).length; if(n>0) return n+'x'; const f=pelGet(p,'freq'); return f||'—'; }
@@ -23665,30 +23785,52 @@
   // fora dos meses do plano (depois do fim, sem renovação). Acima deles, a faixa diz qual mês
   // do plano vale hoje e quando os dias mudam. Mudar os dias de um mês é na aba Plano.
   // O mês do plano que corre hoje (do plano atual ou do anterior, ainda valendo) — null quando não há.
+  // A próxima mudança olha os DOIS planos (o atual e o anterior, na sobreposição): o começo de
+  // cada mês e o fim do anterior, com os dias que valem ali (a mesma conta do pelDias); só conta
+  // quando os dias mudam de verdade. fim = o último dia em que algum mês do plano vale.
   function pelPlanoMesHoje(p, hoje){
     try{
       if(!pelTemDiasPorMes(p)) return null;
-      const r=renovDe(pelExtra(p)||{});
+      const r=renovDe(pelExtra(p)||{}), rot=pelDias(p,'rotina')||[];
       hoje=hoje||zHojeISO();
-      const m=renovMesNaData(r, hoje);
+      const m=renovMesNaData(r, hoje, rot);
       if(!m) return null;
-      const M=m.anterior?renovMesesAnteriores(r):renovMesesDoPlano(r);
-      const prox=M.filter(function(x){ return x.de>hoje && x.dias.join(',')!==m.dias.join(','); })[0]||null;
-      return {mes:m, prox:prox, fim:M.length?M[M.length-1].ate:m.ate};
+      const M=renovMesesDoPlano(r), A=renovMesesAnteriores(r);
+      const fim=M.concat(A).reduce(function(f, x){ return x.ate>f?x.ate:f; }, m.ate);
+      const marcos=M.concat(A).map(function(x){ return x.de; }).concat(A.map(function(x){ return addDiasISO(x.ate, 1); }))
+        .filter(function(d, i, l){ return d>hoje && d<=fim && l.indexOf(d)===i; }).sort();
+      let prox=null;
+      for(let i=0;i<marcos.length && !prox;i++){
+        const dd=renovDiasNaData(r, marcos[i], rot)||rot;
+        if(dd.join(',')!==m.dias.join(',')) prox={de:marcos[i], dias:dd.slice()};
+      }
+      return {mes:m, prox:prox, fim:fim};
     }catch(e){ return null; } /* silencioso de propósito: sem a ficha lida, os chips aparecem sem a faixa */
   }
   // O MÊS NOVO DO PLANO COMEÇA HOJE? (6.30) — o mês i ≥ 2 cujo PRIMEIRO DIA DE DAY CARE é hoje
   // (Hopi: o Mês 3 começa no sábado 05/12; o primeiro dia de Day Care é a segunda 07/12). Só
   // quando os dias mudam de um mês para o outro: mês igual ao anterior não é notícia.
-  // {n, total, dias, era, de} ou null. Função pura: recebe o plano e o dia.
-  function planoMesComecaHoje(r, hoje){
+  // {n, total, dias, era, de, anterior} ou null. Função pura: recebe o plano, o dia e a rotina.
+  // DEPOIS DA RENOVAÇÃO (QA da 6.30, achado 2): os meses que faltam do plano ANTERIOR continuam
+  // valendo — e o começo de cada um deles também é notícia. Na sobreposição, com os dias dele JUNTO
+  // com os do plano novo (pago em 25/11, o plano novo começa em 01/12 e o Mês 3 anterior, com a
+  // quarta, em 05/12: o 1º dia de Day Care é 07/12). "era" = o que valia no dia anterior.
+  function planoMesComecaHoje(r, hoje, rotina){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(hoje||'')) return null;
     const M=renovMesesDoPlano(r||{});
     for(let i=1;i<M.length;i++){
       const dia1=vencEhDiaDayCare(M[i].de)?M[i].de:proximoDiaDayCare(M[i].de);
       if(dia1!==hoje || dia1>M[i].ate) continue;
       if(M[i].dias.join(',')===M[i-1].dias.join(',')) return null;
-      return {n:M[i].n, total:M.length, dias:M[i].dias, era:M[i-1].dias, de:M[i].de};
+      return {n:M[i].n, total:M.length, dias:M[i].dias, era:M[i-1].dias, de:M[i].de, anterior:false};
+    }
+    const A=renovMesesAnteriores(r||{});
+    for(let j=1;j<A.length;j++){
+      const dia1A=vencEhDiaDayCare(A[j].de)?A[j].de:proximoDiaDayCare(A[j].de);
+      if(dia1A!==hoje || dia1A>A[j].ate) continue;
+      const agora=renovDiasNaData(r, A[j].de, rotina)||rotina||[], era=renovDiasNaData(r, addDiasISO(A[j].de, -1), rotina)||rotina||[];
+      if(agora.join(',')===era.join(',')) return null;
+      return {n:A[j].n, total:A.length, dias:agora.slice(), era:era.slice(), de:A[j].de, anterior:true};
     }
     return null;
   }
@@ -23698,11 +23840,11 @@
     const out=[];
     (typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[]).forEach(function(p){
       if(!p || !pelTemDiasPorMes(p) || pelInativo(p)) return;
-      const c=planoMesComecaHoje(renovDe(pelExtra(p)||{}), hoje);
+      const c=planoMesComecaHoje(renovDe(pelExtra(p)||{}), hoje, pelDias(p,'rotina')||[]);
       if(!c) return;
       const nome=pelNome(p)||p.n||'';
       out.push({chave:dcKey(p.n,p.tutor), nome:nome, mes:c.n, dias:c.dias.slice(), era:c.era.slice(),
-        texto:nome+': começa hoje o Mês '+c.n+' do plano — passa a vir '+renovDiasRotulo(c.dias)+' (era '+renovDiasRotulo(c.era)+')'});
+        texto:nome+': começa hoje o Mês '+c.n+' do plano'+(c.anterior?' anterior':'')+' — passa a vir '+renovDiasRotulo(c.dias)+' (era '+renovDiasRotulo(c.era)+')'});
     });
     return out;
   }
@@ -23710,7 +23852,7 @@
     const info=pelPlanoMesHoje(p); if(!info) return '';
     const m=info.mes;
     return '<div id="pelDiasPlanoAviso" class="hint" style="background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue);border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:12px;font-weight:700;color:var(--z-blue)">'
-      +'Hoje vale o Mês '+m.n+' de '+m.total+' do plano'+(m.anterior?' anterior':'')+': '+esc(renovDiasRotulo(m.dias))+'.'
+      +'Hoje vale o Mês '+m.n+' de '+m.total+' do plano'+(m.anterior?' anterior':'')+(m.junto?', junto com o plano atual':'')+': '+esc(renovDiasRotulo(m.dias))+'.'
       +(info.prox?(' A partir de '+fmtBR(info.prox.de)+': '+esc(renovDiasRotulo(info.prox.dias))+'.'):'')
       +' Os dias abaixo são a rotina: valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').'
       +' Para mudar os dias de um mês do plano, use a aba Plano. '
@@ -23732,7 +23874,7 @@
       const info=pelPlanoMesHoje(pelAtual);
       zPergunta('MUDAR A ROTINA DE DEPOIS DO PLANO?',
         ['Os dias do alto da ficha valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
-         'Hoje vale o Mês '+info.mes.n+' do plano: '+renovDiasRotulo(info.mes.dias)+'. Para mudar os dias de um mês do plano, use a aba Plano.'],
+         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. Para mudar os dias de um mês do plano, use a aba Plano.'],
         {sim:'Mudar a rotina', nao:'Ir para a aba Plano', cor:'#234D67', corTitulo:'#234D67'})
         .then(function(ok){ if(ok) toggleDiaPel(d, true); else irParaAbaPlano(); });
       return;
@@ -38183,14 +38325,14 @@
     // plano com dias diferentes em cada mês, a quarta do Mês 3 já é dia dela — está paga no plano.
     // Lançar "Reposição" nesse dia pergunta ANTES de abater do Banco de Reposições.
     var mesRep=null;
-    try{ if(pelTemDiasPorMes(pRep) && repEhDiaDele(pRep, diaRep)) mesRep=renovMesNaData(renovDe(pelExtra(pRep)||{}), diaRep); }
+    try{ if(pelTemDiasPorMes(pRep) && repEhDiaDele(pRep, diaRep)) mesRep=renovMesNaData(renovDe(pelExtra(pRep)||{}), diaRep, pelDias(pRep,'rotina')||[]); }
     catch(e){ mesRep=null; } /* silencioso de propósito: sem a ficha lida, segue o caminho de sempre da reposição */
     if(mesRep){
       var semRep=(typeof trocaDiaSemana==='function')?trocaDiaSemana(diaRep):'';
       var elaRep=(typeof repEhFemea==='function'&&repEhFemea(pRep));
       var nomeRep=pelNome(pRep);
       zEscolha(String(DIA_FULL[semRep]||semRep)+' já é dia '+(elaRep?'da ':'do ')+nomeRep+' no plano',
-        ['No Mês '+mesRep.n+' do plano'+(mesRep.anterior?' anterior':'')+' ('+fmtBR(mesRep.de)+' a '+fmtBR(mesRep.ate)+'), '+(elaRep?'ela':'ele')+' vem '+renovDiasRotulo(mesRep.dias)+'.',
+        ['No Mês '+mesRep.n+' do plano'+(mesRep.anterior?' anterior':'')+' ('+fmtBR(mesRep.de)+' a '+fmtBR(mesRep.ate)+')'+(mesRep.junto?', junto com o plano atual':'')+', '+(elaRep?'ela':'ele')+' vem '+renovDiasRotulo(mesRep.dias)+'.',
          'Dia do plano não gasta saldo de reposição: a vinda já está paga no plano.',
          'Lançar sem abater escreve na planilha e não desconta do Banco de Reposições.'],
         [{t:'Lançar sem abater', fn:function(){

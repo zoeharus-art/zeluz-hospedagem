@@ -22210,14 +22210,46 @@ async function main() {
     // daycare/cadastro (o sintético da nuvem): vale a lista do app — a regressão continua real.
     const cad49 = await dbRead('daycare/cadastro', token) || {};
     if (typeof ctx.pelDias === 'function' && Array.isArray(ctx.PELUDINHOS) && ctx.PELUDINHOS.length) {
-      ctx.__cad49 = cad49;
+      // BOMBA-RELÓGIO DESARMADA (QA da 6.30, achado 4). A ficha com dias por mês — a Hopi, quando a
+      // consultora converter o plano, ou o plano anterior dela congelado numa renovação — é a única
+      // que a 6.30 muda DE PROPÓSITO: ela sai de H1 e H2 (como no H3 da 6.36); toda outra ficha
+      // continua tendo de dar a fórmula antiga. Para PROVAR que a exclusão pega só essas fichas, duas
+      // fichas inventadas entram por cima do cadastro (numa cópia): a «Tâmara» com dias por mês e a
+      // «Tâmara Renovada» só com o plano anterior congelado têm de sair da comparação — e têm de
+      // diferir da fórmula antiga (senão a exclusão não estaria provando nada); a «Tâmara Comum»,
+      // com plano Gold SEM dias por mês, tem de FICAR na comparação (a exclusão não é por ter plano).
+      const inv49 = {
+        'tâmara__viajante teste': { _novo: true, n: 'Tâmara', tutor: 'Viajante Teste', raca: 'SRD', dias: ['seg'],
+          renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } },
+        'tâmara renovada__viajante teste': { _novo: true, n: 'Tâmara Renovada', tutor: 'Viajante Teste', raca: 'SRD', dias: ['seg'],
+          renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-10', fim: '2027-02-28',
+            dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] } },
+        'tâmara comum__viajante teste': { _novo: true, n: 'Tâmara Comum', tutor: 'Viajante Teste', raca: 'SRD', dias: ['ter', 'qui'],
+          renov: { plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' } },
+      };
+      ctx.__cad49 = Object.assign({}, cad49, inv49);
       vm.runInContext('__bkp49 = { cad: pelCadCache, pel: PELUDINHOS.slice(), hz: zHojeISO, dc: dcDia, av: dcAvulsos, dt: DC_DASH_TURMA, pd: planDia };'
         + 'pelCadCache = __cad49; if (typeof mergeNovosAlunos === "function") mergeNovosAlunos();', ctx);
       try {
         const antigo = (p) => { const ex = ctx.pelExtra(p) || {}; return Array.isArray(ex.dias) ? ex.dias : (Array.isArray(p.dias) ? p.dias : []); };
         const datas = ['2026-06-01', '2026-07-15', '2026-09-30', '2026-10-06', '2026-10-07', '2026-11-11', '2026-12-09', '2026-12-31', '2027-01-04', '2027-03-17'];
-        const comDiasMes = Object.keys(cad49).filter((k) => cad49[k] && cad49[k].renov && (cad49[k].renov.dias_mes || cad49[k].renov.dias_mes_anterior));
-        console.log('  cadastro real: ' + ctx.PELUDINHOS.length + ' fichas (' + Object.keys(cad49).length + ' com ficha no retrato) · ' + comDiasMes.length + ' com dias por mês');
+        const temDiasMes49 = (c) => !!(c && c.renov && (c.renov.dias_mes || c.renov.dias_mes_anterior));
+        const comDiasMes = Object.keys(ctx.__cad49).filter((k) => temDiasMes49(ctx.__cad49[k]));
+        const todas49 = ctx.PELUDINHOS.slice();
+        const fora49 = todas49.filter((p) => comDiasMes.indexOf(ctx.pelKey(p)) >= 0);
+        const dentro49 = todas49.filter((p) => comDiasMes.indexOf(ctx.pelKey(p)) < 0);
+        const inv49Fora = fora49.filter((p) => Object.prototype.hasOwnProperty.call(inv49, ctx.pelKey(p)));
+        const inv49Dentro = dentro49.filter((p) => ctx.pelKey(p) === 'tâmara comum__viajante teste');
+        const inv49Difere = inv49Fora.filter((p) => datas.concat(['2026-12-16']).some((d) => JSON.stringify(ctx.pelDias(p, d)) !== JSON.stringify(antigo(p))));
+        console.log('  cadastro: ' + todas49.length + ' fichas (a lista do app, ' + Object.keys(cad49).length + ' com ficha no retrato, mais 3 inventadas) · '
+          + fora49.length + ' com dias por mês (fora de H1 e H2: ' + fora49.map((p) => p.n).join(', ') + ')');
+        check('v-49 · H1 — só as fichas com dias por mês saem da comparação (' + fora49.length + ' de ' + todas49.length + '): as 2 inventadas, que diferem de verdade da fórmula antiga, e as do retrato que tiverem dias por mês; a inventada sem dias por mês fica',
+          fora49.length === comDiasMes.filter((k) => todas49.some((p) => ctx.pelKey(p) === k)).length
+          && fora49.every((p) => temDiasMes49(ctx.pelExtra(p))) && dentro49.every((p) => !temDiasMes49(ctx.pelExtra(p)))
+          && inv49Fora.length === 2 && inv49Difere.length === 2 && inv49Dentro.length === 1 && dentro49.length === todas49.length - fora49.length && dentro49.length > 0,
+          JSON.stringify({ fora: fora49.map((p) => p.n), inventadasFora: inv49Fora.length, diferem: inv49Difere.length, comumDentro: inv49Dentro.length }));
+        ctx.__fora49 = fora49.map((p) => ctx.pelKey(p));
+        vm.runInContext('PELUDINHOS = PELUDINHOS.filter(function(p){ return __fora49.indexOf(pelKey(p)) < 0; });', ctx);
         let dif1 = [];
         ctx.PELUDINHOS.forEach((p) => {
           const a = JSON.stringify(antigo(p));
