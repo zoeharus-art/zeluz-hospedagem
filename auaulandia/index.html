@@ -11749,15 +11749,25 @@
       // Turma vazia com o cadastro já carregado é resposta improvável: não grava fotografia
       // em branco — o próximo aparelho (ou o temporizador de 30 s) tenta de novo.
       if(!chaves.length) return;
+      // O MÊS NOVO DO PLANO COMEÇA HOJE (6.30, caso da Hopi): quem tem plano com dias por mês e
+      // começa hoje um mês com dias diferentes vai junto na fotografia — e na Linha do tempo.
+      var mudam=[]; try{ mudam=planoMesQuemMudaHoje(hoje); }catch(e){ mudam=[]; } /* silencioso de propósito: o registro da troca de mês é a mais — nunca segura a fotografia da turma */
       return DB.ref(turmaFotoTrava(hoje)).transaction(function(atual){
         if(atual) return;                                // outro aparelho gravou primeiro
-        return { ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
+        var foto={ ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
                  hora:(typeof horaAgora==='function'?horaAgora():''), quantos:chaves.length, chaves:chaves };
+        if(mudam.length) foto.mudam_hoje=mudam.map(function(m){ return {chave:m.chave, mes:m.mes, dias:m.dias, era:m.era}; });
+        return foto;
       }).then(function(res){
         _turmaGravada=hoje;
         if(!res || !res.committed) return;               // quem chegou depois não regrava
         if(typeof audit==='function') audit('turma-do-dia',
           chaves.length+' FILHOt(s) esperados hoje', {assinou:'sistema'});
+        // Uma vez por dia na casa toda: a transação acima já garante (só quem gravou registra).
+        mudam.forEach(function(m){
+          try{ if(typeof audit==='function') audit('plano-dias-do-mes', m.texto, {alvo:m.chave, pet:m.nome, assinou:'sistema'}); }
+          catch(e){ _logFalhaGrav('registrar a troca de mês do plano de '+m.nome, e); }
+        });
       }).catch(function(e){ _logFalhaGrav('a fotografia da turma do dia', e); });
     }).catch(function(e){ _logFalhaGrav('ler a fotografia da turma do dia', e); });
   }
@@ -17143,7 +17153,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-05';
+  const APP_VERSAO='2026-10-06-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20125,7 +20135,7 @@
   // ---- mensagens para o tutor (com emoji: WhatsApp, decisão de Adriana) ----
   // primeiroNome() já existe acima (usado no relatório do tutor)
   const DIA_EXT={seg:'segunda',ter:'terça',qua:'quarta',qui:'quinta',sex:'sexta'};
-  function diasPorExtenso(p){ const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]||x);
+  function diasPorExtenso(p){ const d=(pelDias(p,'rotina')||[]).map(x=>DIA_EXT[x]||x);
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1]; }
   // ===== A RENOVAÇÃO ENCANTADORA (Adriana, 01/out/2026) ===================================
@@ -20143,8 +20153,9 @@
   function renovParaNome(art, nome){ return 'para '+renovONome(art, nome); }     // "para a Amora"
   function renovMaiuscula(t){ return t?(t.charAt(0).toUpperCase()+t.slice(1)):t; }
   // "na quarta" · "na segunda e na quarta" · "na segunda, na quarta e na sexta"
+  // Os dias da ROTINA (6.30): a mensagem "Plano finalizou" fala do plano seguinte, não do mês que corre.
   function renovDiasNa(p){
-    const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]).filter(Boolean).map(x=>'na '+x);
+    const d=(pelDias(p,'rotina')||[]).map(x=>DIA_EXT[x]).filter(Boolean).map(x=>'na '+x);
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1];
   }
@@ -20158,7 +20169,7 @@
   // A frequência que a mensagem pode afirmar: os dias marcados na ficha; sem dia marcado, o nº de
   // aulas gravado no plano; sem nenhum dos dois, 0 — e a frase não inventa "uma vez" (QA61).
   function renovAulasMsg(p, r){
-    const d=(pelDias(p)||[]).length;
+    const d=(pelDias(p,'rotina')||[]).length;   // a rotina (6.30): a frequência do plano seguinte
     if(d) return Math.min(5, d);
     const a=Number(r&&r.aulas)||0;
     return (a>=1 && a<=5)?a:0;
@@ -20208,7 +20219,9 @@
     return m+' 🐾💛';
   }
   function msgRenovado(p,ex){
-    const r=renovDe(ex), aulas=renovAulasMsg(p, r);
+    // Plano com dias diferentes em cada mês (6.30): a frase sai SEM a frequência — uma linha com
+    // os dias de cada mês seria texto novo, e texto novo só com o texto da Adriana (06/out/2026).
+    const r=renovDe(ex), aulas=(r.dias_mes?0:renovAulasMsg(p, r));
     const art=renovArtigo(ex), nome=(pelNome(p)||p.n||''), tutor=primeiroNome(pelGet(p,'tutor'));
     const prazo=renovPrazo(r), vezes=aulas?RENOV_VEZES[aulas]:'';
     const ini=r.vig_inicio||r.inicio;
@@ -20242,8 +20255,19 @@
     // (renovVigenciaComeca) distingue corrigir o plano de hoje de lançar um pagamento novo.
     Object.defineProperty(base, '_inicio_gravado', {value:(base.inicio||''), enumerable:false});
     var k=renovRascKey();
-    if(renovRascunho && k && renovRascunho._k===k)
-      Object.keys(renovRascunho).forEach(function(c){ if(c!=='_k') base[c]=renovRascunho[c]; });
+    var rasc=(renovRascunho && k && renovRascunho._k===k)?renovRascunho:null;
+    if(rasc)
+      Object.keys(rasc).forEach(function(c){ if(c!=='_k') base[c]=rasc[c]; });
+    // OS DIAS DE CADA MÊS (6.30, caso da Hopi): sem escolha no rascunho, a tela mostra o que
+    // está gravado ("mudam" quando o plano tem dias por mês). Data de pagamento NOVA no
+    // rascunho é outro plano: NÃO herda "mudam" — o arranjo da viagem não se repete sem a
+    // consultora ligar de novo (e o valor do plano não sai errado sem ninguém ver).
+    if(!rasc || !('dias_modo' in rasc)){
+      var gD=renovDe(ex);
+      var dataNova=!!(rasc && ('inicio' in rasc) && String(rasc.inicio||'')!==String(gD.inicio||''));
+      base.dias_modo=(gD.dias_mes && !dataNova)?'mudam':'iguais';
+    }
+    if(base.dias_modo!=='mudam') delete base.dias_mes;
     return base;
   }
   function renovRascSet(patch){
@@ -20258,11 +20282,107 @@
     var k=renovRascKey();
     if(!renovRascunho||!k||renovRascunho._k!==k) return false;
     var g=renovDe(ex);
-    return ['plano','ordemPet','inicio'].some(function(c){
+    if(['plano','ordemPet','inicio'].some(function(c){
       if(!(c in renovRascunho)) return false;
       if(c==='ordemPet') return Number(renovRascunho[c]||1)!==Number(g[c]||1);
       return String(renovRascunho[c]||'')!==String(g[c]||'');
-    });
+    })) return true;
+    // 6.30: o modo dos dias (iguais × mudam) e os dias de cada mês também esperam o Confirmar.
+    var modoG=g.dias_mes?'mudam':'iguais';
+    if(('dias_modo' in renovRascunho) && renovRascunho.dias_modo!==modoG) return true;
+    if(renovRascunho.dias_modo==='mudam' && ('dias_mes' in renovRascunho)){
+      var nS=renovMesesN(renovEdit(ex));
+      return JSON.stringify(renovDiasMesTela(renovRascunho.dias_mes, nS, []))!==JSON.stringify(renovDiasMesTela(g.dias_mes, nS, []));
+    }
+    return false;
+  }
+  // ---- OS DIAS MUDAM DURANTE O PLANO (6.30, Adriana, 05/out/2026 — caso da Hopi) ------
+  // Os dias de cada mês como a TELA trabalha: n meses, cada um com os dias marcados (pode estar
+  // vazio no rascunho — o Confirmar é que aponta). Mês que ainda não existe na lista (Gold →
+  // Black) começa com a rotina; ao diminuir (Black → Gold), corta.
+  function renovDiasMesTela(L, n, rotina){
+    const out=[];
+    for(let i=0;i<(n||0);i++){
+      const m=(L&&typeof L==='object')?(L[i]!=null?L[i]:L[String(i)]):null;
+      if(m && typeof m==='object'){
+        const arr=Array.isArray(m)?m:Object.keys(m).map(function(c){ return m[c]; });
+        out.push(ORDEM_DIAS.filter(function(d){ return arr.indexOf(d)>=0; }));
+      } else out.push(ORDEM_DIAS.filter(function(d){ return (rotina||[]).indexOf(d)>=0; }));
+    }
+    return out;
+  }
+  // O plano como vai ficar (o rascunho com a vigência calculada) — é dele que saem as datas de
+  // cada mês na tela e no resumo. O período que começa no dia do pagamento não herda o começo
+  // de outro ciclo (a mesma regra do Confirmar).
+  function renovPlanoComCalc(r, calc){
+    const x=Object.assign({}, r||{}, calc||{});
+    if(calc && !calc.vig_inicio) delete x.vig_inicio;
+    return x;
+  }
+  // "Iguais no plano todo" × "Mudam durante o plano". Só mexe no rascunho. Ao ligar, cada mês
+  // começa com os dias da rotina (ou com o que já estava gravado, se é correção do mesmo plano).
+  function renovDiasModoSet(modo){
+    if(!pelAtual) return;
+    const ex=pelExtra(pelAtual), r=renovEdit(ex), n=renovMesesN(r);
+    if(modo!=='mudam'){ renovRascSet({dias_modo:'iguais'}); return; }
+    if(!n) return;                                   // mensal: um mês, um conjunto de dias
+    const k=renovRascKey();
+    const rasc=(renovRascunho && renovRascunho._k===k)?renovRascunho:{};
+    const g=renovDe(ex);
+    const dataNova=('inicio' in rasc) && String(rasc.inicio||'')!==String(g.inicio||'');
+    const fonte=rasc.dias_mes || ((!dataNova && g.dias_mes)?g.dias_mes:null);
+    renovRascSet({dias_modo:'mudam', dias_mes:renovDiasMesTela(fonte, n, pelDias(pelAtual,'rotina')||[])});
+  }
+  // Toque num dia de um mês: só o rascunho muda (nada grava antes do Confirmar).
+  function renovMesDiaToggle(i, d){
+    if(!pelAtual || ORDEM_DIAS.indexOf(d)<0) return;
+    const ex=pelExtra(pelAtual), r=renovEdit(ex), n=renovMesesN(r);
+    i=Number(i); if(!n || !(i>=0 && i<n)) return;
+    const L=renovDiasMesTela(r.dias_mes, n, pelDias(pelAtual,'rotina')||[]);
+    const m=L[i], j=m.indexOf(d);
+    if(j>=0) m.splice(j,1); else m.push(d);
+    L[i]=ORDEM_DIAS.filter(function(x){ return m.indexOf(x)>=0; });
+    renovRascSet({dias_modo:'mudam', dias_mes:L});
+  }
+  // As linhas por mês da aba Plano: datas, os dias de cada mês e o valor da tabela daquele mês.
+  function renovMesesHTML(p, r, calc){
+    const n=renovMesesN(r);
+    const rotina=pelDias(p,'rotina')||[];
+    const L=renovDiasMesTela(r.dias_mes, n, rotina);
+    const V=renovValorDoPlano(r.plano, L, r.ordemPet||1);
+    const D=calc?renovMesesDatas(renovPlanoComCalc(r, calc)):[];
+    const curto=function(iso){ return fmtBR(iso).slice(0,5); };
+    const pode=canEditPel();
+    const linhas=L.map(function(dias, i){
+      const dt=D[i]?(curto(D[i].de)+' a '+curto(D[i].ate)):'—';
+      const v=V.porMes[i]||{aulas:0, valor:0};
+      const chips=ORDEM_DIAS.map(function(d){
+        const on=dias.indexOf(d)>=0;
+        return '<span class="dia'+(on?' on':'')+(pode?' clic':'')+'" data-mes="'+i+'" data-dia="'+d+'"'
+          +(pode?' onclick="renovMesDiaToggle(Number(this.dataset.mes), this.dataset.dia)"':'')+'>'+DIA_LBL[d]+'</span>';
+      }).join('');
+      const valor=!dias.length
+        ? '<span style="color:var(--crm-critico)">marque pelo menos um dia</span>'
+        : (v.valor>0 ? (v.aulas+'x · '+renovBRL(v.valor)) : '<span style="color:var(--crm-critico)">'+v.aulas+'x — sem valor na tabela</span>');
+      return '<div id="planoMes_'+i+'" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;margin-top:6px">'
+        +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Mês '+(i+1)+' <span style="font-weight:600;color:var(--muted)">· '+dt+'</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px">'+chips
+        +'<span style="margin-left:auto;font-size:13px;font-weight:800;color:var(--z-blue)">'+valor+'</span></div></div>';
+    }).join('');
+    const ordem=Number(r.ordemPet||1);
+    const fimTxt=(calc&&calc.fim)?fmtBR(calc.fim):'';
+    return '<div class="field" style="grid-column:1/-1" id="planoMeses"><label>Os dias de cada mês <span style="font-weight:600;color:var(--muted)">— as aulas de cada mês são os dias marcados nele</span></label>'
+      +linhas
+      +(D.length?'':'<div class="hint" style="font-size:11px;margin-top:4px">As datas de cada mês aparecem quando a data do pagamento estiver preenchida.</div>')
+      +'<div id="planoValorPlano" class="prev-calc" style="margin-top:8px">'
+        +(V.falta<0
+          ? ('<strong>Valor do plano: '+renovBRL(V.total)+'</strong> <span style="font-size:12px;font-weight:600;color:var(--muted)">(pago à vista na renovação — a soma da tabela, mês a mês'+(ordem>1?(', com o desconto do '+ordem+'º peludinho em cada mês'):'')+')</span>')
+          : '<span style="color:var(--crm-critico);font-weight:700">Valor do plano: falta acertar o Mês '+(V.falta+1)+'.</span>')
+      +'</div>'
+      +'<div id="planoDepoisDoPlano" class="hint" style="font-size:11.5px;margin-top:4px">'
+        +(fimTxt?('Depois de '+fimTxt+', se o plano não for renovado'):'Depois do fim do plano, se ele não for renovado')
+        +', valem os dias do alto da ficha: '+esc(renovDiasRotulo(rotina))+'.</div>'
+      +'</div>';
   }
   // ---- FREQUÊNCIA ESCOLHIDA NO PRÓPRIO FORMULÁRIO, GUIADA ----------------------------
   // REGRA ÚNICA: aulas por semana = quantidade de dias marcados nos chips do topo da ficha.
@@ -20271,15 +20391,16 @@
   // Por isso escolher 1x com 3 dias marcados NÃO grava nada: aponta em vermelho para os
   // chips lá em cima e diz, com os dias pelo nome, exatamente o que fazer.
   const RENOV_NX=[1,2,3,5];
-  function renovDiasNomes(p){ return (pelDias(p)||[]).map(function(x){ return DIA_LBL[x]||x; }).join(', '); }
+  // Os chips do alto (a ROTINA, 6.30) — é o que o atalho "Aulas por semana" explica e o que o toque edita.
+  function renovDiasNomes(p){ return (pelDias(p,'rotina')||[]).map(function(x){ return DIA_LBL[x]||x; }).join(', '); }
   function renovDiasTexto(p){
-    var d=pelDias(p)||[];
+    var d=pelDias(p,'rotina')||[];
     if(!d.length) return 'hoje nenhum dia está marcado';
     return (d.length===1?'hoje está marcado ':'hoje estão marcados ')+renovDiasNomes(p);
   }
   function setRenovAulas(n){
     if(!pelAtual) return;
-    var atual=(pelDias(pelAtual)||[]).length;
+    var atual=(pelDias(pelAtual,'rotina')||[]).length;
     if(atual===n){ try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: enfeite de tela */ renovPlanoRedesenhar(); return; }
     var msg='Marque '+(n===1?'só 1 dia':n+' dias')+' da semana lá em cima ('+renovDiasTexto(pelAtual)+'). '
       +'As aulas por semana são sempre a quantidade de dias marcados — é esse número que entra na mensalidade.';
@@ -20303,7 +20424,8 @@
     a=a||{}; b=b||{};
     return String(a.plano||'')===String(b.plano||'') && String(a.aulas||'')===String(b.aulas||'')
       && Number(a.ordemPet||1)===Number(b.ordemPet||1) && String(a.inicio||'')===String(b.inicio||'')
-      && String(renovVigOutra(a))===String(renovVigOutra(b)) && String(a.fim||'')===String(b.fim||'');
+      && String(renovVigOutra(a))===String(renovVigOutra(b)) && String(a.fim||'')===String(b.fim||'')
+      && JSON.stringify(a.dias_mes||null)===JSON.stringify(b.dias_mes||null);   // 6.30: os dias de cada mês também
   }
   function renovHistDe(ex){
     var h=(ex&&ex.renov_hist)||{};
@@ -20344,7 +20466,7 @@
       var rot=pl.rotulo?(pl.rotulo+' · '+(pl.compromisso||'')):(o.plano||'—');
       var ini=o.vig_inicio||o.inicio;
       return '<div style="padding:7px 0;border-top:1px dashed var(--z-cream-warm);font-size:12.5px;font-weight:600;color:var(--z-blue)">'
-        +'<strong>'+esc(rot)+'</strong> · '+esc(String(o.aulas||'—'))+'x · '
+        +'<strong>'+esc(rot)+'</strong> · '+esc(renovAulasRotulo(o))+' · '
         +(ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
         +(renovVigOutra(o)?' <span style="font-weight:600;color:var(--muted)">(pago em '+fmtBR(o.inicio)+')</span>':'')
         +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
@@ -20380,9 +20502,9 @@
     const plAnt=planos()[ant.plano]||{}, plAtu=planos()[atual.plano]||{};
     const ok=await zPergunta('DESFAZER A ÚLTIMA RENOVAÇÃO',
       [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
-       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+(atual.aulas||'—')+'x · '
+       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+renovAulasRotulo(atual)+' · '
          +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
-       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+(ant.aulas||'—')+'x · '
+       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+renovAulasRotulo(ant)+' · '
          +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
        'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.'],
       {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
@@ -20392,17 +20514,22 @@
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
+    // 6.30: o plano que volta traz os dias de cada mês (e o anterior congelado) que tinha.
+    if(ant.dias_mes) volta.dias_mes=ant.dias_mes;
+    if(ant.dias_mes_anterior) volta.dias_mes_anterior=ant.dias_mes_anterior;
     await setPelExtra(pelAtual,{renov:volta});
     if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
       .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao-desfeita',
-      'voltou o plano de '+(atual.plano||'—')+' ('+(atual.aulas||'—')+'x) para '+(volta.plano||'—')
-      +' ('+(volta.aulas||'—')+'x) · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
+      'voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')
+      +' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('RENOVAÇÃO DESFEITA',
-      ['O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.',
+      [(volta.dias_mes&&renovDiasMesValido(volta))
+        ? ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', com os dias mudando por mês ('+renovAulasRotulo(volta)+').')
+        : ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.'),
        'Vale até '+(volta.fim?fmtBR(volta.fim):'—')+'.'], {ok:true, botao:'Fechar'});
   }
 
@@ -20460,11 +20587,28 @@
     // DADO INCONSISTENTE APARECE (Adriana, 15/set/2026). A Cookie ficou com plano gravado de
     // 2x e um único dia marcado. Em vez de esconder, a ficha mostra e ensina a consertar —
     // "sem programador" é lei desde 22/ago/2026.
-    const incoerente=(!semPlanoMensal && gravado.aulas && Number(gravado.aulas)!==aulas);
+    // PLANO COM DIAS POR MÊS (6.30): as aulas de cada mês são os dias marcados NAQUELE mês — o
+    // "gravado diz 1x" do plano da Hopi não briga com a rotina. A faixa só aparece quando os dias
+    // de cada mês gravados não fecham com o plano (dado torto no banco).
+    const temDiasMes=!!gravado.dias_mes;
+    const incoerente=(!semPlanoMensal && (temDiasMes ? !renovDiasMesValido(gravado) : (gravado.aulas && Number(gravado.aulas)!==aulas)));
     const faixaIncoerente=incoerente
       ? '<div class="field" style="grid-column:1/-1"><div id="planoIncoerente" class="hint" style="background:rgba(222,180,40,.22);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
-        +'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
-        +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias lá em cima e toque em <strong>Confirmar</strong> para acertar.'
+        +(temDiasMes
+          ? 'Os dias de cada mês gravados não fecham com o plano. Escolha <strong>Mudam durante o plano</strong>, confira cada mês e toque em <strong>Confirmar</strong> para acertar.'
+          : 'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
+            +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias lá em cima e toque em <strong>Confirmar</strong> para acertar.')
+        +'</div></div>'
+      : '';
+    // OS DIAS DA SEMANA MUDAM DURANTE O PLANO? (6.30, caso da Hopi) Só no trimestral e no
+    // semestral: no mensal, um mês é um conjunto de dias.
+    const nMeses=semPlanoMensal?0:renovMesesN(r);
+    const mudam=!!(nMeses && r.dias_modo==='mudam');
+    const seletorModo=nMeses
+      ? '<div class="field" style="grid-column:1/-1"><label>Os dias da semana <span style="font-weight:600;color:var(--muted)">— no '+esc((planos()[r.plano]||{}).compromisso||'plano')+', podem mudar de um mês para o outro</span></label>'
+        +'<div class="seg gold" data-single id="planoDiasModo">'
+          +'<button type="button" class="'+(mudam?'':'on')+'" onclick="renovDiasModoSet(\'iguais\')">Iguais no plano todo</button>'
+          +'<button type="button" class="'+(mudam?'on':'')+'" onclick="renovDiasModoSet(\'mudam\')">Mudam durante o plano</button>'
         +'</div></div>'
       : '';
     return '<div class="prev-bloco" id="planoBloco">'
@@ -20475,6 +20619,7 @@
         +faixaIncoerente
         +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a data':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
           +['Silver','Gold','Black'].map(selPlano).join('')+btnAvu+btnAua+btnMor+'</div></div>'
+      +seletorModo
       + (soHosp
           ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
             +'🌙 Este FILHOt é <strong>só da AuAulândia</strong> — não é auluno do Day Care.<br>'
@@ -20492,11 +20637,12 @@
             +'</div></div>'
           // SELETOR DE AULAS POR SEMANA — atalho e explicação dos chips do topo, nunca uma
           // segunda verdade. Vem ACIMA da data, porque é a primeira coisa a acertar.
-          : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados lá em cima</span></label>'
+          // Com "Mudam durante o plano" (6.30), o atalho dá lugar às linhas de cada mês.
+          : (mudam ? renovMesesHTML(p, r, calc) : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados lá em cima</span></label>'
             +'<div class="seg gold" data-single id="planoAulasSeg">'
               +RENOV_NX.map(function(n){ return '<button type="button" class="'+(aulas===n?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
             +'</div>'
-            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Para trocar, marque os dias no alto da ficha.</div></div>'
+            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Para trocar, marque os dias no alto da ficha.</div></div>')
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
               +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);renovRascSet({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
@@ -20508,7 +20654,7 @@
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
               +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano — menos quando o tutor paga a renovação nos últimos 15 dias do plano atual (o novo período começa no dia seguinte ao fim) ou nos últimos 7 dias do mês (começa no dia 1º do mês seguinte). O vencimento é calculado sozinho — e só grava no Confirmar. Período errado depois de gravar? Use Desfazer a última renovação.</div>':'')+'</div>'
-            +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
+            +(mudam?'':'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>')
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
@@ -20550,8 +20696,30 @@
     const ex=pelExtra(pelAtual), gravado=renovDe(ex), r=renovEdit(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     const aulas=nAulasDe(pelAtual);
-    const dias=pelDias(pelAtual)||[];
-    if(!dias.length){
+    const dias=pelDias(pelAtual,'rotina')||[];
+    // OS DIAS MUDAM DURANTE O PLANO (6.30, caso da Hopi): cada mês precisa de pelo menos um dia
+    // e de preço na tabela; e "mudam" com todos os meses iguais é o plano de sempre.
+    const nMesesC=renovMesesN(r);
+    const mudamC=!!(nMesesC && r.dias_modo==='mudam');
+    const dmC=mudamC?renovDiasMesTela(r.dias_mes, nMesesC, dias):null;
+    const faltaC=function(el, msg){
+      if(typeof zFalta==='function') zFalta([{el:el, msg:msg}], {botao:'planoConfirmar'});
+      else alert(msg);
+    };
+    if(mudamC){
+      const vazio=dmC.findIndex(function(m){ return !m.length; });
+      if(vazio>=0){ faltaC('planoMes_'+vazio, 'Marque pelo menos um dia no Mês '+(vazio+1)+'.'); return; }
+      const vC=renovValorDoPlano(r.plano, dmC, r.ordemPet||1);
+      if(vC.falta>=0){
+        const plF=planos()[r.plano]||{};
+        faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dmC[vC.falta].length+'x por semana — confira a tabela comercial.');
+        return;
+      }
+      if(dmC.every(function(m){ return m.join(',')===dmC[0].join(','); })){
+        faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias no alto da ficha.');
+        return;
+      }
+    } else if(!dias.length){
       if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:'Marque os dias da semana em que este FILHOt vem. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
       else alert('Marque os dias da semana antes de confirmar o plano.');
       return;
@@ -20656,18 +20824,47 @@
     const pl=planos()[r.plano]||{};
     const mens=mensalidade(r.plano, aulas, r.ordemPet||1);
     const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
+    // 6.30: os meses do plano com as datas DESTA vigência (a escolhida acima) e o valor de cada um.
+    const mesesC=mudamC?renovMesesDoPlano(Object.assign(renovPlanoComCalc(r, calc), {dias_mes:dmC})):[];
+    if(mudamC && mesesC.length!==nMesesC){
+      if(typeof zAlertao==='function') zAlertao('NÃO DEU PARA MONTAR OS MESES DO PLANO',
+        ['As datas de cada mês não fecham com o período calculado ('+fmtBR(calc.vig_inicio||calc.inicio)+' até '+fmtBR(calc.fim)+').',
+         'Nada foi gravado. Confira a data do pagamento e tente de novo.'], {botao:'Entendi'});
+      return;
+    }
+    const valorC=mudamC?renovValorDoPlano(r.plano, dmC, r.ordemPet||1):null;
+    const aulasGrava=mudamC?dmC[0].length:aulas;          // renov.aulas = os dias do Mês 1 (quem lê "aulas" continua lendo)
     const linhasPlano=[pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
-       'Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt,
-       (renovVigOutra(calc)
+       (mudamC
+         ? ('Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · os dias mudam durante o plano')
+         : ('Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt))]
+      .concat(mesesC.map(function(m, i){
+        return 'Mês '+m.n+' · '+fmtBR(m.de)+' a '+fmtBR(m.ate)+' · '+renovDiasRotulo(m.dias)+' · '+m.dias.length+'x · '+renovBRL(valorC.porMes[i].valor); }))
+      .concat([(renovVigOutra(calc)
          ? ('Pagamento '+fmtBR(calc.inicio)+' · vale de '+fmtBR(calc.vig_inicio)+' até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))
-         : ('Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))),
-       'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')];
+         : ('Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—')))])
+      .concat(mudamC
+        ? ['Valor do plano: '+renovBRL(valorC.total)+' — pago à vista'+((r.ordemPet||1)>1?(', com o desconto do '+(r.ordemPet)+'º peludinho da família em cada mês'):''),
+           'Depois de '+fmtBR(calc.fim)+', sem renovação: '+renovDiasRotulo(dias)+' (os dias do alto da ficha)']
+        : ['Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')]);
     const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
     if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
     if(renovVigOutra(calc)) linhasPlano.push('Por quê: '+renovVigenciaFrase(calc, calc._porque)+'.');
-    const novo=Object.assign({}, gravado, calc, {aulas:aulas, ordemPet:r.ordemPet||1});
+    const novo=Object.assign({}, gravado, calc, {aulas:aulasGrava, ordemPet:r.ordemPet||1});
     // O período que começa no dia do pagamento não herda o começo de outro ciclo.
     if(!calc.vig_inicio) delete novo.vig_inicio;
+    // OS DIAS DE CADA MÊS (6.30): "Mudam" grava os dias de cada mês; "Iguais" NÃO herda os do
+    // plano gravado (o Object.assign acima herdaria). Na renovação SEGUINTE (o período novo começa
+    // depois do gravado), o plano anterior com dias por mês fica congelado com as datas: os dias
+    // que ainda faltam dele (renovação antecipada) e os passados (a baixa automática olha 60 dias
+    // para trás) continuam certos. Correção do mesmo plano não mexe no anterior.
+    if(mudamC) novo.dias_mes=dmC.map(function(m){ return m.slice(); }); else delete novo.dias_mes;
+    const comecoNovoC=String(calc.vig_inicio||calc.inicio||''), comecoGravC=String(gravado.vig_inicio||gravado.inicio||'');
+    if(/^\d{4}-\d{2}-\d{2}$/.test(comecoGravC) && comecoNovoC>comecoGravC){
+      const antC=renovMesesDoPlano(gravado);
+      if(antC.length) novo.dias_mes_anterior=antC.map(function(m){ return {n:m.n, de:m.de, ate:m.ate, dias:m.dias.slice()}; });
+      else delete novo.dias_mes_anterior;
+    }
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:(renovMesmoPlano(gravado, novo)
@@ -20686,15 +20883,19 @@
     await setPelExtra(pelAtual,{renov:novo});
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao',
-      'renovou o plano '+novo.plano+' ('+aulas+'x, dias '+diasTxt+') '
+      'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
-      +' até '+fmtBR(novo.fim)+' · mensalidade '+fmtCent(mens),
+      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorC.total)):(' · mensalidade '+fmtCent(mens))),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
-      [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
-       'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
-       'Mensalidade '+fmtCent(mens)+'.'], {ok:true, botao:'Fechar'});
+      (mudamC
+        ? [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+', com os dias mudando por mês ('+renovAulasRotulo(novo)+').',
+           'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
+           'Valor do plano '+renovBRL(valorC.total)+'.']
+        : [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
+           'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
+           'Mensalidade '+fmtCent(mens)+'.']), {ok:true, botao:'Fechar'});
   }
 
   // ===== COMEÇOU NO MEIO DO MÊS — a tela (Adriana, 18/set/2026) =====================
@@ -20751,10 +20952,16 @@
       const chave=pelKey(q), nome=pelNome(q), ex=pelExtra(q)||{};
       const r=(chave===eu)?renovEdit(ex):renovDe(ex);     // na ficha aberta vale o rascunho do plano
       const pl=planos()[r.plano];
-      const dias=pelDias(q)||[];
+      let dias=pelDias(q,'rotina')||[];
+      // PLANO COM DIAS POR MÊS (6.30): as diárias que faltam neste mês seguem os dias do Mês 1 — o
+      // do rascunho na ficha aberta ("Mudam durante o plano"), o gravado nas outras fichas.
+      let diasMes=null;
+      if(chave===eu && r.dias_modo==='mudam' && renovMesesN(r)) diasMes=renovDiasMesTela(r.dias_mes, renovMesesN(r), dias)[0]||null;
+      else if(r.dias_mes && renovDiasMesValido(r)){ const dd=pelDias(q, ini)||[]; if(dd.length) diasMes=dd; }
+      if(diasMes && diasMes.length) dias=diasMes; else diasMes=null;
       if(!pl){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem plano escolhido — abra a ficha dele, aba Plano, e escolha Mensal, Trimestral ou Semestral'}); return; }
       if(!dias.length){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem os dias da semana marcados — marque os dias no alto da ficha dele'}); return; }
-      const aulas=nAulasDe(q), ordem=Number(r.ordemPet)||1;
+      const aulas=diasMes?Math.min(5, Math.max(1, dias.length)):nAulasDe(q), ordem=Number(r.ordemPet)||1;
       const mens=mensalidade(r.plano, aulas, ordem);
       // Tabela sem preço para esta faixa não vira conta em R$ 0,00 calada: a tela diz onde arrumar.
       if(!(mens>0)){ pendentes.push({chave:chave, nome:nome,
@@ -21135,7 +21342,7 @@
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
         +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
-        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+nAulasDe(o.p)+'x':'plano a definir')
+        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+(renovDiasMesValido(r)?escAttr(renovMesesDoPlano(r).map(function(m){ return m.dias.length+'x'; }).join(', ')):(nAulasDe(o.p)+'x')):'plano a definir')
         +'<div class="renov-per">'+periodo+'</div></div>'
         +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span></div>';
     }).join('')+'</div>';
@@ -23430,15 +23637,84 @@
     }
     setPelExtra(pelAtual,{raca:raca});
   }
+  // ===== OS CHIPS DO ALTO SÃO A ROTINA (6.30, Adriana, 05/out/2026 — caso da Hopi) ======
+  // Com plano de dias diferentes em cada mês, os chips mostram e editam a ROTINA — o que vale
+  // fora dos meses do plano (depois do fim, sem renovação). Acima deles, a faixa diz qual mês
+  // do plano vale hoje e quando os dias mudam. Mudar os dias de um mês é na aba Plano.
+  // O mês do plano que corre hoje (do plano atual ou do anterior, ainda valendo) — null quando não há.
+  function pelPlanoMesHoje(p, hoje){
+    try{
+      if(!pelTemDiasPorMes(p)) return null;
+      const r=renovDe(pelExtra(p)||{});
+      hoje=hoje||zHojeISO();
+      const m=renovMesNaData(r, hoje);
+      if(!m) return null;
+      const M=m.anterior?renovMesesAnteriores(r):renovMesesDoPlano(r);
+      const prox=M.filter(function(x){ return x.de>hoje && x.dias.join(',')!==m.dias.join(','); })[0]||null;
+      return {mes:m, prox:prox, fim:M.length?M[M.length-1].ate:m.ate};
+    }catch(e){ return null; } /* silencioso de propósito: sem a ficha lida, os chips aparecem sem a faixa */
+  }
+  // O MÊS NOVO DO PLANO COMEÇA HOJE? (6.30) — o mês i ≥ 2 cujo PRIMEIRO DIA DE DAY CARE é hoje
+  // (Hopi: o Mês 3 começa no sábado 05/12; o primeiro dia de Day Care é a segunda 07/12). Só
+  // quando os dias mudam de um mês para o outro: mês igual ao anterior não é notícia.
+  // {n, total, dias, era, de} ou null. Função pura: recebe o plano e o dia.
+  function planoMesComecaHoje(r, hoje){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(hoje||'')) return null;
+    const M=renovMesesDoPlano(r||{});
+    for(let i=1;i<M.length;i++){
+      const dia1=vencEhDiaDayCare(M[i].de)?M[i].de:proximoDiaDayCare(M[i].de);
+      if(dia1!==hoje || dia1>M[i].ate) continue;
+      if(M[i].dias.join(',')===M[i-1].dias.join(',')) return null;
+      return {n:M[i].n, total:M.length, dias:M[i].dias, era:M[i-1].dias, de:M[i].de};
+    }
+    return null;
+  }
+  // Todos os FILHOts ativos com mês novo do plano começando hoje — não só os da turma de hoje:
+  // o mês novo pode começar num dia em que ele não vem. [{chave, nome, mes, dias, era, texto}]
+  function planoMesQuemMudaHoje(hoje){
+    const out=[];
+    (typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[]).forEach(function(p){
+      if(!p || !pelTemDiasPorMes(p) || pelInativo(p)) return;
+      const c=planoMesComecaHoje(renovDe(pelExtra(p)||{}), hoje);
+      if(!c) return;
+      const nome=pelNome(p)||p.n||'';
+      out.push({chave:dcKey(p.n,p.tutor), nome:nome, mes:c.n, dias:c.dias.slice(), era:c.era.slice(),
+        texto:nome+': começa hoje o Mês '+c.n+' do plano — passa a vir '+renovDiasRotulo(c.dias)+' (era '+renovDiasRotulo(c.era)+')'});
+    });
+    return out;
+  }
+  function pelDiasPlanoAvisoHTML(p){
+    const info=pelPlanoMesHoje(p); if(!info) return '';
+    const m=info.mes;
+    return '<div id="pelDiasPlanoAviso" class="hint" style="background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue);border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:12px;font-weight:700;color:var(--z-blue)">'
+      +'Hoje vale o Mês '+m.n+' de '+m.total+' do plano'+(m.anterior?' anterior':'')+': '+esc(renovDiasRotulo(m.dias))+'.'
+      +(info.prox?(' A partir de '+fmtBR(info.prox.de)+': '+esc(renovDiasRotulo(info.prox.dias))+'.'):'')
+      +' Os dias abaixo são a rotina: valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').'
+      +' Para mudar os dias de um mês do plano, use a aba Plano. '
+      +'<a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Ir para a aba Plano</a></div>';
+  }
   // chips de dias clicáveis (frequência recalcula sozinha)
   function diasEditInner(p){
-    const dias=pelDias(p), can=canEditPel();
+    const dias=pelDias(p,'rotina'), can=canEditPel();
     const chips=ORDEM_DIAS.map(d=>`<span class="dia${dias.indexOf(d)>=0?' on':''}${can?' clic':''}"${can?` onclick="toggleDiaPel('${d}')"`:''}>${DIA_LBL[d]}</span>`).join('');
-    return chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${pelFreq(p)}/semana</span>`;
+    // O rótulo conta a ROTINA (os chips): para ficha sem dias por mês, é o pelFreq de sempre.
+    const freq=dias.length?(dias.length+'x'):pelFreq(p);
+    return pelDiasPlanoAvisoHTML(p)+chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${freq}/semana</span>`;
   }
-  function toggleDiaPel(d){
+  function toggleDiaPel(d, jaPerguntou){
     if(!canEditPel()||!pelAtual) return;
-    const antes=pelDias(pelAtual).slice();
+    // Plano com dias por mês correndo (6.30): os chips são a rotina de DEPOIS do plano — pergunta
+    // antes, para ninguém achar que mudou o dia de hoje. Sem isso, o caminho é o de sempre.
+    if(!jaPerguntou && pelPlanoMesHoje(pelAtual) && typeof zPergunta==='function'){
+      const info=pelPlanoMesHoje(pelAtual);
+      zPergunta('MUDAR A ROTINA DE DEPOIS DO PLANO?',
+        ['Os dias do alto da ficha valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
+         'Hoje vale o Mês '+info.mes.n+' do plano: '+renovDiasRotulo(info.mes.dias)+'. Para mudar os dias de um mês do plano, use a aba Plano.'],
+        {sim:'Mudar a rotina', nao:'Ir para a aba Plano', cor:'#234D67', corTitulo:'#234D67'})
+        .then(function(ok){ if(ok) toggleDiaPel(d, true); else irParaAbaPlano(); });
+      return;
+    }
+    const antes=pelDias(pelAtual,'rotina').slice();
     const dias=antes.slice(); const i=dias.indexOf(d);
     if(i>=0) dias.splice(i,1); else dias.push(d);
     dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
@@ -23451,7 +23727,7 @@
       (typeof pelNome==='function'?pelNome(pelAtual):pelAtual.n)+': dias '+nomes(antes)+' → '+nomes(dias),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     const w=document.getElementById('pelDiasEdit'); if(w) w.innerHTML=diasEditInner(pelAtual);
-    const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana';
+    const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana'+(pelPlanoMesHoje(pelAtual)?' (hoje — os dias mudam por mês do plano)':'');
     // O seletor "Aulas por semana" do bloco Plano espelha estes chips — redesenha junto,
     // senão a mesma ficha mostraria duas verdades ao mesmo tempo.
     try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marca de falta é enfeite de tela */
@@ -27005,6 +27281,7 @@
     if(semPlano && tinhaVigencia){
       await renovHistGravar(pelKey(pelAtual), antigo, 'virou '+cat);
       r.inicio=''; r.fim=''; r.mesRenov=''; r.aulas=''; delete r.vig_inicio;
+      delete r.dias_mes; delete r.dias_mes_anterior;   // 6.30: os dias de cada mês vão junto para o histórico
     }
     renovRascLimpar();
     setPelExtra(pelAtual,{categoria:cat, renov:r});
@@ -27112,7 +27389,7 @@
             <div class="hint" style="font-size:11px;margin-top:3px"><a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a> — com resumo antes de gravar e opção de desfazer.</div></div>
           <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>
-          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
+          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana${pelPlanoMesHoje(p)?' (hoje — os dias mudam por mês do plano)':''}" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
         ${blocoReposicaoFicha(p)}
@@ -37855,6 +38132,30 @@
     // pelo check-in já registraram a vinda deste dia. Abater de novo seria tirar duas
     // reposições por uma vinda. Lança na planilha sem abater, a não ser que a pessoa diga.
     var diaRep=dashDia(), LRep=[]; try{ LRep=repLancamentos(pRep)||[]; }catch(e){ LRep=[]; }
+    // DIA DO PLANO NÃO GASTA SALDO (6.30, resposta 3 da Adriana, 06/out/2026 — caso da Hopi): no
+    // plano com dias diferentes em cada mês, a quarta do Mês 3 já é dia dela — está paga no plano.
+    // Lançar "Reposição" nesse dia pergunta ANTES de abater do Banco de Reposições.
+    var mesRep=null;
+    try{ if(pelTemDiasPorMes(pRep) && repEhDiaDele(pRep, diaRep)) mesRep=renovMesNaData(renovDe(pelExtra(pRep)||{}), diaRep); }
+    catch(e){ mesRep=null; } /* silencioso de propósito: sem a ficha lida, segue o caminho de sempre da reposição */
+    if(mesRep){
+      var semRep=(typeof trocaDiaSemana==='function')?trocaDiaSemana(diaRep):'';
+      var elaRep=(typeof repEhFemea==='function'&&repEhFemea(pRep));
+      var nomeRep=pelNome(pRep);
+      zEscolha(String(DIA_FULL[semRep]||semRep)+' já é dia '+(elaRep?'da ':'do ')+nomeRep+' no plano',
+        ['No Mês '+mesRep.n+' do plano'+(mesRep.anterior?' anterior':'')+' ('+fmtBR(mesRep.de)+' a '+fmtBR(mesRep.ate)+'), '+(elaRep?'ela':'ele')+' vem '+renovDiasRotulo(mesRep.dias)+'.',
+         'Dia do plano não gasta saldo de reposição: a vinda já está paga no plano.',
+         'Lançar sem abater escreve na planilha e não desconta do Banco de Reposições.'],
+        [{t:'Lançar sem abater', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM abater (o dia '+diaRep+' já é dia do plano, Mês '+mesRep.n+'): '+valor,{pet:valor});
+            gravar(false);
+          }},
+         {t:'Abater mesmo assim', cor:'#B3261E', fn:function(){ seguirUso(); }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    seguirUso();
+    function seguirUso(){
     if(repDiaTemUso(LRep, diaRep)){
       zEscolha(pelNome(pRep)+' já tem um uso registrado em '+repBRdata(diaRep).slice(0,5),
         ['O Banco de Reposições já descontou um uso deste dia (veja o Extrato dele na tela de Reposições).',
@@ -37870,6 +38171,7 @@
       return;
     }
     seguirRep();
+    }
     function seguirRep(){
     var saldoRep=0; try{ saldoRep=repSaldo(pRep); }catch(e){ saldoRep=0; }
     if(saldoRep<=0){
