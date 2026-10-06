@@ -23260,7 +23260,7 @@
   function vePorDia(){ return podePapel('ver-por-dia'); }
   // Pela data da PRÓXIMA ocorrência do dia (6.30): com plano de dias por mês, a quarta do Mês 3
   // conta a Hopi; a do Mês 2, não. A mesma régua da Turma do dia.
-  function nMatriculados(d){ const iso=turmaIsoDoDia(d); return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p, iso).indexOf(d)>=0).length; }
+  function nMatriculados(d){ const iso=turmaIsoSeguro(d); return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p, iso).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   // ===== ATIVIDADES SELETIVAS (Márcia decide quem faz) — item D =====
   // As demais atividades (chamada, check-in/out, livre, EA, almoço...) são ABERTAS: todos participam.
@@ -28637,8 +28637,14 @@
   // em cada mês, "quem vem na quarta" depende de QUAL quarta. A data é a do dia da aba (a
   // próxima ocorrência dele, a mesma régua das Turminhas); quem chama com uma data (turmaDe)
   // passa a data. Ficha sem dias por mês: a turma de sempre.
+  // A data da próxima ocorrência do dia da aba — '' se a conta não estiver pronta (o app ainda
+  // carregando): aí pelDias responde por hoje, que é o que a turma sempre leu.
+  function turmaIsoSeguro(d, hoje){
+    try{ return turmaIsoDoDia(d, hoje)||''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem a data, vale a turma de sempre (os dias de hoje) */
+  }
   function turmaDoDia(isoOpc){
-    const isoT=/^\d{4}-\d{2}-\d{2}$/.test(isoOpc||'')?isoOpc:turmaIsoDoDia(dcDia, zHojeISO());
+    const isoT=/^\d{4}-\d{2}-\d{2}$/.test(isoOpc||'')?isoOpc:turmaIsoSeguro(dcDia, zHojeISO());
     const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p, isoT).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
     // controla quem já está na lista — evita que o mesmo FILHOt entre 2x (fixo do dia + avulso)
     const jaTem=new Set(base.map(o=>dcKey(o.p.n,o.p.tutor)));
@@ -36160,7 +36166,7 @@
   function gradeAlmocoDados(){
     const out=[];
     ORDEM_DIAS.forEach(function(d){
-      const iso=turmaIsoDoDia(d);      // a semana que vem pela frente (6.30: o mês do plano daquela data)
+      const iso=turmaIsoSeguro(d);     // a semana que vem pela frente (6.30: o mês do plano daquela data)
       const lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
         .filter(function(o){ return pelDias(o.p, iso).indexOf(d)>=0 && !pelInativo(o.p); })
         .sort(function(x,y){ const px=_gaPrio(x),py=_gaPrio(y); if(px!==py) return px-py;
@@ -45813,7 +45819,7 @@
   //  escritos e as colunas vazias, no mesmo formato da planilha.
   function relPertencesBranco(dia){
     var d=dia||dcDia;
-    var isoB=turmaIsoDoDia(d);         // a próxima ocorrência do dia (6.30: o mês do plano daquela data)
+    var isoB=turmaIsoSeguro(d);        // a próxima ocorrência do dia (6.30: o mês do plano daquela data)
     var lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
       .filter(function(o){ return (pelDias(o.p, isoB).indexOf(d)>=0 || (typeof ehMoradorZeluz==='function'&&ehMoradorZeluz(o.p))) && !pelInativo(o.p); })
       .sort(function(a,b){ return jsNorm(a.p.n||'').localeCompare(jsNorm(b.p.n||''),'pt'); });
