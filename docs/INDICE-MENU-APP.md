@@ -35,13 +35,16 @@
 | Antes | Agora |
 |---|---|
 | A troca de escova ficava no **fim** da aba (Saúde e rotina), depois das vacinas e dos antiparasitários | **Check-up e escova** é o primeiro bloco da Prevenção: check-up, troca de escova e "Escova os dentes no Day Care?" |
-| O check-up aparecia **duas vezes**, em campos diferentes: no topo, só a data (sem "Vence em"); no fim, a data com "Vence em" | **Um campo só:** "Último check-up (fez em)" e "Vence em (próximo check-up)". A data grava as duas casas antigas juntas; com as duas preenchidas e diferentes, vale a **mais recente** |
+| O check-up aparecia **duas vezes**, em campos diferentes: no topo, só a data (sem "Vence em"); no fim, a data com "Vence em" | **Um campo só:** "Último check-up (fez em)" e "Vence em (próximo check-up)". A data grava as três casas antigas juntas (pela ficha, pelo painel rápido e pelo "lançar"); com casas diferentes, vale a **mais recente** |
 
-- **As duas datas em tudo:** vacinas, carrapaticida, coleira, vermífugo, exame de fezes, check-up e escova têm "Fez em" (a última) e "Vence em" (a próxima). Quem só sabe quando vence digita direto no "Vence em".
+- **As duas datas em tudo:** vacinas, carrapaticida, coleira, vermífugo, exame de fezes, check-up e escova têm a data em que foi feito ("Última dose", "Última aplicação", "Deu em", "Último exame", "fez em") e o "Vence em". Gestão, Diretoria e Supervisão podem digitar direto no "Vence em" quando só sabem quando vence.
+- **O vencimento do check-up que vale:** sem "à mão", o mais tarde entre o vencimento gravado e um ano depois da data mais recente — a ficha, os Vencimentos, o Hoje na Zêluz e a mesa "Check-up a marcar" dizem a mesma coisa. Ficha antiga sem vencimento gravado continua sem cobrança. O "Vence em" digitado à mão vale também na mesa "Check-up a marcar".
+- O "fez em" não aceita data futura; o "Vence em" ao lado acompanha na hora a data digitada.
 - **Vermífugo (a pergunta da Cookie):** o campo "Vence em (próximo vermífugo)" já existia, logo abaixo de "Deu em". Quem **digita** o "Vence em" é a Gestão, a Diretoria e a Supervisão (decisão de 24/set); os outros perfis veem a data, sem campo.
 - A emergência (veterinário de confiança do tutor) continua no topo, logo depois; o peso, no fim.
 - **Onde está no código:** a aba em `abrirPeludinho` (bloco `ps-saude`); `prevCheckupData` (a data mais recente); `prevUltimaDireta` (grava casas juntas).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.27; defeitos plantados: 12, todos pegos).
+- **Onde está no código (QA):** `prevCheckupVence` (lido por `prevValor` e pela mesa do check-up), `junto` no item do check-up em `PREV_ITENS`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.27; defeitos plantados: 12 do dev e 20 do QA, todos os que mudam o comportamento pegos).
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-02) — o alarme de remédio atravessa a meia-noite
 
@@ -52,15 +55,17 @@
 | O que acontecia | Por quê | Agora |
 |---|---|---|
 | Depois da meia-noite, o celular aberto desde a noite **não tocava o alarme** das doses da madrugada | O alarme só toca quando a data da tela da hospedagem é a de hoje. A tela ficava em "ontem" até a página recarregar, e ela só recarrega **parada** (com a mão na tela, nunca) | A tela da hospedagem **passa sozinha para o dia novo, sem recarregar**, quando estava no dia em que o app abriu e nada está aberto. Junto vêm a lista de hóspedes, a agenda dos remédios, o registro das doses e o retrato do vigia, todos no dia certo |
-| O aparelho parado recarregava logo depois da meia-noite | A regra da virada do dia (seção do 01/out) | O celular de quem recebe o alarme (monitores e plantonistas), **já tocado**, não recarrega entre **0h e 6h**: a recarga apaga o toque que libera o som do celular, e o alarme da madrugada sairia mudo. Às 6h, recarrega como antes |
-| Alarme mudo sem ninguém saber | O celular só libera o som depois de um toque na página | Se o alarme abre sem som, aparece a faixa **"SEM SOM NESTE APARELHO: toque na tela para o alarme tocar."** O primeiro toque em qualquer lugar destrava o som |
+| O aparelho parado recarregava logo depois da meia-noite | A regra da virada do dia (seção do 01/out) | O celular de quem recebe o alarme (monitores e plantonistas), **já tocado** e **com a tela já no dia novo**, não recarrega entre **0h e 6h**: a recarga apaga o toque que libera o som do celular, e o alarme da madrugada sairia mudo. A faixa diz "O dia virou — o app atualiza sozinho às 6h"; tocar nela pergunta antes de atualizar. Com a tela que não passou (ficha aberta, outra data escolhida), o aparelho parado recarrega como antes |
+| Alarme mudo sem ninguém saber | O celular só libera o som depois de um toque na página | Se o alarme abre sem som, aparece a faixa **"SEM SOM NESTE APARELHO: toque na tela para o alarme tocar."** O primeiro toque em qualquer lugar destrava o som, e a faixa vira "Som ligado." no mesmo lugar (sumir fazia o botão "Dei o remédio" pular) |
 
-- **A troca espera** quando há ficha do FILHOt aberta, alarme tocando ou adiado (a dose de ontem é registrada em ontem), check-in ou almoço abertos; e não acontece se alguém escolheu outra data na tela.
+- **A troca espera** quando há ficha do FILHOt aberta, alarme tocando, check-in ou almoço abertos; e não acontece se alguém escolheu outra data na tela.
+- **A dose de ontem adiada na virada:** enquanto o adiar corre (e por 2 minutos depois), a tela espera em ontem; quando o adiar vence, o alarme dela volta a tocar e ela é registrada em ontem. A dose de ontem que ninguém viu nem adiou não volta depois da troca (já era assim; fica para uma story própria).
+- A dose dada e o espelho nas fichas irmãs (o mesmo remédio em duas fichas) ficam no **mesmo dia**, mesmo que a tela passe para o dia novo no meio.
 - O Day Care (turma, falta automática, planilha) continua travado até a recarga, como já era: a faixa **"O dia virou — toque para atualizar"** segue acesa.
 - Quem não recebe o alarme (Gestão, recepção, consultoras) recarrega na virada como antes.
 - **Limites conhecidos:** sem internet na virada, a lista de hóspedes de ontem continua até a planilha responder (os remédios seguem os de quem dormiu). O navegador do teste não aplica a regra de som do celular: o "SEM SOM" é a garantia de que ninguém fica sem saber.
-- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo`, `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20, todos pegos). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07.
+- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo`, `medDiaVelhoAuto` (em `checarDespertadorMed`), `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`, a pergunta em `aplicarVersaoNova`, `_diaLog` em `registrarDoseAgendadaGlobal`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20 do dev e 22 do QA). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07.
 
 ## O que mudou em 06/out/2026 (v 2026-10-06-01) — Lançamentos do dia: o banho para em 17:30, e a tela não perde o lugar nem o cursor
 
@@ -71,12 +76,13 @@
 | O que acontecia | Agora |
 |---|---|
 | O banho ia até 17:45 (pedido de 02/out) | **Tudo vai até 17:30**, o banho também. Um banho às 17:45 (fixo ou já lançado) continua valendo: aparece com o relógio aberto, em «outro horário» |
-| Quando chegava um lançamento de outro aparelho, ou a tela se atualizava sozinha, a lista inteira era redesenhada: **a busca perdia o cursor** (o teclado do celular fechava no meio do nome) e, se o lançamento novo era de um cartão de cima, **a tela pulava** (até 239 px no teste) | A tela guarda **o cartão que importa** (o último tocado, até 4 s antes, ou o que está no terço de cima da tela) e **o campo com o cursor**. Depois do redesenho, o cartão volta ao mesmo lugar, sem deslizar, e o cursor volta ao campo, no mesmo ponto do texto |
+| Quando a tela se redesenhava sozinha (a confirmação da planilha de um lançamento, as leituras ao abrir a tela ou trocar o dia, a fila que roda de 10 em 10 minutos), **a busca perdia o cursor** (o teclado do celular fechava no meio do nome) e, quando a lista de cima mudava de tamanho, **a tela pulava** (239 px no teste) | A tela guarda **o campo com o cursor** e **o cartão que importa** (o último tocado, até 4 s antes, ou o que está no terço de cima da tela). Depois do redesenho, o campo (ou, sem campo, o cartão) volta ao mesmo lugar, sem deslizar, e o cursor volta ao campo, no mesmo ponto do texto. O relógio (hora digitada no teclado) fica de fora, como era |
 
 - Os horários prontos (seção (AD)) continuam iguais: as horas de 8h a 17h, os minutos de 15 em 15, e «outro horário» para o resto.
-- Vale no iPhone também, que não segura a tela sozinho como o Chrome.
+- A rolagem foi testada também sem a âncora do navegador, como no iPhone (o iPhone de verdade não foi testado: vale conferir 2 minutos no celular da recepção).
+- A rolagem que o próprio app faz não conta como "alguém mexeu" (a trava e a recarga do aparelho parado seguem iguais).
 - **Onde está no código:** `dashAncoraGuardar`, `dashAncoraVoltar`, `dashAncoraEscolher`, `dashToqueLigar` (chamadas no começo e no fim de `renderDash`); `DASH_HORA_FIM` vazio.
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.31 e 2 provas da 6.26 atualizadas para o 17:30; defeitos plantados: 19, todos pegos). Teste no Chromium a 375 px, com e sem a âncora do navegador: antes, 4 falhas (cursor perdido, cartão pulando 239 px); depois, 17 de 17.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.31 e 2 provas da 6.26 atualizadas para o 17:30; defeitos plantados: 19 do dev, todos pegos, e 22 do QA, todos os que mudam o comportamento pegos). Teste no Chromium a 375 px, com e sem a âncora do navegador: antes, 4 falhas (cursor perdido, cartão pulando 239 px); depois, 17 de 17.
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-08 e -09) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
 

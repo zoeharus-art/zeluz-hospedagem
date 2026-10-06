@@ -12388,7 +12388,10 @@
     // outro, e o set() cego gravava por cima. Agora a dose é CLAMADA por transaction
     // (molde medTgFilaTentar): só a primeira assinatura entra; a segunda vê quem assinou
     // e a que horas — e nenhum efeito colateral (Telegram, estoque) roda em dobro.
-    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).transaction(function(atual){
+    // O dia da dose fica guardado AQUI (QA da 6.32): o espelho das fichas irmãs grava depois de
+    // uma leitura, e a tela pode ter passado para o dia novo no meio.
+    const _diaLog=dataKeyAtual();
+    DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key+'/'+doseId).transaction(function(atual){
       if(atual) return;          // já assinada — aborta sem escrever
       return reg;
     }).then(function(res){
@@ -12420,7 +12423,7 @@
           const did=magDoseId(x.itemId,x.horario);
           if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
         });
-        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
+        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key).update(extras);
       }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
@@ -17121,7 +17124,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-04';
+  const APP_VERSAO='2026-10-06-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -17148,7 +17151,9 @@
       // fica acesa mesmo com a versão em dia — e diz por quê. O toque é o mesmo: recarregar.
       var __dia=(typeof appDiaVelho==='function') && appDiaVelho();
       if(__dia) acender=true;
-      if(acender) f.textContent=__dia?'O dia virou — toque para atualizar':'Nova versão pronta — toque para atualizar';
+      var __noite=false;
+      try{ __noite=__dia && zDiaSegurarNoite() && ehHojeAua(); }catch(e){ __noite=false; } /* silencioso de propósito: na dúvida, o texto de sempre */
+      if(acender) f.textContent=__dia?(__noite?'O dia virou — o app atualiza sozinho às 6h':'O dia virou — toque para atualizar'):'Nova versão pronta — toque para atualizar';
       f.style.display=acender?'block':'none';
       document.body.style.paddingTop=acender?(f.offsetHeight+'px'):'';
     }catch(e){} /* silencioso de propósito: a faixa é aviso — falhar ao desenhá-la não pode derrubar o vigia da versão */
@@ -17206,6 +17211,17 @@
     // app num dia novo apaga o rascunho de ontem, com as fotos; sem internet, a página não volta.
     // O app diz o que fazer em vez de atualizar. (A recarga sozinha já passou por esta conta.)
     try{
+      // DE MADRUGADA, no celular de quem recebe o alarme (QA da 6.32): atualizar agora apaga o
+      // toque que libera o som. Pergunta antes; quem quiser, atualiza.
+      if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando && !__diaForcarAgora
+         && typeof zDiaSegurarNoite==='function' && zDiaSegurarNoite() && ehHojeAua() && typeof zEscolha==='function'){
+        zEscolha('ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM',
+          ['O celular só libera o som do alarme de remédio depois de um toque na página. Atualizar agora começa a página do zero.',
+           'O app atualiza sozinho às 6h. O alarme de remédio já está no dia de hoje.'],
+          [{t:'Esperar as 6h', cor:'#234D67', fn:function(){}},
+           {t:'Atualizar mesmo assim', cor:'#6b5f4b', fn:function(){ __diaForcarAgora=true; aplicarVersaoNova(); }}]);
+        return;
+      }
       if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando){
         // As duas contas À PARTE (QA59): um alarme na tela, ou o almoço, não pode esconder o
         // check-in aberto nem a falta de internet.
@@ -17288,7 +17304,10 @@
     if(__diaRecarregando || !appDiaVelho()) return '';
     zFaixaVersao(true);
     if(zDiaTrabalhoAberto()) return 'faixa';   // alarme, check-in, almoço ou sem internet: só a faixa
-    if(zDiaSegurarNoite()) return 'faixa';     // o celular da plantonista não recarrega de madrugada (6.32)
+    // O celular da plantonista não recarrega de madrugada (6.32) — SÓ quando a tela já passou para
+    // hoje (QA da 6.32): com a ficha aberta ou outra data escolhida, a tela não passou, e segurar
+    // a recarga deixaria o aparelho parado sem alarme nenhum até as 6h.
+    if(zDiaSegurarNoite() && ehHojeAua()) return 'faixa';
     var motivo=zMotivoParado();
     // Aba escondida NÃO basta para o dia (QA57): no Android e no computador o relógio segue
     // rodando com a página escondida, e quem saiu 20 segundos para o WhatsApp no meio de um
@@ -17320,9 +17339,13 @@
   //     recarga apaga o toque que libera o som no celular, e o alarme da madrugada sairia mudo.
   //     O resto do dia (turma do Day Care, falta, planilha) continua travado até a recarga das
   //     6h, como já era (a faixa do topo avisa).
-  var DIA_TELA_AUTO=APP_DIA_ABERTO, DIA_NOITE_ATE=6;
+  var DIA_TELA_AUTO=APP_DIA_ABERTO, DIA_NOITE_ATE=6, __diaForcarAgora=false;
+  // O ADIADO SEGURA A TROCA enquanto corre e por 2 minutos depois de vencer (QA da 6.32): é o tempo
+  // de o alarme da dose de ontem voltar (o vigia do alarme roda a cada 30 s) e, na tela, segurar
+  // a troca por conta própria. Sem esta folga, a troca passava antes, e a dose nunca voltava.
+  var DIA_ADIADO_FOLGA_MS=2*60*1000;
   function zDiaAdiadoAtivo(agora){
-    try{ return Object.keys(despMedSnooze||{}).some(function(k){ return despMedSnooze[k]>agora; }); }
+    try{ return Object.keys(despMedSnooze||{}).some(function(k){ return despMedSnooze[k]>agora-DIA_ADIADO_FOLGA_MS; }); }
     catch(e){ return false; } /* silencioso de propósito: sem o adiar carregado, não há alarme adiado */
   }
   // Devolve o que fez ('' = nada; 'avancou'; 'espera: <motivo>') — é a prova que morde isto.
@@ -17330,6 +17353,8 @@
     agora=agora||Date.now();
     var hoje=zHojeISO();
     if(!hoje || !DIA_TELA_AUTO || hoje===DIA_TELA_AUTO) return '';
+    // Alguém já voltou para hoje à mão (Hoje, setas): o dia automático acompanha (QA da 6.32).
+    if(dataKeyAtual()===hoje){ DIA_TELA_AUTO=hoje; return ''; }
     if(dataKeyAtual()!==DIA_TELA_AUTO) return '';   // alguém escolheu outra data: a tela é dela
     if(typeof fichaAberta==='function' && fichaAberta()) return 'espera: ficha aberta';
     var aberto=zDiaTrabalhoAberto(); if(aberto && aberto!=='sem internet') return 'espera: '+aberto;
@@ -18431,7 +18456,10 @@
     }
     inatMarcarAtividade();
   }
-  function inatMarcarAtividade(){
+  function inatMarcarAtividade(ev){
+    // A rolagem que o próprio app faz para devolver o lugar (Lançamentos do dia, 6.31) não é
+    // alguém mexendo: sem isto, cada redesenho adiava a trava e a recarga do aparelho parado.
+    if(ev && ev.type==='scroll' && (Date.now()-(DASH_ROLOU_EM||0))<500) return;
     _inatUltimo=Date.now();
     var el=document.getElementById('inatAviso');
     if(el && el.style.display!=='none') el.style.display='none';
@@ -22073,10 +22101,17 @@
   function papelRecebeAlarme(){ return podePapel('recebe-alarme'); }
   // Dose de medicação: mesmo critério — só quem DÁ o remédio é acordado.
   function papelRecebeAlarmeMed(){ return papelRecebeAlarme(); }
+  // A tela ainda no dia de ontem, esperando para passar sozinha (6.32): o alarme só toca, ali, a
+  // dose de ontem que foi ADIADA e já venceu o adiar — e ela é registrada em ontem.
+  function medDiaVelhoAuto(){
+    try{ return !!(typeof DIA_TELA_AUTO!=='undefined' && DIA_TELA_AUTO && dataKeyAtual()===DIA_TELA_AUTO && zHojeISO()!==DIA_TELA_AUTO); }
+    catch(e){ return false; } /* silencioso de propósito: sem a informação, vale a regra de sempre */
+  }
   function checarDespertadorMed(){
     try{
       if(!papelRecebeAlarmeMed()) return; // vet/consultora/supervisora/conferência não recebem alarme de dose
-      if(!ehHojeAua()) return;
+      var velho=false;
+      if(!ehHojeAua()){ if(!medDiaVelhoAuto()) return; velho=true; }
       if(despMedNaTela) return; // já tem um na tela
       if(!MED_AGENDA_TODOS.length||!DB) return;
       medLogHoje().then(function(log){
@@ -22086,6 +22121,11 @@
           const feito=log[it.key]&&log[it.key][doseId];
           if(feito) continue;
           const sk=it.key+'__'+doseId;
+          if(velho){
+            // Só a adiada de ontem que já venceu o adiar (o relógio de hoje não serve para ontem).
+            if(despMedSnooze[sk] && Date.now()>=despMedSnooze[sk]){ mostrarDespertadorMed(it,doseId); return; }
+            continue;
+          }
           if(despMedSnooze[sk] && Date.now()<despMedSnooze[sk]) continue; // adiado — aguarda os 5 min
           const m=minutosAte(it.horario);
           if(m===null) continue;
@@ -22126,12 +22166,16 @@
           var tx=el.querySelector('.desp-tx');
           if(tx) tx.insertAdjacentHTML('beforeend','<span id="despMedSemSom" style="display:block;background:#fff;color:var(--crm-critico);border-radius:8px;padding:6px 9px;margin-top:6px;font-weight:800">SEM SOM NESTE APARELHO: toque na tela para o alarme tocar.</span>');
         }
-      }else if(av){ av.remove(); }
+      }else if(av){
+        // Não some (QA da 6.32): sumir entre o toque e o clique fazia o botão "Dei o remédio" pular,
+        // e o toque caía na tela de trás. Fica no mesmo lugar, com o mesmo tamanho.
+        av.textContent='Som ligado.'; av.style.color='var(--crm-ok)';
+      }
     }catch(e){} /* silencioso de propósito: o aviso é reforço; o alarme na tela é a segurança */
   }
   // O primeiro toque em qualquer lugar destrava o som do alarme que está na tela.
   try{ document.addEventListener('pointerdown', function(){
-    try{ if(despMedAC && despMedAC.state==='suspended') despMedAC.resume().then(medSomConferir, function(){}); }catch(e){} /* silencioso de propósito: o laço do bip tenta de novo em 1,3 s */
+    try{ if(despMedAC && despMedAC.state!=='running' && despMedAC.state!=='closed') despMedAC.resume().then(medSomConferir, function(){}); }catch(e){} /* silencioso de propósito: o laço do bip tenta de novo em 1,3 s */
   }, true); }catch(e){} /* silencioso de propósito: sem o evento, o laço do bip continua tentando */
   function confirmarDoseDespertador(){
     if(!despMedAtual||!despMedAtualDoseId) return;
@@ -23852,7 +23896,8 @@
     // pendências e ninguém acreditar em nenhuma (26/ago/2026). Registrou uma vez, a validade
     // de 90 dias passa a valer e a cobrança aparece sozinha.
     {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true},
-    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true}
+    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true,
+     junto:['checkup_data','checkup']}   // 6.27: as três casas da data do check-up recebem a mesma data
   ];
   // Quantos dias este item vale PARA ESTE FILHOt. Só a coleira varia: cada marca dura um
   // tempo e esse tempo é configurável. Sem marca na ficha vale a Seresto — que é a coleira
@@ -23862,8 +23907,22 @@
     return (it&&it.dias)||0;
   }
   // O valor do item, aceitando o nome novo e o antigo da ficha (ver `alt` em PREV_ITENS).
+  // O VENCIMENTO QUE VALE DO CHECK-UP (QA da 6.27). A data do check-up mora em três casas e
+  // o vencimento em checkup_p; uma ficha podia dizer "fez em 01/09/2025" e "vence em
+  // 01/01/2025" ao mesmo tempo. Sem o "à mão", vale o MAIS TARDE entre o vencimento gravado e
+  // um ano depois da data mais recente. Nunca cria cobrança: sem vencimento gravado, nada muda.
+  function prevCheckupVence(ex){
+    ex=ex||{};
+    var p=String(ex.checkup_p||'');
+    if(ex.checkup_p_manual || !/^\d{4}-\d{2}-\d{2}$/.test(p)) return p;
+    var d=prevCheckupData(ex);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return p;
+    var conta=addDiasISO(d, 365);
+    return (conta && conta>p)?conta:p;
+  }
   function prevValor(ex, it){
     ex=ex||{};
+    if(it && it.k==='checkup_p') return prevCheckupVence(ex);
     // Item CALCULADO (a 2ª dose do vermífugo, 21/set/2026): não existe campo no banco — a
     // data sai de uma conta sobre a própria ficha. Tudo o mais do app (Prevenção, Vence
     // amanhã, filtro, Excel) continua lendo pela MESMA porta, sem saber a diferença.
@@ -23953,11 +24012,11 @@
     var estF=opc.compacto?' style="margin:0"':'';
     var estL=opc.compacto?' style="font-size:11px"':'';
     if(!podeVencManual()){
-      return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label><div class="prev-calc">'
+      return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label><div class="prev-calc" id="prevVence_'+escAttr(campoP)+'">'
         +(v?('vence em '+fmtBR(v)):'sem data')+'</div>'+hint+aviso+'</div>';
     }
     return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label>'
-      +'<input type="date" class="cad-in" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+      +'<input type="date" class="cad-in" id="prevVence_'+escAttr(campoP)+'" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
       +hint+aviso+'</div>';
   }
   // A nota da data à mão. A troca de escova adiada porque o tutor não autorizou diz isso,
@@ -24002,6 +24061,11 @@
     patch[campoP]=dt?addDiasISO(dt,dias):'';
     if(ex[campoP+'_manual']){ patch[campoP+'_manual']=''; prevAvisoRecalc(campoP); }
     setPelExtra(pelAtual, patch);
+    // O "Vence em" ao lado acompanha na hora (QA da 6.27): antes, só reabrindo a ficha.
+    try{
+      var v=document.getElementById('prevVence_'+campoP);
+      if(v){ if('value' in v && v.tagName==='INPUT') v.value=patch[campoP]; else v.textContent=patch[campoP]?('vence em '+fmtBR(patch[campoP])):'sem data'; }
+    }catch(e){} /* silencioso de propósito: o dado já está gravado; a tela se acerta ao reabrir */
   }
   // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
   function prevPendencias(ex, grupo){
@@ -24351,8 +24415,10 @@
       var ex=pelExtra(p)||{};
       if(ex.inativo==='Sim') return;
       if(ex.checkup_fez==='Nunca fez'){ out.nunca.push({i:i,p:p}); return; }
-      var data=prevCheckupData(ex);
-      if(data){ var vence=umAno(data);
+      // 6.27 (QA): o "Vence em" digitado à mão vale aqui também — "às vezes é mais fácil colocar a
+      // data que irá fazer". Sem ele, a conta de sempre, pelo mesmo vencimento que a cobrança usa.
+      var data=prevCheckupData(ex), vm=(ex.checkup_p_manual && /^\d{4}-\d{2}-\d{2}$/.test(String(ex.checkup_p||'')))?String(ex.checkup_p):'';
+      if(data || vm){ var vence=vm || prevCheckupVence(Object.assign({}, ex, {checkup_p:ex.checkup_p||''})) || umAno(data);
         if(vence&&vence<hoje) out.vencidos.push({i:i,p:p,vence:vence});
         else out.emDia.push({i:i,p:p,vence:vence});
         return; }
@@ -24917,7 +24983,7 @@
     var nomeItem=it.nome||'este item';
     var gravar=function(dtFinal, proxDef, atrasoConfirmado){
       var patch={};
-      if(it.base) patch[it.base]=dtFinal;
+      if(it.base){ patch[it.base]=dtFinal; (it.junto||[]).forEach(function(k2){ patch[k2]=dtFinal; }); }
       patch[k]=proxDef;
       // Lançar uma dose nova é dizer que a validade agora sai DELA: a marca de "digitado à
       // mão" cai junto, senão a ficha ficaria com uma data velha travada (24/set/2026).
@@ -25280,7 +25346,7 @@
     var ex=pelExtra(p)||{};
     var de=ex[k]||'';
     var patch={};
-    if(it.base) patch[it.base]=dt;
+    if(it.base){ patch[it.base]=dt; (it.junto||[]).forEach(function(k2){ patch[k2]=dt; }); }
     var id=String(chave)+'_'+k;
     if(it.nomeK){
       var nm=String(((document.getElementById('prevCorrN_'+id)||{}).value)||'').trim();
@@ -26888,11 +26954,11 @@
         ${prevAjudaVenceHTML()}
         ${alertaPrevencao(ex,'saude','Escova e check-up')}
         <div class="cad-grid">
-          <div class="field"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
-          <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+          <div class="field" style="grid-column:1/-1"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
+          <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:1,checkup:1})" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
-          ${prevVenceCampoHTML(Object.assign({},ex,{checkup_t:prevCheckupData(ex)}),'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{rot:'Vence em (próximo check-up)', calcTexto:(prevCheckupData(ex)?('Pela conta: '+fmtBR(addDiasISO(prevCheckupData(ex),365))+' · 1 ano.'):'')})}
-          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          ${prevVenceCampoHTML(Object.assign({},ex,{checkup_t:prevCheckupData(ex), checkup_p:prevCheckupVence(ex)}),'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{rot:'Vence em (próximo check-up)', calcTexto:(prevCheckupData(ex)?('Pela conta: '+fmtBR(addDiasISO(prevCheckupData(ex),365))+' · 1 ano.'):'')})}
+          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${escAttr(ex.escova_t||'')}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{rot:'Vence em (próxima troca)', calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
         </div>
         ${escovaFichaHTML(ex)}
@@ -36363,13 +36429,17 @@
   }
   // ===== A TELA NÃO PULA (Adriana, 06/out/2026) =============================================
   // "Já fiz uma reclamação sobre o horário [...] Fica difícil de digitar, toda hora tem que
-  // voltar." O redesenho troca a lista inteira (innerHTML) e o navegador perdia o lugar: a cada
-  // toque na hora, ou a cada lançamento chegando de outro aparelho, a tela saltava (até 400 px
-  // no teste a 375 px) e o campo que estava sendo digitado perdia o cursor. Antes de redesenhar,
-  // guarda-se o cartão que importa — o último tocado (até 4 s antes) ou o que está no terço de
-  // cima da tela — e o campo com o cursor; depois, o cartão volta ao mesmo lugar na tela e o
-  // cursor volta ao campo.
-  var DASH_TOQUE={i:-1, ts:0}, DASH_TOQUE_MS=4000;
+  // voltar." O redesenho troca a lista inteira (innerHTML): a confirmação da planilha de um
+  // lançamento, as leituras ao abrir a tela ou trocar o dia e a fila que roda de 10 em 10
+  // minutos redesenham com alguém digitando. O campo perdia o cursor (o teclado do celular
+  // fechava no meio do nome) e, quando a lista de cima mudava de tamanho, a tela saltava (239 px
+  // no teste a 375 px). Antes de redesenhar, guarda-se o campo com o cursor e o cartão que
+  // importa — o último tocado (até 4 s antes) ou o que está no terço de cima da tela; depois,
+  // o campo (ou, sem campo, o cartão) volta ao mesmo lugar na tela e o cursor volta ao campo.
+  // O RELÓGIO FICA DE FORA (QA da 6.31): devolver o cursor ao campo de hora (type=time) põe o
+  // cursor no primeiro pedaço, e os números seguintes digitados no teclado reescreveriam a hora.
+  var DASH_TOQUE={i:-1, ts:0}, DASH_TOQUE_MS=4000, DASH_ROLOU_EM=0;
+  var DASH_CAMPO_DATA=/^(time|date|datetime-local|month|week)$/;
   function dashCartoes(el){
     return el?Array.prototype.filter.call(el.children||[], function(c){ return !!(c.classList&&c.classList.contains('card')); }):[];
   }
@@ -36400,9 +36470,10 @@
       if(!r.some(function(x){ return x.bottom>x.top; })) return null;
       var i=dashAncoraEscolher(r, window.innerHeight, DASH_TOQUE, Date.now());
       var a=document.activeElement, foco=null;
-      if(a && a.id && el.contains(a) && (a.tagName==='INPUT'||a.tagName==='TEXTAREA')){
-        foco={id:a.id, s:null, e:null};
-        try{ foco.s=a.selectionStart; foco.e=a.selectionEnd; }catch(e){} /* silencioso de propósito: o relógio (type=time) não tem seleção */
+      if(a && a.id && el.contains(a) && (a.tagName==='TEXTAREA' || (a.tagName==='INPUT' && !DASH_CAMPO_DATA.test(String(a.type||''))))){
+        foco={id:a.id, s:null, e:null, top:null};
+        try{ foco.s=a.selectionStart; foco.e=a.selectionEnd; }catch(e){} /* silencioso de propósito: nem todo campo tem seleção */
+        try{ if(a.getBoundingClientRect) foco.top=a.getBoundingClientRect().top; }catch(e){} /* silencioso de propósito: sem a posição do campo, vale a do cartão */
       }
       return {i:i, top:(i>=0?r[i].top:null), foco:foco};
     }catch(e){ return null; } /* silencioso de propósito: guardar o lugar é conforto; nunca pode impedir o redesenho */
@@ -36424,14 +36495,21 @@
           if(a.foco.s!=null){ try{ f.setSelectionRange(a.foco.s, a.foco.e); }catch(e){} /* silencioso de propósito: nem todo campo aceita seleção */ }
         }
       }
-      if(a.i<0 || a.top==null) return;
-      var c=dashCartoes(el)[a.i]; if(!c) return;
-      var d=c.getBoundingClientRect().top-a.top;
+      // O campo com o cursor é a âncora mais fiel (QA da 6.31): num cartão comprido, o que entra
+      // no mesmo cartão, acima da busca, também empurrava o campo.
+      var d=null, fNovo=(a.foco && a.foco.top!=null)?document.getElementById(a.foco.id):null;
+      if(fNovo && fNovo.getBoundingClientRect) d=fNovo.getBoundingClientRect().top-a.foco.top;
+      else{
+        if(a.i<0 || a.top==null) return;
+        var c=dashCartoes(el)[a.i]; if(!c) return;
+        d=c.getBoundingClientRect().top-a.top;
+      }
       if(Math.abs(d)<1) return;
       // Sem animação: a página tem rolagem suave (tokens do DS) e, aqui, o cartão tem de
       // simplesmente continuar onde estava — nada pode deslizar debaixo do dedo.
       var p=dashRolagemPai(el), de=document.documentElement, sb=de.style.scrollBehavior;
       de.style.scrollBehavior='auto';
+      DASH_ROLOU_EM=Date.now();
       try{ if(p) p.scrollTop+=d; else window.scrollBy(0, d); }
       finally{ de.style.scrollBehavior=sb; }
     }catch(e){} /* silencioso de propósito: devolver o lugar é conforto; nunca pode quebrar a tela */

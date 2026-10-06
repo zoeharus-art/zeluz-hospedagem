@@ -6899,13 +6899,18 @@ prova('6.31 qual cartão segura o lugar: o tocado há até 4 s; senão, o do ter
   const r2 = JSON.stringify([{ top: -600, bottom: -300 }, { top: 250, bottom: 300 }]);
   igual(run(`dashAncoraEscolher(${r2}, 800, null, ${agora})`), 1, 'ninguém no ponto: o primeiro visível');
   igual(run(`dashAncoraEscolher([], 800, null, ${agora})`), -1);
+  // QA da 6.31: o teto de 200 px na tela grande, e o primeiro visível é o que ainda aparece (mesmo cortado em cima)
+  const r3 = JSON.stringify([{ top: 100, bottom: 250 }, { top: 250, bottom: 400 }]);
+  igual(run(`dashAncoraEscolher(${r3}, 900, null, ${agora})`), 0, 'tela de 900 px: o ponto é 200 px (não 300)');
+  const r4 = JSON.stringify([{ top: -100, bottom: 50 }, { top: 300, bottom: 500 }]);
+  igual(run(`dashAncoraEscolher(${r4}, 800, null, ${agora})`), 0, 'cortado em cima, mas visível: é ele');
 });
 prova('6.31 o redesenho devolve o cartão ao mesmo lugar, sem animação, e o cursor ao campo que estava sendo digitado', () => {
   run(ANC631);
   try {
     run(`__montar(4); __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__inp('dashB_vet',2,2);`);
     const a = JSON.parse(JSON.stringify(run('__a=dashAncoraGuardar(__el)')));
-    igual(a, { i: 2, top: 100, foco: { id: 'dashB_vet', s: 2, e: 2 } }, 'guarda o cartão a 200 px do topo e o cursor');
+    igual(a, { i: 2, top: 100, foco: { id: 'dashB_vet', s: 2, e: 2, top: null } }, 'guarda o cartão a 200 px do topo e o cursor');
     // o redesenho: entraram lançamentos acima, o cartão desceu 239 px; o campo é outro objeto
     run(`__montar(4); __topos=[[-900,-300],[-300,339],[339,939],[939,1500]]; __novo=__inp('dashB_vet',0,0); document.activeElement=null;
       document.getElementById=function(id){ return id==='dashB_vet'?__novo:null; }; document.documentElement.style.scrollBehavior='smooth';`);
@@ -6918,6 +6923,43 @@ prova('6.31 o redesenho devolve o cartão ao mesmo lugar, sem animação, e o cu
     run(`__sb=[]; __foco=[]; __sel=[]; __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__novo;`);
     run('dashAncoraVoltar(__el, __a)');
     igual(run('__sb'), [], 'sem diferença, sem rolar'); igual(run('__foco'), [], 'o campo já tem o cursor: não refoca');
+    // QA da 6.31: o cartão que SOBE (tiraram lançamentos acima) também volta; e uma linha só (34 px) também
+    run(`__sb=[]; __topos=[[-900,-400],[-400,18],[18,700],[700,1300]];`); run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, -82, 'auto']], 'subiu 82 px: desce 82');
+    run(`__sb=[]; __topos=[[-900,-400],[-400,134],[134,700],[700,1300]];`); run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 34, 'auto']], 'uma linha nova acima (34 px): volta também');
+    igual(run('DASH_ROLOU_EM > 0'), true, 'marca que a rolagem foi do app');
+  } finally { run(SOLTA631); }
+});
+prova('6.31 (QA) a âncora é o campo com o cursor; o relógio (hora) fica de fora; a rolagem do app não conta como "alguém mexeu"', () => {
+  run(ANC631);
+  try {
+    // o campo com o cursor, num cartão comprido: o que entra no mesmo cartão, acima dele, não o empurra
+    run(`__montar(3); __topos=[[-300,900],[900,1300],[1300,1800]];
+      __campo=__inp('dashB_banho',3,3); __campo.getBoundingClientRect=function(){ return {top:420, bottom:460}; }; document.activeElement=__campo;`);
+    const a = JSON.parse(JSON.stringify(run('__a=dashAncoraGuardar(__el)')));
+    igual(a.foco, { id: 'dashB_banho', s: 3, e: 3, top: 420 });
+    run(`__montar(3); __topos=[[-300,960],[960,1360],[1360,1860]]; __novo=__inp('dashB_banho',0,0); __novo.getBoundingClientRect=function(){ return {top:454, bottom:494}; };
+      document.activeElement=null; document.getElementById=function(id){ return id==='dashB_banho'?__novo:null; };`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 34, 'auto']], 'o campo desceu 34 px dentro do mesmo cartão (o topo do cartão nem mexeu): volta 34');
+    // o relógio: não guarda o cursor (os números seguintes reescreveriam a hora)
+    ['time', 'date', 'datetime-local', 'month', 'week'].forEach((t) => {
+      run(`__rel=__inp('dashH_vet',null,null); __rel.type='${t}'; document.activeElement=__rel;`);
+      igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, t + ': fora');
+    });
+    run(`__txt=__inp('dashB_vet',1,1); __txt.type='text'; document.activeElement=__txt;`);
+    assert.ok(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, 'texto: guarda');
+    run(`__ta={id:'dashT_x', tagName:'TEXTAREA', __dentro:true, selectionStart:0, selectionEnd:0}; document.activeElement=__ta;`);
+    assert.ok(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, 'caixa de texto: guarda');
+    // a rolagem do app não zera o "parado"
+    run(`__bkIn={u:_inatUltimo}; _inatUltimo=1000; DASH_ROLOU_EM=Date.now();`);
+    try {
+      run("inatMarcarAtividade({type:'scroll'})"); igual(run('_inatUltimo'), 1000, 'a rolagem do app logo depois: não conta');
+      run("inatMarcarAtividade({type:'pointerdown'})"); assert.ok(run('_inatUltimo') > 1000, 'um toque conta');
+      run('_inatUltimo=1000; DASH_ROLOU_EM=Date.now()-600;'); run("inatMarcarAtividade({type:'scroll'})");
+      assert.ok(run('_inatUltimo') > 1000, 'rolagem de gente (depois de meio segundo) conta');
+    } finally { run('_inatUltimo=__bkIn.u;'); }
   } finally { run(SOLTA631); }
 });
 prova('6.31 o que não se guarda: tela escondida, campo de fora da lista, botão; o toque marca o cartão de cima (não o de dentro)', () => {
@@ -6931,7 +6973,7 @@ prova('6.31 o que não se guarda: tela escondida, campo de fora da lista, botão
     igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, 'botão tocado: não volta o cursor');
     run('dashAncoraVoltar(__el, null)'); igual(run('__sb'), []);
     // o toque: o dedo cai num cartão de DENTRO do cartão (bloco do vermífugo); conta o de cima
-    run(`__el.__dashToque=0; dashToqueLigar(__el);
+    run(`__el.__dashToque=0; __nLiga=0; __addOrig=__el.addEventListener; __el.addEventListener=function(ev,f,c){ __nLiga++; return __addOrig.call(this,ev,f,c); }; dashToqueLigar(__el); dashToqueLigar(__el);
       __interno={parentElement:__el.children[1], closest:function(){ return __el.children[1]; }};
       __el.children[1].parentElement=__el; __el.children[1].closest=function(){ return __el.children[1]; };
       __alvo={closest:function(sel){ return __interno; }};
@@ -6944,20 +6986,23 @@ prova('6.31 o que não se guarda: tela escondida, campo de fora da lista, botão
     igual(run('DASH_TOQUE.i'), 1, 'o cartão de cima, o 2º da lista');
     assert.ok(Date.now() - run('DASH_TOQUE.ts') < 1000);
     igual(Object.keys(run('__el.__ouvir')).sort(), ['focusin', 'pointerdown'], 'ouve o dedo e o teclado');
+    igual(run('__nLiga'), 2, 'liga uma vez só, por mais que a tela redesenhe');
   } finally { run(SOLTA631); }
 });
 prova('6.31 o renderDash guarda o lugar ANTES de trocar a lista e devolve DEPOIS, com o mesmo registro', () => {
   run(`__bk631r={g:dashAncoraGuardar, v:dashAncoraVoltar, l:dashToqueLigar, ge:document.getElementById}; __ordem=[];
     __bl={innerHTML:'', set __x(v){}};
     Object.defineProperty(__bl,'innerHTML',{set:function(v){ __ordem.push('troca'); }, get:function(){ return ''; }});
-    document.getElementById=function(id){ return id==='dashBlocos'?__bl:null; };
+    __busca={}; Object.defineProperty(__busca,'value',{get:function(){ return 'To'; }, set:function(v){ __ordem.push('texto'); }});
+    document.getElementById=function(id){ return id==='dashBlocos'?__bl:(id==='dashB_banho'?__busca:null); };
+    __bkSg=dashSugerir; dashSugerir=function(){};
     dashToqueLigar=function(el){ __ordem.push('liga:'+(el===__bl)); };
     dashAncoraGuardar=function(el){ __ordem.push('guarda:'+(el===__bl)); return {marca:42}; };
     dashAncoraVoltar=function(el,a){ __ordem.push('volta:'+(el===__bl)+':'+(a&&a.marca)); };`);
   try {
     run('renderDash()');
-    igual(run('__ordem'), ['liga:true', 'guarda:true', 'troca', 'volta:true:42']);
-  } finally { run('dashAncoraGuardar=__bk631r.g; dashAncoraVoltar=__bk631r.v; dashToqueLigar=__bk631r.l; document.getElementById=__bk631r.ge;'); }
+    igual(run('__ordem'), ['liga:true', 'guarda:true', 'troca', 'texto', 'volta:true:42'], 'o texto digitado volta ANTES do cursor (senão o cursor iria para o fim)');
+  } finally { run('dashAncoraGuardar=__bk631r.g; dashAncoraVoltar=__bk631r.v; dashToqueLigar=__bk631r.l; document.getElementById=__bk631r.ge; dashSugerir=__bkSg;'); }
 });
 // ================================================================== 6.32 — o alarme atravessa a meia-noite
 console.log('\n6.32 — O alarme de remédio atravessa a meia-noite: a tela da hospedagem passa para o dia novo sem recarregar (06/out/2026)');
@@ -7014,6 +7059,8 @@ prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme toc
     run(`despMedNaTela=null; despMedSnooze={'bia__x_23-55': ${agora + 120000}};`);
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'adiado: ele volta em ontem');
     run(`despMedSnooze={'bia__x_23-55': ${agora - 1000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'o adiar venceu há 1 s: espera o alarme voltar (QA)');
+    run(`despMedSnooze={'bia__x_23-55': ${agora - 121000}};`);
     run("zDiaTrabalhoAberto=function(){ return 'check-in aberto'; };");
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: check-in aberto');
     run("zDiaTrabalhoAberto=function(){ return 'sem internet'; };");
@@ -7039,11 +7086,23 @@ prova('6.32 de madrugada, o celular de quem recebe o alarme e já foi tocado nã
     igual(run(`zDiaSegurarNoite(${h(2)})`), false, 'quem não recebe o alarme (Gestão, recepção): recarrega como sempre');
     // o vigia da virada usa a regra
     run('__rec632=true; navigator.userActivation={hasBeenActive:true};');
-    run(`__bkDate632=Date; Date=function(a){ return a===undefined?new __bkDate632(${h(2)}):new __bkDate632(a); }; Date.now=function(){ return ${h(2)}; };`);
+    run(`__bkDate632=Date; Date=function(a){ return a===undefined?new __bkDate632(${h(2)}):new __bkDate632(a); }; Date.now=function(){ return ${h(2)}; };
+      selectedDate=new __bkDate632(${h(0, 1)});`);
     try {
-      igual(run('zViradaDoDiaTick()'), 'faixa', '02:00, trancado: só a faixa');
+      igual(run('zViradaDoDiaTick()'), 'faixa', '02:00, trancado, a tela já no dia novo: só a faixa');
       igual(run('__st632'), []);
-    } finally { run('Date=__bkDate632;'); }
+      igual(run('__faixa632.textContent'), 'O dia virou — o app atualiza sozinho às 6h', 'a faixa não convida à recarga que cala o som');
+      // QA da 6.32: a tela que NÃO passou (ficha aberta, outra data): recarrega, como antes — senão ficaria sem alarme até as 6h
+      run(`selectedDate=new __bkDate632(${new Date(2026, 9, 6, 22, 40).getTime()}); __diaRecarregando=false;`);
+      igual(run('zViradaDoDiaTick()'), 'recarga', '02:00, trancado, tela ainda no dia 06: recarrega');
+      run('__diaRecarregando=false;');
+      // e a volta do bolso de madrugada, com a tela já no dia novo: não recarrega
+      run(`selectedDate=new __bkDate632(${h(0, 1)}); __st632=[]; zMotivoParado=function(){ return ''; }; __diaOcultoDesde=${h(1)};`);
+      igual(run(`zViradaDoDiaVisibilidade(false, ${h(2)})`), 'faixa', 'voltou do bolso às 02:00 (fora 1 h): só a faixa');
+      igual(run('__st632'), []);
+    } finally { run('Date=__bkDate632; zMotivoParado=function(){ return "trancado"; };'); }
+    // 23:00 (aparelho aberto há dois dias): a madrugada ainda não chegou — vale a regra de sempre
+    igual(run(`zDiaSegurarNoite(${new Date(2026, 9, 7, 23, 0).getTime()})`), false, '23:00 não é madrugada');
     run(`Date=function(a){ return a===undefined?new __bkDate632(${h(6, 1)}):new __bkDate632(a); }; Date.now=function(){ return ${h(6, 1)}; };`);
     try { igual(run('zViradaDoDiaTick()'), 'recarga', '06:01, trancado: recarrega'); }
     finally { run('Date=__bkDate632;'); }
@@ -7052,7 +7111,7 @@ prova('6.32 de madrugada, o celular de quem recebe o alarme e já foi tocado nã
 prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando o som volta; o primeiro toque destrava', () => {
   run(`__bk632s={ge:document.getElementById, ac:despMedAC, dn:despMedNaTela, st:setTimeout, bl:bipMedLoopStart};
     __html632=[]; __semSom=null;
-    __tx632={insertAdjacentHTML:function(w,h){ __html632.push(w+'|'+h); __semSom={remove:function(){ __semSom=null; __html632.push('removeu'); }}; }};
+    __tx632={insertAdjacentHTML:function(w,h){ __html632.push(w+'|'+h); __semSom={textContent:'SEM SOM', style:{}, remove:function(){ __semSom=null; __html632.push('removeu'); }}; }};
     __desp632={style:{}, innerHTML:'', querySelector:function(q){ return q==='.desp-tx'?__tx632:null; }};
     document.getElementById=function(id){ return id==='despMed'?__desp632:(id==='despMedSemSom'?__semSom:null); };`);
   try {
@@ -7062,15 +7121,80 @@ prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando 
     igual(run('__html632.length'), 1, 'uma faixa só');
     assert.ok(/^beforeend\|<span id="despMedSemSom"[^>]*>SEM SOM NESTE APARELHO: toque na tela para o alarme tocar\.<\/span>$/.test(run('__html632[0]')), run('__html632[0]'));
     run("despMedAC.state='running'; medSomConferir();");
-    igual(run('__html632[1]'), 'removeu', 'o som voltou: a faixa some');
+    igual(run('__html632.length'), 1, 'o som voltou: a faixa NÃO some (sumir fazia o botão pular — QA)');
+    igual(run('__semSom.textContent'), 'Som ligado.', 'no mesmo lugar, diz que o som voltou');
+    // o alarme seguinte, mudo de novo: a faixa volta a avisar (a de antes já saiu com o alarme fechado)
+    run("__semSom=null; despMedAC.state='suspended'; medSomConferir();");
+    igual(run('__html632.length'), 2, 'cada alarme mudo avisa');
     run('despMedNaTela=null; despMedAC={state:"suspended"};'); igual(run('medSomMudo()'), false, 'sem alarme na tela: nada');
     // a conferência é marcada logo depois do alarme abrir
     run(`__st632s=[]; setTimeout=function(f,ms){ __st632s.push([f===medSomConferir, ms]); return 0; }; bipMedLoopStart=function(){};`);
     run("mostrarDespertadorMed({key:'bia', hospNome:'Bia', nome:'Apoquel', q:'1', u:'comprimido', horario:'02:00'}, 'x_02-00');");
     igual(run('__st632s'), [[true, 1500]]);
     const src = fs.readFileSync(APP, 'utf8');
-    assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state==='suspended'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som');
+    assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state!=='running' && despMedAC\.state!=='closed'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som (também o "interrupted" do iPhone)');
   } finally { run('document.getElementById=__bk632s.ge; despMedAC=__bk632s.ac; despMedNaTela=__bk632s.dn; setTimeout=__bk632s.st; bipMedLoopStart=__bk632s.bl;'); }
+});
+prova('6.32 (QA) a dose adiada na virada volta a tocar com a tela ainda em ontem, e é registrada em ontem; as outras doses de ontem não tocam pelo relógio de hoje', () => {
+  run(ARMA632 + `__bk632v={ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB, pr:papelRecebeAlarmeMed};
+    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}, {key:'bia', itemId:'y', horario:'23:30', nome:'Otomax'}];
+    __mo632=[]; mostrarDespertadorMed=function(it,d){ __mo632.push(d); despMedNaTela=it.key+'__'+d; };
+    DB={}; papelRecebeAlarmeMed=function(){ return true; };`);
+  try {
+    // tela em ontem esperando a troca (o relógio já em hoje)
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 23, 58);
+    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='${iso(ontemD)}'; selectedDate=new Date(${ontemD.getTime()});`);
+    igual(run('medDiaVelhoAuto()'), true);
+    run(`__log632={}; medLogHoje=function(){ return {then:function(f){ f(__log632); return {catch:function(){}}; }}; };`);
+    run(`despMedSnooze={'bia__x_23-55': Date.now()+60000};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), [], 'o adiar ainda corre: nada');
+    run(`despMedSnooze={'bia__x_23-55': Date.now()-1000};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), ['x_23-55'], 'o adiar venceu: a dose de ontem volta (a 23:30, que ninguém adiou, não toca pelo relógio de hoje)');
+    igual(run('dataKeyAtual()'), iso(ontemD), 'e a tela continua em ontem: a dose é registrada em ontem');
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), 'espera: alarme na tela');
+    // já registrada em ontem: não volta
+    run(`despMedNaTela=null; __mo632=[]; __log632={bia:{'x_23-55':{quem:'Ana'}}};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), []);
+    // a tela que alguém pôs em outra data não toca nada (regra de sempre)
+    run(`DIA_TELA_AUTO='${iso(agoraD)}'; __log632={};`); run('checarDespertadorMed()'); igual(run('__mo632'), []);
+  } finally { run(SOLTA632 + 'MED_AGENDA_TODOS=__bk632v.ag; medLogHoje=__bk632v.ml; mostrarDespertadorMed=__bk632v.mo; DB=__bk632v.db; papelRecebeAlarmeMed=__bk632v.pr;'); }
+});
+prova('6.32 (QA) a dose e o espelho das fichas irmãs ficam no MESMO dia, mesmo que a tela passe para o dia novo no meio; voltar para hoje à mão acerta o dia automático', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/const _diaLog=dataKeyAtual\(\);\n    DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\+'\/'\+doseId\)\.transaction/.test(src), 'a dose guarda o dia antes de gravar');
+  assert.ok(/return DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\)\.update\(extras\);/.test(src), 'o espelho usa o mesmo dia');
+  igual((src.match(/medicacao-log\/'\+dataKeyAtual\(\)\+'\/'\+it\.key/g) || []).length, 0, 'nenhuma gravação da dose relê o dia depois');
+  run(ARMA632);
+  try {
+    const agoraD = new Date();
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='2026-01-01'; selectedDate=new Date(${agoraD.getTime()});`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), '', 'a tela já está em hoje (alguém tocou em Hoje)');
+    igual(run('DIA_TELA_AUTO'), iso(agoraD), 'o dia automático acompanha: na próxima meia-noite, ela passa sozinha');
+    // data FUTURA escolhida pela plantonista não é atropelada
+    const amanha = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() + 2, 10);
+    run(`DIA_TELA_AUTO='2026-01-01'; selectedDate=new Date(${amanha.getTime()});`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), '', 'data futura escolhida: a tela é dela'); igual(run('dataKeyAtual()'), iso(amanha));
+    // o almoço segura a troca (a regra comum do "trabalho aberto")
+    run(`DIA_TELA_AUTO='${iso(new Date(agoraD.getTime() - 86400000))}'; selectedDate=new Date(${agoraD.getTime() - 86400000}); zDiaTrabalhoAberto=function(){ return 'almoço'; };`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), 'espera: almoço');
+  } finally { run(SOLTA632); }
+});
+provaAsync('6.32 (QA) a faixa de madrugada: tocar pergunta antes de atualizar (atualizar cala o som); "Atualizar mesmo assim" atualiza', async () => {
+  const h = (hh) => new Date(2026, 9, 7, hh, 0).getTime();
+  run(`__bk632f={ab:APP_DIA_ABERTO, hz:zHojeISO, ze:zEscolha, rep:location.replace, pr:papelRecebeAlarmeMed, ua:navigator.userActivation, sd:selectedDate, rec:__diaRecarregando, fo:__diaForcarAgora, D:Date};
+    APP_DIA_ABERTO='2026-10-06'; zHojeISO=function(){ return '2026-10-07'; }; __diaRecarregando=false; __diaForcarAgora=false;
+    __esc632=[]; zEscolha=function(t,l,b){ __esc632.push({t:t, b:b}); }; __rep632=0; location.replace=function(){ __rep632++; };
+    papelRecebeAlarmeMed=function(){ return true; }; navigator.userActivation={hasBeenActive:true};
+    Date=function(a){ return a===undefined?new __bk632f.D(${h(2)}):new __bk632f.D(a); }; Date.now=function(){ return ${h(2)}; };
+    selectedDate=new __bk632f.D(${h(0)});`);
+  try {
+    run('aplicarVersaoNova()');
+    igual(run('__esc632.length'), 1); igual(run('__esc632[0].t'), 'ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM'); igual(run('__rep632'), 0, 'não atualizou');
+    run('__esc632[0].b[1].fn()');
+    igual(run('__rep632'), 1, '"Atualizar mesmo assim" atualiza');
+  } finally { run('APP_DIA_ABERTO=__bk632f.ab; zHojeISO=__bk632f.hz; zEscolha=__bk632f.ze; location.replace=__bk632f.rep; papelRecebeAlarmeMed=__bk632f.pr; navigator.userActivation=__bk632f.ua; selectedDate=__bk632f.sd; __diaRecarregando=__bk632f.rec; __diaForcarAgora=__bk632f.fo; Date=__bk632f.D;'); }
 });
 // ================================================================== 6.27 — check-up e escova no topo
 console.log('\n6.27 — Ficha › Prevenção: check-up e escova no topo, com "Fez em" e "Vence em" (Adriana, 02/out/2026, na ficha da Cookie)');
@@ -7087,6 +7211,7 @@ prova('6.27 a data do check-up: vale a mais recente das três casas; sem data v�
   igual(run("prevCheckupData({checkup_data:'2025-03-10', checkup_t:'2025-09-01'})"), '2025-09-01', 'o check-up novo, lançado embaixo, não fica atrás do velho');
   igual(run("prevCheckupData({checkup_data:'2025-09-01', checkup_t:'2025-03-10', checkup:'2024-11-27'})"), '2025-09-01');
   igual(run("prevCheckupData({checkup:'2024-11-27'})"), '2024-11-27', 'o campo legado (a Becca)');
+  igual(run("prevCheckupData({checkup_data:'2024-01-01', checkup_t:'2023-05-05', checkup:'2025-05-05'})"), '2025-05-05', 'a casa legada também entra na conta');
   igual(run("prevCheckupData({checkup_data:'a', checkup_t:'b', checkup:'c'})"), 'a', 'sem data válida: a ordem de sempre');
   igual(run("prevCheckupData({checkup_data:'quebrada', checkup_t:'2025-01-02'})"), '2025-01-02', 'a data válida vence o texto quebrado');
   igual(run('prevCheckupData({})'), ''); igual(run('prevCheckupData(null)'), '');
@@ -7096,12 +7221,19 @@ prova('6.27 "fez em" do check-up grava as casas juntas (checkup_t e checkup_data
     setPelExtra=function(p,patch){ __gr627.push(JSON.parse(JSON.stringify(patch))); }; prevAvisoRecalc=function(){};
     pelAtual={n:'Cookie'}; __ex627b={checkup_p:'2026-01-01', checkup_p_manual:true}; pelExtra=function(){ return __ex627b; };`);
   try {
-    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-02',{checkup_data:'2026-10-02'})");
-    igual(run('__gr627[0]'), { checkup_t: '2026-10-02', checkup_data: '2026-10-02', checkup_p: '2027-10-02', checkup_p_manual: '' });
-    run("__ex627b={}; prevUltimaDireta('checkup_t','checkup_p',365,'',{checkup_data:''})");
-    igual(run('__gr627[1]'), { checkup_t: '', checkup_data: '', checkup_p: '' }, 'apagar a data apaga as duas casas');
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-02',{checkup_data:1,checkup:1})");
+    igual(run('__gr627[0]'), { checkup_t: '2026-10-02', checkup_data: '2026-10-02', checkup: '2026-10-02', checkup_p: '2027-10-02', checkup_p_manual: '' });
+    run("__ex627b={}; prevUltimaDireta('checkup_t','checkup_p',365,'',{checkup_data:1,checkup:1})");
+    igual(run('__gr627[1]'), { checkup_t: '', checkup_data: '', checkup: '', checkup_p: '' }, 'apagar a data apaga as três casas');
+    // a Becca (só o campo legado, 27/11/2024) corrigida para uma data ANTERIOR: a correção pega
+    run("__ex627b={checkup:'2024-11-27'}; prevUltimaDireta('checkup_t','checkup_p',365,'2024-06-01',{checkup_data:1,checkup:1}); Object.assign(__ex627b, __gr627[2]);");
+    igual(run('prevCheckupData(__ex627b)'), '2024-06-01', 'a casa legada recebe a data nova');
+    // o "Vence em" ao lado acompanha na hora
+    run(`__bkGE627=document.getElementById; __ve627={tagName:'INPUT', value:''}; document.getElementById=function(id){ return id==='prevVence_checkup_p'?__ve627:null; };`);
+    try { run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-03',{checkup_data:1,checkup:1})"); igual(run('__ve627.value'), '2027-10-03'); }
+    finally { run('document.getElementById=__bkGE627;'); }
     run("prevUltimaDireta('escova_t','escova_p',90,'2026-10-01')");
-    igual(run('__gr627[2]'), { escova_t: '2026-10-01', escova_p: '2026-12-30' }, 'a escova: só as dela');
+    igual(run('__gr627[4]'), { escova_t: '2026-10-01', escova_p: '2026-12-30' }, 'a escova: só as dela');
   } finally { run('setPelExtra=__bk627g.sp; pelExtra=__bk627g.pe; pelAtual=__bk627g.pa; prevAvisoRecalc=__bk627g.av;'); }
 });
 prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só de check-up com "Fez em" e "Vence em", a escova com as duas datas', () => {
@@ -7114,14 +7246,23 @@ prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só d
   assert.ok(pos('Check-up e escova') < pos('<h3 class="cad-sub">Vacinas</h3>') && pos('Check-up e escova') < pos('<h3 class="cad-sub">Antiparasitários</h3>'), 'no topo, antes das vacinas');
   assert.ok(aba.indexOf('Saúde e rotina') < 0, 'o bloco do fim saiu');
   igual((aba.match(/Último check-up/g) || []).length, 1, 'um campo só de check-up (antes eram dois, em casas diferentes)');
-  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-09-01" onchange="prevUltimaDireta\('checkup_t','checkup_p',365,this\.value,\{checkup_data:this\.value\}\)"/.test(aba), 'mostra a data mais recente e grava as duas casas');
-  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><input type="date" class="cad-in" value="" onchange="prevVenceManualSet\('checkup_p',this\.value\)"/.test(aba), 'o check-up ganhou o "Vence em" no topo');
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-09-01" onchange="prevUltimaDireta\('checkup_t','checkup_p',365,this\.value,\{checkup_data:1,checkup:1\}\)" min="2015-01-01" max="\d{4}-\d{2}-\d{2}"/.test(aba), 'mostra a data mais recente, grava as três casas e não aceita data futura');
+  assert.ok(/<div class="field" style="grid-column:1\/-1"><label>Já fez check-up\?<\/label>/.test(aba), '"Já fez check-up?" na linha inteira: os pares fez em | vence em ficam alinhados no computador');
+  assert.ok(pos('Escova e check-up') > 0 && pos('Escova e check-up') < pos('Já fez check-up?') && pos('Já fez check-up?') < pos('Último check-up (fez em)'), 'o alerta do grupo e o "Já fez check-up?" antes do primeiro campo');
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><input type="date" class="cad-in" id="prevVence_checkup_p" value="" onchange="prevVenceManualSet\('checkup_p',this\.value\)"/.test(aba), 'o check-up ganhou o "Vence em" no topo');
   assert.ok(/Pela conta: 01\/09\/2026 · 1 ano\./.test(aba), 'a conta sai da data mais recente');
   igual((aba.match(/Última troca de escova de dentes/g) || []).length, 1, 'a escova aparece uma vez');
   assert.ok(aba.indexOf("onchange=\"prevUltimaDireta('escova_t','escova_p',90,this.value)\"") > 0);
-  assert.ok(/<label>Vence em \(próxima troca\)<\/label><input type="date" class="cad-in" value="2026-10-30"/.test(aba));
+  assert.ok(/<label>Vence em \(próxima troca\)<\/label><input type="date" class="cad-in" id="prevVence_escova_p" value="2026-10-30"/.test(aba));
+  // a casa de cima mais nova que a de baixo, e a ficha só com o campo legado (a Becca): o campo mostra a mais recente
+  const hd = ficha627({ checkup_data: '2025-11-02', checkup_t: '2025-03-01' });
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-11-02"/.test(hd), 'checkup_data mais nova');
+  const hl = ficha627({ checkup: '2024-11-27' });
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2024-11-27"/.test(hl), 'só o campo legado');
   assert.ok(pos('Última troca de escova de dentes') < pos('Escova os dentes no Day Care?') && pos('Escova os dentes no Day Care?') < pos('<h3 class="cad-sub">Vacinas</h3>'), 'o "Escova no Day Care?" sobe junto');
   assert.ok(pos('Escova os dentes no Day Care?') < pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'a emergência continua no topo, logo depois');
+  assert.ok(pos('<h3 class="cad-sub">Oportunidades</h3>') > pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'e as Oportunidades vêm depois da emergência');
+  assert.ok(pos('Se você só sabe quando vence, digite em ') > pos('Check-up e escova') && pos('Se você só sabe quando vence, digite em ') < pos('Último check-up (fez em)'), 'a ajuda do "Vence em" (para quem digita) no bloco do topo');
   assert.ok(pos('<h3 class="cad-sub">Peso</h3>') > pos('Exame de fezes'), 'o peso continua no fim');
   // ficha antiga só com a casa de cima (checkup_data): a data aparece, e o "Vence em" não diz "última: não informada"
   const ho = ficha627({ checkup_data: '2025-03-10' });
@@ -7132,8 +7273,33 @@ prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só d
   // quem não digita o "Vence em" (decisão de 24/set): vê a data, sem campo
   const hc = ficha627({ checkup_t: '2025-09-01', checkup_p: '2026-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', verm_t: '2026-07-01', verm_p: '2026-11-01' }, 'consultora');
   const abaC = hc.slice(hc.indexOf('<div class="ppanel2" id="ps-saude">'), hc.indexOf('<div class="ppanel2" id="ps-med">'));
-  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
-  assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc" id="prevVence_checkup_p">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
+  assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc" id="prevVence_verm_p">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
+});
+prova('6.27 (QA) o vencimento que vale do check-up: o mais tarde entre o gravado e um ano depois da data mais recente; à mão manda; sem vencimento gravado, nada muda', () => {
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01', checkup_t:'2024-01-01', checkup_p:'2025-01-01'})"), '2026-09-01', 'fez em 01/09/2025 e "vence em 01/01/2025": vale 01/09/2026');
+  igual(run("prevCheckupVence({checkup_t:'2025-09-01', checkup_p:'2026-12-01'})"), '2026-12-01', 'o gravado mais tarde vale');
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01', checkup_p:'2025-01-01', checkup_p_manual:true})"), '2025-01-01', 'à mão manda');
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01'})"), '', 'ficha antiga sem vencimento: não cria cobrança');
+  igual(run("prevValor({checkup_data:'2026-01-15', checkup_t:'2025-01-01', checkup_p:'2026-01-01'}, PREV_ITENS.find(function(i){ return i.k==='checkup_p'; }))"), '2027-01-15', 'a cobrança (Vencimentos, Hoje, alerta) lê pela mesma porta');
+  igual(run("prevValor({vac_mult_p:'2026-01-01'}, PREV_ITENS.find(function(i){ return i.k==='vac_mult_p'; }))"), '2026-01-01', 'os outros itens, como sempre');
+  // o painel rápido e o "lançar" gravam as três casas juntas
+  igual(JSON.parse(JSON.stringify(run("PREV_ITENS.find(function(i){ return i.k==='checkup_p'; }).junto"))), ['checkup_data', 'checkup']);
+  const src = fs.readFileSync(APP, 'utf8');
+  igual((src.match(/\(it\.junto\|\|\[\]\)\.forEach\(function\(k2\)\{ patch\[k2\]=dt(Final)?; \}\);/g) || []).length, 2, 'os dois caminhos rápidos (painel e lançar)');
+});
+prova('6.27 (QA) a mesa "Check-up a marcar": o "Vence em" digitado à mão vale; o vencimento gravado mais tarde também', () => {
+  run(`__bk627c={P:PELUDINHOS, pe:pelExtra, hz:zHojeISO}; zHojeISO=function(){ return '2026-10-06'; };
+    PELUDINHOS=[{n:'A',tutor:'x'},{n:'B',tutor:'y'},{n:'C',tutor:'z'},{n:'D',tutor:'w'}];
+    __ex627c={A:{checkup_p:'2026-12-01', checkup_p_manual:true}, B:{checkup_t:'2025-08-01', checkup_p:'2026-12-01', checkup_p_manual:true},
+      C:{checkup_data:'2025-01-10', checkup_p:'2026-11-30'}, D:{}};
+    pelExtra=function(p){ return __ex627c[p.n]; };`);
+  try {
+    const c = JSON.parse(JSON.stringify(run('prevCheckupContagem()')));
+    const nomes = (l) => l.map((o) => o.p.n).sort();
+    igual(nomes(c.emDia), ['A', 'B', 'C'], 'A: só o "Vence em" (não é "sem informação"); B: fez em 2025, mas vence em 12/2026 à mão; C: o gravado mais tarde');
+    igual(nomes(c.semInfo), ['D']); igual(c.vencidos.length, 0);
+  } finally { run('PELUDINHOS=__bk627c.P; pelExtra=__bk627c.pe; zHojeISO=__bk627c.hz;'); }
 });
 // ================================================================== 6.34 — a hora do banho fixo na linha
 console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora do banho (Adriana, 06/out/2026, Charlotte)');
