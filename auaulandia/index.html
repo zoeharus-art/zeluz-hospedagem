@@ -17121,7 +17121,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-01';
+  const APP_VERSAO='2026-10-06-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -17288,6 +17288,7 @@
     if(__diaRecarregando || !appDiaVelho()) return '';
     zFaixaVersao(true);
     if(zDiaTrabalhoAberto()) return 'faixa';   // alarme, check-in, almoço ou sem internet: só a faixa
+    if(zDiaSegurarNoite()) return 'faixa';     // o celular da plantonista não recarrega de madrugada (6.32)
     var motivo=zMotivoParado();
     // Aba escondida NÃO basta para o dia (QA57): no Android e no computador o relógio segue
     // rodando com a página escondida, e quem saiu 20 segundos para o WhatsApp no meio de um
@@ -17304,7 +17305,53 @@
     setTimeout(aplicarVersaoNova, 600);   // folga para o rastro sair antes da página ir embora
     return 'recarga';
   }
-  try{ setInterval(function(){ try{ zViradaDoDiaTick(); }catch(e){} /* silencioso de propósito: o vigia tenta de novo em 15 s */ }, 15000); }
+  // ===== O ALARME DE REMÉDIO ATRAVESSA A MEIA-NOITE (6.32, 06/out/2026) ==================
+  // Achado do QA57 (01/out): o alarme de remédio só toca quando a data da tela da hospedagem
+  // é a de hoje (ehHojeAua). No aparelho que entrou antes da meia-noite, a tela continuava
+  // em "ontem" até recarregar — e ele só recarrega PARADO. Quem estava com o celular na mão
+  // depois da meia-noite ficava sem o alarme das doses da madrugada.
+  // (1) A tela da hospedagem passa sozinha para o dia novo, SEM recarregar, quando estava no
+  //     dia em que o app abriu (ninguém escolheu outra data) e nada está aberto: ficha do
+  //     FILHOt, alarme na tela ou adiado, check-in, almoço. Junto vêm a lista de hóspedes, a
+  //     agenda dos remédios, o registro das doses e o retrato do vigia — tudo no dia certo.
+  //     A dose de ontem que ainda está tocando (ou adiada) é registrada em ontem: a troca
+  //     espera por ela.
+  // (2) O celular de quem recebe o alarme, que já foi tocado, não recarrega entre 0h e 6h: a
+  //     recarga apaga o toque que libera o som no celular, e o alarme da madrugada sairia mudo.
+  //     O resto do dia (turma do Day Care, falta, planilha) continua travado até a recarga das
+  //     6h, como já era (a faixa do topo avisa).
+  var DIA_TELA_AUTO=APP_DIA_ABERTO, DIA_NOITE_ATE=6;
+  function zDiaAdiadoAtivo(agora){
+    try{ return Object.keys(despMedSnooze||{}).some(function(k){ return despMedSnooze[k]>agora; }); }
+    catch(e){ return false; } /* silencioso de propósito: sem o adiar carregado, não há alarme adiado */
+  }
+  // Devolve o que fez ('' = nada; 'avancou'; 'espera: <motivo>') — é a prova que morde isto.
+  function zDiaTelaAvancar(agora){
+    agora=agora||Date.now();
+    var hoje=zHojeISO();
+    if(!hoje || !DIA_TELA_AUTO || hoje===DIA_TELA_AUTO) return '';
+    if(dataKeyAtual()!==DIA_TELA_AUTO) return '';   // alguém escolheu outra data: a tela é dela
+    if(typeof fichaAberta==='function' && fichaAberta()) return 'espera: ficha aberta';
+    var aberto=zDiaTrabalhoAberto(); if(aberto && aberto!=='sem internet') return 'espera: '+aberto;
+    if(zDiaAdiadoAtivo(agora)) return 'espera: alarme adiado';
+    selectedDate=new Date(agora); DIA_TELA_AUTO=hoje;
+    try{ updateDateLabel(); }catch(e){} /* silencioso de propósito: o rótulo se acerta no próximo desenho */
+    try{ carregarHospedes(); }catch(e){ _logLeituraFalhou('hóspedes do dia novo (zDiaTelaAvancar)', e); }
+    try{ if(typeof audit==='function') audit('dia-tela-avancou', 'a tela da hospedagem passou para '+hoje+' sem recarregar (o alarme de remédio segue)', {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return 'avancou';
+  }
+  function zDiaSegurarNoite(agora){
+    var d=new Date(agora||Date.now());
+    if(d.getHours()>=DIA_NOITE_ATE) return false;
+    try{ if(!papelRecebeAlarmeMed()) return false; }catch(e){ return false; } /* silencioso de propósito: sem o papel, vale a recarga de sempre */
+    // Nunca tocado desde que abriu: o som já está preso; recarregar não perde nada.
+    try{ var ua=navigator.userActivation; if(ua && ua.hasBeenActive===false) return false; }catch(e){} /* silencioso de propósito: sem a informação, segura (o som vale mais) */
+    return true;
+  }
+  try{ setInterval(function(){
+    try{ zDiaTelaAvancar(); }catch(e){} /* silencioso de propósito: tenta de novo em 15 s */
+    try{ zViradaDoDiaTick(); }catch(e){} /* silencioso de propósito: o vigia tenta de novo em 15 s */
+  }, 15000); }
   catch(e){} /* silencioso de propósito: sem temporizador, a faixa da versão e o fechar e abrir continuam valendo */
   // O CELULAR QUE VOLTA DO BOLSO (Adriana, 01/out/2026: "quero que seja basicamente
   // automático"). Com a página escondida o relógio do celular para; ao voltar, o toque de
@@ -17322,6 +17369,7 @@
       : ('voltou para o app depois de '+Math.round(fora/60000)+' min'));
   }
   try{ document.addEventListener('visibilitychange', function(){
+    try{ if(!document.hidden) zDiaTelaAvancar(); }catch(e){} /* silencioso de propósito: o vigia de 15 s tenta de novo */
     try{ zViradaDoDiaVisibilidade(!!document.hidden, Date.now()); }catch(e){} /* silencioso de propósito: o vigia de 15 s cobre o mesmo dia */
   }); }catch(e){} /* silencioso de propósito: sem o evento, o vigia de 15 s e a trava de 5 min continuam valendo */
 
@@ -22064,7 +22112,27 @@
       +'</div></div>';
     el.style.display='block';
     bipMedLoopStart();
+    // SEM SOM (6.32): o celular só libera o som depois de um toque na página. Se o alarme
+    // abriu mudo (aparelho recém-aberto ou recarregado, iPhone), a faixa diz o que fazer.
+    setTimeout(medSomConferir, 1500);
   }
+  function medSomMudo(){ return !!(despMedNaTela && despMedAC && despMedAC.state!=='running'); }
+  function medSomConferir(){
+    try{
+      var el=document.getElementById('despMed'); if(!el || !despMedNaTela) return;
+      var av=document.getElementById('despMedSemSom');
+      if(medSomMudo()){
+        if(!av){
+          var tx=el.querySelector('.desp-tx');
+          if(tx) tx.insertAdjacentHTML('beforeend','<span id="despMedSemSom" style="display:block;background:#fff;color:var(--crm-critico);border-radius:8px;padding:6px 9px;margin-top:6px;font-weight:800">SEM SOM NESTE APARELHO: toque na tela para o alarme tocar.</span>');
+        }
+      }else if(av){ av.remove(); }
+    }catch(e){} /* silencioso de propósito: o aviso é reforço; o alarme na tela é a segurança */
+  }
+  // O primeiro toque em qualquer lugar destrava o som do alarme que está na tela.
+  try{ document.addEventListener('pointerdown', function(){
+    try{ if(despMedAC && despMedAC.state==='suspended') despMedAC.resume().then(medSomConferir, function(){}); }catch(e){} /* silencioso de propósito: o laço do bip tenta de novo em 1,3 s */
+  }, true); }catch(e){} /* silencioso de propósito: sem o evento, o laço do bip continua tentando */
   function confirmarDoseDespertador(){
     if(!despMedAtual||!despMedAtualDoseId) return;
     // Tela trancada: o alarme APARECE e TOCA (não pode esconder remédio), mas quem deu a dose

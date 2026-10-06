@@ -2,6 +2,25 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 06/out/2026 (v 2026-10-06-02) — o alarme de remédio atravessa a meia-noite
+
+> **Achado do QA57 (01/out/2026), já existia antes:** "num aparelho que entrou antes da meia-noite, o alarme de remédio não dispara depois da meia-noite". Story 6.32, feita no /loop autorizado pela Adriana em 06/out ("o que está pendente para você ir consertando em loop").
+
+### (AH) A tela da hospedagem passa para o dia novo sozinha, e o celular da plantonista não recarrega de madrugada
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| Depois da meia-noite, o celular aberto desde a noite **não tocava o alarme** das doses da madrugada | O alarme só toca quando a data da tela da hospedagem é a de hoje. A tela ficava em "ontem" até a página recarregar, e ela só recarrega **parada** (com a mão na tela, nunca) | A tela da hospedagem **passa sozinha para o dia novo, sem recarregar**, quando estava no dia em que o app abriu e nada está aberto. Junto vêm a lista de hóspedes, a agenda dos remédios, o registro das doses e o retrato do vigia, todos no dia certo |
+| O aparelho parado recarregava logo depois da meia-noite | A regra da virada do dia (seção do 01/out) | O celular de quem recebe o alarme (monitores e plantonistas), **já tocado**, não recarrega entre **0h e 6h**: a recarga apaga o toque que libera o som do celular, e o alarme da madrugada sairia mudo. Às 6h, recarrega como antes |
+| Alarme mudo sem ninguém saber | O celular só libera o som depois de um toque na página | Se o alarme abre sem som, aparece a faixa **"SEM SOM NESTE APARELHO: toque na tela para o alarme tocar."** O primeiro toque em qualquer lugar destrava o som |
+
+- **A troca espera** quando há ficha do FILHOt aberta, alarme tocando ou adiado (a dose de ontem é registrada em ontem), check-in ou almoço abertos; e não acontece se alguém escolheu outra data na tela.
+- O Day Care (turma, falta automática, planilha) continua travado até a recarga, como já era: a faixa **"O dia virou — toque para atualizar"** segue acesa.
+- Quem não recebe o alarme (Gestão, recepção, consultoras) recarrega na virada como antes.
+- **Limites conhecidos:** sem internet na virada, a lista de hóspedes de ontem continua até a planilha responder (os remédios seguem os de quem dormiu). O navegador do teste não aplica a regra de som do celular: o "SEM SOM" é a garantia de que ninguém fica sem saber.
+- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo`, `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20, todos pegos). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07.
+
 ## O que mudou em 06/out/2026 (v 2026-10-06-01) — Lançamentos do dia: o banho para em 17:30, e a tela não perde o lugar nem o cursor
 
 > **Adriana, 06/out/2026:** *"Já fiz uma reclamação sobre o horário, para colocar horário de banho em lançamentos do dia. Fica difícil de digitar, toda hora tem que voltar. Então, horário de banho, de veterinário, saída mais cedo, tudo que tem horário, ser mais fácil. Pode ser a marcação mesmo. Horário de banho, por exemplo, a gente pode marcar é, 14, 14h15, 14h30, marcar de 15 em 15 minutos até as 17h30. Último horário, 17h30."* Story 6.31.

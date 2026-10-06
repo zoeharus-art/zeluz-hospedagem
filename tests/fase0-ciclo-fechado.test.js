@@ -5624,8 +5624,9 @@ provaAsync('o "Salvo" do banho fixo, num aparelho aberto desde ontem, diz que el
 prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam nas três gravações do dia', () => {
   const src = fs.readFileSync(APP, 'utf8');
   assert.ok(/var motivo=zMotivoParado\(\);[\s\S]{0,700}if\(!motivo\) return 'faixa';/.test(src), 'mesma regra de "parado"');
-  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
-  assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
+  // 6.32: antes da regra da recarga, a tela da hospedagem tenta passar para o dia novo (zDiaTelaAvancar).
+  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ if\(!document\.hidden\) zDiaTelaAvancar\(\); \}[^\n]*\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
+  assert.ok(/setInterval\(function\(\)\{\n    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
   assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9])';/.test(src));
@@ -6957,6 +6958,119 @@ prova('6.31 o renderDash guarda o lugar ANTES de trocar a lista e devolve DEPOIS
     run('renderDash()');
     igual(run('__ordem'), ['liga:true', 'guarda:true', 'troca', 'volta:true:42']);
   } finally { run('dashAncoraGuardar=__bk631r.g; dashAncoraVoltar=__bk631r.v; dashToqueLigar=__bk631r.l; document.getElementById=__bk631r.ge;'); }
+});
+// ================================================================== 6.32 — o alarme atravessa a meia-noite
+console.log('\n6.32 — O alarme de remédio atravessa a meia-noite: a tela da hospedagem passa para o dia novo sem recarregar (06/out/2026)');
+const ARMA632 = `__bk632={hz:zHojeISO, sd:selectedDate, dta:DIA_TELA_AUTO, fa:fichaAberta, ch:carregarHospedes, ul:updateDateLabel, au:audit,
+    sn:despMedSnooze, dn:despMedNaTela, ta:zDiaTrabalhoAberto, pr:papelRecebeAlarmeMed, ua:navigator.userActivation};
+  __ch632=0; carregarHospedes=function(){ __ch632++; }; __ul632=0; updateDateLabel=function(){ __ul632++; };
+  __au632=[]; audit=function(t,m){ __au632.push(t+': '+m); }; fichaAberta=function(){ return __fa632; }; __fa632=false;
+  despMedSnooze={}; despMedNaTela=null;
+  zHojeISO=function(){ return __hoje632; }; __hoje632='2026-10-07';
+  DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);`;
+const SOLTA632 = `zHojeISO=__bk632.hz; selectedDate=__bk632.sd; DIA_TELA_AUTO=__bk632.dta; fichaAberta=__bk632.fa; carregarHospedes=__bk632.ch;
+  updateDateLabel=__bk632.ul; audit=__bk632.au; despMedSnooze=__bk632.sn; despMedNaTela=__bk632.dn; zDiaTrabalhoAberto=__bk632.ta;
+  papelRecebeAlarmeMed=__bk632.pr; navigator.userActivation=__bk632.ua;`;
+prova('6.32 a tela da hospedagem passa sozinha para o dia novo, sem recarregar: lista, agenda e registro das doses no dia certo', () => {
+  // Datas pelo relógio de verdade: o ehHojeAua compara com o agora real.
+  const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 22, 40);
+  const HOJE = iso(agoraD), ONTEM = iso(ontemD), agora = agoraD.getTime();
+  run(ARMA632 + `DIA_TELA_AUTO='${ONTEM}'; selectedDate=new Date(${ontemD.getTime()});`);
+  try {
+    run(`__hoje632='${ONTEM}';`);
+    igual(run(`zDiaTelaAvancar(${agora})`), '', 'o dia não virou: nada');
+    run(`__hoje632='${HOJE}';`);
+    igual(run('dataKeyAtual()'), ONTEM); igual(run('ehHojeAua()'), false, 'antes: o alarme ficava calado (a tela em ontem)');
+    igual(run(`zDiaTelaAvancar(${agora})`), 'avancou');
+    igual(run('dataKeyAtual()'), HOJE, 'a tela foi para o dia novo');
+    igual(run('ehHojeAua()'), true, 'e o alarme volta a valer');
+    igual(run('DIA_TELA_AUTO'), HOJE);
+    igual(run('__ch632'), 1, 'a lista de hóspedes (e, com ela, a agenda dos remédios) é relida');
+    igual(run('__ul632'), 1, 'o rótulo da data muda');
+    igual(run('__au632'), ['dia-tela-avancou: a tela da hospedagem passou para ' + HOJE + ' sem recarregar (o alarme de remédio segue)']);
+    igual(run(`zDiaTelaAvancar(${agora + 15000})`), '', 'uma vez só');
+    // o registro das doses e a leitura do alarme seguem a data da tela
+    run(`__bk632z={zm:zMapaUma}; __zm632=[]; zMapaUma=function(p){ __zm632.push(p); return Promise.resolve({}); };`);
+    try { run('medLogHoje()'); igual(run('__zm632'), ['auaulandia/medicacao-log/' + HOJE]); }
+    finally { run('zMapaUma=__bk632z.zm;'); }
+    // a outra meia-noite (aparelho aberto dois dias): segue de novo
+    const amanhaD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() + 1, 0, 1);
+    run(`__hoje632='${iso(amanhaD)}';`);
+    igual(run(`zDiaTelaAvancar(${amanhaD.getTime()})`), 'avancou'); igual(run('dataKeyAtual()'), iso(amanhaD));
+  } finally { run(SOLTA632); }
+});
+prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme tocando ou adiado (a dose de ontem fica em ontem), check-in; sem internet não segura', () => {
+  run(ARMA632);
+  try {
+    const agora = new Date(2026, 9, 7, 0, 1).getTime();
+    run('selectedDate=new Date(2026,9,3,10,0);');
+    igual(run(`zDiaTelaAvancar(${agora})`), '', 'a recepção olhando o dia 03: a tela é dela');
+    igual(run('dataKeyAtual()'), '2026-10-03');
+    run('selectedDate=new Date(2026,9,6,22,40); __fa632=true;');
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: ficha aberta'); igual(run('dataKeyAtual()'), '2026-10-06');
+    run("__fa632=false; despMedNaTela='bia__x_23-55';");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme na tela', 'o remédio das 23:55 ainda tocando é registrado em ontem');
+    run(`despMedNaTela=null; despMedSnooze={'bia__x_23-55': ${agora + 120000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'adiado: ele volta em ontem');
+    run(`despMedSnooze={'bia__x_23-55': ${agora - 1000}};`);
+    run("zDiaTrabalhoAberto=function(){ return 'check-in aberto'; };");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: check-in aberto');
+    run("zDiaTrabalhoAberto=function(){ return 'sem internet'; };");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'avancou', 'sem internet: a troca é só na tela; a lista de ontem fica até a planilha responder');
+    igual(run('__ch632'), 1);
+  } finally { run(SOLTA632); }
+});
+prova('6.32 de madrugada, o celular de quem recebe o alarme e já foi tocado não recarrega (a recarga calaria o som); às 6h, recarrega', () => {
+  run(ARMA632 + `__bk632t={ab:APP_DIA_ABERTO, mp:zMotivoParado, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando};
+    __faixa632={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632:null; };
+    __st632=[]; setTimeout=function(f,ms){ __st632.push(ms); return 0; }; __diaRecarregando=false;
+    APP_DIA_ABERTO='2026-10-06'; zMotivoParado=function(){ return 'trancado'; }; zDiaTrabalhoAberto=function(){ return ''; };
+    __rec632=true; papelRecebeAlarmeMed=function(){ return __rec632; }; navigator.userActivation={hasBeenActive:true};`);
+  try {
+    const h = (hh, mm) => new Date(2026, 9, 7, hh, mm || 0).getTime();
+    igual(run(`zDiaSegurarNoite(${h(0, 5)})`), true); igual(run(`zDiaSegurarNoite(${h(5, 59)})`), true);
+    igual(run(`zDiaSegurarNoite(${h(6, 0)})`), false, 'às 6h a recarga volta');
+    run('navigator.userActivation={hasBeenActive:false};');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), false, 'nunca tocado: o som já está preso, recarregar não perde nada');
+    run('navigator.userActivation=undefined;');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), true, 'sem a informação (iPhone antigo): segura');
+    run('__rec632=false;');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), false, 'quem não recebe o alarme (Gestão, recepção): recarrega como sempre');
+    // o vigia da virada usa a regra
+    run('__rec632=true; navigator.userActivation={hasBeenActive:true};');
+    run(`__bkDate632=Date; Date=function(a){ return a===undefined?new __bkDate632(${h(2)}):new __bkDate632(a); }; Date.now=function(){ return ${h(2)}; };`);
+    try {
+      igual(run('zViradaDoDiaTick()'), 'faixa', '02:00, trancado: só a faixa');
+      igual(run('__st632'), []);
+    } finally { run('Date=__bkDate632;'); }
+    run(`Date=function(a){ return a===undefined?new __bkDate632(${h(6, 1)}):new __bkDate632(a); }; Date.now=function(){ return ${h(6, 1)}; };`);
+    try { igual(run('zViradaDoDiaTick()'), 'recarga', '06:01, trancado: recarrega'); }
+    finally { run('Date=__bkDate632;'); }
+  } finally { run(SOLTA632 + 'APP_DIA_ABERTO=__bk632t.ab; zMotivoParado=__bk632t.mp; setTimeout=__bk632t.st; document.getElementById=__bk632t.ge; __diaRecarregando=__bk632t.rec;'); }
+});
+prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando o som volta; o primeiro toque destrava', () => {
+  run(`__bk632s={ge:document.getElementById, ac:despMedAC, dn:despMedNaTela, st:setTimeout, bl:bipMedLoopStart};
+    __html632=[]; __semSom=null;
+    __tx632={insertAdjacentHTML:function(w,h){ __html632.push(w+'|'+h); __semSom={remove:function(){ __semSom=null; __html632.push('removeu'); }}; }};
+    __desp632={style:{}, innerHTML:'', querySelector:function(q){ return q==='.desp-tx'?__tx632:null; }};
+    document.getElementById=function(id){ return id==='despMed'?__desp632:(id==='despMedSemSom'?__semSom:null); };`);
+  try {
+    run("despMedNaTela='bia__x_02-00'; despMedAC={state:'suspended'};");
+    igual(run('medSomMudo()'), true);
+    run('medSomConferir(); medSomConferir();');
+    igual(run('__html632.length'), 1, 'uma faixa só');
+    assert.ok(/^beforeend\|<span id="despMedSemSom"[^>]*>SEM SOM NESTE APARELHO: toque na tela para o alarme tocar\.<\/span>$/.test(run('__html632[0]')), run('__html632[0]'));
+    run("despMedAC.state='running'; medSomConferir();");
+    igual(run('__html632[1]'), 'removeu', 'o som voltou: a faixa some');
+    run('despMedNaTela=null; despMedAC={state:"suspended"};'); igual(run('medSomMudo()'), false, 'sem alarme na tela: nada');
+    // a conferência é marcada logo depois do alarme abrir
+    run(`__st632s=[]; setTimeout=function(f,ms){ __st632s.push([f===medSomConferir, ms]); return 0; }; bipMedLoopStart=function(){};`);
+    run("mostrarDespertadorMed({key:'bia', hospNome:'Bia', nome:'Apoquel', q:'1', u:'comprimido', horario:'02:00'}, 'x_02-00');");
+    igual(run('__st632s'), [[true, 1500]]);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state==='suspended'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som');
+  } finally { run('document.getElementById=__bk632s.ge; despMedAC=__bk632s.ac; despMedNaTela=__bk632s.dn; setTimeout=__bk632s.st; bipMedLoopStart=__bk632s.bl;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
