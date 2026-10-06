@@ -2140,7 +2140,7 @@ async function main() {
 
     // ---- 1. o script da conta entra no app (sem ele a tela não desenha nada) ----
     check('index.html inclui o painel-logica.js',
-      /<script src="painel-logica\.js"><\/script>/.test(html));
+      /<script src="painel-logica\.js(?:\?v=\d{4}-\d{2}-\d{2}-\d{2})?"><\/script>/.test(html));
 
     // ---- 2. as duas telas existem, com item de menu, título e gancho ----
     check('a tela v-painelmeu existe no HTML', /id="v-painelmeu"/.test(html));
@@ -8901,7 +8901,7 @@ async function main() {
     // O leitor já era provado aqui, mas vivia fora do app: ninguém na recepção conseguia
     // usá-lo. Agora ele entra pela página e por um botão da tela de Alergias a confirmar.
     check('o app carrega o leitor junto com a página (<script src="resposta-tutor.js">)',
-      /<script src="resposta-tutor\.js"><\/script>/.test(html));
+      /<script src="resposta-tutor\.js(?:\?v=\d{4}-\d{2}-\d{2}-\d{2})?"><\/script>/.test(html));
     check('a tela de Alergias a confirmar tem o botão "Colar resposta do tutor"',
       (html.match(/>Colar resposta do tutor</g) || []).length >= 2 &&
       (html.match(/onclick="algColarBotao\(/g) || []).length >= 2,
@@ -13001,8 +13001,8 @@ async function main() {
     check('pdirAbrir se tranca pela mesma tabela (link direto não fura a permissão)',
       /function pdirAbrir\([\s\S]{0,500}?podePapel\('painel-diretoria'\)/.test(html));
     check('o financeiro-logica.js entra na página antes do script grande',
-      /<script src="financeiro-logica\.js"><\/script>/.test(html) &&
-      html.indexOf('<script src="financeiro-logica.js">') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
+      /<script src="financeiro-logica\.js(?:\?v=\d{4}-\d{2}-\d{2}-\d{2})?"><\/script>/.test(html) &&
+      html.indexOf('<script src="financeiro-logica.js') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
   }
   console.log('');
 
@@ -22381,6 +22381,16 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════════
   console.log('v-50 · Financeiro: plano com dias diferentes em cada mês, somado mês a mês (Hopi, 06/out):');
   {
+    // N1 do QA da 6.36: a versão nova recarrega a página com outro endereço, mas os arquivos de
+    // fora ficam guardados pelo endereço DELES (10 minutos no GitHub Pages). Cada arquivo de conta
+    // carrega com ?v= igual à APP_VERSAO — o index novo nunca roda com o financeiro velho.
+    {
+      const ver50 = (/const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html) || [])[1] || '';
+      const src50 = (html.match(/<script src="(?!https?:)[^"]+"><\/script>/g) || []).map((t) => /src="([^"]+)"/.exec(t)[1]);
+      const ruins50 = src50.filter((s) => s !== s.split('?')[0] + '?v=' + ver50);
+      check('v-50 · N1 — os arquivos de conta da página (resposta-tutor, painel-logica, financeiro-logica) carregam com ?v= igual à APP_VERSAO',
+        ver50 !== '' && src50.length === 3 && ruins50.length === 0, (ruins50.join(' · ') || src50.join(' · ')) + ' · APP_VERSAO ' + ver50);
+    }
     // O Financeiro de ANTES da 6.36: cópia byte a byte do arquivo em 6932426 (blob git d1207be).
     const ANTES50 = path.join(__dirname, 'lib', 'financeiro-logica-antes-6.36.js');
     const buf50 = fs.readFileSync(ANTES50);

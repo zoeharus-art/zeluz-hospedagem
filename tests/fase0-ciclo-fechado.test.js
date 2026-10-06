@@ -8510,6 +8510,20 @@ provaAsync('6.30 Q21 — no dia em que o Mês 1 de uma ficha começa, a outra (M
     '2026-12-07', null, "__log630q.out=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.nome+' '+m.mes; });");
   igual(L.out, ['Tâmara 3']);
 });
+prova('6.30 — QA da 6.36 (N4): o Mês 2 do plano novo igual ao Mês 1 não esconde o Mês 3 do plano ANTERIOR que muda no mesmo dia (07/12: Seg → Seg, Qua)', () => {
+  // plano novo pago em 05/11, dentro do anterior; o Mês 2 dele começa em 05/12 (sábado) igual ao Mês 1, e o
+  // Mês 3 do anterior também começa em 05/12. O 1º dia de Day Care é 07/12: muda de Seg para Seg, Qua.
+  ctx.__r630n4 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-05', fim: '2027-01-31', dias_mes: [['seg'], ['seg'], ['seg', 'sex']],
+    dias_mes_anterior: [{ n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] }, { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] },
+      { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] };
+  igual(J630("planoMesComecaHoje(__r630n4, '2026-12-07', ['seg'])"), { n: 3, total: 3, dias: ['seg', 'qua'], era: ['seg'], de: '2026-12-05', anterior: true });
+  igual(run("planoMesComecaHoje(__r630n4, '2026-12-14', ['seg'])"), null, 'na semana seguinte, nada');
+  // o Mês 3 do plano NOVO (Seg → Seg, Sex) continua registrado pelo laço do plano atual
+  igual(J630("planoMesComecaHoje(__r630n4, '2027-01-05', ['seg'])"), { n: 3, total: 3, dias: ['seg', 'sex'], era: ['seg'], de: '2027-01-05', anterior: false });
+  // e o Mês 2 igual ao Mês 1, sem plano anterior, continua sem notícia
+  ctx.__r630n4b = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-05', fim: '2027-01-31', dias_mes: [['seg'], ['seg'], ['seg', 'sex']] };
+  igual(run("planoMesComecaHoje(__r630n4b, '2026-12-07', ['seg'])"), null);
+});
 // @@630-FIM
 // @@636-INI
 console.log('\n6.36 — Financeiro: o plano com dias diferentes em cada mês soma mês a mês (caso da Hopi, Adriana, 05/out/2026)');
@@ -8541,7 +8555,7 @@ const cad36 = (renov, extra) => { const c = {}; c[CH36] = ficha36(renov, extra);
 const FORMATO36 = /R\$ (\d{1,3}(\.\d{3})*),\d{2}/;
 // Todo "R$" do texto é seguido do número no formato completo (R$ 1.307,00) — e há pelo menos um.
 const soFormato36 = (txt) => { const t = String(txt); const todos = (t.match(/R\$/g) || []).length;
-  return todos > 0 && todos === (t.match(/R\$ \d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/g) || []).length; };
+  return todos > 0 && todos === (t.match(/R\$(?: |&nbsp;)\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/g) || []).length; };
 
 prova('6.36 AC1 — a Hopi (Gold, 1º, paga em 05/10/2026): R$ 1.307,00 em outubro, R$ 0,00 em novembro e dezembro (regime de caixa)', () => {
   const D = dados36(cad36(renov36()));
@@ -8693,7 +8707,8 @@ prova('6.36 AC4 — a linha da ficha diz os dias e o valor de cada mês ("1x, 1x
   igual([L.aulas, L.mensalidade], [null, null], 'não existe UMA mensalidade: ninguém multiplica o Mês 1');
   // Painel da Diretoria › "Maiores valores a receber"
   const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
-  assert.ok(pd.indexOf('plano Gold (trimestral) · dias por mês: 1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00') >= 0, pd.slice(0, 600));
+  // na TELA, o espaço depois do R$ não quebra a linha (QA da 6.36, N3: "R$⏎359,00" a 375 px)
+  assert.ok(pd.indexOf('plano Gold (trimestral) · dias por mês: 1x, 1x, 2x — R$&nbsp;359,00 + R$&nbsp;359,00 + R$&nbsp;589,00') >= 0, pd.slice(0, 600));
   assert.ok(pd.indexOf('R$ 1.307,00') >= 0);
   // Lançar pagamento (fora do menu, código vivo)
   ctx36.__cad36 = cad36(renov36());
@@ -8702,7 +8717,7 @@ prova('6.36 AC4 — a linha da ficha diz os dias e o valor de cada mês ("1x, 1x
     LP_CACHE={quando:1, irm:{}, pag:{}}; zHojeISO=function(){ return '2026-10-06'; };`);
   try {
     const lp = run36('lpCobrancaHTML()');
-    assert.ok(/plano Gold \(trimestral\) · dias por mês: 1x, 1x, 2x — R\$ 359,00 \+ R\$ 359,00 \+ R\$ 589,00 · mês 2026-10/.test(lp), lp.slice(0, 700));
+    assert.ok(/plano Gold \(trimestral\) · dias por mês: 1x, 1x, 2x — R\$&nbsp;359,00 \+ R\$&nbsp;359,00 \+ R\$&nbsp;589,00 · mês 2026-10/.test(lp), lp.slice(0, 700));
     assert.ok(lp.indexOf('<strong>R$ 1.307,00</strong>') >= 0 && lp.indexOf('Registrar recebimento — R$ 1.307,00') >= 0);
     assert.ok(lp.indexOf('x por semana') < 0, 'o "Nx por semana" do Mês 1 não aparece no plano que muda por mês');
     // ficha SEM dias por mês: a linha de sempre ("2x por semana")
@@ -8870,6 +8885,73 @@ prova('6.36 AC9 — todo valor na tela no formato R$ 1.307,00 (milhar com ponto,
   assert.ok(FORMATO36.test('R$ 1.307,00') && !soFormato36('R$ 1307,00') && !soFormato36('R$ 1.307') && !soFormato36('R$ 1,307.00'));
 });
 
+// ---- QA da 6.36 (Quinn): as provas que faltavam (N2), o ?v= dos arquivos de conta (N1) e o R$ que não quebra (N3)
+prova('6.36 — QA (N2): o desconto arredondado ao centavo MAIS PRÓXIMO em cada mês (nunca para cima, nunca para baixo) — preço R$ 359,10 e R$ 589,10', () => {
+  run36(`__bk36q=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35910; planosCfg.Gold.valores[2]=58910;`);
+  try {
+    // 2º da família (7%): 35.910 × 0,93 = 33.396,3 → 33.396 (para cima seria 33.397); 58.910 × 0,93 = 54.786,3 → 54.786
+    const out = res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2026-10');
+    igual([out.porFILHOt[0].valorPorMes, out.porFILHOt[0].valor, out.aReceberTotal], [[33396, 33396, 54786], 121578, 121578]);
+    igual(ctx36.finBRL(121578), 'R$ 1.215,78');
+    ctx36.__dm36 = HOPI36;
+    igual(J36('renovValorDoPlano("Gold", __dm36, 2).total'), 121578, 'a aba Plano diz o mesmo');
+    // 3º da família (12%): 35.910 × 0,88 = 31.600,8 → 31.601 (para baixo seria 31.600); 58.910 × 0,88 = 51.840,8 → 51.841
+    igual(res36(dados36(cad36(renov36({ ordemPet: 3 }))), '2026-10').porFILHOt[0].valorPorMes, [31601, 31601, 51841]);
+    igual(J36('renovValorDoPlano("Gold", __dm36, 3).total'), 31601 * 2 + 51841);
+  } finally { run36('planosCfg=__bk36q;'); }
+});
+prova('6.36 — QA (N2): pagamento A MAIS não vira "falta" negativa (o "a receber" das outras fichas fica inteiro) e o "(n)" do Day Care conta o plano por mês', () => {
+  const cad = cad36(renov36());
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const sem = res36(dados36(cad), '2026-10');
+  const zeb = sem.porFILHOt.filter((o) => o.chave === 'zebra__viajante teste')[0];
+  assert.ok(zeb && zeb.valor > 0, JSON.stringify(zeb));
+  igual(res36(dados36(cad36(renov36())), '2026-10').porServico.daycare.quantos, 1, 'só a Tâmara (plano por mês): 1');
+  igual([sem.porServico.daycare.quantos, sem.aReceberTotal], [2, 130700 + zeb.valor], 'a Tâmara e a Zebra');
+  // a Tâmara pagou R$ 1.400,00 (R$ 93,00 a mais): falta R$ 0,00 — nunca -R$ 93,00 tirado do "a receber" da Zebra
+  const pag = { '2026-10': { x1: { chave: CH36, valor_cent: 140000, ref: '2026-10', data: '2026-10-06', servico: 'daycare', plano: 'Gold' } } };
+  const mais = res36(dados36(cad, { pagamentos: pag }), '2026-10');
+  const T = mais.porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([T.pago, T.falta, T.situacao], [140000, 0, 'pago']);
+  igual([mais.aReceberTotal, mais.porServico.daycare.aReceber, mais.emAtrasoTotal, mais.porServico.daycare.quantos], [zeb.valor, zeb.valor, zeb.valor, 2]);
+});
+prova('6.36 — QA (N2): começou no meio do mês SEM o mês da 1ª cobrança gravado: a âncora é o dia 1º do mês seguinte ao pagamento (o mesmo do app)', () => {
+  const r = renov36({ meio_mes: { opcao: 1, inicio: '2026-10-05' }, fim: '2027-01-31' });
+  ctx36.__r36m = r;
+  const meses = J36('finMesesDoPlano(planos(), __r36m)').map((m) => m.de + '|' + m.ate);
+  igual(meses, ['2026-10-05|2026-11-30', '2026-12-01|2026-12-31', '2027-01-01|2027-01-31']);
+  igual(J36('finMesesDoPlano(planos(), __r36m)'), J36('renovMesesDoPlano(__r36m)'), 'a aba Plano diz o mesmo');
+  const L = res36(dados36(cad36(r)), '2026-10').porFILHOt[0];
+  igual([L.mesesDoPlano.map((m) => m.de + '|' + m.ate), L.vigencia, L.valor], [meses, { inicio: '2026-10-05', fim: '2027-01-31' }, 130700]);
+});
+prova('6.36 — QA (N2): Nº na família gravado e torto (0), numa família: a MESMA regra do caminho de sempre (vale o gravado; a família não passa por cima)', () => {
+  const cad = cad36(renov36({ ordemPet: 0 }));
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const irm = { irmaos: { v1: { a: CH36, b: 'zebra__viajante teste' } } };
+  igual(J36('finOrdensFamilia(' + JSON.stringify(cad) + ', ' + JSON.stringify(irm.irmaos) + ')')[CH36], 2, 'a família, sozinha, diria 2º');
+  const porMes = res36(dados36(cad, irm), '2026-10').porFILHOt.filter((o) => o.chave === CH36)[0];
+  const cad2 = JSON.parse(JSON.stringify(cad)); cad2[CH36].renov.dias_mes = null;
+  const sempre = res36(dados36(cad2, irm), '2026-10').porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([porMes.valorPorMes[0], sempre.mensalidade], [35900, 35900], 'o Mês 1 (1x) = a mensalidade do caminho de sempre para a mesma ficha');
+  igual(porMes.valor, 130700);
+});
+prova('6.36 — QA (N1): os arquivos de conta carregam com ?v= igual à APP_VERSAO (o index novo nunca roda com o Financeiro velho guardado no aparelho)', () => {
+  const html = fs.readFileSync(APP, 'utf8');
+  const ver = (/const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html) || [])[1];
+  assert.ok(ver, 'sem APP_VERSAO');
+  ['resposta-tutor.js', 'painel-logica.js', 'financeiro-logica.js'].forEach((f) =>
+    assert.ok(html.indexOf('<script src="' + f + '?v=' + ver + '"></script>') > 0, f + ' sem ?v=' + ver));
+  igual((html.match(/<script src="(?!https?:)/g) || []).length, 3, 'nenhum outro arquivo de fora sem o ?v=');
+  // a ordem continua: os três antes do script grande
+  assert.ok(html.indexOf('<script src="financeiro-logica.js?v=') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
+});
+prova('6.36 — QA (N3): na tela, "R$ 359,00" não quebra no meio (espaço que não quebra depois do R$); a troca muda só esse espaço', () => {
+  igual(run36("brlSemQuebra('1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00')"), '1x, 1x, 2x — R$&nbsp;359,00 + R$&nbsp;359,00 + R$&nbsp;589,00');
+  igual([run36('brlSemQuebra(null)'), run36("brlSemQuebra('plano Gold (trimestral)')"), run36("brlSemQuebra('-R$ 240,00 · R$ x')")], ['', 'plano Gold (trimestral)', '-R$&nbsp;240,00 · R$ x']);
+  const out = res36(dados36(cad36(renov36())), '2026-10');
+  const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+  assert.ok(!/R\$ \d{1,3}(?:\.\d{3})*,\d{2} \+/.test(pd) && !/\+ R\$ \d/.test(pd), 'nenhum R$ quebrável dentro do detalhe dos meses');
+});
 prova('6.36 — o arquivo do dinheiro continua ES5 (roda no tablet velho) e o caminho de sempre está no texto, intocado', () => {
   assert.ok(!/=>|\bconst\b|\blet\b|`|Object\.assign|\.find\(/.test(FIN_SRC36.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'nada de ES6 fora dos comentários');
   // o caminho de sempre: a conta de hoje continua lá, linha por linha

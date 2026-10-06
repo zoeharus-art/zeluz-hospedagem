@@ -5103,20 +5103,25 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js"></script>
+<script src="resposta-tutor.js?v=2026-10-06-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js"></script>
+<script src="painel-logica.js?v=2026-10-06-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
      dinheiro do mês: finResumoMes (a receber, recebido, atraso, inadimplência) e finBRL
      (o formato completo, R$ 1.234,56 — sempre com centavos). A tela só desenha o
-     resultado; a conta mora aqui fora. -->
-<script src="financeiro-logica.js"></script>
+     resultado; a conta mora aqui fora.
+     A VERSÃO NO ENDEREÇO (?v=, igual à APP_VERSAO — o harness confere): a versão nova recarrega
+     a página com outro endereço, mas o navegador guarda os arquivos de fora pelo endereço deles
+     (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
+     index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
+     aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
+<script src="financeiro-logica.js?v=2026-10-06-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -23821,7 +23826,9 @@
     for(let i=1;i<M.length;i++){
       const dia1=vencEhDiaDayCare(M[i].de)?M[i].de:proximoDiaDayCare(M[i].de);
       if(dia1!==hoje || dia1>M[i].ate) continue;
-      if(M[i].dias.join(',')===M[i-1].dias.join(',')) return null;
+      // Sem mudança no plano atual, o plano anterior ainda pode mudar HOJE (o Mês 3 dele começando
+      // no mesmo dia, na sobreposição): segue para o laço dele, em vez de sair (QA da 6.36, N4).
+      if(M[i].dias.join(',')===M[i-1].dias.join(',')) break;
       return {n:M[i].n, total:M.length, dias:M[i].dias, era:M[i-1].dias, de:M[i].de, anterior:false};
     }
     const A=renovMesesAnteriores(r||{});
@@ -54842,7 +54849,7 @@
           +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')
           // Plano com dias diferentes em cada mês (6.36): os dias e o valor de cada mês, prontos do
           // financeiro-logica — o valor cheio abaixo é a soma deles.
-          +(m.linha.detalheMeses?(' · dias por mês: '+esc(m.linha.detalheMeses)):(' · '+m.linha.aulas+'x por semana'))
+          +(m.linha.detalheMeses?(' · dias por mês: '+brlSemQuebra(esc(m.linha.detalheMeses))):(' · '+m.linha.aulas+'x por semana'))
           +((m.linha.ordemPet>1)?(' · '+m.linha.ordemPet+'º da família, desconto aplicado'):'')
           +' · mês '+esc(m.ref)+'</span>'
           +'<span class="val" style="font-variant-numeric:tabular-nums"><strong>'+esc(finBRL(m.linha.valor))+'</strong> · '
@@ -58372,6 +58379,12 @@
       +'<p class="pm-rot" style="margin-top:10px">O Meu Dashboard é pessoal de cada monitor — a rota é dele, não se abre de fora. O que alimenta a rota de todos é a escala e o plano do dia, e é isso que este atalho abre.</p>'
       +'</article>';
   }
+  // "R$ 359,00" inteiro na mesma linha: troca SÓ o espaço depois do R$ (o que veio pronto do finBRL)
+  // pelo espaço que não quebra — regra do formato monetário; nenhum R$ é montado aqui. Recebe texto
+  // JÁ escapado e devolve HTML (QA da 6.36, N3: "R$⏎359,00" a 375 px).
+  function brlSemQuebra(htmlEscapado){
+    return String(htmlEscapado==null?'':htmlEscapado).replace(/(R\$) (?=\d)/g, '$1&nbsp;');
+  }
   // O dinheiro do mês. Recebe o resumo do finResumoMes e desenha — nenhuma conta aqui.
   // temPagamentos diz se JÁ existe o nó de lançamentos: sem ele, o "recebido" é
   // R$ 0,00 com o motivo escrito, nunca um zero mudo.
@@ -58407,7 +58420,7 @@
         if(o.servico==='daycare' && o.detalheMeses) rotPlano+=' · dias por mês: '+o.detalheMeses;
         h+='<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(vd)+'\')">'
           +'<span class="pa-li-txt"><b style="text-transform:capitalize">'+esc(o.nome)+'</b>'
-          +'<span>'+esc(rotPlano)+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
+          +'<span>'+brlSemQuebra(esc(rotPlano))+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
           +'<span class="pa-li-go" style="font-size:14px;font-variant-numeric:tabular-nums">'+esc(finBRL(o.falta))+'</span>'
           +'</button>';
       });
