@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-06"></script>
+<script src="resposta-tutor.js?v=2026-10-07-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-06"></script>
+<script src="painel-logica.js?v=2026-10-07-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-06"></script>
+<script src="financeiro-logica.js?v=2026-10-07-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -17435,7 +17435,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-06';
+  const APP_VERSAO='2026-10-07-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -22552,6 +22552,9 @@
   function banhoFaltaIrAoCheckin(o){
     if(!banhoFaltaAtivLiberada('checkin-corpo')) return false;
     try{
+      // O check-in é sempre o de hoje: o Day Care deixado em outro dia da semana mostraria o rótulo
+      // errado (QA da 6.42). Só o dia da tela muda; nada do check-in muda.
+      try{ if(typeof HOJE_DIA!=='undefined') dcDia=HOJE_DIA; }catch(e){} /* silencioso de propósito: sem o dia de hoje, o rótulo fica como estava */
       if(typeof abrirAtividade==='function') abrirAtividade('checkin-corpo');
       var el=document.getElementById('dcBusca');
       if(el){ el.value=String((o&&o.nome)||''); if(typeof onDcBusca==='function') onDcBusca(); }
@@ -43127,6 +43130,10 @@
   function hojeChamadaMapa(){
     try{ var m=Z_MAPAS[chamadaNo()]; if(m&&m.mapa) return m.mapa; }
     catch(e){ /* silencioso de propósito: sem o mapa vivo vale o que a tela da Chamada deixou */ }
+    // A chamada que a tela deixou é de outro dia (passou da meia-noite com o app aberto — QA da
+    // 6.42): hoje ninguém foi marcado ainda; a de ontem não vale.
+    try{ if(typeof _chamadaVivaDia!=='undefined' && _chamadaVivaDia && _chamadaVivaDia!==dcDataKey()) return {}; }
+    catch(e){ /* silencioso de propósito: sem o dia da chamada viva, vale a de sempre */ }
     return (typeof dcChamada!=='undefined'&&dcChamada)?dcChamada:{};
   }
   function hojeCheckinMapa(){
@@ -43241,6 +43248,9 @@
         sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
         tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
         fonte:fonte, hora:hojeHoraDe(chave, ck),
+        // Hóspede e morador estão na casa mesmo marcados "veio" na Chamada (a Chamada lista os dois):
+        // não passam pelo check-in do corpo de entrada do Day Care (QA da 6.42; regra do QA71).
+        hospede:!!o.hospede, morador:!!(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)),
         itens:itens, remedio:remedio, banho:banho, pend:pend, respostas:respostas,
         proxima:ant.proxima, antec:ant.itens, antGrupos:antGrupos,
         antAbertos:antAbertos, antReg:antReg,
@@ -43300,19 +43310,21 @@
   }
   function hojeFrasePresenca(o){
     if(o.fonte==='checkin') return o.hora?('presente pelo check-in às '+o.hora):'presente pelo check-in';
-    if(o.fonte==='hospede') return 'hóspede da AuAulândia — está na casa';
-    if(o.fonte==='morador') return 'morador da casa';
+    if(o.fonte==='hospede' || (o.fonte==='chamada' && o.hospede)) return 'hóspede da AuAulândia — está na casa';
+    if(o.fonte==='morador' || (o.fonte==='chamada' && o.morador)) return 'morador da casa';
     // Só a chamada diz que veio (6.42): o check-in do corpo de entrada ainda falta.
     if(o.fonte==='chamada') return 'presente pela chamada — falta o check-in do corpo';
     return 'presente';
   }
+  // Está só pela chamada e deve o check-in do corpo de entrada (6.42): hóspede e morador, não.
+  function hojeSemCkDe(o){ return !!(o && o.fonte==='chamada' && !o.hospede && !o.morador); }
   // ===== NA CHAMADA, SEM O CHECK-IN DO CORPO (Story 6.42) ===============================
   // Adriana, 02/out/2026 (Rafael): "coloque a opção está aqui (para que se não foi feito o
   // checkin do corpo apareça que tem que fazer!!!)". A janela do «Está aqui» avisa uma vez;
   // este quadro fica no Hoje na Zêluz até o check-in do corpo de entrada de cada um ser feito.
   // Quem entra aqui: a chamada de hoje diz "veio" e não há check-in de entrada (hojeFonteDe →
   // 'chamada'). Hóspede, morador e quem faltou não entram. Nada aqui grava: só lê e leva até lá.
-  function hojeSemCheckinLista(L){ return (L||[]).filter(function(o){ return !!(o && o.fonte==='chamada'); }); }
+  function hojeSemCheckinLista(L){ return (L||[]).filter(hojeSemCkDe); }
   function hojeSemCheckinNome(o, L){
     try{
       if(typeof nomeDesamb!=='function' || typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !o.p) return String(o.nome||'');
@@ -43404,6 +43416,7 @@
   function hojeCkVivoLigar(){
     if(!DB || typeof zMapaVivo!=='function') return;
     var dia=dcDataKey();
+    if(_hojeCkVivoDia===dia) return;   // já ligado hoje: ligar de novo só redesenharia a tela outra vez (QA da 6.42)
     if(_hojeCkVivoDia && _hojeCkVivoDia!==dia){
       try{ zMapaDesligar('daycare/checkin-corpo/'+_hojeCkVivoDia, '_hojeSemCk'); }catch(e){} /* silencioso de propósito: desligar é economia */
     }
@@ -43478,7 +43491,9 @@
       +'A lista de todos com quem falar hoje está em <strong>Quem chamar hoje</strong>. '
       +'O que dá para fazer no próximo dia dele é assunto da tela <strong>Vencimentos</strong>.</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
-    HOJE_FILTROS.forEach(function(f){
+    // Na carga, a tela pode ser aberta antes de a lista dos filtros existir (monitora com o Hoje
+    // concedido — QA da 6.42): sem ela, a tela sai sem os botões de filtro e acerta no próximo desenho.
+    ((typeof HOJE_FILTROS!=='undefined' && HOJE_FILTROS) || []).forEach(function(f){
       var n=hojeFiltrada(L, f.v).length;
       h+='<span class="dia clic'+(HOJE_FILTRO===f.v?' on':'')+'" id="hojeF-'+f.v+'" onclick="hojeFiltrar(\''+f.v+'\')">'
         +escAttr(f.t)+' ('+n+')</span>';
@@ -43513,7 +43528,7 @@
         +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(o.nome)
         +(o.raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(o.raca)+'</span>'):'')+'</strong>'
         +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
-        +'<span class="hint" style="margin:0;color:'+(o.fonte==='chamada'?'var(--crm-critico)':'var(--crm-ok)')+';font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
+        +'<span class="hint" style="margin:0;color:'+(hojeSemCkDe(o)?'var(--crm-critico)':'var(--crm-ok)')+';font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
         // O banho fixo de hoje fica na PRIMEIRA linha, junto do nome: ele não é pendência,
         // é compromisso do dia — e some no fim da tarde se ninguém vir (24/set/2026).
         +(o.banho?('<span class="hoje-banho" style="margin:0;font-size:13px;font-weight:800;color:var(--z-blue)">'+escAttr(o.banho)+'</span>'):'')

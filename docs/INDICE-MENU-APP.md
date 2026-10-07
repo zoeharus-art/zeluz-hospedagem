@@ -2,6 +2,24 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-07) — Hoje na Zêluz: hóspede e morador fora do quadro do check-in
+
+> QA independente da Story 6.42 (FAIL por um ponto): hóspede e morador marcados "veio" na Chamada (ela lista os dois) entravam no quadro "Na chamada, sem o check-in do corpo". O Repolho apareceria todo dia.
+
+### (AR) Hoje na Zêluz › "Na chamada, sem o check-in do corpo" (ajustes)
+
+| Antes | Agora |
+|---|---|
+| Hóspede da AuAulândia ou morador da casa marcado "veio" na Chamada entrava no quadro, com "Fazer o check-in agora", e a linha dizia "falta o check-in do corpo" em vermelho | **Não entram.** A linha volta a dizer "hóspede da AuAulândia — está na casa" e "morador da casa", em verde: os dois não passam pelo check-in de entrada do Day Care |
+| Depois da meia-noite com o app aberto, o quadro mostrava os nomes de ontem até a tela ser reaberta | A chamada de ontem não vale no dia seguinte: o quadro começa vazio |
+| O atalho abria o check-in com o Day Care no dia da semana que alguém deixou | Abre no dia de hoje (o check-in sempre foi gravado no dia de hoje; só o rótulo confundia) |
+| Abrir o Hoje de novo no mesmo dia redesenhava a tela uma vez a mais | O aviso do check-in é ligado uma vez por dia |
+| Monitora com o Hoje concedido: erro de página na carga (já existia) | A tela desenha sem os botões de filtro e eles voltam no desenho seguinte |
+
+- **Xarás:** o quadro mostra o nome como a lista do check-in mostra (com o tutor ou a raça). O atalho leva à busca pelo nome; entre xarás, a monitora escolhe pelo mesmo sufixo.
+- **Onde está no código:** `hojeSemCkDe` (quem deve o check-in), `hojeLista` (marca `hospede` e `morador`), `hojeFrasePresenca`, `hojeChamadaMapa`, `hojeCkVivoLigar`, `banhoFaltaIrAoCheckin`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (542 no total; 6 da 6.42 pelo QA, uma delas pela lista de verdade do Hoje). Defeitos plantados: 31 (21 do QA e 10 novos), todos pegos. Chromium a 375 px: 32 de 33 nos cenários do QA (o que falta é a busca entre xarás, acima).
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-06) — «Está aqui»: o "Toquei errado — desfazer" não some
 
 > QA independente da Story 6.41 (FAIL por um ponto): o botão de desfazer não aparecia para quem entra pelo Time sem as atividades do Day Care, nem quando outro cartaz estava na tela (por exemplo, "Fredo chegou e tem pendência").
