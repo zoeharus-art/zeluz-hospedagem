@@ -5103,20 +5103,25 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js"></script>
+<script src="resposta-tutor.js?v=2026-10-07-01"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js"></script>
+<script src="painel-logica.js?v=2026-10-07-01"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
      dinheiro do mês: finResumoMes (a receber, recebido, atraso, inadimplência) e finBRL
      (o formato completo, R$ 1.234,56 — sempre com centavos). A tela só desenha o
-     resultado; a conta mora aqui fora. -->
-<script src="financeiro-logica.js"></script>
+     resultado; a conta mora aqui fora.
+     A VERSÃO NO ENDEREÇO (?v=, igual à APP_VERSAO — o harness confere): a versão nova recarrega
+     a página com outro endereço, mas o navegador guarda os arquivos de fora pelo endereço deles
+     (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
+     index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
+     aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
+<script src="financeiro-logica.js?v=2026-10-07-01"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6574,19 +6579,21 @@
   // Os dias em que ELE viria no período — é isto que transforma "30 dias de cio" em
   // 12 créditos com um toque só, em vez de a recepção lançar data por data.
   const REP_DIAKEY=['dom','seg','ter','qua','qui','sex','sab'];
+  // Plano com dias por mês (6.30): cada data do período vale pelos dias DAQUELE mês do plano.
   function repDiasQueViria(p, de, ate){
     const out=[];
     try{
       const dias=(typeof pelDias==='function')?pelDias(p):[];
-      if(!dias.length) return out;
+      const porMes=pelTemDiasPorMes(p);
+      if(!dias.length && !porMes) return out;
       const d1=new Date(de+'T00:00:00'), d2=new Date(ate+'T00:00:00');
       if(isNaN(d1)||isNaN(d2)||d2<d1) return out;
       const lim=new Date(d1); lim.setDate(lim.getDate()+400);   // trava de sanidade
       for(let d=new Date(d1); d<=d2 && d<=lim; d.setDate(d.getDate()+1)){
-        if(dias.indexOf(REP_DIAKEY[d.getDay()])>=0){
-          const p2=function(x){ return String(x).padStart(2,'0'); };
-          out.push(d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()));
-        }
+        const p2=function(x){ return String(x).padStart(2,'0'); };
+        const iso=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+        const diasNaData=porMes?(pelDias(p, iso)||[]):dias;
+        if(diasNaData.indexOf(REP_DIAKEY[d.getDay()])>=0) out.push(iso);
       }
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     return out;
@@ -6682,6 +6689,7 @@
     el.innerHTML=escAttr(pelNome(p))+' <span style="font-weight:500;color:var(--muted);font-size:13px">· '
       +escAttr(pelGet(p,'tutor')||'sem tutor')+' · vem '
       +(dias.length?dias.map(function(d){ return DIA_LBL[d]||d; }).join(', '):'sem dias na ficha')
+      +(pelTemMesDoPlanoAdiante(p)?' (hoje — os dias mudam por mês do plano)':'')
       +' · saldo atual <b>'+repSaldo(p)+'</b></span>';
     document.getElementById('repPelResults').innerHTML='';
     document.getElementById('repPelBusca').value='';
@@ -7681,7 +7689,7 @@
     if(dia==='dom'||dia==='sab') return 'O Day Care não funciona no fim de semana. Escolha um dia de semana.';
     const hoje=(typeof hojeISO==='function')?hojeISO():'';
     if(hoje && paraISO<hoje) return 'Essa data já passou.';
-    try{ if((pelDias(p)||[]).indexOf(dia)>=0) return 'Ele já vem nesse dia da semana — não precisa de troca.'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    try{ if((pelDias(p, paraISO)||[]).indexOf(dia)>=0) return 'Ele já vem nesse dia da semana — não precisa de troca.'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     try{ const k=pelKey(p); if((TROCA_CACHE[paraISO]||{})[k]) return 'Ele já tem troca marcada nesse dia.'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     return '';
   }
@@ -7999,7 +8007,7 @@
       if(!p || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return false;
       var dia=(typeof trocaDiaSemana==='function')?trocaDiaSemana(iso):'';
       if(!dia) return false;
-      var dias=(typeof pelDias==='function')?(pelDias(p)||[]):[];
+      var dias=(typeof pelDias==='function')?(pelDias(p, iso)||[]):[];   // os dias DAQUELA data (6.30)
       return Array.isArray(dias) && dias.indexOf(dia)>=0;
     }catch(e){ return false; }
   }
@@ -8117,6 +8125,22 @@
     // é anterior a esta versão e não prova nada: a tela DIZ que não sabe.
     if(!est) return (c.auto||{})._estado_v ? {estado:'espera'} : {estado:'antigo'};
     return {estado:'espera'};
+  }
+  // A hora que o automático GRAVOU na planilha para este nome (itens com hora: o banho fixo).
+  // Vale fora da janela também (um dia que já passou): é o que ficou registrado. Sem registro,
+  // ou registro sem hora, devolve '' — a tela não inventa (QA da 6.34).
+  function repPlanHoraNome(dia, nomeRaca, tipo){
+    var c=REP_PLAN_CACHE[dia]; if(!c) return '';
+    var est=((c.auto||{})._estado||{})[tipo]; if(!est) return '';
+    var r=est[vagasNomeChave(nomeRaca)];
+    if(r && r.hora_aviso) return '';   // a aba não tem a coluna da hora: a hora não está na planilha
+    return (r && typeof r.hora==='string')?r.hora:'';
+  }
+  // A aba daquele dia não tem a coluna da hora (a ponte avisou ao gravar): a linha DIZ isso.
+  function repPlanHoraSemColuna(dia, nomeRaca, tipo){
+    var c=REP_PLAN_CACHE[dia]; if(!c) return false;
+    var r=(((c.auto||{})._estado||{})[tipo]||{})[vagasNomeChave(nomeRaca)];
+    return !!(r && r.hora_aviso);
   }
   function repPlanQuando(ts){
     if(!ts) return '';
@@ -8612,11 +8636,13 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(de)){ out.motivo='Diga também em que dia '+ele+' NÃO vem — é esse o dia que sai na troca.'; return out; }
     if(hoje && de<hoje){ out.motivo='O dia '+repBRdata(de)+' já passou. Para uma falta que já aconteceu, use «+ Falta».'; return out; }
     if(de===dia){ out.motivo='Os dois dias são o mesmo. Escolha o dia em que '+ele+' vem e o dia em que não vem.'; return out; }
-    var dias=[]; try{ dias=pelDias(p)||[]; }catch(e){ dias=[]; }
+    // Cada dia pela SUA data (6.30): o dia que sai é dela no mês do plano dele; o dia novo, no seu.
+    var dias=[]; try{ dias=pelDias(p, de)||[]; }catch(e){ dias=[]; }
+    var diasPara=[]; try{ diasPara=pelDias(p, dia)||[]; }catch(e){ diasPara=[]; }
     var semDe=trocaDiaSemana(de);
     var nomeDia=function(d){ return (typeof DIA_FULL!=='undefined'&&DIA_FULL[d])||d; };
     if(dias.indexOf(semDe)<0){ out.motivo=pelNome(p)+' não vem '+repNoDia(de)+' — não é dia '+(ele==='ela'?'dela':'dele')+' para trocar.'; return out; }
-    if(dias.indexOf(sem)>=0){ out.motivo=pelNome(p)+' já vem na '+String(nomeDia(sem)).toLowerCase()+' — '+repBRdata(dia)+' já é dia '+(ele==='ela'?'dela':'dele')+'.'; return out; }
+    if(diasPara.indexOf(sem)>=0){ out.motivo=pelNome(p)+' já vem na '+String(nomeDia(sem)).toLowerCase()+' — '+repBRdata(dia)+' já é dia '+(ele==='ela'?'dela':'dele')+'.'; return out; }
     var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){ L=[]; }
     var an=repAnulados(L);
     var jaFeita=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.troca&&l.data===de&&l.volta===dia; })[0];
@@ -11744,15 +11770,25 @@
       // Turma vazia com o cadastro já carregado é resposta improvável: não grava fotografia
       // em branco — o próximo aparelho (ou o temporizador de 30 s) tenta de novo.
       if(!chaves.length) return;
+      // O MÊS NOVO DO PLANO COMEÇA HOJE (6.30, caso da Hopi): quem tem plano com dias por mês e
+      // começa hoje um mês com dias diferentes vai junto na fotografia — e na Linha do tempo.
+      var mudam=[]; try{ mudam=planoMesQuemMudaHoje(hoje); }catch(e){ mudam=[]; } /* silencioso de propósito: o registro da troca de mês é a mais — nunca segura a fotografia da turma */
       return DB.ref(turmaFotoTrava(hoje)).transaction(function(atual){
         if(atual) return;                                // outro aparelho gravou primeiro
-        return { ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
+        var foto={ ts:Date.now(), por:(typeof quemSou==='function'?quemSou():'-'),
                  hora:(typeof horaAgora==='function'?horaAgora():''), quantos:chaves.length, chaves:chaves };
+        if(mudam.length) foto.mudam_hoje=mudam.map(function(m){ return {chave:m.chave, mes:m.mes, dias:m.dias, era:m.era}; });
+        return foto;
       }).then(function(res){
         _turmaGravada=hoje;
         if(!res || !res.committed) return;               // quem chegou depois não regrava
         if(typeof audit==='function') audit('turma-do-dia',
           chaves.length+' FILHOt(s) esperados hoje', {assinou:'sistema'});
+        // Uma vez por dia na casa toda: a transação acima já garante (só quem gravou registra).
+        mudam.forEach(function(m){
+          try{ if(typeof audit==='function') audit('plano-dias-do-mes', m.texto, {alvo:m.chave, pet:m.nome, assinou:'sistema'}); }
+          catch(e){ _logFalhaGrav('registrar a troca de mês do plano de '+m.nome, e); }
+        });
       }).catch(function(e){ _logFalhaGrav('a fotografia da turma do dia', e); });
     }).catch(function(e){ _logFalhaGrav('ler a fotografia da turma do dia', e); });
   }
@@ -12388,7 +12424,10 @@
     // outro, e o set() cego gravava por cima. Agora a dose é CLAMADA por transaction
     // (molde medTgFilaTentar): só a primeira assinatura entra; a segunda vê quem assinou
     // e a que horas — e nenhum efeito colateral (Telegram, estoque) roda em dobro.
-    DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key+'/'+doseId).transaction(function(atual){
+    // O dia da dose fica guardado AQUI (QA da 6.32): o espelho das fichas irmãs grava depois de
+    // uma leitura, e a tela pode ter passado para o dia novo no meio.
+    const _diaLog=dataKeyAtual();
+    DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key+'/'+doseId).transaction(function(atual){
       if(atual) return;          // já assinada — aborta sem escrever
       return reg;
     }).then(function(res){
@@ -12420,7 +12459,7 @@
           const did=magDoseId(x.itemId,x.horario);
           if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
         });
-        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+it.key).update(extras);
+        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key).update(extras);
       }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
       if(currentHosp && medAgendaKey(currentHosp)===it.key){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
       if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
@@ -14315,7 +14354,8 @@
     ORC_SEL.push((ORC_AULUNO&&pl.ativo)
       ? {key:key, nome:p.n||'', tutor:p.tutor||'', raca:_raca,
          dias:((typeof pelDias==='function')?pelDias(p):[])||[], trocas:{},
-         planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
+         planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff,
+         porMes:pelTemDiasPorMes(p)}
       : {key:key, nome:p.n||'', tutor:p.tutor||'', raca:_raca, dias:[], trocas:{}, planoKey:'',
          rotulo:(ORC_AULUNO?pl.rotulo:'não é auluno'), compromisso:'', hospOff:0,
          semPlano:ORC_AULUNO&&!pl.ativo});
@@ -14333,6 +14373,7 @@
     if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
     el.innerHTML=ORC_SEL.map(function(s,i){
       var dias=(s.dias||[]).length?('vem '+s.dias.map(function(d){ return ORC_DIAW_LB[d]||d; }).join(', ')):'sem dias no Day Care — todas as noites são diária';
+      if(orcPorMesAviso(s)) dias=((s.dias||[]).length?(dias+' hoje — '):'')+'os dias mudam por mês do plano, e a conta segue os dias de cada noite';
       var ord=(i===0?'1º FILHOt':(i+1)+'º FILHOt');
       var aviso=s.semPlano?'<div style="font-size:12.5px;color:var(--crm-critico);font-weight:700;margin-top:2px">Sem plano ativo: sem desconto e sem pernoite. Se ele renovou, atualize a ficha antes de orçar.</div>':'';
       return '<div class="orc-pet"><div style="flex:1"><strong>'+escAttr(s.nome)+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(ord)+'</span>'
@@ -14381,6 +14422,24 @@
   function orcDiasEfetivos(s){
     var tr=s.trocas||{};
     return (s.dias||[]).map(function(d){ return tr[d]||d; });
+  }
+  // NOITE A NOITE (6.30, Adriana, 05/out/2026 — caso da Hopi): quem tem plano com dias diferentes
+  // em cada mês tem a pernoite decidida pelos dias DAQUELA noite — a quarta do Mês 3 é dia dela
+  // (pernoite); a quarta do Mês 2 não é (diária). A troca pedida neste orçamento vale do mesmo jeito.
+  // Sem dias por mês, é a conta de sempre.
+  // O rótulo "os dias mudam por mês do plano" só enquanto existe mês do plano de hoje em diante
+  // (QA da 6.30, achado 6); a conta noite a noite continua com s.porMes.
+  function orcPorMesAviso(s){
+    if(!s || !s.porMes) return false;
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===s.key; });
+    return !!(p && pelTemMesDoPlanoAdiante(p));
+  }
+  function orcDiasEfetivosEm(s, iso){
+    if(!s || !s.porMes) return orcDiasEfetivos(s||{});
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===s.key; });
+    if(!p) return orcDiasEfetivos(s);
+    var tr=s.trocas||{};
+    return (pelDias(p, iso)||[]).map(function(d){ return tr[d]||d; });
   }
   // Desconto da diária: vale o MAIOR entre o desconto do plano e o do 2º/3º FILHOt —
   // nunca soma (decisão da Adriana, 12/ago/2026). Assim o mensal (0%) ganha os 5% do 2º,
@@ -14534,7 +14593,7 @@
       // Dias EFETIVOS: se a tutora trocou a quinta pela sexta nesta hospedagem, é a sexta que
       // vira pernoite e a quinta que passa a ser diária de hotel.
       var dias=orcDiasEfetivos(s);
-      var lista=noites.map(function(n){ return {iso:n.iso, dw:n.dw, pernoite:dias.indexOf(n.dw)>=0}; });
+      var lista=noites.map(function(n){ return {iso:n.iso, dw:n.dw, pernoite:(s.porMes?orcDiasEfetivosEm(s, n.iso):dias).indexOf(n.dw)>=0}; });
       // REPOSIÇÃO: cada dia a repor vale um dia de Day Care, então uma noite que seria
       // DIÁRIA de hotel passa a valer só o PERNOITE. Consome as primeiras noites de
       // diária — nunca mais reposições do que noites de diária existem.
@@ -14738,7 +14797,8 @@
       return (ORC_AULUNO&&pl.ativo)
         ? {key:sp.key, nome:p.n||'', tutor:p.tutor||'', raca:_raca,
            dias:((typeof pelDias==='function')?pelDias(p):[])||[], trocas:sp.trocas||{},
-           planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff}
+           planoKey:pl.planoKey, rotulo:pl.rotulo, compromisso:pl.compromisso, hospOff:pl.hospOff,
+           porMes:pelTemDiasPorMes(p)}
         : {key:sp.key, nome:p.n||'', tutor:p.tutor||'', raca:_raca, dias:[], trocas:sp.trocas||{},
            planoKey:'', rotulo:(ORC_AULUNO?pl.rotulo:'não é auluno'), compromisso:'', hospOff:0,
            semPlano:ORC_AULUNO&&!pl.ativo};
@@ -17121,7 +17181,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-02-09';
+  const APP_VERSAO='2026-10-07-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -17148,7 +17208,9 @@
       // fica acesa mesmo com a versão em dia — e diz por quê. O toque é o mesmo: recarregar.
       var __dia=(typeof appDiaVelho==='function') && appDiaVelho();
       if(__dia) acender=true;
-      if(acender) f.textContent=__dia?'O dia virou — toque para atualizar':'Nova versão pronta — toque para atualizar';
+      var __noite=false;
+      try{ __noite=__dia && zDiaSegurarNoite() && ehHojeAua(); }catch(e){ __noite=false; } /* silencioso de propósito: na dúvida, o texto de sempre */
+      if(acender) f.textContent=__dia?(__noite?'O dia virou — o app atualiza sozinho às 6h':'O dia virou — toque para atualizar'):'Nova versão pronta — toque para atualizar';
       f.style.display=acender?'block':'none';
       document.body.style.paddingTop=acender?(f.offsetHeight+'px'):'';
     }catch(e){} /* silencioso de propósito: a faixa é aviso — falhar ao desenhá-la não pode derrubar o vigia da versão */
@@ -17172,6 +17234,8 @@
       // respondeu toca com a tela trancada; recarregar a página a apagaria, e ela não voltaria.
       // Vale para a recarga da versão nova também (o mesmo furo existia desde 08/set).
       if(despMedNaTela || despNaTela) return '';
+      // O adiado que ainda não voltou também não (2ª rodada do QA da 6.32): a recarga apagaria o adiar.
+      if(typeof zDiaAdiadoAtivo==='function' && zDiaAdiadoAtivo(Date.now())) return '';
       if(!inatLogado()) return 'na porta de entrada';
       if(_appTrancado) return 'tela trancada';
       if(document.hidden) return 'aba escondida';
@@ -17206,6 +17270,27 @@
     // app num dia novo apaga o rascunho de ontem, com as fotos; sem internet, a página não volta.
     // O app diz o que fazer em vez de atualizar. (A recarga sozinha já passou por esta conta.)
     try{
+      // UM ALARME ADIADO QUE AINDA NÃO VOLTOU (3ª rodada do QA da 6.32): atualizar agora apaga o
+      // adiar, e a dose não volta a tocar. Pergunta antes — de dia (versão nova) e na virada.
+      if(!__diaRecarregando && !__diaForcarAgora && typeof zDiaAdiadoAtivo==='function' && zDiaAdiadoAtivo(Date.now()) && typeof zEscolha==='function'){
+        zEscolha('HÁ UM REMÉDIO ADIADO',
+          ['Um alarme de remédio foi adiado e ainda não voltou. Atualizar agora apaga o adiar, e a dose não toca de novo.',
+           'Espere o alarme voltar e registre a dose; depois, atualize.'],
+          [{t:'Esperar o alarme', cor:'#234D67', fn:function(){}},
+           {t:'Atualizar mesmo assim', cor:'#6b5f4b', fn:function(){ __diaForcarAgora=true; aplicarVersaoNova(); }}]);
+        return;
+      }
+      // DE MADRUGADA, no celular de quem recebe o alarme (QA da 6.32): atualizar agora apaga o
+      // toque que libera o som. Pergunta antes; quem quiser, atualiza.
+      if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando && !__diaForcarAgora
+         && typeof zDiaSegurarNoite==='function' && zDiaSegurarNoite() && ehHojeAua() && typeof zEscolha==='function'){
+        zEscolha('ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM',
+          ['O celular só libera o som do alarme de remédio depois de um toque na página. Atualizar agora começa a página do zero.',
+           'O app atualiza sozinho às 6h. O alarme de remédio já está no dia de hoje.'],
+          [{t:'Esperar as 6h', cor:'#234D67', fn:function(){}},
+           {t:'Atualizar mesmo assim', cor:'#6b5f4b', fn:function(){ __diaForcarAgora=true; aplicarVersaoNova(); }}]);
+        return;
+      }
       if(typeof appDiaVelho==='function' && appDiaVelho() && !__diaRecarregando){
         // As duas contas À PARTE (QA59): um alarme na tela, ou o almoço, não pode esconder o
         // check-in aberto nem a falta de internet.
@@ -17288,6 +17373,13 @@
     if(__diaRecarregando || !appDiaVelho()) return '';
     zFaixaVersao(true);
     if(zDiaTrabalhoAberto()) return 'faixa';   // alarme, check-in, almoço ou sem internet: só a faixa
+    // O alarme adiado que ainda não voltou (2ª rodada do QA da 6.32): recarregar agora apagaria o
+    // adiar, e a dose de ontem nunca mais tocaria. Como o alarme na tela, não é aparelho parado.
+    if(zDiaAdiadoAtivo(Date.now())) return 'faixa';
+    // O celular da plantonista não recarrega de madrugada (6.32) — SÓ quando a tela já passou para
+    // hoje (QA da 6.32): com a ficha aberta ou outra data escolhida, a tela não passou, e segurar
+    // a recarga deixaria o aparelho parado sem alarme nenhum até as 6h.
+    if(zDiaSegurarNoite() && ehHojeAua()) return 'faixa';
     var motivo=zMotivoParado();
     // Aba escondida NÃO basta para o dia (QA57): no Android e no computador o relógio segue
     // rodando com a página escondida, e quem saiu 20 segundos para o WhatsApp no meio de um
@@ -17304,7 +17396,65 @@
     setTimeout(aplicarVersaoNova, 600);   // folga para o rastro sair antes da página ir embora
     return 'recarga';
   }
-  try{ setInterval(function(){ try{ zViradaDoDiaTick(); }catch(e){} /* silencioso de propósito: o vigia tenta de novo em 15 s */ }, 15000); }
+  // ===== O ALARME DE REMÉDIO ATRAVESSA A MEIA-NOITE (6.32, 06/out/2026) ==================
+  // Achado do QA57 (01/out): o alarme de remédio só toca quando a data da tela da hospedagem
+  // é a de hoje (ehHojeAua). No aparelho que entrou antes da meia-noite, a tela continuava
+  // em "ontem" até recarregar — e ele só recarrega PARADO. Quem estava com o celular na mão
+  // depois da meia-noite ficava sem o alarme das doses da madrugada.
+  // (1) A tela da hospedagem passa sozinha para o dia novo, SEM recarregar, quando estava no
+  //     dia em que o app abriu (ninguém escolheu outra data) e nada está aberto: ficha do
+  //     FILHOt, alarme na tela ou adiado, check-in, almoço. Junto vêm a lista de hóspedes, a
+  //     agenda dos remédios, o registro das doses e o retrato do vigia — tudo no dia certo.
+  //     A dose de ontem que ainda está tocando (ou adiada) é registrada em ontem: a troca
+  //     espera por ela.
+  // (2) O celular de quem recebe o alarme, que já foi tocado, não recarrega entre 0h e 6h: a
+  //     recarga apaga o toque que libera o som no celular, e o alarme da madrugada sairia mudo.
+  //     O resto do dia (turma do Day Care, falta, planilha) continua travado até a recarga das
+  //     6h, como já era (a faixa do topo avisa).
+  var DIA_TELA_AUTO=APP_DIA_ABERTO, DIA_NOITE_ATE=6, __diaForcarAgora=false;
+  // O ADIADO SEGURA A TROCA E A RECARGA até o alarme dele VOLTAR à tela, ou até a dose aparecer
+  // registrada (2ª rodada do QA da 6.32). A folga fixa de 2 minutos não servia: com o celular no
+  // bolso a página congela, o relógio pula, e a folga já tinha passado quando ela acordava; e a
+  // recarga da virada passava por cima do adiado com o celular parado na mesa. O teto de 1 hora
+  // depois do prazo do adiar é para o adiado que não pode mais voltar (remédio tirado da agenda)
+  // não prender a tela em ontem.
+  var DIA_ADIADO_TETO_MS=60*60*1000;
+  function zDiaAdiadoAtivo(agora){
+    // Só segura quando o alarme TEM como voltar (3ª rodada do QA da 6.32): com outra data
+    // escolhida na tela, o alarme não toca — segurar deixaria as doses do dia novo caladas.
+    try{ if(!ehHojeAua() && !medDiaVelhoAuto()) return false; }catch(e){} /* silencioso de propósito: na dúvida, segura (o remédio vale mais) */
+    try{ return Object.keys(despMedSnoozePend||{}).some(function(k){ return despMedSnoozePend[k]>agora-DIA_ADIADO_TETO_MS; }); }
+    catch(e){ return false; } /* silencioso de propósito: sem o adiar carregado, não há alarme adiado */
+  }
+  // Devolve o que fez ('' = nada; 'avancou'; 'espera: <motivo>') — é a prova que morde isto.
+  function zDiaTelaAvancar(agora){
+    agora=agora||Date.now();
+    var hoje=zHojeISO();
+    if(!hoje || !DIA_TELA_AUTO || hoje===DIA_TELA_AUTO) return '';
+    // Alguém já voltou para hoje à mão (Hoje, setas): o dia automático acompanha (QA da 6.32).
+    if(dataKeyAtual()===hoje){ DIA_TELA_AUTO=hoje; return ''; }
+    if(dataKeyAtual()!==DIA_TELA_AUTO) return '';   // alguém escolheu outra data: a tela é dela
+    if(typeof fichaAberta==='function' && fichaAberta()) return 'espera: ficha aberta';
+    var aberto=zDiaTrabalhoAberto(); if(aberto && aberto!=='sem internet') return 'espera: '+aberto;
+    if(zDiaAdiadoAtivo(agora)) return 'espera: alarme adiado';
+    selectedDate=new Date(agora); DIA_TELA_AUTO=hoje;
+    try{ updateDateLabel(); }catch(e){} /* silencioso de propósito: o rótulo se acerta no próximo desenho */
+    try{ carregarHospedes(); }catch(e){ _logLeituraFalhou('hóspedes do dia novo (zDiaTelaAvancar)', e); }
+    try{ if(typeof audit==='function') audit('dia-tela-avancou', 'a tela da hospedagem passou para '+hoje+' sem recarregar (o alarme de remédio segue)', {}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return 'avancou';
+  }
+  function zDiaSegurarNoite(agora){
+    var d=new Date(agora||Date.now());
+    if(d.getHours()>=DIA_NOITE_ATE) return false;
+    try{ if(!papelRecebeAlarmeMed()) return false; }catch(e){ return false; } /* silencioso de propósito: sem o papel, vale a recarga de sempre */
+    // Nunca tocado desde que abriu: o som já está preso; recarregar não perde nada.
+    try{ var ua=navigator.userActivation; if(ua && ua.hasBeenActive===false) return false; }catch(e){} /* silencioso de propósito: sem a informação, segura (o som vale mais) */
+    return true;
+  }
+  try{ setInterval(function(){
+    try{ zDiaTelaAvancar(); }catch(e){} /* silencioso de propósito: tenta de novo em 15 s */
+    try{ zViradaDoDiaTick(); }catch(e){} /* silencioso de propósito: o vigia tenta de novo em 15 s */
+  }, 15000); }
   catch(e){} /* silencioso de propósito: sem temporizador, a faixa da versão e o fechar e abrir continuam valendo */
   // O CELULAR QUE VOLTA DO BOLSO (Adriana, 01/out/2026: "quero que seja basicamente
   // automático"). Com a página escondida o relógio do celular para; ao voltar, o toque de
@@ -17322,6 +17472,7 @@
       : ('voltou para o app depois de '+Math.round(fora/60000)+' min'));
   }
   try{ document.addEventListener('visibilitychange', function(){
+    try{ if(!document.hidden) zDiaTelaAvancar(); }catch(e){} /* silencioso de propósito: o vigia de 15 s tenta de novo */
     try{ zViradaDoDiaVisibilidade(!!document.hidden, Date.now()); }catch(e){} /* silencioso de propósito: o vigia de 15 s cobre o mesmo dia */
   }); }catch(e){} /* silencioso de propósito: sem o evento, o vigia de 15 s e a trava de 5 min continuam valendo */
 
@@ -18383,7 +18534,10 @@
     }
     inatMarcarAtividade();
   }
-  function inatMarcarAtividade(){
+  function inatMarcarAtividade(ev){
+    // A rolagem que o próprio app faz para devolver o lugar (Lançamentos do dia, 6.31) não é
+    // alguém mexendo: sem isto, cada redesenho adiava a trava e a recarga do aparelho parado.
+    if(ev && ev.type==='scroll' && (Date.now()-(DASH_ROLOU_EM||0))<500) return;
     _inatUltimo=Date.now();
     var el=document.getElementById('inatAviso');
     if(el && el.style.display!=='none') el.style.display='none';
@@ -19444,7 +19598,9 @@
   function planos(){ return planosCfg||PLANOS_PADRAO; }
   // valores em centavos para não ter erro de ponto flutuante
   function fmtCent(c){ return 'R$ '+(c/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function nAulasDe(p){ const d=pelDias(p)||[]; return Math.min(5,Math.max(1,d.length))||1; }
+  // Aulas da ROTINA (6.30): só é usada em contexto de plano (aba Plano, Confirmar, meio do mês,
+  // Renovação) — nunca para "quem vem hoje". Para ficha sem dias por mês, rotina = hoje.
+  function nAulasDe(p){ const d=pelDias(p,'rotina')||[]; return Math.min(5,Math.max(1,d.length))||1; }
   // mensalidade com desconto do Nº do peludinho na família (2º=7%, 3º+=12%)
   function mensalidade(planoKey, aulas, ordemPet){
     const pl=planos()[planoKey]; if(!pl) return 0;
@@ -19634,6 +19790,180 @@
   }
   // ---- renovação por FILHOt ----
   function renovDe(ex){ return (ex&&ex.renov)||{}; }
+  // ===== PLANO COM DIAS DIFERENTES EM CADA MÊS (Adriana, 05/out/2026 — caso da Hopi) ======
+  // "Da Hopi, nós fechamos um plano trimestral, sendo que durante dois meses ela vai vir uma
+  //  vez por semana apenas, e no último mês, duas vezes por semana, para poder fazer as
+  //  reposições [...] No primeiro mês, ela vai vir tais dias da semana, no segundo mês, ela
+  //  vai vir tais dias e etc."
+  // Os dias de cada mês moram DENTRO do plano gravado: renov.dias_mes = [["seg"],["seg"],
+  // ["seg","qua"]] (o índice 0 é o Mês 1). As DATAS de cada mês NÃO são gravadas: saem
+  // sempre desta conta, a partir do início, do prazo e do fim do plano — o meio do mês, a
+  // correção da data e o Desfazer nunca deixam duas verdades. Os chips do alto da ficha
+  // (ex.dias) passam a ser a ROTINA: o que vale fora dos meses do plano.
+  // Respostas da Adriana (06/out/2026): o "mês" conta do início do plano; o último mês termina
+  // no fim da vigência; os dias a mais são dias do plano e não gastam saldo de reposição;
+  // plano vencido sem renovação volta para os chips do alto (a rotina).
+  // Quantos meses o plano tem (3 no trimestral, 6 no semestral); 0 quando não cabe dia por mês.
+  function renovMesesN(r){
+    try{ const pl=planos()[(r||{}).plano]; const n=pl?(PLANO_MESES[pl.compromisso]||0):0; return n>1?n:0; }
+    catch(e){ return 0; } /* silencioso de propósito: sem a tabela de planos não há meses para contar */
+  }
+  // Os dias de cada mês, saneados: dado do banco é dado, não ordem. Aceita lista ou objeto de
+  // chaves numéricas (o Firebase pode devolver qualquer um dos dois), tira dia desconhecido,
+  // repetido e fora de ordem. Devolve null quando não fecha com o plano (outro tamanho, mês sem dia).
+  function renovDiasMesSaneado(L, n){
+    if(!L || typeof L!=='object' || !(n>1)) return null;
+    const tam=Array.isArray(L)?L.length:Object.keys(L).length;
+    if(tam!==n) return null;
+    const out=[];
+    for(let i=0;i<n;i++){
+      let m=L[i]; if(m==null) m=L[String(i)];
+      if(!m || typeof m!=='object') return null;
+      const arr=Array.isArray(m)?m:Object.keys(m).map(function(c){ return m[c]; });
+      const dias=ORDEM_DIAS.filter(function(d){ return arr.indexOf(d)>=0; });
+      if(!dias.length) return null;
+      out.push(dias);
+    }
+    return out;
+  }
+  // As DATAS de cada mês do plano, numa conta só: [{n, de, ate}] ou [] (sem como valer, não inventa).
+  // O Mês 1 começa no começo do período (vig_inicio || inicio); os seguintes contam da âncora —
+  // sempre somando a partir dela, nunca em cadeia, para não acumular desvio. Quem começou no
+  // meio do mês tem a âncora no dia 1º do primeiro mês cobrado (mes_cobranca_1). O último mês
+  // termina no fim da vigência (todo plano já vence no fim do mês — regra de 30/jul).
+  function renovMesesDatas(r){
+    try{
+      r=r||{};
+      const n=renovMesesN(r); if(!n) return [];
+      const ehISO=function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x||''); };
+      const ini=r.vig_inicio||r.inicio;
+      if(!ehISO(ini)||!ehISO(r.fim)) return [];
+      const ancora=renovMeioMesVale(r)
+        ? (/^\d{4}-\d{2}$/.test(r.mes_cobranca_1||'')?(r.mes_cobranca_1+'-01'):renovPrimeiroDoMesSeguinte(r.inicio))
+        : ini;
+      if(!ehISO(ancora)) return [];
+      const out=[];
+      for(let i=0;i<n;i++){
+        const de=(i===0)?ini:addMesesISO(ancora, i);
+        const ate=(i===n-1)?r.fim:addDiasISO(addMesesISO(ancora, i+1), -1);
+        if(!ehISO(de)||!ehISO(ate)||de>ate||ate>r.fim) return [];
+        out.push({n:i+1, de:de, ate:ate});
+      }
+      return out;
+    }catch(e){ return []; } /* silencioso de propósito: data torta no banco vira "sem meses" — vale a rotina */
+  }
+  // Os meses do plano com os dias de cada um: [{n, de, ate, dias}] ou [] quando o plano não tem
+  // dias por mês válidos (aí vale a rotina — os chips do alto da ficha).
+  function renovMesesDoPlano(r){
+    r=r||{};
+    if(!r.dias_mes) return [];
+    const n=renovMesesN(r); if(!n) return [];
+    const dm=renovDiasMesSaneado(r.dias_mes, n); if(!dm) return [];
+    const D=renovMesesDatas(r); if(D.length!==n) return [];
+    return D.map(function(m, i){ return {n:m.n, de:m.de, ate:m.ate, dias:dm[i].slice()}; });
+  }
+  function renovDiasMesValido(r){ return renovMesesDoPlano(r).length>0; }
+  // O plano anterior com dias por mês, congelado COM as datas na renovação seguinte (o plano
+  // de origem já saiu de renov). Saneado do mesmo jeito: período torto ou mês sem dia não vale.
+  function renovMesesAnteriores(r){
+    const A=(r&&r.dias_mes_anterior&&typeof r.dias_mes_anterior==='object')?r.dias_mes_anterior:null;
+    if(!A) return [];
+    const L=Array.isArray(A)?A:Object.keys(A).map(function(c){ return A[c]; });
+    const out=[];
+    L.forEach(function(m){
+      if(!m || typeof m!=='object') return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(m.de||'')||!/^\d{4}-\d{2}-\d{2}$/.test(m.ate||'')||m.de>m.ate) return;
+      const arr=Array.isArray(m.dias)?m.dias:((m.dias&&typeof m.dias==='object')?Object.keys(m.dias).map(function(c){ return m.dias[c]; }):[]);
+      const dias=ORDEM_DIAS.filter(function(d){ return arr.indexOf(d)>=0; });
+      if(dias.length) out.push({n:Number(m.n)||0, de:m.de, ate:m.ate, dias:dias});
+    });
+    return out;
+  }
+  // A data cai DENTRO do plano atual (do começo do período ao fim)? É a sobreposição com os
+  // meses que ainda faltam do plano anterior.
+  function renovDentroDoPlano(r, iso){
+    const comeco=(r&&(r.vig_inicio||r.inicio))||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(comeco) || iso<comeco) return false;
+    return !(/^\d{4}-\d{2}-\d{2}$/.test((r&&r.fim)||'') && iso>r.fim);
+  }
+  // Os dias da semana que valem NUMA DATA pelo plano: o mês do plano atual que contém a data;
+  // senão, o mês do plano anterior (renovação: os dias que faltam dele continuam valendo até o
+  // fim dele). null = vale a rotina.
+  // SOBREPOSIÇÃO (QA da 6.30, achado 2 — o AC8 como está escrito): quando o plano novo começa
+  // DENTRO do plano anterior (pago em 10/12 com o Mês 3 correndo até 31/12), nos dias em que os
+  // dois valem, valem os dias do mês do plano anterior JUNTO com os do plano novo — a união: o
+  // tutor pagou os dois. Fora da sobreposição, cada plano com os seus. `rotina` são os chips do
+  // alto da ficha: os dias do plano novo quando ele não tem dias por mês.
+  function renovDiasNaData(r, iso, rotina){
+    if(!r || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+    let novo=null;
+    const M=renovMesesDoPlano(r);
+    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate){ novo=M[i].dias; break; }
+    let velho=null;
+    const A=renovMesesAnteriores(r);
+    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate){ velho=A[j].dias; break; }
+    if(!velho) return novo;
+    if(!renovDentroDoPlano(r, iso)) return velho;            // antes do plano atual: só o anterior
+    const diasNovo=novo||(Array.isArray(rotina)?rotina:[]);
+    return ORDEM_DIAS.filter(function(d){ return velho.indexOf(d)>=0 || diasNovo.indexOf(d)>=0; });
+  }
+  // O mês do plano (atual ou anterior) que vale numa data: {n, de, ate, dias, total, anterior, junto}
+  // ou null. Na sobreposição, é o mês do plano anterior, com os dias JUNTO com os do plano novo
+  // (os mesmos do renovDiasNaData) e junto:true.
+  function renovMesNaData(r, iso, rotina){
+    if(!r || !/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+    const A=renovMesesAnteriores(r);
+    for(let j=0;j<A.length;j++) if(A[j].de<=iso && iso<=A[j].ate){
+      const junto=renovDentroDoPlano(r, iso);
+      return Object.assign({total:A.length, anterior:true}, A[j], {junto:junto, dias:(junto?(renovDiasNaData(r, iso, rotina)||A[j].dias):A[j].dias)});
+    }
+    const M=renovMesesDoPlano(r);
+    for(let i=0;i<M.length;i++) if(M[i].de<=iso && iso<=M[i].ate) return Object.assign({total:M.length, anterior:false, junto:false}, M[i]);
+    return null;
+  }
+  // Existe mês do plano (o atual ou o anterior, ainda guardado) de hoje em diante? É o que os
+  // RÓTULOS perguntam ("os dias mudam por mês do plano") — QA da 6.30, achado 6: depois do último
+  // mês, a frase ficava presa enquanto existisse o plano anterior congelado. A CONTA continua
+  // com pelTemDiasPorMes (a baixa automática olha 60 dias para trás).
+  function pelTemMesDoPlanoAdiante(p, hoje){
+    try{
+      if(!pelTemDiasPorMes(p)) return false;
+      const r=renovDe(pelExtra(p)||{}); hoje=hoje||zHojeISO();
+      return renovMesesDoPlano(r).concat(renovMesesAnteriores(r)).some(function(m){ return m.ate>=hoje; });
+    }catch(e){ return false; } /* silencioso de propósito: sem a ficha lida, o rótulo sai sem a frase */
+  }
+  // A ficha tem plano com dias por mês (o atual ou o anterior, ainda guardado)? Checagem barata:
+  // é ela que deixa as fichas de sempre no caminho de sempre.
+  function pelTemDiasPorMes(p){
+    try{ const r=((typeof pelExtra==='function'?pelExtra(p):null)||{}).renov; return !!(r && (r.dias_mes || r.dias_mes_anterior)); }
+    catch(e){ return false; } /* silencioso de propósito: sem a ficha lida, vale o caminho de sempre */
+  }
+  // "Seg, Qua" — os dias pelo nome curto, na ordem da semana.
+  function renovDiasRotulo(dias){ return (dias||[]).map(function(d){ return DIA_LBL[d]||d; }).join(', ')||'nenhum dia'; }
+  // "1x · 1x · 2x" quando o plano tem dias por mês; senão "2x" (as aulas gravadas).
+  function renovAulasRotulo(o){
+    const M=renovMesesDoPlano(o||{});
+    if(M.length) return M.map(function(m){ return m.dias.length+'x'; }).join(' · ');
+    return String((o&&o.aulas)||'—')+'x';
+  }
+  // O valor do plano, mês a mês, pela TABELA (resposta 1 da Adriana, 06/out/2026): a mensalidade
+  // de cada mês pela quantidade de dias daquele mês, com o desconto do Nº na família aplicado
+  // e arredondado EM CADA MÊS (é o que o Financeiro já faz ao multiplicar a mensalidade). Hopi:
+  // R$ 359,00 + R$ 359,00 + R$ 589,00 = R$ 1.307,00. {total, porMes:[{aulas, valor}], falta}
+  // — falta = o 1º mês sem dia ou sem preço na tabela (índice), -1 quando a conta fecha.
+  function renovValorDoPlano(planoKey, diasMes, ordemPet){
+    const porMes=[]; let total=0, falta=-1;
+    (diasMes||[]).forEach(function(d, i){
+      const n=(d||[]).length;
+      const v=n?mensalidade(planoKey, Math.min(5, n), ordemPet||1):0;
+      porMes.push({aulas:n, valor:v});
+      if(!(v>0) && falta<0) falta=i;
+      total+=v;
+    });
+    return {total:(falta<0?total:0), porMes:porMes, falta:falta};
+  }
+  // R$ no formato completo, com centavos: o do Financeiro quando ele carregou; senão o da tela.
+  function renovBRL(c){ return (typeof finBRL==='function')?finBRL(c):fmtCent(c); }
   // ===== UMA PORTA SÓ PARA O PLANO (Adriana, 15/set/2026) ============================
   // Esta função era a SEGUNDA porta: a aba Identificação tinha "Plano Day Care — início" e
   // "— fim" gravando direto no banco, sem escolher plano, sem validar, sem resumo e sem
@@ -19883,7 +20213,7 @@
   // ---- mensagens para o tutor (com emoji: WhatsApp, decisão de Adriana) ----
   // primeiroNome() já existe acima (usado no relatório do tutor)
   const DIA_EXT={seg:'segunda',ter:'terça',qua:'quarta',qui:'quinta',sex:'sexta'};
-  function diasPorExtenso(p){ const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]||x);
+  function diasPorExtenso(p){ const d=(pelDias(p,'rotina')||[]).map(x=>DIA_EXT[x]||x);
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1]; }
   // ===== A RENOVAÇÃO ENCANTADORA (Adriana, 01/out/2026) ===================================
@@ -19901,8 +20231,9 @@
   function renovParaNome(art, nome){ return 'para '+renovONome(art, nome); }     // "para a Amora"
   function renovMaiuscula(t){ return t?(t.charAt(0).toUpperCase()+t.slice(1)):t; }
   // "na quarta" · "na segunda e na quarta" · "na segunda, na quarta e na sexta"
+  // Os dias da ROTINA (6.30): a mensagem "Plano finalizou" fala do plano seguinte, não do mês que corre.
   function renovDiasNa(p){
-    const d=(pelDias(p)||[]).map(x=>DIA_EXT[x]).filter(Boolean).map(x=>'na '+x);
+    const d=(pelDias(p,'rotina')||[]).map(x=>DIA_EXT[x]).filter(Boolean).map(x=>'na '+x);
     if(!d.length) return ''; if(d.length===1) return d[0];
     return d.slice(0,-1).join(', ')+' e '+d[d.length-1];
   }
@@ -19916,7 +20247,7 @@
   // A frequência que a mensagem pode afirmar: os dias marcados na ficha; sem dia marcado, o nº de
   // aulas gravado no plano; sem nenhum dos dois, 0 — e a frase não inventa "uma vez" (QA61).
   function renovAulasMsg(p, r){
-    const d=(pelDias(p)||[]).length;
+    const d=(pelDias(p,'rotina')||[]).length;   // a rotina (6.30): a frequência do plano seguinte
     if(d) return Math.min(5, d);
     const a=Number(r&&r.aulas)||0;
     return (a>=1 && a<=5)?a:0;
@@ -19966,7 +20297,9 @@
     return m+' 🐾💛';
   }
   function msgRenovado(p,ex){
-    const r=renovDe(ex), aulas=renovAulasMsg(p, r);
+    // Plano com dias diferentes em cada mês (6.30): a frase sai SEM a frequência — uma linha com
+    // os dias de cada mês seria texto novo, e texto novo só com o texto da Adriana (06/out/2026).
+    const r=renovDe(ex), aulas=(r.dias_mes?0:renovAulasMsg(p, r));
     const art=renovArtigo(ex), nome=(pelNome(p)||p.n||''), tutor=primeiroNome(pelGet(p,'tutor'));
     const prazo=renovPrazo(r), vezes=aulas?RENOV_VEZES[aulas]:'';
     const ini=r.vig_inicio||r.inicio;
@@ -20000,9 +20333,67 @@
     // (renovVigenciaComeca) distingue corrigir o plano de hoje de lançar um pagamento novo.
     Object.defineProperty(base, '_inicio_gravado', {value:(base.inicio||''), enumerable:false});
     var k=renovRascKey();
-    if(renovRascunho && k && renovRascunho._k===k)
-      Object.keys(renovRascunho).forEach(function(c){ if(c!=='_k') base[c]=renovRascunho[c]; });
+    var rasc=(renovRascunho && k && renovRascunho._k===k)?renovRascunho:null;
+    if(rasc)
+      Object.keys(rasc).forEach(function(c){ if(c!=='_k') base[c]=rasc[c]; });
+    // OS DIAS DE CADA MÊS (6.30, caso da Hopi): sem escolha no rascunho, a tela mostra o que
+    // está gravado ("mudam" quando o plano tem dias por mês). PLANO NOVO no rascunho (a data do
+    // pagamento é de uma renovação) NÃO herda "mudam" — o arranjo da viagem não se repete sem a
+    // consultora ligar de novo (e o valor do plano não sai errado sem ninguém ver). Mas a data
+    // CORRIGIDA do mesmo plano (05/10 → 02/10: erro de digitação) continua com os dias de cada
+    // mês — QA da 6.30, achado 1: a tela voltava para "Iguais" e o Confirmar apagava as quartas.
+    if(!rasc || !('dias_modo' in rasc)){
+      var gD=renovDe(ex);
+      base.dias_modo=(gD.dias_mes && renovRascMesmoPlano(base, gD, rasc))?'mudam':'iguais';
+    }
+    if(base.dias_modo!=='mudam') delete base.dias_mes;
     return base;
+  }
+  // CORREÇÃO DO MESMO PLANO × PLANO NOVO (QA da 6.30, achado 1). É CORREÇÃO quando: a pessoa
+  // escolheu isso no Confirmar ("Correção da data" ou "Manter … (só corrigi a data)"); a data do
+  // pagamento é a mesma; o plano termina no MESMO dia do gravado (05/10 → 02/10 ou → 06/10:
+  // continua até 31/12); ou o período não começa depois do gravado. É PLANO NOVO quando a pessoa
+  // escolheu "Pagamento novo" / "Começar em …", ou quando o período começa depois do gravado e
+  // termina em outro dia (a renovação). escolha: 'correcao' | 'novo' | ''.
+  function renovEhCorrecao(g, c, escolha){
+    if(escolha==='correcao') return true;
+    if(escolha==='novo') return false;
+    g=g||{}; c=c||{};
+    const ehISO=function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x||''); };
+    const gIni=g.vig_inicio||g.inicio||'', cIni=c.vig_inicio||c.inicio||'';
+    if(!ehISO(gIni) || !ehISO(cIni)) return true;      // sem plano gravado não há "plano novo" para separar
+    if(String(g.inicio||'')===String(c.inicio||'')) return true;
+    if(ehISO(g.fim) && c.fim===g.fim) return true;
+    return cIni<=gIni;
+  }
+  // A linha do resumo do Confirmar sobre os dias de cada mês do plano GRAVADO ('' quando ele não
+  // os tem, ou quando é o mesmo plano que continua com eles). QA da 6.30: achado 1 (a correção que
+  // passa para "Iguais" diz que eles deixam de valer) e achado 2 (a renovação diz até quando eles
+  // continuam valendo — na sobreposição, junto com os do plano novo).
+  function renovLinhaMesesDoAtual(g, c, correcao, novoTemMeses, rotina){
+    const A=renovMesesDoPlano(g||{}); if(!A.length || !c) return '';
+    const rot=A.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ');
+    const ini=c.vig_inicio||c.inicio||'';
+    if(correcao){
+      if(novoTemMeses) return '';
+      return 'Os dias de cada mês do plano atual ('+rot+') deixam de valer — a partir de '+fmtBR(ini)+' vale '+renovDiasRotulo(rotina)+'.';
+    }
+    const fimA=A[A.length-1].ate;
+    const depois=novoTemMeses?'valem os dias de cada mês do plano novo':('vale '+renovDiasRotulo(rotina));
+    const verbo=(fimA<hojeISO())?'valeram':'continuam valendo';
+    if(fimA>=ini)
+      return 'Os dias de cada mês do plano atual ('+rot+') '+verbo+' até '+fmtBR(fimA)+', junto com os do plano novo — a partir de '+fmtBR(addDiasISO(fimA, 1))+', '+depois+'.';
+    return 'Os dias de cada mês do plano atual ('+rot+') '+verbo+' até '+fmtBR(fimA)+' — a partir de '+fmtBR(ini)+', '+depois+'.';
+  }
+  // O rascunho da tela ainda é o MESMO plano gravado? Sem data nova, sim; com data nova, pela
+  // conta da vigência (a mesma da tela e do Confirmar). A pergunta do Confirmar ainda pode
+  // mudar a leitura — e o Confirmar refaz a conta com a resposta.
+  function renovRascMesmoPlano(base, g, rasc){
+    if(!rasc || !('inicio' in rasc) || String(rasc.inicio||'')===String((g&&g.inicio)||'')) return true;
+    let c=null;
+    try{ c=(base && base.plano && base.inicio && planos()[base.plano])?renovCalcular(base, base.plano, 1, base.inicio):null; }
+    catch(e){ c=null; } /* silencioso de propósito: sem a conta da vigência, a data nova vale como plano novo (o caminho de antes) */
+    return !!c && renovEhCorrecao(g, c, '');
   }
   function renovRascSet(patch){
     var k=renovRascKey(); if(!k) return;
@@ -20016,11 +20407,107 @@
     var k=renovRascKey();
     if(!renovRascunho||!k||renovRascunho._k!==k) return false;
     var g=renovDe(ex);
-    return ['plano','ordemPet','inicio'].some(function(c){
+    if(['plano','ordemPet','inicio'].some(function(c){
       if(!(c in renovRascunho)) return false;
       if(c==='ordemPet') return Number(renovRascunho[c]||1)!==Number(g[c]||1);
       return String(renovRascunho[c]||'')!==String(g[c]||'');
-    });
+    })) return true;
+    // 6.30: o modo dos dias (iguais × mudam) e os dias de cada mês também esperam o Confirmar.
+    var modoG=g.dias_mes?'mudam':'iguais';
+    if(('dias_modo' in renovRascunho) && renovRascunho.dias_modo!==modoG) return true;
+    if(renovRascunho.dias_modo==='mudam' && ('dias_mes' in renovRascunho)){
+      var nS=renovMesesN(renovEdit(ex));
+      return JSON.stringify(renovDiasMesTela(renovRascunho.dias_mes, nS, []))!==JSON.stringify(renovDiasMesTela(g.dias_mes, nS, []));
+    }
+    return false;
+  }
+  // ---- OS DIAS MUDAM DURANTE O PLANO (6.30, Adriana, 05/out/2026 — caso da Hopi) ------
+  // Os dias de cada mês como a TELA trabalha: n meses, cada um com os dias marcados (pode estar
+  // vazio no rascunho — o Confirmar é que aponta). Mês que ainda não existe na lista (Gold →
+  // Black) começa com a rotina; ao diminuir (Black → Gold), corta.
+  function renovDiasMesTela(L, n, rotina){
+    const out=[];
+    for(let i=0;i<(n||0);i++){
+      const m=(L&&typeof L==='object')?(L[i]!=null?L[i]:L[String(i)]):null;
+      if(m && typeof m==='object'){
+        const arr=Array.isArray(m)?m:Object.keys(m).map(function(c){ return m[c]; });
+        out.push(ORDEM_DIAS.filter(function(d){ return arr.indexOf(d)>=0; }));
+      } else out.push(ORDEM_DIAS.filter(function(d){ return (rotina||[]).indexOf(d)>=0; }));
+    }
+    return out;
+  }
+  // O plano como vai ficar (o rascunho com a vigência calculada) — é dele que saem as datas de
+  // cada mês na tela e no resumo. O período que começa no dia do pagamento não herda o começo
+  // de outro ciclo (a mesma regra do Confirmar).
+  function renovPlanoComCalc(r, calc){
+    const x=Object.assign({}, r||{}, calc||{});
+    if(calc && !calc.vig_inicio) delete x.vig_inicio;
+    return x;
+  }
+  // "Iguais no plano todo" × "Mudam durante o plano". Só mexe no rascunho. Ao ligar, cada mês
+  // começa com os dias da rotina (ou com o que já estava gravado, se é correção do mesmo plano).
+  function renovDiasModoSet(modo){
+    if(!pelAtual) return;
+    const ex=pelExtra(pelAtual), r=renovEdit(ex), n=renovMesesN(r);
+    if(modo!=='mudam'){ renovRascSet({dias_modo:'iguais'}); return; }
+    if(!n) return;                                   // mensal: um mês, um conjunto de dias
+    const k=renovRascKey();
+    const rasc=(renovRascunho && renovRascunho._k===k)?renovRascunho:null;
+    const g=renovDe(ex);
+    const mesmoPlano=renovRascMesmoPlano(r, g, rasc);
+    const fonte=(rasc&&rasc.dias_mes) || ((mesmoPlano && g.dias_mes)?g.dias_mes:null);
+    renovRascSet({dias_modo:'mudam', dias_mes:renovDiasMesTela(fonte, n, pelDias(pelAtual,'rotina')||[])});
+  }
+  // Toque num dia de um mês: só o rascunho muda (nada grava antes do Confirmar).
+  function renovMesDiaToggle(i, d){
+    if(!pelAtual || ORDEM_DIAS.indexOf(d)<0) return;
+    const ex=pelExtra(pelAtual), r=renovEdit(ex), n=renovMesesN(r);
+    i=Number(i); if(!n || !(i>=0 && i<n)) return;
+    const L=renovDiasMesTela(r.dias_mes, n, pelDias(pelAtual,'rotina')||[]);
+    const m=L[i], j=m.indexOf(d);
+    if(j>=0) m.splice(j,1); else m.push(d);
+    L[i]=ORDEM_DIAS.filter(function(x){ return m.indexOf(x)>=0; });
+    renovRascSet({dias_modo:'mudam', dias_mes:L});
+  }
+  // As linhas por mês da aba Plano: datas, os dias de cada mês e o valor da tabela daquele mês.
+  function renovMesesHTML(p, r, calc){
+    const n=renovMesesN(r);
+    const rotina=pelDias(p,'rotina')||[];
+    const L=renovDiasMesTela(r.dias_mes, n, rotina);
+    const V=renovValorDoPlano(r.plano, L, r.ordemPet||1);
+    const D=calc?renovMesesDatas(renovPlanoComCalc(r, calc)):[];
+    const curto=function(iso){ return fmtBR(iso).slice(0,5); };
+    const pode=canEditPel();
+    const linhas=L.map(function(dias, i){
+      const dt=D[i]?(curto(D[i].de)+' a '+curto(D[i].ate)):'—';
+      const v=V.porMes[i]||{aulas:0, valor:0};
+      const chips=ORDEM_DIAS.map(function(d){
+        const on=dias.indexOf(d)>=0;
+        return '<span class="dia'+(on?' on':'')+(pode?' clic':'')+'" data-mes="'+i+'" data-dia="'+d+'"'
+          +(pode?' onclick="renovMesDiaToggle(Number(this.dataset.mes), this.dataset.dia)"':'')+'>'+DIA_LBL[d]+'</span>';
+      }).join('');
+      const valor=!dias.length
+        ? '<span style="color:var(--crm-critico)">marque pelo menos um dia</span>'
+        : (v.valor>0 ? (v.aulas+'x · '+renovBRL(v.valor)) : '<span style="color:var(--crm-critico)">'+v.aulas+'x — sem valor na tabela</span>');
+      return '<div id="planoMes_'+i+'" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;margin-top:6px">'
+        +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Mês '+(i+1)+' <span style="font-weight:600;color:var(--muted)">· '+dt+'</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px">'+chips
+        +'<span style="margin-left:auto;font-size:13px;font-weight:800;color:var(--z-blue)">'+valor+'</span></div></div>';
+    }).join('');
+    const ordem=Number(r.ordemPet||1);
+    const fimTxt=(calc&&calc.fim)?fmtBR(calc.fim):'';
+    return '<div class="field" style="grid-column:1/-1" id="planoMeses"><label>Os dias de cada mês <span style="font-weight:600;color:var(--muted)">— as aulas de cada mês são os dias marcados nele</span></label>'
+      +linhas
+      +(D.length?'':'<div class="hint" style="font-size:11px;margin-top:4px">As datas de cada mês aparecem quando a data do pagamento estiver preenchida.</div>')
+      +'<div id="planoValorPlano" class="prev-calc" style="margin-top:8px">'
+        +(V.falta<0
+          ? ('<strong>Valor do plano: '+renovBRL(V.total)+'</strong> <span style="font-size:12px;font-weight:600;color:var(--muted)">(pago à vista na renovação — a soma da tabela, mês a mês'+(ordem>1?(', com o desconto do '+ordem+'º peludinho em cada mês'):'')+')</span>')
+          : '<span style="color:var(--crm-critico);font-weight:700">Valor do plano: falta acertar o Mês '+(V.falta+1)+'.</span>')
+      +'</div>'
+      +'<div id="planoDepoisDoPlano" class="hint" style="font-size:11.5px;margin-top:4px">'
+        +(fimTxt?('Depois de '+fimTxt+', se o plano não for renovado'):'Depois do fim do plano, se ele não for renovado')
+        +', valem os dias do alto da ficha: '+esc(renovDiasRotulo(rotina))+'.</div>'
+      +'</div>';
   }
   // ---- FREQUÊNCIA ESCOLHIDA NO PRÓPRIO FORMULÁRIO, GUIADA ----------------------------
   // REGRA ÚNICA: aulas por semana = quantidade de dias marcados nos chips do topo da ficha.
@@ -20029,20 +20516,33 @@
   // Por isso escolher 1x com 3 dias marcados NÃO grava nada: aponta em vermelho para os
   // chips lá em cima e diz, com os dias pelo nome, exatamente o que fazer.
   const RENOV_NX=[1,2,3,5];
-  function renovDiasNomes(p){ return (pelDias(p)||[]).map(function(x){ return DIA_LBL[x]||x; }).join(', '); }
+  // Os chips do alto (a ROTINA, 6.30) — é o que o atalho "Aulas por semana" explica e o que o toque edita.
+  function renovDiasNomes(p){ return (pelDias(p,'rotina')||[]).map(function(x){ return DIA_LBL[x]||x; }).join(', '); }
   function renovDiasTexto(p){
-    var d=pelDias(p)||[];
+    var d=pelDias(p,'rotina')||[];
     if(!d.length) return 'hoje nenhum dia está marcado';
     return (d.length===1?'hoje está marcado ':'hoje estão marcados ')+renovDiasNomes(p);
   }
   function setRenovAulas(n){
     if(!pelAtual) return;
-    var atual=(pelDias(pelAtual)||[]).length;
+    var atual=(pelDias(pelAtual,'rotina')||[]).length;
     if(atual===n){ try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: enfeite de tela */ renovPlanoRedesenhar(); return; }
-    var msg='Marque '+(n===1?'só 1 dia':n+' dias')+' da semana lá em cima ('+renovDiasTexto(pelAtual)+'). '
-      +'As aulas por semana são sempre a quantidade de dias marcados — é esse número que entra na mensalidade.';
-    if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:msg}], {});
+    // 6.37: diz QUANTOS faltam (ou sobram) e aponta os dias logo abaixo, na própria aba Plano.
+    var dif=n-atual, qt=function(x){ return x===1?'1 dia':(x+' dias'); };
+    var msg=(dif>0?('Para '+n+'x, marque mais '+qt(dif)):('Para '+n+'x, desmarque '+qt(-dif)))+' aqui embaixo ('+renovDiasTexto(pelAtual)+'). '
+      +'A mensalidade segue a quantidade de dias marcados.';
+    if(typeof zFalta==='function') zFalta([{el:(document.getElementById('planoDiasChips')?'planoDiasChips':'pelDiasEdit'), msg:msg}], {});
     else try{ alert(msg); }catch(e){} /* silencioso de propósito: guarda defensiva */
+  }
+  // Os dias da semana dentro da aba Plano (6.37): os MESMOS chips do alto da ficha, maiores para o
+  // toque (44 px, como os outros botões do app), os 5 numa linha só (a caixa é uma grade de 5).
+  // Quem não edita a ficha vê os dias, sem tocar. O toque avisa que veio da aba ('plano').
+  function planoDiasChipsHTML(p){
+    var dias=pelDias(p,'rotina')||[], can=canEditPel();
+    return ORDEM_DIAS.map(function(d){
+      return '<span class="dia'+(dias.indexOf(d)>=0?' on':'')+(can?' clic':'')+'" style="font-size:13px;padding:0;margin:0;min-height:44px;display:flex;align-items:center;justify-content:center"'
+        +(can?(' onclick="toggleDiaPel(\''+d+'\', false, \'plano\')"'):'')+'>'+DIA_LBL[d]+'</span>';
+    }).join('');
   }
   // Redesenha SÓ o bloco Plano — usado quando os chips de dias mudam, para o seletor Nx
   // espelhar os chips na mesma hora (sem isso a tela ficaria com duas verdades).
@@ -20061,7 +20561,8 @@
     a=a||{}; b=b||{};
     return String(a.plano||'')===String(b.plano||'') && String(a.aulas||'')===String(b.aulas||'')
       && Number(a.ordemPet||1)===Number(b.ordemPet||1) && String(a.inicio||'')===String(b.inicio||'')
-      && String(renovVigOutra(a))===String(renovVigOutra(b)) && String(a.fim||'')===String(b.fim||'');
+      && String(renovVigOutra(a))===String(renovVigOutra(b)) && String(a.fim||'')===String(b.fim||'')
+      && JSON.stringify(a.dias_mes||null)===JSON.stringify(b.dias_mes||null);   // 6.30: os dias de cada mês também
   }
   function renovHistDe(ex){
     var h=(ex&&ex.renov_hist)||{};
@@ -20102,7 +20603,7 @@
       var rot=pl.rotulo?(pl.rotulo+' · '+(pl.compromisso||'')):(o.plano||'—');
       var ini=o.vig_inicio||o.inicio;
       return '<div style="padding:7px 0;border-top:1px dashed var(--z-cream-warm);font-size:12.5px;font-weight:600;color:var(--z-blue)">'
-        +'<strong>'+esc(rot)+'</strong> · '+esc(String(o.aulas||'—'))+'x · '
+        +'<strong>'+esc(rot)+'</strong> · '+esc(renovAulasRotulo(o))+' · '
         +(ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
         +(renovVigOutra(o)?' <span style="font-weight:600;color:var(--muted)">(pago em '+fmtBR(o.inicio)+')</span>':'')
         +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
@@ -20130,7 +20631,7 @@
       if(typeof zAlertao==='function') zAlertao('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA',
         ['Este FILHOt não tem nenhuma renovação anterior no histórico.',
          'O histórico começa a ser guardado a partir da primeira renovação confirmada nesta versão do app.',
-         'Para corrigir o plano atual, ajuste os dias lá em cima, o plano e a data, e toque em Confirmar.'],
+         'Para corrigir o plano atual, ajuste os dias (em «Quais dias?», na aba Plano), o plano e a data, e toque em Confirmar.'],
         {botao:'Entendi'});
       return;
     }
@@ -20138,9 +20639,9 @@
     const plAnt=planos()[ant.plano]||{}, plAtu=planos()[atual.plano]||{};
     const ok=await zPergunta('DESFAZER A ÚLTIMA RENOVAÇÃO',
       [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
-       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+(atual.aulas||'—')+'x · '
+       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+renovAulasRotulo(atual)+' · '
          +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
-       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+(ant.aulas||'—')+'x · '
+       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+renovAulasRotulo(ant)+' · '
          +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
        'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.'],
       {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
@@ -20150,17 +20651,22 @@
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
+    // 6.30: o plano que volta traz os dias de cada mês (e o anterior congelado) que tinha.
+    if(ant.dias_mes) volta.dias_mes=ant.dias_mes;
+    if(ant.dias_mes_anterior) volta.dias_mes_anterior=ant.dias_mes_anterior;
     await setPelExtra(pelAtual,{renov:volta});
     if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
       .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao-desfeita',
-      'voltou o plano de '+(atual.plano||'—')+' ('+(atual.aulas||'—')+'x) para '+(volta.plano||'—')
-      +' ('+(volta.aulas||'—')+'x) · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
+      'voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')
+      +' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('RENOVAÇÃO DESFEITA',
-      ['O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.',
+      [(volta.dias_mes&&renovDiasMesValido(volta))
+        ? ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', com os dias mudando por mês ('+renovAulasRotulo(volta)+').')
+        : ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.'),
        'Vale até '+(volta.fim?fmtBR(volta.fim):'—')+'.'], {ok:true, botao:'Fechar'});
   }
 
@@ -20170,6 +20676,9 @@
     // AULAS = DIAS MARCADOS. Sempre. Nem o que está gravado nem o que alguém digitou —
     // é a quantidade de chips do topo da ficha que manda, aqui e na mensalidade.
     const aulas=nAulasDe(p);
+    // nAulasDe nunca devolve menos de 1. Para a TELA, zero dia marcado é zero: nenhum número
+    // aceso e a mensalidade pedindo os dias (QA da 6.37, F6). O Confirmar já barra.
+    const nDiasMarcados=(pelDias(p,'rotina')||[]).length;
     const sujo=renovRascSujo(ex);
     // A consultora fala com o tutor em MENSAL / TRIMESTRAL / SEMESTRAL — é isso que precisa
     // estar na frente. Silver/Gold/Black continuam sendo o nome comercial (e definem o valor),
@@ -20218,21 +20727,43 @@
     // DADO INCONSISTENTE APARECE (Adriana, 15/set/2026). A Cookie ficou com plano gravado de
     // 2x e um único dia marcado. Em vez de esconder, a ficha mostra e ensina a consertar —
     // "sem programador" é lei desde 22/ago/2026.
-    const incoerente=(!semPlanoMensal && gravado.aulas && Number(gravado.aulas)!==aulas);
+    // PLANO COM DIAS POR MÊS (6.30): as aulas de cada mês são os dias marcados NAQUELE mês — o
+    // "gravado diz 1x" do plano da Hopi não briga com a rotina. A faixa só aparece quando os dias
+    // de cada mês gravados não fecham com o plano (dado torto no banco).
+    const temDiasMes=!!gravado.dias_mes;
+    const incoerente=(!semPlanoMensal && (temDiasMes ? !renovDiasMesValido(gravado) : (gravado.aulas && Number(gravado.aulas)!==nDiasMarcados)));
     const faixaIncoerente=incoerente
       ? '<div class="field" style="grid-column:1/-1"><div id="planoIncoerente" class="hint" style="background:rgba(222,180,40,.22);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
-        +'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
-        +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias lá em cima e toque em <strong>Confirmar</strong> para acertar.'
+        +(temDiasMes
+          ? 'Os dias de cada mês gravados não fecham com o plano. Escolha <strong>Mudam durante o plano</strong>, confira cada mês e toque em <strong>Confirmar</strong> para acertar.'
+          : 'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas '
+            +(nDiasMarcados?('os dias marcados são '+nDiasMarcados+' ('+esc(renovDiasNomes(p))+')'):'nenhum dia está marcado')+'. Confira os dias em <strong>Quais dias?</strong>, logo abaixo, e toque em <strong>Confirmar</strong> para acertar.')
+        +'</div></div>'
+      : '';
+    // OS DIAS DA SEMANA MUDAM DURANTE O PLANO? (6.30, caso da Hopi) Só no trimestral e no
+    // semestral: no mensal, um mês é um conjunto de dias.
+    const nMeses=semPlanoMensal?0:renovMesesN(r);
+    const mudam=!!(nMeses && r.dias_modo==='mudam');
+    const seletorModo=nMeses
+      ? '<div class="field" style="grid-column:1/-1"><label>Os dias da semana <span style="font-weight:600;color:var(--muted)">— no '+esc((planos()[r.plano]||{}).compromisso||'plano')+', podem mudar de um mês para o outro</span></label>'
+        +'<div class="seg gold" data-single id="planoDiasModo">'
+          +'<button type="button" class="'+(mudam?'':'on')+'" onclick="renovDiasModoSet(\'iguais\')">Iguais no plano todo</button>'
+          +'<button type="button" class="'+(mudam?'on':'')+'" onclick="renovDiasModoSet(\'mudam\')">Mudam durante o plano</button>'
         +'</div></div>'
       : '';
     return '<div class="prev-bloco" id="planoBloco">'
       +'<div class="prev-tit">Plano <span class="vd '+(semPlanoMensal?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
       // TEXTO DE APOIO — o sistema orienta o que fazer, em uma linha, antes de qualquer campo.
-      +(semPlanoMensal?'':'<div id="planoComoFazer" class="hint" style="margin:0 0 9px;font-weight:700;color:var(--z-blue)">Primeiro marque os dias da semana lá em cima. Depois escolha o plano e a data. Nada é gravado antes do Confirmar.</div>')
+      +(semPlanoMensal?'':'<div id="planoComoFazer" class="hint" style="margin:0 0 9px;font-weight:700;color:var(--z-blue)">'
+        +(mudam
+          ? 'Escolha o plano e a data e marque os dias de cada mês logo abaixo. Nada é gravado antes do Confirmar.'
+          : 'Marque os dias da semana em «Quais dias?», logo abaixo. Depois escolha o plano e a data. Nada é gravado antes do Confirmar.')
+        +'</div>')
       +'<div class="cad-grid">'
         +faixaIncoerente
         +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a data':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
           +['Silver','Gold','Black'].map(selPlano).join('')+btnAvu+btnAua+btnMor+'</div></div>'
+      +seletorModo
       + (soHosp
           ? '<div class="field" style="grid-column:1/-1"><div class="hint" style="background:rgba(46,125,138,.12);border-left:4px solid #2E7D8A;border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
             +'🌙 Este FILHOt é <strong>só da AuAulândia</strong> — não é auluno do Day Care.<br>'
@@ -20250,11 +20781,17 @@
             +'</div></div>'
           // SELETOR DE AULAS POR SEMANA — atalho e explicação dos chips do topo, nunca uma
           // segunda verdade. Vem ACIMA da data, porque é a primeira coisa a acertar.
-          : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados lá em cima</span></label>'
+          // Com "Mudam durante o plano" (6.30), o atalho dá lugar às linhas de cada mês.
+          // 6.37 (Adriana, 06/out/2026, Fred: "deseja 2x por semana vou fechar e volta para uma vez"):
+          // os DIAS ficam aqui também, logo abaixo — os mesmos chips do alto da ficha (toggleDiaPel,
+          // uma verdade só). O "2x" diz quantos faltam marcar, e a pessoa marca sem sair da aba.
+          : (mudam ? renovMesesHTML(p, r, calc) : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados</span></label>'
             +'<div class="seg gold" data-single id="planoAulasSeg">'
-              +RENOV_NX.map(function(n){ return '<button type="button" class="'+(aulas===n?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
+              +RENOV_NX.map(function(n){ return '<button type="button" class="'+((nDiasMarcados && aulas===n)?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
             +'</div>'
-            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Para trocar, marque os dias no alto da ficha.</div></div>'
+            +'<label style="margin-top:10px">Quais dias?</label>'
+            +'<div id="planoDiasChips" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px;max-width:340px">'+planoDiasChipsHTML(p)+'</div>'
+            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+(nDiasMarcados?(aulas+'x por semana ('+esc(renovDiasNomes(p))+')'):'nenhum dia marcado')+'. Toque nos dias para trocar: são os mesmos do alto da ficha.</div></div>')
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
               +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);renovRascSet({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
@@ -20266,7 +20803,7 @@
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
               +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano — menos quando o tutor paga a renovação nos últimos 15 dias do plano atual (o novo período começa no dia seguinte ao fim) ou nos últimos 7 dias do mês (começa no dia 1º do mês seguinte). O vencimento é calculado sozinho — e só grava no Confirmar. Período errado depois de gravar? Use Desfazer a última renovação.</div>':'')+'</div>'
-            +'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>'
+            +(mudam?'':'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+((mens&&nDiasMarcados)?fmtCent(mens):(mens?'marque os dias em «Quais dias?»':'escolha o plano'))+'</div></div>')
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
@@ -20308,9 +20845,47 @@
     const ex=pelExtra(pelAtual), gravado=renovDe(ex), r=renovEdit(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     const aulas=nAulasDe(pelAtual);
-    const dias=pelDias(pelAtual)||[];
-    if(!dias.length){
-      if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:'Marque os dias da semana em que este FILHOt vem. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
+    const dias=pelDias(pelAtual,'rotina')||[];
+    // OS DIAS MUDAM DURANTE O PLANO (6.30, caso da Hopi): cada mês precisa de pelo menos um dia
+    // e de preço na tabela; e "mudam" com todos os meses iguais é o plano de sempre.
+    const nMesesC=renovMesesN(r);
+    let mudamC=!!(nMesesC && r.dias_modo==='mudam');
+    let dmC=mudamC?renovDiasMesTela(r.dias_mes, nMesesC, dias):null;
+    // O modo dos dias foi ESCOLHIDO na tela (tocou em "Iguais"/"Mudam" ou num dia de um mês)? Se
+    // não foi, ele segue a leitura do plano — e o Confirmar refaz depois da pergunta da data.
+    const kC=renovRascKey();
+    const modoEscolhidoC=!!(renovRascunho && kC && renovRascunho._k===kC && ('dias_modo' in renovRascunho));
+    const faltaC=function(el, msg){
+      if(typeof zFalta==='function') zFalta([{el:el, msg:msg}], {botao:'planoConfirmar'});
+      else alert(msg);
+    };
+    // Os dias de cada mês fecham? (um dia em cada mês, preço na tabela, meses diferentes)
+    // avisar=false: só responde, sem apontar nada (é o caso da troca de modo depois da pergunta).
+    const mesesFechamC=function(dm, avisar){
+      const vazio=dm.findIndex(function(m){ return !m.length; });
+      if(vazio>=0){ if(avisar) faltaC('planoMes_'+vazio, 'Marque pelo menos um dia no Mês '+(vazio+1)+'.'); return false; }
+      const vC=renovValorDoPlano(r.plano, dm, r.ordemPet||1);
+      if(vC.falta>=0){
+        const plF=planos()[r.plano]||{};
+        if(avisar) faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dm[vC.falta].length+'x por semana — confira a tabela comercial.');
+        return false;
+      }
+      if(dm.every(function(m){ return m.join(',')===dm[0].join(','); })){
+        if(avisar) faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias em «Quais dias?».');
+        return false;
+      }
+      return true;
+    };
+    if(mudamC){
+      if(!mesesFechamC(dmC, true)) return;
+      // OS CHIPS DO ALTO TAMBÉM NO "MUDAM" (QA da 6.30, achado 7): são eles que valem depois do
+      // plano. Sem nenhum, quando o plano acaba o FILHOt some da turma sem ninguém ver.
+      if(!dias.length){
+        faltaC('pelDiasEdit', 'Marque os dias da semana lá em cima: são eles que valem depois do plano, se ele não for renovado. Sem nenhum dia marcado, este FILHOt sai da turma quando o plano acabar.');
+        return;
+      }
+    } else if(!dias.length){
+      if(typeof zFalta==='function') zFalta([{el:(document.getElementById('planoDiasChips')?'planoDiasChips':'pelDiasEdit'), msg:'Marque os dias da semana em que este FILHOt vem'+(document.getElementById('planoDiasChips')?', aqui em «Quais dias?»':'')+'. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
       else alert('Marque os dias da semana antes de confirmar o plano.');
       return;
     }
@@ -20330,6 +20905,7 @@
       return;
     }
     let jaDecidiu=false;
+    let escolhaC='';   // 6.30: o que a pessoa respondeu sobre a data — 'novo' | 'correcao' | '' (não perguntou)
     // Ficha em que a pessoa já escolheu "Manter" (período anotado = dia do pagamento) e que é
     // reconfirmada com a MESMA data — para acertar os dias, por exemplo — continua anotada.
     // Sem isto a anotação sumia e a ficha voltava a perguntar a cada abertura (QA56).
@@ -20359,6 +20935,9 @@
         // gravado, e a ficha para de oferecer o mês seguinte a cada vez que é aberta.
         if(!ehNovo) calc.vig_inicio=calc.inicio;
       }
+      // 6.30: "Pagamento novo" é plano novo; "Correção da data" é o mesmo plano (os dias de cada
+      // mês continuam). A pergunta da ficha antiga é sobre o MESMO pagamento: correção nas duas.
+      escolhaC=(ehNovo && escolheuRegra)?'novo':'correcao';
       jaDecidiu=true;
     }
     // TRAVA CONTRA VIGÊNCIA NASCIDA VENCIDA (Adriana, 11/ago/2026 — caso Beau).
@@ -20407,25 +20986,69 @@
           {sim:'Começar em '+fmtBR(isoSeg)+', valendo até '+fmtBR(calcSeg.fim),
            nao:'Manter até '+fmtBR(calc.fim)+' (só corrigi a data)'});
         if(seguir) calc=calcSeg;
+        escolhaC=seguir?'novo':'correcao';
       }
+    }
+    // CORREÇÃO OU PLANO NOVO, com a resposta da pergunta acima (QA da 6.30, achado 1).
+    const correcaoC=renovEhCorrecao(gravado, calc, escolhaC);
+    // Sem modo escolhido na tela, os dias de cada mês seguem a leitura FINAL: a correção do mesmo
+    // plano continua com os dias de cada mês gravados (Mês 1, 2, 3 contados do início do plano, com
+    // as datas recalculadas); o plano novo começa em "Iguais" (AC8: não herda os dias por mês).
+    if(!modoEscolhidoC && nMesesC){
+      if(correcaoC && !mudamC && gravado.dias_mes && renovDiasMesValido(gravado)){
+        const dmG=renovDiasMesTela(gravado.dias_mes, nMesesC, dias);
+        if(mesesFechamC(dmG, false)){ mudamC=true; dmC=dmG; }
+      } else if(!correcaoC && mudamC){ mudamC=false; dmC=null; }
     }
     // RESUMO ANTES DE GRAVAR. "O sistema inteiro precisa orientar o que fazer" (Adriana).
     // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
     const pl=planos()[r.plano]||{};
     const mens=mensalidade(r.plano, aulas, r.ordemPet||1);
     const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
+    // 6.30: os meses do plano com as datas DESTA vigência (a escolhida acima) e o valor de cada um.
+    const mesesC=mudamC?renovMesesDoPlano(Object.assign(renovPlanoComCalc(r, calc), {dias_mes:dmC})):[];
+    if(mudamC && mesesC.length!==nMesesC){
+      if(typeof zAlertao==='function') zAlertao('NÃO DEU PARA MONTAR OS MESES DO PLANO',
+        ['As datas de cada mês não fecham com o período calculado ('+fmtBR(calc.vig_inicio||calc.inicio)+' até '+fmtBR(calc.fim)+').',
+         'Nada foi gravado. Confira a data do pagamento e tente de novo.'], {botao:'Entendi'});
+      return;
+    }
+    const valorC=mudamC?renovValorDoPlano(r.plano, dmC, r.ordemPet||1):null;
+    const aulasGrava=mudamC?dmC[0].length:aulas;          // renov.aulas = os dias do Mês 1 (quem lê "aulas" continua lendo)
     const linhasPlano=[pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
-       'Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt,
-       (renovVigOutra(calc)
+       (mudamC
+         ? ('Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · os dias mudam durante o plano')
+         : ('Plano '+(pl.rotulo||r.plano)+' ('+(pl.compromisso||'')+') · '+aulas+'x por semana · '+diasTxt))]
+      .concat(mesesC.map(function(m, i){
+        return 'Mês '+m.n+' · '+fmtBR(m.de)+' a '+fmtBR(m.ate)+' · '+renovDiasRotulo(m.dias)+' · '+m.dias.length+'x · '+renovBRL(valorC.porMes[i].valor); }))
+      .concat([(renovVigOutra(calc)
          ? ('Pagamento '+fmtBR(calc.inicio)+' · vale de '+fmtBR(calc.vig_inicio)+' até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))
-         : ('Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—'))),
-       'Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')];
+         : ('Início '+fmtBR(calc.inicio)+' · vale até '+fmtBR(calc.fim)+' · renova em '+(calc.mesRenov||'—')))])
+      .concat(mudamC
+        ? ['Valor do plano: '+renovBRL(valorC.total)+' — pago à vista'+((r.ordemPet||1)>1?(', com o desconto do '+(r.ordemPet)+'º peludinho da família em cada mês'):''),
+           'Depois de '+fmtBR(calc.fim)+', sem renovação: '+renovDiasRotulo(dias)+' (os dias do alto da ficha)']
+        : ['Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')]);
     const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
     if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
     if(renovVigOutra(calc)) linhasPlano.push('Por quê: '+renovVigenciaFrase(calc, calc._porque)+'.');
-    const novo=Object.assign({}, gravado, calc, {aulas:aulas, ordemPet:r.ordemPet||1});
+    // O que acontece com os dias de cada mês do plano GRAVADO — linha obrigatória quando ele os tem
+    // (QA da 6.30, achados 1 e 2): eles nunca somem calados.
+    const linhaMesesAtualC=renovLinhaMesesDoAtual(gravado, calc, correcaoC, mudamC, dias);
+    if(linhaMesesAtualC) linhasPlano.push(linhaMesesAtualC);
+    const novo=Object.assign({}, gravado, calc, {aulas:aulasGrava, ordemPet:r.ordemPet||1});
     // O período que começa no dia do pagamento não herda o começo de outro ciclo.
     if(!calc.vig_inicio) delete novo.vig_inicio;
+    // OS DIAS DE CADA MÊS (6.30): "Mudam" grava os dias de cada mês; "Iguais" NÃO herda os do
+    // plano gravado (o Object.assign acima herdaria). Na renovação (plano NOVO, renovEhCorrecao),
+    // o plano anterior com dias por mês fica congelado com as datas: os dias que ainda faltam dele
+    // (inclusive na sobreposição com o plano novo) e os passados (a baixa automática olha 60 dias
+    // para trás) continuam certos. Correção do mesmo plano não mexe no anterior.
+    if(mudamC) novo.dias_mes=dmC.map(function(m){ return m.slice(); }); else delete novo.dias_mes;
+    if(!correcaoC){
+      const antC=renovMesesDoPlano(gravado);
+      if(antC.length) novo.dias_mes_anterior=antC.map(function(m){ return {n:m.n, de:m.de, ate:m.ate, dias:m.dias.slice()}; });
+      else delete novo.dias_mes_anterior;
+    }
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:(renovMesmoPlano(gravado, novo)
@@ -20444,15 +21067,19 @@
     await setPelExtra(pelAtual,{renov:novo});
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao',
-      'renovou o plano '+novo.plano+' ('+aulas+'x, dias '+diasTxt+') '
+      'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
-      +' até '+fmtBR(novo.fim)+' · mensalidade '+fmtCent(mens),
+      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorC.total)):(' · mensalidade '+fmtCent(mens))),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
-      [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
-       'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
-       'Mensalidade '+fmtCent(mens)+'.'], {ok:true, botao:'Fechar'});
+      (mudamC
+        ? [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+', com os dias mudando por mês ('+renovAulasRotulo(novo)+').',
+           'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
+           'Valor do plano '+renovBRL(valorC.total)+'.']
+        : [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
+           'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
+           'Mensalidade '+fmtCent(mens)+'.']), {ok:true, botao:'Fechar'});
   }
 
   // ===== COMEÇOU NO MEIO DO MÊS — a tela (Adriana, 18/set/2026) =====================
@@ -20509,10 +21136,16 @@
       const chave=pelKey(q), nome=pelNome(q), ex=pelExtra(q)||{};
       const r=(chave===eu)?renovEdit(ex):renovDe(ex);     // na ficha aberta vale o rascunho do plano
       const pl=planos()[r.plano];
-      const dias=pelDias(q)||[];
+      let dias=pelDias(q,'rotina')||[];
+      // PLANO COM DIAS POR MÊS (6.30): as diárias que faltam neste mês seguem os dias do Mês 1 — o
+      // do rascunho na ficha aberta ("Mudam durante o plano"), o gravado nas outras fichas.
+      let diasMes=null;
+      if(chave===eu && r.dias_modo==='mudam' && renovMesesN(r)) diasMes=renovDiasMesTela(r.dias_mes, renovMesesN(r), dias)[0]||null;
+      else if(r.dias_mes && renovDiasMesValido(r)){ const dd=pelDias(q, ini)||[]; if(dd.length) diasMes=dd; }
+      if(diasMes && diasMes.length) dias=diasMes; else diasMes=null;
       if(!pl){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem plano escolhido — abra a ficha dele, aba Plano, e escolha Mensal, Trimestral ou Semestral'}); return; }
       if(!dias.length){ pendentes.push({chave:chave, nome:nome, falta:'ainda não tem os dias da semana marcados — marque os dias no alto da ficha dele'}); return; }
-      const aulas=nAulasDe(q), ordem=Number(r.ordemPet)||1;
+      const aulas=diasMes?Math.min(5, Math.max(1, dias.length)):nAulasDe(q), ordem=Number(r.ordemPet)||1;
       const mens=mensalidade(r.plano, aulas, ordem);
       // Tabela sem preço para esta faixa não vira conta em R$ 0,00 calada: a tela diz onde arrumar.
       if(!(mens>0)){ pendentes.push({chave:chave, nome:nome,
@@ -20832,6 +21465,13 @@
   function setRenovFiltro(f){ renovFiltro=f; renderRenovacao(); }
   function renderRenovacao(){
     const el=document.getElementById('renovLista'); if(!el) return;
+    // Story 6.40: a tela pode ser desenhada (aoAbrirView, ao entrar como consultora) ANTES de o
+    // script chegar à linha do "var renovFiltro='cobrar'" acima — aí o filtro ainda é undefined
+    // e o primeiro desenho dava erro. Sem filtro, vale o de sempre: a cobrar agora.
+    if(typeof renovFiltro!=='string' || !renovFiltro) renovFiltro='cobrar';
+    // Pelo mesmo motivo, a lista do app (PELUDINHOS) ainda pode não existir: aí não desenha agora —
+    // o desenho de verdade vem quando o cadastro chega (a lista já aparecia depois do erro).
+    if(!Array.isArray(PELUDINHOS)) return;
     const ehTipo=renovFiltro.indexOf('tipo:')===0;
     const tipoAlvo=ehTipo?renovFiltro.slice(5):'';
     const ativos=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
@@ -20893,7 +21533,7 @@
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
         +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
-        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+nAulasDe(o.p)+'x':'plano a definir')
+        +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+(renovDiasMesValido(r)?escAttr(renovMesesDoPlano(r).map(function(m){ return m.dias.length+'x'; }).join(', ')):(nAulasDe(o.p)+'x')):'plano a definir')
         +'<div class="renov-per">'+periodo+'</div></div>'
         +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span></div>';
     }).join('')+'</div>';
@@ -21076,6 +21716,9 @@
   // está na tela, com volume mais alto. Só para quando a pessoa toca "Dei o remédio" ou "ADIAR 5 min".
   // Dose atrasada é segurança: o alarme não some sozinho nem cala sozinho.
   let despMedAC=null, despMedLoopTimer=null, despMedSnooze={};
+  // Os adiados cujo alarme AINDA NÃO VOLTOU à tela (sk → prazo do adiar). É o que segura a virada
+  // do dia (zDiaAdiadoAtivo): sai quando o alarme reabre ou quando a dose aparece registrada.
+  let despMedSnoozePend={};
   // Sirene "despertador antigo": rajada de pulsos alternando 2 tons, volume ALTO e estridente.
   // Toca em loop até uma ação humana ("Dei o remédio" ou "ADIAR 5 min"). Vibra o aparelho junto.
   function bipMedPadrao(ac){
@@ -22025,10 +22668,26 @@
   function papelRecebeAlarme(){ return podePapel('recebe-alarme'); }
   // Dose de medicação: mesmo critério — só quem DÁ o remédio é acordado.
   function papelRecebeAlarmeMed(){ return papelRecebeAlarme(); }
+  // A tela ainda no dia de ontem, esperando para passar sozinha (6.32): o alarme só toca, ali, a
+  // dose de ontem que foi ADIADA e já venceu o adiar — e ela é registrada em ontem.
+  function medDiaVelhoAuto(){
+    try{ return !!(typeof DIA_TELA_AUTO!=='undefined' && DIA_TELA_AUTO && dataKeyAtual()===DIA_TELA_AUTO && zHojeISO()!==DIA_TELA_AUTO); }
+    catch(e){ return false; } /* silencioso de propósito: sem a informação, vale a regra de sempre */
+  }
   function checarDespertadorMed(){
     try{
       if(!papelRecebeAlarmeMed()) return; // vet/consultora/supervisora/conferência não recebem alarme de dose
-      if(!ehHojeAua()) return;
+      var velho=false;
+      if(!ehHojeAua()){ if(!medDiaVelhoAuto()) return; velho=true; }
+      // Com a tela em ontem, o adiado de um remédio que saiu da agenda não volta nunca: sai do
+      // pendente, senão seguraria a tela (e as doses do dia novo) até o teto (3ª rodada do QA da 6.32).
+      if(velho){
+        try{
+          var __naFila={};
+          (MED_AGENDA_TODOS||[]).forEach(function(it){ __naFila[it.key+'__'+magDoseId(it.itemId,it.horario)]=1; });
+          Object.keys(despMedSnoozePend||{}).forEach(function(k){ if(!__naFila[k]) delete despMedSnoozePend[k]; });
+        }catch(e){} /* silencioso de propósito: sem a agenda, vale o teto */
+      }
       if(despMedNaTela) return; // já tem um na tela
       if(!MED_AGENDA_TODOS.length||!DB) return;
       medLogHoje().then(function(log){
@@ -22036,8 +22695,13 @@
         for(const it of fila){
           const doseId=magDoseId(it.itemId,it.horario);
           const feito=log[it.key]&&log[it.key][doseId];
-          if(feito) continue;
           const sk=it.key+'__'+doseId;
+          if(feito){ delete despMedSnoozePend[sk]; continue; }   // dada (aqui ou em outro aparelho): não segura mais nada
+          if(velho){
+            // Só a adiada de ontem que já venceu o adiar (o relógio de hoje não serve para ontem).
+            if(despMedSnooze[sk] && Date.now()>=despMedSnooze[sk]){ mostrarDespertadorMed(it,doseId); return; }
+            continue;
+          }
           if(despMedSnooze[sk] && Date.now()<despMedSnooze[sk]) continue; // adiado — aguarda os 5 min
           const m=minutosAte(it.horario);
           if(m===null) continue;
@@ -22049,6 +22713,7 @@
   function mostrarDespertadorMed(it,doseId){
     const el=document.getElementById('despMed'); if(!el) return;
     despMedNaTela=it.key+'__'+doseId; despMedAtual=it; despMedAtualDoseId=doseId;
+    delete despMedSnoozePend[despMedNaTela];   // o adiado voltou: agora quem segura é o alarme na tela
     const qtd=fmtQtd(it.q,it.u);
     // Item 10 — pomada/aplicação SEM o local é instrução pela metade: a plantonista das 2h da
     // manhã não tem como adivinhar que o Crema 64 da Dolly é no machucado do lado esquerdo do
@@ -22064,7 +22729,31 @@
       +'</div></div>';
     el.style.display='block';
     bipMedLoopStart();
+    // SEM SOM (6.32): o celular só libera o som depois de um toque na página. Se o alarme
+    // abriu mudo (aparelho recém-aberto ou recarregado, iPhone), a faixa diz o que fazer.
+    setTimeout(medSomConferir, 1500);
   }
+  function medSomMudo(){ return !!(despMedNaTela && despMedAC && despMedAC.state!=='running'); }
+  function medSomConferir(){
+    try{
+      var el=document.getElementById('despMed'); if(!el || !despMedNaTela) return;
+      var av=document.getElementById('despMedSemSom');
+      if(medSomMudo()){
+        if(!av){
+          var tx=el.querySelector('.desp-tx');
+          if(tx) tx.insertAdjacentHTML('beforeend','<span id="despMedSemSom" style="display:block;background:#fff;color:var(--crm-critico);border-radius:8px;padding:6px 9px;margin-top:6px;font-weight:800">SEM SOM NESTE APARELHO: toque na tela para o alarme tocar.</span>');
+        }
+      }else if(av){
+        // Não some (QA da 6.32): sumir entre o toque e o clique fazia o botão "Dei o remédio" pular,
+        // e o toque caía na tela de trás. Fica no mesmo lugar, com o mesmo tamanho.
+        av.textContent='Som ligado.'; av.style.color='var(--crm-ok)';
+      }
+    }catch(e){} /* silencioso de propósito: o aviso é reforço; o alarme na tela é a segurança */
+  }
+  // O primeiro toque em qualquer lugar destrava o som do alarme que está na tela.
+  try{ document.addEventListener('pointerdown', function(){
+    try{ if(despMedAC && despMedAC.state!=='running' && despMedAC.state!=='closed') despMedAC.resume().then(medSomConferir, function(){}); }catch(e){} /* silencioso de propósito: o laço do bip tenta de novo em 1,3 s */
+  }, true); }catch(e){} /* silencioso de propósito: sem o evento, o laço do bip continua tentando */
   function confirmarDoseDespertador(){
     if(!despMedAtual||!despMedAtualDoseId) return;
     // Tela trancada: o alarme APARECE e TOCA (não pode esconder remédio), mas quem deu a dose
@@ -22086,6 +22775,7 @@
     if(despMedAtual&&despMedAtualDoseId){
       const sk=despMedAtual.key+'__'+despMedAtualDoseId;
       despMedSnooze[sk]=Date.now()+5*60*1000;
+      despMedSnoozePend[sk]=despMedSnooze[sk];
       if(typeof audit==='function') audit('med-alarme-adiado','adiou o alarme de '+(despMedAtual.nome||'medicação')+' de '+(despMedAtual.hospNome||''),{pet:despMedAtual.hospNome||'',med:despMedAtual.nome||'',horario:despMedAtual.horario||''});
     }
     fecharDespertadorMed();
@@ -22773,7 +23463,9 @@
   // Quantos aulunos estão matriculados em cada dia — só Gestão e Supervisão (Adriana, Márcia,
   // Amanda). Para o monitor seria ruído; para elas é ocupação da turma.
   function vePorDia(){ return podePapel('ver-por-dia'); }
-  function nMatriculados(d){ return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p).indexOf(d)>=0).length; }
+  // Pela data da PRÓXIMA ocorrência do dia (6.30): com plano de dias por mês, a quarta do Mês 3
+  // conta a Hopi; a do Mês 2, não. A mesma régua da Turma do dia.
+  function nMatriculados(d){ const iso=turmaIsoSeguro(d); return PELUDINHOS.filter(p=>!pelInativo(p)&&pelDias(p, iso).indexOf(d)>=0).length; }
   const ORDEM_DIAS=['seg','ter','qua','qui','sex'];
   // ===== ATIVIDADES SELETIVAS (Márcia decide quem faz) — item D =====
   // As demais atividades (chamada, check-in/out, livre, EA, almoço...) são ABERTAS: todos participam.
@@ -23062,7 +23754,19 @@
     return false;
   }
   function pelGet(p,campo){ const ex=pelExtra(p); const v=ex[campo]; return (v!=null&&v!=='')?v:(p[campo]!=null?p[campo]:''); }
-  function pelDias(p){ const ex=pelExtra(p); return Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]); }
+  // UMA PORTA SÓ PARA OS DIAS DA SEMANA (6.30, Adriana, 05/out/2026 — caso da Hopi).
+  // pelDias(p)           → os dias que valem HOJE (o significado de sempre);
+  // pelDias(p, 'AAAA-MM-DD') → os dias que valem NAQUELA data (o mês do plano que a contém);
+  // pelDias(p, 'rotina') → os chips do alto da ficha (o que vale fora dos meses do plano).
+  // Ficha sem dias por mês (todas as de hoje): a resposta é a de sempre, em qualquer data.
+  // Na sobreposição de um plano novo com os meses que faltam do anterior, valem os dias dos
+  // dois juntos (a rotina entra como os dias do plano novo sem dias por mês) — QA da 6.30.
+  function pelDias(p, quando){ const ex=pelExtra(p); const base=Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]);
+    if(quando==='rotina' || !ex.renov || !(ex.renov.dias_mes || ex.renov.dias_mes_anterior)) return base;
+    const iso=/^\d{4}-\d{2}-\d{2}$/.test(quando||'')?quando:zHojeISO();
+    const achou=renovDiasNaData(ex.renov, iso, base);
+    return achou?achou.slice():base; }
+  function pelDiasEm(p, iso){ return pelDias(p, iso); }
   function pelFreq(p){ const n=pelDias(p).length; if(n>0) return n+'x'; const f=pelGet(p,'freq'); return f||'—'; }
   function pelNome(p){ return pelGet(p,'n')||p.n||''; }
   function pelNasc(p){ const ex=pelExtra(p); return ex.nasc||p.nasc||''; }
@@ -23140,19 +23844,135 @@
     }
     setPelExtra(pelAtual,{raca:raca});
   }
+  // ===== OS CHIPS DO ALTO SÃO A ROTINA (6.30, Adriana, 05/out/2026 — caso da Hopi) ======
+  // Com plano de dias diferentes em cada mês, os chips mostram e editam a ROTINA — o que vale
+  // fora dos meses do plano (depois do fim, sem renovação). Acima deles, a faixa diz qual mês
+  // do plano vale hoje e quando os dias mudam. Mudar os dias de um mês é na aba Plano.
+  // O mês do plano que corre hoje (do plano atual ou do anterior, ainda valendo) — null quando não há.
+  // A próxima mudança olha os DOIS planos (o atual e o anterior, na sobreposição): o começo de
+  // cada mês e o fim do anterior, com os dias que valem ali (a mesma conta do pelDias); só conta
+  // quando os dias mudam de verdade. fim = o último dia em que algum mês do plano vale.
+  function pelPlanoMesHoje(p, hoje){
+    try{
+      if(!pelTemDiasPorMes(p)) return null;
+      const r=renovDe(pelExtra(p)||{}), rot=pelDias(p,'rotina')||[];
+      hoje=hoje||zHojeISO();
+      const m=renovMesNaData(r, hoje, rot);
+      if(!m) return null;
+      const M=renovMesesDoPlano(r), A=renovMesesAnteriores(r);
+      const fim=M.concat(A).reduce(function(f, x){ return x.ate>f?x.ate:f; }, m.ate);
+      const marcos=M.concat(A).map(function(x){ return x.de; }).concat(A.map(function(x){ return addDiasISO(x.ate, 1); }))
+        .filter(function(d, i, l){ return d>hoje && d<=fim && l.indexOf(d)===i; }).sort();
+      let prox=null;
+      for(let i=0;i<marcos.length && !prox;i++){
+        const dd=renovDiasNaData(r, marcos[i], rot)||rot;
+        if(dd.join(',')!==m.dias.join(',')) prox={de:marcos[i], dias:dd.slice()};
+      }
+      return {mes:m, prox:prox, fim:fim};
+    }catch(e){ return null; } /* silencioso de propósito: sem a ficha lida, os chips aparecem sem a faixa */
+  }
+  // O MÊS NOVO DO PLANO COMEÇA HOJE? (6.30) — o mês i ≥ 2 cujo PRIMEIRO DIA DE DAY CARE é hoje
+  // (Hopi: o Mês 3 começa no sábado 05/12; o primeiro dia de Day Care é a segunda 07/12). Só
+  // quando os dias mudam de um mês para o outro: mês igual ao anterior não é notícia.
+  // {n, total, dias, era, de, anterior} ou null. Função pura: recebe o plano, o dia e a rotina.
+  // DEPOIS DA RENOVAÇÃO (QA da 6.30, achado 2): os meses que faltam do plano ANTERIOR continuam
+  // valendo — e o começo de cada um deles também é notícia. Na sobreposição, com os dias dele JUNTO
+  // com os do plano novo (pago em 25/11, o plano novo começa em 01/12 e o Mês 3 anterior, com a
+  // quarta, em 05/12: o 1º dia de Day Care é 07/12). "era" = o que valia no dia anterior.
+  function planoMesComecaHoje(r, hoje, rotina){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(hoje||'')) return null;
+    const M=renovMesesDoPlano(r||{});
+    for(let i=1;i<M.length;i++){
+      const dia1=vencEhDiaDayCare(M[i].de)?M[i].de:proximoDiaDayCare(M[i].de);
+      if(dia1!==hoje || dia1>M[i].ate) continue;
+      // Sem mudança no plano atual, o plano anterior ainda pode mudar HOJE (o Mês 3 dele começando
+      // no mesmo dia, na sobreposição): segue para o laço dele, em vez de sair (QA da 6.36, N4).
+      if(M[i].dias.join(',')===M[i-1].dias.join(',')) break;
+      return {n:M[i].n, total:M.length, dias:M[i].dias, era:M[i-1].dias, de:M[i].de, anterior:false};
+    }
+    const A=renovMesesAnteriores(r||{});
+    for(let j=1;j<A.length;j++){
+      const dia1A=vencEhDiaDayCare(A[j].de)?A[j].de:proximoDiaDayCare(A[j].de);
+      if(dia1A!==hoje || dia1A>A[j].ate) continue;
+      const agora=renovDiasNaData(r, A[j].de, rotina)||rotina||[], era=renovDiasNaData(r, addDiasISO(A[j].de, -1), rotina)||rotina||[];
+      if(agora.join(',')===era.join(',')) return null;
+      return {n:A[j].n, total:A.length, dias:agora.slice(), era:era.slice(), de:A[j].de, anterior:true};
+    }
+    return null;
+  }
+  // Todos os FILHOts ativos com mês novo do plano começando hoje — não só os da turma de hoje:
+  // o mês novo pode começar num dia em que ele não vem. [{chave, nome, mes, dias, era, texto}]
+  function planoMesQuemMudaHoje(hoje){
+    const out=[];
+    (typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[]).forEach(function(p){
+      if(!p || !pelTemDiasPorMes(p) || pelInativo(p)) return;
+      const c=planoMesComecaHoje(renovDe(pelExtra(p)||{}), hoje, pelDias(p,'rotina')||[]);
+      if(!c) return;
+      const nome=pelNome(p)||p.n||'';
+      out.push({chave:dcKey(p.n,p.tutor), nome:nome, mes:c.n, dias:c.dias.slice(), era:c.era.slice(),
+        texto:nome+': começa hoje o Mês '+c.n+' do plano'+(c.anterior?' anterior':'')+' — passa a vir '+renovDiasRotulo(c.dias)+' (era '+renovDiasRotulo(c.era)+')'});
+    });
+    return out;
+  }
+  function pelDiasPlanoAvisoHTML(p){
+    const info=pelPlanoMesHoje(p); if(!info) return '';
+    const m=info.mes;
+    return '<div id="pelDiasPlanoAviso" class="hint" style="background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue);border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:12px;font-weight:700;color:var(--z-blue)">'
+      +'Hoje vale o Mês '+m.n+' de '+m.total+' do plano'+(m.anterior?' anterior':'')+(m.junto?', junto com o plano atual':'')+': '+esc(renovDiasRotulo(m.dias))+'.'
+      +(info.prox?(' A partir de '+fmtBR(info.prox.de)+': '+esc(renovDiasRotulo(info.prox.dias))+'.'):'')
+      +' Os dias abaixo são a rotina: valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').'
+      +' Para mudar os dias de um mês do plano, use a aba Plano. '
+      +'<a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800;text-decoration:underline">Ir para a aba Plano</a></div>';
+  }
   // chips de dias clicáveis (frequência recalcula sozinha)
   function diasEditInner(p){
-    const dias=pelDias(p), can=canEditPel();
+    const dias=pelDias(p,'rotina'), can=canEditPel();
     const chips=ORDEM_DIAS.map(d=>`<span class="dia${dias.indexOf(d)>=0?' on':''}${can?' clic':''}"${can?` onclick="toggleDiaPel('${d}')"`:''}>${DIA_LBL[d]}</span>`).join('');
-    return chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${pelFreq(p)}/semana</span>`;
+    // O rótulo conta a ROTINA (os chips): para ficha sem dias por mês, é o pelFreq de sempre.
+    const freq=dias.length?(dias.length+'x'):pelFreq(p);
+    return pelDiasPlanoAvisoHTML(p)+chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${freq}/semana</span>`;
   }
-  function toggleDiaPel(d){
+  function toggleDiaPel(d, jaPerguntou, origem){
     if(!canEditPel()||!pelAtual) return;
-    const antes=pelDias(pelAtual).slice();
+    // Plano com dias por mês correndo (6.30): os chips são a rotina de DEPOIS do plano — pergunta
+    // antes, para ninguém achar que mudou o dia de hoje. Sem isso, o caminho é o de sempre.
+    // Toque vindo da própria aba Plano (6.37, QA F5): "Ir para a aba Plano" não leva a lugar
+    // nenhum — a saída é escolher "Mudam durante o plano", ali mesmo.
+    if(!jaPerguntou && pelPlanoMesHoje(pelAtual) && typeof zPergunta==='function'){
+      const info=pelPlanoMesHoje(pelAtual), daAba=(origem==='plano');
+      // «Mudam durante o plano» só serve quando o plano EM EDIÇÃO tem meses (trimestral ou
+      // semestral) e o mês de hoje é dele — não do plano anterior, que não se edita por aqui
+      // (re-QA da 6.37, A1). Nos outros casos, o segundo botão só fecha a pergunta.
+      let podeMudam=false;
+      if(daAba){ try{ podeMudam=(renovMesesN(renovEdit(pelExtra(pelAtual)))>1) && !info.mes.anterior; }catch(e){ podeMudam=false; } /* silencioso de propósito: sem como saber, o botão só fecha */ }
+      const comoMudar=!daAba
+        ? 'Para mudar os dias de um mês do plano, use a aba Plano.'
+        : (podeMudam
+          ? 'Para mudar os dias de um mês do plano, escolha «Mudam durante o plano», aqui na aba.'
+          : (info.mes.anterior
+            ? 'Os dias dos meses do plano anterior não mudam por aqui.'
+            : 'O plano em edição é mensal: os dias são os mesmos o mês todo.'));
+      zPergunta('MUDAR A ROTINA DE DEPOIS DO PLANO?',
+        [(daAba?'Os dias de «Quais dias?»':'Os dias do alto da ficha')+' valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
+         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. '+comoMudar],
+        {sim:'Mudar a rotina', nao:(daAba?(podeMudam?'Mudam durante o plano':'Voltar'):'Ir para a aba Plano'), cor:'#234D67', corTitulo:'#234D67'})
+        .then(function(ok){
+          if(ok) toggleDiaPel(d, true, origem);
+          else if(daAba){ if(podeMudam){ try{ renovDiasModoSet('mudam'); }catch(e){ _logFalhaGrav('trocar para "Mudam durante o plano"', e); } } }
+          else irParaAbaPlano();
+        });
+      return;
+    }
+    const antes=pelDias(pelAtual,'rotina').slice();
     const dias=antes.slice(); const i=dias.indexOf(d);
     if(i>=0) dias.splice(i,1); else dias.push(d);
     dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
     setPelExtra(pelAtual,{dias:dias, freq:(dias.length?dias.length+'x':'')});
+    // O cadastro em memória acompanha NA HORA (QA da 6.37, F1): a ficha lê o pelCadCache antes da
+    // cópia local, e o ouvinte do cadastro só o troca ~90 ms depois. Sem isto, o redesenho logo
+    // abaixo mostraria os dias antigos, e um segundo toque rápido partiria da lista velha.
+    // (Mesmo molde das outras gravações da ficha que já atualizam o cache.)
+    try{ const _kd=pelKey(pelAtual); if(typeof pelCadCache!=='undefined' && pelCadCache[_kd]) pelCadCache[_kd]=Object.assign({},pelCadCache[_kd],{dias:dias.slice(), freq:(dias.length?dias.length+'x':'')}); }catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
     // RASTRO EM TODA PORTA (Adriana, 15/set/2026): mexer nos dias muda as aulas por semana
     // e, com elas, a mensalidade. Mudança de dinheiro sem rastro era porta sem fechadura —
     // ninguém sabia quem tinha trocado o dia da Cookie nem quando.
@@ -23161,7 +23981,7 @@
       (typeof pelNome==='function'?pelNome(pelAtual):pelAtual.n)+': dias '+nomes(antes)+' → '+nomes(dias),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     const w=document.getElementById('pelDiasEdit'); if(w) w.innerHTML=diasEditInner(pelAtual);
-    const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana';
+    const fi=document.getElementById('pelFreqInput'); if(fi) fi.value=pelFreq(pelAtual)+' por semana'+(pelPlanoMesHoje(pelAtual)?' (hoje — os dias mudam por mês do plano)':'');
     // O seletor "Aulas por semana" do bloco Plano espelha estes chips — redesenha junto,
     // senão a mesma ficha mostraria duas verdades ao mesmo tempo.
     try{ zLimparFalta(); }catch(e){} /* silencioso de propósito: limpar marca de falta é enfeite de tela */
@@ -23784,7 +24604,8 @@
     // pendências e ninguém acreditar em nenhuma (26/ago/2026). Registrou uma vez, a validade
     // de 90 dias passa a valer e a cobrança aparece sozinha.
     {k:'escova_p',    base:'escova_t',    nome:'Troca de escova de dentes', dias:90,  grupo:'saude', opcional:true},
-    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true}
+    {k:'checkup_p',   base:'checkup_t',   nome:'Check-up',                  dias:365, grupo:'saude', opcional:true, rotina:true,
+     junto:['checkup_data','checkup']}   // 6.27: as três casas da data do check-up recebem a mesma data
   ];
   // Quantos dias este item vale PARA ESTE FILHOt. Só a coleira varia: cada marca dura um
   // tempo e esse tempo é configurável. Sem marca na ficha vale a Seresto — que é a coleira
@@ -23794,8 +24615,22 @@
     return (it&&it.dias)||0;
   }
   // O valor do item, aceitando o nome novo e o antigo da ficha (ver `alt` em PREV_ITENS).
+  // O VENCIMENTO QUE VALE DO CHECK-UP (QA da 6.27). A data do check-up mora em três casas e
+  // o vencimento em checkup_p; uma ficha podia dizer "fez em 01/09/2025" e "vence em
+  // 01/01/2025" ao mesmo tempo. Sem o "à mão", vale o MAIS TARDE entre o vencimento gravado e
+  // um ano depois da data mais recente. Nunca cria cobrança: sem vencimento gravado, nada muda.
+  function prevCheckupVence(ex){
+    ex=ex||{};
+    var p=String(ex.checkup_p||'');
+    if(ex.checkup_p_manual || !/^\d{4}-\d{2}-\d{2}$/.test(p)) return p;
+    var d=prevCheckupData(ex);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return p;
+    var conta=addDiasISO(d, 365);
+    return (conta && conta>p)?conta:p;
+  }
   function prevValor(ex, it){
     ex=ex||{};
+    if(it && it.k==='checkup_p') return prevCheckupVence(ex);
     // Item CALCULADO (a 2ª dose do vermífugo, 21/set/2026): não existe campo no banco — a
     // data sai de uma conta sobre a própria ficha. Tudo o mais do app (Prevenção, Vence
     // amanhã, filtro, Excel) continua lendo pela MESMA porta, sem saber a diferença.
@@ -23877,7 +24712,8 @@
     else if(opc.calcTexto) notas.push(opc.calcTexto);
     // Sem a data em que tomou, a tela DIZ isso — e não inventa uma para trás.
     if(semUltima) notas.push('última: não informada');
-    var hint=notas.length?('<div class="hint" style="margin-top:3px">'+notas.join(' · ')+'</div>'):'';
+    // Com id (2ª rodada do QA da 6.27): a data digitada em "fez em" refaz esta nota na hora.
+    var hint='<div class="hint" id="prevVenceNota_'+escAttr(campoP)+'" style="margin-top:3px'+(notas.length?'':';display:none')+'">'+notas.join(' · ')+'</div>';
     var mostra=!!PREV_RECALC_AVISO[campoP];
     var aviso='<div class="hint" id="prevRecalc_'+campoP+'" style="margin-top:3px;font-weight:800;color:var(--crm-atencao-text)'
       +(mostra?'':';display:none')+'">'+(mostra?'A próxima foi recalculada pela última dose.':'')+'</div>';
@@ -23885,11 +24721,11 @@
     var estF=opc.compacto?' style="margin:0"':'';
     var estL=opc.compacto?' style="font-size:11px"':'';
     if(!podeVencManual()){
-      return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label><div class="prev-calc">'
+      return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label><div class="prev-calc" id="prevVence_'+escAttr(campoP)+'">'
         +(v?('vence em '+fmtBR(v)):'sem data')+'</div>'+hint+aviso+'</div>';
     }
     return '<div class="field"'+estF+'><label'+estL+'>'+rot+'</label>'
-      +'<input type="date" class="cad-in" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+      +'<input type="date" class="cad-in" id="prevVence_'+escAttr(campoP)+'" value="'+escAttr(v)+'" onchange="'+onchange+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
       +hint+aviso+'</div>';
   }
   // A nota da data à mão. A troca de escova adiada porque o tutor não autorizou diz isso,
@@ -23923,14 +24759,41 @@
   }
   // "Última …" que grava direto (escova e check-up). Refaz a próxima pela conta e desfaz a
   // marca de "à mão" — a última dose manda, e o campo avisa que a data foi recalculada.
-  function prevUltimaDireta(campoT, campoP, dias, valor){
+  // `junto` (opcional): outras casas da ficha que recebem a MESMA data na mesma gravação — o
+  // check-up grava checkup_t e checkup_data juntos, para as três casas antigas não divergirem.
+  function prevUltimaDireta(campoT, campoP, dias, valor, junto){
     if(!pelAtual) return;
     var dt=String(valor||'').trim();
+    // Data no futuro não é "fez em" (2ª rodada do QA da 6.27): o `max` do campo segura no
+    // computador, mas o calendário do celular pode deixar passar. Nada é gravado.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dt) && dt>zHojeISO()){
+      try{ zAlertao('ESSA DATA AINDA NÃO CHEGOU', ['"Fez em" é a data em que foi feito: não pode ser depois de hoje.', 'Nada foi gravado. Escolha a data de novo.'], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: o aviso é reforço — o importante é não gravar */
+      // O campo volta à data gravada (3ª rodada do QA da 6.27): com a data recusada à vista,
+      // parecia que tinha gravado.
+      try{
+        var __ae=document.activeElement, __exF=pelExtra(pelAtual)||{};
+        if(__ae && __ae.tagName==='INPUT' && __ae.value===dt) __ae.value=(campoT==='checkup_t')?prevCheckupData(__exF):String(__exF[campoT]||'');
+      }catch(e){} /* silencioso de propósito: o campo se acerta ao reabrir a ficha */
+      return;
+    }
     var ex=pelExtra(pelAtual)||{};
     var patch={}; patch[campoT]=dt;
+    if(junto && typeof junto==='object') Object.keys(junto).forEach(function(k){ patch[k]=dt; });
     patch[campoP]=dt?addDiasISO(dt,dias):'';
     if(ex[campoP+'_manual']){ patch[campoP+'_manual']=''; prevAvisoRecalc(campoP); }
     setPelExtra(pelAtual, patch);
+    // O "Vence em" ao lado acompanha na hora (QA da 6.27): antes, só reabrindo a ficha.
+    try{
+      var v=document.getElementById('prevVence_'+campoP);
+      if(v){ if('value' in v && v.tagName==='INPUT') v.value=patch[campoP]; else v.textContent=patch[campoP]?('vence em '+fmtBR(patch[campoP])):'sem data'; }
+      // e a nota "Pela conta" logo abaixo também (2ª rodada do QA da 6.27)
+      var nt=document.getElementById('prevVenceNota_'+campoP);
+      if(nt){
+        nt.textContent=patch[campoP]?('Pela conta: '+fmtBR(patch[campoP])+' · '+(dias===365?'1 ano':(dias+' dias'))+'.'):'última: não informada';
+        if(nt.style) nt.style.display='';
+      }
+    }catch(e){} /* silencioso de propósito: o dado já está gravado; a tela se acerta ao reabrir */
   }
   // grupo (opcional): 'vacina' | 'antip' | 'saude'. Sem grupo = tudo, como sempre foi.
   function prevPendencias(ex, grupo){
@@ -24117,7 +24980,15 @@
   // "Check-up veterinário"), checkup_t (bloco "Saúde e rotina") e checkup (campo legado,
   // anterior aos dois). A contagem só lia checkup_data — e NEGAVA 30 fichas que TÊM a
   // data (a Becca tem checkup=2024-11-27 e a tela dizia "sem informação"). Uma leitura só:
-  function prevCheckupData(ex){ return (ex&&(ex.checkup_data||ex.checkup_t||ex.checkup))||''; }
+  // 06/out/2026 (6.27): com as três casas preenchidas e diferentes, vale a data MAIS RECENTE —
+  // antes valia a de cima, e um check-up novo lançado embaixo ficava escondido atrás do velho.
+  // Sem nenhuma data válida, a ordem de sempre (checkup_data, checkup_t, checkup).
+  function prevCheckupData(ex){
+    if(!ex) return '';
+    var ds=[ex.checkup_data, ex.checkup_t, ex.checkup].filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }).sort();
+    if(ds.length) return ds[ds.length-1];
+    return ex.checkup_data||ex.checkup_t||ex.checkup||'';
+  }
   // Idade na lista ("quanto mais velho, mais necessário" — Adriana, 08/set). Sem
   // nascimento na ficha, a tela diz que não sabe — nunca inventa uma data.
   function prevCheckupIdade(p){
@@ -24272,8 +25143,10 @@
       var ex=pelExtra(p)||{};
       if(ex.inativo==='Sim') return;
       if(ex.checkup_fez==='Nunca fez'){ out.nunca.push({i:i,p:p}); return; }
-      var data=prevCheckupData(ex);
-      if(data){ var vence=umAno(data);
+      // 6.27 (QA): o "Vence em" digitado à mão vale aqui também — "às vezes é mais fácil colocar a
+      // data que irá fazer". Sem ele, a conta de sempre, pelo mesmo vencimento que a cobrança usa.
+      var data=prevCheckupData(ex), vm=(ex.checkup_p_manual && /^\d{4}-\d{2}-\d{2}$/.test(String(ex.checkup_p||'')))?String(ex.checkup_p):'';
+      if(data || vm){ var vence=vm || prevCheckupVence(Object.assign({}, ex, {checkup_p:ex.checkup_p||''})) || umAno(data);
         if(vence&&vence<hoje) out.vencidos.push({i:i,p:p,vence:vence});
         else out.emDia.push({i:i,p:p,vence:vence});
         return; }
@@ -24838,7 +25711,7 @@
     var nomeItem=it.nome||'este item';
     var gravar=function(dtFinal, proxDef, atrasoConfirmado){
       var patch={};
-      if(it.base) patch[it.base]=dtFinal;
+      if(it.base){ patch[it.base]=dtFinal; (it.junto||[]).forEach(function(k2){ patch[k2]=dtFinal; }); }
       patch[k]=proxDef;
       // Lançar uma dose nova é dizer que a validade agora sai DELA: a marca de "digitado à
       // mão" cai junto, senão a ficha ficaria com uma data velha travada (24/set/2026).
@@ -24961,7 +25834,10 @@
       +vivos.map(function(c){ var o=PREV_CORRIGE_OK[c]||{};
         return '<div style="font-size:13.5px;font-weight:700;color:var(--crm-ok);margin-top:3px">✓ '
           +escAttr(o.texto||'')+'</div>'; }).join('')
-      +'<div class="hint" style="margin-top:4px">Foi para a ficha do FILHOt — a Prevenção, os Vencimentos e a Hoje na Zêluz já leem esta data.</div></div>';
+      +'<div class="hint" style="margin-top:4px">Foi para a ficha do FILHOt — a Prevenção, os Vencimentos e a Hoje na Zêluz já leem '
+      // A resposta "não escova aqui" (6.35) não grava data: a frase não fala de data (QA da 6.35).
+      +(vivos.every(function(c){ return (PREV_CORRIGE_OK[c]||{}).resposta; })?'esta resposta'
+        :(vivos.some(function(c){ return (PREV_CORRIGE_OK[c]||{}).resposta; })?'o que foi gravado':'esta data'))+'.</div></div>';
   }
   function prevCorrigeItemDe(k){ return (PREV_ITENS||[]).find(function(x){ return x.k===k; })||{}; }
   // Quantos dias o item vale PARA ESTE FILHOt, pela MESMA conta que a ficha mostra. A coleira
@@ -25004,6 +25880,7 @@
       +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue)">'
       +escAttr((it.nome||k)+' — '+(pelNome(p)||''))+'</div>'
       +'<div class="hint" style="margin-top:2px">O que você gravar aqui vai para a <strong>ficha do FILHOt</strong> e vale em todas as telas. Não precisa abrir a ficha.</div>';
+    h+=prevCorrigeEscovaDcHTML(k, ex, chave, tela);
     if(it.nomeK) h+='<div style="margin-top:8px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Nome do produto / vacina</label>'
       +'<input class="cad-in" id="prevCorrN_'+id+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac" style="margin:0;width:100%;max-width:280px"></div>';
     // O VERMÍFUGO NO PAINEL RÁPIDO (Fase 0, 25/set/2026 — Adriana: "duas doses com 21 dias
@@ -25032,6 +25909,50 @@
     h+=prevCorrigeFezesHTML(k, ex, id, ka, tela, hoje);
     h+='<div style="margin-top:7px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeFechar(\''+tela+'\')">fechar</button></div>';
     return h+'</div>';
+  }
+  // "ELE ESCOVA OS DENTES?" NO PAINEL RÁPIDO (Adriana, 06/out/2026, na Hoje na Zêluz, com a
+  // troca de escova do Antônio "em aberto, nunca registrado": "Tem peludo que não escova dentes
+  // [...] que não deixa. Então, a gente tem que colocar que não deixa. Então, tem que ter opção
+  // aqui [...] Se ele escova, ok. Se ele não escova, a gente não tem como fazer.").
+  // A MESMA pergunta da ficha (escovaDcPatch, 29/set): com Não, a troca de escova sai de toda
+  // cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor); com Sim, o painel
+  // segue aberto para a data da troca.
+  function prevCorrigeEscovaDcHTML(k, ex, chave, tela){
+    if(k!=='escova_p') return '';
+    var dc=String((ex||{}).escova_dc||''), ka=jsAspas(chave);
+    var bt=function(rot, v, mot, on, cor){
+      return '<button type="button" class="btn" style="min-height:40px;padding:8px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+cor+';'
+        +(on?('background:'+cor+';color:var(--z-cream)'):('background:#fff;color:'+cor))+'"'
+        +' onclick="prevCorrigeEscovaDc(\''+ka+'\',\''+v+'\',\''+jsAspas(mot)+'\',\''+tela+'\')">'+esc(rot)+'</button>';
+    };
+    // Sem "Ele": a ficha pode ser de uma FILHOt (QA da 6.35).
+    return '<div style="margin-top:9px"><label style="display:block;font-size:11px;font-weight:800;color:var(--muted)">Escova os dentes aqui?</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
+      +bt('Sim, escova', 'Sim', '', dc==='Sim', 'var(--z-blue)')
+      +bt('Não deixa escovar', 'Não', 'Não deixa', false, 'var(--crm-critico)')
+      +bt('O tutor não compra a pasta', 'Não', 'O tutor não compra a pasta', false, 'var(--crm-critico)')
+      +'</div><div class="hint" style="margin-top:3px">Com <strong>não</strong>, a troca de escova sai da cobrança, em todas as telas. Dá para mudar depois na ficha › Prevenção.'
+      +(dc==='Sim'?' Escova aqui: grave abaixo a data da troca.':'')+'</div></div>';
+  }
+  function prevCorrigeEscovaDc(chave, v, motivo, tela){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
+    var p=prevCorrigePetDe(chave); if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(v!=='Sim' && v!=='Não') return Promise.resolve({ok:false, erro:'resposta inválida'});
+    var patch=escovaDcPatch(v, (typeof pelAtividades==='function')?pelAtividades(p):[]);
+    if(v==='Não') patch.escova_dc_motivo=String(motivo||'');
+    return Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return r; }
+      try{ if(typeof audit==='function') audit('ficha-escova', 'escova os dentes no Day Care: '+v+((v==='Não'&&motivo)?(' ('+motivo+')'):'')
+        +', atualizado na tela '+prevCorrigeTelaNome(tela), {alvo:chave, pet:pelNome(p)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(v==='Não'){
+        PREV_CORRIGE_OK[prevCorrigeAlvo(chave,'escova_p')]={ts:Date.now(), ate:'', resposta:true,
+          texto:(pelNome(p)||'')+' — não escova aqui ('+(motivo||'não')+'): a troca de escova saiu da cobrança'};
+        PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
+        try{ prevCorrigeFecharConversa(p, chave); }catch(e){ /* silencioso de propósito: fechar é consequência — a resposta já está gravada */ }
+      }
+      prevCorrigeRedesenhar(tela);
+      return r||{ok:true};
+    });
   }
   // O pedaço do vermífugo dentro do painel: o esquema (dose única × 2 doses) antes do
   // "Feito hoje", e a frase da 2ª dose. Nada aqui grava sozinho — quem grava é o botão.
@@ -25157,7 +26078,7 @@
     var ex=pelExtra(p)||{};
     var de=ex[k]||'';
     var patch={};
-    if(it.base) patch[it.base]=dt;
+    if(it.base){ patch[it.base]=dt; (it.junto||[]).forEach(function(k2){ patch[k2]=dt; }); }
     var id=String(chave)+'_'+k;
     if(it.nomeK){
       var nm=String(((document.getElementById('prevCorrN_'+id)||{}).value)||'').trim();
@@ -25374,6 +26295,10 @@
       if(it.k==='escova_p' && escovaNaoEscova(ex))
         return '<div style="border-top:1px solid var(--line);padding:9px 0;font-size:13px;color:var(--muted)"><strong>'+escAttr(it.nome)+':</strong> não escova no Day Care — fora da cobrança.</div>';
       var feito=ex[it.base]||'', prox=ex[it.k]||'';
+      // O CHECK-UP (2ª rodada do QA da 6.27): a data que vale é a mais recente das três casas, e o
+      // vencimento é o que vale (prevValor). Ler as casas cruas mostrava um check-up velho como
+      // vencido, e o Salvar gravava essa data velha nas três casas — apagando o check-up novo.
+      if(it.k==='checkup_p'){ feito=prevCheckupData(ex)||''; prox=prevValor(ex, it)||''; }
       var por=ex[it.k.replace(/_p$/,'')+'_por']||'';
       var atrasado=venceuISO(prox);
       return '<div style="border-top:1px solid var(--line);padding:9px 0">'
@@ -26638,6 +27563,7 @@
     if(semPlano && tinhaVigencia){
       await renovHistGravar(pelKey(pelAtual), antigo, 'virou '+cat);
       r.inicio=''; r.fim=''; r.mesRenov=''; r.aulas=''; delete r.vig_inicio;
+      delete r.dias_mes; delete r.dias_mes_anterior;   // 6.30: os dias de cada mês vão junto para o histórico
     }
     renovRascLimpar();
     setPelExtra(pelAtual,{categoria:cat, renov:r});
@@ -26745,7 +27671,7 @@
             <div class="hint" style="font-size:11px;margin-top:3px"><a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a> — com resumo antes de gravar e opção de desfazer.</div></div>
           <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>
-          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana" readonly></div>
+          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana${pelPlanoMesHoje(p)?' (hoje — os dias mudam por mês do plano)':''}" readonly></div>
         </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
         ${blocoReposicaoFicha(p)}
@@ -26755,11 +27681,25 @@
         <h2 style="font-size:20px">Prevenção</h2>
         <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele — nada grava sozinho, e a tela não sobe.</div>
 
-        <h3 class="cad-sub">Check-up veterinário</h3>
+        <!-- CHECK-UP E ESCOVA NO TOPO (Adriana, 02/out/2026, na ficha da Cookie: "tô aqui tentando
+             achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente
+             é um cuidado" · "ter essas duas opções em todos os casos [...] Para exame, para tudo").
+             O check-up vivia em DOIS lugares da aba, em campos diferentes (o de cima sem "Vence
+             em"); agora é um só, com "Fez em" e "Vence em", e grava as duas casas antigas juntas.
+             A escova, que ficava no fim da aba, sobe para o lado dele. -->
+        <h3 class="cad-sub">Check-up e escova</h3>
+        ${prevAjudaVenceHTML()}
+        ${alertaPrevencao(ex,'saude','Escova e check-up')}
         <div class="cad-grid">
-          <div class="field"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
-          <div class="field"><label>Último check-up (data)</label><input type="date" class="cad-in" value="${escAttr(ex.checkup_data||'')}" onchange="setPelExtra(pelAtual,{checkup_data:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
+          <div class="field" style="grid-column:1/-1"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
+          <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:1,checkup:1})" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
+          ${prevVenceCampoHTML(Object.assign({},ex,{checkup_t:prevCheckupData(ex), checkup_p:prevCheckupVence(ex)}),'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{rot:'Vence em (próximo check-up)', calcTexto:(prevCheckupData(ex)?('Pela conta: '+fmtBR(addDiasISO(prevCheckupData(ex),365))+' · 1 ano.'):'')})}
+          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${escAttr(ex.escova_t||'')}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
+          ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{rot:'Vence em (próxima troca)', calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
+        </div>
+        ${escovaFichaHTML(ex)}
+        <div class="cad-grid" style="margin-top:12px">
           <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
                emergência — veterinário(a) de confiança do tutor, clínica e endereço.
                Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
@@ -26790,17 +27730,6 @@
         ${blocoVerm(pbEx('verm'))}
         ${blocoFezes(pbEx('fezes'))}
         ${blocoCio(ex,p)}
-
-        <h3 class="cad-sub">Saúde e rotina</h3>
-        ${prevAjudaVenceHTML()}
-        ${alertaPrevencao(ex,'saude','Escova e check-up')}
-        <div class="cad-grid">
-          <div class="field"><label>Último check-up</label><input type="date" class="cad-in" value="${ex.checkup_t||ex.checkup||''}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          ${prevVenceCampoHTML(ex,'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{calcTexto:(ex.checkup_t?('Pela conta: '+fmtBR(addDiasISO(ex.checkup_t,365))+' · 1 ano.'):'')})}
-          <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${ex.escova_t||''}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
-        </div>
-        ${escovaFichaHTML(ex)}
 
         <h3 class="cad-sub">Peso</h3>
         ${blocoPeso(ex)}
@@ -27986,8 +28915,19 @@
       +'<button type="button" class="btn btn-gold" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="abrirItemDoMenu(\'ficha\')">Criar a ficha no Cadastro</button>'
       +'</div></div>';
   }
-  function turmaDoDia(){
-    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
+  // A TURMA PELA DATA (6.30, Adriana, 05/out/2026 — caso da Hopi): com plano de dias diferentes
+  // em cada mês, "quem vem na quarta" depende de QUAL quarta. A data é a do dia da aba (a
+  // próxima ocorrência dele, a mesma régua das Turminhas); quem chama com uma data (turmaDe)
+  // passa a data. Ficha sem dias por mês: a turma de sempre.
+  // A data da próxima ocorrência do dia da aba — '' se a conta não estiver pronta (o app ainda
+  // carregando): aí pelDias responde por hoje, que é o que a turma sempre leu.
+  function turmaIsoSeguro(d, hoje){
+    try{ return turmaIsoDoDia(d, hoje)||''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem a data, vale a turma de sempre (os dias de hoje) */
+  }
+  function turmaDoDia(isoOpc){
+    const isoT=/^\d{4}-\d{2}-\d{2}$/.test(isoOpc||'')?isoOpc:turmaIsoSeguro(dcDia, zHojeISO());
+    const base=PELUDINHOS.map((p,i)=>({p,i})).filter(o=>(pelDias(o.p, isoT).indexOf(dcDia)>=0 || ehMoradorZeluz(o.p)) && !pelInativo(o.p));
     // controla quem já está na lista — evita que o mesmo FILHOt entre 2x (fixo do dia + avulso)
     const jaTem=new Set(base.map(o=>dcKey(o.p.n,o.p.tutor)));
     dcAvulsos.forEach((a,k)=>{
@@ -35508,8 +36448,9 @@
   function gradeAlmocoDados(){
     const out=[];
     ORDEM_DIAS.forEach(function(d){
+      const iso=turmaIsoSeguro(d);     // a semana que vem pela frente (6.30: o mês do plano daquela data)
       const lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
-        .filter(function(o){ return pelDias(o.p).indexOf(d)>=0 && !pelInativo(o.p); })
+        .filter(function(o){ return pelDias(o.p, iso).indexOf(d)>=0 && !pelInativo(o.p); })
         .sort(function(x,y){ const px=_gaPrio(x),py=_gaPrio(y); if(px!==py) return px-py;
           return jsNorm(x.p.n).localeCompare(jsNorm(y.p.n),'pt',{sensitivity:'base'}); });
       lista.forEach(function(o,idx){
@@ -35796,6 +36737,12 @@
   }
   // As linhas do automático de UM item, já sem quem a recepção lançou à mão (o mesmo FILHOt
   // na mesma coluna é UMA linha, não duas). Devolve quantas são e o HTML.
+  // A HORA DO BANHO FIXO NA LINHA (Adriana, 06/out/2026): "Precisa de aparecer também nos
+  // lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui,
+  // Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o
+  // horário do banho". A hora é a que o automático GRAVOU na "Hora Banho" (o registro dele,
+  // repPlanHoraNome) — não a conta da ficha: a ficha pode ter mudado depois, e a linha diz
+  // "na planilha ✓" (QA da 6.34). A conferência acerta a planilha quando a ficha muda.
   function dashAutoLinhas(autoK, dia, jaMao){
     var visto=jaMao||{};
     var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[dashAutoNomeChave(v)]; });
@@ -35803,8 +36750,16 @@
     var html=L.map(function(v){
       var e=repPlanEstadoNome(dia, v, autoK);
       var cor='var(--muted)', txt='';
-      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
-      else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){ cor='var(--z-gold-deep)'; txt=repPlanQuedaTexto(); }
+      var hr=DASH_AUTO_COLS_HORA[autoK]?repPlanHoraNome(dia, v, autoK):'';
+      // "enviado em": a hora em que foi para a planilha não se confunde com a hora do banho.
+      if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='na planilha ✓'+(e.ts?(' (enviado em '+repPlanQuando(e.ts).replace(' ',', ')+')'):'');
+        if(DASH_AUTO_COLS_HORA[autoK] && repPlanHoraSemColuna(dia, v, autoK)){ cor='var(--z-gold-deep)'; txt+=' — sem a hora: a planilha deste dia não tem a coluna "Hora Banho"'; } }
+      else if(e.estado==='falhou' && repPlanEhQuedaConexao(e.msg||'a ponte não respondeu')){
+        cor='var(--z-gold-deep)';
+        // A hora nova que não chegou (2ª rodada do QA da 6.34): a frase da queda não pode esconder isso.
+        var __pre=/^(a hora |não consegui tirar a hora|o banho saiu da planilha)/.test(String(e.msg||''))?String(e.msg).split(' — ')[0].replace(' não foi gravada',' ainda não foi gravada'):'';
+        txt=(__pre?(__pre+'; '):'')+repPlanQuedaTexto();
+      }
       else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='a planilha recusou — '+e.msg; }
       else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
       else if(e.estado==='fora'){ cor='var(--z-gold-deep)'; txt='fora da conferência automática'; }
@@ -35812,6 +36767,7 @@
       else if(e.estado==='lendo'){ txt='conferindo a planilha…'; }
       return '<div class="pair dash-auto" style="padding:6px 0;border-bottom:1px solid var(--line)">'
         +'<span class="k"><strong>'+escAttr(v)+'</strong>'
+        +(hr?(' <span class="dash-auto-hora" style="color:var(--z-blue-soft);font-weight:800">'+escAttr(hr)+'</span>'):'')
         +' <span class="dash-auto-tag">'+escAttr(DASH_AUTO_TAG[autoK]||'automático')+'</span>'
         +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
         +'</span></div>';
@@ -36215,7 +37171,99 @@
       } else { st.style.color='var(--crm-critico)'; st.textContent='Não consegui: '+((r&&r.erro)||'a ponte não respondeu'); }
     });
   }
+  // ===== A TELA NÃO PULA (Adriana, 06/out/2026) =============================================
+  // "Já fiz uma reclamação sobre o horário [...] Fica difícil de digitar, toda hora tem que
+  // voltar." O redesenho troca a lista inteira (innerHTML): a confirmação da planilha de um
+  // lançamento, as leituras ao abrir a tela ou trocar o dia e a fila que roda de 10 em 10
+  // minutos redesenham com alguém digitando. O campo perdia o cursor (o teclado do celular
+  // fechava no meio do nome) e, quando a lista de cima mudava de tamanho, a tela saltava (239 px
+  // no teste a 375 px). Antes de redesenhar, guarda-se o campo com o cursor e o cartão que
+  // importa — o último tocado (até 4 s antes) ou o que está no terço de cima da tela; depois,
+  // o campo (ou, sem campo, o cartão) volta ao mesmo lugar na tela e o cursor volta ao campo.
+  // O RELÓGIO FICA DE FORA (QA da 6.31): devolver o cursor ao campo de hora (type=time) põe o
+  // cursor no primeiro pedaço, e os números seguintes digitados no teclado reescreveriam a hora.
+  var DASH_TOQUE={i:-1, ts:0}, DASH_TOQUE_MS=4000, DASH_ROLOU_EM=0;
+  var DASH_CAMPO_DATA=/^(time|date|datetime-local|month|week)$/;
+  function dashCartoes(el){
+    return el?Array.prototype.filter.call(el.children||[], function(c){ return !!(c.classList&&c.classList.contains('card')); }):[];
+  }
+  function dashToqueLigar(el){
+    if(!el||el.__dashToque||!el.addEventListener) return;
+    el.__dashToque=1;
+    var f=function(ev){
+      var c=(ev.target&&ev.target.closest)?ev.target.closest('.card'):null;
+      while(c && c.parentElement!==el) c=c.parentElement?c.parentElement.closest('.card'):null;
+      if(c){ DASH_TOQUE.i=dashCartoes(el).indexOf(c); DASH_TOQUE.ts=Date.now(); }
+    };
+    el.addEventListener('pointerdown', f, true);
+    el.addEventListener('focusin', f, true);
+  }
+  // Pura: qual cartão segura o lugar. r = [{top, bottom}] na tela, na ordem dos cartões.
+  function dashAncoraEscolher(r, alturaTela, toque, agora){
+    if(toque && toque.i>=0 && toque.i<r.length && (agora-toque.ts)<=DASH_TOQUE_MS) return toque.i;
+    var y=Math.min((alturaTela||0)/3, 200), i;
+    for(i=0; i<r.length; i++){ if(r[i].top<=y && r[i].bottom>y) return i; }
+    for(i=0; i<r.length; i++){ if(r[i].bottom>0) return i; }
+    return -1;
+  }
+  function dashAncoraGuardar(el){
+    try{
+      var cs=dashCartoes(el); if(!cs.length) return null;
+      var r=cs.map(function(c){ var b=c.getBoundingClientRect(); return {top:b.top, bottom:b.bottom}; });
+      // Tela escondida (outra aba aberta): não há lugar a guardar.
+      if(!r.some(function(x){ return x.bottom>x.top; })) return null;
+      var i=dashAncoraEscolher(r, window.innerHeight, DASH_TOQUE, Date.now());
+      var a=document.activeElement, foco=null;
+      if(a && a.id && el.contains(a) && (a.tagName==='TEXTAREA' || (a.tagName==='INPUT' && !DASH_CAMPO_DATA.test(String(a.type||''))))){
+        foco={id:a.id, s:null, e:null, top:null};
+        try{ foco.s=a.selectionStart; foco.e=a.selectionEnd; }catch(e){} /* silencioso de propósito: nem todo campo tem seleção */
+        // Só com o campo À VISTA (2ª rodada do QA da 6.31): quem subiu até outro cartão está
+        // olhando outro lugar — segurar o campo escondido fazia a parte visível pular.
+        try{ if(a.getBoundingClientRect){ var __ft=a.getBoundingClientRect().top; if(__ft>=0 && __ft<window.innerHeight) foco.top=__ft; } }catch(e){} /* silencioso de propósito: sem a posição do campo, vale a do cartão */
+      }
+      return {i:i, top:(i>=0?r[i].top:null), foco:foco};
+    }catch(e){ return null; } /* silencioso de propósito: guardar o lugar é conforto; nunca pode impedir o redesenho */
+  }
+  function dashRolagemPai(el){
+    for(var p=el&&el.parentElement; p && p!==document.body && p!==document.documentElement; p=p.parentElement){
+      var o=getComputedStyle(p).overflowY;
+      if((o==='auto'||o==='scroll') && p.scrollHeight>p.clientHeight) return p;
+    }
+    return null;
+  }
+  function dashAncoraVoltar(el, a){
+    if(!a) return;
+    try{
+      if(a.foco){
+        var f=document.getElementById(a.foco.id);
+        if(f && f!==document.activeElement){
+          f.focus({preventScroll:true});
+          if(a.foco.s!=null){ try{ f.setSelectionRange(a.foco.s, a.foco.e); }catch(e){} /* silencioso de propósito: nem todo campo aceita seleção */ }
+        }
+      }
+      // O campo com o cursor é a âncora mais fiel (QA da 6.31): num cartão comprido, o que entra
+      // no mesmo cartão, acima da busca, também empurrava o campo.
+      var d=null, fNovo=(a.foco && a.foco.top!=null)?document.getElementById(a.foco.id):null;
+      if(fNovo && fNovo.getBoundingClientRect) d=fNovo.getBoundingClientRect().top-a.foco.top;
+      else{
+        if(a.i<0 || a.top==null) return;
+        var c=dashCartoes(el)[a.i]; if(!c) return;
+        d=c.getBoundingClientRect().top-a.top;
+      }
+      if(Math.abs(d)<1) return;
+      // Sem animação: a página tem rolagem suave (tokens do DS) e, aqui, o cartão tem de
+      // simplesmente continuar onde estava — nada pode deslizar debaixo do dedo.
+      var p=dashRolagemPai(el), de=document.documentElement, sb=de.style.scrollBehavior;
+      de.style.scrollBehavior='auto';
+      DASH_ROLOU_EM=Date.now();
+      try{ if(p) p.scrollTop+=d; else window.scrollBy(0, d); }
+      finally{ de.style.scrollBehavior=sb; }
+    }catch(e){} /* silencioso de propósito: devolver o lugar é conforto; nunca pode quebrar a tela */
+  }
   function renderDash(){
+    var __ancEl=document.getElementById('dashBlocos');
+    dashToqueLigar(__ancEl);
+    var __anc=dashAncoraGuardar(__ancEl);
     try{ dashSincronizarSeletor(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     var av=document.getElementById('dashPonteAviso');
     if(av){
@@ -36318,6 +37366,7 @@
       var h=document.getElementById('dashH_'+i.k); if(h&&m.h) h.value=m.h;
       var dt=document.getElementById('dashD_'+i.k); if(dt&&m.d) dt.value=m.d;
     });
+    dashAncoraVoltar(el, __anc);
   }
 
   // ===== O DETALHE QUE VAI JUNTO — Adriana, 26/ago/2026 ===========================
@@ -36844,11 +37893,13 @@
   //  15 horas e por aí vai. [...] Indo até o horário de 5 e meia, que dá para marcar outro;
   //  5 e 45 dá para marcar ainda banho."
   // Um toque na HORA (8h a 17h) já escolhe a hora cheia; um segundo toque, se precisar, troca
-  // os minutos (de 15 em 15). O banho vai até 17:45; o resto, até 17:30. O que fugir da grade
-  // (7:30, 18:00, o remédio da noite) continua no relógio, em «outro horário».
+  // os minutos (de 15 em 15). Tudo vai até 17:30, o banho também (Adriana, 06/out/2026:
+  // "marcar de 15 em 15 minutos até as 17h30. Último horário, 17h30" — antes o banho ia até
+  // 17:45). O que fugir da grade (7:30, 17:45, 18:00, o remédio da noite) continua no relógio,
+  // em «outro horário».
   // O relógio (#dashH_{item}) continua sendo o lugar onde a hora mora: quem lança lê dele.
   var DASH_HORA={}, DASH_HORA_OUTRO={};
-  var DASH_HORA_INI=8, DASH_HORA_FIM={banho:'17:45'}, DASH_HORA_FIM_PADRAO='17:30';
+  var DASH_HORA_INI=8, DASH_HORA_FIM={}, DASH_HORA_FIM_PADRAO='17:30';
   function dashHoraFim(k){ return DASH_HORA_FIM[k]||DASH_HORA_FIM_PADRAO; }
   // Pura: os horários da grade de um item, de 15 em 15 minutos.
   function dashHoraGrade(k){
@@ -37366,6 +38417,30 @@
     // pelo check-in já registraram a vinda deste dia. Abater de novo seria tirar duas
     // reposições por uma vinda. Lança na planilha sem abater, a não ser que a pessoa diga.
     var diaRep=dashDia(), LRep=[]; try{ LRep=repLancamentos(pRep)||[]; }catch(e){ LRep=[]; }
+    // DIA DO PLANO NÃO GASTA SALDO (6.30, resposta 3 da Adriana, 06/out/2026 — caso da Hopi): no
+    // plano com dias diferentes em cada mês, a quarta do Mês 3 já é dia dela — está paga no plano.
+    // Lançar "Reposição" nesse dia pergunta ANTES de abater do Banco de Reposições.
+    var mesRep=null;
+    try{ if(pelTemDiasPorMes(pRep) && repEhDiaDele(pRep, diaRep)) mesRep=renovMesNaData(renovDe(pelExtra(pRep)||{}), diaRep, pelDias(pRep,'rotina')||[]); }
+    catch(e){ mesRep=null; } /* silencioso de propósito: sem a ficha lida, segue o caminho de sempre da reposição */
+    if(mesRep){
+      var semRep=(typeof trocaDiaSemana==='function')?trocaDiaSemana(diaRep):'';
+      var elaRep=(typeof repEhFemea==='function'&&repEhFemea(pRep));
+      var nomeRep=pelNome(pRep);
+      zEscolha(String(DIA_FULL[semRep]||semRep)+' já é dia '+(elaRep?'da ':'do ')+nomeRep+' no plano',
+        ['No Mês '+mesRep.n+' do plano'+(mesRep.anterior?' anterior':'')+' ('+fmtBR(mesRep.de)+' a '+fmtBR(mesRep.ate)+')'+(mesRep.junto?', junto com o plano atual':'')+', '+(elaRep?'ela':'ele')+' vem '+renovDiasRotulo(mesRep.dias)+'.',
+         'Dia do plano não gasta saldo de reposição: a vinda já está paga no plano.',
+         'Lançar sem abater escreve na planilha e não desconta do Banco de Reposições.'],
+        [{t:'Lançar sem abater', fn:function(){
+            if(typeof audit==='function') audit('dashboard-daycare','Reposição lançada SEM abater (o dia '+diaRep+' já é dia do plano, Mês '+mesRep.n+'): '+valor,{pet:valor});
+            gravar(false);
+          }},
+         {t:'Abater mesmo assim', cor:'#B3261E', fn:function(){ seguirUso(); }},
+         {t:'Não lançar', fn:function(){}}]);
+      return;
+    }
+    seguirUso();
+    function seguirUso(){
     if(repDiaTemUso(LRep, diaRep)){
       zEscolha(pelNome(pRep)+' já tem um uso registrado em '+repBRdata(diaRep).slice(0,5),
         ['O Banco de Reposições já descontou um uso deste dia (veja o Extrato dele na tela de Reposições).',
@@ -37381,6 +38456,7 @@
       return;
     }
     seguirRep();
+    }
     function seguirRep(){
     var saldoRep=0; try{ saldoRep=repSaldo(pRep); }catch(e){ saldoRep=0; }
     if(saldoRep<=0){
@@ -38400,7 +39476,9 @@
     var d=(typeof orcDiaSemana==='function')?orcDiaSemana(iso):'';
     if(!VENC_DIA_NOME[d]) return [];                          // sábado e domingo não há Day Care
     var antes=dcDia;
-    try{ dcDia=d; return turmaDoDia(); }
+    // A data vai junto (6.30): o dia-alvo pode estar a mais de uma semana (feriado longo), e o
+    // plano com dias por mês responde pela data, não só pelo dia da semana.
+    try{ dcDia=d; return turmaDoDia(iso); }
     finally{ dcDia=antes; }
   }
 
@@ -39034,11 +40112,15 @@
     try{ var ex=(typeof pelExtra==='function')?(pelExtra(p)||{}):{};
       if(Array.isArray(ex.dias)&&ex.dias.length) dias=ex.dias; }
     catch(e){ /* silencioso de propósito: sem a ficha extra valem os dias do cadastro em memória */ }
+    // Plano com dias por mês (6.30): cada data pelos dias DAQUELE mês do plano.
+    var porMes=pelTemDiasPorMes(p);
     var ehDele=function(d){
       if(!vencEhDiaDayCare(d)) return false;
-      if(!dias.length) return true;
+      var dd=dias;
+      if(porMes){ try{ dd=pelDias(p, d)||dias; }catch(e){ dd=dias; } } /* silencioso de propósito: sem a ficha lida, valem os dias já na mão */
+      if(!dd.length) return true;
       var s=(typeof orcDiaSemana==='function')?orcDiaSemana(d):'';
-      return dias.indexOf(s)>=0;
+      return dd.indexOf(s)>=0;
     };
     if(ehDele(iso)) return iso;                      // hoje é dia dele: é hoje mesmo
     var d=iso, guarda=0;
@@ -41337,14 +42419,18 @@
     try{ dias=(typeof pelDias==='function')?(pelDias(p)||[]):[]; }
     catch(e){ dias=[]; } /* silencioso de propósito: sem a ficha extra valem os dias do cadastro em memória */
     if((!dias||!dias.length) && p && Array.isArray(p.dias)) dias=p.dias;
+    // Plano com dias por mês (6.30): cada dia do laço pelos dias DAQUELE mês do plano.
+    var porMes=pelTemDiasPorMes(p);
     // (1) o próximo dia FIXO dele
     var porFicha='';
-    if(dias&&dias.length){
+    if((dias&&dias.length) || porMes){
       var d=iso, guarda=0;
       while(guarda++<40){
         d=proximoDiaDayCare(d); if(!d) break;
         var sem=(typeof orcDiaSemana==='function')?orcDiaSemana(d):'';
-        if(dias.indexOf(sem)>=0){ porFicha=d; break; }
+        var dd=dias||[];
+        if(porMes){ try{ dd=pelDias(p, d)||dd; }catch(e){ dd=dias||[]; } } /* silencioso de propósito: sem a ficha lida, valem os dias já na mão */
+        if(dd.indexOf(sem)>=0){ porFicha=d; break; }
       }
     }
     // (2) a reposição ou o avulso já AGENDADO — ele pode voltar antes do dia fixo
@@ -42925,7 +44011,7 @@
       if(!p || (typeof pelInativo==='function' && pelInativo(p))) return;
       if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)) return;       // mora aqui: não é turma
       var pk=pelKey(p), ck=dcKey(p.n, p.tutor);
-      var fixo=(pelDias(p)||[]).indexOf(d)>=0;
+      var fixo=(pelDias(p, iso)||[]).indexOf(d)>=0;        // os dias DAQUELA data (6.30: o mês do plano)
       var L=(typeof repLancamentos==='function')?(repLancamentos(p)||[]):[];
       var an=anulados(L);
       var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&l.data===iso&&!an[l._id]; })[0]||null;
@@ -43300,6 +44386,28 @@
       if(!Array.isArray(dias) || dias.indexOf(br.dia)>=0) return '';
       var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
       var dn=BANHO_DIA_NOME[br.dia];
+      // PLANO COM DIAS POR MÊS (6.30): o banho fixo é lançado pela data (dashAutoVemNoDia), então
+      // só avisa quando o dia do banho não aparece em NENHUM mês que ainda falta do plano nem na
+      // rotina de depois dele. Se aparece só mais adiante, diz a partir de quando.
+      if(typeof pelTemDiasPorMes==='function' && pelTemDiasPorMes(p)){
+        var hojeB=(typeof zHojeISO==='function')?zHojeISO():'';
+        var rB=((typeof pelExtra==='function'?pelExtra(p):null)||{}).renov||{};
+        var futuros=renovMesesDoPlano(rB).concat(renovMesesAnteriores(rB)).filter(function(m){ return m.ate>=hojeB; })
+          .sort(function(a,b){ return a.de<b.de?-1:(a.de>b.de?1:0); });
+        var comBanho=futuros.filter(function(m){ return m.dias.indexOf(br.dia)>=0; })[0];
+        if(comBanho){
+          var aPartir=(comBanho.de>hojeB)?comBanho.de:hojeB;
+          return '<div class="hint" style="margin:4px 0 0;color:var(--crm-atencao-text);font-weight:700">⚠ Pela ficha, '+escAttr(nome)
+            +' vem ao Day Care na '+dn+' só a partir de '+escAttr(fmtBR(aPartir))+' (Mês '+comBanho.n+' do plano). '
+            +'Até lá, o app não lança o banho fixo na '+dn+'; se vier só para o banho, lance à mão nos Lançamentos do dia.</div>';
+        }
+        if((pelDias(p,'rotina')||[]).indexOf(br.dia)>=0 && futuros.length){
+          var fimP=futuros[futuros.length-1].ate;
+          return '<div class="hint" style="margin:4px 0 0;color:var(--crm-atencao-text);font-weight:700">⚠ Pela ficha, '+escAttr(nome)
+            +' vem ao Day Care na '+dn+' só depois do plano (a partir de '+escAttr(fmtBR(addDiasISO(fimP, 1)))+', pelos dias do alto da ficha). '
+            +'Até lá, o app não lança o banho fixo na '+dn+'; se vier só para o banho, lance à mão nos Lançamentos do dia.</div>';
+        }
+      }
       var vem=dias.filter(function(d){ return BANHO_DIA_NOME[d]; }).map(function(d){ return BANHO_DIA_NOME[d]; });
       var cat=(typeof pelCategoria==='function')?pelCategoria(p):'';
       // QA57: "marque a quinta na ficha" para quem vem SÓ para o banho faria a falta das 12h
@@ -43514,6 +44622,7 @@
   };
   // A coluna da HORA de cada item que tem hora. Fora daqui, o automático escreve só o nome.
   var DASH_AUTO_COLS_HORA={ banho:'Hora Banho' };
+  var DASH_HORA_AVISO_MS=6*60*60*1000;   // aba sem a coluna da hora: confere de novo a cada 6 h
   // Itens que fazem sentido escrever com antecedência (a Adriana: "já existe reposição
   // lançada lá para frente de tutores super organizados… aniversários já sabemos de todos").
   // O banho fixo entra aqui por definição: ele é combinado justamente para não depender do dia.
@@ -43558,7 +44667,8 @@
       // Os dias da FICHA (01/out/2026), os mesmos que o Day Care usa: o p.dias é o do cadastro
       // importado, e quem teve os dias mudados na ficha tinha o banho de amanhã calculado
       // pelos dias antigos.
-      var dias=(typeof pelDias==='function')?pelDias(p):((p&&p.dias)||[]);
+      // 6.30: os dias DAQUELA data (o mês do plano de quem tem dias diferentes em cada mês).
+      var dias=(typeof pelDias==='function')?pelDias(p, iso):((p&&p.dias)||[]);
       return Array.isArray(dias) && dias.indexOf(dia)>=0;
     }catch(e){ return false; }
   }
@@ -43660,9 +44770,11 @@
         if(!ehMorador){
           var _br=banhoRecDe(p);
           if(_br && _br.ativo && banhoRecValeNoDia(_br, iso) && banhoAutoPodeNoDia(p, iso, veio)){
-            var _vb=banhoRecValorPlanilha(p, _br);
+            var _vb=banhoRecValorPlanilha(p, _br), _chb=dashAutoNomeChave(_vb);
             out.banho.push(_vb);
-            out._horas.banho[dashAutoNomeChave(_vb)]=banhoRecHoraNoDia(_br, iso);
+            // Dois FILHOts com a mesma chave: fica a hora do PRIMEIRO, o mesmo que a lista
+            // guarda (o "sem repetidos" abaixo fica com o primeiro) — QA da 6.34.
+            if(out._horas.banho[_chb]===undefined) out._horas.banho[_chb]=banhoRecHoraNoDia(_br, iso);
           }
         }
         // --- Auluno com restrição (só quem vem nesse dia — a TV é do dia)
@@ -43750,7 +44862,7 @@
       // da ponte deixava o lançamento de uma pessoa esperando atrás de dezenas de escritas do
       // automático (74 s no 1º passe do dia). Uma por vez, a pessoa entra na próxima vaga.
       // `saindo` = o que os passos 1 e 2 tiram NESTA passada: o passo 3 não conta como presente.
-      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0}, manterNoRegistro={}, saindo={};
+      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0, horas:0}, manterNoRegistro={}, saindo={};
       var marcarSaindo=function(col, txt){ var c=jsNorm(col); saindo[c]=saindo[c]||{}; saindo[c][jsNorm(String(txt||''))]=1; };
       // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
       // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
@@ -43758,11 +44870,30 @@
       // Agora, para cada nome, fica gravado se a planilha aceitou (planilha_ok/planilha_msg),
       // e é disto que a tela de Reposições tira o "lançada na planilha ✓".
       var estado={};
-      var marcar=function(k, valor, ok, msg){
+      // A HORA QUE FOI PARA A PLANILHA (QA da 6.34, 06/out/2026). Nos itens com hora (o banho
+      // fixo), o registro guarda também a hora que ESTE mecanismo gravou na "Hora Banho". É ela
+      // que os Lançamentos do dia mostram ao lado do nome — a da planilha, não a da ficha — e é
+      // com ela que a próxima passada percebe que a hora da ficha mudou. Sem `hora`, ninguém
+      // sabe que hora está lá (registro anterior a esta versão, ou a linha é da recepção).
+      var estAntes=(jaAuto && jaAuto._estado && typeof jaAuto._estado==='object')?jaAuto._estado:{};
+      var horaAntesDe=function(k, ch){
+        var r=(estAntes[k]||{})[ch];
+        return (r && typeof r.hora==='string')?r.hora:undefined;
+      };
+      var horaAvisoDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && r.hora_aviso)?String(r.hora_aviso):''; };
+      var horaAvisoTsDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && Number(r.hora_aviso_ts))||0; };
+      // `aviso` (2ª rodada do QA da 6.34): a ponte gravou o nome, mas disse que a aba não tem a
+      // coluna da hora. A hora fica registrada (para a próxima passada não insistir a cada 5
+      // minutos), marcada: a tela não mostra uma hora que não está na planilha.
+      var marcar=function(k, valor, ok, msg, hora, aviso, avisoTs){
         estado[k]=estado[k]||{};
         var ch=dashAutoNomeChave(valor);
         if(!ch) return;
         estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
+        if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string'){
+          estado[k][ch].hora=hora;
+          if(aviso){ estado[k][ch].hora_aviso=String(aviso); estado[k][ch].hora_aviso_ts=Number(avisoTs)||Date.now(); }
+        }
       };
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
         var col=DASH_AUTO_COLS[k];
@@ -43790,8 +44921,51 @@
               ? __mesmos.filter(function(a){ return (jsNorm(a)!==__nv || __maoVivo) && (jsNorm(a)===__nv || antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); }))
                   && !((maoTxt[k]||{})[jsNorm(a)]); })   // texto igual ao lançado à mão: é da recepção (QA35)
               : [];
-            if(!__velhos.length){ marcar(k, v, true, ''); return; }   // já está lá (de qualquer jeito)
-            var __naoSaiu=[];
+            if(!__velhos.length){
+              // Já está lá. Se é a célula DESTE mecanismo (o mesmo texto, sem lançamento da
+              // recepção) e a hora da ficha não é a que foi gravada — "mudar só o dia" com outra
+              // hora, a hora do combinado trocada, ou registro sem hora —, a ponte regrava: o
+              // `lancar` com o mesmo texto só acerta a "Hora Banho" daquela linha. Hora apagada
+              // da ficha: tira e lança de novo, porque o `lancar` sem hora não limpa a célula.
+              var __hq=horasDe(k, v), __ha=horaAntesDe(k, __ch);
+              if(DASH_AUTO_COLS_HORA[k] && __jaNovo && !__maoVivo && !((maoTxt[k]||{})[__nv])){
+                // A aba sem a coluna "Hora Banho" (a ponte avisou): não insiste a cada passada, mas
+                // confere de novo a cada 6 horas — a coluna pode ter sido criada (3ª rodada do QA).
+                var __av=horaAvisoDe(k, __ch), __avTs=horaAvisoTsDe(k, __ch);
+                if(__ha===__hq && (!__av || (Date.now()-__avTs)<DASH_HORA_AVISO_MS)){ marcar(k, v, true, '', __hq, __av, __avTs); return; }
+                // Sem ler os Lançamentos do dia, não se sabe se a linha é da recepção: não mexe
+                // agora; a próxima passada tenta (2ª rodada do QA da 6.34, como o passo 2).
+                if(!maoLida){ marcar(k, v, true, '', __ha, __av, __avTs); return; }
+                var __colH=DASH_AUTO_COLS_HORA[k];
+                // Ficha sem hora: tira e lança de novo, a não ser que o registro já diga que não há
+                // hora lá — registro sem hora (antigo) também (3ª rodada do QA: a hora velha ficava).
+                var __vaiTirar=(!__hq && __ha!==''), __tirou=false;
+                tarefas.push(function(){
+                  return (__vaiTirar
+                      ? dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:__colH, valor:v})
+                      : Promise.resolve({ok:true}))
+                    .then(function(x0){
+                      if(!(x0&&x0.ok)) return x0;
+                      if(__vaiTirar) __tirou=true;
+                      return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:__colH, hora:__hq, valor:v});
+                    })
+                    .then(function(x){
+                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq, x.avisoHora); }
+                      // Tirou e não voltou: o banho está fora da planilha até a próxima passada
+                      // (que lança de novo) — a linha diz isso, sem hora.
+                      else if(__tirou) marcar(k, v, false, 'o banho saiu da planilha para acertar a hora e ainda não voltou — '+((x&&x.erro)||'a ponte não respondeu'));
+                      // Não deu: a linha diz que a hora nova não chegou, com a hora que continua
+                      // gravada; a próxima passada tenta de novo.
+                      else marcar(k, v, false, (__hq?('a hora '+__hq+' não foi gravada'):'não consegui tirar a hora da planilha')
+                        +' — '+((x&&x.erro)||'a ponte não respondeu'), __ha);
+                      return x;
+                    });
+                });
+                return;
+              }
+              marcar(k, v, true, ''); return;   // já está lá (de qualquer jeito)
+            }
+            var __naoSaiu=[], __horaFoi;
             __velhos.forEach(function(vv){ marcarSaindo(col, vv); });
             tarefas.push(function(){ return __velhos.reduce(function(fila, velho){
                 return fila.then(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:velho}); })
@@ -43807,9 +44981,9 @@
                 }
                 if(__jaNovo || __maoVivo) return {ok:true, jaEstava:true};   // a recepção já lançou à mão: vale a linha dela
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
-                  .then(function(y){ if(y&&y.ok) resumo.posto++; return y; });
+                  .then(function(y){ if(y&&y.ok){ resumo.posto++; __horaFoi=horasDe(k, v); } return y; });
               })
-              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||''); return x; }); });
+              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi, x&&x.avisoHora); return x; }); });
             return;
           }
           // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
@@ -43819,7 +44993,7 @@
             .then(function(x){
               var ok=!!(x&&x.ok);
               if(ok) resumo.posto++;
-              marcar(k, v, ok, (x&&x.erro)||'');
+              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined, x&&x.avisoHora);
               return x;
             }); });
         });
@@ -43926,9 +45100,10 @@
         novoRegistro._estado_v=1;
         novoRegistro._erro=null;            // conferiu o dia: a falha anterior não vale mais
         return DB.ref(noAuto).set(novoRegistro).catch(function(e){ _logFalhaGrav('dashAutoSincronizar', e); }).then(function(){
-          if((resumo.posto||resumo.tirado) && typeof audit==='function')
-            audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)',{});
-          return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado};
+          if((resumo.posto||resumo.tirado||resumo.horas) && typeof audit==='function')
+            audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)'
+              +(resumo.horas?(', '+resumo.horas+' hora(s) acertada(s)'):''),{});
+          return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado, horas:resumo.horas};
         });
       });
     }).catch(function(e){
@@ -43969,9 +45144,10 @@
       }, Promise.resolve()).then(function(){
         var posto=res.reduce(function(a,x){ return a+((x&&x.posto)||0); },0);
         var tirado=res.reduce(function(a,x){ return a+((x&&x.tirado)||0); },0);
+        var horas=res.reduce(function(a,x){ return a+((x&&x.horas)||0); },0);
         // Dia que não pôde ser lido NÃO é "✅ 0 posto(s)": o botão diz (QA34, 29/set/2026).
         var falhas=res.filter(function(x){ return x && x.ok===false; });
-        return {ok:true, posto:posto, tirado:tirado, dias:dias.length, falhas:falhas.length, erroFalha:falhas.length?String(falhas[0].erro||''):''};
+        return {ok:true, posto:posto, tirado:tirado, horas:horas, dias:dias.length, falhas:falhas.length, erroFalha:falhas.length?String(falhas[0].erro||''):''};
       });
     }).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
   }
@@ -43986,7 +45162,7 @@
         ? ('❌ '+_motivo(r.erro))
         : (r.falhas
           ? ('⚠ '+(r.falhas===r.dias?'não consegui ler a planilha':('não consegui ler '+r.falhas+' de '+r.dias+' dia(s)'))+': '+_motivo(r.erroFalha))
-          : ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s) em '+(r.dias||1)+' dia(s)'));
+          : ('✅ '+(r.posto||0)+' posto(s) · '+(r.tirado||0)+' tirado(s)'+(r.horas?(' · '+r.horas+' hora(s) acertada(s)'):'')+' em '+(r.dias||1)+' dia(s)'));
       try{ dashCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       setTimeout(function(){ try{ btn.textContent=t; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 8000);
     });
@@ -44989,8 +46165,9 @@
   //  escritos e as colunas vazias, no mesmo formato da planilha.
   function relPertencesBranco(dia){
     var d=dia||dcDia;
+    var isoB=turmaIsoSeguro(d);        // a próxima ocorrência do dia (6.30: o mês do plano daquela data)
     var lista=PELUDINHOS.map(function(p,i){ return {p:p,i:i}; })
-      .filter(function(o){ return (pelDias(o.p).indexOf(d)>=0 || (typeof ehMoradorZeluz==='function'&&ehMoradorZeluz(o.p))) && !pelInativo(o.p); })
+      .filter(function(o){ return (pelDias(o.p, isoB).indexOf(d)>=0 || (typeof ehMoradorZeluz==='function'&&ehMoradorZeluz(o.p))) && !pelInativo(o.p); })
       .sort(function(a,b){ return jsNorm(a.p.n||'').localeCompare(jsNorm(b.p.n||''),'pt'); });
     if(!lista.length){ alert('Não há peludinhos marcados para '+(DIA_FULL[d]||d)+'.'); return; }
     var linhas=lista.map(function(o){ return [pelNome(o.p), o.p.raca||''].concat(PT_ITENS.map(function(){ return ''; })); });
@@ -53770,7 +54947,10 @@
       if(m.linha){
         h+='<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--line)">'
           +'<span class="k"><strong style="text-transform:capitalize">'+esc(m.nome)+'</strong> · plano '+esc(m.linha.plano)
-          +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')+' · '+m.linha.aulas+'x por semana'
+          +(m.linha.compromisso?(' ('+esc(m.linha.compromisso)+')'):'')
+          // Plano com dias diferentes em cada mês (6.36): os dias e o valor de cada mês, prontos do
+          // financeiro-logica — o valor cheio abaixo é a soma deles.
+          +(m.linha.detalheMeses?(' · dias por mês: '+brlSemQuebra(esc(m.linha.detalheMeses))):(' · '+m.linha.aulas+'x por semana'))
           +((m.linha.ordemPet>1)?(' · '+m.linha.ordemPet+'º da família, desconto aplicado'):'')
           +' · mês '+esc(m.ref)+'</span>'
           +'<span class="val" style="font-variant-numeric:tabular-nums"><strong>'+esc(finBRL(m.linha.valor))+'</strong> · '
@@ -57300,6 +58480,12 @@
       +'<p class="pm-rot" style="margin-top:10px">O Meu Dashboard é pessoal de cada monitor — a rota é dele, não se abre de fora. O que alimenta a rota de todos é a escala e o plano do dia, e é isso que este atalho abre.</p>'
       +'</article>';
   }
+  // "R$ 359,00" inteiro na mesma linha: troca SÓ o espaço depois do R$ (o que veio pronto do finBRL)
+  // pelo espaço que não quebra — regra do formato monetário; nenhum R$ é montado aqui. Recebe texto
+  // JÁ escapado e devolve HTML (QA da 6.36, N3: "R$⏎359,00" a 375 px).
+  function brlSemQuebra(htmlEscapado){
+    return String(htmlEscapado==null?'':htmlEscapado).replace(/(R\$) (?=\d)/g, '$1&nbsp;');
+  }
   // O dinheiro do mês. Recebe o resumo do finResumoMes e desenha — nenhuma conta aqui.
   // temPagamentos diz se JÁ existe o nó de lançamentos: sem ele, o "recebido" é
   // R$ 0,00 com o motivo escrito, nunca um zero mudo.
@@ -57329,9 +58515,13 @@
       abertos.slice(0,5).forEach(function(o){
         var vd=(o.servico==='daycare')?'renovacao':'orcamento';
         var rotPlano=(o.servico==='daycare')?('plano '+o.plano+(o.compromisso?(' ('+o.compromisso+')'):'')):'hospedagem';
+        // Plano com dias diferentes em cada mês (6.36): a linha diz os dias e o valor de cada
+        // mês, para quem confere ("1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00"). O texto
+        // vem pronto do financeiro-logica (finBRL) — nenhum número nasce aqui.
+        if(o.servico==='daycare' && o.detalheMeses) rotPlano+=' · dias por mês: '+o.detalheMeses;
         h+='<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(vd)+'\')">'
           +'<span class="pa-li-txt"><b style="text-transform:capitalize">'+esc(o.nome)+'</b>'
-          +'<span>'+esc(rotPlano)+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
+          +'<span>'+brlSemQuebra(esc(rotPlano))+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
           +'<span class="pa-li-go" style="font-size:14px;font-variant-numeric:tabular-nums">'+esc(finBRL(o.falta))+'</span>'
           +'</button>';
       });

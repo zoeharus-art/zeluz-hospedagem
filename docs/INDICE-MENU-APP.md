@@ -1,6 +1,175 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01 e 02/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06 e 07/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
+
+> **Adriana, 06/out/2026,** com a foto do Confirmar do Fred dizendo "1x por semana · Ter": *"Erro - Fred eleonora deseja 2x por semana vou fechar e volta para uma vez"*. Story 6.37.
+
+### (AN) Ficha › Plano › "Quais dias?"
+
+| Antes | Agora |
+|---|---|
+| Tocar em **2x** na aba Plano só mostrava "Marque 2 dias da semana lá em cima" e apontava os chips do alto da ficha; ao fechar o aviso, o seletor voltava para 1x, e o Confirmar gravava 1x | Logo abaixo de "Aulas por semana" aparecem os dias (**Quais dias?** Seg · Ter · Qua · Qui · Sex). Tocar em **2x** diz quantos faltam ("Para 2x, marque mais 1 dia aqui embaixo (hoje está marcado Ter)"); tocar no dia o marca, e o **2x** acende. Pedir menos do que está marcado diz quantos desmarcar |
+
+- Os dias da aba Plano são **os mesmos** do alto da ficha (a mesma gravação, com rastro): marcar num lugar aparece no outro. As aulas por semana continuam sendo a quantidade de dias marcados — é esse número que entra na mensalidade.
+- Os botões dos dias têm 44 px de altura, para o toque no celular, e os 5 cabem numa linha a 375 px. Quem não edita a ficha vê os dias, sem tocar.
+- **Tocar no dia redesenha a aba na hora** (QA da 6.37): o cadastro em memória acompanha a gravação, sem esperar o banco; dois toques rápidos no mesmo dia marcam e desmarcam.
+- O texto da aba aponta **«Quais dias?»**, e não mais "lá em cima": o texto de apoio, a faixa amarela do plano que não bate com os dias (o caso do Fred), o Desfazer e o Confirmar sem nenhum dia.
+- Nenhum dia marcado: nenhum número aceso, "Hoje: nenhum dia marcado", a mensalidade diz "marque os dias em «Quais dias?»" e a faixa amarela diz "nenhum dia está marcado".
+- Plano com dias diferentes em cada mês (6.30): no modo "Mudam durante o plano", valem as linhas de cada mês (sem mudança). Com o plano por mês correndo e "Iguais", tocar num dia da aba pergunta antes; a saída é **«Mudam durante o plano»**, ali mesmo (e não "Ir para a aba Plano", onde a pessoa já está). Quando isso não serve — o plano em edição é mensal, ou hoje vale um mês do plano anterior —, o botão é **Voltar** e a pergunta diz por quê.
+- **Onde está no código:** `planoDiasChipsHTML` (os dias na aba), `setRenovAulas` (o aviso), `blocoPlano`; a gravação é a de sempre, `toggleDiaPel` (com `origem='plano'` quando o toque vem da aba).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (11 provas da 6.37: a da entrega, as 7 do QA — o redesenho na hora e o toque duplo, a ordem e a grade, a rotina × o Mês 1, a pergunta vinda da aba, o texto e o zero dia, o Confirmar sem dia — e as 3 do re-QA — o «Mudam» só quando serve, a faixa com zero dia, o Desfazer); `tests/harness.js` v-15 (o aviso aponta os dias da aba ou do alto; o texto de apoio novo; a faixa amarela). Defeitos plantados: 7 na entrega, 25 nos ajustes do QA (os 16 do QA e 9 novos) e 5 nos do re-QA, todos pegos. Chromium a 375 e a 1280 px (dado inventado): os roteiros do QA sem redesenho manual, todos ok.
+
+### (AO) Renovação de planos: o primeiro desenho como consultora (Story 6.40)
+
+- Ao entrar no app como consultora, a tela Renovação de planos podia ser desenhada antes de o filtro "a cobrar agora" existir, e o primeiro desenho dava erro (a lista aparecia depois). Agora, sem filtro, vale "a cobrar agora".
+- **Onde está no código:** `renderRenovacao`. **Prova:** Fase 0, "6.40".
+
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — o Financeiro soma mês a mês o plano com dias diferentes em cada mês (caso da Hopi)
+
+> **Adriana, 05/out/2026:** *"Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."* Story 6.36, continuação da 6.30 (no mesmo pull request), com as respostas recomendadas, pela autorização do /loop de 06/out.
+
+### (AM) Financeiro: o plano com dias diferentes em cada mês vale a soma dos meses
+
+| Antes | Agora |
+|---|---|
+| O Financeiro calculava o plano por uma quantidade só de aulas, a do Mês 1 gravada no plano: para a Hopi, R$ 359,00 × 3 = **R$ 1.077,00**, R$ 230,00 a menos que o combinado | O valor do plano é a **soma mês a mês** da tabela, com o desconto do Nº na família aplicado e arredondado em cada mês (a mesma conta da aba Plano). Hopi (Gold, 1º da família, paga em 05/10/2026): **R$ 1.307,00** em outubro; **R$ 0,00** em novembro e em dezembro (o plano inteiro cai no mês do pagamento, como sempre) |
+| A linha da ficha dizia "1x por semana" (o Mês 1) | A linha diz os dias e o valor de cada mês: **"plano Gold (trimestral) · dias por mês: 1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00"**, no Dashboard da Adriana (Maiores valores a receber) e no Lançar pagamento |
+| Plano vencido sem renovação: o "valor de um mês" saía do Mês 1 | Sai da **rotina** (os dias do alto da ficha), que é o que volta a valer depois do plano |
+
+- **Onde aparece:** Recebimentos do mês (Dashboard da Adriana e da Márcia, linhas Trimestral e Semestral), Dashboard da Adriana (a receber, em atraso, maiores valores a receber, vencidos) e a tela Lançar pagamento (fora do menu desde 18/set, código vivo), que passa a aceitar **R$ 1.307,00** e barra R$ 1.077,00 ("falta R$ 230,00").
+- **Os valores da story, ao centavo:** Gold 1x, 1x, 2x — 1º **R$ 1.307,00** · 2º **R$ 1.215,51** · 3º **R$ 1.150,16**; Black 1x, 1x, 1x, 1x, 2x, 2x, 1º **R$ 2.488,00**. O "Valor do plano" da aba Plano e o Financeiro dão o mesmo centavo (provado em 120 combinações).
+- **Dias por mês que não fecham com o plano** (outro número de meses, mês sem dia, data que não fecha, plano mensal, mês sem preço na tabela): a ficha fica **fora de toda soma**, em "sem como calcular", com o motivo escrito (por exemplo, "o Mês 2 está sem dia da semana válido (segunda a sexta) — confira na ficha, aba Plano"). Nunca um valor inventado.
+- **Vencido sem a rotina marcada** (sem dias no alto da ficha e na lista do app): fora da soma de vencidos, com o motivo escrito.
+- **Fichas sem dias por mês:** o Financeiro dá exatamente os mesmos números de antes, linha por linha (provado contra a conta de antes da 6.36, guardada em `tests/lib/financeiro-logica-antes-6.36.js`).
+- **Onde está no código:** `auaulandia/financeiro-logica.js`: `finResumoMes` (a porta: `if (r.dias_mes)`), `finResumoDiasMes` (a linha do mês), `finValorDoPlano` (a soma mês a mês), `finMesesDoPlano`, `finDiasMesValidos`, `finMesesDatas`, `finDiasMesSaneado`, `finMesesN`, `finMeioMesVale`, `finAddMesesISO`, `finAddDiasISO` (espelhos, em ES5, das contas da 6.30 no app), `finDiasMesMotivo` (o motivo escrito) e `finAulasRotina` (o vencido pela rotina); `auaulandia/index.html`: `pdirFinHTML` e `lpCobrancaHTML` (o texto dos dias por mês).
+- **A versão no endereço dos arquivos de conta (QA da 6.36):** `resposta-tutor.js`, `painel-logica.js` e `financeiro-logica.js` entram na página com `?v=` igual à `APP_VERSAO`. A versão nova recarrega a página com outro endereço, mas o navegador guarda os arquivos de fora pelo endereço deles (10 minutos no GitHub Pages): sem o `?v=`, um aparelho aberto pouco antes da publicação rodaria o app novo com a conta velha e mostraria R$ 1.077,00 para a Hopi, sem aviso. **Ao subir a versão, o `?v=` sobe junto** (o harness v-50 confere).
+- **Na tela, "R$ 359,00" não quebra no meio:** o detalhe dos meses usa o espaço que não quebra depois do R$ (`brlSemQuebra`), no Dashboard da Adriana e no Lançar pagamento.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (18 provas da 6.36, bloco "6.36 — Financeiro": as 12 da entrega e as 6 do QA — o arredondamento ao centavo mais próximo com preço quebrado, o pagamento a mais, o contador do Day Care, o meio do mês sem o mês da 1ª cobrança, o Nº na família torto numa família, o `?v=` e o R$ que não quebra); `tests/harness.js` v-50 (N1: o `?v=` igual à `APP_VERSAO`; H3: a conta de 2026-06 a 2026-10 igual à de antes da 6.36. O retrato sintético não tem cadastro: a prova de fato foi um cadastro inventado sobre a lista do app, comparado com a cópia congelada do Financeiro de antes. H5: paridade app × Financeiro em 120 combinações, a tabela da story ao centavo e o preço com centavos); defeitos plantados: 30 na entrega, todos pegos, e 12 nos ajustes do QA, todos pegos. Revisão tripla (lógica, entradas e verificação independente) registrada na story.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — plano com dias diferentes em cada mês (caso da Hopi)
+
+> **Adriana, 05/out/2026:** *"Tem alguns planos [...] que quando o tutor viaja, a gente fecha um plano e deixa para fazer a reposição depois. É o caso da Hopi. Da Hopi, nós fechamos um plano trimestral, sendo que durante dois meses ela vai vir uma vez por semana apenas, e no último mês, duas vezes por semana, para poder fazer as reposições que vamos precisar. [...] Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano. Então, eu preciso conseguir escolher como que funciona isso e os dias da semana que ela vai vir. No primeiro mês, ela vai vir tais dias da semana, no segundo mês, ela vai vir tais dias e etc. [...] para poder ter esses casos que a gente acaba fazendo."* Story 6.30, com as respostas recomendadas, pela autorização do /loop de 06/out.
+
+### (AL) Ficha › Plano › "Os dias da semana": iguais no plano todo ou mudando a cada mês
+
+| Antes | Agora |
+|---|---|
+| Um conjunto só de dias da semana por FILHOt, igual para o plano inteiro. Para a Hopi vir 2x no 3º mês, alguém precisava lembrar de trocar os dias da ficha à mão no dia certo, e isso mudava também as datas passadas e futuras | No plano **trimestral** ou **semestral**, a aba Plano tem **"Os dias da semana": Iguais no plano todo · Mudam durante o plano**. Em "Mudam", aparece uma linha por mês (Mês 1, Mês 2, Mês 3…), com as datas, os dias de cada mês e o valor da tabela daquele mês. No plano **mensal** a opção não aparece |
+| O valor do plano era sempre a mensalidade de um conjunto de dias | **"Valor do plano"** é a soma da tabela, mês a mês. Hopi (Gold, 1º da família): Mês 1 Seg R$ 359,00 · Mês 2 Seg R$ 359,00 · Mês 3 Seg e Qua R$ 589,00 · **Valor do plano: R$ 1.307,00**. O desconto do 2º e do 3º peludinho é aplicado em cada mês |
+| A turma, a Chamada, o check-in, a TV, as vagas, a troca de dia, a reposição e o orçamento liam os dias da ficha, sem data | Tudo lê os dias **pela data**: na quarta 09/12/2026 (Mês 3) a Hopi está na turma, na Chamada, no check-in e na planilha; na quarta 11/11/2026 (Mês 2), não. Troca de dia, reposição (dia a dia e por período), próxima vinda, orçamento de hospedagem (noite a noite) e o contador das Turminhas seguem o mês do plano de cada data |
+| Os chips do alto da ficha eram "os dias dele" | Com plano que muda por mês, os chips do alto são a **rotina**: o que vale depois do plano, se ele não for renovado. Acima deles, uma faixa diz qual mês vale hoje e quando os dias mudam ("Hoje vale o Mês 1 de 3 do plano: Seg. A partir de 05/12/2026: Seg, Qua…"). Tocar num chip durante o plano pergunta antes ("Mudar a rotina" ou "Ir para a aba Plano") |
+
+- **O mês do plano conta do início do plano** (Hopi: 05/10 a 04/11, 05/11 a 04/12) e **o último mês termina no fim da vigência** (05/12 a 31/12). Quem começou no meio do mês tem os meses a partir do mês cobrado (22/09 a 31/10, novembro, dezembro).
+- **Nada grava antes do Confirmar.** O resumo mostra cada mês com as datas, os dias e o valor, o "Valor do plano: R$ 1.307,00 — pago à vista" e o que vale depois ("Depois de 31/12/2026, sem renovação: Seg"). O Confirmar barra mês sem dia (aponta o mês), mês sem valor na tabela e os meses todos iguais (aí é "Iguais no plano todo").
+- **Os dias a mais do mês são dias do plano:** lançar "Reposição" num dia do plano (a quarta do Mês 3) pergunta antes de abater ("Quarta já é dia da Hopi no plano"), e a baixa automática não gasta saldo nesse dia.
+- **A troca de mês fica registrada:** no primeiro dia de Day Care do mês novo (Hopi: segunda 07/12), a Linha do tempo do dia registra uma vez "Hopi: começa hoje o Mês 3 do plano — passa a vir Seg, Qua (era Seg)". Mês com os mesmos dias do anterior não gera registro. Depois de uma renovação, o começo de cada mês que ainda falta do plano anterior também é registrado ("Hopi: começa hoje o Mês 3 do plano anterior — passa a vir Seg, Qua (era Seg)").
+- **Corrigir a data do pagamento não é plano novo** (ajuste do QA, 06/out): 05/10 → 02/10 (erro de digitação), ou 05/10 → 06/10 respondendo "Manter até 31/12/2026 (só corrigi a data)", continua em "Mudam", com os mesmos dias de cada mês contados do início corrigido (Mês 1 de 02/10 a 01/11, Mês 3 de 02/12 a 31/12) e o mesmo "Valor do plano: R$ 1.307,00". É correção quando o plano termina no mesmo dia do gravado, quando o período não começa depois do gravado ou quando a pessoa responde "Correção da data" / "Manter … (só corrigi a data)". Se a consultora escolher "Iguais" numa correção, o resumo do Confirmar diz, numa linha: "Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) deixam de valer — a partir de 02/10/2026 vale Seg."
+- **Renovação:** o plano novo começa em "Iguais" (não herda o arranjo da viagem). Os dias que faltam do plano antigo continuam valendo até o fim dele. Quando o plano novo começa **dentro** do antigo (pago em 10/12, ou em 25/11 com o plano novo a partir de 01/12), nos dias em que os dois valem vale a **soma dos dias dos dois** (o tutor pagou os dois): as quartas 16, 23 e 30/12 continuam da Hopi. O resumo do Confirmar diz até quando: "Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, vale Seg." A faixa acima dos chips diz "Hoje vale o Mês 3 de 3 do plano anterior, junto com o plano atual: Seg, Qua.", e a pergunta da Reposição nos Lançamentos do dia também. O Desfazer devolve o plano anterior com os dias de cada mês. Plano vencido sem renovação: valem os chips do alto.
+- **"Mudam" também pede os chips do alto:** sem nenhum dia marcado lá em cima, o Confirmar aponta os chips ("são eles que valem depois do plano, se ele não for renovado"); sem eles, o FILHOt sairia da turma quando o plano acabasse.
+- **O aviso "os dias mudam por mês do plano"** (no modal de Reposições e no orçamento de hospedagem) só aparece enquanto existe mês do plano de hoje em diante; depois do último mês, some (a conta de datas passadas continua).
+- **Mensagens ao tutor:** "Plano finalizou" fala da rotina ("uma vez por semana, na segunda"); "Renovação confirmada" sai sem a frequência (uma linha com os dias de cada mês seria texto novo, só com o texto da Adriana).
+- **O Financeiro soma mês a mês** desde a v 2026-10-07-01 (Story 6.36, seção (AM) acima): a Hopi vale **R$ 1.307,00** em outubro em todo lugar que lê o Financeiro (Recebimentos do mês, Dashboard da Adriana e Lançar pagamento).
+- **Fichas sem dias por mês:** nada muda, em data nenhuma. O que foi provado de fato: (1) o harness com o **retrato sintético** sobre a **lista de FILHOts do app** (118 fichas, hoje e em 10 datas, a turma de cada dia da semana e o contador das Turminhas) — o retrato da nuvem **não tem o cadastro** (`daycare/cadastro`), então **não** foi provado no cadastro real; (2) as provas diferenciais do QA contra a versão sem a 6.30 (`789726d`), com 300 fichas sintéticas: **408.632 comparações, 0 diferenças** em toda leitura de dias, e 0 diferenças no Confirmar, no Desfazer, no orçamento e na Reposição (refeitas depois dos ajustes do QA). Quando a Hopi for convertida, ela (e o plano anterior dela, depois de uma renovação) sai dessa comparação do harness, com prova de que a exclusão pega só as fichas com dias por mês.
+- **Onde está no código:** `renovMesesDoPlano`, `renovMesesDatas`, `renovDiasMesSaneado`, `renovDiasNaData` (com a soma dos dias na sobreposição), `renovMesNaData`, `renovDentroDoPlano`, `renovValorDoPlano` (as contas); `renovEhCorrecao`, `renovRascMesmoPlano` (correção × plano novo), `renovLinhaMesesDoAtual` (a linha do resumo); `pelTemMesDoPlanoAdiante`, `orcPorMesAviso` (o aviso só enquanto há mês do plano); `pelDias(p, quando)` (a porta única: sem data = hoje, data = o mês do plano, `'rotina'` = os chips); `nAulasDe` (rotina); `turmaDoDia(iso)`, `turmaDe`, `turmaListaDoDia`, `nMatriculados`, `gradeAlmocoDados`, `relPertencesBranco`; `trocaValidar`, `repEhDiaDele`, `dxVereditoTroca`, `repDiasQueViria`, `proximaVindaDe`, `vencProximoDiaDele`, `dashAutoVemNoDia`, `banhosAvisoDiaSemDaycare`, `orcDiasEfetivosEm`; aba Plano: `renovEdit`, `renovRascSujo`, `renovDiasModoSet`, `renovMesDiaToggle`, `renovMesesHTML`, `blocoPlano`, `confirmarRenovacao`, `renovMesmoPlano`, `renovHistHTML`, `desfazerRenovacao`; chips: `diasEditInner`, `toggleDiaPel`, `pelPlanoMesHoje`; registro: `planoMesComecaHoje`, `planoMesQuemMudaHoje` (no `gravarTurmaDoDia`); reposição: `dashLancar`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (58 provas da 6.30, bloco "6.30 — plano com dias por mês": as 29 da entrega, as 15 do QA independente, as 13 dos ajustes do QA — a correção da data, a sobreposição, o aviso e os chips do "Mudam" — e 1 do re-QA); `tests/harness.js` v-49 (14 checagens: a regressão na lista do app, com prova de que só as fichas com dias por mês saem da comparação, e a Tâmara inventada na aba Plano, no Confirmar e no Desfazer); defeitos plantados: 38 na entrega, todos pegos, e 49 nos ajustes do QA (os 22 do QA e 27 novos), 47 pegos e 2 equivalentes (registrados na story 6.30); no re-QA, o registro do mês novo passou a olhar também o plano anterior quando o mês do plano atual não muda no mesmo dia (1 prova nova, `planoMesComecaHoje`); roteiro no navegador a 375 px (24 de 24 na entrega; 42 de 42 nos ajustes: a correção da data e a renovação dentro do plano antigo).
+
+## O que mudou em 06/out/2026 (v 2026-10-06-04 e -05) — a hora do banho fixo nos Lançamentos do dia, e "Escova os dentes aqui?" no painel rápido
+
+> **Adriana, 06/out/2026:** *"Precisa de aparecer também nos lançamentos do dia, quando é jogado pela planilha, o horário. É igual o banho aqui, Charlotte está aqui na planilha [...] foi para a planilha às 15h28, mas não está falando o horário do banho deles. Eu preciso visivelmente esse horário, assim como Ragna, que está aqui às 14h30."* Story 6.34.
+>
+> *"Hoje [na Zêluz], sobre a troca de escova de dente em aberto. Aí tá aqui, nunca registrado. Tem peludo que não escova dentes [...] que não deixa. Então, a gente tem que colocar que não deixa. Então, tem que ter opção aqui, troca de escovas de dente do Antônio. É, ele escova dente? Se ele escova, ok. Se ele não escova, a gente não tem como fazer."* Story 6.35.
+
+### (AJ) A linha do banho fixo diz a hora do banho — a que está na planilha
+
+| Antes | Agora |
+|---|---|
+| "Charlotte/Spitz · automático · banho fixo · na planilha ✓ 06/10 15:28" — a hora que aparecia era a do **envio** à planilha (15:28), não a do banho | "Charlotte/Spitz **(a hora do banho dela)** · automático · banho fixo · na planilha ✓ (enviado em 06/10, 15:28)" — a **hora do banho** em destaque, ao lado do nome, como já aparecia no banho lançado à mão (a Ragna, 14:30) |
+| A hora mudada na ficha depois do envio ("mudar só o dia" com outra hora, a hora do combinado trocada) **não chegava à planilha**: a TV tocava o alarme na hora velha | A conferência automática percebe que a hora mudou e a ponte **regrava a "Hora Banho"** daquela linha, na próxima conferência (ela começa 20 segundos depois de salvar no Banhos recorrentes e passa dia por dia; sem isso, na volta de 5 minutos) |
+
+- **A hora da linha é a que foi gravada na planilha** (o registro da conferência guarda, nome por nome, a hora enviada), não uma conta feita a cada redesenho: entre mudar a ficha e a conferência passar, a linha mostra a hora que ainda está na planilha. Sem hora gravada (registro anterior a esta versão, ou banho lançado à mão), a linha fica só com o nome. Vale também para outro dia escolhido no seletor e para dias que já passaram.
+- **Primeira passada depois da publicação:** os banhos fixos já lançados (hoje + 14 dias) recebem a hora uma vez, para o registro passar a guardá-la; depois disso, só quando a hora muda.
+- **O "(enviado em …)"** vale em todas as linhas do automático dos Lançamentos do dia (banho, reposição, falta, adaptação). A tela de Reposições continua com "lançada na planilha ✓ 06/10 15:28".
+- **Não deu para regravar a hora:** a linha mostra a hora que continua lá e diz "a planilha recusou — a hora 16:15 não foi gravada", ou, se a conexão caiu, "a hora 16:15 ainda não foi gravada; a conexão com a planilha caiu…"; a próxima passada tenta de novo. Sem conseguir ler os Lançamentos do dia, a conferência não regrava nada (a linha pode ser da recepção).
+- **Aba sem a coluna "Hora Banho":** a ponte grava o nome e avisa; a linha fica sem hora e diz "sem a hora: a planilha deste dia não tem a coluna "Hora Banho""; a conferência não insiste a cada 5 minutos, mas confere de novo a cada 6 horas (a coluna pode ter sido criada).
+- **Hora apagada no combinado:** a conferência tira a linha e lança de novo, sem hora. Se tirou e não conseguiu lançar, a linha diz "o banho saiu da planilha para acertar a hora e ainda não voltou" (a próxima passada lança).
+- O botão **Conferir agora** diz também quantas horas acertou ("· 2 hora(s) acertada(s)").
+- **Depende da ponte:** a regravação usa o `lancar` da ponte com o mesmo texto, que acerta só a "Hora Banho" daquela linha (`integracao-daycare/Codigo.gs`, desde a versão 5, de 19/set, a da "Hora Medicação"; a publicada é a 6).
+- O banho lançado à mão pela recepção continua com a hora dela: a conferência não mexe.
+- **Onde está no código:** `repPlanHoraNome`, `dashAutoLinhas`; em `dashAutoSincronizar`, `horaAntesDe`, `horaAvisoDe` e o passo "já está lá" (a hora e o aviso no `marcar`).
+
+### (AK) "Escova os dentes aqui?" no painel da troca de escova
+
+- Tocar na troca de escova (por exemplo, "em aberto, nunca registrado") no **Hoje na Zêluz**, nos **Vencimentos** ou na **Prevenção** abre o painel com a pergunta **"Escova os dentes aqui?"**: **Sim, escova** · **Não deixa escovar** · **O tutor não compra a pasta**.
+- **Não:** grava na ficha a mesma resposta de Ficha › Prevenção › "Escova os dentes no Day Care?" (com o motivo). A troca de escova sai de toda cobrança (Prevenção, Vencimentos, Hoje na Zêluz e mensagem ao tutor) e da escovação dos monitores; aparece a confirmação verde ("já leem esta resposta").
+- **Sim:** grava e o painel continua aberto para a data da troca (Feito hoje ou Feito em…), com a dica "Escova aqui: grave abaixo a data da troca."
+- **O banco recusou:** aparece "A FICHA NÃO FOI ATUALIZADA" e o painel continua aberto, sem confirmação.
+- **Quem pode:** quem atualiza a prevenção na tela (recepção, Supervisão, Gestão).
+- **Onde está no código:** `prevCorrigeEscovaDcHTML`, `prevCorrigeEscovaDc` (usa `escovaDcPatch`, a mesma da ficha).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.34 e 2 da 6.35). Defeitos plantados: 18 na 1ª rodada, todos pegos; 19 depois do 1º QA, 18 pegos (o que escapa grava hora vazia em colunas sem hora, que a tela não lê); 13 depois do 2º QA (os que escapavam a ele), todos pegos.
+
+## O que mudou em 06/out/2026 (v 2026-10-06-03) — Ficha › Prevenção: check-up e escova no topo, com as duas datas
+
+> **Adriana, 02/out/2026, na ficha da Cookie:** *"Em cadastro do peludinho, eu tô aqui tentando achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente é um cuidado, né? [...] Então, ter essas duas opções em todos os casos. Para exame, para tudo que a gente precisa de manter ali."* Story 6.27, com as respostas recomendadas, pela autorização do /loop de 06/out.
+
+### (AI) O que se procura primeiro fica em cima
+
+| Antes | Agora |
+|---|---|
+| A troca de escova ficava no **fim** da aba (Saúde e rotina), depois das vacinas e dos antiparasitários | **Check-up e escova** é o primeiro bloco da Prevenção: check-up, troca de escova e "Escova os dentes no Day Care?" |
+| O check-up aparecia **duas vezes**, em campos diferentes: no topo, só a data (sem "Vence em"); no fim, a data com "Vence em" | **Um campo só:** "Último check-up (fez em)" e "Vence em (próximo check-up)". A data grava as três casas antigas juntas (pela ficha, pelo painel rápido e pelo "lançar"); com casas diferentes, vale a **mais recente** |
+
+- **As duas datas em tudo:** vacinas, carrapaticida, coleira, vermífugo, exame de fezes, check-up e escova têm a data em que foi feito ("Última dose", "Última aplicação", "Deu em", "Último exame", "fez em") e o "Vence em". Gestão, Diretoria e Supervisão podem digitar direto no "Vence em" quando só sabem quando vence.
+- **O vencimento do check-up que vale:** sem "à mão", o mais tarde entre o vencimento gravado e um ano depois da data mais recente — a ficha, os Vencimentos, o Hoje na Zêluz e a mesa "Check-up a marcar" dizem a mesma coisa. Ficha antiga sem vencimento gravado continua sem cobrança. O "Vence em" digitado à mão vale também na mesa "Check-up a marcar".
+- O "fez em" não aceita data futura (o campo barra no computador; no celular, o app avisa "ESSA DATA AINDA NÃO CHEGOU", não grava e o campo volta à data gravada); o "Vence em" e a nota "Pela conta" ao lado acompanham na hora a data digitada.
+- **Prevenção › editar (o lançamento da tela Prevenção):** o check-up mostra a data mais recente e o vencimento que vale, e o Salvar grava essa data nas três casas (antes mostrava a casa velha como vencida e, ao salvar, apagava o check-up novo).
+- **Vermífugo (a pergunta da Cookie):** o campo "Vence em (próximo vermífugo)" já existia, logo abaixo de "Deu em". Quem **digita** o "Vence em" é a Gestão, a Diretoria e a Supervisão (decisão de 24/set); os outros perfis veem a data, sem campo.
+- A emergência (veterinário de confiança do tutor) continua no topo, logo depois; o peso, no fim.
+- **Onde está no código:** a aba em `abrirPeludinho` (bloco `ps-saude`); `prevCheckupData` (a data mais recente); `prevUltimaDireta` (grava casas juntas).
+- **Onde está no código (QA):** `prevCheckupVence` (lido por `prevValor` e pela mesa do check-up), `junto` no item do check-up em `PREV_ITENS`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.27; defeitos plantados: 12 do dev e 20 do 1º QA, todos os que mudam o comportamento pegos; 5 depois do 2º QA, todos pegos).
+
+## O que mudou em 06/out/2026 (v 2026-10-06-02) — o alarme de remédio atravessa a meia-noite
+
+> **Achado do QA57 (01/out/2026), já existia antes:** "num aparelho que entrou antes da meia-noite, o alarme de remédio não dispara depois da meia-noite". Story 6.32, feita no /loop autorizado pela Adriana em 06/out ("o que está pendente para você ir consertando em loop").
+
+### (AH) A tela da hospedagem passa para o dia novo sozinha, e o celular da plantonista não recarrega de madrugada
+
+| O que acontecia | Por quê | Agora |
+|---|---|---|
+| Depois da meia-noite, o celular aberto desde a noite **não tocava o alarme** das doses da madrugada | O alarme só toca quando a data da tela da hospedagem é a de hoje. A tela ficava em "ontem" até a página recarregar, e ela só recarrega **parada** (com a mão na tela, nunca) | A tela da hospedagem **passa sozinha para o dia novo, sem recarregar**, quando estava no dia em que o app abriu e nada está aberto. Junto vêm a lista de hóspedes, a agenda dos remédios, o registro das doses e o retrato do vigia, todos no dia certo |
+| O aparelho parado recarregava logo depois da meia-noite | A regra da virada do dia (seção do 01/out) | O celular de quem recebe o alarme (monitores e plantonistas), **já tocado** e **com a tela já no dia novo**, não recarrega entre **0h e 6h**: a recarga apaga o toque que libera o som do celular, e o alarme da madrugada sairia mudo. A faixa diz "O dia virou — o app atualiza sozinho às 6h"; tocar nela pergunta antes de atualizar. Com a tela que não passou (ficha aberta, outra data escolhida), o aparelho parado recarrega como antes |
+| Alarme mudo sem ninguém saber | O celular só libera o som depois de um toque na página | Se o alarme abre sem som, aparece a faixa **"SEM SOM NESTE APARELHO: toque na tela para o alarme tocar."** O primeiro toque em qualquer lugar destrava o som, e a faixa vira "Som ligado." no mesmo lugar (sumir fazia o botão "Dei o remédio" pular) |
+
+- **A troca espera** quando há ficha do FILHOt aberta, alarme tocando, check-in ou almoço abertos; e não acontece se alguém escolheu outra data na tela.
+- **A dose de ontem adiada na virada:** a tela espera em ontem, e o aparelho não recarrega, **até o alarme dela voltar** (ou até a dose aparecer dada, neste ou em outro aparelho): com o celular na mão, na mesa ou no bolso. Quando o adiar vence, o alarme volta a tocar e a dose é registrada em ontem. Enquanto espera, as doses do dia novo não tocam naquele aparelho — por isso a espera tem limite: o remédio que saiu da agenda sai da espera na hora; com outra data escolhida na tela (o alarme não toca ali), não há espera; e, em último caso, ela acaba **1 hora depois do fim do adiar** (1h05 depois do toque em "ADIAR 5 min"). Celular no bolso por mais que isso: a dose de ontem não volta no aparelho (o vigia do servidor cobra depois de 30 minutos). A dose de ontem que ninguém viu nem adiou não volta depois da troca (já era assim; fica para uma story própria).
+- O adiado que ainda não voltou também segura a recarga da **versão nova** (como o alarme na tela), e **tocar na faixa pergunta antes** ("HÁ UM REMÉDIO ADIADO": Esperar o alarme · Atualizar mesmo assim).
+- Com outra data escolhida na tela e o aparelho parado, a recarga da virada espera só se houver um adiado de hoje esperando o alarme.
+- A dose dada e o espelho nas fichas irmãs (o mesmo remédio em duas fichas) ficam no **mesmo dia**, mesmo que a tela passe para o dia novo no meio.
+- O Day Care (turma, falta automática, planilha) continua travado até a recarga, como já era: a faixa **"O dia virou — toque para atualizar"** segue acesa.
+- Quem não recebe o alarme (Gestão, recepção, consultoras) recarrega na virada como antes.
+- **Limites conhecidos:** sem internet na virada, a lista de hóspedes de ontem continua até a planilha responder (os remédios seguem os de quem dormiu). O navegador do teste não aplica a regra de som do celular: o "SEM SOM" é a garantia de que ninguém fica sem saber.
+- **Onde está no código:** `zDiaTelaAvancar`, `zDiaSegurarNoite`, `zDiaAdiadoAtivo` (com `despMedSnoozePend`, os adiados que ainda não voltaram, e `DIA_ADIADO_TETO_MS`), `medDiaVelhoAuto` (em `checarDespertadorMed`), `DIA_TELA_AUTO`, `DIA_NOITE_ATE`, `medSomMudo`, `medSomConferir`, a pergunta em `aplicarVersaoNova`, `_diaLog` em `registrarDoseAgendadaGlobal`; `zMotivoParado` e `zViradaDoDiaTick` olham o adiado.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (10 provas da 6.32 e 1 prova da 6.21 atualizada; defeitos plantados: 20 do dev; 22 do 1º QA, dos quais escapam 6 (Q1 equivalente; Q7, Q10, Q11, Q20 e Q22, lacunas baixas); 10 depois do 2º QA, todos pegos). Chromium com o relógio adiantado: na versão anterior, a página recarregava na virada; agora a tela passa para o dia 07, o alarme das 00:05 abre e a dose é registrada no dia 07. Com a dose adiada às 23:58: na mesa, no bolso e com a página congelada, o alarme volta com a tela em ontem e nada recarrega por cima.
+
+## O que mudou em 06/out/2026 (v 2026-10-06-01) — Lançamentos do dia: o banho para em 17:30, e a tela não perde o lugar nem o cursor
+
+> **Adriana, 06/out/2026:** *"Já fiz uma reclamação sobre o horário, para colocar horário de banho em lançamentos do dia. Fica difícil de digitar, toda hora tem que voltar. Então, horário de banho, de veterinário, saída mais cedo, tudo que tem horário, ser mais fácil. Pode ser a marcação mesmo. Horário de banho, por exemplo, a gente pode marcar é, 14, 14h15, 14h30, marcar de 15 em 15 minutos até as 17h30. Último horário, 17h30."* Story 6.31.
+
+### (AG) O último horário é 17:30 em tudo, e a busca não perde o que está sendo digitado
+
+| O que acontecia | Agora |
+|---|---|
+| O banho ia até 17:45 (pedido de 02/out) | **Tudo vai até 17:30**, o banho também. Um banho às 17:45 (fixo ou já lançado) continua valendo: aparece com o relógio aberto, em «outro horário» |
+| Quando a tela se redesenhava sozinha (a confirmação da planilha de um lançamento, as leituras ao abrir a tela ou trocar o dia, a fila que roda de 10 em 10 minutos), **a busca perdia o cursor** (o teclado do celular fechava no meio do nome) e, quando a lista de cima mudava de tamanho, **a tela pulava** (239 px no teste) | A tela guarda **o campo com o cursor** e **o cartão que importa** (o último tocado, até 4 s antes, ou o que está no terço de cima da tela). Depois do redesenho, o campo (ou, sem campo, o cartão) volta ao mesmo lugar, sem deslizar, e o cursor volta ao campo, no mesmo ponto do texto. O relógio (hora digitada no teclado) fica de fora, como era |
+
+- Os horários prontos (seção (AD)) continuam iguais: as horas de 8h a 17h, os minutos de 15 em 15, e «outro horário» para o resto.
+- A rolagem foi testada também sem a âncora do navegador, como no iPhone (o iPhone de verdade não foi testado: vale conferir 2 minutos no celular da recepção).
+- A rolagem que o próprio app faz não conta como "alguém mexeu" (a trava e a recarga do aparelho parado seguem iguais).
+- O campo com o cursor só é a âncora quando está **à vista**: quem subiu até outro cartão continua vendo o mesmo cartão parado (o cursor continua no campo).
+- **Onde está no código:** `dashAncoraGuardar`, `dashAncoraVoltar`, `dashAncoraEscolher`, `dashToqueLigar` (chamadas no começo e no fim de `renderDash`); `DASH_HORA_FIM` vazio.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.31 e 2 provas da 6.26 atualizadas para o 17:30; defeitos plantados: 19 do dev, todos pegos, e 22 do QA, todos os que mudam o comportamento pegos). Teste no Chromium a 375 px, com e sem a âncora do navegador: antes, 4 falhas (cursor perdido, cartão pulando 239 px); depois, 17 de 17.
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-08 e -09) — «Ele está aqui» no aviso do banho de quem faltou, e o almoço
 
@@ -66,14 +235,14 @@
 |---|---|
 | O relógio do celular, que pede vários toques para chegar à hora | **Botões:** as horas, de **8h a 17h**; um toque já escolhe a hora cheia (14h → 14:00). Logo abaixo, os minutos daquela hora, de 15 em 15 (14:00, 14:15, 14:30, 14:45): um segundo toque, só se precisar |
 
-- **Até onde vai:** o banho até **17:45**; Veterinário, Sai mais cedo, Avaliação e Medicação até **17:30**.
+- **Até onde vai:** tudo até **17:30**, o banho também (desde 06/out, seção (AG); antes, o banho ia até 17:45).
 - **outro horário** abre o relógio de sempre, para o que fugir da grade (7:30, 18:00, o remédio da noite). Uma hora fora da grade já aparece com o relógio aberto.
 - Tocar de novo na mesma hora não apaga os minutos; tocar em outra hora troca para a hora cheia.
 - A hora escolhida aparece escrita ("Horário: 14:30") e acesa. O lançamento, a planilha, a TV e o alarme leem a mesma hora de sempre.
 - Vale na busca, no painel do FILHOt escolhido e no nome escrito à mão (Avaliação). O "Avisado às" da Pernoite continua com o relógio.
 - **A hora vem antes da busca**, em toda busca que pede horário (Banho, Veterinário, Sai mais cedo, Avaliação e Medicação): no Veterinário, no Sai mais cedo e na Avaliação, tocar no nome já lança, então a hora fica escolhida antes; e os nomes sugeridos ficam colados no campo, sem o teclado do celular escondê-los.
 - Botões grandes para o dedo (42 px de altura).
-- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (banho até 17:45).
+- **Onde está no código:** `dashHoraGrade`, `dashHorarioHTML`, `dashHoraHora`, `dashHoraEscolher`, `dashHoraAbrirOutro`, `dashHoraOutro`, `DASH_HORA_FIM` (vazio desde 06/out: todos até 17:30).
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (5 provas da 6.26; 26 defeitos plantados, 26 pegos).
 
 ## O que mudou em 02/out/2026 (v 2026-10-02-01) — reposição e troca: "ele veio" com o dia certo, e a baixa sozinha pelo check-in

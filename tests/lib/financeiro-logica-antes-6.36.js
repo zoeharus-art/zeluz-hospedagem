@@ -31,12 +31,8 @@
  *
  *  TEM (Day Care):     daycare/cadastro/{chave}/renov =
  *                      {plano, inicio, fim, aulas?, ordemPet?, mesRenov?,
- *                       quando?, plano_deduzido?, plano_deduzido_meses?,
- *                       dias_mes?}
+ *                       quando?, plano_deduzido?, plano_deduzido_meses?}
  *                      `inicio` é rotulado na tela como "Data do pagamento".
- *                      `dias_mes` (desde 06/out/2026, Story 6.30): os dias da
- *                      semana de CADA mês do plano — ver "plano com dias
- *                      diferentes em cada mês", mais abaixo (Story 6.36).
  *  TEM (AuAulândia):   auaulandia/orcamentos/{id} =
  *                      {total_cent, parcela1_cent, parcela2_cent, entrada,
  *                       saida, status, status_em, criado_em, pets[], ...}
@@ -66,8 +62,7 @@
  * docs/FINANCEIRO-DASHBOARD.md § 5 têm resposta. Este arquivo obedece:
  *
  *  1. TRIMESTRAL/SEMESTRAL É PAGO TODO À VISTA NA RENOVAÇÃO. O valor do
- *     período inteiro (mensalidade × meses do compromisso; no plano com dias
- *     diferentes em cada mês, a soma mês a mês — Story 6.36) entra inteiro no
+ *     período inteiro (mensalidade × meses do compromisso) entra inteiro no
  *     mês de `renov.inicio` — os meses seguintes do período NÃO geram nova
  *     cobrança. Não existe mais escolha de "regime" (caixa × competência):
  *     só existe este jeito. O campo `parcelas` da tabela de planos do app
@@ -428,332 +423,6 @@ function finLancamentoValido(lancamento, valorEsperado) {
   return { ok: false, motivo: 'passa ' + finBRL(v - esperado) + ' do valor esperado' };
 }
 
-/* ------------------------------- plano com dias diferentes em cada mês (6.36) */
-
-/* O CASO DA HOPI (Adriana, 05/out/2026; Story 6.36):
- *   "Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589.
- *    Então, ficou o total de 1.307 o plano."
- *
- * Desde a Story 6.30 o plano gravado pode trazer renov.dias_mes: os dias da semana de
- * CADA mês do plano ([["seg"],["seg"],["seg","qua"]] — o índice 0 é o Mês 1). Só existe
- * no trimestral (3 meses) e no semestral (6). renov.aulas continua gravado, mas é SÓ o
- * Mês 1: quem calcular o plano por ele erra (a Hopi daria R$ 1.077,00 — R$ 230,00 a
- * menos que o combinado).
- *
- * O VALOR DO PLANO é a SOMA MÊS A MÊS da tabela: a mensalidade de cada mês pela
- * quantidade de dias daquele mês, com o desconto do Nº na família aplicado e
- * ARREDONDADO EM CADA MÊS (finMensalidade, a mesma fórmula do app). É a conta da aba
- * Plano (renovValorDoPlano, no index.html), centavo por centavo. Quando os meses são
- * iguais, dá o mesmo centavo que "mensalidade x meses" do caminho de sempre.
- *
- * Este arquivo roda ANTES do index.html e não enxerga as funções dele. Por isso a regra
- * de validade dos dias por mês e a conta das datas de cada mês estão REPLICADAS aqui,
- * passo a passo, das funções do app: renovMesesN, renovDiasMesSaneado, renovMesesDatas,
- * renovMesesDoPlano, renovDiasMesValido, renovMeioMesVale, mmMesDe, mmMesSeguinteDe,
- * renovPrimeiroDoMesSeguinte, addMesesISO e addDiasISO. A paridade é provada no harness
- * (v-50, H5) e na Fase 0 (bloco 6.36): mudar uma sem mudar a outra derruba a prova.
- */
-var FIN_ORDEM_DIAS = ['seg', 'ter', 'qua', 'qui', 'sex'];
-
-/* "Parece data" com a MESMA régua do app: /^\d{4}-\d{2}-\d{2}$/.test(x||''). */
-function finPareceISO(x) { return /^\d{4}-\d{2}-\d{2}$/.test(x || ''); }
-
-/* Espelho de addDiasISO do app: soma dias pelo calendário local. */
-function finAddDiasISO(iso, n) {
-  if (!finPareceISO(iso)) return '';
-  var a = iso.split('-');
-  var d = new Date(Number(a[0]), Number(a[1]) - 1, Number(a[2]));
-  d.setDate(d.getDate() + n);
-  return d.getFullYear() + '-' + finPad2(d.getMonth() + 1) + '-' + finPad2(d.getDate());
-}
-
-/* Espelho de addMesesISO do app: 31/01 + 1 mês = 28/02, não 03/03. */
-function finAddMesesISO(iso, n) {
-  if (!finPareceISO(iso)) return '';
-  var a = iso.split('-');
-  var d = new Date(Number(a[0]), Number(a[1]) - 1, Number(a[2]));
-  var dia = d.getDate();
-  d.setMonth(d.getMonth() + n);
-  if (d.getDate() < dia) d.setDate(0);
-  return d.getFullYear() + '-' + finPad2(d.getMonth() + 1) + '-' + finPad2(d.getDate());
-}
-
-/* Espelho de mmMesDe do app ('AAAA-MM-DD' -> 'AAAA-MM'). */
-function finMmMesDe(iso) { return finPareceISO(iso) ? String(iso).slice(0, 7) : ''; }
-
-/* Espelho de mmMesSeguinteDe do app ('2026-12-05' -> '2027-01'). */
-function finMesSeguinteDe(iso) {
-  if (!finPareceISO(iso)) return '';
-  var a = iso.split('-');
-  var ano = Number(a[0]), m = Number(a[1]);
-  return ((m === 12) ? ano + 1 : ano) + '-' + finPad2((m === 12) ? 1 : m + 1);
-}
-
-/* Espelho de renovPrimeiroDoMesSeguinte do app. */
-function finPrimeiroDoMesSeguinte(iso) { var m = finMesSeguinteDe(iso); return m ? (m + '-01') : ''; }
-
-/* Espelho de renovMeioMesVale do app: o registro de "começou no meio do mês" só vale
-   quando é do MESMO mês da data do pagamento. */
-function finMeioMesVale(r) {
-  var reg = (r && r.meio_mes && typeof r.meio_mes === 'object') ? r.meio_mes : null;
-  if (!reg || !r.inicio) return null;
-  if (!finMmMesDe(reg.inicio) || finMmMesDe(reg.inicio) !== finMmMesDe(r.inicio)) return null;
-  return reg;
-}
-
-/* Espelho de renovMesesN do app: quantos meses o plano tem para dias por mês — 3 no
-   trimestral, 6 no semestral; 0 quando não cabe (mensal, plano fora da tabela).
-   `planos` é a tabela que o app entrega (planos()). */
-function finMesesN(planos, r) {
-  try {
-    var pl = finObj(planos)[(r || {}).plano];
-    var n = pl ? (FIN_PLANO_MESES[pl.compromisso] || 0) : 0;
-    return n > 1 ? n : 0;
-  } catch (e) { return 0; } /* sem a tabela de planos não há meses para contar */
-}
-
-/* Espelho de renovDiasMesSaneado do app. Dado do banco é dado, não ordem: aceita lista
-   ou objeto de chaves numéricas (o Firebase devolve qualquer um dos dois), tira dia
-   desconhecido, repetido e fora de ordem. null quando não fecha com o plano (outro
-   número de meses, mês sem dia). */
-function finDiasMesSaneado(L, n) {
-  if (!L || typeof L !== 'object' || !(n > 1)) return null;
-  var tam = finEhLista(L) ? L.length : Object.keys(L).length;
-  if (tam !== n) return null;
-  var out = [], i, j, m, arr, ks, dias;
-  for (i = 0; i < n; i++) {
-    m = L[i]; if (m == null) m = L[String(i)];
-    if (!m || typeof m !== 'object') return null;
-    if (finEhLista(m)) arr = m;
-    else { arr = []; ks = Object.keys(m); for (j = 0; j < ks.length; j++) arr.push(m[ks[j]]); }
-    dias = [];
-    for (j = 0; j < FIN_ORDEM_DIAS.length; j++) if (arr.indexOf(FIN_ORDEM_DIAS[j]) >= 0) dias.push(FIN_ORDEM_DIAS[j]);
-    if (!dias.length) return null;
-    out.push(dias);
-  }
-  return out;
-}
-
-/* Espelho de renovMesesDatas do app: as DATAS de cada mês do plano, [{n, de, ate}] ou []
-   (sem como valer: não inventa). O Mês 1 começa no começo do período; os seguintes
-   contam da âncora, sempre a partir dela (nunca em cadeia). Quem começou no meio do mês
-   tem a âncora no dia 1º do primeiro mês cobrado. O último mês termina no fim da
-   vigência. ATENÇÃO: o começo do PERÍODO (que pode não ser o dia do pagamento) só serve
-   aqui, para as datas dos meses — o mês do DINHEIRO continua sendo o de renov.inicio. */
-function finMesesDatas(planos, r) {
-  try {
-    r = r || {};
-    var n = finMesesN(planos, r); if (!n) return [];
-    var ini = r.vig_inicio || r.inicio;
-    if (!finPareceISO(ini) || !finPareceISO(r.fim)) return [];
-    var ancora = finMeioMesVale(r)
-      ? (/^\d{4}-\d{2}$/.test(r.mes_cobranca_1 || '') ? (r.mes_cobranca_1 + '-01') : finPrimeiroDoMesSeguinte(r.inicio))
-      : ini;
-    if (!finPareceISO(ancora)) return [];
-    var out = [], i, de, ate;
-    for (i = 0; i < n; i++) {
-      de = (i === 0) ? ini : finAddMesesISO(ancora, i);
-      ate = (i === n - 1) ? r.fim : finAddDiasISO(finAddMesesISO(ancora, i + 1), -1);
-      if (!finPareceISO(de) || !finPareceISO(ate) || de > ate || ate > r.fim) return [];
-      out.push({ n: i + 1, de: de, ate: ate });
-    }
-    return out;
-  } catch (e) { return []; } /* data torta no banco vira "sem meses" — nunca uma data inventada */
-}
-
-/* Espelho de renovMesesDoPlano do app: os meses do plano com os dias de cada um,
-   [{n, de, ate, dias}], ou [] quando o plano não tem dias por mês válidos. */
-function finMesesDoPlano(planos, r) {
-  r = r || {};
-  if (!r.dias_mes) return [];
-  var n = finMesesN(planos, r); if (!n) return [];
-  var dm = finDiasMesSaneado(r.dias_mes, n); if (!dm) return [];
-  var D = finMesesDatas(planos, r); if (D.length !== n) return [];
-  var out = [], i;
-  for (i = 0; i < n; i++) out.push({ n: D[i].n, de: D[i].de, ate: D[i].ate, dias: dm[i].slice() });
-  return out;
-}
-
-/* Espelho de renovDiasMesValido do app. */
-function finDiasMesValidos(planos, r) { return finMesesDoPlano(planos, r).length > 0; }
-
-/* finValorDoPlano — espelho de renovValorDoPlano do app, com a fórmula do Financeiro
-   (finMensalidade, a mesma do app): o valor de cada mês pela quantidade de dias daquele
-   mês, com o desconto do Nº na família aplicado e arredondado EM CADA MÊS, e a soma.
-   Devolve {total, porMes:[{aulas, valor}], falta}: falta = o índice do 1º mês sem dia
-   ou sem preço na tabela, -1 quando a conta fecha. Com falta, total = 0 — nunca uma
-   soma pela metade. `diasMes` é a lista JÁ SANEADA (finMesesDoPlano). */
-function finValorDoPlano(planos, planoKey, diasMes, ordemPet, descontos) {
-  var L = finLista(diasMes), porMes = [], total = 0, falta = -1, i, n, v;
-  for (i = 0; i < L.length; i++) {
-    n = (L[i] || []).length;
-    v = n ? finMensalidade(planos, planoKey, Math.min(5, n), ordemPet || 1, descontos) : 0;
-    if (v === null) v = 0;               /* sem preço na tabela: o mês não fecha */
-    porMes.push({ aulas: n, valor: v });
-    if (!(v > 0) && falta < 0) falta = i;
-    total += v;
-  }
-  return { total: (falta < 0 ? total : 0), porMes: porMes, falta: falta };
-}
-
-/* Por que os dias por mês gravados não valem — o motivo escrito do "sem como calcular".
-   '' quando valem. Cada frase aponta o que conferir na ficha (aba Plano). */
-function finDiasMesMotivo(planos, r) {
-  r = finObj(r);
-  var pre = 'plano ' + r.plano + ' com dias diferentes em cada mês: ';
-  var fim = ' — confira na ficha, aba Plano';
-  var n = finMesesN(planos, r);
-  if (!n) return pre + 'só o trimestral e o semestral têm dias próprios em cada mês' + fim;
-  var L = r.dias_mes;
-  if (!L || typeof L !== 'object') return pre + 'os dias de cada mês gravados não são uma lista de meses' + fim;
-  var tam = finEhLista(L) ? L.length : Object.keys(L).length;
-  if (tam !== n) return pre + 'há dias gravados para ' + tam + (tam === 1 ? ' mês' : ' meses') +
-    ', mas o plano tem ' + n + ' meses' + fim;
-  if (!finDiasMesSaneado(L, n)) {
-    var i, m, ruim = 0;
-    for (i = 0; i < n; i++) {
-      m = L[i]; if (m == null) m = L[String(i)];
-      if (!finDiasMesSaneado([m, ['seg']], 2)) { ruim = i + 1; break; }
-    }
-    return pre + (ruim ? ('o Mês ' + ruim + ' está sem dia da semana válido (segunda a sexta)')
-      : 'os dias de cada mês gravados não fecham com o plano') + fim;
-  }
-  if (finMesesDatas(planos, r).length !== n) {
-    return pre + 'as datas dos meses não fecham (data do pagamento, fim do plano ou começo no meio do mês)' + fim;
-  }
-  return '';
-}
-
-/* As aulas da ROTINA (os dias do alto da ficha; senão os do array-mestre) — o que volta a
-   valer quando o plano com dias por mês vence sem renovação. É o finAulasDe SEM o
-   renov.aulas (que, nesse plano, é só o Mês 1). null quando não há dias em lugar nenhum. */
-function finAulasRotina(chave, cadastro, peludinhos) {
-  var c = finObj(finObj(cadastro)[chave]);
-  var so = {};
-  so[chave] = { dias: c.dias };
-  return finAulasDe(chave, so, peludinhos);
-}
-
-/* A linha do mês de UM FILHOt com plano de dias por mês (chamada SÓ pelo finResumoMes,
-   quando renov.dias_mes existe). Mexe em R do mesmo jeito que o caminho de sempre:
-   porServico, porFILHOt, inadimplentes, semComoCalcular e os contadores de ordem.
-   X = {planos, cadastro, peludinhos, ordensFamilia, descontos, mes, ultimoDia, hoje, pagoPorChave} */
-function finResumoDiasMes(R, k, c, r, X) {
-  var nome = String(c.n || k.split('__')[0]);
-  var M = finMesesDoPlano(X.planos, r);
-  if (!M.length) {
-    /* Dado torto (outro número de meses, mês sem dia, data que não fecha): FORA de toda
-       soma, com o motivo escrito — nunca um valor inventado. */
-    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare', motivo: finDiasMesMotivo(X.planos, r) });
-    return;
-  }
-  /* Ordem de desconto: a MESMA regra do caminho de sempre (finResumoMes) — ordemPet
-     explícito prevalece; sem ele, a família resolve sozinha; sem os dois, 1º com aviso. */
-  var ordemExplicita = (r.ordemPet !== undefined && r.ordemPet !== null);
-  var ordemFamilia = ordemExplicita ? undefined : X.ordensFamilia[k];
-  var ordemUsada = ordemExplicita ? r.ordemPet : ordemFamilia;
-  if (!ordemExplicita) {
-    if (ordemFamilia !== undefined) R.ordemFamiliaResolvida++;
-    else R.ordemPetSuposta++;
-  }
-  var dias = [], i;
-  for (i = 0; i < M.length; i++) dias.push(M[i].dias);
-  var V = finValorDoPlano(X.planos, r.plano, dias, ordemUsada, X.descontos);
-  if (V.falta >= 0) {
-    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
-      motivo: 'a tabela de preços não tem valor para ' + r.plano + ' com ' + V.porMes[V.falta].aulas +
-        ' aula(s) no Mês ' + (V.falta + 1) + ' (plano com dias diferentes em cada mês)' });
-    return;
-  }
-  var fim = String(M[M.length - 1].ate);     /* o último mês termina no fim da vigência */
-  var pl = X.planos[r.plano];
-
-  /* Regime caixa, como o caminho de sempre: o plano inteiro (a soma dos meses) cai no
-     mês do pagamento; os meses seguintes do período não geram cobrança nova. */
-  var entra = (finMesDe(r.inicio) === X.mes);
-  var valorMes = entra ? V.total : 0;
-  var pago = finCent(X.pagoPorChave[k]);
-  var falta = valorMes - pago; if (falta < 0) falta = 0;
-  var venceEm = r.inicio;
-
-  if (entra) {
-    R.porServico.daycare.quantos++;
-    R.porServico.daycare.recebido += pago;
-    R.porServico.daycare.aReceber += falta;
-    if (X.hoje && falta > 0 && finEhISO(venceEm) && venceEm < X.hoje) {
-      R.porServico.daycare.emAtraso += falta;
-    }
-    if (r.plano_deduzido !== true) R.porServico.daycare.declarado += V.total;
-    var aulasPorMes = [], valorPorMes = [], meses = [], rotA = [], rotV = [];
-    for (i = 0; i < M.length; i++) {
-      aulasPorMes.push(V.porMes[i].aulas);
-      valorPorMes.push(V.porMes[i].valor);
-      meses.push({ n: M[i].n, de: M[i].de, ate: M[i].ate, dias: M[i].dias.slice(),
-        aulas: V.porMes[i].aulas, valor: V.porMes[i].valor });
-      rotA.push(V.porMes[i].aulas + 'x');
-      rotV.push(finBRL(V.porMes[i].valor));
-    }
-    R.porFILHOt.push({
-      chave: k,
-      nome: nome,
-      tutor: String(c.tutor || k.split('__')[1] || ''),
-      servico: 'daycare',
-      plano: String(r.plano),
-      compromisso: String(pl.compromisso || ''),
-      /* Não existe UMA quantidade de aulas nem UMA mensalidade: cada mês tem a sua
-         (aulasPorMes, valorPorMes). null aqui impede que alguém multiplique o Mês 1. */
-      aulas: null,
-      mensalidade: null,
-      valor: valorMes,
-      pago: pago,
-      falta: falta,
-      vigencia: { inicio: r.inicio, fim: fim },
-      venceEm: finEhISO(venceEm) ? venceEm : '',
-      ordemPet: ordemExplicita ? parseInt(r.ordemPet, 10) : (ordemFamilia !== undefined ? ordemFamilia : 1),
-      ordemPetSuposta: (!ordemExplicita && ordemFamilia === undefined),
-      resolvidoPorFamilia: (!ordemExplicita && ordemFamilia !== undefined),
-      planoDeduzido: r.plano_deduzido === true,
-      situacao: falta === 0 ? 'pago' : 'aberto',
-      /* Para quem confere: os dias e o valor de cada mês. */
-      diasPorMes: true,
-      aulasPorMes: aulasPorMes,
-      valorPorMes: valorPorMes,
-      mesesDoPlano: meses,
-      aulasRotulo: rotA.join(', '),
-      detalheMeses: rotA.join(', ') + ' — ' + rotV.join(' + ')
-    });
-  }
-
-  /* VENCEU SEM RENOVAÇÃO: o que volta a valer é a ROTINA (os dias do alto da ficha) —
-     resposta recomendada da pergunta 4 do desenho. O valor de UM mês é o da rotina, não
-     o do último mês do plano. Sem como saber a rotina: fora da soma, com o motivo. */
-  if (finEhISO(fim) && X.ultimoDia && fim < X.ultimoDia && finMesDe(r.inicio) <= X.mes) {
-    var aulasRot = finAulasRotina(k, X.cadastro, X.peludinhos);
-    var mensalRot = (aulasRot === null) ? null : finMensalidade(X.planos, r.plano, aulasRot, ordemUsada, X.descontos);
-    if (mensalRot === null) {
-      R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
-        motivo: (aulasRot === null)
-          ? ('o plano ' + r.plano + ' com dias diferentes em cada mês venceu sem renovação e a ficha não tem os dias da rotina (os do alto da ficha) para o valor de um mês')
-          : ('a tabela de preços não tem valor para ' + r.plano + ' com ' + aulasRot + ' aula(s) — a rotina, que volta a valer depois do plano com dias diferentes em cada mês') });
-      return;
-    }
-    R.inadimplentes.push({
-      chave: k,
-      nome: nome,
-      tutor: String(c.tutor || k.split('__')[1] || ''),
-      servico: 'daycare',
-      plano: String(r.plano),
-      venceuEm: fim,
-      valorDeUmMes: mensalRot,
-      tipo: 'plano-vencido',
-      contaEmAReceber: false,
-      planoDeduzido: r.plano_deduzido === true,
-      pelaRotina: true
-    });
-    R.porServico.daycare.inadimplencia += mensalRot;
-  }
-}
-
 /* ------------------------------------------------------------------ resumo */
 
 /* finResumoMes(dados, mes, opcoes) — a conta do mês.
@@ -773,10 +442,6 @@ function finResumoDiasMes(R, k, c, r, X) {
  *   Regime é SEMPRE caixa: o plano inteiro (mensalidade x meses do
  *   compromisso) cai no MÊS DO PAGAMENTO. Decisão da Adriana, 02/set/2026 —
  *   ver o cabeçalho deste arquivo. Não existe mais opção de "competência".
- *
- *   Plano com dias diferentes em cada mês (renov.dias_mes, Story 6.36): o
- *   valor é a SOMA MÊS A MÊS da tabela (finResumoDiasMes); dias por mês que
- *   não fecham com o plano vão para `semComoCalcular` com o motivo escrito.
  *
  * Devolve zeros — nunca NaN, nunca undefined — quando o mês não tem nada.
  */
@@ -849,14 +514,6 @@ function finResumoMes(dados, mes, opcoes) {
     if (!finEhISO(r.inicio)) {
       R.semComoCalcular.push({ chave: k, nome: String(c.n || k.split('__')[0]),
         servico: 'daycare', motivo: 'plano ' + r.plano + ' sem data de pagamento lançada' });
-      continue;
-    }
-    /* PLANO COM DIAS DIFERENTES EM CADA MÊS (6.36): caminho próprio, somado mês a mês
-       (finResumoDiasMes). Sem renov.dias_mes, NADA abaixo muda — é o caminho de sempre. */
-    if (r.dias_mes) {
-      finResumoDiasMes(R, k, c, r, { planos: planos, cadastro: cadastro, peludinhos: peludinhos,
-        ordensFamilia: ordensFamilia, descontos: d.descontoIrmao, mes: mes, ultimoDia: ultimoDia,
-        hoje: hoje, pagoPorChave: pagoPorChave });
       continue;
     }
     aulas = finAulasDe(k, cadastro, peludinhos);
@@ -1104,11 +761,6 @@ if (typeof module !== 'undefined' && module.exports) {
     finGruposFamilia: finGruposFamilia, finOrdensFamilia: finOrdensFamilia,
     finPagamentosDoMes: finPagamentosDoMes, finSomaPorChave: finSomaPorChave,
     finLancamentoValido: finLancamentoValido,
-    finPareceISO: finPareceISO, finAddDiasISO: finAddDiasISO, finAddMesesISO: finAddMesesISO,
-    finMeioMesVale: finMeioMesVale, finMesesN: finMesesN, finDiasMesSaneado: finDiasMesSaneado,
-    finMesesDatas: finMesesDatas, finMesesDoPlano: finMesesDoPlano, finDiasMesValidos: finDiasMesValidos,
-    finValorDoPlano: finValorDoPlano, finDiasMesMotivo: finDiasMesMotivo, finAulasRotina: finAulasRotina,
-    finResumoDiasMes: finResumoDiasMes,
     finResumoMes: finResumoMes,
     FIN_PLANOS_PADRAO: FIN_PLANOS_PADRAO, FIN_DESC_IRMAO: FIN_DESC_IRMAO
   };

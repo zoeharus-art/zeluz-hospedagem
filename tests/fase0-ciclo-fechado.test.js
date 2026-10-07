@@ -932,11 +932,13 @@ prova('a mensagem da troca fala em troca — não em reposição', () => {
   } finally { run('pelExtra=__bkT3.pe;'); }
 });
 prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai como TROCA na mensagem ao tutor', () => {
-  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
-  igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
-  igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
+  // O relógio fica parado em 28/09 (o dia do caso): sem isso, a prova virou bomba-relógio —
+  // em 06/out a falta de 02/10 já tinha passado e a troca virava reposição, como manda a regra.
   run(`__bkT7=zHojeISO; zHojeISO=function(){ return '2026-09-28'; };`);
   try {
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
+    igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
+    igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
     igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), false, 'falta de dia que já passou: reposição');
     igual(run("repLancEhTroca({qtd:1, data:'2026-09-28', volta:'2026-09-29'})"), true, 'falta de hoje com dia combinado: troca');
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-07', volta:'2026-10-20', periodo:true})"), false, 'período que rende um dia: reposição');
@@ -5181,7 +5183,14 @@ prova('a mensagem ao tutor e a lista da Renovação dizem o período (01/10 a 31
 });
 prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PAGAMENTO (renov.inicio, regime de caixa)', () => {
   const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
-  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin) && !/vig_inicio/.test(fin));
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === mes\);/.test(fin));
+  // 6.36: o plano com dias diferentes em cada mês também conta o dinheiro pelo mês da DATA DO PAGAMENTO
+  assert.ok(/var entra = \(finMesDe\(r\.inicio\) === X\.mes\);/.test(fin), 'o plano com dias por mês também é regime de caixa');
+  // 6.36: o começo do PERÍODO (vig_inicio) só entra na conta das DATAS de cada mês do plano
+  // (finMesesDatas, espelho de renovMesesDatas) — nunca no mês do dinheiro.
+  const i36 = fin.indexOf('function finMesesDatas('), j36 = fin.indexOf('\nfunction ', i36 + 10);
+  assert.ok(i36 > 0 && j36 > i36 && /vig_inicio/.test(fin.slice(i36, j36)), 'as datas dos meses começam no começo do período');
+  assert.ok(!/vig_inicio/.test(fin.slice(0, i36) + fin.slice(j36)), 'fora das datas dos meses, o Financeiro não lê o começo do período');
 });
 // ---- QA da 6.20 (FAIL → ajustes): corrigir a data nunca grava o mês errado
 const renov620 = (L) => { const r = L.grav[0] && L.grav[0].renov; return r ? [r.inicio, r.vig_inicio || '', r.fim] : null; };
@@ -5622,11 +5631,12 @@ provaAsync('o "Salvo" do banho fixo, num aparelho aberto desde ontem, diz que el
 prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam nas três gravações do dia', () => {
   const src = fs.readFileSync(APP, 'utf8');
   assert.ok(/var motivo=zMotivoParado\(\);[\s\S]{0,700}if\(!motivo\) return 'faixa';/.test(src), 'mesma regra de "parado"');
-  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
-  assert.ok(/setInterval\(function\(\)\{ try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
+  // 6.32: antes da regra da recarga, a tela da hospedagem tenta passar para o dia novo (zDiaTelaAvancar).
+  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ if\(!document\.hidden\) zDiaTelaAvancar\(\); \}[^\n]*\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
+  assert.ok(/setInterval\(function\(\)\{\n    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -6277,11 +6287,11 @@ prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «des
 });
 // ================================================================== 6.26 — horários prontos
 console.log('\n6.26 — Lançamentos do dia: horários prontos em um toque (Adriana, 02/out/2026)');
-prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho vai até 17:45', () => {
+prova('a grade: de 15 em 15 minutos, das 8:00 às 17:30; o banho também para em 17:30 (6.31, Adriana 06/out)', () => {
   const g = (k) => JSON.parse(JSON.stringify(run(`dashHoraGrade('${k}')`)));
   const v = g('vet'), b = g('banho');
   assert.strictEqual(v[0], '08:00'); assert.strictEqual(v[1], '08:15'); assert.strictEqual(v[v.length - 1], '17:30'); assert.strictEqual(v.length, 39);
-  assert.strictEqual(b[b.length - 1], '17:45'); assert.strictEqual(b.length, 40);
+  assert.strictEqual(b[b.length - 1], '17:30'); assert.strictEqual(b.length, 39); igual(b, v);
   ['14:00', '14:15', '14:30', '14:45', '13:00', '15:00', '17:00'].forEach((t) => assert.ok(v.indexOf(t) >= 0, t));
   ['medicacao', 'saicedo', 'avaliacao'].forEach((k) => assert.strictEqual(g(k).slice(-1)[0], '17:30', k));
 });
@@ -6314,7 +6324,12 @@ prova('a tela: as horas 8h a 17h; tocada a hora, os minutos dela; o relógio gua
     assert.ok(/id="dashH_vet" style="max-width:140px" value="14:30"/.test(h1), 'o relógio tem a mesma hora (é dele que o lançamento lê)');
     run("DASH_HORA.vet='17:00'; DASH_HORA.banho='17:00';");
     assert.ok(run("dashHorarioHTML('vet')").indexOf("'17:45'") < 0, 'o veterinário para em 17:30');
-    assert.ok(run("dashHorarioHTML('banho')").indexOf("dashHoraEscolher('banho','17:45')") >= 0, 'o banho ainda tem 17:45');
+    const hb17 = run("dashHorarioHTML('banho')");
+    assert.ok(hb17.indexOf("'17:45'") < 0 && hb17.indexOf("dashHoraEscolher('banho','17:30')") >= 0, 'o banho também para em 17:30 (6.31)');
+    run("DASH_HORA.banho='17:45';");
+    const hb1745 = run("dashHorarioHTML('banho')");
+    assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_banho" style="max-width:140px" value="17:45"/.test(hb1745) && hb1745.indexOf('background:var(--z-blue)') < 0,
+      'banho às 17:45 (já lançado ou fixo): fora da grade, o relógio aparece aberto com a hora');
     run("DASH_HORA.medicacao='20:00';");
     const h2 = run("dashHorarioHTML('medicacao')");
     assert.ok(/<div style="margin-top:6px"><span class="hint">Outro horário:<\/span> <input type="time" class="cad-in" id="dashH_medicacao" style="max-width:140px" value="20:00"/.test(h2), 'fora da grade: o relógio aparece aberto, com a hora');
@@ -6861,6 +6876,2414 @@ prova('6.29 a busca redesenha o check-in do corpo (não a tela genérica); a pr�
     run('__vdcAtiva=false;'); igual(run('banhoFaltaTemCartaz()'), false, 'saiu do Day Care: o aviso volta');
     run("__vdcAtiva=true; dcAtiv='almoco';"); igual(run('banhoFaltaTemCartaz()'), false, 'outra atividade do Day Care: o aviso volta');
   } finally { run('ckAtual=__bkCa.ca; document.getElementById=__bkCa.ge; dcAtiv=__bkCa.da;'); }
+});
+// ================================================================== 6.31 — a tela não pula
+console.log('\n6.31 — Lançamentos do dia: o banho para em 17:30 e a tela não perde o lugar nem o cursor (Adriana, 06/out/2026)');
+// Cartões de mentira: cada um sabe onde está na tela. Trocar `__topos` simula o redesenho.
+const ANC631 = `
+  __topos=[]; __sb=[]; __foco=[]; __sel=[];
+  __mkCard=function(i){ return {classList:{contains:function(c){ return c==='card'; }}, __i:i,
+    getBoundingClientRect:function(){ var t=__topos[i]; return {top:t[0], bottom:t[1]}; }}; };
+  __el={children:[], parentElement:null, contains:function(x){ return !!(x&&x.__dentro); },
+    __ouvir:{}, addEventListener:function(ev,f,cap){ this.__ouvir[ev]=f; }};
+  __montar=function(n){ __el.children=[]; for(var i=0;i<n;i++) __el.children.push(__mkCard(i)); };
+  __inp=function(id,s,e){ return {id:id, tagName:'INPUT', __dentro:true, selectionStart:s, selectionEnd:e,
+    focus:function(o){ __foco.push([id, JSON.stringify(o||null)]); }, setSelectionRange:function(a,b){ __sel.push([id,a,b]); }}; };
+  __bk631={sb:window.scrollBy, ih:window.innerHeight, ae:document.activeElement, ge:document.getElementById, de:document.documentElement, t:DASH_TOQUE};
+  window.scrollBy=function(a,b){ __sb.push([a,b,document.documentElement.style.scrollBehavior]); };
+  window.innerHeight=800;
+  document.documentElement={style:{scrollBehavior:''}};
+  DASH_TOQUE={i:-1, ts:0};`;
+const SOLTA631 = `window.scrollBy=__bk631.sb; window.innerHeight=__bk631.ih; document.activeElement=__bk631.ae;
+  document.getElementById=__bk631.ge; document.documentElement=__bk631.de; DASH_TOQUE=__bk631.t;`;
+prova('6.31 qual cartão segura o lugar: o tocado há até 4 s; senão, o do terço de cima da tela; senão, o primeiro visível', () => {
+  const r = JSON.stringify([{ top: -600, bottom: -50 }, { top: -50, bottom: 350 }, { top: 350, bottom: 900 }]);
+  const agora = 1000000;
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:2, ts:${agora - 3999}}, ${agora})`), 2, 'tocado há 4 s: ele');
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:2, ts:${agora - 4001}}, ${agora})`), 1, 'toque velho: o que está a 200 px do topo');
+  igual(run(`dashAncoraEscolher(${r}, 450, {i:-1, ts:0}, ${agora})`), 1, 'tela baixa: um terço da altura (150 px)');
+  igual(run(`dashAncoraEscolher(${r}, 800, {i:7, ts:${agora}}, ${agora})`), 1, 'toque num cartão que não existe mais: ignora');
+  const r2 = JSON.stringify([{ top: -600, bottom: -300 }, { top: 250, bottom: 300 }]);
+  igual(run(`dashAncoraEscolher(${r2}, 800, null, ${agora})`), 1, 'ninguém no ponto: o primeiro visível');
+  igual(run(`dashAncoraEscolher([], 800, null, ${agora})`), -1);
+  // QA da 6.31: o teto de 200 px na tela grande, e o primeiro visível é o que ainda aparece (mesmo cortado em cima)
+  const r3 = JSON.stringify([{ top: 100, bottom: 250 }, { top: 250, bottom: 400 }]);
+  igual(run(`dashAncoraEscolher(${r3}, 900, null, ${agora})`), 0, 'tela de 900 px: o ponto é 200 px (não 300)');
+  const r4 = JSON.stringify([{ top: -100, bottom: 50 }, { top: 300, bottom: 500 }]);
+  igual(run(`dashAncoraEscolher(${r4}, 800, null, ${agora})`), 0, 'cortado em cima, mas visível: é ele');
+});
+prova('6.31 o redesenho devolve o cartão ao mesmo lugar, sem animação, e o cursor ao campo que estava sendo digitado', () => {
+  run(ANC631);
+  try {
+    run(`__montar(4); __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__inp('dashB_vet',2,2);`);
+    const a = JSON.parse(JSON.stringify(run('__a=dashAncoraGuardar(__el)')));
+    igual(a, { i: 2, top: 100, foco: { id: 'dashB_vet', s: 2, e: 2, top: null } }, 'guarda o cartão a 200 px do topo e o cursor');
+    // o redesenho: entraram lançamentos acima, o cartão desceu 239 px; o campo é outro objeto
+    run(`__montar(4); __topos=[[-900,-300],[-300,339],[339,939],[939,1500]]; __novo=__inp('dashB_vet',0,0); document.activeElement=null;
+      document.getElementById=function(id){ return id==='dashB_vet'?__novo:null; }; document.documentElement.style.scrollBehavior='smooth';`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 239, 'auto']], 'rola 239 px de volta, com a rolagem suave desligada naquele instante');
+    igual(run('document.documentElement.style.scrollBehavior'), 'smooth', 'e a rolagem suave volta como estava');
+    igual(run('__foco'), [['dashB_vet', '{"preventScroll":true}']], 'o cursor volta ao campo, sem a tela correr até ele');
+    igual(run('__sel'), [['dashB_vet', 2, 2]], 'no mesmo ponto do texto');
+    // cartão já no lugar (o navegador segurou): nada a rolar
+    run(`__sb=[]; __foco=[]; __sel=[]; __topos=[[-900,-400],[-400,100],[100,700],[700,1300]]; document.activeElement=__novo;`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [], 'sem diferença, sem rolar'); igual(run('__foco'), [], 'o campo já tem o cursor: não refoca');
+    // QA da 6.31: o cartão que SOBE (tiraram lançamentos acima) também volta; e uma linha só (34 px) também
+    run(`__sb=[]; __topos=[[-900,-400],[-400,18],[18,700],[700,1300]];`); run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, -82, 'auto']], 'subiu 82 px: desce 82');
+    run(`__sb=[]; __topos=[[-900,-400],[-400,134],[134,700],[700,1300]];`); run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 34, 'auto']], 'uma linha nova acima (34 px): volta também');
+    igual(run('DASH_ROLOU_EM > 0'), true, 'marca que a rolagem foi do app');
+  } finally { run(SOLTA631); }
+});
+prova('6.31 (QA) a âncora é o campo com o cursor; o relógio (hora) fica de fora; a rolagem do app não conta como "alguém mexeu"', () => {
+  run(ANC631);
+  try {
+    // o campo com o cursor, num cartão comprido: o que entra no mesmo cartão, acima dele, não o empurra
+    run(`__montar(3); __topos=[[-300,900],[900,1300],[1300,1800]];
+      __campo=__inp('dashB_banho',3,3); __campo.getBoundingClientRect=function(){ return {top:420, bottom:460}; }; document.activeElement=__campo;`);
+    const a = JSON.parse(JSON.stringify(run('__a=dashAncoraGuardar(__el)')));
+    igual(a.foco, { id: 'dashB_banho', s: 3, e: 3, top: 420 });
+    run(`__montar(3); __topos=[[-300,960],[960,1360],[1360,1860]]; __novo=__inp('dashB_banho',0,0); __novo.getBoundingClientRect=function(){ return {top:454, bottom:494}; };
+      document.activeElement=null; document.getElementById=function(id){ return id==='dashB_banho'?__novo:null; };`);
+    run('dashAncoraVoltar(__el, __a)');
+    igual(run('__sb'), [[0, 34, 'auto']], 'o campo desceu 34 px dentro do mesmo cartão (o topo do cartão nem mexeu): volta 34');
+    // 2ª rodada do QA: o campo com o cursor FORA da tela (a pessoa subiu até outro cartão) não é a âncora — vale o cartão
+    [-136, run('window.innerHeight') + 10].forEach((topo) => {
+      run(`__montar(3); __topos=[[-300,900],[900,1300],[1300,1800]];
+        __campo=__inp('dashB_banho',3,3); __campo.getBoundingClientRect=function(){ return {top:${topo}, bottom:${topo + 40}}; }; document.activeElement=__campo;`);
+      const af = JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)')));
+      igual([af.foco && af.foco.id, af.foco && af.foco.top], ['dashB_banho', null], 'topo ' + topo + ': o cursor volta, mas a âncora é o cartão');
+      assert.ok(af.i >= 0 && af.top != null, 'com o cartão guardado');
+    });
+    // o relógio: não guarda o cursor (os números seguintes reescreveriam a hora)
+    ['time', 'date', 'datetime-local', 'month', 'week'].forEach((t) => {
+      run(`__rel=__inp('dashH_vet',null,null); __rel.type='${t}'; document.activeElement=__rel;`);
+      igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, t + ': fora');
+    });
+    run(`__txt=__inp('dashB_vet',1,1); __txt.type='text'; document.activeElement=__txt;`);
+    assert.ok(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, 'texto: guarda');
+    run(`__ta={id:'dashT_x', tagName:'TEXTAREA', __dentro:true, selectionStart:0, selectionEnd:0}; document.activeElement=__ta;`);
+    assert.ok(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, 'caixa de texto: guarda');
+    // a rolagem do app não zera o "parado"
+    run(`__bkIn={u:_inatUltimo}; _inatUltimo=1000; DASH_ROLOU_EM=Date.now();`);
+    try {
+      run("inatMarcarAtividade({type:'scroll'})"); igual(run('_inatUltimo'), 1000, 'a rolagem do app logo depois: não conta');
+      run("inatMarcarAtividade({type:'pointerdown'})"); assert.ok(run('_inatUltimo') > 1000, 'um toque conta');
+      run('_inatUltimo=1000; DASH_ROLOU_EM=Date.now()-600;'); run("inatMarcarAtividade({type:'scroll'})");
+      assert.ok(run('_inatUltimo') > 1000, 'rolagem de gente (depois de meio segundo) conta');
+    } finally { run('_inatUltimo=__bkIn.u;'); }
+  } finally { run(SOLTA631); }
+});
+prova('6.31 o que não se guarda: tela escondida, campo de fora da lista, botão; o toque marca o cartão de cima (não o de dentro)', () => {
+  run(ANC631);
+  try {
+    run(`__montar(3); __topos=[[0,0],[0,0],[0,0]]; document.activeElement=__inp('dashB_vet',1,1);`);
+    igual(run('dashAncoraGuardar(__el)'), null, 'aba escondida: nada a guardar');
+    run(`__topos=[[-100,300],[300,700],[700,900]]; document.activeElement={id:'busca-geral', tagName:'INPUT', __dentro:false};`);
+    igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, 'campo fora da lista: não é dela');
+    run(`document.activeElement={id:'x', tagName:'BUTTON', __dentro:true};`);
+    igual(JSON.parse(JSON.stringify(run('dashAncoraGuardar(__el)'))).foco, null, 'botão tocado: não volta o cursor');
+    run('dashAncoraVoltar(__el, null)'); igual(run('__sb'), []);
+    // o toque: o dedo cai num cartão de DENTRO do cartão (bloco do vermífugo); conta o de cima
+    run(`__el.__dashToque=0; __nLiga=0; __addOrig=__el.addEventListener; __el.addEventListener=function(ev,f,c){ __nLiga++; return __addOrig.call(this,ev,f,c); }; dashToqueLigar(__el); dashToqueLigar(__el);
+      __interno={parentElement:__el.children[1], closest:function(){ return __el.children[1]; }};
+      __el.children[1].parentElement=__el; __el.children[1].closest=function(){ return __el.children[1]; };
+      __alvo={closest:function(sel){ return __interno; }};
+      __interno.closest=function(){ return __interno; }; __interno.parentElement=__el.children[1];
+      __el.children[1].parentElement=__el;
+      __alvo.closest=function(){ return __interno; };
+      __interno.parentElement.closest=function(){ return __el.children[1]; };`);
+    run(`(function(){ var c=__el.children[1]; c.parentElement=__el; __interno.parentElement={closest:function(){ return c; }}; })();
+      __el.__ouvir.pointerdown({target:__alvo});`);
+    igual(run('DASH_TOQUE.i'), 1, 'o cartão de cima, o 2º da lista');
+    assert.ok(Date.now() - run('DASH_TOQUE.ts') < 1000);
+    igual(Object.keys(run('__el.__ouvir')).sort(), ['focusin', 'pointerdown'], 'ouve o dedo e o teclado');
+    igual(run('__nLiga'), 2, 'liga uma vez só, por mais que a tela redesenhe');
+  } finally { run(SOLTA631); }
+});
+prova('6.31 o renderDash guarda o lugar ANTES de trocar a lista e devolve DEPOIS, com o mesmo registro', () => {
+  run(`__bk631r={g:dashAncoraGuardar, v:dashAncoraVoltar, l:dashToqueLigar, ge:document.getElementById}; __ordem=[];
+    __bl={innerHTML:'', set __x(v){}};
+    Object.defineProperty(__bl,'innerHTML',{set:function(v){ __ordem.push('troca'); }, get:function(){ return ''; }});
+    __busca={}; Object.defineProperty(__busca,'value',{get:function(){ return 'To'; }, set:function(v){ __ordem.push('texto'); }});
+    document.getElementById=function(id){ return id==='dashBlocos'?__bl:(id==='dashB_banho'?__busca:null); };
+    __bkSg=dashSugerir; dashSugerir=function(){};
+    dashToqueLigar=function(el){ __ordem.push('liga:'+(el===__bl)); };
+    dashAncoraGuardar=function(el){ __ordem.push('guarda:'+(el===__bl)); return {marca:42}; };
+    dashAncoraVoltar=function(el,a){ __ordem.push('volta:'+(el===__bl)+':'+(a&&a.marca)); };`);
+  try {
+    run('renderDash()');
+    igual(run('__ordem'), ['liga:true', 'guarda:true', 'troca', 'texto', 'volta:true:42'], 'o texto digitado volta ANTES do cursor (senão o cursor iria para o fim)');
+  } finally { run('dashAncoraGuardar=__bk631r.g; dashAncoraVoltar=__bk631r.v; dashToqueLigar=__bk631r.l; document.getElementById=__bk631r.ge; dashSugerir=__bkSg;'); }
+});
+// ================================================================== 6.32 — o alarme atravessa a meia-noite
+console.log('\n6.32 — O alarme de remédio atravessa a meia-noite: a tela da hospedagem passa para o dia novo sem recarregar (06/out/2026)');
+const ARMA632 = `__bk632={hz:zHojeISO, sd:selectedDate, dta:DIA_TELA_AUTO, fa:fichaAberta, ch:carregarHospedes, ul:updateDateLabel, au:audit,
+    sn:despMedSnooze, sp:despMedSnoozePend, dn:despMedNaTela, ta:zDiaTrabalhoAberto, pr:papelRecebeAlarmeMed, ua:navigator.userActivation};
+  __ch632=0; carregarHospedes=function(){ __ch632++; }; __ul632=0; updateDateLabel=function(){ __ul632++; };
+  __au632=[]; audit=function(t,m){ __au632.push(t+': '+m); }; fichaAberta=function(){ return __fa632; }; __fa632=false;
+  despMedSnooze={}; despMedSnoozePend={}; despMedNaTela=null;
+  zHojeISO=function(){ return __hoje632; }; __hoje632='2026-10-07';
+  DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);`;
+const SOLTA632 = `zHojeISO=__bk632.hz; selectedDate=__bk632.sd; DIA_TELA_AUTO=__bk632.dta; fichaAberta=__bk632.fa; carregarHospedes=__bk632.ch;
+  updateDateLabel=__bk632.ul; audit=__bk632.au; despMedSnooze=__bk632.sn; despMedSnoozePend=__bk632.sp; despMedNaTela=__bk632.dn; zDiaTrabalhoAberto=__bk632.ta;
+  papelRecebeAlarmeMed=__bk632.pr; navigator.userActivation=__bk632.ua;`;
+prova('6.32 a tela da hospedagem passa sozinha para o dia novo, sem recarregar: lista, agenda e registro das doses no dia certo', () => {
+  // Datas pelo relógio de verdade: o ehHojeAua compara com o agora real.
+  const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 22, 40);
+  const HOJE = iso(agoraD), ONTEM = iso(ontemD), agora = agoraD.getTime();
+  run(ARMA632 + `DIA_TELA_AUTO='${ONTEM}'; selectedDate=new Date(${ontemD.getTime()});`);
+  try {
+    run(`__hoje632='${ONTEM}';`);
+    igual(run(`zDiaTelaAvancar(${agora})`), '', 'o dia não virou: nada');
+    run(`__hoje632='${HOJE}';`);
+    igual(run('dataKeyAtual()'), ONTEM); igual(run('ehHojeAua()'), false, 'antes: o alarme ficava calado (a tela em ontem)');
+    igual(run(`zDiaTelaAvancar(${agora})`), 'avancou');
+    igual(run('dataKeyAtual()'), HOJE, 'a tela foi para o dia novo');
+    igual(run('ehHojeAua()'), true, 'e o alarme volta a valer');
+    igual(run('DIA_TELA_AUTO'), HOJE);
+    igual(run('__ch632'), 1, 'a lista de hóspedes (e, com ela, a agenda dos remédios) é relida');
+    igual(run('__ul632'), 1, 'o rótulo da data muda');
+    igual(run('__au632'), ['dia-tela-avancou: a tela da hospedagem passou para ' + HOJE + ' sem recarregar (o alarme de remédio segue)']);
+    igual(run(`zDiaTelaAvancar(${agora + 15000})`), '', 'uma vez só');
+    // o registro das doses e a leitura do alarme seguem a data da tela
+    run(`__bk632z={zm:zMapaUma}; __zm632=[]; zMapaUma=function(p){ __zm632.push(p); return Promise.resolve({}); };`);
+    try { run('medLogHoje()'); igual(run('__zm632'), ['auaulandia/medicacao-log/' + HOJE]); }
+    finally { run('zMapaUma=__bk632z.zm;'); }
+    // a outra meia-noite (aparelho aberto dois dias): segue de novo
+    const amanhaD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() + 1, 0, 1);
+    run(`__hoje632='${iso(amanhaD)}';`);
+    igual(run(`zDiaTelaAvancar(${amanhaD.getTime()})`), 'avancou'); igual(run('dataKeyAtual()'), iso(amanhaD));
+  } finally { run(SOLTA632); }
+});
+prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme tocando ou adiado (a dose de ontem fica em ontem), check-in; sem internet não segura', () => {
+  run(ARMA632);
+  try {
+    const agora = new Date(2026, 9, 7, 0, 1).getTime();
+    run('selectedDate=new Date(2026,9,3,10,0);');
+    igual(run(`zDiaTelaAvancar(${agora})`), '', 'a recepção olhando o dia 03: a tela é dela');
+    igual(run('dataKeyAtual()'), '2026-10-03');
+    run('selectedDate=new Date(2026,9,6,22,40); __fa632=true;');
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: ficha aberta'); igual(run('dataKeyAtual()'), '2026-10-06');
+    run("__fa632=false; despMedNaTela='bia__x_23-55';");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme na tela', 'o remédio das 23:55 ainda tocando é registrado em ontem');
+    run(`despMedNaTela=null; despMedSnoozePend={'bia__x_23-55': ${agora + 120000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'adiado: ele volta em ontem');
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 1000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'o adiar venceu há 1 s: espera o alarme voltar (QA)');
+    // 2ª rodada do QA: a página congelada no bolso acorda 10 min depois — o alarme ainda não voltou, a troca espera
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 600000}};`);
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'acordou 10 min depois do adiar: espera o alarme voltar');
+    // o adiado que não pode mais voltar (remédio tirado da agenda) não prende a tela: teto de 1 hora
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 3601000}};`);
+    run("zDiaTrabalhoAberto=function(){ return 'check-in aberto'; };");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: check-in aberto');
+    run("zDiaTrabalhoAberto=function(){ return 'sem internet'; };");
+    igual(run(`zDiaTelaAvancar(${agora})`), 'avancou', 'sem internet: a troca é só na tela; a lista de ontem fica até a planilha responder');
+    igual(run('__ch632'), 1);
+  } finally { run(SOLTA632); }
+});
+prova('6.32 de madrugada, o celular de quem recebe o alarme e já foi tocado não recarrega (a recarga calaria o som); às 6h, recarrega', () => {
+  run(ARMA632 + `__bk632t={ab:APP_DIA_ABERTO, mp:zMotivoParado, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando};
+    __faixa632={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632:null; };
+    __st632=[]; setTimeout=function(f,ms){ __st632.push(ms); return 0; }; __diaRecarregando=false;
+    APP_DIA_ABERTO='2026-10-06'; zMotivoParado=function(){ return 'trancado'; }; zDiaTrabalhoAberto=function(){ return ''; };
+    __rec632=true; papelRecebeAlarmeMed=function(){ return __rec632; }; navigator.userActivation={hasBeenActive:true};`);
+  try {
+    const h = (hh, mm) => new Date(2026, 9, 7, hh, mm || 0).getTime();
+    igual(run(`zDiaSegurarNoite(${h(0, 5)})`), true); igual(run(`zDiaSegurarNoite(${h(5, 59)})`), true);
+    igual(run(`zDiaSegurarNoite(${h(6, 0)})`), false, 'às 6h a recarga volta');
+    run('navigator.userActivation={hasBeenActive:false};');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), false, 'nunca tocado: o som já está preso, recarregar não perde nada');
+    run('navigator.userActivation=undefined;');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), true, 'sem a informação (iPhone antigo): segura');
+    run('__rec632=false;');
+    igual(run(`zDiaSegurarNoite(${h(2)})`), false, 'quem não recebe o alarme (Gestão, recepção): recarrega como sempre');
+    // o vigia da virada usa a regra
+    run('__rec632=true; navigator.userActivation={hasBeenActive:true};');
+    run(`__bkDate632=Date; Date=function(a){ return a===undefined?new __bkDate632(${h(2)}):new __bkDate632(a); }; Date.now=function(){ return ${h(2)}; };
+      selectedDate=new __bkDate632(${h(0, 1)});`);
+    try {
+      igual(run('zViradaDoDiaTick()'), 'faixa', '02:00, trancado, a tela já no dia novo: só a faixa');
+      igual(run('__st632'), []);
+      igual(run('__faixa632.textContent'), 'O dia virou — o app atualiza sozinho às 6h', 'a faixa não convida à recarga que cala o som');
+      // QA da 6.32: a tela que NÃO passou (ficha aberta, outra data): recarrega, como antes — senão ficaria sem alarme até as 6h
+      run(`selectedDate=new __bkDate632(${new Date(2026, 9, 6, 22, 40).getTime()}); __diaRecarregando=false;`);
+      igual(run('zViradaDoDiaTick()'), 'recarga', '02:00, trancado, tela ainda no dia 06: recarrega');
+      run('__diaRecarregando=false;');
+      // e a volta do bolso de madrugada, com a tela já no dia novo: não recarrega
+      run(`selectedDate=new __bkDate632(${h(0, 1)}); __st632=[]; zMotivoParado=function(){ return ''; }; __diaOcultoDesde=${h(1)};`);
+      igual(run(`zViradaDoDiaVisibilidade(false, ${h(2)})`), 'faixa', 'voltou do bolso às 02:00 (fora 1 h): só a faixa');
+      igual(run('__st632'), []);
+    } finally { run('Date=__bkDate632; zMotivoParado=function(){ return "trancado"; };'); }
+    // 23:00 (aparelho aberto há dois dias): a madrugada ainda não chegou — vale a regra de sempre
+    igual(run(`zDiaSegurarNoite(${new Date(2026, 9, 7, 23, 0).getTime()})`), false, '23:00 não é madrugada');
+    run(`Date=function(a){ return a===undefined?new __bkDate632(${h(6, 1)}):new __bkDate632(a); }; Date.now=function(){ return ${h(6, 1)}; };`);
+    try { igual(run('zViradaDoDiaTick()'), 'recarga', '06:01, trancado: recarrega'); }
+    finally { run('Date=__bkDate632;'); }
+  } finally { run(SOLTA632 + 'APP_DIA_ABERTO=__bk632t.ab; zMotivoParado=__bk632t.mp; setTimeout=__bk632t.st; document.getElementById=__bk632t.ge; __diaRecarregando=__bk632t.rec;'); }
+});
+prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando o som volta; o primeiro toque destrava', () => {
+  run(`__bk632s={ge:document.getElementById, ac:despMedAC, dn:despMedNaTela, st:setTimeout, bl:bipMedLoopStart};
+    __html632=[]; __semSom=null;
+    __tx632={insertAdjacentHTML:function(w,h){ __html632.push(w+'|'+h); __semSom={textContent:'SEM SOM', style:{}, remove:function(){ __semSom=null; __html632.push('removeu'); }}; }};
+    __desp632={style:{}, innerHTML:'', querySelector:function(q){ return q==='.desp-tx'?__tx632:null; }};
+    document.getElementById=function(id){ return id==='despMed'?__desp632:(id==='despMedSemSom'?__semSom:null); };`);
+  try {
+    run("despMedNaTela='bia__x_02-00'; despMedAC={state:'suspended'};");
+    igual(run('medSomMudo()'), true);
+    run('medSomConferir(); medSomConferir();');
+    igual(run('__html632.length'), 1, 'uma faixa só');
+    assert.ok(/^beforeend\|<span id="despMedSemSom"[^>]*>SEM SOM NESTE APARELHO: toque na tela para o alarme tocar\.<\/span>$/.test(run('__html632[0]')), run('__html632[0]'));
+    run("despMedAC.state='running'; medSomConferir();");
+    igual(run('__html632.length'), 1, 'o som voltou: a faixa NÃO some (sumir fazia o botão pular — QA)');
+    igual(run('__semSom.textContent'), 'Som ligado.', 'no mesmo lugar, diz que o som voltou');
+    // o alarme seguinte, mudo de novo: a faixa volta a avisar (a de antes já saiu com o alarme fechado)
+    run("__semSom=null; despMedAC.state='suspended'; medSomConferir();");
+    igual(run('__html632.length'), 2, 'cada alarme mudo avisa');
+    run('despMedNaTela=null; despMedAC={state:"suspended"};'); igual(run('medSomMudo()'), false, 'sem alarme na tela: nada');
+    // a conferência é marcada logo depois do alarme abrir
+    run(`__st632s=[]; setTimeout=function(f,ms){ __st632s.push([f===medSomConferir, ms]); return 0; }; bipMedLoopStart=function(){};`);
+    run("mostrarDespertadorMed({key:'bia', hospNome:'Bia', nome:'Apoquel', q:'1', u:'comprimido', horario:'02:00'}, 'x_02-00');");
+    igual(run('__st632s'), [[true, 1500]]);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state!=='running' && despMedAC\.state!=='closed'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som (também o "interrupted" do iPhone)');
+  } finally { run('document.getElementById=__bk632s.ge; despMedAC=__bk632s.ac; despMedNaTela=__bk632s.dn; setTimeout=__bk632s.st; bipMedLoopStart=__bk632s.bl;'); }
+});
+prova('6.32 (QA) a dose adiada na virada volta a tocar com a tela ainda em ontem, e é registrada em ontem; as outras doses de ontem não tocam pelo relógio de hoje', () => {
+  run(ARMA632 + `__bk632v={ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB, pr:papelRecebeAlarmeMed};
+    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}, {key:'bia', itemId:'y', horario:'23:30', nome:'Otomax'}];
+    __mo632=[]; mostrarDespertadorMed=function(it,d){ __mo632.push(d); despMedNaTela=it.key+'__'+d; };
+    DB={}; papelRecebeAlarmeMed=function(){ return true; };`);
+  try {
+    // tela em ontem esperando a troca (o relógio já em hoje)
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 23, 58);
+    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='${iso(ontemD)}'; selectedDate=new Date(${ontemD.getTime()});`);
+    igual(run('medDiaVelhoAuto()'), true);
+    run(`__log632={}; medLogHoje=function(){ return {then:function(f){ f(__log632); return {catch:function(){}}; }}; };`);
+    run(`despMedSnooze={'bia__x_23-55': Date.now()+60000};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), [], 'o adiar ainda corre: nada');
+    run(`despMedSnooze={'bia__x_23-55': Date.now()-1000};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), ['x_23-55'], 'o adiar venceu: a dose de ontem volta (a 23:30, que ninguém adiou, não toca pelo relógio de hoje)');
+    igual(run('dataKeyAtual()'), iso(ontemD), 'e a tela continua em ontem: a dose é registrada em ontem');
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), 'espera: alarme na tela');
+    // já registrada em ontem: não volta
+    run(`despMedNaTela=null; __mo632=[]; __log632={bia:{'x_23-55':{quem:'Ana'}}};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), []);
+    // a tela que alguém pôs em outra data não toca nada (regra de sempre)
+    run(`DIA_TELA_AUTO='${iso(agoraD)}'; __log632={};`); run('checarDespertadorMed()'); igual(run('__mo632'), []);
+  } finally { run(SOLTA632 + 'MED_AGENDA_TODOS=__bk632v.ag; medLogHoje=__bk632v.ml; mostrarDespertadorMed=__bk632v.mo; DB=__bk632v.db; papelRecebeAlarmeMed=__bk632v.pr;'); }
+});
+prova('6.32 (QA) a dose e o espelho das fichas irmãs ficam no MESMO dia, mesmo que a tela passe para o dia novo no meio; voltar para hoje à mão acerta o dia automático', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/const _diaLog=dataKeyAtual\(\);\n    DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\+'\/'\+doseId\)\.transaction/.test(src), 'a dose guarda o dia antes de gravar');
+  assert.ok(/return DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\)\.update\(extras\);/.test(src), 'o espelho usa o mesmo dia');
+  igual((src.match(/medicacao-log\/'\+dataKeyAtual\(\)\+'\/'\+it\.key/g) || []).length, 0, 'nenhuma gravação da dose relê o dia depois');
+  run(ARMA632);
+  try {
+    const agoraD = new Date();
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='2026-01-01'; selectedDate=new Date(${agoraD.getTime()});`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), '', 'a tela já está em hoje (alguém tocou em Hoje)');
+    igual(run('DIA_TELA_AUTO'), iso(agoraD), 'o dia automático acompanha: na próxima meia-noite, ela passa sozinha');
+    // data FUTURA escolhida pela plantonista não é atropelada
+    const amanha = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() + 2, 10);
+    run(`DIA_TELA_AUTO='2026-01-01'; selectedDate=new Date(${amanha.getTime()});`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), '', 'data futura escolhida: a tela é dela'); igual(run('dataKeyAtual()'), iso(amanha));
+    // o almoço segura a troca (a regra comum do "trabalho aberto")
+    run(`DIA_TELA_AUTO='${iso(new Date(agoraD.getTime() - 86400000))}'; selectedDate=new Date(${agoraD.getTime() - 86400000}); zDiaTrabalhoAberto=function(){ return 'almoço'; };`);
+    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), 'espera: almoço');
+  } finally { run(SOLTA632); }
+});
+provaAsync('6.32 (QA) a faixa de madrugada: tocar pergunta antes de atualizar (atualizar cala o som); "Atualizar mesmo assim" atualiza', async () => {
+  const h = (hh) => new Date(2026, 9, 7, hh, 0).getTime();
+  run(`__bk632f={ab:APP_DIA_ABERTO, hz:zHojeISO, ze:zEscolha, rep:location.replace, pr:papelRecebeAlarmeMed, ua:navigator.userActivation, sd:selectedDate, rec:__diaRecarregando, fo:__diaForcarAgora, D:Date};
+    APP_DIA_ABERTO='2026-10-06'; zHojeISO=function(){ return '2026-10-07'; }; __diaRecarregando=false; __diaForcarAgora=false;
+    __esc632=[]; zEscolha=function(t,l,b){ __esc632.push({t:t, b:b}); }; __rep632=0; location.replace=function(){ __rep632++; };
+    papelRecebeAlarmeMed=function(){ return true; }; navigator.userActivation={hasBeenActive:true};
+    Date=function(a){ return a===undefined?new __bk632f.D(${h(2)}):new __bk632f.D(a); }; Date.now=function(){ return ${h(2)}; };
+    selectedDate=new __bk632f.D(${h(0)});`);
+  try {
+    run('aplicarVersaoNova()');
+    igual(run('__esc632.length'), 1); igual(run('__esc632[0].t'), 'ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM'); igual(run('__rep632'), 0, 'não atualizou');
+    run('__esc632[0].b[1].fn()');
+    igual(run('__rep632'), 1, '"Atualizar mesmo assim" atualiza');
+  } finally { run('APP_DIA_ABERTO=__bk632f.ab; zHojeISO=__bk632f.hz; zEscolha=__bk632f.ze; location.replace=__bk632f.rep; papelRecebeAlarmeMed=__bk632f.pr; navigator.userActivation=__bk632f.ua; selectedDate=__bk632f.sd; __diaRecarregando=__bk632f.rec; __diaForcarAgora=__bk632f.fo; Date=__bk632f.D;'); }
+});
+prova('6.32 (2ª rodada do QA) o adiado segura a recarga da virada até o alarme voltar: celular parado na mesa, de volta do bolso, versão nova', () => {
+  run(ARMA632 + `__bk632r={ab:APP_DIA_ABERTO, mp:zMotivoParado, st:setTimeout, ge:document.getElementById, rec:__diaRecarregando, il:inatLogado, tr:_appTrancado, iu:_inatUltimo, ec:zEhComputador};
+    __faixa632={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632:null; };
+    __st632=[]; setTimeout=function(f,ms){ __st632.push(ms); return 0; }; __diaRecarregando=false;
+    APP_DIA_ABERTO='2026-10-06'; zDiaTrabalhoAberto=function(){ return ''; }; papelRecebeAlarmeMed=function(){ return true; };
+    navigator.userActivation={hasBeenActive:true}; inatLogado=function(){ return true; }; _appTrancado=false; zEhComputador=function(){ return false; };`);
+  try {
+    const agora = Date.now();
+    // a tela ainda em ontem (esperando o adiado), parado há 4 min na mesa
+    run(`selectedDate=new Date(2026,9,6,23,58); _inatUltimo=${agora - 240000};`);
+    igual(run('zMotivoParado()'), '3 min sem toque', 'sem adiado: é aparelho parado');
+    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 30000}};`);
+    igual(run('zMotivoParado()'), '', 'com o adiado que ainda não voltou, não é parado (a recarga da versão nova também espera)');
+    igual(run('zViradaDoDiaTick()'), 'faixa', 'na mesa: a virada não recarrega por cima do adiado');
+    igual(run(`zViradaDoDiaTick('voltou para o app depois de 10 min')`), 'faixa', 'de volta do bolso: também não');
+    igual(run('__st632'), [], 'nenhuma recarga marcada');
+    // o alarme voltou e foi respondido (o pendente saiu): agora a virada segue a regra de sempre
+    run('despMedSnoozePend={};');
+    igual(run('zViradaDoDiaTick()'), 'recarga', 'sem adiado pendente e parado, com a tela em ontem: recarrega como antes');
+  } finally { run(SOLTA632 + `APP_DIA_ABERTO=__bk632r.ab; zMotivoParado=__bk632r.mp; setTimeout=__bk632r.st; document.getElementById=__bk632r.ge; __diaRecarregando=__bk632r.rec;
+    inatLogado=__bk632r.il; _appTrancado=__bk632r.tr; _inatUltimo=__bk632r.iu; zEhComputador=__bk632r.ec;`); }
+});
+prova('6.32 (2ª rodada do QA) o pendente do adiado: entra ao adiar, sai quando o alarme volta ou quando a dose aparece dada (aqui ou em outro aparelho)', () => {
+  run(ARMA632 + `__bk632p={ag:MED_AGENDA_TODOS, ml:medLogHoje, db:DB, ge:document.getElementById, bl:bipMedLoopStart, bs:bipMedLoopStop, st:setTimeout, ma:despMedAtual, md:despMedAtualDoseId};
+    __desp632p={style:{}, innerHTML:'', querySelector:function(){ return null; }}; document.getElementById=function(id){ return id==='despMed'?__desp632p:null; };
+    bipMedLoopStart=function(){}; bipMedLoopStop=function(){}; setTimeout=function(){ return 0; };
+    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel', hospNome:'Bia'}]; DB={}; papelRecebeAlarmeMed=function(){ return true; };`);
+  try {
+    run("despMedAtual=MED_AGENDA_TODOS[0]; despMedAtualDoseId='x_23-55'; adiarDoseDespertador();");
+    const p = run("despMedSnoozePend['bia__x_23-55']");
+    assert.ok(p && p === run("despMedSnooze['bia__x_23-55']"), 'adiou: pendente com o prazo do adiar');
+    run("mostrarDespertadorMed(MED_AGENDA_TODOS[0], 'x_23-55');");
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'o alarme voltou à tela: sai do pendente');
+    // adiou de novo e a dose foi dada em outro aparelho: a conferência do alarme tira o pendente
+    run("fecharDespertadorMed(); despMedAtual=MED_AGENDA_TODOS[0]; despMedAtualDoseId='x_23-55'; adiarDoseDespertador();");
+    run("selectedDate=new Date(); medLogHoje=function(){ return {then:function(f){ f({bia:{'x_23-55':{quem:'Ana'}}}); return {catch:function(){}}; }}; }; checarDespertadorMed();");
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'dada: não segura mais a virada');
+  } finally { run(SOLTA632 + `MED_AGENDA_TODOS=__bk632p.ag; medLogHoje=__bk632p.ml; DB=__bk632p.db; document.getElementById=__bk632p.ge; bipMedLoopStart=__bk632p.bl; bipMedLoopStop=__bk632p.bs;
+    setTimeout=__bk632p.st; despMedAtual=__bk632p.ma; despMedAtualDoseId=__bk632p.md;`); }
+});
+prova('6.32 (2ª rodada do QA) com a tela em ontem ou em outra data: o alarme não toca a dose adiada fora do dia automático; a faixa diz "toque para atualizar" e o toque não pergunta', () => {
+  const h = (hh) => new Date(2026, 9, 7, hh, 0).getTime();
+  run(ARMA632 + `__bk632o={ab:APP_DIA_ABERTO, ze:zEscolha, rep:location.replace, ge:document.getElementById, rec:__diaRecarregando, fo:__diaForcarAgora, D:Date};
+    APP_DIA_ABERTO='2026-10-06'; __diaRecarregando=false; __diaForcarAgora=false; papelRecebeAlarmeMed=function(){ return true; }; navigator.userActivation={hasBeenActive:true};
+    __esc632o=[]; zEscolha=function(t){ __esc632o.push(t); }; __rep632o=0; location.replace=function(){ __rep632o++; };
+    __faixa632o={style:{}, textContent:'', offsetHeight:30}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__faixa632o:null; };
+    Date=function(a){ return a===undefined?new __bk632o.D(${h(2)}):new __bk632o.D(a); }; Date.now=function(){ return ${h(2)}; };`);
+  try {
+    // R6: a tela que alguém pôs no dia 05 (o dia automático é o 06): a dose adiada não toca ali
+    run(`selectedDate=new __bk632o.D(2026,9,5,10,0); DIA_TELA_AUTO='2026-10-06';`);
+    igual(run('medDiaVelhoAuto()'), false, 'outra data escolhida à mão: o alarme da dose de ontem não é registrado nela');
+    // R16 e R12: tela em ontem (ficha aberta), 02:00
+    run(`selectedDate=new __bk632o.D(2026,9,6,23,0);`);
+    run('zFaixaVersao(true);');
+    igual(run('__faixa632o.textContent'), 'O dia virou — toque para atualizar', 'a tela não passou: a faixa não promete as 6h');
+    run('aplicarVersaoNova()');
+    igual(run('__esc632o'), [], 'e o toque atualiza sem perguntar (a tela em ontem já não toca o alarme de hoje)');
+    igual(run('__rep632o'), 1);
+  } finally { run(SOLTA632 + 'APP_DIA_ABERTO=__bk632o.ab; zEscolha=__bk632o.ze; location.replace=__bk632o.rep; document.getElementById=__bk632o.ge; __diaRecarregando=__bk632o.rec; __diaForcarAgora=__bk632o.fo; Date=__bk632o.D;'); }
+});
+prova('6.32 (3ª rodada do QA) o adiado só segura quando o alarme pode voltar; o remédio que saiu da agenda sai do pendente; a dose dada em outro aparelho também, com a tela em ontem; o toque na faixa pergunta', () => {
+  run(ARMA632 + `__bk632t3={ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB, ze:zEscolha, rep:location.replace, rec:__diaRecarregando, fo:__diaForcarAgora,
+      il:inatLogado, tr:_appTrancado, ec:zEhComputador};
+    MED_AGENDA_TODOS=[{key:'tom', itemId:'z', horario:'00:20', nome:'Apoquel'}]; DB={}; papelRecebeAlarmeMed=function(){ return true; };
+    __mo632t=[]; mostrarDespertadorMed=function(it,d){ __mo632t.push(d); };
+    __log632t={}; medLogHoje=function(){ return {then:function(f){ f(__log632t); return {catch:function(){}}; }}; };`);
+  try {
+    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 23, 58), dois = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 2, 10, 0);
+    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='${iso(ontemD)}';`);
+    // outra data escolhida: o alarme não toca ali — o pendente não segura nada
+    run(`selectedDate=new Date(${dois.getTime()}); despMedSnoozePend={'bia__x_23-55': Date.now()-60000};`);
+    igual(run('zDiaAdiadoAtivo(Date.now())'), false, 'tela em outra data: não segura (as doses do dia novo tocam)');
+    // tela em ontem: segura; o remédio da Bia saiu da agenda → a conferência do alarme tira o pendente
+    run(`selectedDate=new Date(${ontemD.getTime()});`);
+    igual(run('zDiaAdiadoAtivo(Date.now())'), true);
+    run('checarDespertadorMed();');
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'fora da agenda: sai do pendente');
+    // com a tela em ontem, a dose dada em outro aparelho também tira o pendente (A9)
+    run(`MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}]; despMedSnoozePend={'bia__x_23-55': Date.now()+60000}; despMedSnooze={'bia__x_23-55': Date.now()+60000};
+      __log632t={bia:{'x_23-55':{quem:'Ana'}}}; checarDespertadorMed();`);
+    assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'dada em outro aparelho: sai, e a tela pode passar');
+    // trancado com o adiado pendente: não é parado (A11)
+    run(`despMedSnoozePend={'bia__x_23-55': Date.now()-30000}; inatLogado=function(){ return true; }; _appTrancado=true; zEhComputador=function(){ return false; };`);
+    igual(run('zMotivoParado()'), '', 'trancado, mas com o adiado esperando: não recarrega');
+    // o toque na faixa com o adiado pendente pergunta antes (32-2); "Atualizar mesmo assim" atualiza
+    run(`__esc632t=[]; zEscolha=function(t,l,b){ __esc632t.push({t:t, b:b}); }; __rep632t=0; location.replace=function(){ __rep632t++; }; __diaRecarregando=false; __diaForcarAgora=false;`);
+    run('aplicarVersaoNova()');
+    igual(run('__esc632t.length'), 1); igual(run('__esc632t[0].t'), 'HÁ UM REMÉDIO ADIADO'); igual(run('__rep632t'), 0, 'não atualizou');
+    run('__esc632t[0].b[1].fn()');
+    igual(run('__rep632t'), 1, '"Atualizar mesmo assim" atualiza');
+  } finally { run(SOLTA632 + `MED_AGENDA_TODOS=__bk632t3.ag; medLogHoje=__bk632t3.ml; mostrarDespertadorMed=__bk632t3.mo; DB=__bk632t3.db; zEscolha=__bk632t3.ze; location.replace=__bk632t3.rep;
+    __diaRecarregando=__bk632t3.rec; __diaForcarAgora=__bk632t3.fo; inatLogado=__bk632t3.il; _appTrancado=__bk632t3.tr; zEhComputador=__bk632t3.ec;`); }
+});
+provaAsync('6.34 (3ª rodada do QA) o botão Conferir agora conta as horas acertadas, somadas em todos os dias', async () => {
+  run(`__bk634b={pp:dashPontePronta, sy:dashAutoSincronizar, db:DB, dc:dashCarregar, st:setTimeout};
+    dashPontePronta=function(){ return Promise.resolve({url:'x'}); }; dashCarregar=function(){}; setTimeout=function(){ return 0; };
+    DB={ref:function(){ return {once:function(){ return Promise.resolve({val:function(){ return 0; }}); }, push:function(){ return Promise.resolve(); },
+      set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); }, on:function(){}, off:function(){}}; }};
+    dashAutoSincronizar=function(d){ return Promise.resolve({ok:true, dia:d, posto:1, tirado:0, horas:(d===zHojeISO()?2:1)}); };`);
+  try {
+    const r = await run('dashAutoRodar(true)');
+    igual([r.posto, r.horas, r.dias], [15, 16, 15], 'horas somadas nos 15 dias');
+    run(`__btn634={textContent:'Conferir agora', disabled:false}; dashAutoRodar=function(){ return Promise.resolve({ok:true, posto:4, tirado:0, horas:1, dias:15, falhas:0}); };`);
+    await run('dashAutoBotao(__btn634); Promise.resolve().then(function(){}).then(function(){}).then(function(){})');
+    igual(run('__btn634.textContent'), '✅ 4 posto(s) · 0 tirado(s) · 1 hora(s) acertada(s) em 15 dia(s)');
+  } finally { run('dashPontePronta=__bk634b.pp; dashAutoSincronizar=__bk634b.sy; DB=__bk634b.db; dashCarregar=__bk634b.dc; setTimeout=__bk634b.st;'); }
+});
+// ================================================================== 6.27 — check-up e escova no topo
+console.log('\n6.27 — Ficha › Prevenção: check-up e escova no topo, com "Fez em" e "Vence em" (Adriana, 02/out/2026, na ficha da Cookie)');
+const ficha627 = (ex, papel) => {
+  ctx.__ex627 = ex;
+  run(`__bk627={ge:document.getElementById, pe:pelExtra, P:PELUDINHOS, r:document.body.dataset.role}; __fic627={style:{}, innerHTML:''};
+    document.getElementById=function(id){ return id==='pel-ficha'?__fic627:(id==='pel-lista'?{style:{}}:null); };
+    pelExtra=function(){ return __ex627; }; PELUDINHOS=[{n:'Cookie', raca:'Spitz', tutor:'Ana Teste'}];
+    document.body.dataset.role='${papel || 'gestao'}';`);
+  try { run('abrirPeludinho(0)'); return run('__fic627.innerHTML'); }
+  finally { run('document.getElementById=__bk627.ge; pelExtra=__bk627.pe; PELUDINHOS=__bk627.P; document.body.dataset.role=__bk627.r;'); }
+};
+prova('6.27 a data do check-up: vale a mais recente das três casas; sem data válida, a ordem de sempre', () => {
+  igual(run("prevCheckupData({checkup_data:'2025-03-10', checkup_t:'2025-09-01'})"), '2025-09-01', 'o check-up novo, lançado embaixo, não fica atrás do velho');
+  igual(run("prevCheckupData({checkup_data:'2025-09-01', checkup_t:'2025-03-10', checkup:'2024-11-27'})"), '2025-09-01');
+  igual(run("prevCheckupData({checkup:'2024-11-27'})"), '2024-11-27', 'o campo legado (a Becca)');
+  igual(run("prevCheckupData({checkup_data:'2024-01-01', checkup_t:'2023-05-05', checkup:'2025-05-05'})"), '2025-05-05', 'a casa legada também entra na conta');
+  igual(run("prevCheckupData({checkup_data:'a', checkup_t:'b', checkup:'c'})"), 'a', 'sem data válida: a ordem de sempre');
+  igual(run("prevCheckupData({checkup_data:'quebrada', checkup_t:'2025-01-02'})"), '2025-01-02', 'a data válida vence o texto quebrado');
+  igual(run('prevCheckupData({})'), ''); igual(run('prevCheckupData(null)'), '');
+});
+prova('6.27 "fez em" do check-up grava as casas juntas (checkup_t e checkup_data) e refaz o "vence em"; a escova continua como era', () => {
+  run(`__bk627g={sp:setPelExtra, pe:pelExtra, pa:pelAtual, av:prevAvisoRecalc}; __gr627=[];
+    setPelExtra=function(p,patch){ __gr627.push(JSON.parse(JSON.stringify(patch))); }; prevAvisoRecalc=function(){};
+    pelAtual={n:'Cookie'}; __ex627b={checkup_p:'2026-01-01', checkup_p_manual:true}; pelExtra=function(){ return __ex627b; };`);
+  try {
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-02',{checkup_data:1,checkup:1})");
+    igual(run('__gr627[0]'), { checkup_t: '2026-10-02', checkup_data: '2026-10-02', checkup: '2026-10-02', checkup_p: '2027-10-02', checkup_p_manual: '' });
+    run("__ex627b={}; prevUltimaDireta('checkup_t','checkup_p',365,'',{checkup_data:1,checkup:1})");
+    igual(run('__gr627[1]'), { checkup_t: '', checkup_data: '', checkup: '', checkup_p: '' }, 'apagar a data apaga as três casas');
+    // a Becca (só o campo legado, 27/11/2024) corrigida para uma data ANTERIOR: a correção pega
+    run("__ex627b={checkup:'2024-11-27'}; prevUltimaDireta('checkup_t','checkup_p',365,'2024-06-01',{checkup_data:1,checkup:1}); Object.assign(__ex627b, __gr627[2]);");
+    igual(run('prevCheckupData(__ex627b)'), '2024-06-01', 'a casa legada recebe a data nova');
+    // o "Vence em" ao lado acompanha na hora
+    run(`__bkGE627=document.getElementById; __ve627={tagName:'INPUT', value:''}; document.getElementById=function(id){ return id==='prevVence_checkup_p'?__ve627:null; };`);
+    try { run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-03',{checkup_data:1,checkup:1})"); igual(run('__ve627.value'), '2027-10-03'); }
+    finally { run('document.getElementById=__bkGE627;'); }
+    run("prevUltimaDireta('escova_t','escova_p',90,'2026-10-01')");
+    igual(run('__gr627[4]'), { escova_t: '2026-10-01', escova_p: '2026-12-30' }, 'a escova: só as dela');
+  } finally { run('setPelExtra=__bk627g.sp; pelExtra=__bk627g.pe; pelAtual=__bk627g.pa; prevAvisoRecalc=__bk627g.av;'); }
+});
+prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só de check-up com "Fez em" e "Vence em", a escova com as duas datas', () => {
+  const h = ficha627({ checkup_data: '2025-03-10', checkup_t: '2025-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', escova_dc: 'Sim' });
+  const i = h.indexOf('<div class="ppanel2" id="ps-saude">'), fim = h.indexOf('<div class="ppanel2" id="ps-med">');
+  assert.ok(i > 0 && fim > i, 'a aba Prevenção desenhou');
+  const aba = h.slice(i, fim);
+  const pos = (t) => aba.indexOf(t);
+  assert.ok(pos('<h3 class="cad-sub">Check-up e escova</h3>') > 0, 'o bloco novo existe');
+  assert.ok(pos('Check-up e escova') < pos('<h3 class="cad-sub">Vacinas</h3>') && pos('Check-up e escova') < pos('<h3 class="cad-sub">Antiparasitários</h3>'), 'no topo, antes das vacinas');
+  assert.ok(aba.indexOf('Saúde e rotina') < 0, 'o bloco do fim saiu');
+  igual((aba.match(/Último check-up/g) || []).length, 1, 'um campo só de check-up (antes eram dois, em casas diferentes)');
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-09-01" onchange="prevUltimaDireta\('checkup_t','checkup_p',365,this\.value,\{checkup_data:1,checkup:1\}\)" min="2015-01-01" max="\d{4}-\d{2}-\d{2}"/.test(aba), 'mostra a data mais recente, grava as três casas e não aceita data futura');
+  assert.ok(/<div class="field" style="grid-column:1\/-1"><label>Já fez check-up\?<\/label>/.test(aba), '"Já fez check-up?" na linha inteira: os pares fez em | vence em ficam alinhados no computador');
+  // O alerta do grupo muda com a data ("em dia" hoje; "URGENTE — vencido" depois que a escova vence):
+  // a prova procura o alerta pela caixa, não pelo texto — senão vira bomba-relógio (achada no QA da 6.34).
+  const alerta = Math.min(...['class="alm-fora"', 'class="dc-faltas"', 'class="dc-meia"'].map((c) => { const x = aba.indexOf(c, pos('Check-up e escova')); return x < 0 ? Infinity : x; }));
+  assert.ok(alerta > 0 && alerta < pos('Já fez check-up?') && pos('Já fez check-up?') < pos('Último check-up (fez em)'), 'o alerta do grupo e o "Já fez check-up?" antes do primeiro campo');
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><input type="date" class="cad-in" id="prevVence_checkup_p" value="" onchange="prevVenceManualSet\('checkup_p',this\.value\)"/.test(aba), 'o check-up ganhou o "Vence em" no topo');
+  assert.ok(/Pela conta: 01\/09\/2026 · 1 ano\./.test(aba), 'a conta sai da data mais recente');
+  igual((aba.match(/Última troca de escova de dentes/g) || []).length, 1, 'a escova aparece uma vez');
+  assert.ok(aba.indexOf("onchange=\"prevUltimaDireta('escova_t','escova_p',90,this.value)\"") > 0);
+  assert.ok(/<label>Vence em \(próxima troca\)<\/label><input type="date" class="cad-in" id="prevVence_escova_p" value="2026-10-30"/.test(aba));
+  // a casa de cima mais nova que a de baixo, e a ficha só com o campo legado (a Becca): o campo mostra a mais recente
+  const hd = ficha627({ checkup_data: '2025-11-02', checkup_t: '2025-03-01' });
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-11-02"/.test(hd), 'checkup_data mais nova');
+  const hl = ficha627({ checkup: '2024-11-27' });
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2024-11-27"/.test(hl), 'só o campo legado');
+  assert.ok(pos('Última troca de escova de dentes') < pos('Escova os dentes no Day Care?') && pos('Escova os dentes no Day Care?') < pos('<h3 class="cad-sub">Vacinas</h3>'), 'o "Escova no Day Care?" sobe junto');
+  assert.ok(pos('Escova os dentes no Day Care?') < pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'a emergência continua no topo, logo depois');
+  assert.ok(pos('<h3 class="cad-sub">Oportunidades</h3>') > pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'e as Oportunidades vêm depois da emergência');
+  assert.ok(pos('Se você só sabe quando vence, digite em ') > pos('Check-up e escova') && pos('Se você só sabe quando vence, digite em ') < pos('Último check-up (fez em)'), 'a ajuda do "Vence em" (para quem digita) no bloco do topo');
+  assert.ok(pos('<h3 class="cad-sub">Peso</h3>') > pos('Exame de fezes'), 'o peso continua no fim');
+  // ficha antiga só com a casa de cima (checkup_data): a data aparece, e o "Vence em" não diz "última: não informada"
+  const ho = ficha627({ checkup_data: '2025-03-10' });
+  const abaO = ho.slice(ho.indexOf('<div class="ppanel2" id="ps-saude">'), ho.indexOf('<div class="ppanel2" id="ps-med">'));
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-03-10"/.test(abaO), 'a data antiga aparece no campo único');
+  const ckV = abaO.slice(abaO.indexOf('Vence em (próximo check-up)'), abaO.indexOf('Última troca de escova de dentes'));
+  assert.ok(/Pela conta: 10\/03\/2026 · 1 ano\./.test(ckV) && ckV.indexOf('última: não informada') < 0, ckV);
+  // quem não digita o "Vence em" (decisão de 24/set): vê a data, sem campo
+  const hc = ficha627({ checkup_t: '2025-09-01', checkup_p: '2026-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', verm_t: '2026-07-01', verm_p: '2026-11-01' }, 'consultora');
+  const abaC = hc.slice(hc.indexOf('<div class="ppanel2" id="ps-saude">'), hc.indexOf('<div class="ppanel2" id="ps-med">'));
+  assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc" id="prevVence_checkup_p">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
+  assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc" id="prevVence_verm_p">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
+});
+prova('6.27 (QA) o vencimento que vale do check-up: o mais tarde entre o gravado e um ano depois da data mais recente; à mão manda; sem vencimento gravado, nada muda', () => {
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01', checkup_t:'2024-01-01', checkup_p:'2025-01-01'})"), '2026-09-01', 'fez em 01/09/2025 e "vence em 01/01/2025": vale 01/09/2026');
+  igual(run("prevCheckupVence({checkup_t:'2025-09-01', checkup_p:'2026-12-01'})"), '2026-12-01', 'o gravado mais tarde vale');
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01', checkup_p:'2025-01-01', checkup_p_manual:true})"), '2025-01-01', 'à mão manda');
+  igual(run("prevCheckupVence({checkup_data:'2025-09-01'})"), '', 'ficha antiga sem vencimento: não cria cobrança');
+  igual(run("prevValor({checkup_data:'2026-01-15', checkup_t:'2025-01-01', checkup_p:'2026-01-01'}, PREV_ITENS.find(function(i){ return i.k==='checkup_p'; }))"), '2027-01-15', 'a cobrança (Vencimentos, Hoje, alerta) lê pela mesma porta');
+  igual(run("prevValor({vac_mult_p:'2026-01-01'}, PREV_ITENS.find(function(i){ return i.k==='vac_mult_p'; }))"), '2026-01-01', 'os outros itens, como sempre');
+  // o painel rápido e o "lançar" gravam as três casas juntas
+  igual(JSON.parse(JSON.stringify(run("PREV_ITENS.find(function(i){ return i.k==='checkup_p'; }).junto"))), ['checkup_data', 'checkup']);
+  const src = fs.readFileSync(APP, 'utf8');
+  igual((src.match(/\(it\.junto\|\|\[\]\)\.forEach\(function\(k2\)\{ patch\[k2\]=dt(Final)?; \}\);/g) || []).length, 2, 'os dois caminhos rápidos (painel e lançar)');
+});
+prova('6.27 (QA) a mesa "Check-up a marcar": o "Vence em" digitado à mão vale; o vencimento gravado mais tarde também', () => {
+  run(`__bk627c={P:PELUDINHOS, pe:pelExtra, hz:zHojeISO}; zHojeISO=function(){ return '2026-10-06'; };
+    PELUDINHOS=[{n:'A',tutor:'x'},{n:'B',tutor:'y'},{n:'C',tutor:'z'},{n:'D',tutor:'w'}];
+    __ex627c={A:{checkup_p:'2026-12-01', checkup_p_manual:true}, B:{checkup_t:'2025-08-01', checkup_p:'2026-12-01', checkup_p_manual:true},
+      C:{checkup_data:'2025-01-10', checkup_p:'2026-11-30'}, D:{}};
+    pelExtra=function(p){ return __ex627c[p.n]; };`);
+  try {
+    const c = JSON.parse(JSON.stringify(run('prevCheckupContagem()')));
+    const nomes = (l) => l.map((o) => o.p.n).sort();
+    igual(nomes(c.emDia), ['A', 'B', 'C'], 'A: só o "Vence em" (não é "sem informação"); B: fez em 2025, mas vence em 12/2026 à mão; C: o gravado mais tarde');
+    igual(nomes(c.semInfo), ['D']); igual(c.vencidos.length, 0);
+  } finally { run('PELUDINHOS=__bk627c.P; pelExtra=__bk627c.pe; zHojeISO=__bk627c.hz;'); }
+});
+prova('6.27 (2ª rodada do QA) o painel "editar" da Prevenção mostra o check-up que vale; o Salvar sem mexer grava a data mais nova (não apaga o check-up novo)', () => {
+  run(`__bk627e={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, au:audit, za:zAlertao, rd:prevRedesenhar, st:setTimeout, hz:zHojeISO};
+    zHojeISO=function(){ return '2026-10-06'; };   /* relógio parado: sem bomba-relógio (3ª rodada do QA) */
+    PELUDINHOS=[{n:'Cookie', raca:'Spitz', tutor:'Ana Teste'}]; __ex627e={checkup_data:'2026-03-01', checkup_t:'2024-01-01', checkup_p:'2025-01-01'};
+    pelExtra=function(){ return __ex627e; }; __gr627e=[]; setPelExtra=function(p,patch){ __gr627e.push(JSON.parse(JSON.stringify(patch))); };
+    audit=function(){}; __za627e=[]; zAlertao=function(t){ __za627e.push(t); }; prevRedesenhar=function(){}; setTimeout=function(){ return 0; };`);
+  try {
+    const ch = run('pelKey(PELUDINHOS[0])');
+    const h = run("prevEdicaoHTML({p:PELUDINHOS[0], nome:'Cookie'})");
+    const ini = h.indexOf('Check-up'), bloco = h.slice(ini, h.indexOf('Salvar Check-up'));
+    assert.ok(bloco.indexOf('id="prevT_' + ch + '_checkup_p" value="2026-03-01"') > 0, 'Feito em: a data mais recente das três casas');
+    assert.ok(bloco.indexOf('id="prevP_' + ch + '_checkup_p" value="2027-03-01"') > 0, 'Vale até: o vencimento que vale');
+    assert.ok(h.indexOf('VENCIDO') < 0 || h.indexOf('VENCIDO') > h.indexOf('Salvar Check-up'), 'o check-up não aparece vencido');
+    // o Salvar sem mexer nas datas (só "Quem fez")
+    const campos = {}; campos['prevT_' + ch + '_checkup_p'] = { value: '2026-03-01' }; campos['prevP_' + ch + '_checkup_p'] = { value: '2027-03-01' }; campos['prevQ_' + ch + '_checkup_p'] = { value: 'Clínica' };
+    ctx.__campos627e = campos; run('document.getElementById=function(id){ return __campos627e[id]||null; };');
+    run(`prevLancar(${JSON.stringify(ch)}, 'checkup_p')`);
+    igual(run('__za627e'), [], 'sem pergunta de atraso');
+    const g = run('__gr627e[0]');
+    igual([g.checkup_t, g.checkup_data, g.checkup, g.checkup_p], ['2026-03-01', '2026-03-01', '2026-03-01', '2027-03-01'], 'as três casas com a data nova — o check-up de 01/03/2026 não é apagado');
+  } finally { run('PELUDINHOS=__bk627e.P; pelExtra=__bk627e.pe; setPelExtra=__bk627e.sp; document.getElementById=__bk627e.ge; audit=__bk627e.au; zAlertao=__bk627e.za; prevRedesenhar=__bk627e.rd; setTimeout=__bk627e.st; zHojeISO=__bk627e.hz;'); }
+});
+prova('6.27 (2ª rodada do QA) "fez em" no futuro não grava (o calendário do celular pode passar do max); a nota "Pela conta" acompanha a data; a ficha mostra o vencimento que vale', () => {
+  run(`__bk627f={sp:setPelExtra, pe:pelExtra, pa:pelAtual, av:prevAvisoRecalc, za:zAlertao, ge:document.getElementById, hz:zHojeISO}; __gr627f=[];
+    setPelExtra=function(p,patch){ __gr627f.push(JSON.parse(JSON.stringify(patch))); }; prevAvisoRecalc=function(){}; zHojeISO=function(){ return '2026-10-06'; };
+    pelAtual={n:'Cookie'}; pelExtra=function(){ return {}; }; __za627f=[]; zAlertao=function(t){ __za627f.push(t); };
+    __nt627={textContent:'velha', style:{display:'none'}}; __ve627f={tagName:'INPUT', value:''};
+    document.getElementById=function(id){ return id==='prevVenceNota_checkup_p'?__nt627:(id==='prevVence_checkup_p'?__ve627f:null); };`);
+  try {
+    run(`__bkAE627=Object.getOwnPropertyDescriptor(document,'activeElement'); __inp627={tagName:'INPUT', value:'2026-10-07'};
+      Object.defineProperty(document,'activeElement',{configurable:true, get:function(){ return __inp627; }});
+      pelExtra=function(){ return {checkup_data:'2026-03-01', checkup_t:'2024-01-01'}; };`);
+    try { run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-07',{checkup_data:1,checkup:1})"); }
+    finally { run("if(__bkAE627) Object.defineProperty(document,'activeElement',__bkAE627); else delete document.activeElement; pelExtra=function(){ return {}; };"); }
+    igual(run('__gr627f.length'), 0, 'amanhã: nada gravado'); igual(run('__za627f'), ['ESSA DATA AINDA NÃO CHEGOU']);
+    igual(run('__inp627.value'), '2026-03-01', 'o campo volta à data gravada (a mais recente), não fica com a recusada');
+    run("prevUltimaDireta('checkup_t','checkup_p',365,'2026-10-06',{checkup_data:1,checkup:1})");
+    igual(run('__gr627f.length'), 1, 'hoje vale');
+    igual(run('__nt627.textContent'), 'Pela conta: 06/10/2027 · 1 ano.', 'a nota acompanha a data digitada'); igual(run('__nt627.style.display'), '');
+    run("document.getElementById=function(id){ return id==='prevVenceNota_escova_p'?__nt627:null; }; prevUltimaDireta('escova_t','escova_p',90,'2026-10-01')");
+    igual(run('__nt627.textContent'), 'Pela conta: 30/12/2026 · 90 dias.');
+  } finally { run('setPelExtra=__bk627f.sp; pelExtra=__bk627f.pe; pelAtual=__bk627f.pa; prevAvisoRecalc=__bk627f.av; zAlertao=__bk627f.za; document.getElementById=__bk627f.ge; zHojeISO=__bk627f.hz;'); }
+  // a ficha: vencimento gravado mais cedo que um ano depois da data mais recente → vale o mais tarde
+  const hv = ficha627({ checkup_data: '2026-03-01', checkup_t: '2024-01-01', checkup_p: '2025-01-01' });
+  assert.ok(/id="prevVence_checkup_p" value="2027-03-01"/.test(hv), 'o "Vence em" da ficha é o que vale, não a casa crua');
+  assert.ok(/<div class="hint" id="prevVenceNota_checkup_p" style="margin-top:3px">Pela conta: 01\/03\/2027 · 1 ano\.<\/div>/.test(hv), 'a nota tem o id que a atualização procura');
+  assert.ok(/id="prevVenceNota_escova_p"/.test(hv), 'a da escova também');
+  assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2026-03-01"[^>]*max="\d{4}-\d{2}-\d{2}"/.test(hv), 'o fez em tem o max de hoje');
+  const mx = (hv.match(/value="2026-03-01" onchange="prevUltimaDireta\('checkup_t'[^>]*max="(\d{4}-\d{2}-\d{2})"/) || [])[1];
+  igual(mx, run('zHojeISO()'), 'max = hoje, não 2035');
+});
+// ================================================================== 6.34 — a hora do banho fixo na linha
+console.log('\n6.34 — Lançamentos do dia: a linha do banho fixo mostra a hora gravada na planilha (Adriana, 06/out/2026, Charlotte)');
+// O relógio fica parado em 05/10 (QA da 6.34: a prova virava bomba-relógio em 07/10): o dia 06 é
+// futuro para dashAutoCalcular (quem vem sai dos dias da ficha) e está na janela da conferência.
+const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, pd:pelDias, hz:zHojeISO, c6:REP_PLAN_CACHE['2026-10-06'], c13:REP_PLAN_CACHE['2026-10-13']};
+  zHojeISO=function(){ return '2026-10-05'; };
+  __ex634={
+    'Charlotte|Bia': {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:30', desde:'2026-09-01', sham:'SEM SHAMPOO'}},
+    'Ragna|Rui':     {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01', sham:'SEM SHAMPOO', excecoes:{'2026-10-06':{hora:'16:15'}}}},
+    'Tico|Ana':      {banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'09:00', desde:'2026-09-01', excecoes:{'2026-10-06':{pular:true}}}},
+    'Nina|Lu':       {banho_rec:{ativo:false, freq:'semanal', dia:'ter', hora:'11:00', desde:'2026-09-01'}}
+  };
+  PELUDINHOS=[{n:'Charlotte', raca:'Spitz', tutor:'Bia'}, {n:'Ragna', raca:'Westie', tutor:'Rui'}, {n:'Tico', raca:'SRD', tutor:'Ana'}, {n:'Nina', raca:'SRD', tutor:'Lu'}];
+  pelExtra=function(p){ return __ex634[p.n+'|'+p.tutor]||{}; }; pelDias=function(){ return ['ter']; };`;
+const SOLTA634 = `PELUDINHOS=__bk634.P; pelExtra=__bk634.pe; pelDias=__bk634.pd; zHojeISO=__bk634.hz;
+  if(__bk634.c6) REP_PLAN_CACHE['2026-10-06']=__bk634.c6; else delete REP_PLAN_CACHE['2026-10-06'];
+  if(__bk634.c13) REP_PLAN_CACHE['2026-10-13']=__bk634.c13; else delete REP_PLAN_CACHE['2026-10-13'];`;
+prova('6.34 a hora que vai para a planilha: exceção do dia vale; pulado e desligado ficam de fora; dois FILHOts com a mesma chave ficam com a hora do primeiro (o da lista)', () => {
+  run(ARMA634);
+  try {
+    const ch = (p) => run(`dashAutoNomeChave(banhoRecValorPlanilha(PELUDINHOS[${p}], banhoRecDe(PELUDINHOS[${p}])))`);
+    let o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
+    igual(o._horas.banho[ch(0)], '14:30', 'Charlotte: 14:30');
+    igual(o._horas.banho[ch(1)], '16:15', 'Ragna: a hora mudada só para hoje');
+    igual(Object.keys(o._horas.banho).length, 2, 'Tico (pulado hoje) e Nina (banho fixo desligado) não entram');
+    igual(o.banho.length, 2);
+    // mesma chave (o mesmo Nome/Raça, sem xará reconhecida): a lista fica com o primeiro, e a hora também
+    run(`PELUDINHOS=[{n:'Luna', raca:'Poodle', tutor:'Ana'}, {n:'Luna', raca:'SRD', tutor:'Rui'}];
+      __ex634={'Luna|Ana':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01'}},
+               'Luna|Rui':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:00', desde:'2026-09-01'}}};
+      __xr634=dashXaraDe; dashXaraDe=function(){ return 1; };`);
+    try {
+      o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
+      igual(o.banho.length, 1, 'as duas viram a mesma linha');
+      igual(o._horas.banho[run(`dashAutoNomeChave(${JSON.stringify(o.banho[0])})`)], o.banho[0].indexOf('Poodle') >= 0 ? '10:00' : '14:00', 'a hora é a do nome que ficou na lista');
+    } finally { run('dashXaraDe=__xr634;'); }
+  } finally { run(SOLTA634); }
+});
+prova('6.34 a linha do automático: nome, a hora GRAVADA em destaque e "na planilha ✓ (enviado em …)"; sem hora gravada, nada de hora', () => {
+  run(ARMA634);
+  try {
+    const v0 = run('banhoRecValorPlanilha(PELUDINHOS[0], banhoRecDe(PELUDINHOS[0]))'), v1 = run('banhoRecValorPlanilha(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]))');
+    const k = (v) => JSON.stringify(run(`vagasNomeChave(${JSON.stringify(v)})`));
+    const ts = new Date(2026, 9, 6, 15, 28).getTime();
+    // Ragna: a ficha diz 16:15 hoje, mas a planilha ainda tem 10:00 (a conferência não passou): a linha diz 10:00
+    run(`REP_PLAN_CACHE['2026-10-06']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v0, v1, 'Zeca/SRD'])}, _estado_v:1,
+      _estado:{banho:{${k(v0)}:{planilha_ok:true, ts:${ts}, hora:'14:30'}, ${k(v1)}:{planilha_ok:true, ts:${ts}, hora:'10:00'}, ${k('Zeca/SRD')}:{planilha_ok:true, ts:${ts}}}}}};`);
+    const h = run("dashAutoLinhas('banho', '2026-10-06', null).html");
+    const linha = (nome) => h.split('<div class="pair dash-auto"').find((x) => x.indexOf(nome) >= 0) || '';
+    assert.ok(/<strong>Charlotte\/Spitz \(SEM SHAMPOO\)<\/strong> <span class="dash-auto-hora" style="color:var\(--z-blue-soft\);font-weight:800">14:30<\/span> <span class="dash-auto-tag">automático · banho fixo<\/span>/.test(linha('Charlotte')), linha('Charlotte'));
+    assert.ok(/na planilha ✓ \(enviado em 06\/10, 15:28\)/.test(linha('Charlotte')), 'a hora do envio diz que é do envio: ' + linha('Charlotte'));
+    assert.ok(/>10:00<\/span>/.test(linha('Ragna')) && linha('Ragna').indexOf('16:15') < 0, 'Ragna: a hora que está na planilha, não a da ficha: ' + linha('Ragna'));
+    assert.ok(linha('Zeca').indexOf('dash-auto-hora') < 0, 'sem hora gravada: só o nome, sem inventar hora');
+    // outro dia no seletor: vale o registro DAQUELE dia
+    run(`REP_PLAN_CACHE['2026-10-13']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v0])}, _estado_v:1, _estado:{banho:{${k(v0)}:{planilha_ok:true, ts:${ts}, hora:'15:45'}}}}};`);
+    assert.ok(/>15:45<\/span>/.test(run("dashAutoLinhas('banho', '2026-10-13', null).html")), 'dia 13: a hora gravada no dia 13');
+    // a hora vai escapada
+    run(`REP_PLAN_CACHE['2026-10-13'].auto._estado.banho[${k(v0)}].hora='<b>x';`);
+    assert.ok(run("dashAutoLinhas('banho', '2026-10-13', null).html").indexOf('<b>x') < 0, 'hora escapada');
+    // outras colunas do automático não ganham hora
+    run(`REP_PLAN_CACHE['2026-10-06'].auto.reposicao=['Charlotte/Spitz']; REP_PLAN_CACHE['2026-10-06'].auto._estado.reposicao={${k('Charlotte/Spitz')}:{planilha_ok:true, ts:1, hora:'09:00'}};`);
+    assert.ok(run("dashAutoLinhas('reposicao', '2026-10-06', null).html").indexOf('dash-auto-hora') < 0, 'a reposição não tem hora');
+    // a hora nova que não chegou: a linha diz isso, com a hora que continua lá (queda de conexão e recusa)
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}]={planilha_ok:false, ts:${ts}, hora:'10:00', planilha_msg:'a hora 16:15 não foi gravada — Failed to fetch'};`);
+    let lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/>10:00<\/span>/.test(lr) && /a hora 16:15 ainda não foi gravada; a conexão/.test(lr), lr);
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}].planilha_msg='não consegui tirar a hora da planilha — a ponte não respondeu em 12s';`);
+    lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/não consegui tirar a hora da planilha; a conexão/.test(lr), lr);
+    run(`REP_PLAN_CACHE['2026-10-06'].auto._estado.banho[${k(v1)}].planilha_msg='a hora 16:15 não foi gravada — coluna não encontrada';`);
+    lr = run("dashAutoLinhas('banho', '2026-10-06', null).html").split('<div class="pair dash-auto"').find((x) => x.indexOf('Ragna') >= 0);
+    assert.ok(/a planilha recusou — a hora 16:15 não foi gravada — coluna não encontrada/.test(lr), lr);
+    igual(typeof run('typeof dashAutoHorasBanho'), 'string'); igual(run('typeof dashAutoHorasBanho'), 'undefined', 'a conta da ficha a cada redesenho saiu (era o custo de 100 a 900 ms)');
+  } finally { run(SOLTA634); }
+});
+provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda a hora, a ponte regrava a "Hora Banho" (a TV deixa de tocar na hora velha)', async () => {
+  run(`__bk634s={pc:dashPonteChamar, calc:dashAutoCalcular, db:DB, au:audit};
+    audit=function(){};
+    __p634=[]; __pl634={}; __falha634=''; dashPonteChamar=function(c){ __p634.push(JSON.parse(JSON.stringify(c)));
+      if(c.acao==='lerDia') return Promise.resolve({ok:true, conteudo:__pl634});
+      if(__falha634 && c.acao===__falha634) return Promise.resolve({ok:false, erro:'Failed to fetch'});
+      return Promise.resolve({ok:true, jaEstava:true}); };
+    __hq634='16:15'; __txt634='Charlotte/Spitz (SEM SHAMPOO)';
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=[__txt634]; o._horas={banho:{}}; o._horas.banho[dashAutoNomeChave(__txt634)]=__hq634; return o; };
+    __b634={}; __g634={};
+    DB={ref:function(p){ return {
+      once:function(){ var v=__b634[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
+      set:function(v){ __g634[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      update:function(v){ __g634[p]=Object.assign({}, __g634[p]||{}, v); return Promise.resolve(); } }; }};`);
+  try {
+    const dia = '2026-10-06', no = 'daycare/dashboard-auto/' + dia;
+    const ch = run("dashAutoNomeChave('Charlotte/Spitz (SEM SHAMPOO)')");
+    const prepara = (horaAntes, extra) => run(`__p634=[]; __g634={}; __pl634={Banho:['Charlotte/Spitz (SEM SHAMPOO)']}; __b634={};
+      __b634['${no}']={banho:['Charlotte/Spitz (SEM SHAMPOO)'], _estado_v:1, _estado:{banho:{${JSON.stringify(ch)}:{planilha_ok:true, ts:1${horaAntes === undefined ? '' : `, hora:${JSON.stringify(horaAntes)}`}}}}};
+      ${extra || ''}`);
+    const chamadas = () => run('__p634').filter((c) => c.acao !== 'lerDia');
+    const reg = () => run(`__g634['${no}']._estado.banho[${JSON.stringify(ch)}]`);
+    // 1) a planilha tem 14:30, a ficha passou a 16:15 ("mudar só o dia" com outra hora): regrava a hora, o mesmo texto
+    prepara('14:30');
+    let r = await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.valor, c.hora, c.colunaHora]), [['lancar', 'Charlotte/Spitz (SEM SHAMPOO)', '16:15', 'Hora Banho']]);
+    igual([reg().planilha_ok, reg().hora], [true, '16:15'], 'o registro passa a dizer 16:15');
+    igual(r.horas, 1);
+    // 2) a mesma hora: nenhuma chamada
+    prepara('16:15');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas(), [], 'hora igual: a ponte não é chamada');
+    igual(reg().hora, '16:15');
+    // 3) registro sem hora (anterior a esta versão): regrava uma vez, e grava a hora
+    prepara(undefined);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora]), [['lancar', '16:15']]);
+    igual(reg().hora, '16:15');
+    // 4) a hora saiu do combinado: tira e lança de novo, sem hora (o lancar sem hora não limpa a célula)
+    run("__hq634='';"); prepara('14:30');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora || '']), [['remover', ''], ['lancar', '']]);
+    igual(reg().hora, '');
+    run("__hq634='16:15';");
+    // 5) a ponte falhou: a linha diz que a hora nova não foi gravada, com a hora que continua lá; a próxima passada tenta de novo
+    prepara('14:30', "__falha634='lancar';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual([reg().planilha_ok, reg().hora], [false, '14:30']);
+    assert.ok(/^a hora 16:15 não foi gravada — Failed to fetch$/.test(reg().planilha_msg), reg().planilha_msg);
+    run("__falha634='';");
+    // 6) a recepção lançou o mesmo FILHOt à mão: a linha é dela (com a hora dela) — o automático não regrava a hora
+    prepara('14:30', `__b634['daycare/dashboard/${dia}']={banho:{L1:{valor:'Charlotte/Spitz (SEM SHAMPOO)', hora:'11:00', ts:1}}};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().filter((c) => c.acao === 'lancar' && c.hora === '16:15'), [], 'a hora da recepção fica');
+    // 7) lançamento novo: a hora entra no registro
+    prepara(undefined, '__pl634={};');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora]), [['lancar', '16:15']]);
+    igual(reg().hora, '16:15');
+    // 8) o shampoo mudou (sai a célula velha, entra a nova): a hora entra no registro
+    run("__txt634='Charlotte/Spitz (SHAMPOO NA BOLSA)';"); prepara('14:30');
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.valor]), [['remover', 'Charlotte/Spitz (SEM SHAMPOO)'], ['lancar', 'Charlotte/Spitz (SHAMPOO NA BOLSA)']]);
+    igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora`), '16:15');
+    run("__txt634='Charlotte/Spitz (SEM SHAMPOO)';");
+    // 9) (2ª rodada) só a coluna COM hora é regravada: a reposição que já está lá não ganha um lancar a cada passada
+    run(`__p634=[]; __g634={}; __pl634={'Reposição':['Lanna/SRD']}; __b634={}; __b634['${no}']={reposicao:['Lanna/SRD'], _estado_v:1, _estado:{}};
+      __cbk634=dashAutoCalcular; dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.reposicao=['Lanna/SRD']; o._horas={banho:{}}; return o; };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'reposição já na planilha: nenhuma chamada');
+      assert.ok(!('hora' in run(`__g634['${no}']._estado.reposicao[${JSON.stringify(run("dashAutoNomeChave('Lanna/SRD')"))}]`)), 'e nada de hora no registro dela');
+    } finally { run('dashAutoCalcular=__cbk634;'); }
+    // 10) lançamento novo que a ponte recusou: sem hora no registro (a hora não está na planilha)
+    prepara(undefined, "__pl634={}; __falha634='lancar';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(reg().planilha_ok, false); assert.ok(!('hora' in reg()), 'recusado: sem hora');
+    run("__falha634='';");
+    // 11) hora apagada e o remover falhou: não lança por cima; diz que não tirou a hora, com a hora que continua lá
+    run("__hq634='';"); prepara('14:30', "__falha634='remover';");
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => c.acao), ['remover'], 'sem o lancar');
+    igual([reg().planilha_ok, reg().hora], [false, '14:30']);
+    assert.ok(/^não consegui tirar a hora da planilha — Failed to fetch$/.test(reg().planilha_msg), reg().planilha_msg);
+    run("__hq634='16:15'; __falha634='';");
+    // 12) sem conseguir ler os Lançamentos do dia: não regrava (a linha pode ser da recepção); a próxima passada tenta
+    prepara('14:30', `__b634['daycare/dashboard/${dia}']=undefined; __bkOnce634=DB.ref; DB.ref=function(p){ var r=__bkOnce634(p); if(p==='daycare/dashboard/${dia}') r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED')); }; return r; };`);
+    try {
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'nenhuma regravação');
+      igual(reg().hora, '14:30', 'o registro continua com a hora que está lá');
+    } finally { run('DB.ref=__bkOnce634;'); }
+    // 13) a aba não tem a coluna "Hora Banho" (a ponte avisa): o registro marca, a linha não mostra hora, e a próxima passada não insiste
+    run(`__pcbk634=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='lancar'){ __p634.push(JSON.parse(JSON.stringify(c))); return Promise.resolve({ok:true, jaEstava:true, avisoHora:'a aba "Outubro" nao tem a coluna de hora "Hora Banho": a hora nao foi gravada'}); } return __pcbk634(c); };`);
+    try {
+      prepara('14:30');
+      await run(`dashAutoSincronizar('${dia}')`);
+      assert.ok(/nao tem a coluna de hora/.test(reg().hora_aviso), JSON.stringify(reg()));
+      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts=Date.now()-3600*1000; __p634=[];`);
+      const tsAv = run(`__b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas(), [], 'a próxima passada não insiste a cada 5 minutos');
+      igual(reg().hora_aviso_ts, tsAv, 'e guarda a hora do 1º aviso (senão a conferência de 6 em 6 horas nunca chegaria)');
+      run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:__g634['${no}']};`);
+      igual(run(`repPlanHoraNome('${dia}', 'Charlotte/Spitz (SEM SHAMPOO)', 'banho')`), '', 'a linha não mostra a hora que não está na planilha');
+      // 3ª rodada: a linha DIZ que a planilha não tem a coluna
+      run(`REP_PLAN_CACHE['${dia}'].auto.banho=['Charlotte/Spitz (SEM SHAMPOO)'];`);
+      const zDia = run('zHojeISO'); run(`__zh634=zHojeISO; zHojeISO=function(){ return '${dia}'; };`);
+      try { assert.ok(/sem a hora: a planilha deste dia não tem a coluna "Hora Banho"/.test(run(`dashAutoLinhas('banho', '${dia}', null).html`)), 'aviso à vista'); }
+      finally { run('zHojeISO=__zh634;'); }
+      // o aviso não se perde quando a leitura dos Lançamentos falha (34-1)
+      run(`__b634['${no}']=__g634['${no}']; __p634=[]; __bkOnce634b=DB.ref; DB.ref=function(p){ var r=__bkOnce634b(p); if(p==='daycare/dashboard/${dia}') r.once=function(){ return Promise.reject(new Error('x')); }; return r; }; __hq634='15:00';`);
+      try { await run(`dashAutoSincronizar('${dia}')`); } finally { run("DB.ref=__bkOnce634b; __hq634='16:15';"); }
+      assert.ok(/nao tem a coluna/.test(reg().hora_aviso || ''), 'leitura falha: o aviso continua');
+      // passadas 6 horas, confere de novo (a coluna pode ter sido criada)
+      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora='16:15'; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts=Date.now()-7*3600*1000; __p634=[];`);
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(chamadas().map((c) => c.acao), ['lancar'], 'depois de 6 h, tenta de novo');
+    } finally { run(`dashPonteChamar=__pcbk634; delete REP_PLAN_CACHE['${dia}'];`); }
+    // 14) (3ª rodada) hora apagada: o remover deu certo e o lancar falhou — o banho está fora da planilha, sem hora na linha
+    run("__hq634='';"); prepara('14:30');
+    run(`__pcbk634c=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='lancar'){ __p634.push(JSON.parse(JSON.stringify(c))); return Promise.resolve({ok:false, erro:'Failed to fetch'}); } return __pcbk634c(c); };`);
+    try { await run(`dashAutoSincronizar('${dia}')`); } finally { run('dashPonteChamar=__pcbk634c;'); }
+    igual(chamadas().map((c) => c.acao), ['remover', 'lancar']);
+    assert.ok(/^o banho saiu da planilha para acertar a hora e ainda não voltou — Failed to fetch$/.test(reg().planilha_msg) && !('hora' in reg()), JSON.stringify(reg()));
+    // 15) (3ª rodada) registro sem hora (antigo) e ficha sem hora: tira e lança, para a hora velha não ficar
+    prepara(undefined);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().map((c) => [c.acao, c.hora || '']), [['remover', ''], ['lancar', '']]);
+    igual(reg().hora, '');
+    run("__hq634='16:15';");
+    // 16) (3ª rodada) lançamento novo e troca de shampoo com o aviso de coluna: o aviso entra no registro
+    run(`__pcbk634d=dashPonteChamar; dashPonteChamar=function(c){ if(c.acao==='lancar'){ __p634.push(JSON.parse(JSON.stringify(c))); return Promise.resolve({ok:true, avisoHora:'sem coluna'}); } return __pcbk634d(c); };`);
+    try {
+      prepara(undefined, '__pl634={};');
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual([reg().hora, reg().hora_aviso], ['16:15', 'sem coluna'], 'lançamento novo');
+      run("__txt634='Charlotte/Spitz (SHAMPOO NA BOLSA)';"); prepara('14:30');
+      await run(`dashAutoSincronizar('${dia}')`);
+      igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora_aviso`), 'sem coluna', 'troca de shampoo');
+    } finally { run("dashPonteChamar=__pcbk634d; __txt634='Charlotte/Spitz (SEM SHAMPOO)';"); }
+    // 17) (3ª rodada) a recepção lançou o mesmo texto e o reenvio dela esgotou: a hora da recepção fica
+    prepara('14:30', `__b634['daycare/dashboard/${dia}']={banho:{L1:{valor:'Charlotte/Spitz (SEM SHAMPOO)', hora:'11:00', ts:1, planilha_desisti:true}}};`);
+    await run(`dashAutoSincronizar('${dia}')`);
+    igual(chamadas().filter((c) => c.acao === 'lancar' && c.hora === '16:15'), [], 'a linha é da recepção, mesmo com o reenvio esgotado');
+  } finally { run('dashPonteChamar=__bk634s.pc; dashAutoCalcular=__bk634s.calc; DB=__bk634s.db; audit=__bk634s.au;'); }
+});
+// ================================================================== 6.35 — "ele escova os dentes?" no painel rápido
+console.log('\n6.35 — Hoje na Zêluz (e Vencimentos, Prevenção): "Ele escova os dentes aqui?" no painel da troca de escova (Adriana, 06/out/2026, Antônio)');
+const ARMA635 = `__bk635={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, pa:PREV_CORRIGE_ABERTO, po:PREV_CORRIGE_ORIGEM, ok:PREV_CORRIGE_OK, au:audit, rd:prevCorrigeRedesenhar, fc:prevCorrigeFecharConversa, r:document.body.dataset.role, at:pelAtividades};
+  __ex635={escova_t:'', escova_p:''}; PELUDINHOS=[{n:'Antônio', raca:'Spitz', tutor:'Rita'}];
+  pelExtra=function(){ return __ex635; }; pelAtividades=function(){ return ['escova','agility']; };
+  __sp635=[]; setPelExtra=function(p,patch){ __sp635.push(JSON.parse(JSON.stringify(patch))); Object.assign(__ex635, patch); return Promise.resolve({ok:true}); };
+  __au635=[]; audit=function(t,m){ __au635.push(t+': '+m); }; __rd635=[]; prevCorrigeRedesenhar=function(t){ __rd635.push(t); };
+  __fc635=0; prevCorrigeFecharConversa=function(){ __fc635++; };
+  PREV_CORRIGE_OK={}; document.body.dataset.role='consultora';
+  __ch635=dcKey('Antônio','Rita'); PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; PREV_CORRIGE_ORIGEM='';`;
+const SOLTA635 = `PELUDINHOS=__bk635.P; pelExtra=__bk635.pe; setPelExtra=__bk635.sp; PREV_CORRIGE_ABERTO=__bk635.pa; PREV_CORRIGE_ORIGEM=__bk635.po;
+  PREV_CORRIGE_OK=__bk635.ok; audit=__bk635.au; prevCorrigeRedesenhar=__bk635.rd; prevCorrigeFecharConversa=__bk635.fc; document.body.dataset.role=__bk635.r; pelAtividades=__bk635.at;`;
+prova('6.35 o painel da troca de escova pergunta "Escova os dentes aqui?" (Sim · Não deixa escovar · O tutor não compra a pasta); os outros itens, não', () => {
+  run(ARMA635);
+  try {
+    const h = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
+    assert.ok(/>Escova os dentes aqui\?</.test(h) && !/Ele escova/.test(h), h.slice(0, 600));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Sim','','hoje'\)">Sim, escova<\/button>/.test(h));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','Não deixa','hoje'\)">Não deixa escovar<\/button>/.test(h));
+    assert.ok(/onclick="prevCorrigeEscovaDc\('[^']+','Não','O tutor não compra a pasta','hoje'\)">O tutor não compra a pasta<\/button>/.test(h));
+    assert.ok(h.indexOf('Escova os dentes aqui?') < h.indexOf('Feito hoje'), 'a pergunta vem antes da data');
+    assert.ok(h.indexOf('grave abaixo a data da troca') < 0, 'sem resposta, sem a dica do Sim');
+    assert.ok(/border:1\.5px solid var\(--crm-critico\)/.test(h) && h.indexOf('#B3261E') < 0, 'a cor do Não é o token da marca');
+    igual((h.match(/min-height:40px;padding:8px 13px/g) || []).length, 3, 'os 3 botões com 40 px de altura (toque)');
+    run("__ex635.escova_dc='Não';");
+    assert.ok(/background:#fff;color:var\(--z-blue\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')")), 'com Não na ficha, o Sim não aparece aceso');
+    run("delete __ex635.escova_dc;");
+    run("__ex635.escova_dc='Sim';");
+    const hs = run("prevCorrigePainelHTML(__ch635, 'hoje', '2026-10-06')");
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)" onclick="prevCorrigeEscovaDc\('[^']+','Sim'/.test(hs), 'o Sim aceso quando a ficha já diz que escova');
+    assert.ok(/Escova aqui: grave abaixo a data da troca\./.test(hs), 'com Sim, a dica leva à data');
+    igual(run("prevCorrigeEscovaDcHTML('verm_p', {}, 'x', 'hoje')"), '', 'vermífugo: sem a pergunta');
+  } finally { run(SOLTA635); }
+});
+provaAsync('6.35 "Não deixa escovar": grava na ficha (como a pergunta da ficha), sai da cobrança, fecha o painel e confirma; "Sim": grava e o painel segue para a data; sem permissão, nada', async () => {
+  run(ARMA635);
+  try {
+    await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+    igual(run('__sp635[0]'), { escova_dc: 'Não', atividades: ['agility'], escova_dc_motivo: 'Não deixa' }, 'sai da escovação dos monitores também');
+    igual(run("prevForaDaCobranca(__ex635, {k:'escova_p'})"), true, 'a troca de escova saiu da cobrança');
+    igual(run('PREV_CORRIGE_ABERTO'), '', 'o painel fecha');
+    igual(run('PREV_CORRIGE_OK[__ch635+"|escova_p"].texto'), 'Antônio — não escova aqui (Não deixa): a troca de escova saiu da cobrança');
+    igual(run('__fc635'), 1, 'a conversa do cartão fecha se ficou vazio'); igual(run('__rd635'), ['hoje']);
+    assert.ok(/já leem esta resposta\./.test(run('prevCorrigeOkHTML()')), 'a confirmação não fala de data: nenhuma data foi gravada');
+    run("PREV_CORRIGE_OK['outro|verm_p']={ts:Date.now(), ate:'2027-02-06', texto:'Bob — vermífugo feito hoje'};");
+    assert.ok(/já leem o que foi gravado\./.test(run('prevCorrigeOkHTML()')), 'resposta e data juntas: "o que foi gravado"');
+    run("delete PREV_CORRIGE_OK[__ch635+'|escova_p'];");
+    assert.ok(/já leem esta data\./.test(run('prevCorrigeOkHTML()')), 'só data: "esta data", como sempre');
+    run("PREV_CORRIGE_OK={}; PREV_CORRIGE_OK[__ch635+'|escova_p']={ts:Date.now(), ate:'', resposta:true, texto:'x'};");
+    assert.ok(/^ficha-escova: escova os dentes no Day Care: Não \(Não deixa\), atualizado na tela Hoje na Zêluz$/.test(run('__au635[0]')), run('__au635[0]'));
+    run("PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; pelAtividades=function(){ return ['agility']; };");
+    await run("prevCorrigeEscovaDc(__ch635, 'Sim', '', 'venc')");
+    igual(run('__sp635[1]'), { escova_dc: 'Sim', atividades: ['agility', 'escova'] });
+    igual(run('PREV_CORRIGE_ABERTO'), run('__ch635') + '|escova_p', 'com Sim, o painel segue aberto para a data da troca');
+    igual(run('__rd635'), ['hoje', 'venc'], 'com Sim, a tela redesenha (o Sim aceso e a dica)');
+    igual(run("prevForaDaCobranca(__ex635, {k:'escova_p'})"), false);
+    run("document.body.dataset.role='monitor';");
+    const r = await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+    igual(r && r.ok, false); igual(run('__sp635.length'), 2, 'monitor: nada gravado');
+    run("document.body.dataset.role='consultora';");
+    igual((await run("prevCorrigeEscovaDc(__ch635, 'Talvez', '', 'hoje')")).ok, false, 'resposta fora das duas: nada');
+    // o banco recusou: aviso, painel aberto, nada de confirmação verde, de rastro nem de conversa fechada
+    run(`__za635=[]; __bkza635=zAlertao; zAlertao=function(t){ __za635.push(t); }; PREV_CORRIGE_OK={}; __fc635=0; __au635=[];
+      PREV_CORRIGE_ABERTO=__ch635+'|escova_p'; setPelExtra=function(){ return Promise.resolve({ok:false, erro:'PERMISSION_DENIED'}); };`);
+    try {
+      const rf = await run("prevCorrigeEscovaDc(__ch635, 'Não', 'Não deixa', 'hoje')");
+      igual(rf.ok, false); igual(run('__za635'), ['A FICHA NÃO FOI ATUALIZADA']);
+      igual(run('PREV_CORRIGE_ABERTO'), run('__ch635') + '|escova_p', 'o painel fica aberto');
+      igual(run('Object.keys(PREV_CORRIGE_OK).length'), 0, 'sem confirmação verde');
+      igual([run('__fc635'), run('__au635.length')], [0, 0], 'a conversa não fecha e o rastro não diz que gravou');
+    } finally { run('zAlertao=__bkza635;'); }
+  } finally { run(SOLTA635); }
+});
+// ================================================================== 6.30 — plano com dias por mês
+console.log('\n6.30 — plano com dias por mês: a Hopi vem 1x nos dois primeiros meses e 2x no último (Adriana, 05/out/2026)');
+// Dado INVENTADO: a «Tâmara», da tutora «Viajante Teste» — Gold pago em 05/10/2026, vale até
+// 31/12/2026, 1º da família, rotina (chips do alto) Seg, e os dias do plano mês a mês:
+// Mês 1 Seg · Mês 2 Seg · Mês 3 Seg e Qua. Feriados de fábrica: 12/10, 02/11, 20/11, 08/12, 25/12.
+const TAMARA630 = { n: 'Tâmara', tutor: 'Viajante Teste', raca: 'SRD', dias: ['seg'] };
+const RENOV630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31',
+  mesRenov: 'dezembro de 2026', quando: '2026-10-06', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] });
+// Arma a ficha no cache do cadastro (a mesma porta que o app lê) e devolve o desarme.
+const arma630 = (renov, extra, hoje) => {
+  ctx.__t630 = Object.assign({}, TAMARA630); ctx.__ex630 = Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], renov: renov }, extra || {});
+  run(`__bk630={cad:pelCadCache, hz:zHojeISO, P:PELUDINHOS}; pelCadCache=Object.assign({}, pelCadCache);
+    pelCadCache[pelKey(__t630)]=__ex630; PELUDINHOS=[__t630]; zHojeISO=function(){ return '${hoje || '2026-12-09'}'; };`);
+};
+const solta630 = () => run('pelCadCache=__bk630.cad; zHojeISO=__bk630.hz; PELUDINHOS=__bk630.P;');
+const J630 = (codigo) => JSON.parse(JSON.stringify(run(codigo)));
+prova('6.30 P1 — os meses do plano saem do início: 05/10–04/11 Seg · 05/11–04/12 Seg · 05/12–31/12 Seg, Qua (o último termina no fim da vigência)', () => {
+  arma630(RENOV630());
+  try {
+    igual(J630('renovMesesDoPlano(__ex630.renov)'), [
+      { n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] },
+      { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] },
+      { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }]);
+  } finally { solta630(); }
+});
+prova('6.30 P2 — pelDias pela data: 07/10 Seg; 09/12 Seg, Qua; 04/01/2027 (plano vencido) a rotina; sem data = hoje; "rotina" = os chips', () => {
+  arma630(RENOV630(), null, '2026-12-09');
+  try {
+    igual(J630("pelDias(__t630, '2026-10-07')"), ['seg']);
+    igual(J630("pelDias(__t630, '2026-12-09')"), ['seg', 'qua']);
+    igual(J630("pelDias(__t630, '2026-11-11')"), ['seg'], 'a quarta do Mês 2 não é dia dela');
+    igual(J630("pelDias(__t630, '2027-01-04')"), ['seg'], 'depois do plano, sem renovação: os dias do alto da ficha');
+    igual(J630('pelDias(__t630)'), ['seg', 'qua'], 'sem data: os dias de HOJE (09/12, Mês 3)');
+    igual(J630("pelDias(__t630, 'rotina')"), ['seg']);
+    igual(J630("pelDiasEm(__t630, '2026-12-09')"), ['seg', 'qua'], 'o apelido pedido na story');
+    run("zHojeISO=function(){ return '2026-11-11'; };");
+    igual(J630('pelDias(__t630)'), ['seg'], 'hoje no Mês 2: Seg');
+  } finally { solta630(); }
+});
+prova('6.30 P3 — ficha SEM dias por mês: pelDias igual ao de sempre em qualquer data, e nAulasDe igual (regressão)', () => {
+  const antiga = (ex, p) => (Array.isArray(ex.dias) ? ex.dias : (Array.isArray(p.dias) ? p.dias : []));
+  const casos = [
+    [{ dias: ['ter', 'qui'], renov: { plano: 'Gold', aulas: 2, inicio: '2026-10-05', fim: '2026-12-31' } }, { n: 'Faísca', tutor: 'Teste A', dias: ['seg'] }],
+    [{ renov: { plano: 'Silver', aulas: 1, inicio: '2026-10-01', fim: '2026-10-31' } }, { n: 'Brisa', tutor: 'Teste B', dias: ['sex'] }],
+    [{ dias: [] }, { n: 'Pingo', tutor: 'Teste C', dias: ['qua'] }],
+    [{}, { n: 'Sem Nada', tutor: 'Teste D' }],
+    [{ dias: ['seg', 'ter', 'qua', 'qui', 'sex'], renov: {} }, { n: 'Todo Dia', tutor: 'Teste E' }],
+  ];
+  run('__bk630r={cad:pelCadCache, hz:zHojeISO}; pelCadCache=Object.assign({}, pelCadCache);');
+  try {
+    casos.forEach(([ex, p]) => {
+      ctx.__exR = ex; ctx.__pR = p;
+      run('pelCadCache[pelKey(__pR)]=__exR;');
+      const esperado = antiga(ex, p);
+      ['2026-10-07', '2026-12-09', '2027-01-04', '2025-03-03', 'rotina', undefined].forEach((q) => {
+        igual(J630('pelDias(__pR' + (q === undefined ? '' : ", '" + q + "'") + ')'), esperado, p.n + ' em ' + q);
+      });
+      ['2026-10-07', '2026-12-09'].forEach((h) => { run("zHojeISO=function(){ return '" + h + "'; };"); igual(J630('pelDias(__pR)'), esperado); });
+      igual(run('nAulasDe(__pR)'), Math.min(5, Math.max(1, esperado.length)) || 1, 'nAulasDe de ' + p.n);
+      assert.strictEqual(run("pelDias(__pR, '2026-12-09')===pelExtra(__pR).dias || !Array.isArray(pelExtra(__pR).dias)"), true, 'a MESMA lista (sem cópia) quando não há dias por mês');
+    });
+  } finally { run('pelCadCache=__bk630r.cad; zHojeISO=__bk630r.hz;'); }
+});
+prova('6.30 P4 — começou no meio do mês (pago 22/09, opção 2, mês cobrado outubro): 22/09–31/10 · 01/11–30/11 · 01/12–31/12', () => {
+  const r = { plano: 'Gold', inicio: '2026-09-22', fim: '2026-12-31', mes_cobranca_1: '2026-10', meio_mes: { opcao: 2, inicio: '2026-09-22' }, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  ctx.__r630 = r;
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2026-09-22|2026-10-31', '2026-11-01|2026-11-30', '2026-12-01|2026-12-31']);
+  // registro do meio do mês ainda sem o mes_cobranca_1 gravado: a âncora é o dia 1º do mês seguinte
+  ctx.__r630 = Object.assign({}, r, { mes_cobranca_1: '' });
+  igual(J630('renovMesesDoPlano(__r630)[1].de'), '2026-11-01');
+});
+prova('6.30 P5 — renovação antecipada / fim do mês (período começa 01/10): os meses coincidem com o calendário', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-09-25', vig_inicio: '2026-10-01', fim: '2026-12-31', dias_mes: [['seg'], ['ter'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2026-10-01|2026-10-31', '2026-11-01|2026-11-30', '2026-12-01|2026-12-31']);
+  ctx.__r630 = { plano: 'Black', inicio: '2026-10-05', fim: '2027-03-31', dias_mes: [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'),
+    ['2026-10-05|2026-11-04', '2026-11-05|2026-12-04', '2026-12-05|2027-01-04', '2027-01-05|2027-02-04', '2027-02-05|2027-03-04', '2027-03-05|2027-03-31'], 'semestral: 6 meses');
+});
+prova('6.30 P6 — dado torto não vale (outro tamanho, mês vazio, só sábado, Silver, sem fim): sem meses, e vale a rotina', () => {
+  const tortos = [
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], [], ['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['sab'], ['seg'], ['seg', 'qua']] },
+    { plano: 'Silver', inicio: '2026-10-05', fim: '2026-10-31', dias_mes: [['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] },
+    { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: 'seg,qua' },
+  ];
+  tortos.forEach((r, i) => {
+    arma630(r);
+    try {
+      igual(J630('renovMesesDoPlano(__ex630.renov)'), [], 'caso ' + i);
+      igual(J630("pelDias(__t630, '2026-12-09')"), ['seg'], 'caso ' + i + ': a rotina');
+      assert.strictEqual(run('renovDiasMesValido(__ex630.renov)'), false);
+    } finally { solta630(); }
+  });
+  // o banco devolve objeto de chaves numéricas e dia repetido/fora de ordem: saneia
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: { 0: ['seg'], 1: { a: 'seg' }, 2: ['qua', 'seg', 'qua', 'xyz'] } };
+  igual(J630('renovMesesDoPlano(__r630)[2].dias'), ['seg', 'qua']);
+});
+prova('6.30 P7 — Turma do dia (Turminhas): em 09/12 a Tâmara vem como fixa; na quarta 11/11 (Mês 2), não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  run(`__bk630t={rl:repLancamentos, ra:repAgendaDe, te:poTelDoTutor, rs:repSaldo};
+    repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 0; };`);
+  try {
+    const f = "{pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:0, hoje:'2026-11-09'}";
+    const dez = J630("turmaListaDoDia('2026-12-09', " + f + ')');
+    igual(dez.vem.map((o) => [o.nome, o.porque]), [['Tâmara', '']], 'fixa do dia, sem "reposição"');
+    const nov = J630("turmaListaDoDia('2026-11-11', " + f + ')');
+    igual([nov.vem.length, nov.naoVem.length], [0, 0], 'a quarta do Mês 2 não é dela');
+    igual(J630("turmaListaDoDia('2026-12-07', " + f + ').vem.length'), 1, 'segunda: dela em todos os meses');
+  } finally { run('repLancamentos=__bk630t.rl; repAgendaDe=__bk630t.ra; poTelDoTutor=__bk630t.te; repSaldo=__bk630t.rs;'); solta630(); }
+});
+prova('6.30 P8 — turmaDoDia (a Chamada, o check-in e a TV): a aba da quarta vista na sexta 04/12 já é a quarta 09/12 (Mês 3); vista em 09/11, a quarta 11/11 não tem a Tâmara', () => {
+  arma630(RENOV630(), null, '2026-12-04');
+  run("__bk630d={dc:dcDia, av:dcAvulsos}; dcAvulsos=[]; dcDia='qua';");
+  try {
+    igual(J630('turmaDoDia().map(function(o){ return o.p.n; })'), ['Tâmara'], 'na sexta 04/12 (ainda Mês 2), a aba da quarta é a de 09/12');
+    run("zHojeISO=function(){ return '2026-11-09'; };");
+    igual(J630('turmaDoDia().map(function(o){ return o.p.n; })'), [], 'semana de 09/11: a quarta 11/11 é do Mês 2');
+    igual(J630("turmaDoDia('2026-12-09').map(function(o){ return o.p.n; })"), ['Tâmara'], 'com a data na mão, vale a data');
+    igual(J630("turmaDe('2026-12-09').map(function(o){ return o.p.n; })"), ['Tâmara'], 'turmaDe passa a data');
+    igual(run('dcDia'), 'qua', 'a aba volta como estava');
+    igual(J630("turmaDe('2026-11-11').map(function(o){ return o.p.n; })"), []);
+  } finally { run('dcDia=__bk630d.dc; dcAvulsos=__bk630d.av;'); solta630(); }
+});
+const stubsTroca630 = () => run(`__bk630x={rs:repSaldo, rd:repDisponivel, rt:repTrocasPendentes, dm:dcMatriculado, vd:vagasDoDia, rl:repLancamentos, tc:TROCA_CACHE};
+  repSaldo=function(){ return 2; }; repDisponivel=function(){ return 2; }; repTrocasPendentes=function(){ return 0; }; dcMatriculado=function(){ return true; };
+  vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };
+  repLancamentos=function(){ return []; }; TROCA_CACHE={};`);
+const soltaTroca630 = () => run('repSaldo=__bk630x.rs; repDisponivel=__bk630x.rd; repTrocasPendentes=__bk630x.rt; dcMatriculado=__bk630x.dm; vagasDoDia=__bk630x.vd; repLancamentos=__bk630x.rl; TROCA_CACHE=__bk630x.tc;');
+prova('6.30 P9 — troca de dia pela data: 07/12 → 09/12 "já vem na quarta"; 09/12 → 10/12 vale; 11/11 → 12/11 "não vem na quarta"', () => {
+  arma630(RENOV630(), null, '2026-11-09'); stubsTroca630();
+  try {
+    const V = (de, para) => J630("dxVeredito(__t630, '" + para + "', {de:'" + de + "'})");
+    assert.ok(/já vem na quarta/.test(V('2026-12-07', '2026-12-09').motivo), V('2026-12-07', '2026-12-09').motivo);
+    const ok = V('2026-12-09', '2026-12-10');
+    igual([ok.ok, ok.tipo], [true, 'troca'], ok.motivo);
+    assert.ok(/não vem na quarta/.test(V('2026-11-11', '2026-11-12').motivo), V('2026-11-11', '2026-11-12').motivo);
+    const nov = V('2026-11-30', '2026-12-02');
+    igual([nov.ok, nov.tipo], [true, 'troca'], 'a quarta 02/12 (Mês 2) ainda não é dela: a troca para lá vale');
+    assert.ok(/já vem na quarta/.test(V('2026-11-30', '2026-12-09').motivo), 'cada dia pela sua data: a segunda do Mês 2 para a quarta do Mês 3 (que já é dela)');
+  } finally { soltaTroca630(); solta630(); }
+});
+prova('6.30 P10 — "Ele já vem nesse dia" e "é o dia dela" respondem pela data: a quarta do Mês 3 é dela; a do Mês 2, não', () => {
+  arma630(RENOV630(), null, '2026-11-09'); stubsTroca630();
+  try {
+    assert.ok(/já vem nesse dia/.test(run("trocaValidar(__t630, '2026-12-09')")));
+    igual(run("trocaValidar(__t630, '2026-11-11')"), '');
+    igual(run("repEhDiaDele(__t630, '2026-12-09')"), true);
+    igual(run("repEhDiaDele(__t630, '2026-11-11')"), false);
+    igual(run("repEhDiaDele(__t630, '2026-11-16')"), true, 'segunda é dela em todo mês');
+  } finally { soltaTroca630(); solta630(); }
+});
+prova('6.30 P11 — reposição por período (30/11 a 11/12): 30/11 e 07/12 (segundas) e 09/12 (quarta do Mês 3) — a quarta 02/12 não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  try {
+    igual(J630("repDiasQueViria(__t630, '2026-11-30', '2026-12-11')"), ['2026-11-30', '2026-12-07', '2026-12-09']);
+  } finally { solta630(); }
+});
+prova('6.30 P12 — a próxima vinda: depois de 30/11 é 07/12; depois de 07/12 é 09/12 (08/12 é feriado)', () => {
+  arma630(RENOV630(), null, '2026-11-30');
+  run('__bk630a={ra:repAgendaDe}; repAgendaDe=function(){ return []; };');
+  try {
+    igual(run("proximaVindaDe(__t630, '2026-11-30')"), '2026-12-07');
+    igual(run("proximaVindaDe(__t630, '2026-12-07')"), '2026-12-09');
+    igual(run("proximaVindaDe(__t630, '2026-11-09')"), '2026-11-16', 'no Mês 2 a quarta não conta');
+    igual(run("vencProximoDiaDele(__t630, '2026-12-08')"), '2026-12-09', 'a resposta que chega no feriado vai para a quarta do Mês 3');
+    igual(run("vencProximoDiaDele(__t630, '2026-11-10')"), '2026-11-16', 'no Mês 2 a quarta não é dela');
+  } finally { run('repAgendaDe=__bk630a.ra;'); solta630(); }
+});
+prova('6.30 P13 — a planilha do dia (banho fixo e o automático): quarta 09/12 sim; quarta 02/12 não', () => {
+  arma630(RENOV630(), null, '2026-11-09');
+  try {
+    igual(run("dashAutoVemNoDia(__t630, '2026-12-09')"), true);
+    igual(run("dashAutoVemNoDia(__t630, '2026-12-02')"), false);
+  } finally { solta630(); }
+});
+prova('6.30 P23 — o valor do plano pela tabela, mês a mês: 1º R$ 1.307,00 · 2º R$ 1.215,51 · 3º R$ 1.150,16 · Black R$ 2.488,00; e o desconto é por mês', () => {
+  const V = (plano, dm, ordem) => J630("renovValorDoPlano('" + plano + "', " + JSON.stringify(dm) + ', ' + ordem + ')');
+  const hopi = [['seg'], ['seg'], ['seg', 'qua']];
+  igual(V('Gold', hopi, 1), { total: 130700, porMes: [{ aulas: 1, valor: 35900 }, { aulas: 1, valor: 35900 }, { aulas: 2, valor: 58900 }], falta: -1 });
+  igual(V('Gold', hopi, 2).total, 121551);
+  igual(V('Gold', hopi, 3).total, 115016);
+  igual(V('Black', [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']], 1).total, 248800);
+  igual(run('renovBRL(130700)'), 'R$ 1.307,00');
+  igual(run('renovBRL(121551)'), 'R$ 1.215,51');
+  // preço quebrado (a Gestão grava centavos): o desconto é arredondado EM CADA MÊS, como no Financeiro
+  run(`__bk630p=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35950; planosCfg.Gold.valores[2]=58950;`);
+  try {
+    igual(V('Gold', hopi, 2).total, 121692, 'Math.round(35950×0,93)×2 + Math.round(58950×0,93) = 33.434×2 + 54.824');
+    run('delete planosCfg.Gold.valores[2];');
+    igual(V('Gold', hopi, 1).falta, 2, 'mês sem preço na tabela: a conta não fecha e diz qual mês');
+    igual(V('Gold', hopi, 1).total, 0, 'nunca um total pela metade');
+  } finally { run('planosCfg=__bk630p;'); }
+  igual(V('Gold', [['seg'], [], ['seg']], 1).falta, 1, 'mês sem dia: a conta não fecha');
+});
+prova('6.30 P25 — orçamento de hospedagem de 01/12 a 10/12: a noite de 02/12 (quarta do Mês 2) é diária; a de 09/12 (quarta do Mês 3) é pernoite', () => {
+  arma630(RENOV630(), null, '2026-11-20');
+  const geOrig = ctx.document.getElementById;
+  const els = { orcEntrada: { value: '2026-12-01' }, orcSaida: { value: '2026-12-10' }, orcCardResultado: { style: {} }, orcCardMsg: { style: {} },
+    orcAvisoData: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' }, orcResultado: { innerHTML: '' }, orcMsg: { value: '' } };
+  ctx.document.getElementById = function (id) { return (id in els) ? els[id] : geOrig.call(this, id); };
+  run(`__bk630o={sel:ORC_SEL, rep:ORC_REP, calc:ORC_CALC, aul:ORC_AULUNO, t:ORC_TEMP, man:ORC_TEMP_MANUAL, auto:ORC_TEMP_AUTO, rr:orcRenderResultado, rm:orcRenderMsg, rs:orcRenderSel, nc:orcNovoComecou, hj:hojeISO};
+    ORC_SEL=[]; ORC_REP={}; ORC_AULUNO=true; ORC_TEMP='baixa'; ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
+    orcRenderResultado=function(){}; orcRenderMsg=function(){}; orcRenderSel=function(){}; orcNovoComecou=function(){};
+    hojeISO=function(){ return '2026-11-20'; };`);
+  try {
+    run('orcAdd(pelKey(__t630))');
+    igual(J630('[ORC_SEL.length, ORC_SEL[0].porMes, ORC_SEL[0].dias]'), [1, true, ['seg']], 'a ficha entra marcada como "dias por mês"');
+    const N = J630('ORC_CALC.pets[0].noites.map(function(n){ return n.iso.slice(5)+(n.pernoite?" P":" D"); })');
+    assert.ok(N.indexOf('12-02 D') >= 0, 'quarta 02/12 (Mês 2): diária — ' + N.join(','));
+    assert.ok(N.indexOf('12-09 P') >= 0, 'quarta 09/12 (Mês 3): pernoite — ' + N.join(','));
+    assert.ok(N.indexOf('12-07 P') >= 0 && N.indexOf('12-01 D') >= 0, N.join(','));
+    igual(J630('[ORC_CALC.pets[0].nPer, ORC_CALC.pets[0].nDia]'), [2, 7]);
+    // ficha sem dias por mês: a conta de sempre, pelos dias guardados
+    run("ORC_SEL=[{key:'x__y', nome:'X', tutor:'Y', raca:'SRD', dias:['qua'], trocas:{}, planoKey:'Gold', rotulo:'Gold', compromisso:'trimestral', hospOff:10}]; orcCalcular();");
+    igual(J630('ORC_CALC.pets[0].noites.filter(function(n){ return n.pernoite; }).map(function(n){ return n.iso; })'), ['2026-12-02', '2026-12-09']);
+  } finally {
+    ctx.document.getElementById = geOrig;
+    run('ORC_SEL=__bk630o.sel; ORC_REP=__bk630o.rep; ORC_CALC=__bk630o.calc; ORC_AULUNO=__bk630o.aul; ORC_TEMP=__bk630o.t; ORC_TEMP_MANUAL=__bk630o.man; ORC_TEMP_AUTO=__bk630o.auto; orcRenderResultado=__bk630o.rr; orcRenderMsg=__bk630o.rm; orcRenderSel=__bk630o.rs; orcNovoComecou=__bk630o.nc; hojeISO=__bk630o.hj;');
+    solta630();
+  }
+});
+prova('6.30 P28 — contador das Turminhas por dia: a quarta conta a Tâmara só quando a próxima quarta cai no Mês 3', () => {
+  arma630(RENOV630(), null, '2026-12-07');
+  try {
+    igual(run("nMatriculados('qua')"), 1, 'na segunda 07/12, a próxima quarta é 09/12 (Mês 3)');
+    igual(run("nMatriculados('seg')"), 1);
+    run("zHojeISO=function(){ return '2026-11-30'; };");
+    igual(run("nMatriculados('qua')"), 0, 'em 30/11, a próxima quarta é 02/12 (Mês 2)');
+    igual(J630('gradeAlmocoDados().map(function(x){ return x.dia; })'), ['Segunda'], 'a grade de almoço da semana também');
+    run("zHojeISO=function(){ return '2026-12-04'; };");
+    igual(run("nMatriculados('qua')"), 1, 'na sexta 04/12 (ainda Mês 2), a próxima quarta já é 09/12 (Mês 3)');
+    igual(J630('gradeAlmocoDados().map(function(x){ return x.dia; })'), ['Segunda', 'Quarta'], 'e a grade de almoço da semana que vem');
+  } finally { solta630(); }
+});
+// ---- a aba Plano, o Confirmar, o Desfazer, os chips e as outras portas (passos 6 a 11)
+// Um ambiente controlado: a ficha da Tâmara no cache do cadastro, gravações e perguntas anotadas.
+const monta630 = async (opts, corpo) => {
+  ctx.__o630 = opts;
+  run(`__bk630c={cad:pelCadCache, hz:zHojeISO, hj:hojeISO, P:PELUDINHOS, pa:pelAtual, sp:setPelExtra, hg:renovHistGravar, au:audit, zp:zPergunta,
+      za:zAlertao, zf:zFalta, zl:zLimparFalta, rf:renderPelFicha, rp:renderPel, rd:renderDaycare, ce:canEditPel, pp:podePapel, rr:renovRascunho,
+      mm:mmBlocoHTML, db:DB, ip:irParaAbaPlano, pc:planosCfg};
+    __log630={grav:[], hist:[], rastro:[], perg:[], faltas:[], cartazes:[], resp:(__o630.resp||[]).slice(), irPlano:0, out:null};
+    pelCadCache=Object.assign({}, pelCadCache);
+    __t630={n:'Tâmara', tutor:'Viajante Teste', raca:'SRD', dias:['seg']};
+    pelCadCache[pelKey(__t630)]=JSON.parse(JSON.stringify(__o630.ex));
+    PELUDINHOS=[__t630]; pelAtual=__t630;
+    zHojeISO=function(){ return __o630.hoje; }; hojeISO=function(){ return __o630.hoje; };
+    setPelExtra=function(p,o){ var c=JSON.parse(JSON.stringify(o)); __log630.grav.push(c); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(o))); return Promise.resolve({ok:true}); };
+    renovHistGravar=function(k,a,m){ __log630.hist.push({a:JSON.parse(JSON.stringify(a)), m:m}); return Promise.resolve(); };
+    audit=function(a,d,m){ __log630.rastro.push({acao:a, detalhe:String(d), alvo:(m&&m.alvo)||''}); };
+    zPergunta=function(t,l,op){ __log630.perg.push({t:t, l:l, op:op}); return Promise.resolve(__log630.resp.length?__log630.resp.shift():false); };
+    zAlertao=function(t,l){ __log630.cartazes.push({t:t, l:l}); };
+    zFalta=function(l,o){ __log630.faltas.push({el:String(l[0].el), msg:l[0].msg}); return true; }; zLimparFalta=function(){};
+    renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){}; canEditPel=function(){ return true; }; podePapel=function(){ return true; };
+    mmBlocoHTML=function(){ return ''; }; irParaAbaPlano=function(){ __log630.irPlano++; };
+    DB={ref:function(){ return {remove:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); }}; }};
+    renovRascunho=__o630.rasc?Object.assign({_k:pelKey(__t630)}, __o630.rasc):null;`);
+  try { await run('(async function(){ ' + corpo + ' })()'); for (let i = 0; i < 30; i++) await Promise.resolve(); return J630('__log630'); }
+  finally {
+    run(`pelCadCache=__bk630c.cad; zHojeISO=__bk630c.hz; hojeISO=__bk630c.hj; PELUDINHOS=__bk630c.P; pelAtual=__bk630c.pa; setPelExtra=__bk630c.sp;
+      renovHistGravar=__bk630c.hg; audit=__bk630c.au; zPergunta=__bk630c.zp; zAlertao=__bk630c.za; zFalta=__bk630c.zf; zLimparFalta=__bk630c.zl;
+      renderPelFicha=__bk630c.rf; renderPel=__bk630c.rp; renderDaycare=__bk630c.rd; canEditPel=__bk630c.ce; podePapel=__bk630c.pp;
+      renovRascunho=__bk630c.rr; mmBlocoHTML=__bk630c.mm; DB=__bk630c.db; irParaAbaPlano=__bk630c.ip; planosCfg=__bk630c.pc;`);
+  }
+};
+const EX630 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], sexo: 'Fêmea', renov: renov }, extra || {});
+const GOLD1X630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-05' });
+provaAsync('6.30 P14 — aba Plano no Mês 3 (09/12): sem a faixa amarela, três meses com datas, R$ 359,00 · R$ 589,00 e "Valor do plano: R$ 1.307,00"; ficha antiga 2x com 1 chip continua com a faixa', async () => {
+  const L = await monta630({ ex: EX630(RENOV630()), hoje: '2026-12-09' }, '__log630.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  const h = L.out;
+  assert.ok(!/id="planoIncoerente"/.test(h), 'o "gravado diz 1x" não briga com o Mês 3');
+  assert.ok(/id="planoDiasModo"/.test(h) && /class="on" onclick="renovDiasModoSet\('mudam'\)">Mudam durante o plano/.test(h), 'o modo gravado aparece ligado');
+  ['planoMes_0', 'planoMes_1', 'planoMes_2'].forEach((id) => assert.ok(h.indexOf('id="' + id + '"') >= 0, id));
+  assert.ok(/Mês 1 <span[^>]*>· 05\/10 a 04\/11/.test(h) && /Mês 3 <span[^>]*>· 05\/12 a 31\/12/.test(h), 'as datas de cada mês');
+  assert.ok(/1x · R\$ 359,00/.test(h) && /2x · R\$ 589,00/.test(h), 'o valor da tabela de cada mês');
+  assert.ok(/<strong>Valor do plano: R\$ 1\.307,00<\/strong>/.test(h), 'a soma');
+  assert.ok(/Depois de 31\/12\/2026, se o plano não for renovado, valem os dias do alto da ficha: Seg\./.test(h));
+  assert.ok(!/id="planoAulasSeg"/.test(h), 'o atalho 1x/2x some no modo "Mudam"');
+  const M = await monta630({ ex: EX630({ plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' }), hoje: '2026-12-09' }, '__log630.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok(/O plano gravado diz 2x, mas os dias marcados são 1 \(Seg\)/.test(M.out), 'a faixa antiga segue para o caso antigo');
+  assert.ok(/id="planoAulasSeg"/.test(M.out) && /class="on" onclick="renovDiasModoSet\('iguais'\)"/.test(M.out), 'sem dias por mês: "Iguais" e o atalho de sempre');
+  const T = await monta630({ ex: EX630(Object.assign(RENOV630(), { dias_mes: [['seg'], ['seg']] })), hoje: '2026-12-09' }, '__log630.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok(/id="planoIncoerente"[^>]*>Os dias de cada mês gravados não fecham com o plano/.test(T.out), 'dado torto no banco aparece');
+  const S = await monta630({ ex: EX630({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-10-31' }), hoje: '2026-10-06' }, '__log630.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok(!/planoDiasModo/.test(S.out), 'no plano Mensal a opção não aparece');
+});
+provaAsync('6.30 P15 — ligar "Mudam", marcar a quarta no Mês 3 e Confirmar: o resumo diz cada mês e "Valor do plano: R$ 1.307,00"; grava dias_mes e aulas 1, sem tocar nos chips; nada antes do Confirmar', async () => {
+  const L = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', resp: [true] },
+    `renovDiasModoSet('mudam'); renovMesDiaToggle(2, 'qua');
+     __log630.antes={grav:__log630.grav.length, sujo:renovRascSujo(pelExtra(pelAtual)), tela:blocoPlano(pelExtra(pelAtual), pelAtual)};
+     await confirmarRenovacao();
+     __log630.depois=pelDias(pelAtual, '2026-12-09');`);
+  assert.strictEqual(L.antes.grav, 0, 'tocar nos dias de cada mês não grava'); assert.strictEqual(L.antes.sujo, true);
+  assert.ok(/Valor do plano: R\$ 1\.307,00/.test(L.antes.tela), 'a tela já mostra a soma');
+  assert.strictEqual(L.perg.length, 1); assert.strictEqual(L.perg[0].t, 'CONFIRA ANTES DE GRAVAR');
+  const txt = L.perg[0].l.join(' | ');
+  ['Plano Gold (trimestral) · os dias mudam durante o plano', 'Mês 1 · 05/10/2026 a 04/11/2026 · Seg · 1x · R$ 359,00', 'Mês 2 · 05/11/2026 a 04/12/2026 · Seg · 1x · R$ 359,00',
+    'Mês 3 · 05/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00', 'Início 05/10/2026 · vale até 31/12/2026 · renova em dezembro de 2026', 'Valor do plano: R$ 1.307,00 — pago à vista',
+    'Depois de 31/12/2026, sem renovação: Seg (os dias do alto da ficha)'].forEach((linha) => assert.ok(L.perg[0].l.indexOf(linha) >= 0, linha + ' — ' + txt));
+  assert.ok(!/Mensalidade/.test(txt), 'no modo "Mudam" o resumo não fala em mensalidade de um mês só');
+  assert.strictEqual(L.grav.length, 1); igual(Object.keys(L.grav[0]), ['renov'], 'só o plano — os chips do alto não mudam');
+  const rv = L.grav[0].renov;
+  igual([rv.dias_mes, rv.aulas, rv.fim, 'dias_mes_anterior' in rv], [[['seg'], ['seg'], ['seg', 'qua']], 1, '2026-12-31', false]);
+  igual(L.depois, ['seg', 'qua'], 'gravado, a quarta do Mês 3 já é dela');
+  assert.ok(L.rastro.some((r) => r.acao === 'renovacao' && /dias por mês: Seg \| Seg \| Seg, Qua/.test(r.detalhe) && /valor do plano R\$ 1\.307,00/.test(r.detalhe)), JSON.stringify(L.rastro));
+  assert.ok(L.cartazes.some((c) => c.t === 'PLANO GRAVADO' && /1x · 1x · 2x/.test(c.l.join(' ')) && /R\$ 1\.307,00/.test(c.l.join(' '))));
+  const V = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', resp: [false] }, `renovDiasModoSet('mudam'); renovMesDiaToggle(2, 'qua'); await confirmarRenovacao();`);
+  igual([V.perg.length, V.grav.length, V.hist.length], [1, 0, 0], '"Voltar e conferir" não grava nada');
+  // plano já com dias por mês: mexer SÓ num mês é rascunho à espera do Confirmar; desfazer o toque limpa
+  const W = await monta630({ ex: EX630(RENOV630()), hoje: '2026-10-06' },
+    `var s0=renovRascSujo(pelExtra(pelAtual)); renovMesDiaToggle(1, 'sex'); var s1=renovRascSujo(pelExtra(pelAtual)); renovMesDiaToggle(1, 'sex');
+     __log630.out=[s0, s1, renovRascSujo(pelExtra(pelAtual)), renovEdit(pelExtra(pelAtual)).dias_modo];`);
+  igual(W.out, [false, true, false, 'mudam']);
+});
+provaAsync('6.30 P16 — Confirmar barra: mês sem dia (aponta o Mês 3), os três meses iguais, e mês sem valor na tabela', async () => {
+  const A = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', rasc: { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], []] }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([A.faltas.length, A.faltas[0].el, A.grav.length, A.perg.length], [1, 'planoMes_2', 0, 0]);
+  assert.ok(/Marque pelo menos um dia no Mês 3/.test(A.faltas[0].msg));
+  const B = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', rasc: { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg']] }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([B.faltas[0].el, B.grav.length], ['planoDiasModo', 0]);
+  assert.ok(/Os 3 meses estão com os mesmos dias\. Escolha "Iguais no plano todo"/.test(B.faltas[0].msg), B.faltas[0].msg);
+  const C = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', rasc: { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, resp: [true] },
+    "planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); delete planosCfg.Gold.valores[2]; await confirmarRenovacao();");
+  igual([C.faltas[0].el, C.grav.length], ['planoMes_2', 0]);
+  assert.ok(/a tabela de planos não tem valor para Gold de 2x por semana — confira a tabela comercial/i.test(C.faltas[0].msg), C.faltas[0].msg);
+});
+provaAsync('6.30 P17 — renovação antecipada em 21/12 ("Iguais", Seg): o plano novo não herda os dias por mês; o antigo fica congelado com as datas, e 23/12 e 30/12 continuam quartas dela', async () => {
+  const L = await monta630({ ex: EX630(RENOV630()), hoje: '2026-12-21', rasc: { inicio: '2026-12-21' }, resp: [true] },
+    `__log630.modo=renovEdit(pelExtra(pelAtual)).dias_modo; await confirmarRenovacao();
+     __log630.dias={d23:pelDias(pelAtual,'2026-12-23'), d30:pelDias(pelAtual,'2026-12-30'), j06:pelDias(pelAtual,'2027-01-06'), j04:pelDias(pelAtual,'2027-01-04')};`);
+  igual(L.modo, 'iguais', 'data de pagamento nova não herda "Mudam"');
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.vig_inicio, rv.fim, 'dias_mes' in rv, rv.aulas], ['2026-12-21', '2027-01-01', '2027-03-31', false, 1]);
+  igual(rv.dias_mes_anterior, [{ n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] }, { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] }, { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }]);
+  igual(L.dias, { d23: ['seg', 'qua'], d30: ['seg', 'qua'], j06: ['seg'], j04: ['seg'] });
+  assert.ok(L.perg[0].l.indexOf('Plano Gold (trimestral) · 1x por semana · Seg') >= 0, L.perg[0].l.join(' | '));
+  igual(L.hist.length, 1, 'o plano com dias por mês vai para "Renovações anteriores"');
+  igual(L.hist[0].a.dias_mes, [['seg'], ['seg'], ['seg', 'qua']]);
+  igual(L.perg[0].l.filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026 — a partir de 01/01/2027, vale Seg.'], 'o resumo diz até quando os dias de cada mês continuam valendo');
+  // um plano novo que começa no MEIO do anterior (QA da 6.30, achado 2 — o AC8): antes dele, só o anterior;
+  // na sobreposição, o mês do anterior JUNTO com os dias do plano novo (aqui, a rotina Ter)
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-12-10', fim: '2027-02-28', dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] };
+  igual([J630("renovDiasNaData(__r630, '2026-12-09', ['ter'])"), J630("renovDiasNaData(__r630, '2026-12-16', ['ter'])")], [['seg', 'qua'], ['seg', 'ter', 'qua']]);
+});
+provaAsync('6.30 P18 — Desfazer a renovação devolve o plano anterior com os dias por mês; a quarta 09/12 volta a ser dela', async () => {
+  const novo = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', mesRenov: 'março de 2027',
+    dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] };
+  const ant = Object.assign(RENOV630(), { substituidoEm: 1, por: 'Consultora Teste', motivo: 'renovação' });
+  const L = await monta630({ ex: EX630(novo, { renov_hist: { h1: ant } }), hoje: '2026-12-21', resp: [true] },
+    `await desfazerRenovacao(); __log630.d09=pelDias(pelAtual, '2026-12-09'); __log630.mesmo=renovMesmoPlano(pelExtra(pelAtual).renov, __o630.ex.renov_hist.h1);`);
+  igual(L.perg[0].t, 'DESFAZER A ÚLTIMA RENOVAÇÃO');
+  assert.ok(/^SAI: Gold · 1x · 01\/01\/2027 → 31\/03\/2027/.test(L.perg[0].l[1]) && /^VOLTA: Gold · 1x · 1x · 2x · 05\/10\/2026 → 31\/12\/2026/.test(L.perg[0].l[2]), JSON.stringify(L.perg[0].l));
+  const rv = L.grav[0].renov;
+  igual([rv.plano, rv.inicio, rv.fim, rv.dias_mes, 'dias_mes_anterior' in rv], ['Gold', '2026-10-05', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], false]);
+  igual(L.d09, ['seg', 'qua']);
+  assert.ok(L.rastro.some((r) => r.acao === 'renovacao-desfeita' && /\(1x · 1x · 2x\)/.test(r.detalhe)), JSON.stringify(L.rastro));
+  assert.ok(L.cartazes.some((c) => /com os dias mudando por mês \(1x · 1x · 2x\)/.test(c.l.join(' '))));
+});
+prova('6.30 P19 — "mesmo plano" compara também os dias de cada mês (mudou um mês = vai para o histórico)', () => {
+  ctx.__a630 = RENOV630(); ctx.__b630 = Object.assign(RENOV630(), { dias_mes: [['seg'], ['seg'], ['seg', 'sex']] }); ctx.__c630 = GOLD1X630();
+  igual(run('renovMesmoPlano(__a630, __b630)'), false);
+  igual(run('renovMesmoPlano(__a630, JSON.parse(JSON.stringify(__a630)))'), true);
+  igual(run('renovMesmoPlano(__a630, Object.assign({}, __a630, {quando:"2026-10-07"}))'), true);
+  igual(run('renovMesmoPlano(__c630, Object.assign({}, __c630, {dias_mes:__a630.dias_mes}))'), false, 'virar "Mudam" na mesma data é correção que vai para o histórico');
+  igual(run('renovMesmoPlano(__c630, JSON.parse(JSON.stringify(__c630)))'), true, 'sem dias por mês, o de sempre');
+});
+provaAsync('6.30 P20 — tocar num chip do alto no Mês 3 pergunta antes; "Mudar a rotina" grava Seg + o dia tocado (nunca Seg, Qua + dia); "Ir para a aba Plano" não grava', async () => {
+  const L = await monta630({ ex: EX630(RENOV630()), hoje: '2026-12-09', resp: [true] }, "toggleDiaPel('ter');");
+  igual(L.perg[0].t, 'MUDAR A ROTINA DE DEPOIS DO PLANO?');
+  igual([L.perg[0].op.sim, L.perg[0].op.nao], ['Mudar a rotina', 'Ir para a aba Plano']);
+  igual(L.grav, [{ dias: ['seg', 'ter'], freq: '2x' }]);
+  assert.ok(L.rastro.some((r) => r.acao === 'dias-da-semana' && /Tâmara: dias Seg → Seg, Ter/.test(r.detalhe)), JSON.stringify(L.rastro));
+  const N = await monta630({ ex: EX630(RENOV630()), hoje: '2026-12-09', resp: [false] }, "toggleDiaPel('ter');");
+  igual([N.grav.length, N.irPlano], [0, 1]);
+  const S = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-12-09', resp: [] }, "toggleDiaPel('ter'); __log630.sinc=__log630.grav.length;");
+  igual([S.sinc, S.perg.length], [1, 0], 'sem dias por mês: grava na hora, sem pergunta (o caminho de sempre)');
+  const D = await monta630({ ex: EX630(RENOV630()), hoje: '2026-12-09' }, '__log630.out=diasEditInner(pelAtual);');
+  assert.ok(/id="pelDiasPlanoAviso"[^>]*>Hoje vale o Mês 3 de 3 do plano: Seg, Qua\. Os dias abaixo são a rotina: valem depois do plano \(a partir de 01\/01\/2027\)\./.test(D.out), D.out.slice(0, 400));
+  assert.ok(/<span class="dia on clic"[^>]*>Seg<\/span><span class="dia clic"[^>]*>Ter<\/span><span class="dia clic"[^>]*>Qua<\/span>/.test(D.out) && />1x\/semana</.test(D.out), 'os chips mostram a rotina (Seg, 1x)');
+  const E = await monta630({ ex: EX630(RENOV630()), hoje: '2026-10-20' }, '__log630.out=diasEditInner(pelAtual);');
+  assert.ok(/Hoje vale o Mês 1 de 3 do plano: Seg\. A partir de 05\/12\/2026: Seg, Qua\./.test(E.out), E.out.slice(0, 300));
+  const F = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-20' }, '__log630.out=diasEditInner(pelAtual);');
+  assert.ok(!/pelDiasPlanoAviso/.test(F.out), 'sem dias por mês, sem faixa');
+});
+provaAsync('6.30 P21 — virar avulso leva os dias por mês para o histórico, junto com a vigência', async () => {
+  const L = await monta630({ ex: EX630(Object.assign(RENOV630(), { dias_mes_anterior: [{ n: 3, de: '2026-07-05', ate: '2026-07-31', dias: ['ter'] }] })), hoje: '2026-11-10' }, "await setPelCategoria('avulso');");
+  const rv = L.grav[0].renov;
+  igual([rv.plano, rv.fim, 'dias_mes' in rv, 'dias_mes_anterior' in rv], ['avulso', '', false, false]);
+  igual(L.hist[0].a.dias_mes, [['seg'], ['seg'], ['seg', 'qua']], 'o plano com os dias foi para "Renovações anteriores"');
+});
+prova('6.30 P22 — mensagens ao tutor: "Plano finalizou" fala da rotina ("uma vez por semana, na segunda"); "Renovação confirmada" sai sem a frequência', () => {
+  arma630(RENOV630(), { sexo: 'Fêmea' }, '2026-12-09');
+  try {
+    const fin = run('msgPlanoFinalizou(__t630, pelExtra(__t630))');
+    assert.ok(/Hoje, ela vem uma vez por semana, na segunda, no plano trimestral\./.test(fin), fin);
+    const ren = run('msgRenovado(__t630, pelExtra(__t630))');
+    assert.ok(/O plano trimestral de Day Care da Tâmara foi renovado\./.test(ren) && !/por semana/.test(ren), ren);
+    run('pelCadCache[pelKey(__t630)].renov=' + JSON.stringify(GOLD1X630()) + ';');
+    assert.ok(/da Tâmara, de uma vez por semana, foi renovado/.test(run('msgRenovado(__t630, pelExtra(__t630))')), 'sem dias por mês, a frase de sempre');
+  } finally { solta630(); }
+});
+provaAsync('6.30 P26 — a troca de mês fica na Linha do tempo UMA vez, no 1º dia de Day Care do mês novo (07/12), mesmo de quem não vem nesse dia; 09/12, feriado e fim de semana não registram', async () => {
+  ctx.__q630 = { n: 'Quarta', tutor: 'Outra Teste', raca: 'SRD', dias: ['seg'] };
+  arma630(RENOV630(), null, '2026-12-07');
+  run(`pelCadCache[pelKey(__q630)]={n:'Quarta', tutor:'Outra Teste', dias:['seg'], renov:{plano:'Gold', aulas:1, ordemPet:1, inicio:'2026-10-05', fim:'2026-12-31', dias_mes:[['seg'],['seg'],['qua']]}};
+    PELUDINHOS=[__t630, __q630];
+    __bk630g={D:Date, db:DB, au:audit, td:turmaDeHoje, dv:appDiaVelho, tg:_turmaGravada, fc:__feriadoConferido, fcfg:orcFeriadosCfg};
+    __agora630=0; Date=(function(R){ function F(){ if(arguments.length) return new (Function.prototype.bind.apply(R, [null].concat([].slice.call(arguments))))(); return new R(__agora630); }
+      F.now=function(){ return __agora630; }; F.UTC=R.UTC; F.parse=R.parse; F.prototype=R.prototype; return F; })(Date);
+    turmaDeHoje=function(){ return [{p:__t630}]; }; appDiaVelho=function(){ return false; };
+    __aud630=[]; audit=function(a,d,m){ __aud630.push({acao:a, detalhe:String(d), alvo:(m&&m.alvo)||''}); };`);
+  const roda = async (iso) => {
+    const B = bancoCaminhos({}); ctx.__B = B;
+    run(`DB=__B; _turmaGravada=''; __feriadoConferido={}; __aud630=[]; __agora630=new __bk630g.D('${iso}T10:00:00').getTime();`);
+    await run('gravarTurmaDoDia()'); for (let i = 0; i < 60; i++) await Promise.resolve();
+    return { aud: J630('__aud630').filter((a) => a.acao === 'plano-dias-do-mes'), foto: B.dados['daycare/turma/' + iso] || null };
+  };
+  try {
+    const d07 = await roda('2026-12-07');
+    igual(d07.aud.map((a) => a.detalhe), ['Tâmara: começa hoje o Mês 3 do plano — passa a vir Seg, Qua (era Seg)', 'Quarta: começa hoje o Mês 3 do plano — passa a vir Qua (era Seg)']);
+    igual(d07.foto && d07.foto.mudam_hoje.map((m) => [m.mes, m.dias, m.era]), [[3, ['seg', 'qua'], ['seg']], [3, ['qua'], ['seg']]]);
+    igual(d07.foto.chaves.length, 1, 'a turma do dia continua a de sempre (a Quarta não vem na segunda)');
+    igual((await roda('2026-12-09')).aud.length, 0, 'em 09/12 nada');
+    igual((await roda('2026-12-08')).foto, null, 'feriado: nem fotografia');
+    igual((await roda('2026-12-05')).aud.length, 0, 'sábado: nada');
+    igual((await roda('2026-11-05')).aud.length, 0, 'Mês 2 com os mesmos dias do Mês 1 não é notícia');
+    // outro aparelho gravou primeiro: só ele registra (a transação decide)
+    const B2 = bancoCaminhos({ 'daycare/turma/2026-12-07': { ts: 1, chaves: ['x'] } }); ctx.__B = B2;
+    run("DB=__B; _turmaGravada=''; __feriadoConferido={}; __aud630=[];");
+    await run('gravarTurmaDoDia()'); for (let i = 0; i < 60; i++) await Promise.resolve();
+    igual(J630('__aud630').filter((a) => a.acao === 'plano-dias-do-mes').length, 0, 'segundo aparelho: nenhum rastro repetido');
+    // a função pura: o 1º dia de Day Care do mês novo (mês que começa no feriado 08/12 → 09/12)
+    ctx.__r630 = { plano: 'Gold', inicio: '2026-10-08', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+    igual([run("planoMesComecaHoje(__r630, '2026-12-08')"), J630("planoMesComecaHoje(__r630, '2026-12-09')").n], [null, 3]);
+    igual(run('planoMesComecaHoje(' + JSON.stringify(GOLD1X630()) + ", '2026-12-07')"), null, 'sem dias por mês: nunca');
+  } finally {
+    run('Date=__bk630g.D; DB=__bk630g.db; audit=__bk630g.au; turmaDeHoje=__bk630g.td; appDiaVelho=__bk630g.dv; _turmaGravada=__bk630g.tg; __feriadoConferido=__bk630g.fc; orcFeriadosCfg=__bk630g.fcfg;');
+    solta630();
+  }
+});
+provaAsync('6.30 P27 — Lançamentos do dia: "Reposição" da Tâmara na quarta 09/12 pergunta antes de abater ("já é dia dela no plano"); ficha sem dias por mês segue o caminho de sempre', async () => {
+  const B = bancoCaminhos({}); ctx.__B = B;
+  arma630(RENOV630(), { sexo: 'Fêmea' }, '2026-12-09');
+  run(`__bk630l={R:REPO_CACHE, DB:DB, dd:DASH_DADOS, ds:DASH_DIA_SEL, esp:dashEspelhar, rd:renderDash, au:audit, ze:zEscolha, ab:dashRepAbater, t:DC_DASH_TURMA, pv:pendAvaliarLancamento};
+    REPO_CACHE={}; REPO_CACHE[pelKey(__t630)]={lancamentos:{c1:{tipo:'credito', data:'2026-11-16'}, c2:{tipo:'credito', data:'2026-11-23'}}};
+    DASH_DADOS={}; DASH_DIA_SEL='2026-12-09'; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
+    dashEspelhar=function(){ return Promise.resolve({ok:true}); }; renderDash=function(){}; audit=function(){}; pendAvaliarLancamento=function(){};
+    __esc=[]; zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b}); }; __abat=0; dashRepAbater=function(){ __abat++; return Promise.resolve(true); };
+    DB=__B;`);
+  try {
+    run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    const e = run('__esc[0]');
+    igual(e && e.t, 'Quarta já é dia da Tâmara no plano');
+    assert.ok(/No Mês 3 do plano \(05\/12\/2026 a 31\/12\/2026\), ela vem Seg, Qua\./.test(e.l[0]) && /não gasta saldo de reposição/.test(e.l[1]), JSON.stringify(e.l));
+    igual(J630('__esc[0].b.map(function(x){ return x.t; })'), ['Lançar sem abater', 'Abater mesmo assim', 'Não lançar']);
+    igual(B.escritos, [], 'nada antes de a pessoa escolher');
+    run('__esc[0].b[0].fn()'); await espera();
+    igual(B.escritos.filter((c) => /dashboard\/2026-12-09\/reposicao\//.test(c)).length, 1, 'a planilha recebe');
+    igual(run('__abat'), 0, 'o saldo não desce');
+    // «Abater mesmo assim» segue as checagens de sempre (aqui, com saldo, abate)
+    run('DASH_DADOS={}; __esc=[];'); run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    run('__esc[0].b[1].fn()'); await espera();
+    igual([run('__esc.length'), run('__abat')], [1, 1]);
+    // a quarta do Mês 2 (02/12) não é dela: o caminho de sempre, sem pergunta
+    run("DASH_DADOS={}; __esc=[]; __abat=0; DASH_DIA_SEL='2026-12-02';"); run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    igual([run('__esc.length'), run('__abat')], [0, 1]);
+    // ficha SEM dias por mês, no dia fixo dela: o caminho de sempre (sem a pergunta nova)
+    run(`pelCadCache[pelKey(__t630)].renov=${JSON.stringify(GOLD1X630())}; pelCadCache[pelKey(__t630)].dias=['qua'];
+      DASH_DADOS={}; __esc=[]; __abat=0; DASH_DIA_SEL='2026-12-09';`);
+    run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    igual([run('__esc.length'), run('__abat')], [0, 1]);
+  } finally {
+    run('REPO_CACHE=__bk630l.R; DB=__bk630l.DB; DASH_DADOS=__bk630l.dd; DASH_DIA_SEL=__bk630l.ds; dashEspelhar=__bk630l.esp; renderDash=__bk630l.rd; audit=__bk630l.au; zEscolha=__bk630l.ze; dashRepAbater=__bk630l.ab; DC_DASH_TURMA=__bk630l.t; pendAvaliarLancamento=__bk630l.pv;');
+    solta630();
+  }
+});
+prova('6.30 — o aviso do banho fixo: a quarta só a partir do Mês 3 diz a data; dia que não aparece em mês nenhum avisa como sempre', () => {
+  arma630(RENOV630(), { sexo: 'Fêmea' }, '2026-10-20');
+  run("__bk630b=pelCategoria; pelCategoria=function(){ return 'auluno'; };");
+  try {
+    const qua = run("banhosAvisoDiaSemDaycare(__t630, {ativo:true, dia:'qua'})");
+    assert.ok(/vem ao Day Care na quarta só a partir de 05\/12\/2026 \(Mês 3 do plano\)/.test(qua), qua);
+    const sex = run("banhosAvisoDiaSemDaycare(__t630, {ativo:true, dia:'sex'})");
+    assert.ok(/não vem ao Day Care na sexta \(vem: segunda\)/.test(sex), sex);
+    igual(run("banhosAvisoDiaSemDaycare(__t630, {ativo:true, dia:'seg'})"), '');
+  } finally { run('pelCategoria=__bk630b;'); solta630(); }
+});
+prova('6.30 — a área protegida e as portas antigas: turmaDeHoje idêntica, gravarTurmaDoDia com o mesmo começo, sem "dcDia!==HOJE_DIA", o texto de apoio do Plano intacto', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/function turmaDeHoje\(\)\{\n    if\(typeof turmaDoDia!=='function'\) return \[\];\n    var antes=dcDia;\n    try\{ dcDia=HOJE_DIA; return turmaDoDia\(\); \}/.test(src));
+  assert.ok(!/dcDia!==HOJE_DIA/.test(src));
+  assert.ok(/function blocoPlano\(ex,p\)\{[\s\S]{0,900}?const aulas=nAulasDe\(p\);/.test(src));
+  // o texto de apoio: a 6.37 (QA, F4) trocou o "lá em cima" pelos dias da própria aba — a frase continua uma só
+  assert.ok(/id="planoComoFazer"[\s\S]{0,400}Marque os dias da semana em «Quais dias\?», logo abaixo\. Depois escolha o plano e a data\. Nada é gravado antes do Confirmar\./.test(src));
+  assert.ok(/if\(ant\.dias_mes\) volta\.dias_mes=ant\.dias_mes;/.test(src), 'o Desfazer leva os dias de cada mês');
+});
+// ---- QA independente da 6.30 (Quinn, 06/out/2026) e os ajustes ---------------------------------
+// Dado INVENTADO (a «Tâmara» e fichas de brincadeira). As 15 provas "Q" vêm do QA (quinn-provas.js),
+// cada uma presa a um defeito que escapava; as "QA1".."QA7" são as dos achados corrigidos.
+// Várias fichas no cache do cadastro, gravações e perguntas anotadas — e TUDO volta no fim
+// (o sandbox é o mesmo das outras provas).
+const amb630 = async (fichas, hoje, rasc, corpo, resp) => {
+  ctx.__f630 = JSON.parse(JSON.stringify(fichas)); ctx.__h630 = hoje; ctx.__r630q = rasc || null; ctx.__resp630 = (resp || [true, true, true]).slice();
+  run(`__bk630q={cad:pelCadCache, P:PELUDINHOS, pa:pelAtual, hz:zHojeISO, hj:hojeISO, sp:setPelExtra, hg:renovHistGravar, au:audit, zp:zPergunta,
+      za:zAlertao, zf:zFalta, zl:zLimparFalta, rf:renderPelFicha, rp:renderPel, ce:canEditPel, pp:podePapel, mm:mmBlocoHTML,
+      ra:repAgendaDe, rx:relBaixarXLS, db:DB, rr:renovRascunho, pc:pelCategoria, ge:document.getElementById,
+      osel:ORC_SEL, orep:ORC_REP, ocalc:ORC_CALC, oaul:ORC_AULUNO, ot:ORC_TEMP, oman:ORC_TEMP_MANUAL, oauto:ORC_TEMP_AUTO,
+      orr:orcRenderResultado, orm:orcRenderMsg, ors:orcRenderSel, onc:orcNovoComecou};
+    __log630q={grav:[], perg:[], faltas:[], rastro:[], out:null, xls:null};
+    pelCadCache={}; PELUDINHOS=__f630.map(function(f){ return {n:f.n, tutor:f.tutor, raca:'SRD', dias:(f.pdias||[])}; });
+    __f630.forEach(function(f){ var e=JSON.parse(JSON.stringify(f)); delete e.pdias; pelCadCache[pelKey(f)]=e; });
+    pelAtual=PELUDINHOS[0]; zHojeISO=function(){ return __h630; }; hojeISO=zHojeISO;
+    setPelExtra=function(p,o){ __log630q.grav.push(JSON.parse(JSON.stringify(o))); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(o))); return Promise.resolve({ok:true}); };
+    renovHistGravar=function(){ return Promise.resolve(); }; audit=function(a,d){ __log630q.rastro.push(a+' | '+d); };
+    zPergunta=function(t,l,op){ __log630q.perg.push({t:t, l:l, sim:op&&op.sim, nao:op&&op.nao}); return Promise.resolve(__resp630.length?__resp630.shift():true); };
+    zAlertao=function(){}; zFalta=function(l){ __log630q.faltas.push({el:String(l[0].el), msg:l[0].msg}); return true; }; zLimparFalta=function(){};
+    renderPelFicha=function(){}; renderPel=function(){}; canEditPel=function(){ return true; }; podePapel=function(){ return true; }; mmBlocoHTML=function(){ return ''; };
+    repAgendaDe=function(){ return []; }; relBaixarXLS=function(html){ __log630q.xls=String(html); };
+    DB={ref:function(){ return {remove:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); }}; }};
+    renovRascunho=__r630q?Object.assign({_k:pelKey(pelAtual)}, __r630q):null;`);
+  try { await run('(async function(){ ' + corpo + ' })()'); for (let i = 0; i < 40; i++) await Promise.resolve(); return J630('__log630q'); }
+  finally {
+    run(`pelCadCache=__bk630q.cad; PELUDINHOS=__bk630q.P; pelAtual=__bk630q.pa; zHojeISO=__bk630q.hz; hojeISO=__bk630q.hj; setPelExtra=__bk630q.sp;
+      renovHistGravar=__bk630q.hg; audit=__bk630q.au; zPergunta=__bk630q.zp; zAlertao=__bk630q.za; zFalta=__bk630q.zf; zLimparFalta=__bk630q.zl;
+      renderPelFicha=__bk630q.rf; renderPel=__bk630q.rp; canEditPel=__bk630q.ce; podePapel=__bk630q.pp; mmBlocoHTML=__bk630q.mm;
+      repAgendaDe=__bk630q.ra; relBaixarXLS=__bk630q.rx; DB=__bk630q.db; renovRascunho=__bk630q.rr; pelCategoria=__bk630q.pc; document.getElementById=__bk630q.ge;
+      ORC_SEL=__bk630q.osel; ORC_REP=__bk630q.orep; ORC_CALC=__bk630q.ocalc; ORC_AULUNO=__bk630q.oaul; ORC_TEMP=__bk630q.ot; ORC_TEMP_MANUAL=__bk630q.oman; ORC_TEMP_AUTO=__bk630q.oauto;
+      orcRenderResultado=__bk630q.orr; orcRenderMsg=__bk630q.orm; orcRenderSel=__bk630q.ors; orcNovoComecou=__bk630q.onc;`);
+  }
+};
+const HOPI630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-05', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] });
+const ANT630 = () => [{ n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] }, { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] }, { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }];
+const F630 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], sexo: 'Fêmea', renov }, extra || {});
+const resumo630 = (L) => ((L.perg.find((p) => p.t === 'CONFIRA ANTES DE GRAVAR') || {}).l || []);
+// O Financeiro (6.36) lendo o plano gravado — as funções do bloco 6.36 (o sandbox ctx36), ao centavo.
+const fin630 = (renov, mes) => { const o = res36(dados36(cad36(renov)), mes); return { aReceber: o.aReceberTotal, declarado: o.declaradoTotal, linhas: o.porFILHOt.length, sem: o.semComoCalcular.length }; };
+
+// ---- achado 1 (ALTA): corrigir a data do pagamento não apaga os dias de cada mês -----------------
+provaAsync('6.30 QA1a — corrigir a data 05/10 → 02/10 (erro de digitação): a tela continua em "Mudam"; o resumo diz os três meses a partir de 02/10 e "Valor do plano: R$ 1.307,00"; grava os dias de cada mês; a quarta 09/12 continua dela; o Financeiro dá R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02' },
+    `__log630q.out={modo:renovEdit(pelExtra(pelAtual)).dias_modo, tela:blocoPlano(pelExtra(pelAtual), pelAtual)};
+     await confirmarRenovacao(); __log630q.out.d09=pelDias(pelAtual,'2026-12-09'); __log630q.out.d02=pelDias(pelAtual,'2026-12-02');`);
+  igual(L.out.modo, 'mudam', 'a data corrigida do MESMO plano não volta a tela para "Iguais"');
+  assert.ok(/class="on" onclick="renovDiasModoSet\('mudam'\)"/.test(L.out.tela) && /Mês 1 <span[^>]*>· 02\/10 a 01\/11/.test(L.out.tela) && /Mês 3 <span[^>]*>· 02\/12 a 31\/12/.test(L.out.tela), 'a tela mostra os meses com as datas novas');
+  igual(L.perg.map((p) => p.t), ['CONFIRA ANTES DE GRAVAR'], 'mesmo fim (31/12): é correção, sem pergunta');
+  ['Plano Gold (trimestral) · os dias mudam durante o plano', 'Mês 1 · 02/10/2026 a 01/11/2026 · Seg · 1x · R$ 359,00', 'Mês 2 · 02/11/2026 a 01/12/2026 · Seg · 1x · R$ 359,00',
+    'Mês 3 · 02/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00', 'Início 02/10/2026 · vale até 31/12/2026 · renova em dezembro de 2026', 'Valor do plano: R$ 1.307,00 — pago à vista']
+    .forEach((linha) => assert.ok(resumo630(L).indexOf(linha) >= 0, linha + ' — ' + resumo630(L).join(' | ')));
+  assert.ok(!resumo630(L).some((l) => /deixam de valer|continuam valendo/.test(l)), 'o mesmo plano continua com os dias de cada mês: nada a avisar');
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, rv.dias_mes, rv.aulas, 'dias_mes_anterior' in rv], ['2026-10-02', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], 1, false]);
+  igual([L.out.d09, L.out.d02], [['seg', 'qua'], ['seg', 'qua']], 'a quarta 09/12 continua dela; e a 02/12 também: com o início corrigido, o Mês 3 vai de 02/12 a 31/12');
+  // o Financeiro lê o plano gravado: R$ 1.307,00 em outubro (era R$ 1.077,00 com os dias apagados)
+  igual(fin630(rv, '2026-10'), { aReceber: 130700, declarado: 130700, linhas: 1, sem: 0 });
+  igual(ctx36.finBRL(fin630(rv, '2026-10').aReceber), 'R$ 1.307,00');
+  igual([fin630(rv, '2026-11').aReceber, fin630(rv, '2026-12').aReceber], [0, 0], 'novembro e dezembro: R$ 0,00 (regime de caixa)');
+});
+provaAsync('6.30 QA1b — corrigir 05/10 → 06/10 respondendo "Manter até 31/12/2026 (só corrigi a data)": os dias de cada mês continuam (Mês 1 de 06/10 a 05/11), sem plano anterior congelado; o Financeiro, R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-06' },
+    `__log630q.out={modo:renovEdit(pelExtra(pelAtual)).dias_modo}; await confirmarRenovacao(); __log630q.out.d09=pelDias(pelAtual,'2026-12-09');`, [false, true]);
+  igual(L.out.modo, 'mudam', 'o mesmo fim (31/12): a tela já mostra "Mudam"');
+  igual(L.perg.map((p) => [p.t, p.nao]), [['ESTE PAGAMENTO NÃO ESTENDE O PLANO', 'Manter até 31/12/2026 (só corrigi a data)'], ['CONFIRA ANTES DE GRAVAR', 'Voltar e conferir']]);
+  assert.ok(resumo630(L).indexOf('Mês 1 · 06/10/2026 a 05/11/2026 · Seg · 1x · R$ 359,00') >= 0 && resumo630(L).indexOf('Mês 3 · 06/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00') >= 0
+    && resumo630(L).indexOf('Valor do plano: R$ 1.307,00 — pago à vista') >= 0, resumo630(L).join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.fim, rv.dias_mes, 'dias_mes_anterior' in rv, 'vig_inicio' in rv], ['2026-10-06', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], false, false]);
+  igual(L.out.d09, ['seg', 'qua']);
+  igual(fin630(rv, '2026-10').aReceber, 130700);
+});
+provaAsync('6.30 QA1c — 05/10 → 06/10 respondendo "Começar em 01/01/2027" (pagamento novo): o plano novo não herda os dias por mês; o anterior fica congelado; o resumo diz até quando os dias de cada mês do plano atual continuam valendo', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-06' },
+    `await confirmarRenovacao(); __log630q.out={d09:pelDias(pelAtual,'2026-12-09'), j06:pelDias(pelAtual,'2027-01-06')};`, [true, true]);
+  const l = resumo630(L);
+  assert.ok(l.indexOf('Plano Gold (trimestral) · 1x por semana · Seg') >= 0, 'plano novo: "Iguais" (AC8) — ' + l.join(' | '));
+  assert.ok(l.indexOf('Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026 — a partir de 01/01/2027, vale Seg.') >= 0, l.join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.vig_inicio, rv.fim, 'dias_mes' in rv], ['2027-01-01', '2027-03-31', false]);
+  igual(rv.dias_mes_anterior, ANT630());
+  igual(L.out, { d09: ['seg', 'qua'], j06: ['seg'] });
+});
+provaAsync('6.30 QA1d — correção com "Iguais" escolhido na tela: o resumo diz, numa linha obrigatória, que os dias de cada mês deixam de valer e a partir de quando vale a rotina', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02', dias_modo: 'iguais' }, `await confirmarRenovacao(); __log630q.out=pelDias(pelAtual,'2026-12-09');`);
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) deixam de valer — a partir de 02/10/2026 vale Seg.']);
+  igual(['dias_mes' in L.grav[0].renov, 'dias_mes_anterior' in L.grav[0].renov, L.out], [false, false, ['seg']], 'quem escolheu "Iguais" e confirmou: a rotina');
+  // ficha sem dias por mês: nenhuma linha nova no resumo (o caminho de sempre)
+  const S = await amb630([F630(GOLD1X630())], '2026-10-07', { inicio: '2026-10-02' }, 'await confirmarRenovacao();');
+  igual(resumo630(S).filter((x) => /dias de cada mês/.test(x)), []);
+});
+provaAsync('6.30 QA1e — a regra correção × plano novo (renovEhCorrecao): a resposta da pergunta manda; a mesma data, o mesmo fim e o período que não começa depois do gravado são correção; começar depois e terminar em outro dia é plano novo; e na tela "Mudam" de novo numa data corrigida traz os meses gravados, numa data de renovação começa da rotina', async () => {
+  ctx.__g630 = HOPI630();
+  const C = (c, e) => run('renovEhCorrecao(__g630, ' + JSON.stringify(c) + ", '" + (e || '') + "')");
+  igual([C({ inicio: '2026-10-05', fim: '2026-12-31' }), C({ inicio: '2026-10-06', fim: '2026-12-31' }), C({ inicio: '2026-10-02', fim: '2026-12-31' }),
+    C({ inicio: '2026-09-05', fim: '2026-11-30' }), C({ inicio: '2026-12-10', fim: '2027-02-28' }), C({ inicio: '2026-11-25', vig_inicio: '2026-12-01', fim: '2027-02-28' }),
+    C({ inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31' })], [true, true, true, true, false, false, false]);
+  igual([C({ inicio: '2026-12-10', fim: '2027-02-28' }, 'correcao'), C({ inicio: '2026-10-06', fim: '2026-12-31' }, 'novo')], [true, false], 'a resposta da pessoa manda');
+  igual(run("renovEhCorrecao({}, {inicio:'2026-10-06', fim:'2026-12-31'}, '')"), true, 'sem plano gravado não há plano novo para separar');
+  const A = await amb630([F630(HOPI630())], '2026-10-07', { inicio: '2026-10-02' },
+    "renovDiasModoSet('iguais'); var a=renovEdit(pelExtra(pelAtual)).dias_modo; renovDiasModoSet('mudam'); __log630q.out=[a, renovEdit(pelExtra(pelAtual)).dias_mes];");
+  igual(A.out, ['iguais', [['seg'], ['seg'], ['seg', 'qua']]], 'data corrigida: "Mudam" de novo traz os meses gravados');
+  const B = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' },
+    "var a=renovEdit(pelExtra(pelAtual)).dias_modo; renovDiasModoSet('mudam'); __log630q.out=[a, renovEdit(pelExtra(pelAtual)).dias_mes];");
+  igual(B.out, ['iguais', [['seg'], ['seg'], ['seg']]], 'data de renovação: começa em "Iguais" e, ligando "Mudam", da rotina');
+  // a linha do resumo, pura (renovLinhaMesesDoAtual): plano novo com dias por mês na sobreposição; e o plano gravado que já acabou
+  const R = await amb630([F630(HOPI630())], '2027-03-05', null,
+    `var g=renovDe(pelExtra(pelAtual)); __log630q.out=[renovLinhaMesesDoAtual(g, {inicio:'2026-12-10', fim:'2027-02-28'}, false, true, ['seg']),
+      renovLinhaMesesDoAtual(g, {inicio:'2027-03-05', fim:'2027-05-31'}, false, false, ['seg']), renovLinhaMesesDoAtual(g, {inicio:'2026-10-02', fim:'2026-12-31'}, true, true, ['seg']),
+      renovLinhaMesesDoAtual(${JSON.stringify(GOLD1X630())}, {inicio:'2026-12-10', fim:'2027-02-28'}, false, false, ['seg'])];`);
+  igual(R.out, ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) valeram até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, valem os dias de cada mês do plano novo.',
+    'Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) valeram até 31/12/2026 — a partir de 05/03/2027, vale Seg.', '', ''],
+    'em 05/03/2027 o plano gravado já acabou: "valeram"; a correção que continua com os dias de cada mês e a ficha sem dias por mês não ganham linha');
+});
+provaAsync('6.30 QA1f — "Manter … (só corrigi a data)" com a tela em "Iguais" (Black → Gold, 06/10): a resposta é correção — o Confirmar volta para os dias de cada mês gravados (os 3 primeiros), sem plano anterior congelado', async () => {
+  const BL = { plano: 'Black', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2027-03-31', mesRenov: 'março de 2027', quando: '2026-10-05', dias_mes: [['seg'], ['seg'], ['seg', 'qua'], ['seg'], ['seg'], ['seg']] };
+  const L = await amb630([F630(BL)], '2026-10-07', { inicio: '2026-10-06', plano: 'Gold' }, `__log630q.out=renovEdit(pelExtra(pelAtual)).dias_modo; await confirmarRenovacao();`, [false, true]);
+  igual(L.out, 'iguais', 'na tela, a conta lê plano novo (outro fim)');
+  igual(L.perg.map((p) => p.t), ['ESTE PAGAMENTO NÃO ESTENDE O PLANO', 'CONFIRA ANTES DE GRAVAR']);
+  assert.ok(resumo630(L).indexOf('Plano Gold (trimestral) · os dias mudam durante o plano') >= 0 && resumo630(L).indexOf('Mês 3 · 06/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 589,00') >= 0, resumo630(L).join(' | '));
+  const rv = L.grav[0].renov;
+  igual([rv.plano, rv.dias_mes, 'dias_mes_anterior' in rv], ['Gold', [['seg'], ['seg'], ['seg', 'qua']], false]);
+  // respondendo "Começar em 01/04/2027" (pagamento novo): "Iguais", e os meses do Black continuam até 31/03/2027
+  const N = await amb630([F630(BL)], '2026-10-07', { inicio: '2026-10-06', plano: 'Gold' }, 'await confirmarRenovacao();', [true, true]);
+  igual(['dias_mes' in N.grav[0].renov, N.grav[0].renov.dias_mes_anterior.length], [false, 6]);
+  assert.ok(resumo630(N).indexOf('Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua | Seg | Seg | Seg) continuam valendo até 31/03/2027 — a partir de 01/04/2027, vale Seg.') >= 0, resumo630(N).join(' | '));
+});
+
+// ---- achado 2 (MÉDIA): o AC8 na renovação que começa dentro do plano antigo -----------------------
+provaAsync('6.30 QA2a — caso A: pagamento em 10/12 (o plano novo começa em 10/12, dentro do Mês 3): as quartas 16, 23 e 30/12 continuam dela (o Mês 3 JUNTO com o plano novo); o resumo diz até quando; depois de 31/12, só a rotina', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' },
+    `await confirmarRenovacao(); __log630q.out={}; ['2026-12-02','2026-12-09','2026-12-14','2026-12-16','2026-12-23','2026-12-30','2027-01-04','2027-01-06'].forEach(function(d){ __log630q.out[d]=pelDias(pelAtual,d); });`);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, 'vig_inicio' in rv, rv.fim, 'dias_mes' in rv], ['2026-12-10', false, '2027-02-28', false]);
+  igual(rv.dias_mes_anterior, ANT630());
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, vale Seg.']);
+  igual(L.out, { '2026-12-02': ['seg'], '2026-12-09': ['seg', 'qua'], '2026-12-14': ['seg', 'qua'], '2026-12-16': ['seg', 'qua'], '2026-12-23': ['seg', 'qua'], '2026-12-30': ['seg', 'qua'],
+    '2027-01-04': ['seg'], '2027-01-06': ['seg'] }, 'Mês 2 (até 04/12): Seg; de 05/12 a 31/12 (Mês 3, e de 10/12 junto com o plano novo): Seg, Qua; em 2027, só o plano novo');
+});
+provaAsync('6.30 QA2b — caso A2: pagamento em 25/11 (o plano novo começa em 01/12): 02/12 (Mês 2, Seg) não é quarta dela; 09 e 16/12 são; a Linha do tempo registra em 07/12 "começa hoje o Mês 3 do plano anterior" (e também quando a renovação antecipada vem antes de o último mês começar)', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-11-25', { inicio: '2026-11-25' },
+    `await confirmarRenovacao(); __log630q.out={dias:{}}; ['2026-12-02','2026-12-09','2026-12-16','2026-12-30','2027-01-06'].forEach(function(d){ __log630q.out.dias[d]=pelDias(pelAtual,d); });
+     __log630q.out.m07=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.texto; }); __log630q.out.m09=planoMesQuemMudaHoje('2026-12-09').length;
+     __log630q.out.m01=planoMesQuemMudaHoje('2026-12-01').length;`);
+  const rv = L.grav[0].renov;
+  igual([rv.inicio, rv.vig_inicio, rv.fim], ['2026-11-25', '2026-12-01', '2027-02-28']);
+  igual(resumo630(L).filter((x) => /dias de cada mês do plano atual/.test(x)), ['Os dias de cada mês do plano atual (Seg | Seg | Seg, Qua) continuam valendo até 31/12/2026, junto com os do plano novo — a partir de 01/01/2027, vale Seg.']);
+  igual(L.out.dias, { '2026-12-02': ['seg'], '2026-12-09': ['seg', 'qua'], '2026-12-16': ['seg', 'qua'], '2026-12-30': ['seg', 'qua'], '2027-01-06': ['seg'] });
+  igual(L.out.m07, ['Tâmara: começa hoje o Mês 3 do plano anterior — passa a vir Seg, Qua (era Seg)']);
+  igual([L.out.m09, L.out.m01], [0, 0], 'uma vez só (07/12, o 1º dia de Day Care do Mês 3); o começo do plano novo não é notícia');
+  // último mês curto (pago em 20/10: Mês 3 de 20/12 a 31/12) e renovação antecipada em 17/12, ANTES de o Mês 3
+  // começar (o plano novo só começa em 01/01/2027): o começo do Mês 3 anterior é registrado na segunda 21/12
+  const P20 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-20', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-20', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  const R = await amb630([F630(P20)], '2026-12-17', { inicio: '2026-12-17' },
+    `await confirmarRenovacao(); __log630q.out=[planoMesQuemMudaHoje('2026-12-21').map(function(m){ return m.texto; }), planoMesQuemMudaHoje('2026-12-20').length, pelDias(pelAtual,'2026-12-23'), pelDias(pelAtual,'2027-01-06')];`);
+  igual([R.grav[0].renov.vig_inicio, R.grav[0].renov.dias_mes_anterior.length], ['2027-01-01', 3]);
+  igual(R.out, [['Tâmara: começa hoje o Mês 3 do plano anterior — passa a vir Seg, Qua (era Seg)'], 0, ['seg', 'qua'], ['seg']]);
+});
+prova('6.30 QA2c — a união na sobreposição (a conta pura): rotina Ter → Seg, Ter, Qua; plano novo com dias por mês → os dois juntos; antes do plano novo, só o anterior; depois do fim do anterior, só o novo', () => {
+  ctx.__u630 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-10', fim: '2027-02-28', dias_mes_anterior: ANT630() };
+  igual([J630("renovDiasNaData(__u630, '2026-12-16', ['ter'])"), J630("renovDiasNaData(__u630, '2026-12-16', ['seg'])"), J630("renovDiasNaData(__u630, '2026-12-16')")],
+    [['seg', 'ter', 'qua'], ['seg', 'qua'], ['seg', 'qua']]);
+  igual([J630("renovDiasNaData(__u630, '2026-12-09', ['ter'])"), run("renovDiasNaData(__u630, '2027-01-05', ['ter'])")], [['seg', 'qua'], null], 'antes do plano novo: só o anterior; depois do anterior: a rotina (null)');
+  ctx.__v630 = Object.assign({}, ctx.__u630, { dias_mes: [['ter'], ['ter'], ['ter', 'qui']] });
+  igual([J630("renovDiasNaData(__v630, '2026-12-16', ['sex'])"), J630("renovDiasNaData(__v630, '2027-01-05', ['sex'])"), J630("renovDiasNaData(__v630, '2027-02-11', ['sex'])")],
+    [['seg', 'ter', 'qua'], ['ter'], ['ter', 'qui']], 'com dias por mês no plano novo: o Mês 1 novo (Ter) junto com o Mês 3 anterior');
+  ctx.__w630 = Object.assign({}, ctx.__u630, { fim: '2026-12-20' });
+  igual(J630("renovDiasNaData(__w630, '2026-12-28', ['ter'])"), ['seg', 'qua'], 'depois do fim do plano novo (dado torto): o anterior sozinho');
+  igual(J630("renovMesNaData(__u630, '2026-12-16', ['ter'])"), { total: 3, anterior: true, n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'ter', 'qua'], junto: true });
+  igual(J630("renovMesNaData(__u630, '2026-12-09', ['ter'])").junto, false);
+  // pela porta única: a rotina (os chips do alto) é o plano novo "Iguais"
+  arma630(Object.assign({}, ctx.__u630), { dias: ['ter'] }, '2026-12-16');
+  try {
+    igual([J630('pelDias(__t630)'), J630("pelDias(__t630, '2026-12-15')"), J630("pelDias(__t630, 'rotina')")], [['seg', 'ter', 'qua'], ['seg', 'ter', 'qua'], ['ter']]);
+  } finally { solta630(); }
+});
+provaAsync('6.30 QA2d — na sobreposição, a faixa dos chips, a Turma do dia e a Reposição nos Lançamentos do dia dizem e seguem "junto com o plano atual"', async () => {
+  const A2 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-25', vig_inicio: '2026-12-01', fim: '2027-02-28', dias_mes_anterior: ANT630() };
+  const L = await amb630([F630(A2)], '2026-12-02', null, `__log630q.out=[diasEditInner(pelAtual)]; zHojeISO=function(){ return '2026-12-16'; }; __log630q.out.push(diasEditInner(pelAtual));`);
+  assert.ok(/Hoje vale o Mês 2 de 3 do plano anterior, junto com o plano atual: Seg\. A partir de 05\/12\/2026: Seg, Qua\. Os dias abaixo são a rotina: valem depois do plano \(a partir de 01\/01\/2027\)\./.test(L.out[0]), L.out[0].slice(0, 400));
+  assert.ok(/Hoje vale o Mês 3 de 3 do plano anterior, junto com o plano atual: Seg, Qua\. Os dias abaixo/.test(L.out[1]), L.out[1].slice(0, 400));
+  arma630(A2, { sexo: 'Fêmea' }, '2026-12-09');
+  run(`__bk630t2={rl:repLancamentos, ra:repAgendaDe, te:poTelDoTutor, rs:repSaldo};
+    repLancamentos=function(){ return []; }; repAgendaDe=function(){ return []; }; poTelDoTutor=function(){ return ''; }; repSaldo=function(){ return 0; };`);
+  try {
+    const f = "{pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:0, hoje:'2026-12-09'}";
+    igual(J630("turmaListaDoDia('2026-12-16', " + f + ').vem.map(function(o){ return [o.nome, o.porque]; })'), [['Tâmara', '']], 'a quarta 16/12: fixa do dia');
+    igual(J630("turmaListaDoDia('2026-12-02', " + f + ').vem.length'), 0, 'a quarta 02/12 (Mês 2 anterior, Seg): não');
+    igual(J630("turmaListaDoDia('2027-01-06', " + f + ').vem.length'), 0, 'a quarta 06/01/2027 (só o plano novo, Seg): não');
+  } finally { run('repLancamentos=__bk630t2.rl; repAgendaDe=__bk630t2.ra; poTelDoTutor=__bk630t2.te; repSaldo=__bk630t2.rs;'); solta630(); }
+  const B = bancoCaminhos({}); ctx.__B = B;
+  arma630(A2, { sexo: 'Fêmea' }, '2026-12-16');
+  run(`__bk630l2={R:REPO_CACHE, DB:DB, dd:DASH_DADOS, ds:DASH_DIA_SEL, esp:dashEspelhar, rd:renderDash, au:audit, ze:zEscolha, ab:dashRepAbater, t:DC_DASH_TURMA, pv:pendAvaliarLancamento};
+    REPO_CACHE={}; REPO_CACHE[pelKey(__t630)]={lancamentos:{c1:{tipo:'credito', data:'2026-11-16'}}};
+    DASH_DADOS={}; DASH_DIA_SEL='2026-12-16'; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};
+    dashEspelhar=function(){ return Promise.resolve({ok:true}); }; renderDash=function(){}; audit=function(){}; pendAvaliarLancamento=function(){};
+    __esc=[]; zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b}); }; __abat=0; dashRepAbater=function(){ __abat++; return Promise.resolve(true); };
+    DB=__B;`);
+  try {
+    run("dashLancar('reposicao', 'Tâmara/SRD', 0)"); await espera();
+    const e = run('__esc[0]');
+    igual(e && e.t, 'Quarta já é dia da Tâmara no plano');
+    assert.ok(/No Mês 3 do plano anterior \(05\/12\/2026 a 31\/12\/2026\), junto com o plano atual, ela vem Seg, Qua\./.test(e.l[0]), JSON.stringify(e.l));
+    igual([B.escritos.length, run('__abat')], [0, 0], 'nada antes de a pessoa escolher');
+  } finally {
+    run('REPO_CACHE=__bk630l2.R; DB=__bk630l2.DB; DASH_DADOS=__bk630l2.dd; DASH_DIA_SEL=__bk630l2.ds; dashEspelhar=__bk630l2.esp; renderDash=__bk630l2.rd; audit=__bk630l2.au; zEscolha=__bk630l2.ze; dashRepAbater=__bk630l2.ab; DC_DASH_TURMA=__bk630l2.t; pendAvaliarLancamento=__bk630l2.pv;');
+    solta630();
+  }
+});
+provaAsync('6.30 QA2e — o Financeiro não lê a união: com ou sem o plano anterior congelado, o finResumoMes de out/2026 a fev/2027 é o mesmo, ao centavo; e o Desfazer do caso A devolve a Hopi com os dias de cada mês e R$ 1.307,00 em outubro', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-12-10', { inicio: '2026-12-10' }, 'await confirmarRenovacao();');
+  const com = L.grav[0].renov, sem = Object.assign({}, com); delete sem.dias_mes_anterior;
+  ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02'].forEach((m) => {
+    igual(JSON.stringify(res36(dados36(cad36(com)), m)), JSON.stringify(res36(dados36(cad36(sem)), m)), m);
+  });
+  igual(fin630(com, '2026-12'), { aReceber: 107700, declarado: 107700, linhas: 1, sem: 0 }, 'o plano novo ("Iguais", Gold 1x): R$ 359,00 × 3 = R$ 1.077,00 em dezembro');
+  const D = await amb630([F630(com, { renov_hist: { h1: Object.assign(HOPI630(), { substituidoEm: 1, por: 'Consultora Teste', motivo: 'renovação' }) } })], '2026-12-10', null,
+    "await desfazerRenovacao(); __log630q.out=pelDias(pelAtual,'2026-12-16');");
+  const vv = D.grav[0].renov;
+  igual([vv.inicio, vv.fim, vv.dias_mes, D.out], ['2026-10-05', '2026-12-31', [['seg'], ['seg'], ['seg', 'qua']], ['seg', 'qua']]);
+  igual(fin630(vv, '2026-10').aReceber, 130700, 'o Desfazer devolve R$ 1.307,00 em outubro');
+});
+
+// ---- achados 6 e 7 (BAIXAS) --------------------------------------------------------------------
+provaAsync('6.30 QA6 — o rótulo "os dias mudam por mês do plano" só enquanto existe mês do plano de hoje em diante: em 22/12 sim; em 10/02/2027 (o plano anterior acabou em 31/12) não, no modal de Reposições e no orçamento; a conta noite a noite continua', async () => {
+  const POS = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: ANT630() };
+  const els = { repEscolhido: { style: {}, innerHTML: '' }, repPelResults: { innerHTML: '' }, repPelBusca: { value: '' }, repFormulario: { style: {} }, repWarn: { textContent: '' } };
+  const corpo = `var ge=document.getElementById; document.getElementById=function(id){ return __els630[id]||ge.call(document, id); };
+    repSaldo=function(){ return 0; }; repPelSel=pelAtual; repMostrarEscolhido(); __log630q.out={rep:__els630.repEscolhido.innerHTML,
+      adiante:pelTemMesDoPlanoAdiante(pelAtual), conta:pelTemDiasPorMes(pelAtual),
+      orc:orcPorMesAviso({key:pelKey(pelAtual), porMes:true}), orcSem:orcPorMesAviso({key:pelKey(pelAtual), porMes:false})};`;
+  run('__bk630r={rs:repSaldo, sel:repPelSel};');
+  try {
+    ctx.__els630 = JSON.parse(JSON.stringify(els));
+    const D = await amb630([F630(POS)], '2026-12-22', null, corpo);
+    assert.ok(/vem Seg, Qua \(hoje — os dias mudam por mês do plano\)/.test(D.out.rep), D.out.rep);
+    igual([D.out.adiante, D.out.conta, D.out.orc, D.out.orcSem], [true, true, true, false]);
+    ctx.__els630 = JSON.parse(JSON.stringify(els));
+    const F = await amb630([F630(POS)], '2027-02-10', null, corpo);
+    assert.ok(/vem Seg ·/.test(F.out.rep) && !/os dias mudam por mês do plano/.test(F.out.rep), F.out.rep);
+    igual([F.out.adiante, F.out.conta, F.out.orc], [false, true, false], 'a conta (pelTemDiasPorMes) continua sabendo do plano anterior; o rótulo, não');
+  } finally { run('repSaldo=__bk630r.rs; repPelSel=__bk630r.sel;'); }
+});
+provaAsync('6.30 QA7 — "Mudam" com os chips do alto vazios não grava: aponta os chips (sem eles, depois do plano o FILHOt some da turma); com os chips marcados, grava', async () => {
+  const G = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' };
+  const L = await amb630([F630(G, { dias: [] })], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([L.grav.length, L.perg.length, L.faltas.length, L.faltas[0].el], [0, 0, 1, 'pelDiasEdit']);
+  assert.ok(/Marque os dias da semana lá em cima: são eles que valem depois do plano/.test(L.faltas[0].msg) && /sai da turma quando o plano acabar/.test(L.faltas[0].msg), L.faltas[0].msg);
+  const M = await amb630([F630(G)], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([M.faltas.length, M.grav.length, M.grav[0].renov.dias_mes], [0, 1, [['seg'], ['seg'], ['seg', 'qua']]]);
+  // a ordem: o mês sem dia é apontado antes dos chips
+  const O = await amb630([F630(G, { dias: [] })], '2026-10-06', { dias_modo: 'mudam', dias_mes: [['seg'], [], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual(O.faltas.map((f) => f.el), ['planoMes_1']);
+});
+
+// ---- achado 3: as 15 provas do QA (cada uma morde o defeito que escapava) -------------------------
+provaAsync('6.30 Q2 — correção do mesmo plano: "Iguais" e de volta "Mudam" traz os meses gravados (não a rotina)', async () => {
+  const L = await amb630([F630(HOPI630())], '2026-10-20', null, "renovDiasModoSet('iguais'); renovDiasModoSet('mudam'); __log630q.out=renovEdit(pelExtra(pelAtual)).dias_mes;");
+  igual(L.out, [['seg'], ['seg'], ['seg', 'qua']]);
+});
+provaAsync('6.30 Q4 — ficha INATIVA com plano por mês não entra no registro do mês novo', async () => {
+  const L = await amb630([F630(HOPI630(), { inativo: 'Sim' }), F630(HOPI630(), { n: 'Ativa', tutor: 'Outra Teste' })], '2026-12-07', null, "__log630q.out=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.nome; });");
+  igual(L.out, ['Ativa']);
+});
+provaAsync('6.30 Q5 — renov.aulas gravado = os dias do Mês 1 mesmo quando a rotina é outra (chips Qua, Sex; Mês 1 Seg)', async () => {
+  const L = await amb630([F630({ plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31' }, { dias: ['qua', 'sex'] })], '2026-10-06',
+    { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, 'await confirmarRenovacao();');
+  igual([L.grav.length, L.grav[0].renov.aulas], [1, 1]);
+});
+provaAsync('6.30 Q6 — Desfazer devolve também o plano anterior congelado (dias_mes_anterior) do plano restaurado', async () => {
+  const B = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes: [['ter'], ['ter'], ['ter', 'qui']], dias_mes_anterior: ANT630() };
+  const L = await amb630([F630({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2027-03-20', vig_inicio: '2027-04-01', fim: '2027-06-30' }, { renov_hist: { h1: Object.assign({}, B, { substituidoEm: 1, por: 'x', motivo: 'renovação' }) } })],
+    '2026-12-28', null, "await desfazerRenovacao(); __log630q.out=pelDias(pelAtual, '2026-12-30');");
+  assert.ok(L.grav[0] && L.grav[0].renov.dias_mes_anterior && L.grav[0].renov.dias_mes_anterior.length === 3, JSON.stringify(L.grav));
+  igual(L.out, ['seg', 'qua']);
+});
+provaAsync('6.30 Q7 — aba Plano, 2º peludinho: R$ 333,87 · R$ 333,87 · R$ 547,77 e "Valor do plano: R$ 1.215,51"', async () => {
+  const L = await amb630([F630(Object.assign(HOPI630(), { ordemPet: 2 }))], '2026-10-06', null, '__log630q.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok((L.out.match(/1x · R\$ 333,87/g) || []).length === 2 && /2x · R\$ 547,77/.test(L.out) && /Valor do plano: R\$ 1\.215,51/.test(L.out));
+});
+provaAsync('6.30 Q8 — resumo do Confirmar, 2º peludinho: "Valor do plano: R$ 1.215,51 — pago à vista, com o desconto do 2º peludinho da família em cada mês"', async () => {
+  const L = await amb630([F630(Object.assign(HOPI630(), { ordemPet: 2 }))], '2026-10-06', null, 'await confirmarRenovacao();');
+  const l = resumo630(L);
+  assert.ok(l.indexOf('Mês 3 · 05/12/2026 a 31/12/2026 · Seg, Qua · 2x · R$ 547,77') >= 0 && l.some((x) => /^Valor do plano: R\$ 1\.215,51 — pago à vista, com o desconto do 2º peludinho/.test(x)), JSON.stringify(l));
+});
+provaAsync('6.30 Q11 — tabela de pertences EM BRANCO da quarta, gerada na sexta 04/12 (ainda Mês 2): a quarta 09/12 é do Mês 3 e a Tâmara está; gerada em 30/11, não', async () => {
+  let L = await amb630([F630(HOPI630())], '2026-12-04', null, "relPertencesBranco('qua');");
+  assert.ok(/Tâmara/.test(L.xls || ''), 'deveria listar a Tâmara na quarta 09/12');
+  L = await amb630([F630(HOPI630()), F630({}, { n: 'Fixa', tutor: 'Quarta Teste', dias: ['qua'] })], '2026-11-30', null, "relPertencesBranco('qua');");
+  assert.ok(!/Tâmara/.test(L.xls || '') && /Fixa/.test(L.xls || ''));
+});
+provaAsync('6.30 Q13 — reposição por período com os chips vazios: os dias do plano contam (hoje antes do plano)', async () => {
+  const L = await amb630([F630(HOPI630(), { dias: [] })], '2026-10-01', null, "__log630q.out=repDiasQueViria(pelAtual, '2026-10-05', '2026-10-20');");
+  igual(L.out, ['2026-10-05', '2026-10-12', '2026-10-19']);
+});
+provaAsync('6.30 Q14 — próxima vinda com os chips vazios: o 1º dia do plano (05/10)', async () => {
+  const L = await amb630([F630(HOPI630(), { dias: [] })], '2026-10-01', null, "__log630q.out=proximaVindaDe(pelAtual, '2026-10-01');");
+  igual(L.out, '2026-10-05');
+});
+provaAsync('6.30 Q15 — orçamento: a troca pedida (segunda → terça) vale para quem tem dias por mês', async () => {
+  const els = { orcEntrada: { value: '2026-12-01' }, orcSaida: { value: '2026-12-10' }, orcCardResultado: { style: {} }, orcCardMsg: { style: {} }, orcAvisoData: { innerHTML: '' }, orcTemporada: { innerHTML: '' }, orcTemporadaNota: { innerHTML: '' }, orcResultado: { innerHTML: '' }, orcMsg: { value: '' } };
+  ctx.__els630 = els;
+  const L = await amb630([F630(HOPI630())], '2026-11-20', null, `var ge=document.getElementById; document.getElementById=function(id){ return __els630[id]||ge.call(document, id); };
+    ORC_SEL=[]; ORC_REP={}; ORC_AULUNO=true; ORC_TEMP='baixa'; ORC_TEMP_MANUAL=true; ORC_TEMP_AUTO=false;
+    orcRenderResultado=function(){}; orcRenderMsg=function(){}; orcRenderSel=function(){}; orcNovoComecou=function(){};
+    orcAdd(pelKey(pelAtual)); ORC_SEL[0].trocas={seg:'ter'}; orcCalcular();
+    __log630q.out=ORC_CALC.pets[0].noites.map(function(n){ return n.iso.slice(5)+(n.pernoite?'P':'D'); });`);
+  assert.ok(L.out.indexOf('12-07D') >= 0 && L.out.indexOf('12-08P') >= 0 && L.out.indexOf('12-09P') >= 0, L.out.join(','));
+});
+provaAsync('6.30 Q16 — banho fixo na quarta durante o plano anterior (renovação antecipada): "só depois do plano (a partir de 01/01/2027)"', async () => {
+  const B = { plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg'] }] };
+  const L = await amb630([F630(B, { dias: ['seg', 'qua'] })], '2026-12-22', null, "pelCategoria=function(){ return 'auluno'; }; __log630q.out=banhosAvisoDiaSemDaycare(pelAtual, {ativo:true, dia:'qua'});");
+  assert.ok(/só depois do plano \(a partir de 01\/01\/2027/.test(L.out || ''), L.out);
+});
+prova('6.30 Q18 — âncora no dia 31 ("Manter" em 31/01/2027): 31/01–27/02 · 28/02–30/03 · 31/03–31/03 (soma sempre a partir da âncora)', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2027-01-31', vig_inicio: '2027-01-31', fim: '2027-03-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] };
+  igual(J630('renovMesesDoPlano(__r630).map(function(m){ return m.de+"|"+m.ate; })'), ['2027-01-31|2027-02-27', '2027-02-28|2027-03-30', '2027-03-31|2027-03-31']);
+});
+prova('6.30 Q19 — lista MAIOR que o plano (4 meses num trimestral) é dado torto: sem meses, vale a rotina', () => {
+  ctx.__r630 = { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua'], ['sex']] };
+  igual(J630('renovMesesDoPlano(__r630)'), []);
+});
+provaAsync('6.30 Q20 — só o plano anterior congelado (janela da renovação antecipada): a próxima vinda olha a data (04/01 é segunda, rotina Ter → 05/01)', async () => {
+  const B = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: ANT630() };
+  const L = await amb630([F630(B, { dias: ['ter'] })], '2026-12-30', null, "__log630q.out=[proximaVindaDe(pelAtual, '2026-12-30'), repDiasQueViria(pelAtual, '2026-12-28', '2027-01-08')];");
+  igual(L.out, ['2027-01-05', ['2026-12-28', '2026-12-30', '2027-01-05']]);
+});
+provaAsync('6.30 Q21 — no dia em que o Mês 1 de uma ficha começa, a outra (Mês 3 começando) ainda é registrada', async () => {
+  const L = await amb630([F630({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-07', fim: '2027-02-28', dias_mes: [['ter'], ['ter'], ['ter', 'qui']] }, { n: 'Nova', tutor: 'Começa Teste' }), F630(HOPI630())],
+    '2026-12-07', null, "__log630q.out=planoMesQuemMudaHoje('2026-12-07').map(function(m){ return m.nome+' '+m.mes; });");
+  igual(L.out, ['Tâmara 3']);
+});
+prova('6.30 — QA da 6.36 (N4): o Mês 2 do plano novo igual ao Mês 1 não esconde o Mês 3 do plano ANTERIOR que muda no mesmo dia (07/12: Seg → Seg, Qua)', () => {
+  // plano novo pago em 05/11, dentro do anterior; o Mês 2 dele começa em 05/12 (sábado) igual ao Mês 1, e o
+  // Mês 3 do anterior também começa em 05/12. O 1º dia de Day Care é 07/12: muda de Seg para Seg, Qua.
+  ctx.__r630n4 = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-05', fim: '2027-01-31', dias_mes: [['seg'], ['seg'], ['seg', 'sex']],
+    dias_mes_anterior: [{ n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'] }, { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'] },
+      { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] };
+  igual(J630("planoMesComecaHoje(__r630n4, '2026-12-07', ['seg'])"), { n: 3, total: 3, dias: ['seg', 'qua'], era: ['seg'], de: '2026-12-05', anterior: true });
+  igual(run("planoMesComecaHoje(__r630n4, '2026-12-14', ['seg'])"), null, 'na semana seguinte, nada');
+  // o Mês 3 do plano NOVO (Seg → Seg, Sex) continua registrado pelo laço do plano atual
+  igual(J630("planoMesComecaHoje(__r630n4, '2027-01-05', ['seg'])"), { n: 3, total: 3, dias: ['seg', 'sex'], era: ['seg'], de: '2027-01-05', anterior: false });
+  // e o Mês 2 igual ao Mês 1, sem plano anterior, continua sem notícia
+  ctx.__r630n4b = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-11-05', fim: '2027-01-31', dias_mes: [['seg'], ['seg'], ['seg', 'sex']] };
+  igual(run("planoMesComecaHoje(__r630n4b, '2026-12-07', ['seg'])"), null);
+});
+// @@630-FIM
+// @@636-INI
+console.log('\n6.36 — Financeiro: o plano com dias diferentes em cada mês soma mês a mês (caso da Hopi, Adriana, 05/out/2026)');
+// "Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."
+// Um sandbox PRÓPRIO, na ordem da página: o financeiro-logica.js ANTES do script grande. O sandbox das provas
+// antigas fica sem o financeiro de propósito (as provas assíncronas lá de cima ainda vão rodar nele).
+// Dado INVENTADO: a «Tâmara», da tutora «Viajante Teste» (a mesma ficha-modelo da 6.30). O relógio fica
+// CONGELADO nestas provas: toda conta recebe o "hoje" na mão, e a tela que lê o relógio tem o dela trocado.
+const FIN_SRC36 = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+const ctx36 = vm.createContext(makeSandbox());
+vm.runInContext(FIN_SRC36, ctx36, { filename: 'financeiro-logica.js' });
+vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx36, { filename: 'index.html#script (6.36)', timeout: 15000 });
+const run36 = (c) => vm.runInContext(c, ctx36);
+const J36 = (c) => JSON.parse(JSON.stringify(run36(c)));
+// O Financeiro de ANTES da 6.36: cópia congelada, byte a byte, do arquivo em 6932426 (blob d1207be). É contra
+// ele que o caminho de sempre (fichas sem dias por mês) se prova IGUAL.
+const FIN_ANTES36 = require('./lib/financeiro-logica-antes-6.36.js');
+const FIN_NOVO36 = require('../auaulandia/financeiro-logica.js');
+const CH36 = 'tâmara__viajante teste';
+const HOPI36 = [['seg'], ['seg'], ['seg', 'qua']];
+const renov36 = (extra) => Object.assign({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31',
+  mesRenov: 'dezembro de 2026', quando: '2026-10-06', dias_mes: HOPI36 }, extra || {});
+const ficha36 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], renov: renov }, extra || {});
+// O pacote que as telas do app entregam ao finResumoMes: a tabela EM VIGOR (planos()) e o desconto do plano.
+const dados36 = (cad, extra) => Object.assign({ cadastro: cad, peludinhos: [], irmaos: {}, orcamentos: {}, pagamentos: null,
+  planos: J36('planos()'), descontoIrmao: J36('DESC_PET_PLANO') }, extra || {});
+const res36 = (dados, mes, hoje) => JSON.parse(JSON.stringify(ctx36.finResumoMes(dados, mes, { hoje: hoje || '2026-10-06' })));
+const cad36 = (renov, extra) => { const c = {}; c[CH36] = ficha36(renov, extra); return c; };
+const FORMATO36 = /R\$ (\d{1,3}(\.\d{3})*),\d{2}/;
+// Todo "R$" do texto é seguido do número no formato completo (R$ 1.307,00) — e há pelo menos um.
+const soFormato36 = (txt) => { const t = String(txt); const todos = (t.match(/R\$/g) || []).length;
+  return todos > 0 && todos === (t.match(/R\$(?: |&nbsp;)\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)/g) || []).length; };
+
+prova('6.36 AC1 — a Hopi (Gold, 1º, paga em 05/10/2026): R$ 1.307,00 em outubro, R$ 0,00 em novembro e dezembro (regime de caixa)', () => {
+  const D = dados36(cad36(renov36()));
+  const out = res36(D, '2026-10');
+  igual([out.aReceberTotal, out.declaradoTotal, out.recebidoTotal, out.semComoCalcular.length], [130700, 130700, 0, 0]);
+  igual(out.porFILHOt.length, 1);
+  const L = out.porFILHOt[0];
+  igual([L.chave, L.plano, L.compromisso, L.valor, L.falta, L.pago, L.situacao, L.venceEm], [CH36, 'Gold', 'trimestral', 130700, 130700, 0, 'aberto', '2026-10-05']);
+  igual(L.vigencia, { inicio: '2026-10-05', fim: '2026-12-31' });
+  igual(ctx36.finBRL(L.valor), 'R$ 1.307,00');
+  igual(J36('recQuebra(' + JSON.stringify(out) + ').linhas.trimestral'), { valor: 130700, quantos: 1, deTabela: 0 }, 'Recebimentos do mês: a linha Trimestral');
+  ['2026-11', '2026-12'].forEach((m) => {
+    const r = res36(D, m);
+    igual([r.aReceberTotal, r.declaradoTotal, r.inadimplenciaTotal, r.porFILHOt.length, r.semComoCalcular.length, r.inadimplentes.length], [0, 0, 0, 0, 0, 0], m);
+    igual(ctx36.finBRL(r.aReceberTotal), 'R$ 0,00');
+  });
+  igual(res36(D, '2026-09').porFILHOt.length, 0, 'setembro: nada (o pagamento é de outubro)');
+  // o que a conta de ANTES da 6.36 dizia para a mesma ficha (Mês 1 × 3): R$ 1.077,00 — R$ 230,00 a menos
+  igual(FIN_ANTES36.finResumoMes(D, '2026-10', { hoje: '2026-10-06' }).aReceberTotal, 107700);
+  // "em atraso" é recorte do "a receber": venceu em 05/10 — em 06/10 está em atraso; em 05/10, ainda não
+  igual([out.emAtrasoTotal, res36(D, '2026-10', '2026-10-05').emAtrasoTotal], [130700, 0]);
+  // data vinda da planilha antiga (plano_deduzido): entra no "a receber", NUNCA no "declarado"
+  const ded = res36(dados36(cad36(renov36({ plano_deduzido: true }))), '2026-10');
+  igual([ded.aReceberTotal, ded.declaradoTotal, ded.porFILHOt[0].planoDeduzido], [130700, 0, true]);
+});
+prova('6.36 — meses iguais: a soma mês a mês é a mensalidade × meses do caminho de sempre, ao centavo, com qualquer tabela de desconto', () => {
+  [[{ 2: 7, 3: 12 }, 2], [{ 2: 10, 3: 20 }, 2], [{ 2: 10, 3: 20 }, 3], [{ 2: 10, 3: 20 }, 1]].forEach(([desc, ordem]) => {
+    [['Gold', [['ter', 'qui'], ['ter', 'qui'], ['ter', 'qui']], '2026-12-31'], ['Black', [['seg'], ['seg'], ['seg'], ['seg'], ['seg'], ['seg']], '2027-03-31']].forEach(([plano, dm, fim]) => {
+      const igualMes = res36(dados36(cad36(renov36({ plano: plano, ordemPet: ordem, fim: fim, aulas: dm[0].length, dias_mes: dm })), { descontoIrmao: desc }), '2026-10');
+      const sempre = res36(dados36(cad36(renov36({ plano: plano, ordemPet: ordem, fim: fim, aulas: dm[0].length, dias_mes: null })), { descontoIrmao: desc }), '2026-10');
+      igual(igualMes.porFILHOt[0].valor, sempre.porFILHOt[0].valor, plano + ' ' + ordem + 'º ' + JSON.stringify(desc));
+      igual(igualMes.porFILHOt[0].valor, sempre.porFILHOt[0].mensalidade * dm.length);
+    });
+  });
+  // e o desconto da tabela que a TELA entrega é o que vale (não o de fábrica do Financeiro)
+  igual(res36(dados36(cad36(renov36({ ordemPet: 2 })), { descontoIrmao: { 2: 10, 3: 20 } }), '2026-10').porFILHOt[0].valor, 32310 * 2 + 53010);
+});
+
+prova('6.36 AC2 — ao centavo: Gold 1x, 1x, 2x — 1º R$ 1.307,00 · 2º R$ 1.215,51 · 3º R$ 1.150,16; Black 1x, 1x, 1x, 1x, 2x, 2x, 1º R$ 2.488,00', () => {
+  const casos = [
+    [renov36({ ordemPet: 1 }), 130700, 'R$ 1.307,00', [35900, 35900, 58900]],
+    [renov36({ ordemPet: 2 }), 121551, 'R$ 1.215,51', [33387, 33387, 54777]],
+    [renov36({ ordemPet: 3 }), 115016, 'R$ 1.150,16', [31592, 31592, 51832]],
+    [{ plano: 'Black', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2027-03-31',
+      dias_mes: [['seg'], ['seg'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua']] }, 248800, 'R$ 2.488,00', [33800, 33800, 33800, 33800, 56800, 56800]],
+  ];
+  casos.forEach(([r, total, brl, porMes]) => {
+    const out = res36(dados36(cad36(r)), '2026-10');
+    igual([out.aReceberTotal, out.declaradoTotal, out.porFILHOt[0].valor], [total, total, total], brl);
+    igual(out.porFILHOt[0].valorPorMes, porMes, brl + ' mês a mês');
+    igual(ctx36.finBRL(out.porFILHOt[0].valor), brl);
+    // conferência à mão, fora do app: cada mês arredondado, depois a soma
+    igual(porMes.reduce((a, b) => a + b, 0), total);
+  });
+  // o desconto do Nº na família também vale quando a FAMÍLIA resolve a ordem (sem ordemPet gravado)
+  const cad = cad36(renov36({ ordemPet: undefined }));
+  delete cad[CH36].renov.ordemPet;
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const fam = res36(dados36(cad, { irmaos: { v1: { a: CH36, b: 'zebra__viajante teste' } } }), '2026-10');
+  const t = fam.porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([t.valor, t.ordemPet, t.resolvidoPorFamilia, fam.ordemFamiliaResolvida], [121551, 2, true, 1], 'a família põe a Tâmara em 2º (a Zebra é a 1ª pelo explícito)');
+});
+
+prova('6.36 AC3 — paridade: o valor do plano no Financeiro é o "Valor do plano" da aba Plano (renovValorDoPlano), centavo por centavo, em 120 combinações; e os meses e a validade são os mesmos do app', () => {
+  let semente = 636;
+  const sorte = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
+  const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex'];
+  const umMes = () => { const k = 1 + Math.floor(sorte() * 5); const s = DIAS.slice(); const o = []; while (o.length < k) o.push(s.splice(Math.floor(sorte() * s.length), 1)[0]); return o; };
+  const ordenar = (m) => DIAS.filter((d) => m.indexOf(d) >= 0);
+  // começos de verdade, gravados pela MESMA função do app (aplicarRenovacao): dia comum, dia 31,
+  // fim de fevereiro, fim do mês (o período começa no dia 1º) e começo no meio do mês
+  const comecos = [['2026-10-05', null], ['2026-01-31', null], ['2027-02-28', null], ['2026-09-25', { vigInicio: '2026-10-01' }], ['2026-09-22', { meioMes: true }]];
+  run36("__bk36z=zHojeISO; zHojeISO=function(){ return '2026-10-06'; };");
+  let n = 0;
+  const difs = [];
+  try {
+    ['Gold', 'Black'].forEach((plano) => {
+      const nm = plano === 'Gold' ? 3 : 6;
+      [1, 2, 3].forEach((ordem) => {
+        for (let k = 0; k < 20; k++) {
+          const dm = []; for (let i = 0; i < nm; i++) dm.push(ordenar(umMes()));
+          const [ini, opts] = comecos[k % comecos.length];
+          ctx36.__a36 = [plano, dm[0].length, ini, opts];
+          const r = J36('aplicarRenovacao(__a36[0], __a36[1], __a36[2], __a36[3]||undefined)');
+          if (opts && opts.meioMes) r.meio_mes = { opcao: 2, inicio: ini };
+          r.ordemPet = ordem; r.dias_mes = dm;
+          ctx36.__r36 = r; ctx36.__dm36 = dm; ctx36.__o36 = ordem;
+          const app = J36('renovValorDoPlano(__r36.plano, __dm36, __o36)');
+          const fin = J36('finValorDoPlano(planos(), __r36.plano, __dm36, __o36, DESC_PET_PLANO)');
+          if (JSON.stringify(app) !== JSON.stringify(fin)) difs.push(['valor', plano, ordem, JSON.stringify(dm), app.total, fin.total]);
+          const mApp = J36('renovMesesDoPlano(__r36)'), mFin = J36('finMesesDoPlano(planos(), __r36)');
+          if (JSON.stringify(mApp) !== JSON.stringify(mFin) || mApp.length !== nm) difs.push(['meses', plano, ini, JSON.stringify(mApp), JSON.stringify(mFin)]);
+          if (run36('renovDiasMesValido(__r36)') !== run36('finDiasMesValidos(planos(), __r36)')) difs.push(['validade', plano, ini]);
+          const cad = {}; cad[CH36] = ficha36(r);
+          const out = res36(dados36(cad), ini.slice(0, 7));
+          const linha = out.porFILHOt[0] || {};
+          if (linha.valor !== app.total || out.aReceberTotal !== app.total || !(app.total > 0)) difs.push(['finResumoMes', plano, ordem, ini, linha.valor, app.total]);
+          if (linha.aulasRotulo !== dm.map((m) => m.length + 'x').join(', ')) difs.push(['rótulo', linha.aulasRotulo]);
+          n++;
+        }
+      });
+    });
+  } finally { run36('zHojeISO=__bk36z;'); }
+  igual(difs, [], 'nenhuma diferença');
+  assert.ok(n >= 50, n + ' combinações');
+  igual(n, 120);
+});
+
+prova('6.36 AC3 — paridade no dado torto e no preço com centavos: o mesmo "vale/não vale" do app; o desconto arredondado EM CADA MÊS (nunca no total)', () => {
+  const tortos = [
+    { dias_mes: [['seg'], ['seg']] }, { dias_mes: [['seg'], [], ['seg', 'qua']] }, { dias_mes: [['sab'], ['seg'], ['seg']] },
+    { plano: 'Silver', fim: '2026-10-31', dias_mes: [['seg', 'qua']] }, { fim: '', dias_mes: HOPI36 }, { dias_mes: 'seg,qua' },
+    { dias_mes: { 0: ['seg'], 1: { a: 'seg' }, 2: ['qua', 'seg', 'qua', 'xyz'] } }, { inicio: '2026-13-05', dias_mes: HOPI36 },
+    { fim: '2026-11-15', dias_mes: HOPI36 }, { vig_inicio: '2027-01-01', dias_mes: HOPI36 }, { dias_mes: [['seg'], null, ['qua']] },
+    { meio_mes: { opcao: 1, inicio: '2026-10-05' }, mes_cobranca_1: '2026-11', fim: '2027-01-31', dias_mes: HOPI36 },
+    { meio_mes: { opcao: 1, inicio: '2026-09-05' }, dias_mes: HOPI36 }, { plano: 'Platina', dias_mes: HOPI36 }, { dias_mes: [] },
+  ];
+  tortos.forEach((x, i) => {
+    ctx36.__r36 = renov36(x);
+    igual(J36('finMesesDoPlano(planos(), __r36)'), J36('renovMesesDoPlano(__r36)'), 'caso ' + i);
+    igual(run36('finDiasMesValidos(planos(), __r36)'), run36('renovDiasMesValido(__r36)'), 'caso ' + i);
+  });
+  // preço quebrado (a Gestão grava centavos): o desconto é arredondado EM CADA MÊS — o mesmo do app
+  run36(`__bk36p=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35950; planosCfg.Gold.valores[2]=58950;`);
+  try {
+    ctx36.__dm36 = HOPI36;
+    igual(J36('renovValorDoPlano("Gold", __dm36, 2).total'), 121692);
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 2, DESC_PET_PLANO)'), J36('renovValorDoPlano("Gold", __dm36, 2)'));
+    const out = res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2026-10');
+    // Math.round(35950 × 0,93) = 33.434 (×2) + Math.round(58950 × 0,93) = 54.824 → 121.692; no total seria 121.691
+    igual([out.porFILHOt[0].valor, out.porFILHOt[0].valorPorMes], [121692, [33434, 33434, 54824]]);
+    igual(ctx36.finBRL(121692), 'R$ 1.216,92');
+    // mês sem preço na tabela: as duas contas dizem o mesmo mês que falta, e total R$ 0,00 (nunca pela metade)
+    run36('delete planosCfg.Gold.valores[2];');
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 1, DESC_PET_PLANO)'), J36('renovValorDoPlano("Gold", __dm36, 1)'));
+    igual(J36('finValorDoPlano(planos(), "Gold", __dm36, 1, DESC_PET_PLANO)'), { total: 0, porMes: [{ aulas: 1, valor: 35950 }, { aulas: 1, valor: 35950 }, { aulas: 2, valor: 0 }], falta: 2 });
+  } finally { run36('planosCfg=__bk36p;'); }
+});
+
+prova('6.36 AC4 — a linha da ficha diz os dias e o valor de cada mês ("1x, 1x, 2x"), no Painel da Diretoria e no Lançar pagamento', () => {
+  const out = res36(dados36(cad36(renov36())), '2026-10');
+  const L = out.porFILHOt[0];
+  igual([L.diasPorMes, L.aulasPorMes, L.valorPorMes, L.aulasRotulo], [true, [1, 1, 2], [35900, 35900, 58900], '1x, 1x, 2x']);
+  igual(L.detalheMeses, '1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00');
+  igual(L.mesesDoPlano, [
+    { n: 1, de: '2026-10-05', ate: '2026-11-04', dias: ['seg'], aulas: 1, valor: 35900 },
+    { n: 2, de: '2026-11-05', ate: '2026-12-04', dias: ['seg'], aulas: 1, valor: 35900 },
+    { n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'], aulas: 2, valor: 58900 }]);
+  igual([L.aulas, L.mensalidade], [null, null], 'não existe UMA mensalidade: ninguém multiplica o Mês 1');
+  // Painel da Diretoria › "Maiores valores a receber"
+  const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+  // na TELA, o espaço depois do R$ não quebra a linha (QA da 6.36, N3: "R$⏎359,00" a 375 px)
+  assert.ok(pd.indexOf('plano Gold (trimestral) · dias por mês: 1x, 1x, 2x — R$&nbsp;359,00 + R$&nbsp;359,00 + R$&nbsp;589,00') >= 0, pd.slice(0, 600));
+  assert.ok(pd.indexOf('R$ 1.307,00') >= 0);
+  // Lançar pagamento (fora do menu, código vivo)
+  ctx36.__cad36 = cad36(renov36());
+  run36(`__bk36l={c:pelCadCache, P:PELUDINHOS, s:LP_SEL, k:LP_CACHE, z:zHojeISO};
+    pelCadCache=__cad36; PELUDINHOS=[{n:'Tâmara', tutor:'Viajante Teste', raca:'SRD', dias:['seg']}]; LP_SEL=0;
+    LP_CACHE={quando:1, irm:{}, pag:{}}; zHojeISO=function(){ return '2026-10-06'; };`);
+  try {
+    const lp = run36('lpCobrancaHTML()');
+    assert.ok(/plano Gold \(trimestral\) · dias por mês: 1x, 1x, 2x — R\$&nbsp;359,00 \+ R\$&nbsp;359,00 \+ R\$&nbsp;589,00 · mês 2026-10/.test(lp), lp.slice(0, 700));
+    assert.ok(lp.indexOf('<strong>R$ 1.307,00</strong>') >= 0 && lp.indexOf('Registrar recebimento — R$ 1.307,00') >= 0);
+    assert.ok(lp.indexOf('x por semana') < 0, 'o "Nx por semana" do Mês 1 não aparece no plano que muda por mês');
+    // ficha SEM dias por mês: a linha de sempre ("2x por semana")
+    run36("pelCadCache[" + JSON.stringify(CH36) + "].renov={plano:'Gold', aulas:2, ordemPet:1, inicio:'2026-10-05', fim:'2026-12-31'};");
+    const lp2 = run36('lpCobrancaHTML()');
+    assert.ok(/plano Gold \(trimestral\) · 2x por semana · mês 2026-10/.test(lp2) && lp2.indexOf('dias por mês') < 0, lp2.slice(0, 600));
+  } finally { run36('pelCadCache=__bk36l.c; PELUDINHOS=__bk36l.P; LP_SEL=__bk36l.s; LP_CACHE=__bk36l.k; zHojeISO=__bk36l.z;'); }
+});
+
+prova('6.36 AC5 — vencido sem renovação: o "valor de um mês" é o da ROTINA (os dias do alto da ficha), não o do Mês 1 nem o do último mês', () => {
+  // a Tâmara venceu em 31/12/2026; a rotina dela (chips do alto) é Ter e Qui (2x)
+  const D = dados36(cad36(renov36(), { dias: ['ter', 'qui'] }));
+  const jan = res36(D, '2027-01', '2027-01-10');
+  igual(jan.inadimplentes.length, 1);
+  const v = jan.inadimplentes[0];
+  igual([v.chave, v.venceuEm, v.valorDeUmMes, v.tipo, v.contaEmAReceber, v.pelaRotina], [CH36, '2026-12-31', 58900, 'plano-vencido', false, true]);
+  igual([jan.inadimplenciaTotal, jan.aReceberTotal, jan.semComoCalcular.length], [58900, 0, 0]);
+  igual(FIN_ANTES36.finResumoMes(D, '2027-01', { hoje: '2027-01-10' }).inadimplenciaTotal, 35900, 'antes: o Mês 1 gravado em renov.aulas (1x)');
+  // rotina Seg (1x), 2º da família: R$ 333,87
+  igual(res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2027-02', '2027-02-10').inadimplenciaTotal, 33387);
+  // sem os chips do alto: vale a lista-mestre (peludinhos), como no caminho de sempre
+  const semChips = cad36(renov36()); delete semChips[CH36].dias;
+  igual(res36(dados36(semChips, { peludinhos: [{ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg', 'qua', 'sex'] }] }), '2027-01', '2027-01-10').inadimplenciaTotal, 69900);
+  // sem rotina em lugar nenhum: fora da soma, com o motivo — nunca o Mês 1 no lugar
+  const sem = res36(dados36(semChips), '2027-01', '2027-01-10');
+  igual([sem.inadimplenciaTotal, sem.inadimplentes.length, sem.semComoCalcular.length], [0, 0, 1]);
+  assert.ok(/venceu sem renovação e a ficha não tem os dias da rotina/.test(sem.semComoCalcular[0].motivo), sem.semComoCalcular[0].motivo);
+  // em dezembro (ainda no plano) não há vencido
+  igual(res36(D, '2026-12', '2026-12-20').inadimplentes.length, 0);
+});
+
+prova('6.36 AC6 — dias por mês inválidos vão para "sem como calcular", com o motivo escrito, FORA de toda soma (e o Lançar pagamento diz o motivo)', () => {
+  const tabSem4 = JSON.parse(JSON.stringify(J36('planos()'))); delete tabSem4.Gold.valores[4];
+  const casos = [
+    [{ dias_mes: [['seg'], ['seg']] }, /há dias gravados para 2 meses, mas o plano tem 3 meses/],
+    [{ dias_mes: [['seg'], [], ['seg', 'qua']] }, /o Mês 2 está sem dia da semana válido/],
+    [{ dias_mes: [['seg'], ['seg'], ['sab']] }, /o Mês 3 está sem dia da semana válido/],
+    [{ plano: 'Silver', fim: '2026-10-31', dias_mes: [['seg', 'qua']] }, /plano Silver com dias diferentes em cada mês: só o trimestral e o semestral/],
+    [{ fim: '', dias_mes: HOPI36 }, /as datas dos meses não fecham/],
+    [{ fim: '2026-11-15', dias_mes: HOPI36 }, /as datas dos meses não fecham/],
+    [{ dias_mes: 'seg,qua' }, /não são uma lista de meses/],
+    [{ dias_mes: [['seg'], ['seg'], ['seg', 'ter', 'qua', 'qui']] }, /a tabela de preços não tem valor para Gold com 4 aula\(s\) no Mês 3/, tabSem4],
+  ];
+  casos.forEach(([x, motivo, tab], i) => {
+    const D = dados36(cad36(renov36(x)), tab ? { planos: tab } : null);
+    ['2026-10', '2026-11', '2027-01'].forEach((m) => {
+      const out = res36(D, m, '2027-01-10');
+      igual([out.aReceberTotal, out.declaradoTotal, out.inadimplenciaTotal, out.emAtrasoTotal, out.porFILHOt.length, out.inadimplentes.length],
+        [0, 0, 0, 0, 0, 0], 'caso ' + i + ' em ' + m + ': fora de toda soma');
+      igual(out.semComoCalcular.length, 1, 'caso ' + i);
+      assert.ok(motivo.test(out.semComoCalcular[0].motivo), 'caso ' + i + ': ' + out.semComoCalcular[0].motivo);
+      assert.ok(out.avisos.join(' ').indexOf('ficaram FORA da soma por falta de dado') >= 0);
+      igual(J36('recQuebra(' + JSON.stringify(out) + ')').total, 0);
+    });
+    // o Lançar pagamento não cobra: diz o motivo
+    const cb = J36('lpCobrancaDe(' + JSON.stringify(CH36) + ', ' + JSON.stringify(D) + ', "2026-10-06")');
+    assert.ok(!cb.linha && motivo.test(cb.motivo), JSON.stringify(cb));
+  });
+  // a ficha torta não arrasta as outras: a do lado continua na conta de sempre
+  const cad = cad36(renov36({ dias_mes: [['seg'], ['seg']] }));
+  cad['brisa__teste b'] = { n: 'Brisa', tutor: 'Teste B', dias: ['sex'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const out = res36(dados36(cad), '2026-10');
+  igual([out.aReceberTotal, out.porFILHOt.map((o) => o.chave), out.semComoCalcular.map((o) => o.chave)], [38700, ['brisa__teste b'], [CH36]]);
+});
+
+// O cadastro variado (todo jeito de ficha que a conta conhece) — para provar que o caminho de sempre não mudou.
+function cadastroVariado36(nomes) {
+  let s = 36;
+  const sorte = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  const um = (l) => l[Math.floor(sorte() * l.length)];
+  const cad = {}, irmaos = {}, orc = {}, pag = {};
+  const meses = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
+  nomes.forEach((nm, i) => {
+    const k = (nm + '__tutor ' + (i % 17)).toLowerCase().replace(/[.#$\[\]\/]/g, '-');
+    const plano = um(['Silver', 'Gold', 'Black', 'Silver', 'Gold', 'auaulandia', 'avulso', 'morador', undefined, 'Platina']);
+    const dia = String(1 + Math.floor(sorte() * 28)).padStart(2, '0');
+    const r = { plano: plano };
+    const v = sorte();
+    if (v > 0.08) r.inicio = um(meses) + '-' + dia; else if (v > 0.04) r.inicio = '2026-13-40';
+    if (sorte() > 0.3) r.aulas = um([1, 2, 3, 4, 5, 6, '2', 0]);
+    if (sorte() > 0.4) r.ordemPet = um([1, 2, 3, 4, '2', 0, null]);
+    if (sorte() > 0.5 && r.inicio && /^\d{4}-\d{2}-\d{2}$/.test(r.inicio)) r.fim = um(['2026-08-31', '2026-10-31', '2026-12-31', '2027-01-31', r.inicio]);
+    if (sorte() > 0.85) r.plano_deduzido = true;
+    if (sorte() > 0.9) r.vig_inicio = '2026-10-01';
+    const c = { n: nm, tutor: 'Tutor ' + (i % 17), renov: r };
+    if (sorte() > 0.25) c.dias = ['seg', 'ter', 'qua', 'qui', 'sex'].filter(() => sorte() > 0.6);
+    if (sorte() > 0.93) c.inativo = 'Sim';
+    if (sorte() > 0.95) c.categoria = um(['hospede', 'avulso', 'auluno']);
+    if (sorte() > 0.97) c.renov = null;
+    cad[k] = c;
+    if (i > 0 && sorte() > 0.8) irmaos['v' + i] = { a: k, b: Object.keys(cad)[Math.floor(sorte() * i)] };
+    if (sorte() > 0.85) pag[um(meses)] = Object.assign(pag[um(meses)] || {}, { ['p' + i]: { chave: k, valor_cent: um([38700, 107700, 33387, 5]), data: um(meses) + '-10' } });
+    if (sorte() > 0.9) orc['o' + i] = { status: um(['fechado', 'aguardando', 'cancelado']), total_cent: 90000, parcela1_cent: 45000, parcela2_cent: 45000,
+      entrada: um(meses) + '-15', status_em: Date.UTC(2026, Math.floor(sorte() * 9) + 3, 12, 15), criado_em: Date.UTC(2026, 6, 1, 15), pets: [{ nome: nm }] };
+  });
+  return { cadastro: cad, irmaos: irmaos, orcamentos: orc, pagamentos: pag, peludinhos: nomes.slice(0, 20).map((nm, i) => ({ n: nm, tutor: 'Tutor ' + (i % 17), dias: ['seg', 'qua'] })) };
+}
+const NOMES36 = ['Amora', 'Baque', 'Cacau', 'Duna', 'Faísca', 'Gaia', 'Hércules', 'Íris', 'Jade', 'Kiwi', 'Luna', 'Mel', 'Nino', 'Ônix', 'Paçoca', 'Quindim',
+  'Rubi', 'Sushi', 'Tufo', 'Uva', 'Vento', 'Xodó', 'Yuki', 'Zeca', 'Bolota', 'Caju', 'Dengo', 'Esquilo', 'Fubá', 'Guri', 'Hulk', 'Isca', 'Juju', 'Kika',
+  'Lola', 'Mingau', 'Nescau', 'Oreo', 'Pipoca', 'Quiabo', 'Rabito', 'Sálvia', 'Tico', 'Ursa', 'Valente', 'Wasabi', 'Xerife', 'Yoyo', 'Zuzu', 'Bento',
+  'Chica', 'Dudu', 'Estrela', 'Flor', 'Gordo', 'Hana', 'Ivy', 'Joca', 'Kong', 'Lilo'];
+
+prova('6.36 AC7 — fichas SEM dias por mês: o Financeiro dá EXATAMENTE os mesmos números de antes (60 fichas variadas, 11 meses, 3 "hoje"; a conta inteira, linha por linha)', () => {
+  const D = cadastroVariado36(NOMES36);
+  const difs = [];
+  let linhas = 0;
+  ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'].forEach((m) => {
+    ['', '2026-08-15', '2026-10-06'].forEach((h) => {
+      [null, { planos: J36('planos()'), descontoIrmao: J36('DESC_PET_PLANO') }].forEach((tab) => {
+        const dd = Object.assign({}, D, tab || {});
+        const a = JSON.stringify(FIN_ANTES36.finResumoMes(dd, m, { hoje: h }));
+        const b = JSON.stringify(FIN_NOVO36.finResumoMes(dd, m, { hoje: h }));
+        const c = JSON.stringify(ctx36.finResumoMes(dd, m, { hoje: h }));
+        if (a !== b || a !== c) difs.push(m + ' ' + h);
+        linhas += JSON.parse(a).porFILHOt.length;
+      });
+    });
+  });
+  igual(difs, [], 'nenhum mês diferente');
+  assert.ok(linhas > 100, linhas + ' linhas conferidas');
+  // a conta tem de ter MATÉRIA: linhas de Day Care e de AuAulândia, sem como calcular, vencidos e irmãos
+  const r = FIN_NOVO36.finResumoMes(D, '2026-10', { hoje: '2026-10-06' });
+  assert.ok(r.porFILHOt.some((o) => o.servico === 'daycare') && r.semComoCalcular.length > 0 && r.inadimplentes.length > 0, JSON.stringify([r.porFILHOt.length, r.semComoCalcular.length, r.inadimplentes.length]));
+  // com a Tâmara no meio, as OUTRAS linhas continuam iguais às de antes
+  const comT = Object.assign({}, D, { cadastro: Object.assign({}, D.cadastro, cad36(renov36())) });
+  ['2026-10', '2026-11', '2027-01'].forEach((m) => {
+    const a = FIN_ANTES36.finResumoMes(comT, m, { hoje: '2026-10-06' }), b = FIN_NOVO36.finResumoMes(comT, m, { hoje: '2026-10-06' });
+    const tira = (x) => x.filter((o) => o.chave !== CH36);
+    igual(JSON.parse(JSON.stringify([tira(b.porFILHOt), tira(b.inadimplentes), tira(b.semComoCalcular)])),
+      JSON.parse(JSON.stringify([tira(a.porFILHOt), tira(a.inadimplentes), tira(a.semComoCalcular)])), m);
+  });
+});
+
+prova('6.36 AC8 — "Lançar pagamento" aceita o valor somado mês a mês (R$ 1.307,00) e barra o do Mês 1 × 3; o lançamento quita a cobrança ao centavo', () => {
+  const D = dados36(cad36(renov36()), { pagamentos: {} });
+  ctx36.__d36 = D;
+  const fam = J36('lpCobrancasFamilia(' + JSON.stringify(CH36) + ', __d36, "2026-10-06")');
+  igual([fam.membros.length, fam.membros[0].ref, fam.membros[0].linha.valor, fam.totalValor, fam.totalFalta, fam.abertos], [1, '2026-10', 130700, 130700, 130700, 1]);
+  ctx36.__l36 = fam.membros[0].linha;
+  const reg = J36('lpRegistroDe(__l36, "2026-10", "2026-10-06", "2026-10-06", "pix", "Teste", 1)');
+  assert.ok(!('erro' in reg), JSON.stringify(reg));
+  igual([reg.chave, reg.valor_cent, reg.ref, reg.data, reg.plano, reg.servico], [CH36, 130700, '2026-10', '2026-10-06', 'Gold', 'daycare']);
+  igual(J36('finLancamentoValido(130700, 130700)'), { ok: true });
+  igual(J36('finLancamentoValido(107700, 130700)'), { ok: false, motivo: 'falta R$ 230,00' }, 'o valor do Mês 1 × 3 é barrado');
+  const pago = res36(Object.assign({}, D, { pagamentos: { '2026-10': { x1: reg } } }), '2026-10');
+  igual([pago.recebidoTotal, pago.aReceberTotal, pago.porFILHOt[0].pago, pago.porFILHOt[0].falta, pago.porFILHOt[0].situacao], [130700, 0, 130700, 0, 'pago']);
+  // depois de pago, a tela não oferece de novo
+  ctx36.__d36b = Object.assign({}, D, { pagamentos: { '2026-10': { x1: reg } } });
+  igual(J36('lpCobrancasFamilia(' + JSON.stringify(CH36) + ', __d36b, "2026-10-06").abertos'), 0);
+});
+
+prova('6.36 AC9 — todo valor na tela no formato R$ 1.307,00 (milhar com ponto, decimal com vírgula, centavos sempre)', () => {
+  const casos = [renov36(), renov36({ ordemPet: 2 }), { plano: 'Black', aulas: 1, ordemPet: 3, inicio: '2026-10-05', fim: '2027-03-31',
+    dias_mes: [['seg'], ['seg', 'ter', 'qua', 'qui', 'sex'], ['seg'], ['seg'], ['seg', 'qua'], ['seg', 'qua', 'sex']] }];
+  casos.forEach((r) => {
+    const out = res36(dados36(cad36(r)), '2026-10');
+    const L = out.porFILHOt[0];
+    assert.ok(soFormato36(L.detalheMeses) && (L.detalheMeses.match(/R\$/g) || []).length === L.valorPorMes.length, L.detalheMeses);
+    L.valorPorMes.forEach((v) => assert.ok(L.detalheMeses.indexOf(ctx36.finBRL(v)) >= 0));
+    const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+    assert.ok(soFormato36(pd), (pd.match(/R\$[^<]{0,14}/g) || []).join(' | '));
+  });
+  igual([ctx36.finBRL(130700), ctx36.finBRL(121551), ctx36.finBRL(115016), ctx36.finBRL(248800), ctx36.finBRL(33387), ctx36.finBRL(0)],
+    ['R$ 1.307,00', 'R$ 1.215,51', 'R$ 1.150,16', 'R$ 2.488,00', 'R$ 333,87', 'R$ 0,00']);
+  assert.ok(FORMATO36.test('R$ 1.307,00') && !soFormato36('R$ 1307,00') && !soFormato36('R$ 1.307') && !soFormato36('R$ 1,307.00'));
+});
+
+// ---- QA da 6.36 (Quinn): as provas que faltavam (N2), o ?v= dos arquivos de conta (N1) e o R$ que não quebra (N3)
+prova('6.36 — QA (N2): o desconto arredondado ao centavo MAIS PRÓXIMO em cada mês (nunca para cima, nunca para baixo) — preço R$ 359,10 e R$ 589,10', () => {
+  run36(`__bk36q=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=35910; planosCfg.Gold.valores[2]=58910;`);
+  try {
+    // 2º da família (7%): 35.910 × 0,93 = 33.396,3 → 33.396 (para cima seria 33.397); 58.910 × 0,93 = 54.786,3 → 54.786
+    const out = res36(dados36(cad36(renov36({ ordemPet: 2 }))), '2026-10');
+    igual([out.porFILHOt[0].valorPorMes, out.porFILHOt[0].valor, out.aReceberTotal], [[33396, 33396, 54786], 121578, 121578]);
+    igual(ctx36.finBRL(121578), 'R$ 1.215,78');
+    ctx36.__dm36 = HOPI36;
+    igual(J36('renovValorDoPlano("Gold", __dm36, 2).total'), 121578, 'a aba Plano diz o mesmo');
+    // 3º da família (12%): 35.910 × 0,88 = 31.600,8 → 31.601 (para baixo seria 31.600); 58.910 × 0,88 = 51.840,8 → 51.841
+    igual(res36(dados36(cad36(renov36({ ordemPet: 3 }))), '2026-10').porFILHOt[0].valorPorMes, [31601, 31601, 51841]);
+    igual(J36('renovValorDoPlano("Gold", __dm36, 3).total'), 31601 * 2 + 51841);
+  } finally { run36('planosCfg=__bk36q;'); }
+});
+prova('6.36 — QA (N2): pagamento A MAIS não vira "falta" negativa (o "a receber" das outras fichas fica inteiro) e o "(n)" do Day Care conta o plano por mês', () => {
+  const cad = cad36(renov36());
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const sem = res36(dados36(cad), '2026-10');
+  const zeb = sem.porFILHOt.filter((o) => o.chave === 'zebra__viajante teste')[0];
+  assert.ok(zeb && zeb.valor > 0, JSON.stringify(zeb));
+  igual(res36(dados36(cad36(renov36())), '2026-10').porServico.daycare.quantos, 1, 'só a Tâmara (plano por mês): 1');
+  igual([sem.porServico.daycare.quantos, sem.aReceberTotal], [2, 130700 + zeb.valor], 'a Tâmara e a Zebra');
+  // a Tâmara pagou R$ 1.400,00 (R$ 93,00 a mais): falta R$ 0,00 — nunca -R$ 93,00 tirado do "a receber" da Zebra
+  const pag = { '2026-10': { x1: { chave: CH36, valor_cent: 140000, ref: '2026-10', data: '2026-10-06', servico: 'daycare', plano: 'Gold' } } };
+  const mais = res36(dados36(cad, { pagamentos: pag }), '2026-10');
+  const T = mais.porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([T.pago, T.falta, T.situacao], [140000, 0, 'pago']);
+  igual([mais.aReceberTotal, mais.porServico.daycare.aReceber, mais.emAtrasoTotal, mais.porServico.daycare.quantos], [zeb.valor, zeb.valor, zeb.valor, 2]);
+});
+prova('6.36 — QA (N2): começou no meio do mês SEM o mês da 1ª cobrança gravado: a âncora é o dia 1º do mês seguinte ao pagamento (o mesmo do app)', () => {
+  const r = renov36({ meio_mes: { opcao: 1, inicio: '2026-10-05' }, fim: '2027-01-31' });
+  ctx36.__r36m = r;
+  const meses = J36('finMesesDoPlano(planos(), __r36m)').map((m) => m.de + '|' + m.ate);
+  igual(meses, ['2026-10-05|2026-11-30', '2026-12-01|2026-12-31', '2027-01-01|2027-01-31']);
+  igual(J36('finMesesDoPlano(planos(), __r36m)'), J36('renovMesesDoPlano(__r36m)'), 'a aba Plano diz o mesmo');
+  const L = res36(dados36(cad36(r)), '2026-10').porFILHOt[0];
+  igual([L.mesesDoPlano.map((m) => m.de + '|' + m.ate), L.vigencia, L.valor], [meses, { inicio: '2026-10-05', fim: '2027-01-31' }, 130700]);
+});
+prova('6.36 — QA (N2): Nº na família gravado e torto (0), numa família: a MESMA regra do caminho de sempre (vale o gravado; a família não passa por cima)', () => {
+  const cad = cad36(renov36({ ordemPet: 0 }));
+  cad['zebra__viajante teste'] = { n: 'Zebra', tutor: 'Viajante Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31' } };
+  const irm = { irmaos: { v1: { a: CH36, b: 'zebra__viajante teste' } } };
+  igual(J36('finOrdensFamilia(' + JSON.stringify(cad) + ', ' + JSON.stringify(irm.irmaos) + ')')[CH36], 2, 'a família, sozinha, diria 2º');
+  const porMes = res36(dados36(cad, irm), '2026-10').porFILHOt.filter((o) => o.chave === CH36)[0];
+  const cad2 = JSON.parse(JSON.stringify(cad)); cad2[CH36].renov.dias_mes = null;
+  const sempre = res36(dados36(cad2, irm), '2026-10').porFILHOt.filter((o) => o.chave === CH36)[0];
+  igual([porMes.valorPorMes[0], sempre.mensalidade], [35900, 35900], 'o Mês 1 (1x) = a mensalidade do caminho de sempre para a mesma ficha');
+  igual(porMes.valor, 130700);
+});
+prova('6.36 — QA (N1): os arquivos de conta carregam com ?v= igual à APP_VERSAO (o index novo nunca roda com o Financeiro velho guardado no aparelho)', () => {
+  const html = fs.readFileSync(APP, 'utf8');
+  const ver = (/const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html) || [])[1];
+  assert.ok(ver, 'sem APP_VERSAO');
+  ['resposta-tutor.js', 'painel-logica.js', 'financeiro-logica.js'].forEach((f) =>
+    assert.ok(html.indexOf('<script src="' + f + '?v=' + ver + '"></script>') > 0, f + ' sem ?v=' + ver));
+  igual((html.match(/<script src="(?!https?:)/g) || []).length, 3, 'nenhum outro arquivo de fora sem o ?v=');
+  // a ordem continua: os três antes do script grande
+  assert.ok(html.indexOf('<script src="financeiro-logica.js?v=') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
+});
+prova('6.36 — QA (N3): na tela, "R$ 359,00" não quebra no meio (espaço que não quebra depois do R$); a troca muda só esse espaço', () => {
+  igual(run36("brlSemQuebra('1x, 1x, 2x — R$ 359,00 + R$ 359,00 + R$ 589,00')"), '1x, 1x, 2x — R$&nbsp;359,00 + R$&nbsp;359,00 + R$&nbsp;589,00');
+  igual([run36('brlSemQuebra(null)'), run36("brlSemQuebra('plano Gold (trimestral)')"), run36("brlSemQuebra('-R$ 240,00 · R$ x')")], ['', 'plano Gold (trimestral)', '-R$&nbsp;240,00 · R$ x']);
+  const out = res36(dados36(cad36(renov36())), '2026-10');
+  const pd = run36('pdirFinHTML(' + JSON.stringify(out) + ', false, "outubro de 2026")');
+  assert.ok(!/R\$ \d{1,3}(?:\.\d{3})*,\d{2} \+/.test(pd) && !/\+ R\$ \d/.test(pd), 'nenhum R$ quebrável dentro do detalhe dos meses');
+});
+prova('6.36 — o arquivo do dinheiro continua ES5 (roda no tablet velho) e o caminho de sempre está no texto, intocado', () => {
+  assert.ok(!/=>|\bconst\b|\blet\b|`|Object\.assign|\.find\(/.test(FIN_SRC36.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'nada de ES6 fora dos comentários');
+  // o caminho de sempre: a conta de hoje continua lá, linha por linha
+  ['    aulas = finAulasDe(k, cadastro, peludinhos);', '    valorMes = entra ? mensal * (meses || 1) : 0;',
+    '        R.porServico.daycare.declarado += mensal * (meses || 1);', '        valorDeUmMes: mensal,']
+    .forEach((l) => assert.ok(FIN_SRC36.indexOf(l + '\n') > 0, l));
+  // a porta do plano com dias por mês fica ANTES da conta de sempre e sai dela com continue
+  assert.ok(/    if \(r\.dias_mes\) \{\n      finResumoDiasMes\(R, k, c, r, \{[\s\S]{0,260}\}\);\n      continue;\n    \}\n    aulas = finAulasDe/.test(FIN_SRC36));
+});
+// @@636-FIM
+// ================================================================== 6.37 — o "2x" da aba Plano marca os dias ali mesmo
+console.log('\n6.37 — Aba Plano: os dias da semana logo abaixo do "2x" (Adriana, 06/out/2026, Fred)');
+prova('6.37 a aba Plano mostra os dias (os mesmos chips do alto, maiores); o "2x" com 1 dia diz quantos faltam e aponta os dias da aba; tocar no dia grava pela porta de sempre e o 2x acende', () => {
+  run(`__bk637={pa:pelAtual, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, zf:zFalta, au:audit, rp:renderPel, rd:(typeof renderDaycare==='function'?renderDaycare:null), r:document.body.dataset.role, P:PELUDINHOS};
+    PELUDINHOS=[{n:'Fred', raca:'SRD', tutor:'Eleonora Teste'}]; pelAtual=PELUDINHOS[0];
+    __ex637={dias:['ter'], renov:{plano:'Gold', inicio:'2026-10-06', fim:'2026-12-31', aulas:1}}; pelExtra=function(){ return __ex637; };
+    __gr637=[]; setPelExtra=function(p,patch){ __gr637.push(JSON.parse(JSON.stringify(patch))); Object.assign(__ex637, patch); };
+    __zf637=[]; zFalta=function(l){ __zf637.push(l[0]); }; audit=function(){}; renderPel=function(){}; renderDaycare=function(){};
+    __chips637={}; document.getElementById=function(id){ return id==='planoDiasChips'?__chips637:null; };
+    document.body.dataset.role='consultora';`);
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    const box = h.slice(h.indexOf('id="planoDiasChips"'), h.indexOf('</div>', h.indexOf('id="planoDiasChips"')));
+    assert.ok(box.length > 0, 'os dias aparecem na aba Plano');
+    igual((box.match(/<span class="dia/g) || []).length, 5, 'Seg a Sex');
+    assert.ok(/class="dia on clic" style="[^"]*min-height:44px[^"]*" onclick="toggleDiaPel\('ter', false, 'plano'\)">Ter</.test(box), 'a terça acesa, tocável, maior (44 px)');
+    assert.ok(/class="dia clic"[^>]*onclick="toggleDiaPel\('qua', false, 'plano'\)">Qua</.test(box), 'a quarta apagada, tocável');
+    assert.ok(/Toque nos dias para trocar: são os mesmos do alto da ficha\./.test(h));
+    // o "2x" com 1 dia marcado: diz quantos faltam e aponta os dias da aba; nada é gravado
+    run('setRenovAulas(2)');
+    igual(run('__gr637.length'), 0, 'o 2x sozinho não grava');
+    igual(run('__zf637[0].el'), 'planoDiasChips', 'aponta os dias da própria aba');
+    assert.ok(/^Para 2x, marque mais 1 dia aqui embaixo \(hoje está marcado Ter\)\./.test(run('__zf637[0].msg')), run('__zf637[0].msg'));
+    // tocar na quarta: grava pela porta de sempre (toggleDiaPel), e o seletor acende o 2x
+    run("toggleDiaPel('qua')");
+    igual(run('__gr637[0]'), { dias: ['ter', 'qua'], freq: '2x' });
+    assert.ok(/<button type="button" class="on" onclick="setRenovAulas\(2\)">2x<\/button>/.test(run('blocoPlano(pelExtra(pelAtual), pelAtual)')), 'o 2x acende');
+    // pedir menos do que está marcado: diz quantos desmarcar
+    run('__zf637=[]; setRenovAulas(1)');
+    assert.ok(/^Para 1x, desmarque 1 dia aqui embaixo \(hoje estão marcados Ter, Qua\)\./.test(run('__zf637[0].msg')), run('__zf637[0].msg'));
+    // sem a aba Plano na tela, aponta os chips do alto (como antes)
+    run("__zf637=[]; document.getElementById=function(){ return null; }; setRenovAulas(3)");
+    igual(run('__zf637[0].el'), 'pelDiasEdit');
+    // quem não edita a ficha vê os dias, sem tocar
+    run("document.body.dataset.role='monitor';");
+    const hm = run('planoDiasChipsHTML(pelAtual)');
+    assert.ok(hm.indexOf('onclick') < 0 && /class="dia on"/.test(hm), 'monitor: só vê');
+  } finally { run(`pelAtual=__bk637.pa; pelExtra=__bk637.pe; setPelExtra=__bk637.sp; document.getElementById=__bk637.ge; zFalta=__bk637.zf; audit=__bk637.au; renderPel=__bk637.rp;
+    if(__bk637.rd) renderDaycare=__bk637.rd; document.body.dataset.role=__bk637.r; PELUDINHOS=__bk637.P;`); }
+});
+
+// ---- QA da 6.37 (Quinn): o redesenho na hora (F1), as lacunas de prova (F2), o layout (F3),
+// o texto que apontava "lá em cima" (F4), a pergunta vinda da própria aba (F5) e o zero dia (F6).
+const amb637 = (ex, extra) => run(`__bk637q={pa:pelAtual, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, zf:zFalta, au:audit, rp:renderPel,
+    rd:(typeof renderDaycare==='function'?renderDaycare:null), r:document.body.dataset.role, P:PELUDINHOS, cc:pelCadCache, lg:localStorage.getItem, ls:localStorage.setItem,
+    zp:zPergunta, dm:renovDiasModoSet, ia:irParaAbaPlano, hz:zHojeISO, rr:renovRascunho, za:(typeof zAlertao==='function'?zAlertao:null)};
+  PELUDINHOS=[{n:'Fred', raca:'SRD', tutor:'Eleonora Teste'}]; pelAtual=PELUDINHOS[0]; renovRascunho=null;
+  __ls637={}; localStorage.getItem=function(k){ return Object.prototype.hasOwnProperty.call(__ls637,k)?__ls637[k]:null; }; localStorage.setItem=function(k,v){ __ls637[k]=String(v); };
+  pelExtra=__bk637q.pe; pelCadCache={}; pelCadCache[pelKey(pelAtual)]=JSON.parse(${JSON.stringify(JSON.stringify(ex))});
+  /* a gravação de verdade escreve a cópia local e o banco; o ouvinte do banco só troca o pelCadCache ~90 ms depois */
+  __gr637q=[]; setPelExtra=function(p,patch){ __gr637q.push(JSON.parse(JSON.stringify(patch))); var k='zeluz_pel_'+pelKey(p);
+    var o=JSON.parse(localStorage.getItem(k)||'{}'); Object.assign(o,patch); localStorage.setItem(k, JSON.stringify(o)); return Promise.resolve({ok:true}); };
+  __zf637q=[]; zFalta=function(l){ __zf637q.push(l[0]); }; __au637q=[]; audit=function(a,d){ __au637q.push([a,d]); }; renderPel=function(){}; renderDaycare=function(){};
+  zHojeISO=function(){ return '2026-10-06'; };
+  __box637q={outer:null}; __el637q={planoBloco:{set outerHTML(v){ __box637q.outer=v; }}, planoDiasChips:{}};
+  document.getElementById=function(id){ return __el637q[id]||null; };
+  document.body.dataset.role='consultora'; ${extra || ''}`);
+const solta637 = () => run(`pelAtual=__bk637q.pa; pelExtra=__bk637q.pe; setPelExtra=__bk637q.sp; document.getElementById=__bk637q.ge; zFalta=__bk637q.zf; audit=__bk637q.au;
+  renderPel=__bk637q.rp; if(__bk637q.rd) renderDaycare=__bk637q.rd; document.body.dataset.role=__bk637q.r; PELUDINHOS=__bk637q.P; pelCadCache=__bk637q.cc;
+  localStorage.getItem=__bk637q.lg; localStorage.setItem=__bk637q.ls; zPergunta=__bk637q.zp; renovDiasModoSet=__bk637q.dm; irParaAbaPlano=__bk637q.ia; zHojeISO=__bk637q.hz; renovRascunho=__bk637q.rr;`);
+const FRED637 = { n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x', renov: { plano: 'Gold', inicio: '2026-10-06', fim: '2026-12-31', aulas: 1, ordemPet: 1 } };
+const seg637 = (h) => { const i = h.indexOf('id="planoAulasSeg"'); return h.slice(i, h.indexOf('</div>', i)); };
+const chips637 = (h) => { const i = h.indexOf('id="planoDiasChips"'); return h.slice(i, h.indexOf('</div>', i)); };
+prova('6.37 QA (F1/F2) — tocar na quarta da aba: o bloco Plano é redesenhado NA HORA com Ter e Qua e o 2x aceso (o cadastro em memória acompanha); um segundo toque rápido desfaz', () => {
+  amb637(FRED637);
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    igual(run('__gr637q[0]'), { dias: ['ter', 'qua'], freq: '2x' }, 'grava pela porta de sempre');
+    igual(J630('pelCadCache[pelKey(pelAtual)].dias'), ['ter', 'qua'], 'o cadastro em memória já tem os dias novos, sem esperar o ouvinte');
+    const h = run('__box637q.outer');
+    assert.ok(typeof h === 'string' && h.indexOf('id="planoBloco"') >= 0, 'o bloco Plano foi redesenhado');
+    igual((seg637(h).match(/class="on"/g) || []).length, 1, 'um número aceso só');
+    assert.ok(/class="on" onclick="setRenovAulas\(2\)">2x/.test(seg637(h)), seg637(h));
+    assert.ok(/class="dia on clic"[^>]*>Ter<[\s\S]*class="dia on clic"[^>]*>Qua</.test(chips637(h)), 'Ter e Qua acesas no redesenho');
+    igual(run('__au637q.filter(function(a){ return a[0]==="dias-da-semana"; }).map(function(a){ return a[1]; })'), ['Fred: dias Ter → Ter, Qua'], 'o rastro de sempre');
+    // toque duplo (15 ms, antes do ouvinte): parte da lista NOVA e desmarca a quarta
+    run("toggleDiaPel('qua', false, 'plano')");
+    igual(run('__gr637q[1]'), { dias: ['ter'], freq: '1x' });
+    assert.ok(/class="on" onclick="setRenovAulas\(1\)">1x/.test(seg637(run('__box637q.outer'))), 'de volta ao 1x');
+    // ficha que ainda não está no cadastro em memória (só a cópia local): nada é inventado no cache
+    run("pelCadCache={}; toggleDiaPel('sex')");
+    igual(run('Object.keys(pelCadCache).length'), 0);
+  } finally { solta637(); }
+});
+prova('6.37 QA (F2/F3) — os dias da aba na ordem Seg a Sex, numa grade de 5 (os 5 numa linha a 375 px), com 44 px de toque', () => {
+  amb637(Object.assign({}, FRED637, { dias: ['sex', 'seg', 'qua'] }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    igual((chips637(h).match(/>(Seg|Ter|Qua|Qui|Sex)</g) || []).map((x) => x.slice(1, -1)), ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']);
+    assert.ok(/id="planoDiasChips" style="display:grid;grid-template-columns:repeat\(5,1fr\)/.test(h), 'grade de 5');
+    igual((chips637(h).match(/min-height:44px/g) || []).length, 5);
+    igual((seg637(h).match(/class="on"/g) || []).length, 1, 'um número aceso só (3x)');
+    assert.ok(/class="on" onclick="setRenovAulas\(3\)">3x/.test(seg637(h)));
+  } finally { solta637(); }
+});
+prova('6.37 QA (F2) — plano com dias por mês e "Iguais": os dias da aba são a ROTINA (iguais aos do alto), não os do Mês 1 de hoje', () => {
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } });
+  try {
+    igual(run("pelDias(pelAtual).join(',')"), 'seg', 'hoje (Mês 1) vale Seg');
+    const aba = run('planoDiasChipsHTML(pelAtual)'), alto = run('diasEditInner(pelAtual)');
+    igual((aba.match(/class="dia on[^"]*"[^>]*>(\w+)</g) || []).map((x) => /> *(\w+)<$/.exec(x)[1]), ['Ter'], 'a aba: Ter (a rotina)');
+    igual((alto.match(/class="dia on[^"]*"[^>]*>(\w+)</g) || []).map((x) => /> *(\w+)<$/.exec(x)[1]), ['Ter'], 'o alto: Ter');
+  } finally { solta637(); }
+});
+provaAsync('6.37 QA (F5) — toque na aba com plano por mês correndo: a pergunta fala de «Quais dias?» e oferece «Mudam durante o plano» (não "Ir para a aba Plano", onde a pessoa já está)', async () => {
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } },
+    "__zp637q=[]; zPergunta=function(t,l,o){ __zp637q.push({t:t,l:l,o:o}); return Promise.resolve(false); }; __dm637q=[]; renovDiasModoSet=function(m){ __dm637q.push(m); }; __ia637q=0; irParaAbaPlano=function(){ __ia637q++; };");
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual([q.t, q.o.sim, q.o.nao], ['MUDAR A ROTINA DE DEPOIS DO PLANO?', 'Mudar a rotina', 'Mudam durante o plano']);
+    assert.ok(/^Os dias de «Quais dias\?» valem depois do plano \(a partir de 01\/01\/2027\)\./.test(q.l[0]) && /escolha «Mudam durante o plano», aqui na aba\./.test(q.l[1]), JSON.stringify(q.l));
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [['mudam'], 0, 0], 'vai para "Mudam", sem gravar e sem pular de aba');
+    // o toque no ALTO da ficha continua como antes
+    run("__zp637q=[]; toggleDiaPel('qua')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q2 = J630('__zp637q[0]');
+    igual([q2.o.nao, run('__ia637q')], ['Ir para a aba Plano', 1]);
+    assert.ok(/^Os dias do alto da ficha valem depois do plano/.test(q2.l[0]));
+  } finally { solta637(); }
+});
+prova('6.37 QA (F4/F6) — o texto aponta «Quais dias?» (não "lá em cima"); zero dia marcado: nenhum número aceso e a mensalidade pede os dias', () => {
+  amb637(Object.assign({}, FRED637, { renov: Object.assign({}, FRED637.renov, { aulas: 2 }) }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/id="planoComoFazer"[^>]*>Marque os dias da semana em «Quais dias\?», logo abaixo\./.test(h));
+    assert.ok(/O plano gravado diz 2x, mas os dias marcados são 1 \(Ter\)\. Confira os dias em <strong>Quais dias\?<\/strong>, logo abaixo/.test(h), 'a faixa do caso do Fred aponta a aba');
+    assert.ok(h.indexOf('lá em cima') < 0, 'nenhum "lá em cima" no bloco Plano');
+    run("pelCadCache[pelKey(pelAtual)].dias=[];");
+    const z = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    igual((seg637(z).match(/class="on"/g) || []).length, 0, 'nenhum número aceso');
+    assert.ok(/Mensalidade<\/label><div class="prev-calc">marque os dias em «Quais dias\?»</.test(z), 'a mensalidade pede os dias');
+    assert.ok(/Hoje: nenhum dia marcado\./.test(z));
+  } finally { solta637(); }
+});
+provaAsync('6.37 QA (F4) — Confirmar sem nenhum dia marcado: aponta os dias da própria aba («Quais dias?»), e não grava; sem a aba na tela, os do alto', async () => {
+  amb637(Object.assign({}, FRED637, { dias: [] }));
+  try {
+    await run('confirmarRenovacao()');
+    const f = J630('__zf637q[0]');
+    igual(f.el, 'planoDiasChips');
+    assert.ok(/^Marque os dias da semana em que este FILHOt vem, aqui em «Quais dias\?»\. Sem dia marcado não há aulas por semana/.test(f.msg), f.msg);
+    igual(run('__gr637q.length'), 0, 'nada gravado');
+    run('__zf637q=[]; delete __el637q.planoDiasChips;');
+    await run('confirmarRenovacao()');
+    igual(J630('__zf637q[0].el'), 'pelDiasEdit');
+    assert.ok(/^Marque os dias da semana em que este FILHOt vem\. Sem dia marcado/.test(J630('__zf637q[0].msg')));
+  } finally { solta637(); }
+});
+provaAsync('6.37 re-QA (A1) — «Mudam durante o plano» só aparece quando serve: plano em edição mensal ou mês do plano anterior → "Voltar", com o porquê, e nada muda', async () => {
+  const HOPI = { n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } };
+  const PERG = "__zp637q=[]; zPergunta=function(t,l,o){ __zp637q.push({t:t,l:l,o:o}); return Promise.resolve(false); }; __dm637q=[]; renovDiasModoSet=function(m){ __dm637q.push(m); }; __ia637q=0; irParaAbaPlano=function(){ __ia637q++; };";
+  // 1) o rascunho trocado para Mensal · Silver: o plano em edição não tem meses
+  amb637(HOPI, PERG);
+  try {
+    run("renovRascSet({plano:'Silver'}); toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual(q.o.nao, 'Voltar');
+    assert.ok(/O plano em edição é mensal: os dias são os mesmos o mês todo\./.test(q.l[1]) && q.l[1].indexOf('Mudam durante o plano') < 0, q.l[1]);
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [[], 0, 0], 'nada muda');
+  } finally { solta637(); }
+  // 2) hoje vale um mês do plano ANTERIOR (sobreposição): os meses dele não se editam por aqui
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['seg'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-12-10', fim: '2027-03-09', aulas: 1, ordemPet: 1, dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] } },
+    PERG + " zHojeISO=function(){ return '2026-12-14'; };");
+  try {
+    assert.ok(J630('pelPlanoMesHoje(pelAtual).mes.anterior') === true, 'hoje é do plano anterior');
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual(q.o.nao, 'Voltar');
+    assert.ok(/Hoje vale o Mês 3 do plano anterior/.test(q.l[1]) && /Os dias dos meses do plano anterior não mudam por aqui\./.test(q.l[1]), q.l[1]);
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [[], 0, 0]);
+  } finally { solta637(); }
+  // 3) o caso que serve (o plano atual por mês, rascunho Gold): continua «Mudam durante o plano»
+  amb637(HOPI, PERG);
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    igual([J630('__zp637q[0]').o.nao, J630('__dm637q')], ['Mudam durante o plano', ['mudam']]);
+  } finally { solta637(); }
+});
+prova('6.37 re-QA (A2) — zero dia marcado: a faixa amarela diz "nenhum dia está marcado" (não "são 1 (nenhum)"), igual ao resto da tela', () => {
+  amb637(Object.assign({}, FRED637, { dias: [], renov: Object.assign({}, FRED637.renov, { aulas: 2 }) }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/O plano gravado diz 2x, mas nenhum dia está marcado\. Confira os dias em <strong>Quais dias\?<\/strong>/.test(h), 'faixa com zero dia');
+    assert.ok(h.indexOf('são 1 (') < 0);
+    // gravado 1x e nenhum dia: também não fecha
+    run('pelCadCache[pelKey(pelAtual)].renov.aulas=1;');
+    assert.ok(/O plano gravado diz 1x, mas nenhum dia está marcado\./.test(run('blocoPlano(pelExtra(pelAtual), pelAtual)')));
+    // e com os dias certos, nada de faixa
+    run("pelCadCache[pelKey(pelAtual)].dias=['ter'];");
+    igual(run('blocoPlano(pelExtra(pelAtual), pelAtual)').indexOf('id="planoIncoerente"'), -1);
+  } finally { solta637(); }
+});
+provaAsync('6.37 re-QA (A3) — Desfazer sem histórico: a explicação aponta «Quais dias?», não "lá em cima"', async () => {
+  amb637(FRED637, "__za637q=[]; zAlertao=function(t,l,o){ __za637q.push({t:t,l:l}); };");
+  try {
+    await run('desfazerRenovacao()');
+    const a = J630('__za637q[0]');
+    igual(a.t, 'NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA');
+    assert.ok(/ajuste os dias \(em «Quais dias\?», na aba Plano\), o plano e a data/.test(a.l[2]) && a.l.join(' ').indexOf('lá em cima') < 0, JSON.stringify(a.l));
+  } finally { run('zAlertao=__bk637q.za;'); solta637(); }
+  // e o Confirmar com todos os meses iguais também manda para «Quais dias?»
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf('Escolha "Iguais no plano todo" e marque esses dias em «Quais dias?».') > 0 && src.indexOf('marque esses dias no alto da ficha') < 0);
+});
+prova('6.40 — Renovação de planos: o 1º desenho, antes de o filtro existir, não dá erro e abre em "a cobrar agora"', () => {
+  run(`__bk640={f:renovFiltro, ge:document.getElementById, P:PELUDINHOS}; PELUDINHOS=[]; renovFiltro=undefined;
+    __rl640={innerHTML:''}; document.getElementById=function(id){ return id==='renovLista'?__rl640:null; };`);
+  try {
+    run('renderRenovacao()');
+    igual(run('renovFiltro'), 'cobrar');
+    // a lista do app ainda não chegou (o script não passou da declaração dela): não desenha e não dá erro
+    run("renovFiltro=undefined; PELUDINHOS=undefined; __rl640.innerHTML='antes';");
+    run('renderRenovacao()');
+    igual([run('renovFiltro'), run('__rl640.innerHTML')], ['cobrar', 'antes']);
+  } finally { run('renovFiltro=__bk640.f; document.getElementById=__bk640.ge; PELUDINHOS=__bk640.P;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
