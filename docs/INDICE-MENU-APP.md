@@ -10,7 +10,7 @@
 
 | Antes | Agora |
 |---|---|
-| Sem as atividades do Day Care no Time (o padrão da recepção) ou com outro cartaz na frente, a janela virava um cartaz com "Entendi" e **sem o desfazer** | O desfazer aparece sempre que o toque mudou a chamada: sem atalhos, a janela traz "Entendi" e "Toquei errado — desfazer"; com outro cartaz na tela, a janela espera na fila e volta **com os botões** |
+| Sem as atividades do Day Care no Time (o padrão de quem é cadastrado no Time) ou com outro cartaz na frente, a janela virava um cartaz com "Entendi" e **sem o desfazer** | O desfazer aparece sempre que o toque mudou a chamada: sem atalhos, a janela traz "Entendi" e "Toquei errado — desfazer"; com outro cartaz na tela, a janela espera na fila e volta **com os botões** |
 | Xarás: "DESFEITO: FREDO" | "DESFEITO: FREDO - TUTORA TESTE", como o aviso e a janela do toque |
 | A rede caía no passo do banho e a janela dizia "corrija em Day Care › Chamada", com a chamada já desfeita | "⚠ DESFIZ SÓ A CHAMADA": diz que a chamada voltou e que o banho continua segurado ("ainda vem"), com o que fazer |
 | O check-in do corpo terminado em outro aparelho no mesmo instante podia ser coberto pelo "faltou" | Depois de gravar, o app confere o check-in de novo: se apareceu, a chamada volta a "veio" e nada mais é desfeito ("NÃO DESFIZ: … ESTÁ AQUI") |

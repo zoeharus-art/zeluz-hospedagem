@@ -6655,7 +6655,7 @@
   function repHojeISO(){ return zHojeISO(); }
 
   // ---- Modal de lançamento ----
-  var repPelSel=null, repModoAtual='dia', repMotivoAtual='', REP_LANCANDO=false;
+  var repPelSel=null, repModoAtual='dia', repMotivoAtual='', REP_LANCANDO=false, REP_LANC_GER=0;
   function repAbrirLancar(pel){
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão lançam reposição.'); return; }
     repPelSel=pel||null; repModoAtual='dia'; repMotivoAtual='';
@@ -6667,7 +6667,7 @@
     var _rv=document.getElementById('repVolta'); if(_rv) _rv.value='';
     var _vb=document.getElementById('repVagasBox'); if(_vb) _vb.innerHTML='';
     var _bo=document.querySelector('#repModal .rep-ok'); if(_bo){ _bo.disabled=false; _bo.textContent='Lançar reposição'; }
-    REP_LANCANDO=false;
+    REP_LANCANDO=false; REP_LANC_GER++;   // o modal novo é outro lançamento (re-QA da 6.39)
     document.getElementById('repData').value=repHojeISO();
     document.getElementById('repDe').value=repHojeISO();
     document.getElementById('repAte').value='';
@@ -6717,6 +6717,10 @@
     // A prévia é do FILHOt escolhido AGORA (QA da 6.39, L1): trocar de FILHOt com o modal aberto
     // deixava a conta do anterior na tela.
     try{ if(repModoAtual==='periodo') repPreverDias(); else if(repModoAtual==='alguns') repPreverAlguns(); }catch(e){} /* silencioso de propósito: a prévia acerta no próximo toque */
+    // O aviso e a faixa do dia de repor também são do FILHOt de agora (re-QA da 6.39): "não tem os
+    // dias marcados" e "terça já é dia do Fredo" ficavam na tela depois da troca.
+    var _wEsc=document.getElementById('repWarn'); if(_wEsc && !REP_LANCANDO) _wEsc.textContent='';
+    try{ if(!REP_LANCANDO) repVoltaPintar(); }catch(e){} /* silencioso de propósito: a faixa acerta quando o dia de repor mudar */
     if(!dias.length){
       document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. Nos modos "período" e "alguns dias" eu não consigo saber em quais dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
     }
@@ -6749,7 +6753,7 @@
     // na ficha davam 1 crédito sem dizer por quê). Só dias de semana: sábado e domingo não têm
     // Day Care e não precisam de explicação. Os já lançados (QA da 6.39, M1) e os feriados (M3)
     // também aparecem.
-    const fora=repForaDoPeriodo(p, de, ate, dias.concat(anP.ja))+repJaLancadasHTML(anP.ja)+repFeriadosHTML(anP.feriados);
+    const fora=repForaDoPeriodo(p, de, ate, dias.concat(anP.ja))+repJaLancadasHTML(anP.ja)+repFeriadosHTML(anP.feriados, true);
     if(!dias.length){ el.innerHTML=(anP.ja.length?'Nesse período não sobra dia para lançar.':'Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.')+fora; return; }
     const most=dias.slice(0,10).map(repBRdata).join(' · ');
     el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
@@ -6815,7 +6819,10 @@
   function repCreditoVivoNaData(p, iso){
     try{
       var L=repLancamentos(p), anul=repAnulados(L);
-      return L.some(function(l){ return l && l.tipo==='credito' && String(l.data||'')===iso && !anul[l._id]; });
+      // O crédito da saída antecipada da hospedagem (hospConfirmarAntecipada) tem a data do dia em
+      // que ele foi embora, mas não é falta avisada do Day Care: não segura a data (re-QA da 6.39).
+      return L.some(function(l){ return l && l.tipo==='credito' && String(l.data||'')===iso && !anul[l._id]
+        && !l.estadiaId && !/^hospedagem/.test(String(l.motivo||'')); });
     }catch(e){ return false; } /* silencioso de propósito: sem o extrato lido, vale a conta de sempre */
   }
   var REP_JA_LANCADA='a falta avisada desse dia já foi lançada (está no Extrato)';
@@ -6845,10 +6852,11 @@
     catch(e){ out=[]; } /* silencioso de propósito: sem a lista de feriados, sem o aviso */
     return out;
   }
-  function repFeriadosHTML(F){
+  function repFeriadosHTML(F, periodo){
     if(!F || !F.length) return '';
     return '<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(F.map(function(o){ return String(repBRdata(o.iso)).slice(0,5)+' é feriado ('+o.nome+')'; }).join('; '))
-      +': confira se a Zêluz abre. Se não abre, tire '+(F.length>1?'essas datas':'essa data')+'.</span>';
+      +': confira se a Zêluz abre. Se não abre, '
+      +(periodo?'mude o período ou use «Alguns dias» sem '+(F.length>1?'essas datas':'essa data'):'tire '+(F.length>1?'essas datas':'essa data'))+'.</span>';
   }
   // Os dias do período que viram crédito: os dias dele, menos os que já têm falta avisada viva.
   function repPeriodoAnalise(p, de, ate){
@@ -6856,9 +6864,13 @@
     dias.forEach(function(d){ if(repCreditoVivoNaData(p, d)) ja.push(d); else entram.push(d); });
     return {entram:entram, ja:ja, feriados:repFeriadosEm(entram)};
   }
+  function repListaDatasE(isos){
+    var l=(isos||[]).map(function(d){ return String(repBRdata(d)).slice(0,5); });
+    return l.length>1?(l.slice(0,-1).join(', ')+' e '+l[l.length-1]):(l[0]||'');
+  }
   function repJaLancadasHTML(ja){
     if(!ja || !ja.length) return '';
-    return '<span class="rep-fora">'+escAttr(ja.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', '))
+    return '<span class="rep-fora">'+escAttr(repListaDatasE(ja))
       +(ja.length>1?' já têm':' já tem')+' falta avisada lançada (está no Extrato): não '+(ja.length>1?'entram':'entra')+' de novo.</span>';
   }
   // O conselho de quando um dia de semana fica de fora: é a ficha que precisa mudar — no plano
@@ -6868,11 +6880,11 @@
     var ele=(repEhFemea(p)?'ela':'ele');
     var semana=(fora||[]).filter(function(o){ return /^não é dia /.test(String(o.porque||'')); });
     if(!semana.length) return '';
-    var n=semana.length, nesse=(n>1?'nesses dias':'nesse dia'), out=[];
-    if(semana.some(function(o){ return / nesse mês do plano /.test(o.porque); }))
-      out.push('Se '+ele+' passou a vir '+nesse+', ajuste os dias na aba Plano da ficha.');
-    if(semana.some(function(o){ return / na ficha /.test(o.porque); }))
-      out.push('Se '+ele+' passou a vir '+nesse+', marque '+(n>1?'os dias':'o dia')+' no alto da ficha.');
+    var out=[];
+    var nPlano=semana.filter(function(o){ return / nesse mês do plano /.test(o.porque); }).length;
+    var nFicha=semana.filter(function(o){ return / na ficha /.test(o.porque); }).length;
+    if(nPlano) out.push('Se '+ele+' passou a vir '+(nPlano>1?'nesses dias':'nesse dia')+', ajuste os dias na aba Plano da ficha.');
+    if(nFicha) out.push('Se '+ele+' passou a vir '+(nFicha>1?'nesses dias':'nesse dia')+', marque '+(nFicha>1?'os dias':'o dia')+' no alto da ficha.');
     return out.join(' ');
   }
   function repForaHTML(p, fora){
@@ -6990,13 +7002,16 @@
     // pendente por muito tempo, e a recepção não pode ficar sem lançar ninguém.
     if(REP_LANCANDO){ w.textContent='Ainda estou lançando o toque anterior. Espere a confirmação.'; return; }
     REP_LANCANDO=true;
+    // A resposta de um lançamento antigo (o modal foi reaberto enquanto ele gravava) não fecha o
+    // modal novo nem solta a trava dele (re-QA da 6.39).
+    const _ger=REP_LANC_GER, _mesmo=function(){ return _ger===REP_LANC_GER; };
     const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
-    const soltar=function(){ REP_LANCANDO=false; if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
+    const soltar=function(){ if(!_mesmo()) return; REP_LANCANDO=false; if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
     let regs=[], foraAlguns=[];
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
-      if(repCreditoVivoNaData(p, d)){ w.textContent='A falta avisada de '+repBRdata(d)+' já foi lançada (está no Extrato). Para lançar de novo, estorne a anterior no Extrato.'; soltar(); return; }
+      if(repCreditoVivoNaData(p, d)){ w.textContent='A falta avisada de '+repBRdata(d)+' já foi lançada: está no Extrato e já conta no saldo. Para lançar de novo, estorne a anterior no Extrato.'; soltar(); return; }
       regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
       // As mesmas regras da "Marcar troca" (QA27): o dia que sai é dia dele, o dia novo não é,
       // e o dia novo não é sábado nem domingo. Fora disso, continua reposição.
@@ -7033,14 +7048,19 @@
     // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
   // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
   const _saldoAntes=repSaldo(p);
-  Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(refs){
+  // Erro na hora (antes de qualquer promessa): solta a trava e diz, em vez de prendê-la (re-QA da 6.39).
+  let _grav;
+  try{ _grav=Promise.all(regs.map(function(r){ return repGravar(p,r); })); }
+  catch(e){ _grav=Promise.reject(e); }
+  _grav.then(function(refs){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
         +((regs[0]&&regs[0].alguns)?(' — dias '+regs.map(function(r){ return String(repBRdata(r.data)).slice(0,5); }).join(', ')
           +(foraAlguns.length?(' (de fora: '+foraAlguns.map(function(o){ return String(repBRdata(o.iso)).slice(0,5); }).join(', ')+')'):'')):'')
         +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
       // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
       repAuditDiaDele(p, voltaEfetiva);
-      repFechar(); soltar();
+      if(_mesmo()) repFechar();
+      soltar();
       // Falta avisada para HOJE: se ele tinha banho hoje, a recepção é avisada (28/set/2026).
       try{ if(regs.some(function(r){ return r.data===dcDataKey(); }) && typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){} /* silencioso de propósito: o aviso volta na próxima mudança da chamada */
       // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
@@ -7077,6 +7097,12 @@
         _troca?repMensagem(p,'troca',{de:_info.data, para:_info.volta}):repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
+      // O modal já é de outro lançamento: o aviso não vai para a linha dele (re-QA da 6.39).
+      if(!_mesmo()){
+        if(typeof zAlertao==='function') zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+((e&&e.message)||e)+'.',
+          'Nada foi salvo. Lance de novo.'], {botao:'Entendi'});
+        return;
+      }
       soltar();
       w.textContent='Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.';
     });
@@ -22732,7 +22758,8 @@
         else if(res.banho==='outra') linhas.push('O banho ficou como outra pessoa decidiu depois do toque.');
         // O toque não segurou o banho (QA da 6.41, B3): diz o que vale agora, não "continua segurado".
         else if(rec.decAntes && rec.decAntes.decisao==='mantido') linhas.push('O banho continua segurado, como já estava antes do toque ("ainda vem"). Se não vier, toque em «Liberar o horário» no Hoje na Zêluz.');
-        else if(decAg==='liberado' || decAg==='liberando') linhas.push('O horário do banho continua liberado'+(dAg.quem?(' ('+dAg.quem+' liberou)'):'')+'.');
+        else if(decAg==='liberado') linhas.push('O horário do banho continua liberado'+(dAg.quem?(' ('+dAg.quem+' liberou)'):'')+'.');
+        else if(decAg==='liberando') linhas.push('O horário do banho está sendo liberado'+(dAg.quem?(' por '+dAg.quem):'')+'.');
         else if(decAg==='mantido') linhas.push('O banho continua segurado ("ainda vem")'+(dAg.quem?(' por '+dAg.quem):'')+'. Se não vier, toque em «Liberar o horário» no Hoje na Zêluz.');
         else linhas.push('O banho não mudou: confira no Hoje na Zêluz › Banho de quem faltou.');
         banhoFaltaMostrar('DESFEITO: '+nome.toUpperCase(), linhas, {botao:'Entendi', ok:true});
