@@ -672,6 +672,8 @@ function finResumoDiasMes(R, k, c, r, X) {
      mês do pagamento; os meses seguintes do período não geram cobrança nova. */
   var entra = (finMesDe(r.inicio) === X.mes);
   var valorMes = entra ? V.total : 0;
+  var vgD = finValorGravado(r);                   /* 6.44: o valor gravado no fechamento */
+  if (entra && vgD) valorMes = vgD;
   var pago = finCent(X.pagoPorChave[k]);
   var falta = valorMes - pago; if (falta < 0) falta = 0;
   var venceEm = r.inicio;
@@ -683,7 +685,7 @@ function finResumoDiasMes(R, k, c, r, X) {
     if (X.hoje && falta > 0 && finEhISO(venceEm) && venceEm < X.hoje) {
       R.porServico.daycare.emAtraso += falta;
     }
-    if (r.plano_deduzido !== true) R.porServico.daycare.declarado += V.total;
+    if (r.plano_deduzido !== true) R.porServico.daycare.declarado += (vgD || V.total);
     var aulasPorMes = [], valorPorMes = [], meses = [], rotA = [], rotV = [];
     for (i = 0; i < M.length; i++) {
       aulasPorMes.push(V.porMes[i].aulas);
@@ -722,6 +724,7 @@ function finResumoDiasMes(R, k, c, r, X) {
       aulasRotulo: rotA.join(', '),
       detalheMeses: rotA.join(', ') + ' — ' + rotV.join(' + ')
     });
+    if (vgD) R.porFILHOt[R.porFILHOt.length - 1].valorGravado = true;   /* 6.44 */
   }
 
   /* VENCEU SEM RENOVAÇÃO: o que volta a valer é a ROTINA (os dias do alto da ficha) —
@@ -752,6 +755,124 @@ function finResumoDiasMes(R, k, c, r, X) {
     });
     R.porServico.daycare.inadimplencia += mensalRot;
   }
+}
+
+/* ------------------------------------------------- o valor fechado e as renovações (6.44) */
+
+/* O VALOR GRAVADO NO FECHAMENTO (Story 6.44 — Adriana, 07/out/2026: "o valor do plano total
+   fechado"). Desde a 6.44, o Confirmar da aba Plano grava renov.valor_plano_cent — o que a
+   casa fechou com o tutor naquele dia. Ele vale mais que a tabela de hoje: o mês fechado não
+   muda se o preço mudar depois. Ficha sem esse campo: 0, e vale a conta de sempre. */
+function finValorGravado(r) {
+  var v = finObj(r).valor_plano_cent;
+  return (typeof v === 'number' && isFinite(v) && v > 0) ? Math.round(v) : 0;
+}
+
+/* O plano que entrou no lugar de outro é CORREÇÃO dele (e não renovação) quando tem a mesma
+   data de pagamento, o mesmo fim, ou começa antes ou no mesmo dia — a mesma regra do
+   renovEhCorrecao do app. Sem data no que entrou (virou morador, ficha zerada), o antigo
+   valeu: não é correção. */
+function finEhCorrecaoDe(antigo, novo) {
+  var a = finObj(antigo), n = finObj(novo);
+  var aIni = String(a.vig_inicio || a.inicio || ''), nIni = String(n.vig_inicio || n.inicio || '');
+  if (!finEhISO(aIni) || !finEhISO(nIni)) return false;
+  if (String(a.inicio || '') === String(n.inicio || '')) return true;
+  if (finEhISO(a.fim) && String(n.fim || '') === String(a.fim)) return true;
+  return nIni <= aIni;
+}
+
+/* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44). Renovar manda o plano anterior para
+   renov_hist, e o Financeiro lia só o atual: o pagamento anterior sumia do mês em que entrou.
+   Aqui entram as que foram renovação de verdade, na ordem em que saíram. Ficam de fora a
+   renovação DESFEITA (não aconteceu) e o plano CORRIGIDO (o pagamento é o mesmo do que entrou
+   no lugar dele — contar os dois seria contar duas vezes): o que o Confirmar gravou como
+   "correção" e, nos registros de antes da 6.44, o que a regra do app reconhece como correção. */
+function finRenovHistContados(c) {
+  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), lista = [], i, o;
+  for (i = 0; i < ids.length; i++) {
+    o = finObj(h[ids[i]]);
+    if (!o.plano && !o.inicio) continue;
+    if (String(o.motivo || '') === 'desfeita') continue;
+    /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: fica de fora sem adivinhar. */
+    if (String(o.motivo || '') === 'correção') continue;
+    lista.push(o);
+  }
+  lista.sort(function (a, b) { return (Number(a.substituidoEm) || 0) - (Number(b.substituidoEm) || 0); });
+  var out = [], suc;
+  for (i = 0; i < lista.length; i++) {
+    suc = (i + 1 < lista.length) ? lista[i + 1] : finObj(cc.renov);
+    if (finEhCorrecaoDe(lista[i], suc)) continue;
+    out.push(lista[i]);
+  }
+  return out;
+}
+
+/* A renovação anterior no mês em que foi paga (6.44). Só entra no mês do pagamento dela: não
+   gera inadimplência (o plano atual é quem responde por isso) nem cobrança fora do mês. O
+   valor é o gravado no fechamento; sem ele, a tabela, com as aulas e o nº na família DAQUELE
+   plano. O pagamento lançado do FILHOt é gasto aqui primeiro (pagoPorChave diminui), para o
+   plano atual não usar o mesmo dinheiro duas vezes.
+   X = {planos, cadastro, peludinhos, ordensFamilia, descontos, mes, hoje, pagoPorChave} */
+function finResumoHistorico(R, k, c, h, X) {
+  if (finMesDe(h.inicio) !== X.mes) return;
+  var nome = String(c.n || k.split('__')[0]);
+  var pl = X.planos[h.plano];
+  if (!pl) {
+    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
+      motivo: 'renovação anterior com o plano "' + String(h.plano || '') + '", que não está na tabela' });
+    return;
+  }
+  var ordemExplicita = (h.ordemPet !== undefined && h.ordemPet !== null);
+  var ordemUsada = ordemExplicita ? h.ordemPet : X.ordensFamilia[k];
+  var meses = finMesesDoCompromisso(pl.compromisso);
+  var nAulas = parseInt(h.aulas, 10);
+  var aulas = (nAulas >= 1) ? Math.min(5, nAulas) : null;
+  var mensal = null, valor = finValorGravado(h), i;
+  if (!valor && h.dias_mes) {
+    var M = finMesesDoPlano(X.planos, h), dias = [];
+    for (i = 0; i < M.length; i++) dias.push(M[i].dias);
+    var V = M.length ? finValorDoPlano(X.planos, h.plano, dias, ordemUsada, X.descontos) : null;
+    if (V && V.falta < 0) valor = V.total;
+  } else if (!valor) {
+    if (aulas === null) aulas = finAulasDe(k, X.cadastro, X.peludinhos);
+    mensal = (aulas === null) ? null : finMensalidade(X.planos, h.plano, aulas, ordemUsada, X.descontos);
+    if (mensal !== null) valor = mensal * (meses || 1);
+  }
+  if (!valor) {
+    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
+      motivo: 'renovação anterior (' + String(h.plano) + ', paga em ' + String(h.inicio).slice(8, 10) + '/' + String(h.inicio).slice(5, 7) + '/' + String(h.inicio).slice(0, 4) + ') sem como calcular o valor' });
+    return;
+  }
+  var pago = Math.min(finCent(X.pagoPorChave[k]), valor);
+  X.pagoPorChave[k] = finCent(X.pagoPorChave[k]) - pago;
+  var falta = valor - pago;
+  R.porServico.daycare.quantos++;
+  R.porServico.daycare.recebido += pago;
+  R.porServico.daycare.aReceber += falta;
+  if (X.hoje && falta > 0 && finEhISO(h.inicio) && h.inicio < X.hoje) R.porServico.daycare.emAtraso += falta;
+  if (h.plano_deduzido !== true) R.porServico.daycare.declarado += valor;
+  R.porFILHOt.push({
+    chave: k,
+    nome: nome,
+    tutor: String(c.tutor || k.split('__')[1] || ''),
+    servico: 'daycare',
+    plano: String(h.plano),
+    compromisso: String(pl.compromisso || ''),
+    aulas: aulas,
+    mensalidade: mensal,
+    valor: valor,
+    pago: pago,
+    falta: falta,
+    vigencia: { inicio: String(h.inicio), fim: finEhISO(h.fim) ? h.fim : finFimVigencia(h.inicio, meses) },
+    venceEm: String(h.inicio),
+    ordemPet: ordemExplicita ? parseInt(h.ordemPet, 10) : (ordemUsada !== undefined ? ordemUsada : 1),
+    ordemPetSuposta: (!ordemExplicita && ordemUsada === undefined),
+    resolvidoPorFamilia: (!ordemExplicita && ordemUsada !== undefined),
+    planoDeduzido: h.plano_deduzido === true,
+    situacao: falta === 0 ? 'pago' : 'aberto',
+    origem: 'renovacao-anterior',
+    valorGravado: finValorGravado(h) > 0
+  });
 }
 
 /* ------------------------------------------------------------------ resumo */
@@ -835,6 +956,13 @@ function finResumoMes(dados, mes, opcoes) {
     k = chaves[i];
     c = finObj(cadastro[k]);
     if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */
+    /* RENOVAÇÕES ANTERIORES (6.44): o pagamento de um plano que já foi renovado continua no
+       mês em que entrou — mesmo que a categoria de hoje seja outra (virou morador). */
+    var histK = finRenovHistContados(c), zh;
+    for (zh = 0; zh < histK.length; zh++) {
+      finResumoHistorico(R, k, c, histK[zh], { planos: planos, cadastro: cadastro, peludinhos: peludinhos,
+        ordensFamilia: ordensFamilia, descontos: d.descontoIrmao, mes: mes, hoje: hoje, pagoPorChave: pagoPorChave });
+    }
     r = finObj(c.renov);
     cat = finCategoria(k, cadastro);
     /* Hóspede, avulso e morador não têm mensalidade. Moradores nunca geram
@@ -888,6 +1016,9 @@ function finResumoMes(dados, mes, opcoes) {
        período não geram cobrança nova (decisão da Adriana, 02/set/2026). */
     var entra = (finMesDe(r.inicio) === mes);
     valorMes = entra ? mensal * (meses || 1) : 0;
+    /* 6.44: o valor GRAVADO no fechamento vale mais que a tabela de hoje. */
+    var vg = finValorGravado(r);
+    if (entra && vg) valorMes = vg;
 
     var pago = finCent(pagoPorChave[k]);
     var falta = valorMes - pago; if (falta < 0) falta = 0;
@@ -910,6 +1041,7 @@ function finResumoMes(dados, mes, opcoes) {
          "o tutor pagou". */
       if (finMesDe(r.inicio) === mes && r.plano_deduzido !== true) {
         R.porServico.daycare.declarado += mensal * (meses || 1);
+        if (vg) R.porServico.daycare.declarado += vg - mensal * (meses || 1);   /* 6.44: o gravado */
       }
       R.porFILHOt.push({
         chave: k,
@@ -932,6 +1064,7 @@ function finResumoMes(dados, mes, opcoes) {
         /* "parcial" saiu da conta (Adriana, 02/set/2026) — só existe pago/aberto. */
         situacao: falta === 0 ? 'pago' : 'aberto'
       });
+      if (vg) R.porFILHOt[R.porFILHOt.length - 1].valorGravado = true;   /* 6.44 */
     }
 
     /* INADIMPLENTE: a vigência acabou antes do fim deste mês e ninguém

@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-08"></script>
+<script src="resposta-tutor.js?v=2026-10-07-09"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-08"></script>
+<script src="painel-logica.js?v=2026-10-07-09"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-08"></script>
+<script src="financeiro-logica.js?v=2026-10-07-09"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -17516,7 +17516,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-08';
+  const APP_VERSAO='2026-10-07-09';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20942,6 +20942,7 @@
         +(ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—')
         +(renovVigOutra(o)?' <span style="font-weight:600;color:var(--muted)">(pago em '+fmtBR(o.inicio)+')</span>':'')
         +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
+        +(function(){ const vh=renovValorDoHist(o); return vh.v?(' · <span class="renov-hist-valor" style="font-weight:800">'+fmtCent(vh.v)+(vh.pelaTabela?' <span style="font-weight:600;color:var(--muted)">(pela tabela)</span>':'')+'</span>'):''; })()
         +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
         +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(o.motivo):'')+'</div></div>';
     }).join('');
@@ -20989,6 +20990,9 @@
     // 6.30: o plano que volta traz os dias de cada mês (e o anterior congelado) que tinha.
     if(ant.dias_mes) volta.dias_mes=ant.dias_mes;
     if(ant.dias_mes_anterior) volta.dias_mes_anterior=ant.dias_mes_anterior;
+    // 6.44: o valor fechado do plano que volta volta junto (sem ele, vale a conta pela tabela).
+    if(ant.valor_plano_cent) volta.valor_plano_cent=ant.valor_plano_cent;
+    if(ant.mensalidade_cent) volta.mensalidade_cent=ant.mensalidade_cent;
     await setPelExtra(pelAtual,{renov:volta});
     if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
       .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
@@ -21003,6 +21007,34 @@
         ? ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', com os dias mudando por mês ('+renovAulasRotulo(volta)+').')
         : ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', de '+(volta.aulas||'—')+'x por semana.'),
        'Vale até '+(volta.fim?fmtBR(volta.fim):'—')+'.'], {ok:true, botao:'Fechar'});
+  }
+
+  // ---- O VALOR DO PLANO (Story 6.44) --------------------------------------------------
+  // Meses do tipo do plano: 1 (mensal), 3 (trimestral), 6 (semestral); 1 quando não há plano.
+  function renovMesesDoTipo(planoKey){
+    const pl=planos()[planoKey]; return pl?(PLANO_MESES[pl.compromisso]||1):1;
+  }
+  // A conta escrita embaixo do valor: "3 meses × R$ 359,00 (mensalidade)"; no mensal, um mês só.
+  function renovContaDoValor(meses, mens){
+    return (meses>1)?(meses+' meses × '+fmtCent(mens)+' (mensalidade)'):'um mês (no mensal, o valor do plano é a própria mensalidade)';
+  }
+  // O que vai entre parênteses no resumo, no aviso e no rastro: "3 × R$ 359,00" ou "mensal".
+  function renovContaCurta(meses, mens){ return (meses>1)?(meses+' × '+fmtCent(mens)):'mensal'; }
+  // O valor de um plano do histórico: o gravado no fechamento; sem ele (plano confirmado antes da
+  // 6.44), a conta pela tabela de hoje, dita como tal. {v, pelaTabela} — v=0 quando não há como.
+  function renovValorDoHist(o){
+    o=o||{};
+    const g=Number(o.valor_plano_cent);
+    if(isFinite(g) && g>0) return {v:Math.round(g), pelaTabela:false};
+    try{
+      if(o.dias_mes && renovDiasMesValido(o)){
+        const M=renovMesesDoPlano(o), V=M.length?renovValorDoPlano(o.plano, M.map(function(m){ return m.dias; }), o.ordemPet||1):null;
+        return (V && V.falta<0 && V.total>0)?{v:V.total, pelaTabela:true}:{v:0, pelaTabela:true};
+      }
+      const n=parseInt(o.aulas,10);
+      const m=(n>=1)?mensalidade(o.plano, Math.min(5,n), o.ordemPet||1):0;
+      return {v:m?m*renovMesesDoTipo(o.plano):0, pelaTabela:true};
+    }catch(e){ return {v:0, pelaTabela:true}; } /* silencioso de propósito: é só a leitura do histórico */
   }
 
   // ---- aba PLANO na ficha ----
@@ -21023,6 +21055,9 @@
       return '<button class="'+(r.plano===k?'on':'')+'" onclick="pick(this);renovRascSet({plano:\''+k+'\'})">'+tipo+' · '+pl.rotulo+'</button>'; };
     const clsSt=st.estado==='vencido'?'vd-venc':(st.estado==='vence'?'vd-perto':(st.estado==='ok'?'vd-ok':'vd-sem'));
     const mens=(r.plano&&r.plano!=='auaulandia'&&r.plano!=='avulso'&&r.plano!=='morador')?mensalidade(r.plano,aulas,r.ordemPet||1):0;
+    // O VALOR DO PLANO (6.44 — Adriana, 07/out/2026: "o valor do plano total fechado"). É ele que
+    // o tutor paga e que o fechamento do mês soma: a mensalidade vezes os meses do tipo.
+    const mesesPlT=renovMesesDoTipo(r.plano), valorPlT=mens*mesesPlT;
     // A vigência do rascunho é CALCULADA na hora, a partir do plano e da data que estão na
     // tela — nunca lida de um campo gravado que pode estar velho.
     const regMMTela=renovMeioMesVale(r);
@@ -21138,7 +21173,7 @@
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
               +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano — menos quando o tutor paga a renovação nos últimos 15 dias do plano atual (o novo período começa no dia seguinte ao fim) ou nos últimos 7 dias do mês (começa no dia 1º do mês seguinte). O vencimento é calculado sozinho — e só grava no Confirmar. Período errado depois de gravar? Use Desfazer a última renovação.</div>':'')+'</div>'
-            +(mudam?'':'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+((mens&&nDiasMarcados)?fmtCent(mens):(mens?'marque os dias em «Quais dias?»':'escolha o plano'))+'</div></div>')
+            +(mudam?'':'<div class="field" id="planoValorCampo"><label>Valor do plano'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+((mens&&nDiasMarcados)?(fmtCent(valorPlT)+'<span id="planoValorConta" style="display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px">'+renovContaDoValor(mesesPlT, mens)+'</span>'):(mens?'marque os dias em «Quais dias?»':'escolha o plano'))+'</div></div>')
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
@@ -21339,6 +21374,8 @@
     // Ela lê o que vai para o banco, com o dinheiro na frente, e decide.
     const pl=planos()[r.plano]||{};
     const mens=mensalidade(r.plano, aulas, r.ordemPet||1);
+    // 6.44: o valor do plano (o que o tutor paga e o que o fechamento do mês soma).
+    const mesesPlC=renovMesesDoTipo(r.plano), valorPlC=mens*mesesPlC;
     const diasTxt=renovDiasNomes(pelAtual)||'nenhum dia marcado';
     // 6.30: os meses do plano com as datas DESTA vigência (a escolhida acima) e o valor de cada um.
     const mesesC=mudamC?renovMesesDoPlano(Object.assign(renovPlanoComCalc(r, calc), {dias_mes:dmC})):[];
@@ -21362,7 +21399,7 @@
       .concat(mudamC
         ? ['Valor do plano: '+renovBRL(valorC.total)+' — pago à vista'+((r.ordemPet||1)>1?(', com o desconto do '+(r.ordemPet)+'º peludinho da família em cada mês'):''),
            'Depois de '+fmtBR(calc.fim)+', sem renovação: '+renovDiasRotulo(dias)+' (os dias do alto da ficha)']
-        : ['Mensalidade '+fmtCent(mens)+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')]);
+        : ['Valor do plano '+fmtCent(valorPlC)+' ('+renovContaCurta(mesesPlC, mens)+')'+((r.ordemPet||1)>1?' — '+(r.ordemPet)+'º peludinho da família, com desconto':'')]);
     const regMMConf=renovMeioMesVale(Object.assign({}, r, {inicio:calc.inicio}));
     if(regMMConf) linhasPlano.push('O plano passará a valer até '+fmtBR(calc.fim)+' — '+renovMeioMesFrase(regMMConf)+'.');
     if(renovVigOutra(calc)) linhasPlano.push('Por quê: '+renovVigenciaFrase(calc, calc._porque)+'.');
@@ -21384,6 +21421,12 @@
       if(antC.length) novo.dias_mes_anterior=antC.map(function(m){ return {n:m.n, de:m.de, ate:m.ate, dias:m.dias.slice()}; });
       else delete novo.dias_mes_anterior;
     }
+    // O VALOR FECHADO FICA GRAVADO (6.44): o fechamento do mês soma este número, e não a tabela
+    // de hoje — se o preço mudar depois, o mês que já fechou não muda. "Iguais" grava também a
+    // mensalidade; "Mudam" não tem uma mensalidade só (cada mês tem a sua).
+    const valorGravaC=mudamC?valorC.total:valorPlC;
+    if(valorGravaC>0) novo.valor_plano_cent=valorGravaC; else delete novo.valor_plano_cent;
+    if(!mudamC && mens>0) novo.mensalidade_cent=mens; else delete novo.mensalidade_cent;
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:(renovMesmoPlano(gravado, novo)
@@ -21394,7 +21437,9 @@
     // Confirmar de novo o MESMO plano (mesmo tipo, aulas, pagamento e período) não é renovação:
     // não empurra uma cópia para "Renovações anteriores" (Adriana, 30/set/2026 — quatro
     // tentativas iguais viraram quatro "renovações anteriores" do Baque e do Nelson).
-    if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, 'renovação');
+    // 6.44: a correção vai para o histórico dita como correção — o fechamento do mês não conta
+    // duas vezes o mesmo pagamento (o plano corrigido e o que entrou no lugar dele).
+    if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, correcaoC?'correção':'renovação');
     // Vigência que NÃO é mais do meio do mês não herda o "para onde voltar" da anterior:
     // aquele vencimento já foi para "Renovações anteriores". Herdar faria o Desfazer do
     // meio do mês devolver uma data de outro ciclo (Adriana, 22/set/2026).
@@ -21404,7 +21449,7 @@
     if(typeof audit==='function') audit('renovacao',
       'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
-      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorC.total)):(' · mensalidade '+fmtCent(mens))),
+      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorC.total)):(' · valor do plano '+fmtCent(valorPlC)+' ('+renovContaCurta(mesesPlC, mens)+')')),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
@@ -21414,7 +21459,7 @@
            'Valor do plano '+renovBRL(valorC.total)+'.']
         : [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
            'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
-           'Mensalidade '+fmtCent(mens)+'.']), {ok:true, botao:'Fechar'});
+           'Valor do plano '+fmtCent(valorPlC)+' ('+renovContaCurta(mesesPlC, mens)+').']), {ok:true, botao:'Fechar'});
   }
 
   // ===== COMEÇOU NO MEIO DO MÊS — a tela (Adriana, 18/set/2026) =====================
@@ -28269,7 +28314,7 @@
 
       <div class="ppanel2 so-sensivel" id="ps-plano"><div class="card">
         <h2 style="font-size:20px">Plano</h2>
-        <div class="hint">Planos DayCare 2026. Valor mensal; o tipo do plano muda até quando ele vale. Desconto: 2º peludinho 7%, 3º 12%.</div>
+        <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho 7%, 3º 12%.</div>
         ${blocoPlano(ex,p)}
         <h3 class="cad-sub">Mensagens para o tutor</h3>
         <div class="renov-msgs">
@@ -58827,7 +58872,7 @@
         +'<span>'+esc(motivo)+'. Um total pela metade é pior do que nenhum — abra a tela de novo em instantes.</span>'
         +'</div></div></div></article>';
     }
-    var q=recQuebra(recResumoDoMes(mes)), av=recAvulsosNaCarteira();
+    var resumo=recResumoDoMes(mes), q=recQuebra(resumo), av=recAvulsosNaCarteira();
     h+='<div class="pm-lista">';
     REC_TIPOS.forEach(function(t){
       var L=q.linhas[t.k];
@@ -58867,12 +58912,88 @@
       +'</span></div>'
       +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total+avSoma))+'</span>'
       +'</div></div>';
+    h+=recListaHTML(resumo, mes, avLidos);
     h+='<p class="pm-nota"><strong>De onde vem cada valor.</strong> Os planos saem da data do pagamento lançada na ficha de cada FILHOt, na Renovação de planos, com o período inteiro caindo no mês do pagamento. A hospedagem sai dos orçamentos fechados. '
       +(q.deTabela>0?('<strong>'+q.deTabela+'</strong> '+(q.deTabela===1?'ficha traz':'fichas trazem')+' a data vinda da planilha antiga, e não de alguém da Central dizendo que recebeu. '):'')
       +(q.semComoCalcular>0?('<strong>'+q.semComoCalcular+'</strong> '+(q.semComoCalcular===1?'ficha ficou':'fichas ficaram')+' de fora por falta de dado na própria ficha. '):'')
       +'Isto é o que a casa LANÇOU, não o extrato do banco.</p>'
       +'</article>';
     return h;
+  }
+
+  /* ===== FILHOt POR FILHOt (Story 6.44 — Adriana, 07/out/2026) =========================
+   * "Teria que somar quanto a gente recebeu do plano no mês para poder finalizar os
+   * recebimentos do mês, o que foi fechado, para a gente bater com o outro sistema."
+   * As linhas são as MESMAS do finResumoMes que o quadro já soma (porFILHOt) — nenhuma conta
+   * nova; o total da lista é o total do quadro. As diárias avulsas entram numa linha só (o
+   * app guarda a soma delas, não quem pagou cada uma). */
+  var REC_LISTA_ABERTA=false;    // a lista aberta continua aberta quando o quadro se redesenha
+  function recLinhasDoMes(resumo){
+    var L=((resumo||{}).porFILHOt||[]).map(function(o){
+      var hosp=(o.servico==='auaulandia');
+      var pl=(!hosp && typeof planos==='function')?(planos()[o.plano]||{}):{};
+      var tipo=String(o.compromisso||'');
+      var oque=hosp?'Hospedagem na AuAulândia'
+        :((pl.rotulo||o.plano||'plano')+(tipo?(' · '+tipo):'')+(o.aulas?(' · '+o.aulas+'x por semana'):(o.aulasRotulo?(' · '+o.aulasRotulo):'')));
+      var quando=hosp
+        ?((o.parcelas||[]).map(function(x){ return x.qual+' '+((typeof fmtBR==='function')?fmtBR(x.vence):x.vence); }).join(' + '))
+        :((typeof fmtBR==='function')?fmtBR(o.venceEm||((o.vigencia||{}).inicio)||''):(o.venceEm||''));
+      var obs=[];
+      if(o.origem==='renovacao-anterior') obs.push('renovação anterior (o plano já foi renovado depois)');
+      if(!hosp) obs.push(o.valorGravado?'valor gravado no fechamento':'valor pela tabela de hoje (plano fechado antes de o app gravar o valor)');
+      if(o.planoDeduzido===true) obs.push('data vinda da planilha antiga');
+      return {nome:String(o.nome||''), tutor:String(o.tutor||''), oque:oque, quando:quando||'—',
+              valor:(o.valor||0), obs:obs.join(' · '), ordem:(hosp?'1':'0')+String(o.venceEm||((o.vigencia||{}).inicio)||'')+String(o.nome||'')};
+    });
+    L.sort(function(a,b){ return a.ordem<b.ordem?-1:(a.ordem>b.ordem?1:0); });
+    return L;
+  }
+  function recListaHTML(resumo, mes, avLidos){
+    var L=recLinhasDoMes(resumo), rot=recMesRotulo(mes);
+    var soma=L.reduce(function(t,x){ return t+x.valor; }, 0)+(avLidos?REC_AVULSO.total_cent:0);
+    var h='<details class="rec-lista" id="recLista" style="margin-top:10px"'+(REC_LISTA_ABERTA?' open':'')+' ontoggle="REC_LISTA_ABERTA=this.open"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ver FILHOt por FILHOt ('+L.length+') — para bater com o outro sistema</summary>'
+      +'<div class="pm-lista">';
+    if(!L.length) h+='<div class="pm-li"><div class="pm-li-txt"><span>Nenhum plano pago nem reserva em '+esc(rot)+'.</span></div></div>';
+    L.forEach(function(x){
+      h+='<div class="pm-li rec-li-filhot"><div class="pm-li-txt"><b>'+esc(x.nome)+'</b>'
+        +'<span>'+esc(x.tutor||'tutor a confirmar')+' &middot; '+esc(x.oque)+' &middot; pago em '+esc(x.quando)
+        +(x.obs?(' &middot; '+esc(x.obs)):'')+'</span></div>'
+        +'<span class="pm-li-fim rec-val">'+esc(fmtCent(x.valor))+'</span></div>';
+    });
+    if(avLidos && REC_AVULSO.n>0) h+='<div class="pm-li"><div class="pm-li-txt"><b>Diárias avulsas</b><span>'+esc(pmPlural(REC_AVULSO.n,'diária lançada','diárias lançadas'))+' com valor em '+esc(rot)+'</span></div>'
+      +'<span class="pm-li-fim rec-val">'+esc(fmtCent(REC_AVULSO.total_cent))+'</span></div>';
+    h+='<div class="pm-li rec-total"><div class="pm-li-txt"><b>Total da lista</b><span>igual ao total do quadro</span></div>'
+      +'<span class="pm-li-fim rec-val" id="recListaTotal">'+esc(fmtCent(soma))+'</span></div>'
+      +'</div>'
+      +'<div class="pm-acao" style="margin-top:8px"><button type="button" class="pm-bt" id="recBaixar" onclick="recBaixarExcel()">Baixar Excel de '+esc(rot)+'</button></div>'
+      +'<div id="recBaixarStatus" class="pm-nota" style="display:none"></div>'
+      +'</details>';
+    return h;
+  }
+  // O Excel é a MESMA lista da tela (recLinhasDoMes), com o mesmo total.
+  function recBaixarExcel(){
+    var mes=recMesAtual(), rot=recMesRotulo(mes);
+    var st=document.getElementById('recBaixarStatus');
+    var motivo=recTrava();
+    if(motivo){ if(st){ st.style.display='block'; st.textContent='Ainda não dá para baixar: '+motivo+'.'; } return; }
+    var L=recLinhasDoMes(recResumoDoMes(mes));
+    var avLidos=(REC_AVULSO.ok && REC_AVULSO.mes===mes);
+    var linhas=L.map(function(x){ return [x.nome, x.tutor, x.oque, x.quando, fmtCent(x.valor), x.obs]; });
+    var soma=L.reduce(function(t,x){ return t+x.valor; }, 0);
+    if(avLidos && REC_AVULSO.n>0){ linhas.push(['Diárias avulsas', '', REC_AVULSO.n+(REC_AVULSO.n===1?' diária lançada':' diárias lançadas')+' com valor', rot, fmtCent(REC_AVULSO.total_cent), '']); soma+=REC_AVULSO.total_cent; }
+    if(!avLidos) linhas.push(['Diárias avulsas', '', 'ainda não lidas — fora do total', rot, '', 'abra o quadro de novo em instantes e baixe outra vez']);
+    linhas.push(['TOTAL', '', '', '', fmtCent(soma), 'igual ao total do quadro Recebimentos de '+rot]);
+    var html=relTabelaHTML('Recebimentos de '+rot,
+      L.length+' linhas (planos e reservas) · regime de caixa: o plano inteiro no mês da data do pagamento · gerado em '+new Date().toLocaleString('pt-BR'),
+      ['FILHOt','Tutor','O quê','Data do pagamento','Valor','Observação'], linhas);
+    var nome='Zeluz-recebimentos-'+mes+'.xls';
+    var baixou=relEntregar(nome, html);
+    try{ if(typeof audit==='function') audit('relatorio-baixado', 'recebimentos '+mes+' — '+linhas.length+' linhas', {arquivo:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    if(st){
+      st.style.display='block';
+      st.innerHTML='<strong>'+(baixou?'Mandei baixar':'Não consegui baixar')+'</strong> — '+L.length+' linhas. '
+        +'Se nada apareceu no seu aparelho, <button type="button" class="pm-bt" style="padding:5px 12px;font-size:12.5px" onclick="relAbrirNaTela()">abra na tela</button>.';
+    }
   }
 
   // Redesenha o quadro onde ele estiver na tela — no Dashboard da Adriana, no da Márcia,

@@ -5190,7 +5190,15 @@ prova('o Financeiro não muda: o mês do dinheiro continua sendo o da DATA DO PA
   // (finMesesDatas, espelho de renovMesesDatas) — nunca no mês do dinheiro.
   const i36 = fin.indexOf('function finMesesDatas('), j36 = fin.indexOf('\nfunction ', i36 + 10);
   assert.ok(i36 > 0 && j36 > i36 && /vig_inicio/.test(fin.slice(i36, j36)), 'as datas dos meses começam no começo do período');
-  assert.ok(!/vig_inicio/.test(fin.slice(0, i36) + fin.slice(j36)), 'fora das datas dos meses, o Financeiro não lê o começo do período');
+  // 6.44: a ÚNICA outra leitura é a regra da correção (finEhCorrecaoDe, espelho do renovEhCorrecao
+  // do app), que diz se um plano do histórico foi corrigido — ela não decide o mês do dinheiro.
+  const i44 = fin.indexOf('function finEhCorrecaoDe('), j44 = fin.indexOf('\nfunction ', i44 + 10);
+  assert.ok(i44 > 0 && j44 > i44, 'a regra da correção existe');
+  const fora = [[0, i36], [j36, fin.length]].reduce((t, [a, b]) => t + fin.slice(a, b), '');
+  const semRegra = fora.replace(fin.slice(i44, j44), '');
+  assert.ok(!/vig_inicio/.test(semRegra), 'fora das datas dos meses e da regra da correção, o Financeiro não lê o começo do período');
+  const iH = fin.indexOf('function finResumoHistorico('), jH = fin.indexOf('\nfunction ', iH + 10);
+  assert.ok(iH > 0 && /if \(finMesDe\(h\.inicio\) !== X\.mes\) return;/.test(fin.slice(iH, jH)), 'a renovação anterior também conta no mês da DATA DO PAGAMENTO');
 });
 // ---- QA da 6.20 (FAIL → ajustes): corrigir a data nunca grava o mês errado
 const renov620 = (L) => { const r = L.grav[0] && L.grav[0].renov; return r ? [r.inicio, r.vig_inicio || '', r.fim] : null; };
@@ -9199,7 +9207,8 @@ prova('6.37 QA (F4/F6) — o texto aponta «Quais dias?» (não "lá em cima"); 
     run("pelCadCache[pelKey(pelAtual)].dias=[];");
     const z = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
     igual((seg637(z).match(/class="on"/g) || []).length, 0, 'nenhum número aceso');
-    assert.ok(/Mensalidade<\/label><div class="prev-calc">marque os dias em «Quais dias\?»</.test(z), 'a mensalidade pede os dias');
+    // 6.44: o campo virou "Valor do plano" (Adriana, 07/out/2026) — e continua pedindo os dias.
+    assert.ok(/Valor do plano<\/label><div class="prev-calc">marque os dias em «Quais dias\?»</.test(z), 'o valor do plano pede os dias');
     assert.ok(/Hoje: nenhum dia marcado\./.test(z));
   } finally { solta637(); }
 });
@@ -10512,6 +10521,247 @@ provaAsync('6.43 QA (B5, B9, Q2, Q3, Q16) — enquanto a lista não chega o lan�
       } finally { run('dxPintar=__bk643.dp;'); }
     } finally { run('document.querySelectorAll=__bk643.qsa; repMostrarEscolhido=__bk643.rme;'); soltaTroca630(); }
   } finally { run('orcFeriadosGarantir=__bk643.og; setTimeout=__bk643.st; REP_FER_LENDO=false;'); run(FER643_VOLTA); solta639(); }
+});
+
+// ================================================================ 6.44
+console.log('\n6.44 — Fechamento de plano: o valor do plano (não a mensalidade), gravado; renovar não apaga o pagamento anterior; FILHOt por FILHOt (Adriana, 07/out/2026)');
+// "Num plano trimestral, o valor da mensalidade não é o valor do plano: o valor do plano total fechado é maior.
+//  Teria que somar quanto a gente recebeu do plano no mês ... para a gente bater com o outro sistema."
+// Dado INVENTADO: a «Tâmara» da «Viajante Teste» (a ficha-modelo da 6.30/6.36) e o «Fred» da «Eleonora Teste» (6.37).
+const valorCampo644 = (h) => { const i = h.indexOf('id="planoValorCampo"'); return i < 0 ? '' : h.slice(i, h.indexOf('</div></div>', i)); };
+prova('6.44 AC1 — aba Plano: "Valor do plano" no lugar de "Mensalidade" — Gold 1x R$ 1.077,00 com "3 meses × R$ 359,00 (mensalidade)"; mensal, um mês; 2º peludinho com desconto', () => {
+  amb637(FRED637);
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    const c = valorCampo644(h);
+    assert.ok(/<label>Valor do plano<\/label><div class="prev-calc">R\$ 1\.077,00<span id="planoValorConta"[^>]*>3 meses × R\$ 359,00 \(mensalidade\)<\/span>/.test(c), c);
+    assert.ok(h.indexOf('<label>Mensalidade') < 0, 'o campo "Mensalidade" saiu do modo de sempre');
+    run("pelCadCache[pelKey(pelAtual)].renov=Object.assign({}, pelCadCache[pelKey(pelAtual)].renov, {plano:'Silver', fim:'2026-10-31'}); renovRascunho=null;");
+    const s = valorCampo644(run('blocoPlano(pelExtra(pelAtual), pelAtual)'));
+    assert.ok(/R\$ 387,00<span id="planoValorConta"[^>]*>um mês \(no mensal, o valor do plano é a própria mensalidade\)/.test(s), s);
+    run("pelCadCache[pelKey(pelAtual)].renov=Object.assign({}, pelCadCache[pelKey(pelAtual)].renov, {plano:'Black', fim:'2027-03-31', ordemPet:2});");
+    const b = valorCampo644(run('blocoPlano(pelExtra(pelAtual), pelAtual)'));
+    // Black 1x, 2º: R$ 338,00 com 7% = R$ 314,34; × 6 = R$ 1.886,04
+    assert.ok(/<label>Valor do plano \(com desconto\)<\/label><div class="prev-calc">R\$ 1\.886,04<span id="planoValorConta"[^>]*>6 meses × R\$ 314,34 \(mensalidade\)/.test(b), b);
+    igual(run('mensalidade("Black",1,2)*renovMesesDoTipo("Black")'), 188604);
+  } finally { solta637(); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf('o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista.') > 0, 'o texto do topo da aba explica');
+  assert.ok(src.indexOf('Planos DayCare 2026. Valor mensal;') < 0);
+});
+provaAsync('6.44 AC2/AC3 — Confirmar "Iguais": resumo, aviso e rastro dizem "Valor do plano R$ 1.077,00 (3 × R$ 359,00)"; grava valor_plano_cent e mensalidade_cent', async () => {
+  const L = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-10-06', rasc: null, resp: [true] }, 'await confirmarRenovacao();');
+  const conf = L.perg[L.perg.length - 1];
+  igual(conf.t, 'CONFIRA ANTES DE GRAVAR');
+  assert.ok(conf.l.indexOf('Valor do plano R$ 1.077,00 (3 × R$ 359,00)') >= 0, JSON.stringify(conf.l));
+  assert.ok(!conf.l.some((x) => /^Mensalidade /.test(x)), 'nenhuma linha "Mensalidade" no resumo');
+  igual([L.grav.length, L.grav[0].renov.valor_plano_cent, L.grav[0].renov.mensalidade_cent], [1, 107700, 35900]);
+  const card = L.cartazes.find((c) => c.t === 'PLANO GRAVADO');
+  assert.ok(card && card.l.indexOf('Valor do plano R$ 1.077,00 (3 × R$ 359,00).') >= 0, JSON.stringify(L.cartazes));
+  assert.ok(/ · valor do plano R\$ 1\.077,00 \(3 × R\$ 359,00\)$/.test(L.rastro[0].detalhe) && L.rastro[0].detalhe.indexOf('mensalidade') < 0, L.rastro[0].detalhe);
+  igual(L.hist.length, 0, 'o mesmo plano reconfirmado não vai para o histórico');
+  // mensal: "(mensal)"; 2º peludinho: o desconto continua dito
+  const S = await monta630({ ex: EX630({ plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-10-05', fim: '2026-10-31' }), hoje: '2026-10-06', rasc: null, resp: [true] }, 'await confirmarRenovacao();');
+  const ls = S.perg[S.perg.length - 1].l;
+  // Silver 1x, 2º: R$ 387,00 com 7% = R$ 359,91
+  assert.ok(ls.indexOf('Valor do plano R$ 359,91 (mensal) — 2º peludinho da família, com desconto') >= 0, JSON.stringify(ls));
+  igual([S.grav[0].renov.valor_plano_cent, S.grav[0].renov.mensalidade_cent], [35991, 35991]);
+});
+provaAsync('6.44 AC3 — renovação grava o valor do plano NOVO e manda o anterior para o histórico como "renovação"; correção vai como "correção"', async () => {
+  const R = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-12-21', rasc: { inicio: '2026-12-21' }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([R.hist.length, R.hist[0].m, R.hist[0].a.inicio, R.grav[0].renov.inicio, R.grav[0].renov.valor_plano_cent], [1, 'renovação', '2026-10-05', '2026-12-21', 107700]);
+  // correção da data (resposta "Correção da data" na pergunta da 6.20)
+  const C = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', fim: '2026-09-30' }, '2026-09-21', [false, true]);
+  igual([C.hist.length, C.hist[0].m, C.grav[0].renov.inicio, C.grav[0].renov.valor_plano_cent, C.grav[0].renov.mensalidade_cent], [1, 'correção', '2026-09-21', 61700, 61700]);
+  // pagamento novo na mesma pergunta: "renovação"
+  const N = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-20', fim: '2026-09-30' }, '2026-09-21', [true, true]);
+  igual([N.hist[0].m, N.grav[0].renov.fim], ['renovação', '2026-10-31']);
+});
+provaAsync('6.44 AC3 — "Mudam": grava a soma mês a mês (R$ 1.307,00) e NÃO grava mensalidade; a correção do mesmo pagamento vai como "correção"', async () => {
+  const L = await monta630({ ex: EX630(Object.assign(GOLD1X630(), { mensalidade_cent: 35900, valor_plano_cent: 107700 })), hoje: '2026-10-06',
+    rasc: { dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([L.grav.length, L.grav[0].renov.valor_plano_cent, 'mensalidade_cent' in L.grav[0].renov], [1, 130700, false]);
+  igual([L.hist.length, L.hist[0].m, L.hist[0].a.valor_plano_cent], [1, 'correção', 107700]);
+  assert.ok(L.perg[L.perg.length - 1].l.some((x) => /^Valor do plano: R\$ 1\.307,00 — pago à vista/.test(x)));
+});
+provaAsync('6.44 AC3 — Desfazer devolve o valor fechado do plano que volta (e não inventa valor quando ele não tinha)', async () => {
+  const atual = Object.assign(GOLD1X630(), { inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', valor_plano_cent: 107700, mensalidade_cent: 35900 });
+  const ant = Object.assign(GOLD1X630(), { valor_plano_cent: 99900, mensalidade_cent: 33300, substituidoEm: 5, por: 'Teste', motivo: 'renovação' });
+  const L = await monta630({ ex: EX630(atual, { renov_hist: { h1: ant } }), hoje: '2026-12-22', rasc: null, resp: [true] }, 'await desfazerRenovacao();');
+  igual([L.hist[0].m, L.grav.length, L.grav[0].renov.inicio, L.grav[0].renov.valor_plano_cent, L.grav[0].renov.mensalidade_cent], ['desfeita', 1, '2026-10-05', 99900, 33300]);
+  const semV = Object.assign(GOLD1X630(), { substituidoEm: 5, por: 'Teste', motivo: 'renovação' });
+  const M = await monta630({ ex: EX630(atual, { renov_hist: { h1: semV } }), hoje: '2026-12-22', rasc: null, resp: [true] }, 'await desfazerRenovacao();');
+  igual(['valor_plano_cent' in M.grav[0].renov, 'mensalidade_cent' in M.grav[0].renov], [false, false]);
+});
+prova('6.44 AC4 — Recebimentos usam o valor GRAVADO: a tabela mudar não muda o mês fechado; sem valor gravado, a conta de sempre', () => {
+  const g = Object.assign(GOLD1X630(), { inicio: '2026-07-05', fim: '2026-09-30', valor_plano_cent: 99900 });
+  const out = res36(dados36(cad36(g)), '2026-07');
+  igual([out.porFILHOt.length, out.porFILHOt[0].valor, out.porFILHOt[0].valorGravado, out.aReceberTotal, out.declaradoTotal], [1, 99900, true, 99900, 99900]);
+  const tab = J36('planos()'); tab.Gold.valores[1] = 40000;
+  igual(res36(dados36(cad36(g), { planos: tab }), '2026-07').porFILHOt[0].valor, 99900, 'tabela nova, mês fechado igual');
+  const semV = res36(dados36(cad36(Object.assign({}, g, { valor_plano_cent: undefined }))), '2026-07');
+  igual([semV.porFILHOt[0].valor, 'valorGravado' in semV.porFILHOt[0], semV.declaradoTotal], [107700, false, 107700]);
+  igual(res36(dados36(cad36(Object.assign({}, g, { valor_plano_cent: undefined })), { planos: tab }), '2026-07').porFILHOt[0].valor, 120000, 'sem gravado: a tabela de hoje (3 × R$ 400,00)');
+  // valor torto não vale: texto, negativo, zero, NaN
+  ['999', -100, 0, NaN, null].forEach((v) => igual(res36(dados36(cad36(Object.assign({}, g, { valor_plano_cent: v }))), '2026-07').porFILHOt[0].valor, 107700, String(v)));
+  // fora do mês do pagamento o gravado não aparece; a inadimplência continua sendo de UM mês da tabela
+  const out10 = res36(dados36(cad36(g)), '2026-10');
+  igual([out10.aReceberTotal, out10.inadimplentes.length, out10.inadimplentes[0].valorDeUmMes], [0, 1, 35900]);
+  // plano com dias por mês (6.36): o gravado também vale
+  const h = res36(dados36(cad36(renov36({ valor_plano_cent: 125000 }))), '2026-10');
+  igual([h.porFILHOt[0].valor, h.porFILHOt[0].valorGravado, h.declaradoTotal, h.aReceberTotal], [125000, true, 125000, 125000]);
+  igual(res36(dados36(cad36(renov36({ valor_plano_cent: 125000, plano_deduzido: true }))), '2026-10').declaradoTotal, 0, 'planilha antiga nunca é "declarado"');
+  // com pagamento lançado, o "falta" sai do gravado
+  const p = res36(dados36(cad36(g), { pagamentos: { '2026-07': { x1: { chave: CH36, valor_cent: 99900, data: '2026-07-05' } } } }), '2026-07');
+  igual([p.porFILHOt[0].pago, p.porFILHOt[0].falta, p.porFILHOt[0].situacao], [99900, 0, 'pago']);
+});
+// O histórico como o app grava: o plano que saiu, com quando saiu (substituidoEm), quem e o motivo.
+const hist644 = (o, t, motivo) => Object.assign({}, o, { substituidoEm: t, por: 'Teste', motivo: motivo || 'renovação' });
+const JUL644 = () => Object.assign(GOLD1X630(), { inicio: '2026-07-05', fim: '2026-09-30', mesRenov: 'setembro de 2026', quando: '2026-07-05' });
+const OUT644 = () => Object.assign(GOLD1X630(), { inicio: '2026-09-28', vig_inicio: '2026-10-01', fim: '2026-12-31' });
+prova('6.44 AC5 — renovar não apaga o pagamento anterior: julho continua com os R$ 1.077,00 do plano que foi renovado em setembro', () => {
+  const D = dados36(cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { valor_plano_cent: 107700 }), 100) } }));
+  const jul = res36(D, '2026-07');
+  igual([jul.porFILHOt.length, jul.porFILHOt[0].valor, jul.porFILHOt[0].origem, jul.porFILHOt[0].venceEm, jul.porFILHOt[0].compromisso, jul.aReceberTotal, jul.declaradoTotal],
+    [1, 107700, 'renovacao-anterior', '2026-07-05', 'trimestral', 107700, 107700]);
+  igual(J36('recQuebra(' + JSON.stringify(jul) + ').linhas.trimestral'), { valor: 107700, quantos: 1, deTabela: 0 }, 'a linha Trimestral de julho');
+  const set = res36(D, '2026-09');
+  igual([set.porFILHOt.length, set.porFILHOt[0].origem || 'atual', set.porFILHOt[0].valor, set.inadimplentes.length], [1, 'atual', 107700, 0], 'setembro: o plano atual (pago em 28/09)');
+  ['2026-08', '2026-10'].forEach((m) => { const r = res36(D, m); igual([r.porFILHOt.length, r.inadimplentes.length, r.aReceberTotal], [0, 0, 0], m); });
+  // a ficha que nunca renovou dá o mesmo de antes; o histórico vazio também
+  const semH = dados36(cad36(OUT644())), comVazio = dados36(cad36(OUT644(), { renov_hist: {} }));
+  ['2026-07', '2026-09'].forEach((m) => igual(res36(comVazio, m), res36(semH, m), m));
+  igual(JSON.parse(JSON.stringify(FIN_ANTES36.finResumoMes(semH, '2026-09', { hoje: '2026-10-06' }))), res36(semH, '2026-09'), 'igual à conta de antes da 6.36');
+});
+prova('6.44 AC5 — não contam: a renovação desfeita, a correção (dita pelo Confirmar ou reconhecida pela regra do app); contam: a cadeia de renovações, cada uma no seu mês', () => {
+  const jul = (h) => res36(dados36(cad36(OUT644(), { renov_hist: h })), '2026-07');
+  igual(jul({ a: hist644(JUL644(), 100, 'desfeita') }).porFILHOt.length, 0, 'desfeita');
+  igual(jul({ a: hist644(JUL644(), 100, 'correção') }).porFILHOt.length, 0, 'correção dita pelo Confirmar');
+  // registros de ANTES da 6.44 (todos "renovação"): a regra do app (renovEhCorrecao) separa
+  const julAtual = (atual, antigo) => res36(dados36(cad36(atual, { renov_hist: { a: hist644(antigo, 100) } })), '2026-07');
+  const corr1 = julAtual(Object.assign(JUL644(), { inicio: '2026-07-06' }), JUL644());        // mesmo fim: corrigiu a data
+  igual([corr1.porFILHOt.length, corr1.porFILHOt[0].origem || 'atual', corr1.aReceberTotal], [1, 'atual', 107700], 'mesmo fim = correção: um pagamento só');
+  const corr2 = julAtual(Object.assign(JUL644(), { inicio: '2026-07-01', fim: '2026-09-28' }), Object.assign(JUL644(), { inicio: '2026-07-10' }));
+  igual(corr2.porFILHOt.length, 1, 'começa antes = correção');
+  const corr3 = julAtual(Object.assign(JUL644(), { aulas: 2 }), JUL644());                     // mesma data, trocou as aulas
+  igual([corr3.porFILHOt.length, corr3.porFILHOt[0].valor], [1, 176700], 'mesma data = correção (vale a ficha atual: 2x)');
+  // a regra é a MESMA do app, caso a caso
+  [[JUL644(), OUT644()], [JUL644(), Object.assign(JUL644(), { inicio: '2026-07-06' })], [JUL644(), Object.assign(JUL644(), { inicio: '2026-07-01', fim: '2026-09-28' })],
+    [OUT644(), Object.assign(OUT644(), { inicio: '2026-09-29' })], [JUL644(), { plano: 'morador' }], [{ plano: 'Gold' }, JUL644()],
+    // mesma data de pagamento, período noutro começo e outro fim (só a regra da data pega)
+    [Object.assign(OUT644(), { vig_inicio: undefined }), Object.assign(OUT644(), { fim: '2027-01-31' })],
+    // mesmo começo do período, data e fim diferentes (só o "não começa depois" pega)
+    [OUT644(), Object.assign(OUT644(), { inicio: '2026-09-29', fim: '2027-01-31' })],
+    // a renovação de verdade: começa depois e termina noutro dia
+    [JUL644(), Object.assign(OUT644(), { inicio: '2026-07-20', vig_inicio: '2026-10-01' })]].forEach(([a, n], i) => {
+    const app = run36('renovEhCorrecao(' + JSON.stringify(a) + ', ' + JSON.stringify(n) + ', "")');
+    const fin = ctx36.finEhCorrecaoDe(a, n);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(a.inicio || '') && /^\d{4}-\d{2}-\d{2}$/.test(n.inicio || '')) igual(fin, app, 'caso ' + i);
+    else igual(fin, false, 'caso ' + i + ': sem data de um dos lados, o antigo valeu (o app chama de correção só para não perguntar)');
+  });
+  // a cadeia: julho → outubro → janeiro, cada pagamento no seu mês, uma vez só
+  const JAN = Object.assign(GOLD1X630(), { inicio: '2026-12-29', vig_inicio: '2027-01-01', fim: '2027-03-31' });
+  const D = dados36(cad36(JAN, { renov_hist: { b: hist644(OUT644(), 200), a: hist644(JUL644(), 100) } }));
+  igual(['2026-07', '2026-09', '2026-12'].map((m) => res36(D, m).porFILHOt.map((o) => [o.venceEm, o.origem || 'atual', o.valor])),
+    [[['2026-07-05', 'renovacao-anterior', 107700]], [['2026-09-28', 'renovacao-anterior', 107700]], [['2026-12-29', 'atual', 107700]]]);
+  // desfeita no meio da cadeia: o que foi desfeito some, o resto fica
+  const D2 = dados36(cad36(OUT644(), { renov_hist: { a: hist644(JUL644(), 100), x: hist644(JAN, 300, 'desfeita') } }));
+  igual([res36(D2, '2026-07').porFILHOt.length, res36(D2, '2026-12').porFILHOt.length, res36(D2, '2026-09').porFILHOt.length], [1, 0, 1]);
+  // o desfazer que não conseguiu tirar o plano do histórico: o plano que voltou é o mesmo pagamento — conta uma vez
+  const D3 = dados36(cad36(JUL644(), { renov_hist: { a: hist644(JUL644(), 100), x: hist644(OUT644(), 300, 'desfeita') } }));
+  igual(res36(D3, '2026-07').porFILHOt.length, 1);
+});
+prova('6.44 AC5 — a renovação anterior: virou morador ainda conta no mês em que pagou; quem saiu continua fora; sem valor gravado, a tabela com as aulas e o nº na família DAQUELE plano', () => {
+  const vir = res36(dados36(cad36({ plano: 'morador' }, { renov_hist: { a: hist644(JUL644(), 100, 'virou morador') } })), '2026-07');
+  igual([vir.porFILHOt.length, vir.porFILHOt[0].valor, vir.porFILHOt[0].origem], [1, 107700, 'renovacao-anterior']);
+  const inat = res36(dados36(cad36(OUT644(), { inativo: 'Sim', renov_hist: { a: hist644(JUL644(), 100) } })), '2026-07');
+  igual(inat.porFILHOt.length, 0, 'inativo: fora (regra de sempre — pergunta 1 da story)');
+  const h2 = res36(dados36(cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { aulas: 2, ordemPet: 2 }), 100) } })), '2026-07');
+  // Gold 2x, 2º: R$ 589,00 com 7% = R$ 547,77; × 3 = R$ 1.643,31
+  igual([h2.porFILHOt[0].valor, h2.porFILHOt[0].aulas, h2.porFILHOt[0].mensalidade, h2.porFILHOt[0].ordemPet], [164331, 2, 54777, 2]);
+  const hDias = res36(dados36(cad36(OUT644(), { renov_hist: { a: hist644(renov36({ inicio: '2026-07-05', fim: '2026-09-30' }), 100) } })), '2026-07');
+  igual([hDias.porFILHOt[0].valor, hDias.semComoCalcular.length], [130700, 0], 'dias por mês: a soma mês a mês');
+  const semTab = res36(dados36(cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { plano: 'Platina' }), 100) } })), '2026-07');
+  igual([semTab.porFILHOt.length, semTab.semComoCalcular.length], [0, 1]);
+  assert.ok(/renovação anterior com o plano "Platina"/.test(semTab.semComoCalcular[0].motivo), semTab.semComoCalcular[0].motivo);
+  const semAulas = res36(dados36(cad36(Object.assign(OUT644(), { aulas: '' }), { dias: [], renov_hist: { a: hist644(Object.assign(JUL644(), { aulas: '' }), 100) } })), '2026-07');
+  igual([semAulas.porFILHOt.length, semAulas.semComoCalcular.length], [0, 2], 'sem aulas e sem dias: os dois fora (o anterior e o atual), com o motivo');
+  assert.ok(semAulas.semComoCalcular.some((o) => /^renovação anterior \(Gold, paga em 05\/07\/2026\) sem como calcular o valor$/.test(o.motivo)), JSON.stringify(semAulas.semComoCalcular));
+  // planilha antiga: entra no "a receber", nunca no "declarado"
+  const ded = res36(dados36(cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { plano_deduzido: true }), 100) } })), '2026-07');
+  igual([ded.aReceberTotal, ded.declaradoTotal, ded.porFILHOt[0].planoDeduzido], [107700, 0, true]);
+});
+prova('6.44 AC5 — renovado DUAS vezes no mesmo mês: os dois pagamentos contam, e o dinheiro lançado não é usado duas vezes', () => {
+  const novo = Object.assign(GOLD1X630(), { inicio: '2026-07-28', vig_inicio: '2026-10-01', fim: '2026-12-31' });
+  const D = dados36(cad36(novo, { renov_hist: { a: hist644(Object.assign(JUL644(), { valor_plano_cent: 107700 }), 100) } }),
+    { pagamentos: { '2026-07': { x1: { chave: CH36, valor_cent: 150000, data: '2026-07-28' } } } });
+  const r = res36(D, '2026-07');
+  // o lançamento paga primeiro o pagamento mais antigo (a renovação anterior), depois o atual
+  igual(r.porFILHOt.map((o) => [o.origem || 'atual', o.valor, o.pago, o.falta]).sort(), [['atual', 107700, 42300, 65400], ['renovacao-anterior', 107700, 107700, 0]]);
+  igual([r.recebidoTotal, r.aReceberTotal], [150000, 65400]);
+});
+prova('6.44 AC6 — Recebimentos: a lista FILHOt por FILHOt tem o MESMO total do quadro, marca a renovação anterior e baixa o Excel com a mesma lista', () => {
+  const cad = cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { valor_plano_cent: 107700 }), 100) } });
+  cad['bento__tutor bento teste'] = { n: 'Bento', tutor: 'Tutor Bento Teste', dias: ['ter'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-07-10', fim: '2026-07-31', valor_plano_cent: 38700, mensalidade_cent: 38700 } };
+  const orc = { o1: { status: 'fechado', status_em: Date.UTC(2026, 6, 3, 15), criado_em: Date.UTC(2026, 6, 1, 15), entrada: '2026-07-04', saida: '2026-07-06', tutor: 'Tutora Hóspede Teste',
+    parcela1_cent: 30000, parcela2_cent: 45000, total_cent: 75000, pets: [{ nome: 'Pipoca' }] } };
+  ctx36.__cad644 = cad; ctx36.__orc644 = orc;
+  run36(`__bk644={cc:pelCadCache, P:PELUDINHOS, F:REC_FONTES, M:REC_MES, A:REC_AVULSO, ge:document.getElementById, re:relEntregar, au:audit, ab:REC_LISTA_ABERTA, cr:CARTEIRA_CARREGADA};
+    CARTEIRA_CARREGADA=true; pelCadCache=__cad644; PELUDINHOS=[]; recGuardarFontes(__orc644, {}); REC_MES='2026-07'; REC_AVULSO={mes:'', quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0};
+    __st644={style:{}, innerHTML:'', textContent:''}; document.getElementById=function(id){ return id==='recBaixarStatus'?__st644:null; };
+    __xls644=[]; relEntregar=function(n,h){ __xls644.push({n:n, h:h}); return true; }; audit=function(){};`);
+  try {
+    const L = J36('recLinhasDoMes(recResumoDoMes("2026-07"))');
+    igual(L.map((x) => [x.nome, x.valor]), [['Tâmara', 107700], ['Bento', 38700], ['Pipoca', 75000]], 'planos pela data do pagamento, depois as reservas');
+    assert.ok(/^renovação anterior/.test(L[0].obs) && /valor gravado no fechamento/.test(L[0].obs), L[0].obs);
+    igual([L[0].oque, L[0].quando, L[2].oque, L[2].quando], ['Gold · trimestral · 1x por semana', '05/07/2026', 'Hospedagem na AuAulândia', 'reserva 03/07/2026 + no dia 04/07/2026']);
+    const card = run36('recCardHTML()');
+    const tot = (card.match(/rec-val rec-val-total">([^<]+)</) || [])[1], lt = (card.match(/id="recListaTotal">([^<]+)</) || [])[1];
+    igual([tot, lt], ['R$ 2.214,00', 'R$ 2.214,00'], 'o total da lista é o total do quadro');
+    assert.ok(/Ver FILHOt por FILHOt \(3\)/.test(card) && card.indexOf('renovação anterior (o plano já foi renovado depois)') > 0);
+    const lista = card.slice(card.indexOf('id="recLista"'), card.indexOf('</details>'));
+    assert.ok(soFormato36(lista), 'todo valor da lista no formato R$ 1.077,00');
+    assert.ok(lista.indexOf(' open') < 0 && /ontoggle="REC_LISTA_ABERTA=this\.open"/.test(lista), 'a lista começa fechada e lembra quando é aberta');
+    run36('REC_LISTA_ABERTA=true;'); assert.ok(/id="recLista"[^>]* open /.test(run36('recCardHTML()')), 'aberta continua aberta no redesenho');
+    run36('recBaixarExcel()');
+    const X = J36('__xls644');
+    igual([X.length, X[0].n], [1, 'Zeluz-recebimentos-2026-07.xls']);
+    assert.ok(X[0].h.indexOf('<th>FILHOt</th><th>Tutor</th><th>O quê</th><th>Data do pagamento</th><th>Valor</th><th>Observação</th>') > 0);
+    assert.ok(X[0].h.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 2.214,00</td>') > 0, 'o mesmo total');
+    assert.ok(X[0].h.indexOf('<td>Diárias avulsas</td><td></td><td>ainda não lidas — fora do total</td>') > 0, 'diz que as avulsas não entraram');
+    assert.ok(/Mandei baixar<\/strong> — 3 linhas/.test(run36('__st644.innerHTML')));
+    // com as avulsas lidas: entram na lista, no Excel e no total — os três iguais
+    run36("REC_AVULSO={mes:'2026-07', quando:1, lendo:false, ok:true, total_cent:19400, n:2, semValor:0, futuros:0};");
+    const c2 = run36('recCardHTML()');
+    igual([(c2.match(/rec-val rec-val-total">([^<]+)</) || [])[1], (c2.match(/id="recListaTotal">([^<]+)</) || [])[1]], ['R$ 2.408,00', 'R$ 2.408,00']);
+    run36('recBaixarExcel()');
+    const h2 = J36('__xls644')[1].h;
+    assert.ok(h2.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 2.408,00</td>') > 0 && h2.indexOf('2 diárias lançadas com valor') > 0);
+    // sem dados prontos, o Excel não sai pela metade
+    run36('REC_FONTES={quando:0, orc:null, irm:null}; recBaixarExcel();');
+    igual([J36('__xls644').length, /^Ainda não dá para baixar: /.test(run36('__st644.textContent'))], [2, true]);
+  } finally {
+    run36(`pelCadCache=__bk644.cc; PELUDINHOS=__bk644.P; REC_FONTES=__bk644.F; REC_MES=__bk644.M; REC_AVULSO=__bk644.A; document.getElementById=__bk644.ge;
+      relEntregar=__bk644.re; audit=__bk644.au; REC_LISTA_ABERTA=__bk644.ab; CARTEIRA_CARREGADA=__bk644.cr;`);
+  }
+});
+prova('6.44 AC7 — "Renovações anteriores" mostram o valor de cada plano: o gravado, ou o da tabela dito como tal', () => {
+  const ex = { renov: OUT644(), renov_hist: {
+    a: hist644(Object.assign(JUL644(), { valor_plano_cent: 99900 }), 100),
+    b: hist644(Object.assign(JUL644(), { inicio: '2026-04-05', fim: '2026-06-30', aulas: 2, ordemPet: 2 }), 50),
+    c: hist644(renov36({ inicio: '2026-01-05', fim: '2026-03-31' }), 10),
+    d: hist644({ plano: 'Gold', inicio: '2025-10-05', fim: '2025-12-31', aulas: '' }, 5) } };
+  const h = run('renovHistHTML(' + JSON.stringify(ex) + ')');
+  const vals = (h.match(/class="renov-hist-valor"[^>]*>(R\$ [\d.,]+)( <span[^>]*>\(pela tabela\)<\/span>)?/g) || []).map((x) => x.replace(/<[^>]+>/g, '').replace(/^.*?>/, ''));
+  // Gold 2x, 2º peludinho: R$ 547,77 × 3 = R$ 1.643,31
+  igual(vals, ['R$ 999,00', 'R$ 1.643,31 (pela tabela)', 'R$ 1.307,00 (pela tabela)'], h);
+  igual((h.match(/renov-hist-valor/g) || []).length, 3, 'o plano sem aulas não ganha valor inventado');
+});
+prova('6.44 AC8/AC9 — o caminho de sempre continua no texto; a área protegida não foi tocada por esta story', () => {
+  const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+  assert.ok(fin.indexOf('    valorMes = entra ? mensal * (meses || 1) : 0;\n') > 0 && fin.indexOf('        R.porServico.daycare.declarado += mensal * (meses || 1);\n') > 0);
+  assert.ok(fin.indexOf("    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n") > 0, 'quem saiu continua fora');
+  assert.ok(!/\b(const|let)\s|=>/.test(fin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'ES5');
 });
 
 // ------------------------------------------------ o fim

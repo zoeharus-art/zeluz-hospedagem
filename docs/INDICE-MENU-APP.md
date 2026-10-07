@@ -2,6 +2,27 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-09) — Fechamento de plano: o valor do plano, e o recebido de plano no mês FILHOt por FILHOt
+
+> Adriana, 07/out/2026: *"Num plano trimestral, o valor da mensalidade não é o valor do plano: o valor do plano total fechado é maior. Seria interessante o valor do plano e não da mensalidade, que está aqui 359. Teria que somar quanto a gente recebeu do plano no mês para poder finalizar os recebimentos do mês, o que foi fechado, para a gente bater com o outro sistema."* (Story 6.44)
+
+### (AU) Ficha › aba Plano e Recebimentos do mês (Dashboard da Adriana e da Márcia)
+
+| Antes | Agora |
+|---|---|
+| A aba Plano mostrava **Mensalidade R$ 359,00** num trimestral; o total do plano não aparecia | **Valor do plano R$ 1.077,00**, com a conta embaixo: "3 meses × R$ 359,00 (mensalidade)". No mensal, "um mês (no mensal, o valor do plano é a própria mensalidade)". Com desconto de irmão, o rótulo diz "(com desconto)" |
+| O resumo "CONFIRA ANTES DE GRAVAR", o aviso "PLANO GRAVADO" e o rastro (Linha do tempo) diziam "mensalidade R$ 359,00" | Dizem **"Valor do plano R$ 1.077,00 (3 × R$ 359,00)"** (no mensal, "(mensal)"). O plano com dias diferentes em cada mês continua com a soma mês a mês |
+| Nenhum valor ficava gravado: o quadro recalculava pela tabela de hoje | O Confirmar grava o valor fechado (`renov.valor_plano_cent`; no modo "Iguais", também `renov.mensalidade_cent`). O mês que já fechou não muda se a tabela mudar. O Desfazer devolve os valores do plano que volta |
+| Renovar apagava o pagamento anterior do mês dele (o Financeiro lia só o plano atual): Gold pago em 05/07 e renovado em setembro sumia de julho | As renovações anteriores contam no mês em que foram pagas. Não contam: a renovação **desfeita** e o plano **corrigido** (desde esta versão, o Confirmar diz no histórico quando foi "correção"; nos registros de antes, vale a regra do app: mesma data de pagamento, mesmo fim ou começa antes) |
+| O quadro só tinha o total por tipo | **Ver FILHOt por FILHOt** (toque para abrir): nome, tutor, plano e tipo, data do pagamento e valor, com as reservas da hospedagem e as diárias avulsas lançadas; o total da lista é o total do quadro. **Baixar Excel** com a mesma lista e o mesmo total, para bater com o outro sistema |
+| "Renovações anteriores" (aba Plano) não diziam o valor | Cada linha mostra o valor do plano: o gravado, ou o da tabela de hoje dito "(pela tabela)" para os planos fechados antes desta versão |
+
+- **Sem valor gravado e sem histórico, nada muda:** a conta do mês dá exatamente os mesmos números de antes (a prova da 6.36 com 60 fichas continua passando).
+- **Continua igual (perguntas à Adriana na Story 6.44):** quem saiu (inativado) não entra em nenhum mês; no "Começou no meio do mês", a opção 2 de um trimestral; as diárias do meio do mês fora dos recebimentos.
+- **A renovação anterior** entra só no mês em que foi paga: não gera cobrança nem "em débito" em outro mês. Quem virou morador continua com o pagamento antigo no mês em que pagou. Plano anterior sem valor gravado: a tabela de hoje, com as aulas e o nº na família daquele plano.
+- **Onde está no código:** `financeiro-logica.js` — `finValorGravado`, `finEhCorrecaoDe`, `finRenovHistContados`, `finResumoHistorico` (e o valor gravado nos dois caminhos de `finResumoMes`); `index.html` — `renovMesesDoTipo`, `renovContaDoValor`, `renovContaCurta`, `renovValorDoHist`, `blocoPlano`, `confirmarRenovacao`, `desfazerRenovacao`, `renovHistHTML`, `recLinhasDoMes`, `recListaHTML`, `recBaixarExcel`, `recCardHTML`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (567 no total; 13 da 6.44 e 2 antigas revistas — o rótulo "Mensalidade" virou "Valor do plano", e a regra da correção é a única outra leitura do começo do período). Defeitos plantados: 46, todos pegos. Chromium a 375 px: aba Plano, Confirmar, quadro de julho com a renovação anterior, lista e Excel.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-08) — Feriado não vira reposição
 
 > Adriana, 07/out/2026: *"feriado não são reposto. Não tem funcionando no dia e é perdido."* (a pergunta tinha ficado na Story 6.39).
