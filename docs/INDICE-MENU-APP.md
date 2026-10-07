@@ -1,8 +1,8 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02 e 06/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06 e 07/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
-## O que mudou em 06/out/2026 (v 2026-10-07-01) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
 
 > **Adriana, 06/out/2026,** com a foto do Confirmar do Fred dizendo "1x por semana · Ter": *"Erro - Fred eleonora deseja 2x por semana vou fechar e volta para uma vez"*. Story 6.37.
 
@@ -16,17 +16,17 @@
 - Os botões dos dias têm 44 px de altura, para o toque no celular, e os 5 cabem numa linha a 375 px. Quem não edita a ficha vê os dias, sem tocar.
 - **Tocar no dia redesenha a aba na hora** (QA da 6.37): o cadastro em memória acompanha a gravação, sem esperar o banco; dois toques rápidos no mesmo dia marcam e desmarcam.
 - O texto da aba aponta **«Quais dias?»**, e não mais "lá em cima": o texto de apoio, a faixa amarela do plano que não bate com os dias (o caso do Fred), o Desfazer e o Confirmar sem nenhum dia.
-- Nenhum dia marcado: nenhum número aceso, "Hoje: nenhum dia marcado" e a mensalidade diz "marque os dias em «Quais dias?»".
-- Plano com dias diferentes em cada mês (6.30): no modo "Mudam durante o plano", valem as linhas de cada mês (sem mudança). Com o plano por mês correndo e "Iguais", tocar num dia da aba pergunta antes; a saída é **«Mudam durante o plano»**, ali mesmo (e não "Ir para a aba Plano", onde a pessoa já está).
+- Nenhum dia marcado: nenhum número aceso, "Hoje: nenhum dia marcado", a mensalidade diz "marque os dias em «Quais dias?»" e a faixa amarela diz "nenhum dia está marcado".
+- Plano com dias diferentes em cada mês (6.30): no modo "Mudam durante o plano", valem as linhas de cada mês (sem mudança). Com o plano por mês correndo e "Iguais", tocar num dia da aba pergunta antes; a saída é **«Mudam durante o plano»**, ali mesmo (e não "Ir para a aba Plano", onde a pessoa já está). Quando isso não serve — o plano em edição é mensal, ou hoje vale um mês do plano anterior —, o botão é **Voltar** e a pergunta diz por quê.
 - **Onde está no código:** `planoDiasChipsHTML` (os dias na aba), `setRenovAulas` (o aviso), `blocoPlano`; a gravação é a de sempre, `toggleDiaPel` (com `origem='plano'` quando o toque vem da aba).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (8 provas da 6.37: a da entrega e as 7 do QA — o redesenho na hora e o toque duplo, a ordem e a grade, a rotina × o Mês 1, a pergunta vinda da aba, o texto e o zero dia, o Confirmar sem dia); `tests/harness.js` v-15 (o aviso aponta os dias da aba ou do alto; o texto de apoio novo). Defeitos plantados: 7 na entrega e 25 nos ajustes do QA (os 16 do QA e 9 novos), todos pegos. Chromium a 375 px (dado inventado): 9 de 9 na entrega.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (11 provas da 6.37: a da entrega, as 7 do QA — o redesenho na hora e o toque duplo, a ordem e a grade, a rotina × o Mês 1, a pergunta vinda da aba, o texto e o zero dia, o Confirmar sem dia — e as 3 do re-QA — o «Mudam» só quando serve, a faixa com zero dia, o Desfazer); `tests/harness.js` v-15 (o aviso aponta os dias da aba ou do alto; o texto de apoio novo; a faixa amarela). Defeitos plantados: 7 na entrega, 25 nos ajustes do QA (os 16 do QA e 9 novos) e 5 nos do re-QA, todos pegos. Chromium a 375 e a 1280 px (dado inventado): os roteiros do QA sem redesenho manual, todos ok.
 
 ### (AO) Renovação de planos: o primeiro desenho como consultora (Story 6.40)
 
 - Ao entrar no app como consultora, a tela Renovação de planos podia ser desenhada antes de o filtro "a cobrar agora" existir, e o primeiro desenho dava erro (a lista aparecia depois). Agora, sem filtro, vale "a cobrar agora".
 - **Onde está no código:** `renderRenovacao`. **Prova:** Fase 0, "6.40".
 
-## O que mudou em 06/out/2026 (v 2026-10-07-01) — o Financeiro soma mês a mês o plano com dias diferentes em cada mês (caso da Hopi)
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — o Financeiro soma mês a mês o plano com dias diferentes em cada mês (caso da Hopi)
 
 > **Adriana, 05/out/2026:** *"Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano."* Story 6.36, continuação da 6.30 (no mesmo pull request), com as respostas recomendadas, pela autorização do /loop de 06/out.
 
@@ -48,7 +48,7 @@
 - **Na tela, "R$ 359,00" não quebra no meio:** o detalhe dos meses usa o espaço que não quebra depois do R$ (`brlSemQuebra`), no Dashboard da Adriana e no Lançar pagamento.
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (18 provas da 6.36, bloco "6.36 — Financeiro": as 12 da entrega e as 6 do QA — o arredondamento ao centavo mais próximo com preço quebrado, o pagamento a mais, o contador do Day Care, o meio do mês sem o mês da 1ª cobrança, o Nº na família torto numa família, o `?v=` e o R$ que não quebra); `tests/harness.js` v-50 (N1: o `?v=` igual à `APP_VERSAO`; H3: a conta de 2026-06 a 2026-10 igual à de antes da 6.36. O retrato sintético não tem cadastro: a prova de fato foi um cadastro inventado sobre a lista do app, comparado com a cópia congelada do Financeiro de antes. H5: paridade app × Financeiro em 120 combinações, a tabela da story ao centavo e o preço com centavos); defeitos plantados: 30 na entrega, todos pegos, e 12 nos ajustes do QA, todos pegos. Revisão tripla (lógica, entradas e verificação independente) registrada na story.
 
-## O que mudou em 06/out/2026 (v 2026-10-07-01) — plano com dias diferentes em cada mês (caso da Hopi)
+## O que mudou em 07/out/2026 (v 2026-10-07-01) — plano com dias diferentes em cada mês (caso da Hopi)
 
 > **Adriana, 05/out/2026:** *"Tem alguns planos [...] que quando o tutor viaja, a gente fecha um plano e deixa para fazer a reposição depois. É o caso da Hopi. Da Hopi, nós fechamos um plano trimestral, sendo que durante dois meses ela vai vir uma vez por semana apenas, e no último mês, duas vezes por semana, para poder fazer as reposições que vamos precisar. [...] Ela foi fechado a creche trimestral 718, mais duas vezes por semana de 589. Então, ficou o total de 1.307 o plano. Então, eu preciso conseguir escolher como que funciona isso e os dias da semana que ela vai vir. No primeiro mês, ela vai vir tais dias da semana, no segundo mês, ela vai vir tais dias e etc. [...] para poder ter esses casos que a gente acaba fazendo."* Story 6.30, com as respostas recomendadas, pela autorização do /loop de 06/out.
 

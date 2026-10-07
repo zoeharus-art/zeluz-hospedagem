@@ -20731,13 +20731,13 @@
     // "gravado diz 1x" do plano da Hopi não briga com a rotina. A faixa só aparece quando os dias
     // de cada mês gravados não fecham com o plano (dado torto no banco).
     const temDiasMes=!!gravado.dias_mes;
-    const incoerente=(!semPlanoMensal && (temDiasMes ? !renovDiasMesValido(gravado) : (gravado.aulas && Number(gravado.aulas)!==aulas)));
+    const incoerente=(!semPlanoMensal && (temDiasMes ? !renovDiasMesValido(gravado) : (gravado.aulas && Number(gravado.aulas)!==nDiasMarcados)));
     const faixaIncoerente=incoerente
       ? '<div class="field" style="grid-column:1/-1"><div id="planoIncoerente" class="hint" style="background:rgba(222,180,40,.22);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;font-weight:700;color:var(--z-blue)">'
         +(temDiasMes
           ? 'Os dias de cada mês gravados não fecham com o plano. Escolha <strong>Mudam durante o plano</strong>, confira cada mês e toque em <strong>Confirmar</strong> para acertar.'
-          : 'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
-            +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias em <strong>Quais dias?</strong>, logo abaixo, e toque em <strong>Confirmar</strong> para acertar.')
+          : 'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas '
+            +(nDiasMarcados?('os dias marcados são '+nDiasMarcados+' ('+esc(renovDiasNomes(p))+')'):'nenhum dia está marcado')+'. Confira os dias em <strong>Quais dias?</strong>, logo abaixo, e toque em <strong>Confirmar</strong> para acertar.')
         +'</div></div>'
       : '';
     // OS DIAS DA SEMANA MUDAM DURANTE O PLANO? (6.30, caso da Hopi) Só no trimestral e no
@@ -20871,7 +20871,7 @@
         return false;
       }
       if(dm.every(function(m){ return m.join(',')===dm[0].join(','); })){
-        if(avisar) faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias no alto da ficha.');
+        if(avisar) faltaC('planoDiasModo', 'Os '+nMesesC+' meses estão com os mesmos dias. Escolha "Iguais no plano todo" e marque esses dias em «Quais dias?».');
         return false;
       }
       return true;
@@ -23940,14 +23940,25 @@
     // nenhum — a saída é escolher "Mudam durante o plano", ali mesmo.
     if(!jaPerguntou && pelPlanoMesHoje(pelAtual) && typeof zPergunta==='function'){
       const info=pelPlanoMesHoje(pelAtual), daAba=(origem==='plano');
+      // «Mudam durante o plano» só serve quando o plano EM EDIÇÃO tem meses (trimestral ou
+      // semestral) e o mês de hoje é dele — não do plano anterior, que não se edita por aqui
+      // (re-QA da 6.37, A1). Nos outros casos, o segundo botão só fecha a pergunta.
+      let podeMudam=false;
+      if(daAba){ try{ podeMudam=(renovMesesN(renovEdit(pelExtra(pelAtual)))>1) && !info.mes.anterior; }catch(e){ podeMudam=false; } /* silencioso de propósito: sem como saber, o botão só fecha */ }
+      const comoMudar=!daAba
+        ? 'Para mudar os dias de um mês do plano, use a aba Plano.'
+        : (podeMudam
+          ? 'Para mudar os dias de um mês do plano, escolha «Mudam durante o plano», aqui na aba.'
+          : (info.mes.anterior
+            ? 'Os dias dos meses do plano anterior não mudam por aqui.'
+            : 'O plano em edição é mensal: os dias são os mesmos o mês todo.'));
       zPergunta('MUDAR A ROTINA DE DEPOIS DO PLANO?',
         [(daAba?'Os dias de «Quais dias?»':'Os dias do alto da ficha')+' valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
-         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. '
-           +(daAba?'Para mudar os dias de um mês do plano, escolha «Mudam durante o plano», aqui na aba.':'Para mudar os dias de um mês do plano, use a aba Plano.')],
-        {sim:'Mudar a rotina', nao:(daAba?'Mudam durante o plano':'Ir para a aba Plano'), cor:'#234D67', corTitulo:'#234D67'})
+         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. '+comoMudar],
+        {sim:'Mudar a rotina', nao:(daAba?(podeMudam?'Mudam durante o plano':'Voltar'):'Ir para a aba Plano'), cor:'#234D67', corTitulo:'#234D67'})
         .then(function(ok){
           if(ok) toggleDiaPel(d, true, origem);
-          else if(daAba){ try{ renovDiasModoSet('mudam'); }catch(e){ _logFalhaGrav('trocar para "Mudam durante o plano"', e); } }
+          else if(daAba){ if(podeMudam){ try{ renovDiasModoSet('mudam'); }catch(e){ _logFalhaGrav('trocar para "Mudam durante o plano"', e); } } }
           else irParaAbaPlano();
         });
       return;

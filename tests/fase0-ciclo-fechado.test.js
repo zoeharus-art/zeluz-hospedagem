@@ -9105,7 +9105,7 @@ prova('6.37 a aba Plano mostra os dias (os mesmos chips do alto, maiores); o "2x
 // o texto que apontava "lá em cima" (F4), a pergunta vinda da própria aba (F5) e o zero dia (F6).
 const amb637 = (ex, extra) => run(`__bk637q={pa:pelAtual, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, zf:zFalta, au:audit, rp:renderPel,
     rd:(typeof renderDaycare==='function'?renderDaycare:null), r:document.body.dataset.role, P:PELUDINHOS, cc:pelCadCache, lg:localStorage.getItem, ls:localStorage.setItem,
-    zp:zPergunta, dm:renovDiasModoSet, ia:irParaAbaPlano, hz:zHojeISO, rr:renovRascunho};
+    zp:zPergunta, dm:renovDiasModoSet, ia:irParaAbaPlano, hz:zHojeISO, rr:renovRascunho, za:(typeof zAlertao==='function'?zAlertao:null)};
   PELUDINHOS=[{n:'Fred', raca:'SRD', tutor:'Eleonora Teste'}]; pelAtual=PELUDINHOS[0]; renovRascunho=null;
   __ls637={}; localStorage.getItem=function(k){ return Object.prototype.hasOwnProperty.call(__ls637,k)?__ls637[k]:null; }; localStorage.setItem=function(k,v){ __ls637[k]=String(v); };
   pelExtra=__bk637q.pe; pelCadCache={}; pelCadCache[pelKey(pelAtual)]=JSON.parse(${JSON.stringify(JSON.stringify(ex))});
@@ -9211,6 +9211,67 @@ provaAsync('6.37 QA (F4) — Confirmar sem nenhum dia marcado: aponta os dias da
     igual(J630('__zf637q[0].el'), 'pelDiasEdit');
     assert.ok(/^Marque os dias da semana em que este FILHOt vem\. Sem dia marcado/.test(J630('__zf637q[0].msg')));
   } finally { solta637(); }
+});
+provaAsync('6.37 re-QA (A1) — «Mudam durante o plano» só aparece quando serve: plano em edição mensal ou mês do plano anterior → "Voltar", com o porquê, e nada muda', async () => {
+  const HOPI = { n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } };
+  const PERG = "__zp637q=[]; zPergunta=function(t,l,o){ __zp637q.push({t:t,l:l,o:o}); return Promise.resolve(false); }; __dm637q=[]; renovDiasModoSet=function(m){ __dm637q.push(m); }; __ia637q=0; irParaAbaPlano=function(){ __ia637q++; };";
+  // 1) o rascunho trocado para Mensal · Silver: o plano em edição não tem meses
+  amb637(HOPI, PERG);
+  try {
+    run("renovRascSet({plano:'Silver'}); toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual(q.o.nao, 'Voltar');
+    assert.ok(/O plano em edição é mensal: os dias são os mesmos o mês todo\./.test(q.l[1]) && q.l[1].indexOf('Mudam durante o plano') < 0, q.l[1]);
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [[], 0, 0], 'nada muda');
+  } finally { solta637(); }
+  // 2) hoje vale um mês do plano ANTERIOR (sobreposição): os meses dele não se editam por aqui
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['seg'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-12-10', fim: '2027-03-09', aulas: 1, ordemPet: 1, dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg', 'qua'] }] } },
+    PERG + " zHojeISO=function(){ return '2026-12-14'; };");
+  try {
+    assert.ok(J630('pelPlanoMesHoje(pelAtual).mes.anterior') === true, 'hoje é do plano anterior');
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual(q.o.nao, 'Voltar');
+    assert.ok(/Hoje vale o Mês 3 do plano anterior/.test(q.l[1]) && /Os dias dos meses do plano anterior não mudam por aqui\./.test(q.l[1]), q.l[1]);
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [[], 0, 0]);
+  } finally { solta637(); }
+  // 3) o caso que serve (o plano atual por mês, rascunho Gold): continua «Mudam durante o plano»
+  amb637(HOPI, PERG);
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    igual([J630('__zp637q[0]').o.nao, J630('__dm637q')], ['Mudam durante o plano', ['mudam']]);
+  } finally { solta637(); }
+});
+prova('6.37 re-QA (A2) — zero dia marcado: a faixa amarela diz "nenhum dia está marcado" (não "são 1 (nenhum)"), igual ao resto da tela', () => {
+  amb637(Object.assign({}, FRED637, { dias: [], renov: Object.assign({}, FRED637.renov, { aulas: 2 }) }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/O plano gravado diz 2x, mas nenhum dia está marcado\. Confira os dias em <strong>Quais dias\?<\/strong>/.test(h), 'faixa com zero dia');
+    assert.ok(h.indexOf('são 1 (') < 0);
+    // gravado 1x e nenhum dia: também não fecha
+    run('pelCadCache[pelKey(pelAtual)].renov.aulas=1;');
+    assert.ok(/O plano gravado diz 1x, mas nenhum dia está marcado\./.test(run('blocoPlano(pelExtra(pelAtual), pelAtual)')));
+    // e com os dias certos, nada de faixa
+    run("pelCadCache[pelKey(pelAtual)].dias=['ter'];");
+    igual(run('blocoPlano(pelExtra(pelAtual), pelAtual)').indexOf('id="planoIncoerente"'), -1);
+  } finally { solta637(); }
+});
+provaAsync('6.37 re-QA (A3) — Desfazer sem histórico: a explicação aponta «Quais dias?», não "lá em cima"', async () => {
+  amb637(FRED637, "__za637q=[]; zAlertao=function(t,l,o){ __za637q.push({t:t,l:l}); };");
+  try {
+    await run('desfazerRenovacao()');
+    const a = J630('__za637q[0]');
+    igual(a.t, 'NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA');
+    assert.ok(/ajuste os dias \(em «Quais dias\?», na aba Plano\), o plano e a data/.test(a.l[2]) && a.l.join(' ').indexOf('lá em cima') < 0, JSON.stringify(a.l));
+  } finally { run('zAlertao=__bk637q.za;'); solta637(); }
+  // e o Confirmar com todos os meses iguais também manda para «Quais dias?»
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(src.indexOf('Escolha "Iguais no plano todo" e marque esses dias em «Quais dias?».') > 0 && src.indexOf('marque esses dias no alto da ficha') < 0);
 });
 prova('6.40 — Renovação de planos: o 1º desenho, antes de o filtro existir, não dá erro e abre em "a cobrar agora"', () => {
   run(`__bk640={f:renovFiltro, ge:document.getElementById, P:PELUDINHOS}; PELUDINHOS=[]; renovFiltro=undefined;

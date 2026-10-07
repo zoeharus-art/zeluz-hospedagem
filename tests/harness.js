@@ -14761,7 +14761,8 @@ async function main() {
         && /onclick="irParaAbaPlano\(\);return false"/.test(html));
       check('v-15 · a faixa amarela de dado inconsistente existe na aba Plano',
         /id="planoIncoerente"/.test(html)
-        && /O plano gravado diz '\+esc\(String\(gravado\.aulas\)\)\+'x, mas os dias marcados são '\+aulas/.test(html));
+        && /O plano gravado diz '\+esc\(String\(gravado\.aulas\)\)\+'x, mas '/.test(html)
+        && /'os dias marcados são '\+nDiasMarcados/.test(html) && /'nenhum dia está marcado'/.test(html));
       // 6.37 (QA, F4): os dias também ficam na aba Plano — o texto aponta «Quais dias?», logo abaixo;
       // com "Mudam durante o plano", os dias de cada mês.
       check('v-15 · o texto de apoio abre o bloco Plano, em uma linha',
