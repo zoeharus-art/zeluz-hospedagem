@@ -9507,6 +9507,8 @@ provaAsync('6.39 QA (M2) — dois toques seguidos (o "Avisar a Márcia" não se 
     const ger0 = run('REP_LANC_GER');
     try { run('repAbrirLancar(PELUDINHOS[0])'); } finally { run('document.querySelectorAll=__bk639.qsa; repMostrarEscolhido=__bk639.rme;'); }
     igual([run('REP_LANCANDO'), run('REP_LANC_GER')], [false, ger0 + 1], 'o modal novo é outro lançamento');
+    await espera639();   // a lista de feriados (6.43) chega antes de qualquer toque
+    igual(run('REP_FER_LENDO'), false);
     // a gravação de erro também destrava
     run(`repModoAtual='alguns'; repMotivoAtual='viagem'; repAlgunsDatas=['2026-10-21']; __g639=[];
       repGravar=function(){ return Promise.reject(new Error('sem rede')); };`);
@@ -10251,12 +10253,12 @@ provaAsync('6.43 AC1 — "Alguns dias" e "Um período": o feriado fica de fora, 
     run("__g639=[]; __el639.repAte.value='2026-10-12';"); run('repPreverDias()');
     assert.ok(/^Nesse período não sobra dia para lançar\./.test(run('__el639.repPrevia.innerHTML')), run('__el639.repPrevia.innerHTML'));
     run('repConfirmar()'); await espera639();
-    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Os dias dele nesse período são feriado: a Zêluz não abre e o dia não é reposto. Nada foi lançado.']);
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'O dia dele nesse período é feriado: a Zêluz não abre e ele não é reposto. Nada foi lançado.']);
     // período com uma data já lançada e um feriado: as duas razões
     run(`__bk643.rc=REPO_CACHE; REPO_CACHE={}; REPO_CACHE[pelKey(repPelSel)]={lancamentos:{c1:{tipo:'credito', data:'2026-10-13', ts:1}}}; __el639.repAte.value='2026-10-13'; __g639=[];`);
     try {
       run('repConfirmar()'); await espera639();
-      igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Nesse período não sobra dia para lançar: os dias dele já têm falta avisada lançada (estão no Extrato) ou são feriado.']);
+      igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Nesse período não sobra dia para lançar: os dias dele já têm falta avisada lançada (estão no Extrato) ou são feriados.']);
     } finally { run('REPO_CACHE=__bk643.rc;'); }
   } finally { run(FER643_VOLTA); solta639(); }
 });
@@ -10341,6 +10343,161 @@ provaAsync('6.43 AC5 — abrir a janela da falta avisada e "Marcar o dia" busca 
     run('repFeriadosBuscar(function(){ __cb643++; })'); await espera639();
     igual(run('__cb643'), 0);
   } finally { run('document.querySelectorAll=__bk639.qsa; repMostrarEscolhido=__bk639.rme; orcFeriadosGarantir=__bk643.og;'); run(FER643_VOLTA); solta639(); }
+});
+
+// ---- QA independente da 6.43 (CONCERNS): o que foi ajustado
+console.log('\n6.43 — ajustes do QA: o encaixe da Márcia, o avulso, a Lista de troca, a tela e a espera da lista');
+provaAsync('6.43 QA (M1) — a autorização do encaixe pela Márcia não marca dia num feriado (reposição, avulso e troca); dia comum segue', async () => {
+  amb639(FREDO639(['seg', 'ter']), FER643 + `__bk643.va={db:DB, pe:vagasPodeEncaixar, pd:vagasPedidoDe, pc:repPelaChave, al:alert, zp:zPergunta, vd:vagasDoDia};
+    DB={}; vagasPodeEncaixar=function(){ return true; }; repPelaChave=function(){ return PELUDINHOS[0]; };
+    __ped643={tipo:'reposicao', pet:'Fredo', payload:{credito_id:'c1'}}; vagasPedidoDe=function(){ return __ped643; };
+    __al643=[]; alert=function(t){ __al643.push(String(t)); }; __zp643=0; zPergunta=function(){ __zp643++; return Promise.resolve(false); };
+    vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:true, lido:true, livres:0, usadas:5, limite:5}; };`);
+  try {
+    for (const tipo of ['reposicao', 'avulso']) {
+      run(`__ped643.tipo='${tipo}'; __al643=[]; __zp643=0;`);
+      await run("vagasAutorizar('2026-10-12', 'fredo__eleonora teste')"); await espera639();
+      igual([run('__zp643'), /^12\/10\/2026 é feriado \(Nossa Senhora Aparecida\): a Zêluz não abre\. Escolha outro dia\.\n\nO pedido continua em aberto: recuse-o, ou combine outro dia com a recepção\.$/.test(run('__al643[0]||""'))],
+        [0, true], tipo + ': nem pergunta, nada é gravado');
+    }
+    run("__ped643={tipo:'reposicao', pet:'Fredo', payload:{troca:{de:'2026-10-13'}}}; __al643=[]; __zp643=0;");
+    await run("vagasAutorizar('2026-10-12', 'fredo__eleonora teste')"); await espera639();
+    igual(run('__zp643'), 0, 'troca para o feriado: nada');
+    run("__ped643={tipo:'reposicao', pet:'Fredo', payload:{credito_id:'c1'}}; __al643=[]; __zp643=0;");
+    await run("vagasAutorizar('2026-10-14', 'fredo__eleonora teste')"); await espera639();
+    igual([run('__zp643'), run('__al643.length')], [1, 0], 'dia comum: a pergunta de sempre');
+  } finally {
+    run('DB=__bk643.va.db; vagasPodeEncaixar=__bk643.va.pe; vagasPedidoDe=__bk643.va.pd; repPelaChave=__bk643.va.pc; alert=__bk643.va.al; zPergunta=__bk643.va.zp; vagasDoDia=__bk643.va.vd;');
+    run(FER643_VOLTA); solta639();
+  }
+});
+provaAsync('6.43 QA (M2) — "Um dia só" num feriado que NÃO é dia dele também não vira crédito; nem um feriado que já tem falta lançada', async () => {
+  amb639(FREDO639(['ter']), FER643 + `repModoAtual='dia'; __el639.repData.value='2026-10-12'; __bk643.rc=REPO_CACHE; REPO_CACHE={};`);
+  try {
+    run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, '12/10/2026 é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto: nada foi lançado.']);
+    run("REPO_CACHE[pelKey(repPelSel)]={lancamentos:{c1:{tipo:'credito', data:'2026-10-12', ts:1}}};");
+    run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), /^12\/10\/2026 é feriado/.test(run('__el639.repWarn.textContent'))], [0, true], 'a mensagem é a do feriado, não a de "já lançada"');
+    // período: o feriado com falta já lançada aparece como feriado (não como "já tem")
+    run("__ex639.dias=['seg','ter']; repModoAtual='periodo'; __el639.repDe.value='2026-10-12'; __el639.repAte.value='2026-10-13'; repPreverDias();");
+    const h = run('__el639.repPrevia.innerHTML');
+    assert.ok(h.indexOf('12/10 (segunda-feira) não entra: ' + POR643 + '.') >= 0 && h.indexOf('já tem falta avisada') < 0, h);
+  } finally { run('REPO_CACHE=__bk643.rc;'); run(FER643_VOLTA); solta639(); }
+});
+prova('6.43 QA (M2) — "Marcar o dia" sem saldo (avulso, cobrado) num feriado: não lança; a troca que sai de um feriado diz "feriado" mesmo quando o dia não é dele', () => {
+  amb639(FREDO639(['ter']), FER643);
+  stubsTroca630();
+  run('__bk643.av={rs:repSaldo, rd:repDisponivel, dc:diariaAvulsaCent}; repSaldo=function(){ return 0; }; repDisponivel=function(){ return 0; }; diariaAvulsaCent=function(){ return 9000; };');
+  try {
+    const comum = J630("dxVeredito(PELUDINHOS[0], '2026-10-14')");
+    igual([comum.ok, comum.tipo], [true, 'avulso'], 'sem saldo, dia comum: avulso');
+    const fer = J630("dxVeredito(PELUDINHOS[0], '2026-10-12')");
+    igual([fer.ok, fer.tipo, fer.motivo], [false, '', '12/10/2026 é feriado (Nossa Senhora Aparecida): a Zêluz não abre. Escolha outro dia.']);
+    const t = J630("dxVeredito(PELUDINHOS[0], '2026-10-14', {de:'2026-10-12'})");
+    igual([t.ok, t.motivo], [false, '12/10/2026 é feriado (Nossa Senhora Aparecida): a Zêluz não abre e o dia não é reposto. Não há dia para trocar.']);
+  } finally { run('repSaldo=__bk643.av.rs; repDisponivel=__bk643.av.rd; diariaAvulsaCent=__bk643.av.dc;'); soltaTroca630(); run(FER643_VOLTA); solta639(); }
+});
+prova('6.43 QA (B1, B2, B3) — a Lista de troca não oferece o feriado; o botão não pede "marcar no dia dele"; "Marcar o dia" mostra só o aviso', () => {
+  amb639(FREDO639(['seg', 'ter']), FER643);
+  stubsTroca630();
+  try {
+    const antes = J630('trocaProximosDias(10).map(function(d){ return d.iso; })');
+    run(`__fer643='${antes[0]}'; orcEhFeriado=function(iso){ return iso===__fer643?'Feriado Teste':(iso==='2026-10-12'?'Nossa Senhora Aparecida':''); };`);
+    const depois = J630('trocaProximosDias(10).map(function(d){ return d.iso; })');
+    igual([depois.length, depois.indexOf(antes[0])], [10, -1], 'o feriado sai da lista e ela continua com 10 dias');
+    // B2: o rótulo do botão com o dia de repor no feriado (12/10 é segunda, dia dele)
+    run("__el639.repVolta.value='2026-10-12';");
+    igual(run('repBotaoRotulo()'), 'Lançar reposição');
+    run("__el639.repVolta.value='2026-10-19';");
+    igual(run('repBotaoRotulo()'), run('REP_DIA_DELE_BOTAO'), 'segunda comum, dia dele: o botão de sempre');
+    // B3: "Marcar o dia" no feriado
+    run(`Object.assign(__el639, {dxEscolhido:{style:{}, innerHTML:''}, dxVeredito:{innerHTML:''}, dxVagas:{innerHTML:''}, dxOk:{disabled:false, textContent:''}});
+      __bk643.dx={p:dxPel, d:dxDia, t:dxTroca}; dxPel=PELUDINHOS[0]; dxDia='2026-10-12'; dxTroca=false;`);
+    try {
+      run('dxPintar()');
+      const vg = run('__el639.dxVagas.innerHTML');
+      igual([vg.indexOf('12/10/2026 é feriado (Nossa Senhora Aparecida): a Zêluz não abre. Escolha outro dia.') >= 0, /vaga|já é dia|Avisar a Márcia/.test(vg), run('__el639.dxVeredito.innerHTML')], [true, false, '']);
+      run("dxDia='2026-10-19'; dxPintar();");
+      assert.ok(/já é dia do Fredo/.test(run('__el639.dxVagas.innerHTML')), 'dia comum: a faixa de sempre');
+    } finally { run('dxPel=__bk643.dx.p; dxDia=__bk643.dx.d; dxTroca=__bk643.dx.t;'); }
+  } finally { soltaTroca630(); run(FER643_VOLTA); solta639(); }
+});
+provaAsync('6.43 QA (B4, B7) — textos do período (dela, singular e plural); a confirmação e o rastro dizem que o feriado ficou de fora', async () => {
+  amb639(FREDO639(['seg', 'ter'], { sexo: 'Fêmea' }), FER643 + "repModoAtual='periodo'; __el639.repDe.value='2026-10-12'; __el639.repAte.value='2026-10-12';");
+  try {
+    run('repConfirmar()'); await espera639();
+    igual(run('__el639.repWarn.textContent'), 'O dia dela nesse período é feriado: a Zêluz não abre e ele não é reposto. Nada foi lançado.');
+    run("orcEhFeriado=function(iso){ return ({'2026-10-12':'Nossa Senhora Aparecida','2026-10-13':'Recesso Teste'})[iso]||''; };"); run('repConfirmar()'); await espera639();
+    run("__el639.repAte.value='2026-10-13';"); run('repConfirmar()'); await espera639();
+    igual(run('__el639.repWarn.textContent'), 'Os dias dela nesse período são feriados: a Zêluz não abre e eles não são repostos. Nada foi lançado.');
+    // B7: período com feriado e dia comum
+    run("orcEhFeriado=function(iso){ return iso==='2026-10-12'?'Nossa Senhora Aparecida':''; }; __el639.repAte.value='2026-10-13'; __g639=[]; __mm639=[]; __au639=[];");
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-13']);
+    const l = J630('__mm639')[0].l;
+    assert.ok(l.indexOf('Ficaram de fora: 12/10 (segunda-feira) — ' + POR643 + '.') >= 0, JSON.stringify(l));
+    assert.ok(/\(de fora, feriado: 12\/10\)/.test(J630('__au639').filter((a) => a[0] === 'reposicao-credito')[0][1]));
+  } finally { run(FER643_VOLTA); solta639(); }
+});
+provaAsync('6.43 QA (B5, B9, Q2, Q3, Q16) — enquanto a lista não chega o lançamento espera (até 4 s); quando chega, "Alguns dias" e o dia de repor são refeitos; no meio de um lançamento, nada é repintado', async () => {
+  amb639(FREDO639(['seg', 'ter']), `__bk643={fe:orcEhFeriado, cfg:orcFeriadosCfg, og:orcFeriadosGarantir, st:setTimeout};
+    orcFeriadosCfg={}; __res643=[]; orcFeriadosGarantir=function(){ return new Promise(function(ok){ __res643.push(ok); }); };
+    __st643=[]; setTimeout=function(f,ms){ __st643.push([f,ms]); return 0; };`);
+  try {
+    // a espera trava o lançamento e diz por quê
+    run("__cb643=0; repFeriadosBuscar(function(){ __cb643++; });");
+    igual([run('REP_FER_LENDO'), J630('__st643.map(function(x){ return x[1]; })')], [true, [4000]]);
+    run("repAlgunsDatas=['2026-10-13']; repConfirmar();"); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent'), run('REP_LANCANDO')], [0, 'Ainda estou conferindo os feriados. Espere um instante e confirme de novo.', false]);
+    run('__res643[0]();'); await espera639();
+    igual([run('REP_FER_LENDO'), run('__cb643')], [false, 1], 'a lista chegou: libera e refaz a tela');
+    // sem resposta do banco: os 4 s liberam (vale a lista do código)
+    run('repFeriadosBuscar(function(){});'); igual(run('REP_FER_LENDO'), true);
+    run('__st643[__st643.length-1][0]();'); igual(run('REP_FER_LENDO'), false);
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-13']);
+    // "Marcar o dia" também espera a lista
+    stubsTroca630();
+    run(`__el639.dxWarn={textContent:''}; __el639.dxOk={disabled:false, textContent:''}; __bk643.dx={p:dxPel, d:dxDia, t:dxTroca}; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxTroca=false;
+      __bk643.rcl=repCreditoLivre; __rcl643=0; repCreditoLivre=function(){ __rcl643++; return null; };`);
+    try {
+      run('REP_FER_LENDO=true; dxConfirmar();');
+      igual([run('__el639.dxWarn.textContent'), run('__rcl643'), run('__el639.dxOk.disabled')], ['Ainda estou conferindo os feriados. Espere um instante e confirme de novo.', 0, false]);
+      run('REP_FER_LENDO=false;');
+    } finally { run('dxPel=__bk643.dx.p; dxDia=__bk643.dx.d; dxTroca=__bk643.dx.t; repCreditoLivre=__bk643.rcl;'); soltaTroca630(); }
+    // uma busca antiga que termina depois não solta a espera da nova
+    run('repFeriadosBuscar(function(){}); repFeriadosBuscar(function(){});');
+    run('__st643[__st643.length-2][0]();'); igual(run('REP_FER_LENDO'), true);
+    run('__res643[__res643.length-1]();'); await espera639(); igual(run('REP_FER_LENDO'), false);
+    // a janela aberta: quando a lista (com o recesso da Gestão) chega, "Alguns dias" e o dia de repor são refeitos
+    run(`['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+      ['repBlocoDia','repBlocoPeriodo','repBlocoAlguns'].forEach(function(k){ __el639[k]={style:{display:''}}; });
+      __bk643.qsa=document.querySelectorAll; document.querySelectorAll=function(){ return []; };
+      __bk643.rme=repMostrarEscolhido; repMostrarEscolhido=function(){};`);
+    stubsTroca630();
+    try {
+      run('repAbrirLancar(PELUDINHOS[0])');
+      run("repModoAtual='alguns'; repAlgunsDatas=['2026-10-12','2026-10-13']; __el639.repVolta.value='2026-10-14'; repPreverAlguns(); repVoltaPintar();");
+      assert.ok(/viria em <b>2 dias<\/b>/.test(run('__el639.repPreviaAlguns.innerHTML')) && run('__el639.repVagasBox.innerHTML').indexOf('feriado') < 0, 'antes da lista');
+      run("orcFeriadosCfg={'2026-10-12':'Recesso da Zêluz', '2026-10-14':'Recesso da Zêluz'}; orcEhFeriado=__bk643.fe;");
+      run('__res643[__res643.length-1]();'); await espera639();
+      assert.ok(/viria em <b>1 dia<\/b>/.test(run('__el639.repPreviaAlguns.innerHTML')) && run('__el639.repPreviaAlguns.innerHTML').indexOf('é feriado (Recesso da Zêluz)') >= 0, run('__el639.repPreviaAlguns.innerHTML'));
+      assert.ok(run('__el639.repVagasBox.innerHTML').indexOf('14/10/2026 é feriado (Recesso da Zêluz): a Zêluz não abre. Escolha outro dia.') >= 0, run('__el639.repVagasBox.innerHTML'));
+      // B9: no meio de um lançamento, a lista que chega não repinta o botão
+      run("repAbrirLancar(PELUDINHOS[0]); REP_LANCANDO=true; __btn639.disabled=true; __btn639.textContent='Lançando…'; __el639.repVolta.value='2026-10-20';");
+      run('__res643[__res643.length-1]();'); await espera639();
+      igual([run('__btn639.disabled'), run('__btn639.textContent')], [true, 'Lançando…']);
+      run('REP_LANCANDO=false;');
+      // B9 em "Marcar o dia": gravando, a tela não é refeita
+      run(`__el639.dxModal={classList:{add:function(){}, remove:function(){}, contains:function(){ return true; }}}; __el639.dxOk={disabled:false, textContent:''};
+        __bk643.dp=dxPintar; dxAbrir(PELUDINHOS[0]); __dp643=0; dxPintar=function(){ __dp643++; }; __el639.dxOk.disabled=true; __el639.dxOk.textContent='Lançando…';`);
+      try {
+        run('__res643[__res643.length-1]();'); await espera639();
+        igual(run('__dp643'), 0);
+      } finally { run('dxPintar=__bk643.dp;'); }
+    } finally { run('document.querySelectorAll=__bk643.qsa; repMostrarEscolhido=__bk643.rme;'); soltaTroca630(); }
+  } finally { run('orcFeriadosGarantir=__bk643.og; setTimeout=__bk643.st; REP_FER_LENDO=false;'); run(FER643_VOLTA); solta639(); }
 });
 
 // ------------------------------------------------ o fim
