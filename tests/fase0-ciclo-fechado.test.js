@@ -6767,10 +6767,15 @@ provaAsync('6.29 quem tem as atividades limitadas no Time: o cartaz não oferece
   run(BF_STUBS); run(JA629);
   try {
     const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
-    // nenhuma atividade liberada (o padrão do Time): sem atalhos, só o cartaz com o recado
+    // nenhuma atividade liberada (o padrão do Time): sem atalhos — só "Entendi" e o desfazer (QA da 6.41, A1)
     run(bolt629(dia, kP) + `__ativ629=[]; __alertas=[]; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc.length'), 0, 'sem botões que levariam a outra tela');
+    igual([run('__esc.length'), run('__esc[0].t'), run('__esc[0].b')], [1, 'FALTA O CHECK-IN DO CORPO DE BOLT', ['Entendi', 'Toquei errado — desfazer']], 'sem botões que levariam a outra tela');
+    assert.ok(run('__esc[0].l').indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0, JSON.stringify(run('__esc[0].l')));
+    // sem nada a desfazer (a chamada já dizia "veio" antes do toque): o cartaz simples, como antes
+    run(bolt629(dia, kP) + `__ativ629=[]; __alertas=[]; __esc=[]; __banco['daycare/chamada/${dia}/${kP}']='veio'; dcChamada['${kP}']='veio';`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc.length'), 0);
     const al = JSON.parse(JSON.stringify(run('__alertas')));
     igual(al[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
     assert.ok(al[0].l.indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0, JSON.stringify(al[0].l));
@@ -9612,7 +9617,7 @@ provaAsync('6.41 AC1-AC5 — Bolt faltou ao meio-dia e tinha banho; «Ele está 
     igual(run('__med629'), 1, 'o remédio relê a fila (voltou a faltar)');
     const al = JSON.parse(JSON.stringify(run('__alertas')));
     igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
-    igual(al[0].l, ['A chamada de hoje voltou para "faltou".', 'O banho das 17:00 volta para a pergunta: liberar o horário ou ele ainda vem.']);
+    igual(al[0].l, ['A chamada de hoje voltou para "faltou".', 'O banho das 17:00 volta para a pergunta: «Liberar o horário» ou «Ele ainda vem».']);
     assert.ok(run('__aud629').indexOf('chamada: desfez o «Está aqui» (toque errado) — voltou para faltou') >= 0, JSON.stringify(run('__aud629')));
     igual(run(`BANHO_FALTA_AQUI['${dia}|${kP}']===undefined`), true, 'desfeito uma vez só');
     // o banho segurado ANTES do toque ("ainda vem") continua segurado; sem marcação antes, volta a "sem marcação"
@@ -9754,6 +9759,274 @@ prova('6.42 AC2 — "Fazer o check-in agora" abre o check-in do corpo de entrada
     igual(J630('__ir642'), ['Pipoca'], 'só quem está no quadro');
   } finally { run('hojeLista=__bk642c.hl; banhoFaltaIrAoCheckin=__bk642c.ir;'); }
 });
+
+// ================================================================== QA641 (Quinn) — provas independentes da Story 6.41
+// Dado INVENTADO (Bolt / Rui, como as provas da 6.29). Cada prova roda no app inteiro (sandbox) com o banco de mentira.
+console.log('\nQA641 — provas independentes do "Toquei errado — desfazer" (Quinn)');
+const qaToque641 = async (dia, kP, prep) => {
+  run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[];` + (prep || ''));
+  await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick(); run('__alertas=[];');
+};
+const qaSemana641 = (dia) => run(`['dom','seg','ter','qua','qui','sex','sab'][new Date('${dia}T12:00:00').getDay()]`);
+const qaPelOk641 = `__pelOk=true; setPelExtra=function(p,patch){ if(!__pelOk) return Promise.resolve({ok:false, erro:'barrado'}); __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); __extra[p.n]=Object.assign({}, __extra[p.n]||{}, JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };`;
+provaAsync('QA641-1 — "ainda vem" de ANTES do toque, da mesma pessoa e com o relógio do outro aparelho adiantado: continua segurado', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const fut = run('Date.now()+10*60000');
+    await qaToque641(dia, kP, `BANHO_FALTA_DEC['${kP}']={decisao:'mantido', quem:'Márcia', ts:${fut}}; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Márcia', ts:${fut}};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, 'o toque não segurou: já estava segurado');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`), fut, 'o "ainda vem" de antes fica');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-2 — o aparelho não sabia do "ainda vem" de outro (gravado antes, mesma pessoa, ou depois com o relógio adiantado de outra pessoa): o desfazer não o tira', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    // (a) mesma pessoa (login de posto com o mesmo nome em dois aparelhos), gravado ANTES, e este aparelho não sabia
+    await qaToque641(dia, kP, `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Márcia', ts:5};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, '(a) não foi este toque que segurou');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`), 5, '(a) o "ainda vem" de antes fica');
+    // (b) outra pessoa, relógio adiantado
+    const fut = run('Date.now()+10*60000');
+    await qaToque641(dia, kP, `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:${fut}};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, '(b) não foi este toque que segurou');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', '(b) o "ainda vem" da Lia fica');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-3 — "ainda vem" de outra pessoa gravado DEPOIS do toque, com carimbo maior: fica', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    const ts = J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).decTs;
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:${ts + 5000}};`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => /outra pessoa decidiu depois do toque/.test(x.l[1] || '')), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-4 — a decisão de ANTES do toque ("não deu certo" do "ainda vem") volta como estava, no banco e no aparelho', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const fal = { decisao: 'falhou', acao: 'manter', quem: 'Lia', ts: 5, msg: 'não consegui segurar o banho fixo na ficha' };
+    await qaToque641(dia, kP, `BANHO_FALTA_DEC['${kP}']=${JSON.stringify(fal)}; __banco[banhoFaltaNo('${dia}')+'/${kP}']=${JSON.stringify(fal)};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, true);
+    run(desf641(0)); await tick();
+    igual(J630(`__banco[banhoFaltaNo('${dia}')+'/${kP}']`), fal, 'no banco');
+    igual(J630(`BANHO_FALTA_DEC['${kP}']`), fal, 'no aparelho');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-5 — banho FIXO com exceção do dia que já existia antes do toque: volta a de antes (não some)', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    const antes = { manter: true, motivo: 'combinado com a tutora', quem: 'Gestão', ts: 5 };
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{'${dia}':${JSON.stringify(antes)}, '2020-01-01':{pular:true}}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).motivo, 'ainda vem', 'o toque gravou o "manter" dele');
+    run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`), antes, 'a exceção de antes volta');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['2020-01-01']`), { pular: true });
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-6 — banho FIXO: não consegui gravar na ficha ao desfazer — a janela diz, e a chamada e a pergunta voltam', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    run('__pelOk=false;');
+    run(desf641(0)); await tick();
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l[1], 'O banho volta para a pergunta, mas não consegui tirar o "ainda vem" do banho fixo na ficha: confira em Banhos recorrentes.');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).manter, true, 'a ficha ficou como estava (o aviso manda conferir)');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-7 — o dia virou entre o toque e o desfazer: nada é gravado', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__bkDK641=dcDataKey; dcDataKey=function(){ return "2099-01-02"; }; __gravBF=[]; __rmBF=[];');
+    try { run(desf641(0)); await tick(); } finally { run('dcDataKey=__bkDK641;'); }
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual([run('__gravBF.length'), run('__rmBF.length')], [0, 0]);
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['O DIA VIROU']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-8 — alguém TIROU a marcação da chamada depois do toque (sem marcação): o desfazer não grava "faltou" por cima', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run(`delete __banco['daycare/chamada/${dia}/${kP}']; __gravBF=[];`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']===undefined`), true, 'continua sem marcação');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => [x.t, x.l[0]]), [['NÃO DESFIZ', 'A chamada de Bolt mudou depois do toque: sem marcação.']]);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'nada mais foi desfeito');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-9 — dois toques no desfazer (o segundo antes de o primeiro terminar): grava uma vez só', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__aud629=[];');
+    run(desf641(0) + desf641(0)); await tick();
+    igual(run('__aud629').filter((x) => /desfez o «Está aqui»/.test(x)).length, 1);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-10 — o desfazer não toca no check-in do corpo, nos pertences nem nas pendências de prevenção', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__gravBF=[]; __rmBF=[]; __pend629=[];');
+    run(desf641(0)); await tick();
+    const toc = run('__gravBF.map(function(x){ return x.p; }).concat(__rmBF)');
+    igual(JSON.parse(JSON.stringify(toc)).filter((p) => /checkin-corpo|pertences|pendencias/.test(p)), [], JSON.stringify(toc));
+    igual(run('__pend629'), [], 'pendAvisarChegada não é chamada no desfazer');
+    igual(JSON.parse(JSON.stringify(toc)).sort(), [banhoNo641(dia, kP), 'daycare/chamada/' + dia + '/' + kP].sort());
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+function banhoNo641(dia, k) { return run(`banhoFaltaNo('${dia}')+'/${k}'`); }
+provaAsync('QA641-11 — banho FIXO: depois do toque, a Gestão mudou o dia na ficha ("pular" hoje): o desfazer não mexe na ficha', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    const pul = run('Date.now()+1000');
+    run(`__extra.Bolt.banho_rec.excecoes['${dia}']={pular:true, quem:'Gestão', ts:${pul}}; __pel=[];`);
+    run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`), { pular: true, quem: 'Gestão', ts: pul }, 'o "pular" da Gestão fica');
+    igual(run('__pel.length'), 0, 'a ficha não foi regravada');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+// ================================================================== 6.41 — ajustes do QA independente (A1, B1 a B5, B7)
+console.log('\n6.41 — ajustes do QA: o desfazer não some com a tela ocupada nem sem as atividades do Day Care; falha no meio; check-in no mesmo instante');
+const toque641q = async (dia, kP, prep) => {
+  run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[]; BANHO_FALTA_FILA=[];` + (prep || ''));
+  await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+};
+provaAsync('6.41 QA (A1) — outro cartaz na tela (a pendência de prevenção, um "JÁ FOI DECIDIDO"): o resultado do «Está aqui» espera na fila e volta COM o "Toquei errado — desfazer"', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __cartaz=true;");
+    igual([run('__esc.length'), run('__alertas.length'), run('BANHO_FALTA_FILA.length')], [0, 0, 1], 'a tela está ocupada: o resultado espera');
+    run('__cartaz=false; banhoFaltaTique();');
+    igual([run('__esc.length'), run('__esc[0].t'), run('__esc[0].b')], [1, 'FALTA O CHECK-IN DO CORPO DE BOLT', ['Fazer o check-in agora', 'Depois', 'Toquei errado — desfazer']]);
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), J630('__alertas').map((x) => x.t)], ['faltou', ['DESFEITO: BOLT']], 'o desfazer que veio da fila funciona');
+    // sem as atividades do Day Care e com a tela ocupada: "Entendi" e o desfazer
+    await toque641q(dia, kP, '__ativ629=[]; __cartaz=true;');
+    run('__cartaz=false; banhoFaltaTique();');
+    igual(run('__esc[0].b'), ['Entendi', 'Toquei errado — desfazer']);
+    run('__timers=[];'); run('__esc[0].fn[0]();');
+    igual(run('__timers.length'), 1, '"Entendi" segue para a próxima pergunta');
+    // a fila de outro dia não aparece
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __cartaz=true;");
+    run('BANHO_FALTA_FILA[0].dia="2020-01-01"; __cartaz=false; __esc=[]; banhoFaltaTique();');
+    igual(run('BANHO_FALTA_FILA.length'), 0);
+    igual(J630('__esc').filter((x) => x.t === 'FALTA O CHECK-IN DO CORPO DE BOLT').length, 0);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B1, B5, B7) — xarás: o resultado diz o tutor; o rastro do banho registra o desfazer; o aviso de pendência pode voltar se ele chegar de verdade', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={}; __bkPA641=PEND_AVISADO; PEND_AVISADO={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, `PELUDINHOS=PELUDINHOS.concat([{n:'Bolt', tutor:'Ana', dias:['seg']}]); __ativ629=['checkin-corpo']; PEND_AVISADO['${dia}||${kP}']=true; PEND_AVISADO['${dia}||outro']=true;`);
+    run('__alertas=[]; __aud629=[];'); run(desf641(0)); await tick();
+    igual(J630('__alertas').map((x) => x.t), ['DESFEITO: BOLT - RUI']);
+    assert.ok(run('__aud629').some((x) => /^banho-falta: Bolt: desfez o "ainda vem" \(toque errado no «Está aqui»\)$/.test(x)), JSON.stringify(run('__aud629')));
+    igual([run(`PEND_AVISADO['${dia}||${kP}']===undefined`), run(`PEND_AVISADO['${dia}||outro']`)], [true, true], 'só a marca deste FILHOt sai');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641; PEND_AVISADO=__bkPA641;'); }
+});
+provaAsync('6.41 QA (B2) — a rede cai no passo do banho, depois de a chamada voltar: a janela diz o que voltou e o que não voltou', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p===banhoFaltaNo('${dia}')+'/${kP}'){ return Object.assign({}, r, {once:function(){ return Promise.reject(new Error('sem rede')); }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['⚠ DESFIZ SÓ A CHAMADA']);
+    igual(al[0].l, ['A chamada de hoje de Bolt voltou para "faltou".', 'Não consegui devolver o banho: sem rede. Ele continua segurado ("ainda vem"): se não vier, toque em «Liberar o horário» no Hoje na Zêluz.']);
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['faltou', 'mantido']);
+    // a chamada que não gravou: a mensagem de sempre
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p==='daycare/chamada/${dia}/${kP}'){ return Object.assign({}, r, {set:function(){ return Promise.reject(new Error('sem rede')); }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    igual(J630('__alertas').map((x) => x.t), ['⚠ NÃO CONSEGUI DESFAZER']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B4) — o check-in do corpo termina em outro aparelho no mesmo instante do desfazer: a chamada volta a "veio" e nada mais é desfeito', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[]; __aud629=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p==='daycare/chamada/${dia}/${kP}'){ return Object.assign({}, r, {set:function(v){ var x=r.set(v); if(v==='faltou') ${fimCk629(dia, kP)}=1234; return x; }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    igual(al[0].l, ['Ele acabou de ter o check-in do corpo de entrada feito: está aqui de verdade.', 'A chamada continua "veio".']);
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`dcChamada['${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['veio', 'veio', 'mantido']);
+    igual(run('__aud629').filter((x) => /desfez/.test(x)).length, 0, 'nada foi desfeito: sem rastro de desfazer');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B3) — o toque não segurou o banho (outro aparelho já tinha liberado): o desfazer diz que o horário continua liberado; sem o sexo na ficha, os nomes dos botões', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, `__ativ629=['checkin-corpo']; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Lia', ts:7};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false);
+    run('__alertas=[];'); run(desf641(run('__esc.length') - 1)); await tick();
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l[1], 'O horário do banho continua liberado (Lia liberou).');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', 'a liberação da Lia fica');
+    // sem o sexo na ficha: «Liberar o horário» ou «Ainda vem»
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __extra.Bolt={};");
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual(J630('__alertas')[0].l[1], 'O banho das 17:00 volta para a pergunta: «Liberar o horário» ou «Ainda vem».');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+provaAsync('6.41 QA (B4) — com o check-in do corpo já feito antes do desfazer, a chamada nem é tocada (a 2ª conferência é só para o mesmo instante)', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run(`${fimCk629(dia, kP)}=1234; ${fimCk629(dia, kP).replace('/fim', '/inicio')}=1200; __alertas=[]; __gravBF=[]; __rmBF=[];`);
+    run(desf641(0)); await tick();
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    igual(al[0].l[0], 'Ele tem o check-in do corpo de entrada de hoje: está aqui de verdade.');
+    igual([run('__gravBF.length'), run('__rmBF.length')], [0, 0], 'nada foi gravado: nem a chamada');
+    // só o início do exame (não terminou): ainda não é o check-in feito — o desfazer segue
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run(`${fimCk629(dia, kP).replace('/fim', '/inicio')}=1200; __alertas=[];`);
+    run(desf641(0)); await tick();
+    igual([J630('__alertas').map((x) => x.t), run(`__banco['daycare/chamada/${dia}/${kP}']`)], [['DESFEITO: BOLT'], 'faltou']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

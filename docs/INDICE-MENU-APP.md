@@ -2,6 +2,26 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-06) — «Está aqui»: o "Toquei errado — desfazer" não some
+
+> QA independente da Story 6.41 (FAIL por um ponto): o botão de desfazer não aparecia para quem entra pelo Time sem as atividades do Day Care, nem quando outro cartaz estava na tela (por exemplo, "Fredo chegou e tem pendência").
+
+### (AQ) «Ele está aqui» › **Toquei errado — desfazer** (ajustes)
+
+| Antes | Agora |
+|---|---|
+| Sem as atividades do Day Care no Time (o padrão da recepção) ou com outro cartaz na frente, a janela virava um cartaz com "Entendi" e **sem o desfazer** | O desfazer aparece sempre que o toque mudou a chamada: sem atalhos, a janela traz "Entendi" e "Toquei errado — desfazer"; com outro cartaz na tela, a janela espera na fila e volta **com os botões** |
+| Xarás: "DESFEITO: FREDO" | "DESFEITO: FREDO - TUTORA TESTE", como o aviso e a janela do toque |
+| A rede caía no passo do banho e a janela dizia "corrija em Day Care › Chamada", com a chamada já desfeita | "⚠ DESFIZ SÓ A CHAMADA": diz que a chamada voltou e que o banho continua segurado ("ainda vem"), com o que fazer |
+| O check-in do corpo terminado em outro aparelho no mesmo instante podia ser coberto pelo "faltou" | Depois de gravar, o app confere o check-in de novo: se apareceu, a chamada volta a "veio" e nada mais é desfeito ("NÃO DESFIZ: … ESTÁ AQUI") |
+| "O banho continua segurado, como já estava antes do toque" quando outro aparelho já tinha liberado | Diz o que vale agora: "O horário do banho continua liberado (Lia liberou)." |
+
+- **Rastro:** o desfazer do banho (não fixo) também entra no rastro do banho de quem faltou.
+- **Pendência de prevenção:** a marca "já avisei" do aviso "chegou e tem pendência" sai no desfazer; se ele chegar de verdade hoje, o check-in avisa de novo. A pendência não muda e o `pendAvisarChegada` não foi alterado.
+- **Texto:** "volta para a pergunta: «Liberar o horário» ou «Ele ainda vem»" (os nomes dos botões; sem o sexo na ficha, «Ainda vem»).
+- **Onde está no código:** `banhoFaltaMostrar` (a fila com botões, `op.escolha`), `banhoFaltaEstaAqui` (o desfazer sem depender dos atalhos), `banhoFaltaDesfazerAqui`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (532 no total; 11 provas do QA e 6 novas). Defeitos plantados: 46 (17 do QA, 14 do dev e 15 novos), todos pegos. Chromium a 375 px: os 20 cenários do QA, inclusive a recepção sem atividades, a pendência aberta e os xarás.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-05) — falta avisada: a data já lançada não entra de novo
 
 > QA independente da Story 6.39 (CONCERNS). O caso do Fred: o 13/10 já entrou pelo "Um período"; lançar 13 e 14/10 em "Alguns dias" daria dois créditos para o 13.
@@ -48,7 +68,7 @@
 - **Banho fixo:** o "manter" do dia que o toque gravou na ficha sai; as outras exceções ficam.
 - A fila do remédio relê (voltou a faltar). Rastro: "desfez o «Está aqui» (toque errado)". Só quem decide o banho de quem faltou vê o botão. O botão não aparece quando a chamada já dizia "veio" antes do toque.
 - **Onde está no código:** `banhoFaltaEstaAqui` (guarda o que o toque mudou em `BANHO_FALTA_AQUI`) e `banhoFaltaDesfazerAqui` (lê e só então grava).
-- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.41 e 2 da 6.29 com o botão novo). Defeitos plantados: 14, 13 pegos e 1 equivalente (o carimbo da decisão já cobre). Chromium a 375 px: 7 de 7.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.41 e 2 da 6.29 com o botão novo). Defeitos plantados: 14, 13 pegos (o 14º, que o dev tinha como equivalente, não era: o QA mostrou o caso e a prova entrou na v 2026-10-07-06). Chromium a 375 px: 7 de 7.
 
 ## O que mudou em 07/out/2026 (v 2026-10-07-02) — falta avisada em alguns dias (caso do Fred)
 
