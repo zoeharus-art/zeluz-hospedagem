@@ -5103,13 +5103,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-06-07"></script>
+<script src="resposta-tutor.js?v=2026-10-07-01"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-06-07"></script>
+<script src="painel-logica.js?v=2026-10-07-01"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5121,7 +5121,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-06-07"></script>
+<script src="financeiro-logica.js?v=2026-10-07-01"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -17181,7 +17181,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-06-07';
+  const APP_VERSAO='2026-10-07-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -20535,12 +20535,13 @@
     else try{ alert(msg); }catch(e){} /* silencioso de propósito: guarda defensiva */
   }
   // Os dias da semana dentro da aba Plano (6.37): os MESMOS chips do alto da ficha, maiores para o
-  // toque. Quem não edita a ficha vê os dias, sem tocar.
+  // toque (44 px, como os outros botões do app), os 5 numa linha só (a caixa é uma grade de 5).
+  // Quem não edita a ficha vê os dias, sem tocar. O toque avisa que veio da aba ('plano').
   function planoDiasChipsHTML(p){
     var dias=pelDias(p,'rotina')||[], can=canEditPel();
     return ORDEM_DIAS.map(function(d){
-      return '<span class="dia'+(dias.indexOf(d)>=0?' on':'')+(can?' clic':'')+'" style="font-size:13px;padding:9px 14px;margin:0"'
-        +(can?(' onclick="toggleDiaPel(\''+d+'\')"'):'')+'>'+DIA_LBL[d]+'</span>';
+      return '<span class="dia'+(dias.indexOf(d)>=0?' on':'')+(can?' clic':'')+'" style="font-size:13px;padding:0;margin:0;min-height:44px;display:flex;align-items:center;justify-content:center"'
+        +(can?(' onclick="toggleDiaPel(\''+d+'\', false, \'plano\')"'):'')+'>'+DIA_LBL[d]+'</span>';
     }).join('');
   }
   // Redesenha SÓ o bloco Plano — usado quando os chips de dias mudam, para o seletor Nx
@@ -20630,7 +20631,7 @@
       if(typeof zAlertao==='function') zAlertao('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA',
         ['Este FILHOt não tem nenhuma renovação anterior no histórico.',
          'O histórico começa a ser guardado a partir da primeira renovação confirmada nesta versão do app.',
-         'Para corrigir o plano atual, ajuste os dias lá em cima, o plano e a data, e toque em Confirmar.'],
+         'Para corrigir o plano atual, ajuste os dias (em «Quais dias?», na aba Plano), o plano e a data, e toque em Confirmar.'],
         {botao:'Entendi'});
       return;
     }
@@ -20675,6 +20676,9 @@
     // AULAS = DIAS MARCADOS. Sempre. Nem o que está gravado nem o que alguém digitou —
     // é a quantidade de chips do topo da ficha que manda, aqui e na mensalidade.
     const aulas=nAulasDe(p);
+    // nAulasDe nunca devolve menos de 1. Para a TELA, zero dia marcado é zero: nenhum número
+    // aceso e a mensalidade pedindo os dias (QA da 6.37, F6). O Confirmar já barra.
+    const nDiasMarcados=(pelDias(p,'rotina')||[]).length;
     const sujo=renovRascSujo(ex);
     // A consultora fala com o tutor em MENSAL / TRIMESTRAL / SEMESTRAL — é isso que precisa
     // estar na frente. Silver/Gold/Black continuam sendo o nome comercial (e definem o valor),
@@ -20733,7 +20737,7 @@
         +(temDiasMes
           ? 'Os dias de cada mês gravados não fecham com o plano. Escolha <strong>Mudam durante o plano</strong>, confira cada mês e toque em <strong>Confirmar</strong> para acertar.'
           : 'O plano gravado diz '+esc(String(gravado.aulas))+'x, mas os dias marcados são '+aulas
-            +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias lá em cima e toque em <strong>Confirmar</strong> para acertar.')
+            +' ('+esc(renovDiasNomes(p)||'nenhum')+'). Confira os dias em <strong>Quais dias?</strong>, logo abaixo, e toque em <strong>Confirmar</strong> para acertar.')
         +'</div></div>'
       : '';
     // OS DIAS DA SEMANA MUDAM DURANTE O PLANO? (6.30, caso da Hopi) Só no trimestral e no
@@ -20750,7 +20754,11 @@
     return '<div class="prev-bloco" id="planoBloco">'
       +'<div class="prev-tit">Plano <span class="vd '+(semPlanoMensal?'vd-ok':clsSt)+'">'+st.label+'</span></div>'
       // TEXTO DE APOIO — o sistema orienta o que fazer, em uma linha, antes de qualquer campo.
-      +(semPlanoMensal?'':'<div id="planoComoFazer" class="hint" style="margin:0 0 9px;font-weight:700;color:var(--z-blue)">Primeiro marque os dias da semana lá em cima. Depois escolha o plano e a data. Nada é gravado antes do Confirmar.</div>')
+      +(semPlanoMensal?'':'<div id="planoComoFazer" class="hint" style="margin:0 0 9px;font-weight:700;color:var(--z-blue)">'
+        +(mudam
+          ? 'Escolha o plano e a data e marque os dias de cada mês logo abaixo. Nada é gravado antes do Confirmar.'
+          : 'Marque os dias da semana em «Quais dias?», logo abaixo. Depois escolha o plano e a data. Nada é gravado antes do Confirmar.')
+        +'</div>')
       +'<div class="cad-grid">'
         +faixaIncoerente
         +'<div class="field" style="grid-column:1/-1"><label>Tipo de plano <span style="font-weight:600;color:'+(!r.plano?'var(--crm-critico)':'var(--muted)')+'">'+(!r.plano?'— OBRIGATÓRIO: escolha antes de lançar a data':'(define até quando vale)')+'</span></label><div class="seg gold" data-single'+(!r.plano?' style="outline:2px solid var(--crm-critico);outline-offset:3px;border-radius:11px"':'')+'>'
@@ -20779,11 +20787,11 @@
           // uma verdade só). O "2x" diz quantos faltam marcar, e a pessoa marca sem sair da aba.
           : (mudam ? renovMesesHTML(p, r, calc) : '<div class="field" style="grid-column:1/-1"><label>Aulas por semana <span style="font-weight:600;color:var(--muted)">— é a quantidade de dias marcados</span></label>'
             +'<div class="seg gold" data-single id="planoAulasSeg">'
-              +RENOV_NX.map(function(n){ return '<button type="button" class="'+(aulas===n?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
+              +RENOV_NX.map(function(n){ return '<button type="button" class="'+((nDiasMarcados && aulas===n)?'on':'')+'" onclick="setRenovAulas('+n+')">'+n+'x</button>'; }).join('')
             +'</div>'
             +'<label style="margin-top:10px">Quais dias?</label>'
-            +'<div id="planoDiasChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+planoDiasChipsHTML(p)+'</div>'
-            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+aulas+'x por semana'+(renovDiasNomes(p)?' ('+esc(renovDiasNomes(p))+')':' — nenhum dia marcado')+'. Toque nos dias para trocar: são os mesmos do alto da ficha.</div></div>')
+            +'<div id="planoDiasChips" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px;max-width:340px">'+planoDiasChipsHTML(p)+'</div>'
+            +'<div class="hint" style="font-size:11px;margin-top:3px">Hoje: '+(nDiasMarcados?(aulas+'x por semana ('+esc(renovDiasNomes(p))+')'):'nenhum dia marcado')+'. Toque nos dias para trocar: são os mesmos do alto da ficha.</div></div>')
             +'<div class="field"><label>Nº do peludinho na família</label><div class="seg gold" data-single>'
               +[1,2,3].map(function(n){ return '<button class="'+((r.ordemPet||1)===n?'on':'')+'" onclick="pick(this);renovRascSet({ordemPet:'+n+'})">'+n+'º</button>'; }).join('')+'</div></div>'
             // Sem plano escolhido a data não calcula vencimento nenhum — e a consultora
@@ -20795,7 +20803,7 @@
             +'<div class="field"><label>Data do pagamento'+(!r.plano?' <span style="color:var(--crm-critico);font-weight:800">— escolha o plano primeiro</span>':'')+'</label>'
               +'<input type="date" class="cad-in" id="planoDataPag" value="'+(r.inicio||'')+'"'+(!r.plano?' disabled style="opacity:.55;cursor:not-allowed" onclick="avisoEscolhaPlano()"':'')+' onchange="setRenovInicio(this.value)" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
               +(r.plano?'<div class="hint" style="font-size:11px;margin-top:3px">O mês deste pagamento já conta como o 1º mês do plano — menos quando o tutor paga a renovação nos últimos 15 dias do plano atual (o novo período começa no dia seguinte ao fim) ou nos últimos 7 dias do mês (começa no dia 1º do mês seguinte). O vencimento é calculado sozinho — e só grava no Confirmar. Período errado depois de gravar? Use Desfazer a última renovação.</div>':'')+'</div>'
-            +(mudam?'':'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+(mens?fmtCent(mens):'escolha o plano')+'</div></div>')
+            +(mudam?'':'<div class="field"><label>Mensalidade'+((r.ordemPet||1)>1?' (com desconto)':'')+'</label><div class="prev-calc">'+((mens&&nDiasMarcados)?fmtCent(mens):(mens?'marque os dias em «Quais dias?»':'escolha o plano'))+'</div></div>')
             // O vencimento em destaque: é o número que a consultora confere antes de confirmar.
             +'<div class="field" style="grid-column:1/-1"><label>Vale até '+(r.plano?'<span style="font-weight:600;color:var(--muted)">— calculado pelo sistema</span>':'')+'</label>'
               +'<div class="prev-calc" style="font-size:19px;font-weight:800;'+(fimTela&&fimTela<hojeISO()?'color:var(--crm-critico)':'')+'">'
@@ -20877,7 +20885,7 @@
         return;
       }
     } else if(!dias.length){
-      if(typeof zFalta==='function') zFalta([{el:'pelDiasEdit', msg:'Marque os dias da semana em que este FILHOt vem. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
+      if(typeof zFalta==='function') zFalta([{el:(document.getElementById('planoDiasChips')?'planoDiasChips':'pelDiasEdit'), msg:'Marque os dias da semana em que este FILHOt vem'+(document.getElementById('planoDiasChips')?', aqui em «Quais dias?»':'')+'. Sem dia marcado não há aulas por semana — e sem aulas não há mensalidade.'}], {botao:'planoConfirmar'});
       else alert('Marque os dias da semana antes de confirmar o plano.');
       return;
     }
@@ -21457,6 +21465,13 @@
   function setRenovFiltro(f){ renovFiltro=f; renderRenovacao(); }
   function renderRenovacao(){
     const el=document.getElementById('renovLista'); if(!el) return;
+    // Story 6.40: a tela pode ser desenhada (aoAbrirView, ao entrar como consultora) ANTES de o
+    // script chegar à linha do "var renovFiltro='cobrar'" acima — aí o filtro ainda é undefined
+    // e o primeiro desenho dava erro. Sem filtro, vale o de sempre: a cobrar agora.
+    if(typeof renovFiltro!=='string' || !renovFiltro) renovFiltro='cobrar';
+    // Pelo mesmo motivo, a lista do app (PELUDINHOS) ainda pode não existir: aí não desenha agora —
+    // o desenho de verdade vem quando o cadastro chega (a lista já aparecia depois do erro).
+    if(!Array.isArray(PELUDINHOS)) return;
     const ehTipo=renovFiltro.indexOf('tipo:')===0;
     const tipoAlvo=ehTipo?renovFiltro.slice(5):'';
     const ativos=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
@@ -23917,17 +23932,24 @@
     const freq=dias.length?(dias.length+'x'):pelFreq(p);
     return pelDiasPlanoAvisoHTML(p)+chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${freq}/semana</span>`;
   }
-  function toggleDiaPel(d, jaPerguntou){
+  function toggleDiaPel(d, jaPerguntou, origem){
     if(!canEditPel()||!pelAtual) return;
     // Plano com dias por mês correndo (6.30): os chips são a rotina de DEPOIS do plano — pergunta
     // antes, para ninguém achar que mudou o dia de hoje. Sem isso, o caminho é o de sempre.
+    // Toque vindo da própria aba Plano (6.37, QA F5): "Ir para a aba Plano" não leva a lugar
+    // nenhum — a saída é escolher "Mudam durante o plano", ali mesmo.
     if(!jaPerguntou && pelPlanoMesHoje(pelAtual) && typeof zPergunta==='function'){
-      const info=pelPlanoMesHoje(pelAtual);
+      const info=pelPlanoMesHoje(pelAtual), daAba=(origem==='plano');
       zPergunta('MUDAR A ROTINA DE DEPOIS DO PLANO?',
-        ['Os dias do alto da ficha valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
-         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. Para mudar os dias de um mês do plano, use a aba Plano.'],
-        {sim:'Mudar a rotina', nao:'Ir para a aba Plano', cor:'#234D67', corTitulo:'#234D67'})
-        .then(function(ok){ if(ok) toggleDiaPel(d, true); else irParaAbaPlano(); });
+        [(daAba?'Os dias de «Quais dias?»':'Os dias do alto da ficha')+' valem depois do plano (a partir de '+fmtBR(addDiasISO(info.fim, 1))+').',
+         'Hoje vale o Mês '+info.mes.n+' do plano'+(info.mes.anterior?' anterior':'')+(info.mes.junto?', junto com o plano atual':'')+': '+renovDiasRotulo(info.mes.dias)+'. '
+           +(daAba?'Para mudar os dias de um mês do plano, escolha «Mudam durante o plano», aqui na aba.':'Para mudar os dias de um mês do plano, use a aba Plano.')],
+        {sim:'Mudar a rotina', nao:(daAba?'Mudam durante o plano':'Ir para a aba Plano'), cor:'#234D67', corTitulo:'#234D67'})
+        .then(function(ok){
+          if(ok) toggleDiaPel(d, true, origem);
+          else if(daAba){ try{ renovDiasModoSet('mudam'); }catch(e){ _logFalhaGrav('trocar para "Mudam durante o plano"', e); } }
+          else irParaAbaPlano();
+        });
       return;
     }
     const antes=pelDias(pelAtual,'rotina').slice();
@@ -23935,6 +23957,11 @@
     if(i>=0) dias.splice(i,1); else dias.push(d);
     dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
     setPelExtra(pelAtual,{dias:dias, freq:(dias.length?dias.length+'x':'')});
+    // O cadastro em memória acompanha NA HORA (QA da 6.37, F1): a ficha lê o pelCadCache antes da
+    // cópia local, e o ouvinte do cadastro só o troca ~90 ms depois. Sem isto, o redesenho logo
+    // abaixo mostraria os dias antigos, e um segundo toque rápido partiria da lista velha.
+    // (Mesmo molde das outras gravações da ficha que já atualizam o cache.)
+    try{ const _kd=pelKey(pelAtual); if(typeof pelCadCache!=='undefined' && pelCadCache[_kd]) pelCadCache[_kd]=Object.assign({},pelCadCache[_kd],{dias:dias.slice(), freq:(dias.length?dias.length+'x':'')}); }catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
     // RASTRO EM TODA PORTA (Adriana, 15/set/2026): mexer nos dias muda as aulas por semana
     // e, com elas, a mensalidade. Mudança de dinheiro sem rastro era porta sem fechadura —
     // ninguém sabia quem tinha trocado o dia da Cookie nem quando.

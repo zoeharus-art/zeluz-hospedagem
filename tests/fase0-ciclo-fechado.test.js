@@ -5636,7 +5636,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{\n    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -8271,7 +8271,8 @@ prova('6.30 — a área protegida e as portas antigas: turmaDeHoje idêntica, gr
   assert.ok(/function turmaDeHoje\(\)\{\n    if\(typeof turmaDoDia!=='function'\) return \[\];\n    var antes=dcDia;\n    try\{ dcDia=HOJE_DIA; return turmaDoDia\(\); \}/.test(src));
   assert.ok(!/dcDia!==HOJE_DIA/.test(src));
   assert.ok(/function blocoPlano\(ex,p\)\{[\s\S]{0,900}?const aulas=nAulasDe\(p\);/.test(src));
-  assert.ok(/id="planoComoFazer"[\s\S]{0,260}Primeiro marque os dias da semana lá em cima\. Depois escolha o plano e a data\. Nada é gravado antes do Confirmar\./.test(src));
+  // o texto de apoio: a 6.37 (QA, F4) trocou o "lá em cima" pelos dias da própria aba — a frase continua uma só
+  assert.ok(/id="planoComoFazer"[\s\S]{0,400}Marque os dias da semana em «Quais dias\?», logo abaixo\. Depois escolha o plano e a data\. Nada é gravado antes do Confirmar\./.test(src));
   assert.ok(/if\(ant\.dias_mes\) volta\.dias_mes=ant\.dias_mes;/.test(src), 'o Desfazer leva os dias de cada mês');
 });
 // ---- QA independente da 6.30 (Quinn, 06/out/2026) e os ajustes ---------------------------------
@@ -9074,8 +9075,8 @@ prova('6.37 a aba Plano mostra os dias (os mesmos chips do alto, maiores); o "2x
     const box = h.slice(h.indexOf('id="planoDiasChips"'), h.indexOf('</div>', h.indexOf('id="planoDiasChips"')));
     assert.ok(box.length > 0, 'os dias aparecem na aba Plano');
     igual((box.match(/<span class="dia/g) || []).length, 5, 'Seg a Sex');
-    assert.ok(/class="dia on clic" style="font-size:13px;padding:9px 14px;margin:0" onclick="toggleDiaPel\('ter'\)">Ter</.test(box), 'a terça acesa, tocável, maior');
-    assert.ok(/class="dia clic"[^>]*onclick="toggleDiaPel\('qua'\)">Qua</.test(box), 'a quarta apagada, tocável');
+    assert.ok(/class="dia on clic" style="[^"]*min-height:44px[^"]*" onclick="toggleDiaPel\('ter', false, 'plano'\)">Ter</.test(box), 'a terça acesa, tocável, maior (44 px)');
+    assert.ok(/class="dia clic"[^>]*onclick="toggleDiaPel\('qua', false, 'plano'\)">Qua</.test(box), 'a quarta apagada, tocável');
     assert.ok(/Toque nos dias para trocar: são os mesmos do alto da ficha\./.test(h));
     // o "2x" com 1 dia marcado: diz quantos faltam e aponta os dias da aba; nada é gravado
     run('setRenovAulas(2)');
@@ -9098,6 +9099,130 @@ prova('6.37 a aba Plano mostra os dias (os mesmos chips do alto, maiores); o "2x
     assert.ok(hm.indexOf('onclick') < 0 && /class="dia on"/.test(hm), 'monitor: só vê');
   } finally { run(`pelAtual=__bk637.pa; pelExtra=__bk637.pe; setPelExtra=__bk637.sp; document.getElementById=__bk637.ge; zFalta=__bk637.zf; audit=__bk637.au; renderPel=__bk637.rp;
     if(__bk637.rd) renderDaycare=__bk637.rd; document.body.dataset.role=__bk637.r; PELUDINHOS=__bk637.P;`); }
+});
+
+// ---- QA da 6.37 (Quinn): o redesenho na hora (F1), as lacunas de prova (F2), o layout (F3),
+// o texto que apontava "lá em cima" (F4), a pergunta vinda da própria aba (F5) e o zero dia (F6).
+const amb637 = (ex, extra) => run(`__bk637q={pa:pelAtual, pe:pelExtra, sp:setPelExtra, ge:document.getElementById, zf:zFalta, au:audit, rp:renderPel,
+    rd:(typeof renderDaycare==='function'?renderDaycare:null), r:document.body.dataset.role, P:PELUDINHOS, cc:pelCadCache, lg:localStorage.getItem, ls:localStorage.setItem,
+    zp:zPergunta, dm:renovDiasModoSet, ia:irParaAbaPlano, hz:zHojeISO, rr:renovRascunho};
+  PELUDINHOS=[{n:'Fred', raca:'SRD', tutor:'Eleonora Teste'}]; pelAtual=PELUDINHOS[0]; renovRascunho=null;
+  __ls637={}; localStorage.getItem=function(k){ return Object.prototype.hasOwnProperty.call(__ls637,k)?__ls637[k]:null; }; localStorage.setItem=function(k,v){ __ls637[k]=String(v); };
+  pelExtra=__bk637q.pe; pelCadCache={}; pelCadCache[pelKey(pelAtual)]=JSON.parse(${JSON.stringify(JSON.stringify(ex))});
+  /* a gravação de verdade escreve a cópia local e o banco; o ouvinte do banco só troca o pelCadCache ~90 ms depois */
+  __gr637q=[]; setPelExtra=function(p,patch){ __gr637q.push(JSON.parse(JSON.stringify(patch))); var k='zeluz_pel_'+pelKey(p);
+    var o=JSON.parse(localStorage.getItem(k)||'{}'); Object.assign(o,patch); localStorage.setItem(k, JSON.stringify(o)); return Promise.resolve({ok:true}); };
+  __zf637q=[]; zFalta=function(l){ __zf637q.push(l[0]); }; __au637q=[]; audit=function(a,d){ __au637q.push([a,d]); }; renderPel=function(){}; renderDaycare=function(){};
+  zHojeISO=function(){ return '2026-10-06'; };
+  __box637q={outer:null}; __el637q={planoBloco:{set outerHTML(v){ __box637q.outer=v; }}, planoDiasChips:{}};
+  document.getElementById=function(id){ return __el637q[id]||null; };
+  document.body.dataset.role='consultora'; ${extra || ''}`);
+const solta637 = () => run(`pelAtual=__bk637q.pa; pelExtra=__bk637q.pe; setPelExtra=__bk637q.sp; document.getElementById=__bk637q.ge; zFalta=__bk637q.zf; audit=__bk637q.au;
+  renderPel=__bk637q.rp; if(__bk637q.rd) renderDaycare=__bk637q.rd; document.body.dataset.role=__bk637q.r; PELUDINHOS=__bk637q.P; pelCadCache=__bk637q.cc;
+  localStorage.getItem=__bk637q.lg; localStorage.setItem=__bk637q.ls; zPergunta=__bk637q.zp; renovDiasModoSet=__bk637q.dm; irParaAbaPlano=__bk637q.ia; zHojeISO=__bk637q.hz; renovRascunho=__bk637q.rr;`);
+const FRED637 = { n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x', renov: { plano: 'Gold', inicio: '2026-10-06', fim: '2026-12-31', aulas: 1, ordemPet: 1 } };
+const seg637 = (h) => { const i = h.indexOf('id="planoAulasSeg"'); return h.slice(i, h.indexOf('</div>', i)); };
+const chips637 = (h) => { const i = h.indexOf('id="planoDiasChips"'); return h.slice(i, h.indexOf('</div>', i)); };
+prova('6.37 QA (F1/F2) — tocar na quarta da aba: o bloco Plano é redesenhado NA HORA com Ter e Qua e o 2x aceso (o cadastro em memória acompanha); um segundo toque rápido desfaz', () => {
+  amb637(FRED637);
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    igual(run('__gr637q[0]'), { dias: ['ter', 'qua'], freq: '2x' }, 'grava pela porta de sempre');
+    igual(J630('pelCadCache[pelKey(pelAtual)].dias'), ['ter', 'qua'], 'o cadastro em memória já tem os dias novos, sem esperar o ouvinte');
+    const h = run('__box637q.outer');
+    assert.ok(typeof h === 'string' && h.indexOf('id="planoBloco"') >= 0, 'o bloco Plano foi redesenhado');
+    igual((seg637(h).match(/class="on"/g) || []).length, 1, 'um número aceso só');
+    assert.ok(/class="on" onclick="setRenovAulas\(2\)">2x/.test(seg637(h)), seg637(h));
+    assert.ok(/class="dia on clic"[^>]*>Ter<[\s\S]*class="dia on clic"[^>]*>Qua</.test(chips637(h)), 'Ter e Qua acesas no redesenho');
+    igual(run('__au637q.filter(function(a){ return a[0]==="dias-da-semana"; }).map(function(a){ return a[1]; })'), ['Fred: dias Ter → Ter, Qua'], 'o rastro de sempre');
+    // toque duplo (15 ms, antes do ouvinte): parte da lista NOVA e desmarca a quarta
+    run("toggleDiaPel('qua', false, 'plano')");
+    igual(run('__gr637q[1]'), { dias: ['ter'], freq: '1x' });
+    assert.ok(/class="on" onclick="setRenovAulas\(1\)">1x/.test(seg637(run('__box637q.outer'))), 'de volta ao 1x');
+    // ficha que ainda não está no cadastro em memória (só a cópia local): nada é inventado no cache
+    run("pelCadCache={}; toggleDiaPel('sex')");
+    igual(run('Object.keys(pelCadCache).length'), 0);
+  } finally { solta637(); }
+});
+prova('6.37 QA (F2/F3) — os dias da aba na ordem Seg a Sex, numa grade de 5 (os 5 numa linha a 375 px), com 44 px de toque', () => {
+  amb637(Object.assign({}, FRED637, { dias: ['sex', 'seg', 'qua'] }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    igual((chips637(h).match(/>(Seg|Ter|Qua|Qui|Sex)</g) || []).map((x) => x.slice(1, -1)), ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']);
+    assert.ok(/id="planoDiasChips" style="display:grid;grid-template-columns:repeat\(5,1fr\)/.test(h), 'grade de 5');
+    igual((chips637(h).match(/min-height:44px/g) || []).length, 5);
+    igual((seg637(h).match(/class="on"/g) || []).length, 1, 'um número aceso só (3x)');
+    assert.ok(/class="on" onclick="setRenovAulas\(3\)">3x/.test(seg637(h)));
+  } finally { solta637(); }
+});
+prova('6.37 QA (F2) — plano com dias por mês e "Iguais": os dias da aba são a ROTINA (iguais aos do alto), não os do Mês 1 de hoje', () => {
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } });
+  try {
+    igual(run("pelDias(pelAtual).join(',')"), 'seg', 'hoje (Mês 1) vale Seg');
+    const aba = run('planoDiasChipsHTML(pelAtual)'), alto = run('diasEditInner(pelAtual)');
+    igual((aba.match(/class="dia on[^"]*"[^>]*>(\w+)</g) || []).map((x) => /> *(\w+)<$/.exec(x)[1]), ['Ter'], 'a aba: Ter (a rotina)');
+    igual((alto.match(/class="dia on[^"]*"[^>]*>(\w+)</g) || []).map((x) => /> *(\w+)<$/.exec(x)[1]), ['Ter'], 'o alto: Ter');
+  } finally { solta637(); }
+});
+provaAsync('6.37 QA (F5) — toque na aba com plano por mês correndo: a pergunta fala de «Quais dias?» e oferece «Mudam durante o plano» (não "Ir para a aba Plano", onde a pessoa já está)', async () => {
+  amb637({ n: 'Fred', tutor: 'Eleonora Teste', dias: ['ter'], freq: '1x',
+    renov: { plano: 'Gold', inicio: '2026-10-05', fim: '2026-12-31', aulas: 1, ordemPet: 1, dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } },
+    "__zp637q=[]; zPergunta=function(t,l,o){ __zp637q.push({t:t,l:l,o:o}); return Promise.resolve(false); }; __dm637q=[]; renovDiasModoSet=function(m){ __dm637q.push(m); }; __ia637q=0; irParaAbaPlano=function(){ __ia637q++; };");
+  try {
+    run("toggleDiaPel('qua', false, 'plano')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q = J630('__zp637q[0]');
+    igual([q.t, q.o.sim, q.o.nao], ['MUDAR A ROTINA DE DEPOIS DO PLANO?', 'Mudar a rotina', 'Mudam durante o plano']);
+    assert.ok(/^Os dias de «Quais dias\?» valem depois do plano \(a partir de 01\/01\/2027\)\./.test(q.l[0]) && /escolha «Mudam durante o plano», aqui na aba\./.test(q.l[1]), JSON.stringify(q.l));
+    igual([J630('__dm637q'), run('__ia637q'), run('__gr637q.length')], [['mudam'], 0, 0], 'vai para "Mudam", sem gravar e sem pular de aba');
+    // o toque no ALTO da ficha continua como antes
+    run("__zp637q=[]; toggleDiaPel('qua')");
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const q2 = J630('__zp637q[0]');
+    igual([q2.o.nao, run('__ia637q')], ['Ir para a aba Plano', 1]);
+    assert.ok(/^Os dias do alto da ficha valem depois do plano/.test(q2.l[0]));
+  } finally { solta637(); }
+});
+prova('6.37 QA (F4/F6) — o texto aponta «Quais dias?» (não "lá em cima"); zero dia marcado: nenhum número aceso e a mensalidade pede os dias', () => {
+  amb637(Object.assign({}, FRED637, { renov: Object.assign({}, FRED637.renov, { aulas: 2 }) }));
+  try {
+    const h = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/id="planoComoFazer"[^>]*>Marque os dias da semana em «Quais dias\?», logo abaixo\./.test(h));
+    assert.ok(/O plano gravado diz 2x, mas os dias marcados são 1 \(Ter\)\. Confira os dias em <strong>Quais dias\?<\/strong>, logo abaixo/.test(h), 'a faixa do caso do Fred aponta a aba');
+    assert.ok(h.indexOf('lá em cima') < 0, 'nenhum "lá em cima" no bloco Plano');
+    run("pelCadCache[pelKey(pelAtual)].dias=[];");
+    const z = run('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    igual((seg637(z).match(/class="on"/g) || []).length, 0, 'nenhum número aceso');
+    assert.ok(/Mensalidade<\/label><div class="prev-calc">marque os dias em «Quais dias\?»</.test(z), 'a mensalidade pede os dias');
+    assert.ok(/Hoje: nenhum dia marcado\./.test(z));
+  } finally { solta637(); }
+});
+provaAsync('6.37 QA (F4) — Confirmar sem nenhum dia marcado: aponta os dias da própria aba («Quais dias?»), e não grava; sem a aba na tela, os do alto', async () => {
+  amb637(Object.assign({}, FRED637, { dias: [] }));
+  try {
+    await run('confirmarRenovacao()');
+    const f = J630('__zf637q[0]');
+    igual(f.el, 'planoDiasChips');
+    assert.ok(/^Marque os dias da semana em que este FILHOt vem, aqui em «Quais dias\?»\. Sem dia marcado não há aulas por semana/.test(f.msg), f.msg);
+    igual(run('__gr637q.length'), 0, 'nada gravado');
+    run('__zf637q=[]; delete __el637q.planoDiasChips;');
+    await run('confirmarRenovacao()');
+    igual(J630('__zf637q[0].el'), 'pelDiasEdit');
+    assert.ok(/^Marque os dias da semana em que este FILHOt vem\. Sem dia marcado/.test(J630('__zf637q[0].msg')));
+  } finally { solta637(); }
+});
+prova('6.40 — Renovação de planos: o 1º desenho, antes de o filtro existir, não dá erro e abre em "a cobrar agora"', () => {
+  run(`__bk640={f:renovFiltro, ge:document.getElementById, P:PELUDINHOS}; PELUDINHOS=[]; renovFiltro=undefined;
+    __rl640={innerHTML:''}; document.getElementById=function(id){ return id==='renovLista'?__rl640:null; };`);
+  try {
+    run('renderRenovacao()');
+    igual(run('renovFiltro'), 'cobrar');
+    // a lista do app ainda não chegou (o script não passou da declaração dela): não desenha e não dá erro
+    run("renovFiltro=undefined; PELUDINHOS=undefined; __rl640.innerHTML='antes';");
+    run('renderRenovacao()');
+    igual([run('renovFiltro'), run('__rl640.innerHTML')], ['cobrar', 'antes']);
+  } finally { run('renovFiltro=__bk640.f; document.getElementById=__bk640.ge; PELUDINHOS=__bk640.P;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {
