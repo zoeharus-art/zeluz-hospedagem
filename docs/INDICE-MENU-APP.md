@@ -2,6 +2,26 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-08) — Feriado não vira reposição
+
+> Adriana, 07/out/2026: *"feriado não são reposto. Não tem funcionando no dia e é perdido."* (a pergunta tinha ficado na Story 6.39).
+
+### (AT) Reposições › Lançar falta avisada e Marcar o dia — feriado
+
+| Antes | Agora |
+|---|---|
+| Falta avisada num feriado em dia dele virava crédito; a prévia só pedia "confira se a Zêluz abre" | **Não vira crédito.** Em "Alguns dias" e "Um período", o feriado aparece entre os que ficam de fora: "12/10 (segunda-feira) não entra: é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto." |
+| "Um dia só" lançava o feriado sem aviso | Não lança: "12/10/2026 é feriado (…). A Zêluz não abre e o dia não é reposto: nada foi lançado." |
+| O dia de repor podia ser um feriado | O aviso aparece assim que o dia é escolhido (sem vagas nem "Avisar a Márcia") e a falta não é gravada com ele: "12/10/2026 é feriado (…): a Zêluz não abre. Escolha outro dia." |
+| "Marcar o dia" (reposição, avulso, troca e a Lista de troca, que abre a mesma tela) aceitava feriado | Não aceita o feriado como dia de vir, e a troca não sai de um feriado: "… a Zêluz não abre e o dia não é reposto. Não há dia para trocar." |
+| Num aparelho que nunca abriu o Orçamento, valia só a lista de feriados do código | As duas janelas buscam a lista com o recesso da Gestão (uma vez por sessão) e refazem a prévia quando ela chega |
+
+- **A lista é uma só:** Configurações › Orçamento › feriados (nacionais, de MG, os dois de BH e o recesso que a Gestão acrescenta) — a mesma da falta automática das 12h e do calendário do Day Care.
+- **O que já foi lançado não muda sozinho:** falta avisada de feriado lançada antes desta versão continua no saldo; a recepção estorna no Extrato, se for o caso.
+- **Feriado no fim de semana** (ex.: 15/11/2026, domingo) continua dizendo "é domingo: não há Day Care".
+- **Onde está no código:** `repFeriadoNome`, `repFeriadoPorque`, `repFeriadoDiaRepor`, `repFeriadosBuscar`; `repAlgunsAnalise`, `repPeriodoAnalise`, `repPreverDias`, `repVoltaPintar`, `repConfirmar`, `dxVeredito`, `dxVereditoTroca`, `repAbrirLancar`, `dxAbrir`. Saíram `repFeriadosEm` e `repFeriadosHTML` (o aviso "confira se a Zêluz abre").
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (548 no total; 6 da 6.43 e as da 6.39 que esperavam o crédito em feriado, revistas). Harness: v-51 A1 compara com o período de verdade e ganha a A3 (feriado nunca vira crédito). Defeitos plantados: 25, todos pegos. Chromium a 375 px: 17 de 17.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-07) — Hoje na Zêluz: hóspede e morador fora do quadro do check-in
 
 > QA independente da Story 6.42 (FAIL por um ponto): hóspede e morador marcados "veio" na Chamada (ela lista os dois) entravam no quadro "Na chamada, sem o check-in do corpo". O Repolho apareceria todo dia.

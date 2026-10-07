@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-07"></script>
+<script src="resposta-tutor.js?v=2026-10-07-08"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-07"></script>
+<script src="painel-logica.js?v=2026-10-07-08"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-07"></script>
+<script src="financeiro-logica.js?v=2026-10-07-08"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6679,6 +6679,11 @@
     repAlgunsDatas=[''];
     var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display='none';
     repAlgunsDesenhar();
+    // O recesso da Gestão entra na conta do feriado (6.43): quando a lista chega, a prévia é refeita.
+    repFeriadosBuscar(function(){
+      if(repModoAtual==='periodo') repPreverDias(); else if(repModoAtual==='alguns') repPreverAlguns();
+      repVoltaPintar();
+    });
     if(repPelSel) repMostrarEscolhido(); else {
       document.getElementById('repEscolhido').style.display='none';
       document.getElementById('repFormulario').style.display='none';
@@ -6751,10 +6756,11 @@
     const anP=repPeriodoAnalise(p, de, ate), dias=anP.entram;
     // O que fica de fora, com o porquê (Story 6.39, caso do Fred: 13 e 14/10 com só a terça
     // na ficha davam 1 crédito sem dizer por quê). Só dias de semana: sábado e domingo não têm
-    // Day Care e não precisam de explicação. Os já lançados (QA da 6.39, M1) e os feriados (M3)
-    // também aparecem.
-    const fora=repForaDoPeriodo(p, de, ate, dias.concat(anP.ja))+repJaLancadasHTML(anP.ja)+repFeriadosHTML(anP.feriados, true);
-    if(!dias.length){ el.innerHTML=(anP.ja.length?'Nesse período não sobra dia para lançar.':'Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.')+fora; return; }
+    // Day Care e não precisam de explicação. Os já lançados (QA da 6.39, M1) e os feriados (6.43:
+    // a Zêluz não abre e o dia não é reposto) também aparecem, com o porquê.
+    const isoF=anP.feriados.map(function(o){ return o.iso; });
+    const fora=repForaDoPeriodo(p, de, ate, dias.concat(anP.ja, isoF))+repJaLancadasHTML(anP.ja)+repForaHTML(p, anP.feriados);
+    if(!dias.length){ el.innerHTML=((anP.ja.length||anP.feriados.length)?'Nesse período não sobra dia para lançar.':'Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.')+fora; return; }
     const most=dias.slice(0,10).map(repBRdata).join(' · ');
     el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
       +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
@@ -6827,7 +6833,7 @@
   }
   var REP_JA_LANCADA='a falta avisada desse dia já foi lançada (está no Extrato)';
   // O que entra e o que fica de fora, sem gravar nada:
-  // {entram:[iso], fora:[{iso, porque}], repetidas:[iso], feriados:[{iso, nome}]}.
+  // {entram:[iso], fora:[{iso, porque}], repetidas:[iso]}. O feriado fica em `fora` (6.43).
   function repAlgunsAnalise(p, datas){
     var vistos={}, entram=[], fora=[], repetidas=[];
     (datas||[]).forEach(function(d){
@@ -6836,33 +6842,50 @@
       if(vistos[d]){ if(repetidas.indexOf(d)<0) repetidas.push(d); return; }
       vistos[d]=true;
       if(!dataPlausivel(d)){ fora.push({iso:d, porque:'a data está fora do calendário do app'}); return; }
+      // Feriado num dia de semana (6.43): a Zêluz não abre — vale mais que "não é dia dele".
+      var _w=-1; try{ _w=new Date(d+'T12:00:00').getDay(); }catch(e){ _w=-1; } /* silencioso de propósito: sem o dia da semana, segue a conta de sempre */
+      var _fer=(_w>0 && _w<6)?repFeriadoNome(d):'';
+      if(_fer){ fora.push({iso:d, porque:repFeriadoPorque(_fer)}); return; }
       if(!repDiasQueViria(p, d, d).length){ fora.push({iso:d, porque:repPorQueNaoVem(p, d)}); return; }
       if(repCreditoVivoNaData(p, d)){ fora.push({iso:d, porque:REP_JA_LANCADA}); return; }
       entram.push(d);
     });
     entram.sort(); repetidas.sort(); fora.sort(function(a,b){ return a.iso<b.iso?-1:(a.iso>b.iso?1:0); });
-    return {entram:entram, fora:fora, repetidas:repetidas, feriados:repFeriadosEm(entram)};
+    return {entram:entram, fora:fora, repetidas:repetidas};
   }
-  // Feriado em dia dele (QA da 6.39, M3): o app trata feriado como dia sem Day Care, mas ele vira
-  // crédito como sempre virou. A prévia avisa; se feriado deve ou não virar crédito, é decisão
-  // da Adriana (pergunta registrada na story).
-  function repFeriadosEm(isos){
-    var out=[];
-    try{ (isos||[]).forEach(function(d){ var n=(typeof orcEhFeriado==='function')?orcEhFeriado(d):''; if(n) out.push({iso:d, nome:String(n)}); }); }
-    catch(e){ out=[]; } /* silencioso de propósito: sem a lista de feriados, sem o aviso */
-    return out;
+  // FERIADO NÃO É REPOSTO (Story 6.43 — Adriana, 07/out/2026): "feriado não são reposto. Não tem
+  // funcionando no dia e é perdido." Feriado não vira crédito de falta avisada, não é dia de repor
+  // e não sai numa troca. A lista é a de sempre (orcFeriados: nacionais, de MG, os dois de BH e o
+  // recesso que a Gestão acrescenta) — a mesma da falta automática e do calendário do Day Care.
+  function repFeriadoNome(iso){
+    try{ return (typeof orcEhFeriado==='function')?String(orcEhFeriado(String(iso||'').slice(0,10))||''):''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem a lista de feriados, vale a conta de sempre */
   }
-  function repFeriadosHTML(F, periodo){
-    if(!F || !F.length) return '';
-    return '<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(F.map(function(o){ return String(repBRdata(o.iso)).slice(0,5)+' é feriado ('+o.nome+')'; }).join('; '))
-      +': confira se a Zêluz abre. Se não abre, '
-      +(periodo?'mude o período ou use «Alguns dias» sem '+(F.length>1?'essas datas':'essa data'):'tire '+(F.length>1?'essas datas':'essa data'))+'.</span>';
+  function repFeriadoPorque(nome){ return 'é feriado ('+nome+'). A Zêluz não abre e o dia não é reposto'; }
+  // O dia de repor (e o dia novo da troca) num feriado: ninguém repõe com a casa fechada.
+  function repFeriadoDiaRepor(iso){
+    var n=repFeriadoNome(iso);
+    return n?(repBRdata(iso)+' é feriado ('+n+'): a Zêluz não abre. Escolha outro dia.'):'';
   }
-  // Os dias do período que viram crédito: os dias dele, menos os que já têm falta avisada viva.
+  // A lista de feriados com o recesso da Gestão: buscada uma vez por sessão (orcFeriadosGarantir,
+  // a mesma da falta automática) e, quando chega, a tela refaz a prévia.
+  function repFeriadosBuscar(depois){
+    try{
+      if(typeof orcFeriadosGarantir!=='function') return;
+      orcFeriadosGarantir().then(function(){ try{ if(depois) depois(); }catch(e){} /* silencioso de propósito: a prévia acerta no próximo toque */ });
+    }catch(e){ /* silencioso de propósito: sem a busca, vale a lista do código */ }
+  }
+  // Os dias do período que viram crédito: os dias dele, menos os feriados e os que já têm falta
+  // avisada viva.
   function repPeriodoAnalise(p, de, ate){
-    var dias=repDiasQueViria(p, de, ate), entram=[], ja=[];
-    dias.forEach(function(d){ if(repCreditoVivoNaData(p, d)) ja.push(d); else entram.push(d); });
-    return {entram:entram, ja:ja, feriados:repFeriadosEm(entram)};
+    var dias=repDiasQueViria(p, de, ate), entram=[], ja=[], feriados=[];
+    dias.forEach(function(d){
+      var n=repFeriadoNome(d);
+      if(n) feriados.push({iso:d, porque:repFeriadoPorque(n)});
+      else if(repCreditoVivoNaData(p, d)) ja.push(d);
+      else entram.push(d);
+    });
+    return {entram:entram, ja:ja, feriados:feriados};
   }
   function repListaDatasE(isos){
     var l=(isos||[]).map(function(d){ return String(repBRdata(d)).slice(0,5); });
@@ -6937,7 +6960,7 @@
     var n=a.entram.length;
     el.innerHTML=escAttr(pelNome(p))+' viria em <b>'+n+' dia'+(n>1?'s':'')+'</b>: '+escAttr(a.entram.map(repDataComSemana).join(' · '))
       +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+n+' crédito'+(n>1?'s':'')+' de reposição.</span>'
-      +rep+repForaHTML(p, a.fora)+repFeriadosHTML(a.feriados);
+      +rep+repForaHTML(p, a.fora);
   }
   // ===== O DIA DE REPOR E AS VAGAS (Adriana, 21/set/2026) ==========================
   // "Se tiver vaga — são 5 por dia de reposição+avulso — se não tiver vaga, primeiro precisa
@@ -6953,6 +6976,9 @@
     var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
     // A faixa do "dia dele" vem PRIMEIRO: é o erro que ela quis evitar, não um detalhe.
     if(box) box.innerHTML=v?(repDiaDeleAvisoHTML(repPelSel, v)+vagasAvisoHTML(v,'repPedirEncaixe()')):'';
+    // Feriado (6.43): a Zêluz não abre — nem vaga, nem "dia dele"; só o aviso.
+    var ferV=v?repFeriadoDiaRepor(v):'';
+    if(box && ferV) box.innerHTML='<div class="rep-fora" style="font-weight:800;color:var(--crm-critico)">'+escAttr(ferV)+'</div>';
     var btn=document.querySelector('#repModal .rep-ok');
     if(btn){ btn.textContent=repBotaoRotulo(); btn.disabled=false; }
   }
@@ -6982,6 +7008,9 @@
     // até ele aparecer de verdade. É só o aviso para a recepção saber quem vem em que dia.
     const volta=((document.getElementById('repVolta')||{}).value||'').trim();
     if(volta && volta<repHojeISO()){ w.textContent='O dia de repor não pode ser no passado. Se ele já repôs, marque o uso na lista em vez de agendar.'; return; }
+    // Feriado (6.43): a Zêluz não abre, ninguém repõe nesse dia.
+    const ferVolta=volta?repFeriadoDiaRepor(volta):'';
+    if(ferVolta){ w.textContent=ferVolta; return; }
     // AS VAGAS DO DIA DE REPOR. Cheio: a Gestão encaixa (e a autorização fica registrada);
     // quem não pode encaixar lança a falta e o dia fica esperando a Márcia — o que NÃO
     // acontece é o dia entrar por cima do limite sem ninguém saber.
@@ -7011,6 +7040,9 @@
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
+      // Feriado (6.43, Adriana): "não tem funcionamento no dia e é perdido" — não vira crédito.
+      const ferD=repFeriadoNome(d);
+      if(ferD){ w.textContent=repBRdata(d)+' é feriado ('+ferD+'). A Zêluz não abre e o dia não é reposto: nada foi lançado.'; soltar(); return; }
       if(repCreditoVivoNaData(p, d)){ w.textContent='A falta avisada de '+repBRdata(d)+' já foi lançada: está no Extrato e já conta no saldo. Para lançar de novo, estorne a anterior no Extrato.'; soltar(); return; }
       regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
       // As mesmas regras da "Marcar troca" (QA27): o dia que sai é dia dele, o dia novo não é,
@@ -7026,7 +7058,13 @@
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
       const anC=repPeriodoAnalise(p,de,ate), dias=anC.entram;
-      if(!dias.length){ w.textContent=anC.ja.length?'Os dias desse período já têm falta avisada lançada (estão no Extrato).':'Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.'; soltar(); return; }
+      if(!dias.length){
+        w.textContent=(anC.ja.length && anC.feriados.length)?'Nesse período não sobra dia para lançar: os dias dele já têm falta avisada lançada (estão no Extrato) ou são feriado.'
+          :anC.ja.length?'Os dias desse período já têm falta avisada lançada (estão no Extrato).'
+          :anC.feriados.length?'Os dias dele nesse período são feriado: a Zêluz não abre e o dia não é reposto. Nada foi lançado.'
+          :'Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.';
+        soltar(); return;
+      }
       const lote='L'+Date.now();
       // O agendamento vai só no PRIMEIRO do lote: 12 créditos não são 12 dias de volta,
       // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
@@ -8827,6 +8865,8 @@
     h('dxResults',''); h('dxEscolhido',''); h('dxVeredito',''); h('dxVagas','');
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
     dxPintar();
+    // O recesso da Gestão entra na conta do feriado (6.43): quando a lista chega, a tela é refeita.
+    repFeriadosBuscar(function(){ var m=document.getElementById('dxModal'); if(m && m.classList.contains('on')) dxPintar(); });
     if(!dxPel) setTimeout(function(){ try{ document.getElementById('dxBusca').focus(); }catch(e){ /* enfeite de tela */ } },120);
   }
   function dxFechar(){ var el=document.getElementById('dxModal'); if(el) el.classList.remove('on'); }
@@ -8864,6 +8904,8 @@
     if(hoje && dia<hoje){ out.motivo='Esse dia já passou. Escolha hoje ou um dia à frente.'; return out; }
     var sem=(typeof trocaDiaSemana==='function')?trocaDiaSemana(dia):'';
     if(sem==='sab'||sem==='dom'){ out.motivo='O Day Care não funciona no fim de semana. Escolha um dia de semana.'; return out; }
+    // Feriado (6.43): a Zêluz não abre — não é dia de repor, de avulso nem de troca.
+    var ferDia=repFeriadoDiaRepor(dia); if(ferDia){ out.motivo=ferDia; return out; }
     try{ out.saldo=repSaldo(p); }catch(e){ out.saldo=0; }
     try{ out.trocas=repTrocasPendentes(p); out.livre=Math.max(0, repDisponivel(p,'')-out.trocas); }catch(e){ out.livre=out.saldo; }
     out.matriculado=dcMatriculado(p);
@@ -8889,6 +8931,9 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(de)){ out.motivo='Diga também em que dia '+ele+' NÃO vem — é esse o dia que sai na troca.'; return out; }
     if(hoje && de<hoje){ out.motivo='O dia '+repBRdata(de)+' já passou. Para uma falta que já aconteceu, use «+ Falta».'; return out; }
     if(de===dia){ out.motivo='Os dois dias são o mesmo. Escolha o dia em que '+ele+' vem e o dia em que não vem.'; return out; }
+    // O dia que sai é feriado (6.43): ele é perdido e não gera reposição — não há o que trocar.
+    var ferDe=repFeriadoNome(de);
+    if(ferDe){ out.motivo=repBRdata(de)+' é feriado ('+ferDe+'): a Zêluz não abre e o dia não é reposto. Não há dia para trocar.'; return out; }
     // Cada dia pela SUA data (6.30): o dia que sai é dela no mês do plano dele; o dia novo, no seu.
     var dias=[]; try{ dias=pelDias(p, de)||[]; }catch(e){ dias=[]; }
     var diasPara=[]; try{ diasPara=pelDias(p, dia)||[]; }catch(e){ diasPara=[]; }
@@ -17435,7 +17480,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-07';
+  const APP_VERSAO='2026-10-07-08';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
