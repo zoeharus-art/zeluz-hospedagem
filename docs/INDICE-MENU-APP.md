@@ -2,6 +2,21 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-04) — Hoje na Zêluz: quem está só na chamada, sem o check-in do corpo
+
+> **Adriana, 02/out/2026** (o Rafael): *"coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!!)"*. A janela do «Está aqui» avisava uma vez; agora o Hoje na Zêluz lembra até o check-in ser feito. Story 6.42.
+
+### (AR) Hoje na Zêluz › "Na chamada, sem o check-in do corpo"
+
+| Antes | Agora |
+|---|---|
+| Marcado "veio" na chamada (✓ Veio ou «Está aqui») sem o check-in do corpo de entrada, a linha dizia só "presente"; fechada a janela do «Está aqui», só o painel do monitor lembrava | Quadro **"Na chamada, sem o check-in do corpo (N)"**, logo depois do banho de quem faltou, com o nome (e o tutor, se há xarás) e **Fazer o check-in agora** (abre o check-in do corpo de entrada com o nome). Quem não tem a atividade no Time lê "Peça a quem faz o check-in do corpo". O nome sai do quadro quando o check-in é feito, sem reabrir a tela |
+
+- A linha do FILHOt na lista (e o Excel do Hoje) diz **"presente pela chamada — falta o check-in do corpo"**, em vermelho.
+- Hóspedes, moradores e quem faltou não entram. Nada é gravado: o quadro só lê e leva até o check-in. Nenhuma leitura nova do banco: é o mesmo nó do dia que o Hoje já lia.
+- **Onde está no código:** `hojeSemCheckinLista`, `hojeSemCheckinCardHTML`, `hojeSemCheckinIr`, `hojeCkVivoLigar` e `hojeFrasePresenca`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.42). Defeitos plantados: 11, todos pegos.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-03) — «Está aqui» tocado por engano: desfazer
 
 > Da fila do /loop autorizado pela Adriana em 06/out ("desfazer o «Está aqui» tocado errado"); backlog da Story 6.29 (QA73). Story 6.41.

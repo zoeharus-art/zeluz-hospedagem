@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-03"></script>
+<script src="resposta-tutor.js?v=2026-10-07-04"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-03"></script>
+<script src="painel-logica.js?v=2026-10-07-04"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-03"></script>
+<script src="financeiro-logica.js?v=2026-10-07-04"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -17348,7 +17348,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-03';
+  const APP_VERSAO='2026-10-07-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -43173,7 +43173,43 @@
     if(o.fonte==='checkin') return o.hora?('presente pelo check-in às '+o.hora):'presente pelo check-in';
     if(o.fonte==='hospede') return 'hóspede da AuAulândia — está na casa';
     if(o.fonte==='morador') return 'morador da casa';
+    // Só a chamada diz que veio (6.42): o check-in do corpo de entrada ainda falta.
+    if(o.fonte==='chamada') return 'presente pela chamada — falta o check-in do corpo';
     return 'presente';
+  }
+  // ===== NA CHAMADA, SEM O CHECK-IN DO CORPO (Story 6.42) ===============================
+  // Adriana, 02/out/2026 (Rafael): "coloque a opção está aqui (para que se não foi feito o
+  // checkin do corpo apareça que tem que fazer!!!)". A janela do «Está aqui» avisa uma vez;
+  // este quadro fica no Hoje na Zêluz até o check-in do corpo de entrada de cada um ser feito.
+  // Quem entra aqui: a chamada de hoje diz "veio" e não há check-in de entrada (hojeFonteDe →
+  // 'chamada'). Hóspede, morador e quem faltou não entram. Nada aqui grava: só lê e leva até lá.
+  function hojeSemCheckinLista(L){ return (L||[]).filter(function(o){ return !!(o && o.fonte==='chamada'); }); }
+  function hojeSemCheckinNome(o, L){
+    try{
+      if(typeof nomeDesamb!=='function' || typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !o.p) return String(o.nome||'');
+      return nomeDesamb({p:o.p}, PELUDINHOS.map(function(q){ return {p:q}; }));
+    }catch(e){ return String(o.nome||''); } /* silencioso de propósito: sem a lista, o nome da ficha */
+  }
+  function hojeSemCheckinCardHTML(L){
+    var S=hojeSemCheckinLista(L); if(!S.length) return '';
+    var pode=(typeof banhoFaltaAtivLiberada==='function') ? banhoFaltaAtivLiberada('checkin-corpo') : false;
+    var h='<div class="card" id="hojeSemCk" style="border-left:4px solid var(--crm-critico)">'
+      +'<h2 style="font-size:17px;margin-bottom:2px">Na chamada, sem o check-in do corpo ('+S.length+')</h2>'
+      +'<div class="hint">Marcados como "veio" na chamada de hoje, mas o check-in do corpo de entrada não foi feito. O exame continua obrigatório: o nome sai daqui quando o check-in for feito.</div>';
+    S.forEach(function(o){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
+        +'<strong style="color:var(--z-blue)">'+escAttr(hojeSemCheckinNome(o, L))+'</strong>'
+        +(pode?('<button type="button" class="btn" style="padding:6px 12px;font-size:13px;min-height:44px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="hojeSemCheckinIr(this.dataset.k)">Fazer o check-in agora</button>'):'')
+        +'</div>';
+    });
+    if(!pode) h+='<div class="hint" style="margin-top:6px;font-weight:700">Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.</div>';
+    return h+'</div>';
+  }
+  function hojeSemCheckinIr(chave){
+    var o=null;
+    try{ o=hojeSemCheckinLista(hojeLista()).filter(function(x){ return x.chave===chave; })[0]||null; }catch(e){ o=null; } /* silencioso de propósito: sem a lista, nada a abrir */
+    if(!o) return false;
+    return (typeof banhoFaltaIrAoCheckin==='function') ? banhoFaltaIrAoCheckin({nome:o.nome}) : false;
   }
   // A linha inteira em TEXTO PURO — é ela que vai para o WhatsApp e para o Excel, e é a
   // mesma frase que a tela mostra. Duas escritas da mesma linha viram duas verdades.
@@ -43235,6 +43271,16 @@
   }
   // A leitura que a tela e o contador do menu precisam. Uma vez por sessão cada coisa — e,
   // no caso da chamada, um ouvinte que fica vivo o dia inteiro.
+  var _hojeCkVivoDia='';
+  function hojeCkVivoLigar(){
+    if(!DB || typeof zMapaVivo!=='function') return;
+    var dia=dcDataKey();
+    if(_hojeCkVivoDia && _hojeCkVivoDia!==dia){
+      try{ zMapaDesligar('daycare/checkin-corpo/'+_hojeCkVivoDia, '_hojeSemCk'); }catch(e){} /* silencioso de propósito: desligar é economia */
+    }
+    _hojeCkVivoDia=dia;
+    zMapaVivo('daycare/checkin-corpo/'+dia, '_hojeSemCk', function(){ hojeRedesenhar(); });
+  }
   function hojeCarregar(){
     if(!DB) return Promise.resolve(null);
     // A planilha do dia também: o banho de quem faltou precisa dela neste aparelho (QA30).
@@ -43244,6 +43290,9 @@
     catch(e){ /* silencioso de propósito: sem o vivo o zMapaUma abaixo ainda responde */ }
     tarefas.push(zMapaUma(chamadaNo()).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (hojeCarregar)', e); return {}; }));
     tarefas.push(zMapaUma('daycare/checkin-corpo/'+dcDataKey()).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (hojeCarregar)', e); return {}; }));
+    // O quadro "Na chamada, sem o check-in do corpo" (6.42) some quando o check-in chega: o
+    // mesmo ouvinte do nó do dia (nenhuma leitura nova) avisa a tela. O do dia anterior é solto.
+    try{ hojeCkVivoLigar(); }catch(e){ /* silencioso de propósito: sem o aviso, o quadro acerta no próximo desenho */ }
     if(typeof PEND_ABERTAS==='undefined' || PEND_ABERTAS===null){
       try{ if(typeof pendCarregar==='function') tarefas.push(pendCarregar()); }
       catch(e){ /* silencioso de propósito: a tela diz o que não conseguiu ler */ }
@@ -43313,7 +43362,8 @@
       +'<textarea id="hojeTxt" readonly style="display:none;width:100%;margin-top:9px;min-height:130px;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px"></textarea>'
       +'</div>'
       +prevCorrigeOkHTML()
-      +((typeof banhoFaltaCardHTML==='function')?banhoFaltaCardHTML():'');
+      +((typeof banhoFaltaCardHTML==='function')?banhoFaltaCardHTML():'')
+      +hojeSemCheckinCardHTML(L);
     if(!L.length){
       h+='<div class="card"><h2 style="font-size:17px">Ninguém marcado na casa ainda</h2>'
         +'<div class="hint">A lista se enche sozinha conforme a Chamada e o Check-in do corpo acontecem — não é preciso reabrir a tela. '
@@ -43334,7 +43384,7 @@
         +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(o.nome)
         +(o.raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(o.raca)+'</span>'):'')+'</strong>'
         +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
-        +'<span class="hint" style="margin:0;color:var(--crm-ok);font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
+        +'<span class="hint" style="margin:0;color:'+(o.fonte==='chamada'?'var(--crm-critico)':'var(--crm-ok)')+';font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
         // O banho fixo de hoje fica na PRIMEIRA linha, junto do nome: ele não é pendência,
         // é compromisso do dia — e some no fim da tarde se ninguém vir (24/set/2026).
         +(o.banho?('<span class="hoje-banho" style="margin:0;font-size:13px;font-weight:800;color:var(--z-blue)">'+escAttr(o.banho)+'</span>'):'')

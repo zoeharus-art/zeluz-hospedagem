@@ -9534,6 +9534,76 @@ provaAsync('6.41 AC3 — banho FIXO: o "manter" do dia que o toque gravou na fic
     assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => x.t === 'DESFEITO: BOLT' && /volta para a pergunta/.test(x.l[1])), JSON.stringify(run('__alertas')));
   } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
 });
+
+// ================================================================== 6.42 — Hoje na Zêluz: na chamada, sem o check-in do corpo
+console.log('\n6.42 — Hoje na Zêluz: quem está só na chamada fica à vista até o check-in do corpo (Adriana, 02/out/2026, Rafael)');
+const L642 = () => [
+  { chave: 'rafael__ana', nome: 'Rafael', fonte: 'chamada', p: { n: 'Rafael', tutor: 'Ana' } },
+  { chave: 'luna__rui', nome: 'Luna', fonte: 'checkin', hora: '08:10', p: { n: 'Luna', tutor: 'Rui' } },
+  { chave: 'maya__lia', nome: 'Maya', fonte: 'hospede', p: { n: 'Maya', tutor: 'Lia' } },
+  { chave: 'repolho__zeluz', nome: 'Repolho', fonte: 'morador', p: { n: 'Repolho', tutor: 'Zêluz' } },
+  { chave: 'pipoca__bia', nome: 'Pipoca', fonte: 'chamada', p: { n: 'Pipoca', tutor: 'Bia' } }];
+prova('6.42 AC1/AC2/AC5 — o quadro lista só quem a chamada diz "veio" sem o check-in de entrada; com a atividade no Time, "Fazer o check-in agora"; sem ela, a quem pedir', () => {
+  ctx.__L642 = L642();
+  run(`__bk642={ap:atividadesPermitidas, P:PELUDINHOS}; PELUDINHOS=__L642.map(function(o){ return o.p; }); __ativ642=null; atividadesPermitidas=function(){ return __ativ642; };`);
+  try {
+    igual(J630('hojeSemCheckinLista(__L642).map(function(o){ return o.nome; })'), ['Rafael', 'Pipoca']);
+    const h = run('hojeSemCheckinCardHTML(__L642)');
+    assert.ok(/id="hojeSemCk"/.test(h) && /Na chamada, sem o check-in do corpo \(2\)/.test(h), h.slice(0, 300));
+    igual((h.match(/Fazer o check-in agora/g) || []).length, 2);
+    assert.ok(/>Rafael<\/strong>[\s\S]*data-k="rafael__ana"[\s\S]*>Pipoca<\/strong>[\s\S]*data-k="pipoca__bia"/.test(h), h);
+    assert.ok(h.indexOf('Luna') < 0 && h.indexOf('Maya') < 0 && h.indexOf('Repolho') < 0, 'check-in feito, hóspede e morador não entram');
+    assert.ok(/min-height:44px/.test(h));
+    // sem a atividade no Time: nenhum botão, e a frase de a quem pedir
+    run('__ativ642=[];');
+    const h2 = run('hojeSemCheckinCardHTML(__L642)');
+    igual([(h2.match(/Fazer o check-in agora/g) || []).length, /Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo\./.test(h2)], [0, true]);
+    // ninguém só na chamada: nada de quadro
+    igual(run('hojeSemCheckinCardHTML(__L642.filter(function(o){ return o.fonte!=="chamada"; }))'), '');
+    igual(run('hojeSemCheckinCardHTML([])'), '');
+  } finally { run('atividadesPermitidas=__bk642.ap; PELUDINHOS=__bk642.P;'); }
+});
+prova('6.42 AC4 — a linha do FILHOt diz "presente pela chamada — falta o check-in do corpo"; as outras frases não mudam', () => {
+  igual([run("hojeFrasePresenca({fonte:'chamada'})"), run("hojeFrasePresenca({fonte:'checkin', hora:'08:10'})"), run("hojeFrasePresenca({fonte:'hospede'})"),
+    run("hojeFrasePresenca({fonte:'morador'})"), run('hojeFrasePresenca({})')],
+    ['presente pela chamada — falta o check-in do corpo', 'presente pelo check-in às 08:10', 'hóspede da AuAulândia — está na casa', 'morador da casa', 'presente']);
+  // a fonte vem da regra de sempre: faltou vence; check-in de entrada vence a chamada
+  const o = "{p:{n:'Rafael', tutor:'Ana'}}", k = run("dcKey('Rafael','Ana')");
+  igual([run(`hojeFonteDe(${o}, {'${k}':'veio'}, {})`), run(`hojeFonteDe(${o}, {'${k}':'veio'}, {'${k}':{tipo:'entrada', fim:1}})`), run(`hojeFonteDe(${o}, {'${k}':'faltou'}, {})`)],
+    ['chamada', 'checkin', '']);
+});
+prova('6.42 AC1/AC3 — o quadro entra no Hoje na Zêluz logo depois do banho de quem faltou, e o check-in que chega redesenha a tela (o mesmo ouvinte do dia; o de ontem é solto)', () => {
+  ctx.__L642 = L642();
+  run(`__bk642b={hl:hojeLista, ge:document.getElementById, bf:banhoFaltaCardHTML, pc:prevCorrigeOkHTML, zv:zMapaVivo, zd:zMapaDesligar, dk:dcDataKey, hr:hojeRedesenhar, P:PELUDINHOS, d:_hojeCkVivoDia, db:DB};
+    PELUDINHOS=__L642.map(function(o){ return o.p; }); hojeLista=function(){ return __L642; };
+    __raiz642={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz642:null; };
+    banhoFaltaCardHTML=function(){ return '<!--BANHO-->'; }; prevCorrigeOkHTML=function(){ return ''; };`);
+  try {
+    run('hojeRender()');
+    const h = run('__raiz642.innerHTML');
+    assert.ok(h.indexOf('<!--BANHO-->') >= 0 && h.indexOf('<!--BANHO-->') < h.indexOf('id="hojeSemCk"'), 'logo depois do quadro do banho');
+    assert.ok(/presente pela chamada — falta o check-in do corpo/.test(h));
+    // o ouvinte: um aviso por tela, e o do dia anterior é solto
+    run(`__zv642=[]; __zd642=[]; DB={}; zMapaVivo=function(p,sl,cb){ __zv642.push([p,sl]); __cb642=cb; return {}; }; zMapaDesligar=function(p,sl){ __zd642.push([p,sl]); };
+      __rd642=0; hojeRedesenhar=function(){ __rd642++; }; _hojeCkVivoDia=''; dcDataKey=function(){ return '2026-10-07'; };`);
+    run('hojeCkVivoLigar()');
+    igual(J630('__zv642'), [['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']]);
+    run('__cb642({})'); igual(run('__rd642'), 1, 'o check-in que chega redesenha a tela');
+    run("dcDataKey=function(){ return '2026-10-08'; }; hojeCkVivoLigar();");
+    igual([J630('__zd642'), J630('__zv642')[1]], [[['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']], ['daycare/checkin-corpo/2026-10-08', '_hojeSemCk']]);
+  } finally {
+    run(`hojeLista=__bk642b.hl; document.getElementById=__bk642b.ge; banhoFaltaCardHTML=__bk642b.bf; prevCorrigeOkHTML=__bk642b.pc; zMapaVivo=__bk642b.zv; zMapaDesligar=__bk642b.zd;
+      dcDataKey=__bk642b.dk; hojeRedesenhar=__bk642b.hr; PELUDINHOS=__bk642b.P; _hojeCkVivoDia=__bk642b.d; DB=__bk642b.db;`);
+  }
+});
+prova('6.42 AC2 — "Fazer o check-in agora" abre o check-in do corpo de entrada com o nome dele (pela porta do «Está aqui», que respeita o Time)', () => {
+  ctx.__L642 = L642();
+  run(`__bk642c={hl:hojeLista, ir:banhoFaltaIrAoCheckin}; hojeLista=function(){ return __L642; }; __ir642=[]; banhoFaltaIrAoCheckin=function(o){ __ir642.push(o.nome); return true; };`);
+  try {
+    igual([run("hojeSemCheckinIr('pipoca__bia')"), run("hojeSemCheckinIr('luna__rui')"), run("hojeSemCheckinIr('ninguem')")], [true, false, false]);
+    igual(J630('__ir642'), ['Pipoca'], 'só quem está no quadro');
+  } finally { run('hojeLista=__bk642c.hl; banhoFaltaIrAoCheckin=__bk642c.ir;'); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
