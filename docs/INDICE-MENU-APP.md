@@ -2,6 +2,23 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-02) — falta avisada em alguns dias (caso do Fred)
+
+> **Adriana, 06/out/2026:** *"Lancei na reposição do Fred e da Eleonora o dia 13 e 14. E lá no Falta, um período, eu escrevi dia 13 e dia 14 e contabilizou apenas um dia, como se fosse o dia 13. Precisa de resolver isso. Às vezes a pessoa vai fazer dois, três dias, a gente colocar mais datas."* Story 6.39.
+
+### (AP) Reposições › Lançar falta avisada › "Alguns dias"
+
+| Antes | Agora |
+|---|---|
+| Só "Um dia só" ou "Um período". No período, o dia que não era dia dele na ficha ficava de fora **sem aviso**: 13 e 14/10 com só a terça davam 1 crédito, e ninguém sabia por quê | Terceiro modo, **Alguns dias (datas soltas)**: uma data por linha, "+ outra data" e "×" para tirar. Cada data em que ele viria vira um crédito, num lançamento só, com o mesmo motivo e o mesmo dia de repor (só no primeiro crédito, como no período) |
+| — | A prévia diz **o que fica de fora e por quê**: "14/10 (quarta-feira) não entra: não é dia do Fred na ficha (ele vem Ter). Se ele passou a vir nesse dia, marque o dia no alto da ficha." Sábado e domingo: "não há Day Care". Data repetida conta uma vez só, com o aviso. No período, os dias de semana que ficam de fora aparecem também (até 5 pelo nome e "e mais N") |
+
+- **A regra do crédito não muda:** a falta é de um dia em que ele viria (a mesma do período). Plano com dias diferentes em cada mês (6.30): vale o dia daquele mês do plano, e o conselho manda ajustar na aba Plano.
+- **A confirmação, o rastro e o Extrato** dizem os dias ("alguns dias: 13/10, 15/10, 20/10") e o que ficou de fora. A mensagem pronta ao tutor fala dos dias: "contando as dos dias 13/10, 15/10 e 20/10".
+- **"Um dia só" continua como antes** (aceita qualquer data; a troca de dia continua só nele).
+- **Onde está no código:** `repAlgunsAnalise` (o que entra e o que fica de fora), `repPorQueNaoVem` (o porquê), `repPreverAlguns` e `repForaDoPeriodo` (as prévias), `repAlgunsHTML`/`repAlgunsMais`/`repAlgunsTirar` (as linhas), `repConfirmar` (o modo `alguns`), `repMensagem` (os dias na mensagem) e `repExtratoAlguns` (o Extrato).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.39); `tests/harness.js` v-51 (paridade com o período, FILHOt por FILHOt da lista do app, em 3 semanas; todo dia de fora com o porquê). Defeitos plantados: 17, todos pegos.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-01) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
 
 > **Adriana, 06/out/2026,** com a foto do Confirmar do Fred dizendo "1x por semana · Ter": *"Erro - Fred eleonora deseja 2x por semana vou fechar e volta para uma vez"*. Story 6.37.

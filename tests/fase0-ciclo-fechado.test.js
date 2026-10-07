@@ -9285,6 +9285,159 @@ prova('6.40 — Renovação de planos: o 1º desenho, antes de o filtro existir,
     igual([run('renovFiltro'), run('__rl640.innerHTML')], ['cobrar', 'antes']);
   } finally { run('renovFiltro=__bk640.f; document.getElementById=__bk640.ge; PELUDINHOS=__bk640.P;'); }
 });
+
+// ================================================================== 6.39 — falta avisada em alguns dias (caso do Fred)
+console.log('\n6.39 — Falta avisada em "Alguns dias" e a prévia que diz o que fica de fora (Adriana, 06/out/2026, Fred)');
+// "Lancei na reposição do Fred e da Eleonora o dia 13 e 14 [...] contabilizou apenas um dia [...] Às vezes a pessoa vai
+// fazer dois, três dias, a gente colocar mais datas." Dado INVENTADO: «Fredo», tutora «Eleonora Teste».
+// 13/10/2026 é terça; 14/10, quarta; 15/10, quinta; 17/10, sábado.
+const amb639 = (ficha, extra) => run(`__bk639={pa:repPelSel, pe:pelExtra, P:PELUDINHOS, ge:document.getElementById, qs:document.querySelector, rg:repGravar, au:audit,
+    mm:repMsgModal, rr:renderReposicao, sd:repSaldo, hz:zHojeISO, ad:repAlgunsDatas, mo:repModoAtual, mt:repMotivoAtual, r:document.body.dataset.role};
+  PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'}]; repPelSel=PELUDINHOS[0];
+  __ex639=JSON.parse(${JSON.stringify(JSON.stringify(ficha))}); pelExtra=function(){ return __ex639; };
+  __g639=[]; repGravar=function(p,r){ __g639.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__g639.length}); };
+  __au639=[]; audit=function(a,d){ __au639.push([a,d]); }; __mm639=[]; repMsgModal=function(t,l,msg){ __mm639.push({t:t,l:l,msg:msg}); };
+  renderReposicao=function(){}; repSaldo=function(){ return 2; }; zHojeISO=function(){ return '2026-10-07'; };
+  __el639={repWarn:{textContent:''}, repObs:{value:''}, repVolta:{value:''}, repData:{value:''}, repDe:{value:''}, repAte:{value:''},
+    repPrevia:{innerHTML:''}, repPreviaAlguns:{innerHTML:''}, repAlgunsLista:{innerHTML:''}, repModal:{classList:{add:function(){}, remove:function(){}}},
+    repVagasBox:{innerHTML:''}};
+  document.getElementById=function(id){ return __el639[id]||null; };
+  __btn639={disabled:false, textContent:''}; document.querySelector=function(q){ return q==='#repModal .rep-ok'?__btn639:null; };
+  document.body.dataset.role='consultora'; repModoAtual='alguns'; repMotivoAtual='viagem'; ${extra || ''}`);
+const solta639 = () => run(`repPelSel=__bk639.pa; pelExtra=__bk639.pe; PELUDINHOS=__bk639.P; document.getElementById=__bk639.ge; document.querySelector=__bk639.qs;
+  repGravar=__bk639.rg; audit=__bk639.au; repMsgModal=__bk639.mm; renderReposicao=__bk639.rr; repSaldo=__bk639.sd; zHojeISO=__bk639.hz;
+  repAlgunsDatas=__bk639.ad; repModoAtual=__bk639.mo; repMotivoAtual=__bk639.mt; document.body.dataset.role=__bk639.r;`);
+const FREDO639 = (dias, extra) => Object.assign({ n: 'Fredo', tutor: 'Eleonora Teste', sexo: 'Macho', dias: dias, freq: dias.length + 'x' }, extra || {});
+const espera639 = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+
+prova('6.39 AC2/AC3 — o caso do Fred: 13 e 14/10 com só a terça na ficha — entra o 13; o 14 (quarta) fica de fora COM o porquê e o que fazer', () => {
+  amb639(FREDO639(['ter']), "repAlgunsDatas=['2026-10-13','2026-10-14'];");
+  try {
+    igual(J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)"), { entram: ['2026-10-13'], fora: [{ iso: '2026-10-14', porque: 'não é dia do Fredo na ficha (ele vem Ter)' }], repetidas: [] });
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/Fredo viria em <b>1 dia<\/b>: 13\/10 \(terça-feira\)/.test(h), h);
+    assert.ok(/14\/10 \(quarta-feira\) não entra: não é dia do Fredo na ficha \(ele vem Ter\)\./.test(h), h);
+    assert.ok(/Se ele passou a vir nesse dia, marque o dia no alto da ficha\./.test(h), h);
+    assert.ok(/Vou gerar 1 crédito de reposição\./.test(h));
+  } finally { solta639(); }
+});
+provaAsync('6.39 AC1/AC5 — com Ter e Qua na ficha: 13 e 14/10 viram 2 créditos num lançamento só (mesmo motivo, mesmo lote, o dia de repor só no primeiro); rastro e mensagem com os dias', async () => {
+  amb639(FREDO639(['ter', 'qua']), "repAlgunsDatas=['2026-10-14','2026-10-13']; __el639.repObs.value='viagem curta';");
+  try {
+    run('repConfirmar()'); await espera639();
+    const g = J630('__g639');
+    igual(g.length, 2);
+    igual(g.map((r) => [r.tipo, r.data, r.motivo, r.obs, r.volta]), [['credito', '2026-10-13', 'viagem', 'viagem curta', ''], ['credito', '2026-10-14', 'viagem', 'viagem curta', '']]);
+    igual([g[0].lote === g[1].lote, /^L\d+$/.test(g[0].lote), g[0].alguns, g[1].alguns, 'periodo' in g[0], 'troca' in g[0]], [true, true, { datas: ['2026-10-13', '2026-10-14'] }, { datas: ['2026-10-13', '2026-10-14'] }, false, false]);
+    const au = J630('__au639').filter((a) => a[0] === 'reposicao-credito');
+    igual(au.length, 1);
+    assert.ok(/^Fredo · 2 dia\(s\) · .* — dias 13\/10, 14\/10$/.test(au[0][1]), au[0][1]);
+    const m = J630('__mm639[0]');
+    assert.ok(/Fredo ganhou 2 dias de reposição/.test(m.l[0]), JSON.stringify(m.l));
+    assert.ok(/contando as dos dias 13\/10 e 14\/10\./.test(m.msg), m.msg);
+    // com uma data que fica de fora, ela aparece na confirmação e no rastro
+    run("__g639=[]; __au639=[]; __mm639=[]; repAlgunsDatas=['2026-10-13','2026-10-15','2026-10-17'];");
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-13']);
+    const m2 = J630('__mm639[0]');
+    assert.ok(m2.l.some((x) => /^Ficaram de fora: 15\/10 \(quinta-feira\) \(não é dia do Fredo na ficha \(ele vem Ter, Qua\)\); 17\/10 \(sábado\) \(é sábado: não há Day Care\)\.$/.test(x)), JSON.stringify(m2.l));
+    assert.ok(/ — dias 13\/10 \(de fora: 15\/10, 17\/10\)$/.test(J630('__au639')[0][1]), J630('__au639')[0][1]);
+    // com o dia de repor escolhido: ele vai só no PRIMEIRO crédito (uma volta marcada, não uma por dia)
+    run(`__g639=[]; __mm639=[]; repAlgunsDatas=['2026-10-13','2026-10-14']; __el639.repVolta.value='2026-10-21';
+      __bk639.vd=vagasDoDia; vagasDoDia=function(){ return {lido:true, cheio:false}; };`);
+    try {
+      run('repConfirmar()'); await espera639();
+      igual(J630('__g639').map((r) => [r.data, r.volta]), [['2026-10-13', '2026-10-21'], ['2026-10-14', '']]);
+      assert.ok(/O dia de repor já ficou combinado: 21\/10\/2026\./.test(J630('__mm639[0]').msg), J630('__mm639[0]').msg);
+    } finally { run('vagasDoDia=__bk639.vd;'); }
+  } finally { solta639(); }
+});
+provaAsync('6.39 AC3/AC4 — nada vira crédito: data repetida conta uma vez, fim de semana diz que não há Day Care, nenhuma data válida não grava, linha em branco não conta', async () => {
+  amb639(FREDO639(['ter']), "repAlgunsDatas=['2026-10-13','','2026-10-13','2026-10-17'];");
+  try {
+    igual(J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)"), { entram: ['2026-10-13'], fora: [{ iso: '2026-10-17', porque: 'é sábado: não há Day Care' }], repetidas: ['2026-10-13'] });
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/13\/10 está repetida: conta uma vez só\./.test(h) && /17\/10 \(sábado\) não entra: é sábado: não há Day Care\./.test(h), h);
+    assert.ok(h.indexOf('marque o dia no alto da ficha') < 0, 'fim de semana não pede para mudar a ficha');
+    // data fora do calendário do app (2015 a 2035), mesmo sendo terça: fica de fora
+    igual(J630("repAlgunsAnalise(repPelSel, ['2040-01-03'])"), { entram: [], fora: [{ iso: '2040-01-03', porque: 'a data está fora do calendário do app' }], repetidas: [] });
+    // só datas que não viram crédito: não grava e diz por quê
+    run("repAlgunsDatas=['2026-10-14','2026-10-17'];"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Nenhuma dessas datas vira crédito: 14/10 (quarta-feira) — não é dia do Fredo na ficha (ele vem Ter).']);
+    // nenhuma data
+    run("repAlgunsDatas=['','']; __el639.repWarn.textContent='';"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Escolha pelo menos uma data.']);
+    run('repPreverAlguns()');
+    igual(run('__el639.repPreviaAlguns.innerHTML'), 'Escolha as datas para eu calcular.');
+  } finally { solta639(); }
+});
+prova('6.39 AC2 — "Um período" também diz o que fica de fora: 13 a 14/10 com só a terça; período longo resume (até 5 pelo nome e "e mais")', () => {
+  amb639(FREDO639(['ter']), "repModoAtual='periodo'; __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-14';");
+  try {
+    run('repPreverDias()');
+    const h = run('__el639.repPrevia.innerHTML');
+    assert.ok(/viria em <b>1 dia<\/b>/.test(h) && /14\/10 \(quarta-feira\) não entra: não é dia do Fredo na ficha \(ele vem Ter\)\./.test(h), h);
+    run("__el639.repAte.value='2026-11-11';"); run('repPreverDias()');
+    const h2 = run('__el639.repPrevia.innerHTML');
+    // 13/10 a 11/11: 22 dias de semana, 5 terças → 17 de fora
+    assert.ok(/viria em <b>5 dias<\/b>/.test(h2) && /Ficam de fora 17 dias de semana que não são dias dele: 14\/10 \(quarta-feira\) · 15\/10 \(quinta-feira\) · 16\/10 \(sexta-feira\) · 19\/10 \(segunda-feira\) · 21\/10 \(quarta-feira\) e mais 12\./.test(h2), h2);
+    // período só de terças: nada de fora
+    run("__el639.repAte.value='2026-10-13';"); run('repPreverDias()');
+    igual(run('__el639.repPrevia.innerHTML').indexOf('rep-fora'), -1);
+  } finally { solta639(); }
+});
+prova('6.39 — plano com dias por mês (6.30): a data fora do mês do plano diz "nesse mês do plano" e manda ajustar na aba Plano', () => {
+  amb639(FREDO639(['ter'], { sexo: 'Fêmea', renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } }),
+    "repAlgunsDatas=['2026-10-12','2026-10-14'];");
+  try {
+    const a = J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)");
+    igual(a.entram, ['2026-10-12']);
+    igual(a.fora, [{ iso: '2026-10-14', porque: 'não é dia da Fredo nesse mês do plano (ela vem Seg)' }]);
+    run('repPreverAlguns()');
+    assert.ok(/Se ela passou a vir nesse dia, ajuste os dias na aba Plano da ficha\./.test(run('__el639.repPreviaAlguns.innerHTML')));
+    // no Mês 3 (dezembro), a quarta é dia dela
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-12-09'])").entram, ['2026-12-09']);
+  } finally { solta639(); }
+});
+prova('6.39 — abrir o modal limpa as datas (as do FILHOt anterior nunca passam para o próximo) e a troca de modo mostra só o bloco certo', () => {
+  amb639(FREDO639(['ter']), `repAlgunsDatas=['2026-10-13','2026-10-14'];
+    ['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+    ['repBlocoDia','repBlocoPeriodo','repBlocoAlguns'].forEach(function(k){ __el639[k]={style:{display:''}}; });
+    __bk639.qsa=document.querySelectorAll; document.querySelectorAll=function(){ return []; };
+    __bk639.rme=repMostrarEscolhido; repMostrarEscolhido=function(){};`);
+  try {
+    run('repAbrirLancar(PELUDINHOS[0])');
+    igual([J630('repAlgunsDatas'), run('repModoAtual'), run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoDia.style.display')], [[''], 'dia', 'none', 'block']);
+    run("repSetModo('alguns')");
+    igual([run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoPeriodo.style.display'), run('__el639.repBlocoDia.style.display')], ['block', 'none', 'none']);
+    // uma linha só, sem o "×"; com duas, cada uma tem o seu
+    const h1 = run('repAlgunsHTML()');
+    igual([(h1.match(/type="date"/g) || []).length, h1.indexOf('rep-alguns-tirar')], [1, -1]);
+    run('repAlgunsMais()');
+    const h2 = run('repAlgunsHTML()');
+    igual([(h2.match(/type="date"/g) || []).length, (h2.match(/rep-alguns-tirar/g) || []).length], [2, 2]);
+    run("repAlgunsSet(0,'2026-10-13'); repAlgunsTirar(1);");
+    igual(J630('repAlgunsDatas'), ['2026-10-13']);
+    run("repSetModo('periodo')");
+    igual([run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoPeriodo.style.display')], ['none', 'block']);
+  } finally { run('document.querySelectorAll=__bk639.qsa; repMostrarEscolhido=__bk639.rme;'); solta639(); }
+});
+prova('6.39 AC5 — Extrato e mensagem: os dias do lançamento, em lista ou em objeto (o banco devolve os dois)', () => {
+  igual(run("repExtratoAlguns({alguns:{datas:['2026-10-20','2026-10-13','2026-10-15']}})"), ' · alguns dias: 13/10, 15/10, 20/10');
+  igual(run("repExtratoAlguns({alguns:{datas:{0:'2026-10-13',1:'2026-10-15'}}})"), ' · alguns dias: 13/10, 15/10');
+  igual([run("repExtratoAlguns({alguns:{datas:['2026-10-13']}})"), run('repExtratoAlguns({})'), run("repExtratoAlguns({alguns:{datas:'x'}})")], ['', '', '']);
+  run(`__bk639m={hz:zHojeISO, pe:pelExtra}; zHojeISO=function(){ return '2026-10-15'; }; pelExtra=function(){ return {sexo:'Macho'}; };`);
+  try {
+    const p = "{n:'Fredo', tutor:'Eleonora Teste'}";
+    assert.ok(/está com 5 reposições, com a de hoje, referentes aos dias 13\/10, 15\/10 e 20\/10\./.test(run('repMensagem(' + p + ", 'credito', {qtd:3, datas:['2026-10-20','2026-10-13','2026-10-15'], saldo:5})")));
+    assert.ok(/contando as dos dias 13\/10 e 14\/10\./.test(run('repMensagem(' + p + ", 'credito', {qtd:2, datas:['2026-10-13','2026-10-14'], saldo:4})")));
+    // o período e o dia só continuam como antes
+    assert.ok(/contando as do período de 20\/10\/2026 a 30\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:9, de:'2026-10-20', ate:'2026-10-30', saldo:9})")));
+    assert.ok(/com a de hoje, referente ao dia 15\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:1, data:'2026-10-15', saldo:1})")));
+  } finally { run('zHojeISO=__bk639m.hz; pelExtra=__bk639m.pe;'); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

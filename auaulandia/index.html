@@ -1732,6 +1732,13 @@
   .rep-previa{margin-top:11px;background:var(--z-cream-warm);border:1.5px solid var(--line);
     border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--z-blue);font-weight:600;line-height:1.5}
   .rep-previa b{color:var(--z-gold-deep)}
+  /* FALTA EM ALGUNS DIAS (Story 6.39): uma data por linha, "×" para tirar e "+ outra data" */
+  .rep-alguns-linha{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .rep-alguns-tirar{flex:0 0 44px;min-height:44px;border:1.5px solid var(--line);background:var(--z-white);border-radius:11px;
+    font-size:20px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit}
+  .rep-alguns-mais{margin-top:8px;min-height:44px;border:1.5px dashed var(--line);background:var(--z-white);border-radius:11px;
+    padding:10px 14px;font-weight:700;font-size:14px;color:var(--z-blue);cursor:pointer;font-family:inherit}
+  .rep-previa .rep-fora{display:block;margin-top:6px;color:var(--crm-critico);font-weight:600}
   /* TROCA DE DIA no «Marcar reposição» (25/set/2026) */
   .dx-troca-lb{display:flex;gap:10px;align-items:flex-start;margin-top:12px;background:var(--z-cream-warm);
     border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--z-blue);
@@ -4827,10 +4834,11 @@
       <div class="rep-escolhido" id="repEscolhido" style="display:none"></div>
 
       <div id="repFormulario" style="display:none">
-        <label class="rep-lb">É um dia só ou um período?</label>
+        <label class="rep-lb">É um dia só, um período ou alguns dias?</label>
         <div class="seg gold" data-single id="repModo">
           <button class="on" onclick="pick(this);repSetModo('dia')">Um dia só</button>
           <button onclick="pick(this);repSetModo('periodo')">Um período (cio, viagem…)</button>
+          <button onclick="pick(this);repSetModo('alguns')">Alguns dias (datas soltas)</button>
         </div>
 
         <div id="repBlocoDia">
@@ -4849,6 +4857,14 @@
             <span class="dia clic" onclick="repAtalho(7)">1 semana</span>
           </div>
           <div class="rep-previa" id="repPrevia"></div>
+        </div>
+
+        <!-- ALGUNS DIAS (Story 6.39, Adriana, 06/out/2026): datas soltas num lançamento só. -->
+        <div id="repBlocoAlguns" style="display:none">
+          <label class="rep-lb">Quais dias ele não vem?</label>
+          <div id="repAlgunsLista"></div>
+          <button type="button" class="rep-alguns-mais" onclick="repAlgunsMais()">+ outra data</button>
+          <div class="rep-previa" id="repPreviaAlguns"></div>
         </div>
 
         <label class="rep-lb">Por que ele não vem?</label>
@@ -5103,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-01"></script>
+<script src="resposta-tutor.js?v=2026-10-07-02"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-01"></script>
+<script src="painel-logica.js?v=2026-10-07-02"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5121,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-01"></script>
+<script src="financeiro-logica.js?v=2026-10-07-02"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6659,6 +6675,9 @@
     document.querySelectorAll('#repModo button').forEach(function(b,i){ b.classList.toggle('on', i===0); });
     document.getElementById('repBlocoDia').style.display='block';
     document.getElementById('repBlocoPeriodo').style.display='none';
+    repAlgunsDatas=[''];
+    var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display='none';
+    repAlgunsDesenhar();
     if(repPelSel) repMostrarEscolhido(); else {
       document.getElementById('repEscolhido').style.display='none';
       document.getElementById('repFormulario').style.display='none';
@@ -6695,14 +6714,16 @@
     document.getElementById('repPelBusca').value='';
     document.getElementById('repFormulario').style.display='block';
     if(!dias.length){
-      document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. No modo "período" eu não consigo calcular quantos dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
+      document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. Nos modos "período" e "alguns dias" eu não consigo saber em quais dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
     }
   }
   function repSetModo(m){
     repModoAtual=m;
     document.getElementById('repBlocoDia').style.display=(m==='dia')?'block':'none';
     document.getElementById('repBlocoPeriodo').style.display=(m==='periodo')?'block':'none';
+    var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display=(m==='alguns')?'block':'none';
     if(m==='periodo') repPreverDias();
+    if(m==='alguns') repAlgunsDesenhar();
   }
   function repMotivoSel(m){ repMotivoAtual=m; }
   function repAtalho(n){
@@ -6720,11 +6741,137 @@
     const p=repPelSel, de=(document.getElementById('repDe')||{}).value, ate=(document.getElementById('repAte')||{}).value;
     if(!p||!de||!ate){ el.innerHTML='Escolha o peludinho e as duas datas para eu calcular.'; return; }
     const dias=repDiasQueViria(p,de,ate);
-    if(!dias.length){ el.innerHTML='Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.'; return; }
+    // O que fica de fora, com o porquê (Story 6.39, caso do Fred: 13 e 14/10 com só a terça
+    // na ficha davam 1 crédito sem dizer por quê). Só dias de semana: sábado e domingo não têm
+    // Day Care e não precisam de explicação.
+    const fora=repForaDoPeriodo(p, de, ate, dias);
+    if(!dias.length){ el.innerHTML='Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.'+fora; return; }
     const most=dias.slice(0,10).map(repBRdata).join(' · ');
     el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
       +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
-      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>';
+      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>'
+      +fora;
+  }
+  // ===== FALTA EM ALGUNS DIAS (Story 6.39 — Adriana, 06/out/2026, caso do Fred) ==================
+  // "Às vezes a pessoa vai fazer dois, três dias, a gente colocar mais datas." Datas soltas num
+  // lançamento só: cada data em que ele viria vira um crédito, com o mesmo motivo e o mesmo dia de
+  // repor. A data que não é dia dele fica de fora, com o porquê escrito — a mesma regra do período
+  // (crédito é dinheiro: a falta é de um dia em que ele viria).
+  var repAlgunsDatas=[''];
+  var REP_ALGUNS_MAX=31;
+  function repAlgunsHTML(){
+    return repAlgunsDatas.map(function(v,i){
+      return '<div class="rep-alguns-linha">'
+        +'<input type="date" class="rep-in" id="repAlguns_'+i+'" value="'+escAttr(v||'')+'" min="2015-01-01" max="2035-12-31"'
+        +' onchange="repAlgunsSet('+i+',this.value)" onkeydown="return dataSoNoCalendario(event)">'
+        +(repAlgunsDatas.length>1?('<button type="button" class="rep-alguns-tirar" onclick="repAlgunsTirar('+i+')" aria-label="Tirar esta data">×</button>'):'')
+        +'</div>';
+    }).join('');
+  }
+  function repAlgunsDesenhar(){
+    var el=document.getElementById('repAlgunsLista'); if(el) el.innerHTML=repAlgunsHTML();
+    repPreverAlguns();
+  }
+  function repAlgunsSet(i, v){
+    if(i>=0 && i<repAlgunsDatas.length) repAlgunsDatas[i]=String(v||'').slice(0,10);
+    repPreverAlguns();
+  }
+  function repAlgunsMais(){
+    if(repAlgunsDatas.length>=REP_ALGUNS_MAX){ var w=document.getElementById('repWarn'); if(w) w.textContent='Até '+REP_ALGUNS_MAX+' datas por lançamento. Para mais, use "Um período".'; return; }
+    repAlgunsDatas.push('');
+    repAlgunsDesenhar();
+    try{ var n=document.getElementById('repAlguns_'+(repAlgunsDatas.length-1)); if(n) n.focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */
+  }
+  function repAlgunsTirar(i){
+    repAlgunsDatas.splice(i,1);
+    if(!repAlgunsDatas.length) repAlgunsDatas=[''];
+    repAlgunsDesenhar();
+  }
+  // Por que a data NÃO vira crédito. Fim de semana: não há Day Care. Dia de semana: não é dia
+  // dele na ficha (ou naquele mês do plano, no plano com dias por mês — 6.30).
+  function repPorQueNaoVem(p, iso){
+    var w=-1; try{ w=new Date(String(iso)+'T12:00:00').getDay(); }catch(e){ w=-1; } /* silencioso de propósito: sem o dia da semana vale o motivo geral */
+    if(w===0) return 'é domingo: não há Day Care';
+    if(w===6) return 'é sábado: não há Day Care';
+    var f=repEhFemea(p), nome=pelNome(p);
+    var dias=[]; try{ dias=pelDias(p, iso)||[]; }catch(e){ dias=[]; } /* silencioso de propósito: sem a ficha lida, "nenhum dia" */
+    var porMes=false; try{ porMes=!!(pelTemDiasPorMes(p) && renovMesNaData(renovDe(pelExtra(p)||{}), iso, pelDias(p,'rotina')||[])); }catch(e){ porMes=false; } /* silencioso de propósito: sem o plano lido, vale a ficha */
+    var vem=dias.length?((f?'ela':'ele')+' vem '+dias.map(function(x){ return DIA_LBL[x]||x; }).join(', ')):'a ficha não tem dias marcados';
+    return 'não é dia '+(f?'da ':'do ')+nome+(porMes?' nesse mês do plano':' na ficha')+' ('+vem+')';
+  }
+  function repDataComSemana(iso){
+    var n=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var w=''; try{ w=n[new Date(String(iso)+'T12:00:00').getDay()]||''; }catch(e){ w=''; } /* silencioso de propósito: sem o dia da semana vale só a data */
+    return String(repBRdata(iso)).slice(0,5)+(w?(' ('+w+')'):'');
+  }
+  // O que entra e o que fica de fora, sem gravar nada: {entram:[iso], fora:[{iso, porque}], repetidas:[iso]}.
+  function repAlgunsAnalise(p, datas){
+    var vistos={}, entram=[], fora=[], repetidas=[];
+    (datas||[]).forEach(function(d){
+      d=String(d||'').slice(0,10);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;               // linha em branco: não conta
+      if(vistos[d]){ if(repetidas.indexOf(d)<0) repetidas.push(d); return; }
+      vistos[d]=true;
+      if(!dataPlausivel(d)){ fora.push({iso:d, porque:'a data está fora do calendário do app'}); return; }
+      if(repDiasQueViria(p, d, d).length) entram.push(d);
+      else fora.push({iso:d, porque:repPorQueNaoVem(p, d)});
+    });
+    entram.sort(); repetidas.sort(); fora.sort(function(a,b){ return a.iso<b.iso?-1:(a.iso>b.iso?1:0); });
+    return {entram:entram, fora:fora, repetidas:repetidas};
+  }
+  // O conselho de quando um dia de semana fica de fora: é a ficha que precisa mudar.
+  function repForaConselho(p){
+    var f=repEhFemea(p);
+    return (pelTemDiasPorMes(p)
+      ? ('Se '+(f?'ela':'ele')+' passou a vir nesse dia, ajuste os dias na aba Plano da ficha.')
+      : ('Se '+(f?'ela':'ele')+' passou a vir nesse dia, marque o dia no alto da ficha.'));
+  }
+  function repForaHTML(p, fora){
+    if(!fora || !fora.length) return '';
+    var semana=fora.some(function(o){ return !/^é (sábado|domingo)/.test(o.porque); });
+    return fora.map(function(o){ return '<span class="rep-fora">'+escAttr(repDataComSemana(o.iso))+' não entra: '+escAttr(o.porque)+'.</span>'; }).join('')
+      +(semana?('<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(repForaConselho(p))+'</span>'):'');
+  }
+  // No período: os dias de semana que ficam de fora, até 5 pelo nome.
+  function repForaDoPeriodo(p, de, ate, entram){
+    try{
+      var d1=new Date(de+'T12:00:00'), d2=new Date(ate+'T12:00:00');
+      if(isNaN(d1)||isNaN(d2)||d2<d1) return '';
+      var fora=[], lim=new Date(d1); lim.setDate(lim.getDate()+400);
+      var p2=function(x){ return String(x).padStart(2,'0'); };
+      for(var d=new Date(d1); d<=d2 && d<=lim; d.setDate(d.getDate()+1)){
+        var w=d.getDay(); if(w===0||w===6) continue;
+        var iso=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+        if((entram||[]).indexOf(iso)<0) fora.push(iso);
+      }
+      if(!fora.length) return '';
+      if(fora.length===1) return repForaHTML(p, [{iso:fora[0], porque:repPorQueNaoVem(p, fora[0])}]);
+      var f=repEhFemea(p);
+      return '<span class="rep-fora">Ficam de fora '+fora.length+' dias de semana que não são dias '+(f?'dela':'dele')+': '
+        +escAttr(fora.slice(0,5).map(repDataComSemana).join(' · '))+(fora.length>5?(' e mais '+(fora.length-5)):'')+'.</span>'
+        +'<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(repForaConselho(p))+'</span>';
+    }catch(e){ return ''; } /* silencioso de propósito: a prévia principal continua valendo */
+  }
+  // No Extrato, o lançamento diz os dias que entraram juntos ("alguns dias: 13/10, 15/10"). O banco
+  // pode devolver a lista como objeto de chaves numéricas: os dois valem.
+  function repExtratoAlguns(l){
+    var a=(l&&l.alguns&&l.alguns.datas)||null; if(!a || typeof a!=='object') return '';
+    var lista=Array.isArray(a)?a:Object.keys(a).map(function(c){ return a[c]; });
+    lista=lista.filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }).sort();
+    return lista.length>1?escAttr(' · alguns dias: '+lista.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', ')):'';
+  }
+  function repPreverAlguns(){
+    var el=document.getElementById('repPreviaAlguns'); if(!el) return;
+    var p=repPelSel;
+    var a=repAlgunsAnalise(p, repAlgunsDatas);
+    if(!p || (!a.entram.length && !a.fora.length)){ el.innerHTML='Escolha as datas para eu calcular.'; return; }
+    var rep=a.repetidas.length?('<span class="rep-fora">'+escAttr(a.repetidas.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', '))
+      +(a.repetidas.length>1?' estão repetidas: cada uma':' está repetida:')+' conta uma vez só.</span>'):'';
+    if(!a.entram.length){ el.innerHTML='Nenhuma dessas datas vira crédito.'+repForaHTML(p, a.fora)+rep; return; }
+    var n=a.entram.length;
+    el.innerHTML=escAttr(pelNome(p))+' viria em <b>'+n+' dia'+(n>1?'s':'')+'</b>: '+escAttr(a.entram.map(repDataComSemana).join(' · '))
+      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+n+' crédito'+(n>1?'s':'')+' de reposição.</span>'
+      +repForaHTML(p, a.fora)+rep;
   }
   // ===== O DIA DE REPOR E AS VAGAS (Adriana, 21/set/2026) ==========================
   // "Se tiver vaga — são 5 por dia de reposição+avulso — se não tiver vaga, primeiro precisa
@@ -6785,7 +6932,7 @@
     if(pedirVaga && !diaLotado) pedirVaga=false;   // o dia tem vaga: não há o que pedir
     const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
     const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
-    let regs=[];
+    let regs=[], foraAlguns=[];
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
@@ -6799,7 +6946,7 @@
         // Fica fora do objeto `troca`, que o repTrocaGravar reescreve numa remarcação.
         regs[0].nasceu_troca=true;
       }
-    } else {
+    } else if(repModoAtual==='periodo'){
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
       const dias=repDiasQueViria(p,de,ate);
@@ -6809,6 +6956,16 @@
       // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
       regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(voltaEfetiva||''):'')}; });
     }
+    if(repModoAtual==='alguns'){
+      // ALGUNS DIAS (6.39): só as datas que são dia dele viram crédito; o resto fica de fora,
+      // com o porquê na prévia e na confirmação. O dia de repor vai só no primeiro, como no período.
+      const an=repAlgunsAnalise(p, repAlgunsDatas);
+      if(!an.entram.length && !an.fora.length){ w.textContent='Escolha pelo menos uma data.'; soltar(); return; }
+      if(!an.entram.length){ w.textContent='Nenhuma dessas datas vira crédito: '+repDataComSemana(an.fora[0].iso)+' — '+an.fora[0].porque+'.'; soltar(); return; }
+      const loteA='L'+Date.now();
+      regs=an.entram.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:loteA, alguns:{datas:an.entram.slice()}, volta:(ix===0?(voltaEfetiva||''):'')}; });
+      foraAlguns=an.fora;
+    }
     // A autorização do encaixe viaja COM o crédito: meses depois ainda se sabe quem abriu
     // a vaga acima do limite, e por que o dia tem seis em vez de cinco.
     if(autVaga && regs.length) regs[0].autorizacao=autVaga;
@@ -6817,6 +6974,8 @@
   const _saldoAntes=repSaldo(p);
   Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(refs){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
+        +((regs[0]&&regs[0].alguns)?(' — dias '+regs.map(function(r){ return String(repBRdata(r.data)).slice(0,5); }).join(', ')
+          +(foraAlguns.length?(' (de fora: '+foraAlguns.map(function(o){ return String(repBRdata(o.iso)).slice(0,5); }).join(', ')+')'):'')):'')
         +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
       // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
       repAuditDiaDele(p, voltaEfetiva);
@@ -6839,6 +6998,7 @@
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
       var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
+      if(regs.length>1 && regs[0].alguns){ _info.datas=regs.map(function(r){ return r.data; }); }
       var _troca=!!(regs.length===1 && regs[0].troca);
       repMsgModal('✅ Reposição lançada',
         (_troca
@@ -6848,6 +7008,7 @@
               +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]
           : [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
              'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
+            .concat(foraAlguns.length?['Ficaram de fora: '+foraAlguns.map(function(o){ return repDataComSemana(o.iso)+' ('+o.porque+')'; }).join('; ')+'.']:[])
             .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
                   +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[]))
         .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
@@ -6897,9 +7058,14 @@
       var qtd=info.qtd||1, _hj=repHojeISO();
       // "Com a de hoje" só quando a falta é de HOJE (Adriana, 28/set/2026: a falta do Bis
       // era do dia 02/10 e a mensagem dizia "com a de hoje"). Falta de outro dia: "contando".
-      var _per=(qtd>1 && info.de && info.ate);
-      var _hoje=_per ? (info.de<=_hj && _hj<=info.ate) : ((info.data||_hj)===_hj);
-      var ref=_per
+      // Alguns dias (6.39): a mensagem diz os dias, um por um ("13/10, 15/10 e 20/10").
+      var _datas=(qtd>1 && Array.isArray(info.datas) && info.datas.length>1)?info.datas.slice().sort():null;
+      var _per=(!_datas && qtd>1 && info.de && info.ate);
+      var _hoje=_datas ? (_datas.indexOf(_hj)>=0) : (_per ? (info.de<=_hj && _hj<=info.ate) : ((info.data||_hj)===_hj));
+      var _lista=_datas ? (function(l){ l=l.map(function(d){ return String(repBRdata(d)).slice(0,5); }); return l.slice(0,-1).join(', ')+' e '+l[l.length-1]; })(_datas) : '';
+      var ref=_datas
+        ? ((_hoje?', com a de hoje, referentes aos dias ':', contando as dos dias ')+_lista)
+        : _per
         ? ((_hoje?', com as de hoje, referentes ao período de ':', contando as do período de ')+repBRdata(info.de)+' a '+repBRdata(info.ate))
         : ((_hoje?', com a de hoje, referente ao dia ':', contando a do dia ')+repBRdata(info.data||_hj));
       corpo='Passando para dizer que '+o+' '+nome+' está com '
@@ -8987,7 +9153,8 @@
       return '<div class="rep-lanc"><span class="lc-tipo '+((l.tipo==='estorno'&&l.dia_devolvido)?'credito':l.tipo)+'" style="'+risco+'">'+rot+'</span>'
         +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
         +(l.obs?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
-        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')+escAttr(diaTxt)+'</div></span>'
+        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')
+          +repExtratoAlguns(l)+escAttr(diaTxt)+'</div></span>'
         +((l.tipo==='credito'&&!anulado[l._id])?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
         +(repUsoDevolvivel(l, anulado)?'<button onclick="repDevolverUso('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--z-blue);cursor:pointer;font-family:inherit">Devolver</button>':'')
         +'</div>';
@@ -17181,7 +17348,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-01';
+  const APP_VERSAO='2026-10-07-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
