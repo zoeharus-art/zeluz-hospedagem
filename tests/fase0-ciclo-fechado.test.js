@@ -6715,7 +6715,7 @@ provaAsync('6.29 «Ele está aqui»: marca VEIO na chamada, segura o banho e, se
     const seg = JSON.parse(JSON.stringify(run('__esc.slice(1).map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
     igual(seg.length, 1, JSON.stringify(seg));
     igual(seg[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
-    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois']);
+    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois', 'Toquei errado — desfazer'], 'o desfazer da 6.41 vem por último');
     igual(seg[0].l, ['Marcado como "veio" na chamada de hoje. O banho das 17:00 fica com ele.',
       'O check-in do corpo de entrada não foi feito: faça agora.', 'Está na grade do almoço: confira se ele já almoçou.']);
     run('__esc[1].fn[0]();');
@@ -6767,10 +6767,15 @@ provaAsync('6.29 quem tem as atividades limitadas no Time: o cartaz não oferece
   run(BF_STUBS); run(JA629);
   try {
     const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
-    // nenhuma atividade liberada (o padrão do Time): sem atalhos, só o cartaz com o recado
+    // nenhuma atividade liberada (o padrão do Time): sem atalhos — só "Entendi" e o desfazer (QA da 6.41, A1)
     run(bolt629(dia, kP) + `__ativ629=[]; __alertas=[]; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc.length'), 0, 'sem botões que levariam a outra tela');
+    igual([run('__esc.length'), run('__esc[0].t'), run('__esc[0].b')], [1, 'FALTA O CHECK-IN DO CORPO DE BOLT', ['Entendi', 'Toquei errado — desfazer']], 'sem botões que levariam a outra tela');
+    assert.ok(run('__esc[0].l').indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0, JSON.stringify(run('__esc[0].l')));
+    // sem nada a desfazer (a chamada já dizia "veio" antes do toque): o cartaz simples, como antes
+    run(bolt629(dia, kP) + `__ativ629=[]; __alertas=[]; __esc=[]; __banco['daycare/chamada/${dia}/${kP}']='veio'; dcChamada['${kP}']='veio';`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc.length'), 0);
     const al = JSON.parse(JSON.stringify(run('__alertas')));
     igual(al[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
     assert.ok(al[0].l.indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0, JSON.stringify(al[0].l));
@@ -6779,12 +6784,12 @@ provaAsync('6.29 quem tem as atividades limitadas no Time: o cartaz não oferece
     // só o almoço liberado: «Abrir o almoço» e o recado do check-in
     run(bolt629(dia, kP) + `__ativ629=['almoco']; __alertas=[]; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc[0].b'), ['Abrir o almoço', 'Depois']);
+    igual(run('__esc[0].b'), ['Abrir o almoço', 'Depois', 'Toquei errado — desfazer']);
     assert.ok(run('__esc[0].l').indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0);
     // com o check-in liberado
     run(bolt629(dia, kP) + `__ativ629=['checkin-corpo']; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc[0].b'), ['Fazer o check-in agora', 'Depois']);
+    igual(run('__esc[0].b'), ['Fazer o check-in agora', 'Depois', 'Toquei errado — desfazer']);
   } finally { run(JA629_VOLTA); run(BF_VOLTA); }
 });
 provaAsync('6.29 xarás com o tutor no aviso e no cartão; aviso de outro dia não grava; outro aparelho já liberou: o texto diz isso; dois banhos no plural', async () => {
@@ -9285,6 +9290,952 @@ prova('6.40 — Renovação de planos: o 1º desenho, antes de o filtro existir,
     igual([run('renovFiltro'), run('__rl640.innerHTML')], ['cobrar', 'antes']);
   } finally { run('renovFiltro=__bk640.f; document.getElementById=__bk640.ge; PELUDINHOS=__bk640.P;'); }
 });
+
+// ================================================================== 6.39 — falta avisada em alguns dias (caso do Fred)
+console.log('\n6.39 — Falta avisada em "Alguns dias" e a prévia que diz o que fica de fora (Adriana, 06/out/2026, Fred)');
+// "Lancei na reposição do Fred e da Eleonora o dia 13 e 14 [...] contabilizou apenas um dia [...] Às vezes a pessoa vai
+// fazer dois, três dias, a gente colocar mais datas." Dado INVENTADO: «Fredo», tutora «Eleonora Teste».
+// 13/10/2026 é terça; 14/10, quarta; 15/10, quinta; 17/10, sábado.
+const amb639 = (ficha, extra) => run(`__bk639={pa:repPelSel, pe:pelExtra, P:PELUDINHOS, ge:document.getElementById, qs:document.querySelector, rg:repGravar, au:audit,
+    mm:repMsgModal, rr:renderReposicao, sd:repSaldo, hz:zHojeISO, ad:repAlgunsDatas, mo:repModoAtual, mt:repMotivoAtual, r:document.body.dataset.role};
+  PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'}]; repPelSel=PELUDINHOS[0];
+  __ex639=JSON.parse(${JSON.stringify(JSON.stringify(ficha))}); pelExtra=function(){ return __ex639; };
+  __g639=[]; repGravar=function(p,r){ __g639.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__g639.length}); };
+  __au639=[]; audit=function(a,d){ __au639.push([a,d]); }; __mm639=[]; repMsgModal=function(t,l,msg){ __mm639.push({t:t,l:l,msg:msg}); };
+  renderReposicao=function(){}; repSaldo=function(){ return 2; }; zHojeISO=function(){ return '2026-10-07'; };
+  __el639={repWarn:{textContent:''}, repObs:{value:''}, repVolta:{value:''}, repData:{value:''}, repDe:{value:''}, repAte:{value:''},
+    repPrevia:{innerHTML:''}, repPreviaAlguns:{innerHTML:''}, repAlgunsLista:{innerHTML:''}, repModal:{classList:{add:function(){}, remove:function(){}}},
+    repVagasBox:{innerHTML:''}};
+  document.getElementById=function(id){ return __el639[id]||null; };
+  __btn639={disabled:false, textContent:''}; document.querySelector=function(q){ return q==='#repModal .rep-ok'?__btn639:null; };
+  document.body.dataset.role='consultora'; repModoAtual='alguns'; repMotivoAtual='viagem'; ${extra || ''}`);
+const solta639 = () => run(`repPelSel=__bk639.pa; pelExtra=__bk639.pe; PELUDINHOS=__bk639.P; document.getElementById=__bk639.ge; document.querySelector=__bk639.qs;
+  repGravar=__bk639.rg; audit=__bk639.au; repMsgModal=__bk639.mm; renderReposicao=__bk639.rr; repSaldo=__bk639.sd; zHojeISO=__bk639.hz;
+  repAlgunsDatas=__bk639.ad; repModoAtual=__bk639.mo; repMotivoAtual=__bk639.mt; document.body.dataset.role=__bk639.r;`);
+const FREDO639 = (dias, extra) => Object.assign({ n: 'Fredo', tutor: 'Eleonora Teste', sexo: 'Macho', dias: dias, freq: dias.length + 'x' }, extra || {});
+const espera639 = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+
+prova('6.39 AC2/AC3 — o caso do Fred: 13 e 14/10 com só a terça na ficha — entra o 13; o 14 (quarta) fica de fora COM o porquê e o que fazer', () => {
+  amb639(FREDO639(['ter']), "repAlgunsDatas=['2026-10-13','2026-10-14'];");
+  try {
+    igual(J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)"), { entram: ['2026-10-13'], fora: [{ iso: '2026-10-14', porque: 'não é dia do Fredo na ficha (ele vem Ter)' }], repetidas: [], feriados: [] });
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/Fredo viria em <b>1 dia<\/b>: 13\/10 \(terça-feira\)/.test(h), h);
+    assert.ok(/14\/10 \(quarta-feira\) não entra: não é dia do Fredo na ficha \(ele vem Ter\)\./.test(h), h);
+    assert.ok(/Se ele passou a vir nesse dia, marque o dia no alto da ficha\./.test(h), h);
+    assert.ok(/Vou gerar 1 crédito de reposição\./.test(h));
+  } finally { solta639(); }
+});
+provaAsync('6.39 AC1/AC5 — com Ter e Qua na ficha: 13 e 14/10 viram 2 créditos num lançamento só (mesmo motivo, mesmo lote, o dia de repor só no primeiro); rastro e mensagem com os dias', async () => {
+  amb639(FREDO639(['ter', 'qua']), "repAlgunsDatas=['2026-10-14','2026-10-13']; __el639.repObs.value='viagem curta';");
+  try {
+    run('repConfirmar()'); await espera639();
+    const g = J630('__g639');
+    igual(g.length, 2);
+    igual(g.map((r) => [r.tipo, r.data, r.motivo, r.obs, r.volta]), [['credito', '2026-10-13', 'viagem', 'viagem curta', ''], ['credito', '2026-10-14', 'viagem', 'viagem curta', '']]);
+    igual([g[0].lote === g[1].lote, /^L\d+$/.test(g[0].lote), g[0].alguns, g[1].alguns, 'periodo' in g[0], 'troca' in g[0]], [true, true, { datas: ['2026-10-13', '2026-10-14'] }, { datas: ['2026-10-13', '2026-10-14'] }, false, false]);
+    const au = J630('__au639').filter((a) => a[0] === 'reposicao-credito');
+    igual(au.length, 1);
+    assert.ok(/^Fredo · 2 dia\(s\) · .* — dias 13\/10, 14\/10$/.test(au[0][1]), au[0][1]);
+    const m = J630('__mm639[0]');
+    assert.ok(/Fredo ganhou 2 dias de reposição/.test(m.l[0]), JSON.stringify(m.l));
+    assert.ok(/contando as dos dias 13\/10 e 14\/10\./.test(m.msg), m.msg);
+    // com uma data que fica de fora, ela aparece na confirmação e no rastro
+    run("__g639=[]; __au639=[]; __mm639=[]; repAlgunsDatas=['2026-10-13','2026-10-15','2026-10-17'];");
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-13']);
+    const m2 = J630('__mm639[0]');
+    assert.ok(m2.l.some((x) => /^Ficaram de fora: 15\/10 \(quinta-feira\) — não é dia do Fredo na ficha \(ele vem Ter, Qua\); 17\/10 \(sábado\) — é sábado: não há Day Care\.$/.test(x)), JSON.stringify(m2.l));
+    assert.ok(/ — dias 13\/10 \(de fora: 15\/10, 17\/10\)$/.test(J630('__au639')[0][1]), J630('__au639')[0][1]);
+    // com o dia de repor escolhido: ele vai só no PRIMEIRO crédito (uma volta marcada, não uma por dia)
+    run(`__g639=[]; __mm639=[]; repAlgunsDatas=['2026-10-13','2026-10-14']; __el639.repVolta.value='2026-10-21';
+      __bk639.vd=vagasDoDia; vagasDoDia=function(){ return {lido:true, cheio:false}; };`);
+    try {
+      run('repConfirmar()'); await espera639();
+      igual(J630('__g639').map((r) => [r.data, r.volta]), [['2026-10-13', '2026-10-21'], ['2026-10-14', '']]);
+      assert.ok(/O dia de repor já ficou combinado: 21\/10\/2026\./.test(J630('__mm639[0]').msg), J630('__mm639[0]').msg);
+    } finally { run('vagasDoDia=__bk639.vd;'); }
+  } finally { solta639(); }
+});
+provaAsync('6.39 AC3/AC4 — nada vira crédito: data repetida conta uma vez, fim de semana diz que não há Day Care, nenhuma data válida não grava, linha em branco não conta', async () => {
+  amb639(FREDO639(['ter']), "repAlgunsDatas=['2026-10-13','','2026-10-13','2026-10-17'];");
+  try {
+    igual(J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)"), { entram: ['2026-10-13'], fora: [{ iso: '2026-10-17', porque: 'é sábado: não há Day Care' }], repetidas: ['2026-10-13'], feriados: [] });
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/13\/10 está repetida: conta uma vez só\./.test(h) && /17\/10 \(sábado\) não entra: é sábado: não há Day Care\./.test(h), h);
+    assert.ok(h.indexOf('marque o dia no alto da ficha') < 0, 'fim de semana não pede para mudar a ficha');
+    // data fora do calendário do app (2015 a 2035), mesmo sendo terça: fica de fora
+    igual(J630("repAlgunsAnalise(repPelSel, ['2040-01-03'])"), { entram: [], fora: [{ iso: '2040-01-03', porque: 'a data está fora do calendário do app' }], repetidas: [], feriados: [] });
+    // só datas que não viram crédito: não grava e diz por quê
+    run("repAlgunsDatas=['2026-10-14','2026-10-17'];"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Nenhuma dessas datas vira crédito: 14/10 (quarta-feira) — não é dia do Fredo na ficha (ele vem Ter).']);
+    // nenhuma data
+    run("repAlgunsDatas=['','']; __el639.repWarn.textContent='';"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Escolha pelo menos uma data.']);
+    run('repPreverAlguns()');
+    igual(run('__el639.repPreviaAlguns.innerHTML'), 'Escolha as datas para eu calcular.');
+  } finally { solta639(); }
+});
+prova('6.39 AC2 — "Um período" também diz o que fica de fora: 13 a 14/10 com só a terça; período longo resume (até 5 pelo nome e "e mais")', () => {
+  amb639(FREDO639(['ter']), "repModoAtual='periodo'; __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-14';");
+  try {
+    run('repPreverDias()');
+    const h = run('__el639.repPrevia.innerHTML');
+    assert.ok(/viria em <b>1 dia<\/b>/.test(h) && /14\/10 \(quarta-feira\) não entra: não é dia do Fredo na ficha \(ele vem Ter\)\./.test(h), h);
+    run("__el639.repAte.value='2026-11-11';"); run('repPreverDias()');
+    const h2 = run('__el639.repPrevia.innerHTML');
+    // 13/10 a 11/11: 22 dias de semana, 5 terças → 17 de fora
+    assert.ok(/viria em <b>5 dias<\/b>/.test(h2) && /Ficam de fora 17 dias de semana que não são dias dele: 14\/10 \(quarta-feira\) · 15\/10 \(quinta-feira\) · 16\/10 \(sexta-feira\) · 19\/10 \(segunda-feira\) · 21\/10 \(quarta-feira\) e mais 12\./.test(h2), h2);
+    // período só de terças: nada de fora
+    run("__el639.repAte.value='2026-10-13';"); run('repPreverDias()');
+    igual(run('__el639.repPrevia.innerHTML').indexOf('rep-fora'), -1);
+  } finally { solta639(); }
+});
+prova('6.39 — plano com dias por mês (6.30): a data fora do mês do plano diz "nesse mês do plano" e manda ajustar na aba Plano', () => {
+  amb639(FREDO639(['ter'], { sexo: 'Fêmea', renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } }),
+    "repAlgunsDatas=['2026-10-12','2026-10-14'];");
+  try {
+    const a = J630("repAlgunsAnalise(repPelSel, repAlgunsDatas)");
+    igual(a.entram, ['2026-10-12']);
+    igual(a.fora, [{ iso: '2026-10-14', porque: 'não é dia da Fredo nesse mês do plano (ela vem Seg)' }]);
+    run('repPreverAlguns()');
+    assert.ok(/Se ela passou a vir nesse dia, ajuste os dias na aba Plano da ficha\./.test(run('__el639.repPreviaAlguns.innerHTML')));
+    // no Mês 3 (dezembro), a quarta é dia dela
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-12-09'])").entram, ['2026-12-09']);
+  } finally { solta639(); }
+});
+prova('6.39 — abrir o modal limpa as datas (as do FILHOt anterior nunca passam para o próximo) e a troca de modo mostra só o bloco certo', () => {
+  amb639(FREDO639(['ter']), `repAlgunsDatas=['2026-10-13','2026-10-14'];
+    ['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+    ['repBlocoDia','repBlocoPeriodo','repBlocoAlguns'].forEach(function(k){ __el639[k]={style:{display:''}}; });
+    __bk639.qsa=document.querySelectorAll; document.querySelectorAll=function(){ return []; };
+    __bk639.rme=repMostrarEscolhido; repMostrarEscolhido=function(){};`);
+  try {
+    run('repAbrirLancar(PELUDINHOS[0])');
+    igual([J630('repAlgunsDatas'), run('repModoAtual'), run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoDia.style.display')], [[''], 'dia', 'none', 'block']);
+    run("repSetModo('alguns')");
+    igual([run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoPeriodo.style.display'), run('__el639.repBlocoDia.style.display')], ['block', 'none', 'none']);
+    // uma linha só, sem o "×"; com duas, cada uma tem o seu
+    const h1 = run('repAlgunsHTML()');
+    igual([(h1.match(/type="date"/g) || []).length, h1.indexOf('rep-alguns-tirar')], [1, -1]);
+    run('repAlgunsMais()');
+    const h2 = run('repAlgunsHTML()');
+    igual([(h2.match(/type="date"/g) || []).length, (h2.match(/rep-alguns-tirar/g) || []).length], [2, 2]);
+    run("repAlgunsSet(0,'2026-10-13'); repAlgunsTirar(1);");
+    igual(J630('repAlgunsDatas'), ['2026-10-13']);
+    run("repSetModo('periodo')");
+    igual([run('__el639.repBlocoAlguns.style.display'), run('__el639.repBlocoPeriodo.style.display')], ['none', 'block']);
+  } finally { run('document.querySelectorAll=__bk639.qsa; repMostrarEscolhido=__bk639.rme;'); solta639(); }
+});
+prova('6.39 AC5 — Extrato e mensagem: os dias do lançamento, em lista ou em objeto (o banco devolve os dois)', () => {
+  igual(run("repExtratoAlguns({alguns:{datas:['2026-10-20','2026-10-13','2026-10-15']}})"), ' · alguns dias: 13/10, 15/10, 20/10');
+  igual(run("repExtratoAlguns({alguns:{datas:{0:'2026-10-13',1:'2026-10-15'}}})"), ' · alguns dias: 13/10, 15/10');
+  igual([run("repExtratoAlguns({alguns:{datas:['2026-10-13']}})"), run('repExtratoAlguns({})'), run("repExtratoAlguns({alguns:{datas:'x'}})")], ['', '', '']);
+  run(`__bk639m={hz:zHojeISO, pe:pelExtra}; zHojeISO=function(){ return '2026-10-15'; }; pelExtra=function(){ return {sexo:'Macho'}; };`);
+  try {
+    const p = "{n:'Fredo', tutor:'Eleonora Teste'}";
+    assert.ok(/está com 5 reposições, com a de hoje, referentes aos dias 13\/10, 15\/10 e 20\/10\./.test(run('repMensagem(' + p + ", 'credito', {qtd:3, datas:['2026-10-20','2026-10-13','2026-10-15'], saldo:5})")));
+    assert.ok(/contando as dos dias 13\/10 e 14\/10\./.test(run('repMensagem(' + p + ", 'credito', {qtd:2, datas:['2026-10-13','2026-10-14'], saldo:4})")));
+    // o período e o dia só continuam como antes
+    assert.ok(/contando as do período de 20\/10\/2026 a 30\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:9, de:'2026-10-20', ate:'2026-10-30', saldo:9})")));
+    assert.ok(/com a de hoje, referente ao dia 15\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:1, data:'2026-10-15', saldo:1})")));
+  } finally { run('zHojeISO=__bk639m.hz; pelExtra=__bk639m.pe;'); }
+});
+
+// ---- QA da 6.39 (CONCERNS): o que o QA achou e os defeitos que escapavam das provas
+provaAsync('6.39 QA (M1) — a data que já tem falta avisada viva não ganha um segundo crédito: "Alguns dias", "Um período" e "Um dia só"; estornada, volta a valer', async () => {
+  amb639(FREDO639(['ter', 'qua']), `__bk639.rc=REPO_CACHE; REPO_CACHE={}; REPO_CACHE[pelKey(repPelSel)]={lancamentos:{c1:{tipo:'credito', data:'2026-10-13', motivo:'viagem', ts:1}}};
+    repAlgunsDatas=['2026-10-13','2026-10-14'];`);
+  try {
+    const a = J630('repAlgunsAnalise(repPelSel, repAlgunsDatas)');
+    igual([a.entram, a.fora], [['2026-10-14'], [{ iso: '2026-10-13', porque: 'a falta avisada desse dia já foi lançada (está no Extrato)' }]]);
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/viria em <b>1 dia<\/b>: 14\/10 \(quarta-feira\)/.test(h) && /13\/10 \(terça-feira\) não entra: a falta avisada desse dia já foi lançada \(está no Extrato\)\./.test(h), h);
+    assert.ok(h.indexOf('alto da ficha') < 0 && h.indexOf('aba Plano') < 0, 'a data já lançada não pede para mudar a ficha');
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-14']);
+    // só a data já lançada: não grava
+    run("__g639=[]; repAlgunsDatas=['2026-10-13'];"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Nenhuma dessas datas vira crédito: 13/10 (terça-feira) — a falta avisada desse dia já foi lançada (está no Extrato).']);
+    // "Um período" de 13 a 14/10: só o 14 entra, e a prévia diz por quê (sem dizer que não é dia dele)
+    run("repModoAtual='periodo'; __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-14'; __g639=[];");
+    run('repPreverDias()');
+    const hp = run('__el639.repPrevia.innerHTML');
+    assert.ok(/viria em <b>1 dia<\/b>/.test(hp) && /Vou gerar 1 crédito de reposição\./.test(hp) && /13\/10 já tem falta avisada lançada \(está no Extrato\): não entra de novo\./.test(hp), hp);
+    assert.ok(hp.indexOf('Ficam de fora') < 0 && hp.indexOf('não é dia') < 0, hp);
+    run('repConfirmar()'); await espera639();
+    igual(J630('__g639').map((r) => r.data), ['2026-10-14']);
+    // período só com a data já lançada
+    run("__g639=[]; __el639.repAte.value='2026-10-13';"); run('repPreverDias()');
+    assert.ok(/^Nesse período não sobra dia para lançar\./.test(run('__el639.repPrevia.innerHTML')), run('__el639.repPrevia.innerHTML'));
+    run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent')], [0, 'Os dias desse período já têm falta avisada lançada (estão no Extrato).']);
+    // "Um dia só"
+    run("repModoAtual='dia'; __el639.repData.value='2026-10-13'; __g639=[];"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__el639.repWarn.textContent'), run('__btn639.disabled'), run('REP_LANCANDO')],
+      [0, 'A falta avisada de 13/10/2026 já foi lançada: está no Extrato e já conta no saldo. Para lançar de novo, estorne a anterior no Extrato.', false, false]);
+    // o uso do crédito não conta como falta lançada; o estorno devolve a data
+    run("REPO_CACHE[pelKey(repPelSel)].lancamentos.u1={tipo:'uso', data:'2026-10-14', ts:3};");
+    igual(run("repCreditoVivoNaData(repPelSel, '2026-10-14')"), false);
+    run("REPO_CACHE[pelKey(repPelSel)].lancamentos.e1={tipo:'estorno', estornaId:'c1', ts:2}; __el639.repWarn.textContent='';");
+    run('repConfirmar()'); await espera639();
+    igual([J630('__g639').map((r) => r.data), run('__el639.repWarn.textContent')], [['2026-10-13'], '']);
+    // sem o extrato lido: a conta de sempre
+    run('REPO_CACHE={};');
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-10-13'])").entram, ['2026-10-13']);
+  } finally { run('REPO_CACHE=__bk639.rc;'); solta639(); }
+});
+provaAsync('6.39 QA (M2) — dois toques seguidos (o "Avisar a Márcia" não se desativa): grava UM lote; o segundo toque avisa; a resposta destrava; abrir o modal destrava', async () => {
+  amb639(FREDO639(['ter', 'qua']), `repAlgunsDatas=['2026-10-13','2026-10-14'];
+    __res639=[]; repGravar=function(p,r){ __g639.push(JSON.parse(JSON.stringify(r))); return new Promise(function(ok){ __res639.push(ok); }); };`);
+  try {
+    run('repConfirmar(); repConfirmar({pedirEncaixe:true}); repConfirmar();');
+    igual([run('__g639.length'), run('REP_LANCANDO'), run('__btn639.disabled'), run('__el639.repWarn.textContent')],
+      [2, true, true, 'Ainda estou lançando o toque anterior. Espere a confirmação.']);
+    run("__res639.forEach(function(ok,i){ ok({key:'k'+i}); });"); await espera639();
+    igual([run('REP_LANCANDO'), run('__btn639.disabled'), run('__mm639.length')], [false, false, 1]);
+    run("__g639=[]; __res639=[]; repAlgunsDatas=['2026-10-20'];"); run('repConfirmar()');
+    igual([run('__g639.length'), run('REP_LANCANDO')], [1, true]);
+    // gravação pendurada (sem rede): abrir o modal de novo destrava
+    run(`['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+      ['repBlocoDia','repBlocoPeriodo','repBlocoAlguns'].forEach(function(k){ __el639[k]={style:{display:''}}; });
+      __bk639.qsa=document.querySelectorAll; document.querySelectorAll=function(){ return []; };
+      __bk639.rme=repMostrarEscolhido; repMostrarEscolhido=function(){};`);
+    const ger0 = run('REP_LANC_GER');
+    try { run('repAbrirLancar(PELUDINHOS[0])'); } finally { run('document.querySelectorAll=__bk639.qsa; repMostrarEscolhido=__bk639.rme;'); }
+    igual([run('REP_LANCANDO'), run('REP_LANC_GER')], [false, ger0 + 1], 'o modal novo é outro lançamento');
+    // a gravação de erro também destrava
+    run(`repModoAtual='alguns'; repMotivoAtual='viagem'; repAlgunsDatas=['2026-10-21']; __g639=[];
+      repGravar=function(){ return Promise.reject(new Error('sem rede')); };`);
+    run('repConfirmar()'); await espera639();
+    igual([run('REP_LANCANDO'), run('__btn639.disabled'), /^Não consegui lançar: sem rede\./.test(run('__el639.repWarn.textContent'))], [false, false, true]);
+  } finally { solta639(); }
+});
+prova('6.39 QA (M3) — feriado em dia dele: a prévia avisa para conferir se a Zêluz abre; o crédito entra como sempre', () => {
+  amb639(FREDO639(['seg', 'ter']), `__bk639.fe=orcEhFeriado; orcEhFeriado=function(iso){ return iso==='2026-10-12'?'Nossa Senhora Aparecida':''; };
+    repAlgunsDatas=['2026-10-12','2026-10-13'];`);
+  try {
+    const a = J630('repAlgunsAnalise(repPelSel, repAlgunsDatas)');
+    igual([a.entram, a.feriados], [['2026-10-12', '2026-10-13'], [{ iso: '2026-10-12', nome: 'Nossa Senhora Aparecida' }]]);
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/viria em <b>2 dias<\/b>/.test(h) && /12\/10 é feriado \(Nossa Senhora Aparecida\): confira se a Zêluz abre\. Se não abre, tire essa data\./.test(h), h);
+    run("repModoAtual='periodo'; __el639.repDe.value='2026-10-12'; __el639.repAte.value='2026-10-13';"); run('repPreverDias()');
+    const hp = run('__el639.repPrevia.innerHTML');
+    assert.ok(/viria em <b>2 dias<\/b>/.test(hp) && /12\/10 é feriado \(Nossa Senhora Aparecida\): confira se a Zêluz abre\./.test(hp), hp);
+    run("__el639.repDe.value='2026-10-13';"); run('repPreverDias()');
+    igual(run('__el639.repPrevia.innerHTML').indexOf('feriado'), -1);
+    // o feriado de verdade do app (12/10) também é reconhecido
+    run('orcEhFeriado=__bk639.fe;');
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-10-12'])").feriados.length, run("orcEhFeriado('2026-10-12')") ? 1 : 0);
+  } finally { run('orcEhFeriado=__bk639.fe;'); solta639(); }
+});
+prova('6.39 QA (L1) — trocar de FILHOt com o modal aberto refaz a prévia ("Alguns dias" e "Um período")', () => {
+  amb639(FREDO639(['ter']), `PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'},{n:'Lia', raca:'SRD', tutor:'Eleonora Teste'}]; repPelSel=PELUDINHOS[0];
+    __exL639={n:'Lia', tutor:'Eleonora Teste', sexo:'Fêmea', dias:['qua'], freq:'1x'};
+    pelExtra=function(p){ return (p&&p.n==='Lia')?__exL639:__ex639; };
+    ['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+    repAlgunsDatas=['2026-10-14'];`);
+  try {
+    run('repPreverAlguns()');
+    assert.ok(/^Nenhuma dessas datas vira crédito\./.test(run('__el639.repPreviaAlguns.innerHTML')));
+    run('repEscolher(1)');
+    assert.ok(/^Lia viria em <b>1 dia<\/b>: 14\/10 \(quarta-feira\)/.test(run('__el639.repPreviaAlguns.innerHTML')), run('__el639.repPreviaAlguns.innerHTML'));
+    run("repModoAtual='periodo'; __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-14'; repEscolher(0);");
+    assert.ok(/Fredo viria em <b>1 dia<\/b>:<br>13\/10\/2026/.test(run('__el639.repPrevia.innerHTML')), run('__el639.repPrevia.innerHTML'));
+    run('repEscolher(1)');
+    assert.ok(/Lia viria em <b>1 dia<\/b>:<br>14\/10\/2026/.test(run('__el639.repPrevia.innerHTML')), run('__el639.repPrevia.innerHTML'));
+  } finally { solta639(); }
+});
+prova('6.39 QA (L3) — textos: "nesses dias"; a data fora do calendário com o ano; a repetida antes do que fica de fora; o conselho certo para cada motivo', () => {
+  amb639(FREDO639(['ter']), "repAlgunsDatas=['2026-10-13','2026-10-13','2026-10-14','2026-10-15','2040-01-03'];");
+  try {
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/Se ele passou a vir nesses dias, marque os dias no alto da ficha\./.test(h), h);
+    assert.ok(/03\/01\/2040 não entra: a data está fora do calendário do app\./.test(h), h);
+    assert.ok(h.indexOf('está repetida') >= 0 && h.indexOf('está repetida') < h.indexOf('não entra'), 'a repetida vem antes do que fica de fora');
+    // só a data fora do calendário: nada de mexer na ficha
+    run("repAlgunsDatas=['2040-01-03']; repPreverAlguns();");
+    igual(run('__el639.repPreviaAlguns.innerHTML').indexOf('ficha'), -1);
+    // um dia de semana só: "nesse dia"
+    run("repAlgunsDatas=['2026-10-14']; repPreverAlguns();");
+    assert.ok(/Se ele passou a vir nesse dia, marque o dia no alto da ficha\./.test(run('__el639.repPreviaAlguns.innerHTML')));
+  } finally { solta639(); }
+});
+provaAsync('6.39 QA (L2) — o que entra no lote e na mensagem: só as datas que viram crédito (sem as de fora e sem as repetidas); "com a de hoje" só se hoje está na lista', async () => {
+  amb639(FREDO639(['ter', 'qua']), "repAlgunsDatas=['2026-10-14','2026-10-13','2026-10-15','2026-10-13'];");
+  try {
+    run('repPreverAlguns()');
+    assert.ok(/viria em <b>2 dias<\/b>/.test(run('__el639.repPreviaAlguns.innerHTML')) && /Vou gerar 2 créditos de reposição\./.test(run('__el639.repPreviaAlguns.innerHTML')));
+    run('repConfirmar()'); await espera639();
+    const g = J630('__g639');
+    igual([g.map((r) => r.data), g[0].alguns, g[1].alguns], [['2026-10-13', '2026-10-14'], { datas: ['2026-10-13', '2026-10-14'] }, { datas: ['2026-10-13', '2026-10-14'] }]);
+    const m = J630('__mm639[0]');
+    assert.ok(/contando as dos dias 13\/10 e 14\/10\./.test(m.msg), m.msg);
+    assert.ok(m.msg.indexOf('15/10') < 0, m.msg);
+    // a data que não vira crédito não prende o botão
+    run("__g639=[]; repAlgunsDatas=['2026-10-15'];"); run('repConfirmar()'); await espera639();
+    igual([run('__g639.length'), run('__btn639.disabled'), run('REP_LANCANDO')], [0, false, false]);
+    run("repAlgunsDatas=['2026-10-20'];"); run('repConfirmar()'); await espera639();
+    igual(run('__g639.length'), 1);
+    // até 31 linhas: a 32ª não entra
+    run("repAlgunsDatas=[]; for(var i=0;i<30;i++) repAlgunsDatas.push(''); __el639.repWarn.textContent='';");
+    run('repAlgunsMais()'); igual([run('repAlgunsDatas.length'), run('__el639.repWarn.textContent')], [31, '']);
+    run('repAlgunsMais()'); igual([run('repAlgunsDatas.length'), run('__el639.repWarn.textContent')], [31, 'Até 31 datas por lançamento. Para mais, use "Um período".']);
+  } finally { solta639(); }
+  run(`__bk639h={hz:zHojeISO, pe:pelExtra}; zHojeISO=function(){ return '2026-10-15'; }; pelExtra=function(){ return {sexo:'Macho'}; };`);
+  try {
+    const p = "{n:'Fredo', tutor:'Eleonora Teste'}";
+    const t = run('repMensagem(' + p + ", 'credito', {qtd:2, datas:['2026-10-13','2026-10-20'], saldo:4})");
+    assert.ok(/contando as dos dias 13\/10 e 20\/10\./.test(t) && t.indexOf('com a de hoje') < 0, t);
+  } finally { run('zHojeISO=__bk639h.hz; pelExtra=__bk639h.pe;'); }
+});
+
+// ================================================================== 6.41 — «Está aqui» tocado por engano: desfazer
+console.log('\n6.41 — «Está aqui» tocado por engano: "Toquei errado — desfazer" (fila do /loop, 06/out/2026)');
+const desf641 = (i) => `__esc[${i}].fn[__esc[${i}].b.indexOf('Toquei errado — desfazer')]();`;
+provaAsync('6.41 AC1-AC5 — Bolt faltou ao meio-dia e tinha banho; «Ele está aqui» por engano; "Toquei errado — desfazer": a chamada volta para "faltou", o banho volta para a pergunta, o remédio relê, rastro', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; banhoFaltaPerguntar('${dia}');`);
+    run('__esc[0].fn[1]();'); await tick();                     // «Ele está aqui»
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['veio', 'mantido']);
+    const ts = run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).antes, 'faltou');
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, true);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).decTs, ts);
+    run('__alertas=[]; __med629=0;');
+    run(desf641(1)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou', 'a chamada volta para "faltou"');
+    igual(run(`dcChamada['${kP}']`), 'faltou', 'e a deste aparelho');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']===undefined`), true, 'a decisão do banho desse toque sai');
+    igual([run(`BANHO_FALTA_DEC['${kP}']===undefined`), run(`BANHO_FALTA_VISTO['${dia}|${kP}']===undefined`)], [true, true], 'a pergunta do banho volta');
+    igual(run('__med629'), 1, 'o remédio relê a fila (voltou a faltar)');
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l, ['A chamada de hoje voltou para "faltou".', 'O banho das 17:00 volta para a pergunta: «Liberar o horário» ou «Ele ainda vem».']);
+    assert.ok(run('__aud629').indexOf('chamada: desfez o «Está aqui» (toque errado) — voltou para faltou') >= 0, JSON.stringify(run('__aud629')));
+    igual(run(`BANHO_FALTA_AQUI['${dia}|${kP}']===undefined`), true, 'desfeito uma vez só');
+    // o banho segurado ANTES do toque ("ainda vem") continua segurado; sem marcação antes, volta a "sem marcação"
+    run(bolt629(dia, kP) + `delete dcChamada['${kP}']; __banco['daycare/chamada/${dia}/${kP}']=null;
+      BANHO_FALTA_DEC['${kP}']={decisao:'mantido', quem:'Lia', ts:5}; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:5}; __esc=[]; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']===undefined`), true, 'sem marcação antes: a marcação sai');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', 'o "ainda vem" da Lia fica');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => x.t === 'DESFEITO: BOLT' && /voltou para "sem marcação"/.test(x.l[0]) && /continua segurado, como já estava antes do toque/.test(x.l[1])), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 AC2/AC3 — não desfaz por cima: check-in do corpo feito depois, chamada mudada por outra pessoa, decisão do banho de outra pessoa; quem não decide o banho não desfaz', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const toque = async () => { run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[];`);
+      await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick(); run('__alertas=[];'); };
+    // 1) o check-in do corpo de entrada foi feito depois do toque: ele está aqui de verdade
+    await toque();
+    run(`${fimCk629(dia, kP)}=789;`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    // 2) alguém marcou outra coisa na chamada depois do toque
+    await toque();
+    run(`__banco['daycare/chamada/${dia}/${kP}']='faltou';`);
+    run(desf641(0)); await tick();
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => [x.t, x.l[0]]), [['NÃO DESFIZ', 'A chamada de Bolt mudou depois do toque: faltou.']]);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'nada mais foi desfeito');
+    // 3) outra pessoa liberou o horário depois do toque: a chamada volta, a decisão dela fica
+    await toque();
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Lia', ts:99};`);
+    run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['faltou', 'liberado']);
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => /O banho ficou como outra pessoa decidiu depois do toque\./.test(x.l[1])));
+    // 3b) outra pessoa gravou o MESMO "ainda vem" por cima, com outro carimbo: a dela fica
+    await toque();
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:99};`);
+    run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`)], ['faltou', 'Lia']);
+    // 4) sem permissão: não desfaz
+    await toque();
+    run('__pode=false; __bkAl641=alert; __al641=[]; alert=function(t){ __al641.push(t); };');
+    try { run(desf641(0)); await tick(); } finally { run('alert=__bkAl641; __pode=true;'); }
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual(run('__al641.length'), 1);
+    // 5) já estava "veio" antes do toque: não há o que desfazer, o botão não aparece
+    run(bolt629(dia, kP) + `dcChamada['${kP}']='veio'; __esc=[]; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].b').indexOf('Toquei errado — desfazer'), -1);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 AC3 — banho FIXO: o "manter" do dia que o toque gravou na ficha sai (e o que havia antes volta); a pergunta do banho volta', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const dSem = run(`['dom','seg','ter','qua','qui','sex','sab'][new Date('${dia}T12:00:00').getDay()]`);
+    run(`__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{'2020-01-01':{pular:true}}}};`);
+    run(`BANHO_FALTA=[{chave:'${kP}', nome:'Bolt', hora:'17:00', origem:'fixo', porque:'faltou', fixo:true, lancs:[], txts:[]}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; dcChamada={}; dcChamada['${kP}']='faltou'; __banco['daycare/chamada/${dia}/${kP}']='faltou'; __esc=[]; __alertas=[];
+      setPelExtra=function(p,patch){ __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); __extra[p.n]=Object.assign({}, __extra[p.n]||{}, JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).manter, true, 'o toque segurou o banho fixo do dia');
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']===undefined`), true, 'o "manter" do dia saiu da ficha');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['2020-01-01']`), { pular: true }, 'as outras exceções ficam');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => x.t === 'DESFEITO: BOLT' && /volta para a pergunta/.test(x.l[1])), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+// ================================================================== 6.42 — Hoje na Zêluz: na chamada, sem o check-in do corpo
+console.log('\n6.42 — Hoje na Zêluz: quem está só na chamada fica à vista até o check-in do corpo (Adriana, 02/out/2026, Rafael)');
+const L642 = () => [
+  { chave: 'rafael__ana', nome: 'Rafael', fonte: 'chamada', p: { n: 'Rafael', tutor: 'Ana' } },
+  { chave: 'luna__rui', nome: 'Luna', fonte: 'checkin', hora: '08:10', p: { n: 'Luna', tutor: 'Rui' } },
+  { chave: 'maya__lia', nome: 'Maya', fonte: 'hospede', p: { n: 'Maya', tutor: 'Lia' } },
+  { chave: 'repolho__zeluz', nome: 'Repolho', fonte: 'morador', p: { n: 'Repolho', tutor: 'Zêluz' } },
+  { chave: 'pipoca__bia', nome: 'Pipoca', fonte: 'chamada', p: { n: 'Pipoca', tutor: 'Bia' } }];
+prova('6.42 AC1/AC2/AC5 — o quadro lista só quem a chamada diz "veio" sem o check-in de entrada; com a atividade no Time, "Fazer o check-in agora"; sem ela, a quem pedir', () => {
+  ctx.__L642 = L642();
+  run(`__bk642={ap:atividadesPermitidas, P:PELUDINHOS}; PELUDINHOS=__L642.map(function(o){ return o.p; }); __ativ642=null; atividadesPermitidas=function(){ return __ativ642; };`);
+  try {
+    igual(J630('hojeSemCheckinLista(__L642).map(function(o){ return o.nome; })'), ['Rafael', 'Pipoca']);
+    const h = run('hojeSemCheckinCardHTML(__L642)');
+    assert.ok(/id="hojeSemCk"/.test(h) && /Na chamada, sem o check-in do corpo \(2\)/.test(h), h.slice(0, 300));
+    igual((h.match(/Fazer o check-in agora/g) || []).length, 2);
+    assert.ok(/>Rafael<\/strong>[\s\S]*data-k="rafael__ana"[\s\S]*>Pipoca<\/strong>[\s\S]*data-k="pipoca__bia"/.test(h), h);
+    assert.ok(h.indexOf('Luna') < 0 && h.indexOf('Maya') < 0 && h.indexOf('Repolho') < 0, 'check-in feito, hóspede e morador não entram');
+    assert.ok(/min-height:44px/.test(h));
+    // sem a atividade no Time: nenhum botão, e a frase de a quem pedir
+    run('__ativ642=[];');
+    const h2 = run('hojeSemCheckinCardHTML(__L642)');
+    igual([(h2.match(/Fazer o check-in agora/g) || []).length, /Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo\./.test(h2)], [0, true]);
+    // ninguém só na chamada: nada de quadro
+    igual(run('hojeSemCheckinCardHTML(__L642.filter(function(o){ return o.fonte!=="chamada"; }))'), '');
+    igual(run('hojeSemCheckinCardHTML([])'), '');
+  } finally { run('atividadesPermitidas=__bk642.ap; PELUDINHOS=__bk642.P;'); }
+});
+prova('6.42 AC4 — a linha do FILHOt diz "presente pela chamada — falta o check-in do corpo"; as outras frases não mudam', () => {
+  igual([run("hojeFrasePresenca({fonte:'chamada'})"), run("hojeFrasePresenca({fonte:'checkin', hora:'08:10'})"), run("hojeFrasePresenca({fonte:'hospede'})"),
+    run("hojeFrasePresenca({fonte:'morador'})"), run('hojeFrasePresenca({})')],
+    ['presente pela chamada — falta o check-in do corpo', 'presente pelo check-in às 08:10', 'hóspede da AuAulândia — está na casa', 'morador da casa', 'presente']);
+  // a fonte vem da regra de sempre: faltou vence; check-in de entrada vence a chamada
+  const o = "{p:{n:'Rafael', tutor:'Ana'}}", k = run("dcKey('Rafael','Ana')");
+  igual([run(`hojeFonteDe(${o}, {'${k}':'veio'}, {})`), run(`hojeFonteDe(${o}, {'${k}':'veio'}, {'${k}':{tipo:'entrada', fim:1}})`), run(`hojeFonteDe(${o}, {'${k}':'faltou'}, {})`)],
+    ['chamada', 'checkin', '']);
+});
+prova('6.42 AC1/AC3 — o quadro entra no Hoje na Zêluz logo depois do banho de quem faltou, e o check-in que chega redesenha a tela (o mesmo ouvinte do dia; o de ontem é solto)', () => {
+  ctx.__L642 = L642();
+  run(`__bk642b={hl:hojeLista, ge:document.getElementById, bf:banhoFaltaCardHTML, pc:prevCorrigeOkHTML, zv:zMapaVivo, zd:zMapaDesligar, dk:dcDataKey, hr:hojeRedesenhar, P:PELUDINHOS, d:_hojeCkVivoDia, db:DB};
+    PELUDINHOS=__L642.map(function(o){ return o.p; }); hojeLista=function(){ return __L642; };
+    __raiz642={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz642:null; };
+    banhoFaltaCardHTML=function(){ return '<!--BANHO-->'; }; prevCorrigeOkHTML=function(){ return ''; };`);
+  try {
+    run('hojeRender()');
+    const h = run('__raiz642.innerHTML');
+    assert.ok(h.indexOf('<!--BANHO-->') >= 0 && h.indexOf('<!--BANHO-->') < h.indexOf('id="hojeSemCk"'), 'logo depois do quadro do banho');
+    assert.ok(/presente pela chamada — falta o check-in do corpo/.test(h));
+    // o ouvinte: um aviso por tela, e o do dia anterior é solto
+    run(`__zv642=[]; __zd642=[]; DB={}; zMapaVivo=function(p,sl,cb){ __zv642.push([p,sl]); __cb642=cb; return {}; }; zMapaDesligar=function(p,sl){ __zd642.push([p,sl]); };
+      __rd642=0; hojeRedesenhar=function(){ __rd642++; }; _hojeCkVivoDia=''; dcDataKey=function(){ return '2026-10-07'; };`);
+    run('hojeCkVivoLigar()');
+    igual(J630('__zv642'), [['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']]);
+    run('__cb642({})'); igual(run('__rd642'), 1, 'o check-in que chega redesenha a tela');
+    run("dcDataKey=function(){ return '2026-10-08'; }; hojeCkVivoLigar();");
+    igual([J630('__zd642'), J630('__zv642')[1]], [[['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']], ['daycare/checkin-corpo/2026-10-08', '_hojeSemCk']]);
+  } finally {
+    run(`hojeLista=__bk642b.hl; document.getElementById=__bk642b.ge; banhoFaltaCardHTML=__bk642b.bf; prevCorrigeOkHTML=__bk642b.pc; zMapaVivo=__bk642b.zv; zMapaDesligar=__bk642b.zd;
+      dcDataKey=__bk642b.dk; hojeRedesenhar=__bk642b.hr; PELUDINHOS=__bk642b.P; _hojeCkVivoDia=__bk642b.d; DB=__bk642b.db;`);
+  }
+});
+prova('6.42 AC2 — "Fazer o check-in agora" abre o check-in do corpo de entrada com o nome dele (pela porta do «Está aqui», que respeita o Time)', () => {
+  ctx.__L642 = L642();
+  run(`__bk642c={hl:hojeLista, ir:banhoFaltaIrAoCheckin}; hojeLista=function(){ return __L642; }; __ir642=[]; banhoFaltaIrAoCheckin=function(o){ __ir642.push(o.nome); return true; };`);
+  try {
+    igual([run("hojeSemCheckinIr('pipoca__bia')"), run("hojeSemCheckinIr('luna__rui')"), run("hojeSemCheckinIr('ninguem')")], [true, false, false]);
+    igual(J630('__ir642'), ['Pipoca'], 'só quem está no quadro');
+  } finally { run('hojeLista=__bk642c.hl; banhoFaltaIrAoCheckin=__bk642c.ir;'); }
+});
+
+// ================================================================== QA641 (Quinn) — provas independentes da Story 6.41
+// Dado INVENTADO (Bolt / Rui, como as provas da 6.29). Cada prova roda no app inteiro (sandbox) com o banco de mentira.
+console.log('\nQA641 — provas independentes do "Toquei errado — desfazer" (Quinn)');
+const qaToque641 = async (dia, kP, prep) => {
+  run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[];` + (prep || ''));
+  await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick(); run('__alertas=[];');
+};
+const qaSemana641 = (dia) => run(`['dom','seg','ter','qua','qui','sex','sab'][new Date('${dia}T12:00:00').getDay()]`);
+const qaPelOk641 = `__pelOk=true; setPelExtra=function(p,patch){ if(!__pelOk) return Promise.resolve({ok:false, erro:'barrado'}); __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); __extra[p.n]=Object.assign({}, __extra[p.n]||{}, JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };`;
+provaAsync('QA641-1 — "ainda vem" de ANTES do toque, da mesma pessoa e com o relógio do outro aparelho adiantado: continua segurado', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const fut = run('Date.now()+10*60000');
+    await qaToque641(dia, kP, `BANHO_FALTA_DEC['${kP}']={decisao:'mantido', quem:'Márcia', ts:${fut}}; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Márcia', ts:${fut}};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, 'o toque não segurou: já estava segurado');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`), fut, 'o "ainda vem" de antes fica');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-2 — o aparelho não sabia do "ainda vem" de outro (gravado antes, mesma pessoa, ou depois com o relógio adiantado de outra pessoa): o desfazer não o tira', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    // (a) mesma pessoa (login de posto com o mesmo nome em dois aparelhos), gravado ANTES, e este aparelho não sabia
+    await qaToque641(dia, kP, `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Márcia', ts:5};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, '(a) não foi este toque que segurou');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`), 5, '(a) o "ainda vem" de antes fica');
+    // (b) outra pessoa, relógio adiantado
+    const fut = run('Date.now()+10*60000');
+    await qaToque641(dia, kP, `__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:${fut}};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false, '(b) não foi este toque que segurou');
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', '(b) o "ainda vem" da Lia fica');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-3 — "ainda vem" de outra pessoa gravado DEPOIS do toque, com carimbo maior: fica', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    const ts = J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).decTs;
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:${ts + 5000}};`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => /outra pessoa decidiu depois do toque/.test(x.l[1] || '')), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-4 — a decisão de ANTES do toque ("não deu certo" do "ainda vem") volta como estava, no banco e no aparelho', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const fal = { decisao: 'falhou', acao: 'manter', quem: 'Lia', ts: 5, msg: 'não consegui segurar o banho fixo na ficha' };
+    await qaToque641(dia, kP, `BANHO_FALTA_DEC['${kP}']=${JSON.stringify(fal)}; __banco[banhoFaltaNo('${dia}')+'/${kP}']=${JSON.stringify(fal)};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, true);
+    run(desf641(0)); await tick();
+    igual(J630(`__banco[banhoFaltaNo('${dia}')+'/${kP}']`), fal, 'no banco');
+    igual(J630(`BANHO_FALTA_DEC['${kP}']`), fal, 'no aparelho');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-5 — banho FIXO com exceção do dia que já existia antes do toque: volta a de antes (não some)', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    const antes = { manter: true, motivo: 'combinado com a tutora', quem: 'Gestão', ts: 5 };
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{'${dia}':${JSON.stringify(antes)}, '2020-01-01':{pular:true}}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).motivo, 'ainda vem', 'o toque gravou o "manter" dele');
+    run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`), antes, 'a exceção de antes volta');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['2020-01-01']`), { pular: true });
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-6 — banho FIXO: não consegui gravar na ficha ao desfazer — a janela diz, e a chamada e a pergunta voltam', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    run('__pelOk=false;');
+    run(desf641(0)); await tick();
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l[1], 'O banho volta para a pergunta, mas não consegui tirar o "ainda vem" do banho fixo na ficha: confira em Banhos recorrentes.');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).manter, true, 'a ficha ficou como estava (o aviso manda conferir)');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-7 — o dia virou entre o toque e o desfazer: nada é gravado', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__bkDK641=dcDataKey; dcDataKey=function(){ return "2099-01-02"; }; __gravBF=[]; __rmBF=[];');
+    try { run(desf641(0)); await tick(); } finally { run('dcDataKey=__bkDK641;'); }
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual([run('__gravBF.length'), run('__rmBF.length')], [0, 0]);
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['O DIA VIROU']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-8 — alguém TIROU a marcação da chamada depois do toque (sem marcação): o desfazer não grava "faltou" por cima', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run(`delete __banco['daycare/chamada/${dia}/${kP}']; __gravBF=[];`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']===undefined`), true, 'continua sem marcação');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => [x.t, x.l[0]]), [['NÃO DESFIZ', 'A chamada de Bolt mudou depois do toque: sem marcação.']]);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'nada mais foi desfeito');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-9 — dois toques no desfazer (o segundo antes de o primeiro terminar): grava uma vez só', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__aud629=[];');
+    run(desf641(0) + desf641(0)); await tick();
+    igual(run('__aud629').filter((x) => /desfez o «Está aqui»/.test(x)).length, 1);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('QA641-10 — o desfazer não toca no check-in do corpo, nos pertences nem nas pendências de prevenção', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await qaToque641(dia, kP);
+    run('__gravBF=[]; __rmBF=[]; __pend629=[];');
+    run(desf641(0)); await tick();
+    const toc = run('__gravBF.map(function(x){ return x.p; }).concat(__rmBF)');
+    igual(JSON.parse(JSON.stringify(toc)).filter((p) => /checkin-corpo|pertences|pendencias/.test(p)), [], JSON.stringify(toc));
+    igual(run('__pend629'), [], 'pendAvisarChegada não é chamada no desfazer');
+    igual(JSON.parse(JSON.stringify(toc)).sort(), [banhoNo641(dia, kP), 'daycare/chamada/' + dia + '/' + kP].sort());
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+function banhoNo641(dia, k) { return run(`banhoFaltaNo('${dia}')+'/${k}'`); }
+provaAsync('QA641-11 — banho FIXO: depois do toque, a Gestão mudou o dia na ficha ("pular" hoje): o desfazer não mexe na ficha', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')"), dSem = qaSemana641(dia);
+    run(qaPelOk641);
+    await qaToque641(dia, kP, `__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{}}};
+      BANHO_FALTA[0].fixo=true; BANHO_FALTA[0].origem='fixo';`);
+    const pul = run('Date.now()+1000');
+    run(`__extra.Bolt.banho_rec.excecoes['${dia}']={pular:true, quem:'Gestão', ts:${pul}}; __pel=[];`);
+    run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`), { pular: true, quem: 'Gestão', ts: pul }, 'o "pular" da Gestão fica');
+    igual(run('__pel.length'), 0, 'a ficha não foi regravada');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+// ================================================================== 6.41 — ajustes do QA independente (A1, B1 a B5, B7)
+console.log('\n6.41 — ajustes do QA: o desfazer não some com a tela ocupada nem sem as atividades do Day Care; falha no meio; check-in no mesmo instante');
+const toque641q = async (dia, kP, prep) => {
+  run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[]; BANHO_FALTA_FILA=[];` + (prep || ''));
+  await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+};
+provaAsync('6.41 QA (A1) — outro cartaz na tela (a pendência de prevenção, um "JÁ FOI DECIDIDO"): o resultado do «Está aqui» espera na fila e volta COM o "Toquei errado — desfazer"', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __cartaz=true;");
+    igual([run('__esc.length'), run('__alertas.length'), run('BANHO_FALTA_FILA.length')], [0, 0, 1], 'a tela está ocupada: o resultado espera');
+    run('__cartaz=false; banhoFaltaTique();');
+    igual([run('__esc.length'), run('__esc[0].t'), run('__esc[0].b')], [1, 'FALTA O CHECK-IN DO CORPO DE BOLT', ['Fazer o check-in agora', 'Depois', 'Toquei errado — desfazer']]);
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), J630('__alertas').map((x) => x.t)], ['faltou', ['DESFEITO: BOLT']], 'o desfazer que veio da fila funciona');
+    // sem as atividades do Day Care e com a tela ocupada: "Entendi" e o desfazer
+    await toque641q(dia, kP, '__ativ629=[]; __cartaz=true;');
+    run('__cartaz=false; banhoFaltaTique();');
+    igual(run('__esc[0].b'), ['Entendi', 'Toquei errado — desfazer']);
+    run('__timers=[];'); run('__esc[0].fn[0]();');
+    igual(run('__timers.length'), 1, '"Entendi" segue para a próxima pergunta');
+    // a fila de outro dia não aparece
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __cartaz=true;");
+    run('BANHO_FALTA_FILA[0].dia="2020-01-01"; __cartaz=false; __esc=[]; banhoFaltaTique();');
+    igual(run('BANHO_FALTA_FILA.length'), 0);
+    igual(J630('__esc').filter((x) => x.t === 'FALTA O CHECK-IN DO CORPO DE BOLT').length, 0);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B1, B5, B7) — xarás: o resultado diz o tutor; o rastro do banho registra o desfazer; o aviso de pendência pode voltar se ele chegar de verdade', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={}; __bkPA641=PEND_AVISADO; PEND_AVISADO={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, `PELUDINHOS=PELUDINHOS.concat([{n:'Bolt', tutor:'Ana', dias:['seg']}]); __ativ629=['checkin-corpo']; PEND_AVISADO['${dia}||${kP}']=true; PEND_AVISADO['${dia}||outro']=true;`);
+    run('__alertas=[]; __aud629=[];'); run(desf641(0)); await tick();
+    igual(J630('__alertas').map((x) => x.t), ['DESFEITO: BOLT - RUI']);
+    assert.ok(run('__aud629').some((x) => /^banho-falta: Bolt: desfez o "ainda vem" \(toque errado no «Está aqui»\)$/.test(x)), JSON.stringify(run('__aud629')));
+    igual([run(`PEND_AVISADO['${dia}||${kP}']===undefined`), run(`PEND_AVISADO['${dia}||outro']`)], [true, true], 'só a marca deste FILHOt sai');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641; PEND_AVISADO=__bkPA641;'); }
+});
+provaAsync('6.41 QA (B2) — a rede cai no passo do banho, depois de a chamada voltar: a janela diz o que voltou e o que não voltou', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p===banhoFaltaNo('${dia}')+'/${kP}'){ return Object.assign({}, r, {once:function(){ return Promise.reject(new Error('sem rede')); }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['⚠ DESFIZ SÓ A CHAMADA']);
+    igual(al[0].l, ['A chamada de hoje de Bolt voltou para "faltou".', 'Não consegui devolver o banho: sem rede. Ele continua segurado ("ainda vem"): se não vier, toque em «Liberar o horário» no Hoje na Zêluz.']);
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['faltou', 'mantido']);
+    // a chamada que não gravou: a mensagem de sempre
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p==='daycare/chamada/${dia}/${kP}'){ return Object.assign({}, r, {set:function(){ return Promise.reject(new Error('sem rede')); }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    igual(J630('__alertas').map((x) => x.t), ['⚠ NÃO CONSEGUI DESFAZER']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B4) — o check-in do corpo termina em outro aparelho no mesmo instante do desfazer: a chamada volta a "veio" e nada mais é desfeito', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run('__alertas=[]; __aud629=[];');
+    run(`__dbOrig641=DB; DB={ref:function(p){ var r=__dbOrig641.ref(p); if(p==='daycare/chamada/${dia}/${kP}'){ return Object.assign({}, r, {set:function(v){ var x=r.set(v); if(v==='faltou') ${fimCk629(dia, kP)}=1234; return x; }}); } return r; }};`);
+    try { run(desf641(0)); await tick(); } finally { run('DB=__dbOrig641;'); }
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    igual(al[0].l, ['Ele acabou de ter o check-in do corpo de entrada feito: está aqui de verdade.', 'A chamada continua "veio".']);
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`dcChamada['${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['veio', 'veio', 'mantido']);
+    igual(run('__aud629').filter((x) => /desfez/.test(x)).length, 0, 'nada foi desfeito: sem rastro de desfazer');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 QA (B3) — o toque não segurou o banho (outro aparelho já tinha liberado): o desfazer diz que o horário continua liberado; sem o sexo na ficha, os nomes dos botões', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, `__ativ629=['checkin-corpo']; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Lia', ts:7};`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, false);
+    run('__alertas=[];'); run(desf641(run('__esc.length') - 1)); await tick();
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l[1], 'O horário do banho continua liberado (Lia liberou).');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', 'a liberação da Lia fica');
+    // sem o sexo na ficha: «Liberar o horário» ou «Ainda vem»
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo']; __extra.Bolt={};");
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual(J630('__alertas')[0].l[1], 'O banho das 17:00 volta para a pergunta: «Liberar o horário» ou «Ainda vem».');
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+provaAsync('6.41 QA (B4) — com o check-in do corpo já feito antes do desfazer, a chamada nem é tocada (a 2ª conferência é só para o mesmo instante)', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run(`${fimCk629(dia, kP)}=1234; ${fimCk629(dia, kP).replace('/fim', '/inicio')}=1200; __alertas=[]; __gravBF=[]; __rmBF=[];`);
+    run(desf641(0)); await tick();
+    const al = J630('__alertas');
+    igual(al.map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    igual(al[0].l[0], 'Ele tem o check-in do corpo de entrada de hoje: está aqui de verdade.');
+    igual([run('__gravBF.length'), run('__rmBF.length')], [0, 0], 'nada foi gravado: nem a chamada');
+    // só o início do exame (não terminou): ainda não é o check-in feito — o desfazer segue
+    await toque641q(dia, kP, "__ativ629=['checkin-corpo'];");
+    run(`${fimCk629(dia, kP).replace('/fim', '/inicio')}=1200; __alertas=[];`);
+    run(desf641(0)); await tick();
+    igual([J630('__alertas').map((x) => x.t), run(`__banco['daycare/chamada/${dia}/${kP}']`)], [['DESFEITO: BOLT'], 'faltou']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+// ---- re-QA da 6.39 (PASS com observações baixas): o que foi ajustado depois
+prova('6.39 re-QA — a saída antecipada da hospedagem, o crédito de outro FILHOt e o do mesmo dia de outro ano não seguram a data', () => {
+  amb639(FREDO639(['ter', 'qua']), `__bk639.rc=REPO_CACHE; REPO_CACHE={};
+    REPO_CACHE[pelKey(repPelSel)]={lancamentos:{'sa-x-1':{tipo:'credito', data:'2026-10-13', motivo:'hospedagem-saida-antecipada', estadiaId:'x', seq:1, ts:1},
+      v:{tipo:'credito', data:'2025-10-14', motivo:'viagem', ts:2}}};
+    REPO_CACHE['outro__tutora']={lancamentos:{c:{tipo:'credito', data:'2026-10-14', motivo:'viagem', ts:3}}};`);
+  try {
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-10-13','2026-10-14'])").entram, ['2026-10-13', '2026-10-14']);
+    igual([run("repCreditoVivoNaData(repPelSel, '2026-10-13')"), run("repCreditoVivoNaData(repPelSel, '2026-10-14')"), run("repCreditoVivoNaData(repPelSel, '2025-10-14')")], [false, false, true]);
+    // um crédito com estadiaId (de hospedagem) mas outro motivo também não segura
+    run("REPO_CACHE[pelKey(repPelSel)].lancamentos.h2={tipo:'credito', data:'2026-10-20', motivo:'outro', estadiaId:'y', ts:4};");
+    igual(run("repCreditoVivoNaData(repPelSel, '2026-10-20')"), false);
+    // a falta que entrou como troca de dia (a "Marcar troca") segura a data, como qualquer falta avisada
+    run("REPO_CACHE[pelKey(repPelSel)].lancamentos.t1={tipo:'credito', data:'2026-10-21', motivo:'troca', troca:{de:'2026-10-21', para:'2026-10-23'}, ts:5};");
+    igual(run("repCreditoVivoNaData(repPelSel, '2026-10-21')"), true);
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-10-21'])").fora.map((o) => o.porque), ['a falta avisada desse dia já foi lançada (está no Extrato)']);
+  } finally { run('REPO_CACHE=__bk639.rc;'); solta639(); }
+});
+prova('6.39 re-QA — textos: "e" na lista; plural de "já têm" e de "essas datas"; o feriado só nas datas que entram; no período, "mude o período"; "nesse dia" por motivo', () => {
+  amb639(FREDO639(['seg', 'ter', 'qua']), `__bk639.rc=REPO_CACHE; REPO_CACHE={};
+    REPO_CACHE[pelKey(repPelSel)]={lancamentos:{a:{tipo:'credito', data:'2026-10-13', ts:1}, b:{tipo:'credito', data:'2026-10-14', ts:2}}};
+    __bk639.fe=orcEhFeriado; orcEhFeriado=function(iso){ return ({'2026-10-12':'Nossa Senhora Aparecida', '2026-10-13':'Feriado Teste', '2026-10-19':'Recesso Teste'})[iso]||''; };
+    repModoAtual='periodo'; __el639.repDe.value='2026-10-12'; __el639.repAte.value='2026-10-14';`);
+  try {
+    run('repPreverDias()');
+    const h = run('__el639.repPrevia.innerHTML');
+    assert.ok(/13\/10 e 14\/10 já têm falta avisada lançada \(está no Extrato\): não entram de novo\./.test(h), h);
+    assert.ok(/12\/10 é feriado \(Nossa Senhora Aparecida\): confira se a Zêluz abre\. Se não abre, mude o período ou use «Alguns dias» sem essa data\./.test(h), h);
+    igual(h.indexOf('Feriado Teste'), -1, 'o feriado de uma data já lançada não é avisado');
+    // dois feriados que entram: "essas datas"
+    run("__el639.repAte.value='2026-10-19'; repAlgunsDatas=['2026-10-12','2026-10-19']; repPreverAlguns();");
+    assert.ok(/12\/10 é feriado \(Nossa Senhora Aparecida\); 19\/10 é feriado \(Recesso Teste\): confira se a Zêluz abre\. Se não abre, tire essas datas\./.test(run('__el639.repPreviaAlguns.innerHTML')), run('__el639.repPreviaAlguns.innerHTML'));
+    // um só já lançado: singular
+    igual(run("repJaLancadasHTML(['2026-10-13'])").indexOf('13/10 já tem falta avisada lançada (está no Extrato): não entra de novo.') >= 0, true);
+    // feriado numa data que não é dia dele (fica de fora): sem o aviso de feriado
+    run("__ex639.dias=['ter']; __ex639.freq='1x'; REPO_CACHE[pelKey(repPelSel)]={lancamentos:{}}; repAlgunsDatas=['2026-10-12','2026-10-20']; repPreverAlguns();");
+    const hf = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/12\/10 \(segunda-feira\) não entra: não é dia do Fredo na ficha/.test(hf) && hf.indexOf('é feriado') < 0, hf);
+  } finally { run('REPO_CACHE=__bk639.rc; orcEhFeriado=__bk639.fe;'); solta639(); }
+  // um dia do plano e um da ficha de fora: cada frase no singular
+  amb639(FREDO639(['ter'], { sexo: 'Fêmea', renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', dias_mes: [['seg'], ['seg'], ['seg']] } }),
+    "repAlgunsDatas=['2026-10-14','2027-01-06'];");
+  try {
+    const a = J630('repAlgunsAnalise(repPelSel, repAlgunsDatas)');
+    igual(a.fora.map((o) => / nesse mês do plano /.test(o.porque) ? 'plano' : (/ na ficha /.test(o.porque) ? 'ficha' : o.porque)), ['plano', 'ficha']);
+    run('repPreverAlguns()');
+    const h = run('__el639.repPreviaAlguns.innerHTML');
+    assert.ok(/Se ela passou a vir nesse dia, ajuste os dias na aba Plano da ficha\. Se ela passou a vir nesse dia, marque o dia no alto da ficha\./.test(h), h);
+  } finally { solta639(); }
+});
+provaAsync('6.39 re-QA — trocar de FILHOt limpa o aviso velho e repinta o dia de repor; erro na hora solta a trava; a resposta atrasada não fecha o lançamento seguinte', async () => {
+  amb639(FREDO639(['ter']), `PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'},{n:'Lia', raca:'SRD', tutor:'Eleonora Teste'}]; repPelSel=PELUDINHOS[0];
+    __exL639={n:'Lia', tutor:'Eleonora Teste', sexo:'Fêmea', dias:['qua'], freq:'1x'};
+    pelExtra=function(p){ return (p&&p.n==='Lia')?__exL639:__ex639; };
+    ['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
+    __bk639.vp=repVoltaPintar; __vp639=0; repVoltaPintar=function(){ __vp639++; };`);
+  try {
+    run("__el639.repWarn.textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha.'; repEscolher(1);");
+    igual([run('__el639.repWarn.textContent'), run('__vp639')], ['', 1], 'o aviso do anterior sai e o dia de repor é repintado');
+    // com um lançamento em andamento, a troca não mexe no aviso nem no botão
+    run("REP_LANCANDO=true; __el639.repWarn.textContent='Ainda estou lançando o toque anterior. Espere a confirmação.'; repEscolher(0);");
+    igual([run('__el639.repWarn.textContent'), run('__vp639')], ['Ainda estou lançando o toque anterior. Espere a confirmação.', 1]);
+    run('REP_LANCANDO=false; repVoltaPintar=__bk639.vp;');
+    // erro na hora (o repGravar lança): a trava solta e o aviso diz
+    run(`repModoAtual='alguns'; repAlgunsDatas=['2026-10-13']; repGravar=function(){ throw new Error('valor recusado'); };`);
+    run('repConfirmar()'); await espera639();
+    igual([run('REP_LANCANDO'), run('__btn639.disabled'), /^Não consegui lançar: valor recusado\./.test(run('__el639.repWarn.textContent'))], [false, false, true]);
+    // a resposta do 1º chega depois de o modal ser reaberto: não fecha o 2º nem solta a trava dele
+    run(`__res639=[]; __g639=[]; repGravar=function(p,r){ __g639.push(r); return new Promise(function(ok,no){ __res639.push({ok:ok, no:no}); }); };
+      __fechou639=0; __bk639.rf=repFechar; repFechar=function(){ __fechou639++; };
+      __al639=[]; __bk639.za=zAlertao; zAlertao=function(t,l){ __al639.push(t); };`);
+    try {
+      run("repAlgunsDatas=['2026-10-13']; repConfirmar();");
+      run('REP_LANCANDO=false; REP_LANC_GER++;');   // o que o repAbrirLancar faz
+      run("repAlgunsDatas=['2026-10-20']; repConfirmar();");
+      igual([run('__g639.length'), run('REP_LANCANDO')], [2, true]);
+      run("__res639[0].ok([{key:'k1'}]);"); await espera639();
+      igual([run('__fechou639'), run('REP_LANCANDO'), run('__mm639.length')], [0, true, 1], 'o 1º mostra a confirmação, mas não fecha o 2º nem solta a trava');
+      run("__res639[1].ok([{key:'k2'}]);"); await espera639();
+      igual([run('__fechou639'), run('REP_LANCANDO')], [1, false]);
+      // a falha do antigo vai para um cartaz, não para a linha do modal novo
+      run("__el639.repWarn.textContent=''; repAlgunsDatas=['2026-10-27']; repConfirmar(); REP_LANCANDO=false; REP_LANC_GER++;");
+      run("__res639[2].no(new Error('sem rede'));"); await espera639();
+      igual([run('__al639'), run('__el639.repWarn.textContent')], [['A FALTA AVISADA NÃO ENTROU'], '']);
+    } finally { run('repFechar=__bk639.rf; zAlertao=__bk639.za;'); }
+  } finally { solta639(); }
+});
+provaAsync('6.41 reconfirmação — o desfazer com a liberação em andamento diz "está sendo liberado por"', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    await toque641q(dia, kP, `__ativ629=['checkin-corpo']; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberando', quem:'Lia', ts:Date.now()};`);
+    run(`BANHO_FALTA_DEC['${kP}']={decisao:'liberando', quem:'Lia', ts:Date.now()}; __alertas=[];`);
+    if (run('__esc.length')) { run(desf641(run('__esc.length') - 1)); await tick(); }
+    const al = J630('__alertas');
+    igual([al.map((x) => x.t), al[0] && al[0].l[1]], [['DESFEITO: BOLT'], 'O horário do banho está sendo liberado por Lia.']);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+
+// ---- QA independente da 6.42 (FAIL: hóspede e morador "veio" na Chamada entravam no quadro)
+console.log('\n6.42 — ajustes do QA: hóspede e morador fora do quadro; o ouvinte uma vez por dia; o atalho no dia de hoje');
+const amb642 = (extra) => run(`__bk642q={tu:turmaDeHoje, em:ehMoradorZeluz, cm:hojeChamadaMapa, km:hojeCheckinMapa, pe:pelExtra, P:PELUDINHOS, ap:atividadesPermitidas};
+  __rf642={n:'Rafael', tutor:'Ana Teste', raca:'SRD'}; __my642={n:'Maya', tutor:'Lia Teste', raca:'Spitz'}; __rp642={n:'Repolho', tutor:'Zêluz', raca:'SRD'};
+  __th642={n:'Thor', tutor:'Rui Teste', raca:'SRD'};
+  PELUDINHOS=[__rf642, __my642, __rp642, __th642];
+  turmaDeHoje=function(){ return [{p:__rf642, i:0}, {p:__my642, i:1, hospede:true}, {p:__rp642, i:2}, {p:__th642, i:3}]; };
+  ehMoradorZeluz=function(p){ return !!(p && p.n==='Repolho'); };
+  __cham642={}; ['Rafael|Ana Teste','Maya|Lia Teste','Repolho|Zêluz'].forEach(function(x){ var a=x.split('|'); __cham642[dcKey(a[0],a[1])]='veio'; });
+  __ck642={}; __ck642[dcKey('Thor','Rui Teste')]={tipo:'entrada', hora:'09:00', fim:1};
+  hojeChamadaMapa=function(){ return __cham642; }; hojeCheckinMapa=function(){ return __ck642; };
+  pelExtra=function(){ return {}; }; __ativ642=null; atividadesPermitidas=function(){ return __ativ642; }; ${extra || ''}`);
+const solta642 = () => run(`turmaDeHoje=__bk642q.tu; ehMoradorZeluz=__bk642q.em; hojeChamadaMapa=__bk642q.cm; hojeCheckinMapa=__bk642q.km; pelExtra=__bk642q.pe;
+  PELUDINHOS=__bk642q.P; atividadesPermitidas=__bk642q.ap;`);
+prova('6.42 QA (achado 1) — pela lista de verdade do Hoje: hóspede e morador marcados "veio" na Chamada não entram no quadro e mantêm a frase deles; só o Rafael entra', () => {
+  amb642();
+  try {
+    const L = J630('hojeLista().map(function(o){ return {n:o.nome, f:o.fonte, h:o.hospede, m:o.morador, frase:hojeFrasePresenca(o)}; })');
+    const por = {}; L.forEach((o) => { por[o.n] = o; });
+    igual([por.Rafael.frase, por.Maya.frase, por.Repolho.frase, por.Thor.frase],
+      ['presente pela chamada — falta o check-in do corpo', 'hóspede da AuAulândia — está na casa', 'morador da casa', 'presente pelo check-in às 09:00']);
+    igual([por.Maya.f, por.Maya.h, por.Repolho.f, por.Repolho.m], ['chamada', true, 'chamada', true], 'a fonte continua a da regra de sempre');
+    igual(J630('hojeSemCheckinLista(hojeLista()).map(function(o){ return o.nome; })'), ['Rafael']);
+    const h = run('hojeSemCheckinCardHTML(hojeLista())');
+    assert.ok(/Na chamada, sem o check-in do corpo \(1\)/.test(h) && h.indexOf('Maya') < 0 && h.indexOf('Repolho') < 0, h);
+    igual([run("hojeSemCkDe({fonte:'chamada'})"), run("hojeSemCkDe({fonte:'chamada', hospede:true})"), run("hojeSemCkDe({fonte:'chamada', morador:true})"), run("hojeSemCkDe({fonte:'hospede'})"), run('hojeSemCkDe(null)')],
+      [true, false, false, false, false]);
+  } finally { solta642(); }
+});
+prova('6.42 QA (achado 2) — a tela: o quadro usa a lista inteira (com o filtro "Fazer hoje" ligado), a frase vermelha só para quem deve o check-in, e o nome escapado', () => {
+  amb642(`__bk642q.ge=document.getElementById; __bk642q.bf=banhoFaltaCardHTML; __bk642q.pc=prevCorrigeOkHTML; __bk642q.hf=HOJE_FILTRO;
+    __raiz642q={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz642q:null; };
+    banhoFaltaCardHTML=function(){ return ''; }; prevCorrigeOkHTML=function(){ return ''; }; __rf642.n='Rafael <b>x</b>';
+    __cham642={}; __cham642[dcKey('Rafael <b>x</b>','Ana Teste')]='veio'; __cham642[dcKey('Maya','Lia Teste')]='veio';`);
+  try {
+    igual(run("hojeFiltrada(hojeLista(), 'fazer').length"), 0, 'o filtro "Fazer hoje" deixa a lista vazia');
+    run("HOJE_FILTRO='fazer'; hojeRender();");
+    const h = run('__raiz642q.innerHTML');
+    assert.ok(/Na chamada, sem o check-in do corpo \(1\)/.test(h), 'com o filtro ligado, o quadro ainda mostra quem deve o check-in');
+    assert.ok(h.indexOf('Rafael &lt;b>x&lt;/b>') >= 0 && h.indexOf('<b>x') < 0, 'o nome vai escapado');
+    run("HOJE_FILTRO='todos'; hojeRender();");
+    const h2 = run('__raiz642q.innerHTML');
+    assert.ok(/color:var\(--crm-critico\);font-weight:700">presente pela chamada — falta o check-in do corpo/.test(h2), 'a frase de quem deve o check-in, em vermelho');
+    assert.ok(/color:var\(--crm-ok\);font-weight:700">hóspede da AuAulândia — está na casa/.test(h2), 'a do hóspede, como sempre');
+  } finally { run('document.getElementById=__bk642q.ge; banhoFaltaCardHTML=__bk642q.bf; prevCorrigeOkHTML=__bk642q.pc; HOJE_FILTRO=__bk642q.hf;'); solta642(); }
+});
+prova('6.42 QA (achado 2) — o Time: só a atividade do check-in do corpo dá o botão; com o botão, sem o "Peça a quem"; xarás com o que os distingue', () => {
+  amb642(`PELUDINHOS=PELUDINHOS.concat([{n:'Rafael', tutor:'Bia Teste', raca:'Poodle'}]);`);
+  try {
+    run("__ativ642=['almoco','chamada'];");
+    const h = run('hojeSemCheckinCardHTML(hojeLista())');
+    igual([(h.match(/Fazer o check-in agora/g) || []).length, /Peça a quem faz o check-in do corpo/.test(h)], [0, true], 'almoço e chamada não dão o atalho');
+    run("__ativ642=['checkin-corpo'];");
+    const h2 = run('hojeSemCheckinCardHTML(hojeLista())');
+    igual([(h2.match(/Fazer o check-in agora/g) || []).length, /Peça a quem faz o check-in do corpo/.test(h2)], [1, false]);
+    const nome = run('(function(){ var o=hojeSemCheckinLista(hojeLista())[0]; return hojeSemCheckinNome(o, hojeLista()); })()');
+    assert.ok(nome !== 'Rafael' && /^Rafael - /.test(nome), nome);
+    assert.ok(h2.indexOf('>' + nome + '</strong>') >= 0, 'o quadro mostra o nome distinguido');
+  } finally { solta642(); }
+});
+prova('6.42 QA (achado 2 e 6) — abrir o Hoje liga o aviso do check-in; abrir de novo no mesmo dia não religa (nem redesenha a mais)', () => {
+  run(`__bk642r={zv:zMapaVivo, zd:zMapaDesligar, dk:dcDataKey, d:_hojeCkVivoDia, db:DB, cv:chamadaVivaLigar, zu:zMapaUma, gp:dcGarantirPlanilha, pc:pendCarregar, vc:vencPendCarregar, hl:hojeCkVivoLigar, pa:PEND_ABERTAS};
+    __zv642r=[]; __zd642r=[]; DB={}; zMapaVivo=function(p,sl,cb){ __zv642r.push([p,sl]); return {}; }; zMapaDesligar=function(p,sl){ __zd642r.push([p,sl]); };
+    _hojeCkVivoDia=''; dcDataKey=function(){ return '2026-10-07'; };
+    chamadaVivaLigar=function(){}; zMapaUma=function(){ return Promise.resolve({}); }; dcGarantirPlanilha=function(){}; PEND_ABERTAS={}; vencPendCarregar=function(){ return Promise.resolve(); };`);
+  try {
+    run('hojeCarregar();');
+    igual(J630('__zv642r').filter((x) => x[1] === '_hojeSemCk'), [['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']], 'abrir o Hoje liga o aviso');
+    run('hojeCarregar(); hojeCkVivoLigar();');
+    igual([J630('__zv642r').filter((x) => x[1] === '_hojeSemCk').length, J630('__zd642r').length], [1, 0], 'no mesmo dia: nem solta nem religa');
+    run("dcDataKey=function(){ return '2026-10-08'; }; hojeCarregar();");
+    igual([J630('__zd642r'), J630('__zv642r').filter((x) => x[1] === '_hojeSemCk').length], [[['daycare/checkin-corpo/2026-10-07', '_hojeSemCk']], 2]);
+  } finally {
+    run(`zMapaVivo=__bk642r.zv; zMapaDesligar=__bk642r.zd; dcDataKey=__bk642r.dk; _hojeCkVivoDia=__bk642r.d; DB=__bk642r.db; chamadaVivaLigar=__bk642r.cv; zMapaUma=__bk642r.zu;
+      dcGarantirPlanilha=__bk642r.gp; pendCarregar=__bk642r.pc; vencPendCarregar=__bk642r.vc; hojeCkVivoLigar=__bk642r.hl; PEND_ABERTAS=__bk642r.pa;`);
+  }
+});
+prova('6.42 QA (achado 4) — o atalho para o check-in põe o Day Care no dia de hoje (o rótulo não fica em outro dia da semana)', () => {
+  run(`__bk642s={aa:abrirAtividade, ge:document.getElementById, ap:atividadesPermitidas, d:dcDia}; __abr642=[]; abrirAtividade=function(s){ __abr642.push([s, dcDia]); };
+    document.getElementById=function(){ return null; }; atividadesPermitidas=function(){ return null; };
+    dcDia=(HOJE_DIA==='seg')?'ter':'seg';`);
+  try {
+    igual(run("banhoFaltaIrAoCheckin({nome:'Rafael'})"), true);
+    igual(J630('__abr642'), [['checkin-corpo', run('HOJE_DIA')]]);
+  } finally { run('abrirAtividade=__bk642s.aa; document.getElementById=__bk642s.ge; atividadesPermitidas=__bk642s.ap; dcDia=__bk642s.d;'); }
+});
+
+prova('6.42 QA (achado 5 e à parte) — depois da meia-noite, a chamada de ontem não vale no Hoje; a tela aberta antes da lista dos filtros existir não quebra', () => {
+  run(`__bk642t={zm:Z_MAPAS, dc:dcChamada, cv:_chamadaVivaDia, dk:dcDataKey, hf:HOJE_FILTROS};
+    Z_MAPAS={}; dcChamada={'fredo__tutora-teste':'veio'}; _chamadaVivaDia='2026-10-07'; dcDataKey=function(){ return '2026-10-07'; };`);
+  try {
+    igual(J630('hojeChamadaMapa()'), { 'fredo__tutora-teste': 'veio' }, 'no mesmo dia, vale a chamada que a tela deixou');
+    run("dcDataKey=function(){ return '2026-10-08'; };");
+    igual(J630('hojeChamadaMapa()'), {}, 'passou da meia-noite: a de ontem não vale');
+    run("_chamadaVivaDia='';");
+    igual(J630('hojeChamadaMapa()'), { 'fredo__tutora-teste': 'veio' }, 'sem a chamada viva ligada, vale a de sempre');
+    // os filtros ainda não existem: a tela desenha sem eles
+    run(`__bk642t.ge=document.getElementById; __bk642t.hl=hojeLista; __bk642t.bf=banhoFaltaCardHTML; __bk642t.pc=prevCorrigeOkHTML;
+      __raiz642t={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz642t:null; };
+      hojeLista=function(){ return []; }; banhoFaltaCardHTML=function(){ return ''; }; prevCorrigeOkHTML=function(){ return ''; }; HOJE_FILTROS=undefined;`);
+    try {
+      run('hojeRender()');
+      igual([typeof run('__raiz642t.innerHTML'), run('__raiz642t.innerHTML').indexOf('hojeF-todos')], ['string', -1]);
+      run('HOJE_FILTROS=__bk642t.hf; hojeRender();');
+      assert.ok(run('__raiz642t.innerHTML').indexOf('hojeF-todos') >= 0, 'com a lista, os botões de filtro voltam');
+    } finally { run('document.getElementById=__bk642t.ge; hojeLista=__bk642t.hl; banhoFaltaCardHTML=__bk642t.bf; prevCorrigeOkHTML=__bk642t.pc;'); }
+  } finally { run('Z_MAPAS=__bk642t.zm; dcChamada=__bk642t.dc; _chamadaVivaDia=__bk642t.cv; dcDataKey=__bk642t.dk; HOJE_FILTROS=__bk642t.hf;'); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

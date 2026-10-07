@@ -1732,6 +1732,13 @@
   .rep-previa{margin-top:11px;background:var(--z-cream-warm);border:1.5px solid var(--line);
     border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--z-blue);font-weight:600;line-height:1.5}
   .rep-previa b{color:var(--z-gold-deep)}
+  /* FALTA EM ALGUNS DIAS (Story 6.39): uma data por linha, "×" para tirar e "+ outra data" */
+  .rep-alguns-linha{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .rep-alguns-tirar{flex:0 0 44px;min-height:44px;border:1.5px solid var(--line);background:var(--z-white);border-radius:11px;
+    font-size:20px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit}
+  .rep-alguns-mais{margin-top:8px;min-height:44px;border:1.5px dashed var(--line);background:var(--z-white);border-radius:11px;
+    padding:10px 14px;font-weight:700;font-size:14px;color:var(--z-blue);cursor:pointer;font-family:inherit}
+  .rep-previa .rep-fora{display:block;margin-top:6px;color:var(--crm-critico);font-weight:600}
   /* TROCA DE DIA no «Marcar reposição» (25/set/2026) */
   .dx-troca-lb{display:flex;gap:10px;align-items:flex-start;margin-top:12px;background:var(--z-cream-warm);
     border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--z-blue);
@@ -4827,10 +4834,11 @@
       <div class="rep-escolhido" id="repEscolhido" style="display:none"></div>
 
       <div id="repFormulario" style="display:none">
-        <label class="rep-lb">É um dia só ou um período?</label>
+        <label class="rep-lb">É um dia só, um período ou alguns dias?</label>
         <div class="seg gold" data-single id="repModo">
           <button class="on" onclick="pick(this);repSetModo('dia')">Um dia só</button>
           <button onclick="pick(this);repSetModo('periodo')">Um período (cio, viagem…)</button>
+          <button onclick="pick(this);repSetModo('alguns')">Alguns dias (datas soltas)</button>
         </div>
 
         <div id="repBlocoDia">
@@ -4849,6 +4857,14 @@
             <span class="dia clic" onclick="repAtalho(7)">1 semana</span>
           </div>
           <div class="rep-previa" id="repPrevia"></div>
+        </div>
+
+        <!-- ALGUNS DIAS (Story 6.39, Adriana, 06/out/2026): datas soltas num lançamento só. -->
+        <div id="repBlocoAlguns" style="display:none">
+          <label class="rep-lb">Quais dias ele não vem?</label>
+          <div id="repAlgunsLista"></div>
+          <button type="button" class="rep-alguns-mais" onclick="repAlgunsMais()">+ outra data</button>
+          <div class="rep-previa" id="repPreviaAlguns"></div>
         </div>
 
         <label class="rep-lb">Por que ele não vem?</label>
@@ -5103,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-01"></script>
+<script src="resposta-tutor.js?v=2026-10-07-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-01"></script>
+<script src="painel-logica.js?v=2026-10-07-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5121,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-01"></script>
+<script src="financeiro-logica.js?v=2026-10-07-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6639,7 +6655,7 @@
   function repHojeISO(){ return zHojeISO(); }
 
   // ---- Modal de lançamento ----
-  var repPelSel=null, repModoAtual='dia', repMotivoAtual='';
+  var repPelSel=null, repModoAtual='dia', repMotivoAtual='', REP_LANCANDO=false, REP_LANC_GER=0;
   function repAbrirLancar(pel){
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão lançam reposição.'); return; }
     repPelSel=pel||null; repModoAtual='dia'; repMotivoAtual='';
@@ -6651,6 +6667,7 @@
     var _rv=document.getElementById('repVolta'); if(_rv) _rv.value='';
     var _vb=document.getElementById('repVagasBox'); if(_vb) _vb.innerHTML='';
     var _bo=document.querySelector('#repModal .rep-ok'); if(_bo){ _bo.disabled=false; _bo.textContent='Lançar reposição'; }
+    REP_LANCANDO=false; REP_LANC_GER++;   // o modal novo é outro lançamento (re-QA da 6.39)
     document.getElementById('repData').value=repHojeISO();
     document.getElementById('repDe').value=repHojeISO();
     document.getElementById('repAte').value='';
@@ -6659,6 +6676,9 @@
     document.querySelectorAll('#repModo button').forEach(function(b,i){ b.classList.toggle('on', i===0); });
     document.getElementById('repBlocoDia').style.display='block';
     document.getElementById('repBlocoPeriodo').style.display='none';
+    repAlgunsDatas=[''];
+    var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display='none';
+    repAlgunsDesenhar();
     if(repPelSel) repMostrarEscolhido(); else {
       document.getElementById('repEscolhido').style.display='none';
       document.getElementById('repFormulario').style.display='none';
@@ -6694,15 +6714,24 @@
     document.getElementById('repPelResults').innerHTML='';
     document.getElementById('repPelBusca').value='';
     document.getElementById('repFormulario').style.display='block';
+    // A prévia é do FILHOt escolhido AGORA (QA da 6.39, L1): trocar de FILHOt com o modal aberto
+    // deixava a conta do anterior na tela.
+    try{ if(repModoAtual==='periodo') repPreverDias(); else if(repModoAtual==='alguns') repPreverAlguns(); }catch(e){} /* silencioso de propósito: a prévia acerta no próximo toque */
+    // O aviso e a faixa do dia de repor também são do FILHOt de agora (re-QA da 6.39): "não tem os
+    // dias marcados" e "terça já é dia do Fredo" ficavam na tela depois da troca.
+    var _wEsc=document.getElementById('repWarn'); if(_wEsc && !REP_LANCANDO) _wEsc.textContent='';
+    try{ if(!REP_LANCANDO) repVoltaPintar(); }catch(e){} /* silencioso de propósito: a faixa acerta quando o dia de repor mudar */
     if(!dias.length){
-      document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. No modo "período" eu não consigo calcular quantos dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
+      document.getElementById('repWarn').textContent='Atenção: este peludinho não tem os dias da semana marcados na ficha. Nos modos "período" e "alguns dias" eu não consigo saber em quais dias ele viria — lance dia a dia ou preencha a ficha primeiro.';
     }
   }
   function repSetModo(m){
     repModoAtual=m;
     document.getElementById('repBlocoDia').style.display=(m==='dia')?'block':'none';
     document.getElementById('repBlocoPeriodo').style.display=(m==='periodo')?'block':'none';
+    var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display=(m==='alguns')?'block':'none';
     if(m==='periodo') repPreverDias();
+    if(m==='alguns') repAlgunsDesenhar();
   }
   function repMotivoSel(m){ repMotivoAtual=m; }
   function repAtalho(n){
@@ -6719,12 +6748,196 @@
     const el=document.getElementById('repPrevia'); if(!el) return;
     const p=repPelSel, de=(document.getElementById('repDe')||{}).value, ate=(document.getElementById('repAte')||{}).value;
     if(!p||!de||!ate){ el.innerHTML='Escolha o peludinho e as duas datas para eu calcular.'; return; }
-    const dias=repDiasQueViria(p,de,ate);
-    if(!dias.length){ el.innerHTML='Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.'; return; }
+    const anP=repPeriodoAnalise(p, de, ate), dias=anP.entram;
+    // O que fica de fora, com o porquê (Story 6.39, caso do Fred: 13 e 14/10 com só a terça
+    // na ficha davam 1 crédito sem dizer por quê). Só dias de semana: sábado e domingo não têm
+    // Day Care e não precisam de explicação. Os já lançados (QA da 6.39, M1) e os feriados (M3)
+    // também aparecem.
+    const fora=repForaDoPeriodo(p, de, ate, dias.concat(anP.ja))+repJaLancadasHTML(anP.ja)+repFeriadosHTML(anP.feriados, true);
+    if(!dias.length){ el.innerHTML=(anP.ja.length?'Nesse período não sobra dia para lançar.':'Nesse período ele não teria nenhum dia de Day Care — confira as datas e os dias dele na ficha.')+fora; return; }
     const most=dias.slice(0,10).map(repBRdata).join(' · ');
     el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
       +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
-      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>';
+      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>'
+      +fora;
+  }
+  // ===== FALTA EM ALGUNS DIAS (Story 6.39 — Adriana, 06/out/2026, caso do Fred) ==================
+  // "Às vezes a pessoa vai fazer dois, três dias, a gente colocar mais datas." Datas soltas num
+  // lançamento só: cada data em que ele viria vira um crédito, com o mesmo motivo e o mesmo dia de
+  // repor. A data que não é dia dele fica de fora, com o porquê escrito — a mesma regra do período
+  // (crédito é dinheiro: a falta é de um dia em que ele viria).
+  var repAlgunsDatas=[''];
+  var REP_ALGUNS_MAX=31;
+  function repAlgunsHTML(){
+    return repAlgunsDatas.map(function(v,i){
+      return '<div class="rep-alguns-linha">'
+        +'<input type="date" class="rep-in" id="repAlguns_'+i+'" value="'+escAttr(v||'')+'" min="2015-01-01" max="2035-12-31"'
+        +' onchange="repAlgunsSet('+i+',this.value)" onkeydown="return dataSoNoCalendario(event)">'
+        +(repAlgunsDatas.length>1?('<button type="button" class="rep-alguns-tirar" onclick="repAlgunsTirar('+i+')" aria-label="Tirar esta data">×</button>'):'')
+        +'</div>';
+    }).join('');
+  }
+  function repAlgunsDesenhar(){
+    var el=document.getElementById('repAlgunsLista'); if(el) el.innerHTML=repAlgunsHTML();
+    repPreverAlguns();
+  }
+  function repAlgunsSet(i, v){
+    if(i>=0 && i<repAlgunsDatas.length) repAlgunsDatas[i]=String(v||'').slice(0,10);
+    repPreverAlguns();
+  }
+  function repAlgunsMais(){
+    if(repAlgunsDatas.length>=REP_ALGUNS_MAX){ var w=document.getElementById('repWarn'); if(w) w.textContent='Até '+REP_ALGUNS_MAX+' datas por lançamento. Para mais, use "Um período".'; return; }
+    repAlgunsDatas.push('');
+    repAlgunsDesenhar();
+    try{ var n=document.getElementById('repAlguns_'+(repAlgunsDatas.length-1)); if(n) n.focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */
+  }
+  function repAlgunsTirar(i){
+    repAlgunsDatas.splice(i,1);
+    if(!repAlgunsDatas.length) repAlgunsDatas=[''];
+    repAlgunsDesenhar();
+  }
+  // Por que a data NÃO vira crédito. Fim de semana: não há Day Care. Dia de semana: não é dia
+  // dele na ficha (ou naquele mês do plano, no plano com dias por mês — 6.30).
+  function repPorQueNaoVem(p, iso){
+    var w=-1; try{ w=new Date(String(iso)+'T12:00:00').getDay(); }catch(e){ w=-1; } /* silencioso de propósito: sem o dia da semana vale o motivo geral */
+    if(w===0) return 'é domingo: não há Day Care';
+    if(w===6) return 'é sábado: não há Day Care';
+    var f=repEhFemea(p), nome=pelNome(p);
+    var dias=[]; try{ dias=pelDias(p, iso)||[]; }catch(e){ dias=[]; } /* silencioso de propósito: sem a ficha lida, "nenhum dia" */
+    var porMes=false; try{ porMes=!!(pelTemDiasPorMes(p) && renovMesNaData(renovDe(pelExtra(p)||{}), iso, pelDias(p,'rotina')||[])); }catch(e){ porMes=false; } /* silencioso de propósito: sem o plano lido, vale a ficha */
+    var vem=dias.length?((f?'ela':'ele')+' vem '+dias.map(function(x){ return DIA_LBL[x]||x; }).join(', ')):'a ficha não tem dias marcados';
+    return 'não é dia '+(f?'da ':'do ')+nome+(porMes?' nesse mês do plano':' na ficha')+' ('+vem+')';
+  }
+  function repDataComSemana(iso){
+    var n=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    var w=''; try{ w=n[new Date(String(iso)+'T12:00:00').getDay()]||''; }catch(e){ w=''; } /* silencioso de propósito: sem o dia da semana vale só a data */
+    return String(repBRdata(iso)).slice(0,5)+(w?(' ('+w+')'):'');
+  }
+  // A data já tem falta avisada lançada e viva (crédito não estornado)? Lançar de novo daria
+  // dois créditos para o mesmo dia (QA da 6.39, M1 — o próximo passo provável do caso do Fred:
+  // o 13/10 já entrou pelo período e ia entrar de novo em "Alguns dias").
+  function repCreditoVivoNaData(p, iso){
+    try{
+      var L=repLancamentos(p), anul=repAnulados(L);
+      // O crédito da saída antecipada da hospedagem (hospConfirmarAntecipada) tem a data do dia em
+      // que ele foi embora, mas não é falta avisada do Day Care: não segura a data (re-QA da 6.39).
+      return L.some(function(l){ return l && l.tipo==='credito' && String(l.data||'')===iso && !anul[l._id]
+        && !l.estadiaId && !/^hospedagem/.test(String(l.motivo||'')); });
+    }catch(e){ return false; } /* silencioso de propósito: sem o extrato lido, vale a conta de sempre */
+  }
+  var REP_JA_LANCADA='a falta avisada desse dia já foi lançada (está no Extrato)';
+  // O que entra e o que fica de fora, sem gravar nada:
+  // {entram:[iso], fora:[{iso, porque}], repetidas:[iso], feriados:[{iso, nome}]}.
+  function repAlgunsAnalise(p, datas){
+    var vistos={}, entram=[], fora=[], repetidas=[];
+    (datas||[]).forEach(function(d){
+      d=String(d||'').slice(0,10);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;               // linha em branco: não conta
+      if(vistos[d]){ if(repetidas.indexOf(d)<0) repetidas.push(d); return; }
+      vistos[d]=true;
+      if(!dataPlausivel(d)){ fora.push({iso:d, porque:'a data está fora do calendário do app'}); return; }
+      if(!repDiasQueViria(p, d, d).length){ fora.push({iso:d, porque:repPorQueNaoVem(p, d)}); return; }
+      if(repCreditoVivoNaData(p, d)){ fora.push({iso:d, porque:REP_JA_LANCADA}); return; }
+      entram.push(d);
+    });
+    entram.sort(); repetidas.sort(); fora.sort(function(a,b){ return a.iso<b.iso?-1:(a.iso>b.iso?1:0); });
+    return {entram:entram, fora:fora, repetidas:repetidas, feriados:repFeriadosEm(entram)};
+  }
+  // Feriado em dia dele (QA da 6.39, M3): o app trata feriado como dia sem Day Care, mas ele vira
+  // crédito como sempre virou. A prévia avisa; se feriado deve ou não virar crédito, é decisão
+  // da Adriana (pergunta registrada na story).
+  function repFeriadosEm(isos){
+    var out=[];
+    try{ (isos||[]).forEach(function(d){ var n=(typeof orcEhFeriado==='function')?orcEhFeriado(d):''; if(n) out.push({iso:d, nome:String(n)}); }); }
+    catch(e){ out=[]; } /* silencioso de propósito: sem a lista de feriados, sem o aviso */
+    return out;
+  }
+  function repFeriadosHTML(F, periodo){
+    if(!F || !F.length) return '';
+    return '<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(F.map(function(o){ return String(repBRdata(o.iso)).slice(0,5)+' é feriado ('+o.nome+')'; }).join('; '))
+      +': confira se a Zêluz abre. Se não abre, '
+      +(periodo?'mude o período ou use «Alguns dias» sem '+(F.length>1?'essas datas':'essa data'):'tire '+(F.length>1?'essas datas':'essa data'))+'.</span>';
+  }
+  // Os dias do período que viram crédito: os dias dele, menos os que já têm falta avisada viva.
+  function repPeriodoAnalise(p, de, ate){
+    var dias=repDiasQueViria(p, de, ate), entram=[], ja=[];
+    dias.forEach(function(d){ if(repCreditoVivoNaData(p, d)) ja.push(d); else entram.push(d); });
+    return {entram:entram, ja:ja, feriados:repFeriadosEm(entram)};
+  }
+  function repListaDatasE(isos){
+    var l=(isos||[]).map(function(d){ return String(repBRdata(d)).slice(0,5); });
+    return l.length>1?(l.slice(0,-1).join(', ')+' e '+l[l.length-1]):(l[0]||'');
+  }
+  function repJaLancadasHTML(ja){
+    if(!ja || !ja.length) return '';
+    return '<span class="rep-fora">'+escAttr(repListaDatasE(ja))
+      +(ja.length>1?' já têm':' já tem')+' falta avisada lançada (está no Extrato): não '+(ja.length>1?'entram':'entra')+' de novo.</span>';
+  }
+  // O conselho de quando um dia de semana fica de fora: é a ficha que precisa mudar — no plano
+  // com dias por mês, o mês do plano (aba Plano); fora dele, os dias do alto da ficha (QA, L3).
+  // Só para "não é dia dele": sábado, domingo, calendário e já lançada não pedem ficha nova.
+  function repForaConselho(p, fora){
+    var ele=(repEhFemea(p)?'ela':'ele');
+    var semana=(fora||[]).filter(function(o){ return /^não é dia /.test(String(o.porque||'')); });
+    if(!semana.length) return '';
+    var out=[];
+    var nPlano=semana.filter(function(o){ return / nesse mês do plano /.test(o.porque); }).length;
+    var nFicha=semana.filter(function(o){ return / na ficha /.test(o.porque); }).length;
+    if(nPlano) out.push('Se '+ele+' passou a vir '+(nPlano>1?'nesses dias':'nesse dia')+', ajuste os dias na aba Plano da ficha.');
+    if(nFicha) out.push('Se '+ele+' passou a vir '+(nFicha>1?'nesses dias':'nesse dia')+', marque '+(nFicha>1?'os dias':'o dia')+' no alto da ficha.');
+    return out.join(' ');
+  }
+  function repForaHTML(p, fora){
+    if(!fora || !fora.length) return '';
+    var cons=repForaConselho(p, fora);
+    return fora.map(function(o){
+        // fora do calendário do app: a data com o ano, para quem digitou errado enxergar o erro
+        var quando=/calendário/.test(o.porque)?repBRdata(o.iso):repDataComSemana(o.iso);
+        return '<span class="rep-fora">'+escAttr(quando)+' não entra: '+escAttr(o.porque)+'.</span>';
+      }).join('')
+      +(cons?('<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(cons)+'</span>'):'');
+  }
+  // No período: os dias de semana que ficam de fora, até 5 pelo nome.
+  function repForaDoPeriodo(p, de, ate, entram){
+    try{
+      var d1=new Date(de+'T12:00:00'), d2=new Date(ate+'T12:00:00');
+      if(isNaN(d1)||isNaN(d2)||d2<d1) return '';
+      var fora=[], lim=new Date(d1); lim.setDate(lim.getDate()+400);
+      var p2=function(x){ return String(x).padStart(2,'0'); };
+      for(var d=new Date(d1); d<=d2 && d<=lim; d.setDate(d.getDate()+1)){
+        var w=d.getDay(); if(w===0||w===6) continue;
+        var iso=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+        if((entram||[]).indexOf(iso)<0) fora.push(iso);
+      }
+      if(!fora.length) return '';
+      if(fora.length===1) return repForaHTML(p, [{iso:fora[0], porque:repPorQueNaoVem(p, fora[0])}]);
+      var f=repEhFemea(p);
+      var cons=repForaConselho(p, fora.map(function(d){ return {iso:d, porque:repPorQueNaoVem(p, d)}; }));
+      return '<span class="rep-fora">Ficam de fora '+fora.length+' dias de semana que não são dias '+(f?'dela':'dele')+': '
+        +escAttr(fora.slice(0,5).map(repDataComSemana).join(' · '))+(fora.length>5?(' e mais '+(fora.length-5)):'')+'.</span>'
+        +(cons?('<span class="rep-fora" style="color:var(--z-blue)">'+escAttr(cons)+'</span>'):'');
+    }catch(e){ return ''; } /* silencioso de propósito: a prévia principal continua valendo */
+  }
+  // No Extrato, o lançamento diz os dias que entraram juntos ("alguns dias: 13/10, 15/10"). O banco
+  // pode devolver a lista como objeto de chaves numéricas: os dois valem.
+  function repExtratoAlguns(l){
+    var a=(l&&l.alguns&&l.alguns.datas)||null; if(!a || typeof a!=='object') return '';
+    var lista=Array.isArray(a)?a:Object.keys(a).map(function(c){ return a[c]; });
+    lista=lista.filter(function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(String(d||'')); }).sort();
+    return lista.length>1?escAttr(' · alguns dias: '+lista.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', ')):'';
+  }
+  function repPreverAlguns(){
+    var el=document.getElementById('repPreviaAlguns'); if(!el) return;
+    var p=repPelSel;
+    var a=repAlgunsAnalise(p, repAlgunsDatas);
+    if(!p || (!a.entram.length && !a.fora.length)){ el.innerHTML='Escolha as datas para eu calcular.'; return; }
+    var rep=a.repetidas.length?('<span class="rep-fora">'+escAttr(a.repetidas.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', '))
+      +(a.repetidas.length>1?' estão repetidas: cada uma':' está repetida:')+' conta uma vez só.</span>'):'';
+    if(!a.entram.length){ el.innerHTML='Nenhuma dessas datas vira crédito.'+rep+repForaHTML(p, a.fora); return; }
+    var n=a.entram.length;
+    el.innerHTML=escAttr(pelNome(p))+' viria em <b>'+n+' dia'+(n>1?'s':'')+'</b>: '+escAttr(a.entram.map(repDataComSemana).join(' · '))
+      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+n+' crédito'+(n>1?'s':'')+' de reposição.</span>'
+      +rep+repForaHTML(p, a.fora)+repFeriadosHTML(a.feriados);
   }
   // ===== O DIA DE REPOR E AS VAGAS (Adriana, 21/set/2026) ==========================
   // "Se tiver vaga — são 5 por dia de reposição+avulso — se não tiver vaga, primeiro precisa
@@ -6783,12 +6996,22 @@
       }
     }
     if(pedirVaga && !diaLotado) pedirVaga=false;   // o dia tem vaga: não há o que pedir
+    // UM lançamento por vez (QA da 6.39, M2): dois toques no "Avisar a Márcia" — o botão da caixa
+    // de vagas, que o disabled abaixo não alcança — gravavam o lote em dobro com o banco lento.
+    // Abrir o modal de novo destrava (repAbrirLancar): sem rede, a gravação anterior pode ficar
+    // pendente por muito tempo, e a recepção não pode ficar sem lançar ninguém.
+    if(REP_LANCANDO){ w.textContent='Ainda estou lançando o toque anterior. Espere a confirmação.'; return; }
+    REP_LANCANDO=true;
+    // A resposta de um lançamento antigo (o modal foi reaberto enquanto ele gravava) não fecha o
+    // modal novo nem solta a trava dele (re-QA da 6.39).
+    const _ger=REP_LANC_GER, _mesmo=function(){ return _ger===REP_LANC_GER; };
     const btn=document.querySelector('#repModal .rep-ok'); if(btn){ btn.disabled=true; btn.textContent='Lançando…'; }
-    const soltar=function(){ if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
-    let regs=[];
+    const soltar=function(){ if(!_mesmo()) return; REP_LANCANDO=false; if(btn){ btn.disabled=false; btn.textContent=repBotaoRotulo(); } };
+    let regs=[], foraAlguns=[];
     if(repModoAtual==='dia'){
       const d=(document.getElementById('repData').value||'').trim();
       if(!d){ w.textContent='Informe o dia em que ele não vem.'; soltar(); return; }
+      if(repCreditoVivoNaData(p, d)){ w.textContent='A falta avisada de '+repBRdata(d)+' já foi lançada: está no Extrato e já conta no saldo. Para lançar de novo, estorne a anterior no Extrato.'; soltar(); return; }
       regs=[{tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, volta:voltaEfetiva||''}];
       // As mesmas regras da "Marcar troca" (QA27): o dia que sai é dia dele, o dia novo não é,
       // e o dia novo não é sábado nem domingo. Fora disso, continua reposição.
@@ -6799,15 +7022,25 @@
         // Fica fora do objeto `troca`, que o repTrocaGravar reescreve numa remarcação.
         regs[0].nasceu_troca=true;
       }
-    } else {
+    } else if(repModoAtual==='periodo'){
       const de=(document.getElementById('repDe').value||''), ate=(document.getElementById('repAte').value||'');
       if(!de||!ate){ w.textContent='Informe as duas datas do período.'; soltar(); return; }
-      const dias=repDiasQueViria(p,de,ate);
-      if(!dias.length){ w.textContent='Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.'; soltar(); return; }
+      const anC=repPeriodoAnalise(p,de,ate), dias=anC.entram;
+      if(!dias.length){ w.textContent=anC.ja.length?'Os dias desse período já têm falta avisada lançada (estão no Extrato).':'Nesse período ele não teria nenhum dia de Day Care. Confira as datas e os dias dele na ficha.'; soltar(); return; }
       const lote='L'+Date.now();
       // O agendamento vai só no PRIMEIRO do lote: 12 créditos não são 12 dias de volta,
       // é uma volta marcada. Gravar em todos encheria a tela da recepção com o mesmo aviso.
       regs=dias.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:lote, periodo:{de:de,ate:ate}, volta:(ix===0?(voltaEfetiva||''):'')}; });
+    }
+    if(repModoAtual==='alguns'){
+      // ALGUNS DIAS (6.39): só as datas que são dia dele viram crédito; o resto fica de fora,
+      // com o porquê na prévia e na confirmação. O dia de repor vai só no primeiro, como no período.
+      const an=repAlgunsAnalise(p, repAlgunsDatas);
+      if(!an.entram.length && !an.fora.length){ w.textContent='Escolha pelo menos uma data.'; soltar(); return; }
+      if(!an.entram.length){ w.textContent='Nenhuma dessas datas vira crédito: '+repDataComSemana(an.fora[0].iso)+' — '+an.fora[0].porque+'.'; soltar(); return; }
+      const loteA='L'+Date.now();
+      regs=an.entram.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:loteA, alguns:{datas:an.entram.slice()}, volta:(ix===0?(voltaEfetiva||''):'')}; });
+      foraAlguns=an.fora;
     }
     // A autorização do encaixe viaja COM o crédito: meses depois ainda se sabe quem abriu
     // a vaga acima do limite, e por que o dia tem seis em vez de cinco.
@@ -6815,12 +7048,19 @@
     // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
   // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
   const _saldoAntes=repSaldo(p);
-  Promise.all(regs.map(function(r){ return repGravar(p,r); })).then(function(refs){
+  // Erro na hora (antes de qualquer promessa): solta a trava e diz, em vez de prendê-la (re-QA da 6.39).
+  let _grav;
+  try{ _grav=Promise.all(regs.map(function(r){ return repGravar(p,r); })); }
+  catch(e){ _grav=Promise.reject(e); }
+  _grav.then(function(refs){
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
+        +((regs[0]&&regs[0].alguns)?(' — dias '+regs.map(function(r){ return String(repBRdata(r.data)).slice(0,5); }).join(', ')
+          +(foraAlguns.length?(' (de fora: '+foraAlguns.map(function(o){ return String(repBRdata(o.iso)).slice(0,5); }).join(', ')+')'):'')):'')
         +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
       // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
       repAuditDiaDele(p, voltaEfetiva);
-      repFechar(); soltar();
+      if(_mesmo()) repFechar();
+      soltar();
       // Falta avisada para HOJE: se ele tinha banho hoje, a recepção é avisada (28/set/2026).
       try{ if(regs.some(function(r){ return r.data===dcDataKey(); }) && typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){} /* silencioso de propósito: o aviso volta na próxima mudança da chamada */
       // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
@@ -6839,6 +7079,7 @@
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
       var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
+      if(regs.length>1 && regs[0].alguns){ _info.datas=regs.map(function(r){ return r.data; }); }
       var _troca=!!(regs.length===1 && regs[0].troca);
       repMsgModal('✅ Reposição lançada',
         (_troca
@@ -6848,6 +7089,7 @@
               +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]
           : [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
              'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
+            .concat(foraAlguns.length?['Ficaram de fora: '+foraAlguns.map(function(o){ return repDataComSemana(o.iso)+' — '+o.porque; }).join('; ')+'.']:[])
             .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
                   +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[]))
         .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
@@ -6855,6 +7097,12 @@
         _troca?repMensagem(p,'troca',{de:_info.data, para:_info.volta}):repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
+      // O modal já é de outro lançamento: o aviso não vai para a linha dele (re-QA da 6.39).
+      if(!_mesmo()){
+        if(typeof zAlertao==='function') zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+((e&&e.message)||e)+'.',
+          'Nada foi salvo. Lance de novo.'], {botao:'Entendi'});
+        return;
+      }
       soltar();
       w.textContent='Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.';
     });
@@ -6897,9 +7145,14 @@
       var qtd=info.qtd||1, _hj=repHojeISO();
       // "Com a de hoje" só quando a falta é de HOJE (Adriana, 28/set/2026: a falta do Bis
       // era do dia 02/10 e a mensagem dizia "com a de hoje"). Falta de outro dia: "contando".
-      var _per=(qtd>1 && info.de && info.ate);
-      var _hoje=_per ? (info.de<=_hj && _hj<=info.ate) : ((info.data||_hj)===_hj);
-      var ref=_per
+      // Alguns dias (6.39): a mensagem diz os dias, um por um ("13/10, 15/10 e 20/10").
+      var _datas=(qtd>1 && Array.isArray(info.datas) && info.datas.length>1)?info.datas.slice().sort():null;
+      var _per=(!_datas && qtd>1 && info.de && info.ate);
+      var _hoje=_datas ? (_datas.indexOf(_hj)>=0) : (_per ? (info.de<=_hj && _hj<=info.ate) : ((info.data||_hj)===_hj));
+      var _lista=_datas ? (function(l){ l=l.map(function(d){ return String(repBRdata(d)).slice(0,5); }); return l.slice(0,-1).join(', ')+' e '+l[l.length-1]; })(_datas) : '';
+      var ref=_datas
+        ? ((_hoje?', com a de hoje, referentes aos dias ':', contando as dos dias ')+_lista)
+        : _per
         ? ((_hoje?', com as de hoje, referentes ao período de ':', contando as do período de ')+repBRdata(info.de)+' a '+repBRdata(info.ate))
         : ((_hoje?', com a de hoje, referente ao dia ':', contando a do dia ')+repBRdata(info.data||_hj));
       corpo='Passando para dizer que '+o+' '+nome+' está com '
@@ -8987,7 +9240,8 @@
       return '<div class="rep-lanc"><span class="lc-tipo '+((l.tipo==='estorno'&&l.dia_devolvido)?'credito':l.tipo)+'" style="'+risco+'">'+rot+'</span>'
         +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
         +(l.obs?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
-        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')+escAttr(diaTxt)+'</div></span>'
+        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')
+          +repExtratoAlguns(l)+escAttr(diaTxt)+'</div></span>'
         +((l.tipo==='credito'&&!anulado[l._id])?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
         +(repUsoDevolvivel(l, anulado)?'<button onclick="repDevolverUso('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--z-blue);cursor:pointer;font-family:inherit">Devolver</button>':'')
         +'</div>';
@@ -17181,7 +17435,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-01';
+  const APP_VERSAO='2026-10-07-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21806,7 +22060,8 @@
   // ganha (transação), e os outros veem o que foi decidido. Nenhum cartaz deste módulo apaga
   // outro que esteja aberto: ele espera a tela ficar livre (QA28, QA29).
   var BANHO_FALTA=[], BANHO_FALTA_DEC={}, BANHO_FALTA_DIA='', BANHO_FALTA_CHEGOU=[], BANHO_FALTA_VISTO={}, BANHO_FALTA_TRAVA={},
-      BANHO_FALTA_FILA=[], __banhoFaltaT=null;
+      BANHO_FALTA_FILA=[], __banhoFaltaT=null,
+      BANHO_FALTA_AQUI={};   // o que cada «Está aqui» deste aparelho mudou, para o "toquei errado" (6.41)
   var BANHO_FALTA_PRESO_MS=5*60000;   // "liberando" há mais que isso: o aparelho caiu no meio
   // "Liberado, mas ainda na planilha" só com leitura FEITA DEPOIS de este aparelho saber da
   // liberação (QA31): uma planilha lida antes mostra o banho que já saiu. BANHO_FALTA_VIU =
@@ -21992,6 +22247,9 @@
     op=op||{};
     var dia=dcDataKey();
     if(banhoFaltaTemCartaz() || typeof zAlertao!=='function'){ BANHO_FALTA_FILA.push({titulo:titulo, linhas:linhas, op:op, dia:dia}); return false; }
+    // Resultado com botões (o do «Está aqui», QA da 6.41): na fila, ele volta COM os botões —
+    // o "Toquei errado — desfazer" não pode sumir porque outro cartaz estava na tela.
+    if(op.escolha && typeof zEscolha==='function'){ zEscolha(titulo, linhas, op.escolha, op.opEscolha||{}); return true; }
     zAlertao(titulo, linhas, Object.assign({}, op, {aoFechar:function(){ banhoFaltaSeguir(dia); }}));
     return true;
   }
@@ -22294,6 +22552,9 @@
   function banhoFaltaIrAoCheckin(o){
     if(!banhoFaltaAtivLiberada('checkin-corpo')) return false;
     try{
+      // O check-in é sempre o de hoje: o Day Care deixado em outro dia da semana mostraria o rótulo
+      // errado (QA da 6.42). Só o dia da tela muda; nada do check-in muda.
+      try{ if(typeof HOJE_DIA!=='undefined') dcDia=HOJE_DIA; }catch(e){} /* silencioso de propósito: sem o dia de hoje, o rótulo fica como estava */
       if(typeof abrirAtividade==='function') abrirAtividade('checkin-corpo');
       var el=document.getElementById('dcBusca');
       if(el){ el.value=String((o&&o.nome)||''); if(typeof onDcBusca==='function') onDcBusca(); }
@@ -22346,6 +22607,13 @@
     var g=banhoFaltaGenero(k);
     var antes=(typeof dcChamada==='object' && dcChamada)?dcChamada[k]:undefined;
     var d=BANHO_FALTA_DEC[k]||{};
+    // Para o "toquei errado" (6.41): o que havia ANTES do toque — a decisão do banho e o dia do
+    // banho fixo na ficha — e quem toca agora.
+    var tsAntesAqui=Date.now();
+    var quemAqui=(typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-');
+    var excAntesAqui=null;
+    try{ var _pAq=banhoFaltaPel(k), _brAq=_pAq?banhoRecDe(_pAq):null; if(_brAq && _brAq.excecoes && _brAq.excecoes[dia]) excAntesAqui=JSON.parse(JSON.stringify(_brAq.excecoes[dia])); }
+    catch(e){ excAntesAqui=null; } /* silencioso de propósito: sem a ficha lida, não há banho fixo a devolver */
     return DB.ref('daycare/chamada/'+dia+'/'+k).set('veio').then(function(){
       try{ if(typeof dcChamada==='object' && dcChamada) dcChamada[k]='veio'; }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
       try{ if(typeof audit==='function') audit('chamada', 'marcou presença (está aqui, pelo aviso do banho)', {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
@@ -22363,6 +22631,16 @@
     }).then(function(r){
       var fezCk=r[1];
       try{ if(typeof audit==='function') audit('banho-falta', o.nome+' está aqui — presença marcada'+(fezCk===true?'':' (sem o check-in do corpo de entrada)'), {alvo:k, pet:o.nome}); }catch(e){} /* silencioso de propósito */
+      // O que ESTE toque mudou (6.41): a chamada (se não era "veio") e o banho, se foi ele quem
+      // segurou (a decisão dele, com o carimbo dele — a de outro aparelho não é desfeita).
+      try{
+        var decAg=BANHO_FALTA_DEC[k]||null;
+        var segurou=!!(d.decisao!=='mantido' && r[0]===true && decAg && decAg.decisao==='mantido' && Number(decAg.ts)>=tsAntesAqui && decAg.quem===quemAqui);
+        if(antes!=='veio') BANHO_FALTA_AQUI[dia+'|'+k]={antes:(antes===undefined?null:antes), decAntes:(d&&d.decisao)?JSON.parse(JSON.stringify(d)):null,
+          segurou:segurou, decTs:segurou?decAg.ts:null, excAntes:excAntesAqui, tsAntes:tsAntesAqui,
+          o:{chave:k, nome:o.nome||'', hora:o.hora||'', fixo:!!o.fixo, origem:o.origem||'', porque:o.porque||''}};
+        else delete BANHO_FALTA_AQUI[dia+'|'+k];        // já era "veio": este toque não mudou nada a desfazer
+      }catch(e){} /* silencioso de propósito: sem o registro, o botão "toquei errado" não aparece — a Chamada continua consertando */
       var lib=(r[0]===false) ? (BANHO_FALTA_DEC[k]||null) : null;
       var t=banhoFaltaAquiTexto(Object.assign({}, o, {nomeVisivel:banhoFaltaNomeVisivel(o)}), fezCk, g, lib);
       if(!t.semCheckin){ banhoFaltaMostrar('✅ '+t.titulo, t.linhas, {botao:'Entendi', ok:true}); return true; }
@@ -22372,13 +22650,20 @@
       var botoes=[];
       if(podeCk) botoes.push({t:'Fazer o check-in agora', cor:'#14532D', fn:function(){ banhoFaltaIrAoCheckin(o); }});
       if(podeAlm) botoes.push({t:'Abrir o almoço', cor:'#234D67', fn:function(){ banhoFaltaIrAoAlmoco(); }});
-      if(!botoes.length || banhoFaltaTemCartaz() || typeof zEscolha!=='function'){
+      // Tocou no FILHOt errado (6.41): desfaz ali mesmo. Com o check-in do corpo feito, não aparece.
+      // Não depende dos atalhos do Time nem da tela livre (QA da 6.41, A1): quem entra pelo Time
+      // sem as atividades do Day Care, ou com a pendência de prevenção aberta na frente, também
+      // precisa do botão.
+      var desf=BANHO_FALTA_AQUI[dia+'|'+k]?{t:'Toquei errado — desfazer', cor:'#B3261E', fn:function(){ banhoFaltaDesfazerAqui(o, dia); }}:null;
+      if((!botoes.length && !desf) || typeof zEscolha!=='function'){
         banhoFaltaMostrar(t.titulo, linhas.concat(podeCk?['Day Care › Check-in do corpo.']:[]), {botao:'Entendi'});
         return true;
       }
-      botoes.push({t:'Depois', cor:'#7C8B99', fn:function(){ banhoFaltaSeguir(dia); }});
-      zEscolha(t.titulo, linhas, botoes,
-        {corTitulo:'#B3261E', rodape:(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'))+' também aparece como "ainda sem check-in do corpo" no painel do monitor.'});
+      botoes.push({t:(botoes.length?'Depois':'Entendi'), cor:'#7C8B99', fn:function(){ banhoFaltaSeguir(dia); }});
+      if(desf) botoes.push(desf);
+      var opE={corTitulo:'#B3261E', rodape:(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'))+' também aparece como "ainda sem check-in do corpo" no painel do monitor.'};
+      if(banhoFaltaTemCartaz()){ BANHO_FALTA_FILA.push({titulo:t.titulo, linhas:linhas, op:{escolha:botoes, opEscolha:opE}, dia:dia}); return true; }
+      zEscolha(t.titulo, linhas, botoes, opE);
       return true;
     }).catch(function(e){
       _logFalhaGrav('presença pelo aviso do banho '+k, e);
@@ -22387,6 +22672,114 @@
         'Marque ✓ Veio em Day Care › Chamada.'], {botao:'Entendi'});
       return false;
     }).then(function(v){ delete BANHO_FALTA_TRAVA['aqui|'+k]; return v; });
+  }
+  // ===== «ESTÁ AQUI» TOCADO POR ENGANO (Story 6.41) ===================================
+  // Devolve o que o toque mudou: a chamada de hoje volta ao que era (só se ainda está "veio" e
+  // SEM o check-in do corpo de entrada — com ele, o FILHOt está aqui de verdade), e o banho volta
+  // à pergunta se foi o toque que o segurou (a decisão dele sai; no banho fixo, o dia da ficha
+  // volta ao que era). Decisão de outra pessoa, gravada depois, fica. Nada no check-in muda.
+  function banhoFaltaDesfazerAqui(o, dia){
+    var k=String((o&&o.chave)||''); var rec=BANHO_FALTA_AQUI[dia+'|'+k];
+    var g=banhoFaltaGenero(k), Ele=(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'));
+    // O nome como o aviso mostra (xarás com o tutor — QA da 6.41, B1).
+    var nome=''; try{ nome=String(banhoFaltaNomeVisivel(o)||''); }catch(e){ nome=''; } /* silencioso de propósito: sem o tutor, vale o nome */
+    if(!nome) nome=String((o&&o.nome)||'');
+    if(!DB || !k || !rec) return Promise.resolve(false);
+    if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return Promise.resolve(false); }
+    if(dia!==dcDataKey()){ banhoFaltaMostrar('O DIA VIROU', ['O toque foi em '+(((typeof fmtBR==='function')?fmtBR(dia):'')||dia)+'. Nada foi desfeito.'], {botao:'Entendi'}); return Promise.resolve(false); }
+    if(BANHO_FALTA_TRAVA['desfaz|'+k]) return Promise.resolve(false);
+    BANHO_FALTA_TRAVA['desfaz|'+k]=1;
+    var fim=function(v){ delete BANHO_FALTA_TRAVA['desfaz|'+k]; return v; };
+    var feito={chamada:false};   // o que já voltou, para a mensagem de falha dizer a verdade (QA da 6.41, B2)
+    return DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value').then(function(sn){
+      if(sn && sn.val && sn.val()){
+        banhoFaltaMostrar('NÃO DESFIZ: '+nome.toUpperCase()+' ESTÁ AQUI', [Ele+' tem o check-in do corpo de entrada de hoje: está aqui de verdade.',
+          'Se a chamada estiver errada, corrija em Day Care › Chamada.'], {botao:'Entendi'});
+        return false;
+      }
+      // LÊ e só então grava (e não uma transação: no banco de verdade, a transação que começa sem o
+      // valor no aparelho desiste sem perguntar ao servidor). O "desfazer" é logo depois do toque.
+      var refCh=DB.ref('daycare/chamada/'+dia+'/'+k);
+      return refCh.once('value').then(function(snC){
+        var atualC=(snC && snC.val)?snC.val():null;
+        if(atualC!=='veio'){                          // alguém mexeu depois: não passa por cima
+          banhoFaltaMostrar('NÃO DESFIZ', ['A chamada de '+nome+' mudou depois do toque: '+(atualC||'sem marcação')+'.',
+            'Confira em Day Care › Chamada.'], {botao:'Entendi'});
+          return false;
+        }
+        return (rec.antes==null ? refCh.remove() : refCh.set(rec.antes)).then(function(){
+          feito.chamada=true;
+          // O check-in do corpo terminou em outro aparelho no mesmo instante (QA da 6.41, B4)? O banco
+          // entrega as gravações em ordem: a que chegou antes da nossa já está aqui. Se apareceu, a
+          // chamada volta a "veio" e nada mais é desfeito.
+          return DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value').then(function(sn2){
+            if(!(sn2 && sn2.val && sn2.val())) return true;
+            return refCh.set('veio').then(function(){
+              feito.chamada=false;
+              try{ if(typeof dcChamada==='object' && dcChamada) dcChamada[k]='veio'; }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
+              banhoFaltaMostrar('NÃO DESFIZ: '+nome.toUpperCase()+' ESTÁ AQUI', [Ele+' acabou de ter o check-in do corpo de entrada feito: está aqui de verdade.',
+                'A chamada continua "veio".'], {botao:'Entendi'});
+              return false;
+            });
+          });
+        });
+      }).then(function(okCh){
+        if(!okCh) return false;
+        try{ if(typeof dcChamada==='object' && dcChamada){ if(rec.antes==null) delete dcChamada[k]; else dcChamada[k]=rec.antes; } }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
+        try{ if(rec.antes==='faltou' && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+        catch(e){ _logFalhaGrav('a fila do remédio de '+k+' (desfazer o está aqui)', e); }
+        try{ if(typeof audit==='function') audit('chamada', 'desfez o «Está aqui» (toque errado) — voltou para '+(rec.antes||'sem marcação'), {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        delete BANHO_FALTA_AQUI[dia+'|'+k];
+        // O aviso "chegou e tem pendência" deste toque não conta: se ele chegar de verdade hoje, o
+        // check-in avisa de novo (QA da 6.41, B7). Só a marca do aviso sai; a pendência fica.
+        try{ if(typeof PEND_AVISADO==='object' && PEND_AVISADO) delete PEND_AVISADO[dia+'||'+k]; }catch(e){} /* silencioso de propósito: no pior caso, o aviso não se repete, como antes */
+        // O banho: só a decisão DESTE toque sai; a de outra pessoa fica.
+        if(!rec.segurou) return {banho:'ficou'};
+        var refB=DB.ref(banhoFaltaNo(dia)+'/'+k);
+        return refB.once('value').then(function(snB){
+          var atualB=(snB && snB.val)?snB.val():null;
+          if(!(atualB && atualB.decisao==='mantido' && Number(atualB.ts)===Number(rec.decTs))) return {banho:'outra'};   // outra decisão: fica
+          return (rec.decAntes ? refB.set(rec.decAntes) : refB.remove()).then(function(){ return {banho:'tirou'}; });
+        }).then(function(rb){
+          if(rb.banho!=='tirou') return rb;
+          try{ if(typeof audit==='function') audit('banho-falta', String((o&&o.nome)||k)+': desfez o "ainda vem" (toque errado no «Está aqui»)', {alvo:k, pet:(o&&o.nome)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+          if(rec.decAntes) BANHO_FALTA_DEC[k]=rec.decAntes; else delete BANHO_FALTA_DEC[k];
+          delete BANHO_FALTA_VISTO[dia+'|'+k];        // a pergunta do banho volta
+          // Banho fixo: o dia da ficha volta ao que era — só se ainda é o "manter" deste toque.
+          var pF=banhoFaltaPel(k), brF=pF?banhoRecDe(pF):null, excAg=(brF&&brF.excecoes)?brF.excecoes[dia]:null;
+          if(!(excAg && excAg.manter && Number(excAg.ts)>=Number(rec.tsAntes))) return {banho:'voltou'};
+          return banhosGravarExcecao(k, dia, rec.excAntes||null, 'desfez o "ainda vem" de '+(((typeof fmtBR==='function')?fmtBR(dia):'')||dia)+' (toque errado no «Está aqui»)')
+            .then(function(ok){ return {banho:ok?'voltou':'fixo-falhou'}; });
+        });
+      }).then(function(res){
+        if(res===false) return false;
+        try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        var linhas=['A chamada de hoje voltou '+(rec.antes==='faltou'?'para "faltou".':'para "sem marcação".')];
+        var dAg=BANHO_FALTA_DEC[k]||null, decAg=(dAg&&dAg.decisao)||'';
+        if(res.banho==='voltou') linhas.push('O banho'+(rec.o.hora?(' das '+rec.o.hora):'')+' volta para a pergunta: «Liberar o horário» ou «'+g.ainda+'».');
+        else if(res.banho==='fixo-falhou') linhas.push('O banho volta para a pergunta, mas não consegui tirar o "ainda vem" do banho fixo na ficha: confira em Banhos recorrentes.');
+        else if(res.banho==='outra') linhas.push('O banho ficou como outra pessoa decidiu depois do toque.');
+        // O toque não segurou o banho (QA da 6.41, B3): diz o que vale agora, não "continua segurado".
+        else if(rec.decAntes && rec.decAntes.decisao==='mantido') linhas.push('O banho continua segurado, como já estava antes do toque ("ainda vem"). Se não vier, toque em «Liberar o horário» no Hoje na Zêluz.');
+        else if(decAg==='liberado') linhas.push('O horário do banho continua liberado'+(dAg.quem?(' ('+dAg.quem+' liberou)'):'')+'.');
+        else if(decAg==='liberando') linhas.push('O horário do banho está sendo liberado'+(dAg.quem?(' por '+dAg.quem):'')+'.');
+        else if(decAg==='mantido') linhas.push('O banho continua segurado ("ainda vem")'+(dAg.quem?(' por '+dAg.quem):'')+'. Se não vier, toque em «Liberar o horário» no Hoje na Zêluz.');
+        else linhas.push('O banho não mudou: confira no Hoje na Zêluz › Banho de quem faltou.');
+        banhoFaltaMostrar('DESFEITO: '+nome.toUpperCase(), linhas, {botao:'Entendi', ok:true});
+        return true;
+      });
+    }).catch(function(e){
+      _logFalhaGrav('desfazer o está aqui de '+k, e);
+      if(feito.chamada){
+        // A chamada já voltou; o banho não (QA da 6.41, B2).
+        banhoFaltaMostrar('⚠ DESFIZ SÓ A CHAMADA', ['A chamada de hoje de '+nome+' voltou '+(rec.antes==='faltou'?'para "faltou".':'para "sem marcação".'),
+          'Não consegui devolver o banho: '+banhoFaltaSemPonto((e&&e.message)||e)+'. Ele continua segurado ("ainda vem"): se não vier, toque em «Liberar o horário» no Hoje na Zêluz.'], {botao:'Entendi'});
+        return false;
+      }
+      banhoFaltaMostrar('⚠ NÃO CONSEGUI DESFAZER', ['Não consegui desfazer o «Está aqui» de '+nome+': '+banhoFaltaSemPonto((e&&e.message)||e)+'.',
+        'Corrija em Day Care › Chamada e, se precisar, libere o horário do banho no Hoje na Zêluz.'], {botao:'Entendi'});
+      return false;
+    }).then(fim, fim);
   }
   function banhoFaltaEstaAquiUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
@@ -42737,6 +43130,10 @@
   function hojeChamadaMapa(){
     try{ var m=Z_MAPAS[chamadaNo()]; if(m&&m.mapa) return m.mapa; }
     catch(e){ /* silencioso de propósito: sem o mapa vivo vale o que a tela da Chamada deixou */ }
+    // A chamada que a tela deixou é de outro dia (passou da meia-noite com o app aberto — QA da
+    // 6.42): hoje ninguém foi marcado ainda; a de ontem não vale.
+    try{ if(typeof _chamadaVivaDia!=='undefined' && _chamadaVivaDia && _chamadaVivaDia!==dcDataKey()) return {}; }
+    catch(e){ /* silencioso de propósito: sem o dia da chamada viva, vale a de sempre */ }
     return (typeof dcChamada!=='undefined'&&dcChamada)?dcChamada:{};
   }
   function hojeCheckinMapa(){
@@ -42851,6 +43248,9 @@
         sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
         tel:(typeof poTelDoTutor==='function')?poTelDoTutor(p):'',
         fonte:fonte, hora:hojeHoraDe(chave, ck),
+        // Hóspede e morador estão na casa mesmo marcados "veio" na Chamada (a Chamada lista os dois):
+        // não passam pelo check-in do corpo de entrada do Day Care (QA da 6.42; regra do QA71).
+        hospede:!!o.hospede, morador:!!(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)),
         itens:itens, remedio:remedio, banho:banho, pend:pend, respostas:respostas,
         proxima:ant.proxima, antec:ant.itens, antGrupos:antGrupos,
         antAbertos:antAbertos, antReg:antReg,
@@ -42910,9 +43310,47 @@
   }
   function hojeFrasePresenca(o){
     if(o.fonte==='checkin') return o.hora?('presente pelo check-in às '+o.hora):'presente pelo check-in';
-    if(o.fonte==='hospede') return 'hóspede da AuAulândia — está na casa';
-    if(o.fonte==='morador') return 'morador da casa';
+    if(o.fonte==='hospede' || (o.fonte==='chamada' && o.hospede)) return 'hóspede da AuAulândia — está na casa';
+    if(o.fonte==='morador' || (o.fonte==='chamada' && o.morador)) return 'morador da casa';
+    // Só a chamada diz que veio (6.42): o check-in do corpo de entrada ainda falta.
+    if(o.fonte==='chamada') return 'presente pela chamada — falta o check-in do corpo';
     return 'presente';
+  }
+  // Está só pela chamada e deve o check-in do corpo de entrada (6.42): hóspede e morador, não.
+  function hojeSemCkDe(o){ return !!(o && o.fonte==='chamada' && !o.hospede && !o.morador); }
+  // ===== NA CHAMADA, SEM O CHECK-IN DO CORPO (Story 6.42) ===============================
+  // Adriana, 02/out/2026 (Rafael): "coloque a opção está aqui (para que se não foi feito o
+  // checkin do corpo apareça que tem que fazer!!!)". A janela do «Está aqui» avisa uma vez;
+  // este quadro fica no Hoje na Zêluz até o check-in do corpo de entrada de cada um ser feito.
+  // Quem entra aqui: a chamada de hoje diz "veio" e não há check-in de entrada (hojeFonteDe →
+  // 'chamada'). Hóspede, morador e quem faltou não entram. Nada aqui grava: só lê e leva até lá.
+  function hojeSemCheckinLista(L){ return (L||[]).filter(hojeSemCkDe); }
+  function hojeSemCheckinNome(o, L){
+    try{
+      if(typeof nomeDesamb!=='function' || typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS) || !o.p) return String(o.nome||'');
+      return nomeDesamb({p:o.p}, PELUDINHOS.map(function(q){ return {p:q}; }));
+    }catch(e){ return String(o.nome||''); } /* silencioso de propósito: sem a lista, o nome da ficha */
+  }
+  function hojeSemCheckinCardHTML(L){
+    var S=hojeSemCheckinLista(L); if(!S.length) return '';
+    var pode=(typeof banhoFaltaAtivLiberada==='function') ? banhoFaltaAtivLiberada('checkin-corpo') : false;
+    var h='<div class="card" id="hojeSemCk" style="border-left:4px solid var(--crm-critico)">'
+      +'<h2 style="font-size:17px;margin-bottom:2px">Na chamada, sem o check-in do corpo ('+S.length+')</h2>'
+      +'<div class="hint">Marcados como "veio" na chamada de hoje, mas o check-in do corpo de entrada não foi feito. O exame continua obrigatório: o nome sai daqui quando o check-in for feito.</div>';
+    S.forEach(function(o){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
+        +'<strong style="color:var(--z-blue)">'+escAttr(hojeSemCheckinNome(o, L))+'</strong>'
+        +(pode?('<button type="button" class="btn" style="padding:6px 12px;font-size:13px;min-height:44px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="hojeSemCheckinIr(this.dataset.k)">Fazer o check-in agora</button>'):'')
+        +'</div>';
+    });
+    if(!pode) h+='<div class="hint" style="margin-top:6px;font-weight:700">Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.</div>';
+    return h+'</div>';
+  }
+  function hojeSemCheckinIr(chave){
+    var o=null;
+    try{ o=hojeSemCheckinLista(hojeLista()).filter(function(x){ return x.chave===chave; })[0]||null; }catch(e){ o=null; } /* silencioso de propósito: sem a lista, nada a abrir */
+    if(!o) return false;
+    return (typeof banhoFaltaIrAoCheckin==='function') ? banhoFaltaIrAoCheckin({nome:o.nome}) : false;
   }
   // A linha inteira em TEXTO PURO — é ela que vai para o WhatsApp e para o Excel, e é a
   // mesma frase que a tela mostra. Duas escritas da mesma linha viram duas verdades.
@@ -42974,6 +43412,17 @@
   }
   // A leitura que a tela e o contador do menu precisam. Uma vez por sessão cada coisa — e,
   // no caso da chamada, um ouvinte que fica vivo o dia inteiro.
+  var _hojeCkVivoDia='';
+  function hojeCkVivoLigar(){
+    if(!DB || typeof zMapaVivo!=='function') return;
+    var dia=dcDataKey();
+    if(_hojeCkVivoDia===dia) return;   // já ligado hoje: ligar de novo só redesenharia a tela outra vez (QA da 6.42)
+    if(_hojeCkVivoDia && _hojeCkVivoDia!==dia){
+      try{ zMapaDesligar('daycare/checkin-corpo/'+_hojeCkVivoDia, '_hojeSemCk'); }catch(e){} /* silencioso de propósito: desligar é economia */
+    }
+    _hojeCkVivoDia=dia;
+    zMapaVivo('daycare/checkin-corpo/'+dia, '_hojeSemCk', function(){ hojeRedesenhar(); });
+  }
   function hojeCarregar(){
     if(!DB) return Promise.resolve(null);
     // A planilha do dia também: o banho de quem faltou precisa dela neste aparelho (QA30).
@@ -42983,6 +43432,9 @@
     catch(e){ /* silencioso de propósito: sem o vivo o zMapaUma abaixo ainda responde */ }
     tarefas.push(zMapaUma(chamadaNo()).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (hojeCarregar)', e); return {}; }));
     tarefas.push(zMapaUma('daycare/checkin-corpo/'+dcDataKey()).catch(function(e){ _logLeituraFalhou('daycare/checkin-corpo/ (hojeCarregar)', e); return {}; }));
+    // O quadro "Na chamada, sem o check-in do corpo" (6.42) some quando o check-in chega: o
+    // mesmo ouvinte do nó do dia (nenhuma leitura nova) avisa a tela. O do dia anterior é solto.
+    try{ hojeCkVivoLigar(); }catch(e){ /* silencioso de propósito: sem o aviso, o quadro acerta no próximo desenho */ }
     if(typeof PEND_ABERTAS==='undefined' || PEND_ABERTAS===null){
       try{ if(typeof pendCarregar==='function') tarefas.push(pendCarregar()); }
       catch(e){ /* silencioso de propósito: a tela diz o que não conseguiu ler */ }
@@ -43039,7 +43491,9 @@
       +'A lista de todos com quem falar hoje está em <strong>Quem chamar hoje</strong>. '
       +'O que dá para fazer no próximo dia dele é assunto da tela <strong>Vencimentos</strong>.</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
-    HOJE_FILTROS.forEach(function(f){
+    // Na carga, a tela pode ser aberta antes de a lista dos filtros existir (monitora com o Hoje
+    // concedido — QA da 6.42): sem ela, a tela sai sem os botões de filtro e acerta no próximo desenho.
+    ((typeof HOJE_FILTROS!=='undefined' && HOJE_FILTROS) || []).forEach(function(f){
       var n=hojeFiltrada(L, f.v).length;
       h+='<span class="dia clic'+(HOJE_FILTRO===f.v?' on':'')+'" id="hojeF-'+f.v+'" onclick="hojeFiltrar(\''+f.v+'\')">'
         +escAttr(f.t)+' ('+n+')</span>';
@@ -43052,7 +43506,8 @@
       +'<textarea id="hojeTxt" readonly style="display:none;width:100%;margin-top:9px;min-height:130px;border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px"></textarea>'
       +'</div>'
       +prevCorrigeOkHTML()
-      +((typeof banhoFaltaCardHTML==='function')?banhoFaltaCardHTML():'');
+      +((typeof banhoFaltaCardHTML==='function')?banhoFaltaCardHTML():'')
+      +hojeSemCheckinCardHTML(L);
     if(!L.length){
       h+='<div class="card"><h2 style="font-size:17px">Ninguém marcado na casa ainda</h2>'
         +'<div class="hint">A lista se enche sozinha conforme a Chamada e o Check-in do corpo acontecem — não é preciso reabrir a tela. '
@@ -43073,7 +43528,7 @@
         +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(o.nome)
         +(o.raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(o.raca)+'</span>'):'')+'</strong>'
         +(o.tutor?('<span class="hint" style="margin:0">tutor '+escAttr(o.tutor)+'</span>'):'')
-        +'<span class="hint" style="margin:0;color:var(--crm-ok);font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
+        +'<span class="hint" style="margin:0;color:'+(hojeSemCkDe(o)?'var(--crm-critico)':'var(--crm-ok)')+';font-weight:700">'+escAttr(hojeFrasePresenca(o))+'</span>'
         // O banho fixo de hoje fica na PRIMEIRA linha, junto do nome: ele não é pendência,
         // é compromisso do dia — e some no fim da tarde se ninguém vir (24/set/2026).
         +(o.banho?('<span class="hoje-banho" style="margin:0;font-size:13px;font-weight:800;color:var(--z-blue)">'+escAttr(o.banho)+'</span>'):'')

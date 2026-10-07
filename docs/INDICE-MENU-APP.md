@@ -2,6 +2,109 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-07) — Hoje na Zêluz: hóspede e morador fora do quadro do check-in
+
+> QA independente da Story 6.42 (FAIL por um ponto): hóspede e morador marcados "veio" na Chamada (ela lista os dois) entravam no quadro "Na chamada, sem o check-in do corpo". O Repolho apareceria todo dia.
+
+### (AR) Hoje na Zêluz › "Na chamada, sem o check-in do corpo" (ajustes)
+
+| Antes | Agora |
+|---|---|
+| Hóspede da AuAulândia ou morador da casa marcado "veio" na Chamada entrava no quadro, com "Fazer o check-in agora", e a linha dizia "falta o check-in do corpo" em vermelho | **Não entram.** A linha volta a dizer "hóspede da AuAulândia — está na casa" e "morador da casa", em verde: os dois não passam pelo check-in de entrada do Day Care |
+| Depois da meia-noite com o app aberto, o quadro mostrava os nomes de ontem até a tela ser reaberta | A chamada de ontem não vale no dia seguinte: o quadro começa vazio |
+| O atalho abria o check-in com o Day Care no dia da semana que alguém deixou | Abre no dia de hoje (o check-in sempre foi gravado no dia de hoje; só o rótulo confundia) |
+| Abrir o Hoje de novo no mesmo dia redesenhava a tela uma vez a mais | O aviso do check-in é ligado uma vez por dia |
+| Monitora com o Hoje concedido: erro de página na carga (já existia) | A tela desenha sem os botões de filtro e eles voltam no desenho seguinte |
+
+- **Xarás:** o quadro mostra o nome como a lista do check-in mostra (com o tutor ou a raça). O atalho leva à busca pelo nome; entre xarás, a monitora escolhe pelo mesmo sufixo.
+- **Onde está no código:** `hojeSemCkDe` (quem deve o check-in), `hojeLista` (marca `hospede` e `morador`), `hojeFrasePresenca`, `hojeChamadaMapa`, `hojeCkVivoLigar`, `banhoFaltaIrAoCheckin`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (542 no total; 6 da 6.42 pelo QA, uma delas pela lista de verdade do Hoje). Defeitos plantados: 31 (21 do QA e 10 novos), todos pegos. Chromium a 375 px: 32 de 33 nos cenários do QA (o que falta é a busca entre xarás, acima).
+
+## O que mudou em 07/out/2026 (v 2026-10-07-06) — «Está aqui»: o "Toquei errado — desfazer" não some
+
+> QA independente da Story 6.41 (FAIL por um ponto): o botão de desfazer não aparecia para quem entra pelo Time sem as atividades do Day Care, nem quando outro cartaz estava na tela (por exemplo, "Fredo chegou e tem pendência").
+
+### (AQ) «Ele está aqui» › **Toquei errado — desfazer** (ajustes)
+
+| Antes | Agora |
+|---|---|
+| Sem as atividades do Day Care no Time (o padrão de quem é cadastrado no Time) ou com outro cartaz na frente, a janela virava um cartaz com "Entendi" e **sem o desfazer** | O desfazer aparece sempre que o toque mudou a chamada: sem atalhos, a janela traz "Entendi" e "Toquei errado — desfazer"; com outro cartaz na tela, a janela espera na fila e volta **com os botões** |
+| Xarás: "DESFEITO: FREDO" | "DESFEITO: FREDO - TUTORA TESTE", como o aviso e a janela do toque |
+| A rede caía no passo do banho e a janela dizia "corrija em Day Care › Chamada", com a chamada já desfeita | "⚠ DESFIZ SÓ A CHAMADA": diz que a chamada voltou e que o banho continua segurado ("ainda vem"), com o que fazer |
+| O check-in do corpo terminado em outro aparelho no mesmo instante podia ser coberto pelo "faltou" | Depois de gravar, o app confere o check-in de novo: se apareceu, a chamada volta a "veio" e nada mais é desfeito ("NÃO DESFIZ: … ESTÁ AQUI") |
+| "O banho continua segurado, como já estava antes do toque" quando outro aparelho já tinha liberado | Diz o que vale agora: "O horário do banho continua liberado (Lia liberou)." |
+
+- **Rastro:** o desfazer do banho (não fixo) também entra no rastro do banho de quem faltou.
+- **Pendência de prevenção:** a marca "já avisei" do aviso "chegou e tem pendência" sai no desfazer; se ele chegar de verdade hoje, o check-in avisa de novo. A pendência não muda e o `pendAvisarChegada` não foi alterado.
+- **Texto:** "volta para a pergunta: «Liberar o horário» ou «Ele ainda vem»" (os nomes dos botões; sem o sexo na ficha, «Ainda vem»).
+- **Onde está no código:** `banhoFaltaMostrar` (a fila com botões, `op.escolha`), `banhoFaltaEstaAqui` (o desfazer sem depender dos atalhos), `banhoFaltaDesfazerAqui`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (532 no total; 11 provas do QA e 6 novas). Defeitos plantados: 46 (17 do QA, 14 do dev e 15 novos), todos pegos. Chromium a 375 px: os 20 cenários do QA, inclusive a recepção sem atividades, a pendência aberta e os xarás.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-05) — falta avisada: a data já lançada não entra de novo
+
+> QA independente da Story 6.39 (CONCERNS). O caso do Fred: o 13/10 já entrou pelo "Um período"; lançar 13 e 14/10 em "Alguns dias" daria dois créditos para o 13.
+
+### (AS) Reposições › Lançar falta avisada (os três modos)
+
+| Antes | Agora |
+|---|---|
+| A mesma data podia ganhar dois créditos: nada impedia lançar de novo um dia que já tinha falta avisada | **A data que já tem falta avisada lançada (e não estornada) não entra de novo.** "Alguns dias": fica de fora com "a falta avisada desse dia já foi lançada (está no Extrato)". "Um período": a prévia diz "13/10 já tem falta avisada lançada (está no Extrato): não entra de novo". "Um dia só": não lança e diz para estornar a anterior no Extrato. Estornada, a data volta a valer |
+| Dois toques seguidos no "Avisar a Márcia" (a caixa de vagas) com o banco lento gravavam o lote duas vezes | **Um lançamento por vez:** o segundo toque diz "Ainda estou lançando o toque anterior. Espere a confirmação." Abrir o modal de novo destrava (sem rede, a gravação pode ficar pendente) |
+| Feriado em dia dele virava crédito sem aviso | A prévia avisa: "12/10 é feriado (Nossa Senhora Aparecida): confira se a Zêluz abre. Se não abre, tire essa data." O crédito entra como sempre entrou; se feriado deve virar crédito é decisão da Adriana (pergunta na Story 6.39) |
+| Trocar de FILHOt com o modal aberto deixava a prévia do anterior | A prévia refaz na hora, com o FILHOt escolhido |
+
+- **Textos:** "nesses dias" quando são vários; a data fora do calendário do app aparece com o ano (para quem digitou errado ver o erro); a data repetida vem antes do que fica de fora; na confirmação, "15/10 (quinta-feira) — não é dia do Fred na ficha", sem parênteses dentro de parênteses; o conselho de mudar a ficha só aparece quando o motivo é "não é dia dele" (aba Plano no plano com dias por mês; alto da ficha nos outros).
+- **Onde está no código:** `repCreditoVivoNaData` (a data já lançada), `repPeriodoAnalise` (o período sem as já lançadas), `repFeriadosEm`/`repFeriadosHTML` (o aviso de feriado), `REP_LANCANDO` (a trava, em `repConfirmar`; destrava em `repAbrirLancar`), `repMostrarEscolhido` (a prévia refeita), `repForaConselho` (o conselho por motivo).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (6 provas do QA da 6.39; 515 no total). Defeitos plantados: 31 (8 do QA que escapavam e 23 novos), todos pegos.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-04) — Hoje na Zêluz: quem está só na chamada, sem o check-in do corpo
+
+> **Adriana, 02/out/2026** (o Rafael): *"coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!!)"*. A janela do «Está aqui» avisava uma vez; agora o Hoje na Zêluz lembra até o check-in ser feito. Story 6.42.
+
+### (AR) Hoje na Zêluz › "Na chamada, sem o check-in do corpo"
+
+| Antes | Agora |
+|---|---|
+| Marcado "veio" na chamada (✓ Veio ou «Está aqui») sem o check-in do corpo de entrada, a linha dizia só "presente"; fechada a janela do «Está aqui», só o painel do monitor lembrava | Quadro **"Na chamada, sem o check-in do corpo (N)"**, logo depois do banho de quem faltou, com o nome (e o tutor, se há xarás) e **Fazer o check-in agora** (abre o check-in do corpo de entrada com o nome). Quem não tem a atividade no Time lê "Peça a quem faz o check-in do corpo". O nome sai do quadro quando o check-in é feito, sem reabrir a tela |
+
+- A linha do FILHOt na lista (e o Excel do Hoje) diz **"presente pela chamada — falta o check-in do corpo"**, em vermelho.
+- Hóspedes, moradores e quem faltou não entram. Nada é gravado: o quadro só lê e leva até o check-in. Nenhuma leitura nova do banco: é o mesmo nó do dia que o Hoje já lia.
+- **Onde está no código:** `hojeSemCheckinLista`, `hojeSemCheckinCardHTML`, `hojeSemCheckinIr`, `hojeCkVivoLigar` e `hojeFrasePresenca`.
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (4 provas da 6.42). Defeitos plantados: 11, todos pegos.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-03) — «Está aqui» tocado por engano: desfazer
+
+> Da fila do /loop autorizado pela Adriana em 06/out ("desfazer o «Está aqui» tocado errado"); backlog da Story 6.29 (QA73). Story 6.41.
+
+### (AQ) Aviso "NÃO VEIO — TINHA BANHO" › «Ele está aqui» › **Toquei errado — desfazer**
+
+| Antes | Agora |
+|---|---|
+| «Ele está aqui» tocado no FILHOt errado só se consertava à mão, em dois lugares: Day Care › Chamada › Faltou, e Hoje na Zêluz › Banho de quem faltou › Liberar o horário | A janela que abre depois do toque (a do "FALTA O CHECK-IN DO CORPO") traz **Toquei errado — desfazer**: a chamada de hoje volta ao que era ("faltou" ou sem marcação) e o banho volta para a pergunta, se foi o toque que o segurou |
+
+- **Não desfaz por cima de ninguém:** com o check-in do corpo de entrada feito, não desfaz ("ele está aqui de verdade"); chamada mudada por outra pessoa depois do toque, não mexe; "ainda vem" ou "liberado" de outra pessoa ficam. O "ainda vem" que já existia antes do toque continua.
+- **Banho fixo:** o "manter" do dia que o toque gravou na ficha sai; as outras exceções ficam.
+- A fila do remédio relê (voltou a faltar). Rastro: "desfez o «Está aqui» (toque errado)". Só quem decide o banho de quem faltou vê o botão. O botão não aparece quando a chamada já dizia "veio" antes do toque.
+- **Onde está no código:** `banhoFaltaEstaAqui` (guarda o que o toque mudou em `BANHO_FALTA_AQUI`) e `banhoFaltaDesfazerAqui` (lê e só então grava).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.41 e 2 da 6.29 com o botão novo). Defeitos plantados: 14, 13 pegos (o 14º, que o dev tinha como equivalente, não era: o QA mostrou o caso e a prova entrou na v 2026-10-07-06). Chromium a 375 px: 7 de 7.
+
+## O que mudou em 07/out/2026 (v 2026-10-07-02) — falta avisada em alguns dias (caso do Fred)
+
+> **Adriana, 06/out/2026:** *"Lancei na reposição do Fred e da Eleonora o dia 13 e 14. E lá no Falta, um período, eu escrevi dia 13 e dia 14 e contabilizou apenas um dia, como se fosse o dia 13. Precisa de resolver isso. Às vezes a pessoa vai fazer dois, três dias, a gente colocar mais datas."* Story 6.39.
+
+### (AP) Reposições › Lançar falta avisada › "Alguns dias"
+
+| Antes | Agora |
+|---|---|
+| Só "Um dia só" ou "Um período". No período, o dia que não era dia dele na ficha ficava de fora **sem aviso**: 13 e 14/10 com só a terça davam 1 crédito, e ninguém sabia por quê | Terceiro modo, **Alguns dias (datas soltas)**: uma data por linha, "+ outra data" e "×" para tirar. Cada data em que ele viria vira um crédito, num lançamento só, com o mesmo motivo e o mesmo dia de repor (só no primeiro crédito, como no período) |
+| — | A prévia diz **o que fica de fora e por quê**: "14/10 (quarta-feira) não entra: não é dia do Fred na ficha (ele vem Ter). Se ele passou a vir nesse dia, marque o dia no alto da ficha." Sábado e domingo: "não há Day Care". Data repetida conta uma vez só, com o aviso. No período, os dias de semana que ficam de fora aparecem também (até 5 pelo nome e "e mais N") |
+
+- **A regra do crédito não muda:** a falta é de um dia em que ele viria (a mesma do período). Plano com dias diferentes em cada mês (6.30): vale o dia daquele mês do plano, e o conselho manda ajustar na aba Plano.
+- **A confirmação e o rastro** dizem os dias e o que ficou de fora. **O Extrato** diz só os dias que entraram ("alguns dias: 13/10, 15/10, 20/10"). A mensagem pronta ao tutor fala dos dias: "contando as dos dias 13/10, 15/10 e 20/10".
+- **"Um dia só" continua como antes** (aceita qualquer data; a troca de dia continua só nele).
+- **Onde está no código:** `repAlgunsAnalise` (o que entra e o que fica de fora), `repPorQueNaoVem` (o porquê), `repPreverAlguns` e `repForaDoPeriodo` (as prévias), `repAlgunsHTML`/`repAlgunsMais`/`repAlgunsTirar` (as linhas), `repConfirmar` (o modo `alguns`), `repMensagem` (os dias na mensagem) e `repExtratoAlguns` (o Extrato).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.39); `tests/harness.js` v-51 (paridade com o período, FILHOt por FILHOt da lista do app, em 3 semanas; todo dia de fora com o porquê). Defeitos plantados: 17, todos pegos.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-01) — aba Plano: o "2x" marca os dias ali mesmo (caso do Fred)
 
 > **Adriana, 06/out/2026,** com a foto do Confirmar do Fred dizendo "1x por semana · Ter": *"Erro - Fred eleonora deseja 2x por semana vou fechar e volta para uma vez"*. Story 6.37.
