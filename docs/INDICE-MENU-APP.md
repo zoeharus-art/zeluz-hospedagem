@@ -2,6 +2,23 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-05) — falta avisada: a data já lançada não entra de novo
+
+> QA independente da Story 6.39 (CONCERNS). O caso do Fred: o 13/10 já entrou pelo "Um período"; lançar 13 e 14/10 em "Alguns dias" daria dois créditos para o 13.
+
+### (AS) Reposições › Lançar falta avisada (os três modos)
+
+| Antes | Agora |
+|---|---|
+| A mesma data podia ganhar dois créditos: nada impedia lançar de novo um dia que já tinha falta avisada | **A data que já tem falta avisada lançada (e não estornada) não entra de novo.** "Alguns dias": fica de fora com "a falta avisada desse dia já foi lançada (está no Extrato)". "Um período": a prévia diz "13/10 já tem falta avisada lançada (está no Extrato): não entra de novo". "Um dia só": não lança e diz para estornar a anterior no Extrato. Estornada, a data volta a valer |
+| Dois toques seguidos no "Avisar a Márcia" (a caixa de vagas) com o banco lento gravavam o lote duas vezes | **Um lançamento por vez:** o segundo toque diz "Ainda estou lançando o toque anterior. Espere a confirmação." Abrir o modal de novo destrava (sem rede, a gravação pode ficar pendente) |
+| Feriado em dia dele virava crédito sem aviso | A prévia avisa: "12/10 é feriado (Nossa Senhora Aparecida): confira se a Zêluz abre. Se não abre, tire essa data." O crédito entra como sempre entrou; se feriado deve virar crédito é decisão da Adriana (pergunta na Story 6.39) |
+| Trocar de FILHOt com o modal aberto deixava a prévia do anterior | A prévia refaz na hora, com o FILHOt escolhido |
+
+- **Textos:** "nesses dias" quando são vários; a data fora do calendário do app aparece com o ano (para quem digitou errado ver o erro); a data repetida vem antes do que fica de fora; na confirmação, "15/10 (quinta-feira) — não é dia do Fred na ficha", sem parênteses dentro de parênteses; o conselho de mudar a ficha só aparece quando o motivo é "não é dia dele" (aba Plano no plano com dias por mês; alto da ficha nos outros).
+- **Onde está no código:** `repCreditoVivoNaData` (a data já lançada), `repPeriodoAnalise` (o período sem as já lançadas), `repFeriadosEm`/`repFeriadosHTML` (o aviso de feriado), `REP_LANCANDO` (a trava, em `repConfirmar`; destrava em `repAbrirLancar`), `repMostrarEscolhido` (a prévia refeita), `repForaConselho` (o conselho por motivo).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (6 provas do QA da 6.39; 515 no total). Defeitos plantados: 31 (8 do QA que escapavam e 23 novos), todos pegos.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-04) — Hoje na Zêluz: quem está só na chamada, sem o check-in do corpo
 
 > **Adriana, 02/out/2026** (o Rafael): *"coloque a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que fazer!!!)"*. A janela do «Está aqui» avisava uma vez; agora o Hoje na Zêluz lembra até o check-in ser feito. Story 6.42.
@@ -45,7 +62,7 @@
 | — | A prévia diz **o que fica de fora e por quê**: "14/10 (quarta-feira) não entra: não é dia do Fred na ficha (ele vem Ter). Se ele passou a vir nesse dia, marque o dia no alto da ficha." Sábado e domingo: "não há Day Care". Data repetida conta uma vez só, com o aviso. No período, os dias de semana que ficam de fora aparecem também (até 5 pelo nome e "e mais N") |
 
 - **A regra do crédito não muda:** a falta é de um dia em que ele viria (a mesma do período). Plano com dias diferentes em cada mês (6.30): vale o dia daquele mês do plano, e o conselho manda ajustar na aba Plano.
-- **A confirmação, o rastro e o Extrato** dizem os dias ("alguns dias: 13/10, 15/10, 20/10") e o que ficou de fora. A mensagem pronta ao tutor fala dos dias: "contando as dos dias 13/10, 15/10 e 20/10".
+- **A confirmação e o rastro** dizem os dias e o que ficou de fora. **O Extrato** diz só os dias que entraram ("alguns dias: 13/10, 15/10, 20/10"). A mensagem pronta ao tutor fala dos dias: "contando as dos dias 13/10, 15/10 e 20/10".
 - **"Um dia só" continua como antes** (aceita qualquer data; a troca de dia continua só nele).
 - **Onde está no código:** `repAlgunsAnalise` (o que entra e o que fica de fora), `repPorQueNaoVem` (o porquê), `repPreverAlguns` e `repForaDoPeriodo` (as prévias), `repAlgunsHTML`/`repAlgunsMais`/`repAlgunsTirar` (as linhas), `repConfirmar` (o modo `alguns`), `repMensagem` (os dias na mensagem) e `repExtratoAlguns` (o Extrato).
 - **Provas:** `tests/fase0-ciclo-fechado.test.js` (7 provas da 6.39); `tests/harness.js` v-51 (paridade com o período, FILHOt por FILHOt da lista do app, em 3 semanas; todo dia de fora com o porquê). Defeitos plantados: 17, todos pegos.
