@@ -8717,7 +8717,13 @@
       return;
     }
     // Feriado (6.43): a Zêluz não abre — o pedido pode ter nascido antes da regra, ou o dia virou
-    // recesso depois. Nada é gravado; o pedido continua em aberto para ser recusado.
+    // recesso depois. Nada é gravado; o pedido continua em aberto para ser recusado. O recesso da
+    // Gestão só existe no banco: a lista é buscada antes de conferir, com a mesma espera de até 4 s
+    // das janelas da reposição (re-QA da 6.43).
+    try{
+      if(typeof orcFeriadosGarantir==='function')
+        await Promise.race([orcFeriadosGarantir(), new Promise(function(ok){ setTimeout(ok, 4000); })]);
+    }catch(e){ /* silencioso de propósito: sem a lista do banco, vale a do código */ }
     var ferA=repFeriadoDiaRepor(dia);
     if(ferA){ alert(ferA+'\n\nO pedido continua em aberto: recuse-o, ou combine outro dia com a recepção.'); return; }
     var v=vagasDoDia(dia), pay=ped.payload||{};

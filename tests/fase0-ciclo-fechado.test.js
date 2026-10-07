@@ -10366,6 +10366,20 @@ provaAsync('6.43 QA (M1) — a autorização do encaixe pela Márcia não marca 
     run("__ped643={tipo:'reposicao', pet:'Fredo', payload:{credito_id:'c1'}}; __al643=[]; __zp643=0;");
     await run("vagasAutorizar('2026-10-14', 'fredo__eleonora teste')"); await espera639();
     igual([run('__zp643'), run('__al643.length')], [1, 0], 'dia comum: a pergunta de sempre');
+    // o recesso que só existe no banco (re-QA): a autorização busca a lista antes de conferir
+    run(`__bk643.va.og=orcFeriadosGarantir; __bk643.va.st=setTimeout; __bk643.va.cfg=orcFeriadosCfg; orcEhFeriado=__bk643.fe; orcFeriadosCfg=null;
+      orcFeriadosGarantir=function(){ orcFeriadosCfg={'2026-10-14':'Recesso da Zêluz'}; return Promise.resolve(); };
+      __al643=[]; __zp643=0;`);
+    try {
+      await run("vagasAutorizar('2026-10-14', 'fredo__eleonora teste')"); await espera639();
+      igual([run('__zp643'), /^14\/10\/2026 é feriado \(Recesso da Zêluz\): a Zêluz não abre\./.test(run('__al643[0]||""'))], [0, true], 'o recesso do banco barra o encaixe');
+      // sem resposta do banco: depois de 4 s, segue com a lista que houver
+      run(`orcFeriadosCfg={}; orcFeriadosGarantir=function(){ return new Promise(function(){}); }; __st643=[]; setTimeout=function(f,ms){ __st643.push([f,ms]); return 0; }; __al643=[]; __zp643=0;`);
+      const pend = run("vagasAutorizar('2026-10-15', 'fredo__eleonora teste')"); await espera639();
+      igual([run('__zp643'), J630('__st643.map(function(x){ return x[1]; })')], [0, [4000]], 'esperando a lista: ainda não perguntou');
+      run('__st643[0][0]();'); await pend; await espera639();
+      igual(run('__zp643'), 1, 'aos 4 s, a pergunta de sempre');
+    } finally { run('orcFeriadosGarantir=__bk643.va.og; setTimeout=__bk643.va.st;'); }
   } finally {
     run('DB=__bk643.va.db; vagasPodeEncaixar=__bk643.va.pe; vagasPedidoDe=__bk643.va.pd; repPelaChave=__bk643.va.pc; alert=__bk643.va.al; zPergunta=__bk643.va.zp; vagasDoDia=__bk643.va.vd;');
     run(FER643_VOLTA); solta639();
