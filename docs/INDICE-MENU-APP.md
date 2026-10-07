@@ -2,6 +2,29 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-08) — Feriado não vira reposição
+
+> Adriana, 07/out/2026: *"feriado não são reposto. Não tem funcionando no dia e é perdido."* (a pergunta tinha ficado na Story 6.39).
+
+### (AT) Reposições › Lançar falta avisada e Marcar o dia — feriado
+
+| Antes | Agora |
+|---|---|
+| Falta avisada num feriado em dia dele virava crédito; a prévia só pedia "confira se a Zêluz abre" | **Não vira crédito.** Em "Alguns dias" e "Um período", o feriado aparece entre os que ficam de fora: "12/10 (segunda-feira) não entra: é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto." |
+| "Um dia só" lançava o feriado sem aviso | Não lança: "12/10/2026 é feriado (…). A Zêluz não abre e o dia não é reposto: nada foi lançado." |
+| O dia de repor podia ser um feriado | O aviso aparece assim que o dia é escolhido (sem vagas nem "Avisar a Márcia") e a falta não é gravada com ele: "12/10/2026 é feriado (…): a Zêluz não abre. Escolha outro dia." |
+| "Marcar o dia" (reposição, avulso, troca e a Lista de troca, que abre a mesma tela) aceitava feriado | Não aceita o feriado como dia de vir (só o aviso, sem vagas nem "dia dele"), e a troca não sai de um feriado: "… a Zêluz não abre e o dia não é reposto. Não há dia para trocar." |
+| A Gestão autorizava o encaixe de um pedido num feriado (reposição ou avulso cobrado) | Não autoriza: o aviso diz que é feriado e que o pedido continua em aberto para ser recusado |
+| A Lista de troca oferecia o feriado ("0 de 5 vagas") | Não oferece, como não oferece sábado e domingo |
+| Num aparelho que nunca abriu o Orçamento, valia só a lista de feriados do código | As duas janelas buscam a lista com o recesso da Gestão (uma vez por sessão) e refazem a prévia quando ela chega; até ela chegar (no máximo 4 s), um toque no botão não grava e a janela diz "Ainda estou conferindo os feriados. Espere um instante e confirme de novo." A autorização do encaixe também busca a lista antes de conferir |
+| "Um período" com feriado: a confirmação não dizia que ele ficou de fora | A confirmação diz "Ficaram de fora: 12/10 (segunda-feira) — é feriado (…)" e o rastro, "(de fora, feriado: 12/10)". A mensagem ao tutor não mudou |
+
+- **A lista é uma só:** Configurações › Valores da hospedagem, bloco "Feriados (não entregamos)" (nacionais, de MG, os dois de BH e o recesso que a Gestão acrescenta) — a mesma da falta automática das 12h e do calendário do Day Care. A lista do código só tem 2026 e 2027 (backlog: 2028 em diante).
+- **O que já foi lançado não muda sozinho:** falta avisada de feriado lançada antes desta versão continua no saldo; a recepção estorna no Extrato, se for o caso.
+- **Feriado no fim de semana** (ex.: 15/11/2026, domingo): em "Alguns dias", continua dizendo "é domingo: não há Day Care"; em "Um dia só", diz que é feriado. Nos dois casos, nada é lançado.
+- **Onde está no código:** `repFeriadoNome`, `repFeriadoPorque`, `repFeriadoDiaRepor`, `repFeriadosBuscar` (`REP_FER_LENDO`); `repAlgunsAnalise`, `repPeriodoAnalise`, `repPreverDias`, `repVoltaPintar`, `repBotaoRotulo`, `repConfirmar`, `dxVeredito`, `dxVereditoTroca`, `dxPintar`, `dxConfirmar`, `vagasAutorizar`, `trocaProximosDias`, `repAbrirLancar`, `dxAbrir`. Saíram `repFeriadosEm` e `repFeriadosHTML` (o aviso "confira se a Zêluz abre").
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (554 no total; 12 da 6.43 e as da 6.39 que esperavam o crédito em feriado, revistas). Harness: v-51 A1 compara com o período de verdade e ganha a A3 (feriado nunca vira crédito). Defeitos plantados: 22 do dev na 1ª versão (21 válidos, todos pegos), 15 do QA (14 pegos; o Q7 não muda nada) e 18 dos ajustes, todos pegos. Chromium a 375 px: 20 de 20, como recepção e como Gestão.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-07) — Hoje na Zêluz: hóspede e morador fora do quadro do check-in
 
 > QA independente da Story 6.42 (FAIL por um ponto): hóspede e morador marcados "veio" na Chamada (ela lista os dois) entravam no quadro "Na chamada, sem o check-in do corpo". O Repolho apareceria todo dia.
