@@ -10040,6 +10040,10 @@ prova('6.39 re-QA — a saída antecipada da hospedagem, o crédito de outro FIL
     // um crédito com estadiaId (de hospedagem) mas outro motivo também não segura
     run("REPO_CACHE[pelKey(repPelSel)].lancamentos.h2={tipo:'credito', data:'2026-10-20', motivo:'outro', estadiaId:'y', ts:4};");
     igual(run("repCreditoVivoNaData(repPelSel, '2026-10-20')"), false);
+    // a falta que entrou como troca de dia (a "Marcar troca") segura a data, como qualquer falta avisada
+    run("REPO_CACHE[pelKey(repPelSel)].lancamentos.t1={tipo:'credito', data:'2026-10-21', motivo:'troca', troca:{de:'2026-10-21', para:'2026-10-23'}, ts:5};");
+    igual(run("repCreditoVivoNaData(repPelSel, '2026-10-21')"), true);
+    igual(J630("repAlgunsAnalise(repPelSel, ['2026-10-21'])").fora.map((o) => o.porque), ['a falta avisada desse dia já foi lançada (está no Extrato)']);
   } finally { run('REPO_CACHE=__bk639.rc;'); solta639(); }
 });
 prova('6.39 re-QA — textos: "e" na lista; plural de "já têm" e de "essas datas"; o feriado só nas datas que entram; no período, "mude o período"; "nesse dia" por motivo', () => {
