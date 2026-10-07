@@ -2,6 +2,22 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 07/out/2026 (v 2026-10-07-03) — «Está aqui» tocado por engano: desfazer
+
+> Da fila do /loop autorizado pela Adriana em 06/out ("desfazer o «Está aqui» tocado errado"); backlog da Story 6.29 (QA73). Story 6.41.
+
+### (AQ) Aviso "NÃO VEIO — TINHA BANHO" › «Ele está aqui» › **Toquei errado — desfazer**
+
+| Antes | Agora |
+|---|---|
+| «Ele está aqui» tocado no FILHOt errado só se consertava à mão, em dois lugares: Day Care › Chamada › Faltou, e Hoje na Zêluz › Banho de quem faltou › Liberar o horário | A janela que abre depois do toque (a do "FALTA O CHECK-IN DO CORPO") traz **Toquei errado — desfazer**: a chamada de hoje volta ao que era ("faltou" ou sem marcação) e o banho volta para a pergunta, se foi o toque que o segurou |
+
+- **Não desfaz por cima de ninguém:** com o check-in do corpo de entrada feito, não desfaz ("ele está aqui de verdade"); chamada mudada por outra pessoa depois do toque, não mexe; "ainda vem" ou "liberado" de outra pessoa ficam. O "ainda vem" que já existia antes do toque continua.
+- **Banho fixo:** o "manter" do dia que o toque gravou na ficha sai; as outras exceções ficam.
+- A fila do remédio relê (voltou a faltar). Rastro: "desfez o «Está aqui» (toque errado)". Só quem decide o banho de quem faltou vê o botão. O botão não aparece quando a chamada já dizia "veio" antes do toque.
+- **Onde está no código:** `banhoFaltaEstaAqui` (guarda o que o toque mudou em `BANHO_FALTA_AQUI`) e `banhoFaltaDesfazerAqui` (lê e só então grava).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (3 provas da 6.41 e 2 da 6.29 com o botão novo). Defeitos plantados: 14, 13 pegos e 1 equivalente (o carimbo da decisão já cobre). Chromium a 375 px: 7 de 7.
+
 ## O que mudou em 07/out/2026 (v 2026-10-07-02) — falta avisada em alguns dias (caso do Fred)
 
 > **Adriana, 06/out/2026:** *"Lancei na reposição do Fred e da Eleonora o dia 13 e 14. E lá no Falta, um período, eu escrevi dia 13 e dia 14 e contabilizou apenas um dia, como se fosse o dia 13. Precisa de resolver isso. Às vezes a pessoa vai fazer dois, três dias, a gente colocar mais datas."* Story 6.39.

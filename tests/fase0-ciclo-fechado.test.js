@@ -6715,7 +6715,7 @@ provaAsync('6.29 «Ele está aqui»: marca VEIO na chamada, segura o banho e, se
     const seg = JSON.parse(JSON.stringify(run('__esc.slice(1).map(function(x){ return {t:x.t, b:x.b, l:x.l}; })')));
     igual(seg.length, 1, JSON.stringify(seg));
     igual(seg[0].t, 'FALTA O CHECK-IN DO CORPO DE BOLT');
-    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois']);
+    igual(seg[0].b, ['Fazer o check-in agora', 'Abrir o almoço', 'Depois', 'Toquei errado — desfazer'], 'o desfazer da 6.41 vem por último');
     igual(seg[0].l, ['Marcado como "veio" na chamada de hoje. O banho das 17:00 fica com ele.',
       'O check-in do corpo de entrada não foi feito: faça agora.', 'Está na grade do almoço: confira se ele já almoçou.']);
     run('__esc[1].fn[0]();');
@@ -6779,12 +6779,12 @@ provaAsync('6.29 quem tem as atividades limitadas no Time: o cartaz não oferece
     // só o almoço liberado: «Abrir o almoço» e o recado do check-in
     run(bolt629(dia, kP) + `__ativ629=['almoco']; __alertas=[]; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc[0].b'), ['Abrir o almoço', 'Depois']);
+    igual(run('__esc[0].b'), ['Abrir o almoço', 'Depois', 'Toquei errado — desfazer']);
     assert.ok(run('__esc[0].l').indexOf('Peça a quem faz o check-in do corpo: Day Care › Check-in do corpo.') >= 0);
     // com o check-in liberado
     run(bolt629(dia, kP) + `__ativ629=['checkin-corpo']; __esc=[];`);
     await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
-    igual(run('__esc[0].b'), ['Fazer o check-in agora', 'Depois']);
+    igual(run('__esc[0].b'), ['Fazer o check-in agora', 'Depois', 'Toquei errado — desfazer']);
   } finally { run(JA629_VOLTA); run(BF_VOLTA); }
 });
 provaAsync('6.29 xarás com o tutor no aviso e no cartão; aviso de outro dia não grava; outro aparelho já liberou: o texto diz isso; dois banhos no plural', async () => {
@@ -9437,6 +9437,102 @@ prova('6.39 AC5 — Extrato e mensagem: os dias do lançamento, em lista ou em o
     assert.ok(/contando as do período de 20\/10\/2026 a 30\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:9, de:'2026-10-20', ate:'2026-10-30', saldo:9})")));
     assert.ok(/com a de hoje, referente ao dia 15\/10\/2026\./.test(run('repMensagem(' + p + ", 'credito', {qtd:1, data:'2026-10-15', saldo:1})")));
   } finally { run('zHojeISO=__bk639m.hz; pelExtra=__bk639m.pe;'); }
+});
+
+// ================================================================== 6.41 — «Está aqui» tocado por engano: desfazer
+console.log('\n6.41 — «Está aqui» tocado por engano: "Toquei errado — desfazer" (fila do /loop, 06/out/2026)');
+const desf641 = (i) => `__esc[${i}].fn[__esc[${i}].b.indexOf('Toquei errado — desfazer')]();`;
+provaAsync('6.41 AC1-AC5 — Bolt faltou ao meio-dia e tinha banho; «Ele está aqui» por engano; "Toquei errado — desfazer": a chamada volta para "faltou", o banho volta para a pergunta, o remédio relê, rastro', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; banhoFaltaPerguntar('${dia}');`);
+    run('__esc[0].fn[1]();'); await tick();                     // «Ele está aqui»
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['veio', 'mantido']);
+    const ts = run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].ts`);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).antes, 'faltou');
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).segurou, true);
+    igual(J630(`BANHO_FALTA_AQUI['${dia}|${kP}']`).decTs, ts);
+    run('__alertas=[]; __med629=0;');
+    run(desf641(1)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou', 'a chamada volta para "faltou"');
+    igual(run(`dcChamada['${kP}']`), 'faltou', 'e a deste aparelho');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']===undefined`), true, 'a decisão do banho desse toque sai');
+    igual([run(`BANHO_FALTA_DEC['${kP}']===undefined`), run(`BANHO_FALTA_VISTO['${dia}|${kP}']===undefined`)], [true, true], 'a pergunta do banho volta');
+    igual(run('__med629'), 1, 'o remédio relê a fila (voltou a faltar)');
+    const al = JSON.parse(JSON.stringify(run('__alertas')));
+    igual(al.map((x) => x.t), ['DESFEITO: BOLT']);
+    igual(al[0].l, ['A chamada de hoje voltou para "faltou".', 'O banho das 17:00 volta para a pergunta: liberar o horário ou ele ainda vem.']);
+    assert.ok(run('__aud629').indexOf('chamada: desfez o «Está aqui» (toque errado) — voltou para faltou') >= 0, JSON.stringify(run('__aud629')));
+    igual(run(`BANHO_FALTA_AQUI['${dia}|${kP}']===undefined`), true, 'desfeito uma vez só');
+    // o banho segurado ANTES do toque ("ainda vem") continua segurado; sem marcação antes, volta a "sem marcação"
+    run(bolt629(dia, kP) + `delete dcChamada['${kP}']; __banco['daycare/chamada/${dia}/${kP}']=null;
+      BANHO_FALTA_DEC['${kP}']={decisao:'mantido', quem:'Lia', ts:5}; __banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:5}; __esc=[]; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']===undefined`), true, 'sem marcação antes: a marcação sai');
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`), 'Lia', 'o "ainda vem" da Lia fica');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => x.t === 'DESFEITO: BOLT' && /voltou para "sem marcação"/.test(x.l[0]) && /continua segurado, como já estava antes do toque/.test(x.l[1])), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 AC2/AC3 — não desfaz por cima: check-in do corpo feito depois, chamada mudada por outra pessoa, decisão do banho de outra pessoa; quem não decide o banho não desfaz', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const toque = async () => { run(bolt629(dia, kP) + `__banco['daycare/chamada/${dia}/${kP}']='faltou'; delete __banco[banhoFaltaNo('${dia}')+'/${kP}']; delete ${fimCk629(dia, kP)}; __esc=[]; __alertas=[];`);
+      await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick(); run('__alertas=[];'); };
+    // 1) o check-in do corpo de entrada foi feito depois do toque: ele está aqui de verdade
+    await toque();
+    run(`${fimCk629(dia, kP)}=789;`);
+    run(desf641(0)); await tick();
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => x.t), ['NÃO DESFIZ: BOLT ESTÁ AQUI']);
+    // 2) alguém marcou outra coisa na chamada depois do toque
+    await toque();
+    run(`__banco['daycare/chamada/${dia}/${kP}']='faltou';`);
+    run(desf641(0)); await tick();
+    igual(JSON.parse(JSON.stringify(run('__alertas'))).map((x) => [x.t, x.l[0]]), [['NÃO DESFIZ', 'A chamada de Bolt mudou depois do toque: faltou.']]);
+    igual(run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`), 'mantido', 'nada mais foi desfeito');
+    // 3) outra pessoa liberou o horário depois do toque: a chamada volta, a decisão dela fica
+    await toque();
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'liberado', quem:'Lia', ts:99};`);
+    run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].decisao`)], ['faltou', 'liberado']);
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => /O banho ficou como outra pessoa decidiu depois do toque\./.test(x.l[1])));
+    // 3b) outra pessoa gravou o MESMO "ainda vem" por cima, com outro carimbo: a dela fica
+    await toque();
+    run(`__banco[banhoFaltaNo('${dia}')+'/${kP}']={decisao:'mantido', quem:'Lia', ts:99};`);
+    run(desf641(0)); await tick();
+    igual([run(`__banco['daycare/chamada/${dia}/${kP}']`), run(`__banco[banhoFaltaNo('${dia}')+'/${kP}'].quem`)], ['faltou', 'Lia']);
+    // 4) sem permissão: não desfaz
+    await toque();
+    run('__pode=false; __bkAl641=alert; __al641=[]; alert=function(t){ __al641.push(t); };');
+    try { run(desf641(0)); await tick(); } finally { run('alert=__bkAl641; __pode=true;'); }
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'veio');
+    igual(run('__al641.length'), 1);
+    // 5) já estava "veio" antes do toque: não há o que desfazer, o botão não aparece
+    run(bolt629(dia, kP) + `dcChamada['${kP}']='veio'; __esc=[]; __alertas=[];`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(run('__esc[0].b').indexOf('Toquei errado — desfazer'), -1);
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
+});
+provaAsync('6.41 AC3 — banho FIXO: o "manter" do dia que o toque gravou na ficha sai (e o que havia antes volta); a pergunta do banho volta', async () => {
+  run(BF_STUBS); run(JA629); run('__bkAQ641=BANHO_FALTA_AQUI; BANHO_FALTA_AQUI={};');
+  try {
+    const dia = run('dcDataKey()'), kP = run("dcKey('Bolt','Rui')");
+    const dSem = run(`['dom','seg','ter','qua','qui','sex','sab'][new Date('${dia}T12:00:00').getDay()]`);
+    run(`__extra.Bolt={sexo:'Macho', banho_rec:{ativo:true, freq:'semanal', dia:'${dSem}', hora:'17:00', desde:'2026-09-01', excecoes:{'2020-01-01':{pular:true}}}};`);
+    run(`BANHO_FALTA=[{chave:'${kP}', nome:'Bolt', hora:'17:00', origem:'fixo', porque:'faltou', fixo:true, lancs:[], txts:[]}];
+      BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; dcChamada={}; dcChamada['${kP}']='faltou'; __banco['daycare/chamada/${dia}/${kP}']='faltou'; __esc=[]; __alertas=[];
+      setPelExtra=function(p,patch){ __pel.push({n:p.n, patch:JSON.parse(JSON.stringify(patch))}); __extra[p.n]=Object.assign({}, __extra[p.n]||{}, JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };`);
+    await run(`banhoFaltaEstaAqui(BANHO_FALTA[0], '${dia}')`); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']`).manter, true, 'o toque segurou o banho fixo do dia');
+    run('__alertas=[];'); run(desf641(0)); await tick();
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['${dia}']===undefined`), true, 'o "manter" do dia saiu da ficha');
+    igual(J630(`__extra.Bolt.banho_rec.excecoes['2020-01-01']`), { pular: true }, 'as outras exceções ficam');
+    igual(run(`__banco['daycare/chamada/${dia}/${kP}']`), 'faltou');
+    assert.ok(JSON.parse(JSON.stringify(run('__alertas'))).some((x) => x.t === 'DESFEITO: BOLT' && /volta para a pergunta/.test(x.l[1])), JSON.stringify(run('__alertas')));
+  } finally { run(JA629_VOLTA); run(BF_VOLTA); run('BANHO_FALTA_AQUI=__bkAQ641;'); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

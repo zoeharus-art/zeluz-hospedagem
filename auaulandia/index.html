@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-02"></script>
+<script src="resposta-tutor.js?v=2026-10-07-03"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-02"></script>
+<script src="painel-logica.js?v=2026-10-07-03"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-02"></script>
+<script src="financeiro-logica.js?v=2026-10-07-03"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -17348,7 +17348,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-02';
+  const APP_VERSAO='2026-10-07-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21973,7 +21973,8 @@
   // ganha (transação), e os outros veem o que foi decidido. Nenhum cartaz deste módulo apaga
   // outro que esteja aberto: ele espera a tela ficar livre (QA28, QA29).
   var BANHO_FALTA=[], BANHO_FALTA_DEC={}, BANHO_FALTA_DIA='', BANHO_FALTA_CHEGOU=[], BANHO_FALTA_VISTO={}, BANHO_FALTA_TRAVA={},
-      BANHO_FALTA_FILA=[], __banhoFaltaT=null;
+      BANHO_FALTA_FILA=[], __banhoFaltaT=null,
+      BANHO_FALTA_AQUI={};   // o que cada «Está aqui» deste aparelho mudou, para o "toquei errado" (6.41)
   var BANHO_FALTA_PRESO_MS=5*60000;   // "liberando" há mais que isso: o aparelho caiu no meio
   // "Liberado, mas ainda na planilha" só com leitura FEITA DEPOIS de este aparelho saber da
   // liberação (QA31): uma planilha lida antes mostra o banho que já saiu. BANHO_FALTA_VIU =
@@ -22513,6 +22514,13 @@
     var g=banhoFaltaGenero(k);
     var antes=(typeof dcChamada==='object' && dcChamada)?dcChamada[k]:undefined;
     var d=BANHO_FALTA_DEC[k]||{};
+    // Para o "toquei errado" (6.41): o que havia ANTES do toque — a decisão do banho e o dia do
+    // banho fixo na ficha — e quem toca agora.
+    var tsAntesAqui=Date.now();
+    var quemAqui=(typeof pessoaDoTurno==='function')?pessoaDoTurno():((typeof quemSou==='function')?quemSou():'-');
+    var excAntesAqui=null;
+    try{ var _pAq=banhoFaltaPel(k), _brAq=_pAq?banhoRecDe(_pAq):null; if(_brAq && _brAq.excecoes && _brAq.excecoes[dia]) excAntesAqui=JSON.parse(JSON.stringify(_brAq.excecoes[dia])); }
+    catch(e){ excAntesAqui=null; } /* silencioso de propósito: sem a ficha lida, não há banho fixo a devolver */
     return DB.ref('daycare/chamada/'+dia+'/'+k).set('veio').then(function(){
       try{ if(typeof dcChamada==='object' && dcChamada) dcChamada[k]='veio'; }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
       try{ if(typeof audit==='function') audit('chamada', 'marcou presença (está aqui, pelo aviso do banho)', {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
@@ -22530,6 +22538,16 @@
     }).then(function(r){
       var fezCk=r[1];
       try{ if(typeof audit==='function') audit('banho-falta', o.nome+' está aqui — presença marcada'+(fezCk===true?'':' (sem o check-in do corpo de entrada)'), {alvo:k, pet:o.nome}); }catch(e){} /* silencioso de propósito */
+      // O que ESTE toque mudou (6.41): a chamada (se não era "veio") e o banho, se foi ele quem
+      // segurou (a decisão dele, com o carimbo dele — a de outro aparelho não é desfeita).
+      try{
+        var decAg=BANHO_FALTA_DEC[k]||null;
+        var segurou=!!(d.decisao!=='mantido' && r[0]===true && decAg && decAg.decisao==='mantido' && Number(decAg.ts)>=tsAntesAqui && decAg.quem===quemAqui);
+        if(antes!=='veio') BANHO_FALTA_AQUI[dia+'|'+k]={antes:(antes===undefined?null:antes), decAntes:(d&&d.decisao)?JSON.parse(JSON.stringify(d)):null,
+          segurou:segurou, decTs:segurou?decAg.ts:null, excAntes:excAntesAqui, tsAntes:tsAntesAqui,
+          o:{chave:k, nome:o.nome||'', hora:o.hora||'', fixo:!!o.fixo, origem:o.origem||'', porque:o.porque||''}};
+        else delete BANHO_FALTA_AQUI[dia+'|'+k];        // já era "veio": este toque não mudou nada a desfazer
+      }catch(e){} /* silencioso de propósito: sem o registro, o botão "toquei errado" não aparece — a Chamada continua consertando */
       var lib=(r[0]===false) ? (BANHO_FALTA_DEC[k]||null) : null;
       var t=banhoFaltaAquiTexto(Object.assign({}, o, {nomeVisivel:banhoFaltaNomeVisivel(o)}), fezCk, g, lib);
       if(!t.semCheckin){ banhoFaltaMostrar('✅ '+t.titulo, t.linhas, {botao:'Entendi', ok:true}); return true; }
@@ -22544,6 +22562,8 @@
         return true;
       }
       botoes.push({t:'Depois', cor:'#7C8B99', fn:function(){ banhoFaltaSeguir(dia); }});
+      // Tocou no FILHOt errado (6.41): desfaz ali mesmo. Com o check-in do corpo feito, não aparece.
+      if(BANHO_FALTA_AQUI[dia+'|'+k]) botoes.push({t:'Toquei errado — desfazer', cor:'#B3261E', fn:function(){ banhoFaltaDesfazerAqui(o, dia); }});
       zEscolha(t.titulo, linhas, botoes,
         {corTitulo:'#B3261E', rodape:(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'))+' também aparece como "ainda sem check-in do corpo" no painel do monitor.'});
       return true;
@@ -22554,6 +22574,80 @@
         'Marque ✓ Veio em Day Care › Chamada.'], {botao:'Entendi'});
       return false;
     }).then(function(v){ delete BANHO_FALTA_TRAVA['aqui|'+k]; return v; });
+  }
+  // ===== «ESTÁ AQUI» TOCADO POR ENGANO (Story 6.41) ===================================
+  // Devolve o que o toque mudou: a chamada de hoje volta ao que era (só se ainda está "veio" e
+  // SEM o check-in do corpo de entrada — com ele, o FILHOt está aqui de verdade), e o banho volta
+  // à pergunta se foi o toque que o segurou (a decisão dele sai; no banho fixo, o dia da ficha
+  // volta ao que era). Decisão de outra pessoa, gravada depois, fica. Nada no check-in muda.
+  function banhoFaltaDesfazerAqui(o, dia){
+    var k=String((o&&o.chave)||''); var rec=BANHO_FALTA_AQUI[dia+'|'+k];
+    var g=banhoFaltaGenero(k), Ele=(g.pron==='ela'?'Ela':(g.pron==='ele'?'Ele':'O FILHOt'));
+    var nome=String((o&&o.nome)||'');
+    if(!DB || !k || !rec) return Promise.resolve(false);
+    if(!banhoFaltaPode()){ alert('Só a recepção, a Gestão ou a Supervisão decidem o banho de quem faltou.'); return Promise.resolve(false); }
+    if(dia!==dcDataKey()){ banhoFaltaMostrar('O DIA VIROU', ['O toque foi em '+(((typeof fmtBR==='function')?fmtBR(dia):'')||dia)+'. Nada foi desfeito.'], {botao:'Entendi'}); return Promise.resolve(false); }
+    if(BANHO_FALTA_TRAVA['desfaz|'+k]) return Promise.resolve(false);
+    BANHO_FALTA_TRAVA['desfaz|'+k]=1;
+    var fim=function(v){ delete BANHO_FALTA_TRAVA['desfaz|'+k]; return v; };
+    return DB.ref('daycare/checkin-corpo/'+dia+'/'+k+'/fim').once('value').then(function(sn){
+      if(sn && sn.val && sn.val()){
+        banhoFaltaMostrar('NÃO DESFIZ: '+nome.toUpperCase()+' ESTÁ AQUI', [Ele+' tem o check-in do corpo de entrada de hoje: está aqui de verdade.',
+          'Se a chamada estiver errada, corrija em Day Care › Chamada.'], {botao:'Entendi'});
+        return false;
+      }
+      // LÊ e só então grava (e não uma transação: no banco de verdade, a transação que começa sem o
+      // valor no aparelho desiste sem perguntar ao servidor). O "desfazer" é logo depois do toque.
+      var refCh=DB.ref('daycare/chamada/'+dia+'/'+k);
+      return refCh.once('value').then(function(snC){
+        var atualC=(snC && snC.val)?snC.val():null;
+        if(atualC!=='veio'){                          // alguém mexeu depois: não passa por cima
+          banhoFaltaMostrar('NÃO DESFIZ', ['A chamada de '+nome+' mudou depois do toque: '+(atualC||'sem marcação')+'.',
+            'Confira em Day Care › Chamada.'], {botao:'Entendi'});
+          return false;
+        }
+        return (rec.antes==null ? refCh.remove() : refCh.set(rec.antes)).then(function(){ return true; });
+      }).then(function(okCh){
+        if(!okCh) return false;
+        try{ if(typeof dcChamada==='object' && dcChamada){ if(rec.antes==null) delete dcChamada[k]; else dcChamada[k]=rec.antes; } }catch(e){} /* silencioso de propósito: a chamada viva traz o mesmo valor */
+        try{ if(rec.antes==='faltou' && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
+        catch(e){ _logFalhaGrav('a fila do remédio de '+k+' (desfazer o está aqui)', e); }
+        try{ if(typeof audit==='function') audit('chamada', 'desfez o «Está aqui» (toque errado) — voltou para '+(rec.antes||'sem marcação'), {alvo:k}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        delete BANHO_FALTA_AQUI[dia+'|'+k];
+        // O banho: só a decisão DESTE toque sai; a de outra pessoa fica.
+        if(!rec.segurou) return {banho:'ficou'};
+        var refB=DB.ref(banhoFaltaNo(dia)+'/'+k);
+        return refB.once('value').then(function(snB){
+          var atualB=(snB && snB.val)?snB.val():null;
+          if(!(atualB && atualB.decisao==='mantido' && Number(atualB.ts)===Number(rec.decTs))) return {banho:'outra'};   // outra decisão: fica
+          return (rec.decAntes ? refB.set(rec.decAntes) : refB.remove()).then(function(){ return {banho:'tirou'}; });
+        }).then(function(rb){
+          if(rb.banho!=='tirou') return rb;
+          if(rec.decAntes) BANHO_FALTA_DEC[k]=rec.decAntes; else delete BANHO_FALTA_DEC[k];
+          delete BANHO_FALTA_VISTO[dia+'|'+k];        // a pergunta do banho volta
+          // Banho fixo: o dia da ficha volta ao que era — só se ainda é o "manter" deste toque.
+          var pF=banhoFaltaPel(k), brF=pF?banhoRecDe(pF):null, excAg=(brF&&brF.excecoes)?brF.excecoes[dia]:null;
+          if(!(excAg && excAg.manter && Number(excAg.ts)>=Number(rec.tsAntes))) return {banho:'voltou'};
+          return banhosGravarExcecao(k, dia, rec.excAntes||null, 'desfez o "ainda vem" de '+(((typeof fmtBR==='function')?fmtBR(dia):'')||dia)+' (toque errado no «Está aqui»)')
+            .then(function(ok){ return {banho:ok?'voltou':'fixo-falhou'}; });
+        });
+      }).then(function(res){
+        if(res===false) return false;
+        try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        var linhas=['A chamada de hoje voltou '+(rec.antes==='faltou'?'para "faltou".':'para "sem marcação".')];
+        if(res.banho==='voltou') linhas.push('O banho'+(rec.o.hora?(' das '+rec.o.hora):'')+' volta para a pergunta: liberar o horário ou '+g.ainda.toLowerCase()+'.');
+        else if(res.banho==='fixo-falhou') linhas.push('O banho volta para a pergunta, mas não consegui tirar o "ainda vem" do banho fixo na ficha: confira em Banhos recorrentes.');
+        else if(res.banho==='outra') linhas.push('O banho ficou como outra pessoa decidiu depois do toque.');
+        else linhas.push('O banho continua segurado, como já estava antes do toque ("ainda vem"). Se não vier, toque em «Liberar o horário» no Hoje na Zêluz.');
+        banhoFaltaMostrar('DESFEITO: '+nome.toUpperCase(), linhas, {botao:'Entendi', ok:true});
+        return true;
+      });
+    }).catch(function(e){
+      _logFalhaGrav('desfazer o está aqui de '+k, e);
+      banhoFaltaMostrar('⚠ NÃO CONSEGUI DESFAZER', ['Não consegui desfazer o «Está aqui» de '+nome+': '+banhoFaltaSemPonto((e&&e.message)||e)+'.',
+        'Corrija em Day Care › Chamada e, se precisar, libere o horário do banho no Hoje na Zêluz.'], {botao:'Entendi'});
+      return false;
+    }).then(fim, fim);
   }
   function banhoFaltaEstaAquiUI(chave){
     var o=BANHO_FALTA.filter(function(x){ return x.chave===chave; })[0]; if(!o) return;
