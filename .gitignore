@@ -36,3 +36,7 @@ tests/.retrato/
 servidor-senha/node_modules/
 conta-servico*.json
 senhas-fixas.json
+
+# Instagram — fotos e vídeos de FILHOts e clientes NUNCA entram aqui (repo público)
+instagram/fotos/
+instagram/videos/

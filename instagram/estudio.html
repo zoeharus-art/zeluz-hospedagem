@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estúdio Zêluz</title>
+<!-- Estúdio de artes do Instagram. Tudo roda no navegador: as fotos NÃO saem do aparelho
+     e NÃO entram no repositório (que é público). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --z-gold: #DEB428; --z-gold-light: #E5C353; --z-gold-deep: #B8961F;
+    --z-blue: #234D67; --z-blue-deep: #1A3A4F;
+    --z-cream: #FFFDF6; --z-cream-warm: #F9F5EC;
+    --z-gray-300: #DDDCD8; --z-gray-500: #8A8985; --z-gray-700: #4A4946; --z-black: #1D1E1C;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--z-cream-warm); color: var(--z-black);
+         font: 15px/1.45 Inter, system-ui, sans-serif; }
+  header { padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+           border-bottom: 1px solid var(--z-gray-300); background: var(--z-cream); }
+  header img { height: 30px; }
+  header h1 { font: 600 18px Poppins, sans-serif; color: var(--z-blue); margin: 0; }
+  header span { color: var(--z-gray-500); font-size: 13px; }
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 0; min-height: calc(100vh - 59px); }
+  aside { background: var(--z-cream); border-right: 1px solid var(--z-gray-300); padding: 18px 20px 40px; overflow-y: auto; }
+  section.palco { padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .passo { margin-bottom: 20px; }
+  .passo h2 { font: 600 12px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--z-gold-deep); margin: 0 0 8px; }
+  label { display: block; font-size: 13px; color: var(--z-gray-700); margin: 10px 0 4px; }
+  input[type=text], textarea, select { width: 100%; padding: 9px 11px; border: 1px solid var(--z-gray-300);
+    border-radius: 10px; background: #fff; font: inherit; color: var(--z-black); }
+  textarea { resize: vertical; min-height: 54px; }
+  input[type=range] { width: 100%; accent-color: var(--z-blue); }
+  .opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opcoes button, .btn { border: 1px solid var(--z-gray-300); background: #fff; color: var(--z-blue);
+    padding: 8px 12px; border-radius: 999px; font: 500 13px Inter; cursor: pointer; }
+  .opcoes button[aria-pressed=true] { background: var(--z-blue); color: var(--z-cream); border-color: var(--z-blue); }
+  .btn.principal { background: var(--z-gold); border-color: var(--z-gold); color: var(--z-black); font-weight: 600; padding: 12px 18px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .foto-in { border: 1.5px dashed var(--z-gray-300); border-radius: 12px; padding: 14px; text-align: center;
+    background: #fff; cursor: pointer; color: var(--z-gray-700); font-size: 13px; }
+  .foto-in.tem { border-style: solid; border-color: var(--z-gold); }
+  .linha { display: flex; gap: 8px; align-items: center; }
+  .linha > * { flex: 1; }
+  .dica { font-size: 12px; color: var(--z-gray-500); margin-top: 4px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 10px; color: var(--z-gray-700); }
+  .check input { accent-color: var(--z-blue); }
+  #previa { max-width: 100%; max-height: calc(100vh - 210px); border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(35,77,103,.14); cursor: grab; touch-action: none; background: #fff; }
+  #previa.arrastando { cursor: grabbing; }
+  .slides { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .slides button { width: 54px; height: 54px; border-radius: 10px; border: 2px solid transparent; padding: 0; overflow: hidden;
+    background: #fff; cursor: pointer; font: 600 13px Inter; color: var(--z-blue); }
+  .slides button.atual { border-color: var(--z-gold); }
+  .slides canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  #video-quadro { display: none; margin-top: 8px; }
+  #video-quadro video { width: 100%; border-radius: 8px; background: #000; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--z-gray-300); order: 2; }
+    section.palco { order: 1; padding: 16px; }
+    #previa { max-height: 70vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <img src="assets/simbolo-zeluz-39.svg" alt="">
+  <h1>Estúdio Zêluz</h1>
+  <span>foto nossa + pouco texto = arte com a nossa cara</span>
+</header>
+
+<main>
+<aside>
+  <div class="passo">
+    <h2>1 · Formato</h2>
+    <div class="opcoes" id="formatos">
+      <button data-v="feed" aria-pressed="true">Feed / carrossel 4:5</button>
+      <button data-v="story" aria-pressed="false">Story / capa de reel 9:16</button>
+    </div>
+  </div>
+
+  <div class="passo">
+    <h2>2 · Foto ou vídeo nosso</h2>
+    <div class="foto-in" id="fotoIn">Toque para escolher uma foto ou vídeo do celular</div>
+    <input type="file" id="arquivo" accept="image/*,video/*" hidden>
+    <div id="video-quadro">
+      <video id="video" muted playsinline></video>
+      <label>Escolha o quadro</label>
+      <input type="range" id="videoTempo" min="0" max="1000" value="0">
+      <button class="btn" id="usarQuadro" style="margin-top:6px">Usar este quadro</button>
+    </div>
+    <label>Zoom</label>
+    <input type="range" id="zoom" min="100" max="300" value="100">
+    <p class="dica">Arraste a foto na prévia para enquadrar.</p>
+    <label class="check"><input type="checkbox" id="tom" checked> Tom Zêluz (deixa as fotos do celular com a mesma luz)</label>
+  </div>
+
+  <div class="passo">
+    <h2>3 · Layout</h2>
+    <div class="opcoes" id="layouts">
+      <button data-v="foto" aria-pressed="true">Foto</button>
+      <button data-v="papel" aria-pressed="false">Foto + papel</button>
+      <button data-v="frase" aria-pressed="false">Frase</button>
+      <button data-v="bastidor" aria-pressed="false">Bastidor</button>
+    </div>
+    <p class="dica" id="dicaLayout"></p>
+  </div>
+
+  <div class="passo">
+    <h2>4 · Texto (pouco!)</h2>
+    <label for="editoria">Frente</label>
+    <select id="editoria">
+      <option value="">— sem etiqueta —</option>
+      <option value="institucional">Zêluz</option>
+      <option value="daycare">Daycare</option>
+      <option value="spa">Banho Dermoprotetor</option>
+      <option value="tosa">Tosa</option>
+      <option value="auaulandia">AuAulândia</option>
+      <option value="vetcare">VetCare</option>
+      <option value="emporio">Empório 100% natural</option>
+    </select>
+    <label for="nome" id="rotNome">Quem aparece</label>
+    <input type="text" id="nome" placeholder="Ex.: Thor, Westie, 3 anos">
+    <label for="titulo" id="rotTitulo">Texto da arte</label>
+    <textarea id="titulo" placeholder="Ex.: Primeiro dia de Daycare."></textarea>
+    <label for="apoio" id="rotApoio">Linha de apoio (opcional)</label>
+    <input type="text" id="apoio" placeholder="Ex.: Chegou tímido. Saiu com três amigos.">
+    <label>Tamanho do texto</label>
+    <input type="range" id="tamanho" min="80" max="125" value="100">
+    <label class="check"><input type="checkbox" id="numerar"> Numerar slides (1/5) no carrossel</label>
+    <label class="check"><input type="checkbox" id="guias" checked> Mostrar área que o Instagram cobre (só na prévia)</label>
+  </div>
+</aside>
+
+<section class="palco">
+  <canvas id="previa" width="1080" height="1350" aria-label="Prévia da arte"></canvas>
+  <div class="slides" id="slides"></div>
+  <div class="acoes">
+    <button class="btn" id="addSlide">+ slide (carrossel)</button>
+    <button class="btn" id="dupSlide">Duplicar slide</button>
+    <button class="btn" id="delSlide">Apagar slide</button>
+    <button class="btn principal" id="baixar">Baixar</button>
+  </div>
+  <p class="dica" id="statusBaixar"></p>
+</section>
+</main>
+
+<script>
+(() => {
+  // ── Paleta (tokens-ds-v8). Cor da frente aparece só como detalhe, nunca chapada.
+  const C = {
+    gold: '#DEB428', goldLight: '#E5C353', goldDeep: '#B8961F',
+    blue: '#234D67', blueDeep: '#1A3A4F', cream: '#FFFDF6', creamWarm: '#F9F5EC',
+    gray500: '#8A8985', gray700: '#4A4946', black: '#1D1E1C'
+  };
+  const FRENTES = {
+    institucional: { nome: 'ZÊLUZ', cor: C.gold },
+    daycare:       { nome: 'DAYCARE', cor: '#E08856' },
+    spa:           { nome: 'BANHO DERMOPROTETOR', cor: '#B8A9C9' },
+    tosa:          { nome: 'TOSA', cor: '#3A6A85' },
+    auaulandia:    { nome: 'AUAULÂNDIA', cor: '#5AABB5' },
+    vetcare:       { nome: 'VETCARE', cor: '#2E7D8A' },
+    emporio:       { nome: 'EMPÓRIO 100% NATURAL', cor: '#5E9B6B' }
+  };
+  const DICAS = {
+    foto: 'A foto manda. Use para FILHOt em ação, equipe, momentos.',
+    papel: 'Foto com respiro e texto embaixo. Bom para explicar algo (banho, tosa, Empório).',
+    frase: 'Fala de cliente ou da equipe. Coloque uma foto pequena de quem disse.',
+    bastidor: 'Foto crua com um bilhetinho. Mais humano impossível. Ótimo para capa de reel.'
+  };
+  const ROTULOS = {
+    foto:     ['Quem aparece', 'Texto da arte', 'Linha de apoio (opcional)'],
+    papel:    ['Quem aparece', 'Texto da arte', 'Linha de apoio (opcional)'],
+    frase:    ['Quem disse', 'A frase (palavras da pessoa)', 'Contexto (opcional)'],
+    bastidor: ['Quem aparece (opcional)', 'Bilhete', '—']
+  };
+
+  const FMT = { feed: [1080, 1350], story: [1080, 1920] };
+  let formato = 'feed';
+  const novoSlide = () => ({ layout: 'foto', editoria: '', nome: '', titulo: '', apoio: '',
+    img: null, zoom: 1, px: 0, py: 0, tamanho: 1 });
+  let slides = [novoSlide()];
+  let atual = 0;
+  let tom = true, numerar = false, guias = true;
+
+  const $ = id => document.getElementById(id);
+  const previa = $('previa');
+  const pctx = previa.getContext('2d');
+
+  // Símbolos da marca embutidos (cópia de assets/): carregados de arquivo, "sujariam" o canvas
+  // quando a página é aberta direto do computador (file://) e o Baixar falharia.
+  const simbolo = new Image(); simbolo.src = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iQ2FtYWRhXzEiIGRhdGEtbmFtZT0iQ2FtYWRhIDEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMjQwIDI2MCA2MjAgNTYwIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjMWQxZDFiOwogICAgICB9CiAgICAgIC5jbHMtMyB7CiAgICAgICAgZmlsbDogI2RlYjQyODsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGc+CiAgICA8Zz4KICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNTY0Ljk0LDc2OS45MmMtNi4yNi44Ni0xMi43OSwxLjU4LTE5LjYxLDIuMTItMTY0Ljc1LDEzLjI5LTIwMy40MS04Mi40Ny0yMDQuOTItODYuNTktLjIxLS4zNS01LjY5LTEzLjM2LTcuMTktMzMuMTQtLjY4LTguNjEsMi42Ny0xMi42Miw1LjYxLTE0LjQ0LDguMDQtNS4wMiwyMC4xMywxLjY1LDIyLjUxLDMuMDNsLjY2LjQ3YzE5LjgyLDE2LjUyLDU0LjQyLDE0LjE1LDU0Ljc4LDE0LjEzLjcyLS4wMSw0NC4yOC0xLjAzLDc0LjU3LTE3LjMyLDI4LjkyLTE1LjU2LDM0LjAyLTc1LjEsMzQuMDUtNzUuNjdsLjQ2LTUuNzksNS43Mi44OWMxNi43MiwyLjY2LDI4Ljc3LDEsMzQuOTMtNC44MSw0Ljk3LTQuNjgsNC41Ni0xMC43OCw0LjU2LTEwLjgybC0xMi45OC03OC40N2MtMS42Ny05Ljk4LTEuOS0xOS42My0uNjYtMjguOCwxMC42MS03OS40Ni00NC42Ni0xMDkuNTMtNDcuMDQtMTEwLjc1bC0uNTUtLjM0Yy0uNTMtLjM3LTU2LjE2LTM3LjI4LTEzNy44Ni0xMy4xNS04MC44LDIzLjg0LTg3LjAxLDEwOC40My04Ny4wNiwxMDkuMjhsLTEwLjczLS43MmMuMDYtLjkxLDYuODItOTIuODgsOTQuNzctMTE4Ljg0LDg0Ljk2LTI1LjE3LDE0Mi4xNiwxMS4zNSwxNDYuNzMsMTQuNDMsNS4wMSwyLjc4LDYzLjU0LDM3LjY0LDUyLjM3LDEyMS41MS0xLjA3LDguMDgtLjg3LDE2LjczLjYsMjUuNjZsMTMsNzguNzdjLjExLjc5LDEuMSwxMS43LTcuNzksMjAuMDUtNy45NCw3LjUtMjAuODQsMTAuMjgtMzguMzgsOC4zNi0yLjEsMTYuMzctMTAuNTIsNjMuMzEtMzkuMDQsNzguNjEtMzIuNTcsMTcuNTktNzcuMjgsMTguNjEtNzkuMTgsMTguNjQtMS4yOC4xMi0zOC41NywyLjYzLTYxLjc2LTE2LjI4LTQuMi0yLjQtOS41OS0zLjg1LTExLTIuOTgtLjE4LjEyLS44NywxLjI0LS41OSw0LjUzLDEuMzcsMTguMDMsNi4zNSwyOS44MSw2LjM5LDI5Ljk0LDEuNTUsMy45NSwzNy44NCw5Mi40NywxOTQuMTcsNzkuOSwxNTUuNzItMTIuNTcsMTUzLjE2LTExNi44NiwxNTMuMTQtMTE3LjkxbC0uMDMtLjM1Yy4zOC0xNS40Ni0xLjIyLTMxLjA4LTMuNTEtMzYuMDQtLjc3LjgzLTIuMDQsMi4zNy0zLjY5LDUuMTUtMy42Niw2LjEtMy44NCwxNS4wNy0zLjMxLDIxLjU2LDEuMzQsMTYuNTItNi4wMSwzMi44Ny0xOS4xMyw0Mi42OS03LjI2LDUuNDMtMTYuMzEsMTAuMTctMjYuODIsMTQuMTctMTkuNDksNy4zMi0zNi41MSw5Ljg1LTUwLjY1LDcuNDctOS45MS0xLjcxLTE3Ljc2LTkuMTctMTkuOTktMTkuMTUtLjQ0LTEuODgtMS4zNy0zLjU4LTIuNjktNC44Ni0zMi44Ni0zMC45MS0yNi42OS01NS4zOS0yMC4xLTY3LjI1LDMuMTUtNS42Niw4LjQyLTkuOTQsMTQuODMtMTIuMDYsMjUuNzktOC41Miw1Ny40Ny0yNC44Miw2MS44Ny00Mi43NCwzLjYzLTE0LjgzLDguNC0yOCwxMy40LTM3LjAzLDQuODctOC44OCwxMi4zNy0xNS44NCwyMS42Ni0yMC4xMywxMi42OS01Ljg1LDM3LjkzLTE2LjY2LDY0LjMzLTIzLjQ4LDI2LjU5LTYuODksNTIuMzgsOS42NCw2OS4zNCwyNC43Niw3LjkyLDcuMDMsMTQuODEsMTUuMzIsMjAuNTMsMjQuNjQsOC40NywxMy42NSwyNC4wMSw0MC45OSwzMy42Nyw3MC4zNSwxMi40NiwzNy45Mi04Ljc0LDYwLjA4LTI0LjI0LDc2LjIzLTMuMjIsMy4zMi02LjIsNi40Ni04LjcxLDkuNTMtOS45NiwxMi4wNS0yMy4xMiwxNy43Ni0zMi4zMiwyMC40MS02LjkyLDIuMDEtMTQuMzksMS40OC0yMC45OS0xLjYtMzMuOTktMTUuNy00Mi45NC01MS41My0yNi41Mi0xMDYuNTEuNDgtMS42OC44NC0yLjg5LDEtMy40OGwyLjc0LjUxLDcuOTIuNDVjLS4wNywxLjE2LS40NiwyLjQ3LTEuMzgsNS42Mi0xNC42NSw0OS4wMy03LjY5LDgwLjU0LDIwLjcyLDkzLjY1LDQuMjgsMS45OSw5LjA0LDIuMzEsMTMuNTEsMS4wNyw3LjgtMi4yNSwxOC44MS03LjA0LDI3LjA2LTE3LDIuNzUtMy4zNSw1LjkyLTYuNjEsOS4yMi0xMC4wNywxNS4xMS0xNS43NywzMi4yMS0zMy42OCwyMS44LTY1LjQ4LTkuMzQtMjguMzEtMjQuNC01NC44MS0zMi41Ny02OC4wOC01LjItOC4zOS0xMS40My0xNS44Ny0xOC41Ni0yMi4yLTEyLjI3LTEwLjk3LTM2LjMzLTI4LjM5LTU5LjUtMjIuNDUtMjUuNjMsNi42NS01MC4yLDE3LjIxLTYyLjU4LDIyLjkxLTcuMTcsMy4zLTEyLjk3LDguNjktMTYuNzUsMTUuNTItNC41NSw4LjI1LTguOTMsMjAuNDUtMTIuMzQsMzQuNDEtNi44OCwyNy45MS01NC41MSw0NS42NS02OC45NSw1MC4zOC0zLjc5LDEuMjktNi45NSwzLjgtOC44LDcuMTMtNi4yMSwxMS4xMy04LjEsMjkuNTUsMTguMDYsNTQuMTksMi45MiwyLjc2LDQuOSw2LjMzLDUuOCwxMC4zMiwxLjI5LDUuNjcsNS43Myw5Ljk0LDExLjM1LDEwLjksOC4zOCwxLjQzLDIzLjA0LDEuMzksNDUuMDMtNi45MSw5LjYxLTMuNjIsMTcuNzUtNy45NCwyNC4yMi0xMi43MiwxMC4yMi03LjY1LDE1Ljg5LTIwLjM3LDE0Ljg0LTMzLjI3LS42Ni04LjA0LS4zMS0xOS4zOSw0LjgtMjcuOTIsMi4xNi0zLjU3LDcuODctMTMuMTEsMTUuNzItMTAuODIsMTAuMzMsMywxMS45LDI3LjQsMTEuNDMsNDcuMzcuMDcsNS44NC0uNzksMTA2LjczLTE0My4zOCwxMjYuNjkiLz4KICAgICAgPGc+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNTAyLjA5LDQ2OC44OWMyLjk5Ljk4LDUuOTksMS44NSw5LjA1LDIuNDEsMywuNjMsNS45NywxLjA3LDguOSwxLjM4LDIuOTQuMjksNS44OS0uNjksOC41NC4yOCwyLjc1Ljk1LDUuNDIsMS44OSw4Ljk1LDQuNDRsLjE3LDEuMDRjLTEuMzIsMS42OS0yLjg5LDIuOTktNC41OCwzLjcyLTEuNy44Ni0zLjQ2LDEuMzMtNS4yMywxLjUyLTMuNjEuNTYtNi45LTEuNC0xMC4wMS0yLjY4LTMuMTYtMS4yOS02LjEyLTIuODktOC44Ny00Ljc4LTIuNzMtMS45Ni01LjMzLTMuOTctNy41NS02LjQxbC42NC0uOTFaIi8+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNjUyLjUsNTQ2Ljk4YzIuMjIuMTksNC4zNy40Myw2LjQ1LjI2LDIuMDctLjA2LDQuMDctLjI1LDUuODgtLjU4LDEuODgtLjMyLDMuMjYtMS45MSw0Ljg1LTEuNDIsMS43LjMsMy4zNi44Miw2LjgsMi4xNmwuNjYuODhjLS4xLDEuODEtLjY5LDMuNDMtMS42Miw0LjU2LS44NSwxLjI5LTIuMDQsMi4xOC0zLjM0LDIuODItMi41NywxLjQxLTUuNDcuMjItNy44OS0uNDItMi40OS0uNjItNC43Ni0xLjYtNi44Mi0yLjgyLTIuMDEtMS4zOS0zLjkxLTIuNjctNS41LTQuNTFsLjU0LS45MloiLz4KICAgICAgPC9nPgogICAgPC9nPgogICAgPGc+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTU1Ni41LDc2Ni45NWMtNi4yNi44Ni0xMi43OSwxLjU4LTE5LjYxLDIuMTItMTY0Ljc1LDEzLjI5LTIwMy40MS04Mi40Ny0yMDQuOTItODYuNTktLjIxLS4zNS01LjY5LTEzLjM2LTcuMTktMzMuMTQtLjY4LTguNjEsMi42Ny0xMi42Miw1LjYxLTE0LjQ0LDguMDQtNS4wMiwyMC4xMywxLjY1LDIyLjUxLDMuMDNsLjY2LjQ3YzE5LjgyLDE2LjUyLDU0LjQyLDE0LjE1LDU0Ljc4LDE0LjEzLjcyLS4wMSw0NC4yOC0xLjAzLDc0LjU3LTE3LjMyLDI4LjkyLTE1LjU2LDM0LjAyLTc1LjEsMzQuMDUtNzUuNjdsLjQ2LTUuNzksNS43Mi44OWMxNi43MiwyLjY2LDI4Ljc3LDEsMzQuOTMtNC44MSw0Ljk3LTQuNjgsNC41Ni0xMC43OCw0LjU2LTEwLjgybC0xMi45OC03OC40N2MtMS42Ny05Ljk4LTEuOS0xOS42My0uNjYtMjguOCwxMC42MS03OS40Ni00NC42Ni0xMDkuNTMtNDcuMDQtMTEwLjc1bC0uNTUtLjM0Yy0uNTMtLjM3LTU2LjE2LTM3LjI4LTEzNy44Ni0xMy4xNS04MC44LDIzLjg0LTg3LjAxLDEwOC40My04Ny4wNiwxMDkuMjhsLTEwLjczLS43MmMuMDYtLjkxLDYuODItOTIuODgsOTQuNzctMTE4Ljg0LDg0Ljk2LTI1LjE3LDE0Mi4xNiwxMS4zNSwxNDYuNzMsMTQuNDMsNS4wMSwyLjc4LDYzLjU0LDM3LjY0LDUyLjM3LDEyMS41MS0xLjA3LDguMDgtLjg3LDE2LjczLjYsMjUuNjZsMTMsNzguNzdjLjExLjc5LDEuMSwxMS43LTcuNzksMjAuMDUtNy45NCw3LjUtMjAuODQsMTAuMjgtMzguMzgsOC4zNi0yLjEsMTYuMzctMTAuNTIsNjMuMzEtMzkuMDQsNzguNjEtMzIuNTcsMTcuNTktNzcuMjgsMTguNjEtNzkuMTgsMTguNjQtMS4yOC4xMi0zOC41NywyLjYzLTYxLjc2LTE2LjI4LTQuMi0yLjQtOS41OS0zLjg1LTExLTIuOTgtLjE4LjEyLS44NywxLjI0LS41OSw0LjUzLDEuMzcsMTguMDMsNi4zNSwyOS44MSw2LjM5LDI5Ljk0LDEuNTUsMy45NSwzNy44NCw5Mi40NywxOTQuMTcsNzkuOSwxNTUuNzItMTIuNTcsMTUzLjE2LTExNi44NiwxNTMuMTQtMTE3LjkxbC0uMDMtLjM1Yy4zOC0xNS40Ni0xLjIyLTMxLjA4LTMuNTEtMzYuMDQtLjc3LjgzLTIuMDQsMi4zNy0zLjY5LDUuMTUtMy42Niw2LjEtMy44NCwxNS4wNy0zLjMxLDIxLjU2LDEuMzQsMTYuNTItNi4wMSwzMi44Ny0xOS4xMyw0Mi42OS03LjI2LDUuNDMtMTYuMzEsMTAuMTctMjYuODIsMTQuMTctMTkuNDksNy4zMi0zNi41MSw5Ljg1LTUwLjY1LDcuNDctOS45MS0xLjcxLTE3Ljc2LTkuMTctMTkuOTktMTkuMTUtLjQ0LTEuODgtMS4zNy0zLjU4LTIuNjktNC44Ni0zMi44Ni0zMC45MS0yNi42OS01NS4zOS0yMC4xLTY3LjI1LDMuMTUtNS42Niw4LjQyLTkuOTQsMTQuODMtMTIuMDYsMjUuNzktOC41Miw1Ny40Ny0yNC44Miw2MS44Ny00Mi43NCwzLjYzLTE0LjgzLDguNC0yOCwxMy40LTM3LjAzLDQuODctOC44OCwxMi4zNy0xNS44NCwyMS42Ni0yMC4xMywxMi42OS01Ljg1LDM3LjkzLTE2LjY2LDY0LjMzLTIzLjQ4LDI2LjU5LTYuODksNTIuMzgsOS42NCw2OS4zNCwyNC43Niw3LjkyLDcuMDMsMTQuODEsMTUuMzIsMjAuNTMsMjQuNjQsOC40NywxMy42NSwyNC4wMSw0MC45OSwzMy42Nyw3MC4zNSwxMi40NiwzNy45Mi04Ljc0LDYwLjA4LTI0LjI0LDc2LjIzLTMuMjIsMy4zMi02LjIsNi40Ni04LjcxLDkuNTMtOS45NiwxMi4wNS0yMy4xMiwxNy43Ni0zMi4zMiwyMC40MS02LjkyLDIuMDEtMTQuMzksMS40OC0yMC45OS0xLjYtMzMuOTktMTUuNy00Mi45NC01MS41My0yNi41Mi0xMDYuNTEuNDgtMS42OC44NC0yLjg5LDEtMy40OGwyLjc0LjUxLDcuOTIuNDVjLS4wNywxLjE2LS40NiwyLjQ3LTEuMzgsNS42Mi0xNC42NSw0OS4wMy03LjY5LDgwLjU0LDIwLjcyLDkzLjY1LDQuMjgsMS45OSw5LjA0LDIuMzEsMTMuNTEsMS4wNyw3LjgtMi4yNSwxOC44MS03LjA0LDI3LjA2LTE3LDIuNzUtMy4zNSw1LjkyLTYuNjEsOS4yMi0xMC4wNywxNS4xMS0xNS43NywzMi4yMS0zMy42OCwyMS44LTY1LjQ4LTkuMzQtMjguMzEtMjQuNC01NC44MS0zMi41Ny02OC4wOC01LjItOC4zOS0xMS40My0xNS44Ny0xOC41Ni0yMi4yLTEyLjI3LTEwLjk3LTM2LjMzLTI4LjM5LTU5LjUtMjIuNDUtMjUuNjMsNi42NS01MC4yLDE3LjIxLTYyLjU4LDIyLjkxLTcuMTcsMy4zLTEyLjk3LDguNjktMTYuNzUsMTUuNTItNC41NSw4LjI1LTguOTMsMjAuNDUtMTIuMzQsMzQuNDEtNi44OCwyNy45MS01NC41MSw0NS42NS02OC45NSw1MC4zOC0zLjc5LDEuMjktNi45NSwzLjgtOC44LDcuMTMtNi4yMSwxMS4xMy04LjEsMjkuNTUsMTguMDYsNTQuMTksMi45MiwyLjc2LDQuOSw2LjMzLDUuOCwxMC4zMiwxLjI5LDUuNjcsNS43Myw5Ljk0LDExLjM1LDEwLjksOC4zOCwxLjQzLDIzLjA0LDEuMzksNDUuMDMtNi45MSw5LjYxLTMuNjIsMTcuNzUtNy45NCwyNC4yMi0xMi43MiwxMC4yMi03LjY1LDE1Ljg5LTIwLjM3LDE0Ljg0LTMzLjI3LS42Ni04LjA0LS4zMS0xOS4zOSw0LjgtMjcuOTIsMi4xNi0zLjU3LDcuODctMTMuMTEsMTUuNzItMTAuODIsMTAuMzMsMywxMS45LDI3LjQsMTEuNDMsNDcuMzcuMDcsNS44NC0uNzksMTA2LjczLTE0My4zOCwxMjYuNjkiLz4KICAgICAgPGc+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNNDkzLjY1LDQ2NS45MmMyLjk5Ljk4LDUuOTksMS44NSw5LjA1LDIuNDEsMywuNjMsNS45NywxLjA3LDguOSwxLjM4LDIuOTQuMjksNS44OS0uNjksOC41NC4yOCwyLjc1Ljk1LDUuNDIsMS44OSw4Ljk1LDQuNDRsLjE3LDEuMDRjLTEuMzIsMS42OS0yLjg5LDIuOTktNC41OCwzLjcyLTEuNy44Ni0zLjQ2LDEuMzMtNS4yMywxLjUyLTMuNjEuNTYtNi45LTEuNC0xMC4wMS0yLjY4LTMuMTYtMS4yOS02LjEyLTIuODktOC44Ny00Ljc4LTIuNzMtMS45Ni01LjMzLTMuOTctNy41NS02LjQxbC42NC0uOTFaIi8+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNNjQ0LjA2LDU0NC4wMWMyLjIyLjE5LDQuMzcuNDMsNi40NS4yNiwyLjA3LS4wNiw0LjA3LS4yNSw1Ljg4LS41OCwxLjg4LS4zMiwzLjI2LTEuOTEsNC44NS0xLjQyLDEuNy4zLDMuMzYuODIsNi44LDIuMTZsLjY2Ljg4Yy0uMSwxLjgxLS42OSwzLjQzLTEuNjIsNC41Ni0uODUsMS4yOS0yLjA0LDIuMTgtMy4zNCwyLjgyLTIuNTcsMS40MS01LjQ3LjIyLTcuODktLjQyLTIuNDktLjYyLTQuNzYtMS42LTYuODItMi44Mi0yLjAxLTEuMzktMy45MS0yLjY3LTUuNS00LjUxbC41NC0uOTJaIi8+CiAgICAgIDwvZz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPg==';
+  const simboloClaro = new Image(); simboloClaro.src = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iQ2FtYWRhXzEiIGRhdGEtbmFtZT0iQ2FtYWRhIDEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMjQwIDI2MCA2MjAgNTYwIj4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjRkZGREY2OwogICAgICB9CiAgICAgIC5jbHMtMyB7CiAgICAgICAgZmlsbDogI2RlYjQyODsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGc+CiAgICA8Zz4KICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNTY0Ljk0LDc2OS45MmMtNi4yNi44Ni0xMi43OSwxLjU4LTE5LjYxLDIuMTItMTY0Ljc1LDEzLjI5LTIwMy40MS04Mi40Ny0yMDQuOTItODYuNTktLjIxLS4zNS01LjY5LTEzLjM2LTcuMTktMzMuMTQtLjY4LTguNjEsMi42Ny0xMi42Miw1LjYxLTE0LjQ0LDguMDQtNS4wMiwyMC4xMywxLjY1LDIyLjUxLDMuMDNsLjY2LjQ3YzE5LjgyLDE2LjUyLDU0LjQyLDE0LjE1LDU0Ljc4LDE0LjEzLjcyLS4wMSw0NC4yOC0xLjAzLDc0LjU3LTE3LjMyLDI4LjkyLTE1LjU2LDM0LjAyLTc1LjEsMzQuMDUtNzUuNjdsLjQ2LTUuNzksNS43Mi44OWMxNi43MiwyLjY2LDI4Ljc3LDEsMzQuOTMtNC44MSw0Ljk3LTQuNjgsNC41Ni0xMC43OCw0LjU2LTEwLjgybC0xMi45OC03OC40N2MtMS42Ny05Ljk4LTEuOS0xOS42My0uNjYtMjguOCwxMC42MS03OS40Ni00NC42Ni0xMDkuNTMtNDcuMDQtMTEwLjc1bC0uNTUtLjM0Yy0uNTMtLjM3LTU2LjE2LTM3LjI4LTEzNy44Ni0xMy4xNS04MC44LDIzLjg0LTg3LjAxLDEwOC40My04Ny4wNiwxMDkuMjhsLTEwLjczLS43MmMuMDYtLjkxLDYuODItOTIuODgsOTQuNzctMTE4Ljg0LDg0Ljk2LTI1LjE3LDE0Mi4xNiwxMS4zNSwxNDYuNzMsMTQuNDMsNS4wMSwyLjc4LDYzLjU0LDM3LjY0LDUyLjM3LDEyMS41MS0xLjA3LDguMDgtLjg3LDE2LjczLjYsMjUuNjZsMTMsNzguNzdjLjExLjc5LDEuMSwxMS43LTcuNzksMjAuMDUtNy45NCw3LjUtMjAuODQsMTAuMjgtMzguMzgsOC4zNi0yLjEsMTYuMzctMTAuNTIsNjMuMzEtMzkuMDQsNzguNjEtMzIuNTcsMTcuNTktNzcuMjgsMTguNjEtNzkuMTgsMTguNjQtMS4yOC4xMi0zOC41NywyLjYzLTYxLjc2LTE2LjI4LTQuMi0yLjQtOS41OS0zLjg1LTExLTIuOTgtLjE4LjEyLS44NywxLjI0LS41OSw0LjUzLDEuMzcsMTguMDMsNi4zNSwyOS44MSw2LjM5LDI5Ljk0LDEuNTUsMy45NSwzNy44NCw5Mi40NywxOTQuMTcsNzkuOSwxNTUuNzItMTIuNTcsMTUzLjE2LTExNi44NiwxNTMuMTQtMTE3LjkxbC0uMDMtLjM1Yy4zOC0xNS40Ni0xLjIyLTMxLjA4LTMuNTEtMzYuMDQtLjc3LjgzLTIuMDQsMi4zNy0zLjY5LDUuMTUtMy42Niw2LjEtMy44NCwxNS4wNy0zLjMxLDIxLjU2LDEuMzQsMTYuNTItNi4wMSwzMi44Ny0xOS4xMyw0Mi42OS03LjI2LDUuNDMtMTYuMzEsMTAuMTctMjYuODIsMTQuMTctMTkuNDksNy4zMi0zNi41MSw5Ljg1LTUwLjY1LDcuNDctOS45MS0xLjcxLTE3Ljc2LTkuMTctMTkuOTktMTkuMTUtLjQ0LTEuODgtMS4zNy0zLjU4LTIuNjktNC44Ni0zMi44Ni0zMC45MS0yNi42OS01NS4zOS0yMC4xLTY3LjI1LDMuMTUtNS42Niw4LjQyLTkuOTQsMTQuODMtMTIuMDYsMjUuNzktOC41Miw1Ny40Ny0yNC44Miw2MS44Ny00Mi43NCwzLjYzLTE0LjgzLDguNC0yOCwxMy40LTM3LjAzLDQuODctOC44OCwxMi4zNy0xNS44NCwyMS42Ni0yMC4xMywxMi42OS01Ljg1LDM3LjkzLTE2LjY2LDY0LjMzLTIzLjQ4LDI2LjU5LTYuODksNTIuMzgsOS42NCw2OS4zNCwyNC43Niw3LjkyLDcuMDMsMTQuODEsMTUuMzIsMjAuNTMsMjQuNjQsOC40NywxMy42NSwyNC4wMSw0MC45OSwzMy42Nyw3MC4zNSwxMi40NiwzNy45Mi04Ljc0LDYwLjA4LTI0LjI0LDc2LjIzLTMuMjIsMy4zMi02LjIsNi40Ni04LjcxLDkuNTMtOS45NiwxMi4wNS0yMy4xMiwxNy43Ni0zMi4zMiwyMC40MS02LjkyLDIuMDEtMTQuMzksMS40OC0yMC45OS0xLjYtMzMuOTktMTUuNy00Mi45NC01MS41My0yNi41Mi0xMDYuNTEuNDgtMS42OC44NC0yLjg5LDEtMy40OGwyLjc0LjUxLDcuOTIuNDVjLS4wNywxLjE2LS40NiwyLjQ3LTEuMzgsNS42Mi0xNC42NSw0OS4wMy03LjY5LDgwLjU0LDIwLjcyLDkzLjY1LDQuMjgsMS45OSw5LjA0LDIuMzEsMTMuNTEsMS4wNyw3LjgtMi4yNSwxOC44MS03LjA0LDI3LjA2LTE3LDIuNzUtMy4zNSw1LjkyLTYuNjEsOS4yMi0xMC4wNywxNS4xMS0xNS43NywzMi4yMS0zMy42OCwyMS44LTY1LjQ4LTkuMzQtMjguMzEtMjQuNC01NC44MS0zMi41Ny02OC4wOC01LjItOC4zOS0xMS40My0xNS44Ny0xOC41Ni0yMi4yLTEyLjI3LTEwLjk3LTM2LjMzLTI4LjM5LTU5LjUtMjIuNDUtMjUuNjMsNi42NS01MC4yLDE3LjIxLTYyLjU4LDIyLjkxLTcuMTcsMy4zLTEyLjk3LDguNjktMTYuNzUsMTUuNTItNC41NSw4LjI1LTguOTMsMjAuNDUtMTIuMzQsMzQuNDEtNi44OCwyNy45MS01NC41MSw0NS42NS02OC45NSw1MC4zOC0zLjc5LDEuMjktNi45NSwzLjgtOC44LDcuMTMtNi4yMSwxMS4xMy04LjEsMjkuNTUsMTguMDYsNTQuMTksMi45MiwyLjc2LDQuOSw2LjMzLDUuOCwxMC4zMiwxLjI5LDUuNjcsNS43Myw5Ljk0LDExLjM1LDEwLjksOC4zOCwxLjQzLDIzLjA0LDEuMzksNDUuMDMtNi45MSw5LjYxLTMuNjIsMTcuNzUtNy45NCwyNC4yMi0xMi43MiwxMC4yMi03LjY1LDE1Ljg5LTIwLjM3LDE0Ljg0LTMzLjI3LS42Ni04LjA0LS4zMS0xOS4zOSw0LjgtMjcuOTIsMi4xNi0zLjU3LDcuODctMTMuMTEsMTUuNzItMTAuODIsMTAuMzMsMywxMS45LDI3LjQsMTEuNDMsNDcuMzcuMDcsNS44NC0uNzksMTA2LjczLTE0My4zOCwxMjYuNjkiLz4KICAgICAgPGc+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNTAyLjA5LDQ2OC44OWMyLjk5Ljk4LDUuOTksMS44NSw5LjA1LDIuNDEsMywuNjMsNS45NywxLjA3LDguOSwxLjM4LDIuOTQuMjksNS44OS0uNjksOC41NC4yOCwyLjc1Ljk1LDUuNDIsMS44OSw4Ljk1LDQuNDRsLjE3LDEuMDRjLTEuMzIsMS42OS0yLjg5LDIuOTktNC41OCwzLjcyLTEuNy44Ni0zLjQ2LDEuMzMtNS4yMywxLjUyLTMuNjEuNTYtNi45LTEuNC0xMC4wMS0yLjY4LTMuMTYtMS4yOS02LjEyLTIuODktOC44Ny00Ljc4LTIuNzMtMS45Ni01LjMzLTMuOTctNy41NS02LjQxbC42NC0uOTFaIi8+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNjUyLjUsNTQ2Ljk4YzIuMjIuMTksNC4zNy40Myw2LjQ1LjI2LDIuMDctLjA2LDQuMDctLjI1LDUuODgtLjU4LDEuODgtLjMyLDMuMjYtMS45MSw0Ljg1LTEuNDIsMS43LjMsMy4zNi44Miw2LjgsMi4xNmwuNjYuODhjLS4xLDEuODEtLjY5LDMuNDMtMS42Miw0LjU2LS44NSwxLjI5LTIuMDQsMi4xOC0zLjM0LDIuODItMi41NywxLjQxLTUuNDcuMjItNy44OS0uNDItMi40OS0uNjItNC43Ni0xLjYtNi44Mi0yLjgyLTIuMDEtMS4zOS0zLjkxLTIuNjctNS41LTQuNTFsLjU0LS45MloiLz4KICAgICAgPC9nPgogICAgPC9nPgogICAgPGc+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTU1Ni41LDc2Ni45NWMtNi4yNi44Ni0xMi43OSwxLjU4LTE5LjYxLDIuMTItMTY0Ljc1LDEzLjI5LTIwMy40MS04Mi40Ny0yMDQuOTItODYuNTktLjIxLS4zNS01LjY5LTEzLjM2LTcuMTktMzMuMTQtLjY4LTguNjEsMi42Ny0xMi42Miw1LjYxLTE0LjQ0LDguMDQtNS4wMiwyMC4xMywxLjY1LDIyLjUxLDMuMDNsLjY2LjQ3YzE5LjgyLDE2LjUyLDU0LjQyLDE0LjE1LDU0Ljc4LDE0LjEzLjcyLS4wMSw0NC4yOC0xLjAzLDc0LjU3LTE3LjMyLDI4LjkyLTE1LjU2LDM0LjAyLTc1LjEsMzQuMDUtNzUuNjdsLjQ2LTUuNzksNS43Mi44OWMxNi43MiwyLjY2LDI4Ljc3LDEsMzQuOTMtNC44MSw0Ljk3LTQuNjgsNC41Ni0xMC43OCw0LjU2LTEwLjgybC0xMi45OC03OC40N2MtMS42Ny05Ljk4LTEuOS0xOS42My0uNjYtMjguOCwxMC42MS03OS40Ni00NC42Ni0xMDkuNTMtNDcuMDQtMTEwLjc1bC0uNTUtLjM0Yy0uNTMtLjM3LTU2LjE2LTM3LjI4LTEzNy44Ni0xMy4xNS04MC44LDIzLjg0LTg3LjAxLDEwOC40My04Ny4wNiwxMDkuMjhsLTEwLjczLS43MmMuMDYtLjkxLDYuODItOTIuODgsOTQuNzctMTE4Ljg0LDg0Ljk2LTI1LjE3LDE0Mi4xNiwxMS4zNSwxNDYuNzMsMTQuNDMsNS4wMSwyLjc4LDYzLjU0LDM3LjY0LDUyLjM3LDEyMS41MS0xLjA3LDguMDgtLjg3LDE2LjczLjYsMjUuNjZsMTMsNzguNzdjLjExLjc5LDEuMSwxMS43LTcuNzksMjAuMDUtNy45NCw3LjUtMjAuODQsMTAuMjgtMzguMzgsOC4zNi0yLjEsMTYuMzctMTAuNTIsNjMuMzEtMzkuMDQsNzguNjEtMzIuNTcsMTcuNTktNzcuMjgsMTguNjEtNzkuMTgsMTguNjQtMS4yOC4xMi0zOC41NywyLjYzLTYxLjc2LTE2LjI4LTQuMi0yLjQtOS41OS0zLjg1LTExLTIuOTgtLjE4LjEyLS44NywxLjI0LS41OSw0LjUzLDEuMzcsMTguMDMsNi4zNSwyOS44MSw2LjM5LDI5Ljk0LDEuNTUsMy45NSwzNy44NCw5Mi40NywxOTQuMTcsNzkuOSwxNTUuNzItMTIuNTcsMTUzLjE2LTExNi44NiwxNTMuMTQtMTE3LjkxbC0uMDMtLjM1Yy4zOC0xNS40Ni0xLjIyLTMxLjA4LTMuNTEtMzYuMDQtLjc3LjgzLTIuMDQsMi4zNy0zLjY5LDUuMTUtMy42Niw2LjEtMy44NCwxNS4wNy0zLjMxLDIxLjU2LDEuMzQsMTYuNTItNi4wMSwzMi44Ny0xOS4xMyw0Mi42OS03LjI2LDUuNDMtMTYuMzEsMTAuMTctMjYuODIsMTQuMTctMTkuNDksNy4zMi0zNi41MSw5Ljg1LTUwLjY1LDcuNDctOS45MS0xLjcxLTE3Ljc2LTkuMTctMTkuOTktMTkuMTUtLjQ0LTEuODgtMS4zNy0zLjU4LTIuNjktNC44Ni0zMi44Ni0zMC45MS0yNi42OS01NS4zOS0yMC4xLTY3LjI1LDMuMTUtNS42Niw4LjQyLTkuOTQsMTQuODMtMTIuMDYsMjUuNzktOC41Miw1Ny40Ny0yNC44Miw2MS44Ny00Mi43NCwzLjYzLTE0LjgzLDguNC0yOCwxMy40LTM3LjAzLDQuODctOC44OCwxMi4zNy0xNS44NCwyMS42Ni0yMC4xMywxMi42OS01Ljg1LDM3LjkzLTE2LjY2LDY0LjMzLTIzLjQ4LDI2LjU5LTYuODksNTIuMzgsOS42NCw2OS4zNCwyNC43Niw3LjkyLDcuMDMsMTQuODEsMTUuMzIsMjAuNTMsMjQuNjQsOC40NywxMy42NSwyNC4wMSw0MC45OSwzMy42Nyw3MC4zNSwxMi40NiwzNy45Mi04Ljc0LDYwLjA4LTI0LjI0LDc2LjIzLTMuMjIsMy4zMi02LjIsNi40Ni04LjcxLDkuNTMtOS45NiwxMi4wNS0yMy4xMiwxNy43Ni0zMi4zMiwyMC40MS02LjkyLDIuMDEtMTQuMzksMS40OC0yMC45OS0xLjYtMzMuOTktMTUuNy00Mi45NC01MS41My0yNi41Mi0xMDYuNTEuNDgtMS42OC44NC0yLjg5LDEtMy40OGwyLjc0LjUxLDcuOTIuNDVjLS4wNywxLjE2LS40NiwyLjQ3LTEuMzgsNS42Mi0xNC42NSw0OS4wMy03LjY5LDgwLjU0LDIwLjcyLDkzLjY1LDQuMjgsMS45OSw5LjA0LDIuMzEsMTMuNTEsMS4wNyw3LjgtMi4yNSwxOC44MS03LjA0LDI3LjA2LTE3LDIuNzUtMy4zNSw1LjkyLTYuNjEsOS4yMi0xMC4wNywxNS4xMS0xNS43NywzMi4yMS0zMy42OCwyMS44LTY1LjQ4LTkuMzQtMjguMzEtMjQuNC01NC44MS0zMi41Ny02OC4wOC01LjItOC4zOS0xMS40My0xNS44Ny0xOC41Ni0yMi4yLTEyLjI3LTEwLjk3LTM2LjMzLTI4LjM5LTU5LjUtMjIuNDUtMjUuNjMsNi42NS01MC4yLDE3LjIxLTYyLjU4LDIyLjkxLTcuMTcsMy4zLTEyLjk3LDguNjktMTYuNzUsMTUuNTItNC41NSw4LjI1LTguOTMsMjAuNDUtMTIuMzQsMzQuNDEtNi44OCwyNy45MS01NC41MSw0NS42NS02OC45NSw1MC4zOC0zLjc5LDEuMjktNi45NSwzLjgtOC44LDcuMTMtNi4yMSwxMS4xMy04LjEsMjkuNTUsMTguMDYsNTQuMTksMi45MiwyLjc2LDQuOSw2LjMzLDUuOCwxMC4zMiwxLjI5LDUuNjcsNS43Myw5Ljk0LDExLjM1LDEwLjksOC4zOCwxLjQzLDIzLjA0LDEuMzksNDUuMDMtNi45MSw5LjYxLTMuNjIsMTcuNzUtNy45NCwyNC4yMi0xMi43MiwxMC4yMi03LjY1LDE1Ljg5LTIwLjM3LDE0Ljg0LTMzLjI3LS42Ni04LjA0LS4zMS0xOS4zOSw0LjgtMjcuOTIsMi4xNi0zLjU3LDcuODctMTMuMTEsMTUuNzItMTAuODIsMTAuMzMsMywxMS45LDI3LjQsMTEuNDMsNDcuMzcuMDcsNS44NC0uNzksMTA2LjczLTE0My4zOCwxMjYuNjkiLz4KICAgICAgPGc+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNNDkzLjY1LDQ2NS45MmMyLjk5Ljk4LDUuOTksMS44NSw5LjA1LDIuNDEsMywuNjMsNS45NywxLjA3LDguOSwxLjM4LDIuOTQuMjksNS44OS0uNjksOC41NC4yOCwyLjc1Ljk1LDUuNDIsMS44OSw4Ljk1LDQuNDRsLjE3LDEuMDRjLTEuMzIsMS42OS0yLjg5LDIuOTktNC41OCwzLjcyLTEuNy44Ni0zLjQ2LDEuMzMtNS4yMywxLjUyLTMuNjEuNTYtNi45LTEuNC0xMC4wMS0yLjY4LTMuMTYtMS4yOS02LjEyLTIuODktOC44Ny00Ljc4LTIuNzMtMS45Ni01LjMzLTMuOTctNy41NS02LjQxbC42NC0uOTFaIi8+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0zIiBkPSJNNjQ0LjA2LDU0NC4wMWMyLjIyLjE5LDQuMzcuNDMsNi40NS4yNiwyLjA3LS4wNiw0LjA3LS4yNSw1Ljg4LS41OCwxLjg4LS4zMiwzLjI2LTEuOTEsNC44NS0xLjQyLDEuNy4zLDMuMzYuODIsNi44LDIuMTZsLjY2Ljg4Yy0uMSwxLjgxLS42OSwzLjQzLTEuNjIsNC41Ni0uODUsMS4yOS0yLjA0LDIuMTgtMy4zNCwyLjgyLTIuNTcsMS40MS01LjQ3LjIyLTcuODktLjQyLTIuNDktLjYyLTQuNzYtMS42LTYuODItMi44Mi0yLjAxLTEuMzktMy45MS0yLjY3LTUuNS00LjUxbC41NC0uOTJaIi8+CiAgICAgIDwvZz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPg==';
+
+  // ── Utilitários de desenho
+  function quebrar(ctx, texto, larg) {
+    const linhas = [];
+    for (const par of String(texto).split('\n')) {
+      const pal = par.split(/\s+/).filter(Boolean);
+      if (!pal.length) { linhas.push(''); continue; }
+      let l = pal[0];
+      for (let i = 1; i < pal.length; i++) {
+        const t = l + ' ' + pal[i];
+        if (ctx.measureText(t).width > larg) { linhas.push(l); l = pal[i]; } else l = t;
+      }
+      linhas.push(l);
+    }
+    return linhas;
+  }
+  function texto(ctx, t, x, y, larg, fonte, cor, alt, alinhar = 'left') {
+    if (!t) return y;
+    ctx.font = fonte; ctx.fillStyle = cor; ctx.textAlign = alinhar; ctx.textBaseline = 'alphabetic';
+    for (const l of quebrar(ctx, t, larg)) { ctx.fillText(l, x, y); y += alt; }
+    return y;
+  }
+  function alturaTexto(ctx, t, larg, fonte, alt) {
+    if (!t) return 0;
+    ctx.font = fonte; return quebrar(ctx, t, larg).length * alt;
+  }
+  function retRedondo(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  // Foto "cover" com zoom e posição; guarda a sobra para o arrastar saber converter pixels.
+  function desenharFoto(ctx, s, x, y, w, h, raio = 0) {
+    ctx.save();
+    if (raio) { retRedondo(ctx, x, y, w, h, raio); ctx.clip(); }
+    else { ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); }
+    if (!s.img) {
+      ctx.fillStyle = C.creamWarm; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = C.gray500; ctx.font = '500 34px Inter'; ctx.textAlign = 'center';
+      ctx.fillText('sua foto aqui', x + w / 2, y + h / 2);
+      s._sobra = [0, 0]; ctx.restore(); return;
+    }
+    const iw = s.img.width, ih = s.img.height;
+    const esc = Math.max(w / iw, h / ih) * s.zoom;
+    const dw = iw * esc, dh = ih * esc, ex = dw - w, ey = dh - h;
+    s._sobra = [ex, ey, w];
+    if (tom) ctx.filter = 'saturate(1.04) sepia(.07) brightness(1.03) contrast(1.02)';
+    ctx.drawImage(s.img, x - ex * (s.px + 1) / 2, y - ey * (s.py + 1) / 2, dw, dh);
+    ctx.filter = 'none';
+    ctx.restore();
+  }
+  function etiqueta(ctx, ed, x, y, claro) {
+    const f = FRENTES[ed]; if (!f) return;
+    ctx.save();
+    ctx.font = '600 24px Inter';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = f.cor; ctx.beginPath(); ctx.arc(x + 9, y - 9, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = claro ? C.cream : C.blue; ctx.textAlign = 'left';
+    ctx.fillText(f.nome, x + 30, y);
+    ctx.restore();
+  }
+  function assinatura(ctx, W, H, claro, baixo) {
+    const img = claro ? simboloClaro : simbolo;
+    if (!img.complete || !img.naturalWidth) return;
+    const w = 104, h = w * 560 / 620;
+    ctx.drawImage(img, W - 64 - w, H - baixo - h, w, h);
+  }
+  function numero(ctx, W, i, n, topo) {
+    if (!numerar || n < 2) return;
+    ctx.save(); ctx.font = '600 24px Inter';
+    const t = `${i + 1}/${n}`, w = ctx.measureText(t).width + 36;
+    ctx.fillStyle = 'rgba(255,253,246,.92)'; retRedondo(ctx, W - 64 - w, topo, w, 46, 23); ctx.fill();
+    ctx.fillStyle = C.blue; ctx.textAlign = 'center'; ctx.fillText(t, W - 64 - w / 2, topo + 31);
+    ctx.restore();
+  }
+
+  // ── Layouts
+  function render(ctx, s, i, n, W, H) {
+    const story = H > 1500;
+    const segTopo = story ? 250 : 64;      // área que o Instagram cobre no story
+    const segBaixo = story ? 340 : 64;
+    const k = s.tamanho;
+    const larg = W - 128;
+    ctx.clearRect(0, 0, W, H);
+
+    if (s.layout === 'foto') {
+      desenharFoto(ctx, s, 0, 0, W, H);
+      const g = ctx.createLinearGradient(0, H * 0.42, 0, H);
+      g.addColorStop(0, 'rgba(26,58,79,0)'); g.addColorStop(1, 'rgba(22,40,52,.82)');
+      ctx.fillStyle = g; ctx.fillRect(0, H * 0.42, W, H * 0.58);
+      const fT = `600 ${Math.round(66 * k)}px Poppins`, aT = Math.round(78 * k);
+      const fA = `400 ${Math.round(34 * k)}px Inter`, aA = Math.round(46 * k);
+      const fN = `italic 600 ${Math.round(46 * k)}px "Cormorant Garamond"`, aN = Math.round(56 * k);
+      const hN = alturaTexto(ctx, s.nome, larg, fN, aN);
+      const hT = alturaTexto(ctx, s.titulo, larg - 110, fT, aT);
+      const hA = alturaTexto(ctx, s.apoio, larg - 110, fA, aA);
+      let y = H - segBaixo - 24 - (hN + hT + hA + (s.editoria ? 62 : 0));
+      if (s.editoria) { etiqueta(ctx, s.editoria, 64, y + 24, true); y += 62; }
+      texto(ctx, s.nome, 64, y + aN * 0.75, larg, fN, C.goldLight, aN); y += hN;
+      texto(ctx, s.titulo, 64, y + aT * 0.8, larg - 110, fT, C.cream, aT); y += hT;
+      texto(ctx, s.apoio, 64, y + aA * 0.8, larg - 110, fA, 'rgba(255,253,246,.9)', aA);
+      assinatura(ctx, W, H, true, segBaixo);
+      numero(ctx, W, i, n, segTopo + 24);
+    }
+
+    else if (s.layout === 'papel') {
+      ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
+      const fy = segTopo, fh = Math.round(H * (story ? 0.5 : 0.6));
+      desenharFoto(ctx, s, 64, fy, W - 128, fh, 28);
+      let y = fy + fh + 76;
+      if (s.editoria) { etiqueta(ctx, s.editoria, 64, y); y += 70; } else y += 20;
+      const aT = Math.round(70 * k);
+      y = texto(ctx, s.titulo, 64, y, larg - 60, `600 ${Math.round(58 * k)}px Poppins`, C.blue, aT);
+      y = texto(ctx, s.apoio, 64, y + 6, larg - 60, `400 ${Math.round(34 * k)}px Inter`, C.gray700, Math.round(48 * k));
+      if (s.nome) texto(ctx, s.nome, 64, y + 30, larg - 140, `italic 600 ${Math.round(40 * k)}px "Cormorant Garamond"`, C.goldDeep, 50);
+      assinatura(ctx, W, H, false, segBaixo);
+      numero(ctx, W, i, n, segTopo + 24);
+    }
+
+    else if (s.layout === 'frase') {
+      ctx.fillStyle = C.cream; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(222,180,40,.08)'; ctx.fillRect(0, 0, W, H);
+      const fQ = `italic 500 ${Math.round(74 * k)}px "Cormorant Garamond"`, aQ = Math.round(86 * k);
+      const altQ = alturaTexto(ctx, s.titulo || ' ', larg, fQ, aQ);
+      const blocoBaixo = (s.img ? 210 : 0) + 120;
+      let y = Math.max(segTopo + 200, (H - altQ - blocoBaixo) / 2);
+      ctx.font = `italic 600 220px "Cormorant Garamond"`; ctx.fillStyle = C.gold; ctx.textAlign = 'left';
+      ctx.fillText('“', 52, y + 40);
+      y = texto(ctx, s.titulo, 64, y + 110, larg, fQ, C.blue, aQ) + 40;
+      if (s.img) {
+        const r = 84;
+        ctx.save(); ctx.beginPath(); ctx.arc(64 + r, y + r, r, 0, Math.PI * 2); ctx.clip();
+        desenharFoto(ctx, s, 64, y, r * 2, r * 2); ctx.restore();
+        ctx.strokeStyle = C.gold; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(64 + r, y + r, r, 0, Math.PI * 2); ctx.stroke();
+        texto(ctx, s.nome, 64 + r * 2 + 32, y + r - 4, larg - r * 2 - 32, '600 34px Inter', C.black, 44);
+        texto(ctx, s.apoio, 64 + r * 2 + 32, y + r + 42, larg - r * 2 - 32, '400 28px Inter', C.gray700, 38);
+      } else {
+        y = texto(ctx, s.nome ? s.nome : '', 64, y + 10, larg, '600 34px Inter', C.black, 44);
+        texto(ctx, s.apoio, 64, y + 4, larg, '400 28px Inter', C.gray700, 38);
+      }
+      if (s.editoria) etiqueta(ctx, s.editoria, 64, segTopo + 40);
+      assinatura(ctx, W, H, false, segBaixo);
+      numero(ctx, W, i, n, segTopo + 24);
+    }
+
+    else if (s.layout === 'bastidor') {
+      desenharFoto(ctx, s, 0, 0, W, H);
+      if (s.titulo) {
+        const fB = `500 ${Math.round(36 * k)}px Inter`, aB = Math.round(48 * k);
+        ctx.font = fB;
+        const ls = quebrar(ctx, s.titulo, 640);
+        const bw = Math.min(720, Math.max(...ls.map(l => ctx.measureText(l).width)) + 72);
+        const bh = ls.length * aB + 56 + (s.nome ? 48 : 0);
+        ctx.save();
+        ctx.translate(64, segTopo + 20); ctx.rotate(-1.6 * Math.PI / 180);
+        ctx.shadowColor = 'rgba(0,0,0,.18)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8;
+        ctx.fillStyle = C.cream; retRedondo(ctx, 0, 0, bw, bh, 14); ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = C.gold; ctx.fillRect(28, 0, 64, 7);
+        let y = texto(ctx, s.titulo, 36, 36 + aB * 0.75, 640, fB, C.black, aB);
+        if (s.nome) texto(ctx, s.nome, 36, y + 14, 640, `italic 600 ${Math.round(34 * k)}px "Cormorant Garamond"`, C.goldDeep, 40);
+        ctx.restore();
+      }
+      assinatura(ctx, W, H, true, segBaixo);
+      numero(ctx, W, i, n, segTopo + 24);
+    }
+  }
+
+  function guiasStory(ctx, W, H) {
+    ctx.save(); ctx.fillStyle = 'rgba(192,57,43,.13)';
+    ctx.fillRect(0, 0, W, 250); ctx.fillRect(0, H - 340, W, 340);
+    ctx.fillStyle = 'rgba(155,44,44,.9)'; ctx.font = '500 26px Inter'; ctx.textAlign = 'center';
+    ctx.fillText('o Instagram cobre esta faixa', W / 2, 140); ctx.fillText('o Instagram cobre esta faixa', W / 2, H - 170);
+    ctx.restore();
+  }
+  function guiasFeed(ctx, W, H) {
+    // No perfil, o feed corta a arte 4:5 para 3:4 — marca a sobra de cima e de baixo.
+    const corte = Math.round((H - W * 4 / 3) / 2);
+    ctx.save(); ctx.fillStyle = 'rgba(192,57,43,.10)';
+    ctx.fillRect(0, 0, W, corte); ctx.fillRect(0, H - corte, W, corte); ctx.restore();
+  }
+
+  function desenhar() {
+    const [W, H] = FMT[formato];
+    if (previa.width !== W || previa.height !== H) { previa.width = W; previa.height = H; }
+    render(pctx, slides[atual], atual, slides.length, W, H);
+    if (guias) (formato === 'story' ? guiasStory : guiasFeed)(pctx, W, H);
+    miniaturas();
+  }
+
+  function miniaturas() {
+    const box = $('slides');
+    box.innerHTML = '';
+    if (slides.length < 2) return;
+    const [W, H] = FMT[formato];
+    slides.forEach((s, i) => {
+      const b = document.createElement('button');
+      if (i === atual) b.className = 'atual';
+      b.setAttribute('aria-label', `Slide ${i + 1}`);
+      const c = document.createElement('canvas'); c.width = W / 6; c.height = H / 6;
+      const x = c.getContext('2d'); x.scale(1 / 6, 1 / 6); render(x, s, i, slides.length, W, H);
+      b.appendChild(c); b.onclick = () => { atual = i; carregarCampos(); desenhar(); };
+      box.appendChild(b);
+    });
+  }
+
+  // ── Campos ⇄ slide atual
+  function carregarCampos() {
+    const s = slides[atual];
+    for (const k of ['editoria', 'nome', 'titulo', 'apoio']) $(k).value = s[k];
+    $('zoom').value = Math.round(s.zoom * 100);
+    $('tamanho').value = Math.round(s.tamanho * 100);
+    marcar('layouts', s.layout);
+    $('fotoIn').textContent = s.img ? 'Trocar foto ou vídeo' : 'Toque para escolher uma foto ou vídeo do celular';
+    $('fotoIn').classList.toggle('tem', !!s.img);
+    atualizarRotulos();
+  }
+  function atualizarRotulos() {
+    const l = slides[atual].layout, r = ROTULOS[l];
+    $('rotNome').textContent = r[0]; $('rotTitulo').textContent = r[1]; $('rotApoio').textContent = r[2];
+    $('apoio').disabled = l === 'bastidor';
+    $('dicaLayout').textContent = DICAS[l];
+  }
+  function marcar(grupo, v) {
+    document.querySelectorAll(`#${grupo} button`).forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
+  }
+  for (const k of ['editoria', 'nome', 'titulo', 'apoio']) {
+    $(k).addEventListener('input', e => { slides[atual][k] = e.target.value; desenhar(); });
+  }
+  $('zoom').oninput = e => { slides[atual].zoom = e.target.value / 100; desenhar(); };
+  $('tamanho').oninput = e => { slides[atual].tamanho = e.target.value / 100; desenhar(); };
+  $('tom').onchange = e => { tom = e.target.checked; desenhar(); };
+  $('numerar').onchange = e => { numerar = e.target.checked; desenhar(); };
+  $('guias').onchange = e => { guias = e.target.checked; desenhar(); };
+  $('formatos').onclick = e => {
+    const v = e.target.dataset && e.target.dataset.v; if (!v) return;
+    formato = v; marcar('formatos', v); desenhar();
+  };
+  $('layouts').onclick = e => {
+    const v = e.target.dataset && e.target.dataset.v; if (!v) return;
+    slides[atual].layout = v; marcar('layouts', v); atualizarRotulos(); desenhar();
+  };
+
+  // ── Foto / vídeo
+  $('fotoIn').onclick = () => $('arquivo').click();
+  $('arquivo').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const url = URL.createObjectURL(f);
+    if (f.type.startsWith('video/')) {
+      const v = $('video'); v.src = url; $('video-quadro').style.display = 'block';
+      v.onloadeddata = () => { v.currentTime = 0.1; };
+    } else {
+      $('video-quadro').style.display = 'none';
+      const img = new Image();
+      img.onload = () => { const s = slides[atual]; s.img = img; s.zoom = 1; s.px = 0; s.py = 0; carregarCampos(); desenhar(); };
+      img.src = url;
+    }
+    e.target.value = '';
+  };
+  $('videoTempo').oninput = e => { const v = $('video'); if (v.duration) v.currentTime = v.duration * e.target.value / 1000; };
+  $('usarQuadro').onclick = () => {
+    const v = $('video'); if (!v.videoWidth) return;
+    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    const s = slides[atual]; s.img = c; s.zoom = 1; s.px = 0; s.py = 0;
+    carregarCampos(); desenhar();
+  };
+
+  // Arrastar a foto na prévia
+  let arr = null;
+  previa.addEventListener('pointerdown', e => {
+    if (!slides[atual].img) return;
+    arr = { x: e.clientX, y: e.clientY }; previa.setPointerCapture(e.pointerId); previa.classList.add('arrastando');
+  });
+  previa.addEventListener('pointermove', e => {
+    if (!arr) return;
+    const s = slides[atual], [ex, ey] = s._sobra || [0, 0];
+    const esc = previa.width / previa.getBoundingClientRect().width;
+    const dx = (e.clientX - arr.x) * esc, dy = (e.clientY - arr.y) * esc;
+    arr = { x: e.clientX, y: e.clientY };
+    if (ex > 0) s.px = Math.max(-1, Math.min(1, s.px - dx * 2 / ex));
+    if (ey > 0) s.py = Math.max(-1, Math.min(1, s.py - dy * 2 / ey));
+    desenhar();
+  });
+  const soltar = () => { arr = null; previa.classList.remove('arrastando'); };
+  previa.addEventListener('pointerup', soltar); previa.addEventListener('pointercancel', soltar);
+
+  // ── Slides
+  $('addSlide').onclick = () => {
+    const base = slides[atual], s = novoSlide();
+    s.editoria = base.editoria; s.layout = base.layout === 'foto' ? 'papel' : base.layout;
+    slides.splice(atual + 1, 0, s); atual++; carregarCampos(); desenhar();
+  };
+  $('dupSlide').onclick = () => {
+    const s = Object.assign({}, slides[atual]); slides.splice(atual + 1, 0, s); atual++; carregarCampos(); desenhar();
+  };
+  $('delSlide').onclick = () => {
+    if (slides.length < 2) { slides = [novoSlide()]; atual = 0; }
+    else { slides.splice(atual, 1); atual = Math.max(0, atual - 1); }
+    carregarCampos(); desenhar();
+  };
+
+  // ── Baixar em tamanho real (sem as guias)
+  $('baixar').onclick = async () => {
+    const [W, H] = FMT[formato];
+    const data = new Date().toISOString().slice(0, 10);
+    const tipo = formato === 'story' ? 'story' : (slides.length > 1 ? 'carrossel' : 'post');
+    for (let i = 0; i < slides.length; i++) {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      render(c.getContext('2d'), slides[i], i, slides.length, W, H);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.94));
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `zeluz-${tipo}-${data}${slides.length > 1 ? '-' + String(i + 1).padStart(2, '0') : ''}.jpg`;
+      document.body.appendChild(a); a.click(); a.remove();
+      await new Promise(r => setTimeout(r, 350));
+    }
+    $('statusBaixar').textContent = slides.length > 1
+      ? `${slides.length} imagens baixadas, na ordem. Suba todas juntas no Instagram.`
+      : 'Imagem baixada.';
+  };
+
+  // Desenha só depois das fontes e do símbolo, para a prévia não piscar com a letra errada.
+  Promise.all([
+    document.fonts.load('600 60px Poppins'), document.fonts.load('400 30px Inter'),
+    document.fonts.load('500 30px Inter'), document.fonts.load('600 30px Inter'),
+    document.fonts.load('italic 500 60px "Cormorant Garamond"'), document.fonts.load('italic 600 60px "Cormorant Garamond"'),
+    simbolo.decode().catch(() => {}), simboloClaro.decode().catch(() => {})
+  ]).finally(() => { carregarCampos(); desenhar(); });
+  carregarCampos(); desenhar();
+})();
+</script>
+</body>
+</html>
