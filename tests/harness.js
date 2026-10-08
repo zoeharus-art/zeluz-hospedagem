@@ -3756,8 +3756,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -4053,8 +4053,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -4437,8 +4437,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -5083,8 +5083,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -14719,7 +14719,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-10-07-08';/.test(html));
+        /const APP_VERSAO='2026-10-07-09';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14886,11 +14886,12 @@ async function main() {
         conf.perg === 1 && conf.titulo === 'CONFIRA ANTES DE GRAVAR'
         && conf.sim === 'Confirmar e gravar o plano' && conf.nao === 'Voltar e conferir',
         JSON.stringify({p:conf.perg, t:conf.titulo, s:conf.sim, n:conf.nao}));
-      check('v-15 · o resumo traz FILHOt, tutor, plano, 1x, o dia, a vigência e a mensalidade com centavos',
+      // 6.44 (Adriana, 07/out/2026): o resumo diz o VALOR DO PLANO (o trimestral inteiro), com a conta.
+      check('v-15 · o resumo traz FILHOt, tutor, plano, 1x, o dia, a vigência e o valor do plano com centavos (3 × a mensalidade)',
         conf.linhas.join(' | ').indexOf('Cookie · Yara') >= 0
         && /1x por semana · Ter/.test(conf.linhas.join(' | '))
         && /Início 11\/09\/2026 · vale até 30\/11\/2026/.test(conf.linhas.join(' | '))
-        && /Mensalidade R\$ \d{1,3}(\.\d{3})*,\d{2}/.test(conf.linhas.join(' | ')),
+        && /Valor do plano R\$ \d{1,3}(\.\d{3})*,\d{2} \(3 × R\$ \d{1,3}(\.\d{3})*,\d{2}\)/.test(conf.linhas.join(' | ')),
         JSON.stringify(conf.linhas));
       check('v-15 · gravou UMA vez, no cadastro da Cookie, com aulas = dias marcados (1x, não 2x)',
         conf.ups === 1 && conf.caminho === 'daycare/cadastro/cookie__yara'
@@ -15548,8 +15549,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15803,8 +15804,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -16106,8 +16107,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -16375,8 +16376,8 @@ async function main() {
       && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
       && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16849,8 +16850,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -17262,8 +17263,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -17579,8 +17580,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -17937,8 +17938,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -18173,8 +18174,12 @@ async function main() {
     check('v-36 · a conta do meio do mês mora numa função só, e ninguém calcula fim por fora',
       (html.match(/function fimVigenciaMeioMesISO\(/g) || []).length === 1
       && (html.match(/function renovCalcular\(/g) || []).length === 1
-      && /const calc=\(r\.plano&&r\.inicio&&planos\(\)\[r\.plano\]\)\?renovCalcular\(r, r\.plano, aulas, r\.inicio\):null;/.test(html)
-      && /let calc=renovCalcular\(r, r\.plano, aulas, r\.inicio\);/.test(html));
+      // 6.44: o plano relançado depois da troca de categoria passa pela MESMA conta (renovCalcular);
+      // renovBaseDoRelancamento só entrega o período que já era, sem calcular fim nenhum.
+      && /const calc=\(r\.plano&&r\.inicio&&planos\(\)\[r\.plano\]\)\?renovCalcular\(renovBaseDoRelancamento\(ex, r\), r\.plano, aulas, r\.inicio\):null;/.test(html)
+      && /let calc=renovCalcular\(renovBaseDoRelancamento\(ex, r\), r\.plano, aulas, r\.inicio\);/.test(html)
+      && (function(){ const i=html.indexOf('function renovBaseDoRelancamento('), j=html.indexOf('function renovCalcular(', i);
+        return i>0 && j>i && !/aplicarRenovacao|fimVigencia/.test(html.slice(i, j)); })());
     check('v-36 · o resumo do Confirmar avisa até quando o plano passará a valer',
       /linhasPlano\.push\('O plano passará a valer até '\+fmtBR\(calc\.fim\)\+' — '\+renovMeioMesFrase\(regMMConf\)\+'\.'\)/.test(html)
       && /'O plano passará a valer até '\+fmtBR\(fins\[0\]\.f\.para\)/.test(html));
@@ -18190,8 +18195,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -18408,8 +18413,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -18782,8 +18787,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -19030,8 +19035,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -19480,8 +19485,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -19684,8 +19689,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -20006,8 +20011,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -20292,8 +20297,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -20816,8 +20821,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -21173,8 +21178,8 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -21519,8 +21524,8 @@ async function main() {
         ctx.prevCorrigePetDe(chave47) === pel47
         && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
 
-      check('v-47 · a versão carimbada desta entrega é a 2026-10-07-08',
-        /const APP_VERSAO='2026-10-07-08';/.test(html));
+      check('v-47 · a versão carimbada desta entrega é a 2026-10-07-09',
+        /const APP_VERSAO='2026-10-07-09';/.test(html));
     } finally {
       ctx.document.getElementById = geOrig47;
       ctx.document.body.dataset.role = papelAntes47;
@@ -21983,8 +21988,8 @@ async function main() {
       && /delete BANHO_RASC\[chave\]; banhoRascGuardar\(\);/.test(html)
       && html.indexOf('Há uma alteração nesta linha que ainda não foi gravada') > 0);
 
-    check('v-48 · a versão carimbada desta entrega é a 2026-10-07-08',
-      /const APP_VERSAO='2026-10-07-08';/.test(html));
+    check('v-48 · a versão carimbada desta entrega é a 2026-10-07-09',
+      /const APP_VERSAO='2026-10-07-09';/.test(html));
   }
   console.log('');
 
@@ -22436,14 +22441,44 @@ async function main() {
     // plano) são as únicas que a 6.36 muda de propósito: ficam fora da comparação — senão a
     // prova viraria bomba-relógio no dia da conversão. As outras têm de dar o mesmo de antes.
     const comDiasMes50 = Object.keys(cad50 || {}).filter((k) => cad50[k] && cad50[k].renov && cad50[k].renov.dias_mes);
+    // 6.44: também mudam de propósito a ficha com renovações anteriores (o pagamento de antes conta no
+    // mês dele) e a com o valor GRAVADO no fechamento — ficam fora pelo mesmo motivo (não é bomba-relógio).
+    const muda644 = (c) => !!(c && ((c.renov_hist && typeof c.renov_hist === 'object' && Object.keys(c.renov_hist).length)
+      || (c.renov && Number(c.renov.valor_plano_cent) > 0)));
+    check('v-50 · H3 — 6.44: a ficha com renovação anterior ou com valor gravado sai da comparação; a ficha comum fica',
+      muda644({ renov: { plano: 'Gold' }, renov_hist: { a: { plano: 'Gold' } } }) && muda644({ renov: { plano: 'Gold', valor_plano_cent: 107700 } })
+      && !muda644({ renov: { plano: 'Gold', inicio: '2026-07-05' } }) && !muda644({ renov: { plano: 'Gold' }, renov_hist: {} }) && !muda644({ renov: { valor_plano_cent: 0 } }));
+    const com644 = Object.keys(cad50 || {}).filter((k) => comDiasMes50.indexOf(k) < 0 && muda644(cad50[k]));
     if (cad50 && Object.keys(cad50).length) {
       const cadSem50 = {};
-      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
+      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0 && com644.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
       const r50 = compara50({ cadastro: cadSem50, orcamentos: orc50 || {}, pagamentos: pag50 || null, irmaos: irmaos || {},
         peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] });
-      console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
+      console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês e ' + com644.length + ' com renovação anterior ou valor gravado (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
       check('v-50 · H3 — retrato: o finResumoMes de 2026-06 a 2026-10 é o de antes da 6.36 (totais e linhas, em 3 "hoje") para toda ficha sem dias por mês',
         r50.difs.length === 0, r50.difs.slice(0, 4).join(' · '));
+      // 6.44 (QA): as fichas com renovação anterior NÃO ficam sem conferência. Sem valor gravado e sem
+      // dias por mês, a 6.44 só ACRESCENTA as linhas das renovações anteriores: tirando essas linhas (e os
+      // "sem como calcular" delas), tudo é o que era antes. E o retrato diz quanto cada mês muda.
+      const soHist50 = com644.filter((k) => !(cad50[k].renov && Number(cad50[k].renov.valor_plano_cent) > 0));
+      if (soHist50.length && !(pag50 && Object.keys(pag50).length)) {
+        const cadH = {}; soHist50.forEach((k) => { cadH[k] = cad50[k]; });
+        const dadosH = { cadastro: cadH, orcamentos: {}, pagamentos: null, irmaos: irmaos || {}, peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] };
+        const difH = [], somaH = [];
+        let confiraH = 0;
+        meses50.forEach((m) => {
+          const a = JSON.parse(JSON.stringify(FIN_ANTES50.finResumoMes(Object.assign({}, dadosH, tabApp50), m, { hoje: '2026-10-08' })));
+          const b = JSON.parse(JSON.stringify(ctx.finResumoMes(Object.assign({}, dadosH, tabApp50), m, { hoje: '2026-10-08' })));
+          const hist = b.porFILHOt.filter((o) => o.origem === 'renovacao-anterior');
+          const tira = { porFILHOt: b.porFILHOt.filter((o) => o.origem !== 'renovacao-anterior'), inadimplentes: b.inadimplentes,
+            semComoCalcular: b.semComoCalcular.filter((o) => !/^renovação anterior/.test(o.motivo)) };
+          if (JSON.stringify(tira) !== JSON.stringify({ porFILHOt: a.porFILHOt, inadimplentes: a.inadimplentes, semComoCalcular: a.semComoCalcular })) difH.push(m);
+          confiraH += hist.filter((o) => o.confira).length;
+          somaH.push(m + ' +' + ctx.finBRL(hist.reduce((t, o) => t + o.valor, 0)) + ' (' + hist.length + ')');
+        });
+        console.log('  6.44 no retrato: ' + soHist50.length + ' fichas com renovação anterior · o que entra por mês: ' + somaH.join(' · ') + ' · ' + confiraH + ' linha(s) com "confira"');
+        check('v-50 · H3 — retrato, 6.44: nas fichas com renovação anterior, só entram as linhas delas (o resto é o de antes)', difH.length === 0, difH.join(' · '));
+      }
     } else {
       console.log('  retrato sem o nó daycare/cadastro (o sintético da nuvem): a prova usa só o cadastro inventado abaixo.');
     }

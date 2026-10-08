@@ -659,6 +659,12 @@ function finResumoDiasMes(R, k, c, r, X) {
   var dias = [], i;
   for (i = 0; i < M.length; i++) dias.push(M[i].dias);
   var V = finValorDoPlano(X.planos, r.plano, dias, ordemUsada, X.descontos);
+  /* 6.44 (QA): com o valor gravado no fechamento, o mês sem preço na tabela de hoje não tira a
+     ficha do total — o valor é o gravado (e o detalhe do mês sem preço diz isso). */
+  if (V.falta >= 0 && finValorGravado(r)) {
+    for (i = 0; i < V.porMes.length; i++) if (!(V.porMes[i].valor > 0)) V.porMes[i].valor = null;
+    V.falta = -1; V.semPrecoHoje = true; V.total = finValorGravado(r);
+  }
   if (V.falta >= 0) {
     R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
       motivo: 'a tabela de preços não tem valor para ' + r.plano + ' com ' + V.porMes[V.falta].aulas +
@@ -672,6 +678,8 @@ function finResumoDiasMes(R, k, c, r, X) {
      mês do pagamento; os meses seguintes do período não geram cobrança nova. */
   var entra = (finMesDe(r.inicio) === X.mes);
   var valorMes = entra ? V.total : 0;
+  var vgD = finValorGravado(r);                   /* 6.44: o valor gravado no fechamento */
+  if (entra && vgD) valorMes = vgD;
   var pago = finCent(X.pagoPorChave[k]);
   var falta = valorMes - pago; if (falta < 0) falta = 0;
   var venceEm = r.inicio;
@@ -683,7 +691,7 @@ function finResumoDiasMes(R, k, c, r, X) {
     if (X.hoje && falta > 0 && finEhISO(venceEm) && venceEm < X.hoje) {
       R.porServico.daycare.emAtraso += falta;
     }
-    if (r.plano_deduzido !== true) R.porServico.daycare.declarado += V.total;
+    if (r.plano_deduzido !== true) R.porServico.daycare.declarado += (vgD || V.total);
     var aulasPorMes = [], valorPorMes = [], meses = [], rotA = [], rotV = [];
     for (i = 0; i < M.length; i++) {
       aulasPorMes.push(V.porMes[i].aulas);
@@ -691,7 +699,7 @@ function finResumoDiasMes(R, k, c, r, X) {
       meses.push({ n: M[i].n, de: M[i].de, ate: M[i].ate, dias: M[i].dias.slice(),
         aulas: V.porMes[i].aulas, valor: V.porMes[i].valor });
       rotA.push(V.porMes[i].aulas + 'x');
-      rotV.push(finBRL(V.porMes[i].valor));
+      rotV.push(V.porMes[i].valor === null ? 'sem preço na tabela de hoje' : finBRL(V.porMes[i].valor));
     }
     R.porFILHOt.push({
       chave: k,
@@ -722,6 +730,7 @@ function finResumoDiasMes(R, k, c, r, X) {
       aulasRotulo: rotA.join(', '),
       detalheMeses: rotA.join(', ') + ' — ' + rotV.join(' + ')
     });
+    if (vgD) R.porFILHOt[R.porFILHOt.length - 1].valorGravado = true;   /* 6.44 */
   }
 
   /* VENCEU SEM RENOVAÇÃO: o que volta a valer é a ROTINA (os dias do alto da ficha) —
@@ -752,6 +761,284 @@ function finResumoDiasMes(R, k, c, r, X) {
     });
     R.porServico.daycare.inadimplencia += mensalRot;
   }
+}
+
+/* ------------------------------------------------- o valor fechado e as renovações (6.44) */
+
+/* O VALOR GRAVADO NO FECHAMENTO (Story 6.44 — Adriana, 07/out/2026: "o valor do plano total
+   fechado"). Desde a 6.44, o Confirmar da aba Plano grava renov.valor_plano_cent — o que a
+   casa fechou com o tutor naquele dia. Ele vale mais que a tabela de hoje: o mês fechado não
+   muda se o preço mudar depois. Ficha sem esse campo: 0, e vale a conta de sempre. */
+function finValorGravado(r) {
+  var v = finObj(r).valor_plano_cent;
+  return (typeof v === 'number' && isFinite(v) && v > 0) ? Math.round(v) : 0;
+}
+
+/* O plano que entrou no lugar de outro é CORREÇÃO dele (e não renovação) quando tem a mesma
+   data de pagamento, o mesmo fim, ou começa antes ou no mesmo dia — a mesma regra do
+   renovEhCorrecao do app. Sem data no que entrou (virou morador, ficha zerada), o antigo
+   valeu: não é correção. */
+/* Cópia rasa (ES5): a conta nunca escreve no cadastro que recebeu. */
+function finCopia(o) {
+  var r = {}, k;
+  for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) r[k] = o[k];
+  return r;
+}
+
+function finEhCorrecaoDe(antigo, novo) {
+  var a = finObj(antigo), n = finObj(novo);
+  var aIni = String(a.vig_inicio || a.inicio || ''), nIni = String(n.vig_inicio || n.inicio || '');
+  if (!finEhISO(aIni) || !finEhISO(nIni)) return false;
+  if (String(a.inicio || '') === String(n.inicio || '')) return true;
+  /* "O mesmo fim" é o do dia em que o plano entrou: o registro do "Começou no meio do mês"
+     estica o fim DEPOIS do Confirmar e guarda o de antes em fim_anterior. */
+  if (finEhISO(a.fim) && (String(n.fim || '') === String(a.fim) || String(n.fim_anterior || '') === String(a.fim))) return true;
+  return nIni <= aIni;
+}
+
+/* Os dois planos começam o período no mesmo dia (o do pagamento, quando não há outro)? Só para a
+   regra da correção do histórico (QA da 6.44, 4ª rodada): a versão final que trocou só o tipo ou as
+   aulas tem o mesmo começo. Não decide o mês do dinheiro (é sempre o da data do pagamento). */
+function finMesmoComecoDoPeriodo(a, b) {
+  var x = finObj(a), y = finObj(b), ix = String(x.vig_inicio || x.inicio || ''), iy = String(y.vig_inicio || y.inicio || '');
+  return finEhISO(ix) && ix === iy;
+}
+
+/* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44). Renovar manda o plano anterior para
+   renov_hist, e o Financeiro lia só o atual: o pagamento anterior sumia do mês em que entrou.
+   Aqui entram as que foram renovação de verdade, na ordem em que saíram. Ficam de fora a
+   renovação DESFEITA (não aconteceu) e o plano CORRIGIDO (o pagamento é o mesmo do que entrou
+   no lugar dele — contar os dois seria contar duas vezes): o que o Confirmar gravou como
+   "correção" e, nos registros de antes da 6.44, o que a regra do app reconhece como correção. */
+function finRenovHistContados(c) {
+  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), todos = [], i, o, m;
+  for (i = 0; i < ids.length; i++) {
+    o = finObj(h[ids[i]]);
+    if (!o.plano && !o.inicio) continue;
+    todos.push(o);
+  }
+  todos.sort(function (a, b) { return (Number(a.substituidoEm) || 0) - (Number(b.substituidoEm) || 0); });
+  var atual = finObj(cc.renov);
+  /* A VERSÃO FINAL do pagamento que entrou no lugar (QA da 6.44): o que veio depois com a MESMA
+     data de pagamento é o mesmo pagamento corrigido. É com a última versão dele que se decide
+     se o anterior foi renovação ou correção — o plano gravado errado antes da 6.20 ("30/09 até
+     30/09", o mesmo fim do anterior) e refeito depois ("de 01/10 até 31/10") não apaga o
+     pagamento de antes. */
+  function versaoFinalIdx(seq, j) {
+    while (j + 1 < seq.length && String(seq[j + 1].inicio || '') === String(seq[j].inicio || '')) j++;
+    return j;
+  }
+  function versaoFinal(seq, j) { return seq[versaoFinalIdx(seq, j)]; }
+  /* O MOTIVO DECIDIDO PELO APP (QA da 6.44): desde a 6.44 o registro do histórico sai marcado
+     (motivo_conferido) — o motivo foi decidido na hora, pelo Confirmar (que pergunta "pagamento
+     novo ou correção da data?" quando a data muda e não dá para saber), pelo Desfazer ou pela
+     troca de categoria, e vale sem adivinhar. Os registros sem a marca (os de antes) seguem a
+     regra do app (renovEhCorrecao), e o caso em que o app de hoje perguntaria sai com "confira"
+     para quem bate o mês. */
+  function conferido(r) { return r.motivo_conferido === true; }
+  var AVISO = 'registro sem a decisão gravada pelo app (de antes desta versão)';
+  /* 1º O "DESFEITO" ANTIGO QUE FOI PAGAMENTO: antes da 6.44, desfazer e desfazer de novo (para
+     trazer a renovação de volta) gravava o plano pago como "desfeita". O desfeito de verdade é o
+     plano MAIS NOVO (confirmado depois do que voltou, ou que começa depois dele); o do "desfazer
+     duas vezes" foi confirmado ANTES do plano que voltou e foi pago. O "desfeita" gravado desde
+     a 6.44 nunca foi pagamento (o refazer devolve o plano pago com o motivo dele).
+     O plano que voltou é o primeiro registro seguinte que NÃO é um "desfeita" de verdade (QA da 6.44,
+     4ª e 5ª rodadas): o Desfazer tira do histórico o plano que volta, então o "desfeita" logo depois
+     de outro é o de outra renovação desfeita — menos o plano pago que o desfazer duas vezes marcou
+     assim (por isso a conta vai do mais novo para o mais antigo). O "desfeita" sem data de pagamento
+     (o Desfazer da troca de categoria no app de antes) nunca foi pagamento.
+     Confirmado no MESMO dia do plano que voltou (o app de antes reescrevia o dia ao confirmar de
+     novo, e o plano lançado atrasado leva o dia do lançamento): os dados não dizem se foi o
+     pagamento anterior ou uma correção desfeita. Conta, com "confira" (4ª rodada) — antes saía
+     calado. */
+  var todosSeq = todos.concat([atual]), recuperado = [], j;
+  /* Lido contra o plano que voltou (sd): '' (desfeito de verdade), 'antes' ou 'mesmo dia'. */
+  function recDe(r, sd) {
+    if (finEhCorrecaoDe(r, sd)) return '';
+    var qo = String(r.quando || ''), qs = String(sd.quando || '');
+    if (qo < qs) return 'antes';
+    if (qo === qs && finEhISO(qo)) return 'mesmo dia';
+    return '';
+  }
+  function pulaDesfeitos(j) {
+    while (j < todos.length && String(todosSeq[j].motivo || '') === 'desfeita' && !recuperado[j]) j++;
+    return j;
+  }
+  for (i = todos.length - 1; i >= 0; i--) {
+    o = todos[i]; recuperado[i] = '';
+    if (String(o.motivo || '') !== 'desfeita') continue;
+    if (conferido(o) || Object.prototype.hasOwnProperty.call(o, 'motivo_do_que_voltou')) continue;
+    if (!finEhISO(o.inicio)) continue;
+    j = pulaDesfeitos(i + 1);
+    recuperado[i] = recDe(o, versaoFinal(todosSeq, j));
+    /* O seguinte recuperado como "mesmo dia" pode ter sido só uma correção desfeita (conferência da
+       5ª rodada): vale também a leitura com o plano que veio depois dele. */
+    if (!recuperado[i] && j < todos.length && recuperado[j] === 'mesmo dia')
+      recuperado[i] = recDe(o, versaoFinal(todosSeq, pulaDesfeitos(j + 1)));
+  }
+  /* 2º A SEQUÊNCIA DOS PLANOS QUE VALERAM, na ordem em que saíram: sem os desfeitos de verdade, mas
+     COM os que o Confirmar disse que foram correção (QA da 6.44, 3ª rodada). Cada plano é comparado
+     com o que entrou no lugar DELE — e a correção que veio depois é esse plano: tirá-la da sequência
+     fazia um registro antigo (a troca de dias, a correção de antes) parecer renovado pelo plano
+     corrigido, e contar o mesmo pagamento duas vezes. O desfeito antigo que foi pagamento entra no
+     lugar dele (sem isso, a correção feita antes dele virava pagamento fantasma). */
+  var seq = [], marca = [];
+  for (i = 0; i < todos.length; i++) {
+    if (String(todos[i].motivo || '') === 'desfeita' && !recuperado[i]) continue;
+    seq.push(todos[i]); marca.push(recuperado[i]);
+  }
+  seq.push(atual);
+  var out = [], vistos = {}, cp, suc, js, prox, porque, corr, duvidaMD, duvidaVF;
+  /* Um pagamento por data: a data do plano atual e a de um já contado não contam de novo. */
+  if (finEhISO(atual.inicio)) vistos[atual.inicio] = true;
+  for (i = 0; i < seq.length - 1; i++) {
+    o = seq[i];
+    m = String(o.motivo || '');
+    /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: não conta, sem adivinhar. */
+    if (m === 'correção') continue;
+    prox = seq[i + 1];
+    js = versaoFinalIdx(seq, i + 1); suc = seq[js];
+    /* A MESMA DATA do registro seguinte é o mesmo pagamento numa versão mais nova (QA da 6.44, 5ª
+       rodada): quem conta é ela. Ex.: o "virou morador" tocado por engano e o plano lançado de novo
+       com a mesma data — corrigido depois, o "virou" não volta a contar. */
+    if (finEhISO(o.inicio) && String(prox.inicio || '') === String(o.inicio)) continue;
+    /* O registro antigo é correção do plano que entrou no lugar dele — o da versão final, ou o que
+       entrou LOGO depois quando a versão final só trocou o tipo ou as aulas, com o mesmo começo
+       (QA da 6.44, 4ª rodada: Silver 10/09 corrigido para 20/09 e depois trocado para Gold em
+       20/09 é um pagamento só). O "30/09 até 30/09" de antes da 6.20, refeito "de 01/10 até 31/10",
+       tem outro começo na versão final e não apaga o pagamento de antes. */
+    duvidaMD = false; duvidaVF = false;
+    if (!marca[i] && !conferido(o)) {
+      corr = finEhCorrecaoDe(o, suc) || (prox !== suc && finMesmoComecoDoPeriodo(prox, suc) && finEhCorrecaoDe(o, prox));
+      /* O seguinte é um "desfeita" antigo do MESMO dia, que pode ter sido só uma correção desfeita
+         (5ª rodada): a correção só vale se também for do plano que veio depois dele; senão conta, com
+         "confira". */
+      if (corr && (marca[js] === 'mesmo dia' || marca[i + 1] === 'mesmo dia') && js + 1 < seq.length
+          && !finEhCorrecaoDe(o, versaoFinal(seq, js + 1))) { corr = false; duvidaMD = true; }
+      /* A versão mais nova do pagamento seguinte diz "correção", mas a que entrou logo depois (o mesmo
+         pagamento) diz "renovação": o plano relançado (a troca de categoria) pode ter perdido o começo
+         do período. Conta, com "confira" (conferência da 5ª rodada). */
+      if (corr && prox !== suc && !finEhCorrecaoDe(o, prox)) { corr = false; duvidaVF = true; }
+      if (corr) continue;
+    }
+    if (vistos[o.inicio]) continue;
+    vistos[o.inicio] = true;
+    cp = finCopia(o);
+    if (marca[i] === 'mesmo dia') cp._confira = AVISO + ', marcado "desfeita" no mesmo dia em que o plano seguinte foi confirmado: pode ser o pagamento anterior (desfazer duas vezes) ou uma correção que foi desfeita; conta como pagamento; confira';
+    else if (marca[i]) cp._confira = AVISO + ', marcado "desfeita" (desfazer duas vezes, para trazer a renovação de volta): conta como pagamento; confira';
+    else if (duvidaVF) cp._confira = AVISO + ': a versão mais nova do pagamento seguinte tem outro período (o plano lançado de novo pode ter perdido o começo do período); conta como pagamento; confira';
+    else if (duvidaMD) cp._confira = AVISO + ': o plano seguinte é um registro marcado "desfeita" no mesmo dia, que pode ter sido só uma correção desfeita; conta como pagamento; confira';
+    else if (o.refeito_de_antigo === true && !conferido(o)) cp._confira = AVISO + ': o Desfazer trouxe de volta um plano que uma versão antiga do app marcou "desfeita", e não dá para saber se este foi pagamento; confira';
+    else if (!conferido(o) && !/^virou /.test(m)) {
+      /* Onde o app de hoje perguntaria "pagamento novo ou correção da data?" — contra o plano que
+         entrou LOGO depois (o Confirmar seguinte, mesmo sem mudar nada, reescrevia o dia da
+         confirmação da versão final) e contra a versão final. Conta, mas pede conferência. */
+      porque = finPerguntariaNovoOuCorrecao(o, prox) || finPerguntariaNovoOuCorrecao(o, suc);
+      if (porque) cp._confira = AVISO + ': ' + porque + ' — confira se foi pagamento novo ou correção da data';
+    }
+    out.push(cp);
+  }
+  /* Do pagamento mais antigo para o mais novo: é nessa ordem que o dinheiro lançado é gasto. */
+  out.sort(function (a, b) { return String(a.inicio || '') < String(b.inicio || '') ? -1 : (String(a.inicio || '') > String(b.inicio || '') ? 1 : 0); });
+  return out;
+}
+
+/* O app de hoje perguntaria "pagamento novo ou correção da data?" ao trocar o plano `a` por `n`?
+   A MESMA regra do renovPerguntaNovoOuCorrecao do app (6.44): a data mudou, a regra da correção
+   não decide, e (o novo foi confirmado no mesmo dia do anterior; a data do novo não é depois do dia
+   em que o anterior foi lançado — o pagamento seguinte vem depois desse dia; ou o novo veio com o
+   anterior ainda longe de acabar — mais de 15 dias antes do fim); e a pergunta da 6.20 (a data nova
+   até 15 dias depois da anterior, com o plano ainda valendo). Devolve o
+   porquê, para o "confira" dizer o motivo certo; '' quando o app não perguntaria. */
+function finPerguntariaNovoOuCorrecao(antigo, novo) {
+  var a = finObj(antigo), n = finObj(novo);
+  if (!finEhISO(a.inicio) || !finEhISO(n.inicio) || String(a.inicio) === String(n.inicio)) return '';
+  if (finEhCorrecaoDe(a, n)) return '';
+  if (finEhISO(a.quando) && String(a.quando) === String(n.quando || '')) return 'o plano seguinte foi confirmado no mesmo dia';
+  if (finEhISO(a.quando) && String(n.inicio) <= String(a.quando)) return 'o pagamento seguinte é de antes do dia em que este plano foi lançado, ou do mesmo dia';
+  if (finEhISO(a.fim) && String(n.inicio) < finAddDiasISO(a.fim, -15)) return 'o pagamento seguinte veio mais de 15 dias antes do fim do plano';
+  /* A pergunta da 6.20, que o app também faz (renovVigenciaComeca): a data nova perto da anterior (até
+     15 dias), ainda dentro do plano. O app de antes perguntava e não gravava a resposta (5ª rodada). */
+  if (finEhISO(a.fim) && String(n.inicio) <= String(a.fim) && String(n.inicio) <= finAddDiasISO(String(a.inicio), 15)) return 'o pagamento seguinte veio até 15 dias depois deste, com o plano ainda valendo';
+  return '';
+}
+
+/* A renovação anterior no mês em que foi paga (6.44). Só entra no mês do pagamento dela: não
+   gera inadimplência (o plano atual é quem responde por isso) nem cobrança fora do mês. O
+   valor é o gravado no fechamento; sem ele, a tabela, com as aulas e o nº na família DAQUELE
+   plano. O pagamento lançado do FILHOt é gasto aqui primeiro (pagoPorChave diminui), para o
+   plano atual não usar o mesmo dinheiro duas vezes.
+   X = {planos, cadastro, peludinhos, ordensFamilia, descontos, mes, hoje, pagoPorChave} */
+function finResumoHistorico(R, k, c, h, X) {
+  if (finMesDe(h.inicio) !== X.mes) return;
+  var nome = String(c.n || k.split('__')[0]);
+  var pl = X.planos[h.plano];
+  /* Com o valor GRAVADO no fechamento, a tabela de hoje não é necessária: o mês fechado não muda
+     se o plano sair da tabela (QA da 6.44). */
+  if (!pl && !finValorGravado(h)) {
+    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
+      motivo: 'renovação anterior com o plano "' + String(h.plano || '') + '", que não está na tabela' });
+    return;
+  }
+  pl = pl || {};
+  var ordemExplicita = (h.ordemPet !== undefined && h.ordemPet !== null);
+  var ordemUsada = ordemExplicita ? h.ordemPet : X.ordensFamilia[k];
+  var meses = finMesesDoCompromisso(pl.compromisso);
+  var nAulas = parseInt(h.aulas, 10);
+  var aulas = (nAulas >= 1) ? Math.min(5, nAulas) : null;
+  var mensal = null, valor = finValorGravado(h), i, rotA = [];
+  if (h.dias_mes) {
+    /* Plano com dias diferentes em cada mês: não existe UMA quantidade de aulas (como no plano
+       atual, aulas fica null) — o rótulo diz as de cada mês. */
+    aulas = null;
+    var M = X.planos[h.plano] ? finMesesDoPlano(X.planos, h) : [], dias = [];
+    for (i = 0; i < M.length; i++) { dias.push(M[i].dias); rotA.push(M[i].dias.length + 'x'); }
+    var V = M.length ? finValorDoPlano(X.planos, h.plano, dias, ordemUsada, X.descontos) : null;
+    if (!valor && V && V.falta < 0) valor = V.total;
+  } else if (!valor) {
+    /* Sem as aulas DAQUELE plano, a conta não usa os dias de hoje da ficha (seria inventar o
+       valor de um plano que já passou): vai para "sem como calcular" (QA da 6.44). */
+    mensal = (aulas === null) ? null : finMensalidade(X.planos, h.plano, aulas, ordemUsada, X.descontos);
+    if (mensal !== null) valor = mensal * (meses || 1);
+  }
+  if (!valor) {
+    R.semComoCalcular.push({ chave: k, nome: nome, servico: 'daycare',
+      motivo: 'renovação anterior (' + String(h.plano) + ', paga em ' + String(h.inicio).slice(8, 10) + '/' + String(h.inicio).slice(5, 7) + '/' + String(h.inicio).slice(0, 4) + ') sem como calcular o valor' });
+    return;
+  }
+  var pago = Math.min(finCent(X.pagoPorChave[k]), valor);
+  X.pagoPorChave[k] = finCent(X.pagoPorChave[k]) - pago;
+  var falta = valor - pago;
+  R.porServico.daycare.quantos++;
+  R.porServico.daycare.recebido += pago;
+  R.porServico.daycare.aReceber += falta;
+  if (X.hoje && falta > 0 && finEhISO(h.inicio) && h.inicio < X.hoje) R.porServico.daycare.emAtraso += falta;
+  if (h.plano_deduzido !== true) R.porServico.daycare.declarado += valor;
+  R.porFILHOt.push({
+    chave: k,
+    nome: nome,
+    tutor: String(c.tutor || k.split('__')[1] || ''),
+    servico: 'daycare',
+    plano: String(h.plano),
+    compromisso: String(pl.compromisso || ''),
+    aulas: aulas,
+    mensalidade: mensal,
+    valor: valor,
+    pago: pago,
+    falta: falta,
+    vigencia: { inicio: String(h.inicio), fim: finEhISO(h.fim) ? h.fim : (meses ? finFimVigencia(h.inicio, meses) : '') },
+    venceEm: String(h.inicio),
+    ordemPet: ordemExplicita ? parseInt(h.ordemPet, 10) : (ordemUsada !== undefined ? ordemUsada : 1),
+    ordemPetSuposta: (!ordemExplicita && ordemUsada === undefined),
+    resolvidoPorFamilia: (!ordemExplicita && ordemUsada !== undefined),
+    planoDeduzido: h.plano_deduzido === true,
+    situacao: falta === 0 ? 'pago' : 'aberto',
+    origem: 'renovacao-anterior',
+    motivoHist: String(h.motivo || ''),
+    valorGravado: finValorGravado(h) > 0
+  });
+  if (rotA.length) R.porFILHOt[R.porFILHOt.length - 1].aulasRotulo = rotA.join(', ');
+  if (h._confira) R.porFILHOt[R.porFILHOt.length - 1].confira = String(h._confira);
 }
 
 /* ------------------------------------------------------------------ resumo */
@@ -835,6 +1122,13 @@ function finResumoMes(dados, mes, opcoes) {
     k = chaves[i];
     c = finObj(cadastro[k]);
     if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */
+    /* RENOVAÇÕES ANTERIORES (6.44): o pagamento de um plano que já foi renovado continua no
+       mês em que entrou — mesmo que a categoria de hoje seja outra (virou morador). */
+    var histK = finRenovHistContados(c), zh;
+    for (zh = 0; zh < histK.length; zh++) {
+      finResumoHistorico(R, k, c, histK[zh], { planos: planos, cadastro: cadastro, peludinhos: peludinhos,
+        ordensFamilia: ordensFamilia, descontos: d.descontoIrmao, mes: mes, hoje: hoje, pagoPorChave: pagoPorChave });
+    }
     r = finObj(c.renov);
     cat = finCategoria(k, cadastro);
     /* Hóspede, avulso e morador não têm mensalidade. Moradores nunca geram
@@ -860,7 +1154,7 @@ function finResumoMes(dados, mes, opcoes) {
       continue;
     }
     aulas = finAulasDe(k, cadastro, peludinhos);
-    if (aulas === null) {
+    if (aulas === null && !finValorGravado(r)) {
       R.semComoCalcular.push({ chave: k, nome: String(c.n || k.split('__')[0]),
         servico: 'daycare', motivo: 'não há como saber quantas aulas por semana (sem renov.aulas e sem dias)' });
       continue;
@@ -874,7 +1168,14 @@ function finResumoMes(dados, mes, opcoes) {
       if (ordemFamilia !== undefined) R.ordemFamiliaResolvida++;
       else R.ordemPetSuposta++;
     }
-    mensal = finMensalidade(planos, r.plano, aulas, ordemUsada, d.descontoIrmao);
+    mensal = (aulas === null) ? null : finMensalidade(planos, r.plano, aulas, ordemUsada, d.descontoIrmao);
+    /* 6.44 (QA): com o valor GRAVADO no fechamento, a ficha não sai do total porque a tabela de
+       hoje perdeu o preço (ou a ficha perdeu os dias): a mensalidade é a gravada, ou o valor
+       fechado dividido pelos meses do tipo. */
+    if (mensal === null && finValorGravado(r)) {
+      mensal = finValorGravado({ valor_plano_cent: finObj(r).mensalidade_cent })
+        || Math.round(finValorGravado(r) / (finMesesDoCompromisso(planos[r.plano].compromisso) || 1));
+    }
     if (mensal === null) {
       R.semComoCalcular.push({ chave: k, nome: String(c.n || k.split('__')[0]),
         servico: 'daycare', motivo: 'a tabela de preços não tem valor para ' + r.plano + ' com ' + aulas + ' aula(s)' });
@@ -888,6 +1189,9 @@ function finResumoMes(dados, mes, opcoes) {
        período não geram cobrança nova (decisão da Adriana, 02/set/2026). */
     var entra = (finMesDe(r.inicio) === mes);
     valorMes = entra ? mensal * (meses || 1) : 0;
+    /* 6.44: o valor GRAVADO no fechamento vale mais que a tabela de hoje. */
+    var vg = finValorGravado(r);
+    if (entra && vg) valorMes = vg;
 
     var pago = finCent(pagoPorChave[k]);
     var falta = valorMes - pago; if (falta < 0) falta = 0;
@@ -910,6 +1214,7 @@ function finResumoMes(dados, mes, opcoes) {
          "o tutor pagou". */
       if (finMesDe(r.inicio) === mes && r.plano_deduzido !== true) {
         R.porServico.daycare.declarado += mensal * (meses || 1);
+        if (vg) R.porServico.daycare.declarado += vg - mensal * (meses || 1);   /* 6.44: o gravado */
       }
       R.porFILHOt.push({
         chave: k,
@@ -932,6 +1237,7 @@ function finResumoMes(dados, mes, opcoes) {
         /* "parcial" saiu da conta (Adriana, 02/set/2026) — só existe pago/aberto. */
         situacao: falta === 0 ? 'pago' : 'aberto'
       });
+      if (vg) R.porFILHOt[R.porFILHOt.length - 1].valorGravado = true;   /* 6.44 */
     }
 
     /* INADIMPLENTE: a vigência acabou antes do fim deste mês e ninguém
@@ -1049,6 +1355,17 @@ function finResumoMes(dados, mes, opcoes) {
     }
   }
 
+  /* UM FILHOt QUE PAGOU DUAS VEZES NO MÊS (6.44: a renovação anterior e o plano atual no mesmo
+     mês) é UM FILHOt: "quantos" conta FILHOts, não pagamentos. Sem renovação anterior no mês,
+     nada muda (uma linha por chave). */
+  var vistosDc = {}, repetidos = 0, zq;
+  for (zq = 0; zq < R.porFILHOt.length; zq++) {
+    if (R.porFILHOt[zq].servico !== 'daycare') continue;
+    if (vistosDc[R.porFILHOt[zq].chave]) repetidos++;
+    vistosDc[R.porFILHOt[zq].chave] = true;
+  }
+  R.porServico.daycare.quantos -= repetidos;
+
   /* ------------------------------------------------------------- totais ---- */
   R.recebidoTotal = R.porServico.daycare.recebido + R.porServico.auaulandia.recebido;
   R.aReceberTotal = R.porServico.daycare.aReceber + R.porServico.auaulandia.aReceber;
@@ -1085,8 +1402,13 @@ function finResumoMes(dados, mes, opcoes) {
     R.avisos.push(R.ordemFamiliaResolvida + ' FILHOt(s) sem o "Nº do peludinho na família" tiveram a ' +
       'ordem de desconto resolvida automaticamente pelo vínculo de irmãos (daycare/irmaos).');
   }
+  var foraChaves = {}, foraN = 0;
+  for (zq = 0; zq < R.semComoCalcular.length; zq++) {
+    if (!foraChaves[R.semComoCalcular[zq].chave]) foraN++;
+    foraChaves[R.semComoCalcular[zq].chave] = true;
+  }
   if (R.semComoCalcular.length) {
-    R.avisos.push(R.semComoCalcular.length + ' FILHOt(s) ficaram FORA da soma por falta de dado. ' +
+    R.avisos.push(foraN + ' FILHOt(s) ficaram FORA da soma por falta de dado. ' +
       'Estão listados em "sem como calcular" — não foram estimados.');
   }
   return R;
