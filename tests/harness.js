@@ -22453,6 +22453,28 @@ async function main() {
       console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês e ' + com644.length + ' com renovação anterior ou valor gravado (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
       check('v-50 · H3 — retrato: o finResumoMes de 2026-06 a 2026-10 é o de antes da 6.36 (totais e linhas, em 3 "hoje") para toda ficha sem dias por mês',
         r50.difs.length === 0, r50.difs.slice(0, 4).join(' · '));
+      // 6.44 (QA): as fichas com renovação anterior NÃO ficam sem conferência. Sem valor gravado e sem
+      // dias por mês, a 6.44 só ACRESCENTA as linhas das renovações anteriores: tirando essas linhas (e os
+      // "sem como calcular" delas), tudo é o que era antes. E o retrato diz quanto cada mês muda.
+      const soHist50 = com644.filter((k) => !(cad50[k].renov && Number(cad50[k].renov.valor_plano_cent) > 0));
+      if (soHist50.length && !(pag50 && Object.keys(pag50).length)) {
+        const cadH = {}; soHist50.forEach((k) => { cadH[k] = cad50[k]; });
+        const dadosH = { cadastro: cadH, orcamentos: {}, pagamentos: null, irmaos: irmaos || {}, peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] };
+        const difH = [], somaH = [];
+        let confiraH = 0;
+        meses50.forEach((m) => {
+          const a = JSON.parse(JSON.stringify(FIN_ANTES50.finResumoMes(Object.assign({}, dadosH, tabApp50), m, { hoje: '2026-10-08' })));
+          const b = JSON.parse(JSON.stringify(ctx.finResumoMes(Object.assign({}, dadosH, tabApp50), m, { hoje: '2026-10-08' })));
+          const hist = b.porFILHOt.filter((o) => o.origem === 'renovacao-anterior');
+          const tira = { porFILHOt: b.porFILHOt.filter((o) => o.origem !== 'renovacao-anterior'), inadimplentes: b.inadimplentes,
+            semComoCalcular: b.semComoCalcular.filter((o) => !/^renovação anterior/.test(o.motivo)) };
+          if (JSON.stringify(tira) !== JSON.stringify({ porFILHOt: a.porFILHOt, inadimplentes: a.inadimplentes, semComoCalcular: a.semComoCalcular })) difH.push(m);
+          confiraH += hist.filter((o) => o.confira).length;
+          somaH.push(m + ' +' + ctx.finBRL(hist.reduce((t, o) => t + o.valor, 0)) + ' (' + hist.length + ')');
+        });
+        console.log('  6.44 no retrato: ' + soHist50.length + ' fichas com renovação anterior · o que entra por mês: ' + somaH.join(' · ') + ' · ' + confiraH + ' linha(s) com "confira"');
+        check('v-50 · H3 — retrato, 6.44: nas fichas com renovação anterior, só entram as linhas delas (o resto é o de antes)', difH.length === 0, difH.join(' · '));
+      }
     } else {
       console.log('  retrato sem o nó daycare/cadastro (o sintético da nuvem): a prova usa só o cadastro inventado abaixo.');
     }
