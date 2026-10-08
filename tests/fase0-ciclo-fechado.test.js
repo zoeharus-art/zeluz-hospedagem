@@ -856,12 +856,13 @@ provaAsync('o lançamento de Reposição guarda de qual lançamento veio o uso',
 
 // ================================================================== Troca de dia (Coco Chanel e Billy Paul, 25/set)
 console.log('\nTroca de dia — falta avisada no dia dele, Reposição no novo, sem gastar as reposições');
-const TROCA_STUBS = `__bkT={pd:pelDias, rl:repLancamentos, vd:vagasDoDia, dm:dcMatriculado, rs:repSaldo, rdi:repDisponivel, hz:zHojeISO, pe:pelExtra};
+const TROCA_STUBS = `__bkT={pd:pelDias, rl:repLancamentos, vd:vagasDoDia, dm:dcMatriculado, rs:repSaldo, rdi:repDisponivel, hz:zHojeISO, pe:pelExtra, lido:REPO_LIDO};
+  REPO_LIDO=true;   // 6.46: o Extrato de reposições já chegou
   pelDias=function(){ return ['ter']; }; dcMatriculado=function(){ return true; }; repSaldo=function(){ return 2; }; repDisponivel=function(){ return 2; };
   zHojeISO=function(){ return '2026-09-25'; }; pelExtra=function(){ return {sexo:'Fêmea'}; };
   vagasDoDia=function(){ return {reposicao:__VR||[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };
   __VR=[]; __LT=[]; repLancamentos=function(){ return __LT; };`;
-const TROCA_VOLTA = 'pelDias=__bkT.pd; repLancamentos=__bkT.rl; vagasDoDia=__bkT.vd; dcMatriculado=__bkT.dm; repSaldo=__bkT.rs; repDisponivel=__bkT.rdi; zHojeISO=__bkT.hz; pelExtra=__bkT.pe;';
+const TROCA_VOLTA = 'pelDias=__bkT.pd; repLancamentos=__bkT.rl; vagasDoDia=__bkT.vd; dcMatriculado=__bkT.dm; repSaldo=__bkT.rs; repDisponivel=__bkT.rdi; zHojeISO=__bkT.hz; pelExtra=__bkT.pe; REPO_LIDO=__bkT.lido;';
 prova('o veredito da troca: não pede reposição, valida os dois dias e converte a reposição já marcada', () => {
   run(TROCA_STUBS);
   try {
@@ -896,29 +897,49 @@ prova('o veredito da troca: não pede reposição, valida os dois dias e convert
   } finally { run(TROCA_VOLTA); }
 });
 provaAsync('gravar a troca: crédito próprio (falta no dia dela, volta no novo); a reposição marcada volta a ficar sem dia', async () => {
-  run(TROCA_STUBS + `__bkT2={db:DB, au:audit}; audit=function(){}; __up=null; __upP='';
-    DB={ref:function(p){ return { push:function(){ return {key:'NOVO'}; }, update:function(v){ __upP=p; __up=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};`);
+  // 6.46: o crédito novo nasce por TRANSAÇÃO no nó fixo fa-{dia} (antes era push: a chave 'NOVO' deste
+  // banco de mentira escondia o furo dos dois aparelhos). O banco imita o SDK: 1ª volta com null.
+  run(TROCA_STUBS + `__bkT2={db:DB, au:audit}; audit=function(){}; __up=null; __upP=''; __ops=[]; __tx={};
+    DB={ref:function(p){ return { push:function(){ __ops.push('push'); return {key:'NOVO'}; },
+      update:function(v){ __ops.push('update'); __upP=p; __up=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      // 3ª rodada da 6.46: a releitura dos lançamentos (o que está no "servidor" debaixo deste caminho)
+      once:function(){ __ops.push('once'); var o={}; Object.keys(__tx).forEach(function(k){ if(k.indexOf(p+'/')===0 && __tx[k]) o[k.slice(p.length+1)]=__tx[k]; });
+        return Promise.resolve({val:function(){ return o; }}); },
+      transaction:function(fn){ __ops.push('transaction '+p.split('/').pop());
+        if(fn(null)===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}});
+        var r=fn(__tx[p]==null?null:JSON.parse(JSON.stringify(__tx[p]))); if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __tx[p]; }}});
+        __tx[p]=r; return Promise.resolve({committed:true, snapshot:{val:function(){ return r; }}}); } }; }};`);
   try {
     run("__LT=[{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'}];");
     let r = await run("repTrocaGravar({n:'Coco Chanel', tutor:'Juliana'}, '2026-09-29', '2026-09-30', null)");
     let up = JSON.parse(JSON.stringify(run('__up')));
     assert.ok(/daycare\/reposicao\/.+\/lancamentos$/.test(run('__upP')));
-    assert.strictEqual(up.NOVO.tipo, 'credito');
-    assert.strictEqual(up.NOVO.data, '2026-09-29', 'falta avisada na terça');
-    assert.strictEqual(up.NOVO.volta, '2026-09-30', 'Reposição na quarta');
-    assert.strictEqual(up.NOVO.motivo, 'troca');
-    assert.deepStrictEqual([up.NOVO.troca.de, up.NOVO.troca.para], ['2026-09-29', '2026-09-30']);
+    const novo = JSON.parse(JSON.stringify(run("__tx[Object.keys(__tx).filter(function(k){ return /\\/lancamentos\\/fa-2026-09-29$/.test(k); })[0]]")));
+    assert.strictEqual(novo.tipo, 'credito');
+    assert.strictEqual(novo.data, '2026-09-29', 'falta avisada na terça');
+    assert.strictEqual(novo.volta, '2026-09-30', 'Reposição na quarta');
+    assert.strictEqual(novo.motivo, 'troca');
+    assert.deepStrictEqual([novo.troca.de, novo.troca.para], ['2026-09-29', '2026-09-30']);
+    igual(J630('__ops'), ['transaction fa-2026-09-29', 'update'], 'o crédito primeiro; só depois a reposição marcada sai do dia (6.46)');
+    assert.ok(!Object.keys(up).some((k) => /^fa-/.test(k) || k === 'NOVO'), 'o crédito não vai no update');
     assert.strictEqual(up['c1/volta'], '', 'a reposição que estava marcada volta a ficar sem dia');
     assert.ok(/virou troca/.test(up['c1/volta_desmarcada'].motivo) && up['c1/volta_desmarcada'].dia === '2026-09-30');
     assert.strictEqual(JSON.parse(JSON.stringify(r)).convertida, true);
+    assert.strictEqual(JSON.parse(JSON.stringify(r)).credId, 'fa-2026-09-29');
     // o tutor já tinha avisado a falta da terça: a troca usa aquela falta
-    run("__LT=[{_id:'f1', tipo:'credito', data:'2026-09-29', motivo:'viagem'}];");
+    // (3ª rodada da 6.46: a falta do Extrato é conferida no servidor — a ida ao servidor no nó dela, a
+    // releitura — e a troca entra nela por transação, no mesmo nó; antes era um update)
+    run("__LT=[{_id:'f1', tipo:'credito', data:'2026-09-29', motivo:'viagem'}]; __ops=[]; __up=null;"
+      + "__tx[Object.keys(__tx)[0].replace(/fa-2026-09-29$/, 'f1')]={tipo:'credito', data:'2026-09-29', motivo:'viagem', quem:'Recepção', ts:3};");
     r = await run("repTrocaGravar({n:'Coco Chanel', tutor:'Juliana'}, '2026-09-29', '2026-09-30', {quem:'Márcia', ts:1})");
-    up = JSON.parse(JSON.stringify(run('__up')));
-    assert.ok(!up.NOVO, 'nenhum crédito novo');
-    assert.strictEqual(up['f1/volta'], '2026-09-30');
-    assert.strictEqual(up['f1/troca'].de, '2026-09-29');
-    assert.strictEqual(up['f1/autorizacao'].quem, 'Márcia');
+    const f1 = JSON.parse(JSON.stringify(run("__tx[Object.keys(__tx).filter(function(k){ return /\\/lancamentos\\/f1$/.test(k); })[0]]")));
+    igual(J630('__ops'), ['transaction f1', 'once', 'transaction f1'], 'a ida ao servidor, a releitura e a troca no nó da falta');
+    assert.ok(!Object.keys(J630('__tx')).some((k) => /fa-2026-09-29-2$/.test(k)) && run('__up') === null, 'nenhum crédito novo, nenhum update');
+    assert.strictEqual(f1.volta, '2026-09-30');
+    assert.strictEqual(f1.troca.de, '2026-09-29');
+    assert.strictEqual(f1.autorizacao.quem, 'Márcia');
+    igual([f1.quem, f1.motivo], ['Recepção', 'viagem'], 'o resto da falta fica como estava');
+    assert.strictEqual(JSON.parse(JSON.stringify(r)).credId, 'f1');
   } finally { run(TROCA_VOLTA + ' DB=__bkT2.db; audit=__bkT2.au;'); }
 });
 prova('a mensagem da troca fala em troca — não em reposição', () => {
@@ -955,7 +976,8 @@ prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai c
 provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; lotado, falta que já passou e período continuam reposição', async () => {
   run(`__bkR={ge:document.getElementById, mm:repMsgModal, rg:repGravar, au:audit, ad:repAuditDiaDele, rf:repFechar, rr:renderReposicao,
       vp:vagasPedir, tl:repTelDe, hz:zHojeISO, rs:repSaldo, vd:vagasDoDia, ve:vagasPodeEncaixar, pt:pessoaDoTurno, pe:pelExtra, dq:repDiasQueViria,
-      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual, pd:pelDias};
+      ps:repPelSel, mo:repModoAtual, mt:repMotivoAtual, pd:pelDias, lido:REPO_LIDO};
+    REPO_LIDO=true;   // 6.46: o Extrato de reposições já chegou
     __diasDele=['sex']; pelDias=function(){ return __diasDele; };   // o Bis vem às sextas
     __elsR={}; document.getElementById=function(id){ return __elsR[id]||(__elsR[id]={value:'', textContent:'', innerHTML:'', style:{}, disabled:false}); };
     __capR=[]; repMsgModal=function(t,l,x){ __capR.push({t:t, l:l, x:x}); };
@@ -1002,7 +1024,7 @@ provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; l
   } finally {
     run(`document.getElementById=__bkR.ge; repMsgModal=__bkR.mm; repGravar=__bkR.rg; audit=__bkR.au; repAuditDiaDele=__bkR.ad; repFechar=__bkR.rf;
       renderReposicao=__bkR.rr; vagasPedir=__bkR.vp; repTelDe=__bkR.tl; zHojeISO=__bkR.hz; repSaldo=__bkR.rs; vagasDoDia=__bkR.vd;
-      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt; pelDias=__bkR.pd;`);
+      vagasPodeEncaixar=__bkR.ve; pessoaDoTurno=__bkR.pt; pelExtra=__bkR.pe; repDiasQueViria=__bkR.dq; repPelSel=__bkR.ps; repModoAtual=__bkR.mo; repMotivoAtual=__bkR.mt; pelDias=__bkR.pd; REPO_LIDO=__bkR.lido;`);
   }
 });
 prova('reposição: "com a de hoje" só quando a falta é de hoje', () => {
@@ -1044,14 +1066,23 @@ provaAsync('dia lotado: a Márcia autoriza e o app faz a troca inteira', async (
     repPelaChave=function(){ return {n:'Coco Chanel', tutor:'Juliana'}; };
     vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], usadas:5, limite:5, cheio:true, lido:true}; };
     zPergunta=function(){ return Promise.resolve(true); };
-    repTrocaGravar=function(p, de, para, aut){ __tg={de:de, para:para, aut:!!aut}; return Promise.resolve({convertida:false}); };
+    repTrocaGravar=function(p, de, para, aut){ __tg={de:de, para:para, aut:!!aut, st:__pdT5.status}; return Promise.resolve({convertida:false}); };
     repTrocaFeitaModal=function(){ __fm++; }; audit=function(){};
-    DB={ref:function(){ return { update:function(){ return Promise.resolve(); } }; }};`);
+    // 6.46: o pedido está no servidor e é reservado por transação antes de gravar (o banco de
+    // mentira imita o SDK: a 1ª volta vem com null, a 2ª com o que está no servidor).
+    // 4ª rodada da 6.46 (ATK3-8): a reserva confere que o pedido do servidor é o que a tela mostra.
+    __pdT5={status:'pedido', pet:'Coco Chanel', tipo:'reposicao', payload:{volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}}}; __upT5=[];
+    DB={ref:function(){ return { update:function(v){ __upT5.push(JSON.parse(JSON.stringify(v))); return Promise.resolve(); },
+      transaction:function(fn){ if(fn(null)===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}});
+        var r=fn(JSON.parse(JSON.stringify(__pdT5))); if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __pdT5; }}});
+        __pdT5=r; return Promise.resolve({committed:true, snapshot:{val:function(){ return r; }}}); } }; }};`);
   try {
     await run("vagasAutorizar('2026-09-30', 'coco')");
     for (let i = 0; i < 20; i++) await Promise.resolve();
-    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__tg'))), { de: '2026-09-29', para: '2026-09-30', aut: true });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__tg'))), { de: '2026-09-29', para: '2026-09-30', aut: true, st: 'autorizando' }, 'o pedido foi reservado antes de gravar (6.46)');
     assert.strictEqual(run('__fm'), 1, 'a mensagem da troca sai pronta');
+    // revisão da 6.46: o "autorizado" também é por transação, conferindo que a reserva é a nossa
+    assert.deepStrictEqual([run('__pdT5.status'), run('__pdT5.autorizado_por') === run('__pdT5.autorizando.quem'), run('__upT5.length')], ['autorizado', true, 0]);
   } finally { run('vagasPodeEncaixar=__bkT5.pp; vagasPedidoDe=__bkT5.pd; repPelaChave=__bkT5.pc; vagasDoDia=__bkT5.vd; zPergunta=__bkT5.zp; repTrocaGravar=__bkT5.tg; repTrocaFeitaModal=__bkT5.fm; DB=__bkT5.db; audit=__bkT5.au;' + TROCA_VOLTA); }
 });
 
@@ -5651,7 +5682,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{\n    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -9313,7 +9344,8 @@ console.log('\n6.39 — Falta avisada em "Alguns dias" e a prévia que diz o que
 // fazer dois, três dias, a gente colocar mais datas." Dado INVENTADO: «Fredo», tutora «Eleonora Teste».
 // 13/10/2026 é terça; 14/10, quarta; 15/10, quinta; 17/10, sábado.
 const amb639 = (ficha, extra) => run(`__bk639={pa:repPelSel, pe:pelExtra, P:PELUDINHOS, ge:document.getElementById, qs:document.querySelector, rg:repGravar, au:audit,
-    mm:repMsgModal, rr:renderReposicao, sd:repSaldo, hz:zHojeISO, ad:repAlgunsDatas, mo:repModoAtual, mt:repMotivoAtual, r:document.body.dataset.role};
+    mm:repMsgModal, rr:renderReposicao, sd:repSaldo, hz:zHojeISO, ad:repAlgunsDatas, mo:repModoAtual, mt:repMotivoAtual, r:document.body.dataset.role, lido:REPO_LIDO};
+  REPO_LIDO=true;   // 6.46: o Extrato de reposições já chegou (o ouvinte respondeu)
   PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'}]; repPelSel=PELUDINHOS[0];
   __ex639=JSON.parse(${JSON.stringify(JSON.stringify(ficha))}); pelExtra=function(){ return __ex639; };
   __g639=[]; repGravar=function(p,r){ __g639.push(JSON.parse(JSON.stringify(r))); return Promise.resolve({key:'k'+__g639.length}); };
@@ -9327,7 +9359,7 @@ const amb639 = (ficha, extra) => run(`__bk639={pa:repPelSel, pe:pelExtra, P:PELU
   document.body.dataset.role='consultora'; repModoAtual='alguns'; repMotivoAtual='viagem'; ${extra || ''}`);
 const solta639 = () => run(`repPelSel=__bk639.pa; pelExtra=__bk639.pe; PELUDINHOS=__bk639.P; document.getElementById=__bk639.ge; document.querySelector=__bk639.qs;
   repGravar=__bk639.rg; audit=__bk639.au; repMsgModal=__bk639.mm; renderReposicao=__bk639.rr; repSaldo=__bk639.sd; zHojeISO=__bk639.hz;
-  repAlgunsDatas=__bk639.ad; repModoAtual=__bk639.mo; repMotivoAtual=__bk639.mt; document.body.dataset.role=__bk639.r;`);
+  repAlgunsDatas=__bk639.ad; repModoAtual=__bk639.mo; repMotivoAtual=__bk639.mt; document.body.dataset.role=__bk639.r; REPO_LIDO=__bk639.lido;`);
 const FREDO639 = (dias, extra) => Object.assign({ n: 'Fredo', tutor: 'Eleonora Teste', sexo: 'Macho', dias: dias, freq: dias.length + 'x' }, extra || {});
 const espera639 = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 
@@ -11474,6 +11506,2296 @@ prova('6.44 QA7 — registros antigos: o plano pago do desfazer duas vezes segui
   igual(st.map((o) => o.valor).sort(), [38700, 38700]);
   assert.ok(st.some((o) => /a versão mais nova do pagamento seguinte tem outro período .* confira$/.test(o.confira || '')), JSON.stringify(st.map((o) => o.confira)));
 });
+
+// ================================================================== Story 6.46 — a mesma falta avisada (ou troca) lançada 2 vezes
+console.log('\n6.46 — a mesma falta avisada (ou troca de dia) lançada duas vezes não vira dois créditos (Coco Chanel, Billy Paul e Bis, quadro linha 42)');
+// Dado INVENTADO: «Fredo» (amb639), vem só às terças; hoje = qua 07/10/2026 (amb639). 12/10 é feriado:
+// as provas usam ter 13/10, qua 14/10, ter 20/10 e qua 21/10.
+// O banco de mentira imita o Firebase, COM transação: a 1ª volta vem com null (o nó não está em
+// memória), como no SDK e no bancoFalso lá de cima; devolver algo que não seja `undefined` faz o
+// "servidor" responder com o que tem. A escrita local desce NA HORA para o REPO_CACHE (o ouvinte local
+// do SDK). Com `atrasado`, a escrita vai só para o servidor: é o 2º aparelho, cujo Extrato ainda não
+// recebeu o que o 1º acabou de gravar. Com `pendurado`, as transações esperam (sem rede) até liberar().
+function banco646(op) {
+  op = op || {};
+  const serv = {}; let n = 0; const fila = [];
+  const partes = (c) => String(c).split('/').filter(Boolean);
+  const le = (raiz, c) => { let o = raiz; for (const k of partes(c)) { if (o == null || typeof o !== 'object') return null; o = o[k]; } return o == null ? null : o; };
+  const poe = (raiz, c, v) => { const ps = partes(c); let o = raiz;
+    for (let i = 0; i < ps.length - 1; i++) { if (o[ps[i]] == null || typeof o[ps[i]] !== 'object') o[ps[i]] = {}; o = o[ps[i]]; }
+    if (v === null || v === undefined) delete o[ps[ps.length - 1]]; else o[ps[ps.length - 1]] = JSON.parse(JSON.stringify(v)); };
+  const grava = (c, v) => { poe(serv, c, v);
+    if (!op.atrasado && /^daycare\/reposicao\//.test(c)) poe(ctx.REPO_CACHE, c.replace(/^daycare\/reposicao\//, ''), v); };
+  const tx = (c, fn) => {
+    if (fn(null) === undefined) return { committed: false, snapshot: { val: () => null } };
+    const atual = le(serv, c), r = fn(atual == null ? null : JSON.parse(JSON.stringify(atual)));
+    if (r === undefined) return { committed: false, snapshot: { val: () => le(serv, c) } };
+    grava(c, r); return { committed: true, snapshot: { val: () => r } };
+  };
+  const B = {
+    serv, txs: [], ups: [], falhaUpdate: null, falhaOnce: null,
+    ref(c) { c = c || ''; return {
+      push(v) { const k = 'K' + (++n); if (v !== undefined) grava(c + '/' + k, v); const pr = Promise.resolve({ key: k }); pr.key = k; return pr; },
+      update(o) {
+        if (B.falhaUpdate && B.falhaUpdate.test(c)) return Promise.reject(new Error('sem rede'));
+        B.ups.push(c); Object.keys(o).forEach((k) => grava(c + '/' + k, o[k])); return Promise.resolve(); },
+      set(v) { grava(c, v); return Promise.resolve(); },
+      // `falhaOnce` (revisão da 6.46): a releitura falha (a rede caiu entre a transação e a releitura).
+      once() { if (B.falhaOnce && B.falhaOnce.test(c)) return Promise.reject(new Error('sem rede'));
+        const v = le(serv, c); return Promise.resolve({ val: () => v }); },
+      transaction(fn) { B.txs.push(c.split('/').pop());
+        if (op.pendurado) return new Promise((ok) => fila.push(() => ok(tx(c, fn))));
+        return Promise.resolve(tx(c, fn)); } }; },
+    liberar() { while (fila.length) fila.shift()(); },
+    poe(c, v) { grava(c, v); },
+    le(c) { return le(serv, c); },
+    lanc() { return le(serv, 'daycare/reposicao/' + run('pelKey(PELUDINHOS[0])') + '/lancamentos') || {}; },
+  };
+  return B;
+}
+// Os créditos vivos (não estornados) gravados no SERVIDOR: é o que o saldo de todos os aparelhos vai ler.
+const creditos646 = (B) => { const o = B.lanc(), an = {};
+  Object.keys(o).forEach((k) => { if (o[k].tipo === 'estorno' && o[k].estornaId) an[o[k].estornaId] = 1; });
+  return Object.keys(o).filter((k) => o[k].tipo === 'credito' && !an[k]).map((k) => o[k].data + '→' + (o[k].volta || '-') + (o[k].troca ? ' troca' : '')).sort(); };
+const K646 = () => run('pelKey(PELUDINHOS[0])');
+const palco646 = (op) => {
+  const B = banco646(typeof op === 'object' ? op : { atrasado: !!op }); ctx.__B646 = B;
+  amb639(FREDO639(['ter']), `__bk646={rg:repGravar, db:DB, vd:vagasDoDia, vc:vagasCarregarDia, pt:pessoaDoTurno, rc:REPO_CACHE, qs:quemSou,
+      al:alert, zp:zPergunta, zt:zTexto, og:orcFeriadosGarantir, vp:VAGAS_PEDIDOS, dx:[dxPel, dxDia, dxTroca, dxDe]};
+    repGravar=__bk639.rg; DB=__B646; REPO_CACHE={}; pessoaDoTurno=function(){ return __pt646; }; __pt646='Recepção Teste';
+    __quem646='Aparelho A'; quemSou=function(){ return __quem646; };
+    __al646=[]; alert=function(t){ __al646.push(String(t)); }; zPergunta=function(){ return Promise.resolve(true); };
+    __zt646='Lançada 2 vezes'; zTexto=function(){ return Promise.resolve(__zt646); };
+    orcFeriadosGarantir=function(){ return Promise.resolve(); }; VAGAS_PEDIDOS={};
+    __el639.dxWarn={textContent:''}; __el639.dxOk={disabled:false, textContent:''};
+    vagasCarregarDia=function(){ return Promise.resolve(); };
+    vagasDoDia=function(dia){ return {reposicao:repAgendadosPara(dia).map(function(o){ return pelNome(o.p); }), avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };
+    repModoAtual='dia'; repMotivoAtual='outro';`);
+  return B;
+};
+const solta646 = () => { run(`repGravar=__bk646.rg; DB=__bk646.db; vagasDoDia=__bk646.vd; vagasCarregarDia=__bk646.vc; pessoaDoTurno=__bk646.pt; REPO_CACHE=__bk646.rc;
+  quemSou=__bk646.qs; alert=__bk646.al; zPergunta=__bk646.zp; zTexto=__bk646.zt; orcFeriadosGarantir=__bk646.og; VAGAS_PEDIDOS=__bk646.vp;
+  dxPel=__bk646.dx[0]; dxDia=__bk646.dx[1]; dxTroca=__bk646.dx[2]; dxDe=__bk646.dx[3];
+  if(typeof VAGAS_LANCADOS!=='undefined') VAGAS_LANCADOS={};`); solta639(); };
+// «+ Falta» › Um dia só (com ou sem o dia de repor). Reabrir o modal (repAbrirLancar) faz o mesmo REP_LANCANDO=false/REP_LANC_GER++.
+// A recusa relê os lançamentos antes de virar texto (revisão da 6.46): mais voltas de promessa.
+const espera646 = async () => { for (let i = 0; i < 4; i++) await espera639(); };
+const falta646 = async (D, N, quem) => { run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; ${quem ? `__quem646='${quem}';` : ''}
+  __el639.repData.value='${D}'; __el639.repVolta.value='${N || ''}'; repModoAtual='dia'; repConfirmar();`); await espera646();
+  return run('__el639.repWarn.textContent'); };
+const periodo646 = async (de, ate, N) => { run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent='';
+  __el639.repDe.value='${de}'; __el639.repAte.value='${ate}'; __el639.repVolta.value='${N || ''}'; repModoAtual='periodo'; repConfirmar();`); await espera646();
+  return run('__el639.repWarn.textContent'); };
+const alguns646 = async (datas, N) => { run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent='';
+  repAlgunsDatas=${JSON.stringify(datas)}; __el639.repVolta.value='${N || ''}'; repModoAtual='alguns'; repConfirmar();`); await espera646();
+  return run('__el639.repWarn.textContent'); };
+// «Marcar o dia» › troca (e a Lista de troca): o dxConfirmar, que chama o repTrocaGravar
+const marcar646 = async (D, N) => { run(`__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='${N}'; dxTroca=true; dxDe='${D}'; dxConfirmar();`); await espera646();
+  return run('__el639.dxWarn.textContent'); };
+const hora646 = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const ESPERA646 = 'Ainda estou trazendo o Extrato de reposições. Espere uns segundos e confirme de novo: assim a mesma falta não entra duas vezes.';
+
+provaAsync('6.46 P1 (controle) — mesmo aparelho, Extrato em dia: a troca lançada 2 vezes (pelos dois caminhos, nas quatro ordens) dá UM crédito, na chave fixa', async () => {
+  const casos = [['«+ Falta» 2×', falta646, falta646], ['«Marcar troca» 2×', marcar646, marcar646],
+    ['«+ Falta» e «Marcar troca»', falta646, marcar646], ['«Marcar troca» e «+ Falta»', marcar646, falta646]];
+  for (const [nome, a, b] of casos) {
+    const B = palco646(false);
+    try { await a('2026-10-13', '2026-10-14'); await b('2026-10-13', '2026-10-14');
+      igual(creditos646(B), ['2026-10-13→2026-10-14 troca'], nome);
+      igual(Object.keys(B.lanc()), ['fa-2026-10-13'], nome + ': o nó fixo da falta');
+    } finally { solta646(); }
+  }
+  // as chaves puras: o sufixo nasce quando o nó já existe (vivo ou estornado)
+  igual(run("repFaltaChave('2026-10-13', [])"), 'fa-2026-10-13');
+  igual(run("repFaltaChave('2026-10-13', [{_id:'fa-2026-10-13'},{_id:'fa-2026-10-13-2'},{_id:'fa-2026-10-14'}])"), 'fa-2026-10-13-3');
+});
+provaAsync('6.46 P2 (R1) — 2º aparelho, Extrato atrasado: «+ Falta» 13/10 com repor em 14/10 2× grava UM crédito; o 2º toque diz quem lançou e a hora; a trava solta e o botão volta', async () => {
+  const B = palco646(true);
+  try {
+    await falta646('2026-10-13', '2026-10-14', 'Aparelho A');
+    const w = await falta646('2026-10-13', '2026-10-14', 'Aparelho B');
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    const reg = B.lanc()['fa-2026-10-13'];
+    igual(reg.quem, 'Aparelho A', 'a transação não grava por cima: o 1º fica');
+    igual(w, 'A falta avisada de 13/10/2026 acabou de ser lançada em outro aparelho (por Aparelho A, às ' + hora646(reg.ts) + '). Ela já está no Extrato e já conta no saldo. Nada foi lançado de novo.'
+      + ' O dia de repor (14/10/2026) já estava marcado no lançamento do outro aparelho.');
+    igual([run('REP_LANCANDO'), run('__btn639.disabled'), run('__mm639.length'), J630('__au639').filter((a) => a[0] === 'reposicao-credito').length], [false, false, 1, 1],
+      'a trava solta, o botão volta; a confirmação e o rastro são só do 1º');
+    igual(B.txs, ['fa-2026-10-13', 'fa-2026-10-13'], 'os dois aparelhos caíram no MESMO nó');
+  } finally { solta646(); }
+});
+provaAsync('6.46 P3 (R2) — 2º aparelho, Extrato atrasado: «Marcar troca» 13/10 → 14/10 2× grava UM crédito, e o 2º diz "Essa troca já está feita (em outro aparelho, por …)"', async () => {
+  const B = palco646(true);
+  try {
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    run("__pt646='Recepção Outra';");
+    const w = await marcar646('2026-10-13', '2026-10-14');
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    igual(w, 'Essa troca já está feita (em outro aparelho, por Recepção Teste): 13/10/2026 → 14/10/2026. Nada foi lançado de novo.');
+    igual([run('__el639.dxOk.disabled'), run('__mm639.length')], [false, 1], 'o botão volta; a confirmação da troca é só a do 1º');
+  } finally { solta646(); }
+});
+provaAsync('6.46 P4 (R3) — misto, Extrato atrasado: «+ Falta» num aparelho e «Marcar troca» no outro (nas duas ordens) grava UM crédito; a falta com outro dia recusa a troca e diz o que fazer', async () => {
+  for (const [a, b, aviso] of [[falta646, marcar646, /^Essa troca já está feita \(em outro aparelho, por Recepção Teste\): 13\/10\/2026 → 14\/10\/2026\. Nada foi lançado de novo\.$/],
+    [marcar646, falta646, /^A falta avisada de 13\/10\/2026 acabou de ser lançada em outro aparelho \(por Recepção Teste, às \d\d:\d\d\)\. Ela já está no Extrato e já conta no saldo\. Nada foi lançado de novo\. O dia de repor \(14\/10\/2026\) já estava marcado no lançamento do outro aparelho\.$/]]) {
+    const B = palco646(true);
+    try { await a('2026-10-13', '2026-10-14'); const w = await b('2026-10-13', '2026-10-14');
+      igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+      assert.ok(aviso.test(w), w);
+    } finally { solta646(); }
+  }
+  // a falta comum (sem dia de repor) entrou no outro aparelho: a troca não cria crédito novo
+  const B = palco646(true);
+  try {
+    await falta646('2026-10-13', '');
+    const w = await marcar646('2026-10-13', '2026-10-14');
+    igual(creditos646(B), ['2026-10-13→-']);
+    igual(w, 'A falta de 13/10/2026 acabou de ser lançada em outro aparelho. Espere a tela atualizar e faça a troca de novo: o app aproveita essa falta, sem crédito novo.');
+    igual(run('__el639.dxOk.disabled'), false);
+  } finally { solta646(); }
+});
+provaAsync('6.46 P5 (R4, caso C) — o dia de repor que já tem a troca ou a reposição dele não recebe outra pela «+ Falta» (como a «Marcar troca»): aviso, e nada é gravado', async () => {
+  for (const primeiro of [falta646, marcar646]) {
+    const B = palco646(false);
+    try { await primeiro('2026-10-13', '2026-10-14');
+      const n0 = B.txs.length;
+      const w = await falta646('2026-10-20', '2026-10-14');
+      igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+      igual(w, 'Fredo já tem a troca de 13/10 marcada para 14/10/2026. Escolha outro dia de repor ou deixe em branco. Nada foi lançado.');
+      igual([B.txs.length, run('REP_LANCANDO')], [n0, false], 'nem chega a tentar gravar');
+      // o período e "Alguns dias" com o mesmo dia de repor: a mesma recusa
+      igual(await periodo646('2026-10-20', '2026-10-27', '2026-10-14'), w);
+      igual(await alguns646(['2026-10-20'], '2026-10-14'), w);
+      igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    } finally { solta646(); }
+  }
+  // a reposição comum marcada para 14/10 (falta de 06/10): «uma reposição»
+  const B = palco646(false);
+  try {
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/c0', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', ts: 1 });
+    igual(await falta646('2026-10-20', '2026-10-14'), 'Fredo já tem uma reposição marcada para 14/10/2026. Escolha outro dia de repor ou deixe em branco. Nada foi lançado.');
+    igual(creditos646(B), ['2026-10-06→2026-10-14']);
+    // sem o dia de repor, a falta entra normalmente
+    igual(await falta646('2026-10-20', ''), '');
+    igual(creditos646(B), ['2026-10-06→2026-10-14', '2026-10-20→-']);
+  } finally { solta646(); }
+});
+provaAsync('6.46 P5b — com a troca 13/10 → 14/10 estornada, a falta 20/10 com repor em 14/10 é aceita', async () => {
+  const B = palco646(false);
+  try {
+    await marcar646('2026-10-13', '2026-10-14');
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/e1', { tipo: 'estorno', estornaId: 'fa-2026-10-13', data: '2026-10-07', motivo: 'estorno', ts: 2 });
+    igual(await falta646('2026-10-20', '2026-10-14'), '');
+    igual(creditos646(B), ['2026-10-20→2026-10-14 troca']);
+  } finally { solta646(); }
+});
+provaAsync('6.46 P6 — "Um período" 13 a 20/10 em 2 aparelhos dá 2 créditos, não 4; com parte já lançada, entram só os dias novos, a confirmação diz quais já estavam e o dia de repor não some sem aviso', async () => {
+  let B = palco646(true);
+  try {
+    igual(await periodo646('2026-10-13', '2026-10-20'), '');
+    const w = await periodo646('2026-10-13', '2026-10-20');
+    igual(creditos646(B), ['2026-10-13→-', '2026-10-20→-']);
+    igual(w, 'As faltas avisadas de 13/10 e 20/10 acabaram de ser lançadas em outro aparelho. Elas já estão no Extrato e já contam no saldo. Nada foi lançado de novo.');
+    igual([run('REP_LANCANDO'), run('__mm639.length')], [false, 1]);
+  } finally { solta646(); }
+  // o outro aparelho lançou só o 13/10; este lança o período 13 a 20/10 com repor em 21/10
+  B = palco646(true);
+  try {
+    await falta646('2026-10-13', '');
+    run('__mm639=[]; __au639=[];');
+    igual(await periodo646('2026-10-13', '2026-10-20', '2026-10-21'), '');
+    igual(creditos646(B), ['2026-10-13→-', '2026-10-20→-'], 'entrou só o 20/10; o 13/10 ficou como estava');
+    const m = J630('__mm639[0]');
+    igual(m.l[0], 'Fredo ganhou 1 dia de reposição — motivo: Outro.');
+    assert.ok(m.l.indexOf('Entrou: 20/10. Já estava lançada em outro aparelho: 13/10 (ficou como estava). O dia de repor (21/10/2026) não foi marcado: marque em «Marcar reposição».') >= 0, JSON.stringify(m.l));
+    assert.ok(!m.l.some((x) => /O tutor escolheu repor/.test(x)), 'o dia de repor não aparece como agendado');
+    assert.ok(/contando a do dia 20\/10\/2026/.test(m.msg) && !/21\/10/.test(m.msg), m.msg);
+    const au = J630('__au639').filter((a) => a[0] === 'reposicao-credito');
+    assert.ok(au.length === 1 && /^Fredo · 1 dia\(s\) · Outro \(já estava lançada em outro aparelho: 13\/10\)$/.test(au[0][1]), JSON.stringify(au));
+  } finally { solta646(); }
+  // "Alguns dias" com parte já lançada (sem dia de repor): só os dias novos, sem falar em dia de repor
+  B = palco646(true);
+  try {
+    await falta646('2026-10-20', '');
+    run('__mm639=[];');
+    igual(await alguns646(['2026-10-13', '2026-10-20', '2026-10-27']), '');
+    igual(creditos646(B), ['2026-10-13→-', '2026-10-20→-', '2026-10-27→-']);
+    const l = J630('__mm639[0].l');
+    igual(l[0], 'Fredo ganhou 2 dias de reposição — motivo: Outro.');
+    assert.ok(l.indexOf('Entraram: 13/10 e 27/10. Já estava lançada em outro aparelho: 20/10 (ficou como estava).') >= 0, JSON.stringify(l));
+    assert.ok(/contando as dos dias 13\/10 e 27\/10\./.test(J630('__mm639[0].msg')), J630('__mm639[0].msg'));
+  } finally { solta646(); }
+});
+provaAsync('6.46 P7 — a Márcia autoriza o MESMO pedido em 2 aparelhos: o pedido é reservado por transação; 1 crédito, 1 "autorizado"; o 2º ouve "já está sendo autorizado"', async () => {
+  const PED = (st) => ({ pet: 'Fredo', tutor: 'Eleonora Teste', tipo: 'reposicao', status: st || 'pedido', dia: '2026-10-14', quem: 'Recepção Teste', ts: 1,
+    payload: { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } });
+  const prep = (B, ped) => { B.poe('daycare/vagas-pedidos/2026-10-14/' + K646(), ped);
+    run(`document.body.dataset.role='gestao'; __pt646='Márcia Teste'; VAGAS_PEDIDOS={'2026-10-14':{}}; VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])]=${JSON.stringify(ped)};`); };
+  const autoriza = () => run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))");
+  const pedido = (B) => B.le('daycare/vagas-pedidos/2026-10-14/' + K646());
+  // ao mesmo tempo
+  let B = palco646(true);
+  try {
+    prep(B, PED());
+    const a = autoriza(), b = autoriza(); await a; await b; await espera639();
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    igual([pedido(B).status, pedido(B).autorizado_por, pedido(B).autorizando.quem], ['autorizado', 'Márcia Teste', 'Márcia Teste']);
+    igual(J630('__al646'), ['Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi lançado de novo.']);
+    igual(B.lanc()['fa-2026-10-13'].autorizacao.quem, 'Márcia Teste', 'a autorização viaja com o crédito');
+  } finally { solta646(); }
+  // um depois do outro (o 2º aparelho ainda com o pedido aberto na tela)
+  B = palco646(true);
+  try {
+    prep(B, PED()); await autoriza(); await espera639();
+    run(`VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])].status='pedido';`);
+    await autoriza(); await espera639();
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    igual([pedido(B).status, J630('__al646')], ['autorizado', ['Este pedido já foi autorizado (por Márcia Teste). Nada foi lançado de novo.']]);
+  } finally { solta646(); }
+  // a reserva de um aparelho que fechou no meio (há 3 min) volta a valer; a de 10 s atrás, não
+  B = palco646(true);
+  try {
+    const velho = Object.assign(PED('autorizando'), { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 180000 } });
+    prep(B, velho);
+    igual(J630('vagasPedidosAbertos().length'), 1, 'a reserva abandonada volta para o quadro');
+    await autoriza(); await espera639();
+    igual([creditos646(B), pedido(B).status, J630('__al646')], [['2026-10-13→2026-10-14 troca'], 'autorizado', []]);
+  } finally { solta646(); }
+  B = palco646(true);
+  try {
+    prep(B, Object.assign(PED('autorizando'), { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 10000 } }));
+    // revisão da 6.46: reservado agora, ele FICA no quadro — "em autorização por …", sem os botões
+    igual(J630('vagasPedidosAbertos().map(function(o){ return [o._chave, !!o._emAutorizacao]; })'), [[K646(), true]], 'reservado agora: fica no quadro, em autorização');
+    const hq = run('vagasPedidosHTML()');
+    assert.ok(/em autorização por Gestão Outra/.test(hq) && !/vagasAutorizar\(/.test(hq) && !/vagasRecusar\(/.test(hq), hq);
+    await autoriza(); await espera639();
+    igual([creditos646(B), pedido(B).status, J630('__al646')], [[], 'autorizando', ['Este pedido já está sendo autorizado em outro aparelho (por Gestão Outra). Nada foi lançado de novo.']]);
+  } finally { solta646(); }
+  // a troca já foi feita pela recepção em outro aparelho: nada entra de novo, e o pedido fica ATENDIDO
+  // (revisão da 6.46, ATK6): "autorizado", com a nota de quem a fez — não volta para "pedido" nem pede recusa
+  B = palco646(true);
+  try {
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'troca', volta: '2026-10-14',
+      troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X', ts: 5 }, quem: 'Recepção X', ts: 5 });
+    prep(B, PED()); await autoriza(); await espera639();
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    igual([pedido(B).status, pedido(B).nota, pedido(B).autorizado_por, J630('__al646')], ['autorizado', 'já estava feita por Recepção X', 'Márcia Teste',
+      ['Essa troca já está feita (em outro aparelho, por Recepção X): 13/10/2026 → 14/10/2026. Nada foi lançado de novo.\n\nO pedido ficou como autorizado: a troca já estava feita por Recepção X.']]);
+    // e o «Recusar» de depois não desmente: o pedido já foi atendido
+    run("__zt646='Já foi feita';"); await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera639();
+    igual([pedido(B).status, J630('__al646').slice(-1)], ['autorizado', ['Este pedido já foi autorizado (por Márcia Teste). A recusa não foi gravada.']]);
+  } finally { solta646(); }
+});
+provaAsync('6.46 P8 — sem o Extrato (REPO_LIDO=false), os 3 caminhos esperam e nada é gravado; com o Extrato lido e a casa sem reposição nenhuma (REPO_CACHE={}), lança', async () => {
+  const B = palco646(false);
+  try {
+    run('REPO_LIDO=false;');
+    igual(await falta646('2026-10-13', '2026-10-14'), ESPERA646);
+    igual([run('REP_LANCANDO'), run('__btn639.disabled')], [false, false]);
+    igual(await marcar646('2026-10-13', '2026-10-14'), ESPERA646);
+    const ped = { pet: 'Fredo', tipo: 'reposicao', status: 'pedido', dia: '2026-10-14', payload: { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } };
+    B.poe('daycare/vagas-pedidos/2026-10-14/' + K646(), ped);
+    run(`document.body.dataset.role='gestao'; VAGAS_PEDIDOS={'2026-10-14':{}}; VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])]=${JSON.stringify(ped)};`);
+    await run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera639();
+    igual(J630('__al646'), [ESPERA646]);
+    igual([B.txs, B.ups, Object.keys(B.lanc()), B.le('daycare/vagas-pedidos/2026-10-14/' + K646()).status], [[], [], [], 'pedido'], 'nada foi gravado');
+    // o Extrato chegou — vazio (a casa não tem reposição nenhuma): lança normalmente
+    run('REPO_LIDO=true; REPO_CACHE={};');
+    igual(await falta646('2026-10-13', ''), '');
+    igual(creditos646(B), ['2026-10-13→-']);
+  } finally { solta646(); }
+  // o ouvinte do Extrato marca a chegada (vazio também conta)
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/DB\.ref\('daycare\/reposicao'\)\.on\('value', s=>\{ REPO_CACHE=s\.val\(\)\|\|\{\};\s+REPO_LIDO=true;/.test(src), 'o ouvinte de daycare/reposicao marca REPO_LIDO');
+});
+provaAsync('6.46 P9 — estornar e relançar a mesma falta grava fa-13/10-2: saldo 1, e o estorno antigo não anula o crédito novo', async () => {
+  const B = palco646(false);
+  try {
+    run("document.body.dataset.role='gestao';");
+    await falta646('2026-10-13', '');
+    await run("repEstornar(0, 'fa-2026-10-13')"); await espera639();
+    const est = Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno');
+    igual([est.length, B.lanc()[est[0]].estornaId], [1, 'fa-2026-10-13']);
+    igual(await falta646('2026-10-13', ''), '');
+    igual(Object.keys(B.lanc()).filter((k) => /^fa-/.test(k)).sort(), ['fa-2026-10-13', 'fa-2026-10-13-2']);
+    igual(creditos646(B), ['2026-10-13→-']);
+    igual(run('__bk639.sd(PELUDINHOS[0])'), 1, 'o saldo de verdade (repSaldo) é 1');
+  } finally { solta646(); }
+});
+provaAsync('6.46 P10 — a troca recusada pela transação NÃO desmarca a reposição marcada para o dia novo; com a troca gravada, ela sai só depois', async () => {
+  let B = palco646(true);
+  try {
+    // no servidor: a falta de 13/10 (sem troca), lançada pelo outro aparelho; aqui: a reposição marcada para 14/10
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', volta: '', quem: 'Aparelho B', ts: 5 });
+    const c0 = { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', ts: 1 };
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/c0', c0);
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{c0:' + JSON.stringify(c0) + '}};');
+    const w = await marcar646('2026-10-13', '2026-10-14');
+    igual(w, 'A falta de 13/10/2026 acabou de ser lançada em outro aparelho. Espere a tela atualizar e faça a troca de novo: o app aproveita essa falta, sem crédito novo.');
+    igual([B.lanc().c0.volta, B.ups], ['2026-10-14', []], 'a reposição marcada continua no dia');
+    igual(creditos646(B), ['2026-10-06→2026-10-14', '2026-10-13→-']);
+  } finally { solta646(); }
+  // a troca entra: a transação primeiro, o update da reposição marcada depois
+  B = palco646(false);
+  try {
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/c0', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', ts: 1 });
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([B.txs, B.ups.length, B.lanc().c0.volta, B.lanc().c0.volta_desmarcada.dia], [['fa-2026-10-13'], 1, '', '2026-10-14']);
+    igual(creditos646(B), ['2026-10-06→-', '2026-10-13→2026-10-14 troca']);
+  } finally { solta646(); }
+  // a troca entrou, mas o update da reposição marcada falhou: a tela diz que ela continua marcada
+  B = palco646(false);
+  try {
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/c0', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', ts: 1 });
+    B.falhaUpdate = /\/lancamentos$/;
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual(creditos646(B), ['2026-10-06→2026-10-14', '2026-10-13→2026-10-14 troca']);
+    const l = J630('__mm639[0].l');
+    assert.ok(l.indexOf('A reposição que estava marcada para 14/10/2026 continua marcada: não consegui tirar o dia agora. Toque em «desmarcar» ao lado da data, na tela de Reposições.') >= 0, JSON.stringify(l));
+    assert.ok(!l.some((x) => /voltou a ficar sem dia/.test(x)), JSON.stringify(l));
+  } finally { solta646(); }
+});
+provaAsync('6.46 P11 — o crédito antigo (chave de push) na mesma data continua segurando: relançar a falta é recusado nos três modos; a troca usa a falta antiga', async () => {
+  const B = palco646(false);
+  try {
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/-Nantigo1', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', quem: 'Antigo', ts: 1 });
+    igual(await falta646('2026-10-13', ''), 'A falta avisada de 13/10/2026 já foi lançada: está no Extrato e já conta no saldo. Para lançar de novo, estorne a anterior no Extrato.');
+    igual(await alguns646(['2026-10-13']), 'Nenhuma dessas datas vira crédito: 13/10 (terça-feira) — a falta avisada desse dia já foi lançada (está no Extrato).');
+    igual(await periodo646('2026-10-13', '2026-10-13'), 'Os dias desse período já têm falta avisada lançada (estão no Extrato).');
+    igual(B.txs, [], 'nem tenta gravar');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([creditos646(B), Object.keys(B.lanc())], [['2026-10-13→2026-10-14 troca'], ['-Nantigo1']], 'a troca entra na falta antiga, sem crédito novo');
+  } finally { solta646(); }
+});
+provaAsync('6.46 P12 — as repetidas já gravadas: repRepetidas acha o par (e ignora a saída antecipada sa-); o Extrato mostra o selo com quem e a hora de cada uma; o estorno é o de sempre (pede o motivo, grava uma linha, não apaga)', async () => {
+  const L = [
+    { _id: '-Na', tipo: 'credito', data: '2026-10-13', motivo: 'viagem', quem: 'Recepção A', ts: Date.UTC(2026, 9, 8, 13, 14) },
+    { _id: '-Nb', tipo: 'credito', data: '2026-10-13', motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' }, quem: 'Recepção B', ts: Date.UTC(2026, 9, 8, 13, 15) },
+    { _id: 'sa-EST1-1', tipo: 'credito', data: '2026-10-20', motivo: 'hospedagem-saida-antecipada', estadiaId: 'EST1', seq: 1, ts: 3 },
+    { _id: 'sa-EST1-2', tipo: 'credito', data: '2026-10-20', motivo: 'hospedagem-saida-antecipada', estadiaId: 'EST1', seq: 2, ts: 3 },
+    { _id: '-Nc', tipo: 'credito', data: '2026-10-27', ts: 4 }, { _id: '-Nd', tipo: 'credito', data: '2026-10-27', ts: 5 },
+    { _id: '-Ne', tipo: 'estorno', estornaId: '-Nc', ts: 6 }, { _id: '-Nf', tipo: 'credito', data: '2026-11-03', ts: 7 }];
+  const R = J630('repRepetidas(' + JSON.stringify(L) + ')');
+  igual(Object.keys(R), ['2026-10-13'], 'só o par vivo de falta; o sa- e o par com um estornado não contam');
+  igual(R['2026-10-13'].map((l) => l._id), ['-Na', '-Nb'], 'do mais antigo ao mais novo');
+  const B = palco646(false);
+  try {
+    run("document.body.dataset.role='gestao'; ['repExtTit','repExtSub','repExtLista'].forEach(function(k){ __el639[k]={textContent:'', innerHTML:''}; }); __el639.repExtratoModal={classList:{add:function(){}, remove:function(){}}};");
+    L.forEach((l) => { const o = Object.assign({}, l); delete o._id; B.poe('daycare/reposicao/' + K646() + '/lancamentos/' + l._id, o); });
+    run('repAbrirExtrato(0)');
+    const h = run('__el639.repExtLista.innerHTML');
+    const q = (ts) => { const d = new Date(ts), p2 = (x) => String(x).padStart(2, '0'); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear() + ' às ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); };
+    const selo = 'Repetida — lançada 2 vezes: Recepção A em ' + q(L[0].ts) + ' · Recepção B em ' + q(L[1].ts);
+    igual(h.split(selo).length - 1, 2, 'o selo nas duas linhas do par: ' + h.slice(0, 200));
+    igual((h.match(/Repetida — lançada/g) || []).length, 2, 'e em nenhuma outra (nem no sa-)');
+    // o estorno de sempre: sem o motivo, nada; com o motivo, uma linha nova — o original fica
+    run("__zt646='';"); await run("repEstornar(0, '-Nb')"); await espera639();
+    igual(Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno').length, 1, 'sem o motivo, nada é gravado');
+    run("__zt646='Lançada 2 vezes (repetida da de Recepção A)';"); await run("repEstornar(0, '-Nb')"); await espera639();
+    const est = Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno' && B.lanc()[k].estornaId === '-Nb');
+    igual([est.length, !!B.lanc()['-Nb'], B.lanc()[est[0]].obs], [1, true, 'Lançada 2 vezes (repetida da de Recepção A)'], 'grava o estorno; nada é apagado');
+    igual(Object.keys(J630('repRepetidas(repLancamentos(PELUDINHOS[0]))')), [], 'estornada, deixa de ser repetida');
+  } finally { solta646(); }
+});
+provaAsync('6.46 P13 — sem rede: o modal reaberto relança a mesma falta na MESMA chave; quando a rede volta, entra UM crédito', async () => {
+  const B = palco646({ atrasado: true, pendurado: true });
+  try {
+    await falta646('2026-10-13', '');
+    igual(run('REP_LANCANDO'), true, 'a 1ª gravação está pendurada');
+    await falta646('2026-10-13', '');     // reabriu o modal e lançou de novo
+    igual(B.txs, ['fa-2026-10-13', 'fa-2026-10-13'], 'a mesma chave');
+    B.liberar(); await espera639();
+    igual(creditos646(B), ['2026-10-13→-']);
+    assert.ok(/^A falta avisada de 13\/10\/2026 acabou de ser lançada em outro aparelho/.test(run('__el639.repWarn.textContent')), run('__el639.repWarn.textContent'));
+    igual(run('REP_LANCANDO'), false);
+  } finally { solta646(); }
+});
+provaAsync('6.46 P14 — o crédito da saída antecipada da hospedagem (sa-) não muda: a «Marcar troca» 13/10 → 14/10 nasce no nó fixo fa-2026-10-13, e o sa- fica como estava (4ª rodada, ATK3-5)', async () => {
+  const B = palco646(false);
+  try {
+    const SA = { tipo: 'credito', data: '2026-10-13', motivo: 'hospedagem-saida-antecipada', estadiaId: 'EST1', seq: 1, ts: 1 };
+    B.poe('daycare/reposicao/' + K646() + '/lancamentos/sa-EST1-1', SA);
+    igual(run("repCreditoVivoNaData(PELUDINHOS[0], '2026-10-13')"), false);
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    // 4ª rodada da 6.46 (ATK3-5): o sa- não é a falta do dia que sai — a troca não entra nele (antes: as duas
+    // transações eram no nó dele, e a troca gastava o crédito da hospedagem)
+    igual([Object.keys(B.lanc()).sort(), B.lanc()['sa-EST1-1'], B.lanc()['fa-2026-10-13'].troca.para, B.lanc()['fa-2026-10-13'].volta, B.txs],
+      [['fa-2026-10-13', 'sa-EST1-1'], SA, '2026-10-14', '2026-10-14', ['fa-2026-10-13']]);
+    igual(Object.keys(J630('repRepetidas(repLancamentos(PELUDINHOS[0]))')), []);
+  } finally { solta646(); }
+});
+
+// ---------------------------------------------------------------- 6.46 — revisão (achados do QA e do ataque de saldo)
+console.log('\n6.46 — revisão: o saldo da confirmação, o dia de repor da falta já lançada, a recusa conferida no servidor e a reserva da Márcia');
+// O saldo de verdade é o do repSaldo do app (o amb639 o troca por um falso que sempre devolve 2).
+const saldoMsg646 = (m) => { const x = /está com (\d+) reposiç/.exec((m && m.msg) || ''); return x ? +x[1] : null; };
+// O saldo do SERVIDOR, contado pelo repSaldo de verdade (o Extrato em dia).
+const saldoServ646 = (B) => { run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:' + JSON.stringify(B.lanc()) + '};'); return run('__bk639.sd(PELUDINHOS[0])'); };
+const LANC646 = () => 'daycare/reposicao/' + K646() + '/lancamentos/';
+const PED646 = () => 'daycare/vagas-pedidos/2026-10-14/' + K646();
+const PEDTROCA646 = (st, extra) => Object.assign({ pet: 'Fredo', tutor: 'Eleonora Teste', tipo: 'reposicao', status: st || 'pedido', dia: '2026-10-14', quem: 'Recepção Teste', ts: 1,
+  payload: { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } }, extra || {});
+const PEDAVULSO646 = (st, extra) => Object.assign({ pet: 'Fredo', tutor: 'Eleonora Teste', tipo: 'avulso', status: st || 'pedido', dia: '2026-10-14', quem: 'Recepção Teste', ts: 1,
+  payload: { valor_cent: 9700, matriculado: true } }, extra || {});
+const prepPed646 = (B, ped) => { B.poe(PED646(), ped);
+  run(`document.body.dataset.role='gestao'; __pt646='Márcia Teste'; VAGAS_PEDIDOS={'2026-10-14':{}}; VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])]=${JSON.stringify(ped)};`); };
+const autoriza646 = async () => { await run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646(); };
+const DIA_LOTADO646 = "vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:true, lido:true, livres:0, usadas:5, limite:5}; }; document.body.dataset.role='consultora';";
+
+provaAsync('6.46 R1 (QA646-01, ATK1) — parte já lançada no outro aparelho: o "Saldo agora" e a mensagem ao tutor contam a falta que já estava lançada (repSaldo de verdade); sem a conferência, ela fica de fora e a tela diz', async () => {
+  // "Alguns dias" 13, 20 e 27/10, com o 20/10 lançado no outro aparelho (Q646-1)
+  let B = palco646(true);
+  try {
+    run('repSaldo=__bk639.sd;');
+    await falta646('2026-10-20', '', 'Aparelho A');
+    run('__mm639=[];');
+    igual(await alguns646(['2026-10-13', '2026-10-20', '2026-10-27']), '');
+    const m = J630('__mm639[0]');
+    igual(saldoServ646(B), 3, 'no servidor: 3 créditos');
+    igual([m.l[1].split('.')[0], saldoMsg646(m)], ['Saldo agora: 3', 3], JSON.stringify(m));
+    assert.ok(/está com 3 reposições, contando as dos dias 13\/10 e 27\/10\./.test(m.msg), m.msg);
+  } finally { solta646(); }
+  // "Um período" 13 a 20/10, com um crédito antigo já no Extrato e o 13/10 lançado no outro aparelho (ATK1)
+  B = palco646(true);
+  try {
+    run('repSaldo=__bk639.sd;');
+    const c0 = { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', ts: 1 };
+    B.poe(LANC646() + 'c0', c0);
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{c0:' + JSON.stringify(c0) + '}};');
+    await falta646('2026-10-13', '', 'Aparelho A');
+    run('__mm639=[];');
+    igual(await periodo646('2026-10-13', '2026-10-20'), '');
+    const m = J630('__mm639[0]');
+    igual([m.l[1].split('.')[0], saldoMsg646(m)], ['Saldo agora: 3', 3], JSON.stringify(m));
+    igual(saldoServ646(B), 3);
+  } finally { solta646(); }
+  // a releitura falhou: a recusada fica FORA da conta, e a tela diz por quê (sem afirmar que ela conta)
+  B = palco646(true);
+  try {
+    run('repSaldo=__bk639.sd;');
+    await falta646('2026-10-20', '', 'Aparelho A');
+    B.falhaOnce = /lancamentos$/;
+    run('__mm639=[]; __au639=[];');
+    igual(await alguns646(['2026-10-13', '2026-10-20', '2026-10-27']), '');
+    const m = J630('__mm639[0]');
+    igual([m.l[1].split('.')[0], saldoMsg646(m)], ['Saldo agora: 2', 2]);
+    assert.ok(m.l.indexOf('Entraram: 13/10 e 27/10. Já estava lançada em outro aparelho: 20/10 (ficou como estava). Não consegui conferir agora se ela continua valendo, e o saldo acima não conta com ela: confira no Extrato antes de mandar a mensagem ao tutor.') >= 0, JSON.stringify(m.l));
+    assert.ok(J630('__au639').some((a) => a[0] === 'reposicao-credito' && /\(já estava lançada em outro aparelho: 20\/10; sem conferir se continua valendo\)/.test(a[1])), JSON.stringify(J630('__au639')));
+  } finally { solta646(); }
+});
+provaAsync('6.46 R2 (QA646-02, ATK4) — a falta inteira já estava lançada no outro aparelho: a tela diz que o dia de repor NÃO foi marcado (na troca, que se faz em «+ Marcar troca») e que a Márcia NÃO recebeu o pedido de encaixe', async () => {
+  // reposição: 21/10 é dia dele (ter e qua na ficha); o outro lançou a falta sem dia de repor
+  let B = palco646(true);
+  try {
+    run("__ex639.dias=['ter','qua']; __ex639.freq='2x';");
+    await falta646('2026-10-13', '', 'Aparelho A');
+    const w = await falta646('2026-10-13', '2026-10-21', 'Aparelho B');
+    assert.ok(/^A falta avisada de 13\/10\/2026 acabou de ser lançada em outro aparelho \(por Aparelho A, às \d\d:\d\d\)\. Ela já está no Extrato e já conta no saldo\. Nada foi lançado de novo\. O dia de repor \(21\/10\/2026\) não foi marcado: marque em «Marcar reposição»\.$/.test(w), w);
+    igual(creditos646(B), ['2026-10-13→-']);
+  } finally { solta646(); }
+  // troca (ATK4): o Fredo só vem às terças; 13/10 com repor em 14/10 seria troca
+  B = palco646(true);
+  try {
+    await falta646('2026-10-13', '', 'Aparelho A');
+    const w = await falta646('2026-10-13', '2026-10-14', 'Aparelho B');
+    assert.ok(/ Nada foi lançado de novo\. O dia de repor \(14\/10\/2026\) não foi marcado: faça a troca em «\+ Marcar troca», que aproveita essa falta\.$/.test(w), w);
+    const no = B.lanc()['fa-2026-10-13'];
+    igual([no.quem, no.volta, !!no.troca], ['Aparelho A', '', false], 'o lançamento do outro aparelho ficou como estava');
+  } finally { solta646(); }
+  // o outro lançou a troca para OUTRO dia (15/10, quinta): a tela diz qual dia está lá
+  B = palco646(true);
+  try {
+    await falta646('2026-10-13', '2026-10-15', 'Aparelho A');
+    const w = await falta646('2026-10-13', '2026-10-14', 'Aparelho B');
+    assert.ok(/ Nada foi lançado de novo\. O dia de repor \(14\/10\/2026\) não foi marcado: a falta lançada no outro aparelho está com o dia de repor em 15\/10\/2026\. Confira com o tutor qual dia vale; para trocar, use «\+ Marcar troca», que aproveita essa falta\.$/.test(w), w);
+    igual(creditos646(B), ['2026-10-13→2026-10-15 troca']);
+  } finally { solta646(); }
+  // dia lotado e «Avisar a Márcia» (Q646-11): o pedido NÃO é gravado, e a tela diz isso
+  B = palco646(true);
+  try {
+    run("__ex639.dias=['ter','qua']; __ex639.freq='2x';");
+    await falta646('2026-10-13', '', 'Aparelho A');
+    run(DIA_LOTADO646 + "__bkR2=vagasPedir; __vpR2=[]; vagasPedir=function(d,p,t,pay){ __vpR2.push([d,t,pay]); return Promise.resolve({}); };");
+    try {
+      run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __quem646='Aparelho B';
+        __el639.repData.value='2026-10-13'; __el639.repVolta.value='2026-10-21'; repModoAtual='dia'; repPedirEncaixe();`);
+      await espera646();
+      const w = run('__el639.repWarn.textContent');
+      igual(J630('__vpR2'), [], 'nenhum pedido de encaixe foi gravado');
+      assert.ok(/ Nada foi lançado de novo\. O dia de repor \(21\/10\/2026\) não foi marcado, e a Márcia não recebeu o pedido de encaixe: peça de novo em «Marcar reposição» › «Avisar a Márcia»\.$/.test(w), w);
+      igual([run('REP_LANCANDO'), run('__btn639.disabled')], [false, false], 'a trava solta');
+    } finally { run('vagasPedir=__bkR2;'); }
+  } finally { solta646(); }
+  // o modal já é de outro lançamento: o cartaz leva as mesmas frases
+  B = palco646(true);
+  try {
+    run("__ex639.dias=['ter','qua']; __ex639.freq='2x'; __bkZaR2=zAlertao; __zaR2=[]; zAlertao=function(t, l){ __zaR2.push([t, l]); };");
+    try {
+      await falta646('2026-10-13', '', 'Aparelho A');
+      run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __quem646='Aparelho B';
+        __el639.repData.value='2026-10-13'; __el639.repVolta.value='2026-10-21'; repModoAtual='dia'; repConfirmar(); REP_LANC_GER++;`);
+      await espera646();
+      const za = J630('__zaR2');
+      igual([za.length, za[0][0], za[0][1].length], [1, 'A FALTA AVISADA JÁ ESTAVA LANÇADA', 2]);
+      igual(za[0][1][1], 'O dia de repor (21/10/2026) não foi marcado: marque em «Marcar reposição».');
+    } finally { run('zAlertao=__bkZaR2;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 R3 (QA646-03) — o dia de repor que JÁ está no lançamento do outro aparelho: a tela diz que já estava marcado (no período e na falta inteira) e não pede encaixe à Márcia', async () => {
+  // Q646-6: A lança 13/10 com repor em 21/10 (troca); B lança o período 13 a 20/10 com repor em 21/10
+  let B = palco646(true);
+  try {
+    await falta646('2026-10-13', '2026-10-21', 'Aparelho A');
+    run('__mm639=[];');
+    igual(await periodo646('2026-10-13', '2026-10-20', '2026-10-21'), '');
+    const l = J630('__mm639[0].l');
+    assert.ok(l.indexOf('Entrou: 20/10. Já estava lançada em outro aparelho: 13/10 (ficou como estava). O dia de repor (21/10/2026) já estava marcado no lançamento do outro aparelho.') >= 0, JSON.stringify(l));
+    assert.ok(!l.some((x) => /não foi marcado|LOTADO|O tutor escolheu repor/.test(x)), JSON.stringify(l));
+    igual(creditos646(B), ['2026-10-13→2026-10-21 troca', '2026-10-20→-']);
+  } finally { solta646(); }
+  // dia lotado e «Avisar a Márcia», com o 21/10 já encaixado (pela Gestão) no lançamento do outro: nada de pedido
+  B = palco646(true);
+  try {
+    run("__ex639.dias=['ter','qua']; __ex639.freq='2x';");
+    B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'outro', volta: '2026-10-21', quem: 'Gestão Outra', ts: Date.now() - 5000 });
+    run(DIA_LOTADO646 + "__bkR3=vagasPedir; __vpR3=[]; vagasPedir=function(d,p,t,pay){ __vpR3.push([d,t,pay]); return Promise.resolve({}); };");
+    try {
+      run(`__mm639=[]; REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __quem646='Aparelho B';
+        __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-20'; __el639.repVolta.value='2026-10-21'; repModoAtual='periodo'; repPedirEncaixe();`);
+      await espera646();
+      const l = J630('__mm639[0].l');
+      igual(J630('__vpR3'), [], 'o dia já está marcado: não há encaixe a pedir');
+      assert.ok(l.indexOf('Entraram: 14/10 e 20/10. Já estava lançada em outro aparelho: 13/10 (ficou como estava). O dia de repor (21/10/2026) já estava marcado no lançamento do outro aparelho.') >= 0
+        && !l.some((x) => /LOTADO|Márcia já recebeu/.test(x)), JSON.stringify(l));
+    } finally { run('vagasPedir=__bkR3;'); }
+  } finally { solta646(); }
+  // a falta inteira já lançada, com o mesmo dia de repor: "já estava marcado"
+  B = palco646(true);
+  try {
+    run("__ex639.dias=['ter','qua']; __ex639.freq='2x';");
+    await falta646('2026-10-13', '2026-10-21', 'Aparelho A');
+    const w = await falta646('2026-10-13', '2026-10-21', 'Aparelho B');
+    assert.ok(/ Nada foi lançado de novo\. O dia de repor \(21\/10\/2026\) já estava marcado no lançamento do outro aparelho\.$/.test(w), w);
+  } finally { solta646(); }
+});
+provaAsync('6.46 R4 (ATK2) — Extrato atrasado e estorno recente: a falta (ou a troca) estornada no servidor entra de novo no sufixo seguinte; já relançada noutro sufixo, é recusada; sem a releitura, a tela não afirma nada', async () => {
+  const FA = (extra) => Object.assign({ tipo: 'credito', data: '2026-10-13', motivo: 'viagem', quem: 'Aparelho A', ts: Date.now() - 60000 }, extra || {});
+  const EST = { tipo: 'estorno', estornaId: 'fa-2026-10-13', data: '2026-10-08', motivo: 'estorno', quem: 'Aparelho A', ts: Date.now() - 30000 };
+  const TROCA = FA({ motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X' }, quem: 'Recepção X', ts: 5 });
+  const fas = (B) => Object.keys(B.lanc()).filter((k) => /^fa-/.test(k)).sort();
+  // (a) fa-13 e o estorno dele no servidor; este aparelho não recebeu nenhum dos dois
+  let B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FA()); B.poe(LANC646() + 'e1', EST);
+    run('__mm639=[];');
+    igual(await falta646('2026-10-13', ''), '', 'nada de "já conta no saldo"');
+    igual([creditos646(B), fas(B), run('__mm639.length')], [['2026-10-13→-'], ['fa-2026-10-13', 'fa-2026-10-13-2'], 1], 'entrou de novo, no sufixo seguinte');
+    igual(saldoServ646(B), 1);
+  } finally { solta646(); }
+  // (b) estornada e JÁ relançada no outro aparelho (fa-13-2 viva): recusa, sem crédito novo
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FA()); B.poe(LANC646() + 'e1', EST);
+    B.poe(LANC646() + 'fa-2026-10-13-2', FA({ quem: 'Aparelho C', ts: Date.now() - 10000 }));
+    const w = await falta646('2026-10-13', '');
+    assert.ok(/^A falta avisada de 13\/10\/2026 acabou de ser lançada em outro aparelho \(por Aparelho C, às \d\d:\d\d\)\. Ela já está no Extrato e já conta no saldo\. Nada foi lançado de novo\.$/.test(w), w);
+    igual([creditos646(B), fas(B)], [['2026-10-13→-'], ['fa-2026-10-13', 'fa-2026-10-13-2']]);
+  } finally { solta646(); }
+  // (c) a troca 13→14 desfeita (estornada); «Marcar troca» 13→14 neste aparelho: entra de novo
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA); B.poe(LANC646() + 'e1', Object.assign({}, EST, { obs: 'Troca desfeita' }));
+    run('__mm639=[];');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '', 'nada de "já está feita"');
+    igual([creditos646(B), fas(B), run('__mm639.length')], [['2026-10-13→2026-10-14 troca'], ['fa-2026-10-13', 'fa-2026-10-13-2'], 1]);
+  } finally { solta646(); }
+  // (d) a releitura falha: nem "já conta no saldo", nem "já está feita"
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FA());
+    B.falhaOnce = /lancamentos$/;
+    const w = await falta646('2026-10-13', '');
+    assert.ok(/^A falta avisada de 13\/10\/2026 acabou de ser lançada em outro aparelho \(por Aparelho A, às \d\d:\d\d\)\. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar\. Nada foi lançado de novo\.$/.test(w), w);
+    igual([creditos646(B), run('REP_LANCANDO')], [['2026-10-13→-'], false]);
+  } finally { solta646(); }
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA);
+    B.falhaOnce = /lancamentos$/;
+    igual(await marcar646('2026-10-13', '2026-10-14'), 'Essa troca já foi lançada em outro aparelho (por Recepção X): 13/10/2026 → 14/10/2026. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar. Nada foi lançado de novo.');
+    igual(run('__el639.dxOk.disabled'), false);
+  } finally { solta646(); }
+});
+provaAsync('6.46 R5 (ATK5) — «Recusar» por transação, só a partir de pedido livre: a recusa aberta antes de a Márcia autorizar no outro aparelho não grava por cima; a reserva viva barra sem pedir o motivo; o pedido livre é recusado', async () => {
+  // B abre o «Recusar» (motivo na tela) ANTES; A autoriza; B confirma o motivo depois
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDTROCA646());
+    run("__ztPend=null; zTexto=function(){ return new Promise(function(ok){ __ztPend=ok; }); };");
+    const rec = run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))");
+    await autoriza646();
+    igual(B.le(PED646()).status, 'autorizado');
+    run("__ztPend('Sem vaga mesmo');"); await rec; await espera646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.motivo_recusa == null, ped.autorizado_por, creditos646(B)], ['autorizado', true, 'Márcia Teste', ['2026-10-13→2026-10-14 troca']]);
+    igual(J630('__al646').slice(-1), ['Este pedido já foi autorizado (por Márcia Teste). A recusa não foi gravada.']);
+    assert.ok(!J630('__au639').some((a) => a[0] === 'vaga-recusada'), 'nada de rastro de recusa');
+  } finally { solta646(); }
+  // a reserva viva de outro aparelho: nem pede o motivo
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDTROCA646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 10000, id: 'outro' } }));
+    run("__ztN=0; zTexto=function(){ __ztN++; return Promise.resolve('Sem vaga'); };");
+    await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+    igual([B.le(PED646()).status, B.le(PED646()).autorizando.id, run('__ztN'), J630('__al646')],
+      ['autorizando', 'outro', 0, ['Este pedido já está sendo autorizado em outro aparelho (por Gestão Outra). A recusa não foi gravada.']]);
+  } finally { solta646(); }
+  // a reserva chega ENTRE o motivo e a gravação: a transação confere de novo
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDTROCA646());
+    run(`zTexto=function(){ __B646.poe('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]), Object.assign({}, __B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])),
+      {status:'autorizando', autorizando:{quem:'Gestão Outra', ts:Date.now(), id:'outro'}})); return Promise.resolve('Sem vaga'); };`);
+    await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+    igual([B.le(PED646()).status, J630('__al646')], ['autorizando', ['Este pedido já está sendo autorizado em outro aparelho (por Gestão Outra). A recusa não foi gravada.']]);
+  } finally { solta646(); }
+  // o pedido livre é recusado, com o motivo e o rastro (e a reserva abandonada também)
+  for (const ped of [PEDTROCA646(), PEDTROCA646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 180000, id: 'velha' } })]) {
+    B = palco646(true);
+    try {
+      prepPed646(B, ped);
+      run("__zt646='Sem vaga mesmo';");
+      await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+      const p2 = B.le(PED646());
+      igual([p2.status, p2.motivo_recusa, p2.autorizado_por, p2.autorizando == null, J630('__al646')], ['recusado', 'Sem vaga mesmo', 'Márcia Teste', true, []]);
+      assert.ok(J630('__au639').some((a) => a[0] === 'vaga-recusada'), 'o rastro da recusa');
+    } finally { solta646(); }
+  }
+});
+provaAsync('6.46 R6 (QA646-06) — a Márcia: o "autorizado" só é gravado se a reserva ainda for a deste aparelho; a devolução depois de uma falha também (a reserva de outro aparelho não é apagada)', async () => {
+  const TOMA = "__B646.poe('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]), Object.assign({}, __B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])), {status:'autorizando', autorizando:{quem:'Gestão Outra', ts:Date.now(), id:'outro'}}));";
+  // (a) a gravação demorou e outro aparelho tomou a reserva no meio: o "autorizado" não atropela
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkR6=dxLancarAvulso; __nR6=0; dxLancarAvulso=function(){ __nR6++; ${TOMA} return Promise.resolve(true); };`);
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nR6'), ped.status, ped.autorizando.id, ped.autorizado_por == null], [1, 'autorizando', 'outro', true], 'a reserva do outro ficou');
+      igual(J630('__al646'), ['Lancei o encaixe de Fredo em 14/10/2026, mas não marquei o pedido como autorizado: enquanto eu gravava, outro aparelho passou a autorizá-lo (por Gestão Outra). Confira o Extrato e os Lançamentos do dia antes de lançar de novo.']);
+      assert.ok(!J630('__au639').some((a) => a[0] === 'vaga-autorizada'), 'sem rastro de autorização');
+    } finally { run('dxLancarAvulso=__bkR6;'); }
+  } finally { solta646(); }
+  // (a2) a MESMA pessoa no outro tablet (a Márcia em dois aparelhos): o que vale é a marca do aparelho, não o nome
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkR6=dxLancarAvulso; dxLancarAvulso=function(){ ${TOMA.replace("quem:'Gestão Outra'", "quem:'Márcia Teste'")} return Promise.resolve(true); };`);
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([ped.status, ped.autorizando.id, ped.autorizado_por == null], ['autorizando', 'outro', true]);
+      igual(J630('__al646'), ['Lancei o encaixe de Fredo em 14/10/2026, mas não marquei o pedido como autorizado: enquanto eu gravava, outro aparelho passou a autorizá-lo (por Márcia Teste). Confira o Extrato e os Lançamentos do dia antes de lançar de novo.']);
+    } finally { run('dxLancarAvulso=__bkR6;'); }
+  } finally { solta646(); }
+  // (b) a gravação falhou e, no meio, outro aparelho tomou a reserva: a devolução não apaga a dele
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkR6=dxLancarAvulso; dxLancarAvulso=function(){ ${TOMA} return Promise.reject(new Error('sem rede')); };`);
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([ped.status, ped.autorizando.id], ['autorizando', 'outro']);
+    } finally { run('dxLancarAvulso=__bkR6;'); }
+  } finally { solta646(); }
+  // (c) controle: falhou e a reserva é a nossa → volta para "pedido", sem a reserva (Q646-8)
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run("__bkR6=dxLancarAvulso; dxLancarAvulso=function(){ return Promise.reject(new Error('sem rede')); };");
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([ped.status, ped.autorizando == null, J630('__al646')], ['pedido', true, ['Não consegui autorizar: sem rede. O pedido continua em aberto.']]);
+    } finally { run('dxLancarAvulso=__bkR6;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 R7 (ATK6) — troca já feita: a autorização fecha o pedido como atendido ("autorizado", com a nota de quem a fez), sem pedir recusa; sem a conferência no servidor, ele continua em aberto', async () => {
+  const TROCA = { tipo: 'credito', data: '2026-10-13', motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X', ts: 5 }, quem: 'Recepção X', ts: 5 };
+  let B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA);
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.nota, ped.autorizado_por, creditos646(B)], ['autorizado', 'já estava feita por Recepção X', 'Márcia Teste', ['2026-10-13→2026-10-14 troca']]);
+    assert.ok(!J630('__al646').some((t) => /recuse/.test(t)), 'não manda recusar');
+    assert.ok(J630('__au639').some((a) => a[0] === 'vaga-autorizada' && /já estava feita por Recepção X/.test(a[1])), JSON.stringify(J630('__au639')));
+    // e a recusa de depois não desmente
+    run("__zt646='Já foi feita';"); await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+    igual(B.le(PED646()).status, 'autorizado');
+  } finally { solta646(); }
+  // sem a releitura, "já foi lançada… confira": o pedido continua em aberto (não se fecha no escuro)
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA);
+    B.falhaOnce = /lancamentos$/;
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.autorizando == null, J630('__al646')], ['pedido', true,
+      ['Essa troca já foi lançada em outro aparelho (por Recepção X): 13/10/2026 → 14/10/2026. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar. Nada foi lançado de novo.\n\nO pedido continua em aberto.']]);
+  } finally { solta646(); }
+});
+provaAsync('6.46 R8 (QA646-06) — a reserva da Márcia usa a hora do servidor: o carimbo é o ServerValue.TIMESTAMP (sem o SDK, a hora do aparelho) e a comparação desconta a diferença de .info/serverTimeOffset', async () => {
+  // (a) com o SDK: o carimbo é o marcador do servidor
+  let B = palco646(true);
+  try {
+    run("__svR8=firebase.database.ServerValue; firebase.database.ServerValue={TIMESTAMP:{'.sv':'timestamp'}};");
+    prepPed646(B, PEDAVULSO646());
+    run("__bkR8=dxLancarAvulso; __tsR8=null; dxLancarAvulso=function(){ __tsR8=__B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])).autorizando.ts; return Promise.resolve(true); };");
+    try {
+      await autoriza646();
+      igual([J630('__tsR8'), B.le(PED646()).status], [{ '.sv': 'timestamp' }, 'autorizado']);
+    } finally { run('dxLancarAvulso=__bkR8;'); }
+  } finally { run('firebase.database.ServerValue=__svR8;'); solta646(); }
+  // (b) sem o SDK (sandbox de prova) e com um TIMESTAMP que não é marcador: a hora do aparelho
+  for (const sv of ['undefined', '{TIMESTAMP:0}']) {
+    B = palco646(true);
+    try {
+      run('__svR8=firebase.database.ServerValue; firebase.database.ServerValue=' + sv + ';');
+      prepPed646(B, PEDAVULSO646());
+      run("__bkR8=dxLancarAvulso; __tsR8=null; dxLancarAvulso=function(){ __tsR8=__B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])).autorizando.ts; return Promise.resolve(true); };");
+      const t0 = Date.now();
+      try {
+        await autoriza646();
+        const ts = run('__tsR8');
+        assert.ok(typeof ts === 'number' && ts >= t0 - 5 && ts <= Date.now() + 5, sv + ': ' + ts);
+      } finally { run('dxLancarAvulso=__bkR8;'); }
+    } finally { run('firebase.database.ServerValue=__svR8;'); solta646(); }
+  }
+  // (c) este aparelho está 3 min ADIANTADO: a reserva de 10 s atrás (na hora do servidor) continua valendo
+  B = palco646(true);
+  try {
+    run('VAGAS_RELOGIO_DIF=-180000;');
+    const serv = Date.now() - 180000;
+    igual(run('vagasPedidoLivre(' + JSON.stringify({ status: 'autorizando', autorizando: { quem: 'Gestão Outra', ts: serv - 10000 } }) + ')'), false, 'reservado há 10 s');
+    igual(run('vagasPedidoLivre(' + JSON.stringify({ status: 'autorizando', autorizando: { quem: 'Gestão Outra', ts: serv - 130000 } }) + ')'), true, 'abandonado há 2 min e 10 s');
+    prepPed646(B, PEDAVULSO646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: serv - 10000, id: 'outro' } }));
+    run("__bkR8=dxLancarAvulso; __nR8=0; dxLancarAvulso=function(){ __nR8++; return Promise.resolve(true); };");
+    try {
+      await autoriza646();
+      igual([run('__nR8'), B.le(PED646()).autorizando.id, J630('__al646')], [0, 'outro', ['Este pedido já está sendo autorizado em outro aparelho (por Gestão Outra). Nada foi lançado de novo.']]);
+    } finally { run('dxLancarAvulso=__bkR8;'); }
+  } finally { run('VAGAS_RELOGIO_DIF=0;'); solta646(); }
+  // (d) o vagasPedCarregar liga o ouvinte de .info/serverTimeOffset
+  run(`__bkDB8=DB; __on8={}; DB={ref:function(c){ return {on:function(ev, cb, err){ __on8[c]=cb; }}; }}; try{ vagasPedCarregar(); } finally { DB=__bkDB8; }`);
+  try {
+    run("__on8['.info/serverTimeOffset']({val:function(){ return -2500; }});");
+    igual(run('VAGAS_RELOGIO_DIF'), -2500);
+    run("__on8['.info/serverTimeOffset']({val:function(){ return null; }});");
+    igual(run('VAGAS_RELOGIO_DIF'), 0);
+  } finally { run('VAGAS_RELOGIO_DIF=0;'); }
+});
+provaAsync('6.46 R9 — o pedido em autorização num aparelho fica no quadro ("em autorização por …", sem botões, nos dois quadros) e o quadro se redesenha sozinho quando a reserva vence', async () => {
+  const B = palco646(true);
+  run(`__stR9=[]; __bkST9=setTimeout; __bkCT9=clearTimeout; setTimeout=function(f, ms){ __stR9.push({f:f, ms:ms}); return __stR9.length; }; clearTimeout=function(){};
+    __el639.poCardEncaixes={innerHTML:''};`);
+  try {
+    const ts = Date.now() - 30000;
+    prepPed646(B, PEDTROCA646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: ts, id: 'outro' } }));
+    const card = run('vagasEncaixesCardHTML()');
+    assert.ok(/em autorização por Gestão Outra/.test(card) && !/vagasAutorizar\(/.test(card) && !/Nenhum dia estourou/.test(card), card);
+    run("document.body.dataset.role='consultora';");
+    assert.ok(/em autorização por Gestão Outra/.test(run('vagasPedidosHTML()')), 'na tela de Reposições também');
+    run("document.body.dataset.role='gestao';");
+    const t = J630('__stR9.map(function(x){ return x.ms; })').pop();
+    assert.ok(t >= 85000 && t <= 92000, 'o redesenho fica marcado para quando a reserva vence: ' + t);
+    // a reserva venceu: o redesenho marcado devolve os botões ao quadro
+    run(`VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])].autorizando.ts=Date.now()-130000; __stR9[__stR9.length-1].f();`);
+    const depois = run('__el639.poCardEncaixes.innerHTML');
+    assert.ok(/vagasAutorizar\(/.test(depois) && !/em autorização/.test(depois), depois);
+    igual(J630('vagasPedidosAbertos().map(function(o){ return !!o._emAutorizacao; })'), [false]);
+  } finally { run('setTimeout=__bkST9; clearTimeout=__bkCT9;'); solta646(); }
+});
+provaAsync('6.46 R10 (QA646-05) — «Avisar a Márcia» do «Marcar reposição» antes de o Extrato chegar: espera e não grava pedido (sairia como AVULSO para quem tem reposição)', async () => {
+  const B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-06', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '', quem: 'Recepção', ts: 1 });
+    run(`REPO_LIDO=false; REPO_CACHE={}; dxPel=PELUDINHOS[0]; dxDia='2026-10-21'; dxTroca=false; dxDe='';
+      __bkR10=vagasPedir; __vpR10=[]; vagasPedir=function(d,p,t,pay){ __vpR10.push([d,t,pay]); return Promise.resolve({}); };`);
+    try {
+      run('dxPedir()'); await espera646();
+      igual([J630('__vpR10'), run('__el639.dxWarn.textContent')], [[], ESPERA646]);
+      // o Extrato chegou: o pedido sai como reposição, com o crédito livre de 06/10
+      run(`REPO_LIDO=true; REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:${JSON.stringify(B.lanc())}};`);
+      run('dxPedir()'); await espera646();
+      igual(J630('__vpR10').map((x) => [x[1], x[2].credito_id]), [['reposicao', 'fa-2026-10-06']]);
+    } finally { run('vagasPedir=__bkR10;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 R11 — o ouvinte do Extrato com erro: a leitura recusada pelo banco (permissão) ou o aparelho sem internet mudam o texto da trava nos 4 caminhos, em vez de "espere uns segundos" para sempre', async () => {
+  // a ligação: o 3º argumento do ouvinte de daycare/reposicao marca o erro
+  const src = fs.readFileSync(APP, 'utf8');
+  const i0 = src.indexOf("DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE="), i1 = src.indexOf("DB.ref('daycare/oportunidades')", i0);
+  const bloco = (i0 > 0 && i1 > i0) ? src.slice(i0, i1) : '';
+  const m = /\},\s*(?:\/\/[^\n]*\n\s*)*(function\(e\)\{ REPO_ERRO=e\|\|new Error\('leitura recusada'\);[^\n]*\})\);/.exec(bloco);
+  assert.ok(m, 'o ouvinte de daycare/reposicao tem o callback de erro: ' + bloco.slice(0, 600));
+  const ERRO = 'Não consegui trazer o Extrato de reposições: o banco recusou a leitura (permissão). Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
+  const SEMNET = 'Este aparelho está sem internet e ainda não trouxe o Extrato de reposições. Sem ele, a mesma falta poderia entrar duas vezes: quando a internet voltar, confirme de novo.';
+  const B = palco646(false);
+  try {
+    run('REPO_LIDO=false; REPO_ERRO=null;');
+    // o callback do ouvinte, chamado como o SDK chama quando cancela por permissão
+    run('(' + m[1] + ")(new Error(\"permission_denied at /daycare/reposicao: Client doesn't have permission to access the desired data.\"));");
+    igual(await falta646('2026-10-13', ''), ERRO);
+    igual(await marcar646('2026-10-13', '2026-10-14'), ERRO);
+    run("__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-21'; dxTroca=false; dxDe=''; dxPedir();");
+    igual(run('__el639.dxWarn.textContent'), ERRO);
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    igual(J630('__al646'), [ERRO]);
+    igual([B.txs, B.le(PED646()).status], [[], 'pedido'], 'nada foi gravado');
+    // sem internet (e sem erro do banco): diz isso
+    run('REPO_ERRO=null; navigator.onLine=false;');
+    igual(await falta646('2026-10-13', ''), SEMNET);
+    run('navigator.onLine=true;');
+    igual(await falta646('2026-10-13', ''), ESPERA646, 'com a rede e sem erro: o texto de espera de sempre');
+    // o Extrato chega: a falta entra
+    run('REPO_LIDO=true; REPO_CACHE={};');
+    igual(await falta646('2026-10-13', ''), '');
+  } finally { run('REPO_ERRO=null; navigator.onLine=true;'); solta646(); }
+});
+
+// ---------------------------------------------------------------- 6.46 — 3ª rodada (achados do 2º QA e da 2ª rodada de ataques)
+console.log('\n6.46 — 3ª rodada: a troca já feita com o Extrato em dia, a falta estornada no ramo da troca, o pedido de novo, o "autorizado" que cai e os textos da Márcia');
+// O zAlertao de verdade mexe na tela: aqui ele só anota.
+const ZA646 = '__bkZA646=zAlertao; __za646=[]; zAlertao=function(t,l){ __za646.push([t,l]); };';
+const ZA646_VOLTA = 'zAlertao=__bkZA646;';
+const TROCA646 = () => ({ tipo: 'credito', data: '2026-10-13', motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X', ts: 5 }, quem: 'Recepção X', ts: 5 });
+const EST646 = (id, extra) => Object.assign({ tipo: 'estorno', estornaId: id || 'fa-2026-10-13', data: '2026-10-08', motivo: 'estorno', quem: 'Aparelho A', ts: Date.now() - 30000 }, extra || {});
+const FALTA646 = (extra) => Object.assign({ tipo: 'credito', data: '2026-10-13', motivo: 'viagem', volta: '', quem: 'Aparelho A', ts: 7 }, extra || {});
+const fas646 = (B) => Object.keys(B.lanc()).filter((k) => /^fa-/.test(k)).sort();
+// "o outro aparelho" toma a reserva do pedido de 14/10 (grava direto no banco)
+const TOMA646 = (quem) => `__B646.poe('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]), Object.assign({}, __B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])), {status:'autorizando', autorizando:{quem:'${quem || 'Gestão Outra'}', ts:Date.now(), id:'outro'}}));`;
+// a reserva DESTE aparelho envelhece 3 min (a gravação demorou: aparelho sem rede no meio)
+const ENVELHECE646 = `(function(){ var c='daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]); var v=__B646.le(c); if(v&&v.autorizando){ v.autorizando.ts=Date.now()-180000; __B646.poe(c, v); } })();`;
+// a transação nº `n` do pedido de encaixe responde com `resp` (uma promessa): 'disconnect', sem resposta…
+const PEDTX646 = (B, n, resp) => { const ref0 = B.ref; let k = 0;
+  B.ref = (c) => { const r = ref0(c); if (/vagas-pedidos/.test(c)) { const t0 = r.transaction; r.transaction = (fn) => { k++; if (k === n) return resp(); return t0(fn); }; } return r; };
+  return () => { B.ref = ref0; }; };
+const PEDIDO_TELA646 = "VAGAS_PEDIDOS['2026-10-14'][pelKey(PELUDINHOS[0])]=__B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]));";
+
+provaAsync('6.46 T1 (ATK2-18) — troca já feita com o Extrato DESTE aparelho em dia: a Márcia autoriza e o pedido fecha como atendido (com a nota), sem pergunta e sem mandar recusar; desfeita no servidor agora há pouco, não fecha; sem a releitura, continua em aberto', async () => {
+  // (a) a R7 com o Extrato em dia — o caso comum: o dia abriu vaga e a recepção fez a troca no balcão
+  let B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA646());
+    prepPed646(B, PEDTROCA646());
+    run('__zp646=0; zPergunta=function(){ __zp646++; return Promise.resolve(true); };');
+    igual(run("dxVeredito(PELUDINHOS[0], '2026-10-14', {de:'2026-10-13'}).motivo"), 'Essa troca já está feita: 13/10/2026 → 14/10/2026.', 'o Extrato daqui já tem a troca');
+    await autoriza646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.nota, ped.autorizado_por, creditos646(B), run('__zp646')], ['autorizado', 'já estava feita por Recepção X', 'Márcia Teste', ['2026-10-13→2026-10-14 troca'], 0]);
+    igual(J630('__al646'), ['Essa troca já está feita (por Recepção X): 13/10/2026 → 14/10/2026. Nada foi lançado de novo.\n\nO pedido ficou como autorizado: a troca já estava feita por Recepção X.']);
+    assert.ok(!J630('__al646').some((t) => /recuse/.test(t)), 'não manda recusar');
+    assert.ok(J630('__au639').some((a) => a[0] === 'vaga-autorizada' && /já estava feita por Recepção X/.test(a[1])), JSON.stringify(J630('__au639')));
+    igual(B.lanc()['fa-2026-10-13'], TROCA646(), 'a troca não foi regravada');
+    run("__zt646='Já foi feita';"); await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+    igual(B.le(PED646()).status, 'autorizado', 'o «Recusar» de depois não desmente');
+  } finally { solta646(); }
+  // (b) o Extrato daqui ainda tem a troca, mas ela foi DESFEITA no servidor agora há pouco: nada fecha
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA646()); B.poe(LANC646() + 'e1', EST646(null, { obs: 'Troca desfeita' }));
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(TROCA646()) + '}};');
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.autorizando == null, ped.nota == null, creditos646(B)], ['pedido', true, true, []]);
+    igual(J630('__al646'), ['A troca 13/10/2026 → 14/10/2026, que aparece no Extrato deste aparelho, foi desfeita em outro aparelho agora há pouco. Nada foi lançado: quando a tela atualizar, toque em «Autorizar» de novo.\n\nO pedido continua em aberto.']);
+  } finally { solta646(); }
+  // (c) sem a releitura: não fecha no escuro
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA646());
+    B.falhaOnce = /lancamentos$/;
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    const ped = B.le(PED646());
+    igual([ped.status, ped.autorizando == null], ['pedido', true]);
+    igual(J630('__al646'), ['Essa troca já foi lançada (por Recepção X): 13/10/2026 → 14/10/2026. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar. Nada foi lançado de novo.\n\nO pedido continua em aberto.']);
+  } finally { solta646(); }
+  // (d) no Extrato há OUTRA troca (13→15) e o 14/10 já tem ele como avulso: não é "já feita" — é "não vale mais", e nada fecha
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', Object.assign(TROCA646(), { volta: '2026-10-15', troca: { de: '2026-10-13', para: '2026-10-15', quem: 'Recepção X', ts: 5 } }));
+    prepPed646(B, PEDTROCA646());
+    run("vagasDoDia=function(){ return {reposicao:[], avulso:['Fredo'], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };");
+    await autoriza646();
+    igual([B.le(PED646()).status, B.le(PED646()).autorizando == null], ['pedido', true]);
+    assert.ok(/^Esta troca não vale mais: Fredo já está marcado em 14\/10\/2026/.test(J630('__al646')[0] || ''), JSON.stringify(J630('__al646')));
+  } finally { solta646(); }
+});
+provaAsync('6.46 T2 (ATK2-12, -13 e -16) — a falta (ou a troca) do Extrato estornada no servidor segundos antes: «+ Marcar troca» e a Márcia gravam a troca como falta nova (fa-13-2), sem mexer no nó estornado; a falta viva recebe a troca no nó dela; a mesma troca já gravada no servidor é "já está feita"', async () => {
+  // (a) ATK2-12: falta sem dia; o estorno ainda não chegou ao Extrato daqui
+  let B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646()); B.poe(LANC646() + 'e1', EST646());
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(FALTA646()) + '}};');
+    run('__mm639=[];');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([creditos646(B), fas646(B), J630('__mm639').map((m) => m.t)], [['2026-10-13→2026-10-14 troca'], ['fa-2026-10-13', 'fa-2026-10-13-2'], ['✅ Troca de dia feita']]);
+    igual(B.lanc()['fa-2026-10-13'], FALTA646(), 'o nó estornado fica como estava');
+    igual(saldoServ646(B), 1);
+  } finally { solta646(); }
+  // (b) ATK2-16: a troca 13→15 desfeita no outro aparelho; aqui ela ainda aparece viva; remarcar para 14/10
+  B = palco646(true);
+  try {
+    const tr = FALTA646({ motivo: 'troca', volta: '2026-10-15', troca: { de: '2026-10-13', para: '2026-10-15', quem: 'Recepção X' }, quem: 'Recepção X' });
+    B.poe(LANC646() + 'fa-2026-10-13', tr); B.poe(LANC646() + 'e1', EST646(null, { obs: 'Troca desfeita' }));
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(tr) + '}};');
+    run('__mm639=[];');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual(creditos646(B), ['2026-10-13→2026-10-14 troca']);
+    igual([B.lanc()['fa-2026-10-13-2'].troca.para, B.lanc()['fa-2026-10-13'].volta, B.lanc()['fa-2026-10-13'].troca.para], ['2026-10-14', '2026-10-15', '2026-10-15'], 'a troca desfeita fica no histórico como era');
+    assert.ok(/troca do Fredo do dia 13\/10 para quarta-feira, dia 14\/10/.test(J630('__mm639[0]').msg), J630('__mm639[0]').msg);
+  } finally { solta646(); }
+  // (c) ATK2-13: a mesma situação, pela Márcia
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646()); B.poe(LANC646() + 'e1', EST646());
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(FALTA646()) + '}};');
+    prepPed646(B, PEDTROCA646());
+    await autoriza646();
+    igual([B.le(PED646()).status, creditos646(B), B.lanc()['fa-2026-10-13-2'].autorizacao.quem, saldoServ646(B)], ['autorizado', ['2026-10-13→2026-10-14 troca'], 'Márcia Teste', 1]);
+  } finally { solta646(); }
+  // (d) a falta viva: a troca entra NELA (a ida ao servidor e a troca, as duas no nó dela); o resto fica como estava
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    const f = B.lanc()['fa-2026-10-13'];
+    igual([fas646(B), creditos646(B), B.txs, f.quem, f.troca.quem, f.volta_por], [['fa-2026-10-13'], ['2026-10-13→2026-10-14 troca'], ['fa-2026-10-13', 'fa-2026-10-13'], 'Aparelho A', 'Recepção Teste', 'Recepção Teste']);
+  } finally { solta646(); }
+  // (e) o Extrato daqui tem a falta sem dia; no servidor, OUTRO aparelho acabou de fazer a mesma troca: "já está feita", nada regravado
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646({ volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X', ts: 9 } }));
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(FALTA646()) + '}};');
+    igual(await marcar646('2026-10-13', '2026-10-14'), 'Essa troca já está feita (em outro aparelho, por Recepção X): 13/10/2026 → 14/10/2026. Nada foi lançado de novo.');
+    igual([creditos646(B), B.lanc()['fa-2026-10-13'].troca.quem, B.lanc()['fa-2026-10-13'].troca.ts], [['2026-10-13→2026-10-14 troca'], 'Recepção X', 9]);
+  } finally { solta646(); }
+  // (f) a falta viva já tinha outro dia de repor no servidor (15/10), que o Extrato daqui ainda não mostra: o dia que sai é o do servidor
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646({ volta: '2026-10-15', volta_por: 'Recepção X' }));
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(FALTA646()) + '}};');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    const f = B.lanc()['fa-2026-10-13'];
+    igual([f.volta, f.volta_desmarcada.dia, f.volta_desmarcada.motivo], ['2026-10-14', '2026-10-15', 'remarcada para 14/10/2026']);
+  } finally { solta646(); }
+  // (g) a falta viva e uma reposição marcada para o dia novo: a troca entra na falta e, DEPOIS, a reposição volta a ficar sem dia
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 });
+    run('__mm639=[];');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([B.lanc().c1.volta, B.lanc().c1.volta_desmarcada.motivo, B.lanc()['fa-2026-10-13'].volta, creditos646(B)],
+      ['', 'virou troca (no lugar de 13/10/2026)', '2026-10-14', ['2026-10-06→-', '2026-10-13→2026-10-14 troca']]);
+    assert.ok(J630('__mm639[0]').l.indexOf('A reposição que estava marcada para 14/10/2026 voltou a ficar sem dia.') >= 0, JSON.stringify(J630('__mm639[0]').l));
+  } finally { solta646(); }
+  // (h) a falta do Extrato foi estornada E relançada no outro aparelho (fa-13-2 viva): a troca entra na relançada, sem crédito novo
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646()); B.poe(LANC646() + 'e1', EST646());
+    B.poe(LANC646() + 'fa-2026-10-13-2', FALTA646({ quem: 'Aparelho C' }));
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"fa-2026-10-13":' + JSON.stringify(FALTA646()) + '}};');
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([creditos646(B), fas646(B), B.lanc()['fa-2026-10-13-2'].quem], [['2026-10-13→2026-10-14 troca'], ['fa-2026-10-13', 'fa-2026-10-13-2'], 'Aparelho C']);
+  } finally { solta646(); }
+  // (i) a releitura não responde: segue como antes, na falta do Extrato
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    B.falhaOnce = /lancamentos$/;
+    igual(await marcar646('2026-10-13', '2026-10-14'), '');
+    igual([fas646(B), creditos646(B)], [['fa-2026-10-13'], ['2026-10-13→2026-10-14 troca']]);
+  } finally { solta646(); }
+});
+provaAsync('6.46 T3 (ATK2-15) — «Avisar a Márcia» de novo não grava por cima do pedido em autorização (reserva viva) nem do autorizado, e a tela diz; o recusado e a reserva vencida podem ser pedidos de novo; o avulso entra uma vez só', async () => {
+  // (a) a corrida do ATK2-15: a Márcia reservou e está lançando; no balcão, «Avisar a Márcia» de novo; um 2º aparelho da Gestão tenta autorizar
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkVAG646=vagasAvisarGestao; vagasAvisarGestao=function(){ return Promise.resolve(false); };
+      __bkAVT3=dxLancarAvulso; __nT3=0; __pedT3=null; __innerT3=Promise.resolve(); dxLancarAvulso=function(){ __nT3++;
+        if(__nT3===1){
+          __pedT3=vagasPedir('2026-10-14', PELUDINHOS[0], 'avulso', {valor_cent:9700, matriculado:true})
+            .then(function(){ return 'gravou'; }, function(e){ return ((e&&e.vagaAviso)?'aviso: ':'erro: ')+e.message; });
+          return __pedT3.then(function(){
+            __pt646='Gestão C'; ${PEDIDO_TELA646}
+            __innerT3=vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0])); __pt646='Márcia Teste';
+            return __innerT3.then(function(){ return true; });
+          });
+        }
+        return Promise.resolve(true); };`);
+    try {
+      await autoriza646(); await run('__innerT3'); await espera646();
+      igual(await run('__pedT3'), 'aviso: A Márcia já está autorizando este encaixe (Fredo em 14/10/2026). Nada foi pedido de novo: espere a tela atualizar.');
+      const ped = B.le(PED646());
+      igual([run('__nT3'), ped.status, ped.autorizado_por], [1, 'autorizado', 'Márcia Teste'], 'um avulso só');
+      assert.ok(J630('__al646').indexOf('Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi lançado de novo.') >= 0, JSON.stringify(J630('__al646')));
+    } finally { run('dxLancarAvulso=__bkAVT3; vagasAvisarGestao=__bkVAG646;'); }
+  } finally { solta646(); }
+  // (b) a tela do «Avisar a Márcia» (dxPedir): o pedido já autorizado (o MESMO encaixe: o avulso de R$ 97,00 — 4ª
+  // rodada, QA646C-01: outro encaixe reabre, ver U1) e o pedido em autorização ficam como estão
+  const pedirDeNovo = () => run("__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxTroca=false; dxDe=''; dxPedir();");
+  for (const [st, extra, texto] of [
+    ['autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }, 'A Márcia já autorizou este encaixe (Fredo em 14/10/2026). Nada foi pedido de novo: se Fredo não está na lista desse dia, fale com ela.'],
+    ['autorizando', { autorizando: { quem: 'Márcia Teste', ts: Date.now() - 10000, id: 'outro' } }, 'A Márcia já está autorizando este encaixe (Fredo em 14/10/2026). Nada foi pedido de novo: espere a tela atualizar.']]) {
+    B = palco646(false);
+    try {
+      run('__bkVAG646=vagasAvisarGestao; vagasAvisarGestao=function(){ return Promise.resolve(false); };'
+        + "__bkDVT3=dxVeredito; dxVeredito=function(p, d, tr){ var v=__bkDVT3(p, d, tr); return v.ok?Object.assign({}, v, {tipo:'avulso', valor_cent:9700, matriculado:true}):v; };");
+      const antes = PEDAVULSO646(st, extra);
+      B.poe(PED646(), antes);
+      pedirDeNovo(); await espera646();
+      igual([run('__el639.dxWarn.textContent'), B.le(PED646())], [texto, antes], st + ': nada gravado por cima');
+    } finally { run('vagasAvisarGestao=__bkVAG646; dxVeredito=__bkDVT3;'); solta646(); }
+  }
+  // (c) o recusado e a reserva vencida (abandonada há 3 min) podem ser pedidos de novo
+  for (const [st, extra] of [['recusado', { motivo_recusa: 'Sem vaga', autorizado_por: 'Márcia Teste' }], ['autorizando', { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 180000, id: 'outro' } }]]) {
+    B = palco646(false);
+    try {
+      run('__bkVAG646=vagasAvisarGestao; vagasAvisarGestao=function(){ return Promise.resolve(false); };');
+      B.poe(PED646(), PEDAVULSO646(st, extra));
+      pedirDeNovo(); await espera646();
+      const ped = B.le(PED646());
+      igual([ped.status, ped.motivo_recusa == null, ped.autorizando == null, run('__el639.dxWarn.textContent')], ['pedido', true, true, ''], st + ': pedido de novo');
+    } finally { run('vagasAvisarGestao=__bkVAG646;'); solta646(); }
+  }
+  // (d) «+ Falta» com o dia de repor lotado e «Avisar a Márcia», com o pedido daquele dia em autorização: a falta entra, o pedido não é apagado, e o cartaz diz
+  B = palco646(false);
+  try {
+    const em = PEDAVULSO646('autorizando', { dia: '2026-10-21', autorizando: { quem: 'Márcia Teste', ts: Date.now() - 10000, id: 'outro' } });
+    B.poe('daycare/vagas-pedidos/2026-10-21/' + K646(), em);
+    run(ZA646 + DIA_LOTADO646 + '__bkVAG646=vagasAvisarGestao; vagasAvisarGestao=function(){ return Promise.resolve(false); };');
+    try {
+      run(`__mm639=[]; REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __el639.repData.value='2026-10-13'; __el639.repVolta.value='2026-10-21'; repModoAtual='dia'; repPedirEncaixe();`);
+      await espera646();
+      igual([creditos646(B), B.le('daycare/vagas-pedidos/2026-10-21/' + K646())], [['2026-10-13→-'], em]);
+      igual(J630('__za646'), [['A FALTA ENTROU, MAS NÃO AVISEI A MÁRCIA', ['A Márcia já está autorizando este encaixe (Fredo em 21/10/2026). Nada foi pedido de novo: espere a tela atualizar.',
+        'A falta avisada está salva. Fale com a Márcia sobre o dia 21/10/2026.']]]);
+    } finally { run(ZA646_VOLTA + 'vagasAvisarGestao=__bkVAG646;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 T4 (QA646B-01) — o encaixe entrou e o "autorizado" caiu por rede (disconnect): o pedido não reabre, a tela diz o que houve e o quadro mostra «Autorizar»; tocado de novo, só marca o pedido — nada entra duas vezes (avulso, troca e reposição)', async () => {
+  const CAIU = 'Lancei o encaixe de Fredo em 14/10/2026, mas não consegui marcar o pedido como autorizado (a conexão caiu). Toque em «Autorizar» de novo quando a internet voltar: nada entra duas vezes.';
+  // (a) avulso
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + '__bkT4=dxLancarAvulso; __nT4=0; dxLancarAvulso=function(){ __nT4++; return Promise.resolve(true); };');
+    try {
+      await autoriza646();
+      let ped = B.le(PED646());
+      igual([run('__nT4'), ped.status, !!ped.autorizando, J630('__al646')], [1, 'autorizando', true, [CAIU]], 'o pedido não reabre: fica com a reserva deste aparelho');
+      // o quadro (o ouvinte traz o pedido como está no servidor): «Autorizar», sem «Recusar» e sem "em autorização"
+      run(PEDIDO_TELA646);
+      const hq = run('vagasPedidosHTML()');
+      assert.ok(/vagasAutorizar\(/.test(hq) && !/vagasRecusar\(/.test(hq) && !/em autorização/.test(hq) && /Lançado neste aparelho; falta marcar o pedido como autorizado\./.test(hq), hq);
+      // outro aparelho da Gestão (sem a memória deste) continua barrado pela reserva: não lança de novo
+      run("__al646=[]; __bkVL646=VAGAS_LANCADOS; VAGAS_LANCADOS={}; __pt646='Gestão C';");
+      await autoriza646();
+      run("VAGAS_LANCADOS=__bkVL646; __pt646='Márcia Teste';");
+      igual([run('__nT4'), J630('__al646')], [1, ['Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi lançado de novo.']]);
+      // a internet voltou: «Autorizar» de novo neste aparelho só marca o pedido
+      run('__al646=[];');
+      await autoriza646();
+      ped = B.le(PED646());
+      igual([run('__nT4'), ped.status, ped.autorizado_por, J630('__al646'), J630('__za646').map((z) => z[0])], [1, 'autorizado', 'Márcia Teste', [], ['ENCAIXE AUTORIZADO']], 'nada entra duas vezes');
+      igual(J630('__au639').filter((a) => a[0] === 'vaga-autorizada').length, 1);
+      igual(J630('Object.keys(VAGAS_LANCADOS)'), [], 'a memória sai quando o pedido fecha');
+    } finally { volta(); run('dxLancarAvulso=__bkT4;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) troca
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDTROCA646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run('__mm639=[];');
+    try {
+      await autoriza646();
+      igual([creditos646(B), B.le(PED646()).status, J630('__al646'), run('__mm639.length')], [['2026-10-13→2026-10-14 troca'], 'autorizando', [CAIU], 0]);
+      const tx0 = B.txs.length;
+      await autoriza646();
+      igual([creditos646(B), B.le(PED646()).status, B.txs.length - tx0], [['2026-10-13→2026-10-14 troca'], 'autorizado', 1], 'só o "autorizado": a troca não é gravada de novo');
+      igual(J630('__mm639').map((m) => m.t), ['✅ Troca de dia feita']);
+    } finally { volta(); }
+  } finally { solta646(); }
+  // (c) reposição (o dia de repor no crédito que a recepção lançou)
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', quem: 'Recepção', ts: 1 });
+    prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }));
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646);
+    try {
+      await autoriza646();
+      igual([B.lanc().c1.volta, B.ups.length, B.le(PED646()).status, J630('__al646')], ['2026-10-14', 1, 'autorizando', [CAIU]]);
+      await autoriza646();
+      igual([B.lanc().c1.volta, B.ups.length, B.le(PED646()).status], ['2026-10-14', 1, 'autorizado'], 'o dia de repor não é gravado de novo');
+      igual(J630('__za646').map((z) => z[0]), ['ENCAIXE AUTORIZADO']);
+    } finally { volta(); run(ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 T5 (QA646B-02, ATK2-5 e ATK2-6) — os textos da autorização dizem o que aconteceu: a troca já feita com a reserva perdida não fala em "Lancei"; "continua em aberto" só quando o pedido reabriu de fato; senão, o estado real', async () => {
+  // (a) a troca já feita (Extrato atrasado) e outro aparelho toma a reserva enquanto este conferia
+  let B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA646());
+    prepPed646(B, PEDTROCA646());
+    run(`__bkRL646=repRelerLancamentos; repRelerLancamentos=function(p){ ${TOMA646()} return __bkRL646(p); };`);
+    try {
+      await autoriza646();
+      igual(J630('__al646'), ['Essa troca já está feita (em outro aparelho, por Recepção X): 13/10/2026 → 14/10/2026. Nada foi lançado de novo.\n\nO pedido não foi marcado como autorizado: enquanto eu conferia, outro aparelho passou a autorizá-lo (por Gestão Outra).']);
+      igual([B.le(PED646()).autorizando.id, creditos646(B)], ['outro', ['2026-10-13→2026-10-14 troca']]);
+    } finally { run('repRelerLancamentos=__bkRL646;'); }
+  } finally { solta646(); }
+  // (b) ATK2-6: a gravação falhou DEPOIS que outro aparelho reservou e autorizou: o pedido não reabre, e a tela diz
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkT5=dxLancarAvulso; dxLancarAvulso=function(){ ${TOMA646('Gestão C')}
+      var c='daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]); __B646.poe(c, Object.assign({}, __B646.le(c), {status:'autorizado', autorizado_por:'Gestão C'}));
+      return Promise.reject(new Error('sem rede')); };`);
+    try {
+      await autoriza646();
+      igual([B.le(PED646()).status, J630('__al646')], ['autorizado', ['Não consegui autorizar: sem rede. O pedido não voltou a ficar em aberto: ele foi autorizado em outro aparelho (por Gestão C).']]);
+    } finally { run('dxLancarAvulso=__bkT5;'); }
+  } finally { solta646(); }
+  // (c) o avulso barrado (dashLancar avisou): reabriu → o texto de sempre; tomado por outro aparelho → o estado
+  for (const [toma, st, texto] of [[false, 'pedido', 'Não consegui lançar — o pedido continua em aberto. Veja a mensagem que apareceu e tente de novo.'],
+    [true, 'autorizando', 'Não consegui lançar. O pedido não voltou a ficar em aberto: outro aparelho passou a autorizá-lo (por Gestão Outra). Veja a mensagem que apareceu.']]) {
+    B = palco646(true);
+    try {
+      prepPed646(B, PEDAVULSO646());
+      run(`__bkT5=dxLancarAvulso; dxLancarAvulso=function(){ ${toma ? TOMA646() : ''} return Promise.resolve(false); };`);
+      try {
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646')], [st, [texto]]);
+      } finally { run('dxLancarAvulso=__bkT5;'); }
+    } finally { solta646(); }
+  }
+  // (d) a devolução não responde (sem rede, a transação espera a conexão): em 6 s a tela fala, sem dizer "continua em aberto"
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => new Promise(() => {}));
+    run(`__bkT5=dxLancarAvulso; dxLancarAvulso=function(){ return Promise.reject(new Error('sem rede')); };
+      __bkST646=setTimeout; setTimeout=function(f, ms){ if(ms===6000){ Promise.resolve().then(f); return 0; } return __bkST646(f, ms); };`);
+    try {
+      // sem o prazo, a autorização nunca termina: a prova conta voltas de promessa (sem esperar o relógio)
+      // e falha em vez de ficar parada
+      run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))");
+      for (let i = 0; i < 6; i++) await espera646();
+      igual(J630('__al646'), ['Não consegui autorizar: sem rede. Não consegui reabrir o pedido agora: ele volta a ficar em aberto em até 2 minutos.']);
+    } finally { volta(); run('dxLancarAvulso=__bkT5; setTimeout=__bkST646;'); }
+  } finally { solta646(); }
+  // (e) outro aparelho já devolveu o pedido (ele está em aberto, sem reserva): a tela diz "continua em aberto", sem se contradizer
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkT5=dxLancarAvulso; dxLancarAvulso=function(){ var c='daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]);
+      var v=__B646.le(c); delete v.autorizando; v.status='pedido'; __B646.poe(c, v); return Promise.reject(new Error('sem rede')); };`);
+    try {
+      await autoriza646();
+      igual([B.le(PED646()).status, J630('__al646')], ['pedido', ['Não consegui autorizar: sem rede. O pedido continua em aberto.']]);
+    } finally { run('dxLancarAvulso=__bkT5;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.46 T6 (ATK2-3 e ATK2-4) — a reserva venceu no meio de uma gravação longa e outro aparelho decidiu: a tela diz o que fazer conforme como o pedido ficou (avulso autorizado de novo; troca, dia de repor ou avulso recusados)', async () => {
+  const INI = 'Lancei o encaixe de Fredo em 14/10/2026, mas não marquei o pedido como autorizado: enquanto eu gravava, ';
+  // (a) ATK2-4: o avulso, e C autoriza com a reserva vencida
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkT6=dxLancarAvulso; __nT6=0; __innerT6=Promise.resolve(); dxLancarAvulso=function(){ __nT6++;
+      if(__nT6===1){ ${ENVELHECE646} __pt646='Gestão C'; ${PEDIDO_TELA646} __innerT6=vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0])); __pt646='Márcia Teste';
+        return __innerT6.then(function(){ return true; }); }
+      return Promise.resolve(true); };`);
+    try {
+      await autoriza646(); await run('__innerT6'); await espera646();
+      igual([B.le(PED646()).autorizado_por, J630('__al646')], ['Gestão C', [INI + 'ele foi autorizado em outro aparelho (por Gestão C). O avulso pode ter entrado duas vezes: confira os Lançamentos do dia 14/10/2026 e tire o repetido.']]);
+    } finally { run('dxLancarAvulso=__bkT6;'); }
+  } finally { solta646(); }
+  // (b) ATK2-3: a troca, a reserva vence e outro aparelho RECUSA; (c) o dia de repor; (d) o avulso
+  // (quem recusa é lido DEPOIS do motivo: o nome do outro aparelho só volta quando a recusa termina)
+  const RECUSA = `${ENVELHECE646} __pt646='Márcia B'; ${PEDIDO_TELA646} var pr=vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0])).then(function(){ __pt646='Márcia Teste'; });`;
+  // 4ª rodada (QA646C-02): o «Recusar» confere no servidor se o encaixe já entrou, e a troca e o dia de repor já
+  // estão lá — ele não recusa (ver U4). A recusa que chega antes do lançamento (um aparelho com a versão antiga,
+  // ou a leitura que viu o servidor um instante antes) é gravada direto no banco, como a do outro aparelho.
+  const RECUSA_DIRETA = `${ENVELHECE646} (function(){ var c='daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]); var n=Object.assign({}, __B646.le(c), {status:'recusado', motivo_recusa:'Não cabe mais ninguém', autorizado_por:'Márcia B', autorizado_ts:Date.now()}); delete n.autorizando; __B646.poe(c, n); })(); var pr=Promise.resolve();`;
+  for (const [nome, ped, prep, fim] of [
+    ['troca', PEDTROCA646(), `__bkG6=repTrocaGravar; repTrocaGravar=function(){ return __bkG6.apply(null, arguments).then(function(r){ ${RECUSA_DIRETA} return pr.then(function(){ return r; }); }); };`,
+      'A troca entrou mesmo assim: desfaça-a na tela de Reposições («desmarcar» ao lado de 14/10/2026) ou fale com quem recusou.'],
+    ['reposição', PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }),
+      `__bkG6=repAgendarVolta; repAgendarVolta=function(){ return __bkG6.apply(null, arguments).then(function(r){ ${RECUSA_DIRETA} return pr.then(function(){ return r; }); }); };`,
+      'O dia de repor entrou mesmo assim: desmarque-o na tela de Reposições («desmarcar» ao lado de 14/10/2026) ou fale com quem recusou.'],
+    ['avulso', PEDAVULSO646(), `__bkG6=dxLancarAvulso; dxLancarAvulso=function(){ ${RECUSA} return pr.then(function(){ return true; }); };`,
+      'O avulso entrou mesmo assim: tire-o dos Lançamentos do dia 14/10/2026 ou fale com quem recusou.']]) {
+    B = palco646(true);
+    try {
+      B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', quem: 'Recepção', ts: 1 });
+      run("REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{c1:" + JSON.stringify(B.lanc().c1) + '}};');
+      prepPed646(B, ped);
+      run("__zt646='Não cabe mais ninguém';" + prep);
+      try {
+        await autoriza646(); await espera646();
+        igual([B.le(PED646()).status, J630('__al646')], ['recusado', [INI + 'ele foi recusado em outro aparelho (por Márcia B). ' + fim]], nome);
+      } finally { run(nome === 'troca' ? 'repTrocaGravar=__bkG6;' : (nome === 'avulso' ? 'dxLancarAvulso=__bkG6;' : 'repAgendarVolta=__bkG6;')); }
+    } finally { solta646(); }
+  }
+});
+provaAsync('6.46 T8 (QA646B-04) — período com o 13/10 já lançado no outro aparelho (com o dia de repor em 22/10), o dia de repor 21/10 lotado: com «Avisar a Márcia» ou sem, a tela diz o outro dia e manda conferir com o tutor', async () => {
+  for (const pedir of [true, false]) {
+    const B = palco646(true);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', volta: '2026-10-22', quem: 'Aparelho A', ts: Date.now() - 60000 });
+      run(DIA_LOTADO646 + '__bkT8=vagasPedir; __vpT8=[]; vagasPedir=function(d,p,t,pay){ __vpT8.push([d,t,pay]); return Promise.resolve({}); };');
+      try {
+        run(`__mm639=[]; REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __quem646='Aparelho B';
+          __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-20'; __el639.repVolta.value='2026-10-21'; repModoAtual='periodo'; ${pedir ? 'repPedirEncaixe();' : 'repConfirmar();'}`);
+        await espera646();
+        const m = J630('__mm639[0]');
+        igual(creditos646(B), ['2026-10-13→2026-10-22', '2026-10-20→-']);
+        igual(J630('__vpT8').map((x) => [x[0], x[2].credito_id]), pedir ? [['2026-10-21', 'fa-2026-10-20']] : []);
+        assert.ok(m.l.indexOf('Entrou: 20/10. Já estava lançada em outro aparelho: 13/10 (ficou como estava). A falta de 13/10/2026, lançada no outro aparelho, está com o dia de repor em 22/10/2026. Confira com o tutor qual dia vale.') >= 0, JSON.stringify(m.l));
+        assert.ok(m.l.some((x) => x === 'O dia 21/10/2026 está LOTADO, então ele NÃO ficou agendado: ' + (pedir ? 'a Márcia já recebeu o pedido de encaixe.' : 'peça o encaixe à Márcia.')), JSON.stringify(m.l));
+      } finally { run('vagasPedir=__bkT8;'); }
+    } finally { solta646(); }
+  }
+});
+
+// ================================================================== 2º gate da 6.46 (Quinn) — cenários adversariais nas linhas da revisão
+// Incorporadas à Fase 0 na 3ª rodada (QA646B-03): a QB646-5 é a única prova da exclusão do sa- na conferência da
+// recusa; a QB646-4 (registro, sem afirmação) ficou de fora — a T8 a substitui, com afirmações.
+console.log('\nQB646 — 2º gate da 6.46 (transações da Márcia, releitura do estorno, hora do servidor, quadro "em autorização")');
+// QB1: o avulso ENTROU e a rede caiu na hora do "autorizado" (a transação do fechar volta com 'disconnect',
+// como o SDK faz com transação já enviada quando a conexão cai). Com o update de antes, a escrita ficava na fila.
+provaAsync('QB646-1 — avulso lançado e o "autorizado" cai por rede (disconnect): a tela não diz "Não consegui autorizar… continua em aberto" nem reabre o pedido', async () => {
+  const B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const ref0 = B.ref; let nTx = 0;
+    B.ref = (c) => { const r = ref0(c); if (/vagas-pedidos/.test(c)) { const t0 = r.transaction; r.transaction = (fn) => { nTx++; if (nTx === 2) return Promise.reject(new Error('disconnect')); return t0(fn); }; } return r; };
+    run("__bkQB1=dxLancarAvulso; __nQB1=0; dxLancarAvulso=function(){ __nQB1++; return Promise.resolve(true); };");
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      ctx.__qb1 = { lancou: run('__nQB1'), status: ped.status, alertas: J630('__al646') };
+      console.log('      [QB1] avulso lançado=' + run('__nQB1') + ' · pedido=' + ped.status + ' · alerta=' + JSON.stringify(J630('__al646')));
+      // o avulso ENTROU: a tela não pode dizer "Não consegui autorizar… continua em aberto" nem reabrir o pedido como se nada tivesse entrado
+      igual(run('__nQB1'), 1);
+      assert.ok(!(ped.status === 'pedido' && /^Não consegui autorizar/.test(J630('__al646')[0] || '')),
+        'avulso lançado, pedido=' + ped.status + ', alerta=' + JSON.stringify(J630('__al646')));
+    } finally { run('dxLancarAvulso=__bkQB1;'); B.ref = ref0; }
+  } finally { solta646(); }
+});
+// QB2: a troca JÁ estava feita e, enquanto o "autorizado" era gravado, outro aparelho tomou a reserva
+provaAsync('QB646-2 — troca já feita + reserva perdida no meio: a frase não diz "Nada foi lançado de novo" e "Lancei o encaixe" ao mesmo tempo', async () => {
+  const TROCA = { tipo: 'credito', data: '2026-10-13', motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Recepção X', ts: 5 }, quem: 'Recepção X', ts: 5 };
+  const B = palco646(true);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', TROCA);
+    prepPed646(B, PEDTROCA646());
+    run(`__bkQB2=repTrocaGravar; repTrocaGravar=function(){ return __bkQB2.apply(null, arguments).then(function(r){
+      __B646.poe('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]), Object.assign({}, __B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])), {status:'autorizando', autorizando:{quem:'Gestão Outra', ts:Date.now(), id:'outro'}}));
+      return r; }); };`);
+    try {
+      await autoriza646();
+      const al = J630('__al646');
+      console.log('      [QB2] pedido=' + B.le(PED646()).status + ' · alerta=' + JSON.stringify(al));
+      ctx.__qb2 = al;
+      igual(creditos646(B), ['2026-10-13→2026-10-14 troca'], 'nenhum crédito novo');
+      assert.ok(!(/Nada foi lançado de novo/.test(al[0] || '') && /Lancei o encaixe/.test(al[0] || '')), 'a frase se contradiz: ' + JSON.stringify(al));
+      igual(B.le(PED646()).autorizando.id, 'outro', 'a reserva do outro ficou');
+    } finally { run('repTrocaGravar=__bkQB2;'); }
+  } finally { solta646(); }
+});
+// QB3: período com o 1º dia ESTORNADO no servidor (Extrato atrasado), dia lotado e «Avisar a Márcia»:
+// o 13/10 entra de novo em fa-13-2, e o pedido de encaixe vai com ESSE crédito
+provaAsync('QB646-3 — período 13 a 20/10 com o 13/10 estornado no servidor, dia de repor lotado e «Avisar a Márcia»: o pedido vai com o crédito regravado (fa-13-2)', async () => {
+  const B = palco646(true);
+  try {
+    run('repSaldo=__bk639.sd;');
+    B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', quem: 'Aparelho A', ts: Date.now() - 60000 });
+    B.poe(LANC646() + 'e1', { tipo: 'estorno', estornaId: 'fa-2026-10-13', data: '2026-10-08', motivo: 'estorno', quem: 'Aparelho A', ts: Date.now() - 30000 });
+    run(DIA_LOTADO646 + "__bkQB3=vagasPedir; __vpQB3=[]; vagasPedir=function(d,p,t,pay){ __vpQB3.push([d,t,pay]); return Promise.resolve({}); };");
+    try {
+      run(`__mm639=[]; REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __quem646='Aparelho B';
+        __el639.repDe.value='2026-10-13'; __el639.repAte.value='2026-10-20'; __el639.repVolta.value='2026-10-21'; repModoAtual='periodo'; repPedirEncaixe();`);
+      await espera646();
+      const vp = J630('__vpQB3'), m = J630('__mm639[0]');
+      console.log('      [QB3] pedidos=' + JSON.stringify(vp) + ' · linhas=' + JSON.stringify(m.l));
+      igual(creditos646(B), ['2026-10-13→-', '2026-10-20→-']);
+      igual(vp.length, 1);
+      igual([vp[0][0], vp[0][1], vp[0][2].credito_id, vp[0][2].data], ['2026-10-21', 'reposicao', 'fa-2026-10-13-2', '2026-10-13']);
+      igual([m.l[1].split('.')[0], saldoMsg646(m), saldoServ646(B)], ['Saldo agora: 2', 2, 2]);
+      assert.ok(m.l.some((x) => /LOTADO.*a Márcia já recebeu o pedido de encaixe/.test(x)), JSON.stringify(m.l));
+    } finally { run('vagasPedir=__bkQB3;'); }
+  } finally { solta646(); }
+});
+// QB5: a conferência no servidor não conta o crédito da saída antecipada (sa-) como a falta viva do dia
+provaAsync('QB646-5 — conferência da recusa: com o fa-13 estornado e um crédito sa- vivo no mesmo 13/10, a falta entra de novo (fa-13-2); o sa- não segura a data', async () => {
+  const B = palco646(true);
+  try {
+    const SA = { tipo: 'credito', data: '2026-10-13', motivo: 'hospedagem — saída antecipada', estadiaId: 'EST1', quem: 'Recepção', ts: 3 };
+    B.poe(LANC646() + 'sa-EST1-1', SA);
+    run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:{"sa-EST1-1":' + JSON.stringify(SA) + '}};');
+    B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', quem: 'Aparelho A', ts: Date.now() - 60000 });
+    B.poe(LANC646() + 'e1', { tipo: 'estorno', estornaId: 'fa-2026-10-13', data: '2026-10-08', motivo: 'estorno', quem: 'Aparelho A', ts: Date.now() - 30000 });
+    const w = await falta646('2026-10-13', '');
+    igual(w, '', 'nada de "já conta no saldo"');
+    assert.ok(Object.keys(B.lanc()).indexOf('fa-2026-10-13-2') >= 0, JSON.stringify(Object.keys(B.lanc())));
+  } finally { solta646(); }
+});
+// QB6: aparelho 3 min ADIANTADO, com a diferença do servidor já lida: o redesenho fica marcado para quando a reserva
+// vence na hora do SERVIDOR (≈ 91 s), não para "agora"
+provaAsync('QB646-6 — relógio adiantado 3 min (VAGAS_RELOGIO_DIF=-180000): o quadro mostra "em autorização" e o redesenho fica para ≈ 91 s', async () => {
+  const B = palco646(true);
+  run(`__stQB6=[]; __bkSTQB6=setTimeout; __bkCTQB6=clearTimeout; setTimeout=function(f, ms){ __stQB6.push({f:f, ms:ms}); return __stQB6.length; }; clearTimeout=function(){};
+    VAGAS_RELOGIO_DIF=-180000;`);
+  try {
+    const serv = Date.now() - 180000;
+    prepPed646(B, PEDTROCA646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: serv - 30000, id: 'outro' } }));
+    const card = run('vagasEncaixesCardHTML()');
+    assert.ok(/em autorização por Gestão Outra/.test(card) && !/vagasAutorizar\(/.test(card), card);
+    const t = J630('__stQB6.map(function(x){ return x.ms; })').pop();
+    assert.ok(t >= 85000 && t <= 92000, 'redesenho em ' + t + ' ms');
+  } finally { run('setTimeout=__bkSTQB6; clearTimeout=__bkCTQB6; VAGAS_RELOGIO_DIF=0;'); solta646(); }
+});
+
+
+// ---------------------------------------------------------------- 6.46 — 4ª rodada (achados do 3º QA e da 3ª rodada de ataques)
+console.log('\n6.46 — 4ª rodada: o pedido autorizado antigo, o 2º toque, a conexão que cai no meio, o encaixe já lançado, o pedido que muda e o sa- na troca');
+// O avulso de Fredo nos Lançamentos do dia 14/10 (o que o dashLancar de verdade grava: o nome da planilha e a chave da ficha)
+const AVULSO_NO_DIA646 = (B, quem) => B.poe('daycare/dashboard/2026-10-14/avulso/K9', { valor: run('dashNomePlanilha(PELUDINHOS[0])'),
+  chave: run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)'), quem: quem || 'Recepção X', ts: 5 });
+// a transação nº `n` no caminho `re`: `entra` = a gravação chega ao servidor antes de a resposta voltar com 'disconnect'
+const CAI646 = (B, re, n, entra) => { const ref0 = B.ref; let k = 0;
+  B.ref = (c) => { const r = ref0(c); if (re.test(c)) { const t0 = r.transaction;
+    r.transaction = (fn) => { k++; if (k === n) return (entra ? t0(fn) : Promise.resolve()).then(() => Promise.reject(new Error('disconnect'))); return t0(fn); }; } return r; };
+  return () => { B.ref = ref0; }; };
+const AVISAR646 = '__bkVAG646u=vagasAvisarGestao; vagasAvisarGestao=function(){ return Promise.resolve(false); };';
+const AVISAR646_VOLTA = 'vagasAvisarGestao=__bkVAG646u;';
+
+provaAsync('6.46 U1 (QA646C-01, ATK3-4, QC646-5 e QC646-7) — o pedido "autorizado" antigo só segura o MESMO encaixe, e enquanto ele está de pé: a reposição desmarcada e a reposição que virou troca chegam à Márcia de novo; o mesmo encaixe de pé continua barrado', async () => {
+  const PED_C1 = (st, extra) => PEDTROCA646(st, Object.assign({ autorizado_por: 'Márcia Teste', autorizado_ts: 3, payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }, extra || {}));
+  const JA = 'A Márcia já autorizou este encaixe (Fredo em 14/10/2026). Nada foi pedido de novo: se Fredo não está na lista desse dia, fale com ela.';
+  // (a) QC646-5: a reposição autorizada para 14/10 foi desmarcada depois (o tutor desistiu); ele pede o 14/10 de novo
+  let B = palco646(false);
+  try {
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '', quem: 'Recepção', ts: 1,
+      volta_desmarcada: { dia: '2026-10-14', quem: 'Recepção', ts: 2, motivo: 'o tutor desmarcou' } });
+    B.poe(PED646(), PED_C1('autorizado'));
+    run(ZA646 + DIA_LOTADO646 + AVISAR646);
+    try {
+      run("__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxTroca=false; dxDe=''; dxPedir();"); await espera646();
+      const ped = B.le(PED646());
+      igual([run('__el639.dxWarn.textContent'), ped.status, ped.payload, ped.autorizado_por == null, J630('__za646').map((z) => z[0])],
+        ['', 'pedido', { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' }, true, ['PEDIDO ENVIADO À MÁRCIA']], 'QC646-5: o pedido reabre');
+      run("VAGAS_PEDIDOS={'2026-10-14':{}};" + PEDIDO_TELA646);
+      igual(J630('vagasPedidosAbertos().length'), 1, 'o pedido volta ao quadro da Márcia');
+    } finally { run(AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) QC646-7 e ATK3-4: a reposição de 14/10 entrou por encaixe autorizado; o tutor diz que é TROCA (não vem 13, vem 14)
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1, autorizacao: { quem: 'Márcia Teste', ts: 2 } });
+    B.poe(PED646(), PED_C1('autorizado'));
+    run(ZA646 + AVISAR646 + "vagasDoDia=function(){ return {reposicao:['Fredo'], avulso:[], troca:[], cheio:true, lido:true, livres:0, usadas:5, limite:5}; }; document.body.dataset.role='consultora';");
+    try {
+      run("__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxTroca=true; dxDe='2026-10-13'; dxPedir();"); await espera646();
+      const ped = B.le(PED646());
+      igual([run('__el639.dxWarn.textContent'), ped.status, ped.payload, J630('__za646').map((z) => z[0])],
+        ['', 'pedido', { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } }, ['PEDIDO ENVIADO À MÁRCIA']], 'a troca chega à Márcia');
+      // a Márcia autoriza: a troca entra (13 → 14) e a reposição c1 volta a ficar sem dia — o crédito não se perde
+      prepPed646(B, ped);
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), B.lanc().c1.volta_desmarcada.dia], ['autorizado', ['2026-10-06→-', '2026-10-13→2026-10-14 troca'], '2026-10-14']);
+    } finally { run(AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (c) o MESMO encaixe, de pé, continua barrado; desfeito, reabre (vagasPedir direto: a tela não chega a pedir o que já está no dia)
+  const pedir = async (tipo, pay) => { try { await run(`vagasPedir('2026-10-14', PELUDINHOS[0], '${tipo}', ${JSON.stringify(pay)})`); return 'gravou'; } catch (e) { return e.message; } };
+  const casos = [
+    ['reposição c1 de pé', { c1: { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 } }, PED_C1('autorizado'),
+      'reposicao', { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' }, JA],
+    ['reposição: outro crédito', { c1: { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 } }, PED_C1('autorizado'),
+      'reposicao', { credito_id: 'c2', data: '2026-10-08', volta: '2026-10-14' }, 'gravou'],
+    ['troca de pé', { 'fa-2026-10-13': TROCA646() }, PEDTROCA646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }),
+      'reposicao', { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } }, JA],
+    ['troca desfeita (estornada)', { 'fa-2026-10-13': TROCA646(), E1: EST646('fa-2026-10-13') }, PEDTROCA646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }),
+      'reposicao', { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } }, 'gravou'],
+    ['avulso, o mesmo valor', {}, PEDAVULSO646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }), 'avulso', { valor_cent: 9700, matriculado: true }, JA],
+    ['avulso → reposição', {}, PEDAVULSO646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }), 'reposicao', { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' }, 'gravou'],
+    ['avulso, outro valor', {}, PEDAVULSO646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }), 'avulso', { valor_cent: 17000, matriculado: false }, 'gravou'],
+    ['reposição sem crédito (de pé) → avulso', { c1: { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 } },
+      PEDTROCA646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3, payload: { credito_id: '', data: '', volta: '2026-10-14' } }), 'avulso', { valor_cent: 9700, matriculado: true }, 'gravou'],
+    ['troca de pé → reposição sem crédito', { 'fa-2026-10-13': TROCA646() }, PEDTROCA646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3 }),
+      'reposicao', { credito_id: '', data: '', volta: '2026-10-14' }, 'gravou']];
+  for (const [nome, lanc, antes, tipo, pay, esperado] of casos) {
+    B = palco646(false);
+    try {
+      Object.keys(lanc).forEach((k) => B.poe(LANC646() + k, lanc[k]));
+      B.poe(PED646(), antes);
+      run(AVISAR646);
+      try {
+        const r = await pedir(tipo, pay);
+        const ped = B.le(PED646());
+        igual([r, ped.status], [esperado, esperado === 'gravou' ? 'pedido' : 'autorizado'], nome);
+        if (esperado !== 'gravou') igual(ped, antes, nome + ': nada gravado por cima');
+      } finally { run(AVISAR646_VOLTA); }
+    } finally { solta646(); }
+  }
+});
+provaAsync('6.46 U2 (ATK3-2) — «Autorizar» de novo tocado 2 vezes com o "autorizado" pendente: o 2º toque não grava nada e não fala em avulso em dobro; o "autorizado" que entrou no servidor (a resposta se perdeu) fecha sem alarme', async () => {
+  // (a) os dois toques sem rede (as transações do pedido esperam); a rede volta
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + '__bkU2=dxLancarAvulso; __nU2=0; dxLancarAvulso=function(){ __nU2++; return Promise.resolve(true); };');
+    try {
+      await autoriza646(); volta();
+      run('__al646=[]; __za646=[];');
+      const ref0 = B.ref; const fila = [];
+      B.ref = (c) => { const r = ref0(c); if (/vagas-pedidos/.test(c)) { const t0 = r.transaction; r.transaction = (fn) => new Promise((ok, ko) => fila.push(() => t0(fn).then(ok, ko))); } return r; };
+      try {
+        const p1 = run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))");
+        const p2 = run("vagasAutorizar('2026-10-14', pelKey(PELUDINHOS[0]))");
+        await espera646();
+        igual([fila.length, J630('__al646')], [1, ['Ainda estou marcando como autorizado o pedido de Fredo em 14/10/2026, do toque anterior. Espere a confirmação aparecer.']], 'o 2º toque não grava');
+        while (fila.length) await fila.shift()();
+        await p1; await p2; await espera646();
+      } finally { B.ref = ref0; }
+      igual([run('__nU2'), B.le(PED646()).status, J630('__za646').map((z) => z[0])], [1, 'autorizado', ['ENCAIXE AUTORIZADO']]);
+      assert.ok(!J630('__al646').some((t) => /duas vezes|repetido/.test(t)), JSON.stringify(J630('__al646')));
+      // o toque seguinte já não está em andamento: segue o caminho de sempre
+      run('__al646=[];' + PEDIDO_TELA646); await autoriza646();
+      igual([run('__nU2'), J630('__al646')], [1, ['Este pedido já foi autorizado (por Márcia Teste). Nada foi lançado de novo.']]);
+    } finally { run('dxLancarAvulso=__bkU2;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) o "autorizado" ENTROU no servidor, mas a resposta voltou com 'disconnect': o «Autorizar» de novo fecha, sem alarme
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = CAI646(B, /vagas-pedidos/, 2, true);
+    run(ZA646 + '__bkU2=dxLancarAvulso; __nU2=0; dxLancarAvulso=function(){ __nU2++; return Promise.resolve(true); };');
+    try {
+      await autoriza646();
+      igual([B.le(PED646()).status, run('__nU2'), J630('Object.keys(VAGAS_LANCADOS)').length], ['autorizado', 1, 1], 'o "autorizado" entrou; a tela não soube');
+      run('__al646=[]; __za646=[];');
+      await autoriza646();
+      igual([run('__nU2'), B.le(PED646()).status, J630('__al646'), J630('__za646').map((z) => z[0]), J630('Object.keys(VAGAS_LANCADOS)')],
+        [1, 'autorizado', [], ['ENCAIXE AUTORIZADO'], []]);
+      igual(J630('__au639').filter((a) => a[0] === 'vaga-autorizada').length, 1, 'um rastro só');
+    } finally { volta(); run('dxLancarAvulso=__bkU2;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (c) o "autorizado" de outra pessoa (outra hora) não é tomado como deste aparelho
+  igual(J630(`[vagasAutorizadoNosso({status:'autorizado', autorizado_por:'Márcia Teste', autorizado_ts:5, autorizando:{id:'m1'}}, {id:'m1'}, {ts:5}, 'Márcia Teste'),
+    vagasAutorizadoNosso({status:'autorizado', autorizado_por:'Gestão C', autorizado_ts:5}, {id:'m1'}, {ts:5}, 'Márcia Teste'),
+    vagasAutorizadoNosso({status:'autorizado', autorizado_por:'Márcia Teste', autorizado_ts:6}, {id:'m1'}, {ts:5}, 'Márcia Teste'),
+    vagasAutorizadoNosso({status:'autorizado', autorizado_por:'Márcia Teste', autorizado_ts:5, autorizando:{id:'m2'}}, {id:'m1'}, {ts:5}, 'Márcia Teste'),
+    vagasAutorizadoNosso({status:'recusado', autorizado_por:'Márcia Teste', autorizado_ts:5}, {id:'m1'}, {ts:5}, 'Márcia Teste')]`),
+    [true, false, false, false, false]);
+});
+provaAsync('6.46 U3 (QA646C-03) — a conexão cai no meio da troca ("disconnect", com a troca gravada ou não): a Márcia não reabre o pedido e ouve o que fazer; o «Autorizar» de novo só fecha (ou lança, se não entrou); «+ Marcar troca», «+ Falta» e «Avisar a Márcia» não dizem "Nada foi salvo"', async () => {
+  const CAIU = 'A conexão caiu no meio: toque em «Autorizar» de novo quando a internet voltar; se já entrou, o app só fecha o pedido.';
+  const FA13 = /lancamentos\/fa-2026-10-13$/;
+  // (a) a Márcia: a troca na falta viva (a 1ª transação no nó é a ida ao servidor; a 2ª, a troca)
+  for (const entra of [true, false]) {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 2, entra);
+      run('__mm639=[];');
+      try {
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646'), run('__mm639.length'), creditos646(B)],
+          ['autorizando', [CAIU], 0, [entra ? '2026-10-13→2026-10-14 troca' : '2026-10-13→-']], 'entra=' + entra + ': o pedido não reabre');
+        run(PEDIDO_TELA646);
+        const hq = run('vagasPedidosHTML()');
+        assert.ok(/A conexão caiu no meio da gravação; toque em «Autorizar» de novo\./.test(hq) && /vagasAutorizar\(/.test(hq) && !/vagasRecusar\(/.test(hq), hq);
+        // outro aparelho continua barrado pela reserva
+        run("__al646=[]; __bkVLu3=VAGAS_LANCADOS; VAGAS_LANCADOS={}; __pt646='Gestão C';");
+        await autoriza646();
+        run("VAGAS_LANCADOS=__bkVLu3; __pt646='Márcia Teste';");
+        igual(J630('__al646'), ['Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi lançado de novo.']);
+        // a internet voltou: «Autorizar» de novo, sem perguntar — a troca que entrou só fecha; a que não entrou entra agora
+        run('__al646=[]; __zpU3=0; zPergunta=function(){ __zpU3++; return Promise.resolve(true); };');
+        await autoriza646();
+        const ped = B.le(PED646());
+        igual([ped.status, ped.autorizado_por, creditos646(B), J630('__al646'), J630('__mm639').map((m) => m.t), run('__zpU3'), J630('Object.keys(VAGAS_LANCADOS)')],
+          ['autorizado', 'Márcia Teste', ['2026-10-13→2026-10-14 troca'], [], ['✅ Troca de dia feita'], 0, []], 'entra=' + entra);
+      } finally { volta(); }
+    } finally { solta646(); }
+  }
+  // (a2) a conexão cai de novo no refeito (a troca não entrou nas duas vezes): continua "não sei se entrou"; na 3ª, entra
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646());
+      const ref0 = B.ref; let k = 0;
+      B.ref = (c) => { const r = ref0(c); if (FA13.test(c)) { const t0 = r.transaction;
+        r.transaction = (fn) => { k++; if (k === 2 || k === 4) return Promise.reject(new Error('disconnect')); return t0(fn); }; } return r; };
+      run('__mm639=[];');
+      try {
+        await autoriza646(); run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646'), creditos646(B), J630('Object.keys(VAGAS_LANCADOS)').length], ['autorizando', [CAIU], ['2026-10-13→-'], 1], '2ª queda');
+        run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, creditos646(B), J630('__mm639').map((m) => m.t)], ['autorizado', ['2026-10-13→2026-10-14 troca'], ['✅ Troca de dia feita']]);
+      } finally { B.ref = ref0; }
+    } finally { solta646(); }
+  }
+  // (b) a falta nova (sem falta lançada): a transação do fa-13 cai já gravada; com a reposição marcada para 14/10 ainda no dia
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 });
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 1, true);
+      run('__mm639=[];');
+      try {
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646'), B.lanc().c1.volta], ['autorizando', [CAIU], '2026-10-14'], 'a troca entrou; a reposição marcada ainda não saiu do dia');
+        run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, creditos646(B), J630('__mm639').map((m) => m.t)], ['autorizado', ['2026-10-06→2026-10-14', '2026-10-13→2026-10-14 troca'], ['✅ Troca de dia feita']]);
+        assert.ok(J630('__mm639')[0].l.some((x) => /A reposição que estava marcada para 14\/10\/2026 continua marcada: não consegui tirar o dia agora/.test(x)), JSON.stringify(J630('__mm639')[0].l));
+      } finally { volta(); }
+    } finally { solta646(); }
+  }
+  // (b2) o mesmo, com o Extrato deste aparelho atrasado e a releitura falhando no refeito: não fecha no escuro — continua guardado
+  {
+    const B = palco646(true);
+    try {
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 1, true);
+      try {
+        await autoriza646();
+        run(PEDIDO_TELA646 + '__al646=[]; __mm639=[];'); B.falhaOnce = /lancamentos$/;
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646'), run('__mm639.length'), creditos646(B)], ['autorizando', [CAIU], 0, ['2026-10-13→2026-10-14 troca']]);
+        B.falhaOnce = null; run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__mm639').map((m) => m.t), creditos646(B)], ['autorizado', ['✅ Troca de dia feita'], ['2026-10-13→2026-10-14 troca']]);
+      } finally { volta(); B.falhaOnce = null; }
+    } finally { solta646(); }
+  }
+  // (b3) o dia de repor (a gravação é update — aqui forçada a cair já gravada): o refeito usa o MESMO crédito do pedido
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', quem: 'Recepção', ts: 1 });
+      B.poe(LANC646() + 'c2', { tipo: 'credito', data: '2026-10-08', motivo: 'viagem', quem: 'Recepção', ts: 2 });
+      prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }));
+      run(ZA646 + '__bkRAu3=repAgendarVolta; __nRA=0; repAgendarVolta=function(){ __nRA++; var pr=__bkRAu3.apply(null, arguments); return (__nRA===1)?pr.then(function(){ throw new Error("disconnect"); }):pr; };');
+      try {
+        await autoriza646();
+        igual([J630('__al646'), B.le(PED646()).status], [[CAIU], 'autorizando']);
+        run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, B.lanc().c1.volta, B.lanc().c2.volta || '', J630('__za646').map((z) => z[0])], ['autorizado', '2026-10-14', '', ['ENCAIXE AUTORIZADO']]);
+      } finally { run('repAgendarVolta=__bkRAu3;' + ZA646_VOLTA); }
+    } finally { solta646(); }
+  }
+  // (b4) o refeito que não lança (o avulso barrado pelos Lançamentos do dia): o pedido reabre e a memória deste aparelho sai junto
+  {
+    const B = palco646(false);
+    try {
+      prepPed646(B, PEDAVULSO646());
+      run('__bkAVu3=dxLancarAvulso; __nAV=0; dxLancarAvulso=function(){ __nAV++; return (__nAV===1)?Promise.reject(new Error("disconnect")):Promise.resolve(false); };');
+      try {
+        await autoriza646();
+        igual(J630('__al646'), [CAIU]);
+        run(PEDIDO_TELA646 + '__al646=[];');
+        await autoriza646();
+        igual([B.le(PED646()).status, J630('__al646'), J630('Object.keys(VAGAS_LANCADOS)')],
+          ['pedido', ['Não consegui lançar — o pedido continua em aberto. Veja a mensagem que apareceu e tente de novo.'], []]);
+      } finally { run('dxLancarAvulso=__bkAVu3;'); }
+    } finally { solta646(); }
+  }
+  // (c) a reserva deixou de ser deste aparelho enquanto a conexão estava fora: o «Autorizar» de novo não refaz nada
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 2, false);
+      try {
+        await autoriza646();
+        run(TOMA646('Gestão Outra') + PEDIDO_TELA646 + '__al646=[];');
+        const tx0 = B.txs.length;
+        await autoriza646();
+        igual([J630('__al646'), B.txs.length - tx0, creditos646(B), J630('Object.keys(VAGAS_LANCADOS)')],
+          [['Não refiz o encaixe de Fredo em 14/10/2026: enquanto a conexão estava fora, outro aparelho passou a autorizá-lo (por Gestão Outra). Confira o Extrato e os Lançamentos do dia antes de lançar de novo.'], 0, ['2026-10-13→-'], []]);
+      } finally { volta(); }
+    } finally { solta646(); }
+  }
+  // (d) «+ Marcar troca» (recepção): a troca entrou e a resposta voltou com 'disconnect'
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      const volta = CAI646(B, FA13, 2, true);
+      try {
+        run('__mm639=[];');
+        igual([await marcar646('2026-10-13', '2026-10-14'), run('__mm639.length'), creditos646(B)],
+          ['A conexão caiu no meio: confira no Extrato se a troca entrou antes de lançar de novo.', 0, ['2026-10-13→2026-10-14 troca']]);
+        igual(await marcar646('2026-10-13', '2026-10-14'), 'Essa troca já está feita: 13/10/2026 → 14/10/2026.');
+      } finally { volta(); }
+    } finally { solta646(); }
+  }
+  // (e) «+ Falta» (a transação da falta nova) e (f) «Avisar a Márcia» (a transação do pedido)
+  {
+    const B = palco646(false);
+    try {
+      const volta = CAI646(B, FA13, 1, true);
+      try { igual(await falta646('2026-10-13'), 'A conexão caiu no meio: confira no Extrato o que entrou antes de lançar de novo.'); }
+      finally { volta(); }
+    } finally { solta646(); }
+  }
+  {
+    const B = palco646(false);
+    try {
+      run(DIA_LOTADO646 + AVISAR646);
+      const volta = CAI646(B, /vagas-pedidos/, 1, true);
+      try {
+        run("__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxTroca=false; dxDe=''; dxPedir();"); await espera646();
+        igual(run('__el639.dxWarn.textContent'), 'A conexão caiu no meio: confira nos pedidos de encaixe, na tela de Reposições, se o pedido chegou à Márcia antes de pedir de novo.');
+      } finally { volta(); run(AVISAR646_VOLTA); }
+    } finally { solta646(); }
+  }
+});
+provaAsync('6.46 U4 (QA646C-02, ATK3-1 e ATK3-6) — o encaixe que já entrou: o «Recusar» não recusa (diz o que fazer) e o «Autorizar» só fecha o pedido ("já estava lançado"); a reserva vencida deste aparelho continua com o «Autorizar»', async () => {
+  const FIM = (oque, desfazer) => 'O encaixe já está lançado (' + oque + '): recusar não tira o lançamento. Nada foi recusado: se Fredo não vem, ' + desfazer
+    + ' e recuse depois; se vem, toque em «Autorizar», que só fecha o pedido.';
+  const recusa = async (quem) => { run(`__al646=[]; __ztN=0; __bkZTu4=zTexto; zTexto=function(){ __ztN++; return Promise.resolve('Não cabe mais ninguém'); }; __pt646='${quem || 'Gestão C'}';` + PEDIDO_TELA646);
+    try { await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646(); } finally { run("zTexto=__bkZTu4; __pt646='Márcia Teste';"); } };
+  // (a) o avulso lançado direto pela recepção (o dia abriu vaga) e o pedido de avulso em aberto
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    AVULSO_NO_DIA646(B, 'Recepção X');
+    run(ZA646 + '__bkU4=dxLancarAvulso; __nU4=0; dxLancarAvulso=function(){ __nU4++; return Promise.resolve(true); };');
+    try {
+      await recusa();
+      igual([B.le(PED646()).status, J630('__al646'), run('__ztN')],
+        ['pedido', [FIM('o avulso de Fredo está nos Lançamentos do dia 14/10/2026', 'tire o avulso dos Lançamentos do dia 14/10/2026')], 0], 'nada recusado; o motivo nem é pedido');
+      run('__al646=[];'); await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nU4'), ped.status, ped.nota, ped.autorizado_por, J630('__al646')], [0, 'autorizado', 'já estava lançado por Recepção X', 'Márcia Teste',
+        ['O avulso de Fredo em 14/10/2026 já está nos Lançamentos do dia (lançado por Recepção X). Nada foi lançado de novo.\n\nO pedido ficou como autorizado: o avulso já estava lançado por Recepção X.']]);
+      assert.ok(J630('__au639').some((a) => a[0] === 'vaga-autorizada' && /já estava lançado por Recepção X/.test(a[1])), JSON.stringify(J630('__au639')));
+      // tirado o avulso dos Lançamentos do dia, o pedido de novo pode ser recusado
+      B.poe(PED646(), PEDAVULSO646()); B.poe('daycare/dashboard/2026-10-14/avulso/K9', null);
+      await recusa();
+      igual([B.le(PED646()).status, J630('__al646'), run('__ztN')], ['recusado', [], 1]);
+    } finally { run('dxLancarAvulso=__bkU4;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) a troca já no servidor (o Extrato deste aparelho atrasado) e (c) o dia de repor já marcado
+  for (const [nome, lanc, ped, oque, desfazer] of [
+    ['troca', { 'fa-2026-10-13': TROCA646() }, PEDTROCA646(), 'a troca 13/10/2026 → 14/10/2026 está no Extrato de Fredo', 'desfaça a troca na tela de Reposições («desmarcar» ao lado de 14/10/2026)'],
+    ['dia de repor', { c1: { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 } },
+      PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }),
+      'o dia de repor 14/10/2026 está marcado no Extrato de Fredo', 'desmarque o dia de repor na tela de Reposições («desmarcar» ao lado de 14/10/2026)']]) {
+    B = palco646(true);
+    try {
+      Object.keys(lanc).forEach((k) => B.poe(LANC646() + k, lanc[k]));
+      prepPed646(B, ped);
+      await recusa();
+      igual([B.le(PED646()).status, J630('__al646'), run('__ztN')], ['pedido', [FIM(oque, desfazer)], 0], nome);
+      // desfeito (estornado), a recusa grava
+      B.poe(LANC646() + 'E1', EST646(Object.keys(lanc)[0]));
+      await recusa();
+      igual([B.le(PED646()).status, J630('__al646')], ['recusado', []], nome + ' desfeito');
+    } finally { solta646(); }
+  }
+  // (c2) o pedido é do crédito c1; quem está no dia 14/10 é o c2: o pedido do c1 não entrou, e a recusa grava
+  B = palco646(true);
+  try {
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', quem: 'Recepção', ts: 1 });
+    B.poe(LANC646() + 'c2', { tipo: 'credito', data: '2026-10-08', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 2 });
+    prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }));
+    await recusa();
+    igual([B.le(PED646()).status, J630('__al646')], ['recusado', []]);
+  } finally { solta646(); }
+  // (d) ATK3-1 com o avulso nos Lançamentos do dia: o encaixe entrou, o "autorizado" caiu e a rede ficou fora > 2 min
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + '__bkU4=dxLancarAvulso; __nU4=0; __Bu4=__B646; dxLancarAvulso=function(){ __nU4++; __Bu4.poe("daycare/dashboard/2026-10-14/avulso/K9", {valor:dashNomePlanilha(PELUDINHOS[0]), chave:dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor), quem:"Márcia Teste", ts:5}); return Promise.resolve(true); };');
+    try {
+      await autoriza646(); volta();
+      run(ENVELHECE646 + PEDIDO_TELA646);
+      // este aparelho (com a memória): a reserva venceu, mas ainda é dele — só o «Autorizar», sem «Recusar»
+      const hA = run('vagasPedidosHTML()');
+      assert.ok(/Lançado neste aparelho; falta marcar o pedido como autorizado\./.test(hA) && /vagasAutorizar\(/.test(hA) && !/vagasRecusar\(/.test(hA), hA);
+      // o aparelho C (sem a memória): «Recusar» não recusa
+      run('__bkVLu4=VAGAS_LANCADOS; VAGAS_LANCADOS={};');
+      await recusa('Gestão C');
+      run('VAGAS_LANCADOS=__bkVLu4;');
+      igual([B.le(PED646()).status, J630('__al646')], ['autorizando', [FIM('o avulso de Fredo está nos Lançamentos do dia 14/10/2026', 'tire o avulso dos Lançamentos do dia 14/10/2026')]]);
+      // a internet volta: o «Autorizar» deste aparelho só marca o pedido
+      run('__al646=[];' + PEDIDO_TELA646); await autoriza646();
+      igual([run('__nU4'), B.le(PED646()).status, J630('__al646'), J630('__za646').map((z) => z[0])], [1, 'autorizado', [], ['ENCAIXE AUTORIZADO']]);
+    } finally { run('dxLancarAvulso=__bkU4;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (e) ATK3-6 com o avulso nos Lançamentos do dia: C autoriza com a reserva vencida — fecha, sem lançar; o toque atrasado de A não fala em dobro
+  B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + '__bkU4=dxLancarAvulso; __nU4=0; __Bu4=__B646; dxLancarAvulso=function(){ __nU4++; __Bu4.poe("daycare/dashboard/2026-10-14/avulso/K9", {valor:dashNomePlanilha(PELUDINHOS[0]), chave:dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor), quem:"Márcia Teste", ts:5}); return Promise.resolve(true); };');
+    try {
+      await autoriza646(); volta();
+      run(ENVELHECE646);
+      run("__bkVLu4=VAGAS_LANCADOS; VAGAS_LANCADOS={}; __pt646='Gestão C'; __al646=[];" + PEDIDO_TELA646);
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nU4'), ped.status, ped.autorizado_por, ped.nota], [1, 'autorizado', 'Gestão C', 'já estava lançado por Márcia Teste']);
+      run("VAGAS_LANCADOS=__bkVLu4; __pt646='Márcia Teste'; __al646=[];" + PEDIDO_TELA646);
+      await autoriza646();
+      igual([run('__nU4'), J630('__al646')], [1, ['Lancei o encaixe de Fredo em 14/10/2026, mas não marquei o pedido como autorizado: enquanto eu gravava, ele foi autorizado em outro aparelho (por Gestão C). Esse aparelho achou o avulso já nos Lançamentos do dia 14/10/2026 e não lançou de novo.']]);
+    } finally { run('dxLancarAvulso=__bkU4;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (f) pura: o avulso de outra ficha com o mesmo nome não é o dele; sem as duas chaves, vale o nome
+  igual(J630(`[!!vagasAvulsoDoFilhot(PELUDINHOS[0], {a:{valor:dashNomePlanilha(PELUDINHOS[0]), chave:'outra__ficha'}}),
+    !!vagasAvulsoDoFilhot(PELUDINHOS[0], {a:{valor:dashNomePlanilha(PELUDINHOS[0])}}),
+    !!vagasAvulsoDoFilhot(PELUDINHOS[0], {a:{valor:'Outro/SRD'}}), !!vagasAvulsoDoFilhot(PELUDINHOS[0], {a:{valor:''}}), vagasAvulsoDoFilhot(PELUDINHOS[0], null)]`),
+    [false, true, false, false, null]);
+});
+provaAsync('6.46 U5 (ATK3-8) — o pedido muda (avulso → reposição) enquanto a Márcia está na pergunta: nada é reservado nem lançado, e a tela diz o que ele é agora; atualizada a tela, ela autoriza a reposição (R$ 0,00)', async () => {
+  const B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', volta: '', quem: 'Recepção', ts: 1 });
+    prepPed646(B, PEDAVULSO646());
+    run(ZA646 + AVISAR646 + "__bkU5=dxLancarAvulso; __nU5=0; dxLancarAvulso=function(){ __nU5++; return Promise.resolve(true); };"
+      + "zPergunta=function(){ var pt=__pt646; __pt646='Recepção Teste'; return vagasPedir('2026-10-14', PELUDINHOS[0], 'reposicao', {credito_id:'fa-2026-10-13', data:'2026-10-13', volta:'2026-10-14'}).then(function(){ __pt646=pt; return true; }); };");
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nU5'), ped.status, ped.tipo, ped.autorizando == null, B.lanc()['fa-2026-10-13'].volta, J630('__al646'), J630('__za646').map((z) => z[0])],
+        [0, 'pedido', 'reposicao', true, '', ['O pedido mudou enquanto a senhora decidia (agora é reposição). Nada foi lançado: confira de novo.'], []]);
+      run(PEDIDO_TELA646 + "__al646=[]; __za646=[]; zPergunta=function(){ return Promise.resolve(true); };");
+      await autoriza646();
+      igual([run('__nU5'), B.le(PED646()).status, B.lanc()['fa-2026-10-13'].volta, J630('__za646').map((z) => z[0])], [0, 'autorizado', '2026-10-14', ['ENCAIXE AUTORIZADO']]);
+    } finally { run('dxLancarAvulso=__bkU5;' + AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // o tipo na frase, como no quadro; o mesmo pedido (outra ordem das chaves) é o mesmo; o mesmo encaixe pedido de novo
+  // (outra hora do pedido) também é o mesmo (5ª rodada, QA646D-03)
+  igual(J630(`[vagasPedidoTipoTexto({tipo:'avulso', payload:{valor_cent:9700}}), vagasPedidoTipoTexto({tipo:'reposicao', payload:{troca:{de:'2026-10-13'}}}),
+    vagasMesmoPedido({ts:1, tipo:'avulso', payload:{valor_cent:9700, matriculado:true}}, {ts:1, tipo:'avulso', payload:{matriculado:true, valor_cent:9700}}),
+    vagasMesmoPedido({ts:1, tipo:'avulso', payload:{valor_cent:9700}}, {ts:2, tipo:'avulso', payload:{valor_cent:9700}}),
+    vagasMesmoPedido({ts:1, tipo:'avulso', payload:{valor_cent:9700}}, {ts:1, tipo:'avulso', payload:{valor_cent:17000}}),
+    vagasMesmoPedido({ts:1, tipo:'avulso', payload:{valor_cent:9700}}, {ts:1, tipo:'reposicao', payload:{valor_cent:9700}})]`),
+    ['avulso de R$ 97,00', 'troca, no lugar de 13/10/2026', true, true, false, false]);
+});
+provaAsync('6.46 U6 (ATK3-5) — o crédito da saída antecipada (sa-) não segura a data da troca: a troca de hoje nasce em fa-, e o sa- fica livre (pela recepção, pela Márcia e nas releituras do servidor)', async () => {
+  const SA = { tipo: 'credito', data: '2026-10-07', motivo: 'hospedagem-saida-antecipada', obs: 'Saída antecipada', estadiaId: 'EST1', seq: 1, quem: 'Plantão', ts: 1 };
+  const LIVRE = "vagasDoDia=function(dia){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };";
+  const PED07 = () => 'daycare/vagas-pedidos/2026-10-08/' + K646();
+  const casos = [
+    // [nome, atrasado, lançamentos (servidor), Extrato deste aparelho (null = o do servidor), pela Márcia, nó esperado]
+    ['«+ Marcar troca», sa- de hoje', false, { 'sa-EST1-1': SA }, null, false, 'fa-2026-10-07'],
+    ['a Márcia, sa- de hoje', false, { 'sa-EST1-1': SA }, null, true, 'fa-2026-10-07'],
+    ['falta do Extrato estornada no servidor + sa- (releitura do ramo da falta)', true,
+      { 'sa-EST1-1': SA, 'fa-2026-10-07': { tipo: 'credito', data: '2026-10-07', motivo: 'viagem', quem: 'A', ts: 2 }, E1: EST646('fa-2026-10-07') },
+      { 'sa-EST1-1': SA, 'fa-2026-10-07': { tipo: 'credito', data: '2026-10-07', motivo: 'viagem', quem: 'A', ts: 2 } }, false, 'fa-2026-10-07-2'],
+    ['nó fixo ocupado por falta estornada que este aparelho não viu + sa- (releitura da falta nova)', true,
+      { 'sa-EST1-1': SA, 'fa-2026-10-07': { tipo: 'credito', data: '2026-10-07', motivo: 'viagem', quem: 'A', ts: 2 }, E1: EST646('fa-2026-10-07') }, {}, false, 'fa-2026-10-07-2']];
+  for (const [nome, atrasado, lanc, local, marcia, no] of casos) {
+    const B = palco646(atrasado);
+    try {
+      run("__ex639.dias=['qua']; __ex639.freq='1x';" + LIVRE);
+      Object.keys(lanc).forEach((k) => B.poe(LANC646() + k, lanc[k]));
+      if (local) run('REPO_CACHE[pelKey(PELUDINHOS[0])]={lancamentos:' + JSON.stringify(local) + '};');
+      run('__mm639=[];');
+      if (marcia) {
+        const ped = PEDTROCA646('pedido', { dia: '2026-10-08', payload: { volta: '2026-10-08', troca: { de: '2026-10-07', para: '2026-10-08' } } });
+        B.poe(PED07(), ped);
+        run(`document.body.dataset.role='gestao'; __pt646='Márcia Teste'; VAGAS_PEDIDOS={'2026-10-08':{}}; VAGAS_PEDIDOS['2026-10-08'][pelKey(PELUDINHOS[0])]=${JSON.stringify(ped)};`);
+        await run("vagasAutorizar('2026-10-08', pelKey(PELUDINHOS[0]))"); await espera646();
+        igual(B.le(PED07()).status, 'autorizado', nome);
+      } else {
+        igual(await marcar646('2026-10-07', '2026-10-08'), '', nome);
+      }
+      igual([B.lanc()['sa-EST1-1'], (B.lanc()[no] || {}).troca && B.lanc()[no].troca.para, J630('__mm639').map((m) => m.t)], [SA, '2026-10-08', ['✅ Troca de dia feita']], nome);
+    } finally { solta646(); }
+  }
+  // pura: o sa- é reconhecido pela estadia OU pelo motivo "hospedagem-…" (a mesma regra do repCreditoVivoNaData)
+  igual(J630("[repSaidaAntecipada({motivo:'hospedagem-saida-antecipada'}), repSaidaAntecipada({estadiaId:'E1'}), repSaidaAntecipada({motivo:'viagem'}), repSaidaAntecipada(null)]"),
+    [true, true, false, false]);
+  // o veredito: o sa- com a reposição marcada para o dia novo é CONVERTIDO (não é a falta do dia que sai), como o repTrocaGravar faz
+  const B = palco646(false);
+  try {
+    run("__ex639.dias=['qua']; __ex639.freq='1x';" + "vagasDoDia=function(dia){ return {reposicao:['Fredo'], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };");
+    B.poe(LANC646() + 'sa-EST1-1', Object.assign({}, SA, { volta: '2026-10-08' }));
+    igual(J630("dxVeredito(PELUDINHOS[0], '2026-10-08', {de:'2026-10-07'}).converte"), 'sa-EST1-1');
+    run('__mm639=[];');
+    igual(await marcar646('2026-10-07', '2026-10-08'), '');
+    igual([B.lanc()['sa-EST1-1'].volta, B.lanc()['sa-EST1-1'].troca == null, B.lanc()['fa-2026-10-07'].troca.para], ['', true, '2026-10-08']);
+  } finally { solta646(); }
+});
+// ================================================================== 3º gate da 6.46 (Quinn) — QC646-3 e QC646-4, incorporadas (QA646C-04)
+// QC3 (cobertura): o "autorizado" já gravado e só a tela de confirmação falhou — e a mensagem do erro que já termina em ponto
+provaAsync('QC646-3 — o pedido JÁ autorizado e a confirmação falha: a tela diz que está autorizado (sem "Lancei… não consegui marcar") e sem ".."', async () => {
+  const B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run(`__bkQC3=dxLancarAvulso; dxLancarAvulso=function(){ return Promise.resolve(true); };
+      __bkZAq3=zAlertao; zAlertao=function(){ throw new Error('a tela fechou.'); };`);
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([ped.status, J630('__al646'), J630('Object.keys(VAGAS_LANCADOS)')],
+        ['autorizado', ['O encaixe de Fredo em 14/10/2026 está autorizado, mas não consegui mostrar a confirmação: a tela fechou.'], []]);
+    } finally { run('dxLancarAvulso=__bkQC3; zAlertao=__bkZAq3;'); }
+  } finally { solta646(); }
+});
+// QC4 (cobertura): a memória do "lançado aqui" é de uma reserva que NÃO é mais deste aparelho (outro a tomou): o quadro
+// mostra "em autorização por …", sem «Autorizar»
+provaAsync('QC646-4 — memória do "lançado neste aparelho" com a reserva já de outro aparelho: o quadro diz "em autorização por Gestão Outra", sem botões', async () => {
+  const B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646('autorizando', { autorizando: { quem: 'Gestão Outra', ts: Date.now() - 10000, id: 'outro' } }));
+    run("VAGAS_LANCADOS[vagasLancadoChave('2026-10-14', pelKey(PELUDINHOS[0]))]={marca:{quem:'Márcia Teste', ts:Date.now()-200000, id:'meu'}, aut:{quem:'Márcia Teste', ts:1}, trocaR:null};");
+    const h = run('vagasPedidosHTML()');
+    assert.ok(/em autorização por Gestão Outra/.test(h) && !/Lançado neste aparelho/.test(h) && !/vagasAutorizar\(/.test(h), h);
+  } finally { solta646(); }
+});
+
+// ---------------------------------------------------------------- 6.46 — 5ª rodada (achados do 4º QA e da 4ª rodada de ataques)
+console.log('\n6.46 — 5ª rodada: a memória do "lançado neste aparelho" só para o mesmo pedido, o «Recusar» sem rede, o mesmo encaixe pedido de novo, o refeito da troca desfeita e o avulso já lançado no dia da reposição');
+// O avulso de Fredo nos Lançamentos do dia 14/10, com o detalhe que o dashLancar grava (o valor e o matriculado), ou sem ele
+const AVDET646 = (B, det, extra) => B.poe('daycare/dashboard/2026-10-14/avulso/K9', Object.assign({ valor: run('dashNomePlanilha(PELUDINHOS[0])'),
+  chave: run('dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)'), quem: 'Márcia Teste', ts: 5 }, det ? { det } : {}, extra || {}));
+const AVQTD646 = (B) => Object.keys(B.le('daycare/dashboard/2026-10-14/avulso') || {}).length;
+
+provaAsync('6.46 W1 (QA646D-01) — a memória "lançado neste aparelho" só vale para o MESMO pedido: pedido novo de outro encaixe, ou o mesmo avulso pedido de novo depois de recusado, segue o caminho de sempre (pergunta, reserva, lança), sem "Lancei…"', async () => {
+  const AVULSO_CAI = '__bkW1=dxLancarAvulso; __nW1=0; __Bw1=__B646; dxLancarAvulso=function(){ __nW1++; __Bw1.poe("daycare/dashboard/2026-10-14/avulso/K"+(8+__nW1), {valor:dashNomePlanilha(PELUDINHOS[0]), chave:dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor), quem:"Márcia Teste", ts:5}); return Promise.resolve(true); };';
+  const PERGUNTA = '__zpW1=0; zPergunta=function(){ __zpW1++; return Promise.resolve(true); };';
+  // (a) QD646-11: o avulso entrou e o "autorizado" caiu; Gestão C fechou o pedido ("já estava lançado"); o tutor desistiu do
+  // avulso (saiu dos Lançamentos do dia) e pediu a TROCA 13/10 → 14/10, que reabre o pedido (outro encaixe)
+  let B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + AVISAR646 + AVULSO_CAI);
+    try {
+      await autoriza646(); volta();
+      igual([run('__nW1'), J630('Object.keys(VAGAS_LANCADOS)').length], [1, 1], 'o avulso entrou; a memória ficou');
+      const c = PED646(); const v = Object.assign({}, B.le(c), { status: 'autorizado', autorizado_por: 'Gestão C', autorizado_ts: 9, nota: 'já estava lançado por Márcia Teste' });
+      delete v.autorizando; B.poe(c, v);
+      B.poe('daycare/dashboard/2026-10-14/avulso/K9', null);
+      run("__pt646='Recepção Teste';");
+      await run("vagasPedir('2026-10-14', PELUDINHOS[0], 'reposicao', {volta:'2026-10-14', troca:{de:'2026-10-13', para:'2026-10-14'}})");
+      run("__pt646='Márcia Teste'; __al646=[]; __mm639=[];" + PERGUNTA + PEDIDO_TELA646);
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__zpW1'), ped.status, ped.autorizado_por, creditos646(B), J630('__al646'), J630('__mm639').map((m) => m.t), J630('Object.keys(VAGAS_LANCADOS)')],
+        [1, 'autorizado', 'Márcia Teste', ['2026-10-13→2026-10-14 troca'], [], ['✅ Troca de dia feita'], []]);
+    } finally { run('dxLancarAvulso=__bkW1;' + AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) o MESMO avulso pedido de novo (outra hora do pedido) depois de recusado: o avulso tinha saído dos Lançamentos do dia; a
+  // memória velha fechava sem lançar ("Lancei…", R$ 97,00 sem cobrar) — agora pergunta, reserva e lança
+  B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const volta = PEDTX646(B, 2, () => Promise.reject(new Error('disconnect')));
+    run(ZA646 + AVISAR646 + AVULSO_CAI);
+    try {
+      await autoriza646(); volta();
+      B.poe('daycare/dashboard/2026-10-14/avulso/K9', null);
+      const c = PED646(); const v = Object.assign({}, B.le(c), { status: 'recusado', autorizado_por: 'Gestão C', autorizado_ts: 9, motivo_recusa: 'o tutor desistiu' });
+      delete v.autorizando; B.poe(c, v);
+      run("__pt646='Recepção Teste';");
+      await run("vagasPedir('2026-10-14', PELUDINHOS[0], 'avulso', {valor_cent:9700, matriculado:true})");
+      run("__pt646='Márcia Teste'; __al646=[]; __za646=[];" + PERGUNTA + PEDIDO_TELA646);
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__zpW1'), run('__nW1'), AVQTD646(B), ped.status, ped.autorizado_por, J630('__al646'), J630('__za646').map((z) => z[0])],
+        [1, 2, 1, 'autorizado', 'Márcia Teste', [], ['ENCAIXE AUTORIZADO']]);
+    } finally { run('dxLancarAvulso=__bkW1;' + AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (c) pura: a reserva ainda é a deste aparelho; o mesmo pedido (a mesma hora e o mesmo encaixe) com a reserva de outro; outro
+  // encaixe; outra hora; sem a memória do pedido
+  igual(J630(`(function(){ var m={marca:{id:'meu'}, ped:{ts:1, tipo:'avulso', payload:{valor_cent:9700, matriculado:true}}};
+    return [vagasLancadoDoPedido({ts:7, tipo:'reposicao', status:'autorizando', autorizando:{id:'meu'}}, m),
+      vagasLancadoDoPedido({ts:1, tipo:'avulso', status:'autorizado', autorizando:{id:'outro'}, payload:{matriculado:true, valor_cent:9700}}, m),
+      vagasLancadoDoPedido({ts:1, tipo:'reposicao', status:'pedido', payload:{volta:'2026-10-14', troca:{de:'2026-10-13', para:'2026-10-14'}}}, m),
+      vagasLancadoDoPedido({ts:2, tipo:'avulso', status:'pedido', payload:{valor_cent:9700, matriculado:true}}, m),
+      vagasLancadoDoPedido({ts:1, tipo:'avulso', status:'pedido', payload:{valor_cent:9700, matriculado:true}}, {marca:{id:'meu'}}),
+      vagasLancadoDoPedido(null, m)]; })()`), [true, true, false, false, false, false]);
+});
+
+provaAsync('6.46 W2 (QA646D-02) — «Recusar» de avulso sem resposta da leitura dos Lançamentos do dia: em 6 s a tela diz que não conseguiu conferir, sem pedir o motivo e sem recusar; a leitura recusada pelo banco recusa como antes', async () => {
+  const RECUSA = `__al646=[]; __ztW2=0; __bkZTw2=zTexto; zTexto=function(){ __ztW2++; return Promise.resolve('Não cabe'); }; __pt646='Gestão C';`;
+  // (a) sem rede: a leitura do avulso e a do pedido não respondem (sem o prazo, a tela ficava muda)
+  let B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    const ref0 = B.ref;
+    B.ref = (c) => { const r = ref0(c); if (/dashboard|vagas-pedidos/.test(c)) r.once = () => new Promise(() => {}); return r; };
+    run(RECUSA + '__bkSTw2=setTimeout; setTimeout=function(f, ms){ if(ms===6000){ Promise.resolve().then(f); return 0; } return __bkSTw2(f, ms); };' + PEDIDO_TELA646);
+    try {
+      run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))");
+      for (let i = 0; i < 6; i++) await espera646();
+      igual([run('__ztW2'), J630('__al646'), B.le(PED646()).status], [0,
+        ['Não consegui conferir se o avulso de Fredo já está nos Lançamentos do dia 14/10/2026: o banco não respondeu em 6 s. Nada foi recusado: toque em «Recusar» de novo quando a internet voltar.'], 'pedido']);
+    } finally { B.ref = ref0; run("zTexto=__bkZTw2; setTimeout=__bkSTw2; __pt646='Márcia Teste';"); }
+  } finally { solta646(); }
+  // (b) a leitura recusada pelo banco (permissão): não trava a Gestão — o motivo é pedido e o pedido fica "recusado", como antes
+  B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    B.falhaOnce = /dashboard/;
+    run(RECUSA + PEDIDO_TELA646);
+    try {
+      await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+      igual([run('__ztW2'), J630('__al646'), B.le(PED646()).status], [1, [], 'recusado']);
+    } finally { B.falhaOnce = null; run("zTexto=__bkZTw2; __pt646='Márcia Teste';"); }
+  } finally { solta646(); }
+});
+
+provaAsync('6.46 W3 (QA646D-03) — o MESMO avulso pedido de novo durante a pergunta (outra recepção) não é "o pedido mudou": a Márcia autoriza e entra um avulso só; outro valor continua "mudou", com "a senhora"', async () => {
+  for (const [nome, pay, esperado] of [['o mesmo avulso', { valor_cent: 9700, matriculado: true }, null],
+    ['outro valor', { valor_cent: 17000, matriculado: false }, 'O pedido mudou enquanto a senhora decidia (agora é avulso de R$ 170,00). Nada foi lançado: confira de novo.']]) {
+    const B = palco646(false);
+    try {
+      prepPed646(B, PEDAVULSO646());
+      run(ZA646 + AVISAR646 + "__bkW3=dxLancarAvulso; __nW3=0; dxLancarAvulso=function(){ __nW3++; return Promise.resolve(true); };"
+        + "zPergunta=function(){ var pt=__pt646; __pt646='Recepção Outra'; return vagasPedir('2026-10-14', PELUDINHOS[0], 'avulso', " + JSON.stringify(pay) + ").then(function(){ __pt646=pt; return true; }); };");
+      try {
+        await autoriza646();
+        const ped = B.le(PED646());
+        if (!esperado) igual([run('__nW3'), ped.status, ped.quem, ped.autorizado_por, J630('__al646'), J630('__za646').map((z) => z[0])],
+          [1, 'autorizado', 'Recepção Outra', 'Márcia Teste', [], ['ENCAIXE AUTORIZADO']], nome);
+        else igual([run('__nW3'), ped.status, J630('__al646'), J630('__za646').map((z) => z[0])], [0, 'pedido', [esperado], []], nome);
+      } finally { run('dxLancarAvulso=__bkW3;' + AVISAR646_VOLTA + ZA646_VOLTA); }
+    } finally { solta646(); }
+  }
+});
+
+provaAsync('6.46 W4 (QA646D-04) — o refeito do "não sei se entrou" reconfere a troca: desfeita no meio pela recepção, ela não é refeita sem a pergunta e o pedido volta a ficar em aberto; o «Autorizar» seguinte pergunta; refeita por outro, o refeito só fecha', async () => {
+  const FA13 = /lancamentos\/fa-2026-10-13$/;
+  const DESFAZ = "repTrocaDesfazer(PELUDINHOS[0], Object.assign({_id:'fa-2026-10-13'}, __B646.le('daycare/reposicao/'+pelKey(PELUDINHOS[0])+'/lancamentos/fa-2026-10-13')), '2026-10-14')";
+  const PERGUNTA = '__zpW4=0; zPergunta=function(){ __zpW4++; return Promise.resolve(true); };';
+  for (const [nome, comFalta, quem] of [['a falta já existia (desfazer tira o dia)', true, 'Recepção Teste'], ['a troca nasceu sem falta (desfazer estorna)', false, 'Aparelho A']]) {
+    const B = palco646(false);
+    try {
+      if (comFalta) B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, comFalta ? 2 : 1, true);
+      run('__mm639=[];');
+      try { await autoriza646(); } finally { volta(); }
+      igual([creditos646(B), B.le(PED646()).status], [['2026-10-13→2026-10-14 troca'], 'autorizando'], nome + ': a troca entrou; o pedido guardado');
+      run("__pt646='Recepção Teste';"); await run(DESFAZ); run("__pt646='Márcia Teste';");
+      run(PEDIDO_TELA646 + '__al646=[];' + PERGUNTA);
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), fas646(B), run('__zpW4'), run('__mm639.length'), J630('__al646'), J630('Object.keys(VAGAS_LANCADOS)')],
+        ['pedido', comFalta ? ['2026-10-13→- troca'] : [], ['fa-2026-10-13'], 0, 0,
+          ['A troca 13/10/2026 → 14/10/2026 de Fredo entrou e foi desfeita depois, na tela de Reposições (por ' + quem + '). Não refiz a troca sem perguntar: se ela ainda vale, toque em «Autorizar» de novo.\n\nO pedido continua em aberto.'], []], nome);
+      // o «Autorizar» seguinte é o de sempre: pergunta, e a troca entra uma vez
+      run(PEDIDO_TELA646 + '__al646=[];');
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), run('__zpW4'), J630('__mm639').map((m) => m.t)], ['autorizado', ['2026-10-13→2026-10-14 troca'], 1, ['✅ Troca de dia feita']], nome);
+    } finally { solta646(); }
+  }
+  // (c) desfeita (estornada) e REFEITA pela recepção em «+ Marcar troca» (fa-13-2): a troca está de pé — o refeito só fecha, sem pergunta
+  {
+    const B = palco646(false);
+    try {
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 1, true);
+      run('__mm639=[];');
+      try { await autoriza646(); } finally { volta(); }
+      run("__pt646='Recepção Teste';"); await run(DESFAZ);
+      igual(await marcar646('2026-10-13', '2026-10-14'), '', 'a recepção refaz a troca');
+      run("__pt646='Márcia Teste'; __mm639=[]; __al646=[];" + PERGUNTA + PEDIDO_TELA646);
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), fas646(B), run('__zpW4'), J630('__al646'), J630('__mm639').map((m) => m.t)],
+        ['autorizado', ['2026-10-13→2026-10-14 troca'], ['fa-2026-10-13', 'fa-2026-10-13-2'], 0, [], ['✅ Troca de dia feita']]);
+    } finally { solta646(); }
+  }
+  // (e) desfeita no meio e a 1ª releitura do refeito falha (as seguintes respondem): continua guardado, sem refazer a troca
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 2, true);
+      run('__mm639=[];');
+      try { await autoriza646(); } finally { volta(); }
+      run("__pt646='Recepção Teste';"); await run(DESFAZ); run("__pt646='Márcia Teste';");
+      const ref0 = B.ref; let n = 0;
+      B.ref = (c) => { const r = ref0(c); if (/lancamentos$/.test(c)) { const o0 = r.once; r.once = (...a) => (++n === 1 ? Promise.reject(new Error('sem rede')) : o0(...a)); } return r; };
+      run(PEDIDO_TELA646 + '__al646=[];' + PERGUNTA);
+      try { await autoriza646(); } finally { B.ref = ref0; }
+      igual([B.le(PED646()).status, creditos646(B), run('__zpW4'), run('__mm639.length'), J630('__al646')],
+        ['autorizando', ['2026-10-13→- troca'], 0, 0, ['A conexão caiu no meio: toque em «Autorizar» de novo quando a internet voltar; se já entrou, o app só fecha o pedido.']]);
+    } finally { solta646(); }
+  }
+  // (f) a reconferência não acha troca nenhuma (a 1ª tentativa não entrou), a mesma troca aparece logo depois (outro aparelho) e a
+  // releitura do repTrocaGravar falha: sem conferir, não fecha no escuro — continua guardado
+  {
+    const B = palco646(true);
+    try {
+      prepPed646(B, PEDTROCA646());
+      const volta = CAI646(B, FA13, 1, false);
+      try { await autoriza646(); } finally { volta(); }
+      const ref0 = B.ref; let n = 0;
+      B.ref = (c) => { const r = ref0(c); if (/lancamentos$/.test(c)) { const o0 = r.once;
+        r.once = (...a) => (++n === 1 ? o0(...a).then((s) => { B.poe(LANC646() + 'fa-2026-10-13', TROCA646()); return s; }) : Promise.reject(new Error('sem rede'))); } return r; };
+      run(PEDIDO_TELA646 + '__al646=[]; __mm639=[];' + PERGUNTA);
+      try { await autoriza646(); } finally { B.ref = ref0; }
+      igual([B.le(PED646()).status, creditos646(B), run('__zpW4'), run('__mm639.length'), J630('__al646')],
+        ['autorizando', ['2026-10-13→2026-10-14 troca'], 0, 0, ['A conexão caiu no meio: toque em «Autorizar» de novo quando a internet voltar; se já entrou, o app só fecha o pedido.']]);
+    } finally { solta646(); }
+  }
+  // (d) pura no servidor: a releitura que não responde → null (o refeito continua guardado); a troca desta autorização de pé → false
+  {
+    const B = palco646(false);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', Object.assign(TROCA646(), { autorizacao: { quem: 'Márcia Teste', ts: 5 } }));
+      igual(await run("vagasTrocaDesfeitaDepois(PELUDINHOS[0], '2026-10-13', '2026-10-14', {quem:'Márcia Teste', ts:5})"), false, 'de pé');
+      B.poe(LANC646() + 'fa-2026-10-13/volta', '');
+      const r = await run("vagasTrocaDesfeitaDepois(PELUDINHOS[0], '2026-10-13', '2026-10-14', {quem:'Márcia Teste', ts:5})");
+      igual(JSON.parse(JSON.stringify(r)), { credId: 'fa-2026-10-13', quem: '' }, 'sem o dia: desfeita');
+      igual(await run("vagasTrocaDesfeitaDepois(PELUDINHOS[0], '2026-10-13', '2026-10-14', {quem:'Márcia Teste', ts:6})"), false, 'outra autorização: não é a desta');
+      B.falhaOnce = /lancamentos$/;
+      igual(await run("vagasTrocaDesfeitaDepois(PELUDINHOS[0], '2026-10-13', '2026-10-14', {quem:'Márcia Teste', ts:5})"), null, 'sem a releitura');
+    } finally { B.falhaOnce = null; solta646(); }
+  }
+});
+
+provaAsync('6.46 W5 (ATK4-1 e ATK4-2, já existia no 6ba2fb9) — o avulso dele já nos Lançamentos do dia: o «Autorizar» da reposição ou da troca para o mesmo dia não lança em cima, diz o avulso (com o valor) e o pedido volta a ficar em aberto; tirado o avulso, autoriza', async () => {
+  const FRASE = (oque, valor) => 'Fredo já tem um avulso lançado em 14/10/2026' + (valor ? ' (' + valor + ')' : '') + ': tire o avulso dos Lançamentos do dia antes de autorizar '
+    + oque + ', para não cobrar duas vezes.\n\nO pedido continua em aberto.';
+  // (a) ATK4-1: o avulso autorizado em 14/10; «+ Falta» 13/10 com repor 14/10 (lotado) e «Avisar a Márcia» reabre o pedido como reposição
+  let B = palco646(false);
+  try {
+    AVDET646(B, { valor_cent: 9700, matriculado: true });
+    B.poe(PED646(), PEDAVULSO646('autorizado', { autorizado_por: 'Márcia Teste', autorizado_ts: 3, autorizando: { quem: 'Márcia Teste', ts: 2, id: 'm0' } }));
+    run(ZA646 + DIA_LOTADO646 + AVISAR646);
+    try {
+      run("REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __el639.repData.value='2026-10-13'; __el639.repVolta.value='2026-10-14'; repModoAtual='dia'; repConfirmar({pedirEncaixe:true});");
+      await espera646();
+      const ped = B.le(PED646());
+      igual([ped.status, ped.tipo], ['pedido', 'reposicao'], 'o pedido reabre como reposição');
+      prepPed646(B, ped);
+      run('__al646=[]; __za646=[];');
+      await autoriza646();
+      igual([B.le(PED646()).status, AVQTD646(B), creditos646(B), J630('__al646'), J630('__za646').map((z) => z[0])],
+        ['pedido', 1, ['2026-10-13→-'], [FRASE('a reposição', 'R$ 97,00')], []]);
+      // tirado o avulso dos Lançamentos do dia, a reposição entra
+      B.poe('daycare/dashboard/2026-10-14/avulso/K9', null);
+      run('__al646=[];' + PEDIDO_TELA646);
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), J630('__al646'), J630('__za646').map((z) => z[0])], ['autorizado', ['2026-10-13→2026-10-14'], [], ['ENCAIXE AUTORIZADO']]);
+    } finally { run(AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+  // (b) ATK4-2: o pedido de troca 13 → 14 com o avulso (sem o detalhe do valor) já no dia: nada entra, a frase sem valor
+  B = palco646(false);
+  try {
+    AVDET646(B, null);
+    prepPed646(B, PEDTROCA646());
+    run('__mm639=[];');
+    await autoriza646();
+    igual([B.le(PED646()).status, creditos646(B), fas646(B), run('__mm639.length'), J630('__al646')], ['pedido', [], [], 0, [FRASE('a troca', '')]]);
+  } finally { solta646(); }
+  // (c) o avulso de OUTRO FILHOt no dia não segura; (d) a leitura que falha segue como antes (a troca entra)
+  for (const [nome, prep] of [['outro FILHOt', (B) => AVDET646(B, { valor_cent: 9700, matriculado: true }, { valor: 'Outro/SRD', chave: 'outro__tutor' })],
+    ['a leitura falha', (B) => { AVDET646(B, { valor_cent: 9700, matriculado: true }); B.falhaOnce = /dashboard/; }]]) {
+    B = palco646(false);
+    try {
+      prep(B);
+      prepPed646(B, PEDTROCA646());
+      run('__mm639=[];');
+      await autoriza646();
+      igual([B.le(PED646()).status, creditos646(B), J630('__al646'), J630('__mm639').map((m) => m.t)], ['autorizado', ['2026-10-13→2026-10-14 troca'], [], ['✅ Troca de dia feita']], nome);
+    } finally { B.falhaOnce = null; solta646(); }
+  }
+  // (e) o refeito do "não sei se entrou" (dia de repor) não confere o avulso: a autorização já foi dada, e o dia pode já ter entrado
+  B = palco646(false);
+  try {
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', quem: 'Recepção', ts: 1 });
+    prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'c1', data: '2026-10-06', volta: '2026-10-14' } }));
+    run(ZA646 + '__bkRAw5=repAgendarVolta; __nRAw5=0; repAgendarVolta=function(){ __nRAw5++; var pr=__bkRAw5.apply(null, arguments); return (__nRAw5===1)?pr.then(function(){ throw new Error("disconnect"); }):pr; };');
+    try {
+      await autoriza646();
+      AVDET646(B, { valor_cent: 9700, matriculado: true });
+      run(PEDIDO_TELA646 + '__al646=[];');
+      await autoriza646();
+      igual([B.le(PED646()).status, B.lanc().c1.volta, J630('__al646'), J630('__za646').map((z) => z[0])], ['autorizado', '2026-10-14', [], ['ENCAIXE AUTORIZADO']]);
+    } finally { run('repAgendarVolta=__bkRAw5;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+
+// ================================================================== 4º gate da 6.46 (Quinn) — QD646-4 a QD646-10, incorporadas (QA646D-05)
+// Pegam os 10 defeitos plantados pelo QA nas linhas da 4ª rodada que passavam na Fase 0 (QD-M1, M2, M4, M5, M6, M8, M9, M10, M11 e M16).
+// QD4 (prova): a troca ANTIGA dentro do sa- (gravada pelo master 6ba2fb9, antes desta story) continua "já feita" em todos os caminhos.
+// Pega QD-M11 (o "já feita" do veredito filtrado pelo sa-, como o achador da falta): sem isso, a troca entraria de novo em fa-.
+provaAsync('QD646-4 — a troca antiga dentro do sa- (dados de produção do master) continua "já feita": «+ Marcar troca», a Márcia e o «Recusar» não criam crédito novo', async () => {
+  const SA = { tipo: 'credito', data: '2026-10-07', motivo: 'hospedagem-saida-antecipada', obs: 'Saída antecipada', estadiaId: 'EST1', seq: 1, quem: 'Plantão', ts: 1,
+    volta: '2026-10-08', volta_por: 'Recepção X', troca: { de: '2026-10-07', para: '2026-10-08', quem: 'Recepção X', ts: 2 } };
+  const LIVRE = "__ex639.dias=['qua']; __ex639.freq='1x'; vagasDoDia=function(dia){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true, livres:3, usadas:2, limite:5}; };";
+  const PED08 = () => 'daycare/vagas-pedidos/2026-10-08/' + K646();
+  // (a) «+ Marcar troca» de novo
+  let B = palco646(false);
+  try {
+    run(LIVRE);
+    B.poe(LANC646() + 'sa-EST1-1', SA);
+    igual([await marcar646('2026-10-07', '2026-10-08'), fas646(B), B.lanc()['sa-EST1-1']], ['Essa troca já está feita: 07/10/2026 → 08/10/2026.', [], SA]);
+  } finally { solta646(); }
+  // (b) a Márcia autoriza o pedido da mesma troca: fecha como atendido, sem crédito novo; (c) o «Recusar» não recusa
+  for (const via of ['autorizar', 'recusar']) {
+    B = palco646(false);
+    try {
+      run(LIVRE);
+      B.poe(LANC646() + 'sa-EST1-1', SA);
+      const ped = PEDTROCA646('pedido', { dia: '2026-10-08', payload: { volta: '2026-10-08', troca: { de: '2026-10-07', para: '2026-10-08' } } });
+      B.poe(PED08(), ped);
+      run(`document.body.dataset.role='gestao'; __pt646='Márcia Teste'; VAGAS_PEDIDOS={'2026-10-08':{}}; VAGAS_PEDIDOS['2026-10-08'][pelKey(PELUDINHOS[0])]=${JSON.stringify(ped)};`);
+      if (via === 'autorizar') {
+        await run("vagasAutorizar('2026-10-08', pelKey(PELUDINHOS[0]))"); await espera646();
+        igual([B.le(PED08()).status, /^já estava feita/.test(B.le(PED08()).nota || ''), fas646(B), B.lanc()['sa-EST1-1']], ['autorizado', true, [], SA], via);
+      } else {
+        run("__ztQ4=0; __bkZTq4=zTexto; zTexto=function(){ __ztQ4++; return Promise.resolve('Não cabe'); };");
+        try { await run("vagasRecusar('2026-10-08', pelKey(PELUDINHOS[0]))"); await espera646(); } finally { run('zTexto=__bkZTq4;'); }
+        igual([B.le(PED08()).status, run('__ztQ4'), /^O encaixe já está lançado \(a troca 07\/10\/2026 → 08\/10\/2026/.test(J630('__al646')[0] || '')], ['pedido', 0, true], via);
+      }
+    } finally { solta646(); }
+  }
+});
+
+// QD5 (prova): «Autorizar» de avulso com a leitura dos Lançamentos do dia FALHANDO: lança como antes (o dashLancar barra o repetido).
+// Pega QD-M4 (a leitura com erro tratada como "já lançado": o pedido fecharia sem o avulso — R$ 97,00 sem cobrar).
+provaAsync('QD646-5 — «Autorizar» de avulso com a leitura dos Lançamentos do dia falhando: o avulso é lançado (não fecha como "já estava lançado")', async () => {
+  const B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    B.falhaOnce = /dashboard/;
+    run(ZA646 + '__bkQ5=dxLancarAvulso; __nQ5=0; dxLancarAvulso=function(){ __nQ5++; return Promise.resolve(true); };');
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nQ5'), ped.status, ped.nota == null, J630('__za646').map((z) => z[0])], [1, 'autorizado', true, ['ENCAIXE AUTORIZADO']]);
+    } finally { B.falhaOnce = null; run('dxLancarAvulso=__bkQ5;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+
+// QD6 (prova): avulso já nos Lançamentos do dia e a reserva tomada por outro aparelho enquanto eu conferia: a frase não diz "Lancei".
+// Pega QD-M6 (o perdeuTexto no lugar da frase do avulso já lançado).
+provaAsync('QD646-6 — avulso já lançado e a reserva tomada no meio da conferência: "…Nada foi lançado de novo. O pedido não foi marcado como autorizado…", sem "Lancei"', async () => {
+  const B = palco646(false);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    AVULSO_NO_DIA646(B, 'Recepção X');
+    const ref0 = B.ref;
+    B.ref = (c) => { const r = ref0(c); if (/dashboard/.test(c)) { const o0 = r.once; r.once = () => { run(TOMA646('Gestão Outra')); return o0(); }; } return r; };
+    run(ZA646 + '__bkQ6=dxLancarAvulso; __nQ6=0; dxLancarAvulso=function(){ __nQ6++; return Promise.resolve(true); };');
+    try {
+      await autoriza646();
+      igual([run('__nQ6'), B.le(PED646()).status, J630('__al646')], [0, 'autorizando',
+        ['O avulso de Fredo em 14/10/2026 já está nos Lançamentos do dia (lançado por Recepção X). Nada foi lançado de novo.\n\nO pedido não foi marcado como autorizado: enquanto eu conferia, outro aparelho passou a autorizá-lo (por Gestão Outra).']]);
+    } finally { B.ref = ref0; run('dxLancarAvulso=__bkQ6;' + ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+
+// QD7 (prova): «+ Falta» com a conexão caindo no meio e o modal já de OUTRO lançamento: o cartaz diz "NÃO SEI SE…ENTROU", sem "Nada foi salvo".
+// Pega QD-M8 (o cartaz de sempre, "A FALTA AVISADA NÃO ENTROU … Nada foi salvo").
+provaAsync('QD646-7 — «+ Falta»: a conexão cai no meio e o modal já é de outro lançamento: o cartaz "NÃO SEI SE A FALTA AVISADA ENTROU", sem "Nada foi salvo"', async () => {
+  const B = palco646(false);
+  try {
+    const ref0 = B.ref;
+    B.ref = (c) => { const r = ref0(c); if (/lancamentos\/fa-2026-10-13$/.test(c)) { const t0 = r.transaction;
+      r.transaction = (fn) => t0(fn).then(() => { run('REP_LANC_GER++;'); return Promise.reject(new Error('disconnect')); }); } return r; };
+    run(ZA646);
+    try {
+      await falta646('2026-10-13');
+      const z = J630('__za646');
+      igual([z.length, (z[0] || [])[0], ((z[0] || [])[1] || []).some((l) => /Nada foi salvo/.test(l))], [1, 'NÃO SEI SE A FALTA AVISADA ENTROU', false], JSON.stringify(z));
+    } finally { B.ref = ref0; run(ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+
+// QD8 (prova): o ATK3-8 com o ouvinte de verdade — durante a pergunta, o VAGAS_PEDIDOS JÁ traz o pedido novo (o on('value') do app).
+// Pega QD-M9 (a reserva feita com o pedido relido depois da pergunta: o tipo e o payload lançados seriam os do pedido velho).
+provaAsync('QD646-8 — o pedido muda durante a pergunta e o ouvinte já trouxe o pedido novo para a tela: nada é reservado nem lançado (U5 com o ouvinte)', async () => {
+  const B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', { tipo: 'credito', data: '2026-10-13', motivo: 'viagem', volta: '', quem: 'Recepção', ts: 1 });
+    prepPed646(B, PEDAVULSO646());
+    run(ZA646 + AVISAR646 + "__bkQ8=dxLancarAvulso; __nQ8=0; dxLancarAvulso=function(){ __nQ8++; return Promise.resolve(true); };"
+      + "zPergunta=function(){ var pt=__pt646; __pt646='Recepção Teste'; return vagasPedir('2026-10-14', PELUDINHOS[0], 'reposicao', {credito_id:'fa-2026-10-13', data:'2026-10-13', volta:'2026-10-14'}).then(function(){ __pt646=pt; "
+      + PEDIDO_TELA646 + " return true; }); };");
+    try {
+      await autoriza646();
+      const ped = B.le(PED646());
+      igual([run('__nQ8'), ped.status, ped.tipo, B.lanc()['fa-2026-10-13'].volta, J630('__za646').map((z) => z[0])], [0, 'pedido', 'reposicao', '', []]);
+    } finally { run('dxLancarAvulso=__bkQ8;' + AVISAR646_VOLTA + ZA646_VOLTA); }
+  } finally { solta646(); }
+});
+
+// QD9 (prova): "não sei se entrou" redesenha o quadro na hora: sem isso, o pedido continua "em autorização por Márcia Teste",
+// sem botão, até a reserva vencer (nada muda no servidor para o ouvinte redesenhar). Pega QD-M10.
+provaAsync('QD646-9 — a conexão cai no meio da troca: o quadro é redesenhado na hora (o «Autorizar» aparece sem esperar os 2 min)', async () => {
+  const B = palco646(false);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    prepPed646(B, PEDTROCA646());
+    const volta = CAI646(B, /lancamentos\/fa-2026-10-13$/, 2, false);
+    run('__bkRDq9=vagasPedRedesenhar; __nRDq9=0; vagasPedRedesenhar=function(){ __nRDq9++; };');
+    try {
+      await autoriza646();
+      igual([J630('__al646'), run('__nRDq9') >= 1], [['A conexão caiu no meio: toque em «Autorizar» de novo quando a internet voltar; se já entrou, o app só fecha o pedido.'], true]);
+    } finally { volta(); run('vagasPedRedesenhar=__bkRDq9;'); }
+  } finally { solta646(); }
+});
+
+// QD10 (prova, puras e uma leitura): o "de pé" e o "mesmo encaixe" nas bordas. Pega QD-M1, QD-M2, QD-M5 e QD-M16.
+provaAsync('QD646-10 — bordas do "de pé" (crédito estornado; outro crédito no dia), do "mesmo encaixe" (avulso de outro valor) e do «Recusar» (troca de outro dia para o mesmo dia)', async () => {
+  const B = palco646(false);
+  try {
+    const PED = "({tipo:'reposicao', dia:'2026-10-14', payload:{credito_id:'c1', data:'2026-10-06', volta:'2026-10-14'}})";
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 1 });
+    B.poe(LANC646() + 'E1', EST646('c1'));
+    igual(run(`vagasEncaixeDePe(${PED}, PELUDINHOS[0])`), false, 'c1 estornado não está de pé');
+    B.poe(LANC646() + 'E1', null);
+    B.poe(LANC646() + 'c1', { tipo: 'credito', data: '2026-10-06', motivo: 'viagem', volta: '', quem: 'Recepção', ts: 1 });
+    B.poe(LANC646() + 'c2', { tipo: 'credito', data: '2026-10-08', motivo: 'viagem', volta: '2026-10-14', quem: 'Recepção', ts: 2 });
+    igual(run(`vagasEncaixeDePe(${PED}, PELUDINHOS[0])`), false, 'c1 desmarcado; o c2 no dia não é o encaixe autorizado');
+    igual(run("vagasMesmoEncaixe({tipo:'avulso', payload:{valor_cent:9700, matriculado:true}}, {tipo:'avulso', payload:{valor_cent:17000, matriculado:true}})"), false, 'avulso de outro valor');
+    // «Recusar» do pedido de troca 13→14 quando o que está no dia 14 é a troca 12→14: o pedido não entrou
+    B.poe(LANC646() + 'c2', null);
+    B.poe(LANC646() + 'fa-2026-10-12', { tipo: 'credito', data: '2026-10-12', motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-12', para: '2026-10-14', quem: 'R', ts: 3 }, quem: 'R', ts: 3 });
+    const t = await run(`vagasEncaixeLancadoTexto(${JSON.stringify(PEDTROCA646())}, PELUDINHOS[0], '2026-10-14')`);
+    igual(t, '', 'a troca de outro dia não é a do pedido');
+  } finally { solta646(); }
+});
+
 
 // ------------------------------------------------ o fim
 fila.then(() => {

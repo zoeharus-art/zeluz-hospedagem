@@ -5119,13 +5119,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-07-09"></script>
+<script src="resposta-tutor.js?v=2026-10-08-01"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-07-09"></script>
+<script src="painel-logica.js?v=2026-10-08-01"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5137,7 +5137,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-07-09"></script>
+<script src="financeiro-logica.js?v=2026-10-08-01"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5342,8 +5342,13 @@
       // e "aviso que depende de abrir a tela não é aviso".
       try{ vagasPedCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       DB.ref('daycare/reposicao').on('value', s=>{ REPO_CACHE=s.val()||{};
+        REPO_LIDO=true;   // o Extrato chegou (mesmo vazio): a falta avisada já pode ser lançada (6.46)
+        REPO_ERRO=null;
         try{ const v=document.getElementById('v-reposicao'); if(v&&v.classList.contains('active')) renderReposicao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-        try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
+        try{ if(typeof renderPendencias==='function') renderPendencias(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ },
+        // O banco recusou a leitura (revisão da 6.46): o ouvinte morre e não volta sozinho. A trava
+        // do lançamento passa a dizer isso, em vez de "espere uns segundos" para sempre.
+        function(e){ REPO_ERRO=e||new Error('leitura recusada'); _logLeituraFalhou('daycare/reposicao (Extrato de reposições)', e); });
       // Oportunidades (CRM-lite do check-up): nó pequeno, só registros de conversa —
       // a recepção registra num aparelho e a tela do check-up mostra no outro na hora.
       DB.ref('daycare/oportunidades').on('value', s=>{ OPORT_CACHE=s.val()||{};
@@ -6519,6 +6524,31 @@
   // Conta corrente: crédito entra quando falta avisada, sai quando ele vem repor. Nada é
   // apagado — errou, lança um ESTORNO. O extrato conta a história inteira.
   var REPO_CACHE={};
+  // O EXTRATO JÁ CHEGOU? (Story 6.46, 08/out/2026) O REPO_CACHE começa vazio e só se enche quando o
+  // ouvinte de daycare/reposicao responde. Vazio por "ainda não chegou" e vazio por "a casa não tem
+  // nenhuma reposição" parecem iguais — e no primeiro caso a guarda de "já lançada" não enxerga nada:
+  // o aparelho recém-aberto lançava de novo a falta que já estava no servidor. Por isso a marca é
+  // própria (Object.keys(REPO_CACHE).length não distingue os dois casos). Enquanto for false, os
+  // caminhos que criam crédito esperam (decisão aplicada pela recomendação D4 da investigação, que a
+  // Adriana pode mudar: sem o Extrato, não se lança falta).
+  var REPO_LIDO=false;
+  var REP_EXTRATO_ESPERA='Ainda estou trazendo o Extrato de reposições. Espere uns segundos e confirme de novo: assim a mesma falta não entra duas vezes.';
+  // A LEITURA DO EXTRATO FALHOU (revisão da 6.46): o banco recusou o ouvinte (permissão) e ele não
+  // volta sozinho. Sem esta marca, a trava diria "espere uns segundos" para sempre.
+  var REPO_ERRO=null;
+  // O texto da trava: o que de fato está acontecendo — a leitura foi recusada, o aparelho está sem
+  // internet, ou o Extrato só está a caminho.
+  function repExtratoEsperaTexto(){
+    if(REPO_ERRO){
+      var m=String((REPO_ERRO&&REPO_ERRO.message)||REPO_ERRO||'');
+      return 'Não consegui trazer o Extrato de reposições: '+(/permission/i.test(m)?'o banco recusou a leitura (permissão)':(m||'erro sem descrição'))
+        +'. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
+    }
+    try{ if(typeof navigator!=='undefined' && navigator && navigator.onLine===false)
+      return 'Este aparelho está sem internet e ainda não trouxe o Extrato de reposições. Sem ele, a mesma falta poderia entrar duas vezes: quando a internet voltar, confirme de novo.'; }
+    catch(e){ /* silencioso de propósito: sem a informação da rede, vale o texto de espera */ }
+    return REP_EXTRATO_ESPERA;
+  }
   // MOTIVOS (Adriana, 08/ago/2026): saíram da tela "Zêluz fechada" — não é motivo de falta do
   // tutor, a casa fechada é problema nosso e não vira crédito — e "Tutor está fora", que dizia a
   // mesma coisa que "Tutor viajou" e "Tutor não conseguiu trazer".
@@ -6584,13 +6614,97 @@
     return out;
   }
   function repPodeLancar(){ return podePapel('lancar-reposicao'); }
-  function repGravar(p,reg){
+  // A MESMA FALTA DUAS VEZES (Story 6.46, 08/out/2026 — Coco Chanel, Billy Paul e Bis): com `chave`
+  // (a da falta avisada, repFaltaChave), o lançamento é gravado UMA vez só, por transação, no nó fixo
+  // lancamentos/<chave> — o mesmo molde do repVeioGravar. A guarda do cache (repCreditoVivoNaData)
+  // não enxerga o que o outro aparelho acabou de gravar; o servidor enxerga: se o nó já existe, nada
+  // é gravado e volta o que estava lá (quem lançou e quando). Sem chave (uso, estorno), o push de
+  // sempre. Devolve sempre {committed, key, existente}.
+  function repGravar(p,reg,chave){
     if(!p) return Promise.resolve();
     const k=pelKey(p);
     reg.quem=(typeof quemSou==='function')?quemSou():'-';
     reg.ts=Date.now();
     if(!DB){ return Promise.reject(new Error('sem conexão com o banco')); }
-    return DB.ref('daycare/reposicao/'+k+'/lancamentos').push(reg);
+    const base='daycare/reposicao/'+k+'/lancamentos';
+    if(!chave){
+      const ref=DB.ref(base).push(reg);
+      return Promise.resolve(ref).then(function(r){
+        return {committed:true, key:String((r&&r.key)||(ref&&ref.key)||''), existente:null};
+      });
+    }
+    let visto=null;
+    return DB.ref(base+'/'+chave).transaction(function(atual){
+      visto=atual||null;
+      if(atual) return;            // já lançada (o outro aparelho, ou o toque anterior ainda sem rede)
+      return reg;
+    }).then(function(res){
+      const ok=!!(res && res.committed);
+      let ex=null;
+      if(!ok){
+        try{ ex=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null; }
+        catch(e){ ex=null; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+        if(!ex) ex=visto;
+      }
+      return {committed:ok, key:chave, existente:ex};
+    });
+  }
+  // A CONEXÃO CAIU NO MEIO (4ª rodada da 6.46, QA646C-03): o SDK aborta com 'disconnect' a transação
+  // que já foi enviada — ela pode ter entrado no servidor. É "não sei se entrou", nunca "nada foi salvo".
+  function repConexaoCaiu(e){ return String((e&&e.message)||e||'')==='disconnect'; }
+  var REP_CONEXAO_CAIU_FALTA='A conexão caiu no meio: confira no Extrato o que entrou antes de lançar de novo.';
+  var REP_CONEXAO_CAIU_TROCA='A conexão caiu no meio: confira no Extrato se a troca entrou antes de lançar de novo.';
+  var REP_CONEXAO_CAIU_PEDIDO='A conexão caiu no meio: confira nos pedidos de encaixe, na tela de Reposições, se o pedido chegou à Márcia antes de pedir de novo.';
+  // Relê os lançamentos dele no servidor (revisão da 6.46). Devolve a lista (com _id) ou null quando
+  // a leitura falha ou não responde em 6 s — quem chama decide o que dizer sem a conferência (a
+  // tela não pode ficar presa em «Lançando…» porque a rede caiu entre a transação e a releitura).
+  function repRelerLancamentos(p){
+    var t=null, ler;
+    var prazo=new Promise(function(ok){ t=setTimeout(function(){ ok(null); }, 6000); });
+    try{
+      ler=DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos').once('value').then(function(s){
+        var o=(s && typeof s.val==='function')?(s.val()||{}):{};
+        return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); });
+      });
+    }catch(e){ ler=Promise.reject(e); }
+    return Promise.race([ler, prazo]).then(function(L){
+      try{ clearTimeout(t); }catch(e){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+      if(!L) _logLeituraFalhou('lançamentos de reposição de '+pelNome(p)+' (conferir a falta já lançada)', new Error('o banco não respondeu em 6 s'));
+      return L||null;
+    }, function(e){
+      try{ clearTimeout(t); }catch(x){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+      _logLeituraFalhou('lançamentos de reposição de '+pelNome(p)+' (conferir a falta já lançada)', e);
+      return null;
+    });
+  }
+  // A RECUSA CONFERIDA NO SERVIDOR (revisão da 6.46): a transação recusa porque o nó fa-{dia} já
+  // existe — mas o Extrato deste aparelho pode estar atrasado também no ESTORNO desse nó. Antes de
+  // dizer "já conta no saldo", os lançamentos são relidos e cada falta recusada é conferida:
+  //  - há crédito vivo nesse dia → `vivo` (já lançada; o saldo conta com ela);
+  //  - o nó estava estornado e não há outro vivo → grava de novo, no sufixo seguinte da lista
+  //    relida (fa-{dia}-2…), e ela passa a `ok` (sem isto o crédito se perdia: ninguém relança o
+  //    que a tela diz que já está lançado);
+  //  - a releitura falhou → `incerto` (o texto manda conferir no Extrato, sem afirmar nada).
+  // `recusas` = [{r, x, ok:false}] do repConfirmar; muda cada uma no lugar.
+  function repRecusasConferir(p, recusas){
+    if(!recusas || !recusas.length) return Promise.resolve();
+    return repRelerLancamentos(p).then(function(Lr){
+      if(!Lr){ recusas.forEach(function(rc){ rc.incerto=true; }); return null; }
+      var an=repAnulados(Lr);
+      return Promise.all(recusas.map(function(rc){
+        var dia=String(rc.r.data||''), no=String((rc.x&&rc.x.key)||'');
+        // a mesma regra do repCreditoVivoNaData: o crédito da saída antecipada não segura a data
+        var vivos=Lr.filter(function(l){ return l && l.tipo==='credito' && String(l.data||'')===dia && !an[l._id]
+          && !l.estadiaId && !/^hospedagem/.test(String(l.motivo||'')); });
+        var vivo=vivos.filter(function(l){ return l._id===no; })[0]||vivos[0]||null;
+        if(vivo){ rc.vivo=true; rc.x={committed:false, key:vivo._id, existente:vivo}; return null; }
+        return repGravar(p, rc.r, repFaltaChave(dia, Lr)).then(function(x){
+          rc.x=x;
+          if(x && x.committed===false){ rc.vivo=true; return; }   // outro aparelho relançou neste instante
+          rc.ok=true;
+        });
+      }));
+    });
   }
   // Os dias em que ELE viria no período — é isto que transforma "30 dias de cio" em
   // 12 créditos com um toque só, em vez de a recepção lançar data por data.
@@ -6832,6 +6946,94 @@
     }catch(e){ return false; } /* silencioso de propósito: sem o extrato lido, vale a conta de sempre */
   }
   var REP_JA_LANCADA='a falta avisada desse dia já foi lançada (está no Extrato)';
+  // O crédito da saída antecipada da hospedagem (hospConfirmarAntecipada: sa-…, com estadiaId e motivo
+  // "hospedagem-…") — a mesma regra do repCreditoVivoNaData. Pura (4ª rodada da 6.46, ATK3-5).
+  function repSaidaAntecipada(l){ return !!(l && (l.estadiaId || /^hospedagem/.test(String(l.motivo||'')))); }
+  // Pura (6.46): as faltas avisadas que JÁ estão em dobro no Extrato — gravadas antes da chave fixa
+  // (push), por dois aparelhos ao mesmo tempo. Só créditos vivos de falta do Day Care: o da saída
+  // antecipada da hospedagem (sa-…) nasce com várias noites na mesma data de propósito, e não é
+  // repetida. Devolve {data:[lançamentos, do mais antigo ao mais novo]}, só as datas com mais de um.
+  function repRepetidas(L){
+    var an=repAnulados(L), por={}, out={};
+    (L||[]).forEach(function(l){
+      if(!l || l.tipo!=='credito' || an[l._id]) return;
+      if(l.estadiaId || /^hospedagem/.test(String(l.motivo||''))) return;
+      var d=String(l.data||''); if(!d) return;
+      (por[d]=por[d]||[]).push(l);
+    });
+    Object.keys(por).forEach(function(d){
+      if(por[d].length>1) out[d]=por[d].slice().sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    });
+    return out;
+  }
+  // A hora de um lançamento (hh:mm) e o "quando" inteiro (DD/MM/AAAA às hh:mm) — o Extrato e os
+  // avisos de "já lançada" dizem quem lançou e quando, para a recepção conferir com quem estava lá.
+  function repHoraDe(ts){
+    var d=new Date(+ts||0); if(!ts || isNaN(d)) return '';
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    return p2(d.getHours())+':'+p2(d.getMinutes());
+  }
+  function repQuandoDe(ts){
+    var d=new Date(+ts||0); if(!ts || isNaN(d)) return '';
+    var p2=function(x){ return String(x).padStart(2,'0'); };
+    return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear()+' às '+repHoraDe(ts);
+  }
+  function repQuemDe(l){ var q=String((l&&l.quem)||'').trim(); return (q && q!=='-')?q:''; }
+  // CASO C (6.46): o crédito vivo dele que já tem `volta` naquele dia de repor (a troca ou a
+  // reposição marcada). O da MESMA falta (a mesma data) fica de fora: esse é o "já lançada".
+  function repVoltaOcupada(p, volta, data){
+    try{
+      var L=repLancamentos(p)||[], an=repAnulados(L);
+      return L.filter(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===volta
+        && !(data && String(l.data||'')===data); })[0]||null;
+    }catch(e){ return null; } /* silencioso de propósito: sem o extrato lido, vale a conta de sempre */
+  }
+  function repVoltaOcupadaTexto(p, ocup, volta){
+    var oque=repTrocaViva(ocup)?('a troca de '+String(repBRdata(String(((ocup.troca||{}).de)||ocup.data||''))).slice(0,5)):'uma reposição';
+    return pelNome(p)+' já tem '+oque+' marcada para '+repBRdata(volta)+'. Escolha outro dia de repor ou deixe em branco. Nada foi lançado.';
+  }
+  // Os textos de quando a transação recusou (6.46): a falta já tinha entrado por outro aparelho.
+  // `ja` = [{r:lançamento que ia entrar, x:{existente}, vivo|incerto}]. "Já conta no saldo" só
+  // depois de conferido no servidor (repRecusasConferir); sem a conferência, a tela manda conferir.
+  function repJaLancadaTexto(ja){
+    var inc=(ja||[]).some(function(o){ return o && o.incerto; });
+    if((ja||[]).length===1){
+      var ex=(ja[0].x&&ja[0].x.existente)||{}, quem=repQuemDe(ex), hora=repHoraDe(ex.ts);
+      var por=(quem||hora)?(' ('+(quem?('por '+quem):'')+(quem&&hora?', ':'')+(hora?('às '+hora):'')+')'):'';
+      return 'A falta avisada de '+repBRdata(ja[0].r.data)+' acabou de ser lançada em outro aparelho'+por
+        +(inc?'. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar.'
+             :'. Ela já está no Extrato e já conta no saldo.')
+        +' Nada foi lançado de novo.';
+    }
+    return 'As faltas avisadas de '+repListaDatasE((ja||[]).map(function(o){ return o.r.data; }))
+      +' acabaram de ser lançadas em outro aparelho.'
+      +(inc?' Não consegui conferir agora se elas continuam valendo: confira no Extrato quando a tela atualizar.'
+           :' Elas já estão no Extrato e já contam no saldo.')
+      +' Nada foi lançado de novo.';
+  }
+  // `voltaNota` = a frase do dia de repor que ia no 1º lançamento, quando ele já estava lançado.
+  function repParteJaLancadaTexto(gravados, ja, voltaNota){
+    var n=(ja||[]).length, inc=(ja||[]).some(function(o){ return o && o.incerto; });
+    return ((gravados||[]).length>1?'Entraram: ':'Entrou: ')+repListaDatasE((gravados||[]).map(function(r){ return r.data; }))+'. '
+      +(n>1?'Já estavam lançadas':'Já estava lançada')+' em outro aparelho: '+repListaDatasE((ja||[]).map(function(o){ return o.r.data; }))
+      +(n>1?' (ficaram como estavam).':' (ficou como estava).')
+      +(inc?(n>1?' Não consegui conferir agora se elas continuam valendo, e o saldo acima não conta com elas: confira no Extrato antes de mandar a mensagem ao tutor.'
+                :' Não consegui conferir agora se ela continua valendo, e o saldo acima não conta com ela: confira no Extrato antes de mandar a mensagem ao tutor.'):'')
+      +(voltaNota?(' '+voltaNota):'');
+  }
+  // O DIA DE REPOR QUE IA NA FALTA JÁ LANÇADA (revisão da 6.46, QA646-02/03): nada some calado.
+  // `volta` = o dia pedido; `ex` = o lançamento que já estava no servidor; `troca` = ia virar troca;
+  // `pedirVaga` = o dia estava lotado e a Márcia ia receber o pedido de encaixe neste mesmo toque.
+  function repVoltaRecusadaTexto(volta, ex, troca, pedirVaga){
+    if(!volta) return '';
+    var V=repBRdata(volta), outra=String((ex&&ex.volta)||'');
+    if(outra===volta) return 'O dia de repor ('+V+') já estava marcado no lançamento do outro aparelho.';
+    var ini='O dia de repor ('+V+') não foi marcado'+(pedirVaga?', e a Márcia não recebeu o pedido de encaixe':'');
+    if(outra) return ini+': a falta lançada no outro aparelho está com o dia de repor em '+repBRdata(outra)+'. Confira com o tutor qual dia vale'
+      +(troca?'; para trocar, use «+ Marcar troca», que aproveita essa falta.':'.');
+    if(troca) return ini+': faça a troca em «+ Marcar troca», que aproveita essa falta.';
+    return ini+(pedirVaga?': peça de novo em «Marcar reposição» › «Avisar a Márcia».':': marque em «Marcar reposição».');
+  }
   // O que entra e o que fica de fora, sem gravar nada:
   // {entram:[iso], fora:[{iso, porque}], repetidas:[iso]}. O feriado fica em `fora` (6.43).
   function repAlgunsAnalise(p, datas){
@@ -7014,6 +7216,8 @@
     if(!p){ w.textContent='Escolha o peludinho primeiro.'; return; }
     if(!repMotivoAtual){ w.textContent='Diga por que ele não vem — é isso que a gestão lê depois.'; return; }
     if(REP_FER_LENDO){ w.textContent=REP_FER_ESPERA; return; }
+    // Sem o Extrato, a guarda de "já lançada" não enxerga nada (6.46): espera ele chegar.
+    if(!REPO_LIDO){ w.textContent=repExtratoEsperaTexto(); return; }
     const obs=(document.getElementById('repObs').value||'').trim();
     // Data que o TUTOR escolheu para repor. Não mexe no saldo — o crédito continua valendo
     // até ele aparecer de verdade. É só o aviso para a recepção saber quem vem em que dia.
@@ -7036,6 +7240,15 @@
       }
     }
     if(pedirVaga && !diaLotado) pedirVaga=false;   // o dia tem vaga: não há o que pedir
+    // CASO C (6.46): o dia de repor que JÁ TEM a troca ou a reposição dele não recebe outra — a
+    // mesma regra da «Marcar troca». Sem isto, a troca 13→14 e depois a falta 20 com repor em 14
+    // davam dois créditos para o mesmo 14/10, sem aviso. A mesma falta de novo (a mesma data, o
+    // mesmo dia de repor) segue adiante: quem diz "já lançada" é a guarda do dia.
+    if(volta){
+      const _dC=(repModoAtual==='dia')?String((document.getElementById('repData')||{}).value||'').trim():'';
+      const _oc=repVoltaOcupada(p, volta, _dC);
+      if(_oc){ w.textContent=repVoltaOcupadaTexto(p, _oc, volta); return; }
+    }
     // UM lançamento por vez (QA da 6.39, M2): dois toques no "Avisar a Márcia" — o botão da caixa
     // de vagas, que o disabled abaixo não alcança — gravavam o lote em dobro com o banco lento.
     // Abrir o modal de novo destrava (repAbrirLancar): sem rede, a gravação anterior pode ficar
@@ -7099,15 +7312,63 @@
     // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
   // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
   const _saldoAntes=repSaldo(p);
+  // A CHAVE FIXA DE CADA FALTA (6.46): fa-{dia}, gravada por transação. O Extrato desta hora dá o
+  // sufixo (-2 depois de um estorno); quem decide se a falta já existe é o servidor.
+  const _L0=repLancamentos(p)||[];
   // Erro na hora (antes de qualquer promessa): solta a trava e diz, em vez de prendê-la (re-QA da 6.39).
   let _grav;
-  try{ _grav=Promise.all(regs.map(function(r){ return repGravar(p,r); })); }
+  try{ _grav=Promise.all(regs.map(function(r){ return repGravar(p, r, repFaltaChave(r.data, _L0)); })); }
   catch(e){ _grav=Promise.reject(e); }
   _grav.then(function(refs){
+      // SÓ O QUE ESTA CHAMADA GRAVOU (6.46): a transação recusa a falta que o outro aparelho acabou
+      // de lançar. Rastro, saldo, mensagem e pedido de encaixe contam só as que entraram agora.
+      // (A recusa é committed===false; qualquer outra resposta é gravação.)
+      var _res=regs.map(function(r,i){ var x=(refs||[])[i]; return {r:r, x:x, ok:!(x && x.committed===false)}; });
+      // Cada recusa é conferida no servidor antes de virar texto (revisão da 6.46): a estornada
+      // entra de novo no sufixo seguinte; a viva conta no saldo; sem a releitura, nada se afirma.
+      return repRecusasConferir(p, _res.filter(function(o){ return !o.ok; })).then(function(){ return _res; });
+    }).then(function(_res){
+      var gravs=_res.filter(function(o){ return o.ok; }), jaLanc=_res.filter(function(o){ return !o.ok; });
+      // O dia de repor (e a autorização do encaixe) vão no PRIMEIRO do lote. Se o primeiro já estava
+      // lançado, o dia de repor não entrou por este toque: ou já estava marcado no lançamento do
+      // outro aparelho (QA646-03), ou não foi marcado — e a tela diz qual dos dois (QA646-02).
+      var _o0=_res[0]||{}, _ex0=(!_o0.ok && _o0.x && _o0.x.existente)||null;
+      var voltaJaMarcada=!!(volta && !_o0.ok && _ex0 && String(_ex0.volta||'')===volta);
+      if(!gravs.length){
+        var _tj=[repJaLancadaTexto(jaLanc)];
+        var _tv=repVoltaRecusadaTexto(volta, _ex0, !!(regs[0]&&regs[0].troca), pedirVaga);
+        if(_tv) _tj.push(_tv);
+        // O modal já é de outro lançamento: o aviso vai para um cartaz, não para a linha dele.
+        if(!_mesmo()){
+          if(typeof zAlertao==='function') zAlertao('A FALTA AVISADA JÁ ESTAVA LANÇADA', _tj, {botao:'Entendi'});
+          return;
+        }
+        soltar();
+        w.textContent=_tj.join(' ');
+        return;
+      }
+      // Daqui em diante, `regs` são só os que entraram.
+      var voltaPerdida=!!(voltaEfetiva && !_o0.ok);
+      var voltaNota=(!_o0.ok && (voltaJaMarcada || voltaEfetiva))?repVoltaRecusadaTexto(volta, _ex0, false, false):'';
+      // Dia de repor LOTADO (vai para a Márcia, ou fica para pedir) e o lançamento do outro aparelho com
+      // OUTRO dia de repor (3ª rodada da 6.46, QA646B-04): sem a frase, podiam ficar dois dias de repor
+      // marcados sem ninguém conferir com o tutor — a mesma frase de quando o dia não está lotado.
+      var _voltaOutra=String((_ex0&&_ex0.volta)||'');
+      if(!voltaNota && volta && !voltaEfetiva && !_o0.ok && _voltaOutra && _voltaOutra!==volta)
+        voltaNota='A falta de '+repBRdata(_o0.r.data)+', lançada no outro aparelho, está com o dia de repor em '+repBRdata(_voltaOutra)+'. Confira com o tutor qual dia vale.';
+      if(voltaPerdida || voltaJaMarcada){ voltaEfetiva=''; autVaga=null; }
+      if(voltaJaMarcada) pedirVaga=false;          // o dia já está marcado: não há encaixe a pedir
+      // O saldo da confirmação e da mensagem ao tutor (QA646-01): as recusadas que estão VIVAS no
+      // servidor também contam — elas nunca estão no _saldoAntes (o repFaltaChave pula todo nó que
+      // o Extrato deste aparelho conhece). A que não pôde ser conferida fica de fora, e a tela diz.
+      var _jaVivas=jaLanc.filter(function(o){ return o.vivo; }).length;
+      regs=gravs.map(function(o){ return o.r; });
       if(typeof audit==='function') audit('reposicao-credito', pelNome(p)+' · '+regs.length+' dia(s) · '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)
         +((regs[0]&&regs[0].alguns)?(' — dias '+regs.map(function(r){ return String(repBRdata(r.data)).slice(0,5); }).join(', ')
           +(foraAlguns.length?(' (de fora: '+foraAlguns.map(function(o){ return String(repBRdata(o.iso)).slice(0,5); }).join(', ')+')'):'')):'')
         +((regs[0]&&regs[0].periodo&&foraAlguns.length)?(' (de fora, feriado: '+foraAlguns.map(function(o){ return String(repBRdata(o.iso)).slice(0,5); }).join(', ')+')'):'')
+        +(jaLanc.length?(' (já '+(jaLanc.length>1?'estavam lançadas':'estava lançada')+' em outro aparelho: '+jaLanc.map(function(o){ return String(repBRdata(o.r.data)).slice(0,5); }).join(', ')
+          +(jaLanc.some(function(o){ return o.incerto; })?'; sem conferir se continua valendo':'')+')'):'')
         +(autVaga?(' — encaixe em '+repBRdata(volta)+' autorizado por '+autVaga.quem):''), {obs:obs});
       // O rastro de quando o dia de repor é o dia dele. Não é bloqueio: é memória.
       repAuditDiaDele(p, voltaEfetiva);
@@ -7118,18 +7379,19 @@
       // O PEDIDO DE ENCAIXE, quando o dia de repor está lotado e quem lançou não pode abrir
       // vaga: vai com a chave do crédito que acabou de nascer, para a autorização da Márcia
       // já marcar o dia nele — sem a recepção ter de lançar nada de novo.
-      var _credId=''; try{ _credId=(refs&&refs[0]&&refs[0].key)||''; }catch(e){ _credId=''; }
+      var _credId=''; try{ _credId=(gravs[0].x&&gravs[0].x.key)||''; }catch(e){ _credId=''; }
       if(pedirVaga && volta){
         vagasPedir(volta, p, 'reposicao', {credito_id:_credId, data:(regs[0]||{}).data||'', volta:volta})
           .catch(function(e){
             if(typeof zAlertao==='function') zAlertao('A FALTA ENTROU, MAS NÃO AVISEI A MÁRCIA',
-              ['Não consegui gravar o pedido de encaixe: '+((e&&e.message)||e)+'.',
+              // o pedido que a Márcia já está autorizando (ou já autorizou) não é apagado (3ª rodada da 6.46)
+              [(e && e.vagaAviso)?e.message:('Não consegui gravar o pedido de encaixe: '+((e&&e.message)||e)+'.'),
                'A falta avisada está salva. Fale com a Márcia sobre o dia '+repBRdata(volta)+'.'],{botao:'Entendi'});
           });
       }
       // A confirmação vem com a mensagem pronta para o tutor: é a consultora quem manda,
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
-      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length};
+      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length+_jaVivas};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
       if(regs.length>1 && regs[0].alguns){ _info.datas=regs.map(function(r){ return r.data; }); }
       var _troca=!!(regs.length===1 && regs[0].troca);
@@ -7141,22 +7403,30 @@
               +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]
           : [pelNome(p)+' ganhou '+regs.length+' dia'+(regs.length>1?'s':'')+' de reposição — motivo: '+(REP_MOTIVOS[repMotivoAtual]||repMotivoAtual)+'.',
              'Saldo agora: '+_info.saldo+'. Quando ele vier repor, marque o uso na tela de Reposições.']
+            .concat(jaLanc.length?[repParteJaLancadaTexto(regs, jaLanc, voltaNota)]:[])
             .concat(foraAlguns.length?['Ficaram de fora: '+foraAlguns.map(function(o){ return repDataComSemana(o.iso)+' — '+o.porque; }).join('; ')+'.']:[])
             .concat(voltaEfetiva?['O tutor escolheu repor em '+repBRdata(voltaEfetiva)+' — fica agendado.'
                   +(autVaga?(' O dia estava lotado: encaixe autorizado por '+autVaga.quem+'.'):'')]:[]))
-        .concat((volta&&!voltaEfetiva)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
+        .concat((volta&&!voltaEfetiva&&!voltaPerdida&&!voltaJaMarcada)?['O dia '+repBRdata(volta)+' está LOTADO, então ele NÃO ficou agendado: '
                   +(pedirVaga?'a Márcia já recebeu o pedido de encaixe.':'peça o encaixe à Márcia.')]:[]),
         _troca?repMensagem(p,'troca',{de:_info.data, para:_info.volta}):repMensagem(p,'credito',_info), repTelDe(p));
       setTimeout(renderReposicao, 400);
     }).catch(function(e){
+      // A conexão caiu no meio da transação (4ª rodada da 6.46, QA646C-03): o SDK a aborta com
+      // 'disconnect' já enviada, e ela pode ter entrado. "Nada foi salvo" seria falso.
+      var caiu=repConexaoCaiu(e);
       // O modal já é de outro lançamento: o aviso não vai para a linha dele (re-QA da 6.39).
       if(!_mesmo()){
-        if(typeof zAlertao==='function') zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+((e&&e.message)||e)+'.',
-          'Nada foi salvo. Lance de novo.'], {botao:'Entendi'});
+        if(typeof zAlertao==='function'){
+          if(caiu) zAlertao('NÃO SEI SE A FALTA AVISADA ENTROU', ['A conexão caiu no meio do lançamento da falta avisada de '+pelNome(p)+'.',
+            'Confira no Extrato o que entrou antes de lançar de novo.'], {botao:'Entendi'});
+          else zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+((e&&e.message)||e)+'.',
+            'Nada foi salvo. Lance de novo.'], {botao:'Entendi'});
+        }
         return;
       }
       soltar();
-      w.textContent='Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.';
+      w.textContent=caiu?REP_CONEXAO_CAIU_FALTA:('Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.');
     });
   }
   // ===== MENSAGEM PRONTA DE REPOSIÇÃO — Adriana, 31/ago/2026 ======================
@@ -7569,6 +7839,16 @@
   function repVeioChave(dia, L){
     var ids={}; (L||[]).forEach(function(l){ if(l && l._id) ids[l._id]=1; });
     var base='veio-'+String(dia||''), k=base, n=1;
+    while(ids[k]){ n++; k=base+'-'+n; }
+    return k;
+  }
+  // Pura (6.46): o nó da falta avisada daquele dia — fa-{dia}. Dois aparelhos lançando a mesma falta
+  // caem no MESMO nó, e a transação do repGravar deixa entrar só o primeiro. Se o nó já existe no
+  // Extrato (vivo ou estornado), o próximo livre: fa-{dia}-2, -3… Sem o sufixo, a falta relançada
+  // depois de um estorno cairia no nó antigo — e o estorno antigo, que aponta para ele, a anularia.
+  function repFaltaChave(dia, L){
+    var ids={}; (L||[]).forEach(function(l){ if(l && l._id) ids[l._id]=1; });
+    var base='fa-'+String(dia||''), k=base, n=1;
     while(ids[k]){ n++; k=base+'-'+n; }
     return k;
   }
@@ -8589,22 +8869,46 @@
     if(!DB) return;
     DB.ref('daycare/vagas-pedidos').on('value', function(s){
       VAGAS_PEDIDOS=s.val()||{};
-      try{ if(document.getElementById('repLista')) renderReposicao(); }
-      catch(e){ _logFalhaGrav('vagasPedCarregar (tela de Reposições)', e); }
-      try{ var c=document.getElementById('poCardEncaixes'); if(c) c.innerHTML=vagasEncaixesCardHTML(); }
-      catch(e){ _logFalhaGrav('vagasPedCarregar (Dashboard da Márcia)', e); }
+      vagasPedRedesenhar();
     });
+    // A HORA DO SERVIDOR (revisão da 6.46): a reserva de 2 min da Márcia é medida no relógio do
+    // servidor, não no de cada aparelho — um tablet com o relógio adiantado via a reserva do outro
+    // como abandonada e autorizava junto (o avulso saía em dobro). O SDK mantém a diferença entre os
+    // dois relógios em .info/serverTimeOffset.
+    try{
+      DB.ref('.info/serverTimeOffset').on('value', function(s){ var v=Number(s && s.val && s.val()); VAGAS_RELOGIO_DIF=isFinite(v)?v:0; },
+        function(e){ _logLeituraFalhou('.info/serverTimeOffset (hora do servidor)', e); });
+    }catch(e){ _logLeituraFalhou('.info/serverTimeOffset (hora do servidor)', e); }
+  }
+  // Os dois quadros de pedidos (tela de Reposições e Dashboard da Márcia), redesenhados juntos.
+  // O quadro da Márcia nasce invisível (.pm-rv): quem o redesenha ACENDE (pmAnimar), senão fica um
+  // retângulo em branco no lugar dos pedidos — a mesma lição do vencPcQuadro (21/set/2026).
+  function vagasPedRedesenhar(){
+    try{ if(document.getElementById('repLista')) renderReposicao(); }
+    catch(e){ _logFalhaGrav('vagasPedCarregar (tela de Reposições)', e); }
+    try{ var c=document.getElementById('poCardEncaixes'); if(c){ c.innerHTML=vagasEncaixesCardHTML();
+      try{ if(typeof pmAnimar==='function') pmAnimar(c); }catch(e){ /* silencioso de propósito: animação — o quadro já está na tela */ } } }
+    catch(e){ _logFalhaGrav('vagasPedCarregar (Dashboard da Márcia)', e); }
   }
   function vagasPedidoDe(dia, chave){ return ((VAGAS_PEDIDOS||{})[dia]||{})[chave]||null; }
+  // Os pedidos em aberto. O que está EM AUTORIZAÇÃO num aparelho (reserva de menos de 2 min) fica no
+  // quadro com `_emAutorizacao` — "em autorização por {quem}", sem os botões —, em vez de sumir: a
+  // reserva de um aparelho que fechou no meio deixava o pedido escondido até alguém redesenhar a tela.
   function vagasPedidosAbertos(){
-    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', out=[];
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', out=[], agora=vagasAgora();
     Object.keys(VAGAS_PEDIDOS||{}).forEach(function(dia){
       if(hoje && dia<hoje) return;            // dia que já passou não se autoriza
       var d=VAGAS_PEDIDOS[dia]||{};
       Object.keys(d).forEach(function(ch){
         var o=d[ch]||{};
-        if(String(o.status||'pedido')!=='pedido') return;
-        out.push(Object.assign({}, o, {_dia:dia, _chave:ch}));
+        var livre=vagasPedidoLivre(o, agora);
+        if(!livre && String(o.status||'')!=='autorizando') return;   // autorizado ou recusado: sai do quadro
+        // Reservado por ESTE aparelho com o encaixe já lançado e o "autorizado" pendente (3ª rodada da
+        // 6.46, QA646B-01): fica com o «Autorizar», que só marca o pedido — a tela mandou tocar de novo.
+        // Também com a reserva vencida, enquanto ela ainda é deste aparelho (4ª rodada, QA646C-02): o
+        // «Recusar» aqui recusaria um encaixe que já entrou. `incerto`: a conexão caiu no meio da gravação.
+        var aqui=vagasLancadoAqui(dia, ch, o), mL=aqui?(VAGAS_LANCADOS||{})[vagasLancadoChave(dia, ch)]:null;
+        out.push(Object.assign({}, o, {_dia:dia, _chave:ch}, aqui?{_lancadoAqui:true, _incertoAqui:!!(mL&&mL.incerto)}:(livre?{}:{_emAutorizacao:true})));
       });
     });
     return out.sort(function(a,b){
@@ -8621,13 +8925,77 @@
              pet:pelNome(p), tutor:pelGet(p,'tutor')||'', chave:ch};
     try{ var k=dcKey(p.n,p.tutor); if(k) reg.alvo=k; }catch(e){ /* sem alvo o pedido vale igual */ }
     if(payload && typeof payload==='object') reg.payload=payload;
-    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+ch).set(reg).then(function(){
+    // O PEDIDO DE NOVO NÃO APAGA A AUTORIZAÇÃO (3ª rodada da 6.46, ATK2-15): gravado por transação.
+    // O «Avisar a Márcia» repetido gravava por cima (set) do pedido que a Márcia estava autorizando,
+    // e a reserva sumia: um 2º aparelho da Gestão o via livre e lançava o mesmo avulso outra vez. O
+    // pedido em autorização (reserva viva) fica como está, e a tela diz; o autorizado também, mas só
+    // quando o pedido novo é o MESMO encaixe e ele continua de pé (4ª rodada, QA646C-01 e ATK3-4). O
+    // recusado, a reserva vencida (abandonada) e outro encaixe podem ser pedidos de novo, como antes.
+    var fez=false, visto=null;
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+ch).transaction(function(atual){
+      fez=false; visto=atual||null;
+      if(atual && vagasPedidoOcupado(atual, reg, p)) return;  // a Márcia já está nele (ou já o autorizou)
+      fez=true;
+      return reg;
+    }).then(function(res){
+      if(!(res && res.committed && fez)){
+        var v=visto;
+        try{ if(res && res.snapshot && typeof res.snapshot.val==='function' && res.snapshot.val()) v=res.snapshot.val(); }
+        catch(e){ v=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+        var er=new Error(vagasPedidoOcupadoTexto(v, p, dia));
+        er.vagaAviso=true;       // a frase é para a tela inteira, sem "Não consegui"
+        throw er;
+      }
       if(typeof audit==='function') audit('vaga-pedido',
         pelNome(p)+' — encaixe pedido em '+repBRdata(dia)+' ('+reg.tipo+'): o dia estava lotado',
         {alvo:reg.alvo||'', pet:pelNome(p), assinou:reg.quem});
       vagasAvisarGestao(reg);
       return reg;
     });
+  }
+  // O pedido que um novo «Avisar a Márcia» não pode apagar: o que está em autorização (reserva viva),
+  // sempre; o autorizado, só quando o pedido novo é o MESMO encaixe e ele continua de pé (4ª rodada da
+  // 6.46, QA646C-01 e ATK3-4). Um pedido antigo autorizado travava para sempre o pedido seguinte do
+  // mesmo FILHOt no mesmo dia: a reposição autorizada que virou troca (13→14) não chegava à Márcia, e o
+  // dia que sai virava falta sem crédito. Outro encaixe reabre o pedido, como antes da 3ª rodada — o
+  // lançamento em dobro é barrado mais abaixo (o avulso pelos Lançamentos do dia, a troca já feita, o
+  // mesmo dia de repor regravado). Sem `novo`, vale a regra larga (qualquer autorizado ocupa).
+  function vagasPedidoOcupado(o, novo, p){
+    var st=String((o&&o.status)||'pedido');
+    if(st==='autorizando') return !vagasPedidoLivre(o, vagasAgora());
+    if(st!=='autorizado') return false;
+    if(!novo) return true;
+    return vagasMesmoEncaixe(o, novo) && vagasEncaixeDePe(o, p);
+  }
+  // Pura: os dois pedidos são o mesmo encaixe? Mesmo tipo e mesma troca (o dia que sai), o mesmo
+  // crédito (reposição) ou o mesmo valor (avulso).
+  function vagasMesmoEncaixe(a, b){
+    var tipo=function(o){ return (String((o&&o.tipo)||'')==='avulso')?'avulso':'reposicao'; };
+    if(tipo(a)!==tipo(b)) return false;
+    var pa=(a&&a.payload)||{}, pb=(b&&b.payload)||{};
+    var da=String(((pa.troca||{}).de)||''), db=String(((pb.troca||{}).de)||'');
+    if(da || db) return da===db;
+    if(tipo(a)==='avulso') return Math.round(+pa.valor_cent||0)===Math.round(+pb.valor_cent||0);
+    return String(pa.credito_id||'')===String(pb.credito_id||'');
+  }
+  // O encaixe autorizado continua de pé no Extrato deste aparelho? A troca: o crédito vivo com ela. A
+  // reposição: o crédito (o do pedido, ou qualquer um sem chave) ainda marcado para esse dia — desmarcado
+  // depois da autorização (o tutor desistiu), o pedido de agora é outro encaixe. O avulso mora nos
+  // Lançamentos do dia, que este aparelho não tem: vale como de pé (o mesmo avulso não se pede duas vezes).
+  function vagasEncaixeDePe(o, p){
+    try{
+      var pay=(o&&o.payload)||{}, dia=String((o&&o.dia)||pay.volta||'');
+      if(String((o&&o.tipo)||'')==='avulso' || !p) return true;
+      if(pay.troca && pay.troca.de) return !!repTrocaFeitaNoExtrato(p, String(pay.troca.de), dia);
+      var L=repLancamentos(p)||[], an=repAnulados(L), cid=String(pay.credito_id||'');
+      return L.some(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===dia && (!cid || l._id===cid); });
+    }catch(e){ return true; } /* silencioso de propósito: sem o Extrato lido, vale a regra larga (não grava por cima) */
+  }
+  function vagasPedidoOcupadoTexto(v, p, dia){
+    var nome=pelNome(p), D=repBRdata(dia);
+    if(String((v&&v.status)||'')==='autorizado')
+      return 'A Márcia já autorizou este encaixe ('+nome+' em '+D+'). Nada foi pedido de novo: se '+nome+' não está na lista desse dia, fale com ela.';
+    return 'A Márcia já está autorizando este encaixe ('+nome+' em '+D+'). Nada foi pedido de novo: espere a tela atualizar.';
   }
   // O Telegram da Gestão — SÓ se o grupo já existir na ponte. Grupo inventado é o erro que
   // já custou caro nesta casa.
@@ -8709,6 +9077,8 @@
       alert('Só a Gestão ou a Diretoria autoriza um encaixe acima das '+vagasLimite()+' vagas.');
       return;
     }
+    // Sem o Extrato (6.46), a troca não sabe se a falta já entrou e a reposição não acha o crédito.
+    if(!REPO_LIDO){ alert(repExtratoEsperaTexto()); return; }
     var ped=vagasPedidoDe(dia, chave);
     if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return; }
     var p=(typeof repPelaChave==='function')?repPelaChave(chave):null;
@@ -8716,56 +9086,298 @@
       alert('Não achei a ficha de '+(ped.pet||'')+' neste aparelho. Abra a tela de Reposições e tente de novo.');
       return;
     }
-    // Feriado (6.43): a Zêluz não abre — o pedido pode ter nascido antes da regra, ou o dia virou
-    // recesso depois. Nada é gravado; o pedido continua em aberto para ser recusado. O recesso da
-    // Gestão só existe no banco: a lista é buscada antes de conferir, com a mesma espera de até 4 s
-    // das janelas da reposição (re-QA da 6.43).
-    try{
-      if(typeof orcFeriadosGarantir==='function')
-        await Promise.race([orcFeriadosGarantir(), new Promise(function(ok){ setTimeout(ok, 4000); })]);
-    }catch(e){ /* silencioso de propósito: sem a lista do banco, vale a do código */ }
-    var ferA=repFeriadoDiaRepor(dia);
-    if(ferA){ alert(ferA+'\n\nO pedido continua em aberto: recuse-o, ou combine outro dia com a recepção.'); return; }
-    var v=vagasDoDia(dia), pay=ped.payload||{};
+    var pay=ped.payload||{};
     var ehAvulso=(ped.tipo==='avulso');
     var ehTroca=!ehAvulso && !!(pay.troca && /^\d{4}-\d{2}-\d{2}$/.test(pay.troca.de||''));
     var valor=Math.round(pay.valor_cent||0) || diariaAvulsaCent(p);
-    if(ehTroca){
-      var vt=dxVeredito(p, dia, {de:pay.troca.de});
-      if(!vt.ok){ alert('Esta troca não vale mais: '+vt.motivo+'\n\nO pedido continua em aberto — recuse-o, ou combine outro dia com a recepção.'); return; }
-    }
-    if(!await zPergunta('Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?',
-      ['O dia está com '+v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+'.',
-       ehAvulso?('Vai entrar como AVULSO nos Lançamentos do dia '+fmtBR(dia)+' — '+fmtCent(valor)
-                 +(pay.matriculado?' (matriculado)':' (não matriculado)')+'.')
-              :(ehTroca?('Vai ficar feita a TROCA: '+(ped.pet||'')+' não vem em '+fmtBR(pay.troca.de)+' e vem em '+fmtBR(dia)+'.')
-                       :('Vai ficar combinado que '+(ped.pet||'')+' repõe em '+fmtBR(dia)+'.')),
-       'Fica registrado que a autorização foi sua.'],
-      {sim:'Autorizar', nao:'Não autorizar'})) return;
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
-    var aut={quem:quem, ts:Date.now()};
-    var acao, trocaR=null;
-    if(ehAvulso) acao=dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut);
-    else if(ehTroca) acao=repTrocaGravar(p, pay.troca.de, dia, aut).then(function(r){ trocaR=r; return true; });
-    else {
-      // O crédito da falta JÁ existe (foi lançado quando a recepção pediu o encaixe): aqui
-      // só se marca o dia de repor nele. Se a chave se perdeu, procura-se um crédito sem
-      // dia marcado — e, não havendo nenhum, NÃO se inventa crédito: crédito é dinheiro.
-      var cid=pay.credito_id||((repCreditoLivre(p)||{})._id)||'';
-      if(!cid){
-        alert('Não achei o crédito de reposição de '+(ped.pet||'')+' para marcar o dia '+fmtBR(dia)
-          +'. Abra o Extrato dele na tela de Reposições — o pedido continua em aberto.');
+    var kL=vagasLancadoChave(dia, chave), pend=(VAGAS_LANCADOS||{})[kL]||null;
+    var aut=null, marca=null, cid='', trocaR=null, jaLocal=null;
+    // O 2º toque enquanto o 1º do mesmo pedido ainda está gravando (4ª rodada da 6.46, ATK3-2): sem a
+    // rede, as duas gravações ficavam na fila, e a 2ª, vendo o "autorizado" da 1ª, mandava tirar um
+    // avulso "repetido" que não existia. O 2º toque não grava nada.
+    if(pend && pend.andando){
+      alert('Ainda estou marcando como autorizado o pedido de '+(ped.pet||'')+' em '+fmtBR(dia)+', do toque anterior. Espere a confirmação aparecer.');
+      return;
+    }
+    // A MEMÓRIA SÓ VALE PARA O MESMO PEDIDO (5ª rodada da 6.46, QA646D-01): fechado o pedido em outro
+    // aparelho e pedido de novo com OUTRO encaixe (o tutor desistiu do avulso e pediu a troca), a memória
+    // velha tomava o 1º «Autorizar»: sem pergunta, sem reserva, sem lançar — e a tela dizia "Lancei…".
+    // Pedido novo segue o caminho de sempre (pergunta, reserva, lança).
+    if(pend && !vagasLancadoDoPedido(ped, pend)){ delete VAGAS_LANCADOS[kL]; pend=null; }
+    if(pend){
+      // O ENCAIXE JÁ ENTROU POR ESTE APARELHO (3ª rodada da 6.46, QA646B-01): só falta marcar o pedido
+      // como autorizado, com a reserva que ainda é deste aparelho. Nada é lançado de novo.
+      // NÃO SEI SE ENTROU (`incerto`, 4ª rodada da 6.46, QA646C-03): a conexão caiu no meio da gravação
+      // (a troca é transação, e o SDK a aborta já enviada). O lançamento é refeito com a mesma
+      // autorização e a mesma reserva, sem perguntar de novo: a troca que já entrou volta "já está
+      // feita", o mesmo dia de repor é regravado no mesmo crédito, e o avulso que já está nos
+      // Lançamentos do dia é reconhecido — nada entra duas vezes. A reserva que deixou de ser deste
+      // aparelho (outro aparelho pegou o pedido, ou decidiu) não é atropelada.
+      if(pend.incerto && !vagasReservaNossa(ped, pend.marca)){
+        delete VAGAS_LANCADOS[kL];
+        alert('Não refiz o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+': enquanto a conexão estava fora, '+vagasPedidoEstado(ped)
+          +'. Confira o Extrato e os Lançamentos do dia antes de lançar de novo.');
         return;
       }
-      acao=repAgendarVolta(p, cid, dia, aut);
-    }
-    acao.then(function(ok){
-      if(ok===false){
-        alert('Não consegui lançar — o pedido continua em aberto. Veja a mensagem que apareceu e tente de novo.');
-        return null;
+      aut=pend.aut; marca=pend.marca; trocaR=pend.trocaR||null; cid=pend.cid||'';
+      pend.andando=true;
+    } else {
+      // Feriado (6.43): a Zêluz não abre — o pedido pode ter nascido antes da regra, ou o dia virou
+      // recesso depois. Nada é gravado; o pedido continua em aberto para ser recusado. O recesso da
+      // Gestão só existe no banco: a lista é buscada antes de conferir, com a mesma espera de até 4 s
+      // das janelas da reposição (re-QA da 6.43).
+      try{
+        if(typeof orcFeriadosGarantir==='function')
+          await Promise.race([orcFeriadosGarantir(), new Promise(function(ok){ setTimeout(ok, 4000); })]);
+      }catch(e){ /* silencioso de propósito: sem a lista do banco, vale a do código */ }
+      var ferA=repFeriadoDiaRepor(dia);
+      if(ferA){ alert(ferA+'\n\nO pedido continua em aberto: recuse-o, ou combine outro dia com a recepção.'); return; }
+      var v=vagasDoDia(dia);
+      if(ehTroca){
+        var vt=dxVeredito(p, dia, {de:pay.troca.de});
+        // A TROCA JÁ FEITA, COM O EXTRATO EM DIA (3ª rodada da 6.46, ATK2-18): o veredito diz "Essa troca
+        // já está feita", mas mandar recusar o pedido deixava "recusado" com a troca valendo — e o dia
+        // dele, se ele viesse, virava crédito fantasma. O pedido fecha como atendido, igual ao caminho
+        // do Extrato atrasado (ATK6), depois de conferida no servidor.
+        if(!vt.ok) jaLocal=repTrocaFeitaNoExtrato(p, pay.troca.de, dia);
+        if(!vt.ok && !jaLocal){ alert('Esta troca não vale mais: '+vt.motivo+'\n\nO pedido continua em aberto — recuse-o, ou combine outro dia com a recepção.'); return; }
       }
-      return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave)
-        .update({status:'autorizado', autorizado_por:quem, autorizado_ts:aut.ts}).then(function(){
+      // A troca já feita não pergunta: nada será lançado, o pedido só é marcado como atendido.
+      if(!jaLocal && !await zPergunta('Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?',
+        ['O dia está com '+v.usadas+' de '+v.limite+' vaga'+(v.limite===1?'':'s')+'.',
+         ehAvulso?('Vai entrar como AVULSO nos Lançamentos do dia '+fmtBR(dia)+' — '+fmtCent(valor)
+                   +(pay.matriculado?' (matriculado)':' (não matriculado)')+'.')
+                :(ehTroca?('Vai ficar feita a TROCA: '+(ped.pet||'')+' não vem em '+fmtBR(pay.troca.de)+' e vem em '+fmtBR(dia)+'.')
+                         :('Vai ficar combinado que '+(ped.pet||'')+' repõe em '+fmtBR(dia)+'.')),
+         'Fica registrado que a autorização foi sua.'],
+        {sim:'Autorizar', nao:'Não autorizar'})) return;
+      aut={quem:quem, ts:Date.now()};
+      // O crédito da falta JÁ existe (foi lançado quando a recepção pediu o encaixe): na reposição
+      // só se marca o dia de repor nele. Se a chave se perdeu, procura-se um crédito sem dia
+      // marcado — e, não havendo nenhum, NÃO se inventa crédito: crédito é dinheiro.
+      if(!ehAvulso && !ehTroca){
+        cid=pay.credito_id||((repCreditoLivre(p)||{})._id)||'';
+        if(!cid){
+          alert('Não achei o crédito de reposição de '+(ped.pet||'')+' para marcar o dia '+fmtBR(dia)
+            +'. Abra o Extrato dele na tela de Reposições — o pedido continua em aberto.');
+          return;
+        }
+      }
+      // A MÁRCIA EM DOIS APARELHOS (6.46): o pedido é RESERVADO por transação antes de qualquer
+      // gravação. Só um aparelho ganha a reserva; o outro ouve quem está autorizando e nada lança.
+      // A reserva só vale para o pedido que a Márcia VIU (4ª rodada, ATK3-8): se ele mudou enquanto a
+      // pergunta estava aberta, nada é reservado nem lançado.
+      var reserva=null;
+      try{ reserva=await vagasReservar(dia, chave, quem, ped); }
+      catch(e){
+        _logFalhaGrav('reservar o pedido de encaixe de '+(ped.pet||'')+' em '+dia, e);
+        alert('Não consegui autorizar: '+((e&&e.message)||e)+'. O pedido continua em aberto.');
+        return;
+      }
+      if(!reserva || !reserva.ok){ alert((reserva&&reserva.texto)||'Este pedido não está mais em aberto. Atualize a tela.'); return; }
+      marca=reserva.marca;
+    }
+    var caminho='daycare/vagas-pedidos/'+dia+'/'+chave;
+    // `lancou`: o encaixe (avulso, troca ou dia de repor) já entrou; `autorizou`: o pedido já está
+    // marcado como autorizado. Depois de qualquer um dos dois, o pedido não volta a ficar em aberto.
+    var autorizou=false, lancou=!!(pend && !pend.incerto);
+    // Deu errado ANTES de lançar: o pedido volta a ficar em aberto, para a Márcia decidir de novo — por
+    // transação, e só se a reserva ainda for a NOSSA (revisão da 6.46): outro aparelho que já a tomou
+    // (a nossa venceu) não pode ter a dele apagada. Devolve como o pedido ficou (3ª rodada da 6.46),
+    // para a tela dizer "continua em aberto" só quando ele reabriu de fato: {reabriu}, {v: o pedido
+    // como está no servidor}, {erro} (sem rede, ou sem resposta em 6 s — sem rede, a transação espera
+    // a conexão voltar, e a tela não pode ficar calada) ou {autorizado}.
+    var devolver=function(){
+      if(autorizou) return Promise.resolve({autorizado:true});
+      // O refeito depois da queda (`incerto`) que não lançou: a memória deste aparelho sai junto (4ª rodada).
+      delete VAGAS_LANCADOS[kL];
+      var fez=false, visto=null, t=null;
+      var prazo=new Promise(function(ok){ t=setTimeout(function(){ ok({erro:new Error('o banco não respondeu em 6 s')}); }, 6000); });
+      var tx=DB.ref(caminho).transaction(function(atual){
+        fez=false; visto=atual||null;
+        if(atual===null || atual===undefined) return null;      // cache frio: o servidor responde
+        if(!vagasReservaNossa(atual, marca)) return;            // não é mais nossa: não mexe
+        fez=true;
+        var n=Object.assign({}, atual, {status:'pedido'}); delete n.autorizando; return n;
+      }).then(function(res){
+        if(res && res.committed && fez) return {reabriu:true};
+        var v2=visto;
+        try{ if(res && res.snapshot && typeof res.snapshot.val==='function') v2=res.snapshot.val(); }
+        catch(e){ v2=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+        return {reabriu:false, v:v2};
+      }, function(e){ _logFalhaGrav('devolver o pedido de encaixe de '+(ped.pet||'')+' em '+dia, e); return {erro:e}; });
+      return Promise.race([tx, prazo]).then(function(d){
+        try{ clearTimeout(t); }catch(e){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+        return d;
+      });
+    };
+    // O "autorizado" também só entra se a reserva ainda for a nossa (revisão da 6.46): se a gravação
+    // demorou mais que a reserva e outro aparelho a tomou, ou se alguém recusou no meio, a decisão
+    // dele não é atropelada. Devolve true, ou {perdeu, v} com o pedido como está no servidor.
+    var fechar=function(extra){
+      var fez=false, visto=null;
+      return DB.ref(caminho).transaction(function(atual){
+        fez=false; visto=atual||null;
+        if(atual===null || atual===undefined) return null;      // cache frio: o servidor responde
+        if(!vagasReservaNossa(atual, marca)) return;
+        fez=true;
+        return Object.assign({}, atual, {status:'autorizado', autorizado_por:quem, autorizado_ts:aut.ts}, extra||{});
+      }).then(function(res){
+        if(res && res.committed && fez){ autorizou=true; delete VAGAS_LANCADOS[kL]; return true; }
+        delete VAGAS_LANCADOS[kL];                               // não é mais nossa: «Autorizar» de novo não a recupera
+        var v2=visto;
+        try{ if(res && res.snapshot && typeof res.snapshot.val==='function') v2=res.snapshot.val(); }
+        catch(e){ v2=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+        // O "autorizado" que já está lá é o DESTE aparelho (4ª rodada da 6.46, ATK3-2): o toque anterior
+        // o gravou, e a resposta se perdeu na queda da conexão. O pedido está fechado: nada de alarme.
+        if(vagasAutorizadoNosso(v2, marca, aut, quem)){ autorizou=true; return true; }
+        return {perdeu:true, v:v2};
+      });
+    };
+    // O lançamento entrou, mas o pedido mudou de mãos enquanto gravava: a tela diz, para ninguém lançar
+    // de novo — e o que fazer conforme como o pedido ficou (3ª rodada da 6.46, ATK2-3 e ATK2-4: a reserva
+    // venceu no meio de uma gravação longa, e outro aparelho autorizou ou recusou).
+    var perdeuTexto=function(r){
+      var v2=r&&r.v, st=String((v2&&v2.status)||''), D=fmtBR(dia);
+      _logFalhaGrav('marcar o pedido de encaixe de '+(ped.pet||'')+' em '+dia+' como autorizado (a reserva não era mais deste aparelho)',
+        new Error(vagasPedidoEstado(v2)));
+      var ini='Lancei o encaixe de '+(ped.pet||'')+' em '+D+', mas não marquei o pedido como autorizado: enquanto eu gravava, '
+        +vagasPedidoEstado(v2)+'.';
+      // O outro aparelho achou o avulso já lançado e não lançou de novo (4ª rodada da 6.46, QA646C-02).
+      if(st==='autorizado' && ehAvulso && /^já estava lançado/.test(String((v2&&v2.nota)||'')))
+        return ini+' Esse aparelho achou o avulso já nos Lançamentos do dia '+D+' e não lançou de novo.';
+      if(st==='autorizado' && ehAvulso) return ini+' O avulso pode ter entrado duas vezes: confira os Lançamentos do dia '+D+' e tire o repetido.';
+      if(st==='recusado'){
+        if(ehAvulso) return ini+' O avulso entrou mesmo assim: tire-o dos Lançamentos do dia '+D+' ou fale com quem recusou.';
+        if(ehTroca) return ini+' A troca entrou mesmo assim: desfaça-a na tela de Reposições («desmarcar» ao lado de '+D+') ou fale com quem recusou.';
+        return ini+' O dia de repor entrou mesmo assim: desmarque-o na tela de Reposições («desmarcar» ao lado de '+D+') ou fale com quem recusou.';
+      }
+      return ini+' Confira o Extrato e os Lançamentos do dia antes de lançar de novo.';
+    };
+    var acao, avulsoJa=null, trocaDz=null, refeito=!!(pend && pend.incerto);
+    // O AVULSO DELE JÁ NOS LANÇAMENTOS DO DIA (5ª rodada da 6.46; já existia no 6ba2fb9): o avulso
+    // autorizado e, depois, a reposição ou a troca para o mesmo dia — o pedido reabre (outro encaixe), e o
+    // «Autorizar» lançava a reposição com o avulso valendo: R$ 97,00 e um crédito pelo mesmo dia. Antes de
+    // lançar, a leitura dos Lançamentos do dia; achou, nada é lançado e o pedido volta a ficar em aberto.
+    // Sem a leitura, segue como antes. O refeito não confere: a autorização já foi dada, e o lançamento
+    // pode já ter entrado.
+    var semAvulsoNoDia=function(){
+      if(refeito) return Promise.resolve();
+      return vagasAvulsoNoDiaLer(p, dia).then(function(a){
+        if(!a || a.erro) return;
+        var vc=Math.round(+((a.det||{}).valor_cent)||0);
+        var er=new Error((ped.pet||'')+' já tem um avulso lançado em '+fmtBR(dia)+(vc>0?(' ('+fmtCent(vc)+')'):'')
+          +': tire o avulso dos Lançamentos do dia antes de autorizar '+(ehTroca?'a troca':'a reposição')+', para não cobrar duas vezes.');
+        er.repAviso=true;        // a frase é para a tela inteira, sem "Não consegui"
+        throw er;
+      });
+    };
+    // A troca gravada (o caminho de sempre, e o refeito depois da conferência).
+    var gravarTroca=function(){ return repTrocaGravar(p, pay.troca.de, dia, aut).then(function(r){
+      trocaR=r;
+      if(r && r.jaFeita && refeito){
+        // Refeito depois da queda (QA646C-03): a troca que já está lá é a do toque anterior — a reserva
+        // continua deste aparelho. Sem conferir no servidor, continua guardada (nada reabre).
+        if(r.incerto) throw new Error('disconnect');
+        // A reposição marcada para o dia novo ficou para trás se a queda veio antes de tirá-la do dia.
+        try{
+          var Lm=repLancamentos(p)||[], anm=repAnulados(Lm);
+          var mp=Lm.filter(function(l){ return l && l.tipo==='credito' && !anm[l._id] && String(l.volta||'')===dia && !repTrocaViva(l) && l._id!==r.credId; })[0];
+          if(mp) trocaR=Object.assign({}, r, {marcadaPendente:mp._id});
+        }catch(e){ /* silencioso de propósito: sem o Extrato, a confirmação sai sem essa linha */ }
+        return true;
+      }
+      return (r&&r.jaFeita)?'jaFeita':true;
+    }); };
+    if(pend && !pend.incerto) acao=Promise.resolve(true);
+    else if(jaLocal) acao=repTrocaJaFeitaConferir(p, pay.troca.de, dia, jaLocal).then(function(r){ trocaR=r; return 'jaFeita'; });
+    // O AVULSO QUE JÁ ESTÁ NOS LANÇAMENTOS DO DIA (4ª rodada da 6.46, QA646C-02, ATK3-1 e ATK3-6): lançado
+    // direto pela recepção quando o dia abriu vaga, ou por este pedido antes de uma queda de rede. Lançar
+    // de novo era barrado pelo dashLancar, e o pedido voltava a ficar em aberto para sempre (só saía por
+    // «Recusar», com o avulso cobrado). Agora o pedido fecha como atendido, sem lançar nada.
+    else if(ehAvulso) acao=vagasAvulsoNoDiaLer(p, dia).then(function(a){
+      if(a && !a.erro){ avulsoJa=a; return 'jaLancado'; }
+      return dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut);
+    });
+    // O REFEITO RECONFERE A TROCA (5ª rodada da 6.46, QA646D-04): a troca desta autorização que entrou e
+    // foi desfeita no meio (o tutor desistiu) não é refeita sem a pergunta — o pedido volta a ficar em
+    // aberto. Sem a releitura, continua guardado (nada reabre).
+    else if(ehTroca && refeito) acao=vagasTrocaDesfeitaDepois(p, pay.troca.de, dia, aut).then(function(dz){
+      if(dz===null) throw new Error('disconnect');
+      if(dz){ trocaDz=dz; return 'desfeita'; }
+      return gravarTroca();
+    });
+    else if(ehTroca) acao=semAvulsoNoDia().then(function(){ return gravarTroca(); });
+    else acao=semAvulsoNoDia().then(function(){ return repAgendarVolta(p, cid, dia, aut); });
+    return acao.then(function(ok){
+      if(ok==='jaLancado'){
+        var quemA=String((avulsoJa&&avulsoJa.quem)||'').trim(); if(quemA==='-') quemA='';
+        var notaA='já estava lançado'+(quemA?(' por '+quemA):'');
+        var jaTxt='O avulso de '+(ped.pet||'')+' em '+fmtBR(dia)+' já está nos Lançamentos do dia'+(quemA?(' (lançado por '+quemA+')'):'')+'. Nada foi lançado de novo.';
+        return fechar({nota:notaA}).then(function(r){
+          if(r!==true){
+            _logFalhaGrav('marcar o pedido de encaixe de '+(ped.pet||'')+' em '+dia+' como autorizado (avulso já lançado; a reserva não era mais deste aparelho)',
+              new Error(vagasPedidoEstado(r&&r.v)));
+            alert(jaTxt+'\n\nO pedido não foi marcado como autorizado: enquanto eu conferia, '+vagasPedidoEstado(r&&r.v)+'.');
+            return null;
+          }
+          if(typeof audit==='function') audit('vaga-autorizada',
+            (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' (avulso; '+notaA+')',
+            {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
+          alert(jaTxt+'\n\nO pedido ficou como autorizado: o avulso '+notaA+'.');
+          return true;
+        });
+      }
+      if(ok==='desfeita'){
+        // A troca desta autorização entrou e foi desfeita no meio (5ª rodada da 6.46, QA646D-04): nada é
+        // refeito, e o pedido volta a ficar em aberto — o «Autorizar» seguinte pergunta de novo.
+        return devolver().then(function(d){
+          var qD=String((trocaDz&&trocaDz.quem)||'').trim(); if(qD==='-') qD='';
+          alert('A troca '+fmtBR(pay.troca.de)+' → '+fmtBR(dia)+' de '+(ped.pet||'')+' entrou e foi desfeita depois, na tela de Reposições'
+            +(qD?(' (por '+qD+')'):'')+'. Não refiz a troca sem perguntar: se ela ainda vale, toque em «Autorizar» de novo.\n\n'+vagasDevolvidoTexto(d));
+          return null;
+        });
+      }
+      if(ok==='jaFeita'){
+        // A mesma troca já foi feita (em outro aparelho, ou já está no Extrato deste): nada entra de
+        // novo. O pedido fica ATENDIDO ("autorizado", com a nota de quem a fez) — mandar recusá-lo
+        // deixava "recusado" com a troca valendo (revisão da 6.46). Sem a conferência no servidor, ele
+        // continua em aberto.
+        if(trocaR && trocaR.incerto){
+          return devolver().then(function(d){
+            alert(repTrocaJaFeitaTexto(trocaR, pay.troca.de, dia)+'\n\n'+vagasDevolvidoTexto(d));
+            return null;
+          });
+        }
+        var exJ=(trocaR&&trocaR.existente)||{}, quemJ=String(((exJ.troca||{}).quem)||exJ.quem||'').trim(); if(quemJ==='-') quemJ='';
+        var nota='já estava feita'+(quemJ?(' por '+quemJ):((trocaR&&trocaR.local)?'':' em outro aparelho'));
+        return fechar({nota:nota}).then(function(r){
+          if(r!==true){
+            // Este aparelho não lançou nada (3ª rodada da 6.46, QA646B-02): a frase não fala em "Lancei".
+            _logFalhaGrav('marcar o pedido de encaixe de '+(ped.pet||'')+' em '+dia+' como autorizado (troca já feita; a reserva não era mais deste aparelho)',
+              new Error(vagasPedidoEstado(r&&r.v)));
+            alert(repTrocaJaFeitaTexto(trocaR, pay.troca.de, dia)+'\n\nO pedido não foi marcado como autorizado: enquanto eu conferia, '
+              +vagasPedidoEstado(r&&r.v)+'.');
+            return null;
+          }
+          if(typeof audit==='function') audit('vaga-autorizada',
+            (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' (troca de '+repBRdata(pay.troca.de)+'; '+nota+')',
+            {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
+          alert(repTrocaJaFeitaTexto(trocaR, pay.troca.de, dia)+'\n\nO pedido ficou como autorizado: a troca '+nota+'.');
+          return true;
+        });
+      }
+      if(ok===false){
+        return devolver().then(function(d){
+          alert((d && d.reabriu)?'Não consegui lançar — o pedido continua em aberto. Veja a mensagem que apareceu e tente de novo.'
+            :('Não consegui lançar. '+vagasDevolvidoTexto(d)+' Veja a mensagem que apareceu.'));
+          return null;
+        });
+      }
+      lancou=true;
+      return fechar().then(function(r){
+          if(r!==true){ alert(perdeuTexto(r)); return null; }
           if(typeof audit==='function') audit('vaga-autorizada',
             (ped.pet||'')+' — encaixe autorizado em '+repBRdata(dia)+' ('+(ehAvulso?'avulso':(ehTroca?'troca de '+repBRdata(pay.troca.de):'reposição'))+')',
             {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
@@ -8778,35 +9390,344 @@
           return true;
         });
     }).catch(function(e){
-      _logFalhaGrav('autorizar o encaixe de '+(ped.pet||'')+' em '+dia, e);
-      alert('Não consegui autorizar: '+((e&&e.message)||e)+'. O pedido continua em aberto.');
+      var msg=String((e&&e.message)||e).replace(/\.+$/,'');   // a frase segue com ponto: sem "..".
+      if(autorizou){
+        // O pedido já está autorizado: o que falhou foi só a tela de confirmação.
+        _logFalhaGrav('mostrar a confirmação do encaixe de '+(ped.pet||'')+' em '+dia+' (o pedido já está autorizado)', e);
+        alert('O encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+' está autorizado, mas não consegui mostrar a confirmação: '+msg+'.');
+        return;
+      }
+      if(lancou){
+        // O ENCAIXE ENTROU E O "AUTORIZADO" CAIU (3ª rodada da 6.46, QA646B-01): a transação já enviada
+        // é abortada pelo SDK quando a conexão cai ('disconnect'). Reabrir o pedido deixaria outro
+        // aparelho lançar o mesmo encaixe de novo, ou recusá-lo com o encaixe valendo: ele fica com a
+        // reserva deste aparelho, que guarda o que já lançou — o «Autorizar» de novo só o marca.
+        VAGAS_LANCADOS[kL]={marca:marca, aut:aut, trocaR:trocaR, ped:vagasPedidoMarca(ped)};
+        _logFalhaGrav('marcar o pedido de encaixe de '+(ped.pet||'')+' em '+dia+' como autorizado (o encaixe já entrou)', e);
+        try{ vagasPedRedesenhar(); }catch(x){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ }
+        var caiu=(msg==='disconnect') || (typeof navigator!=='undefined' && !!navigator && navigator.onLine===false);
+        alert('Lancei o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+', mas não consegui marcar o pedido como autorizado ('
+          +(caiu?'a conexão caiu':msg)+'). Toque em «Autorizar» de novo'+(caiu?' quando a internet voltar':'')+': nada entra duas vezes.');
+        return;
+      }
+      if(msg==='disconnect'){
+        // NÃO SEI SE ENTROU (4ª rodada da 6.46, QA646C-03): a gravação é transação (a troca na falta, a
+        // falta nova), e o SDK aborta com 'disconnect' a transação já enviada — ela pode ter entrado no
+        // servidor. Reabrir deixaria outro aparelho recusar com a troca valendo; dizer "nada foi salvo"
+        // seria falso. O pedido fica com a reserva deste aparelho, que guarda a autorização: o
+        // «Autorizar» de novo refaz o lançamento sem perguntar, e o que já entrou só fecha o pedido.
+        VAGAS_LANCADOS[kL]={marca:marca, aut:aut, trocaR:trocaR, cid:cid, incerto:true, ped:vagasPedidoMarca(ped)};
+        _logFalhaGrav('autorizar o encaixe de '+(ped.pet||'')+' em '+dia+' (a conexão caiu no meio: não sei se entrou)', e);
+        try{ vagasPedRedesenhar(); }catch(x){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ }
+        alert('A conexão caiu no meio: toque em «Autorizar» de novo quando a internet voltar; se já entrou, o app só fecha o pedido.');
+        return;
+      }
+      return devolver().then(function(d){
+        // A falta desse dia entrou por outro aparelho com outro dia de repor: a frase diz o que fazer.
+        if(e && e.repAviso){ alert(e.message+'\n\n'+vagasDevolvidoTexto(d)); return; }
+        _logFalhaGrav('autorizar o encaixe de '+(ped.pet||'')+' em '+dia, e);
+        alert('Não consegui autorizar: '+msg+'. '+vagasDevolvidoTexto(d));
+      });
+    }).then(function(x){ if(pend) delete pend.andando; return x; },
+      function(e){ if(pend) delete pend.andando; throw e; });
+  }
+  // O ENCAIXE JÁ LANÇADO, COM O "AUTORIZADO" PENDENTE (3ª rodada da 6.46, QA646B-01): o que este
+  // aparelho lançou e a reserva que ainda é dele, por pedido. Só na memória da página (recarregada, o
+  // «Autorizar» de novo segue o caminho de sempre: a troca e a reposição se reconhecem; o avulso é
+  // barrado pelos Lançamentos do dia, e nada entra duas vezes).
+  var VAGAS_LANCADOS={};
+  function vagasLancadoChave(dia, chave){ return String(dia||'')+'|'+String(chave||''); }
+  // O pedido está reservado por ESTE aparelho, com o encaixe já lançado (ou com a gravação cortada
+  // pela queda da conexão, `incerto`)?
+  function vagasLancadoAqui(dia, chave, o){
+    var m=(VAGAS_LANCADOS||{})[vagasLancadoChave(dia, chave)];
+    return !!(m && vagasReservaNossa(o, m.marca));
+  }
+  // O pedido como a memória o guarda: a hora do pedido, o tipo e o que será lançado (5ª rodada da 6.46).
+  function vagasPedidoMarca(o){ return {ts:(o&&o.ts!=null)?o.ts:null, tipo:String((o&&o.tipo)||''), payload:(o&&o.payload)||null}; }
+  // A memória deste aparelho é DESTE pedido? (5ª rodada da 6.46, QA646D-01) A reserva ainda é a dele;
+  // ou é o mesmo pedido — a mesma hora do pedido e o mesmo encaixe — que outro aparelho pegou ou decidiu
+  // (a tela diz como ele ficou). Pedido novo (outro encaixe, ou pedido de novo depois) não é. Pura.
+  function vagasLancadoDoPedido(o, m){
+    if(!o || !m) return false;
+    if(vagasReservaNossa(o, m.marca)) return true;
+    var v=m.ped||null;
+    return !!v && String(o.ts==null?'':o.ts)===String(v.ts==null?'':v.ts) && vagasMesmoPedido(o, v);
+  }
+  // O "autorizado" do pedido é o que ESTE aparelho gravou (4ª rodada da 6.46, ATK3-2)? A mesma pessoa,
+  // a mesma hora da autorização e, se a reserva ficou no pedido, a marca deste aparelho.
+  function vagasAutorizadoNosso(o, marca, aut, quem){
+    if(!o || String(o.status||'')!=='autorizado' || !aut) return false;
+    if(String(o.autorizado_por||'')!==String(quem||'') || +o.autorizado_ts!==+aut.ts) return false;
+    return !(o.autorizando && o.autorizando.id && marca && o.autorizando.id!==marca.id);
+  }
+  // O AVULSO DESTE FILHOt NOS LANÇAMENTOS DO DIA (4ª rodada da 6.46, QA646C-02): a mesma trava do
+  // dashLancar — o mesmo nome da planilha e, quando os dois lados têm a chave, a mesma ficha. Pura.
+  function vagasAvulsoDoFilhot(p, lista){
+    var nome=jsNorm(dashNomePlanilha(p)||''), ch='', achou=null;
+    try{ ch=dcKey(p.n, p.tutor)||''; }catch(e){ ch=''; } /* silencioso de propósito: sem a chave, vale o nome, como no dashLancar */
+    Object.keys(lista||{}).some(function(id){
+      var r=(lista||{})[id]||{};
+      if(!String(r.valor||'').trim() || jsNorm(r.valor)!==nome) return false;
+      if(ch && r.chave && String(r.chave)!==ch) return false;
+      achou=Object.assign({_id:id}, r); return true;
+    });
+    return achou;
+  }
+  // Lido no servidor: o lançamento, null, ou {erro} (a leitura falhou — quem chama segue como antes).
+  // `prazo` (5ª rodada da 6.46, QA646D-02; só o «Recusar» usa): sem resposta nesse tempo, {erro,
+  // semResposta} — sem rede, o once espera a conexão voltar, e o botão ficava mudo.
+  function vagasAvulsoNoDiaLer(p, dia, prazo){
+    try{
+      if(!DB || !p) return Promise.resolve(null);
+      var ler=DB.ref('daycare/dashboard/'+dia+'/avulso').once('value').then(function(s){
+        return vagasAvulsoDoFilhot(p, (s && typeof s.val==='function')?s.val():null);
+      }, function(e){ return {erro:e}; });
+      if(!prazo) return ler;
+      var t=null;
+      var vence=new Promise(function(ok){ t=setTimeout(function(){ ok({erro:new Error('o banco não respondeu'), semResposta:true}); }, prazo); });
+      return Promise.race([ler, vence]).then(function(a){
+        try{ clearTimeout(t); }catch(e){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+        return a;
+      });
+    }catch(e){ return Promise.resolve({erro:e}); }
+  }
+  // O encaixe do pedido JÁ ENTROU? (4ª rodada da 6.46, QA646C-02, ATK3-1 e ATK3-6) Conferido no
+  // servidor: o avulso nos Lançamentos do dia; a troca e o dia de repor nos lançamentos relidos. Devolve
+  // a frase do «Recusar», ou '' (não entrou, ou não deu para conferir: vale a recusa de sempre).
+  // O avulso sem resposta em 6 s (5ª rodada da 6.46, QA646D-02): a frase de "não consegui conferir", com
+  // `info.semResposta` — nada é recusado sem saber se o avulso já está cobrado.
+  function vagasEncaixeLancadoTexto(ped, p, dia, info){
+    try{
+      var pay=(ped&&ped.payload)||{}, nome=String((ped&&ped.pet)||'').trim()||pelNome(p), D=repBRdata(dia);
+      var fim=function(oque, desfazer){
+        return 'O encaixe já está lançado ('+oque+'): recusar não tira o lançamento. Nada foi recusado: se '+nome
+          +' não vem, '+desfazer+' e recuse depois; se vem, toque em «Autorizar», que só fecha o pedido.';
+      };
+      if(String((ped&&ped.tipo)||'')==='avulso'){
+        return vagasAvulsoNoDiaLer(p, dia, 6000).then(function(a){
+          if(a && a.semResposta){
+            if(info) info.semResposta=true;
+            return 'Não consegui conferir se o avulso de '+nome+' já está nos Lançamentos do dia '+D+': o banco não respondeu em 6 s. '
+              +'Nada foi recusado: toque em «Recusar» de novo quando a internet voltar.';
+          }
+          return (a && !a.erro)?fim('o avulso de '+nome+' está nos Lançamentos do dia '+D, 'tire o avulso dos Lançamentos do dia '+D):'';
+        });
+      }
+      var de=String(((pay.troca||{}).de)||''), cid=String(pay.credito_id||'');
+      if(!de && !cid) return Promise.resolve('');
+      return repRelerLancamentos(p).then(function(Lr){
+        if(!Lr) return '';
+        var an=repAnulados(Lr);
+        var vivo=Lr.filter(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===dia
+          && (de?(!!l.troca && String(l.data||'')===de):(l._id===cid)); })[0];
+        if(!vivo) return '';
+        return de?fim('a troca '+repBRdata(de)+' → '+D+' está no Extrato de '+nome, 'desfaça a troca na tela de Reposições («desmarcar» ao lado de '+D+')')
+          :fim('o dia de repor '+D+' está marcado no Extrato de '+nome, 'desmarque o dia de repor na tela de Reposições («desmarcar» ao lado de '+D+')');
+      }, function(){ return ''; });
+    }catch(e){ return Promise.resolve(''); } /* silencioso de propósito: sem a conferência, vale a recusa de sempre */
+  }
+  // A TROCA DESTA AUTORIZAÇÃO ENTROU E FOI DESFEITA DEPOIS? (5ª rodada da 6.46, QA646D-04) Relida no
+  // servidor. A troca `de` → `para` de pé (esta ou outra) → false: o refeito só fecha. O crédito com a
+  // marca desta autorização (`autorizacao`, gravada pela 1ª tentativa) estornado ou sem o dia → {credId,
+  // quem}: foi desfeita. Nenhum → false: não entrou, e o refeito lança agora. Sem a releitura → null.
+  function vagasTrocaDesfeitaDepois(p, de, para, aut){
+    return repRelerLancamentos(p).then(function(Lr){
+      if(!Lr) return null;
+      var an=repAnulados(Lr), a=aut||{};
+      if(Lr.some(function(l){ return l && l.tipo==='credito' && !an[l._id] && l.troca && String(l.data||'')===de && String(l.volta||'')===para; })) return false;
+      var nossa=Lr.filter(function(l){ return l && l.tipo==='credito' && String(l.data||'')===de && l.autorizacao
+        && +l.autorizacao.ts===+a.ts && String(l.autorizacao.quem||'')===String(a.quem||''); })[0];
+      if(!nossa || !(an[nossa._id] || String(nossa.volta||'')!==para)) return false;
+      var est=Lr.filter(function(l){ return l && l.tipo==='estorno' && l.estornaId===nossa._id; })[0];
+      return {credId:nossa._id, quem:String(est?(est.quem||''):((nossa.volta_desmarcada||{}).quem||'')).trim()};
     });
   }
+  // Como o pedido ficou depois da devolução (3ª rodada da 6.46): "continua em aberto" só quando ele
+  // reabriu de fato (ou está livre); senão, o estado real.
+  function vagasDevolvidoTexto(d){
+    if(!d || d.reabriu) return 'O pedido continua em aberto.';
+    if(d.autorizado) return 'O pedido ficou como autorizado.';
+    if(d.erro) return 'Não consegui reabrir o pedido agora: ele volta a ficar em aberto em até 2 minutos.';
+    if(!d.v) return 'O pedido não existe mais.';
+    if(vagasPedidoLivre(d.v)) return 'O pedido continua em aberto.';
+    return 'O pedido não voltou a ficar em aberto: '+vagasPedidoEstado(d.v)+'.';
+  }
+  // A RESERVA DO PEDIDO (6.46): 'pedido' → 'autorizando', com quem, quando e uma marca própria (id),
+  // por transação. Cache frio devolve `null` na 1ª volta: `return null` deixa o SDK trazer o valor do
+  // servidor (a mesma lição do dashPlanFilaReenviar — `return;` ali abortaria antes de perguntar ao
+  // servidor). `pegou` diz se a ÚLTIMA volta (a que o servidor aceitou) foi a nossa reserva.
+  var VAGAS_RESERVA_MS=120000;      // 2 min: a reserva de um aparelho que fechou no meio volta a valer
+  // A HORA DO SERVIDOR (revisão da 6.46): diferença entre o relógio do servidor e o deste aparelho,
+  // vinda de .info/serverTimeOffset (vagasPedCarregar). Sem o SDK (sandbox de prova), fica 0: vale o
+  // relógio do aparelho.
+  var VAGAS_RELOGIO_DIF=0;
+  function vagasAgora(){ return Date.now()+(+VAGAS_RELOGIO_DIF||0); }
+  // O carimbo da reserva: a hora do SERVIDOR (ServerValue.TIMESTAMP, que o servidor preenche ao
+  // gravar). Só vale o marcador de verdade do SDK (um objeto); sem ele, a hora deste aparelho.
+  function vagasCarimboServidor(){
+    try{
+      var sv=(typeof firebase!=='undefined' && firebase && firebase.database && firebase.database.ServerValue)
+        ? firebase.database.ServerValue.TIMESTAMP : null;
+      if(sv && typeof sv==='object') return sv;
+    }catch(e){ /* silencioso de propósito: sem o SDK, vale a hora do aparelho */ }
+    return Date.now();
+  }
+  function vagasPedidoLivre(o, agora){
+    if(!o) return false;
+    var st=String(o.status||'pedido');
+    if(st==='pedido') return true;
+    return st==='autorizando' && ((+agora||vagasAgora())-(+((o.autorizando||{}).ts)||0))>VAGAS_RESERVA_MS;
+  }
+  // A reserva ainda é a deste aparelho (a marca `id` que ele mesmo gravou)?
+  function vagasReservaNossa(o, marca){
+    return !!(o && marca && String(o.status||'')==='autorizando' && o.autorizando && o.autorizando.id===marca.id);
+  }
+  function vagasQuemReservou(o){ var q=String(((o||{}).autorizando||{}).quem||'').trim(); return (q && q!=='-')?q:''; }
+  // Como o pedido está agora, numa frase que cabe depois de "enquanto eu gravava, …".
+  function vagasPedidoEstado(v){
+    if(!v) return 'o pedido deixou de existir';
+    var st=String(v.status||'pedido'), por=function(q){ q=String(q||'').trim(); return (q && q!=='-')?(' (por '+q+')'):''; };
+    if(st==='autorizando') return 'outro aparelho passou a autorizá-lo'+por((v.autorizando||{}).quem);
+    if(st==='autorizado') return 'ele foi autorizado em outro aparelho'+por(v.autorizado_por);
+    if(st==='recusado') return 'ele foi recusado em outro aparelho'+por(v.autorizado_por);
+    return 'ele voltou a ficar em aberto';
+  }
+  // A frase de quando o pedido não está mais livre. `recusa`: quem tentava era o «Recusar».
+  function vagasReservaTexto(v, recusa){
+    if(!v) return 'Não achei este pedido. Atualize a tela e tente de novo.';
+    var st=String(v.status||'pedido');
+    var fim=recusa?' A recusa não foi gravada.':' Nada foi lançado de novo.';
+    if(st==='autorizando'){ var q=vagasQuemReservou(v);
+      return 'Este pedido já está sendo autorizado em outro aparelho'+(q?(' (por '+q+')'):'')+'.'+fim; }
+    if(st==='autorizado'){ var qa=String(v.autorizado_por||'').trim();
+      return 'Este pedido já foi autorizado'+(qa&&qa!=='-'?(' (por '+qa+')'):'')+'.'+fim; }
+    if(st==='recusado'){ var qr=String(v.autorizado_por||'').trim();
+      return 'Este pedido já foi recusado'+(qr&&qr!=='-'?(' (por '+qr+')'):'')+'.'+(recusa?'':' Nada foi lançado.'); }
+    return 'Este pedido não está mais em aberto. Atualize a tela.';
+  }
+  // `viu` (4ª rodada da 6.46, ATK3-8): o pedido como a Márcia o viu na tela. Se no servidor ele já é
+  // outro (pedido de novo enquanto a pergunta estava aberta: outro tipo, outro crédito, outro valor),
+  // nada é reservado — senão o app lançava o AVULSO do pedido velho e marcava a REPOSIÇÃO como autorizada.
+  function vagasReservar(dia, chave, quem, viu){
+    var marca={quem:String(quem||'-'), ts:vagasCarimboServidor(), id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)};
+    var pegou=false, mudou=false, visto=null;
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).transaction(function(atual){
+      pegou=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;       // cache frio: o servidor responde
+      if(!vagasPedidoLivre(atual, vagasAgora())) return;        // outro aparelho pegou (ou já decidiu)
+      if(viu && !vagasMesmoPedido(atual, viu)){ mudou=true; return; }   // não é o pedido que a Márcia viu
+      pegou=true;
+      return Object.assign({}, atual, {status:'autorizando', autorizando:marca});
+    }).then(function(res){
+      if(res && res.committed && pegou) return {ok:true, marca:marca};
+      var v=visto;
+      try{ if(res && res.snapshot && typeof res.snapshot.val==='function' && res.snapshot.val()) v=res.snapshot.val(); }
+      catch(e){ v=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+      if(mudou && v && vagasPedidoLivre(v, vagasAgora()) && !vagasMesmoPedido(v, viu))
+        return {ok:false, mudou:true, texto:'O pedido mudou enquanto a senhora decidia (agora é '+vagasPedidoTipoTexto(v)+'). Nada foi lançado: confira de novo.'};
+      return {ok:false, texto:vagasReservaTexto(v)};
+    });
+  }
+  // Pura: o pedido do servidor é o mesmo encaixe que a Márcia viu? O tipo e o que será lançado. Sem a hora
+  // do pedido (5ª rodada da 6.46, QA646D-03): o MESMO encaixe pedido de novo durante a pergunta (outra
+  // recepção tocou «Avisar a Márcia») é o mesmo encaixe — lança-se o que ela viu, e nada dobra.
+  function vagasMesmoPedido(a, b){
+    if(!a || !b) return false;
+    return String(a.tipo||'')===String(b.tipo||'') && vagasJsonEstavel(a.payload||null)===vagasJsonEstavel(b.payload||null);
+  }
+  // JSON com as chaves em ordem: o mesmo objeto, venha de onde vier, dá o mesmo texto.
+  function vagasJsonEstavel(v){
+    if(v===null || v===undefined || typeof v!=='object') return JSON.stringify(v===undefined?null:v);
+    if(Array.isArray(v)) return '['+v.map(vagasJsonEstavel).join(',')+']';
+    return '{'+Object.keys(v).sort().map(function(k){ return JSON.stringify(k)+':'+vagasJsonEstavel(v[k]); }).join(',')+'}';
+  }
+  // O tipo do pedido numa frase curta, como no quadro: "avulso de R$ 97,00", "troca, no lugar de …", "reposição".
+  function vagasPedidoTipoTexto(o){
+    var pay=(o&&o.payload)||{};
+    if(String((o&&o.tipo)||'')==='avulso') return 'avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'');
+    if(pay.troca && pay.troca.de) return 'troca, no lugar de '+fmtBR(pay.troca.de);
+    return 'reposição';
+  }
+  // A reserva de outro aparelho vence em 2 min: o quadro se redesenha sozinho nessa hora (revisão
+  // da 6.46), para o pedido voltar a ter os botões sem ninguém precisar abrir a tela de novo.
+  var VAGAS_RESERVA_TIMER=null;
+  function vagasReservaVigiar(L){
+    try{
+      if(VAGAS_RESERVA_TIMER){ clearTimeout(VAGAS_RESERVA_TIMER); VAGAS_RESERVA_TIMER=null; }
+      var prox=0;
+      (L||[]).forEach(function(o){
+        if(!o || !o._emAutorizacao) return;
+        var fim=(+((o.autorizando||{}).ts)||0)+VAGAS_RESERVA_MS+1000;
+        if(!prox || fim<prox) prox=fim;
+      });
+      if(!prox) return;
+      VAGAS_RESERVA_TIMER=setTimeout(function(){ VAGAS_RESERVA_TIMER=null; vagasPedRedesenhar(); }, Math.max(1000, prox-vagasAgora()));
+    }catch(e){ /* silencioso de propósito: sem o relógio, o quadro se acerta na próxima mudança dos pedidos */ }
+  }
+  // RECUSAR também por transação (revisão da 6.46): só a partir de um pedido LIVRE. A recusa gravada
+  // por cima de um "autorizado" deixava "recusado" com a troca valendo; por cima de uma reserva viva,
+  // desmentia a autorização em andamento no outro aparelho.
   async function vagasRecusar(dia, chave){
     if(!DB) return;
     if(!vagasPodeEncaixar()){ alert('Só a Gestão ou a Diretoria decide um encaixe.'); return; }
     var ped=vagasPedidoDe(dia, chave);
     if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return; }
+    if(!vagasPedidoLivre(ped)){ alert(vagasReservaTexto(ped, true)); return; }
+    // O ENCAIXE QUE JÁ ENTROU NÃO SE RECUSA (4ª rodada da 6.46, QA646C-02, ATK3-1 e ATK3-6): o "recusado"
+    // ficava com o avulso cobrado (R$ 97,00) ou com a troca valendo, e a recepção dizia ao tutor que não
+    // cabia. Conferido no servidor antes do motivo: lançado, nada é recusado, e a tela diz o que fazer.
+    var pRec=(typeof repPelaChave==='function')?repPelaChave(chave):null;
+    if(pRec){
+      var jaRec='', infoRec={};
+      try{ jaRec=await vagasEncaixeLancadoTexto(ped, pRec, dia, infoRec); }catch(e){ jaRec=''; } /* silencioso de propósito: sem a conferência, vale a recusa de sempre */
+      // Sem resposta (5ª rodada, QA646D-02): a frase sai já — a leitura do pedido também ficaria esperando a rede.
+      if(jaRec && infoRec.semResposta){ alert(jaRec); return; }
+      if(jaRec){
+        // O pedido pode ter sido decidido no servidor enquanto a tela não atualizava: aí vale a frase de sempre.
+        var vRec=null;
+        try{ var sRec=await DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).once('value'); vRec=(sRec && typeof sRec.val==='function')?sRec.val():null; }
+        catch(e){ vRec=null; } /* silencioso de propósito: sem a leitura, vale a frase do encaixe lançado */
+        alert((vRec && !vagasPedidoLivre(vRec))?vagasReservaTexto(vRec, true):jaRec);
+        return;
+      }
+    }
     var motivo=((await zTexto('Recusar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia),
       ['Por quê? A recepção precisa saber o que dizer ao tutor.'],
       {rotulo:'Motivo da recusa', botao:'Recusar o encaixe', minimo:3}))||'').trim();
     if(!motivo) return;
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
-    DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave)
-      .update({status:'recusado', motivo_recusa:motivo, autorizado_por:quem, autorizado_ts:Date.now()})
-      .then(function(){
-        if(typeof audit==='function') audit('vaga-recusada',
-          (ped.pet||'')+' — encaixe recusado em '+repBRdata(dia)+': '+motivo,
-          {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
-      }).catch(function(e){
-        _logFalhaGrav('recusar o encaixe de '+(ped.pet||'')+' em '+dia, e);
-        alert('Não consegui recusar: '+((e&&e.message)||e));
+    var fez=false, visto=null, res=null, agora=Date.now();
+    try{
+      res=await DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).transaction(function(atual){
+        fez=false; visto=atual||null;
+        if(atual===null || atual===undefined) return null;     // cache frio: o servidor responde
+        if(!vagasPedidoLivre(atual, vagasAgora())) return;      // outro aparelho decidiu (ou está decidindo)
+        fez=true;
+        var n=Object.assign({}, atual, {status:'recusado', motivo_recusa:motivo, autorizado_por:quem, autorizado_ts:agora});
+        delete n.autorizando; return n;
       });
+    }catch(e){
+      _logFalhaGrav('recusar o encaixe de '+(ped.pet||'')+' em '+dia, e);
+      alert('Não consegui recusar: '+((e&&e.message)||e));
+      return;
+    }
+    if(!(res && res.committed && fez)){
+      var v=visto;
+      try{ if(res && res.snapshot && typeof res.snapshot.val==='function') v=res.snapshot.val(); }
+      catch(e){ v=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+      alert(vagasReservaTexto(v, true));
+      return;
+    }
+    if(typeof audit==='function') audit('vaga-recusada',
+      (ped.pet||'')+' — encaixe recusado em '+repBRdata(dia)+': '+motivo,
+      {alvo:ped.alvo||'', pet:ped.pet||'', assinou:quem});
   }
   // A lista dos pedidos — a MESMA em dois lugares: na tela de Reposições (onde a recepção
   // vê o que está esperando) e no Dashboard da Márcia (onde ela decide). Nunca uma cópia.
   function vagasPedidosHTML(){
     var L=vagasPedidosAbertos();
+    vagasReservaVigiar(L);
     if(!L.length) return '';
     var pode=vagasPodeEncaixar();
     var h='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+L.length+' pedido'+(L.length>1?'s':'')
@@ -8828,7 +9749,14 @@
             :((pay.troca&&pay.troca.de)?('troca (no lugar de '+fmtBR(pay.troca.de).slice(0,5)+')'):'reposição'))
         +' · pedido por '+esc(o.quem||'-')+'</small>'
         +(jaTem?('<small>nesse dia já estão: '+esc(jaTem)+'</small>'):'')+'</div>'
-        +(pode?('<div class="vg-acoes">'
+        // Em autorização num aparelho (6.46): sem botões — quem decide é quem está nele.
+        +(o._emAutorizacao?('<small style="margin-left:auto;color:var(--crm-critico);font-weight:800">em autorização'
+            +(vagasQuemReservou(o)?(' por '+esc(vagasQuemReservou(o))):' em outro aparelho')+'</small>')
+        // Já lançado por este aparelho (3ª rodada da 6.46): só o «Autorizar», que marca o pedido sem lançar de novo.
+        :(o._lancadoAqui && pode)?('<div class="vg-acoes"><small style="color:var(--crm-critico);font-weight:800">'
+            +(o._incertoAqui?'A conexão caiu no meio da gravação; toque em «Autorizar» de novo.':'Lançado neste aparelho; falta marcar o pedido como autorizado.')+'</small>'
+            +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button></div>')
+        :pode?('<div class="vg-acoes">'
             +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button>'
             +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vagasRecusar(\''+jsD+'\',\''+jsK+'\')">Recusar</button></div>')
           :'<small style="margin-left:auto;color:var(--crm-critico);font-weight:800">com a Márcia</small>')
@@ -8978,7 +9906,8 @@
     // "é troca", ela CONVERTE (a data sai dela e a reposição volta a ficar sem dia). Outra coisa
     // (avulso, troca antiga da Lista de troca, lançamento à mão) não se converte sozinha.
     var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===dia&&!repTrocaViva(l); })[0]||null;
-    var faltaDe=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de; })[0]||null;
+    // o crédito da saída antecipada (sa-) não é a falta do dia que sai (4ª rodada da 6.46, ATK3-5)
+    var faltaDe=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de&&!repSaidaAntecipada(l); })[0]||null;
     var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
     var noDia=v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; });
     if(noDia && !marcada){
@@ -8990,10 +9919,14 @@
     out.ok=true; out.tipo='troca';
     return out;
   }
-  // Grava a TROCA num update só: o crédito da falta do dia dele (o que já existia, se o tutor
-  // tinha avisado antes, ou um novo) recebe o dia novo e a marca `troca`; a reposição que a
-  // recepção tinha marcado para o dia novo, se houver, volta a ficar sem dia. Nada é apagado:
-  // o dia que saía de cada crédito fica em volta_desmarcada.
+  // Grava a TROCA. Com a falta do dia dele já lançada (o tutor tinha avisado antes), num update só:
+  // aquele crédito recebe o dia novo e a marca `troca`; a reposição que a recepção tinha marcado para
+  // o dia novo, se houver, volta a ficar sem dia. Nada é apagado: o dia que saía de cada crédito fica
+  // em volta_desmarcada.
+  // Sem a falta lançada (6.46): o crédito nasce no nó fixo fa-{de}, por transação, PRIMEIRO — dois
+  // aparelhos marcando a mesma troca caem no mesmo nó e só um entra. A reposição marcada só sai do
+  // dia novo DEPOIS que o crédito foi gravado: troca recusada não mexe em nada. Se o que já está lá
+  // é a mesma troca, volta {jaFeita:true}; se é a falta lançada com outro dia, a troca é recusada.
   function repTrocaGravar(p, de, para, aut){
     if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
     if(!p) return Promise.reject(new Error('sem o peludinho'));
@@ -9001,29 +9934,169 @@
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), agora=Date.now();
     var troca={de:de, para:para, quem:quem, ts:agora};
     var base='daycare/reposicao/'+pelKey(p)+'/lancamentos', up={};
-    var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de; })[0]||null;
+    // O crédito da saída antecipada da hospedagem (sa-) não é a falta do Day Care: não segura a data,
+    // e a troca não entra nele (4ª rodada da 6.46, ATK3-5 — a mesma regra do repCreditoVivoNaData).
+    var falta=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.data===de&&!repSaidaAntecipada(l); })[0]||null;
     var marcada=L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.volta===para&&!repTrocaViva(l); })[0]||null;
-    if(marcada && !(falta && marcada._id===falta._id)){
+    var converte=!!(marcada && !(falta && marcada._id===falta._id));
+    if(converte){
       up[marcada._id+'/volta']='';
       up[marcada._id+'/volta_desmarcada']={dia:para, quem:quem, ts:agora, motivo:'virou troca (no lugar de '+repBRdata(de)+')'};
     }
-    var credId;
-    if(falta){
-      credId=falta._id;
-      if(falta.volta && falta.volta!==para) up[credId+'/volta_desmarcada']={dia:falta.volta, quem:quem, ts:agora, motivo:'remarcada para '+repBRdata(para)};
-      up[credId+'/volta']=para; up[credId+'/volta_por']=quem; up[credId+'/volta_ts']=agora; up[credId+'/troca']=troca;
-      if(aut) up[credId+'/autorizacao']=aut;
-    } else {
-      credId=DB.ref(base).push().key;
-      var reg={tipo:'credito', data:de, motivo:'troca', obs:'Troca de dia pedida pelo tutor', volta:para, troca:troca, quem:quem, ts:agora};
-      if(aut) reg.autorizacao=aut;
-      up[credId]=reg;
-    }
-    return DB.ref(base).update(up).then(function(){
+    // O rastro e a resposta de sempre. `disse` é a frase "a reposição marcada voltou a ficar sem dia"
+    // do rastro — no ramo da falta já lançada, a mesma condição de antes da 6.46.
+    var fim=function(credId, convertida, faltaExistia, disse, marcadaPendente){
       if(typeof audit==='function') audit('reposicao-troca', pelNome(p)+': troca de '+repBRdata(de)+' para '+repBRdata(para)
-        +(marcada?' (a reposição marcada para '+repBRdata(para)+' voltou a ficar sem dia)':'')+(aut?(' — encaixe autorizado por '+(aut.quem||'-')):''),
+        +(disse?' (a reposição marcada para '+repBRdata(para)+' voltou a ficar sem dia)':'')
+        +(marcadaPendente?' (a reposição marcada para '+repBRdata(para)+' NÃO saiu do dia: desmarcar à mão)':'')
+        +(aut?(' — encaixe autorizado por '+(aut.quem||'-')):''),
         {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
-      return {credId:credId, convertida:!!(marcada && !(falta && marcada._id===falta._id)), faltaExistia:!!falta};
+      var r={credId:credId, convertida:convertida, faltaExistia:faltaExistia};
+      if(marcadaPendente) r.marcadaPendente=marcadaPendente;
+      return r;
+    };
+    // A troca entra na falta que já existe, por transação no nó dela (3ª rodada da 6.46). Nada é
+    // apagado: o dia que saía fica em volta_desmarcada. A mesma troca já gravada (o outro aparelho
+    // acabou de fazê-la) → {jaFeita}; o nó que deixou de ser a falta desse dia → a frase do que fazer.
+    // A reposição marcada para o dia novo só sai DEPOIS, como na falta nova (marcadaPendente).
+    var trocarNaFalta=function(credF){
+      var fez=false, visto=null;
+      return DB.ref(base+'/'+credF).transaction(function(atual){
+        fez=false; visto=atual||null;
+        if(atual===null || atual===undefined) return null;      // cache frio: o servidor responde
+        if(atual.tipo!=='credito' || String(atual.data||'')!==de) return;
+        if(atual.troca && String(atual.volta||'')===para && String(atual.troca.de||'')===de) return;   // a mesma troca
+        fez=true;
+        var n=Object.assign({}, atual);
+        if(atual.volta && atual.volta!==para) n.volta_desmarcada={dia:atual.volta, quem:quem, ts:agora, motivo:'remarcada para '+repBRdata(para)};
+        n.volta=para; n.volta_por=quem; n.volta_ts=agora; n.troca=troca;
+        if(aut) n.autorizacao=aut;
+        return n;
+      }).then(function(res){
+        if(!(res && res.committed && fez)){
+          var ex=null;
+          try{ ex=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null; }
+          catch(e){ ex=null; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+          if(!ex) ex=visto;
+          if(ex && ex.troca && ex.volta===para && String(ex.data||'')===de) return {jaFeita:true, credId:credF, existente:ex};
+          var er=new Error('A falta de '+repBRdata(de)+' mudou agora há pouco em outro aparelho. Espere a tela atualizar e faça a troca de novo.');
+          er.repAviso=true;      // a frase é para a tela inteira, sem "Não consegui"
+          throw er;
+        }
+        if(!converte) return fim(credF, false, true, !!marcada);
+        return DB.ref(base).update(up).then(function(){ return fim(credF, true, true, true); }, function(e){
+          _logFalhaGrav('repTrocaGravar (desmarcar a reposição de '+repBRdata(para)+')', e);
+          return fim(credF, false, true, false, marcada._id);
+        });
+      });
+    };
+    var credId=repFaltaChave(de, L);
+    var reg={tipo:'credito', data:de, motivo:'troca', obs:'Troca de dia pedida pelo tutor', volta:para, troca:troca, quem:quem, ts:agora};
+    if(aut) reg.autorizacao=aut;
+    // A troca recusada pela transação: a mesma troca → {jaFeita}; outra coisa → a frase do que fazer.
+    // `incerto` = não deu para conferir no servidor se o que está lá continua valendo.
+    var recusada=function(ex, chave, incerto){
+      if(ex && ex.troca && ex.volta===para){ var rj={jaFeita:true, credId:chave, existente:ex}; if(incerto) rj.incerto=true; return rj; }
+      var er=new Error('A falta de '+repBRdata(de)+' acabou de ser lançada em outro aparelho. Espere a tela atualizar e faça a troca de novo: o app aproveita essa falta, sem crédito novo.');
+      er.repAviso=true;          // a frase é para a tela inteira, sem "Não consegui"
+      throw er;
+    };
+    var gravar=function(chave, conferida){
+      var visto=null;
+      return DB.ref(base+'/'+chave).transaction(function(atual){
+        visto=atual||null;
+        if(atual) return;            // a falta desse dia acabou de entrar por outro aparelho
+        return reg;
+      }).then(function(res){
+        if(!(res && res.committed)){
+          var ex=null;
+          try{ ex=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null; }
+          catch(e){ ex=null; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+          if(!ex) ex=visto;
+          if(conferida) return recusada(ex, chave, false);
+          // CONFERIDA NO SERVIDOR (revisão da 6.46): o nó pode ser a troca já DESFEITA (estornada),
+          // com o estorno ainda a caminho do Extrato deste aparelho. Dizer "já está feita" perderia
+          // a troca. Relida a lista: há falta viva nesse dia → a regra de sempre; não há → a troca
+          // entra de novo, no sufixo seguinte (fa-{dia}-2…); sem a releitura, nada se afirma.
+          return repRelerLancamentos(p).then(function(Lr){
+            if(!Lr) return recusada(ex, chave, true);
+            var an2=repAnulados(Lr);
+            var vivas=Lr.filter(function(l){ return l&&l.tipo==='credito'&&!an2[l._id]&&l.data===de&&!repSaidaAntecipada(l); });
+            var viva=vivas.filter(function(l){ return l._id===chave; })[0]||vivas[0]||null;
+            if(viva) return recusada(viva, viva._id, false);
+            return gravar(repFaltaChave(de, Lr), true);
+          });
+        }
+        if(!converte) return fim(chave, false, false, false);
+        // O crédito da troca já está gravado: só agora a reposição marcada sai do dia novo. Se esta
+        // gravação falhar, a troca vale e a tela diz que a reposição continua marcada.
+        return DB.ref(base).update(up).then(function(){ return fim(chave, true, false, true); }, function(e){
+          _logFalhaGrav('repTrocaGravar (desmarcar a reposição de '+repBRdata(para)+')', e);
+          return fim(chave, false, false, false, marcada._id);
+        });
+      });
+    };
+    if(falta){
+      // A FALTA DO EXTRATO CONFERIDA NO SERVIDOR (3ª rodada da 6.46, ATK2-12, -13 e -16): o Extrato
+      // deste aparelho pode ter a falta e ainda não o ESTORNO dela, feito em outro aparelho segundos
+      // antes (a troca desfeita, a falta tirada). O update de antes gravava a troca dentro do crédito
+      // estornado: a tela confirmava a troca e o saldo ficava 0. Agora:
+      //  1. uma ida ao servidor: a transação que devolve o nó da falta como está (não muda nada).
+      //     Quando ela volta, o servidor já entregou a este aparelho tudo o que gravou antes dela (o
+      //     Firebase entrega na ordem), o estorno inclusive — e o nó estornado fica como estava;
+      //  2. a releitura (sai do cache do SDK, já em dia) confere a falta;
+      //  3. estornada e sem outra viva nesse dia → a troca entra como falta nova, no sufixo seguinte
+      //     (fa-{dia}-2…), pelo caminho de quando não havia falta; viva → a troca entra nela.
+      // Sem a releitura (não respondeu), segue como antes: na falta do Extrato.
+      var falta0=falta._id;
+      return DB.ref(base+'/'+falta0).transaction(function(atual){
+        if(atual===null || atual===undefined) return null;      // cache frio: o servidor responde
+        return atual;                                            // nada muda: é só a ida ao servidor
+      }).then(function(){ return repRelerLancamentos(p); }).then(function(Lr){
+        if(!Lr) return trocarNaFalta(falta0);
+        var an2=repAnulados(Lr);
+        var vivas=Lr.filter(function(l){ return l&&l.tipo==='credito'&&!an2[l._id]&&l.data===de&&!repSaidaAntecipada(l); });
+        var viva=vivas.filter(function(l){ return l._id===falta0; })[0]||vivas[0]||null;
+        if(viva) return trocarNaFalta(viva._id);
+        if(an2[falta0]) return gravar(repFaltaChave(de, Lr), true);   // estornada no outro aparelho: falta nova
+        return trocarNaFalta(falta0);                                  // fora da lista relida: vale a do Extrato
+      });
+    }
+    return gravar(credId, false);
+  }
+  // A troca que outro aparelho já fez (6.46): a frase da tela, com quem fez. Sem a conferência no
+  // servidor (`incerto`), a frase não afirma que ela continua valendo.
+  // `local` (3ª rodada da 6.46): a troca estava no Extrato deste aparelho — pode ter sido feita
+  // nele mesmo, então a frase não diz "em outro aparelho".
+  function repTrocaJaFeitaTexto(r, de, para){
+    var ex=(r&&r.existente)||{};
+    var quem=String(((ex.troca||{}).quem)||ex.quem||'').trim(); if(quem==='-') quem='';
+    var local=!!(r && r.local);
+    if(r && r.incerto) return 'Essa troca já foi lançada'+(local?'':' em outro aparelho')+(quem?(' (por '+quem+')'):'')+': '+repBRdata(de)+' → '+repBRdata(para)
+      +'. Não consegui conferir agora se ela continua valendo: confira no Extrato quando a tela atualizar. Nada foi lançado de novo.';
+    if(local) return 'Essa troca já está feita'+(quem?(' (por '+quem+')'):'')+': '+repBRdata(de)+' → '+repBRdata(para)+'. Nada foi lançado de novo.';
+    return 'Essa troca já está feita (em outro aparelho'+(quem?(', por '+quem):'')+'): '+repBRdata(de)+' → '+repBRdata(para)+'. Nada foi lançado de novo.';
+  }
+  // A mesma troca já no Extrato deste aparelho: o crédito vivo com a troca, a falta `de` e o dia
+  // novo `para` — o mesmo filtro do "Essa troca já está feita" do dxVereditoTroca.
+  function repTrocaFeitaNoExtrato(p, de, para){
+    var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){ L=[]; }
+    var an=repAnulados(L);
+    return L.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.troca&&l.data===de&&l.volta===para; })[0]||null;
+  }
+  // A troca do Extrato conferida no servidor antes de o pedido da Márcia fechar como atendido (3ª
+  // rodada da 6.46). A releitura vem depois da reserva — uma ida ao servidor —, então o cache já tem o
+  // que o servidor gravou antes dela. Viva → {jaFeita, local}; desfeita agora há pouco em outro
+  // aparelho → a frase do que fazer (o pedido volta a ficar em aberto); sem a releitura → `incerto`.
+  function repTrocaJaFeitaConferir(p, de, para, ex){
+    return repRelerLancamentos(p).then(function(Lr){
+      if(!Lr) return {jaFeita:true, local:true, incerto:true, credId:(ex&&ex._id)||'', existente:ex||null};
+      var an=repAnulados(Lr);
+      var viva=Lr.filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&l.troca&&l.data===de&&l.volta===para; })[0]||null;
+      if(viva) return {jaFeita:true, local:true, credId:viva._id, existente:viva};
+      var er=new Error('A troca '+repBRdata(de)+' → '+repBRdata(para)+', que aparece no Extrato deste aparelho, foi desfeita em outro aparelho agora há pouco. Nada foi lançado: quando a tela atualizar, toque em «Autorizar» de novo.');
+      er.repAviso=true;          // a frase é para a tela inteira, sem "Não consegui"
+      throw er;
     });
   }
   // As linhas da confirmação e a mensagem para o tutor — as mesmas pela recepção e pela Márcia.
@@ -9034,6 +10107,8 @@
        'Na planilha: falta avisada em '+repBRdata(de)+' e Reposição em '+repBRdata(para)+' (na próxima conferência, até '+DASH_AUTO_MIN+' min).',
        'As reposições que '+(ela?'ela':'ele')+' já tinha continuam as mesmas.']
         .concat((r&&r.convertida)?['A reposição que estava marcada para '+repBRdata(para)+' voltou a ficar sem dia.']:[])
+        // 6.46: a troca entrou, mas a reposição marcada não saiu do dia (a 2ª gravação falhou).
+        .concat((r&&r.marcadaPendente)?['A reposição que estava marcada para '+repBRdata(para)+' continua marcada: não consegui tirar o dia agora. Toque em «desmarcar» ao lado da data, na tela de Reposições.']:[])
         .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
       repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
   }
@@ -9105,6 +10180,9 @@
     var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
     if(!v.ok){ diz(v.motivo); return; }
     if(REP_FER_LENDO){ diz(REP_FER_ESPERA); return; }
+    // Sem o Extrato (6.46): nem a troca sabe se a falta já entrou, nem o veredito sabe o saldo
+    // (sem ele, o dia sairia como avulso cobrado de quem tem reposição).
+    if(!REPO_LIDO){ diz(repExtratoEsperaTexto()); return; }
     var vg=vagasDoDia(dia);
     if(!vg.lido){ diz('Ainda estou conferindo as vagas de '+repBRdata(dia)+'. Espere um instante e confirme de novo.'); return; }
     if(vg.cheio && !vagasPodeEncaixar()){
@@ -9126,15 +10204,24 @@
       });
     };
     var falhou=function(e){ solta(); diz('Não consegui: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.'); };
+    // A troca é transação: a conexão que cai no meio ('disconnect') pode tê-la deixado gravada (4ª
+    // rodada da 6.46, QA646C-03). A tela não diz "Nada foi salvo".
     if(v.tipo==='troca'){
       repTrocaGravar(p, v.de, dia, aut).then(function(r){
+        // A mesma troca acabou de ser feita em outro aparelho (6.46): nada entrou de novo.
+        if(r && r.jaFeita){ solta(); diz(repTrocaJaFeitaTexto(r, v.de, dia)); return; }
         repAuditDiaDele(p, dia);
         solta(); dxFechar();
         repTrocaFeitaModal(p, v.de, dia, r, aut);
         vagasCarregarDia(dia, true).then(function(){
           try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
         });
-      }).catch(falhou);
+      }).catch(function(e){
+        // A falta desse dia entrou por outro aparelho com outro dia de repor: a frase diz o que fazer.
+        if(e && e.repAviso){ solta(); diz(e.message); return; }
+        if(repConexaoCaiu(e)){ solta(); diz(REP_CONEXAO_CAIU_TROCA); return; }
+        falhou(e);
+      });
       return;
     }
     if(v.tipo==='reposicao'){
@@ -9174,6 +10261,9 @@
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
     var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
     if(!v.ok){ if(w) w.textContent=v.motivo; return; }
+    // Sem o Extrato (revisão da 6.46, QA646-05): o veredito não sabe o saldo, e o pedido sairia como
+    // AVULSO para quem tem reposição — e a Márcia, ao autorizar, lançaria o avulso pelo tipo do pedido.
+    if(!REPO_LIDO){ if(w) w.textContent=repExtratoEsperaTexto(); return; }
     var cred=(v.tipo==='avulso'||v.tipo==='troca')?null:repCreditoLivre(p);
     // A troca pede a vaga como reposição (é o que ela ocupa), com a troca dentro: quando a
     // Márcia autoriza, o app faz a troca inteira — falta avisada e Reposição.
@@ -9190,6 +10280,10 @@
       if(typeof zAlertao==='function') zAlertao('PEDIDO ENVIADO À MÁRCIA', l, {botao:'Fechar'});
       else alert(l.join('\n'));
     }).catch(function(e){
+      // A Márcia já está no pedido (3ª rodada da 6.46): a frase diz, sem "Não consegui".
+      if(e && e.vagaAviso){ if(w) w.textContent=e.message; return; }
+      // O pedido é transação (3ª rodada): a conexão que cai no meio pode tê-lo deixado gravado (4ª rodada).
+      if(repConexaoCaiu(e)){ if(w) w.textContent=REP_CONEXAO_CAIU_PEDIDO; return; }
       if(w) w.textContent='Não consegui avisar a Márcia: '+((e&&e.message)||e)+'. Nada foi salvo.';
     });
   }
@@ -9292,6 +10386,10 @@
     // O que já foi estornado aparece riscado: o extrato conta a história inteira, mas quem
     // lê precisa ver de relance o que ainda vale e o que foi desfeito.
     const anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+    // A MESMA FALTA LANÇADA DUAS VEZES (6.46): as que entraram em dobro antes da chave fixa ganham
+    // o selo, com quem lançou cada uma e a hora. Só mostra: quem decide estornar é a pessoa, pelo
+    // «Estornar» de sempre (com o motivo escrito; nada é apagado).
+    const repetidas=repRepetidas(L);
     document.getElementById('repExtTit').textContent='Extrato — '+pelNome(p);
     document.getElementById('repExtSub').innerHTML='Saldo atual: <b>'+saldo+'</b> dia(s) de reposição'
       +(presos?(' · <b>'+presos+'</b> reservado(s) em orçamento de hospedagem · <b>'+Math.max(0,saldo-presos)+'</b> livre(s)'):'')
@@ -9317,17 +10415,27 @@
         : ((l.tipo==='estorno'&&l.dia_devolvido)?(' · devolveu a reposição de '+repBRdata(l.dia_devolvido)):'')
           +((l.tipo==='uso'&&(l.lanc||l.obs===REP_OBS_LANC))?' · pelos Lançamentos do dia':'');
       const risco=anulado[l._id]?'text-decoration:line-through;opacity:.6':'';
+      const grupoRep=(l.tipo==='credito')?(repetidas[String(l.data||'')]||[]):[];
+      const seloRep=grupoRep.some(function(x){ return x._id===l._id; })?repRepetidaSelo(grupoRep):'';
       // A devolução é +1 para o saldo: a cor é a do crédito, não a do erro.
       return '<div class="rep-lanc"><span class="lc-tipo '+((l.tipo==='estorno'&&l.dia_devolvido)?'credito':l.tipo)+'" style="'+risco+'">'+rot+'</span>'
         +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+(REP_MOTIVOS[l.motivo]||l.motivo||'—')
         +(l.obs?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
         +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')
-          +repExtratoAlguns(l)+escAttr(diaTxt)+'</div></span>'
+          +repExtratoAlguns(l)+escAttr(diaTxt)+'</div>'
+        +(seloRep?('<div class="lc-meta" style="color:var(--crm-critico);font-weight:800">'+escAttr(seloRep)+'</div>'):'')+'</span>'
         +((l.tipo==='credito'&&!anulado[l._id])?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
         +(repUsoDevolvivel(l, anulado)?'<button onclick="repDevolverUso('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--z-blue);cursor:pointer;font-family:inherit">Devolver</button>':'')
         +'</div>';
     }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>');
     document.getElementById('repExtratoModal').classList.add('on');
+  }
+  // O selo da repetida (6.46): "Repetida — lançada 2 vezes", com quem e quando de cada uma.
+  function repRepetidaSelo(grupo){
+    return 'Repetida — lançada '+grupo.length+' vezes: '+grupo.map(function(x){
+      var q=repQuemDe(x)||'sem nome', qd=repQuandoDe(x.ts);
+      return q+(qd?(' em '+qd):' (sem a hora)');
+    }).join(' · ');
   }
   function repFecharExtrato(){ document.getElementById('repExtratoModal').classList.remove('on'); }
 
@@ -17516,7 +18624,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-07-09';
+  const APP_VERSAO='2026-10-08-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
