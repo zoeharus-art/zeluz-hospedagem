@@ -20705,11 +20705,14 @@
   // acima diz "plano novo" — mas a correção para alguns dias depois (23/09 → 25/09 num trimestral,
   // 10/07 → 28/07 num mensal) tem o mesmo jeito de uma renovação. Desde a 6.44 isso é dinheiro: a
   // renovação conta os DOIS pagamentos no fechamento do mês. O app pergunta quando não dá para
-  // saber: o plano gravado foi confirmado HOJE (a data errada sendo consertada); ele foi lançado já
-  // vencido (o "Manter … mesmo assim" do aviso de vigência vencida — QA da 6.44, 3ª rodada); ou o
-  // pagamento novo veio com ele ainda longe de acabar (mais de 15 dias antes do fim). A
-  // renovação de sempre — paga nos últimos 15 dias do plano, ou depois que ele acabou (o Baque:
-  // pagou 02/09 e renovou 30/09 para outubro) — não pergunta nada. (A mesma regra está no financeiro-logica.js,
+  // saber: o plano gravado foi confirmado HOJE (a data errada sendo consertada); a data nova não é
+  // depois do dia em que o plano gravado foi lançado (QA da 6.44, 4ª rodada: o tutor paga e só
+  // depois o pagamento é lançado — o pagamento seguinte vem DEPOIS desse dia, e a data certa de um
+  // lançamento errado vem antes dele ou no mesmo dia: o mês trocado no calendário, 28/08 no lugar
+  // de 28/09, e o plano lançado já vencido com o "Manter … mesmo assim"); ou o pagamento novo veio
+  // com ele ainda longe de acabar (mais de 15 dias antes do fim). A renovação de sempre — paga nos
+  // últimos 15 dias do plano, ou depois que ele acabou (o Baque: pagou 02/09 e renovou 30/09 para
+  // outubro) — não pergunta nada. (A mesma regra está no financeiro-logica.js,
   // finPerguntariaNovoOuCorrecao, para pedir "confira" nos registros antigos.)
   function renovPerguntaNovoOuCorrecao(g, c, hoje){
     g=g||{}; c=c||{};
@@ -20717,7 +20720,7 @@
     if(!ehISO(g.inicio) || !ehISO(c.inicio) || String(g.inicio)===String(c.inicio)) return false;
     if(renovEhCorrecao(g, c, '')) return false;
     if(ehISO(g.quando) && String(g.quando)===String(hoje||'')) return true;
-    if(ehISO(g.quando) && ehISO(g.fim) && String(g.fim) < String(g.quando)) return true;
+    if(ehISO(g.quando) && String(c.inicio) <= String(g.quando)) return true;
     return ehISO(g.fim) && String(c.inicio) < addDiasISO(g.fim, -15);
   }
   // A linha do resumo do Confirmar sobre os dias de cada mês do plano GRAVADO ('' quando ele não
@@ -20969,7 +20972,8 @@
         +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
         +(function(){ const vh=renovValorDoHist(o); return vh.v?(' · <span class="renov-hist-valor" style="font-weight:800">'+fmtCent(vh.v)+(vh.pelaTabela?' <span style="font-weight:600;color:var(--muted)">(pela tabela)</span>':'')+'</span>'):''; })()
         +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
-        +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(renovMotivoRotulo(o.motivo)):'')+'</div></div>';
+        +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(renovMotivoRotulo(o.motivo)):'')
+        +(o.motivo_antes?' ('+esc(renovMotivoRotulo(o.motivo_antes))+' por engano)':'')+'</div></div>';
     }).join('');
     return '<div id="renovHist" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm)">'
       +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Renovações anteriores ('+hist.length+')</div>'
@@ -21014,12 +21018,17 @@
     // O "desfeita" ANTIGO (de antes da 6.44, sem a marca) confirmado ANTES do plano atual é o plano
     // PAGO que o "desfazer duas vezes" de antes deixou marcado assim (QA da 6.44): o Desfazer desfaz
     // o atual, como qualquer outro — refazer ali apagaria o pagamento dele no Desfazer seguinte.
-    // (A mesma regra do fechamento do mês: confirmado antes do atual E não é a renovação desfeita —
-    // o atual não começa antes dele. QA da 6.44, 3ª rodada.)
-    const antPagoC=String(ant.motivo||'')==='desfeita' && ant.motivo_conferido!==true
-      && !Object.prototype.hasOwnProperty.call(ant,'motivo_do_que_voltou') && String(ant.quando||'')<String(atual.quando||'')
+    // (A mesma regra do fechamento do mês: confirmado antes do atual, ou no mesmo dia — QA da 6.44,
+    // 4ª rodada —, E não é a renovação desfeita: o atual não começa antes dele. 3ª rodada.)
+    const antAntigoC=String(ant.motivo||'')==='desfeita' && ant.motivo_conferido!==true
+      && !Object.prototype.hasOwnProperty.call(ant,'motivo_do_que_voltou');
+    const qAntC=String(ant.quando||''), qAtuC=String(atual.quando||'');
+    const antPagoC=antAntigoC && (qAntC<qAtuC || (qAntC===qAtuC && /^\d{4}-\d{2}-\d{2}$/.test(qAntC)))
       && !renovEhCorrecao(ant, atual, '');
-    if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, atual, ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
+    // O refazer de um "desfeita" antigo não sabe se o plano que sai foi pago (QA da 6.44, 4ª rodada):
+    // ele vai marcado, e o fechamento do mês pede "confira" quando o conta.
+    if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, antAntigoC?Object.assign({}, atual, {refeito_de_antigo:true}):atual,
+      ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
     else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:(antPagoC?'renovação':String(ant.motivo||'')),
       conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}), 'desfeita');
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
@@ -21412,6 +21421,26 @@
         {sim:'Pagamento novo: o tutor pagou de novo', nao:'Correção da data: um pagamento só', corTitulo:'#234D67'});
       escolhaC=novoP?'novo':'correcao';
     }
+    // O PLANO QUE SAIU NA TROCA DE CATEGORIA (QA da 6.44, 4ª rodada). Virar morador, avulso ou
+    // hóspede manda a vigência para "Renovações anteriores" ("virou …"), e ela conta no mês em que
+    // foi paga. A ficha que volta a ter plano com OUTRA data dentro daquele período (a troca foi
+    // engano, e o plano foi lançado de novo) contaria os dois pagamentos: o app pergunta, e a
+    // resposta fica gravada no próprio registro do histórico, depois do Confirmar.
+    let virouC=null, virouNovoC=false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(gravado.inicio||'')){
+      const h0=renovHistDe(ex)[0], isoV=/^\d{4}-\d{2}-\d{2}$/;
+      if(h0 && /^virou /.test(String(h0.motivo||'')) && isoV.test(h0.inicio||'') && isoV.test(h0.fim||'')
+         && String(h0.inicio)!==String(calc.inicio) && String(calc.inicio)<=String(h0.fim)){
+        const plV=planos()[h0.plano]||{};
+        virouC=h0;
+        virouNovoC=await zPergunta('PAGAMENTO NOVO OU CORREÇÃO DA DATA?',
+          ['O plano que saiu quando a ficha '+renovMotivoRotulo(h0.motivo)+' ('+(plV.rotulo||h0.plano||'—')+') foi pago em '+fmtBR(h0.inicio)+' e valia até '+fmtBR(h0.fim)+'.',
+           'A data do pagamento agora é '+fmtBR(calc.inicio)+', dentro daquele plano.',
+           'Se o tutor pagou de novo, é pagamento novo: os dois pagamentos ('+fmtBR(h0.inicio)+' e '+fmtBR(calc.inicio)+') contam no fechamento do mês.',
+           'Se é o mesmo pagamento lançado de novo (a troca de categoria foi engano), é correção: conta um pagamento só, o de '+fmtBR(calc.inicio)+'.'],
+          {sim:'Pagamento novo: o tutor pagou de novo', nao:'Correção da data: um pagamento só', corTitulo:'#234D67'});
+      }
+    }
     // CORREÇÃO OU PLANO NOVO, com a resposta da pergunta acima (QA da 6.30, achado 1).
     const correcaoC=renovEhCorrecao(gravado, calc, escolhaC);
     // Sem modo escolhido na tela, os dias de cada mês seguem a leitura FINAL: a correção do mesmo
@@ -21520,6 +21549,22 @@
     // 6.44: a correção vai para o histórico dita como correção — o fechamento do mês não conta
     // duas vezes o mesmo pagamento (o plano corrigido e o que entrou no lugar dele).
     if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, correcaoC?'correção':'renovação');
+    // A resposta sobre o plano que saiu na troca de categoria vai para o registro dele: "pagamento
+    // novo" conta os dois (decidido pelo app); "correção" conta um só (o registro vira correção, e
+    // o rastro diz qual era a troca).
+    if(virouC){
+      const upV=virouNovoC?{motivo_conferido:true}:{motivo:'correção', motivo_antes:String(virouC.motivo||''), motivo_conferido:true};
+      if(DB) await DB.ref('daycare/cadastro/'+k+'/renov_hist/'+virouC._id).update(upV)
+        .then(function(){
+          // a ficha aberta já mostra a resposta em "Renovações anteriores" (o ouvinte do cadastro confirma logo depois)
+          try{ const cV=pelCadCache[k]; if(cV && cV.renov_hist && cV.renov_hist[virouC._id]){
+            const rhV=Object.assign({}, cV.renov_hist); rhV[virouC._id]=Object.assign({}, rhV[virouC._id], upV);
+            pelCadCache[k]=Object.assign({}, cV, {renov_hist:rhV}); } }
+          catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige a tela logo depois */
+        })
+        .catch(function(e){ _logFalhaGrav('histórico de renovação '+k+'/'+virouC._id, e); });
+      else _logFalhaGrav('histórico de renovação '+k+' (banco reconectando)', new Error('banco reconectando'));
+    }
     // Vigência que NÃO é mais do meio do mês não herda o "para onde voltar" da anterior:
     // aquele vencimento já foi para "Renovações anteriores". Herdar faria o Desfazer do
     // meio do mês devolver uma data de outro ciclo (Adriana, 22/set/2026).
@@ -21529,7 +21574,8 @@
     if(typeof audit==='function') audit('renovacao',
       'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
-      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorGravaC)):(' · valor do plano '+fmtCent(valorGravaC)+' ('+contaC+')')),
+      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorGravaC)):(' · valor do plano '+fmtCent(valorGravaC)+' ('+contaC+')'))
+      +(virouC?(' · o plano que saiu quando a ficha '+renovMotivoRotulo(virouC.motivo)+' ('+fmtBR(virouC.inicio)+'): '+(virouNovoC?'pagamento novo, os dois contam':'correção, um pagamento só')):''),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
