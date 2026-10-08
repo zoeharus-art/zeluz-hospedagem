@@ -5260,9 +5260,12 @@ provaAsync('corrigir a data de pagamento para um dia ANTES da gravada é correç
   igual(renov620(L), ['2026-09-14', '', '2026-09-30']);
 });
 provaAsync('depois da trava "nasce vencida", nenhuma outra pergunta refaz o período que a pessoa aceitou', async () => {
-  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-07-01', fim: '2026-09-30' }, '2026-08-10', [false, true, true]);
-  assert.strictEqual(L.perg.length, 2, JSON.stringify(L.perg.map((p) => p.t)));
+  // 6.44: entre a trava e o resumo entra a pergunta "pagamento novo ou correção" (o plano gravado vai
+  // até 30/09 e a data nova é 10/08) — ela decide o que o fechamento do mês conta, não o período.
+  const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-07-01', fim: '2026-09-30' }, '2026-08-10', [false, false, true]);
+  igual(L.perg.map((p) => p.t), ['ATENÇÃO — esta vigência já nasce VENCIDA', 'PAGAMENTO NOVO OU CORREÇÃO DA DATA?', 'CONFIRA ANTES DE GRAVAR']);
   igual(renov620(L), ['2026-08-10', '', '2026-08-31']);
+  igual(L.hist[0].m, 'correção');
 });
 provaAsync('K10 — ficha antiga vencida (28/08 → 31/08) reconfirmada: a pergunta do período vem ANTES da trava, e "Manter" nas duas grava 28/08 → 31/08', async () => {
   const L = await confirmar620({ plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-08-28', fim: '2026-08-31' }, null, [false, false, true]);
@@ -10797,7 +10800,9 @@ prova('6.44 QA — dois pagamentos anteriores no mesmo mês: o dinheiro lançado
   const A = Object.assign(JUL644(), { inicio: '2026-07-02' });                                   // Gold, R$ 1.077,00
   const B = { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-07-15', fim: '2026-07-31' };   // Silver, R$ 387,00
   const C = Object.assign(GOLD1X630(), { inicio: '2026-07-28', vig_inicio: '2026-10-01', fim: '2026-12-31' });
-  const D = dados36(cad36(C, { renov_hist: { b: hist644(B, 200, 'renovação'), a: hist644(A, 300, 'desfeita') } }),
+  // os dois decididos pelo app ("renovação" marcada), saídos do histórico em ordem diferente da data do pagamento
+  const mk = (o, t) => Object.assign({}, o, { substituidoEm: t, por: 'Teste', motivo: 'renovação', motivo_conferido: true });
+  const D = dados36(cad36(C, { renov_hist: { b: mk(B, 200), a: mk(A, 300) } }),
     { pagamentos: { '2026-07': { x1: { chave: CH36, valor_cent: 38700, data: '2026-07-02' } } } });
   const r = res36(D, '2026-07');
   igual(r.porFILHOt.map((o) => [o.venceEm, o.pago]).sort(), [['2026-07-02', 38700], ['2026-07-15', 0], ['2026-07-28', 0]]);
@@ -10923,7 +10928,7 @@ prova('6.44 QA2 FIN-002 — registros de ANTES da 6.44: o "desfeita" mais novo n
   const C5 = dados36(cad36(G644c('2026-10-02', '2027-01-01', '2026-10-02'), { renov_hist: { a: hist644(G644c('2026-07-05', '2026-10-04', '2026-07-05'), 500, 'desfeita') } }));
   const j5 = res36(C5, '2026-07').porFILHOt;
   igual([j5.length, j5[0].origem], [1, 'renovacao-anterior']);
-  assert.ok(/^registro de antes de 08\/10\/2026 marcado "desfeita" \(desfazer duas vezes, para trazer a renovação de volta\): conta como pagamento; confira$/.test(j5[0].confira), j5[0].confira);
+  assert.ok(/^registro antigo \(de antes de o app perguntar se foi pagamento novo ou correção da data\), marcado "desfeita" \(desfazer duas vezes, para trazer a renovação de volta\): conta como pagamento; confira$/.test(j5[0].confira), j5[0].confira);
   // o desfeito antigo que começa DEPOIS do plano que ficou é a renovação desfeita: não conta, mesmo confirmado antes dele
   const C5r = dados36(cad36(G644c('2026-10-05', '2026-12-31', '2026-10-06'), { renov_hist: { a: hist644(G644c('2026-10-10', '2027-01-09', '2026-10-01'), 500, 'desfeita') } }));
   igual(res36(C5r, '2026-10').porFILHOt.map((o) => o.origem || 'atual'), ['atual']);
@@ -10936,12 +10941,22 @@ prova('6.44 QA2 FIN-002 — registros de ANTES da 6.44: o "desfeita" mais novo n
   const D = dados36(cad36(S('2026-09-21', '2026-10-31', '2026-09-21'), { renov_hist: { a: hist644(S('2026-09-02', '2026-09-30', '2026-09-21'), 100) } }));
   const s9 = res36(D, '2026-09').porFILHOt.filter((o) => o.origem);
   igual(s9.length, 1);
-  assert.ok(/confirmado no mesmo dia do plano que entrou no lugar: confira se foi pagamento novo ou correção da data$/.test(s9[0].confira), s9[0].confira);
+  assert.ok(/: o pagamento seguinte veio cedo — confira se foi pagamento novo ou correção da data$/.test(s9[0].confira), s9[0].confira);
   const L = J36('recLinhasDoMes(' + JSON.stringify(res36(D, '2026-09')) + ')');
   assert.ok(L.some((x) => x.confira && /confira se foi pagamento novo ou correção da data/.test(x.obs)), 'a lista e o Excel dizem "confira"');
-  // confirmado noutro dia: conta sem aviso
-  const D2 = dados36(cad36(S('2026-09-21', '2026-10-31', '2026-09-21'), { renov_hist: { a: hist644(S('2026-09-02', '2026-09-30', '2026-09-02'), 100) } }));
+  // a renovação de sempre (noutro mês, perto do fim, confirmada noutro dia): conta sem aviso
+  const D2 = dados36(cad36(S('2026-10-01', '2026-10-31', '2026-10-01'), { renov_hist: { a: hist644(S('2026-09-02', '2026-09-30', '2026-09-02'), 100) } }));
   igual(res36(D2, '2026-09').porFILHOt.filter((o) => o.origem).map((o) => 'confira' in o), [false]);
+  // a correção do dia feita noutro dia (10/09 → 25/09, num trimestral, antes da 6.44): conta, com "confira"
+  const V = dados36(cad36(G644c('2026-09-25', '2026-12-31', '2026-09-26'), { renov_hist: { a: hist644(G644c('2026-09-10', '2026-11-30', '2026-09-10'), 100) } }));
+  const v9 = res36(V, '2026-09').porFILHOt.filter((o) => o.origem);
+  igual([v9.length, /confira se foi pagamento novo ou correção da data$/.test(v9[0].confira)], [1, true]);
+  // "virou morador" antigo, com o mesmo "quando" do renov que ficou: conta e sem "confira" (não houve pagamento depois)
+  const VM = dados36(cad36({ plano: 'morador', quando: '2026-07-05' }, { renov_hist: { a: hist644(JUL644(), 100, 'virou morador') } }));
+  igual(res36(VM, '2026-07').porFILHOt.map((o) => [o.valor, 'confira' in o]), [[107700, false]]);
+  // registro MARCADO confirmado no mesmo dia do plano seguinte: sem "confira" (a decisão foi do app)
+  const MK = dados36(cad36(S('2026-09-21', '2026-10-31', '2026-09-21'), { renov_hist: { a: hist644c(S('2026-09-02', '2026-09-30', '2026-09-21'), 100, 'renovação') } }));
+  igual(res36(MK, '2026-09').porFILHOt.filter((o) => o.origem).map((o) => 'confira' in o), [false]);
   // o motivo decidido pelo app (marcado) vale sem adivinhar: "renovação" conta, "correção" não
   const T = dados36(cad36(S('2026-09-21', '2026-09-30', '2026-09-21'), { renov_hist: { a: hist644c(S('2026-09-02', '2026-09-30', '2026-09-02'), 100, 'renovação') } }));
   igual(res36(T, '2026-09').porFILHOt.length, 2, 'a regra do mesmo fim não desfaz a decisão gravada');
@@ -11014,7 +11029,108 @@ prova('6.44 QA2 — lista: o plano anterior de quem virou morador diz isso; o qu
   const src = fs.readFileSync(APP, 'utf8');
   const bl = src.slice(src.indexOf('  function recLinhasDoMes(resumo){'), src.indexOf('  // Redesenha o quadro onde ele estiver na tela'));
   igual((bl.match(/fmtCent\(/g) || []).length, 1, 'só o recBRL cai no fmtCent (quando o Financeiro não carregou)');
-  assert.ok(/if\(o\.origem==='renovacao-anterior'\) rotPlano\+=' · renovação anterior';/.test(src));
+  assert.ok(src.indexOf("if(o.origem==='renovacao-anterior') rotPlano+=(/^virou /.test(String(o.motivoHist||''))?(' · plano anterior (depois '+renovMotivoRotulo(o.motivoHist)+')'):' · renovação anterior');") > 0);
+});
+
+// ---- Re-QA da 6.44 (Quinn + caçada de dinheiro): a correção da data que tinha jeito de renovação (FIN-005) e os registros antigos
+provaAsync('6.44 QA3 FIN-005 — corrigir 23/09 → 25/09 num trimestral: o Confirmar PERGUNTA "pagamento novo ou correção"; correção = um pagamento, pagamento novo = dois', async () => {
+  const G = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-09-23', fim: '2026-11-30', mesRenov: 'novembro de 2026', quando: '2026-09-23', valor_plano_cent: 107700, mensalidade_cent: 35900 };
+  const L = await monta630({ ex: EX630(G), hoje: '2026-09-26', rasc: { inicio: '2026-09-25' }, resp: [false, true] }, 'await confirmarRenovacao();');
+  igual(L.perg.map((p) => p.t), ['PAGAMENTO NOVO OU CORREÇÃO DA DATA?', 'CONFIRA ANTES DE GRAVAR']);
+  const q = L.perg[0];
+  igual([q.op.sim, q.op.nao], ['Pagamento novo: o tutor pagou de novo', 'Correção da data: um pagamento só']);
+  assert.ok(q.l.indexOf('Se só a data estava errada, é correção: conta um pagamento só, o de 25/09/2026.') >= 0
+    && q.l.indexOf('Nas duas respostas, o plano fica de 01/10/2026 até 31/12/2026.') >= 0, JSON.stringify(q.l));
+  igual([L.hist[0].m, L.grav[0].renov.inicio, L.grav[0].renov.vig_inicio, L.grav[0].renov.fim, L.grav[0].renov.valor_plano_cent], ['correção', '2026-09-25', '2026-10-01', '2026-12-31', 107700]);
+  const fim = (Lx) => dados36(cad36(Lx.grav[0].renov, { renov_hist: { a: hist644c(Lx.hist[0].a, 100, Lx.hist[0].m) } }));
+  igual(res36(fim(L), '2026-09').porFILHOt.map((o) => [o.venceEm, o.origem || 'atual', o.valor]), [['2026-09-25', 'atual', 107700]]);
+  // "Pagamento novo": os dois pagamentos contam (é o que a pessoa disse)
+  const N = await monta630({ ex: EX630(G), hoje: '2026-09-26', rasc: { inicio: '2026-09-25' }, resp: [true, true] }, 'await confirmarRenovacao();');
+  igual([N.hist[0].m, res36(fim(N), '2026-09').porFILHOt.length], ['renovação', 2]);
+  // fechar a pergunta sem escolher vale como correção (nunca inventa dinheiro)
+  const F = await monta630({ ex: EX630(G), hoje: '2026-09-26', rasc: { inicio: '2026-09-25' }, resp: [undefined, true] }, 'await confirmarRenovacao();');
+  igual(F.hist[0].m, 'correção');
+  // a variante 23/09 → 03/10 também pergunta
+  const O = await monta630({ ex: EX630(G), hoje: '2026-10-04', rasc: { inicio: '2026-10-03' }, resp: [false, true] }, 'await confirmarRenovacao();');
+  igual([O.perg[0].t, O.hist[0].m], ['PAGAMENTO NOVO OU CORREÇÃO DA DATA?', 'correção']);
+});
+provaAsync('6.44 QA3 — a pergunta só onde não dá para saber: o primeiro plano corrigido no mesmo dia pergunta; a renovação de sempre (perto do fim ou para o período seguinte) não', async () => {
+  // A: o primeiro plano gravado hoje com 05/09 por engano, corrigido hoje para 06/10
+  const A = await monta630({ ex: EX630({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-09-05', fim: '2026-11-30', quando: '2026-10-06' }), hoje: '2026-10-06', rasc: { inicio: '2026-10-06' }, resp: [false, true] }, 'await confirmarRenovacao();');
+  igual([A.perg[0].t, A.hist[0].m], ['PAGAMENTO NOVO OU CORREÇÃO DA DATA?', 'correção']);
+  // renovação perto do fim (21/12 num Gold até 31/12): só o resumo
+  const R = await monta630({ ex: EX630(GOLD1X630()), hoje: '2026-12-21', rasc: { inicio: '2026-12-21' }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([R.perg.map((p) => p.t), R.hist[0].m], [['CONFIRA ANTES DE GRAVAR'], 'renovação']);
+  // mensal pago 01/10 e renovado 25/10 para novembro (o plano novo começa depois do fim do atual): só o resumo
+  const S = await monta630({ ex: EX630({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31', quando: '2026-10-01' }), hoje: '2026-10-25', rasc: { inicio: '2026-10-25' }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([S.perg.map((p) => p.t), S.grav[0].renov.vig_inicio], [['CONFIRA ANTES DE GRAVAR'], '2026-11-01']);
+  // o mesmo, mas o plano atual foi confirmado HOJE (pode ser a data errada sendo consertada): pergunta
+  const S2 = await monta630({ ex: EX630({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31', quando: '2026-10-25' }), hoje: '2026-10-25', rasc: { inicio: '2026-10-25' }, resp: [true, true] }, 'await confirmarRenovacao();');
+  igual(S2.perg[0].t, 'PAGAMENTO NOVO OU CORREÇÃO DA DATA?');
+  // a regra do app e a do financeiro dizem o mesmo (registro antigo: "confira" onde o app perguntaria)
+  [[{ inicio: '2026-09-23', fim: '2026-11-30', quando: '2026-09-23' }, { inicio: '2026-09-25', vig_inicio: '2026-10-01', fim: '2026-12-31', quando: '2026-09-26' }],
+    [{ inicio: '2026-09-02', fim: '2026-09-30', quando: '2026-09-02' }, { inicio: '2026-09-30', vig_inicio: '2026-10-01', fim: '2026-10-31', quando: '2026-09-30' }],
+    [{ inicio: '2026-10-05', fim: '2026-12-31', quando: '2026-10-05' }, { inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', quando: '2026-12-21' }],
+    [{ inicio: '2026-07-10', fim: '2026-07-31', quando: '2026-07-10' }, { inicio: '2026-07-28', vig_inicio: '2026-08-01', fim: '2026-08-31', quando: '2026-07-28' }],
+    [{ inicio: '2026-06-02', fim: '2026-11-30', quando: '2026-06-02' }, { inicio: '2026-09-28', vig_inicio: '2026-10-01', fim: '2027-03-31', quando: '2026-09-28' }],
+    // a correção pela regra do app (mesmo fim) nunca pergunta, nem longe do fim
+    [{ inicio: '2026-10-05', fim: '2026-12-31', quando: '2026-10-05' }, { inicio: '2026-10-03', fim: '2026-12-31', quando: '2026-10-06' }]].forEach(([g, c], i) => {
+    igual(ctx36.finPerguntariaNovoOuCorrecao(g, c), run36('renovPerguntaNovoOuCorrecao(' + JSON.stringify(g) + ', ' + JSON.stringify(c) + ', ' + JSON.stringify(c.quando) + ')'), 'caso ' + i);
+  });
+});
+provaAsync('6.44 QA3 — registro ANTIGO do "desfazer duas vezes" e mais dois Desfazer no app novo: junho não perde o pagamento (depois de 2 e de 4 toques)', async () => {
+  const A = Object.assign(G644c('2026-06-02', '2026-11-30', '2026-06-02'), { plano: 'Black', valor_plano_cent: 202800, mensalidade_cent: 33800 });
+  const B = Object.assign(G644c('2026-09-28', '2027-03-31', '2026-09-28'), { plano: 'Black', vig_inicio: '2026-10-01', valor_plano_cent: 202800, mensalidade_cent: 33800 });
+  const cap = "renovHistGravar=function(k,a,m,c){ __log630.hist.push({a:JSON.parse(JSON.stringify(a)), m:m, c:c}); return Promise.resolve(); }; await desfazerRenovacao();";
+  const jun = (renov, hist) => res36(dados36(cad36(renov, { renov_hist: hist })), '2026-06').porFILHOt.reduce((t, o) => t + o.valor, 0);
+  // estado deixado pelo app de antes: B atual e A (o pago) marcado "desfeita", sem a marca da 6.44
+  igual(jun(B, { a: hist644(A, 300, 'desfeita') }), 202800, 'antes dos toques');
+  // 1º Desfazer no app novo: o "desfeita" antigo confirmado antes é o plano pago — desfaz o B como qualquer outro
+  const L1 = await monta630({ ex: EX630(B, { renov_hist: { a: hist644(A, 300, 'desfeita') } }), hoje: '2026-10-08', rasc: null, resp: [true] }, cap);
+  igual([L1.hist[0].m, L1.hist[0].a.inicio, L1.hist[0].a.motivo_do_que_voltou, L1.hist[0].a.conferido_do_que_voltou, L1.grav[0].renov.inicio], ['desfeita', '2026-09-28', 'renovação', false, '2026-06-02']);
+  const h1 = { b: hist644c(L1.hist[0].a, 400, 'desfeita') };
+  igual(jun(L1.grav[0].renov, h1), 202800, 'depois de 1 toque');
+  // 2º Desfazer: o B volta e o A vai para o histórico como "renovação" sem a marca (o motivo antigo)
+  const L2 = await monta630({ ex: EX630(L1.grav[0].renov, { renov_hist: h1 }), hoje: '2026-10-08', rasc: null, resp: [true] }, cap);
+  igual([L2.hist[0].m, L2.hist[0].c, L2.grav[0].renov.inicio], ['renovação', false, '2026-09-28']);
+  const h2 = { a: Object.assign({}, L2.hist[0].a, { substituidoEm: 500, por: 'Teste', motivo: 'renovação' }) };
+  igual(jun(L2.grav[0].renov, h2), 202800, 'depois de 2 toques');
+  // 3º e 4º: o mesmo vai e volta, e junho continua com o pagamento
+  const L3 = await monta630({ ex: EX630(L2.grav[0].renov, { renov_hist: h2 }), hoje: '2026-10-08', rasc: null, resp: [true] }, cap);
+  const h3 = { b: hist644c(L3.hist[0].a, 600, 'desfeita') };
+  const L4 = await monta630({ ex: EX630(L3.grav[0].renov, { renov_hist: h3 }), hoje: '2026-10-08', rasc: null, resp: [true] }, cap);
+  const h4 = { a: Object.assign({}, L4.hist[0].a, { substituidoEm: 700, por: 'Teste', motivo: L4.hist[0].m }, L4.hist[0].c ? { motivo_conferido: true } : {}) };
+  igual([jun(L4.grav[0].renov, h4), L4.grav[0].renov.inicio], [202800, '2026-09-28'], 'depois de 4 toques');
+  // o "desfeita" antigo MAIS NOVO que o plano atual é a renovação desfeita de verdade: o Desfazer a traz de volta
+  const V = await monta630({ ex: EX630(A, { renov_hist: { b: hist644(B, 300, 'desfeita') } }), hoje: '2026-10-08', rasc: null, resp: [true] }, cap);
+  igual([V.hist[0].m, V.hist[0].a.inicio, V.hist[0].c, V.grav[0].renov.inicio], ['renovação', '2026-06-02', false, '2026-09-28']);
+});
+prova('6.44 QA3 — registro antigo: corrigida na virada do mês, renovada e "desfeita duas vezes": junho R$ 1.077,00 (confira), julho R$ 0,00, setembro R$ 1.077,00', () => {
+  const A = G644c('2026-07-02', '2026-09-30', '2026-07-02'), A2 = G644c('2026-06-28', '2026-09-30', '2026-07-05'), B = G644c('2026-09-27', '2026-12-31', '2026-09-27');
+  const cadX = cad36(B, { renov_hist: { a: hist644(A, 100, 'renovação'), z: hist644(A2, 400, 'desfeita') } });
+  const antes = JSON.stringify(cadX);
+  const D = dados36(cadX);
+  const tot = (m) => res36(D, m).porFILHOt.reduce((t, o) => t + o.valor, 0);
+  igual([tot('2026-06'), tot('2026-07'), tot('2026-09')], [107700, 0, 107700]);
+  assert.ok(/marcado "desfeita"/.test(res36(D, '2026-06').porFILHOt[0].confira));
+  igual(JSON.stringify(cadX), antes, 'a conta não escreve no cadastro (nem no desfeito antigo)');
+});
+provaAsync('6.44 QA3 — corrigir a data mudando o nº na família recalcula o valor (não mantém o fechado)', async () => {
+  const fechado = Object.assign(GOLD1X630(), { valor_plano_cent: 107700, mensalidade_cent: 35900 });
+  const L = await monta630({ ex: EX630(fechado), hoje: '2026-10-06', rasc: { inicio: '2026-10-03', ordemPet: 2 }, resp: [true, true, true] }, 'await confirmarRenovacao();');
+  igual([L.hist[0].m, L.grav[0].renov.ordemPet, L.grav[0].renov.valor_plano_cent, L.grav[0].renov.mensalidade_cent], ['correção', 2, 100161, 33387]);
+});
+prova('6.44 QA3 — a lista usa o formatador do Financeiro (o tablet sem o idioma não muda o texto); "hóspede" com acento', () => {
+  const r = res36(dados36(cad36(Object.assign(GOLD1X630(), { inicio: '2026-07-05', fim: '2026-09-30', valor_plano_cent: 107700 }))), '2026-07');
+  run36('__bk644d=fmtCent; fmtCent=function(){ return "X"; };');
+  try {
+    const h = run36('recListaHTML(' + JSON.stringify(r) + ', "2026-07", false)');
+    assert.ok(h.indexOf('>R$ 1.077,00<') > 0 && h.indexOf('>X<') < 0, 'a lista não passa pelo fmtCent');
+  } finally { run36('fmtCent=__bk644d;'); }
+  igual([run36('renovMotivoRotulo("virou hospede")'), run36('renovMotivoRotulo("virou avulso")')], ['virou hóspede', 'virou avulso']);
+  assert.ok(/ · virou hóspede<\/div>/.test(run('renovHistHTML(' + JSON.stringify({ renov: { plano: 'auaulandia' }, renov_hist: { a: hist644(JUL644(), 100, 'virou hospede') } }) + ')')), 'o histórico da ficha também');
+  const vh = res36(dados36(cad36({ plano: 'auaulandia' }, { renov_hist: { a: hist644(JUL644(), 100, 'virou hospede') } })), '2026-07');
+  assert.ok(/^plano anterior \(depois virou hóspede\)/.test(J36('recLinhasDoMes(' + JSON.stringify(vh) + ')')[0].obs));
 });
 
 // ------------------------------------------------ o fim

@@ -803,7 +803,7 @@ function finEhCorrecaoDe(antigo, novo) {
    no lugar dele — contar os dois seria contar duas vezes): o que o Confirmar gravou como
    "correção" e, nos registros de antes da 6.44, o que a regra do app reconhece como correção. */
 function finRenovHistContados(c) {
-  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), todos = [], i, o;
+  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), todos = [], i, o, m;
   for (i = 0; i < ids.length; i++) {
     o = finObj(h[ids[i]]);
     if (!o.plano && !o.inicio) continue;
@@ -820,64 +820,72 @@ function finRenovHistContados(c) {
     while (j + 1 < seq.length && String(seq[j + 1].inicio || '') === String(seq[j].inicio || '')) j++;
     return seq[j];
   }
-  /* O MOTIVO DECIDIDO PELO APP (QA da 6.44): desde a 6.44 todo registro do histórico sai marcado
-     (motivo_conferido) — o motivo foi decidido na hora, pelo Confirmar, pelo Desfazer ou pela troca
-     de categoria, e vale sem adivinhar. Os registros de antes não têm a marca: para eles, a regra
-     do app (renovEhCorrecao) decide, e o caso ambíguo sai com "confira" para quem bate o mês. */
+  /* O MOTIVO DECIDIDO PELO APP (QA da 6.44): desde a 6.44 o registro do histórico sai marcado
+     (motivo_conferido) — o motivo foi decidido na hora, pelo Confirmar (que pergunta "pagamento
+     novo ou correção da data?" quando a data muda e não dá para saber), pelo Desfazer ou pela
+     troca de categoria, e vale sem adivinhar. Os registros antigos não têm a marca: para eles a
+     regra do app (renovEhCorrecao) decide, e o caso em que o app de hoje perguntaria sai com
+     "confira" para quem bate o mês. */
   function conferido(r) { return r.motivo_conferido === true; }
-  var AVISO_ANTES = 'registro de antes de 08/10/2026';
-  /* Os planos que valeram: sem os desfeitos e sem o que o Confirmar disse que foi correção. */
-  var cadeia = [];
+  var AVISO = 'registro antigo (de antes de o app perguntar se foi pagamento novo ou correção da data)';
+  /* 1º O "DESFEITO" ANTIGO QUE FOI PAGAMENTO: antes da 6.44, desfazer e desfazer de novo (para
+     trazer a renovação de volta) gravava o plano pago como "desfeita". O desfeito de verdade é o
+     plano MAIS NOVO (confirmado depois do que voltou, ou que começa depois dele); o do "desfazer
+     duas vezes" foi confirmado ANTES do plano que voltou e foi pago. O "desfeita" gravado desde
+     a 6.44 nunca foi pagamento (o refazer devolve o plano pago com o motivo dele). */
+  var todosSeq = todos.concat([atual]), recuperado = [], sd;
   for (i = 0; i < todos.length; i++) {
-    if (String(todos[i].motivo || '') === 'desfeita') continue;
-    /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: fica de fora sem adivinhar. */
-    if (String(todos[i].motivo || '') === 'correção') continue;
-    cadeia.push(todos[i]);
+    o = todos[i]; recuperado[i] = false;
+    if (String(o.motivo || '') !== 'desfeita') continue;
+    if (conferido(o) || Object.prototype.hasOwnProperty.call(o, 'motivo_do_que_voltou')) continue;
+    sd = versaoFinal(todosSeq, i + 1);
+    if (finEhCorrecaoDe(o, sd)) continue;
+    if (!(String(o.quando || '') < String(sd.quando || ''))) continue;
+    recuperado[i] = true;
   }
-  var seq = cadeia.concat([atual]), out = [], vistos = {};
+  /* 2º A CADEIA DOS PLANOS QUE VALERAM — o desfeito antigo que foi pagamento entra no lugar dele
+     (ele é o sucessor do plano que veio antes; sem isso, a correção feita antes dele virava
+     pagamento fantasma). Ficam de fora os desfeitos de verdade e o que foi dito "correção". */
+  var cadeia = [], marca = [];
+  for (i = 0; i < todos.length; i++) {
+    m = String(todos[i].motivo || '');
+    if (m === 'desfeita' && !recuperado[i]) continue;
+    /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: fica de fora sem adivinhar. */
+    if (m === 'correção') continue;
+    cadeia.push(todos[i]); marca.push(recuperado[i]);
+  }
+  var seq = cadeia.concat([atual]), out = [], vistos = {}, cp, suc;
   /* Um pagamento por data: a data do plano atual e a de um já contado não contam de novo. */
   if (finEhISO(atual.inicio)) vistos[atual.inicio] = true;
-  var cp, suc;
   for (i = 0; i < cadeia.length; i++) {
     o = cadeia[i];
     suc = versaoFinal(seq, i + 1);
-    if (!conferido(o) && finEhCorrecaoDe(o, suc)) continue;
+    if (!marca[i] && !conferido(o) && finEhCorrecaoDe(o, suc)) continue;
     if (vistos[o.inicio]) continue;
     vistos[o.inicio] = true;
     cp = finCopia(o);
-    /* Confirmado no MESMO dia do plano que entrou no lugar, num registro sem a marca: pode ter sido
-       a correção da data (a escolha da pessoa não ficava gravada). Conta, mas pede conferência. */
-    if (!conferido(o) && finEhISO(o.quando) && String(o.quando) === String(suc.quando || ''))
-      cp._confira = AVISO_ANTES + ', confirmado no mesmo dia do plano que entrou no lugar: confira se foi pagamento novo ou correção da data';
-    out.push(cp);
-  }
-  /* O "DESFEITO" QUE FOI PAGAMENTO (QA da 6.44): desfazer e desfazer de novo (para trazer de
-     volta a renovação) gravava o plano pago como "desfeita". O desfeito de verdade é sempre
-     o plano novo que voltou para um anterior (o que entrou no lugar dele começa antes, ou é o
-     mesmo pagamento); o que foi trocado por um plano que começa DEPOIS foi renovado, e conta. */
-  var todosSeq = todos.concat([atual]);
-  for (i = 0; i < todos.length; i++) {
-    o = todos[i];
-    if (String(o.motivo || '') !== 'desfeita') continue;
-    /* O "desfeita" gravado desde a 6.44 nunca foi pagamento: o Desfazer guarda nele o motivo do
-       plano que voltou, e o refazer devolve o plano pago ao histórico com o motivo dele (QA da 6.44:
-       desfazer a correção da data para antes contava o plano desfeito). */
-    if (conferido(o) || Object.prototype.hasOwnProperty.call(o, 'motivo_do_que_voltou')) continue;
-    suc = versaoFinal(todosSeq, i + 1);
-    if (finEhCorrecaoDe(o, suc)) continue;
-    /* No registro antigo, o desfeito de verdade é o plano MAIS NOVO (confirmado depois do que
-       voltou: a correção da data para antes que foi desfeita). O do "desfazer duas vezes" foi
-       confirmado ANTES do plano que voltou — esse foi pago. */
-    if (!(String(o.quando || '') < String(suc.quando || ''))) continue;
-    if (vistos[o.inicio]) continue;
-    vistos[o.inicio] = true;
-    cp = finCopia(o);
-    cp._confira = AVISO_ANTES + ' marcado "desfeita" (desfazer duas vezes, para trazer a renovação de volta): conta como pagamento; confira';
+    if (marca[i]) cp._confira = AVISO + ', marcado "desfeita" (desfazer duas vezes, para trazer a renovação de volta): conta como pagamento; confira';
+    /* Num registro antigo, o caso em que o app de hoje perguntaria (o pagamento seguinte no mesmo
+       mês, confirmado no mesmo dia, ou bem antes do fim do plano) conta, mas pede conferência. */
+    else if (!conferido(o) && !/^virou /.test(String(o.motivo || '')) && finPerguntariaNovoOuCorrecao(o, suc))
+      cp._confira = AVISO + ': o pagamento seguinte veio cedo — confira se foi pagamento novo ou correção da data';
     out.push(cp);
   }
   /* Do pagamento mais antigo para o mais novo: é nessa ordem que o dinheiro lançado é gasto. */
   out.sort(function (a, b) { return String(a.inicio || '') < String(b.inicio || '') ? -1 : (String(a.inicio || '') > String(b.inicio || '') ? 1 : 0); });
   return out;
+}
+
+/* O app de hoje perguntaria "pagamento novo ou correção da data?" ao trocar o plano `a` por `n`?
+   A MESMA regra do renovPerguntaNovoOuCorrecao do app (6.44): a data mudou, a regra da correção
+   não decide, e o novo foi confirmado no mesmo dia do anterior ou veio com o anterior ainda
+   longe de acabar (mais de 15 dias antes do fim). */
+function finPerguntariaNovoOuCorrecao(antigo, novo) {
+  var a = finObj(antigo), n = finObj(novo);
+  if (!finEhISO(a.inicio) || !finEhISO(n.inicio) || String(a.inicio) === String(n.inicio)) return false;
+  if (finEhCorrecaoDe(a, n)) return false;
+  if (finEhISO(a.quando) && String(a.quando) === String(n.quando || '')) return true;
+  return finEhISO(a.fim) && String(n.inicio) < finAddDiasISO(a.fim, -15);
 }
 
 /* A renovação anterior no mês em que foi paga (6.44). Só entra no mês do pagamento dela: não

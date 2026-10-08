@@ -20701,6 +20701,23 @@
     if(ehISO(g.fim) && c.fim===g.fim) return true;
     return cIni<=gIni;
   }
+  // PAGAMENTO NOVO OU CORREÇÃO DA DATA? (QA da 6.44, FIN-005). A data do pagamento mudou e a regra
+  // acima diz "plano novo" — mas a correção para alguns dias depois (23/09 → 25/09 num trimestral,
+  // 10/07 → 28/07 num mensal) tem o mesmo jeito de uma renovação. Desde a 6.44 isso é dinheiro: a
+  // renovação conta os DOIS pagamentos no fechamento do mês. O app pergunta quando não dá para
+  // saber: o plano gravado foi confirmado HOJE (a data errada sendo consertada), ou o pagamento
+  // novo veio com o plano gravado ainda longe de acabar (mais de 15 dias antes do fim). A
+  // renovação de sempre — paga nos últimos 15 dias do plano, ou depois que ele acabou (o Baque:
+  // pagou 02/09 e renovou 30/09 para outubro) — não pergunta nada. (A mesma regra está no financeiro-logica.js,
+  // finPerguntariaNovoOuCorrecao, para pedir "confira" nos registros antigos.)
+  function renovPerguntaNovoOuCorrecao(g, c, hoje){
+    g=g||{}; c=c||{};
+    const ehISO=function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x||''); };
+    if(!ehISO(g.inicio) || !ehISO(c.inicio) || String(g.inicio)===String(c.inicio)) return false;
+    if(renovEhCorrecao(g, c, '')) return false;
+    if(ehISO(g.quando) && String(g.quando)===String(hoje||'')) return true;
+    return ehISO(g.fim) && String(c.inicio) < addDiasISO(g.fim, -15);
+  }
   // A linha do resumo do Confirmar sobre os dias de cada mês do plano GRAVADO ('' quando ele não
   // os tem, ou quando é o mesmo plano que continua com eles). QA da 6.30: achado 1 (a correção que
   // passa para "Iguais" diz que eles deixam de valer) e achado 2 (a renovação diz até quando eles
@@ -20914,6 +20931,8 @@
   // 6.44 (QA): todo registro sai com motivo_conferido — o motivo foi decidido pelo app NA HORA
   // (Confirmar, Desfazer, troca de categoria) e o fechamento do mês confia nele sem adivinhar.
   // conferido=false só no refazer de um registro antigo, cujo motivo ninguém decidiu.
+  // O motivo do histórico como se lê: a troca de categoria grava a chave ("virou hospede").
+  function renovMotivoRotulo(m){ return String(m||'').replace(/^virou hospede$/, 'virou hóspede'); }
   function renovHistGravar(k, antigo, motivo, conferido){
     if(!antigo||!(antigo.plano||antigo.inicio)) return Promise.resolve();
     var reg=Object.assign({}, antigo, {substituidoEm:Date.now(), por:renovQuemAgora(), motivo:(motivo||'renovação')});
@@ -20948,7 +20967,7 @@
         +(gr.n>1?' <span style="font-weight:800">· '+gr.n+' vezes iguais (tentativas repetidas)</span>':'')
         +(function(){ const vh=renovValorDoHist(o); return vh.v?(' · <span class="renov-hist-valor" style="font-weight:800">'+fmtCent(vh.v)+(vh.pelaTabela?' <span style="font-weight:600;color:var(--muted)">(pela tabela)</span>':'')+'</span>'):''; })()
         +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
-        +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(o.motivo):'')+'</div></div>';
+        +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(renovMotivoRotulo(o.motivo)):'')+'</div></div>';
     }).join('');
     return '<div id="renovHist" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm)">'
       +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Renovações anteriores ('+hist.length+')</div>'
@@ -20990,8 +21009,14 @@
     // DESFAZER DUAS VEZES (QA da 6.44). Desfazer o desfeito traz a renovação de volta: o plano que
     // sai agora foi PAGO e volta ao histórico com o motivo que tinha (guardado no desfeito), e não
     // como "desfeita" — senão o fechamento do mês apagaria o pagamento dele.
-    if(String(ant.motivo||'')==='desfeita') await renovHistGravar(k, atual, ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
-    else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:String(ant.motivo||''), conferido_do_que_voltou:(ant.motivo_conferido===true)}), 'desfeita');
+    // O "desfeita" ANTIGO (de antes da 6.44, sem a marca) confirmado ANTES do plano atual é o plano
+    // PAGO que o "desfazer duas vezes" de antes deixou marcado assim (QA da 6.44): o Desfazer desfaz
+    // o atual, como qualquer outro — refazer ali apagaria o pagamento dele no Desfazer seguinte.
+    const antPagoC=String(ant.motivo||'')==='desfeita' && ant.motivo_conferido!==true
+      && !Object.prototype.hasOwnProperty.call(ant,'motivo_do_que_voltou') && String(ant.quando||'')<String(atual.quando||'');
+    if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, atual, ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
+    else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:(antPagoC?'renovação':String(ant.motivo||'')),
+      conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}), 'desfeita');
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
@@ -21366,6 +21391,20 @@
         if(seguir) calc=calcSeg;
         escolhaC=seguir?'novo':'correcao';
       }
+    }
+    // PAGAMENTO NOVO OU CORREÇÃO DA DATA? quando ninguém perguntou ainda e não dá para saber (QA da
+    // 6.44, FIN-005). O período é o mesmo nas duas respostas; muda o que o fechamento do mês conta.
+    // Fechar a pergunta sem escolher vale como correção: um pagamento só (nunca inventa dinheiro).
+    if(!escolhaC && renovPerguntaNovoOuCorrecao(gravado, calc, hojeISO())){
+      const perC=function(c){ return fmtBR(c.vig_inicio||c.inicio)+' até '+fmtBR(c.fim); };
+      const novoP=await zPergunta('PAGAMENTO NOVO OU CORREÇÃO DA DATA?',
+        ['O plano gravado foi pago em '+fmtBR(gravado.inicio)+' e vale até '+fmtBR(gravado.fim)+'.',
+         'A data do pagamento agora é '+fmtBR(calc.inicio)+'.',
+         'Se o tutor pagou de novo, é pagamento novo: os dois pagamentos ('+fmtBR(gravado.inicio)+' e '+fmtBR(calc.inicio)+') contam no fechamento do mês.',
+         'Se só a data estava errada, é correção: conta um pagamento só, o de '+fmtBR(calc.inicio)+'.',
+         'Nas duas respostas, o plano fica de '+perC(calc)+'.'],
+        {sim:'Pagamento novo: o tutor pagou de novo', nao:'Correção da data: um pagamento só', corTitulo:'#234D67'});
+      escolhaC=novoP?'novo':'correcao';
     }
     // CORREÇÃO OU PLANO NOVO, com a resposta da pergunta acima (QA da 6.30, achado 1).
     const correcaoC=renovEhCorrecao(gravado, calc, escolhaC);
@@ -58986,7 +59025,7 @@
       var obs=[];
       if(o.origem==='renovacao-anterior'){
         var mh=String(o.motivoHist||'');
-        obs.push(/^virou /.test(mh)?('plano anterior (depois '+mh+')'):'renovação anterior (o plano já foi renovado depois)');
+        obs.push(/^virou /.test(mh)?('plano anterior (depois '+renovMotivoRotulo(mh)+')'):'renovação anterior (o plano já foi renovado depois)');
       }
       if(o.confira) obs.push(String(o.confira));
       if(!hosp) obs.push(o.valorGravado?'valor gravado no fechamento':'valor pela tabela de hoje (plano fechado antes de o app gravar o valor)');
@@ -59254,7 +59293,7 @@
         // vem pronto do financeiro-logica (finBRL) — nenhum número nasce aqui.
         if(o.servico==='daycare' && o.detalheMeses) rotPlano+=' · dias por mês: '+o.detalheMeses;
         // 6.44: o pagamento de um plano que já foi renovado (o mesmo FILHOt pode aparecer duas vezes).
-        if(o.origem==='renovacao-anterior') rotPlano+=' · renovação anterior';
+        if(o.origem==='renovacao-anterior') rotPlano+=(/^virou /.test(String(o.motivoHist||''))?(' · plano anterior (depois '+renovMotivoRotulo(o.motivoHist)+')'):' · renovação anterior');
         h+='<button type="button" class="pa-li" onclick="pdirIr(\''+escAttr(vd)+'\')">'
           +'<span class="pa-li-txt"><b style="text-transform:capitalize">'+esc(o.nome)+'</b>'
           +'<span>'+brlSemQuebra(esc(rotPlano))+(o.venceEm?(' · venceu em '+esc(orcBR(o.venceEm))):'')+'</span></span>'
