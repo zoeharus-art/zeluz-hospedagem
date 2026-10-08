@@ -20528,6 +20528,22 @@
   }
   // A vigência calculada do jeito certo, de um lugar só: quem desenha a tela, quem confirma
   // e quem grava leem todos a MESMA conta — a regra do meio do mês inclusive.
+  // O PLANO RELANÇADO DEPOIS DA TROCA DE CATEGORIA, com a MESMA data do plano que saiu (QA da 6.44,
+  // conferência da 5ª rodada): é o mesmo pagamento, e o período é o que já era — a conta parte do
+  // registro "virou …" como se fosse o plano gravado (a troca apagou o período da ficha). Sem isto,
+  // a renovação paga antes do fim (Silver pago 18/09 que valia outubro) voltava "18/09 até 30/09",
+  // ia para a cobrança e, com o mesmo fim do plano anterior, apagava o pagamento dele no fechamento.
+  // Devolve r (o de sempre) em qualquer outro caso. A mesma conta na tela e no Confirmar.
+  function renovBaseDoRelancamento(ex, r){
+    const iso=/^\d{4}-\d{2}-\d{2}$/, g=renovDe(ex)||{};
+    if(iso.test(g.inicio||'')) return r;
+    const hv=renovHistDe(ex)[0];
+    if(!(hv && /^virou /.test(String(hv.motivo||'')) && iso.test(hv.inicio||'') && String(hv.inicio)===String((r||{}).inicio||''))) return r;
+    const b=Object.assign({}, r, {fim:hv.fim||''});
+    if(hv.vig_inicio) b.vig_inicio=hv.vig_inicio; else delete b.vig_inicio;
+    Object.defineProperty(b, '_inicio_gravado', {value:String(hv.inicio), enumerable:false});
+    return b;
+  }
   function renovCalcular(r, planoKey, aulas, iniISO){
     const meioMes=!!renovMeioMesVale(Object.assign({}, r||{}, {inicio:iniISO}));
     const v=meioMes?{vig:iniISO, porque:''}:renovVigenciaComeca(r, iniISO);
@@ -21110,7 +21126,7 @@
     // A vigência do rascunho é CALCULADA na hora, a partir do plano e da data que estão na
     // tela — nunca lida de um campo gravado que pode estar velho.
     const regMMTela=renovMeioMesVale(r);
-    const calc=(r.plano&&r.inicio&&planos()[r.plano])?renovCalcular(r, r.plano, aulas, r.inicio):null;
+    const calc=(r.plano&&r.inicio&&planos()[r.plano])?renovCalcular(renovBaseDoRelancamento(ex, r), r.plano, aulas, r.inicio):null;
     const fimTela=calc?calc.fim:'';
     const mesTela=calc?calc.mesRenov:'';
     // POR QUE ESTE VENCIMENTO É O DO MÊS SEGUINTE — a ficha diz, ao lado da data
@@ -21316,7 +21332,8 @@
     // A regra do meio do mês entra pela MESMA porta da tela (renovCalcular): quem registrou
     // a opção 1 ou a 2 neste mês tem o plano valendo o próximo mês inteiro, e o Confirmar
     // grava esse vencimento — não o do mês que já estava correndo.
-    let calc=renovCalcular(r, r.plano, aulas, r.inicio);
+    // O plano relançado depois da troca de categoria com a mesma data: o período que já era.
+    let calc=renovCalcular(renovBaseDoRelancamento(ex, r), r.plano, aulas, r.inicio);
     if(!calc){
       if(typeof zAlertao==='function') zAlertao('PLANO NÃO RECONHECIDO',
         ['O plano "'+(r.plano||'—')+'" não está na tabela de planos deste ano.',

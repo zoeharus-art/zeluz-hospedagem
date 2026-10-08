@@ -11441,6 +11441,40 @@ provaAsync('6.44 QA6 — o plano lançado atrasado ainda dentro da vigência, re
   igual(soma644(D, '2026-09'), 77400);
 });
 
+// ---- conferência da 5ª rodada da 6.44: o relançamento com a mesma data herda o período; registros antigos
+provaAsync('6.44 QA7 — o plano relançado depois da troca de categoria com a MESMA data herda o período (01/10 a 31/10, e não 18/09 a 30/09): a tela, o Confirmar e o fechamento', async () => {
+  const vazio = { plano: '', aulas: '', inicio: '', fim: '', mesRenov: '', ordemPet: 1 };
+  const GJ = G644c('2026-07-01', '2026-09-30', '2026-07-01');
+  const SV = S644('2026-09-18', '2026-10-31', '2026-09-18', { vig_inicio: '2026-10-01' });
+  const hist = () => ({ renov_hist: { a: hist644(GJ, 50), v: hist644c(SV, 100, 'virou morador') } });
+  const T = await monta630({ ex: EX630(vazio, hist()), hoje: '2026-09-24', rasc: { plano: 'Silver', aulas: 1, inicio: '2026-09-18' } }, '__log630.out=blocoPlano(pelExtra(pelAtual), pelAtual);');
+  assert.ok(/calculado pelo sistema de 01\/10\/2026 até 31\/10\/2026/.test(T.out.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')), 'a tela mostra o período que já era');
+  const L = await monta630({ ex: EX630(vazio, hist()), hoje: '2026-09-24', rasc: { plano: 'Silver', aulas: 1, inicio: '2026-09-18' }, resp: [true] }, 'await confirmarRenovacao();');
+  igual([L.perg.map((p) => p.t), L.grav[0].renov.inicio, L.grav[0].renov.vig_inicio, L.grav[0].renov.fim], [['CONFIRA ANTES DE GRAVAR'], '2026-09-18', '2026-10-01', '2026-10-31']);
+  const D = dados36(cad36(L.grav[0].renov, hist()));
+  igual([soma644(D, '2026-07'), soma644(D, '2026-09')], [107700, 38700]);
+  // com outra data, a conta de sempre (a pergunta da troca decide o dinheiro)
+  const O = await monta630({ ex: EX630(vazio, hist()), hoje: '2026-09-24', rasc: { plano: 'Silver', aulas: 1, inicio: '2026-09-20' }, resp: [false, true] }, 'await confirmarRenovacao();');
+  igual([O.perg[0].t, O.grav[0].renov.inicio, O.grav[0].renov.vig_inicio || '', O.grav[0].renov.fim], ['PAGAMENTO NOVO OU CORREÇÃO DA DATA?', '2026-09-20', '', '2026-09-30']);
+});
+prova('6.44 QA7 — registros antigos: o plano pago do desfazer duas vezes seguido de uma correção desfeita no mesmo dia continua contando; o plano relançado que perdeu o começo do período não apaga o pagamento anterior', () => {
+  // Black 05/06; renovação Gold 02/10 desfeita duas vezes; no mesmo dia, trocada para 22/09 e desfeita
+  const Bk = B644('2026-06-05', '2026-11-30', '2026-06-05'), G22 = G644c('2026-09-22', '2026-11-30', '2026-10-02'), G02 = G644c('2026-10-02', '2026-12-31', '2026-10-02');
+  const D = dados36(cad36(G02, { renov_hist: { a: hist644(Bk, 300, 'desfeita'), b: hist644(G22, 500, 'desfeita') } }));
+  const jn = res36(D, '2026-06').porFILHOt;
+  igual([jn.map((o) => o.valor), soma644(D, '2026-10')], [[202800], 107700]);
+  assert.ok(/desfazer duas vezes/.test(jn[0].confira || ''), jn[0].confira);
+  // com mais uma renovação desfeita de verdade depois (Silver 15/11, o mesmo fim do Black): junho continua
+  const Dz = dados36(cad36(G02, { renov_hist: { a: hist644(Bk, 300, 'desfeita'), b: hist644(G22, 500, 'desfeita'), c: hist644(S644('2026-11-15', '2026-11-30', '2026-11-15'), 600, 'desfeita') } }));
+  igual(soma644(Dz, '2026-06'), 202800);
+  // app de antes: Silver 15/09 e renovação 23/09 (outubro); relançada depois da troca de categoria sem o começo do período e corrigida para 22/09
+  const S15 = S644('2026-09-15', '2026-09-30', '2026-09-15'), V23 = S644('2026-09-23', '2026-10-31', '2026-09-23', { vig_inicio: '2026-10-01' });
+  const R = dados36(cad36(S644('2026-09-22', '2026-09-30', '2026-09-26'), { renov_hist: { a: hist644(S15, 100), b: hist644c(V23, 200, 'virou hospede'), c: hist644c(S644('2026-09-23', '2026-09-30', '2026-09-25'), 300, 'correção') } }));
+  const st = res36(R, '2026-09').porFILHOt;
+  igual(st.map((o) => o.valor).sort(), [38700, 38700]);
+  assert.ok(st.some((o) => /a versão mais nova do pagamento seguinte tem outro período .* confira$/.test(o.confira || '')), JSON.stringify(st.map((o) => o.confira)));
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

@@ -18174,8 +18174,12 @@ async function main() {
     check('v-36 · a conta do meio do mês mora numa função só, e ninguém calcula fim por fora',
       (html.match(/function fimVigenciaMeioMesISO\(/g) || []).length === 1
       && (html.match(/function renovCalcular\(/g) || []).length === 1
-      && /const calc=\(r\.plano&&r\.inicio&&planos\(\)\[r\.plano\]\)\?renovCalcular\(r, r\.plano, aulas, r\.inicio\):null;/.test(html)
-      && /let calc=renovCalcular\(r, r\.plano, aulas, r\.inicio\);/.test(html));
+      // 6.44: o plano relançado depois da troca de categoria passa pela MESMA conta (renovCalcular);
+      // renovBaseDoRelancamento só entrega o período que já era, sem calcular fim nenhum.
+      && /const calc=\(r\.plano&&r\.inicio&&planos\(\)\[r\.plano\]\)\?renovCalcular\(renovBaseDoRelancamento\(ex, r\), r\.plano, aulas, r\.inicio\):null;/.test(html)
+      && /let calc=renovCalcular\(renovBaseDoRelancamento\(ex, r\), r\.plano, aulas, r\.inicio\);/.test(html)
+      && (function(){ const i=html.indexOf('function renovBaseDoRelancamento('), j=html.indexOf('function renovCalcular(', i);
+        return i>0 && j>i && !/aplicarRenovacao|fimVigencia/.test(html.slice(i, j)); })());
     check('v-36 · o resumo do Confirmar avisa até quando o plano passará a valer',
       /linhasPlano\.push\('O plano passará a valer até '\+fmtBR\(calc\.fim\)\+' — '\+renovMeioMesFrase\(regMMConf\)\+'\.'\)/.test(html)
       && /'O plano passará a valer até '\+fmtBR\(fins\[0\]\.f\.para\)/.test(html));

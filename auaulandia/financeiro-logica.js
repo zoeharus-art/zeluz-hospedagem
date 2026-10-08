@@ -851,19 +851,30 @@ function finRenovHistContados(c) {
      novo, e o plano lançado atrasado leva o dia do lançamento): os dados não dizem se foi o
      pagamento anterior ou uma correção desfeita. Conta, com "confira" (4ª rodada) — antes saía
      calado. */
-  var todosSeq = todos.concat([atual]), recuperado = [], sd, j, qo, qs;
+  var todosSeq = todos.concat([atual]), recuperado = [], j;
+  /* Lido contra o plano que voltou (sd): '' (desfeito de verdade), 'antes' ou 'mesmo dia'. */
+  function recDe(r, sd) {
+    if (finEhCorrecaoDe(r, sd)) return '';
+    var qo = String(r.quando || ''), qs = String(sd.quando || '');
+    if (qo < qs) return 'antes';
+    if (qo === qs && finEhISO(qo)) return 'mesmo dia';
+    return '';
+  }
+  function pulaDesfeitos(j) {
+    while (j < todos.length && String(todosSeq[j].motivo || '') === 'desfeita' && !recuperado[j]) j++;
+    return j;
+  }
   for (i = todos.length - 1; i >= 0; i--) {
     o = todos[i]; recuperado[i] = '';
     if (String(o.motivo || '') !== 'desfeita') continue;
     if (conferido(o) || Object.prototype.hasOwnProperty.call(o, 'motivo_do_que_voltou')) continue;
     if (!finEhISO(o.inicio)) continue;
-    j = i + 1;
-    while (j < todos.length && String(todosSeq[j].motivo || '') === 'desfeita' && !recuperado[j]) j++;
-    sd = versaoFinal(todosSeq, j);
-    if (finEhCorrecaoDe(o, sd)) continue;
-    qo = String(o.quando || ''); qs = String(sd.quando || '');
-    if (qo < qs) recuperado[i] = 'antes';
-    else if (qo === qs && finEhISO(qo)) recuperado[i] = 'mesmo dia';
+    j = pulaDesfeitos(i + 1);
+    recuperado[i] = recDe(o, versaoFinal(todosSeq, j));
+    /* O seguinte recuperado como "mesmo dia" pode ter sido só uma correção desfeita (conferência da
+       5ª rodada): vale também a leitura com o plano que veio depois dele. */
+    if (!recuperado[i] && j < todos.length && recuperado[j] === 'mesmo dia')
+      recuperado[i] = recDe(o, versaoFinal(todosSeq, pulaDesfeitos(j + 1)));
   }
   /* 2º A SEQUÊNCIA DOS PLANOS QUE VALERAM, na ordem em que saíram: sem os desfeitos de verdade, mas
      COM os que o Confirmar disse que foram correção (QA da 6.44, 3ª rodada). Cada plano é comparado
@@ -877,7 +888,7 @@ function finRenovHistContados(c) {
     seq.push(todos[i]); marca.push(recuperado[i]);
   }
   seq.push(atual);
-  var out = [], vistos = {}, cp, suc, js, prox, porque, corr, duvidaMD;
+  var out = [], vistos = {}, cp, suc, js, prox, porque, corr, duvidaMD, duvidaVF;
   /* Um pagamento por data: a data do plano atual e a de um já contado não contam de novo. */
   if (finEhISO(atual.inicio)) vistos[atual.inicio] = true;
   for (i = 0; i < seq.length - 1; i++) {
@@ -896,7 +907,7 @@ function finRenovHistContados(c) {
        (QA da 6.44, 4ª rodada: Silver 10/09 corrigido para 20/09 e depois trocado para Gold em
        20/09 é um pagamento só). O "30/09 até 30/09" de antes da 6.20, refeito "de 01/10 até 31/10",
        tem outro começo na versão final e não apaga o pagamento de antes. */
-    duvidaMD = false;
+    duvidaMD = false; duvidaVF = false;
     if (!marca[i] && !conferido(o)) {
       corr = finEhCorrecaoDe(o, suc) || (prox !== suc && finMesmoComecoDoPeriodo(prox, suc) && finEhCorrecaoDe(o, prox));
       /* O seguinte é um "desfeita" antigo do MESMO dia, que pode ter sido só uma correção desfeita
@@ -904,6 +915,10 @@ function finRenovHistContados(c) {
          "confira". */
       if (corr && (marca[js] === 'mesmo dia' || marca[i + 1] === 'mesmo dia') && js + 1 < seq.length
           && !finEhCorrecaoDe(o, versaoFinal(seq, js + 1))) { corr = false; duvidaMD = true; }
+      /* A versão mais nova do pagamento seguinte diz "correção", mas a que entrou logo depois (o mesmo
+         pagamento) diz "renovação": o plano relançado (a troca de categoria) pode ter perdido o começo
+         do período. Conta, com "confira" (conferência da 5ª rodada). */
+      if (corr && prox !== suc && !finEhCorrecaoDe(o, prox)) { corr = false; duvidaVF = true; }
       if (corr) continue;
     }
     if (vistos[o.inicio]) continue;
@@ -911,6 +926,7 @@ function finRenovHistContados(c) {
     cp = finCopia(o);
     if (marca[i] === 'mesmo dia') cp._confira = AVISO + ', marcado "desfeita" no mesmo dia em que o plano seguinte foi confirmado: pode ser o pagamento anterior (desfazer duas vezes) ou uma correção que foi desfeita; conta como pagamento; confira';
     else if (marca[i]) cp._confira = AVISO + ', marcado "desfeita" (desfazer duas vezes, para trazer a renovação de volta): conta como pagamento; confira';
+    else if (duvidaVF) cp._confira = AVISO + ': a versão mais nova do pagamento seguinte tem outro período (o plano lançado de novo pode ter perdido o começo do período); conta como pagamento; confira';
     else if (duvidaMD) cp._confira = AVISO + ': o plano seguinte é um registro marcado "desfeita" no mesmo dia, que pode ter sido só uma correção desfeita; conta como pagamento; confira';
     else if (o.refeito_de_antigo === true && !conferido(o)) cp._confira = AVISO + ': o Desfazer trouxe de volta um plano que uma versão antiga do app marcou "desfeita", e não dá para saber se este foi pagamento; confira';
     else if (!conferido(o) && !/^virou /.test(m)) {
