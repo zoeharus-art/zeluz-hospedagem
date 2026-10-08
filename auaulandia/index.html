@@ -21027,10 +21027,12 @@
       && !renovEhCorrecao(ant, atual, '');
     // O refazer de um "desfeita" antigo não sabe se o plano que sai foi pago (QA da 6.44, 4ª rodada):
     // ele vai marcado, e o fechamento do mês pede "confira" quando o conta.
-    if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, antAntigoC?Object.assign({}, atual, {refeito_de_antigo:true}):atual,
+    // A marca vai junto quando o plano marcado volta e sai de novo (5ª rodada): o "desfeita" guarda
+    // refeito_do_que_voltou, e o refazer seguinte devolve a marca.
+    if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, (antAntigoC||ant.refeito_do_que_voltou===true)?Object.assign({}, atual, {refeito_de_antigo:true}):atual,
       ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
     else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:(antPagoC?'renovação':String(ant.motivo||'')),
-      conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}), 'desfeita');
+      conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}, (ant.refeito_de_antigo===true)?{refeito_do_que_voltou:true}:{}), 'desfeita');
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
@@ -21425,17 +21427,24 @@
     // hóspede manda a vigência para "Renovações anteriores" ("virou …"), e ela conta no mês em que
     // foi paga. A ficha que volta a ter plano com OUTRA data dentro daquele período (a troca foi
     // engano, e o plano foi lançado de novo) contaria os dois pagamentos: o app pergunta, e a
-    // resposta fica gravada no próprio registro do histórico, depois do Confirmar.
+    // resposta fica gravada no próprio registro do histórico, depois do Confirmar. Também pergunta a
+    // data até o dia em que aquele plano foi lançado (a mesma regra do Confirmar; QA da 6.44, 5ª
+    // rodada). A MESMA data é o mesmo pagamento (o fechamento do mês conta um só).
     let virouC=null, virouNovoC=false;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(gravado.inicio||'')){
       const h0=renovHistDe(ex)[0], isoV=/^\d{4}-\d{2}-\d{2}$/;
       if(h0 && /^virou /.test(String(h0.motivo||'')) && isoV.test(h0.inicio||'') && isoV.test(h0.fim||'')
-         && String(h0.inicio)!==String(calc.inicio) && String(calc.inicio)<=String(h0.fim)){
+         && String(h0.inicio)!==String(calc.inicio)
+         && (String(calc.inicio)<=String(h0.fim) || (isoV.test(h0.quando||'') && String(calc.inicio)<=String(h0.quando)))){
         const plV=planos()[h0.plano]||{};
+        const iniV=String(h0.vig_inicio||h0.inicio);
+        const ondeV=(String(calc.inicio)<iniV)?', antes do começo daquele plano'
+          :((String(calc.inicio)<=String(h0.fim))?', dentro daquele plano'
+          :(', depois do fim daquele plano, mas não depois do dia em que ele foi lançado ('+fmtBR(h0.quando)+')'));
         virouC=h0;
         virouNovoC=await zPergunta('PAGAMENTO NOVO OU CORREÇÃO DA DATA?',
           ['O plano que saiu quando a ficha '+renovMotivoRotulo(h0.motivo)+' ('+(plV.rotulo||h0.plano||'—')+') foi pago em '+fmtBR(h0.inicio)+' e valia até '+fmtBR(h0.fim)+'.',
-           'A data do pagamento agora é '+fmtBR(calc.inicio)+', dentro daquele plano.',
+           'A data do pagamento agora é '+fmtBR(calc.inicio)+ondeV+'.',
            'Se o tutor pagou de novo, é pagamento novo: os dois pagamentos ('+fmtBR(h0.inicio)+' e '+fmtBR(calc.inicio)+') contam no fechamento do mês.',
            'Se é o mesmo pagamento lançado de novo (a troca de categoria foi engano), é correção: conta um pagamento só, o de '+fmtBR(calc.inicio)+'.'],
           {sim:'Pagamento novo: o tutor pagou de novo', nao:'Correção da data: um pagamento só', corTitulo:'#234D67'});
@@ -21707,7 +21716,7 @@
       if(Object.prototype.hasOwnProperty.call(rQ,'fim_anterior')) para=rQ.fim_anterior||'';
       else{
         const c=(rQ.plano&&rQ.inicio&&planos()[rQ.plano])
-          ? aplicarRenovacao(rQ.plano, Number(rQ.aulas)||nAulasDe(q), rQ.inicio) : null;
+          ? aplicarRenovacao(rQ.plano, Number(rQ.aulas)||nAulasDe(q), rQ.inicio, rQ.vig_inicio?{vigInicio:rQ.vig_inicio}:undefined) : null;
         para=(c&&c.fim)||'';
       }
       if(!para||para===de) return null;

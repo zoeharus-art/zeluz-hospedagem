@@ -824,10 +824,11 @@ function finRenovHistContados(c) {
      se o anterior foi renovação ou correção — o plano gravado errado antes da 6.20 ("30/09 até
      30/09", o mesmo fim do anterior) e refeito depois ("de 01/10 até 31/10") não apaga o
      pagamento de antes. */
-  function versaoFinal(seq, j) {
+  function versaoFinalIdx(seq, j) {
     while (j + 1 < seq.length && String(seq[j + 1].inicio || '') === String(seq[j].inicio || '')) j++;
-    return seq[j];
+    return j;
   }
+  function versaoFinal(seq, j) { return seq[versaoFinalIdx(seq, j)]; }
   /* O MOTIVO DECIDIDO PELO APP (QA da 6.44): desde a 6.44 o registro do histórico sai marcado
      (motivo_conferido) — o motivo foi decidido na hora, pelo Confirmar (que pergunta "pagamento
      novo ou correção da data?" quando a data muda e não dá para saber), pelo Desfazer ou pela
@@ -841,20 +842,23 @@ function finRenovHistContados(c) {
      plano MAIS NOVO (confirmado depois do que voltou, ou que começa depois dele); o do "desfazer
      duas vezes" foi confirmado ANTES do plano que voltou e foi pago. O "desfeita" gravado desde
      a 6.44 nunca foi pagamento (o refazer devolve o plano pago com o motivo dele).
-     O plano que voltou é o primeiro registro seguinte que NÃO é "desfeita" (QA da 6.44, 4ª rodada):
-     o Desfazer tira do histórico o plano que volta, então o "desfeita" logo depois de outro é o de
-     outra renovação desfeita, e não o plano que voltou.
+     O plano que voltou é o primeiro registro seguinte que NÃO é um "desfeita" de verdade (QA da 6.44,
+     4ª e 5ª rodadas): o Desfazer tira do histórico o plano que volta, então o "desfeita" logo depois
+     de outro é o de outra renovação desfeita — menos o plano pago que o desfazer duas vezes marcou
+     assim (por isso a conta vai do mais novo para o mais antigo). O "desfeita" sem data de pagamento
+     (o Desfazer da troca de categoria no app de antes) nunca foi pagamento.
      Confirmado no MESMO dia do plano que voltou (o app de antes reescrevia o dia ao confirmar de
      novo, e o plano lançado atrasado leva o dia do lançamento): os dados não dizem se foi o
      pagamento anterior ou uma correção desfeita. Conta, com "confira" (4ª rodada) — antes saía
      calado. */
   var todosSeq = todos.concat([atual]), recuperado = [], sd, j, qo, qs;
-  for (i = 0; i < todos.length; i++) {
+  for (i = todos.length - 1; i >= 0; i--) {
     o = todos[i]; recuperado[i] = '';
     if (String(o.motivo || '') !== 'desfeita') continue;
     if (conferido(o) || Object.prototype.hasOwnProperty.call(o, 'motivo_do_que_voltou')) continue;
+    if (!finEhISO(o.inicio)) continue;
     j = i + 1;
-    while (j < todos.length && String(todosSeq[j].motivo || '') === 'desfeita') j++;
+    while (j < todos.length && String(todosSeq[j].motivo || '') === 'desfeita' && !recuperado[j]) j++;
     sd = versaoFinal(todosSeq, j);
     if (finEhCorrecaoDe(o, sd)) continue;
     qo = String(o.quando || ''); qs = String(sd.quando || '');
@@ -873,7 +877,7 @@ function finRenovHistContados(c) {
     seq.push(todos[i]); marca.push(recuperado[i]);
   }
   seq.push(atual);
-  var out = [], vistos = {}, cp, suc, prox, porque;
+  var out = [], vistos = {}, cp, suc, js, prox, porque, corr, duvidaMD;
   /* Um pagamento por data: a data do plano atual e a de um já contado não contam de novo. */
   if (finEhISO(atual.inicio)) vistos[atual.inicio] = true;
   for (i = 0; i < seq.length - 1; i++) {
@@ -882,19 +886,32 @@ function finRenovHistContados(c) {
     /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: não conta, sem adivinhar. */
     if (m === 'correção') continue;
     prox = seq[i + 1];
-    suc = versaoFinal(seq, i + 1);
+    js = versaoFinalIdx(seq, i + 1); suc = seq[js];
+    /* A MESMA DATA do registro seguinte é o mesmo pagamento numa versão mais nova (QA da 6.44, 5ª
+       rodada): quem conta é ela. Ex.: o "virou morador" tocado por engano e o plano lançado de novo
+       com a mesma data — corrigido depois, o "virou" não volta a contar. */
+    if (finEhISO(o.inicio) && String(prox.inicio || '') === String(o.inicio)) continue;
     /* O registro antigo é correção do plano que entrou no lugar dele — o da versão final, ou o que
        entrou LOGO depois quando a versão final só trocou o tipo ou as aulas, com o mesmo começo
        (QA da 6.44, 4ª rodada: Silver 10/09 corrigido para 20/09 e depois trocado para Gold em
        20/09 é um pagamento só). O "30/09 até 30/09" de antes da 6.20, refeito "de 01/10 até 31/10",
        tem outro começo na versão final e não apaga o pagamento de antes. */
-    if (!marca[i] && !conferido(o) && (finEhCorrecaoDe(o, suc)
-        || (prox !== suc && finMesmoComecoDoPeriodo(prox, suc) && finEhCorrecaoDe(o, prox)))) continue;
+    duvidaMD = false;
+    if (!marca[i] && !conferido(o)) {
+      corr = finEhCorrecaoDe(o, suc) || (prox !== suc && finMesmoComecoDoPeriodo(prox, suc) && finEhCorrecaoDe(o, prox));
+      /* O seguinte é um "desfeita" antigo do MESMO dia, que pode ter sido só uma correção desfeita
+         (5ª rodada): a correção só vale se também for do plano que veio depois dele; senão conta, com
+         "confira". */
+      if (corr && (marca[js] === 'mesmo dia' || marca[i + 1] === 'mesmo dia') && js + 1 < seq.length
+          && !finEhCorrecaoDe(o, versaoFinal(seq, js + 1))) { corr = false; duvidaMD = true; }
+      if (corr) continue;
+    }
     if (vistos[o.inicio]) continue;
     vistos[o.inicio] = true;
     cp = finCopia(o);
     if (marca[i] === 'mesmo dia') cp._confira = AVISO + ', marcado "desfeita" no mesmo dia em que o plano seguinte foi confirmado: pode ser o pagamento anterior (desfazer duas vezes) ou uma correção que foi desfeita; conta como pagamento; confira';
     else if (marca[i]) cp._confira = AVISO + ', marcado "desfeita" (desfazer duas vezes, para trazer a renovação de volta): conta como pagamento; confira';
+    else if (duvidaMD) cp._confira = AVISO + ': o plano seguinte é um registro marcado "desfeita" no mesmo dia, que pode ter sido só uma correção desfeita; conta como pagamento; confira';
     else if (o.refeito_de_antigo === true && !conferido(o)) cp._confira = AVISO + ': o Desfazer trouxe de volta um plano que uma versão antiga do app marcou "desfeita", e não dá para saber se este foi pagamento; confira';
     else if (!conferido(o) && !/^virou /.test(m)) {
       /* Onde o app de hoje perguntaria "pagamento novo ou correção da data?" — contra o plano que
@@ -914,7 +931,8 @@ function finRenovHistContados(c) {
    A MESMA regra do renovPerguntaNovoOuCorrecao do app (6.44): a data mudou, a regra da correção
    não decide, e (o novo foi confirmado no mesmo dia do anterior; a data do novo não é depois do dia
    em que o anterior foi lançado — o pagamento seguinte vem depois desse dia; ou o novo veio com o
-   anterior ainda longe de acabar — mais de 15 dias antes do fim). Devolve o
+   anterior ainda longe de acabar — mais de 15 dias antes do fim); e a pergunta da 6.20 (a data nova
+   até 15 dias depois da anterior, com o plano ainda valendo). Devolve o
    porquê, para o "confira" dizer o motivo certo; '' quando o app não perguntaria. */
 function finPerguntariaNovoOuCorrecao(antigo, novo) {
   var a = finObj(antigo), n = finObj(novo);
@@ -923,6 +941,9 @@ function finPerguntariaNovoOuCorrecao(antigo, novo) {
   if (finEhISO(a.quando) && String(a.quando) === String(n.quando || '')) return 'o plano seguinte foi confirmado no mesmo dia';
   if (finEhISO(a.quando) && String(n.inicio) <= String(a.quando)) return 'o pagamento seguinte é de antes do dia em que este plano foi lançado, ou do mesmo dia';
   if (finEhISO(a.fim) && String(n.inicio) < finAddDiasISO(a.fim, -15)) return 'o pagamento seguinte veio mais de 15 dias antes do fim do plano';
+  /* A pergunta da 6.20, que o app também faz (renovVigenciaComeca): a data nova perto da anterior (até
+     15 dias), ainda dentro do plano. O app de antes perguntava e não gravava a resposta (5ª rodada). */
+  if (finEhISO(a.fim) && String(n.inicio) <= String(a.fim) && String(n.inicio) <= finAddDiasISO(String(a.inicio), 15)) return 'o pagamento seguinte veio até 15 dias depois deste, com o plano ainda valendo';
   return '';
 }
 
