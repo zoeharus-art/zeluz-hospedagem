@@ -20983,7 +20983,11 @@
       {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
     if(!ok) return;
     const k=pelKey(pelAtual);
-    await renovHistGravar(k, atual, 'desfeita');
+    // DESFAZER DUAS VEZES (QA da 6.44). Desfazer o desfeito traz a renovação de volta: o plano que
+    // sai agora foi PAGO e volta ao histórico com o motivo que tinha (guardado no desfeito), e não
+    // como "desfeita" — senão o fechamento do mês apagaria o pagamento dele.
+    if(String(ant.motivo||'')==='desfeita') await renovHistGravar(k, atual, ant.motivo_do_que_voltou||'renovação');
+    else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:String(ant.motivo||'')}), 'desfeita');
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
@@ -21424,9 +21428,28 @@
     // O VALOR FECHADO FICA GRAVADO (6.44): o fechamento do mês soma este número, e não a tabela
     // de hoje — se o preço mudar depois, o mês que já fechou não muda. "Iguais" grava também a
     // mensalidade; "Mudam" não tem uma mensalidade só (cada mês tem a sua).
-    const valorGravaC=mudamC?valorC.total:valorPlC;
+    // Confirmar de novo o MESMO plano (conferir os dias, a tentativa repetida) mantém o valor que
+    // foi fechado com o tutor — a tabela de hoje não reescreve, calada, um mês que já fechou (QA
+    // da 6.44); o resumo diz qual seria o da tabela, quando é outro.
+    const mesmoC=renovMesmoPlano(gravado, novo);
+    const valorCalcC=mudamC?valorC.total:valorPlC, gravVC=Number(gravado.valor_plano_cent)||0;
+    let valorGravaC=valorCalcC, mensGravaC=(!mudamC && mens>0)?mens:0;
+    if(mesmoC && gravVC>0){
+      valorGravaC=gravVC;
+      mensGravaC=(!mudamC && Number(gravado.mensalidade_cent)>0)?Number(gravado.mensalidade_cent):(gravVC===valorCalcC?mensGravaC:0);
+    }
+    const contaC=(mensGravaC>0)?renovContaCurta(mesesPlC, mensGravaC)
+      :((valorGravaC===valorCalcC)?renovContaCurta(mesesPlC, mens):((mesesPlC>1)?(mesesPlC+' meses'):'mensal'));
     if(valorGravaC>0) novo.valor_plano_cent=valorGravaC; else delete novo.valor_plano_cent;
-    if(!mudamC && mens>0) novo.mensalidade_cent=mens; else delete novo.mensalidade_cent;
+    if(mensGravaC>0) novo.mensalidade_cent=mensGravaC; else delete novo.mensalidade_cent;
+    if(valorGravaC!==valorCalcC){
+      const iVC=linhasPlano.findIndex(function(l){ return /^Valor do plano/.test(l); });
+      const txtVC='Valor do plano '+fmtCent(valorGravaC)+(mudamC?'':(' ('+contaC+')'))+' — o valor fechado deste plano (pela tabela de hoje, '+fmtCent(valorCalcC)+')';
+      if(iVC>=0) linhasPlano[iVC]=txtVC; else linhasPlano.push(txtVC);
+    }
+    // A data que veio da planilha antiga deixa de valer quando alguém da Central confirma um plano
+    // novo ou corrige este: daí em diante é a palavra dela (o "declarado" do Financeiro).
+    if(!mesmoC){ delete novo.plano_deduzido; delete novo.plano_deduzido_meses; }
     const ok=await zPergunta('CONFIRA ANTES DE GRAVAR', linhasPlano,
       {sim:'Confirmar e gravar o plano', nao:'Voltar e conferir', cor:'#234D67', corTitulo:'#234D67',
        rodape:(renovMesmoPlano(gravado, novo)
@@ -21449,17 +21472,17 @@
     if(typeof audit==='function') audit('renovacao',
       'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
-      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorC.total)):(' · valor do plano '+fmtCent(valorPlC)+' ('+renovContaCurta(mesesPlC, mens)+')')),
+      +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorGravaC)):(' · valor do plano '+fmtCent(valorGravaC)+' ('+contaC+')')),
       {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
       (mudamC
         ? [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+', com os dias mudando por mês ('+renovAulasRotulo(novo)+').',
            'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
-           'Valor do plano '+renovBRL(valorC.total)+'.']
+           'Valor do plano '+renovBRL(valorGravaC)+'.']
         : [pelNome(pelAtual)+' · '+(pl.rotulo||novo.plano)+' de '+aulas+'x por semana.',
            'Vale até '+fmtBR(novo.fim)+', com próxima renovação em '+(novo.mesRenov||'—')+'.',
-           'Valor do plano '+fmtCent(valorPlC)+' ('+renovContaCurta(mesesPlC, mens)+').']), {ok:true, botao:'Fechar'});
+           'Valor do plano '+fmtCent(valorGravaC)+' ('+contaC+').']), {ok:true, botao:'Fechar'});
   }
 
   // ===== COMEÇOU NO MEIO DO MÊS — a tela (Adriana, 18/set/2026) =====================
@@ -28083,6 +28106,7 @@
       await renovHistGravar(pelKey(pelAtual), antigo, 'virou '+cat);
       r.inicio=''; r.fim=''; r.mesRenov=''; r.aulas=''; delete r.vig_inicio;
       delete r.dias_mes; delete r.dias_mes_anterior;   // 6.30: os dias de cada mês vão junto para o histórico
+      delete r.valor_plano_cent; delete r.mensalidade_cent;   // 6.44: o valor fechado também (fica no histórico)
     }
     renovRascLimpar();
     setPelExtra(pelAtual,{categoria:cat, renov:r});
@@ -46621,7 +46645,7 @@
       if(st){ st.style.display='block';
         st.innerHTML='<strong style="color:var(--crm-critico)">O navegador bloqueou a janela.</strong> '
           +'Libere os pop-ups para este site e toque de novo.'; }
-      return;
+      return false;   // 6.44: quem chama de outra tela (sem #relStatus) diz isso no próprio lugar
     }
     try{
       w.document.open();
@@ -55336,7 +55360,8 @@
     if(!ref) return {motivo:'sem plano com data de pagamento lançada — a renovação vem primeiro (Renovação de planos)'};
     var R=finResumoMes(dados, ref, {hoje:hoje});
     var i;
-    for(i=0;i<R.porFILHOt.length;i++) if(R.porFILHOt[i].chave===chave) return {ref:ref, linha:R.porFILHOt[i]};
+    // 6.44: a renovação anterior paga no mesmo mês também tem linha — a cobrança é a do plano atual.
+    for(i=0;i<R.porFILHOt.length;i++) if(R.porFILHOt[i].chave===chave && R.porFILHOt[i].origem!=='renovacao-anterior') return {ref:ref, linha:R.porFILHOt[i]};
     for(i=0;i<R.semComoCalcular.length;i++) if(R.semComoCalcular[i].chave===chave) return {motivo:R.semComoCalcular[i].motivo};
     return {motivo:'sem cobrança no mês do plano ('+ref+') — confira a ficha, na aba Plano'};
   }
@@ -58717,6 +58742,9 @@
     var out={linhas:{}, total:0, deTabela:0, semComoCalcular:0}, i;
     for(i=0;i<REC_TIPOS.length;i++) out.linhas[REC_TIPOS[i].k]={valor:0, quantos:0, deTabela:0};
     if(!r) return out;
+    // 6.44: o FILHOt que pagou duas vezes no mês (a renovação anterior e o plano atual) conta
+    // UMA vez em "quantos" — o valor soma os dois pagamentos.
+    var visto={};
     (r.porFILHOt||[]).forEach(function(o){
       var k;
       if(o.servico==='auaulandia') k='hospedagem';
@@ -58725,11 +58753,15 @@
         if(k!=='mensal'&&k!=='trimestral'&&k!=='semestral') k='semtipo';
       }
       var L=out.linhas[k]; if(!L) return;
-      L.valor+=(o.valor||0); L.quantos++;
+      L.valor+=(o.valor||0);
+      if(!visto[k+'|'+o.chave]) L.quantos++;
+      visto[k+'|'+o.chave]=true;
       if(o.planoDeduzido===true){ L.deTabela++; out.deTabela++; }
       out.total+=(o.valor||0);
     });
-    out.semComoCalcular=(r.semComoCalcular||[]).length;
+    var fora={};
+    (r.semComoCalcular||[]).forEach(function(o){ fora[o.chave]=true; });
+    out.semComoCalcular=Object.keys(fora).length;
     return out;
   }
 
@@ -58928,71 +58960,102 @@
    * nova; o total da lista é o total do quadro. As diárias avulsas entram numa linha só (o
    * app guarda a soma delas, não quem pagou cada uma). */
   var REC_LISTA_ABERTA=false;    // a lista aberta continua aberta quando o quadro se redesenha
+  // O QUADRO APARECE EM DOIS DASHBOARDS AO MESMO TEMPO (o da Adriana e o da Márcia ficam no DOM):
+  // nada aqui se acha por id — o botão acha o aviso dentro do PRÓPRIO quadro (QA da 6.44).
   function recLinhasDoMes(resumo){
+    var br=function(x){ return (typeof fmtBR==='function')?fmtBR(x):String(x||''); };
     var L=((resumo||{}).porFILHOt||[]).map(function(o){
       var hosp=(o.servico==='auaulandia');
       var pl=(!hosp && typeof planos==='function')?(planos()[o.plano]||{}):{};
       var tipo=String(o.compromisso||'');
       var oque=hosp?'Hospedagem na AuAulândia'
-        :((pl.rotulo||o.plano||'plano')+(tipo?(' · '+tipo):'')+(o.aulas?(' · '+o.aulas+'x por semana'):(o.aulasRotulo?(' · '+o.aulasRotulo):'')));
+        :((pl.rotulo||o.plano||'plano')+(tipo?(' · '+tipo):'')+(o.aulas?(' · '+o.aulas+'x por semana'):(o.aulasRotulo?(' · dias por mês: '+o.aulasRotulo):'')));
+      // Plano: a data do pagamento. Reserva: as parcelas que caem no mês (a da reserva no dia em
+      // que fechou; a do dia, na entrada — que pode ainda não ter acontecido).
       var quando=hosp
-        ?((o.parcelas||[]).map(function(x){ return x.qual+' '+((typeof fmtBR==='function')?fmtBR(x.vence):x.vence); }).join(' + '))
-        :((typeof fmtBR==='function')?fmtBR(o.venceEm||((o.vigencia||{}).inicio)||''):(o.venceEm||''));
+        ?((o.parcelas||[]).map(function(x){ return x.qual==='reserva'?('reserva fechada em '+br(x.vence)):('parcela do dia: entrada em '+br(x.vence)); }).join(' + '))
+        :('pago em '+br(o.venceEm||((o.vigencia||{}).inicio)||''));
       var obs=[];
       if(o.origem==='renovacao-anterior') obs.push('renovação anterior (o plano já foi renovado depois)');
       if(!hosp) obs.push(o.valorGravado?'valor gravado no fechamento':'valor pela tabela de hoje (plano fechado antes de o app gravar o valor)');
       if(o.planoDeduzido===true) obs.push('data vinda da planilha antiga');
       return {nome:String(o.nome||''), tutor:String(o.tutor||''), oque:oque, quando:quando||'—',
-              valor:(o.valor||0), obs:obs.join(' · '), ordem:(hosp?'1':'0')+String(o.venceEm||((o.vigencia||{}).inicio)||'')+String(o.nome||'')};
+              valor:(o.valor||0), obs:obs.join(' · '), grupo:(hosp?1:0), data:String(o.venceEm||((o.vigencia||{}).inicio)||'')};
     });
-    L.sort(function(a,b){ return a.ordem<b.ordem?-1:(a.ordem>b.ordem?1:0); });
+    // Planos primeiro, depois as reservas; dentro de cada um, pela data e pelo nome (com acento no lugar certo).
+    L.sort(function(a,b){
+      if(a.grupo!==b.grupo) return a.grupo-b.grupo;
+      if(a.data!==b.data) return a.data<b.data?-1:1;
+      return a.nome.localeCompare(b.nome, 'pt', {sensitivity:'base'});
+    });
     return L;
   }
+  // As fichas que ficaram FORA do total (sem como calcular), com o motivo — quem confere com o
+  // outro sistema precisa saber qual FILHOt falta, e por quê.
+  function recForaDoMes(resumo){
+    return ((resumo||{}).semComoCalcular||[]).map(function(o){ return {nome:String(o.nome||o.chave||''), motivo:String(o.motivo||'')}; });
+  }
+  function recPluralLinhas(n){ return n+(n===1?' linha':' linhas'); }
   function recListaHTML(resumo, mes, avLidos){
-    var L=recLinhasDoMes(resumo), rot=recMesRotulo(mes);
+    var L=recLinhasDoMes(resumo), F=recForaDoMes(resumo), rot=recMesRotulo(mes);
     var soma=L.reduce(function(t,x){ return t+x.valor; }, 0)+(avLidos?REC_AVULSO.total_cent:0);
-    var h='<details class="rec-lista" id="recLista" style="margin-top:10px"'+(REC_LISTA_ABERTA?' open':'')+' ontoggle="REC_LISTA_ABERTA=this.open"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ver FILHOt por FILHOt ('+L.length+') — para bater com o outro sistema</summary>'
+    var h='<details class="rec-lista" style="margin-top:10px"'+(REC_LISTA_ABERTA?' open':'')+' ontoggle="REC_LISTA_ABERTA=this.open"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ver FILHOt por FILHOt ('+L.length+') — para bater com o outro sistema</summary>'
       +'<div class="pm-lista">';
     if(!L.length) h+='<div class="pm-li"><div class="pm-li-txt"><span>Nenhum plano pago nem reserva em '+esc(rot)+'.</span></div></div>';
     L.forEach(function(x){
       h+='<div class="pm-li rec-li-filhot"><div class="pm-li-txt"><b>'+esc(x.nome)+'</b>'
-        +'<span>'+esc(x.tutor||'tutor a confirmar')+' &middot; '+esc(x.oque)+' &middot; pago em '+esc(x.quando)
+        +'<span>'+esc(x.tutor||'tutor a confirmar')+' &middot; '+esc(x.oque)+' &middot; '+esc(x.quando)
         +(x.obs?(' &middot; '+esc(x.obs)):'')+'</span></div>'
         +'<span class="pm-li-fim rec-val">'+esc(fmtCent(x.valor))+'</span></div>';
     });
     if(avLidos && REC_AVULSO.n>0) h+='<div class="pm-li"><div class="pm-li-txt"><b>Diárias avulsas</b><span>'+esc(pmPlural(REC_AVULSO.n,'diária lançada','diárias lançadas'))+' com valor em '+esc(rot)+'</span></div>'
       +'<span class="pm-li-fim rec-val">'+esc(fmtCent(REC_AVULSO.total_cent))+'</span></div>';
     h+='<div class="pm-li rec-total"><div class="pm-li-txt"><b>Total da lista</b><span>igual ao total do quadro</span></div>'
-      +'<span class="pm-li-fim rec-val" id="recListaTotal">'+esc(fmtCent(soma))+'</span></div>'
-      +'</div>'
-      +'<div class="pm-acao" style="margin-top:8px"><button type="button" class="pm-bt" id="recBaixar" onclick="recBaixarExcel()">Baixar Excel de '+esc(rot)+'</button></div>'
-      +'<div id="recBaixarStatus" class="pm-nota" style="display:none"></div>'
+      +'<span class="pm-li-fim rec-val rec-lista-total">'+esc(fmtCent(soma))+'</span></div>';
+    F.forEach(function(x){
+      h+='<div class="pm-li rec-li-fora"><div class="pm-li-txt"><b>'+esc(x.nome)+' — fora do total</b><span>'+esc(x.motivo)+'</span></div></div>';
+    });
+    h+='</div>'
+      +'<div class="pm-acao" style="margin-top:8px"><button type="button" class="pm-bt rec-baixar" onclick="recBaixarExcel(this)">Baixar Excel de '+esc(rot)+'</button></div>'
+      +'<div class="pm-nota rec-baixar-status" style="display:none"></div>'
       +'</details>';
     return h;
   }
-  // O Excel é a MESMA lista da tela (recLinhasDoMes), com o mesmo total.
-  function recBaixarExcel(){
+  // O aviso do Baixar Excel mora no quadro do botão tocado (no Dashboard da Adriana ou no da Márcia).
+  function recStatusDe(el){
+    try{ var q=(el&&el.closest)?el.closest('.rec-lista'):null; return q?q.querySelector('.rec-baixar-status'):null; }
+    catch(e){ return null; } /* silencioso de propósito: sem o quadro, o download segue sem o aviso */
+  }
+  function recAbrirNaTela(el){
+    if(relAbrirNaTela()===false){
+      var st=recStatusDe(el);
+      if(st){ st.style.display='block'; st.innerHTML='<strong style="color:var(--crm-critico)">O navegador bloqueou a janela.</strong> Libere os pop-ups para este site e toque de novo.'; }
+    }
+  }
+  // O Excel é a MESMA lista da tela (recLinhasDoMes), com o mesmo total e as fichas que ficaram fora.
+  function recBaixarExcel(el){
     var mes=recMesAtual(), rot=recMesRotulo(mes);
-    var st=document.getElementById('recBaixarStatus');
+    var st=recStatusDe(el);
     var motivo=recTrava();
     if(motivo){ if(st){ st.style.display='block'; st.textContent='Ainda não dá para baixar: '+motivo+'.'; } return; }
-    var L=recLinhasDoMes(recResumoDoMes(mes));
+    var resumo=recResumoDoMes(mes), L=recLinhasDoMes(resumo), F=recForaDoMes(resumo);
     var avLidos=(REC_AVULSO.ok && REC_AVULSO.mes===mes);
     var linhas=L.map(function(x){ return [x.nome, x.tutor, x.oque, x.quando, fmtCent(x.valor), x.obs]; });
     var soma=L.reduce(function(t,x){ return t+x.valor; }, 0);
-    if(avLidos && REC_AVULSO.n>0){ linhas.push(['Diárias avulsas', '', REC_AVULSO.n+(REC_AVULSO.n===1?' diária lançada':' diárias lançadas')+' com valor', rot, fmtCent(REC_AVULSO.total_cent), '']); soma+=REC_AVULSO.total_cent; }
+    if(avLidos && REC_AVULSO.n>0){ linhas.push(['Diárias avulsas', '', pmPlural(REC_AVULSO.n,'diária lançada','diárias lançadas')+' com valor', rot, fmtCent(REC_AVULSO.total_cent), '']); soma+=REC_AVULSO.total_cent; }
     if(!avLidos) linhas.push(['Diárias avulsas', '', 'ainda não lidas — fora do total', rot, '', 'abra o quadro de novo em instantes e baixe outra vez']);
     linhas.push(['TOTAL', '', '', '', fmtCent(soma), 'igual ao total do quadro Recebimentos de '+rot]);
+    F.forEach(function(x){ linhas.push([x.nome, '', 'FORA DO TOTAL', '', '', x.motivo]); });
     var html=relTabelaHTML('Recebimentos de '+rot,
-      L.length+' linhas (planos e reservas) · regime de caixa: o plano inteiro no mês da data do pagamento · gerado em '+new Date().toLocaleString('pt-BR'),
-      ['FILHOt','Tutor','O quê','Data do pagamento','Valor','Observação'], linhas);
+      recPluralLinhas(L.length)+' (planos e reservas) · regime de caixa: o plano inteiro no mês da data do pagamento · gerado em '+new Date().toLocaleString('pt-BR'),
+      ['FILHOt','Tutor','O quê','Data','Valor','Observação'], linhas);
     var nome='Zeluz-recebimentos-'+mes+'.xls';
     var baixou=relEntregar(nome, html);
-    try{ if(typeof audit==='function') audit('relatorio-baixado', 'recebimentos '+mes+' — '+linhas.length+' linhas', {arquivo:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+    try{ if(typeof audit==='function') audit('relatorio-baixado', 'recebimentos '+mes+' — '+recPluralLinhas(linhas.length), {arquivo:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
     if(st){
       st.style.display='block';
-      st.innerHTML='<strong>'+(baixou?'Mandei baixar':'Não consegui baixar')+'</strong> — '+L.length+' linhas. '
-        +'Se nada apareceu no seu aparelho, <button type="button" class="pm-bt" style="padding:5px 12px;font-size:12.5px" onclick="relAbrirNaTela()">abra na tela</button>.';
+      st.innerHTML='<strong>'+(baixou?'Mandei baixar':'Não consegui baixar')+'</strong> — '+recPluralLinhas(L.length)+'. '
+        +'Se nada apareceu no seu aparelho, <button type="button" class="pm-bt" style="padding:5px 12px;font-size:12.5px" onclick="recAbrirNaTela(this)">abra na tela</button>.';
     }
   }
 

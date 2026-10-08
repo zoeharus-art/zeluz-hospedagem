@@ -777,7 +777,9 @@ function finEhCorrecaoDe(antigo, novo) {
   var aIni = String(a.vig_inicio || a.inicio || ''), nIni = String(n.vig_inicio || n.inicio || '');
   if (!finEhISO(aIni) || !finEhISO(nIni)) return false;
   if (String(a.inicio || '') === String(n.inicio || '')) return true;
-  if (finEhISO(a.fim) && String(n.fim || '') === String(a.fim)) return true;
+  /* "O mesmo fim" é o do dia em que o plano entrou: o registro do "Começou no meio do mês"
+     estica o fim DEPOIS do Confirmar e guarda o de antes em fim_anterior. */
+  if (finEhISO(a.fim) && (String(n.fim || '') === String(a.fim) || String(n.fim_anterior || '') === String(a.fim))) return true;
   return nIni <= aIni;
 }
 
@@ -788,22 +790,56 @@ function finEhCorrecaoDe(antigo, novo) {
    no lugar dele — contar os dois seria contar duas vezes): o que o Confirmar gravou como
    "correção" e, nos registros de antes da 6.44, o que a regra do app reconhece como correção. */
 function finRenovHistContados(c) {
-  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), lista = [], i, o;
+  var cc = finObj(c), h = finObj(cc.renov_hist), ids = Object.keys(h), todos = [], i, o;
   for (i = 0; i < ids.length; i++) {
     o = finObj(h[ids[i]]);
     if (!o.plano && !o.inicio) continue;
-    if (String(o.motivo || '') === 'desfeita') continue;
+    todos.push(o);
+  }
+  todos.sort(function (a, b) { return (Number(a.substituidoEm) || 0) - (Number(b.substituidoEm) || 0); });
+  var atual = finObj(cc.renov);
+  /* A VERSÃO FINAL do pagamento que entrou no lugar (QA da 6.44): o que veio depois com a MESMA
+     data de pagamento é o mesmo pagamento corrigido. É com a última versão dele que se decide
+     se o anterior foi renovação ou correção — o plano gravado errado antes da 6.20 ("30/09 até
+     30/09", o mesmo fim do anterior) e refeito depois ("de 01/10 até 31/10") não apaga o
+     pagamento de antes. */
+  function versaoFinal(seq, j) {
+    while (j + 1 < seq.length && String(seq[j + 1].inicio || '') === String(seq[j].inicio || '')) j++;
+    return seq[j];
+  }
+  /* Os planos que valeram: sem os desfeitos e sem o que o Confirmar disse que foi correção. */
+  var cadeia = [];
+  for (i = 0; i < todos.length; i++) {
+    if (String(todos[i].motivo || '') === 'desfeita') continue;
     /* Desde a 6.44 o Confirmar diz no histórico quando foi correção: fica de fora sem adivinhar. */
-    if (String(o.motivo || '') === 'correção') continue;
-    lista.push(o);
+    if (String(todos[i].motivo || '') === 'correção') continue;
+    cadeia.push(todos[i]);
   }
-  lista.sort(function (a, b) { return (Number(a.substituidoEm) || 0) - (Number(b.substituidoEm) || 0); });
-  var out = [], suc;
-  for (i = 0; i < lista.length; i++) {
-    suc = (i + 1 < lista.length) ? lista[i + 1] : finObj(cc.renov);
-    if (finEhCorrecaoDe(lista[i], suc)) continue;
-    out.push(lista[i]);
+  var seq = cadeia.concat([atual]), out = [], vistos = {};
+  /* Um pagamento por data: a data do plano atual e a de um já contado não contam de novo. */
+  if (finEhISO(atual.inicio)) vistos[atual.inicio] = true;
+  for (i = 0; i < cadeia.length; i++) {
+    o = cadeia[i];
+    if (finEhCorrecaoDe(o, versaoFinal(seq, i + 1))) continue;
+    if (vistos[o.inicio]) continue;
+    vistos[o.inicio] = true;
+    out.push(o);
   }
+  /* O "DESFEITO" QUE FOI PAGAMENTO (QA da 6.44): desfazer e desfazer de novo (para trazer de
+     volta a renovação) gravava o plano pago como "desfeita". O desfeito de verdade é sempre
+     o plano novo que voltou para um anterior (o que entrou no lugar dele começa antes, ou é o
+     mesmo pagamento); o que foi trocado por um plano que começa DEPOIS foi renovado, e conta. */
+  var todosSeq = todos.concat([atual]);
+  for (i = 0; i < todos.length; i++) {
+    o = todos[i];
+    if (String(o.motivo || '') !== 'desfeita') continue;
+    if (finEhCorrecaoDe(o, versaoFinal(todosSeq, i + 1))) continue;
+    if (vistos[o.inicio]) continue;
+    vistos[o.inicio] = true;
+    out.push(o);
+  }
+  /* Do pagamento mais antigo para o mais novo: é nessa ordem que o dinheiro lançado é gasto. */
+  out.sort(function (a, b) { return String(a.inicio || '') < String(b.inicio || '') ? -1 : (String(a.inicio || '') > String(b.inicio || '') ? 1 : 0); });
   return out;
 }
 
@@ -827,12 +863,15 @@ function finResumoHistorico(R, k, c, h, X) {
   var meses = finMesesDoCompromisso(pl.compromisso);
   var nAulas = parseInt(h.aulas, 10);
   var aulas = (nAulas >= 1) ? Math.min(5, nAulas) : null;
-  var mensal = null, valor = finValorGravado(h), i;
-  if (!valor && h.dias_mes) {
+  var mensal = null, valor = finValorGravado(h), i, rotA = [];
+  if (h.dias_mes) {
+    /* Plano com dias diferentes em cada mês: não existe UMA quantidade de aulas (como no plano
+       atual, aulas fica null) — o rótulo diz as de cada mês. */
+    aulas = null;
     var M = finMesesDoPlano(X.planos, h), dias = [];
-    for (i = 0; i < M.length; i++) dias.push(M[i].dias);
+    for (i = 0; i < M.length; i++) { dias.push(M[i].dias); rotA.push(M[i].dias.length + 'x'); }
     var V = M.length ? finValorDoPlano(X.planos, h.plano, dias, ordemUsada, X.descontos) : null;
-    if (V && V.falta < 0) valor = V.total;
+    if (!valor && V && V.falta < 0) valor = V.total;
   } else if (!valor) {
     if (aulas === null) aulas = finAulasDe(k, X.cadastro, X.peludinhos);
     mensal = (aulas === null) ? null : finMensalidade(X.planos, h.plano, aulas, ordemUsada, X.descontos);
@@ -873,6 +912,7 @@ function finResumoHistorico(R, k, c, h, X) {
     origem: 'renovacao-anterior',
     valorGravado: finValorGravado(h) > 0
   });
+  if (rotA.length) R.porFILHOt[R.porFILHOt.length - 1].aulasRotulo = rotA.join(', ');
 }
 
 /* ------------------------------------------------------------------ resumo */
@@ -1182,6 +1222,17 @@ function finResumoMes(dados, mes, opcoes) {
     }
   }
 
+  /* UM FILHOt QUE PAGOU DUAS VEZES NO MÊS (6.44: a renovação anterior e o plano atual no mesmo
+     mês) é UM FILHOt: "quantos" conta FILHOts, não pagamentos. Sem renovação anterior no mês,
+     nada muda (uma linha por chave). */
+  var vistosDc = {}, repetidos = 0, zq;
+  for (zq = 0; zq < R.porFILHOt.length; zq++) {
+    if (R.porFILHOt[zq].servico !== 'daycare') continue;
+    if (vistosDc[R.porFILHOt[zq].chave]) repetidos++;
+    vistosDc[R.porFILHOt[zq].chave] = true;
+  }
+  R.porServico.daycare.quantos -= repetidos;
+
   /* ------------------------------------------------------------- totais ---- */
   R.recebidoTotal = R.porServico.daycare.recebido + R.porServico.auaulandia.recebido;
   R.aReceberTotal = R.porServico.daycare.aReceber + R.porServico.auaulandia.aReceber;
@@ -1218,8 +1269,13 @@ function finResumoMes(dados, mes, opcoes) {
     R.avisos.push(R.ordemFamiliaResolvida + ' FILHOt(s) sem o "Nº do peludinho na família" tiveram a ' +
       'ordem de desconto resolvida automaticamente pelo vínculo de irmãos (daycare/irmaos).');
   }
+  var foraChaves = {}, foraN = 0;
+  for (zq = 0; zq < R.semComoCalcular.length; zq++) {
+    if (!foraChaves[R.semComoCalcular[zq].chave]) foraN++;
+    foraChaves[R.semComoCalcular[zq].chave] = true;
+  }
   if (R.semComoCalcular.length) {
-    R.avisos.push(R.semComoCalcular.length + ' FILHOt(s) ficaram FORA da soma por falta de dado. ' +
+    R.avisos.push(foraN + ' FILHOt(s) ficaram FORA da soma por falta de dado. ' +
       'Estão listados em "sem como calcular" — não foram estimados.');
   }
   return R;

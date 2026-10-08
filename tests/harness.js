@@ -22437,12 +22437,20 @@ async function main() {
     // plano) são as únicas que a 6.36 muda de propósito: ficam fora da comparação — senão a
     // prova viraria bomba-relógio no dia da conversão. As outras têm de dar o mesmo de antes.
     const comDiasMes50 = Object.keys(cad50 || {}).filter((k) => cad50[k] && cad50[k].renov && cad50[k].renov.dias_mes);
+    // 6.44: também mudam de propósito a ficha com renovações anteriores (o pagamento de antes conta no
+    // mês dele) e a com o valor GRAVADO no fechamento — ficam fora pelo mesmo motivo (não é bomba-relógio).
+    const muda644 = (c) => !!(c && ((c.renov_hist && typeof c.renov_hist === 'object' && Object.keys(c.renov_hist).length)
+      || (c.renov && Number(c.renov.valor_plano_cent) > 0)));
+    check('v-50 · H3 — 6.44: a ficha com renovação anterior ou com valor gravado sai da comparação; a ficha comum fica',
+      muda644({ renov: { plano: 'Gold' }, renov_hist: { a: { plano: 'Gold' } } }) && muda644({ renov: { plano: 'Gold', valor_plano_cent: 107700 } })
+      && !muda644({ renov: { plano: 'Gold', inicio: '2026-07-05' } }) && !muda644({ renov: { plano: 'Gold' }, renov_hist: {} }) && !muda644({ renov: { valor_plano_cent: 0 } }));
+    const com644 = Object.keys(cad50 || {}).filter((k) => comDiasMes50.indexOf(k) < 0 && muda644(cad50[k]));
     if (cad50 && Object.keys(cad50).length) {
       const cadSem50 = {};
-      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
+      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0 && com644.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
       const r50 = compara50({ cadastro: cadSem50, orcamentos: orc50 || {}, pagamentos: pag50 || null, irmaos: irmaos || {},
         peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] });
-      console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
+      console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês e ' + com644.length + ' com renovação anterior ou valor gravado (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
       check('v-50 · H3 — retrato: o finResumoMes de 2026-06 a 2026-10 é o de antes da 6.36 (totais e linhas, em 3 "hoje") para toda ficha sem dias por mês',
         r50.difs.length === 0, r50.difs.slice(0, 4).join(' · '));
     } else {
