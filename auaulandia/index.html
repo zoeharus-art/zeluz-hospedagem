@@ -20705,8 +20705,9 @@
   // acima diz "plano novo" — mas a correção para alguns dias depois (23/09 → 25/09 num trimestral,
   // 10/07 → 28/07 num mensal) tem o mesmo jeito de uma renovação. Desde a 6.44 isso é dinheiro: a
   // renovação conta os DOIS pagamentos no fechamento do mês. O app pergunta quando não dá para
-  // saber: o plano gravado foi confirmado HOJE (a data errada sendo consertada), ou o pagamento
-  // novo veio com o plano gravado ainda longe de acabar (mais de 15 dias antes do fim). A
+  // saber: o plano gravado foi confirmado HOJE (a data errada sendo consertada); ele foi lançado já
+  // vencido (o "Manter … mesmo assim" do aviso de vigência vencida — QA da 6.44, 3ª rodada); ou o
+  // pagamento novo veio com ele ainda longe de acabar (mais de 15 dias antes do fim). A
   // renovação de sempre — paga nos últimos 15 dias do plano, ou depois que ele acabou (o Baque:
   // pagou 02/09 e renovou 30/09 para outubro) — não pergunta nada. (A mesma regra está no financeiro-logica.js,
   // finPerguntariaNovoOuCorrecao, para pedir "confira" nos registros antigos.)
@@ -20716,6 +20717,7 @@
     if(!ehISO(g.inicio) || !ehISO(c.inicio) || String(g.inicio)===String(c.inicio)) return false;
     if(renovEhCorrecao(g, c, '')) return false;
     if(ehISO(g.quando) && String(g.quando)===String(hoje||'')) return true;
+    if(ehISO(g.quando) && ehISO(g.fim) && String(g.fim) < String(g.quando)) return true;
     return ehISO(g.fim) && String(c.inicio) < addDiasISO(g.fim, -15);
   }
   // A linha do resumo do Confirmar sobre os dias de cada mês do plano GRAVADO ('' quando ele não
@@ -21012,8 +21014,11 @@
     // O "desfeita" ANTIGO (de antes da 6.44, sem a marca) confirmado ANTES do plano atual é o plano
     // PAGO que o "desfazer duas vezes" de antes deixou marcado assim (QA da 6.44): o Desfazer desfaz
     // o atual, como qualquer outro — refazer ali apagaria o pagamento dele no Desfazer seguinte.
+    // (A mesma regra do fechamento do mês: confirmado antes do atual E não é a renovação desfeita —
+    // o atual não começa antes dele. QA da 6.44, 3ª rodada.)
     const antPagoC=String(ant.motivo||'')==='desfeita' && ant.motivo_conferido!==true
-      && !Object.prototype.hasOwnProperty.call(ant,'motivo_do_que_voltou') && String(ant.quando||'')<String(atual.quando||'');
+      && !Object.prototype.hasOwnProperty.call(ant,'motivo_do_que_voltou') && String(ant.quando||'')<String(atual.quando||'')
+      && !renovEhCorrecao(ant, atual, '');
     if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, atual, ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
     else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:(antPagoC?'renovação':String(ant.motivo||'')),
       conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}), 'desfeita');
@@ -21394,7 +21399,8 @@
     }
     // PAGAMENTO NOVO OU CORREÇÃO DA DATA? quando ninguém perguntou ainda e não dá para saber (QA da
     // 6.44, FIN-005). O período é o mesmo nas duas respostas; muda o que o fechamento do mês conta.
-    // Fechar a pergunta sem escolher vale como correção: um pagamento só (nunca inventa dinheiro).
+    // A pergunta só tem os dois botões; se ela voltar sem resposta, vale correção (um pagamento só,
+    // nunca inventa dinheiro).
     if(!escolhaC && renovPerguntaNovoOuCorrecao(gravado, calc, hojeISO())){
       const perC=function(c){ return fmtBR(c.vig_inicio||c.inicio)+' até '+fmtBR(c.fim); };
       const novoP=await zPergunta('PAGAMENTO NOVO OU CORREÇÃO DA DATA?',
@@ -21475,6 +21481,10 @@
     // foi fechado com o tutor — a tabela de hoje não reescreve, calada, um mês que já fechou (QA
     // da 6.44); o resumo diz qual seria o da tabela, quando é outro.
     const mesmoC=renovMesmoPlano(gravado, novo);
+    // O MESMO plano confirmado de novo (conferir os dias, a tentativa repetida) guarda o dia em que
+    // foi confirmado de verdade: é por ele que o fechamento do mês reconhece a correção feita no
+    // mesmo dia (QA da 6.44, 3ª rodada).
+    if(mesmoC && /^\d{4}-\d{2}-\d{2}$/.test(gravado.quando||'')) novo.quando=gravado.quando;
     // A CORREÇÃO SÓ DA DATA é o mesmo pagamento (QA da 6.44): mesmo tipo, aulas, nº na família e dias
     // de cada mês — o valor fechado com o tutor continua o mesmo, ainda que a tabela tenha mudado.
     const soDataC=correcaoC && String(gravado.plano||'')===String(novo.plano||'') && String(gravado.aulas||'')===String(novo.aulas||'')
