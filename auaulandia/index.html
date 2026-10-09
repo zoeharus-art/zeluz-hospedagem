@@ -5125,13 +5125,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-02"></script>
+<script src="resposta-tutor.js?v=2026-10-09-03"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-02"></script>
+<script src="painel-logica.js?v=2026-10-09-03"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5143,7 +5143,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-02"></script>
+<script src="financeiro-logica.js?v=2026-10-09-03"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -8714,15 +8714,23 @@
   // O MESMO estado, pedido pelo NOME. O automático guarda listas de "Nome/Raça", não fichas
   // — e os Lançamentos do dia precisam dizer o estado de cada uma dessas linhas sem ter a
   // ficha na mão (23/set/2026). Uma régua só: repPlanEstado passou a chamar esta.
+  // A chave do nome no registro do automático (6.49): no registro novo (_estado_v 2), a
+  // identidade pela ficha (dashAutoIdent); no de antes desta versão, o primeiro nome de sempre.
+  function repPlanEstadoChave(auto, nomeRaca){
+    return (Number((auto||{})._estado_v)>=2)
+      ? ((typeof dashAutoIdent==='function')?dashAutoIdent(nomeRaca):vagasNomeChave(nomeRaca))
+      : vagasNomeChave(nomeRaca);
+  }
   function repPlanEstadoNome(dia, nomeRaca, tipo){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return {estado:'nada'};
     if(!repPlanNaJanela(dia)) return {estado:'fora'};
     var c=REP_PLAN_CACHE[dia];
     if(!c || !c.ts) return {estado:'lendo'};
     var est=((c.auto||{})._estado||{})[tipo]||null;
-    var ch=vagasNomeChave(nomeRaca);
+    var ch=repPlanEstadoChave(c.auto, nomeRaca);
     var r=est?est[ch]:null;
-    if(r && r.planilha_ok===true) return {estado:'ok', ts:r.ts||0};
+    // `escrito` (6.49): quando o automático pôs o texto na planilha pela última vez (0 = não se sabe).
+    if(r && r.planilha_ok===true) return {estado:'ok', ts:r.ts||0, escrito:Number(r.escrito)||0};
     if(r && r.planilha_ok===false) return {estado:'falhou', ts:r.ts||0,
       msg:String(r.planilha_msg||'a ponte não respondeu')};
     var erro=(c.auto||{})._erro;
@@ -8739,14 +8747,14 @@
   function repPlanHoraNome(dia, nomeRaca, tipo){
     var c=REP_PLAN_CACHE[dia]; if(!c) return '';
     var est=((c.auto||{})._estado||{})[tipo]; if(!est) return '';
-    var r=est[vagasNomeChave(nomeRaca)];
+    var r=est[repPlanEstadoChave(c.auto, nomeRaca)];
     if(r && r.hora_aviso) return '';   // a aba não tem a coluna da hora: a hora não está na planilha
     return (r && typeof r.hora==='string')?r.hora:'';
   }
   // A aba daquele dia não tem a coluna da hora (a ponte avisou ao gravar): a linha DIZ isso.
   function repPlanHoraSemColuna(dia, nomeRaca, tipo){
     var c=REP_PLAN_CACHE[dia]; if(!c) return false;
-    var r=(((c.auto||{})._estado||{})[tipo]||{})[vagasNomeChave(nomeRaca)];
+    var r=(((c.auto||{})._estado||{})[tipo]||{})[repPlanEstadoChave(c.auto, nomeRaca)];
     return !!(r && r.hora_aviso);
   }
   function repPlanQuando(ts){
@@ -18689,7 +18697,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-02';
+  const APP_VERSAO='2026-10-09-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -23937,6 +23945,8 @@
     const zerar={ banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:false, erro:'' };
     try{
       const t=await fetchSheet(abaDaycareDe(d), SHEET_DC);
+      // A mesma tabela serve à conferência da TV nos Lançamentos do dia (6.49): sem segunda leitura.
+      try{ if(typeof tvTabelaGuardar==='function') tvTabelaGuardar((typeof zHojeISO==='function')?zHojeISO():'', abaDaycareDe(d), t, lidaEm); }catch(e){} /* silencioso de propósito: é só a conferência da TV */
       const ix=planIdx(t.cols);
       if(ix.data==null){ planDia=Object.assign(zerar,{erro:'A aba "'+abaDaycareDe(d)+'" não tem coluna Data.'}); return planDia; }
       const out=Object.assign({}, zerar, {lida:true, dia:(typeof dcDataKey==='function')?dcDataKey():'', lidaEm:lidaEm});
@@ -39203,7 +39213,7 @@
     {k:'hospRestr',    t:'Hóspede com restrição', icone:'⚠️'}
   ];
   function dashAutoListaDoDia(dia, autoK){
-    var L=((REP_PLAN_CACHE[dia]||{}).auto||{})[autoK];
+    var L=dashAutoListaDoRegistro((REP_PLAN_CACHE[dia]||{}).auto||{}, autoK);   // a lista inteira (6.49)
     return Array.isArray(L)?L.filter(function(v){ return String(v||'').trim(); }):[];
   }
   // As linhas do automático de UM item, já sem quem a recepção lançou à mão (o mesmo FILHOt
@@ -39216,7 +39226,9 @@
   // "na planilha ✓" (QA da 6.34). A conferência acerta a planilha quando a ficha muda.
   function dashAutoLinhas(autoK, dia, jaMao){
     var visto=jaMao||{};
-    var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[dashAutoNomeChave(v)]; });
+    // A mesma FICHA (6.49): a Fiona/SRD lançada à mão não esconde a linha da Fiona/Buldogue.
+    var idDe=dashAutoIdentador();
+    var L=dashAutoListaDoDia(dia, autoK).filter(function(v){ return !visto[idDe(v)]; });
     if(!L.length) return {n:0, html:''};
     var html=L.map(function(v){
       var e=repPlanEstadoNome(dia, v, autoK);
@@ -39241,18 +39253,563 @@
         +(hr?(' <span class="dash-auto-hora" style="color:var(--z-blue-soft);font-weight:800">'+escAttr(hr)+'</span>'):'')
         +' <span class="dash-auto-tag">'+escAttr(DASH_AUTO_TAG[autoK]||'automático')+'</span>'
         +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
+        // 6.49: o banho de hoje diz também se está na planilha que a TV lê.
+        +dashTvAutoHTML(autoK, dia, v)
         +'</span></div>';
     }).join('');
     return {n:L.length, html:html};
   }
   // As chaves de quem já está lançado à mão naquele item — para não mostrar em dobro.
   function dashChavesDaMao(lista){
-    var m={};
+    var m={}, idDe=dashAutoIdentador();
     Object.keys(lista||{}).forEach(function(id){
-      var c=dashAutoNomeChave((lista[id]||{}).valor);
+      var c=idDe((lista[id]||{}).valor);
       if(c) m[c]=1;
     });
     return m;
+  }
+  // FICOU NA PLANILHA (3ª rodada do QA da 6.49, QA649b-1): o que a conferência deixou na planilha
+  // na dúvida — pode ser de uma pessoa, e o app não apaga o que uma pessoa escreveu. Do dia que está
+  // na tela, de hoje em diante (o automático confere hoje e os próximos 14 dias); só o registro do
+  // dia que a tela já leu, sem leitura nova.
+  function dashAutoFicouHTML(){
+    var dia=dashDia(), hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!dia || !hoje || dia<hoje) return '';
+    var f=(((REP_PLAN_CACHE[dia]||{}).auto||{})._ficou)||{}, L=[];
+    Object.keys(DASH_AUTO_COLS).forEach(function(k){
+      (Array.isArray(f[k])?f[k]:[]).forEach(function(v){
+        L.push('<div class="pair" data-ficou="'+escAttr(k)+'" style="padding:4px 0;border-bottom:1px solid var(--line)"><span class="k">ficou na planilha: <strong>'+esc(v)+'</strong>'
+          +' (coluna "'+esc(DASH_AUTO_COLS[k])+'") — tire à mão se não vale mais</span></div>');
+      });
+    });
+    if(!L.length) return '';
+    return '<div class="card dash-ficou" style="border-left:4px solid var(--crm-atencao)"><strong>Na dúvida, o app não tirou da planilha de '+esc(fmtBR(dia)||dia)+':</strong>'
+      +'<div style="margin-top:4px">'+L.join('')+'</div>'
+      +'<div class="hint" style="margin-top:4px">Um aparelho ainda na versão anterior do app conferiu este dia, e não há como saber se foi o app ou uma pessoa quem escreveu. O app não apaga o que pode ser de uma pessoa.</div></div>';
+  }
+  /* ===== O BANHO DE HOJE ESTÁ NA PLANILHA QUE A TV LÊ? (Adriana, 08/out/2026 — Story 6.49) =======
+   * "Fiona está no lançamento do dia no banho, no entanto não está aparecendo no dashboard. O que
+   *  ocorreu? Preciso que todos apareçam."
+   * O app confirmava pela resposta da PONTE ("foi para a planilha"), não pelo que a TV LÊ. A TV lê a
+   * aba do mês pela mesma porta pública (gviz) e só mostra as linhas cuja coluna Data, como texto,
+   * é "dd/mm/aaaa" do dia: uma linha com a data escrita de outro jeito fica fora da TV e dentro da
+   * conferência. Agora cada banho de hoje diz se está na planilha que a TV lê — lida pela mesma
+   * porta e com as mesmas regras —, e, quando não está, por quê.
+   * O texto diz "na planilha que a TV lê", nunca "na TV": daqui não se sabe se a TV foi recarregada,
+   * se está em outro dia ou sem internet, nem se alguém riscou o nome nela (crítica C4).
+   * A leitura é a que o app já faz (fetchSheet na planilha do Day Care): no máximo uma por minuto,
+   * só com esta tela visível e em hoje; a do carregarPlanilhaDia, quando é recente, vale também.
+   * Não lê nada no Firebase. */
+  // ---- A CÓPIA DAS REGRAS DA TV (dashboard-daycare1-zeluz/index.html, f7fb851) -----------------
+  // parseGviz (a célula de data vira o texto formatado da planilha; hora pura "HH:MM"; "10h05" vira
+  // "10:05"), o filtro do renderDay (Data === "dd/mm/aaaa") e o bloco Banho (BLOCKS.banho.fn com
+  // v/has: coluna "Banho" preenchida e diferente de "0"; ordem do relógio, sem hora no fim).
+  // Cópia, não carga: nenhum código da TV roda aqui. O exemplo de contrato da Fase 0 (P1) é o mesmo
+  // que a TV tem de ter no teste dela (parte C da story).
+  function tvTiraAcento(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+  function tvLinhasDaTabela(table){
+    var cols=((table&&table.cols)||[]).map(function(c){ return String((c&&(c.label||c.id))||'').trim().normalize('NFC'); });
+    var out=[];
+    ((table&&table.rows)||[]).forEach(function(row, i){
+      if(!(row&&row.c)) return;
+      var obj={}, dataCrua=null;
+      row.c.forEach(function(cell, j){
+        var key=cols[j]||('col'+j);
+        var val='';
+        if(cell&&cell.v!=null){
+          if(typeof cell.v==='string'&&cell.v.indexOf('Date(')===0){
+            var p=cell.v.match(/Date\((-?\d+),(\d+),(\d+)(?:,(\d+),(\d+(?:\.\d+)?))?/);
+            if(p){
+              var yr=+p[1], mo=+p[2], dy=+p[3];
+              if(p[4]!=null&&yr===1899&&mo===11&&dy===30){
+                var hr=+p[4], mn=Math.round(+p[5]);
+                val=String(hr).padStart(2,'0')+':'+String(mn).padStart(2,'0');
+              } else {
+                val=cell.f!=null?String(cell.f):(String(dy).padStart(2,'0')+'/'+String(mo+1).padStart(2,'0')+'/'+yr);
+              }
+            } else { val=cell.f!=null?String(cell.f):String(cell.v); }
+          } else {
+            val=cell.f!=null?String(cell.f):String(cell.v);
+            val=val.replace(/^(\d{1,2})h(\d{1,2})$/i, function(_,h,m){ return String(+h).padStart(2,'0')+':'+String(+m).padStart(2,'0'); })
+                   .replace(/^(\d{1,2})h$/i, function(_,h){ return String(+h).padStart(2,'0')+':00'; });
+          }
+        }
+        obj[key]=val;
+        var keySimples=key.normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+        if(keySimples!==key) obj[keySimples]=val;
+        // O que a TV joga fora — o valor CRU da coluna Data — fica aqui ao lado, para dizer por que
+        // uma linha do dia não entrou (data de verdade com outro formato, ou texto).
+        if(key==='Data') dataCrua=(cell&&cell.v!=null)?String(cell.v):null;
+      });
+      if(!Object.keys(obj).some(function(k){ return obj[k]!==''; })) return;
+      out.push({r:obj, i:i, dataCrua:dataCrua});
+    });
+    return out;
+  }
+  function tvV(r,k){
+    var kN=k.normalize('NFC'), kS=tvTiraAcento(k);
+    var direct=String(r[kN]||r[kN+' ']||r[k]||r[k+' ']||r[kS]||r[kS+' ']||'').trim();
+    if(direct!=='') return direct;
+    var kSL=kS.toLowerCase();
+    var match=Object.keys(r).find(function(rk){ return tvTiraAcento(rk).toLowerCase()===kSL; });
+    return match?String(r[match]).trim():'';
+  }
+  function tvHas(r,k){ var x=tvV(r,k); return x!==''&&x!=='0'; }
+  function tvParseHora(str){
+    if(!str) return null;
+    str=String(str).trim().toLowerCase();
+    var m;
+    if((m=str.match(/^(\d{1,2})h(\d{2})?$/))) return {h:+m[1], min:m[2]?+m[2]:0};
+    if((m=str.match(/^(\d{1,2}):(\d{2})$/))) return {h:+m[1], min:+m[2]};
+    return null;
+  }
+  function tvDataTexto(iso){ var p=String(iso||'').split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):''; }
+  // Pura: o bloco Banho da TV para o dia `iso`, a partir da tabela crua do gviz.
+  // → [{nome, hora, linha}] na ordem em que a TV mostra (linha = posição na tabela lida).
+  function tvEspelhoBanho(table, iso){
+    var dataStr=tvDataTexto(iso);
+    var L=tvLinhasDaTabela(table).filter(function(x){ return String(x.r['Data']||'').trim()===dataStr; })
+      .filter(function(x){ return tvHas(x.r,'Banho'); })
+      .map(function(x){ return {nome:tvV(x.r,'Banho'), hora:tvV(x.r,'Hora Banho'), linha:x.i}; })
+      .filter(function(e){ return e.nome&&e.nome!==''; });
+    return L.slice().sort(function(a,b){
+      var ta=tvParseHora(a.hora), tb=tvParseHora(b.hora);
+      if(!ta&&!tb) return 0;
+      if(!ta) return 1;
+      if(!tb) return -1;
+      return (ta.h*60+ta.min)-(tb.h*60+tb.min);
+    });
+  }
+  // Pura: os banhos que estão em linhas do dia `iso` que a TV NÃO lê — a Data é de verdade esse dia
+  // (Date(a,m,d) cru) ou o texto "d/m/aaaa", mas o texto formatado não é "dd/mm/aaaa". → [texto normalizado]
+  function tvBanhoForaDaData(table, iso){
+    var dataStr=tvDataTexto(iso), m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));
+    if(!m) return [];
+    var a=+m[1], me=+m[2], d=+m[3], out=[];
+    tvLinhasDaTabela(table).forEach(function(x){
+      if(String(x.r['Data']||'').trim()===dataStr) return;
+      var c=String(x.dataCrua||'').trim(), ehDoDia=false, q;
+      if((q=/^Date\((\d+),(\d+),(\d+)/.exec(c))) ehDoDia=(+q[1]===a && +q[2]===me-1 && +q[3]===d);
+      else if((q=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(c))) ehDoDia=(+q[1]===d && +q[2]===me && +q[3]===a);
+      if(!ehDoDia || !tvHas(x.r,'Banho')) return;
+      out.push(jsNorm(tvV(x.r,'Banho')));
+    });
+    return out;
+  }
+  // A linha do app está na TV? O MESMO texto; ou a MESMA ficha nos dois lados ("Ozzy - Lhasa"
+  // escrito à mão × "Ozzy/Lhasa Apso"). Nunca pelo primeiro nome.
+  function tvBanhoNaTV(texto, espelho){
+    var idDe=dashAutoIdentador();
+    var n=jsNorm(String(texto||'')), id=idDe(texto);
+    var porFicha=(id.indexOf('f:')===0);
+    return (espelho||[]).some(function(e){
+      if(jsNorm(String(e.nome||''))===n) return true;
+      return porFicha && idDe(e.nome)===id;
+    });
+  }
+  // ---- A LEITURA (no máximo 1 por minuto, só com esta tela à vista e em hoje) ----------------------
+  var TV_BANHO={dia:'', aba:'', ok:null, erro:'', lidaEm:0, pedidaEm:0, lendo:false, espelho:[], foraDaData:[]};
+  var TV_BANHO_LERDIA={};      // {dia: {pedidaEm, banho:[texto normalizado]}} — o que a PONTE leu (a conferência)
+  var TV_BANHO_MEXEU={};       // {id do lançamento: quando a ponte respondeu ao lançar/reenviar neste aparelho}
+  var TV_BANHO_PUS={};         // {texto normalizado: quando} — as linhas que o «pôr de novo» deste aparelho tentou repor
+  var TV_BANHO_QUER=0;         // uma leitura é pedida para depois desta hora (30 s depois de lançar ou tirar)
+  var TV_BANHO_LIGADO=false;
+  var TV_BANHO_MIN_MS=60000, TV_BANHO_CADA_MS=120000, TV_BANHO_DEPOIS_MS=30000, TV_BANHO_CAMINHO_MS=180000;
+  // O DIA DOS LANÇAMENTOS NA MEMÓRIA (2ª rodada do QA da 6.49, QA649-1). O computador que passa a
+  // noite com os Lançamentos do dia abertos vira o dia sem reler nada: o DASH_DADOS continua com
+  // os banhos de ONTEM, e a conferência da planilha de HOJE os dava, em vermelho, por "banhos de
+  // hoje que NÃO estão na planilha que a TV lê". O dashCarregar anota de que dia é o que ele leu;
+  // com o dia virado, a tela não confere nada até reler os lançamentos de hoje — e relê sozinha.
+  var DASH_DADOS_DE={obj:null, dia:''}, DASH_TV_RELER_DIA='';
+  // O DASH_DADOS é o de hoje? Lido pelo dashCarregar: o dia anotado decide. Montado por outra porta
+  // (sem anotação): vale, a não ser que o aparelho tenha virado o dia desde que abriu (appDiaVelho).
+  function dashDadosDeHoje(hoje){
+    if(DASH_DADOS_DE.obj && DASH_DADOS_DE.obj===DASH_DADOS) return DASH_DADOS_DE.dia===hoje;
+    return !(typeof appDiaVelho==='function' && appDiaVelho());
+  }
+  // Hoje, quando a tela está em hoje E com os lançamentos de hoje na memória; senão, ''.
+  function dashTvHoje(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!hoje || dashDia()!==hoje || !dashDadosDeHoje(hoje)) return '';
+    return hoje;
+  }
+  // O dia virou com a tela aberta: relê os lançamentos de hoje (uma vez por dia; o dashCarregar
+  // é o mesmo de abrir a tela, e só lê — a trava do aparelho com o dia velho continua valendo
+  // para tudo o que grava).
+  function dashTvRelerDia(hoje){
+    if(!hoje || DASH_TV_RELER_DIA===hoje) return false;
+    DASH_TV_RELER_DIA=hoje;
+    try{ dashCarregar(); }catch(e){ return false; } /* silencioso de propósito: o vigia de 15 s não insiste no mesmo dia; abrir a tela relê */
+    return true;
+  }
+  // Pura: é hora de ler? s = {lendo, pedidaEm, lidaEm, dia, hoje, quer}
+  function tvBanhoPrecisaLer(agora, s){
+    if(s.lendo) return false;
+    if((agora-(s.pedidaEm||0))<TV_BANHO_MIN_MS) return false;         // no máximo uma por minuto
+    if(s.dia!==s.hoje || !s.lidaEm) return true;                        // ainda não leu hoje
+    if(s.quer && agora>=s.quer && s.lidaEm<s.quer) return true;         // 30 s depois de lançar ou tirar
+    return (agora-s.lidaEm)>=TV_BANHO_CADA_MS;                          // a cada 2 minutos
+  }
+  function tvBanhoTelaVisivel(){
+    try{
+      if(typeof document!=='undefined' && document.visibilityState==='hidden') return false;
+      var v=document.getElementById('v-dashdc');
+      return !!(v && v.classList && v.classList.contains('active')===true);
+    }catch(e){ return false; } /* silencioso de propósito: sem saber, não lê */
+  }
+  function tvBanhoErroTexto(e, aba){
+    var m=String((e&&e.message)||e||'');
+    if(/timeout/i.test(m)) return 'a planilha não respondeu em 15 s';
+    if(/no table/i.test(m)) return 'não achei a aba "'+aba+'"';
+    return 'sem conexão com a planilha';
+  }
+  // A tabela crua chega por aqui — da leitura desta tela ou da do carregarPlanilhaDia (a planilha de
+  // hoje, que o Day Care já lê): uma leitura só serve às duas. A mais nova vale.
+  function tvTabelaGuardar(dia, aba, tabela, pedidaEm){
+    if(!tabela || !dia) return;
+    if(TV_BANHO.dia===dia && (pedidaEm||0)<TV_BANHO.lidaEm) return;
+    TV_BANHO.dia=dia; TV_BANHO.aba=aba; TV_BANHO.ok=true; TV_BANHO.erro='';
+    TV_BANHO.lidaEm=pedidaEm||Date.now();
+    if((pedidaEm||0)>TV_BANHO.pedidaEm) TV_BANHO.pedidaEm=pedidaEm||0;
+    TV_BANHO.espelho=tvEspelhoBanho(tabela, dia);
+    TV_BANHO.foraDaData=tvBanhoForaDaData(tabela, dia);
+  }
+  function tvLerDiaGuardar(dia, pedidaEm, conteudo){
+    if(dia!==((typeof zHojeISO==='function')?zHojeISO():'')) return;
+    var banho=[];
+    Object.keys(conteudo||{}).forEach(function(t){ if(jsNorm(t)==='banho') banho=banho.concat((conteudo[t]||[]).map(function(v){ return jsNorm(String(v||'')); })); });
+    TV_BANHO_LERDIA[dia]={pedidaEm:pedidaEm||0, banho:banho};
+  }
+  function tvBanhoLer(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var aba=abaDaycareDe(new Date(hoje+'T12:00:00')), pedida=Date.now();
+    TV_BANHO.pedidaEm=pedida; TV_BANHO.lendo=true;
+    // Como a TV: sem a aba com acento ("Março"), tenta sem acento.
+    var ler=function(nome){ return fetchSheet(nome, SHEET_DC); };
+    return ler(aba).catch(function(e){
+      var sem=aba.normalize('NFD').replace(/[̀-ͯ]/g,'');
+      if(sem!==aba) return ler(sem);
+      throw e;
+    }).then(function(t){
+      TV_BANHO.lendo=false;
+      tvTabelaGuardar(hoje, aba, t, pedida);
+    }, function(e){
+      TV_BANHO.lendo=false;
+      if(TV_BANHO.dia===hoje && pedida<TV_BANHO.lidaEm) return;
+      TV_BANHO.dia=hoje; TV_BANHO.aba=aba; TV_BANHO.ok=false; TV_BANHO.erro=tvBanhoErroTexto(e, aba);
+    }).then(function(){
+      try{ if(tvBanhoTelaVisivel()) renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    });
+  }
+  // Chamado pelo redesenho da tela e por um vigia de 15 s: lê só quando precisa.
+  function tvBanhoTique(){
+    try{
+      if(!tvBanhoTelaVisivel()) return false;
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      if(!hoje || dashDia()!==hoje) return false;
+      if(!dashDadosDeHoje(hoje)){ dashTvRelerDia(hoje); return false; }   // o dia virou com a tela aberta (QA649-1)
+      if(!dashTvBanhoLinhas(true).length && !dashBanhoFixoACaminhoHoje().length) return false;   // sem banho hoje, nada a conferir
+      if(!tvBanhoPrecisaLer(Date.now(), {lendo:TV_BANHO.lendo, pedidaEm:TV_BANHO.pedidaEm, lidaEm:TV_BANHO.lidaEm,
+          dia:TV_BANHO.dia, hoje:hoje, quer:TV_BANHO_QUER})) return false;
+      tvBanhoLer();
+      return true;
+    }catch(e){ return false; } /* silencioso de propósito: a conferência da TV é ajuda; a próxima batida tenta */
+  }
+  function tvBanhoLigar(){
+    if(TV_BANHO_LIGADO) return;
+    TV_BANHO_LIGADO=true;
+    try{ setInterval(tvBanhoTique, 15000); }catch(e){} /* silencioso de propósito: sem o vigia, a tela lê a cada redesenho */
+  }
+  // A ponte respondeu a um lançamento (ou reenvio, ou «tirar») de banho NESTE aparelho: a leitura de
+  // antes não vale para ele, e uma nova é pedida para daqui a 30 s.
+  function tvBanhoMexeu(id, acao){
+    if(acao==='lancar' && id) TV_BANHO_MEXEU[id]=Date.now();
+    TV_BANHO_QUER=Date.now()+TV_BANHO_DEPOIS_MS;
+  }
+  // Pura: o estado de UMA linha. desde = quando o app pôs o texto na planilha (0 = não se sabe).
+  // L = {dia, hoje, ok, erro, lidaEm, espelho, foraDaData, lerDia:{pedidaEm, banho}}
+  //   'lendo' · 'erro' · 'ok' · 'caminho' · 'nao' (a planilha não tem) · 'data' (linha que a TV não lê)
+  function tvBanhoEstado(texto, desde, agora, L){
+    if(!L || L.dia!==L.hoje || (L.ok!==false && !L.lidaEm)) return {e:'lendo'};
+    if(L.ok===false) return {e:'erro', msg:String(L.erro||'')};
+    var achou=tvBanhoNaTV(texto, L.espelho);
+    if(achou) return (L.lidaEm>=desde)?{e:'ok'}:{e:'caminho'};
+    if((agora-desde)<TV_BANHO_CAMINHO_MS) return {e:'caminho'};
+    if(L.lidaEm<desde) return {e:'lendo'};
+    var n=jsNorm(String(texto||''));
+    var ld=L.lerDia||null;
+    if((ld && ld.pedidaEm>=desde && (ld.banho||[]).indexOf(n)>=0) || (L.foraDaData||[]).indexOf(n)>=0) return {e:'data'};
+    return {e:'nao'};
+  }
+  function tvBanhoLeitura(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    return {dia:TV_BANHO.dia, hoje:hoje, ok:TV_BANHO.ok, erro:TV_BANHO.erro, lidaEm:TV_BANHO.lidaEm,
+            espelho:TV_BANHO.espelho, foraDaData:TV_BANHO.foraDaData, lerDia:TV_BANHO_LERDIA[hoje]||null};
+  }
+  // Uma linha lançada à mão. `antes` = um aviso que já existia vale para ela (a mesma conta do
+  // renderDash: planilha_ok false, ou não confirmado há mais de 2 minutos).
+  function dashTvLinhaDaMao(o, id, agora){
+    o=o||{};
+    return {texto:String(o.valor||''), hora:String(o.hora||''), id:id, mao:true,
+            antes:(o.planilha_ok===false) || (o.planilha_ok!==true && (agora-(o.ts||0))>120000),
+            desde:Math.max(Number(o.ts)||0, TV_BANHO_MEXEU[id]||0, TV_BANHO_PUS[jsNorm(String(o.valor||''))]||0)};
+  }
+  // Uma linha do automático: o estado de hoje (na planilha ✓, recusou, a conexão caiu…) vem antes;
+  // só a que diz "na planilha ✓" ganha a conferência da TV, desde quando o automático a escreveu.
+  function dashTvLinhaDoAuto(v, dia){
+    var e=repPlanEstadoNome(dia, v, 'banho');
+    return {texto:String(v||''), hora:repPlanHoraNome(dia, v, 'banho'), mao:false, antes:(e.estado!=='ok'),
+            desde:Math.max(Number(e.escrito)||0, TV_BANHO_PUS[jsNorm(String(v||''))]||0)};
+  }
+  function dashTvComEstado(l, agora, L){ l.tv=l.antes?null:tvBanhoEstado(l.texto, l.desde, agora, L||tvBanhoLeitura()); return l; }
+  // Os banhos de HOJE na tela, com o estado de cada um. Os avisos que já existiam (NÃO foi para a
+  // TV, não confirmado, recusou, a conexão caiu) vêm antes: nessas linhas não há estado novo.
+  // `soContar` = só a lista, sem calcular os estados (o vigia só quer saber se há banho).
+  function dashTvBanhoLinhas(soContar){
+    var hoje=dashTvHoje();          // hoje, com os lançamentos de hoje na memória (QA649-1)
+    if(!hoje) return [];
+    var out=[], lista=DASH_DADOS.banho||{}, agora=Date.now();
+    Object.keys(lista).forEach(function(id){
+      if(!String((lista[id]||{}).valor||'').trim()) return;
+      out.push(dashTvLinhaDaMao(lista[id], id, agora));
+    });
+    var jaMao=dashChavesDaMao(lista), idDe=dashAutoIdentador();
+    dashAutoListaDoDia(hoje, 'banho').forEach(function(v){
+      if(jaMao[idDe(v)]) return;
+      out.push(dashTvLinhaDoAuto(v, hoje));
+    });
+    if(soContar) return out;
+    var L=tvBanhoLeitura();
+    out.forEach(function(l){ dashTvComEstado(l, agora, L); });
+    return out;
+  }
+  // O estado da TV nas linhas desenhadas pelo renderDash (só no Banho e só em hoje).
+  function dashTvMaoHTML(k, o, id){
+    if(k!=='banho') return '';
+    var hoje=dashTvHoje();
+    if(!hoje || !String((o||{}).valor||'').trim()) return '';
+    var agora=Date.now();
+    return dashTvEstadoHTML(dashTvComEstado(dashTvLinhaDaMao(o, id, agora), agora));
+  }
+  function dashTvAutoHTML(autoK, dia, v){
+    var hoje=dashTvHoje();
+    if(autoK!=='banho' || !hoje || dia!==hoje) return '';
+    return dashTvEstadoHTML(dashTvComEstado(dashTvLinhaDoAuto(v, dia), Date.now()));
+  }
+  function tvBanhoMotivoTexto(t){
+    if(!t) return '';
+    if(t.e==='nao') return 'a planilha não tem este banho nas linhas de hoje';
+    if(t.e==='data') return 'está numa linha da planilha que a TV não lê (a data dessa linha está escrita diferente). Peça à Gestão para acertar a data.';
+    return '';
+  }
+  // O pedaço que entra na linha (à mão ou automática). Sem estado (aviso de antes), nada.
+  function dashTvEstadoHTML(l){
+    var t=l&&l.tv; if(!t) return '';
+    var cor='var(--muted)', txt='', bt='';
+    if(t.e==='ok'){ cor='var(--crm-ok)'; txt='na planilha que a TV lê ✓'; }
+    else if(t.e==='caminho'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha que a TV lê'; }
+    else if(t.e==='lendo'){ txt='conferindo a planilha que a TV lê…'; }
+    else if(t.e==='erro'){ cor='var(--z-gold-deep)'; txt='não consegui conferir a planilha que a TV lê agora ('+t.msg+')'; }
+    else if(t.e==='nao' || t.e==='data'){
+      cor='var(--crm-critico)'; txt='NÃO está na planilha que a TV lê: '+tvBanhoMotivoTexto(t);
+      if(t.e==='nao') bt=' <button type="button" class="btn dash-tv-por" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashTvPorDeNovo(this)">pôr de novo</button>';
+    }
+    return ' <span class="dash-tv-estado" data-tv="'+t.e+'" style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'+bt;
+  }
+  // O aviso no alto: quantos e quais banhos de hoje NÃO estão na planilha que a TV lê.
+  function dashTvAvisoHTML(){
+    var fora=dashTvBanhoLinhas().filter(function(l){ return l.tv && (l.tv.e==='nao' || l.tv.e==='data'); });
+    if(!fora.length) return '';
+    var n=fora.length, temNao=fora.some(function(l){ return l.tv.e==='nao'; });
+    return '<div class="card dash-tv-aviso" style="border-left:4px solid var(--crm-critico)"><strong>'
+      +(n===1?'1 banho de hoje NÃO está':(n+' banhos de hoje NÃO estão'))+' na planilha que a TV lê:</strong>'
+      +fora.map(function(l){
+        return '<div class="hint" style="margin-top:4px"><strong style="color:var(--z-blue)">'+esc(l.texto)+'</strong>'
+          +(l.hora?(' '+esc(l.hora)):'')+' — '+esc(tvBanhoMotivoTexto(l.tv))+'</div>';
+      }).join('')
+      +(temNao?('<div style="margin-top:8px"><button type="button" class="btn btn-gold dash-tv-por" style="padding:6px 12px;font-size:13px" onclick="dashTvPorDeNovo(this)">pôr de novo</button>'
+        +' <span class="hint">confere a planilha de hoje e põe de novo o que falta.</span></div>'):'')
+      +'</div>';
+  }
+  // «pôr de novo»: NÃO é escritor novo (crítica C13). Roda a conferência de HOJE — a mesma do
+  // «Conferir a planilha agora» —, que repõe o lançado à mão que sumiu e o banho fixo que falta.
+  // A ponte não duplica. Depois, a leitura seguinte da planilha que a TV lê confirma.
+  var DASH_TV_PONDO=false;
+  // `rotulo`: o que o botão diz enquanto confere (o «Conferir a planilha agora» do banho fixo que
+  // ainda não foi para a planilha usa esta mesma conferência — QA649-3).
+  function dashTvPorDeNovo(btn, rotulo){
+    if(DASH_TV_PONDO) return Promise.resolve(null);
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!hoje) return Promise.resolve(null);
+    DASH_TV_PONDO=true;
+    try{ if(btn){ btn.disabled=true; btn.textContent=rotulo||'pondo de novo…'; } }catch(e){} /* silencioso de propósito: enfeite de botão */
+    // As linhas que estão "a planilha não tem" passam a "a caminho" até uma leitura nova: a de antes
+    // não vale para elas. As outras (✓, a data escrita diferente) continuam como estão.
+    var __pus=Date.now(), __tentou=[];
+    dashTvBanhoLinhas().forEach(function(l){ if(l.tv && l.tv.e==='nao'){ var n=jsNorm(l.texto); __tentou.push(n); TV_BANHO_PUS[n]=__pus; } });
+    return Promise.resolve(dashAutoSincronizar(hoje)).catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; }).then(function(r){
+      DASH_TV_PONDO=false;
+      TV_BANHO_QUER=Date.now()+TV_BANHO_DEPOIS_MS;
+      if(!(r&&r.ok)){
+        var m=String((r&&r.erro)||'a ponte não respondeu');
+        if(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) m='a conexão com a planilha caiu';
+        __tentou.forEach(function(n){ if(TV_BANHO_PUS[n]===__pus) delete TV_BANHO_PUS[n]; });
+        if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI PÔR DE NOVO', [m+'.', 'A conferência de hoje não foi até o fim. Tente de novo em alguns minutos.'], {botao:'Entendi'});
+      }
+      var redesenhar=function(){ try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */ };
+      try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(hoje, true).then(redesenhar, redesenhar); else redesenhar(); }
+      catch(e){ redesenhar(); } /* silencioso de propósito: sem reler o registro do automático, a tela acerta na próxima passada */
+      return r;
+    });
+  }
+  // ---- O BANHO FIXO DE HOJE QUE NÃO VAI PARA A TV ------------------------------------------------
+  // Todo FILHOt com banho fixo que cai hoje e não está nem no automático nem à mão aparece no cartão
+  // Banho, com o motivo — ninguém some calado. As regras são as do automático (dashAutoCalcular e
+  // banhoAutoPodeNoDia), lidas na mesma ordem; nada é gravado.
+  // Quem vem no dia: a mesma conta do dashAutoCalcular (a turma de hoje; no futuro, os dias da ficha).
+  function dashBanhoQuemVem(iso){
+    var vem={}, hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    try{
+      if(iso===hoje && typeof turmaDoDia==='function'){
+        ((typeof turmaDeHoje==='function')?turmaDeHoje():turmaDoDia()).forEach(function(o){ if(o&&o.p) vem[pelKey(o.p)]=o.p; });
+      } else {
+        PELUDINHOS.forEach(function(p){ if(!pelInativo(p) && dashAutoVemNoDia(p,iso)) vem[pelKey(p)]=p; });
+      }
+    }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+    return vem;
+  }
+  // Pura (lê só a ficha, o extrato e a chamada em memória): por que o banho fixo de `p` não vai para
+  // a TV em `iso`. null = vai (o automático lança).
+  function dashBanhoFixoMotivo(p, br, iso, veio, hoje){
+    var inativo=false, morador=false;
+    try{ inativo=(typeof pelInativo==='function') && pelInativo(p); }catch(e){ inativo=false; } /* silencioso de propósito: sem a ficha, vale ativo */
+    try{ morador=(typeof pelCategoria==='function') && pelCategoria(p)==='morador'; }catch(e){ morador=false; } /* silencioso de propósito: sem a categoria, não é morador */
+    var vai=!inativo && !morador && banhoRecValeNoDia(br, iso) && banhoAutoPodeNoDia(p, iso, veio);
+    if(vai) return null;
+    if(inativo) return {cod:'inativo', txt:'está nos Inativos: o automático não lança'};
+    if(morador) return {cod:'morador', txt:'mora na casa: o automático não lança banho fixo de morador'};
+    var ex=banhoRecExcecao(br, iso);
+    if(ex && ex.pular){
+      var q=String(ex.quem||'').trim(), quando=(typeof repQuandoDe==='function')?repQuandoDe(ex.ts):'', partes=[];
+      if(q && q!=='-') partes.push('por '+q);
+      if(quando) partes.push('em '+quando);
+      return {cod:'pulado', txt:(ex.motivo==='faltou'?'horário liberado porque faltou':'pulado só hoje')+(partes.length?(' ('+partes.join(', ')+')'):'')};
+    }
+    var fech='';
+    try{ fech=(typeof orcFechado==='function')?(orcFechado(iso)||''):''; }catch(e){ fech=''; } /* silencioso de propósito: sem a tabela de feriados vale o calendário comum */
+    if(fech) return {cod:'feriado', txt:(fech==='domingo')?'domingo: a casa não abre':('feriado ('+fech+'): a casa não abre')};
+    var manter=!!(ex && ex.manter), avisou=false;
+    try{ var La=repLancamentos(p)||[], an=repAnulados(La); avisou=La.some(function(l){ return l && l.tipo==='credito' && l.data===iso && !an[l._id]; }); }
+    catch(e){ avisou=false; } /* silencioso de propósito: sem o extrato, vale o que se sabe */
+    if(avisou && !manter) return {cod:'avisada', txt:'falta avisada para hoje'};
+    var vem=!!veio;
+    if(!vem){ try{ vem=((typeof repAgendaDe==='function')?repAgendaDe(p):[]).indexOf(iso)>=0; }catch(e){ vem=false; } } /* silencioso de propósito: sem a agenda de reposição, vale a ficha */
+    if(!vem) return {cod:'naovem', txt:'não vem ao Day Care '+(iso===hoje?'hoje':'nesse dia')+', pela ficha'};
+    try{ if(iso===hoje && !manter && dcChamada && dcChamada[dcKey(p.n,p.tutor)]==='faltou') return {cod:'faltou', txt:'faltou na chamada de hoje'}; }
+    catch(e){} /* silencioso de propósito: sem a chamada em memória, vale o motivo geral */
+    return {cod:'outro', txt:'o automático não lança '+(iso===hoje?'hoje':'nesse dia')};
+  }
+  // A lista do dia: quem tem banho fixo que cai em `iso` e não está nem no automático nem à mão.
+  // `fora` = o automático NÃO lança (com o motivo); `aCaminho` = o automático lança, mas ainda não
+  // lançou: a conferência não passou desde a última mudança, ou está parada (2ª rodada do QA,
+  // QA649-3). Ninguém fica de fora das duas listas.
+  function dashBanhoFixoClassificar(iso, maoLista, autoLista){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', out=[], aCaminho=[];
+    if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS)) return {fora:out, aCaminho:aCaminho};
+    var jaMao=dashChavesDaMao(maoLista||{}), jaAuto={}, idDe=dashAutoIdentador();
+    (autoLista||[]).forEach(function(v){ var c=idDe(v); if(c) jaAuto[c]=1; });
+    var vem=null;
+    PELUDINHOS.forEach(function(p){
+      try{
+        var br=banhoRecDe(p);
+        if(!br || !br.ativo || !banhoRecCaiNoDia(br, iso)) return;
+        var c=idDe(banhoRecValorPlanilha(p, br));
+        if(jaMao[c] || jaAuto[c]) return;
+        if(!vem) vem=dashBanhoQuemVem(iso);
+        var mot=dashBanhoFixoMotivo(p, br, iso, !!vem[pelKey(p)], hoje);
+        var o={chave:dcKey(p.n, p.tutor), nome:dashNomePlanilha(p), hora:banhoRecHoraNoDia(br, iso), cod:'vai', txt:'', valor:banhoRecValorPlanilha(p, br)};
+        if(!mot){ aCaminho.push(o); return; }
+        o.cod=mot.cod; o.txt=mot.txt;
+        out.push(o);
+      }catch(e){} /* silencioso de propósito: uma ficha estranha não derruba a lista das outras */
+    });
+    var ordem=function(a,b){ return String(a.hora||'99').localeCompare(String(b.hora||'99')) || String(a.nome).localeCompare(String(b.nome),'pt-BR'); };
+    return {fora:out.sort(ordem), aCaminho:aCaminho.sort(ordem)};
+  }
+  function dashBanhoFixoFora(iso, maoLista, autoLista){ return dashBanhoFixoClassificar(iso, maoLista, autoLista).fora; }
+  function dashBanhoFixoACaminho(iso, maoLista, autoLista){ return dashBanhoFixoClassificar(iso, maoLista, autoLista).aCaminho; }
+  // Os de HOJE, só com o registro do automático do dia já lido (antes disso, não se sabe).
+  function dashBanhoFixoACaminhoHoje(){
+    var hoje=dashTvHoje(), c=hoje?REP_PLAN_CACHE[hoje]:null;
+    if(!c || !c.ts) return [];
+    return dashBanhoFixoACaminho(hoje, DASH_DADOS.banho||{}, dashAutoListaDoDia(hoje, 'banho'));
+  }
+  // O que diz a linha de quem o automático vai lançar (QA649-3): quando, ou por que ainda não.
+  function dashBanhoFixoACaminhoTexto(hoje){
+    if(typeof appDiaVelho==='function' && appDiaVelho())
+      return 'vai para a planilha na próxima conferência feita por um aparelho em dia ('+appDiaVelhoTexto()+')';
+    // `_erro` só existe enquanto a última passada falhou: a que confere o dia grava `_erro:null`.
+    var a=((REP_PLAN_CACHE[hoje]||{}).auto)||{}, er=a._erro;
+    if(er && er.msg){
+      var m=String(er.msg);
+      if(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) m='a conexão com a planilha caiu';
+      return 'ainda não foi para a planilha: a última conferência não conseguiu ler a planilha ('+m+'); o app tenta de novo sozinho em até '+DASH_AUTO_MIN+' min';
+    }
+    return 'vai para a planilha na próxima conferência, em até '+DASH_AUTO_MIN+' min';
+  }
+  function dashBanhoFixoForaHTML(maoLista){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(!dashDadosDeHoje(hoje)) return '';      // o dia virou com a tela aberta: espera reler (QA649-1)
+    var R=dashBanhoFixoClassificar(hoje, maoLista, dashAutoListaDoDia(hoje, 'banho'));
+    var L=R.fora, c=REP_PLAN_CACHE[hoje];
+    // "Ainda não lançou" só depois de ler o registro do automático do dia: antes disso, não se sabe.
+    var A=(c && c.ts)?R.aCaminho:[];
+    if(!L.length && !A.length) return '';
+    var h='<div class="dash-fixo-fora" id="dashFixoFora" style="margin-top:10px;padding-top:8px;border-top:1.5px dashed var(--line)">';
+    if(A.length){
+      // Outro aparelho pode já ter conferido (este não relê o registro): a planilha que a TV lê, lida
+      // aqui de qualquer jeito, diz se a célula já está lá.
+      var txtA=dashBanhoFixoACaminhoTexto(hoje), TL=tvBanhoLeitura();
+      var jaNaTV=function(o){ return TL.dia===hoje && TL.ok===true && TL.lidaEm>0 && tvBanhoNaTV(o.valor, TL.espelho); };
+      h+='<div style="font-size:13px;font-weight:800;color:var(--z-blue)">Banho fixo de hoje que o automático ainda não confirmou ('+A.length+')</div>'
+        +A.map(function(o){
+          var ok=jaNaTV(o);
+          return '<div class="pair" data-fora="vai" style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="k"><strong>'+esc(o.nome)+'</strong>'
+            +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+esc(o.hora)+'</span>'):'')
+            +' <span data-tv="'+(ok?'ok':'vai')+'" style="color:'+(ok?'var(--crm-ok)':'var(--z-gold-deep)')+';font-weight:800;font-size:11.5px">'+esc(ok?'na planilha que a TV lê ✓':txtA)+'</span></span></div>';
+        }).join('')
+        +'<div style="margin-top:6px"><button type="button" class="btn dash-tv-por" style="background:none;border:none;color:var(--z-blue);font-size:12px;font-weight:800;text-decoration:underline;padding:0 4px" onclick="dashTvPorDeNovo(this, \'conferindo a planilha…\')">Conferir a planilha agora</button></div>';
+    }
+    if(L.length){
+      h+='<div style="font-size:13px;font-weight:800;color:var(--z-blue)'+(A.length?';margin-top:8px':'')+'">Banho fixo de hoje que não vai para a TV ('+L.length+')</div>'
+      +L.map(function(o){
+        var bt=(o.cod==='faltou')
+          ? '<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:12px;font-weight:800;text-decoration:underline;padding:0 4px" onclick="dashBanhoFixoAbrirFaltou()">Abrir Hoje na Zêluz › Banho de quem faltou</button>'
+          : '<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:12px;font-weight:800;text-decoration:underline;padding:0 4px" data-ch="'+escAttr(o.chave)+'" onclick="dashBanhoFixoLancarMao(this.dataset.ch)">Lançar à mão</button>';
+        return '<div class="pair" data-fora="'+escAttr(o.cod)+'" style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="k"><strong>'+esc(o.nome)+'</strong>'
+          +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+esc(o.hora)+'</span>'):'')
+          +' <span style="color:var(--z-gold-deep);font-weight:800;font-size:11.5px">'+esc(o.txt)+'</span> '+bt+'</span></div>';
+      }).join('');
+    }
+    return h+'</div>';
+  }
+  // «Lançar à mão»: só ESCOLHE — o FILHOt e a hora do combinado no painel do Banho (o shampoo do
+  // combinado vem marcado, como em toda escolha). Nada vai para o banco sem o «Lançar na planilha».
+  function dashBanhoFixoLancarMao(chave){
+    var p=(PELUDINHOS||[]).find(function(q){ return q && dcKey(q.n, q.tutor)===chave; });
+    if(!p) return false;
+    var br=banhoRecDe(p), hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var hora=br?String(banhoRecHoraNoDia(br, hoje)||''):'';
+    DASH_HORA.banho=hora;
+    DASH_HORA_OUTRO.banho=!!(hora && dashHoraGrade('banho').indexOf(hora)<0);
+    try{ var h=document.getElementById('dashH_banho'); if(h) h.value=hora; }catch(e){} /* silencioso de propósito: o relógio redesenha com a hora */
+    dashEscolher('banho', dashNomePlanilha(p), PELUDINHOS.indexOf(p));
+    return true;
+  }
+  // Faltou: a decisão (liberar o horário, ainda vem, está aqui) mora no Hoje na Zêluz, no quadro
+  // «Banho de quem faltou» — este botão só leva até lá (crítica C5: nada daqui toca no check-in).
+  function dashBanhoFixoAbrirFaltou(){
+    try{ if(typeof abrirItemDoMenu==='function') abrirItemDoMenu('hoje'); }catch(e){} /* silencioso de propósito: navegação — falhar não muda dado nenhum */
   }
   function dashItem(k){ return DASH_ITENS.find(function(i){ return i.k===k; }); }
   // O dia que está sendo lançado. Começa em hoje e a recepção troca no seletor da tela.
@@ -39503,10 +40060,13 @@
     catch(e){} /* silencioso de propósito: sem a fila a linha diz "conferindo o check-in" e a próxima passada lê de novo */
     if(!DB){ renderDash(); return; }
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+    try{ tvBanhoLigar(); }catch(e){} /* silencioso de propósito: sem o vigia, a tela confere a cada redesenho */
+    var __diaLido=dashDia();   // de que dia é o que vai ser lido (2ª rodada do QA da 6.49, QA649-1)
     Promise.all([
       DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; })
         .catch(function(e){ try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */ }),
-      DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=dashLimparFantasmas(s.val()||{}); }).catch(function(){ DASH_DADOS={}; })
+      DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=dashLimparFantasmas(s.val()||{}); DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; })
+        .catch(function(){ DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; })
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
       if(u&&DASH_PONTE) u.value=DASH_PONTE.url||'';
@@ -39745,7 +40305,11 @@
         // é a tela que a recepção já está olhando quando lança (Adriana, 04/set/2026).
         +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'')
         // E o que não chegou à planilha também é avisado aqui — com a fila reenviando.
-        +dashFilaAvisoHTML();
+        +dashFilaAvisoHTML()
+        // E o banho de hoje que NÃO está na planilha que a TV lê (6.49).
+        +dashTvAvisoHTML()
+        // E o que a conferência deixou na planilha na dúvida (3ª rodada do QA da 6.49).
+        +dashAutoFicouHTML();
     }
     var el=document.getElementById('dashBlocos'); if(!el) return;
     // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
@@ -39797,12 +40361,16 @@
                       ?(' <span style="color:var(--muted);font-weight:700;font-size:11px">envio à planilha não confirmado</span>'
                         +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
                       :'')))
+                 // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
+                 +dashTvMaoHTML(it.k, o, id)
                  +'</span>'
                  +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+aut.html+'</div>')
           : (aut.n
             ? ('<div style="margin-top:6px">'+aut.html+'</div>')
             : '<div class="hint">Ninguém lançado hoje.</div>'))
+        // 6.49: o banho fixo de hoje que não vai para a TV, com o motivo — ninguém some calado.
+        +((it.k==='banho' && __diaDash===((typeof zHojeISO==='function')?zHojeISO():''))?dashBanhoFixoForaHTML(lista):'')
         +'<div style="margin-top:8px">'
         +(DASH_FORA[it.k]
           ? dashForaPainelHTML(it)
@@ -39838,6 +40406,8 @@
       var dt=document.getElementById('dashD_'+i.k); if(dt&&m.d) dt.value=m.d;
     });
     dashAncoraVoltar(el, __anc);
+    // A planilha que a TV lê: lê só se for hora (no máximo 1 vez por minuto) — 6.49.
+    try{ tvBanhoTique(); }catch(e){} /* silencioso de propósito: a conferência da TV é ajuda; o vigia de 15 s tenta de novo */
   }
 
   // ===== O DETALHE QUE VAI JUNTO — Adriana, 26/ago/2026 ===========================
@@ -44770,6 +45340,8 @@
     return dashPonteChamar({acao:acao, dia:dia, coluna:it.col, colunaHora:it.colHora||'',
                             valor:reg.valor||'', hora:reg.hora||''}).then(function(r){
       var ok=!!(r&&r.ok);
+      // O banho mexido NESTE aparelho: a leitura da planilha que a TV lê de antes não vale para ele (6.49).
+      if(k==='banho'){ try{ tvBanhoMexeu(id, acao); }catch(e){} /* silencioso de propósito: é só a conferência da TV */ }
       if(acao==='lancar'&&DB){
         // transaction porque o registro pode ter sido TIRADO enquanto a ponte respondia:
         // gravar direto recriaria um lançamento sem nome (ver "lançamento fantasma").
@@ -47192,6 +47764,212 @@
     DASH_NOMECHAVE_MEMO[s]=out;
     return out;
   }
+  /* ===== QUEM É QUEM: A FICHA, NÃO O PRIMEIRO NOME (Adriana, 08/out/2026 — Story 6.49) ==========
+   * "Fiona está no lançamento do dia no banho, no entanto não está aparecendo no dashboard. O que
+   *  ocorreu? Preciso que todos apareçam."
+   * O motor automático comparava pelo PRIMEIRO NOME (dashAutoNomeChave): a Fiona/Buldogue e a
+   * Fiona/SRD eram uma só. O banho fixo de uma passava por "na planilha ✓" porque a outra estava
+   * na coluna; lançar uma à mão escondia a outra dos Lançamentos do dia e chegava a TIRAR da
+   * planilha o banho fixo dela; duas com banho fixo no mesmo dia viravam uma. É o mesmo fio dos
+   * casos Cristal e Ozzy (29/09) e Lana (01/10).
+   * A identidade agora é a FICHA: o texto que casa EXATAMENTE com uma ficha só (planCasar, com
+   * raça e tutor; nunca pelo erro de digitação, e sem contar o xará inativo — dashIdentFicha)
+   * vale "f:" + a chave dela; o que não casa com segurança vale o nome inteiro, com a raça e o
+   * tutor e sem o detalhe ("t:fiona|buldogue"). "Ozzy - Lhasa" escrito à mão e "Ozzy/Lhasa Apso"
+   * continuam o mesmo FILHOt (os dois casam com a mesma ficha); as três Mayas continuam separadas
+   * pelo tutor. Um nome ambíguo escrito direto na planilha ("Fiona", com duas Fionas na casa) deixa
+   * de valer por uma delas: a TV pode mostrar as duas linhas — duplicado visível é melhor que
+   * banho sumido.
+   * dashAutoNomeChave NÃO mudou: é ela que conta as vagas do dia (vagasNomeChave, área da 6.46).
+   * A MEMÓRIA vale enquanto o cadastro não mudar em nada que decide a identidade (nome, raça e
+   * tutor de cada ficha — no código e no que a ficha gravou —, e quem está nos Inativos), e não só
+   * pelo tamanho: trocar a raça de uma ficha não muda quantas fichas há (crítica C14). */
+  var DASH_IDENT_MEMO={}, DASH_IDENT_ASS=null;
+  function dashIdentAssinatura(){
+    var a=[];
+    try{
+      var P=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+      a.push(P.length);
+      for(var i=0;i<P.length;i++){ var p=P[i]||{}; a.push(p.n, p.raca, p.tutor); }
+      // …e quem está nos Inativos (2ª rodada do QA): o xará inativo não conta, então sair dos
+      // Inativos ou voltar muda a identidade de um nome escrito sem raça. É a ficha gravada que
+      // traz o `inativo` (pelCadCache) — uma leitura de propriedade por ficha, sem abrir a ficha.
+      var C=(typeof pelCadCache!=='undefined'&&pelCadCache&&typeof pelCadCache==='object')?pelCadCache:{};
+      Object.keys(C).forEach(function(k){ var c=C[k]||{}; a.push(k, c.n, c.raca, c.tutor, c.inativo); });
+    }catch(e){ a.push('?'); } /* silencioso de propósito: sem cadastro legível a memória recomeça na próxima vez */
+    return a.join('\u0001');
+  }
+  // O texto sem a ficha: nome, raça e tutor normalizados, sem o detalhe entre parênteses e sem o
+  // " - restrição". A barra vira "|" e os caracteres que o Firebase não aceita numa chave saem —
+  // a identidade também é a chave do registro do automático (_estado).
+  function dashIdentTexto(s){
+    var q=null;
+    try{ q=(typeof planPartir==='function')?planPartir(s):null; }catch(e){ q=null; } /* silencioso de propósito: sem as partes vale o texto inteiro */
+    var t=q ? (String(q.nome||'')+(q.raca?('/'+q.raca):'')+(q.tutor?(' ('+q.tutor+')'):''))
+            : ((typeof jsNorm==='function')?jsNorm(s):String(s||'').trim().toLowerCase());
+    return 't:'+String(t).replace(/\//g,'|').replace(/[.#$\[\]]/g,'-');
+  }
+  function dashIdentConferir(){
+    var ass=dashIdentAssinatura();
+    if(ass!==DASH_IDENT_ASS){
+      DASH_IDENT_MEMO={}; DASH_IDENT_ASS=ass;
+      // A lista dos primeiros nomes de tutor (o que separa "(Luciana)" do detalhe) também se
+      // renova: ela guardava a resposta pelo tamanho do cadastro.
+      if(typeof DASH_TUTOR1_N!=='undefined') DASH_TUTOR1_N=-1;
+    }
+  }
+  function dashAutoIdent(v){ dashIdentConferir(); return dashIdentCalcular(v); }
+  // UM LOTE de nomes (uma passada da conferência, um desenho da tela): o cadastro é conferido uma
+  // vez só — a assinatura custa dezenas de microssegundos, e uma passada chega a milhares de nomes.
+  function dashAutoIdentador(){ dashIdentConferir(); return dashIdentCalcular; }
+  // A lista que o automático escreveu numa coluna, num registro: a inteira (_listas) ou a de sempre.
+  function dashAutoListaDoRegistro(reg, k){
+    var l=(reg && reg._listas && Array.isArray(reg._listas[k])) ? reg._listas[k] : ((reg && reg[k]) || []);
+    return Array.isArray(l) ? l : [];
+  }
+  // TROCA DE VERSÃO, 2ª rodada do QA da 6.49 (achado do caçador). O aparelho que ainda não
+  // atualizou regrava este registro inteiro (set) como v1, sem a lista inteira (_listas): o que
+  // esta versão escreveu para o SEGUNDO xará de primeiro nome (a Fiona/SRD, com a Fiona/Buldogue
+  // na lista) some do registro, e o passo 2 nunca mais o tiraria da planilha — nem na falta das
+  // 12h, nem pulado, nem desligado. Num registro v1, a lista é REFEITA PELA FICHA: a célula que tem
+  // exatamente o texto que o automático escreveria para um FILHOt com xará de primeiro nome (o
+  // único caso em que a lista do aparelho antigo sai mais curta) conta como dele. O que a recepção
+  // lançou à mão com esse texto continua dela; sem ler os Lançamentos do dia, nada é refeito.
+  // Registro v2 não passa por aqui: a lista dele já é a inteira.
+  // SÓ COM PROVA (3ª rodada do QA, QA649b-1): a lista é refeita só no Banho do banho fixo, cujo
+  // texto leva o detalhe do combinado em maiúscula ("(SEM SHAMPOO)"), que ninguém escreve à mão.
+  // Nas colunas que pessoas também escrevem (Reposição, Faltas Avisadas, AUniversariante, Cliente
+  // Novo, Adaptação, as restrições), o "Nome/Raça" de uma pessoa é igual ao do automático: na
+  // dúvida, a célula NÃO sai — vai para `duvida`, e os Lançamentos do dia avisam «ficou na
+  // planilha». Hóspede não é ficha: a dúvida é o segundo hóspede de um primeiro nome que o
+  // registro do aparelho antigo tem (ele guarda um por primeiro nome).
+  function dashAutoTextoDaFicha(k, p){
+    if(k==='hospRestr') return '';                    // hóspede não é ficha do cadastro
+    if(k==='banho'){ var br=banhoRecDe(p); return br?banhoRecValorPlanilha(p, br):''; }
+    if(k==='aulunosRestr') return dashAutoTextoRestricao(p, (typeof pelExtra==='function')?(pelExtra(p)||{}):{});
+    return dashNomePlanilha(p);
+  }
+  function dashAutoListaRefeita(k, reg, atual, maoTxtK, idDe, duvida){
+    var antes=dashAutoListaDoRegistro(reg, k);
+    if(Number((reg||{})._estado_v)!==1 || !maoTxtK || !(atual||[]).length) return antes;
+    var P=(typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+    var visto={}, extra=[], porId=null, c1Antes={};
+    antes.forEach(function(v){ visto[jsNorm(String(v))]=1; c1Antes[dashAutoNomeChave(v)]=1; });
+    atual.forEach(function(cel){
+      try{
+        var n=jsNorm(String(cel||''));
+        if(!n || visto[n] || maoTxtK[n]) return;
+        if(k==='hospRestr'){ if(duvida && c1Antes[dashAutoNomeChave(cel)]) duvida.push(cel); return; }
+        var id=String(idDe(cel)||''); if(id.indexOf('f:')!==0) return;
+        if(!porId){ porId={}; P.forEach(function(q){ if(q) porId['f:'+dcKey(q.n, q.tutor)]=q; }); }
+        var p=porId[id]; if(!p) return;
+        if(jsNorm(dashAutoTextoDaFicha(k, p))!==n) return;
+        var c1=dashAutoNomeChave(dashNomePlanilha(p)), nN=jsNorm(p.n);
+        var temXara=P.some(function(q){ return q && q!==p && jsNorm(q.n)===nN && dashAutoNomeChave(dashNomePlanilha(q))===c1; });
+        if(!temXara) return;
+        visto[n]=1;
+        // A prova: o Banho, com o detalhe do combinado (o texto não é só o "Nome/Raça").
+        if(DASH_AUTO_COLS_HORA[k] && n!==jsNorm(dashNomePlanilha(p))) extra.push(cel);
+        else if(duvida) duvida.push(cel);
+      }catch(e){} /* silencioso de propósito: uma célula estranha só não é refeita; a conferência segue */
+    });
+    return extra.length?antes.concat(extra):antes;
+  }
+  // PONTE ENTRE VERSÕES (crítica C15 da 6.49). Até todos os aparelhos atualizarem, o que ainda está na
+  // versão de antes também confere a planilha, e lê este registro pelo PRIMEIRO NOME. Duas coisas o
+  // mantêm quieto em vez de desfazer o que esta versão fez:
+  //  · a lista de cada coluna fica como ele a escreveria (um nome por primeiro nome, o primeiro da
+  //    lista); a inteira vai em _listas, só quando é diferente. Com a lista inteira, ele tomava a
+  //    célula da Fiona/SRD por "o texto velho" da Fiona/Buldogue e a tirava da planilha;
+  //  · o estado de cada nome vai também na chave do primeiro nome (a do primeiro da lista, como ele
+  //    gravaria): sem ela, ele lia "ainda não passou" e regravava a hora a cada 5 minutos. Vai SÓ o
+  //    que ele lê (dashAutoEstadoParaAntigo) — a cópia inteira deixava o registro 2,7 vezes maior
+  //    (2ª rodada do QA, QA649-2).
+  // Quem lê o v2 só olha a identidade e a lista inteira.
+  // O REGISTRO QUE ESTA PASSADA ACABOU DE GRAVAR (2ª rodada do QA da 6.49, QA649-3). A tela guarda o
+  // registro do dia em REP_PLAN_CACHE (o das vagas) e só o relia ao abrir: o banho fixo que a
+  // conferência automática acabou de escrever continuava em "o automático ainda não confirmou".
+  // O que foi gravado agora é o que uma leitura traria — troca só o `auto` de um dia JÁ lido (o
+  // avulso, a reposição à mão e a hora da leitura ficam como estavam: as vagas releem no prazo delas)
+  // e redesenha os Lançamentos do dia, se estiverem à vista nesse dia. Nenhuma leitura nova.
+  function dashAutoCacheAtualizar(iso, reg){
+    var c=REP_PLAN_CACHE[iso];
+    if(!c || !c.ts || c.lendo || !reg) return false;
+    c.auto=JSON.parse(JSON.stringify(reg));
+    try{ if(iso===dashDia() && tvBanhoTelaVisivel()) renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    return true;
+  }
+  // O que o aparelho de antes desta versão PRECISA na chave do primeiro nome: o ✓ ou o motivo da
+  // recusa (repPlanEstadoNome), a hora (repPlanHoraNome/repPlanHoraSemColuna e a conferência dele:
+  // hora, hora_aviso, hora_aviso_ts). O resto — o `ts` (lá, só o "enviado em" do ✓) e o `escrito`
+  // — fica só na identidade: até recarregar, o aparelho antigo mostra o ✓ sem o "enviado em".
+  function dashAutoEstadoParaAntigo(r){
+    var o={planilha_ok:!!r.planilha_ok};
+    if(!r.planilha_ok) o.planilha_msg=String(r.planilha_msg||'a ponte não respondeu');
+    if(typeof r.hora==='string') o.hora=r.hora;
+    if(r.hora_aviso){ o.hora_aviso=r.hora_aviso; o.hora_aviso_ts=Number(r.hora_aviso_ts)||0; }
+    return o;
+  }
+  function dashAutoPonteVersoes(reg, estado, idDe){
+    Object.keys(DASH_AUTO_COLS).forEach(function(k){
+      var cheia=Array.isArray(reg[k])?reg[k]:[], visto={}, curta=[];
+      cheia.forEach(function(v){
+        var c1=String(dashAutoNomeChave(v)||'').replace(/[.#$\[\]\/]/g,'-');
+        if(c1 && visto[c1]) return;
+        if(c1) visto[c1]=1;
+        curta.push(v);
+        var ch=idDe(v);
+        if(c1 && ch && c1!==ch && estado[k] && estado[k][ch] && !estado[k][c1]) estado[k][c1]=dashAutoEstadoParaAntigo(estado[k][ch]);
+      });
+      if(curta.length!==cheia.length){ reg._listas=reg._listas||{}; reg._listas[k]=cheia; reg[k]=curta; }
+    });
+  }
+  // A FICHA QUE O TEXTO NOMEIA COM SEGURANÇA (2ª rodada do QA da 6.49). Só vale o casamento
+  // EXATO: o nome igual ao da ficha e, havendo xará, a raça ou o tutor que desempatam.
+  //  · O "erro de digitação" do planCasar (conf 'fuzzy') NÃO vale como identidade: "Mel", um
+  //    FILHOt sem ficha escrito na planilha, casava com o Bel/SRD e segurava o banho fixo dele,
+  //    com «na planilha que a TV lê ✓» falso (achado do caçador). Ele vale o texto ("t:mel").
+  //  · O xará INATIVO não conta — a mesma régua do dashXaraDe, que já não põe o tutor no nome
+  //    por causa de quem saiu: "Boris", escrito à mão com o Boris/Westie na casa e o
+  //    Boris/Buldogue nos Inativos, é o Boris/Westie (senão a TV mostrava o mesmo FILHOt duas vezes).
+  // O planCasar não muda: o Day Care também o usa. → a ficha, ou null.
+  function dashIdentFicha(s){
+    var m=planCasar(s);
+    if(m && m.p && !m.ambiguo) return (m.conf==='fuzzy')?null:m.p;
+    // Dúvida entre fichas de MESMO NOME (conf 'exato'): só as ativas a desfazem.
+    return (m && m.ambiguo && m.conf==='exato')?dashIdentSoAtivas(s):null;
+  }
+  // A régua do planCasar — nome exato, raça (planRacaBate) e tutor que desempatam —, contando só
+  // as fichas ATIVAS. Só é chamada quando o planCasar ficou em dúvida entre fichas de mesmo nome.
+  function dashIdentSoAtivas(s){
+    var q=planPartir(s); if(!q) return null;
+    var alvo=planNorm(q.nome);
+    var c=((typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[]).filter(function(p){
+      return p && planNorm(p.n)===alvo && !(typeof pelInativo==='function' && pelInativo(p));
+    });
+    if(c.length>1 && q.raca) c=c.filter(function(p){ return planRacaBate(p.raca, q.raca); });
+    if(c.length>1 && q.tutor){
+      var porTutor=c.filter(function(p){
+        var t=planNorm(((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'');
+        return !!t && (t===q.tutor || t.split(' ')[0]===q.tutor || t.indexOf(q.tutor)>=0);
+      });
+      if(porTutor.length) c=porTutor;
+    }
+    if(c.length!==1) return null;
+    if(q.raca && !planRacaBate(c[0].raca, q.raca)) return null;   // nome único e raça que não bate: não é ele
+    return c[0];
+  }
+  function dashIdentCalcular(v){
+    var s=String(v==null?'':v);
+    if(!s.trim()) return '';
+    if(DASH_IDENT_MEMO[s]!==undefined) return DASH_IDENT_MEMO[s];
+    var out='', p=null;
+    try{ p=dashIdentFicha(s); }catch(e){ p=null; } /* silencioso de propósito: sem casamento seguro vale o texto inteiro */
+    if(p) out='f:'+dcKey(p.n, p.tutor);
+    if(!out) out=dashIdentTexto(s);
+    DASH_IDENT_MEMO[s]=out;
+    return out;
+  }
   var DASH_SEM=['dom','seg','ter','qua','qui','sex','sab'];
   function dashAutoVemNoDia(p, iso){
     try{
@@ -47251,6 +48029,7 @@
   // O que DEVE estar na planilha naquele dia, item por item. Só lê o que o app já tem.
   function dashAutoCalcular(iso){
     var out={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ out[k]=[]; });
+    var idDe=dashAutoIdentador();   // a identidade pela ficha (6.49), conferindo o cadastro uma vez
     // A HORA de cada nome, por item que tem hora. Fica FORA das listas de propósito: as
     // listas viram o registro gravado em daycare/dashboard-auto/{dia}, e hora não é nome.
     // Quem lê isto é só dashAutoSincronizar, na hora de chamar a ponte.
@@ -47303,10 +48082,11 @@
         if(!ehMorador){
           var _br=banhoRecDe(p);
           if(_br && _br.ativo && banhoRecValeNoDia(_br, iso) && banhoAutoPodeNoDia(p, iso, veio)){
-            var _vb=banhoRecValorPlanilha(p, _br), _chb=dashAutoNomeChave(_vb);
+            var _vb=banhoRecValorPlanilha(p, _br), _chb=idDe(_vb);
             out.banho.push(_vb);
-            // Dois FILHOts com a mesma chave: fica a hora do PRIMEIRO, o mesmo que a lista
-            // guarda (o "sem repetidos" abaixo fica com o primeiro) — QA da 6.34.
+            // A hora é da FICHA (6.49): a Fiona/Buldogue e a Fiona/SRD têm cada uma a sua. Dois
+            // textos da mesma ficha (não acontece: uma ficha, um combinado) ficariam com a do
+            // primeiro, o mesmo que a lista guarda — QA da 6.34.
             if(out._horas.banho[_chb]===undefined) out._horas.banho[_chb]=banhoRecHoraNoDia(_br, iso);
           }
         }
@@ -47334,9 +48114,10 @@
         });
       }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     }
-    // sem repetidos (só as LISTAS — `_horas` não é lista de nomes)
+    // sem repetidos (só as LISTAS — `_horas` não é lista de nomes). Repetido é a MESMA FICHA
+    // (6.49): duas Fionas, duas reposições de xarás e duas restrições ficam as duas.
     Object.keys(DASH_AUTO_COLS).forEach(function(k){
-      var visto={}; out[k]=(out[k]||[]).filter(function(v){ var c=dashAutoNomeChave(v); if(visto[c]) return false; visto[c]=1; return true; });
+      var visto={}; out[k]=(out[k]||[]).filter(function(v){ var c=idDe(v); if(visto[c]) return false; visto[c]=1; return true; });
     });
     // Restrições em ORDEM ALFABÉTICA (Adriana, 04/set/2026): a lista saía na ordem do
     // cadastro, e quem procura um FILHOt no quadro procura pelo nome. Vale para aulunos e
@@ -47354,6 +48135,7 @@
     // planilha o banho de hoje. Não grava nada, nem o "_erro": os outros aparelhos conferem.
     if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve({ok:false, erro:appDiaVelhoTexto()});
     var noAuto='daycare/dashboard-auto/'+iso;
+    var __lerPedido=Date.now();
     return Promise.all([
       dashPonteChamar({acao:'lerDia', dia:iso}),
       DB.ref(noAuto).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
@@ -47363,12 +48145,17 @@
       // ler (null), esta passada não tira nada.
       DB.ref('daycare/dashboard/'+iso).once('value').then(function(s){ return (s&&s.val&&s.val())||{}; }).catch(function(){ return null; })
     ]).then(function(r){
+      var idDe=dashAutoIdentador();   // 6.49: a identidade pela ficha, com o cadastro conferido uma vez por passada
       var naPlanilha=(r[0]&&r[0].conteudo)||{}, jaAuto=r[1]||{};
+      // O que a PONTE leu do dia fica guardado para os Lançamentos do dia (6.49): quando a TV não
+      // tem o banho e a ponte tem, a linha da planilha está com a data escrita diferente.
+      if(r[0]&&r[0].ok){ try{ tvLerDiaGuardar(iso, __lerPedido, naPlanilha); }catch(e){} /* silencioso de propósito: é só o motivo da linha; a conferência segue */ }
       var maoLida=(r[2]!==null && r[2]!==undefined), maoCh={}, maoTxt={}, maoVivo={};
       if(maoLida) Object.keys(r[2]||{}).forEach(function(kk){
         var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
         Object.keys(itens).forEach(function(id){
-          var val=(itens[id]||{}).valor, c=dashAutoNomeChave(val);
+          // A identidade é a FICHA (6.49): o lançamento à mão da Fiona/SRD não é o da Fiona/Buldogue.
+          var val=(itens[id]||{}).valor, c=idDe(val);
           if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; maoTxt[kk]=maoTxt[kk]||{}; maoTxt[kk][jsNorm(String(val))]=1; }
           // VIVO = o passo 3 repõe se sumir (não esgotou as tentativas, a coluna existe). É a
           // palavra da recepção que fica na planilha: o automático não põe outra por cima (QA37).
@@ -47389,13 +48176,16 @@
       if(iso>hojeISOs) Object.keys(DASH_AUTO_COLS).forEach(function(k){ if(!DASH_AUTO_FUTURO[k]) desejado[k]=[]; });
       var horasDe=function(k, v){
         var m=(desejado._horas&&desejado._horas[k])||{};
-        return m[dashAutoNomeChave(v)]||'';
+        return m[idDe(v)]||'';
       };
       // As tarefas são FUNÇÕES e rodam uma por vez (QA36): empurrar tudo de uma vez para a fila
       // da ponte deixava o lançamento de uma pessoa esperando atrás de dezenas de escritas do
       // automático (74 s no 1º passe do dia). Uma por vez, a pessoa entra na próxima vaga.
       // `saindo` = o que os passos 1 e 2 tiram NESTA passada: o passo 3 não conta como presente.
-      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0, horas:0}, manterNoRegistro={}, saindo={};
+      // `postos`/`tirados`: os NOMES vão para o rastro (crítica C12 da 6.49) — "1 tirado(s)" não
+      // deixava ninguém achar a Fiona na Linha do tempo do dia.
+      var tarefas=[], novoRegistro={}, resumo={posto:0, tirado:0, horas:0, postos:[], tirados:[]}, manterNoRegistro={}, saindo={}, ficou={};
+      var anotar=function(lista, txt){ var t=String(txt||'').trim(); if(t && resumo[lista].indexOf(t)<0) resumo[lista].push(t); };
       var marcarSaindo=function(col, txt){ var c=jsNorm(col); saindo[c]=saindo[c]||{}; saindo[c][jsNorm(String(txt||''))]=1; };
       // ===== A CONFIRMAÇÃO, NOME POR NOME (Adriana, 21/set/2026) ====================
       // "Ter confirmação que foi lançado." Antes este registro guardava só a lista do que o
@@ -47409,20 +48199,33 @@
       // com ela que a próxima passada percebe que a hora da ficha mudou. Sem `hora`, ninguém
       // sabe que hora está lá (registro anterior a esta versão, ou a linha é da recepção).
       var estAntes=(jaAuto && jaAuto._estado && typeof jaAuto._estado==='object')?jaAuto._estado:{};
-      var horaAntesDe=function(k, ch){
-        var r=(estAntes[k]||{})[ch];
+      // O REGISTRO ANTERIOR (6.49): o de agora guarda pela identidade (_estado_v=2); o de antes
+      // desta versão (v1), pelo primeiro nome — continua lido, pela chave dele. Com duas Fionas
+      // num registro v1, as duas leem a mesma linha: no pior caso a hora é regravada uma vez.
+      var estAntesV2=(Number(jaAuto && jaAuto._estado_v)>=2);
+      var estAntesDe=function(k, v){ return (estAntes[k]||{})[estAntesV2?idDe(v):dashAutoNomeChave(v)]; };
+      var horaAntesDe=function(k, v){
+        var r=estAntesDe(k, v);
         return (r && typeof r.hora==='string')?r.hora:undefined;
       };
-      var horaAvisoDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && r.hora_aviso)?String(r.hora_aviso):''; };
-      var horaAvisoTsDe=function(k, ch){ var r=(estAntes[k]||{})[ch]; return (r && Number(r.hora_aviso_ts))||0; };
+      var horaAvisoDe=function(k, v){ var r=estAntesDe(k, v); return (r && r.hora_aviso)?String(r.hora_aviso):''; };
+      var horaAvisoTsDe=function(k, v){ var r=estAntesDe(k, v); return (r && Number(r.hora_aviso_ts))||0; };
       // `aviso` (2ª rodada do QA da 6.34): a ponte gravou o nome, mas disse que a aba não tem a
       // coluna da hora. A hora fica registrada (para a próxima passada não insistir a cada 5
       // minutos), marcada: a tela não mostra uma hora que não está na planilha.
-      var marcar=function(k, valor, ok, msg, hora, aviso, avisoTs){
+      // `escreveu` (6.49): esta passada pôs o texto na planilha agora. `escrito` guarda QUANDO o
+      // automático escreveu pela última vez — é com ela que os Lançamentos do dia sabem se a
+      // leitura da planilha que a TV lê é de depois da escrita ("a caminho" até lá).
+      var marcar=function(k, valor, ok, msg, hora, aviso, avisoTs, escreveu){
         estado[k]=estado[k]||{};
-        var ch=dashAutoNomeChave(valor);
+        var ch=idDe(valor);
         if(!ch) return;
-        estado[k][ch]={planilha_ok:!!ok, planilha_msg:ok?'':String(msg||'a ponte não respondeu'), ts:Date.now()};
+        // Sem o `planilha_msg` vazio quando deu certo, e o `escrito` só onde a tela o usa (o Banho,
+        // a coluna com hora): o registro inteiro desce a cada abertura da tela (QA649-2).
+        estado[k][ch]={planilha_ok:!!ok, ts:Date.now()};
+        if(!ok) estado[k][ch].planilha_msg=String(msg||'a ponte não respondeu');
+        var __esc=(ok && escreveu)?Date.now():(Number((estAntesDe(k, valor)||{}).escrito)||0);
+        if(__esc && DASH_AUTO_COLS_HORA[k]) estado[k][ch].escrito=__esc;
         if(DASH_AUTO_COLS_HORA[k] && typeof hora==='string'){
           estado[k][ch].hora=hora;
           if(aviso){ estado[k][ch].hora_aviso=String(aviso); estado[k][ch].hora_aviso_ts=Number(avisoTs)||Date.now(); }
@@ -47431,13 +48234,19 @@
       Object.keys(DASH_AUTO_COLS).forEach(function(k){
         var col=DASH_AUTO_COLS[k];
         var atual=(naPlanilha[col]||[]).filter(Boolean);
-        var atualCh={}; atual.forEach(function(v){ atualCh[dashAutoNomeChave(v)]=v; });
-        var antes=(jaAuto[k]||[]);
+        // Pela FICHA (6.49): a Fiona/SRD na coluna não é a Fiona/Buldogue que falta.
+        var atualCh={}; atual.forEach(function(v){ atualCh[idDe(v)]=v; });
+        // O que ESTE mecanismo escreveu: a lista inteira (_listas, 6.49) quando o registro a tem;
+        // senão, a de sempre (um dia sem xarás de primeiro nome) — e, no registro v1 regravado
+        // pelo aparelho que ainda não atualizou, refeita pela ficha (2ª rodada do QA) — só com prova
+        // (3ª rodada): a célula em dúvida fica na planilha e vai para `duvida`.
+        var duvida=[];
+        var antes=dashAutoListaRefeita(k, jaAuto, atual, maoLida?(maoTxt[k]||{}):null, idDe, duvida);
         var quer=desejado[k]||[];
-        var querCh={}; quer.forEach(function(v){ querCh[dashAutoNomeChave(v)]=v; });
+        var querCh={}; quer.forEach(function(v){ querCh[idDe(v)]=v; });
         // 1) falta na planilha → lançar
         quer.forEach(function(v){
-          var __ch=dashAutoNomeChave(v);
+          var __ch=idDe(v);
           // A recepção lançou o mesmo FILHOt nesta coluna (QA37 P2/P3): vale a linha dela. Se
           // ela não está na planilha, o passo 3 a repõe nesta mesma passada; o automático não
           // escreve a dele junto, senão o FILHOt apareceria duas vezes na TV.
@@ -47448,7 +48257,9 @@
             // o combinado mudou (o shampoo do banho fixo, 25/set/2026), a velha sai e a nova
             // entra — senão a TV diria "NA RECEPÇÃO" com o shampoo na bolsa. O que uma pessoa
             // escreveu continua intocado (não está no registro do automático).
-            var __nv=jsNorm(v), __mesmos=atual.filter(function(a){ return dashAutoNomeChave(a)===__ch; });
+            // Só as células da MESMA ficha (crítica C1 da 6.49): com a chave do primeiro nome, a
+            // Fiona/Buldogue lançada à mão fazia este passo tirar da planilha o banho fixo da Fiona/SRD.
+            var __nv=jsNorm(v), __mesmos=atual.filter(function(a){ return idDe(a)===__ch; });
             var __jaNovo=__mesmos.some(function(a){ return jsNorm(a)===__nv; });
             var __velhos=(DASH_AUTO_COLS_HORA[k] || __maoVivo)
               ? __mesmos.filter(function(a){ return (jsNorm(a)!==__nv || __maoVivo) && (jsNorm(a)===__nv || antes.some(function(b){ return jsNorm(String(b))===jsNorm(a); }))
@@ -47460,11 +48271,11 @@
               // hora, a hora do combinado trocada, ou registro sem hora —, a ponte regrava: o
               // `lancar` com o mesmo texto só acerta a "Hora Banho" daquela linha. Hora apagada
               // da ficha: tira e lança de novo, porque o `lancar` sem hora não limpa a célula.
-              var __hq=horasDe(k, v), __ha=horaAntesDe(k, __ch);
+              var __hq=horasDe(k, v), __ha=horaAntesDe(k, v);
               if(DASH_AUTO_COLS_HORA[k] && __jaNovo && !__maoVivo && !((maoTxt[k]||{})[__nv])){
                 // A aba sem a coluna "Hora Banho" (a ponte avisou): não insiste a cada passada, mas
                 // confere de novo a cada 6 horas — a coluna pode ter sido criada (3ª rodada do QA).
-                var __av=horaAvisoDe(k, __ch), __avTs=horaAvisoTsDe(k, __ch);
+                var __av=horaAvisoDe(k, v), __avTs=horaAvisoTsDe(k, v);
                 if(__ha===__hq && (!__av || (Date.now()-__avTs)<DASH_HORA_AVISO_MS)){ marcar(k, v, true, '', __hq, __av, __avTs); return; }
                 // Sem ler os Lançamentos do dia, não se sabe se a linha é da recepção: não mexe
                 // agora; a próxima passada tenta (2ª rodada do QA da 6.34, como o passo 2).
@@ -47483,7 +48294,7 @@
                       return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:__colH, hora:__hq, valor:v});
                     })
                     .then(function(x){
-                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq, x.avisoHora); }
+                      if(x&&x.ok){ resumo.horas++; marcar(k, v, true, '', __hq, x.avisoHora, undefined, __tirou); if(__tirou) anotar('postos', v); }
                       // Tirou e não voltou: o banho está fora da planilha até a próxima passada
                       // (que lança de novo) — a linha diz isso, sem hora.
                       else if(__tirou) marcar(k, v, false, 'o banho saiu da planilha para acertar a hora e ainda não voltou — '+((x&&x.erro)||'a ponte não respondeu'));
@@ -47502,7 +48313,7 @@
             __velhos.forEach(function(vv){ marcarSaindo(col, vv); });
             tarefas.push(function(){ return __velhos.reduce(function(fila, velho){
                 return fila.then(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:velho}); })
-                  .then(function(x){ if(x&&x.ok) resumo.tirado++; else __naoSaiu.push(velho); return x; });
+                  .then(function(x){ if(x&&x.ok){ resumo.tirado++; anotar('tirados', velho); } else __naoSaiu.push(velho); return x; });
               }, Promise.resolve())
               .then(function(x){
                 // A velha NÃO saiu (QA18): ela continua no registro, para a próxima conferência
@@ -47514,9 +48325,9 @@
                 }
                 if(__jaNovo || __maoVivo) return {ok:true, jaEstava:true};   // a recepção já lançou à mão: vale a linha dela
                 return dashPonteChamar({acao:'lancar', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
-                  .then(function(y){ if(y&&y.ok){ resumo.posto++; __horaFoi=horasDe(k, v); } return y; });
+                  .then(function(y){ if(y&&y.ok){ resumo.posto++; anotar('postos', v); __horaFoi=horasDe(k, v); } return y; });
               })
-              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi, x&&x.avisoHora); return x; }); });
+              .then(function(x){ marcar(k, v, !!(x&&x.ok), (x&&x.erro)||'', __horaFoi, x&&x.avisoHora, undefined, (__horaFoi!==undefined)); return x; }); });
             return;
           }
           // A HORA vai na mesma chamada, na coluna de hora do item (o banho fixo é o
@@ -47525,23 +48336,23 @@
                                         colunaHora:(DASH_AUTO_COLS_HORA[k]||''), hora:horasDe(k, v), valor:v})
             .then(function(x){
               var ok=!!(x&&x.ok);
-              if(ok) resumo.posto++;
-              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined, x&&x.avisoHora);
+              if(ok){ resumo.posto++; anotar('postos', v); }
+              marcar(k, v, ok, (x&&x.erro)||'', ok?horasDe(k, v):undefined, x&&x.avisoHora, undefined, ok);
               return x;
             }); });
         });
         // 2) foi este mecanismo que pôs e não vale mais → tirar
         antes.forEach(function(v){
-          if(querCh[dashAutoNomeChave(v)]!==undefined) return;
-          if(atualCh[dashAutoNomeChave(v)]===undefined) return;      // já não está na planilha
+          if(querCh[idDe(v)]!==undefined) return;
+          if(atualCh[idDe(v)]===undefined) return;      // já não está na planilha
           // O mesmo FILHOt foi lançado À MÃO nos Lançamentos do dia: a linha da recepção fica
           // (29/set/2026). Com o mesmo texto, a ponte não duplica e a célula é uma só; tirar por
           // nome apagaria o lançamento dela. Se ainda há a célula que ESTE mecanismo escreveu,
           // com OUTRO texto, só ela sai — senão o FILHOt apareceria duas vezes na TV (QA35).
-          if(maoCh[k] && maoCh[k][dashAutoNomeChave(v)]){
+          if(maoCh[k] && maoCh[k][idDe(v)]){
             var __meu=atual.filter(function(a){ return jsNorm(a)===jsNorm(String(v)) && !((maoTxt[k]||{})[jsNorm(a)]); })[0];
             if(__meu){ marcarSaindo(col, __meu); tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col, colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__meu})
-              .then(function(x){ if(x&&x.ok) resumo.tirado++; else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); }); }
+              .then(function(x){ if(x&&x.ok){ resumo.tirado++; anotar('tirados', __meu); } else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); }); }
             return;
           }
           // Não deu para ler os Lançamentos do dia: não tira nada agora; a próxima passada tenta.
@@ -47555,8 +48366,25 @@
           marcarSaindo(col, __sai);
           tarefas.push(function(){ return dashPonteChamar({acao:'remover', dia:iso, coluna:col,
                                         colunaHora:(DASH_AUTO_COLS_HORA[k]||''), valor:__sai})
-            .then(function(x){ if(x&&x.ok) resumo.tirado++; else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); });
+            .then(function(x){ if(x&&x.ok){ resumo.tirado++; anotar('tirados', __sai); } else manterNoRegistro[k]=(manterNoRegistro[k]||[]).concat([v]); return x; }); });
         });
+        // FICOU NA PLANILHA (3ª rodada do QA da 6.49, QA649b-1). A célula em dúvida que o automático
+        // não quer mais NÃO sai: vai para `_ficou`, e os Lançamentos do dia dizem «ficou na planilha:
+        // … tire à mão se não vale mais». O aviso segue nas passadas seguintes (o registro v2 já não
+        // refaz a dúvida) enquanto a célula estiver lá, sem lançamento à mão e sem o automático a
+        // querer de novo. A dúvida nunca está na lista do registro (a lista é a prova de que é dele).
+        // No dia futuro, só as colunas que o automático escreve com antecedência: nas outras ele
+        // nunca escreveu.
+        if(iso<=hojeISOs || DASH_AUTO_FUTURO[k]){
+          var __fv={};
+          duvida.concat((jaAuto._ficou && Array.isArray(jaAuto._ficou[k]))?jaAuto._ficou[k]:[]).forEach(function(v){
+            var n=jsNorm(String(v||''));
+            if(!n || __fv[n] || querCh[idDe(v)]!==undefined || (maoTxt[k]||{})[n]) return;
+            var cel=atual.filter(function(a){ return jsNorm(a)===n; })[0];
+            if(cel===undefined) return;
+            __fv[n]=1; ficou[k]=(ficou[k]||[]).concat([cel]);
+          });
+        }
         novoRegistro[k]=quer;
       });
       // 3) TODO LANÇAMENTO DO DIA ESTÁ NA PLANILHA (Adriana, 29/set/2026: "reveja todos os
@@ -47574,14 +48402,17 @@
       if(maoLida){
         var colNorm={};
         Object.keys(naPlanilha).forEach(function(t){ colNorm[jsNorm(t)]=(colNorm[jsNorm(t)]||[]).concat(naPlanilha[t]||[]); });
-        var fichaDe=function(txt){ try{ var m=planCasar(String(txt||'')); return (m && m.p && !m.ambiguo)?dcKey(m.p.n, m.p.tutor):''; }catch(e){ return ''; } }; /* sem casamento seguro, vale o nome */
+        // A MESMA régua da identidade (2ª rodada do QA da 6.49): só o casamento exato dá a ficha.
+        // Com o erro de digitação do planCasar, o "Mel" escrito na planilha segurava o Bel/SRD
+        // lançado à mão que tinha sumido — nem a conferência nem o «pôr de novo» o repunham.
+        var fichaDe=function(txt){ var id=idDe(String(txt||'')); return (id.indexOf('f:')===0)?id.slice(2):''; }; /* sem casamento seguro, vale o nome */
         Object.keys(r[2]||{}).forEach(function(kk){
           var it=(typeof dashItem==='function')?dashItem(kk):null;
           if(!it || !dashVaiParaPlanilha(it)) return;
           var itens=(r[2]||{})[kk]; if(!itens || typeof itens!=='object') return;
           var sai=saindo[jsNorm(it.col)]||{}, soTexto=(kk==='medicacao' || kk==='vet');
           var linhas=(colNorm[jsNorm(it.col)]||[]).filter(function(v){ return !sai[jsNorm(v)]; })
-            .map(function(v){ return {n:jsNorm(v), f:(soTexto?'':fichaDe(v)), ch:dashAutoNomeChave(v)}; });
+            .map(function(v){ return {n:jsNorm(v), f:(soTexto?'':fichaDe(v)), ch:idDe(v)}; });
           var presente=function(L){ return linhas.some(function(c){
             if(c.n===L.n) return true;
             if(soTexto) return false;
@@ -47592,7 +48423,9 @@
             if(!String(reg.valor||'').trim()) return;
             if((Date.now()-(Number(reg.ts)||0)) < 120000) return;
             if(dashPlanFilaMorto(reg) || dashPlanFilaSemColuna(reg.planilha_msg)) return;
-            var L={n:jsNorm(String(reg.valor)), f:(soTexto?'':(reg.chave||fichaDe(reg.valor))), ch:dashAutoNomeChave(reg.valor)};
+            // Sem ficha dos dois lados, vale o texto inteiro (6.49), nunca o primeiro nome: uma
+            // "Fiona" sem raça na planilha não segura a Fiona/Buldogue lançada à mão.
+            var L={n:jsNorm(String(reg.valor)), f:(soTexto?'':(reg.chave||fichaDe(reg.valor))), ch:idDe(reg.valor)};
             if(presente(L)) return;
             linhas.push(L);                                   // o mesmo FILHOt não volta duas vezes
             reporMao.push({k:kk, id:id, reg:reg, it:it});
@@ -47609,7 +48442,7 @@
               if(!atual || !String(atual.valor||'').trim()) return;
               return Promise.resolve(dashEspelhar(x.k, x.id, atual, 'lancar', iso)).then(function(y){
                 if(!(y && y.ok)) return;
-                resumo.posto++;
+                resumo.posto++; anotar('postos', atual.valor);
                 try{ if(typeof audit==='function') audit('dashboard-daycare','a conferência repôs na planilha '+(atual.valor||'')+' ('+x.it.t+', '+((typeof fmtBR==='function'?fmtBR(iso):'')||iso)+'): estava nos Lançamentos do dia e tinha sumido da planilha',{pet:atual.valor||''}); }
                 catch(e){} /* silencioso de propósito: rastro — o audit() tem bolso próprio */
                 if(y.jaEstava) return;
@@ -47624,18 +48457,27 @@
         }, Promise.resolve());
       }).then(function(){
         Object.keys(manterNoRegistro).forEach(function(k){ novoRegistro[k]=(novoRegistro[k]||[]).concat(manterNoRegistro[k]); });
+        dashAutoPonteVersoes(novoRegistro, estado, idDe);
         novoRegistro._ts=Date.now();
         novoRegistro._quem=(typeof quemSou==='function'?quemSou():'-');
         novoRegistro._estado=estado;        // a confirmação, nome por nome
         // A marca de que ESTE registro já nasceu com confirmação. O Firebase não guarda
         // objeto vazio: sem ela, um dia em que o automático não quis escrever nada ficaria
         // igual a um registro velho, e a tela diria "não sei" onde devia dizer "a caminho".
-        novoRegistro._estado_v=1;
+        // v2 (6.49): as chaves do _estado são a identidade (dashAutoIdent), não o primeiro nome.
+        // Quem lê um registro v1 procura pela chave antiga (repPlanEstadoChave).
+        novoRegistro._estado_v=2;
+        if(Object.keys(ficou).length) novoRegistro._ficou=ficou;   // 3ª rodada do QA (QA649b-1)
         novoRegistro._erro=null;            // conferiu o dia: a falha anterior não vale mais
-        return DB.ref(noAuto).set(novoRegistro).catch(function(e){ _logFalhaGrav('dashAutoSincronizar', e); }).then(function(){
+        var __gravou=false;
+        return DB.ref(noAuto).set(novoRegistro).then(function(){ __gravou=true; }, function(e){ _logFalhaGrav('dashAutoSincronizar', e); }).then(function(){
+          // O que esta passada gravou vale na tela deste aparelho na hora, sem reler o banco (QA649-3).
+          if(__gravou){ try{ dashAutoCacheAtualizar(iso, novoRegistro); }catch(e){} } /* silencioso de propósito: a tela acerta na próxima leitura do registro */
           if((resumo.posto||resumo.tirado||resumo.horas) && typeof audit==='function')
             audit('dashboard-auto','preencheu a planilha de '+iso+': '+resumo.posto+' posto(s), '+resumo.tirado+' tirado(s)'
-              +(resumo.horas?(', '+resumo.horas+' hora(s) acertada(s)'):''),{});
+              +(resumo.horas?(', '+resumo.horas+' hora(s) acertada(s)'):'')
+              +(resumo.postos.length?(' — posto(s): '+resumo.postos.join('; ')):'')
+              +(resumo.tirados.length?(' — tirado(s): '+resumo.tirados.join('; ')):''),{});
           return {ok:true, dia:iso, posto:resumo.posto, tirado:resumo.tirado, horas:resumo.horas};
         });
       });
@@ -47735,6 +48577,46 @@
       alert('Não foi para a planilha: '+((e&&e.message)||e));
     });
   }
+  // O MESMO TEXTO EM OUTRO LANÇAMENTO (crítica C2 da 6.49). Dois aparelhos lançaram a mesma
+  // Fiona com o mesmo texto: a ponte respondeu "já estava" ao segundo, e a célula na planilha é
+  // UMA só. Tirar o repetido pedia à ponte que tirasse TODAS as células com esse texto — a do outro
+  // lançamento saía junto, e ele continuava na tela como se estivesse na planilha, sem aviso
+  // nenhum. Agora, antes de pedir, o app relê o item daquele dia no banco (o lançamento feito em
+  // outro aparelho não está na memória deste): havendo outro lançamento com o mesmo texto, sai só
+  // este lançamento e a célula fica. Sem a releitura, vale o que este aparelho tem na memória.
+  // A ponte não muda: ela continua tirando pelo texto.
+  function dashMesmoTextoEmOutro(lista, id, valor){
+    var alvo=(typeof jsNorm==='function')?jsNorm(String(valor||'')):String(valor||'').trim().toLowerCase();
+    if(!alvo) return null;
+    var achou=null;
+    Object.keys(lista||{}).forEach(function(oid){
+      if(achou || oid===id) return;
+      var o=(lista||{})[oid]||{};
+      if(!String(o.valor||'').trim()) return;
+      if(((typeof jsNorm==='function')?jsNorm(String(o.valor)):String(o.valor).trim().toLowerCase())===alvo) achou=o;
+    });
+    return achou;
+  }
+  function dashRemoverDaPlanilha(k, id, reg){
+    var dia=dashDia(), it=dashItem(k);
+    if(!(DB && it && dashVaiParaPlanilha(it) && reg && String(reg.valor||'').trim())) return dashEspelhar(k,id,reg,'remover');
+    var naMemoria=(dia===dashDia())?(DASH_DADOS[k]||{}):{};
+    return DB.ref('daycare/dashboard/'+dia+'/'+k).once('value')
+      .then(function(sn){ return (sn&&sn.val&&sn.val())||{}; })
+      .catch(function(e){ _logLeituraFalhou('daycare/dashboard/'+dia+'/'+k+' (tirar: o mesmo texto em outro lançamento)', e); return null; })
+      .then(function(lista){
+        var outro=dashMesmoTextoEmOutro(lista!==null?lista:naMemoria, id, reg.valor);
+        if(!outro) return dashEspelhar(k,id,reg,'remover');
+        var quem=String(outro.quem||'').trim(), hr=(typeof repHoraDe==='function')?repHoraDe(outro.ts):'';
+        var deQuem=(quem?(' por '+quem):'')+(hr?(' às '+hr):'');
+        try{ if(typeof audit==='function') audit('dashboard-daycare','a célula de '+(reg.valor||'')+' continua na planilha ('+it.t+'): o mesmo texto está em outro lançamento'+deQuem,{pet:reg.valor||''}); }
+        catch(e){} /* silencioso de propósito: rastro — o audit() tem bolso próprio */
+        if(typeof zAlertao==='function') zAlertao('A CÉLULA CONTINUA NA PLANILHA',
+          ['Saiu só este lançamento. O mesmo texto («'+(reg.valor||'')+'») está em outro lançamento de '+it.t+deQuem+': a planilha e a TV continuam com ele.',
+           'Se o outro lançamento também não vale, tire-o também.'],{botao:'Entendi'});
+        return {ok:true, mantida:true};
+      });
+  }
   async function dashRemover(k,id){
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
@@ -47827,7 +48709,7 @@
         try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
         catch(e){ _logFalhaGrav('desarmar o alarme do remédio tirado', e); }
       }
-      var _espRem=dashEspelhar(k,id,reg,'remover');
+      var _espRem=dashRemoverDaPlanilha(k,id,reg);
       // Banho tirado à mão: DEPOIS de a ponte tirar a linha, relê a planilha, e o cartão
       // "Banho de quem faltou" se atualiza (QA29, QA31).
       if(k==='banho'){

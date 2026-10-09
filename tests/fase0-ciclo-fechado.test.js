@@ -1311,7 +1311,7 @@ provaAsync('QA17 F1 — mudou o shampoo: o automático troca a célula que ELE e
       if(d.acao==='lerDia') return Promise.resolve({ok:true, conteudo:{Banho:__planilha.slice()}}); return Promise.resolve({ok:true}); };
     dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; });
       o.banho=['Lana/Spitz (SHAMPOO · MEDICAMENTOSO · CLORESTEN · NA BOLSA)']; o._horas={banho:{}};
-      o._horas.banho[dashAutoNomeChave(o.banho[0])]='10:00'; return o; };`);
+      o._horas.banho[dashAutoIdent(o.banho[0])]='10:00'; return o; };`);
   try {
     await run("dashAutoSincronizar('2026-10-01')");
     for (let i = 0; i < 40; i++) await Promise.resolve();
@@ -1340,12 +1340,14 @@ provaAsync('QA18 — a planilha não deixou tirar a célula velha: ela continua 
       return Promise.resolve({ok:true}); };
     dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; });
       o.banho=['Lana/Spitz (SHAMPOO · MEDICAMENTOSO · NA BOLSA)']; o._horas={banho:{}};
-      o._horas.banho[dashAutoNomeChave(o.banho[0])]='10:00'; return o; };`);
+      o._horas.banho[dashAutoIdent(o.banho[0])]='10:00'; return o; };`);
   try {
     await run("dashAutoSincronizar('2026-10-01')");
     for (let i = 0; i < 40; i++) await Promise.resolve();
     const reg = JSON.parse(JSON.stringify(run('__reg')));
-    assert.ok((reg.banho || []).indexOf('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)') >= 0, 'o texto velho continua sendo dele: ' + JSON.stringify(reg.banho));
+    // 6.49: a lista inteira do que ele escreveu fica em _listas quando há dois textos do mesmo primeiro nome
+    const lista = (reg._listas && reg._listas.banho) || reg.banho || [];
+    assert.ok(lista.indexOf('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)') >= 0, 'o texto velho continua sendo dele: ' + JSON.stringify(lista));
     assert.ok(!JSON.parse(JSON.stringify(run('__ch'))).some((c) => c.acao === 'lancar'), 'sem tirar a velha, não põe a nova (nada de duas células)');
     // a próxima conferência: agora a ponte deixa
     run("__ch=[]; __falhaRem=false; __jaAuto=__reg;");
@@ -3463,9 +3465,9 @@ prova('ligações: a chamada viva, o Hoje na Zêluz, a planilha, a falta avisada
     const src = fs.readFileSync(APP, 'utf8');
     assert.ok(/planDia=out;[\s\S]{0,400}banhoFaltaAgendar\(\)/.test(src), 'a leitura da planilha agenda a conferência');
     assert.ok(/regs\.some\(function\(r\)\{ return r\.data===dcDataKey\(\); \}\) && typeof banhoFaltaAgendar==='function'\) banhoFaltaAgendar\(\)/.test(src), 'a falta avisada de hoje agenda a conferência');
-    assert.ok(/var _espRem=dashEspelhar\(k,id,reg,'remover'\);[\s\S]{0,400}if\(k==='banho'\)\{[\s\S]{0,300}dcGarantirPlanilha\(true\)[\s\S]{0,200}Promise\.resolve\(_espRem\)\.then\(_relerPlan, _relerPlan\)/.test(src),
+    assert.ok(/var _espRem=dashRemoverDaPlanilha\(k,id,reg\);[\s\S]{0,400}if\(k==='banho'\)\{[\s\S]{0,300}dcGarantirPlanilha\(true\)[\s\S]{0,200}Promise\.resolve\(_espRem\)\.then\(_relerPlan, _relerPlan\)/.test(src),
       'tirar um banho à mão relê a planilha DEPOIS de a ponte tirar a linha (QA31)');
-    const rem = src.slice(src.indexOf('async function dashRemover('), src.indexOf('var _espRem=dashEspelhar(k,id,reg,\'remover\');'));
+    const rem = src.slice(src.indexOf('async function dashRemover('), src.indexOf('var _espRem=dashRemoverDaPlanilha(k,id,reg);'));
     assert.ok(!/dcGarantirPlanilha\(true\)/.test(rem), 'nenhuma releitura antes da ponte');
     assert.ok(/function hojeCarregar\(\)\{[\s\S]{0,300}dcGarantirPlanilha\(\)/.test(src), 'o Hoje na Zêluz lê a planilha do dia');
   } finally { run(`zMapaVivo=__bkLG.zv; banhoFaltaAgendar=__bkLG.ag; hojeLista=__bkLG.hl; document.getElementById=__bkLG.ge; BANHO_FALTA=__bkLG.bf; BANHO_FALTA_DIA=__bkLG.bd; BANHO_FALTA_DEC=__bkLG.bdc; BANHO_FALTA_CHEGOU=__bkLG.bc; _chamadaVivaDia=__bkLG.cv; renderDaycare=__bkLG.rd; repPodeLancar=__bkLG.rp; DB=__bkLG.db;`); }
@@ -9210,24 +9212,26 @@ const ARMA634 = `__bk634={P:PELUDINHOS, pe:pelExtra, pd:pelDias, hz:zHojeISO, c6
 const SOLTA634 = `PELUDINHOS=__bk634.P; pelExtra=__bk634.pe; pelDias=__bk634.pd; zHojeISO=__bk634.hz;
   if(__bk634.c6) REP_PLAN_CACHE['2026-10-06']=__bk634.c6; else delete REP_PLAN_CACHE['2026-10-06'];
   if(__bk634.c13) REP_PLAN_CACHE['2026-10-13']=__bk634.c13; else delete REP_PLAN_CACHE['2026-10-13'];`;
-prova('6.34 a hora que vai para a planilha: exceção do dia vale; pulado e desligado ficam de fora; dois FILHOts com a mesma chave ficam com a hora do primeiro (o da lista)', () => {
+prova('6.34 a hora que vai para a planilha: exceção do dia vale; pulado e desligado ficam de fora; dois FILHOts com o mesmo primeiro nome ficam os dois, cada um com a sua hora (6.49)', () => {
   run(ARMA634);
   try {
-    const ch = (p) => run(`dashAutoNomeChave(banhoRecValorPlanilha(PELUDINHOS[${p}], banhoRecDe(PELUDINHOS[${p}])))`);
+    const ch = (p) => run(`dashAutoIdent(banhoRecValorPlanilha(PELUDINHOS[${p}], banhoRecDe(PELUDINHOS[${p}])))`);
     let o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
     igual(o._horas.banho[ch(0)], '14:30', 'Charlotte: 14:30');
     igual(o._horas.banho[ch(1)], '16:15', 'Ragna: a hora mudada só para hoje');
     igual(Object.keys(o._horas.banho).length, 2, 'Tico (pulado hoje) e Nina (banho fixo desligado) não entram');
     igual(o.banho.length, 2);
-    // mesma chave (o mesmo Nome/Raça, sem xará reconhecida): a lista fica com o primeiro, e a hora também
+    // O mesmo primeiro nome, raças e tutores diferentes (6.49, a Fiona): antes as duas viravam uma
+    // linha só (a chave era o primeiro nome); agora cada ficha é uma linha, com a sua hora.
     run(`PELUDINHOS=[{n:'Luna', raca:'Poodle', tutor:'Ana'}, {n:'Luna', raca:'SRD', tutor:'Rui'}];
       __ex634={'Luna|Ana':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'10:00', desde:'2026-09-01'}},
                'Luna|Rui':{banho_rec:{ativo:true, freq:'semanal', dia:'ter', hora:'14:00', desde:'2026-09-01'}}};
       __xr634=dashXaraDe; dashXaraDe=function(){ return 1; };`);
     try {
       o = JSON.parse(JSON.stringify(run("dashAutoCalcular('2026-10-06')")));
-      igual(o.banho.length, 1, 'as duas viram a mesma linha');
-      igual(o._horas.banho[run(`dashAutoNomeChave(${JSON.stringify(o.banho[0])})`)], o.banho[0].indexOf('Poodle') >= 0 ? '10:00' : '14:00', 'a hora é a do nome que ficou na lista');
+      igual(o.banho.length, 2, 'as duas ficam');
+      const hDe = (raca) => o._horas.banho[run(`dashAutoIdent(${JSON.stringify(o.banho.find((v) => v.indexOf(raca) >= 0))})`)];
+      igual([hDe('Poodle'), hDe('SRD')], ['10:00', '14:00'], 'cada uma com a sua hora');
     } finally { run('dashXaraDe=__xr634;'); }
   } finally { run(SOLTA634); }
 });
@@ -9276,7 +9280,7 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
       if(__falha634 && c.acao===__falha634) return Promise.resolve({ok:false, erro:'Failed to fetch'});
       return Promise.resolve({ok:true, jaEstava:true}); };
     __hq634='16:15'; __txt634='Charlotte/Spitz (SEM SHAMPOO)';
-    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=[__txt634]; o._horas={banho:{}}; o._horas.banho[dashAutoNomeChave(__txt634)]=__hq634; return o; };
+    dashAutoCalcular=function(){ var o={}; Object.keys(DASH_AUTO_COLS).forEach(function(k){ o[k]=[]; }); o.banho=[__txt634]; o._horas={banho:{}}; o._horas.banho[dashAutoIdent(__txt634)]=__hq634; return o; };
     __b634={}; __g634={};
     DB={ref:function(p){ return {
       once:function(){ var v=__b634[p]; return Promise.resolve({val:function(){ return v===undefined?null:v; }}); },
@@ -9284,12 +9288,14 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
       update:function(v){ __g634[p]=Object.assign({}, __g634[p]||{}, v); return Promise.resolve(); } }; }};`);
   try {
     const dia = '2026-10-06', no = 'daycare/dashboard-auto/' + dia;
-    const ch = run("dashAutoNomeChave('Charlotte/Spitz (SEM SHAMPOO)')");
+    // `ch`: a chave do registro de ANTES desta versão (v1, o primeiro nome) — o que a passada lê;
+    // `ch2`: a do registro que a passada grava (v2, a identidade da 6.49).
+    const ch = run("dashAutoNomeChave('Charlotte/Spitz (SEM SHAMPOO)')"), ch2 = run("dashAutoIdent('Charlotte/Spitz (SEM SHAMPOO)')");
     const prepara = (horaAntes, extra) => run(`__p634=[]; __g634={}; __pl634={Banho:['Charlotte/Spitz (SEM SHAMPOO)']}; __b634={};
       __b634['${no}']={banho:['Charlotte/Spitz (SEM SHAMPOO)'], _estado_v:1, _estado:{banho:{${JSON.stringify(ch)}:{planilha_ok:true, ts:1${horaAntes === undefined ? '' : `, hora:${JSON.stringify(horaAntes)}`}}}}};
       ${extra || ''}`);
     const chamadas = () => run('__p634').filter((c) => c.acao !== 'lerDia');
-    const reg = () => run(`__g634['${no}']._estado.banho[${JSON.stringify(ch)}]`);
+    const reg = () => run(`__g634['${no}']._estado.banho[${JSON.stringify(ch2)}]`);
     // 1) a planilha tem 14:30, a ficha passou a 16:15 ("mudar só o dia" com outra hora): regrava a hora, o mesmo texto
     prepara('14:30');
     let r = await run(`dashAutoSincronizar('${dia}')`);
@@ -9331,7 +9337,7 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
     run("__txt634='Charlotte/Spitz (SHAMPOO NA BOLSA)';"); prepara('14:30');
     await run(`dashAutoSincronizar('${dia}')`);
     igual(chamadas().map((c) => [c.acao, c.valor]), [['remover', 'Charlotte/Spitz (SEM SHAMPOO)'], ['lancar', 'Charlotte/Spitz (SHAMPOO NA BOLSA)']]);
-    igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora`), '16:15');
+    igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoIdent('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora`), '16:15');
     run("__txt634='Charlotte/Spitz (SEM SHAMPOO)';");
     // 9) (2ª rodada) só a coluna COM hora é regravada: a reposição que já está lá não ganha um lancar a cada passada
     run(`__p634=[]; __g634={}; __pl634={'Reposição':['Lanna/SRD']}; __b634={}; __b634['${no}']={reposicao:['Lanna/SRD'], _estado_v:1, _estado:{}};
@@ -9339,7 +9345,7 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
     try {
       await run(`dashAutoSincronizar('${dia}')`);
       igual(chamadas(), [], 'reposição já na planilha: nenhuma chamada');
-      assert.ok(!('hora' in run(`__g634['${no}']._estado.reposicao[${JSON.stringify(run("dashAutoNomeChave('Lanna/SRD')"))}]`)), 'e nada de hora no registro dela');
+      assert.ok(!('hora' in run(`__g634['${no}']._estado.reposicao[${JSON.stringify(run("dashAutoIdent('Lanna/SRD')"))}]`)), 'e nada de hora no registro dela');
     } finally { run('dashAutoCalcular=__cbk634;'); }
     // 10) lançamento novo que a ponte recusou: sem hora no registro (a hora não está na planilha)
     prepara(undefined, "__pl634={}; __falha634='lancar';");
@@ -9366,8 +9372,8 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
       prepara('14:30');
       await run(`dashAutoSincronizar('${dia}')`);
       assert.ok(/nao tem a coluna de hora/.test(reg().hora_aviso), JSON.stringify(reg()));
-      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts=Date.now()-3600*1000; __p634=[];`);
-      const tsAv = run(`__b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts`);
+      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch2)}].hora_aviso_ts=Date.now()-3600*1000; __p634=[];`);
+      const tsAv = run(`__b634['${no}']._estado.banho[${JSON.stringify(ch2)}].hora_aviso_ts`);
       await run(`dashAutoSincronizar('${dia}')`);
       igual(chamadas(), [], 'a próxima passada não insiste a cada 5 minutos');
       igual(reg().hora_aviso_ts, tsAv, 'e guarda a hora do 1º aviso (senão a conferência de 6 em 6 horas nunca chegaria)');
@@ -9383,7 +9389,7 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
       try { await run(`dashAutoSincronizar('${dia}')`); } finally { run("DB.ref=__bkOnce634b; __hq634='16:15';"); }
       assert.ok(/nao tem a coluna/.test(reg().hora_aviso || ''), 'leitura falha: o aviso continua');
       // passadas 6 horas, confere de novo (a coluna pode ter sido criada)
-      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora='16:15'; __b634['${no}']._estado.banho[${JSON.stringify(ch)}].hora_aviso_ts=Date.now()-7*3600*1000; __p634=[];`);
+      run(`__b634['${no}']=__g634['${no}']; __b634['${no}']._estado.banho[${JSON.stringify(ch2)}].hora='16:15'; __b634['${no}']._estado.banho[${JSON.stringify(ch2)}].hora_aviso_ts=Date.now()-7*3600*1000; __p634=[];`);
       await run(`dashAutoSincronizar('${dia}')`);
       igual(chamadas().map((c) => c.acao), ['lancar'], 'depois de 6 h, tenta de novo');
     } finally { run(`dashPonteChamar=__pcbk634; delete REP_PLAN_CACHE['${dia}'];`); }
@@ -9407,7 +9413,7 @@ provaAsync('6.34 a conferência grava a hora no registro e, quando a ficha muda 
       igual([reg().hora, reg().hora_aviso], ['16:15', 'sem coluna'], 'lançamento novo');
       run("__txt634='Charlotte/Spitz (SHAMPOO NA BOLSA)';"); prepara('14:30');
       await run(`dashAutoSincronizar('${dia}')`);
-      igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoNomeChave('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora_aviso`), 'sem coluna', 'troca de shampoo');
+      igual(run(`__g634['${no}']._estado.banho[${JSON.stringify(run("dashAutoIdent('Charlotte/Spitz (SHAMPOO NA BOLSA)')"))}].hora_aviso`), 'sem coluna', 'troca de shampoo');
     } finally { run("dashPonteChamar=__pcbk634d; __txt634='Charlotte/Spitz (SEM SHAMPOO)';"); }
     // 17) (3ª rodada) a recepção lançou o mesmo texto e o reenvio dela esgotou: a hora da recepção fica
     prepara('14:30', `__b634['daycare/dashboard/${dia}']={banho:{L1:{valor:'Charlotte/Spitz (SEM SHAMPOO)', hora:'11:00', ts:1, planilha_desisti:true}}};`);
@@ -15550,6 +15556,1146 @@ prova('6.51 — tutor sem nada especial: botões e campos levam a chave limpa, s
   assert.ok(h.indexOf(`id="prevEd_antônio__ana"`) >= 0 && h.indexOf(`prevAbrir('antônio__ana')`) >= 0, 'ficha e fechar com a chave de sempre');
   for (const t of ["\\'", '&amp;', '&quot;']) assert.strictEqual(h.indexOf(t), -1, 'escape onde não precisa: ' + t);
 });
+
+// ================================================================== 6.49 — todo banho de hoje aparece (a Fiona)
+console.log('\n6.49 — Fiona: a identidade pela ficha e a conferência da planilha que a TV lê (Adriana, 08/out/2026)');
+// Tudo inventado: Fiona/Buldogue Francês (tutor Isac Teste) e Fiona/SRD (tutora Bia Teste), quinta 08/10/2026.
+const DIA649 = '2026-10-08';
+const CAD649 = `[{n:'Fiona', raca:'Buldogue Francês', tutor:'Isac Teste'}, {n:'Fiona', raca:'SRD', tutor:'Bia Teste'},
+  {n:'Ozzy', raca:'Lhasa Apso', tutor:'Márcia Teste'}, {n:'Ozzy', raca:'Norfolk', tutor:'Sabrina Teste'}, {n:'Ozzy', raca:'Spitz', tutor:'Zuleica Teste'},
+  {n:'Maya', raca:'SRD', tutor:'Luciana Teste'}, {n:'Maya', raca:'SRD', tutor:'Marcela Teste'}, {n:'Maya', raca:'Spitz', tutor:'Rita Teste'}]`;
+// O palco: cadastro, fichas (pelExtra), turma de hoje, banco e ponte de mentira (a planilha é uma lista
+// de células {v, h}), o relógio do dia em 08/10. Tudo volta no SOLTA649.
+const ARMA649 = `__bk649={P:PELUDINHOS, pe:pelExtra, hz:zHojeISO, rh:repHojeISO, ab:APP_DIA_ABERTO, db:DB, pc:dashPonteChamar, au:audit,
+    ponte:DASH_PONTE, dados:DASH_DADOS, sel:DASH_DIA_SEL, ch:dcChamada, tdh:turmaDeHoje, rl:repLancamentos, rd:renderDash, za:zAlertao,
+    fs:fetchSheet, ge:document.getElementById, of:orcFechado, aim:abrirItemDoMenu, cache:REP_PLAN_CACHE['${DIA649}'],
+    selB:DASH_SEL.banho, selIB:DASH_SEL_I.banho, horaB:DASH_HORA.banho, detB:DASH_DET.banho, pcc:pelCadCache};
+  PELUDINHOS=${CAD649};
+  __ex649={}; pelExtra=function(p){ return __ex649[p.n+'|'+p.tutor]||{}; };
+  __turma649=[]; turmaDeHoje=function(){ return __turma649.map(function(i){ return {p:PELUDINHOS[i]}; }); };
+  __rl649={}; repLancamentos=function(p){ return (__rl649[p.n+'|'+p.tutor]||[]).slice(); };
+  zHojeISO=function(){ return '${DIA649}'; }; repHojeISO=function(){ return '${DIA649}'; }; APP_DIA_ABERTO='${DIA649}';
+  dcChamada={}; DASH_DIA_SEL='${DIA649}'; DASH_DADOS={}; DASH_PONTE={url:'https://script.google.com/x/exec', token:'t'};
+  __au649=[]; audit=function(a, b){ __au649.push(String(b||'')); }; renderDash=function(){}; __za649=[]; zAlertao=function(t, l){ __za649.push([t, l]); };
+  pelCadCache={};
+  delete REP_PLAN_CACHE['${DIA649}'];
+  // o banco de mentira: uma árvore, com once/set/update/remove/transaction
+  __db649={}; __dbEsc649=[];
+  __dbPega=function(p){ var o=__db649; var ps=p.split('/'); for(var i=0;i<ps.length;i++){ if(o==null||typeof o!=='object') return null; o=o[ps[i]]; } return (o===undefined)?null:JSON.parse(JSON.stringify(o)); };
+  __dbPoe=function(p, v){ var ps=p.split('/'), o=__db649; for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]]||typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; } if(v===null||v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); };
+  DB={ref:function(p){ return {
+    once:function(){ var v=__dbPega(p); return Promise.resolve({val:function(){ return v; }}); },
+    set:function(v){ __dbEsc649.push(['set', p]); __dbPoe(p, v); return Promise.resolve(); },
+    update:function(v){ __dbEsc649.push(['update', p]); var a=__dbPega(p)||{}; Object.keys(v||{}).forEach(function(k){ a[k]=v[k]; }); __dbPoe(p, a); return Promise.resolve(); },
+    remove:function(){ __dbEsc649.push(['remove', p]); __dbPoe(p, null); return Promise.resolve(); },
+    transaction:function(fn){ __dbEsc649.push(['transaction', p]); var r=fn(__dbPega(p)); if(r!==undefined) __dbPoe(p, r); return Promise.resolve({committed:r!==undefined, snapshot:{val:function(){ return __dbPega(p); }}}); }
+  }; }};
+  // a ponte de mentira: a planilha do dia, célula por célula (o mesmo texto não duplica, como a ponte)
+  __pl649=[]; __pc649=[];
+  dashPonteChamar=function(d){ __pc649.push(JSON.parse(JSON.stringify(d)));
+    if(d.acao==='lerDia') return Promise.resolve({ok:true, conteudo:{Banho:__pl649.map(function(c){ return c.v; })}});
+    if(d.acao==='lancar'){ var c=__pl649.filter(function(x){ return jsNorm(x.v)===jsNorm(d.valor); })[0];
+      if(c){ if(d.hora) c.h=d.hora; return Promise.resolve({ok:true, jaEstava:true}); }
+      __pl649.push({v:d.valor, h:d.hora||''}); return Promise.resolve({ok:true}); }
+    if(d.acao==='remover'){ var n=__pl649.length; __pl649=__pl649.filter(function(x){ return jsNorm(x.v)!==jsNorm(d.valor); }); return Promise.resolve({ok:true, removidos:n-__pl649.length}); }
+    return Promise.resolve({ok:false, erro:'acao'}); };
+  TV_BANHO={dia:'', aba:'', ok:null, erro:'', lidaEm:0, pedidaEm:0, lendo:false, espelho:[], foraDaData:[]};
+  TV_BANHO_LERDIA={}; TV_BANHO_MEXEU={}; TV_BANHO_PUS={}; TV_BANHO_QUER=0; DASH_DADOS_DE={obj:null, dia:''}; DASH_TV_RELER_DIA='';`;
+const SOLTA649 = `PELUDINHOS=__bk649.P; pelExtra=__bk649.pe; zHojeISO=__bk649.hz; repHojeISO=__bk649.rh; APP_DIA_ABERTO=__bk649.ab; DB=__bk649.db;
+  dashPonteChamar=__bk649.pc; audit=__bk649.au; DASH_PONTE=__bk649.ponte; DASH_DADOS=__bk649.dados; DASH_DIA_SEL=__bk649.sel; dcChamada=__bk649.ch;
+  turmaDeHoje=__bk649.tdh; repLancamentos=__bk649.rl; renderDash=__bk649.rd; zAlertao=__bk649.za; fetchSheet=__bk649.fs; document.getElementById=__bk649.ge;
+  orcFechado=__bk649.of; abrirItemDoMenu=__bk649.aim; pelCadCache=__bk649.pcc;
+  if(__bk649.cache) REP_PLAN_CACHE['${DIA649}']=__bk649.cache; else delete REP_PLAN_CACHE['${DIA649}'];
+  if(__bk649.selB===undefined) delete DASH_SEL.banho; else DASH_SEL.banho=__bk649.selB;
+  if(__bk649.selIB===undefined) delete DASH_SEL_I.banho; else DASH_SEL_I.banho=__bk649.selIB;
+  if(__bk649.horaB===undefined) delete DASH_HORA.banho; else DASH_HORA.banho=__bk649.horaB;
+  if(__bk649.detB===undefined) delete DASH_DET.banho; else DASH_DET.banho=__bk649.detB;
+  TV_BANHO={dia:'', aba:'', ok:null, erro:'', lidaEm:0, pedidaEm:0, lendo:false, espelho:[], foraDaData:[]};
+  TV_BANHO_LERDIA={}; TV_BANHO_MEXEU={}; TV_BANHO_PUS={}; TV_BANHO_QUER=0; DASH_DADOS_DE={obj:null, dia:''}; DASH_TV_RELER_DIA='';`;
+const BR649 = (hora) => `{banho_rec:{ativo:true, freq:'semanal', dia:'qui', hora:'${hora}', desde:'2026-09-01', sham:'SEM SHAMPOO'}}`;
+const espera649 = async (n) => { for (let i = 0; i < (n || 300); i++) await Promise.resolve(); };
+// A tabela do gviz que a TV leria, montada da planilha de mentira (Data de verdade, formatada dd/mm/aaaa).
+const GVIZ649 = `(function(){ return {cols:[{label:'Data'},{label:'Banho'},{label:'Hora Banho'}], rows:__pl649.map(function(c){
+    return {c:[{v:'Date(2026,9,8)', f:(c.torta?'8/10/2026':'08/10/2026')}, {v:c.v}, c.h?{v:c.h}:null]}; })}; })()`;
+const lerTV649 = () => run(`tvTabelaGuardar('${DIA649}', '2026 DayCare Outubro', ${GVIZ649}, Date.now()+1)`);
+const pl649 = () => run('__pl649.map(function(c){ return c.v; })');
+const ponte649 = (acao) => run('__pc649').filter((c) => c.acao === acao).map((c) => c.valor);
+
+// ---- P1 — a cópia das regras da TV, no exemplo de contrato -----------------------------------------
+// O MESMO exemplo e a MESMA lista têm de estar no tests/dashboard-regression.js da TV (parte C da story):
+// conferido aqui contra o index.html da TV (f7fb851) em scratchpad/w649/contrato-tv.js.
+const CONTRATO649 = {
+  cols: [{ label: 'Data' }, { label: 'Banho ' }, { label: 'Hora Banho' }, { label: 'Avaliação' }],
+  rows: [
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: 'Lupita/SRD (SEM SHAMPOO)' }, { v: 'Date(1899,11,30,15,0,0)', f: '15:00' }, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: 'Bóris/Westie' }, { v: '14h30' }, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: '0' }, null, { v: 'Tico' }] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: 'Nina/Poodle' }, null, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '8/10/2026' }, { v: 'Fiona/SRD' }, { v: '11:00' }, null] },
+    { c: [{ v: 'Date(2026,9,9)', f: '09/10/2026' }, { v: 'Tico/Spitz' }, { v: '09:00' }, null] },
+    { c: [null, { v: 'Fiona/Buldogue Francês' }, { v: '16:00' }, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: '   ' }, null, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: 'Kiara/Lhasa' }, { v: '10h' }, null] },
+    { c: [{ v: 'Date(2026,9,8)', f: '08/10/2026' }, { v: 'Dudu/Pug' }, { v: 'Date(1899,11,30,9,5,0)' }, null] },
+    null, { c: null },
+  ],
+};
+const CONTRATO649_LISTA = [['Dudu/Pug', '09:05'], ['Kiara/Lhasa', '10:00'], ['Bóris/Westie', '14:30'], ['Lupita/SRD (SEM SHAMPOO)', '15:00'], ['Nina/Poodle', '']];
+prova('6.49 P1 — tvEspelhoBanho é o bloco Banho da TV: "Banho " com espaço, "0" e vazio fora, "14h30" e "10h", hora pura do gviz, sem hora no fim, outro dia fora', () => {
+  ctx.__T649 = CONTRATO649;
+  const L = JSON.parse(JSON.stringify(run(`tvEspelhoBanho(__T649, '${DIA649}')`)));
+  igual(L.map((e) => [e.nome, e.hora]), CONTRATO649_LISTA);
+  igual(L.map((e) => e.linha), [9, 8, 1, 0, 3], 'a posição na tabela lida');
+  igual(JSON.parse(JSON.stringify(run(`tvEspelhoBanho(__T649, '2026-10-09')`))).map((e) => e.nome), ['Tico/Spitz'], 'outro dia: a linha do dia');
+});
+// ---- P2 — a linha que a TV não lê ------------------------------------------------------------------
+prova('6.49 P2 — Data nula ou "8/10/2026": fora do espelho; a data de verdade no dia vira o motivo (b); com o lerDia da ponte tendo o texto, também', () => {
+  ctx.__T649 = CONTRATO649;
+  const fora = JSON.parse(JSON.stringify(run(`tvBanhoForaDaData(__T649, '${DIA649}')`)));
+  igual(fora, ['fiona/srd'], 'a "8/10/2026" de verdade é do dia; a Data nula não se sabe de que dia é');
+  const esp = run(`tvEspelhoBanho(__T649, '${DIA649}')`);
+  const L = (ld) => ({ dia: DIA649, hoje: DIA649, ok: true, erro: '', lidaEm: 2000, espelho: esp, foraDaData: fora, lerDia: ld });
+  ctx.__L649 = L(null);
+  igual(run(`tvBanhoEstado('Fiona/SRD', 1000, 1000+10*60000, __L649).e`), 'data', 'a data de verdade escrita de outro jeito');
+  igual(run(`tvBanhoEstado('Fiona/Buldogue Francês', 1000, 1000+10*60000, __L649).e`), 'nao', 'sem a ponte, a Data nula é "a planilha não tem"');
+  ctx.__L649 = L({ pedidaEm: 1500, banho: ['fiona/buldogue frances'] });
+  igual(run(`tvBanhoEstado('Fiona/Buldogue Francês', 1000, 1000+10*60000, __L649).e`), 'data', 'a ponte tem, a TV não: a linha da planilha que a TV não lê');
+  ctx.__L649 = L({ pedidaEm: 500, banho: ['fiona/buldogue frances'] });
+  igual(run(`tvBanhoEstado('Fiona/Buldogue Francês', 1000, 1000+10*60000, __L649).e`), 'nao', 'a leitura da ponte de ANTES do lançamento não conta');
+  assert.ok(/a data dessa linha está escrita diferente\)\. Peça à Gestão para acertar a data\./.test(run("tvBanhoMotivoTexto({e:'data'})")));
+});
+// ---- P3 — os estados da linha ----------------------------------------------------------------------
+prova('6.49 P3 — estados: ✓ só com leitura DEPOIS do lançamento; a caminho até 3 min; "não tem"; não consegui conferir; os avisos de antes vêm antes', () => {
+  run(ARMA649);
+  try {
+    const T = (esp, lidaEm, extra) => Object.assign({ dia: DIA649, hoje: DIA649, ok: true, erro: '', lidaEm, espelho: esp.map((n) => ({ nome: n })), foraDaData: [], lerDia: null }, extra || {});
+    const e = (texto, desde, agora, L) => { ctx.__L649 = L; return run(`tvBanhoEstado(${JSON.stringify(texto)}, ${desde}, ${agora}, __L649).e`); };
+    const t0 = 1790000000000;
+    igual(e('Fiona/SRD', t0, t0 + 60000, T(['Fiona/SRD'], t0 + 30000)), 'ok', 'lida depois e tem');
+    igual(e('Fiona/SRD', t0, t0 + 60000, T(['Fiona/SRD'], t0 - 1)), 'caminho', 'lida ANTES do lançamento: nunca ✓');
+    igual(e('Fiona/SRD', t0, t0 + 120000, T([], t0 + 30000)), 'caminho', 'até 3 min: a caminho (o gviz atrasa)');
+    igual(e('Fiona/SRD', t0, t0 + 181000, T([], t0 - 5000)), 'lendo', '3 min sem leitura feita DEPOIS: conferindo');
+    igual(e('Fiona/SRD', t0, t0 + 181000, T([], t0 + 180500)), 'nao', 'lida depois e não tem: a planilha não tem');
+    igual(e('Fiona/SRD', t0, t0 + 181000, T([], 0, { ok: false, erro: 'sem conexão com a planilha' })), 'erro', 'a leitura falhou');
+    igual(e('Fiona/SRD', t0, t0 + 181000, T(['Fiona/SRD'], t0 + 1000, { dia: '2026-10-07' })), 'lendo', 'a leitura é de ontem');
+    igual(e('Fiona/SRD', t0, t0 + 60000, T(['Fiona'], t0 + 30000)), 'caminho', 'o primeiro nome não basta (com duas Fionas)');
+    igual(e('Fiona/SRD (SEM SHAMPOO)', t0, t0 + 60000, T(['Fiona/Buldogue Francês (SEM SHAMPOO)'], t0 + 30000)), 'caminho', 'a outra Fiona não é ela');
+    igual(e('Ozzy/Lhasa Apso (SEM SHAMPOO)', t0, t0 + 60000, T(['Ozzy - Lhasa'], t0 + 30000)), 'ok', 'a mesma ficha escrita à mão');
+    const agora = Date.now();
+    run(`tvTabelaGuardar('${DIA649}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Fiona/SRD'}]}]}, ${agora})`);
+    const html = (o) => run(`dashTvMaoHTML('banho', ${JSON.stringify(o)}, 'x1')`);
+    assert.ok(/data-tv="ok"[^>]*>na planilha que a TV lê ✓</.test(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: true })), 'na planilha que a TV lê ✓');
+    assert.ok(!/na TV ✓/.test(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: true })), 'nunca "na TV ✓" (crítica C4)');
+    igual(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: false }), '', '"NÃO foi para a TV" vem antes');
+    igual(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: null }), '', '"envio não confirmado" vem antes');
+    const nao = html({ valor: 'Fiona/Buldogue Francês', ts: agora - 600000, planilha_ok: true });
+    assert.ok(/NÃO está na planilha que a TV lê: a planilha não tem este banho nas linhas de hoje/.test(nao) && /dashTvPorDeNovo\(this\)">pôr de novo</.test(nao), nao);
+    run(`TV_BANHO.ok=false; TV_BANHO.erro='sem conexão com a planilha';`);
+    assert.ok(/não consegui conferir a planilha que a TV lê agora \(sem conexão com a planilha\)/.test(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: true })));
+    igual(run(`dashTvMaoHTML('vet', ${JSON.stringify({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: true })}, 'x1')`), '', 'só o Banho (os outros itens ficam para depois — K2)');
+    run(`DASH_DIA_SEL='2026-10-09';`);
+    igual(html({ valor: 'Fiona/SRD', ts: agora - 600000, planilha_ok: true }), '', 'outro dia: nada (a TV mostra hoje)');
+  } finally { run(SOLTA649); }
+});
+// ---- P4 — «pôr de novo» -------------------------------------------------------------------------------
+provaAsync('6.49 P4 — «pôr de novo» roda a conferência de hoje: a ponte recebe UMA vez o texto e a hora da linha; relida, "na planilha que a TV lê ✓"; o aviso do alto some', async () => {
+  run(ARMA649);
+  try {
+    const t = Date.now() - 10 * 60000;
+    run(`__dbPoe('daycare/dashboard/${DIA649}/banho/m1', {valor:'Fiona/Buldogue Francês (SEM SHAMPOO)', hora:'15:00', chave:dcKey('Fiona','Isac Teste'), ts:${t}, planilha_ok:true});
+      DASH_DADOS={banho:__dbPega('daycare/dashboard/${DIA649}/banho')}; __pl649=[{v:'Fiona/SRD', h:'10:00'}];`);
+    lerTV649();
+    const L0 = run('dashTvBanhoLinhas()');
+    igual(L0.map((l) => l.tv.e), ['nao']);
+    const av = run('dashTvAvisoHTML()');
+    assert.ok(/1 banho de hoje NÃO está na planilha que a TV lê:/.test(av) && /Fiona\/Buldogue Francês \(SEM SHAMPOO\)<\/strong> 15:00 — a planilha não tem este banho nas linhas de hoje/.test(av) && /pôr de novo/.test(av), av);
+    run('__pc649=[];');
+    await run('dashTvPorDeNovo(null)');
+    await espera649();
+    const lanc = run('__pc649').filter((c) => c.acao === 'lancar');
+    igual(lanc.map((c) => [c.valor, c.hora]), [['Fiona/Buldogue Francês (SEM SHAMPOO)', '15:00']], 'uma chamada, o texto e a hora da linha');
+    igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), ['caminho'], 'a leitura de antes não vale: a caminho');
+    lerTV649();
+    igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), ['ok']);
+    igual(run('dashTvAvisoHTML()'), '', 'o aviso some');
+    // só as linhas que estavam "a planilha não tem" voltam a "a caminho"; a ✓ e a da data escrita diferente ficam como estão
+    run(`__dbPoe('daycare/dashboard/${DIA649}/banho/m2', {valor:'Kiara/Lhasa', hora:'09:00', ts:${t}, planilha_ok:true});
+      __dbPoe('daycare/dashboard/${DIA649}/banho/m3', {valor:'Pipoca/SRD', hora:'11:30', ts:${t}, planilha_ok:true});
+      __dbPoe('daycare/dashboard/${DIA649}/banho/m4', {valor:'Lupita/SRD', hora:'14:30', ts:${t}, planilha_ok:true});
+      DASH_DADOS={banho:__dbPega('daycare/dashboard/${DIA649}/banho')}; __pl649.push({v:'Kiara/Lhasa', h:'09:00'}, {v:'Pipoca/SRD', h:'11:30', torta:true});
+      TV_BANHO_PUS={}; TV_BANHO_MEXEU={};`);
+    lerTV649();
+    const est = () => run('dashTvBanhoLinhas()').map((l) => l.texto + ':' + l.tv.e).sort();
+    igual(est(), ['Fiona/Buldogue Francês (SEM SHAMPOO):ok', 'Kiara/Lhasa:ok', 'Lupita/SRD:nao', 'Pipoca/SRD:data']);
+    run('__pc649=[];'); await run('dashTvPorDeNovo(null)'); await espera649();
+    igual(est(), ['Fiona/Buldogue Francês (SEM SHAMPOO):ok', 'Kiara/Lhasa:ok', 'Lupita/SRD:caminho', 'Pipoca/SRD:data']);
+    assert.ok(/Pipoca\/SRD<\/strong> 11:30 — está numa linha da planilha que a TV não lê/.test(run('dashTvAvisoHTML()')) && !/pôr de novo/.test(run('dashTvAvisoHTML()')), 'o aviso continua com a Pipoca, sem «pôr de novo» (não adianta)');
+    assert.ok(/^<div class="card dash-tv-aviso"[^>]*><strong>1 banho de hoje NÃO está/.test(run('dashTvAvisoHTML()')), 'só a Pipoca: a que está a caminho não entra no aviso');
+    const pip = run(`dashTvMaoHTML('banho', __dbPega('daycare/dashboard/${DIA649}/banho/m3'), 'm3')`);
+    assert.ok(/data-tv="data"/.test(pip) && !/pôr de novo/.test(pip), 'a linha da Pipoca não oferece «pôr de novo»: ' + pip);
+    // o «reenviar» (ou a fila, ou a conferência) deste aparelho: a leitura de antes não vale para a linha
+    run(`TV_BANHO.lidaEm=0; tvTabelaGuardar('${DIA649}', 'aba', ${GVIZ649}, Date.now()-1000)`);
+    igual(run(`dashTvMaoHTML('banho', __dbPega('daycare/dashboard/${DIA649}/banho/m2'), 'm2')`).match(/data-tv="(\w+)"/)[1], 'ok');
+    run('TV_BANHO_QUER=0;');
+    await run(`dashEspelhar('banho', 'm2', __dbPega('daycare/dashboard/${DIA649}/banho/m2'), 'lancar', '${DIA649}')`); await espera649();
+    igual(run(`dashTvMaoHTML('banho', __dbPega('daycare/dashboard/${DIA649}/banho/m2'), 'm2')`).match(/data-tv="(\w+)"/)[1], 'caminho', 'reenviada: a caminho até a próxima leitura');
+    assert.ok(run('TV_BANHO_QUER') > Date.now(), 'e uma leitura é pedida para daqui a 30 s');
+  } finally { run(SOLTA649); }
+});
+// ---- a matriz: Fiona/Buldogue × Fiona/SRD em todas as combinações -----------------------------------
+// fixo = banho fixo de hoje (o automático); mao = lançado à mão, com a célula sumida da planilha (F3);
+// planilha = escrito direto na planilha por uma pessoa como "Fiona" (o nome ambíguo).
+const papel649 = (p, quem) => {
+  const i = quem === 'A' ? 0 : 1, nome = quem === 'A' ? 'Fiona|Isac Teste' : 'Fiona|Bia Teste', hora = quem === 'A' ? '15:00' : '10:00';
+  if (p === 'fixo') run(`__ex649['${nome}']=${BR649(hora)}; __turma649.push(${i});`);
+  if (p === 'mao') run(`__dbPoe('daycare/dashboard/${DIA649}/banho/m${quem}', {valor:dashNomePlanilha(PELUDINHOS[${i}])+' (SEM SHAMPOO)', hora:'${hora}', chave:dcKey(PELUDINHOS[${i}].n, PELUDINHOS[${i}].tutor), ts:Date.now()-600000, planilha_ok:true});`);
+  if (p === 'planilha') run(`__pl649.push({v:'Fiona', h:'${hora}'});`);
+};
+const textoDe649 = (p, quem) => (p === 'planilha' ? 'Fiona' : (quem === 'A' ? 'Fiona/Buldogue Francês' : 'Fiona/SRD') + ' (SEM SHAMPOO)');
+['fixo', 'mao', 'planilha'].forEach((pa) => ['fixo', 'mao', 'planilha'].forEach((pb) => {
+  if (pa === 'planilha' && pb === 'planilha') return;
+  provaAsync(`6.49 AC5 — Fiona/Buldogue (${pa}) × Fiona/SRD (${pb}): as duas na planilha, as duas nos Lançamentos do dia, cada linha ✓ só com a sua célula, nada de pessoa tirado`, async () => {
+    run(ARMA649);
+    try {
+      papel649(pa, 'A'); papel649(pb, 'B');
+      await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+      await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+      const pl = pl649();
+      [[pa, 'A'], [pb, 'B']].forEach(([p, q]) => assert.ok(pl.indexOf(textoDe649(p, q)) >= 0, q + ' na planilha: ' + JSON.stringify(pl)));
+      igual(pl.length, 2, 'nem a menos nem a mais: ' + JSON.stringify(pl));
+      igual(ponte649('remover'), [], 'nada tirado');
+      // os Lançamentos do dia: cada Fiona uma vez (à mão ou automática)
+      const reg = run(`__dbPega('daycare/dashboard-auto/${DIA649}')`);
+      run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}};
+        DASH_DADOS={banho:__dbPega('daycare/dashboard/${DIA649}/banho')||{}};`);
+      const linhas = run('dashTvBanhoLinhas(true)').map((l) => l.texto);
+      const esperado = [[pa, 'A'], [pb, 'B']].filter(([p]) => p !== 'planilha').map(([p, q]) => textoDe649(p, q));
+      igual(linhas.slice().sort(), esperado.slice().sort(), 'cada Fiona do app aparece uma vez');
+      // nenhum "na planilha ✓" sem a célula
+      const est = (reg._estado || {}).banho || {};
+      // (as chaves do primeiro nome são a ponte para o aparelho que ainda não atualizou — C15)
+      Object.keys(est).filter((k) => /^[ft]:/.test(k)).forEach((k) => { if (est[k].planilha_ok) assert.ok(pl.some((v) => run(`dashAutoIdent(${JSON.stringify(v)})`) === k), 'ok sem célula: ' + k); });
+      igual(reg._estado_v, 2, 'o registro novo é pela identidade');
+      // a planilha que a TV lê tem as duas
+      lerTV649();
+      igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), esperado.map(() => 'ok'));
+    } finally { run(SOLTA649); }
+  });
+}));
+// ---- P5 a P9 — os experimentos E1 a E5, ao contrário ---------------------------------------------------
+prova('6.49 P5 (E1) — Fiona/Buldogue e Fiona/SRD têm identidades diferentes; o nome que vai para a planilha não muda', () => {
+  run(ARMA649);
+  try {
+    const a = run("dashAutoIdent('Fiona/Buldogue Francês (SEM SHAMPOO)')"), b = run("dashAutoIdent('Fiona/SRD')");
+    igual([a, b], ['f:fiona__isac-teste', 'f:fiona__bia-teste']);
+    igual(run("dashAutoIdent('Fiona')"), 't:fiona', 'o nome ambíguo vale o texto, nunca uma das duas');
+    igual(run("dashAutoIdent('Fiona/Pug')"), 't:fiona|pug', 'a raça que não casa: o texto (a barra vira "|" — chave do Firebase)');
+    igual(run('dashNomePlanilha(PELUDINHOS[0])'), 'Fiona/Buldogue Francês', 'sem tutor: não é xará de mesma raça');
+    igual(run("dashAutoNomeChave('Fiona/SRD')"), 'fiona', 'a chave das vagas (6.46) continua a mesma');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 P6 (E2) — banho fixo da Fiona/Buldogue com a Fiona/SRD na planilha (escrita por uma pessoa): o automático ESCREVE, e o ✓ é dela', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); run("__pl649=[{v:'Fiona/SRD', h:'10:00'}];");
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    const est = run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho`);
+    igual(Object.keys(est).filter((k) => /^[ft]:/.test(k)), ['f:fiona__isac-teste'], 'pela identidade, só a dela');
+    assert.ok(est['f:fiona__isac-teste'].planilha_ok === true && est['f:fiona__isac-teste'].escrito > 0 && est['f:fiona__isac-teste'].hora === '15:00', JSON.stringify(est));
+    igual(run(`TV_BANHO_LERDIA['${DIA649}'].banho`), ['fiona/srd'], 'o que a ponte leu do dia fica guardado para o motivo da linha');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 P7 (E3) — a Fiona/Buldogue lançada à mão sumiu e a planilha tem "Fiona" (sem raça): a conferência repõe', async () => {
+  run(ARMA649);
+  try {
+    papel649('mao', 'A'); run("__pl649=[{v:'Fiona', h:'10:00'}];");
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    assert.ok(__au649Tem('a conferência repôs na planilha Fiona/Buldogue Francês (SEM SHAMPOO)'));
+  } finally { run(SOLTA649); }
+});
+function __au649Tem(t) { return run('__au649').some((x) => x.indexOf(t) >= 0); }
+prova('6.49 P8 (E4) — Lançamentos do dia: a Fiona/SRD lançada à mão NÃO esconde a linha automática da Fiona/Buldogue; a Fiona/Buldogue à mão esconde', () => {
+  run(ARMA649);
+  try {
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{banho:['Fiona/Buldogue Francês (SEM SHAMPOO)'], _estado_v:2,
+      _estado:{banho:{'f:fiona__isac-teste':{planilha_ok:true, ts:Date.now(), hora:'15:00'}}}}};`);
+    igual(run(`dashAutoLinhas('banho', '${DIA649}', dashChavesDaMao({}))`).n, 1);
+    igual(run(`dashAutoLinhas('banho', '${DIA649}', dashChavesDaMao({y1:{valor:'Fiona/SRD'}}))`).n, 1, 'a outra Fiona à mão não esconde');
+    igual(run(`dashAutoLinhas('banho', '${DIA649}', dashChavesDaMao({y1:{valor:'Fiona/Buldogue Francês'}}))`).n, 0, 'a mesma ficha à mão: uma linha só');
+    assert.ok(/na planilha ✓/.test(run(`dashAutoLinhas('banho', '${DIA649}', null)`).html), 'o registro v2 é lido pela identidade');
+    run(`REP_PLAN_CACHE['${DIA649}'].auto.reposicao=['Fiona/Buldogue Francês']; REP_PLAN_CACHE['${DIA649}'].auto._estado.reposicao={'f:fiona__isac-teste':{planilha_ok:true, ts:1}};`);
+    assert.ok(!/planilha que a TV lê/.test(run(`dashAutoLinhas('reposicao', '${DIA649}', null)`).html), 'a conferência da TV é só do Banho');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 P9 (E5) — duas Fionas com banho fixo no mesmo dia: as duas na lista do automático, cada uma com a sua hora', () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    const o = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${DIA649}')`)));
+    igual(o.banho, ['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona/SRD (SEM SHAMPOO)']);
+    igual([o._horas.banho['f:fiona__isac-teste'], o._horas.banho['f:fiona__bia-teste']], ['15:00', '10:00']);
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 C1 (P5b) — a Fiona/Buldogue lançada à mão NÃO faz o automático tirar da planilha o banho fixo da Fiona/SRD', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'B');
+    run(`__pl649=[{v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}, {v:'Fiona/Buldogue Francês', h:'14:00'}];
+      __dbPoe('daycare/dashboard-auto/${DIA649}', {banho:['Fiona/SRD (SEM SHAMPOO)'], _estado_v:1, _estado:{banho:{fiona:{planilha_ok:true, hora:'10:00', ts:1}}}});
+      __dbPoe('daycare/dashboard/${DIA649}/banho/x1', {valor:'Fiona/Buldogue Francês', hora:'14:00', chave:dcKey('Fiona','Isac Teste'), ts:Date.now()-600000, planilha_ok:true});`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), [], 'zero remoções');
+    igual(pl649(), ['Fiona/SRD (SEM SHAMPOO)', 'Fiona/Buldogue Francês']);
+    const est = run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho`);
+    igual(Object.keys(est).filter((k) => /^[ft]:/.test(k)), ['f:fiona__bia-teste'], 'a da Fiona/Buldogue (à mão) não entra no registro do automático');
+    assert.ok(est['f:fiona__bia-teste'].planilha_ok === true, JSON.stringify(est));
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}};`);
+    igual(run(`dashAutoLinhas('banho', '${DIA649}', dashChavesDaMao(__dbPega('daycare/dashboard/${DIA649}/banho')))`).n, 1, 'a linha automática da Fiona/SRD continua nos Lançamentos');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 C1b — o banho fixo da Fiona/SRD que deixou de valer sai da planilha mesmo com o da Fiona/Buldogue de pé', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    run(`__pl649=[{v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}, {v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}];
+      __dbPoe('daycare/dashboard-auto/${DIA649}', {banho:['Fiona/Buldogue Francês (SEM SHAMPOO)'], _listas:{banho:['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona/SRD (SEM SHAMPOO)']}, _estado_v:2,
+        _estado:{banho:{'f:fiona__isac-teste':{planilha_ok:true, hora:'15:00', ts:1}, 'f:fiona__bia-teste':{planilha_ok:true, hora:'10:00', ts:1}}}});`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), ['Fiona/SRD (SEM SHAMPOO)'], 'o combinado da Fiona/SRD foi desligado: o banho sai');
+    igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+  } finally { run(SOLTA649); }
+});
+// ---- C2 — «tirar» o repetido -----------------------------------------------------------------------
+provaAsync('6.49 C2 — «tirar» um lançamento repetido (o mesmo texto em outro aparelho) NÃO tira a célula: a tela diz; sem repetido, tira como sempre', async () => {
+  run(ARMA649);
+  try {
+    run(`zPergunta=(__bk649.zp=zPergunta, function(){ return Promise.resolve(true); }); dcGarantirPlanilha=(__bk649.dg=dcGarantirPlanilha, function(){});
+      __pl649=[{v:'Fiona/Buldogue Francês', h:'14:00'}];
+      __dbPoe('daycare/dashboard/${DIA649}/banho/a1', {valor:'Fiona/Buldogue Francês', hora:'14:00', quem:'Recepção 1', ts:new Date(2026,9,8,13,52).getTime(), planilha_ok:true});
+      __dbPoe('daycare/dashboard/${DIA649}/banho/b2', {valor:'Fiona/Buldogue Francês', hora:'14:00', quem:'Recepção 2', ts:new Date(2026,9,8,13,55).getTime(), planilha_ok:true});
+      DASH_DADOS={banho:{b2:__dbPega('daycare/dashboard/${DIA649}/banho/b2')}};`);
+    try {
+      await run("dashRemover('banho','b2')"); await espera649();
+      igual(ponte649('remover'), [], 'a ponte não é chamada');
+      igual(pl649(), ['Fiona/Buldogue Francês'], 'a célula do outro lançamento fica');
+      igual(run(`Object.keys(__dbPega('daycare/dashboard/${DIA649}/banho'))`), ['a1'], 'o lançamento repetido saiu do banco');
+      const za = run('__za649');
+      assert.ok(za.length === 1 && za[0][0] === 'A CÉLULA CONTINUA NA PLANILHA' && /por Recepção 1 às 13:52/.test(za[0][1][0]), JSON.stringify(za));
+      assert.ok(__au649Tem('a célula de Fiona/Buldogue Francês continua na planilha (Banho)'));
+      // o último: agora tira da planilha (a outra Fiona, com OUTRO texto, não segura nada)
+      run(`__za649=[]; __dbPoe('daycare/dashboard/${DIA649}/banho/z9', {valor:'Fiona/SRD', ts:3}); __pl649.push({v:'Fiona/SRD', h:'10:00'});
+        DASH_DADOS={banho:{a1:__dbPega('daycare/dashboard/${DIA649}/banho/a1'), z9:__dbPega('daycare/dashboard/${DIA649}/banho/z9')}};`);
+      await run("dashRemover('banho','a1')"); await espera649();
+      igual(ponte649('remover'), ['Fiona/Buldogue Francês']);
+      igual(pl649(), ['Fiona/SRD']);
+      // a releitura falhou: vale a memória deste aparelho
+      run(`__pl649=[{v:'Fiona/SRD', h:'10:00'}]; __pc649=[];
+        __dbPoe('daycare/dashboard/${DIA649}/banho/c3', {valor:'Fiona/SRD', ts:1}); __dbPoe('daycare/dashboard/${DIA649}/banho/d4', {valor:'Fiona/SRD', ts:2});
+        DASH_DADOS={banho:{c3:{valor:'Fiona/SRD', ts:1}, d4:{valor:'Fiona/SRD', ts:2}}};
+        __onceOk649=DB.ref; DB={ref:function(p){ var r=__onceOk649(p); if(/banho$/.test(p)) r.once=function(){ return Promise.reject(new Error('offline')); }; return r; }};`);
+      await run("dashRemover('banho','d4')"); await espera649();
+      igual(ponte649('remover'), [], 'sem a releitura, o repetido na memória segura a célula');
+    } finally { run('zPergunta=__bk649.zp; dcGarantirPlanilha=__bk649.dg;'); }
+  } finally { run(SOLTA649); }
+});
+// ---- P10 a P12 — o que tem de continuar ---------------------------------------------------------------
+provaAsync('6.49 P10 — "Ozzy - Lhasa" escrito à mão é o Ozzy/Lhasa Apso (nada escrito de novo; a TV o conta); e não segura o banho fixo do Ozzy/Norfolk', async () => {
+  run(ARMA649);
+  try {
+    run(`__ex649['Ozzy|Márcia Teste']=${BR649('09:00')}; __turma649.push(2); __pl649=[{v:'Ozzy - Lhasa', h:'09:00'}];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), [], 'QA36 M-2: nada escrito de novo');
+    run(`__ex649['Ozzy|Sabrina Teste']=${BR649('11:00')}; __turma649.push(3); __pc649=[];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), ['Ozzy/Norfolk (SEM SHAMPOO)'], 'o Ozzy/Norfolk entra');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}};`);
+    lerTV649();
+    igual(run('dashTvBanhoLinhas()').map((l) => [l.texto, l.tv.e]), [['Ozzy/Lhasa Apso (SEM SHAMPOO)', 'ok'], ['Ozzy/Norfolk (SEM SHAMPOO)', 'ok']], 'o "Ozzy - Lhasa" escrito à mão conta como o Ozzy/Lhasa Apso na planilha que a TV lê');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 P11 — as três Mayas continuam com o tutor; um "Maya/SRD" escrito à mão (sem tutor) não segura nenhuma das três', async () => {
+  run(ARMA649);
+  try {
+    igual([5, 6, 7].map((i) => run(`dashNomePlanilha(PELUDINHOS[${i}])`)), ['Maya/SRD (Luciana)', 'Maya/SRD (Marcela)', 'Maya/Spitz']);
+    run(`__ex649['Maya|Luciana Teste']=${BR649('09:00')}; __ex649['Maya|Marcela Teste']=${BR649('09:30')}; __ex649['Maya|Rita Teste']=${BR649('10:00')};
+      __turma649.push(5, 6, 7); __pl649=[{v:'Maya/SRD', h:'08:00'}];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar').sort(), ['Maya/SRD (Luciana) (SEM SHAMPOO)', 'Maya/SRD (Marcela) (SEM SHAMPOO)', 'Maya/Spitz (SEM SHAMPOO)']);
+    igual(ponte649('remover'), [], 'o "Maya/SRD" da pessoa fica');
+    const ids = [5, 6, 7].map((i) => run(`dashAutoIdent(dashNomePlanilha(PELUDINHOS[${i}]))`));
+    igual(new Set(ids).size, 3, JSON.stringify(ids));
+  } finally { run(SOLTA649); }
+});
+prova('6.49 P12 — registro v1 (pelo primeiro nome) lido como antes; registro v2 lido pela identidade, Fiona por Fiona, nos Lançamentos e na tela de Reposições (C16)', () => {
+  run(ARMA649);
+  try {
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:1, banho:['Fiona/SRD (SEM SHAMPOO)'],
+      _estado:{banho:{fiona:{planilha_ok:true, ts:1, hora:'10:00'}}}}};`);
+    igual(run(`repPlanEstadoNome('${DIA649}', 'Fiona/SRD (SEM SHAMPOO)', 'banho').estado`), 'ok', 'v1: ok, não "registro anterior"');
+    igual(run(`repPlanHoraNome('${DIA649}', 'Fiona/SRD (SEM SHAMPOO)', 'banho')`), '10:00');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, banho:[], faltas:['Fiona/Buldogue Francês', 'Fiona/SRD'],
+      _estado:{banho:{'f:fiona__isac-teste':{planilha_ok:true, ts:1, hora:'15:00'}, 'f:fiona__bia-teste':{planilha_ok:false, planilha_msg:'a coluna não existe', ts:1, hora:'10:00'}},
+               faltas:{'f:fiona__isac-teste':{planilha_ok:true, ts:1}, 'f:fiona__bia-teste':{planilha_ok:false, planilha_msg:'a coluna não existe', ts:1}}}}};`);
+    igual([run(`repPlanEstadoNome('${DIA649}', 'Fiona/Buldogue Francês (SEM SHAMPOO)', 'banho').estado`), run(`repPlanEstadoNome('${DIA649}', 'Fiona/SRD (SEM SHAMPOO)', 'banho').estado`)], ['ok', 'falhou']);
+    igual([run(`repPlanHoraNome('${DIA649}', 'Fiona/Buldogue Francês', 'banho')`), run(`repPlanHoraNome('${DIA649}', 'Fiona/SRD', 'banho')`)], ['15:00', '10:00']);
+    igual([run(`repPlanEstado('${DIA649}', PELUDINHOS[0], 'faltas').estado`), run(`repPlanEstado('${DIA649}', PELUDINHOS[1], 'faltas').estado`)], ['ok', 'falhou'], 'a tela de Reposições, Fiona por Fiona');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 C16 — Falta avisada e Reposição de duas Fionas no mesmo dia: as duas na lista do automático', () => {
+  run(ARMA649);
+  try {
+    run(`__rl649['Fiona|Isac Teste']=[{_id:'c1', tipo:'credito', data:'${DIA649}', motivo:'viagem', volta:''}];
+      __rl649['Fiona|Bia Teste']=[{_id:'c2', tipo:'credito', data:'${DIA649}', motivo:'viagem', volta:''}, {_id:'c3', tipo:'credito', data:'2026-10-01', motivo:'viagem', volta:'${DIA649}'}];
+      __rl649['Ozzy|Márcia Teste']=[{_id:'c4', tipo:'credito', data:'2026-10-01', motivo:'viagem', volta:'${DIA649}'}];
+      __rl649['Ozzy|Sabrina Teste']=[{_id:'c5', tipo:'credito', data:'2026-10-02', motivo:'viagem', volta:'${DIA649}'}];`);
+    const o = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${DIA649}')`)));
+    igual(o.faltas, ['Fiona/Buldogue Francês', 'Fiona/SRD']);
+    igual(o.reposicao, ['Fiona/SRD', 'Ozzy/Lhasa Apso', 'Ozzy/Norfolk']);
+  } finally { run(SOLTA649); }
+});
+prova('6.49 C14 — a memória da identidade se renova quando a raça (ou o tutor) muda sem mudar o tamanho do cadastro', () => {
+  run(ARMA649);
+  try {
+    igual(run("dashAutoIdent('Fiona/Pug')"), 't:fiona|pug');
+    run("PELUDINHOS[1].raca='Pug';");
+    igual(run("dashAutoIdent('Fiona/Pug')"), 'f:fiona__bia-teste', 'a mesma quantidade de fichas, a raça nova');
+    run("PELUDINHOS[1].raca='SRD'; pelCadCache={'maya__luciana teste':{tutor:'Luana Teste'}};");
+    igual(run("dashAutoIdent('Fiona/Pug')"), 't:fiona|pug', 'e volta');
+  } finally { run(SOLTA649); }
+});
+// ---- C12 — o rastro com os nomes -----------------------------------------------------------------------
+provaAsync('6.49 C12 — o rastro do automático diz quem foi posto e quem foi tirado', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    run(`__pl649=[{v:'Lupita/SRD', h:'09:00'}]; __dbPoe('daycare/dashboard-auto/${DIA649}', {banho:['Lupita/SRD'], _estado_v:2, _estado:{}});`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    const a = run('__au649').filter((x) => /^preencheu a planilha de /.test(x));
+    igual(a, ['preencheu a planilha de ' + DIA649 + ': 2 posto(s), 1 tirado(s) — posto(s): Fiona/Buldogue Francês (SEM SHAMPOO); Fiona/SRD (SEM SHAMPOO) — tirado(s): Lupita/SRD']);
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 P3b — a passada que só confere (nada escrito) não faz a linha automática voltar a "a caminho"', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    // a escrita foi há 1 minuto; a leitura da TV, há 30 s (depois dela)
+    run(`(function(){ var r=__dbPega('daycare/dashboard-auto/${DIA649}'); r._estado.banho['f:fiona__isac-teste'].escrito=Date.now()-60000; __dbPoe('daycare/dashboard-auto/${DIA649}', r); })();
+      TV_BANHO.lidaEm=0; tvTabelaGuardar('${DIA649}', 'aba', ${GVIZ649}, Date.now()-30000);`);
+    const esc1 = run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho['f:fiona__isac-teste'].escrito`);
+    run('__pc649=[];'); await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(run('__pc649').filter((c) => c.acao !== 'lerDia'), [], 'nada escrito');
+    igual(run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho['f:fiona__isac-teste'].escrito`), esc1, 'o "escrito" é de quando escreveu, não de quando conferiu');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}};`);
+    igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), ['ok'], 'a leitura de 30 s atrás continua valendo');
+  } finally { run(SOLTA649); }
+});
+// ---- C15 — a troca de versão: o aparelho que ainda não atualizou lê o registro novo --------------------
+provaAsync('6.49 C15 — a troca de versão: o registro v2 fica legível para o aparelho que ainda não atualizou (a lista e a chave do primeiro nome); um v1 recém-gravado não é desfeito', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    const rec = run(`__dbPega('daycare/dashboard-auto/${DIA649}')`);
+    igual(rec._estado_v, 2);
+    igual(rec.banho, ['Fiona/Buldogue Francês (SEM SHAMPOO)'], 'a lista de sempre, como o aparelho antigo a escreveria (um por primeiro nome)');
+    igual(rec._listas.banho, ['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona/SRD (SEM SHAMPOO)'], 'a lista inteira');
+    const kV1 = run("vagasNomeChave('Fiona/Buldogue Francês (SEM SHAMPOO)')");
+    igual([kV1, rec._estado.banho[kV1].planilha_ok, rec._estado.banho[kV1].hora], ['fiona', true, '15:00'], 'o aparelho antigo acha a do primeiro da lista');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}};`);
+    igual(run(`dashAutoLinhas('banho', '${DIA649}', null)`).n, 2, 'esta versão mostra as duas');
+    // o aparelho antigo regrava o registro como v1 (pelo primeiro nome): o novo lê sem desfazer nada
+    run(`__dbPoe('daycare/dashboard-auto/${DIA649}', {banho:['Fiona/Buldogue Francês (SEM SHAMPOO)'], _estado_v:1, _estado:{banho:{fiona:{planilha_ok:true, ts:1, hora:'15:00'}}}}); __pc649=[];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    // a hora da Fiona/SRD não está no v1 (a chave "fiona" é da outra): ela é só confirmada — o mesmo texto, a mesma hora
+    igual(run('__pc649').filter((c) => c.acao !== 'lerDia').map((c) => [c.acao, c.valor, c.hora]), [['lancar', 'Fiona/SRD (SEM SHAMPOO)', '10:00']], 'nada tirado, nenhuma célula nova');
+    igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona/SRD (SEM SHAMPOO)']);
+    igual(run(`__dbPega('daycare/dashboard-auto/${DIA649}')._listas.banho`).length, 2, 'e a lista inteira volta');
+  } finally { run(SOLTA649); }
+});
+// ---- P13 — o banho fixo de hoje que não vai para a TV (com C5 e C18) ----------------------------------
+prova('6.49 P13 — o banho fixo que não vai para a TV: um motivo por caso, o botão certo; «Lançar à mão» só preenche o painel; o automático e a lista concordam', () => {
+  run(ARMA649);
+  try {
+    run(`PELUDINHOS=PELUDINHOS.concat([{n:'Bia', raca:'SRD', tutor:'Ana Teste'}, {n:'Thor', raca:'Pug', tutor:'Rui Teste'}, {n:'Lili', raca:'Spitz', tutor:'Luísa Teste'},
+        {n:'Repolho', raca:'SRD', tutor:'Zêluz'}, {n:'Nina', raca:'Poodle', tutor:'Lu Teste'}, {n:'Tico', raca:'Westie', tutor:'Rô Teste'}]);
+      var B=function(h, ex){ var o=${BR649('X')}; o.banho_rec.hora=h; if(ex) o.banho_rec.excecoes=ex; return o; };
+      __ex649['Fiona|Isac Teste']=B('15:00');                                   // faltou na chamada
+      __ex649['Fiona|Bia Teste']=B('10:00');                                    // vai (controle)
+      __ex649['Bia|Ana Teste']=B('09:00');                                      // falta avisada
+      __ex649['Thor|Rui Teste']=B('11:00', {'${DIA649}':{pular:true, quem:'Recepção Teste', ts:new Date(2026,9,7,16,40).getTime()}});
+      __ex649['Lili|Luísa Teste']=Object.assign(B('12:00'), {inativo:'Sim'});
+      __ex649['Repolho|Zêluz']=Object.assign(B('13:00'), {categoria:'morador'});
+      __ex649['Nina|Lu Teste']=B('14:00');                                      // não vem hoje
+      __ex649['Tico|Rô Teste']=B('16:00');                                      // não vem, mas foi lançado à mão
+      __turma649=[0, 1, 8, 9];
+      PELUDINHOS.push({n:'Kiko', raca:'Beagle', tutor:'Rô Teste'});             // avisou a falta, mas a recepção disse que ainda vem
+      __ex649['Kiko|Rô Teste']=B('17:00', {'${DIA649}':{manter:true}}); __turma649.push(14);
+      __rl649['Kiko|Rô Teste']=[{_id:'c9', tipo:'credito', data:'${DIA649}', motivo:'viagem'}];
+      dcChamada[dcKey('Fiona','Isac Teste')]='faltou';
+      __rl649['Bia|Ana Teste']=[{_id:'c1', tipo:'credito', data:'${DIA649}', motivo:'viagem'}];
+      DASH_DADOS={banho:{t1:{valor:'Tico/Westie', hora:'16:00', ts:1, planilha_ok:true}}};
+      REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, banho:['Fiona/SRD (SEM SHAMPOO)'], _estado:{}}};`);
+    const L = JSON.parse(JSON.stringify(run(`dashBanhoFixoFora('${DIA649}', DASH_DADOS.banho, ['Fiona/SRD (SEM SHAMPOO)'])`)));
+    igual(L.map((o) => [o.nome, o.hora, o.cod, o.txt]), [
+      ['Bia/SRD', '09:00', 'avisada', 'falta avisada para hoje'],
+      ['Thor/Pug', '11:00', 'pulado', 'pulado só hoje (por Recepção Teste, em 07/10/2026 às 16:40)'],
+      ['Lili/Spitz', '12:00', 'inativo', 'está nos Inativos: o automático não lança'],
+      ['Repolho/SRD', '13:00', 'morador', 'mora na casa: o automático não lança banho fixo de morador'],
+      ['Nina/Poodle', '14:00', 'naovem', 'não vem ao Day Care hoje, pela ficha'],
+      ['Fiona/Buldogue Francês', '15:00', 'faltou', 'faltou na chamada de hoje']]);
+    // o automático e a lista concordam, ficha por ficha
+    const auto = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${DIA649}')`))).banho;
+    run('PELUDINHOS').forEach((p, i) => {
+      const br = run(`banhoRecDe(PELUDINHOS[${i}])`); if (!br || !run(`banhoRecCaiNoDia(banhoRecDe(PELUDINHOS[${i}]), '${DIA649}')`)) return;
+      const mot = run(`dashBanhoFixoMotivo(PELUDINHOS[${i}], banhoRecDe(PELUDINHOS[${i}]), '${DIA649}', !!dashBanhoQuemVem('${DIA649}')[pelKey(PELUDINHOS[${i}])], '${DIA649}')`);
+      igual(mot === null, auto.indexOf(run(`banhoRecValorPlanilha(PELUDINHOS[${i}], banhoRecDe(PELUDINHOS[${i}]))`)) >= 0, 'concordam: ' + p.n);
+    });
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[14], banhoRecDe(PELUDINHOS[14]), '${DIA649}', true, '${DIA649}')`), null, '"ainda vem": vai para a TV');
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[14], banhoRecDe(PELUDINHOS[14]), '${DIA649}', false, '${DIA649}').cod`), 'naovem', '"ainda vem", mas não é dia de Day Care: o motivo é esse, não a falta avisada');
+    // quem já está no registro do automático (um registro de antes da falta, por exemplo) não aparece em dobro
+    igual(run(`dashBanhoFixoFora('${DIA649}', DASH_DADOS.banho, ['Fiona/SRD (SEM SHAMPOO)', 'Lili/Spitz (SEM SHAMPOO)'])`).map((o) => o.nome).indexOf('Lili/Spitz'), -1);
+    // feriado (o mesmo dia, com a tabela dizendo feriado)
+    run(`orcFechado=function(){ return 'Dia de teste'; };`);
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]), '${DIA649}', true, '${DIA649}')`), { cod: 'feriado', txt: 'feriado (Dia de teste): a casa não abre' });
+    run('orcFechado=__bk649.of;');
+    // o HTML: o faltou leva ao Banho de quem faltou (C5: sem «Ela está aqui»); os outros, «Lançar à mão»
+    const h = run('dashBanhoFixoForaHTML(DASH_DADOS.banho)');
+    assert.ok(/Banho fixo de hoje que não vai para a TV \(6\)/.test(h), h);
+    assert.ok(/dashBanhoFixoAbrirFaltou\(\)">Abrir Hoje na Zêluz › Banho de quem faltou</.test(h));
+    igual((h.match(/>Lançar à mão</g) || []).length, 5);
+    assert.ok(!/Ela está aqui|banhoFaltaEstaAqui|pendAvisarChegada/.test(h), 'nenhuma porta para o check-in (C5)');
+    run(`__aim649=[]; abrirItemDoMenu=function(v){ __aim649.push(v); }; dashBanhoFixoAbrirFaltou();`);
+    igual(run('__aim649'), ['hoje']);
+    // «Lançar à mão» só escolhe: o FILHOt, a ficha e a hora do combinado; nada no banco
+    // a tela de verdade: o relógio do Banho é um campo que guarda a hora (é ele que o «Lançar na planilha» lê)
+    run(`__els649b={}; document.getElementById=function(id){ if(!__els649b[id]) __els649b[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __els649b[id]; };
+      __dbEsc649=[]; delete DASH_SEL.banho; delete DASH_SEL_I.banho; __bk649.dl=dashLancar; __lancou649=0; dashLancar=function(){ __lancou649++; };`);
+    try { igual(run(`dashBanhoFixoLancarMao(dcKey('Nina','Lu Teste'))`), true); } finally { run('dashLancar=__bk649.dl;'); }
+    igual(run('__lancou649'), 0, 'o lançamento não é chamado');
+    igual(run("[__els649b.dashH_banho.value, dashDetFalta('banho')]"), ['14:00', ''], 'pronto para o «Lançar na planilha»: a hora no relógio, nada faltando');
+    igual([run('DASH_SEL.banho'), run('DASH_SEL_I.banho'), run('DASH_HORA.banho'), run('DASH_DET.banho.sham')], ['Nina/Poodle', 12, '14:00', 'SEM SHAMPOO']);
+    igual(run('__dbEsc649'), [], 'nada gravado');
+    igual(run('__pc649'), [], 'nada na ponte');
+  } finally { run(SOLTA649); }
+});
+// ---- P14 — a leitura limitada --------------------------------------------------------------------------
+provaAsync('6.49 P14 — dez redesenhos em 1 minuto = 1 leitura; só com a tela à vista, em hoje e com banho; 30 s depois de lançar, de novo (no mínimo 1 minuto)', async () => {
+  run(ARMA649);
+  try {
+    igual(run(`[tvBanhoPrecisaLer(100000, {pedidaEm:50000, lidaEm:50000, dia:'a', hoje:'a'}), tvBanhoPrecisaLer(200000, {pedidaEm:50000, lidaEm:50000, dia:'a', hoje:'a'}),
+      tvBanhoPrecisaLer(115000, {pedidaEm:50000, lidaEm:50000, dia:'a', hoje:'a', quer:110000}), tvBanhoPrecisaLer(100000, {pedidaEm:50000, lidaEm:50000, dia:'a', hoje:'a', quer:90000}),
+      tvBanhoPrecisaLer(100000, {pedidaEm:50000, lidaEm:50000, dia:'x', hoje:'a'}), tvBanhoPrecisaLer(500000, {lendo:true, pedidaEm:0, lidaEm:0, dia:'', hoje:'a'})]`),
+      [false, true, true, false, false, false]);
+    run(`__fs649=0; fetchSheet=function(){ __fs649++; return Promise.resolve({cols:[{label:'Data'},{label:'Banho'}], rows:[]}); };
+      __vis649=true; __els649={}; document.getElementById=function(id){
+        if(id==='v-dashdc') return {classList:{contains:function(c){ return __vis649 && c==='active'; }}};
+        if(!__els649[id]) __els649[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}};
+        return __els649[id]; };
+      renderDash=__bk649.rd;
+      DASH_DADOS={banho:{m1:{valor:'Fiona/SRD', hora:'10:00', ts:Date.now()-600000, planilha_ok:true}}};`);
+    for (let i = 0; i < 10; i++) run('renderDash()');
+    await espera649();
+    igual(run('__fs649'), 1, 'uma leitura');
+    for (let i = 0; i < 10; i++) run('tvBanhoTique()');
+    igual(run('__fs649'), 1, 'antes de 1 minuto, nenhuma');
+    run('TV_BANHO.pedidaEm-=61000; TV_BANHO.lidaEm-=61000; tvBanhoMexeu("m1", "lancar"); TV_BANHO_QUER=Date.now()-1;');
+    run('tvBanhoTique(); tvBanhoTique();'); await espera649();
+    igual(run('__fs649'), 2, 'depois de lançar (passado 1 minuto), uma');
+    run('TV_BANHO.pedidaEm-=200000; TV_BANHO.lidaEm-=200000; __vis649=false;');
+    run('tvBanhoTique();'); igual(run('__fs649'), 2, 'tela escondida: nenhuma');
+    run(`__vis649=true; DASH_DIA_SEL='2026-10-09';`);
+    run('tvBanhoTique();'); igual(run('__fs649'), 2, 'outro dia: nenhuma');
+    run(`DASH_DIA_SEL='${DIA649}'; DASH_DADOS={};`);
+    run('tvBanhoTique();'); igual(run('__fs649'), 2, 'sem banho hoje: nenhuma');
+    run(`DASH_DADOS={banho:{m1:{valor:'Fiona/SRD', ts:1, planilha_ok:true}}};`);
+    run('tvBanhoTique();'); await espera649(); igual(run('__fs649'), 3, 'a cada 2 minutos');
+    // a leitura do carregarPlanilhaDia (a do Day Care) também vale: nenhuma a mais
+    run(`TV_BANHO.pedidaEm-=200000; TV_BANHO.lidaEm-=200000; tvTabelaGuardar('${DIA649}', 'aba', {cols:[], rows:[]}, Date.now());`);
+    run('tvBanhoTique();'); igual(run('__fs649'), 3, 'a tabela recente do carregarPlanilhaDia serve');
+    run(`TV_BANHO.pedidaEm-=200000; TV_BANHO.lidaEm=0; tvTabelaGuardar('${DIA649}', 'aba', {cols:[], rows:[]}, Date.now()-10000); TV_BANHO_QUER=Date.now()-1;`);
+    run('tvBanhoTique();'); igual(run('__fs649'), 3, 'a leitura do Day Care de 10 s atrás conta para o minuto: nenhuma a mais');
+    igual(run('__dbEsc649'), [], 'nenhuma leitura nem escrita nova no banco');
+    // a leitura que falha: "não consegui conferir", com o motivo; nunca ✓
+    run(`fetchSheet=function(){ __fs649++; return Promise.reject(new Error('timeout')); }; TV_BANHO.pedidaEm=0; TV_BANHO.lidaEm-=200000;`);
+    run('tvBanhoTique();'); await espera649();
+    igual([run('TV_BANHO.ok'), run('TV_BANHO.erro')], [false, 'a planilha não respondeu em 15 s']);
+    assert.ok(/data-tv="erro"[^>]*>não consegui conferir a planilha que a TV lê agora \(a planilha não respondeu em 15 s\)/.test(run(`dashTvMaoHTML('banho', DASH_DADOS.banho.m1, 'm1')`)));
+    // março: como a TV, a aba sem acento quando a com acento não existe
+    run(`__abas649=[]; fetchSheet=function(nome){ __abas649.push(nome); return nome==='2026 DayCare Marco' ? Promise.resolve({cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,2,12)', f:'12/03/2026'}, {v:'Fiona/SRD'}]}]}) : Promise.reject(new Error('no table')); };
+      zHojeISO=function(){ return '2026-03-12'; }; DASH_DIA_SEL='2026-03-12'; APP_DIA_ABERTO='2026-03-12'; TV_BANHO.pedidaEm=0;`);
+    run('tvBanhoTique();'); await espera649();
+    igual(run('__abas649'), ['2026 DayCare Março', '2026 DayCare Marco']);
+    igual([run('TV_BANHO.ok'), run('TV_BANHO.dia'), run('TV_BANHO.espelho.length')], [true, '2026-03-12', 1]);
+  } finally { run(SOLTA649); }
+});
+// ---- P15 — a área protegida -------------------------------------------------------------------------
+prova('6.49 P15 — nada da 6.49 chama o check-in, os pertences, pendAvisarChegada ou banhoFaltaEstaAqui; carregarPlanilhaDia só guarda a tabela', () => {
+  const nomes = ['dashAutoIdent', 'dashIdentAssinatura', 'dashIdentTexto', 'tvLinhasDaTabela', 'tvEspelhoBanho', 'tvBanhoForaDaData', 'tvBanhoNaTV', 'tvBanhoLer',
+    'tvBanhoTique', 'tvTabelaGuardar', 'tvBanhoEstado', 'dashTvBanhoLinhas', 'dashTvEstadoHTML', 'dashTvAvisoHTML', 'dashTvPorDeNovo', 'dashBanhoQuemVem',
+    'dashBanhoFixoMotivo', 'dashBanhoFixoFora', 'dashBanhoFixoForaHTML', 'dashBanhoFixoLancarMao', 'dashBanhoFixoAbrirFaltou', 'dashRemoverDaPlanilha', 'dashMesmoTextoEmOutro'];
+  nomes.forEach((n) => {
+    const src = run(`String(${n})`);
+    assert.ok(!/\b(ck[A-Z]\w*|ckt\w*|pt[A-Z]\w*|pendAvisarChegada|banhoFaltaEstaAqui|banhoFaltaIrAoCheckin)\s*\(/.test(src), n);
+  });
+  const src = fs.readFileSync(APP, 'utf8');
+  const cpd = src.slice(src.indexOf('async function carregarPlanilhaDia(){'), src.indexOf('function banhoDaPlanilha(k)'));
+  igual((cpd.match(/tvTabelaGuardar/g) || []).length, 2, 'só a guarda da tabela (o typeof e a chamada)');
+});
+
+// ================================================================== 6.49 — 2ª rodada do QA (09/out/2026)
+// Os achados do caçador (o erro de digitação que valia como identidade; a troca de versão que apagava
+// a lista inteira; o xará inativo) e do gate (QA649-1 a QA649-4). Cada prova falha no código da 1ª
+// rodada e passa no de agora.
+console.log('\n6.49 — 2ª rodada do QA: o erro de digitação, a troca de versão, o xará inativo, o dia que vira, o banho fixo a caminho');
+const BEL649 = `PELUDINHOS.push({n:'Bel', raca:'SRD', tutor:'Rui Teste'}, {n:'Luna', raca:'Poodle', tutor:'Rui Teste'}); __iBel649=PELUDINHOS.length-2;`;
+prova('6.49 R2-1a — identidade só pelo casamento EXATO: "Mel" (sem ficha) não é o Bel/SRD; "Lua" não é a Luna/Poodle; o nome, a raça e o tutor exatos continuam valendo', () => {
+  run(ARMA649);
+  try {
+    run(BEL649);
+    igual(run("[dashAutoIdent('Mel'), dashAutoIdent('Mel/SRD'), dashAutoIdent('Lua')]"), ['t:mel', 't:mel|srd', 't:lua'], 'o erro de digitação do planCasar não vale como ficha');
+    igual(run("[dashAutoIdent('Bel'), dashAutoIdent('Bel/SRD (SEM SHAMPOO)'), dashAutoIdent('Luna/Poodle')]"), ['f:bel__rui-teste', 'f:bel__rui-teste', 'f:luna__rui-teste']);
+    igual(run("[dashAutoIdent('Ozzy - Lhasa'), dashAutoIdent('Maya/SRD (Luciana)'), dashAutoIdent('Fiona/SRD')]"), ['f:ozzy__marcia-teste', 'f:maya__luciana-teste', 'f:fiona__bia-teste'], 'raça e tutor que desempatam continuam valendo');
+    igual(run("planCasar('Mel').conf"), 'fuzzy', 'o planCasar não mudou: para o Day Care, "Mel" continua sendo o Bel por erro de digitação');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-1b — banho fixo do Bel/SRD com "Mel" escrito na planilha: o automático ESCREVE o Bel, e o ✓ é dele (nunca o do "Mel")', async () => {
+  run(ARMA649);
+  try {
+    run(`${BEL649} __ex649['Bel|Rui Teste']=${BR649('11:00')}; __turma649.push(__iBel649); __pl649=[{v:'Mel', h:'09:00'}];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), ['Bel/SRD (SEM SHAMPOO)'], 'a ponte recebe o Bel');
+    igual(pl649(), ['Mel', 'Bel/SRD (SEM SHAMPOO)']);
+    const est = run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho['f:bel__rui-teste']`);
+    assert.ok(est.planilha_ok === true && est.escrito > 0, JSON.stringify(est));
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}}; DASH_DADOS={banho:{}};`);
+    run(`TV_BANHO.lidaEm=0; tvTabelaGuardar('${DIA649}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Mel'}]}]}, Date.now()+1)`);
+    igual(run('dashTvBanhoLinhas()').map((l) => [l.texto, l.tv.e]), [['Bel/SRD (SEM SHAMPOO)', 'caminho']], 'só com o "Mel" na planilha que a TV lê, o Bel NÃO tem ✓ (a leitura não tem a célula dele)');
+    lerTV649();
+    igual(run('dashTvBanhoLinhas()').map((l) => [l.texto, l.tv.e]), [['Bel/SRD (SEM SHAMPOO)', 'ok']], 'com a célula dele, ✓');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-1c — o Bel/SRD lançado à mão sumiu e a planilha tem "Mel": a linha diz que NÃO está, o aviso do alto lista, a conferência e o «pôr de novo» repõem', async () => {
+  run(ARMA649);
+  try {
+    run(`${BEL649} __turma649.push(__iBel649);
+      __dbPoe('daycare/dashboard/${DIA649}/banho/m1', {valor:'Bel/SRD (SEM SHAMPOO)', hora:'11:00', chave:'bel__rui-teste', ts:Date.now()-10*60000, planilha_ok:true});
+      __pl649=[{v:'Mel', h:'09:00'}]; DASH_DADOS={banho:__dbPega('daycare/dashboard/${DIA649}/banho')};`);
+    lerTV649();
+    const linha = run(`dashTvMaoHTML('banho', DASH_DADOS.banho.m1, 'm1')`);
+    assert.ok(/data-tv="nao"/.test(linha) && !/✓/.test(linha), 'sem ✓ falso: ' + linha);
+    assert.ok(/Bel\/SRD \(SEM SHAMPOO\)<\/strong> 11:00 — a planilha não tem este banho/.test(run('dashTvAvisoHTML()')), 'o aviso do alto lista o Bel');
+    await run('dashTvPorDeNovo(null)'); await espera649();
+    igual(ponte649('lancar'), ['Bel/SRD (SEM SHAMPOO)'], '«pôr de novo» (a conferência de hoje) repõe');
+    igual(pl649(), ['Mel', 'Bel/SRD (SEM SHAMPOO)']);
+    assert.ok(__au649Tem('a conferência repôs na planilha Bel/SRD (SEM SHAMPOO)'));
+  } finally { run(SOLTA649); }
+});
+// ---- R2-2 — a troca de versão: o registro v1 do aparelho antigo, sem a lista inteira ------------------
+// O aparelho antigo regrava o registro como o código de antes da 6.49 grava: v1, a lista um por primeiro
+// nome e o estado pela chave do primeiro nome (o mesmo set de sempre).
+const V1649 = (lista, hora) => `__dbPoe('daycare/dashboard-auto/${DIA649}', {banho:${JSON.stringify(lista)}, _estado_v:1, _ts:Date.now(), _estado:{banho:${lista.length ? `{fiona:{planilha_ok:true, planilha_msg:'', ts:1, hora:'${hora}'}}` : '{}'}}});`;
+provaAsync('6.49 R2-2a — troca de versão: o aparelho antigo regravou o registro (v1, sem _listas) e a Fiona/SRD falta às 12h: o aparelho novo tira o banho fixo dela da planilha', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona/SRD (SEM SHAMPOO)']);
+    run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));            // a passada do aparelho antigo
+    run(`dcChamada[dcKey('Fiona','Bia Teste')]='faltou'; __pc649=[];`);       // 12h: a Fiona/SRD faltou
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), ['Fiona/SRD (SEM SHAMPOO)'], 'a lista refeita pela ficha: o banho fixo dela sai');
+    igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    run('__pc649=[];'); await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(run('__pc649').filter((c) => c.acao !== 'lerDia'), [], 'e fica quieto depois');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-2b — o aparelho antigo passou DEPOIS da falta das duas (tirou só a Fiona/Buldogue e gravou a lista vazia): o novo tira a Fiona/SRD; desligado e pulado só hoje também saem', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    run(`dcChamada[dcKey('Fiona','Isac Teste')]='faltou'; dcChamada[dcKey('Fiona','Bia Teste')]='faltou';
+      __pl649=[{v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}];`);
+    run(V1649([], ''));
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), ['Fiona/SRD (SEM SHAMPOO)']);
+    // desligado (o combinado fica gravado com ativo:false, como o «Salvar» grava): sai também
+    run(`dcChamada={}; __ex649['Fiona|Bia Teste'].banho_rec.ativo=false; __pl649=[{v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}, {v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}]; __pc649=[];`);
+    run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), ['Fiona/SRD (SEM SHAMPOO)'], 'o banho fixo desligado da Fiona/SRD sai');
+    igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    // pulado só hoje: sai também
+    run(`__ex649['Fiona|Bia Teste'].banho_rec.ativo=true; __ex649['Fiona|Bia Teste'].banho_rec.excecoes={'${DIA649}':{pular:true, quem:'Recepção Teste', ts:1}};
+      __pl649=[{v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}, {v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}]; __pc649=[];`);
+    run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), ['Fiona/SRD (SEM SHAMPOO)'], 'o banho fixo pulado só hoje da Fiona/SRD sai');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-2c — a lista refeita não toma o que é de pessoa: o lançado à mão com o mesmo texto fica; FILHOt sem xará fica; registro v2 não refaz; sem ler os Lançamentos do dia, nada é refeito', async () => {
+  run(ARMA649);
+  try {
+    // A Fiona/SRD tem banho fixo, mas não vem hoje (fora da turma): a célula com o texto do automático só sai se for DELE.
+    run(`__ex649['Fiona|Bia Teste']=${BR649('10:00')};
+      PELUDINHOS.push({n:'Kiara', raca:'Lhasa', tutor:'Rui Teste'}); __ex649['Kiara|Rui Teste']=${BR649('08:00')};   // a Kiara não tem xará
+      __dbPoe('daycare/dashboard/${DIA649}/banho/m1', {valor:'Fiona/SRD (SEM SHAMPOO)', hora:'10:00', chave:dcKey('Fiona','Bia Teste'), ts:Date.now()-600000, planilha_ok:true});
+      __pl649=[{v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}, {v:'Kiara/Lhasa (SEM SHAMPOO)', h:'08:00'}];`);
+    run(V1649([], ''));
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), [], 'a Fiona/SRD lançada à mão é da recepção; a Kiara (sem xará) não sai da lista do aparelho antigo: é de pessoa');
+    // registro v2 sem _listas: a lista dele já é a inteira — a célula com o texto do automático, fora dela, é de pessoa
+    run(`__dbPoe('daycare/dashboard/${DIA649}/banho/m1', null); __pc649=[]; __pl649=[{v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}];
+      __dbPoe('daycare/dashboard-auto/${DIA649}', {banho:[], _estado_v:2, _ts:Date.now(), _estado:{}});`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), [], 'registro v2: nada refeito');
+    // sem ler os Lançamentos do dia: nada sai e nada entra no registro (não se sabe se é da recepção)
+    run(`${V1649([], '')} __pc649=[]; __onceOk649b=DB.ref; DB={ref:function(p){ var r=__onceOk649b(p); if(p==='daycare/dashboard/${DIA649}') r.once=function(){ return Promise.reject(new Error('offline')); }; return r; }};`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), [], 'sem a leitura dos Lançamentos do dia');
+    igual(run(`dashAutoListaDoRegistro(__dbPega('daycare/dashboard-auto/${DIA649}'), 'banho')`), [], 'e a célula não vira do automático');
+  } finally { run(SOLTA649); }
+});
+// ---- R2-3 — o xará inativo ---------------------------------------------------------------------------
+provaAsync('6.49 R2-3 — o xará INATIVO não conta: "Boris" escrito à mão é o Boris/Westie (nada em dobro na TV, ✓ dele); com os dois ativos, continua em dúvida; a memória acompanha os Inativos', async () => {
+  run(ARMA649);
+  try {
+    run(`PELUDINHOS.push({n:'Boris', raca:'Westie', tutor:'Rui Teste'}, {n:'Boris', raca:'Buldogue', tutor:'Ex Teste'});
+      __ex649['Boris|Rui Teste']=${BR649('11:00')}; __ex649['Boris|Ex Teste']={inativo:'Sim'}; __turma649.push(PELUDINHOS.length-2);
+      pelCadCache[pelKey(PELUDINHOS[PELUDINHOS.length-1])]={inativo:'Sim'};      // a ficha gravada (o que o ouvinte do cadastro traz)
+      __pl649=[{v:'Boris', h:'11:00'}];`);
+    igual(run("[dashAutoIdent('Boris'), dashAutoIdent('Boris/Westie (SEM SHAMPOO)'), dashAutoIdent('Boris/Buldogue')]"), ['f:boris__rui-teste', 'f:boris__rui-teste', 'f:boris__ex-teste']);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), [], 'o "Boris" da pessoa é o Boris/Westie: nada escrito de novo');
+    igual(pl649(), ['Boris'], 'um Boris só na TV');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${DIA649}'), avulso:{}, reposicao:{}}; DASH_DADOS={banho:{}};`);
+    lerTV649();
+    igual(run('dashTvBanhoLinhas()').map((l) => [l.texto, l.tv.e]), [['Boris/Westie (SEM SHAMPOO)', 'ok']], 'o "Boris" da planilha que a TV lê é o dele');
+    // o Boris/Buldogue volta dos Inativos (o cadastro não muda de tamanho): "Boris" volta a ser dúvida
+    run(`__ex649['Boris|Ex Teste']={}; pelCadCache[pelKey(PELUDINHOS[PELUDINHOS.length-1])]={inativo:'Nao'};`);
+    igual(run("dashAutoIdent('Boris')"), 't:boris', 'a memória se renova pelos Inativos (o mesmo tamanho de cadastro)');
+    run('__pc649=[];'); await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('lancar'), ['Boris/Westie (SEM SHAMPOO)'], 'dois Boris na casa: o duplicado visível da story (R5)');
+  } finally { run(SOLTA649); }
+});
+// ---- R2-4 — QA649-1: o aparelho aberto desde ontem -----------------------------------------------------
+provaAsync('6.49 R2-4 (QA649-1) — aberto desde ontem: os banhos de ontem não viram "banhos de hoje fora da planilha que a TV lê"; o vigia relê os lançamentos de hoje quando o dia vira', async () => {
+  run(ARMA649);
+  try {
+    run(`__bkDK649=dcDataKey; __dia649='${DIA649}'; dcDataKey=function(){ return __dia649; }; zHojeISO=function(){ return __dia649; }; DASH_DIA_SEL='';
+      __dbPoe('daycare/dashboard/2026-10-08/banho/m1', {valor:'Kiara/Lhasa', hora:'09:00', ts:Date.now()-3600000, planilha_ok:true});
+      __dbPoe('daycare/dashboard/2026-10-08/banho/m2', {valor:'Lupita/SRD', hora:'10:00', ts:Date.now()-3600000, planilha_ok:true});
+      __dbPoe('daycare/dashboard/2026-10-09/banho/n1', {valor:'Nina/Poodle', hora:'14:00', ts:Date.now()-3600000, planilha_ok:true});
+      __fs649b=0; fetchSheet=function(){ __fs649b++; return Promise.resolve({cols:[{label:'Data'},{label:'Banho'}], rows:[]}); };
+      __ex649['Ozzy|Sabrina Teste']={banho_rec:{ativo:true, freq:'semanal', dia:'sex', hora:'16:00', desde:'2026-09-01', sham:'SEM SHAMPOO'}};   // banho fixo de sexta, fora da turma
+      REP_PLAN_CACHE['2026-10-09']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now(), banho:['Fiona/SRD (SEM SHAMPOO)'],
+        _estado:{banho:{'f:fiona__bia-teste':{planilha_ok:true, ts:1, escrito:1, hora:'10:00'}}}}};`);
+    try {
+      run('dashCarregar()'); await espera649();
+      igual(run('Object.keys(DASH_DADOS.banho||{})'), ['m1', 'm2']);
+      run(`tvTabelaGuardar('2026-10-08', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Kiara/Lhasa'}]}, {c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Lupita/SRD'}]}]}, Date.now())`);
+      igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), ['ok', 'ok'], 'no dia: ✓');
+      // meia-noite: o relógio vira, a tela continua aberta com os lançamentos de ontem
+      run(`__dia649='2026-10-09'; tvTabelaGuardar('2026-10-09', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[]}, Date.now());`);
+      igual(run('appDiaVelho()'), true);
+      igual(run('dashTvBanhoLinhas()'), [], 'nenhuma linha de ontem conferida contra a planilha de hoje');
+      igual(run('dashTvAvisoHTML()'), '', 'sem aviso falso no alto');
+      igual(run(`dashTvMaoHTML('banho', DASH_DADOS.banho.m1, 'm1')`), '', 'sem estado na linha de ontem');
+      igual(run('dashBanhoFixoForaHTML(DASH_DADOS.banho)'), '', 'nem a lista do banho fixo');
+      igual(run(`dashTvAutoHTML('banho', '2026-10-09', 'Fiona/SRD (SEM SHAMPOO)')`), '', 'nem a linha automática');
+      igual(run('DASH_DADOS_DE.dia'), '2026-10-08', 'o dashCarregar anotou de que dia é o que leu');
+      // o vigia de 15 s (a tela à vista) relê os lançamentos de hoje, uma vez
+      run(`__els649c={}; document.getElementById=function(id){
+          if(id==='v-dashdc') return {classList:{contains:function(c){ return c==='active'; }}};
+          if(!__els649c[id]) __els649c[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}};
+          return __els649c[id]; };`);
+      igual(run('tvBanhoTique()'), false, 'não lê a planilha antes de reler os lançamentos');
+      await espera649();
+      igual(run('Object.keys(DASH_DADOS.banho||{})'), ['n1'], 'relidos os lançamentos de hoje');
+      igual(run('DASH_DADOS_DE.dia'), '2026-10-09');
+      igual(run('dashTvBanhoLinhas(true)').map((l) => l.texto), ['Nina/Poodle', 'Fiona/SRD (SEM SHAMPOO)']);
+      assert.ok(/Ozzy\/Norfolk<\/strong>/.test(run('dashBanhoFixoForaHTML(DASH_DADOS.banho)')), 'com os lançamentos de hoje, a lista do banho fixo de hoje volta');
+      igual(run(`dashTvRelerDia('2026-10-09')`), false, 'uma vez por dia');
+      // montado por outra porta (sem a anotação do dashCarregar) com o aparelho no dia velho: também não confere
+      run(`DASH_DADOS={banho:{m1:{valor:'Kiara/Lhasa', hora:'09:00', ts:Date.now()-3600000, planilha_ok:true}}};`);
+      igual(run('dashTvBanhoLinhas()'), [], 'o DASH_DADOS de origem desconhecida, com o dia virado, não conta');
+    } finally { run('dcDataKey=__bkDK649;'); }
+  } finally { run(SOLTA649); }
+});
+// ---- R2-5 — QA649-3: o banho fixo que o automático vai lançar e ainda não lançou -------------------------
+provaAsync('6.49 R2-5 (QA649-3) — o banho fixo que o automático ainda não lançou aparece ("vai para a planilha na próxima conferência"), com «Conferir a planilha agora»; ninguém fica fora das quatro listas', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');                                         // Fiona/Buldogue: vai, e o registro ainda não a tem
+    papel649('fixo', 'B');                                         // Fiona/SRD: já está no registro (linha automática)
+    run(`PELUDINHOS.push({n:'Kiara', raca:'Lhasa', tutor:'Rui Teste'}, {n:'Thor', raca:'Pug', tutor:'Rui Teste'});
+      __ex649['Kiara|Rui Teste']=${BR649('08:00')}; __turma649.push(8);                         // lançada à mão
+      __ex649['Thor|Rui Teste']=${BR649('12:00')}; __ex649['Thor|Rui Teste'].banho_rec.excecoes={'${DIA649}':{pular:true, quem:'Recepção Teste', ts:new Date(2026,9,8,7,50).getTime()}}; __turma649.push(9);
+      DASH_DADOS={banho:{k1:{valor:'Kiara/Lhasa (SEM SHAMPOO)', hora:'08:00', ts:Date.now()-600000, planilha_ok:true}}};
+      REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now()-60000, banho:['Fiona/SRD (SEM SHAMPOO)'], _estado:{banho:{'f:fiona__bia-teste':{planilha_ok:true, ts:1, hora:'10:00'}}}}};`);
+    const h = run('dashBanhoFixoForaHTML(DASH_DADOS.banho)');
+    assert.ok(/Banho fixo de hoje que o automático ainda não confirmou \(1\)/.test(h) && /Fiona\/Buldogue Francês<\/strong> <span[^>]*>15:00<\/span> <span data-tv="vai"[^>]*>vai para a planilha na próxima conferência, em até 5 min</.test(h), h);
+    assert.ok(/onclick="dashTvPorDeNovo\(this, 'conferindo a planilha…'\)">Conferir a planilha agora</.test(h), 'o botão da conferência de hoje');
+    assert.ok(/Banho fixo de hoje que não vai para a TV \(1\)/.test(h) && (h.match(/>Lançar à mão</g) || []).length === 1, 'o Thor continua na outra lista');
+    const A = run(`dashBanhoFixoACaminho('${DIA649}', DASH_DADOS.banho, dashAutoListaDoDia('${DIA649}', 'banho'))`).map((o) => [o.nome, o.hora, o.cod]);
+    igual(A, [['Fiona/Buldogue Francês', '15:00', 'vai']]);
+    igual(run(`dashBanhoFixoFora('${DIA649}', DASH_DADOS.banho, dashAutoListaDoDia('${DIA649}', 'banho'))`).map((o) => [o.nome, o.cod]), [['Thor/Pug', 'pulado']]);
+    // as quatro listas cobrem todo banho fixo de hoje, cada FILHOt numa só
+    const auto = run(`dashAutoListaDoDia('${DIA649}', 'banho')`).map((v) => run(`dashAutoIdent(${JSON.stringify(v)})`));
+    const mao = Object.values(run('DASH_DADOS.banho')).map((o) => run(`dashAutoIdent(${JSON.stringify(o.valor)})`));
+    const vai = run(`dashBanhoFixoACaminho('${DIA649}', DASH_DADOS.banho, dashAutoListaDoDia('${DIA649}', 'banho'))`).map((o) => 'f:' + o.chave);
+    const fora = run(`dashBanhoFixoFora('${DIA649}', DASH_DADOS.banho, dashAutoListaDoDia('${DIA649}', 'banho'))`).map((o) => 'f:' + o.chave);
+    const todos = run(`PELUDINHOS.filter(function(p){ var br=banhoRecDe(p); return br && br.ativo && banhoRecCaiNoDia(br, '${DIA649}'); }).map(function(p){ return 'f:'+dcKey(p.n, p.tutor); })`);
+    igual(auto.concat(mao, vai, fora).sort(), JSON.parse(JSON.stringify(todos)).sort(), 'cada um em exatamente uma lista');
+    // antes de ler o registro do automático do dia, não se sabe: nada de "ainda não lançou"
+    run(`__bkC649=REP_PLAN_CACHE['${DIA649}']; delete REP_PLAN_CACHE['${DIA649}'];`);
+    assert.ok(!/ainda não confirmou/.test(run('dashBanhoFixoForaHTML(DASH_DADOS.banho)')));
+    run(`REP_PLAN_CACHE['${DIA649}']=__bkC649;`);
+    // outro aparelho já conferiu (este não relê o registro): a planilha que a TV lê diz que a célula está lá
+    run(`tvTabelaGuardar('${DIA649}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Fiona/Buldogue Francês (SEM SHAMPOO)'}]}]}, Date.now());`);
+    assert.ok(/Fiona\/Buldogue Francês<\/strong> <span[^>]*>15:00<\/span> <span data-tv="ok"[^>]*>na planilha que a TV lê ✓</.test(run('dashBanhoFixoForaHTML(DASH_DADOS.banho)')), 'já na planilha que a TV lê: ✓');
+    run(`TV_BANHO={dia:'', aba:'', ok:null, erro:'', lidaEm:0, pedidaEm:0, lendo:false, espelho:[], foraDaData:[]};`);
+    // a conferência parada: a última falhou; o aparelho com o dia velho
+    run(`REP_PLAN_CACHE['${DIA649}'].auto._erro={msg:'Failed to fetch', ts:Date.now()};`);
+    igual(run(`dashBanhoFixoACaminhoTexto('${DIA649}')`), 'ainda não foi para a planilha: a última conferência não conseguiu ler a planilha (a conexão com a planilha caiu); o app tenta de novo sozinho em até 5 min');
+    run(`delete REP_PLAN_CACHE['${DIA649}'].auto._erro; APP_DIA_ABERTO='2026-10-07';`);
+    igual(run(`dashBanhoFixoACaminhoTexto('${DIA649}')`), 'vai para a planilha na próxima conferência feita por um aparelho em dia (este aparelho ainda está com o dia 07/10: toque na faixa do topo para atualizar)');
+    run(`APP_DIA_ABERTO='${DIA649}';`);
+    // «Conferir a planilha agora»: a conferência de hoje escreve a Fiona/Buldogue; o registro relido a tem
+    run(`__dbPoe('daycare/dashboard/${DIA649}/banho/k1', DASH_DADOS.banho.k1); __dbPoe('daycare/dashboard-auto/${DIA649}', REP_PLAN_CACHE['${DIA649}'].auto);
+      __pl649=[{v:'Fiona/SRD (SEM SHAMPOO)', h:'10:00'}, {v:'Kiara/Lhasa (SEM SHAMPOO)', h:'08:00'}]; __bt649={disabled:false, textContent:''};`);
+    const p = run(`dashTvPorDeNovo(__bt649, 'conferindo a planilha…')`);
+    igual(run('__bt649.textContent'), 'conferindo a planilha…');
+    await p; await espera649();
+    igual(ponte649('lancar'), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    igual(run(`dashBanhoFixoACaminho('${DIA649}', DASH_DADOS.banho, dashAutoListaDoDia('${DIA649}', 'banho'))`), [], 'virou a linha automática');
+    assert.ok(!/ainda não confirmou/.test(run('dashBanhoFixoForaHTML(DASH_DADOS.banho)')));
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-5b (QA649-3) — a conferência AUTOMÁTICA deste aparelho (sem botão): o registro que ela gravou vale na tela na hora, sem reler o banco; dia nunca lido não ganha registro inventado', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now()-30000, avulso:{x1:{valor:'Tico/Spitz'}}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now()-60000, banho:[], _estado:{}}}; DASH_DADOS={banho:{}};`);
+    assert.ok(/o automático ainda não confirmou \(1\)[\s\S]*Fiona\/Buldogue Francês/.test(run('dashBanhoFixoForaHTML({})')), 'antes da conferência: a caminho');
+    igual(run('dashBanhoFixoACaminhoHoje()').map((o) => o.nome), ['Fiona/Buldogue Francês']);
+    // o único banho de hoje é o fixo que o automático ainda não confirmou: o vigia lê a planilha que a TV lê do mesmo jeito
+    run(`__fs649e=0; fetchSheet=function(){ __fs649e++; return Promise.resolve({cols:[{label:'Data'},{label:'Banho'}], rows:[]}); };
+      __ge649e=document.getElementById; document.getElementById=function(id){ if(id==='v-dashdc') return {classList:{contains:function(c){ return c==='active'; }}}; return __ge649e(id); };`);
+    igual(run('tvBanhoTique()'), true, 'lê'); await espera649();
+    igual(run('__fs649e'), 1);
+    run('document.getElementById=__ge649e;');
+    run(`__dbEsc649=[]; __refOnce649=DB.ref; DB={ref:function(p){ var r=__refOnce649(p), o=r.once; r.once=function(){ __dbEsc649.push(['once', p]); return o.apply(r, arguments); }; return r; }};`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(run('dashBanhoFixoACaminhoHoje()'), [], 'a Fiona/Buldogue virou a linha automática');
+    igual(run('dashBanhoFixoForaHTML({})'), '', 'e a lista some');
+    igual(run(`dashAutoListaDoDia('${DIA649}', 'banho')`), ['Fiona/Buldogue Francês (SEM SHAMPOO)']);
+    igual(run(`[REP_PLAN_CACHE['${DIA649}'].avulso.x1.valor, REP_PLAN_CACHE['${DIA649}'].ts < Date.now()-20000]`), ['Tico/Spitz', true], 'o avulso e a hora da leitura (as vagas) ficam como estavam');
+    igual(run('__dbEsc649').map((e) => e.join(' ')), ['once daycare/dashboard-auto/' + DIA649, 'once daycare/dashboard/' + DIA649, 'set daycare/dashboard-auto/' + DIA649], 'as leituras e a gravação de sempre — nenhuma leitura nova');
+    // um dia que a tela nunca leu: nada é criado (as vagas leriam um avulso vazio)
+    run(`delete REP_PLAN_CACHE['2026-10-09'];`);
+    await run(`dashAutoSincronizar('2026-10-09')`); await espera649();
+    igual(run(`REP_PLAN_CACHE['2026-10-09']===undefined`), true);
+  } finally { run(SOLTA649); }
+});
+// ---- R2-6 — QA649-2: na chave do primeiro nome, só o que o aparelho antigo lê -------------------------
+provaAsync('6.49 R2-6 (QA649-2) — o registro: na chave do primeiro nome, só o que o aparelho antigo lê (sem ts, sem escrito, sem o motivo vazio); na identidade, o "escrito" só no Banho', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A'); papel649('fixo', 'B');
+    run(`__rl649['Ozzy|Márcia Teste']=[{_id:'c1', tipo:'credito', data:'${DIA649}', motivo:'viagem'}];`);   // uma falta avisada: outra coluna
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    const reg = run(`__dbPega('daycare/dashboard-auto/${DIA649}')`);
+    const est = reg._estado;
+    igual(Object.keys(est.banho.fiona).sort(), ['hora', 'planilha_ok'], 'banho: o ✓ e a hora');
+    igual(est.banho.fiona, { planilha_ok: true, hora: '15:00' });
+    Object.keys(est).forEach((k) => Object.keys(est[k]).forEach((ch) => {
+      const r = est[k][ch];
+      if (/^[ft]:/.test(ch)) {
+        assert.ok(!('planilha_msg' in r) || r.planilha_ok === false, k + '/' + ch + ': motivo vazio gravado');
+        assert.ok(!('escrito' in r) || k === 'banho', k + '/' + ch + ': escrito fora do Banho');
+      } else {
+        igual(Object.keys(r).filter((c) => ['planilha_ok', 'planilha_msg', 'hora', 'hora_aviso', 'hora_aviso_ts'].indexOf(c) < 0), [], k + '/' + ch + ': cópia com campo a mais');
+      }
+    }));
+    assert.ok(est.faltas['f:ozzy__marcia-teste'].planilha_ok === true && !('escrito' in est.faltas['f:ozzy__marcia-teste']) && !('planilha_msg' in est.faltas['f:ozzy__marcia-teste']), JSON.stringify(est.faltas));
+    // o aparelho de antes desta versão lê a cópia como sempre (a mesma conta do repPlanEstadoNome dele)
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), auto:{_estado_v:1, banho:${JSON.stringify(reg.banho)}, _estado:${JSON.stringify(est)}}, avulso:{}, reposicao:{}};`);
+    igual([run(`repPlanEstadoNome('${DIA649}', 'Fiona/Buldogue Francês (SEM SHAMPOO)', 'banho').estado`), run(`repPlanHoraNome('${DIA649}', 'Fiona/Buldogue Francês (SEM SHAMPOO)', 'banho')`)], ['ok', '15:00'], 'lido como v1: ✓ e a hora');
+    // a recusa e o aviso da hora também vão na cópia (é o que o aparelho antigo mostra e lê na conferência)
+    run(`__pc649=[]; __pl649=[]; delete __ex649['Fiona|Bia Teste']; __dbPoe('daycare/dashboard-auto/${DIA649}', null); __pcBk649=dashPonteChamar;
+      dashPonteChamar=function(d){ if(d.acao==='lancar' && /Buldogue/.test(d.valor)) return Promise.resolve({ok:false, erro:'a planilha recusou o texto'}); return __pcBk649(d); };`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho.fiona`), { planilha_ok: false, planilha_msg: 'a planilha recusou o texto' }, 'a recusa, com o motivo');
+    run(`dashPonteChamar=function(d){ if(d.acao==='lancar') return __pcBk649(d).then(function(r){ r.avisoHora='a aba não tem a coluna Hora Banho'; return r; }); return __pcBk649(d); };`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    const c = run(`__dbPega('daycare/dashboard-auto/${DIA649}')._estado.banho.fiona`);
+    assert.ok(c.planilha_ok === true && c.hora === '15:00' && c.hora_aviso === 'a aba não tem a coluna Hora Banho' && c.hora_aviso_ts > 0 && Object.keys(c).length === 4, JSON.stringify(c));
+  } finally { run(SOLTA649); }
+});
+prova('6.49 R2-3b — o xará inativo, com a raça escrita: "Boris/Westie" (dois Westie nos Inativos, um Pug na casa) não vira o Pug; com um Westie na casa, é ele', () => {
+  run(ARMA649);
+  try {
+    run(`PELUDINHOS.push({n:'Boris', raca:'Westie', tutor:'Ex Teste'}, {n:'Boris', raca:'Westie', tutor:'Ex2 Teste'}, {n:'Boris', raca:'Pug', tutor:'Rui Teste'});
+      __ex649['Boris|Ex Teste']={inativo:'Sim'}; __ex649['Boris|Ex2 Teste']={inativo:'Sim'};`);
+    igual(run("[dashAutoIdent('Boris/Westie'), dashAutoIdent('Boris'), dashAutoIdent('Boris/Pug')]"), ['t:boris|westie', 'f:boris__rui-teste', 'f:boris__rui-teste'], 'a raça escrita que não bate com o único ativo: não é ele');
+    run(`PELUDINHOS.push({n:'Boris', raca:'Westie', tutor:'Lu Teste'});`);
+    igual(run("[dashAutoIdent('Boris/Westie'), dashAutoIdent('Boris')]"), ['f:boris__lu-teste', 't:boris'], 'dois ativos: a raça desempata; sem raça, dúvida');
+    // o tutor também desempata entre as ativas: duas Mayas SRD de tutora "Luciana", uma nos Inativos
+    run(`PELUDINHOS.push({n:'Maya', raca:'SRD', tutor:'Luciana Ex Teste'}); __ex649['Maya|Luciana Ex Teste']={inativo:'Sim'};`);
+    igual(run("[dashAutoIdent('Maya/SRD (Luciana)'), dashAutoIdent('Maya/SRD (Marcela)')]"), ['f:maya__luciana-teste', 'f:maya__marcela-teste']);
+  } finally { run(SOLTA649); }
+});
+// ---- R2-7 — QA649-4: os cinco defeitos plantados que escaparam ------------------------------------------
+prova('6.49 R2-7a (QA649-4, QM3) — o banho lançado em OUTRO aparelho há 30 s fica "a caminho" (o ts do lançamento conta), nunca "NÃO está" nem ✓ de leitura antiga', () => {
+  run(ARMA649);
+  try {
+    const t = Date.now();
+    run(`tvTabelaGuardar('${DIA649}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'08/10/2026'}, {v:'Kiara/Lhasa'}]}]}, ${t - 60000})`);
+    const st = (o) => (run(`dashTvMaoHTML('banho', ${JSON.stringify(o)}, 'x9')`).match(/data-tv="(\w+)"/) || [])[1];
+    igual(st({ valor: 'Fiona/SRD', ts: t - 30000, planilha_ok: true }), 'caminho', 'lançado há 30 s em outro aparelho, a leitura é de antes: a caminho');
+    igual(st({ valor: 'Kiara/Lhasa', ts: t - 30000, planilha_ok: true }), 'caminho', 'a leitura de antes do lançamento não vale ✓');
+    igual(st({ valor: 'Fiona/SRD', ts: t - 10 * 60000, planilha_ok: true }), 'nao', 'o mesmo, lançado há 10 min: "NÃO está"');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 R2-7b (QA649-4, QM10) — a linha automática com um aviso de antes (a planilha recusou) não ganha o estado da TV nem entra no aviso do alto', () => {
+  run(ARMA649);
+  try {
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now(), banho:['Fiona/SRD (SEM SHAMPOO)'],
+        _estado:{banho:{'f:fiona__bia-teste':{planilha_ok:false, planilha_msg:'a coluna não existe', ts:1}}}}}; DASH_DADOS={banho:{}};
+      tvTabelaGuardar('${DIA649}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[]}, Date.now());`);
+    igual(run(`dashTvAutoHTML('banho', '${DIA649}', 'Fiona/SRD (SEM SHAMPOO)')`), '', 'o "a planilha recusou" vem antes');
+    igual(run('dashTvBanhoLinhas()').map((l) => l.tv), [null]);
+    igual(run('dashTvAvisoHTML()'), '');
+    assert.ok(/a planilha recusou — a coluna não existe/.test(run(`dashAutoLinhas('banho', '${DIA649}', null)`).html), 'a linha diz o aviso de antes');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 R2-7c (QA649-4, QM4) — a lista do banho fixo de hoje só aparece com a tela em hoje (no calendário em outro dia, não)', () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    run(`dcChamada[dcKey('Fiona','Isac Teste')]='faltou'; REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, banho:[], _estado:{}}};
+      fetchSheet=function(){ return Promise.resolve({cols:[], rows:[]}); };
+      __els649d={}; document.getElementById=function(id){
+        if(!__els649d[id]) __els649d[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}};
+        return __els649d[id]; };
+      renderDash=__bk649.rd; DASH_DADOS={};`);
+    run('renderDash()');
+    assert.ok(/Banho fixo de hoje que não vai para a TV \(1\)/.test(run('__els649d.dashBlocos.innerHTML')), 'em hoje, a lista');
+    run(`DASH_DIA_SEL='2026-10-09'; renderDash();`);
+    assert.ok(!/Banho fixo de hoje/.test(run('__els649d.dashBlocos.innerHTML')), 'em outro dia, nada');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R2-7d (QA649-4, QM6) — «pôr de novo» tocado duas vezes seguidas: UMA conferência', async () => {
+  run(ARMA649);
+  try {
+    run(`__dbPoe('daycare/dashboard/${DIA649}/banho/m1', {valor:'Fiona/SRD', hora:'10:00', ts:Date.now()-600000, planilha_ok:true}); __pc649=[];`);
+    const a = run('dashTvPorDeNovo(null)'), b = run('dashTvPorDeNovo(null)');
+    igual(await b, null, 'o segundo toque não faz nada');
+    await a; await espera649();
+    igual(run('__pc649').filter((c) => c.acao === 'lerDia').length, 1, 'uma conferência só');
+    igual(run('DASH_TV_PONDO'), false, 'e o botão destrava no fim');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 R2-7e (QA649-4, QM8) — a leitura que falha diz "não consegui conferir" na linha, mas NÃO vira aviso no alto (não se sabe se falta)', () => {
+  run(ARMA649);
+  try {
+    run(`DASH_DADOS={banho:{m1:{valor:'Fiona/SRD', hora:'10:00', ts:Date.now()-600000, planilha_ok:true}}}; TV_BANHO.dia='${DIA649}'; TV_BANHO.ok=false; TV_BANHO.erro='sem conexão com a planilha';`);
+    igual(run('dashTvBanhoLinhas()').map((l) => l.tv.e), ['erro']);
+    igual(run('dashTvAvisoHTML()'), '', 'sem aviso no alto');
+  } finally { run(SOLTA649); }
+});
+
+// ================================================================== 6.49 — 3ª rodada do QA (09/out/2026)
+// O achado médio do 2º gate (QA649b-1: na troca de versão, a lista refeita tirava a célula escrita por uma
+// pessoa nas colunas sem detalhe) e os baixos (as provas dos defeitos plantados QB8/K7 e QB19/K15; a coluna
+// «Hóspedes com Restrições»). As provas R3-1 falham no código da 2ª rodada; as R3-2 e R3-3 falham com os
+// defeitos plantados (o código já estava certo).
+console.log('\n6.49 — 3ª rodada do QA: só tira com prova; na dúvida, «ficou na planilha»; as travas do texto exato e do dia da leitura');
+// A ponte de mentira com a planilha POR COLUNA (as colunas fora do Banho): {coluna: [{v, h}]}.
+const COLS649 = `__plc649={}; __plcCol649=function(c){ return (__plc649[c]=__plc649[c]||[]); };
+  dashPonteChamar=function(d){ __pc649.push(JSON.parse(JSON.stringify(d)));
+    if(d.acao==='lerDia'){ var c={}; Object.keys(__plc649).forEach(function(k){ c[k]=__plc649[k].map(function(x){ return x.v; }); }); return Promise.resolve({ok:true, conteudo:c}); }
+    var L=__plcCol649(d.coluna);
+    if(d.acao==='lancar'){ var e=L.filter(function(x){ return jsNorm(x.v)===jsNorm(d.valor); })[0];
+      if(e){ if(d.hora) e.h=d.hora; return Promise.resolve({ok:true, jaEstava:true}); }
+      L.push({v:d.valor, h:d.hora||''}); return Promise.resolve({ok:true}); }
+    if(d.acao==='remover'){ var n=L.length; __plc649[d.coluna]=L.filter(function(x){ return jsNorm(x.v)!==jsNorm(d.valor); }); return Promise.resolve({ok:true, removidos:n-__plc649[d.coluna].length}); }
+    return Promise.resolve({ok:false, erro:'acao'}); };`;
+const plc649 = (col) => run(`(__plc649[${JSON.stringify(col)}]||[]).map(function(c){ return c.v; })`);
+const tirou649 = () => run('__pc649').filter((c) => c.acao === 'remover').map((c) => c.coluna + ': ' + c.valor);
+const regDe649 = (dia) => run(`__dbPega('daycare/dashboard-auto/${dia || DIA649}')`);
+// O aviso dos Lançamentos do dia, do dia na tela, com o registro do dia já lido.
+const ficouTela649 = (dia) => {
+  const d = dia || DIA649;
+  run(`REP_PLAN_CACHE['${d}']={ts:Date.now(), auto:__dbPega('daycare/dashboard-auto/${d}')||{}, avulso:{}, reposicao:{}}; DASH_DIA_SEL='${d}';`);
+  return run('dashAutoFicouHTML()');
+};
+const LINHA_FICOU649 = (txt, col) => `ficou na planilha: <strong>${txt}</strong> (coluna "${col}") — tire à mão se não vale mais`;
+const COLS_PESSOA649 = [['faltas', 'Faltas Avisadas'], ['reposicao', 'Reposição'], ['aniversario', 'AUniversariante'], ['clienteNovo', 'Cliente Novo'], ['adaptacao', 'Adaptação'], ['aulunosRestr', 'Aulunos com restriçóes']];
+provaAsync('6.49 R3-1a (QA649b-1) — troca de versão: «fiona/srd» escrita por uma pessoa em Faltas Avisadas, Reposição, AUniversariante, Cliente Novo, Adaptação e Aulunos com restrição FICA; a tela diz «ficou na planilha… tire à mão se não vale mais»', async () => {
+  run(ARMA649);
+  try {
+    run(COLS649);
+    papel649('fixo', 'A'); run('__turma649.push(1);');                     // a Fiona/SRD vem hoje, sem nada no app
+    run(`__plcCol649('Banho').push({v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'});`);
+    COLS_PESSOA649.forEach(([, col]) => run(`__plcCol649(${JSON.stringify(col)}).push({v:'fiona/srd', h:''});`));
+    run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));          // a passada do aparelho antigo
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(tirou649(), [], 'nenhuma célula de pessoa sai');
+    COLS_PESSOA649.forEach(([, col]) => igual(plc649(col), ['fiona/srd'], col));
+    const f = regDe649()._ficou || {};
+    igual(Object.keys(f).sort(), COLS_PESSOA649.map(([k]) => k).sort(), 'o registro guarda a dúvida de cada coluna');
+    const h = ficouTela649();
+    COLS_PESSOA649.forEach(([, col]) => assert.ok(h.indexOf(LINHA_FICOU649('fiona/srd', col)) >= 0, col + ': ' + h));
+    assert.ok(/Na dúvida, o app não tirou da planilha de 08\/10\/2026:/.test(h) && /não há como saber se foi o app ou uma pessoa quem escreveu/.test(h), h);
+    // na tela de verdade: o aviso vai no alto dos Lançamentos do dia
+    run(`fetchSheet=function(){ return Promise.resolve({cols:[], rows:[]}); }; DASH_DADOS={}; renderDash=__bk649.rd;
+      __els649f={}; document.getElementById=function(id){
+        if(!__els649f[id]) __els649f[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}};
+        return __els649f[id]; };
+      renderDash();`);
+    assert.ok(run('__els649f.dashPonteAviso.innerHTML').indexOf(LINHA_FICOU649('fiona/srd', 'Faltas Avisadas')) >= 0, 'no alto da tela');
+    // a passada seguinte (o registro já é v2): continua sem tirar e continua avisando
+    run('__pc649=[];'); await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(tirou649(), []);
+    igual(Object.keys(regDe649()._ficou || {}).length, COLS_PESSOA649.length, 'o aviso segue no registro v2');
+    // tirada à mão da planilha: o aviso dela some; lançada à mão no app (a recepção): é dela, sem aviso;
+    // o automático volta a querer (o aniversário dela está na ficha): já está lá, sem aviso
+    run(`__plc649['Faltas Avisadas']=[]; __dbPoe('daycare/dashboard/${DIA649}/reposicao/m1', {valor:'Fiona/SRD', ts:Date.now()-600000, planilha_ok:true});
+      __ex649['Fiona|Bia Teste']={nasc:'2019-10-08'}; __pc649=[];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(tirou649(), []);
+    igual(Object.keys(regDe649()._ficou || {}).sort(), ['adaptacao', 'aulunosRestr', 'clienteNovo'], 'sem Faltas (tirada à mão), sem Reposição (lançada à mão) e sem AUniversariante (o automático a quer)');
+    igual([plc649('AUniversariante'), plc649('Faltas Avisadas')], [['fiona/srd'], []], 'o aniversário já está lá: nada escrito de novo');
+    // ninguém mais em dúvida: o registro sai sem o _ficou, e a tela sem o aviso
+    run(`__plc649={}; __plcCol649('Banho').push({v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}); __pc649=[];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual('_ficou' in regDe649(), false);
+    igual(ficouTela649(), '');
+  } finally { run(SOLTA649); }
+});
+prova('6.49 R3-1d (QA649d-2) — o aviso «ficou na planilha» escapa o texto da célula: «<b>» escrito na planilha aparece como texto, não vira HTML', () => {
+  run(ARMA649);
+  try {
+    run(`__dbPoe('daycare/dashboard-auto/${DIA649}', {_ficou:{faltas:['<b>Nina</b> & Lu']}});`);
+    const h = ficouTela649();
+    assert.ok(h.indexOf('<b>Nina</b>') < 0, 'o HTML da célula entrou na tela: ' + h);
+    assert.ok(h.indexOf(LINHA_FICOU649('&lt;b&gt;Nina&lt;/b&gt; &amp; Lu', 'Faltas Avisadas')) >= 0, h);
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R3-1b (QA649b-1) — nos próximos 14 dias também: «fiona/srd» na Reposição de 13/10 fica, e a tela de 13/10 avisa; Cliente Novo de um dia futuro não é dúvida (o automático nunca o escreve com antecedência); dia que já passou não avisa', async () => {
+  run(ARMA649);
+  try {
+    const F = '2026-10-13';
+    run(COLS649);
+    run(`__turma649.push(1); __plcCol649('Reposição').push({v:'fiona/srd', h:''}); __plcCol649('Cliente Novo').push({v:'fiona/srd', h:''});
+      __dbPoe('daycare/dashboard-auto/${F}', {_estado_v:1, _ts:Date.now(), _estado:{}});`);   // o aparelho antigo passou no dia 13
+    await run(`dashAutoSincronizar('${F}')`); await espera649();
+    igual(tirou649(), [], 'nada sai no dia futuro');
+    igual([plc649('Reposição'), plc649('Cliente Novo')], [['fiona/srd'], ['fiona/srd']]);
+    igual(regDe649(F)._ficou || null, { reposicao: ['fiona/srd'] });
+    const h = ficouTela649(F);
+    assert.ok(h.indexOf(LINHA_FICOU649('fiona/srd', 'Reposição')) >= 0 && /de 13\/10\/2026:/.test(h) && !/Cliente Novo/.test(h), h);
+    run(`zHojeISO=function(){ return '2026-10-14'; };`);
+    igual(ficouTela649(F), '', 'o dia 13 já passou: não há o que tirar');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R3-1c (QA649b-1) — duas Fionas com falta avisada pelo app; o aparelho antigo regrava o registro (v1, só a primeira); a da Fiona/SRD é estornada: a célula dela FICA, com o aviso; a da Fiona/Buldogue, que o registro prova, sai', async () => {
+  run(ARMA649);
+  try {
+    run(COLS649);
+    run(`__rl649['Fiona|Isac Teste']=[{_id:'c1', tipo:'credito', data:'${DIA649}', motivo:'viagem'}]; __rl649['Fiona|Bia Teste']=[{_id:'c2', tipo:'credito', data:'${DIA649}', motivo:'viagem'}];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(plc649('Faltas Avisadas'), ['Fiona/Buldogue Francês', 'Fiona/SRD']);
+    run(`__dbPoe('daycare/dashboard-auto/${DIA649}', {faltas:['Fiona/Buldogue Francês'], _estado_v:1, _ts:Date.now(), _estado:{faltas:{fiona:{planilha_ok:true, planilha_msg:'', ts:1}}}});
+      __rl649['Fiona|Bia Teste']=[]; __pc649=[];`);                         // o aparelho antigo passou; a falta da Fiona/SRD foi estornada
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(tirou649(), [], 'sem prova de que foi o automático (o "Fiona/SRD" de uma pessoa é igual): fica');
+    igual(plc649('Faltas Avisadas'), ['Fiona/Buldogue Francês', 'Fiona/SRD']);
+    assert.ok(ficouTela649().indexOf(LINHA_FICOU649('Fiona/SRD', 'Faltas Avisadas')) >= 0, 'a tela avisa');
+    // a da Fiona/Buldogue está no registro (a prova): estornada, sai
+    run(`__rl649['Fiona|Isac Teste']=[]; __pc649=[];`);
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(tirou649(), ['Faltas Avisadas: Fiona/Buldogue Francês']);
+    igual(regDe649()._ficou || null, { faltas: ['Fiona/SRD'] }, 'e o aviso da Fiona/SRD continua');
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R3-1d (caçador) — «Hóspedes com Restrições» na troca de versão: a Luna/SRD faz check-out; a restrição dela fica na planilha e a tela avisa «ficou na planilha» (nada é apagado)', async () => {
+  run(ARMA649);
+  try {
+    run(`${COLS649} __bkH649={h:hospedes, ex:extraDoHosp, rc:racaDe};
+      hospedes=[{nome:'Luna', raca:'Poodle', __ex:{alergia:'frango'}}, {nome:'Luna', raca:'SRD', __ex:{restricao:'ração úmida'}}];
+      extraDoHosp=function(h){ return h.__ex||{}; }; racaDe=function(h){ return h.raca; };`);
+    try {
+      await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+      igual(plc649('Hóspedes com Restrições'), ['Luna/Poodle - frango', 'Luna/SRD - ração úmida']);
+      run(`__dbPoe('daycare/dashboard-auto/${DIA649}', {hospRestr:['Luna/Poodle - frango'], _estado_v:1, _ts:Date.now(), _estado:{hospRestr:{luna:{planilha_ok:true, planilha_msg:'', ts:1}}}});
+        hospedes=hospedes.slice(0, 1); __pc649=[];                            // o aparelho antigo passou; a Luna/SRD foi embora
+        __plcCol649('Hóspedes com Restrições').push({v:'Luna/SRD - ração úmida', h:''}, {v:'Bolt - não dar petisco', h:''});`);
+      // (a Luna/SRD escrita de novo noutra linha: um aviso só; a restrição de um hóspede de outro primeiro
+      // nome, escrita por uma pessoa, não é dúvida — o registro do aparelho antigo não tem nenhum "Bolt")
+      await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+      igual(tirou649(), []);
+      igual(regDe649()._ficou || null, { hospRestr: ['Luna/SRD - ração úmida'] });
+      assert.ok(ficouTela649().indexOf(LINHA_FICOU649('Luna/SRD - ração úmida', 'Hóspedes com Restrições')) >= 0);
+      igual(plc649('Hóspedes com Restrições'), ['Luna/Poodle - frango', 'Luna/SRD - ração úmida', 'Luna/SRD - ração úmida', 'Bolt - não dar petisco'], 'nada apagado');
+    } finally { run('hospedes=__bkH649.h; extraDoHosp=__bkH649.ex; racaDe=__bkH649.rc;'); }
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R3-2 (QB8 / K7) — o Banho, a coluna em que há prova: a célula de pessoa com OUTRO texto («Fiona SRD», «fiona - srd», «Fiona/SRD») fica, com a Fiona/SRD sem banho fixo e com banho fixo e falta; o combinado sem o detalhe em maiúscula é dúvida', async () => {
+  for (const caso of ['sem banho fixo', 'banho fixo e falta']) {
+    run(ARMA649);
+    try {
+      papel649('fixo', 'A'); run('__turma649.push(1);');
+      if (caso !== 'sem banho fixo') run(`__ex649['Fiona|Bia Teste']=${BR649('10:00')}; dcChamada[dcKey('Fiona','Bia Teste')]='faltou';`);
+      run(`__pl649=[{v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}, {v:'Fiona SRD', h:'09:30'}, {v:'fiona - srd', h:'09:40'}, {v:'Fiona/SRD', h:'09:50'}];`);
+      run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));
+      await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+      igual(ponte649('remover'), [], caso + ': o texto não é o do automático');
+      igual(pl649(), ['Fiona/Buldogue Francês (SEM SHAMPOO)', 'Fiona SRD', 'fiona - srd', 'Fiona/SRD'], caso);
+      igual('_ficou' in regDe649(), false, caso + ': e não é dúvida (o automático nunca escreveu esses textos)');
+    } finally { run(SOLTA649); }
+  }
+  // O combinado gravado SEM o detalhe (o «Salvar» de hoje exige o shampoo; um combinado antigo pode não ter):
+  // o texto do automático é só o "Nome/Raça", igual ao de uma pessoa — dúvida, fica, e a tela avisa.
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    run(`__ex649['Fiona|Bia Teste']=${BR649('10:00')}; __ex649['Fiona|Bia Teste'].banho_rec.sham=''; __turma649.push(1); dcChamada[dcKey('Fiona','Bia Teste')]='faltou';
+      __pl649=[{v:'Fiona/Buldogue Francês (SEM SHAMPOO)', h:'15:00'}, {v:'Fiona/SRD', h:'10:00'}];`);
+    igual(run('banhoRecValorPlanilha(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]))'), 'Fiona/SRD');
+    run(V1649(['Fiona/Buldogue Francês (SEM SHAMPOO)'], '15:00'));
+    await run(`dashAutoSincronizar('${DIA649}')`); await espera649();
+    igual(ponte649('remover'), []);
+    igual(regDe649()._ficou || null, { banho: ['Fiona/SRD'] });
+    assert.ok(ficouTela649().indexOf(LINHA_FICOU649('Fiona/SRD', 'Banho')) >= 0);
+  } finally { run(SOLTA649); }
+});
+provaAsync('6.49 R3-3 (QB19 / K15) — «…que o automático ainda não confirmou»: o ✓ só com a leitura de HOJE que deu certo; a leitura que falhou (o espelho anterior fica guardado) e a leitura de ontem não dão ✓', async () => {
+  run(ARMA649);
+  try {
+    papel649('fixo', 'A');
+    run(`REP_PLAN_CACHE['${DIA649}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now()-60000, banho:[], _estado:{}}}; DASH_DADOS={banho:{}};`);
+    const st = () => (run('dashBanhoFixoForaHTML({})').match(/Fiona\/Buldogue Francês<\/strong> <span[^>]*>15:00<\/span> <span data-tv="(\w+)"/) || [])[1];
+    const TAB = (f) => `{cols:[{label:'Data'},{label:'Banho'}], rows:[{c:[{v:'Date(2026,9,8)', f:'${f}'}, {v:'Fiona/Buldogue Francês (SEM SHAMPOO)'}]}]}`;
+    run(`tvTabelaGuardar('${DIA649}', 'aba', ${TAB('08/10/2026')}, Date.now()-90000);`);
+    igual(st(), 'ok', 'a leitura de hoje que deu certo tem a célula: ✓');
+    // a leitura seguinte falha (a mesma porta do vigia): o tvBanhoLer guarda o erro e mantém o espelho anterior
+    run(`fetchSheet=function(){ return Promise.reject(new Error('Failed to fetch')); };`);
+    await run('tvBanhoLer()'); await espera649();
+    igual(run('[TV_BANHO.ok, TV_BANHO.espelho.length>0]'), [false, true], 'o espelho anterior continua guardado');
+    igual(st(), 'vai', 'com a última leitura falhando, nada de ✓');
+    // a leitura é de ONTEM (a tela aberta na virada, antes da primeira leitura de hoje)
+    run(`TV_BANHO={dia:'', aba:'', ok:null, erro:'', lidaEm:0, pedidaEm:0, lendo:false, espelho:[], foraDaData:[]};
+      tvTabelaGuardar('2026-10-07', 'aba', ${TAB('07/10/2026')}, Date.now());`);
+    igual(run('[TV_BANHO.dia, TV_BANHO.ok, TV_BANHO.espelho.length>0]'), ['2026-10-07', true, true], 'a leitura de ontem tem a célula');
+    igual(st(), 'vai', 'a leitura de ontem não dá ✓ hoje');
+  } finally { run(SOLTA649); }
+});
+
 
 // ------------------------------------------------ o fim
 fila.then(() => {
