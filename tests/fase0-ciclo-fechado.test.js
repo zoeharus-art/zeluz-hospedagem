@@ -628,6 +628,9 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
        __msg=null; DB=__B; PELUDINHOS=[{n:'Luna', tutor:'Ana'}];
        repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-22', volta:'2026-09-28'}]; };
        repSaldo=function(){ return 1; }; __bkpD2=repDisponivel; repDisponivel=function(){ return 1; };
+       // 6.38: o relógio preso no dia em que a prova foi escrita (25/09, o dia 28/09 ainda por vir, dentro
+       // do prazo). Com o relógio de verdade, o 28/09 já passou e, pela regra das 24 horas, não se desmarca.
+       __bkpH=repHojeISO; repHojeISO=function(){ return '2026-09-25'; };
        repPodeLancar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };
        repMsgModal=function(t, l, texto){ __msg={t:t, texto:texto}; }; renderReposicao=function(){};`);
   try {
@@ -639,7 +642,7 @@ provaAsync('desmarcar: a data sai do crédito (fica guardada), e a mensagem sai 
     assert.ok(msg && /desmarcada/.test(msg.t));
     assert.ok(/fica 1 reposição para marcar/.test(msg.texto), msg && msg.texto);
   } finally {
-    run('DB=__bkpDB; PELUDINHOS=__bkpP; repLancamentos=__bkpL; repPodeLancar=__bkpPL; zPergunta=__bkpZP; repMsgModal=__bkpMM; renderReposicao=__bkpRR; repSaldo=__bkpS; repDisponivel=__bkpD2;');
+    run('DB=__bkpDB; PELUDINHOS=__bkpP; repLancamentos=__bkpL; repPodeLancar=__bkpPL; zPergunta=__bkpZP; repMsgModal=__bkpMM; renderReposicao=__bkpRR; repSaldo=__bkpS; repDisponivel=__bkpD2; repHojeISO=__bkpH;');
   }
 });
 
@@ -672,15 +675,21 @@ prova('pura: a reposição marcada para um dia que JÁ PASSOU, sem uso naquele d
   assert.deepStrictEqual(V([{ _id: 'c1', tipo: 'credito', volta: '2026-09-23' }, { _id: 'e1', tipo: 'estorno', estornaId: 'c1' }]), [], 'crédito estornado não conta');
 });
 prova('remarcar: sem crédito livre, «Marcar reposição» usa a marcada que já passou', () => {
-  run(`__bkR1={l:repLancamentos, h:repHojeISO}; repHojeISO=function(){ return '2026-09-25'; };`);
+  // 6.38 (P38-28): o comportamento de antes da regra é o de REP_RETRO_GESTAO=false (sem o "sim" da P2).
+  run(`__bkR1={l:repLancamentos, h:repHojeISO, rg:REP_RETRO_GESTAO}; repHojeISO=function(){ return '2026-09-25'; }; REP_RETRO_GESTAO=false;`);
   try {
     run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };`);
     assert.strictEqual(run('repCreditoLivre({})._id'), 'c1', 'antes: "Não achei um crédito sem dia marcado"');
+    run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23', prazo24h:'2026-09-23'}]; };`);
+    assert.strictEqual(run('repCreditoLivre({})'), null, '6.38: a vencida na regra não se remarca (sai pela baixa ou pela Gestão)');
+    run(`REP_RETRO_GESTAO=true; repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };`);
+    assert.strictEqual(run('repCreditoLivre({})'), null, '6.38: com o "sim" da P2, a de antes da regra também não (a Gestão confere)');
+    run('REP_RETRO_GESTAO=false;');
     run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}, {_id:'c2', tipo:'credito', data:'2026-09-12'}]; };`);
     assert.strictEqual(run('repCreditoLivre({})._id'), 'c2', 'havendo crédito sem dia, ele vem primeiro');
     run(`repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-30'}]; };`);
     assert.strictEqual(run('repCreditoLivre({})'), null, 'a marcada para um dia que ainda vem não é roubada');
-  } finally { run('repLancamentos=__bkR1.l; repHojeISO=__bkR1.h;'); }
+  } finally { run('repLancamentos=__bkR1.l; repHojeISO=__bkR1.h; REP_RETRO_GESTAO=__bkR1.rg;'); }
 });
 provaAsync('remarcar guarda o dia que estava marcado (com quem e para quando)', async () => {
   const B = bancoFalso({});
@@ -744,23 +753,29 @@ provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (
   } finally { run('DB=__bkR3.db; DASH_DADOS=__bkR3.dd; dashDia=__bkR3.di; dashItem=__bkR3.it; zPergunta=__bkR3.zp; renderDash=__bkR3.rd; audit=__bkR3.au; dashEspelhar=__bkR3.esp; repMsgModal=__bkR3.mm; repLancamentos=__bkR3.l; repSaldo=__bkR3.s; repLivresSemDia=__bkR3.lsd; prevCorrigePetDe=__bkR3.pc; repHojeISO=__bkR3.h; pelExtra=__bkR3.pe;'); }
 });
 prova('QA14 A1 — a marcada que já passou só "continua valendo" até o que ainda está livre no saldo', () => {
-  run(`__bkQ1={l:repLancamentos, h:repHojeISO, lsd:repLivresSemDia}; repHojeISO=function(){ return '2026-09-25'; };
+  // 6.38: o remarcar da vencida é o comportamento de antes da regra (REP_RETRO_GESTAO=false; ver P38-28).
+  run(`__bkQ1={l:repLancamentos, h:repHojeISO, lsd:repLivresSemDia, rg:REP_RETRO_GESTAO}; repHojeISO=function(){ return '2026-09-25'; }; REP_RETRO_GESTAO=false;
     repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'},
       {_id:'c2', tipo:'credito', data:'2026-09-11', volta:'2026-09-30'}, {_id:'u1', tipo:'uso', data:'2026-09-24'}]; };`);
   try {
     run('repLivresSemDia=function(){ return 0; };');   // saldo 1, e ele já está na marcada de 30/09
     assert.deepStrictEqual(JSON.parse(JSON.stringify(run("repVoltasVencidasValendo({}, null, '2026-09-25')"))), [], 'nada livre: a vencida não "vale"');
     assert.strictEqual(run('repCreditoLivre({})'), null, 'e não se remarca: mais dias marcados que saldo era barrado antes');
-    run('repLivresSemDia=function(){ return 1; };');   // o caso B da Safira: saldo 1, nada marcado adiante
+    // 6.38 (3ª rodada, re-gate R2-01): o teto das vencidas sai da própria lista (repTetoVencidas), não mais
+    // do repLivresSemDia — o caso B da Safira (saldo 1, nada marcado adiante) agora está no Extrato: o c2
+    // ficou marcado para 24/09, o dia do u1, que gastou essa marcação.
+    run(`repLivresSemDia=function(){ return 1; }; repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'},
+      {_id:'c2', tipo:'credito', data:'2026-09-11', volta:'2026-09-24'}, {_id:'u1', tipo:'uso', data:'2026-09-24'}]; };`);
     assert.strictEqual(run("repVoltasVencidasValendo({}, null, '2026-09-25')[0]._id"), 'c1');
     assert.strictEqual(run('repCreditoLivre({})._id'), 'c1');
-  } finally { run('repLancamentos=__bkQ1.l; repHojeISO=__bkQ1.h; repLivresSemDia=__bkQ1.lsd;'); }
+  } finally { run('repLancamentos=__bkQ1.l; repHojeISO=__bkQ1.h; repLivresSemDia=__bkQ1.lsd; REP_RETRO_GESTAO=__bkQ1.rg;'); }
 });
 provaAsync('QA14 M1 — desmarcar um dia que já passou não inventa reposição na mensagem', async () => {
   const B = bancoFalso({});
   ctx.__B = B;
-  run(`__bkQ2={db:DB, p:PELUDINHOS, l:repLancamentos, pl:repPodeLancar, zp:zPergunta, mm:repMsgModal, rr:renderReposicao, s:repSaldo, d:repDisponivel, h:repHojeISO, au:audit};
-       __msgQ2=null; DB=__B; PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; audit=function(){};
+  // 6.38: desmarcar de graça o dia que já passou é o comportamento de antes da regra (REP_RETRO_GESTAO=false).
+  run(`__bkQ2={db:DB, p:PELUDINHOS, l:repLancamentos, pl:repPodeLancar, zp:zPergunta, mm:repMsgModal, rr:renderReposicao, s:repSaldo, d:repDisponivel, h:repHojeISO, au:audit, rg:REP_RETRO_GESTAO};
+       __msgQ2=null; DB=__B; PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; audit=function(){}; REP_RETRO_GESTAO=false;
        repHojeISO=function(){ return '2026-09-25'; };
        repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10', volta:'2026-09-23'}]; };
        repSaldo=function(){ return 1; }; repDisponivel=function(){ return 1; };
@@ -772,7 +787,7 @@ provaAsync('QA14 M1 — desmarcar um dia que já passou não inventa reposição
     const m = run('__msgQ2');
     assert.ok(/fica 1 reposição para marcar/.test(m.texto), m.texto);
     assert.ok(/não repôs na quarta-feira, 23\/09: a data saiu/.test(JSON.stringify(m.l)), JSON.stringify(m.l));
-  } finally { run('DB=__bkQ2.db; PELUDINHOS=__bkQ2.p; repLancamentos=__bkQ2.l; repPodeLancar=__bkQ2.pl; zPergunta=__bkQ2.zp; repMsgModal=__bkQ2.mm; renderReposicao=__bkQ2.rr; repSaldo=__bkQ2.s; repDisponivel=__bkQ2.d; repHojeISO=__bkQ2.h; audit=__bkQ2.au;'); }
+  } finally { run('DB=__bkQ2.db; PELUDINHOS=__bkQ2.p; repLancamentos=__bkQ2.l; repPodeLancar=__bkQ2.pl; zPergunta=__bkQ2.zp; repMsgModal=__bkQ2.mm; renderReposicao=__bkQ2.rr; repSaldo=__bkQ2.s; repDisponivel=__bkQ2.d; repHojeISO=__bkQ2.h; audit=__bkQ2.au; REP_RETRO_GESTAO=__bkQ2.rg;'); }
 });
 provaAsync('QA14 M2 — tirar um dia que também está marcado: a recepção escolhe tirar e desmarcar, ou só o lançamento', async () => {
   run(`__bkQ3={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, ze:zEscolha, zp:zPergunta, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
@@ -821,7 +836,9 @@ provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o m
     __push4=[]; __msg4=null;
     DB={ref:function(p){ return { set:function(v){ __push4.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); } }; }};
     PELUDINHOS=[{n:'Safira', tutor:'Bia'}]; repHojeISO=function(){ return '2026-09-25'; }; pelExtra=function(){ return {sexo:'Fêmea'}; };
-    repLancamentos=function(){ return [{_id:'c1', tipo:'credito', data:'2026-09-10'}, {_id:'u1', tipo:'uso', data:'2026-09-23', obs:''},
+    // 6.38 (QA638-02): o número "depois" sai da própria lista e nunca é negativo — a lista agora fecha com o
+    // repSaldo de mentira (0): o crédito c0 é o que a hospedagem orc-x-1 usou.
+    repLancamentos=function(){ return [{_id:'c0', tipo:'credito', data:'2026-09-05'}, {_id:'c1', tipo:'credito', data:'2026-09-10'}, {_id:'u1', tipo:'uso', data:'2026-09-23', obs:''},
       {_id:'orc-x-1', tipo:'uso', data:'2026-09-20'}]; };
     repSaldo=function(){ return 0; }; repPodeLancar=function(){ return true; }; repLivresSemDia=function(){ return 0; };
     zTexto=function(){ return Promise.resolve('a tutora cancelou'); };
@@ -960,7 +977,9 @@ prova('Bis (28/set/2026): falta de um dia com o dia de repor já combinado sai c
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:'2026-10-01'})"), true);
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-02', volta:''})"), false, 'sem dia de repor: reposição');
     igual(run("repLancEhTroca({qtd:5, data:'2026-10-05', volta:'2026-10-20', de:'2026-10-05', ate:'2026-10-09'})"), false, 'período (férias): reposição');
-    igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), false, 'falta de dia que já passou: reposição');
+    // 6.38 (P7, aplicada pela recomendação): a troca lançada depois do dia de origem também é troca — muda o QA26.
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-29'})"), true, 'falta de dia que já passou, com o dia novo adiante: troca (P7)');
+    igual(run("repLancEhTroca({qtd:1, data:'2026-09-25', volta:'2026-09-27'})"), false, 'o dia novo que já passou: não');
     igual(run("repLancEhTroca({qtd:1, data:'2026-09-28', volta:'2026-09-29'})"), true, 'falta de hoje com dia combinado: troca');
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-07', volta:'2026-10-20', periodo:true})"), false, 'período que rende um dia: reposição');
     igual(run("repLancEhTroca({qtd:1, data:'2026-10-01', volta:'2026-10-01'})"), false);
@@ -1014,7 +1033,8 @@ provaAsync('Bis (QA26): o lançamento com dia de repor grava a marca de troca; l
     r = await caso({ data: '2026-10-02', volta: '2026-10-01', cheio: true });
     assert.ok(!r.g[0].troca && /contando a do dia 02\/10\/2026/.test(r.c[0].x), 'dia de repor lotado, sem agendar: reposição ' + r.c[0].x);
     r = await caso({ data: '2026-09-25', volta: '2026-09-29' });
-    assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'falta de dia que já passou: reposição ' + r.c[0].x);
+    // 6.38 (P7, aplicada pela recomendação): a troca lançada DEPOIS do dia de origem também é troca — muda o QA26.
+    assert.ok(r.g[0].troca && r.g[0].troca.de === '2026-09-25' && /troca/i.test(r.c[0].x), 'falta de dia que já passou, com o dia novo adiante: troca (P7) ' + r.c[0].x);
     r = await caso({ data: '2026-10-01', volta: '2026-10-01' });
     assert.ok(!r.g[0].troca && !/troca/i.test(r.c[0].x), 'dia de repor igual ao da falta: reposição');
     r = await caso({ modo: 'periodo', de: '2026-10-05', ate: '2026-10-11', dias: ['2026-10-07'], volta: '2026-10-20' });
@@ -1109,9 +1129,12 @@ provaAsync('QA15 — desmarcar a troca: estorna a falta que nasceu dela (a terç
     PELUDINHOS=[{n:'Coco Chanel', tutor:'Juliana'}]; repHojeISO=function(){ return '2026-09-25'; };
     repLancamentos=function(){ return [{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}}]; };
     repPodeLancar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };
-    zAlertao=function(t, l){ __z5={t:t, l:l}; }; renderReposicao=function(){};`);
+    zAlertao=function(t, l){ __z5={t:t, l:l}; }; renderReposicao=function(){};
+    // 6.38 (AC3): dentro do prazo a troca tem duas saídas; «Volta a vir…» é o caminho de antes (estorna a falta).
+    __bkZE5=zEscolha; __ze5=null; zEscolha=function(t, l, bts){ __ze5=bts.map(function(b){ return b.t; }); bts[0].fn(); };`);
   try {
     await run("repDesmarcar(0, '2026-09-30')");
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(run('__ze5'))), ['Volta a vir na terça-feira, 29/09', 'Não vem nos dois dias: vira reposição', 'Manter a troca']);
     for (let i = 0; i < 10; i++) await Promise.resolve();
     const g = JSON.parse(JSON.stringify(run('__g5')));
     assert.strictEqual(g.length, 1);
@@ -1122,7 +1145,7 @@ provaAsync('QA15 — desmarcar a troca: estorna a falta que nasceu dela (a terç
     assert.strictEqual(m5.t, '✅ Troca desfeita');
     assert.ok(/a troca do dia 29\/09 \(terça-feira\) para o dia 30\/09 \(quarta-feira\) foi desfeita/.test(m5.texto), m5.texto);
     assert.ok(/vem na terça-feira, 29\/09, como sempre/.test(m5.texto) && !/reposi/i.test(m5.texto), 'QA16: a troca desfeita avisa o tutor sem falar em reposição');
-  } finally { run('DB=__bkQ5.db; PELUDINHOS=__bkQ5.p; repLancamentos=__bkQ5.l; repPodeLancar=__bkQ5.pl; zPergunta=__bkQ5.zp; zAlertao=__bkQ5.za; renderReposicao=__bkQ5.rr; repHojeISO=__bkQ5.h; audit=__bkQ5.au; repGravar=__bkQ5.g; vagasCarregarDia=__bkQ5.vc; repMsgModal=__bkQ5.mm;'); }
+  } finally { run('DB=__bkQ5.db; PELUDINHOS=__bkQ5.p; repLancamentos=__bkQ5.l; repPodeLancar=__bkQ5.pl; zPergunta=__bkQ5.zp; zAlertao=__bkQ5.za; renderReposicao=__bkQ5.rr; repHojeISO=__bkQ5.h; audit=__bkQ5.au; repGravar=__bkQ5.g; vagasCarregarDia=__bkQ5.vc; repMsgModal=__bkQ5.mm; zEscolha=__bkZE5;'); }
 });
 provaAsync('QA15 — no dia da troca, "Veio repor hoje" e o lançamento do dia não falam em reposição ao tutor', async () => {
   run(`__bkQ6={p:PELUDINHOS, l:repLancamentos, s:repSaldo, pl:repPodeLancar, zp:zPergunta, zt:zTexto, za:zAlertao, mm:repMsgModal, rr:renderReposicao, h:repHojeISO, au:audit, g:repGravar, rsv:repReservado, di:dashDia};
@@ -1358,8 +1381,11 @@ provaAsync('QA18 — a planilha não deixou tirar a célula velha: ela continua 
   } finally { run('DB=__bkG1.db; dashPonteChamar=__bkG1.pc; dashAutoCalcular=__bkG1.ac; zHojeISO=__bkG1.hz; audit=__bkG1.au; APP_DIA_ABERTO=__bkG1.ab;'); }
 });
 prova('QA18 — a baixa da hospedagem no dia da troca não "cumpre" a troca', () => {
+  // 6.38 (QA638-02): a troca por vir só fica pendente dentro do livro-caixa (o número nunca fica negativo).
+  // Com só a troca e a hospedagem, o livro-caixa é 0 e nenhuma troca cabe nele; o crédito livre c0 dá a
+  // folga para a prova continuar provando o que é dela: a hospedagem não é a vinda da troca.
   run(`__bkG2={l:repLancamentos, h:repHojeISO}; repHojeISO=function(){ return '2026-09-25'; };
-    repLancamentos=function(){ return [{_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}},
+    repLancamentos=function(){ return [{_id:'c0', tipo:'credito', data:'2026-09-01'}, {_id:'t1', tipo:'credito', data:'2026-09-29', motivo:'troca', volta:'2026-09-30', troca:{de:'2026-09-29', para:'2026-09-30'}},
       {_id:'orc-x-1', tipo:'uso', data:'2026-09-30', orcId:'x', motivo:'hospedagem'}]; };`);
   try {
     assert.strictEqual(run("repTrocasPendentes({n:'Billy Paul', tutor:'Juliana'})"), 1);
@@ -6314,7 +6340,9 @@ prova('a tela: «ele veio» ao lado de «desmarcar», a frase sem "não repôs",
   assert.ok(/setInterval\(function\(\)\{ try\{ repBaixaPelaPresenca\(false\); \}[^\n]*\}, REP_VEIO_MIN\*60000\);/.test(src), 'e de 10 em 10 minutos');
 });
 prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «desmarcar»; a 2ª marcada do mesmo dia só desmarca', () => {
-  run(`__bk625r={ge:document.getElementById, L:repLancamentos, S:repSaldo, D:repDisponivel, H:repHojeISO, P:PELUDINHOS, B:repBaixaPelaPresenca, PL:repPodeLancar, V:vagasGarantirDias, PE:pelExtra, I:pelInativo};
+  // 6.38: as marcadas que já passaram, antes da regra, sem o "sim" da P2 (REP_RETRO_GESTAO=false) — o desenho de antes.
+  run(`__bk625r={ge:document.getElementById, L:repLancamentos, S:repSaldo, D:repDisponivel, H:repHojeISO, P:PELUDINHOS, B:repBaixaPelaPresenca, PL:repPodeLancar, V:vagasGarantirDias, PE:pelExtra, I:pelInativo, RG:REP_RETRO_GESTAO};
+    REP_RETRO_GESTAO=false;
     __el625={innerHTML:''}; document.getElementById=function(id){ return id==='repLista'?__el625:null; };
     PELUDINHOS=[{n:'Billy Paul', tutor:'Tutora Teste', dias:['ter']}, {n:'Luna', tutor:'Ana Teste', dias:['seg'], sexo:'Fêmea'},
       {n:'Bis', tutor:'Caio Teste', dias:['seg']}, {n:'Nina', tutor:'Gil Teste', dias:['seg']}];
@@ -6341,7 +6369,7 @@ prova('a tela, desenhada: a linha diz a troca, «ele veio»/«ela veio» e «des
     assert.ok(n.indexOf('repVeioNoDia(') < 0 && n.indexOf("repDesmarcar(3,'2026-09-30')") >= 0, 'só desmarcar');
   } finally {
     run(`document.getElementById=__bk625r.ge; repLancamentos=__bk625r.L; repSaldo=__bk625r.S; repDisponivel=__bk625r.D; repHojeISO=__bk625r.H;
-      PELUDINHOS=__bk625r.P; repBaixaPelaPresenca=__bk625r.B; repPodeLancar=__bk625r.PL; vagasGarantirDias=__bk625r.V; pelExtra=__bk625r.PE; pelInativo=__bk625r.I;`);
+      PELUDINHOS=__bk625r.P; repBaixaPelaPresenca=__bk625r.B; repPodeLancar=__bk625r.PL; vagasGarantirDias=__bk625r.V; pelExtra=__bk625r.PE; pelInativo=__bk625r.I; REP_RETRO_GESTAO=__bk625r.RG;`);
   }
 });
 // ================================================================== 6.26 — horários prontos
@@ -15282,13 +15310,17 @@ provaAsync('6.46 W5 (ATK4-1 e ATK4-2, já existia no 6ba2fb9) — o avulso dele 
       prepPed646(B, ped);
       run('__al646=[]; __za646=[];');
       await autoriza646();
+      // 6.38 (T3, AC5a): a falta de um dia com o dia de repor que cumpre a regra da troca (13/10 terça, dia dele;
+      // 14/10 quarta, não) chega à Márcia COMO TROCA — a proteção do avulso vale igual, e a frase diz "a troca".
+      igual(ped.payload.troca, { de: '2026-10-13', para: '2026-10-14' }, 'o pedido leva a troca');
       igual([B.le(PED646()).status, AVQTD646(B), creditos646(B), J630('__al646'), J630('__za646').map((z) => z[0])],
-        ['pedido', 1, ['2026-10-13→-'], [FRASE('a reposição', 'R$ 97,00')], []]);
-      // tirado o avulso dos Lançamentos do dia, a reposição entra
+        ['pedido', 1, ['2026-10-13→-'], [FRASE('a troca', 'R$ 97,00')], []]);
+      // tirado o avulso dos Lançamentos do dia, a troca entra (na falta que já existia)
       B.poe('daycare/dashboard/2026-10-14/avulso/K9', null);
-      run('__al646=[];' + PEDIDO_TELA646);
+      run('__al646=[]; __mm639=[];' + PEDIDO_TELA646);
       await autoriza646();
-      igual([B.le(PED646()).status, creditos646(B), J630('__al646'), J630('__za646').map((z) => z[0])], ['autorizado', ['2026-10-13→2026-10-14'], [], ['ENCAIXE AUTORIZADO']]);
+      igual([B.le(PED646()).status, creditos646(B), J630('__al646'), J630('__za646').map((z) => z[0]), J630('__mm639').map((m) => m.t)],
+        ['autorizado', ['2026-10-13→2026-10-14 troca'], [], [], ['✅ Troca de dia feita']]);
     } finally { run(AVISAR646_VOLTA + ZA646_VOLTA); }
   } finally { solta646(); }
   // (b) ATK4-2: o pedido de troca 13 → 14 com o avulso (sem o detalhe do valor) já no dia: nada entra, a frase sem valor
@@ -18453,6 +18485,1268 @@ prova('6.50 R2-5 (6.49, à parte) — a tela aberta durante a carga (o monitor s
     igual(run(`dashDadosDeHoje('${DIA650}')`), false);
   } finally { run(SOLTA650); }
 });
+
+// ================================================================== 6.38 — a política das 24 horas da reposição e da troca
+console.log('\n6.38 — A política das 24 horas: a troca fora do saldo, "marcou e não veio", desmarcar com prazo, o passado com a Gestão (Adriana, 06 e 08/out/2026)');
+// Dado INVENTADO, nomes de brincadeira: Totó (vem às quartas), Batata (sextas), João e Juju (quintas), Bolinha (segundas).
+// 06/10/2026 terça · 07/10 quarta · 08/10 quinta · 09/10 sexta · 12/10 segunda (feriado de Nossa Senhora Aparecida).
+// Toda prova prende o relógio (relogio621) em horas do meio do dia: o dia é o mesmo em Brasília e em UTC, e a
+// rodada passa com TZ=UTC e com TZ=America/Sao_Paulo. Onde a hora é perto da meia-noite, quem decide é o relógio do
+// servidor (servidor638), que conta no fuso de Brasília.
+const servidor638 = (dif) => {
+  run(`__bkSrv638={d:VAGAS_RELOGIO_DIF, l:(typeof VAGAS_RELOGIO_LIDO==='undefined')?false:VAGAS_RELOGIO_LIDO}; VAGAS_RELOGIO_DIF=${+dif || 0}; VAGAS_RELOGIO_LIDO=true;`);
+  return () => run('VAGAS_RELOGIO_DIF=__bkSrv638.d; VAGAS_RELOGIO_LIDO=__bkSrv638.l;');
+};
+const espera638 = async () => { for (let i = 0; i < 12; i++) await espera639(); };
+const TOTO638 = { n: 'Totó', raca: 'SRD', tutor: 'Ana Teste', dias: ['qua'], sexo: 'Macho' };
+const BATATA638 = { n: 'Batata', raca: 'Pug', tutor: 'Bia Teste', dias: ['sex'], sexo: 'Macho' };
+const JOAO638 = { n: 'João', raca: 'Spitz', tutor: 'Caio Teste', dias: ['qui'], sexo: 'Macho' };
+const JUJU638 = { n: 'Juju', raca: 'Spitz', tutor: 'Duda Teste', dias: ['qui'], sexo: 'Fêmea' };
+const BOLINHA638 = { n: 'Bolinha', raca: 'SRD', tutor: 'Eva Teste', dias: ['seg'], sexo: 'Fêmea' };
+// A troca do Totó (quarta 07/10 → quinta 08/10); `regra` = marcada com a regra das 24 horas (prazo24h = o dia novo).
+const TROCA638 = (regra, extra) => Object.assign({ tipo: 'credito', data: '2026-10-07', motivo: 'troca', volta: '2026-10-08',
+  troca: { de: '2026-10-07', para: '2026-10-08', quem: 'Recepção X', ts: 5 }, nasceu_troca: true, quem: 'Recepção X', ts: 5 },
+  regra ? { prazo24h: '2026-10-08' } : {}, extra || {});
+const REPO638 = (volta, regra, extra) => Object.assign({ tipo: 'credito', data: '2026-10-01', motivo: 'viagem', volta: volta || '', quem: 'Recepção X', ts: 3 },
+  (regra && volta) ? { prazo24h: volta } : {}, extra || {});
+const LIVRE638 = (data) => ({ tipo: 'credito', data: data || '2026-09-20', motivo: 'outro', volta: '', quem: 'Recepção X', ts: 2 });
+// O palco: o relógio preso, o banco com caminhos e transação (banco646: a gravação desce na hora para o REPO_CACHE,
+// como o ouvinte do Extrato), as janelas capturadas e as respostas da pessoa em fila.
+const palco638 = (cfg) => {
+  cfg = cfg || {};
+  const soltaR = relogio621(cfg.hora || '2026-10-09T09:00:00-03:00');
+  const B = banco646({}); ctx.__B638 = B;
+  const refB = B.ref;   // o banco646 não tem remove: tirar um nó é gravar null
+  B.ref = (c) => { const r = refB(c); if (!r.remove) r.remove = () => { B.poe(c, null); return Promise.resolve(); }; return r; };
+  run(`__bk638={P:PELUDINHOS, rc:REPO_CACHE, rl:REPO_LIDO, db:DB, pe:pelExtra, pd:pelDias, pi:pelInativo, role:document.body.dataset.role,
+      pt:pessoaDoTurno, qs:quemSou, za:zAlertao, zp:zPergunta, zt:zTexto, ze:zEscolha, mm:repMsgModal, rr:renderReposicao, au:audit, al:alert,
+      dif:VAGAS_RELOGIO_DIF, lido:(typeof VAGAS_RELOGIO_LIDO==='undefined')?false:VAGAS_RELOGIO_LIDO, et:EST_TODAS, cc:CARTEIRA_CARREGADA, ce:CF_ESTADIAS_LIDO,
+      vc:vagasCarregarDia, ts:_repVeioTs, rod:_repVeioRodando, sem:REP_VEIO_SEM, ad:appDiaVelho, lg:_logFalhaGrav, ge:document.getElementById,
+      conf:(typeof REP_CONFERIR==='undefined')?undefined:REP_CONFERIR, trv:(typeof REP_TRAVA_LIDA==='undefined')?undefined:REP_TRAVA_LIDA,
+      retro:(typeof REP_RETRO_GESTAO==='undefined')?undefined:REP_RETRO_GESTAO, hoje:(typeof REP_BAIXA_HOJE==='undefined')?undefined:REP_BAIXA_HOJE};
+    PELUDINHOS=${JSON.stringify(cfg.fichas || [TOTO638])}; REPO_CACHE={}; REPO_LIDO=true; DB=__B638;
+    pelExtra=function(p){ return {sexo:(p&&p.sexo)||''}; }; pelDias=function(p){ return (p&&p.dias)||[]; }; pelInativo=function(p){ return !!(p&&p.inativo); };
+    document.body.dataset.role='${cfg.papel || 'consultora'}';
+    pessoaDoTurno=function(){ return __pt638; }; quemSou=function(){ return __pt638; }; __pt638='Recepção Teste';
+    __za638=[]; zAlertao=function(t,l){ __za638.push({t:t, l:l}); };
+    __zp638=[]; __zpR638=[]; zPergunta=function(t,l,o){ __zp638.push({t:t, l:l, o:o}); return Promise.resolve(__zpR638.length?__zpR638.shift():true); };
+    __zt638=[]; __ztR638=[]; zTexto=function(t,l,o){ __zt638.push({t:t, l:l, o:o}); return Promise.resolve(__ztR638.length?__ztR638.shift():null); };
+    __ze638=[]; __zeR638=[]; zEscolha=function(t,l,bts){ __ze638.push({t:t, l:l, b:bts.map(function(b){ return b.t; })});
+      var r=__zeR638.length?__zeR638.shift():null, b=null;
+      if(typeof r==='number') b=bts[r]; else if(r) b=bts.filter(function(x){ return x.t.indexOf(r)>=0; })[0];
+      if(!b){ if(r!=null) __zeFalta638.push(String(r)); b=bts[bts.length-1]; }   // sem a resposta pedida: o último botão (desistir), nunca trava
+      if(b && typeof b.fn==='function') b.fn(); }; __zeFalta638=[];
+    __mm638=[]; repMsgModal=function(t,l,x){ __mm638.push({t:t, l:l, x:x}); }; renderReposicao=function(){};
+    __au638=[]; audit=function(a,d){ __au638.push(a+' · '+String(d)); }; __al638=[]; alert=function(t){ __al638.push(String(t)); };
+    EST_TODAS={}; CARTEIRA_CARREGADA=true; CF_ESTADIAS_LIDO=true; vagasCarregarDia=function(){ return Promise.resolve(); };
+    _repVeioTs=0; _repVeioRodando=false; REP_VEIO_SEM={}; appDiaVelho=function(){ return false; };
+    if(typeof REP_CONFERIR!=='undefined') REP_CONFERIR={}; if(typeof REP_TRAVA_LIDA!=='undefined') REP_TRAVA_LIDA={};
+    if(typeof REP_RETRO_GESTAO!=='undefined') REP_RETRO_GESTAO=${cfg.retro === false ? 'false' : 'true'};
+    __lf638=[]; _logFalhaGrav=function(o,e){ __lf638.push(o+': '+((e&&e.message)||e)); };`);
+  (cfg.lanc || []).forEach((m, i) => Object.keys(m || {}).forEach((id) => B.poe(no638(i, id), m[id])));
+  Object.keys(cfg.dados || {}).forEach((c) => B.poe(c, cfg.dados[c]));
+  const soltaS = (cfg.srv != null) ? servidor638(cfg.srv) : null;
+  return { B, solta: () => {
+    if (soltaS) soltaS();
+    run(`PELUDINHOS=__bk638.P; REPO_CACHE=__bk638.rc; REPO_LIDO=__bk638.rl; DB=__bk638.db; pelExtra=__bk638.pe; pelDias=__bk638.pd; pelInativo=__bk638.pi;
+      document.body.dataset.role=__bk638.role; pessoaDoTurno=__bk638.pt; quemSou=__bk638.qs; zAlertao=__bk638.za; zPergunta=__bk638.zp; zTexto=__bk638.zt;
+      zEscolha=__bk638.ze; repMsgModal=__bk638.mm; renderReposicao=__bk638.rr; audit=__bk638.au; alert=__bk638.al; VAGAS_RELOGIO_DIF=__bk638.dif; VAGAS_RELOGIO_LIDO=__bk638.lido;
+      EST_TODAS=__bk638.et; CARTEIRA_CARREGADA=__bk638.cc; CF_ESTADIAS_LIDO=__bk638.ce; vagasCarregarDia=__bk638.vc; _repVeioTs=Date.now(); _repVeioRodando=false;
+      REP_VEIO_SEM=__bk638.sem; appDiaVelho=__bk638.ad; _logFalhaGrav=__bk638.lg; document.getElementById=__bk638.ge;
+      if(__bk638.conf!==undefined) REP_CONFERIR=__bk638.conf; if(__bk638.trv!==undefined) REP_TRAVA_LIDA=__bk638.trv;
+      if(__bk638.retro!==undefined) REP_RETRO_GESTAO=__bk638.retro; if(__bk638.hoje!==undefined) REP_BAIXA_HOJE=__bk638.hoje;`);
+    soltaR();
+  } };
+};
+const no638 = (i, id) => 'daycare/reposicao/' + run(`pelKey(PELUDINHOS[${i}])`) + '/lancamentos/' + id;
+const lanc638 = (B, i) => B.le('daycare/reposicao/' + run(`pelKey(PELUDINHOS[${i || 0}])`) + '/lancamentos') || {};
+const dk638 = (i) => run(`dcKey(PELUDINHOS[${i}].n, PELUDINHOS[${i}].tutor)`);
+const saldos638 = (i) => J630(`[repSaldo(PELUDINHOS[${i || 0}]), repTrocasPendentes(PELUDINHOS[${i || 0}]), repSaldoReposicao(PELUDINHOS[${i || 0}])]`);
+const TRAVA638 = { ts: 1, por: 'sistema', quantos: 3, hora: '12:00' };
+const comPalco638 = async (cfg, fn) => { const P = palco638(cfg); try { await fn(P.B); } finally { P.solta(); } };
+
+prova('6.38 P38-01 — repDiaBrasilia: 23:30 em Brasília ainda é 07/10; 00:00 já é 08/10 (com e sem Intl de fuso; o formato do en-CA não entra)', () => {
+  igual(run('repDiaBrasilia(Date.UTC(2026,9,8,2,30))'), '2026-10-07');
+  igual(run('repDiaBrasilia(Date.UTC(2026,9,8,3,0))'), '2026-10-08');
+  igual(run('repDiaBrasilia(Date.UTC(2026,9,9,11,0))'), '2026-10-09');
+  run('__bkIntl638=Intl; Intl={DateTimeFormat:function(){ throw new Error("sem fuso"); }};');
+  try {
+    igual(run('repDiaBrasilia(Date.UTC(2026,9,8,2,30))'), '2026-10-07', 'sem Intl com fuso: UTC−3');
+    igual(run('repDiaBrasilia(Date.UTC(2026,9,8,3,0))'), '2026-10-08');
+  } finally { run('Intl=__bkIntl638;'); }
+  const tl = Date.prototype.toLocaleDateString;
+  Date.prototype.toLocaleDateString = function () { return '10/7/2026'; };   // o formato que mudou entre versões do Chrome
+  try { igual(run('repDiaBrasilia(Date.UTC(2026,9,8,2,30))'), '2026-10-07'); } finally { Date.prototype.toLocaleDateString = tl; }
+});
+prova('6.38 P38-02/03 — o prazo: até as 24h do dia anterior ao dia marcado, pelo relógio do servidor (23:59 de 07/10 dentro; 00:00:30 de 08/10 fora)', () => {
+  const caso = (hora, volta) => { const s1 = relogio621(hora), s2 = servidor638(0);
+    try { return J630(`(function(){ var r=repPrazo('${volta}'); return [r.dentro, r.texto, r.relogio, r.limite]; })()`); } finally { s2(); s1(); } };
+  igual(caso('2026-10-07T12:00:00-03:00', '2026-10-08'), [true, 'até as 24h de quarta-feira, 07/10', 'servidor', '2026-10-07']);
+  igual(caso('2026-10-08T12:00:00-03:00', '2026-10-08')[0], false, 'no próprio dia: fora');
+  igual(caso('2026-10-09T12:00:00-03:00', '2026-10-08')[0], false, 'depois: fora');
+  igual(caso('2026-10-07T23:59:00-03:00', '2026-10-08')[0], true, '23:59 da véspera: dentro');
+  igual(caso('2026-10-08T00:00:30-03:00', '2026-10-08')[0], false, 'meia-noite e meio minuto: fora');
+  igual(caso('2026-10-09T12:00:00-03:00', '2026-10-12'), [true, 'até as 24h de domingo, 11/10', 'servidor', '2026-10-11'], 'segunda-feira: vence às 24h de domingo (P8)');
+});
+prova('6.38 P38-04 — quem decide é o servidor: aparelho 23:50 de 07/10 com o servidor 15 min adiante → fora; aparelho 00:05 de 08/10 com o servidor 10 min atrás → dentro; sem o servidor, vale o aparelho', () => {
+  let s1 = relogio621('2026-10-07T23:50:00-03:00'), s2 = servidor638(15 * 60000);
+  try { igual(J630("[repPrazo('2026-10-08').dentro, repHojeServidor()]"), [false, '2026-10-08']); } finally { s2(); s1(); }
+  s1 = relogio621('2026-10-08T00:05:00-03:00'); s2 = servidor638(-10 * 60000);
+  try { igual(J630("[repPrazo('2026-10-08').dentro, repHojeServidor()]"), [true, '2026-10-07']); } finally { s2(); s1(); }
+  run(`__bkP4={h:repHojeISO, l:VAGAS_RELOGIO_LIDO}; repHojeISO=function(){ return '2026-10-07'; }; VAGAS_RELOGIO_LIDO=false;`);
+  try {
+    igual(J630("(function(){ var r=repPrazo('2026-10-08'); return [r.dentro, r.relogio]; })()"), [true, 'aparelho']);
+    run("repHojeISO=function(){ return '2026-10-08'; };");
+    igual(J630("(function(){ var r=repPrazo('2026-10-08'); return [r.dentro, r.relogio]; })()"), [false, 'aparelho']);
+  } finally { run('repHojeISO=__bkP4.h; VAGAS_RELOGIO_LIDO=__bkP4.l;'); }
+  // o aviso do tutor (P4): o dia é o do aviso, não o de agora
+  const s3 = relogio621('2026-10-08T07:30:00-03:00'), s4 = servidor638(0);
+  try {
+    igual(run(`repPrazo('2026-10-08', ${Date.parse('2026-10-07T22:10:00-03:00')}).dentro`), true, 'o WhatsApp das 22:10 de quarta, lido às 07:30 de quinta');
+    igual(run(`repPrazo('2026-10-08', ${Date.parse('2026-10-08T07:00:00-03:00')}).dentro`), false);
+  } finally { s4(); s3(); }
+});
+prova('6.38 P38-05 — a conta do Totó (tabela 2.3): o livro-caixa (repSaldo) não muda; a troca sai do número que as pessoas veem', () => {
+  const T = TROCA638(true);
+  const U = (extra) => Object.assign({ _id: 'veio-2026-10-08', tipo: 'uso', data: '2026-10-08', motivo: 'troca', credito: 'fa-2026-10-07', quem: 'x', ts: 9 }, extra || {});
+  const C = (L, hoje) => J630(`(function(L){ return [repSaldoDe(L), repTrocasPendentesLista(L, '${hoje}', 99).length, repSaldoReposicaoDe(L, '${hoje}', 0)]; })(${JSON.stringify(L)})`);
+  const t = Object.assign({ _id: 'fa-2026-10-07' }, T);
+  igual(C([t], '2026-10-07'), [1, 1, 0], 'troca marcada');
+  igual(C([t, U()], '2026-10-09'), [0, 0, 0], 'veio em 08/10: TROCA CUMPRIDA');
+  igual(C([t, U({ desfecho: 'nao_veio', veio_auto: true })], '2026-10-09'), [0, 0, 0], 'não veio: TROCA PERDIDA');
+  igual(C([t], '2026-10-09'), [1, 1, 0], 'passou e a baixa ainda não rodou (na regra)');
+  igual(C([Object.assign({}, t, { volta: '', volta_desmarcada: { dia: '2026-10-08', dentro_prazo: true, virou_reposicao: true } })], '2026-10-07'), [1, 0, 1], 'desmarcada até as 24h de 07/10: vira reposição');
+  igual(C([Object.assign({}, t, { volta: '', volta_desmarcada: { dia: '2026-10-08', fora_prazo: true } }), U({ desfecho: 'fora_prazo' })], '2026-10-08'), [0, 0, 0], 'desmarcada fora do prazo');
+  igual(C([Object.assign({}, t, { volta: '', volta_desmarcada: { dia: '2026-10-08', excecao: { quem: 'G', motivo: 'doente' }, virou_reposicao: true } }),
+    U({ desfecho: 'nao_veio' }), { _id: 'dev-veio-2026-10-08', tipo: 'estorno', estornaId: 'veio-2026-10-08', dia_devolvido: '2026-10-08', devolvido_gestao: true }], '2026-10-09'),
+    [1, 0, 1], 'a Gestão devolve a troca perdida');
+  // o mesmo pelo Extrato do aparelho (as funções de tela)
+  const P = palco638({ hora: '2026-10-07T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': T }] });
+  try { igual(saldos638(0), [1, 1, 0]); } finally { P.solta(); }
+});
+prova('6.38 P38-06 — a troca antiga sem a regra que já passou: fora do número enquanto espera a Gestão (de qualquer idade); com a regra, também; com REP_RETRO_GESTAO=false, como antes (+1)', () => {
+  let P = palco638({ hora: '2026-10-10T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': TROCA638(false) }] });
+  try {
+    igual(saldos638(0), [1, 1, 0], 'sem a regra: sai do número (P1)');
+    run('REP_RETRO_GESTAO=false;');
+    igual(saldos638(0), [1, 0, 1], 'sem o "sim" da P2: como antes');
+  } finally { P.solta(); }
+  P = palco638({ hora: '2026-10-10T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': TROCA638(true) }] });
+  try { igual(saldos638(0), [1, 1, 0], 'com a regra'); } finally { P.solta(); }
+  const velha = Object.assign(TROCA638(false), { data: '2026-07-01', volta: '2026-07-02', troca: { de: '2026-07-01', para: '2026-07-02' } });
+  P = palco638({ hora: '2026-10-10T10:00:00-03:00', lanc: [{ 'fa-2026-07-01': velha }] });
+  // 2ª rodada (QA638-01): sem corte de dias — a de mais de 60 dias também fica fora do número até a Gestão conferir.
+  try { igual(saldos638(0), [1, 1, 0], 'mais de 60 dias: também fora do número (sem corte que mude sozinho)'); } finally { P.solta(); }
+});
+// As telas, desenhadas com o Extrato do Totó: só a troca de quarta 07/10 → quinta 08/10 (na regra), e nenhuma reposição.
+const tela638 = () => run(`__el638={repLista:{innerHTML:''}, repResumo:{innerHTML:''}, repCount:{textContent:''}, repBusca:{value:''}, repEncaixes:{innerHTML:''},
+    repExtTit:{textContent:''}, repExtSub:{innerHTML:''}, repExtLista:{innerHTML:''}, repExtratoModal:{classList:{add:function(){}, remove:function(){}}}};
+  document.getElementById=function(id){ return __el638[id]||null; }; renderReposicao=__bk638.rr; _repVeioTs=Date.now();`);
+const linha638 = (h, n) => { const i = h.indexOf('<div class="rp-nome">' + n + '</div>'); if (i < 0) return '';
+  const a = h.lastIndexOf('<div class="rep-row">', i), b = h.indexOf('<div class="rep-row">', i); return h.slice(a, b > 0 ? b : h.length); };
+prova('6.38 P38-07 — telas: Reposições (0, a troca visível com «desmarcar», sem «Veio repor hoje» em 06/10 e com ele em 08/10), Extrato (cabeçalho e TROCA), ficha, turma e "Dias a repor"', () => {
+  for (const [hora, temBotao] of [['2026-10-06T10:00:00-03:00', false], ['2026-10-08T10:00:00-03:00', true]]) {
+    const P = palco638({ hora, srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] });
+    try {
+      tela638();
+      run('renderReposicao()');
+      const h = run('__el638.repLista.innerHTML'), l = linha638(h, 'Totó');
+      assert.ok(l, 'o Totó continua na tela (a troca não some): ' + h.slice(0, 300));
+      assert.ok(/<div class="rp-n">0<\/div>/.test(l), 'o número é 0: ' + l.slice(0, 200));
+      assert.ok(/Vem repor em 08\/10\/2026 \(troca, no lugar de 07\/10\)/.test(l), l.slice(0, 600));
+      assert.ok(/repDesmarcar\(0,'2026-10-08'\)/.test(l), 'com «desmarcar»');
+      igual(/repUsar\(0\)/.test(l), temBotao, '«Veio repor hoje» só no dia da troca');
+      assert.ok(/<b>0<\/b>com dias a repor/.test(run('__el638.repResumo.innerHTML')), run('__el638.repResumo.innerHTML'));
+      run('repAbrirExtrato(0)');
+      assert.ok(/Saldo atual: <b>0<\/b> dia\(s\) de reposição/.test(run('__el638.repExtSub.innerHTML')), run('__el638.repExtSub.innerHTML'));
+      assert.ok(/troca marcada: quarta-feira, 07\/10 → quinta-feira, 08\/10 \(não entra no saldo\)/.test(run('__el638.repExtSub.innerHTML')));
+      const x = run('__el638.repExtLista.innerHTML');
+      assert.ok(/>TROCA<\/span>/.test(x) && x.indexOf('+1 CRÉDITO') < 0, x.slice(0, 400));
+      assert.ok(/Troca: quarta-feira, 07\/10 → quinta-feira, 08\/10 · não entra no saldo/.test(x), x.slice(0, 600));
+      const f = run('blocoReposicaoFicha(PELUDINHOS[0])');
+      assert.ok(/>0<\/span><span class="hint" style="margin:0">dias a repor/.test(f), f.slice(0, 600));
+      igual(/repFichaUsar\(\)/.test(f), temBotao, '«Usou 1 hoje» só no dia da troca');
+      assert.ok(/troca marcada para quinta-feira, 08\/10 \(não entra no saldo\)/.test(f), f.slice(0, 900));
+      igual(run('contarPendencias().repComSaldo'), 0, 'o quadro "Dias a repor" não conta o Totó');
+      const t = J630(`turmaListaDoDia('2026-10-08', {pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'${hora.slice(0, 10)}'})`);
+      igual(t.vem.map((o) => [o.nome, o.reposicoes]), [['Totó', 0]], 'turma do dia: 0 reposições');
+    } finally { P.solta(); }
+  }
+});
+prova('6.38 P38-08 — Extrato: TROCA, TROCA CUMPRIDA, TROCA PERDIDA, −1 NÃO VEIO, −1 DESMARCADA FORA DO PRAZO e "virou reposição"; a soma dos +1/−1 bate com o número', () => {
+  const casos = [
+    { L: { 'fa-2026-10-07': TROCA638(true), 'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'troca', credito: 'fa-2026-10-07', obs: 'Marcado depois: veio em 08/10, pela troca de 07/10', quem: 'R', ts: 9 } },
+      rot: ['TROCA', 'TROCA CUMPRIDA'], txt: /cumprida em 08\/10/ },
+    { L: { 'fa-2026-10-07': TROCA638(true), 'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'troca', credito: 'fa-2026-10-07', desfecho: 'nao_veio', veio_auto: true, quem: 'sistema', ts: 9,
+      obs: 'Troca 07/10 → 08/10 — não veio (não desmarcou até as 24h do dia anterior)' } },
+      rot: ['TROCA', 'TROCA PERDIDA'], txt: /Troca 07\/10 → 08\/10 — não veio \(não desmarcou até as 24h do dia anterior\)/ },
+    { L: { 'fa-2026-10-01': REPO638('2026-10-06', true), 'veio-2026-10-06': { tipo: 'uso', data: '2026-10-06', motivo: 'reposicao', credito: 'fa-2026-10-01', desfecho: 'nao_veio', veio_auto: true, quem: 'sistema', ts: 9,
+      obs: 'Marcada para 06/10 — não veio (não desmarcou até as 24h do dia anterior)' }, 'fa-2026-09-20': LIVRE638() },
+      rot: ['+1 CRÉDITO', '−1 NÃO VEIO', '+1 CRÉDITO'], txt: /Marcada para 06\/10 — não veio \(não desmarcou até as 24h do dia anterior\)/ },
+    { L: { 'fa-2026-10-01': REPO638('', false, { volta_desmarcada: { dia: '2026-10-08', fora_prazo: true, quem: 'R', ts: 8 } }),
+      'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', credito: 'fa-2026-10-01', desfecho: 'fora_prazo', quem: 'R', ts: 9,
+        obs: 'Desmarcada em 08/10 às 09:12, depois do prazo (até as 24h de 07/10): conta como usada' } },
+      rot: ['+1 CRÉDITO', '−1 DESMARCADA FORA DO PRAZO'], txt: /desmarcada de 08\/10\/2026 fora do prazo \(por R\): contou como usada/ },
+    { L: { 'fa-2026-10-07': TROCA638(true, { volta: '', volta_desmarcada: { dia: '2026-10-08', dentro_prazo: true, virou_reposicao: true, quem: 'R', ts: 8 } }) },
+      rot: ['+1 CRÉDITO'], txt: /era troca 07\/10 → 08\/10: desmarcada dentro do prazo, virou reposição/ },
+  ];
+  for (const c of casos) {
+    const P = palco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [c.L] });
+    try {
+      tela638(); run('repAbrirExtrato(0)');
+      const x = run('__el638.repExtLista.innerHTML');
+      const rots = (x.match(/<span class="lc-tipo[^"]*"[^>]*>([^<]*)<\/span>/g) || []).map((s) => s.replace(/<[^>]+>/g, ''));
+      igual(rots.slice().sort(), c.rot.slice().sort(), x.slice(0, 500));
+      assert.ok(c.txt.test(x), String(c.txt) + ' ' + x.slice(0, 900));
+      const soma = rots.reduce((a, r) => a + (/^\+1/.test(r) ? 1 : (/^−1/.test(r) ? -1 : 0)), 0);
+      igual(soma, run('repSaldoReposicao(PELUDINHOS[0])'), 'a soma do Extrato é o número da tela');
+    } finally { P.solta(); }
+  }
+});
+provaAsync('6.38 P38-09 — o crédito da troca não paga outro dia: «Veio repor hoje» e a Reposição dos Lançamentos do dia em 06/10 dizem a frase nova e não gravam; em 08/10, TROCA CUMPRIDA', async () => {
+  const FRASE = 'Totó não tem saldo de reposição. A troca marcada para quinta-feira, 08/10, não é reposição: ela vale só nesse dia.';
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    await run('repUsar(0)'); await espera638();
+    igual(J630('__al638'), [FRASE]);
+    igual(Object.keys(lanc638(B)), ['fa-2026-10-07'], 'nada gravado');
+    run(`__bkDL638={dd:DASH_DADOS, ds:DASH_DIA_SEL, rd:renderDash, esp:dashEspelhar, t:DC_DASH_TURMA};
+      DASH_DADOS={}; DASH_DIA_SEL='2026-10-06'; renderDash=function(){}; dashEspelhar=function(){}; DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:''};`);
+    try {
+      run("dashLancar('reposicao', dashNomePlanilha(PELUDINHOS[0]), 0)"); await espera638();
+      const e = J630('__ze638');
+      assert.ok(e.length && e[0].t === 'Totó não tem saldo de reposição' && e[0].l.indexOf('A troca marcada para quinta-feira, 08/10, não é reposição: ela vale só nesse dia.') >= 0, JSON.stringify(e));
+    } finally { run('DASH_DADOS=__bkDL638.dd; DASH_DIA_SEL=__bkDL638.ds; renderDash=__bkDL638.rd; dashEspelhar=__bkDL638.esp; DC_DASH_TURMA=__bkDL638.t;'); }
+  });
+  await comPalco638({ hora: '2026-10-08T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    await run('repUsar(0)'); await espera638();
+    igual(J630('__za638').map((z) => z.t), ['TROCA CUMPRIDA']);
+    const u = lanc638(B)['veio-2026-10-08'];
+    assert.ok(u && u.tipo === 'uso' && u.motivo === 'troca' && u.credito === 'fa-2026-10-07', 'o uso do dia marcado, no nó do dia: ' + JSON.stringify(lanc638(B)));
+    igual(saldos638(0), [0, 0, 0]);
+    igual(run("repSaldoParaUsarHoje(PELUDINHOS[0], '2026-10-08')"), 0, 'a troca já cumprida não paga outro uso no mesmo dia (C10)');
+  });
+});
+prova('6.38 P38-10 — «Marcar reposição» em 06/10 com só a troca: avulso; com a reposição marcada para 13/10: não cobra avulso (diz para desmarcar o outro dia); orçamento da hospedagem: 0', () => {
+  let P = palco638({ hora: '2026-10-06T10:00:00-03:00', lanc: [{ 'fa-2026-10-07': TROCA638(true) }] });
+  run(`__bkV638={vd:vagasDoDia, dm:dcMatriculado, da:diariaAvulsaCent}; vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true}; };
+    dcMatriculado=function(){ return true; }; diariaAvulsaCent=function(){ return 9700; };`);
+  try {
+    const v = J630("dxVeredito(PELUDINHOS[0], '2026-10-09')");
+    igual([v.ok, v.tipo, v.saldo], [true, 'avulso', 0]);
+    assert.ok(!/troca de dia já marcada/.test(run("dxVeredictoHTML(dxVeredito(PELUDINHOS[0], '2026-10-09'))")), 'a frase velha do "saldo da troca" saiu');
+    igual(run('orcSaldoRep({key:pelKey(PELUDINHOS[0])})'), 0);
+  } finally { P.solta(); }
+  P = palco638({ hora: '2026-10-06T10:00:00-03:00', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-13', true) }] });
+  try {
+    const v = J630("dxVeredito(PELUDINHOS[0], '2026-10-09')");
+    igual([v.ok, v.tipo], [false, ''], 'não é avulso: ele tem reposição (marcada para outro dia)');
+    igual(v.motivo, 'Totó tem 1 reposição, marcada para 13/10. Para usá-la neste dia, desmarque o outro dia (até as 24h do dia anterior) e marque de novo.');
+  } finally { run('vagasDoDia=__bkV638.vd; dcMatriculado=__bkV638.dm; diariaAvulsaCent=__bkV638.da;'); P.solta(); }
+});
+provaAsync('6.38 P38-11 — T3: «+ Falta» com o dia novo lotado → «Avisar a Márcia» leva a troca; a Márcia autoriza (também depois do dia de origem) e grava a TROCA; o veredito que falha cai na reposição comum, dizendo', async () => {
+  const p = palco646(); run(DIA_LOTADO646 + "__vp638=[]; __bkVP638=vagasPedir; vagasPedir=function(d,p,t,pay){ __vp638.push([d,t,JSON.parse(JSON.stringify(pay))]); return Promise.resolve({}); };");
+  try {
+    run(`zHojeISO=function(){ return '2026-10-07'; };`);
+    // o Fredo vem às terças: falta da terça 13/10, dia novo quarta 14/10 (lotado)
+    run(`REP_LANCANDO=false; REP_LANC_GER++; __el639.repWarn.textContent=''; __el639.repData.value='2026-10-13'; __el639.repVolta.value='2026-10-14'; repModoAtual='dia'; repConfirmar({pedirEncaixe:true});`);
+    await espera646();
+    const ped = J630('__vp638');
+    igual(ped.length, 1);
+    igual([ped[0][0], ped[0][1], ped[0][2].troca, ped[0][2].credito_id], ['2026-10-14', 'reposicao', { de: '2026-10-13', para: '2026-10-14' }, 'fa-2026-10-13']);
+    const f = p.lanc()['fa-2026-10-13'];
+    assert.ok(f && !f.troca && !f.volta, 'até a Márcia autorizar, é falta avisada (sem vaga, sem troca): ' + JSON.stringify(f));
+  } finally { run('vagasPedir=__bkVP638;'); solta646(); }
+  // a Márcia autoriza: com o pedido de 13/10 → 14/10 e a falta já lançada — antes e DEPOIS do dia de origem
+  for (const hoje of ['2026-10-12', '2026-10-14']) {
+    const B = palco646();
+    run(ZA646 + `zHojeISO=function(){ return '${hoje}'; }; document.body.dataset.role='gestao'; __pt646='Márcia Teste';`);
+    try {
+      B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+      prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'fa-2026-10-13', data: '2026-10-13', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } }));
+      await autoriza646();
+      const c = B.lanc()['fa-2026-10-13'];
+      igual([c.volta, !!c.troca, c.prazo24h, B.le(PED646()).status], ['2026-10-14', true, '2026-10-14', 'autorizado'], hoje + ' ' + JSON.stringify(c));
+    } finally { run(ZA646_VOLTA); solta646(); }
+  }
+  // o veredito da troca falha (o dia novo virou dia dele na ficha): entra como reposição comum, com a frase
+  const B = palco646();
+  run(ZA646 + `zHojeISO=function(){ return '2026-10-12'; }; document.body.dataset.role='gestao'; __pt646='Márcia Teste'; __ex639.dias=['ter','qua'];`);
+  try {
+    B.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    prepPed646(B, PEDTROCA646('pedido', { payload: { credito_id: 'fa-2026-10-13', data: '2026-10-13', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } }));
+    await autoriza646();
+    const c = B.lanc()['fa-2026-10-13'];
+    igual([c.volta, !!c.troca, c.prazo24h], ['2026-10-14', false, '2026-10-14'], JSON.stringify(c));
+    const tudo = JSON.stringify(J630('__za646')) + JSON.stringify(J630('__mm639')) + JSON.stringify(J630('__al646'));
+    assert.ok(/Entrou como reposição: Fredo já vem na quarta/.test(tudo), tudo);
+  } finally { run(ZA646_VOLTA); solta646(); }
+});
+provaAsync('6.38 P38-12 — T2: «Alguns dias» com uma data só e o dia de repor que cumpre a regra grava a troca; o período de um dia, não', async () => {
+  const B = palco646();
+  try {
+    run(`zHojeISO=function(){ return '2026-10-07'; };`);
+    await alguns646(['2026-10-13'], '2026-10-14');
+    const c = B.lanc()['fa-2026-10-13'];
+    igual([c.volta, c.troca && c.troca.de, c.troca && c.troca.para, c.nasceu_troca, c.prazo24h], ['2026-10-14', '2026-10-13', '2026-10-14', true, '2026-10-14'], JSON.stringify(c));
+    assert.ok(/Conforme pedido, estamos fazendo a troca/.test(J630('__mm639')[0].msg), 'a mensagem é a da troca');
+  } finally { solta646(); }
+  const B2 = palco646();
+  try {
+    run(`zHojeISO=function(){ return '2026-10-07'; };`);
+    await periodo646('2026-10-13', '2026-10-13', '2026-10-14');
+    const c = B2.lanc()['fa-2026-10-13'];
+    igual([c.volta, !!c.troca], ['2026-10-14', false], 'período nunca é troca (QA26)');
+  } finally { solta646(); }
+});
+prova('6.38 P38-13 — T5: «Marcar reposição» sem "É troca" mostra a dica quando há falta avisada futura sem dia num dia dele; com a falta passada, não', () => {
+  for (const [data, tem] of [['2026-10-07', true], ['2026-09-30', false]]) {
+    const P = palco638({ hora: '2026-10-06T10:00:00-03:00', lanc: [{ ['fa-' + data]: { tipo: 'credito', data, motivo: 'viagem', volta: '', quem: 'R', ts: 2 } }] });
+    run(`__bkV638={vd:vagasDoDia, dm:dcMatriculado}; vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true}; }; dcMatriculado=function(){ return true; };
+      dxPel=PELUDINHOS[0]; dxDia='2026-10-08';`);
+    try {
+      const h = run("dxVeredictoHTML(dxVeredito(PELUDINHOS[0], '2026-10-08'))");
+      igual(/Ele tem a falta avisada de quarta-feira, 07\/10, ainda sem dia de repor\. Se o tutor está trocando o dia, marque «É troca de dia» e escolha 07\/10: a troca não mexe nas reposições\./.test(h), tem, h);
+    } finally { run('vagasDoDia=__bkV638.vd; dcMatriculado=__bkV638.dm;'); P.solta(); }
+  }
+});
+// A baixa "não veio": o Bolinha... não — o Totó com a reposição marcada para quinta 08/10, na regra. Hoje 09/10, 08:00.
+const REPO08 = () => REPO638('2026-10-08', true);
+const baixa638 = async () => { const r = JSON.parse(JSON.stringify(await run('repBaixaPelaPresenca(true)'))); await espera638(); return r; };
+provaAsync('6.38 P38-14 — baixa "não veio" (09/10 08:00): chamada «faltou», sem check-in, trava sem feriado, marcada na regra → o uso em veio-2026-10-08, com o desfecho, o crédito, o texto e o rastro', async () => {
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO08(), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    B.poe('daycare/chamada/2026-10-08/' + dk638(0), 'faltou');
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    const antes = saldos638(0);
+    const r = await baixa638();
+    const u = lanc638(B)['veio-2026-10-08'];
+    assert.ok(u, 'gravou no nó do dia: ' + JSON.stringify(lanc638(B)));
+    igual([u.tipo, u.data, u.motivo, u.desfecho, u.credito, u.veio_auto, u.quem, u.relogio, u.obs],
+      ['uso', '2026-10-08', 'reposicao', 'nao_veio', 'fa-2026-10-01', true, 'sistema', 'servidor', 'Marcada para 08/10 — não veio (não desmarcou até as 24h do dia anterior)']);
+    igual(saldos638(0)[2], antes[2] - 1, 'o saldo de reposição cai 1');
+    assert.ok(J630('__au638').some((a) => a.indexOf('não veio no dia marcado (não desmarcou até as 24h do dia anterior): Totó (08/10)') >= 0), JSON.stringify(J630('__au638')));
+    igual(r.ok, true);
+  });
+});
+provaAsync('6.38 P38-15 — baixa: chamada vazia, sem check-in, com a trava → "não veio"; sem a trava do dia → nada, e o porquê vai para a Gestão', async () => {
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO08() }] }, async (B) => {
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    await baixa638();
+    igual(lanc638(B)['veio-2026-10-08'].desfecho, 'nao_veio');
+  });
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO08() }] }, async (B) => {
+    await baixa638();
+    igual(Object.keys(lanc638(B)), ['fa-2026-10-01'], 'nada gravado');
+    igual(run("REP_CONFERIR[pelKey(PELUDINHOS[0])+'|2026-10-08']"), 'o app não tem o registro desse dia');
+    assert.ok(J630('repConferirLista()').some((o) => o.dia === '2026-10-08' && /o app não tem o registro desse dia/.test(o.motivo)), 'aparece para a Gestão');
+  });
+});
+provaAsync('6.38 P38-16 — baixa: feriado na trava, dia fixo, hospedado, dormiu aqui, "faltou" com check-in e 2ª marcação → nada gravado, cada um com o porquê', async () => {
+  const casos = [
+    ['feriado', { trava: Object.assign({}, TRAVA638, { feriado: 'Recesso da casa' }) }, 'a Zêluz não abriu (Recesso da casa)'],
+    ['dia fixo', { dias: ['qui'], trava: TRAVA638 }, 'é dia fixo dele'],
+    ['hospedado', { est: true, trava: TRAVA638 }, 'estava hospedado'],
+    ['dormiu aqui', { trava: Object.assign({}, TRAVA638, { sem_falta: '__K__' }) }, 'passou a noite aqui ou estava hospedado'],
+    ['contraditório', { chamada: 'faltou', checkin: 1759900000000, trava: TRAVA638 }, 'a chamada diz que faltou e o check-in diz que veio'],
+    ['2ª marcação', { segunda: true, trava: TRAVA638 }, '2ª marcação no mesmo dia'],
+  ];
+  for (const [nome, c, porque] of casos) {
+    const ficha = Object.assign({}, TOTO638, c.dias ? { dias: c.dias } : {});
+    const L = { 'fa-2026-10-01': REPO08() };
+    if (c.segunda) { L['fa-2026-10-02'] = REPO638('2026-10-08', true, { data: '2026-10-02' }); L['veio-2026-10-08'] = { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', credito: 'fa-2026-10-01', quem: 'R', ts: 9 }; }
+    await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, fichas: [ficha], lanc: [L] }, async (B) => {
+      const k = dk638(0);
+      if (c.trava) B.poe('daycare/falta-automatica/2026-10-08', JSON.parse(JSON.stringify(c.trava).replace('"__K__"', JSON.stringify({ [k]: true }))));
+      if (c.chamada) B.poe('daycare/chamada/2026-10-08/' + k, c.chamada);
+      if (c.checkin) B.poe('daycare/checkin-corpo/2026-10-08/' + k + '/fim', c.checkin);
+      if (c.est) run(`EST_TODAS={e1:{refKey:pelKey(PELUDINHOS[0]), nome:'Totó', tutor:'Ana Teste', entrada:'2026-10-07', saida:'2026-10-09'}};`);
+      const antes = Object.keys(lanc638(B)).sort();
+      await baixa638();
+      igual(Object.keys(lanc638(B)).sort(), antes, nome + ': nada gravado');
+      const lista = J630('repConferirLista()');
+      assert.ok(lista.some((o) => o.dia === '2026-10-08' && o.motivo.indexOf(porque) >= 0), nome + ': ' + JSON.stringify(lista));
+    });
+  }
+});
+provaAsync('6.38 P38-17 — o relógio da baixa: no próprio dia nada; com o servidor já em 09/10 e o aparelho ainda em 08/10, espera o aparelho virar; com o servidor atrasado, também espera; sem o servidor lido, nada', async () => {
+  const caso = async (hora, srv) => {
+    let n = null;
+    await comPalco638({ hora, srv, lanc: [{ 'fa-2026-10-01': REPO08() }] }, async (B) => {
+      B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+      run(`__bkH638=repHojeISO; repHojeISO=function(){ return repDiaBrasilia(Date.now()); };`);
+      try { await baixa638(); } finally { run('repHojeISO=__bkH638;'); }
+      n = lanc638(B)['veio-2026-10-08'] ? lanc638(B)['veio-2026-10-08'].desfecho : null;
+      if (!n) igual(J630('repConferirLista()').length, 0, 'na regra e sem porquê: a baixa decide, a Gestão não precisa conferir (' + hora + ')');
+    });
+    return n;
+  };
+  igual(await caso('2026-10-08T23:00:00-03:00', 0), null, 'no próprio dia 08/10 às 23:00');
+  igual(await caso('2026-10-08T23:58:00-03:00', 3 * 60000), null, 'aparelho 23:58 de 08/10, servidor 00:01 de 09/10');
+  igual(await caso('2026-10-09T00:02:00-03:00', -5 * 60000), null, 'aparelho já em 09/10, servidor ainda em 08/10');
+  igual(await caso('2026-10-09T00:10:00-03:00', 0), 'nao_veio', 'os dois em 09/10');
+  igual(await caso('2026-10-09T10:00:00-03:00', null), null, 'o servidor ainda não respondeu: nada de "não veio"');
+});
+provaAsync('6.38 P38-18 — a marcada antes da regra (sem prazo24h) não é baixada: vai para a lista da Gestão; com REP_RETRO_GESTAO=false, também nada (como antes)', async () => {
+  for (const retro of [true, false]) {
+    await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, retro, lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', false) }] }, async (B) => {
+      B.poe('daycare/chamada/2026-10-08/' + dk638(0), 'faltou');
+      B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+      await baixa638();
+      igual(Object.keys(lanc638(B)), ['fa-2026-10-01'], 'nada gravado (retro=' + retro + ')');
+      igual(J630('repConferirLista()').length, retro ? 1 : 0);
+    });
+  }
+});
+provaAsync('6.38 P38-19 — uma vez só: duas baixas ao mesmo tempo, «ele veio» × baixa, e 10 rodadas → um nó veio-{dia}', async () => {
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO08() }] }, async (B) => {
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    const L = J630('repLancamentos(PELUDINHOS[0])'), cred = L.filter((l) => l._id === 'fa-2026-10-01')[0];
+    ctx.__c638 = cred; ctx.__L638 = L;
+    const r = JSON.parse(JSON.stringify(await run("Promise.all([repDesfechoGravar(PELUDINHOS[0], __c638, 'nao_veio', {auto:true}, __L638), repDesfechoGravar(PELUDINHOS[0], __c638, 'nao_veio', {auto:true}, __L638)])")));
+    igual(r.map((x) => x.committed).sort(), [false, true], 'dois aparelhos: um grava');
+    for (let i = 0; i < 10; i++) { run('_repVeioTs=0; REP_VEIO_SEM={};'); await baixa638(); }
+    igual(Object.keys(lanc638(B)).sort(), ['fa-2026-10-01', 'veio-2026-10-08'], '10 rodadas: o mesmo nó');
+  });
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO08(), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    await Promise.all([run("repVeioNoDia(0, '2026-10-08')"), run('repBaixaPelaPresenca(true)')]); await espera638();
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), ['veio-2026-10-08'], '«ele veio» e a baixa: um desfecho');
+  });
+});
+provaAsync('6.38 P38-20 — João e Juju (troca quinta 08/10 → sexta 09/10, na regra): João veio (check-in), Juju não → TROCA CUMPRIDA e TROCA PERDIDA; o número de reposição dos dois não muda', async () => {
+  const T = (extra) => Object.assign({ tipo: 'credito', data: '2026-10-08', motivo: 'troca', volta: '2026-10-09', troca: { de: '2026-10-08', para: '2026-10-09' }, nasceu_troca: true, prazo24h: '2026-10-09', quem: 'R', ts: 4 }, extra || {});
+  await comPalco638({ hora: '2026-10-10T09:00:00-03:00', srv: 0, fichas: [JOAO638, JUJU638], lanc: [{ 'fa-2026-10-08': T(), 'fa-2026-09-20': LIVRE638() }, { 'fa-2026-10-08': T() }] }, async (B) => {
+    const antes = [saldos638(0)[2], saldos638(1)[2]];
+    igual(antes, [1, 0]);
+    B.poe('daycare/checkin-corpo/2026-10-09/' + dk638(0) + '/fim', 1760000000000);
+    B.poe('daycare/chamada/2026-10-09/' + dk638(1), 'faltou');
+    B.poe('daycare/falta-automatica/2026-10-09', TRAVA638);
+    await baixa638();
+    const uJ = lanc638(B, 0)['veio-2026-10-09'], uU = lanc638(B, 1)['veio-2026-10-09'];
+    igual([uJ.motivo, uJ.desfecho || 'veio', uU.motivo, uU.desfecho], ['troca', 'veio', 'troca', 'nao_veio']);
+    igual([saldos638(0)[2], saldos638(1)[2]], antes, 'a troca não mexe nas reposições');
+    tela638(); run('repAbrirExtrato(1)');
+    assert.ok(/>TROCA PERDIDA</.test(run('__el638.repExtLista.innerHTML')));
+    run('repAbrirExtrato(0)');
+    assert.ok(/>TROCA CUMPRIDA</.test(run('__el638.repExtLista.innerHTML')));
+  });
+});
+// Desmarcar: a reposição do Totó marcada para quinta 08/10 (na regra), e uma livre (saldo 2).
+const desm638 = async (cfg, fn) => comPalco638(Object.assign({ srv: 0, lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638() }] }, cfg), fn);
+provaAsync('6.38 P38-21 — desmarcar dentro do prazo (07/10 23:59): o dia sai, a reposição volta a ficar sem dia (dentro_prazo), o saldo não muda e a mensagem é a de sempre', async () => {
+  await desm638({ hora: '2026-10-07T23:59:00-03:00' }, async (B) => {
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.dia, c.volta_desmarcada.dentro_prazo, c.volta_desmarcada.relogio], ['', '2026-10-08', true, 'servidor']);
+    assert.ok(J630('__zp638')[0].l.indexOf('Dentro do prazo (até as 24h de quarta-feira, 07/10).') >= 0, JSON.stringify(J630('__zp638')));
+    igual(saldos638(0)[2], 2);
+    const m = J630('__mm638')[0];
+    assert.ok(/foi desmarcada\.\n\nEla continua valendo: ficam 2 reposições para marcar/.test(m.x), m.x);
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), [], 'nenhum uso');
+  });
+});
+provaAsync('6.38 P38-22 — desmarcar fora do prazo (08/10 09:12), recepção: o uso "fora_prazo" no veio-2026-10-08 PRIMEIRO, depois o dia sai; o saldo cai 1; a vaga fica livre; a mensagem R2', async () => {
+  await desm638({ hora: '2026-10-08T09:12:00-03:00' }, async (B) => {
+    const ordem = []; const ref0 = B.ref;
+    B.ref = (c) => { const r = ref0(c); const tx = r.transaction, up = r.update;
+      r.transaction = (fn) => { ordem.push('tx ' + c.split('/').pop()); return tx(fn); }; r.update = (o) => { ordem.push('update ' + c.split('/').pop()); return up(o); }; return r; };
+    run("__ztR638=['2026-10-08T09:12']; __zeR638=['Desmarcar e contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(ordem, ['tx veio-2026-10-08', 'update fa-2026-10-01'], 'a transação vem antes do update');
+    const u = lanc638(B)['veio-2026-10-08'], c = lanc638(B)['fa-2026-10-01'];
+    igual([u.desfecho, u.credito, u.motivo, c.volta, c.volta_desmarcada.fora_prazo], ['fora_prazo', 'fa-2026-10-01', 'reposicao', '', true]);
+    igual(u.obs, 'Desmarcada em 08/10 às 09:12, depois do prazo (até as 24h de 07/10): conta como usada');
+    igual(saldos638(0)[2], 1);
+    igual(run("repAgendadosPara('2026-10-08').length"), 0, 'some das vagas do dia');
+    const e = J630('__ze638')[0];
+    igual(e.t, 'Desmarcar fora do prazo?');
+    igual(e.l, ['O prazo para desmarcar a reposição de Totó na quinta-feira, 08/10, era até as 24h de quarta-feira, 07/10.',
+      'Desmarcando agora, a vaga fica livre, mas a reposição conta como usada: o saldo era 2 e fica 1.', 'Só a Gestão pode devolvê-la.']);
+    igual(e.b, ['Desmarcar e contar como usada', 'A Zêluz desmarcou (não conta)', 'Manter o dia'], 'a recepção não tem o «sem contar»');
+    const m = J630('__mm638')[0];
+    igual(m.t, 'Reposição desmarcada fora do prazo');
+    igual(m.l[0], 'Totó não vem mais na quinta-feira, 08/10. A vaga ficou livre. A reposição contou como usada: saldo agora 1.');
+    assert.ok(m.x.indexOf('Passando para confirmar: a reposição do Totó que estava marcada para quinta-feira, 08/10, foi desmarcada. Como o aviso chegou depois das 24h do dia anterior, ela conta como usada: fica 1 reposição para marcar quando for melhor para vocês.') >= 0, m.x);
+  });
+});
+provaAsync('6.38 P38-23 — fora do prazo com o update do crédito falhando: o uso fica, a linha vira "Marcada outra vez", e o «desmarcar» de novo libera sem contar outra', async () => {
+  await desm638({ hora: '2026-10-08T09:12:00-03:00' }, async (B) => {
+    B.falhaUpdate = /fa-2026-10-01$/;
+    run("__ztR638=['2026-10-08T09:12']; __zeR638=['Desmarcar e contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(lanc638(B)['veio-2026-10-08'].desfecho, 'fora_prazo');
+    assert.ok(J630('__al638').concat(J630('__za638').map((z) => JSON.stringify(z))).join(' ').indexOf('a vaga ainda não foi liberada: toque em «desmarcar» de novo') >= 0, JSON.stringify([J630('__al638'), J630('__za638')]));
+    B.falhaUpdate = null;
+    run('__zp638=[];');
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual([lanc638(B)['fa-2026-10-01'].volta, Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)).length], ['', 1], 'liberou, sem contar outra');
+    igual(saldos638(0)[2], 1);
+  });
+});
+provaAsync('6.38 P38-24 — fora do prazo, a Gestão: «sem contar» sem motivo não grava; com motivo grava a exceção e o saldo não muda', async () => {
+  await desm638({ hora: '2026-10-08T09:12:00-03:00', papel: 'gestao' }, async (B) => {
+    run("__ztR638=['2026-10-08T09:12', null]; __zeR638=['sem contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(lanc638(B)['fa-2026-10-01'].volta, '2026-10-08', 'sem motivo: nada');
+    igual(J630('__ze638')[0].b, ['Desmarcar e contar como usada', 'A Zêluz desmarcou (não conta)', 'Desmarcar sem contar (exceção)', 'Manter o dia']);
+    run("__ztR638=['2026-10-08T09:12', 'FILHOt doente, com receita']; __zeR638=['sem contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.excecao.motivo, c.volta_desmarcada.excecao.quem], ['', 'FILHOt doente, com receita', 'Recepção Teste']);
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), []);
+    igual(saldos638(0)[2], 2);
+  });
+});
+provaAsync('6.38 P38-25 — troca: dentro do prazo com o dia de origem por vir → as duas saídas; origem passada → só "vira reposição"; fora do prazo → TROCA PERDIDA; antecipada fora do prazo → + «ele vem no dia dele»', async () => {
+  // dentro, origem por vir (hoje 06/10): «Volta a vir na quarta» estorna; «vira reposição» → +1
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    run("__zeR638=['vira reposição'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(J630('__ze638')[0].b, ['Volta a vir na quarta-feira, 07/10', 'Não vem nos dois dias: vira reposição', 'Manter a troca']);
+    const c = lanc638(B)['fa-2026-10-07'];
+    igual([c.volta, c.volta_desmarcada.virou_reposicao, c.volta_desmarcada.dentro_prazo], ['', true, true]);
+    igual(saldos638(0), [1, 0, 1]);
+  });
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    run("__zeR638=['Volta a vir'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const est = Object.keys(lanc638(B)).filter((k) => lanc638(B)[k].tipo === 'estorno');
+    igual(est.length, 1, 'a falta que nasceu da troca sai');
+    igual(saldos638(0), [0, 0, 0]);
+  });
+  // dentro, origem já passada (hoje 07/10 tarde... servidor em 07/10, mas o dia 07/10 é hoje: a origem passa amanhã) → 08/10 é o dia novo, hoje 07/10: origem = hoje, não passou
+  await comPalco638({ hora: '2026-10-07T15:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-06': Object.assign(TROCA638(true), { data: '2026-10-06', troca: { de: '2026-10-06', para: '2026-10-08' } }) }] }, async () => {
+    run("__zeR638=['Manter'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(J630('__ze638')[0].b, ['Não vem nos dois dias: vira reposição', 'Manter a troca'], 'o dia de origem (06/10) já passou');
+  });
+  // fora do prazo (hoje 08/10): TROCA PERDIDA, o número não muda
+  await comPalco638({ hora: '2026-10-08T09:12:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    run("__ztR638=['2026-10-08T09:12']; __zeR638=['a troca é perdida'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const e = J630('__ze638')[0];
+    igual([e.t, e.b], ['Desmarcar a troca fora do prazo?', ['Desmarcar: a troca é perdida', 'A Zêluz desmarcou (não conta)', 'Manter a troca']]);
+    const u = lanc638(B)['veio-2026-10-08'];
+    igual([u.desfecho, u.motivo, lanc638(B)['fa-2026-10-07'].volta], ['fora_prazo', 'troca', '']);
+    igual(saldos638(0), [0, 0, 0]);
+    const m = J630('__mm638')[0];
+    igual(m.l[0], 'Totó não vem mais na quinta-feira, 08/10. A vaga ficou livre. A troca foi perdida: as reposições continuam 0.');
+    assert.ok(m.x.indexOf('Passando para confirmar: a troca do Totó do dia 07/10 (quarta-feira) para o dia 08/10 (quinta-feira) foi desmarcada. Como o aviso chegou depois das 24h do dia anterior, a troca não vira reposição.') >= 0, m.x);
+  });
+  // antecipada (Batata: sexta 09/10 → terça 06/10), hoje 06/10, fora do prazo: + «Ele vem no dia dele»
+  const ANT = { tipo: 'credito', data: '2026-10-09', motivo: 'troca', volta: '2026-10-06', troca: { de: '2026-10-09', para: '2026-10-06' }, nasceu_troca: true, prazo24h: '2026-10-06', quem: 'R', ts: 3 };
+  await comPalco638({ hora: '2026-10-06T08:00:00-03:00', srv: 0, fichas: [BATATA638], lanc: [{ 'fa-2026-10-09': ANT }] }, async (B) => {
+    run("__ztR638=['2026-10-06T08:00']; __zeR638=['dia dele'];");
+    await run("repDesmarcar(0, '2026-10-06')"); await espera638();
+    igual(J630('__ze638')[0].b, ['Desmarcar: a troca é perdida', 'Ele vem no dia dele, sexta-feira, 09/10', 'A Zêluz desmarcou (não conta)', 'Manter a troca']);
+    igual(Object.keys(lanc638(B)).filter((k) => lanc638(B)[k].tipo === 'estorno').length, 1, 'estornou: ele volta ao dia dele');
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), [], 'sem uso');
+  });
+});
+provaAsync('6.38 P38-26 — 2ª marcação (o dia já tem uso) e casa fechada (feriado 12/10) → desmarcar sem contar', async () => {
+  await desm638({ hora: '2026-10-08T15:00:00-03:00', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-10-02': REPO638('2026-10-08', true, { data: '2026-10-02' }),
+    'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', credito: 'fa-2026-10-01', quem: 'R', ts: 9 } }] }, async (B) => {
+    const antes = saldos638(0)[2];
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const marc = ['fa-2026-10-01', 'fa-2026-10-02'].map((k) => lanc638(B)[k].volta);
+    assert.ok(marc.indexOf('') >= 0, 'um dia saiu: ' + JSON.stringify(marc));
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)).length, 1, 'nenhum uso a mais');
+    igual(saldos638(0)[2], antes);
+  });
+  await desm638({ hora: '2026-10-12T09:00:00-03:00', fichas: [BOLINHA638], lanc: [{ 'fa-2026-10-05': REPO638('2026-10-12', true, { data: '2026-10-05' }) }] }, async (B) => {
+    run("__bkOF638=orcFeriadosGarantir; orcFeriadosGarantir=function(){ return Promise.resolve(); };");
+    try { await run("repDesmarcar(0, '2026-10-12')"); await espera638(); } finally { run('orcFeriadosGarantir=__bkOF638;'); }
+    igual([lanc638(B)['fa-2026-10-05'].volta, Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)).length], ['', 0], 'feriado: sem contar');
+  });
+});
+provaAsync('6.38 P38-27 — Lançamentos do dia › Tirar fora do prazo: o uso do próprio lançamento vira o desfecho, o dia sai (um update), e só depois o lançamento; o 1º falhando não tira nada; dentro do prazo, como antes', async () => {
+  const prep = (B) => run(`__bkDR638={dd:DASH_DADOS, di:dashDia, it:dashItem, rd:renderDash, esp:dashEspelhar, pc:prevCorrigePetDe, rm:dashRemoverDaPlanilha};
+    DASH_DADOS={reposicao:{L1:{valor:'Totó/SRD', chave:dcKey(PELUDINHOS[0].n, PELUDINHOS[0].tutor)}}};
+    dashDia=function(){ return '2026-10-08'; }; dashItem=function(){ return {t:'Reposição', col:'Reposição'}; }; renderDash=function(){}; dashEspelhar=function(){};
+    dashRemoverDaPlanilha=function(){ return Promise.resolve(); }; prevCorrigePetDe=function(){ return PELUDINHOS[0]; };`);
+  const volta = () => run('DASH_DADOS=__bkDR638.dd; dashDia=__bkDR638.di; dashItem=__bkDR638.it; renderDash=__bkDR638.rd; dashEspelhar=__bkDR638.esp; prevCorrigePetDe=__bkDR638.pc; dashRemoverDaPlanilha=__bkDR638.rm;');
+  const L = () => ({ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638(),
+    U1: { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', obs: 'Reposição lançada nos Lançamentos do dia', lanc: { dia: '2026-10-08', id: 'L1' }, quem: 'R', ts: 9 } });
+  await comPalco638({ hora: '2026-10-08T09:12:00-03:00', srv: 0, lanc: [L()] }, async (B) => {
+    prep(B);
+    try {
+      B.poe('daycare/dashboard/2026-10-08/reposicao/L1', { valor: 'Totó/SRD' });
+      const ordem = []; const ref0 = B.ref;
+      B.ref = (c) => { const r = ref0(c); const up = r.update, rm = r.remove;
+        r.update = (o) => { ordem.push('update ' + c.split('/').pop()); return up(o); };
+        r.remove = () => { ordem.push('remove ' + c.split('/').slice(-2).join('/')); B.poe(c, null); return Promise.resolve(); }; return r; };
+      run("__zeR638=['fora do prazo: conta como usada'];");
+      await run("dashRemover('reposicao','L1')"); await espera638();
+      igual(J630('__ze638')[0].b[0], 'Tirar e desmarcar 08/10 (fora do prazo: conta como usada)');
+      igual(ordem, ['update lancamentos', 'remove reposicao/L1']);
+      const x = lanc638(B);
+      igual([x.U1.desfecho, x.U1.credito, x['fa-2026-10-01'].volta, x['fa-2026-10-01'].volta_desmarcada.fora_prazo, Object.keys(x).filter((k) => x[k].tipo === 'estorno').length],
+        ['fora_prazo', 'fa-2026-10-01', '', true, 0], 'nenhum uso novo e nenhuma devolução: o do lançamento conta');
+      igual(saldos638(0)[2], 1);
+    } finally { volta(); }
+  });
+  await comPalco638({ hora: '2026-10-08T09:12:00-03:00', srv: 0, lanc: [L()] }, async (B) => {
+    prep(B);
+    try {
+      B.poe('daycare/dashboard/2026-10-08/reposicao/L1', { valor: 'Totó/SRD' });
+      B.falhaUpdate = /lancamentos$/;
+      run("__zeR638=['fora do prazo: conta como usada'];");
+      await run("dashRemover('reposicao','L1')"); await espera638();
+      assert.ok(B.le('daycare/dashboard/2026-10-08/reposicao/L1'), 'o 1º falhou: o lançamento fica');
+      igual(lanc638(B)['fa-2026-10-01'].volta, '2026-10-08');
+    } finally { volta(); }
+  });
+  // dentro do prazo (hoje 07/10, o lançamento é de 08/10): como antes — tira, devolve e desmarca
+  await comPalco638({ hora: '2026-10-07T09:12:00-03:00', srv: 0, lanc: [L()] }, async (B) => {
+    prep(B);
+    try {
+      B.poe('daycare/dashboard/2026-10-08/reposicao/L1', { valor: 'Totó/SRD' });
+      run("__zeR638=['Tirar e desmarcar'];");
+      await run("dashRemover('reposicao','L1')"); await espera638();
+      igual(J630('__ze638')[0].b[0], 'Tirar e desmarcar 08/10 (o tutor não vem)');
+      const x = lanc638(B);
+      igual([x['dev-U1'] && x['dev-U1'].estornaId, x['fa-2026-10-01'].volta, x.U1.desfecho || null], ['U1', '', null]);
+    } finally { volta(); }
+  });
+});
+provaAsync('6.38 P38-28 — remarcar: a vencida na regra (e, com a P2, a sem regra) não é remarcável por «Marcar reposição»; repAgendarVolta e a troca recusam remarcar um dia na regra fora do prazo; dentro do prazo, remarcam', async () => {
+  for (const [regra, retro, espera] of [[true, true, null], [false, true, null], [false, false, 'fa-2026-10-01']]) {
+    const P = palco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, retro, lanc: [{ 'fa-2026-10-01': REPO638('2026-10-06', regra) }] });
+    try { igual(run('(repCreditoLivre(PELUDINHOS[0])||{})._id||null'), espera, 'regra=' + regra + ' retro=' + retro); } finally { P.solta(); }
+  }
+  const FRASE = 'A reposição marcada para 08/10/2026 já passou do prazo para desmarcar (até as 24h de quarta-feira, 07/10). Desmarque primeiro em Reposições (ela conta como usada) ou peça a exceção à Gestão.';
+  await desm638({ hora: '2026-10-08T09:00:00-03:00' }, async (B) => {
+    let erro = null;
+    try { await run("repAgendarVolta(PELUDINHOS[0], 'fa-2026-10-01', '2026-10-15', null)"); } catch (e) { erro = e; }
+    igual([erro && erro.message, erro && erro.repAviso], [FRASE, true]);
+    igual(lanc638(B)['fa-2026-10-01'].volta, '2026-10-08');
+  });
+  await desm638({ hora: '2026-10-07T09:00:00-03:00' }, async (B) => {
+    await run("repAgendarVolta(PELUDINHOS[0], 'fa-2026-10-01', '2026-10-15', null)");
+    igual([lanc638(B)['fa-2026-10-01'].volta, lanc638(B)['fa-2026-10-01'].prazo24h], ['2026-10-15', '2026-10-15'], 'dentro: remarca, com a regra');
+  });
+  // a troca sobre a falta que já tinha um dia de repor na regra, fora do prazo: recusa
+  await comPalco638({ hora: '2026-10-08T09:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': REPO638('2026-10-08', true, { data: '2026-10-07' }) }] }, async (B) => {
+    let erro = null;
+    try { await run("repTrocaGravar(PELUDINHOS[0], '2026-10-07', '2026-10-09', null)"); } catch (e) { erro = e; }
+    assert.ok(erro && erro.repAviso && /já passou do prazo para desmarcar/.test(erro.message), String(erro && erro.message));
+    igual(lanc638(B)['fa-2026-10-07'].volta, '2026-10-08');
+  });
+});
+provaAsync('6.38 P38-29 — toda marcação nova grava prazo24h = o dia marcado: «+ Falta» (troca e reposição), «Marcar reposição», «+ Marcar troca», a Márcia, a troca sobre falta existente; remarcação de aparelho antigo (só volta) sai da regra', async () => {
+  // «+ Falta» Um dia só: reposição (dia de repor que é dia dele) e troca
+  for (const [N, troca] of [['2026-10-20', false], ['2026-10-14', true]]) {
+    const B = palco646();
+    try {
+      run(`zHojeISO=function(){ return '2026-10-07'; };`);
+      await falta646('2026-10-13', N);
+      const c = B.lanc()['fa-2026-10-13'];
+      igual([c.volta, c.prazo24h, !!c.troca], [N, N, troca]);
+    } finally { solta646(); }
+  }
+  // «Marcar reposição» (dxConfirmar) e «+ Marcar troca»
+  const B = palco646();
+  try {
+    run(`zHojeISO=function(){ return '2026-10-07'; };`);
+    B.poe(LANC646() + 'fa-2026-10-06', FALTA646({ data: '2026-10-06' }));
+    run(`__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-15'; dxTroca=false; dxDe=''; dxConfirmar();`); await espera646();
+    igual([B.lanc()['fa-2026-10-06'].volta, B.lanc()['fa-2026-10-06'].prazo24h], ['2026-10-15', '2026-10-15'], 'Marcar reposição');
+    await marcar646('2026-10-13', '2026-10-14');
+    igual([B.lanc()['fa-2026-10-13'].volta, B.lanc()['fa-2026-10-13'].prazo24h], ['2026-10-14', '2026-10-14'], '+ Marcar troca');
+    B.poe(LANC646() + 'fa-2026-10-20', FALTA646({ data: '2026-10-20' }));
+    await marcar646('2026-10-20', '2026-10-21');
+    igual([B.lanc()['fa-2026-10-20'].volta, B.lanc()['fa-2026-10-20'].prazo24h], ['2026-10-21', '2026-10-21'], 'troca sobre a falta que já existia');
+    // aparelho com a versão antiga remarca (só o volta): sai da regra
+    B.poe(LANC646() + 'fa-2026-10-06/volta', '2026-10-16');
+    igual(run(`repNaRegra(${JSON.stringify(B.lanc()['fa-2026-10-06'])})`), false);
+  } finally { solta646(); }
+  // a Márcia: reposição
+  const B2 = palco646();
+  run(ZA646 + `zHojeISO=function(){ return '2026-10-07'; }; document.body.dataset.role='gestao'; __pt646='Márcia Teste';`);
+  try {
+    B2.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    prepPed646(B2, PEDTROCA646('pedido', { payload: { credito_id: 'fa-2026-10-13', data: '2026-10-13', volta: '2026-10-14' } }));
+    await autoriza646();
+    igual([B2.lanc()['fa-2026-10-13'].volta, B2.lanc()['fa-2026-10-13'].prazo24h], ['2026-10-14', '2026-10-14'], 'a Márcia autoriza a reposição');
+  } finally { run(ZA646_VOLTA); solta646(); }
+});
+provaAsync('6.38 P38-30 — «Devolver»: a recepção não vê no uso com desfecho; a Gestão devolve num update só (dev- + o dia sai + exceção) e a baixa seguinte não grava nada; uso sem desfecho continua devolvível pela recepção', async () => {
+  const L = () => ({ 'fa-2026-10-01': REPO638('2026-10-08', true), 'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', credito: 'fa-2026-10-01', desfecho: 'nao_veio', veio_auto: true, quem: 'sistema', ts: 9, obs: 'Marcada para 08/10 — não veio (não desmarcou até as 24h do dia anterior)' },
+    'fa-2026-09-20': LIVRE638(), u7: { tipo: 'uso', data: '2026-10-02', motivo: 'reposicao', quem: 'R', ts: 8, obs: '' } });
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [L()] }, async () => {
+    tela638(); run('repAbrirExtrato(0)');
+    const x = run('__el638.repExtLista.innerHTML');
+    assert.ok(x.indexOf("repDevolverUso(0,'veio-2026-10-08')") < 0 && x.indexOf('Só a Gestão devolve (regra das 24 horas)') >= 0, x.slice(0, 800));
+    assert.ok(x.indexOf("repDevolverUso(0,'u7')") >= 0, 'o uso sem desfecho continua com «Devolver»');
+    await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
+    igual(J630('__al638'), ['Só a Gestão devolve (regra das 24 horas).']);
+  });
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, papel: 'gestao', lanc: [L()] }, async (B) => {
+    const ups = []; const ref0 = B.ref;
+    B.ref = (c) => { const r = ref0(c); const up = r.update, st = r.set;
+      r.update = (o) => { ups.push([c.split('/').pop(), Object.keys(o).sort()]); return up(o); }; r.set = (v) => { ups.push(['set ' + c.split('/').pop()]); return st(v); }; return r; };
+    run("__ztR638=['estava internado'];");
+    await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
+    igual(ups, [['lancamentos', ['dev-veio-2026-10-08', 'fa-2026-10-01/volta', 'fa-2026-10-01/volta_desmarcada']]], 'um update só');
+    const x = lanc638(B);
+    igual([x['dev-veio-2026-10-08'].devolvido_gestao, x['dev-veio-2026-10-08'].estornaId, x['fa-2026-10-01'].volta, x['fa-2026-10-01'].volta_desmarcada.excecao.motivo],
+      [true, 'veio-2026-10-08', '', 'estava internado']);
+    igual(saldos638(0)[2], 1);
+    const m = J630('__mm638')[0];
+    igual([m.t, m.l[0]], ['Reposição devolvida pela Gestão', 'Totó ganhou de volta a reposição de 08/10 (sem dia marcado). Saldo agora 1.']);
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    const antes = Object.keys(lanc638(B)).sort();
+    await baixa638();
+    igual(Object.keys(lanc638(B)).sort(), antes, 'a baixa não refaz');
+  });
+});
+provaAsync('6.38 P38-31 — a lista "Para a Gestão conferir" com o Batata: só o 06/10 (marcado antes da regra), com o porquê; «Contar: não veio» → veio-2026-10-06 e o saldo final 2; «Não contar» exige motivo; a recepção não vê; a mesa diz 1 e depois 0', async () => {
+  const L = { 'fa-2026-03-30': { tipo: 'credito', data: '2026-03-30', motivo: 'viagem', volta: '2026-10-07', quem: 'R', ts: 1 },
+    'veio-2026-10-07': { tipo: 'uso', data: '2026-10-07', motivo: 'reposicao', quem: 'R', ts: 7, obs: '' },
+    'fa-2026-10-09': { tipo: 'credito', data: '2026-10-09', motivo: 'viagem', volta: '2026-10-06', quem: 'R', ts: 2 },
+    'fa-2026-08-01': LIVRE638('2026-08-01'), 'fa-2026-08-08': LIVRE638('2026-08-08') };
+  await comPalco638({ hora: '2026-10-10T09:00:00-03:00', srv: 0, papel: 'gestao', fichas: [BATATA638], lanc: [L] }, async (B) => {
+    igual(saldos638(0)[2], 3, 'saldo 4, menos o «Veio repor hoje» de 07/10');
+    const lista = J630('repConferirLista()');
+    igual(lista.map((o) => [o.dia, o.regra]), [['2026-10-06', false]]);
+    assert.ok(/marcada antes da regra das 24 horas/.test(lista[0].motivo) && /o tutor não tinha sido avisado do prazo/.test(lista[0].motivo), lista[0].motivo);
+    run(`MESA_FATIA='gestao';`);
+    assert.ok(/<span class="dt-n">1<\/span><span class="dt-txt"><span class="dt-l">Reposições para conferir<\/span>/.test(run('mesaFatiaHtml().tiles')), 'a mesa diz 1');
+    tela638(); run('renderReposicao()');
+    const q = run('__el638.repResumo.innerHTML');
+    assert.ok(/Para a Gestão conferir — reposições e trocas marcadas que já passaram \(1\)/.test(q) && /Batata/.test(q) && /repConferirContar\(0,'2026-10-06'\)/.test(q), q.slice(0, 1200));
+    run("__ztR638=['ok'];");
+    await run("repConferirNaoContar(0, '2026-10-06')"); await espera638();
+    assert.ok(lanc638(B)['fa-2026-10-09'].volta === '2026-10-06', '"ok" tem menos de 3 letras... (o zTexto pede mínimo 3)');
+    run('__zp638=[];');
+    await run("repConferirContar(0, '2026-10-06')"); await espera638();
+    assert.ok(J630('__zp638')[0].l.join(' ').indexOf('confira o WhatsApp antes de contar') >= 0, JSON.stringify(J630('__zp638')));
+    const u = lanc638(B)['veio-2026-10-06'];
+    igual([u.desfecho, u.credito, !!u.conferido, u.conferido && u.conferido.quem], ['nao_veio', 'fa-2026-10-09', true, 'Recepção Teste']);
+    igual(saldos638(0)[2], 2, 'ele fica com 2');
+    tela638(); run('repAbrirExtrato(0)');
+    assert.ok(/−1 NÃO VEIO/.test(run('__el638.repExtLista.innerHTML')));
+    igual(J630('repConferirLista()'), []);
+    assert.ok(!/Reposições para conferir/.test(run('mesaFatiaHtml().tiles')), 'a mesa diz 0 (o quadro some)');
+  });
+  await comPalco638({ hora: '2026-10-10T09:00:00-03:00', srv: 0, papel: 'consultora', fichas: [BATATA638], lanc: [L] }, async () => {
+    tela638(); run('renderReposicao()');
+    assert.ok(!/Para a Gestão conferir/.test(run('__el638.repResumo.innerHTML')), 'a recepção não vê o quadro');
+    const l = linha638(run('__el638.repLista.innerHTML'), 'Batata');
+    assert.ok(/Estava marcada para 06\/10\/2026 \(marcada antes da regra das 24 horas\): a Gestão confere/.test(l), l.slice(0, 800));
+    assert.ok(l.indexOf("repDesmarcar(0,'2026-10-06')") < 0, 'sem «desmarcar» de graça no passado');
+  });
+});
+prova('6.38 P38-32 — R1: a mensagem da falta com o dia de repor, da reposição marcada e da troca termina com o prazo, com o número das Configurações (5, 6, e 1 no singular); as outras não', () => {
+  run(`__bkR1638={pe:pelExtra, vl:vagasLimite}; pelExtra=function(){ return {sexo:'Macho'}; }; __vl638=5; vagasLimite=function(){ return __vl638; };`);
+  try {
+    const p = "{n:'Totó', tutor:'Ana Teste'}";
+    const R = (n) => 'Caso precise desmarcar a reposição, me avise até as 24h do dia anterior. Temos apenas ' + n + ' por dia, além dos nossos Aulunos, e assim consigo remanejar outros Aulunos e famílias que precisam.';
+    const T = (n) => 'Caso precise desmarcar a troca, me avise até as 24h do dia anterior. Temos apenas ' + n + ' por dia, além dos nossos Aulunos, e assim consigo remanejar outros Aulunos e famílias que precisam.';
+    const fim = (m, par) => m.indexOf('\n\n' + par + '\n\nEssa mensagem é para que possamos controlar juntas.') >= 0;
+    for (const [n, rr, tt] of [[5, '5 vagas de reposição', '5 vagas'], [6, '6 vagas de reposição', '6 vagas'], [1, '1 vaga de reposição', '1 vaga']]) {
+      run('__vl638=' + n + ';');
+      assert.ok(fim(run(`repMensagem(${p}, 'credito', {qtd:1, data:'2026-10-07', volta:'2026-10-13', saldo:1})`), R(rr)), 'crédito com o dia de repor, ' + n);
+      assert.ok(fim(run(`repMensagem(${p}, 'agendada', {volta:'2026-10-13', livres:0})`), R(rr)), 'agendada, ' + n);
+      assert.ok(fim(run(`repMensagem(${p}, 'troca', {de:'2026-10-07', para:'2026-10-08'})`), T(tt)), 'troca, ' + n);
+    }
+    for (const [modo, info] of [['credito', "{qtd:1, data:'2026-10-07', saldo:1}"], ['desmarcada', "{volta:'2026-10-13', livres:1}"], ['uso', '{saldo:1}'],
+      ['troca-desfeita', "{de:'2026-10-07', para:'2026-10-08', estorna:true}"]]) {
+      assert.ok(!/me avise até as 24h/.test(run(`repMensagem(${p}, '${modo}', ${info})`)), modo + ' sem o prazo');
+    }
+  } finally { run('pelExtra=__bkR1638.pe; vagasLimite=__bkR1638.vl;'); }
+});
+provaAsync('6.38 P38-33 — baixa no mesmo dia: o check-in do corpo de entrada de hoje (08:10) dá a baixa na mesma volta; só a chamada "veio" espera o dia seguinte; dia fixo, nada', async () => {
+  for (const [nome, cfg, espera] of [['check-in', { checkin: true }, 'veio'], ['só a chamada', { chamada: true }, null], ['dia fixo', { checkin: true, dias: ['qui'] }, null]]) {
+    await comPalco638({ hora: '2026-10-08T08:15:00-03:00', srv: 0, fichas: [Object.assign({}, TOTO638, cfg.dias ? { dias: cfg.dias } : {})],
+      lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+      if (cfg.checkin) B.poe('daycare/checkin-corpo/2026-10-08/' + dk638(0) + '/fim', Date.parse('2026-10-08T08:10:00-03:00'));
+      if (cfg.chamada) B.poe('daycare/chamada/2026-10-08/' + dk638(0), 'veio');
+      run("__bkH638=repHojeISO; repHojeISO=function(){ return '2026-10-08'; };");
+      try { await baixa638(); } finally { run('repHojeISO=__bkH638;'); }
+      const u = lanc638(B)['veio-2026-10-08'];
+      igual(u ? (u.desfecho || 'veio') : null, espera, nome);
+      if (u) igual(u.obs, 'Baixa automática pelo check-in do corpo de hoje');
+    });
+  }
+});
+prova('6.38 P38-34 — área protegida: repSaldo e hospConfirmarAntecipada idênticos (o texto da função); nenhuma ck*/ckt*/pt* chama as funções da regra', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const fn = (n) => { const i = src.indexOf('function ' + n + '('); let d = 0, j = src.indexOf('{', i); for (; j < src.length; j++) { if (src[j] === '{') d++; else if (src[j] === '}') { d--; if (!d) break; } } return src.slice(i, j + 1); };
+  const h = (t) => require('crypto').createHash('sha256').update(t).digest('hex');
+  igual(h(fn('repSaldo')), '566c707e9b91295e7f498532b5c59c00772525fe829081ed5b3864266aed6c9c', 'repSaldo');
+  igual(h(fn('hospConfirmarAntecipada')), '92559dd9d743c9816f185bc13d411608a61ff0b112c0c8c6401461a32efe3440', 'hospConfirmarAntecipada');
+  const nomes = (src.match(/function (ck[A-Za-z0-9_]*|ckt[A-Za-z0-9_]*|pt[A-Z][A-Za-z0-9_]*)\(/g) || []).map((s) => s.slice(9, -1));
+  assert.ok(nomes.length > 50, 'a sonda achou as funções protegidas: ' + nomes.length);
+  for (const n of nomes) assert.ok(!/repSaldoReposicao|repTrocasPendentes|repDesmarcar|repDesfechoGravar|repComoDesmarcar|repPrazo\(/.test(fn(n)), n);
+});
+provaAsync('6.38 P4 — o aviso do tutor vale pela hora em que ele avisou: WhatsApp das 22:10 de 07/10 registrado às 07:30 de 08/10 → desmarca sem contar, com avisou_em e quem registrou', async () => {
+  await desm638({ hora: '2026-10-08T07:30:00-03:00' }, async (B) => {
+    run("__ztR638=['2026-10-07T22:10'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const zt = J630('__zt638')[0];
+    igual([zt.t, zt.o.tipo, zt.o.valor, zt.o.rotulo], ['Quando o tutor avisou?', 'datetime-local', '2026-10-08T07:30', 'O tutor avisou em']);
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.dentro_prazo, c.volta_desmarcada.avisou_em, c.volta_desmarcada.quem], ['', true, Date.parse('2026-10-07T22:10:00-03:00'), 'Recepção Teste']);
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), [], 'não conta');
+    igual(saldos638(0)[2], 2);
+    assert.ok(J630('__au638').some((a) => /o tutor avisou em 07\/10 às 22:10/.test(a)), JSON.stringify(J630('__au638')));
+  });
+});
+provaAsync('6.38 P6 — «A Zêluz desmarcou» fora do prazo: não conta, com o motivo e quem; a troca vira reposição', async () => {
+  await desm638({ hora: '2026-10-08T09:12:00-03:00' }, async (B) => {
+    run("__ztR638=['2026-10-08T09:12', 'a casa lotou: falta de equipe']; __zeR638=['A Zêluz desmarcou'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.zeluz.motivo, c.volta_desmarcada.zeluz.quem], ['', 'a casa lotou: falta de equipe', 'Recepção Teste']);
+    igual(Object.keys(lanc638(B)).filter((k) => /^veio-/.test(k)), []);
+    igual(saldos638(0)[2], 2);
+  });
+  await comPalco638({ hora: '2026-10-08T09:12:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async (B) => {
+    run("__ztR638=['2026-10-08T09:12', 'a casa fechou por falta de luz']; __zeR638=['A Zêluz desmarcou'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const c = lanc638(B)['fa-2026-10-07'];
+    igual([c.volta, c.volta_desmarcada.virou_reposicao], ['', true]);
+    igual(saldos638(0), [1, 0, 1], 'a troca virou reposição');
+  });
+});
+provaAsync('6.38 P5 — a reposição marcada no próprio dia, para o mesmo dia: entra na regra (prazo24h) e, se ele não vier, conta', async () => {
+  const B = palco646();
+  try {
+    run(`zHojeISO=function(){ return '2026-10-07'; }; __ex639.dias=['ter']; repMotivoAtual='outro';`);
+    B.poe(LANC646() + 'fa-2026-10-06', FALTA646({ data: '2026-10-06' }));
+    run(`__el639.dxWarn.textContent=''; dxPel=PELUDINHOS[0]; dxDia='2026-10-07'; dxTroca=false; dxDe=''; dxConfirmar();`); await espera646();
+    igual(B.lanc()['fa-2026-10-06'].prazo24h, '2026-10-07');
+    const m = J630('__mm639').slice(-1)[0];
+    assert.ok(m.l.join(' ').indexOf('Marcada para hoje: o prazo para desmarcar sem contar já passou (era até as 24h de ontem). Se não vier, conta como usada.') >= 0, JSON.stringify(m.l));
+  } finally { solta646(); }
+});
+provaAsync('6.38 P7 — «+ Falta › Um dia só» lançada depois do dia de origem (faltou na quarta, lançada na quinta, dia novo hoje ou adiante) fica como troca', async () => {
+  const B = palco646();
+  try {
+    run(`zHojeISO=function(){ return '2026-10-14'; };`);
+    await falta646('2026-10-13', '2026-10-14');
+    const c = B.lanc()['fa-2026-10-13'];
+    igual([c.volta, c.troca && c.troca.de, c.troca && c.troca.para, c.prazo24h], ['2026-10-14', '2026-10-13', '2026-10-14', '2026-10-14']);
+    run(`__bkS638=repSaldo; repSaldo=__bk639.sd;`);
+    try { igual(run('repSaldoReposicao(PELUDINHOS[0])'), 0, 'a troca não entra no saldo'); } finally { run('repSaldo=__bkS638;'); }
+  } finally { solta646(); }
+});
+provaAsync('6.38 C06 — a Márcia autoriza a reposição: a mensagem ao tutor ("agendada", com o prazo) sai pronta depois do ENCAIXE AUTORIZADO', async () => {
+  const B2 = palco646();
+  run(`__za638b=[]; __bkZA638=zAlertao; zAlertao=function(t,l,o){ __za638b.push(t); if(o && typeof o.aoFechar==='function') o.aoFechar(); };
+    zHojeISO=function(){ return '2026-10-07'; }; document.body.dataset.role='gestao'; __pt646='Márcia Teste';`);
+  try {
+    B2.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    prepPed646(B2, PEDTROCA646('pedido', { payload: { credito_id: 'fa-2026-10-13', data: '2026-10-13', volta: '2026-10-14' } }));
+    await autoriza646();
+    igual(J630('__za638b'), ['ENCAIXE AUTORIZADO']);
+    const m = J630('__mm639').slice(-1)[0];
+    assert.ok(m && /a reposição do Fredo ficou marcada para quarta-feira, 14\/10/.test(m.msg) && /Caso precise desmarcar a reposição, me avise até as 24h do dia anterior/.test(m.msg), JSON.stringify(m));
+  } finally { run('zAlertao=__bkZA638;'); solta646(); }
+});
+provaAsync('6.38 C11 — «ele veio» na troca que já passou, com 1 reposição livre: "as reposições continuam 1" (a vinda da troca não mexe nas reposições)', async () => {
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    igual(saldos638(0), [2, 1, 1]);
+    await run("repVeioNoDia(0, '2026-10-08')"); await espera638();
+    igual(J630('__zp638')[0].l, ['Pela troca, no lugar de 07/10.', 'Não é reposição: as reposições dele continuam 1.']);
+    igual([lanc638(B)['veio-2026-10-08'].motivo, saldos638(0)[2]], ['troca', 1]);
+    igual(J630('__za638').map((z) => z.l.join(' | ')), ['Totó veio na quinta-feira, 08/10, no lugar de 07/10. | As reposições continuam 1.']);
+  });
+});
+provaAsync('6.38 C17 — desmarcar fora do prazo com o nó do dia já no servidor (o Extrato do aparelho atrasado): relê; anulado → grava no sufixo seguinte; vivo → só tira o dia, sem contar outro', async () => {
+  const servidor = (B, id, v) => { const k = run('pelKey(PELUDINHOS[0])'); B.serv.daycare.reposicao[k].lancamentos[id] = v; };
+  await desm638({ hora: '2026-10-08T09:12:00-03:00' }, async (B) => {
+    servidor(B, 'veio-2026-10-08', { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', quem: 'R', ts: 1 });
+    servidor(B, 'dev-veio-2026-10-08', { tipo: 'estorno', estornaId: 'veio-2026-10-08', dia_devolvido: '2026-10-08', quem: 'R', ts: 2 });
+    run("__ztR638=['2026-10-08T09:12']; __zeR638=['Desmarcar e contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const x = B.serv.daycare.reposicao[run('pelKey(PELUDINHOS[0])')].lancamentos;
+    igual([x['veio-2026-10-08-2'] && x['veio-2026-10-08-2'].desfecho, x['fa-2026-10-01'].volta], ['fora_prazo', ''], 'o anulado não segura: o sufixo seguinte');
+  });
+  await desm638({ hora: '2026-10-08T09:12:00-03:00' }, async (B) => {
+    servidor(B, 'veio-2026-10-08', { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', desfecho: 'nao_veio', quem: 'outro aparelho', ts: 1 });
+    run("__ztR638=['2026-10-08T09:12']; __zeR638=['Desmarcar e contar'];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const x = B.serv.daycare.reposicao[run('pelKey(PELUDINHOS[0])')].lancamentos;
+    igual([Object.keys(x).filter((k) => /^veio-/.test(k)), x['fa-2026-10-01'].volta, x['fa-2026-10-01'].volta_desmarcada.so_tira], [['veio-2026-10-08'], '', true], 'vivo: o dia já tem desfecho, nada a mais');
+    assert.ok(J630('__za638').some((z) => z.t === 'ESSE DIA JÁ TEM UM DESFECHO'), JSON.stringify(J630('__za638')));
+  });
+});
+prova('6.38 C16 — a hora do servidor só vale depois de a conexão subir: o ouvinte de .info/connected liga VAGAS_RELOGIO_LIDO, e o vagasPedCarregar (todo papel) o arma', () => {
+  run(`__bkC16={db:DB, l:VAGAS_RELOGIO_LIDO, o:REP_RELOGIO_OUVINDO, vp:VAGAS_PEDIDOS, pr:vagasPedRedesenhar, d:VAGAS_RELOGIO_DIF}; __on638={};
+    DB={ref:function(c){ return {on:function(ev, fn){ __on638[c]=fn; }}; }}; VAGAS_RELOGIO_LIDO=false; REP_RELOGIO_OUVINDO=false; vagasPedRedesenhar=function(){};`);
+  try {
+    run('vagasPedCarregar()');
+    assert.ok(run("typeof __on638['.info/connected']==='function'"), 'o vagasPedCarregar arma o ouvinte da conexão');
+    run("__on638['.info/serverTimeOffset']({val:function(){ return 0; }});");
+    igual(run('VAGAS_RELOGIO_LIDO'), false, 'o 1º valor da diferença (0, antes de conectar) não basta');
+    run("__on638['.info/connected']({val:function(){ return false; }});");
+    igual(run('VAGAS_RELOGIO_LIDO'), false);
+    run("__on638['.info/serverTimeOffset']({val:function(){ return 900000; }}); __on638['.info/connected']({val:function(){ return true; }});");
+    igual(run('[VAGAS_RELOGIO_LIDO, VAGAS_RELOGIO_DIF]'), [true, 900000], 'conectou: o prazo passa a ser medido pela hora do servidor');
+  } finally { run('DB=__bkC16.db; VAGAS_RELOGIO_LIDO=__bkC16.l; REP_RELOGIO_OUVINDO=__bkC16.o; VAGAS_PEDIDOS=__bkC16.vp; vagasPedRedesenhar=__bkC16.pr; VAGAS_RELOGIO_DIF=__bkC16.d;'); }
+});
+
+
+// ================================================================== 6.38 — 2ª rodada (achados do QA independente, 09/out/2026)
+console.log('\n6.38 — 2ª rodada: o número nunca muda sozinho nem fica negativo, a agenda de verdade, a troca que espera a Gestão, a casa fechada, o que foi marcado antes da regra, o aviso, o relógio do servidor');
+// Decisões do @po (lado conservador, sem cobrar o tutor de surpresa). Dado INVENTADO; relógio preso em toda prova.
+const vista638r2 = (i, nome) => {
+  i = i || 0;
+  tela638(); run('renderReposicao()');
+  const l = linha638(run('__el638.repLista.innerHTML'), nome || run(`pelNome(PELUDINHOS[${i}])`));
+  const n = (/<div class="rp-n">(-?\d+)<\/div>/.exec(l) || [])[1];
+  run(`repAbrirExtrato(${i})`);
+  const sub = run('__el638.repExtSub.innerHTML').replace(/<[^>]+>/g, '');
+  const msg = run(`repMensagem(PELUDINHOS[${i}],'credito',{qtd:1, data:'2026-11-03'})`);
+  const ficha = (/>(-?\d+)<\/span><span class="hint" style="margin:0">dias? a repor/.exec(run(`blocoReposicaoFicha(PELUDINHOS[${i}])`)) || [])[1];
+  return { saldos: saldos638(i), tela: (n === undefined) ? null : +n, extrato: +((/Saldo atual: (-?\d+)/.exec(sub) || [])[1]),
+    msg: +((/está com (-?\d+)/.exec(msg) || [])[1]), ficha: (ficha === undefined) ? null : +ficha };
+};
+const stubV638r2 = () => run(`__bkV638r2={vd:vagasDoDia, dm:dcMatriculado, da:diariaAvulsaCent}; vagasDoDia=function(){ return {reposicao:[], avulso:[], troca:[], cheio:false, lido:true}; };
+    dcMatriculado=function(){ return true; }; diariaAvulsaCent=function(){ return 9700; };`);
+const soltaV638r2 = () => run('vagasDoDia=__bkV638r2.vd; dcMatriculado=__bkV638r2.dm; diariaAvulsaCent=__bkV638r2.da;');
+const veredito638r2 = (dia) => J630(`(function(v){ return [v.ok, v.tipo, v.valor_cent||0, v.livre, v.motivo||'']; })(dxVeredito(PELUDINHOS[0], '${dia}'))`);
+const usos638r2 = (B, i) => { const o = lanc638(B, i || 0); return Object.keys(o).filter((k) => o[k].tipo === 'uso').map((k) => k + ':' + (o[k].desfecho || 'veio')); };
+// A troca antiga do João: quarta 13/08 → quinta 14/08, sem a regra (marcada antes desta versão) e sem vinda.
+const TROCAJOAO638 = (regra) => Object.assign(TROCA638(regra), { data: '2026-08-13', volta: '2026-08-14',
+  troca: { de: '2026-08-13', para: '2026-08-14', quem: 'Recepção X', ts: 5 } }, regra ? { prazo24h: '2026-08-14' } : {});
+
+provaAsync('6.38 R2-01 (QA638-01) — o número nunca muda sozinho: a troca antiga do João fora do número no 60º dia, no 61º e com 200 dias (sem corte de dias); na regra, a que passou da janela da baixa vai para a Gestão', async () => {
+  const visto = {};
+  for (const hora of ['2026-10-13T10:00:00-03:00', '2026-10-14T10:00:00-03:00', '2027-03-02T10:00:00-03:00']) {
+    await comPalco638({ hora, srv: 0, fichas: [JOAO638], lanc: [{ 'fa-2026-08-13': TROCAJOAO638(false), 'fa-2026-09-20': LIVRE638() }] }, async () => {
+      visto[hora.slice(0, 10)] = vista638r2(0, 'João');
+    });
+  }
+  const esperado = { saldos: [2, 1, 1], tela: 1, extrato: 1, msg: 1, ficha: 1 };
+  igual(visto, { '2026-10-13': esperado, '2026-10-14': esperado, '2027-03-02': esperado }, 'o mesmo número nos três dias, em toda tela e na mensagem');
+  // na regra, sem desfecho (a baixa não decidiu): o mesmo número; passada a janela de 60 dias da baixa, a Gestão vê
+  const r = {};
+  for (const hora of ['2026-10-13T10:00:00-03:00', '2026-10-14T10:00:00-03:00', '2027-03-02T10:00:00-03:00']) {
+    await comPalco638({ hora, srv: 0, papel: 'gestao', fichas: [JOAO638], lanc: [{ 'fa-2026-08-13': TROCAJOAO638(true) }] }, async () => {
+      r[hora.slice(0, 10)] = [saldos638(0), J630('repConferirLista()').map((o) => o.motivo)];
+    });
+  }
+  igual(r['2026-10-13'], [[1, 1, 0], []], 'no 60º dia, ainda na janela da baixa: a baixa decide');
+  igual(r['2026-10-14'], [[1, 1, 0], ['o app não decidiu sozinho — passou da janela de 60 dias da baixa automática']], 'no 61º dia: o mesmo número, e a Gestão vê');
+  igual(r['2027-03-02'], r['2026-10-14']);
+});
+
+provaAsync('6.38 R2-02 (QA638-02) — o número nunca fica negativo: a troca por vir cujo crédito foi gasto noutro dia (versão antiga) e o livro-caixa negativo de antes mostram 0 na tela, no Extrato, na ficha, na mensagem e na turma', async () => {
+  await comPalco638({ hora: '2026-10-06T15:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(false),
+    'K1': { tipo: 'uso', data: '2026-10-06', motivo: 'reposicao', obs: '', quem: 'R', ts: 8 } }] }, async () => {
+    igual(vista638r2(0), { saldos: [0, 0, 0], tela: null, extrato: 0, msg: 0, ficha: 0 }, 'a troca não cabe no livro-caixa: não sai do número');
+    const t = J630(`turmaListaDoDia('2026-10-08', {pets:PELUDINHOS, trocas:{}, avulsos:{}, chamada:{}, pend:[], margem:3, hoje:'2026-10-06'})`);
+    igual(t.vem.map((o) => [o.nome, o.reposicoes]), [['Totó', 0]]);
+    igual(run("repSaldoRepDepois(PELUDINHOS[0], [{_id:'x', tipo:'uso', data:'2026-10-06', motivo:'reposicao'}], null)"), 0, 'o "depois" também nunca é negativo');
+  });
+  await comPalco638({ hora: '2026-10-06T15:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-09-20': LIVRE638(),
+    'K1': { tipo: 'uso', data: '2026-10-05', motivo: 'reposicao', obs: '', quem: 'R', ts: 8 }, 'K2': { tipo: 'uso', data: '2026-10-06', motivo: 'reposicao', obs: '', quem: 'R', ts: 9 } }] }, async () => {
+    const v = vista638r2(0);
+    igual([v.saldos[0], v.saldos[2], v.extrato, v.msg, v.ficha], [-1, 0, 0, 0, 0], 'o livro-caixa continua −1 (não muda); o número mostrado é 0');
+    assert.ok(!/-1/.test(run("repMensagem(PELUDINHOS[0],'credito',{qtd:1, data:'2026-11-03'})")), 'a mensagem ao tutor não diz −1');
+  });
+  // 3ª rodada (re-gate R2-04, Z07): o "antes" que a janela recebe de um Extrato atrasado (0, com 1 livre já na lista) não leva o "depois" a −1
+  await comPalco638({ hora: '2026-10-06T15:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-09-20': LIVRE638() }] }, async () => {
+    igual(run("repSaldoRepDepois(PELUDINHOS[0], [{_id:'y', tipo:'uso', data:'2026-10-06', motivo:'reposicao'}], null, 0)"), 0, 'o piso 0 do "depois"');
+  });
+});
+
+provaAsync('6.38 R2-03 (QA638-03) — a agenda de verdade: quem já veio repor hoje (check-in) e tem mais 1 livre marca outra como REPOSIÇÃO; a troca de hoje cumprida também; a frase do bloqueio não cita o dia já usado', async () => {
+  const usoHoje = (credito, motivo) => ({ tipo: 'uso', data: '2026-10-08', motivo: motivo || 'reposicao', credito, veio_auto: true, quem: 'sistema', ts: 9, obs: 'Baixa automática pelo check-in do corpo de hoje' });
+  for (const L of [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'veio-2026-10-08': usoHoje('fa-2026-10-01'), 'fa-2026-09-20': LIVRE638() },
+    { 'fa-2026-10-07': TROCA638(true), 'veio-2026-10-08': usoHoje('fa-2026-10-07', 'troca'), 'fa-2026-09-20': LIVRE638() }]) {
+    await comPalco638({ hora: '2026-10-08T10:00:00-03:00', srv: 0, fichas: [BATATA638], lanc: [L] }, async () => {
+      stubV638r2();
+      try {
+        igual(run('repLivresParaMarcar(PELUDINHOS[0])'), 1);
+        igual(veredito638r2('2026-10-15').slice(0, 4), [true, 'reposicao', 0, 1]);
+        tela638(); run('renderReposicao()');
+        const l = linha638(run('__el638.repLista.innerHTML'), 'Batata');
+        assert.ok(l && l.indexOf('Vem repor em 08/10/2026') < 0, 'a linha não diz "vem repor" no dia que já teve a vinda: ' + l.slice(0, 500));
+      } finally { soltaV638r2(); }
+    });
+  }
+  await comPalco638({ hora: '2026-10-08T10:00:00-03:00', srv: 0, fichas: [BATATA638], lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'veio-2026-10-08': usoHoje('fa-2026-10-01'),
+    'fa-2026-09-20': REPO638('2026-10-20', true, { data: '2026-09-20' }) }] }, async () => {
+    stubV638r2();
+    try {
+      igual(veredito638r2('2026-10-15'), [false, '', 0, 0, 'Batata tem 1 reposição, marcada para 20/10. Para usá-la neste dia, desmarque o outro dia (até as 24h do dia anterior) e marque de novo.']);
+    } finally { soltaV638r2(); }
+  });
+});
+
+provaAsync('6.38 R2-04 (QA638-04) — a troca que passou esperando a Gestão: «Marcar reposição» para com a frase e nunca sai AVULSO; a hospedagem não perde o desconto', async () => {
+  await comPalco638({ hora: '2026-10-10T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(false) }] }, async () => {
+    stubV638r2();
+    try {
+      igual(saldos638(0), [1, 1, 0]);
+      igual(veredito638r2('2026-10-14'), [false, '', 0, 0, 'Totó: a troca de 08/10 espera a Gestão conferir. Até lá, este dia não sai como avulso nem como reposição: peça à Gestão para conferir em Reposições.']);
+      igual(run('orcSaldoRep({key:pelKey(PELUDINHOS[0])})'), 1, 'o orçamento da hospedagem continua com 1 dia de desconto (como antes da 6.38)');
+    } finally { soltaV638r2(); }
+  });
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async () => {
+    stubV638r2();
+    try {
+      const v = veredito638r2('2026-10-14');
+      igual([v[0], v[1]], [false, '']);
+      assert.ok(/a troca de 08\/10 espera a conferência do dia \(a baixa automática ou a Gestão\)/.test(v[4]), v[4]);
+    } finally { soltaV638r2(); }
+  });
+  // sem troca esperando, o avulso continua o de sempre (AC4)
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async () => {
+    stubV638r2();
+    try { igual(veredito638r2('2026-10-09').slice(0, 3), [true, 'avulso', 9700]); } finally { soltaV638r2(); }
+  });
+  // 3ª rodada (sonda N8 do QA, Z05): a troca de HOJE ainda por cumprir não "espera a Gestão" — o dia seguinte sai avulso (AC4)
+  await comPalco638({ hora: '2026-10-08T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async () => {
+    stubV638r2();
+    try { igual(veredito638r2('2026-10-09'), [true, 'avulso', 9700, 0, '']); } finally { soltaV638r2(); }
+  });
+});
+
+provaAsync('6.38 R2-05 (QA638-05) — casa fechada (feriado 12/10): a linha da recepção diz «desmarcar (não conta)», sem «não veio»; «não veio» é recusado (recepção e Gestão); desmarcar não conta; na hospedagem, só a Gestão diz «não veio»', async () => {
+  const L = { 'fa-2026-10-01': REPO638('2026-10-12', true), 'fa-2026-09-20': LIVRE638() };
+  for (const papel of ['consultora', 'gestao']) {
+    await comPalco638({ hora: '2026-10-13T10:00:00-03:00', srv: 0, papel, fichas: [BATATA638], lanc: [L] }, async (B) => {
+      tela638(); run('renderReposicao()');
+      const l = linha638(run('__el638.repLista.innerHTML'), 'Batata');
+      assert.ok(/Estava marcada para 12\/10\/2026: a Zêluz não abriu \(Nossa Senhora Aparecida\) · <button[^>]*repDesmarcar\(0,'2026-10-12'\)[^>]*>desmarcar \(não conta\)<\/button>/.test(l), l.slice(0, 900));
+      assert.ok(l.indexOf("repContarNaoVeio(0,'2026-10-12')") < 0 && l.indexOf("repVeioNoDia(0,'2026-10-12')") < 0, 'sem «não veio» e sem «ele veio»');
+      assert.ok(/A Zêluz não abriu nesse dia: «desmarcar \(não conta\)» tira o dia sem contar a reposição\./.test(l) && l.indexOf('Regra das 24 horas') < 0, 'a explicação da casa fechada');
+      if (papel === 'gestao') {
+        const q = run('__el638.repResumo.innerHTML');
+        assert.ok(/repDesmarcar\(0,'2026-10-12'\)[^>]*>Desmarcar \(a Zêluz não abriu: não conta\)/.test(q) && q.indexOf("repConferirContar(0,'2026-10-12')") < 0, q.slice(0, 1500));
+        assert.ok(q.indexOf('))') < 0 || !/não abriu \([^)]*\)\)/.test(q), 'sem parênteses dobrados');
+      }
+      await run("repContarNaoVeio(0, '2026-10-12')"); await espera638();
+      igual([usos638r2(B), J630('__al638').slice(-1)[0]], [[], 'Em 12/10 a Zêluz não abriu (Nossa Senhora Aparecida): a reposição não conta. Use «desmarcar (não conta)».']);
+      run('__zpR638=[true];'); await run("repDesmarcar(0, '2026-10-12')"); await espera638();
+      const c = lanc638(B)['fa-2026-10-01'];
+      igual([c.volta, !!c.volta_desmarcada.casa_fechada, usos638r2(B), saldos638(0)], ['', true, [], [2, 0, 2]], 'desmarcar na casa fechada não conta');
+    });
+  }
+  // hospedado no dia marcado: a recepção vê «ele veio» e "a Gestão confere"; «não veio» é da Gestão
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, papel: 'consultora', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    run(`__bkHosp638=repHospedadoNoDia; repHospedadoNoDia=function(p, d){ return d==='2026-10-08'; };`);
+    try {
+      tela638(); run('renderReposicao()');
+      const l = linha638(run('__el638.repLista.innerHTML'), 'Totó');
+      assert.ok(/o app não decidiu sozinho — estava hospedado/.test(l) && /repVeioNoDia\(0,'2026-10-08'\)/.test(l) && l.indexOf("repContarNaoVeio(0,'2026-10-08')") < 0 && /a Gestão confere/.test(l), l.slice(0, 900));
+      await run("repContarNaoVeio(0, '2026-10-08')"); await espera638();
+      igual([usos638r2(B), J630('__al638').slice(-1)[0]], [[], 'Totó na quinta-feira, 08/10: estava hospedado. Quem confere é a Gestão.']);
+    } finally { run('repHospedadoNoDia=__bkHosp638;'); }
+  });
+  // 3ª rodada (sonda N9 do QA, Z06): a Gestão conta «não veio» no dia de hospedagem (a decisão é dela)
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, papel: 'gestao', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    run(`__bkHosp638=repHospedadoNoDia; repHospedadoNoDia=function(p, d){ return d==='2026-10-08'; };`);
+    try {
+      run('__zpR638=[true];'); await run("repContarNaoVeio(0, '2026-10-08')"); await espera638();
+      igual([usos638r2(B), saldos638(0), J630('__al638')], [['veio-2026-10-08:nao_veio'], [1, 0, 1], []]);
+    } finally { run('repHospedadoNoDia=__bkHosp638;'); }
+  });
+});
+
+provaAsync('6.38 R2-06 (QA638-06) — marcada ANTES da regra para hoje, o tutor liga às 09:00: desmarca sem contar, com a frase; a Gestão vê na lista e dá «Visto»; a troca antiga desmarcada vira reposição', async () => {
+  let estado = null;
+  await comPalco638({ hora: '2026-10-08T09:00:00-03:00', srv: 0, papel: 'consultora', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', false), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    igual(run("repComoDesmarcar(repLancamentos(PELUDINHOS[0]).filter(function(l){ return l.volta; })[0], repLancamentos(PELUDINHOS[0]), repHojeServidor(), false).modo"), 'antes-regra');
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(J630('__zt638').length, 0, 'não pergunta quando o tutor avisou: não conta de qualquer jeito');
+    const p = J630('__zp638')[0];
+    assert.ok(p.l.indexOf('Marcada antes da regra das 24 horas: não conta (o tutor não tinha recebido o prazo para desmarcar).') >= 0, JSON.stringify(p));
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.antes_regra, !!c.volta_desmarcada.dentro_prazo, usos638r2(B), saldos638(0)], ['', true, false, [], [2, 0, 2]]);
+    tela638(); run('repAbrirExtrato(0)');
+    assert.ok(/desmarcada de 08\/10\/2026 sem contar \(por Recepção Teste\): marcada antes da regra das 24 horas/.test(run('__el638.repExtLista.innerHTML')), run('__el638.repExtLista.innerHTML').slice(0, 900));
+    assert.ok(J630('__au638').some((a) => /marcada antes da regra das 24 horas: não conta/.test(a)), 'na Linha do tempo');
+    estado = lanc638(B);
+    await run("repConferirVisto(0, 'fa-2026-10-01')"); await espera638();
+    igual([!!lanc638(B)['fa-2026-10-01'].volta_desmarcada.visto, J630('__al638').slice(-1)[0]], [false, 'Só a Gestão confere esta lista.']);
+  });
+  await comPalco638({ hora: '2026-10-08T10:00:00-03:00', srv: 0, papel: 'gestao', lanc: [estado] }, async (B) => {
+    const lista = J630('repConferirLista()');
+    igual(lista.map((o) => [o.dia, !!o.antesRegra]), [['2026-10-08', true]]);
+    run(`MESA_FATIA='gestao';`);
+    assert.ok(/<span class="dt-n">1<\/span><span class="dt-txt"><span class="dt-l">Reposições para conferir<\/span>/.test(run('mesaFatiaHtml().tiles')));
+    tela638(); run('renderReposicao()');
+    const q = run('__el638.repResumo.innerHTML');
+    assert.ok(/Para a Gestão ver — desmarcadas sem contar, marcadas antes da regra das 24 horas \(1\)/.test(q) && /repConferirVisto\(0,'fa-2026-10-01'\)/.test(q)
+      && q.indexOf('reposições e trocas marcadas que já passaram') < 0, q.slice(0, 1500));
+    await run("repConferirVisto(0, 'fa-2026-10-01')"); await espera638();
+    igual(lanc638(B)['fa-2026-10-01'].volta_desmarcada.visto.quem, 'Recepção Teste');
+    igual(J630('repConferirLista()'), []);
+  });
+  // a troca marcada antes da regra, desmarcada no dia novo (o dia de origem já passou): vira reposição, sem contar
+  await comPalco638({ hora: '2026-10-08T09:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(false) }] }, async (B) => {
+    igual(saldos638(0), [1, 1, 0]);
+    run("__zeR638=['vira reposição'];"); await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const e = J630('__ze638')[0];
+    igual(e.b, ['Não vem nos dois dias: vira reposição', 'Manter a troca']);
+    assert.ok(e.l.indexOf('Marcada antes da regra das 24 horas: não conta (o tutor não tinha recebido o prazo para desmarcar).') >= 0, JSON.stringify(e));
+    const vd = lanc638(B)['fa-2026-10-07'].volta_desmarcada;
+    igual([vd.antes_regra, vd.virou_reposicao, usos638r2(B), saldos638(0)], [true, true, [], [1, 0, 1]]);
+  });
+});
+
+provaAsync('6.38 R2-07 (QA638-07) — "Quando o tutor avisou?" não aceita aviso antes da marcação; depois da marcação e dentro do prazo, não conta', async () => {
+  const L = () => [{ 'fa-2026-10-01': REPO638('2026-10-08', true, { volta_ts: Date.parse('2026-10-07T23:30:00-03:00') }), 'fa-2026-09-20': LIVRE638() }];
+  await comPalco638({ hora: '2026-10-08T07:30:00-03:00', srv: 0, lanc: L() }, async (B) => {
+    run("__ztR638=['2026-09-01T10:00']; __zpR638=[true];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual([lanc638(B)['fa-2026-10-01'].volta, usos638r2(B), J630('__al638').slice(-1)[0]],
+      ['2026-10-08', [], 'O aviso não pode ser antes da marcação: 08/10/2026 foi marcado em 07/10 às 23:30. Confira o dia e a hora do aviso. Nada foi mudado.']);
+  });
+  await comPalco638({ hora: '2026-10-08T07:30:00-03:00', srv: 0, lanc: L() }, async (B) => {
+    run("__ztR638=['2026-10-07T23:40']; __zpR638=[true];");
+    await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    const c = lanc638(B)['fa-2026-10-01'];
+    igual([c.volta, c.volta_desmarcada.dentro_prazo, c.volta_desmarcada.avisou_em, usos638r2(B)], ['', true, Date.parse('2026-10-07T23:40:00-03:00'), []]);
+  });
+});
+
+provaAsync('6.38 R2-08 (QA638-08) — «não veio» e «ele veio» pedem também o relógio do servidor: o aparelho adiantado um dia não conta o dia marcado', async () => {
+  const L = () => [{ 'fa-2026-10-01': REPO638('2026-10-08', true), 'fa-2026-09-20': LIVRE638() }];
+  const txt = 'Pelo relógio do servidor, 08/10/2026 ainda não terminou (a hora deste aparelho pode estar adiantada). Nada foi gravado. No próprio dia, use «Veio repor hoje» ou «desmarcar».';
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: -86400000, lanc: L() }, async (B) => {
+    igual([run('repHojeISO()'), run('repHojeServidor()')], ['2026-10-09', '2026-10-08']);
+    await run("repContarNaoVeio(0, '2026-10-08')"); await espera638();
+    await run("repVeioNoDia(0, '2026-10-08')"); await espera638();
+    igual([usos638r2(B), J630('__al638'), J630('__zp638').length], [[], [txt, txt], 0]);
+  });
+  await comPalco638({ hora: '2026-10-09T08:00:00-03:00', srv: 0, lanc: L() }, async (B) => {
+    run('__zpR638=[true];'); await run("repContarNaoVeio(0, '2026-10-08')"); await espera638();
+    igual(usos638r2(B), ['veio-2026-10-08:nao_veio'], 'com os dois relógios depois do dia, conta');
+  });
+});
+
+provaAsync('6.38 R2-09 (QA638-09: Q01, Q07, Q11, Q15) — só a Gestão devolve o "desmarcada fora do prazo"; a recepção não desmarca de graça o dia que passou; a reserva da hospedagem sai avulso; «Volta a vir» só na troca que nasceu da troca', async () => {
+  // Q01
+  const L1 = { 'fa-2026-10-01': Object.assign(REPO638('', true), { volta_desmarcada: { dia: '2026-10-08', fora_prazo: true } }),
+    'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', desfecho: 'fora_prazo', credito: 'fa-2026-10-01', quem: 'R', ts: 9, obs: 'x' } };
+  const r1 = {};
+  for (const papel of ['consultora', 'gestao']) {
+    await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, papel, lanc: [L1] }, async (B) => {
+      tela638(); run('repAbrirExtrato(0)');
+      const x = run('__el638.repExtLista.innerHTML');
+      run("__ztR638=['estava internado'];"); await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
+      r1[papel] = [x.indexOf("repDevolverUso(0,'veio-2026-10-08')") >= 0, /Só a Gestão devolve/.test(x), !!lanc638(B)['dev-veio-2026-10-08'], saldos638(0)[2]];
+    });
+  }
+  igual(r1, { consultora: [false, true, false, 0], gestao: [true, false, true, 1] });
+  // Q07
+  for (const regra of [true, false]) {
+    await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': REPO638('2026-10-08', regra), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+      run('__zpR638=[true];'); await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+      igual([lanc638(B)['fa-2026-10-01'].volta, usos638r2(B), J630('__al638').length], ['2026-10-08', [], 1], 'o dia que passou não se desmarca de graça (' + (regra ? 'na regra' : 'antes da regra') + ')');
+    });
+  }
+  // Q11
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-09-20': LIVRE638() }] }, async () => {
+    stubV638r2(); run('__bkRes638=repReservado; repReservado=function(){ return 1; };');
+    try { igual(veredito638r2('2026-10-09').slice(0, 3), [true, 'avulso', 9700], 'a reposição reservada em hospedagem: avulso, com a frase da reserva'); }
+    finally { run('repReservado=__bkRes638;'); soltaV638r2(); }
+  });
+  // Q15
+  const T = Object.assign(TROCA638(true), { motivo: 'viagem' }); delete T.nasceu_troca;
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': T }] }, async (B) => {
+    run("__zeR638=['Manter'];"); await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(J630('__ze638')[0].b, ['Não vem nos dois dias: vira reposição', 'Manter a troca'], 'a falta avisada de verdade não é estornada');
+  });
+  await comPalco638({ hora: '2026-10-06T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-07': TROCA638(true) }] }, async () => {
+    run("__zeR638=['Manter'];"); await run("repDesmarcar(0, '2026-10-08')"); await espera638();
+    igual(J630('__ze638')[0].b, ['Volta a vir na quarta-feira, 07/10', 'Não vem nos dois dias: vira reposição', 'Manter a troca'], 'a que nasceu da troca: as duas saídas');
+  });
+});
+
+provaAsync('6.38 R2-09b (QA: Q05, Q06, Q08, Q10, Q17) — as guardas das funções, não só da tela: «não veio» antiga e «Não contar» só da Gestão; o crédito já usado não é remarcado; as livres sem as vencidas; a mensagem da Márcia conta a marcação que entra', async () => {
+  await comPalco638({ hora: '2026-10-10T09:00:00-03:00', srv: 0, papel: 'consultora', lanc: [{ 'fa-2026-10-01': REPO638('2026-10-06', false), 'fa-2026-09-20': LIVRE638() }] }, async (B) => {
+    await run("repContarNaoVeio(0, '2026-10-06')"); await espera638();
+    run("__ztR638=['o tutor avisou']; "); await run("repConferirNaoContar(0, '2026-10-06')"); await espera638();
+    igual([usos638r2(B), lanc638(B)['fa-2026-10-01'].volta, J630('__al638')],
+      [[], '2026-10-06', ['Marcada antes da regra das 24 horas: quem confere é a Gestão.', 'Só a Gestão pode não contar (regra das 24 horas).']]);
+    igual(run('repLivresParaMarcar(PELUDINHOS[0])'), 1, 'Q10: a vencida que espera a Gestão não está livre');
+  });
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-01': Object.assign(REPO638('', true), { volta_desmarcada: { dia: '2026-10-08', fora_prazo: true } }),
+    'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', desfecho: 'fora_prazo', credito: 'fa-2026-10-01', quem: 'R', ts: 9 } }] }, async (B) => {
+    igual(run('repCreditoLivre(PELUDINHOS[0])'), null, 'Q08: o crédito que já tem o uso dele não volta a ser remarcado');
+    B.poe(no638(0, 'fa-2026-09-20'), LIVRE638());
+    igual(run('repCreditoLivre(PELUDINHOS[0])._id'), 'fa-2026-09-20');
+  });
+  // Q17: a Márcia autoriza a reposição; a mensagem conta a marcação que está entrando
+  const B2 = palco646();
+  run(`__za638r2=[]; __bkZA638r2=zAlertao; zAlertao=function(t,l,o){ __za638r2.push(t); if(o && typeof o.aoFechar==='function') o.aoFechar(); };
+    zHojeISO=function(){ return '2026-10-07'; }; document.body.dataset.role='gestao'; __pt646='Márcia Teste';`);
+  try {
+    B2.poe(LANC646() + 'fa-2026-10-13', FALTA646());
+    prepPed646(B2, PEDTROCA646('pedido', { payload: { credito_id: 'fa-2026-10-13', data: '2026-10-13', volta: '2026-10-14' } }));
+    await autoriza646();
+    const m = J630('__mm639').slice(-1)[0], depois = run('repLivresParaMarcar(PELUDINHOS[0], 0)');
+    const frase = depois ? ('Com essa marcação, ' + (depois === 1 ? 'fica 1 reposição' : ('ficam ' + depois + ' reposições')) + ' ainda sem dia.') : 'Com essa marcação, não fica nenhuma reposição sem dia.';
+    assert.ok(m && m.msg.indexOf(frase) >= 0, frase + ' | ' + JSON.stringify(m));
+  } finally { run('zAlertao=__bkZA638r2;'); solta646(); }
+});
+
+prova('6.38 R2-10 (QA638-10) — os comentários da regra antiga saíram do código; o motivo da Gestão sem parênteses dobrados', () => {
+  const html = fs.readFileSync(APP, 'utf8');
+  assert.ok(html.indexOf('se marcou e não veio, o crédito continua dele') < 0 && html.indexOf('O crédito só é consumido quando ele APARECE.') < 0);
+  assert.ok(html.indexOf("'o app não decidiu sozinho ('") < 0);
+});
+
+
+// ================================================================== 6.38 — 3ª rodada (re-gate do QA, 09/out/2026)
+console.log('\n6.38 — 3ª rodada: as vencidas pela agenda de verdade em todas as telas, a troca por vir com reserva, o quadro da mesa');
+
+provaAsync('6.38 R3-01 (re-gate R2-01) — Batata com a marcada de hoje já usada e a de ontem (07/10, na regra) sem uso: no MESMO dia, o «Marcar reposição» cita o 07/10, a linha mostra, a baixa grava o "não veio"; sem a trava, a Gestão vê', async () => {
+  const L = { 'fa-2026-10-01': REPO638('2026-10-08', true), 'veio-2026-10-08': { tipo: 'uso', data: '2026-10-08', motivo: 'reposicao', credito: 'fa-2026-10-01', veio_auto: true, quem: 'sistema', ts: 9, obs: 'Baixa automática pelo check-in do corpo de hoje' },
+    'fa-2026-09-25': REPO638('2026-10-07', true, { data: '2026-09-25' }) };
+  for (const trava of [true, false]) {
+    await comPalco638({ hora: '2026-10-08T10:00:00-03:00', srv: 0, papel: 'gestao', fichas: [BATATA638], lanc: [L] }, async (B) => {
+      if (trava) B.poe('daycare/falta-automatica/2026-10-07', TRAVA638);
+      stubV638r2();
+      try {
+        igual(J630("repVoltasVencidasValendo(PELUDINHOS[0], null, repHojeISO()).map(function(l){ return l.volta; })"), ['2026-10-07'], 'a vencida de ontem vale hoje');
+        igual(J630("repVencidasSemDesfecho(PELUDINHOS[0], null).map(function(l){ return l.volta; })"), ['2026-10-07']);
+        const v = veredito638r2('2026-10-15');
+        igual([v[0], v[1]], [false, '']); assert.ok(/marcada para 07\/10/.test(v[4]), v[4]);
+        tela638(); run('renderReposicao()');
+        assert.ok(/Estava marcada para 07\/10\/2026/.test(linha638(run('__el638.repLista.innerHTML'), 'Batata')), 'a linha mostra o 07/10 hoje');
+        await baixa638();
+        if (trava) igual(usos638r2(B).sort(), ['veio-2026-10-07:nao_veio', 'veio-2026-10-08:veio'], 'a baixa grava o "não veio" no mesmo dia');
+        else {
+          igual(usos638r2(B), ['veio-2026-10-08:veio'], 'sem a trava, nada gravado');
+          igual(J630('repConferirLista()').map((o) => [o.dia, o.motivo]), [['2026-10-07', 'o app não decidiu sozinho — o app não tem o registro desse dia']], 'e a Gestão vê no mesmo dia');
+        }
+      } finally { soltaV638r2(); }
+    });
+  }
+});
+
+provaAsync('6.38 R3-02 (re-gate R2-02) — só a troca 14/10 → 15/10 e 1 dia reservado em hospedagem: a troca continua troca (fora do número), e o «Veio repor hoje» de 13/10 não fica liberado', async () => {
+  const T = Object.assign(TROCA638(true), { data: '2026-10-14', volta: '2026-10-15', prazo24h: '2026-10-15', troca: { de: '2026-10-14', para: '2026-10-15', quem: 'R', ts: 5 } });
+  for (const res of [0, 1]) {
+    await comPalco638({ hora: '2026-10-13T10:00:00-03:00', srv: 0, lanc: [{ 'fa-2026-10-14': T }] }, async (B) => {
+      run(`__bkRes638r3=repReservado; repReservado=function(){ return ${res}; };`);
+      try {
+        igual([saldos638(0), run("repSaldoParaUsarHoje(PELUDINHOS[0], '2026-10-13')"), run("repSaldoParaUsarHoje(PELUDINHOS[0], '2026-10-15')")], [[1, 1, 0], 0, 1], 'reservado ' + res);
+        await run('repUsar(0)'); await espera638();
+        igual([usos638r2(B), J630('__al638').slice(-1)[0]], [[], 'Totó não tem saldo de reposição. A troca marcada para quinta-feira, 15/10, não é reposição: ela vale só nesse dia.'], 'reservado ' + res);
+      } finally { run('repReservado=__bkRes638r3;'); }
+    });
+  }
+});
+
+prova('6.38 R3-03 (re-gate R2-03) — o quadro da mesa cobre os dois tipos: as que passaram sem desfecho e as desmarcadas antes da regra, para ver', () => {
+  const P = palco638({ hora: '2026-10-08T15:00:00-03:00', papel: 'gestao', lanc: [{ 'fa-2026-10-01': Object.assign(REPO638('', false),
+    { volta_desmarcada: { dia: '2026-10-08', quem: 'Recepção X', ts: 1791460800000, antes_regra: true } }) }] });
+  try {
+    run(`MESA_FATIA='gestao';`);
+    const h = run('mesaFatiaHtml().tiles').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    assert.ok(/1 Reposições para conferir marcadas que já passaram sem desfecho, e desmarcadas antes da regra, para ver — confira uma por uma/.test(h), h.slice(0, 1500));
+  } finally { P.solta(); }
+});
+
 
 // ------------------------------------------------ o fim
 fila.then(() => {
