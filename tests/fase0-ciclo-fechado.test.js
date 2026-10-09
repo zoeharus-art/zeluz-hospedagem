@@ -5678,11 +5678,13 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   const src = fs.readFileSync(APP, 'utf8');
   assert.ok(/var motivo=zMotivoParado\(\);[\s\S]{0,700}if\(!motivo\) return 'faixa';/.test(src), 'mesma regra de "parado"');
   // 6.32: antes da regra da recarga, a tela da hospedagem tenta passar para o dia novo (zDiaTelaAvancar).
-  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n    try\{ if\(!document\.hidden\) zDiaTelaAvancar\(\); \}[^\n]*\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
-  assert.ok(/setInterval\(function\(\)\{\n    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
+  // 6.47: antes da troca, a marca de "a página dormiu" (medOntemVisibilidade / medOntemBatida — o alarme de ontem espera o banco);
+  // (3ª rodada) e o redesenho do alarme de remédio na tela (medDespRedesenhar), na mesma batida.
+  assert.ok(/document\.addEventListener\('visibilitychange', function\(\)\{\n(?:    try\{ medOntemVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}[^\n]*\n)?    try\{ if\(!document\.hidden\) zDiaTelaAvancar\(\); \}[^\n]*\n    try\{ zViradaDoDiaVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'a volta para o app está ligada');
+  assert.ok(/setInterval\(function\(\)\{\n(?:    try\{ medOntemBatida\(Date\.now\(\)\); \}[^\n]*\n)?(?:    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}[^\n]*\n)?    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9]|9-0[1-9])';/.test(src));
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -7078,10 +7080,17 @@ const ARMA632 = `__bk632={hz:zHojeISO, sd:selectedDate, dta:DIA_TELA_AUTO, fa:fi
   __au632=[]; audit=function(t,m){ __au632.push(t+': '+m); }; fichaAberta=function(){ return __fa632; }; __fa632=false;
   despMedSnooze={}; despMedSnoozePend={}; despMedNaTela=null;
   zHojeISO=function(){ return __hoje632; }; __hoje632='2026-10-07';
-  DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);`;
+  DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);
+  if(typeof despMedSnoozeDia!=='undefined'){ __bk632.sdia=despMedSnoozeDia; __bk632.sit=despMedSnoozeIt; despMedSnoozeDia={}; despMedSnoozeIt={}; }
+  __bk632.za=zAlertao; __al632=[]; zAlertao=function(t,l){ __al632.push(t+' | '+(l||[]).join(' ')); };
+  if(typeof MED_AGENDA_DIA!=='undefined'){ __bk632.agd=MED_AGENDA_DIA; __bk632.agf=__medAgendaFalhas; MED_AGENDA_DIA=''; __medAgendaFalhas=0; }
+  if(typeof MED_AGENDA_INTEIRA!=='undefined'){ __bk632.agi=MED_AGENDA_INTEIRA; MED_AGENDA_INTEIRA=true; }`;
 const SOLTA632 = `zHojeISO=__bk632.hz; selectedDate=__bk632.sd; DIA_TELA_AUTO=__bk632.dta; fichaAberta=__bk632.fa; carregarHospedes=__bk632.ch;
   updateDateLabel=__bk632.ul; audit=__bk632.au; despMedSnooze=__bk632.sn; despMedSnoozePend=__bk632.sp; despMedNaTela=__bk632.dn; zDiaTrabalhoAberto=__bk632.ta;
-  papelRecebeAlarmeMed=__bk632.pr; navigator.userActivation=__bk632.ua;`;
+  papelRecebeAlarmeMed=__bk632.pr; navigator.userActivation=__bk632.ua;
+  if(__bk632.sdia){ despMedSnoozeDia=__bk632.sdia; despMedSnoozeIt=__bk632.sit; }
+  zAlertao=__bk632.za; if('agd' in __bk632){ MED_AGENDA_DIA=__bk632.agd; __medAgendaFalhas=__bk632.agf; }
+  if('agi' in __bk632) MED_AGENDA_INTEIRA=__bk632.agi;`;
 prova('6.32 a tela da hospedagem passa sozinha para o dia novo, sem recarregar: lista, agenda e registro das doses no dia certo', () => {
   // Datas pelo relógio de verdade: o ehHojeAua compara com o agora real.
   const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -7111,7 +7120,7 @@ prova('6.32 a tela da hospedagem passa sozinha para o dia novo, sem recarregar: 
     igual(run(`zDiaTelaAvancar(${amanhaD.getTime()})`), 'avancou'); igual(run('dataKeyAtual()'), iso(amanhaD));
   } finally { run(SOLTA632); }
 });
-prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme tocando ou adiado (a dose de ontem fica em ontem), check-in; sem internet não segura', () => {
+prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme tocando (a dose de ontem fica em ontem), check-in; sem internet não segura; o adiado não segura mais (6.47, 4ª rodada: volta pelo dia dele)', () => {
   run(ARMA632);
   try {
     const agora = new Date(2026, 9, 7, 0, 1).getTime();
@@ -7122,20 +7131,23 @@ prova('6.32 a troca espera: data escolhida por alguém, ficha aberta, alarme toc
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: ficha aberta'); igual(run('dataKeyAtual()'), '2026-10-06');
     run("__fa632=false; despMedNaTela='bia__x_23-55';");
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme na tela', 'o remédio das 23:55 ainda tocando é registrado em ontem');
-    run(`despMedNaTela=null; despMedSnoozePend={'bia__x_23-55': ${agora + 120000}};`);
-    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'adiado: ele volta em ontem');
-    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 1000}};`);
-    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'o adiar venceu há 1 s: espera o alarme voltar (QA)');
-    // 2ª rodada do QA: a página congelada no bolso acorda 10 min depois — o alarme ainda não voltou, a troca espera
-    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 600000}};`);
-    igual(run(`zDiaTelaAvancar(${agora})`), 'espera: alarme adiado', 'acordou 10 min depois do adiar: espera o alarme voltar');
-    // o adiado que não pode mais voltar (remédio tirado da agenda) não prende a tela: teto de 1 hora
-    run(`despMedSnoozePend={'bia__x_23-55': ${agora - 3601000}};`);
+    // O ADIADO (6.47, 4ª rodada): a troca não espera mais por ele — a tela passa, e o adiado continua com o dia
+    // guardado no ADIAR (o de ontem): ele volta pelo dia dele e é registrado em ontem (medAdiadoDeOutroDia; a volta
+    // e a recarga, com relógio fixo, estão nas provas da 6.47). Antes: «espera: alarme adiado» até ele voltar — com
+    // o ADIAR em laço, as doses de hoje ficavam caladas por horas.
+    for (const [prazo, rot] of [[agora + 120000, 'o adiar ainda corre'], [agora - 1000, 'o adiar venceu há 1 s'], [agora - 600000, 'acordou 10 min depois do adiar']]) {
+      run(`despMedNaTela=null; despMedSnoozePend={'bia__x_23-55': ${prazo}}; despMedSnooze={'bia__x_23-55': ${prazo}};
+        despMedSnoozeDia={'bia__x_23-55':'2026-10-06'}; despMedSnoozeIt={'bia__x_23-55':{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}};`);
+      igual([run(`zDiaTelaAvancar(${agora})`), run('dataKeyAtual()')], ['avancou', '2026-10-07'], rot + ': a tela passa (antes: «espera: alarme adiado»)');
+      igual([run("despMedSnoozeDia['bia__x_23-55']"), run("Object.keys(despMedSnoozePend)")], ['2026-10-06', ['bia__x_23-55']], rot + ': o adiado continua, com o dia dele (ontem)');
+      run("DIA_TELA_AUTO='2026-10-06'; selectedDate=new Date(2026,9,6,22,40);");
+    }
+    run('despMedSnoozePend={}; despMedSnooze={}; despMedSnoozeDia={}; despMedSnoozeIt={};');
     run("zDiaTrabalhoAberto=function(){ return 'check-in aberto'; };");
     igual(run(`zDiaTelaAvancar(${agora})`), 'espera: check-in aberto');
     run("zDiaTrabalhoAberto=function(){ return 'sem internet'; };");
     igual(run(`zDiaTelaAvancar(${agora})`), 'avancou', 'sem internet: a troca é só na tela; a lista de ontem fica até a planilha responder');
-    igual(run('__ch632'), 1);
+    igual(run('__ch632'), 4);
   } finally { run(SOLTA632); }
 });
 prova('6.32 de madrugada, o celular de quem recebe o alarme e já foi tocado não recarrega (a recarga calaria o som); às 6h, recarrega', () => {
@@ -7205,34 +7217,34 @@ prova('6.32 alarme mudo: a faixa "SEM SOM NESTE APARELHO" aparece e some quando 
     assert.ok(/document\.addEventListener\('pointerdown', function\(\)\{\n    try\{ if\(despMedAC && despMedAC\.state!=='running' && despMedAC\.state!=='closed'\) despMedAC\.resume\(\)\.then\(medSomConferir/.test(src), 'o primeiro toque destrava o som (também o "interrupted" do iPhone)');
   } finally { run('document.getElementById=__bk632s.ge; despMedAC=__bk632s.ac; despMedNaTela=__bk632s.dn; setTimeout=__bk632s.st; bipMedLoopStart=__bk632s.bl;'); }
 });
-prova('6.32 (QA) a dose adiada na virada volta a tocar com a tela ainda em ontem, e é registrada em ontem; as outras doses de ontem não tocam pelo relógio de hoje', () => {
-  run(ARMA632 + `__bk632v={ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB, pr:papelRecebeAlarmeMed};
-    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}, {key:'bia', itemId:'y', horario:'23:30', nome:'Otomax'}];
+prova('6.32 (QA) a dose adiada na virada volta a tocar com a tela ainda em ontem, e é registrada em ontem; (6.47) a de ontem que ninguém viu toca dentro do teto, a mais antiga não', () => {
+  // Relógio FIXO (6.47): com o relógio de verdade, a prova mudava de resultado entre 0h e 3h.
+  const D = (d, hh, mm, ss) => new Date(2026, 9, d, hh, mm || 0, ss || 0).getTime();
+  run(ARMA632 + `__bk632v={ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB, pr:papelRecebeAlarmeMed, D:Date};
+    MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}, {key:'bia', itemId:'y', horario:'23:30', nome:'Otomax'}, {key:'lua', itemId:'z', horario:'14:00', nome:'Prednisolona'}];
     __mo632=[]; mostrarDespertadorMed=function(it,d){ __mo632.push(d); despMedNaTela=it.key+'__'+d; };
-    DB={}; papelRecebeAlarmeMed=function(){ return true; };`);
+    DB={}; papelRecebeAlarmeMed=function(){ return true; };
+    Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __bk632v.D(${D(7, 0, 1)}); return new (Function.prototype.bind.apply(__bk632v.D,[null].concat(a)))(); };
+    Date.now=function(){ return ${D(7, 0, 1)}; }; Date.prototype=__bk632v.D.prototype;
+    __hoje632='2026-10-07'; DIA_TELA_AUTO='2026-10-06'; selectedDate=new __bk632v.D(${D(6, 23, 58)});
+    __log632={}; medLogHoje=function(){ return {then:function(f){ f(__log632); return {catch:function(){}}; }}; };`);
   try {
-    // tela em ontem esperando a troca (o relógio já em hoje)
-    const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    const agoraD = new Date(), ontemD = new Date(agoraD.getFullYear(), agoraD.getMonth(), agoraD.getDate() - 1, 23, 58);
-    run(`__hoje632='${iso(agoraD)}'; DIA_TELA_AUTO='${iso(ontemD)}'; selectedDate=new Date(${ontemD.getTime()});`);
     igual(run('medDiaVelhoAuto()'), true);
-    run(`__log632={}; medLogHoje=function(){ return {then:function(f){ f(__log632); return {catch:function(){}}; }}; };`);
-    run(`despMedSnooze={'bia__x_23-55': Date.now()+60000};`); run('checarDespertadorMed()');
-    igual(run('__mo632'), [], 'o adiar ainda corre: nada');
-    run(`despMedSnooze={'bia__x_23-55': Date.now()-1000};`); run('checarDespertadorMed()');
-    igual(run('__mo632'), ['x_23-55'], 'o adiar venceu: a dose de ontem volta (a 23:30, que ninguém adiou, não toca pelo relógio de hoje)');
-    igual(run('dataKeyAtual()'), iso(ontemD), 'e a tela continua em ontem: a dose é registrada em ontem');
-    igual(run(`zDiaTelaAvancar(${agoraD.getTime()})`), 'espera: alarme na tela');
-    // já registrada em ontem: não volta
-    run(`despMedNaTela=null; __mo632=[]; __log632={bia:{'x_23-55':{quem:'Ana'}}};`); run('checarDespertadorMed()');
-    igual(run('__mo632'), []);
-    // a tela que alguém pôs em outra data não toca nada (regra de sempre)
-    run(`DIA_TELA_AUTO='${iso(agoraD)}'; __log632={};`); run('checarDespertadorMed()'); igual(run('__mo632'), []);
-  } finally { run(SOLTA632 + 'MED_AGENDA_TODOS=__bk632v.ag; medLogHoje=__bk632v.ml; mostrarDespertadorMed=__bk632v.mo; DB=__bk632v.db; papelRecebeAlarmeMed=__bk632v.pr;'); }
+    run(`despMedSnooze={'bia__x_23-55': ${D(7, 0, 1) + 60000}};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), ['y_23-30'], 'o adiar da 23:55 ainda corre; a 23:30, que ninguém viu (31 min), toca (6.47); a das 14:00 (10 h) não');
+    run(`despMedNaTela=null; __mo632=[]; __log632={bia:{'y_23-30':{quem:'Ana'}}}; despMedSnooze={'bia__x_23-55': ${D(7, 0, 1) - 1000}};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), ['x_23-55'], 'o adiar venceu: a dose de ontem volta');
+    igual(run('dataKeyAtual()'), '2026-10-06', 'e a tela continua em ontem: a dose é registrada em ontem');
+    igual(run(`zDiaTelaAvancar(${D(7, 0, 1)})`), 'espera: alarme na tela');
+    run(`despMedNaTela=null; __mo632=[]; __log632={bia:{'x_23-55':{quem:'Ana'}, 'y_23-30':{quem:'Ana'}}};`); run('checarDespertadorMed()');
+    igual(run('__mo632'), [], 'as duas registradas; a das 14:00, fora do teto, não toca');
+    run(`DIA_TELA_AUTO='2026-10-07'; __log632={};`); run('checarDespertadorMed()'); igual(run('__mo632'), [], 'a tela que alguém pôs em outra data não toca nada');
+  } finally { run(SOLTA632 + 'MED_AGENDA_TODOS=__bk632v.ag; medLogHoje=__bk632v.ml; mostrarDespertadorMed=__bk632v.mo; DB=__bk632v.db; papelRecebeAlarmeMed=__bk632v.pr; Date=__bk632v.D;'); }
 });
 prova('6.32 (QA) a dose e o espelho das fichas irmãs ficam no MESMO dia, mesmo que a tela passe para o dia novo no meio; voltar para hoje à mão acerta o dia automático', () => {
   const src = fs.readFileSync(APP, 'utf8');
-  assert.ok(/const _diaLog=dataKeyAtual\(\);\n    DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\+'\/'\+doseId\)\.transaction/.test(src), 'a dose guarda o dia antes de gravar');
+  // (6.47, 5ª rodada) pela ficha, a dose com o ADIAR de outro dia ainda por voltar é a desse dia (_diaOutro); senão, o da tela
+  assert.ok(/const _diaLog=diaAlarme\|\|_diaOutro\|\|dataKeyAtual\(\);\n    DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\+'\/'\+doseId\)\.transaction/.test(src), 'a dose guarda o dia antes de gravar');
   assert.ok(/return DB\.ref\('auaulandia\/medicacao-log\/'\+_diaLog\+'\/'\+it\.key\)\.update\(extras\);/.test(src), 'o espelho usa o mesmo dia');
   igual((src.match(/medicacao-log\/'\+dataKeyAtual\(\)\+'\/'\+it\.key/g) || []).length, 0, 'nenhuma gravação da dose relê o dia depois');
   run(ARMA632);
@@ -7344,6 +7356,8 @@ prova('6.32 (3ª rodada do QA) o adiado só segura quando o alarme pode voltar; 
     igual(run('zDiaAdiadoAtivo(Date.now())'), true);
     run('checarDespertadorMed();');
     assert.strictEqual(run("despMedSnoozePend['bia__x_23-55']"), undefined, 'fora da agenda: sai do pendente');
+    // (6.47, 4ª rodada) e a tela diz: quem adiou está esperando o alarme voltar (antes: sumia em silêncio)
+    igual(run('__al632'), ['ALARME ADIADO QUE NÃO VOLTA | O alarme adiado de um remédio não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa). Nada foi registrado. Se a dose ainda for necessária, fale com a veterinária.']);
     // com a tela em ontem, a dose dada em outro aparelho também tira o pendente (A9)
     run(`MED_AGENDA_TODOS=[{key:'bia', itemId:'x', horario:'23:55', nome:'Apoquel'}]; despMedSnoozePend={'bia__x_23-55': Date.now()+60000}; despMedSnooze={'bia__x_23-55': Date.now()+60000};
       __log632t={bia:{'x_23-55':{quem:'Ana'}}}; checarDespertadorMed();`);
@@ -7359,6 +7373,1652 @@ prova('6.32 (3ª rodada do QA) o adiado só segura quando o alarme pode voltar; 
     igual(run('__rep632t'), 1, '"Atualizar mesmo assim" atualiza');
   } finally { run(SOLTA632 + `MED_AGENDA_TODOS=__bk632t3.ag; medLogHoje=__bk632t3.ml; mostrarDespertadorMed=__bk632t3.mo; DB=__bk632t3.db; zEscolha=__bk632t3.ze; location.replace=__bk632t3.rep;
     __diaRecarregando=__bk632t3.rec; __diaForcarAgora=__bk632t3.fo; inatLogado=__bk632t3.il; _appTrancado=__bk632t3.tr; zEhComputador=__bk632t3.ec;`); }
+});
+// ================================================================== 6.47 — a dose de ontem que ninguém viu
+console.log('\n6.47 — A dose de remédio de ontem que ninguém viu toca depois da virada, com a tela em ontem (08/out/2026)');
+// Tudo com relógio FIXO (Date trocado no sandbox): nenhuma prova depende da hora em que a suíte roda.
+const ONTEM647 = '2026-10-07', HOJE647 = '2026-10-08';
+const T647 = (d, hh, mm, ss) => new Date(2026, 9, d, hh, mm || 0, ss || 0).getTime();
+run('var __RD647=Date;');
+const relogio647 = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD647(${ms}); return new (Function.prototype.bind.apply(__RD647,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD647.prototype; Date.UTC=__RD647.UTC; Date.parse=__RD647.parse;
+  zHojeISO=function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); };`);
+// Banco "nulo" e completo: uma resposta atrasada de outra prova (o Telegram de um check-in, por exemplo)
+// que chegue durante estas provas encontra todos os métodos e não derruba a suíte.
+run(`__dbNulo647=function(p, extra){ var r={key:String(p||'').split('/').pop(), once:function(){ return Promise.resolve({val:function(){ return null; }, exists:function(){ return false; }, forEach:function(){ return false; }}); },
+    on:function(e,cb){ return cb; }, off:function(){}, set:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); }, remove:function(){ return Promise.resolve(); },
+    push:function(){ return Promise.resolve(); }, transaction:function(){ return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}}); },
+    child:function(k){ return __dbNulo647(p+'/'+k); }, orderByChild:function(){ return r; }, orderByKey:function(){ return r; }, limitToFirst:function(){ return r; }, limitToLast:function(){ return r; },
+    equalTo:function(){ return r; }, startAt:function(){ return r; }, endAt:function(){ return r; }, onDisconnect:function(){ return {set:function(){ return Promise.resolve(); }, remove:function(){ return Promise.resolve(); }, cancel:function(){ return Promise.resolve(); }}; }};
+    return Object.assign(r, extra||{}); };`);
+const ARMA647 = `__bk647={hz:zHojeISO, sd:selectedDate, dta:DIA_TELA_AUTO, ab:APP_DIA_ABERTO, fa:fichaAberta, ch:carregarHospedes, ul:updateDateLabel, au:audit, sn:despMedSnooze, sp:despMedSnoozePend,
+    dn:despMedNaTela, da:despMedAtual, dd:despMedAtualDoseId, dia:despMedAtualDia, ta:zDiaTrabalhoAberto, pr:papelRecebeAlarmeMed, ag:MED_AGENDA_TODOS, ml:medLogHoje, mo:mostrarDespertadorMed, db:DB,
+    op:despMedOntemPend, oc:__medOntemConf, ope:__medOntemPedido, mp:zMotivoParado, st:setTimeout, fv:zFaixaVersao, rec:__diaRecarregando, fo:__diaForcarAgora, ze:zEscolha, za:zAlertao, rep:location.replace, ck:zDiaCheckinAberto,
+    ac:__medAcordouEm, cn:__medConectado, ce:__medConectadoEm, cl:__medConexaoLigada, bt:__medBatida, oc2:__medOcultoDesde};
+  __ch=0; carregarHospedes=function(){ __ch++; }; updateDateLabel=function(){}; audit=function(){}; __fa=false; fichaAberta=function(){ return __fa; };
+  despMedSnooze={}; despMedSnoozePend={}; despMedNaTela=null; despMedAtual=null; despMedAtualDoseId=null; despMedAtualDia=null; despMedOntemPend={}; __medOntemConf=null; __medOntemPedido=null;
+  __medAcordouEm=0; __medConectado=null; __medConectadoEm=0; __medConexaoLigada=false; __medBatida=0; __medOcultoDesde=0;
+  zDiaTrabalhoAberto=function(){ return despMedNaTela?'alarme na tela':''; }; __papel=true; papelRecebeAlarmeMed=function(){ return __papel; };
+  __mo=[]; mostrarDespertadorMed=function(it,d,dia){ __mo.push(it.key+'__'+d); despMedNaTela=it.key+'__'+d; despMedAtual=it; despMedAtualDoseId=d; despMedAtualDia=dia||dataKeyAtual(); };
+  __log={}; __logLido=[]; __logPendura=false; medLogHoje=function(){ __logLido.push(dataKeyAtual()); if(__logPendura) return {then:function(){ return {catch:function(){}}; }}; return {then:function(f){ f(__log); return {catch:function(){}}; }}; };
+  DB={ref:function(p){ return __dbNulo647(p); }}; DIA_TELA_AUTO='${ONTEM647}'; APP_DIA_ABERTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 22, 40)});
+  zMotivoParado=function(){ return __parado; }; __parado=''; __st=[]; setTimeout=function(f,ms){ __st.push(ms); return 0; }; zFaixaVersao=function(){}; __diaRecarregando=false; __diaForcarAgora=false;
+  __esc=[]; zEscolha=function(t,l,b){ __esc.push({t:t,l:l,b:b}); }; __al=[]; zAlertao=function(t){ __al.push(t); }; __rep=0; location.replace=function(){ __rep++; }; zDiaCheckinAberto=function(){ return false; };
+  if(typeof medAdiadoDeOutroDia==='function'){ __bk647.sdia=despMedSnoozeDia; __bk647.sit=despMedSnoozeIt; __bk647.tard=__medTardia; __bk647.odl=__medOutroDiaLendo; despMedSnoozeDia={}; despMedSnoozeIt={}; __medTardia={}; __medOutroDiaLendo=0; }
+  if(typeof medNaoVouDar==='function'){ __bk647.nd=__medNaoDar; __bk647.ao=__medAcordouOculto; __bk647.nr=despMedNaoDar; __bk647.zm=Z_MAPAS; __medNaoDar={}; __medAcordouOculto=0; despMedNaoDar=false; Z_MAPAS={}; }
+  if(typeof MED_AGENDA_DIA!=='undefined'){ __bk647.agd=MED_AGENDA_DIA; __bk647.agf=__medAgendaFalhas; MED_AGENDA_DIA=''; __medAgendaFalhas=0; }
+  if(typeof MED_AGENDA_INTEIRA!=='undefined'){ __bk647.agi=MED_AGENDA_INTEIRA; MED_AGENDA_INTEIRA=true; }
+  if(typeof MED_AGENDA_SUSPENSOS!=='undefined'){ __bk647.ags=MED_AGENDA_SUSPENSOS; __bk647.dav=__medDescarteAviso; MED_AGENDA_SUSPENSOS={}; __medDescarteAviso=[]; }`;
+const SOLTA647 = `Date=__RD647; zHojeISO=__bk647.hz; selectedDate=__bk647.sd; DIA_TELA_AUTO=__bk647.dta; APP_DIA_ABERTO=__bk647.ab; fichaAberta=__bk647.fa; carregarHospedes=__bk647.ch; updateDateLabel=__bk647.ul; audit=__bk647.au;
+  despMedSnooze=__bk647.sn; despMedSnoozePend=__bk647.sp; despMedNaTela=__bk647.dn; despMedAtual=__bk647.da; despMedAtualDoseId=__bk647.dd; despMedAtualDia=__bk647.dia; zDiaTrabalhoAberto=__bk647.ta; papelRecebeAlarmeMed=__bk647.pr; MED_AGENDA_TODOS=__bk647.ag;
+  medLogHoje=__bk647.ml; mostrarDespertadorMed=__bk647.mo; DB=__bk647.db; despMedOntemPend=__bk647.op; __medOntemConf=__bk647.oc; __medOntemPedido=__bk647.ope; zMotivoParado=__bk647.mp; setTimeout=__bk647.st; zFaixaVersao=__bk647.fv;
+  __diaRecarregando=__bk647.rec; __diaForcarAgora=__bk647.fo; zEscolha=__bk647.ze; zAlertao=__bk647.za; location.replace=__bk647.rep; zDiaCheckinAberto=__bk647.ck;
+  __medAcordouEm=__bk647.ac; __medConectado=__bk647.cn; __medConectadoEm=__bk647.ce; __medConexaoLigada=__bk647.cl; __medBatida=__bk647.bt; __medOcultoDesde=__bk647.oc2;
+  if(typeof medAdiadoDeOutroDia==='function' && __bk647.sdia){ despMedSnoozeDia=__bk647.sdia; despMedSnoozeIt=__bk647.sit; __medTardia=__bk647.tard; __medOutroDiaLendo=__bk647.odl; }
+  if(typeof medNaoVouDar==='function' && __bk647.zm){ __medNaoDar=__bk647.nd; __medAcordouOculto=__bk647.ao; despMedNaoDar=__bk647.nr; Z_MAPAS=__bk647.zm; }
+  if(typeof MED_AGENDA_DIA!=='undefined' && ('agd' in __bk647)){ MED_AGENDA_DIA=__bk647.agd; __medAgendaFalhas=__bk647.agf; }
+  if('agi' in __bk647) MED_AGENDA_INTEIRA=__bk647.agi;
+  if('ags' in __bk647){ MED_AGENDA_SUSPENSOS=__bk647.ags; __medDescarteAviso=__bk647.dav; }`;
+// Para o «Dei o remédio» de verdade: quem assina, o Telegram, o estoque e um banco que grava por transação.
+const GRAVA647 = `__bkG647={pt:pessoaDoTurno, tg:medTgAvisarDose, de:descontarEstoquePorDose, cg:carregarMedAtrasadaGestora, bs:bipMedLoopStop, bl:bipMedLoopStart, ge:document.getElementById, tr:_appTrancado};
+  pessoaDoTurno=function(){ return 'Ana Souza'; }; medTgAvisarDose=function(){}; descontarEstoquePorDose=function(){}; carregarMedAtrasadaGestora=function(){}; bipMedLoopStop=function(){}; bipMedLoopStart=function(){}; _appTrancado=false;
+  __el647={style:{}, innerHTML:'', textContent:'', value:'', focus:function(){}, querySelector:function(){ return null; }}; document.getElementById=function(id){ return __el647; };
+  __gr=[]; DB={ref:function(p){ return __dbNulo647(p, {transaction:function(f){ var v=f(null); __gr.push(p); return Promise.resolve({committed:true, snapshot:{val:function(){ return v; }}}); },
+    once:function(){ return Promise.resolve({val:function(){ return {}; }}); }, update:function(){ __gr.push('update:'+p); return Promise.resolve(); }}); }};`;
+const SOLTAG647 = `pessoaDoTurno=__bkG647.pt; medTgAvisarDose=__bkG647.tg; descontarEstoquePorDose=__bkG647.de; carregarMedAtrasadaGestora=__bkG647.cg; bipMedLoopStop=__bkG647.bs; bipMedLoopStart=__bkG647.bl; document.getElementById=__bkG647.ge; _appTrancado=__bkG647.tr;`;
+const BIA647 = "{key:'bia__ana', itemId:'x', horario:'23:30', nome:'Apoquel', hospNome:'Bia'}";
+const THOR647 = "{key:'thor__rui', itemId:'y', horario:'23:30', nome:'Otomax', hospNome:'Thor'}";
+const VELHA647 = "{key:'lua__eva', itemId:'z', horario:'14:00', nome:'Prednisolona', hospNome:'Lua'}";
+const DCD647 = "{key:'dc__tico__joana', itemId:'medicacao_0', horario:'23:00', nome:'Apoquel', hospNome:'Tico'}";
+const SAIU647 = "{key:'nina__eva', itemId:'w', horario:'23:00', nome:'Apoquel', hospNome:'Nina', saidaHoje:true}";
+// Só voltas de promessa (microtarefas), nunca o relógio do Node: as respostas atrasadas das provas do
+// check-in (o Telegram da ficha) ficam onde sempre ficaram, sem cair no meio destas provas.
+const volta647 = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+prova('6.47 P1 (pura) a janela: até o teto; Day Care, quem saiu ontem e horário inválido nunca; o teto é o menor entre 3 h e a metade do intervalo até a próxima dose (C5)', () => {
+  run(ARMA647);
+  try {
+    igual(run(`medOntemNaJanela(${BIA647}, '${ONTEM647}', ${T647(8, 0, 20)})`), true, '23:30 às 00:20 (50 min)');
+    igual(run(`medOntemNaJanela(${VELHA647}, '${ONTEM647}', ${T647(8, 0, 5)})`), false, '14:00 às 00:05 (10 h): fora');
+    igual(run(`medOntemNaJanela({key:'a',itemId:'i',horario:'21:00'}, '${ONTEM647}', ${T647(8, 0, 0)})`), true, '21:00 à meia-noite: exatamente 3 h, dentro');
+    igual(run(`medOntemNaJanela({key:'a',itemId:'i',horario:'20:59'}, '${ONTEM647}', ${T647(8, 0, 0)})`), false, '20:59 à meia-noite: fora');
+    igual(run(`medOntemNaJanela(${DCD647}, '${ONTEM647}', ${T647(8, 0, 5)})`), false, 'Day Care (também a pernoite do check-in de pertences): não toca');
+    igual(run(`medOntemNaJanela(${SAIU647}, '${ONTEM647}', ${T647(8, 0, 5)})`), false, 'quem tinha saída ontem já foi para casa (C9)');
+    igual(run(`medOntemNaJanela({key:'a',itemId:'i',horario:'depois do jantar'}, '${ONTEM647}', ${T647(8, 0, 5)})`), false);
+    igual(run(`medOntemNaJanela({key:'a',itemId:'i',horario:'00:10'}, '${HOJE647}', ${T647(8, 0, 5)})`), false, 'dose ainda no futuro');
+    // C5: de 4 em 4 h (22h, 2h, 6h…): a metade do intervalo é 2 h
+    const Q4 = ['22:00', '02:00', '06:00', '10:00', '14:00', '18:00'].map((h) => `{key:'rex__ivo', itemId:'q', horario:'${h}'}`).join(',');
+    igual(run(`medOntemTeto({key:'rex__ivo', itemId:'q', horario:'22:00'}, [${Q4}])`), 2 * 3600000, '4 em 4 h: teto de 2 h');
+    igual(run(`medOntemNaJanela({key:'rex__ivo', itemId:'q', horario:'22:00'}, '${ONTEM647}', ${T647(8, 0, 0)}, [${Q4}])`), true, '22:00 à meia-noite (2 h): dentro');
+    igual(run(`medOntemNaJanela({key:'rex__ivo', itemId:'q', horario:'22:00'}, '${ONTEM647}', ${T647(8, 0, 55)}, [${Q4}])`), false, '22:00 às 00:55 (2 h 55): fora, a das 02:00 está perto');
+    igual(run(`medOntemTeto(${BIA647}, [${BIA647}])`), 3 * 3600000, 'uma vez por dia: 3 h');
+    igual(run(`medOntemTeto({key:'k', itemId:'i', horario:'20:00'}, [{key:'k', itemId:'i', horario:'08:00'}, {key:'k', itemId:'i', horario:'20:00'}])`), 3 * 3600000, '12 em 12 h: 3 h (a metade, 6 h, é maior)');
+    igual(run(`medOntemTeto({key:'k', itemId:'i', horario:'21:00'}, [{key:'k', itemId:'i', horario:'21:00'}, {key:'k', itemId:'j', horario:'22:00'}, {key:'m', itemId:'i', horario:'22:00'}])`), 3 * 3600000, 'outro remédio ou outra ficha não contam');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P2 (pura) as pendentes: tira a dada, a adiada, a do Day Care, a de quem saiu e a fora do teto', () => {
+  run(ARMA647);
+  try {
+    const r = run(`medOntemPendentes([${BIA647}, ${THOR647}, ${VELHA647}, ${DCD647}, ${SAIU647}], {thor__rui:{'y_23-30':{quem:'Ana'}}}, {}, '${ONTEM647}', ${T647(8, 0, 20)})`);
+    igual(Object.keys(r), ['bia__ana__x_23-30']);
+    igual(r['bia__ana__x_23-30'], T647(7, 23, 30), 'guarda a hora da dose');
+    igual(Object.keys(run(`medOntemPendentes([${BIA647}], {}, {'bia__ana__x_23-30': ${T647(8, 0, 25)}}, '${ONTEM647}', ${T647(8, 0, 20)})`)), [], 'adiada: segue a regra da 6.32');
+    const Q4 = ['22:00', '02:00', '06:00', '10:00', '14:00', '18:00'].map((h) => `{key:'rex__ivo', itemId:'q', horario:'${h}'}`).join(',');
+    igual(Object.keys(run(`medOntemPendentes([${Q4}], {}, {}, '${ONTEM647}', ${T647(8, 0, 0)})`)), ['rex__ivo__q_22-00'], 'de 4 em 4 h, à meia-noite (2 h): dentro');
+    igual(Object.keys(run(`medOntemPendentes([${Q4}], {}, {}, '${ONTEM647}', ${T647(8, 0, 30)})`)), [], 'de 4 em 4 h, às 00:30 (2 h 30): fora — a das 02:00 está perto (C5)');
+
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P3 (R1) o celular congelado das 23:00 às 00:20: a tela espera, o alarme da 23:30 abre em ontem; a recarga da virada também espera', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run('medDiaVelhoAuto()'), true);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem', 'antes: avancou e a dose sumia');
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'o alarme abre na hora (a troca pede a conferência)');
+    igual(run('__logLido'), [ONTEM647], 'o registro lido é o de ontem');
+    igual(run('[dataKeyAtual(), despMedAtualDia]'), [ONTEM647, ONTEM647]);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20, 15)})`), 'espera: alarme na tela');
+    for (const p of ['3 min sem toque', 'tela trancada']) {
+      run(`__parado='${p}'; __st=[]; despMedNaTela=null; __diaRecarregando=false;`);
+      igual(run('zViradaDoDiaTick()'), 'faixa', p + ': não recarrega'); igual(run('__st'), []);
+    }
+    run(`__parado=''; __diaOcultoDesde=${T647(7, 23, 0)}; __st=[];`);
+    igual(run(`zViradaDoDiaVisibilidade(false, ${T647(8, 0, 20)})`), 'faixa', 'de volta do bolso: não recarrega'); igual(run('__st'), []);
+    run(`__fa=true; __parado='3 min sem toque'; despMedNaTela=null; __st=[];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: ficha aberta');
+    igual(run('zViradaDoDiaTick()'), 'faixa', 'ficha aberta + parado: não recarrega (antes: recarga)'); igual(run('__st'), []);
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 P4 a dose é registrada em medicacao-log/{ontem}, e sai da lista na hora; depois, a tela passa para hoje (P4b)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    igual(run('Object.keys(despMedOntemPend)'), ['bia__ana__x_23-30']);
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30']);
+    igual(run('Object.keys(despMedOntemPend)'), [], 'registrada: sai da lista da dose de ontem (C3)');
+    // P4b: a conferência seguinte vê a dose dada e a tela passa
+    run(`despMedNaTela=null; __log={bia__ana:{'x_23-30':{quem:'Ana Souza'}}};`); relogio647(T647(8, 0, 21));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 21)})`), 'avancou'); igual(run('dataKeyAtual()'), HOJE647);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+prova('6.47 P5 (R2) duas doses de ontem: uma de cada vez, a mais antiga primeiro; a do Thor não some quando a da Bia é dada', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${THOR647}, {key:'bia__ana', itemId:'x', horario:'22:30', nome:'Apoquel', hospNome:'Bia'}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    igual(run('__mo'), ['bia__ana__x_22-30'], 'a das 22:30 primeiro');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: alarme na tela');
+    run(`despMedNaTela=null; __log={bia__ana:{'x_22-30':{quem:'Ana'}}}; __mo=[];`); relogio647(T647(8, 0, 25));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 25)})`), 'espera: dose de ontem', 'antes: avancou e a do Thor sumia');
+    igual(run('__mo'), ['thor__rui__y_23-30']);
+    run(`despMedNaTela=null; __log={bia__ana:{'x_22-30':{quem:'Ana'}}, thor__rui:{'y_23-30':{quem:'Ana'}}}; checarDespertadorMed();`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 26)})`), 'avancou');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P6 a dose das 14:00 de ontem às 00:05: não toca, não segura, nada é gravado; a das 23:30, na mesma agenda, toca', () => {
+  run(ARMA647); relogio647(T647(8, 0, 5));
+  try {
+    run(`MED_AGENDA_TODOS=[${VELHA647}];`);
+    run('checarDespertadorMed();'); igual(run('__mo'), []);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 5)})`), 'avancou');
+    // o teto separa as duas: com a das 23:30 na agenda, só ela toca (a das 14:00 vem antes na fila e é pulada)
+    run(`DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 22, 40)}); MED_AGENDA_TODOS=[${VELHA647}, ${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 5)})`), 'espera: dose de ontem');
+    igual(run('[__mo, Object.keys(despMedOntemPend)]'), [['bia__ana__x_23-30'], ['bia__ana__x_23-30']]);
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P7 os limites: papel que não recebe, outra data, Day Care, quem saiu ontem, fora da agenda, dada em outro aparelho, adiada (não segura: volta pelo dia dela — 4ª rodada)', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  const reset = `DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 22, 40)}); __medOntemConf=null; __medOntemPedido=null; despMedOntemPend={}; despMedNaTela=null; __mo=[];`;
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __papel=false;`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'avancou', 'Gestão: troca como antes');
+    run(reset + `__papel=true; selectedDate=new __RD647(${T647(5, 10)});`);
+    igual(run('zDiaOntemPendente(' + T647(8, 0, 20) + ')'), false, 'outra data escolhida à mão');
+    run(reset + `MED_AGENDA_TODOS=[${DCD647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'avancou', 'Day Care');
+    run(reset + `MED_AGENDA_TODOS=[${SAIU647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'avancou', 'quem tinha saída ontem (C9)');
+    run(reset + `MED_AGENDA_TODOS=[${['22:00', '02:00', '06:00', '10:00', '14:00', '18:00'].map((h) => `{key:'rex__ivo', itemId:'q', horario:'${h}'}`).join(',')}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 30)})`), 'avancou', 'de 4 em 4 h, às 00:30: a das 22:00 passou da metade do intervalo (C5)');
+    run(reset + 'MED_AGENDA_TODOS=[];');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'avancou', 'remédio fora da agenda (suspenso, terminou)');
+    run(reset + `MED_AGENDA_TODOS=[${BIA647}]; __log={bia__ana:{'x_23-30':{quem:'Rui'}}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem', 'conferindo');
+    igual(run('__mo'), [], 'dada em outro aparelho: não toca');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 21)})`), 'avancou');
+    run(reset + `__log={}; despMedSnooze={'bia__ana__x_23-30': ${T647(8, 0, 23)}}; despMedSnoozePend={'bia__ana__x_23-30': ${T647(8, 0, 23)}};
+      despMedSnoozeDia={'bia__ana__x_23-30':'${ONTEM647}'}; despMedSnoozeIt={'bia__ana__x_23-30':${BIA647}};`);
+    igual([run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), run('__mo'), run(`zDiaAdiadoAtivo(${T647(8, 0, 20)})`)], ['avancou', [], true],
+      'adiada (4ª rodada): a tela passa sem esperar por ela (antes: «espera: alarme adiado»); o adiado continua e segura só a recarga');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P8 o "conferindo" não prende: sem resposta do registro de ontem por 2 min, a tela passa', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __logPendura=true;`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 21, 59)})`), 'espera: dose de ontem', '119 s');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 22, 1)})`), 'avancou', '121 s');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P9 (R5) o toque na faixa com a dose de ontem tocando, pendente ou em conferência: pergunta antes, sem afirmar o que não sabe (C3); o check-in aberto continua na frente', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; despMedNaTela='bia__ana__x_23-30';`);
+    run('aplicarVersaoNova()');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['HÁ UM REMÉDIO DE ONTEM SEM REGISTRO']); igual(run('__rep'), 0, 'antes: recarregava e o alarme sumia');
+    igual(run('__esc[0].l'), ['O alarme de uma dose de remédio de ontem está na tela. Atualizar agora apaga o alarme, e a dose não toca de novo.',
+      'Dê o remédio e toque em «Dei o remédio»; depois, atualize.'], 'sem o «ADIAR», que cairia em outra pergunta (C3)');
+    igual(run('__esc[0].b.map(function(b){ return b.t; })'), ['Responder o alarme', 'Atualizar mesmo assim']);
+    run('__esc[0].b[1].fn()'); igual(run('__rep'), 1, '"Atualizar mesmo assim" atualiza');
+    // em conferência (o registro ainda não respondeu): não afirma que falta registro
+    run(`__esc=[]; __rep=0; __diaForcarAgora=false; despMedNaTela=null; __logPendura=true;`);
+    run('aplicarVersaoNova()');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['CONFERINDO OS REMÉDIOS DE ONTEM']);
+    igual(run('__esc[0].l'), ['Conferindo os remédios de ontem neste aparelho. Toque de novo em alguns segundos.']); igual(run('__rep'), 0);
+    // pendente, ainda sem alarme: «Responder o alarme» abre o alarme na hora (C3)
+    run(`__esc=[]; __logPendura=false; checarDespertadorMed(); despMedNaTela=null; __mo=[];`);
+    igual(run('Object.keys(despMedOntemPend)'), ['bia__ana__x_23-30']);
+    run('aplicarVersaoNova()');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['HÁ UM REMÉDIO DE ONTEM SEM REGISTRO']);
+    assert.ok(/^Uma dose de remédio de ontem ainda não tem registro neste aparelho, e o alarme dela vai abrir agora\./.test(run('__esc[0].l[0]')), run('__esc[0].l[0]'));
+    run('__esc[0].b[0].fn()'); igual(run('__mo'), ['bia__ana__x_23-30'], '«Responder o alarme» abre o alarme (antes: não fazia nada)'); igual(run('__rep'), 0);
+    // o check-in aberto vem antes (QA59 N5)
+    run(`__esc=[]; __rep=0; zDiaCheckinAberto=function(){ return true; };`);
+    run('aplicarVersaoNova()'); igual(run('__al'), ['SALVE O CHECK-IN ANTES DE ATUALIZAR'], 'QA59 N5: o check-in vem antes'); igual(run('__esc'), []);
+  } finally { run(SOLTA647); }
+});
+prova('6.47 P10 o alarme da dose de ontem diz "de ontem", há quanto tempo, e manda conferir antes de dar (C3, C5); o de hoje fica como era', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  run(`mostrarDespertadorMed=__bk647.mo; __bk10={ge:document.getElementById, bl:bipMedLoopStart}; __el={style:{}, innerHTML:''}; document.getElementById=function(id){ return id==='despMed'?__el:null; }; bipMedLoopStart=function(){};`);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; mostrarDespertadorMed(${BIA647}, 'x_23-30', '${ONTEM647}');`);
+    const h = run('__el.innerHTML');
+    assert.ok(/ às <strong id="despMedQuando">23:30 de ontem<\/strong><span id="despMedAtraso"> — há 50 min<\/span><span id="despMedInstr">/.test(h), h);
+    assert.ok(/<span id="despMedInstr">Dose de ontem: confira se ninguém deu antes de dar\. Se ninguém deu, dê o remédio agora — este alarme não desaparece sozinho\.<\/span>/.test(h), h);
+    assert.ok(!/ainda não foi registrada/.test(h), 'não afirma o que o aparelho não sabe');
+    igual(run('despMedAtualDia'), ONTEM647);
+    relogio647(T647(8, 2, 20)); run(`mostrarDespertadorMed(${BIA647}, 'x_23-30', '${ONTEM647}');`);
+    assert.ok(/23:30 de ontem<\/strong><span id="despMedAtraso"> — há 2 h 50 min<\/span>/.test(run('__el.innerHTML')), run('__el.innerHTML'));
+    run(`selectedDate=new __RD647(${T647(8, 0, 20)}); DIA_TELA_AUTO='${HOJE647}'; mostrarDespertadorMed({key:'bia__ana', itemId:'x', horario:'00:15', nome:'Apoquel', hospNome:'Bia'}, 'x_00-15');`);
+    const h2 = run('__el.innerHTML');
+    assert.ok(/às <strong id="despMedQuando">00:15<\/strong><span id="despMedAtraso"><\/span><span id="despMedInstr">Dê o remédio agora — este alarme não desaparece sozinho\.<\/span>/.test(h2), 'o alarme de hoje fica como era: ' + h2);
+    igual(run('despMedAtualDia'), HOJE647, 'sem o dia, vale o da tela');
+    igual([run('medAtrasoTexto(30000)'), run('medAtrasoTexto(3600000)'), run('medAtrasoTexto(50*60000)')], ['há menos de 1 min', 'há 1 h', 'há 50 min']);
+    // 2ª rodada: o atraso é um trecho próprio (o redesenho troca), na mesma linha e no mesmo tamanho do horário
+    assert.ok(/\.desp-tx #despMedAtraso\{display:inline;font-size:inherit;font-weight:inherit;opacity:1\}/.test(fs.readFileSync(APP, 'utf8')), 'o atraso não vira uma linha menor embaixo');
+  } finally { run(SOLTA647 + 'document.getElementById=__bk10.ge; bipMedLoopStart=__bk10.bl;'); }
+});
+prova('6.47 P11 a ficha de ontem mostra "—faltou—" (e a de amanhã, "—pendente—")', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    igual(run(`statusDoseMed('23:30', false, '${ONTEM647}')`), 'atrasada');
+    igual(run(`statusDoseMed('14:00', false, '${ONTEM647}')`), 'atrasada', 'antes: pendente');
+    igual(run(`statusDoseMed('08:00', false, '2026-10-09')`), 'pendente');
+    igual(run(`statusDoseMed('00:10', false, '${HOJE647}')`), 'atrasada', 'hoje: a régua de sempre');
+    igual(run(`statusDoseMed('00:10', true, '${ONTEM647}')`), 'cumprida');
+    const html = run(`renderPlacarMedDia([{nome:'Apoquel', h:'14:00', feito:false}])`);
+    assert.ok(/14:00 \(—faltou—\)/.test(html), html);
+    run(`selectedDate=new __RD647(${T647(9, 10)});`);
+    assert.ok(/00:10 \(—pendente—\)/.test(run(`renderPlacarMedDia([{nome:'Apoquel', h:'00:10', feito:false}])`)), 'a ficha de amanhã não diz "faltou"');
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 C1 o alarme de ontem aberto + «Hoje» (ou outra pessoa destranca) + «Dei o remédio»: grava em ONTEM; a plantonista que assume continua em ontem; a Gestão vai para hoje', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647);
+  run(`mostrarDespertadorMed=__bk647.mo; __bkC1={cf:carregarFicha, sr:senhasRuntime, ua:usuarioAtual, al:aplicarLogin, rm:document.body.removeAttribute, ds:Object.assign({}, document.body.dataset)};
+    carregarFicha=function(){}; document.body.removeAttribute=function(){};
+    __alErr=''; var __alOrig=aplicarLogin; aplicarLogin=function(u){ try{ __alOrig(u); }catch(e){ __alErr=String(e&&e.message||e); } };
+    usuarioAtual=function(){ return {nome:'Wandela'}; };
+    // o resto da entrada (menus, contadores, telas) não é desta prova: fica calado, e volta no fim
+    __bkC1f={}; ['inatIniciar','batimentoIniciar','montarSubnav','aplicarPaginasPessoa','aplicarPermMenu','pendCarregar','vencGarantir','hojeGarantir','permCarregarConcedidas',
+      'ajustarAcordeoes','ajustarSubcabecalhosMenu','abrirSanfonasDe','telaInicialDe','renderKPIs','renderCarteira','renderMovimento','renderPendencias','inatMarcarAtividade'].forEach(function(n){
+      __bkC1f[n]=globalThis[n]; globalThis[n]=function(){ return null; }; });`);
+  const novoDia = () => run(`despMedNaTela=null; despMedAtual=null; despMedAtualDoseId=null; despMedAtualDia=null; __gr=[]; DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 22, 40)}); __medOntemConf=null; __medOntemPedido=null; despMedOntemPend={};`);
+  try {
+    // (a) «Hoje» com o alarme da Bia na tela
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    run('goToToday();'); igual(run('dataKeyAtual()'), ONTEM647, '«Hoje» pergunta antes (2ª rodada): a tela fica em ontem');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['HÁ REMÉDIO DE ONTEM POR RESPONDER']);
+    run('__esc[0].b[1].fn();'); igual(run('dataKeyAtual()'), HOJE647, '«Ir para hoje mesmo assim» leva a tela para hoje');
+    // a ficha da Bia aberta em hoje: a dose de ontem não aparece dada nela
+    run(`__bkC1h={ch:currentHosp, ml:MED_AGENDA_LOG, rm:renderMedAgendaHoje}; currentHosp={nome:'Bia', refKey:'bia__ana'}; MED_AGENDA_LOG={}; renderMedAgendaHoje=function(){};`);
+    try {
+      igual(run('medAgendaKey(currentHosp)'), 'bia__ana');
+      run('confirmarDoseDespertador();'); await volta647();
+      igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'antes: gravava em ' + HOJE647 + ' (a dose das 23:30 de hoje ficava "dada")');
+      igual(run('Object.keys(MED_AGENDA_LOG)'), [], 'a ficha de hoje não mostra a dose de ontem como dada');
+    } finally { run('currentHosp=__bkC1h.ch; MED_AGENDA_LOG=__bkC1h.ml; renderMedAgendaHoje=__bkC1h.rm;'); }
+    // (b) trancado; outra PLANTONISTA destranca (troca de turno): continua em ontem, grava em ontem, e o Thor toca depois
+    novoDia(); run(`MED_AGENDA_TODOS=[${BIA647}, ${THOR647}]; senhasRuntime=function(){ return {'1234':{nome:'Rita', role:'plantonista'}}; }; __el647.value='1234';`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    run('_appTrancado=true; confirmarDoseDespertador();'); igual(run('__gr'), [], 'trancado: pede a senha');
+    run('destrancarApp();'); igual(run('__alErr'), '', 'aplicarLogin rodou inteiro');
+    igual(run('dataKeyAtual()'), ONTEM647, 'quem recebe o alarme continua em ontem (antes: ia para hoje)');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30']);
+    run(`despMedNaTela=null; __log={bia__ana:{'x_23-30':{quem:'Rita'}}}; __mo=[]; mostrarDespertadorMed=function(it,d,dia){ __mo.push(it.key+'__'+d); despMedNaTela=it.key+'__'+d; despMedAtual=it; despMedAtualDoseId=d; despMedAtualDia=dia||dataKeyAtual(); };`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 21)})`), 'espera: dose de ontem'); igual(run('__mo'), ['thor__rui__y_23-30'], 'a do Thor não some');
+    // (c) a GESTÃO destranca com o alarme de ontem na tela: a tela vai para hoje (como sempre), e a dose vai para ontem
+    novoDia(); run(`__mo=[]; __log={}; mostrarDespertadorMed=__bk647.mo; MED_AGENDA_TODOS=[${BIA647}]; usuarioAtual=function(){ return {nome:'Rita'}; }; senhasRuntime=function(){ return {'9999':{nome:'Gestão', role:'gestao'}}; }; __el647.value='9999';`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    run('_appTrancado=true; __papel=false; destrancarApp();'); igual(run('__alErr'), '');
+    igual(run('dataKeyAtual()'), HOJE647, 'quem não recebe o alarme vai para hoje, como antes');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'a dose vai para o dia em que o alarme abriu');
+  } finally { run(`Object.keys(__bkC1f).forEach(function(n){ globalThis[n]=__bkC1f[n]; }); carregarFicha=__bkC1.cf; senhasRuntime=__bkC1.sr; usuarioAtual=__bkC1.ua; aplicarLogin=__bkC1.al; document.body.removeAttribute=__bkC1.rm;
+    Object.keys(document.body.dataset).forEach(function(k){ if(!(k in __bkC1.ds)) delete document.body.dataset[k]; }); Object.assign(document.body.dataset, __bkC1.ds);` + SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 C2 e C7 a resposta atrasada da conferência não abre nada depois de a tela passar; duas conferências na mesma batida abrem o alarme UMA vez', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    // C2: o registro de ontem demora; a tela passa aos 2 min 30 s; a resposta antiga chega depois
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __solta=[]; medLogHoje=function(){ __logLido.push(dataKeyAtual()); return new Promise(function(r){ __solta.push(r); }); };`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    relogio647(T647(8, 0, 22, 30));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 22, 30)})`), 'avancou', 'sem resposta em 2 min, a tela passa (E4)');
+    run('__solta.forEach(function(r){ r({}); });'); await volta647(); await volta647();
+    igual(run('[dataKeyAtual(), __mo]'), [HOJE647, []], 'antes: a dose de ontem abria com a tela em hoje e gravava em hoje');
+    // C2b: a conferência começou às 23:59:50 com a tela em hoje (07/10/2026) e voltou às 00:00:10, com a tela agora "em ontem":
+    // a régua de hoje abriria a dose das 00:03 de ONTEM (24 h atrás) como se fosse daqui a 3 min
+    run(SOLTA647); run(ARMA647); relogio647(T647(7, 23, 59, 50));
+    run(`DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 23, 59, 50)}); MED_AGENDA_TODOS=[{key:'bia__ana', itemId:'m', horario:'00:03', nome:'Apoquel', hospNome:'Bia'}];
+      __solta=[]; medLogHoje=function(){ __logLido.push(dataKeyAtual()); return new Promise(function(r){ __solta.push(r); }); };`);
+    igual(run('[ehHojeAua(), medDiaVelhoAuto()]'), [true, false]);
+    run('checarDespertadorMed();'); relogio647(T647(8, 0, 0, 10));
+    igual(run('[dataKeyAtual(), medDiaVelhoAuto()]'), [ONTEM647, true]);
+    run('__solta.forEach(function(r){ r({}); });'); await volta647();
+    igual(run('__mo'), [], 'a resposta da conferência de hoje não vale depois da virada');
+    // C2c: a conferência do dia 07 (pedida às 23:59:59) volta depois de a tela passar para o dia 08: não abre nada —
+    // senão a dose das 00:03 de HOJE abriria com o dia 07 e seria gravada em 07 (o dia do alarme é o da conferência)
+    run(SOLTA647); run(ARMA647); relogio647(T647(7, 23, 59, 59));
+    run(`DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 23, 59, 59)}); MED_AGENDA_TODOS=[{key:'bia__ana', itemId:'m', horario:'00:03', nome:'Apoquel', hospNome:'Bia'}];
+      __solta=[]; medLogHoje=function(){ __logLido.push(dataKeyAtual()); return new Promise(function(r){ __solta.push(r); }); };`);
+    run('checarDespertadorMed();'); relogio647(T647(8, 0, 0, 30));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 30)})`), 'avancou'); igual(run('[dataKeyAtual(), ehHojeAua()]'), [HOJE647, true]);
+    run('__solta.forEach(function(r){ r({}); });'); await volta647();
+    igual(run('__mo'), [], 'a resposta do dia 07 não abre a dose de hoje');
+    // C7: o vigia de 15 s chama a troca e a virada na mesma batida; as duas conferências voltam depois
+    run(SOLTA647); run(ARMA647); relogio647(T647(8, 0, 20));
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __parado='3 min sem toque'; medLogHoje=function(){ __logLido.push(dataKeyAtual()); return Promise.resolve(__log).then(function(v){ return Object.assign({},v); }); };`);
+    igual([run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), run('zViradaDoDiaTick()')], ['espera: dose de ontem', 'faixa']);
+    await volta647(); await volta647();
+    igual(run('__logLido.length'), 2, 'duas conferências pedidas');
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'o alarme abre uma vez só (antes: duas, com o som reiniciado)');
+    igual(run('__st'), [], 'nenhuma recarga');
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 C3 depois do «Dei o remédio» da última dose de ontem, o toque na faixa não pergunta mais (a dose sai da lista na hora)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run('confirmarDoseDespertador();'); await volta647();
+    run('despMedNaTela=null;'); relogio647(T647(8, 0, 21));
+    run('aplicarVersaoNova()');
+    igual(run('__esc'), [], 'antes: "HÁ UM REMÉDIO DE ONTEM SEM REGISTRO" com a Bia já dada');
+    igual(run('__rep'), 1, 'atualiza');
+    // outro aparelho assinou primeiro (a transação não grava): a dose também sai da lista
+    run(`despMedNaTela=null; __rep=0; __esc=[]; __medOntemConf=null; __medOntemPedido=null; despMedOntemPend={};`);
+    relogio647(T647(8, 0, 20)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(`DB={ref:function(p){ return __dbNulo647(p, {transaction:function(f){ return Promise.resolve({committed:false, snapshot:{val:function(){ return {quem:'Rita', ts:${T647(7, 23, 40)}}; }}}); }}); }};`);
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('[Object.keys(despMedOntemPend), despMedNaTela, __al]'), [[], null, ['ESTA DOSE JÁ FOI REGISTRADA']], 'já assinada: sai da lista e o alarme fecha');
+    relogio647(T647(8, 0, 21)); run('aplicarVersaoNova()'); igual([run('__esc'), run('__rep')], [[], 1]);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 C9 a agenda do alarme marca quem tem saída no dia («Dormiu · sai hoje»): a dose da noite dele não toca depois da meia-noite', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  run(`__bkC9={hs:hospedes, vg:medVigiaGravar, cm:carregarMedAtrasadaGestora}; medVigiaGravar=function(){}; carregarMedAtrasadaGestora=function(){};
+    hospedes=[{nome:'Nina', tutor:'Eva', refKey:'nina__eva', saidaHoje:true}, {nome:'Bia', tutor:'Ana', refKey:'bia__ana'}];
+    DB={ref:function(p){ var v=null; if(p==='auaulandia/medicacao-agenda/nina__eva/itens') v={w:{nome:'Apoquel', horarios:['23:00']}}; if(p==='auaulandia/medicacao-agenda/bia__ana/itens') v={x:{nome:'Apoquel', horarios:['23:30']}};
+      return __dbNulo647(p, {once:function(){ return Promise.resolve({val:function(){ return v; }}); }}); }};
+    medLogHoje=function(){ __logLido.push(dataKeyAtual()); return Promise.resolve(__log); };
+    MED_AGENDA_TODOS=[]; carregarAgendaMedTodos();`);
+  try {
+    for (let i = 0; i < 5; i++) await volta647();
+    igual(run('MED_AGENDA_TODOS.map(function(d){ return d.key+" "+d.horario+" "+d.saidaHoje; })'), ['nina__eva 23:00 true', 'bia__ana 23:30 false']);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); await volta647();
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'só a Bia: a Nina foi para casa ontem (a das 23:00 dela vinha antes na fila)');
+  } finally { run('hospedes=__bkC9.hs; medVigiaGravar=__bkC9.vg; carregarMedAtrasadaGestora=__bkC9.cm;' + SOLTA647); }
+});
+prova('6.47 a faixa do topo acesa: o alarme de remédio abre logo abaixo dela (a 375 px a faixa cobria o nome do FILHOt)', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/\.desp-med\{top:var\(--z-faixa-topo-h,0px\)\}/.test(src), 'o alarme usa a altura da faixa');
+  run(`__bkFx={ge:document.getElementById, de:document.documentElement, pt:document.body.style.paddingTop, ab:APP_DIA_ABERTO}; APP_DIA_ABERTO=zHojeISO();
+    __fx={style:{}, textContent:'', offsetHeight:44}; document.getElementById=function(id){ return id==='faixaVersaoTopo'?__fx:null; };
+    __props=[]; document.documentElement={style:{setProperty:function(k,v){ __props.push(k+'='+v); }}};`);
+  try {
+    run('zFaixaVersao(true);'); run('zFaixaVersao(false);');
+    igual(run('__props'), ['--z-faixa-topo-h=44px', '--z-faixa-topo-h=0px'], 'acesa: a altura dela; apagada: 0');
+  } finally { run('document.getElementById=__bkFx.ge; document.documentElement=__bkFx.de; document.body.style.paddingTop=__bkFx.pt; APP_DIA_ABERTO=__bkFx.ab;'); }
+});
+provaAsync('6.47 C4 a página que volta (descongelada, de volta do bolso, relógio que pulou) não abre o alarme de ontem com o registro em memória velho: espera o banco', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  run(`__cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }};`);
+  const T0 = T647(8, 0, 20);
+  try {
+    // às 00:05 o aparelho conferiu (a Bia sem registro), mas o alarme dela não abriu: havia outro na tela. A tela apagou,
+    // e às 00:20 o celular acorda: a conferência de antes não vale mais.
+    run(`MED_AGENDA_TODOS=[${BIA647}]; despMedNaTela='outro__alarme';`);
+    relogio647(T647(8, 0, 5)); run(`despMedOntemPend=medOntemPendentes(MED_AGENDA_TODOS, {}, {}, '${ONTEM647}', ${T647(8, 0, 5)}); __medOntemConf={dia:'${ONTEM647}', ts:${T647(8, 0, 5)}, vistas:{'bia__ana__x_23-30':1}};`);
+    igual(run(`zDiaOntemEstado(${T647(8, 0, 5)})`), 'pendente');
+    run('despMedNaTela=null;'); relogio647(T0);
+    run(`medOntemAcordou(${T0});`);
+    igual([run(`zDiaOntemEstado(${T0})`), run('Object.keys(despMedOntemPend)')], ['conferindo', []], 'acordou: a conferência de antes não vale (a faixa não afirma)');
+    igual(run('__cn.length'), 1, 'liga o ouvinte de conexão');
+    igual(run('__st'), [5500], 'confere de novo logo depois da folga');
+    run('__cn[0]({val:function(){ return false; }});');   // o banco ainda não voltou
+    igual(run(`zDiaTelaAvancar(${T0})`), 'espera: dose de ontem', 'conferindo');
+    relogio647(T0 + 20000); run('checarDespertadorMed();');
+    igual(run('__mo'), [], 'sem conexão há 20 s: nenhum alarme de ontem com o registro velho');
+    // a conexão volta aos 25 s; o registro novo (a Bia foi dada às 23:35 em outro aparelho) chega aos 28 s
+    relogio647(T0 + 25000); run('__cn[0]({val:function(){ return true; }});');
+    relogio647(T0 + 27000); run('checarDespertadorMed();'); igual(run('__mo'), [], 'folga de 5 s depois da conexão (o registro velho ainda diz "sem registro")');
+    run(`__log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);
+    relogio647(T0 + 31000);
+    igual(run(`zDiaTelaAvancar(${T0 + 31000})`), 'espera: dose de ontem', 'a conferência acontece agora');
+    igual(run('__mo'), [], 'a dose já dada não toca');
+    igual(run(`zDiaTelaAvancar(${T0 + 31000})`), 'avancou');
+    // depois da 1ª conferência boa, a espera acabou: a conexão que cai de novo não segura a próxima dose de ontem
+    run(`__log={}; MED_AGENDA_TODOS=[${BIA647}, ${THOR647}]; __medOntemConf=null; __medOntemPedido=null; despMedOntemPend={}; despMedNaTela=null; __mo=[];
+      DIA_TELA_AUTO='${ONTEM647}'; selectedDate=new __RD647(${T647(7, 22, 40)}); medOntemAcordou(${T0}); __cn[0]({val:function(){ return true; }});`);
+    run(`__medConectadoEm=${T0};`); relogio647(T0 + 6000); run('checarDespertadorMed();');
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'a conexão voltou e assentou: a Bia toca');
+    run(`despMedNaTela=null; __log={bia__ana:{'x_23-30':{quem:'Ana'}}}; __cn[0]({val:function(){ return false; }});`);
+    relogio647(T0 + 20000); run('checarDespertadorMed();');
+    igual(run('__mo'), ['bia__ana__x_23-30', 'thor__rui__y_23-30'], 'a conexão caiu de novo aos 20 s: o Thor toca mesmo assim (a espera é só a da volta)');
+    // sem conexão nenhuma: em 1 min, vale o registro em memória (o alarme manda conferir antes de dar)
+    run(SOLTA647); run(ARMA647); relogio647(T0);
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }}; medOntemAcordou(${T0}); __cn[0]({val:function(){ return false; }});`);
+    relogio647(T0 + 59000); igual(run(`zDiaTelaAvancar(${T0 + 59000})`), 'espera: dose de ontem'); igual(run('__mo'), []);
+    relogio647(T0 + 61000); igual(run(`zDiaTelaAvancar(${T0 + 61000})`), 'espera: dose de ontem'); igual(run('__mo'), ['bia__ana__x_23-30'], 'sem banco, depois de 1 min: toca pela memória');
+    // banco sem o .info (não sei): vale a folga de 5 s
+    run(SOLTA647); run(ARMA647); relogio647(T0);
+    run(`MED_AGENDA_TODOS=[${BIA647}]; medOntemAcordou(${T0});`);
+    relogio647(T0 + 4000); run('checarDespertadorMed();'); igual(run('__mo'), []);
+    relogio647(T0 + 6000); run('checarDespertadorMed();'); igual(run('__mo'), ['bia__ana__x_23-30']);
+    // a conferência marcada para depois da folga abre o alarme também com a ficha aberta (a troca da tela espera por ela)
+    run(SOLTA647); run(ARMA647); relogio647(T0);
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __fa=true; medOntemAcordou(${T0});`); relogio647(T0 + 5500);
+    run('medOntemReconferir();');
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'ficha aberta: o alarme de ontem abre na hora marcada');
+    igual(run(`zDiaTelaAvancar(${T0 + 5500})`), 'espera: ficha aberta');
+    run(SOLTA647); run(ARMA647);
+    // quem marca o "acordou": o relógio que pulou (à vista) e a aba que volta depois de 1 min
+    run(SOLTA647); run(ARMA647);
+    igual([run(`medOntemBatida(${T0})`), run(`medOntemBatida(${T0 + 15000})`), run(`medOntemBatida(${T0 + 75000})`)], [false, false, true], 'pulo de 1 min entre batidas');
+    igual(run('__medAcordouEm'), T0 + 75000);
+    run('__medAcordouEm=0;');
+    igual([run(`medOntemVisibilidade(true, ${T0})`), run(`medOntemVisibilidade(false, ${T0 + 30000})`)], [false, false], 'saiu 30 s (o WhatsApp): não');
+    igual([run(`medOntemVisibilidade(true, ${T0})`), run(`medOntemVisibilidade(false, ${T0 + 120000})`)], [false, true], 'saiu 2 min: sim');
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/document\.addEventListener\('resume', function\(\)\{\n(?:    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}[^\n]*\n)?    try\{ medOntemAcordou\(Date\.now\(\)\); zDiaTelaAvancar\(\); \}/.test(src), 'a página descongelada marca o "acordou"');
+    assert.ok(/setInterval\(function\(\)\{ try\{ medOntemBatida\(Date\.now\(\)\); \}catch\(e\)\{\}[^\n]* checarDespertadorMed\(\); \}, 30000\);/.test(src), 'a batida de 30 s mede o relógio ANTES de conferir');
+    assert.ok(/setInterval\(function\(\)\{\n    try\{ medOntemBatida\(Date\.now\(\)\); \}[^\n]*\n(?:    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}[^\n]*\n)?    try\{ zDiaTelaAvancar\(\); \}/.test(src), 'e a de 15 s, antes da troca');
+    assert.ok(/addEventListener\('visibilitychange', function\(\)\{\n    try\{ medOntemVisibilidade\(!!document\.hidden, Date\.now\(\)\); \}/.test(src), 'e a volta da aba');
+  } finally { run(SOLTA647); }
+});
+// ------------------------------------------------ 6.47 — 2ª rodada (achados do 1º QA e do caçador; relógio FIXO)
+// Banco com registro: a transação grava no caminho; o once do registro de um dia devolve o que foi gravado nele.
+const BANCO647B = `__regs={}; __lidos=[]; __gr=[]; __onceFalha=false;
+  DB={ref:function(p){ return __dbNulo647(p, {
+    transaction:function(f){ var v=f(__regs[p]||null); if(v){ __regs[p]=v; __gr.push(p); } return Promise.resolve({committed:!!v, snapshot:{val:function(){ return v||__regs[p]||null; }}}); },
+    once:function(){ __lidos.push(p); if(__onceFalha && /medicacao-log/.test(p)) return Promise.reject(new Error('sem rede')); return Promise.resolve({val:function(){ return /medicacao-log/.test(p) ? (__regs[p]||null) : {}; }}); },
+    update:function(){ __gr.push('update:'+p); return Promise.resolve(); } }); }};`;
+// O alarme de verdade com uma tela de mentira: o innerHTML do alarme vira os trechos com id que o redesenho troca,
+// e o que o redesenho escreve volta para o innerHTML (o texto da tela é o mesmo jeito de ler antes e depois).
+// (3ª rodada) Também o segundo botão (despMedB2: ADIAR ou «Entendi — não vou dar»).
+const DOM647B = `__els={}; __despEl={style:{}, _h:'', querySelector:function(){ return null; }};
+  __mkEl647=function(id){ var e={id:id, style:{}, value:'', innerHTML:'', _t:'', focus:function(){}, querySelector:function(){ return null; }};
+    Object.defineProperty(e, 'textContent', {get:function(){ return this._t; }, set:function(v){ this._t=v;
+      var re=new RegExp('(<(strong|span|button)[^>]* id="'+id+'"[^>]*>)[^<]*(<\\\\/\\\\2>)'); __despEl._h=__despEl._h.replace(re, function(a,b,c,d){ return b+v+d; }); }});
+    return e; };
+  Object.defineProperty(__despEl, 'innerHTML', {get:function(){ return this._h; }, set:function(h){ this._h=h; var re=/<(strong|span|button)[^>]* id="(despMed[A-Za-z0-9]+)"[^>]*>([^<]*)<\\/\\1>/g, m;
+    while((m=re.exec(h))){ var e=__mkEl647(m[2]); e._t=m[3].replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&amp;/g,'&'); __els[m[2]]=e; } }});
+  document.getElementById=function(id){ if(id==='despMed') return __despEl; return __els[id]||(__els[id]=__mkEl647(id)); };`;
+const MOREAL647 = `mostrarDespertadorMed=function(it,d,dia){ __mo.push(it.key+'__'+d); return __bk647.mo(it,d,dia); };`;
+const Q4_647 = ['22:30', '02:30', '06:30', '10:30', '14:30', '18:30'].map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(',');
+const PERG647 = 'HÁ REMÉDIO DE ONTEM POR RESPONDER';
+// «Hoje» e, se ele perguntar, «Ir para hoje mesmo assim» (contra a 1ª rodada, que não perguntava, a prova chega à afirmação dela)
+const HOJE_MESMO_ASSIM647 = '__esc=[]; goToToday(); if(__esc.length) __esc[0].b[1].fn();';
+provaAsync('6.47 (2ª rodada) «Hoje», o «Hoje» da ficha e as setas que chegam a hoje, com remédio de ontem por responder: perguntam antes e a tela fica em ontem; a do Thor toca depois da Bia (achados do 1º QA, SONDA S2)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B);
+  run('__bkH647={cf:carregarFicha, role:document.body.dataset.role}; carregarFicha=function(){}; document.body.dataset.role="monitor";');
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${THOR647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    for (const chamada of ['goToToday()', 'goToToday({})', 'fichaHoje()', 'changeDate(1)', 'fichaMudaDia(1)']) {
+      run('__esc=[];'); run(chamada);
+      igual(run('dataKeyAtual()'), ONTEM647, chamada + ': a tela fica em ontem (antes: ia para hoje)');
+      igual(run('__esc.map(function(e){ return e.t; })'), [PERG647], chamada);
+    }
+    igual(run('__esc[0].l'), ['Há remédio de ontem por responder: a tela fica em ontem até ele.',
+      'Se for para hoje agora, a dose de ontem que ainda não tocou não toca mais neste aparelho.'], 'a do Thor ainda não tocou: a segunda linha diz o que «Ir para hoje» faz com ela');
+    igual(run('__esc[0].b.map(function(b){ return b.t; })'), ['Responder o alarme', 'Ir para hoje mesmo assim']);
+    run('__esc[0].b[0].fn();');
+    igual([run('dataKeyAtual()'), run('despMedNaTela')], [ONTEM647, 'bia__ana__x_23-30'], '«Responder o alarme»: o alarme continua na tela, em ontem');
+    // a seta para trás não é «Hoje»: a tela vai para a data escolhida (a regra de outra data, AC7)
+    run('__esc=[]; changeDate(-1);'); igual([run('dataKeyAtual()'), run('__esc')], ['2026-10-06', []]);
+    run(`selectedDate=new __RD647(${T647(7, 22, 40)});`);
+    // a Bia dada, o Thor toca (antes: com o «Hoje», a tela ia para hoje e o Thor sumia sem aviso)
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30']);
+    run(`despMedNaTela=null; __log={bia__ana:{'x_23-30':{quem:'Ana Souza'}}}; __mo=[];`); relogio647(T647(8, 0, 21));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 21)})`), 'espera: dose de ontem'); igual(run('__mo'), ['thor__rui__y_23-30'], 'a do Thor toca');
+    // só o Thor na tela, nada mais na fila: a pergunta vai sem a segunda linha
+    run('__esc=[]; goToToday();'); igual(run('__esc[0].l'), ['Há remédio de ontem por responder: a tela fica em ontem até ele.']);
+    // nada por responder: o «Hoje» vai para hoje sem perguntar
+    run(`despMedNaTela=null; __log={bia__ana:{'x_23-30':{quem:'Ana Souza'}}, thor__rui:{'y_23-30':{quem:'Ana Souza'}}}; __medOntemConf=null; despMedOntemPend={}; checarDespertadorMed();`);
+    run('__esc=[]; goToToday();'); igual([run('__esc'), run('dataKeyAtual()')], [[], HOJE647], 'sem remédio de ontem por responder: vai para hoje, como sempre');
+    // quem não recebe o alarme (Gestão) vai para hoje, como sempre
+    run(`selectedDate=new __RD647(${T647(7, 22, 40)}); despMedNaTela='bia__ana__x_23-30'; __papel=false; __esc=[]; goToToday();`);
+    igual([run('__esc'), run('dataKeyAtual()')], [[], HOJE647], 'Gestão: sem pergunta');
+  } finally { run('carregarFicha=__bkH647.cf; document.body.dataset.role=__bkH647.role;' + SOLTAG647 + SOLTA647); }
+});
+prova('6.47 (2ª rodada) «Hoje» enquanto o registro de ontem ainda é conferido: não afirma que falta registro, e «Esperar» confere (C3)', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __logPendura=true;`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('[__mo, despMedNaTela]'), [[], null]);
+    run('goToToday();');
+    igual(run('dataKeyAtual()'), ONTEM647);
+    igual(run('__esc.map(function(e){ return e.t; })'), ['CONFERINDO OS REMÉDIOS DE ONTEM']);
+    igual(run('__esc[0].l'), ['Conferindo os remédios de ontem neste aparelho: a tela fica em ontem até terminar. Toque de novo em alguns segundos.',
+      'Se for para hoje agora, qualquer dose de ontem que ainda não tocou não toca mais neste aparelho.'], '(3ª rodada, sonda S10) diz o que «Ir para hoje mesmo assim» faz, sem afirmar que há dose sem registro');
+    igual(run('__esc[0].b.map(function(b){ return b.t; })'), ['Esperar', 'Ir para hoje mesmo assim']);
+    run('__logPendura=false; __esc[0].b[0].fn();');
+    igual(run('__mo'), ['bia__ana__x_23-30'], '«Esperar» confere de novo, e o alarme abre');
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) «Ir para hoje mesmo assim» + ADIAR no alarme de ontem: o adiado volta em 5 min pelo dia dele, confere o registro de ONTEM e grava em ontem; a faixa não manda esperar à toa (SONDA S1)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); igual(run('dataKeyAtual()'), HOJE647, '«Ir para hoje mesmo assim»');
+    relogio647(T647(8, 0, 21)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 21)})`), '', 'o dia automático acompanha');
+    run('adiarDoseDespertador();');
+    igual(run('[despMedNaTela, Object.keys(despMedSnoozePend)]'), [null, ['bia__ana__x_23-30']], 'adiado');
+    // enquanto o adiar corre: a recarga espera, e a pergunta da faixa fala de um alarme que agora volta mesmo
+    relogio647(T647(8, 0, 23)); run('__parado="3 min sem toque"; __st=[]; __diaRecarregando=false; __esc=[];');
+    igual(run('zViradaDoDiaTick()'), 'faixa'); igual(run('__st'), []);
+    run('aplicarVersaoNova()'); igual([run('__esc.map(function(e){ return e.t; })'), run('__rep')], [['HÁ UM REMÉDIO ADIADO'], 0]);
+    run('__mo=[]; __lidos=[];'); relogio647(T647(8, 0, 25, 59)); run('checarDespertadorMed();'); await volta647();
+    igual(run('[__mo, __lidos]'), [[], []], 'o adiar ainda corre');
+    relogio647(T647(8, 0, 26)); run('checarDespertadorMed();'); await volta647();
+    igual(run('__lidos'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'confere o registro de ONTEM');
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'antes: nunca voltava (a régua de hoje via «23:30» 23 h à frente)');
+    igual([run('Object.keys(despMedSnoozeDia)'), run('Object.keys(despMedSnoozePend)')], [[], []], 'voltou: o dia guardado e o pendente saem');
+    assert.ok(/23:30 de ontem/.test(run('__el647.innerHTML')), 'o alarme diz que é de ontem, com a tela em hoje');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'grava em ontem');
+    relogio647(T647(8, 0, 27)); run('__lidos=[]; checarDespertadorMed();'); await volta647();
+    igual(run('__lidos'), [], 'respondido: não confere de novo');
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+prova('6.47 (2ª rodada) depois do «Ir para hoje mesmo assim», o alarme de ontem que continua na tela: o toque na faixa pergunta antes (depois das 6h, sem a pergunta da madrugada)', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); igual([run('dataKeyAtual()'), run('despMedNaTela'), run('despMedAtualDia')], [HOJE647, 'bia__ana__x_23-30', ONTEM647]);
+    relogio647(T647(8, 6, 30)); run('__esc=[]; __rep=0; aplicarVersaoNova();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__rep')], [['HÁ UM REMÉDIO DE ONTEM SEM REGISTRO'], 0], 'antes: atualizava, e o alarme de ontem sumia');
+    run('__esc[0].b[1].fn();'); igual(run('__rep'), 1, '«Atualizar mesmo assim» atualiza');
+    // o alarme de hoje na tela, com a tela em hoje: a regra de sempre (atualiza)
+    run(`__esc=[]; __rep=0; __diaForcarAgora=false; despMedAtualDia='${HOJE647}'; aplicarVersaoNova();`);
+    igual([run('__esc'), run('__rep')], [[], 1]);
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) ADIAR antes do «Hoje»: «Responder o alarme» traz o adiado na hora; e o adiado de ANTES da meia-noite (a base da 6.32) volta pelo dia dele com a tela em hoje (4ª rodada: o «Hoje» e a tela não esperam pelo adiado)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    // (4ª rodada) só o adiado: o «Hoje» vai para hoje sem perguntar (antes: «HÁ REMÉDIO DE ONTEM POR RESPONDER», e a tela
+    // ficava em ontem); o adiado volta 5 min depois pelo dia dele e é registrado em ontem
+    run('adiarDoseDespertador(); __esc=[]; goToToday();');
+    igual([run('__esc'), run('dataKeyAtual()'), run('Object.keys(despMedSnoozeDia)')], [[], HOJE647, ['bia__ana__x_23-30']]);
+    relogio647(T647(8, 0, 25, 1)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'volta pelo dia dele');
+    run(SOLTAG647 + SOLTA647);
+    // com a dose do Thor ainda por tocar, o «Hoje» pergunta (por ela); «Responder o alarme» traz o adiado da Bia na hora
+    run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${THOR647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    run('adiarDoseDespertador(); __esc=[]; goToToday();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l'), run('dataKeyAtual()')], [[PERG647], ['Há remédio de ontem por responder: a tela fica em ontem até ele.',
+      'Se for para hoje agora, a dose de ontem que ainda não tocou não toca mais neste aparelho.'], ONTEM647], 'a do Thor ainda não tocou; a adiada da Bia não é "dose que ainda não tocou"');
+    relogio647(T647(8, 0, 21)); run('__mo=[]; __esc[0].b[0].fn();');
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], '«Responder o alarme»: o adiado volta na hora (antes: «Esperar o alarme», 5 min)');
+    // a base da 6.32: o alarme das 23:30 abriu ANTES da meia-noite (o dia dele é o 07) e foi adiado às 23:58
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(7, 23, 25)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${BIA647}]; selectedDate=new __RD647(${T647(7, 23, 25)});`);
+    run('checarDespertadorMed();'); igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'o alarme de hoje (07/10), às 23:25');
+    relogio647(T647(7, 23, 58)); run('adiarDoseDespertador();');
+    // 00:00:15: a tela passa sozinha (antes: «espera: alarme adiado» até ele voltar); a recarga continua esperando por ele
+    relogio647(T647(8, 0, 0, 15)); run('__mo=[]; __parado="3 min sem toque"; __st=[];');
+    igual([run(`zDiaTelaAvancar(${T647(8, 0, 0, 15)})`), run('dataKeyAtual()'), run('zViradaDoDiaTick()'), run('__st')], ['avancou', HOJE647, 'faixa', []]);
+    relogio647(T647(8, 0, 2)); run('checarDespertadorMed();'); await volta647();
+    igual(run('__mo'), [], 'o adiar ainda corre');
+    relogio647(T647(8, 0, 3, 1)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'antes (SONDA-BASE S1): não voltava');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'registrado em ontem: a promessa da 6.32 continua');
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) o adiado de outro dia, com a tela em hoje: já dado em outro aparelho não volta; sem resposta do banco, volta assim mesmo; a mais antiga primeiro; uma leitura por vez; espera o banco depois de acordar; o remédio que saiu da agenda não volta', async () => {
+  const prep = (extra) => {
+    run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+    run(`selectedDate=new __RD647(${T647(8, 0, 20)}); DIA_TELA_AUTO='${HOJE647}'; MED_AGENDA_TODOS=[${BIA647}];
+      despMedSnooze={'bia__ana__x_23-30': ${T647(8, 0, 25)}}; despMedSnoozePend={'bia__ana__x_23-30': ${T647(8, 0, 25)}};
+      despMedSnoozeDia={'bia__ana__x_23-30':'${ONTEM647}'}; despMedSnoozeIt={'bia__ana__x_23-30':${BIA647}};` + (extra || ''));
+    relogio647(T647(8, 0, 25, 30));
+  };
+  try {
+    // já dado em outro aparelho
+    prep(`__regs['auaulandia/medicacao-log/${ONTEM647}/bia__ana/x_23-30']={quem:'Rita'};`);
+    run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('Object.keys(despMedSnoozeDia)'), run('Object.keys(despMedSnoozePend)')], [[], [], []], 'dado: não volta, e não segura mais a recarga');
+    igual(run(`zDiaAdiadoAtivo(${T647(8, 0, 25, 30)})`), false);
+    run(SOLTAG647 + SOLTA647);
+    // o banco não responde: o alarme abre assim mesmo (manda conferir; a transação não deixa registrar duas vezes)
+    prep('__onceFalha=true;'); run('checarDespertadorMed();'); await volta647();
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'perder a dose é pior');
+    run(SOLTAG647 + SOLTA647);
+    // duas adiadas de ontem: a mais antiga primeiro; duas conferências na mesma batida leem uma vez
+    prep(`despMedSnooze['thor__rui__y_22-30']=${T647(8, 0, 24)}; despMedSnoozeDia['thor__rui__y_22-30']='${ONTEM647}';
+      despMedSnoozeIt['thor__rui__y_22-30']={key:'thor__rui', itemId:'y', horario:'22:30', nome:'Otomax', hospNome:'Thor'};`);
+    run('checarDespertadorMed(); checarDespertadorMed();'); await volta647();
+    igual(run('__lidos'), ['auaulandia/medicacao-log/' + ONTEM647 + '/thor__rui/y_22-30'], 'a das 22:30 primeiro, e uma leitura só');
+    igual(run('__mo'), ['thor__rui__y_22-30']);
+    run(SOLTAG647 + SOLTA647);
+    // a página que acabou de acordar: espera o banco (C4)
+    prep(`__cn=[]; var __dbB=DB; DB={ref:function(p){ var r=__dbB.ref(p); if(p==='.info/connected') r.on=function(ev, cb){ __cn.push(cb); return cb; }; return r; }};`);
+    run(`medOntemAcordou(${T647(8, 0, 25, 30)}); __cn[0]({val:function(){ return false; }}); checarDespertadorMed();`); await volta647();
+    igual([run('__mo'), run('__lidos')], [[], []], 'acordou sem banco: o adiado espera');
+    run('__cn[0]({val:function(){ return true; }});'); relogio647(T647(8, 0, 25, 36)); run('checarDespertadorMed();'); await volta647();
+    igual(run('__mo'), ['bia__ana__x_23-30'], 'o banco voltou, mais a folga: volta');
+    run(SOLTAG647 + SOLTA647);
+    // o remédio que saiu da agenda com a tela em ontem (6.32): também não volta depois, com a tela em hoje
+    run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${BIA647}];`); igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run('adiarDoseDespertador(); MED_AGENDA_TODOS=[]; checarDespertadorMed();');
+    igual([run('Object.keys(despMedSnoozePend)'), run('Object.keys(despMedSnoozeDia)')], [[], []], 'saiu da agenda: sai do pendente e do dia guardado');
+    run(`selectedDate=new __RD647(${T647(8, 0, 21)}); __mo=[];`); relogio647(T647(8, 0, 26)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('__lidos')], [[], []]);
+    run(SOLTAG647 + SOLTA647);
+    // a resposta do banco que chega depois de a tela mudar de dia não abre nada (como a C2)
+    prep(); run(`checarDespertadorMed(); selectedDate=new __RD647(${T647(9, 10)});`); await volta647();
+    igual([run('__lidos.length'), run('__mo')], [1, []], 'a tela foi para outra data no meio: nada abre');
+    run(SOLTAG647 + SOLTA647);
+    // o adiado de HOJE segue a régua de hoje (não passa por aqui: nenhuma leitura a mais)
+    prep(`MED_AGENDA_TODOS=[{key:'bia__ana', itemId:'x', horario:'00:15', nome:'Apoquel', hospNome:'Bia'}];
+      despMedSnooze={'bia__ana__x_00-15': ${T647(8, 0, 25)}}; despMedSnoozePend={'bia__ana__x_00-15': ${T647(8, 0, 25)}};
+      despMedSnoozeDia={'bia__ana__x_00-15':'${HOJE647}'}; despMedSnoozeIt={'bia__ana__x_00-15':MED_AGENDA_TODOS[0]};`);
+    run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('__lidos'), run('despMedAtualDia')], [['bia__ana__x_00-15'], [], HOJE647]);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) o alarme de ontem acompanha o relógio: o "há X" a cada batida; passado o teto, não manda dar (sem gravar nada) e continua até alguém responder; a próxima dose do mesmo remédio, logo depois, avisa (SONDA S3)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+  // o que está escrito no alarme (sem as marcas): "Rex toma Antibiótico às 22:30 de ontem — há 1 h 30 minDose de ontem: …"
+  const tela = () => run('__despEl.innerHTML.replace(/<[^>]+>/g, "")').replace(/^.*? às /, '').replace(/Dei o remédio.*$/, '');
+  const txt = () => run('[__els.despMedQuando.textContent, __els.despMedAtraso.textContent, __els.despMedInstr.textContent]');
+  const CONF = 'Dose de ontem: confira se ninguém deu antes de dar. Se ninguém deu, dê o remédio agora — este alarme não desaparece sozinho.';
+  const PASSOU = 'Passou do horário seguro desta dose: não dê sem falar com a veterinária.';
+  try {
+    // antibiótico de 4 em 4 h: o teto da dose das 22:30 é 2 h (a metade do intervalo)
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    igual(tela(), '22:30 de ontem — há 1 h 30 min' + CONF);
+    relogio647(T647(8, 0, 29, 30)); run('checarDespertadorMed();');
+    igual(tela(), '22:30 de ontem — há 1 h 59 min' + CONF, '30 s antes do teto: ainda manda conferir e dar');
+    relogio647(T647(8, 0, 29, 31)); run('checarDespertadorMed();');
+    igual(tela(), '22:30 de ontem — há 1 h 59 min' + 'Está no limite do horário seguro desta dose: não dê sem falar com a veterinária.',
+      '(3ª rodada, QA647b-6) a menos de 30 s do teto já diz «não dê»: o texto vale até a próxima batida; (4ª rodada, QA3-D) «no limite», e não «Passou», ao lado de «há 1 h 59 min»');
+    relogio647(T647(8, 0, 30, 1)); run('checarDespertadorMed();');
+    igual(tela(), '22:30 de ontem — há 2 h' + PASSOU, 'passou do teto: não manda dar');
+    relogio647(T647(8, 2, 25)); run('checarDespertadorMed();');
+    igual(tela(), '22:30 de ontem — há 3 h 55 min' + PASSOU, 'antes: às 02:25 ainda dizia "há 1 h 30 min" e mandava dar');
+    igual([run('despMedNaTela'), run('__gr')], ['rex__ivo__q_22-30', []], 'o alarme continua até alguém responder, e nada é gravado (nunca um "não dada")');
+    igual(run(`zDiaTelaAvancar(${T647(8, 2, 25)})`), 'espera: alarme na tela');
+    // (3ª rodada) o alarme de ontem que já diz «não dê» não segura o «Hoje»: a tela vai para hoje sem perguntar,
+    // e o alarme continua na tela, com o dia dele (a resposta é no próprio alarme)
+    run('__esc=[]; goToToday();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('dataKeyAtual()'), run('despMedNaTela'), run('despMedAtualDia')], [[], HOJE647, 'rex__ivo__q_22-30', ONTEM647],
+      'antes (2ª rodada): o alarme passado do teto ainda segurava o «Hoje» como remédio de ontem por responder');
+    run(`selectedDate=new __RD647(${T647(7, 22, 40)});`);   // a tela volta para ontem, para o resto da prova
+    // «Dei o remédio» às 02:25 (depois do aviso): grava em ontem; a das 02:30, logo em seguida, não manda dar
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/rex__ivo/q_22-30']);
+    run('__log={}; __mo=[];'); relogio647(T647(8, 2, 25, 20));
+    igual(run(`zDiaTelaAvancar(${T647(8, 2, 25, 20)})`), 'avancou');
+    run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['rex__ivo__q_02-30'], HOJE647]);
+    igual(tela(), '02:30A dose anterior deste remédio (22:30 de ontem) foi registrada às 02:25, depois do horário seguro: não dê sem falar com a veterinária.',
+      'antes: «Dê o remédio agora» — duas doses em 5 min');
+    // o alarme aberto ANTES da meia-noite (o de hoje, às 22:25) e sem resposta até depois: também acompanha
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(7, 22, 25)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; selectedDate=new __RD647(${T647(7, 22, 25)}); __log={rex__ivo:{'q_02-30':{quem:'Ana'}, 'q_06-30':{quem:'Ana'}, 'q_10-30':{quem:'Ana'}, 'q_14-30':{quem:'Ana'}, 'q_18-30':{quem:'Ana'}}}; checarDespertadorMed();`);
+    igual(tela(), '22:30Dê o remédio agora — este alarme não desaparece sozinho.', 'o alarme de hoje, como sempre');
+    relogio647(T647(8, 0, 31)); run('checarDespertadorMed();');
+    igual(tela(), '22:30 de ontem — há 2 h 1 min' + PASSOU, 'depois da meia-noite, é de ontem; passado o teto, não manda dar');
+    igual(txt(), ['22:30 de ontem', ' — há 2 h 1 min', PASSOU], 'os três trechos que o redesenho troca');
+    // assinada tarde por OUTRO aparelho (a transação vê quem assinou): a próxima dose também avisa
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`); igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    run(`__regs['auaulandia/medicacao-log/${ONTEM647}/rex__ivo/q_22-30']={quem:'Rita', ts:${T647(8, 2, 20)}};`);
+    relogio647(T647(8, 2, 25)); run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__al'), ['ESTA DOSE JÁ FOI REGISTRADA']);
+    run('__log={}; __mo=[];'); relogio647(T647(8, 2, 25, 20)); igual(run(`zDiaTelaAvancar(${T647(8, 2, 25, 20)})`), 'avancou');
+    run('checarDespertadorMed();'); await volta647();
+    igual(tela(), '02:30A dose anterior deste remédio (22:30 de ontem) foi registrada às 02:20, depois do horário seguro: não dê sem falar com a veterinária.');
+    // a marca (4ª rodada): a dose registrada depois do teto (a de ontem e a de hoje); avisa só a PRÓXIMA dose do mesmo
+    // remédio, e só quando ela vem até o teto (o menor entre 3 h e a metade do intervalo) depois do registro
+    const K6 = ['22:30', '04:30', '10:30', '16:30'].map((x) => `{key:'k', itemId:'i', horario:'${x}'}`).join(',');   // de 6 em 6 h: teto de 3 h
+    run(`MED_AGENDA_TODOS=[${K6}, {key:'k', itemId:'j', horario:'01:00'}]; __medTardia={};`);   // j: outro remédio da mesma ficha, entre as doses de i
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'22:30'}, 'i_22-30', '${ONTEM647}', ${T647(8, 1, 30)})`), false, 'dentro do teto (3 h): não marca');
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'22:30'}, 'i_22-30', '${ONTEM647}', ${T647(8, 1, 31)})`), true);
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'22:30'}, '${ONTEM647}', ${T647(8, 1, 32)})`), '', 'a própria dose: não');
+    igual(run(`medTardiaAviso({key:'k',itemId:'j',horario:'01:00'}, '${HOJE647}', ${T647(8, 0, 55)})`), '', 'outro remédio: não');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'04:30'}, '${HOJE647}', ${T647(8, 4, 25)})`),
+      'A dose anterior deste remédio (22:30 de ontem) foi registrada às 01:31, depois do horário seguro: não dê sem falar com a veterinária.', 'a próxima dose (2 h 59 min depois do registro): avisa');
+    // (3ª rodada, sonda S11) pela DOSE, não pela hora em que o alarme é desenhado: o alarme da das 04:30 sem resposta continua avisando
+    assert.ok(run(`medTardiaAviso({key:'k',itemId:'i',horario:'04:30'}, '${HOJE647}', ${T647(8, 7, 31)})`) !== '', 'o mesmo alarme, 6 h depois do registro: continua avisando');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'10:30'}, '${HOJE647}', ${T647(8, 10, 25)})`), '', '(4ª rodada, 3R-E) a dose depois da próxima: não (antes: avisava até 3 h depois do registro, citando a dose errada)');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'16:30'}, '${ONTEM647}', ${T647(8, 1, 40)})`), '', 'a dose de antes da tardia: não');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'04:30'}, '${ONTEM647}', ${T647(8, 1, 40)})`), '', 'a mesma hora da próxima, mas no dia da tardia (antes dela): não');
+    // a próxima longe o bastante do registro tardio (mais que o teto): o alarme de sempre (3R-E2: a metade do intervalo)
+    run(`MED_AGENDA_TODOS=[{key:'k', itemId:'i', horario:'21:00'}]; __medTardia={};`);
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'21:00'}, 'i_21-00', '${ONTEM647}', ${T647(8, 7, 15)})`), true, 'uma vez por dia, dada às 07:15 pelo alarme');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'21:00'}, '${HOJE647}', ${T647(8, 20, 55)})`), '', 'a das 21:00 de hoje, 13 h 45 min depois: como sempre');
+    // uma vez por dia, a de ontem dada pelo alarme às 19:30 de hoje (22 h 30 min depois, a veterinária mandou dar): a das 21:00 de hoje avisa
+    run('__medTardia={};');
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'21:00'}, 'i_21-00', '${ONTEM647}', ${T647(8, 19, 30)})`), true);
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'21:00'}, '${HOJE647}', ${T647(8, 20, 55)})`),
+      'A dose anterior deste remédio (21:00 de ontem) foi registrada às 19:30, depois do horário seguro: não dê sem falar com a veterinária.', 'a próxima (a de amanhã da tardia), 1 h 30 min depois');
+    // (4ª rodada) a dose de HOJE dada tarde pelo alarme também marca: a próxima do mesmo antibiótico avisa, citando a de hoje —
+    // (5ª rodada, QA4-A e R4-8) só de madrugada (0h às 6h), quando a fila da dose de ontem a atrasa; de dia, o alarme de hoje mandou dar
+    run(`MED_AGENDA_TODOS=[${K6}]; __medTardia={};`);
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'04:30'}, 'i_04-30', '${HOJE647}', ${T647(8, 7, 40)})`), false, '(5ª rodada) a de hoje, 3 h 10 min depois, às 07:40: não marca (antes: marcava)');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'10:30'}, '${HOJE647}', ${T647(8, 10, 25)})`), '', '(5ª rodada) a das 10:30 manda dar (antes: «não dê»)');
+    const K4 = ['22:30', '02:30', '06:30', '10:30', '14:30', '18:30'].map((x) => `{key:'k', itemId:'i', horario:'${x}'}`).join(',');   // de 4 em 4 h: teto de 2 h
+    run(`MED_AGENDA_TODOS=[${K4}]; __medTardia={};`);
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'02:30'}, 'i_02-30', '${HOJE647}', ${T647(8, 6, 0)})`), false, '(5ª rodada) às 06:00 já é dia: não marca');
+    igual(run(`medTardiaMarcar({key:'k',itemId:'i',horario:'02:30'}, 'i_02-30', '${HOJE647}', ${T647(8, 5, 59)})`), true, 'de madrugada, a de hoje passada do teto marca');
+    igual(run(`medTardiaAviso({key:'k',itemId:'i',horario:'06:30'}, '${HOJE647}', ${T647(8, 6, 25)})`),
+      'A dose anterior deste remédio (02:30 de hoje) foi registrada às 05:59, depois do horário seguro: não dê sem falar com a veterinária.');
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`);
+    igual(run(`medDespTextos({key:'k',itemId:'i',horario:'21:00'}, '${ONTEM647}', ${T647(8, 1, 32)}).instr`), PASSOU, 'passado o teto, vale o aviso desta dose');
+    igual([run(`medRotuloDia('${ONTEM647}', '${HOJE647}')`), run(`medRotuloDia('2026-10-06', '${HOJE647}')`), run("medDiaAnterior('2026-11-01')")], ['de ontem', 'de 06/10', '2026-10-31']);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) a página escondida que acorda com o vigia ANTES do evento de visibilidade (ordem do iPhone): o alarme de ontem também espera o banco (SONDA S6)', async () => {
+  run(ARMA647); relogio647(T647(7, 23, 0));
+  run(`__cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }}; __bkHid647=document.hidden;`);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    run(`medOntemBatida(${T647(7, 23, 0)}); document.hidden=true; medOntemVisibilidade(true, ${T647(7, 23, 0)});`);
+    // a Rita deu a Bia às 23:35 em outro aparelho; este ainda não recebeu (registro em memória vazio)
+    relogio647(T647(8, 0, 20));
+    igual(run(`medOntemBatida(${T647(8, 0, 20)})`), true, 'o pulo de 80 min com a página escondida: a página dormiu');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); await volta647();
+    igual(run('__mo'), [], 'antes: o alarme abria na hora, com o registro velho da memória');
+    run(`document.hidden=false; medOntemVisibilidade(false, ${T647(8, 0, 20)}); __cn[0]({val:function(){ return true; }}); __log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);
+    relogio647(T647(8, 0, 20, 6));
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20, 6)})`), 'espera: dose de ontem'); igual(run('__mo'), [], 'o registro chegou: a dose dada não toca');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20, 6)})`), 'avancou');
+  } finally { run('document.hidden=__bkHid647;' + SOLTA647); }
+});
+provaAsync('6.47 (2ª rodada) o estoque da dose de ontem dada com a tela já em hoje é marcado no dia do registro: a dose de hoje à noite também desconta (SONDA S7, QA647-1)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647);
+  run(`__est={modo:'contavel', restante:10, contados:{}}; __estCk=[]; __gr=[];
+    DB={ref:function(p){ return __dbNulo647(p, {transaction:function(f){
+      if(String(p).slice(-8)==='/estoque'){ var v=f(JSON.parse(JSON.stringify(__est))); if(v){ __est=v; } __estCk.push(v ? Object.keys(v.contados).join(',') : 'já contado'); return Promise.resolve({committed:!!v, snapshot:{val:function(){ return __est; }}}); }
+      var r=f(null); __gr.push(p); return Promise.resolve({committed:true, snapshot:{val:function(){ return r; }}}); },
+      once:function(){ return Promise.resolve({val:function(){ return {}; }}); }}); }};
+    descontarEstoquePorDose=__bkG647.de; __bkE647={ae:avaliarEstoqueAlerta}; avaliarEstoqueAlerta=function(){};`);
+  try {
+    run(`MED_AGENDA_TODOS=[{key:'bia__ana', itemId:'x', horario:'23:30', nome:'Apoquel', hospNome:'Bia', q:'1', u:'comprimido'}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); igual(run('dataKeyAtual()'), HOJE647, '«Ir para hoje mesmo assim»');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30'], 'a dose vai para ontem (C1)');
+    igual([run('__estCk'), run('__est.restante')], [[ONTEM647 + '__x_23-30'], 9], 'antes: a marca ficava em ' + HOJE647);
+    // 23:31 de hoje: a dose de HOJE é dada
+    relogio647(T647(8, 23, 31)); run(`registrarDoseAgendadaGlobal({key:'bia__ana', itemId:'x', horario:'23:30', nome:'Apoquel', hospNome:'Bia', q:'1', u:'comprimido'}, 'x_23-30');`); await volta647();
+    igual(run('__est.restante'), 8, '10 → 9 (ontem) → 8 (hoje); antes: a de hoje não descontava');
+  } finally { run('avaliarEstoqueAlerta=__bkE647.ae;' + SOLTAG647 + SOLTA647); }
+});
+prova('6.47 (2ª rodada, QA647-4 Q10) a conferência vale 2 min: passado isso, a espera volta a "conferindo" e pede outra conferência', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; despMedOntemPend={'bia__ana__x_23-30': ${T647(7, 23, 30)}}; __medOntemConf={dia:'${ONTEM647}', ts:${T647(8, 0, 20)}, vistas:{'bia__ana__x_23-30':1}};`);
+    igual(run(`zDiaOntemEstado(${T647(8, 0, 22)})`), 'pendente', '120 s: a conferência ainda vale');
+    igual(run(`zDiaOntemEstado(${T647(8, 0, 22, 1)})`), 'conferindo', '121 s: vencida (antes do QA, um defeito que a deixasse valer para sempre passava)');
+    run('__logPendura=true; __logLido=[];');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 22, 1)})`), 'espera: dose de ontem');
+    igual(run('__logLido'), [ONTEM647], 'e pede outra conferência');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 (2ª rodada, QA647-4 Q11) a pergunta "CONFERINDO OS REMÉDIOS DE ONTEM" da faixa: «Esperar» confere de novo', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __logPendura=true;`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run('aplicarVersaoNova();');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['CONFERINDO OS REMÉDIOS DE ONTEM']); igual(run('__esc[0].b[0].t'), 'Esperar');
+    run('__logPendura=false; __logLido=[]; __esc[0].b[0].fn();');
+    igual([run('__logLido'), run('__mo')], [[ONTEM647], ['bia__ana__x_23-30']], '«Esperar» confere (antes do QA, um «Esperar» que não fazia nada passava)');
+    igual(run('__rep'), 0);
+  } finally { run(SOLTA647); }
+});
+// ------------------------------------------------ 6.47 — 3ª rodada (achados do 2º QA e do caçador; relógio FIXO)
+// Princípio: a dose de ontem nunca cala as doses de hoje por muito tempo; na dúvida, a tela passa para hoje e a
+// dose de ontem fica para o vigia do servidor de manhã (como era antes da 6.47).
+// O registro POR DIA (o do ARMA647 é um só para qualquer dia): o de ontem e o de hoje separados.
+const LOGDIA647 = `__logs={}; __logs['${ONTEM647}']={}; __logs['${HOJE647}']={};
+  medLogHoje=function(){ var d=dataKeyAtual(); __logLido.push(d); return {then:function(f){ f(__logs[d]||{}); return {catch:function(){}}; }}; };`;
+// "Dei o remédio" de mentira para o laço das provas: grava no registro do dia do alarme e fecha.
+const DEU647 = `(function(){ var d=despMedAtualDia, k=despMedAtual.key, id=despMedAtualDoseId; __logs[d]=__logs[d]||{}; __logs[d][k]=__logs[d][k]||{}; __logs[d][k][id]={quem:'Ana'}; fecharDespertadorMed(); })();`;
+const BT2_647 = () => (/<button[^>]* id="despMedB2"[^>]*>([^<]*)<\/button>/.exec(run('__despEl.innerHTML')) || [])[1];
+const NAO_DAR647 = 'Entendi — não vou dar';
+const PASSOU647 = 'Passou do horário seguro desta dose: não dê sem falar com a veterinária.';
+const BEIRA647 = 'Está no limite do horário seguro desta dose: não dê sem falar com a veterinária.';   // 4ª rodada (QA3-D): nos 30 s antes do teto
+const REX_ONTEM_DADOS647 = `rex__ivo:{'q_02-30':{quem:'Ana'}, 'q_06-30':{quem:'Ana'}, 'q_10-30':{quem:'Ana'}, 'q_14-30':{quem:'Ana'}, 'q_18-30':{quem:'Ana'}}`;
+const hhmm647 = (t) => new Date(t).toTimeString().slice(0, 5);
+// 4ª rodada: o banco que responde a leitura do adiado de outro dia pelo registro POR DIA (__logs), como o medLogHoje do LOGDIA647.
+const BANCODIA647 = `DB={ref:function(p){ var m=/^auaulandia\\/medicacao-log\\/([^/]+)\\/([^/]+)\\/([^/]+)$/.exec(p);
+    return __dbNulo647(p, {once:function(){ __lidos.push(p); var v=m ? ((__logs[m[1]]||{})[m[2]]||{})[m[3]]||null : null; return Promise.resolve({val:function(){ return v; }}); },
+      transaction:function(f){ var v=f(null); __gr.push(p); return Promise.resolve({committed:true, snapshot:{val:function(){ return v; }}}); },
+      update:function(){ return Promise.resolve(); }}); }}; __lidos=[]; __gr=[];`;
+const hms647 = (t) => new Date(t).toTimeString().slice(0, 8);
+// Roda a madrugada de 15 em 15 s (o vigia de 15 s; a cada 30 s, o de 30 s) e responde o que abre: a Bia (dose de ontem que a
+// plantonista não consegue conferir) pelo segundo botão — o ADIAR, ou, passado o horário seguro, «Entendi — não vou dar» —; o Rex,
+// «Dei o remédio». Devolve a hora em que a tela passou e o que abriu.
+const MADRUGADA647 = async (de, ate) => {
+  const out = { telaHoje: null, bia: [], rex: [], recargas: 0 };
+  for (let t = de; t <= ate; t += 15000) {   // de: múltiplo de 30 s (o vigia de 30 s bate nas batidas pares)
+    relogio647(t); run(`zDiaTelaAvancar(${t}); __st=[]; if(zViradaDoDiaTick()==='recarga') __rec647++;`); if ((t / 15000) % 2 === 0) run('checarDespertadorMed();');
+    await volta647();
+    if (!out.telaHoje && run('dataKeyAtual()') === HOJE647) out.telaHoje = hms647(t);
+    const na = run('despMedNaTela');
+    if (/^bia__/.test(na || '')) { out.bia.push(hms647(t) + '/' + run('despMedAtualDia').slice(8) + '/' + (run('despMedNaoDar') ? 'Entendi' : 'ADIAR')); run('despMedSegundoBotao();'); }
+    else if (/^rex__/.test(na || '')) { out.rex.push(na.split('__')[2] + '@' + hms647(t) + '/' + run('despMedAtualDia').slice(8) + '/' + run('__els.despMedInstr.textContent').slice(0, 18)); run(DEU647); }
+  }
+  out.recargas = run('__rec647');
+  return out;
+};
+const REX4_647 = ['20:30', '00:30', '04:30', '08:30', '12:30', '16:30'].map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(',');
+const REX4_DADAS647 = `rex__ivo:{'q_20-30':{quem:'Ana'}, 'q_00-30':{quem:'Ana'}, 'q_04-30':{quem:'Ana'}, 'q_08-30':{quem:'Ana'}, 'q_12-30':{quem:'Ana'}, 'q_16-30':{quem:'Ana'}}`;
+provaAsync('6.47 (4ª rodada) o ADIAR da dose de ontem não segura a tela, dentro ou depois do teto: a tela passa, a dose de HOJE das 00:30 toca às 00:25 e o adiado volta pelo dia dele, registrado em ontem (achado médio do 3º caçador, SONDA 3R-B; antes, a tela ficava em ontem até 2 h 59 min)', async () => {
+  try {
+    for (const [bia, teto, beira] of [[BIA647, '02:30', '02:29:30'], ["{key:'bia__ana', itemId:'x', horario:'23:59', nome:'Apoquel', hospNome:'Bia'}", '02:59', '02:58:30']]) {
+      run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCODIA647);
+      run(`__rec647=0; MED_AGENDA_TODOS=[${bia}, ${REX4_647}]; __logs['${ONTEM647}']={${REX4_DADAS647}};`);
+      try {
+        igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_' + (teto === '02:30' ? '23-30' : '23-59'));
+        relogio647(T647(8, 0, 0, 10)); run('despMedSegundoBotao();');   // ADIAR (dentro do teto)
+        const r = await MADRUGADA647(T647(8, 0, 0, 30), T647(8, 3, 15));
+        igual(r.telaHoje, '00:00:30', 'a tela passa na batida seguinte ao ADIAR (antes: «espera: alarme adiado» até ' + teto + ')');
+        assert.ok(/^q_00-30@00:2[56]:[0-9]{2}\/08\/Dê o remédio agora$/.test(r.rex[0] || ''), 'a das 00:30 de hoje toca às 00:25 (no máximo 1 min depois), mandando dar como sempre (antes: às ' + teto + ', 2 h depois): ' + JSON.stringify(r.rex));
+        assert.ok(r.bia.length >= 20 && r.bia.every((x) => /\/07\//.test(x)), 'o adiado volta de 5 em 5 min, sempre pelo dia dele (07/10): ' + JSON.stringify(r.bia));
+        const ultima = r.bia[r.bia.length - 1];
+        assert.ok(/Entendi$/.test(ultima) && ultima.slice(0, 8) >= beira && r.bia.slice(0, -1).every((x) => /ADIAR$/.test(x)), 'dentro do teto, ADIAR; à beira do teto (' + teto + '), volta uma vez com «Entendi — não vou dar» e acaba: ' + JSON.stringify(r.bia.slice(-3)));
+        igual([r.recargas, run(`(__logs['${ONTEM647}'].bia__ana)||null`)], [0, null], 'nenhuma recarga (o adiado e a madrugada seguram); nada gravado para a Bia (nunca um "não dada")');
+      } finally { run(SOLTAG647 + SOLTA647); }
+    }
+    // 3R-C (contraprova): com a tela já em hoje, o mesmo laço dá o mesmo resultado
+    run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCODIA647);
+    run(`__rec647=0; MED_AGENDA_TODOS=[${BIA647}, ${REX4_647}]; __logs['${ONTEM647}']={${REX4_DADAS647}};`);
+    try {
+      igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+      run('despMedSegundoBotao(); ' + HOJE_MESMO_ASSIM647); igual(run('dataKeyAtual()'), HOJE647, 'com só o adiado, o «Hoje» não pergunta');
+      const r = await MADRUGADA647(T647(8, 0, 0, 30), T647(8, 0, 40));
+      assert.ok(/^q_00-30@00:2[56]:[0-9]{2}\/08\/Dê o remédio agora$/.test(r.rex[0] || ''), JSON.stringify(r.rex));
+    } finally { run(SOLTAG647 + SOLTA647); }
+    // a recarga continua esperando o adiado que ainda vai voltar (a tela não): com a FICHA aberta (a tela fica em ontem por ela),
+    // ADIAR às 00:21 e o celular parado na mesa — a recarga das 00:24 apagaria o adiar em silêncio
+    run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(LOGDIA647); run(MOREAL647); run(BANCODIA647);
+    try {
+      run(`MED_AGENDA_TODOS=[${BIA647}]; __fa=true;`);
+      igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: ficha aberta'); run('checarDespertadorMed();'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+      relogio647(T647(8, 0, 21)); run('adiarDoseDespertador(); __parado="3 min sem toque"; __st=[];');
+      relogio647(T647(8, 0, 24, 30)); igual([run('zViradaDoDiaTick()'), run('__st')], ['faixa', []], 'parado, com o adiado esperando: não recarrega');
+      relogio647(T647(8, 0, 26)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+      igual([run('__mo'), run('despMedAtualDia'), run('dataKeyAtual()')], [['bia__ana__x_23-30'], ONTEM647, ONTEM647], 'volta por cima da ficha, em ontem (a regra da 6.32)');
+    } finally { run(SOLTAG647 + SOLTA647); }
+    // de manhã: o ADIAR tocado no alarme passado do teto (um toque antes do redesenho) segura a recarga só até ele voltar, 5 min
+    // depois, já com «Entendi — não vou dar»; respondido, a recarga das 6h segue
+    run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCODIA647);
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; __logs['${ONTEM647}']={${REX_ONTEM_DADOS647}};`);
+    try {
+      igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+      relogio647(T647(8, 6, 8)); run('adiarDoseDespertador(); __parado="3 min sem toque"; __st=[];');
+      igual([run(`zDiaTelaAvancar(${T647(8, 6, 8)})`), run('zViradaDoDiaTick()')], ['avancou', 'faixa']);
+      relogio647(T647(8, 6, 13, 30)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+      igual([run('__mo'), run('despMedAtualDia'), BT2_647()], [['rex__ivo__q_22-30'], ONTEM647, NAO_DAR647], 'volta uma vez, pelo dia dele, sem o ADIAR');
+      run('despMedSegundoBotao(); __st=[];'); relogio647(T647(8, 6, 14));
+      igual(run('zViradaDoDiaTick()'), 'recarga', 'respondido: a recarga das 6h segue');
+    } finally { run(SOLTAG647 + SOLTA647); }
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) «Entendi — não vou dar»: o alarme que diz «não dê» troca o ADIAR por ela; ela fecha neste aparelho, não volta, não grava nada em medicacao-log e deixa o rastro; a tela passa (QA647b-3)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+  run('__aud=[]; audit=function(a,d){ __aud.push(a+" | "+d); };');
+  try {
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; __log={${REX_ONTEM_DADOS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    igual([BT2_647(), run('despMedNaoDar')], ['ADIAR 5 min', false], 'dentro do teto: ADIAR, como sempre');
+    // 00:31: passou do teto (00:30) — o redesenho troca a instrução e o segundo botão, no mesmo lugar
+    relogio647(T647(8, 0, 31)); run('checarDespertadorMed();');
+    igual([run('__els.despMedInstr.textContent'), BT2_647(), run('despMedNaoDar')], [PASSOU647, NAO_DAR647, true], 'antes: o ADIAR continuava (e voltava em laço)');
+    igual(run('zDiaOntemSegura()'), false, 'o alarme que diz «não dê» não segura o «Hoje» nem a troca de turno');
+    run('__mo=[]; despMedSegundoBotao();');
+    igual([run('despMedNaTela'), run('__gr'), run('Object.keys(__medNaoDar)')], [null, [], [ONTEM647 + '|rex__ivo__q_22-30']], 'fecha sem gravar nada (nunca um "não dada", AC12)');
+    igual(run('__aud'), ['med-alarme-nao-vou-dar | fechou sem dar o alarme de Antibiótico de Rex (22:30 de ontem): o alarme dizia para não dar sem falar com a veterinária'], 'o rastro, como o do ADIAR');
+    for (const t of [T647(8, 0, 31, 30), T647(8, 0, 37)]) { relogio647(t); run('checarDespertadorMed();'); await volta647(); }
+    igual([run('__mo'), run('despMedNaTela')], [[], null], 'não volta neste aparelho');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 37)})`), 'avancou', 'nada mais segura: a tela passa');
+    // com a tela em hoje: o adiado de ontem feito DENTRO do teto volta uma vez depois dele (a folga do ADIAR), já com «não dê»
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+    run('__aud=[]; audit=function(a,d){ __aud.push(a); };');
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; __log={${REX_ONTEM_DADOS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); igual(run('dataKeyAtual()'), HOJE647);
+    relogio647(T647(8, 0, 28)); run('despMedSegundoBotao();');   // ADIAR (o botão ainda é o ADIAR)
+    igual([run('despMedNaTela'), run('Object.keys(despMedSnoozeDia)')], [null, ['rex__ivo__q_22-30']], 'o botão era o ADIAR: adiou');
+    relogio647(T647(8, 0, 33)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia'), BT2_647(), run('__els.despMedInstr.textContent')], [['rex__ivo__q_22-30'], ONTEM647, NAO_DAR647, PASSOU647],
+      'volta às 00:33 pelo dia dele (2 h 3 min, dentro do teto mais o ADIAR), já sem o ADIAR');
+    run('despMedSegundoBotao(); __mo=[];');
+    igual([run('Object.keys(despMedSnooze)'), run('Object.keys(despMedSnoozePend)'), run('Object.keys(despMedSnoozeDia)')], [[], [], []], 'do adiado não sobra nada');
+    for (const t of [T647(8, 0, 38), T647(8, 0, 43)]) { relogio647(t); run('checarDespertadorMed();'); await volta647(); }
+    igual([run('__mo'), run('__gr'), run('__aud')], [[], [], ['med-alarme-adiado', 'med-alarme-nao-vou-dar']], 'não volta, nada gravado; no rastro, o ADIAR e o «Entendi — não vou dar»');
+    // «Dei o remédio» continua possível (a veterinária mandou dar): a próxima dose do mesmo remédio avisa, também sem o ADIAR
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647); run(LOGDIA647);
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; __logs['${ONTEM647}']={${REX_ONTEM_DADOS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    relogio647(T647(8, 0, 40)); run('checarDespertadorMed(); confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/rex__ivo/q_22-30'], '«Dei» grava a dose tardia em ontem');
+    run(`__logs['${ONTEM647}'].rex__ivo['q_22-30']={quem:'Ana Souza'};`);
+    relogio647(T647(8, 0, 40, 20)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 40, 20)})`), 'avancou');
+    relogio647(T647(8, 2, 25)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), BT2_647(), run('despMedNaoDar')], [['rex__ivo__q_02-30'], NAO_DAR647, true], 'a das 02:30 avisa que a anterior foi tarde e não tem o ADIAR');
+    run('despMedSegundoBotao(); __mo=[];'); relogio647(T647(8, 2, 30, 30)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('Object.keys(__medNaoDar)')], [[], [HOJE647 + '|rex__ivo__q_02-30']], '«Entendi — não vou dar» na de hoje: não volta');
+    relogio647(T647(8, 6, 25)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), BT2_647()], [['rex__ivo__q_06-30'], 'ADIAR 5 min'], 'a das 06:30 (mais de 3 h depois do registro tardio): como sempre');
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+prova('6.47 (3ª rodada) a pergunta da faixa não manda dar o que o alarme diz para não dar; o adiado passado do teto pergunta sem mandar registrar a dose (QA647b-5, sondas S12 e R10; 4ª rodada)', () => {
+  run(ARMA647); relogio647(T647(8, 0, 0, 5));
+  try {
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    relogio647(T647(8, 1, 0)); run('__esc=[]; aplicarVersaoNova();');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['HÁ UM REMÉDIO DE ONTEM SEM REGISTRO']);
+    igual(run('__esc[0].l[1]'), PASSOU647 + ' No alarme, toque em «Entendi — não vou dar» (ou em «Dei o remédio», se a veterinária mandar dar); depois, atualize.',
+      'antes: «Dê o remédio e toque em «Dei o remédio»; depois, atualize.», com o alarme dizendo «não dê»');
+    assert.ok(!/Dê o remédio/.test(run('__esc[0].l.join(" ")')));
+    // o adiado passado do teto (4ª rodada): ele volta uma vez, já dizendo «não dê» — a pergunta segura a atualização e
+    // não manda registrar a dose (na 3ª rodada, atualizava sem perguntar, e o adiado sumia em silêncio)
+    run('adiarDoseDespertador(); __esc=[]; __rep=0; aplicarVersaoNova();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l[1]'), run('__rep')],
+      [['HÁ UM REMÉDIO ADIADO'], 'Espere o alarme voltar e responda a ele (ele vai dizer para não dar sem falar com a veterinária); depois, atualize.', 0]);
+    // o adiado feito antes do teto que vai voltar depois dele (a folga do ADIAR): a pergunta não manda registrar a dose
+    run(SOLTA647); run(ARMA647); relogio647(T647(8, 0, 0, 5));
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`); igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    for (const [quando, certo] of [[T647(8, 0, 20), 'Espere o alarme voltar e registre a dose; depois, atualize.'],
+      [T647(8, 0, 28), 'Espere o alarme voltar e responda a ele (ele vai dizer para não dar sem falar com a veterinária); depois, atualize.']]) {
+      relogio647(quando); run('if(!despMedNaTela) checarDespertadorMed(); adiarDoseDespertador(); __esc=[]; __rep=0; aplicarVersaoNova();');
+      igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l[1]'), run('__rep')], [['HÁ UM REMÉDIO ADIADO'], certo, 0], hhmm647(quando));
+      relogio647(quando + 5 * 60000); run('checarDespertadorMed();');
+    }
+    // (4ª rodada) o adiado que já venceu e ainda não voltou (a página acordou e espera o banco): o alarme volta agora, então vale
+    // a hora de agora — o prazo (00:20) era antes do teto (00:30), e às 00:40 o alarme vai voltar dizendo «não dê»
+    run(SOLTA647); run(ARMA647); relogio647(T647(8, 0, 40));
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; despMedSnooze={'rex__ivo__q_22-30': ${T647(8, 0, 20)}}; despMedSnoozePend={'rex__ivo__q_22-30': ${T647(8, 0, 20)}};
+      despMedSnoozeDia={'rex__ivo__q_22-30':'${ONTEM647}'}; despMedSnoozeIt={'rex__ivo__q_22-30':MED_AGENDA_TODOS[0]}; __esc=[]; __rep=0; aplicarVersaoNova();`);
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l[1]'), run('__rep')],
+      [['HÁ UM REMÉDIO ADIADO'], 'Espere o alarme voltar e responda a ele (ele vai dizer para não dar sem falar com a veterinária); depois, atualize.', 0], 'o prazo venceu antes do teto, mas o alarme volta depois dele');
+    // a dose de ontem da lista que, ao abrir, já diria «não dê» (a beira do teto, 30 s): também não manda dar
+    run(SOLTA647); run(ARMA647); relogio647(T647(8, 0, 29, 40));
+    run(`MED_AGENDA_TODOS=[${Q4_647}]; despMedOntemPend={'rex__ivo__q_22-30': ${T647(7, 22, 30)}};
+      __medOntemConf={dia:'${ONTEM647}', ts:${T647(8, 0, 29, 40)}, vistas:{'rex__ivo__q_22-30':1}}; __esc=[]; aplicarVersaoNova();`);
+    igual(run('__esc[0].l[1]'), BEIRA647 + ' No alarme, toque em «Entendi — não vou dar» (ou em «Dei o remédio», se a veterinária mandar dar); depois, atualize.', '(4ª rodada) o mesmo texto do alarme, também o da beira');
+    // duas na lista: a pergunta fala da que abre agora (a primeira da fila, a mais antiga)
+    const L2140 = "{key:'lua__eva', itemId:'l', horario:'21:40', nome:'Prednisolona', hospNome:'Lua'}";
+    for (const [ag, pend, certo] of [[`${BIA647}, ${Q4_647}`, `{'bia__ana__x_23-30':1, 'rex__ivo__q_22-30':1}`, 'passou'], [`${Q4_647}, ${L2140}`, `{'rex__ivo__q_22-30':1, 'lua__eva__l_21-40':1}`, 'dê']]) {
+      run(`MED_AGENDA_TODOS=[${ag}]; despMedOntemPend=${pend}; __medOntemConf={dia:'${ONTEM647}', ts:${T647(8, 0, 29, 40)}, vistas:{'bia__ana__x_23-30':1, 'rex__ivo__q_22-30':1, 'lua__eva__l_21-40':1}}; __esc=[]; aplicarVersaoNova();`);
+      igual(/^(Passou do horário seguro|Está no limite do horário seguro)/.test(run('__esc[0].l[1]')) ? 'passou' : 'dê', certo, ag.slice(0, 40));
+    }
+    run(`despMedOntemPend={'bia__ana__x_23-30': ${T647(7, 23, 30)}}; MED_AGENDA_TODOS=[${BIA647}]; __medOntemConf={dia:'${ONTEM647}', ts:${T647(8, 0, 29, 40)}, vistas:{'bia__ana__x_23-30':1}}; __esc=[]; aplicarVersaoNova();`);
+    igual(run('__esc[0].l[1]'), 'Dê o remédio e toque em «Dei o remédio»; depois, atualize.', 'dentro do teto: como era');
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) a beira do teto: o alarme aberto a menos de 30 s do teto já nasce dizendo «não dê» e sem o ADIAR; o que o segundo botão faz segue o texto dele (QA647b-6)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 0, 0)); run(GRAVA647); run(DOM647B); run(MOREAL647);
+  const NINA = "{key:'nina__eva', itemId:'n', horario:'21:00', nome:'Gabapentina', hospNome:'Nina'}";
+  try {
+    // AC6: a das 21:00 (uma vez por dia) à meia-noite exata toca — e já diz «não dê» (antes: «dê» e, 30 s depois, «não dê»)
+    run(`MED_AGENDA_TODOS=[${NINA}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 0)})`), 'espera: dose de ontem'); igual(run('__mo'), ['nina__eva__n_21-00']);
+    igual([run('__els.despMedInstr.textContent'), BT2_647()], [BEIRA647, NAO_DAR647], '(4ª rodada, QA3-D) «no limite»: o atraso é exatamente o teto (3 h)');
+    relogio647(T647(8, 0, 0, 30)); run('checarDespertadorMed();');
+    igual([run('__els.despMedInstr.textContent'), BT2_647()], [PASSOU647, NAO_DAR647], '30 s depois: passou do teto');
+    // a de 4 em 4 h: o segundo botão vira «Entendi — não vou dar» no redesenho de 30 s antes do teto, e faz o que diz
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 29)); run(GRAVA647); run(DOM647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 29)})`), 'espera: dose de ontem');
+    igual(BT2_647(), 'ADIAR 5 min');
+    relogio647(T647(8, 0, 29, 31)); run('medDespRedesenhar(Date.now());');
+    igual([BT2_647(), run('despMedNaoDar')], [NAO_DAR647, true], 'a 29 s do teto');
+    run('despMedSegundoBotao();');
+    igual([run('Object.keys(despMedSnooze)'), run('Object.keys(__medNaoDar)')], [[], [ONTEM647 + '|rex__ivo__q_22-30']], 'o botão faz o que diz: não adia');
+    // fechada ainda dentro da janela (00:29:31): a conferência seguinte não a reabre nem segura a tela por ela
+    relogio647(T647(8, 0, 29, 40)); run('__mo=[]; checarDespertadorMed();');
+    igual([run('__mo'), run(`zDiaTelaAvancar(${T647(8, 0, 29, 45)})`)], [[], 'avancou']);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) aba escondida sem congelar (1 batida por minuto): o "acordou" vale uma vez por período escondido; a tela passa logo depois da meia-noite e a dose de HOJE das 00:30 toca às 00:25 (QA647b-4, SONDA-Q2C)', async () => {
+  const REX = "{key:'rex__ivo', itemId:'r', horario:'00:30', nome:'Antibiótico', hospNome:'Rex'}";
+  try {
+    for (const ordem of ['folga antes dos vigias', 'vigias antes da folga']) {
+      run(ARMA647); relogio647(T647(7, 23, 50)); run(LOGDIA647);
+      run(`DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') cb({val:function(){ return true; }}); return cb; }}); }};
+        __stQ=[]; setTimeout=function(f,ms){ __stQ.push(f); return 0; }; __bkHid647c=document.hidden;
+        MED_AGENDA_TODOS=[${BIA647}, ${REX}]; __logs['${ONTEM647}']={bia__ana:{'x_23-30':{quem:'Rita'}}, rex__ivo:{'r_00-30':{quem:'Ana'}}};
+        medOntemBatida(${T647(7, 23, 50)}); medOntemLigarConexao(); document.hidden=true; medOntemVisibilidade(true, ${T647(7, 23, 50)});`);
+      let telaHoje = null, rex = null, acordou = 0;
+      for (let t = T647(7, 23, 51); t <= T647(8, 1, 0) && !rex; t += 60000) {
+        relogio647(t);
+        const folga = () => { for (const f of run('__stQ.splice(0)')) { try { f(); } catch (e) { /* silencioso de propósito: o reconferir que falha é o vigia que tenta de novo */ } } };
+        if (ordem === 'folga antes dos vigias') folga();
+        if (run('medOntemBatida(Date.now())')) acordou++;
+        run('zDiaTelaAvancar(); zViradaDoDiaTick(); medOntemBatida(Date.now()); checarDespertadorMed();');
+        if (ordem !== 'folga antes dos vigias') folga();
+        await volta647();
+        if (!telaHoje && run('dataKeyAtual()') === HOJE647) telaHoje = hhmm647(t);
+        if (run('despMedNaTela')) rex = run('despMedNaTela') + '@' + hhmm647(t) + '/' + run('despMedAtualDia');
+      }
+      run('document.hidden=__bkHid647c;' + SOLTA647);
+      igual([acordou, telaHoje <= '00:01', rex], [1, true, 'rex__ivo__r_00-30@00:25/' + HOJE647], ordem + ' — antes: o "acordou" a cada batida, a tela em ontem até 02:31 e o Rex às 02:31');
+    }
+    // escondida de novo depois de voltar à vista: o primeiro pulo do novo período conta
+    run(ARMA647); relogio647(T647(8, 1, 0));
+    const T0 = T647(8, 1, 0);
+    run(`medOntemBatida(${T0}); medOntemVisibilidade(true, ${T0});`);
+    igual([run(`medOntemBatida(${T0 + 60000})`), run(`medOntemBatida(${T0 + 120000})`)], [true, false], 'um "acordou" por período escondido');
+    run(`medOntemVisibilidade(false, ${T0 + 130000}); medOntemVisibilidade(true, ${T0 + 140000});`);
+    igual(run(`medOntemBatida(${T0 + 200000})`), true, 'outro período: conta de novo');
+    // a página que abriu escondida (nenhum evento de visibilidade): também um "acordou" só
+    run(`medOntemVisibilidade(false, ${T0 + 200000}); __bkHid647d=document.hidden; document.hidden=true; __medAcordouOculto=0;`);
+    igual([run(`medOntemBatida(${T0 + 260000})`), run(`medOntemBatida(${T0 + 320000})`)], [true, false], 'escondida sem o evento: um "acordou" só');
+    run(`document.hidden=__bkHid647d; __medOcultoDesde=0; __medAcordouOculto=0; __medBatida=${T0 + 320000};`);
+    igual([run(`medOntemBatida(${T0 + 380000})`), run(`medOntemBatida(${T0 + 440000})`)], [true, true], 'com a página à vista, todo pulo é página que dormiu (como era)');
+  } finally { run('document.hidden=false;' + SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) a seta «›» com a pergunta aberta e a tela que passa sozinha: «Ir para hoje mesmo assim» vai para HOJE, não para amanhã (QA647b-1, SONDA-Q2 A e A2)', async () => {
+  try {
+    for (const [papel, seta] of [['plantonista', 'changeDate(1)'], ['monitor', 'changeDate(1)'], ['monitor', 'fichaMudaDia(1)']]) {
+      run(ARMA647); relogio647(T647(8, 0, 20));
+      run(`__bkQ647={cf:carregarFicha, role:document.body.dataset.role}; carregarFicha=function(){}; document.body.dataset.role='${papel}';`);
+      try {
+        run(`MED_AGENDA_TODOS=[${BIA647}]; medOntemAcordou(${T647(8, 0, 20)});`);   // o celular acabou de sair do bolso (C4)
+        igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+        run('__esc=[]; ' + seta + ';');
+        igual(run('__esc.map(function(e){ return e.t; })'), ['CONFERINDO OS REMÉDIOS DE ONTEM'], seta);
+        run(`__log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);   // a Rita deu a Bia às 23:35 em outro aparelho: o registro chega
+        relogio647(T647(8, 0, 20, 6)); run('medOntemReconferir();'); await volta647();
+        relogio647(T647(8, 0, 20, 20)); run(`zDiaTelaAvancar(${T647(8, 0, 20, 20)})`);   // o vigia passa a tela, com a pergunta aberta
+        igual(run('dataKeyAtual()'), HOJE647, 'a tela passou sozinha');
+        relogio647(T647(8, 0, 20, 25)); run('__esc[0].b[1].fn();');   // «Ir para hoje mesmo assim»
+        igual(run('dataKeyAtual()'), HOJE647, papel + ' ' + seta + ': antes, a seta refazia a conta com a tela nova e ia para AMANHÃ');
+      } finally { run('carregarFicha=__bkQ647.cf; document.body.dataset.role=__bkQ647.role;' + SOLTA647); }
+    }
+    // A2: com o alarme de ontem na tela (pergunta «HÁ REMÉDIO DE ONTEM POR RESPONDER»), a dose é respondida e a tela passa
+    // com a pergunta aberta (na 3ª rodada, com o adiado; desde a 4ª, o adiado não segura a seta: ela vai para hoje sem perguntar)
+    run(ARMA647); relogio647(T647(8, 0, 20));
+    run(`__bkQ647={cf:carregarFicha, role:document.body.dataset.role}; carregarFicha=function(){}; document.body.dataset.role='monitor';`);
+    try {
+      run(`MED_AGENDA_TODOS=[${BIA647}];`);
+      igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+      relogio647(T647(8, 0, 21)); run('__esc=[]; changeDate(1);');
+      igual(run('__esc.map(function(e){ return e.t; })'), [PERG647]);
+      run(`fecharDespertadorMed(); __log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);   // respondida (aqui, ou dada em outro aparelho)
+      relogio647(T647(8, 0, 25, 30)); run('checarDespertadorMed();'); await volta647();
+      relogio647(T647(8, 0, 25, 45)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 25, 45)})`), 'avancou');
+      run('__esc[0].b[1].fn();'); igual(run('dataKeyAtual()'), HOJE647, 'A2: antes, amanhã');
+      // só o adiado (4ª rodada): a seta vai para hoje sem perguntar
+      run(`selectedDate=new __RD647(${T647(7, 22, 40)}); DIA_TELA_AUTO='${ONTEM647}'; __log={}; __medOntemConf=null; despMedOntemPend={};`);
+      relogio647(T647(8, 0, 26)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 26)})`), 'espera: dose de ontem');
+      run('adiarDoseDespertador(); __esc=[]; changeDate(1);'); igual([run('__esc'), run('dataKeyAtual()')], [[], HOJE647], 'o adiado volta pelo dia dele');
+      // e a seta com a pergunta, sem a tela passar: vai para hoje, como antes
+      run(`selectedDate=new __RD647(${T647(7, 22, 40)}); DIA_TELA_AUTO='${ONTEM647}'; __log={}; __medOntemConf=null; despMedSnooze={}; despMedSnoozePend={}; despMedSnoozeDia={}; despMedSnoozeIt={};`);
+      relogio647(T647(8, 0, 26)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 26)})`), 'espera: dose de ontem');
+      run('__esc=[]; changeDate(1); __esc[0].b[1].fn();'); igual(run('dataKeyAtual()'), HOJE647);
+    } finally { run('carregarFicha=__bkQ647.cf; document.body.dataset.role=__bkQ647.role;' + SOLTA647); }
+  } finally { run(SOLTA647); }
+});
+// 4ª rodada: o adiado guardado com o dia (QA647b-2) — ele volta pelo menos uma vez depois de vencer o ADIAR; só o remédio que
+// saiu da agenda é descartado, e a tela diz. Arma o adiado de outro dia, com a tela em hoje.
+const ADIADO647 = (sk, prazo, dia, it) => `despMedSnooze={'${sk}': ${prazo}}; despMedSnoozePend={'${sk}': ${prazo}}; despMedSnoozeDia={'${sk}':'${dia}'}; despMedSnoozeIt={'${sk}':${it}};`;
+provaAsync('6.47 (4ª rodada) o ADIAR volta pelo menos uma vez depois de vencer: o Day Care com pernoite, quem tinha saída, a dose do dia adiada perto da meia-noite, de anteontem, o celular que dormiu, a tela em ontem — passado o horário seguro, volta dizendo «não dê» e sem o ADIAR (3R-A, 3R-A2, QA3-A; antes, sumia em silêncio)', async () => {
+  const TICO = "{key:'dc__tico__joana', itemId:'medicacao_0', horario:'23:30', nome:'Apoquel', hospNome:'Tico', local:'Day Care'}";
+  const NINA = "{key:'nina__eva', itemId:'w', horario:'23:30', nome:'Apoquel', hospNome:'Nina', saidaHoje:true}";
+  try {
+    // 3R-A: o alarme abre às 23:56 com a tela em hoje (07/10); ADIAR às 23:58; a tela passa à meia-noite; volta às 00:03, pelo dia dele
+    for (const [nome, it] of [['Day Care com pernoite', TICO], ['quem tinha saída marcada', NINA], ['hospedagem (controle)', BIA647]]) {
+      run(ARMA647); relogio647(T647(7, 23, 56)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+      try {
+        run(`selectedDate=new __RD647(${T647(7, 23, 56)}); MED_AGENDA_TODOS=[${it}];`);
+        run('checarDespertadorMed();'); await volta647(); igual(run('despMedAtualDia'), ONTEM647, nome + ': o alarme de hoje (07/10)');
+        relogio647(T647(7, 23, 58)); run('despMedSegundoBotao();');   // ADIAR
+        relogio647(T647(8, 0, 0, 15)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 15)})`), 'avancou');
+        relogio647(T647(8, 0, 3, 30)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+        igual([run('__mo').length, run('despMedAtualDia'), BT2_647()], [1, ONTEM647, 'ADIAR 5 min'], nome + ': volta às 00:03, pelo dia dele (antes: o Day Care e quem tinha saída sumiam)');
+        run('confirmarDoseDespertador();'); await volta647();
+        assert.ok(/medicacao-log\/2026-10-07\//.test(run('__gr[0]') || ''), nome + ': grava em ontem — ' + run('__gr[0]'));
+      } finally { run(SOLTAG647 + SOLTA647); }
+    }
+    // 3R-A2: o alarme do Tico está NA TELA à meia-noite (abriu às 23:25); «ADIAR 5 min» às 00:01 — volta às 00:06
+    run(ARMA647); relogio647(T647(7, 23, 25)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+    try {
+      run(`selectedDate=new __RD647(${T647(7, 23, 25)}); MED_AGENDA_TODOS=[${TICO}];`);
+      run('checarDespertadorMed();'); await volta647();
+      relogio647(T647(8, 0, 1)); run('checarDespertadorMed();'); igual(BT2_647(), 'ADIAR 5 min'); run('despMedSegundoBotao();');
+      relogio647(T647(8, 0, 1, 15)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 1, 15)})`), 'avancou');
+      relogio647(T647(8, 0, 6, 30)); run('__mo=[]; checarDespertadorMed();'); await volta647();
+      igual([run('__mo'), run('despMedAtualDia')], [['dc__tico__joana__medicacao_0_23-30'], ONTEM647], 'o «ADIAR 5 min» volta em 5 min');
+    } finally { run(SOLTAG647 + SOLTA647); }
+    // QA3-A: a dose do DIA (sem teto) adiada às 23:58: volta uma vez depois da meia-noite, já de ontem, dizendo «não dê» e sem o ADIAR
+    for (const [h, ag] of [['20:50', ['20:50']], ['20:00', ['04:00', '12:00', '20:00']], ['21:00', ['21:00']]]) {
+      run(ARMA647); relogio647(T647(7, 23, 58)); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647); run(LOGDIA647);
+      try {
+        const AG = ag.map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(',');
+        run(`selectedDate=new __RD647(${T647(7, 23, 58)}); MED_AGENDA_TODOS=[${AG}];`);
+        ag.filter((x) => x !== h).forEach((x) => run(`__logs['${ONTEM647}'].rex__ivo=__logs['${ONTEM647}'].rex__ivo||{}; __logs['${ONTEM647}'].rex__ivo['q_${x.replace(':', '-')}']={quem:'Ana'};`));
+        run('checarDespertadorMed();'); igual(run('despMedNaTela'), 'rex__ivo__q_' + h.replace(':', '-'));
+        run('adiarDoseDespertador(); __mo=[];');
+        relogio647(T647(8, 0, 0, 15)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 15)})`), 'avancou', h + ': a tela passa');
+        relogio647(T647(8, 0, 3, 30)); run('checarDespertadorMed();'); await volta647();
+        igual([run('__mo'), run('despMedAtualDia'), run('__els.despMedInstr.textContent'), BT2_647()], [['rex__ivo__q_' + h.replace(':', '-')], ONTEM647, PASSOU647, NAO_DAR647],
+          h + ': antes (3ª rodada), sumia em silêncio; volta uma vez e acaba no «Entendi»');
+        run('despMedSegundoBotao(); __mo=[];'); relogio647(T647(8, 0, 9)); run('checarDespertadorMed();'); await volta647();
+        igual(run('__mo'), [], 'respondido com «Entendi — não vou dar»: não volta');
+      } finally { run(SOLTAG647 + SOLTA647); }
+    }
+    // de anteontem, o celular que dormiu (o ADIAR venceu às 00:33, e ele só acordou às 00:35:01) e a tela em ontem: voltam uma vez
+    for (const [rot, prazo, dia, agora, it, rotulo] of [['de anteontem', T647(6, 23, 55), '2026-10-06', T647(8, 0, 1), BIA647, '23:30 de 06/10'],
+      ['o celular que dormiu', T647(8, 0, 33), ONTEM647, T647(8, 0, 35, 1), 'MED_AGENDA_TODOS[0]', '22:30 de ontem']]) {
+      run(ARMA647); relogio647(agora); run(GRAVA647); run(BANCO647B); run(DOM647B); run(MOREAL647);
+      try {
+        run(`selectedDate=new __RD647(${agora}); DIA_TELA_AUTO='${HOJE647}'; MED_AGENDA_TODOS=[${Q4_647}];`);
+        const sk = rot === 'de anteontem' ? 'bia__ana__x_23-30' : 'rex__ivo__q_22-30';
+        run(ADIADO647(sk, prazo, dia, it));
+        run('checarDespertadorMed();'); await volta647();
+        igual([run('__mo'), run('despMedAtualDia'), run('__els.despMedQuando.textContent'), BT2_647()], [[sk], dia, rotulo, NAO_DAR647], rot + ': antes, descartado em silêncio');
+      } finally { run(SOLTAG647 + SOLTA647); }
+    }
+    run(ARMA647); relogio647(T647(8, 0, 40)); run(DOM647B); run(MOREAL647);
+    try {
+      run(`MED_AGENDA_TODOS=[${Q4_647}]; __log={${REX_ONTEM_DADOS647}};` + ADIADO647('rex__ivo__q_22-30', T647(8, 0, 33), ONTEM647, 'MED_AGENDA_TODOS[0]'));
+      run('checarDespertadorMed();');
+      igual([run('__mo'), run('dataKeyAtual()'), run('__els.despMedInstr.textContent'), BT2_647()], [['rex__ivo__q_22-30'], ONTEM647, PASSOU647, NAO_DAR647], 'tela em ontem (a regra da 6.32): volta, dizendo «não dê» (antes: descartado)');
+    } finally { run(SOLTA647); }
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (4ª rodada) só o adiado cujo remédio saiu da agenda é descartado, e a tela diz («ALARME ADIADO QUE NÃO VOLTA»); com a agenda de outro dia, pela metade ou com a parte do Day Care relida para hoje, nada é descartado (QA647b-2 D e D2; nunca em silêncio)', async () => {
+  const LUA14 = "{key:'lua__eva', itemId:'z', horario:'14:00', nome:'Prednisolona', hospNome:'Lua'}";
+  const AVISO = (x) => 'ALARME ADIADO QUE NÃO VOLTA | O alarme adiado de ' + x + ' não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa). Nada foi registrado. Se a dose ainda for necessária, fale com a veterinária.';
+  try {
+    // D: o remédio que saiu da agenda à tarde (a tutora buscou a Lua) — descartado às 14:05, com o aviso; à meia-noite, nas duas ordens dos vigias, nada
+    for (const ordem of ['vigia de 15 s antes', 'vigia de 30 s antes']) {
+      run(ARMA647); relogio647(T647(7, 14, 0, 5)); run('__al=[]; zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); }; __au=[]; audit=function(t,m){ __au.push(t+": "+m); };');
+      run(`selectedDate=new __RD647(${T647(7, 14, 0, 5)}); MED_AGENDA_TODOS=[${LUA14}]; __log={};`);
+      run('checarDespertadorMed();'); await volta647(); igual(run('__mo'), ['lua__eva__z_14-00']);
+      run('adiarDoseDespertador();');
+      relogio647(T647(7, 14, 2)); run(`MED_AGENDA_TODOS=[]; MED_AGENDA_DIA='${ONTEM647}';`);   // a tutora buscou a Lua: a agenda relida, inteira
+      relogio647(T647(7, 14, 5)); run('checarDespertadorMed();'); await volta647();
+      igual([run('Object.keys(despMedSnooze)'), run('Object.keys(despMedSnoozePend)'), run('Object.keys(despMedSnoozeDia)'), run('__al')], [[], [], [], [AVISO('Prednisolona de Lua (14:00)')]],
+        'descartado, e a tela diz (antes: em silêncio)');
+      igual(run('__au.filter(function(x){ return /^med-alarme-adiado-descartado/.test(x); })'), ['med-alarme-adiado-descartado: O alarme adiado de Prednisolona de Lua (14:00) não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa).'], 'e fica o rastro na auditoria');
+      run('__mo=[];'); relogio647(T647(8, 0, 0, 15));
+      if (ordem === 'vigia de 15 s antes') { run('medOntemBatida(Date.now()); zDiaTelaAvancar(); zViradaDoDiaTick();'); relogio647(T647(8, 0, 0, 30)); run('medOntemBatida(Date.now()); checarDespertadorMed();'); }
+      else { run('medOntemBatida(Date.now()); checarDespertadorMed();'); await volta647(); relogio647(T647(8, 0, 0, 30)); run('medOntemBatida(Date.now()); zDiaTelaAvancar(); zViradaDoDiaTick();'); relogio647(T647(8, 0, 1)); run('checarDespertadorMed();'); }
+      await volta647();
+      igual([run('__mo'), run('__al').length], [[], 1], ordem + ': nada de «Lua toma Prednisolona às 14:00 de ontem» de madrugada');
+      run(SOLTA647);
+    }
+    // a agenda pela metade (uma leitura falhou), a carga seguinte já em curso com a lista pela metade ainda na memória (ela zera a
+    // contagem de falhas logo no começo) ou a agenda de outro dia (a lista ainda é a de outra data): não dá para saber — nada é descartado
+    for (const [rot, arma] of [['agenda pela metade', `MED_AGENDA_INTEIRA=false; __medAgendaFalhas=1; MED_AGENDA_DIA='${ONTEM647}';`],
+      ['a carga seguinte em curso, com a lista pela metade na memória (antes: descartado, com o aviso falso)', `MED_AGENDA_INTEIRA=false; __medAgendaFalhas=0; MED_AGENDA_DIA='${ONTEM647}';`],
+      ['agenda de outro dia', `MED_AGENDA_DIA='2026-10-05';`]]) {
+      run(ARMA647); relogio647(T647(7, 14, 5)); run('__al=[];');
+      run(`selectedDate=new __RD647(${T647(7, 14, 5)}); MED_AGENDA_TODOS=[];` + ADIADO647('lua__eva__z_14-00', T647(7, 14, 5), ONTEM647, LUA14) + arma);
+      run('checarDespertadorMed();');
+      igual([run('Object.keys(despMedSnoozePend)'), run('__al')], [['lua__eva__z_14-00'], []], rot);
+      run(SOLTA647);
+    }
+    // a parte do Day Care é relida pelo dia de hoje depois da meia-noite (C6): com a tela em ontem, a dose dc__ de ontem não está nela e
+    // não "saiu da agenda" — o adiado do Tico volta (pelo dia dele, quando a tela passa)
+    run(ARMA647); relogio647(T647(8, 0, 2)); run(GRAVA647); run(BANCO647B); run(MOREAL647); run('__al=[];');
+    const TICO = "{key:'dc__tico__joana', itemId:'medicacao_0', horario:'23:30', nome:'Apoquel', hospNome:'Tico'}";
+    run(`MED_AGENDA_TODOS=[]; MED_AGENDA_DIA='${ONTEM647}';` + ADIADO647('dc__tico__joana__medicacao_0_23-30', T647(8, 0, 6), ONTEM647, TICO));
+    run('checarDespertadorMed();');
+    igual([run('Object.keys(despMedSnoozePend)'), run('__al'), run(`zDiaTelaAvancar(${T647(8, 0, 2)})`)], [['dc__tico__joana__medicacao_0_23-30'], [], 'avancou']);
+    relogio647(T647(8, 0, 6, 30)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['dc__tico__joana__medicacao_0_23-30'], ONTEM647]);
+    run(SOLTAG647 + SOLTA647);
+    // sem a tela de aviso (zAlertao falhou), o aviso vai num alert — nunca em silêncio
+    run(ARMA647); relogio647(T647(7, 14, 5)); run(`__bkAl647=alert; __alr=[]; alert=function(m){ __alr.push(m); }; zAlertao=function(){ throw new Error('sem tela'); };`);
+    try {
+      run(`selectedDate=new __RD647(${T647(7, 14, 5)}); MED_AGENDA_TODOS=[]; MED_AGENDA_DIA='${ONTEM647}';` + ADIADO647('lua__eva__z_14-00', T647(7, 14, 5), ONTEM647, LUA14));
+      run('checarDespertadorMed();');
+      igual([run('Object.keys(despMedSnoozePend)'), run('__alr')], [[], ['O alarme adiado de Prednisolona de Lua (14:00) não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa).']]);
+    } finally { run('alert=__bkAl647;' + SOLTA647); }
+    // D2: a dose da recepção adiada às 07:55 virou a do check-in de pertences (outra chave): saiu da agenda — descartada, com o aviso
+    run(ARMA647); relogio647(T647(7, 7, 55)); run('__al=[]; zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); };');
+    const REC = "{key:'dc__tico__joana', itemId:'rec_0', horario:'08:00', nome:'Apoquel', hospNome:'Tico'}";
+    run(`selectedDate=new __RD647(${T647(7, 7, 55)}); MED_AGENDA_TODOS=[${REC}]; __log={};`);
+    run('checarDespertadorMed();'); igual(run('__mo'), ['dc__tico__joana__rec_0_08-00']); run('adiarDoseDespertador();');
+    relogio647(T647(7, 8, 0, 30)); run("MED_AGENDA_TODOS=[{key:'dc__tico__joana', itemId:'medicacao_0', horario:'08:00', nome:'Apoquel', hospNome:'Tico'}]; __log={dc__tico__joana:{'medicacao_0_08-00':{quem:'Rita'}}}; checarDespertadorMed();");
+    igual([run('Object.keys(despMedSnooze)'), run('__al')], [[], [AVISO('Apoquel de Tico (08:00)')]]);
+    relogio647(T647(8, 0, 1)); run(`DIA_TELA_AUTO='${HOJE647}'; selectedDate=new __RD647(${T647(8, 0, 1)}); __mo=[]; checarDespertadorMed();`); await volta647();
+    igual(run('__mo'), [], 'à meia-noite, nada (antes da 3ª rodada: «Tico toma Apoquel às 08:00 de ontem — há 16 h»)');
+  } finally { run(SOLTA647); }
+});
+provaAsync('6.47 (4ª rodada) a agenda guarda, junto com a lista, se ela veio inteira (MED_AGENDA_INTEIRA): a carga em curso não muda o que vale; a carga que termina com uma leitura falhada não deixa descartar adiado', async () => {
+  run(ARMA647); relogio647(T647(7, 14, 0));
+  run(`__bkAgI={hs:hospedes, vg:medVigiaGravar, cm:carregarMedAtrasadaGestora}; medVigiaGravar=function(){}; carregarMedAtrasadaGestora=function(){};
+    hospedes=[{nome:'Lua', tutor:'Eva', refKey:'lua__eva'}, {nome:'Bia', tutor:'Ana', refKey:'bia__ana'}]; __falhaLua=false; __pendura=false; __guarda=false; __res=[];
+    DB={ref:function(p){ var v=null; if(p==='auaulandia/medicacao-agenda/lua__eva/itens') v={z:{nome:'Prednisolona', horarios:['14:00']}}; if(p==='auaulandia/medicacao-agenda/bia__ana/itens') v={x:{nome:'Apoquel', horarios:['23:30']}};
+      return __dbNulo647(p, {once:function(){ if(__pendura) return new Promise(function(){}); if(__guarda) return new Promise(function(r){ __res.push(function(){ r({val:function(){ return v; }}); }); }); if(__falhaLua && /lua__eva/.test(p)) return Promise.reject(new Error('sem rede')); return Promise.resolve({val:function(){ return v; }}); }}); }};
+    medLogHoje=function(){ return Promise.resolve({}); };`);
+  try {
+    run('__falhaLua=true; MED_AGENDA_TODOS=[]; carregarAgendaMedTodos();'); for (let i = 0; i < 5; i++) await volta647();
+    igual([run('MED_AGENDA_TODOS.map(function(d){ return d.key; })'), run('MED_AGENDA_DIA'), run('MED_AGENDA_INTEIRA')], [['bia__ana'], ONTEM647, false], 'a leitura da Lua falhou: a lista veio pela metade');
+    run('__falhaLua=false; __pendura=true; carregarAgendaMedTodos();'); await volta647();
+    igual([run('__medAgendaFalhas'), run('MED_AGENDA_INTEIRA')], [0, false], 'a carga seguinte em curso zera a contagem, mas a lista na memória continua marcada pela metade');
+    run('__pendura=false; carregarAgendaMedTodos();'); for (let i = 0; i < 5; i++) await volta647();
+    igual([run('MED_AGENDA_TODOS.map(function(d){ return d.key; }).sort()'), run('MED_AGENDA_INTEIRA')], [['bia__ana', 'lua__eva'], true], 'tudo lido: inteira');
+    // a carga que termina depois de a tela passar de dia guarda o dia em que COMEÇOU (a lista é a desse dia)
+    run(`__guarda=true; __res=[]; selectedDate=new __RD647(${T647(7, 23, 59)}); carregarAgendaMedTodos(); selectedDate=new __RD647(${T647(8, 0, 1)});`); await volta647();
+    run('__guarda=false; __res.forEach(function(f){ f(); });'); for (let i = 0; i < 5; i++) await volta647();
+    igual([run('MED_AGENDA_DIA'), run('dataKeyAtual()')], [ONTEM647, HOJE647], 'a lista é a do dia em que a carga começou');
+  } finally { run('hospedes=__bkAgI.hs; medVigiaGravar=__bkAgI.vg; carregarMedAtrasadaGestora=__bkAgI.cm;' + SOLTA647); }
+});
+provaAsync('6.47 (4ª rodada) o prazo velho de um ADIAR de OUTRA noite, na mesma dose (o aparelho que não recarregou), não esconde a dose de ontem que ninguém viu nem reabre a que passou do teto', async () => {
+  const LUA14 = "{key:'lua__eva', itemId:'z', horario:'14:00', nome:'Prednisolona', hospNome:'Lua'}";
+  // a Bia das 23:30 foi adiada na noite de 06/10 (o prazo, 00:03 de 07/10, ficou guardado depois que o alarme voltou e foi
+  // respondido); na noite de 07/10 o alarme dela nunca abriu (celular congelado das 23:00 às 00:20)
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(MOREAL647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __log={}; despMedSnooze={'bia__ana__x_23-30': ${T647(7, 0, 3)}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem', 'antes: «avancou» — a dose da Bia sumia');
+    await volta647();
+    igual([run('__mo'), run('despMedAtualDia'), run('Object.keys(despMedOntemPend)')], [['bia__ana__x_23-30'], ONTEM647, ['bia__ana__x_23-30']], 'abre como a dose de ontem que ninguém viu');
+    run('confirmarDoseDespertador();'); await volta647();
+    igual(run('__gr'), ['auaulandia/medicacao-log/' + ONTEM647 + '/bia__ana/x_23-30']);
+  } finally { run(SOLTAG647 + SOLTA647); }
+  // a Lua das 14:00 (adiada na tarde de 06/10, prazo 14:07) não foi dada em 07/10 neste aparelho; à meia-noite, com a tela em ontem
+  // segurada pelo Thor, o prazo velho não a reabre como "adiada" (a das 14:00 está fora do teto: AC6)
+  run(ARMA647); relogio647(T647(8, 0, 5)); run(MOREAL647);
+  try {
+    run(`MED_AGENDA_TODOS=[${LUA14}, ${THOR647}]; __log={}; despMedSnooze={'lua__eva__z_14-00': ${T647(6, 14, 7)}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 5)})`), 'espera: dose de ontem'); await volta647();
+    igual(run('__mo'), ['thor__rui__y_23-30'], 'antes: «Lua toma Prednisolona às 14:00 de ontem — há 10 h», um falso alarme, antes do Thor');
+  } finally { run(SOLTA647); }
+  // o adiado PENDENTE de outra noite (a Bia das 23:30 de 06/10, adiada às 02:58 de 07/10; o celular congelou até 00:20 de 08/10): a Bia das
+  // 23:30 de 07/10, que ninguém viu, toca como dose de ontem (o adiado de 06/10 não a esconde)
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(MOREAL647);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}]; __log={}; despMedSnooze={'bia__ana__x_23-30': ${T647(7, 3, 3)}}; despMedSnoozePend={'bia__ana__x_23-30': ${T647(7, 3, 3)}};
+      despMedSnoozeDia={'bia__ana__x_23-30':'2026-10-06'}; despMedSnoozeIt={'bia__ana__x_23-30':${BIA647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'a dose de 07/10 abre (antes, com o adiado de 06/10 contado como desta noite, a tela passava)');
+  } finally { run(SOLTA647); }
+  // o «Hoje» com a Bia na tela e o Thor por tocar (com o prazo velho de um ADIAR de outra noite): a pergunta diz que o Thor não toca mais
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${THOR647}]; __log={}; despMedSnooze={'thor__rui__y_23-30': ${T647(7, 0, 3)}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    run('__esc=[]; goToToday();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l')], [[PERG647], ['Há remédio de ontem por responder: a tela fica em ontem até ele.',
+      'Se for para hoje agora, a dose de ontem que ainda não tocou não toca mais neste aparelho.']], 'o Thor ainda não tocou nesta noite');
+  } finally { run(SOLTA647); }
+});
+prova('6.47 (3ª rodada) de madrugada, com a tela em hoje e o alarme de ontem na tela: o toque na faixa faz a pergunta do remédio de ontem, que fala também do som (achado baixo do caçador, SONDA R2)', () => {
+  run(ARMA647); relogio647(T647(8, 0, 20));
+  run('__bkUa647=navigator.userActivation; navigator.userActivation={hasBeenActive:true};');
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); igual([run('dataKeyAtual()'), run('despMedAtualDia')], [HOJE647, ONTEM647]);
+    relogio647(T647(8, 0, 25)); run('__esc=[]; __rep=0; aplicarVersaoNova();');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['HÁ UM REMÉDIO DE ONTEM SEM REGISTRO'], 'antes: «ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM», que dizia que o alarme já estava no dia de hoje');
+    igual(run('__esc[0].l'), ['O alarme de uma dose de remédio de ontem está na tela. Atualizar agora apaga o alarme, e a dose não toca de novo.',
+      'Dê o remédio e toque em «Dei o remédio»; depois, atualize.',
+      'Atualizar agora também pode deixar o alarme de remédio sem som: o celular só libera o som depois de um toque na página.']);
+    run('__esc[0].b[1].fn();'); igual(run('__rep'), 1, '«Atualizar mesmo assim» atualiza');
+    // sem alarme de ontem na tela, a pergunta da madrugada é a de sempre (6.32)
+    run('fecharDespertadorMed(); __esc=[]; __rep=0; __diaForcarAgora=false; aplicarVersaoNova();');
+    igual(run('__esc.map(function(e){ return e.t; })'), ['ATUALIZAR AGORA PODE DEIXAR O ALARME SEM SOM']);
+  } finally { run('navigator.userActivation=__bkUa647;' + SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) «Ir para hoje mesmo assim» com a lista da conferência vazia ou velha (a página que acabou de voltar): a pergunta diz que a dose de ontem que não tocou não toca mais (achados baixos do caçador, SONDAS R3 e S10)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 20)); run(LOGDIA647);
+  try {
+    run(`__cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }};
+      MED_AGENDA_TODOS=[${BIA647}, ${THOR647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    igual([run('despMedNaTela'), run('Object.keys(despMedOntemPend).sort()')], ['bia__ana__x_23-30', ['bia__ana__x_23-30', 'thor__rui__y_23-30']]);
+    // o celular vai para o bolso das 00:20:30 às 00:40: a página que volta zera a lista
+    run(`document.hidden=true; medOntemVisibilidade(true, ${T647(8, 0, 20, 30)});`);
+    relogio647(T647(8, 0, 40)); run(`document.hidden=false; medOntemVisibilidade(false, ${T647(8, 0, 40)});`);
+    igual(run('Object.keys(despMedOntemPend)'), []);
+    run('__esc=[]; goToToday();');
+    igual(run('__esc[0].l'), ['Há remédio de ontem por responder: a tela fica em ontem até ele.',
+      'Se for para hoje agora, qualquer dose de ontem que ainda não tocou não toca mais neste aparelho.'], 'o alarme da Bia na tela: antes, sem a segunda linha — e o Thor sumia sem aviso');
+    // (4ª rodada) a Bia adiada não segura mais; o Thor, que ainda não tocou, com a lista velha: a pergunta da conferência, com a linha
+    run('adiarDoseDespertador(); __esc=[]; goToToday();');
+    igual([run('__esc.map(function(e){ return e.t; })'), run('__esc[0].l')], [['CONFERINDO OS REMÉDIOS DE ONTEM'], ['Conferindo os remédios de ontem neste aparelho: a tela fica em ontem até terminar. Toque de novo em alguns segundos.',
+      'Se for para hoje agora, qualquer dose de ontem que ainda não tocou não toca mais neste aparelho.']]);
+    // com a lista fresca e a do Thor dada, só sobra o adiado da Bia: o «Hoje» vai para hoje sem perguntar (ela volta pelo dia dela)
+    run(`__logs['${ONTEM647}']={thor__rui:{'y_23-30':{quem:'Rita'}}}; __medAcordouEm=0; checarDespertadorMed(); __esc=[]; goToToday();`);
+    igual([run('__esc'), run('dataKeyAtual()'), run('Object.keys(despMedSnoozeDia)')], [[], HOJE647, ['bia__ana__x_23-30']]);
+  } finally { run('document.hidden=false;' + SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada) o alarme na tela acerta o atraso e a instrução na volta da aba, no evento "resume" e no vigia de 15 s, sem esperar a batida de 30 s (achado baixo do caçador, SONDA R9)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(DOM647B); run(MOREAL647);
+  const ler = () => run('__els.despMedQuando.textContent+__els.despMedAtraso.textContent+" | "+__els.despMedInstr.textContent');
+  try {
+    run(`MED_AGENDA_TODOS=[${Q4_647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    run(`document.hidden=true; medOntemVisibilidade(true, ${T647(8, 0, 1)});`);
+    relogio647(T647(8, 1, 30)); run(`document.hidden=false; medOntemVisibilidade(false, ${T647(8, 1, 30)});`);
+    igual([ler(), BT2_647()], ['22:30 de ontem — há 3 h | ' + PASSOU647, NAO_DAR647], 'antes: «há 1 h 30 min | … dê o remédio agora» até a batida de 30 s');
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/document\.addEventListener\('resume', function\(\)\{\n    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}/.test(src), 'no "resume" (Android)');
+    assert.ok(/setInterval\(function\(\)\{\n    try\{ medOntemBatida\(Date\.now\(\)\); \}[^\n]*\n    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}/.test(src), 'no vigia de 15 s');
+  } finally { run('document.hidden=false;' + SOLTAG647 + SOLTA647); }
+});
+// «Dei o remédio» de verdade no alarme (a transação e a marca) e o registro por dia que a conferência lê.
+const DEI_ALARME647 = async () => { const d = run('despMedAtualDia'), k = run('despMedAtual.key'), id = run('despMedAtualDoseId'); run('confirmarDoseDespertador();'); await volta647();
+  run(`__logs['${d}']=__logs['${d}']||{}; __logs['${d}']['${k}']=__logs['${d}']['${k}']||{}; __logs['${d}']['${k}']['${id}']={quem:'Ana Souza', ts:Date.now()}; fecharDespertadorMed();`); };
+provaAsync('6.47 (4ª rodada) o aviso da dose tardia só vem do «Dei o remédio» do alarme (o registro de outro aparelho em memória, o que a conferência e o adiado leem e o «Dei agora» da ficha não marcam); vale só para a PRÓXIMA dose e cita a dose certa; a dose de HOJE dada tarde também avisa a próxima (QA3-B, QA3-B3, 3R-E, 3R-E2, achado médio do caçador)', async () => {
+  const ARMA = (ag) => { run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCODIA647); run(`MED_AGENDA_TODOS=[${ag}];`); };
+  const abre = async (t) => { relogio647(t); run('__mo=[]; zDiaTelaAvancar(); checarDespertadorMed();'); await volta647(); return run('despMedNaTela') ? [run('despMedNaTela').split('__')[2], run('__els.despMedInstr.textContent'), BT2_647()] : null; };
+  const DE = 'Dê o remédio agora — este alarme não desaparece sozinho.';
+  try {
+    // QA3-B: o registro de ontem que este aparelho tem em memória (feito às 00:45 em outro aparelho, pela ficha): a das 02:30 manda dar
+    ARMA(Q4_647);
+    run(`selectedDate=new __RD647(${T647(8, 2, 20)}); DIA_TELA_AUTO='${HOJE647}';
+      Z_MAPAS['auaulandia/medicacao-log/${ONTEM647}']={pronto:true, mapa:{rex__ivo:{'q_22-30':{quem:'Rita', ts:${T647(8, 0, 45)}}}}};`);
+    igual(await abre(T647(8, 2, 25)), ['q_02-30', DE, 'ADIAR 5 min'], 'QA3-B: antes, «não dê» com «Entendi — não vou dar» (a dose de ontem foi dada na hora; o registro é que foi tarde)');
+    run(SOLTAG647 + SOLTA647);
+    // a conferência (tela em ontem) e o adiado de outro dia leem o registro tardio de outro aparelho: não marcam
+    ARMA(Q4_647); run(`__logs['${ONTEM647}']={rex__ivo:{'q_22-30':{quem:'Rita', ts:${T647(8, 0, 40)}}}}; checarDespertadorMed();`);
+    igual(run('Object.keys(__medTardia)'), [], 'a conferência não marca');
+    run(`selectedDate=new __RD647(${T647(8, 0, 33, 10)}); DIA_TELA_AUTO='${HOJE647}';` + ADIADO647('rex__ivo__q_22-30', T647(8, 0, 33), ONTEM647, 'MED_AGENDA_TODOS[0]'));
+    relogio647(T647(8, 0, 33, 10)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('Object.keys(__medTardia)')], [[], []], 'o adiado de outro dia, dado em outro aparelho: não volta e não marca');
+    run(SOLTAG647 + SOLTA647);
+    // QA3-B3: o pedido do vigia da manhã — a das 21:00 de ontem (de 12 em 12 h) dada na hora e registrada às 07:15 pela ficha: a das 09:00 manda dar
+    ARMA(['21:00', '09:00'].map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(','));
+    run(`selectedDate=new __RD647(${T647(7, 12, 0)}); DIA_TELA_AUTO='${HOJE647}';`); relogio647(T647(8, 7, 15));
+    run(`registrarDoseAgendadaGlobal({key:'rex__ivo', itemId:'q', horario:'21:00', nome:'Antibiótico', hospNome:'Rex'}, 'q_21-00');`); await volta647();
+    run(`selectedDate=new __RD647(${T647(8, 8, 55)});`);
+    igual([run('__gr'), await abre(T647(8, 8, 55))], [['auaulandia/medicacao-log/' + ONTEM647 + '/rex__ivo/q_21-00'], ['q_09-00', DE, 'ADIAR 5 min']], 'QA3-B3: antes, «não dê»');
+    run(SOLTAG647 + SOLTA647);
+    // a mesma dose já assinada por outra pessoa às 07:15 (a transação mostra quem): pela ficha, não marca; pelo alarme da MESMA dose, marca
+    for (const [rot, dia, marca] of [['pela ficha', '', []], ['pelo alarme', ONTEM647, ['rex__ivo__q']]]) {
+      ARMA(['21:00', '09:00'].map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(','));
+      run(`DB={ref:function(p){ return __dbNulo647(p, {transaction:function(){ return Promise.resolve({committed:false, snapshot:{val:function(){ return {quem:'Rita', ts:${T647(8, 7, 15)}}; }}}); }}); }};`);
+      run(`selectedDate=new __RD647(${T647(7, 12, 0)}); DIA_TELA_AUTO='${HOJE647}';`); relogio647(T647(8, 7, 20));   // a ficha de ontem, aberta à mão
+      run(`registrarDoseAgendadaGlobal({key:'rex__ivo', itemId:'q', horario:'21:00', nome:'Antibiótico', hospNome:'Rex'}, 'q_21-00'${dia ? `, '${dia}'` : ''});`); await volta647();
+      igual(run('Object.keys(__medTardia)'), marca, 'já assinada às 07:15, ' + rot);
+      run(SOLTAG647 + SOLTA647);
+    }
+    // 3R-E: colírio de 2 em 2 h; a das 23:30 de ontem dada às 00:40 pelo alarme (depois do teto, 1 h): a das 01:30 avisa, citando a das 23:30;
+    // a das 01:30 dada na hora: a das 03:30 manda dar (antes: «não dê», citando a das 23:30 — e o «Entendi» pulava uma dose devida)
+    const COL = ['01:30', '03:30', '05:30', '07:30', '09:30', '11:30', '13:30', '15:30', '17:30', '19:30', '21:30', '23:30'];
+    for (const resposta of ['Dei', 'Entendi']) {
+      ARMA(COL.map((x) => `{key:'lua__eva', itemId:'c', horario:'${x}', nome:'Colírio', hospNome:'Lua'}`).join(','));
+      run(`__logs['${ONTEM647}']={lua__eva:{${COL.filter((x) => x !== '23:30').map((x) => `'c_${x.replace(':', '-')}':{quem:'Ana'}`).join(',')}}};`);
+      igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+      relogio647(T647(8, 0, 40)); await DEI_ALARME647();
+      igual(await abre(T647(8, 1, 25)), ['c_01-30', 'A dose anterior deste remédio (23:30 de ontem) foi registrada às 00:40, depois do horário seguro: não dê sem falar com a veterinária.', NAO_DAR647]);
+      if (resposta === 'Dei') await DEI_ALARME647(); else run('despMedSegundoBotao();');
+      igual(await abre(T647(8, 3, 25)), ['c_03-30', DE, 'ADIAR 5 min'], 'a das 01:30 respondida com ' + resposta + ': a das 03:30 manda dar');
+      run(SOLTAG647 + SOLTA647);
+    }
+    // 3R-E2: de 4 em 4 h, a das 22:30 de ontem dada às 03:35 pelo alarme: a das 02:30 avisa; a das 06:30, 2 h 55 min depois, manda dar
+    ARMA(Q4_647); run(`__logs['${ONTEM647}']={${REX_ONTEM_DADOS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem');
+    relogio647(T647(8, 3, 35)); await DEI_ALARME647();
+    igual(await abre(T647(8, 3, 35, 30)), ['q_02-30', 'A dose anterior deste remédio (22:30 de ontem) foi registrada às 03:35, depois do horário seguro: não dê sem falar com a veterinária.', NAO_DAR647]);
+    // S11: sem resposta, o mesmo alarme continua avisando (pela dose, não pela hora em que é desenhado)
+    relogio647(T647(8, 6, 20)); run('checarDespertadorMed();'); assert.ok(/^A dose anterior deste remédio/.test(run('__els.despMedInstr.textContent')), run('__els.despMedInstr.textContent'));
+    run('despMedSegundoBotao();');
+    igual(await abre(T647(8, 6, 25)), ['q_06-30', DE, 'ADIAR 5 min'], '3R-E2: antes, «não dê» também na das 06:30');
+    run(SOLTAG647 + SOLTA647);
+    // a dose de HOJE dada tarde (achado médio do caçador): o alarme da Bia de ontem fica na tela sem resposta até as 02:30; a das 00:30
+    // do Rex (de 4 em 4 h) só abre às 02:30:30 e é dada às 02:31 — a das 04:30 não pode abrir mandando dar (1 h 59 min depois)
+    ARMA(`${BIA647}, ${REX4_647}`); run(`__logs['${ONTEM647}']={${REX4_DADAS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem'); igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    relogio647(T647(8, 2, 30, 15)); run('checarDespertadorMed(); despMedSegundoBotao();');   // «Entendi — não vou dar» (passou do teto)
+    igual(await abre(T647(8, 2, 30, 30)), ['q_00-30', DE, 'ADIAR 5 min'], 'a das 00:30, 2 h atrasada: o alarme de hoje não tem teto (já era assim)');
+    relogio647(T647(8, 2, 31)); await DEI_ALARME647();
+    igual(await abre(T647(8, 4, 25)), ['q_04-30', 'A dose anterior deste remédio (00:30 de hoje) foi registrada às 02:31, depois do horário seguro: não dê sem falar com a veterinária.', NAO_DAR647],
+      'antes: «Dê o remédio agora» — duas doses do antibiótico em 1 h 59 min');
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (4ª rodada) a ordem do iPhone com um pulo anterior no mesmo período escondido: o congelamento seguinte (3 min ou mais) também espera o banco; o relógio de 1 batida por minuto da aba escondida continua sem contar de novo (QA3-C; QA647b-4)', async () => {
+  run(ARMA647); relogio647(T647(7, 23, 0));
+  run(`__cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }}; __bkHid647=document.hidden;`);
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    run(`medOntemBatida(${T647(7, 23, 0)}); document.hidden=true; medOntemVisibilidade(true, ${T647(7, 23, 0, 10)});`);
+    relogio647(T647(7, 23, 1, 30)); igual(run(`medOntemBatida(${T647(7, 23, 1, 30)})`), true, 'o 1º pulo com a página escondida (90 s): acordou');
+    relogio647(T647(7, 23, 2, 30)); igual(run(`medOntemBatida(${T647(7, 23, 2, 30)})`), false, 'o relógio espaçado da aba escondida (1 batida por minuto): não conta de novo (QA647b-4)');
+    relogio647(T647(7, 23, 5, 29)); igual(run(`medOntemBatida(${T647(7, 23, 5, 29)})`), false, '2 min 59 s sem batida, escondida: ainda o relógio espaçado');
+    relogio647(T647(7, 23, 8, 29)); igual(run(`medOntemBatida(${T647(7, 23, 8, 29)})`), true, '3 min sem batida, escondida: a página congelou — conta de novo');
+    // congela até 00:20; a Rita deu a Bia às 23:35 em outro aparelho, e o registro ainda não chegou a este; o vigia roda antes do evento de visibilidade
+    relogio647(T647(8, 0, 20)); igual(run(`medOntemBatida(${T647(8, 0, 20)})`), true, 'o congelamento (pulo de 77 min): conta de novo');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem'); await volta647();
+    igual(run('__mo'), [], 'antes: o alarme abria na hora, com o registro velho');
+    run(`document.hidden=false; medOntemVisibilidade(false, ${T647(8, 0, 20)}); __cn[0]({val:function(){ return true; }}); __log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);
+    relogio647(T647(8, 0, 20, 6));
+    igual([run(`zDiaTelaAvancar(${T647(8, 0, 20, 6)})`), run('__mo')], ['espera: dose de ontem', []], 'o registro chegou: a dose dada não toca');
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20, 6)})`), 'avancou');
+  } finally { run('document.hidden=__bkHid647;' + SOLTA647); }
+});
+provaAsync('6.47 (3ª rodada, QA647b-7) as lacunas dos defeitos plantados do QA: a agenda de hoje vazia não cala o adiado de ontem (N20); a reconferência passa a tela sem esperar o vigia de 15 s (Q4); o modo ontem liga o sinal de conexão antes de a página dormir (Q6); o adiado de outro dia não lê nada com a tela em ontem (N39)', async () => {
+  try {
+    // N20: «Ir para hoje mesmo assim» + ADIAR, e a agenda de hoje sem remédio nenhum (a lista de hóspedes de hoje veio vazia)
+    run(ARMA647); relogio647(T647(8, 0, 20)); run(GRAVA647); run(BANCO647B); run(MOREAL647);
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 20)})`), 'espera: dose de ontem');
+    run(HOJE_MESMO_ASSIM647); run('adiarDoseDespertador(); MED_AGENDA_TODOS=[]; __mo=[];');
+    relogio647(T647(8, 0, 25, 30)); run('checarDespertadorMed();'); await volta647();
+    igual([run('__mo'), run('despMedAtualDia')], [['bia__ana__x_23-30'], ONTEM647], 'volta pelo dia dele mesmo com a agenda de hoje vazia');
+    run(SOLTAG647 + SOLTA647);
+    // Q4: a conferência já foi feita (a batida de 30 s, depois da folga): a reconferência passa a tela na hora
+    run(ARMA647); relogio647(T647(8, 0, 20));
+    run(`__cn=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ if(p==='.info/connected') __cn.push(cb); return cb; }}); }};
+      MED_AGENDA_TODOS=[${BIA647}]; medOntemAcordou(${T647(8, 0, 20)}); __cn[0]({val:function(){ return true; }});`);
+    relogio647(T647(8, 0, 20, 5)); run(`__log={bia__ana:{'x_23-30':{quem:'Rita'}}}; checarDespertadorMed();`);
+    igual([run('__mo'), run('dataKeyAtual()')], [[], ONTEM647], 'a conferência acha a Bia dada; a tela ainda não passou');
+    relogio647(T647(8, 0, 20, 6)); run('medOntemReconferir();');
+    igual(run('dataKeyAtual()'), HOJE647, 'a reconferência (5,5 s depois de acordar) passa a tela, sem esperar o vigia de 15 s');
+    run(SOLTA647);
+    // Q6: com a tela em ontem, o sinal de conexão é ligado antes de a página dormir (uma vez); com a tela em hoje, não
+    run(ARMA647); relogio647(T647(8, 0, 20));
+    run(`__on=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ __on.push(p); return cb; }}); }}; MED_AGENDA_TODOS=[${BIA647}]; __log={bia__ana:{'x_23-30':{quem:'Rita'}}};`);
+    run('checarDespertadorMed(); checarDespertadorMed();');
+    igual(run('__on'), ['.info/connected'], 'uma vez, no modo ontem');
+    run(SOLTA647); run(ARMA647); relogio647(T647(7, 22, 0));
+    run(`__on=[]; DB={ref:function(p){ return __dbNulo647(p, {on:function(ev, cb){ __on.push(p); return cb; }}); }}; selectedDate=new __RD647(${T647(7, 22, 0)}); MED_AGENDA_TODOS=[${BIA647}];`);
+    run('checarDespertadorMed();'); igual(run('__on'), [], 'no modo hoje, não');
+    run(SOLTA647);
+    // N39: com a tela em ontem, o adiado de outro dia não é lido por aqui (quem cuida é a regra da 6.32)
+    run(ARMA647); relogio647(T647(8, 0, 30)); run(GRAVA647); run(BANCO647B);
+    run(`MED_AGENDA_TODOS=[${BIA647}]; despMedSnooze={'thor__rui__y_23-30': ${T647(8, 0, 29)}}; despMedSnoozeDia={'thor__rui__y_23-30':'2026-10-06'}; despMedSnoozeIt={'thor__rui__y_23-30':${THOR647}};`);
+    igual([run(`medAdiadoDeOutroDia('${ONTEM647}')`), run('__lidos')], [false, []]);
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+// ------------------------------------------------ 6.47 — 5ª rodada (achados da 4ª revisão: caçador R4-1, R4-2, R4-4, R4-8; gate QA4-A, QA4-C; relógio FIXO)
+// O banco POR DIA (__logs) que lê e grava pela transação: a dose já assinada aborta («ESTA DOSE JÁ FOI REGISTRADA»); o estoque guarda o dia.
+const BANCO5_647 = `__est=[]; descontarEstoquePorDose=function(k,i,d,q,dia){ __est.push((dia||'(tela)')+'__'+d); };
+  DB={ref:function(p){ var m=/^auaulandia\\/medicacao-log\\/([^/]+)\\/([^/]+)\\/([^/]+)$/.exec(p);
+    var lido=function(){ return m ? (((__logs[m[1]]||{})[m[2]]||{})[m[3]]||null) : null; };
+    return __dbNulo647(p, {once:function(){ __lidos.push(p); var v=lido(); return Promise.resolve({val:function(){ return v; }}); },
+      transaction:function(f){ var cur=lido(), v=f(cur); if(v===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return cur; }}});
+        if(m){ __logs[m[1]]=__logs[m[1]]||{}; __logs[m[1]][m[2]]=__logs[m[1]][m[2]]||{}; __logs[m[1]][m[2]][m[3]]=v; } __gr.push(p); return Promise.resolve({committed:true, snapshot:{val:function(){ return v; }}}); },
+      update:function(){ return Promise.resolve(); }}); }}; __lidos=[]; __gr=[];`;
+// O «Dei agora» da FICHA (o que registrarDoseAgendada chama): sem o dia do alarme.
+const FICHA5_647 = (key, itemId, hr, nome, pet) => `registrarDoseAgendadaGlobal({key:'${key}', itemId:'${itemId}', nome:'${nome}', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'${pet}'}, magDoseId('${itemId}','${hr}'));`;
+const BATIDA5_647 = async (t) => { relogio647(t); run('__mo=[]; zDiaTelaAvancar(); checarDespertadorMed();'); await volta647(); await volta647(); };
+const NA_LOG5_647 = (dia, k, d) => !!run(`((__logs['${dia}']||{})['${k}']||{})['${d}']`);
+provaAsync('6.47 (5ª rodada) registrar OUTRA dose pela ficha não fecha o alarme de ontem que voltou com a tela em hoje; só fecha o alarme da MESMA dose, do mesmo dia (achado médio R4-1; antes, o alarme sumia de vez)', async () => {
+  const ARMA = () => { run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${REX4_647}]; __logs['${ONTEM647}']={${REX4_DADAS647}};`); };
+  const VOLTA = async () => {   // a dose de ontem abre, ADIAR às 00:01 (a tela passa), e o alarme volta pelo dia dele
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem'); await volta647();
+    igual(run('despMedNaTela'), 'bia__ana__x_23-30');
+    relogio647(T647(8, 0, 1)); run('despMedSegundoBotao();');
+    for (let t = T647(8, 0, 1, 30); t <= T647(8, 0, 10) && !run('despMedNaTela'); t += 30000) await BATIDA5_647(t);
+    igual([run('despMedNaTela'), run('despMedAtualDia'), run('dataKeyAtual()')], ['bia__ana__x_23-30', ONTEM647, HOJE647], 'o alarme da Bia voltou com a tela em hoje');
+  };
+  try {
+    for (const variante of ['a ficha registra o Rex', 'o Rex já estava assinado em outro aparelho']) {
+      ARMA();
+      if (/já estava/.test(variante)) run(`__logs['${HOJE647}'].rex__ivo={'q_00-30':{quem:'Rita', ts:${T647(8, 0, 19)}}};`);
+      await VOLTA();
+      relogio647(T647(8, 0, 20)); run(FICHA5_647('rex__ivo', 'q', '00:30', 'Antibiótico', 'Rex')); await volta647(); await volta647();
+      igual(run('despMedNaTela'), 'bia__ana__x_23-30', variante + ': o alarme da Bia continua na tela (antes: fechava e não voltava mais)');
+      igual(run(`__logs['${HOJE647}'].rex__ivo['q_00-30'].quem`), /já estava/.test(variante) ? 'Rita' : 'Ana Souza');
+      if (/já estava/.test(variante)) igual(run('__al'), ['ESTA DOSE JÁ FOI REGISTRADA']);
+      relogio647(T647(8, 0, 21)); run('confirmarDoseDespertador();'); await volta647(); await volta647();
+      igual([run('despMedNaTela'), NA_LOG5_647(ONTEM647, 'bia__ana', 'x_23-30'), NA_LOG5_647(HOJE647, 'bia__ana', 'x_23-30'), run('__al')], [null, true, false, /já estava/.test(variante) ? ['ESTA DOSE JÁ FOI REGISTRADA'] : []],
+        variante + ': «Dei o remédio» no alarme fecha; a dose é de ontem (o aviso da ficha não vem pelo alarme)');
+      run(SOLTAG647 + SOLTA647);
+    }
+    // a MESMA dose pela ficha (a Bia das 23:30, com o alarme de ontem dela na tela): é a dose do alarme — grava em ontem e fecha
+    ARMA(); await VOLTA();
+    relogio647(T647(8, 0, 20)); run(FICHA5_647('bia__ana', 'x', '23:30', 'Apoquel', 'Bia')); await volta647(); await volta647();
+    igual([run('despMedNaTela'), NA_LOG5_647(ONTEM647, 'bia__ana', 'x_23-30'), NA_LOG5_647(HOJE647, 'bia__ana', 'x_23-30')], [null, true, false],
+      'a mesma dose pela ficha, com o alarme de ontem dela na tela: grava em ontem e fecha (antes: gravava em hoje)');
+    run(SOLTAG647 + SOLTA647);
+    // o alarme de HOJE na tela (Bia das 23:30 de 08/10) e a dose de ONTEM no mesmo horário pela ficha posta em ontem: não é a dose do alarme — não fecha
+    run(ARMA647); relogio647(T647(8, 23, 25)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+    run(`selectedDate=new __RD647(${T647(8, 23, 25)}); DIA_TELA_AUTO='${HOJE647}'; APP_DIA_ABERTO='${HOJE647}'; MED_AGENDA_TODOS=[${BIA647}];`);
+    run('checarDespertadorMed();'); await volta647();
+    igual([run('despMedNaTela'), run('despMedAtualDia')], ['bia__ana__x_23-30', HOJE647]);
+    // outra dose de HOJE pela ficha (o Rex das 20:30, registrado tarde): o alarme da Bia continua (antes: fechava e reabria na batida seguinte)
+    run(FICHA5_647('rex__ivo', 'q', '20:30', 'Antibiótico', 'Rex')); await volta647(); await volta647();
+    igual([run('despMedNaTela'), NA_LOG5_647(HOJE647, 'rex__ivo', 'q_20-30')], ['bia__ana__x_23-30', true], 'outra dose do mesmo dia pela ficha: o alarme continua');
+    run(`selectedDate=new __RD647(${T647(7, 12, 0)});`);
+    run(FICHA5_647('bia__ana', 'x', '23:30', 'Apoquel', 'Bia')); await volta647(); await volta647();
+    igual([run('despMedNaTela'), run('despMedAtualDia'), NA_LOG5_647(ONTEM647, 'bia__ana', 'x_23-30')], ['bia__ana__x_23-30', HOJE647, true],
+      'a de ontem pela ficha posta em ontem não fecha o alarme da de hoje (antes: fechava, e com a tela em outra data ele não voltava)');
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (5ª rodada) ADIAR da dose de ontem e registro pela FICHA antes de o alarme voltar: grava no dia do adiado (ontem), o estoque também, e a tela diz; o adiado não volta; a dose de hoje no mesmo horário continua por dar e toca às 23:25 (achado médio R4-2; antes, gravava em hoje e a de hoje não tocava)', async () => {
+  run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+  run('zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); }; __bkRmh647=renderMedAgendaHoje; __rmh=0; renderMedAgendaHoje=function(){ __rmh++; };');
+  try {
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${REX4_647}]; __logs['${ONTEM647}']={${REX4_DADAS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem'); await volta647();
+    relogio647(T647(8, 0, 1)); run('despMedSegundoBotao();');
+    await BATIDA5_647(T647(8, 0, 1, 30)); igual(run('dataKeyAtual()'), HOJE647, 'a tela passou (o ADIAR não a segura)');
+    relogio647(T647(8, 0, 3)); run(FICHA5_647('bia__ana', 'x', '23:30', 'Apoquel', 'Bia')); await volta647(); await volta647();
+    igual([NA_LOG5_647(ONTEM647, 'bia__ana', 'x_23-30'), NA_LOG5_647(HOJE647, 'bia__ana', 'x_23-30'), run('__est'), run('__rmh')], [true, false, [ONTEM647 + '__x_23-30'], 1],
+      'grava em ontem, e o estoque marca ontem (antes: hoje); a ficha é redesenhada (solta o «Registrando…»)');
+    igual(run('__al'), ['DOSE REGISTRADA NO DIA DELA | A dose de Apoquel das 23:30 de ontem foi registrada no dia dela. A das 23:30 de hoje continua por dar.']);
+    const voltas = [];
+    for (let t = T647(8, 0, 3, 30); t <= T647(8, 0, 12); t += 30000) { await BATIDA5_647(t); for (const m of run('__mo')) { voltas.push(m + '@' + hms647(t)); run('fecharDespertadorMed();'); } }
+    igual([voltas, run('Object.keys(despMedSnoozeDia)')], [[], []], 'o adiado acha a dose em ontem e não volta (antes: voltava às 00:06 dizendo «confira se ninguém deu»)');
+    run(`MED_AGENDA_TODOS=[${BIA647}];`);
+    let noite = null;
+    for (let t = T647(8, 23, 24); t <= T647(8, 23, 30) && !noite; t += 30000) { await BATIDA5_647(t); if (run('__mo').length) noite = run('__mo[0]') + '@' + hhmm647(t) + '/' + run('despMedAtualDia'); }
+    igual(noite, 'bia__ana__x_23-30@23:25/' + HOJE647, 'a dose das 23:30 de hoje toca às 23:25 (antes: constava como dada às 00:03)');
+    run(SOLTAG647 + SOLTA647);
+    // sem adiado nem alarme de outro dia, o «Dei agora» da ficha continua gravando no dia da tela (C1), sem aviso
+    run(ARMA647); relogio647(T647(8, 0, 40)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+    run(`selectedDate=new __RD647(${T647(8, 0, 40)}); DIA_TELA_AUTO='${HOJE647}'; MED_AGENDA_TODOS=[${REX4_647}];`);
+    run(FICHA5_647('rex__ivo', 'q', '00:30', 'Antibiótico', 'Rex')); await volta647(); await volta647();
+    igual([run('__gr'), run('__al')], [['auaulandia/medicacao-log/' + HOJE647 + '/rex__ivo/q_00-30'], []], 'sem adiado: grava em hoje (C1)');
+    // o ADIAR da dose de HOJE (o mesmo dia da tela) não muda nada: a ficha grava em hoje, sem aviso
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 25)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+    run(`selectedDate=new __RD647(${T647(8, 0, 25)}); DIA_TELA_AUTO='${HOJE647}'; MED_AGENDA_TODOS=[${REX4_647}];`);
+    run('checarDespertadorMed();'); await volta647(); igual(run('despMedNaTela'), 'rex__ivo__q_00-30'); run('despMedSegundoBotao();');
+    relogio647(T647(8, 0, 27)); run(FICHA5_647('rex__ivo', 'q', '00:30', 'Antibiótico', 'Rex')); await volta647(); await volta647();
+    igual([run('__gr'), run('__al')], [['auaulandia/medicacao-log/' + HOJE647 + '/rex__ivo/q_00-30'], []], 'o adiado de hoje: grava em hoje, sem aviso');
+    // com o alarme de OUTRA dose na tela (o Rex das 00:30 de hoje), a Bia adiada de ontem registrada pela ficha: grava em ontem, e nem o
+    // alarme do Rex fecha nem o aviso o cobre
+    run(SOLTAG647 + SOLTA647); run(ARMA647); relogio647(T647(8, 0, 0, 5)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+    run('zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); };');
+    run(`MED_AGENDA_TODOS=[${BIA647}, ${REX4_647}]; __logs['${ONTEM647}']={${REX4_DADAS647}};`);
+    igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 5)})`), 'espera: dose de ontem'); await volta647();
+    relogio647(T647(8, 0, 1)); run('despMedSegundoBotao();');
+    for (let t = T647(8, 0, 1, 30); t <= T647(8, 0, 10) && !run('despMedNaTela'); t += 30000) await BATIDA5_647(t);
+    relogio647(T647(8, 0, 22)); run('despMedSegundoBotao();');   // a Bia voltou (pelo dia dela) e é adiada de novo: volta às 00:27
+    await BATIDA5_647(T647(8, 0, 25)); igual(run('despMedNaTela'), 'rex__ivo__q_00-30');
+    relogio647(T647(8, 0, 25, 30)); run(FICHA5_647('bia__ana', 'x', '23:30', 'Apoquel', 'Bia')); await volta647(); await volta647();
+    igual([run('despMedNaTela'), NA_LOG5_647(ONTEM647, 'bia__ana', 'x_23-30'), NA_LOG5_647(HOJE647, 'bia__ana', 'x_23-30'), run('__al')], ['rex__ivo__q_00-30', true, false, []],
+      'grava em ontem; o alarme do Rex continua, sem o aviso por cima (antes: gravava em hoje e fechava o Rex)');
+  } finally { run('if(typeof __bkRmh647!=="undefined") renderMedAgendaHoje=__bkRmh647;'); run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (5ª rodada) de dia, a dose de HOJE adiada ou deixada na tela e dada pelo alarme depois do horário seguro não faz a próxima dizer «depois do horário seguro»: o próprio alarme mandou dar (QA4-A e R4-8; de madrugada, a 4ª rodada continua)', async () => {
+  const REX8 = ['08:00', '12:00', '16:00', '20:00', '00:00', '04:00'].map((x) => `{key:'rex__ivo', itemId:'q', horario:'${x}', nome:'Antibiótico', hospNome:'Rex'}`).join(',');
+  const DE = 'Dê o remédio agora — este alarme não desaparece sozinho.';
+  try {
+    for (const modo of ['ADIAR em laço até 10:05 (R4-8)', 'deixada na tela sem resposta até 10:05 (QA4-6)']) {
+      run(ARMA647); relogio647(T647(8, 7, 55)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647); run(BANCO5_647);
+      run(`selectedDate=new __RD647(${T647(8, 7, 55)}); DIA_TELA_AUTO='${HOJE647}'; APP_DIA_ABERTO='${HOJE647}'; MED_AGENDA_TODOS=[${REX8}];
+        __logs['${HOJE647}']={rex__ivo:{'q_00-00':{quem:'Ana'}, 'q_04-00':{quem:'Ana'}}};`);
+      const textos = {};
+      for (let t = T647(8, 7, 55); t <= T647(8, 10, 5); t += 30000) {
+        relogio647(t); run('checarDespertadorMed();'); await volta647();
+        if (run('despMedNaTela')) { textos[run('__els.despMedInstr.textContent')] = 1; if (/ADIAR/.test(modo) && t < T647(8, 10, 5)) run('despMedSegundoBotao();'); }
+      }
+      igual([Object.keys(textos), run('despMedNaTela')], [[DE], 'rex__ivo__q_08-00'], modo + ': o alarme das 08:00 mandou dar o tempo todo');
+      run('confirmarDoseDespertador();'); await volta647(); await volta647();
+      igual([run('Object.keys(__medTardia)'), NA_LOG5_647(HOJE647, 'rex__ivo', 'q_08-00')], [[], true], modo + ': dada às 10:05 pelo alarme, não marca (antes: marcava)');
+      relogio647(T647(8, 11, 55)); run('checarDespertadorMed();'); await volta647();
+      igual([run('despMedNaTela'), run('__els.despMedInstr.textContent'), BT2_647()], ['rex__ivo__q_12-00', DE, 'ADIAR 5 min'],
+        modo + ': a das 12:00 manda dar (antes: «A dose anterior deste remédio (08:00 de hoje) foi registrada às 10:05, depois do horário seguro», com «Entendi — não vou dar»)');
+      run(SOLTAG647 + SOLTA647);
+    }
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (5ª rodada) o remédio SUSPENSO entre o ADIAR e a volta, com a tela já em hoje: o adiado de ontem é descartado e a tela diz, em vez de voltar mandando dar; o remédio com término ontem (fora da agenda de hoje, sem suspensão) continua voltando pelo dia dele (R4-4)', async () => {
+  const BIA2350 = "{key:'bia__ana', itemId:'x', horario:'23:50', nome:'Apoquel', hospNome:'Bia'}";
+  try {
+    for (const [caso, item] of [['suspenso', "{nome:'Apoquel', horarios:['23:50'], suspenso:true}"], ['término ontem', `{nome:'Apoquel', horarios:['23:50'], dataFim:'${ONTEM647}'}, y:{nome:'Otomax', horarios:['23:50'], suspenso:true}`]]) {
+      run(ARMA647); relogio647(T647(7, 23, 45)); run(GRAVA647); run(LOGDIA647); run(DOM647B); run(MOREAL647);
+      run(`zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); }; __au=[]; audit=function(t,m){ __au.push(t+": "+m); };
+        __bkAgS={hs:hospedes, vg:medVigiaGravar, cm:carregarMedAtrasadaGestora}; medVigiaGravar=function(){}; carregarMedAtrasadaGestora=function(){};
+        selectedDate=new __RD647(${T647(7, 23, 45)}); MED_AGENDA_TODOS=[${BIA2350}];`);
+      try {
+        run('checarDespertadorMed();'); await volta647();
+        igual(run('despMedNaTela'), 'bia__ana__x_23-50');
+        relogio647(T647(7, 23, 58)); run('despMedSegundoBotao();');   // ADIAR: volta às 00:03
+        relogio647(T647(8, 0, 0, 15)); igual(run(`zDiaTelaAvancar(${T647(8, 0, 0, 15)})`), 'avancou');
+        // 00:01: a veterinária mexe no Apoquel, e a agenda de hoje é relida, inteira
+        relogio647(T647(8, 0, 1));
+        run(`hospedes=[{nome:'Bia', tutor:'Ana', refKey:'bia__ana'}];
+          DB={ref:function(p){ var v=(p==='auaulandia/medicacao-agenda/bia__ana/itens') ? {x:${item}} : null; return __dbNulo647(p, {once:function(){ return Promise.resolve({val:function(){ return v; }}); }}); }};
+          medLogHoje=function(){ return Promise.resolve(__logs[dataKeyAtual()]||{}); }; carregarAgendaMedTodos();`);
+        for (let i = 0; i < 6; i++) await volta647();
+        const agenda = [run('MED_AGENDA_TODOS.length'), run('MED_AGENDA_DIA'), run('MED_AGENDA_INTEIRA'), run("typeof MED_AGENDA_SUSPENSOS!=='undefined' ? Object.keys(MED_AGENDA_SUSPENSOS) : 'sem a lista'")];
+        const voltas = [];
+        for (let t = T647(8, 0, 1, 30); t <= T647(8, 0, 6); t += 30000) {
+          await BATIDA5_647(t);
+          for (const m of run('__mo')) { voltas.push(m + '@' + hms647(t) + '/' + run('despMedAtualDia') + '/' + run('__els.despMedInstr.textContent').slice(0, 16)); run('fecharDespertadorMed();'); }
+        }
+        if (caso === 'suspenso') {
+          igual([voltas, run('Object.keys(despMedSnoozeDia)'), run('__au.filter(function(x){ return /^med-alarme-adiado-descartado/.test(x); }).length')], [[], [], 1],
+            'suspenso: não volta (antes: às 00:03, «Dose de ontem: confira se ninguém deu antes de dar. Se ninguém deu, dê o remédio agora»), e fica o rastro');
+          igual(run('__al'), ['ALARME ADIADO QUE NÃO VOLTA | O alarme adiado de Apoquel de Bia (23:50 de ontem) não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa). Nada foi registrado. Se a dose ainda for necessária, fale com a veterinária.']);
+        } else {
+          igual([voltas, run('__al')], [['bia__ana__x_23-50@00:03:00/' + ONTEM647 + '/Dose de ontem: c'], []], 'término ontem (e outro remédio dela suspenso): volta pelo dia dele (a dose de ontem ainda era devida)');
+        }
+        igual(agenda, [0, HOJE647, true, caso === 'suspenso' ? ['bia__ana__x'] : ['bia__ana__y']], caso + ': a agenda de hoje (inteira, sem a Bia; a carga guarda o remédio suspenso — no término ontem, só o OUTRO remédio dela, o Otomax)');
+      } finally { run('hospedes=__bkAgS.hs; medVigiaGravar=__bkAgS.vg; carregarMedAtrasadaGestora=__bkAgS.cm;'); run(SOLTAG647 + SOLTA647); }
+    }
+  } finally { run(SOLTAG647 + SOLTA647); }
+});
+provaAsync('6.47 (5ª rodada) o aviso do descarte não cobre o alarme de remédio na tela: com um alarme aberto, o rastro sai na hora e o aviso espera a primeira batida sem alarme, e aparece uma vez (QA4-C)', async () => {
+  const LUA14 = "{key:'lua__eva', itemId:'z', horario:'14:00', nome:'Prednisolona', hospNome:'Lua'}";
+  const REX1405 = "{key:'rex__ivo', itemId:'q', horario:'14:05', nome:'Antibiótico', hospNome:'Rex'}";
+  run(ARMA647); relogio647(T647(7, 14, 0)); run(GRAVA647); run(DOM647B); run(MOREAL647);
+  run('zAlertao=function(t,l){ __al.push(t+" | "+(l||[]).join(" ")); }; __au=[]; audit=function(t,m){ __au.push(t+": "+m); };');
+  try {
+    run(`selectedDate=new __RD647(${T647(7, 14, 0)}); MED_AGENDA_TODOS=[${LUA14}, ${REX1405}]; __log={};`);
+    run('checarDespertadorMed();'); await volta647(); igual(run('despMedNaTela'), 'lua__eva__z_14-00');
+    run('despMedSegundoBotao();');   // ADIAR a Lua (volta às 14:05)
+    relogio647(T647(7, 14, 0, 30)); run('checarDespertadorMed();'); await volta647(); igual(run('despMedNaTela'), 'rex__ivo__q_14-05');
+    relogio647(T647(7, 14, 2)); run(`MED_AGENDA_TODOS=[${REX1405}]; MED_AGENDA_DIA='${ONTEM647}';`);   // a tutora buscou a Lua: a agenda relida, inteira
+    relogio647(T647(7, 14, 2, 30)); run('checarDespertadorMed();'); await volta647();
+    igual([run('Object.keys(despMedSnoozePend)'), run('__au.filter(function(x){ return /^med-alarme-adiado-descartado/.test(x); }).length'), run('__al'), run('despMedNaTela')], [[], 1, [], 'rex__ivo__q_14-05'],
+      'descartado com o rastro na hora, e o aviso NÃO cobre o alarme do Rex (antes: o aviso em tela cheia por cima dele)');
+    relogio647(T647(7, 14, 3)); run('confirmarDoseDespertador();'); await volta647();
+    igual(run('despMedNaTela'), null);
+    run(`__log={rex__ivo:{'q_14-05':{quem:'Ana Souza'}}};`);
+    for (const t of [T647(7, 14, 3, 30), T647(7, 14, 4)]) { relogio647(t); run('checarDespertadorMed();'); await volta647(); }
+    igual(run('__al'), ['ALARME ADIADO QUE NÃO VOLTA | O alarme adiado de Prednisolona de Lua (14:00) não toca de novo: o remédio saiu da agenda (suspenso, horário trocado ou o FILHOt foi para casa). Nada foi registrado. Se a dose ainda for necessária, fale com a veterinária.'],
+      'sem alarme na tela, o aviso aparece, uma vez só');
+  } finally { run(SOLTAG647 + SOLTA647); }
 });
 provaAsync('6.34 (3ª rodada do QA) o botão Conferir agora conta as horas acertadas, somadas em todos os dias', async () => {
   run(`__bk634b={pp:dashPontePronta, sy:dashAutoSincronizar, db:DB, dc:dashCarregar, st:setTimeout};
