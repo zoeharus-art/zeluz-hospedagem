@@ -15457,6 +15457,100 @@ provaAsync('QD646-10 — bordas do "de pé" (crédito estornado; outro crédito 
 });
 
 
+// 6.51 — a ficha aberta pela Prevenção com tutor de apóstrofo no nome ("Ana D'Ávila").
+// A chave do FILHOt (nome + tutor) ia crua para dentro do onclick/onchange: o apóstrofo
+// fechava a string do JavaScript e o "Feito em", o "Quem deu", o "Salvar" e o "fechar"
+// davam SyntaxError em TODOS os itens (pendência P1 do QA48 da 6.11, igual ao master).
+// A prova desenha a ficha, compila cada botão e roda cada um com funções de mentira que
+// anotam a chave que receberam; os campos com essa chave precisam existir na ficha.
+function fichaPrev651(tutor, ficha) {
+  run(`__bk651={pe:pelExtra, hj:hojeISO}; __ex651=${JSON.stringify(ficha || {})};
+    pelExtra=function(){ return __ex651; }; hojeISO=function(){ return '2026-10-09'; };`);
+  try {
+    const p = { n: 'Antônio', tutor };
+    const chave = run(`pelKey(${JSON.stringify(p)})`);
+    const h = run(`prevEdicaoHTML({p:${JSON.stringify(p)}, nome:'Antônio'})`);
+    const itens = run('PREV_ITENS.map(function(it){ return it.k; })');
+    const comNome = run('PREV_ITENS.filter(function(it){ return it.nomeK; }).map(function(it){ return it.k; })');
+    return { chave, h, itens, comNome };
+  } finally { run('pelExtra=__bk651.pe; hojeISO=__bk651.hj;'); }
+}
+const des651 = (a) => a.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+function botoes651(h) {
+  const out = []; const re = /\son(click|change|input)="([^"]*)"/g; let m;
+  while ((m = re.exec(h))) out.push(des651(m[2]));
+  return out;
+}
+function roda651(codigo) {
+  const chamadas = [];
+  const escopo = new Proxy({}, {
+    has(t, k) { return typeof k === 'string'; },
+    get(t, k) {
+      if (k === Symbol.unscopables) return undefined;
+      return function () { chamadas.push([k].concat([].slice.call(arguments))); };
+    },
+  });
+  new Function('__esc', 'with(__esc){' + codigo + '}')(escopo);   // compila e roda (SyntaxError = botão morto)
+  return chamadas;
+}
+function confere651(tutor, ficha) {
+  const { chave, h, itens, comNome } = fichaPrev651(tutor, ficha);
+  const ids = new Set(); const re = /\sid="([^"]*)"/g; let m;
+  while ((m = re.exec(h))) ids.add(des651(m[1]));
+  const vistos = { prevRecalcular: 0, prevOndeFoi: 0, prevLancar: 0, prevAbrir: 0, prevCorrigeEctoMudou: 0 };
+  const ecto = 'ed_' + chave + '_ecto_p';
+  for (const b of botoes651(h)) {
+    let chamadas;
+    try { chamadas = roda651(b); } catch (e) { throw new Error('botão quebrado (' + e.message + '): ' + b); }
+    for (const c of chamadas) {
+      if (!(c[0] in vistos)) continue;
+      vistos[c[0]]++;
+      // o produto do carrapaticida: o select e a frase "Vale N dias" com a mesma chave (QA da 6.51, A2)
+      if (c[0] === 'prevCorrigeEctoMudou') {
+        assert.strictEqual(c[1], ecto, 'prevCorrigeEctoMudou recebeu outro id: ' + b);
+        for (const pre of ['prevCorrP_', 'prevCorrDH_']) assert.ok(ids.has(pre + c[1]), 'sem o campo ' + pre + c[1]);
+        continue;
+      }
+      assert.strictEqual(c[1], chave, c[0] + ' recebeu outra chave: ' + b);
+      if ((c[0] === 'prevRecalcular' || c[0] === 'prevLancar') && c[2] === 'ecto_p') assert.ok(ids.has('prevCorrP_' + ecto), 'sem o produto do carrapaticida prevCorrP_' + ecto);
+      // o campo que a função vai procurar existe na ficha, com a MESMA chave
+      if (c[0] === 'prevRecalcular' || c[0] === 'prevLancar') {
+        for (const pre of ['prevT_', 'prevP_']) assert.ok(ids.has(pre + chave + '_' + c[2]), 'sem o campo ' + pre + chave + '_' + c[2]);
+        if (c[0] === 'prevLancar') assert.ok(ids.has('prevQ_' + chave + '_' + c[2]), 'sem o campo prevQ_ de ' + c[2]);
+        // o nome do produto ou da vacina (QA da 6.51, A1): sem ele o Salvar grava sem o nome, calado
+        if (c[0] === 'prevLancar' && comNome.indexOf(c[2]) >= 0) assert.ok(ids.has('prevN_' + chave + '_' + c[2]), 'sem o campo prevN_ de ' + c[2]);
+      }
+      if (c[0] === 'prevAbrir') assert.ok(ids.has('prevEd_' + chave), 'sem a ficha prevEd_ para rolar até ela');
+    }
+  }
+  // um Salvar e dois "Quem deu" por item; um "Feito em" por item (+1 do produto do carrapaticida); um fechar
+  const n = itens.length - ((h.indexOf('não escova no Day Care') >= 0) ? 1 : 0);
+  igual([vistos.prevLancar, vistos.prevOndeFoi, vistos.prevAbrir], [n, 2 * n, 1], 'botões da ficha com tutor ' + tutor);
+  assert.ok(vistos.prevRecalcular >= n, 'Feito em: ' + vistos.prevRecalcular + ' de ' + n);
+  assert.ok(vistos.prevCorrigeEctoMudou >= 1, 'o produto do carrapaticida não foi conferido');
+  return { chave, n };
+}
+prova("6.51 — ficha aberta pela Prevenção com tutor \"Ana D'Ávila\": Feito em, Quem deu, Salvar e fechar de todos os itens funcionam e acham os próprios campos", () => {
+  const r = confere651("Ana D'Ávila", {});
+  igual(r.chave, "antônio__ana d'ávila");
+  assert.ok(r.n >= 8, 'itens desenhados: ' + r.n);
+  // com a ficha preenchida (produto do carrapaticida, quem deu, quem fez) continua igual
+  confere651("Ana D'Ávila", { ecto_prod: 'Bravecto', ecto_tipo: 'Comprimido', ecto_ondefoi: 'Day Care', vac_por: "Clínica D'Or" });
+});
+prova('6.51 — tutor com aspas, barra invertida, "<" e "&" no nome: nenhum botão quebra e nenhum campo some', () => {
+  confere651('Lu "Bia" \\ <Silva> & Cia', {});
+  confere651("Ze'' \\' \\\\ fim\\", {});
+});
+prova('6.51 — tutor sem nada especial: botões e campos levam a chave limpa, sem escape nenhum (a ficha de sempre)', () => {
+  const { h, itens } = fichaPrev651('Ana', {});
+  for (const k of itens.filter((k) => k !== 'escova_p' || h.indexOf('não escova no Day Care') < 0)) {
+    for (const t of [`prevLancar('antônio__ana','${k}')`, `prevRecalcular('antônio__ana','${k}')`, `id="prevT_antônio__ana_${k}"`, `id="prevP_antônio__ana_${k}"`, `id="prevQ_antônio__ana_${k}"`])
+      assert.ok(h.indexOf(t) >= 0, 'faltou ' + t);
+  }
+  assert.ok(h.indexOf(`id="prevEd_antônio__ana"`) >= 0 && h.indexOf(`prevAbrir('antônio__ana')`) >= 0, 'ficha e fechar com a chave de sempre');
+  for (const t of ["\\'", '&amp;', '&quot;']) assert.strictEqual(h.indexOf(t), -1, 'escape onde não precisa: ' + t);
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

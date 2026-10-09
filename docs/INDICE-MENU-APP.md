@@ -2,6 +2,22 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 09/out/2026 (v 2026-10-09-02) — Prevenção: a ficha de quem tem tutor com apóstrofo no nome funciona
+
+> Pendência P1 do QA48 da story 6.11, igual no master: na ficha aberta pela tela **Prevenção** (toque no nome do FILHOt), um tutor com apóstrofo no nome ("Ana D'Ávila", "Clínica D'Or") travava os botões de **todos** os itens, sem aviso. (Story 6.51)
+
+### (AX) Prevenção › toque no nome › a ficha "Lance aqui mesmo"
+
+| Antes | Agora |
+|---|---|
+| Tutor com apóstrofo no nome: **"Feito em"** não refazia o "Vale até", **"Quem deu"** (Day Care · Tutor em casa), **"Salvar"** e **"fechar"** não faziam nada, em todos os 10 itens (check-up, vacinas, carrapaticida, coleira, vermífugo, exame de fezes e troca de escova). No Chromium, 41 dos 42 botões davam erro de página | Os 42 botões funcionam e cada um acha os próprios campos |
+| Tutor com aspas, barra invertida ou `&` no nome: os mesmos botões morriam (com a barra, a chave chegava errada e o Salvar não achava os campos); com `<`/`>` junto, as datas sumiam e aparecia código na ficha | A ficha sai inteira e todos os botões funcionam |
+
+- **Por quê:** a chave do FILHOt junta o nome e o tutor e ia crua para dentro do botão; o apóstrofo fechava o texto do botão no meio. Agora a chave vai protegida nos botões (`jsAspas`) e nos campos (`escAttr`), como já ia nos botões da tabela que abrem a ficha.
+- **Não mudou:** para tutor sem apóstrofo, aspas ou barra, a ficha sai **igual** à de antes (mesmo HTML). Nada do que é gravado mudou. Check-in do corpo, pertences, `#v-daycare`, `pendAvisarChegada` e as funções `ck*`/`ckt*`/`pt*` intocados.
+- **Onde está no código** (`auaulandia/index.html`): `prevEdicaoHTML` (as chaves `chJs` e `chId`).
+- **Provas:** `tests/fase0-ciclo-fechado.test.js` (720 no total, 0 falhas; 3 da 6.51, que desenham a ficha com "Ana D'Ávila", com aspas, barra invertida, "<" e "&" no tutor e com um tutor comum, compilam e rodam cada botão e conferem que o campo procurado existe). Contra o master, as 2 primeiras falham. Defeitos plantados: 23, todos pegos — 11 do dev (os 5 botões e os 4 campos de volta crus, as duas chaves trocadas e o id do "Feito em" errado) e 12 do QA independente (entre eles o nome do produto ou da vacina, `prevN_`, e os campos do produto do carrapaticida, que as provas passaram a conferir depois do QA). Harness: **3868 ok, com as mesmas 17 falhas do master**. Área protegida idêntica ao master (155 funções ck/ckt/pt, `#v-daycare` e `pendAvisarChegada`). Chromium a 375 px, tocando cada botão: no master, com "Ana D'Ávila", 41 erros de página em 42 botões; na versão nova, 42 de 42 com a chave certa e nenhum erro.
+
 ## O que mudou em 09/out/2026 (v 2026-10-09-01) — A dose de remédio de ontem que ninguém viu toca depois da virada
 
 > Quadro de pedidos (linha 62, "Consertos achados nas revisões") e backlog da story 6.32 (linha 49: *"tocar as doses atrasadas do dia velho antes da troca"*). A 6.32 fez o alarme de remédio atravessar a meia-noite, mas só para a dose **adiada**. A dose das 23:30 que nunca abriu o alarme (celular congelado no bolso, tela apagada, segunda dose na fila atrás de outra) **sumia** depois da meia-noite: a tela passava para hoje, ou a página recarregava, e ninguém era chamado; só o vigia do servidor cobrava, de manhã. (Story 6.47)

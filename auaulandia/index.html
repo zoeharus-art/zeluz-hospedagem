@@ -5125,13 +5125,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-01"></script>
+<script src="resposta-tutor.js?v=2026-10-09-02"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-01"></script>
+<script src="painel-logica.js?v=2026-10-09-02"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5143,7 +5143,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-01"></script>
+<script src="financeiro-logica.js?v=2026-10-09-02"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -18689,7 +18689,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-01';
+  const APP_VERSAO='2026-10-09-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -28754,6 +28754,12 @@
   }
   function prevEdicaoHTML(o){
     var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
+    // A chave junta nome e tutor: "Ana D'Ávila" traz um apóstrofo que, cru dentro do
+    // onclick="fn('...')", fecha a string no meio e mata o "Feito em", o "Quem deu", o
+    // "Salvar" e o "fechar" de todos os itens, sem aviso (P1 do QA48 da 6.11; story 6.51).
+    // Nos botões vai chJs (string de JavaScript); nos id, chId (o navegador devolve a chave
+    // crua, e as funções procuram o campo com ela).
+    var chJs=jsAspas(chave), chId=escAttr(chave);
     var linha=function(it){
       // Quem não escova no Day Care: a troca de escova não é cobrada aqui também (QA40 L6).
       if(it.k==='escova_p' && escovaNaoEscova(ex))
@@ -28773,36 +28779,36 @@
         // guardava o valor ANTIGO da ficha e o lançamento salvava esse valor, ignorando a data
         // nova. Agora, ao trocar a data de "Feito em", o "Vale até" se refaz na hora — e quem
         // quiser uma data diferente (o veterinário pediu antes) ainda pode escrever por cima.
-        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chave+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chave+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chave+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chId+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chJs+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
+        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
         +['Day Care','Tutor em casa'].map(function(op){
             var on=(String(ex[it.k.replace(/_p$/,'')+'_ondefoi']||'')===op);
             return '<button type="button" class="btn" style="margin-right:6px;padding:5px 12px;font-size:12.5px;font-weight:800;border:1.5px solid var(--line);background:'
-              +(on?'var(--z-gold)':'var(--z-cream-warm)')+';color:var(--z-blue)" onclick="prevOndeFoi(\''+chave+'\',\''+it.k+'\',\''+op+'\')">'+op+'</button>';
+              +(on?'var(--z-gold)':'var(--z-cream-warm)')+';color:var(--z-blue)" onclick="prevOndeFoi(\''+chJs+'\',\''+it.k+'\',\''+op+'\')">'+op+'</button>';
           }).join('')
         +'</div>'
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem fez</label>'
-        +'<input class="cad-in" id="prevQ_'+chave+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
+        +'<input class="cad-in" id="prevQ_'+chId+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
         +(it.nomeK?('<div style="grid-column:1/-1"><label class="cad-lb">Nome do produto / vacina</label>'
-          +'<input class="cad-in" id="prevN_'+chave+'_'+it.k+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac · NexGard Spectra · Drontal"></div>'):'')
+          +'<input class="cad-in" id="prevN_'+chId+'_'+it.k+'" value="'+escAttr(ex[it.nomeK]||'')+'" placeholder="Ex: V10 Nobivac · NexGard Spectra · Drontal"></div>'):'')
         // Carrapaticida: o produto que manda na conta fica à vista e se troca aqui (QA47) —
         // contar em silêncio pelo produto de antes cobraria tarde quando a dose de hoje foi outra.
         +(it.k==='ecto_p'?('<div style="grid-column:1/-1">'+prevCorrigeEctoHTML('ecto_p', ex, escAttr('ed_'+chave+'_ecto_p'), jsAspas('ed_'+chave+'_ecto_p'),
             "prevRecalcular('"+jsAspas(chave)+"','ecto_p')")
           +'<div class="hint" id="prevCorrDH_'+escAttr('ed_'+chave+'_ecto_p')+'" style="margin-top:4px">'+escAttr(ectoFraseDias(String(ex.ecto_prod||''), parseInt(ex.ecto_outro_dias,10)||0))+'</div></div>'):'')
         +'</div>'
-        +'<button class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" onclick="prevLancar(\''+chave+'\',\''+it.k+'\')">Salvar '+escAttr(it.nome)+'</button>'
+        +'<button class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" onclick="prevLancar(\''+chJs+'\',\''+it.k+'\')">Salvar '+escAttr(it.nome)+'</button>'
         +(atrasado?'<span style="margin-left:8px;font-size:12px;font-weight:800;color:var(--crm-critico)">continua vencido até você lançar uma data nova</span>':'')
         +'</div>';
     };
-    return '<div id="prevEd_'+chave+'" class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
+    return '<div id="prevEd_'+chId+'" class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
       +'<datalist id="prevQuemLista"><option value="Zêluz"><option value="Tutor"><option value="Clínica externa"></datalist>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<h2 style="font-size:16px;margin:0">'+escAttr(o.nome)+'</h2>'
-      +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" onclick="prevAbrir(\''+chave+'\')">fechar</button></div>'
+      +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" onclick="prevAbrir(\''+chJs+'\')">fechar</button></div>'
       +'<div class="hint">Lance aqui mesmo o que foi feito — não precisa abrir a ficha inteira. A data de validade eu calculo sozinho; se quiser outra, é só escrever.</div>'
       +PREV_ITENS.map(linha).join('')
       +'</div>';
