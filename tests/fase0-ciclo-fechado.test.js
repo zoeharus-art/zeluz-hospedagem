@@ -21534,6 +21534,1562 @@ provaAsync('6.53 R4 R3 — o aparelho que exclui acerta o PRÓPRIO índice na ho
   } finally { run('CF_ESTADIAS_LIDO=__bk653.cfl;'); run(SOLTA653); }
 });
 
+// ================================================================== 6.55 — Quem chamar hoje: o contato que finaliza
+console.log('\n6.55 — Quem chamar hoje: o contato que finaliza, para quem só se hospeda (09/out/2026)');
+// Tudo com dado inventado (Tico/Rita Teste, Mel/Ana Teste…), relógio FIXO (relogio621) e um banco de mentira
+// em árvore (arvore655), que guarda o que foi gravado e quantas atualizações saíram.
+const HOJE655 = '2026-10-07';
+const T655 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+const DD655 = (ts) => { const d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); };
+const HH655 = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const K655 = 'tico__rita-teste', KMEL655 = 'mel__ana-teste';
+const drena655 = async () => { for (let i = 0; i < 300; i++) await Promise.resolve(); };
+function arvore655(seed) {
+  const db = { store: JSON.parse(JSON.stringify(seed || {})), escritas: [], leituras: [], seq: 0, falhar: false, pendurar: false, falharLeitura: false };
+  const partes = (p) => String(p || '').split('/').filter(Boolean);
+  const ler = (p) => partes(p).reduce((o, k) => ((o == null || typeof o !== 'object') ? undefined : o[k]), db.store);
+  const gravar = (p, v) => {
+    const ks = partes(p);
+    let o = db.store;
+    for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null || typeof o[ks[i]] !== 'object') o[ks[i]] = {}; o = o[ks[i]]; }
+    if (v === null || v === undefined) delete o[ks[ks.length - 1]];
+    else o[ks[ks.length - 1]] = JSON.parse(JSON.stringify(v));
+  };
+  const ref = (p) => {
+    const r = {
+      key: partes(p).pop() || null,
+      once() {
+        db.leituras.push(String(p || ''));
+        if (db.falharLeitura) return Promise.reject(new Error('sem conexão (banco de mentira)'));
+        const v = ler(p); return Promise.resolve({ val: () => (v === undefined ? null : JSON.parse(JSON.stringify(v))) });
+      },
+      set(v) { db.escritas.push({ op: 'set', p: String(p || ''), v }); if (db.falhar) return Promise.reject(new Error('sem permissão (banco de mentira)')); gravar(p, v); return Promise.resolve(); },
+      update(o) {
+        db.escritas.push({ op: 'update', p: String(p || ''), v: JSON.parse(JSON.stringify(o)) });
+        if (db.pendurar) return new Promise(() => {});
+        if (db.falhar) return Promise.reject(new Error('sem permissão (banco de mentira)'));
+        Object.keys(o).forEach((k) => gravar((p ? p + '/' : '') + k, o[k]));
+        return Promise.resolve();
+      },
+      push(v) {
+        const k = 'ev' + String(++db.seq).padStart(3, '0');
+        const filho = ref((p ? p + '/' : '') + k);
+        if (v === undefined) return filho;
+        const pr = filho.set(v).then(() => filho); pr.key = k; return pr;
+      },
+      limitToLast() { return r; }, orderByKey() { return r; }, startAt() { return r; }, endAt() { return r; },
+      child(k) { return ref((p ? p + '/' : '') + k); },
+    };
+    return r;
+  };
+  db.ref = ref;
+  return db;
+}
+ctx.__PEL655 = [
+  { n: 'Tico', tutor: 'Rita Teste', raca: 'SRD', sexo: 'Macho' },
+  { n: 'Mel', tutor: 'Ana Teste', raca: 'Poodle', sexo: 'Fêmea', dias: ['qua', 'sex'] },
+  { n: 'Bolt', tutor: 'Caio Teste', raca: 'SRD' },
+  { n: 'Nino', tutor: 'Lia Teste', raca: 'SRD' },
+  { n: 'Gus', tutor: 'Ivo Teste', raca: 'SRD' },
+  { n: 'Juca', tutor: 'Teo Teste', raca: 'SRD' },
+  { n: 'Lupi', tutor: 'Rui Teste', raca: 'SRD' },
+];
+ctx.__EX655 = {
+  Tico: { categoria: 'hospede', verm_p: '2026-09-20' },
+  Mel: { categoria: 'auluno', dias: ['qua', 'sex'], verm_p: '2026-10-08' },
+  Bolt: { categoria: 'avulso' },
+  Nino: {},
+  Gus: { renov: { plano: 'auaulandia' } },
+  Juca: { categoria: 'morador' },
+  Lupi: {},
+};
+// A hospedagem do Tico: entra na segunda (05/10) e sai na quinta (08/10) — 3 noites.
+ctx.__EST655 = { e1: { refKey: 'tico__rita teste', nome: 'Tico', tutor: 'Rita Teste', entrada: '2026-10-05', saida: '2026-10-08', status: 'ativa', _ts: 1 } };
+const ARMA655 = `__bk655={P:PELUDINHOS, pe:pelExtra, hz:zHojeISO, vp:VENC_PEND, vpq:VENC_PEND_QUANDO, vpl:VENC_PEND_LENDO,
+    vr:VENC_REG, vrd:VENC_REG_DIA, vrq:VENC_REG_QUANDO, vcr:VENC_CAL_REG, vcrm:VENC_CAL_REG_MES, et:EST_TODAS, cf:CF_ESTADIAS,
+    cfl:CF_ESTADIAS_LIDO, db:DB, td:turmaDeHoje, hcm:hojeChamadaMapa, hck:hojeCheckinMapa, pv:proximaVindaDe, cfg:VENC_CFG,
+    au:audit, za:zAlertao, zt:zTexto, qs:quemSou, wo:window.open, ge:document.getElementById, al:alert, pa:PEND_ABERTAS,
+    hr:hojeRender, vrn:vencRender, rq:vencRedesenharQuadros, pdc:papelDoCorpo, vl:vencLista, ra:repAgendaDe, hao:HOJE_ANT_ABERTO,
+    pah:PREV_AVISOS, pch:PREV_CACHE_HOSP, rp:renderPrevencao, ftr:fichaTutorRedesenhar, mlp:medLinhaDoPel, brf:banhoRecFraseDia,
+    pel:pelAtual, cu:CONTATOS_ULTIMO, vds:VENC_DIA_SEL, vcm:VENC_CAL_MES, cdz:CONTATOS_DESENHO,
+    ccfg:(typeof CONTATO_CFG!=='undefined'?CONTATO_CFG:undefined), clog:(typeof CONTATO_LOG!=='undefined'?CONTATO_LOG:undefined),
+    cru:(typeof CONTATO_RESP_ULT!=='undefined'?CONTATO_RESP_ULT:undefined), cnf:(typeof CONTATO_NOTA_FEITA!=='undefined'?CONTATO_NOTA_FEITA:undefined)};
+  CONTATO_RESP_ULT=null; CONTATO_NOTA_FEITA={};
+  __AUD655=[]; __ALE655=[]; __URL655=[]; __ZT655=[]; __EL655={}; __ABRE655=true; __QUEM655='Leticya'; __PAPEL655='consultora'; __VL655={}; __CHAM655={};
+  PELUDINHOS=JSON.parse(JSON.stringify(__PEL655)); __EXC655=JSON.parse(JSON.stringify(__EX655));
+  pelExtra=function(p){ return __EXC655[(p&&p.n)||'']||{}; };
+  zHojeISO=function(){ return __HOJE655; };
+  VENC_PEND={}; VENC_PEND_QUANDO=1; VENC_PEND_LENDO=false; VENC_REG=null; VENC_REG_DIA=''; VENC_REG_QUANDO=0; VENC_CAL_REG=null; VENC_CAL_REG_MES='';
+  EST_TODAS=JSON.parse(JSON.stringify(__EST655)); CF_ESTADIAS={}; CF_ESTADIAS_LIDO=true; VENC_DIA_SEL='';
+  __TURMA655=[{p:PELUDINHOS[0], i:0, hospede:true}];
+  turmaDeHoje=function(){ return __TURMA655; };
+  hojeChamadaMapa=function(){ return __CHAM655; }; hojeCheckinMapa=function(){ return {}; };
+  proximaVindaDe=function(){ return null; }; repAgendaDe=function(){ return []; };
+  VENC_CFG={}; CONTATO_CFG={}; CONTATO_LOG={};
+  audit=function(a,d){ __AUD655.push(String(a)+' :: '+String(d)); };
+  zAlertao=function(t,l){ __ALE655.push(String(t)+' :: '+[].concat(l||[]).join(' | ')); };
+  zTexto=function(){ var v=__ZT655.shift(); return Promise.resolve(v===undefined?null:v); };
+  quemSou=function(){ return __QUEM655; };
+  window.open=function(u){ __URL655.push(u); return __ABRE655?{}:null; };
+  document.getElementById=function(id){ return __EL655[id]||null; };
+  alert=function(m){ __ALE655.push('alert :: '+m); };
+  PEND_ABERTAS={}; HOJE_ANT_ABERTO={}; PREV_AVISOS={};
+  hojeRender=function(){}; vencRender=function(){}; vencRedesenharQuadros=function(){}; renderPrevencao=function(){}; fichaTutorRedesenhar=function(){};
+  papelDoCorpo=function(){ return __PAPEL655; };
+  vencLista=function(d){ return __VL655[d||vencDiaAlvo()]||[]; };
+  medLinhaDoPel=function(){ return ''; }; banhoRecFraseDia=function(){ return ''; };
+  vencMemoLimpar();`;
+const SOLTA655 = `PELUDINHOS=__bk655.P; pelExtra=__bk655.pe; zHojeISO=__bk655.hz; VENC_PEND=__bk655.vp; VENC_PEND_QUANDO=__bk655.vpq;
+  VENC_PEND_LENDO=__bk655.vpl; VENC_REG=__bk655.vr; VENC_REG_DIA=__bk655.vrd; VENC_REG_QUANDO=__bk655.vrq; VENC_CAL_REG=__bk655.vcr;
+  VENC_CAL_REG_MES=__bk655.vcrm; EST_TODAS=__bk655.et; CF_ESTADIAS=__bk655.cf; CF_ESTADIAS_LIDO=__bk655.cfl; DB=__bk655.db;
+  turmaDeHoje=__bk655.td; hojeChamadaMapa=__bk655.hcm; hojeCheckinMapa=__bk655.hck; proximaVindaDe=__bk655.pv; VENC_CFG=__bk655.cfg;
+  audit=__bk655.au; zAlertao=__bk655.za; zTexto=__bk655.zt; quemSou=__bk655.qs; window.open=__bk655.wo; document.getElementById=__bk655.ge;
+  alert=__bk655.al; PEND_ABERTAS=__bk655.pa; hojeRender=__bk655.hr; vencRender=__bk655.vrn; vencRedesenharQuadros=__bk655.rq;
+  papelDoCorpo=__bk655.pdc; vencLista=__bk655.vl; repAgendaDe=__bk655.ra; HOJE_ANT_ABERTO=__bk655.hao; PREV_AVISOS=__bk655.pah;
+  PREV_CACHE_HOSP=__bk655.pch; renderPrevencao=__bk655.rp; fichaTutorRedesenhar=__bk655.ftr; medLinhaDoPel=__bk655.mlp;
+  banhoRecFraseDia=__bk655.brf; pelAtual=__bk655.pel; CONTATOS_ULTIMO=__bk655.cu; VENC_DIA_SEL=__bk655.vds; VENC_CAL_MES=__bk655.vcm; CONTATOS_DESENHO=__bk655.cdz;
+  CONTATO_CFG=__bk655.ccfg; CONTATO_LOG=__bk655.clog; CONTATO_RESP_ULT=__bk655.cru; CONTATO_NOTA_FEITA=__bk655.cnf; vencMemoLimpar();`;
+let solta655 = null;
+const arma655 = (hoje, hora, db) => {
+  ctx.__HOJE655 = hoje || HOJE655;
+  ctx.__DB655 = db || arvore655({});
+  run(ARMA655);
+  run('DB=__DB655;');
+  solta655 = relogio621((hoje || HOJE655) + 'T' + (hora || '15:00:00'));
+};
+const hora655 = (dia, hora) => { if (solta655) solta655(); solta655 = relogio621(dia + 'T' + hora); };
+const solta655f = () => { try { if (solta655) solta655(); } finally { solta655 = null; run(SOLTA655); } };
+const evs655 = (db, k) => { const L = ((db.store.daycare || {})['contatos-log'] || {})[k || K655] || {}; return Object.keys(L).map((id) => Object.assign({ id }, L[id])); };
+const reg655 = (db, dia, k) => ((((db.store.daycare || {}).vencimentos || {})[dia] || {})[k || K655]) || {};
+// Uma conversa do Tico: mandada (o histórico de envios já no registro) e, se pedido, cobrada.
+const conv655 = (tipo, envTs, cobs, extra) => Object.assign({ pet: 'Tico', tutor: 'Rita Teste',
+  enviadas: { [tipo]: { quem: 'Ana', ts: envTs } }, envios: { [tipo]: [{ quem: 'Ana', ts: envTs }] },
+  cobrancas: cobs ? { [tipo]: cobs } : undefined,
+  itens: [{ k: 'verm_p', nome: 'Vermífugo', vence: '2026-09-20', atrasado: true }] },
+  /^ant_/.test(tipo) ? { antecipado: true, itens_ant: [{ k: 'verm_p', nome: 'Vermífugo', vence: '2026-09-20', atrasado: true }] } : {}, extra || {});
+const semUndef655 = (o) => JSON.parse(JSON.stringify(o));
+// O FILHOt do cartão de Vencimentos (o objeto que vencLista devolve).
+const O_TICO655 = `{chave:'${K655}', p:PELUDINHOS[0], i:0, nome:'Tico', raca:'SRD', tutor:'Rita Teste', tel:'', sexo:'Macho',
+  itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-09-20', atrasado:true, vacina:false}], atrasados:1}`;
+
+// ---------------------------------------------------------------- Fatia 1 — o registro do contato
+provaAsync('6.55 AC1/AC27 — «Mandar no WhatsApp» (Hoje na Zêluz, um toque): evento «mandou» com quem, dia, hora, tela e o texto igual ao aberto; o registro do dia ganha só a lista envios (o texto não entra em daycare/vencimentos)', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    await run(`hojeWhatsDireto('${K655}', 'antip')`);
+    await drena655();
+    const url = run('__URL655[0]') || '';
+    assert.ok(/^https:\/\/wa\.me\//.test(url), 'abriu o WhatsApp: ' + url);
+    const texto = decodeURIComponent(url.split('?text=')[1] || '');
+    const reg = reg655(db, HOJE655);
+    igual(Object.keys(reg.enviadas || {}), ['ant_antip']);
+    igual(((reg.envios || {}).ant_antip || []), [{ quem: 'Leticya', ts: T655(7, 15) }], 'envios[assunto] ganha {quem, ts}');
+    const evs = evs655(db);
+    assert.strictEqual(evs.length, 1, 'um evento');
+    igual([evs[0].acao, evs[0].canal, evs[0].tela, evs[0].assunto, evs[0].base, evs[0].dia, evs[0].quem, evs[0].ts],
+      ['mandou', 'whatsapp', 'hoje', 'ant_antip', 'antip', HOJE655, 'Leticya', T655(7, 15)]);
+    assert.strictEqual(evs[0].texto, texto, 'o texto do histórico é o aberto no WhatsApp, letra por letra');
+    assert.ok(texto.length > 30 && JSON.stringify(reg).indexOf(texto.slice(0, 30)) < 0, 'o texto NÃO entra em daycare/vencimentos');
+    assert.ok(JSON.stringify(reg.envios).length <= 60, 'a varredura cresce só a lista envios: ' + JSON.stringify(reg.envios).length + ' bytes');
+    assert.ok(!evs[0].tel && JSON.stringify(evs[0]).indexOf('telefone') < 0, 'sem telefone no histórico');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC1 — Vencimentos («Mandar no WhatsApp» do cartão) e Quem chamar hoje (o próximo dia): o mesmo evento, com a tela de cada um e o texto aberto', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`__QMEL=PELUDINHOS[1]; __VL655['2026-10-09']=[{chave:'${KMEL655}', p:__QMEL, i:1, nome:'Mel', raca:'Poodle', tutor:'Ana Teste', tel:'31988887777', sexo:'Fêmea',
+      itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-10-08', atrasado:false, vacina:false}], atrasados:0}];
+      VENC_DIA_SEL='2026-10-09'; __EL655['vencMsg_${KMEL655}__antip']={value:'Olá, Ana! Mensagem da caixa, editada.'};`);
+    run(`vencWhats('${KMEL655}', 'antip')`);
+    await drena655();
+    let evs = evs655(db, KMEL655);
+    igual(evs.map((e) => [e.acao, e.canal, e.tela, e.assunto, e.dia, e.texto]),
+      [['mandou', 'whatsapp', 'vencimentos', 'antip', '2026-10-09', 'Olá, Ana! Mensagem da caixa, editada.']]);
+    assert.strictEqual(decodeURIComponent((run('__URL655[0]') || '').split('?text=')[1] || ''), 'Olá, Ana! Mensagem da caixa, editada.');
+    igual((reg655(db, '2026-10-09', KMEL655).envios || {}).antip, [{ quem: 'Leticya', ts: T655(7, 15) }]);
+    // a gaveta "Vêm no próximo dia" de Quem chamar hoje: o texto é montado na hora
+    hora655(HOJE655, '15:10:00');
+    run(`__VL655['2026-10-08']=__VL655['2026-10-09']; delete __VL655['2026-10-09'];`);
+    await run(`vencWhatsNoDia('${KMEL655}', 'antip', '2026-10-08', 'contatos')`);
+    await drena655();
+    evs = evs655(db, KMEL655);
+    assert.strictEqual(evs.length, 2);
+    igual([evs[1].acao, evs[1].canal, evs[1].tela, evs[1].dia], ['mandou', 'whatsapp', 'contatos', '2026-10-08']);
+    assert.strictEqual(evs[1].texto, decodeURIComponent((run('__URL655[1]') || '').split('?text=')[1] || ''));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC2 — «Mandei» e «Mandada — marcar de novo»: cada toque é um evento «mandou», marcado à mão, com o texto da caixa; o 2º não apaga o 1º e a contagem diz 2', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`__EL655['hojeMsg_${K655}__antip']={value:'Olá, Rita! Texto editado na caixa.'};`);
+    await run(`hojeMandei('${K655}', 'antip')`);
+    await drena655();
+    hora655(HOJE655, '15:20:00');
+    await run(`hojeMandei('${K655}', 'antip')`);
+    await drena655();
+    const reg = reg655(db, HOJE655);
+    igual(reg.envios.ant_antip, [{ quem: 'Leticya', ts: T655(7, 15) }, { quem: 'Leticya', ts: T655(7, 15, 20) }], 'os dois envios ficam');
+    assert.strictEqual(reg.enviadas.ant_antip.ts, T655(7, 15, 20), 'enviadas continua sendo a marca do último, como sempre foi');
+    igual(evs655(db).map((e) => [e.acao, e.canal, e.texto, e.ts]),
+      [['mandou', 'marcado-a-mao', 'Olá, Rita! Texto editado na caixa.', T655(7, 15)], ['mandou', 'marcado-a-mao', 'Olá, Rita! Texto editado na caixa.', T655(7, 15, 20)]]);
+    const c = run(`contatoContagemReg(vencRegDeDia('${HOJE655}','${K655}'), 'ant_antip')`);
+    igual([c.envios, c.cobrancas, c.contatos], [2, 0, 2]);
+    // a releitura do mapa falha (sem conexão para ler): vale a memória deste aparelho — e ela também guarda os dois
+    db.falharLeitura = true;
+    hora655(HOJE655, '15:40:00');
+    await run(`hojeMandei('${K655}', 'antip')`);
+    await drena655();
+    igual(reg655(db, HOJE655).envios.ant_antip.map((x) => x.ts), [T655(7, 15), T655(7, 15, 20), T655(7, 15, 40)], 'sem a releitura, a lista da memória também só cresce');
+    db.falharLeitura = false;
+    // o registro de uma versão antiga (só enviadas, sem envios) conta 1 — o piso
+    igual(run(`(function(){ var c=contatoContagemReg({enviadas:{antip:{quem:'X', ts:5}}}, 'antip'); return [c.envios, c.contatos]; })()`), [1, 1]);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC3 — «Cobrar no WhatsApp» (Quem chamar hoje) e «Cobrei» (Vencimentos e Respostas pendentes): evento «cobrou», com o texto quando houve WhatsApp; cobrancas[assunto] como sempre', async () => {
+  const R06 = conv655('ant_antip', T655(6, 10));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [K655]: R06 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    await run(`vencCobrarNoWhats('${K655}', 'ant_antip', '2026-10-06', 'contatos')`);
+    await drena655();
+    const texto = decodeURIComponent((run('__URL655[0]') || '').split('?text=')[1] || '');
+    assert.ok(/Rita/.test(texto) && /Tico/.test(texto), texto);
+    igual((reg655(db, '2026-10-06').cobrancas || {}).ant_antip, [{ quem: 'Leticya', ts: T655(7, 15) }]);
+    let evs = evs655(db);
+    igual(evs.map((e) => [e.acao, e.canal, e.tela, e.assunto, e.dia, e.texto]), [['cobrou', 'whatsapp', 'contatos', 'ant_antip', '2026-10-06', texto]]);
+    // «Cobrei» do quadro de Respostas pendentes: sem WhatsApp, sem texto
+    hora655(HOJE655, '15:30:00');
+    await run(`vencCobrei('${K655}', 'ant_antip', '2026-10-06', 'pendentes')`);
+    await drena655();
+    evs = evs655(db);
+    igual([evs[1].acao, evs[1].canal, evs[1].tela, 'texto' in evs[1]], ['cobrou', 'marcado-a-mao', 'pendentes', false]);
+    assert.strictEqual(reg655(db, '2026-10-06').cobrancas.ant_antip.length, 2);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC4/AC5 — «Não respondeu» grava «nao_respondeu» e o assunto continua aberto; cada resposta grava «respondeu» com o botão; trocar a resposta é outro evento (nada se apaga)', async () => {
+  const R06 = conv655('ant_antip', T655(6, 10));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [K655]: R06 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    await run(`vencResponderTipo('${K655}', 'ant_antip', 'sem', '2026-10-06')`);
+    await drena655();
+    assert.notStrictEqual(run(`vencEstadoTipo(vencRegDeDia('2026-10-06','${K655}'), 'ant_antip', ${T655(7, 15)})`), 'fechado', '«Não respondeu» não fecha');
+    hora655(HOJE655, '15:10:00');
+    await run(`vencResponderTipo('${K655}', 'ant_antip', 'nao', '2026-10-06')`);
+    await drena655();
+    hora655(HOJE655, '15:20:00');
+    await run(`vencResponderTipo('${K655}', 'ant_antip', 'casa', '2026-10-06')`);
+    await drena655();
+    const evs = evs655(db);
+    igual(evs.map((e) => [e.acao, e.assunto, e.dia, e.resposta ? e.resposta.v : '', e.resposta ? e.resposta.rotulo : '', e.ts]), [
+      ['nao_respondeu', 'ant_antip', '2026-10-06', '', '', T655(7, 15)],
+      ['respondeu', 'ant_antip', '2026-10-06', 'nao', 'Não quer agora', T655(7, 15, 10)],
+      ['respondeu', 'ant_antip', '2026-10-06', 'casa', 'Vai aplicar em casa', T655(7, 15, 20)]]);
+    assert.strictEqual(reg655(db, '2026-10-06').tentativas.ant_antip.length, 1, 'tentativas como sempre');
+    assert.strictEqual(reg655(db, '2026-10-06').respostas.ant_antip.v, 'casa');
+    // no quadro de Respostas pendentes a linha respondida some: o «+ o que o tutor disse» fica no alto
+    const quadro = run(`vencPendListaHTML(0)`);
+    assert.ok(/Resposta registrada às 15:20: Tico — «Vai aplicar em casa»\./.test(quadro)
+      && quadro.indexOf("contatoNotaAbrir('" + K655 + "','2026-10-06','ant_antip')") > 0, quadro.slice(0, 400));
+    hora655(HOJE655, '15:31:00');
+    assert.ok(run(`vencPendListaHTML(0)`).indexOf('contatoNotaAbrir(') < 0, 'depois de 10 minutos, sai');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC5/AC10 — «+ o que o tutor disse» aparece depois da resposta e grava «nota» (até 1.000 letras); o texto livre aparece escapado na ficha', async () => {
+  const R06 = conv655('ant_antip', T655(6, 10), null, { respostas: { ant_antip: { v: 'nao', quem: 'Ana', ts: T655(6, 12) } } });
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [K655]: R06 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    const resp = run(`vencRespostasHTML(vencObjDe('${K655}','2026-10-06'), vencRegDeDia('2026-10-06','${K655}'), 'ant_antip', '2026-10-06', '${K655}')`);
+    assert.ok(resp.indexOf("contatoNotaAbrir('" + K655 + "','2026-10-06','ant_antip')") > 0 && /\+ o que o tutor disse/.test(resp), 'o link aparece depois da resposta');
+    const semResp = run(`vencRespostasHTML(vencObjDe('${K655}','2026-10-06'), {}, 'ant_antip', '2026-10-06', '${K655}')`);
+    assert.ok(semResp.indexOf('contatoNotaAbrir(') < 0, 'sem resposta, não aparece');
+    ctx.__NOTA655 = '<b>disse</b> que vai pensar ' + 'x'.repeat(1200);
+    run('__ZT655.push(__NOTA655);');
+    await run(`contatoNotaAbrir('${K655}', '2026-10-06', 'ant_antip')`);
+    await drena655();
+    const evs = evs655(db);
+    assert.strictEqual(evs.length, 1);
+    igual([evs[0].acao, evs[0].assunto, evs[0].dia, evs[0].nota.length], ['nota', 'ant_antip', '2026-10-06', 1000]);
+    assert.strictEqual(evs[0].nota, ctx.__NOTA655.slice(0, 1000));
+    // a aba Com o tutor, com o histórico lido: o texto escapado
+    run(`pelAtual=PELUDINHOS[0]; __EL655.fichaTutorRoot={innerHTML:''}; __EL655['ps-tutor']={classList:{contains:function(){ return true; }}, offsetParent:{}};`);
+    await run(`contatoLogCarregar('${K655}', true)`);
+    await drena655();
+    run('fichaTutorRender(true);');
+    const html = run('__EL655.fichaTutorRoot.innerHTML');
+    assert.ok(html.indexOf('&lt;b>disse&lt;/b> que vai pensar') > 0, 'escapado (escAttr)');
+    assert.ok(html.indexOf('<b>disse</b>') < 0, 'nunca como HTML');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC6 — janela do WhatsApp bloqueada: nenhum evento e nenhuma marca (Hoje na Zêluz e Quem chamar hoje)', async () => {
+  const R06 = conv655('ant_antip', T655(6, 10));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [K655]: R06 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}}; __ABRE655=false;`);
+    await run(`hojeWhatsDireto('${K655}', 'antip')`);
+    await run(`vencCobrarNoWhats('${K655}', 'ant_antip', '2026-10-06', 'contatos')`);
+    await drena655();
+    assert.strictEqual(db.escritas.length, 0, JSON.stringify(db.escritas.map((w) => w.p)));
+    assert.strictEqual(evs655(db).length, 0);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC7 — dois aparelhos no mesmo assunto ao mesmo tempo: os dois envios e as duas cobranças ficam, e a contagem soma os dois', async () => {
+  // O banco já tem o envio e a cobrança da Bia (outro aparelho); a memória deste aparelho não sabe.
+  const R07 = { pet: 'Tico', tutor: 'Rita Teste', enviadas: { ant_antip: { quem: 'Bia', ts: T655(7, 9) } }, envios: { ant_antip: [{ quem: 'Bia', ts: T655(7, 9) }] },
+    cobrancas: { ant_antip: [{ quem: 'Bia', ts: T655(7, 13) }] } };
+  const db = arvore655({ daycare: { vencimentos: { [HOJE655]: { [K655]: R07 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`__EL655['hojeMsg_${K655}__antip']={value:'Olá, Rita!'};`);
+    await run(`hojeMandei('${K655}', 'antip')`);
+    await drena655();
+    hora655(HOJE655, '15:01:00');
+    await run(`vencCobrei('${K655}', 'ant_antip', '${HOJE655}')`);
+    await drena655();
+    const reg = reg655(db, HOJE655);
+    igual(reg.envios.ant_antip.map((x) => x.quem), ['Bia', 'Leticya']);
+    igual(reg.cobrancas.ant_antip.map((x) => x.quem), ['Bia', 'Leticya']);
+    const c = run(`contatoContagemReg(vencRegDeDia('${HOJE655}','${K655}'), 'ant_antip')`);
+    igual([c.envios, c.cobrancas, c.contatos], [2, 2, 4]);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC8 — a linha diz «mandada em 06/10 às 14:10 por Ana · 2 cobranças (a última em 07/10 às 09:02) · 3 contatos» (Não responderam, Respostas pendentes e a faixa do cartão)', async () => {
+  const R06 = conv655('antip', T655(6, 14, 10), [{ quem: 'Bia', ts: T655(6, 18) }, { quem: 'Ana', ts: T655(7, 9, 2) }]);
+  const esperado = 'mandada em ' + DD655(T655(6, 14, 10)) + ' às ' + HH655(T655(6, 14, 10)) + ' por Ana · 2 cobranças (a última em '
+    + DD655(T655(7, 9, 2)) + ' às ' + HH655(T655(7, 9, 2)) + ') · 3 contatos';
+  assert.strictEqual(esperado, 'mandada em 06/10 às 14:10 por Ana · 2 cobranças (a última em 07/10 às 09:02) · 3 contatos');
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    assert.strictEqual(run(`contatoResumoFrase(contatoContagemReg(vencRegDeDia('2026-10-06','${K655}'), 'antip'))`), esperado);
+    assert.strictEqual(run(`contatoResumoFrase(contatoContagemReg({enviadas:{antip:{quem:'Ana', ts:${T655(6, 14, 10)}}}, cobrancas:{antip:[{quem:'Bia', ts:${T655(7, 9, 2)}}]}}, 'antip'))`),
+      'mandada em 06/10 às 14:10 por Ana · 1 cobrança (em 07/10 às 09:02) · 2 contatos');
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    igual(d.cobrar.map((x) => [x.chave, x.tipo, x.dia, x.contatos, x.frase]), [[K655, 'antip', '2026-10-06', 3, esperado]]);
+    const P = run(`vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})`);
+    const linha = run(`vencPendLinhaHTML(vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})[0], '${HOJE655}', ${T655(7, 15)})`);
+    assert.ok(P.length === 1 && linha.indexOf(esperado) > 0, 'Respostas pendentes');
+    const faixa = run(`contatoCartaoFaixaHTML(${O_TICO655}, vencRegDeDia('2026-10-06','${K655}'), 'antip', '2026-10-06', '${HOJE655}', 'cobrar', ${T655(7, 15)})`);
+    assert.ok(faixa.indexOf(esperado) > 0, 'a faixa do cartão');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC9 — Com o tutor: cada conversa traz o histórico do assunto em ordem (quem, dia e hora, o texto ao tocar, a resposta e o que o tutor disse); a leitura é só daquele FILHOt', async () => {
+  const R06 = conv655('antip', T655(6, 14, 10), [{ quem: 'Bia', ts: T655(6, 18) }], { respostas: { antip: { v: 'nao', quem: 'Bia', ts: T655(6, 19) } } });
+  const LOG = {
+    a3: { ts: T655(6, 19), dia: '2026-10-06', assunto: 'antip', base: 'antip', acao: 'respondeu', quem: 'Bia', resposta: { v: 'nao', rotulo: 'Não quer agora' } },
+    a1: { ts: T655(6, 14, 10), dia: '2026-10-06', assunto: 'antip', base: 'antip', acao: 'mandou', quem: 'Ana', canal: 'whatsapp', tela: 'contatos', texto: 'Olá, Rita! O vermífugo do Tico venceu.' },
+    a2: { ts: T655(6, 18), dia: '2026-10-06', assunto: 'antip', base: 'antip', acao: 'cobrou', quem: 'Bia', canal: 'whatsapp', tela: 'contatos', texto: 'Oi, Rita! Passando só para saber.' },
+    a4: { ts: T655(6, 19, 5), dia: '2026-10-06', assunto: 'antip', base: 'antip', acao: 'nota', quem: 'Bia', nota: 'Disse que faz no veterinário dele.' },
+    z9: { ts: T655(6, 9), dia: '2026-10-01', assunto: 'vacina', base: 'vacina', acao: 'mandou', quem: 'Ana', canal: 'marcado-a-mao' },
+    z8: { ts: T655(2, 9), dia: '2026-10-02', assunto: 'antip', base: 'antip', acao: 'mandou', quem: 'Caio', canal: 'whatsapp', texto: 'mensagem da semana passada' },
+    z7: { ts: T655(2, 11), dia: '2026-10-02', assunto: 'antip', base: 'antip', acao: 'nota', quem: 'Caio', nota: 'nota da semana passada' },
+  };
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [K655]: R06 } }, 'contatos-log': { [K655]: LOG, 'outro__filhot': { b1: { ts: 1, acao: 'mandou', quem: 'X' } } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    await run(`contatoLogCarregar('${K655}', true)`);
+    await drena655();
+    igual(db.leituras.filter((p) => /contatos-log/.test(p)), ['daycare/contatos-log/' + K655], 'lê só o histórico deste FILHOt');
+    const d = JSON.parse(JSON.stringify(run(`fichaUnicaDados(PELUDINHOS[0], ${T655(7, 15)})`)));
+    assert.strictEqual(d.historicoLido, true);
+    const c = d.conversas.filter((x) => x.dia === '2026-10-06' && x.tipo === 'antip')[0];
+    igual(c.historico.map((e) => e.acao + '|' + e.quem), ['mandou|Ana', 'cobrou|Bia', 'respondeu|Bia', 'nota|Bia'], 'em ordem, só deste assunto e deste dia');
+    run(`pelAtual=PELUDINHOS[0]; __EL655.fichaTutorRoot={innerHTML:''}; __EL655['ps-tutor']={classList:{contains:function(){ return true; }}, offsetParent:{}};`);
+    run('fichaTutorRender(true);');
+    const html = run('__EL655.fichaTutorRoot.innerHTML');
+    assert.ok(/<details[^>]*>\s*<summary[^>]*>[^<]*Ana[^<]*mandou[^<]*<\/summary>[\s\S]{0,400}Olá, Rita! O vermífugo do Tico venceu\./.test(html), 'o texto aparece ao tocar (details/summary)');
+    assert.ok(html.indexOf('Disse que faz no veterinário dele.') > 0, 'o que o tutor disse');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC10 — o histórico corta o texto em 4.000 letras e a nota em 1.000, e não guarda campo vazio', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    ctx.__T655 = 'y'.repeat(5000);
+    const ok = await run(`contatoLogGravar('${K655}', {acao:'mandou', dia:'${HOJE655}', assunto:'antip', texto:__T655, nota:__T655, resposta:undefined})`);
+    await drena655();
+    assert.strictEqual(ok, true);
+    const e = evs655(db)[0];
+    igual([e.texto.length, e.nota.length, 'resposta' in e, e.quem, e.ts], [4000, 1000, false, 'Leticya', T655(7, 15)]);
+    assert.strictEqual(await run(`contatoLogGravar('', {acao:'mandou'})`), false, 'sem FILHOt não grava');
+  } finally { solta655f(); }
+});
+
+// ---------------------------------------------------------------- Fatia 2 — «Finalizar»
+provaAsync('6.55 AC11 — «Finalizar» aparece em toda conversa mandada e aberta (Respostas pendentes, faixa do cartão, Hoje na Zêluz); não aparece na que nunca saiu', async () => {
+  const R06 = conv655('antip', T655(6, 14, 10));
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    const alvo = "contatoFinalizarAbrir('" + K655 + "','2026-10-06','antip')";
+    const L = run(`vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})`);
+    assert.ok(L.length === 1 && run(`vencPendLinhaHTML(vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})[0], '${HOJE655}', ${T655(7, 15)})`).indexOf(alvo) > 0, 'Respostas pendentes (cobrar)');
+    assert.ok(run(`vencPendLinhaHTML(vencPendLista(VENC_PEND, '${HOJE655}', ${T655(6, 14, 30)})[0], '${HOJE655}', ${T655(6, 14, 30)})`).indexOf(alvo) > 0, 'Respostas pendentes (aguardando)');
+    const fx = (estado, r) => run(`contatoCartaoFaixaHTML(${O_TICO655}, ${r}, 'antip', '2026-10-06', '${HOJE655}', '${estado}', ${T655(7, 15)})`);
+    assert.ok(fx('aguardando', `vencRegDeDia('2026-10-06','${K655}')`).indexOf(alvo) > 0, 'a faixa do cartão: aguardando');
+    assert.ok(fx('cobrar', `vencRegDeDia('2026-10-06','${K655}')`).indexOf(alvo) > 0, 'a faixa do cartão: cobrar');
+    assert.strictEqual(fx('amandar', '{}'), '', 'a conversa que nunca saiu não tem Finalizar nem conta de contatos');
+    // Hoje na Zêluz: a pergunta de hoje, antes e depois de sair (sem a conversa de terça, que seria a da hospedagem)
+    run('VENC_PEND={};');
+    const o = `hojeLista()[0]`;
+    const nada = run(`hojeAntBlocoHTML(${o}, ${o}.antGrupos[0], '${HOJE655}', {}, ${T655(7, 15)})`);
+    assert.ok(nada.indexOf('contatoFinalizarAbrir(') < 0, 'pergunta que não saiu: sem Finalizar');
+    run(`VENC_PEND['${HOJE655}']={'${K655}':{enviadas:{ant_antip:{quem:'Ana', ts:${T655(7, 9)}}}, envios:{ant_antip:[{quem:'Ana', ts:${T655(7, 9)}}]}}};`);
+    const saiu = run(`hojeAntBlocoHTML(${o}, ${o}.antGrupos[0], '${HOJE655}', VENC_PEND['${HOJE655}']['${K655}'], ${T655(7, 15)})`);
+    assert.ok(saiu.indexOf("contatoFinalizarAbrir('" + K655 + "','" + HOJE655 + "','ant_antip')") > 0, 'pergunta que saiu: Finalizar');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC12 — o painel do Finalizar: histórico, contatos, as 3 saídas; o que o tutor disse é obrigatório em «Respondeu e resolveu» e «Não quer»; sem saída, o botão desligado diz o que falta; diz quando o assunto volta', async () => {
+  const R06 = conv655('antip', T655(6, 14, 10), [{ quem: 'Bia', ts: T655(6, 18) }, { quem: 'Ana', ts: T655(7, 9, 2) }]);
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R06))}}};`);
+    const F = JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)})`)));
+    igual([F.chave, F.dia, F.tipo, F.base, F.perfil, F.contatos, F.estadia_id, F.alvos], [K655, '2026-10-06', 'antip', 'antip', 'so-hospede', 3, 'e1', ['2026-10-06']]);
+    assert.ok(/próxima hospedagem/.test(F.volta), F.volta);
+    const val = (d, n) => JSON.parse(JSON.stringify(run(`contatoFinalizarValida(${JSON.stringify(d)}, ${JSON.stringify(n)})`)));
+    igual(val('', ''), { ok: false, falta: 'Escolha como a conversa terminou.' });
+    igual(val('resolveu', ''), { ok: false, falta: 'Escreva o que o tutor disse.' });
+    igual(val('nao_quer', '   '), { ok: false, falta: 'Escreva o que o tutor disse.' });
+    igual(val('nao_quer', 'Não quer agora, faz em dezembro.'), { ok: true, falta: '' });
+    igual(val('nao_respondeu', ''), { ok: true, falta: '' }, 'em «Não respondeu» é opcional');
+    igual(val('outra', 'x'), { ok: false, falta: 'Escolha como a conversa terminou.' });
+    const html = run(`(function(){ var F=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)}); return contatoFinalizarPainelHTML(F); })()`);
+    ['Respondeu e resolveu', 'Não quer', 'Não respondeu — encerrar (3 contatos)', 'Escolha como a conversa terminou.', 'próxima hospedagem', '3 contatos']
+      .forEach((t) => assert.ok(html.indexOf(t) >= 0, 'falta no painel: ' + t));
+    assert.ok(/id="ctFinOk"[^>]*disabled/.test(html), 'sem saída, o botão nasce desligado');
+    assert.ok(html.indexOf('Ana') > 0 && html.indexOf('Bia') > 0, 'o histórico (quem mandou e quem cobrou)');
+    const html2 = run(`(function(){ var F=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)}); F.escolha='resolveu'; F.nota=''; return contatoFinalizarPainelHTML(F); })()`);
+    assert.ok(/id="ctFinOk"[^>]*disabled/.test(html2) && html2.indexOf('Escreva o que o tutor disse.') > 0);
+    const html3 = run(`(function(){ var F=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)}); F.escolha='nao_respondeu'; return contatoFinalizarPainelHTML(F); })()`);
+    assert.ok(!/id="ctFinOk"[^>]*disabled/.test(html3), 'com a saída que não pede nota, o botão liga');
+    // o histórico lido: o texto da mensagem ao tocar, e as cobranças marcadas sem histórico (versão anterior) com quem e quando
+    run(`CONTATO_LOG['${K655}']={lido:true, lendo:false, quando:${T655(7, 15)}, ev:{a1:{ts:${T655(6, 14, 10)}, dia:'2026-10-06', assunto:'antip', base:'antip',
+      acao:'mandou', quem:'Ana', canal:'whatsapp', tela:'contatos', texto:'Olá, Rita! O vermífugo do Tico venceu.'}}};`);
+    const html4 = run(`(function(){ var F=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)}); return contatoFinalizarPainelHTML(F); })()`);
+    assert.ok(/<details[^>]*><summary[^>]*>06\/10 às 14:10 · Ana mandou a mensagem pelo WhatsApp \(Quem chamar hoje\)<\/summary>[\s\S]{0,300}Olá, Rita! O vermífugo do Tico venceu\./.test(html4), html4.slice(0, 900));
+    assert.ok(html4.indexOf('Bia cobrou') > 0 && html4.indexOf('Ana cobrou') > 0, 'as cobranças sem histórico aparecem, com quem');
+    assert.ok(html4.indexOf('Parte dos envios foi marcada sem o texto') > 0, 'e a tela diz que falta o texto delas');
+    // Auluno (H6): volta na véspera do próximo dia dele
+    run(`proximaVindaDe=function(){ return '2026-10-09'; }; VENC_PEND['2026-10-06']['${KMEL655}']={pet:'Mel', tutor:'Ana Teste', enviadas:{antip:{quem:'Ana', ts:${T655(6, 14)}}}};`);
+    const FM = JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${KMEL655}', '2026-10-06', 'antip', ${T655(7, 15)})`)));
+    assert.strictEqual(FM.perfil, 'auluno');
+    assert.ok(/véspera do próximo dia del[ea] no Day Care \(09\/10\)/.test(FM.volta), FM.volta);
+    // a que nunca saiu não abre o painel
+    assert.strictEqual(run(`contatoFinalizarMontar('${K655}', '2026-10-06', 'vacina', ${T655(7, 15)}).nuncaSaiu`), true);
+  } finally { solta655f(); }
+});
+// Duas conversas abertas do vermífugo na hospedagem do Tico (a pergunta de segunda, cobrada, e a mensagem de terça)
+// e um assunto de outro tipo já fechado pela ficha, que o Finalizar não pode tocar.
+const SEED_FIN655 = () => ({ daycare: { vencimentos: {
+  '2026-10-05': { [K655]: semUndef655(conv655('ant_antip', T655(5, 10), [{ quem: 'Bia', ts: T655(5, 16) }])) },
+  '2026-10-06': { [K655]: semUndef655(conv655('antip', T655(6, 14, 10), null, { fechados: { vacina: { quem: 'Ana', ts: T655(6, 15), via: 'ficha' } } })),
+    'outro__filhot': { pet: 'Outro', enviadas: { antip: { quem: 'Ana', ts: T655(6, 9) } } } } } } });
+const MEM_FIN655 = (db) => `VENC_PEND=${JSON.stringify(db.store.daycare.vencimentos)};`;
+provaAsync('6.55 AC13/AC29 — Finalizar grava, numa atualização só, fechados[assunto] em todos os dias com conversa aberta e o evento «finalizou» (com os dias); o rastro diz a frase', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    igual(run('__F655.alvos'), ['2026-10-05', '2026-10-06'], 'hóspede: as conversas abertas do assunto na hospedagem');
+    assert.strictEqual(run('__F655.contatos'), 3, 'por hospedagem: 1 envio + 1 cobrança na segunda, 1 envio na terça');
+    const ok = await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`);
+    await drena655();
+    assert.strictEqual(ok, true);
+    const ups = db.escritas.filter((w) => w.op === 'update' && w.p === '');
+    assert.strictEqual(ups.length, 1, 'uma atualização só, a partir da raiz');
+    assert.strictEqual(db.escritas.length, 1, 'e nenhuma outra gravação: ' + JSON.stringify(db.escritas.map((w) => w.op + ' ' + w.p)));
+    const evs = evs655(db);
+    assert.strictEqual(evs.length, 1);
+    const fe = { quem: 'Leticya', ts: T655(7, 15), via: 'finalizar', desfecho: 'nao_respondeu', contatos: 3, log: evs[0].id };
+    igual(reg655(db, '2026-10-05').fechados.antip, fe);
+    igual(reg655(db, '2026-10-06').fechados.antip, fe);
+    igual(reg655(db, '2026-10-06').fechados.vacina, { quem: 'Ana', ts: T655(6, 15), via: 'ficha' }, 'o outro assunto não muda');
+    assert.ok(!reg655(db, '2026-10-06', 'outro__filhot').fechados, 'outro FILHOt não muda');
+    const e = evs[0];
+    igual([e.acao, e.desfecho, e.contatos, e.perfil, e.estadia_id, e.assunto, e.base, e.dia, e.quem, e.ts, e.pet, e.tutor, e.dias],
+      ['finalizou', 'nao_respondeu', 3, 'so-hospede', 'e1', 'antip', 'antip', '2026-10-06', 'Leticya', T655(7, 15), 'Tico', 'Rita Teste', ['2026-10-05', '2026-10-06']]);
+    assert.ok(!('nota' in e), 'nota vazia não é gravada');
+    const rastro = run('__AUD655').join('\n');
+    assert.ok(/vence-amanha :: finalizou a conversa sobre vermífugo, carrapaticida e coleira de Tico: não respondeu depois de 3 contatos/.test(rastro), rastro);
+    // a memória deste aparelho já sabe: as duas conversas fecharam
+    igual([run(`vencEstadoTipo(vencRegDeDia('2026-10-05','${K655}'), 'ant_antip', ${T655(7, 15)})`), run(`vencEstadoTipo(vencRegDeDia('2026-10-06','${K655}'), 'antip', ${T655(7, 15)})`)], ['fechado', 'fechado']);
+    // «Não quer» com o que o tutor disse
+    const db2 = arvore655(SEED_FIN655());
+    ctx.__DB655b = db2; run('DB=__DB655b;'); run(MEM_FIN655(db2));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_quer', 'Disse que faz no veterinário dele.')`), true);
+    await drena655();
+    const e2 = evs655(db2)[0];
+    igual([e2.desfecho, e2.nota], ['nao_quer', 'Disse que faz no veterinário dele.']);
+    assert.ok(run('__AUD655').some((t) => /: não quer, depois de 3 contatos — o tutor disse: "Disse que faz no veterinário dele\."/.test(t)), run('__AUD655').join('\n'));
+    // sem a nota obrigatória, nada é gravado
+    const db3 = arvore655(SEED_FIN655()); ctx.__DB655b = db3; run('DB=__DB655b;'); run(MEM_FIN655(db3));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'resolveu', '')`), false);
+    assert.strictEqual(db3.escritas.length, 0);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC13 — a gravação que falha: nada muda, «NÃO consegui gravar» e a conversa continua aberta', async () => {
+  const db = arvore655(SEED_FIN655());
+  db.falhar = true;
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    const ok = await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`);
+    await drena655();
+    assert.strictEqual(ok, false);
+    assert.ok(run('__ALE655').some((t) => /^NÃO consegui gravar :: .*Nada mudou/.test(t)), run('__ALE655').join('\n'));
+    assert.ok(!reg655(db, '2026-10-06').fechados.antip, 'nada no banco');
+    assert.strictEqual(run(`vencEstadoTipo(vencRegDeDia('2026-10-06','${K655}'), 'antip', ${T655(7, 15)})`), 'cobrar', 'a memória continua com a conversa aberta');
+    assert.strictEqual(run('__AUD655').filter((t) => /finalizou/.test(t)).length, 0, 'e nenhum rastro de «finalizou»');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 C20 — a conversa já finalizada em outro aparelho: o Finalizar relê e recusa com «Já finalizado por Bia às …»', async () => {
+  const seed = SEED_FIN655();
+  const db = arvore655(seed);
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));   // a memória é a de antes
+    db.store.daycare.vencimentos['2026-10-06'][K655].fechados.antip = { quem: 'Bia', ts: T655(7, 14, 40), via: 'finalizar', desfecho: 'nao_respondeu', contatos: 3, log: 'x1' };
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    const ok = await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`);
+    await drena655();
+    assert.strictEqual(ok, false);
+    assert.strictEqual(db.escritas.length, 0, 'nada é gravado de novo');
+    assert.ok(run('__ALE655').some((t) => t.indexOf('Já finalizado por Bia às ' + HH655(T655(7, 14, 40))) >= 0), run('__ALE655').join('\n'));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC14 — finalizado sai de Não responderam, Respostas pendentes e do contador do menu; o calendário o conta como «finalizado» (não «respondido»); a aba Com o tutor mostra o desfecho', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    let d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    assert.ok(d.cobrar.some((x) => x.chave === K655), 'antes: na gaveta de cobrar');
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true);
+    await drena655();
+    d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    assert.ok(!d.cobrar.some((x) => x.chave === K655), 'saiu da gaveta de cobrar');
+    assert.ok(!run(`vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})`).some((x) => x.chave === K655), 'saiu das Respostas pendentes');
+    // o calendário (a conta do dia)
+    run(`__VL655['2026-10-06']=[${O_TICO655}]; vencMemoLimpar();`);
+    const c = JSON.parse(JSON.stringify(run(`vencContagemDia('2026-10-06', VENC_PEND['2026-10-06'], ${T655(7, 15)})`)));
+    igual([c.total, c.finalizado, c.respondido, c.cobrar, c.aguardando], [1, 1, 0, 0, 0]);
+    run(`VENC_CAL_REG=VENC_PEND; VENC_CAL_REG_MES='2026-10'; VENC_CAL_MES='2026-10';`);
+    assert.ok(/title="finalizado">1</.test(run('vencCalHTML()')), 'o calendário desenha o número de finalizados');
+    // a ficha única
+    const f = JSON.parse(JSON.stringify(run(`fichaUnicaDados(PELUDINHOS[0], ${T655(7, 15)})`)));
+    const conv = f.conversas.filter((x) => x.dia === '2026-10-06' && x.tipo === 'antip')[0];
+    igual([conv.finalizado.desfecho, conv.finalizado.quem, conv.finalizado.ts, conv.finalizado.contatos, conv.resolvido], ['nao_respondeu', 'Leticya', T655(7, 15), 3, null],
+      '«resolvido» é só o fechado pela ficha (C8)');
+    assert.ok(/próxima hospedagem/.test(conv.finalizado.volta), conv.finalizado.volta);
+    assert.strictEqual(f.esperando.filter((x) => x.tipo === 'antip' || x.tipo === 'ant_antip').length, 0);
+    run(`pelAtual=PELUDINHOS[0]; __EL655.fichaTutorRoot={innerHTML:''}; __EL655['ps-tutor']={classList:{contains:function(){ return true; }}, offsetParent:{}};`);
+    run('fichaTutorRender(true);');
+    const html = run('__EL655.fichaTutorRoot.innerHTML');
+    assert.ok(html.indexOf('Finalizado por Leticya em 07/10 às ' + HH655(T655(7, 15)) + ': não respondeu (3 contatos)') > 0, html.slice(0, 400));
+    assert.ok(html.indexOf('resolvido na ficha') < 0 || /vacina|Vacina/.test(html), 'o Finalizar não aparece como «resolvido na ficha»');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC15 — a ficha não muda (o item continua vencido) e corrigir a data na ficha não reabre o finalizado; o fechamento pela ficha não apaga o desfecho (C1)', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true);
+    await drena655();
+    const L = run('hojeLista()');
+    assert.ok(L[0].itens.some((x) => x.k === 'verm_p' && x.atrasado), 'o vermífugo continua vencido na ficha e no Hoje na Zêluz');
+    igual(run(`vencAssuntosReabertos({verm_p:'2026-09-20'}, vencRegDeDia('2026-10-06','${K655}'), '2026-10-06', '${HOJE655}', PELUDINHOS[0])`), [],
+      'só o fechado pela ficha reabre');
+    // C1: depois do Finalizar, um toque atrasado (cobrança de outro aparelho) e a ficha em dia: a via vira «ficha», o desfecho fica
+    run(`VENC_PEND['2026-10-06']['${K655}'].cobrancas={antip:[{quem:'Bia', ts:${T655(7, 15, 30)}}]}; __grav655=[];
+      __vg655=vencGravar; vencGravar=function(c, patch, rot, o, dia){ __grav655.push({c:c, dia:dia, patch:JSON.parse(JSON.stringify(patch))}); return Promise.resolve(true); };`);
+    hora655(HOJE655, '16:00:00');
+    try {
+      run(`vencFecharAssuntosFazer(PELUDINHOS[0], {verm_p:'2027-01-10'});`);
+    } finally { run('vencGravar=__vg655;'); }
+    const g = run('__grav655').filter((x) => x.dia === '2026-10-06')[0];
+    assert.ok(g, 'fechou pela ficha');
+    igual([g.patch.fechados.antip.via, g.patch.fechados.antip.finalizado.desfecho, g.patch.fechados.antip.finalizado.quem], ['ficha', 'nao_respondeu', 'Leticya']);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC16 — com N contatos (padrão 3, de Configurações) a linha mostra só «Finalizar»: Não responderam, Respostas pendentes e a faixa de cobrança do cartão', async () => {
+  const R3 = conv655('antip', T655(6, 14, 10), [{ quem: 'Bia', ts: T655(6, 18) }, { quem: 'Ana', ts: T655(7, 9, 2) }]);
+  const R2 = conv655('antip', T655(6, 14, 10), [{ quem: 'Ana', ts: T655(7, 9, 2) }]);
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    igual(run('[contatoFinalizarApos(), contatoPodeCobrar({contatos:2}), contatoPodeCobrar({contatos:3}), contatoPodeCobrar({contatos:4})]'), [3, true, false, false]);
+    run('CONTATO_CFG={finalizar_apos:2};');
+    igual(run('[contatoFinalizarApos(), contatoPodeCobrar({contatos:1}), contatoPodeCobrar({contatos:2})]'), [2, true, false]);
+    ['0', 'x', '50', '-1'].forEach((v) => { run(`CONTATO_CFG={finalizar_apos:${JSON.stringify(v)}};`); assert.strictEqual(run('contatoFinalizarApos()'), 3, 'valor inválido volta ao padrão: ' + v); });
+    run('CONTATO_CFG={};');
+    // Não responderam — a linha
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R3))}}};`);
+    let d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    igual([d.cobrar[0].contatos, d.cobrar[0].podeCobrar], [3, false]);
+    let html = run(`contatosLinhaHTML(contatosDados(${T655(7, 15)}).cobrar[0], 0)`);
+    assert.ok(html.indexOf('Cobrar no WhatsApp') < 0 && html.indexOf('contatosFinalizar(0)') > 0 && /3 contatos/.test(html), html);
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R2))}}};`);
+    d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    igual([d.cobrar[0].contatos, d.cobrar[0].podeCobrar], [2, true]);
+    html = run(`contatosLinhaHTML(contatosDados(${T655(7, 15)}).cobrar[0], 0)`);
+    assert.ok(html.indexOf('Cobrar no WhatsApp') > 0 && html.indexOf('contatosFinalizar(0)') > 0, 'abaixo de N: as duas');
+    // o toque no Finalizar da gaveta abre o painel daquela conversa
+    run(`__fa655=contatoFinalizarAbrir; __abriu655=null; contatoFinalizarAbrir=function(c,d,t){ __abriu655=[c,d,t]; };
+      CONTATOS_DESENHO={aqui:[], amanha:[], cobrar:contatosDados(${T655(7, 15)}).cobrar};`);
+    try { run('contatosFinalizar(0)'); } finally { run('contatoFinalizarAbrir=__fa655;'); }
+    igual(run('__abriu655'), [K655, '2026-10-06', 'antip']);
+    // Respostas pendentes e a faixa de cobrança do cartão, com 3 contatos
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R3))}}};`);
+    const lp = run(`vencPendLinhaHTML(vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})[0], '${HOJE655}', ${T655(7, 15)})`);
+    assert.ok(lp.indexOf('vencCobrei(') < 0 && lp.indexOf('contatoFinalizarAbrir(') > 0, 'Respostas pendentes: sem «Cobrei»');
+    const cob = run(`vencCobrancaHTML(${O_TICO655}, vencRegDeDia('2026-10-06','${K655}'), 'antip', '2026-10-06', '${HOJE655}', 'cobrar', ${T655(7, 15)}, '${K655}')`);
+    assert.ok(cob.indexOf('Cobrar no WhatsApp') < 0 && cob.indexOf('vencCobrei(') < 0 && /3 contatos/.test(cob), 'faixa do cartão: sem cobrar');
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(R2))}}};`);
+    const cob2 = run(`vencCobrancaHTML(${O_TICO655}, vencRegDeDia('2026-10-06','${K655}'), 'antip', '2026-10-06', '${HOJE655}', 'cobrar', ${T655(7, 15)}, '${K655}')`);
+    assert.ok(cob2.indexOf('Cobrar no WhatsApp') > 0 && cob2.indexOf('vencCobrei(') > 0, 'abaixo de N: a faixa de sempre');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC16 — Configurações grava o N em daycare/config/contatos (nó próprio), sem tocar em textos/vencimento; valor fora de 1 a 20 não grava', async () => {
+  const db = arvore655({ daycare: { config: { textos: { vencimento: { antip: 'texto da Gestão' } } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run('CONTATO_CFG=null;');
+    assert.ok(/id="cfgContatosN"[^>]*value="3"/.test(run('contatoCfgHTML()')), 'o campo nasce com o padrão de fábrica (3)');
+    run(`__EL655.cfgVencWrap={innerHTML:''}; cfgVencRender();`);
+    assert.ok(run('__EL655.cfgVencWrap.innerHTML').indexOf('Contatos antes de finalizar') > 0, 'está em Configurações › Mensagens prontas');
+    run(`__EL655.cfgContatosN={value:'2'}; __EL655.cfgContatosSt={textContent:'', style:{}};`);
+    assert.strictEqual(await run('contatoCfgSalvar()'), true);
+    await drena655();
+    igual(db.store.daycare.config.contatos, { finalizar_apos: 2, quem: 'Leticya', ts: T655(7, 15) });
+    igual(db.store.daycare.config.textos, { vencimento: { antip: 'texto da Gestão' } }, 'as Mensagens prontas não mudam');
+    igual(db.escritas.map((w) => w.op + ' ' + w.p), ['set daycare/config/contatos']);
+    assert.strictEqual(run('contatoFinalizarApos()'), 2);
+    run(`__EL655.cfgContatosN={value:'0'};`);
+    assert.strictEqual(await run('contatoCfgSalvar()'), false);
+    assert.strictEqual(db.escritas.length, 1, 'nada gravado');
+    assert.ok(/entre 1 e 20/.test(run('__EL655.cfgContatosSt.textContent')), run('__EL655.cfgContatosSt.textContent'));
+    assert.ok(run('__AUD655').some((t) => /contatos antes de finalizar.*2/i.test(t)), run('__AUD655').join('\n'));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC17 / story AC6 — desfazer o «Finalizar»: no mesmo dia por quem finalizou, depois só Supervisão ou Gestão; com motivo; tira só os fechados daquele Finalizar; grava «reabriu»; nada se apaga e nada vai para daycare/pendencias', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true);
+    await drena655();
+    const id = evs655(db)[0].id;
+    // desistiu no motivo: nada muda
+    run('__ZT655.push(null);');
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id}')`), false);
+    assert.ok(reg655(db, '2026-10-05').fechados.antip, 'continua finalizado');
+    // quem finalizou, no mesmo dia, com motivo
+    hora655(HOJE655, '15:40:00');
+    run(`__ZT655.push('Toquei no FILHOt errado');`);
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id}')`), true);
+    await drena655();
+    assert.ok(!(reg655(db, '2026-10-05').fechados || {}).antip && !(reg655(db, '2026-10-06').fechados || {}).antip, 'os dois dias reabriram');
+    igual(reg655(db, '2026-10-06').fechados.vacina, { quem: 'Ana', ts: T655(6, 15), via: 'ficha' }, 'o fechado pela ficha fica');
+    const evs = evs655(db);
+    igual(evs.map((e) => e.acao), ['finalizou', 'reabriu'], 'o histórico guarda os dois');
+    igual([evs[1].log, evs[1].motivo, evs[1].quem, evs[1].ts, evs[1].dias, evs[1].base], [id, 'Toquei no FILHOt errado', 'Leticya', T655(7, 15, 40), ['2026-10-05', '2026-10-06'], 'antip']);
+    assert.ok(run('__AUD655').some((t) => /desfez o «Finalizar» da conversa sobre vermífugo, carrapaticida e coleira de Tico — motivo: "Toquei no FILHOt errado"/.test(t)), run('__AUD655').join('\n'));
+    igual([run(`vencEstadoTipo(vencRegDeDia('2026-10-05','${K655}'), 'ant_antip', ${T655(7, 15, 40)})`)], ['cobrar'], 'a conversa volta ao estado de antes');
+    // finaliza de novo; no dia seguinte, a mesma Consultora não desfaz mais — a Supervisão desfaz
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15, 40)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true);
+    await drena655();
+    const id2 = evs655(db)[2].id;
+    solta655(); solta655 = relogio621('2026-10-08T09:00:00'); ctx.__HOJE655 = '2026-10-08';
+    run(`__ZT655.push('motivo');`);
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id2}')`), false, 'a Consultora, no dia seguinte');
+    assert.ok(run('__ALE655').some((t) => /^SÓ QUEM FINALIZOU/.test(t)), run('__ALE655').join('\n'));
+    run(`__QUEM655='Bia'; __ZT655=['motivo'];`);
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id2}')`), false, 'outra Consultora');
+    run(`__PAPEL655='supervisor'; __QUEM655='Márcia'; __ZT655=['O tutor respondeu por telefone'];`);
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id2}')`), true, 'a Supervisão');
+    await drena655();
+    igual(evs655(db).map((e) => e.acao), ['finalizou', 'reabriu', 'finalizou', 'reabriu']);
+    assert.ok(!(db.store.daycare || {}).pendencias, 'nada em daycare/pendencias (área protegida)');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC18 — Auluno: finalizado, o assunto não volta no mesmo dia (nem a pergunta «fazer hoje?»); volta na véspera do próximo dia dele', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    // A Mel vem quarta e sexta. A mensagem da véspera (de terça, para hoje) saiu e foi finalizada hoje sem resposta.
+    run(`__TURMA655=[{p:PELUDINHOS[1], i:1}]; __CHAM655={'${KMEL655}':'veio'}; proximaVindaDe=function(){ return '2026-10-09'; };
+      VENC_PEND={'${HOJE655}':{'${KMEL655}':{pet:'Mel', tutor:'Ana Teste', enviadas:{antip:{quem:'Ana', ts:${T655(6, 14)}}},
+        itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-10-08', atrasado:false}],
+        fechados:{antip:{quem:'Leticya', ts:${T655(7, 10)}, via:'finalizar', desfecho:'nao_respondeu', contatos:1, log:'f1'}}}}};`);
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o.chave, o.antAbertos, (o.antGrupos[0] || {}).tipo, !!(o.antGrupos[0] || {}).finalizado], [KMEL655, [], 'antip', true],
+      'a pergunta «fazer hoje?» do mesmo assunto não volta hoje');
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    assert.ok(!d.aqui.some((x) => x.chave === KMEL655), 'nem em Estão aqui hoje');
+    const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '${HOJE655}', o.antReg, ${T655(7, 15)}); })()`);
+    assert.ok(/Finalizado por Leticya/.test(bloco) && bloco.indexOf('hojeWhatsDireto(') < 0, bloco);
+    // quinta (08/10): a véspera de sexta, o próximo dia dela — o assunto volta
+    solta655(); solta655 = relogio621('2026-10-08T10:00:00'); ctx.__HOJE655 = '2026-10-08';
+    run(`__TURMA655=[]; __VL655['2026-10-09']=[{chave:'${KMEL655}', p:PELUDINHOS[1], i:1, nome:'Mel', raca:'Poodle', tutor:'Ana Teste', tel:'', sexo:'Fêmea',
+      itens:[{k:'verm_p', nome:'Vermífugo', vence:'2026-10-08', atrasado:false, vacina:false}], atrasados:0}];`);
+    const d2 = JSON.parse(JSON.stringify(run(`contatosDados(${T655(8, 10)})`)));
+    igual(d2.amanha.map((x) => x.chave + '|' + x.tipo + '|' + x.dia), [KMEL655 + '|antip|2026-10-09']);
+  } finally { solta655f(); }
+});
+
+// ---------------------------------------------------------------- Fatia 3 — quem só se hospeda
+provaAsync('6.55 P1 — o caso da linha 79, só com o que a base já tem: o 2º dia da hospedagem não pergunta de novo, e no dia seguinte à saída a linha não oferece mais «Cobrar»', async () => {
+  arma655('2026-10-06', '11:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}}};`);
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(6, 11)})`)));
+    igual(d.aqui.map((x) => x.chave), [], 'o 2º dia da hospedagem: «Estão aqui hoje» não pergunta de novo');
+    const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '2026-10-06', o.antReg, ${T655(6, 11)}); })()`);
+    assert.ok(bloco.indexOf('hojeWhatsDireto(') < 0, 'Hoje na Zêluz não oferece a pergunta nova');
+    // ele foi embora no dia 06; no dia 07 a conversa do dia 05 continua aberta
+    solta655(); solta655 = relogio621('2026-10-07T15:00:00'); ctx.__HOJE655 = '2026-10-07';
+    run(`EST_TODAS.e1.saida='2026-10-06'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(6, 17)}}; __TURMA655=[]; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    const d2 = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    igual(d2.cobrar.map((x) => x.chave), [K655], 'continua para resolver');
+    const html = run(`contatosLinhaHTML(contatosDados(${T655(7, 15)}).cobrar[0], 0)`);
+    assert.ok(html.indexOf('Cobrar no WhatsApp') < 0, 'mas não oferece mais «Cobrar»: ' + html.slice(0, 300));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC19 — o perfil: Hóspede e Auluno Avulso só se hospedam (H1); Auluno hospedado continua Auluno; ficha sem categoria numa hospedagem = hóspede, com o aviso; sem ficha = hóspede, antes dos dias fixos (C6)', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    const pf = (expr, o) => JSON.parse(JSON.stringify(run(`contatoPerfil(${expr}, ${o || 'null'})`)));
+    igual(pf('PELUDINHOS[0]'), { perfil: 'so-hospede', semCategoria: false }, 'Hóspede');
+    igual(pf('PELUDINHOS[2]'), { perfil: 'so-hospede', semCategoria: false }, 'Auluno Avulso (H1)');
+    igual(pf('PELUDINHOS[4]'), { perfil: 'so-hospede', semCategoria: false }, 'sem categoria, plano AuAulândia');
+    igual(pf('PELUDINHOS[5]'), { perfil: 'morador', semCategoria: false });
+    igual(pf('PELUDINHOS[1]'), { perfil: 'auluno', semCategoria: false });
+    run(`EST_TODAS.e9={refKey:'mel__ana teste', nome:'Mel', tutor:'Ana Teste', entrada:'2026-10-06', saida:'2026-10-09', status:'ativa'}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(pf('PELUDINHOS[1]'), { perfil: 'auluno', semCategoria: false }, 'Auluno hospedado continua Auluno');
+    igual(pf('PELUDINHOS[3]'), { perfil: 'auluno', semCategoria: false }, 'sem categoria, sem plano, sem dias e sem hospedagem: como sempre foi');
+    run(`EST_TODAS.e8={refKey:'nino__lia teste', nome:'Nino', tutor:'Lia Teste', entrada:'2026-10-06', saida:'2026-10-09', status:'ativa'}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(pf('PELUDINHOS[3]'), { perfil: 'so-hospede', semCategoria: true }, 'sem categoria numa hospedagem');
+    run(`__EXC655.Nino={dias:['seg']};`);
+    igual(pf('PELUDINHOS[3]'), { perfil: 'auluno', semCategoria: false }, 'com dias fixos é Auluno');
+    // hóspede sem ficha: turmaDoDia o monta com dias:[hoje] — o "sem ficha" vem antes dos dias fixos
+    igual(pf("{n:'Zeca', tutor:'Bia Teste', raca:'SRD', tutor2:'', freq:'hospede', dias:['qua'], nasc:''}", "{i:'hospzeca__bia teste', hospede:true}"),
+      { perfil: 'so-hospede', semCategoria: false }, 'sem ficha');
+    igual(pf('null'), { perfil: 'so-hospede', semCategoria: false }, 'sem ficha nenhuma');
+    // a linha mostra «ficha sem categoria»
+    run(`__EXC655.Nino={verm_p:'2026-09-20'}; EST_TODAS.e8.entrada='2026-10-05';
+      VENC_PEND={'2026-10-06':{'nino__lia-teste':{pet:'Nino', tutor:'Lia Teste', enviadas:{antip:{quem:'Ana', ts:${T655(6, 9)}}}}}}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    const x = d.cobrar.filter((y) => y.chave === 'nino__lia-teste')[0];
+    igual([x.perfil, x.semCategoria], ['so-hospede', true]);
+    assert.ok(/ficha sem categoria/.test(run(`contatosLinhaHTML(contatosDados(${T655(7, 15)}).cobrar.filter(function(y){ return y.chave==='nino__lia-teste'; })[0], 0)`)));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC20 (P1) — hóspede com 3 noites e o vermífugo vencido: a pergunta sai no 1º dia; no 2º e no 3º não volta em Estão aqui hoje, Hoje na Zêluz nem no cartão de hoje — o bloco mostra a conversa da hospedagem (C14)', async () => {
+  arma655('2026-10-05', '10:00:00', arvore655({}));
+  try {
+    // 1º dia (segunda, 05/10): a pergunta
+    let o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o.chave, o.antAbertos, !!(o.antGrupos[0] || {}).estadiaConv], [K655, ['antip'], false]);
+    let d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(5, 10)})`)));
+    igual(d.aqui.map((x) => x.chave + '|' + x.tipo + '|' + x.perfil), [K655 + '|antip|so-hospede']);
+    // ela saiu às 10h e ficou sem resposta
+    run(`VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}}};`);
+    for (const [dia, hh] of [['2026-10-06', 6], ['2026-10-07', 7]]) {
+      solta655(); solta655 = relogio621(dia + 'T11:00:00'); ctx.__HOJE655 = dia;
+      o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+      const g = o.antGrupos[0] || {};
+      igual([g.tipo, (g.estadiaConv || {}).dia, (g.estadiaConv || {}).tipo, o.antAbertos], ['antip', '2026-10-05', 'ant_antip', ['antip']],
+        dia + ': a conversa da hospedagem, ainda sem resposta');
+      d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(hh, 11)})`)));
+      assert.strictEqual(d.aqui.filter((x) => x.chave === K655).length, 0, dia + ': não volta em Estão aqui hoje');
+      const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '${dia}', o.antReg, ${T655(hh, 11)}); })()`);
+      assert.ok(/[Pp]erguntad[oa] em 05\/10/.test(bloco) && /[Uu]ma pergunta por hospedagem/.test(bloco), bloco);
+      assert.ok(bloco.indexOf('hojeWhatsDireto(') < 0, dia + ': o «Mandar no WhatsApp» da pergunta nova não volta');
+      assert.ok(bloco.indexOf("contatoResponderOutroDia('" + K655 + "','ant_antip','nao','2026-10-05')") > 0, 'responde na conversa do 1º dia');
+      assert.ok(bloco.indexOf("contatoFinalizarAbrir('" + K655 + "','2026-10-05','ant_antip')") > 0, 'e finaliza aquela conversa');
+      run(`VENC_REG={}; VENC_REG_DIA='${dia}'; VENC_REG_QUANDO=1;`);
+      const cartao = run(`vencCartaoHTML(${O_TICO655}, '${dia}', '${dia}')`);
+      assert.ok(/[Jj]á conversado nesta hospedagem/.test(cartao) && cartao.indexOf('vencMsg_' + K655 + '__antip') < 0, dia + ': o cartão de hoje não pergunta de novo');
+    }
+  } finally { solta655f(); }
+});
+provaAsync('6.55 C14 — a resposta tardia, no Hoje na Zêluz, grava na conversa do dia em que foi perguntado', async () => {
+  const R05 = conv655('ant_antip', T655(5, 10));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-05': { [K655]: R05 } } } });
+  arma655('2026-10-06', '11:00:00', db);
+  try {
+    run(`VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(R05))}}};`);
+    await run(`contatoResponderOutroDia('${K655}', 'ant_antip', 'nao', '2026-10-05')`);
+    await drena655();
+    assert.strictEqual(reg655(db, '2026-10-05').respostas.ant_antip.v, 'nao');
+    assert.ok(!(((db.store.daycare.vencimentos || {})['2026-10-06'] || {})[K655]), 'nada no dia de hoje');
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([(o.antGrupos[0].estadiaConv || {}).estado, o.antAbertos], ['fechado', []]);
+    const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '2026-10-06', o.antReg, ${T655(6, 11)}); })()`);
+    assert.ok(/Não quer agora/.test(bloco) && bloco.indexOf('contatoResponderOutroDia(') < 0, bloco);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC21 — sem a varredura lida, o hóspede diz «Lendo…» (não pergunta às cegas) e a conta do quadro não afirma número', async () => {
+  arma655('2026-10-06', '11:00:00', arvore655({}));
+  try {
+    run('VENC_PEND=null;');
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([!!(o.antGrupos[0] || {}).lendo, o.antAbertos], [true, []]);
+    const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '2026-10-06', o.antReg, ${T655(6, 11)}); })()`);
+    assert.ok(/Lendo(…|&hellip;)/.test(bloco) && bloco.indexOf('hojeWhatsDireto(') < 0, bloco);
+    assert.strictEqual(run('hojeAnteciparContagem()'), null, 'o quadro dos dashboards não afirma zero nem um');
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(6, 11)})`)));
+    igual(d.aqui.map((x) => [x.chave, !!x.lendo]), [[K655, true]]);
+    assert.ok(/Lendo/.test(run(`contatosLinhaHTML(contatosDados(${T655(6, 11)}).aqui[0], 0)`)) && run(`contatosLinhaHTML(contatosDados(${T655(6, 11)}).aqui[0], 0)`).indexOf('contatosTocar(') < 0);
+    // no 1º dia da hospedagem não há o que ler: pergunta normal
+    solta655(); solta655 = relogio621('2026-10-05T11:00:00'); ctx.__HOJE655 = '2026-10-05';
+    const o1 = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([!!(o1.antGrupos[0] || {}).lendo, o1.antAbertos], [false, ['antip']]);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC22 — já foi embora com a conversa aberta: «já foi embora em DD/MM» e só «Finalizar»; o app não finaliza sozinho; com outra reserva lançada continua valendo (C5); sem as estadias lidas, não afirma', async () => {
+  const R05 = conv655('ant_antip', T655(5, 10));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-05': { [K655]: R05 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`EST_TODAS.e1.saida='2026-10-06'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(6, 17)}, quem:'Ana'};
+      VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(R05))}}}; __TURMA655=[]; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    let x = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`))).cobrar[0];
+    igual([x.chave, x.jaFoiEmbora, x.podeCobrar, x.contatos], [K655, '2026-10-06', false, 1]);
+    const html = run(`contatosLinhaHTML(contatosDados(${T655(7, 15)}).cobrar[0], 0)`);
+    assert.ok(/já foi embora em 06\/10/.test(html) && html.indexOf('Cobrar no WhatsApp') < 0 && html.indexOf('contatosFinalizar(0)') > 0, html);
+    assert.strictEqual(db.escritas.length, 0, 'nada é gravado sozinho');
+    // uma reserva futura já lançada (CF_ESTADIAS guardaria só ela): continua «já foi embora»
+    run(`EST_TODAS.e2={refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-20', saida:'2026-10-22', status:'ativa', _ts:9}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    x = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`))).cobrar[0];
+    igual([x.jaFoiEmbora, x.podeCobrar], ['2026-10-06', false]);
+    // a estadia encerrada por saída antecipada (encerradaEm)
+    run(`EST_TODAS.e1.status='encerrada'; EST_TODAS.e1.encerradaEm='2026-10-06'; delete EST_TODAS.e1.checkout; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(run(`contatoJaFoiEmbora('${K655}', '2026-10-05', PELUDINHOS[0], '${HOJE655}')`), '2026-10-06');
+    // a saída antecipada lançada HOJE: já foi embora hoje
+    run(`EST_TODAS.e1.encerradaEm='${HOJE655}'; EST_TODAS.e1.saida='${HOJE655}'; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(run(`contatoJaFoiEmbora('${K655}', '2026-10-05', PELUDINHOS[0], '${HOJE655}')`), HOJE655);
+    // ainda na casa: não foi embora
+    run(`EST_TODAS.e1.status='ativa'; EST_TODAS.e1.saida='2026-10-08'; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(run(`contatoJaFoiEmbora('${K655}', '2026-10-05', PELUDINHOS[0], '${HOJE655}')`), '');
+    // sem as estadias lidas: «não sei» — continua podendo cobrar
+    run(`EST_TODAS.e1.saida='2026-10-06'; EST_TODAS.e1.status='finalizada'; CF_ESTADIAS_LIDO=false; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    x = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`))).cobrar[0];
+    igual([x.jaFoiEmbora, x.podeCobrar], ['', true]);
+    // o Auluno nunca «foi embora» por esta régua
+    igual(run(`contatoJaFoiEmbora('${KMEL655}', '2026-10-05', PELUDINHOS[1], '${HOJE655}')`), '');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC23 — próxima hospedagem: o assunto finalizado volta no 1º dia da estadia nova, se a ficha continuar devendo', async () => {
+  arma655('2026-10-14', '10:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.saida='2026-10-06'; EST_TODAS.e1.status='finalizada';
+      EST_TODAS.e2={refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-14', saida:'2026-10-16', status:'ativa', _ts:9};
+      VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10), null,
+        { fechados: { antip: { quem: 'Leticya', ts: T655(6, 12), via: 'finalizar', desfecho: 'nao_respondeu', contatos: 3, log: 'f1' } } })))}}}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o.antAbertos, !!(o.antGrupos[0] || {}).estadiaConv, !!(o.antGrupos[0] || {}).finalizado], [['antip'], false, false]);
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(14, 10)})`)));
+    igual(d.aqui.map((x) => x.chave), [K655]);
+    // o 2º dia da hospedagem nova, sem conversa nela ainda: a da hospedagem velha não conta
+    run(`EST_TODAS.e2.entrada='2026-10-13'; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    const o3 = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o3.antAbertos, !!(o3.antGrupos[0] || {}).estadiaConv], [['antip'], false]);
+    // e, na mesma hospedagem velha, continuaria finalizado: o 2º dia da 1ª estadia
+    solta655(); solta655 = relogio621('2026-10-06T10:00:00'); ctx.__HOJE655 = '2026-10-06';
+    run(`EST_TODAS.e1.saida='2026-10-08'; EST_TODAS.e1.status='ativa'; delete EST_TODAS.e2; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    const o2 = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o2.antAbertos, !!((o2.antGrupos[0] || {}).estadiaConv || {}).fe], [[], true]);
+    const bloco = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '2026-10-06', o.antReg, ${T655(6, 10)}); })()`);
+    assert.ok(/só volta na próxima hospedagem/.test(bloco), bloco);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC24 — a categoria mudou para Auluno: vale a regra do Auluno (a pergunta do dia, como sempre)', async () => {
+  arma655('2026-10-06', '11:00:00', arvore655({}));
+  try {
+    run(`__EXC655.Tico={categoria:'auluno', dias:['seg','ter','qua'], verm_p:'2026-09-20'};
+      VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}}};`);
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o.antAbertos, !!(o.antGrupos[0] || {}).estadiaConv], [['antip'], false]);
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(6, 11)})`)));
+    igual(d.aqui.map((x) => x.chave + '|' + x.perfil), [K655 + '|auluno']);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC25 — Prevenção: «Já avisei» também grava «mandou» (tela prevencao) no histórico do FILHOt; o bloco dos hóspedes mostra o último desfecho', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`PREV_CACHE_HOSP=[{p:PELUDINHOS[0], nome:'Tico', tutor:'Rita Teste', raca:'SRD', sexo:'Macho',
+      faltas:[{tipo:'venc', nome:'Vermífugo', data:'2026-09-20', rotina:false}]}];`);
+    run(`prevMarcarAvisado('tico__rita teste', null);`);
+    await drena655();
+    assert.ok(db.store.daycare['prevencao-aviso']['tico__rita teste'], 'o aviso de sempre');
+    const evs = evs655(db);
+    igual(evs.map((e) => [e.acao, e.tela, e.canal, e.assunto, e.dia, e.quem]), [['mandou', 'prevencao', 'marcado-a-mao', 'prevencao', HOJE655, 'Leticya']]);
+    assert.strictEqual(evs[0].texto, run('prevMensagemTutor(PREV_CACHE_HOSP[0])'));
+    // o último desfecho, da varredura em memória
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(conv655('antip', T655(6, 14, 10), null,
+      { fechados: { antip: { quem: 'Leticya', ts: T655(7, 9), via: 'finalizar', desfecho: 'nao_respondeu', contatos: 3, log: 'f1' } } })))}}};`);
+    const html = run('prevBlocoHospedes(PREV_CACHE_HOSP)');
+    assert.ok(/Última conversa finalizada em 07\/10 por Leticya: não respondeu \(3 contatos\)/.test(html), html.slice(0, 600));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 AC26 — contatosDados() e fichaUnicaDados() ganham os campos (perfil, contatos, ultimoContato, podeCobrar, jaFoiEmbora; finalizado e historico)', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(conv655('antip', T655(6, 14, 10), [{ quem: 'Bia', ts: T655(7, 9, 2) }])))}}};
+      __TURMA655.push({p:PELUDINHOS[1], i:1}); __CHAM655={'${KMEL655}':'veio'};`);
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(7, 15)})`)));
+    const x = d.cobrar[0];
+    ['perfil', 'contatos', 'ultimoContato', 'podeCobrar', 'jaFoiEmbora'].forEach((k) => assert.ok(k in x, 'cobrar: falta ' + k));
+    igual(x.ultimoContato, { quem: 'Bia', ts: T655(7, 9, 2) });
+    const aq = d.aqui.filter((y) => y.chave === KMEL655)[0];
+    ['perfil', 'contatos', 'podeCobrar', 'jaFoiEmbora'].forEach((k) => assert.ok(k in aq, 'aqui: falta ' + k));
+    assert.strictEqual(aq.perfil, 'auluno');
+    const f = JSON.parse(JSON.stringify(run(`fichaUnicaDados(PELUDINHOS[0], ${T655(7, 15)})`)));
+    assert.ok('finalizado' in f.conversas[0] && f.conversas[0].finalizado === null);
+    assert.strictEqual(f.historicoLido, false, 'sem o histórico lido, diz que não leu');
+    igual(Object.keys(f.lido).sort(), ['conversas', 'pendencias'], 'o campo «lido» de sempre não muda');
+    assert.ok(!('historico' in f.conversas[0]) || f.conversas[0].historico === null);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 C31 — o nome do tutor sai escapado na linha de Respostas pendentes', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(conv655('antip', T655(6, 14, 10), null, { tutor: '<b>Rita</b> & Cia' })))}}};`);
+    const lp = run(`vencPendLinhaHTML(vencPendLista(VENC_PEND, '${HOJE655}', ${T655(7, 15)})[0], '${HOJE655}', ${T655(7, 15)})`);
+    assert.ok(lp.indexOf('&lt;b>Rita&lt;/b> &amp; Cia') > 0 && lp.indexOf('<b>Rita</b>') < 0, lp.slice(0, 400));
+  } finally { solta655f(); }
+});
+
+// ---------------------------------------------------------------- 6.55 — 2ª rodada (achados do QA independente)
+// A1 (C15), M1, M2, HB5, B1–B8 e uma prova para cada defeito plantado pela QA (q01–q24) que escapava.
+// Painel do Finalizar e caixas de diálogo na tela de mentira: o elemento criado entra em __EL655 pelo id.
+const DOM655 = `__bkDom655={ce:document.createElement, ap:document.body.appendChild, ftp:fichaTutorPode,
+    zp:(typeof zPergunta!=='undefined'?zPergunta:undefined), rd:renderDash, vav:vencAvisarVet, dl:dashLancar};
+  __REM655=0; __VET655=[];
+  document.createElement=function(){ var el={style:{}, remove:function(){ if(el.id && __EL655[el.id]===el) delete __EL655[el.id]; __REM655++; }}; return el; };
+  document.body.appendChild=function(el){ if(el && el.id) __EL655[el.id]=el; };
+  renderDash=function(){}; vencAvisarVet=function(o, v){ __VET655.push(JSON.parse(JSON.stringify(v))); };`;
+const SOLTADOM655 = `document.createElement=__bkDom655.ce; document.body.appendChild=__bkDom655.ap; fichaTutorPode=__bkDom655.ftp;
+  zPergunta=__bkDom655.zp; renderDash=__bkDom655.rd; vencAvisarVet=__bkDom655.vav; dashLancar=__bkDom655.dl;`;
+const dom655 = async (fn) => { run(DOM655); try { return await fn(); } finally { run(SOLTADOM655); } };
+const texto655 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+// O Tico hospedado de quinta 08/10 a domingo 11/10; a pergunta «fazer hoje?» saiu na sexta 09/10.
+const R09_655 = () => semUndef655(conv655('ant_antip', T655(9, 10)));
+
+provaAsync('6.55 R2 A1/C15 — sábado: «Pode fazer hoje — está na bolsa» dado à conversa de sexta, com o hóspede na casa, lança para HOJE (nunca para depois da saída); o bloco do Hoje na Zêluz diz para que dia foi', async () => {
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-09': { [K655]: R09_655() } } } });
+  arma655('2026-10-10', '11:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`EST_TODAS.e1.entrada='2026-10-08'; EST_TODAS.e1.saida='2026-10-11'; EST_TODAS=Object.assign({}, EST_TODAS);
+        VENC_PEND={'2026-10-09':{'${K655}':${JSON.stringify(R09_655())}}};`);
+      const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+      igual(((o.antGrupos[0] || {}).estadiaConv || {}).dia, '2026-10-09', 'no sábado, o bloco mostra a conversa de sexta (C14)');
+      igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-09'), '2026-10-09', '2026-10-10')`))),
+        { dia: '2026-10-10', estadia_id: 'e1' }, 'hospedado hoje: o dia do lançamento é hoje');
+      await run(`contatoResponderOutroDia('${K655}', 'ant_antip', 'hoje_bolsa', '2026-10-09')`);
+      await drena655(); await drena655();
+      const reg = reg655(db, '2026-10-09');
+      const auto = (reg.auto || {}).ant_antip || {};
+      igual([auto.dia, auto.adiado, auto.hospedagem], ['2026-10-10', true, true], 'sábado 10/10 — não terça 13/10, depois da saída em 11/10');
+      assert.ok((auto.itens || []).length >= 1, 'o vermífugo entrou: ' + JSON.stringify(auto.itens));
+      igual(Object.keys((db.store.daycare || {}).dashboard || {}), ['2026-10-10'], 'nos Lançamentos de hoje e de mais nenhum dia');
+      assert.strictEqual(reg.respostas.ant_antip.v, 'hoje_bolsa', 'a resposta fica na conversa de sexta');
+      const rastro = run('__AUD655').filter((t) => /lançou sozinho/.test(t)).join('\n');
+      assert.ok(/no dia 2026-10-10: .*\(o dia 2026-10-09 já passou: foi para hoje, com o FILHOt na hospedagem\)/.test(rastro), rastro);
+      // o bloco do Hoje na Zêluz, depois da resposta: a resposta, para que dia foi e o «desfazer»
+      run(`VENC_PEND={'2026-10-09':{'${K655}':${JSON.stringify(reg)}}};`);
+      const bl = run(`(function(){ var o=hojeLista()[0]; return hojeAntBlocoHTML(o, o.antGrupos[0], '2026-10-10', o.antReg, ${T655(10, 11, 30)}); })()`);
+      const t = texto655(bl);
+      assert.ok(t.indexOf('Já perguntado nesta hospedagem em 09/10 — resposta: «Pode fazer hoje — está na bolsa»') >= 0, t);
+      assert.ok(/Lançado para hoje[^:]*\(10\/10\): Vermífugo/.test(t), t);
+      assert.ok(t.indexOf('A pergunta era de 09/10; o FILHOt está na hospedagem, então foi para o dia da resposta.') >= 0, t);
+      assert.ok(bl.indexOf(`vencDesfazerAuto('${K655}','ant_antip','2026-10-09')`) > 0, 'o desfazer grava na conversa de sexta');
+      // a mesma pergunta feita e respondida no próprio sábado continua como sempre (hoje, sem adiar)
+      const db2 = arvore655({});
+      ctx.__DB655b = db2; run('DB=__DB655b; VENC_PEND={}; vencMemoLimpar();');
+      run(`EST_TODAS.e1.entrada='2026-10-10'; EST_TODAS=Object.assign({}, EST_TODAS);`);
+      await run(`hojeMandei('${K655}', 'antip')`); await drena655();
+      run(`VENC_PEND={'2026-10-10':{'${K655}':${JSON.stringify(reg655(db2, '2026-10-10'))}}};`);
+      await run(`hojeResponder('${K655}', 'antip', 'hoje_bolsa')`); await drena655(); await drena655();
+      const a2 = (reg655(db2, '2026-10-10').auto || {}).ant_antip || {};
+      igual([a2.dia, a2.adiado, 'hospedagem' in a2], ['2026-10-10', false, false], 'a pergunta do próprio dia: hoje, como antes da 6.55');
+    } finally { solta655f(); }
+  });
+});
+provaAsync('6.55 R2 A1/C15 — fora da hospedagem, a resposta tardia fica registrada e NADA se lança: a tela avisa, o cartão diz e o «desfazer» continua; o Auluno segue no próximo dia dele', async () => {
+  const R07 = semUndef655(conv655('ant_antip', T655(7, 10)));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-07': { [K655]: R07 } } } });
+  arma655('2026-10-10', '11:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 9)}}; EST_TODAS=Object.assign({}, EST_TODAS);
+        VENC_PEND={'2026-10-07':{'${K655}':${JSON.stringify(R07)}}}; __TURMA655=[];`);
+      igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-07'), '2026-10-07', '2026-10-10')`))),
+        { fora: true, fim: '2026-10-08' });
+      // respondida pelas Respostas pendentes (o Tico já foi embora, não está no Hoje na Zêluz)
+      assert.strictEqual(await run(`vencResponderTipo('${K655}', 'ant_antip', 'hoje_bolsa', '2026-10-07')`), true);
+      await drena655(); await drena655();
+      const reg = reg655(db, '2026-10-07');
+      assert.strictEqual(reg.respostas.ant_antip.v, 'hoje_bolsa', 'a resposta do tutor fica registrada');
+      igual(reg.auto.ant_antip, { dia: '', onde: 'NA BOLSA', quem: 'Leticya', ts: T655(10, 11), adiado: false, itens: [], falharam: [], foraDaEstadia: true, fim: '2026-10-08' });
+      assert.ok(!(db.store.daycare || {}).dashboard, 'nada nos Lançamentos do dia, de dia nenhum');
+      assert.ok(run('__ALE655').some((t) => /^NADA FOI LANÇADO :: A resposta do tutor ficou registrada\. \| Tico não está na Zêluz hoje \(a hospedagem terminou em 08\/10\)/.test(t)), run('__ALE655').join('\n'));
+      assert.ok(run('__AUD655').some((t) => /NÃO lançou nada: Tico não está na Zêluz hoje \(a hospedagem terminou em 08\/10\)/.test(t)), run('__AUD655').join('\n'));
+      const card = texto655(run(`vencAutoLancadoHTML(null, ${JSON.stringify(reg)}, 'ant_antip', '2026-10-07', '${K655}')`));
+      assert.ok(card.indexOf('Resposta registrada. Nada foi lançado: no dia da resposta, o FILHOt não estava na Zêluz (a hospedagem terminou em 08/10).') >= 0, card);
+      assert.ok(/desfazer/.test(card), 'o «desfazer» da resposta continua lá');
+      // check-out HOJE cedo, antes da saída marcada (11/10): já não está na casa — não lança
+      run(`EST_TODAS.e1.saida='2026-10-11'; EST_TODAS.e1.checkout={ts:${T655(10, 9)}}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+      igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-07'), '2026-10-07', '2026-10-10')`))),
+        { fora: true, fim: '2026-10-10' });
+      // o Auluno Avulso, sem hospedagem, que veio ao Day Care hoje (está na turma de hoje): lança para hoje; fora da turma,
+      // a regra de sempre (HB6, 3ª rodada: sem hospedagem nenhuma não é «fora» — lança para o próximo dia dele)
+      run(`__TURMA655=[{p:PELUDINHOS[2], i:2}];`);
+      igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('bolt__caio-teste', {p:PELUDINHOS[2], nome:'Bolt'}, '2026-10-09', '2026-10-10')`))), { dia: '2026-10-10', estadia_id: null });
+      run(`__TURMA655=[];`);
+      assert.strictEqual(run(`contatoLancarHospede('bolt__caio-teste', {p:PELUDINHOS[2], nome:'Bolt'}, '2026-10-09', '2026-10-10')`), null);
+      // o Auluno: a regra de sempre (vencDiaDoLancamento), a 6.55 não muda nada
+      assert.strictEqual(run(`contatoLancarHospede('${KMEL655}', {p:PELUDINHOS[1], nome:'Mel'}, '2026-10-09', '2026-10-10')`), null);
+      // sem as estadias lidas: a regra de sempre (nunca afirmar sem saber) — nem «fora», nem «hoje» pelo que estiver na memória
+      run('CF_ESTADIAS_LIDO=false;');
+      assert.strictEqual(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-07'), '2026-10-07', '2026-10-10')`), null);
+      run(`EST_TODAS.e1.status='ativa'; delete EST_TODAS.e1.checkout; EST_TODAS=Object.assign({}, EST_TODAS); __TURMA655=[{p:PELUDINHOS[0], i:0, hospede:true}];`);
+      assert.strictEqual(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-07'), '2026-10-07', '2026-10-10')`), null);
+    } finally { solta655f(); }
+  });
+});
+provaAsync('6.55 R2 A1/C15 — vacina: «Pode aplicar hoje» dado depois do dia, pelo hóspede na casa, avisa a veterinária para HOJE; fora da hospedagem, não sai recado (e a tela avisa)', async () => {
+  const vac = [{ k: 'vac_raiva_p', nome: 'Raiva', vence: '2026-09-20', atrasado: true, vacina: true }];
+  const R = (d) => semUndef655(Object.assign(conv655('ant_vacina', T655(d, 10)), { itens: vac, itens_ant: vac }));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-09': { [K655]: R(9) } } } });
+  arma655('2026-10-10', '11:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`EST_TODAS.e1.entrada='2026-10-08'; EST_TODAS.e1.saida='2026-10-11'; EST_TODAS=Object.assign({}, EST_TODAS);
+        VENC_PEND={'2026-10-09':{'${K655}':${JSON.stringify(R(9))}}};`);
+      assert.strictEqual(await run(`vencResponderTipo('${K655}', 'ant_vacina', 'vet_hoje_manha', '2026-10-09')`), true);
+      await drena655();
+      igual([reg655(db, '2026-10-09').vet.dia, run('__VET655').map((v) => v.dia)], ['2026-10-10', ['2026-10-10']], 'o recado é para hoje, não para sexta que passou');
+      // fora da hospedagem: a resposta fica, o recado não sai
+      const db2 = arvore655({ daycare: { vencimentos: { '2026-10-09': { [K655]: R(9) } } } });
+      ctx.__DB655b = db2;
+      run(`DB=__DB655b; __VET655=[]; __TURMA655=[]; EST_TODAS.e1.saida='2026-10-09'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(9, 17)}};
+        EST_TODAS=Object.assign({}, EST_TODAS); VENC_PEND={'2026-10-09':{'${K655}':${JSON.stringify(R(9))}}};`);
+      assert.strictEqual(await run(`vencResponderTipo('${K655}', 'ant_vacina', 'vet_hoje_manha', '2026-10-09')`), true);
+      await drena655();
+      const r2 = reg655(db2, '2026-10-09');
+      igual([r2.respostas.ant_vacina.v, 'vet' in r2, run('__VET655').length], ['vet_hoje_manha', false, 0]);
+      assert.ok(run('__ALE655').some((t) => /^A VETERINÁRIA NÃO FOI AVISADA :: .*Tico não está na Zêluz hoje \(a hospedagem terminou em 09\/10\)/.test(t)), run('__ALE655').join('\n'));
+    } finally { solta655f(); }
+  });
+});
+
+provaAsync('6.55 R2 M1 — hóspede: o Finalizar de uma conversa da hospedagem ANTIGA não fecha a conversa viva da hospedagem atual (e vice-versa)', async () => {
+  const vencs = {
+    '2026-10-01': { [K655]: semUndef655(conv655('ant_antip', T655(1, 10), [{ quem: 'Bia', ts: T655(1, 16) }])) },
+    '2026-10-06': { [K655]: semUndef655(conv655('ant_antip', T655(6, 10))) } };
+  const db = arvore655({ daycare: { vencimentos: JSON.parse(JSON.stringify(vencs)) } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`EST_TODAS={a:{refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-01', saida:'2026-10-03', status:'finalizada', checkout:{ts:${T655(3, 10)}}},
+      b:{refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-06', saida:'2026-10-09', status:'ativa'}};
+      VENC_PEND=${JSON.stringify(vencs)};`);
+    const F1 = JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${K655}', '2026-10-01', 'ant_antip', ${T655(7, 15)})`)));
+    igual([F1.alvos, F1.contatos, F1.estadia_id], [['2026-10-01'], 2, 'a'], 'só a hospedagem de 01 a 03/10');
+    const F2 = JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${K655}', '2026-10-06', 'ant_antip', ${T655(7, 15)})`)));
+    igual([F2.alvos, F2.contatos, F2.estadia_id], [['2026-10-06'], 1, 'b'], 'e a de agora, só ela');
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-01', 'ant_antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true);
+    await drena655();
+    assert.ok((reg655(db, '2026-10-01').fechados || {}).ant_antip || (reg655(db, '2026-10-01').fechados || {}).antip, 'a conversa antiga fechou');
+    assert.ok(!reg655(db, '2026-10-06').fechados, 'a conversa da hospedagem atual continua aberta');
+    igual(evs655(db)[0].dias, ['2026-10-01']);
+    assert.strictEqual(run(`vencEstadoTipo(vencRegDeDia('2026-10-06','${K655}'), 'ant_antip', ${T655(7, 15)})`), 'cobrar', 'e continua aberta, para cobrar ou finalizar');
+    // um dia SEM hospedagem antes dela entra (a véspera); um dia sem hospedagem depois dela, não
+    run(`VENC_PEND['2026-10-05']={'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}};
+      VENC_PEND['2026-10-10']={'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(10, 10))))}};`);
+    igual(JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${K655}', '2026-10-06', 'ant_antip', ${T655(7, 15)}).alvos`))), ['2026-10-05', '2026-10-06']);
+  } finally { solta655f(); }
+});
+
+provaAsync('6.55 R2 HB5 — estadia emendada (A 05→08, B 08→11, sem o FILHOt ir para casa) é a mesma hospedagem: a pergunta finalizada em A não volta em B, e o dia 08 conta uma vez só', async () => {
+  arma655('2026-10-09', '10:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.saida='2026-10-08'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 9)}};
+      EST_TODAS.e2={refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-08', saida:'2026-10-11', status:'ativa', _ts:9};
+      EST_TODAS=Object.assign({}, EST_TODAS);
+      VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10), null,
+        { fechados: { antip: { quem: 'Leticya', ts: T655(6, 12), via: 'finalizar', desfecho: 'nao_quer', contatos: 1, log: 'f1' } } })))}}};`);
+    const H = JSON.parse(JSON.stringify(run(`contatoEstadiasDe('${K655}', PELUDINHOS[0])`)));
+    igual(H.map((h) => [h.id, h.ids, h.entrada, h.saida, h.status]), [['e1', ['e1', 'e2'], '2026-10-05', '2026-10-11', 'ativa']], 'uma hospedagem só');
+    const o = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual([o.antAbertos, !!((o.antGrupos[0] || {}).estadiaConv || {}).fe], [[], true], 'no 2º dia de B, a conversa finalizada em A vale (não pergunta de novo)');
+    const d = JSON.parse(JSON.stringify(run(`contatosDados(${T655(9, 10)})`)));
+    igual(d.aqui.map((x) => x.chave + '|' + x.tipo), [], 'Estão aqui hoje não pede a pergunta de novo');
+    // 1º dia de B (08/10) com a conversa de 05/10 ainda aberta: o bloco mostra AQUELA conversa, não pergunta de novo
+    ctx.__HOJE655 = '2026-10-08'; hora655('2026-10-08', '10:00:00');
+    run(`VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}}};`);
+    const o8 = JSON.parse(JSON.stringify(run('hojeLista()[0]')));
+    igual(((o8.antGrupos[0] || {}).estadiaConv || {}).dia, '2026-10-05', 'a troca de estadia não é hospedagem nova');
+    ctx.__HOJE655 = '2026-10-09'; hora655('2026-10-09', '10:00:00');
+    // sem finalizar: a conversa de 05/10 aberta e um envio em 08/10 — a conta é da hospedagem inteira, uma vez cada
+    run(`VENC_PEND={'2026-10-05':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(5, 10))))}},
+      '2026-10-08':{'${K655}':${JSON.stringify(semUndef655(conv655('ant_antip', T655(8, 10, 5))))}}};`);
+    const a = JSON.parse(JSON.stringify(run(`contatoLinhaInfo('${K655}', '2026-10-05', 'ant_antip', null)`)));
+    const b = JSON.parse(JSON.stringify(run(`contatoLinhaInfo('${K655}', '2026-10-08', 'ant_antip', null)`)));
+    igual([a.contatos, b.contatos, a.estadia_id, b.estadia_id], [2, 2, 'e1', 'e1'], 'a mesma conta nas duas conversas; o dia 08 não conta em dobro');
+    // emendada só quando não houve volta para casa: B começando no dia seguinte à saída é OUTRA hospedagem
+    run(`EST_TODAS.e2.entrada='2026-10-09'; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(JSON.parse(JSON.stringify(run(`contatoEstadiasDe('${K655}', PELUDINHOS[0])`))).map((h) => h.ids), [['e1'], ['e2']]);
+    // A terminou antes (check-out em 07/10) e B começou em 08/10: foi para casa — outra hospedagem
+    run(`EST_TODAS.e2.entrada='2026-10-08'; EST_TODAS.e1.checkout={ts:${T655(7, 9)}}; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual(JSON.parse(JSON.stringify(run(`contatoEstadiasDe('${K655}', PELUDINHOS[0])`))).map((h) => h.ids), [['e1'], ['e2']]);
+  } finally { solta655f(); }
+});
+
+provaAsync('6.55 R2 M2 — as estadias são varridas UMA vez por versão de EST_TODAS (C4/R9); um objeto novo (a leitura do zMapaVivo) refaz o índice', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`(function(){ for(var i=0;i<3000;i++){ EST_TODAS['x'+i]={refKey:'f'+i+'__t'+i, nome:'F'+i, tutor:'T'+i, entrada:'2025-0'+(1+i%9)+'-1'+(i%9), saida:'2025-0'+(1+i%9)+'-2'+(i%9), status:'finalizada'}; }
+      EST_TODAS=Object.assign({}, EST_TODAS);
+      VENC_PEND={'2026-10-06':{}};
+      for(var j=0;j<40;j++){ PELUDINHOS.push({n:'P'+j, tutor:'U'+j}); __EXC655['P'+j]={};
+        VENC_PEND['2026-10-06']['p'+j+'__u'+j]={pet:'P'+j, tutor:'U'+j, enviadas:{antip:{quem:'Ana', ts:${T655(6, 9)}}}, envios:{antip:[{quem:'Ana', ts:${T655(6, 9)}}]}}; } })();
+      __VARRE655=0; __ek655=contatoEstadiaFim; contatoEstadiaFim=function(e){ __VARRE655++; return __ek655(e); };`);
+    try {
+      const d = run(`contatosDados(${T655(7, 15)})`);
+      assert.strictEqual(d.cobrar.length, 40);
+      run('hojeLista(); contatosDados(' + T655(7, 15) + '); hojeLista();');
+      assert.strictEqual(run('__VARRE655'), 3001, 'uma varredura (3.001 estadias) para todos os desenhos');
+      run(`EST_TODAS=Object.assign({}, EST_TODAS);`);
+      run('contatosDados(' + T655(7, 15) + ');');
+      assert.strictEqual(run('__VARRE655'), 6002, 'versão nova de EST_TODAS: uma varredura nova');
+      igual(run(`contatoEstadiasDe('${K655}', PELUDINHOS[0]).map(function(h){ return h.id; })`), ['e1'], 'e o Tico continua achado');
+    } finally { run('contatoEstadiaFim=__ek655;'); }
+  } finally { solta655f(); }
+});
+
+provaAsync('6.55 R2 B2/B3 — envio marcado pela versão anterior (só enviadas) + «marcar de novo» conta 2; o evento leva a hora do TOQUE (rede lenta não apaga o texto do painel)', async () => {
+  const R07 = { pet: 'Tico', tutor: 'Rita Teste', enviadas: { ant_antip: { quem: 'Bia', ts: T655(7, 9) } } };
+  const db = arvore655({ daycare: { vencimentos: { [HOJE655]: { [K655]: R07 } } } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND={'${HOJE655}':{'${K655}':${JSON.stringify(R07)}}};`);
+    await run(`hojeMandei('${K655}', 'antip')`); await drena655();
+    igual(reg655(db, HOJE655).envios.ant_antip, [{ quem: 'Bia', ts: T655(7, 9) }, { quem: 'Leticya', ts: T655(7, 15) }], 'a lista nasce com o envio antigo');
+    const c = run(`(function(){ var c=contatoContagemReg(vencRegDeDia('${HOJE655}','${K655}'), 'ant_antip'); return [c.envios, c.contatos]; })()`);
+    igual(c, [2, 2]);
+    hora655(HOJE655, '15:20:00');
+    run(`VENC_PEND={'${HOJE655}':{'${K655}':${JSON.stringify(reg655(db, HOJE655))}}};`);
+    await run(`hojeMandei('${K655}', 'antip')`); await drena655();
+    igual(reg655(db, HOJE655).envios.ant_antip.map((x) => x.quem), ['Bia', 'Leticya', 'Leticya'], 'o 3º «marcar de novo» também não apaga nada');
+    igual(run(`contatoContagemReg(vencRegDeDia('${HOJE655}','${K655}'), 'ant_antip').contatos`), 3);
+    igual(JSON.parse(JSON.stringify(run(`contatoEnviosCom({enviadas:{antip:{quem:'Ana', ts:5}}}, 'antip', {quem:'Ana', ts:5})`))), { antip: [{ quem: 'Ana', ts: 5 }] }, 'o mesmo envio não entra duas vezes');
+  } finally { solta655f(); }
+  // B3: a gravação demora 2 minutos — o evento guarda a hora do toque (15:00), e o painel junta o texto
+  const db2 = arvore655({});
+  const orig = db2.ref; let segura = null;
+  db2.ref = (p) => {
+    const r = orig(p);
+    if (/vencimentos\/[^/]+\/[^/]+$/.test(String(p))) {
+      const u = r.update;
+      r.update = function () { const self = this, args = arguments; return new Promise((ok) => { segura = () => ok(u.apply(self, args)); }); };
+    }
+    return r;
+  };
+  arma655(HOJE655, '15:00:00', db2);
+  try {
+    run(`__EL655['hojeMsg_${K655}__antip']={value:'Olá, Rita! Texto da caixa.'};`);
+    const pr = run(`hojeMandei('${K655}', 'antip')`);
+    await drena655();
+    hora655(HOJE655, '15:02:00');
+    if (segura) segura();
+    await pr; await drena655();
+    const ev = evs655(db2)[0] || {};
+    igual([ev.ts, ev.quem], [T655(7, 15), 'Leticya'], 'a hora do toque, não a da gravação');
+    run(`VENC_PEND={'${HOJE655}':{'${K655}':${JSON.stringify(reg655(db2, HOJE655))}}};`);
+    await run(`contatoLogCarregar('${K655}', true)`); await drena655();
+    const J = JSON.parse(JSON.stringify(run(`contatoHistoricoJunto('${K655}', 'antip', ['${HOJE655}'])`)));
+    igual([J.lista.map((x) => x.texto), J.incompleto], [['Olá, Rita! Texto da caixa.'], false]);
+    // a cobrança também leva a hora do toque (15:02), não a da gravação (15:05)
+    const prC = run(`vencCobrei('${K655}', 'ant_antip', '${HOJE655}', 'vencimentos')`);
+    await drena655();
+    hora655(HOJE655, '15:05:00');
+    if (segura) segura();
+    await prC; await drena655();
+    const cob = reg655(db2, HOJE655).cobrancas.ant_antip[0];
+    const evC = evs655(db2).filter((e) => e.acao === 'cobrou')[0];
+    igual([evC.ts, evC.quem, cob.ts], [T655(7, 15, 2), 'Leticya', T655(7, 15, 2)]);
+  } finally { solta655f(); }
+});
+
+provaAsync('6.55 R2 B5 — sem rede, o painel do Finalizar FECHA (com aviso): a gravação continua e, quando volta, não mexe no painel de outra conversa aberto depois', async () => {
+  const db = arvore655(SEED_FIN655());
+  let solta = null;
+  const orig = db.ref;
+  // só a 1ª atualização a partir da raiz fica presa (a «rede» volta quando a prova manda); as outras passam
+  db.ref = (p) => { const r = orig(p); if (String(p || '') === '' && !solta) { const u = r.update; r.update = function () { const self = this, a = arguments; return new Promise((ok) => { solta = () => ok(u.apply(self, a)); }); }; } return r; };
+  arma655(HOJE655, '15:00:00', db);
+  await dom655(async () => {
+    try {
+      run(MEM_FIN655(db));
+      run(`contatoFinalizarAbrir('${K655}', '2026-10-06', 'antip'); CONTATO_FIN.escolha='nao_respondeu';`);
+      assert.ok(run('!!__EL655.ctFinBox'), 'o painel abriu');
+      const pr = run('contatoFinalizarConfirmar()'); await drena655();
+      assert.ok(/Fechar — a gravação continua/.test(run('__EL655.ctFinBox.innerHTML')), 'gravando, o botão de baixo diz que fechar não cancela');
+      run('contatoFinalizarFechar();');
+      igual([run('!!__EL655.ctFinBox'), run('CONTATO_FIN')], [false, null], 'o painel fechou — a tela não fica presa');
+      assert.ok(run('__ALE655').some((t) => /^A GRAVAÇÃO CONTINUA :: O «Finalizar» de Tico ainda não chegou ao banco/.test(t)), run('__ALE655').join('\n'));
+      // outra conversa aberta enquanto a primeira grava
+      run(`VENC_PEND['2026-10-06']['${KMEL655}']={pet:'Mel', tutor:'Ana Teste', enviadas:{antip:{quem:'Ana', ts:${T655(6, 9)}}}}; __F2=contatoFinalizarAbrir('${KMEL655}', '2026-10-06', 'antip');`);
+      assert.ok(run('!!__EL655.ctFinBox && CONTATO_FIN===__F2'), 'o painel da Mel está aberto');
+      solta(); assert.strictEqual(await pr, true); await drena655();
+      assert.ok(run('!!__EL655.ctFinBox && CONTATO_FIN===__F2'), 'a gravação do Tico terminou sem fechar o painel da Mel');
+      igual(evs655(db).filter((e) => e.acao === 'finalizou').map((e) => e.pet), ['Tico'], 'gravou uma vez, sozinha');
+    } finally { solta655f(); }
+  });
+});
+
+provaAsync('6.55 R2 B6 — «Escolher à mão» (Pode fazer na Zêluz) também grava «respondeu» no histórico, um por assunto', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`VENC_DIA_SEL='2026-10-08'; __VL655['2026-10-08']=[${O_TICO655}]; vencMemoLimpar(); VENC_REG={}; VENC_REG_DIA='2026-10-08';
+        VENC_ESCOLHA['${K655}']={verm_p:{onde:'NA BOLSA', seg:'1 COMPRIMIDO'}}; dashLancar=function(){ return Promise.resolve(true); };`);
+      run(`vencLancarConfirmado('${K655}')`);
+      await drena655(); await drena655();
+      const e = evs655(db).filter((x) => x.acao === 'respondeu');
+      igual(e.map((x) => [x.dia, x.assunto, x.resposta.v, x.resposta.rotulo, x.quem]), [['2026-10-08', 'antip', 'zeluz', 'Pode fazer na Zêluz', 'Leticya']]);
+      assert.strictEqual(e[0].ts, reg655(db, '2026-10-08').respostas.antip.ts, 'com a hora gravada na resposta');
+    } finally { solta655f(); }
+  });
+});
+
+provaAsync('6.55 R2 B8 — as frases: «mandou a mensagem, marcada à mão (Prevenção)»; o aviso de quem finaliza inclui quem recebeu a tela no Time', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    igual(run(`contatoEventoFrase({acao:'mandou', quem:'Ana', canal:'marcado-a-mao', tela:'prevencao'})`), 'Ana mandou a mensagem, marcada à mão (Prevenção)');
+    igual(run(`contatoEventoFrase({acao:'cobrou', quem:'Ana', canal:'marcado-a-mao', tela:'vencimentos'})`), 'Ana cobrou, cobrança marcada à mão (Vencimentos)');
+    igual(run(`contatoEventoFrase({acao:'mandou', quem:'Ana', canal:'whatsapp', tela:'hoje'})`), 'Ana mandou a mensagem pelo WhatsApp (Hoje na Zêluz)');
+    run(`__bkF655=fichaTutorPode; fichaTutorPode=function(){ return false; };`);
+    try {
+      assert.strictEqual(run(`contatoFinalizarAbrir('${K655}', '2026-10-06', 'antip')`), null);
+      assert.ok(run('__ALE655').some((t) => t === 'SÓ QUEM FALA COM O TUTOR FINALIZA :: Finalizar a conversa é das Consultoras de Bem-Estar, da Supervisão, da Gestão, da Diretoria e de quem recebeu a tela no Time.'), run('__ALE655').join('\n'));
+    } finally { run('fichaTutorPode=__bkF655;'); }
+  } finally { solta655f(); }
+});
+
+// ------------- os defeitos plantados pela QA que escapavam (q04, q06–q09, q11–q19, q21–q23): uma prova cada
+provaAsync('6.55 R2 q04 — o histórico não guarda campo vazio (\'\'), só os que têm valor', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    igual(Object.keys(run(`contatoLogLimpar({acao:'mandou', ts:1, quem:'Ana', texto:'', nota:'', tutor:'', pet:null, dia:undefined, assunto:'antip'})`)).sort(), ['acao', 'assunto', 'quem', 'ts']);
+    await run(`contatoLogGravar('${K655}', {acao:'nao_respondeu', dia:'${HOJE655}', assunto:'antip', pet:'', tutor:''})`); await drena655();
+    const e = evs655(db)[0];
+    assert.ok(!('pet' in e) && !('tutor' in e), JSON.stringify(e));
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q06 — Auluno: o Finalizar fecha aquela conversa e as mais velhas, NUNCA a conversa nova de outro dia dele (H6)', async () => {
+  const conv = (d) => ({ pet: 'Mel', tutor: 'Ana Teste', enviadas: { antip: { quem: 'Ana', ts: T655(d, 9) } }, envios: { antip: [{ quem: 'Ana', ts: T655(d, 9) }] } });
+  const vencs = { '2026-10-02': { [KMEL655]: conv(1) }, '2026-10-07': { [KMEL655]: conv(6) } };
+  const db = arvore655({ daycare: { vencimentos: JSON.parse(JSON.stringify(vencs)) } });
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`VENC_PEND=${JSON.stringify(vencs)};`);
+    run(`__F655=contatoFinalizarMontar('${KMEL655}', '2026-10-02', 'antip', ${T655(7, 15)});`);
+    igual([run('__F655.perfil'), run('__F655.alvos')], ['auluno', ['2026-10-02']]);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true); await drena655();
+    assert.ok(reg655(db, '2026-10-02', KMEL655).fechados.antip, 'a velha fechou');
+    assert.ok(!reg655(db, '2026-10-07', KMEL655).fechados, 'a nova (quarta, dia dela) continua aberta');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q07 — hóspede: a conta da hospedagem para na saída (a conversa de um dia depois dela não soma)', async () => {
+  arma655('2026-10-12', '15:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 10)}}; EST_TODAS=Object.assign({}, EST_TODAS);
+      VENC_PEND={'2026-10-06':{'${K655}':${JSON.stringify(semUndef655(conv655('antip', T655(5, 10))))}},
+        '2026-10-10':{'${K655}':${JSON.stringify(semUndef655(conv655('antip', T655(9, 10), [{ quem: 'Bia', ts: T655(10, 9) }])))}}};`);
+    const l = JSON.parse(JSON.stringify(run(`contatoLinhaInfo('${K655}', '2026-10-06', 'antip', null)`)));
+    igual([l.contatos, l.estadia_id], [1, 'e1'], 'só a conversa de dentro da hospedagem (05 a 08/10)');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q08 — a pergunta «fazer hoje?» mandada DEPOIS do Finalizar é conversa nova: não aparece como finalizada', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    const fe = `{quem:'Ana', ts:${T655(7, 10)}, via:'finalizar', desfecho:'nao_respondeu', contatos:1, log:'f1'}`;
+    const g = (antTs) => JSON.parse(JSON.stringify(run(`contatoAntGrupos([{tipo:'antip', itens:[]}], {antReg:{fechados:{antip:${fe}}, enviadas:{ant_antip:{quem:'Ana', ts:${antTs}}}}, hoje:'${HOJE655}', chave:'${KMEL655}', p:PELUDINHOS[1], agora:${T655(7, 15)}})[0]`)));
+    assert.ok(!g(T655(7, 11)).finalizado, 'mandada às 11:00, depois do Finalizar das 10:00: aberta');
+    assert.ok(g(T655(7, 9)).finalizado, 'mandada às 09:00, antes: finalizada');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q09 — Configurações: o número de contatos acima de 20 não grava', async () => {
+  const db = arvore655({});
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(`__EL655.cfgContatosN={value:'21'}; __EL655.cfgContatosSt={textContent:'', style:{}};`);
+    assert.strictEqual(await run('contatoCfgSalvar()'), false);
+    assert.strictEqual(db.escritas.length, 0);
+    run(`__EL655.cfgContatosN={value:'20'};`);
+    assert.strictEqual(await run('contatoCfgSalvar()'), true);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q11 — desfazer tira só os dias que a releitura confirma do MESMO Finalizar (o dia que outro aparelho finalizou de novo fica)', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true); await drena655();
+    const id = evs655(db)[0].id;
+    const outro = { quem: 'Bia', ts: T655(7, 15, 20), via: 'finalizar', desfecho: 'nao_quer', contatos: 3, log: 'outro' };
+    db.store.daycare.vencimentos['2026-10-06'][K655].fechados.antip = outro;   // o aparelho da Bia, depois
+    hora655(HOJE655, '15:30:00');
+    run(`__ZT655.push('Toquei errado');`);
+    assert.strictEqual(await run(`contatoReabrir('${K655}', 'antip', '${id}')`), true); await drena655();
+    assert.ok(!(reg655(db, '2026-10-05').fechados || {}).antip, 'o dia confirmado reabriu');
+    igual(reg655(db, '2026-10-06').fechados.antip, outro, 'o Finalizar da Bia ficou');
+    igual(evs655(db).filter((e) => e.acao === 'reabriu')[0].dias, ['2026-10-05']);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q12 — SEGURANÇA: o texto da mensagem no histórico sai escapado (Com o tutor e o painel do Finalizar)', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    const h = run(`contatoEventoHTML({acao:'mandou', quem:'Ana<b>', ts:${T655(6, 10)}, canal:'whatsapp', tela:'hoje', texto:'Olá <img src=x onerror=alert(1)> & <script>alert(2)</script>'})`);
+    assert.ok(h.indexOf('<img') < 0 && h.indexOf('<script') < 0 && h.indexOf('<b>') < 0, h);
+    assert.ok(h.indexOf('&lt;img src=x onerror=alert(1)') > 0 && h.indexOf('&amp;') > 0, h);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q13/q14 — perfil: plano «avulso» sem categoria só se hospeda (H1); estadia CANCELADA não é hospedagem (perfil, «já foi embora» e a conta)', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`__EXC655.Lupi={renov:{plano:'avulso'}};`);
+    igual(JSON.parse(JSON.stringify(run('contatoPerfil(PELUDINHOS[6], null)'))), { perfil: 'so-hospede', semCategoria: false });
+    run(`EST_TODAS={c1:{refKey:'nino__lia teste', nome:'Nino', tutor:'Lia Teste', entrada:'2026-10-06', saida:'2026-10-09', status:'cancelada'},
+      c2:{refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-01', saida:'2026-10-03', status:'cancelada'}};`);
+    igual(JSON.parse(JSON.stringify(run('contatoPerfil(PELUDINHOS[3], null)'))), { perfil: 'auluno', semCategoria: false }, 'Nino: a reserva cancelada não o faz hóspede');
+    igual([run(`contatoEstadiasDe('${K655}', PELUDINHOS[0]).length`), run(`contatoJaFoiEmbora('${K655}', '2026-10-02', PELUDINHOS[0], '${HOJE655}')`)], [0, '']);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q15/q16 — um toque por vez (dois toques rápidos = uma gravação) e só quem fala com o tutor abre o Finalizar', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  await dom655(async () => {
+    try {
+      run(MEM_FIN655(db));
+      run(`contatoFinalizarAbrir('${K655}', '2026-10-06', 'antip'); CONTATO_FIN.escolha='nao_respondeu';`);
+      const a = run('contatoFinalizarConfirmar()'); const b = run('contatoFinalizarConfirmar()');
+      igual(await Promise.all([a, b]), [true, false]);
+      await drena655();
+      igual([db.escritas.filter((w) => w.op === 'update' && w.p === '').length, evs655(db).filter((e) => e.acao === 'finalizou').length], [1, 1]);
+      // papel sem a tela (Encãotador, sem a tela recebida no Time): nem abre
+      run(`__PAPEL655='monitor'; CONTATO_FIN=null;`);
+      assert.strictEqual(run('contatoPodeFinalizar()'), false);
+      assert.strictEqual(run(`contatoFinalizarAbrir('${KMEL655}', '2026-10-06', 'antip')`), null);
+      igual([run('CONTATO_FIN'), run('!!__EL655.ctFinBox')], [null, false]);
+      assert.ok(run('__ALE655').some((t) => /^SÓ QUEM FALA COM O TUTOR FINALIZA/.test(t)), run('__ALE655').join('\n'));
+    } finally { solta655f(); }
+  });
+});
+provaAsync('6.55 R2 q17 — o Finalizar não grava por cima do dia que a FICHA fechou em outro aparelho (C20/C1)', async () => {
+  const db = arvore655(SEED_FIN655());
+  arma655(HOJE655, '15:00:00', db);
+  try {
+    run(MEM_FIN655(db));
+    const ficha = { quem: 'Ana', ts: T655(7, 14), via: 'ficha' };
+    db.store.daycare.vencimentos['2026-10-05'][K655].fechados = { antip: ficha };
+    run(`__F655=contatoFinalizarMontar('${K655}', '2026-10-06', 'antip', ${T655(7, 15)});`);
+    igual(run('__F655.alvos'), ['2026-10-05', '2026-10-06']);
+    assert.strictEqual(await run(`contatoFinalizarGravar(__F655, 'nao_respondeu', '')`), true); await drena655();
+    igual(reg655(db, '2026-10-05').fechados.antip, ficha, 'o fechado pela ficha fica');
+    assert.strictEqual(reg655(db, '2026-10-06').fechados.antip.via, 'finalizar');
+    igual(evs655(db)[0].dias, ['2026-10-06']);
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R2 q18 — «desfez a resposta» entra no histórico (C9)', async () => {
+  const R = semUndef655(conv655('antip', T655(6, 9), null, { respostas: { antip: { v: 'bolsa', quem: 'Ana', ts: T655(6, 11) } },
+    auto: { antip: { dia: '2026-10-08', onde: 'bolsa', quem: 'Ana', ts: T655(6, 11), adiado: false, itens: [], falharam: [] } } }));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-08': { [K655]: R } } } });
+  arma655(HOJE655, '15:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`zPergunta=function(){ return Promise.resolve(true); }; __VL655['2026-10-08']=[${O_TICO655}]; vencMemoLimpar();
+        VENC_PEND={'2026-10-08':{'${K655}':${JSON.stringify(R)}}};`);
+      assert.strictEqual(await run(`vencDesfazerAuto('${K655}', 'antip', '2026-10-08')`), true); await drena655();
+      const e = evs655(db).filter((x) => x.acao === 'desfez_resposta');
+      igual(e.map((x) => [x.dia, x.assunto, x.resposta.v, x.quem]), [['2026-10-08', 'antip', 'bolsa', 'Leticya']]);
+    } finally { solta655f(); }
+  });
+});
+provaAsync('6.55 R2 q19/q21/q22/q23 — check-out antes da saída é o dia em que foi embora; a Prevenção mostra o ÚLTIMO desfecho; o histórico junta o evento com até 60 s de diferença; o selo diz «finalizado»', async () => {
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    igual(run(`contatoEstadiaFim({status:'finalizada', saida:'2026-10-11', checkout:{ts:${T655(9, 10)}}})`), '2026-10-09');
+    igual(run(`contatoEstadiaFim({status:'finalizada', saida:'2026-10-08', checkout:{ts:${T655(9, 10)}}})`), '2026-10-08');
+    const fe = (ts, d, log) => ({ quem: 'Ana', ts, via: 'finalizar', desfecho: d, contatos: 2, log });
+    run(`VENC_PEND={'2026-10-05':{'${K655}':{pet:'Tico', fechados:{antip:${JSON.stringify(fe(T655(5, 12), 'nao_quer', 'a'))}}}},
+      '2026-10-06':{'${K655}':{pet:'Tico', fechados:{vacina:${JSON.stringify(fe(T655(6, 12), 'resolveu', 'b'))}}}}};`);
+    const u = JSON.parse(JSON.stringify(run(`contatoUltimoDesfechoDe('${K655}')`)));
+    igual([u.dia, u.base, u.fe.desfecho], ['2026-10-06', 'vacina', 'resolveu']);
+    // histórico: o envio da memória (15:00:00) e o do banco gravado 30 s depois, de um aparelho antigo
+    run(`VENC_PEND={'${HOJE655}':{'${K655}':{pet:'Tico', enviadas:{ant_antip:{quem:'Ana', ts:${T655(7, 15)}}}, envios:{ant_antip:[{quem:'Ana', ts:${T655(7, 15)}}]}}}};
+      CONTATO_LOG['${K655}']={lido:true, lendo:false, quando:${T655(7, 15)}, ev:{e1:{acao:'mandou', quem:'Ana', ts:${T655(7, 15, 0) + 30000}, dia:'${HOJE655}', assunto:'ant_antip', base:'antip', texto:'Oi, Rita!', canal:'whatsapp', tela:'hoje'}}};`);
+    const J = JSON.parse(JSON.stringify(run(`contatoHistoricoJunto('${K655}', 'antip', ['${HOJE655}'])`)));
+    igual([J.lista.length, J.lista[0].texto, J.incompleto], [1, 'Oi, Rita!', false]);
+    const r = `{fechados:{antip:${JSON.stringify(fe(T655(6, 12), 'nao_quer', 'a'))}}, enviadas:{antip:{quem:'Ana', ts:${T655(6, 9)}}}}`;
+    igual([run(`contatoEstadoSelo(${r}, 'antip', 'fechado')`), run(`contatoEstadoSelo({fechados:{antip:{quem:'Ana', ts:1, via:'ficha'}}}, 'antip', 'fechado')`)], ['finalizado', 'fechado']);
+  } finally { solta655f(); }
+});
+
+// ---------------------------------------------------------------- 6.55 — 3ª rodada (re-gate do QA: N1 a N4)
+provaAsync('6.55 R3 N1/HB6 — quem só se hospeda e NÃO tem hospedagem (o Auluno Avulso fora da turma, a ficha não achada pela chave) segue a regra de sempre: lança para o próximo dia dele, como na base; «fora» é só para a hospedagem que terminou', async () => {
+  const KB = 'bolt__caio-teste';
+  const itens = [{ k: 'verm_p', nome: 'Vermífugo', vence: '2026-10-01', atrasado: true }];
+  const RB = { pet: 'Bolt', tutor: 'Caio Teste', antecipado: true, enviadas: { ant_antip: { quem: 'Ana', ts: T655(6, 10) } }, itens, itens_ant: itens };
+  // a sonda R4 da QA: o Avulso que veio na terça, ausente na quarta — na base, lança para quarta (07/10) e, se ele faltar, vira pendência
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [KB]: RB } } } });
+  arma655('2026-10-07', '11:00:00', db);
+  try {
+    run(`__EXC655.Bolt={categoria:'avulso', verm_p:'2026-10-01'}; __TURMA655=[]; VENC_PEND={'2026-10-06':{'${KB}':${JSON.stringify(RB)}}};`);
+    assert.strictEqual(run(`contatoLancarHospede('${KB}', vencObjDe('${KB}','2026-10-06'), '2026-10-06', '2026-10-07')`), null);
+    await run(`vencResponderTipo('${KB}', 'ant_antip', 'hoje_bolsa', '2026-10-06')`); await drena655(); await drena655();
+    const a = (reg655(db, '2026-10-06', KB).auto || {}).ant_antip || {};
+    igual([a.dia, !!a.foraDaEstadia, (a.itens || []).length, 'hospedagem' in a], ['2026-10-07', false, 1, false], 'igual à base (sonda R4 da QA)');
+    igual(Object.keys((db.store.daycare || {}).dashboard || {}), ['2026-10-07']);
+    assert.ok(!run('__ALE655').some((t) => /NADA FOI LANÇADO|só recebem quem está na casa/.test(t)), run('__ALE655').join('\n'));
+  } finally { solta655f(); }
+  // a sonda R9 da QA: a ficha que não é achada pela chave (o nome do tutor mudou depois da conversa) — na base, lança para quinta (08/10)
+  const KZ = 'zeca__bia-teste';
+  const RZ = { pet: 'Zeca', tutor: 'Bia Teste', antecipado: true, enviadas: { ant_antip: { quem: 'Ana', ts: T655(7, 10) } }, itens, itens_ant: itens };
+  const db2 = arvore655({ daycare: { vencimentos: { '2026-10-07': { [KZ]: RZ } } } });
+  arma655('2026-10-08', '11:00:00', db2);
+  try {
+    run(`__TURMA655=[]; VENC_PEND={'2026-10-07':{'${KZ}':${JSON.stringify(RZ)}}};`);
+    await run(`vencResponderTipo('${KZ}', 'ant_antip', 'hoje_bolsa', '2026-10-07')`); await drena655(); await drena655();
+    const a = (reg655(db2, '2026-10-07', KZ).auto || {}).ant_antip || {};
+    igual([a.dia, !!a.foraDaEstadia, (a.itens || []).length], ['2026-10-08', false, 1], 'igual à base (sonda R9 da QA)');
+    assert.ok(!run('__ALE655').some((t) => /NADA FOI LANÇADO/.test(t)), run('__ALE655').join('\n'));
+  } finally { solta655f(); }
+  // e a hospedagem que terminou continua «fora», com a data e a frase da casa
+  arma655('2026-10-10', '11:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 9)}}; EST_TODAS=Object.assign({}, EST_TODAS); __TURMA655=[];`);
+    igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', {p:PELUDINHOS[0], nome:'Tico'}, '2026-10-07', '2026-10-10')`))), { fora: true, fim: '2026-10-08' });
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R3 N2/N4 — check-out antecipado: A 05→10 (saiu em 07) e B 08→12 são duas hospedagens; a conversa de A não soma os contatos de B; a hospedagem do dia é a mais recente que o cobre', async () => {
+  const vencs = {
+    '2026-10-06': { [K655]: semUndef655(conv655('ant_antip', T655(6, 10))) },
+    '2026-10-08': { [K655]: semUndef655(conv655('ant_antip', T655(8, 10), [{ quem: 'Bia', ts: T655(8, 15) }])) } };
+  arma655('2026-10-09', '11:00:00', arvore655({ daycare: { vencimentos: JSON.parse(JSON.stringify(vencs)) } }));
+  try {
+    run(`EST_TODAS={a:{refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-05', saida:'2026-10-10', status:'finalizada', checkout:{ts:${T655(7, 9)}}},
+        b:{refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-08', saida:'2026-10-12', status:'ativa'}};
+      VENC_PEND=${JSON.stringify(vencs)};`);
+    igual(JSON.parse(JSON.stringify(run(`contatoEstadiasDe('${K655}', PELUDINHOS[0])`))).map((h) => [h.id, h.entrada, h.saida, h.fim]),
+      [['a', '2026-10-05', '2026-10-10', '2026-10-07'], ['b', '2026-10-08', '2026-10-12', '']], 'saiu em 07 e voltou em 08: duas hospedagens');
+    igual(['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'].map((d) => (run(`contatoEstadiaDoDia('${K655}', '${d}', PELUDINHOS[0])`) || {}).id || null), ['a', 'a', 'b', 'b']);
+    const a = JSON.parse(JSON.stringify(run(`contatoLinhaInfo('${K655}', '2026-10-06', 'ant_antip', null)`)));
+    igual([a.contatos, a.podeCobrar, a.estadia_id], [1, true, 'a'], 'a conversa de 06/10 conta só a hospedagem A (antes: 3 contatos, sem «Cobrar»)');
+    assert.ok(/1 contato$/.test(a.frase), a.frase);
+    const b = JSON.parse(JSON.stringify(run(`contatoLinhaInfo('${K655}', '2026-10-08', 'ant_antip', null)`)));
+    igual([b.contatos, b.estadia_id], [2, 'b']);
+    igual(JSON.parse(JSON.stringify(run(`contatoFinalizarMontar('${K655}', '2026-10-06', 'ant_antip', ${T655(9, 11)}).alvos`))), ['2026-10-06']);
+    igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-06'), '2026-10-06', '2026-10-09')`))), { dia: '2026-10-09', estadia_id: 'b' });
+    // sem a hospedagem B: saiu em 07 e não está na turma de hoje (a turma só põe o hóspede com a estadia ativa) — «fora», desde 07/10
+    run(`delete EST_TODAS.b; EST_TODAS=Object.assign({}, EST_TODAS); __TURMA655=[];`);
+    igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${K655}', vencObjDe('${K655}','2026-10-06'), '2026-10-06', '2026-10-09')`))), { fora: true, fim: '2026-10-07' });
+    // N4: a regra da lista — duas hospedagens cobrindo o dia, vale a mais recente
+    igual(run(`contatoEstadiaNaLista([{id:'x', entrada:'2026-10-05', saida:'2026-10-10', fim:''}, {id:'y', entrada:'2026-10-08', saida:'2026-10-12', fim:''}], '2026-10-09').id`), 'y');
+    igual(run(`contatoEstadiaNaLista([{id:'x', entrada:'2026-10-05', saida:'2026-10-10', fim:'2026-10-07'}], '2026-10-09')`), null, 'depois do check-out antecipado, o dia não é da hospedagem');
+  } finally { solta655f(); }
+});
+provaAsync('6.55 R3 N3 — o «desfazer» do cartão «nada lançado» só tira a resposta, sem dia vazio; trocar a resposta deixa o rastro certo', async () => {
+  const R = semUndef655(conv655('ant_antip', T655(7, 10)));
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-07': { [K655]: R } } } });
+  arma655('2026-10-10', '11:00:00', db);
+  await dom655(async () => {
+    try {
+      run(`EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 9)}}; EST_TODAS=Object.assign({}, EST_TODAS); __TURMA655=[];
+        VENC_PEND={'2026-10-07':{'${K655}':${JSON.stringify(R)}}};`);
+      assert.strictEqual(await run(`vencResponderTipo('${K655}', 'ant_antip', 'hoje_bolsa', '2026-10-07')`), true); await drena655(); await drena655();
+      assert.strictEqual(reg655(db, '2026-10-07').auto.ant_antip.foraDaEstadia, true);
+      run(`VENC_PEND={'2026-10-07':{'${K655}':${JSON.stringify(reg655(db, '2026-10-07'))}}}; __PERG655=[]; zPergunta=function(t, l){ __PERG655.push([t].concat(l)); return Promise.resolve(false); };`);
+      assert.strictEqual(await run(`vencDesfazerAuto('${K655}', 'ant_antip', '2026-10-07')`), false);
+      igual(run('__PERG655')[0], ['Desfazer a resposta de Tico?', 'A resposta «Pode fazer hoje — está na bolsa» sai, e o assunto volta a esperar resposta.',
+        'Nada tinha sido lançado: no dia da resposta, o FILHOt não estava na Zêluz (a hospedagem terminou em 08/10).']);
+      // trocar a resposta (para «Vai aplicar em casa»): o rastro não fala de «no dia » vazio
+      run('__AUD655=[];');
+      assert.strictEqual(await run(`vencResponderTipo('${K655}', 'ant_antip', 'casa', '2026-10-07')`), true); await drena655(); await drena655();
+      const rastro = run('__AUD655').join('\n');
+      assert.ok(/desfez o registro anterior de Tico — nada tinha sido lançado \(fora da hospedagem\)/.test(rastro), rastro);
+      assert.ok(!/no dia  |no dia \(| no dia $/m.test(rastro) && !/anterior de Tico no dia/.test(rastro), rastro);
+      assert.ok(!('ant_antip' in (reg655(db, '2026-10-07').auto || {})), 'o registro «nada lançado» saiu');
+    } finally { solta655f(); }
+  });
+});
+// ---------------------------------------------------------------- 6.55 — conferência final do QA (N5)
+provaAsync('6.55 R4 N5 — «já foi embora» é só da hospedagem que CONTÉM o dia da conversa: o Avulso que já se hospedou, numa conversa de Day Care, segue a regra de sempre (sonda R10 da QA); a conversa de dentro da hospedagem continua «já foi embora»; a emenda (HB5) vale', async () => {
+  const KB = 'bolt__caio-teste';
+  const itens = [{ k: 'verm_p', nome: 'Vermífugo', vence: '2026-10-01', atrasado: true }];
+  const R = { pet: 'Bolt', tutor: 'Caio Teste', antecipado: true, enviadas: { ant_antip: { quem: 'Ana', ts: T655(6, 10) } }, itens, itens_ant: itens };
+  const H1 = `EST_TODAS.h1={refKey:'bolt__caio teste', nome:'Bolt', tutor:'Caio Teste', entrada:'2026-09-01', saida:'2026-09-05', status:'finalizada', checkout:{ts:${new Date(2026, 8, 5, 10).getTime()}}}; EST_TODAS=Object.assign({}, EST_TODAS);`;
+  // a sonda R10 da QA: hospedou-se de 01 a 05/09; conversa de Day Care em 06/10; hoje 07/10, fora da turma
+  const db = arvore655({ daycare: { vencimentos: { '2026-10-06': { [KB]: R } } } });
+  arma655('2026-10-07', '11:00:00', db);
+  try {
+    run(`__EXC655.Bolt={categoria:'avulso', verm_p:'2026-10-01'}; __TURMA655=[]; ${H1} VENC_PEND={'2026-10-06':{'${KB}':${JSON.stringify(R)}}};`);
+    igual(run(`(function(){ var l=contatoLinhaInfo('${KB}', '2026-10-06', 'ant_antip', null); return [l.jaFoiEmbora, l.podeCobrar]; })()`), ['', true], 'não «já foi embora em 05/09»: a linha continua oferecendo «Cobrar»');
+    assert.strictEqual(run(`contatoLancarHospede('${KB}', vencObjDe('${KB}','2026-10-06'), '2026-10-06', '2026-10-07')`), null);
+    await run(`vencResponderTipo('${KB}', 'ant_antip', 'hoje_bolsa', '2026-10-06')`); await drena655(); await drena655();
+    const a = (reg655(db, '2026-10-06', KB).auto || {}).ant_antip || {};
+    igual([a.dia, !!a.foraDaEstadia, a.fim || '', (a.itens || []).length], ['2026-10-07', false, '', 1], 'lança e vira pendência, como na base');
+    assert.ok(!run('__ALE655').some((t) => /NADA FOI LANÇADO/.test(t)), run('__ALE655').join('\n'));
+    // a conversa que nasceu DENTRO da hospedagem (03/09) continua «já foi embora em 05/09» — e a resposta tardia não lança
+    run(`VENC_PEND['2026-09-03']={'${KB}':{pet:'Bolt', tutor:'Caio Teste', enviadas:{antip:{quem:'Ana', ts:${new Date(2026, 8, 3, 9).getTime()}}}}};`);
+    igual(run(`(function(){ var l=contatoLinhaInfo('${KB}', '2026-09-03', 'antip', null); return [l.jaFoiEmbora, l.podeCobrar]; })()`), ['2026-09-05', false]);
+    igual(JSON.parse(JSON.stringify(run(`contatoLancarHospede('${KB}', {p:PELUDINHOS[2], nome:'Bolt'}, '2026-09-03', '2026-10-07')`))), { fora: true, fim: '2026-09-05' });
+  } finally { solta655f(); }
+  // o hóspede de sempre: conversa de 05/10 dentro da hospedagem 05→06 (check-out em 06), hoje 07/10 — «já foi embora em 06/10»
+  arma655(HOJE655, '15:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.saida='2026-10-06'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(6, 17)}}; EST_TODAS=Object.assign({}, EST_TODAS); __TURMA655=[];`);
+    igual([run(`contatoJaFoiEmbora('${K655}', '2026-10-05', PELUDINHOS[0], '${HOJE655}')`), run(`contatoJaFoiEmbora('${K655}', '2026-10-07', PELUDINHOS[0], '${HOJE655}')`)],
+      ['2026-10-06', ''], 'a conversa de dentro: foi embora; a de um dia sem hospedagem: vazio');
+  } finally { solta655f(); }
+  // a emenda (HB5): A 05→08 e B 08→11 são uma hospedagem — a conversa de 06/10 «foi embora» só quando B termina (11/10), não em 08/10
+  arma655('2026-10-12', '10:00:00', arvore655({}));
+  try {
+    run(`EST_TODAS.e1.saida='2026-10-08'; EST_TODAS.e1.status='finalizada'; EST_TODAS.e1.checkout={ts:${T655(8, 9)}};
+      EST_TODAS.e2={refKey:'tico__rita teste', nome:'Tico', tutor:'Rita Teste', entrada:'2026-10-08', saida:'2026-10-11', status:'finalizada', checkout:{ts:${T655(11, 10)}}, _ts:9};
+      EST_TODAS=Object.assign({}, EST_TODAS);`);
+    igual([run(`contatoJaFoiEmbora('${K655}', '2026-10-06', PELUDINHOS[0], '2026-10-12')`), run(`contatoJaFoiEmbora('${K655}', '2026-10-09', PELUDINHOS[0], '2026-10-12')`)], ['2026-10-11', '2026-10-11']);
+    run(`EST_TODAS.e2.status='ativa'; delete EST_TODAS.e2.checkout; EST_TODAS=Object.assign({}, EST_TODAS);`);
+    assert.strictEqual(run(`contatoJaFoiEmbora('${K655}', '2026-10-06', PELUDINHOS[0], '2026-10-10')`), '', 'com B em curso, está na casa');
+  } finally { solta655f(); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

@@ -237,6 +237,62 @@ async function main() {
       await assertFails(db.ref(`daycare/conferir-medicacao/${dcDia}`).remove());
       ok('anônimo NÃO apaga o dia inteiro de daycare/conferir-medicacao');
     } catch (e) { falhou('anônimo NÃO apaga o dia inteiro de daycare/conferir-medicacao', e); }
+    // ---------------------------------------------------------------- Story 6.55 — o histórico do contato
+    // daycare/contatos-log/{chave}/{id}: só cria. A entrada nova passa; editar, apagar a entrada ou o
+    // histórico inteiro do FILHOt, não. O «Finalizar» grava a entrada junto com os fechados, numa
+    // atualização a partir da raiz — e isso continua passando.
+    const ctChave = 'tico__rita-teste';
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.database().ref(`daycare/contatos-log/${ctChave}/ev-existente`)
+        .set({ ts: Date.now(), quem: 'Ana', acao: 'mandou', dia: '2026-10-06', assunto: 'antip' });
+    });
+    try {
+      await assertSucceeds(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'cobrou', dia: '2026-10-06', assunto: 'antip' }));
+      ok('anônimo CRIA uma entrada nova no histórico do contato (push)');
+    } catch (e) { falhou('anônimo CRIA uma entrada nova no histórico do contato', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}/ev-existente`).update({ acao: 'finalizou' }));
+      ok('anônimo NÃO edita uma entrada do histórico do contato');
+    } catch (e) { falhou('anônimo NÃO edita uma entrada do histórico do contato', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}/ev-existente`).remove());
+      ok('anônimo NÃO apaga uma entrada do histórico do contato');
+    } catch (e) { falhou('anônimo NÃO apaga uma entrada do histórico do contato', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}`).remove());
+      ok('anônimo NÃO apaga o histórico inteiro de um FILHOt');
+    } catch (e) { falhou('anônimo NÃO apaga o histórico inteiro de um FILHOt', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}/sem-campos`).set({ texto: 'oi' }));
+      ok('anônimo NÃO grava entrada sem ts, quem e acao');
+    } catch (e) { falhou('anônimo NÃO grava entrada sem ts, quem e acao', e); }
+    try {
+      const fe = { quem: 'Ana', ts: Date.now(), via: 'finalizar', desfecho: 'nao_respondeu', contatos: 3, log: 'ev-fin' };
+      await assertSucceeds(db.ref().update({
+        [`daycare/vencimentos/2026-10-06/${ctChave}/fechados/antip`]: fe,
+        [`daycare/contatos-log/${ctChave}/ev-fin`]: { ts: fe.ts, quem: 'Ana', acao: 'finalizou', desfecho: 'nao_respondeu', contatos: 3, dias: ['2026-10-06'] },
+      }));
+      ok('o «Finalizar» (fechados + entrada nova, numa atualização só) passa');
+    } catch (e) { falhou('o «Finalizar» (fechados + entrada nova, numa atualização só) passa', e); }
+    // Tamanho (QA B7): os mesmos limites que o app corta antes de gravar.
+    try {
+      await assertSucceeds(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'mandou', texto: 'x'.repeat(4000) }));
+      ok('o texto da mensagem com 4.000 letras passa');
+    } catch (e) { falhou('o texto da mensagem com 4.000 letras passa', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'mandou', texto: 'x'.repeat(4001) }));
+      ok('o texto da mensagem com 4.001 letras NÃO passa');
+    } catch (e) { falhou('o texto da mensagem com 4.001 letras NÃO passa', e); }
+    try {
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'nota', nota: 'x'.repeat(1001) }));
+      await assertFails(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'reabriu', motivo: 'x'.repeat(1001) }));
+      await assertSucceeds(db.ref(`daycare/contatos-log/${ctChave}`).push({ ts: Date.now(), quem: 'Ana', acao: 'nota', nota: 'x'.repeat(1000) }));
+      ok('o que o tutor disse e o motivo do desfazer: até 1.000 letras');
+    } catch (e) { falhou('o que o tutor disse e o motivo do desfazer: até 1.000 letras', e); }
+    try {
+      await assertSucceeds(db.ref('daycare/config/contatos').set({ finalizar_apos: 3, quem: 'Márcia', ts: Date.now() }));
+      ok('daycare/config/contatos é gravável (Configurações › Mensagens prontas)');
+    } catch (e) { falhou('daycare/config/contatos é gravável', e); }
   } finally {
     await testEnv.cleanup();
   }

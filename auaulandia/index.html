@@ -5130,13 +5130,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-07"></script>
+<script src="resposta-tutor.js?v=2026-10-09-08"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-07"></script>
+<script src="painel-logica.js?v=2026-10-09-08"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5148,7 +5148,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-07"></script>
+<script src="financeiro-logica.js?v=2026-10-09-08"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5805,7 +5805,11 @@
     // própria senha, é a Supervisão, a Gestão e a Diretoria (FR1): a Consultora abre e chama
     // uma delas, que digita a senha ali mesmo. O app grava o nome, nunca a senha (FR2).
     'corrigir-hospedagem':          ['consultora','supervisor','gestao','diretoria'],
-    'assinar-correcao-hospedagem':  ['supervisor','gestao','diretoria']
+    'assinar-correcao-hospedagem':  ['supervisor','gestao','diretoria'],
+    // ===== Story 6.55 — desfazer o «Finalizar» de uma conversa com o tutor ============
+    // No mesmo dia, quem finalizou desfaz (regra na própria função). Depois do dia, só a
+    // Supervisão, a Gestão e a Diretoria — sempre com o motivo, que fica no histórico.
+    'desfazer-finalizar-contato': ['supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -19863,7 +19867,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-07';
+  const APP_VERSAO='2026-10-09-08';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -29580,6 +29584,7 @@
     DB.ref('daycare/prevencao-aviso/'+chave).set(reg).then(function(){
       PREV_AVISOS[chave]=reg;
       if(typeof audit==='function') audit('prevencao','avisou o tutor de '+((o&&o.nome)||chave)+' sobre a prevenção',{pet:(o&&o.nome)||''});
+      try{ contatoPrevAvisoLog(o, reg); }catch(e){ /* silencioso de propósito: o aviso já está gravado; o histórico fica sem ele */ }
       renderPrevencao();
     }).catch(function(e){
       if(btn){ btn.disabled=false; btn.textContent='❌ não salvou: '+((e&&e.message)||e); }
@@ -29668,6 +29673,7 @@
           }).join('')
         +'</div>'
         +(av?('<div class="hint" style="margin:4px 0;color:var(--crm-ok);font-weight:700">Tutor avisado em '+fmtBR(av.quando||'')+(av.quem?(' por '+escAttr(av.quem)):'')+'.</div>'):'')
+        +contatoPrevDesfechoHTML(o.p)
         +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
         +'<button type="button" class="btn btn-gold" style="padding:6px 14px;font-size:12.5px" onclick="prevCopiarTutor(\''+jsAspas(ch)+'\',this)">Copiar mensagem para o tutor</button>'
         +'<button type="button" class="btn" style="padding:6px 14px;font-size:12.5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="prevMarcarAvisado(\''+jsAspas(ch)+'\',this)">'+(av?'Avisei de novo':'Já avisei')+'</button>'
@@ -44897,7 +44903,7 @@
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
     var o=vencAchar(chave);
     if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
-    vencMandei(chave, tipo);
+    vencMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:'vencimentos'});
   }
   function vencWhatsCobranca(chave, tipo, dia){
     var ta=document.getElementById('vencMsg_'+chave+'__cob-'+tipo);
@@ -44905,7 +44911,7 @@
     if(!txt){ alert('Não achei a cobrança. Abra a tela de novo.'); return; }
     var o=null; try{ o=vencObjDe(chave, dia); }catch(e){ o=null; } /* silencioso de propósito: sem o cartão, o WhatsApp abre para escolher o contato */
     if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
-    vencCobrei(chave, tipo, dia);
+    vencCobrei(chave, tipo, dia, {texto:txt, canal:'whatsapp', tela:'vencimentos'});
   }
   function vencCopiar(chave, tipo, btn){
     var ta=document.getElementById('vencMsg_'+chave+'__'+tipo);
@@ -45267,7 +45273,7 @@
   // A CONTA DE UM DIA QUALQUER — é ela que pinta os números no calendário. Pura no que
   // importa: recebe o dia e os registros daquele dia, e não lê banco nenhum.
   function vencContagemDia(dia, regDoDia, agora){
-    var out={dia:dia, total:0, aMandar:0, aguardando:0, cobrar:0, respondido:0};
+    var out={dia:dia, total:0, aMandar:0, aguardando:0, cobrar:0, respondido:0, finalizado:0};
     if(!vencEhDiaDayCare(dia)) return out;
     var L=vencListaMemo(dia);
     var reg=regDoDia||{};
@@ -45276,7 +45282,8 @@
       var r=reg[o.chave]||{};
       out.total++;
       var abertos=vencAbertosDe(o, r, agora);
-      if(!abertos.length){ out.respondido++; return; }
+      // 6.55: tudo fechado e ao menos um assunto pelo «Finalizar» conta como finalizado, não respondido.
+      if(!abertos.length){ if(contatoFinalizadoNoCartao(o, r)) out.finalizado++; else out.respondido++; return; }
       if(vencFaltaMandarDe(o, r, agora).length) out.aMandar++;
       var deveC=vencDeveDe(o, r);
       if(abertos.some(function(t){ return vencEstadoTipo(r, t, agora, deveC)==='cobrar'; })) out.cobrar++;
@@ -45396,6 +45403,7 @@
         if(c.cobrar) pontos+='<span class="vcal-n" style="--c:#B3261E" title="a cobrar">'+c.cobrar+'</span>';
         if(c.aguardando) pontos+='<span class="vcal-n" style="--c:#DEB428" title="mandado, sem resposta">'+c.aguardando+'</span>';
         if(c.respondido) pontos+='<span class="vcal-n" style="--c:#1E8449" title="respondido">'+c.respondido+'</span>';
+        if(c.finalizado) pontos+='<span class="vcal-n" style="--c:#6b5f4b" title="finalizado">'+c.finalizado+'</span>';
       } else pontos='<span class="vcal-n vcal-lendo" title="ainda lendo">&middot;&middot;&middot;</span>';
       h+='<button type="button" class="'+cls+'" onclick="vencTrocarDia(\''+iso+'\')" title="'+escAttr(iso)+'">'
         +'<span class="vcal-d">'+d+'</span><span class="vcal-ns">'+pontos+'</span></button>';
@@ -45404,7 +45412,8 @@
       +'<span class="vcal-lg" style="--c:#E08856"></span> a mandar &middot; '
       +'<span class="vcal-lg" style="--c:#B3261E"></span> a cobrar &middot; '
       +'<span class="vcal-lg" style="--c:#DEB428"></span> mandado, sem resposta &middot; '
-      +'<span class="vcal-lg" style="--c:#1E8449"></span> respondido<br>'
+      +'<span class="vcal-lg" style="--c:#1E8449"></span> respondido &middot; '
+      +'<span class="vcal-lg" style="--c:#6b5f4b"></span> finalizado<br>'
       +'O número está no dia em que o FILHOt <strong>vem</strong> — a mensagem se manda na véspera. '
       +'Fim de semana e feriado aparecem apagados: não há Day Care.</div>'
       +(lido?'':'<div class="hint" style="margin-top:4px">Ainda lendo o mês&hellip; os números aparecem sozinhos.</div>')
@@ -45616,7 +45625,9 @@
   // leitura: o "Mandei" da vacina feito no balcão sumia quando a recepção tocava o do
   // vermífugo. Agora, antes de gravar, o mapa é relido do banco (uma leitura pequena) e só
   // o assunto que ESTE toque mudou entra por cima. O formato gravado não muda.
-  var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto','fechados'];
+  // 6.55: `envios` (a lista de cada envio, que só cresce) entra junto — dois aparelhos mandando o
+  // mesmo assunto ficam os dois, e a contagem de contatos soma os dois.
+  var VENC_MAPAS_POR_ASSUNTO=['enviadas','respostas','cobrancas','tentativas','auto','fechados','envios'];
   var VENC_FILA_GRAV={};      // {dia|chave: promessa} — a fila das gravações de cada registro
   // Pura: o mapa do banco (fresco), o que este aparelho tinha (velho) e o que ele quer (novo).
   // Entra por cima só o assunto que mudou de velho para novo; o que sumiu de velho para novo
@@ -45848,7 +45859,9 @@
       var quadroVolta=!!(r.ficha_atualizada && r.ficha_atualizada.via==='quadro' && vencQuadroSegura(ex, p, dia, r, hoje)===true);
       if(!res.length && !reab.length && !quadroVolta) return;
       var fech=Object.assign({}, r.fechados||{});
-      res.forEach(function(t){ fech[t]={quem:quem, ts:Date.now(), via:'ficha'}; });
+      // 6.55 (C1): fechar pela ficha o que estava finalizado (um toque depois do Finalizar) guarda o desfecho.
+      res.forEach(function(t){ var __fin=fech[t]; fech[t]={quem:quem, ts:Date.now(), via:'ficha'};
+        if(__fin && __fin.via==='finalizar') fech[t].finalizado=__fin; });
       reab.forEach(function(t){ delete fech[t]; });
       var rots=function(l){ return vencJuntar(l.map(function(t){ return String(vencRotuloTipo(t)).toLowerCase(); })); };
       // O rastro diz o que a conta viu — "não tem mais pendência de …" — e não "resolveu":
@@ -45869,19 +45882,28 @@
   // "Mandei" — só diz que aquela mensagem SAIU. Não é resposta do tutor, e não fecha nada.
   // UMA marca por assunto (21/set/2026): quem mandou a de vacina e ainda não mandou a do
   // vermífugo precisa VER isso na tela, não adivinhar de memória.
-  function vencMandei(chave, tipo){
-    var o=vencAchar(chave); if(!o) return;
+  // 6.55: cada envio também entra em envios[assunto] (a lista que só cresce: «Mandei de novo» não apaga
+  // o 1º) e no histórico do FILHOt, com o texto — o do WhatsApp (meta) ou o da caixa, se estiver na tela.
+  function vencMandei(chave, tipo, meta){
+    var o=vencAchar(chave); if(!o) return Promise.resolve(false);
     tipo=String(tipo||'');
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var reg={quem:quem, ts:Date.now()};
     var patch={msg_enviada:{quem:quem, ts:reg.ts, tipo:tipo}};
+    var dia=vencDiaAlvo();
     if(tipo){
-      var env=Object.assign({}, (vencRegDe(chave)||{}).enviadas||{});
+      var rAtual=vencRegDe(chave)||{};
+      var env=Object.assign({}, rAtual.enviadas||{});
       env[tipo]=reg; patch.enviadas=env;
+      patch.envios=contatoEnviosCom(rAtual, tipo, reg);
     }
-    vencGravar(chave, patch,
+    var ev=tipo?contatoEventoEnvio(meta, 'vencimentos', 'vencMsg_'+chave+'__'+tipo):null;
+    return vencGravar(chave, patch,
       'marcou que mandou a mensagem de '+String(tipo?vencRotuloTipo(tipo):'prevenção').toLowerCase()
-      +' de '+o.nome+' (dia '+vencDiaAlvo()+')', o);
+      +' de '+o.nome+' (dia '+dia+')', o).then(function(ok){
+      if(ok && ev) contatoLogGravar(chave, Object.assign(ev, {acao:'mandou', ts:reg.ts, quem:reg.quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo), pet:o.nome||'', tutor:o.tutor||''}));
+      return ok;
+    });
   }
   // A RESPOSTA DO CARTÃO INTEIRO — o caminho de antes de 21/set/2026, que continua vivo por
   // duas razões: é por ele que se abre o bloco de ESCOLHER À MÃO ("Pode fazer na Zêluz", com
@@ -45949,7 +45971,10 @@
       return vencGravar(chave, __pt, function(reg){
         var n=(((reg||{}).tentativas||{})[tipo]||tent[tipo]).length;
         return 'anotou que o tutor de '+o.nome+' NÃO respondeu sobre '+rot+' (dia '+dia+') — '
-          +n+'ª tentativa; o assunto continua pendente'; }, o, dia, vencEhAntecipado(tipo));
+          +n+'ª tentativa; o assunto continua pendente'; }, o, dia, vencEhAntecipado(tipo)).then(function(ok){
+        if(ok) contatoLogGravar(chave, {acao:'nao_respondeu', ts:agora, quem:quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo), pet:o.nome||'', tutor:o.tutor||''});
+        return ok;
+      });
     }
     var resps=Object.assign({}, r.respostas||{});
     var antes=String((resps[tipo]||{}).v||'');
@@ -45984,12 +46009,26 @@
               quem:quem, ts:agora};
       patch.vet=vetReg;
     }
+    // 6.55 (C15, o mesmo do lançamento): «Pode aplicar hoje» dado DEPOIS do dia da pergunta, por quem só
+    // se hospeda — hospedado hoje, o recado da veterinária é para hoje; fora da hospedagem, não sai recado.
+    var vetH=(vetReg && def.hoje)?contatoLancarHospede(chave, o, dia, hojeV):null;
+    if(vetH && vetH.dia) vetReg.dia=vetH.dia;
+    var vetFora=(vetH && vetH.fora)?vetH:null;
+    if(vetFora){ vetReg=null; delete patch.vet; }
     var txt=(antes&&antes!==v)
       ? ('mudou a resposta de '+o.nome+' sobre '+rot+' de "'+vencRespRotulo(antes)+'" para "'+def.t+'"')
       : ('registrou a resposta do tutor de '+o.nome+' sobre '+rot+': "'+def.t+'"');
     return vencGravar(chave, patch, txt+' (dia '+dia+')', o, dia, vencEhAntecipado(tipo)).then(function(ok){
       if(!ok) return false;
+      // 6.55: a resposta entra no histórico do FILHOt (trocar de resposta é outro evento; nada se apaga).
+      contatoLogGravar(chave, {acao:'respondeu', ts:agora, quem:quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo),
+        resposta:{v:v, rotulo:def.t||vencRespRotulo(v)||v}, pet:o.nome||'', tutor:o.tutor||''});
+      CONTATO_RESP_ULT={chave:chave, dia:dia, tipo:tipo, nome:String(o.nome||''), rotulo:String(def.t||vencRespRotulo(v)||v), v:v, ts:Date.now()};
       if(vetReg) vencAvisarVet(o, vetReg);
+      if(vetFora && typeof zAlertao==='function') zAlertao('A VETERINÁRIA NÃO FOI AVISADA',
+        ['A resposta do tutor ficou registrada.', String(o.nome||'')+' não está na Zêluz hoje'
+          +(vetFora.fim?(' (a hospedagem terminou em '+contatoDD(vetFora.fim)+')'):'')+': não dá para aplicar a vacina hoje.',
+         'Se ainda precisar, combine com a veterinária quando voltar.'], {botao:'Entendi'});
       return vencAutoDesmanchar(chave, tipo, dia, o, autoAntes).then(function(){
         // Troca de escova: "tinha em casa" ou "não autorizou" põem a próxima na ficha.
         if(def.escova3m){
@@ -46035,8 +46074,9 @@
       var autos=Object.assign({}, (vencRegDeDia(dia,chave)||{}).auto||{});
       delete autos[tipo];
       return vencGravar(chave, {auto:autos},
-        'desfez o lançamento automático anterior de '+((o&&o.nome)||chave)+' no dia '+auto.dia
-        +(res.tirados.length?(' — tirou: '+res.tirados.join(' · ')):' — não havia o que tirar')
+        (auto.foraDaEstadia?('desfez o registro anterior de '+((o&&o.nome)||chave)+' — nada tinha sido lançado (fora da hospedagem)')   // 6.55 (QA N3)
+          :('desfez o lançamento automático anterior de '+((o&&o.nome)||chave)+' no dia '+auto.dia))
+        +(res.tirados.length?(' — tirou: '+res.tirados.join(' · ')):(auto.foraDaEstadia?'':' — não havia o que tirar'))
         +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(){
         try{ renderDash(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
         if(res.erros.length && typeof zAlertao==='function') zAlertao('Parte do lançamento anterior NÃO saiu',
@@ -46054,19 +46094,24 @@
   function vencLancarAuto(chave, tipo, onde, dia, oOpc){
     var o=oOpc||vencObjDe(chave, dia);
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
-    var alvo=vencDiaDoLancamento(o, dia, hoje)||dia;
+    // 6.55 (C15): quem só se hospeda não tem «próximo dia dele» — hospedado hoje, vai para hoje; fora, avisa.
+    var hosp=contatoLancarHospede(chave, o, dia, hoje);
+    if(hosp && hosp.fora) return contatoLancarForaDaEstadia(chave, tipo, onde, dia, o, hosp);
+    var alvo=(hosp && hosp.dia) || vencDiaDoLancamento(o, dia, hoje)||dia;
     var fila=vencLancaveisDoTipo(o, tipo);
     var gravarAuto=function(res){
       var r=vencRegDeDia(dia, chave)||{};
       var auto=Object.assign({}, r.auto||{});
       auto[tipo]={dia:res.dia, onde:onde, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(),
                   adiado:(res.dia!==dia), itens:res.itens, falharam:res.falharam};
+      if(hosp && hosp.dia) auto[tipo].hospedagem=true;
       var frase=res.itens.length
         ? ('lançou sozinho para '+o.nome+' no dia '+res.dia+': '
            +res.itens.map(function(x){ return x.texto+(x.jaEstava?' (já estava lançado)':''); }).join(' · '))
         : ('registrou "'+onde+'" para '+o.nome+' — nada deste assunto se lança nos Lançamentos do dia');
       if(res.falharam.length) frase+=' — NÃO entrou: '+res.falharam.join(' · ');
-      if(res.dia!==dia) frase+=' (o dia '+dia+' já passou: foi para o próximo dia dele)';
+      if(res.dia!==dia) frase+=(hosp && hosp.dia)?(' (o dia '+dia+' já passou: foi para hoje, com o FILHOt na hospedagem)')
+        :(' (o dia '+dia+' já passou: foi para o próximo dia dele)');
       return vencGravar(chave, {auto:auto}, frase, o, dia, vencEhAntecipado(tipo)).then(function(){
         if(res.falharam.length && typeof zAlertao==='function') zAlertao('Parte NÃO entrou nos Lançamentos do dia',
           ['Não entrou: '+res.falharam.join(' · ')+'.',
@@ -46125,13 +46170,18 @@
     var auto=(r.auto||{})[tipo];
     if(!auto||!DB) return Promise.resolve(false);
     var rot=String(vencRotuloTipo(tipo)).toLowerCase();
-    var linhas=['Sai dos Lançamentos do dia '+(((typeof fmtBR==='function'?fmtBR(auto.dia):'')||auto.dia))
-      +', sai da planilha e some da TV:'];
-    (Array.isArray(auto.itens)?auto.itens:[]).forEach(function(x){ linhas.push('· '+x.texto+(x.jaEstava?' (já estava lançado antes — esse fica)':'')); });
-    linhas.push('A resposta "'+vencRespRotulo((vencRespostaDe(r,tipo)||{}).v||auto.onde)+'" também sai, e o assunto volta a esperar resposta.');
+    var linhas;
+    // 6.55 (QA N3): o «nada lançado» (fora da hospedagem) não tem dia nem itens — o desfazer só tira a resposta.
+    if(auto.foraDaEstadia) linhas=contatoDesfazerForaLinhas(r, tipo, auto);
+    else {
+      linhas=['Sai dos Lançamentos do dia '+(((typeof fmtBR==='function'?fmtBR(auto.dia):'')||auto.dia))
+        +', sai da planilha e some da TV:'];
+      (Array.isArray(auto.itens)?auto.itens:[]).forEach(function(x){ linhas.push('· '+x.texto+(x.jaEstava?' (já estava lançado antes — esse fica)':'')); });
+      linhas.push('A resposta "'+vencRespRotulo((vencRespostaDe(r,tipo)||{}).v||auto.onde)+'" também sai, e o assunto volta a esperar resposta.');
+    }
     return Promise.resolve(
       (typeof zPergunta==='function')
-        ? zPergunta('Desfazer o que foi lançado para '+o.nome+'?', linhas, {sim:'Desfazer', nao:'Manter'})
+        ? zPergunta((auto.foraDaEstadia?'Desfazer a resposta de ':'Desfazer o que foi lançado para ')+o.nome+'?', linhas, {sim:'Desfazer', nao:'Manter'})
         : true
     ).then(function(sim){
       if(!sim) return false;
@@ -46144,7 +46194,9 @@
         return vencGravar(chave, {respostas:resps, auto:autos},
           'DESFEZ a resposta de '+o.nome+' sobre '+rot+' (dia '+dia+')'
           +(res.tirados.length?(' — tirou dos Lançamentos do dia '+auto.dia+': '+res.tirados.join(' · ')):' — não havia lançamento a tirar')
-          +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(){
+          +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(okD){
+          if(okD) contatoLogGravar(chave, {acao:'desfez_resposta', dia:dia, assunto:tipo, base:vencTipoBase(tipo),
+            resposta:{v:String((vencRespostaDe(r,tipo)||{}).v||auto.onde||''), rotulo:vencRespRotulo((vencRespostaDe(r,tipo)||{}).v||auto.onde)||''}, pet:o.nome||'', tutor:o.tutor||''});
           try{ renderDash(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
           if(res.erros.length && typeof zAlertao==='function') zAlertao('Parte NÃO saiu dos Lançamentos do dia',
             ['Continua lançado: '+res.erros.join(' · ')+'.',
@@ -46157,17 +46209,24 @@
   // "Cobrei" — a casa cobrou de novo. Guarda QUEM e QUANDO, e pode acontecer mais de uma
   // vez: o relógio da cobrança reinicia a cada uma, para quem acabou de cobrar não ver
   // "cobrar" outra vez no minuto seguinte.
-  function vencCobrei(chave, tipo, diaOpc){
+  // 6.55: `meta` (opcional) = o texto da cobrança aberta no WhatsApp e a tela, ou só o nome da tela;
+  // a cobrança vai para o histórico do FILHOt. Marcada à mão no cartão, vai o texto da caixa.
+  function vencCobrei(chave, tipo, diaOpc, meta){
     var dia=diaOpc||vencDiaAlvo();
     var o=vencObjDe(chave, dia);
     var r=vencRegDeDia(dia, chave)||{};
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var cob=Object.assign({}, r.cobrancas||{});
-    cob[tipo]=(cob[tipo]||[]).concat([{quem:quem, ts:Date.now()}]);
+    var cobTs=Date.now();
+    cob[tipo]=(cob[tipo]||[]).concat([{quem:quem, ts:cobTs}]);
+    var ev=contatoEventoEnvio(meta, 'vencimentos', 'vencMsg_'+chave+'__cob-'+tipo);
     return vencGravar(chave, {cobrancas:cob}, function(reg){
       var n=(((reg||{}).cobrancas||{})[tipo]||cob[tipo]).length;
       return 'cobrou a resposta do tutor de '+o.nome+' sobre '+String(vencRotuloTipo(tipo)).toLowerCase()
-        +' ('+n+'ª cobrança, dia '+dia+')'; }, o, dia, vencEhAntecipado(tipo));
+        +' ('+n+'ª cobrança, dia '+dia+')'; }, o, dia, vencEhAntecipado(tipo)).then(function(ok){
+      if(ok) contatoLogGravar(chave, Object.assign(ev, {acao:'cobrou', ts:cobTs, quem:quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo), pet:(o&&o.nome)||'', tutor:(o&&o.tutor)||''}));
+      return ok;
+    });
   }
   // O bloco de "Pode fazer na Zêluz": abre RASCUNHO. Nada é gravado até o Confirmar.
   function vencAbrirLanc(chave, forcar){
@@ -46309,6 +46368,7 @@
       +(vetReg?(' — vacina de '+vetReg.vacinas+' para '+(((typeof fmtBR==='function')?fmtBR(vetReg.dia):'')||vetReg.dia)+', '+vetReg.periodo):''),
       o, dia).then(function(ok){
       if(!ok) return;
+      contatoRespostaMaoLog(chave, dia, o, respsM, vencGrupos(o));   // 6.55 (QA B6): a resposta entra no histórico
       if(vetReg) vencAvisarVet(o, vetReg);
       var fila=vencComData(o).filter(function(x){ return VENC_LANC[x.k]&&VENC_LANC[x.k].item; });
       if(!fila.length){ delete VENC_ABERTO[chave]; delete VENC_ESCOLHA[chave]; vencRender(); return; }
@@ -46965,13 +47025,16 @@
     var envMsg=r.enviadas||{};
     var agoraC=Date.now();
     vencMensagens(o, dia, hoje).forEach(function(m){
+      // 6.55 (H2): o hóspede que já conversou sobre o assunto nesta hospedagem não recebe de novo.
+      var __est=''; try{ __est=contatoCartaoEstadiaHTML(o, r, m.tipo, dia, hoje); }catch(e){ __est=''; } /* silencioso de propósito: sem a regra nova, o cartão de sempre */
+      if(__est){ h+=__est; return; }
       var jaFoi=envMsg[m.tipo];
       var estado=vencEstadoTipo(r, m.tipo, agoraC, deveF);
       var borda=(estado==='cobrar')?'2px solid #E08856':'1px solid var(--line)';
       h+='<div style="margin-top:11px;padding-top:9px;border-top:'+borda+'">'
         +'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px">'
         +'<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">'
-        +escAttr(m.rotulo)+'</span>'+vencSeloEstado(estado)+'</div>';
+        +escAttr(m.rotulo)+'</span>'+vencSeloEstado(contatoEstadoSelo(r, m.tipo, estado))+'</div>';
       // A frase dela fala em "vence {quando}" — e {quando} é o DIA EM QUE ELE VEM, não a
       // data do vencimento. Quando o item já venceu (e é o caso mais comum aqui: a tela
       // existe justamente para quem está atrasado), a frase pronta soa como se fosse vencer
@@ -47008,6 +47071,8 @@
         +escAttr(jaFoi.quem||'-')+(jaFoi.ts?(' às '+vencHora(jaFoi.ts)):'')+'.</div>';
       // A COBRANÇA — a faixa laranja com a mensagem pronta e o botão "Cobrei".
       h+=vencCobrancaHTML(o, r, m.tipo, dia, hoje, estado, agoraC, ka);
+      // 6.55: quantos contatos, o «Finalizar» (ou o desfecho, com o desfazer).
+      h+=contatoCartaoFaixaHTML(o, r, m.tipo, dia, hoje, estado, agoraC);
       // A RESPOSTA DO TUTOR, deste assunto — nas palavras dela.
       h+=vencRespostasHTML(o, r, m.tipo, dia, ka);
       h+='</div>';
@@ -47039,7 +47104,7 @@
   // consultora ainda tem de fazer, dourado é o que está esperando, verde é o que acabou.
   function vencSeloEstado(estado){
     var S={amandar:['#E08856','a mandar'], aguardando:['#DEB428','aguardando resposta'],
-           cobrar:['#B3261E','COBRAR'], fechado:['#1E8449','respondido']};
+           cobrar:['#B3261E','COBRAR'], fechado:['#1E8449','respondido'], finalizado:['#6b5f4b','finalizado']};
     var s=S[estado]; if(!s) return '';
     return '<span style="border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;'
       +'letter-spacing:.04em;background:'+s[0]+';color:#FFFDF6">'+s[1]+'</span>';
@@ -47061,6 +47126,9 @@
         +escAttr(uc.quem||'-')+' às '+escAttr(vencHora(uc.ts))+'.</div>';
     }
     if(estado!=='cobrar') return h;
+    // 6.55 (H3, H5): com N contatos, ou com o hóspede que já foi embora, a faixa para de cobrar.
+    var __pc=null; try{ __pc=contatoLinhaInfo(o.chave, dia, tipo, o); }catch(e){ __pc=null; } /* silencioso de propósito: sem a contagem, a faixa de sempre */
+    if(__pc && !__pc.podeCobrar) return h+contatoSemCobrarHTML(__pc);
     var ts=vencEnvioTs(r, tipo);
     var idc='vencMsg_'+escAttr(o.chave)+'__cob-'+escAttr(tipo);
     return h+'<div style="margin-top:8px;padding:9px 11px;border-radius:11px;background:rgba(224,136,86,.14);border:1.5px solid #E08856">'
@@ -47103,6 +47171,7 @@
     h+='</div>';
     if(rt&&rt.quem) h+='<div class="hint" style="margin-top:4px">Registrado por '+escAttr(rt.quem)
       +(rt.ts?(' às '+vencHora(rt.ts)):'')+'.</div>';
+    h+=contatoNotaLinkHTML(o.chave, dia, tipo, rt);   // 6.55: «+ o que o tutor disse»
     // A resposta gravada que não tem mais botão (versão antiga): a tela diz qual foi (QA40 L7).
     if(atual && !vencRespostasDe(tipo, dia, o).some(function(x){ return vencRespEh(atual, x.v); }) && vencRespRotulo(atual))
       h+='<div class="hint" style="margin-top:4px">Resposta registrada: “'+escAttr(vencRespRotulo(atual))+'”.</div>';
@@ -47116,14 +47185,21 @@
     var itens=Array.isArray(a.itens)?a.itens:[];
     var quando=vencFraseDia(a.dia, (typeof zHojeISO==='function')?zHojeISO():'');
     var h='<div style="margin-top:7px;padding:8px 11px;border-radius:11px;background:rgba(30,132,73,.10);border:1px solid rgba(30,132,73,.35)">';
-    if(itens.length){
+    if(a.foraDaEstadia){
+      // 6.55 (C15): quem só se hospeda respondeu depois de ir embora — nada foi lançado.
+      h+='<div style="font-weight:800;color:var(--z-blue);font-size:12.5px">Resposta registrada. Nada foi lançado: no dia da resposta, o FILHOt não estava na Zêluz'
+        +(a.fim?(' (a hospedagem terminou em '+escAttr(contatoDD(a.fim))+')'):'')+'.</div>'
+        +'<div class="hint" style="margin-top:3px">Os Lançamentos do dia só recebem quem está na casa. Se ainda precisar, lance à mão no dia em que voltar.</div>';
+    } else if(itens.length){
       h+='<div style="font-weight:800;color:var(--z-blue);font-size:12.5px">Lançado para '+escAttr(quando)+': '
         +escAttr(itens.map(function(x){ return x.texto+(x.jaEstava?' (já estava lançado)':''); }).join(', '))+'</div>';
       if(itens.some(function(x){ return x.pesar; }))
         h+='<div class="hint" style="margin-top:3px;color:var(--crm-atencao-text);font-weight:700">'
           +'O peso não decidiu a dose do vermífugo: foi lançado como <strong>'+escAttr(VENC_PESAR_ROT)
           +'</strong>. Quem for dar pesa antes.</div>';
-      if(a.adiado) h+='<div class="hint" style="margin-top:3px">O dia do cartão já passou — foi para o próximo dia dele.</div>';
+      if(a.adiado) h+='<div class="hint" style="margin-top:3px">'+(a.hospedagem
+        ?('A pergunta era de '+escAttr(contatoDD(dia))+'; o FILHOt está na hospedagem, então foi para o dia da resposta.')
+        :'O dia do cartão já passou — foi para o próximo dia dele.')+'</div>';
       h+='<div class="hint" style="margin-top:3px">Dali segue para a planilha e para a TV. Se ele faltar no dia, vira pendência sozinho.</div>';
     } else {
       h+='<div style="font-weight:800;color:var(--z-blue);font-size:12.5px">Resposta registrada. '
@@ -47152,7 +47228,7 @@
       +'<div style="display:flex;flex-wrap:wrap;gap:7px;align-items:baseline">'
       +'<strong style="color:var(--z-blue);font-size:15px">'+escAttr(nome)+'</strong>'
       +'<span class="hint" style="display:inline">'+escAttr(x.rotulo)
-      +(x.tutor?(' · tutor: '+x.tutor):'')+'</span>'+vencSeloEstado(x.estado)+'</div>'
+      +(x.tutor?(' · tutor: '+escAttr(x.tutor)):'')+'</span>'+vencSeloEstado(x.estado)+'</div>'
       +'<div class="hint" style="margin-top:2px">Mandada '+escAttr(vencEspera(x.enviadaTs||x.ts, agora))
       +(x.quem?(' por '+escAttr(x.quem)):'')+' — para o dia '
       +escAttr(((typeof fmtBR==='function')?fmtBR(x.dia):'')||x.dia)
@@ -47160,15 +47236,22 @@
     if(x.cobrancas.length) h+='<div class="hint" style="margin-top:2px">Cobranças: '+x.cobrancas.length+'.</div>';
     if(x.tentativas.length) h+='<div class="hint" style="margin-top:2px;color:var(--crm-atencao-text);font-weight:700">'
       +x.tentativas.length+' vez'+(x.tentativas.length>1?'es':'')+' sem resposta — continua pendente.</div>';
+    // 6.55: quantas vezes a casa falou com o tutor (AC8) e se ainda cobra (H3, H5).
+    var __l=null; try{ __l=contatoLinhaInfo(x.chave, x.dia, x.tipo, o); }catch(e){ __l=null; } /* silencioso de propósito: sem a contagem, a linha de sempre */
+    if(__l) h+='<div class="hint" style="margin-top:2px">'+escAttr(__l.frase)+'.'
+      +(__l.jaFoiEmbora?(' <strong>Já foi embora em '+escAttr(contatoDD(__l.jaFoiEmbora))+'.</strong>'):'')
+      +(__l.semCategoria?' (ficha sem categoria)':'')
+      +((__l && !__l.podeCobrar && !__l.jaFoiEmbora)?' <strong>O app parou de cobrar: finalize.</strong>':'')+'</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">';
     vencRespostasDe(x.tipo, x.dia, o).forEach(function(b){
       h+='<button type="button" class="btn" style="padding:5px 11px;font-size:12px;font-weight:800;border:1.5px solid '+b.cor+';'
         +'background:transparent;color:'+b.cor+'"'
         +' onclick="vencResponderTipo(\''+ka+'\',\''+escAttr(x.tipo)+'\',\''+b.v+'\',\''+escAttr(x.dia)+'\')">'+escAttr(b.t)+'</button>';
     });
-    if(x.estado==='cobrar')
+    if(x.estado==='cobrar' && (!__l || __l.podeCobrar))
       h+='<button type="button" class="btn" style="padding:5px 11px;font-size:12px;font-weight:800;background:#E08856;color:#FFFDF6;border:none"'
-        +' onclick="vencCobrei(\''+ka+'\',\''+escAttr(x.tipo)+'\',\''+escAttr(x.dia)+'\')">Cobrei</button>';
+        +' onclick="vencCobrei(\''+ka+'\',\''+escAttr(x.tipo)+'\',\''+escAttr(x.dia)+'\',\'pendentes\')">Cobrei</button>';
+    h+=contatoFinalizarBotaoHTML(x.chave, x.dia, x.tipo, x.estado);
     h+='</div>';
     if(o&&o.tel) h+='<div class="hint" style="margin-top:5px"><a href="tel:'+escAttr(o.tel)+'" style="color:var(--z-blue);font-weight:800">'+escAttr(o.tel)+'</a></div>';
     return h+'</div>';
@@ -47177,10 +47260,13 @@
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var agora=Date.now();
     var L=vencPendLista(VENC_PEND, hoje, agora);
-    if(L===null) return '<div class="hint">Ainda lendo as respostas pendentes dos últimos '+VENC_PEND_DIAS+' dias&hellip;</div>';
-    if(!L.length) return '<div class="hint">Nenhuma resposta pendente. Tudo o que foi mandado já teve resposta.</div>';
+    // 6.55 (AC5): a resposta que acabou de ser registrada aqui some da lista — o «+ o que o tutor disse»
+    // fica no alto por 10 minutos.
+    var __ult=contatoRespUltHTML(agora);
+    if(L===null) return __ult+'<div class="hint">Ainda lendo as respostas pendentes dos últimos '+VENC_PEND_DIAS+' dias&hellip;</div>';
+    if(!L.length) return __ult+'<div class="hint">Nenhuma resposta pendente. Tudo o que foi mandado já teve resposta.</div>';
     var mostrar=(limite>0)?L.slice(0,limite):L;
-    var h=mostrar.map(function(x){ return vencPendLinhaHTML(x, hoje, agora); }).join('');
+    var h=__ult+mostrar.map(function(x){ return vencPendLinhaHTML(x, hoje, agora); }).join('');
     if(L.length>mostrar.length)
       h+='<div class="hint" style="margin-top:8px">e mais '+(L.length-mostrar.length)
         +' — <a href="#" onclick="irParaView(\'vencimentos\');return false" style="color:var(--z-blue);font-weight:800">abrir a tela Vencimentos</a>.</div>';
@@ -47650,19 +47736,26 @@
     hojeRender();
   }
   // "Mandei" — só diz que a pergunta SAIU. Não é resposta do tutor, e não fecha nada.
-  function hojeMandei(chave, tipo){
+  // 6.55: `meta` (opcional) = o texto aberto no WhatsApp e a tela; sem ele, «Mandei» à mão leva o texto
+  // da caixa, se estiver na tela. O envio entra em envios[assunto] e no histórico do FILHOt.
+  function hojeMandei(chave, tipo, meta){
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var o=hojeObjAnt(chave, tipo); if(!o||!hoje) return Promise.resolve(false);
     var t=hojeTipoAnt(tipo);
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var reg={quem:quem, ts:Date.now()};
-    var env=Object.assign({}, (vencRegDeDia(hoje, chave)||{}).enviadas||{});
+    var rHoje=vencRegDeDia(hoje, chave)||{};
+    var env=Object.assign({}, rHoje.enviadas||{});
     env[t]=reg;
-    return vencGravar(chave, {enviadas:env, antecipado:true, itens_ant:vencSnapItens(o),
+    var ev=contatoEventoEnvio(meta, 'hoje', 'hojeMsg_'+chave+'__'+tipo);
+    return vencGravar(chave, {enviadas:env, envios:contatoEnviosCom(rHoje, t, reg), antecipado:true, itens_ant:vencSnapItens(o),
                        msg_enviada:{quem:quem, ts:reg.ts, tipo:t}},
       'perguntou hoje ao tutor de '+o.nome+' se pode fazer '
       +vencJuntar(o.itens.map(vencNomeComArtigo))+' com ele já na casa (antecipado, dia '+hoje+')',
-      o, hoje, true).then(function(ok){ hojeRender(); return ok; });
+      o, hoje, true).then(function(ok){
+        if(ok) contatoLogGravar(chave, Object.assign(ev, {acao:'mandou', ts:reg.ts, quem:reg.quem, dia:hoje, assunto:t, base:String(tipo), pet:o.nome||'', tutor:o.tutor||''}));
+        hojeRender(); return ok;
+      });
   }
   // A resposta do tutor. O MESMO caminho do Vence amanhã — com o objeto certo na mão, para o
   // lançamento automático sair com os itens deste assunto e de mais nenhum.
@@ -47682,12 +47775,12 @@
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
     if(!zWhatsAbrir(tel||'', txt)) return;
-    hojeMandei(chave, tipo);
+    hojeMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:'hoje'});
   }
   // UM TOQUE, sem abrir a dobra (Adriana, 25/set/2026: "só deu um clique, copia a mensagem,
   // já manda"). A mensagem é a de Configurações, montada na hora; quem quiser mexer no
   // texto antes abre a dobra e usa o botão de lá.
-  function hojeWhatsDireto(chave, tipo){
+  function hojeWhatsDireto(chave, tipo, tela){
     // Sem o texto de Configurações sairia o de fábrica no lugar do que a Gestão escreveu.
     if(VENC_CFG===null){
       try{ if(typeof vencCfgCarregar==='function') vencCfgCarregar(); }catch(e){ /* silencioso de propósito: o aviso abaixo diz o que fazer */ }
@@ -47700,7 +47793,7 @@
     var txt=hojeMsgAntecipar(o, tipo, hoje);
     if(!txt){ alert('Não consegui montar a mensagem. Abra a pergunta e use o Copiar.'); return; }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return hojeMandei(chave, tipo);
+    return hojeMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:tela||'hoje'});
   }
   function hojeCopiarMsg(chave, tipo, btn){
     var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
@@ -47720,6 +47813,8 @@
   function hojeAnteciparContagem(){
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return null;
     var L=[]; try{ L=hojeLista(); }catch(e){ return null; }
+    // 6.55 (C17): hóspede ainda em «Lendo…» (a varredura não chegou): não sei — nunca afirmar número.
+    if(L.some(function(o){ return (o.antGrupos||[]).some(function(g){ return g && g.lendo; }); })) return null;
     var total=0, itens=0;
     L.forEach(function(o){
       if(!(o.antAbertos||[]).length) return;
@@ -47730,6 +47825,8 @@
   // A DOBRA da pergunta: a mensagem pronta, o Copiar, o Mandei e os botões de resposta — os
   // MESMOS do Vence amanhã, menos o que não faz sentido com ele já aqui.
   function hojeAntBlocoHTML(o, g, hoje, reg, agora){
+    // 6.55: o grupo marcado (lendo, finalizado hoje, ou a conversa desta hospedagem) tem bloco próprio.
+    if(g && (g.lendo || g.finalizado || g.estadiaConv)) return contatoHojeBlocoHTML(o, g, hoje, reg, agora);
     var tipo=g.tipo, ka=jsAspas(o.chave);
     var t=hojeTipoAnt(tipo);
     var estado=vencEstadoTipo(reg||{}, t, agora);
@@ -47748,7 +47845,7 @@
         : ('<button type="button" class="btn btn-gold" style="padding:6px 13px;font-size:12.5px;font-weight:800"'
           +' onclick="hojeAbrirPergunta(\'' + ka + '\',\'' + escAttr(tipo) + '\')">'
           +(aberto?'fechar':(estado==='fechado'?'Ver a resposta':'Registrar a resposta'))+'</button>'))
-      +vencSeloEstado(estado)+'</div>';
+      +vencSeloEstado(contatoEstadoSelo(reg||{}, t, estado))+contatoFinalizarBotaoHTML(o.chave, hoje, t, estado, reg||{})+'</div>';
     if(!aberto) return h+'</div>';
     var oA=hojeObjAnt(o.chave, tipo)||o;
     var msg=hojeMsgAntecipar(oA, tipo, hoje);
@@ -47775,6 +47872,7 @@
     h+='</div>';
     if(rt&&rt.quem) h+='<div class="hint" style="margin-top:4px">Registrado por '+escAttr(rt.quem)
       +(rt.ts?(' às '+vencHora(rt.ts)):'')+'.</div>';
+    h+=contatoNotaLinkHTML(o.chave, hoje, t, rt);   // 6.55: «+ o que o tutor disse»
     h+=vencAutoLancadoHTML(oA, reg||{}, t, hoje, ka);
     var tents=vencTentativasDe(reg||{}, t);
     if(tents.length) h+='<div class="hint" style="margin-top:4px;color:var(--crm-atencao-text);font-weight:700">'
@@ -47893,7 +47991,10 @@
       try{ ant=hojeAntecipar(ex, p, hoje, antReg)||ant; }
       catch(e){ ant={proxima:null, itens:[]}; } /* silencioso de propósito: ficha estranha não derruba a lista inteira */
       var antGrupos=hojeAntGrupos(ant.itens);
-      var antAbertos=antGrupos.filter(function(g){ return hojeAntAberto(antReg, g.tipo, agoraAnt); })
+      // 6.55: quem só se hospeda é perguntado uma vez por hospedagem (H2); o finalizado hoje não volta hoje.
+      try{ antGrupos=contatoAntGrupos(antGrupos, {chave:chave, p:p, o:o, hoje:hoje, antReg:antReg, agora:agoraAnt}); }
+      catch(e){ antGrupos=hojeAntGrupos(ant.itens); } /* silencioso de propósito: sem a regra nova, a pergunta de sempre */
+      var antAbertos=antGrupos.filter(function(g){ return contatoAntAberto(g, antReg, agoraAnt); })
                               .map(function(g){ return g.tipo; });
       out.push({chave:chave, p:p, i:(typeof o.i==='number')?o.i:-1,
         nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
@@ -48257,12 +48358,19 @@
     try{ L=hojeLista(); }
     catch(e){ L=[]; } /* silencioso de propósito: a gaveta sai vazia, nunca a tela inteira */
     L.forEach(function(o){
+      var __pf=null;
       (o.antGrupos||[]).forEach(function(g){
-        if(vencEstadoTipo(o.antReg||{}, hojeTipoAnt(g.tipo), agora)!=='amandar') return;
+        // 6.55: o finalizado hoje e a conversa desta hospedagem (de outro dia) não são pergunta nova;
+        // o hóspede em «Lendo…» entra sem botão (não se pergunta às cegas).
+        if(g.finalizado || g.estadiaConv) return;
+        if(!g.lendo && vencEstadoTipo(o.antReg||{}, hojeTipoAnt(g.tipo), agora)!=='amandar') return;
+        if(!__pf){ try{ __pf=contatoPerfil(o.p, o); }catch(e){ __pf={perfil:'auluno', semCategoria:false}; } } /* silencioso de propósito: sem a ficha, o perfil de sempre */
         aquiSet[o.chave+'|'+g.tipo]=1;
         out.aqui.push({grupo:'aqui', chave:o.chave, tipo:g.tipo, dia:hoje, nome:o.nome, tutor:o.tutor,
           tel:o.tel||'', rotulo:VENC_TIPO_ROTULO[g.tipo]||g.tipo,
-          frase:hojeFraseAntecipar(o, g, hoje), atrasado:hojeTemVencido(g.itens, hoje)});
+          frase:hojeFraseAntecipar(o, g, hoje), atrasado:hojeTemVencido(g.itens, hoje),
+          lendo:!!g.lendo, perfil:__pf.perfil, semCategoria:__pf.semCategoria,
+          contatos:0, ultimoContato:null, podeCobrar:true, jaFoiEmbora:''});
       });
     });
     // 2) vem no próximo dia da casa: a mensagem da véspera ainda não saiu
@@ -48294,10 +48402,13 @@
           // véspera não repete o mesmo pedido ao mesmo tutor no mesmo dia.
           if(aquiSet[o.chave+'|'+t] || vencJaPerguntadoHoje(o.chave, t, dia, hoje)) return;
           var itens=vencItensDoTipo(o, t);
+          var __pfA={perfil:'auluno', semCategoria:false};
+          try{ __pfA=contatoPerfil(o.p, o); }catch(e){ __pfA={perfil:'auluno', semCategoria:false}; } /* silencioso de propósito: sem a ficha, o perfil de sempre */
           out.amanha.push({grupo:'amanha', chave:o.chave, tipo:t, dia:dia, nome:o.nome, tutor:o.tutor,
             tel:o.tel||'', rotulo:VENC_TIPO_ROTULO[t]||t,
             frase:vencJuntar(itens.map(function(x){ return (typeof vencFraseItem==='function')?vencFraseItem(x, hoje):''; })),
-            atrasado:itens.some(function(x){ return x&&x.atrasado; })});
+            atrasado:itens.some(function(x){ return x&&x.atrasado; }),
+            perfil:__pfA.perfil, semCategoria:__pfA.semCategoria, contatos:0, ultimoContato:null, podeCobrar:true, jaFoiEmbora:''});
         });
       });
     }
@@ -48333,9 +48444,15 @@
         if(novas[x.chave+'|'+vencTipoBase(x.tipo)]) return;
         if((maisNova[x.chave+'|'+vencTipoBase(x.tipo)]||0)>Number(x.enviadaTs||0)) return;
         if(x.estado!=='cobrar'){ out.aguardando++; return; }
+        // 6.55 (AC26): o perfil, quantos contatos, o último, se ainda cobra e se o hóspede já foi embora.
+        var __l=null;
+        try{ __l=contatoLinhaInfo(x.chave, x.dia, x.tipo, null); }catch(e){ __l=null; } /* silencioso de propósito: sem a contagem, a linha de sempre */
         out.cobrar.push({grupo:'cobrar', chave:x.chave, tipo:x.tipo, dia:x.dia, nome:vencPendNome(x),
           tutor:x.tutor||'', rotulo:x.rotulo||'', espera:vencEspera(x.ts, agora),
-          cobrancas:(x.cobrancas||[]).length});
+          cobrancas:(x.cobrancas||[]).length,
+          perfil:__l?__l.perfil:'', semCategoria:!!(__l&&__l.semCategoria), contatos:__l?__l.contatos:0,
+          ultimoContato:__l?__l.ultimoContato:null, frase:__l?__l.frase:'', podeCobrar:__l?__l.podeCobrar:true,
+          jaFoiEmbora:__l?__l.jaFoiEmbora:''});
       });
     }
     return out;
@@ -48359,19 +48476,24 @@
   // ---- os gestos: o WhatsApp abre com a mensagem certa e já marca que saiu --------------
   // O "Mandei" de um dia DITO. O de sempre (vencMandei) grava no dia que a tela de
   // Vencimentos tem aberto; daqui, o dia é sempre o próximo da casa.
-  function vencMandeiNoDia(chave, tipo, dia, oOpc){
+  function vencMandeiNoDia(chave, tipo, dia, oOpc, meta){
     var o=oOpc||vencAchar(chave, dia);
     if(!o||!dia) return Promise.resolve(false);
     tipo=String(tipo||'');
     var quem=(typeof quemSou==='function'?quemSou():'-');
     var reg={quem:quem, ts:Date.now()};
-    var env=Object.assign({}, (vencRegDeDia(dia, chave)||{}).enviadas||{});
+    var rDia=vencRegDeDia(dia, chave)||{};
+    var env=Object.assign({}, rDia.enviadas||{});
     env[tipo]=reg;
-    return vencGravar(chave, {msg_enviada:{quem:quem, ts:reg.ts, tipo:tipo}, enviadas:env},
+    var ev=contatoEventoEnvio(meta, 'contatos', '');
+    return vencGravar(chave, {msg_enviada:{quem:quem, ts:reg.ts, tipo:tipo}, enviadas:env, envios:contatoEnviosCom(rDia, tipo, reg)},
       'marcou que mandou a mensagem de '+String(vencRotuloTipo(tipo)).toLowerCase()
-      +' de '+o.nome+' (dia '+dia+', pela lista Quem chamar hoje)', o, dia);
+      +' de '+o.nome+' (dia '+dia+', pela lista Quem chamar hoje)', o, dia).then(function(ok){
+      if(ok) contatoLogGravar(chave, Object.assign(ev, {acao:'mandou', ts:reg.ts, quem:reg.quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo), pet:o.nome||'', tutor:o.tutor||''}));
+      return ok;
+    });
   }
-  function vencWhatsNoDia(chave, tipo, dia){
+  function vencWhatsNoDia(chave, tipo, dia, tela){
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var o=null;
     try{ o=vencAchar(chave, dia); }
@@ -48380,9 +48502,9 @@
     var txt=vencMensagem(o, dia, hoje, tipo);
     if(!txt){ alert('Não consegui montar a mensagem. Abra em Vencimentos e use o Copiar.'); return Promise.resolve(false); }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return vencMandeiNoDia(chave, tipo, dia, o);
+    return vencMandeiNoDia(chave, tipo, dia, o, {texto:txt, canal:'whatsapp', tela:tela||'contatos'});
   }
-  function vencCobrarNoWhats(chave, tipo, dia){
+  function vencCobrarNoWhats(chave, tipo, dia, tela){
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     var o=null;
     try{ o=vencObjDe(chave, dia); }
@@ -48391,16 +48513,17 @@
     var txt=vencMsgCobranca(o, tipo, dia, hoje);
     if(!txt){ alert('Não consegui montar a cobrança. Abra em Vencimentos e use o Copiar.'); return Promise.resolve(false); }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return vencCobrei(chave, tipo, dia);
+    return vencCobrei(chave, tipo, dia, {texto:txt, canal:'whatsapp', tela:tela||'contatos'});
   }
   // O toque da lista. `i` é a posição na gaveta do ÚLTIMO desenho — os dados da linha vêm
   // de lá, nunca de texto do HTML.
   var CONTATOS_DESENHO={aqui:[], amanha:[], cobrar:[]};
   function contatosTocar(grupo, i){
     var x=(CONTATOS_DESENHO[grupo]||[])[i]; if(!x) return;
-    var p=(grupo==='aqui')?hojeWhatsDireto(x.chave, x.tipo)
-         :(grupo==='amanha')?vencWhatsNoDia(x.chave, x.tipo, x.dia)
-         :vencCobrarNoWhats(x.chave, x.tipo, x.dia);
+    if(x.lendo) return;
+    var p=(grupo==='aqui')?hojeWhatsDireto(x.chave, x.tipo, 'contatos')
+         :(grupo==='amanha')?vencWhatsNoDia(x.chave, x.tipo, x.dia, 'contatos')
+         :vencCobrarNoWhats(x.chave, x.tipo, x.dia, 'contatos');
     Promise.resolve(p).then(function(ok){
       if(ok) CONTATOS_ULTIMO={texto:((grupo==='cobrar')?'cobrança aberta no WhatsApp e marcada, para ':'mensagem aberta no WhatsApp e marcada como mandada, para ')
         +(x.tutor?(x.tutor+' ('+x.nome+')'):x.nome)+': '+String(x.rotulo||'').toLowerCase()+'.', ts:Date.now()};
@@ -48442,20 +48565,36 @@
     [2500,6000].forEach(function(t){ setTimeout(contatosRedesenhar, t); });
   }
   function contatosLinhaHTML(x, i){
-    var botao=(x.grupo==='cobrar')?'Cobrar no WhatsApp':'Mandar no WhatsApp';
-    var detalhe=(x.grupo==='cobrar')
-      ? (escAttr(x.rotulo)+' — sem resposta '+escAttr(x.espera)
-         +(x.cobrancas?(' · já cobrado '+x.cobrancas+(x.cobrancas>1?' vezes':' vez')):''))
-      : (escAttr(x.frase||x.rotulo));
+    var cob=(x.grupo==='cobrar');
+    var botao=cob?'Cobrar no WhatsApp':'Mandar no WhatsApp';
+    var detalhe;
+    if(x.lendo) detalhe=escAttr(x.rotulo)+' — Lendo&hellip; as conversas desta hospedagem ainda estão chegando.';
+    else if(cob){
+      // 6.55 (AC8): «mandada em … por … · N cobranças (a última em …) · N contatos».
+      detalhe=escAttr(x.rotulo)+' — '+(x.frase?escAttr(x.frase)+' · ':'')+'sem resposta '+escAttr(x.espera)
+        +((!x.frase && x.cobrancas)?(' · já cobrado '+x.cobrancas+(x.cobrancas>1?' vezes':' vez')):'')
+        +(x.jaFoiEmbora?(' · <strong>já foi embora em '+escAttr(contatoDD(x.jaFoiEmbora))+'</strong>'):'')
+        +((!x.jaFoiEmbora && x.podeCobrar===false)?' · <strong>o app parou de cobrar: finalize</strong>':'');
+    } else detalhe=escAttr(x.frase||x.rotulo);
+    if(x.semCategoria) detalhe+=' · ficha sem categoria';
+    var botoes='';
+    if(!x.lendo){
+      if(!cob || x.podeCobrar!==false)
+        botoes+='<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap"'
+          +' onclick="contatosTocar(\''+x.grupo+'\','+i+')">'+botao+'</button>';
+      // 6.55: «Finalizar» em toda conversa que espera resposta; com N contatos (ou o hóspede que já foi
+      // embora), só ele (H3, H5).
+      if(cob) botoes+='<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap;background:transparent;border:1.5px solid #6b5f4b;color:#6b5f4b"'
+        +' onclick="contatosFinalizar('+i+')">Finalizar</button>';
+    }
     return '<div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
       +'<div style="flex:1 1 200px;min-width:0">'
       +'<div><strong style="font-size:15.5px;color:var(--z-blue)">'+escAttr(x.nome||'')+'</strong>'
       +(x.tutor?('<span class="hint" style="margin:0 0 0 6px">tutor '+escAttr(x.tutor)+'</span>'):'')+'</div>'
-      +'<div style="font-size:13.5px;font-weight:700;color:'+(x.atrasado?'var(--crm-critico)':'var(--z-blue)')+';line-height:1.45;margin-top:2px">'+detalhe+'</div>'
-      +((x.grupo!=='cobrar'&&!x.tel)?'<div class="hint" style="margin-top:2px">Sem telefone na ficha: o WhatsApp abre para você escolher o contato.</div>':'')
+      +'<div style="font-size:13.5px;font-weight:700;color:'+(x.atrasado?'var(--crm-critico)':'var(--z-blue)')+';line-height:1.45;margin-top:2px;overflow-wrap:anywhere">'+detalhe+'</div>'
+      +((x.grupo!=='cobrar'&&!x.tel&&!x.lendo)?'<div class="hint" style="margin-top:2px">Sem telefone na ficha: o WhatsApp abre para você escolher o contato.</div>':'')
       +'</div>'
-      +'<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap"'
-      +' onclick="contatosTocar(\''+x.grupo+'\','+i+')">'+botao+'</button>'
+      +(botoes?('<div style="display:flex;flex-wrap:wrap;gap:8px">'+botoes+'</div>'):'')
       +'</div>';
   }
   function contatosGavetaHTML(titulo, hint, grupo, L, lido, vazio){
@@ -48492,14 +48631,1207 @@
     h+=contatosGavetaHTML('Vêm '+escAttr(frDia||'no próximo dia')+' — avisar',
       'A mensagem da véspera: o que vence ou já venceu para quem vem no próximo dia da casa.',
       'amanha', d.amanha, d.lido.amanha, 'Nada a mandar para o próximo dia.');
-    h+=contatosGavetaHTML('Não responderam — cobrar',
-      'Mensagem mandada, prazo passado e nenhuma resposta. A cobrança é outra conversa, não o reenvio da primeira.'
+    h+=contatosGavetaHTML('Não responderam — cobrar ou finalizar',
+      'Mensagem mandada, prazo passado e nenhuma resposta. A cobrança é outra conversa, não o reenvio da primeira. '
+      +'Com '+contatoNumTxt(contatoFinalizarApos())+' sem resposta, ou com o hóspede que já foi embora, a linha mostra só <strong>Finalizar</strong>.'
       +(d.aguardando?(' <strong>'+d.aguardando+'</strong> ainda '+(d.aguardando>1?'estão':'está')+' dentro do prazo.'):''),
       'cobrar', d.cobrar, d.lido.cobrar, 'Ninguém para cobrar agora.');
     raiz.innerHTML=h;
     // Sem o texto de Configurações, os botões esperam: mandar o texto de fábrica no lugar
     // do que a Gestão escreveu seria mandar a mensagem errada.
     if(VENC_CFG===null) raiz.querySelectorAll('button.btn-gold').forEach(function(b){ b.disabled=true; b.style.opacity='.5'; });
+  }
+
+  // ===== QUEM CHAMAR HOJE — O CONTATO QUE FINALIZA (Story 6.55; Adriana, 08/out/2026) =========
+  // "Quem é de hospedagem, quem não é aluno, a gente não precisa de ficar cobrando desses peludos,
+  //  a gente tem que cobrar, mas (...) tem que mostrar que foi mandado mensagem, o que o tutor
+  //  respondeu e aquilo dali finalizar. Ah, o tutor não respondeu (...) Mandei duas, três vezes e o
+  //  tutor não respondeu. E finalizar, porque senão vira uma grande bagunça."
+  // Três peças:
+  //   1) O HISTÓRICO do contato, por FILHOt — daycare/contatos-log/{chave}/{id}: cada mensagem que
+  //      sai (com o texto exato), cada cobrança, cada «não respondeu», cada resposta e o que o tutor
+  //      disse. Só cresce: nada se apaga. O TEXTO mora aqui, fora de daycare/vencimentos — a
+  //      varredura de 30 dias, que todo aparelho relê, ganha só a lista envios[assunto] ({quem, ts}),
+  //      que é a contagem que vale. O histórico é lido por FILHOt, sob demanda, nunca inteiro.
+  //   2) O «FINALIZAR», com três saídas (H7): fechados[assunto] = {via:'finalizar', desfecho, ...} nos
+  //      registros do dia — as telas já respeitam o fechados desde a 6.2. Com N contatos (H3, 3 de
+  //      fábrica, daycare/config/contatos) a linha para de oferecer «Cobrar». Desfazer tem regra (no
+  //      mesmo dia, quem finalizou; depois, Supervisão ou Gestão) e motivo — fica no histórico.
+  //   3) QUEM SÓ SE HOSPEDA (H1: Hóspede e Auluno Avulso): a pergunta sai uma vez por hospedagem (H2);
+  //      finalizado, só volta na próxima (H4); quem já foi embora só finaliza, e o app não finaliza
+  //      sozinho (H5). O Auluno também finaliza, mas só aquela conversa: o assunto volta na véspera
+  //      do próximo dia dele (H6).
+  // Nada aqui grava em daycare/pendencias, nem toca o check-in, a Chamada ou a turma do dia.
+  var CONTATO_FIN_APOS_PADRAO=3;
+  var CONTATO_CFG=null;          // daycare/config/contatos — null = ainda não li (vale o padrão de fábrica)
+  var CONTATO_CFG_LENDO=false, CONTATO_CFG_FALHOU=0, CONTATO_CFG_VERSAO=0;
+  var CONTATO_LOG={};            // {chave:{lido, lendo, quando, falhou, ev:{id:evento}}} — o histórico de cada FILHOt
+  var CONTATO_LOG_MAX=300;       // as últimas N entradas do FILHOt (limitToLast) — nunca o nó inteiro
+  var CONTATO_TEXTO_MAX=4000, CONTATO_NOTA_MAX=1000;
+  var CONTATO_FIN=null;          // o painel do Finalizar aberto — rascunho: nada é gravado até o toque em «Finalizar»
+  var CONTATO_NOTA_FEITA={};     // {chave|dia|tipo:{ts, nota}} — o que este aparelho acabou de guardar
+  var CONTATO_RESP_ULT=null;     // a última resposta registrada neste aparelho (para o «+ o que o tutor disse»)
+  var CONTATO_DESFECHOS=[
+    {v:'resolveu',      t:'Respondeu e resolveu',      nota:true,  frase:'respondeu e resolveu'},
+    {v:'nao_quer',      t:'Não quer',                  nota:true,  frase:'não quer'},
+    {v:'nao_respondeu', t:'Não respondeu — encerrar',  nota:false, frase:'não respondeu'}
+  ];
+  var CONTATO_TELA_NOME={contatos:'Quem chamar hoje', hoje:'Hoje na Zêluz', vencimentos:'Vencimentos',
+    pendentes:'Respostas pendentes', prevencao:'Prevenção', ficha:'Com o tutor'};
+  function contatoDesfechoDef(v){ return CONTATO_DESFECHOS.filter(function(x){ return x.v===String(v||''); })[0]||null; }
+  function contatoDD(iso){ return String(((typeof fmtBR==='function')?fmtBR(iso):'')||iso||'').slice(0,5); }
+  // "06/10 às 14:10" — o dia e a hora de um toque, no relógio do aparelho.
+  function contatoQuandoTexto(ts){
+    var n=Number(ts||0); if(!(n>0)) return '';
+    return contatoDD(zDiaDoTs(n))+' às '+vencHora(n);
+  }
+  function contatoNumTxt(n){ n=Number(n||0); return n+(n===1?' contato':' contatos'); }
+
+  // ---- o número de contatos antes de finalizar (H3) — Configurações › Mensagens prontas -------
+  // Nó PRÓPRIO, de propósito: daycare/config/textos/vencimento é gravado inteiro com set(), e um
+  // aparelho com a versão antiga apagaria a chave nova ao salvar as mensagens (a lição do QA41).
+  function contatoFinalizarApos(){
+    if(CONTATO_CFG===null) contatoCfgCarregar();
+    var v=(CONTATO_CFG||{}).finalizar_apos;
+    var n=/^\s*\d+\s*$/.test(String(v==null?'':v))?parseInt(String(v),10):NaN;
+    return (n>=1&&n<=20)?n:CONTATO_FIN_APOS_PADRAO;
+  }
+  function contatoCfgCarregar(){
+    if(!DB || CONTATO_CFG_LENDO) return Promise.resolve(CONTATO_CFG);
+    if(CONTATO_CFG_FALHOU && (Date.now()-CONTATO_CFG_FALHOU)<60000) return Promise.resolve(CONTATO_CFG);
+    var ref=null;
+    try{ ref=DB.ref('daycare/config/contatos'); }catch(e){ ref=null; } /* silencioso de propósito: sem o banco vale o padrão de fábrica */
+    if(!ref || typeof ref.once!=='function') return Promise.resolve(CONTATO_CFG);
+    CONTATO_CFG_LENDO=true;
+    var versao=CONTATO_CFG_VERSAO, antes=contatoFinalizarAposDe(CONTATO_CFG);
+    return Promise.resolve(ref.once('value')).then(function(s){
+      CONTATO_CFG_LENDO=false;
+      if(versao!==CONTATO_CFG_VERSAO) return CONTATO_CFG;     // alguém salvou enquanto eu lia: vale o que foi salvo
+      var v=(s&&typeof s.val==='function')?s.val():null;
+      CONTATO_CFG=(v&&typeof v==='object')?v:{};
+      if(contatoFinalizarAposDe(CONTATO_CFG)!==antes){
+        try{ vencRedesenharQuadros(); }catch(e){ /* silencioso de propósito: redesenho de tela — o número já está em memória */ }
+      }
+      return CONTATO_CFG;
+    }).catch(function(e){
+      CONTATO_CFG_LENDO=false; CONTATO_CFG_FALHOU=Date.now();
+      _logLeituraFalhou('daycare/config/contatos (contatoCfgCarregar)', e);
+      return null;
+    });
+  }
+  function contatoFinalizarAposDe(cfg){
+    var v=(cfg||{}).finalizar_apos;
+    var n=/^\s*\d+\s*$/.test(String(v==null?'':v))?parseInt(String(v),10):NaN;
+    return (n>=1&&n<=20)?n:CONTATO_FIN_APOS_PADRAO;
+  }
+  function contatoCfgHTML(){
+    return '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">'
+      +'<label class="cad-lb" for="cfgContatosN">Contatos antes de finalizar</label>'
+      +'<input class="cad-in" inputmode="numeric" id="cfgContatosN" style="max-width:120px" value="'+contatoFinalizarApos()+'">'
+      +'<div class="hint" style="margin-top:3px">Quantas vezes a casa fala com o tutor sobre o mesmo assunto (a mensagem mais as cobranças) antes de o app parar de oferecer <strong>«Cobrar»</strong> e mostrar só <strong>«Finalizar»</strong> — em Quem chamar hoje, nas Respostas pendentes e em Vencimentos. Padrão de fábrica: '+CONTATO_FIN_APOS_PADRAO+'. Este número grava no botão logo abaixo; o «Salvar» das mensagens não mexe nele.</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-gold" onclick="contatoCfgSalvar()">Salvar este número</button></div>'
+      +'<div id="cfgContatosSt" class="hint" style="margin-top:6px"></div></div>';
+  }
+  function contatoCfgSalvar(){
+    var st=document.getElementById('cfgContatosSt');
+    var diz=function(t,c){ if(st){ if(st.style) st.style.color=c; st.textContent=t; } };
+    var el=document.getElementById('cfgContatosN');
+    var txt=String((el&&el.value!=null)?el.value:'').trim();
+    var n=/^\d+$/.test(txt)?parseInt(txt,10):NaN;
+    if(!(n>=1&&n<=20)){ diz('O número de contatos precisa ser um número inteiro entre 1 e 20. Nada foi salvo.','var(--crm-critico)'); return Promise.resolve(false); }
+    if(!DB){ diz('Sem conexão com o banco agora. Nada foi salvo — tente de novo em instantes.','var(--crm-critico)'); return Promise.resolve(false); }
+    var antes=contatoFinalizarApos();
+    var reg={finalizar_apos:n, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    CONTATO_CFG_VERSAO++;
+    diz('Salvando…','var(--muted)');
+    return DB.ref('daycare/config/contatos').set(reg).then(function(){
+      CONTATO_CFG=reg;
+      diz('Salvo: com '+contatoNumTxt(n)+' o app para de oferecer «Cobrar» e mostra só «Finalizar».','var(--crm-ok)');
+      if(typeof audit==='function') audit('config-mensagens-prontas', 'mudou os contatos antes de finalizar de '+antes+' para '+n, {});
+      try{ vencRedesenharQuadros(); }catch(e){ /* silencioso de propósito: redesenho de tela — o número já está gravado */ }
+      return true;
+    }).catch(function(e){
+      _logFalhaGrav('daycare/config/contatos (contatoCfgSalvar)', e);
+      diz('NÃO consegui gravar: '+((e&&e.message)||e)+'. Nada mudou — tente de novo.','var(--crm-critico)');
+      return false;
+    });
+  }
+
+  // ---- quem é: Auluno, quem só se hospeda (Hóspede e Auluno Avulso, H1) ou Morador ------------
+  // A categoria da ficha manda. Sem categoria gravada: o plano; depois os dias fixos; sem plano e sem
+  // dias, quem tem hospedagem é tratado como hóspede (e a linha avisa «ficha sem categoria»). O
+  // hóspede SEM FICHA (a turma do dia o monta com dias:[hoje]) é visto ANTES dos dias fixos (C6).
+  // A marca hospede:true da turma NÃO serve: o Auluno hospedado no dia dele entra pela turma fixa.
+  function contatoPerfil(p, o){
+    var res=function(perfil, sem){ return {perfil:perfil, semCategoria:!!sem}; };
+    var semFicha=!p || !p.n || !!(o && typeof o.i==='string' && o.i.indexOf('hosp')===0);
+    if(!semFicha){
+      var naLista=(typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS) && PELUDINHOS.indexOf(p)>=0);
+      if(!naLista && !vencFichaPorChave(dcKey(p.n, p.tutor))) semFicha=true;
+    }
+    if(semFicha) return res('so-hospede');
+    var ex={};
+    try{ ex=pelExtra(p)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem a ficha extra vale o cadastro em memória */
+    var cat=String(ex.categoria||'');
+    if(cat==='hospede'||cat==='avulso') return res('so-hospede');
+    if(cat==='morador') return res('morador');
+    if(cat) return res('auluno');
+    var pl='';
+    try{ pl=String((((typeof renovDe==='function')?renovDe(ex):ex.renov)||{}).plano||''); }catch(e){ pl=''; } /* silencioso de propósito: ficha sem plano */
+    if(pl==='auaulandia'||pl==='avulso') return res('so-hospede');
+    if(pl==='morador' || /repolho/i.test(String(p.n||''))) return res('morador');
+    if(pl) return res('auluno');
+    var dias=[];
+    try{ dias=(typeof pelDias==='function')?(pelDias(p)||[]):[]; }catch(e){ dias=[]; } /* silencioso de propósito: sem a ficha extra valem os dias do cadastro */
+    if(!dias.length && Array.isArray(p.dias)) dias=p.dias;
+    if(dias.length) return res('auluno');
+    if(contatoEstadiasDe(dcKey(p.n, p.tutor), p).length) return res('so-hospede', true);
+    return res('auluno');
+  }
+
+  // ---- as hospedagens do FILHOt (EST_TODAS: todas, não só a mais recente — C5) ------------------
+  // As estadias guardam a chave da ficha (pelKey: minúsculas, com espaço); as conversas, a do Day
+  // Care (dcKey: espaço vira «-»). Casa por uma ou pela outra (C11).
+  // O ÍNDICE (C4/R9, QA M2): EST_TODAS guarda todas as estadias desde sempre, e esta conta roda por
+  // linha a cada desenho do Hoje na Zêluz e do Quem chamar hoje. Varre-se UMA vez por versão de
+  // EST_TODAS — a versão é o próprio objeto: _cfIndexarEstadias troca o objeto inteiro a cada leitura
+  // (o zMapaVivo entrega Object.assign({}, v)), inclusive depois do check-out gravado aqui mesmo.
+  var CONTATO_EST_IDX=null;   // {T, porRef:{pelKey:[estadia]}, porK:{dcKey:[estadia]}, mem:{rk|chave:[hospedagem]}}
+  function contatoEstIndice(){
+    var T=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS:{};
+    if(CONTATO_EST_IDX && CONTATO_EST_IDX.T===T) return CONTATO_EST_IDX;
+    var iso=/^\d{4}-\d{2}-\d{2}$/, I={T:T, porRef:{}, porK:{}, mem:{}};
+    Object.keys(T).forEach(function(id){
+      var e=T[id]||{};
+      if(String(e.status||'')==='cancelada') return;
+      if(!iso.test(String(e.entrada||''))) return;
+      var x={id:id, entrada:String(e.entrada), saida:iso.test(String(e.saida||''))?String(e.saida):'',
+        status:String(e.status||'ativa'), fim:contatoEstadiaFim(e)};
+      if(e.refKey) (I.porRef[e.refKey]=I.porRef[e.refKey]||[]).push(x);
+      var k=contatoEstadiaChave(id, e);
+      if(k) (I.porK[k]=I.porK[k]||[]).push(x);
+    });
+    CONTATO_EST_IDX=I;
+    return I;
+  }
+  // As HOSPEDAGENS do FILHOt, em ordem de entrada. HB5 (recomendação aplicada; Adriana pode mudar):
+  // estadia emendada — a nova começa no dia em que a anterior terminou (ou antes), sem o FILHOt ir para
+  // casa — é a MESMA hospedagem: a pergunta não se repete e o dia da troca não conta nas duas. Cada item:
+  // {id (o da 1ª estadia), ids, entrada (da 1ª), saida, status e fim (da última), partes}. Não mexa na lista
+  // devolvida: ela é a memória do índice.
+  function contatoEstadiasDe(chave, p){
+    var I=contatoEstIndice();
+    var rk='';
+    try{ rk=(p&&p.n)?pelKey(p):''; }catch(e){ rk=''; } /* silencioso de propósito: sem a ficha, casa pelo nome e tutor */
+    var mk=rk+'|'+String(chave||'');
+    if(I.mem[mk]) return I.mem[mk];
+    var vistos={}, L=[];
+    (rk?(I.porRef[rk]||[]):[]).concat(chave?(I.porK[chave]||[]):[]).forEach(function(x){
+      if(vistos[x.id]) return;
+      vistos[x.id]=1; L.push(x);
+    });
+    L.sort(function(a,b){ return (a.entrada<b.entrada)?-1:((a.entrada>b.entrada)?1:((a.id<b.id)?-1:((a.id>b.id)?1:0))); });
+    var fimDe=function(x){ return x.fim || x.saida || '9999-12-31'; };   // sem saída: ainda não terminou
+    var out=[], cur=null, curFim='';
+    L.forEach(function(x){
+      if(cur && x.entrada<=curFim){
+        cur.ids.push(x.id); cur.partes.push(x);
+        if(fimDe(x)>=curFim){ cur.saida=x.saida; cur.status=x.status; cur.fim=x.fim; curFim=fimDe(x); }
+        return;
+      }
+      cur={id:x.id, ids:[x.id], entrada:x.entrada, saida:x.saida, status:x.status, fim:x.fim, partes:[x]};
+      curFim=fimDe(x);
+      out.push(cur);
+    });
+    I.mem[mk]=out;
+    return out;
+  }
+  // A hospedagem que contém o dia (null = nenhuma); a mais recente, se houver mais de uma. O fim que vale é o
+  // efetivo (QA N2): o check-out ou a saída antecipada, quando vêm antes da saída marcada.
+  function contatoEstadiaNaLista(L, dia){
+    var D=(L||[]).filter(function(e){ var f=e.fim||e.saida; return e.entrada<=dia && (!f || f>=dia); });
+    return D.length?D[D.length-1]:null;
+  }
+  // A chave do Day Care de cada estadia, calculada uma vez (EST_TODAS tem todas as estadias, e esta
+  // conta roda a cada desenho do Hoje na Zêluz e do Quem chamar hoje).
+  var CONTATO_EST_K={};
+  function contatoEstadiaChave(id, e){
+    var n=String(e.nome||''), t=String(e.tutor||''), m=CONTATO_EST_K[id];
+    if(m && m.n===n && m.t===t) return m.k;
+    var k=dcKey(n, t);
+    CONTATO_EST_K[id]={n:n, t:t, k:k};
+    return k;
+  }
+  // O dia em que a estadia TERMINOU ('' = ainda não terminou). Saída antecipada: o dia lançado; check-out
+  // feito: o dia do check-out (ou a saída, se vier antes).
+  function contatoEstadiaFim(e){
+    e=e||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/, st=String(e.status||'ativa');
+    if(st==='encerrada'){ var x=String(e.encerradaEm||e.saida_real||e.saida||''); return iso.test(x)?x:''; }
+    if(st==='finalizada'){
+      var c=(e.checkout && Number(e.checkout.ts)>0)?zDiaDoTs(e.checkout.ts):'', s=String(e.saida||'');
+      if(iso.test(c) && (!iso.test(s) || c<s)) return c;
+      return iso.test(s)?s:c;
+    }
+    return '';
+  }
+  function contatoEstadiaDoDia(chave, dia, p){
+    return contatoEstadiaNaLista(contatoEstadiasDe(chave, p), dia);
+  }
+  // H5: o hóspede da conversa já foi embora? '' = está na casa, não é hóspede ou não sei (estadias ainda
+  // não lidas): nunca afirma sem saber — continua podendo cobrar.
+  function contatoJaFoiEmbora(chave, dia, p, hoje){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return '';
+    var L=contatoEstadiasDe(chave, p); if(!L.length) return '';
+    var naCasa=L.some(function(e){ return e.status==='ativa' && e.entrada<=hoje && (!e.saida || e.saida>=hoje); });
+    if(naCasa) return '';
+    // QA N5: só a hospedagem que CONTÉM o dia da conversa. Conversa fora de qualquer hospedagem (a do Day Care
+    // de quem já se hospedou um dia) não é de hóspede que «foi embora»: vazio, e vale a regra de sempre.
+    var e=contatoEstadiaNaLista(L, dia); if(!e) return '';
+    var fim=e.fim || ((e.saida && e.saida<hoje)?e.saida:'');
+    return (fim && fim<=hoje)?fim:'';
+  }
+
+  // ---- a contagem: quantas vezes a casa falou com o tutor --------------------------------------
+  // «contatos» = mensagens que saíram (envios) + cobranças. Os «não respondeu» ficam à parte: são a
+  // anotação de quem tentou, não mensagem nova ao tutor. O registro de uma versão antiga do app (só
+  // enviadas, sem a lista envios) conta 1 envio — o piso.
+  function contatoListasReg(r, tipo){
+    r=r||{}; tipo=String(tipo||'');
+    var env=((r.envios||{})[tipo]);
+    env=Array.isArray(env)?env.filter(function(x){ return x && typeof x==='object'; }):[];
+    if(!env.length){ var e1=contatoEnvioAntigo(r, tipo); if(e1) env=[e1]; }
+    return {env:env, cob:vencCobrancasDe(r, tipo), ten:vencTentativasDe(r, tipo)};
+  }
+  // O envio que o registro já tinha ANTES da lista envios (versão anterior do app: só enviadas). null = nenhum.
+  function contatoEnvioAntigo(r, tipo){
+    r=r||{}; tipo=String(tipo||'');
+    if(!tipo || !vencMandada(r, tipo)) return null;
+    var e1=(r.enviadas||{})[tipo]||r.msg_enviada||{};
+    return {quem:String(e1.quem||''), ts:Number(e1.ts||0)};
+  }
+  function contatoContagemSoma(listas){
+    var env=[], cob=[], ten=[];
+    (listas||[]).forEach(function(x){ env=env.concat(x.env||[]); cob=cob.concat(x.cob||[]); ten=ten.concat(x.ten||[]); });
+    var porTs=function(a,b){ return Number((a&&a.ts)||0)-Number((b&&b.ts)||0); };
+    env.sort(porTs); cob.sort(porTs);
+    var q=function(x){ return x?{quem:String(x.quem||''), ts:Number(x.ts||0)}:null; };
+    var todos=env.concat(cob).filter(function(x){ return Number((x&&x.ts)||0)>0; }).sort(porTs);
+    return {envios:env.length, cobrancas:cob.length, naoRespondeu:ten.length, contatos:env.length+cob.length,
+      primeiro:q(env[0]), ultimaCobranca:q(cob[cob.length-1]), ultimo:q(todos[todos.length-1])};
+  }
+  function contatoContagemReg(r, tipo){ return contatoContagemSoma([contatoListasReg(r, tipo)]); }
+  // Os dias em memória (a varredura e o dia da tela) com registro deste FILHOt.
+  function contatoDiasDe(chave){
+    var dias={};
+    Object.keys((typeof VENC_PEND!=='undefined' && VENC_PEND)||{}).forEach(function(d){
+      if(/^\d{4}-\d{2}-\d{2}$/.test(d) && (VENC_PEND[d]||{})[chave]) dias[d]=1;
+    });
+    if(typeof VENC_REG!=='undefined' && VENC_REG && VENC_REG_DIA && VENC_REG[chave]) dias[VENC_REG_DIA]=1;
+    return Object.keys(dias).sort();
+  }
+  // Os assuntos deste registro (com e sem o prefixo da antecipação) que são do mesmo `base`.
+  function contatoTiposDe(r, base, comResposta){
+    var out={};
+    ['enviadas','envios','cobrancas'].concat(comResposta?['respostas','tentativas']:[]).forEach(function(c){
+      Object.keys(((r||{})[c])||{}).forEach(function(t){ if(vencTipoBase(t)===base) out[t]=1; });
+    });
+    return Object.keys(out).sort();
+  }
+  // A régua do ciclo (C18): para o Auluno, a conversa (o registro do dia); para quem só se hospeda, a
+  // hospedagem inteira — as conversas do mesmo assunto desde a entrada, menos as já finalizadas.
+  function contatoContagem(chave, dia, tipo, perfil, est){
+    if(perfil!=='so-hospede' || !est || !est.entrada) return contatoContagemReg(vencRegDeDia(dia, chave), tipo);
+    var base=vencTipoBase(tipo), listas=[];
+    contatoDiasDe(chave).forEach(function(d){
+      if(d<est.entrada) return;
+      var fimEst=est.fim||est.saida;                           // o fim efetivo (QA N2)
+      if(fimEst && d>fimEst && d!==dia) return;
+      var r=vencRegDeDia(d, chave)||{};
+      var fe=(r.fechados||{})[base];
+      if(fe && fe.via==='finalizar' && d!==dia) return;       // o ciclo de antes já foi encerrado
+      contatoTiposDe(r, base).forEach(function(t){ listas.push(contatoListasReg(r, t)); });
+    });
+    if(!listas.length) return contatoContagemReg(vencRegDeDia(dia, chave), tipo);
+    return contatoContagemSoma(listas);
+  }
+  // «mandada em 06/10 às 14:10 por Ana · 2 cobranças (a última em 07/10 às 09:02) · 3 contatos»
+  function contatoResumoFrase(c){
+    c=c||{};
+    var partes=[];
+    if(c.envios){
+      var p=c.primeiro||{}, q=contatoQuandoTexto(p.ts), mais=c.envios-1;
+      partes.push('mandada'+(q?(' em '+q):'')+((p.quem && p.quem!=='-')?(' por '+p.quem):'')
+        +(mais>0?(' (e mais '+mais+(mais>1?' vezes':' vez')+')'):''));
+    }
+    if(c.cobrancas){
+      var u=contatoQuandoTexto((c.ultimaCobranca||{}).ts);
+      partes.push(c.cobrancas+(c.cobrancas>1?' cobranças':' cobrança')
+        +(u?((c.cobrancas>1)?(' (a última em '+u+')'):(' (em '+u+')')):''));
+    }
+    partes.push(contatoNumTxt(c.contatos));
+    return partes.join(' · ');
+  }
+  // H3 e H5: a linha deixa de oferecer «Cobrar» com N contatos ou com o hóspede que já foi embora.
+  function contatoPodeCobrar(l){
+    if(!l) return true;
+    if(l.jaFoiEmbora) return false;
+    return !(Number(l.contatos||0)>=contatoFinalizarApos());
+  }
+  // Tudo o que uma linha de conversa precisa saber (Não responderam, Respostas pendentes, cartão).
+  function contatoLinhaInfo(chave, dia, tipo, oOpc){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var p=(oOpc && oOpc.p && oOpc.p.n)?oOpc.p:vencFichaPorChave(chave);
+    var pf=contatoPerfil(p, oOpc||null);
+    var est=(pf.perfil==='so-hospede')?contatoEstadiaDoDia(chave, dia, p):null;
+    var c=contatoContagem(chave, dia, tipo, pf.perfil, est);
+    var l={perfil:pf.perfil, semCategoria:pf.semCategoria, contatos:c.contatos, envios:c.envios, cobrancas:c.cobrancas,
+      naoRespondeu:c.naoRespondeu, ultimoContato:c.ultimo, frase:contatoResumoFrase(c),
+      jaFoiEmbora:(pf.perfil==='so-hospede')?contatoJaFoiEmbora(chave, dia, p, hoje):'',
+      estadia_id:est?est.id:null, finalizarApos:contatoFinalizarApos()};
+    l.podeCobrar=contatoPodeCobrar(l);
+    return l;
+  }
+
+  // ---- o fechado pelo «Finalizar» ---------------------------------------------------------------
+  // O que cobre ESTA conversa (a mesma régua de vencFechadoCobre). null = não foi finalizada.
+  function contatoFinalizadoDe(r, tipo){
+    var fe=(((r||{}).fechados)||{})[vencTipoBase(tipo)];
+    if(!fe || fe.via!=='finalizar') return null;
+    return vencFechadoCobre(r||{}, tipo, fe)?fe:null;
+  }
+  function contatoEstadoSelo(r, tipo, estado){
+    return (estado==='fechado' && contatoFinalizadoDe(r, tipo))?'finalizado':estado;
+  }
+  // C8: «resolvido» é só o que a FICHA fechou; o Finalizar tem campo próprio.
+  function contatoResolvidoPelaFicha(r, t){
+    var fe=(((r||{}).fechados)||{})[vencTipoBase(t)];
+    if(!fe || fe.via==='finalizar' || !vencFechadoCobre(r||{}, t, fe)) return null;
+    return {quem:String(fe.quem||''), ts:Number(fe.ts||0)};
+  }
+  function contatoFinalizadoTexto(fe){
+    fe=fe||{};
+    var d=contatoDesfechoDef(fe.desfecho), q=contatoQuandoTexto(fe.ts);
+    return 'Finalizado por '+String(fe.quem||'-')+(q?(' em '+q):'')+': '+(d?d.frase:'encerrado')+' ('+contatoNumTxt(fe.contatos)+')';
+  }
+  // H4 e H6: quando o assunto volta.
+  function contatoVoltaTexto(perfil, p, hoje){
+    if(perfil==='so-hospede') return 'O assunto só volta na próxima hospedagem (no 1º dia dela), se a ficha continuar devendo.';
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    var prox=null;
+    try{ prox=(p&&p.n)?proximaVindaDe(p, hoje):null; }catch(e){ prox=null; } /* silencioso de propósito: sem a próxima vinda, a frase sai sem a data */
+    var sx='';
+    try{ sx=String(((typeof pelGet==='function' && p && p.n)?pelGet(p,'sexo'):'')||(p&&p.sexo)||''); }catch(e){ sx=''; } /* silencioso de propósito: sem o sexo, «dele» */
+    return 'O assunto volta na véspera do próximo dia '+(/^f/i.test(sx)?'dela':'dele')+' no Day Care'
+      +(prox?(' ('+contatoDD(prox)+')'):'')+', se a ficha continuar devendo. Hoje não volta.';
+  }
+  function contatoFinalizadoDados(r, t, p){
+    var fe=contatoFinalizadoDe(r, t); if(!fe) return null;
+    var pf={perfil:'auluno'};
+    try{ pf=contatoPerfil(p, null); }catch(e){ pf={perfil:'auluno'}; } /* silencioso de propósito: sem a ficha, a frase do Auluno */
+    var d=contatoDesfechoDef(fe.desfecho);
+    return {desfecho:String(fe.desfecho||''), rotulo:d?d.frase:'', quem:String(fe.quem||''), ts:Number(fe.ts||0),
+      contatos:Number(fe.contatos||0), log:String(fe.log||''), volta:contatoVoltaTexto(pf.perfil, p)};
+  }
+  // C16: o FILHOt do calendário conta como «finalizado» quando TODOS os assuntos fecharam e ao menos um
+  // fechou pelo Finalizar.
+  function contatoFinalizadoNoCartao(o, r){
+    return vencGrupos(o).some(function(g){ return !!(contatoFinalizadoDe(r, g.tipo) || contatoFinalizadoDe(r, hojeTipoAnt(g.tipo))); });
+  }
+  function contatoUltimoDesfechoDe(chave){
+    var melhor=null;
+    contatoDiasDe(chave).forEach(function(d){
+      var f=((vencRegDeDia(d, chave)||{}).fechados)||{};
+      Object.keys(f).forEach(function(b){
+        var fe=f[b];
+        if(fe && fe.via==='finalizar' && (!melhor || Number(fe.ts||0)>Number(melhor.fe.ts||0))) melhor={fe:fe, dia:d, base:b};
+      });
+    });
+    return melhor;
+  }
+
+  // ---- H2: a pergunta sai uma vez por hospedagem -------------------------------------------------
+  // A conversa deste assunto na hospedagem, num dia ANTES de hoje (a de hoje segue o fluxo de sempre).
+  // A mais recente; null = não houve. Mandada, respondida ou finalizada contam.
+  function contatoTratadoNaEstadia(chave, base, est, hoje, agora){
+    if(!est || !est.entrada) return null;
+    var dias=contatoDiasDe(chave).filter(function(d){ return d>=est.entrada && d<hoje; }).reverse();
+    for(var i=0;i<dias.length;i++){
+      var r=vencRegDeDia(dias[i], chave)||{};
+      var ts=contatoTiposDe(r, base, true);
+      var fe=(r.fechados||{})[base];
+      var temFin=!!(fe && fe.via==='finalizar');
+      if(!ts.length && !temFin) continue;
+      var ant=hojeTipoAnt(base);
+      var t=(ts.indexOf(ant)>=0)?ant:(ts[0]||ant);
+      return {dia:dias[i], tipo:t, estado:vencEstadoTipo(r, t, agora), fe:(contatoFinalizadoDe(r, t)||(temFin?fe:null)),
+              resposta:vencRespostaDe(r, t)};
+    }
+    return null;
+  }
+  // A pergunta «fazer hoje?» de hoje, com as regras novas. Marca o grupo, nunca inventa um:
+  //   finalizado  → a conversa de hoje deste assunto foi finalizada: a pergunta não volta hoje (AC18);
+  //   lendo       → hóspede, e a varredura das conversas ainda não chegou: não se pergunta às cegas (AC21);
+  //   estadiaConv → hóspede que já conversou sobre o assunto nesta hospedagem, num dia anterior: o bloco
+  //                 mostra AQUELA conversa, e responder ou finalizar grava no dia dela (AC20, C14).
+  function contatoAntGrupos(grupos, cx){
+    cx=cx||{};
+    var reg=cx.antReg||{}, hoje=cx.hoje||((typeof zHojeISO==='function')?zHojeISO():''), chave=cx.chave;
+    var pf=null, est=null, estLido=false;
+    return (grupos||[]).map(function(g){
+      var base=g.tipo, ant=hojeTipoAnt(base);
+      var fe=(reg.fechados||{})[base];
+      var antTs=Number((((reg.enviadas||{})[ant])||{}).ts||0);
+      if(fe && fe.via==='finalizar' && !(antTs>Number(fe.ts||0))) return Object.assign({}, g, {finalizado:fe});
+      if((reg.enviadas||{})[ant] || (reg.respostas||{})[ant]) return g;   // a pergunta de hoje já existe
+      if(pf===null) pf=contatoPerfil(cx.p, cx.o);
+      if(pf.perfil!=='so-hospede') return g;
+      if(!estLido){ est=contatoEstadiaDoDia(chave, hoje, cx.p); estLido=true; }
+      if(!est || !(est.entrada<hoje)) return g;                         // 1º dia da hospedagem: a pergunta normal
+      if(typeof VENC_PEND==='undefined' || VENC_PEND===null) return Object.assign({}, g, {lendo:true});
+      var conv=contatoTratadoNaEstadia(chave, base, est, hoje, cx.agora);
+      return conv?Object.assign({}, g, {estadiaConv:conv}):g;
+    });
+  }
+  function contatoAntAberto(g, reg, agora){
+    if(!g || g.lendo || g.finalizado) return false;
+    if(g.estadiaConv) return g.estadiaConv.estado!=='fechado';
+    return hojeAntAberto(reg, g.tipo, agora);
+  }
+  // O bloco do Hoje na Zêluz para o grupo marcado (lendo, finalizado ou a conversa da hospedagem).
+  function contatoHojeBlocoHTML(o, g, hoje, reg, agora){
+    var ka=jsAspas(o.chave), base=g.tipo;
+    var itens=vencJuntar((g.itens||[]).map(function(x){ return hojeFraseItem(x, hoje); }));
+    var h='<div style="margin-top:6px;padding:8px 11px;border-radius:11px;background:var(--z-cream-warm);border:1.5px solid var(--line)">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'+escAttr(VENC_TIPO_ROTULO[base]||base)+(itens?(': '+escAttr(itens)):'')+'</div>';
+    if(g.lendo) return h+'<div class="hint" style="margin-top:4px">Lendo&hellip; as conversas desta hospedagem ainda estão chegando. A pergunta só aparece se ainda não foi feita nesta hospedagem.</div></div>';
+    if(g.finalizado){
+      var pf={perfil:'auluno'};
+      try{ pf=contatoPerfil(o.p, o); }catch(e){ pf={perfil:'auluno'}; } /* silencioso de propósito: sem a ficha, a frase do Auluno */
+      return h+contatoFinalizadoLinhaHTML(o.chave, g.finalizado, base, contatoVoltaTexto(pf.perfil, o.p, hoje))+'</div>';
+    }
+    var c=g.estadiaConv||{}, quando=contatoDD(c.dia);
+    if(c.fe) return h+'<div class="hint" style="margin-top:4px;font-weight:700;color:var(--z-blue)">Já conversado nesta hospedagem (em '+escAttr(quando)+').</div>'
+      +contatoFinalizadoLinhaHTML(o.chave, c.fe, base, contatoVoltaTexto('so-hospede'))+'</div>';
+    if(c.estado==='fechado'){
+      var rt=c.resposta;
+      // C15 (QA A1): o que a resposta lançou, e para que dia, aparece aqui — com o «desfazer» de sempre.
+      var lanc='';
+      try{ lanc=vencAutoLancadoHTML(o, vencRegDeDia(c.dia, o.chave)||{}, c.tipo, c.dia, ka); }catch(e){ lanc=''; } /* silencioso de propósito: sem o lançamento, o bloco sai só com a resposta */
+      return h+'<div class="hint" style="margin-top:4px;font-weight:700;color:var(--z-blue)">Já perguntado nesta hospedagem em '+escAttr(quando)
+        +((rt&&rt.v)?(' — resposta: «'+escAttr(vencRespRotulo(rt.v)||rt.v)+'»'):' — assunto fechado')+'. Uma pergunta por hospedagem.</div>'+lanc+'</div>';
+    }
+    var info=null;
+    try{ info=contatoLinhaInfo(o.chave, c.dia, c.tipo, o); }catch(e){ info=null; } /* silencioso de propósito: sem a contagem, o bloco sai sem ela */
+    h+='<div class="hint" style="margin-top:4px;font-weight:700;color:var(--crm-atencao-text)">Perguntado em '+escAttr(quando)
+      +', sem resposta — uma pergunta por hospedagem: registre aqui a resposta, na conversa daquele dia.</div>';
+    if(info) h+='<div class="hint" style="margin-top:2px">'+escAttr(info.frase)+'.</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:6px">';
+    vencRespostasDe(c.tipo, c.dia).forEach(function(b){
+      h+='<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;border:1.5px solid '+b.cor+';background:transparent;color:'+b.cor+'"'
+        +' onclick="contatoResponderOutroDia(\''+ka+'\',\''+escAttr(c.tipo)+'\',\''+b.v+'\',\''+escAttr(c.dia)+'\')">'+escAttr(b.t)+'</button>';
+    });
+    h+=contatoFinalizarBotaoHTML(o.chave, c.dia, c.tipo, c.estado)+'</div>';
+    return h+'</div>';
+  }
+  // A resposta dada no Hoje na Zêluz à conversa de outro dia grava NAQUELE dia (C14).
+  function contatoResponderOutroDia(chave, tipo, v, dia){
+    return vencResponderTipo(chave, tipo, v, dia).then(function(ok){
+      try{ hojeRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — a resposta já está gravada */ }
+      return ok;
+    });
+  }
+  // «Escolher à mão» (vencLancarConfirmado) também é resposta do tutor (AC5, QA B6): um «respondeu» por
+  // assunto do cartão, com a hora gravada na resposta. Falhar não desfaz nada — a resposta já está gravada.
+  function contatoRespostaMaoLog(chave, dia, o, resps, grupos){
+    (grupos||[]).forEach(function(g){
+      var rt=(resps||{})[g.tipo]; if(!rt || !rt.v) return;
+      contatoLogGravar(chave, {acao:'respondeu', ts:Number(rt.ts||0)||Date.now(), quem:String(rt.quem||'-'), dia:dia, assunto:g.tipo,
+        base:vencTipoBase(g.tipo), resposta:{v:String(rt.v), rotulo:vencRespRotulo(rt.v)||String(rt.v)},
+        pet:String((o&&o.nome)||''), tutor:String((o&&o.tutor)||'')});
+    });
+  }
+  // ---- C15 (QA A1): a resposta tardia de quem só se hospeda --------------------------------------
+  // «O próximo dia dele» (vencProximoDiaDele) vale para os dias fixos do Auluno. Quem só se hospeda não
+  // tem dia fixo: no fim de semana ou no feriado, o «próximo dia do Day Care» caía DEPOIS da saída. Para
+  // ele, a resposta a uma conversa de dia que já passou: com a hospedagem ativa hoje, o lançamento vai
+  // para HOJE; se a hospedagem dele TERMINOU (foi embora), nada se lança — a tela avisa. HB6 (QA N1,
+  // recomendação aplicada; a Adriana pode mudar): quem só se hospeda e NÃO tem hospedagem (o Auluno
+  // Avulso, a ficha que não é achada pela chave) segue a regra de sempre — lança para o próximo dia dele
+  // e, se ele faltar, vira pendência sozinho. null = a regra de sempre (também para o Auluno, a resposta
+  // do próprio dia e as estadias ainda não lidas: nunca afirmar sem saber).
+  function contatoLancarHospede(chave, o, dia, hoje){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(!dia || !hoje || dia>=hoje) return null;
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return null;
+    var p=(o && o.p && o.p.n)?o.p:vencFichaPorChave(chave);
+    var pf=null;
+    try{ pf=contatoPerfil(p, o||null); }catch(e){ pf=null; } /* silencioso de propósito: sem o perfil, a regra de sempre */
+    if(!pf || pf.perfil!=='so-hospede') return null;
+    var est=contatoEstadiaDoDia(chave, hoje, p);
+    if(est && est.status==='ativa') return {dia:hoje, estadia_id:est.id};
+    // Sem hospedagem hoje, mas na turma de hoje (o Auluno Avulso que veio ao Day Care): está na casa.
+    if(!est && contatoNaTurmaDeHoje(chave)) return {dia:hoje, estadia_id:null};
+    // «Fora» só com a hospedagem terminada (HB6); sem hospedagem nenhuma, a regra de sempre.
+    var fim=contatoJaFoiEmbora(chave, dia, p, hoje);
+    return fim?{fora:true, fim:fim}:null;
+  }
+  function contatoNaTurmaDeHoje(chave){
+    var T=[];
+    try{ T=(typeof turmaDeHoje==='function')?(turmaDeHoje()||[]):[]; }catch(e){ T=[]; } /* silencioso de propósito: sem a turma, vale só a hospedagem */
+    return T.some(function(t){ var q=(t&&t.p)||{}; return !!q.n && dcKey(q.n, q.tutor)===chave; });
+  }
+  // O texto do «desfazer» do cartão «nada lançado» (QA N3): sem dia vazio e sem prometer tirar da planilha.
+  function contatoDesfazerForaLinhas(r, tipo, auto){
+    return ['A resposta «'+(vencRespRotulo((vencRespostaDe(r, tipo)||{}).v||auto.onde)||auto.onde||'')+'» sai, e o assunto volta a esperar resposta.',
+      'Nada tinha sido lançado: no dia da resposta, o FILHOt não estava na Zêluz'+(auto.fim?(' (a hospedagem terminou em '+contatoDD(auto.fim)+')'):'')+'.'];
+  }
+  // Fora da hospedagem: a resposta fica registrada (já foi gravada), o auto diz que NADA foi lançado
+  // (e guarda o «desfazer» da resposta, como todo auto) e a tela avisa.
+  function contatoLancarForaDaEstadia(chave, tipo, onde, dia, o, hosp){
+    var r=vencRegDeDia(dia, chave)||{};
+    var auto=Object.assign({}, r.auto||{});
+    var nome=String((o&&o.nome)||chave), fim=String((hosp&&hosp.fim)||'');
+    auto[tipo]={dia:'', onde:onde, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), adiado:false,
+                itens:[], falharam:[], foraDaEstadia:true, fim:fim};
+    var fimTxt=fim?(' (a hospedagem terminou em '+contatoDD(fim)+')'):'';
+    return vencGravar(chave, {auto:auto}, 'registrou "'+onde+'" para '+nome+' — NÃO lançou nada: '+nome
+      +' não está na Zêluz hoje'+fimTxt+' (dia '+dia+')', o, dia, vencEhAntecipado(tipo)).then(function(ok){
+      if(ok && typeof zAlertao==='function') zAlertao('NADA FOI LANÇADO',
+        ['A resposta do tutor ficou registrada.',
+         nome+' não está na Zêluz hoje'+fimTxt+': os Lançamentos do dia só recebem quem está na casa.',
+         'Se ainda precisar, lance à mão em Lançamentos do dia, no dia em que voltar.'], {botao:'Entendi'});
+      return ok;
+    });
+  }
+  // O cartão de HOJE dos Vencimentos (AC20): o hóspede que já conversou sobre o assunto nesta hospedagem
+  // não recebe a mensagem de novo — o cartão diz onde a conversa está.
+  function contatoCartaoEstadiaHTML(o, r, tipo, dia, hoje){
+    hoje=hoje||((typeof zHojeISO==='function')?zHojeISO():'');
+    if(!o || dia!==hoje) return '';
+    var base=vencTipoBase(tipo);
+    if(contatoTiposDe(r||{}, base, true).length) return '';
+    if(contatoPerfil(o.p, o).perfil!=='so-hospede') return '';
+    var est=contatoEstadiaDoDia(o.chave, hoje, o.p);
+    if(!est || !(est.entrada<hoje)) return '';
+    var cab='<div style="margin-top:11px;padding-top:9px;border-top:1px solid var(--line)">'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">'+escAttr(VENC_TIPO_ROTULO[base]||base)+'</div>';
+    if(typeof VENC_PEND==='undefined' || VENC_PEND===null)
+      return cab+'<div class="hint" style="margin-top:4px">Lendo&hellip; as conversas desta hospedagem ainda estão chegando.</div></div>';
+    var conv=contatoTratadoNaEstadia(o.chave, base, est, hoje);
+    if(!conv) return '';
+    var estado=conv.fe?contatoFinalizadoTexto(conv.fe).replace(/^F/,'f')
+      :((conv.estado==='fechado')?((conv.resposta&&conv.resposta.v)?('resposta: «'+(vencRespRotulo(conv.resposta.v)||conv.resposta.v)+'»'):'assunto fechado')
+        :'ainda sem resposta');
+    return cab+'<div class="hint" style="margin-top:4px;font-weight:700;color:var(--z-blue)">Já conversado nesta hospedagem em '
+      +escAttr(contatoDD(conv.dia))+' — '+escAttr(estado)+'. Uma pergunta por hospedagem: a conversa continua naquele dia (Hoje na Zêluz, Respostas pendentes ou Quem chamar hoje).</div></div>';
+  }
+  // A faixa do cartão (AC8, AC11): o resumo dos contatos e o «Finalizar»; ou o desfecho, com o desfazer.
+  function contatoCartaoFaixaHTML(o, r, tipo, dia, hoje, estado, agora){
+    r=r||{};
+    var fe=contatoFinalizadoDe(r, tipo);
+    if(fe) return contatoFinalizadoLinhaHTML(o.chave, fe, vencTipoBase(tipo));
+    if((estado!=='aguardando' && estado!=='cobrar') || !vencMandada(r, tipo)) return '';
+    var l=null;
+    try{ l=contatoLinhaInfo(o.chave, dia, tipo, o); }catch(e){ l=null; } /* silencioso de propósito: sem a contagem, só o botão */
+    return (l?('<div class="hint" style="margin-top:4px">'+escAttr(l.frase)+'.'
+        +(l.jaFoiEmbora?(' <strong>já foi embora em '+escAttr(contatoDD(l.jaFoiEmbora))+'</strong>.'):'')
+        +(l.semCategoria?' (ficha sem categoria)':'')+'</div>'):'')
+      +'<div style="margin-top:6px">'+contatoFinalizarBotaoHTML(o.chave, dia, tipo, estado, r)+'</div>';
+  }
+  // No lugar da faixa de cobrança, quando a linha não cobra mais (AC16, AC22).
+  function contatoSemCobrarHTML(l){
+    return '<div style="margin-top:8px;padding:9px 11px;border-radius:11px;background:rgba(107,95,75,.10);border:1.5px solid #6b5f4b">'
+      +'<div style="font-weight:800;color:var(--z-blue);font-size:13px">'
+      +(l.jaFoiEmbora
+        ? ('Já foi embora em '+escAttr(contatoDD(l.jaFoiEmbora))+': a pergunta deixou de fazer sentido. Finalize a conversa.')
+        : (escAttr(contatoNumTxt(l.contatos))+' sem resposta: o app parou de cobrar. Finalize a conversa.'))
+      +'</div><div class="hint" style="margin-top:2px">O número de contatos se ajusta em Configurações &rsaquo; Mensagens prontas.</div></div>';
+  }
+  function contatoFinalizarBotaoHTML(chave, dia, tipo, estado, r){
+    if(estado!=='aguardando' && estado!=='cobrar') return '';
+    if(r && !vencMandada(r, tipo)) return '';
+    return '<button type="button" class="btn" style="padding:6px 13px;font-size:12.5px;font-weight:800;background:transparent;border:1.5px solid #6b5f4b;color:#6b5f4b"'
+      +' onclick="contatoFinalizarAbrir(\''+jsAspas(chave)+'\',\''+escAttr(dia)+'\',\''+escAttr(tipo)+'\')">Finalizar</button>';
+  }
+  function contatoFinalizadoLinhaHTML(chave, fe, base, volta){
+    if(!fe) return '';
+    return '<div class="hint" style="margin-top:4px;color:#6b5f4b;font-weight:700">'+escAttr(contatoFinalizadoTexto(fe))+'.'
+      +(volta?(' '+escAttr(volta)):'')
+      +(fe.log?(' <a href="#" style="color:var(--z-blue);font-weight:800" onclick="contatoReabrir(\''+jsAspas(chave)+'\',\''+escAttr(base)+'\',\''+jsAspas(fe.log)+'\');return false">desfazer</a>'):'')
+      +'</div>';
+  }
+  // A linha de Prevenção › hóspedes (AC25, C13): o último desfecho sai da varredura em memória.
+  function contatoPrevDesfechoHTML(p){
+    if(!p || !p.n) return '';
+    var u=null;
+    try{ u=contatoUltimoDesfechoDe(dcKey(p.n, p.tutor)); }catch(e){ u=null; } /* silencioso de propósito: sem a varredura, a linha sai sem o desfecho */
+    if(!u) return '';
+    var d=contatoDesfechoDef(u.fe.desfecho);
+    return '<div class="hint" style="margin:4px 0;color:#6b5f4b;font-weight:700">Última conversa finalizada em '
+      +escAttr(contatoDD(zDiaDoTs(u.fe.ts)))+' por '+escAttr(u.fe.quem||'-')+': '+escAttr(d?d.frase:'encerrada')
+      +' ('+escAttr(contatoNumTxt(u.fe.contatos))+') — '+escAttr(String(VENC_TIPO_ROTULO[u.base]||u.base).toLowerCase())+'.</div>';
+  }
+  // «Já avisei» da Prevenção entra no histórico do FILHOt (AC25).
+  function contatoPrevAvisoLog(o, reg){
+    if(!o || !o.p || !o.p.n) return Promise.resolve(false);
+    var txt='';
+    try{ txt=prevMensagemTutor(o); }catch(e){ txt=''; } /* silencioso de propósito: sem a mensagem, o evento vai sem o texto */
+    return contatoLogGravar(dcKey(o.p.n, o.p.tutor), {acao:'mandou', tela:'prevencao', canal:'marcado-a-mao',
+      assunto:'prevencao', base:'prevencao', dia:String((reg&&reg.quando)||((typeof zHojeISO==='function')?zHojeISO():'')),
+      texto:txt, pet:String(o.nome||''), tutor:String(o.tutor||'')});
+  }
+
+  // ---- o histórico: daycare/contatos-log/{chave}/{id} ------------------------------------------
+  function contatoLogLimpar(ev){
+    var out={};
+    Object.keys(ev||{}).forEach(function(k){
+      var v=ev[k];
+      if(v===undefined || v===null || v==='') return;
+      if(k==='texto') v=String(v).slice(0, CONTATO_TEXTO_MAX);
+      if(k==='nota' || k==='motivo') v=String(v).slice(0, CONTATO_NOTA_MAX);
+      out[k]=v;
+    });
+    return out;
+  }
+  function contatoLogMem(chave, id, e){
+    var L=CONTATO_LOG[chave]=CONTATO_LOG[chave]||{lido:false, lendo:false, quando:0, ev:{}};
+    L.ev=L.ev||{};
+    L.ev[id||('local-'+Number((e&&e.ts)||0)+'-'+Object.keys(L.ev).length)]=e;
+  }
+  // Grava UM evento (push: dois aparelhos nunca se sobrescrevem). Falhar não desfaz o toque — a
+  // contagem que vale é a do registro do dia; o histórico fica sem aquele evento, com rastro da falha.
+  function contatoLogGravar(chave, ev){
+    chave=String(chave||'');
+    if(!DB || !chave || !ev || !ev.acao) return Promise.resolve(false);
+    var e=contatoLogLimpar(Object.assign({ts:Date.now(), quem:(typeof quemSou==='function'?quemSou():'-')}, ev));
+    var ref=null;
+    try{ ref=DB.ref('daycare/contatos-log/'+chave); }catch(x){ ref=null; } /* silencioso de propósito: sem o banco, o registro do dia continua sendo a contagem que vale */
+    if(!ref || typeof ref.push!=='function') return Promise.resolve(false);
+    var pr;
+    try{ pr=ref.push(e); }
+    catch(x){ _logFalhaGrav('daycare/contatos-log/'+chave+' ('+e.acao+')', x); return Promise.resolve(false); }
+    var id=(pr && pr.key)?String(pr.key):'';
+    return Promise.resolve(pr).then(function(r2){
+      if(!id && r2 && r2.key) id=String(r2.key);
+      contatoLogMem(chave, id, e);
+      return true;
+    }).catch(function(x){ _logFalhaGrav('daycare/contatos-log/'+chave+' ('+e.acao+')', x); return false; });
+  }
+  function contatoLogNovoId(chave){
+    try{
+      var r=DB.ref('daycare/contatos-log/'+chave);
+      if(r && typeof r.push==='function'){ var k=r.push().key; if(k) return String(k); }
+    }catch(e){ /* silencioso de propósito: sem a chave do banco, a do carimbo da hora abaixo serve */ }
+    return 'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  }
+  // A leitura de UM FILHOt, sob demanda (aba Com o tutor e painel do Finalizar), com trava de 2 min.
+  function contatoLogCarregar(chave, forcar){
+    chave=String(chave||'');
+    if(!chave) return Promise.resolve(null);
+    var L=CONTATO_LOG[chave]=CONTATO_LOG[chave]||{lido:false, lendo:false, quando:0, ev:{}};
+    if(!DB || L.lendo) return Promise.resolve(L.lido?L:null);
+    if(!forcar && L.lido && (Date.now()-Number(L.quando||0))<120000) return Promise.resolve(L);
+    if(!forcar && !L.lido && L.falhou && (Date.now()-L.falhou)<30000) return Promise.resolve(null);
+    var q=null;
+    try{ q=DB.ref('daycare/contatos-log/'+chave); if(q && typeof q.limitToLast==='function') q=q.limitToLast(CONTATO_LOG_MAX); }
+    catch(e){ _logLeituraFalhou('daycare/contatos-log/'+chave+' (contatoLogCarregar)', e); return Promise.resolve(null); }
+    if(!q || typeof q.once!=='function') return Promise.resolve(null);
+    L.lendo=true;
+    return Promise.resolve(q.once('value')).then(function(s){
+      var v=(s && typeof s.val==='function')?(s.val()||{}):{};
+      L.ev=Object.assign({}, L.ev||{}, v);          // o que este aparelho gravou e ainda não voltou fica
+      L.lido=true; L.lendo=false; L.quando=Date.now(); L.falhou=0;
+      try{ fichaTutorRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de aba */ }
+      return L;
+    }).catch(function(e){
+      L.lendo=false; L.falhou=Date.now();
+      _logLeituraFalhou('daycare/contatos-log/'+chave+' (contatoLogCarregar)', e);
+      return null;
+    });
+  }
+  // Os eventos do FILHOt, em ordem. null = o histórico ainda não foi lido (nunca afirmar «nada»).
+  function contatoLogEventos(chave){
+    var L=CONTATO_LOG[chave]; if(!L || !L.lido) return null;
+    return Object.keys(L.ev||{}).map(function(id){ return Object.assign({id:id}, L.ev[id]); })
+      .sort(function(a,b){ return (Number(a.ts||0)-Number(b.ts||0)) || (a.id<b.id?-1:(a.id>b.id?1:0)); });
+  }
+  function contatoEventoFrase(e){
+    var q=String(e.quem||'-');
+    var tela=CONTATO_TELA_NOME[e.tela]?(' ('+CONTATO_TELA_NOME[e.tela]+')'):'';
+    var mao=(e.canal==='marcado-a-mao'), wpp=(e.canal==='whatsapp');
+    switch(e.acao){
+      case 'mandou': return q+' mandou a mensagem'+(wpp?' pelo WhatsApp':(mao?', marcada à mão':''))+tela;
+      case 'cobrou': return q+' cobrou'+(wpp?' pelo WhatsApp':(mao?', cobrança marcada à mão':''))+tela;
+      case 'nao_respondeu': return q+' anotou «não respondeu»';
+      case 'respondeu': return q+' registrou a resposta «'+String((e.resposta&&e.resposta.rotulo)||(e.resposta&&e.resposta.v)||'')+'»';
+      case 'desfez_resposta': return q+' desfez a resposta «'+String((e.resposta&&e.resposta.rotulo)||'')+'»';
+      case 'nota': return q+' escreveu o que o tutor disse';
+      case 'finalizou': var d=contatoDesfechoDef(e.desfecho); return q+' finalizou: '+(d?d.frase:'encerrado')+' ('+contatoNumTxt(e.contatos)+')';
+      case 'reabriu': return q+' desfez o «Finalizar»';
+    }
+    return q+' '+String(e.acao||'');
+  }
+  function contatoEventoHTML(e){
+    var q=contatoQuandoTexto(e.ts);
+    var cab=(q?(q+' · '):'')+contatoEventoFrase(e);
+    var extra=(e.nota?(': «'+escAttr(e.nota)+'»'):'')+(e.motivo?(' — motivo: «'+escAttr(e.motivo)+'»'):'');
+    if(e.texto) return '<details style="margin-top:3px"><summary style="cursor:pointer;font-size:13px;color:var(--z-blue)">'+escAttr(cab)+'</summary>'
+      +'<div style="white-space:pre-wrap;font-size:13px;line-height:1.45;color:var(--z-blue);margin:4px 0 6px;padding:7px 9px;border-radius:9px;background:var(--z-cream-warm);overflow-wrap:anywhere">'
+      +escAttr(e.texto)+'</div>'+(extra?('<div class="hint">'+extra+'</div>'):'')+'</details>';
+    return '<div style="margin-top:3px;font-size:13px;color:var(--z-blue);overflow-wrap:anywhere">'+escAttr(cab)+extra+'</div>';
+  }
+  // A conversa vista da memória (para o painel, enquanto o histórico não chegou): envios, cobranças,
+  // «não respondeu» e a resposta, com quem e quando — sem o texto.
+  function contatoEventosMemoria(chave, base, dias){
+    var out=[];
+    (dias||[]).forEach(function(d){
+      var r=vencRegDeDia(d, chave)||{};
+      contatoTiposDe(r, base, true).forEach(function(t){
+        var L=contatoListasReg(r, t);
+        L.env.forEach(function(x){ out.push({acao:'mandou', quem:x.quem, ts:x.ts, dia:d, assunto:t}); });
+        L.cob.forEach(function(x){ out.push({acao:'cobrou', quem:x.quem, ts:x.ts, dia:d, assunto:t}); });
+        L.ten.forEach(function(x){ out.push({acao:'nao_respondeu', quem:x.quem, ts:x.ts, dia:d, assunto:t}); });
+        var rt=vencRespostaDe(r, t);
+        if(rt) out.push({acao:'respondeu', quem:rt.quem, ts:rt.ts, dia:d, assunto:t, resposta:{v:rt.v, rotulo:vencRespRotulo(rt.v)}});
+      });
+    });
+    return out.sort(function(a,b){ return Number(a.ts||0)-Number(b.ts||0); });
+  }
+  // «+ o que o tutor disse» (AC5): aparece depois da resposta; a resposta continua em um toque.
+  function contatoNotaLinkHTML(chave, dia, tipo, rt){
+    if(!rt || !rt.v) return '';
+    var feita=CONTATO_NOTA_FEITA[chave+'|'+dia+'|'+tipo];
+    return '<div style="margin-top:4px"><a href="#" style="color:var(--z-blue);font-weight:800;font-size:12.5px"'
+      +' onclick="contatoNotaAbrir(\''+jsAspas(chave)+'\',\''+escAttr(dia)+'\',\''+escAttr(tipo)+'\');return false">+ o que o tutor disse</a>'
+      +(feita?(' <span class="hint" style="display:inline">guardado às '+escAttr(vencHora(feita.ts))+': «'
+        +escAttr(feita.nota.slice(0,140))+(feita.nota.length>140?'…':'')+'»</span>'):'')+'</div>';
+  }
+  function contatoRespUltHTML(agora){
+    var u=CONTATO_RESP_ULT;
+    if(!u || ((agora||Date.now())-Number(u.ts||0))>10*60*1000) return '';
+    return '<div class="hint" style="margin:6px 0;color:var(--crm-ok);font-weight:700">Resposta registrada às '+escAttr(vencHora(u.ts))+': '
+      +escAttr(u.nome||'')+' — «'+escAttr(u.rotulo||'')+'».'+contatoNotaLinkHTML(u.chave, u.dia, u.tipo, {v:u.v})+'</div>';
+  }
+  function contatoNotaAbrir(chave, dia, tipo){
+    var r=vencRegDeDia(dia, chave)||{};
+    var nome=String(r.pet||'')||String((vencFichaPorChave(chave)||{}).n||'');
+    var rot=String(vencRotuloTipo(tipo)).toLowerCase();
+    return Promise.resolve(zTexto('O que o tutor disse',
+      ['Sobre '+rot+(nome?(' — '+nome):'')+'.', 'Fica no histórico do FILHOt, com o seu nome e a hora. Até 1.000 letras.'],
+      {rotulo:'Nas palavras do tutor', grande:4, minimo:1, botao:'Guardar no histórico', cor:'#234D67', erro:'Escreva o que o tutor disse.'}))
+      .then(function(t){
+        t=(t==null)?'':String(t).trim();
+        if(!t) return false;
+        t=t.slice(0, CONTATO_NOTA_MAX);
+        var rt=vencRespostaDe(r, tipo);
+        var ev={acao:'nota', dia:dia, assunto:tipo, base:vencTipoBase(tipo), nota:t, pet:nome, tutor:String(r.tutor||'')};
+        if(rt) ev.resposta={v:String(rt.v||''), rotulo:vencRespRotulo(rt.v)||String(rt.v||'')};
+        return contatoLogGravar(chave, ev).then(function(ok){
+          if(ok){ CONTATO_NOTA_FEITA[chave+'|'+dia+'|'+tipo]={ts:Date.now(), nota:t}; contatoRedesenhar(); }
+          else if(typeof zAlertao==='function') zAlertao('NÃO consegui gravar', ['O que o tutor disse não foi guardado no histórico.', 'Tente de novo em instantes.'], {botao:'Entendi'});
+          return ok;
+        });
+      });
+  }
+  // O evento «mandou»/«cobrou» de um toque: com o texto aberto no WhatsApp (meta.texto) ou, marcado à
+  // mão na própria tela, com o texto da caixa (se estiver lá). meta pode ser só o nome da tela.
+  function contatoEventoEnvio(meta, telaPadrao, idCaixa){
+    if(typeof meta==='string') meta={tela:meta};
+    meta=meta||{};
+    var ev={canal:meta.canal||'marcado-a-mao', tela:meta.tela||telaPadrao||''};
+    var txt=(meta.texto!=null)?String(meta.texto):'';
+    if(!txt && !meta.canal && !meta.tela && idCaixa){
+      try{ var ta=document.getElementById(idCaixa); if(ta && ta.value!=null) txt=String(ta.value||''); }
+      catch(e){ txt=''; } /* silencioso de propósito: sem a caixa na tela, o evento vai sem o texto */
+    }
+    if(txt) ev.texto=txt;
+    return ev;
+  }
+  // envios[assunto]: a lista que só cresce (AC2, AC7) — o «marcar de novo» não apaga o 1º envio. A lista
+  // que nasce agora começa pelo envio que a versão anterior do app marcou só em enviadas (QA B2): sem
+  // isto, o 2º envio contaria como o 1º.
+  function contatoEnviosCom(r, tipo, reg){
+    var m=Object.assign({}, ((r||{}).envios)||{});
+    var L=Array.isArray(m[tipo])?m[tipo].slice():[];
+    if(!L.length){
+      var e1=contatoEnvioAntigo(r, tipo);
+      if(e1 && e1.ts>0 && e1.ts!==Number(reg.ts||0)) L.push(e1);
+    }
+    L.push({quem:String(reg.quem||'-'), ts:Number(reg.ts||0)});
+    m[tipo]=L;
+    return m;
+  }
+  function contatoRedesenhar(){
+    try{ vencRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+    try{ vencRedesenharQuadros(); }catch(e){ /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+    try{ if(typeof hojeRender==='function') hojeRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+    try{ fichaTutorRedesenhar(); }catch(e){ /* silencioso de propósito: redesenho de aba */ }
+  }
+  // A memória deste aparelho recebe o fechados novo (ou perde o desfeito) no mesmo toque.
+  function contatoMemFechados(d, chave, base, fe){
+    var r=vencRegDeDia(d, chave)||{};
+    var fech=Object.assign({}, r.fechados||{});
+    if(fe) fech[base]=fe; else delete fech[base];
+    if(typeof VENC_REG!=='undefined' && VENC_REG && VENC_REG_DIA===d) VENC_REG[chave]=Object.assign({}, VENC_REG[chave]||{}, {fechados:fech});
+    vencMemoriaLateral(d, chave, {fechados:fech});
+  }
+
+  // ---- o «Finalizar» ---------------------------------------------------------------------------
+  // Quem pode: quem fala com o tutor (Consultoras, Supervisão, Gestão, Diretoria e quem recebeu a tela).
+  function contatoPodeFinalizar(){ try{ return fichaTutorPode(); }catch(e){ return false; } }
+  // Os dias com conversa ABERTA do assunto: o hóspede fecha as que estão abertas NA MESMA HOSPEDAGEM da
+  // conversa tocada (mais as de dias sem hospedagem, antes dela) — nunca as de outra hospedagem (QA M1:
+  // cada hospedagem tem o seu ciclo, H4); o Auluno (H6), aquela e as mais velhas do mesmo assunto —
+  // nunca uma conversa nova, de outro dia dele.
+  function contatoFinalizarAlvos(chave, base, dia, perfil, agora, pOpc){
+    var out=[];
+    var LH=(perfil==='so-hospede')?contatoEstadiasDe(chave, pOpc||vencFichaPorChave(chave)):[];
+    var estT=(perfil==='so-hospede')?contatoEstadiaNaLista(LH, dia):null;
+    var mesma=function(d){
+      var h=contatoEstadiaNaLista(LH, d);
+      if(estT) return h?(h.id===estT.id):(d<estT.entrada);
+      return !h && d<=dia;
+    };
+    contatoDiasDe(chave).forEach(function(d){
+      if(perfil==='so-hospede' && !mesma(d)) return;
+      if(perfil!=='so-hospede' && d>dia) return;
+      var r=vencRegDeDia(d, chave)||{};
+      var aberto=contatoTiposDe(r, base).some(function(t){
+        var st=vencEstadoTipo(r, t, agora);
+        return vencMandada(r, t) && (st==='aguardando' || st==='cobrar');
+      });
+      if(aberto) out.push(d);
+    });
+    if(out.indexOf(dia)<0) out.push(dia);
+    return out.sort();
+  }
+  function contatoFinalizarMontar(chave, dia, tipo, agora){
+    agora=agora||Date.now();
+    var r=vencRegDeDia(dia, chave);
+    if(!r) return null;
+    tipo=String(tipo||'');
+    if(!vencMandada(r, tipo)) return {nuncaSaiu:true, chave:chave, dia:dia, tipo:tipo};
+    var base=vencTipoBase(tipo);
+    var o=null;
+    try{ o=vencObjDe(chave, dia); }catch(e){ o=null; } /* silencioso de propósito: sem o cartão, o retrato gravado no registro */
+    var p=(o && o.p && o.p.n)?o.p:vencFichaPorChave(chave);
+    var pf=contatoPerfil(p, o);
+    var est=(pf.perfil==='so-hospede')?contatoEstadiaDoDia(chave, dia, p):null;
+    var c=contatoContagem(chave, dia, tipo, pf.perfil, est);
+    return {chave:chave, dia:dia, tipo:tipo, base:base, nome:String((o&&o.nome)||r.pet||''), tutor:String((o&&o.tutor)||r.tutor||''),
+      rotulo:String(VENC_TIPO_ROTULO[base]||base), perfil:pf.perfil, semCategoria:pf.semCategoria, estadia_id:est?est.id:null,
+      contatos:c.contatos, cont:c, alvos:contatoFinalizarAlvos(chave, base, dia, pf.perfil, agora, p),
+      jaFinalizado:contatoFinalizadoDe(r, tipo), estado:vencEstadoTipo(r, tipo, agora),
+      volta:contatoVoltaTexto(pf.perfil, p), escolha:'', nota:'', id:'', gravando:false};
+  }
+  function contatoFinalizarValida(desfecho, nota){
+    var d=contatoDesfechoDef(desfecho);
+    if(!d) return {ok:false, falta:'Escolha como a conversa terminou.'};
+    if(d.nota && !String(nota||'').trim()) return {ok:false, falta:'Escreva o que o tutor disse.'};
+    return {ok:true, falta:''};
+  }
+  // O histórico no painel: a conversa da memória (quem e quando de cada envio, cobrança, «não respondeu» e
+  // resposta — a contagem que vale) com o texto do histórico do banco onde ele existe, mais o que só o
+  // histórico tem (o que o tutor disse, Finalizar, desfazer). Faltou o texto de algum envio (marcado num
+  // aparelho com a versão anterior): a tela diz (C21).
+  function contatoHistoricoJunto(chave, base, dias, tipoOpc){
+    var mem=contatoEventosMemoria(chave, base, dias);
+    if(tipoOpc) mem=mem.filter(function(m){ return m.assunto===tipoOpc; });
+    var evs=contatoLogEventos(chave);
+    if(!evs) return {lista:mem, lido:false, incompleto:false};
+    var doLog=evs.filter(function(e){
+      if(vencTipoBase(e.assunto||e.base||'')!==base) return false;
+      if(e.acao==='finalizou' || e.acao==='reabriu')
+        return dias.indexOf(e.dia)>=0 || (Array.isArray(e.dias) && e.dias.some(function(d){ return dias.indexOf(d)>=0; }));
+      return dias.indexOf(e.dia)>=0 && (!tipoOpc || e.assunto===tipoOpc);
+    });
+    var usados={}, incompleto=false;
+    var lista=mem.map(function(m){
+      var achou=null;
+      doLog.forEach(function(e, i){
+        if(achou || usados[i] || e.acao!==m.acao || e.dia!==m.dia || e.assunto!==m.assunto) return;
+        if(String(e.quem||'')!==String(m.quem||'') || Math.abs(Number(e.ts||0)-Number(m.ts||0))>60000) return;
+        achou=e; usados[i]=1;
+      });
+      if(!achou && (m.acao==='mandou' || m.acao==='cobrou')) incompleto=true;
+      return achou?Object.assign({}, m, {texto:achou.texto, canal:achou.canal, tela:achou.tela}):m;
+    });
+    doLog.forEach(function(e, i){ if(!usados[i] && ['nota','finalizou','reabriu','desfez_resposta'].indexOf(e.acao)>=0) lista.push(e); });
+    lista.sort(function(a,b){ return Number(a.ts||0)-Number(b.ts||0); });
+    return {lista:lista, lido:true, incompleto:incompleto};
+  }
+  function contatoFinalizarHistoricoHTML(F){
+    var J=contatoHistoricoJunto(F.chave, F.base, F.alvos);
+    if(!J.lista.length) return '<div class="hint">Sem registro dos envios nesta conversa.</div>';
+    var aviso=!J.lido?'Lendo o texto de cada mensagem&hellip;'
+      :(J.incompleto?'Parte dos envios foi marcada sem o texto (num aparelho com a versão anterior do app).':'');
+    return '<div style="margin-top:4px">'+J.lista.map(contatoEventoHTML).join('')+'</div>'
+      +(aviso?('<div class="hint" style="margin-top:3px">'+aviso+'</div>'):'');
+  }
+  function contatoFinalizarPainelHTML(F){
+    var v=contatoFinalizarValida(F.escolha, F.nota);
+    var nTxt=contatoNumTxt(F.contatos);
+    var dEsc=contatoDesfechoDef(F.escolha);
+    var pode=(v.ok && !F.gravando);
+    return '<div style="background:#FFFDF6;border-radius:20px;max-width:580px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);max-height:94vh;display:flex;flex-direction:column;overflow:hidden">'
+      +'<div style="background:#234D67;color:#FFFDF6;padding:16px 20px;font-weight:800;font-size:21px;line-height:1.2">Finalizar a conversa</div>'
+      +'<div style="padding:14px 18px;overflow:auto;color:#234D67;font-size:15px;line-height:1.5;overflow-wrap:anywhere">'
+      +'<div style="font-weight:800;font-size:16px">'+escAttr(F.nome||'')+(F.tutor?(' <span style="font-weight:600">· tutor '+escAttr(F.tutor)+'</span>'):'')+'</div>'
+      +'<div>'+escAttr(F.rotulo)+' — '+escAttr(nTxt)+' com o tutor'+(F.perfil==='so-hospede'?' nesta hospedagem':'')+'.</div>'
+      +(F.semCategoria?'<div class="hint">Ficha sem categoria: tratado como quem só se hospeda.</div>':'')
+      +'<div style="margin-top:10px;font-weight:800">O que aconteceu</div>'
+      +contatoFinalizarHistoricoHTML(F)
+      +'<div style="margin-top:12px;font-weight:800">Como a conversa terminou?</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">'
+      +CONTATO_DESFECHOS.map(function(d){
+        var on=(F.escolha===d.v), t=d.t+(d.v==='nao_respondeu'?(' ('+nTxt+')'):'');
+        return '<button type="button" class="btn" aria-pressed="'+(on?'true':'false')+'" style="text-align:left;padding:10px 14px;min-height:44px;font-size:14.5px;font-weight:800;border:2px solid #234D67;background:'
+          +(on?'#234D67':'transparent')+';color:'+(on?'#FFFDF6':'#234D67')+'" onclick="contatoFinalizarEscolher(\''+d.v+'\')">'+escAttr(t)+'</button>';
+      }).join('')
+      +'</div>'
+      +'<label for="ctFinNota" style="display:block;margin-top:12px;font-weight:800">O que o tutor disse</label>'
+      +'<textarea id="ctFinNota" rows="3" maxlength="'+CONTATO_NOTA_MAX+'" style="width:100%;box-sizing:border-box;margin-top:4px;padding:10px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:15px;color:#234D67;background:#FFFFFF" oninput="contatoFinalizarNota(this.value)">'+escAttr(F.nota||'')+'</textarea>'
+      +'<div class="hint">'+((dEsc && !dEsc.nota)?'Opcional em «Não respondeu».':'Obrigatório em «Respondeu e resolveu» e «Não quer»; opcional em «Não respondeu».')+'</div>'
+      +'<div style="margin-top:10px;padding:9px 11px;border-radius:11px;background:rgba(222,180,40,.16)">'+escAttr(F.volta)+'</div>'
+      +'<div class="hint" style="margin-top:6px">Finalizar encerra a conversa, não a prevenção: a ficha continua mostrando o que venceu. Tocou por engano? Dá para desfazer, com o motivo.</div>'
+      +'</div>'
+      +'<div style="padding:0 18px 16px;display:flex;flex-direction:column;gap:8px">'
+      +'<div id="ctFinFalta" style="font-weight:800;color:#B3261E;font-size:14px">'+escAttr(F.gravando?'':v.falta)+'</div>'
+      +'<button type="button" id="ctFinOk" '+(pode?'':'disabled ')+'style="width:100%;border:0;border-radius:14px;background:#234D67;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:17px;padding:14px;cursor:pointer;opacity:'+(pode?'1':'.5')+'" onclick="contatoFinalizarConfirmar()">'+(F.gravando?'Gravando&hellip;':'Finalizar')+'</button>'
+      +'<button type="button" id="ctFinNao" style="width:100%;border:0;border-radius:14px;background:#6b5f4b;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:13px;cursor:pointer" onclick="contatoFinalizarFechar()">'+(F.gravando?'Fechar — a gravação continua':'Cancelar — não mexer em nada')+'</button>'
+      +'</div></div>';
+  }
+  function contatoFinalizarAbrir(chave, dia, tipo){
+    if(!contatoPodeFinalizar()){
+      if(typeof zAlertao==='function') zAlertao('SÓ QUEM FALA COM O TUTOR FINALIZA', ['Finalizar a conversa é das Consultoras de Bem-Estar, da Supervisão, da Gestão, da Diretoria e de quem recebeu a tela no Time.'], {botao:'Entendi'});
+      return null;
+    }
+    var F=contatoFinalizarMontar(chave, dia, tipo, Date.now());
+    if(!F){ alert('Não achei esta conversa. Abra a tela de novo.'); return null; }
+    if(F.nuncaSaiu){ alert('Esta mensagem ainda não saiu: não há conversa para finalizar.'); return null; }
+    if(F.jaFinalizado){ if(typeof zAlertao==='function') zAlertao('JÁ FINALIZADO', [contatoFinalizadoTexto(F.jaFinalizado)+'.'], {botao:'Entendi'}); return null; }
+    if(F.estado==='fechado'){ if(typeof zAlertao==='function') zAlertao('ESTA CONVERSA JÁ FECHOU', ['O tutor já respondeu, ou a ficha resolveu o assunto. Não há o que finalizar.'], {botao:'Entendi'}); return null; }
+    CONTATO_FIN=F;
+    contatoFinalizarDesenhar();
+    try{ contatoLogCarregar(chave).then(function(){ if(CONTATO_FIN===F) contatoFinalizarDesenhar(); }); }
+    catch(e){ /* silencioso de propósito: o painel mostra o histórico da memória */ }
+    return F;
+  }
+  function contatoFinalizarDesenhar(){
+    var F=CONTATO_FIN; if(!F) return;
+    var d=document.getElementById('ctFinBox');
+    if(!d){
+      d=document.createElement('div'); d.id='ctFinBox';
+      d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:10px;font-family:Poppins,system-ui,-apple-system,sans-serif';
+      document.body.appendChild(d);
+    }
+    d.innerHTML=contatoFinalizarPainelHTML(F);
+  }
+  function contatoFinalizarEscolher(v){
+    var F=CONTATO_FIN; if(!F || F.gravando) return;
+    var t=document.getElementById('ctFinNota'); if(t && t.value!=null) F.nota=String(t.value||'').slice(0, CONTATO_NOTA_MAX);
+    F.escolha=String(v||'');
+    contatoFinalizarDesenhar();
+  }
+  // Digitar não redesenha o painel (o teclado do celular sumiria): só o botão e o que falta.
+  function contatoFinalizarNota(v){
+    var F=CONTATO_FIN; if(!F) return;
+    F.nota=String(v||'').slice(0, CONTATO_NOTA_MAX);
+    var val=contatoFinalizarValida(F.escolha, F.nota);
+    var b=document.getElementById('ctFinOk'), f=document.getElementById('ctFinFalta');
+    if(b && !F.gravando){ b.disabled=!val.ok; b.style.opacity=val.ok?'1':'.5'; }
+    if(f && !F.gravando) f.textContent=val.falta;
+  }
+  // Fechar NUNCA prende a tela (QA B5): com a gravação em curso (sem rede), o painel fecha com um aviso —
+  // a gravação continua sozinha e o resultado aparece no histórico; nada é cancelado nem gravado em dobro.
+  function contatoFinalizarFechar(){
+    var F=CONTATO_FIN;
+    CONTATO_FIN=null;
+    var d=document.getElementById('ctFinBox'); if(d) d.remove();
+    if(F && F.gravando && typeof zAlertao==='function') zAlertao('A GRAVAÇÃO CONTINUA',
+      ['O «Finalizar» de '+String(F.nome||'')+' ainda não chegou ao banco (sem conexão agora).',
+       'Quando a internet voltar, o app termina sozinho e o resultado aparece no histórico. Não precisa finalizar de novo.'], {botao:'Entendi'});
+  }
+  // C21: um toque por vez; o id do evento nasce uma vez por painel (o 2º toque, depois de uma falha,
+  // grava no MESMO lugar); sem resposta do banco em 15 s, a tela diz que ainda não gravou.
+  function contatoFinalizarConfirmar(){
+    var F=CONTATO_FIN; if(!F || F.gravando) return Promise.resolve(false);
+    var val=contatoFinalizarValida(F.escolha, F.nota);
+    if(!val.ok){ contatoFinalizarDesenhar(); return Promise.resolve(false); }
+    F.gravando=true; contatoFinalizarDesenhar();
+    var t=setTimeout(function(){
+      var f=document.getElementById('ctFinFalta');
+      if(f && F.gravando && CONTATO_FIN===F) f.textContent='Sem conexão — ainda não gravou. O app termina sozinho quando a internet voltar; pode fechar este painel.';
+    }, 15000);
+    return contatoFinalizarGravar(F, F.escolha, F.nota).then(function(ok){
+      clearTimeout(t); F.gravando=false;
+      if(ok){
+        if(CONTATO_FIN===F){ CONTATO_FIN=null; var d=document.getElementById('ctFinBox'); if(d) d.remove(); }
+        CONTATOS_ULTIMO={texto:'conversa finalizada: '+(F.nome||'')+' — '+String(F.rotulo||'').toLowerCase()+'.', ts:Date.now()};
+        try{ contatosRender(); }catch(e){ /* silencioso de propósito: redesenho de tela — o Finalizar já está gravado */ }
+      } else if(CONTATO_FIN===F) contatoFinalizarDesenhar();
+      return ok;
+    });
+  }
+  function contatoFinalizarFrase(F, desfecho, nota){
+    var d=contatoDesfechoDef(desfecho), nTxt=contatoNumTxt(F.contatos), nt=String(nota||'').trim();
+    var meio=(desfecho==='nao_respondeu')?('não respondeu depois de '+nTxt):((d?d.frase:'encerrou')+', depois de '+nTxt);
+    return 'finalizou a conversa sobre '+String(F.rotulo||'').toLowerCase()+' de '+(F.nome||F.chave)+': '+meio
+      +(nt?(' — o tutor disse: "'+nt.slice(0,200)+(nt.length>200?'…':'')+'"'):'')+' (dia '+F.dia+')';
+  }
+  function contatoFinalizarPatch(F, alvos, desfecho, nota, quem, ts){
+    var n=Number(F.contatos||0);
+    var fe={quem:String(quem||'-'), ts:ts, via:'finalizar', desfecho:String(desfecho), contatos:n, log:String(F.id)};
+    var ev={ts:ts, dia:F.dia, assunto:F.tipo, base:F.base, acao:'finalizou', quem:fe.quem, desfecho:fe.desfecho, contatos:n,
+      perfil:F.perfil, dias:alvos.slice(), pet:String(F.nome||''), tutor:String(F.tutor||'')};
+    if(F.estadia_id) ev.estadia_id=String(F.estadia_id);
+    var nt=String(nota||'').trim().slice(0, CONTATO_NOTA_MAX); if(nt) ev.nota=nt;
+    var patch={};
+    alvos.forEach(function(d){ patch[vencNo(d, F.chave)+'/fechados/'+F.base]=fe; });
+    patch['daycare/contatos-log/'+F.chave+'/'+F.id]=contatoLogLimpar(ev);
+    return {patch:patch, fe:fe, ev:contatoLogLimpar(ev)};
+  }
+  // Relê o fechados de um dia (C20). undefined = a releitura falhou (vale a memória).
+  function contatoLerFechado(dia, chave, base){
+    try{
+      return Promise.resolve(DB.ref(vencNo(dia, chave)+'/fechados/'+base).once('value'))
+        .then(function(s){ return (s && typeof s.val==='function')?s.val():null; })
+        .catch(function(e){ _logLeituraFalhou(vencNo(dia, chave)+'/fechados/'+base+' (Finalizar)', e); return undefined; });
+    }catch(e){ return Promise.resolve(undefined); } /* silencioso de propósito: sem a releitura, vale a memória */
+  }
+  // AC13: UMA atualização a partir da raiz — os fechados de todos os dias e o evento «finalizou».
+  // Finalizar pela metade é pior que nenhum: falhou, nada muda.
+  function contatoFinalizarGravar(F, desfecho, nota){
+    var val=contatoFinalizarValida(desfecho, nota);
+    if(!F || !val.ok || !F.chave || !F.base) return Promise.resolve(false);
+    if(!DB){
+      if(typeof zAlertao==='function') zAlertao('Sem conexão com o banco agora', ['Nada foi finalizado. Tente de novo em instantes.'], {botao:'Entendi'});
+      return Promise.resolve(false);
+    }
+    if(!F.id) F.id=contatoLogNovoId(F.chave);
+    var quem=(typeof quemSou==='function'?quemSou():'-'), ts=Date.now();
+    var alvos0=(F.alvos||[]).slice();
+    return Promise.all(alvos0.map(function(d){ return contatoLerFechado(d, F.chave, F.base); })).then(function(vals){
+      var outro=null;
+      vals.forEach(function(v, i){ if(!outro && v && v.via==='finalizar' && String(v.log||'')!==String(F.id)) outro={fe:v, dia:alvos0[i]}; });
+      if(outro){
+        contatoMemFechados(outro.dia, F.chave, F.base, outro.fe);
+        contatoRedesenhar();
+        if(typeof zAlertao==='function') zAlertao('JÁ FINALIZADO',
+          ['Já finalizado por '+String(outro.fe.quem||'-')+' às '+vencHora(outro.fe.ts)+(zDiaDoTs(outro.fe.ts)!==((typeof zHojeISO==='function')?zHojeISO():'')?(' de '+contatoDD(zDiaDoTs(outro.fe.ts))):'')+'.',
+           'Nada foi gravado de novo.'], {botao:'Entendi'});
+        return false;
+      }
+      var alvos=alvos0.filter(function(d, i){ var v=vals[i]; return !(v && v.via && v.via!=='finalizar'); });
+      if(!alvos.length){
+        if(typeof zAlertao==='function') zAlertao('ESTA CONVERSA JÁ FECHOU', ['A ficha resolveu o assunto em outro aparelho. Não há o que finalizar.'], {botao:'Entendi'});
+        return false;
+      }
+      var P=contatoFinalizarPatch(F, alvos, desfecho, nota, quem, ts);
+      return DB.ref().update(P.patch).then(function(){
+        alvos.forEach(function(d){ contatoMemFechados(d, F.chave, F.base, P.fe); });
+        contatoLogMem(F.chave, F.id, P.ev);
+        if(typeof audit==='function') audit('vence-amanha', contatoFinalizarFrase(F, desfecho, nota), {alvo:F.chave, pet:F.nome||''});
+        contatoRedesenhar();
+        return true;
+      }).catch(function(e){
+        _logFalhaGrav('daycare/vencimentos e daycare/contatos-log/'+F.chave+' (Finalizar)', e);
+        if(typeof zAlertao==='function') zAlertao('NÃO consegui gravar',
+          ['O erro foi: '+((e&&e.message)||e), 'Nada mudou — a conversa continua aberta. Tente de novo em instantes.'], {botao:'Entendi'});
+        return false;
+      });
+    });
+  }
+  // ---- desfazer o «Finalizar» (story AC6, AC17) --------------------------------------------------
+  // No mesmo dia, quem finalizou; depois, a Supervisão, a Gestão e a Diretoria. Sempre com o motivo.
+  function contatoPodeReabrir(fe){
+    if(!fe) return false;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(String(fe.quem||'')===String((typeof quemSou==='function')?quemSou():'') && zDiaDoTs(fe.ts)===hoje) return true;
+    try{ return !!(typeof podePapel==='function' && podePapel('desfazer-finalizar-contato')); }catch(e){ return false; }
+  }
+  function contatoReabrir(chave, base, logId){
+    chave=String(chave||''); base=String(base||''); logId=String(logId||'');
+    if(!DB || !chave || !base || !logId) return Promise.resolve(false);
+    var dias={}, fe=null, pet='', tutor='';
+    contatoDiasDe(chave).forEach(function(d){
+      var r=vencRegDeDia(d, chave)||{};
+      var x=(r.fechados||{})[base];
+      if(x && x.via==='finalizar' && String(x.log||'')===logId){ dias[d]=1; if(!fe) fe=x; pet=pet||String(r.pet||''); tutor=tutor||String(r.tutor||''); }
+    });
+    var ev=(((CONTATO_LOG[chave]||{}).ev)||{})[logId];
+    if(ev && Array.isArray(ev.dias)) ev.dias.forEach(function(d){ if(/^\d{4}-\d{2}-\d{2}$/.test(String(d))) dias[d]=1; });
+    if(!fe && ev && ev.acao==='finalizou') fe={quem:ev.quem, ts:ev.ts, desfecho:ev.desfecho, contatos:ev.contatos, log:logId, via:'finalizar'};
+    if(ev){ pet=pet||String(ev.pet||''); tutor=tutor||String(ev.tutor||''); }
+    var L=Object.keys(dias).sort();
+    if(!fe || !L.length){
+      if(typeof zAlertao==='function') zAlertao('NADA A DESFAZER', ['Este «Finalizar» já não está nas conversas: a ficha pode ter fechado o assunto depois, ou alguém já desfez.'], {botao:'Entendi'});
+      return Promise.resolve(false);
+    }
+    if(!contatoPodeReabrir(fe)){
+      if(typeof zAlertao==='function') zAlertao('SÓ QUEM FINALIZOU DESFAZ, NO MESMO DIA',
+        [contatoFinalizadoTexto(fe)+'.', 'No mesmo dia, quem finalizou desfaz. Depois disso, quem desfaz é a Supervisão ou a Gestão.'], {botao:'Entendi'});
+      return Promise.resolve(false);
+    }
+    var rot=String(VENC_TIPO_ROTULO[base]||base).toLowerCase();
+    var nome=pet||String((vencFichaPorChave(chave)||{}).n||'')||chave;
+    return Promise.resolve(zTexto('Desfazer o «Finalizar»?',
+      [contatoFinalizadoTexto(fe)+'.', 'A conversa sobre '+rot+' de '+nome+' volta a ficar aberta, como estava antes.',
+       'Nada se apaga: o «Finalizar» e este desfazer ficam no histórico, com o seu nome e o motivo.'],
+      {rotulo:'Por que desfazer? (obrigatório)', minimo:3, botao:'Desfazer', cor:'#234D67', erro:'Escreva o motivo — ele fica no histórico.'}))
+      .then(function(motivo){
+        motivo=(motivo==null)?'':String(motivo).trim();
+        if(!motivo) return false;
+        return Promise.all(L.map(function(d){ return contatoLerFechado(d, chave, base); })).then(function(vals){
+          var alvo=L.filter(function(d, i){ var v=vals[i]; if(v===undefined) return true; return !!(v && v.via==='finalizar' && String(v.log||'')===logId); });
+          if(!alvo.length){
+            L.forEach(function(d, i){ if(vals[i]!==undefined) contatoMemFechados(d, chave, base, vals[i]||null); });
+            contatoRedesenhar();
+            if(typeof zAlertao==='function') zAlertao('NADA A DESFAZER', ['Alguém já desfez este «Finalizar», ou a ficha fechou o assunto depois.'], {botao:'Entendi'});
+            return false;
+          }
+          var id=contatoLogNovoId(chave), quem=(typeof quemSou==='function'?quemSou():'-'), ts=Date.now();
+          var evR=contatoLogLimpar({ts:ts, dia:(ev&&ev.dia)||alvo[alvo.length-1], assunto:(ev&&ev.assunto)||base, base:base, acao:'reabriu', quem:quem,
+            log:logId, motivo:motivo.slice(0, CONTATO_NOTA_MAX), dias:alvo.slice(), pet:nome, tutor:tutor});
+          var patch={};
+          alvo.forEach(function(d){ patch[vencNo(d, chave)+'/fechados/'+base]=null; });
+          patch['daycare/contatos-log/'+chave+'/'+id]=evR;
+          return DB.ref().update(patch).then(function(){
+            alvo.forEach(function(d){ contatoMemFechados(d, chave, base, null); });
+            contatoLogMem(chave, id, evR);
+            if(typeof audit==='function') audit('vence-amanha', 'desfez o «Finalizar» da conversa sobre '+rot+' de '+nome
+              +' — motivo: "'+motivo.slice(0,200)+'" — a conversa voltou a ficar aberta (dia '+alvo.join(', ')+')', {alvo:chave, pet:nome});
+            contatoRedesenhar();
+            return true;
+          }).catch(function(e){
+            _logFalhaGrav('daycare/vencimentos e daycare/contatos-log/'+chave+' (desfazer o Finalizar)', e);
+            if(typeof zAlertao==='function') zAlertao('NÃO consegui gravar',
+              ['O erro foi: '+((e&&e.message)||e), 'Nada mudou — a conversa continua finalizada. Tente de novo em instantes.'], {botao:'Entendi'});
+            return false;
+          });
+        });
+      });
+  }
+  // O toque no «Finalizar» da gaveta «Não responderam» (os dados da linha vêm do último desenho).
+  function contatosFinalizar(i){
+    var x=((CONTATOS_DESENHO||{}).cobrar||[])[i]; if(!x) return null;
+    return contatoFinalizarAbrir(x.chave, x.dia, x.tipo);
+  }
+  // A aba Com o tutor (AC9, AC14, AC17): o desfecho, o «+ o que o tutor disse», o «Finalizar» e o
+  // histórico de cada conversa (o texto ao tocar).
+  function contatoFichaConversaHTML(d, c){
+    if(!c || !c.tipo) return '';
+    var h='';
+    if(c.finalizado) h+=contatoFinalizadoLinhaHTML(d.chave, c.finalizado, vencTipoBase(c.tipo), c.finalizado.volta);
+    if(c.resposta) h+=contatoNotaLinkHTML(d.chave, c.dia, c.tipo, c.resposta);
+    if((c.estado==='aguardando' || c.estado==='cobrar') && c.enviada)
+      h+='<div style="margin-top:4px">'+contatoFinalizarBotaoHTML(d.chave, c.dia, c.tipo, c.estado)+'</div>';
+    if(Array.isArray(c.historico) && c.historico.length)
+      h+='<div style="margin-top:4px;padding-left:8px;border-left:2px solid var(--line)">'+c.historico.map(contatoEventoHTML).join('')
+        +(c.historicoIncompleto?'<div class="hint">Parte dos envios foi marcada sem o texto (num aparelho com a versão anterior do app).</div>':'')+'</div>';
+    return h;
   }
 
   // ===== A FICHA ÚNICA: "COM O TUTOR" (Adriana, 25/set/2026) ==========================
@@ -48568,7 +49900,9 @@
             resposta:rt?{v:String(rt.v||''), rotulo:vencRespRotulo(rt.v)||String(rt.v||''), quem:String(rt.quem||''), ts:Number(rt.ts||0)}:null,
             cobrancas:vencCobrancasDe(r, t).length, tentativas:vencTentativasDe(r, t).length,
             estado:estado, ficha_atualizada:!!r.ficha_atualizada,
-            resolvido:vencFechadoCobre(r, t, (r.fechados||{})[vencTipoBase(t)])?{quem:String(((r.fechados||{})[vencTipoBase(t)]).quem||''), ts:Number(((r.fechados||{})[vencTipoBase(t)]).ts||0)}:null};
+            // 6.55 (C8): «resolvido» é só o que a ficha fechou; o «Finalizar» tem campo próprio.
+            resolvido:contatoResolvidoPelaFicha(r, t),
+            finalizado:t?contatoFinalizadoDados(r, t, p):null, historico:null};
           out.conversas.push(c);
         });
       });
@@ -48605,6 +49939,15 @@
         if((c.estado==='aguardando'||c.estado==='cobrar') && !naLista[c.dia+'|'+c.tipo]) c.estado='legado';
       });
     }
+    // 6.55 (AC9, AC26): o histórico do FILHOt, quando já foi lido (daycare/contatos-log, só dele).
+    var __evs=null;
+    try{ __evs=contatoLogEventos(chave); }catch(e){ __evs=null; } /* silencioso de propósito: sem o histórico, as conversas saem sem ele */
+    out.historicoLido=!!__evs;
+    if(__evs) out.conversas.forEach(function(c){
+      if(!c.tipo) return;
+      var J=contatoHistoricoJunto(chave, vencTipoBase(c.tipo), [c.dia], c.tipo);
+      c.historico=J.lista; c.historicoIncompleto=J.incompleto;
+    });
     return out;
   }
   // A linha do cabeçalho da ficha: bater o olho e saber se há algo em aberto com o tutor.
@@ -48688,6 +50031,7 @@
     var p=(typeof pelAtual!=='undefined')?pelAtual:null;
     if(!p){ raiz.innerHTML='<div class="card"><div class="hint">Abra a ficha de um FILHOt.</div></div>'; return; }
     var d=fichaUnicaDados(p);
+    try{ contatoLogCarregar(d.chave); }catch(e){ /* silencioso de propósito: a aba sai sem o histórico de cada mensagem */ }
     var desistiu=(FT_TENT.p===p && FT_TENT.n>=4);
     var lendo=desistiu?'<div class="hint" style="color:var(--crm-atencao-text);font-weight:700">Não consegui ler agora — toque na aba de novo em instantes.</div>'
                       :'<div class="hint">Lendo&hellip;</div>';
@@ -48739,8 +50083,10 @@
         +(c.tentativas?(' · '+c.tentativas+(c.tentativas>1?' tentativas sem resposta':' tentativa sem resposta')):'')
         +(c.resolvido?(' · <strong>resolvido na ficha</strong> ('+quando(c.resolvido)+')'):'')
         +(c.ficha_atualizada?' · ficha atualizada':'')
-        +'</div></div>';
+        +'</div>'+contatoFichaConversaHTML(d, c)+'</div>';
     });
+    if(d.lido.conversas && d.conversas.length && !d.historicoLido)
+      h+='<div class="hint" style="padding:6px 0">Lendo o histórico de cada mensagem&hellip;</div>';
     h+='</div>';
     raiz.innerHTML=h;
   }
@@ -52204,6 +53550,7 @@
       +'<button type="button" class="btn btn-gold" onclick="cfgVencSalvar()">Salvar</button>'
       +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cfgVencPadrao()">Voltar ao texto de fábrica</button></div>'
       +'<div id="cfgVencSt" class="hint" style="margin-top:6px"></div>';
+    h+=contatoCfgHTML();   // 6.55: «Contatos antes de finalizar» — nó próprio, botão próprio
     w.innerHTML=h;
   }
   // O padrão sai de uma LISTA, nunca de um campo livre: quem escolhe aqui escolhe entre os
