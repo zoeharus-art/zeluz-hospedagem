@@ -26854,7 +26854,11 @@ const SEGUNDA648 = { mesaAtencaoTratei: 1, hospResponderMesmo: 1, salvarFoto: 1,
   // carrega e o r.erro da ponte; o texto das duas réguas da 6.53 que essas funções mostram está na EXCECAO648.
   ocorrDcAnular: 1, ocorrDcDesfazerEngano: 1, ocorrDcReabrir: 1, ocorrDcDarDesfecho: 1, ocorrDcEnganoAbrir: 1, ocorrDcDesfazerAbrir: 1,
   ocorrDcReabrirAbrir: 1, chamadoGravarExcecao: 1, chamadoCorrigir: 1, chamadoCancelar: 1, chamadoCorrigirGravar: 1, chamadoCancelarGravar: 1,
-  avulsaTirarDaPlanilha: 1, avulsaTirar: 1, avulsaTirarAbrir: 1, banhoSaidaDepois: 1, banhoSaidaDepoisTarde: 1 };
+  avulsaTirarDaPlanilha: 1, avulsaTirar: 1, avulsaTirarAbrir: 1, banhoSaidaDepois: 1, banhoSaidaDepoisTarde: 1,
+  // 6.54 (o Palito, «Mudar comida e remédio», publicada depois da 6.48): a tela é da 2ª entrega. O cru: o «Motivo: {e.message}» ao
+  // abrir (mcrAbrirEstadia), o «(não consegui montar o resumo: {e.message})» (mcrPreviaFrases) e o M.erro mostrado na tela, que o
+  // mcrGravar enche com «Não salvou: {e.message}…» quando a gravação falha (mcrConferirHTML, mcrRenderJa)
+  mcrAbrirEstadia: 1, mcrPreviaFrases: 1, mcrConferirHTML: 1, mcrRenderJa: 1 };
 // O .motivo de DADO (4ª rodada, TEST-003): a régua larga lê todo «.motivo», e fora das três telas ele quase sempre é o motivo
 // que a pessoa escreveu (a falta, a remoção, a correção, o cancelamento) ou a frase do próprio app (o veredito, a vacina, o
 // Empório) — não é erro. Fica congelado por função, na contagem de hoje: um .motivo novo, em qualquer função, derruba a prova.
@@ -26869,7 +26873,9 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   pernCartaoHojeHTML: 1, blocoUrgenteHTML: 1, __ciGravar: 1, hospRastro: 1, hospCorrHtml: 1, hospCorrLinha: 1,
   cfResolvidosHTML: 1, empAvisarAtrasoNoTelegram: 1, renderEmporio: 3, lpCobrancaHTML: 1, pmCardPlano: 1, pmCardAvisos: 1,
   pdRender: 2, pcQuadroAlmoco: 1, poVet: 1, poCardFaltas: 1, poCardComida: 1, poCardPernoites: 2,
-  poCardEA: 1, paLinhas: 2, recListaHTML: 1, recBaixarExcel: 1 };
+  poCardEA: 1, paLinhas: 2, recListaHTML: 1, recBaixarExcel: 1,
+  // 6.54 (o Palito): o motivo que a pessoa escreveu, lido no histórico, no PDF e na tela de conferir
+  mcrTrocaPorDatas: 1, mcrPdfApendice: 1, mcrDepoisDeSalvar: 1, mcrMotivoHTML: 2, mcrConferirHTML: 1 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -26968,6 +26974,19 @@ const EXCECAO648 = [
   "if(!vt.ok && !jaLocal && trocaDaFalta){ ehTroca=false; comoRep=vt.motivo; }",   // vagasAutorizar: vt = dxVereditoTroca (frase do app)
   "else if(!vt.ok && !jaLocal){ alert('Esta troca não vale mais: '+vt.motivo+",   // vagasAutorizar: o mesmo veredito da troca
   "if(sx!==sy) D.push(rot+': \"'+String(x==null?'—':(typeof x==='object'?JSON.stringify(x):x))",   // ciDiffCorrecao: o valor de um campo da ficha no resumo da correção (dado)
+  // 6.54 (o Palito, «Mudar comida e remédio», fora das três telas): as frases das validações do mcr e da régua do motivo, e o
+  // motivo que a pessoa escreveu (que a régua seguia até as gravações do mcrMontar)
+  "var quem=String(M.quem||'').trim(), motivo=String(M.motivo||'').trim();",   // mcrMontar: o motivo que a pessoa escreveu (dado) — é ele que segue para o histórico, o rastro e a gravação (up[…]=…, hist.push({…}))
+  "if(nc.erro){ recusas.push(nc.erro); frases.push(nc.erro); return; }",   // mcrMontar: nc = mcrNovoChecar (frase do app sobre o remédio novo)
+  "if(nc.erro) p.push(nc.erro);",   // mcrValidar: a mesma frase do mcrNovoChecar
+  "var mt=motivoQuatroPalavras(M.motivo); if(!mt.ok) p.push(mt.erro);",   // mcrValidar: a frase do motivoQuatroPalavras (o M.motivo só é conferido)
+  "if(nc.erro) out.push(nc.erro+' Confira e salve de novo.');",   // mcrConferirAntes: a frase do mcrNovoChecar
+  "if(nc.erro) h+='<div class=\"mcr-alerta\">'+esc(nc.erro)+'</div>';",   // mcrNovoHTML: a frase do mcrNovoChecar
+  "if(!r.id){ zAlertao('NADA PARA MUDAR AQUI', [r.erro], {botao:'Entendi'}); return; }",   // mcrAbrirDoPlantao: r = mcrEstadiaDoHosp («Faça o check-in da hospedagem…»)
+  "M.bloqueio=idt.ok?'':idt.erro;",   // mcrAbrirEstadia: idt = mcrIdentidade («Não achei esta hospedagem…», «Os dados não batem…»)
+  "var le={}; t.leitura.forEach(function(x){ le[x.id]=x.motivo; });",   // mcrRemediosHTML: o motivo da leitura é frase do app («Suspenso pela veterinária…», «Termina hoje…»)
+  "+'<div class=\"mcr-mut\" id=\"mcrMotivoDica\">'+esc(v.ok?'Motivo ok.':v.erro)+'</div>'",   // mcrMotivoHTML: v = motivoQuatroPalavras
+  "var r=motivoQuatroPalavras(M.motivo); d.textContent=r.ok?'Motivo ok.':r.erro;",   // mcrSetMotivo: r = motivoQuatroPalavras
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -27467,6 +27486,2207 @@ prova('6.48 R4 LOW-6 — «too_big at /…» é erro do app: «a gravação fico
 });
 // ⟦6.48 fim⟧
 
+// ================================================================== 6.54 — mudar comida e remédio depois do check-in (Palito)
+console.log('\n6.54 — Mudar comida e remédio do hóspede depois do check-in, de forma simples (caso do Palito, 09/out/2026)');
+// Relógio FIXO (sexta, 09/10/2026) e dado inventado: o Palito da "Gabi Teste", Zenrelia de mentira.
+const HOJE654 = '2026-10-09', AMANHA654 = '2026-10-10', ONTEM654 = '2026-10-08';
+const T654 = (d, hh, mm, ss) => new Date(2026, 9, d, hh, mm || 0, ss || 0).getTime();
+const KP654 = 'palito__gabi teste';
+const P654 = 'auaulandia/estadias/e1/', A654 = 'auaulandia/medicacao-agenda/' + KP654 + '/itens/';
+const exige654 = (...ns) => ns.forEach((n) => assert.ok(run(`typeof ${n}==='function'`), n + ' existe (função nova da 6.54)'));
+const volta654 = async () => { for (let i = 0; i < 80; i++) await Promise.resolve(); };
+// Banco de mentira com caminhos: grava de verdade num objeto (update na raiz = várias gravações de uma vez).
+function banco654(inicial) {
+  const B = { s: JSON.parse(JSON.stringify(inicial || {})), log: [], falhaUpdate: null };
+  const parts = (p) => String(p || '').split('/').filter(Boolean);
+  const get = (p) => { let c = B.s; for (const k of parts(p)) { if (c == null || typeof c !== 'object') return null; c = c[k]; } return c === undefined ? null : JSON.parse(JSON.stringify(c)); };
+  const put = (p, v) => { const ps = parts(p); let c = B.s; for (let i = 0; i < ps.length - 1; i++) { if (c[ps[i]] == null || typeof c[ps[i]] !== 'object') c[ps[i]] = {}; c = c[ps[i]]; } const k = ps[ps.length - 1]; if (v === null || v === undefined) delete c[k]; else c[k] = JSON.parse(JSON.stringify(v)); };
+  const snap = (p, v) => ({ key: parts(p).slice(-1)[0] || null, val: () => (v == null ? null : JSON.parse(JSON.stringify(v))), exists: () => v != null });
+  B.get = get;
+  B.ref = function (p0) {
+    const p = parts(p0).join('/');
+    const r = {
+      key: parts(p).slice(-1)[0] || null,
+      once() { B.log.push(['once', p]); return Promise.resolve(snap(p, get(p))); },
+      on() { return function () {}; }, off() {},
+      set(v) { B.log.push(['set', p]); put(p, v); return Promise.resolve(); },
+      update(o) { B.log.push(['update', p, Object.keys(o).sort()]); if (B.falhaUpdate) return Promise.reject(new Error(B.falhaUpdate)); Object.keys(o).forEach((k) => put((p ? p + '/' : '') + k, o[k])); return Promise.resolve(); },
+      remove() { B.log.push(['remove', p]); put(p, null); return Promise.resolve(); },
+      push(v) { const k = '-p' + B.log.length; B.log.push(['push', p]); if (v !== undefined) put(p + '/' + k, v); const c = B.ref(p + '/' + k); c.then = (f, g) => Promise.resolve().then(f, g); c.catch = () => c; return c; },
+      transaction(fn) { B.log.push(['tx', p]); const n = fn(get(p)); if (n === undefined) return Promise.resolve({ committed: false, snapshot: snap(p, get(p)) }); put(p, n); return Promise.resolve({ committed: true, snapshot: snap(p, n) }); },
+      child(k) { return B.ref(p + '/' + k); },
+      orderByChild() { return r; }, orderByKey() { return r; }, equalTo() { return r; }, limitToFirst() { return r; }, limitToLast() { return r; },
+    };
+    return r;
+  };
+  B.updates = () => B.log.filter((x) => x[0] === 'update');
+  return B;
+}
+// A estadia do Palito: jantar e café com 50 g de Royal, Zenrelia às 08:00 em blister contado.
+const EST654 = () => ({ nome: 'Palito', tutor: 'Gabi Teste', raca: 'Schnauzer', refKey: KP654, status: 'ativa', entrada: '2026-10-05', saida: '2026-10-12', _ts: 100,
+  ficha: { obsGeral: 'gosta de colo', medObs: '', coleira: null, medEmUso: 'Sim',
+    alim: { obs: '', tipo: 'Ração', marca: 'Royal', unidade: 'gramas', confirmacao: { estado: 'confirmado', quem: 'Rita Teste', ts: 1 },
+      refs: { fixas: { cafe: { on: true, hora: '07:30', racao: '50', natural: '', extra: '' }, almoco: { on: false, hora: '', racao: '', natural: '', extra: '' }, jantar: { on: true, hora: '19:00', racao: '50', natural: '', extra: '' } }, extras: [] },
+      refeicoes: '2', qtd: '50', trazida: '700', dias: 8, entrada: { cafe: false, almoco: false, jantar: true }, saida: { cafe: true, almoco: false, jantar: false },
+      racaoRefeicoes: { cafe: true, almoco: false, jantar: true }, minimo: 700, deficit: 0, comida: null },
+    spa: { banho: 'Não', tipo: '', horario: '', aConfirmar: false } },
+  pertences: [{ uid: 'p1', k: 'comida', nome: 'Ração', spec: 'Royal' }],
+  medicacao: [{ nome: 'Zenrelia', tipo: 'medicamento', q: '1', u: 'comprimido', horarios: ['08:00'], origem: 'tutor', estoque: { modo: 'contavel', inicial: 20 }, continuo: true }],
+  conferencia: { concluida: true, quem: 'Wandela Teste' }, assinatura: 'data:image/png;base64,AAA', assinado_por: 'Gabi Teste' });
+const ITENS654 = () => ({ ci_1: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, origem: 'tutor', tipo: 'medicamento',
+  estoque: { modo: 'contavel', inicial: 20, restante: 12 }, historico: [{ quem: 'Rita Teste', quando: '05/10 18:00', acao: 'Criou (check-in)' }] } });
+// A tela aberta (estado puro), com o que o teste pedir.
+const TELA654 = (o) => { ctx.__Ti = Object.assign({ id: 'e1', est: EST654(), key: KP654, itens: ITENS654(), log: {}, mestre: { raca: 'Schnauzer', tutor: 'Gabi Teste' }, podeFicha: true, hoje: HOJE654, aid: 'a1' }, o || {}); return run('__M=mcrEstadoInicial(__Ti)'); };
+const CTX654 = (o) => { ctx.__Ci = Object.assign({ est: EST654(), itens: ITENS654(), log: {}, hoje: HOJE654, agoraMin: 600, ts: T654(9, 10, 0), quandoBR: '09/10 10:00', avisos: {} }, o || {}); return ctx.__Ci; };
+const REGRA654 = (o) => { ctx.__o = o; return run('__r=mcrRegraHorario(__o)'); };
+// O alarme com relógio fixo: a bancada da 6.47 (ARMA647/SOLTA647) e um banco de mentira com a agenda.
+const ARMA654 = ARMA647 + '; __bk654={hp:hospedes, cg:carregarMedAtrasadaGestora}; carregarMedAtrasadaGestora=function(){};';
+const SOLTA654 = 'hospedes=__bk654.hp; carregarMedAtrasadaGestora=__bk654.cg; ' + SOLTA647;
+const fila654 = async (itens, log, agora, diaTela, sd) => {
+  ctx.__B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { itens } } } });
+  relogio647(agora);
+  run(`DB=__B; hospedes=[{nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}]; selectedDate=new __RD647(${sd || agora}); DIA_TELA_AUTO='${diaTela}'; APP_DIA_ABERTO='${diaTela}'; __log=${JSON.stringify(log)}; __mo=[]; despMedNaTela=null;`);
+  // a carga da fila precisa de uma promessa de verdade; o alarme, da resposta na hora (a da bancada da 6.47)
+  run('__mlSinc654=medLogHoje; medLogHoje=function(){ return Promise.resolve(__log); }; carregarAgendaMedTodos();'); await volta654(); run('medLogHoje=__mlSinc654;');
+  return run('MED_AGENDA_TODOS.map(function(d){ return d.itemId+"@"+d.horario; })');
+};
+
+prova('6.54 F14/AC16 — motivo: no mínimo 4 palavras e 3 diferentes com 2 letras ou mais; as 4 frases prontas passam (a mesma régua da 6.53)', () => {
+  exige654('motivoQuatroPalavras');
+  const ok = (t) => run(`motivoQuatroPalavras(${JSON.stringify(t)}).ok`);
+  igual(['erro', 'erro de digitação', 'ok ok ok ok', 'a b c d', 'Frida errada', '', '   '].map(ok), [false, false, false, false, false, false, false]);
+  igual(['a tutora corrigiu a quantidade', 'não é a ficha dela', 'a tutora pediu para mudar a ração do jantar e do café'].map(ok), [true, true, true], 'a de 12 palavras também passa');
+  igual(run('MCR_FRASES_PRONTAS.length'), 4);
+  igual(run('MCR_FRASES_PRONTAS.map(function(f){ return motivoQuatroPalavras(f).ok; })'), [true, true, true, true], 'o botão pronto salva (achado K1 da crítica)');
+  assert.ok(/4 palavras/.test(run(`motivoQuatroPalavras('erro de digitação').erro`)));
+  assert.ok(/diferentes/.test(run(`motivoQuatroPalavras('ok ok ok ok').erro`)));
+  igual((fs.readFileSync(APP, 'utf8').match(/function motivoQuatroPalavras\(/g) || []).length, 1, 'uma régua só no app (a da 6.53)');
+});
+prova('6.54 F3/AC4 — −5 g / +5 g: 50 → 45; 5 → vazio (a ração da refeição sai, nunca negativa); o campo aceita 47 e recusa negativo', () => {
+  exige654('mcrPasso', 'mcrQtdLimpa');
+  igual([run("mcrPasso('50',-5)"), run("mcrPasso('45',5)"), run("mcrPasso('5',-5)"), run("mcrPasso('',5)"), run("mcrPasso('3',-5)"), run("mcrPasso('1,5',0.5)"), run("mcrPasso('1',-0.5)")], ['45', '50', '', '5', '', '2', '0,5']);
+  igual([run("mcrQtdLimpa('47')"), run("mcrQtdLimpa('-5')"), run("mcrQtdLimpa('0')"), run("mcrQtdLimpa('47,5')"), run("mcrQtdLimpa('abc')"), run("mcrQtdLimpa(' 45 g')")], ['47', '', '', '47,5', '', '45']);
+});
+prova('6.54 AC4 — a linha da refeição: «Jantar · 19:00», −5 g e +5 g, e "era 50 g" depois do toque', () => {
+  exige654('mcrLinhaRefeicaoHTML');
+  ctx.__ra = { on: true, hora: '19:00', racao: '50', natural: '', extra: '' }; ctx.__rb = { on: true, hora: '19:00', racao: '45', natural: '', extra: '' };
+  const h = run(`mcrLinhaRefeicaoHTML('jantar', 'Jantar', __ra, __rb, 'gramas', false)`);
+  assert.ok(/Jantar/.test(h) && /19:00/.test(h), h);
+  assert.ok(/−5 g/.test(h) && /\+5 g/.test(h), 'os dois botões');
+  assert.ok(/era 50 g/.test(h), 'mostra o de antes');
+  assert.ok(!/era/.test(run(`mcrLinhaRefeicaoHTML('jantar', 'Jantar', __ra, __ra, 'gramas', false)`)), 'sem mudança, sem "era"');
+});
+prova('6.54 F2/AC17 — o resumo da comida de → para: "Jantar: 50 g → 45 g de ração", tipo, marca, sem ração; nada mudou = lista vazia', () => {
+  exige654('mcrDiffComida');
+  const AL = (j, c, ex) => ({ tipo: 'Ração', marca: 'Royal', unidade: 'gramas', semRacao: false,
+    refs: { fixas: { cafe: { on: true, hora: '07:30', racao: c || '50', natural: '', extra: '' }, almoco: { on: false, hora: '', racao: '', natural: '', extra: '' }, jantar: { on: true, hora: '19:00', racao: j || '50', natural: '', extra: ex || '' } }, extras: [] } });
+  ctx.__a = AL(); ctx.__b = AL('45');
+  igual(run('mcrDiffComida(__a,__b)'), ['Jantar: 50 g → 45 g de ração']);
+  igual(run('mcrDiffComida(__a,__a)'), [], 'nada mudou');
+  ctx.__c = Object.assign(AL(), { tipo: 'Ração + natural', marca: 'Golden' });
+  igual(run('mcrDiffComida(__a,__c)'), ['Tipo: Ração → Ração + natural', 'Marca: Royal → Golden']);
+  ctx.__d = Object.assign(AL(), { semRacao: true });
+  igual(run('mcrDiffComida(__a,__d)'), ['Sem ração — comida úmida da casa: ligado (só nesta hospedagem)']);
+  ctx.__e = AL('50', '50', '1 colher de patê');
+  igual(run('mcrDiffComida(__a,__e)'), ['Jantar: 50 g de ração → 50 g de ração + 1 colher de patê'], 'o patê como complemento (PA5)');
+  ctx.__f = AL(); ctx.__f.refs.fixas.almoco = { on: true, hora: '12:00', racao: '40', natural: '', extra: '' };
+  igual(run('mcrDiffComida(__a,__f)'), ['Almoço: não fazia → 40 g de ração (12:00)']);
+});
+prova('6.54 F1/AC5 — alimDerivados grava o mesmo que o check-in (ciColetarFicha + ciCalcRacao) em 60 cenários (1 a 5 refeições, extras, natural, 1, 2 e 7 dias)', () => {
+  exige654('alimDerivados');
+  run(`__bkDom654={ge:document.getElementById, qsa:document.querySelectorAll, sv:segVal, rf:ciRefs, rx:ciRefsExtras};
+    __vals={}; __meal={ciMealEnt:{}, ciMealSai:{}}; __segs={};
+    document.getElementById=function(id){ if(!(id in __vals)) __vals[id]={value:'', checked:false, style:{}, textContent:'', innerHTML:'', classList:{add:function(){},remove:function(){},contains:function(){return false;}}}; return __vals[id]; };
+    document.querySelectorAll=function(sel){ var m=/^#(ciMealEnt|ciMealSai) \\.ci-meal-btn\\.on$/.exec(sel); if(m){ var o=__meal[m[1]]; return Object.keys(o).filter(function(k){return o[k];}).map(function(k){ return {dataset:{m:k}}; }); } return []; };
+    segVal=function(id){ return __segs[id]||''; };`);
+  try {
+    const tipos = ['Ração', 'Ração + natural', 'Comida natural'];
+    const datas = [['2026-10-05', '2026-10-05'], ['2026-10-05', '2026-10-06'], ['2026-10-05', '2026-10-11']];
+    let refsVistas = new Set();
+    for (let s = 0; s < 60; s++) {
+      const tipo = tipos[s % 3], dt = datas[Math.floor(s / 3) % 3], nat = tipo !== 'Ração';
+      const on = (b) => !!((s >> b) & 1);
+      const fixas = {
+        cafe: { on: on(0) || s % 7 === 0, hora: '07:30', racao: String(40 + (s % 3) * 5), natural: nat ? String(100 + s) : '', extra: (s % 5 === 0 ? '1 colher de patê' : '') },
+        almoco: { on: on(1), hora: '12:00', racao: (s % 4 === 0 ? '' : '45'), natural: nat ? '80' : '', extra: '' },
+        jantar: { on: on(2) || s % 2 === 0, hora: '19:00', racao: '50', natural: nat ? '90' : '', extra: (s % 6 === 0 ? 'iogurte' : '') } };
+      const extras = []; const nx = (s % 4 === 3 ? 2 : (s % 4 === 1 ? 1 : 0));
+      for (let i = 0; i < nx; i++) extras.push({ nome: 'Extra ' + i, hora: '15:0' + i, racao: (i ? '20' : ''), natural: nat ? '30' : '', extra: (i ? '' : 'petisco') });
+      refsVistas.add(['cafe', 'almoco', 'jantar'].filter((k) => fixas[k].on).length + nx);
+      const ME = { cafe: on(3), almoco: on(4), jantar: true }, MS = { cafe: true, almoco: on(5), jantar: false };
+      const unid = (s % 9 === 0 ? 'medidor' : 'gramas'), traz = (s % 2 ? '600' : ''), ctraz = (s % 3 ? '900' : '');
+      ctx.__sc = { fixas, extras, tipo, unid, ent: dt[0], sai: dt[1], ME, MS, traz, ctraz };
+      run(`__vals={}; __segs={ciAlimTipo:__sc.tipo, ciAlimUnid:__sc.unid}; ciRefs=JSON.parse(JSON.stringify(__sc.fixas)); ciRefsExtras=JSON.parse(JSON.stringify(__sc.extras));
+        __vals.ciEntrada={value:__sc.ent}; __vals.ciSaida={value:__sc.sai}; __vals.ciAlimTraz={value:__sc.traz}; __vals.ciComidaTraz={value:__sc.ctraz}; __vals.ciAlimMarca={value:'Royal'};
+        __meal={ciMealEnt:__sc.ME, ciMealSai:__sc.MS}; ciCalcDias();`);
+      const viaCheckin = run('(function(){ var a=ciColetarFicha().ficha.alim; delete a.confirmacao; return a; })()');
+      ctx.__base = { obs: '', tipo, marca: 'Royal', unidade: unid, refs: { fixas, extras }, trazida: traz, entrada: ME, saida: MS, comida: nat ? { trazida: ctraz } : null };
+      const viaTela = run('(function(){ var a=alimDerivados(__base, __sc.ent, __sc.sai); delete a.confirmacao; return a; })()');
+      igual(viaTela, JSON.parse(JSON.stringify(viaCheckin)), 'cenário ' + s);
+    }
+    assert.ok(refsVistas.has(1) && refsVistas.has(5), 'de 1 a 5 refeições: ' + [...refsVistas].join(','));
+  } finally { run('document.getElementById=__bkDom654.ge; document.querySelectorAll=__bkDom654.qsa; segVal=__bkDom654.sv; ciRefs=__bkDom654.rf; ciRefsExtras=__bkDom654.rx;'); }
+});
+prova('6.54 F4/AC9 — a régua da dose de hoje (pura), tabela: (a) a (i), madrugada, tratamento que termina hoje e remédio que ainda não começou', () => {
+  exige654('mcrRegraHorario', 'mcrModo');
+  const IT = { nome: 'Zenrelia', q: '1', u: 'comprimido', continuo: true };
+  const r = (antes, depois, dados, hh, mm, extra) => REGRA654(Object.assign({ antes, depois, dadosHoje: dados, agoraMin: hh * 60 + (mm || 0), hoje: HOJE654, item: Object.assign({}, IT, { horarios: antes }) }, extra || {}));
+  const modo = (v) => run(`mcrModo(__r, ${JSON.stringify(v)})`);
+  let x = r(['20:00'], ['21:00'], [], 10);                                    // (a)
+  igual([x.podeHoje, x.recomendado, modo('hoje'), modo('amanha'), modo(undefined), x.inicio], [true, 'amanha', 'mesmo', 'troca', 'troca', AMANHA654], '(a) nada dado, horário à frente: oferece Hoje; Amanhã é o recomendado (K5)');
+  x = r(['08:00'], ['09:00'], ['08:00'], 10);                                 // (b)
+  igual([x.podeHoje, modo('hoje')], [false, 'troca'], '(b) 08:00 dada: só amanhã, por troca de datas');
+  assert.ok(/08:00 de hoje já foi dada/.test(x.porque) && /sábado, 10\/10/.test(x.porque), x.porque);
+  x = r(['08:00'], ['08:00', '20:00'], ['08:00'], 10);                        // (c)
+  igual(x.podeHoje, true, '(c) 08:00 dada e mantida, acrescenta 20:00: Hoje permitido');
+  x = r(['20:00'], ['21:00'], [], 20, 30);                                    // (d)
+  igual(x.podeHoje, false, '(d) 20:00 atrasada sem registro'); assert.ok(/20:00.*já passou/.test(x.porque), x.porque);
+  x = r(['20:00'], ['21:00'], [], 19, 50);                                    // (e)
+  igual(x.podeHoje, false, '(e) 20:00 a 10 min'); assert.ok(/menos de 15 minutos/.test(x.porque), x.porque);
+  x = r(['22:00'], ['23:00'], [], 0, 30);                                     // (f)
+  igual([x.podeHoje, x.madrugada, modo('hoje')], [false, true, 'troca'], '(f) 00:30: nunca o mesmo item');
+  x = r(['08:00'], ['08:00'], ['08:00'], 10, 0, { soDose: true });            // (g)
+  igual([modo('amanha'), modo('hoje')], ['mesmo', 'mesmo'], '(g) só a dose: mesmo item sempre');
+  x = r(['20:00'], ['09:00'], [], 10);                                        // (h) K6
+  igual(x.podeHoje, false, '(h) o horário NOVO das 09:00 já passou'); assert.ok(/09:00.*já passou/.test(x.porque), x.porque);
+  x = REGRA654({ antes: [], depois: ['08:00'], dadosHoje: [], agoraMin: 15 * 60, hoje: HOJE654, item: Object.assign({}, IT, { horarios: ['08:00'] }), novo: true }); // (i)
+  igual([x.podeHoje, modo('hoje'), modo('amanha')], [false, 'novo-amanha', 'novo-amanha'], '(i) remédio novo com horário que já passou: começa amanhã');
+  x = REGRA654({ antes: [], depois: ['20:00'], dadosHoje: [], agoraMin: 15 * 60, hoje: HOJE654, item: Object.assign({}, IT, { horarios: ['20:00'] }), novo: true });
+  igual([x.podeHoje, modo('hoje'), modo(undefined)], [true, 'novo-hoje', 'novo-amanha'], 'remédio novo às 20:00, lançado às 15:00: Hoje é escolha, Amanhã é o padrão');
+  // K18 — o tratamento termina hoje: o horário novo não chega a valer
+  x = REGRA654({ antes: ['08:00'], depois: ['09:00'], dadosHoje: ['08:00'], agoraMin: 600, hoje: HOJE654, item: Object.assign({}, IT, { horarios: ['08:00'], continuo: false, dataFim: HOJE654 }) });
+  igual([x.nada, modo(undefined)], [true, 'nada']); assert.ok(/termina hoje/.test(x.porque), x.porque);
+  // K17 — 22:00 → 00:30: na troca, a das 22:00 de hoje e a das 00:30 de amanhã ficam a 2 h 30 min; o alarme da
+  // 22:00 atrasada (6.47, mesmo item) iria até 01:00, depois da metade do intervalo (23:15): a régua marca «perto»,
+  // e a tela só salva com «Confirmei com a veterinária» (prova 6.54 QA A3); o «Salvar agenda» não troca.
+  x = r(['22:00'], ['00:30'], [], 10);
+  igual([x.podeHoje, x.madrugadaNova, x.perto && x.perto.darAte, x.perto && x.perto.alarmeAte], [false, true, '23:15', '01:00']);
+  igual([r(['22:00'], ['23:00'], [], 10).perto, r(['08:00'], ['07:00'], [], 10).perto], [null, null], 'troca com 25 h e 23 h entre as doses: não é perto');
+  // o remédio que ainda não começou muda no mesmo item (não há dose dele hoje nem ontem)
+  x = REGRA654({ antes: ['08:00'], depois: ['09:00'], dadosHoje: [], agoraMin: 600, hoje: HOJE654, item: Object.assign({}, IT, { horarios: ['08:00'], dataInicio: '2026-10-12' }) });
+  igual([x.futuro, modo('amanha')], [true, 'mesmo']);
+  // o que começou HOJE já tem dose hoje: não é "futuro" (a dose das 08:00 dada manda para amanhã)
+  x = REGRA654({ antes: ['08:00'], depois: ['09:00'], dadosHoje: ['08:00'], agoraMin: 600, hoje: HOJE654, item: Object.assign({}, IT, { horarios: ['08:00'], dataInicio: HOJE654 }) });
+  igual([x.futuro, x.podeHoje, modo('hoje')], [false, false, 'troca']);
+  // 15 minutos exatos de folga: pode valer hoje; 14, não (a régua é ≥ 15)
+  igual([r(['10:15'], ['11:00'], [], 10).podeHoje, r(['10:14'], ['11:00'], [], 10).podeHoje, r(['20:00'], ['10:15'], [], 10).podeHoje, r(['20:00'], ['10:14'], [], 10).podeHoje], [true, false, true, false]);
+  // 06:00 em ponto já é dia: pode valer hoje; 05:59, não
+  igual([r(['20:00'], ['21:00'], [], 6, 0).podeHoje, r(['20:00'], ['21:00'], [], 5, 59).podeHoje], [true, false]);
+});
+prova('6.54 F6 — dia sim, dia não: o horário novo começa no próximo dia "sim" do antigo; dias da semana: o próximo dia dele', () => {
+  exige654('mcrInicioNovo');
+  ctx.__alt = { horarios: ['08:00'], freq: { tipo: 'alternado' }, dataInicio: '2026-10-05', continuo: true };
+  igual([run(`mcrInicioNovo(__alt, '2026-10-09')`), run(`mcrInicioNovo(__alt, '2026-10-08')`)], ['2026-10-11', '2026-10-09']);
+  ctx.__dias = { horarios: ['08:00'], freq: { tipo: 'dias', dias: ['seg', 'qua'] }, continuo: true };
+  igual(run(`mcrInicioNovo(__dias, '${HOJE654}')`), '2026-10-12', 'sexta → a próxima segunda');
+  igual(run(`mcrInicioNovo({horarios:['08:00'], continuo:true}, '${HOJE654}')`), AMANHA654);
+  const x = REGRA654({ antes: ['08:00'], depois: ['09:00'], dadosHoje: ['08:00'], agoraMin: 600, hoje: HOJE654, item: ctx.__alt });
+  igual(x.inicio, '2026-10-11', 'troca feita em 09/10 depois da dose: o novo começa em 11/10 (10/10 é "não")');
+  ctx.__novoAlt = Object.assign({}, ctx.__alt, { dataInicio: '2026-10-11' });
+  igual(['2026-10-11', '2026-10-12', '2026-10-13'].map((d) => run(`medVigenteEm(__novoAlt, '${d}')`)), [true, false, true], 'a sequência do dia sim, dia não continua a mesma');
+});
+prova('6.54 F5 — troca por datas: o antigo termina hoje (o contínuo deixa de ser contínuo, P2b), o novo começa amanhã; a vigência de hoje e de amanhã; a deduplicação não junta os dois', () => {
+  exige654('mcrTrocaPorDatas');
+  ctx.__ant = Object.assign(ITENS654().ci_1, {});
+  const r = run(`mcrTrocaPorDatas({antigoId:'ci_1', antigo:__ant, novoId:'mcr_1760000000000_ab', horarios:['09:00'], inicio:'${AMANHA654}', hoje:'${HOJE654}', quem:'Ana Teste', motivo:'a tutora corrigiu o horário', quando:'09/10 10:00', ts:1760000000000, dosesHoje:0})`);
+  igual([r.antigo.continuo, r.antigo.dataFim, r.antigo.trocadoPor, r.antigo.estoque, r.antigo.estoqueMovidoPara], [false, HOJE654, 'mcr_1760000000000_ab', null, 'mcr_1760000000000_ab']);
+  assert.ok(!('paradoEm' in r.antigo), 'troca não é "parou de tomar"');
+  igual([r.novo.horarios, r.novo.dataInicio, r.novo.continuo, r.novo.continuacaoDe, r.novo.nome, r.novo.q, r.novo.u], [['09:00'], AMANHA654, true, 'ci_1', 'Zenrelia', '1', 'comprimido']);
+  igual([r.antigo.historico.length, r.novo.historico.length], [2, 2], 'o histórico do remédio continua, com a linha da troca');
+  assert.ok(/08:00 para 09:00 a partir de sábado, 10\/10/.test(r.antigo.historico[1].acao) && /corrigiu o horário/.test(r.antigo.historico[1].acao), r.antigo.historico[1].acao);
+  ctx.__A = Object.assign({}, ctx.__ant, r.antigo); ctx.__N = r.novo;
+  igual([run(`medVigenteEm(__A,'${HOJE654}')`), run(`medVigenteEm(__A,'${AMANHA654}')`), run(`medVigenteEm(__N,'${HOJE654}')`), run(`medVigenteEm(__N,'${AMANHA654}')`)], [true, false, false, true]);
+  igual(run('medAssinatura(__A)===medAssinatura(__N)'), false, 'P4');
+  igual([run("mcrIdTroca('ci_1', '2026-10-10')"), run("mcrIdTroca('mcr_t_ci_1_20261010', '2026-10-11')"), run("mcrIdTroca('mcr_n_probiotico_20261010', '2026-10-11')")], ['mcr_t_ci_1_20261010', 'mcr_t_ci_1_20261011', 'mcr_t_n_probiotico_20261010_20261011'], 'id determinístico, com prefixo próprio da troca (N2); a troca de uma troca não encomprida o id');
+  igual(Object.keys(run('medDedupe({ci_1:__A, mcr_1760000000000_ab:__N}).itens')).sort(), ['ci_1', 'mcr_1760000000000_ab']);
+});
+provaAsync('6.54 F7/F9/AC10 — P6 fecha: 08:00 dada, horário mudado para 09:00 às 10:00 → hoje nenhum alarme e o vigia de hoje sem 09:00; amanhã só 09:00 (no MESMO item, o alarme das 09:00 abriria hoje)', async () => {
+  exige654('mcrTrocaPorDatas');
+  run(ARMA654);
+  try {
+    const ant = ITENS654().ci_1; ctx.__ant = ant;
+    const r = run(`mcrTrocaPorDatas({antigoId:'ci_1', antigo:__ant, novoId:'mcr_1760000000000_ab', horarios:['09:00'], inicio:'${AMANHA654}', hoje:'${HOJE654}', quem:'Ana Teste', motivo:'a tutora corrigiu o horário', quando:'x', ts:1, dosesHoje:0})`);
+    const itens = { ci_1: Object.assign({}, ant, r.antigo), mcr_1760000000000_ab: r.novo };
+    const LOG = { [KP654]: { 'ci_1_08-00': { quem: 'Wandela Teste', ts: T654(9, 8, 4) } } };
+    igual(await fila654(itens, LOG, T654(9, 10, 0), HOJE654), ['ci_1@08:00']);
+    run('checarDespertadorMed();'); igual(run('__mo'), [], 'hoje: nenhum alarme às 09:00');
+    const vig = ((ctx.__B.s.auaulandia['med-vigia'] || {})[HOJE654] || {}).esperadas || {};
+    igual([Object.keys(vig).length, Object.keys(vig).some((k) => /09-00/.test(k))], [1, false], 'F9 — o retrato do vigia de hoje não espera 09:00');
+    igual(await fila654(itens, {}, T654(10, 8, 56), AMANHA654), ['mcr_1760000000000_ab@09:00']);
+    run('checarDespertadorMed();'); igual(run('__mo'), [KP654 + '__mcr_1760000000000_ab_09-00'], 'amanhã: só 09:00');
+    // contraprova (o P6): o horário trocado no MESMO item abre o alarme das 09:00 com a das 08:00 já dada
+    igual(await fila654({ ci_1: Object.assign({}, ant, { horarios: ['09:00'] }) }, LOG, T654(9, 10, 0), HOJE654), ['ci_1@09:00']);
+    run('checarDespertadorMed();'); igual(run('__mo'), [KP654 + '__ci_1_09-00'], 'a montagem é sensível: no mesmo item, dose em dobro');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 AC11 — sem dose perdida: 20:00 ainda não dada, mudar para 21:00 às 10:00: «Hoje» toca 21:00 (e não 20:00); «Amanhã» toca 20:00 hoje e 21:00 amanhã', async () => {
+  exige654('mcrTrocaPorDatas', 'mcrRegraHorario', 'mcrModo');
+  run(ARMA654);
+  try {
+    const ant = Object.assign(ITENS654().ci_1, { horarios: ['20:00'] }); ctx.__ant = ant;
+    const x = REGRA654({ antes: ['20:00'], depois: ['21:00'], dadosHoje: [], agoraMin: 600, hoje: HOJE654, item: ant });
+    igual([x.podeHoje, run("mcrModo(__r,'hoje')")], [true, 'mesmo']);
+    igual(await fila654({ ci_1: Object.assign({}, ant, { horarios: ['21:00'] }) }, {}, T654(9, 20, 50), HOJE654), ['ci_1@21:00']);
+    run('checarDespertadorMed();'); igual(run('__mo'), [], '20:50: a das 20:00 não toca mais (com «Hoje»)');
+    run(`despMedNaTela=null; __mo=[];`); relogio647(T654(9, 20, 57)); run(`selectedDate=new __RD647(${T654(9, 20, 57)}); checarDespertadorMed();`); igual(run('__mo'), [KP654 + '__ci_1_21-00']);
+    const r = run(`mcrTrocaPorDatas({antigoId:'ci_1', antigo:__ant, novoId:'mcr_9', horarios:['21:00'], inicio:'${AMANHA654}', hoje:'${HOJE654}', quem:'Ana Teste', motivo:'x', quando:'x', ts:1, dosesHoje:1})`);
+    const itens = { ci_1: Object.assign({}, ant, r.antigo), mcr_9: r.novo };
+    igual(await fila654(itens, {}, T654(9, 19, 56), HOJE654), ['ci_1@20:00']);
+    run('checarDespertadorMed();'); igual(run('__mo'), [KP654 + '__ci_1_20-00'], '«Amanhã»: hoje toca 20:00');
+    igual(await fila654(itens, {}, T654(10, 20, 56), AMANHA654), ['mcr_9@21:00'], 'amanhã: 21:00');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 F8/AC10 — com a 6.47: às 00:30, tela em ontem, trocar 22:00 → 23:00 não cria «dose de ontem» às 23:00 (no MESMO item, criaria)', async () => {
+  exige654('mcrTrocaPorDatas', 'mcrRegraHorario');
+  run(ARMA654);
+  try {
+    const ant = { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['22:00'], continuo: true }; ctx.__ant = ant;
+    const x = REGRA654({ antes: ['22:00'], depois: ['23:00'], dadosHoje: [], agoraMin: 30, hoje: AMANHA654, item: ant });
+    igual([x.podeHoje, x.madrugada, run("mcrModo(__r,'hoje')"), x.inicio], [false, true, 'troca', '2026-10-11']);
+    const r = run(`mcrTrocaPorDatas({antigoId:'ci_9', antigo:__ant, novoId:'mcr_1760100000000_cd', horarios:['23:00'], inicio:'2026-10-11', hoje:'${AMANHA654}', quem:'Ana Teste', motivo:'x', quando:'x', ts:1, dosesHoje:0})`);
+    const itens = { ci_9: Object.assign({}, ant, r.antigo), mcr_1760100000000_cd: r.novo };
+    const LOG = { [KP654]: { 'ci_9_22-00': { quem: 'Wandela Teste' } } };
+    igual(await fila654(itens, LOG, T654(10, 0, 30), HOJE654, T654(9, 22, 40)), ['ci_9@22:00'], 'tela em 09/10: só o antigo');
+    igual(run(`Object.keys(medOntemPendentes(MED_AGENDA_TODOS, __log, {}, '${HOJE654}', ${T654(10, 0, 30)}))`), [], 'a das 22:00 foi dada; nada de 23:00 de ontem');
+    igual(await fila654({ ci_9: Object.assign({}, ant, { horarios: ['23:00'] }) }, LOG, T654(10, 0, 30), HOJE654, T654(9, 22, 40)), ['ci_9@23:00']);
+    igual(run(`Object.keys(medOntemPendentes(MED_AGENDA_TODOS, __log, {}, '${HOJE654}', ${T654(10, 0, 30)}))`), [KP654 + '__ci_9_23-00'], 'contraprova: no mesmo item, a dose fantasma das 23:00 de ontem tocaria');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 F10/AC12 — estoque na troca: restante 12, 1 por dose, 1 dose de hoje por dar → o novo começa com 11; o desconto no antigo aborta; no novo, 11 → 10; pote/frasco: o nível passa igual', async () => {
+  exige654('mcrEstoqueHerdado', 'mcrDosesHojeRestantes', 'mcrTrocaPorDatas');
+  ctx.__ant = Object.assign(ITENS654().ci_1, { horarios: ['08:00', '20:00'], estoque: { modo: 'contavel', inicial: 20, restante: 12, contados: { '2026-10-09__ci_1_08-00': true } } });
+  const n = run(`mcrDosesHojeRestantes(__ant, 'ci_1', '${HOJE654}', {'ci_1_08-00':{quem:'Wandela Teste'}})`);
+  igual(n, 1);
+  igual(run(`mcrDosesHojeRestantes(Object.assign({}, __ant, {dataInicio:'2026-10-12'}), 'ci_1', '${HOJE654}', {})`), 0, 'não é dia dele: nenhuma dose hoje');
+  const r = run(`mcrTrocaPorDatas({antigoId:'ci_1', antigo:__ant, novoId:'mcr_2', horarios:['09:00','21:00'], inicio:'${AMANHA654}', hoje:'${HOJE654}', quem:'Ana Teste', motivo:'x', quando:'x', ts:5, dosesHoje:${n}})`);
+  igual(r.novo.estoque, { modo: 'contavel', inicial: 11, restante: 11, herdado: { de: 'ci_1', inicial: 20, restanteNaHora: 12, dosesHoje: 1, ts: 5 } });
+  igual([r.antigo.estoque, r.antigo.estoqueMovidoPara], [null, 'mcr_2']);
+  igual(run(`mcrEstoqueHerdado({modo:'naocontavel', nivel:'metade', acabando:true}, '1', 1, 'ci_1', 5)`), { modo: 'naocontavel', nivel: 'metade', acabando: true, herdado: { de: 'ci_1', ts: 5 } });
+  igual(run(`mcrEstoqueHerdado({modo:'contavel', inicial:4, restante:1}, '2', 1, 'ci_1', 5).restante`), 0, 'nunca negativo');
+  ctx.__B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: { ci_1: Object.assign({}, ctx.__ant, r.antigo), mcr_2: r.novo } } } } });
+  run('__bkE654={db:DB, it:MED_AGENDA_ITENS, av:avaliarEstoqueAlerta}; DB=__B; MED_AGENDA_ITENS={}; avaliarEstoqueAlerta=function(){};');
+  try {
+    run(`descontarEstoquePorDose('${KP654}','ci_1','ci_1_20-00','1','${HOJE654}')`); await volta654();
+    igual(ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens.ci_1.estoque == null, true, 'o antigo continua sem estoque (a dose de hoje já foi descontada no novo)');
+    run(`descontarEstoquePorDose('${KP654}','mcr_2','mcr_2_09-00','1','${AMANHA654}')`); await volta654();
+    igual(ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens.mcr_2.estoque.restante, 10);
+  } finally { run('DB=__bkE654.db; MED_AGENDA_ITENS=__bkE654.it; avaliarEstoqueAlerta=__bkE654.av;'); }
+});
+prova('6.54 AC12 — "Horários de hoje" mostra uma linha de estoque só (a do novo)', () => {
+  exige654('mcrTrocaPorDatas');
+  ctx.__ant = ITENS654().ci_1;
+  const r = run(`mcrTrocaPorDatas({antigoId:'ci_1', antigo:__ant, novoId:'mcr_2', horarios:['09:00'], inicio:'${AMANHA654}', hoje:'${HOJE654}', quem:'Ana Teste', motivo:'x', quando:'x', ts:5, dosesHoje:0})`);
+  ctx.__IT = { ci_1: Object.assign({}, ctx.__ant, r.antigo), mcr_2: r.novo };
+  run('__bkS654={it:MED_AGENDA_ITENS, ch:currentHosp}; MED_AGENDA_ITENS=__IT; currentHosp={nome:"Palito", tutor:"Gabi Teste", refKey:"' + KP654 + '"};');
+  try { igual((run('renderEstoqueResumo()').match(/mag-est-resumo-info/g) || []).length, 1); }
+  finally { run('MED_AGENDA_ITENS=__bkS654.it; currentHosp=__bkS654.ch;'); }
+});
+prova('6.54 F12/AC13 — cobertura daqui até a saída: 6 sobrando, 4 dias, meio por dia → cobre; 2 vezes de 2 por dia → faltam 10; pote → sem conta', () => {
+  exige654('mcrCoberturaDaqui');
+  const C = (it, dh, rest) => { ctx.__ci = it; return run(`mcrCoberturaDaqui(__ci, '${HOJE654}', '2026-10-12', ${dh}${rest != null ? ', ' + rest : ''})`); };
+  let c = C({ q: '0,5', u: 'comprimido', horarios: ['08:00'], continuo: true, estoque: { modo: 'contavel', inicial: 20, restante: 6 } }, 1);
+  igual([c.cobre, c.necessario, c.trazido, c.doses], [true, 2, 6, 4]);
+  c = C({ q: '2', u: 'comprimido', horarios: ['08:00', '20:00'], continuo: true, estoque: { modo: 'contavel', inicial: 20, restante: 6 } }, 2);
+  igual([c.cobre, c.deficit, c.necessario], [false, 10, 16]);
+  igual(C({ q: '1', u: 'ml', horarios: ['08:00'], continuo: true, estoque: { modo: 'naocontavel', nivel: 'cheio' } }, 1), null);
+  c = C({ q: '1', u: 'comprimido', horarios: ['08:00'], continuo: false, dataFim: '2026-10-10', estoque: { modo: 'contavel', restante: 1 } }, 1);
+  igual([c.doses, c.cobre, c.ate], [2, false, '2026-10-10'], 'não cobra depois do fim do tratamento');
+  igual(C({ q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, estoque: { modo: 'contavel', restante: 1 } }, 0, 3).trazido, 3, 'o restante pode vir de fora (o retrato da lista da estadia)');
+});
+provaAsync('6.54 AC13 — depois da mudança, a conta "vai faltar" usa o restante de agora (o retrato na lista da estadia), abre o aviso em Pendências com o tutor e não duplica o aberto; o remédio parado não é cobrado', async () => {
+  const est = EST654();
+  est.medicacao = [{ nome: 'Zenrelia', tipo: 'medicamento', q: '2', u: 'comprimido', horarios: ['08:00', '20:00'], origem: 'tutor', estoque: { modo: 'contavel', inicial: 40 }, continuo: true, cobertura: { dia: HOJE654, dosesHoje: 2, restante: 6 } },
+    { nome: 'Ômega 3', tipo: 'suplemento', q: '1', u: 'cápsula', horarios: ['12:00'], origem: 'tutor', estoque: { modo: 'contavel', inicial: 1 }, continuo: true, parouEm: { data: HOJE654, quem: 'Ana Teste' } }];
+  est.ficha.alim.trazida = '';
+  ctx.__est = est; ctx.__B = banco654({ auaulandia: { 'avisos-racao': {} } });
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run('DB=__B; __bkF654={za:zAlertao}; zAlertao=function(){};');
+  try {
+    run(`checarFaltasDaEstadia('e1', __est, 'o remédio mudou')`); await volta654();
+    const av = Object.values(ctx.__B.s.auaulandia['avisos-racao'] || {});
+    igual(av.map((a) => [a.tipo, a.itemNome, a.deficit, a.necessario, a.trazido]), [['medicacao', 'Zenrelia', 10, 16, 6]], 'só a Zenrelia, pela conta de agora (o Ômega 3 parou)');
+    run(`checarFaltasDaEstadia('e1', __est, 'de novo')`); await volta654();
+    igual(Object.keys(ctx.__B.s.auaulandia['avisos-racao']).length, 1, 'não duplica o aviso aberto');
+  } finally { run('zAlertao=__bkF654.za;'); run(SOLTA654); }
+});
+prova('6.54 AC14 — «Parou de tomar»: «Não — parou agora» tira os horários de hoje ainda não dados e mantém os já dados; «Sim — para depois de hoje» mantém hoje; sem dose dada hoje, termina ontem', () => {
+  exige654('mcrParou');
+  ctx.__it = Object.assign(ITENS654().ci_1, { horarios: ['08:00', '20:00'] });
+  let p = run(`mcrParou(__it, 'agora', ['08:00'], '${HOJE654}', 'Ana Teste', 'a veterinária mudou a prescrição', '09/10 10:00', 7)`);
+  igual([p.continuo, p.dataFim, p.horarios, p.paradoEm.quem, p.paradoEm.data, p.paradoEm.motivo], [false, HOJE654, ['08:00'], 'Ana Teste', HOJE654, 'a veterinária mudou a prescrição']);
+  assert.ok(/Parou de tomar/.test(p.historico[p.historico.length - 1].acao));
+  p = run(`mcrParou(__it, 'depois', ['08:00'], '${HOJE654}', 'Ana Teste', 'x x x x', 'x', 7)`);
+  igual([p.dataFim, 'horarios' in p], [HOJE654, false], 'para depois de hoje: a das 20:00 de hoje ainda toca');
+  p = run(`mcrParou(__it, 'agora', [], '${HOJE654}', 'Ana Teste', 'x x x x', 'x', 7)`);
+  igual([p.dataFim, 'horarios' in p], [ONTEM654, false], 'nenhuma dada hoje: termina ontem (o mesmo do "Não" do check-in), os horários ficam');
+  ctx.__P = Object.assign({}, ctx.__it, run(`mcrParou(__it, 'agora', ['08:00'], '${HOJE654}', 'Ana Teste', 'x x x x', 'x', 7)`));
+  igual([run(`medVigenteEm(__P, '${HOJE654}')`), run(`medVigenteEm(__P, '${AMANHA654}')`), run(`ciMedEmVigor(__P, '${HOJE654}')`)], [true, false, false]);
+});
+prova('6.54 F13/AC21 — a lista da estadia muda no lugar: a ordem e as chaves da Conferência e do Check-out não mudam; o novo entra no fim com agendaId; o parado fica, com "parou em"; o casamento é pelo agendaId, depois nome + dose + horários, depois só o nome', () => {
+  exige654('mcrListaAplicar', 'mcrCasarNaLista');
+  const lista = [{ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'] }, { nome: 'Ômega 3', q: '1', u: 'cápsula', horarios: ['12:00'], agendaId: 'ci_2' }, { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['20:00'] }];
+  ctx.__L = lista;
+  igual([run(`mcrCasarNaLista(__L, 'ci_2', {nome:'Ômega 3'})`), run(`mcrCasarNaLista(__L, 'x', {nome:'Zenrelia', q:'1', u:'comprimido', horarios:['20:00']})`), run(`mcrCasarNaLista(__L, 'x', {nome:'Zenrelia', q:'2', u:'comprimido', horarios:['21:00']})`), run(`mcrCasarNaLista(__L, 'x', {nome:'Apoquel'})`)], [1, 2, -1, -1], 'Zenrelia duas vezes: só nome não decide');
+  ctx.__ops = [{ acao: 'horario', agendaId: 'ci_1', item: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'] }, horarios: ['09:00'], novoId: 'mcr_1', inicio: AMANHA654, quem: 'Ana Teste', cobertura: { dia: HOJE654, dosesHoje: 0, restante: 11 } },
+    { acao: 'parou', agendaId: 'ci_2', item: { nome: 'Ômega 3' }, data: HOJE654, quem: 'Ana Teste', motivo: 'a veterinária mudou a prescrição' },
+    { acao: 'novo', agendaId: 'mcr_3', item: { nome: 'Probiótico', tipo: 'suplemento', q: '1', u: 'sachê', horarios: ['12:00'], origem: 'tutor', dataInicio: AMANHA654, dataFim: '2026-10-12' }, quem: 'Ana Teste' }];
+  const nova = run(`mcrListaAplicar(__L, __ops, '${HOJE654}')`);
+  const chaves = (l) => l.map((m, i) => 'med_' + i + '_' + m.nome);
+  igual(chaves(nova).slice(0, 3), chaves(lista), 'testado (Conferência) e devolvido (Check-out) continuam no mesmo remédio');
+  igual([nova[0].horarios, nova[0].agendaId, nova[0].mudouEm.de, nova[0].mudouEm.para, nova[0].mudouEm.a_partir, nova[0].cobertura.restante], [['09:00'], 'mcr_1', ['08:00'], ['09:00'], AMANHA654, 11]);
+  igual([nova[1].parouEm.data, nova[1].parouEm.quem, nova[2].horarios], [HOJE654, 'Ana Teste', ['20:00']], 'o parado fica para o Check-out devolver; a Zenrelia das 20:00 não foi tocada');
+  igual([nova.length, nova[3].nome, nova[3].agendaId, nova[3].dataInicio], [4, 'Probiótico', 'mcr_3', AMANHA654]);
+  igual(lista[0].horarios, ['08:00'], 'função pura: a lista de entrada não muda');
+  ctx.__L2 = [{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['07:00'] }];
+  igual(run(`mcrCasarNaLista(__L2, 'x', {nome:'apoquel', q:'2', u:'comprimido', horarios:['08:00']})`), 0, 'um só com o nome: casa pelo nome');
+});
+prova('6.54 F15/AC2/AC3 — identidade: raça ou tutor diferentes da ficha ligada, 2 hospedagens ativas, a ligação só pelo nome e a planilha que diz outro tutor (caso da Frida) bloqueiam; sem hospedagem, «Faça o check-in»', () => {
+  exige654('mcrIdentidade', 'mcrEstadiaDoHosp');
+  const I = (o) => { const est = EST654(); ctx.__I = Object.assign({ id: 'e1', est, todas: { e1: est }, mestre: { raca: 'Schnauzer', tutor: 'Gabi Teste' }, hoje: HOJE654, planilha: null, viaSoNome: false }, o || {}); return run('mcrIdentidade(__I)'); };
+  igual(I().ok, true);
+  let x = I({ mestre: { raca: 'SRD', tutor: 'Gabi Teste' } });
+  igual(x.ok, false); assert.ok(/hospedagem diz Schnauzer.*ficha ligada diz SRD/.test(x.erro) && /Gestão/.test(x.erro), x.erro);
+  x = I({ mestre: { raca: 'Schnauzer', tutor: 'Lia Teste' } }); igual(x.ok, false); assert.ok(/tutor/i.test(x.erro), x.erro);
+  igual(I({ mestre: { raca: 'Schnauzer Miniatura', tutor: 'Gabi' } }).ok, true, 'raça escrita mais completa e só o primeiro nome do tutor: é a mesma');
+  const e2 = Object.assign(EST654(), { entrada: '2026-10-06', saida: '2026-10-11', _ts: 200 });
+  x = I({ todas: { e1: EST654(), e2 } }); igual(x.ok, false); assert.ok(/2 hospedagens/.test(x.erro), x.erro);
+  const e3 = Object.assign(EST654(), { entrada: '2026-10-20', saida: '2026-10-22' });
+  igual(I({ todas: { e1: EST654(), e3 } }).ok, true, 'uma hospedagem futura do mesmo FILHOt não bloqueia');
+  x = I({ viaSoNome: true }); igual(x.ok, false); assert.ok(/só pelo nome/.test(x.erro), x.erro);
+  igual(I({ mestre: null }).fichaIncerta, true, 'sem ficha ligada: o interruptor da ficha começa desligado');
+  // A Frida: a hospedagem nasceu com os dados da Auluna (ficha e hospedagem batem), mas a planilha diz "Frida / Ana Carolina"
+  const fr = { nome: 'Frida', tutor: 'Bia Teste', raca: 'SRD', refKey: 'frida__bia teste', status: 'ativa', entrada: '2026-10-07', saida: '2026-10-12' };
+  ctx.__I = { id: 'f1', est: fr, todas: { f1: fr }, mestre: { raca: 'SRD', tutor: 'Bia Teste' }, hoje: HOJE654, planilha: { nome: 'Frida', tutor: 'Ana Carolina' }, viaSoNome: false };
+  x = run('mcrIdentidade(__I)'); igual(x.ok, false); assert.ok(/planilha/.test(x.erro) && /Ana Carolina/.test(x.erro), x.erro);
+  x = I({ est: Object.assign(EST654(), { status: 'cancelada' }) }); igual(x.ok, false);
+  // a hospedagem de quem está no Plantão
+  ctx.__todas = { e1: EST654() };
+  igual(run(`mcrEstadiaDoHosp('${KP654}', __todas, '${HOJE654}').id`), 'e1');
+  assert.ok(/Faça o check-in da hospedagem/.test(run(`mcrEstadiaDoHosp('rex__ivo teste', __todas, '${HOJE654}').erro`)));
+  ctx.__todas = { e1: EST654(), e2 };
+  assert.ok(/2 hospedagens/.test(run(`mcrEstadiaDoHosp('${KP654}', __todas, '${HOJE654}').erro`)));
+});
+prova('6.54 AC3 — os remédios da tela: em vigor e futuros editáveis; suspenso e o que já trocou de horário só leitura; parado e terminado fora', () => {
+  exige654('mcrRemediosDaTela');
+  ctx.__it = { a: { nome: 'Zenrelia', horarios: ['08:00'], continuo: true }, b: { nome: 'Antibiótico', horarios: ['08:00'], dataInicio: '2026-10-11', dataFim: '2026-10-15' },
+    c: { nome: 'Prednisolona', horarios: ['09:00'], suspenso: true, suspensoPor: 'Dra. Teste' }, d: { nome: 'Velho', horarios: ['10:00'], continuo: false, dataFim: '2026-10-01' },
+    e: { nome: 'Ômega', horarios: ['12:00'], paradoEm: { data: '2026-10-08' }, continuo: false, dataFim: '2026-10-08' }, f: { nome: 'Apoquel', horarios: ['07:00'], continuo: false, dataFim: HOJE654, trocadoPor: 'g' },
+    g: { nome: 'Apoquel', horarios: ['07:30'], continuo: true, dataInicio: AMANHA654, continuacaoDe: 'f' } };
+  const r = run(`mcrRemediosDaTela(__it, '${HOJE654}')`);
+  igual([r.editaveis.sort(), r.leitura.map((x) => x.id).sort()], [['a', 'b', 'g'], ['c', 'f']]);
+  assert.ok(/só ela reativa/.test(r.leitura.find((x) => x.id === 'c').motivo));
+});
+prova('6.54 F16/AC19 — sem atropelo: a hospedagem mudada por outra pessoa, o remédio suspenso pela veterinária depois que a tela abriu e a dose registrada depois (com «Hoje») bloqueiam a gravação e dizem o quê', () => {
+  exige654('mcrConferirAntes', 'mcrEstadoInicial');
+  TELA654(); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'hoje'};`);
+  CTX654({ agoraMin: 6 * 60 + 30 }); igual(run('mcrConferirAntes(__M, __Ci)'), []);
+  CTX654({ agoraMin: 6 * 60 + 30 }); ctx.__Ci.est.ficha.alim.marca = 'Golden'; ctx.__Ci.est._ultimaEdicao = { quem: 'Rita Teste', ts: T654(9, 6, 20) };
+  let x = run('mcrConferirAntes(__M, __Ci)'); igual(x.length, 1); assert.ok(/mudou depois que esta tela abriu/.test(x[0]) && /Rita Teste/.test(x[0]), x[0]);
+  CTX654({ agoraMin: 6 * 60 + 30 }); ctx.__Ci.itens.ci_1.suspenso = true;
+  x = run('mcrConferirAntes(__M, __Ci)'); assert.ok(x.some((f) => /suspen/.test(f) && /Zenrelia/.test(f)), x.join(' | '));
+  CTX654({ agoraMin: 6 * 60 + 30, log: { 'ci_1_08-00': { quem: 'Wandela Teste', ts: T654(9, 6, 25) } } });
+  x = run('mcrConferirAntes(__M, __Ci)'); assert.ok(x.some((f) => /registrada depois/.test(f)), x.join(' | '));
+  CTX654({ agoraMin: 6 * 60 + 30 }); ctx.__Ci.est.status = 'encerrada';
+  x = run('mcrConferirAntes(__M, __Ci)'); assert.ok(x.some((f) => /não está mais ativa/.test(f)), x.join(' | '));
+});
+prova('6.54 F17/AC20 — a assinatura do alarme: o estoque e os "contados" não mudam; horário, dose, fim, frequência e suspensão mudam', () => {
+  exige654('mcrAssinaturaAlarme');
+  const base = { k: { nome: 'Palito', itens: { ci_1: Object.assign(ITENS654().ci_1, { estoque: { modo: 'contavel', inicial: 20, restante: 12, contados: {} } }) } } };
+  const sig = (f) => { const g = JSON.parse(JSON.stringify(base)); if (f) f(g.k.itens.ci_1); ctx.__g = g; return run('mcrAssinaturaAlarme(__g)'); };
+  const s0 = sig();
+  igual([sig((i) => { i.estoque.restante = 11; i.estoque.contados['x'] = true; }), sig((i) => { i.historico.push({ acao: 'x' }); })], [s0, s0]);
+  igual([sig((i) => { i.horarios = ['09:00']; }), sig((i) => { i.q = '2'; }), sig((i) => { i.dataFim = HOJE654; i.continuo = false; }), sig((i) => { i.freq = { tipo: 'alternado' }; }), sig((i) => { i.suspenso = true; })].every((s) => s !== s0), true);
+});
+prova('6.54 AC20 — o alarme dos outros aparelhos: mudança de horário, dose, suspensão refaz a fila (3 s depois); o desconto do estoque não; quem não recebe o alarme não relê', () => {
+  exige654('mcrRearmarAlarme');
+  run(`__bkR654={st:setTimeout, ct:clearTimeout, pr:papelRecebeAlarmeMed, ca:carregarAgendaMedTodos, g:MED_AGENDA_GERAL};
+    __tm=[]; __tf=null; setTimeout=function(f,ms){ __tm.push(ms); __tf=f; return __tm.length; }; clearTimeout=function(){}; __papel654=true; papelRecebeAlarmeMed=function(){ return __papel654; };
+    __car=0; carregarAgendaMedTodos=function(){ __car++; }; MCR_ALARME_SIG=null;
+    MED_AGENDA_GERAL={k:{itens:{ci_1:{nome:'Zenrelia', q:'1', u:'comprimido', horarios:['08:00'], estoque:{modo:'contavel', restante:12}}}}};`);
+  try {
+    run('mcrRearmarAlarme();'); igual(run('__tm'), [], 'a primeira leitura só guarda a assinatura');
+    run('MED_AGENDA_GERAL.k.itens.ci_1.estoque.restante=11; mcrRearmarAlarme();'); igual(run('__tm'), [], 'dose registrada (desconto do estoque): não relê');
+    run(`MED_AGENDA_GERAL.k.itens.ci_1.horarios=['09:00']; mcrRearmarAlarme();`); igual(run('__tm'), [3000]);
+    run('__tf();'); igual(run('__car'), 1, 'refaz a fila do alarme');
+    run(`MED_AGENDA_GERAL.k.itens.ci_1.suspenso=true; mcrRearmarAlarme();`); igual(run('__tm'), [3000, 3000]);
+    run(`__papel654=false; MED_AGENDA_GERAL.k.itens.ci_1.q='2'; mcrRearmarAlarme();`); igual(run('__tm'), [3000, 3000], 'Gestão, recepção e veterinária não releem (K16)');
+  } finally { run('setTimeout=__bkR654.st; clearTimeout=__bkR654.ct; papelRecebeAlarmeMed=__bkR654.pr; carregarAgendaMedTodos=__bkR654.ca; MED_AGENDA_GERAL=__bkR654.g; MCR_ALARME_SIG=null;'); }
+});
+prova('6.54 AC5/AC7 — comida: grava ficha/alim com refs novos e os derivados do check-in; os outros campos da hospedagem ficam idênticos; o card do Plantão mostra "JANTAR: 45 gramas de ração"', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar', 'alimDerivados');
+  TELA654(); CTX654();
+  run(`__M.comida.refs.fixas.jantar.racao='45'; __M.motivo='a tutora corrigiu a quantidade'; __M.quem='Ana Teste';`);
+  const G = run('__G=mcrMontar(__M, __Ci)');
+  igual(Object.keys(G.up).sort(), [P654 + '_ts', P654 + '_ultimaEdicao', P654 + 'alteracoes/a1', P654 + 'conferencia/resolvidos/' + T654(9, 10, 0), P654 + 'conferencia/ultima_solucao', P654 + 'ficha/alim'].sort(), 'nem a medicação, nem a agenda');
+  const a = G.up[P654 + 'ficha/alim'];
+  igual([a.refs.fixas.jantar.racao, a.refs.fixas.cafe.racao, a.qtd, a.minimo, a.deficit, a.marca, a.trazida, a.confirmacao.estado, a.confirmacao.via, a.confirmacao.quem], ['45', '50', '', 665, -35, 'Royal', '700', 'mudou', 'mudar-comida', 'Ana Teste']);
+  const B = banco654({ auaulandia: { estadias: { e1: EST654() } } }); B.ref().update(G.up);
+  const depois = B.s.auaulandia.estadias.e1, antes = EST654();
+  const fora = ['ficha', 'alteracoes', 'conferencia', '_ts', '_ultimaEdicao'];
+  igual(Object.keys(depois).filter((k) => fora.indexOf(k) < 0).map((k) => [k, depois[k]]), Object.keys(antes).filter((k) => fora.indexOf(k) < 0).map((k) => [k, antes[k]]), 'medicação, pertences, assinatura, datas: iguais');
+  igual(Object.keys(depois.ficha).filter((k) => k !== 'alim').map((k) => [k, depois.ficha[k]]), Object.keys(antes.ficha).filter((k) => k !== 'alim').map((k) => [k, antes.ficha[k]]), 'observação, banho, coleira: iguais');
+  igual(depois.conferencia.concluida, true, 'comida não reabre a Conferência');
+  // o card do Plantão lê a hospedagem nova
+  ctx.__en = depois;
+  run(`__bkCf654=CF_ESTADIAS; CF_ESTADIAS={'${KP654}':{id:'e1', e:__en}};`);
+  try { assert.ok(/JANTAR: 45 gramas de ração/.test(run(`alimMarcaDoCard({nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'})`))); }
+  finally { run('CF_ESTADIAS=__bkCf654;'); }
+});
+prova('6.54 AC6 — a ficha aprende (ligado por padrão): o plano novo no formato do check-in, e a próxima abertura do Check-in lê 45 g da ficha; desligado («só desta vez») ou sem permissão, a ficha não muda e o rastro diz', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar');
+  TELA654(); CTX654();
+  igual(run('__M.ficha'), true, 'ligado por padrão (PA4)');
+  run(`__M.comida.refs.fixas.jantar.racao='45'; __M.comida.refs.fixas.cafe.racao='45'; __M.motivo='a tutora corrigiu a quantidade'; __M.quem='Ana Teste';`);
+  let G = run('__G=mcrMontar(__M, __Ci)');
+  igual([G.fichaPlano.tipo, G.fichaPlano.unidade, G.fichaPlano.marca, G.fichaPlano.refs.fixas.jantar.racao, G.fichaPlano.conf.estado, G.fichaPlano.conf.via, G.fichaPlano.conf.quem], ['Ração', 'gramas', 'Royal', '45', 'mudou', 'mudar-comida', 'Ana Teste']);
+  igual(G.up[P654 + 'alteracoes/a1'].comida.ficha, true);
+  run(`__bkPe654=pelExtra; pelExtra=function(){ return {alim_plano:__G.fichaPlano}; };`);
+  try { igual(run('ciPlanoDaFicha({n:"Palito"}).refs.fixas.jantar.racao'), '45', 'o próximo check-in já vem com 45 g'); }
+  finally { run('pelExtra=__bkPe654;'); }
+  run('__M.ficha=false;'); G = run('__G=mcrMontar(__M, __Ci)');
+  igual([G.fichaPlano, G.up[P654 + 'alteracoes/a1'].comida.ficha], [null, false], 'só desta vez');
+  TELA654({ podeFicha: false }); igual(run('__M.ficha'), false, 'sem permissão de ficha: desligado');
+  TELA654({ mestre: null }); igual(run('__M.ficha'), false, 'ligação incerta: desligado (K3)');
+});
+prova('6.54 AC8 — a dose muda no MESMO item (campo a campo): o estoque e os "contados" não são regravados; o histórico ganha 1 linha; trocar a medida de um blister pede a contagem de novo (K19)', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar');
+  TELA654(); CTX654();
+  run(`__M.meds.ci_1={acao:'dose', q:'0,5', u:'comprimido'}; __M.motivo='a veterinária mudou a prescrição'; __M.quem='Ana Teste';`);
+  let G = run('__G=mcrMontar(__M, __Ci)');
+  const ag = Object.keys(G.up).filter((k) => k.indexOf(A654) === 0).sort();
+  igual(ag, [A654 + 'ci_1/historico', A654 + 'ci_1/q', A654 + 'ci_1/u'], 'nada de estoque, nada de item novo');
+  igual([G.up[A654 + 'ci_1/q'], G.up[A654 + 'ci_1/historico'].length], ['0,5', 2]);
+  assert.ok(/dose 1 comprimido → 0,5 comprimido/.test(G.frases.join(' | ')), G.frases.join(' | '));
+  igual(G.up[P654 + 'medicacao'][0].q, '0,5', 'a lista da estadia acompanha (PDF, Conferência)');
+  run(`__M.meds.ci_1={acao:'dose', q:'5', u:'ml', contagem:''};`); G = run('__G=mcrMontar(__M, __Ci)');
+  igual(G.up[A654 + 'ci_1/estoque'], null, 'medida nova sem contagem: o blister deixa de ser contado');
+  run(`__M.meds.ci_1={acao:'dose', q:'5', u:'ml', contagem:'60'};`); G = run('__G=mcrMontar(__M, __Ci)');
+  igual(G.up[A654 + 'ci_1/estoque'], { modo: 'contavel', inicial: 60, restante: 60 });
+});
+prova('6.54 AC9/AC10/AC18 — horário depois da dose dada: troca por datas na agenda, a lista da estadia com o horário novo, o rastro com "vale amanhã", resolvido na Conferência, sem reabrir; nada em medicacao-log', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar');
+  TELA654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste', ts: T654(9, 8, 4) } } });
+  CTX654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste', ts: T654(9, 8, 4) } } });
+  run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'hoje'}; __M.motivo='a tutora ligou e corrigiu'; __M.quem='Ana Teste';`);
+  const G = run('__G=mcrMontar(__M, __Ci)');
+  const nid = G.novosIds[0];
+  igual(nid, 'mcr_t_ci_1_20261010', 'o id do novo é o mesmo remédio + o dia do começo (A8: duas gravações caem no mesmo nó)');
+  igual([G.up[A654 + 'ci_1/continuo'], G.up[A654 + 'ci_1/dataFim'], G.up[A654 + 'ci_1/trocadoPor'], G.up[A654 + 'ci_1/estoque']], [false, HOJE654, nid, null], 'mesmo com «Hoje» escolhido, a dose das 08:00 dada manda para amanhã');
+  igual([G.up[A654 + nid].horarios, G.up[A654 + nid].dataInicio, G.up[A654 + nid].estoque.restante], [['09:00'], AMANHA654, 12]);
+  assert.ok(!(A654 + 'ci_1/horarios' in G.up), 'o antigo continua com 08:00 hoje');
+  igual(Object.keys(G.up).some((k) => /medicacao-log/.test(k)), false, 'R-M7: nenhuma dose é marcada como dada');
+  igual([G.up[P654 + 'medicacao'][0].horarios, G.up[P654 + 'medicacao'][0].agendaId], [['09:00'], nid]);
+  const al = G.up[P654 + 'alteracoes/a1'];
+  igual([al.quem, al.motivo, al.remedios[0].id, al.remedios[0].acao, al.remedios[0].vale, al.remedios[0].novoId, al.remedios[0].antes.horarios, al.remedios[0].depois.horarios], ['Ana Teste', 'a tutora ligou e corrigiu', 'ci_1', 'horario', 'amanha', nid, ['08:00'], ['09:00']]);
+  assert.ok(/Zenrelia: horário 08:00 → 09:00, a partir de sábado, 10\/10/.test(G.up[P654 + 'conferencia/resolvidos/' + T654(9, 10, 0)].mudou.join(' | ')));
+  igual(P654 + 'conferencia/concluida' in G.up, false, 'horário não reabre a Conferência');
+  igual(G.tg.length, 1); assert.ok(/Palito/.test(G.tg[0]) && /Zenrelia/.test(G.tg[0]) && /09:00/.test(G.tg[0]) && /Ana Teste/.test(G.tg[0]), G.tg[0]);
+  igual([G.up['auaulandia/medicacao-agenda/' + KP654 + '/_quem'], G.up['auaulandia/medicacao-agenda/' + KP654 + '/_ts']], ['Ana Teste', T654(9, 10, 0)]);
+});
+prova('6.54 F11/AC12 — o aviso de estoque aberto do antigo passa para o novo, com a entrada na trilha; a avaliação do novo não abre um segundo', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar');
+  TELA654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } } });
+  CTX654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } }, avisos: { A1: { key: KP654, itemId: 'ci_1', status: 'pendente', entries: [{ acao: 'aberto', ts: 1 }], medNome: 'Zenrelia' }, A2: { key: KP654, itemId: 'ci_1', status: 'resolvido', entries: [] } } });
+  run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'}; __M.motivo='a tutora ligou e corrigiu'; __M.quem='Ana Teste';`);
+  const G = run('__G=mcrMontar(__M, __Ci)'); const nid = G.novosIds[0];
+  igual(G.up['auaulandia/avisos-estoque/A1/itemId'], nid);
+  igual(G.up['auaulandia/avisos-estoque/A1/entries'].length, 2); assert.ok(/o aviso segue o novo/.test(G.up['auaulandia/avisos-estoque/A1/entries'][1].acao));
+  igual('auaulandia/avisos-estoque/A2/itemId' in G.up, false, 'o encerrado não muda');
+  run(`__bkAv654={c:AVISOS_ESTOQUE_CACHE, db:DB}; AVISOS_ESTOQUE_CACHE={A1:{key:'${KP654}', itemId:'${nid}', status:'pendente', entries:[]}}; __pushes=0; DB={ref:function(){ return {push:function(){ __pushes++; return Promise.resolve(); }}; }};`);
+  try { run(`criarAvisoEstoque({key:'${KP654}', itemId:'${nid}', medNome:'Zenrelia', motivo:'projecao'})`); igual(run('__pushes'), 0); }
+  finally { run('AVISOS_ESTOQUE_CACHE=__bkAv654.c; DB=__bkAv654.db;'); }
+});
+prova('6.54 AC14/AC15 — «Parou» e «Remédio novo»: o novo começa amanhã (padrão) ou hoje (régua); o tutor trouxe agora reabre a Conferência com quem recebeu; da casa não reabre; a lista ganha o novo no fim', () => {
+  exige654('mcrEstadoInicial', 'mcrMontar');
+  TELA654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } } }); CTX654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } }, agoraMin: 10 * 60 });
+  run(`__M.meds.ci_1={acao:'parou', parou:'agora'}; __M.novos=[{nome:'Probiótico', tipo:'suplemento', q:'1', u:'sachê', horarios:['12:00'], continuo:false, dataFim:'2026-10-12', origem:'tutor', comoVeio:'blister', contagem:'6', trouxe:true, recebidoPor:'Rita Teste', vale:'amanha'}];
+    __M.motivo='a veterinária mudou a prescrição'; __M.quem='Ana Teste';`);
+  let G = run('__G=mcrMontar(__M, __Ci)'); const nid = G.novosIds[0];
+  igual([G.up[A654 + 'ci_1/dataFim'], G.up[A654 + 'ci_1/paradoEm'].quem], [HOJE654, 'Ana Teste']);
+  const n = G.up[A654 + nid];
+  igual([n.nome, n.dataInicio, n.dataFim, 'continuo' in n, n.estoque, n.origem, n.horarios], ['Probiótico', AMANHA654, '2026-10-12', false, { modo: 'contavel', inicial: 6, restante: 6 }, 'tutor', ['12:00']]);
+  const L = G.up[P654 + 'medicacao'];
+  igual([L.length, L[0].parouEm.quem, L[1].nome, L[1].agendaId], [2, 'Ana Teste', 'Probiótico', nid]);
+  igual([G.up[P654 + 'conferencia/concluida'], G.up[P654 + 'conferencia/recebido_por']], [false, 'Rita Teste']);
+  assert.ok(/Probiótico/.test(G.up[P654 + 'conferencia/reaberta_motivo']), 'diz o que chegou');
+  igual(Object.keys(G.up).some((k) => /conferencia\/resolvidos/.test(k)), false);
+  run(`__M.novos[0].trouxe=false; __M.novos[0].comoVeio='casa'; __M.novos[0].vale='hoje';`);
+  G = run('__G=mcrMontar(__M, __Ci)');
+  igual([P654 + 'conferencia/concluida' in G.up, G.up[A654 + G.novosIds[0]].dataInicio, G.up[A654 + G.novosIds[0]].estoque], [false, HOJE654, { modo: 'naocontavel', nivel: 'cheio', daCasa: true }], 'da casa: não reabre; 12:00 às 10:00 pode começar hoje');
+});
+prova('6.54 AC16 — validar antes de conferir: motivo curto, nome de posto ("Recepção"), nada mudou, horário inválido e remédio novo sem nome são barrados com a frase do que fazer', () => {
+  exige654('mcrEstadoInicial', 'mcrValidar');
+  TELA654();
+  let p = run('mcrValidar(__M)'); assert.ok(p.some((f) => /Nada mudou/.test(f)), p.join(' | '));
+  run(`__M.comida.refs.fixas.jantar.racao='45'; __M.motivo='erro'; __M.quem='Recepção';`);
+  p = run('mcrValidar(__M)'); assert.ok(p.some((f) => /4 palavras/.test(f)) && p.some((f) => /seu nome/i.test(f)), p.join(' | '));
+  run(`__M.motivo='a tutora corrigiu a quantidade'; __M.quem='Ana Teste';`); igual(run('mcrValidar(__M)'), []);
+  run(`__M.meds.ci_1={acao:'horario', horarios:['25:00'], vale:'amanha'};`); p = run('mcrValidar(__M)'); assert.ok(p.some((f) => /horário/.test(f)), p.join(' | '));
+  run(`__M.meds={}; __M.novos=[{nome:'', q:'1', u:'comprimido', horarios:['12:00'], continuo:true, origem:'tutor', trouxe:false, comoVeio:'casa'}];`); p = run('mcrValidar(__M)'); assert.ok(p.some((f) => /nome/i.test(f)), p.join(' | '));
+  run(`__M.novos=[{nome:'Probiótico', q:'1', u:'sachê', horarios:['12:00'], continuo:true, origem:'tutor', trouxe:true, recebidoPor:'.', comoVeio:'blister', contagem:'6'}];`); p = run('mcrValidar(__M)'); assert.ok(p.some((f) => /recebeu/.test(f)), p.join(' | '));
+});
+prova('6.54 AC18 — o PDF reemitido ganha "ALTERAÇÕES DEPOIS DO CHECK-IN" numa página a mais; sem alteração, a ficha sai igual (mesmo número de páginas)', () => {
+  const est = EST654();
+  const n0 = run('(function(e){ return ciFichaPdfBlob(ciFichaFonteEstadia(e, {})).paginas; })')(est);
+  est.alteracoes = { a1: { quando: T654(9, 10, 0), quem: 'Ana Teste', motivo: 'a tutora corrigiu a quantidade', frases: ['Jantar: 50 g → 45 g de ração'] } };
+  const b = run('(function(e){ return ciFichaPdfBlob(ciFichaFonteEstadia(e, {})); })')(est);
+  igual(b.paginas, n0 + 1);
+  const txt = b.parts.map((u) => Buffer.from(u).toString('latin1')).join('');
+  assert.ok(/ALTERA\xc7\xd5ES DEPOIS DO CHECK-IN/.test(txt), 'o título da seção');
+  assert.ok(/Ana Teste/.test(txt) && /tutora corrigiu a quantidade/.test(txt) && /50 g -> 45 g de ra\xe7\xe3o|50 g \S 45 g de ra\xe7\xe3o/.test(txt), 'quem, motivo e de → para');
+});
+provaAsync('6.54 AC19 — uma gravação só (mais o carimbo das estadias); repetir o Salvar não grava de novo; sem conexão não grava nada; mudada por outra pessoa não grava; banco que recusa: nada parcial', async () => {
+  exige654('mcrGravar', 'mcrEstadoInicial');
+  const inicial = { auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': {} } };
+  ctx.__B = banco654(inicial);
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkG654={ca:zCarimbar, cf:checarFaltasDaEstadia, rh:renderHosp, sp:setPelExtra, tg:tgGrupoNaPonte, ta:tgAvisar, M:(typeof MCR!=='undefined'?MCR:null)};
+    DB=__B; __carimbo=[]; zCarimbar=function(c){ __carimbo.push(c); }; __faltas=0; checarFaltasDaEstadia=function(){ __faltas++; }; renderHosp=function(){}; setPelExtra=function(){ return Promise.resolve({ok:true}); };
+    tgGrupoNaPonte=function(){ return Promise.resolve(false); }; tgAvisar=function(){ return Promise.resolve({ok:true}); }; __medConectado=null;`);
+  const abre = (aid) => run(`MCR=mcrEstadoInicial({id:'e1', est:JSON.parse(JSON.stringify(__B.s.auaulandia.estadias.e1)), key:'${KP654}', itens:JSON.parse(JSON.stringify(__B.s.auaulandia['medicacao-agenda']['${KP654}'].itens)), log:{}, mestre:null, podeFicha:false, hoje:'${HOJE654}', aid:'${aid}'});
+    MCR.comida.refs.fixas.jantar.racao=mcrPasso(MCR.comida.refs.fixas.jantar.racao,-5); MCR.motivo='a tutora corrigiu a quantidade'; MCR.quem='Ana Teste'; MCR.etapa='conferir';`);
+  try {
+    abre('a1');
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().map((u) => u[1]), [''], 'uma gravação, na raiz (várias partes de uma vez)');
+    igual(run('__carimbo'), ['auaulandia/estadias']);
+    igual([run('MCR.etapa'), ctx.__B.s.auaulandia.estadias.e1.ficha.alim.refs.fixas.jantar.racao, run('__faltas')], ['salvo', '45', 1]);
+    // o mesmo toque de novo (a tela do mesmo aid): não grava duas vezes
+    run(`MCR.etapa='conferir';`); await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 1); assert.ok(/já foi salva/.test(run('MCR.aviso||""')), run('MCR.aviso||""'));
+    // sem conexão
+    abre('a2'); run('__medConectado=false;'); await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 1); assert.ok(/Sem conexão: não salvou/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+    // mudada por outra pessoa depois que a tela abriu
+    run('__medConectado=null;'); abre('a3');
+    ctx.__B.s.auaulandia.estadias.e1.ficha.alim.marca = 'Golden'; ctx.__B.s.auaulandia.estadias.e1._ultimaEdicao = { quem: 'Rita Teste', ts: 5 };
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 1); assert.ok(/mudou depois que esta tela abriu/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+    // o banco recusa: nada é gravado
+    abre('a4'); ctx.__B.falhaUpdate = 'permission_denied';
+    const antes = JSON.stringify(ctx.__B.s);
+    await run('mcrGravar()'); await volta654();
+    igual(JSON.stringify(ctx.__B.s), antes, 'nada parcial'); assert.ok(/Não salvou/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+  } finally { run('zCarimbar=__bkG654.ca; checarFaltasDaEstadia=__bkG654.cf; renderHosp=__bkG654.rh; setPelExtra=__bkG654.sp; tgGrupoNaPonte=__bkG654.tg; tgAvisar=__bkG654.ta; MCR=__bkG654.M;'); run(SOLTA654); }
+});
+prova('6.54 AC1 — quem vê «Mudar comida e remédio»: Consultora, Gestão, Supervisão, Diretoria e Veterinária; plantonista, monitor, aprendiz e conferência não; Hóspedes só em HOSPEDADO e A CHEGAR', () => {
+  igual(['consultora', 'gestao', 'supervisor', 'diretoria', 'vet'].map((p) => run(`podePapel('mudar-comida-remedio','${p}')`)), [true, true, true, true, true]);
+  igual(['plantonista', 'monitor', 'aprendiz', 'conferencia', ''].map((p) => run(`podePapel('mudar-comida-remedio','${p}')`)), [false, false, false, false, false]);
+  exige654('mcrBotaoHospedesHTML', 'mcrBotaoCheckinHTML', 'mcrBotaoPlantaoHTML');
+  run(`__bkRole654=document.body.dataset.role; document.body.dataset.role='consultora';`);
+  try {
+    assert.ok(/Comida e remédio/.test(run(`mcrBotaoHospedesHTML('e1', {status:'ativa'}, 'agora')`)));
+    assert.ok(/Comida e remédio/.test(run(`mcrBotaoHospedesHTML('e1', {status:'ativa'}, 'achegar')`)));
+    igual([run(`mcrBotaoHospedesHTML('e1', {status:'ativa'}, 'saiu')`), run(`mcrBotaoHospedesHTML('e1', {status:'cancelada'}, 'cancelada')`)], ['', '']);
+    assert.ok(/Mudar sem refazer o check-in/.test(run(`mcrBotaoCheckinHTML('e1')`)));
+    assert.ok(/Mudar comida e remédio/.test(run(`mcrBotaoPlantaoHTML({nome:'Palito'})`)));
+    igual(run(`mcrBotaoPlantaoHTML({nome:'Repolho', mascote:true})`), '', 'a moradora não tem hospedagem');
+    run(`document.body.dataset.role='plantonista';`);
+    igual([run(`mcrBotaoHospedesHTML('e1', {status:'ativa'}, 'agora')`), run(`mcrBotaoCheckinHTML('e1')`), run(`mcrBotaoPlantaoHTML({nome:'Palito'})`)], ['', '', '']);
+  } finally { run('document.body.dataset.role=__bkRole654;'); }
+});
+provaAsync('6.54 AC22/K8 — check-in: a lista da estadia guarda o agendaId; o check-in feito no dia da troca não traz o remédio antigo (trocadoPor)', async () => {
+  igual(run(`ciMedsToLista({ci_1:{nome:'Zenrelia', q:'1', u:'comprimido', horarios:['08:00']}, ci_2:{nome:'Ômega 3', q:'1', u:'cápsula', horarios:['12:00']}}).map(function(m){ return m.agendaId; })`), ['ci_1', 'ci_2']);
+  ctx.__B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { itens: { ci_1: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: false, dataFim: HOJE654, trocadoPor: 'mcr_1' }, mcr_1: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['09:00'], continuo: true, dataInicio: AMANHA654, continuacaoDe: 'ci_1' } } } } } });
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkCi654={ck:ciKey, am:ciAddMed, me:ciMedEmUso, mc:ciMedEmUsoChange, ss:setSeg}; DB=__B; ciKey=function(){ return '${KP654}'; }; __add=[]; ciAddMed=function(it,op){ __add.push(op.agendaId); }; ciMedEmUso=function(){ return 'Sim'; }; ciMedEmUsoChange=function(){}; setSeg=function(){};`);
+  try { run('ciPreencherMedicacao()'); await volta654(); igual(run('__add'), ['mcr_1']); }
+  finally { run('ciKey=__bkCi654.ck; ciAddMed=__bkCi654.am; ciMedEmUso=__bkCi654.me; ciMedEmUsoChange=__bkCi654.mc; setSeg=__bkCi654.ss;'); run(SOLTA654); }
+});
+prova('6.54 AC23 — a troca por datas de um remédio da veterinária não acende "Receita encerrada"; o «Parou» continua acendendo, como hoje', () => {
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkVg654=MED_AGENDA_GERAL; MED_AGENDA_GERAL={'${KP654}':{nome:'Palito', itens:{
+    a:{origem:'vet', nome:'Antibiótico', horarios:['08:00'], continuo:false, dataFim:'${HOJE654}', trocadoPor:'b'},
+    b:{origem:'vet', nome:'Antibiótico', horarios:['09:00'], continuo:false, dataInicio:'${AMANHA654}', dataFim:'2026-10-15', continuacaoDe:'a'},
+    c:{origem:'vet', nome:'Anti-inflamatório', horarios:['12:00'], continuo:false, dataFim:'${HOJE654}', paradoEm:{quem:'Dra. Teste', data:'${HOJE654}'}}}}};`);
+  try { igual(run('medsEncerradasPend().map(function(p){ return p.id; })'), ['c']); }
+  finally { run('MED_AGENDA_GERAL=__bkVg654;'); run(SOLTA654); }
+});
+provaAsync('6.54 AC24 — «Salvar agenda» do Plantão (veterinária e Gestão): mudar o horário com a dose de hoje já dada vira troca por datas (o P6 fecha também por lá); sem dose dada e com folga, muda no mesmo item, como antes', async () => {
+  const base = { auaulandia: { 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': { [HOJE654]: { [KP654]: { 'ci_1_08-00': { quem: 'Wandela Teste' } } } } } };
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkSa654={ce:canEditMed, ch:currentHosp, co:coletarMedAgendaForm, it:MED_AGENDA_ITENS, rm:renderMedAgenda, ca:carregarAgendaMedTodos, ge:document.getElementById};
+    canEditMed=function(){ return true; }; currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; renderMedAgenda=function(){}; carregarAgendaMedTodos=function(){};
+    __st654={style:{}, textContent:''}; document.getElementById=function(id){ return id==='mag-status'?__st654:{style:{}, value:'', textContent:''}; };`);
+  try {
+    ctx.__B = banco654(base);
+    run(`DB=__B; MED_AGENDA_ITENS=JSON.parse(JSON.stringify(__B.s.auaulandia['medicacao-agenda']['${KP654}'].itens));
+      coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); o.ci_1.horarios=['09:00']; return o; };`);
+    run('salvarMedAgenda()'); await volta654();
+    const it = ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens;
+    const novos = Object.keys(it).filter((k) => /^mcr_/.test(k));
+    igual([it.ci_1.horarios, it.ci_1.dataFim, it.ci_1.continuo, novos.length], [['08:00'], HOJE654, false, 1], 'o antigo fica com as 08:00 de hoje');
+    igual([it[novos[0]].horarios, it[novos[0]].dataInicio, it.ci_1.trocadoPor], [['09:00'], AMANHA654, novos[0]]);
+    assert.ok(/começa amanhã/.test(run('__st654.textContent')), run('__st654.textContent'));
+    // sem dose dada e com folga: mesmo item
+    base.auaulandia['medicacao-log'] = {}; ctx.__B = banco654(base);
+    run(`DB=__B; MED_AGENDA_ITENS=JSON.parse(JSON.stringify(__B.s.auaulandia['medicacao-agenda']['${KP654}'].itens)); MED_AGENDA_ITENS.ci_1.horarios=['20:00'];
+      coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); o.ci_1.horarios=['21:00']; return o; };`);
+    run('salvarMedAgenda()'); await volta654();
+    const it2 = ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens;
+    igual([it2.ci_1.horarios, Object.keys(it2).length], [['21:00'], 1]);
+  } finally { run('canEditMed=__bkSa654.ce; currentHosp=__bkSa654.ch; coletarMedAgendaForm=__bkSa654.co; MED_AGENDA_ITENS=__bkSa654.it; renderMedAgenda=__bkSa654.rm; carregarAgendaMedTodos=__bkSa654.ca; document.getElementById=__bkSa654.ge;'); run(SOLTA654); }
+});
+prova('6.54 AC25 — área protegida: as funções novas não usam os nomes ck/ckt/pt e não ficam dentro do #v-daycare', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const novas = (src.match(/function (mcr\w+|motivoQuatroPalavras|alimDerivados)\(/g) || []).map((s) => s.slice(9, -1));
+  assert.ok(novas.length >= 20, 'as funções da 6.54: ' + novas.length);
+  igual(novas.filter((n) => /^(ck|pt)/.test(n)), []);
+  const ini = src.indexOf('id="v-daycare"'), fim = src.indexOf('id="v-hospedagem"');
+  igual(src.slice(ini, fim).indexOf('mcr'), -1, 'nada da 6.54 no bloco do Day Care');
+});
+
+provaAsync('6.54 AC2/AC3 — a tela abre pela hospedagem: com os dados batendo, abre para mudar (o tutor da planilha igual); com a planilha dizendo outro tutor (Frida), só mostra o que fazer; sem check-in, «Faça o check-in da hospedagem»', async () => {
+  exige654('mcrAbrirEstadia', 'mcrAbrirDoPlantao');
+  const fr = { nome: 'Frida', tutor: 'Bia Teste', raca: 'SRD', refKey: 'frida__bia teste', status: 'ativa', entrada: '2026-10-07', saida: '2026-10-12', _ts: 1, ficha: {}, medicacao: [] };
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654(), f1: fr }, 'medicacao-agenda': { [KP654]: { itens: ITENS654() } }, 'medicacao-log': {} } });
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkA654={M:(typeof MCR!=='undefined'?MCR:null), et:EST_TODAS, za:zAlertao, ch:currentHosp}; DB=__B; EST_TODAS=JSON.parse(JSON.stringify(__B.s.auaulandia.estadias)); __alz=[]; zAlertao=function(t,l){ __alz.push(t+' | '+[].concat(l).join(' ')); };`);
+  try {
+    run(`mcrAbrirEstadia('e1', 'hospedes')`); await volta654();
+    igual([run('MCR.id'), run('MCR.bloqueio'), run('MCR.comida.refs.fixas.jantar.racao'), run("Object.keys(MCR.itens)")], ['e1', '', '50', ['ci_1']]);
+    run(`MCR=null; mcrAbrirEstadia('f1', 'plantao', {planilha:{nome:'Frida', tutor:'Ana Carolina'}})`); await volta654();
+    assert.ok(/planilha diz Frida \/ Ana Carolina/.test(run('MCR.bloqueio')), run('MCR.bloqueio'));
+    run(`MCR=null; currentHosp={nome:'Rex', tutor:'Ivo Teste', refKey:'rex__ivo teste'}; mcrAbrirDoPlantao();`); await volta654();
+    igual(run('MCR'), null); assert.ok(/Faça o check-in da hospedagem/.test(run('__alz.join(" ")')), run('__alz.join(" ")'));
+    run(`currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; mcrAbrirDoPlantao();`); await volta654();
+    igual([run('MCR.id'), run('MCR.origem')], ['e1', 'plantao']);
+  } finally { run('MCR=__bkA654.M; EST_TODAS=__bkA654.et; zAlertao=__bkA654.za; currentHosp=__bkA654.ch;'); run(SOLTA654); }
+});
+prova('6.54 AC17 — «Conferir e salvar» mostra o resumo de → para; com motivo curto não passa; «Voltar e mudar» volta sem gravar nada', () => {
+  exige654('mcrConferir', 'mcrVoltar', 'mcrConferirHTML');
+  ctx.__B = banco654({});
+  run(`__bkV654={M:(typeof MCR!=='undefined'?MCR:null), db:DB}; DB=__B;`);
+  try {
+    TELA654(); run(`MCR=__M; MCR.comida.refs.fixas.jantar.racao='45'; MCR.motivo='erro'; MCR.quem='Ana Teste'; mcrConferir();`);
+    igual(run('MCR.etapa'), 'editar'); assert.ok(/4 palavras/.test(run('MCR.erro')), run('MCR.erro'));
+    run(`MCR.motivo='a tutora corrigiu a quantidade'; mcrConferir();`);
+    igual(run('MCR.etapa'), 'conferir');
+    const h = run('mcrConferirHTML(MCR)');
+    assert.ok(/Jantar: 50 g → 45 g de ração/.test(h) && /Voltar e mudar/.test(h) && /a tutora corrigiu a quantidade/.test(h), 'o resumo em português, com o motivo');
+    run('mcrVoltar();'); igual([run('MCR.etapa'), ctx.__B.log.length], ['editar', 0], 'nada foi lido nem gravado');
+  } finally { run('MCR=__bkV654.M; DB=__bkV654.db;'); }
+});
+provaAsync('6.54 PA6 — cada mudança de remédio manda uma linha ao grupo do Plantão no Telegram (só se o grupo existe na ponte); a comida não manda', async () => {
+  exige654('mcrAvisarPlantao', 'mcrMontar');
+  run(`__bkT654={g:tgGrupoNaPonte, a:tgAvisar}; __tgs=[]; __tem=true; tgGrupoNaPonte=function(n){ return Promise.resolve(__tem && n==='plantao'); }; tgAvisar=function(d){ __tgs.push(d); return Promise.resolve({ok:true}); };`);
+  try {
+    TELA654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } } }); CTX654({ log: { 'ci_1_08-00': { quem: 'Wandela Teste' } } });
+    run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'}; __M.comida.refs.fixas.jantar.racao='45'; __M.motivo='a tutora ligou e corrigiu'; __M.quem='Ana Teste'; __G=mcrMontar(__M, __Ci);`);
+    igual(run('__G.tg.length'), 1, 'a comida não vai ao grupo');
+    await run('mcrAvisarPlantao(__G.tg, __M)');
+    igual(run('__tgs.length'), 1); igual(run('__tgs[0].grupo'), 'plantao');
+    assert.ok(/Palito — Zenrelia: horário 08:00 → 09:00, a partir de sábado, 10\/10 — por Ana Teste/.test(run('__tgs[0].texto')), run('__tgs[0].texto'));
+    run('__tem=false;'); await run('mcrAvisarPlantao(__G.tg, __M)'); igual(run('__tgs.length'), 1, 'sem o grupo na ponte, não inventa destino');
+  } finally { run('tgGrupoNaPonte=__bkT654.g; tgAvisar=__bkT654.a;'); }
+});
+prova('6.54 AC7 — comida mudada em outro aparelho: o Plantão se redesenha em 2 s, só com a lista à vista (com a ficha aberta, não)', () => {
+  exige654('mcrPedirRedesenhoPlantao');
+  run(`__bkP654={ge:document.getElementById, st:setTimeout}; __tmP=[]; setTimeout=function(f,ms){ __tmP.push(ms); return 1; }; __visivel={display:'block'};
+    document.getElementById=function(id){ if(id==='v-hospedagem') return {classList:{contains:function(c){ return c==='active'; }}}; if(id==='hosp-lista') return {style:__visivel}; return null; }; __mcrRedesenhoT=null;`);
+  try {
+    run('mcrPedirRedesenhoPlantao(); mcrPedirRedesenhoPlantao();'); igual(run('__tmP'), [2000], 'um redesenho só, em 2 s');
+    run(`__mcrRedesenhoT=null; __visivel.display='none'; mcrPedirRedesenhoPlantao();`); igual(run('__tmP'), [2000], 'ficha aberta: não redesenha');
+  } finally { run('document.getElementById=__bkP654.ge; setTimeout=__bkP654.st; __mcrRedesenhoT=null;'); }
+});
+prova('6.54 AC1 — Hóspedes: a linha HOSPEDADO tem «Comida e remédio» (Consultora); a JÁ SAIU não', () => {
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkH654={r:document.body.dataset.role}; document.body.dataset.role='consultora';`);
+  try {
+    ctx.__eh = EST654();
+    assert.ok(/mcrAbrirEstadia\('e1','hospedes'\)/.test(run(`hospAbaLinha({id:'e1', e:__eh}, 0)`)), 'na linha de quem está hospedado');
+    ctx.__eh2 = Object.assign(EST654(), { entrada: '2026-09-01', saida: '2026-09-05' });
+    assert.ok(!/mcrAbrirEstadia/.test(run(`hospAbaLinha({id:'e2', e:__eh2}, 0)`)), 'quem já saiu não muda');
+  } finally { run('document.body.dataset.role=__bkH654.r;'); run(SOLTA654); }
+});
+
+
+// ================================================================== 6.54 QA — 2ª rodada: os achados do gate da Quinn
+console.log('\n6.54 QA — 2ª rodada: os achados do gate do QA (remédio é segurança: nenhuma dose em dobro, nenhuma perdida, e avisar)');
+const ISO654Q = (d) => '2026-10-' + String(d).padStart(2, '0');
+const T654Q = (d, min) => new Date(2026, 9, d, Math.floor(min / 60), min % 60, 0).getTime();
+const Z654Q = (o) => Object.assign({ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, origem: 'tutor', tipo: 'medicamento', estoque: { modo: 'contavel', inicial: 20, restante: 12 }, historico: [] }, o || {});
+const NOVO654Q = (o) => Object.assign({ nome: 'Probiótico', tipo: 'suplemento', q: '1', u: 'sachê', horarios: ['20:00'], continuo: true, dataFim: '', origem: 'tutor', comoVeio: 'casa', contagem: '', trouxe: false, recebidoPor: '', vale: 'amanha' }, o || {});
+// A escrita multi-caminho do app aplicada num banco de mentira: a agenda depois.
+const aplica654Q = (itensAntes, up) => { const B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { itens: JSON.parse(JSON.stringify(itensAntes)) } }, estadias: { e1: EST654() } } }); B.ref().update(up); return B.get('auaulandia/medicacao-agenda/' + KP654 + '/itens') || {}; };
+// A tela aberta num dia, com o registro de hoje e o de ontem; e o banco relido na hora de gravar.
+const abre654Q = (itens, o) => { o = o || {}; ctx.__Ti = { id: 'e1', est: o.est || EST654(), key: KP654, itens, log: o.log || {}, logOntem: o.logOntem || {}, mestre: { raca: 'Schnauzer', tutor: 'Gabi Teste' }, podeFicha: true, hoje: o.hoje || HOJE654, aid: o.aid || 'aq' }; run('__M=mcrEstadoInicial(__Ti); __M.motivo="a tutora ligou e corrigiu"; __M.quem="Ana Teste";'); };
+const ctx654Q = (itens, o) => { o = o || {}; const hoje = o.hoje || HOJE654; ctx.__Ci = { est: EST654(), itens: JSON.parse(JSON.stringify(itens)), log: o.log || {}, logOntem: o.logOntem || {}, hoje, agoraMin: o.min, ts: T654Q(Number(hoje.slice(8)), o.min), quandoBR: 'x', avisos: {} }; return ctx.__Ci; };
+// A fila do alarme de um dia (a carga de verdade: carregarAgendaMedTodos, com medVigenteEm), "item@hora".
+const fila654Q = async (itens, d) => (await fila654(itens, {}, T654Q(d, 12 * 60), ISO654Q(d))).slice().sort();
+// O alarme num instante: a fila do dia e uma batida do checarDespertadorMed.
+const alarme654Q = async (itens, log, d, min) => { await fila654(itens, log, T654Q(d, min), ISO654Q(d)); run('despMedNaTela=null; __mo=[]; checarDespertadorMed();'); return run('__mo'); };
+// A gravação de verdade (mcrGravar) num banco de mentira.
+const ARMA654G = `__bkG654Q={ca:zCarimbar, cf:checarFaltasDaEstadia, rh:renderHosp, sp:setPelExtra, tg:tgGrupoNaPonte, ta:tgAvisar, M:(typeof MCR!=='undefined'?MCR:null), r:document.body.dataset.role, pt:(typeof pessoaDoTurno==='function'?pessoaDoTurno:undefined), st:setTimeout};
+  DB=__B; zCarimbar=function(){}; checarFaltasDaEstadia=function(){}; renderHosp=function(){}; setPelExtra=function(){ return Promise.resolve({ok:true}); };
+  tgGrupoNaPonte=function(){ return Promise.resolve(false); }; tgAvisar=function(){ return Promise.resolve({ok:true}); }; __medConectado=null;`;
+const SOLTA654G = 'zCarimbar=__bkG654Q.ca; checarFaltasDaEstadia=__bkG654Q.cf; renderHosp=__bkG654Q.rh; setPelExtra=__bkG654Q.sp; tgGrupoNaPonte=__bkG654Q.tg; tgAvisar=__bkG654Q.ta; MCR=__bkG654Q.M; document.body.dataset.role=__bkG654Q.r; pessoaDoTurno=__bkG654Q.pt; setTimeout=__bkG654Q.st;';
+const abreG654Q = (aid, hoje) => run(`MCR=mcrEstadoInicial({id:'e1', est:JSON.parse(JSON.stringify(__B.s.auaulandia.estadias.e1)), key:'${KP654}', itens:JSON.parse(JSON.stringify(__B.s.auaulandia['medicacao-agenda']['${KP654}'].itens)), log:{}, mestre:null, podeFicha:false, hoje:'${hoje || HOJE654}', aid:'${aid}'});
+  MCR.motivo='a tutora corrigiu a quantidade'; MCR.quem='Ana Teste'; MCR.etapa='conferir';`);
+
+provaAsync('6.54 QA R28/R29/S01/S02 — a fila do alarme de cada dia depois da mudança: tratamento que termina amanhã (o novo termina junto), remédio da refeição com «Hoje» (o «quando» sai), «Salvar agenda» com dia sim, dia não e com a dose dada adiantada', async () => {
+  run(ARMA654);
+  try {
+    const casos = [
+      { id: 'R28', itens: { ci_1: Z654Q({ continuo: false, dataFim: '2026-10-10' }) }, log: { 'ci_1_08-00': { quem: 'W' } }, min: 600, meds: { ci_1: { acao: 'horario', horarios: ['09:00'], vale: 'amanha' } },
+        esp: { 9: ['ci_1@08:00'], 10: ['mcr_t_ci_1_20261010@09:00'], 11: [] } },
+      { id: 'R29', itens: { ci_1: Z654Q({ horarios: ['18:30'], quando: { ref: 'jantar', rel: 'antes', min: 30 }, derivado_de: 'jantar' }) }, log: {}, min: 600, meds: { ci_1: { acao: 'horario', horarios: ['19:30'], vale: 'hoje' } },
+        esp: { 9: ['ci_1@19:30'], 10: ['ci_1@19:30'], 11: ['ci_1@19:30'] } },
+      { id: 'S01', agenda: true, itens: { ci_1: Z654Q({ freq: { tipo: 'alternado' }, dataInicio: '2026-10-05' }) }, log: { 'ci_1_08-00': { quem: 'W' } }, min: 600, form: { ci_1: { horarios: ['09:00'] } },
+        esp: { 9: ['ci_1@08:00'], 10: [], 11: ['mcr_t_ci_1_20261011@09:00'], 12: [], 13: ['mcr_t_ci_1_20261011@09:00'] } },
+      { id: 'S02', agenda: true, itens: { ci_1: Z654Q({ horarios: ['20:00'] }) }, log: { 'ci_1_20-00': { quem: 'W' } }, min: 18 * 60 + 30, form: { ci_1: { horarios: ['21:00'] } },
+        esp: { 9: ['ci_1@20:00'], 10: ['mcr_t_ci_1_20261010@21:00'], 11: ['mcr_t_ci_1_20261010@21:00'] } },
+    ];
+    for (const c of casos) {
+      let depois;
+      if (c.agenda) {
+        const form = JSON.parse(JSON.stringify(c.itens)); Object.keys(c.form).forEach((id) => Object.assign(form[id], c.form[id]));
+        ctx.__fm = form; ctx.__pv = JSON.parse(JSON.stringify(c.itens)); ctx.__lg = c.log;
+        const r = run(`mcrAgendaRegua(__fm, __pv, __lg, '${HOJE654}', ${c.min}, 'Dra. Teste', 'x', ${T654Q(9, c.min)})`);
+        depois = JSON.parse(JSON.stringify(Object.assign({}, r.itens, r.novos)));
+      } else {
+        abre654Q(c.itens, { log: c.log }); ctx.__meds = c.meds; run('__M.meds=JSON.parse(JSON.stringify(__meds));');
+        ctx654Q(c.itens, { log: c.log, min: c.min });
+        igual(run('mcrConferirAntes(__M, __Ci)'), [], c.id + ': a conferência passa');
+        depois = aplica654Q(c.itens, run('mcrMontar(__M, __Ci)').up);
+      }
+      for (const d of Object.keys(c.esp)) igual(await fila654Q(depois, Number(d)), c.esp[d], c.id + ' — dia ' + d + '/10');
+      if (c.id === 'R29') igual(['quando' in depois.ci_1, 'derivado_de' in depois.ci_1], [false, false], 'R29: «Hoje» apaga o «quando» (senão o horário volta a sair da refeição no próximo «Salvar agenda»)');
+      if (c.id === 'R28') igual([!!depois.mcr_t_ci_1_20261010.continuo, depois.mcr_t_ci_1_20261010.dataFim], [false, '2026-10-10'], 'R28: o novo termina junto com a receita (nenhuma dose além dela)');
+    }
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA A1 (alto) — remédio novo com «Tomar até» antes do primeiro dia não grava: a tela diz o que fazer («Hoje» ou mudar «Tomar até»; horário já passado: fale com a veterinária); com «Hoje», o remédio de um dia só toca hoje', async () => {
+  run(ARMA654);
+  try {
+    abre654Q({ ci_1: Z654Q() });
+    ctx.__nv = [NOVO654Q({ nome: 'Antiemético', tipo: 'medicamento', u: 'comprimido', continuo: false, dataFim: HOJE654, origem: 'vet' })];
+    run('__M.novos=JSON.parse(JSON.stringify(__nv));');
+    let v = run('mcrValidar(__M, 900)');
+    assert.ok(v.some((f) => /Antiemético: o remédio termina na sexta, 09\/10 e começaria no sábado, 10\/10: escolha «Hoje» ou mude «Tomar até»/.test(f)), v.join(' | '));
+    relogio647(T654Q(9, 900));
+    assert.ok(/escolha «Hoje» ou mude «Tomar até»/.test(run('mcrNovoHTML(__M, __M.novos[0], 0)')), 'a tela mostra antes de conferir');
+    ctx654Q({ ci_1: Z654Q() }, { min: 900 });
+    assert.ok(run('mcrConferirAntes(__M, __Ci)').some((f) => /escolha «Hoje»/.test(f)), 'a conferência com o banco relido também barra');
+    let G = run('mcrMontar(__M, __Ci)');
+    igual([G.novosIds.length, Object.keys(G.up).some((k) => /mcr_n_/.test(k)), G.recusas.length], [0, false, 1], 'a rede: nada do remédio novo é gravado');
+    run(`__M.novos[0].horarios=['08:00']; __M.novos[0].vale='hoje';`);
+    v = run('mcrValidar(__M, 900)');
+    assert.ok(v.some((f) => /só de hoje com o horário já passado.*fale com a veterinária/.test(f)), v.join(' | '));
+    run(`__M.novos[0].horarios=['20:00']; __M.novos[0].vale='hoje';`);
+    igual(run('mcrValidar(__M, 900)'), []);
+    G = run('mcrMontar(__M, __Ci)'); const nid = G.novosIds[0];
+    igual([nid, G.up[A654 + nid].dataInicio, G.up[A654 + nid].dataFim], ['mcr_n_antiemetico_20261009', HOJE654, HOJE654]);
+    assert.ok(G.avisosTela.some((a) => /Avise a plantonista.*Antiemético começa hoje, às 20:00/.test(a)), G.avisosTela.join(' | '));
+    const depois = aplica654Q({ ci_1: Z654Q() }, G.up);
+    igual(await alarme654Q(depois, { [KP654]: { 'ci_1_08-00': { quem: 'W' } } }, 9, 19 * 60 + 56), [KP654 + '__' + nid + '_20-00'], 'hoje às 19:56 o alarme do Antiemético abre');
+    igual((await fila654Q(depois, 10)).filter((k) => k.indexOf(nid) >= 0), [], 'amanhã ele já terminou');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA A2 — «Parou de tomar — agora» de madrugada (00:30 de sábado) com a dose de ontem das 22:00 sem registro: ela também sai (a fila de ontem refeita não a tem), a tela pergunta e avisa com o horário; registrada no meio, barra', async () => {
+  run(ARMA654);
+  try {
+    const IT = { ci_1: Z654Q({ horarios: ['22:00'] }) };
+    abre654Q(IT, { hoje: ISO654Q(10) }); run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+    relogio647(T654Q(10, 30));
+    assert.ok(/Ainda devem ser dadas a dose de ontem das 22:00 \(sem registro\) e a de hoje das 22:00\?/.test(run(`mcrRemedioHTML(__M, 'ci_1')`)), 'a pergunta fala da dose de ontem');
+    ctx654Q(IT, { hoje: ISO654Q(10), min: 30 });
+    igual(run('mcrConferirAntes(__M, __Ci)'), []);
+    const G = run('mcrMontar(__M, __Ci)');
+    const depois = aplica654Q(IT, G.up);
+    igual([depois.ci_1.dataFim, depois.ci_1.continuo], ['2026-10-08', false], 'sem dose dada ontem: termina anteontem (ontem não vale mais)');
+    assert.ok(/a dose de ontem das 22:00 \(sem registro\) não serão dadas|e a dose de ontem das 22:00 \(sem registro\) não serão dadas/.test(G.frases.join(' ')), G.frases.join(' | '));
+    assert.ok(G.avisosTela.some((a) => /dose de ontem das 22:00 \(toca até 01:00\) de Zenrelia pode tocar.*avise para não dar/.test(a)), G.avisosTela.join(' | '));
+    assert.ok(G.avisosTela.some((a) => /Avise a plantonista.*Zenrelia não toca mais a partir de agora/.test(a)), G.avisosTela.join(' | '));
+    // o aparelho que recebe o alarme refaz a fila de ontem (re-arm): a dose de ontem não está mais lá
+    await fila654(depois, {}, T654Q(9, 12 * 60), ISO654Q(9)); ctx.__fO = run('JSON.parse(JSON.stringify(MED_AGENDA_TODOS))');
+    relogio647(T654Q(10, 31));
+    igual(run(`Object.keys(medOntemPendentes(__fO, {}, {}, '${ISO654Q(9)}', ${T654Q(10, 31)}))`), [], 'nenhuma dose de ontem para tocar');
+    igual(await fila654Q(depois, 10), [], 'hoje: nada');
+    // com a das 08:00 de ontem dada: ontem fica só com ela
+    const IT2 = { ci_1: Z654Q({ horarios: ['08:00', '22:00'] }) }, LO = { 'ci_1_08-00': { quem: 'W' } };
+    abre654Q(IT2, { hoje: ISO654Q(10), logOntem: LO }); run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+    ctx654Q(IT2, { hoje: ISO654Q(10), min: 30, logOntem: LO });
+    const d2 = aplica654Q(IT2, run('mcrMontar(__M, __Ci)').up);
+    igual([d2.ci_1.dataFim, d2.ci_1.horarios], ['2026-10-09', ['08:00']]);
+    igual(await fila654Q(d2, 9), ['ci_1@08:00'], 'ontem: só a dada');
+    // a dose de ontem registrada depois que a tela abriu: barra
+    abre654Q(IT, { hoje: ISO654Q(10) }); run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+    ctx654Q(IT, { hoje: ISO654Q(10), min: 35, logOntem: { 'ci_1_22-00': { quem: 'W' } } });
+    assert.ok(run('mcrConferirAntes(__M, __Ci)').some((f) => /dose de ontem de Zenrelia foi registrada depois que esta tela abriu/.test(f)));
+    // de dia não há dose de ontem na janela: o «Parou agora» é o de sempre
+    igual(run(`mcrOntemFaltam(__Ci.itens.ci_1, 'ci_1', '${ISO654Q(10)}', {}, 600)`), []);
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA A3 (K17) — horário novo perto da última dose antiga (22:00 → 00:30): a tela diz até quando dar a das 22:00 e só salva com «Confirmei com a veterinária»; o histórico e o aviso guardam isso; o alarme da das 22:00 atrasada para às 23:15 (metade do intervalo), e não às 01:00; o «Salvar agenda» não faz essa troca', async () => {
+  const IT = { ci_1: Z654Q({ horarios: ['22:00'] }) };
+  abre654Q(IT); run(`__M.meds.ci_1={acao:'horario', horarios:['00:30'], vale:'amanha'};`);
+  const v = run('mcrValidar(__M, 600)');
+  assert.ok(v.some((f) => /a dose das 22:00 de hoje e a das 00:30 no sábado, 10\/10 ficam a 2 h 30 min uma da outra\. Se a das 22:00 atrasar, não dê depois das 23:15 \(o alarme dela para aí; num celular com o app antigo, ainda pode tocar até 01:00\).*Confirmei com a veterinária/.test(f)), v.join(' | '));
+  run(ARMA654); relogio647(T654Q(9, 600));
+  try { assert.ok(/Confirmei com a veterinária/.test(run(`mcrRemedioHTML(__M, 'ci_1')`)), 'o botão de confirmar aparece no «Como fica»'); } finally { run(SOLTA654); }
+  ctx654Q(IT, { min: 600 });
+  assert.ok(run('mcrConferirAntes(__M, __Ci)').some((f) => /Confirmei com a veterinária/.test(f)), 'sem a confirmação, a gravação também barra');
+  run('__M.meds.ci_1.confirmouVet=true;');
+  igual([run('mcrValidar(__M, 600)'), run('mcrConferirAntes(__M, __Ci)')], [[], []]);
+  const G = run('mcrMontar(__M, __Ci)');
+  const al = G.up[P654 + 'alteracoes/aq'].remedios[0];
+  igual([al.perto.de, al.perto.para, al.perto.darAte, al.perto.confirmouVet], ['22:00', '00:30', '23:15', true]);
+  assert.ok(/ficam a 2 h 30 min uma da outra: confirmado com a veterinária/.test(G.up[A654 + 'ci_1/historico'].slice(-1)[0].acao), 'o histórico guarda a confirmação');
+  assert.ok(G.avisosTela.some((a) => /Avise a plantonista: Zenrelia: na noite da troca.*não dê depois das 23:15/.test(a)), G.avisosTela.join(' | '));
+  // o alarme (6.47): a fila de sexta leva o horário do item novo, e a das 22:00 atrasada para às 23:15
+  run(ARMA654);
+  try {
+    const depois = aplica654Q(IT, G.up);
+    await fila654(depois, {}, T654Q(9, 12 * 60), HOJE654); ctx.__f9 = run('JSON.parse(JSON.stringify(MED_AGENDA_TODOS))');
+    igual([run('__f9[0].continuaEm'), run(`medOntemTeto(__f9[0], __f9)`) / 60000], [['00:30'], 75], 'teto: a metade de 2 h 30 min');
+    const pend = (d, min) => { relogio647(T654Q(d, min)); return run(`Object.keys(medOntemPendentes(__f9, {}, {}, '${HOJE654}', ${T654Q(d, min)}))`); };
+    igual([pend(9, 23 * 60 + 10), pend(9, 23 * 60 + 20), pend(10, 20)], [[KP654 + '__ci_1_22-00'], [], []], '23:10 ainda toca; 23:20 e 00:20 não (a das 00:30 vem logo)');
+    // sem troca (o mesmo item, 22:00 só): o teto continua 3 h, como na 6.47
+    await fila654(IT, {}, T654Q(9, 12 * 60), HOJE654);
+    igual([run('"continuaEm" in MED_AGENDA_TODOS[0]'), run('medOntemTeto(MED_AGENDA_TODOS[0], MED_AGENDA_TODOS)') / 60000], [false, 180]);
+  } finally { run(SOLTA654); }
+  // mudar o horário depois de confirmar pede a confirmação de novo
+  run(`MCR=__M; mcrSetHorario('ci_1', 0, '01:00'); MCR=null;`);
+  igual(run('__M.meds.ci_1.confirmouVet'), false);
+  // o «Salvar agenda» não troca: diz para usar a tela
+  ctx.__fm = { ci_1: Z654Q({ horarios: ['00:30'] }) }; ctx.__pv = JSON.parse(JSON.stringify(IT));
+  const r = run(`mcrAgendaRegua(__fm, __pv, {}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+  igual([r.itens.ci_1.horarios, Object.keys(r.novos).length], [['22:00'], 0]);
+  assert.ok(/«Mudar comida e remédio», que pede a confirmação da veterinária/.test(r.frases.join(' ')), r.frases.join(' | '));
+});
+provaAsync('6.54 QA A4 — «Salvar agenda» com a dose e o horário mudados juntos (08:00 dada): hoje às 20:00 o alarme já pede a dose NOVA; a frase e o histórico falam da dose; o estoque herdado conta a dose nova', async () => {
+  run(ARMA654);
+  try {
+    ctx.__it = { ci_1: Z654Q({ q: '0,5', horarios: ['09:00', '20:00'] }) }; ctx.__pv = { ci_1: Z654Q({ horarios: ['08:00', '20:00'] }) };
+    const r = run(`mcrAgendaRegua(__it, __pv, {'ci_1_08-00':{quem:'W'}}, '${HOJE654}', 600, 'Dra. Teste', 'x', ${T654Q(9, 600)})`);
+    const meio = run(`medDoseTxt({q:'0,5', u:'comprimido'})`), um = run(`medDoseTxt({q:'1', u:'comprimido'})`);
+    igual([r.itens.ci_1.q, r.itens.ci_1.horarios, r.itens.ci_1.dataFim, r.novos.mcr_t_ci_1_20261010.q, r.novos.mcr_t_ci_1_20261010.horarios], ['0,5', ['08:00', '20:00'], HOJE654, '0,5', ['09:00', '20:00']]);
+    assert.ok(r.frases.join(' ').indexOf('A dose nova (' + meio + ') já vale na próxima dose') >= 0, r.frases.join(' | '));
+    assert.ok(r.itens.ci_1.historico.slice(-1)[0].acao.indexOf('dose ' + um + ' → ' + meio + ', vale na próxima dose') >= 0, r.itens.ci_1.historico.slice(-1)[0].acao);
+    igual(r.novos.mcr_t_ci_1_20261010.estoque.restante, 11.5, '12 − meio comprimido da dose das 20:00 de hoje');
+    await fila654(JSON.parse(JSON.stringify(Object.assign({}, r.itens, r.novos))), { [KP654]: { 'ci_1_08-00': { quem: 'W' } } }, T654Q(9, 19 * 60 + 56), HOJE654);
+    igual(run(`MED_AGENDA_TODOS.filter(function(d){ return d.horario==='20:00'; }).map(function(d){ return d.itemId+':'+d.q; })`), ['ci_1:0,5'], 'hoje às 20:00: meio comprimido');
+  } finally { run(SOLTA654); }
+});
+prova('6.54 QA A5 — «Salvar agenda»: o fim do tratamento estendido (09/10 → 14/10) e o horário mudado com a dose dada: a régua lê o fim do formulário e troca (o novo vai até 14/10)', () => {
+  ctx.__it = { ci_1: Z654Q({ continuo: false, dataFim: ISO654Q(14), horarios: ['09:00'] }) }; ctx.__pv = { ci_1: Z654Q({ continuo: false, dataFim: HOJE654 }) };
+  const r = run(`mcrAgendaRegua(__it, __pv, {'ci_1_08-00':{quem:'W'}}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+  const n = r.novos.mcr_t_ci_1_20261010 || {};
+  igual([r.itens.ci_1.horarios, r.itens.ci_1.dataFim, n.horarios, n.dataInicio, n.dataFim], [['08:00'], HOJE654, ['09:00'], AMANHA654, ISO654Q(14)]);
+  assert.ok(!/termina hoje/.test(r.frases.join(' ')), r.frases.join(' | '));
+});
+provaAsync('6.54 QA A6 — «Salvar agenda» no dia da troca: a linha de hoje (trocadoPor) passa pela régua (08:00 dada: continua 08:00 e a frase manda mudar a linha de baixo); não volta a valer depois de hoje; com folga, muda só hoje', async () => {
+  run(ARMA654);
+  try {
+    const ant = Z654Q({ continuo: false, dataFim: HOJE654, trocadoPor: 'mcr_t_ci_1_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_ci_1_20261010' }), nov = Z654Q({ horarios: ['10:00'], dataInicio: AMANHA654, continuacaoDe: 'ci_1' });
+    ctx.__pv = { ci_1: ant, mcr_t_ci_1_20261010: nov }; ctx.__it = { ci_1: Object.assign({}, ant, { horarios: ['09:00'] }), mcr_t_ci_1_20261010: nov };
+    let r = run(`mcrAgendaRegua(__it, __pv, {'ci_1_08-00':{quem:'W'}}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+    igual([r.itens.ci_1.horarios, Object.keys(r.novos).length], [['08:00'], 0]);
+    assert.ok(/esta linha termina hoje e a dose das 08:00 de hoje já foi dada: o horário de hoje continua 08:00\. Para mudar daqui para a frente, mude a linha de baixo \(a que começa no sábado, 10\/10\)/.test(r.frases.join(' ')), r.frases.join(' | '));
+    igual(await alarme654Q(JSON.parse(JSON.stringify(r.itens)), { [KP654]: { 'ci_1_08-00': { quem: 'W' } } }, 9, 10 * 60), [], 'nenhum alarme às 10:00 (a das 08:00 foi dada)');
+    // o formulário tenta pôr a linha de hoje em uso contínuo: ela continua terminando hoje (senão tocariam os dois amanhã)
+    ctx.__it = { ci_1: Object.assign({}, ant, { continuo: true, dataFim: '', estoque: { modo: 'contavel' } }), mcr_t_ci_1_20261010: nov };
+    r = run(`mcrAgendaRegua(__it, __pv, {}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+    igual([r.itens.ci_1.continuo, r.itens.ci_1.dataFim, r.itens.ci_1.trocadoPor], [false, HOJE654, 'mcr_t_ci_1_20261010']);
+    igual(await fila654Q(JSON.parse(JSON.stringify(Object.assign({}, r.itens, r.novos))), 10), ['mcr_t_ci_1_20261010@10:00'], 'amanhã só o novo');
+    // com folga e nada dado (20:00 → 21:00 às 10:00): muda só hoje
+    const ant2 = Object.assign({}, ant, { horarios: ['20:00'] });
+    ctx.__pv = { ci_1: ant2, mcr_t_ci_1_20261010: nov }; ctx.__it = { ci_1: Object.assign({}, ant2, { horarios: ['21:00'] }), mcr_t_ci_1_20261010: nov };
+    r = run(`mcrAgendaRegua(__it, __pv, {}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+    igual([r.itens.ci_1.horarios, r.itens.ci_1.dataFim, r.frases], [['21:00'], HOJE654, []]);
+  } finally { run(SOLTA654); }
+});
+prova('6.54 QA A7 — re-arm: a assinatura de referência é guardada mesmo quando o papel não recebe o alarme; a 1ª mudança depois que a plantonista entra refaz a fila (3 s)', () => {
+  run(`__bkR7={st:setTimeout, pr:papelRecebeAlarmeMed, ca:carregarAgendaMedTodos, g:MED_AGENDA_GERAL, s:MCR_ALARME_SIG, t:__mcrRearmT}; __tm7=[]; setTimeout=function(f,ms){ __tm7.push(ms); return 1; };
+    __p7=false; papelRecebeAlarmeMed=function(){ return __p7; }; carregarAgendaMedTodos=function(){}; MCR_ALARME_SIG=null; __mcrRearmT=null;
+    MED_AGENDA_GERAL={k:{itens:{ci_1:{nome:'Zenrelia', q:'1', u:'comprimido', horarios:['20:00']}}}};`);
+  try {
+    run('mcrRearmarAlarme();');
+    igual(run('MCR_ALARME_SIG!==null'), true, 'a Gestão (sem alarme) já guarda a referência');
+    run(`MED_AGENDA_GERAL.k.itens.ci_1.horarios=['20:30']; mcrRearmarAlarme();`);
+    igual(run('__tm7'), [], 'sem o papel do alarme: não relê a fila (só a referência anda)');
+    run(`__p7=true; MED_AGENDA_GERAL.k.itens.ci_1.horarios=['21:00']; mcrRearmarAlarme();`);
+    igual(run('__tm7'), [3000], 'a plantonista entrou: a 1ª mudança refaz a fila');
+  } finally { run('setTimeout=__bkR7.st; papelRecebeAlarmeMed=__bkR7.pr; carregarAgendaMedTodos=__bkR7.ca; MED_AGENDA_GERAL=__bkR7.g; MCR_ALARME_SIG=__bkR7.s; __mcrRearmT=__bkR7.t;'); }
+});
+provaAsync('6.54 QA A8 — duas gravações ao mesmo tempo (as duas releem antes de qualquer uma gravar): o item novo tem o mesmo id e cai no mesmo nó → amanhã UMA dose de cada; lançado antes por outra pessoa, a conferência barra; dois novos com o mesmo nome na tela, também', async () => {
+  run(ARMA654);
+  try {
+    const LOG = { 'ci_1_08-00': { quem: 'W' } };
+    abre654Q({ ci_1: Z654Q() }, { log: LOG, aid: 'aA' }); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'}; __M.novos=[${JSON.stringify(NOVO654Q())}]; __MA=__M;`);
+    abre654Q({ ci_1: Z654Q() }, { log: LOG, aid: 'aB' }); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'}; __M.novos=[${JSON.stringify(NOVO654Q())}]; __M.quem='Rita Teste'; __MB=__M;`);
+    ctx654Q({ ci_1: Z654Q() }, { log: LOG, min: 600 });
+    igual([run('mcrConferirAntes(__MA, __Ci)'), run('mcrConferirAntes(__MB, __Ci)')], [[], []], 'as duas passam na conferência (o mesmo banco relido)');
+    const GA = run('mcrMontar(__MA, __Ci)'); ctx.__Ci.ts += 1; const GB = run('mcrMontar(__MB, __Ci)');
+    igual([GA.novosIds, GB.novosIds], [['mcr_t_ci_1_20261010', 'mcr_n_probiotico_20261010'], ['mcr_t_ci_1_20261010', 'mcr_n_probiotico_20261010']]);
+    const B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { itens: { ci_1: Z654Q() } } } } });
+    B.ref().update(GA.up); B.ref().update(GB.up);
+    const it = B.get('auaulandia/medicacao-agenda/' + KP654 + '/itens');
+    igual(Object.keys(it).sort(), ['ci_1', 'mcr_n_probiotico_20261010', 'mcr_t_ci_1_20261010']);
+    igual(await fila654Q(it, 10), ['mcr_n_probiotico_20261010@20:00', 'mcr_t_ci_1_20261010@09:00'], 'amanhã: uma dose de cada (nada em dobro)');
+    abre654Q({ ci_1: Z654Q() }, { aid: 'aC' }); run(`__M.novos=[${JSON.stringify(NOVO654Q())}];`);
+    ctx654Q(it, { min: 600 });
+    assert.ok(run('mcrConferirAntes(__M, __Ci)').some((f) => /Probiótico já foi lançado como remédio novo/.test(f)), 'o mesmo remédio novo já lançado: barra');
+    run(`__M.novos=[${JSON.stringify(NOVO654Q())}, ${JSON.stringify(NOVO654Q({ horarios: ['08:00'] }))}];`);
+    assert.ok(run('mcrValidar(__M, 600)').some((f) => /dois remédios novos com este nome/.test(f)));
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA A9 — na hora de salvar, a permissão e o nome são conferidos de novo: troca de turno para plantonista não grava; o nome do turno anterior, pré-preenchido, pede confirmação', async () => {
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': {} } });
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654G);
+  try {
+    abreG654Q('q9'); run(`MCR.comida.refs.fixas.jantar.racao='45'; document.body.dataset.role='plantonista';`);
+    igual(run('mcrPode()'), false);
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 0, 'nada gravado'); assert.ok(/Sem permissão/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+    run('document.body.dataset.role=__bkG654Q.r;');
+    abreG654Q('q9b'); run(`MCR.comida.refs.fixas.jantar.racao='45'; MCR.quemAberto='Ana Teste'; pessoaDoTurno=function(){ return 'Rita Teste'; };`);
+    await run('mcrGravar()'); await volta654();
+    igual([ctx.__B.updates().length, run('MCR.quem'), run('MCR.etapa')], [0, 'Rita Teste', 'editar']); assert.ok(/O turno mudou/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 1, 'com o nome conferido, salva');
+  } finally { run(SOLTA654G); run(SOLTA654); }
+});
+provaAsync('6.54 QA A10 — o dia virou com a tela aberta (aberta na sexta, salvo às 00:05 de sábado): não grava; volta ao «Conferir» com o dia novo e o resumo refeito', async () => {
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': {} } });
+  run(ARMA654); relogio647(T654Q(10, 5)); run(ARMA654G);
+  try {
+    abreG654Q('q10'); run(`MCR.log={'ci_1_08-00':{quem:'W'}}; MCR.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'};`);
+    await run('mcrGravar()'); await volta654();
+    igual([ctx.__B.updates().length, run('MCR.etapa'), run('MCR.hoje')], [0, 'conferir', ISO654Q(10)]);
+    assert.ok(/O dia mudou depois que esta tela abriu \(era sexta, 09\/10\)/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+    assert.ok(/a partir de domingo, 11\/10/.test(run('mcrPreviaFrases(MCR).frases.join(" ")')), 'o resumo refeito para o dia novo (madrugada: começa no dia seguinte)');
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 1, 'conferido de novo, salva');
+    igual(ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens.mcr_t_ci_1_20261011.dataInicio, ISO654Q(11));
+  } finally { run(SOLTA654G); run(SOLTA654); }
+});
+provaAsync('6.54 QA A11 — remédio NOVO lançado de madrugada (00:30 de sábado) para as 08:00: pode começar hoje (sábado), e o alarme de sábado às 07:56 toca; o remédio que já existe continua com a trava da madrugada', async () => {
+  run(ARMA654);
+  try {
+    const IT = { ci_1: Z654Q({ horarios: ['20:00'] }) };
+    igual(REGRA654({ antes: [], depois: ['08:00'], dadosHoje: [], agoraMin: 30, hoje: ISO654Q(10), item: { horarios: ['08:00'] }, novo: true }).podeHoje, true);
+    abre654Q(IT, { hoje: ISO654Q(10) }); run(`__M.novos=[${JSON.stringify(NOVO654Q({ nome: 'Antibiótico', tipo: 'medicamento', u: 'comprimido', horarios: ['08:00'], continuo: false, dataFim: ISO654Q(16), origem: 'vet', vale: 'hoje' }))}];`);
+    ctx654Q(IT, { hoje: ISO654Q(10), min: 30 });
+    igual([run('mcrValidar(__M, 30)'), run('mcrConferirAntes(__M, __Ci)')], [[], []]);
+    const G = run('mcrMontar(__M, __Ci)'); const nid = G.novosIds[0];
+    igual([nid, G.up[A654 + nid].dataInicio], ['mcr_n_antibiotico_20261010', ISO654Q(10)]);
+    const depois = aplica654Q(IT, G.up);
+    igual((await alarme654Q(depois, {}, 10, 7 * 60 + 56)).filter((x) => x.indexOf(nid) >= 0), [KP654 + '__' + nid + '_08-00'], 'sábado 07:56: o antibiótico novo toca');
+    igual(REGRA654({ antes: ['20:00'], depois: ['21:00'], dadosHoje: [], agoraMin: 30, hoje: ISO654Q(10), item: { horarios: ['20:00'], continuo: true } }).podeHoje, false);
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA A12 — «Salvar agenda» sem mudança no dia da troca: o estoque vazio do formulário não é regravado no antigo (ele está no novo), sem ler o registro', async () => {
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  const ant = Z654Q({ continuo: false, dataFim: HOJE654, trocadoPor: 'mcr_t_ci_1_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_ci_1_20261010' }), nov = Z654Q({ horarios: ['09:00'], dataInicio: AMANHA654, continuacaoDe: 'ci_1' });
+  ctx.__pv = { ci_1: ant, mcr_t_ci_1_20261010: nov }; ctx.__it = { ci_1: Object.assign({}, ant, { estoque: { modo: 'contavel' } }), mcr_t_ci_1_20261010: nov };
+  ctx.__B = banco654({}); run('__bkDB12=DB; DB=__B;');
+  try {
+    const r = await run(`mcrReguaDaAgenda('${KP654}', __it, __pv, 'Dra. Teste')`);
+    igual(['estoque' in r.itens.ci_1, r.itens.mcr_t_ci_1_20261010.estoque.restante, r.frases, ctx.__B.log.length], [false, 12, [], 0]);
+  } finally { run('DB=__bkDB12;'); run(SOLTA654); }
+});
+provaAsync('6.54 QA A13 — "Ainda não confirmou" manda conferir em OUTRO aparelho (neste, a mudança aparece antes de o banco confirmar)', async () => {
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': {} } });
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654G);
+  run(`__B13=DB; DB={ref:function(p){ var r=__B13.ref(p); if(!p) r.update=function(){ return new Promise(function(){}); }; return r; }};
+    setTimeout=function(f,ms){ if(ms===20000) f(); return 1; };`);
+  try {
+    abreG654Q('q13'); run(`MCR.comida.refs.fixas.jantar.racao='45';`);
+    await run('mcrGravar()'); await volta654();
+    igual(run('MCR.etapa'), 'pendente');
+    assert.ok(/Ainda não confirmou: não repita\. Confira em 1 minuto, em OUTRO aparelho/.test(run('MCR.aviso||""')), run('MCR.aviso||""'));
+  } finally { run(SOLTA654G); run(SOLTA654); }
+});
+prova('6.54 QA — avisos: «Avise a plantonista» também na mudança de dose, no «Parou — agora» e no remédio novo de hoje (A1); o «Parou — depois de hoje» não muda nada hoje e não avisa', () => {
+  const IT = { ci_1: Z654Q({ horarios: ['08:00', '20:00'] }) }, LOG = { 'ci_1_08-00': { quem: 'W' } };
+  abre654Q(IT, { log: LOG }); run(`__M.meds.ci_1={acao:'dose', q:'0,5', u:'comprimido'};`); ctx654Q(IT, { log: LOG, min: 600 });
+  assert.ok(run('mcrMontar(__M, __Ci)').avisosTela.some((a) => /Avise a plantonista e confira no celular dela \(Plantão › toque em «Hoje»\): Zenrelia passa para .* já na próxima dose/.test(a)));
+  run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+  assert.ok(run('mcrMontar(__M, __Ci)').avisosTela.some((a) => /Avise a plantonista.*Zenrelia não toca mais a partir de agora/.test(a)));
+  run(`__M.meds.ci_1={acao:'parou', parou:'depois'};`);
+  igual(run('mcrMontar(__M, __Ci)').avisosTela.filter((a) => /Avise a plantonista/.test(a)), []);
+});
+prova('6.54 QA — a 2ª mudança com a ficha ligada: se antes houve «só desta vez», a tela diz que a ficha leva a comida inteira (inclusive aquela mudança)', () => {
+  const est = EST654(); est.alteracoes = { a0: { quando: 1, quem: 'Rita Teste', motivo: 'a tutora pediu só hoje', comida: { ficha: false } } };
+  abre654Q({ ci_1: Z654Q() }, { est });
+  igual(run('__M.teveSoDestaVez'), true);
+  run(`__M.comida.refs.fixas.jantar.racao='40';`);
+  assert.ok(/Antes, uma mudança foi «só desta vez»\. Guardando na ficha agora, ela leva a comida inteira desta tela, inclusive aquela mudança\./.test(run('mcrComidaHTML(__M)')));
+  assert.ok(/inclusive o que antes foi «só desta vez»/.test(run('mcrConferirHTML(__M)')));
+  abre654Q({ ci_1: Z654Q() }); igual(run('__M.teveSoDestaVez'), false, 'sem «só desta vez» antes, a frase não aparece');
+});
+prova('6.54 QA — baixos: botão «Comida e remédio» de Hóspedes com 44 px; "Começa no sábado"; o motivo recusado por palavras curtas diz isso', () => {
+  assert.ok(/\.mcr-bt-entrada\{[^}]*min-height:44px/.test(fs.readFileSync(APP, 'utf8')), 'o botão de Hóspedes tem 44 px');
+  abre654Q({ ci_1: Z654Q({ dataInicio: AMANHA654 }) });
+  igual(run(`mcrHojeTxt(__M, 'ci_1', __M.itens.ci_1)`), 'Começa no sábado, 10/10.');
+  igual(run(`mcrNoDia('2026-10-12')`), 'na segunda, 12/10');
+  assert.ok(/palavras diferentes, de 2 letras ou mais/.test(run(`motivoQuatroPalavras('não é a ficha').erro`)), 'a frase da régua da 6.53 diz que contam só as diferentes, de 2 letras ou mais');
+});
+// As 3 provas pequenas do fim da simulação do QA (qa654/cenarios.js), trazidas para a Fase 0.
+prova('6.54 QA — conferir antes de gravar: dose mudada pela veterinária depois que a tela abriu barra; dose registrada no meio barra o «Parou agora»; um conflito só já barra', () => {
+  TELA654(); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'};`);
+  CTX654(); ctx.__Ci.itens.ci_1.q = '0,5';
+  let x = run('mcrConferirAntes(__M, __Ci)'); assert.ok(x.length === 1 && /mudado por outra pessoa/.test(x[0]), x.join(' | '));
+  TELA654(); ctx.__Ti.itens.ci_1.horarios = ['08:00', '20:00']; run('__M=mcrEstadoInicial(__Ti)'); run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+  CTX654({ log: { 'ci_1_20-00': { quem: 'Wandela Teste' } } }); ctx.__Ci.itens.ci_1.horarios = ['08:00', '20:00'];
+  x = run('mcrConferirAntes(__M, __Ci)'); assert.ok(x.some((f) => /registrada depois que esta tela abriu/.test(f)), x.join(' | '));
+});
+provaAsync('6.54 QA — um conflito só, na gravação de verdade, não grava nada', async () => {
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', itens: ITENS654() } }, 'medicacao-log': {} } });
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654G);
+  try {
+    abreG654Q('qc'); run(`MCR.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'};`);
+    ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens.ci_1.q = '2';
+    await run('mcrGravar()'); await volta654();
+    igual(ctx.__B.updates().length, 0, 'nada gravado'); assert.ok(/outra pessoa/.test(run('MCR.erro||""')), run('MCR.erro||""'));
+  } finally { run(SOLTA654G); run(SOLTA654); }
+});
+prova('6.54 QA — cobertura daqui: dia sim, dia não conta só os dias "sim"; resumo da comida diz a troca de medida; redesenho do Plantão só com o Plantão na tela', () => {
+  ctx.__ci = { q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, freq: { tipo: 'alternado' }, dataInicio: '2026-10-05', estoque: { modo: 'contavel', restante: 3 } };
+  const c = run(`mcrCoberturaDaqui(__ci, '2026-10-09', '2026-10-15', 0)`);
+  igual([c.doses, c.cobre], [3, true], '11, 13 e 15/10');
+  ctx.__a = { tipo: 'Ração', marca: 'Royal', unidade: 'gramas', refs: { fixas: {}, extras: [] } }; ctx.__b = Object.assign({}, ctx.__a, { unidade: 'lata' });
+  igual(run('mcrDiffComida(__a,__b)'), ['Medida: gramas → lata']);
+  run(`__bkP={ge:document.getElementById, st:setTimeout}; __tmQ=[]; setTimeout=function(f,ms){ __tmQ.push(ms); return 1; };
+    document.getElementById=function(id){ if(id==='v-hospedagem') return {classList:{contains:function(){ return false; }}}; if(id==='hosp-lista') return {style:{display:'block'}}; return null; }; __mcrRedesenhoT=null;`);
+  try { run('mcrPedirRedesenhoPlantao();'); igual(run('__tmQ'), [], 'outra aba na tela: não redesenha'); }
+  finally { run('document.getElementById=__bkP.ge; setTimeout=__bkP.st; __mcrRedesenhoT=null;'); }
+});
+// ================================================================== 6.54 QA2 — 3ª rodada: o re-gate (N1 a N4) e as provas RG do QA
+console.log('\n6.54 QA2 — 3ª rodada: o teto da 6.47 igual ao da base sem troca (e com o item novo suspenso ou parado), o id da troca, o remédio novo parado e a corrida');
+// O teto da base 6d6515e (antes da 6.54), copiado palavra por palavra: a régua para comparar o medOntemTeto de hoje.
+const TETO_BASE_654 = `function(it, agenda){
+    var m0=medMinutosDe(it&&it.horario), prox=null;
+    if(m0===null) return MED_ONTEM_TETO_MS;
+    (agenda||[]).forEach(function(x){
+      if(!x || x.key!==it.key || x.itemId!==it.itemId) return;
+      var m=medMinutosDe(x.horario); if(m===null || m===m0) return;
+      var d=(m-m0+1440)%1440;                  // minutos até ela (a de amanhã, se for mais cedo)
+      if(prox===null || d<prox) prox=d;
+    });
+    return (prox===null) ? MED_ONTEM_TETO_MS : Math.min(MED_ONTEM_TETO_MS, prox*60000/2);
+  }`;
+run('__tetoBase654=' + TETO_BASE_654 + ';');
+// A fila de um dia (carga de verdade) como entradas inteiras; e as doses de ontem com o teto de hoje ou o da base.
+const filaE654 = async (itens, d) => { await fila654(itens, {}, T654Q(d, 12 * 60), ISO654Q(d)); return run('JSON.parse(JSON.stringify(MED_AGENDA_TODOS))'); };
+const ontemCom654 = (base, dia, t) => run(`(function(){ var n=medOntemTeto; if(${base}) medOntemTeto=__tetoBase654; try{ return JSON.stringify(medOntemPendentes(__fq, __lq, {}, '${dia}', ${t}))+JSON.stringify(__fq.map(function(e){ return medOntemTeto(e, __fq); })); } finally { medOntemTeto=n; } })()`);
+const pendN654 = (base, dia, t) => run(`(function(){ var n=medOntemTeto; if(${base}) medOntemTeto=__tetoBase654; try{ return Object.keys(medOntemPendentes(__fq, __lq, {}, '${dia}', ${t})).length; } finally { medOntemTeto=n; } })()`);
+provaAsync('6.54 QA2 RG2 — sem troca para amanhã (e com troca cujo novo começa depois de amanhã, ou suspenso, ou parado): nenhuma entrada com continuaEm; teto e doses de ontem iguais aos da base em 300 agendas sorteadas × 12 horários da madrugada', async () => {
+  run(ARMA654);
+  let seed = 47; const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const H = ['00:15', '02:00', '06:00', '07:30', '08:00', '12:00', '14:00', '18:00', '20:00', '21:00', '22:00', '22:30', '23:30', '23:59'];
+  const dif = []; let n = 0; const tipos = { semTroca: 0, depoisDeAmanha: 0, suspenso: 0, parado: 0 };
+  try {
+    for (let s = 0; s < 300; s++) {
+      const itens = {}; const ni = 1 + Math.floor(rnd() * 3);
+      for (let i = 0; i < ni; i++) {
+        const hs = []; const nh = 1 + Math.floor(rnd() * 4); for (let j = 0; j < nh; j++) { const h = pick(H); if (hs.indexOf(h) < 0) hs.push(h); }
+        const it = { nome: 'Rem' + i, q: '1', u: 'comprimido', horarios: hs.sort(), continuo: rnd() < 0.6 };
+        if (!it.continuo) it.dataFim = ISO654Q(8 + Math.floor(rnd() * 4));
+        if (rnd() < 0.3) it.dataInicio = ISO654Q(5 + Math.floor(rnd() * 6));
+        if (rnd() < 0.2) it.freq = pick([{ tipo: 'alternado' }, { tipo: 'dias', dias: ['seg', 'qua', 'sex'] }]);
+        if (rnd() < 0.08) it.suspenso = true;
+        itens['ci_' + i] = it;
+      }
+      const d = 8 + Math.floor(rnd() * 3), x = rnd();
+      // a troca que NÃO vai tocar amanhã: o novo começa depois de amanhã, ou começa amanhã mas foi suspenso ou parado (N1)
+      if (x < 0.6) {
+        const tipo = x < 0.2 ? 'depoisDeAmanha' : (x < 0.4 ? 'suspenso' : 'parado'); tipos[tipo]++;
+        const ini = ISO654Q(d + (tipo === 'depoisDeAmanha' ? 2 : 1)), nid = 'mcr_t_ci_0_' + ini.replace(/-/g, '');
+        Object.assign(itens.ci_0, { trocadoPor: nid, continuo: false, dataFim: ISO654Q(d) }); delete itens.ci_0.suspenso;
+        const nv = Object.assign({}, itens.ci_0, { horarios: ['00:30'], dataInicio: ini, continuacaoDe: 'ci_0', continuo: true }); delete nv.trocadoPor; delete nv.dataFim;
+        if (tipo === 'suspenso') Object.assign(nv, { suspenso: true, suspensoPor: 'Dra. Teste' });
+        if (tipo === 'parado') Object.assign(nv, { continuo: false, dataFim: ISO654Q(d), paradoEm: { quem: 'Ana Teste', data: ISO654Q(d) } });
+        itens[nid] = nv;
+      } else tipos.semTroca++;
+      const f = await filaE654(itens, d);
+      if (f.some((e) => 'continuaEm' in e)) { dif.push('continuaEm ' + s); continue; }
+      ctx.__fq = f; const log = {}; f.forEach((e) => { if (rnd() < 0.4) { log[e.key] = log[e.key] || {}; log[e.key][e.itemId + '_' + e.horario.replace(':', '-')] = { quem: 'x' }; } }); ctx.__lq = log;
+      for (let k = 0; k < 12; k++) {
+        const t = T654Q(d + 1, Math.floor(rnd() * 360)); n++;
+        if (ontemCom654(false, ISO654Q(d), t) !== ontemCom654(true, ISO654Q(d), t)) dif.push('janela ' + s + '/' + k);
+      }
+    }
+  } finally { run(SOLTA654); }
+  console.log('      ' + n + ' instantes comparados; ' + JSON.stringify(tipos) + '; diferenças: ' + dif.length);
+  igual(dif, []);
+});
+provaAsync('6.54 QA2 RG3 — troca para amanhã (9 horários antigos × 9 novos, com 1 e 2 horários): o teto de cada dose do antigo = o menor entre o da base e a metade do intervalo até a 1ª dose do item novo (a do dia seguinte)', async () => {
+  run(ARMA654);
+  const H = ['06:00', '08:00', '12:00', '18:00', '20:00', '21:00', '22:00', '23:00', '23:30'], N = ['00:00', '00:30', '01:00', '02:00', '03:00', '05:00', '06:00', '07:00', '09:00'];
+  const erros = []; let pares = 0, menor = 0;
+  const mn = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3));
+  try {
+    for (const ha of H) for (const hn of N) for (const dois of [false, true]) {
+      const ant = Z654Q({ horarios: dois ? ['08:00', ha].filter((x, i, a) => a.indexOf(x) === i).sort() : [ha], continuo: false, dataFim: HOJE654, trocadoPor: 'mcr_t_ci_1_20261010', estoque: null });
+      const nov = Z654Q({ horarios: dois ? ['08:00', hn].filter((x, i, a) => a.indexOf(x) === i).sort() : [hn], dataInicio: AMANHA654, continuacaoDe: 'ci_1' });
+      ctx.__fq = await filaE654({ ci_1: ant, mcr_t_ci_1_20261010: nov }, 9);
+      ctx.__fq.forEach((e, i) => {
+        if (e.itemId !== 'ci_1') return; pares++;
+        const tN = run(`medOntemTeto(__fq[${i}], __fq)`) / 60000, tB = run(`__tetoBase654(__fq[${i}], __fq)`) / 60000;
+        const metade = (1440 - mn(e.horario) + Math.min.apply(null, nov.horarios.map(mn))) / 2;
+        if (Math.abs(tN - Math.min(tB, metade)) > 1e-6) erros.push(ha + '→' + hn + ' ' + e.horario + ': hoje ' + tN + ', base ' + tB + ', metade ' + metade);
+        if (tN < tB) menor++;
+      });
+    }
+  } finally { run(SOLTA654); }
+  console.log('      ' + pares + ' doses do antigo; teto menor que o da base em ' + menor);
+  igual([erros, pares > 200, menor > 20], [[], true, true]);
+});
+provaAsync('6.54 QA2 RG4 (N1) — o item novo suspenso pela veterinária ou parado antes de começar: a última dose do antigo volta ao teto da 6.47 (3 h) e a das 22:00 atrasada ainda toca às 00:20, como na base; com o novo ativo, 75 min', async () => {
+  run(ARMA654);
+  const res = {};
+  try {
+    for (const caso of ['ativo', 'suspenso', 'parado', 'apagado']) {
+      const ant = Z654Q({ horarios: ['22:00'], continuo: false, dataFim: HOJE654, trocadoPor: 'mcr_t_ci_1_20261010', estoque: null });
+      const nov = Z654Q({ horarios: ['00:30'], dataInicio: AMANHA654, continuacaoDe: 'ci_1' });
+      if (caso === 'suspenso') Object.assign(nov, { suspenso: true, suspensoPor: 'Dra. Teste' });
+      if (caso === 'parado') Object.assign(nov, { continuo: false, dataFim: HOJE654, paradoEm: { quem: 'Ana Teste', data: HOJE654 } });
+      const itens = caso === 'apagado' ? { ci_1: ant } : { ci_1: ant, mcr_t_ci_1_20261010: nov };
+      ctx.__fq = await filaE654(itens, 9); ctx.__lq = {};
+      const t = T654Q(10, 20);
+      res[caso] = { teto: run('medOntemTeto(__fq[0], __fq)') / 60000, toca0020: pendN654(false, HOJE654, t), base0020: pendN654(true, HOJE654, t), amanha: (await filaE654(itens, 10)).length };
+    }
+  } finally { run(SOLTA654); }
+  console.log('      ' + JSON.stringify(res));
+  igual([res.ativo.teto, res.ativo.toca0020, res.ativo.amanha], [75, 0, 1], 'a troca normal: 75 min, e amanhã o novo toca');
+  igual([res.suspenso.teto, res.suspenso.toca0020, res.suspenso.base0020, res.suspenso.amanha], [180, 1, 1, 0], 'novo suspenso: o teto de sempre, e a das 22:00 atrasada (a última) toca às 00:20, como na base');
+  igual([res.parado.teto, res.parado.toca0020, res.parado.base0020, res.parado.amanha], [180, 1, 1, 0], 'novo parado antes de começar: idem');
+  igual([res.apagado.teto, res.apagado.toca0020], [180, 1], 'novo apagado: 3 h');
+});
+prova('6.54 QA2 RG11 — «perto» com dois horários: 08:00 e 22:00 → 00:30 e 12:00 pede «Confirmei com a veterinária» (a última dose de hoje é a das 22:00)', () => {
+  const r = REGRA654({ antes: ['08:00', '22:00'], depois: ['00:30', '12:00'], dadosHoje: ['08:00'], agoraMin: 600, hoje: HOJE654, item: Z654Q({ horarios: ['08:00', '22:00'] }) });
+  igual([r.perto && r.perto.de, r.perto && r.perto.para, r.perto && r.perto.darAte], ['22:00', '00:30', '23:15']);
+});
+prova('6.54 QA2 RG5 (N2) — a troca tem id próprio (mcr_t_): a troca de um remédio novo não sobrescreve outro remédio novo de mesmo nome; id da troca ocupado por outro remédio barra na conferência, na gravação e no «Salvar agenda»', () => {
+  igual([run(`mcrIdTroca('mcr_n_probiotico_20261010', '2026-10-11')`), run(`mcrIdNovo('Probiótico', '2026-10-11')`)], ['mcr_t_n_probiotico_20261010_20261011', 'mcr_n_probiotico_20261011']);
+  const P1 = Z654Q({ nome: 'Probiótico', u: 'sachê', horarios: ['20:00'], dataInicio: AMANHA654, estoque: { modo: 'naocontavel', nivel: 'cheio' } });
+  const P2 = Z654Q({ nome: 'Probiótico', q: '2', u: 'sachê', horarios: ['12:00'], dataInicio: ISO654Q(11), estoque: { modo: 'naocontavel', nivel: 'cheio' } });
+  const itens = { mcr_n_probiotico_20261010: P1, mcr_n_probiotico_20261011: P2 }, LOG = { 'mcr_n_probiotico_20261010_20-00': { quem: 'W' } };
+  abre654Q(itens, { hoje: AMANHA654, log: LOG }); run(`__M.meds.mcr_n_probiotico_20261010={acao:'horario', horarios:['21:00'], vale:'amanha'};`);
+  ctx654Q(itens, { hoje: AMANHA654, log: LOG, min: 21 * 60 + 30 });
+  igual(run('mcrConferirAntes(__M, __Ci)'), []);
+  const G = run('mcrMontar(__M, __Ci)');
+  igual([G.novosIds, A654 + 'mcr_n_probiotico_20261011' in G.up], [['mcr_t_n_probiotico_20261010_20261011'], false]);
+  const depois = aplica654Q(itens, G.up);
+  igual([depois.mcr_n_probiotico_20261011.q, depois.mcr_n_probiotico_20261011.horarios, depois.mcr_t_n_probiotico_20261010_20261011.horarios], ['2', ['12:00'], ['21:00']], 'o Probiótico de 2 sachês às 12:00 continua; a troca do outro tem o nó dela');
+  // o id da troca ocupado por OUTRO remédio (não a continuação deste): não grava
+  const IT = { ci_1: Z654Q(), mcr_t_ci_1_20261010: Z654Q({ nome: 'Outro', horarios: ['10:00'], continuacaoDe: 'ci_9' }) }, L1 = { 'ci_1_08-00': { quem: 'W' } };
+  abre654Q(IT, { log: L1 }); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'};`); ctx654Q(IT, { log: L1, min: 600 });
+  assert.ok(run('mcrConferirAntes(__M, __Ci)').some((f) => /já existe outro remédio na agenda no lugar do horário novo/.test(f)));
+  const G2 = run('mcrMontar(__M, __Ci)');
+  igual([G2.recusas.length, A654 + 'mcr_t_ci_1_20261010' in G2.up, A654 + 'ci_1/trocadoPor' in G2.up], [1, false, false], 'a rede: nada da troca é gravado');
+  ctx.__fm = { ci_1: Z654Q({ horarios: ['09:00'] }), mcr_t_ci_1_20261010: IT.mcr_t_ci_1_20261010 }; ctx.__pv = JSON.parse(JSON.stringify(IT));
+  const r = run(`mcrAgendaRegua(__fm, __pv, {'ci_1_08-00':{quem:'W'}}, '${HOJE654}', 600, 'Dra. Teste', 'x', 1)`);
+  igual([r.itens.ci_1.horarios, Object.keys(r.novos)], [['08:00'], []]);
+  // a mesma troca gravada por duas pessoas (a continuação deste remédio): não barra (cai no mesmo nó, A8)
+  const IT3 = { ci_1: Z654Q(), mcr_t_ci_1_20261010: Z654Q({ horarios: ['09:00'], dataInicio: AMANHA654, continuacaoDe: 'ci_1' }) };
+  abre654Q({ ci_1: Z654Q() }, { log: L1 }); run(`__M.meds.ci_1={acao:'horario', horarios:['09:00'], vale:'amanha'};`); ctx654Q(IT3, { log: L1, min: 600 });
+  igual(run('mcrIdTrocaOcupado(__Ci.itens, "mcr_t_ci_1_20261010", "ci_1")'), false);
+});
+prova('6.54 QA2 RG5b (N3) — o remédio novo PARADO no mesmo dia: lançar de novo com o mesmo nome vale, com outro id (…_2), e o parado fica como está; suspenso pela veterinária, a tela diz que só ela reativa', () => {
+  const PZ = Z654Q({ nome: 'Probiótico', u: 'sachê', horarios: ['20:00'], dataInicio: AMANHA654, continuo: false, dataFim: HOJE654, paradoEm: { quem: 'Ana Teste', data: HOJE654 }, estoque: { modo: 'naocontavel', nivel: 'cheio' } });
+  const itens = { mcr_n_probiotico_20261010: PZ };
+  abre654Q(itens); run(`__M.novos=[${JSON.stringify(NOVO654Q({ horarios: ['21:00'] }))}];`);
+  igual(run('mcrValidar(__M, 600)'), [], 'nada barra');
+  ctx654Q(itens, { min: 600 }); igual(run('mcrConferirAntes(__M, __Ci)'), []);
+  const G = run('mcrMontar(__M, __Ci)');
+  igual([G.novosIds, A654 + 'mcr_n_probiotico_20261010' in G.up], [['mcr_n_probiotico_20261010_2'], false]);
+  const SZ = Object.assign({}, PZ, { suspenso: true, suspensoPor: 'Dra. Teste', continuo: true }); delete SZ.paradoEm; delete SZ.dataFim;
+  abre654Q({ mcr_n_probiotico_20261010: SZ }); run(`__M.novos=[${JSON.stringify(NOVO654Q({ horarios: ['21:00'] }))}];`);
+  assert.ok(run('mcrValidar(__M, 600)').some((f) => /foi suspenso pela veterinária \(Dra\. Teste\)\. Só ela reativa, no Cuidado Vet/.test(f)));
+});
+provaAsync('6.54 QA2 RG10 (N4) — corrida de verdade (mcrGravar): «Parou — agora» e a troca 20:00 → 21:00 relidas antes de qualquer gravação; a trava da agenda deixa passar só a primeira, a outra diz o que fazer; o remédio parado não volta amanhã', async () => {
+  const IT = { ci_1: Z654Q({ horarios: ['08:00', '20:00'] }) }, LOG = { 'ci_1_08-00': { quem: 'W' } };
+  ctx.__B = banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', _ts: 5, itens: IT } }, 'medicacao-log': { [HOJE654]: { [KP654]: LOG } } } });
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654G);
+  try {
+    abreG654Q('pa'); run(`MCR.log=${JSON.stringify(LOG)}; MCR.meds.ci_1={acao:'parou', parou:'agora'}; __XA654=MCR;`);
+    abreG654Q('tb'); run(`MCR.log=${JSON.stringify(LOG)}; MCR.meds.ci_1={acao:'horario', horarios:['08:00','21:00'], vale:'amanha'}; MCR.quem='Rita Teste'; __XB654=MCR;`);
+    await run('MCR=__XA654; __pA654=mcrGravar(); MCR=__XB654; __pB654=mcrGravar(); Promise.all([__pA654, __pB654])'); await volta654();
+    const it = ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens;
+    igual([run('__XA654.etapa'), run('__XB654.etapa'), ctx.__B.updates().length, ctx.__B.log.filter((x) => x[0] === 'tx').length], ['salvo', 'editar', 1, 2]);
+    assert.ok(/Os remédios de Palito mudaram agora há pouco, em outro aparelho\. Nada foi salvo/.test(run('__XB654.erro')), run('__XB654.erro'));
+    igual([Object.keys(it), it.ci_1.horarios, it.ci_1.dataFim, !!it.ci_1.paradoEm], [['ci_1'], ['08:00'], HOJE654, true]);
+    igual(await fila654Q(it, 10), [], 'amanhã: nada (o parado não volta pelo item da troca)');
+  } finally { run(SOLTA654G); run(SOLTA654); }
+});
+provaAsync('6.54 QA2 — a trava da agenda (N4): só a mudança de comida não trava; o carimbo vazio (agenda antiga) passa; a agenda mudada no meio por outra porta (o «Salvar agenda», a veterinária) barra', async () => {
+  ctx.__B = banco654({ auaulandia: { 'medicacao-agenda': { [KP654]: { _ts: 7 } } } });
+  run('__bkT654=DB; DB=__B;');
+  try {
+    igual([await run(`mcrTravaAgenda('auaulandia/medicacao-agenda/${KP654}/_ts', 7, 99)`), ctx.__B.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts')], [true, 99]);
+    igual([await run(`mcrTravaAgenda('auaulandia/medicacao-agenda/${KP654}/_ts', 7, 100)`), ctx.__B.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts')], [false, 99]);
+    igual(await run(`mcrTravaAgenda('auaulandia/medicacao-agenda/outra/_ts', null, 1)`), true);
+  } finally { run('DB=__bkT654;'); }
+});
+prova('6.54 QA2 (T10) — «Parou — agora» às 00:30 com a dose de ontem das 22:00 JÁ DADA: nada de "dose de ontem" na pergunta, no resumo ou nos avisos', () => {
+  const IT = { ci_1: Z654Q({ horarios: ['22:00'] }) }, LO = { 'ci_1_22-00': { quem: 'W' } };
+  abre654Q(IT, { hoje: ISO654Q(10), logOntem: LO }); run(`__M.meds.ci_1={acao:'parou', parou:'agora'};`);
+  igual(run(`mcrOntemFaltam(__M.itens.ci_1, 'ci_1', '${ISO654Q(10)}', __M.logOntem, 30)`), []);
+  ctx654Q(IT, { hoje: ISO654Q(10), min: 30, logOntem: LO });
+  const G = run('mcrMontar(__M, __Ci)');
+  assert.ok(!/ontem/.test(G.frases.join(' ') + ' ' + G.avisosTela.join(' ')), G.frases.join(' | ') + ' || ' + G.avisosTela.join(' | '));
+  run(ARMA654); relogio647(T654Q(10, 30));
+  try { assert.ok(!/ontem/.test(run(`mcrRemedioHTML(__M, 'ci_1')`))); } finally { run(SOLTA654); }
+});
+// ================================================================== 6.54 — 4ª rodada: o formulário velho do «Salvar agenda» e da Ficha › Medicamentos (conferência final do QA, F3)
+console.log('\n6.54 — conferência final: o «Salvar agenda» e a Ficha › Medicamentos abertos antes de uma troca (ou de um «Parou») feita em outro aparelho não revivem o remédio antigo');
+const ANTES654R = () => ({ ci_1: Z654Q() });                  // Zenrelia 08:00, uso contínuo (o formulário de antes)
+const LOG654R = { 'ci_1_08-00': { quem: 'W' } };
+const BANCO654R = () => banco654({ auaulandia: { estadias: { e1: EST654() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', _ts: 50, itens: ANTES654R() } }, 'medicacao-log': { [HOJE654]: { [KP654]: LOG654R } } } });
+// A mudança feita pela tela nova em OUTRO aparelho (troca 08:00 → 09:00, ou «Parou — agora»): a escrita do app aplicada no banco.
+const OUTRO654R = (med) => { abre654Q(ANTES654R(), { log: LOG654R, aid: 'outro' }); ctx.__md654 = med; run('__M.meds.ci_1=__md654;'); ctx654Q(ANTES654R(), { log: LOG654R, min: 600 }); ctx.__B.ref().update(run('mcrMontar(__M, __Ci)').up); };
+const itens654R = () => ctx.__B.s.auaulandia['medicacao-agenda'][KP654].itens;
+const espera654R = async () => { for (let i = 0; i < 4; i++) await volta654(); };
+const ARMA654R = `__bkR654={ce:canEditMed, ch:currentHosp, co:coletarMedAgendaForm, rm:renderMedAgenda, ca:carregarAgendaMedTodos, ge:document.getElementById, au:audit};
+  canEditMed=function(){ return true; }; currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; renderMedAgenda=function(){}; audit=function(){};
+  __stS654={style:{}, textContent:''}; document.getElementById=function(id){ return id==='mag-status'?__stS654:{style:{}, value:'', textContent:'', innerHTML:''}; }; DB=__B;`;
+const SOLTA654R = 'canEditMed=__bkR654.ce; currentHosp=__bkR654.ch; coletarMedAgendaForm=__bkR654.co; renderMedAgenda=__bkR654.rm; carregarAgendaMedTodos=__bkR654.ca; document.getElementById=__bkR654.ge; audit=__bkR654.au;';
+provaAsync('6.54 RG14 (conferência final, F3) — «Salvar agenda» com o formulário aberto ANTES da troca feita em outro aparelho: a trava da agenda não grava ("A agenda de Palito mudou em outro aparelho…"), o antigo continua terminando hoje e, no sábado, só toca o novo (09:00); fechado e aberto de novo, grava, e o 2º «Salvar» na mesma tela também', async () => {
+  ctx.__B = BANCO654R();
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654R);
+  try {
+    run('carregarMedAgenda()'); await espera654R();
+    const lido654 = run('typeof MED_AGENDA_TS!=="undefined"?JSON.parse(JSON.stringify(MED_AGENDA_TS)):null');
+    OUTRO654R({ acao: 'horario', horarios: ['09:00'], vale: 'amanha' });
+    // sem reabrir, a veterinária muda só a observação e toca «Salvar agenda» (o formulário velho: «uso contínuo»)
+    ctx.__antes654 = ANTES654R();
+    run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(__antes654)); o.ci_1.obs='dar com comida'; return o; };`);
+    run('salvarMedAgenda()'); await espera654R();
+    let it = itens654R();
+    igual(await fila654Q(it, 10), ['mcr_t_ci_1_20261010@09:00'], 'sábado: só a Zenrelia das 09:00 (sem a trava, tocavam a das 08:00 e a das 09:00: dose em dobro)');
+    igual(run('__stS654.textContent'), 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+    igual([it.ci_1.continuo, it.ci_1.dataFim, 'obs' in it.ci_1, !!it.ci_1.estoque, it.ci_1.trocadoPor], [false, HOJE654, false, false, 'mcr_t_ci_1_20261010'], 'nada gravado por cima da troca');
+    igual(lido654, { key: KP654, ts: 50, lido: true }, 'o carimbo que o formulário leu');
+    // fechar e abrir de novo: grava; o 2º «Salvar» na mesma tela não fica preso (relê o carimbo depois de gravar)
+    relogio647(T654(9, 10, 5)); run(ARMA654R); run('carregarMedAgenda()'); await espera654R();
+    run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); o.mcr_t_ci_1_20261010.obs='dar com comida'; return o; };`);
+    run('salvarMedAgenda()'); await espera654R();
+    relogio647(T654(9, 10, 6));    // o 2º «Salvar» um minuto depois: o carimbo que ele precisa ver é o que o 1º gravou
+    assert.ok(/^✅ Agenda de medicação salva\./.test(run('__stS654.textContent')), run('__stS654.textContent'));
+    run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); o.mcr_t_ci_1_20261010.obs='dar com comida, de manhã'; return o; };`);
+    run('salvarMedAgenda()'); await espera654R();
+    it = itens654R();
+    assert.ok(/^✅ Agenda de medicação salva\./.test(run('__stS654.textContent')), run('__stS654.textContent'));
+    igual([it.mcr_t_ci_1_20261010.obs, it.ci_1.continuo, it.ci_1.dataFim], ['dar com comida, de manhã', false, HOJE654]);
+    igual(await fila654Q(it, 10), ['mcr_t_ci_1_20261010@09:00'], 'sábado: continua só a das 09:00');
+  } finally { run(SOLTA654R); run(SOLTA654); }
+});
+provaAsync('6.54 RG14b — o mesmo com o «Parou — agora» feito em outro aparelho: o «Salvar agenda» velho não grava, e o remédio parado não volta a tocar amanhã; um «Salvar agenda» normal (sem nada no meio) grava como antes', async () => {
+  ctx.__B = BANCO654R();
+  run(ARMA654); relogio647(T654(9, 10, 0)); run(ARMA654R);
+  try {
+    run('carregarMedAgenda()'); await espera654R();
+    OUTRO654R({ acao: 'parou', parou: 'agora' });
+    ctx.__antes654 = ANTES654R();
+    run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(__antes654)); o.ci_1.obs='dar com comida'; return o; };`);
+    run('salvarMedAgenda()'); await espera654R();
+    const it = itens654R();
+    igual(await fila654Q(it, 10), [], 'amanhã: nada (sem a trava, o parado voltava a tocar)');
+    igual(run('__stS654.textContent'), 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+    igual([it.ci_1.continuo, it.ci_1.dataFim, !!it.ci_1.paradoEm], [false, HOJE654, true]);
+    // um «Salvar agenda» normal: formulário lido, nada no meio, grava (e o carimbo anda)
+    ctx.__B = BANCO654R(); run(ARMA654R); run('carregarMedAgenda()'); await espera654R();
+    run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); o.ci_1.obs='dar com comida'; return o; };`);
+    run('salvarMedAgenda()'); await espera654R();
+    assert.ok(/^✅ Agenda de medicação salva\./.test(run('__stS654.textContent')), run('__stS654.textContent'));
+    igual([itens654R().ci_1.obs, itens654R().ci_1.continuo, ctx.__B.s.auaulandia['medicacao-agenda'][KP654]._ts !== 50, run('MED_AGENDA_TS.ts') === ctx.__B.s.auaulandia['medicacao-agenda'][KP654]._ts], ['dar com comida', true, true, true]);
+  } finally { run(SOLTA654R); run(SOLTA654); }
+});
+provaAsync('6.54 RG14c — Ficha › Medicamentos aberta ANTES da troca feita em outro aparelho: o «Salvar medicamentos» velho não grava (a mesma trava); aberta de novo, grava', async () => {
+  ctx.__B = BANCO654R();
+  run(ARMA654); relogio647(T654(9, 10, 0));
+  run(`__bkF654={pa:pelAtual, mk:medChaveDoPel, fd:fmedDesenhar, fc:fmedColetar, zp:zPergunta, ge:document.getElementById, pe:fmedPodeEditar, au:audit, ca:carregarAgendaMedTodos, pn:pelNome, pg:pelGet, ml:medLinhaDoPel};
+    pelAtual={n:'Palito'}; medChaveDoPel=function(){ return '${KP654}'; }; fmedDesenhar=function(){}; zPergunta=function(){ return Promise.resolve(true); }; fmedPodeEditar=function(){ return true; };
+    audit=function(){}; pelNome=function(){ return 'Palito'; }; pelGet=function(){ return 'Gabi Teste'; }; medLinhaDoPel=function(){ return ''; };
+    __stF654={style:{}, textContent:''}; document.getElementById=function(id){ return id==='fmed-status'?__stF654:{style:{}, innerHTML:'', value:'', textContent:''}; }; FMED_KEY=''; FMED_CARREGOU=false; DB=__B;`);
+  try {
+    run('fmedRender()'); await espera654R();
+    const lidoF654 = run('[FMED_CARREGOU, typeof FMED_TS_LIDO!=="undefined"?FMED_TS_LIDO:null]');
+    OUTRO654R({ acao: 'horario', horarios: ['09:00'], vale: 'amanha' });
+    ctx.__antes654 = ANTES654R();
+    run(`fmedColetar=function(){ var o=JSON.parse(JSON.stringify(__antes654)); o.ci_1.q='2'; o.ci_1.dataInicio='2026-10-05'; return o; };`);
+    await run('fmedSalvar()'); await espera654R();
+    let it = itens654R();
+    igual(await fila654Q(it, 10), ['mcr_t_ci_1_20261010@09:00'], 'sábado: só a das 09:00 (sem a trava, a ficha velha revivia a das 08:00)');
+    igual(run('__stF654.textContent'), 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+    igual([it.ci_1.continuo, it.ci_1.q, it.ci_1.dataFim, lidoF654], [false, '1', HOJE654, [true, 50]]);
+    run(`document.getElementById=function(id){ return id==='fmed-status'?__stF654:{style:{}, innerHTML:'', value:'', textContent:''}; }; DB=__B; FMED_CARREGOU=false;`);
+    run('fmedRender()'); await espera654R();
+    run(`fmedColetar=function(){ var o=JSON.parse(JSON.stringify(FMED_ITENS)); Object.keys(o).forEach(function(k){ o[k].dataInicio=o[k].dataInicio||'2026-10-05'; }); o.mcr_t_ci_1_20261010.q='2'; return o; };`);
+    await run('fmedSalvar()'); await espera654R();
+    assert.ok(/^✅ Medicamentos salvos/.test(run('__stF654.textContent')), run('__stF654.textContent'));
+    igual(itens654R().mcr_t_ci_1_20261010.q, '2');
+  } finally { run('pelAtual=__bkF654.pa; medChaveDoPel=__bkF654.mk; fmedDesenhar=__bkF654.fd; fmedColetar=__bkF654.fc; zPergunta=__bkF654.zp; document.getElementById=__bkF654.ge; fmedPodeEditar=__bkF654.pe; audit=__bkF654.au; carregarAgendaMedTodos=__bkF654.ca; pelNome=__bkF654.pn; pelGet=__bkF654.pg; medLinhaDoPel=__bkF654.ml; FMED_KEY=""; FMED_CARREGOU=false;'); run(SOLTA654); }
+});
+prova('6.54 — redesenho da tela (Chromium, 4ª rodada): o "change" de um campo redesenha 300 ms depois (o toque no botão chega antes e não se perde); um redesenho pedido no meio de outro vira um redesenho logo depois, sem erro', () => {
+  run(`__bkRd654={st:setTimeout, ct:clearTimeout, tl:mcrTela, M:MCR}; __tmRd=[]; __clRd=[]; setTimeout=function(f,ms){ __tmRd.push({f:f, ms:ms}); return __tmRd.length; }; clearTimeout=function(t){ __clRd.push(t); };
+    __nRd=0; __telaRd={}; Object.defineProperty(__telaRd, 'innerHTML', {set:function(v){ __nRd++; if(__nRd===1) mcrRender(); }, get:function(){ return ''; }}); mcrTela=function(){ return __telaRd; };`);
+  try {
+    TELA654(); run('MCR=__M; __mcrRenderLogoT=null;');
+    run('mcrRenderLogo();'); igual(run('__tmRd.map(function(t){ return t.ms; })'), [300], 'o change pede o redesenho para daqui a 300 ms');
+    run('mcrRender();');
+    igual([run('__clRd.length'), run('__nRd'), run('__tmRd.map(function(t){ return t.ms; })')], [1, 1, [300, 0]], 'o redesenho de agora cancela o pendente; o pedido do meio (dentro da troca do HTML) vira um redesenho depois');
+    run('__tmRd[1].f();'); igual(run('__nRd'), 2, 'e ele acontece');
+  } finally { run('setTimeout=__bkRd654.st; clearTimeout=__bkRd654.ct; mcrTela=__bkRd654.tl; MCR=__bkRd654.M; __mcrRenderLogoT=null; __mcrRenderAgora=false; __mcrRenderDeNovo=false;'); }
+});
+// ================================================================== 6.54 MC8 — a «Trocar a ficha» (6.53) leva os remédios da 6.54
+// MC8 (5ª rodada): a 6.54 cria a troca por datas ("mcr_t_…", com continuacaoDe) e o remédio novo ("mcr_n_…", no rastro da
+// estadia). A troca de ficha da 6.53 só levava o "ci_…" nascido no check-in: o resto ficava na ficha errada, tocando no
+// FILHOt errado e faltando no certo. O palco: o Palito da Bia Nova (Spitz, cliente nova) lançado na ficha do Palito da
+// Gabi Teste (Schnauzer, aluno do Day Care). Os remédios da 6.54 são gravados pelo código de verdade (mcrMontar).
+const TSM8 = new Date(2026, 9, 7, 14, 0, 0).getTime();
+const IDM8 = pid653(TSM8, 'Palito000001');
+const DEM8 = { refKey: KP654, nome: 'Palito', tutor: 'Gabi Teste', raca: 'Schnauzer' };
+const PARAM8 = { refKey: 'palito__bia nova', nome: 'Palito', tutor: 'Bia Nova', raca: 'Spitz' };
+const ZM8 = 'ci_' + (TSM8 - 600000) + '_zz01';                         // a Zenrelia, nascida no check-in desta hospedagem
+const ZTM8 = 'mcr_t_' + ZM8 + '_20261010';                             // a Zenrelia às 09:00 a partir de 10/10 (troca por datas)
+const PRM8 = 'mcr_n_probiotico_20261008', VMM8 = 'mcr_n_vermifugo_20261008';   // remédios novos desta hospedagem (o vermífugo parou)
+const APM8 = 'fmn_1690000000000_ap1', APTM8 = 'mcr_t_' + APM8 + '_20261010';  // o Apoquel da ficha do Palito aluno e a troca dele
+const COM8 = 'mcr_n_colirio_20261007';                                  // remédio novo de OUTRA hospedagem do Palito aluno
+const DESTAM8 = [ZM8, ZTM8, PRM8, VMM8].sort(), FICAM8 = [APM8, APTM8, COM8].sort();
+const AGM8 = `auaulandia/medicacao-agenda/${KP654}/itens`;
+const ESTM8 = () => Object.assign(EST654(), { entrada: '2026-10-07', saida: '2026-10-12', _ts: TSM8, origem: 'checkin', criado_por: 'Consultora Teste',
+  medicacao: [{ nome: 'Zenrelia', tipo: 'medicamento', q: '1', u: 'comprimido', horarios: ['08:00'], origem: 'tutor', estoque: { modo: 'contavel', inicial: 20 }, continuo: true }] });
+const OUTRAM8 = () => Object.assign(EST654(), { entrada: '2026-10-07', saida: '2026-10-08', status: 'finalizada', _ts: TSM8 + 3600000, medicacao: [] });
+const AGENDAM8 = () => ({
+  [ZM8]: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, origem: 'tutor', tipo: 'medicamento', dataInicio: '2026-10-07',
+    estoque: { modo: 'contavel', inicial: 20, restante: 18 }, historico: [{ quem: 'Consultora Teste', quando: '07/10 13:50', acao: 'Criou (check-in)' }] },
+  [APM8]: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['12:00'], continuo: true, origem: 'tutor', tipo: 'medicamento',
+    historico: [{ quem: 'Rita Teste', quando: '01/09 10:00', acao: 'Criou (ficha)' }] } });
+const DOSEM8 = (it, nome, hr, u, ts) => ({ itemId: it, nome, q: '1', u, horario: hr, quem: 'Zelosa Teste', ts, avulso: false });
+// A 6.54 de verdade: abre a tela, muda e grava (o "up" multi-caminho de mcrMontar aplicado no banco).
+function opM8(B, id, d, min, aid, muda) {
+  const hoje = ISO654Q(d), ontem = ISO654Q(d - 1);
+  const est = B.get('auaulandia/estadias/' + id), itens = B.get(AGM8) || {};
+  const log = B.get('auaulandia/medicacao-log/' + hoje + '/' + KP654) || {}, logOntem = B.get('auaulandia/medicacao-log/' + ontem + '/' + KP654) || {};
+  ctx.__Ti = { id, est, key: KP654, itens, log, logOntem, mestre: null, podeFicha: false, hoje, aid };
+  run('__M=mcrEstadoInicial(__Ti); __M.motivo="a tutora ligou e corrigiu"; __M.quem="Ana Teste";');
+  ctx.__mudaM8 = muda; run('__M.meds=__mudaM8.meds||{}; __M.novos=__mudaM8.novos||[];');
+  ctx.__Ci = { est, itens, log, logOntem, hoje, agoraMin: min, ts: T654Q(d, min), quandoBR: hoje.slice(8) + '/10 ' + String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'), avisos: {} };
+  const G = run('mcrMontar(__M, __Ci)');
+  igual(G.recusas, [], 'a mudança da 6.54 (' + aid + ') grava');
+  B.ref().update(G.up);
+}
+function cenaM8(o) {
+  o = o || {};
+  const est0 = ESTM8(); if (o.semDoses) est0.conferencia = { concluida: false };
+  const B = banco654({ auaulandia: { estadias: { [IDM8]: est0, eOutraM8: OUTRAM8() }, 'medicacao-agenda': { [KP654]: { nome: 'Palito', tutor: 'Gabi Teste', itens: AGENDAM8() } }, 'medicacao-log': {} } });
+  // 07/10, 19:00 — na OUTRA hospedagem do Palito aluno (a pernoite), o colírio novo
+  opM8(B, 'eOutraM8', 7, 19 * 60, 'o1', { novos: [NOVO654Q({ nome: 'Colírio', tipo: 'medicamento', u: 'gota', horarios: ['20:00'], vale: 'hoje' })] });
+  // 08/10, 10:00 — nesta hospedagem: Probiótico (blister de 10) e Vermífugo (até 10/10), os dois a partir de hoje
+  opM8(B, IDM8, 8, 600, 'm8a', { novos: [NOVO654Q({ nome: 'Probiótico', horarios: ['20:00'], vale: 'hoje', comoVeio: 'blister', contagem: '10' }),
+    NOVO654Q({ nome: 'Vermífugo', tipo: 'medicamento', u: 'comprimido', horarios: ['12:00'], continuo: false, dataFim: '2026-10-10', vale: 'hoje' })] });
+  if (!o.semDoses) B.ref('auaulandia/medicacao-log/2026-10-08/' + KP654).set({ [ZM8 + '_08-00']: DOSEM8(ZM8, 'Zenrelia', '08:00', 'comprimido', T654(8, 8, 2)),
+    [VMM8 + '_12-00']: DOSEM8(VMM8, 'Vermífugo', '12:00', 'comprimido', T654(8, 12, 1)), [PRM8 + '_20-00']: DOSEM8(PRM8, 'Probiótico', '20:00', 'sachê', T654(8, 20, 3)) });
+  if (!o.semDoses) B.ref('auaulandia/medicacao-log/2026-10-09/' + KP654).set({ [ZM8 + '_08-00']: DOSEM8(ZM8, 'Zenrelia', '08:00', 'comprimido', T654(9, 8, 1)) });
+  // 09/10, 08:30 — Zenrelia 08:00 → 09:00 a partir de amanhã (a de hoje já foi dada); o Vermífugo parou agora; o Apoquel (da ficha) → 13:00
+  opM8(B, IDM8, 9, 510, 'm8b', { meds: { [ZM8]: { acao: 'horario', horarios: ['09:00'], vale: 'amanha' }, [VMM8]: { acao: 'parou', parou: 'agora' },
+    [APM8]: { acao: 'horario', horarios: ['13:00'], vale: 'amanha' } } });
+  const ag = B.get(AGM8);
+  igual(Object.keys(ag).sort(), DESTAM8.concat(FICAM8).sort(), 'o palco: os remédios da 6.54 estão na ficha errada');
+  igual([ag[ZM8].trocadoPor, ag[ZTM8].continuacaoDe, ag[ZTM8].dataInicio, !!ag[VMM8].paradoEm, ag[APTM8].continuacaoDe], [ZTM8, ZM8, '2026-10-10', true, APM8]);
+  return B;
+}
+const semearM8 = (B, extra) => {
+  ctx.__seedM8 = B.s.auaulandia;
+  run(`Object.keys(__seedM8).forEach(function(k){ __put653('auaulandia/'+k, __seedM8[k]); });
+    __put653('daycare/cadastro/${KP654}', {n:'Palito', tutor:'Gabi Teste', raca:'Schnauzer'});
+    EST_TODAS={}; EST_TODAS['${IDM8}']=__get653('auaulandia/estadias/${IDM8}');
+    PELUDINHOS=[{n:'Palito', tutor:'Gabi Teste', raca:'Schnauzer'}]; pelCadCache={}; AVISOS_ESTOQUE_CACHE={};
+    ${extra || ''}
+    __esc653=[]; __au653=[]; __tg653=[]; __za653=[];`);
+};
+const abrirTrocaM8 = async () => {
+  run(`hospCorrigirAbrir('${IDM8}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Palito', tutor:'Bia Nova', raca:'Spitz', homonimoOk:true});`);
+  igual(run('HOSP_CORR.alvo&&HOSP_CORR.alvo.refKey'), PARAM8.refKey);
+  await run('hospTrocarPreparar()'); await espera653();
+  assert.strictEqual(run('HOSP_CORR.passo'), 'trocar-confirmar', JSON.stringify(run('HOSP_CORR.msg')));
+};
+const MOTIVO_M8 = 'não é a ficha dele, cliente nova da Bia';
+const agM8 = (k) => run(`__get653('auaulandia/medicacao-agenda/${k}/itens')`) || {};
+const logM8 = (d, k) => run(`__get653('auaulandia/medicacao-log/${d}/${k}')`) || {};
+// O que tem de estar na ficha certa e na errada depois da troca (mesmo id, mesmo estoque, a corrente e o histórico inteiro).
+function confereM8(cena, rotulo) {
+  const agN = agM8(PARAM8.refKey), agA = agM8(KP654), antes = cena.get(AGM8);
+  igual(Object.keys(agN).sort(), DESTAM8, rotulo + ': a ficha certa tem a Zenrelia (a de antes e a das 09:00), o Probiótico e o Vermífugo parado');
+  igual(Object.keys(agA).sort(), FICAM8, rotulo + ': a ficha errada fica só com o que é do Palito aluno');
+  DESTAM8.forEach((id) => {
+    igual(agN[id].estoque === undefined ? null : agN[id].estoque, antes[id].estoque === undefined ? null : antes[id].estoque, rotulo + ': o estoque de ' + id + ' vai como estava');
+    igual(agN[id].historico.slice(0, -1), antes[id].historico || [], rotulo + ': o histórico de ' + id + ' vai inteiro');
+    assert.ok(/Mudou de ficha: veio da ficha de Palito · Schnauzer · Gabi Teste/.test(agN[id].historico.slice(-1)[0].acao), rotulo + ': ' + JSON.stringify(agN[id].historico.slice(-1)));
+    igual(agN[id].trocado_de, KP654);
+  });
+  igual([agN[ZM8].trocadoPor, agN[ZM8].dataFim, agN[ZTM8].continuacaoDe, agN[ZTM8].dataInicio, agN[ZTM8].horarios, agN[VMM8].paradoEm.quem],
+    [ZTM8, '2026-10-09', ZM8, '2026-10-10', ['09:00'], 'Ana Teste'], rotulo + ': a corrente e o parado, como estavam');
+  igual(Object.keys(logM8('2026-10-08', PARAM8.refKey)).sort(), [ZM8 + '_08-00', VMM8 + '_12-00', PRM8 + '_20-00'].sort(), rotulo + ': as doses de 08/10 copiadas');
+  igual(Object.keys(logM8('2026-10-09', PARAM8.refKey)), [ZM8 + '_08-00'], rotulo + ': a de hoje copiada');
+  igual([logM8('2026-10-08', PARAM8.refKey)[PRM8 + '_20-00'].copiado_de, logM8('2026-10-08', PARAM8.refKey)[PRM8 + '_20-00'].quem], [KP654, 'Zelosa Teste']);
+  igual(logM8('2026-10-08', KP654), cena.get('auaulandia/medicacao-log/2026-10-08/' + KP654), rotulo + ': as doses originais ficam (nada apagado)');
+  igual(logM8('2026-10-09', KP654), cena.get('auaulandia/medicacao-log/2026-10-09/' + KP654));
+  return { [PARAM8.refKey]: { itens: agN }, [KP654]: { itens: agA } };
+}
+// O alarme de um dia com os DOIS Palitos na casa (o pior caso: a ficha errada também carregada), "chave|item@hora".
+const filaM8 = async (ags, d, min) => {
+  ctx.__B = banco654({ auaulandia: { 'medicacao-agenda': JSON.parse(JSON.stringify(ags)) } });
+  relogio647(T654Q(d, min));
+  run(`DB=__B; hospedes=[{nome:'Palito', tutor:'Bia Nova', refKey:'${PARAM8.refKey}'}, {nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}];
+    selectedDate=new __RD647(${T654Q(d, min)}); DIA_TELA_AUTO='${ISO654Q(d)}'; APP_DIA_ABERTO='${ISO654Q(d)}'; __log={}; __mo=[]; despMedNaTela=null;`);
+  run('__mlSincM8=medLogHoje; medLogHoje=function(){ return Promise.resolve(__log); }; carregarAgendaMedTodos();'); await volta654(); run('medLogHoje=__mlSincM8;');
+  return run('MED_AGENDA_TODOS.map(function(d){ return d.key+"|"+d.itemId+"@"+d.horario; })').slice().sort();
+};
+const confereAlarmeM8 = async (ags, rotulo) => {
+  run(ARMA654);
+  try {
+    const f9 = await filaM8(ags, 9, 600), f10 = await filaM8(ags, 10, 6 * 60);
+    const de = (f, k) => f.filter((x) => x.indexOf(k + '|') === 0);
+    igual(de(f9, PARAM8.refKey), [PARAM8.refKey + '|' + PRM8 + '@20:00', PARAM8.refKey + '|' + ZM8 + '@08:00'].sort(), rotulo + ': hoje, o Palito da Bia');
+    igual(de(f10, PARAM8.refKey), [PARAM8.refKey + '|' + PRM8 + '@20:00', PARAM8.refKey + '|' + ZTM8 + '@09:00'].sort(), rotulo + ': amanhã, a Zenrelia das 09:00 e o Probiótico tocam na ficha certa');
+    igual(de(f10, KP654), [KP654 + '|' + APTM8 + '@13:00', KP654 + '|' + COM8 + '@20:00'].sort(), rotulo + ': amanhã, na ficha errada, só o que é do Palito aluno');
+    igual(de(f9, KP654), [KP654 + '|' + APM8 + '@12:00', KP654 + '|' + COM8 + '@20:00'].sort(), rotulo + ': hoje, na ficha errada, só o que é do Palito aluno');
+  } finally { run(SOLTA654); }
+};
+
+provaAsync('6.54 MC8 a — «Trocar a ficha» depois da 6.54: a Zenrelia trocada (mcr_t_) e o remédio novo (mcr_n_) vão para a ficha certa com o mesmo id, o mesmo estoque e as doses copiadas; amanhã tocam só na certa; a errada não fica com nada desta hospedagem', async () => {
+  const cena = cenaM8();
+  let ags = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    const plano = run('HOSP_CORR.plano.mover.map(function(x){ return x.id; })').slice().sort();
+    const vai = run('hospCorrHtml(HOSP_CORR)');
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    ags = confereM8(cena, 'MC8 a');
+    const e = run(`__get653('auaulandia/estadias/${IDM8}')`), tk = Object.keys(e.trocaFicha)[0];
+    igual([plano, e.refKey, e.trocaFicha[tk].completa, e.trocaFicha[tk].plano.mover.map((x) => x.id).sort()], [DESTAM8, PARAM8.refKey, true, DESTAM8], 'o plano (o que a tela mostra e a estadia guarda para o «Retomar») leva os quatro');
+    // a tela antes da senha diz o que vai, sem duas linhas iguais da Zenrelia
+    ['Remédio "Zenrelia" (o horário de antes, 08:00, até 09/10; o estoque passou para o horário novo) e 2 doses já dadas, copiadas',
+      'Remédio "Zenrelia" (o horário novo, 09:00, a partir de 10/10, com o estoque)', 'Remédio "Probiótico" (com o estoque) e 1 dose já dada, copiada',
+      'Remédio "Vermífugo" (parou de tomar em 09/10: vai com o histórico) e 1 dose já dada, copiada']
+      .forEach((l) => assert.ok(vai.indexOf('<li>' + l + '</li>') >= 0, 'a tela mostra: ' + l + ' — ' + (vai.match(/<li>Remédio[^<]*<\/li>/g) || []).join(' | ')));
+    assert.ok(!/Apoquel|Colírio/.test((vai.split('Vai para a ficha certa')[1] || '').split('</ul>')[0]), 'o Apoquel e o colírio não aparecem no que vai');
+    // a ordem da 6.53 vale para os quatro: grava na certa, o sinal sai, e só então sai da errada
+    const ordem = run('__esc653').map((x) => x[0] + ' ' + x[1]);
+    const iSinal = ordem.indexOf('set auaulandia/sinais/agenda');
+    DESTAM8.forEach((id) => {
+      const iN = ordem.indexOf('transaction auaulandia/medicacao-agenda/' + PARAM8.refKey + '/itens/' + id), iT = ordem.indexOf('remove ' + AGM8 + '/' + id);
+      assert.ok(iN >= 0 && iSinal > iN && iT > iSinal, id + ': grava na certa, sinal, tira da errada — ' + ordem.join(' | '));
+    });
+    igual(run(`__get653('auaulandia/sinais/agenda').itens`).slice().sort(), DESTAM8, 'o sinal leva os quatro');
+    igual(DESTAM8.map((id) => run(`HOSP_MED_MOVIDOS['${KP654}|${id}']`)), DESTAM8.map(() => PARAM8.refKey), 'o «Dei agora» velho da ficha errada não grava nenhum deles');
+  } finally { run(SOLTA653); }
+  await confereAlarmeM8(ags, 'MC8 a');
+});
+provaAsync('6.54 MC8 b — o que NÃO é desta hospedagem fica: o remédio novo de OUTRA hospedagem da ficha errada (mesmo dentro da janela do check-in) e a troca por datas de um remédio da ficha (que não nasceu nesta hospedagem)', async () => {
+  const cena = cenaM8();
+  // no plano (função pura): os quatro vão; o colírio da outra hospedagem e o Apoquel (com a troca dele) ficam
+  ctx.__plM8 = { id: IDM8, e: cena.get('auaulandia/estadias/' + IDM8), de: DEM8, para: PARAM8, agenda: cena.get(AGM8),
+    logs: { '2026-10-08': cena.get('auaulandia/medicacao-log/2026-10-08/' + KP654), '2026-10-09': cena.get('auaulandia/medicacao-log/2026-10-09/' + KP654) },
+    ficha: {}, fichaNova: {}, auditoria: {}, agora: AGORA653, hoje: DIA653 };
+  const P = run('hospPlanoDaTroca(__plM8)');
+  igual(P.mover.map((x) => x.id).sort(), DESTAM8);
+  FICAM8.forEach((id) => assert.ok(P.naoMexe.indexOf(id) >= 0, id + ' fica na ficha de onde sai'));
+  assert.ok(cena.get(AGM8)[COM8].informado_por.ts >= P.janela.de, 'o colírio da outra hospedagem foi lançado DENTRO da janela do check-in: quem decide é a hospedagem, não a hora');
+  igual(P.copiarLog.map((c) => c.doseId).sort(), [ZM8 + '_08-00', ZM8 + '_08-00', VMM8 + '_12-00', PRM8 + '_20-00'].sort(), 'as doses copiadas são as dos quatro');
+  // a estadia é quem diz: o mesmo colírio, lançado NESTA hospedagem, iria junto
+  ctx.__plM8.e = Object.assign({}, ctx.__plM8.e, { alteracoes: Object.assign({}, ctx.__plM8.e.alteracoes, { x: { remedios: [{ id: COM8, acao: 'novo', novoId: COM8 }] } }) });
+  assert.ok(run('hospPlanoDaTroca(__plM8)').mover.some((x) => x.id === COM8), 'com o rastro desta hospedagem, o colírio iria');
+  // de ponta a ponta: depois da troca, a outra hospedagem e a ficha do Palito aluno continuam com o que é delas
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const agA = agM8(KP654), antes = cena.get(AGM8);
+    FICAM8.forEach((id) => igual(agA[id], antes[id], id + ' ficou como estava na ficha do Palito aluno'));
+    assert.ok(!FICAM8.some((id) => agM8(PARAM8.refKey)[id]), 'nada disso foi para a ficha do Palito da Bia');
+    igual(run(`__get653('auaulandia/estadias/eOutraM8')`), cena.get('auaulandia/estadias/eOutraM8'), 'a outra hospedagem não muda');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.54 MC8 c — a troca que ficou pela metade e o «Retomar» levam os mcr_: com o plano novo; com um plano gravado antes desta regra (só o ci_); e com o ci_ já levado numa metade anterior', async () => {
+  for (const caso of ['plano novo', 'plano antigo', 'plano antigo + ci_ já levado']) {
+    const cena = cenaM8();
+    let ags = null;
+    run(ARMA653);
+    try {
+      semearM8(cena);
+      await abrirTrocaM8();
+      run(`__bkApM8=hospTrocaAplicar; hospTrocaAplicar=function(){ return Promise.reject(new Error('sem internet')); };`);
+      const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+      run('hospTrocaAplicar=__bkApM8;');
+      assert.ok(r.ok === false && /pela metade/.test(r.erro), caso + ': ' + JSON.stringify(r));
+      const tk = Object.keys(run(`__get653('auaulandia/estadias/${IDM8}')`).trocaFicha)[0];
+      igual(Object.keys(agM8(KP654)).sort(), DESTAM8.concat(FICAM8).sort(), caso + ': a agenda ainda não mudou');
+      if (caso !== 'plano novo') {
+        // a troca gravada pela versão de antes (2026-10-09-07): o plano só tinha o ci_
+        run(`__pM8=__get653('auaulandia/estadias/${IDM8}/trocaFicha/${tk}/plano'); __pM8.mover=__pM8.mover.filter(function(x){ return x.id==='${ZM8}'; });
+          __pM8.copiarLog=__pM8.copiarLog.filter(function(c){ return c.dose.itemId==='${ZM8}'; }); __put653('auaulandia/estadias/${IDM8}/trocaFicha/${tk}/plano', __pM8);`);
+      }
+      if (caso === 'plano antigo + ci_ já levado') {
+        // uma metade anterior já levou o ci_ (e as doses dele) e o tirou da errada; os mcr_ ficaram
+        run(`var __zM8=__get653('${AGM8}/${ZM8}'); __zM8.trocado_de='${KP654}'; __zM8.historico=__zM8.historico.concat([{quem:'Gestora Teste', quando:'09/10 10:00', acao:'Mudou de ficha: veio da ficha de Palito · Schnauzer · Gabi Teste na troca de ficha de 09/10, por Gestora Teste'}]);
+          __put653('auaulandia/medicacao-agenda/${PARAM8.refKey}/itens/${ZM8}', __zM8); __put653('${AGM8}/${ZM8}', null);
+          ['2026-10-08','2026-10-09'].forEach(function(d){ var x=__get653('auaulandia/medicacao-log/'+d+'/${KP654}/${ZM8}_08-00'); x.copiado_de='${KP654}';
+            __put653('auaulandia/medicacao-log/'+d+'/${PARAM8.refKey}/${ZM8}_08-00', x); });`);
+      }
+      run(`EST_TODAS['${IDM8}']=__get653('auaulandia/estadias/${IDM8}'); hospCorrigirAbrir('${IDM8}');`);
+      assert.ok(/Retomar a troca de ficha/.test(run('hospCorrHtml(HOSP_CORR)')), caso + ': o cartaz oferece retomar');
+      const r2 = await run(`hospRetomarTroca('${IDM8}', '${tk}')`); await espera653();
+      assert.ok(r2.ok, caso + ': ' + JSON.stringify(r2));
+      ags = confereM8(cena, 'MC8 c (' + caso + ')');
+      const r3 = await run(`hospRetomarTroca('${IDM8}', '${tk}')`); await espera653();
+      assert.ok(r3.ok, caso + ': retomar de novo não estraga nada');
+      igual(Object.keys(logM8('2026-10-08', PARAM8.refKey)).length, 3, caso + ': cada dose copiada uma vez só');
+      igual(run(`__get653('auaulandia/estadias/${IDM8}').trocaFicha['${tk}'].completa`), true);
+    } finally { run(SOLTA653); }
+    await confereAlarmeM8(ags, 'MC8 c (' + caso + ')');
+  }
+});
+provaAsync('6.54 MC8 d — DOIS aparelhos: o tablet do Plantão (lista montada antes da troca) só recebe o sinal; o card e o alarme ficam certos hoje e amanhã (a Zenrelia das 09:00 e o Probiótico tocam na ficha certa; nada desta hospedagem toca na errada)', async () => {
+  const cena = cenaM8();
+  run(ARMA653);
+  try {
+    LIGAR_B653();
+    semearM8(cena);
+    ctxB653.__estBM8 = run(`__get653('auaulandia/estadias/${IDM8}')`);
+    runB653(`__bkSdM8=selectedDate; selectedDate=new Date(${T654(9, 9, 50)}); hospedes=[{nome:'Palito', tutor:'Gabi Teste', raca:'Schnauzer', refKey:'${KP654}', hospede:true, saidaHoje:false}];
+      EST_TODAS={'${IDM8}':__estBM8}; MED_AGENDA_TODOS=[];`);
+    runB653('carregarAgendaMedTodos()'); await espera653(6000);
+    const desta = (al) => al.filter((x) => DESTAM8.indexOf(x.split('|')[1]) >= 0);
+    igual(desta(alarmeB653()).slice().sort(), [KP654 + '|' + PRM8, KP654 + '|' + ZM8].sort(), 'antes: o tablet toca os remédios desta hospedagem na ficha errada');
+    await abrirTrocaM8();
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653(6000);
+    assert.ok(r && r.ok, JSON.stringify(r));
+    igual(runB653("hospedes.map(function(h){ return h.refKey+'|'+h.tutor; })"), [PARAM8.refKey + '|Bia Nova'], 'o card vai para a ficha certa');
+    const hoje = alarmeB653();
+    igual(desta(hoje).slice().sort(), [PARAM8.refKey + '|' + PRM8, PARAM8.refKey + '|' + ZM8].sort(), 'hoje, no tablet: a Zenrelia (dada às 08:00) e o Probiótico das 20:00, na ficha certa');
+    assert.ok(!hoje.some((x) => x.indexOf(KP654 + '|') === 0), 'nada toca na ficha errada para o Palito da Bia: ' + JSON.stringify(hoje));
+    igual([runB653('__sinaisB.length'), runB653(`HOSP_MED_MOVIDOS['${KP654}|${ZTM8}']`), runB653(`HOSP_MED_MOVIDOS['${KP654}|${PRM8}']`)], [2, PARAM8.refKey, PARAM8.refKey]);
+    // amanhã cedo, o tablet recarrega a lista do dia
+    runB653(`selectedDate=new Date(${T654(10, 6, 0)}); MED_AGENDA_TODOS=[]; carregarAgendaMedTodos();`); await espera653(6000);
+    const am = alarmeB653();
+    igual(desta(am).slice().sort(), [PARAM8.refKey + '|' + PRM8, PARAM8.refKey + '|' + ZTM8].sort(), 'amanhã: a Zenrelia das 09:00 e o Probiótico tocam na ficha certa');
+    assert.ok(!am.some((x) => x.indexOf(KP654 + '|') === 0), 'amanhã também nada na errada: ' + JSON.stringify(am));
+  } finally { runB653('if(typeof __bkSdM8!=="undefined"&&__bkSdM8){ selectedDate=__bkSdM8; __bkSdM8=null; }'); SOLTA_B653(); run(SOLTA653); }
+});
+provaAsync('6.54 MC8 e — a ficha certa já tem OUTRO remédio com o mesmo id (o "mcr_n_" é nome + dia): a troca recusa antes de gravar qualquer coisa; o «Retomar» também não tira nada da ficha errada', async () => {
+  const cena = cenaM8();
+  run(ARMA653);
+  try {
+    const seu = { nome: 'Probiótico', q: '2', u: 'sachê', horarios: ['07:00'], continuo: true, origem: 'tutor', historico: [{ quem: 'Rita Teste', quando: '08/10 09:00', acao: 'Criou' }] };
+    ctx.__seuM8 = seu;
+    semearM8(cena, `PELUDINHOS.push({n:'Palito', tutor:'Bia Nova', raca:'Spitz'}); __put653('daycare/cadastro/${PARAM8.refKey}', {n:'Palito', tutor:'Bia Nova', raca:'Spitz'});
+      __put653('auaulandia/medicacao-agenda/${PARAM8.refKey}', {nome:'Palito', tutor:'Bia Nova', itens:{'${PRM8}':__seuM8}});`);
+    run(`hospCorrigirAbrir('${IDM8}', {origem:'hospedes'}); hospTrocarAlvo(1);`); await espera653();
+    igual([run('HOSP_CORR.passo'), run('HOSP_CORR.alvo.refKey'), run('HOSP_CORR.alvo.novo')], ['trocar-confirmar', PARAM8.refKey, false]);
+    const tudoAntes = JSON.stringify(run('__db653'));
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok === false && /já tem outro remédio com o mesmo registro de "Probiótico"/.test(r.erro) && /Nada foi gravado/.test(r.erro), JSON.stringify(r));
+    igual(JSON.stringify(run('__db653')), tudoAntes, 'nada foi gravado: nem a estadia, nem a agenda, nem o sinal');
+    igual(agM8(PARAM8.refKey)[PRM8], seu, 'o remédio do Palito da Bia continua o dele');
+    // a troca pela metade que dá de cara com o choque (ele apareceu depois da conferência): o «Retomar» não mexe na agenda
+    ctx.__tfM8 = { de: DEM8, para: PARAM8, ts: AGORA653, quem: 'Gestora Teste', plano: { mover: run('HOSP_CORR.plano.mover'), copiarLog: [], fichaLevar: {}, fichaTirar: [], fichaVista: {} } };
+    run('__esc653=[];');
+    let erro = '';
+    try { await run(`hospTrocaAplicar('${IDM8}', 'tM8', __tfM8, 'Gestora Teste')`); } catch (x) { erro = String((x && x.message) || x); }
+    assert.ok(/já tem outro remédio com o mesmo registro de "Probiótico"/.test(erro), erro);
+    igual(run('__esc653').filter((x) => x[0] !== 'transaction-desistiu'), [], 'nada gravado, nada tirado');
+    igual(Object.keys(agM8(KP654)).sort(), DESTAM8.concat(FICAM8).sort(), 'a ficha errada continua com tudo (nenhuma dose perdida)');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.54 MC8 f — Excluir a hospedagem lançada por engano (sem prova de que dormiu aqui): o alarme dos remédios da 6.54 desta hospedagem para junto com o do check-in; o Apoquel e o colírio, que não são dela, continuam', async () => {
+  const cena = cenaM8({ semDoses: true });
+  let ags = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`hospCorrigirAbrir('${IDM8}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'excluir', JSON.stringify(run('HOSP_CORR.msg')));
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    const r = await run(`hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const ag = agM8(KP654), antes = cena.get(AGM8);
+    [ZM8, ZTM8, PRM8].forEach((id) => assert.ok(ag[id] && ag[id].paradoEm && /hospedagem excluída/.test(ag[id].paradoEm.motivo) && ag[id].continuo === false && ag[id].dataFim === '2026-10-08', id + ': ' + JSON.stringify(ag[id] && [ag[id].paradoEm, ag[id].dataFim])));
+    igual(ag[VMM8], antes[VMM8], 'o vermífugo já parado fica como estava');
+    FICAM8.forEach((id) => igual(ag[id], antes[id], id + ' (do Palito aluno) continua como estava'));
+    assert.ok(h.indexOf('O alarme destes remédios, lançados nesta hospedagem (no check-in ou depois), para (nada é apagado): Zenrelia, Probiótico, Vermífugo.') >= 0, 'a tela diz quais param (sem repetir a Zenrelia)');
+    ags = { [KP654]: { itens: ag } };
+  } finally { run(SOLTA653); }
+  run(ARMA654);
+  try {
+    const de = (f) => f.filter((x) => x.indexOf(KP654 + '|') === 0);
+    igual(de(await filaM8(ags, 9, 600)), [KP654 + '|' + APM8 + '@12:00', KP654 + '|' + COM8 + '@20:00'].sort(), 'hoje: só o que é do Palito aluno');
+    igual(de(await filaM8(ags, 10, 6 * 60)), [KP654 + '|' + APTM8 + '@13:00', KP654 + '|' + COM8 + '@20:00'].sort(), 'amanhã: a Zenrelia das 09:00 e o Probiótico da hospedagem excluída não tocam');
+  } finally { run(SOLTA654); }
+});
+// ================================================================== 6.54 QA5 — 6ª rodada: a trava pelas portas da 6.53 (C5-1), a corrente longa e o remédio lançado na hospedagem (C5-3)
+// M1, M2 e M3 vêm da conferência final 2 do QA (qa654/regate5.js), com os nomes desta suíte.
+// O formulário do Plantão como o coletarMedAgendaForm devolve (só os campos que ele monta + os que ele preserva do que leu).
+const FORMQ5 = (itens) => { const o = {}; Object.keys(itens || {}).forEach((id) => { const it = itens[id] || {}, f = { nome: it.nome, q: it.q || '', u: it.u, horarios: (it.horarios || []).slice(), tipo: it.tipo || 'medicamento', origem: it.origem || 'tutor' };
+  if (it.local) f.local = it.local; if (it.obs) f.obs = it.obs; if (it.dataInicio) f.dataInicio = it.dataInicio; if (it.continuo) f.continuo = true; else if (it.dataFim) f.dataFim = it.dataFim;
+  if (it.estoque) f.estoque = JSON.parse(JSON.stringify(it.estoque)); if (it.historico) f.historico = it.historico; if (it.paradoEm) f.paradoEm = it.paradoEm; if (it.suspenso) f.suspenso = true;
+  o[id] = f; }); return o; };
+// O «Salvar agenda» de um aparelho que leu a agenda da ficha k ANTES (itens + carimbo) e grava agora, no banco da bancada da 6.53.
+const salvarVelhoQ5 = async (k, itensLidos, tsLido, mexe) => {
+  ctx.__lidQ5 = { k, it: itensLidos, ts: tsLido }; ctx.__mexeQ5 = mexe || null;
+  run(`__bkQ5={ce:canEditMed, ch:currentHosp, co:coletarMedAgendaForm, rm:renderMedAgenda, ge:document.getElementById, it:MED_AGENDA_ITENS, ts:MED_AGENDA_TS};
+    canEditMed=function(){ return true; }; currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:__lidQ5.k}; renderMedAgenda=function(){};
+    __stQ5={style:{}, textContent:''}; document.getElementById=function(id){ return id==='mag-status'?__stQ5:{style:{}, value:'', textContent:'', innerHTML:''}; };
+    MED_AGENDA_ITENS=JSON.parse(JSON.stringify(__lidQ5.it)); MED_AGENDA_TS={key:__lidQ5.k, ts:__lidQ5.ts, lido:true};
+    coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(__formQ5)); if(__mexeQ5) Object.keys(__mexeQ5).forEach(function(id){ Object.assign(o[id], __mexeQ5[id]); }); return o; };`);
+  ctx.__formQ5 = FORMQ5(itensLidos);
+  run('__esc653=[]; salvarMedAgenda();'); await espera653();
+  const st = run('__stQ5.textContent'), esc = run('__esc653').map((x) => x[0] + ' ' + x[1]);
+  run('canEditMed=__bkQ5.ce; currentHosp=__bkQ5.ch; coletarMedAgendaForm=__bkQ5.co; renderMedAgenda=__bkQ5.rm; document.getElementById=__bkQ5.ge; MED_AGENDA_ITENS=__bkQ5.it; MED_AGENDA_TS=__bkQ5.ts;');
+  return { st, esc };
+};
+const tsAgQ5 = (k) => run(`__get653('auaulandia/medicacao-agenda/${k}/_ts')`);
+const destaQ5 = (f, k) => f.filter((x) => x.indexOf(k + '|') === 0);
+
+provaAsync('6.54 QA5 M1 — corrente longa: Zenrelia 08:00 → 09:00 (sexta) → 10:00 (sábado, a troca da troca, mcr_t_<ci>_20261011); Probiótico novo trocado duas vezes (mcr_t_n_…); tudo vai para a ficha certa, e no domingo só tocam as pontas da corrente, na certa', async () => {
+  const cena = cenaM8();
+  cena.ref('auaulandia/medicacao-log/2026-10-10/' + KP654).set({ [ZTM8 + '_09-00']: DOSEM8(ZTM8, 'Zenrelia', '09:00', 'comprimido', T654(10, 9, 1)) });
+  opM8(cena, IDM8, 10, 600, 'm8c', { meds: { [ZTM8]: { acao: 'horario', horarios: ['10:00'], vale: 'amanha' } } });
+  const ZT2 = 'mcr_t_' + ZM8 + '_20261011';
+  const ag0 = cena.get(AGM8);
+  igual([!!ag0[ZT2], ag0[ZT2] && ag0[ZT2].continuacaoDe, ag0[ZTM8].trocadoPor, ag0[ZTM8].dataFim], [true, ZTM8, ZT2, '2026-10-10'], 'a troca da troca não encomprida o id e aponta para o elo de antes');
+  const PT1 = run(`mcrIdTroca('${PRM8}', '2026-10-10')`), PT2 = run(`mcrIdTroca('${PT1}', '2026-10-11')`);
+  igual([PT1, PT2], ['mcr_t_n_probiotico_20261008_20261010', 'mcr_t_n_probiotico_20261008_20261011']);
+  const PR = ag0[PRM8];
+  cena.ref(AGM8 + '/' + PRM8).update({ continuo: false, dataFim: '2026-10-09', trocadoPor: PT1 });
+  cena.ref(AGM8 + '/' + PT1).set(Object.assign({}, PR, { horarios: ['21:00'], dataInicio: '2026-10-10', continuo: false, dataFim: '2026-10-10', continuacaoDe: PRM8, trocadoPor: PT2 }));
+  cena.ref(AGM8 + '/' + PT2).set(Object.assign({}, PR, { horarios: ['22:00'], dataInicio: '2026-10-11', continuacaoDe: PT1 }));
+  const vaoM1 = DESTAM8.concat([ZT2, PT1, PT2]).sort();
+  ctx.__plQ5M1 = { id: IDM8, e: cena.get('auaulandia/estadias/' + IDM8), de: DEM8, para: PARAM8, agenda: cena.get(AGM8), logs: {}, ficha: {}, fichaNova: {}, auditoria: {}, agora: AGORA653, hoje: DIA653 };
+  igual(run('hospPlanoDaTroca(__plQ5M1)').mover.map((x) => x.id).sort(), vaoM1, 'o plano leva as duas correntes inteiras');
+  run(`delete __plQ5M1.agenda['${ZTM8}']; delete __plQ5M1.agenda['${PT1}'];`);
+  igual(run('hospPlanoDaTroca(__plQ5M1)').mover.map((x) => x.id).sort(), vaoM1.filter((x) => x !== ZTM8 && x !== PT1), 'sem o elo do meio, a ponta ainda acha a raiz pelo id');
+  ctx.__agLQ5 = { mcr_t_x_20261010: { continuacaoDe: 'mcr_t_x_20261011' }, mcr_t_x_20261011: { continuacaoDe: 'mcr_t_x_20261010' } };
+  igual(run(`hospMcrDaEstadia(__agLQ5, {}, {})`), [], 'laço: nada vai, nada trava');
+  igual(run(`hospMcrDaEstadia(__agLQ5, {x:1}, {})`), [], 'laço com base: para no laço, não vai (conservador)');
+  ctx.__ag2Q5 = { mcr_n_probiotico_20261008_2: {}, 'mcr_t_n_probiotico_20261008_2_20261010': {} };
+  ctx.__e2Q5 = { alteracoes: { a: { remedios: [{ acao: 'novo', novoId: 'mcr_n_probiotico_20261008_2' }] } } };
+  igual(run('hospMcrDaEstadia(__ag2Q5, {}, __e2Q5)'), ['mcr_n_probiotico_20261008_2', 'mcr_t_n_probiotico_20261008_2_20261010'], 'o …_2 e a troca dele vão');
+  let ags = null, vai = '';
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hospHojeISO=zHojeISO; repHojeISO=zHojeISO; dataKeyAtual=zHojeISO; hospAgora=function(){ return ${T654(10, 12, 0)}; };`);
+    await abrirTrocaM8();
+    igual(run('HOSP_CORR.plano.mover.map(function(x){ return x.id; })').slice().sort(), vaoM1);
+    vai = run('hospCorrHtml(HOSP_CORR)');
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const agN = agM8(PARAM8.refKey), agA = agM8(KP654);
+    igual(Object.keys(agN).sort(), vaoM1, 'a ficha certa recebe as duas correntes');
+    igual(Object.keys(agA).sort(), FICAM8, 'a errada fica só com o que é do Palito aluno');
+    igual(Object.keys(logM8('2026-10-10', PARAM8.refKey)), [ZTM8 + '_09-00'], 'a dose de sábado (do elo do meio) foi copiada');
+    ags = { [PARAM8.refKey]: { itens: agN }, [KP654]: { itens: agA } };
+  } finally { run(SOLTA653); }
+  const lis = (vai.split('Vai para a ficha certa')[1] || '').split('</ul>')[0].match(/<li>[^<]*<\/li>/g) || [];
+  igual(lis.length, new Set(lis).size, 'o cartaz não repete linha');
+  assert.ok(lis.some((l) => /Zenrelia" \(o horário de antes, 09:00, até 10\/10/.test(l)), 'o elo do meio aparece como "o horário de antes, 09:00, até 10/10": ' + lis.join(' | '));
+  run(ARMA654);
+  try {
+    const f11 = await filaM8(ags, 11, 600), f10 = await filaM8(ags, 10, 600);
+    igual(destaQ5(f11, PARAM8.refKey), [PARAM8.refKey + '|' + PT2 + '@22:00', PARAM8.refKey + '|' + ZT2 + '@10:00'].sort(), 'domingo: Zenrelia 10:00 e Probiótico 22:00, na certa');
+    igual(destaQ5(f10, PARAM8.refKey), [PARAM8.refKey + '|' + PT1 + '@21:00', PARAM8.refKey + '|' + ZTM8 + '@09:00'].sort(), 'sábado: Zenrelia 09:00 e Probiótico 21:00, na certa');
+    igual(destaQ5(f11, KP654).concat(destaQ5(f10, KP654)).filter((x) => /Zenrelia|probiotico|zz01/.test(x)), [], 'nada desta hospedagem na errada');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA5 M2 (C5-1) — dois Palitos na casa: depois da «Trocar a ficha», o «Salvar agenda» de um tablet que abriu a agenda da ficha errada ANTES é recusado pela trava e não recria lá os remédios desta hospedagem', async () => {
+  const cena = cenaM8();
+  cena.ref('auaulandia/estadias/eOutraM8').update({ status: 'ativa', saida: '2026-10-12' });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let rel = null, agA = null, agN = null, tsA1 = null;
+  run(ARMA653);
+  try {
+    semearM8(cena, `EST_TODAS['eOutraM8']=__get653('auaulandia/estadias/eOutraM8');`);
+    await abrirTrocaM8();
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    igual(Object.keys(agM8(KP654)).sort(), FICAM8, 'a ficha errada fica com o Apoquel, a troca dele e o colírio da outra hospedagem');
+    tsA1 = tsAgQ5(KP654);
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [APM8]: { obs: 'dar depois do almoço' } });
+    agA = agM8(KP654); agN = agM8(PARAM8.refKey);
+  } finally { run(SOLTA653); }
+  run(ARMA654);
+  let f10 = [];
+  try { f10 = await filaM8({ [PARAM8.refKey]: { itens: agN }, [KP654]: { itens: agA } }, 10, 600); } finally { run(SOLTA654); }
+  const voltou = DESTAM8.filter((id) => agA[id]);
+  assert.ok(!voltou.length, 'o «Salvar agenda» velho recriou na ficha errada ' + voltou.join(', ') + ' — no sábado o alarme do Palito aluno tocaria ' + JSON.stringify(destaQ5(f10, KP654)) + ' (status: ' + rel.st + ')');
+  igual(destaQ5(f10, KP654), [KP654 + '|' + APTM8 + '@13:00', KP654 + '|' + COM8 + '@20:00'].sort(), 'sábado: o Palito aluno só com o que é dele');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  igual(rel.esc.filter((x) => /^(set|update|remove) /.test(x)), [], 'nada gravado pelo formulário velho');
+  assert.ok(tsA1 !== tsA0, 'a troca andou o carimbo da agenda da ficha errada: ' + tsA0 + ' → ' + tsA1);
+});
+provaAsync('6.54 QA5 M3 (C5-1) — Excluir: com dose dada não exclui e não grava nada; sem dose, para só os desta hospedagem numa escrita só (o "parou" e o carimbo), nada é apagado, e o «Salvar agenda» velho depois é recusado e não revive o remédio', async () => {
+  let cena = cenaM8({ semDoses: true });
+  cena.ref('auaulandia/medicacao-log/2026-10-08/' + KP654).set({ [PRM8 + '_20-00']: DOSEM8(PRM8, 'Probiótico', '20:00', 'sachê', T654(8, 20, 3)) });
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`hospCorrigirAbrir('${IDM8}'); hospCorrEscolher('excluir');`); await espera653();
+    const antes = JSON.stringify(run('__db653'));
+    const r = await run(`hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})`); await espera653();
+    assert.ok(r && r.ok === false && /dormiu aqui/.test(r.erro), JSON.stringify(r));
+    igual(JSON.stringify(run('__db653')), antes, 'com a dose do Probiótico: nada gravado');
+  } finally { run(SOLTA653); }
+  cena = cenaM8({ semDoses: true });
+  cena.ref('auaulandia/estadias/eOutraM8').update({ status: 'ativa', saida: '2026-10-12' });
+  cena.ref('auaulandia/medicacao-log/2026-10-01/' + KP654).set({ [APM8 + '_12-00']: DOSEM8(APM8, 'Apoquel', '12:00', 'comprimido', T654(1, 12, 1)) });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let ag = null, rel = null, agV = null, tsA1 = null, escAg = [];
+  run(ARMA653);
+  try {
+    semearM8(cena, `EST_TODAS['eOutraM8']=__get653('auaulandia/estadias/eOutraM8');`);
+    run(`hospCorrigirAbrir('${IDM8}'); hospCorrEscolher('excluir');`); await espera653();
+    run('__esc653=[];');
+    const r = await run(`hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const esc = run('__esc653');
+    igual(esc.filter((x) => x[0] === 'remove' || (x[0] === 'set' && x[2] === null)).map((x) => x[1]), [], 'nada apagado');
+    igual(esc.filter((x) => /medicacao-log/.test(x[1])).map((x) => x[0] + ' ' + x[1]), [], 'o registro de doses não é tocado');
+    escAg = esc.filter((x) => /medicacao-agenda/.test(x[1]) && x[0] !== 'transaction-desistiu');
+    ag = agM8(KP654);
+    igual(Object.keys(ag).sort(), Object.keys(agA0).sort(), 'todos os itens continuam na agenda');
+    [ZM8, ZTM8, PRM8].forEach((id) => { igual(ag[id].historico.slice(0, -1), agA0[id].historico || [], id + ': histórico inteiro + a linha da exclusão'); });
+    FICAM8.forEach((id) => igual(ag[id], agA0[id], id + ' (da outra hospedagem / da ficha) intacto'));
+    igual(run(`__get653('auaulandia/estadias/eOutraM8').status`), 'ativa', 'a outra hospedagem continua ativa');
+    igual(run(`__get653('auaulandia/medicacao-log/2026-10-01/${KP654}')`), cena.get('auaulandia/medicacao-log/2026-10-01/' + KP654), 'o registro de outro dia fica');
+    tsA1 = tsAgQ5(KP654);
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [APM8]: { obs: 'dar depois do almoço' } });
+    agV = agM8(KP654);
+  } finally { run(SOLTA653); }
+  run(ARMA654);
+  let f10 = [], f10v = [];
+  try {
+    f10 = await filaM8({ [KP654]: { itens: ag } }, 10, 600);
+    f10v = await filaM8({ [KP654]: { itens: agV } }, 10, 600);
+  } finally { run(SOLTA654); }
+  igual(destaQ5(f10, KP654), [KP654 + '|' + APTM8 + '@13:00', KP654 + '|' + COM8 + '@20:00'].sort(), 'sábado, depois da exclusão: só o que é do Palito aluno');
+  const revive = [ZTM8, PRM8].filter((id) => f10v.some((x) => x.indexOf('|' + id + '@') > 0));
+  assert.ok(!revive.length, 'o «Salvar agenda» velho reviveu ' + revive.join(', ') + ' na ficha do Palito aluno (status: ' + rel.st + ')');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  assert.ok(tsA1 !== tsA0, 'o Excluir andou o carimbo');
+  igual(escAg.length, 1, 'uma escrita só na agenda: ' + JSON.stringify(escAg.map((x) => x[0] + ' ' + x[1])));
+  assert.ok(escAg[0][2]._ts && Object.keys(escAg[0][2]).some((k) => /^itens\/.+\/paradoEm$/.test(k)), 'o "parou" e o carimbo na mesma escrita: ' + JSON.stringify(Object.keys(escAg[0][2])));
+});
+provaAsync('6.54 QA5 — a recusa por id repetido diz como sair: o que conferir, quem resolve e o que fazer em cada caso', async () => {
+  const cena = cenaM8();
+  run(ARMA653);
+  try {
+    ctx.__seuQ5 = { nome: 'Probiótico', q: '2', u: 'sachê', horarios: ['07:00'], continuo: true, origem: 'tutor' };
+    semearM8(cena, `PELUDINHOS.push({n:'Palito', tutor:'Bia Nova', raca:'Spitz'}); __put653('daycare/cadastro/${PARAM8.refKey}', {n:'Palito', tutor:'Bia Nova', raca:'Spitz'});
+      __put653('auaulandia/medicacao-agenda/${PARAM8.refKey}', {nome:'Palito', tutor:'Bia Nova', itens:{'${PRM8}':__seuQ5}});`);
+    run(`hospCorrigirAbrir('${IDM8}', {origem:'hospedes'}); hospTrocarAlvo(1);`); await espera653();
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    igual(r.erro, 'Nada foi gravado: a ficha de Palito · Spitz · Bia Nova já tem outro remédio com o mesmo registro de "Probiótico" (mesmo nome, começando no mesmo dia). '
+      + 'Para sair, quem resolve é a Gestão: abra a aba Medicamentos das duas fichas e confira se é o mesmo remédio. '
+      + 'Se for, toque em «Remover item» nesse remédio na Agenda de Medicação (Plantão) da ficha de onde a hospedagem sai e troque a ficha de novo. '
+      + 'Se não for, anote a dose e o horário, remova o item da ficha de onde a hospedagem sai, troque a ficha e lance o remédio de novo na ficha certa pela tela «Mudar comida e remédio».');
+  } finally { run(SOLTA653); }
+});
+
+// ---------------------------------------------------------------- C5-3: o remédio lançado durante a hospedagem pela veterinária ou pelo Plantão
+const VETQ5 = 'vet_' + T654(8, 15, 0) + '_ab12', NOVQ5 = 'novo_' + T654(8, 16, 0) + '_cd34';
+const VETTQ5 = 'mcr_t_' + VETQ5 + '_20261010';
+// O palco do MC8 + a Amoxicilina receitada pela veterinária no dia 08 (10:00, até 14/10; a de hoje dada às 09:59, e trocada pela 6.54
+// para 11:00 a partir de amanhã) + o colírio Lacrifilm lançado pelo Plantão no dia 08 (18:00).
+function cenaQ5() {
+  const B = cenaM8();
+  B.ref(AGM8 + '/' + VETQ5).set({ nome: 'Amoxicilina', q: '1', u: 'comprimido', horarios: ['10:00'], continuo: false, dataInicio: '2026-10-08', dataFim: '2026-10-14', origem: 'vet', tipo: 'medicamento',
+    estoque: { modo: 'contavel', inicial: 14, restante: 13 }, historico: [{ quem: 'Dra. Teste', quando: '08/10 15:00', acao: 'Receitou' }] });
+  B.ref(AGM8 + '/' + NOVQ5).set({ nome: 'Colírio Lacrifilm', q: '1', u: 'gota', horarios: ['18:00'], continuo: true, origem: 'tutor', tipo: 'medicamento', historico: [{ quem: 'Wandela Teste', quando: '08/10 16:00', acao: 'Criou' }] });
+  opM8(B, IDM8, 9, 520, 'm8v', { meds: { [VETQ5]: { acao: 'horario', horarios: ['11:00'], vale: 'amanha' } } });
+  B.ref('auaulandia/medicacao-log/2026-10-09/' + KP654 + '/' + VETQ5 + '_10-00').set(DOSEM8(VETQ5, 'Amoxicilina', '10:00', 'comprimido', T654(9, 9, 59)));
+  igual([B.get(AGM8)[VETQ5].trocadoPor, B.get(AGM8)[VETTQ5].continuacaoDe], [VETTQ5, VETQ5], 'o palco: a Amoxicilina trocada pela 6.54');
+  return B;
+}
+const escolherQ5 = (id, v) => run(`hospTrocarEscolher(HOSP_CORR.plano.escolher.map(function(c){ return c.id; }).indexOf('${id}'), '${v}')`);
+provaAsync('6.54 QA5 C5-3 a — remédio lançado durante a hospedagem: o cartaz pergunta um por um (nada marcado) e o «Trocar a ficha» fica travado sem a escolha; «Levar» leva com o mesmo id, o estoque, a troca da 6.54 junto e as doses copiadas; «Deixar» deixa; a escolha vai para o rastro e para o «Conferir»', async () => {
+  const cena = cenaQ5();
+  let ags = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    assert.ok(/Remédios lançados durante esta hospedagem/.test(run('hospCorrHtml(HOSP_CORR)')), 'o cartaz não pergunta nada sobre a Amoxicilina (veterinária) nem o colírio (Plantão): a troca os deixaria na ficha errada, sem aviso; vai: '
+      + JSON.stringify(run('HOSP_CORR.plano.mover.map(function(x){ return x.id; })')));
+    const P0 = run('HOSP_CORR.plano');
+    igual(P0.escolher.map((c) => c.id).sort(), [NOVQ5, VETQ5].sort(), 'a lista da escolha: a Amoxicilina da veterinária e o colírio do Plantão');
+    igual(P0.escolher.map((c) => c.escolha), ['', ''], 'nada marcado');
+    assert.ok(!P0.mover.some((x) => [VETQ5, VETTQ5, NOVQ5].indexOf(x.id) >= 0), 'sem a escolha, nada vai');
+    const h0 = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/Remédios lançados durante esta hospedagem \(não vieram do check-in\): de quem são\?/.test(h0), 'o bloco da escolha aparece');
+    assert.ok(h0.indexOf('"Amoxicilina" — 1 comprimido às 10:00') >= 0 && /Lançado em 08\/10 pela veterinária/.test(h0) && /Lançado em 08\/10 pelo Plantão/.test(h0), 'cada remédio com a dose, o horário e quem lançou');
+    igual((h0.match(/type="radio" name="hospCorrEsc\d+"/g) || []).length, 4, 'duas escolhas para cada remédio');
+    assert.ok(!/name="hospCorrEsc\d+" value="(levar|deixar)" checked/.test(h0), 'nenhuma escolha marcada');
+    assert.ok(/<button type="button" disabled aria-disabled="true"[^>]*>Trocar a ficha<\/button>/.test(h0) && /Falta escolher «Levar para a ficha certa» ou «Deixar onde está» em 2 remédios/.test(h0), 'o «Trocar a ficha» travado e o porquê');
+    const antes = JSON.stringify(run('__db653'));
+    const r0 = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r0 && r0.ok === false && /Escolha «Levar para a ficha certa» ou «Deixar onde está» em cada um dos 2 remédios lançado durante esta hospedagem/.test(r0.erro) && /Nada foi gravado/.test(r0.erro), JSON.stringify(r0));
+    igual(JSON.stringify(run('__db653')), antes, 'sem a escolha: nada gravado (nem a estadia, nem a agenda)');
+    escolherQ5(VETQ5, 'levar');
+    const h1 = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/<button type="button" disabled/.test(h1) && /em 1 remédio lançado durante/.test(h1), 'com uma escolha só, continua travado');
+    escolherQ5(NOVQ5, 'deixar');
+    const h2 = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(!/<button type="button" disabled/.test(h2) && /name="hospCorrEsc\d+" value="levar" checked/.test(h2) && /name="hospCorrEsc\d+" value="deixar" checked/.test(h2), 'com as duas escolhas, o botão libera');
+    const P2 = run('HOSP_CORR.plano');
+    igual(P2.mover.map((x) => x.id).sort(), DESTAM8.concat([VETQ5, VETTQ5]).sort(), '«Levar» leva a Amoxicilina e a troca dela; o colírio fica');
+    assert.ok(h2.indexOf('<li>Remédio "Amoxicilina" (o horário de antes, 10:00, até 09/10; o estoque passou para o horário novo) e 1 dose já dada, copiada</li>') >= 0, 'o cartaz mostra o que vai');
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const agN = agM8(PARAM8.refKey), agA = agM8(KP654), ant = cena.get(AGM8);
+    igual(Object.keys(agN).sort(), DESTAM8.concat([VETQ5, VETTQ5]).sort());
+    igual(Object.keys(agA).sort(), FICAM8.concat([NOVQ5]).sort(), '«Deixar»: o colírio fica na ficha do Palito aluno');
+    igual([agN[VETTQ5].estoque, agN[VETQ5].trocadoPor, agN[VETTQ5].continuacaoDe, agN[VETQ5].trocado_de], [ant[VETTQ5].estoque, VETTQ5, VETQ5, KP654], 'mesmo id, mesmo estoque, a corrente inteira');
+    igual(agA[NOVQ5], ant[NOVQ5], 'o colírio ficou como estava');
+    igual(Object.keys(logM8('2026-10-09', PARAM8.refKey)).sort(), [ZM8 + '_08-00', VETQ5 + '_10-00'].sort(), 'a dose da Amoxicilina de hoje copiada');
+    const e = run(`__get653('auaulandia/estadias/${IDM8}')`), tf = e.trocaFicha[Object.keys(e.trocaFicha)[0]];
+    igual(tf.plano.escolhas.map((c) => c.nome + ':' + c.escolha).sort(), ['Amoxicilina:levar', 'Colírio Lacrifilm:deixar'], 'a escolha guardada na estadia');
+    const conf = tf.conferir.filter((c) => c.tipo === 'remedio-escolha').map((c) => c.texto);
+    assert.ok(conf.some((t) => /^"Amoxicilina" \(lançado em 08\/10 pela veterinária, durante esta hospedagem\) foi levado para a ficha de Palito · Spitz · Bia Nova/.test(t))
+      && conf.some((t) => /^"Colírio Lacrifilm" \(lançado em 08\/10 pelo Plantão, durante esta hospedagem\) ficou na ficha de Palito · Schnauzer · Gabi Teste \(escolha «Deixar onde está»\)/.test(t)), 'as duas no «Conferir»: ' + conf.join(' | '));
+    const hc = run(`__get653('auaulandia/hospedagem-correcoes/${IDM8}')`), hc1 = hc[Object.keys(hc)[0]];
+    igual(hc1.escolhas.map((c) => c.id + ':' + c.escolha).sort(), [NOVQ5 + ':deixar', VETQ5 + ':levar'].sort(), 'no rastro (hospedagem-correcoes)');
+    assert.ok(run('__tg653').some((t) => /Remédios lançados durante a hospedagem: .*Amoxicilina \(levado para a ficha certa\)/.test(t.texto) && /Colírio Lacrifilm \(ficou onde estava\)/.test(t.texto)), 'e no aviso da Gestão');
+    ags = { [PARAM8.refKey]: { itens: agN }, [KP654]: { itens: agA } };
+  } finally { run(SOLTA653); }
+  run(ARMA654);
+  try {
+    const f9 = await filaM8(ags, 9, 600), f10 = await filaM8(ags, 10, 6 * 60);
+    assert.ok(destaQ5(f9, PARAM8.refKey).indexOf(PARAM8.refKey + '|' + VETQ5 + '@10:00') >= 0 && destaQ5(f10, PARAM8.refKey).indexOf(PARAM8.refKey + '|' + VETTQ5 + '@11:00') >= 0, 'a Amoxicilina toca hoje e amanhã na ficha certa: ' + JSON.stringify([f9, f10]));
+    assert.ok(!f10.some((x) => x.indexOf(KP654 + '|' + VETTQ5) === 0), 'e não na errada');
+    assert.ok(f10.indexOf(KP654 + '|' + NOVQ5 + '@18:00') >= 0, 'o colírio deixado continua na ficha do Palito aluno');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA5 C5-3 b — «Deixar onde está» nos dois: nada da escolha vai (nem a troca da Amoxicilina); o «Conferir» diz que ficaram e o que fazer', async () => {
+  const cena = cenaQ5();
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    assert.ok(/Remédios lançados durante esta hospedagem/.test(run('hospCorrHtml(HOSP_CORR)')), 'o cartaz não oferece «Deixar onde está»');
+    escolherQ5(VETQ5, 'deixar'); escolherQ5(NOVQ5, 'deixar');
+    igual(run('HOSP_CORR.plano.mover.map(function(x){ return x.id; })').slice().sort(), DESTAM8, 'só os quatro do MC8');
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const agA = agM8(KP654), ant = cena.get(AGM8);
+    [VETQ5, VETTQ5, NOVQ5].forEach((id) => igual(agA[id], ant[id], id + ' ficou como estava'));
+    assert.ok(![VETQ5, VETTQ5, NOVQ5].some((id) => agM8(PARAM8.refKey)[id]), 'nada disso na ficha certa');
+    const e = run(`__get653('auaulandia/estadias/${IDM8}')`), tf = e.trocaFicha[Object.keys(e.trocaFicha)[0]];
+    assert.ok(tf.conferir.some((c) => c.tipo === 'remedio-escolha' && /^"Amoxicilina".*ficou na ficha de Palito · Schnauzer · Gabi Teste \(escolha «Deixar onde está»\)\. Se Palito toma esse remédio, ele não toca na ficha certa: confira com a veterinária e, se for, lance na ficha de Palito · Spitz · Bia Nova\.$/.test(c.texto)), JSON.stringify(tf.conferir.map((c) => c.texto)));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.54 QA5 C5-3 c — a escolha vale no «Retomar» (a troca pela metade leva o que foi «Levar»); e um remédio lançado na ficha errada DEPOIS de o cartaz abrir trava a gravação (feche e abra de novo para escolher)', async () => {
+  let cena = cenaQ5();
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    assert.ok(/Remédios lançados durante esta hospedagem/.test(run('hospCorrHtml(HOSP_CORR)')), 'o cartaz não oferece a escolha');
+    escolherQ5(VETQ5, 'levar'); escolherQ5(NOVQ5, 'deixar');
+    run(`__bkApQ5=hospTrocaAplicar; hospTrocaAplicar=function(){ return Promise.reject(new Error('sem internet')); };`);
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    run('hospTrocaAplicar=__bkApQ5;');
+    assert.ok(r.ok === false && /pela metade/.test(r.erro), JSON.stringify(r));
+    const tk = Object.keys(run(`__get653('auaulandia/estadias/${IDM8}')`).trocaFicha)[0];
+    const r2 = await run(`hospRetomarTroca('${IDM8}', '${tk}')`); await espera653();
+    assert.ok(r2.ok, JSON.stringify(r2));
+    igual(Object.keys(agM8(PARAM8.refKey)).sort(), DESTAM8.concat([VETQ5, VETTQ5]).sort(), 'o «Retomar» leva a Amoxicilina e a troca dela');
+    igual(Object.keys(agM8(KP654)).sort(), FICAM8.concat([NOVQ5]).sort(), 'e deixa o colírio');
+  } finally { run(SOLTA653); }
+  cena = cenaQ5();
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    escolherQ5(VETQ5, 'levar'); escolherQ5(NOVQ5, 'deixar');
+    // com o cartaz aberto, o Plantão lança outro remédio na ficha errada
+    const NOV2 = 'novo_' + (AGORA653 - 60000) + '_ef56';
+    run(`__put653('${AGM8}/${NOV2}', {nome:'Dipirona', q:'5', u:'gota', horarios:['12:00'], continuo:false, dataFim:'2026-10-10', origem:'tutor', tipo:'medicamento'});`);
+    const antes = JSON.stringify(run('__db653'));
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    igual(r.erro, 'Enquanto este cartaz estava aberto, foi lançado na ficha de Palito · Schnauzer · Gabi Teste o remédio "Dipirona". Nada foi gravado: feche este cartaz e abra de novo, para escolher se ele vai para a ficha certa ou fica.');
+    igual(JSON.stringify(run('__db653')), antes, 'nada gravado');
+  } finally { run(SOLTA653); }
+});
+// ================================================================== 6.54 QA6 — 7ª rodada: a conferência final 3 do QA (H1, H2, H5, H6, H7 e H8 de qa654/regate6.js)
+const TQ6 = (d, hh, mm, ss) => new Date(2026, 9, d, hh, mm || 0, ss || 0).getTime();
+const planoQ6 = (cena, escolhas, extraAg, semIds) => {
+  const ag = Object.assign({}, cena.get(AGM8), extraAg || {}); (semIds || []).forEach((id) => { delete ag[id]; });
+  ctx.__plQ6 = { id: IDM8, e: cena.get('auaulandia/estadias/' + IDM8), de: DEM8, para: PARAM8, agenda: ag, logs: {}, ficha: {}, fichaNova: {}, auditoria: {}, agora: AGORA653, hoje: DIA653, escolhas: escolhas || {} };
+  return run('hospPlanoDaTroca(__plQ6)');
+};
+const MEDQ6 = (nome, o) => Object.assign({ nome, q: '1', u: 'comprimido', horarios: ['10:00'], continuo: true, origem: 'tutor', tipo: 'medicamento' }, o || {});
+
+prova('6.54 QA6 H1 — quem entra na lista da escolha (C5-3): a borda das 00:00 do dia da entrada entra e as 23:59:59 da véspera não; o da ficha de antes da hospedagem não; o parado durante entra (dito "parou"); o da Ficha (fmn_) lançado durante entra; id antigo sem data com informado_por de durante entra e sem, não; nenhum ci_ nem mcr_', () => {
+  const cena = cenaM8({ semDoses: true });
+  igual(cena.get('auaulandia/estadias/' + IDM8).entrada, '2026-10-07');
+  const ids = { borda: 'vet_' + TQ6(7, 0, 0, 0) + '_b001', vespera: 'vet_' + TQ6(6, 23, 59, 59) + '_b002', fichaAntiga: 'fmn_' + TQ6(1, 9, 0) + '_b003',
+    parado: 'novo_' + TQ6(8, 9, 0) + '_b004', legadoDurante: 'med_legado_1', legadoSem: 'med_legado_2', fichaDurante: 'fmn_' + TQ6(8, 11, 0) + '_b005' };
+  const ag = { [ids.borda]: MEDQ6('Borda'), [ids.vespera]: MEDQ6('Véspera'), [ids.fichaAntiga]: MEDQ6('Antigo da ficha'),
+    [ids.parado]: MEDQ6('Parado', { continuo: false, dataFim: '2026-10-08', paradoEm: { quem: 'Ana Teste', data: '2026-10-09', ts: TQ6(9, 8, 0), motivo: 'a tutora pediu' } }),
+    [ids.legadoDurante]: MEDQ6('Legado durante', { informado_por: { quem: 'Rita Teste', ts: TQ6(8, 14, 0) } }), [ids.legadoSem]: MEDQ6('Legado sem data'), [ids.fichaDurante]: MEDQ6('Da ficha durante') };
+  const P = planoQ6(cena, {}, ag), lista = P.escolher.map((c) => c.id);
+  igual([ids.borda, ids.parado, ids.legadoDurante, ids.fichaDurante].filter((x) => lista.indexOf(x) < 0), [], 'entram: a borda das 00:00, o parado, o legado com informado_por de durante, o da Ficha lançado durante');
+  igual([ids.vespera, ids.fichaAntiga, ids.legadoSem].filter((x) => lista.indexOf(x) >= 0), [], 'não entram: a véspera, o da ficha de antes, o legado sem data');
+  igual(lista.filter((x) => /^mcr_|^ci_/.test(x)), [], 'nenhum ci_ nem mcr_ na lista');
+  igual(P.escolher.filter((c) => c.id === ids.parado)[0].parado, true);
+  igual(lista.filter((x) => P.mover.some((m) => m.id === x)), [], 'sem escolha, nada da lista vai');
+});
+provaAsync('6.54 QA6 H2 (C6-1) — a linha antiga (a raiz) removida depois da troca de horário: a continuação da Zenrelia (raiz ci_ da janela) vai junto, com as doses da raiz; a da Amoxicilina (raiz vet_ lançada na hospedagem) entra na escolha, e «Levar» leva', async () => {
+  const cena = cenaQ5();
+  // no plano: sem a linha antiga da Zenrelia e sem a da Amoxicilina
+  const P = planoQ6(cena, {}, null, [ZM8, VETQ5]);
+  assert.ok(P.mover.some((x) => x.id === ZTM8), 'a Zenrelia 09:00 (raiz ci_ removida) vai: ' + JSON.stringify(P.mover.map((x) => x.id)));
+  const eAmox = P.escolher.filter((c) => c.id === VETTQ5)[0];
+  assert.ok(eAmox, 'a Amoxicilina 11:00 (raiz vet_ removida) é perguntada: ' + JSON.stringify(P.escolher.map((c) => c.id)));
+  igual([eAmox.nome, eAmox.horarios, eAmox.origem, run(`hospDiaBR(hospIsoDe(${eAmox.lancado}))`), eAmox.escolha], ['Amoxicilina', ['11:00'], 'pela veterinária', '08/10', ''], 'a ponta, com a data e quem lançou a raiz');
+  assert.ok(!P.mover.some((x) => x.id === VETTQ5), 'sem a escolha, não vai');
+  igual(planoQ6(cena, { [VETTQ5]: 'levar' }, null, [ZM8, VETQ5]).mover.filter((x) => x.id === VETTQ5).length, 1, '«Levar» leva a ponta');
+  assert.ok(planoQ6(cena, { [VETTQ5]: 'deixar' }, null, [ZM8, VETQ5]).naoMexe.indexOf(VETTQ5) >= 0, '«Deixar» deixa');
+  // de ponta a ponta: as linhas antigas removidas da ficha errada (o «Remover item» do Plantão) antes da troca de ficha
+  cena.ref(AGM8 + '/' + ZM8).remove(); cena.ref(AGM8 + '/' + VETQ5).remove();
+  let ags = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    igual(run('HOSP_CORR.plano.escolher.map(function(c){ return c.id; })').slice().sort(), [NOVQ5, VETTQ5].sort(), 'o cartaz pergunta pela Amoxicilina (a ponta) e pelo colírio');
+    escolherQ5(VETTQ5, 'levar'); escolherQ5(NOVQ5, 'deixar');
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const agN = agM8(PARAM8.refKey), agA = agM8(KP654);
+    igual(Object.keys(agN).sort(), [ZTM8, PRM8, VMM8, VETTQ5].sort(), 'a ficha certa: a Zenrelia 09:00, o Probiótico, o Vermífugo e a Amoxicilina 11:00');
+    igual(Object.keys(agA).sort(), FICAM8.concat([NOVQ5]).sort(), 'a errada: só o que é do Palito aluno e o colírio deixado');
+    igual(Object.keys(logM8('2026-10-09', PARAM8.refKey)).sort(), [ZM8 + '_08-00', VETQ5 + '_10-00'].sort(), 'as doses de hoje das raízes removidas foram copiadas');
+    const tf = run(`__get653('auaulandia/estadias/${IDM8}')`).trocaFicha; const t1 = tf[Object.keys(tf)[0]];
+    assert.ok(t1.conferir.some((c) => c.tipo === 'remedio-escolha' && /^"Amoxicilina" \(lançado em 08\/10 pela veterinária, durante esta hospedagem\) foi levado/.test(c.texto)), 'a escolha no «Conferir»');
+    ags = { [PARAM8.refKey]: { itens: agN }, [KP654]: { itens: agA } };
+  } finally { run(SOLTA653); }
+  run(ARMA654);
+  try {
+    const f10 = await filaM8(ags, 10, 6 * 60);
+    igual(destaQ5(f10, PARAM8.refKey), [PARAM8.refKey + '|' + PRM8 + '@20:00', PARAM8.refKey + '|' + VETTQ5 + '@11:00', PARAM8.refKey + '|' + ZTM8 + '@09:00'].sort(), 'amanhã, na ficha certa');
+    igual(destaQ5(f10, KP654).filter((x) => /zz01|vet_/.test(x)), [], 'e nada disso na errada');
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.54 QA6 H5 (C6-2) — com o cartaz aberto e a Amoxicilina marcada «Levar», ela (e a troca dela) é removida da ficha errada em outro aparelho: a 1ª gravação recusa e não grava nada (não recria do retrato)', async () => {
+  const cena = cenaQ5();
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    await abrirTrocaM8();
+    escolherQ5(VETQ5, 'levar'); escolherQ5(NOVQ5, 'levar');
+    run(`__put653('${AGM8}/${VETQ5}', null); __put653('${AGM8}/${VETTQ5}', null); __put653('${AGM8}/${NOVQ5}/q', '2');`);
+    const antes = JSON.stringify(run('__db653'));
+    const r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653();
+    assert.ok(!(r && r.ok), 'a 1ª gravação gravou; na ficha certa: ' + JSON.stringify(Object.keys(agM8(PARAM8.refKey)).filter((x) => /vet_/.test(x))) + ' (a Amoxicilina recriada do retrato)');
+    igual(r.erro, 'Nada foi gravado: um remédio mudou com o cartaz aberto ("Amoxicilina" não está mais na ficha de Palito · Schnauzer · Gabi Teste); feche e abra de novo.');
+    igual(JSON.stringify(run('__db653')), antes, 'nada gravado: nem a estadia, nem a ficha certa');
+    assert.ok(!agM8(PARAM8.refKey)[VETQ5] && !agM8(PARAM8.refKey)[VETTQ5], 'a Amoxicilina não foi recriada na ficha certa');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.54 QA6 H6 (C6-3, extensão da F3) — «Remover item» do Plantão anda o carimbo na mesma escrita: o «Salvar agenda» de outro aparelho, com a agenda aberta antes, é recusado e o remédio removido não volta', async () => {
+  const cena = cenaM8({ semDoses: true });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let rel = null, depois = null, esc = [];
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    // a tela do Plantão leu a agenda e o carimbo (o carregarMedAgenda); 8ª rodada (C7-1): o «Remover item» passa pela trava
+    run(`__bkM6={ce:canEditMed, ch:currentHosp, zp:zPergunta, it:MED_AGENDA_ITENS, qs:document.querySelector, ts:MED_AGENDA_TS}; canEditMed=function(){ return true; }; currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'};
+      zPergunta=function(){ return Promise.resolve(true); }; MED_AGENDA_ITENS=__get653('${AGM8}'); MED_AGENDA_TS={key:'${KP654}', ts:__get653('auaulandia/medicacao-agenda/${KP654}/_ts'), lido:true};
+      __el6={dataset:{id:'${APM8}'}, closest:function(s){ return s==='#magItens'?{}:null; }, remove:function(){}};
+      document.querySelector=function(q){ return /magitem/.test(q)?__el6:__bkM6.qs.call(document, q); }; __esc653=[];`);
+    try { await run(`magRemoverItem('${APM8}')`); await espera653(); esc = run('__esc653'); }
+    finally { run('canEditMed=__bkM6.ce; currentHosp=__bkM6.ch; zPergunta=__bkM6.zp; MED_AGENDA_ITENS=__bkM6.it; document.querySelector=__bkM6.qs; MED_AGENDA_TS=__bkM6.ts;'); }
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [COM8]: { obs: 'pingar no olho esquerdo' } });
+    depois = agM8(KP654);
+  } finally { run(SOLTA653); }
+  assert.ok(!depois[APM8], 'o Apoquel removido não volta (o «Salvar agenda» velho: "' + rel.st + '")');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  // a trava da 8ª rodada (C7-1) confere e anda o carimbo antes (a transação no _ts); a remoção vai numa escrita só
+  const ag = esc.filter((x) => /medicacao-agenda/.test(x[1]) && !(x[0] === 'transaction' && /\/_ts$/.test(x[1])));
+  igual(ag.map((x) => x[0] + ' ' + x[1]), ['update auaulandia/medicacao-agenda/' + KP654], 'uma escrita só, na agenda');
+  igual([ag[0][2]['itens/' + APM8], typeof ag[0][2]._ts, ag[0][2]._quem], [null, 'number', 'Recepção'], 'a remoção, o carimbo e quem, juntos');
+});
+provaAsync('6.54 QA6 H7 (C6-3, extensão da F3) — «Reativar» do Cuidado Vet anda o carimbo na mesma escrita: o «Salvar agenda» velho (que leu "suspenso") é recusado e o remédio não volta a ficar suspenso', async () => {
+  const cena = cenaM8({ semDoses: true });
+  cena.ref(AGM8 + '/' + APM8).update({ suspenso: true, suspensoPor: 'Dra. Teste', suspensoMotivo: 'esperar exame', suspensoTs: TQ6(8, 10, 0) });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let rel = null, depois = null, reat = null, esc = [];
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`__bkV6={vc:(typeof VET_MED_CACHE!=='undefined'?VET_MED_CACHE:null), zt:zTexto, vk:vetKey, vh:vetHosp, vcm:vetCarregarMed, pav:podeAlterarVet};
+      VET_MED_CACHE=__get653('${AGM8}'); zTexto=function(){ return Promise.resolve('exame normal, pode voltar'); }; vetKey=function(){ return '${KP654}'; };
+      vetHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; vetCarregarMed=function(){}; podeAlterarVet=function(){ return true; }; __esc653=[];`);
+    try { await run(`vetReativarMed('${APM8}')`); await espera653(); esc = run('__esc653'); }
+    finally { run('VET_MED_CACHE=__bkV6.vc; zTexto=__bkV6.zt; vetKey=__bkV6.vk; vetHosp=__bkV6.vh; vetCarregarMed=__bkV6.vcm; podeAlterarVet=__bkV6.pav;'); }
+    reat = agM8(KP654)[APM8];
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [COM8]: { obs: 'pingar no olho esquerdo' } });
+    depois = agM8(KP654)[APM8];
+  } finally { run(SOLTA653); }
+  assert.ok(reat && !reat.suspenso && /Reativou/.test(reat.historico.slice(-1)[0].acao), 'a reativação aconteceu');
+  assert.ok(!depois.suspenso, 'o Apoquel não volta a ficar suspenso (o «Salvar agenda» velho: "' + rel.st + '")');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  const ag = esc.filter((x) => /medicacao-agenda/.test(x[1]));
+  igual(ag.map((x) => x[0] + ' ' + x[1]), ['update auaulandia/medicacao-agenda/' + KP654], 'uma escrita só, na agenda');
+  assert.ok(ag[0][2]['itens/' + APM8 + '/suspenso'] === null && typeof ag[0][2]._ts === 'number', 'a reativação e o carimbo juntos');
+});
+provaAsync('6.54 QA6 H8 (C5-1, o 2º carimbo) — um tablet lê a agenda da ficha errada NO MEIO da troca (depois do 1º carimbo, antes de os remédios saírem) e salva depois: é recusado e não recria nada', async () => {
+  const cena = cenaM8();
+  cena.ref('auaulandia/estadias/eOutraM8').update({ status: 'ativa', saida: '2026-10-12' });
+  let rel = null, agA = null;
+  run(ARMA653);
+  try {
+    semearM8(cena, `EST_TODAS['eOutraM8']=__get653('auaulandia/estadias/eOutraM8');`);
+    await abrirTrocaM8();
+    run(`__lidoQ6=null; __refQ6=DB.ref; DB.ref=function(p){ var r=__refQ6(p); if(/^auaulandia\\/medicacao-agenda\\/palito__gabi teste\\/itens\\/.+/.test(String(p)) && !__lidoQ6){ var o=r.remove; r.remove=function(){
+      __lidoQ6={it:__get653('auaulandia/medicacao-agenda/palito__gabi teste/itens'), ts:__get653('auaulandia/medicacao-agenda/palito__gabi teste/_ts')}; return o.apply(this, arguments); }; } return r; };`);
+    let r;
+    try { r = await run(`hospTrocarGravar('${MOTIVO_M8}', '${SENHA653}')`); await espera653(); } finally { run('DB.ref=__refQ6;'); }
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const lido = run('__lidoQ6');
+    assert.ok(lido && lido.it && lido.it[ZTM8], 'o tablet leu no meio, com os remédios ainda lá');
+    rel = await salvarVelhoQ5(KP654, lido.it, lido.ts, { [APM8]: { obs: 'dar depois do almoço' } });
+    agA = agM8(KP654);
+  } finally { run(SOLTA653); }
+  igual(DESTAM8.filter((id) => agA[id]), [], 'nada desta hospedagem volta para a ficha errada');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+});
+// ================================================================== 6.54 QA7 — 8ª rodada: a conferência final 4 do QA (H12, H13 e H14 de qa654/regate7.js) e as voltas delas
+const planoQ7 = (cena, ag, escolhas) => {
+  ctx.__plQ7 = { id: IDM8, e: cena.get('auaulandia/estadias/' + IDM8), de: DEM8, para: PARAM8, agenda: ag, logs: {
+    '2026-10-08': cena.get('auaulandia/medicacao-log/2026-10-08/' + KP654) || {}, '2026-10-09': cena.get('auaulandia/medicacao-log/2026-10-09/' + KP654) || {} },
+    ficha: {}, fichaNova: {}, auditoria: {}, agora: AGORA653, hoje: DIA653, escolhas: escolhas || {} };
+  return run('hospPlanoDaTroca(__plQ7)');
+};
+const idsQ7 = (P) => P.mover.map((x) => x.id).sort();
+// A tela do Plantão (a mesma de verdade: carregarMedAgenda, magRemoverItem e salvarMedAgenda) com o DOM de mentira.
+const ARMA_TELA_Q7 = (idEl) => `__bkM7={ce:canEditMed, ch:currentHosp, zp:zPergunta, rm:renderMedAgenda, ge:document.getElementById, qs:document.querySelector, co:coletarMedAgendaForm, it:MED_AGENDA_ITENS, ts:MED_AGENDA_TS};
+  canEditMed=function(){ return true; }; currentHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; zPergunta=function(){ return Promise.resolve(true); }; renderMedAgenda=function(){};
+  __st7={style:{}, textContent:''}; document.getElementById=function(id){ return id==='mag-status'?__st7:{style:{}, value:'', textContent:'', innerHTML:''}; };
+  __el7={dataset:{id:'${idEl}'}, closest:function(s){ return s==='#magItens'?{}:null; }, removido:false, remove:function(){ this.removido=true; }};
+  document.querySelector=function(q){ return /magitem/.test(q)?__el7:null; };`;
+const SOLTA_TELA_Q7 = 'canEditMed=__bkM7.ce; currentHosp=__bkM7.ch; zPergunta=__bkM7.zp; renderMedAgenda=__bkM7.rm; document.getElementById=__bkM7.ge; document.querySelector=__bkM7.qs; coletarMedAgendaForm=__bkM7.co; MED_AGENDA_ITENS=__bkM7.it; MED_AGENDA_TS=__bkM7.ts;';
+
+provaAsync('6.54 QA7 H12 (C7-2) — «Suspender» do Cuidado Vet anda o carimbo na mesma escrita: o «Salvar agenda» velho é recusado, o Apoquel continua suspenso e a linha "Suspendeu" (com o motivo e o nome) fica no histórico', async () => {
+  const cena = cenaM8({ semDoses: true });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let rel = null, sus = null, dep = null, esc = [];
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`__bkS7={vc:(typeof VET_MED_CACHE!=='undefined'?VET_MED_CACHE:null), zt:zTexto, vk:vetKey, vh:vetHosp, vcm:vetCarregarMed, pv:podeAlterarVet};
+      VET_MED_CACHE=__get653('${AGM8}'); zTexto=function(){ return Promise.resolve('esperar o exame de sangue'); }; vetKey=function(){ return '${KP654}'; };
+      vetHosp={nome:'Palito', tutor:'Gabi Teste', refKey:'${KP654}'}; vetCarregarMed=function(){}; podeAlterarVet=function(){ return true; }; __esc653=[];`);
+    try { await run(`vetSuspenderMed('${APM8}')`); await espera653(); esc = run('__esc653'); }
+    finally { run('VET_MED_CACHE=__bkS7.vc; zTexto=__bkS7.zt; vetKey=__bkS7.vk; vetHosp=__bkS7.vh; vetCarregarMed=__bkS7.vcm; podeAlterarVet=__bkS7.pv;'); }
+    sus = agM8(KP654)[APM8];
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [COM8]: { obs: 'pingar no olho esquerdo' } });
+    dep = agM8(KP654)[APM8];
+  } finally { run(SOLTA653); }
+  const linha = (it) => ((it && it.historico) || []).filter((h) => h.acao === 'Suspendeu' && h.motivo === 'esperar o exame de sangue' && h.quem === 'Recepção').length;
+  igual([!!sus.suspenso, linha(sus)], [true, 1], 'a suspensão aconteceu, com a linha no histórico');
+  igual([!!dep.suspenso, linha(dep)], [true, 1], 'depois do «Salvar agenda» velho: continua suspenso e a linha "Suspendeu" continua no histórico');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  const ag = esc.filter((x) => /medicacao-agenda/.test(x[1]));
+  igual(ag.map((x) => x[0] + ' ' + x[1]), ['update auaulandia/medicacao-agenda/' + KP654], 'uma escrita só, na agenda');
+  assert.ok(ag[0][2]['itens/' + APM8 + '/suspenso'] === true && typeof ag[0][2]._ts === 'number' && ag[0][2]._quem === 'Recepção', 'a suspensão e o carimbo juntos');
+});
+provaAsync('6.54 QA7 H12b (C7-2) — «Ciente» do fim da receita anda o carimbo na mesma escrita: o «Salvar agenda» velho é recusado e a linha "Ciente do término" fica', async () => {
+  const cena = cenaM8({ semDoses: true });
+  cena.ref(AGM8 + '/' + APM8).update({ continuo: false, dataFim: '2026-10-08' });
+  const tsA0 = cena.get('auaulandia/medicacao-agenda/' + KP654 + '/_ts'), agA0 = cena.get(AGM8);
+  let rel = null, dep = null, cie = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(`__bkC7={mg:(typeof MED_AGENDA_GERAL!=='undefined'?MED_AGENDA_GERAL:null), pv:podeAlterarVet, vh:vetHosp}; MED_AGENDA_GERAL={'${KP654}':__get653('auaulandia/medicacao-agenda/${KP654}')};
+      podeAlterarVet=function(){ return true; }; vetHosp=null;`);
+    try { run(`vetCienteFimMed('${KP654}', '${APM8}')`); await espera653(); }
+    finally { run('MED_AGENDA_GERAL=__bkC7.mg; podeAlterarVet=__bkC7.pv; vetHosp=__bkC7.vh;'); }
+    cie = agM8(KP654)[APM8];
+    rel = await salvarVelhoQ5(KP654, agA0, tsA0, { [COM8]: { obs: 'pingar no olho esquerdo' } });
+    dep = agM8(KP654)[APM8];
+  } finally { run(SOLTA653); }
+  const linha = (it) => ((it && it.historico) || []).filter((h) => h.acao === 'Ciente do término').length;
+  igual([!!cie.fimCiente, linha(cie)], [true, 1], 'a ciência aconteceu, com a linha no histórico');
+  igual([!!dep.fimCiente, linha(dep)], [true, 1], 'depois do «Salvar agenda» velho: a ciência e a linha continuam');
+  igual(rel.st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+});
+provaAsync('6.54 QA7 H13 (C7-1) — no mesmo aparelho: a veterinária remove o Vermífugo no Plantão e, na mesma tela, muda a observação do Apoquel e toca «Salvar agenda»: grava (a tela guarda o carimbo que ela mesma gravou)', async () => {
+  const cena = cenaM8({ semDoses: true });
+  let st = '', ag = null, tsTela = null, tsBanco = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(ARMA_TELA_Q7(VMM8));
+    try {
+      run('carregarMedAgenda()'); await espera653();
+      igual(run('MED_AGENDA_TS.lido'), true, 'a tela leu o carimbo');
+      await run(`magRemoverItem('${VMM8}')`); await espera653();
+      igual([!!agM8(KP654)[VMM8], run('__el7.removido')], [false, true], 'o Vermífugo saiu (do banco e da tela)');
+      tsTela = run('MED_AGENDA_TS.ts'); tsBanco = run(`__get653('auaulandia/medicacao-agenda/${KP654}/_ts')`);
+      run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); Object.keys(o).forEach(function(k){ o[k].horarios=o[k].horarios||[]; }); o['${APM8}'].obs='dar depois do almoço'; return o; };`);
+      run('salvarMedAgenda()'); await espera653();
+      st = run('__st7.textContent'); ag = agM8(KP654);
+    } finally { run(SOLTA_TELA_Q7); }
+  } finally { run(SOLTA653); }
+  assert.ok(/^✅/.test(st) && ag[APM8].obs === 'dar depois do almoço', 'o «Salvar agenda» da mesma tela grava: "' + st + '"');
+  assert.ok(!ag[VMM8], 'o removido não volta');
+  igual(tsTela, tsBanco, 'a tela guardou o carimbo novo');
+});
+provaAsync('6.54 QA7 H13b (C7-1) — a outra metade: se OUTRO aparelho mudou a agenda depois que a tela leu, o «Remover item» não remove nada, diz por quê e não esconde a mudança (o «Salvar agenda» seguinte desta tela também é recusado)', async () => {
+  const cena = cenaM8({ semDoses: true });
+  let st = '', st2 = '', ag = null, tsTela0 = null, tsTela1 = null, saiuDaTela = null;
+  run(ARMA653);
+  try {
+    semearM8(cena);
+    run(ARMA_TELA_Q7(VMM8));
+    try {
+      run('carregarMedAgenda()'); await espera653();
+      tsTela0 = run('MED_AGENDA_TS.ts');
+      // outro aparelho grava a agenda (a tela nova muda a dose do colírio e anda o carimbo)
+      run(`__put653('${AGM8}/${COM8}/q', '2'); __put653('auaulandia/medicacao-agenda/${KP654}/_ts', ${T654(9, 10, 30)});`);
+      await run(`magRemoverItem('${VMM8}')`); await espera653();
+      st = run('__st7.textContent'); tsTela1 = run('MED_AGENDA_TS.ts'); ag = agM8(KP654);
+      saiuDaTela = run('__el7.removido');
+      run(`coletarMedAgendaForm=function(){ var o=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); Object.keys(o).forEach(function(k){ o[k].horarios=o[k].horarios||[]; }); o['${APM8}'].obs='dar depois do almoço'; return o; };`);
+      run('__st7.textContent=""; salvarMedAgenda()'); await espera653();
+      st2 = run('__st7.textContent');
+    } finally { run(SOLTA_TELA_Q7); }
+  } finally { run(SOLTA653); }
+  assert.ok(ag[VMM8], 'nada saiu: o Vermífugo continua na agenda (o «Remover item» não olhou a mudança do outro aparelho)');
+  igual(st, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+  igual(saiuDaTela, false, 'a linha continua na tela');
+  igual(tsTela1, tsTela0, 'a tela não copiou o carimbo novo (não esconde a mudança do outro aparelho)');
+  igual(st2, 'A agenda de Palito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.', 'o «Salvar agenda» seguinte também é recusado');
+  igual(agM8(KP654)[COM8].q, '2', 'a mudança do outro aparelho fica');
+});
+prova('6.54 QA7 H14 (C6-1) — raiz ci_ de fora da janela: a Gabapentina do Palito aluno veio do check-in de uma hospedagem de setembro (ci_ de 01/09), foi trocada pela 6.54 e a linha antiga removida → a continuação fica na ficha dele; e o Meloxicam (raiz vet_ removida, lançada ANTES da entrada) também fica, sem pergunta', () => {
+  const cena = cenaM8({ semDoses: true });
+  const ag = cena.get(AGM8);
+  const CIOLD = 'ci_' + new Date(2026, 8, 1, 10, 0, 0).getTime() + '_old1', CIOLDT = 'mcr_t_' + CIOLD + '_20261010';
+  const VOLD = 'vet_' + new Date(2026, 9, 5, 10, 0, 0).getTime() + '_old2', VOLDT = 'mcr_t_' + VOLD + '_20261010';
+  ag[CIOLDT] = { nome: 'Gabapentina', q: '1', u: 'cápsula', horarios: ['21:00'], continuo: true, dataInicio: '2026-10-10', continuacaoDe: CIOLD, origem: 'tutor', tipo: 'medicamento' };
+  ag[VOLDT] = { nome: 'Meloxicam', q: '0,5', u: 'comprimido', horarios: ['09:00'], continuo: false, dataInicio: '2026-10-10', dataFim: '2026-10-15', continuacaoDe: VOLD, origem: 'vet', tipo: 'medicamento' };
+  const P = planoQ7(cena, ag, {});
+  igual([idsQ7(P).indexOf(CIOLDT) >= 0, idsQ7(P).indexOf(VOLDT) >= 0, P.escolher.some((c) => c.id === CIOLDT || c.id === VOLDT)], [false, false, false], 'as duas continuações ficam na ficha do Palito aluno, sem pergunta');
+  assert.ok(P.naoMexe.indexOf(CIOLDT) >= 0 && P.naoMexe.indexOf(VOLDT) >= 0, 'e ficam como "não mexe"');
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

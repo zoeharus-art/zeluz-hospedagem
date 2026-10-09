@@ -2521,6 +2521,49 @@
     .pc-festa{display:none !important}
     .pc-copo .pc-agua,.pc-bola svg,.pc-ganho,.pc-copo,.pc-humor svg{transition:none}
   }
+  /* ===== 6.54 — Mudar comida e remédio (tela cheia, 375 px; abaixo da tela trancada e dos alarmes) ===== */
+  #mcrTela{position:fixed;left:0;right:0;bottom:0;top:var(--z-faixa-topo-h,0px);z-index:150;background:var(--z-cream);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;color:var(--z-blue)}
+  #mcrTela .mcr-in{max-width:640px;margin:0 auto;padding:10px 12px 48px;box-sizing:border-box}
+  #mcrTela .mcr-topo{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #mcrTela .mcr-titulo{font-weight:800;font-size:20px;line-height:1.2}
+  #mcrTela .mcr-x{min-width:44px;min-height:44px;border:1.5px solid var(--line);border-radius:12px;background:var(--z-white);color:var(--z-blue);font-size:24px;font-weight:800;cursor:pointer}
+  #mcrTela .mcr-card{background:var(--z-white);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-top:12px;box-sizing:border-box;overflow-wrap:anywhere}
+  #mcrTela .mcr-tit{font-weight:800;font-size:16px;margin-bottom:8px}
+  #mcrTela .mcr-id{display:flex;gap:12px;align-items:center}
+  #mcrTela .mcr-av{flex:0 0 56px;width:56px;height:56px;border-radius:50%;background:var(--z-gold);color:var(--z-blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;background-size:cover;background-position:center}
+  #mcrTela .mcr-id-tx{min-width:0}
+  #mcrTela .mcr-nome{font-weight:800;font-size:18px}
+  #mcrTela .mcr-mut{font-size:12.5px;color:var(--z-blue-soft);font-weight:600;margin-top:3px;line-height:1.4}
+  #mcrTela .mcr-lab{font-size:12.5px;font-weight:800;margin:10px 0 4px}
+  #mcrTela .mcr-ref,#mcrTela .mcr-todas,#mcrTela .mcr-med,#mcrTela .mcr-refed{border-top:1px dashed var(--line);padding:10px 0 4px}
+  #mcrTela .mcr-ref:first-of-type{border-top:none}
+  #mcrTela .mcr-ref-nome{font-weight:800;font-size:14.5px}
+  #mcrTela .mcr-ref-qtd{display:flex;align-items:center;gap:8px;margin-top:6px}
+  #mcrTela .mcr-q{min-width:64px;min-height:44px;border:1.5px solid var(--z-blue);border-radius:12px;background:var(--z-cream-warm);color:var(--z-blue);font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+  #mcrTela .mcr-qin{width:72px;min-height:44px;box-sizing:border-box;border:2px solid var(--z-blue);border-radius:12px;text-align:center;font-size:18px;font-weight:800;color:var(--z-blue);font-family:inherit;background:var(--z-white)}
+  #mcrTela .mcr-un{font-weight:800}
+  #mcrTela .mcr-todas-v{min-width:72px;text-align:center;font-weight:800;font-size:17px}
+  #mcrTela .mcr-antes{font-size:12.5px;font-weight:800;color:var(--z-gold-deep);min-height:2px}
+  #mcrTela .mcr-in-tx{width:100%;min-height:44px;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-size:16px;font-weight:600;color:var(--z-blue);font-family:inherit;background:var(--z-white)}
+  #mcrTela textarea.mcr-in-tx{resize:vertical}
+  #mcrTela .mcr-chips{display:flex;flex-wrap:wrap;gap:6px}
+  #mcrTela .mcr-chip{min-height:44px;border:1.5px solid var(--line);border-radius:12px;background:var(--z-cream-warm);color:var(--z-blue);font-weight:700;font-size:13.5px;padding:8px 12px;cursor:pointer;font-family:inherit;text-align:left;max-width:100%}
+  #mcrTela .mcr-chip.on{background:var(--z-blue);border-color:var(--z-blue);color:var(--z-cream)}
+  #mcrTela .mcr-hrow{display:flex;gap:8px;margin-bottom:6px}
+  #mcrTela .mcr-bt{display:block;width:100%;min-height:48px;border-radius:14px;font-family:inherit;font-weight:800;font-size:16px;margin-top:10px;cursor:pointer;padding:10px 14px}
+  #mcrTela .mcr-bt-pri{background:var(--z-blue);color:var(--z-cream);border:none}
+  #mcrTela .mcr-bt-sec{background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue)}
+  #mcrTela .mcr-bt-lev{background:transparent;color:var(--z-blue);border:1.5px dashed var(--line);font-size:14px;min-height:44px}
+  #mcrTela .mcr-bt[disabled]{opacity:.55}
+  #mcrTela .mcr-alerta{background:rgba(192,57,43,.1);border:1.5px solid var(--crm-critico);color:var(--crm-critico);border-radius:10px;padding:8px 10px;font-weight:800;font-size:13px;margin:6px 0}
+  #mcrTela .mcr-erro{color:var(--crm-critico);font-weight:800;font-size:14px;border-color:var(--crm-critico)}
+  #mcrTela .mcr-ok{border-color:var(--crm-ok)}
+  #mcrTela .mcr-fica{background:var(--z-cream-warm);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:13.5px;font-weight:600}
+  #mcrTela .mcr-so-ler{opacity:.8}
+  #mcrTela .mcr-lista{margin:4px 0 8px;padding-left:20px;font-size:14px;font-weight:600}
+  #mcrTela .mcr-lista li{margin-bottom:4px}
+  .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
 </head>
 <body data-role="gestao">
@@ -3250,6 +3293,7 @@
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
           <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
+          <span id="hf-mcr"></span>
           <div id="hf-pills"></div>
           <div id="hf-obsgeral"></div>
           <div id="hf-vet-instr"></div>
@@ -5130,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-11"></script>
+<script src="resposta-tutor.js?v=2026-10-09-12"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-11"></script>
+<script src="painel-logica.js?v=2026-10-09-12"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5148,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-11"></script>
+<script src="financeiro-logica.js?v=2026-10-09-12"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5400,6 +5444,8 @@
       // mesmo para quem já foi embora, não só para os hóspedes de hoje.
       DB.ref('auaulandia/medicacao-agenda').on('value', s=>{ MED_AGENDA_GERAL=s.val()||{};
         try{ if(typeof checarMedsEncerradas==='function') checarMedsEncerradas(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+        // 6.54 (AC20): remédio mudado em outro aparelho refaz a fila do alarme aqui (só quem recebe o alarme).
+        try{ if(typeof mcrRearmarAlarme==='function') mcrRearmarAlarme(); }catch(e){} /* silencioso de propósito: sem isto, a fila se refaz na próxima leitura da lista */
       });
       // Observações/exames da Veterinária para o tutor (ex.: "ouvido só com sujeira"). Visível a todos,
       // alimenta o retorno da Marcia ao cliente e o futuro módulo do cliente.
@@ -5692,6 +5738,9 @@
     'editar-alergia':           ['gestao','supervisor','diretoria','monitor'],
     'editar-medicacao':         ['gestao','supervisor','diretoria','vet'],
     'editar-medicacao-checkin': ['gestao','supervisor','diretoria','vet','consultora'],
+    // 6.54 — «Mudar comida e remédio» do hóspede depois do check-in (PA3): os mesmos do check-in.
+    // Plantonista, monitor, aprendiz e conferência continuam vendo a comida e o remédio, sem mudar.
+    'mudar-comida-remedio':     ['gestao','supervisor','diretoria','vet','consultora'],
     'desfazer-hospedagem':      ['gestao','supervisor','diretoria'],
     'recebe-alarme':            ['monitor','plantonista'],
     'alterar-vet':              ['vet','gestao','supervisor','diretoria'],
@@ -12993,6 +13042,7 @@
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     if(typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(h,'hf-vet-instr'); // Onda 3: instruções da vet (elizabetano, não deixar na matilha...)
     if(typeof renderHospAlergiaBlock==='function') renderHospAlergiaBlock(h);
+    try{ if(typeof mcrPintarBotaoPlantao==='function') mcrPintarBotaoPlantao(h); }catch(e){} /* silencioso de propósito: o botão da 6.54 é extra */
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
@@ -13612,6 +13662,10 @@
   }
   function magDoseId(itemId,horario){ return itemId+'_'+String(horario||'').replace(':','-'); }
   let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
+  // 6.54 (conferência final do QA): o carimbo da agenda (_ts) que o formulário leu. O «Salvar agenda» só grava se
+  // ele ainda é o mesmo (mcrTravaAgenda): um formulário aberto antes de uma troca ou de um «Parou» feitos em outro
+  // aparelho regravava "uso contínuo" no remédio antigo — e tocavam o antigo e o novo (dose em dobro).
+  let MED_AGENDA_TS={key:'', ts:null, lido:false};
   let MED_AGENDA_LOG={};   // doses já registradas HOJE para o FILHOt aberto: {doseId:{quem,ts,...}}
   // ===== Gate de papel na edição de medicação (Fundação 1 do Design) =====
   // Só a Veterinária, a Gestão, a Supervisão (Amanda) e a Diretoria podem CRIAR/ALTERAR/REMOVER a
@@ -13916,17 +13970,36 @@
     if(!await zPergunta('Remover este medicamento da agenda?',
       ['Ele sai da agenda deste FILHOt. O histórico do que já foi dado continua guardado.'],
       {sim:'Remover', nao:'Manter'})) return;
-    el.remove();
     // Card diário: se o item já estava persistido, remove DELE no banco (nunca via sobrescrita do nó).
     if(noCard && DB && currentHosp && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){
       const key=medAgendaKey(); if(!key) return;
-      DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).remove().then(function(){
-        delete MED_AGENDA_ITENS[id];
-        if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
-        if(typeof audit==='function') audit('medicacao-agenda-remover',key,{pet:currentHosp.nome||'',item:id});
-        if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+      // 6.54 (8ª rodada, C7-1): o «Remover item» passa pela MESMA trava do «Salvar agenda». Só remove se a agenda
+      // ainda é a que esta tela leu, e então guarda na tela o carimbo novo (o «Salvar agenda» seguinte, nesta
+      // mesma tela, grava). Se outro aparelho mudou a agenda, nada sai: copiar o carimbo esconderia a mudança dele.
+      // Tela que não leu o carimbo desta agenda: remove como antes e não mexe no carimbo da tela (o «Salvar
+      // agenda» dela continua recusado: falha fechada).
+      const lidoR=!!(MED_AGENDA_TS && MED_AGENDA_TS.key===key && MED_AGENDA_TS.lido), nomeR=currentHosp.nome||'este FILHOt';
+      const travaR=lidoR ? mcrTravaAgenda('auaulandia/medicacao-agenda/'+key+'/_ts', MED_AGENDA_TS.ts, Date.now()) : Promise.resolve(true);
+      return travaR.then(function(passou){
+        if(!passou){
+          const stR=document.getElementById('mag-status');
+          if(stR){ stR.style.color='var(--crm-critico)'; stR.textContent='A agenda de '+nomeR+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'; }
+          return;
+        }
+        el.remove();
+        // 6.54 (7ª rodada, C6-3 — extensão da trava F3): remove e anda o carimbo da agenda na mesma escrita;
+        // um «Salvar agenda» com o formulário de antes é recusado e não recria o remédio removido.
+        const upR={}; upR['itens/'+id]=null; upR._ts=Date.now(); upR._quem=(typeof quemSou==='function')?quemSou():'-';
+        return DB.ref('auaulandia/medicacao-agenda/'+key).update(upR).then(function(){
+          delete MED_AGENDA_ITENS[id];
+          if(lidoR && MED_AGENDA_TS && MED_AGENDA_TS.key===key) MED_AGENDA_TS.ts=upR._ts;
+          if(typeof renderMedAgendaHoje==='function') renderMedAgendaHoje();
+          if(typeof audit==='function') audit('medicacao-agenda-remover',key,{pet:currentHosp.nome||'',item:id});
+          if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+        });
       }).catch(function(e){ _logFalhaGrav('remover remédio '+id, e); });
     }
+    el.remove();
   }
   function magAddNovoItem(){
     if(!canEditMed()) return;
@@ -14031,28 +14104,41 @@
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const key=medAgendaKey(); if(!key) return;
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
-    const quem=quemSou();
-    const ids=Object.keys(itens);
+    const quem=quemSou(), nomeH=currentHosp.nome||'este FILHOt', ts0=Date.now();
+    const lidoT=(MED_AGENDA_TS && MED_AGENDA_TS.key===key)?MED_AGENDA_TS.ts:null;
+    // 6.54 (AC24): horário mudado com a dose de hoje já dada (ou já passado) começa amanhã, por troca de
+    // datas — a mesma régua da tela «Mudar comida e remédio». Sem isso, o alarme tocava o horário novo hoje.
+    mcrReguaDaAgenda(key, itens, MED_AGENDA_ITENS, quem).then(function(rg){
+    // 6.54 (conferência final): a trava da agenda. Só grava se ninguém gravou a agenda depois que este
+    // formulário foi lido (a tela nova, a veterinária, o check-in e a ficha andam o mesmo carimbo).
+    return mcrTravaAgenda('auaulandia/medicacao-agenda/'+key+'/_ts', lidoT, ts0).then(function(passou){
+    if(!passou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A agenda de '+nomeH+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'; } return; }
+    const ids=Object.keys(rg.itens);
     const ops=[];
     // ANTI-HULK: NUNCA sobrescreve o nó inteiro. Atualiza só os metadados no topo (sem tocar em /itens)
     // e grava CADA remédio item a item. Assim, um remédio que a Vet acabou de adicionar/mudar (que não
     // está neste formulário) NÃO é apagado em silêncio. Remoção é explícita (magRemoverItem).
-    ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:currentHosp.nome||'', tutor:currentHosp.tutor||'', _ts:Date.now(), _quem:quem}));
+    ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:currentHosp.nome||'', tutor:currentHosp.tutor||'', _ts:ts0, _quem:quem}));
     ids.forEach(function(id){
-      const it=itens[id];
+      const it=rg.itens[id];
       // Histórico por remédio (Fundação 1): cada mudança vira uma linha {quem, quando, acao}.
-      const acao=medDiffAcao(MED_AGENDA_ITENS[id], it);
+      // O remédio que trocou de horário por datas (6.54) já leva a linha da troca.
+      const acao=rg.trocados[id]?null:medDiffAcao(MED_AGENDA_ITENS[id], it);
       if(acao){ const hist=Array.isArray(it.historico)?it.historico.slice():[]; hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():new Date().toLocaleString('pt-BR')), acao:acao}); it.historico=hist; }
       ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update(it));
     });
-    Promise.all(ops).then(function(){
-      // recarrega os itens do banco (traz de volta o que outro papel gravou em paralelo) e re-renderiza
-      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value');
-    }).then(function(s){
-      MED_AGENDA_ITENS=s.val()||{}; renderMedAgenda();
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Agenda de medicação salva.'; }
-      if(typeof audit==='function') audit('medicacao-agenda',key,{pet:currentHosp.nome||'',itens:ids.length});
+    Object.keys(rg.novos).forEach(function(nid){ ops.push(DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+nid).set(rg.novos[nid])); });
+    return Promise.all(ops).then(function(){
+      // recarrega os itens do banco (traz de volta o que outro papel gravou em paralelo) e re-renderiza;
+      // e relê o carimbo: o 2º «Salvar» nesta mesma tela não fica preso na trava
+      return Promise.all([DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value'), DB.ref('auaulandia/medicacao-agenda/'+key+'/_ts').once('value')]);
+    }).then(function(r){
+      MED_AGENDA_ITENS=r[0].val()||{}; MED_AGENDA_TS={key:key, ts:(r[1].val()!=null)?r[1].val():null, lido:true}; renderMedAgenda();
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Agenda de medicação salva.'+(rg.frases.length?(' '+rg.frases.join(' ')):''); }
+      if(typeof audit==='function') audit('medicacao-agenda',key,{pet:nomeH,itens:ids.length,troca:rg.frases.join(' ')});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+    });
+    });
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
   }
   function carregarMedAgenda(){
@@ -14061,12 +14147,14 @@
     const hoje=document.getElementById('magHoje'); if(hoje) hoje.innerHTML='';
     const stA=document.getElementById('mag-status'); if(stA) stA.textContent='';
     const stB=document.getElementById('mag-avulsa-status'); if(stB) stB.textContent='';
+    MED_AGENDA_TS={key:'', ts:null, lido:false};
     if(!DB||!currentHosp) return;
     const key=medAgendaKey(); if(!key) return;
     Promise.all([
       DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(s=>s.val()||{}).catch(()=>({})),
-      DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key).once('value').then(s=>s.val()||{}).catch(()=>({}))
-    ]).then(function(r){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_LOG=r[1]||{}; renderMedAgenda(); });
+      DB.ref('auaulandia/medicacao-log/'+dataKeyAtual()+'/'+key).once('value').then(s=>s.val()||{}).catch(()=>({})),
+      DB.ref('auaulandia/medicacao-agenda/'+key+'/_ts').once('value').then(s=>({v:s.val()})).catch(()=>null)
+    ]).then(function(r){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_LOG=r[1]||{}; MED_AGENDA_TS={key:key, ts:(r[2]&&r[2].v!=null)?r[2].v:null, lido:!!r[2]}; renderMedAgenda(); });
   }
   // Quantos dias de folga antes de acabar já dispara o alerta (contável).
   const ESTOQUE_DIAS_ALERTA=2;
@@ -21295,7 +21383,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-11';
+  const APP_VERSAO='2026-10-09-12';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21634,6 +21722,13 @@
       if(!x || x.key!==it.key || x.itemId!==it.itemId) return;
       var m=medMinutosDe(x.horario); if(m===null || m===m0) return;
       var d=(m-m0+1440)%1440;                  // minutos até ela (a de amanhã, se for mais cedo)
+      if(prox===null || d<prox) prox=d;
+    });
+    // 6.54 (K17): o remédio que trocou de horário por datas tem a próxima dose no item novo, que começa
+    // amanhã (continuaEm, da carga da fila). 22:00 → 00:30: a das 22:00 atrasada toca até 23:15, não até 01:00.
+    ((it && Array.isArray(it.continuaEm)) ? it.continuaEm : []).forEach(function(hc){
+      var m=medMinutosDe(hc); if(m===null) return;
+      var d=1440-m0+m;                         // a do item novo é sempre no dia seguinte
       if(prox===null || d<prox) prox=d;
     });
     return (prox===null) ? MED_ONTEM_TETO_MS : Math.min(MED_ONTEM_TETO_MS, prox*60000/2);
@@ -27529,7 +27624,13 @@
           if(it.suspenso){ susp[key+'__'+id]=1; return; } // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk); 6.47: o adiado dela não volta
           if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
           // saidaHoje (6.47): quem tem saída neste dia — a dose da noite dele não toca depois da meia-noite.
-          (it.horarios||[]).forEach(function(hr){ lista.push({hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr, saidaHoje:!!h.saidaHoje}); });
+          // continuaEm (6.54, K17): o remédio que trocou de horário por datas continua AMANHÃ no item novo; a dose
+          // dele de hoje, atrasada, não toca além da metade do intervalo até a 1ª dose do novo (medOntemTeto).
+          // Só quando o novo vai MESMO ser dado amanhã (3ª rodada, N1): suspenso pela veterinária, parado ou fora
+          // do dia, a última dose do antigo fica com o teto de sempre da 6.47.
+          var nv=it.trocadoPor?itens[it.trocadoPor]:null, amanhaC=addDiasISO(diaCarga,1);
+          var cont=(nv && Array.isArray(nv.horarios) && nv.dataInicio===amanhaC && !nv.suspenso && !nv.paradoEm && medVigenteEm(nv, amanhaC))?nv.horarios.slice():null;
+          (it.horarios||[]).forEach(function(hr){ var e={hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr, saidaHoje:!!h.saidaHoje}; if(cont) e.continuaEm=cont; lista.push(e); });
         });
       }).catch(function(e){ __medAgendaFalhas++; _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });
     });
@@ -28192,7 +28293,11 @@
     if(!motivo){ alert('É preciso informar o motivo para suspender.'); return; }
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Suspendeu',motivo:motivo});
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({suspenso:true,suspensoPor:quem,suspensoMotivo:motivo,suspensoTs:Date.now(),historico:hist}).then(function(){
+    // 6.54 (8ª rodada, C7-2 — extensão da trava F3): suspende e anda o carimbo da agenda na mesma escrita;
+    // um «Salvar agenda» com o formulário de antes é recusado e não apaga a linha "Suspendeu" do histórico.
+    var upS={}; upS['itens/'+id+'/suspenso']=true; upS['itens/'+id+'/suspensoPor']=quem; upS['itens/'+id+'/suspensoMotivo']=motivo; upS['itens/'+id+'/suspensoTs']=Date.now();
+    upS['itens/'+id+'/historico']=hist; upS._ts=Date.now(); upS._quem=quem;
+    DB.ref('auaulandia/medicacao-agenda/'+key).update(upS).then(function(){
       if(typeof audit==='function') audit('vet-medicacao-suspensa',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
       vetCarregarMed(vetHosp);
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // some dos alarmes na hora
@@ -28207,7 +28312,10 @@
     if(!motivo){ alert('É preciso informar o motivo para reativar.'); return; }
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Reativou',motivo:motivo});
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({suspenso:null,suspensoPor:null,suspensoMotivo:null,suspensoTs:null,historico:hist}).then(function(){
+    // 6.54 (7ª rodada, C6-3 — extensão da trava F3): reativa e anda o carimbo da agenda na mesma escrita;
+    // um «Salvar agenda» com o formulário de antes (que leu "suspenso") é recusado e não suspende de novo.
+    var upV={}; ['suspenso','suspensoPor','suspensoMotivo','suspensoTs'].forEach(function(c){ upV['itens/'+id+'/'+c]=null; }); upV['itens/'+id+'/historico']=hist; upV._ts=Date.now(); upV._quem=quem;
+    DB.ref('auaulandia/medicacao-agenda/'+key).update(upV).then(function(){
       if(typeof audit==='function') audit('vet-medicacao-reativada',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
       vetCarregarMed(vetHosp);
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
@@ -28517,6 +28625,7 @@
       Object.keys(itens).forEach(function(id){
         var it=itens[id]||{};
         if(it.origem!=='vet') return;          // rotina do tutor / autorizado pela família: não é receita dela
+        if(it.trocadoPor) return;              // 6.54: trocou de horário (o novo continua) — não é fim de receita
         if(it.continuo) return;                // uso contínuo não acaba
         if(it.suspenso) return;                // já foi suspenso — a vet decidiu, não precisa avisar
         if(!it.dataFim) return;
@@ -28548,7 +28657,11 @@
     var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]);
     hist.push({quem:quem,quando:agoraBR(),acao:'Ciente do término',motivo:'Última dose em '+medBRdata(it.dataFim||'')});
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).update({fimCiente:true,fimCientePor:quem,fimCienteTs:Date.now(),historico:hist}).then(function(){
+    // 6.54 (8ª rodada, C7-2 — extensão da trava F3): o «Ciente» e o carimbo da agenda na mesma escrita;
+    // um «Salvar agenda» com o formulário de antes é recusado e não apaga a linha "Ciente do término".
+    var upC={}; upC['itens/'+id+'/fimCiente']=true; upC['itens/'+id+'/fimCientePor']=quem; upC['itens/'+id+'/fimCienteTs']=Date.now();
+    upC['itens/'+id+'/historico']=hist; upC._ts=Date.now(); upC._quem=quem;
+    DB.ref('auaulandia/medicacao-agenda/'+key).update(upC).then(function(){
       if(typeof audit==='function') audit('vet-medicacao-fim-ciente',key,{pet:ficha.nome||'',med:it.nome||'',quem:quem});
       if(vetHosp && vetKey(vetHosp)===key) vetCarregarMed(vetHosp);
     }).catch(function(e){ alert('Erro ao registrar ciência: '+e.message); });
@@ -33537,6 +33650,7 @@
   var FMED_ITENS={};      // o que está salvo no banco para o FILHOt aberto: {id:item}
   var FMED_KEY='';        // a chave da agenda do FILHOt aberto
   var FMED_CARREGOU=false;
+  var FMED_TS_LIDO=null;  // 6.54 (conferência final): o carimbo da agenda (_ts) que esta aba leu — a mesma trava do «Salvar agenda»
   function fmedPodeEditar(){ return canEditCheckinMed(); }
   // Abrir a aba: lê do banco UMA vez por FILHOt (nó pequeno) e desenha.
   function fmedRender(){
@@ -33547,7 +33661,8 @@
     if(!FMED_CARREGOU){
       wrap.innerHTML='<div class="hint">Lendo os medicamentos deste FILHOt&hellip;</div>';
       if(!DB){ wrap.innerHTML='<div class="hint">Banco conectando&hellip; abra a aba de novo em instantes.</div>'; return; }
-      DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+      Promise.all([DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value'), DB.ref('auaulandia/medicacao-agenda/'+key+'/_ts').once('value')]).then(function(rr){
+        var s=rr[0]; FMED_TS_LIDO=(rr[1].val()!=null)?rr[1].val():null;
         // A MESMA régua do check-in (24/set/2026): dado antigo repetido aparece UMA vez só.
         // Quem limpa o banco é o "Salvar medicamentos", com rastro — ver fmedSalvar.
         FMED_ITENS=medDedupe(s.val()||{}).itens; FMED_CARREGOU=true; fmedDesenhar();
@@ -33656,11 +33771,16 @@
       ['Isso vale também para a hospedagem: no próximo check-in a Consultora confirma cada item com o tutor.']),
       {sim:'Salvar medicamentos', nao:'Voltar e conferir'});
     if(!ok) return;
-    const quem=quemSou();
+    const quem=quemSou(), ts0=Date.now(), keyF=FMED_KEY;
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    // 6.54 (conferência final): a mesma trava do «Salvar agenda» — a aba aberta antes de uma troca ou de um
+    // «Parou» feitos em outro aparelho não regrava o remédio antigo.
+    let passou=false;
+    try{ passou=await mcrTravaAgenda('auaulandia/medicacao-agenda/'+keyF+'/_ts', FMED_TS_LIDO, ts0); }catch(e){ passou=false; _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar, trava)', e); }
+    if(!passou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A agenda de '+(pelNome(pelAtual)||'este FILHOt')+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'; } return; }
     const ops=[];
     ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY).update({
-      nome:pelNome(pelAtual)||'', tutor:(typeof pelGet==='function'?pelGet(pelAtual,'tutor'):'')||'', _ts:Date.now(), _quem:quem }));
+      nome:pelNome(pelAtual)||'', tutor:(typeof pelGet==='function'?pelGet(pelAtual,'tutor'):'')||'', _ts:ts0, _quem:quem }));
     Object.keys(itens).forEach(function(id){
       const it=itens[id];
       const acao=medDiffAcao(FMED_ITENS[id], it);
@@ -33671,8 +33791,9 @@
     // 'medicacao-agenda-dedupe'. Duas telas, uma régua só (24/set/2026).
     ops.push(medAgendaGravarItens(FMED_KEY, itens, 'ficha Medicamentos'));
     Promise.all(ops).then(function(){
-      return DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens').once('value');
-    }).then(function(s){
+      return Promise.all([DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens').once('value'), DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/_ts').once('value')]);
+    }).then(function(rr){
+      var s=rr[0]; FMED_TS_LIDO=(rr[1].val()!=null)?rr[1].val():null;
       FMED_ITENS=medDedupe(s.val()||{}).itens; FMED_CARREGOU=true; fmedDesenhar();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'; }
       if(typeof audit==='function') audit('ficha-medicamentos', resumo.join(' | '),
@@ -59113,7 +59234,7 @@
       // DADO ANTIGO JÁ DUPLICADO: a agenda da Lisa chegava com 4 VitaC iguais. A tela mostra
       // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
       // banco com rastro. A Consultora não precisa mais apagar linha por linha.
-      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); });
+      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); }).filter(function(id){ return !itens[id].trocadoPor; });   // trocadoPor (6.54): o horário novo está no item seguinte
       CI_MED_CARREGADOS={ids:{}, sigs:{}};
       ids.forEach(function(id){ CI_MED_CARREGADOS.ids[id]=1; CI_MED_CARREGADOS.sigs[medAssinatura(itens[id])]=1; });
       if(!ids.length) return;
@@ -59566,6 +59687,7 @@
         // Adriana, 06/ago/2026: "a tutora do Toddy ligou que o filho passou informação
         // errada, então precisamos editar". Acrescentar SOMA; corrigir SUBSTITUI — e a
         // medicação errada só sai por aqui.
+        +(typeof mcrBotaoCheckinHTML==='function'?mcrBotaoCheckinHTML(ativa.id):'')
         +'<button type="button" class="btn" style="width:100%;margin-top:8px;background:#B3261E;color:#fff" onclick="ciCorrigirExistente(\''+escAttr(ativa.id)+'\')">✎ Corrigir informação errada</button>'
         +'<div style="font-size:12.5px;color:#6b5f4b;font-weight:600;margin-top:6px">Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha <strong>SUBSTITUIR</strong>.</div>'
         // 6.53 (a Frida): a hospedagem foi lançada no FILHOt errado, ou não aconteceu.
@@ -59764,7 +59886,7 @@
   }
   // A lista que vai para a ESTADIA. Deduplicada pela mesma assinatura da agenda (24/set/2026):
   // sem isto, a estadia da Lisa levava "VitaC" quatro vezes na conferência e no check-out.
-  function ciMedsToLista(itens){ itens=medDedupe(itens||{}).itens; return Object.values(itens).map(function(it){ const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor' }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
+  function ciMedsToLista(itens){ itens=medDedupe(itens||{}).itens; return Object.keys(itens).map(function(id){ const it=itens[id]; const o={ nome:it.nome, tipo:it.tipo, q:it.q, u:it.u, horarios:it.horarios, origem:it.origem||'tutor', agendaId:id }; if(it.estoque) o.estoque=it.estoque; if(it.freq) o.freq=it.freq; if(it.local) o.local=it.local; if(it.dataInicio) o.dataInicio=it.dataInicio; if(it.continuo) o.continuo=true; else if(it.dataFim) o.dataFim=it.dataFim; return o; }); }
 
   // ---- Salvar no sistema ----
   // ==================================================================================
@@ -61149,24 +61271,27 @@
       });
       y-=2;
     };
-    (doc.secoes||[]).forEach(function(sec){
+    var desenhar=function(lista){ (lista||[]).forEach(function(sec){
       secao(sec.titulo||'', !!sec.vermelha);
       (sec.linhas||[]).forEach(function(l){
         if(l && l.k!=null) kv(l.k,l.v,!!l.vermelho||!!sec.vermelha);
         else if(l && l.tab) tabela(l.tab);
         else if(l && l.t!=null) solta(l.t,!!l.cinza);
       });
-    });
+    }); };
+    desenhar(doc.secoes);
     // ---- assinatura do tutor, sempre com o próprio cabeçalho ao lado ----
-    var sig=opts.assinatura||null;
+    var sig=opts.assinatura||null, paginaSig=null;
     if(opts.assinaNome!=null || sig){
       var alturaSig=(sig?150:44)+24;
       garante(alturaSig+26);
       secao('ASSINATURA DO TUTOR');
-      if(sig){ var W2=220, H2=Math.min(110, W2*(sig.h/sig.w)); var yb=y-10-H2; ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' '+(X0+6)+' '+yb.toFixed(2)+' cm /Im0 Do Q'); y=yb; }
+      if(sig){ var W2=220, H2=Math.min(110, W2*(sig.h/sig.w)); var yb=y-10-H2; ops.push('q '+W2.toFixed(2)+' 0 0 '+H2.toFixed(2)+' '+(X0+6)+' '+yb.toFixed(2)+' cm /Im0 Do Q'); y=yb; paginaSig=paginas.length; }
       else { y-=18; texto(X0+6,y,'(sem assinatura no quadro)',10,ZPDF_CINZA,false); }
       if(opts.assinaNome){ y-=16; texto(X0+6,y,opts.assinaNome,10.5,ZPDF_AZUL,true); }
     }
+    // 6.54: o que mudou depois do check-in vai numa página a mais, depois da assinatura — a 1ª fica igual.
+    if(opts.apendice && opts.apendice.length){ novaPagina(); desenhar(opts.apendice); }
     novaPagina();
     if(!paginas.length) paginas.push([]);
     var n=paginas.length;
@@ -61199,7 +61324,7 @@
     // As imagens agora são uma LISTA (assinatura, logo, foto) — cada uma diz em que
     // página aparece. Numeração de objeto vem da posição na lista.
     var imgs=[];
-    if(sig)  imgs.push({nome:'Im0', im:sig,  em:function(i){ return i===n-1; }});
+    if(sig)  imgs.push({nome:'Im0', im:sig,  em:function(i){ return i===(paginaSig!=null?paginaSig:n-1); }});
     if(logo) imgs.push({nome:'Im1', im:logo, em:function(i){ return true; }});
     if(foto) imgs.push({nome:'Im2', im:foto, em:function(i){ return i===0; }});
     var objPag=function(i){ return 3+i; }, objCont=function(i){ return 3+n+i; };
@@ -61282,7 +61407,8 @@
       assinatura: null,
       foto: null,
       // 6.53: "Ficha corrigida em DD/MM: estava na ficha de outro FILHOt" (troca de ficha).
-      nota: (typeof hospNotaTrocaFicha==='function')?hospNotaTrocaFicha(est):''
+      nota: (typeof hospNotaTrocaFicha==='function')?hospNotaTrocaFicha(est):'',
+      alteracoes: est.alteracoes||null   // 6.54: "ALTERAÇÕES DEPOIS DO CHECK-IN", numa página a mais
     };
   }
   function ciBuildPdfBlob(){ return ciFichaPdfBlob(ciFichaFonteTela()); }
@@ -61404,7 +61530,8 @@
       sub:(H.nome||'')+(H.raca?(' · '+H.raca):'')+(H.tutor?(' · Tutor: '+H.tutor):'')+'  —  emitida em '+ciBRdata((typeof hojeISO==='function')?hojeISO():''),
       alertaCab:_alerta.slice(0,110),
       secoes:S
-    },{ assinatura: F.assinatura||null, assinaNome: assina, foto: F.foto||null });
+    },{ assinatura: F.assinatura||null, assinaNome: assina, foto: F.foto||null,
+        apendice: (F.alteracoes&&typeof mcrPdfApendice==='function')?mcrPdfApendice(F.alteracoes):null });
   }
   // (o montador antigo da ficha foi substituído pelo zPdfDocBlob acima — 31/ago/2026;
   //  o histórico do git guarda a versão anterior)
@@ -61555,6 +61682,1490 @@
       {botao:'Entendi'});
   }
 
+
+  // ==================================================================================
+  // ===== MUDAR COMIDA E REMÉDIO DEPOIS DO CHECK-IN (Story 6.54 — Adriana, 08/out/2026)
+  // "O Palito come 45 gramas e não 50 como colocamos no checkin, precisamos conseguir
+  //  alterar medicação e comida dos hóspedes c/ quantidade, marca, ração ou patê ou
+  //  comida etc! assim como medicação, e de forma simples."
+  //
+  // Até aqui a comida só mudava pelo «✎ Corrigir» do Check-in (a tela inteira, assinatura,
+  // reconfirmação de cada remédio) e o remédio, pelo «Salvar agenda» do Plantão — que,
+  // mudando o horário depois de a dose de hoje ter sido dada, fazia o alarme tocar a dose
+  // do horário novo: DOSE EM DOBRO (a dose é identificada por remédio + horário).
+  //
+  // A tela curta «Mudar comida e remédio» (Plantão, Hóspedes e o quadro "já está hospedado"
+  // do Check-in) muda o que precisa, com motivo de 4 palavras e o nome de quem mudou, numa
+  // gravação só. A regra de segurança do remédio é UMA função pura (mcrRegraHorario):
+  //  · horário que muda depois de a dose de hoje ter sido dada, horário que já passou (ou
+  //    está a menos de 15 min), horário novo que já passou, ou antes das 06:00 → começa
+  //    AMANHÃ, por TROCA DE DATAS: o remédio antigo termina hoje (continuo:false, dataFim
+  //    hoje) e um novo (mcr_…) começa amanhã. Todos os leitores do alarme já respeitam a
+  //    vigência (medVigenteEm), e um celular com a fila velha também acerta, porque nada muda
+  //    para hoje. Do alarme, só o teto da dose atrasada (medOntemTeto) passa a ver o item novo
+  //    (2ª rodada, K17).
+  //  · «Hoje» só quando nada disso acontece — e mesmo assim o recomendado é «Amanhã».
+  //  · nunca grava em medicacao-log: nenhuma dose vira "dada" por mudança de horário.
+  // ==================================================================================
+  var MCR_FRASES_PRONTAS=['A tutora avisou por WhatsApp','A tutora ligou e corrigiu','A veterinária mudou a prescrição','Erro de digitação no check-in'];
+  var MCR_FOLGA_MIN=15;               // horário a menos disso não muda "hoje": um celular com a fila velha pode tocar
+  var MCR_DIA_COMECA_MIN=6*60;        // antes das 06:00, só amanhã (a 6.47 ainda pode tocar a dose de ontem)
+  var MCR=null;                       // a tela aberta (estado puro + o que a tela mostra)
+  var MCR_ALARME_SIG=null, __mcrRearmT=null, __mcrRedesenhoT=null;
+  var MCR_DIAS_SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+
+  // ---- O motivo: a régua é a da 6.53 (Frida), `motivoQuatroPalavras(texto)` → {ok, erro}, definida no bloco
+  // "CORRIGIR A HOSPEDAGEM": no mínimo 4 palavras e 3 diferentes de 2 letras ou mais. Uma régua só no app.
+  // "sábado, 10/10": depois da meia-noite, "amanhã" engana quem está no plantão — a data vai escrita.
+  function mcrDiaTexto(iso){
+    var d=new Date(String(iso||'')+'T12:00:00'); if(isNaN(d.getTime())) return String(iso||'');
+    var p=function(x){ return String(x).padStart(2,'0'); };
+    return MCR_DIAS_SEMANA[d.getDay()]+', '+p(d.getDate())+'/'+p(d.getMonth()+1);
+  }
+  // "no sábado, 10/10" / "na segunda, 12/10" (sábado e domingo pedem "no").
+  function mcrNoDia(iso){
+    var d=new Date(String(iso||'')+'T12:00:00'); if(isNaN(d.getTime())) return 'em '+String(iso||'');
+    return ((d.getDay()===0||d.getDay()===6)?'no ':'na ')+mcrDiaTexto(iso);
+  }
+  function mcrHHMM(min){ min=((Math.round(min)%1440)+1440)%1440; return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0'); }
+  function mcrDuracaoTxt(min){ min=Math.round(min); var h=Math.floor(min/60), m=min%60; return (h?(h+' h'):'')+(h&&m?' ':'')+(m?(m+' min'):'')||'0 min'; }
+  function mcrMinDe(h){ var m=/^(\d{2}):(\d{2})$/.exec(String(h||'').trim()); return m?(Number(m[1])*60+Number(m[2])):null; }
+  function mcrAgoraMin(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); }
+  function mcrNovoId(pref, ts){ return (pref||'mcr')+'_'+(ts||Date.now())+'_'+Math.random().toString(36).slice(2,7); }
+  // O id do item novo é DETERMINÍSTICO (achado A8 do QA): duas gravações ao mesmo tempo (duas pessoas,
+  // ou o mesmo pedido repetido de outro aparelho) caem no MESMO nó, e não viram dois alarmes.
+  // Troca por datas: prefixo próprio "mcr_t_" (3ª rodada, N2: a troca de um remédio novo não pode cair no id
+  // de outro remédio novo de mesmo nome) + o remédio + o dia em que o novo começa ("mcr_t_ci_1_20261010");
+  // a troca de uma troca não encomprida o id ("mcr_t_ci_1_20261010" → "mcr_t_ci_1_20261011").
+  function mcrIdTroca(antigoId, inicio){
+    var raiz=String(antigoId||''), m=/^mcr_t_(.+)_(\d{8})$/.exec(raiz);
+    if(m) raiz=m[1]; else if(/^mcr_n_/.test(raiz)) raiz=raiz.slice(4);
+    return 'mcr_t_'+raiz+'_'+String(inicio||'').replace(/-/g,'');
+  }
+  // O id da troca já existe e NÃO é a continuação deste remédio? Então não grava (nunca sobrescreve outro remédio).
+  function mcrIdTrocaOcupado(itens, novoId, antigoId){ var x=(itens||{})[novoId]; return !!x && x.continuacaoDe!==antigoId; }
+  // Remédio novo: o nome + o dia do começo ("mcr_n_probiotico_20261010"). Se esse id é de um remédio novo
+  // PARADO (3ª rodada, N3), o próximo livre ("…_2", "…_3"): o parado não volta, e o lançamento de novo vale.
+  function mcrSlugNome(nome){ return (jsNorm(String(nome||'')).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40))||'remedio'; }
+  function mcrIdNovo(nome, inicio){ return 'mcr_n_'+mcrSlugNome(nome)+'_'+String(inicio||'').replace(/-/g,''); }
+  function mcrIdNovoLivre(nome, inicio, itens){
+    var base=mcrIdNovo(nome, inicio), id=base, k=1;
+    while(itens && itens[id] && itens[id].paradoEm && k<50){ k++; id=base+'_'+k; }
+    return id;
+  }
+  // O remédio novo que já está na agenda com este id (lançado por outra pessoa ou num salvamento anterior): o que dizer.
+  function mcrNovoJaLancadoTxt(nm, x, ini, hoje){
+    if(x && x.suspenso) return nm+': foi suspenso pela veterinária'+(x.suspensoPor?(' ('+x.suspensoPor+')'):'')+'. Só ela reativa, no Cuidado Vet.';
+    return nm+': já está na agenda como remédio novo que começa '+(ini===hoje?'hoje':mcrNoDia(ini))+'. Mude por ele, na lista de cima.';
+  }
+  function mcrLimpo(v){ return (v===undefined)?null:JSON.parse(JSON.stringify(v)); }
+
+  // ---- COMIDA: o mesmo formato que o check-in grava (ficha.alim), refeição a refeição.
+  function mcrRefNorm(r){ r=r||{}; return {on:!!r.on, hora:String(r.hora||''), racao:String(r.racao==null?'':r.racao), natural:String(r.natural==null?'':r.natural), extra:String(r.extra||'')}; }
+  function mcrExtraNorm(e){ e=e||{}; return {nome:String(e.nome||''), hora:String(e.hora||''), racao:String(e.racao==null?'':e.racao), natural:String(e.natural==null?'':e.natural), extra:String(e.extra||'')}; }
+  // Ficha antiga (uma quantidade só): a mesma leitura do ciCarregarRefs, sem tela.
+  function mcrRefsLegado(a){
+    a=a||{}; var fixas={};
+    CI_REF_FIXAS.forEach(function(f){ fixas[f.k]=mcrRefNorm(null); });
+    var rr=a.racaoRefeicoes||{}, nn=(a.comida&&a.comida.refeicoes)||{};
+    CI_REF_FIXAS.forEach(function(f){
+      var temR=!!rr[f.k], temN=!!nn[f.k]; if(!temR&&!temN) return;
+      fixas[f.k]={on:true, hora:'', racao:temR?String(a.qtd||''):'', natural:temN?String((a.comida&&a.comida.qtd)||''):'', extra:''};
+    });
+    var nenhuma=CI_REF_FIXAS.every(function(f){ return !fixas[f.k].on; });
+    if(nenhuma && a.qtd){ var n=parseInt(a.refeicoes,10)||1, ordem=['almoco','jantar','cafe']; for(var i=0;i<Math.min(n,3);i++) fixas[ordem[i]]={on:true, hora:'', racao:String(a.qtd||''), natural:'', extra:''}; }
+    return {fixas:fixas, extras:[]};
+  }
+  function mcrComidaDe(est){
+    var a=(est&&est.ficha&&est.ficha.alim)||{}, refs;
+    if(a.refs&&a.refs.fixas){
+      refs={fixas:{}, extras:[]};
+      CI_REF_FIXAS.forEach(function(f){ refs.fixas[f.k]=mcrRefNorm(a.refs.fixas[f.k]); });
+      refs.extras=(Array.isArray(a.refs.extras)?a.refs.extras:[]).map(mcrExtraNorm);
+    } else refs=mcrRefsLegado(a);
+    return {tipo:String(a.tipo||''), marca:String(a.marca||''), unidade:String(a.unidade||''), refs:refs,
+            semRacao:!!(est&&est.alimentacao&&est.alimentacao.sem_racao)};
+  }
+  function mcrTemNatural(tipo){ return tipo==='Ração + natural'||tipo==='Comida natural'; }
+  // Os campos DERIVADOS que o check-in grava (ciColetarFicha + ciCalcRacao), sem ler a tela:
+  // refeicoes, qtd, dias, racaoRefeicoes, minimo, deficit e comida.*. O resto da ficha.alim fica.
+  // Prova F1: igual ao check-in em 60 cenários.
+  function alimDerivados(alim, entrada, saida){
+    var a=JSON.parse(JSON.stringify(alim||{}));
+    var fx=(a.refs&&a.refs.fixas)||{}, ex=(a.refs&&Array.isArray(a.refs.extras))?a.refs.extras:[];
+    var ativas=[];
+    CI_REF_FIXAS.forEach(function(f){ var r=fx[f.k]||{}; if(r.on) ativas.push({racao:r.racao||'', natural:r.natural||''}); });
+    ex.forEach(function(e){ e=e||{}; ativas.push({racao:e.racao||'', natural:e.natural||''}); });
+    var legado=function(campo){
+      var vals=ativas.map(function(r){ return String(r[campo]||'').trim(); }).filter(function(v){ return v && ciNum(v)>0; });
+      if(!vals.length) return '';
+      return vals.every(function(v){ return v===vals[0]; })?vals[0]:'';
+    };
+    var dias=0;
+    if(entrada&&saida){ var d1=new Date(entrada+'T00:00:00'), d2=new Date(saida+'T00:00:00'); var diff=Math.round((d2-d1)/86400000); dias=(isNaN(diff)||diff<0)?0:diff+1; }
+    var tot=function(l){ var r=0, nt=0; l.forEach(function(x){ r+=ciNum(x.racao); nt+=ciNum(x.natural); }); return {racao:r, natural:nt}; };
+    var parcial=function(marc){
+      marc=marc||{}; var l=[];
+      CI_REF_FIXAS.forEach(function(f){ var r=fx[f.k]||{}; if(r.on&&marc[f.k]) l.push({racao:r.racao||'', natural:r.natural||''}); });
+      ex.forEach(function(e){ e=e||{}; l.push({racao:e.racao||'', natural:e.natural||''}); });
+      return tot(l);
+    };
+    var dia=tot(ativas), ent=parcial(a.entrada), sai=parcial(a.saida);
+    var racao=0, natural=0;
+    if(dias===1){ racao=ent.racao; natural=ent.natural; }
+    else if(dias===2){ racao=ent.racao+sai.racao; natural=ent.natural+sai.natural; }
+    else if(dias>=3){ racao=ent.racao+((dias-2)*dia.racao)+sai.racao; natural=ent.natural+((dias-2)*dia.natural)+sai.natural; }
+    var minimo=Math.round(racao), minimoComida=Math.round(natural);
+    var refObj=function(campo){ var o={cafe:false,almoco:false,jantar:false}; CI_REF_FIXAS.forEach(function(f){ var r=fx[f.k]||{}; if(r.on&&ciNum(r[campo])>0) o[f.k]=true; }); return o; };
+    a.refeicoes=String(ativas.length||'');
+    a.qtd=legado('racao');
+    a.dias=(dias||'');
+    a.racaoRefeicoes=refObj('racao');
+    a.minimo=(minimo||0);
+    a.deficit=((minimo-ciNum(a.trazida))||0);
+    a.comida=mcrTemNatural(a.tipo)?{
+      qtd:legado('natural'), trazida:String((a.comida&&a.comida.trazida)||'').trim(), refeicoes:refObj('natural'),
+      minimo:(minimoComida||0), deficit:((minimoComida-ciNum(a.comida&&a.comida.trazida))||0)
+    }:null;
+    return a;
+  }
+  // −5 g / +5 g. Abaixo de zero não existe: vira vazio (a ração daquela refeição sai).
+  function mcrQtdTexto(n){ n=Math.round(n*100)/100; return String(n).replace('.',','); }
+  function mcrPasso(v, d){ var n=ciNum(v)+Number(d||0); if(!(n>0.0001)) return ''; return mcrQtdTexto(n); }
+  function mcrQtdLimpa(v){ var s=String(v==null?'':v).trim(); if(s.indexOf('-')>=0) return ''; s=s.replace(/[^0-9.,]/g,''); if(!(ciNum(s)>0)) return ''; return s; }
+  function mcrPassoDe(u){ return (!u||u==='gramas')?5:0.5; }
+  function mcrUnidTxt(u){ return (!u||u==='gramas')?' g':(' '+u); }
+  function mcrQtdUnid(q,u){ return String(q)+mcrUnidTxt(u); }
+  function mcrRefDesc(r, u){
+    r=r||{}; if(!r.on) return 'não faz';
+    var p=[];
+    if(ciNum(r.racao)>0) p.push(mcrQtdUnid(r.racao,u)+' de ração');
+    if(ciNum(r.natural)>0) p.push(r.natural+' g de comida natural');
+    if(String(r.extra||'').trim()) p.push(String(r.extra).trim());
+    return p.length?p.join(' + '):'sem quantidade';
+  }
+  function mcrDiffRef(nome, ra, rb, ua, ub){
+    if(!ra.on && rb.on) return nome+': não fazia → '+mcrRefDesc(rb,ub)+(rb.hora?(' ('+rb.hora+')'):'');
+    if(ra.on && !rb.on) return nome+': '+mcrRefDesc(ra,ua)+' → deixa de fazer';
+    var p=[];
+    var soRacao=(ra.natural===rb.natural && ra.extra===rb.extra && (ua||'gramas')===(ub||'gramas') && ciNum(ra.racao)>0 && ciNum(rb.racao)>0 && ra.racao!==rb.racao);
+    if(soRacao) p.push(mcrQtdUnid(ra.racao,ua).trim()+' → '+mcrQtdUnid(rb.racao,ub).trim()+' de ração');
+    else if(mcrRefDesc(ra,ua)!==mcrRefDesc(rb,ub)) p.push(mcrRefDesc(ra,ua)+' → '+mcrRefDesc(rb,ub));
+    if(ra.hora!==rb.hora) p.push('horário '+(ra.hora||'sem horário')+' → '+(rb.hora||'sem horário'));
+    return nome+': '+(p.join('; ')||'ajustado');
+  }
+  // O resumo de → para da comida, em português ("Jantar: 50 g → 45 g de ração"). Nada mudou = [].
+  function mcrDiffComida(a, b){
+    a=a||{}; b=b||{}; var out=[];
+    var vz=function(v){ return String(v||'').trim(); };
+    if(vz(a.tipo)!==vz(b.tipo)) out.push('Tipo: '+(vz(a.tipo)||'não informado')+' → '+(vz(b.tipo)||'não informado'));
+    if(vz(a.marca)!==vz(b.marca)) out.push('Marca: '+(vz(a.marca)||'sem marca')+' → '+(vz(b.marca)||'sem marca'));
+    var ua=vz(a.unidade)||'gramas', ub=vz(b.unidade)||'gramas';
+    if(ua!==ub) out.push('Medida: '+ua+' → '+ub);
+    var fa=(a.refs&&a.refs.fixas)||{}, fb=(b.refs&&b.refs.fixas)||{};
+    CI_REF_FIXAS.forEach(function(f){
+      var ra=mcrRefNorm(fa[f.k]), rb=mcrRefNorm(fb[f.k]);
+      if(JSON.stringify(ra)===JSON.stringify(rb)) return;
+      out.push(mcrDiffRef(f.n, ra, rb, a.unidade, b.unidade));
+    });
+    var ea=(a.refs&&a.refs.extras)||[], eb=(b.refs&&b.refs.extras)||[];
+    for(var i=0;i<Math.max(ea.length, eb.length);i++){
+      var xa=ea[i]?Object.assign({on:true}, mcrExtraNorm(ea[i])):null, xb=eb[i]?Object.assign({on:true}, mcrExtraNorm(eb[i])):null;
+      var nome=((xb&&xb.nome)||(xa&&xa.nome)||'Refeição extra');
+      if(!xa){ out.push(nome+': refeição nova → '+mcrRefDesc(xb, b.unidade)+(xb.hora?(' ('+xb.hora+')'):'')); continue; }
+      if(!xb){ out.push(nome+': '+mcrRefDesc(xa, a.unidade)+' → deixa de fazer'); continue; }
+      if(JSON.stringify(xa)===JSON.stringify(xb)) continue;
+      out.push(mcrDiffRef(nome+(xa.nome!==xb.nome?(' (era «'+(xa.nome||'Refeição extra')+'»)'):''), xa, xb, a.unidade, b.unidade));
+    }
+    if(!!a.semRacao!==!!b.semRacao) out.push('Sem ração — comida úmida da casa: '+(b.semRacao?'ligado (só nesta hospedagem)':'desligado'));
+    return out;
+  }
+  function mcrComidaRastro(c){ c=c||{}; return {tipo:c.tipo||'', marca:c.marca||'', unidade:c.unidade||'', refs:mcrLimpo(c.refs||null), semRacao:!!c.semRacao}; }
+
+  // ---- REMÉDIO: a régua da dose de hoje (pura). Na dúvida, AMANHÃ — funciona até com celular sem internet.
+  function mcrDadosHoje(item, id, log){ log=log||{}; return (item&&Array.isArray(item.horarios)?item.horarios:[]).filter(function(h){ return !!log[magDoseId(id,h)]; }); }
+  function mcrDosesHojeRestantes(item, id, hoje, log){
+    if(!item||item.suspenso) return 0;
+    if(!medVigenteEm(item, hoje)) return 0;
+    var d=mcrDadosHoje(item, id, log);
+    return (item.horarios||[]).filter(function(h){ return d.indexOf(h)<0; }).length;
+  }
+  // O próximo dia em que o remédio é dado (dia sim, dia não e dias da semana: o próximo "sim").
+  function mcrInicioNovo(item, hoje){
+    var d=addDiasISO(hoje,1);
+    for(var i=0;i<14&&d;i++){ if(medFreqHoje(item||{}, d)) return d; d=addDiasISO(d,1); }
+    return addDiasISO(hoje,1);
+  }
+  // K17 (achado A3 do QA). Na troca por datas, a última dose do antigo (hoje) e a primeira do novo
+  // (amanhã) podem ficar perto: 22:00 → 00:30 deixa 2 h 30 min entre elas. O teto da dose de ontem
+  // (6.47, medOntemTeto) olhava só o MESMO item: a das 22:00 atrasada tocaria até 3 h depois (01:00).
+  // Agora a carga da fila leva o horário do item novo (continuaEm) e o teto para na metade (23:15); num
+  // celular com o app antigo, não. Por isso a troca perto pede «Confirmei com a veterinária». PURA: null
+  // quando a metade do intervalo não fica antes do fim do alarme antigo; senão, os horários e até quando dar.
+  function mcrPertoDaTroca(antes, depois, inicio, hoje){
+    if(!inicio || !hoje || inicio!==addDiasISO(hoje,1)) return null;      // começa depois de amanhã: 24 h ou mais
+    var ma=(antes||[]).map(mcrMinDe).filter(function(n){ return n!==null; }), md=(depois||[]).map(mcrMinDe).filter(function(n){ return n!==null; });
+    if(!ma.length || !md.length) return null;
+    var ult=Math.max.apply(null, ma), pri=Math.min.apply(null, md), intervalo=1440-ult+pri;
+    var ag=ma.map(function(m){ return {key:'k', itemId:'a', horario:mcrHHMM(m)}; });
+    var teto=medOntemTeto({key:'k', itemId:'a', horario:mcrHHMM(ult)}, ag)/60000;
+    if(intervalo/2>=teto) return null;
+    return {de:mcrHHMM(ult), para:mcrHHMM(pri), intervaloMin:intervalo, alarmeAte:mcrHHMM(ult+teto), darAte:mcrHHMM(ult+Math.floor(intervalo/2))};
+  }
+  function mcrPertoTxt(nm, pp, inicio){
+    return nm+': na noite da troca, a dose das '+pp.de+' de hoje e a das '+pp.para+' '+mcrNoDia(inicio)+' ficam a '+mcrDuracaoTxt(pp.intervaloMin)
+      +' uma da outra. Se a das '+pp.de+' atrasar, não dê depois das '+pp.darAte+' (o alarme dela para aí; num celular com o app antigo, ainda pode tocar até '+pp.alarmeAte+').';
+  }
+  // As doses de ONTEM deste remédio que o alarme da 6.47 ainda pode tocar agora: sem registro, dentro do
+  // teto (3 h ou a metade do intervalo, a mesma conta do medOntemTeto). Só de madrugada (antes das 06:00).
+  function mcrOntemFaltam(it, id, hoje, logOntem, agoraMin){
+    if(typeof agoraMin!=='number' || agoraMin>=MCR_DIA_COMECA_MIN || !it || it.suspenso) return [];
+    var ontem=addDiasISO(hoje,-1); if(!ontem || !medVigenteEm(it, ontem)) return [];
+    logOntem=logOntem||{};
+    var hs=Array.isArray(it.horarios)?it.horarios.filter(horaOk):[];
+    var ag=hs.map(function(h){ return {key:'k', itemId:'a', horario:h}; });
+    return hs.filter(function(h){
+      if(logOntem[magDoseId(id,h)]) return false;
+      var m=mcrMinDe(h); if(m===null) return false;
+      var atraso=(1440-m)+agoraMin;
+      return atraso>0 && atraso<=medOntemTeto({key:'k', itemId:'a', horario:h}, ag)/60000;
+    });
+  }
+  // Remédio NOVO: quando começa e se pode gravar (achado A1 do QA). «Tomar até» antes do 1º dia = um
+  // remédio que nunca toca: não grava, e diz o que fazer.
+  function mcrNovoChecar(n, hoje, agoraMin){
+    n=n||{}; var nm=String(n.nome||'').trim()||'Remédio novo';
+    var hs=(n.horarios||[]).map(function(h){ return normHora(h)||h; }).filter(horaOk);
+    hs=hs.filter(function(h,i){ return hs.indexOf(h)===i; }).sort();
+    var regra=mcrRegraHorario({antes:[], depois:hs, dadosHoje:[], agoraMin:agoraMin, hoje:hoje, item:{horarios:hs}, novo:true});
+    var modo=mcrModo(regra, n.vale), ini=(modo==='novo-hoje')?hoje:regra.inicio, erro='';
+    if(hs.length && !n.continuo && n.dataFim && n.dataFim>=hoje && n.dataFim<ini){
+      erro=regra.podeHoje
+        ? (nm+': o remédio termina '+mcrNoDia(n.dataFim)+' e começaria '+mcrNoDia(ini)+': escolha «Hoje» ou mude «Tomar até».')
+        : (nm+': é um remédio só de hoje com o horário já passado (ou a menos de 15 minutos): fale com a veterinária. Se ele continua, mude «Tomar até».');
+    }
+    return {hs:hs, regra:regra, modo:modo, ini:ini, erro:erro};
+  }
+  function mcrRegraHorario(o){
+    o=o||{}; var it=o.item||{}, hoje=o.hoje||zHojeISO();
+    var agora=(typeof o.agoraMin==='number')?o.agoraMin:mcrAgoraMin();
+    var antes=(o.antes||[]).filter(horaOk), depois=(o.depois||[]).filter(horaOk), dados=o.dadosHoje||[];
+    var r={podeHoje:false, recomendado:'amanha', porque:'', inicio:mcrInicioNovo(it, hoje), madrugada:agora<MCR_DIA_COMECA_MIN,
+           madrugadaNova:false, nada:false, futuro:false, soDose:!!o.soDose, novo:!!o.novo, bloqueios:[], perto:null};
+    var entram=depois.filter(function(h){ return antes.indexOf(h)<0; }), saem=antes.filter(function(h){ return depois.indexOf(h)<0; });
+    r.madrugadaNova=entram.some(function(h){ return mcrMinDe(h)<MCR_DIA_COMECA_MIN; });
+    if(r.soDose){ r.podeHoje=true; r.recomendado='hoje'; r.porque='A dose nova vale a partir da próxima dose.'; return r; }
+    if(!r.novo && it.dataInicio && it.dataInicio>hoje){
+      r.futuro=true; r.podeHoje=true; r.inicio=it.dataInicio;
+      r.porque='Este remédio começa '+mcrNoDia(it.dataInicio)+': o horário novo já vale desde o começo.';
+      return r;
+    }
+    var B=[], ini=mcrDiaTexto(r.inicio);
+    // A trava da madrugada é do remédio que JÁ EXISTE (a dose de ontem dele ainda pode tocar, 6.47). O remédio
+    // NOVO não tem dose de ontem: "hoje" é o dia do relógio, e vale só a folga do horário que entra (A11 do QA).
+    if(r.madrugada && !r.novo) B.push('Antes das 06:00 a mudança de horário começa no dia seguinte: de madrugada, o alarme ainda pode tocar a dose de ontem.');
+    saem.forEach(function(h){
+      if(dados.indexOf(h)>=0){ B.push('A dose das '+h+' de hoje já foi dada: o horário novo vale a partir de '+ini+'.'); return; }
+      var m=mcrMinDe(h); if(m===null) return;
+      if(m<agora) B.push('O horário das '+h+' de hoje já passou e a dose não foi registrada: o alarme dela pode estar aberto no celular da plantonista.');
+      else if(m-agora<MCR_FOLGA_MIN) B.push('O horário das '+h+' está a menos de 15 minutos: o celular da plantonista pode tocar o horário antigo.');
+    });
+    entram.forEach(function(h){ var m=mcrMinDe(h); if(m!==null && m-agora<MCR_FOLGA_MIN) B.push('O horário novo das '+h+' já passou hoje (ou está a menos de 15 minutos): começar hoje tocaria o alarme na hora.'); });
+    r.bloqueios=B; r.podeHoje=!B.length;
+    if(!r.novo && !it.continuo && it.dataFim && r.inicio>it.dataFim) r.nada=true;
+    if(!r.novo && !r.nada) r.perto=mcrPertoDaTroca(antes, depois, r.inicio, hoje);
+    if(r.nada) r.porque='O tratamento termina '+(it.dataFim===hoje?'hoje':mcrNoDia(it.dataFim))+': o horário novo não chega a valer.'+(r.podeHoje?' Escolha «Hoje» para mudar já; senão, nada muda.':' Nada muda.');
+    else if(!r.podeHoje) r.porque=B[0]+(/vale a partir de/.test(B[0])?'':(' '+(r.novo?'O remédio novo começa':'O horário novo vale')+' a partir de '+ini+'.'));
+    else r.porque=(r.novo?'Pode começar hoje: o primeiro horário ainda está à frente.':'Pode valer hoje: nenhum horário que sai foi dado e há folga.')+' O recomendado é a partir de '+ini+': um celular sem internet ainda segue o horário antigo hoje.';
+    return r;
+  }
+  // O que gravar, dada a régua e a escolha (Hoje / Amanhã). Sem escolha: amanhã.
+  function mcrModo(r, vale){
+    r=r||{};
+    if(r.soDose||r.futuro) return 'mesmo';
+    if(r.novo) return (vale==='hoje'&&r.podeHoje)?'novo-hoje':'novo-amanha';
+    if(vale==='hoje'&&r.podeHoje) return 'mesmo';
+    return r.nada?'nada':'troca';
+  }
+  function mcrEhContavel(est){ return !!est && (est.modo==='contavel' || (est.modo==null && (typeof est.inicial==='number' || typeof est.restante==='number'))); }
+  // O estoque passa para o remédio novo: o que sobra agora, menos as doses de HOJE ainda por dar
+  // (elas são descontadas aqui; o antigo fica sem estoque e o desconto dele aborta). Lado seguro.
+  function mcrEstoqueHerdado(est, q, n, de, ts){
+    if(!est||typeof est!=='object') return null;
+    if(mcrEhContavel(est)){
+      var base=(typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null);
+      var o={modo:'contavel'};
+      if(base!=null){
+        var R=Math.max(0, base-(qtdNum(q)||0)*(n||0)); R=Math.round(R*100)/100;
+        o.inicial=R; o.restante=R;
+        o.herdado={de:de, inicial:(typeof est.inicial==='number'?est.inicial:base), restanteNaHora:base, dosesHoje:n||0, ts:ts||0};
+      } else o.herdado={de:de, ts:ts||0};
+      if(est.acabando) o.acabando=true;
+      return o;
+    }
+    var o2={modo:est.modo||'naocontavel', nivel:est.nivel||'cheio'};
+    if(est.acabando) o2.acabando=true;
+    if(est.daCasa) o2.daCasa=true;
+    o2.herdado={de:de, ts:ts||0};
+    return o2;
+  }
+  // A TROCA POR DATAS: o antigo termina hoje, o novo começa no dia do horário novo.
+  // o.base: de onde vêm os campos do novo (padrão: o antigo); o.periodoDe: de onde vem o período (padrão: o antigo).
+  var MCR_NAO_COPIA={historico:1, trocadoPor:1, continuacaoDe:1, paradoEm:1, suspenso:1, suspensoPor:1, suspensoMotivo:1, suspensoTs:1,
+    fimCiente:1, fimCientePor:1, fimCienteTs:1, estoque:1, estoqueMovidoPara:1, dataInicio:1, dataFim:1, continuo:1, quando:1, derivado_de:1,
+    confirmado_em_checkin:1, mudou_em_checkin:1, horarios:1};
+  function mcrTrocaPorDatas(o){
+    o=o||{}; var ant=o.antigo||{}, base=o.base||ant, per=o.periodoDe||ant;
+    var linha={quem:o.quem||'-', quando:o.quando||'', acao:'Horário mudou de '+((ant.horarios||[]).join(', ')||'—')+' para '+(o.horarios||[]).join(', ')
+      +' a partir de '+mcrDiaTexto(o.inicio)+(o.extra?(' — '+o.extra):'')+(o.motivo?(' — '+o.motivo):''), motivo:o.motivo||'', ts:o.ts||0};
+    var hist=(Array.isArray(ant.historico)?ant.historico.slice():[]).concat([linha]);
+    var antigo={continuo:false, dataFim:o.hoje, trocadoPor:o.novoId, historico:hist};
+    if(ant.estoque){ antigo.estoque=null; antigo.estoqueMovidoPara=o.novoId; }
+    var novo={};
+    Object.keys(base).forEach(function(k){ if(!MCR_NAO_COPIA[k] && base[k]!==undefined) novo[k]=JSON.parse(JSON.stringify(base[k])); });
+    novo.horarios=(o.horarios||[]).slice();
+    novo.dataInicio=o.inicio;
+    if(per.continuo) novo.continuo=true; else if(per.dataFim) novo.dataFim=per.dataFim;
+    if(base!==ant && base.quando && base.quando.ref && base.quando.ref!=='fixo'){ novo.quando=JSON.parse(JSON.stringify(base.quando)); if(base.derivado_de) novo.derivado_de=base.derivado_de; }
+    novo.continuacaoDe=o.antigoId;
+    novo.historico=hist.slice();
+    // o.qHoje: a dose das doses de hoje ainda por dar (a dose mudada junto, no «Salvar agenda», vale na próxima dose).
+    var est=mcrEstoqueHerdado(ant.estoque, (o.qHoje!=null?o.qHoje:ant.q), o.dosesHoje||0, o.antigoId, o.ts||0); if(est) novo.estoque=est;
+    return {antigo:antigo, novo:novo};
+  }
+  // «Parou de tomar». 'agora': os horários de hoje ainda não dados saem (os dados ficam no placar);
+  // sem nenhum dado hoje, termina ontem (o mesmo do "Não" do check-in). 'depois': termina hoje.
+  // De madrugada (achado A2 do QA): a dose de ONTEM sem registro, que o alarme da 6.47 ainda toca,
+  // também sai — ontem fica só com as doses dadas ontem (sem nenhuma dada ontem, termina anteontem).
+  // ontem={faltam:[horários de ontem que ainda tocam], dados:[horários dados ontem]}.
+  function mcrParouTexto(faltamHoje, faltamOntem){
+    var p=[];
+    if(faltamHoje.length) p.push('as doses de hoje das '+faltamHoje.join(', '));
+    if(faltamOntem.length) p.push('a dose de ontem das '+faltamOntem.join(', ')+' (sem registro)');
+    return p.join(' e ')+((faltamHoje.length||faltamOntem.length>1)?' não serão dadas':' não será dada');
+  }
+  function mcrParou(it, opcao, dados, hoje, quem, motivo, quando, ts, ontem){
+    it=it||{}; dados=dados||[]; ontem=ontem||{};
+    var hist=Array.isArray(it.historico)?it.historico.slice():[];
+    var p={continuo:false, paradoEm:{quem:quem||'-', data:hoje, quando:quando||'', ts:ts||0, motivo:motivo||''}};
+    var hs=Array.isArray(it.horarios)?it.horarios:[];
+    var dadas=hs.filter(function(h){ return dados.indexOf(h)>=0; }), faltam=hs.filter(function(h){ return dados.indexOf(h)<0; });
+    var vigHoje=medVigenteEm(it, hoje), fHoje=vigHoje?faltam:[], fOntem=(ontem.faltam||[]).slice(), dOntem=(ontem.dados||[]).slice();
+    var txt;
+    if(opcao==='agora' && (fHoje.length || fOntem.length)){
+      if(vigHoje && dadas.length){ p.dataFim=hoje; p.horarios=dadas.slice(); }
+      else if(fOntem.length){ if(dOntem.length){ p.dataFim=addDiasISO(hoje,-1); p.horarios=dOntem; } else p.dataFim=addDiasISO(hoje,-2); }
+      else p.dataFim=addDiasISO(hoje,-1);
+      txt='Parou de tomar agora — '+mcrParouTexto(fHoje, fOntem);
+    } else { p.dataFim=hoje; txt='Parou de tomar depois de hoje'; }
+    hist.push({quem:quem||'-', quando:quando||'', acao:txt+(motivo?(' — '+motivo):''), motivo:motivo||'', ts:ts||0});
+    p.historico=hist;
+    return p;
+  }
+  // "O que sobrou cobre até a saída?" — do RESTANTE de agora, não do que veio na entrada.
+  function mcrCoberturaDaqui(it, hoje, saida, dosesHoje, restante){
+    it=it||{}; var est=it.estoque||{};
+    if(it.suspenso||it.parouEm) return null;
+    if(!mcrEhContavel(est)) return null;
+    var R=(typeof restante==='number')?restante:((typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null));
+    if(R==null) return null;
+    var qd=qtdNum(it.q); if(qd==null||qd<=0) return null;
+    var nH=(it.horarios||[]).length; if(!nH) return null;
+    if(!hoje||!saida) return null;
+    var fim=saida; if(!it.continuo && it.dataFim && it.dataFim<fim) fim=it.dataFim;
+    var doses=(fim>=hoje)?Math.max(0, dosesHoje||0):0, iso=addDiasISO(hoje,1), g=0;
+    while(iso && iso<=fim && g++<400){ if(medVigenteEm(it, iso)) doses+=nH; iso=addDiasISO(iso,1); }
+    if(!doses) return null;
+    var nec=Math.ceil((doses*qd)-0.0001);
+    return {necessario:nec, trazido:R, deficit:nec-R, cobre:R>=nec, doses:doses, ate:fim, unidade:it.u||''};
+  }
+  // ---- A LISTA DA ESTADIA (o que dar e o que devolver) muda NO LUGAR: a Conferência e o
+  // Check-out guardam o "testado" e o "devolvido" pela posição ('med_'+i).
+  function mcrCasarNaLista(lista, agendaId, item){
+    lista=Array.isArray(lista)?lista:[]; item=item||{};
+    var i;
+    if(agendaId) for(i=0;i<lista.length;i++){ if(lista[i]&&lista[i].agendaId===agendaId) return i; }
+    var nn=jsNorm(item.nome||''), hs=JSON.stringify((item.horarios||[]).slice().sort()), cand=[];
+    if(!nn) return -1;
+    for(i=0;i<lista.length;i++){
+      var m=lista[i]||{};
+      if(m.agendaId && m.agendaId!==agendaId) continue;          // é de outro remédio da agenda
+      if(jsNorm(m.nome||'')!==nn) continue;
+      if(String(m.q||'')===String(item.q||'') && String(m.u||'')===String(item.u||'') && JSON.stringify((m.horarios||[]).slice().sort())===hs) return i;
+      cand.push(i);
+    }
+    return (cand.length===1)?cand[0]:-1;                          // só o nome decide quando há um só
+  }
+  function mcrListaAplicar(lista, ops, hoje){
+    var L=JSON.parse(JSON.stringify(Array.isArray(lista)?lista:[]));
+    (ops||[]).forEach(function(op){
+      op=op||{};
+      if(op.acao==='novo'){
+        var it=op.item||{};
+        var e={nome:it.nome||'', tipo:it.tipo||'medicamento', q:it.q||'', u:it.u||'', horarios:(it.horarios||[]).slice(), origem:it.origem||'tutor',
+               agendaId:op.agendaId, novoEm:{data:hoje, quem:op.quem||'-'}};
+        if(it.estoque) e.estoque=it.estoque; if(it.freq) e.freq=it.freq; if(it.local) e.local=it.local; if(it.dataInicio) e.dataInicio=it.dataInicio;
+        if(it.continuo) e.continuo=true; else if(it.dataFim) e.dataFim=it.dataFim;
+        if(op.cobertura) e.cobertura=op.cobertura;
+        L.push(e); return;
+      }
+      var i=mcrCasarNaLista(L, op.agendaId, op.item); if(i<0) return;
+      var m=L[i];
+      if(op.acao==='dose'){ m.q=op.q; m.u=op.u; m.agendaId=m.agendaId||op.agendaId; m.mudouEm={data:hoje, quem:op.quem||'-', acao:'dose', de:op.deTxt||'', para:op.paraTxt||''}; if(op.cobertura) m.cobertura=op.cobertura; }
+      else if(op.acao==='horario'){
+        m.mudouEm={data:hoje, quem:op.quem||'-', acao:'horario', de:(m.horarios||[]).slice(), para:(op.horarios||[]).slice(), a_partir:op.inicio||hoje};
+        m.horarios=(op.horarios||[]).slice(); m.agendaId=op.novoId||op.agendaId;
+        if(op.cobertura) m.cobertura=op.cobertura;
+      }
+      else if(op.acao==='parou'){ m.agendaId=m.agendaId||op.agendaId; m.parouEm={data:op.data||hoje, quem:op.quem||'-', motivo:op.motivo||''}; }
+    });
+    return L;
+  }
+  // ---- IDENTIDADE (lição da Frida): a mudança só vai para o FILHOt certo.
+  function mcrMesmoTutor(a,b){ var x=jsNorm(a||'').split(' ')[0]||'', y=jsNorm(b||'').split(' ')[0]||''; return !x||!y||x===y; }
+  function mcrMesmaRaca(a,b){ var x=jsNorm(a||''), y=jsNorm(b||''); return !x||!y||x===y||x.indexOf(y)===0||y.indexOf(x)===0; }
+  function mcrMesmoFilhot(a,b){ a=a||{}; b=b||{}; if(a.refKey&&b.refKey) return String(a.refKey).toLowerCase()===String(b.refKey).toLowerCase(); return jsNorm(a.nome||'')===jsNorm(b.nome||'') && jsNorm(a.tutor||'')===jsNorm(b.tutor||''); }
+  function mcrAgoraNaCasa(e, hoje){ e=e||{}; if((e.status||'ativa')!=='ativa') return false; if(e.entrada && hoje<e.entrada) return false; if(e.saida && hoje>e.saida) return false; return true; }
+  function mcrIdentidade(o){
+    o=o||{}; var est=o.est||{}, hoje=o.hoje||zHojeISO();
+    if(!est.nome) return {ok:false, erro:'Não achei esta hospedagem. Feche esta tela e abra de novo.'};
+    if((est.status||'ativa')!=='ativa') return {ok:false, erro:'Esta hospedagem não está mais ativa. Comida e remédio só mudam em hospedagem ativa.'};
+    if(est.saida && hoje>est.saida) return {ok:false, erro:'A saída desta hospedagem já passou ('+ciBRdata(est.saida)+'). Se '+est.nome+' continua na casa, mude as datas em Hóspedes antes.'};
+    var ativas=Object.keys(o.todas||{}).filter(function(k){ return mcrMesmoFilhot(o.todas[k], est) && mcrAgoraNaCasa(o.todas[k], hoje); });
+    if(mcrAgoraNaCasa(est, hoje) && ativas.indexOf(o.id)<0) ativas.push(o.id);
+    if(ativas.length>1) return {ok:false, erro:'Há '+ativas.length+' hospedagens ativas de '+est.nome+' ao mesmo tempo. Resolva em Hóspedes antes (Gestão): a mudança iria para uma delas só.'};
+    if(o.viaSoNome) return {ok:false, erro:'Esta hospedagem está ligada à ficha só pelo nome de '+est.nome+' (não pela ficha certa). Resolva a ligação antes (Gestão), para a mudança não ir para outro FILHOt.'};
+    var mr=o.mestre;
+    if(mr){
+      if(est.raca && mr.raca && !mcrMesmaRaca(est.raca, mr.raca)) return {ok:false, erro:'Os dados não batem: a hospedagem diz '+est.raca+', a ficha ligada diz '+mr.raca+'. Resolva a ligação antes (Gestão).'};
+      if(est.tutor && mr.tutor && !mcrMesmoTutor(est.tutor, mr.tutor)) return {ok:false, erro:'Os dados não batem: a hospedagem diz tutor '+est.tutor+', a ficha ligada diz '+mr.tutor+'. Resolva a ligação antes (Gestão).'};
+    }
+    var pl=o.planilha;
+    if(pl && pl.tutor && est.tutor && !(typeof ehRacaLike==='function' && ehRacaLike(pl.tutor)) && !mcrMesmoTutor(pl.tutor, est.tutor))
+      return {ok:false, erro:'Os dados não batem: a planilha diz '+(pl.nome||est.nome)+' / '+pl.tutor+', a hospedagem diz tutor '+est.tutor+'. Resolva a ligação antes (Gestão).'};
+    return {ok:true, erro:'', fichaIncerta:!mr};
+  }
+  // A hospedagem de quem está no Plantão (a de hoje). Sem ela, não há o que mudar.
+  function mcrEstadiaDoHosp(key, todas, hoje){
+    key=String(key||'').toLowerCase();
+    var ids=Object.keys(todas||{}).filter(function(k){ var e=todas[k]||{}; return String(e.refKey||'').toLowerCase()===key && mcrAgoraNaCasa(e, hoje); });
+    if(!ids.length) return {erro:'Faça o check-in da hospedagem: sem ele não há comida nem remédio registrados para mudar.'};
+    if(ids.length>1) return {erro:'Há '+ids.length+' hospedagens ativas deste FILHOt ao mesmo tempo. Resolva em Hóspedes antes (Gestão).'};
+    return {id:ids[0], est:todas[ids[0]]};
+  }
+  // A chave da agenda saiu do passo "só o nome" do medAgendaKey? (é a porta da Frida)
+  function mcrChaveViaSoNome(h){
+    if(!h||h.refKey||typeof PELUDINHOS==='undefined') return false;
+    var nN=jsNorm(h.nome||''), nT=jsNorm(h.tutor||''), nT1=nT.split(/\s+/)[0]||'';
+    var m=PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && jsNorm(p.tutor||'')===nT; })
+      || (nT1?PELUDINHOS.find(function(p){ return jsNorm(p.n)===nN && (jsNorm(p.tutor||'').split(/\s+/)[0]||'')===nT1; }):null);
+    if(m) return false;
+    return PELUDINHOS.filter(function(p){ return jsNorm(p.n)===nN; }).length===1;
+  }
+  // Os remédios da tela: em vigor e os que ainda vão começar. Suspenso pela vet e o que já trocou
+  // de horário hoje: só leitura. Parado e terminado: fora.
+  function mcrRemediosDaTela(itens, hoje){
+    var ed=[], le=[];
+    Object.keys(itens||{}).forEach(function(id){
+      var it=itens[id]||{};
+      if(!nomeMedOk(it.nome)) return;
+      if(it.paradoEm) return;
+      if(!it.continuo && it.dataFim && it.dataFim<hoje) return;
+      if(it.suspenso){ le.push({id:id, motivo:'Suspenso pela veterinária'+(it.suspensoPor?(' ('+it.suspensoPor+')'):'')+': não gera alarme, e só ela reativa, no Cuidado Vet.'}); return; }
+      if(it.trocadoPor){
+        var nv=(itens[it.trocadoPor]||{});
+        le.push({id:id, motivo:'Termina hoje: '+(nv.dataInicio?('a partir de '+mcrDiaTexto(nv.dataInicio)+' vale '):'vale ')+((nv.horarios||[]).join(', ')||'o horário novo')+' (linha de baixo).'});
+        return;
+      }
+      ed.push(id);
+    });
+    return {editaveis:ed, leitura:le};
+  }
+  // ---- O que a tela abriu (para saber, na hora de gravar, se alguém mudou algo no meio).
+  function mcrFpEstadia(e){ e=e||{}; return JSON.stringify([e.status||'ativa', e.entrada||'', e.saida||'', (e.ficha&&e.ficha.alim)||null, e.alimentacao||null, e.medicacao||null]); }
+  function mcrAssinaturaItem(it){
+    it=it||{};
+    return JSON.stringify([it.nome||'', String(it.q==null?'':it.q), it.u||'', (Array.isArray(it.horarios)?it.horarios.slice().sort():[]), it.dataInicio||'', it.dataFim||'',
+      !!it.continuo, it.freq||null, it.quando||null, !!it.suspenso, !!it.paradoEm, it.trocadoPor||'']);
+  }
+  // A assinatura do ALARME: tudo o que muda a fila, menos o estoque (o desconto de cada dose não relê).
+  function mcrAssinaturaAlarme(geral){
+    var out=[];
+    Object.keys(geral||{}).sort().forEach(function(k){
+      var its=((geral[k]||{}).itens)||{};
+      Object.keys(its).sort().forEach(function(id){ out.push(k+'/'+id+'='+mcrAssinaturaItem(its[id])); });
+    });
+    return out.join('\n');
+  }
+  // Remédio mudado em OUTRO aparelho: o ouvinte da agenda (que já existe) chama aqui. Só quem
+  // recebe o alarme relê a fila, e só quando a assinatura do alarme muda (K16). A assinatura de
+  // referência é guardada SEMPRE (achado A7 do QA): o ouvinte dispara antes do login da plantonista,
+  // e a 1ª mudança depois que ela entra não pode virar só a referência.
+  function mcrRearmarAlarme(){
+    try{
+      var s=mcrAssinaturaAlarme(MED_AGENDA_GERAL);
+      if(MCR_ALARME_SIG===null){ MCR_ALARME_SIG=s; return; }
+      if(s===MCR_ALARME_SIG) return;
+      MCR_ALARME_SIG=s;
+      if(typeof papelRecebeAlarmeMed!=='function' || !papelRecebeAlarmeMed()) return;
+      if(__mcrRearmT) clearTimeout(__mcrRearmT);
+      __mcrRearmT=setTimeout(function(){
+        __mcrRearmT=null;
+        try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){ _logFalhaGrav('refazer a fila do alarme (remédio mudado em outro aparelho)', e); }
+      }, 3000);
+    }catch(e){} /* silencioso de propósito: sem a assinatura, a fila se refaz na próxima leitura da lista de hóspedes, como antes */
+  }
+  // Comida mudada em outro aparelho: o ouvinte das estadias (que já existe) chama aqui; o
+  // Plantão se redesenha em 2 s, só com a lista à vista (sem ficha aberta).
+  function mcrPedirRedesenhoPlantao(){
+    try{
+      var v=document.getElementById('v-hospedagem'), l=document.getElementById('hosp-lista');
+      if(!v||!v.classList||!v.classList.contains('active')) return;
+      if(!l||(l.style&&l.style.display==='none')) return;
+      if(__mcrRedesenhoT) return;
+      __mcrRedesenhoT=setTimeout(function(){ __mcrRedesenhoT=null; try{ renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }, 2000);
+    }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar o ouvinte */
+  }
+
+  // ---- «Salvar agenda» do Plantão (AC24): a mesma régua. Horário mudado que não pode valer hoje vira troca por datas.
+  // 2ª rodada (QA): a linha de hoje de um remédio que já trocou (trocadoPor) também passa pela régua e não volta a
+  // valer depois de hoje (A6); a régua lê o período do formulário (A5); a dose mudada junto com o horário vale na
+  // próxima dose também no antigo (A4); o estoque que já passou para o novo não é regravado (A12); o item novo tem
+  // id determinístico (A8); a troca que deixa duas doses perto demais (K17) não é feita por aqui.
+  function mcrAgendaPorque(antes, depois, dados, regra){
+    var dadaSai=antes.filter(function(h){ return depois.indexOf(h)<0 && dados.indexOf(h)>=0; });
+    return dadaSai.length?('a dose das '+dadaSai.join(', ')+' de hoje já foi dada'):(regra.madrugada?'mudança feita de madrugada':'o horário de hoje já passou ou está perto demais');
+  }
+  function mcrAgendaMantemHorario(it, p, antes){
+    var o=Object.assign({}, it, {horarios:antes});
+    if(p.quando) o.quando=p.quando; else delete o.quando;
+    if(p.derivado_de) o.derivado_de=p.derivado_de; else delete o.derivado_de;
+    return o;
+  }
+  function mcrAgendaRegua(itens, prev, log, hoje, agoraMin, quem, quando, ts){
+    var out={itens:{}, novos:{}, trocados:{}, frases:[]};
+    Object.keys(itens||{}).forEach(function(id){
+      var it=itens[id], p=(prev||{})[id];
+      out.itens[id]=it;
+      if(!it || !p || p.suspenso || p.paradoEm) return;
+      var nm=p.nome||it.nome||'O remédio';
+      var antes=(p.horarios||[]).slice(), depois=(it.horarios||[]).slice();
+      var mudouH=JSON.stringify(antes.slice().sort())!==JSON.stringify(depois.slice().sort());
+      if(p.trocadoPor || p.estoqueMovidoPara){
+        // A linha do remédio que já trocou de horário (a que toca hoje): o período e a troca ficam como estão
+        // (nada de voltar a valer junto com o novo), e o estoque, que já passou para o novo, não é regravado.
+        var o=Object.assign({}, it);
+        if(p.estoqueMovidoPara) delete o.estoque;
+        if(p.trocadoPor){
+          o.continuo=false; o.dataFim=p.dataFim||hoje;
+          if(p.dataInicio) o.dataInicio=p.dataInicio; else delete o.dataInicio;
+          if(p.freq) o.freq=JSON.parse(JSON.stringify(p.freq)); else delete o.freq;
+          if(mudouH){
+            var dd=mcrDadosHoje(p, id, log);
+            var rg=mcrRegraHorario({antes:antes, depois:depois, dadosHoje:dd, agoraMin:agoraMin, hoje:hoje, item:p});
+            if(!rg.podeHoje && !rg.futuro){
+              o=mcrAgendaMantemHorario(o, p, antes);
+              var nv=((itens||{})[p.trocadoPor])||((prev||{})[p.trocadoPor])||{};
+              out.frases.push(nm+': esta linha termina hoje e '+mcrAgendaPorque(antes, depois, dd, rg)+': o horário de hoje continua '+antes.join(', ')
+                +'. Para mudar daqui para a frente, mude a linha de baixo'+(nv.dataInicio?(' (a que começa '+mcrNoDia(nv.dataInicio)+')'):'')+'.');
+            }
+          }
+        }
+        out.itens[id]=o; return;
+      }
+      if(!mudouH) return;
+      var dados=mcrDadosHoje(p, id, log);
+      // A5: o fim do tratamento é o do formulário; o que toca hoje (início, frequência) é o de antes.
+      var itRegua=Object.assign({}, p, {continuo:!!it.continuo, dataFim:it.continuo?'':(it.dataFim||'')});
+      var regra=mcrRegraHorario({antes:antes, depois:depois, dadosHoje:dados, agoraMin:agoraMin, hoje:hoje, item:itRegua});
+      if(regra.futuro || regra.podeHoje) return;                 // como sempre: o mesmo item
+      var porque=mcrAgendaPorque(antes, depois, dados, regra);
+      if(regra.nada){
+        out.itens[id]=mcrAgendaMantemHorario(it, p, antes);
+        out.frases.push(nm+': o tratamento termina '+(itRegua.dataFim===hoje?'hoje':mcrNoDia(itRegua.dataFim))+' e '+porque+': o horário continua '+antes.join(', ')+' (o horário novo não chegaria a valer).');
+        return;
+      }
+      if(regra.perto){
+        out.itens[id]=mcrAgendaMantemHorario(it, p, antes);
+        out.frases.push(mcrPertoTxt(nm, regra.perto, regra.inicio)+' Por isso o horário não mudou por aqui (continua '+antes.join(', ')+'): mude pela tela «Mudar comida e remédio», que pede a confirmação da veterinária.');
+        return;
+      }
+      var novoId=mcrIdTroca(id, regra.inicio);
+      if(mcrIdTrocaOcupado(prev, novoId, id) || mcrIdTrocaOcupado(itens, novoId, id)){
+        out.itens[id]=mcrAgendaMantemHorario(it, p, antes);
+        out.frases.push(nm+': já existe outro remédio na agenda no lugar do horário novo: o horário continua '+antes.join(', ')+'. Confira a lista e salve de novo.');
+        return;
+      }
+      var doseMudou=(String(p.q||'')!==String(it.q||'') || (p.u||'')!==(it.u||''));
+      var doseTxt=doseMudou?('dose '+medDoseTxt(p)+' → '+medDoseTxt(it)+', vale na próxima dose'):'';
+      var tr=mcrTrocaPorDatas({antigoId:id, antigo:p, base:it, periodoDe:it, novoId:novoId, horarios:depois, inicio:regra.inicio, hoje:hoje,
+        quem:quem, motivo:'Salvar agenda do Plantão: '+porque, extra:doseTxt, quando:quando, ts:ts, dosesHoje:mcrDosesHojeRestantes(p, id, hoje, log),
+        qHoje:((p.u||'')===(it.u||''))?it.q:null});
+      // O antigo leva o que o formulário mudou além do horário (a dose vale na próxima dose, A4); o que toca hoje fica.
+      var velho=Object.assign({}, it);
+      velho.horarios=antes;
+      if(p.quando) velho.quando=p.quando; else delete velho.quando;
+      if(p.derivado_de) velho.derivado_de=p.derivado_de; else delete velho.derivado_de;
+      if(p.dataInicio) velho.dataInicio=p.dataInicio; else delete velho.dataInicio;
+      if(p.freq) velho.freq=JSON.parse(JSON.stringify(p.freq)); else delete velho.freq;
+      delete velho.estoque; if(!p.estoque && 'estoque' in it) velho.estoque=it.estoque;
+      out.itens[id]=Object.assign(velho, tr.antigo);
+      out.novos[novoId]=tr.novo; out.trocados[id]=1;
+      var am=(regra.inicio===addDiasISO(hoje,1));
+      out.frases.push(nm+': '+porque+'. O horário novo ('+depois.join(', ')+') começa '+(am?'amanhã, ':'')+(am?mcrDiaTexto(regra.inicio):mcrNoDia(regra.inicio))+'; hoje continua '+antes.join(', ')+'.'
+        +(doseMudou?(' A dose nova ('+medDoseTxt(it)+') já vale na próxima dose.'):''));
+    });
+    return out;
+  }
+  function mcrReguaDaAgenda(key, itens, prev, quem){
+    var hoje=zHojeISO();
+    var mudou=Object.keys(itens||{}).some(function(id){ var p=(prev||{})[id], it=itens[id]||{}; return p && JSON.stringify((p.horarios||[]).slice().sort())!==JSON.stringify((it.horarios||[]).slice().sort()); });
+    // Sem horário mudado, só a arrumação da linha que já trocou (A6/A12): sem ler o registro.
+    if(!mudou||!DB) return Promise.resolve(mcrAgendaRegua(itens, prev, {}, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()));
+    // Sem o registro de hoje, vale a régua do relógio (horário que passou ou está perto não muda hoje).
+    return DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s){ return s.val()||{}; }, function(){ return {}; })
+      .then(function(log){ return mcrAgendaRegua(itens, prev, log, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()); });
+  }
+  // ---- O PDF reemitido: a seção "ALTERAÇÕES DEPOIS DO CHECK-IN", numa página a mais (K15).
+  function mcrPdfApendice(alt){
+    var lista=Object.keys(alt||{}).map(function(k){ return alt[k]; }).filter(function(a){ return a && a.quando; })
+      .sort(function(a,b){ return (a.quando||0)-(b.quando||0); });
+    if(!lista.length) return [];
+    var L=[{t:'As páginas anteriores mostram a ficha como está agora. Cada linha abaixo diz o que mudou depois do check-in (de -> para), quem mudou e por quê: o "de" é o que estava na ficha assinada pelo tutor.', cinza:true}];
+    lista.forEach(function(a){
+      L.push({k:carimboBR(a.quando)+' · '+(a.quem||'—'), v:'Motivo: '+(a.motivo||'—')});
+      (Array.isArray(a.frases)?a.frases:[]).forEach(function(f){ L.push({t:String(f).replace(/→/g,'->')}); });
+    });
+    return [{titulo:'ALTERAÇÕES DEPOIS DO CHECK-IN', linhas:L}];
+  }
+
+  // ---- O ESTADO DA TELA (puro) e a validação
+  function mcrEstadoInicial(o){
+    o=o||{}; var est=o.est||{};
+    var comida=mcrComidaDe(est);
+    var M={aid:o.aid||mcrNovoId('a'), id:o.id||'', key:o.key||'', nome:est.nome||'', tutor:est.tutor||'', raca:est.raca||'', refKey:est.refKey||'',
+      entrada:est.entrada||'', saida:est.saida||'', hoje:o.hoje||zHojeISO(), est:JSON.parse(JSON.stringify(est)), abertoFp:mcrFpEstadia(est),
+      itens:JSON.parse(JSON.stringify(o.itens||{})), log:JSON.parse(JSON.stringify(o.log||{})), logOntem:JSON.parse(JSON.stringify(o.logOntem||{})), abertoItens:{},
+      comidaAntes:comida, comida:JSON.parse(JSON.stringify(comida)),
+      podeFicha:!!o.podeFicha, fichaIncerta:!o.mestre, ficha:!!(o.podeFicha && o.mestre),
+      meds:{}, novos:[], motivo:'', quem:'', etapa:'editar', erro:'', aviso:'', editarTudo:false, bloqueio:'', salvando:false};
+    Object.keys(M.itens).forEach(function(id){ M.abertoItens[id]=mcrAssinaturaItem(M.itens[id]); });
+    // Uma mudança anterior foi «só desta vez» (a ficha não mudou)? Guardar agora leva a comida inteira para a ficha.
+    M.teveSoDestaVez=Object.keys(est.alteracoes||{}).some(function(k){ var a=(est.alteracoes||{})[k]; return !!(a && a.comida && a.comida.ficha===false); });
+    return M;
+  }
+  // K17 de um remédio da tela: a mudança vai virar troca por datas com duas doses perto demais?
+  function mcrPertoDoMed(M, id, it, m, agoraMin, hoje, log){
+    var hs=(m.horarios||[]).map(function(h){ return normHora(h)||h; }).filter(horaOk);
+    var r=mcrRegraHorario({antes:it.horarios||[], depois:hs, dadosHoje:mcrDadosHoje(it, id, log), agoraMin:agoraMin, hoje:hoje, item:it});
+    if(mcrModo(r, m.vale)!=='troca' || !r.perto) return null;
+    return {perto:r.perto, inicio:r.inicio};
+  }
+  function mcrTemMudanca(M){
+    if(mcrDiffComida(M.comidaAntes, M.comida).length) return true;
+    if(Object.keys(M.meds||{}).some(function(id){ return M.meds[id]&&M.meds[id].acao; })) return true;
+    return !!(M.novos||[]).length;
+  }
+  function mcrValidar(M, agoraMin){
+    var p=[], agora=(typeof agoraMin==='number')?agoraMin:mcrAgoraMin(), hojeV=M.hoje||zHojeISO();
+    if(!mcrTemMudanca(M)) p.push('Nada mudou: mude a comida ou um remédio antes de conferir.');
+    var c=M.comida||{}, fx=(c.refs&&c.refs.fixas)||{};
+    var qtdRuim=function(v){ v=String(v==null?'':v).trim(); return !!v && (v.indexOf('-')>=0 || !(ciNum(v)>0) || /[^0-9.,\s]/.test(v)); };
+    CI_REF_FIXAS.forEach(function(f){ var r=fx[f.k]||{}; if(!r.on) return;
+      if(qtdRuim(r.racao)||qtdRuim(r.natural)) p.push(f.n+': escreva a quantidade só com números (ex.: 45).');
+      if(r.hora && !horaOk(r.hora)) p.push(f.n+': horário inválido ('+r.hora+'). Escreva como 19:00.'); });
+    ((c.refs&&c.refs.extras)||[]).forEach(function(e){ if(qtdRuim(e.racao)||qtdRuim(e.natural)) p.push((e.nome||'Refeição extra')+': escreva a quantidade só com números (ex.: 20).'); });
+    Object.keys(M.meds||{}).forEach(function(id){
+      var m=M.meds[id]; if(!m||!m.acao) return; var it=(M.itens||{})[id]||{}, nm=it.nome||'O remédio';
+      if(m.acao==='dose'){
+        if(!m.u) p.push(nm+': toque na MEDIDA (comprimido, ml, gota…).');
+        else if(!medEhLocal(m.u) && !medEhTextoLivre(m.u) && qtdNum(m.q)==null) p.push(nm+': escreva a dose em número (ex.: 1, 0,5, 10).');
+        else if(medEhTextoLivre(m.u) && !String(m.q||'').trim()) p.push(nm+': escreva a descrição da dose.');
+        if(String(m.q||'')===String(it.q||'') && m.u===it.u) p.push(nm+': a dose está igual — mude a dose ou toque em «Desfazer».');
+        if(m.contagem && !/^\d+$/.test(String(m.contagem).trim())) p.push(nm+': a contagem do estoque é um número inteiro (ex.: 30).');
+      } else if(m.acao==='horario'){
+        var hs=m.horarios||[];
+        var ruins=hs.filter(function(h){ return !horaOk(h); });
+        if(!hs.length) p.push(nm+': deixe pelo menos um horário. Parou de tomar? Toque em «Desfazer» e depois em «Parou de tomar».');
+        else if(ruins.length) p.push(nm+': horário inválido ('+ruins.join(', ')+'). Escreva como 07:30.');
+        else if(JSON.stringify(hs.slice().sort())===JSON.stringify((it.horarios||[]).slice().sort())) p.push(nm+': o horário está igual — mude o horário ou toque em «Desfazer».');
+        else {
+          var pt=mcrPertoDoMed(M, id, it, m, agora, hojeV, M.log);
+          if(pt && !m.confirmouVet) p.push(mcrPertoTxt(nm, pt.perto, pt.inicio)+' Confirme com a veterinária e toque em «Confirmei com a veterinária».');
+        }
+      }
+    });
+    var slugs={};
+    (M.novos||[]).forEach(function(n){
+      var nm=(n.nome||'').trim()||'Remédio novo';
+      if(!nomeMedOk(n.nome)) p.push('Remédio novo: escreva o nome do remédio por extenso.');
+      if(!n.u) p.push(nm+': toque na MEDIDA (comprimido, ml, gota…).');
+      else if(medEhLocal(n.u) && !String(n.local||'').trim()) p.push(nm+' (pomada): escreva o LOCAL de aplicação.');
+      else if(!medEhLocal(n.u) && !medEhTextoLivre(n.u) && qtdNum(n.q)==null) p.push(nm+': escreva a dose em número (ex.: 1, 0,5).');
+      var hs=(n.horarios||[]).filter(function(h){ return String(h||'').trim(); });
+      if(!hs.length) p.push(nm+': escreva pelo menos um horário (ex.: 08:00).');
+      else if(hs.some(function(h){ return !horaOk(h); })) p.push(nm+': horário inválido. Escreva como 07:30.');
+      if(!n.continuo && !n.dataFim) p.push(nm+': toque em «Uso contínuo» ou escreva até quando tomar.');
+      if(!n.continuo && n.dataFim && n.dataFim<hojeV) p.push(nm+': a data de «Tomar até» já passou.');
+      var nc=mcrNovoChecar(n, hojeV, agora);
+      if(nc.erro) p.push(nc.erro);
+      if(nomeMedOk(n.nome)){
+        var sg=mcrSlugNome(n.nome);
+        if(slugs[sg]) p.push(nm+': há dois remédios novos com este nome. Junte os horários num só («+ horário»).');
+        slugs[sg]=1;
+        var idL=mcrIdNovoLivre(n.nome, nc.ini, M.itens);
+        if(nc.hs.length && (M.itens||{})[idL]) p.push(mcrNovoJaLancadoTxt(nm, (M.itens||{})[idL], nc.ini, hojeV));
+      }
+      if(!n.comoVeio) p.push(nm+': diga como o remédio veio (blister, pote ou da casa).');
+      if(n.comoVeio==='blister' && !/^\d+$/.test(String(n.contagem||'').trim())) p.push(nm+': conte quantas unidades vieram (blister ou caixa fechada).');
+      if(n.trouxe!==true && n.trouxe!==false) p.push(nm+': o tutor trouxe agora? Toque em Sim ou Não.');
+      if(n.trouxe===true && !nomeAssinaturaValido(n.recebidoPor)) p.push(nm+': escreva o nome de quem recebeu do tutor.');
+    });
+    var mt=motivoQuatroPalavras(M.motivo); if(!mt.ok) p.push(mt.erro);
+    var q=String(M.quem||'').trim();
+    if(!nomeAssinaturaValido(q) || (typeof LOGIN_GENERICO!=='undefined' && LOGIN_GENERICO.test(q))) p.push('Escreva o seu nome (quem está mudando). "Recepção" ou "Plantonista" não dizem quem foi.');
+    return p;
+  }
+  // Na hora de gravar, com o banco relido: alguém mudou algo depois que a tela abriu? (AC19)
+  function mcrConferirAntes(M, C){
+    var out=[], est=(C&&C.est)||null;
+    if(!est||!est.nome){ out.push('A hospedagem de '+M.nome+' não foi encontrada no banco. Nada foi salvo.'); return out; }
+    if((est.status||'ativa')!=='ativa') out.push('A hospedagem de '+M.nome+' não está mais ativa. Nada foi salvo.');
+    if(mcrFpEstadia(est)!==M.abertoFp){
+      var ue=est._ultimaEdicao||{};
+      out.push('A hospedagem de '+M.nome+' mudou depois que esta tela abriu'+(ue.quem?(' (por '+ue.quem+(ue.ts?(', '+carimboBR(ue.ts)):'')+')'):'')+'. Nada foi salvo: feche e abra de novo para ver o que está valendo.');
+    }
+    var agora=(typeof C.agoraMin==='number')?C.agoraMin:mcrAgoraMin(), hoje=C.hoje||M.hoje;
+    Object.keys(M.meds||{}).forEach(function(id){
+      var m=M.meds[id]; if(!m||!m.acao) return;
+      var it=(C.itens||{})[id], nm=((M.itens[id]||{}).nome)||'o remédio';
+      if(!it){ out.push(nm+' saiu da agenda depois que esta tela abriu. Nada foi salvo.'); return; }
+      if(it.suspenso && !(M.itens[id]||{}).suspenso){ out.push('A veterinária suspendeu '+nm+' depois que esta tela abriu. Nada foi salvo.'); return; }
+      if(mcrAssinaturaItem(it)!==M.abertoItens[id]){ out.push(nm+' foi mudado por outra pessoa depois que esta tela abriu. Nada foi salvo.'); return; }
+      if(m.acao==='horario' && m.vale==='hoje'){
+        var dAgora=mcrDadosHoje(it, id, C.log), dAntes=mcrDadosHoje(it, id, M.log);
+        var r=mcrRegraHorario({antes:it.horarios||[], depois:m.horarios||[], dadosHoje:dAgora, agoraMin:agora, hoje:hoje, item:it});
+        if(!r.podeHoje && !r.futuro){
+          var novas=dAgora.filter(function(h){ return dAntes.indexOf(h)<0; });
+          out.push(novas.length
+            ? ('A dose das '+novas.join(', ')+' de '+nm+' foi registrada depois que esta tela abriu: o horário novo agora só pode começar a partir de '+mcrDiaTexto(r.inicio)+'. Confira e salve de novo.')
+            : (nm+': «Hoje» não vale mais. '+r.porque+' Confira e salve de novo.'));
+        }
+      }
+      if(m.acao==='horario'){
+        var hsT=(m.horarios||[]).map(function(h){ return normHora(h)||h; }).filter(horaOk);
+        var rT=mcrRegraHorario({antes:it.horarios||[], depois:hsT, dadosHoje:mcrDadosHoje(it, id, C.log), agoraMin:agora, hoje:hoje, item:it});
+        if(mcrModo(rT, m.vale)==='troca' && mcrIdTrocaOcupado(C.itens, mcrIdTroca(id, rT.inicio), id))
+          out.push(nm+': já existe outro remédio na agenda no lugar do horário novo (que começaria '+mcrNoDia(rT.inicio)+'). Nada foi salvo: feche e abra de novo para ver o que está valendo.');
+      }
+      if(m.acao==='horario' && !m.confirmouVet){
+        var pt=mcrPertoDoMed(M, id, it, m, agora, hoje, C.log);
+        if(pt) out.push(mcrPertoTxt(nm, pt.perto, pt.inicio)+' Confirme com a veterinária, toque em «Confirmei com a veterinária» e salve de novo.');
+      }
+      if(m.acao==='parou' && m.parou){
+        var faltavam=(it.horarios||[]).filter(function(h){ return mcrDadosHoje(it,id,M.log).indexOf(h)<0; }), faltam=(it.horarios||[]).filter(function(h){ return mcrDadosHoje(it,id,C.log).indexOf(h)<0; });
+        if(m.parou==='agora' && faltam.length<faltavam.length) out.push('Uma dose de '+nm+' foi registrada depois que esta tela abriu. Confira a pergunta da dose de hoje e salve de novo.');
+        // A2: a dose de ONTEM registrada no meio (de madrugada, a pergunta falava dela)
+        var lo0=M.logOntem||{}, lo1=C.logOntem||{};
+        if(m.parou==='agora' && agora<MCR_DIA_COMECA_MIN && (it.horarios||[]).some(function(h){ var k=magDoseId(id,h); return !!lo1[k] && !lo0[k]; }))
+          out.push('A dose de ontem de '+nm+' foi registrada depois que esta tela abriu. Confira a pergunta e salve de novo.');
+      }
+    });
+    // Remédio novo: com o relógio de agora, ainda começa antes de terminar (A1)? Alguém já lançou o mesmo (A8)?
+    (M.novos||[]).forEach(function(n){
+      var nc=mcrNovoChecar(n, hoje, agora), nm=String(n.nome||'').trim()||'Remédio novo';
+      if(nc.erro) out.push(nc.erro+' Confira e salve de novo.');
+      else if(nc.hs.length && nomeMedOk(n.nome) && (C.itens||{})[mcrIdNovoLivre(n.nome, nc.ini, C.itens)]) out.push(nm+' já foi lançado como remédio novo (por outra pessoa ou num salvamento anterior). Nada foi salvo: feche e abra de novo para ver o que está valendo.');
+    });
+    return out;
+  }
+  function mcrCobSnap(it, id, hoje, log, restante){
+    var est=(it&&it.estoque)||null; if(!mcrEhContavel(est)) return undefined;
+    var R=(typeof restante==='number')?restante:((typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null));
+    if(R==null) return undefined;
+    return {dia:hoje, dosesHoje:mcrDosesHojeRestantes(it, id, hoje, log), restante:R};
+  }
+  function mcrAplicarCaminhos(obj, up, prefixo){
+    Object.keys(up).forEach(function(k){
+      if(k.indexOf(prefixo)!==0) return;
+      var ps=k.slice(prefixo.length).split('/').filter(Boolean), c=obj;
+      for(var i=0;i<ps.length-1;i++){ if(c[ps[i]]==null||typeof c[ps[i]]!=='object') c[ps[i]]={}; c=c[ps[i]]; }
+      var v=up[k]; if(v===null||v===undefined) delete c[ps[ps.length-1]]; else c[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    });
+    return obj;
+  }
+  // ---- A GRAVAÇÃO (pura): monta UMA escrita multi-caminho com tudo o que muda. Quem grava é mcrGravar.
+  function mcrMontar(M, C){
+    C=C||{}; var est=C.est||{}, itens=C.itens||{}, log=C.log||{}, hoje=C.hoje||M.hoje, ts=C.ts||Date.now(), qd=C.quandoBR||'';
+    var agora=(typeof C.agoraMin==='number')?C.agoraMin:mcrAgoraMin();
+    var quem=String(M.quem||'').trim(), motivo=String(M.motivo||'').trim();
+    var P='auaulandia/estadias/'+M.id+'/', A='auaulandia/medicacao-agenda/'+M.key+'/itens/';
+    var up={}, frases=[], tg=[], ops=[], novosIds=[], rem=[], reabre=[], avisosTela=[], recusas=[];
+    var pet=M.nome||est.nome||'';
+    var linhaTg=function(f){ return pet+' — '+f+' — por '+quem+' (motivo: '+motivo+')'; };
+    var avisePlantonista=function(t){ avisosTela.push('Avise a plantonista e confira no celular dela (Plantão › toque em «Hoje»): '+t); };
+    // --- comida
+    var fichaPlano=null, comidaRastro=null;
+    var difC=mcrDiffComida(M.comidaAntes, M.comida);
+    if(difC.length){
+      var semA=Object.assign({}, M.comidaAntes, {semRacao:false}), semB=Object.assign({}, M.comida, {semRacao:false});
+      if(mcrDiffComida(semA, semB).length){
+        var refs=JSON.parse(JSON.stringify(M.comida.refs));
+        CI_REF_FIXAS.forEach(function(f){ var r=refs.fixas[f.k]; if(r){ r.racao=mcrQtdLimpa(r.racao); r.natural=mcrQtdLimpa(r.natural); } });
+        (refs.extras||[]).forEach(function(e){ e.racao=mcrQtdLimpa(e.racao); e.natural=mcrQtdLimpa(e.natural); });
+        var base=Object.assign({}, (est.ficha&&est.ficha.alim)||{}, {tipo:M.comida.tipo, marca:String(M.comida.marca||'').trim(), unidade:M.comida.unidade, refs:refs});
+        var alim=alimDerivados(base, est.entrada, est.saida);
+        alim.confirmacao={estado:'mudou', quem:quem, ts:ts, via:'mudar-comida'};
+        up[P+'ficha/alim']=alim;
+        if(M.ficha && M.podeFicha && !M.fichaIncerta) fichaPlano={tipo:M.comida.tipo, unidade:M.comida.unidade, marca:String(M.comida.marca||'').trim(), refs:JSON.parse(JSON.stringify(refs)), conf:{estado:'mudou', via:'mudar-comida', quem:quem, ts:ts}};
+      }
+      if(!!M.comidaAntes.semRacao!==!!M.comida.semRacao) up[P+'alimentacao']=M.comida.semRacao?{sem_racao:true, comida_umida:true, quem:quem, ts:ts}:null;
+      comidaRastro={antes:mcrComidaRastro(M.comidaAntes), depois:mcrComidaRastro(M.comida), ficha:!!fichaPlano};
+      frases=frases.concat(difC);
+    }
+    // --- remédios
+    Object.keys(M.meds||{}).forEach(function(id){
+      var m=M.meds[id]; if(!m||!m.acao) return;
+      var it=itens[id]; if(!it) return;
+      var dados=mcrDadosHoje(it, id, log), nm=it.nome||'Remédio', f='';
+      var hist=Array.isArray(it.historico)?it.historico.slice():[];
+      if(m.acao==='dose'){
+        var novoIt=Object.assign({}, it, {q:medEhLocal(m.u)?'':String(m.q||'').trim(), u:m.u});
+        var deT=medDoseTxt(it), paraT=medDoseTxt(novoIt);
+        var obsEst='';
+        if(m.u!==it.u && mcrEhContavel(it.estoque)){
+          var n=parseInt(String(m.contagem||'').replace(/\D/g,''),10);
+          novoIt.estoque=(isFinite(n)&&n>0)?{modo:'contavel', inicial:n, restante:n}:null;
+          up[A+id+'/estoque']=novoIt.estoque;
+          obsEst=novoIt.estoque?(' (contadas '+n+' na medida nova)'):' (o estoque contado deixou de valer: conte de novo na medida nova)';
+        }
+        hist.push({quem:quem, quando:qd, acao:'Dose mudou de '+deT+' para '+paraT+obsEst+(motivo?(' — '+motivo):''), motivo:motivo, ts:ts});
+        up[A+id+'/q']=novoIt.q; up[A+id+'/u']=novoIt.u; up[A+id+'/historico']=hist;
+        f=nm+': dose '+deT+' → '+paraT+' (vale na próxima dose)'+obsEst;
+        avisePlantonista(nm+' passa para '+paraT+' já na próxima dose.');
+        ops.push({acao:'dose', agendaId:id, item:it, q:novoIt.q, u:novoIt.u, quem:quem, deTxt:deT, paraTxt:paraT, cobertura:mcrCobSnap(novoIt, id, hoje, log)});
+        rem.push({id:id, nome:nm, acao:'dose', antes:{q:it.q||'', u:it.u||''}, depois:{q:novoIt.q, u:novoIt.u}, vale:'proxima'});
+      } else if(m.acao==='horario'){
+        var hs=(m.horarios||[]).map(function(h){ return normHora(h)||h; }).filter(horaOk);
+        hs=hs.filter(function(h,i){ return hs.indexOf(h)===i; }).sort();
+        var regra=mcrRegraHorario({antes:it.horarios||[], depois:hs, dadosHoje:dados, agoraMin:agora, hoje:hoje, item:it});
+        var modo=mcrModo(regra, m.vale), deH=(it.horarios||[]).join(', ')||'—', paraH=hs.join(', ');
+        if(modo==='nada'){ frases.push(nm+': '+regra.porque); return; }
+        if(modo==='mesmo'){
+          var valeTxt=regra.futuro?('a partir de '+mcrDiaTexto(regra.inicio)):'já vale hoje';
+          hist.push({quem:quem, quando:qd, acao:'Horário mudou de '+deH+' para '+paraH+' — '+valeTxt+(motivo?(' — '+motivo):''), motivo:motivo, ts:ts});
+          up[A+id+'/horarios']=hs; up[A+id+'/historico']=hist;
+          if(it.quando){ up[A+id+'/quando']=null; up[A+id+'/derivado_de']=null; }
+          f=nm+': horário '+deH+' → '+paraH+', '+valeTxt;
+          var itN=Object.assign({}, it, {horarios:hs}); delete itN.quando;
+          ops.push({acao:'horario', agendaId:id, item:it, horarios:hs, inicio:regra.futuro?regra.inicio:hoje, quem:quem, cobertura:mcrCobSnap(itN, id, hoje, log)});
+          rem.push({id:id, nome:nm, acao:'horario', antes:{horarios:it.horarios||[]}, depois:{horarios:hs}, vale:regra.futuro?'inicio':'hoje'});
+          if(!regra.futuro) avisePlantonista(nm+' passa para '+paraH+' hoje mesmo.');
+        } else {
+          var novoId=mcrIdTroca(id, regra.inicio), nHoje=mcrDosesHojeRestantes(it, id, hoje, log);
+          if(mcrIdTrocaOcupado(itens, novoId, id)){ var rcT=nm+': já existe outro remédio na agenda no lugar do horário novo.'; recusas.push(rcT); frases.push(rcT); return; }
+          var pertoTxt=regra.perto?('a dose das '+regra.perto.de+' de hoje e a das '+regra.perto.para+' '+mcrNoDia(regra.inicio)+' ficam a '+mcrDuracaoTxt(regra.perto.intervaloMin)+' uma da outra: '+(m.confirmouVet?'confirmado com a veterinária':'SEM confirmação da veterinária')):'';
+          var tr=mcrTrocaPorDatas({antigoId:id, antigo:it, novoId:novoId, horarios:hs, inicio:regra.inicio, hoje:hoje, quem:quem, motivo:motivo, extra:pertoTxt, quando:qd, ts:ts, dosesHoje:nHoje});
+          Object.keys(tr.antigo).forEach(function(k){ up[A+id+'/'+k]=tr.antigo[k]; });
+          up[A+novoId]=tr.novo; novosIds.push(novoId);
+          Object.keys(C.avisos||{}).forEach(function(av){
+            var a=(C.avisos||{})[av]||{};
+            if(a.key!==M.key || a.itemId!==id || avisoEncerrado(a)) return;
+            up['auaulandia/avisos-estoque/'+av+'/itemId']=novoId;
+            up['auaulandia/avisos-estoque/'+av+'/entries']=(Array.isArray(a.entries)?a.entries.slice():[]).concat([{acao:'O remédio mudou de horário ('+deH+' → '+paraH+', a partir de '+mcrDiaTexto(regra.inicio)+'): o aviso segue o novo.', assinatura:quem, quando:qd, ts:ts}]);
+          });
+          f=nm+': horário '+deH+' → '+paraH+', a partir de '+mcrDiaTexto(regra.inicio);
+          var ne=tr.novo.estoque;
+          ops.push({acao:'horario', agendaId:id, item:it, horarios:hs, novoId:novoId, inicio:regra.inicio, quem:quem,
+                    cobertura:(ne&&typeof ne.restante==='number')?{dia:addDiasISO(regra.inicio,-1), dosesHoje:0, restante:ne.restante}:undefined});
+          rem.push({id:id, nome:nm, acao:'horario', antes:{horarios:it.horarios||[]}, depois:{horarios:hs}, vale:'amanha', novoId:novoId, a_partir:regra.inicio});
+          if(regra.perto){
+            rem[rem.length-1].perto={de:regra.perto.de, para:regra.perto.para, intervaloMin:regra.perto.intervaloMin, darAte:regra.perto.darAte, confirmouVet:!!m.confirmouVet};
+            f+=' ('+(m.confirmouVet?'confirmado com a veterinária: ':'')+'na noite da troca, a das '+regra.perto.de+' não deve ser dada depois das '+regra.perto.darAte+')';
+            avisosTela.push('Avise a plantonista: '+mcrPertoTxt(nm, regra.perto, regra.inicio));
+          }
+        }
+        if(regra.madrugadaNova && !(modo==='troca' && regra.perto)) avisosTela.push(nm+': horário de madrugada ('+paraH+'). Confira com a veterinária se a dose da noite anterior não fica perto demais.');
+      } else if(m.acao==='parou'){
+        var lo=C.logOntem||{};
+        var fOntem=mcrOntemFaltam(it, id, hoje, lo, agora), dOntem=(it.horarios||[]).filter(function(h){ return !!lo[magDoseId(id,h)]; });
+        var pp=mcrParou(it, m.parou, dados, hoje, quem, motivo, qd, ts, {faltam:fOntem, dados:dOntem});
+        Object.keys(pp).forEach(function(k){ up[A+id+'/'+k]=pp[k]; });
+        var faltam=medVigenteEm(it, hoje)?(it.horarios||[]).filter(function(h){ return dados.indexOf(h)<0; }):[];
+        var agoraMesmo=(m.parou==='agora' && (faltam.length>0 || fOntem.length>0));
+        f=nm+': parou de tomar'+(agoraMesmo?(' agora ('+mcrParouTexto(faltam, fOntem)+')'):' depois de hoje');
+        ops.push({acao:'parou', agendaId:id, item:it, data:hoje, quem:quem, motivo:motivo});
+        rem.push({id:id, nome:nm, acao:'parou', antes:{dataFim:it.dataFim||'', continuo:!!it.continuo, horarios:it.horarios||[]}, depois:{dataFim:pp.dataFim, horarios:pp.horarios||it.horarios||[]}, vale:agoraMesmo?'agora':'depois-de-hoje', ontem:agoraMesmo?fOntem:[]});
+        var atras=agoraMesmo?faltam.filter(function(h){ var mm=mcrMinDe(h); return mm!==null && mm<agora; }):[];
+        if(atras.length) avisosTela.push('O alarme das '+atras.join(', ')+' de '+nm+' pode estar aberto no celular da plantonista: avise para não dar.');
+        if(agoraMesmo && fOntem.length){
+          var agO=(it.horarios||[]).filter(horaOk).map(function(h){ return {key:'k', itemId:'a', horario:h}; });
+          avisosTela.push('O alarme da dose de ontem das '+fOntem.map(function(h){ return h+' (toca até '+mcrHHMM(mcrMinDe(h)+medOntemTeto({key:'k', itemId:'a', horario:h}, agO)/60000)+')'; }).join(', ')
+            +' de '+nm+' pode tocar no celular da plantonista: avise para não dar.');
+        }
+        if(agoraMesmo) avisePlantonista(nm+' não toca mais a partir de agora.');
+      }
+      if(f){ frases.push(f); tg.push(linhaTg(f)); }
+    });
+    (M.novos||[]).forEach(function(n){
+      var nc=mcrNovoChecar(n, hoje, agora), hs=nc.hs, ini=nc.ini;
+      // A1: um remédio que terminaria antes de começar nunca toca — não grava (a tela já barrou; aqui, a rede).
+      if(nc.erro){ recusas.push(nc.erro); frases.push(nc.erro); return; }
+      var novoId=mcrIdNovoLivre(n.nome, ini, itens);
+      var item={nome:String(n.nome||'').trim(), tipo:n.tipo||'medicamento', q:medEhLocal(n.u)?'':String(n.q||'').trim(), u:n.u||'', horarios:hs, origem:n.origem||'tutor', dataInicio:ini,
+        informado_por:{quem:quem, quando:qd, ts:ts},
+        historico:[{quem:quem, quando:qd, acao:'Criou (Mudar comida e remédio, depois do check-in)'+(motivo?(' — '+motivo):''), motivo:motivo, ts:ts}]};
+      if(medEhLocal(n.u) && String(n.local||'').trim()) item.local=String(n.local).trim();
+      if(String(n.obs||'').trim()) item.obs=String(n.obs).trim();
+      if(n.continuo) item.continuo=true; else if(n.dataFim) item.dataFim=n.dataFim;
+      var e2=null;
+      if(n.comoVeio==='blister'){ var c=parseInt(String(n.contagem||'').replace(/\D/g,''),10); e2=(isFinite(c)&&c>0)?{modo:'contavel', inicial:c, restante:c}:{modo:'contavel'}; }
+      else if(n.comoVeio==='pote') e2={modo:'naocontavel', nivel:n.nivel||'cheio'};
+      else if(n.comoVeio==='casa') e2={modo:'naocontavel', nivel:'cheio', daCasa:true};
+      if(e2) item.estoque=e2;
+      up[A+novoId]=item; novosIds.push(novoId);
+      var f=item.nome+': remédio novo, '+(medDoseTxt(item)||'dose a confirmar')+' às '+hs.join(', ')+', '+(ini===hoje?'começa hoje':('a partir de '+mcrDiaTexto(ini)));
+      frases.push(f); tg.push(linhaTg(f));
+      ops.push({acao:'novo', agendaId:novoId, item:item, quem:quem, cobertura:(e2&&typeof e2.restante==='number')?{dia:hoje, dosesHoje:(ini===hoje?hs.length:0), restante:e2.restante}:undefined});
+      rem.push({id:novoId, nome:item.nome, acao:'novo', antes:null, depois:{nome:item.nome, q:item.q, u:item.u, horarios:hs}, vale:(ini===hoje?'hoje':'amanha'), novoId:novoId});
+      if(n.trouxe===true) reabre.push({nome:item.nome, recebidoPor:String(n.recebidoPor||'').trim()});
+      if(n.dcIgual) avisosTela.push(item.nome+': o Day Care lançou um remédio parecido hoje para '+pet+' ('+n.dcIgual+'). Confira para não tocarem dois alarmes.');
+      if(ini===hoje) avisePlantonista(item.nome+' começa hoje, às '+hs.join(', ')+'.');
+    });
+    if(ops.length){
+      up[P+'medicacao']=mcrListaAplicar(est.medicacao, ops, hoje);
+      up['auaulandia/medicacao-agenda/'+M.key+'/_ts']=ts; up['auaulandia/medicacao-agenda/'+M.key+'/_quem']=quem;
+    }
+    var rastro={quando:ts, quem:quem, motivo:motivo, frases:frases.slice(), via:M.origem||'', comida:comidaRastro, remedios:rem};
+    up[P+'alteracoes/'+M.aid]=mcrLimpo(rastro);
+    if(reabre.length){
+      var rec=reabre.map(function(r){ return r.recebidoPor; }).filter(Boolean)[0]||quem;
+      up[P+'conferencia/concluida']=false; up[P+'conferencia/reaberta_em']=ts; up[P+'conferencia/reaberta_por']=quem;
+      up[P+'conferencia/recebido_por']=rec; up[P+'conferencia/recebido_em']=ts; up[P+'conferencia/recebido_lancado_por']=quem;
+      up[P+'conferencia/reaberta_motivo']='CHEGOU MATERIAL NOVO — '+reabre.map(function(r){ return 'Medicação: '+r.nome+' · recebido por '+(r.recebidoPor||quem); }).join(' · ');
+    } else {
+      var sol={quando:ts, quem:quem, motivo:motivo, mudou:frases.slice()};
+      up[P+'conferencia/resolvidos/'+ts]=sol; up[P+'conferencia/ultima_solucao']=sol;
+    }
+    if(C.gravaTs!==false) up[P+'_ts']=ts;
+    up[P+'_ultimaEdicao']={quem:quem, ts:ts, via:'mudar-comida-remedio', aid:M.aid, mudou:frases.slice(0,10)};
+    Object.keys(up).forEach(function(k){ if(up[k]!==null && typeof up[k]==='object') up[k]=mcrLimpo(up[k]); });
+    var estNova=mcrAplicarCaminhos(JSON.parse(JSON.stringify(est)), up, P);
+    return {up:up, frases:frases, tg:tg, rastro:rastro, estNova:estNova, fichaPlano:fichaPlano, novosIds:novosIds, reabre:reabre.length>0,
+            avisosTela:avisosTela, temRemedio:ops.length>0, comidaMudou:!!up[P+'ficha/alim']||(P+'alimentacao' in up), recusas:recusas};
+  }
+  // A estadia ganha o carimbo de tempo (que decide qual é "a mais recente" no Plantão), menos quando
+  // é uma hospedagem futura de quem ainda está hospedado em outra — senão o card leria a comida dela.
+  function mcrGravaTs(M, est){
+    try{
+      var hoje=zHojeISO();
+      if(mcrAgoraNaCasa(est, hoje)) return true;
+      return !Object.keys(EST_TODAS||{}).some(function(k){ return k!==M.id && mcrMesmoFilhot(EST_TODAS[k], est) && mcrAgoraNaCasa(EST_TODAS[k], hoje); });
+    }catch(e){ return true; }
+  }
+  // A gravação: relê o banco, confere, grava UMA vez (multi-caminho), carimba as estadias.
+  function mcrGravar(){
+    var M=MCR; if(!M) return Promise.resolve();
+    if(M.salvando) return Promise.resolve();
+    M.erro=''; M.aviso='';
+    // A9: a permissão e o nome conferidos de novo na hora de salvar (o turno pode ter trocado com a tela aberta).
+    if(!mcrPode()){ M.erro='Sem permissão para mudar: o turno agora é de quem só vê a comida e o remédio. Nada foi gravado.'; mcrRender(); return Promise.resolve(); }
+    if(M.quemAberto && String(M.quem||'').trim()===M.quemAberto){
+      var qa=mcrQuemPadrao();
+      if(qa!==M.quemAberto){ M.quem=qa; M.quemAberto=qa; M.etapa='editar'; M.erro='O turno mudou depois que esta tela abriu: confira o nome em «Quem está mudando» e salve de novo.'; mcrRender(); return Promise.resolve(); }
+    }
+    var probs=mcrValidar(M);
+    if(probs.length){ M.erro=probs.join(' '); M.etapa='editar'; mcrRender(); return Promise.resolve(); }
+    if(!DB){ M.erro='O banco ainda está conectando: não salvou. Espere alguns segundos e toque em Salvar de novo.'; mcrRender(); return Promise.resolve(); }
+    var off=(typeof navigator!=='undefined' && navigator.onLine===false) || (typeof __medConectado!=='undefined' && __medConectado===false);
+    if(off){ M.erro='Sem conexão: não salvou. Nada foi gravado. Confira a internet e toque em Salvar de novo.'; mcrRender(); return Promise.resolve(); }
+    M.salvando=true; mcrRender();
+    var hoje=zHojeISO(), P='auaulandia/estadias/'+M.id;
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return s.val(); }); };
+    var prazo=function(ms, msg){ return new Promise(function(_,rej){ setTimeout(function(){ rej(new Error(msg)); }, ms); }); };
+    var AG='auaulandia/medicacao-agenda/'+M.key;
+    return Promise.race([Promise.all([ler(P), ler(AG+'/itens'), ler('auaulandia/medicacao-log/'+hoje+'/'+M.key), ler(P+'/alteracoes/'+M.aid),
+                                      ler('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+M.key).catch(function(){ return null; }), ler(AG+'/_ts')]),
+                         prazo(15000, 'o banco não respondeu a tempo (15 s)')])
+    .then(function(r){
+      var est=r[0], itens=r[1]||{}, log=r[2]||{}, ja=r[3], logOntem=r[4]||{}, agTs=(r[5]==null?null:r[5]);
+      // A10: o dia virou com a tela aberta. O que valia "hoje" mudou: volta ao «Conferir» com o dia novo.
+      if(!ja && M.hoje!==hoje){
+        var era=M.hoje; M.hoje=hoje; M.log=log; M.logOntem=logOntem; M.salvando=false; M.etapa='conferir';
+        M.erro='O dia mudou depois que esta tela abriu (era '+mcrDiaTexto(era)+'). Confira de novo o resumo acima, que já vale para hoje, e toque em Salvar.';
+        mcrRender(); return;
+      }
+      if(ja){
+        M.salvando=false; M.etapa='salvo'; M.final=Array.isArray(ja.frases)?ja.frases:[];
+        M.aviso='Esta mudança já foi salva'+(ja.quando?(' ('+carimboBR(ja.quando)+(ja.quem?(', por '+ja.quem):'')+')'):'')+'. Nada foi gravado de novo.';
+        mcrRender(); return;
+      }
+      var C={est:est||{}, itens:itens, log:log, logOntem:logOntem, hoje:hoje, agoraMin:mcrAgoraMin(), ts:Date.now(), quandoBR:agoraBR(), avisos:(typeof AVISOS_ESTOQUE_CACHE!=='undefined'?AVISOS_ESTOQUE_CACHE:{})||{}};
+      C.gravaTs=mcrGravaTs(M, C.est);
+      var conf=mcrConferirAntes(M, C);
+      if(conf.length){ M.salvando=false; M.etapa='editar'; M.erro=conf.join(' '); M.log=log; M.logOntem=logOntem; mcrRender(); return; }
+      var G=mcrMontar(M, C);
+      if(G.recusas && G.recusas.length){ M.salvando=false; M.etapa='editar'; M.erro=G.recusas.join(' ')+' Nada foi gravado.'; mcrRender(); return; }
+      // 3ª rodada (N4): a agenda de remédios só é gravada se ninguém a gravou depois da releitura. O carimbo da
+      // agenda (_ts) anda por transação ANTES da gravação: duas gravações ao mesmo tempo («Parou — agora» de um
+      // lado, troca de horário do outro) não passam as duas.
+      var trava=G.temRemedio ? mcrTravaAgenda(AG+'/_ts', agTs, C.ts) : Promise.resolve(true), BLOQ={};
+      return Promise.race([trava, prazo(20000, 'MCR_PRAZO')]).then(function(ok){
+        if(!ok) return BLOQ;
+        return Promise.race([DB.ref().update(G.up), prazo(20000, 'MCR_PRAZO')]);
+      }).then(function(v){
+        if(v===BLOQ){
+          M.salvando=false; M.etapa='editar';
+          M.erro='Os remédios de '+M.nome+' mudaram agora há pouco, em outro aparelho. Nada foi salvo: feche e abra de novo para ver o que está valendo.';
+          mcrRender(); return;
+        }
+        M.salvando=false; M.etapa='salvo'; M.final=G.frases; M.avisosTela=G.avisosTela; M.gravado=G;
+        try{ mcrDepoisDeSalvar(M, G, C); }catch(e){ _logFalhaGrav('depois de mudar comida e remédio', e); }
+        mcrRender();
+      }, function(e){
+        M.salvando=false;
+        if(e && e.message==='MCR_PRAZO'){ M.etapa='pendente'; M.aviso='Ainda não confirmou: não repita. Confira em 1 minuto, em OUTRO aparelho: se a mudança aparecer no Plantão de lá, ela foi salva (neste aparelho ela aparece antes de o banco confirmar).'; mcrRender(); return; }
+        M.etapa='conferir'; M.erro='Não salvou: '+((e&&e.message)||e)+'. Nada foi gravado. Confira a internet e toque em Salvar de novo.';
+        _logFalhaGrav('mudar comida e remédio ('+M.nome+')', e); mcrRender();
+      });
+    }).catch(function(e){ M.salvando=false; M.erro='Não salvou: '+((e&&e.message)||e)+'. Nada foi gravado.'; mcrRender(); });
+  }
+  // N4 (3ª rodada): a trava da agenda. Transação no carimbo da agenda: só anda se ele ainda é o que a releitura viu.
+  // O 1º palpite do Firebase pode vir vazio (sem cópia local): devolve o valor novo, e o servidor chama de novo
+  // com o valor de verdade. Resolve true (pode gravar) ou false (alguém gravou a agenda no meio).
+  function mcrTravaAgenda(caminho, visto, novo){
+    var viu=(visto==null)?null:visto;
+    return DB.ref(caminho).transaction(function(cur){
+      if(cur==null) return novo;
+      return (cur===viu)?novo:undefined;
+    }).then(function(r){ return !!(r && r.committed); });
+  }
+  function mcrDepoisDeSalvar(M, G, C){
+    try{ zCarimbar('auaulandia/estadias'); }catch(e){} /* silencioso de propósito: sem o carimbo, a cópia local de outro aparelho se acerta na próxima mudança */
+    try{ if(typeof audit==='function') audit('hospedagem-mudanca', M.nome+': '+G.frases.join(' · ')+' — motivo: '+M.motivo, {alvo:M.id, pet:M.nome, quem:M.quem, aid:M.aid}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    if(G.fichaPlano && M.mestreRef && typeof setPelExtra==='function'){
+      try{
+        setPelExtra(M.mestreRef, {alim_plano:G.fichaPlano}).then(function(r){
+          var ok=!!(r&&r.ok); M.fichaGravada=ok;
+          DB.ref('auaulandia/estadias/'+M.id+'/alteracoes/'+M.aid+'/comida/fichaGravada').set(ok).catch(function(e){ _logFalhaGrav('rastro da ficha (mudar comida)', e); });
+          if(!ok && MCR===M){ M.avisosTela=(M.avisosTela||[]).concat(['A ficha de '+M.nome+' NÃO guardou a comida nova (próxima hospedagem). A hospedagem de agora já está certa.']); mcrRender(); }
+        });
+      }catch(e){ _logFalhaGrav('ficha (mudar comida)', e); }
+    }
+    if(G.tg.length) mcrAvisarPlantao(G.tg, M);
+    try{ if(typeof checarFaltasDaEstadia==='function') checarFaltasDaEstadia(M.id, G.estNova, 'mudou a comida ou o remédio — '+M.motivo); }catch(e){} /* silencioso de propósito: o aviso é extra */
+    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS) EST_TODAS[M.id]=G.estNova;
+      var rk=G.estNova.refKey; if(rk && typeof CF_ESTADIAS!=='undefined'){ var at=CF_ESTADIAS[rk]; if(!at || at.id===M.id || C.gravaTs!==false) CF_ESTADIAS[rk]={id:M.id, e:G.estNova}; } }catch(e){} /* silencioso de propósito: o ouvinte das estadias traz a mesma coisa */
+    try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    if(G.temRemedio){
+      try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: a fila se refaz na próxima leitura */
+      try{ if(typeof currentHosp!=='undefined' && currentHosp && medAgendaKey(currentHosp)===M.key && typeof carregarMedAgenda==='function') carregarMedAgenda(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    }
+    try{ var vh=document.getElementById('v-hospedes'); if(vh&&vh.classList&&vh.classList.contains('active')&&typeof renderHospedesAba==='function') renderHospedesAba(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  // PA6: cada mudança de remédio manda uma linha ao grupo do Plantão. Só se o grupo existe na ponte.
+  function mcrAvisarPlantao(linhas, M){
+    if(typeof tgGrupoNaPonte!=='function' || typeof tgAvisar!=='function') return Promise.resolve(false);
+    var txt='Remédio de hóspede mudou depois do check-in:\n'+linhas.map(function(l){ return medTgEsc(l); }).join('\n');
+    return tgGrupoNaPonte('plantao').then(function(tem){
+      if(!tem){ try{ audit('hospedagem-mudanca','NÃO avisou o grupo do plantão (o grupo não está na ponte): '+M.nome,{pet:M.nome}); }catch(e){} /* silencioso de propósito: rastro */ return false; }
+      return tgAvisar({grupo:'plantao', texto:txt}).then(function(r){
+        try{ audit('hospedagem-mudanca',((r&&r.ok)?'avisou':'NÃO avisou')+' o grupo do plantão: remédio de '+M.nome,{pet:M.nome}); }catch(e){} /* silencioso de propósito: rastro */
+        return !!(r&&r.ok);
+      });
+    }).catch(function(e){ _logFalhaGrav('aviso do remédio ao grupo do plantão', e); return false; });
+  }
+
+  // ---- AS PORTAS (Plantão, Hóspedes e o quadro "já está hospedado" do Check-in)
+  function mcrPode(){ return podePapel('mudar-comida-remedio'); }
+  function mcrBotaoHospedesHTML(id, e, st){
+    if(!mcrPode()) return ''; e=e||{};
+    if((e.status||'ativa')!=='ativa') return '';
+    if(st!=='agora' && st!=='achegar') return '';
+    return '<button class="btn mcr-bt-entrada" onclick="mcrAbrirEstadia(\''+escAttr(id)+'\',\'hospedes\')">Comida e remédio</button>';
+  }
+  function mcrBotaoCheckinHTML(id){
+    if(!mcrPode()) return '';
+    return '<button type="button" class="btn mcr-bt-entrada" style="width:100%;margin-top:8px" onclick="mcrAbrirEstadia(\''+escAttr(id)+'\',\'checkin\')">Só a comida ou o remédio mudou? Mudar sem refazer o check-in</button>';
+  }
+  function mcrBotaoPlantaoHTML(h){
+    if(!mcrPode() || !h || h.mascote) return '';
+    return '<button type="button" class="mcr-bt-plantao" onclick="mcrAbrirDoPlantao()">✎ Mudar comida e remédio</button>';
+  }
+  function mcrPintarBotaoPlantao(h){ var el=document.getElementById('hf-mcr'); if(el) el.innerHTML=mcrBotaoPlantaoHTML(h); }
+  function mcrAbrirDoPlantao(){
+    var h=(typeof currentHosp!=='undefined')?currentHosp:null; if(!h) return;
+    var r=mcrEstadiaDoHosp(medAgendaKey(h), (typeof EST_TODAS!=='undefined'?EST_TODAS:{}), zHojeISO());
+    if(!r.id){ zAlertao('NADA PARA MUDAR AQUI', [r.erro], {botao:'Entendi'}); return; }
+    mcrAbrirEstadia(r.id, 'plantao', {planilha:(h.refKey?null:{nome:h.nome||'', tutor:h.tutor||''}), viaSoNome:mcrChaveViaSoNome(h)});
+  }
+  function mcrMestreDe(est){
+    try{ var rk=String((est&&est.refKey)||'').toLowerCase(); if(!rk||typeof PELUDINHOS==='undefined') return null;
+      return PELUDINHOS.find(function(p){ return pelKey(p)===rk; })||null; }catch(e){ return null; }
+  }
+  function mcrQuemPadrao(){
+    try{ var p=(typeof pessoaDoTurno==='function')?pessoaDoTurno():''; if(p && p!=='-' && nomeAssinaturaValido(p) && !LOGIN_GENERICO.test(String(p).trim())) return p; }catch(e){} /* silencioso de propósito: sem o nome, a pessoa escreve */
+    return '';
+  }
+  function mcrAbrirEstadia(id, origem, extra){
+    extra=extra||{};
+    if(!mcrPode()){ zAlertao('SEM PERMISSÃO PARA MUDAR', ['Mudar comida e remédio é da Consultora de Bem-Estar, da Gestão, da Supervisão, da Diretoria e da Veterinária. Você continua vendo tudo no Plantão.'], {botao:'Entendi'}); return; }
+    if(!DB){ zAlertao('O BANCO ESTÁ CONECTANDO', ['Espere alguns segundos e toque de novo.'], {botao:'Entendi'}); return; }
+    var el=mcrTela(); el.innerHTML='<div class="mcr-in"><div class="mcr-card">Abrindo a comida e os remédios…</div></div>';
+    try{ if(typeof medOntemLigarConexao==='function') medOntemLigarConexao(); }catch(e){} /* silencioso de propósito: sem o sinal de conexão, vale o navigator.onLine */
+    var hoje=zHojeISO();
+    DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
+      var est=s.val();
+      if(!est||!est.nome){ mcrFechar(); zAlertao('NÃO ACHEI ESTA HOSPEDAGEM', ['Feche e abra de novo. Se continuar, avise a Gestão.'], {botao:'Entendi'}); return; }
+      var key=medAgendaKey({refKey:est.refKey, nome:est.nome, tutor:est.tutor});
+      return Promise.all([
+        DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s2){ return s2.val()||{}; }),
+        DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s3){ return s3.val()||{}; }).catch(function(){ return {}; }),
+        DB.ref('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+key).once('value').then(function(s4){ return s4.val()||{}; }).catch(function(){ return {}; })
+      ]).then(function(r){
+        var mestre=mcrMestreDe(est);
+        var mr=mestre?{raca:pelGet(mestre,'raca'), tutor:pelGet(mestre,'tutor')}:null;
+        var idt=mcrIdentidade({id:id, est:est, todas:(typeof EST_TODAS!=='undefined'?EST_TODAS:{}), mestre:mr, hoje:hoje, planilha:extra.planilha||null, viaSoNome:!!extra.viaSoNome||!est.refKey});
+        var M=mcrEstadoInicial({id:id, est:est, key:key, itens:r[0], log:r[1], logOntem:r[2], mestre:mr, podeFicha:(typeof canEditPel==='function'&&canEditPel()), hoje:hoje});
+        M.origem=origem||''; M.bloqueio=idt.ok?'':idt.erro; M.mestreRef=mestre; M.quem=mcrQuemPadrao(); M.quemAberto=M.quem;
+        try{ var ex=extraDoHosp({nome:est.nome, tutor:est.tutor, refKey:est.refKey})||{}; M.alergia=String(ex.alergia||''); M.restricao=String(ex.restricao||''); }catch(e){} /* silencioso de propósito: sem a ficha, a tarja não aparece */
+        try{ var kc=dcKey(est.nome, est.tutor); var c=ALM_CAD_CACHE[kc]||ALM_CAD_CACHE[String(kc).replace(/-/g,' ')]||null; if(c&&(c.quant||c.alim)) M.almocoDc={quant:String(c.quant||''), alim:String(c.alim||''), restr:String(c.restr||'')}; }catch(e){} /* silencioso de propósito: sem o cadastro do almoço, a linha não aparece */
+        try{ var kd='dc__'+dcKey(est.nome, est.tutor); M.dcHoje=(MED_AGENDA_TODOS||[]).filter(function(d){ return d.key===kd; }).map(function(d){ return {nome:d.nome||'', horario:d.horario||''}; }); }catch(e){ M.dcHoje=[]; } /* silencioso de propósito: sem a fila, sem a linha do Day Care */
+        MCR=M; mcrRender();
+        try{ var t=document.getElementById('mcrTela'); if(t) t.scrollTop=0; }catch(e){} /* silencioso de propósito: enfeite de tela */
+      });
+    }).catch(function(e){ mcrFechar(); zAlertao('NÃO CONSEGUI ABRIR', ['Motivo: '+((e&&e.message)||e)+'.','Confira a internet e toque de novo.'], {botao:'Entendi'}); });
+  }
+
+  // ---- A TELA (375 px: um cartão por bloco, botões de 44 px, nada de janela que o teclado esconde)
+  function mcrTela(){ var el=document.getElementById('mcrTela'); if(!el){ el=document.createElement('div'); el.id='mcrTela'; el.setAttribute('role','dialog'); document.body.appendChild(el); } return el; }
+  function mcrFechar(){ if(MCR&&MCR.salvando) return; MCR=null; var el=document.getElementById('mcrTela'); if(el&&el.remove) el.remove(); }
+  function mcrFecharPergunta(){
+    if(!MCR) return;
+    if(MCR.etapa==='salvo' || !mcrTemMudanca(MCR)){ mcrFechar(); return; }
+    zPergunta('Sair sem salvar?', ['O que você mudou aqui ainda NÃO foi gravado.'], {sim:'Sair sem salvar', nao:'Voltar para a tela', cor:'#6b5f4b'})
+      .then(function(ok){ if(ok) mcrFechar(); });
+  }
+  function mcrRefsAtivasTela(c){
+    var out=[], fx=(c.refs&&c.refs.fixas)||{};
+    CI_REF_FIXAS.forEach(function(f){ if(fx[f.k]&&fx[f.k].on) out.push({k:f.k, nome:f.n}); });
+    ((c.refs&&c.refs.extras)||[]).forEach(function(e,i){ out.push({k:'x'+i, nome:(e.nome||'Refeição extra')}); });
+    return out;
+  }
+  function mcrRefDe(c, k){ if(!c||!c.refs) return null; if(/^x\d+$/.test(k)){ var e=(c.refs.extras||[])[Number(k.slice(1))]; return e?Object.assign({on:true}, e):null; } return (c.refs.fixas||{})[k]||null; }
+  function mcrRefSetCampo(c, k, campo, v){ if(/^x\d+$/.test(k)){ var e=(c.refs.extras||[])[Number(k.slice(1))]; if(e) e[campo]=v; return; } var r=(c.refs.fixas||{})[k]; if(r) r[campo]=v; }
+  function mcrLinhaRefeicaoHTML(k, nome, ra, rb, unidade, soNat){
+    ra=mcrRefNorm(ra); rb=mcrRefNorm(rb);
+    var campo=soNat?'natural':'racao', u=soNat?'gramas':unidade, passo=mcrPassoDe(u), rot=(passo===5)?'5 g':'½';
+    var vA=ra[campo], vB=rb[campo];
+    var antes=(ra.on && String(vA)!==String(vB))?('era '+(String(vA).trim()?mcrQtdUnid(vA,u).trim():'sem quantidade')):'';
+    var sub=[]; if(!soNat && ciNum(rb.natural)>0) sub.push(rb.natural+' g de comida natural'); if(String(rb.extra||'').trim()) sub.push(String(rb.extra).trim());
+    return '<div class="mcr-ref">'
+      +'<div class="mcr-ref-nome">'+esc(nome)+(rb.hora?(' · '+esc(rb.hora)):'')+' <span class="mcr-mut">'+(soNat?'comida natural':'ração')+'</span></div>'
+      +'<div class="mcr-ref-qtd"><button type="button" class="mcr-q" onclick="mcrPassoRef(\''+k+'\','+(-passo)+')">−'+rot+'</button>'
+      +'<input class="mcr-qin" inputmode="decimal" aria-label="'+escAttr(nome)+'" value="'+escAttr(vB)+'" oninput="mcrSetRef(\''+k+'\',\''+campo+'\',this.value)">'
+      +'<span class="mcr-un">'+esc(mcrUnidTxt(u).trim())+'</span>'
+      +'<button type="button" class="mcr-q" onclick="mcrPassoRef(\''+k+'\','+passo+')">+'+rot+'</button></div>'
+      +'<div class="mcr-antes" id="mcrAntes_'+escAttr(k)+'">'+(antes?('('+esc(antes)+')'):'')+'</div>'
+      +(sub.length?('<div class="mcr-mut">+ '+esc(sub.join(' + '))+'</div>'):'')
+      +'</div>';
+  }
+  function mcrCabecalhoHTML(M){
+    var foto=''; try{ foto=(typeof fotoDe==='function')?fotoDe({nome:M.nome, tutor:M.tutor, refKey:M.refKey}):''; }catch(e){ foto=''; } /* silencioso de propósito: sem foto, a inicial */
+    var av=foto?('<div class="mcr-av" style="background-image:url(\''+escAttr(foto)+'\')"></div>'):('<div class="mcr-av">'+esc((M.nome||'?').charAt(0).toUpperCase())+'</div>');
+    return '<div class="mcr-topo"><div class="mcr-titulo">Mudar comida e remédio</div><button type="button" class="mcr-x" onclick="mcrFecharPergunta()" aria-label="Fechar">×</button></div>'
+      +'<div class="mcr-card mcr-id">'+av+'<div class="mcr-id-tx"><div class="mcr-nome">'+esc(M.nome)+'</div>'
+      +'<div class="mcr-mut">'+esc(M.raca||'raça a cadastrar')+' · Tutor: '+esc(M.tutor||'a confirmar')+'</div>'
+      +'<div class="mcr-mut">Hospedado de '+esc(ciBRdata(M.entrada))+' a '+esc(M.saida?ciBRdata(M.saida):'saída a confirmar')+'</div></div></div>';
+  }
+  function mcrChip(on, txt, fn, extra){ return '<button type="button" class="mcr-chip'+(on?' on':'')+'"'+(extra||'')+' onclick="'+fn+'">'+(on?'✓ ':'')+esc(txt)+'</button>'; }
+  function mcrComidaHTML(M){
+    var c=M.comida, h='<div class="mcr-card"><div class="mcr-tit">Comida</div>';
+    if(M.alergia||M.restricao) h+='<div class="mcr-alerta">'+(M.alergia?('ALERGIA: '+esc(M.alergia)):'')+(M.alergia&&M.restricao?' · ':'')+(M.restricao?('NÃO PODE: '+esc(M.restricao)):'')+'</div>';
+    if(c.semRacao) h+='<div class="mcr-alerta">SEM RAÇÃO — comida úmida da casa (só nesta hospedagem)</div>';
+    var soNat=(c.tipo==='Comida natural'), refs=mcrRefsAtivasTela(c);
+    if(!refs.length) h+='<div class="mcr-mut">Nenhuma refeição marcada no check-in. Toque em «Mudar o que ele come» para marcar.</div>';
+    refs.forEach(function(r){ h+=mcrLinhaRefeicaoHTML(r.k, r.nome, mcrRefDe(M.comidaAntes, r.k)||{on:false}, mcrRefDe(c, r.k), c.unidade, soNat); });
+    var campo=soNat?'natural':'racao', vals=refs.map(function(r){ return String((mcrRefDe(c,r.k)||{})[campo]||'').trim(); });
+    if(refs.length>=2 && vals[0] && vals.every(function(v){ return v===vals[0]; })){
+      var passo=mcrPassoDe(soNat?'gramas':c.unidade), rot=(passo===5)?'5 g':'½';
+      h+='<div class="mcr-todas"><div class="mcr-ref-nome">Mesma quantidade em todas ('+refs.length+' refeições)</div><div class="mcr-ref-qtd">'
+        +'<button type="button" class="mcr-q" onclick="mcrPassoTodas('+(-passo)+')">−'+rot+'</button><span class="mcr-todas-v">'+esc(mcrQtdUnid(vals[0], soNat?'gramas':c.unidade).trim())+'</span>'
+        +'<button type="button" class="mcr-q" onclick="mcrPassoTodas('+passo+')">+'+rot+'</button></div></div>';
+    }
+    h+='<button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrToggleTudo()">'+(M.editarTudo?'Fechar «Mudar o que ele come»':'Mudar o que ele come (tipo, marca, patê, refeições)')+'</button>';
+    if(M.editarTudo) h+=mcrComidaTudoHTML(M);
+    h+=mcrChip(c.semRacao, 'Não trouxe ração — comida úmida da casa', 'mcrToggleSemRacao()', ' style="width:100%;margin-top:8px"');
+    if(M.podeFicha && !M.fichaIncerta) h+=mcrChip(M.ficha, 'Guardar também na ficha de '+M.nome+' (na próxima hospedagem já vem assim)', 'mcrToggleFicha()', ' style="width:100%;margin-top:8px"')
+      +(M.ficha?(M.teveSoDestaVez?'<div class="mcr-mut">Antes, uma mudança foi «só desta vez». Guardando na ficha agora, ela leva a comida inteira desta tela, inclusive aquela mudança.</div>':''):'<div class="mcr-mut">Só desta vez: a ficha continua como está.</div>');
+    else h+='<div class="mcr-mut" style="margin-top:8px">'+(M.podeFicha?'A ligação com a ficha não está certa: a ficha não muda daqui (Gestão).':'A ficha só muda pela recepção ou pela Gestão: aqui muda só esta hospedagem.')+'</div>';
+    if(M.almocoDc) h+='<div class="mcr-mut" style="margin-top:8px">Almoço no Day Care: '+esc((M.almocoDc.quant||'quantidade a confirmar')+(M.almocoDc.alim?(' de '+M.almocoDc.alim):''))+' (cadastro do almoço). Se ele come diferente também no almoço do Day Care, a Gestão muda em Ficha › Almoço.</div>';
+    return h+'</div>';
+  }
+  function mcrComidaTudoHTML(M){
+    var c=M.comida, temNat=mcrTemNatural(c.tipo), soNat=(c.tipo==='Comida natural');
+    var h='<div class="mcr-sub"><div class="mcr-lab">Tipo</div><div class="mcr-chips">'
+      +['Ração','Ração + natural','Comida natural'].map(function(t){ return mcrChip(c.tipo===t, t, 'mcrSetComida(\'tipo\',\''+t+'\')'); }).join('')+'</div>'
+      +'<div class="mcr-lab">Marca</div><input class="mcr-in-tx" value="'+escAttr(c.marca)+'" placeholder="Ex.: Royal Canin Mini" oninput="mcrSetComidaTx(\'marca\',this.value)">'
+      +'<div class="mcr-lab">Medida</div><div class="mcr-chips">'
+      +['gramas','medidor','lata','sachê'].map(function(u){ return mcrChip((c.unidade||'gramas')===u, u, 'mcrSetComida(\'unidade\',\''+u+'\')'); }).join('')+'</div>';
+    var campos=function(k, r, extra){
+      var s='';
+      if(extra) s+='<div class="mcr-lab">Nome da refeição</div><input class="mcr-in-tx" value="'+escAttr(r.nome||'')+'" placeholder="Ex.: lanche da tarde" oninput="mcrSetRef(\''+k+'\',\'nome\',this.value)">';
+      s+='<div class="mcr-lab">Horário</div><input type="time" class="mcr-in-tx" value="'+escAttr(r.hora||'')+'" oninput="mcrSetRef(\''+k+'\',\'hora\',this.value)">';
+      if(!soNat) s+='<div class="mcr-lab">Ração ('+esc(mcrUnidTxt(c.unidade).trim())+')</div><input class="mcr-in-tx" inputmode="decimal" value="'+escAttr(r.racao||'')+'" oninput="mcrSetRef(\''+k+'\',\'racao\',this.value)">';
+      if(temNat) s+='<div class="mcr-lab">Comida natural (g)</div><input class="mcr-in-tx" inputmode="decimal" value="'+escAttr(r.natural||'')+'" oninput="mcrSetRef(\''+k+'\',\'natural\',this.value)">';
+      s+='<div class="mcr-lab">O que mais (patê, iogurte…)</div><input class="mcr-in-tx" value="'+escAttr(r.extra||'')+'" placeholder="Ex.: 1 colher de patê" oninput="mcrSetRef(\''+k+'\',\'extra\',this.value)">';
+      return s;
+    };
+    CI_REF_FIXAS.forEach(function(f){
+      var r=c.refs.fixas[f.k]||{};
+      h+='<div class="mcr-refed">'+mcrChip(!!r.on, f.n+(r.on?'':' — não faz'), 'mcrToggleRef(\''+f.k+'\')', ' style="width:100%"')+(r.on?campos(f.k, r, false):'')+'</div>';
+    });
+    (c.refs.extras||[]).forEach(function(e,i){
+      h+='<div class="mcr-refed"><div class="mcr-ref-nome">'+esc(e.nome||'Refeição extra')+'</div>'+campos('x'+i, e, true)
+        +'<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrTirarExtra('+i+')">Tirar esta refeição</button></div>';
+    });
+    h+='<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrAddExtra()">+ Refeição extra</button></div>';
+    return h;
+  }
+  function mcrHojeTxt(M, id, it){
+    var dados=mcrDadosHoje(it, id, M.log);
+    if(!medVigenteEm(it, M.hoje)) return it.dataInicio&&it.dataInicio>M.hoje?('Começa '+mcrNoDia(it.dataInicio)+'.'):'Hoje não é dia dele.';
+    return 'Hoje: '+(it.horarios||[]).map(function(h){
+      var reg=M.log[magDoseId(id,h)];
+      if(!reg) return h;
+      var hh=''; try{ if(reg.ts){ var d=new Date(reg.ts); hh=' às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); } }catch(e){ hh=''; } /* silencioso de propósito: sem o horário, só "já dada" */
+      return h+' (já dada'+(reg.quem?(' por '+reg.quem):'')+hh+')';
+    }).join(', ')+'.';
+  }
+  function mcrComoFica(M, id, it, m){
+    var dados=mcrDadosHoje(it, id, M.log);
+    var r=mcrRegraHorario({antes:it.horarios||[], depois:m.horarios||[], dadosHoje:dados, hoje:M.hoje, item:it});
+    var hs=(m.horarios||[]).filter(horaOk), modo=mcrModo(r, m.vale);
+    var h='<div class="mcr-fica"><div class="mcr-lab">Como fica</div>';
+    if(r.futuro) h+='<div>'+esc(r.porque)+'</div>';
+    else if(modo==='nada') h+='<div>'+esc(r.porque)+'</div>';
+    else if(modo==='mesmo') h+='<div>Hoje: '+esc(hs.join(', ')||'—')+' (o horário antigo não toca mais hoje). Avise a plantonista e confira no celular dela (Plantão › toque em «Hoje»).</div>';
+    else h+='<div>'+esc(mcrHojeTxt(M, id, it))+'</div><div><strong>A partir de '+esc(mcrDiaTexto(r.inicio))+': '+esc(hs.join(', ')||'—')+'.</strong></div>';
+    if(!r.futuro){
+      if(r.podeHoje) h+='<div class="mcr-chips" style="margin-top:6px">'+mcrChip(m.vale!=='hoje', 'A partir de '+mcrDiaTexto(r.inicio)+' (recomendado)', 'mcrSetMed(\''+id+'\',\'vale\',\'amanha\')')
+        +mcrChip(m.vale==='hoje', 'Hoje', 'mcrSetMed(\''+id+'\',\'vale\',\'hoje\')')+'</div><div class="mcr-mut">'+esc(r.porque)+'</div>';
+      else if(modo!=='nada') h+='<div class="mcr-mut">'+esc(r.porque)+'</div>';
+    }
+    if(modo==='troca' && r.perto){
+      h+='<div class="mcr-alerta">'+esc(mcrPertoTxt(it.nome||'O remédio', r.perto, r.inicio))+'</div>'
+        +mcrChip(!!m.confirmouVet, 'Confirmei com a veterinária', 'mcrSetMed(\''+id+'\',\'confirmouVet\','+(!m.confirmouVet)+')', ' style="width:100%"');
+    }
+    else if(r.madrugadaNova) h+='<div class="mcr-mut"><strong>Horário de madrugada:</strong> confira com a veterinária se a dose da noite anterior não fica perto demais.</div>';
+    return h+'</div>';
+  }
+  function mcrRemedioHTML(M, id){
+    var it=M.itens[id]||{}, m=M.meds[id]||{};
+    var h='<div class="mcr-med"><div class="mcr-ref-nome">'+esc(it.nome||'')+'</div>'
+      +'<div class="mcr-mut">'+esc([medDoseTxt(it), (it.horarios||[]).join(', '), medPeriodoTxt(it)].filter(Boolean).join(' · '))+'</div>'
+      +'<div class="mcr-mut">'+esc(mcrHojeTxt(M, id, it))+'</div>';
+    if(!m.acao){
+      h+='<div class="mcr-chips" style="margin-top:6px">'
+        +'<button type="button" class="mcr-chip" onclick="mcrMedAcao(\''+id+'\',\'dose\')">Mudar dose</button>'
+        +'<button type="button" class="mcr-chip" onclick="mcrMedAcao(\''+id+'\',\'horario\')">Mudar horário</button>'
+        +'<button type="button" class="mcr-chip" onclick="mcrMedAcao(\''+id+'\',\'parou\')">Parou de tomar</button></div>'
+        +'<div class="mcr-mut">Trocou de remédio? «Parou de tomar» neste e «+ Remédio novo».</div>';
+      return h+'</div>';
+    }
+    if(m.acao==='dose'){
+      h+='<div class="mcr-lab">Dose nova</div><input class="mcr-in-tx" value="'+escAttr(m.q||'')+'" placeholder="Ex.: 1 · 0,5 · 1/2" oninput="mcrSetMedTx(\''+id+'\',\'q\',this.value)">'
+        +'<div class="mcr-lab">Medida</div><div class="mcr-chips">'+MED_UNIDADES.map(function(u){ return mcrChip(m.u===u, u, 'mcrSetMed(\''+id+'\',\'u\',\''+u+'\')'); }).join('')+'</div>';
+      if(m.u && m.u!==it.u && mcrEhContavel(it.estoque)) h+='<div class="mcr-lab">Medida nova: quantas unidades há agora? (blister ou caixa; deixe em branco se não der para contar)</div><input class="mcr-in-tx" inputmode="numeric" value="'+escAttr(m.contagem||'')+'" oninput="mcrSetMedTx(\''+id+'\',\'contagem\',this.value)">';
+      h+='<div class="mcr-mut">Vale na próxima dose. O estoque contado continua.</div>';
+    } else if(m.acao==='horario'){
+      h+='<div class="mcr-lab">Horários novos</div>'+(m.horarios||[]).map(function(x,i){
+        return '<div class="mcr-hrow"><input type="time" class="mcr-in-tx" value="'+escAttr(x)+'" oninput="mcrSetHorario(\''+id+'\','+i+',this.value)" onchange="mcrRenderLogo()">'
+          +'<button type="button" class="mcr-q" onclick="mcrTirarHorario(\''+id+'\','+i+')" aria-label="Tirar horário">×</button></div>';
+      }).join('')+'<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrAddHorario(\''+id+'\')">+ horário</button>'+mcrComoFica(M, id, it, m);
+    } else if(m.acao==='parou'){
+      var faltam=(it.horarios||[]).filter(function(x){ return mcrDadosHoje(it,id,M.log).indexOf(x)<0; });
+      var fH=medVigenteEm(it, M.hoje)?faltam:[], fO=mcrOntemFaltam(it, id, M.hoje, M.logOntem, mcrAgoraMin());
+      if(fH.length || fO.length){
+        h+='<div class="mcr-lab">'+(fO.length
+          ? ((fH.length?'Ainda devem ser dadas ':'Ainda deve ser dada ')+'a dose de ontem das '+esc(fO.join(', '))+' (sem registro)'+(fH.length?(' e a de hoje das '+esc(fH.join(', '))):'')+'?')
+          : ('A dose de hoje das '+esc(faltam.join(', '))+' ainda deve ser dada?'))+'</div><div class="mcr-chips">'
+          +mcrChip(m.parou==='agora', 'Não — parou agora (recomendado)', 'mcrSetMed(\''+id+'\',\'parou\',\'agora\')')
+          +mcrChip(m.parou==='depois', 'Sim — para depois de hoje', 'mcrSetMed(\''+id+'\',\'parou\',\'depois\')')+'</div>';
+      } else h+='<div class="mcr-mut">Para depois de hoje: não há mais dose dele hoje.</div>';
+      h+='<div class="mcr-mut">Nada é apagado: ele fica na lista da hospedagem para o Check-out devolver ao tutor.</div>';
+    }
+    h+='<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrMedAcao(\''+id+'\',\'\')">Desfazer</button>';
+    return h+'</div>';
+  }
+  function mcrNovoHTML(M, n, i){
+    var hs=(n.horarios||[]);
+    var r=mcrRegraHorario({antes:[], depois:hs, dadosHoje:[], hoje:M.hoje, item:{horarios:hs}, novo:true});
+    var h='<div class="mcr-med"><div class="mcr-ref-nome">Remédio novo</div>'
+      +'<div class="mcr-lab">Nome</div><input class="mcr-in-tx" value="'+escAttr(n.nome||'')+'" placeholder="Nome do remédio ou suplemento" oninput="mcrSetNovoTx('+i+',\'nome\',this.value)" onchange="mcrRenderLogo()">'
+      +'<div class="mcr-chips" style="margin-top:6px">'+mcrChip((n.tipo||'medicamento')==='medicamento','Medicamento','mcrSetNovo('+i+',\'tipo\',\'medicamento\')')+mcrChip(n.tipo==='suplemento','Suplemento','mcrSetNovo('+i+',\'tipo\',\'suplemento\')')+'</div>'
+      +'<div class="mcr-lab">Dose</div><input class="mcr-in-tx" value="'+escAttr(n.q||'')+'" placeholder="Ex.: 1 · 0,5" oninput="mcrSetNovoTx('+i+',\'q\',this.value)">'
+      +'<div class="mcr-lab">Medida</div><div class="mcr-chips">'+MED_UNIDADES.map(function(u){ return mcrChip(n.u===u, u, 'mcrSetNovo('+i+',\'u\',\''+u+'\')'); }).join('')+'</div>'
+      +(medEhLocal(n.u)?('<div class="mcr-lab">Local de aplicação</div><input class="mcr-in-tx" value="'+escAttr(n.local||'')+'" oninput="mcrSetNovoTx('+i+',\'local\',this.value)">'):'')
+      +'<div class="mcr-lab">Horários</div>'+hs.map(function(x,j){ return '<div class="mcr-hrow"><input type="time" class="mcr-in-tx" value="'+escAttr(x)+'" oninput="mcrSetNovoHorario('+i+','+j+',this.value)" onchange="mcrRenderLogo()"><button type="button" class="mcr-q" onclick="mcrTirarNovoHorario('+i+','+j+')" aria-label="Tirar horário">×</button></div>'; }).join('')
+      +'<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrAddNovoHorario('+i+')">+ horário</button>'
+      +'<div class="mcr-lab">Período</div><div class="mcr-chips">'+mcrChip(!!n.continuo,'Uso contínuo','mcrSetNovo('+i+',\'continuo\','+(!n.continuo)+')')+'</div>'
+      +(n.continuo?'':('<div class="mcr-lab">Tomar até</div><input type="date" class="mcr-in-tx" value="'+escAttr(n.dataFim||'')+'" min="'+escAttr(M.hoje)+'" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" oninput="mcrSetNovoTx('+i+',\'dataFim\',this.value)">'))
+      +'<div class="mcr-lab">De onde veio</div><div class="mcr-chips">'+[['tutor','Rotina do tutor'],['vet','Receita da vet'],['familia','Autorizado pela família']].map(function(o){ return mcrChip((n.origem||'tutor')===o[0], o[1], 'mcrSetNovo('+i+',\'origem\',\''+o[0]+'\')'); }).join('')+'</div>'
+      +'<div class="mcr-lab">Como veio</div><div class="mcr-chips">'+[['blister','Blister ou caixa fechada'],['pote','Pote ou frasco (não abrir)'],['casa','É da casa (Empório ou veterinária)']].map(function(o){ return mcrChip(n.comoVeio===o[0], o[1], 'mcrSetNovo('+i+',\'comoVeio\',\''+o[0]+'\')'); }).join('')+'</div>'
+      +(n.comoVeio==='blister'?('<div class="mcr-lab">Quantas unidades vieram?</div><input class="mcr-in-tx" inputmode="numeric" value="'+escAttr(n.contagem||'')+'" oninput="mcrSetNovoTx('+i+',\'contagem\',this.value)">'):'')
+      +'<div class="mcr-lab">O tutor trouxe agora?</div><div class="mcr-chips">'+mcrChip(n.trouxe===true,'Sim','mcrSetNovo('+i+',\'trouxe\',true)')+mcrChip(n.trouxe===false,'Não','mcrSetNovo('+i+',\'trouxe\',false)')+'</div>'
+      +(n.trouxe===true?('<div class="mcr-lab">Quem recebeu do tutor?</div><input class="mcr-in-tx" value="'+escAttr(n.recebidoPor||'')+'" placeholder="Nome de quem pegou na mão" oninput="mcrSetNovoTx('+i+',\'recebidoPor\',this.value)"><div class="mcr-mut">Volta para a Conferência, com o nome de quem recebeu.</div>'):'');
+    if(hs.filter(horaOk).length){
+      var nc=mcrNovoChecar(n, M.hoje);
+      if(nc.erro) h+='<div class="mcr-alerta">'+esc(nc.erro)+'</div>';
+      if(r.podeHoje) h+='<div class="mcr-lab">Começa</div><div class="mcr-chips">'+mcrChip(n.vale!=='hoje','A partir de '+mcrDiaTexto(r.inicio)+' (recomendado)','mcrSetNovo('+i+',\'vale\',\'amanha\')')+mcrChip(n.vale==='hoje','Hoje','mcrSetNovo('+i+',\'vale\',\'hoje\')')+'</div><div class="mcr-mut">'+esc(r.porque)+'</div>';
+      else h+='<div class="mcr-mut">'+esc(r.porque)+'</div>';
+    }
+    if(n.dcIgual) h+='<div class="mcr-alerta">O Day Care lançou hoje um remédio parecido ('+esc(n.dcIgual)+'): confira para não tocarem dois alarmes.</div>';
+    h+='<button type="button" class="mcr-bt mcr-bt-lev" onclick="mcrTirarNovo('+i+')">Tirar este remédio novo</button>';
+    return h+'</div>';
+  }
+  function mcrRemediosHTML(M){
+    var t=mcrRemediosDaTela(M.itens, M.hoje), h='<div class="mcr-card"><div class="mcr-tit">Remédios</div>';
+    if(!t.editaveis.length && !t.leitura.length) h+='<div class="mcr-mut">Nenhum remédio em uso na agenda.</div>';
+    // Na ordem da agenda: o remédio que termina hoje (só leitura) vem antes do que começa amanhã.
+    var le={}; t.leitura.forEach(function(x){ le[x.id]=x.motivo; });
+    Object.keys(M.itens||{}).forEach(function(id){
+      if(t.editaveis.indexOf(id)>=0){ h+=mcrRemedioHTML(M, id); return; }
+      if(!(id in le)) return;
+      var it=M.itens[id]||{}; h+='<div class="mcr-med mcr-so-ler"><div class="mcr-ref-nome">'+esc(it.nome||'')+' · '+esc((it.horarios||[]).join(', '))+'</div><div class="mcr-mut">'+esc(le[id])+'</div></div>';
+    });
+    (M.dcHoje||[]).forEach(function(d){ h+='<div class="mcr-med mcr-so-ler"><div class="mcr-ref-nome">'+esc(d.nome)+' · '+esc(d.horario)+'</div><div class="mcr-mut">Lançado no Day Care hoje (check-in de pertences): muda lá.</div></div>'; });
+    (M.novos||[]).forEach(function(n,i){ h+=mcrNovoHTML(M, n, i); });
+    h+='<button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrAddNovo()">+ Remédio novo</button>';
+    return h+'</div>';
+  }
+  function mcrMotivoHTML(M){
+    var v=motivoQuatroPalavras(M.motivo);
+    return '<div class="mcr-card"><div class="mcr-tit">Por que mudou? (obrigatório)</div><div class="mcr-chips">'
+      +MCR_FRASES_PRONTAS.map(function(f,i){ return mcrChip(String(M.motivo||'').trim()===f, f, 'mcrUsarFrase('+i+')'); }).join('')+'</div>'
+      +'<textarea id="mcrMotivo" class="mcr-in-tx" rows="3" placeholder="O que aconteceu? Pelo menos 4 palavras." oninput="mcrSetMotivo(this.value)">'+esc(M.motivo||'')+'</textarea>'
+      +'<div class="mcr-mut" id="mcrMotivoDica">'+esc(v.ok?'Motivo ok.':v.erro)+'</div>'
+      +'<div class="mcr-lab">Quem está mudando</div><input id="mcrQuem" class="mcr-in-tx" value="'+escAttr(M.quem||'')+'" placeholder="Escreva o seu nome" oninput="mcrSetQuem(this.value)">'
+      +'</div>';
+  }
+  function mcrPreviaFrases(M){
+    try{ var G=mcrMontar(M, {est:M.est, itens:M.itens, log:M.log, hoje:M.hoje, agoraMin:mcrAgoraMin(), ts:Date.now(), quandoBR:agoraBR(), avisos:{}}); return G; }
+    catch(e){ return {frases:['(não consegui montar o resumo: '+((e&&e.message)||e)+')'], avisosTela:[], fichaPlano:null}; }
+  }
+  function mcrConferirHTML(M){
+    var G=mcrPreviaFrases(M);
+    var h='<div class="mcr-card"><div class="mcr-tit">Confira antes de salvar</div><ul class="mcr-lista">'
+      +G.frases.map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>'
+      +'<div class="mcr-mut">Motivo: '+esc(M.motivo)+'</div><div class="mcr-mut">Quem: '+esc(M.quem)+'</div>';
+    if(mcrDiffComida(M.comidaAntes, M.comida).length) h+='<div class="mcr-mut">'+(G.fichaPlano?('A ficha de '+esc(M.nome)+' também muda: na próxima hospedagem já vem assim'+(M.teveSoDestaVez?' (a comida inteira desta tela, inclusive o que antes foi «só desta vez»).':'.')):'Só desta hospedagem: a ficha não muda.')+'</div>';
+    (G.avisosTela||[]).forEach(function(a){ h+='<div class="mcr-alerta">'+esc(a)+'</div>'; });
+    if(M.erro) h+='<div class="mcr-erro">'+esc(M.erro)+'</div>';
+    if(M.etapa==='pendente') h+='<div class="mcr-erro">'+esc(M.aviso)+'</div><button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrFechar()">Fechar</button>';
+    else h+='<button type="button" class="mcr-bt mcr-bt-pri" '+(M.salvando?'disabled':'')+' onclick="mcrGravar()">'+(M.salvando?'Salvando…':'Salvar')+'</button>'
+      +'<button type="button" class="mcr-bt mcr-bt-sec" '+(M.salvando?'disabled':'')+' onclick="mcrVoltar()">Voltar e mudar</button>';
+    return h+'</div>';
+  }
+  function mcrSalvoHTML(M){
+    var h='<div class="mcr-card mcr-ok"><div class="mcr-tit">Salvo.</div>';
+    if(M.aviso) h+='<div>'+esc(M.aviso)+'</div>';
+    h+='<ul class="mcr-lista">'+(M.final||[]).map(function(f){ return '<li>'+esc(f)+'</li>'; }).join('')+'</ul>';
+    var G=M.gravado;
+    if(G && G.comidaMudou) h+='<div>O Plantão já mostra a comida nova de '+esc(M.nome)+'.</div>';
+    if(G && G.temRemedio) h+='<div>O alarme dos remédios já segue o que está acima; nos celulares das plantonistas, em até 10 segundos (com internet e o app atualizado).</div>';
+    (M.avisosTela||[]).forEach(function(a){ h+='<div class="mcr-alerta">'+esc(a)+'</div>'; });
+    return h+'<button type="button" class="mcr-bt mcr-bt-pri" onclick="mcrFechar()">Fechar</button></div>';
+  }
+  // Redesenho reentrante (4ª rodada, achado no Chromium): trocar o HTML tira da tela o campo que estava com o
+  // cursor; o navegador dispara o "change" dele no meio da troca, e o onchange pedia outro redesenho dentro do
+  // primeiro ("The node to be removed is no longer a child"). O pedido do meio vira um redesenho logo depois.
+  var __mcrRenderAgora=false, __mcrRenderDeNovo=false;
+  // O "change" de um campo (nome, horário) redesenha um pouco DEPOIS: se ele veio de um toque num botão da
+  // tela, o toque chega primeiro ao botão (que redesenha) — redesenhar já tirava o botão de baixo do dedo e o
+  // toque se perdia (achado no Chromium, 4ª rodada).
+  var __mcrRenderLogoT=null;
+  function mcrRenderLogo(){ if(__mcrRenderLogoT) clearTimeout(__mcrRenderLogoT); __mcrRenderLogoT=setTimeout(function(){ __mcrRenderLogoT=null; try{ mcrRender(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }, 300); }
+  function mcrRender(){
+    if(__mcrRenderLogoT){ clearTimeout(__mcrRenderLogoT); __mcrRenderLogoT=null; }
+    if(__mcrRenderAgora){ __mcrRenderDeNovo=true; return; }
+    __mcrRenderAgora=true;
+    try{ mcrRenderJa(); }
+    finally{
+      __mcrRenderAgora=false;
+      if(__mcrRenderDeNovo){ __mcrRenderDeNovo=false; setTimeout(function(){ try{ mcrRender(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }, 0); }
+    }
+  }
+  function mcrRenderJa(){
+    var M=MCR; if(!M) return;
+    var el=mcrTela();
+    var h='<div class="mcr-in">'+mcrCabecalhoHTML(M);
+    if(M.bloqueio){
+      h+='<div class="mcr-card mcr-erro">'+esc(M.bloqueio)+'</div><button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrFechar()">Fechar</button></div>';
+      el.innerHTML=h; return;
+    }
+    if(M.etapa==='salvo') h+=mcrSalvoHTML(M);
+    else if(M.etapa==='conferir' || M.etapa==='pendente') h+=mcrConferirHTML(M);
+    else h+=mcrComidaHTML(M)+mcrRemediosHTML(M)+mcrMotivoHTML(M)
+      +(M.erro?('<div class="mcr-card mcr-erro">'+esc(M.erro)+'</div>'):'')
+      +'<button type="button" class="mcr-bt mcr-bt-pri" onclick="mcrConferir()">Conferir e salvar</button>'
+      +'<button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrFecharPergunta()">Fechar sem salvar</button>';
+    el.innerHTML=h+'</div>';
+  }
+  // ---- Os toques da tela
+  function mcrPassoRef(k, d){ var M=MCR; if(!M) return; var soNat=(M.comida.tipo==='Comida natural'), campo=soNat?'natural':'racao'; var r=mcrRefDe(M.comida, k); if(!r) return; mcrRefSetCampo(M.comida, k, campo, mcrPasso(r[campo], d)); mcrRender(); }
+  function mcrPassoTodas(d){ var M=MCR; if(!M) return; var soNat=(M.comida.tipo==='Comida natural'), campo=soNat?'natural':'racao'; mcrRefsAtivasTela(M.comida).forEach(function(x){ var r=mcrRefDe(M.comida, x.k); if(r) mcrRefSetCampo(M.comida, x.k, campo, mcrPasso(r[campo], d)); }); mcrRender(); }
+  function mcrSetRef(k, campo, v){
+    var M=MCR; if(!M) return; mcrRefSetCampo(M.comida, k, campo, String(v==null?'':v));
+    try{ var el=document.getElementById('mcrAntes_'+k); var ra=mcrRefDe(M.comidaAntes, k), rb=mcrRefDe(M.comida, k); var soNat=(M.comida.tipo==='Comida natural'), c2=soNat?'natural':'racao';
+      if(el && ra && rb && (campo===c2)) el.textContent=(ra.on && String(ra[c2])!==String(rb[c2]))?('(era '+(String(ra[c2]).trim()?mcrQtdUnid(ra[c2], soNat?'gramas':M.comida.unidade).trim():'sem quantidade')+')'):''; }catch(e){} /* silencioso de propósito: enfeite de tela */
+  }
+  function mcrSetComida(campo, v){ var M=MCR; if(!M) return; M.comida[campo]=v; mcrRender(); }
+  function mcrSetComidaTx(campo, v){ var M=MCR; if(!M) return; M.comida[campo]=String(v==null?'':v); }
+  function mcrToggleTudo(){ var M=MCR; if(!M) return; M.editarTudo=!M.editarTudo; mcrRender(); }
+  function mcrToggleRef(k){ var M=MCR; if(!M) return; var r=M.comida.refs.fixas[k]; if(!r) return; r.on=!r.on; mcrRender(); }
+  function mcrAddExtra(){ var M=MCR; if(!M) return; M.comida.refs.extras.push(mcrExtraNorm({nome:'Refeição extra'})); mcrRender(); }
+  function mcrTirarExtra(i){ var M=MCR; if(!M) return; M.comida.refs.extras.splice(i,1); mcrRender(); }
+  function mcrToggleSemRacao(){ var M=MCR; if(!M) return; M.comida.semRacao=!M.comida.semRacao; mcrRender(); }
+  function mcrToggleFicha(){ var M=MCR; if(!M||!M.podeFicha||M.fichaIncerta) return; M.ficha=!M.ficha; mcrRender(); }
+  function mcrMedAcao(id, acao){
+    var M=MCR; if(!M) return; var it=M.itens[id]||{};
+    if(!acao){ delete M.meds[id]; mcrRender(); return; }
+    var m={acao:acao};
+    if(acao==='dose'){ m.q=String(it.q||''); m.u=it.u||''; }
+    if(acao==='horario'){ m.horarios=(it.horarios||[]).slice(); m.vale='amanha'; }
+    if(acao==='parou'){ m.parou='agora'; }
+    M.meds[id]=m; mcrRender();
+  }
+  function mcrSetMed(id, campo, v){ var M=MCR; if(!M||!M.meds[id]) return; M.meds[id][campo]=v; mcrRender(); }
+  function mcrSetMedTx(id, campo, v){ var M=MCR; if(!M||!M.meds[id]) return; M.meds[id][campo]=String(v==null?'':v); }
+  function mcrSetHorario(id, i, v){ var M=MCR; if(!M||!M.meds[id]) return; M.meds[id].horarios[i]=normHora(v)||String(v||''); M.meds[id].confirmouVet=false; }
+  function mcrAddHorario(id){ var M=MCR; if(!M||!M.meds[id]) return; M.meds[id].horarios.push(''); M.meds[id].confirmouVet=false; mcrRender(); }
+  function mcrTirarHorario(id, i){ var M=MCR; if(!M||!M.meds[id]) return; M.meds[id].horarios.splice(i,1); M.meds[id].confirmouVet=false; mcrRender(); }
+  function mcrAddNovo(){ var M=MCR; if(!M) return; M.novos.push({nome:'', tipo:'medicamento', q:'', u:'', horarios:[''], continuo:false, dataFim:'', origem:'tutor', comoVeio:'', contagem:'', trouxe:null, recebidoPor:'', vale:'amanha'}); mcrRender(); }
+  function mcrTirarNovo(i){ var M=MCR; if(!M) return; M.novos.splice(i,1); mcrRender(); }
+  function mcrSetNovo(i, campo, v){ var M=MCR; if(!M||!M.novos[i]) return; M.novos[i][campo]=v; mcrRender(); }
+  function mcrSetNovoTx(i, campo, v){
+    var M=MCR; if(!M||!M.novos[i]) return; M.novos[i][campo]=String(v==null?'':v);
+    if(campo==='nome'){ var n=M.novos[i]; n.dcIgual=''; (M.dcHoje||[]).forEach(function(d){ if(!n.dcIgual && n.nome && medMesmoRemedio(n.nome, d.nome)) n.dcIgual=d.nome+' às '+d.horario; }); }
+  }
+  function mcrSetNovoHorario(i, j, v){ var M=MCR; if(!M||!M.novos[i]) return; M.novos[i].horarios[j]=normHora(v)||String(v||''); }
+  function mcrAddNovoHorario(i){ var M=MCR; if(!M||!M.novos[i]) return; M.novos[i].horarios.push(''); mcrRender(); }
+  function mcrTirarNovoHorario(i, j){ var M=MCR; if(!M||!M.novos[i]) return; M.novos[i].horarios.splice(j,1); mcrRender(); }
+  function mcrUsarFrase(i){ var M=MCR; if(!M) return; M.motivo=MCR_FRASES_PRONTAS[i]||''; mcrRender(); }
+  function mcrSetMotivo(v){ var M=MCR; if(!M) return; M.motivo=String(v==null?'':v); var d=document.getElementById('mcrMotivoDica'); if(d){ var r=motivoQuatroPalavras(M.motivo); d.textContent=r.ok?'Motivo ok.':r.erro; } }
+  function mcrSetQuem(v){ var M=MCR; if(!M) return; M.quem=String(v==null?'':v); }
+  function mcrConferir(){
+    var M=MCR; if(!M) return;
+    (M.novos||[]).forEach(function(n){ n.horarios=(n.horarios||[]).filter(function(h){ return String(h||'').trim(); }); });
+    Object.keys(M.meds||{}).forEach(function(id){ var m=M.meds[id]; if(m&&m.horarios) m.horarios=m.horarios.filter(function(h){ return String(h||'').trim(); }); });
+    var p=mcrValidar(M);
+    if(p.length){ M.erro=p.join(' '); mcrRender(); return; }
+    M.erro=''; M.etapa='conferir'; mcrRender();
+    try{ var t=document.getElementById('mcrTela'); if(t) t.scrollTop=0; }catch(e){} /* silencioso de propósito: enfeite de tela */
+  }
+  function mcrVoltar(){ var M=MCR; if(!M||M.salvando) return; M.etapa='editar'; M.erro=''; mcrRender(); }
+
   // ==================================================================================
   // ===== ONDA 4 — CONFERÊNCIA CHECK-IN (Wandela) ====================================
   // Checklist de segurança depois do check-in: pertences etiquetados (ração e medicação
@@ -61583,6 +63194,8 @@
       if(hospEstadiaGanha(e, atual&&atual.e)) CF_ESTADIAS[k]={id:id,e:e};
     });
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // 6.54 (AC7): a comida mudada em outro aparelho aparece no card do Plantão (em 2 s, só com a lista à vista).
+    try{ if(typeof mcrPedirRedesenhoPlantao==='function') mcrPedirRedesenhoPlantao(); }catch(e){} /* silencioso de propósito: redesenho de tela */
     // Quem acabou de fazer check-in sai do cartão "Chegam pelos orçamentos fechados" (25/set).
     try{ if(typeof ciOrcHojeRender==='function') ciOrcHojeRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     // Item 3 — ocorrência registrada em qualquer aparelho chega viva na Recepção (badge + lista).
@@ -61712,6 +63325,7 @@
       + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
       + '<div class="he-acoes">'
       + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
+      + ((typeof mcrBotaoHospedesHTML==='function')?mcrBotaoHospedesHTML(id, e, st):'')
       + ((hospAbaPode()&&(e.status||'ativa')==='ativa')
           ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Dar baixa</button>':'')
       // Só quem está na casa AGORA pode sair antes — e só Gestão, Diretoria ou Supervisão,
@@ -62018,7 +63632,11 @@
     // --- Medicação: cada remédio contra os dias que faltam até a NOVA saída
     var meds=Array.isArray(est.medicacao)?est.medicacao:[];
     meds.forEach(function(m){
-      var c=(typeof medCoberturaEstadia==='function')?medCoberturaEstadia(m, est.entrada, est.saida):null;
+      if(m && m.parouEm) return;   // 6.54: parou de tomar — fica na lista só para o Check-out devolver
+      // 6.54: remédio mudado depois do check-in conta do RESTANTE de quando mudou (o retrato `cobertura`), não do que veio na entrada.
+      var c=(m && m.cobertura && typeof mcrCoberturaDaqui==='function')
+        ? mcrCoberturaDaqui(m, m.cobertura.dia, est.saida, m.cobertura.dosesHoje, m.cobertura.restante)
+        : ((typeof medCoberturaEstadia==='function')?medCoberturaEstadia(m, est.entrada, est.saida):null);
       if(c && !c.cobre){
         achados.push({tipo:'medicacao', nome:m.nome||'medicamento', deficit:c.deficit, unidade:c.unidade,
                       necessario:c.necessario, trazido:c.trazido, ate:c.ate});
@@ -62385,6 +64003,106 @@
   // A dose só é copiada com os dados que a regra v2 do banco exige (K15).
   function hospDoseCopiavel(d){ return !!d && typeof d.nome==='string' && typeof d.u==='string' && typeof d.ts==='number' && typeof d.quem==='string' && typeof d.horario==='string'; }
   var HOSP_CAMPOS_CADASTRO=['raca','tutor','nasc','chip','microchip','vetNome','vetTel','vetClinica','vetEnd'];
+  // ===== OS REMÉDIOS DA 6.54 VÃO JUNTO (6.54, MC8) ===================================
+  // A 6.54 cria a troca por datas ("mcr_t_…": o remédio que continua com o horário novo; o campo
+  // continuacaoDe diz de qual veio) e o remédio novo ("mcr_n_…", anotado no rastro da estadia).
+  // Eles não nascem no check-in: sem esta regra, a troca de ficha os deixava na ficha errada —
+  // tocando no FILHOt errado e faltando no certo. A regra: o "mcr_t_" segue o remédio de onde veio
+  // (a corrente inteira, até a raiz); o "mcr_n_" vai quando foi lançado NESTA estadia. Remédio de
+  // outra estadia, ou da ficha (que não nasceu nesta estadia), fica onde está.
+  function hospMcrRaiz(id, ag){
+    var cur=String(id||''), vistos={};
+    while(/^mcr_t_/.test(cur) && !vistos[cur]){
+      vistos[cur]=1;
+      var it=(ag||{})[cur], prox=(it&&it.continuacaoDe)?String(it.continuacaoDe):'';
+      // o elo que já saiu da agenda: o id da troca guarda a raiz (mcrIdTroca)
+      if(!prox){ var m=/^mcr_t_(.+)_\d{8}$/.exec(cur); prox=m?(/^n_/.test(m[1])?('mcr_'+m[1]):m[1]):''; }
+      if(!prox) break;
+      cur=prox;
+    }
+    return cur;
+  }
+  // Os remédios novos lançados nesta estadia: o rastro de cada mudança e a lista da estadia.
+  function hospMcrNovosDaEstadia(e){
+    e=e||{}; var out={}, emLista=function(v){ return Array.isArray(v)?v:((v&&typeof v==='object')?Object.keys(v).map(function(k){ return v[k]; }):[]); };
+    var alt=e.alteracoes||{};
+    Object.keys(alt).forEach(function(k){
+      emLista((alt[k]||{}).remedios).forEach(function(r){
+        if(!r||r.acao!=='novo') return;
+        [r.novoId, r.id].forEach(function(x){ x=String(x||''); if(/^mcr_n_/.test(x)) out[x]=1; });
+      });
+    });
+    emLista(e.medicacao).forEach(function(m){ var x=String((m&&m.agendaId)||''); if(m&&m.novoEm&&/^mcr_n_/.test(x)) out[x]=1; });
+    return out;
+  }
+  // Os "mcr_" da agenda que vão junto. base: os ids que já vão (o "ci_" desta estadia); e: a estadia.
+  // raizFora (C6-1, 7ª rodada): quando a raiz já saiu da agenda (a linha antiga removida depois da troca
+  // de horário), quem chama decide pelo id dela (o plano: "ci_" da janela do check-in → a corrente vai).
+  function hospMcrDaEstadia(ag, base, e, raizFora){
+    ag=ag||{}; base=base||{};
+    var novos=hospMcrNovosDaEstadia(e);
+    return Object.keys(ag).sort().filter(function(id){
+      if(!/^mcr_[tn]_/.test(id) || base[id]) return false;
+      var raiz=hospMcrRaiz(id, ag);
+      if(typeof raizFora==='function' && !ag[raiz] && raizFora(raiz)) return true;
+      return !!(base[raiz] || (/^mcr_n_/.test(raiz) && novos[raiz]));
+    });
+  }
+  // O remédio que vai para a ficha certa não cai em cima de OUTRO remédio de mesmo id que já está lá
+  // (o id do "mcr_n_" é nome + dia: dois FILHOts podem ter o mesmo). O que já está lá porque esta
+  // troca (ou a metade dela) o levou ("trocado_de" = a ficha de onde sai) não é choque: retomar segue.
+  function hospChoques(mover, agNova, deKey){
+    agNova=agNova||{};
+    return (mover||[]).filter(function(x){ var t=(x&&x.id)?agNova[x.id]:null; return !!t && String(t.trocado_de||'')!==String(deKey||''); })
+      .map(function(x){ return {id:x.id, nome:String((agNova[x.id]||{}).nome||((x.item||{}).nome)||'remédio')}; });
+  }
+  function hospChoqueTxt(ch, para){
+    var nomes=(ch||[]).map(function(c){ return '"'+c.nome+'"'; }).join(', ');
+    return 'a ficha de '+hospRotulo(para)+' já tem outro remédio com o mesmo registro de '+nomes+' (mesmo nome, começando no mesmo dia). '
+      +'Para sair, quem resolve é a Gestão: abra a aba Medicamentos das duas fichas e confira se é o mesmo remédio. '
+      +'Se for, toque em «Remover item» nesse remédio na Agenda de Medicação (Plantão) da ficha de onde a hospedagem sai e troque a ficha de novo. '
+      +'Se não for, anote a dose e o horário, remova o item da ficha de onde a hospedagem sai, troque a ficha e lance o remédio de novo na ficha certa pela tela «Mudar comida e remédio»';
+  }
+  // ===== C5-3 (6ª rodada): REMÉDIO LANÇADO DURANTE A HOSPEDAGEM — QUEM TROCA ESCOLHE =========
+  // O remédio que a veterinária ("vet_…"), o Plantão ("novo_…") ou a Ficha ("fmn_…") lançou na ficha
+  // errada DEPOIS da entrada não é do check-in nem da 6.54: o app não sabe de quem é. Antes da senha, o
+  // cartaz pergunta, um por um: «Levar para a ficha certa» ou «Deixar onde está» — nada marcado; sem
+  // a escolha, não grava (o lado seguro em remédio: nada vai nem fica sem alguém escolher).
+  function hospLancadoEm(id, it){
+    var m=/^(?:ci|fmn|novo|vet)_(\d{10,})_/.exec(String(id||''));
+    if(m) return parseInt(m[1],10)||0;
+    return Number(((it||{}).informado_por||{}).ts)||0;
+  }
+  function hospInicioDoDia(iso){ return /^\d{4}-\d{2}-\d{2}$/.test(String(iso||''))?new Date(iso+'T00:00:00').getTime():0; }
+  function hospOrigemTxt(id){ id=String(id||''); return /^vet_/.test(id)?'pela veterinária':(/^novo_/.test(id)?'pelo Plantão':(/^fmn_/.test(id)?'pela Ficha › Medicamentos':'')); }
+  function hospTrocarEscolher(i, v){
+    var S=HOSP_CORR; if(!S||S.passo!=='trocar-confirmar'||!S.plano||!S.dadosPlano) return;
+    var c=(S.plano.escolher||[])[i]; if(!c||(v!=='levar'&&v!=='deixar')) return;
+    S.escolhas=Object.assign({}, S.escolhas||{}); S.escolhas[c.id]=v;
+    S.plano=hospPlanoDaTroca(Object.assign({}, S.dadosPlano, {escolhas:S.escolhas}));
+    hospCorrRender();
+  }
+  // A linha de cada remédio em "Vai para a ficha certa": a troca por datas tem duas linhas do mesmo
+  // remédio (a de antes e a do horário novo), e o parado vai só com o histórico.
+  function hospRemedioQueVaiTxt(it){
+    it=it||{}; var nm='Remédio "'+(it.nome||'remédio')+'"', hs=(Array.isArray(it.horarios)?it.horarios:[]).join(', ');
+    if(it.paradoEm) return nm+' (parou de tomar em '+hospDiaBR(it.paradoEm.data||'')+': vai com o histórico)';
+    if(it.trocadoPor) return nm+' (o horário de antes'+(hs?(', '+hs):'')+', até '+hospDiaBR(it.dataFim||'')+(it.estoqueMovidoPara?'; o estoque passou para o horário novo':'')+')';
+    if(it.continuacaoDe) return nm+' (o horário novo'+(hs?(', '+hs):'')+', a partir de '+hospDiaBR(it.dataInicio||'')+', com o estoque)';
+    return nm+' (com o estoque)';
+  }
+  // O que a troca leva, lido NA HORA: os remédios do plano + os "mcr_" desta estadia que estão na
+  // ficha de onde sai (vale também para a troca pela metade e para o plano gravado antes desta
+  // regra) — e os choques na ficha certa.
+  async function hospMoverNaHora(pl, de, para, est){
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
+    var mover=[], vis={};
+    (Array.isArray((pl||{}).mover)?pl.mover:[]).forEach(function(x){ if(x&&x.id&&!vis[x.id]){ vis[x.id]=1; mover.push(x); } });
+    var agAnt=(de&&de.refKey)?((await ler('auaulandia/medicacao-agenda/'+de.refKey+'/itens'))||{}):{};
+    hospMcrDaEstadia(agAnt, vis, est).forEach(function(x){ vis[x]=1; mover.push({id:x, item:agAnt[x]}); });
+    var agNova=(para&&para.refKey&&mover.length)?((await ler('auaulandia/medicacao-agenda/'+para.refKey+'/itens'))||{}):{};
+    return {mover:mover, choques:hospChoques(mover, agNova, de&&de.refKey), agAnt:agAnt};
+  }
   function hospPlanoDaTroca(o){
     o=o||{};
     var e=o.e||{}, de=o.de||{}, para=o.para||{};
@@ -62394,12 +64112,21 @@
     var naJ=function(ts){ ts=Number(ts)||0; return !!(ts && J.de && ts>=J.de && ts<=J.ate); };
     var rDe=hospRotulo(de), rPara=hospRotulo(para);
     var nrm=function(x){ return (typeof jsNorm==='function')?jsNorm(String(x||'')):String(x||'').toLowerCase().trim(); };
-    var P={janela:J, mover:[], copiarLog:[], fichaLevar:{}, fichaTirar:[], fichaVista:{}, conferir:[], naoMexe:[], remedioDaAntigaDado:[]};
+    var P={janela:J, mover:[], copiarLog:[], fichaLevar:{}, fichaTirar:[], fichaVista:{}, conferir:[], naoMexe:[], remedioDaAntigaDado:[], escolher:[]};
+    // C5-3: a janela da escolha vai do começo do dia da entrada (ou da janela do check-in, o que vier antes) até agora
+    var escolhas=o.escolhas||{}, iniE=hospInicioDoDia(e.entrada), iniEsc=(iniE&&J.de)?Math.min(iniE, J.de):(iniE||J.de);
+    var naEstadia=function(ts){ ts=Number(ts)||0; return !!(ts && iniEsc && ts>=iniEsc && ts<=J.ate); };
+    var txtEscolha=function(nm, idOrig, lanc, esc){
+      return '"'+nm+'" (lançado em '+hospDiaBR(hospIsoDe(lanc))+(hospOrigemTxt(idOrig)?(' '+hospOrigemTxt(idOrig)):'')+', durante esta hospedagem) '
+        +(esc==='levar'?('foi levado para a ficha de '+rPara+' na troca de ficha (escolha «Levar para a ficha certa»). Confira com a veterinária se é mesmo de '+para.nome+'.')
+          :('ficou na ficha de '+rDe+' (escolha «Deixar onde está»). Se '+para.nome+' toma esse remédio, ele não toca na ficha certa: confira com a veterinária e, se for, lance na ficha de '+rPara+'.'));
+    };
     var conf=function(c){ c.k='c'+P.conferir.length+'_'+c.tipo; P.conferir.push(c); };
     // --- a agenda de remédios da ficha errada
-    var ag=o.agenda||{}, moverIds={};
+    var ag=o.agenda||{}, moverIds={}, mcrs=[];
     Object.keys(ag).forEach(function(id){
       var it=ag[id]||{}, nm=String(it.nome||'remédio');
+      if(/^mcr_[tn]_/.test(id)){ mcrs.push(id); return; }   // 6.54 (MC8): decididos logo abaixo, pela raiz e pela estadia
       if(it.confirmado_em_checkin && naJ(it.confirmado_em_checkin.ts)){
         P.naoMexe.push(id);
         conf({tipo:'remedio-confirmado', ficha:'ambas', itemId:id, aba:'ps-med',
@@ -62422,8 +64149,47 @@
         P.mover.push({id:id, item:it}); moverIds[id]=1;
         return;
       }
+      // C5-3: lançado durante esta hospedagem, sem ser do check-in nem da 6.54 → quem troca escolhe
+      var lanc=hospLancadoEm(id, it);
+      if(!/^ci_/.test(id) && naEstadia(lanc)){
+        var esc=(escolhas[id]==='levar'||escolhas[id]==='deixar')?escolhas[id]:'';
+        P.escolher.push({id:id, nome:nm, dose:(typeof medDoseTxt==='function')?medDoseTxt(it):'', horarios:(Array.isArray(it.horarios)?it.horarios:[]).slice(),
+          lancado:lanc, origem:hospOrigemTxt(id), parado:!!it.paradoEm, escolha:esc});
+        if(esc==='levar'){ P.mover.push({id:id, item:it}); moverIds[id]=1; }
+        else P.naoMexe.push(id);
+        if(esc) conf({tipo:'remedio-escolha', ficha:'ambas', itemId:id, aba:'ps-med', escolha:esc, texto:txtEscolha(nm, id, lanc, esc)});
+        return;
+      }
       P.naoMexe.push(id);
     });
+    // 6.54 (MC8): a troca por datas segue o remédio de onde veio; o remédio novo desta estadia vai
+    // junto (o trocado e o parado também: o histórico inteiro fica na ficha certa).
+    // C6-1 (7ª rodada): a raiz da corrente já saiu da agenda (a linha antiga removida depois da troca de
+    // horário). Decide pelo id dela: "ci_" da janela do check-in → a corrente vai; "vet_", "novo_" ou
+    // "fmn_" lançada durante a hospedagem → a ponta da corrente entra na escolha (C5-3).
+    var baseMcr=Object.assign({}, moverIds), pontas={};
+    var raizCiFora=function(r){ return /^ci_/.test(String(r||'')) && naJ((typeof medItemQuando==='function')?medItemQuando(r, {}):0); };
+    mcrs.forEach(function(id){
+      var r=hospMcrRaiz(id, ag);
+      if(!r || ag[r] || !/^(?:vet|novo|fmn)_/.test(r) || !naEstadia(hospLancadoEm(r, {}))) return;
+      var pi=ag[id]||{}; if(pi.trocadoPor && ag[pi.trocadoPor]) return;      // não é a ponta da corrente
+      if(!pontas[r] || id>pontas[r]) pontas[r]=id;
+    });
+    Object.keys(pontas).sort().forEach(function(r){
+      var pid=pontas[r], pit=ag[pid]||{}, pnm=String(pit.nome||'remédio'), plc=hospLancadoEm(r, {});
+      var escP=(escolhas[pid]==='levar'||escolhas[pid]==='deixar')?escolhas[pid]:'';
+      P.escolher.push({id:pid, nome:pnm, dose:(typeof medDoseTxt==='function')?medDoseTxt(pit):'', horarios:(Array.isArray(pit.horarios)?pit.horarios:[]).slice(),
+        lancado:plc, origem:hospOrigemTxt(r), parado:!!pit.paradoEm, escolha:escP, raiz:r});
+      if(escP==='levar') baseMcr[r]=1;
+      if(escP) conf({tipo:'remedio-escolha', ficha:'ambas', itemId:pid, aba:'ps-med', escolha:escP, texto:txtEscolha(pnm, r, plc, escP)});
+    });
+    var vaoMcr=hospMcrDaEstadia(ag, baseMcr, e, raizCiFora);
+    mcrs.forEach(function(id){
+      if(vaoMcr.indexOf(id)>=0){ P.mover.push({id:id, item:ag[id]||{}}); moverIds[id]=1; }
+      else P.naoMexe.push(id);
+    });
+    // C6-1: as doses já dadas da raiz que saiu da agenda (a corrente dela vai) também são copiadas
+    vaoMcr.forEach(function(id){ var r=hospMcrRaiz(id, ag); if(r && !ag[r]) moverIds[r]=1; });
     // --- as doses já dadas: as do remédio que muda de ficha são copiadas (com os dados que a
     // regra v2 do banco exige); as dos outros remédios da ficha errada foram dadas à hóspede.
     var vale=hospDoseCopiavel;
@@ -62844,9 +64610,10 @@
     S.passo='carregando'; S.msg=''; hospCorrRender();
     try{
       var dados=await hospLerDadosDaTroca(S.id, e, de, para);
-      S.de=de; S.para=para;
-      S.plano=hospPlanoDaTroca({id:S.id, e:e, de:de, para:para, agenda:dados.agenda, logs:dados.logs, ficha:dados.ficha,
-        fichaNova:dados.fichaNova, auditoria:dados.auditoria, agora:hospAgora(), hoje:((typeof hospHojeISO==='function')?hospHojeISO():'')});
+      S.de=de; S.para=para; S.escolhas={};
+      S.dadosPlano={id:S.id, e:e, de:de, para:para, agenda:dados.agenda, logs:dados.logs, ficha:dados.ficha,
+        fichaNova:dados.fichaNova, auditoria:dados.auditoria, agora:hospAgora(), hoje:((typeof hospHojeISO==='function')?hospHojeISO():'')};
+      S.plano=hospPlanoDaTroca(S.dadosPlano);
       S.avisoPlanilha=hospAvisoPlanilha(hospCardsDaPlanilha(e.nome), para.novo?(PELUDINHOS||[]).concat([{n:para.nome, tutor:para.tutor, raca:para.raca}]):(PELUDINHOS||[]), para);
       S.passo='trocar-confirmar';
     }catch(err){
@@ -62921,13 +64688,18 @@
   // agenda, o que é copiado e o que a ficha antiga perde, com o valor que estava lá.
   function hospPlanoParaGuardar(pl){
     pl=pl||{};
-    return hospLimpo({mover:pl.mover||[], copiarLog:pl.copiarLog||[], fichaLevar:pl.fichaLevar||{}, fichaTirar:pl.fichaTirar||[], fichaVista:pl.fichaVista||{}});
+    return hospLimpo({mover:pl.mover||[], copiarLog:pl.copiarLog||[], fichaLevar:pl.fichaLevar||{}, fichaTirar:pl.fichaTirar||[], fichaVista:pl.fichaVista||{},
+      escolhas:(pl.escolher||[]).map(function(c){ return {id:c.id, nome:c.nome, lancado:c.lancado, origem:c.origem, escolha:c.escolha||''}; })});
   }
   async function hospTrocarGravar(motivo, senha){
     var S=HOSP_CORR;
     var falha=function(t){ if(S){ S.msg=t; if(HOSP_CORR===S) hospCorrRender(); } return {ok:false, erro:t}; };
     if(!S||S.passo!=='trocar-confirmar'||!S.alvo||!S.plano) return falha('Escolha a ficha certa antes de gravar.');
     if(S.gravando) return falha('Já estou gravando esta correção: espere o aviso.');
+    // C5-3: nada vai nem fica sem alguém escolher
+    var semEscolha=(S.plano.escolher||[]).filter(function(c){ return c.escolha!=='levar' && c.escolha!=='deixar'; });
+    if(semEscolha.length) return falha('Escolha «Levar para a ficha certa» ou «Deixar onde está» em '+(semEscolha.length===1?'cada remédio':('cada um dos '+semEscolha.length+' remédios'))+' lançado durante esta hospedagem ('
+      +semEscolha.map(function(c){ return '"'+c.nome+'"'; }).join(', ')+'). Nada foi gravado.');
     var m=motivoQuatroPalavras(motivo); if(!m.ok) return falha(m.erro);
     var ass=hospAssinarPorSenha(senha); senha=null;
     if(!ass.ok) return falha(ass.erro);
@@ -62939,6 +64711,22 @@
       var s0=await DB.ref('auaulandia/estadias/'+id).once('value');
       var pre=hospTrocaPatch((s0&&s0.val)?s0.val():null, S.aberto, {tk:'conferencia', de:de, para:{refKey:para.refKey||'?'}, ts:agora});
       if(!pre.ok) return falha(pre.erro);
+      // 6.54 (MC8): o remédio que vai não pode cair em cima de outro de mesmo id na ficha certa (nada salvo pela metade)
+      var nh=await hospMoverNaHora(S.plano, de, para, (s0&&s0.val)?s0.val():null);
+      if(nh.choques.length) return falha('Nada foi gravado: '+hospChoqueTxt(nh.choques, para)+'.');
+      // C6-2 (7ª rodada): um remédio do plano saiu da ficha errada com o cartaz aberto (removido em outro
+      // aparelho): a 1ª gravação não o recria na ficha certa a partir do retrato (o «Retomar» continua
+      // usando o retrato, porque lá o remédio já saiu pela própria troca).
+      var sumiu=(S.plano.mover||[]).filter(function(x){ return x && x.id && !(nh.agAnt||{})[x.id]; });
+      if(sumiu.length) return falha('Nada foi gravado: um remédio mudou com o cartaz aberto ('+sumiu.map(function(x){ return '"'+String(((x.item||{}).nome)||'remédio')+'"'; }).filter(function(n, i, a){ return a.indexOf(n)===i; }).join(', ')
+        +' não está mais na ficha de '+hospRotulo(de)+'); feche e abra de novo.');
+      // C5-3: um remédio lançado na ficha errada DEPOIS que este cartaz abriu ainda não foi escolhido
+      if(S.dadosPlano){
+        var aindaNao=hospPlanoDaTroca(Object.assign({}, S.dadosPlano, {e:(s0&&s0.val)?(s0.val()||S.dadosPlano.e):S.dadosPlano.e, agenda:nh.agAnt||{}, escolhas:S.escolhas||{}, agora:hospAgora()})).escolher
+          .filter(function(c){ return !(S.plano.escolher||[]).some(function(x){ return x.id===c.id; }); });
+        if(aindaNao.length) return falha('Enquanto este cartaz estava aberto, foi lançado na ficha de '+hospRotulo(de)+' o remédio '+aindaNao.map(function(c){ return '"'+c.nome+'"'; }).join(', ')
+          +'. Nada foi gravado: feche este cartaz e abra de novo, para escolher se ele vai para a ficha certa ou fica.');
+      }
       // 2) a ficha nova (com as travas do Novo Hóspede)
       if(para.novo){
         var cr=await hospCriarFichaNova(para, ass, agora);
@@ -62996,10 +64784,15 @@
     var agora=hospAgora(), quando=(typeof agoraBR==='function')?agoraBR():hospQuandoBR(agora), rDe=hospRotulo(de);
     var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
     var naAntiga=function(itId){ return 'auaulandia/medicacao-agenda/'+de.refKey+'/itens/'+itId; };
-    var mover=Array.isArray(pl.mover)?pl.mover:[];
+    // 6.54 (MC8): além do plano, os remédios desta estadia lançados ou trocados pela 6.54 (lidos na
+    // hora: o plano gravado antes desta regra, ou a troca pela metade, também os leva). Choque com
+    // outro remédio de mesmo id na ficha certa: para aqui, antes de mexer em qualquer agenda.
+    var est=await ler('auaulandia/estadias/'+id);
+    var nh=await hospMoverNaHora(pl, de, para, est);
+    if(nh.choques.length) throw new Error(hospChoqueTxt(nh.choques, para)+' (nada foi mexido nas agendas)');
+    var mover=nh.mover;
     var movidos={}, ids=[]; mover.forEach(function(x){ if(x&&x.id&&!movidos[x.id]){ movidos[x.id]=1; ids.push(x.id); } });
     // os dias em que o registro de doses da ficha antiga é relido: os da estadia até hoje e os do plano
-    var est=ids.length?await ler('auaulandia/estadias/'+id):null;
     var dias=hospDiasDaEstadia(est||{}, (typeof hospHojeISO==='function')?hospHojeISO():'');
     (Array.isArray(pl.copiarLog)?pl.copiarLog:[]).forEach(function(c){ if(c&&c.dia&&dias.indexOf(c.dia)<0) dias.push(c.dia); });
     var lerDoses=function(){ return Promise.all(dias.map(function(d){ return ler('auaulandia/medicacao-log/'+d+'/'+de.refKey).then(function(v){ return [d, v||{}]; }); })); };
@@ -63050,10 +64843,15 @@
       await hospGravarSinalAgenda(sinal);
       // 4) o último retrato da agenda antiga (o estoque contado) e do registro dela; só então sai.
       antes=await lerDoses();
+      // C5-1 (6ª rodada): o carimbo da agenda da ficha errada anda ANTES de tirar os remédios dela (e de
+      // novo no fim): um «Salvar agenda» ou a Ficha › Medicamentos com o formulário de antes é recusado
+      // pela trava e não recria aqui o que acabou de ir para a ficha certa.
+      await DB.ref('auaulandia/medicacao-agenda/'+de.refKey).update({_ts:agora, _quem:quem||'-'});
       for(var r=0;r<ids.length;r++){
         ultimos[ids[r]]=await ler(naAntiga(ids[r]));
         await DB.ref(naAntiga(ids[r])).remove();
       }
+      await DB.ref('auaulandia/medicacao-agenda/'+de.refKey).update({_ts:Math.max(hospAgora(), agora+1), _quem:quem||'-'});
     }
     // O aviso "está acabando" aberto para um remédio que mudou de ficha vai junto (K12): a
     // Recepção liga para a tutora certa, e o "Resolver" acha o remédio.
@@ -63155,8 +64953,11 @@
       no.dosesCopiadas=(extra.copiarLog||[]).length;
       no.fichaLevou=Object.keys(extra.fichaLevar||{}); no.fichaTirou=(extra.fichaTirar||[]).slice();
       no.conferir=(extra.conferir||[]).map(function(c){ return c.texto; });
+      no.escolhas=(extra.escolher||[]).map(function(c){ return {id:c.id, nome:c.nome, lancado:c.lancado||0, origem:c.origem||'', escolha:c.escolha||''}; });
       detalhe=(est.nome||'')+' — saiu da ficha de '+hospRotulo(reg.de)+' para '+hospRotulo(reg.para)+' — motivo: '+(reg.motivo||'')+' — '+assinado;
-      texto='HOSPEDAGEM CORRIGIDA: '+detalhe+'.'+((extra.conferir||[]).length?(' Para conferir: '+hospPl(extra.conferir.length, 'item', 'itens')+', em Hóspedes de hoje.'):'');
+      texto='HOSPEDAGEM CORRIGIDA: '+detalhe+'.'
+        +((extra.escolher||[]).length?(' Remédios lançados durante a hospedagem: '+extra.escolher.map(function(c){ return c.nome+' ('+(c.escolha==='levar'?'levado para a ficha certa':'ficou onde estava')+')'; }).join(', ')+'.'):'')
+        +((extra.conferir||[]).length?(' Para conferir: '+hospPl(extra.conferir.length, 'item', 'itens')+', em Hóspedes de hoje.'):'');
     } else {
       no.entrada=est.entrada||''; no.saida=est.saida||''; no.refKey=est.refKey||'';
       no.planilha=reg.planilha||''; no.orcamento=reg.orcamento||'';
@@ -63292,12 +65093,23 @@
       var ext=[];
       // o alarme dos remédios nascidos neste check-in para (marca "parou", com o motivo)
       var k=String(vNovo.refKey||''), hoje=(typeof hospHojeISO==='function')?hospHojeISO():hospIsoDe(agora), quando=(typeof agoraBR==='function')?agoraBR():hospQuandoBR(agora);
+      // C5-1 (6ª rodada): o "parou" de todos e o carimbo da agenda numa escrita só (multi-caminho): um
+      // «Salvar agenda» com o formulário de antes é recusado pela trava e não revive o remédio parado.
+      var upPar={}, nPar=0;
       for(var i=0;i<(S.nascidos||[]).length;i++){
         var nid=S.nascidos[i].id; if(!k||!nid) continue;
         try{
           var sI=await DB.ref('auaulandia/medicacao-agenda/'+k+'/itens/'+nid).once('value'), it=(sI&&sI.val)?sI.val():null;
-          if(it && !it.paradoEm) await DB.ref('auaulandia/medicacao-agenda/'+k+'/itens/'+nid).update(hospParouPatch(it, ass.nome, 'hospedagem excluída (lançada por engano): '+mot, hoje, quando, agora));
+          if(it && !it.paradoEm){
+            var pp=hospParouPatch(it, ass.nome, 'hospedagem excluída (lançada por engano): '+mot, hoje, quando, agora);
+            Object.keys(pp).forEach(function(f){ upPar['itens/'+nid+'/'+f]=pp[f]; }); nPar++;
+          }
         }catch(x){ ext.push('o alarme de um remédio não parou'); _logFalhaGrav('parar o alarme do remédio da hospedagem excluída', x); }
+      }
+      if(nPar){
+        upPar._ts=agora; upPar._quem=ass.nome;
+        try{ await DB.ref('auaulandia/medicacao-agenda/'+k).update(upPar); }
+        catch(x){ ext.push('o alarme dos remédios desta hospedagem não parou'); _logFalhaGrav('parar o alarme do remédio da hospedagem excluída', x); }
       }
       if((S.nascidos||[]).length) try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(x){} /* silencioso de propósito: redesenho de tela */
       // a linha da planilha sai do Plantão nos dias da estadia, com o mesmo motivo
@@ -63504,14 +65316,16 @@
       +'<div style="padding:16px 18px;color:#234D67;font-size:15.5px;line-height:1.45;overflow-wrap:anywhere">';
     if(S.msg) h+='<div role="alert" style="background:#FDECEA;border:2px solid #B3261E;color:#B3261E;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.msg)+'</div>';
     if(S.okMsg){ h+='<div style="background:#E8F5EC;border:2px solid #1E8449;color:#1E8449;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.okMsg)+'</div>'; S.okMsg=''; }
-    var motivoSenha=function(rotuloBotao, onclick){
+    var motivoSenha=function(rotuloBotao, onclick, trava){
       return '<label for="hospCorrMotivo" style="display:block;margin-top:14px;font-weight:800">Por que esta correção? (pelo menos 4 palavras)</label>'
         +'<input id="hospCorrMotivo" type="text" autocomplete="off" oninput="hospCorrContar()" value="'+escAttr(S.motivoTxt||'')+'" placeholder="Ex.: não é a ficha dela, cliente nova" style="'+HOSP_CORR_IN+'">'
         +'<div id="hospCorrConta" style="font-size:13px;font-weight:700;color:#6b5f4b;margin-top:4px">Escreva o que aconteceu em pelo menos 4 palavras.</div>'
         +'<label for="hospCorrSenha" style="display:block;margin-top:12px;font-weight:800">Senha de quem assina (Gestão ou Supervisão)</label>'
         +'<input id="hospCorrSenha" type="password" autocomplete="new-password" style="'+HOSP_CORR_IN+'">'
         +'<div style="font-size:13px;font-weight:600;color:#6b5f4b;margin-top:4px">A Consultora pode abrir e chamar a Gestão ou a Amanda para digitar a senha aqui. O app grava o nome de quem digitou a senha, nunca a senha.</div>'
-        +hospCorrBotao(rotuloBotao, onclick, '#B3261E');
+        +(trava?('<div id="hospCorrTrava" style="margin-top:10px;font-weight:800;color:#B3261E">'+esc(trava)+'</div>'
+          +'<button type="button" disabled aria-disabled="true" style="display:block;width:100%;box-sizing:border-box;border:0;border-radius:14px;background:#B3261E;opacity:.45;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:14px;margin:8px 0 0;cursor:not-allowed">'+esc(rotuloBotao)+'</button>')
+          :hospCorrBotao(rotuloBotao, onclick, '#B3261E'));
     };
     var voltar=function(txt){ return hospCorrBotao(txt||'Voltar', "hospCorrEscolher('menu')", '#6b5f4b'); };
     var fechar=hospCorrBotao('Fechar sem mudar nada', 'hospCorrFechar()', '#6b5f4b');
@@ -63562,10 +65376,26 @@
         +'<div><strong>Sai de: '+esc(rDe)+'</strong></div>'
         +'<div><strong>Vai para: '+esc(hospRotulo(para))+'</strong>'+(para.novo?' (ficha nova)':'')+'</div>'
         +'<div style="margin-top:6px;font-size:14.5px;font-weight:600">Continua igual: comida, remédios, pertences, assinatura do tutor, Conferência e fotos.</div></div>';
+      // C5-3: os remédios lançados durante a hospedagem — um por um, nada marcado
+      var escL=pl.escolher||[], faltaEsc=escL.filter(function(c){ return c.escolha!=='levar' && c.escolha!=='deixar'; }).length;
+      if(escL.length){
+        h+='<div style="margin-top:12px;padding:12px;border-radius:14px;background:#FDECEA;border:2px solid #B3261E">'
+          +'<div style="font-weight:800">Remédios lançados durante esta hospedagem (não vieram do check-in): de quem são?</div>'
+          +'<div style="font-size:14px;font-weight:600;margin-top:4px">O app não sabe se cada um é de '+esc(hospRotulo(para))+' ou de '+esc(rDe)+'. Escolha um por um: sem a escolha, a troca não grava.</div>';
+        escL.forEach(function(c, i){
+          var rad=function(v, txt){ return '<label style="display:flex;gap:10px;align-items:center;min-height:44px;margin-top:4px;font-size:15px;font-weight:700;cursor:pointer">'
+            +'<input type="radio" name="hospCorrEsc'+i+'" value="'+v+'"'+(c.escolha===v?' checked':'')+' onchange="hospTrocarEscolher('+i+',\''+v+'\')" style="width:22px;height:22px;flex:0 0 auto"> '+esc(txt)+'</label>'; };
+          h+='<div class="hosp-corr-esc" style="border-top:1px dashed #B3261E;margin-top:8px;padding-top:8px">'
+            +'<div style="font-weight:800">"'+esc(c.nome)+'"'+(c.dose?(' — '+esc(c.dose)):'')+((c.horarios||[]).length?(' às '+esc(c.horarios.join(', '))):'')+(c.parado?' (parou de tomar)':'')+'</div>'
+            +'<div style="font-size:13.5px;font-weight:600;color:#6b5f4b">Lançado em '+esc(hospDiaBR(hospIsoDe(c.lancado)))+(c.origem?(' '+esc(c.origem)):'')+'</div>'
+            +rad('levar', 'Levar para a ficha certa ('+hospRotulo(para)+')')+rad('deixar', 'Deixar onde está (ficha de '+rDe+')')+'</div>';
+        });
+        h+='</div>';
+      }
       var vai=[];
       (pl.mover||[]).forEach(function(m){
         var n=(pl.copiarLog||[]).filter(function(c){ return String((c.dose&&c.dose.itemId)||String(c.doseId).replace(/_\d{2}-\d{2}$/,''))===m.id; }).length;
-        vai.push('Remédio "'+((m.item&&m.item.nome)||'remédio')+'" (com o estoque)'+(n?(' e '+hospPl(n, 'dose já dada, copiada', 'doses já dadas, copiadas')):''));
+        vai.push(hospRemedioQueVaiTxt(m.item)+(n?(' e '+hospPl(n, 'dose já dada, copiada', 'doses já dadas, copiadas')):''));
       });
       Object.keys(pl.fichaLevar||{}).forEach(function(c){ vai.push(HOSP_CAMPO_ROTULO[c]||c); });
       if(vai.length) h+='<div style="margin-top:12px;font-weight:800">Vai para a ficha certa</div><ul style="margin:4px 0 0 18px;padding:0">'+vai.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')+'</ul>';
@@ -63576,7 +65406,8 @@
           +'<ul style="margin:4px 0 0 18px;padding:0">'+pl.conferir.map(function(c){ return '<li style="margin-bottom:6px">'+esc(c.texto)+hospMsgsHtml(c)+'</li>'; }).join('')+'</ul></div>';
       }
       if(S.avisoPlanilha) h+='<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:#FDECEA;border:2px solid #B3261E;font-weight:700">'+esc(S.avisoPlanilha)+'</div>';
-      h+=motivoSenha('Trocar a ficha', 'hospTrocarGravarTela()')+hospCorrBotao('Voltar e escolher outra ficha', "hospCorrEscolher('trocar')", '#6b5f4b');
+      h+=motivoSenha('Trocar a ficha', 'hospTrocarGravarTela()', faltaEsc?('Falta escolher «Levar para a ficha certa» ou «Deixar onde está» em '+(faltaEsc===1?'1 remédio':(faltaEsc+' remédios'))+' lançado'+(faltaEsc===1?'':'s')+' durante esta hospedagem (acima).'):'')
+        +hospCorrBotao('Voltar e escolher outra ficha', "hospCorrEscolher('trocar')", '#6b5f4b');
     } else if(S.passo==='excluir'){
       var pv=S.provas||{provas:[]};
       if(pv.bloqueia){
@@ -63589,7 +65420,7 @@
         h+='<div style="font-weight:700">Excluir a hospedagem de '+esc(e.nome||'')+' ('+esc(per)+')?</div>'
           +'<div style="font-size:14.5px;font-weight:600;margin-top:4px">Ela sai do Plantão, da Conferência, do Check-out, da chamada do Day Care, da contagem de check-in e do acerto. Fica em "Já saíram — histórico" com o selo EXCLUÍDA, o motivo e quem assinou. Nada é apagado.</div>';
         if(e.valor_cent) h+='<div style="margin-top:8px;font-weight:700">Pernoite com valor: '+esc(fmtCent(Number(e.valor_cent)||0))+'. A noite sai do relatório de pernoites'+(String(e.origem||'')==='daycare-pernoite'?'; a fila da pernoite do Day Care não reabre sozinha':'')+'.</div>';
-        if((S.nascidos||[]).length) h+='<div style="margin-top:8px;font-size:14.5px;font-weight:600">O alarme destes remédios, lançados neste check-in, para (nada é apagado): '+esc(S.nascidos.map(function(x){ return (x.item&&x.item.nome)||'remédio'; }).join(', '))+'.</div>';
+        if((S.nascidos||[]).length) h+='<div style="margin-top:8px;font-size:14.5px;font-weight:600">O alarme destes remédios, lançados nesta hospedagem (no check-in ou depois), para (nada é apagado): '+esc(S.nascidos.map(function(x){ return (x.item&&x.item.nome)||'remédio'; }).filter(function(n, i, a){ return a.indexOf(n)===i; }).join(', '))+'.</div>';
         var radio=function(nome, val, txt){ return '<label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14.5px;font-weight:600"><input type="radio" name="'+nome+'" value="'+val+'"'+(S['esc_'+nome]===val?' checked':'')+' style="width:20px;height:20px;flex:0 0 auto"> '+esc(txt)+'</label>'; };
         var dTodos=hospDiasDoPeriodo(e);
         var perTxt=dTodos.length?(hospDiaBR(dTodos[0])+' a '+hospDiaBR(dTodos[dTodos.length-1])):per;
