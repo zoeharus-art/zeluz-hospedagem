@@ -16697,6 +16697,696 @@ provaAsync('6.49 R3-3 (QB19 / K15) — «…que o automático ainda não confirm
 });
 
 
+// ================================================================== 6.45 — escovação: treino, como aceita, kit dental e relatório
+console.log('\n6.45 — Escovação: «Deixa», «Só com o dedo», «Em treino»; quem não deixa vira treino; «Treinar escovação» no Hoje na Zêluz; kit dental; relatório (quadro, linha 74, 08/out/2026)');
+// Dado INVENTADO: tutores «… Teste»; relógio fixo em 09/10/2026; quem marca é a «Quinn Teste».
+const ARMA645 = `__bk645={P:PELUDINHOS, pe:pelExtra, sp:setPelExtra, au:audit, rd:prevCorrigeRedesenhar, r:document.body.dataset.role, at:pelAtividades,
+    hz:zHojeISO, qs:quemSou, ok:PREV_CORRIGE_OK, za:zAlertao, zp:zPergunta, pa:pelAtual, rf:renderPelFicha, ge:document.getElementById,
+    re:relEntregar, wo:window.open, al:alert, pac:PREV_CORRIGE_ABERTO, db:DB};
+  PELUDINHOS=[{n:'Bruce', raca:'SRD', tutor:'Ana Teste'}, {n:'Rocky', raca:'Spitz', tutor:'Bia Teste'},
+    {n:'Juma', raca:'Westie', tutor:'Caio Teste'}, {n:'Lisa', raca:'Shih Tzu', tutor:'Duda Teste'},
+    {n:'Bis', raca:'Spitz', tutor:'Eva Teste'}, {n:'Marta', raca:'Shih Tzu', tutor:"Ana D'Ávila"}, {n:'Dolar', raca:'Yorkshire', tutor:'Fabi Teste'}];
+  __ex645={}; pelExtra=function(p){ var k=pelKey(p); return __ex645[k]=__ex645[k]||{}; };
+  pelAtividades=function(p){ var a=pelExtra(p).atividades; return Array.isArray(a)?a.slice():[]; };
+  __sp645=[]; __spOk645={ok:true};
+  setPelExtra=function(p,patch){ __sp645.push([pelKey(p), JSON.parse(JSON.stringify(patch))]);
+    if(__spOk645.ok) Object.assign(pelExtra(p), JSON.parse(JSON.stringify(patch))); return Promise.resolve(__spOk645); };
+  __au645=[]; audit=function(t,m,meta){ __au645.push({t:t, m:m, meta:meta||{}}); };
+  __rd645=[]; prevCorrigeRedesenhar=function(t){ __rd645.push(t); };
+  zHojeISO=function(){ return '2026-10-09'; }; quemSou=function(){ return 'Quinn Teste'; };
+  __za645=[]; zAlertao=function(t,l){ __za645.push([t, l]); };
+  __zp645=[]; __zpResp645=true; zPergunta=function(t,l,op){ __zp645.push([t, l, op&&op.sim]); return Promise.resolve(__zpResp645); };
+  __rf645=0; renderPelFicha=function(){ __rf645++; };
+  __db645=[]; __dbOk645=true;
+  DB={ref:function(path){ return {set:function(v){ __db645.push([path, JSON.parse(JSON.stringify(v))]);
+    if(!__dbOk645) return Promise.reject(new Error('PERMISSION_DENIED'));
+    var ps=path.split('/');
+    if(ps.length===5 && ps[0]==='daycare' && ps[1]==='cadastro' && ps[3]==='escova_treino'){ var e=__ex645[ps[2]]=__ex645[ps[2]]||{}; e.escova_treino=Object.assign({}, e.escova_treino||{}); e.escova_treino[ps[4]]=JSON.parse(JSON.stringify(v)); }
+    return Promise.resolve(); }}; }};
+  PREV_CORRIGE_OK={}; PREV_CORRIGE_ABERTO=''; document.body.dataset.role='consultora';
+  __K645=function(nome){ return pelKey(PELUDINHOS.filter(function(p){ return p.n===nome; })[0]); };
+  __E645=function(nome){ return pelExtra(PELUDINHOS.filter(function(p){ return p.n===nome; })[0]); };`;
+const SOLTA645 = `PELUDINHOS=__bk645.P; pelExtra=__bk645.pe; setPelExtra=__bk645.sp; audit=__bk645.au; prevCorrigeRedesenhar=__bk645.rd;
+  document.body.dataset.role=__bk645.r; pelAtividades=__bk645.at; zHojeISO=__bk645.hz; quemSou=__bk645.qs; PREV_CORRIGE_OK=__bk645.ok;
+  zAlertao=__bk645.za; zPergunta=__bk645.zp; pelAtual=__bk645.pa; renderPelFicha=__bk645.rf; document.getElementById=__bk645.ge;
+  relEntregar=__bk645.re; window.open=__bk645.wo; alert=__bk645.al; PREV_CORRIGE_ABERTO=__bk645.pac; DB=__bk645.db;`;
+const J645 = (codigo) => JSON.parse(JSON.stringify(run(codigo)));
+// Os onclick de um pedaço de HTML, já sem o escape do atributo (o que o navegador entrega ao JavaScript).
+const onclicks645 = (h) => { const out = []; const re = /onclick="([^"]*)"/g; let m;
+  while ((m = re.exec(h))) out.push(m[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&amp;/g, '&'));
+  return out; };
+// Roda cada onclick com funções de mentira que anotam o que receberam (a chave chega inteira?).
+const chama645 = (codigo, nomes) => J645(`(function(){ var __c=[]; var pick=function(){}; var __anota=function(n){ return function(){ __c.push([n].concat([].slice.call(arguments))); }; };
+  ${nomes.map((n) => `var ${n}=__anota('${n}');`).join(' ')} ${codigo}; return __c; })()`);
+const exVencido645 = () => `{escova_t:'${run("addDiasISO('2026-10-09',-93)")}', escova_p:'${run("addDiasISO('2026-10-09',-3)")}'}`;
+
+prova('6.45 AC1 — «como aceita»: só vale para quem escova no Day Care; «em treino» e «só com o dedo» continuam na cobrança da troca de escova', () => {
+  run(ARMA645);
+  try {
+  igual([run('escovaAceitaDe({})'), run("escovaAceitaDe({escova_aceita:'treino'})"), run("escovaAceitaDe({escova_dc:'Sim', escova_aceita:'dedo'})"),
+    run("escovaAceitaDe({escova_dc:'Sim', escova_aceita:'deixa'})"), run("escovaAceitaDe({escova_dc:'Não', escova_aceita:'treino'})"),
+    run("escovaAceitaDe({escova_aceita:'talvez'})"), run('escovaAceitaDe(null)')], ['', 'treino', 'dedo', 'deixa', '', '', '']);
+  igual(J645('ESCOVA_ACEITA.map(function(x){ return x.t; })'), ['Deixa', 'Só com o dedo (dedeira)', 'Ainda não deixa — em treino']);
+  for (const v of ['treino', 'dedo', 'deixa']) {
+    const ex = `Object.assign(${exVencido645()}, {escova_dc:'Sim', escova_aceita:'${v}'})`;
+    igual(run(`prevForaDaCobranca(${ex}, {k:'escova_p'})`), false, v + ': continua na cobrança');
+    assert.ok(run(`prevFaltasDe(${ex}, 0)`).some((f) => f.k === 'escova_p'), v + ': a troca vencida aparece na Prevenção');
+    assert.ok(run(`vencItensDe(${ex}, '2026-10-09', 0, '2026-10-09')`).some((f) => f.k === 'escova_p'), v + ': e nos Vencimentos');
+  }
+  // escolher «como aceita» numa ficha sem resposta é dizer que escova aqui: grava o Sim junto (e o chip da escovação dos Encãotadores)
+  igual(J645("escovaAceitaPatch('treino', {}, ['agility'])"), { escova_aceita: 'treino', escova_dc: 'Sim', atividades: ['agility', 'escova'] });
+  igual(J645("escovaAceitaPatch('dedo', {escova_dc:'Sim'}, ['agility'])"), { escova_aceita: 'dedo' }, 'com Sim na ficha, só a resposta nova');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC1/AC4 — a ficha (Prevenção › Check-up e escova) pergunta como aceita e se tem o kit dental, só para quem escova; com Não, nada disso aparece', () => {
+  run(ARMA645);
+  try {
+  const h = run("escovaFichaHTML({escova_dc:'Sim', escova_aceita:'dedo', escova_kit:'Não'})");
+  assert.ok(/<label>Como aceita a escovação\?<\/label>/.test(h), h.slice(0, 400));
+  const oc = onclicks645(h).filter((c) => /escovaAceitaSet|escovaKitSet/.test(c));
+  igual(oc, ["pick(this);escovaAceitaSet('deixa')", "pick(this);escovaAceitaSet('dedo')", "pick(this);escovaAceitaSet('treino')",
+    "pick(this);escovaKitSet('Sim')", "pick(this);escovaKitSet('Não')"]);
+  assert.ok(/>Deixa<\/button>/.test(h) && /class="on"[^>]*>Só com o dedo \(dedeira\)<\/button>/.test(h) && />Ainda não deixa — em treino<\/button>/.test(h), 'os três, com o atual aceso');
+  assert.ok(/<label>Tem o kit dental aqui\?<\/label>/.test(h) && /class="on"[^>]*>Não<\/button><\/div>/.test(h.slice(h.indexOf('Tem o kit dental aqui?'))), 'o kit, com o Não aceso');
+  assert.ok(/continuam escovando/.test(h) && /troca de escova continua na cobrança/.test(h), 'a dica diz que treino e dedo continuam na cobrança');
+  assert.ok(h.indexOf('Como aceita a escovação?') > h.indexOf('Escova os dentes no Day Care?') && h.indexOf('Tem o kit dental aqui?') < h.indexOf('Troca de escova de hoje'), 'depois do Sim/Não e antes da troca de hoje');
+  const hn = run("escovaFichaHTML({escova_dc:'Não', escova_dc_motivo:'Não deixa', escova_aceita:'treino', escova_kit:'Não'})");
+  assert.ok(hn.indexOf('Como aceita') < 0 && hn.indexOf('kit dental') < 0, 'com Não: sem a pergunta e sem o kit');
+  // sem resposta (ninguém disse Não): a pergunta aparece, sem nada aceso
+  const h0 = run('escovaFichaHTML({})');
+  assert.ok(/Como aceita a escovação\?/.test(h0) && !/class="on"[^>]*>(Deixa|Só com o dedo|Ainda não deixa)/.test(h0), 'sem resposta: nada aceso');
+  // em treino: os últimos resultados, do mais novo para o mais velho
+  const ht = run(`escovaFichaHTML({escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-07':{res:'nao', quem:'Rita Teste', ts:1}, '2026-10-09':{res:'dedo', quem:'Quinn Teste', ts:2}, 'lixo':{res:'deixou'}, '2026-10-08':{res:'talvez'}}})`);
+  assert.ok(/Últimos treinos: 09\/10: deixou com o dedo, por Quinn Teste · 07\/10: não deixou, por Rita Teste\./.test(ht), ht.slice(ht.indexOf('Últimos'), ht.indexOf('Últimos') + 200));
+  assert.ok(/Nenhum treino registrado ainda\./.test(run("escovaFichaHTML({escova_dc:'Sim', escova_aceita:'treino'})")));
+  assert.ok(/Último treino: 09\/10: deixou, por Quinn Teste\./.test(run("escovaFichaHTML({escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-09':{res:'deixou', quem:'Quinn Teste', ts:1}}})")), 'um só: no singular');
+  // a ficha inteira: o bloco novo fica entre a pergunta da 6.16 e a emergência
+  const f = ficha627({ escova_dc: 'Sim', escova_aceita: 'treino', escova_kit: 'Não' });
+  const aba = f.slice(f.indexOf('<div class="ppanel2" id="ps-saude">'), f.indexOf('<div class="ppanel2" id="ps-med">'));
+  assert.ok(aba.indexOf('Escova os dentes no Day Care?') < aba.indexOf('Como aceita a escovação?') && aba.indexOf('Tem o kit dental aqui?') < aba.indexOf('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'na aba Prevenção da ficha');
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC1/AC4/AC7 — «como aceita» e o kit: a pessoa toca, a ficha grava, o rastro diz o quê; sem permissão, com resposta inválida ou com o banco recusando, nada de rastro', async () => {
+  run(ARMA645);
+  try {
+    run("pelAtual=PELUDINHOS[0]; __E645('Bruce').atividades=['agility'];");
+    igual((await run("escovaAceitaSet('treino')")).ok, true);
+    igual(J645('__sp645'), [[run("__K645('Bruce')"), { escova_aceita: 'treino', escova_dc: 'Sim', atividades: ['agility', 'escova'] }]]);
+    igual(J645('__au645.map(function(a){ return a.t+": "+a.m; })'), ['ficha-escova: como aceita a escovação: Ainda não deixa — em treino; «Escova os dentes no Day Care?» passou para Sim (com o chip da escovação)']);
+    igual(J645('__au645[0].meta'), { alvo: run("__K645('Bruce')"), pet: 'Bruce' }); igual(run('__rf645'), 1, 'a ficha se redesenha');
+    await run("escovaAceitaSet('dedo')");
+    igual(J645('__sp645[1][1]'), { escova_aceita: 'dedo' }, 'com Sim já na ficha, só a resposta');
+    igual(run('__au645[1].m'), 'como aceita a escovação: Só com o dedo (dedeira) (antes: Ainda não deixa — em treino)');
+    await run("escovaKitSet('Não')");
+    igual(J645('__sp645[2][1]'), { escova_kit: 'Não' }); igual(run('__au645[2].m'), 'tem o kit dental aqui: Não');
+    await run("escovaKitSet('Sim')"); igual(run('__au645[3].m'), 'tem o kit dental aqui: Sim (antes: Não)');
+    // resposta inválida: nada
+    igual((await run("escovaAceitaSet('talvez')")).ok, false); igual((await run("escovaKitSet('Talvez')")).ok, false);
+    igual(run('__sp645.length'), 4); igual(run('__au645.length'), 4);
+    // sem permissão (monitor): nada gravado, nada no rastro
+    run("document.body.dataset.role='monitor';");
+    igual((await run("escovaAceitaSet('deixa')")).ok, false); igual((await run("escovaKitSet('Não')")).ok, false);
+    igual([run('__sp645.length'), run('__au645.length')], [4, 4], 'monitor: nada');
+    run("document.body.dataset.role='consultora';");
+    // o banco recusou: o aviso, e o rastro não diz que gravou
+    run("__spOk645={ok:false, erro:'PERMISSION_DENIED'};");
+    igual((await run("escovaAceitaSet('deixa')")).ok, false); igual((await run("escovaKitSet('Não')")).ok, false);
+    igual(J645('__za645.map(function(z){ return z[0]; })').filter((t) => t === 'A FICHA NÃO FOI ATUALIZADA').length, 2);
+    igual(run('__au645.length'), 4, 'sem rastro de gravação que não houve');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC4 — «Sem kit dental»: só quem escova (deixa, com o dedo ou em treino) e tem «Não» no kit', () => {
+  igual([run("escovaSemKit({escova_aceita:'treino', escova_kit:'Não'})"), run("escovaSemKit({escova_aceita:'deixa', escova_kit:'Não'})"),
+    run("escovaSemKit({escova_aceita:'dedo', escova_kit:'Não'})"), run("escovaSemKit({escova_aceita:'dedo', escova_kit:'Sim'})"),
+    run("escovaSemKit({escova_kit:'Não'})"), run("escovaSemKit({escova_dc:'Não', escova_aceita:'treino', escova_kit:'Não'})"),
+    run("escovaSemKit({escova_aceita:'treino'})"), run('escovaSemKit({})')], [true, true, true, false, false, false, false, false]);
+});
+prova('6.45 AC2 — «Quem não deixa escovar — passar para treino?»: só o «Não escova — Não deixa» de quem está ativo; cada um com 1 toque, e todos com confirmação; o botão leva a chave inteira (tutor com apóstrofo)', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); Object.assign(__E645('Juma'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'});
+      Object.assign(__E645('Lisa'), {escova_dc:'Não', escova_dc_motivo:'O tutor não compra a pasta'}); Object.assign(__E645('Bis'), {escova_dc:'Não', escova_dc_motivo:'Outro', escova_dc_outro:'gengivite'});
+      Object.assign(__E645('Rocky'), {escova_dc:'Sim'}); Object.assign(__E645('Marta'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'});
+      Object.assign(__E645('Dolar'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', inativo:'Sim'});`);
+    igual(J645('escovaNaoDeixaLista().map(function(o){ return o.nome; })'), ['Bruce', 'Juma', 'Marta'], 'o motivo do tutor, o Outro e o Inativo ficam de fora');
+    const h = run('escovaNaoDeixaCardHTML()');
+    assert.ok(/<h2[^>]*>Quem não deixa escovar — passar para treino\?<\/h2>/.test(h), h.slice(0, 300));
+    const oc = onclicks645(h);
+    igual(oc.map((c) => chama645(c, ['escovaPassarTreino', 'escovaPassarTreinoTodos', 'abrirPeludinhoCheckup'])), [
+      [['abrirPeludinhoCheckup', 0]], [['escovaPassarTreino', run("__K645('Bruce')")]],
+      [['abrirPeludinhoCheckup', 2]], [['escovaPassarTreino', run("__K645('Juma')")]],
+      [['abrirPeludinhoCheckup', 5]], [['escovaPassarTreino', run("__K645('Marta')")]],
+      [['escovaPassarTreinoTodos']]]);
+    assert.ok(/>Passar para treino<\/button>/.test(h) && />Passar todos para treino \(3\)<\/button>/.test(h));
+    igual(run('__sp645.length'), 0, 'desenhar a lista não grava nada');
+    // quem não grava na tela vê a lista, sem os botões
+    run("document.body.dataset.role='monitor';");
+    const hm = run('escovaNaoDeixaCardHTML()');
+    assert.ok(/Bruce/.test(hm) && hm.indexOf('escovaPassarTreino') < 0 && /Quem passa para treino é a recepção, a Supervisão ou a Gestão\./.test(hm), hm);
+    run("document.body.dataset.role='consultora';");
+    // um só na lista: o botão dele, sem o «Passar todos»
+    run(`['Juma','Marta'].forEach(function(n){ __E645(n).escova_dc_motivo='Outro'; });`);
+    const h1 = run('escovaNaoDeixaCardHTML()');
+    assert.ok(/>Passar para treino<\/button>/.test(h1) && h1.indexOf('Passar todos') < 0, 'um só: sem «Passar todos»');
+    // ninguém com «Não deixa»: nada de quadro
+    run(`['Bruce','Juma','Marta'].forEach(function(n){ __E645(n).escova_dc_motivo='Outro'; });`);
+    igual(run('escovaNaoDeixaCardHTML()'), '');
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC2/AC7 — «Passar para treino» (1 toque): grava a escova no Day Care e «em treino» só daquele FILHOt, com rastro e confirmação; sem permissão, ficha já mudada ou banco recusando, nada', async () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', atividades:['agility']}, ${exVencido645()});
+      Object.assign(__E645('Juma'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'});`);
+    igual((await run("escovaPassarTreino(__K645('Bruce'))")).ok, true);
+    igual(J645('__sp645'), [[run("__K645('Bruce')"), { escova_dc: 'Sim', atividades: ['agility', 'escova'], escova_aceita: 'treino' }]], 'uma ficha só, a dele');
+    igual(run("escovaAceitaDe(__E645('Bruce'))"), 'treino');
+    igual(run("prevForaDaCobranca(__E645('Bruce'), {k:'escova_p'})"), false, 'em treino: a troca de escova volta para a cobrança');
+    igual(J645('escovaNaoDeixaLista().map(function(o){ return o.nome; })'), ['Juma'], 'saiu da lista; a Juma continua');
+    igual(J645('__au645.map(function(a){ return a.t+": "+a.m; })'), ['ficha-escova: passou para «Ainda não deixa — em treino» (antes: não escova no Day Care — Não deixa), atualizado na tela Prevenção']);
+    igual(run("PREV_CORRIGE_OK[__K645('Bruce')+'|escova_aceita'].texto"), 'Bruce — em treino de escovação: a troca de escova volta para a cobrança');
+    igual(J645('__rd645'), ['prev']);
+    // de novo, com a ficha já em treino: nada (a lista estava velha)
+    igual((await run("escovaPassarTreino(__K645('Bruce'))")).ok, false); igual(run('__sp645.length'), 1);
+    // monitor: nada
+    run("document.body.dataset.role='monitor';");
+    igual((await run("escovaPassarTreino(__K645('Juma'))")).ok, false); igual([run('__sp645.length'), run('__au645.length')], [1, 1]);
+    run("document.body.dataset.role='consultora';");
+    // chave que não existe: nada
+    igual((await run("escovaPassarTreino('ninguem__nada')")).ok, false);
+    // o banco recusou: aviso, sem rastro e sem confirmação verde
+    run("__spOk645={ok:false, erro:'PERMISSION_DENIED'}; PREV_CORRIGE_OK={};");
+    igual((await run("escovaPassarTreino(__K645('Juma'))")).ok, false);
+    igual(J645('__za645.map(function(z){ return z[0]; })'), ['A FICHA NÃO FOI ATUALIZADA']);
+    igual([run('__au645.length'), run('Object.keys(PREV_CORRIGE_OK).length')], [1, 0]);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC2 — «Passar todos para treino»: pergunta antes (com os nomes); «Cancelar» não grava nada; «Passar» grava um por um, com rastro de cada, e diz quantos', async () => {
+  run(ARMA645);
+  try {
+    run(`['Bruce','Juma','Marta'].forEach(function(n){ Object.assign(__E645(n), {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); });
+      Object.assign(__E645('Lisa'), {escova_dc:'Não', escova_dc_motivo:'O tutor não compra a pasta'}); __zpResp645=false;`);
+    await run('escovaPassarTreinoTodos()');
+    igual(run('__zp645.length'), 1); igual(run('__zp645[0][0]'), 'PASSAR 3 PARA TREINO DE ESCOVAÇÃO?');
+    assert.ok(/Bruce, Juma e Marta/.test(J645('__zp645[0][1]').join(' ')), J645('__zp645[0][1]').join(' | '));
+    igual(run('__zp645[0][2]'), 'Passar os 3 para treino');
+    igual([run('__sp645.length'), run('__au645.length')], [0, 0], 'cancelou: nada gravado');
+    run('__zpResp645=true;');
+    const r = await run('escovaPassarTreinoTodos()');
+    igual(J645('__sp645.map(function(s){ return s[0]; })'), [run("__K645('Bruce')"), run("__K645('Juma')"), run("__K645('Marta')")]);
+    igual(J645("['Bruce','Juma','Marta','Lisa'].map(function(n){ return escovaAceitaDe(__E645(n)); })"), ['treino', 'treino', 'treino', ''], 'a Lisa (o tutor não compra a pasta) não muda');
+    igual(run('__au645.length'), 3, 'um rastro por FILHOt');
+    igual(run('__za645[0][0]'), '3 EM TREINO DE ESCOVAÇÃO'); igual([r.ok, r.feitos], [true, 3]);
+    igual(J645('__rd645'), ['prev']);
+    // nada a passar: nem pergunta
+    run('__zp645=[];'); await run('escovaPassarTreinoTodos()'); igual(run('__zp645.length'), 0);
+    // sem permissão: nem pergunta
+    run(`document.body.dataset.role='monitor'; __E645('Lisa').escova_dc_motivo='Não deixa';`);
+    await run('escovaPassarTreinoTodos()'); igual(run('__zp645.length'), 0);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC2 — «todos de uma vez»: a ficha que mudou enquanto a pergunta estava aberta (outra pessoa pôs «Sim») fica como está, e o aviso diz', async () => {
+  run(ARMA645);
+  try {
+    run(`['Bruce','Juma','Marta'].forEach(function(n){ Object.assign(__E645(n), {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); });
+      zPergunta=function(){ Object.assign(__E645('Juma'), {escova_dc:'Sim', escova_aceita:'deixa'}); return Promise.resolve(true); };`);
+    const r = await run('escovaPassarTreinoTodos()');
+    igual([r.ok, r.feitos], [true, 2]); igual(J645('__sp645.map(function(s){ return s[0]; })'), [run("__K645('Bruce')"), run("__K645('Marta')")]);
+    igual(run("escovaAceitaDe(__E645('Juma'))"), 'deixa', 'a Juma continua como a outra pessoa deixou');
+    igual(run('__za645[0][0]'), '2 EM TREINO DE ESCOVAÇÃO');
+    assert.ok(/Já tinha mudado na ficha e ficou como estava: Juma\./.test(J645('__za645[0][1]').join(' ')), J645('__za645[0][1]').join(' | '));
+    igual(run('__au645.length'), 2);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC2 — «todos de uma vez» com uma ficha que falha no meio: as outras gravam, e o aviso diz quem ficou de fora', async () => {
+  run(ARMA645);
+  try {
+    run(`['Bruce','Juma','Marta'].forEach(function(n){ Object.assign(__E645(n), {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); });
+      var __spOrig=setPelExtra; setPelExtra=function(p,patch){ if(p.n==='Juma'){ __sp645.push(['falhou', {}]); return Promise.resolve({ok:false, erro:'PERMISSION_DENIED'}); } return __spOrig(p,patch); };`);
+    const r = await run('escovaPassarTreinoTodos()');
+    igual([r.ok, r.feitos], [false, 2]);
+    igual(J645("['Bruce','Juma','Marta'].map(function(n){ return escovaAceitaDe(__E645(n)); })"), ['treino', '', 'treino']);
+    igual(run('__au645.length'), 2);
+    igual(run('__za645[0][0]'), '1 NÃO PASSOU PARA TREINO DE ESCOVAÇÃO');
+    assert.ok(/Juma/.test(J645('__za645[0][1]').join(' ')) && /2 passaram para treino/.test(J645('__za645[0][1]').join(' ')), J645('__za645[0][1]').join(' | '));
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC3 — «Treinar escovação» no Hoje na Zêluz: só para quem está em treino, com «Deixou», «Deixou com o dedo» e «Não deixou»; o resultado de hoje aparece; «já deixa?» só depois do «Deixou»', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino'}); Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_aceita:'dedo'});
+      Object.assign(__E645('Juma'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', escova_aceita:'treino'});
+      Object.assign(__E645('Marta'), {escova_dc:'Sim', escova_aceita:'treino', sexo:'Fêmea'});
+      __o645=function(n, sexo){ var p=PELUDINHOS.filter(function(x){ return x.n===n; })[0]; return {chave:dcKey(p.n,p.tutor), p:p, nome:n, sexo:sexo||''}; };`);
+    const h = run("escovaTreinoHojeHTML(__o645('Bruce','Macho'), '2026-10-09')");
+    assert.ok(/>Treinar escovação</.test(h), h);
+    igual(onclicks645(h).map((c) => chama645(c, ['escovaTreinoMarcar', 'escovaPassarDeixa'])), [
+      [['escovaTreinoMarcar', run("dcKey('Bruce','Ana Teste')"), 'deixou']], [['escovaTreinoMarcar', run("dcKey('Bruce','Ana Teste')"), 'dedo']],
+      [['escovaTreinoMarcar', run("dcKey('Bruce','Ana Teste')"), 'nao']]]);
+    assert.ok(/>Deixou<\/button>/.test(h) && />Deixou com o dedo<\/button>/.test(h) && />Não deixou<\/button>/.test(h));
+    igual((h.match(/min-height:40px/g) || []).length, 3, 'botões de 40 px (toque)');
+    assert.ok(h.indexOf('já deixa?') < 0 && h.indexOf('Hoje:') < 0, 'sem resultado de hoje: sem «já deixa?»');
+    igual([run("escovaTreinoHojeHTML(__o645('Rocky'), '2026-10-09')"), run("escovaTreinoHojeHTML(__o645('Juma'), '2026-10-09')"), run("escovaTreinoHojeHTML(__o645('Lisa'), '2026-10-09')")],
+      ['', '', ''], 'só com o dedo, quem não escova e quem não respondeu: nada');
+    // resultado de ontem não é o de hoje
+    run(`__E645('Bruce').escova_treino={'2026-10-08':{res:'deixou', quem:'Rita Teste', ts:1}};`);
+    const ho = run("escovaTreinoHojeHTML(__o645('Bruce','Macho'), '2026-10-09')");
+    assert.ok(ho.indexOf('Hoje:') < 0 && ho.indexOf('já deixa?') < 0 && /Último treino — 08\/10: deixou, por Rita Teste\./.test(ho), ho);
+    // hoje: deixou com o dedo — aparece, aceso, e não pergunta «já deixa?»
+    run(`__E645('Bruce').escova_treino['2026-10-09']={res:'dedo', quem:'Quinn Teste', ts:2};`);
+    const hd = run("escovaTreinoHojeHTML(__o645('Bruce','Macho'), '2026-10-09')");
+    assert.ok(/Hoje: deixou com o dedo, por Quinn Teste\./.test(hd) && hd.indexOf('já deixa?') < 0, hd);
+    assert.ok(/background:var\(--z-blue\);color:var\(--z-cream\)[^>]*>Deixou com o dedo<\/button>/.test(hd), 'o de hoje aceso');
+    // hoje: deixou — a pergunta, no masculino e no feminino
+    run(`__E645('Bruce').escova_treino['2026-10-09']={res:'deixou', quem:'Quinn Teste', ts:3}; __E645('Marta').escova_treino={'2026-10-09':{res:'deixou', quem:'Quinn Teste', ts:3}};`);
+    const hj = run("escovaTreinoHojeHTML(__o645('Bruce','Macho'), '2026-10-09')");
+    assert.ok(/>Ele já deixa\? Passar para «Deixa»<\/button>/.test(hj), hj);
+    igual(chama645(onclicks645(hj).filter((c) => /escovaPassarDeixa/.test(c))[0], ['escovaPassarDeixa']), [['escovaPassarDeixa', run("dcKey('Bruce','Ana Teste')")]]);
+    assert.ok(/>Ela já deixa\? Passar para «Deixa»<\/button>/.test(run("escovaTreinoHojeHTML(__o645('Marta','Fêmea'), '2026-10-09')")), 'a FILHOt: «Ela»');
+    // quem não grava na tela: vê o treino, sem botões
+    run("document.body.dataset.role='monitor';");
+    const hm = run("escovaTreinoHojeHTML(__o645('Bruce','Macho'), '2026-10-09')");
+    assert.ok(/Treinar escovação/.test(hm) && /Hoje: deixou, por Quinn Teste\./.test(hm) && hm.indexOf('<button') < 0 && /Quem marca o treino é a recepção, a Supervisão ou a Gestão\./.test(hm), hm);
+    igual(run('__sp645.length'), 0, 'desenhar não grava nada');
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 AC3/AC7 — marcar o treino de hoje: grava SÓ o dia na ficha (data, resultado, quem e quando), sem mudar o «como aceita»; tocar de novo troca o de hoje e os dias antes ficam; «Passar para «Deixa»» só com o toque', async () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-07':{res:'nao', quem:'Rita Teste', ts:1}, '2026-10-01':{res:'importado', quem:'planilha'}}});
+      Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_aceita:'dedo'}); __kb645=dcKey('Bruce','Ana Teste');`);
+    const t0 = Date.now();
+    igual((await run("escovaTreinoMarcar(__kb645, 'dedo')")).ok, true);
+    const g = J645('__db645[0]');
+    igual(g[0], 'daycare/cadastro/' + run("__K645('Bruce')") + '/escova_treino/2026-10-09', 'só o caminho do dia');
+    igual(Object.keys(g[1]).sort(), ['quem', 'res', 'ts']); igual([g[1].res, g[1].quem], ['dedo', 'Quinn Teste']);
+    assert.ok(g[1].ts >= t0, 'e quando');
+    igual(run('__sp645.length'), 0, 'o histórico inteiro não é regravado');
+    igual(J645("__E645('Bruce').escova_treino['2026-10-07']"), { res: 'nao', quem: 'Rita Teste', ts: 1 }, 'o dia antes fica');
+    igual(J645("__E645('Bruce').escova_treino['2026-10-01']"), { res: 'importado', quem: 'planilha' }, 'o registro que não é treino também fica');
+    igual(run("escovaAceitaDe(__E645('Bruce'))"), 'treino', 'o «como aceita» não muda sozinho');
+    igual(J645('__au645.map(function(a){ return a.t+": "+a.m; })'), ['ficha-escova: treino de escovação de 09/10/2026: Deixou com o dedo, atualizado na tela Hoje na Zêluz']);
+    igual(J645('__rd645'), ['hoje']);
+    // de novo no mesmo dia: troca o de hoje
+    await run("escovaTreinoMarcar(__kb645, 'deixou')");
+    igual(J645('__db645.map(function(d){ return d[0]; })'), [g[0], g[0]]);
+    igual(J645("Object.keys(__E645('Bruce').escova_treino).sort()"), ['2026-10-01', '2026-10-07', '2026-10-09']);
+    igual(run("__E645('Bruce').escova_treino['2026-10-09'].res"), 'deixou');
+    igual(run('__au645[1].m'), 'treino de escovação de 09/10/2026: Deixou (antes: Deixou com o dedo), atualizado na tela Hoje na Zêluz');
+    igual(run("escovaAceitaDe(__E645('Bruce'))"), 'treino', '«Deixou» também não muda a ficha sozinho');
+    // inválido, quem não está em treino, chave que não existe e monitor: nada
+    igual((await run("escovaTreinoMarcar(__kb645, 'talvez')")).ok, false);
+    igual((await run("escovaTreinoMarcar(dcKey('Rocky','Bia Teste'), 'dedo')")).ok, false);
+    igual((await run("escovaTreinoMarcar('ninguem__nada', 'dedo')")).ok, false);
+    run("document.body.dataset.role='monitor';");
+    igual((await run("escovaTreinoMarcar(__kb645, 'nao')")).ok, false); igual((await run('escovaPassarDeixa(__kb645)')).ok, false);
+    run("document.body.dataset.role='consultora';");
+    igual([run('__db645.length'), run('__sp645.length'), run('__au645.length')], [2, 0, 2]);
+    // «Ele já deixa? Passar para «Deixa»»: o toque da pessoa (o treino de hoje, relido, é «Deixou»)
+    igual((await run('escovaPassarDeixa(__kb645)')).ok, true);
+    igual(J645('__sp645[0][1]'), { escova_aceita: 'deixa' });
+    igual(run('__au645[2].m'), 'como aceita a escovação: Deixa (antes: Ainda não deixa — em treino), depois do treino, atualizado na tela Hoje na Zêluz');
+    igual(run("PREV_CORRIGE_OK[__K645('Bruce')+'|escova_aceita'].texto"), 'Bruce — já deixa escovar: saiu do treino');
+    igual(run("escovaTreinoHojeHTML({chave:__kb645, p:PELUDINHOS[0], nome:'Bruce'}, '2026-10-09')"), '', 'saiu do treino: o cartão some');
+    igual(run("__E645('Bruce').escova_treino['2026-10-07'].res"), 'nao', 'o histórico fica na ficha');
+    // de novo (já é «Deixa»): nada
+    igual((await run('escovaPassarDeixa(__kb645)')).ok, false); igual(run('__sp645.length'), 1);
+    // o banco recusou: aviso, nada no rastro da ficha (fica só o "gravação falhou"), e a ficha não ganha o dia
+    run(`__dbOk645=false; __E645('Rocky').escova_aceita='treino';`);
+    igual((await run("escovaTreinoMarcar(dcKey('Rocky','Bia Teste'), 'nao')")).ok, false);
+    igual(J645('__za645.map(function(z){ return z[0]; })'), ['A FICHA NÃO FOI ATUALIZADA']);
+    igual(J645('__au645.filter(function(a){ return a.t==="ficha-escova"; }).length'), 3);
+    igual(J645('__au645.filter(function(a){ return a.t==="gravacao-FALHOU"; }).length'), 1, 'a falha vai para a auditoria');
+    igual(run("'escova_treino' in __E645('Rocky')"), false);
+    // sem banco (reconectando): o aviso diz que nada foi gravado
+    run(`__dbOk645=true; __za645=[]; DB=null;`);
+    const rr = await run("escovaTreinoMarcar(dcKey('Rocky','Bia Teste'), 'nao')");
+    igual(rr.ok, false); assert.ok(/internet do aparelho caiu: nada foi gravado/.test(J645('__za645[0][1]').join(' ')), J645('__za645[0][1]').join(' | '));
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA A2) — «Passar para «Deixa»» relê o treino de hoje: se outro aparelho marcou outro resultado, ou não há treino hoje, a ficha continua em treino e a tela avisa', async () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-09':{res:'nao', quem:'Consultora B', ts:2}}}); __kb645=dcKey('Bruce','Ana Teste');`);
+    const r = await run('escovaPassarDeixa(__kb645)');
+    igual([r.ok, run('__sp645.length'), run('__au645.length')], [false, 0, 0], 'nada gravado, nada no rastro');
+    igual(run("escovaAceitaDe(__E645('Bruce'))"), 'treino');
+    igual(run('__za645[0][0]'), 'A FICHA CONTINUA EM TREINO');
+    igual(J645('__za645[0][1]')[0], 'O treino de hoje de Bruce agora está como «Não deixou», marcado por Consultora B.');
+    igual(J645('__rd645'), ['hoje'], 'a tela é redesenhada');
+    // só o de ontem era «Deixou»: hoje não há treino
+    run(`__E645('Bruce').escova_treino={'2026-10-08':{res:'deixou', quem:'Rita Teste', ts:1}}; __za645=[];`);
+    igual((await run('escovaPassarDeixa(__kb645)')).ok, false);
+    igual(J645('__za645[0][1]')[0], 'Ainda não há treino de hoje de Bruce.');
+    // «Deixou com o dedo» hoje: também não
+    run(`__E645('Bruce').escova_treino['2026-10-09']={res:'dedo', quem:'Quinn Teste', ts:3}; __za645=[];`);
+    igual((await run('escovaPassarDeixa(__kb645)')).ok, false); igual(run('__sp645.length'), 0);
+    // «Deixou» hoje: passa
+    run(`__E645('Bruce').escova_treino['2026-10-09']={res:'deixou', quem:'Quinn Teste', ts:4};`);
+    igual((await run('escovaPassarDeixa(__kb645)')).ok, true); igual(J645('__sp645[0][1]'), { escova_aceita: 'deixa' });
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA A3) — dois aparelhos: o que tem a cópia velha da ficha grava o dia dele sem apagar o dia que o outro gravou', async () => {
+  run(ARMA645);
+  try {
+    // o «banco» guarda a árvore; o aparelho B tem a cópia de antes do dia 08 (sem ele)
+    run(`__arv645={}; DB={ref:function(path){ return {set:function(v){ var ps=path.split('/'), c=__arv645;
+        for(var i=0;i<ps.length-1;i++){ c[ps[i]]=c[ps[i]]||{}; c=c[ps[i]]; } c[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); }}; }};
+      Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino'}); __kb645=dcKey('Bruce','Ana Teste');
+      zHojeISO=function(){ return '2026-10-08'; };`);
+    await run("escovaTreinoMarcar(__kb645, 'nao')");                 // aparelho A, dia 08
+    run(`delete __E645('Bruce').escova_treino; zHojeISO=function(){ return '2026-10-09'; };`);   // aparelho B não viu o dia 08
+    await run("escovaTreinoMarcar(__kb645, 'dedo')");
+    igual(J645(`Object.keys(__arv645.daycare.cadastro[__K645('Bruce')].escova_treino).sort()`), ['2026-10-08', '2026-10-09'], 'os dois dias ficam no banco');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC3 — o Hoje na Zêluz desenha o «Treinar escovação» na linha de quem está em treino, e as contas de pendência não mudam', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino'}); Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_aceita:'deixa'});
+      var __L=function(n, fonte){ var p=PELUDINHOS.filter(function(x){ return x.n===n; })[0];
+        return {chave:dcKey(p.n,p.tutor), p:p, nome:n, raca:p.raca, tutor:p.tutor, sexo:'', fonte:fonte, hora:'08:00', itens:[], remedio:false, banho:'', pend:[], respostas:[], antec:[], antGrupos:[], antAbertos:[], antReg:{}, pesa:0}; };
+      __bkH645={hl:hojeLista, bf:banhoFaltaCardHTML, pc:prevCorrigeOkHTML};
+      hojeLista=function(){ return [__L('Bruce','checkin'), __L('Rocky','checkin')]; }; banhoFaltaCardHTML=function(){ return ''; }; prevCorrigeOkHTML=function(){ return ''; };
+      __raiz645={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz645:null; };`);
+    try {
+      run('hojeRender()');
+      const h = run('__raiz645.innerHTML');
+      igual((h.match(/>Treinar escovação</g) || []).length, 1);
+      assert.ok(h.indexOf('>Bruce') < h.indexOf('Treinar escovação') && h.indexOf('Treinar escovação') < h.indexOf('>Rocky'), 'na linha do Bruce');
+      assert.ok(/2 presentes · 0 com pendência/.test(h), 'o treino não vira pendência na conta do topo');
+      igual(run('__sp645.length'), 0);
+    } finally { run('hojeLista=__bkH645.hl; banhoFaltaCardHTML=__bkH645.bf; prevCorrigeOkHTML=__bkH645.pc;'); }
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC4/AC5/AC6 — Prevenção › «Kit dental e escovação»: em treino (com os últimos resultados), só com o dedo e «Sem kit dental»; nada de cobrança nem de mensagem ao tutor', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino', escova_kit:'Não', escova_treino:{'2026-10-07':{res:'nao', quem:'Rita Teste', ts:1}, '2026-10-09':{res:'dedo', quem:'Quinn Teste', ts:2}}});
+      Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_aceita:'dedo', escova_kit:'Sim'});
+      Object.assign(__E645('Juma'), {escova_dc:'Sim', escova_aceita:'deixa', escova_kit:'Não'});
+      Object.assign(__E645('Lisa'), {escova_dc:'Sim', escova_aceita:'deixa'});
+      Object.assign(__E645('Bis'), {escova_aceita:'treino'});
+      Object.assign(__E645('Marta'), {escova_dc:'Sim', escova_aceita:'treino', escova_kit:'Não', inativo:'Sim'});
+      Object.assign(__E645('Dolar'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', escova_aceita:'treino', escova_kit:'Não'});`);
+    const D = J645('(function(d){ return {treino:d.treino.map(function(o){ return o.nome; }), dedo:d.dedo.map(function(o){ return o.nome; }), semKit:d.semKit.map(function(o){ return o.nome; }), linhas:d.linhas.map(function(o){ return o.nome; })}; })(escovaKitDados())');
+    igual(D, { treino: ['Bis', 'Bruce'], dedo: ['Rocky'], semKit: ['Bruce', 'Juma'], linhas: ['Bis', 'Bruce', 'Rocky', 'Juma'] }, 'o Inativo e quem não escova ficam de fora');
+    const h = run('escovaKitCardHTML()');
+    assert.ok(/<h2[^>]*>Kit dental e escovação<\/h2>/.test(h), h.slice(0, 300));
+    const pos = (t) => h.indexOf(t);
+    assert.ok(pos('Em treino (2)') > 0 && pos('Em treino (2)') < pos('Só com o dedo (1)') && pos('Só com o dedo (1)') < pos('Sem kit dental (2)'), 'na ordem do pedido');
+    assert.ok(/Bruce[\s\S]{0,400}09\/10: deixou com o dedo, por Quinn Teste · 07\/10: não deixou, por Rita Teste/.test(h.slice(pos('Em treino (2)'), pos('Só com o dedo (1)'))), 'os últimos resultados do treino');
+    assert.ok(/Bis[\s\S]{0,300}Nenhum treino registrado ainda/.test(h.slice(pos('Em treino (2)'), pos('Só com o dedo (1)'))));
+    const sk = h.slice(pos('Sem kit dental (2)'));
+    igual((sk.match(/— sem kit dental</g) || []).length, 2, 'cada linha diz só "sem kit dental"');
+    assert.ok(/Bruce[\s\S]*Juma/.test(sk));
+    assert.ok(!/R\$|cobr|WhatsApp|mensagem|Copiar/i.test(h), 'AC6: nada de cobrança nem de mensagem ao tutor');
+    const oc = onclicks645(h);
+    assert.ok(oc.indexOf('escovaKitExcel()') >= 0 && oc.indexOf('escovaKitPDF()') >= 0, oc.join(' | '));
+    igual(run('__sp645.length'), 0, 'desenhar não grava nada');
+    // ninguém em treino, com o dedo ou sem kit: sem quadro
+    run(`['Bruce','Rocky','Juma','Lisa','Bis'].forEach(function(n){ var e=__E645(n); e.escova_aceita='deixa'; e.escova_kit='Sim'; });`);
+    igual(run('escovaKitCardHTML()'), '');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC5/AC6 — o relatório «Kit dental e escovação»: Excel e PDF com a mesma tabela (como aceita, kit e últimos treinos), sem valor nem mensagem', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino', escova_kit:'Não', escova_treino:{'2026-10-09':{res:'dedo', quem:'Quinn Teste', ts:2}}});
+      Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_aceita:'dedo', escova_kit:'Sim'});
+      Object.assign(__E645('Juma'), {escova_dc:'Sim', escova_aceita:'deixa', escova_kit:'Não'});
+      Object.assign(__E645('Bis'), {escova_aceita:'treino'});
+      __re645=[]; relEntregar=function(n,h){ __re645.push([n,h]); return true; };`);
+    const r = run('escovaKitRelHTML()');
+    assert.ok(/Zêluz &middot; Kit dental e escovação/.test(r), r.slice(0, 600));
+    const ths = (r.match(/<th>([^<]*)<\/th>/g) || []).map((x) => x.replace(/<\/?th>/g, ''));
+    igual(ths, ['FILHOt', 'Raça', 'Tutor', 'Como aceita', 'Tem o kit dental aqui?', 'Últimos treinos']);
+    const linhas = (r.match(/<tr><td>[\s\S]*?<\/tr>/g) || []).map((tr) => (tr.match(/<td>([^<]*)<\/td>/g) || []).map((x) => x.replace(/<\/?td>/g, '')));
+    igual(linhas, [
+      ['Bis', 'Spitz', 'Eva Teste', 'Ainda não deixa — em treino', 'sem resposta', 'Nenhum treino registrado ainda'],
+      ['Bruce', 'SRD', 'Ana Teste', 'Ainda não deixa — em treino', 'Não — sem kit dental', '09/10: deixou com o dedo, por Quinn Teste'],
+      ['Rocky', 'Spitz', 'Bia Teste', 'Só com o dedo (dedeira)', 'Sim', '—'],
+      ['Juma', 'Westie', 'Caio Teste', 'Deixa', 'Não — sem kit dental', '—']]);
+    assert.ok(/4 FILHOts · em treino: 2 · só com o dedo: 1 · sem kit dental: 2/.test(r), 'o resumo no topo');
+    assert.ok(!/R\$|cobr|WhatsApp|mensagem/i.test(r), 'AC6');
+    // Excel
+    run('escovaKitExcel()');
+    igual(run('__re645.length'), 1);
+    assert.ok(/^Zeluz-kit-dental-escovacao-\d{4}-\d{2}-\d{2}\.xls$/.test(run('__re645[0][0]')), run('__re645[0][0]'));
+    igual(run('__re645[0][1]'), r, 'a mesma tabela');
+    assert.ok(J645('__au645.map(function(a){ return a.t+": "+a.m; })').indexOf('relatorio-baixado: kit-dental-escovacao — 4 linhas') >= 0);
+    // PDF: a mesma tabela numa janela, pronta para imprimir
+    run(`__w645={d:[], document:{open:function(){}, write:function(x){ __w645.d.push(x); }, close:function(){}}, focus:function(){}, print:function(){}};
+      window.open=function(){ return __w645; };`);
+    run('escovaKitPDF()');
+    assert.ok(run('__w645.d.join("")').indexOf('Zêluz &middot; Kit dental e escovação') >= 0 && run('__w645.d.join("")').indexOf('<td>Bruce</td>') >= 0);
+    run(`__al645=[]; alert=function(t){ __al645.push(t); }; window.open=function(){ return null; };`);
+    run('escovaKitPDF()');
+    assert.ok(/bloqueou a janela/.test(run('__al645[0]')), 'janela bloqueada: diz o que fazer');
+    // um só: "1 FILHOt", no singular
+    run(`['Rocky','Juma','Bis'].forEach(function(n){ var e=__E645(n); e.escova_aceita='deixa'; e.escova_kit='Sim'; });`);
+    assert.ok(/1 FILHOt · em treino: 1 · só com o dedo: 0 · sem kit dental: 1 ·/.test(run('escovaKitRelHTML()')), 'singular');
+    // sem ninguém: avisa, sem arquivo
+    run(`['Bruce','Rocky','Juma','Bis'].forEach(function(n){ var e=__E645(n); e.escova_aceita='deixa'; e.escova_kit='Sim'; }); __al645=[];`);
+    run('escovaKitExcel()'); igual(run('__re645.length'), 1); assert.ok(/Ninguém em treino/.test(run('__al645[0]')), run('__al645[0]'));
+  } finally { run(SOLTA645); }
+});
+prova('6.45 AC2/AC4 — a Prevenção põe os dois quadros no topo, antes da tabela, com ou sem pendência na lista', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); Object.assign(__E645('Juma'), {escova_dc:'Sim', escova_aceita:'treino', escova_kit:'Não'});
+      __els645={prevResumo:{innerHTML:''}, prevFiltros:{innerHTML:''}, prevLista:{innerHTML:''}, prevBusca:{value:''}};
+      document.getElementById=function(id){ return __els645[id]||null; };`);
+    run('renderPrevencao()');
+    const h = run('__els645.prevLista.innerHTML');
+    const a = h.indexOf('Quem não deixa escovar — passar para treino?'), b = h.indexOf('Kit dental e escovação'), t = h.indexOf('Aulunos —');
+    assert.ok(a > 0 && b > a, 'os dois quadros');
+    assert.ok(t < 0 || b < t, 'antes da tabela');
+    igual(run('__sp645.length'), 0, 'abrir a Prevenção não muda ficha nenhuma');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 — o histórico do treino ignora o que não é treino (data quebrada, resultado desconhecido) e vem do mais novo para o mais velho', () => {
+  run(ARMA645);
+  try {
+  igual(J645(`escovaTreinoLista({escova_treino:{'2026-10-01':{res:'deixou', quem:'A', ts:1}, '2026-10-09':{res:'nao', quem:'B', ts:3}, '2026-10-05':{res:'dedo', ts:2}, 'x':{res:'deixou'}, '2026-10-06':{res:'?'}, '2026-10-07':null}})`)
+    .map((r) => r.data + ' ' + r.res + ' ' + r.quem), ['2026-10-09 nao B', '2026-10-05 dedo ', '2026-10-01 deixou A']);
+  igual(J645('escovaTreinoLista({})'), []); igual(J645("escovaTreinoLista({escova_treino:'lixo'})"), []);
+  igual(run("escovaTreinoTexto({data:'2025-12-30', res:'nao', quem:''})"), '30/12/2025: não deixou');
+  } finally { run(SOLTA645); }
+});
+
+provaAsync('6.45 — o segundo toque do dia aparece na hora: a cópia do cadastro em memória acompanha o que foi gravado (na ficha, o banco vence a cópia local)', async () => {
+  run(ARMA645);
+  try {
+    run(`pelExtra=__bk645.pe; __bkCad645=pelCadCache; pelCadCache=Object.assign({}, pelCadCache);
+      pelCadCache[pelKey(PELUDINHOS[0])]={n:'Bruce', tutor:'Ana Teste', escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-07':{res:'nao', quem:'Rita Teste', ts:0}, '2026-10-09':{res:'dedo', quem:'Quinn Teste', ts:1}}};
+      pelCadCache[pelKey(PELUDINHOS[2])]={n:'Juma', tutor:'Caio Teste', escova_dc:'Não', escova_dc_motivo:'Não deixa'};
+      setPelExtra=function(p,patch){ __sp645.push([pelKey(p), JSON.parse(JSON.stringify(patch))]); return Promise.resolve({ok:true}); };`);
+    try {
+      await run("escovaTreinoMarcar(dcKey('Bruce','Ana Teste'), 'deixou')");
+      igual(run("pelExtra(PELUDINHOS[0]).escova_treino['2026-10-09'].res"), 'deixou', 'o «Deixou» vale na hora, não o «Deixou com o dedo» de antes');
+      igual(J645("Object.keys(pelExtra(PELUDINHOS[0]).escova_treino).sort()"), ['2026-10-07', '2026-10-09'], 'a memória ganha só o dia: os outros ficam');
+      assert.ok(/Ele já deixa\? Passar para «Deixa»/.test(run("escovaTreinoHojeHTML({chave:dcKey('Bruce','Ana Teste'), p:PELUDINHOS[0], nome:'Bruce', sexo:'Macho'}, '2026-10-09')")), 'e a pergunta aparece no redesenho');
+      await run("escovaPassarDeixa(dcKey('Bruce','Ana Teste'))");
+      igual(run('escovaAceitaDe(pelExtra(PELUDINHOS[0]))'), 'deixa');
+      run('pelAtual=PELUDINHOS[0];');
+      await run("escovaKitSet('Não')"); igual(run('pelExtra(PELUDINHOS[0]).escova_kit'), 'Não');
+      await run("escovaAceitaSet('dedo')"); igual(run('escovaAceitaDe(pelExtra(PELUDINHOS[0]))'), 'dedo');
+      await run('escovaPassarTreino(pelKey(PELUDINHOS[2]))');
+      igual([run('escovaAceitaDe(pelExtra(PELUDINHOS[2]))'), J645('escovaNaoDeixaLista().map(function(o){ return o.nome; })')], ['treino', []], 'a Juma sai da lista na hora');
+      // quem não tem cadastro no banco: a memória não ganha registro inventado (a cópia local vale)
+      run('pelAtual=PELUDINHOS[1];');
+      await run("escovaAceitaSet('dedo')");
+      igual(run('pelKey(PELUDINHOS[1]) in pelCadCache'), false);
+    } finally { run('pelCadCache=__bkCad645;'); }
+  } finally { run(SOLTA645); }
+});
+
+// ---- 6.45, 2ª rodada (QA da 6.45: A1 a A7 e os defeitos que escapavam: Q01 a Q07, Q16 e Q02)
+const ESPECIAIS645 = [{ n: 'Lu', raca: 'SRD', tutor: 'Lu "Bia" \\ <Silva> & Cia' }, { n: 'Ze', raca: 'SRD', tutor: "Ze'' \\' \\\\ fim\\" }];
+prova('6.45 (QA Q01) — Hoje na Zêluz com tutor de apóstrofo, aspas, barra, «<» e «&»: os botões do treino e o «já deixa?» compilam, entregam a chave inteira e acham a ficha', () => {
+  run(ARMA645);
+  try {
+    ctx.__esp645 = ESPECIAIS645;
+    run(`PELUDINHOS=PELUDINHOS.concat(__esp645.map(function(o){ return Object.assign({}, o); }));`);
+    for (const nome of ['Marta', 'Lu', 'Ze']) {
+      run(`Object.assign(__E645('${nome}'), {escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-09':{res:'deixou', quem:'Quinn Teste', ts:1}}});`);
+      const h = run(`(function(){ var p=PELUDINHOS.filter(function(x){ return x.n==='${nome}'; })[0]; return escovaTreinoHojeHTML({chave:dcKey(p.n,p.tutor), p:p, nome:p.n}, '2026-10-09'); })()`);
+      const chave = run(`(function(){ var p=PELUDINHOS.filter(function(x){ return x.n==='${nome}'; })[0]; return dcKey(p.n,p.tutor); })()`);
+      const oc = onclicks645(h);
+      igual(oc.length, 4, nome + ': 3 resultados e o «já deixa?»');
+      const ch = oc.map((c) => chama645(c, ['escovaTreinoMarcar', 'escovaPassarDeixa'])[0]);
+      igual(ch.map((c) => c[1]), [chave, chave, chave, chave], nome + ': a chave inteira');
+      igual(ch.map((c) => c[0] + (c[2] ? ':' + c[2] : '')), ['escovaTreinoMarcar:deixou', 'escovaTreinoMarcar:dedo', 'escovaTreinoMarcar:nao', 'escovaPassarDeixa']);
+      ctx.__ch645 = chave;
+      igual(run(`prevCorrigePetDe(__ch645).n`), nome, nome + ': a chave acha a ficha');
+    }
+    assert.ok(/'/.test(run("dcKey('Marta', \"Ana D'Ávila\")")), 'a chave do Day Care guarda o apóstrofo (por isso o escape importa)');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 (QA Q03) — nome e tutor com «<», «>» e «&» saem escapados nos dois quadros da Prevenção', () => {
+  run(ARMA645);
+  try {
+    run(`PELUDINHOS.push({n:'<b>Nina</b> & Cia', raca:'SRD', tutor:'Gil <i>Teste</i>'}, {n:'<u>Sol</u>', raca:'SRD', tutor:'Hugo & Teste'});
+      Object.assign(__E645('<b>Nina</b> & Cia'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'});
+      Object.assign(__E645('<u>Sol</u>'), {escova_dc:'Sim', escova_aceita:'deixa', escova_kit:'Não'});`);
+    const e1 = run('escovaNaoDeixaCardHTML()'), kit = run('escovaKitCardHTML()');
+    // o padrão da casa (escAttr): «<» e «&» viram entidade — nenhuma marca nasce no texto
+    assert.ok(e1.indexOf('&lt;b>Nina&lt;/b> &amp; Cia') >= 0 && e1.indexOf('<b>') < 0 && e1.indexOf('</b>') < 0 && e1.indexOf('Gil &lt;i>Teste&lt;/i>') >= 0 && e1.indexOf('<i>') < 0, e1.slice(e1.indexOf('Nina') - 80, e1.indexOf('Nina') + 160));
+    assert.ok(kit.indexOf('&lt;u>Sol&lt;/u>') >= 0 && kit.indexOf('<u>') < 0 && kit.indexOf('Hugo &amp; Teste') >= 0, kit);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA A6, Q04) — «Quem não deixa escovar» é só de Auluno com «Não deixa»: hóspede, morador, avulso e o «Não» sem motivo ficam fora; passar o hóspede pela chave não grava nem dá o chip', async () => {
+  run(ARMA645);
+  try {
+    run(`PELUDINHOS.push({n:'Hosp', raca:'SRD', tutor:'Ivo Teste'}, {n:'Mora', raca:'SRD', tutor:'Zêluz Teste'}, {n:'Avul', raca:'SRD', tutor:'Ugo Teste'}, {n:'Semmotivo', raca:'SRD', tutor:'Vera Teste'});
+      Object.assign(__E645('Bruce'), {escova_dc:'Não', escova_dc_motivo:'Não deixa'});
+      Object.assign(__E645('Hosp'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', categoria:'hospede'});
+      Object.assign(__E645('Mora'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', categoria:'morador'});
+      Object.assign(__E645('Avul'), {escova_dc:'Não', escova_dc_motivo:'Não deixa', categoria:'avulso'});
+      Object.assign(__E645('Semmotivo'), {escova_dc:'Não'});`);
+    igual(J645('escovaNaoDeixaLista().map(function(o){ return o.nome; })'), ['Bruce']);
+    igual(J645("[escovaNaoDeixa(__E645('Semmotivo')), escovaNaoDeixa(__E645('Hosp'))]"), [false, true], 'o «Não» sem motivo não é «Não deixa»; o hóspede é, mas não é Auluno');
+    igual((await run("escovaPassarTreino(__K645('Hosp'))")).ok, false);
+    igual((await run("escovaPassarTreino(__K645('Mora'))")).ok, false);
+    igual([run('__sp645.length'), run("(__E645('Hosp').atividades||[]).indexOf('escova')")], [0, -1], 'nada gravado, sem o chip do Day Care');
+    // «todos» com o hóspede que virou Auluno depois de desenhar a lista não é o caso; com a lista só do Bruce, um só passa
+    run('__zpResp645=true;');
+    const r = await run('escovaPassarTreinoTodos()');
+    igual([r.feitos, J645('__sp645.map(function(s){ return s[0]; })')], [1, [run("__K645('Bruce')")]]);
+  } finally { run(SOLTA645); }
+});
+prova('6.45 (QA Q05) — o «Treinar escovação» também aparece na linha COM pendência (quem passa para treino volta a dever a troca de escova)', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino'});
+      var p=PELUDINHOS[0];
+      __bkH645b={hl:hojeLista, bf:banhoFaltaCardHTML, pc:prevCorrigeOkHTML};
+      hojeLista=function(){ return [{chave:dcKey(p.n,p.tutor), p:p, nome:'Bruce', raca:'SRD', tutor:p.tutor, sexo:'', fonte:'checkin', hora:'08:00',
+        itens:[{k:'escova_p', atrasado:true, vence:'2026-10-01', nome:'Troca de escova de dentes'}], remedio:false, banho:'', pend:[], respostas:[], antec:[], antGrupos:[], antAbertos:[], antReg:{}, pesa:1}]; };
+      banhoFaltaCardHTML=function(){ return ''; }; prevCorrigeOkHTML=function(){ return ''; };
+      __raiz645b={innerHTML:''}; document.getElementById=function(id){ return id==='hojeRoot'?__raiz645b:null; };`);
+    try {
+      run('hojeRender()');
+      const h = run('__raiz645b.innerHTML');
+      assert.ok(/1 presente · 1 com pendência/.test(h), 'a linha tem pendência');
+      igual((h.match(/>Treinar escovação</g) || []).length, 1, 'e o cartão do treino está nela');
+      assert.ok(h.indexOf('troca') < h.indexOf('Treinar escovação'), 'depois da pendência da troca');
+    } finally { run('hojeLista=__bkH645b.hl; banhoFaltaCardHTML=__bkH645b.bf; prevCorrigeOkHTML=__bkH645b.pc;'); }
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA Q06) — com o banco recusando, a cópia do cadastro em memória NÃO muda (kit, como aceita, treino do dia, «Deixa» e passar para treino)', async () => {
+  run(ARMA645);
+  try {
+    run(`pelExtra=__bk645.pe; __bkCad645=pelCadCache; pelCadCache=Object.assign({}, pelCadCache);
+      pelCadCache[pelKey(PELUDINHOS[0])]={n:'Bruce', tutor:'Ana Teste', escova_dc:'Sim', escova_aceita:'treino', escova_kit:'Sim', escova_treino:{'2026-10-09':{res:'deixou', quem:'Quinn Teste', ts:1}}};
+      pelCadCache[pelKey(PELUDINHOS[2])]={n:'Juma', tutor:'Caio Teste', escova_dc:'Não', escova_dc_motivo:'Não deixa'};
+      __antes645=JSON.stringify(pelCadCache[pelKey(PELUDINHOS[0])]); __antesJ645=JSON.stringify(pelCadCache[pelKey(PELUDINHOS[2])]);
+      setPelExtra=function(p,patch){ __sp645.push([pelKey(p), patch]); return Promise.resolve({ok:false, erro:'PERMISSION_DENIED'}); }; __dbOk645=false; pelAtual=PELUDINHOS[0];`);
+    try {
+      igual((await run("escovaKitSet('Não')")).ok, false);
+      igual((await run("escovaAceitaSet('dedo')")).ok, false);
+      igual((await run("escovaTreinoMarcar(dcKey('Bruce','Ana Teste'), 'nao')")).ok, false);
+      igual((await run("escovaPassarDeixa(dcKey('Bruce','Ana Teste'))")).ok, false);
+      igual((await run("escovaPassarTreino(pelKey(PELUDINHOS[2]))")).ok, false);
+      igual([run('JSON.stringify(pelCadCache[pelKey(PELUDINHOS[0])])===__antes645'), run('JSON.stringify(pelCadCache[pelKey(PELUDINHOS[2])])===__antesJ645')], [true, true], 'a memória continua com o que está no banco');
+      igual([run('escovaKitDe(pelExtra(PELUDINHOS[0]))'), run('escovaAceitaDe(pelExtra(PELUDINHOS[0]))'), run("pelExtra(PELUDINHOS[0]).escova_treino['2026-10-09'].res")], ['Sim', 'treino', 'deixou']);
+      igual(J645('__au645.filter(function(a){ return a.t==="ficha-escova"; }).length'), 0, 'nada no rastro da ficha');
+    } finally { run('pelCadCache=__bkCad645;'); }
+  } finally { run(SOLTA645); }
+});
+prova('6.45 (QA A1, Q07) — «Escova os dentes no Day Care? Sim» sem «como aceita» e kit «Não» entra em «Sem kit dental»; o quadro aparece mesmo sem ninguém em treino ou com o dedo', () => {
+  run(ARMA645);
+  try {
+    igual([run("escovaSemKit({escova_dc:'Sim', escova_kit:'Não'})"), run("escovaSemKit({escova_dc:'Sim', escova_kit:'Sim'})"), run("escovaSemKit({escova_dc:'Sim'})"),
+      run("escovaSemKit({escova_kit:'Não'})"), run("escovaSemKit({escova_dc:'Não', escova_kit:'Não'})")], [true, false, false, false, false]);
+    run(`Object.assign(__E645('Juma'), {escova_dc:'Sim', escova_aceita:'deixa', escova_kit:'Não'}); Object.assign(__E645('Lisa'), {escova_dc:'Sim', escova_kit:'Não'});
+      Object.assign(__E645('Rocky'), {escova_dc:'Sim', escova_kit:'Sim'}); Object.assign(__E645('Bis'), {escova_kit:'Não'});`);
+    const h = run('escovaKitCardHTML()');
+    assert.ok(/Kit dental e escovação/.test(h) && /Sem kit dental \(2\)/.test(h) && h.indexOf('Em treino (') < 0 && h.indexOf('Só com o dedo (') < 0, h);
+    assert.ok(/Juma[\s\S]*— sem kit dental[\s\S]*Lisa[\s\S]*— sem kit dental/.test(h), 'a Juma (deixa) e a Lisa (Sim, sem «como aceita»); o Bis (sem resposta) e o Rocky (tem kit) fora');
+    const r = run('escovaKitRelHTML()');
+    const linhas = (r.match(/<tr><td>[\s\S]*?<\/tr>/g) || []).map((tr) => (tr.match(/<td>([^<]*)<\/td>/g) || []).map((x) => x.replace(/<\/?td>/g, '')));
+    igual(linhas, [['Juma', 'Westie', 'Caio Teste', 'Deixa', 'Não — sem kit dental', '—'], ['Lisa', 'Shih Tzu', 'Duda Teste', 'sem resposta', 'Não — sem kit dental', '—']]);
+    // a dica da ficha também vale para o «Sim» sem «como aceita»
+    assert.ok(/Aparece em «Sem kit dental», na Prevenção\./.test(run("escovaFichaHTML({escova_dc:'Sim', escova_kit:'Não'})")));
+    assert.ok(!/Aparece em «Sem kit dental»/.test(run("escovaFichaHTML({escova_kit:'Não'})")), 'sem resposta nenhuma: a dica não promete');
+  } finally { run(SOLTA645); }
+});
+prova('6.45 (QA A5, Q16) — «Ele/Ela já deixa?» pela regra de sexo do app (/^f/i), lido também da ficha, e não só da linha do Hoje', () => {
+  run(ARMA645);
+  try {
+    run(`Object.assign(__E645('Bruce'), {escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-09':{res:'deixou', quem:'Q', ts:1}}});`);
+    const pergunta = (sexoFicha, sexoLinha) => {
+      run(`__E645('Bruce').sexo=${JSON.stringify(sexoFicha)};`);
+      const h = run(`escovaTreinoHojeHTML({chave:dcKey('Bruce','Ana Teste'), p:PELUDINHOS[0], nome:'Bruce'${sexoLinha === undefined ? '' : ', sexo:' + JSON.stringify(sexoLinha)}}, '2026-10-09')`);
+      return (h.match(/>(Ele|Ela) já deixa\?/) || [])[1];
+    };
+    igual([pergunta('Fêmea'), pergunta('FÊMEA'), pergunta('F'), pergunta('fêmea'), pergunta('Femea'), pergunta('Macho'), pergunta(''), pergunta('', 'Fêmea'), pergunta('', 'f')],
+      ['Ela', 'Ela', 'Ela', 'Ela', 'Ela', 'Ele', 'Ele', 'Ela', 'Ela']);
+    igual([run('escovaDele([])'), run("(function(){ __E645('Bruce').sexo='Fêmea'; return escovaDele([PELUDINHOS[0]]); })()"),
+      run("(function(){ __E645('Bruce').sexo='M'; return escovaDele([PELUDINHOS[0]]); })()")], ['dele', 'dela', 'dele']);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA A4) — «Passar todos»: «dele/dela/deles/delas» pelo número e pelo sexo; com todos já mudados, "NENHUMA FICHA MUDOU" (nunca "0 EM TREINO"); com tudo recusado, "Nenhum passou"', async () => {
+  run(ARMA645);
+  try {
+    const rodar = async (prep) => {
+      run(`__sp645=[]; __za645=[]; __au645=[]; ['Bruce','Marta','Juma'].forEach(function(n){ var e=__E645(n); for(var k in e) delete e[k]; Object.assign(e, {escova_dc:'Não', escova_dc_motivo:'Não deixa'}); });
+        __E645('Marta').sexo='Fêmea'; __E645('Juma').sexo='fêmea'; __E645('Bruce').sexo='Macho'; setPelExtra=__sp645f; zPergunta=function(){ ${prep || ''} return Promise.resolve(true); };`);
+      const r = await run('escovaPassarTreinoTodos()');
+      return { r, t: run('__za645[0][0]'), l: J645('__za645[0][1]').filter(Boolean) };
+    };
+    run('__sp645f=setPelExtra;');
+    let x = await rodar("Object.assign(__E645('Bruce'), {escova_dc:'Sim'}); Object.assign(__E645('Juma'), {escova_dc:'Sim'});");
+    igual([x.t, x.l], ['1 EM TREINO DE ESCOVAÇÃO', ['Marta. A troca de escova dela volta para a cobrança.', 'Já tinham mudado na ficha e ficaram como estavam: Bruce e Juma.']]);
+    x = await rodar("Object.assign(__E645('Marta'), {escova_dc:'Sim'}); Object.assign(__E645('Juma'), {escova_dc:'Sim'});");
+    igual(x.l[0], 'Bruce. A troca de escova dele volta para a cobrança.');
+    x = await rodar("Object.assign(__E645('Bruce'), {escova_dc:'Sim'});");
+    igual(x.l[0], 'Juma e Marta. A troca de escova delas volta para a cobrança.');
+    x = await rodar('');
+    igual([x.t, x.l[0]], ['3 EM TREINO DE ESCOVAÇÃO', 'Bruce, Juma e Marta. A troca de escova deles volta para a cobrança.']);
+    x = await rodar("['Bruce','Marta','Juma'].forEach(function(n){ __E645(n).escova_dc='Sim'; });");
+    igual([x.t, x.l, x.r.ok, x.r.feitos], ['NENHUMA FICHA MUDOU', ['Já tinham mudado na ficha e ficaram como estavam: Bruce, Juma e Marta.'], true, 0]);
+    run(`__sp645f=function(p,patch){ __sp645.push([pelKey(p), patch]); return Promise.resolve({ok:false, erro:'PERMISSION_DENIED'}); };`);
+    x = await rodar('');
+    igual([x.t, x.l[0]], ['3 NÃO PASSARAM PARA TREINO DE ESCOVAÇÃO', 'Nenhum passou para treino.']);
+  } finally { run(SOLTA645); }
+});
+provaAsync('6.45 (QA Q02) — o dia do treino é o dia de Brasília do aparelho: com o relógio adiantado, 23:50 de 14/03/2027 em Brasília (02:50 UTC do dia 15) grava no dia 14; 00:10 grava no dia 15', async () => {
+  run(ARMA645);
+  const tzAntes = process.env.TZ, DateReal = ctx.Date;
+  try {
+    process.env.TZ = 'America/Sao_Paulo';
+    run('zHojeISO=__bk645.hz;');   // o zHojeISO de verdade, sem dublê
+    for (const [iso, dia, br] of [['2027-03-15T02:50:00Z', '2027-03-14', '14/03/2027'], ['2027-03-15T03:10:00Z', '2027-03-15', '15/03/2027']]) {
+      const T = new DateReal(iso).getTime();
+      ctx.Date = class extends DateReal { constructor(...a) { if (!a.length) super(T); else super(...a); } static now() { return T; } };
+      run(`__db645=[]; __au645=[]; var e=__E645('Bruce'); for(var k in e) delete e[k]; Object.assign(e, {escova_dc:'Sim', escova_aceita:'treino'});`);
+      igual(run('zHojeISO()'), dia, iso);
+      await run("escovaTreinoMarcar(dcKey('Bruce','Ana Teste'), 'dedo')");
+      igual(run('__db645[0][0]').split('/').pop(), dia, iso + ': o caminho do dia');
+      igual(run('__au645[0].m'), 'treino de escovação de ' + br + ': Deixou com o dedo, atualizado na tela Hoje na Zêluz');
+      assert.ok(/Hoje: deixou com o dedo/.test(run(`escovaTreinoHojeHTML({chave:dcKey('Bruce','Ana Teste'), p:PELUDINHOS[0], nome:'Bruce'}, zHojeISO())`)), iso + ': o Hoje mostra o de hoje');
+    }
+  } finally {
+    ctx.Date = DateReal;
+    if (tzAntes === undefined) delete process.env.TZ; else process.env.TZ = tzAntes;
+    run(SOLTA645);
+  }
+});
+
+provaAsync('6.45 — a gravação do dia do treino passa pelo porteiro da ficha (pelCamposBarrados): papel sem permissão não grava nada, nem chamada direta', async () => {
+  run(ARMA645);
+  try {
+    run(`document.body.dataset.role='monitor'; __al645=[]; alert=function(t){ __al645.push(t); };`);
+    const r = await run("escovaTreinoGravarDia(PELUDINHOS[0], '2026-10-09', {res:'dedo', quem:'Q', ts:1})");
+    igual([r.ok, run('__db645.length')], [false, 0]);
+    run("document.body.dataset.role='consultora';");
+    igual((await run("escovaTreinoGravarDia(PELUDINHOS[0], '2026-10-09', {res:'dedo', quem:'Q', ts:1})")).ok, true);
+    igual(run('__db645[0][0]'), 'daycare/cadastro/' + run("__K645('Bruce')") + '/escova_treino/2026-10-09');
+  } finally { run(SOLTA645); }
+});
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

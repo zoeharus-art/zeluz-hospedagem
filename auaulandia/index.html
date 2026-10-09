@@ -5125,13 +5125,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-03"></script>
+<script src="resposta-tutor.js?v=2026-10-09-04"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-03"></script>
+<script src="painel-logica.js?v=2026-10-09-04"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5143,7 +5143,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-03"></script>
+<script src="financeiro-logica.js?v=2026-10-09-04"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -18697,7 +18697,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-03';
+  const APP_VERSAO='2026-10-09-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -26939,6 +26939,7 @@
       +'<div class="field" id="escovaDcOutroBox" style="'+(mot==='Outro'?'':'display:none')+'"><label>Qual o motivo?</label>'
       +'<input class="cad-in" value="'+escAttr(ex.escova_dc_outro||'')+'" placeholder="Escreva o motivo" onchange="setPelExtra(pelAtual,{escova_dc_outro:this.value.trim()})"></div>'
       +'</div>';
+    h+=escovaAceitaFichaHTML(ex);   // 6.45: como aceita e o kit dental (só para quem escova aqui)
     if(dc!=='Não'){
       var ult=ex.escova_ult||{};
       h+='<div class="field" style="margin-top:6px"><label>Troca de escova de hoje</label>'
@@ -27038,6 +27039,436 @@
   function prevForaDaCobranca(ex, it){
     if(prevDispensadoPorExame(ex, it)) return true;
     return !!(it && it.k==='escova_p' && escovaNaoEscova(ex));
+  }
+  // ===== ESCOVAÇÃO: COMO ACEITA, TREINO E KIT DENTAL (Story 6.45, quadro de pedidos, linha 74, 08/out/2026) =====
+  // Quem não deixa escovar (Bruce, Ozzy, Fiona, Norberto, Juma, Marta…) "vira cliente a trabalhar
+  // escovação": em vez de ficar como «Não escova», passa para «Ainda não deixa — em treino». E1, E3,
+  // E4 e E5 aplicadas pela recomendação; E2 (cobrar o kit do tutor) é da Adriana — aqui NADA é
+  // cobrado e nenhuma mensagem ao tutor é criada. O app não muda ficha nenhuma sozinho: cada
+  // mudança é um toque da pessoa (e "todos de uma vez" pergunta antes), com rastro na auditoria.
+  // Campos da ficha: escova_aceita ('deixa' | 'dedo' | 'treino'), escova_kit ('Sim' | 'Não') e
+  // escova_treino ({'AAAA-MM-DD': {res, quem, ts}} — um resultado por dia, o último toque vale).
+  var ESCOVA_ACEITA=[
+    {v:'deixa',  t:'Deixa'},
+    {v:'dedo',   t:'Só com o dedo (dedeira)'},
+    {v:'treino', t:'Ainda não deixa — em treino'}
+  ];
+  var ESCOVA_TREINO_RES=[
+    {v:'deixou', t:'Deixou'},
+    {v:'dedo',   t:'Deixou com o dedo'},
+    {v:'nao',    t:'Não deixou'}
+  ];
+  var ESCOVA_TREINO_ULTIMOS=5;   // quantos resultados a ficha, a Prevenção e o relatório mostram
+  function escovaRotulo(lista, v){ var x=(lista||[]).filter(function(o){ return o.v===v; })[0]; return x?x.t:''; }
+  function escovaAceitaRotulo(v){ return escovaRotulo(ESCOVA_ACEITA, v); }
+  function escovaTreinoResRotulo(v){ return escovaRotulo(ESCOVA_TREINO_RES, v); }
+  // Como aceita, para quem escova no Day Care. Com «Não escova», não há "como aceita": a
+  // resposta antiga fica guardada na ficha, mas não vale (nem treino, nem kit, nem relatório).
+  function escovaAceitaDe(ex){
+    ex=ex||{};
+    if(escovaNaoEscova(ex)) return '';
+    var v=String(ex.escova_aceita||'');
+    return escovaAceitaRotulo(v)?v:'';
+  }
+  function escovaKitDe(ex){ var v=String((ex||{}).escova_kit||''); return (v==='Sim'||v==='Não')?v:''; }
+  // Escova aqui: tem «como aceita» (deixa, com o dedo ou em treino) OU a ficha diz «Escova os dentes
+  // no Day Care? Sim» e ainda não respondeu o «como aceita» (o campo é novo; decisão do @po no QA
+  // da 6.45, A1). Sem resposta nenhuma não é "escova aqui".
+  function escovaEscovaAqui(ex){ return !!escovaAceitaDe(ex) || String((ex||{}).escova_dc||'')==='Sim'; }
+  // «Sem kit dental»: escova aqui e a ficha diz «Não» ao kit. Sem resposta ao kit não é «não tem»:
+  // a lista mostra só o que alguém registrou.
+  function escovaSemKit(ex){ return escovaEscovaAqui(ex) && escovaKitDe(ex)==='Não'; }
+  // O «Não escova no Day Care — Não deixa» de hoje (E1). O motivo do tutor e o «Outro» não entram.
+  function escovaNaoDeixa(ex){ ex=ex||{}; return escovaNaoEscova(ex) && String(ex.escova_dc_motivo||'')==='Não deixa'; }
+  // O histórico do treino, do mais novo para o mais velho. O que não é treino (data quebrada,
+  // resultado desconhecido) não entra.
+  function escovaTreinoLista(ex){
+    var h=(ex&&ex.escova_treino&&typeof ex.escova_treino==='object')?ex.escova_treino:{};
+    var out=[];
+    Object.keys(h).forEach(function(d){
+      var r=h[d];
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !r || typeof r!=='object' || !escovaTreinoResRotulo(r.res)) return;
+      out.push({data:d, res:String(r.res), quem:String(r.quem||''), ts:Number(r.ts)||0});
+    });
+    out.sort(function(a,b){ return (a.data!==b.data)?((a.data<b.data)?1:-1):(b.ts-a.ts); });
+    return out;
+  }
+  function escovaTreinoTexto(r){
+    r=r||{};
+    return prevCelulaData(r.data)+': '+escovaTreinoResRotulo(r.res).toLowerCase()+(r.quem?(', por '+r.quem):'');
+  }
+  function escovaTreinoUltimosTexto(ex){
+    var L=escovaTreinoLista(ex).slice(0, ESCOVA_TREINO_ULTIMOS);
+    return L.length?L.map(escovaTreinoTexto).join(' · '):'Nenhum treino registrado ainda';
+  }
+  // Escolher «como aceita» é dizer que escova aqui: numa ficha sem o «Sim», grava o Sim junto,
+  // pela MESMA regra da pergunta da 6.16 (o chip da escovação dos Encãotadores vai junto).
+  function escovaAceitaPatch(v, ex, atividades){
+    var patch={escova_aceita:v};
+    if(String((ex||{}).escova_dc||'')!=='Sim') Object.assign(patch, escovaDcPatch('Sim', atividades));
+    return patch;
+  }
+  function escovaAtividadesDe(p){ try{ return (typeof pelAtividades==='function')?pelAtividades(p):[]; }catch(e){ return []; } }
+  // A cópia do cadastro em memória acompanha o que ACABOU de ser gravado: o redesenho logo
+  // depois lê a ficha nova, sem esperar o ouvinte do cadastro (que corrige em 90 ms). Sem isto,
+  // o segundo toque do dia (o «Deixou» depois do «Deixou com o dedo») aparecia com o valor de
+  // antes, porque na ficha o banco vence a cópia local. O mesmo gesto da troca de dias da ficha.
+  function escovaCacheGravado(p, patch){
+    try{ var k=pelKey(p); if(typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k]) pelCadCache[k]=Object.assign({}, pelCadCache[k], patch); }
+    catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
+  }
+  // ---- a ficha (Prevenção › Check-up e escova) ------------------------------------------
+  function escovaAceitaFichaHTML(ex){
+    ex=ex||{};
+    if(escovaNaoEscova(ex)) return '';
+    var ac=escovaAceitaDe(ex), kit=escovaKitDe(ex);
+    var bt=function(val, rot, atual, fn){
+      return '<button type="button" class="'+(atual===val?'on':'')+'" onclick="pick(this);'+fn+'(\''+jsAspas(val)+'\')">'+esc(rot)+'</button>';
+    };
+    var h='<div class="field" id="escovaAceitaBox" style="margin-top:10px"><label>Como aceita a escovação?</label>'
+      +'<div class="seg gold" data-single>'+ESCOVA_ACEITA.map(function(x){ return bt(x.v, x.t, ac, 'escovaAceitaSet'); }).join('')+'</div>'
+      +'<div class="hint" style="margin-top:4px">«Só com o dedo» e «Em treino» continuam escovando: a troca de escova continua na cobrança. Quem está em treino aparece no Hoje na Zêluz, nos dias em que vem, com «Treinar escovação».</div>';
+    if(ac==='treino') h+='<div class="hint" style="margin-top:4px;font-weight:700;color:var(--z-blue)">'
+      +(escovaTreinoLista(ex).length?((escovaTreinoLista(ex).length===1?'Último treino: ':'Últimos treinos: ')+esc(escovaTreinoUltimosTexto(ex))+'.'):'Nenhum treino registrado ainda.')+'</div>';
+    h+='</div>';
+    h+='<div class="field"><label>Tem o kit dental aqui?</label>'
+      +'<div class="seg gold" data-single>'+['Sim','Não'].map(function(v){ return bt(v, v, kit, 'escovaKitSet'); }).join('')+'</div>'
+      +'<div class="hint" style="margin-top:4px">O kit dental é a escova do FILHOt, guardada aqui.'
+      +(escovaSemKit(ex)?' Aparece em «Sem kit dental», na Prevenção.':'')+'</div></div>';
+    return h;
+  }
+  function escovaFichaGravada(p, r){
+    if(r && r.ok===false){
+      zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'});
+      if(p===pelAtual){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — volta o botão ao que está gravado */ }
+      return false;
+    }
+    return true;
+  }
+  function escovaAceitaSet(v){
+    var p=pelAtual;
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(!escovaAceitaRotulo(v)) return Promise.resolve({ok:false, erro:'resposta inválida'});
+    if(!escovaPode()){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'}); }
+    var ex=pelExtra(p)||{}, antes=escovaAceitaDe(ex);
+    var patch=escovaAceitaPatch(v, ex, escovaAtividadesDe(p));
+    return Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(!escovaFichaGravada(p, r)) return r;
+      escovaCacheGravado(p, patch);
+      try{ if(typeof audit==='function') audit('ficha-escova', 'como aceita a escovação: '+escovaAceitaRotulo(v)
+        +((antes && antes!==v)?(' (antes: '+escovaAceitaRotulo(antes)+')'):'')
+        +(patch.escova_dc==='Sim'?'; «Escova os dentes no Day Care?» passou para Sim (com o chip da escovação)':''), {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(p===pelAtual){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+      return r||{ok:true};
+    });
+  }
+  function escovaKitSet(v){
+    var p=pelAtual;
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(v!=='Sim' && v!=='Não') return Promise.resolve({ok:false, erro:'resposta inválida'});
+    if(!escovaPode()){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'}); }
+    var antes=escovaKitDe(pelExtra(p)||{});
+    return Promise.resolve(setPelExtra(p, {escova_kit:v})).then(function(r){
+      if(!escovaFichaGravada(p, r)) return r;
+      escovaCacheGravado(p, {escova_kit:v});
+      try{ if(typeof audit==='function') audit('ficha-escova', 'tem o kit dental aqui: '+v+((antes && antes!==v)?(' (antes: '+antes+')'):''),
+        {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      if(p===pelAtual){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — o dado já está gravado */ }
+      return r||{ok:true};
+    });
+  }
+  // ---- a Prevenção: quem não deixa escovar (E1) -----------------------------------------
+  // «dele», «dela», «deles» ou «delas», pela regra de sexo do app (medFemea: /^f/i, lido da ficha).
+  function escovaFemea(p, sexo){ return /^f/i.test(String(sexo||'')) || ((typeof medFemea==='function') && !!p && medFemea(p)); }
+  function escovaDele(ps){
+    ps=ps||[];
+    var todasF=ps.length>0 && ps.every(function(p){ return escovaFemea(p); });
+    return (ps.length>1)?(todasF?'delas':'deles'):(todasF?'dela':'dele');
+  }
+  function escovaJuntarNomes(L){
+    L=(L||[]).slice();
+    if(L.length<2) return L.join('');
+    return L.slice(0,-1).join(', ')+' e '+L[L.length-1];
+  }
+  // Os ativos da casa, com a ficha, na ordem do nome. `filtro(ex)` escolhe quem entra.
+  function escovaFichasDe(filtro){
+    var out=[];
+    var L=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+    L.forEach(function(p, i){
+      if(!p || (typeof pelInativo==='function' && pelInativo(p))) return;
+      var ex=pelExtra(p)||{};
+      if(!filtro(ex)) return;
+      out.push({p:p, i:i, ex:ex, chave:pelKey(p),
+        nome:(typeof pelNome==='function'?pelNome(p):'')||p.n||'',
+        raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+        tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||''});
+    });
+    out.sort(function(a,b){ return jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
+    return out;
+  }
+  // Só quem vem ao Day Care (Auluno): o hóspede da AuAulândia e o morador não entram na lista e não
+  // ganham o chip da escovação do Day Care (QA da 6.45, A6).
+  function escovaEhAuluno(p){ try{ return (typeof pelCategoria!=='function') || pelCategoria(p)==='auluno'; }catch(e){ return false; } }
+  function escovaNaoDeixaAuluno(p){ return !!p && escovaEhAuluno(p) && escovaNaoDeixa(pelExtra(p)||{}); }
+  function escovaNaoDeixaLista(){ return escovaFichasDe(escovaNaoDeixa).filter(function(o){ return escovaEhAuluno(o.p); }); }
+  function escovaLinhaNomeHTML(o){
+    return '<button type="button" class="btn" style="background:none;border:none;padding:0;text-align:left;font:inherit;cursor:pointer" onclick="abrirPeludinhoCheckup('+o.i+')">'
+      +'<span style="font-weight:800;color:var(--z-blue);font-size:15px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'
+      +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span>';
+  }
+  function escovaNaoDeixaCardHTML(){
+    var L=[];
+    try{ L=escovaNaoDeixaLista(); }catch(e){ _logFalhaGrav('escovaNaoDeixaLista (Prevenção)', e); L=[]; }
+    if(!L.length) return '';
+    var pode=prevCorrigePode();
+    var h='<div class="card" id="escNaoDeixaBloco" style="border-left:4px solid var(--z-gold)">'
+      +'<h2 style="font-size:17px">Quem não deixa escovar — passar para treino?</h2>'
+      +'<div class="hint">Estão na ficha como «Não escova no Day Care — Não deixa». Em treino, continuam com a escovação no Day Care: os Encãotadores treinam, o Hoje na Zêluz mostra «Treinar escovação» nos dias em que vêm e a troca de escova volta para a cobrança. Nada muda sozinho: cada um passa com um toque.</div>';
+    L.forEach(function(o){
+      h+='<div style="border-top:1px solid var(--line);padding:10px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">'
+        +'<div style="min-width:0;overflow-wrap:anywhere">'+escovaLinhaNomeHTML(o)+'</div>'
+        +(pode?('<button type="button" class="btn" style="min-height:40px;padding:8px 14px;font-size:12.5px;font-weight:800;border:1.5px solid var(--z-blue);background:var(--z-cream-warm);color:var(--z-blue)" onclick="escovaPassarTreino(\''+jsAspas(o.chave)+'\')">Passar para treino</button>'):'')
+        +'</div>';
+    });
+    if(pode && L.length>1) h+='<div style="margin-top:8px"><button type="button" class="btn btn-gold" style="min-height:40px;padding:8px 16px;font-size:13px;font-weight:800" onclick="escovaPassarTreinoTodos()">Passar todos para treino ('+L.length+')</button></div>';
+    if(!pode) h+='<div class="hint" style="margin-top:6px">Quem passa para treino é a recepção, a Supervisão ou a Gestão.</div>';
+    return h+'</div>';
+  }
+  // A gravação de UM FILHOt, sem tela: a ficha só muda se ainda está «Não deixa».
+  function escovaTreinoPatch(atividades){ return Object.assign(escovaDcPatch('Sim', atividades), {escova_aceita:'treino'}); }
+  function escovaTreinoGravar(p){
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(!escovaNaoDeixaAuluno(p)) return Promise.resolve({ok:false, pulou:true, erro:'a ficha já não está como «Não deixa»'});
+    var patch=escovaTreinoPatch(escovaAtividadesDe(p));
+    return Promise.resolve(setPelExtra(p, patch)).then(function(r){
+      if(r && r.ok===false) return r;
+      escovaCacheGravado(p, patch);
+      try{ if(typeof audit==='function') audit('ficha-escova', 'passou para «'+escovaAceitaRotulo('treino')+'» (antes: não escova no Day Care — Não deixa), atualizado na tela Prevenção',
+        {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      PREV_CORRIGE_OK[prevCorrigeAlvo(pelKey(p),'escova_aceita')]={ts:Date.now(), ate:'', resposta:true,
+        texto:(pelNome(p)||'')+' — em treino de escovação: a troca de escova volta para a cobrança'};
+      return r||{ok:true};
+    });
+  }
+  function escovaPassarTreino(chave){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
+    var p=prevCorrigePetDe(chave);
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    if(!escovaNaoDeixaAuluno(p)){ prevCorrigeRedesenhar('prev'); return Promise.resolve({ok:false, erro:'a ficha já não está como «Não deixa»'}); }
+    return escovaTreinoGravar(p).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return r; }
+      prevCorrigeRedesenhar('prev');
+      return r||{ok:true};
+    });
+  }
+  // TODOS de uma vez: pergunta antes, com os nomes; grava um por um (uma ficha que falha não
+  // segura as outras) e diz quantos passaram e quem ficou de fora.
+  function escovaPassarTreinoTodos(){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, feitos:0, erro:'sem permissão'});
+    var L=escovaNaoDeixaLista();
+    if(!L.length) return Promise.resolve({ok:false, feitos:0});
+    var n=L.length;
+    return Promise.resolve(zPergunta('PASSAR '+n+' PARA TREINO DE ESCOVAÇÃO?', [
+        escovaJuntarNomes(L.map(function(o){ return o.nome; }))+'.',
+        'Cada um passa a «'+escovaAceitaRotulo('treino')+'»: continua com a escovação no Day Care, aparece em «Treinar escovação» no Hoje na Zêluz e a troca de escova volta para a cobrança.',
+        'Quem estiver como «O tutor não compra a pasta» ou «Outro» não muda.'],
+      {sim:(n>1?('Passar os '+n+' para treino'):'Passar para treino'), nao:'Cancelar — não mexer em nada', cor:'#234D67', corTitulo:'#234D67'})).then(function(sim){
+      if(!sim) return {ok:false, feitos:0, cancelado:true};
+      // A ficha que mudou enquanto a pergunta estava aberta (outro aparelho, outra pessoa) fica
+      // como está: o app relê cada uma antes de gravar.
+      var feitos=[], falhas=[], pulados=[], feitosP=[];
+      var fila=Promise.resolve();
+      L.forEach(function(o){
+        fila=fila.then(function(){ return escovaTreinoGravar(o.p); }).then(function(r){
+          if(r && r.pulou) pulados.push(o.nome); else if(r && r.ok===false) falhas.push(o.nome); else { feitos.push(o.nome); feitosP.push(o.p); }
+        }, function(){ falhas.push(o.nome); });
+      });
+      return fila.then(function(){
+        prevCorrigeRedesenhar('prev');
+        var mudou=pulados.length?('Já tinha'+(pulados.length===1?'':'m')+' mudado na ficha e fic'+(pulados.length===1?'ou':'aram')+' como estava'+(pulados.length===1?'':'m')+': '+escovaJuntarNomes(pulados)+'.'):'';
+        if(!falhas.length && !feitos.length) zAlertao('NENHUMA FICHA MUDOU', [mudou], {ok:true, botao:'Fechar'});
+        else if(!falhas.length) zAlertao(feitos.length+' EM TREINO DE ESCOVAÇÃO', [escovaJuntarNomes(feitos)+'. A troca de escova '+escovaDele(feitosP)+' volta para a cobrança.', mudou], {ok:true, botao:'Fechar'});
+        else zAlertao(falhas.length+(falhas.length===1?' NÃO PASSOU':' NÃO PASSARAM')+' PARA TREINO DE ESCOVAÇÃO', [
+          (!feitos.length?'Nenhum passou para treino.':(feitos.length+(feitos.length===1?' passou para treino.':' passaram para treino.'))),
+          'Não consegui gravar: '+escovaJuntarNomes(falhas)+'. Continua'+(falhas.length===1?'':'m')+' na lista: tente de novo em instantes.', mudou], {botao:'Entendi'});
+        return {ok:!falhas.length, feitos:feitos.length, falhas:falhas, pulados:pulados};
+      });
+    });
+  }
+  // ---- o Hoje na Zêluz: «Treinar escovação» (E4) ---------------------------------------
+  function escovaTreinoHojeHTML(o, hoje){
+    if(!o || !o.p) return '';
+    var ex=pelExtra(o.p)||{};
+    if(escovaAceitaDe(ex)!=='treino') return '';
+    var lista=escovaTreinoLista(ex);
+    var deHoje=lista.filter(function(r){ return r.data===hoje; })[0]||null;
+    var ult=lista.filter(function(r){ return r.data!==hoje; })[0]||null;
+    var pode=prevCorrigePode(), ka=jsAspas(o.chave);
+    var h='<div class="esc-treino" style="margin-top:7px;padding:8px 10px;border-radius:10px;background:var(--z-cream-warm);border:1.5px solid var(--line)">'
+      +'<div style="font-size:13.5px;font-weight:800;color:var(--z-blue)">Treinar escovação</div>'
+      +'<div class="hint" style="margin:2px 0 0'+(deHoje?';color:var(--crm-ok);font-weight:700':'')+'">'
+      +(deHoje?('Hoje: '+esc(escovaTreinoResRotulo(deHoje.res).toLowerCase()+(deHoje.quem?(', por '+deHoje.quem):''))+'.')
+              :('Está em treino. Como foi hoje?'+(ult?(' Último treino — '+esc(escovaTreinoTexto(ult))+'.'):'')))+'</div>';
+    if(pode){
+      h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'
+        +ESCOVA_TREINO_RES.map(function(x){
+          var on=!!(deHoje && deHoje.res===x.v);
+          return '<button type="button" class="btn" style="min-height:40px;padding:8px 13px;font-size:12.5px;font-weight:800;border:1.5px solid var(--z-blue);'
+            +(on?'background:var(--z-blue);color:var(--z-cream)':'background:var(--z-cream);color:var(--z-blue)')+'"'
+            +' onclick="escovaTreinoMarcar(\''+ka+'\',\''+x.v+'\')">'+esc(x.t)+'</button>';
+        }).join('')+'</div>';
+      if(deHoje && deHoje.res==='deixou'){
+        h+='<div style="margin-top:6px"><button type="button" class="btn btn-gold" style="min-height:40px;padding:8px 14px;font-size:12.5px;font-weight:800" onclick="escovaPassarDeixa(\''+ka+'\')">'
+          +(escovaFemea(o.p, o.sexo)?'Ela':'Ele')+' já deixa? Passar para «Deixa»</button></div>';
+      }
+    } else {
+      h+='<div class="hint" style="margin-top:4px">Quem marca o treino é a recepção, a Supervisão ou a Gestão.</div>';
+    }
+    return h+'</div>';
+  }
+  // O resultado do dia vai para a ficha (data, resultado, quem e quando). Um por dia: tocar de
+  // novo troca o de hoje; os dias antes ficam. NUNCA muda o «como aceita» sozinho.
+  function escovaTreinoMarcar(chave, res){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
+    if(!escovaTreinoResRotulo(res)) return Promise.resolve({ok:false, erro:'resultado inválido'});
+    var p=prevCorrigePetDe(chave);
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    var ex=pelExtra(p)||{};
+    if(escovaAceitaDe(ex)!=='treino'){ prevCorrigeRedesenhar('hoje'); return Promise.resolve({ok:false, erro:'não está em treino'}); }
+    var hoje=zHojeISO(), quem=(typeof quemSou==='function'?quemSou():'-');
+    var bruto=(ex.escova_treino && typeof ex.escova_treino==='object')?ex.escova_treino:{};
+    var antes=(bruto[hoje] && typeof bruto[hoje]==='object' && escovaTreinoResRotulo(bruto[hoje].res))?bruto[hoje]:null;
+    var reg={res:res, quem:quem, ts:Date.now()};
+    return escovaTreinoGravarDia(p, hoje, reg).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return r; }
+      escovaCacheDia(p, hoje, reg);
+      try{ if(typeof audit==='function') audit('ficha-escova', 'treino de escovação de '+fmtBR(hoje)+': '+escovaTreinoResRotulo(res)
+        +((antes && antes.res!==res)?(' (antes: '+escovaTreinoResRotulo(antes.res)+')'):'')+', atualizado na tela Hoje na Zêluz',
+        {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      prevCorrigeRedesenhar('hoje');
+      return r||{ok:true};
+    });
+  }
+  // Grava SÓ o dia (daycare/cadastro/{chave}/escova_treino/{dia}), nunca o histórico inteiro: um
+  // aparelho com a cópia velha não apaga os dias que não viu (QA da 6.45, A3). Mesmas regras do
+  // setPelExtra: o porteiro de quem pode mudar a ficha, a cópia local do aparelho, o banco
+  // reconectando e a promessa que sempre resolve ({ok:true} ou {ok:false, erro}). O carimbo do
+  // cadastro sai sozinho (o DB.ref é embrulhado para qualquer gravação dentro de daycare/cadastro).
+  function escovaTreinoGravarDia(p, dia, reg){
+    var barrados=(typeof pelCamposBarrados==='function')?pelCamposBarrados({escova_treino:1}):[];
+    if(barrados.length) return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
+    var k=pelKey(p);
+    try{
+      var o=Object.assign({}, pelExtra(p)||{});   // uma cópia: a ficha em memória só muda depois do banco
+      o.escova_treino=Object.assign({}, (o.escova_treino && typeof o.escova_treino==='object')?o.escova_treino:{});
+      o.escova_treino[dia]=reg; delete o.foto;
+      localStorage.setItem('zeluz_pel_'+k, JSON.stringify(o));
+    }catch(e){} /* silencioso de propósito: a cópia local é conveniência — o dado de verdade vai para o banco abaixo */
+    if(!DB){
+      _logFalhaGrav('treino de escovação '+k+' (banco reconectando)', new Error('banco reconectando'));
+      return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
+    }
+    try{
+      return Promise.resolve(DB.ref('daycare/cadastro/'+k+'/escova_treino/'+dia).set(reg))
+        .then(function(){ return {ok:true}; })
+        .catch(function(e){ _logFalhaGrav('treino de escovação '+k, e); return {ok:false, erro:e}; });
+    }catch(e){ _logFalhaGrav('treino de escovação '+k, e); return Promise.resolve({ok:false, erro:e}); }
+  }
+  // A cópia do cadastro em memória ganha só o dia gravado (o resto do histórico fica como está).
+  function escovaCacheDia(p, dia, reg){
+    try{
+      var k=pelKey(p); if(typeof pelCadCache==='undefined' || !pelCadCache || !pelCadCache[k]) return;
+      var h=Object.assign({}, (pelCadCache[k].escova_treino && typeof pelCadCache[k].escova_treino==='object')?pelCadCache[k].escova_treino:{});
+      h[dia]=reg;
+      pelCadCache[k]=Object.assign({}, pelCadCache[k], {escova_treino:h});
+    }catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
+  }
+  // «Ele já deixa? Passar para «Deixa»»: a ficha sai do treino só com este toque.
+  function escovaPassarDeixa(chave){
+    if(!prevCorrigePode()) return Promise.resolve({ok:false, erro:'sem permissão'});
+    var p=prevCorrigePetDe(chave);
+    if(!p) return Promise.resolve({ok:false, erro:'sem ficha'});
+    var ex=pelExtra(p)||{};
+    if(escovaAceitaDe(ex)!=='treino'){ prevCorrigeRedesenhar('hoje'); return Promise.resolve({ok:false, erro:'não está em treino'}); }
+    // A tela pode estar velha: outro aparelho marcou outro resultado hoje. A ficha só sai do treino
+    // se o treino de HOJE, relido agora, é «Deixou».
+    var hojeR=escovaTreinoLista(ex).filter(function(r){ return r.data===zHojeISO(); })[0]||null;
+    if(!hojeR || hojeR.res!=='deixou'){
+      prevCorrigeRedesenhar('hoje');
+      zAlertao('A FICHA CONTINUA EM TREINO', [
+        hojeR?('O treino de hoje de '+(pelNome(p)||'')+' agora está como «'+escovaTreinoResRotulo(hojeR.res)+'»'+(hojeR.quem?(', marcado por '+hojeR.quem):'')+'.')
+             :('Ainda não há treino de hoje de '+(pelNome(p)||'')+'.'),
+        'A tela foi atualizada. Para passar para «Deixa», marque «Deixou» e toque de novo.'], {botao:'Entendi'});
+      return Promise.resolve({ok:false, erro:'o treino de hoje não é «Deixou»'});
+    }
+    return Promise.resolve(setPelExtra(p, {escova_aceita:'deixa'})).then(function(r){
+      if(r && r.ok===false){ zAlertao('A FICHA NÃO FOI ATUALIZADA', escovaFalhaTexto(r), {botao:'Entendi'}); return r; }
+      escovaCacheGravado(p, {escova_aceita:'deixa'});
+      try{ if(typeof audit==='function') audit('ficha-escova', 'como aceita a escovação: '+escovaAceitaRotulo('deixa')+' (antes: '+escovaAceitaRotulo('treino')+'), depois do treino, atualizado na tela Hoje na Zêluz',
+        {alvo:pelKey(p), pet:pelNome(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      PREV_CORRIGE_OK[prevCorrigeAlvo(pelKey(p),'escova_aceita')]={ts:Date.now(), ate:'', resposta:true,
+        texto:(pelNome(p)||'')+' — já deixa escovar: saiu do treino'};
+      prevCorrigeRedesenhar('hoje');
+      return r||{ok:true};
+    });
+  }
+  // ---- «Kit dental e escovação» (E5): a lista na Prevenção, o Excel e o PDF -------------
+  // Uma conta só para os três: em treino, só com o dedo e sem kit dental. Nada de valor, nada
+  // de mensagem ao tutor (E2 é da Adriana).
+  function escovaKitDados(){
+    var todos=escovaFichasDe(function(ex){ var a=escovaAceitaDe(ex); return a==='treino' || a==='dedo' || escovaSemKit(ex); });
+    var treino=todos.filter(function(o){ return escovaAceitaDe(o.ex)==='treino'; });
+    var dedo=todos.filter(function(o){ return escovaAceitaDe(o.ex)==='dedo'; });
+    var semKit=todos.filter(function(o){ return escovaSemKit(o.ex); });
+    var resto=todos.filter(function(o){ return treino.indexOf(o)<0 && dedo.indexOf(o)<0; });
+    return {treino:treino, dedo:dedo, semKit:semKit, linhas:treino.concat(dedo, resto)};
+  }
+  function escovaKitCardHTML(){
+    var D=null;
+    try{ D=escovaKitDados(); }catch(e){ _logFalhaGrav('escovaKitDados (Prevenção)', e); D=null; }
+    if(!D || !D.linhas.length) return '';
+    var sec=function(titulo, L, linha){
+      if(!L.length) return '';
+      return '<h3 style="font-size:15px;margin:12px 0 2px;color:var(--z-blue)">'+escAttr(titulo)+' ('+L.length+')</h3>'
+        +L.map(function(o){ return '<div style="border-top:1px solid var(--line);padding:8px 0;overflow-wrap:anywhere">'+linha(o)+'</div>'; }).join('');
+    };
+    return '<div class="card" id="escKitBloco" style="border-left:4px solid var(--z-blue)">'
+      +'<h2 style="font-size:17px">Kit dental e escovação</h2>'
+      +'<div class="hint">Quem está em treino (com os últimos resultados), quem escova só com o dedo e quem ainda não tem o kit dental aqui. Toque no nome para abrir a ficha.</div>'
+      +sec('Em treino', D.treino, function(o){
+        return escovaLinhaNomeHTML(o)+'<div class="hint" style="margin:2px 0 0">'+escAttr(escovaTreinoUltimosTexto(o.ex))+'</div>'; })
+      +sec('Só com o dedo', D.dedo, function(o){ return escovaLinhaNomeHTML(o); })
+      +sec('Sem kit dental', D.semKit, function(o){ return escovaLinhaNomeHTML(o)+' — sem kit dental'; })
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'
+      +'<button type="button" class="btn btn-gold" style="min-height:40px;padding:8px 14px;font-size:13px;font-weight:800" onclick="escovaKitExcel()">Baixar em Excel</button>'
+      +'<button type="button" class="btn" style="min-height:40px;padding:8px 14px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="escovaKitPDF()">PDF / imprimir</button>'
+      +'</div></div>';
+  }
+  function escovaKitRelHTML(){
+    var D=escovaKitDados();
+    if(!D.linhas.length) return '';
+    var linhas=D.linhas.map(function(o){
+      var a=escovaAceitaDe(o.ex), k=escovaKitDe(o.ex);
+      return [o.nome, o.raca||'', o.tutor||'', a?escovaAceitaRotulo(a):'sem resposta',
+        (k==='Não')?'Não — sem kit dental':(k||'sem resposta'),
+        (a==='treino')?escovaTreinoUltimosTexto(o.ex):'—'];
+    });
+    return relTabelaHTML('Kit dental e escovação',
+      linhas.length+(linhas.length===1?' FILHOt':' FILHOts')+' · em treino: '+D.treino.length+' · só com o dedo: '+D.dedo.length+' · sem kit dental: '+D.semKit.length+' · gerado em '+fmtBR(zHojeISO()),
+      ['FILHOt','Raça','Tutor','Como aceita','Tem o kit dental aqui?','Últimos treinos'], linhas);
+  }
+  function escovaKitExcel(){
+    var h=escovaKitRelHTML();
+    if(!h){ alert('Ninguém em treino, só com o dedo ou sem kit dental agora.'); return; }
+    relBaixarXLS(h, 'kit-dental-escovacao', escovaKitDados().linhas.length);
+  }
+  function escovaKitPDF(){
+    var h=escovaKitRelHTML();
+    if(!h){ alert('Ninguém em treino, só com o dedo ou sem kit dental agora.'); return; }
+    var w=null; try{ w=window.open('','_blank'); }catch(e){ w=null; } /* silencioso de propósito: o aviso abaixo diz o que fazer */
+    if(!w){ alert('O navegador bloqueou a janela. Libere os pop-ups deste site e toque de novo.'); return; }
+    w.document.open(); w.document.write(h.replace('</head>', '<style>@page{margin:8mm}</style></head>')); w.document.close();
+    setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} /* silencioso de propósito: a página fica aberta para imprimir à mão */ }, 400);
   }
   // A data que a ficha MOSTRA como 2ª dose: a que foi dada, se houver; senão a prevista.
   function vermDose2Data(ex){
@@ -27775,7 +28206,8 @@
     // a nova. A caixa de mensagem (plano B do "copiar") mora aqui pelo mesmo motivo: ela
     // precisa existir na tela em qualquer um dos caminhos abaixo.
     var topo='<div id="prevMsgCaixa" class="card" style="display:none"></div>'
-      +prevCorrigeOkHTML()+prevBlocoColeiraVencendo();
+      +prevCorrigeOkHTML()+prevBlocoColeiraVencendo()
+      +escovaNaoDeixaCardHTML()+escovaKitCardHTML();   // 6.45: quem não deixa escovar e o kit dental
     if(!lista.length){
       var vazio = (PREV_TIPO==='deve')   ? 'Ninguém devendo vacina ou antiparasitário. Prevenção em dia.'
                 : (PREV_TIPO==='semcad') ? 'Todas as fichas de prevenção têm pelo menos uma data.'
@@ -46211,6 +46643,7 @@
           h+=hojeAntBlocoHTML(o, g, hoje, o.antReg||{}, agoraH);
         });
       }
+      h+=escovaTreinoHojeHTML(o, hoje);   // 6.45: «Treinar escovação» para quem está em treino
       h+='</div>';
     });
     h+='</div>';
