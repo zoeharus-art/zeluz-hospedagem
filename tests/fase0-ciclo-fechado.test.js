@@ -2957,7 +2957,16 @@ const BF_STUBS = `__bkBF={P:PELUDINHOS, pe:pelExtra, rl:repLancamentos, db:DB, d
   __banco={}; __gravBF=[]; __rmBF=[]; __txErro=null; DB={ref:function(p){ return {
     set:function(v){ __banco[p]=JSON.parse(JSON.stringify(v)); __gravBF.push({p:p, v:__banco[p]}); return Promise.resolve(); },
     remove:function(){ __rmBF.push(p); delete __banco[p]; return Promise.resolve(); },
-    transaction:function(fn){ if(__txErro) return Promise.reject(new Error(__txErro)); var r=fn(__banco[p]===undefined?null:__banco[p]);
+    transaction:function(fn){ if(__txErro) return Promise.reject(new Error(__txErro));
+      // 6.50 (2ª rodada do QA, B1): a exceção do banho fixo é gravada por transação na ficha. Aqui a ficha mora no
+      // __extra e quem grava é o gravador de mentira destas provas (setPelExtra): as asserções de antes valem.
+      var kF=(p.indexOf('daycare/cadastro/')===0 && p.slice(-10)==='/banho_rec')?p.slice(17, -10):'';
+      if(kF){ var pF=PELUDINHOS.filter(function(q){ return pelKey(q)===kF; })[0], atF=pF?((pelExtra(pF)||{}).banho_rec||null):null;
+        var rF=fn(atF==null?null:JSON.parse(JSON.stringify(atF)));
+        if(rF===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return atF; }}});
+        return Promise.resolve(setPelExtra(pF, {banho_rec:rF})).then(function(res){ if(res && res.ok===false) throw new Error(res.erro||'barrado');
+          return {committed:true, snapshot:{val:function(){ return JSON.parse(JSON.stringify(rF)); }}}; }); }
+      var r=fn(__banco[p]===undefined?null:__banco[p]);
       if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __banco[p]; }}});
       __banco[p]=JSON.parse(JSON.stringify(r)); return Promise.resolve({committed:true, snapshot:{val:function(){ return __banco[p]; }}}); },
     once:function(){ var v=__banco[p]; if(v===undefined){ var pre=p+'/', o=null; Object.keys(__banco).forEach(function(k){ if(k.indexOf(pre)===0){ o=o||{}; o[k.slice(pre.length)]=__banco[k]; } }); v=o; }
@@ -17387,6 +17396,1064 @@ provaAsync('6.45 — a gravação do dia do treino passa pelo porteiro da ficha 
     igual(run('__db645[0][0]'), 'daycare/cadastro/' + run("__K645('Bruce')") + '/escova_treino/2026-10-09');
   } finally { run(SOLTA645); }
 });
+
+// ================================================================== 6.50 — banho recorrente: um dia só, e o sábado (09/out/2026)
+// "Preciso URGENTE de ter como tirar no lançamento do dia — assim como todos os outros eu consigo tirar, os
+//  recorrentes também precisam ser tirados. O Rafael é recorrente e não tomará banho hoje." · "Banhos recorrentes.
+//  pode colocar no sábado, está sem a possibilidade de colocar sábado!" (Adriana, 08 e 09/10/2026)
+console.log('\n6.50 — Banho recorrente: tirar e mudar a hora só por um dia nos Lançamentos do dia, e o sábado (Adriana, 09/out/2026)');
+// Tudo inventado. Hoje é sexta, 09/10/2026 (relógio parado). Rafael/Spitz (tutor Rui Teste): banho fixo às sextas
+// 10:00, vem ao Day Care seg, qua e sex. Mel/Poodle (tutora Lia Teste): vem ter e qui. As duas Fionas (xarás) vêm na sexta.
+// A ficha mora no banco de mentira (daycare/cadastro): o que o app grava é o que ele lê de volta.
+const DIA650 = '2026-10-09', SAB650 = '2026-10-10', SEX650 = '2026-10-16', PASSOU650 = '2026-10-02';
+const RAF650 = 'rafael__rui-teste', MEL650 = 'mel__lia-teste', V_RAF650 = 'Rafael/Spitz (SEM SHAMPOO)', V_MEL650 = 'Mel/Poodle (SEM SHAMPOO)';
+const ARMA650 = ARMA649 + `
+  __bk650={pc:banhoAutoPedirConferencia, zp:zPergunta, zt:zTexto, qs:quemSou, ua:usuarioAtual, role:document.body.dataset.role,
+    hb:DASH_HORA.banhofixo, ho:DASH_HORA_OUTRO.banhofixo, hf:DASH_HORA_FIM.banhofixo, rl:banhosRenderLinha, sp:setPelExtra, rp:renderPel,
+    bfx:(typeof DASH_BFX_HORA==='undefined'?null:DASH_BFX_HORA), esc:(typeof BANHO_DIA_ESC==='undefined'?{}:BANHO_DIA_ESC)};
+  PELUDINHOS=[{n:'Rafael', raca:'Spitz', tutor:'Rui Teste', dias:['seg','qua','sex']}, {n:'Mel', raca:'Poodle', tutor:'Lia Teste', dias:['ter','qui']},
+    {n:'Fiona', raca:'SRD', tutor:'Bia Teste', dias:['sex']}, {n:'Fiona', raca:'Buldogue Francês', tutor:'Ivo Teste', dias:['sex']}];
+  zHojeISO=function(){ return '${DIA650}'; }; repHojeISO=function(){ return '${DIA650}'; }; APP_DIA_ABERTO='${DIA650}'; DASH_DIA_SEL='${DIA650}';
+  pelExtra=function(p){ return __dbPega('daycare/cadastro/'+pelKey(p))||{}; };
+  __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0]), {dias:['seg','qua','sex'], banho_rec:{ativo:true, freq:'semanal', dia:'sex', hora:'10:00', desde:'2026-09-04', sham:'SEM SHAMPOO'}});
+  __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1]), {dias:['ter','qui']});
+  __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[2]), {dias:['sex']});
+  __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3]), {dias:['sex']});
+  __turma649=[0, 2, 3];
+  __conf650=0; banhoAutoPedirConferencia=function(){ __conf650++; };
+  __perg650=[]; __resp650=true; zPergunta=function(t, l, o){ __perg650.push({t:t, l:l, o:o}); return Promise.resolve(__resp650); };
+  __txt650=[]; __respT650='14:30'; zTexto=function(t, l, o){ __txt650.push({t:t, l:l, o:o}); return Promise.resolve(__respT650); };
+  quemSou=function(){ return 'Recepção Teste'; };
+  document.body.dataset.role='consultora'; usuarioAtual=function(){ return {nome:'Recepção Teste', role:'consultora'}; };
+  banhosRenderLinha=function(){}; renderPel=function(){};
+  __au650=[]; audit=function(a, b, m){ __au649.push(String(b||'')); __au650.push({a:a, b:String(b||''), m:JSON.parse(JSON.stringify(m||{}))}); };`;
+const SOLTA650 = `banhoAutoPedirConferencia=__bk650.pc; zPergunta=__bk650.zp; zTexto=__bk650.zt; quemSou=__bk650.qs; usuarioAtual=__bk650.ua;
+  document.body.dataset.role=__bk650.role; banhosRenderLinha=__bk650.rl; setPelExtra=__bk650.sp; renderPel=__bk650.rp;
+  if(__bk650.hb===undefined) delete DASH_HORA.banhofixo; else DASH_HORA.banhofixo=__bk650.hb;
+  if(__bk650.ho===undefined) delete DASH_HORA_OUTRO.banhofixo; else DASH_HORA_OUTRO.banhofixo=__bk650.ho;
+  if(__bk650.hf===undefined) delete DASH_HORA_FIM.banhofixo; else DASH_HORA_FIM.banhofixo=__bk650.hf;
+  DASH_BFX_HORA=__bk650.bfx; BANHO_DIA_ESC=__bk650.esc;
+  ['${PASSOU650}','${DIA650}','${SAB650}','${SEX650}','2026-10-23','2026-10-30','2026-10-17'].forEach(function(d){ delete REP_PLAN_CACHE[d]; });
+  ['${RAF650}','${MEL650}'].forEach(function(c){ delete BANHO_RASC[c]; delete BANHO_MSG[c]; delete BANHO_ABERTO[c]; });` + SOLTA649;
+// O registro do automático de um dia (v2), no banco e na memória da tela: o que ele escreveu e com que hora.
+const REG650 = (dia, lista, hora) => run(`(function(){ var est={}; ${JSON.stringify(lista)}.forEach(function(v){
+    est[dashAutoIdent(v)]={planilha_ok:true, ts:Date.now()-600000, hora:${JSON.stringify(hora || '')}, escrito:Date.now()-600000}; });
+  var a={_estado_v:2, _ts:Date.now()-60000, banho:${JSON.stringify(lista)}, _estado:{banho:est}};
+  __dbPoe('daycare/dashboard-auto/${dia}', a); REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:JSON.parse(JSON.stringify(a))}; })()`);
+const EXC650 = (dia, i) => run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[${i || 0}])+'/banho_rec/excecoes${dia ? ('/' + dia) : ''}')`);
+const LIN650 = (dia) => run(`dashAutoLinhas('banho', '${dia}', {})`);
+const FIXO650 = (i, br) => run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[${i}])+'/banho_rec', ${JSON.stringify(br)})`);
+
+// ---- P1 — «tirar só este dia» (hoje) ------------------------------------------------------------------
+provaAsync('6.50 P1 (AC1) — «tirar só este dia» na linha do banho fixo de hoje: pergunta, grava o «pular» do dia, pede a conferência, a linha vai para "não vai para a TV" com «pulado só hoje» e a planilha perde o banho', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00'); run(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}];`);
+    const h0 = LIN650(DIA650).html;
+    assert.ok(/data-ch="rafael__rui-teste" data-dia="2026-10-09" onclick="banhoDiaTirar\(this\.dataset\.ch,this\.dataset\.dia\)">tirar só este dia<\/button>/.test(h0), h0);
+    assert.ok(/data-ch="rafael__rui-teste" data-dia="2026-10-09" onclick="banhoDiaHoraAbrir\(this\.dataset\.ch,this\.dataset\.dia\)">mudar a hora só este dia<\/button>/.test(h0), h0);
+    assert.ok(/<strong>Rafael\/Spitz \(SEM SHAMPOO\)<\/strong> <span class="dash-auto-hora"[^>]*>10:00<\/span> <span class="dash-auto-tag">automático · banho fixo<\/span>/.test(h0), 'a linha de sempre continua igual no começo');
+    // «Manter»: nada muda
+    run('__resp650=false;');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), false);
+    igual(EXC650(), null, 'desistiu: nada gravado');
+    igual(run('__conf650'), 0);
+    // «Tirar só este dia»
+    run('__resp650=true; __perg650=[]; __au649=[];');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    const p = run('__perg650[0]');
+    igual(p.t, 'Tirar o banho de Rafael de 09/10?');
+    igual(p.l[0], 'Só este dia. O combinado continua valendo para os próximos.');
+    igual([p.o.sim, p.o.nao], ['Tirar só este dia', 'Manter']);
+    const ex = EXC650(DIA650);
+    igual(Object.keys(ex).sort(), ['pular', 'quem', 'ts'], 'a mesma exceção do «Pular»: pular, quem e quando');
+    igual([ex.pular, ex.quem, typeof ex.ts], [true, 'Recepção Teste', 'number']);
+    igual(run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec')`).hora, '10:00', 'o combinado continua');
+    igual(run('__conf650'), 1, 'pede a conferência na hora (a fila de 20 s), sem esperar os 5 minutos');
+    // a linha sai das linhas do automático e vai para "não vai para a TV"
+    igual(LIN650(DIA650).n, 0);
+    const g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(/Banho fixo de hoje que não vai para a TV \(1\)/.test(g), g);
+    assert.ok(/<strong>Rafael\/Spitz<\/strong> <span[^>]*>10:00<\/span> <span[^>]*>pulado só hoje \(por Recepção Teste, em \d\d\/\d\d\/\d{4} às \d\d:\d\d\) — sai da planilha e da TV na próxima conferência, em instantes<\/span>/.test(g), g);
+    assert.ok(/data-ch="rafael__rui-teste" data-dia="2026-10-09" onclick="banhoDiaPorDeVolta\(this\.dataset\.ch,this\.dataset\.dia\)">pôr de volta<\/button>/.test(g), g);
+    // a conferência tira da planilha (e da TV)
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(ponte649('remover'), [V_RAF650]);
+    igual(pl649(), []);
+    // depois da conferência, continua no grupo, sem o "sai da planilha"
+    const g2 = run('dashBanhoFixoForaHTML({})');
+    assert.ok(/pulado só hoje \(por Recepção Teste, em [^)]*\)<\/span>/.test(g2) && !/sai da planilha/.test(g2), g2);
+  } finally { run(SOLTA650); }
+});
+// ---- P2 — qualquer dia de hoje em diante --------------------------------------------------------------
+provaAsync('6.50 P2 (AC1) — qualquer dia de hoje em diante: na sexta seguinte (16/10) tira só aquele dia, e a tela de 16/10 mostra "Banho fixo de 16/10 que não vai para a TV" com «pôr de volta»; o dia que já passou não tem os botões', async () => {
+  run(ARMA650);
+  try {
+    REG650(SEX650, [V_RAF650], '10:00'); run(`DASH_DIA_SEL='${SEX650}';`);
+    assert.ok(/data-dia="2026-10-16" onclick="banhoDiaTirar\(this\.dataset\.ch,this\.dataset\.dia\)">tirar só este dia</.test(LIN650(SEX650).html));
+    igual(await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`), true);
+    igual(run('__perg650[0].t'), 'Tirar o banho de Rafael de 16/10?');
+    igual(EXC650(SEX650).pular, true);
+    igual(EXC650(DIA650), null, 'hoje continua');
+    igual(LIN650(SEX650).n, 0);
+    const g = run(`dashBanhoFixoForaHTML({}, '${SEX650}')`);
+    assert.ok(/Banho fixo de 16\/10 que não vai para a TV \(1\)/.test(g), g);
+    assert.ok(/pulado só neste dia \(por Recepção Teste, em [^)]*\) — sai da planilha na próxima conferência, em instantes/.test(g), g);
+    assert.ok(/>pôr de volta<\/button>/.test(g) && !/Lançar à mão/.test(g), 'no dia futuro, «pôr de volta» (o «Lançar à mão» é do banho de hoje)');
+    // o dia futuro mostra SÓ o pulado: quem não vem ao Day Care naquele dia continua de fora, como na 6.49
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sex', hora: '15:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    igual((run(`dashBanhoFixoForaHTML({}, '${SEX650}')`).match(/data-fora=/g) || []).length, 1);
+    // a tela de 16/10 desenha o grupo no cartão Banho
+    run(`__els650={}; document.getElementById=function(id){ if(!__els650[id]) __els650[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __els650[id]; };
+      __rd650=renderDash; renderDash=__bk649.rd; DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${SEX650}'};`);
+    try { run('renderDash()'); } finally { run('renderDash=__rd650;'); }
+    assert.ok(/Banho fixo de 16\/10 que não vai para a TV \(1\)/.test(run('__els650.dashBlocos.innerHTML')), 'no cartão Banho de 16/10');
+    // o dia que já passou: sem botões, e nada é gravado mesmo chamando direto
+    REG650(PASSOU650, [V_RAF650], '10:00');
+    const hp = LIN650(PASSOU650).html;
+    assert.ok(hp.indexOf(V_RAF650) > 0 && !/banhoDia/.test(hp), hp);
+    run('__perg650=[];');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${PASSOU650}')`), false);
+    igual([EXC650(PASSOU650), run('__perg650.length')], [null, 0]);
+    igual(run(`dashBanhoFixoForaHTML({}, '${PASSOU650}')`), '', 'dia que passou: sem grupo');
+    // dia em que o combinado não cai (sábado, para quem tem banho na sexta): nada
+    igual(await run(`banhoDiaTirar('${RAF650}', '${SAB650}')`), false);
+    igual(EXC650(SAB650), null);
+  } finally { run(SOLTA650); }
+});
+// ---- P3 — «mudar a hora só este dia» ------------------------------------------------------------------
+provaAsync('6.50 P3 (AC2) — «mudar a hora só este dia»: os horários prontos da 6.26 (15 em 15 min, até 17:30) e "outro horário"; grava a hora daquele dia e a planilha recebe a hora nova na conferência; o "ainda vem" do dia fica', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00'); run(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}];`);
+    run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}')`);
+    igual(run('DASH_HORA.banhofixo'), '10:00', 'começa na hora do dia');
+    let h = LIN650(DIA650).html;
+    assert.ok(/Hora do banho de Rafael só em 09\/10/.test(h) && /Nos outros dias continua às 10:00/.test(h), h);
+    assert.ok(/dashHoraHora\('banhofixo','08'\)/.test(h) && /dashHoraHora\('banhofixo','17'\)/.test(h) && !/dashHoraHora\('banhofixo','18'\)/.test(h), 'as horas cheias até 17h');
+    assert.ok(/onclick="dashHoraAbrirOutro\('banhofixo'\)">outro horário</.test(h), '"outro horário"');
+    assert.ok(/disabled[^>]*>Escolha a hora nova</.test(h), 'sem hora nova, o botão espera');
+    run(`dashHoraHora('banhofixo','17')`);
+    h = LIN650(DIA650).html;
+    assert.ok(/dashHoraEscolher\('banhofixo','17:30'\)/.test(h) && !/'17:45'/.test(h), 'para em 17:30, como o banho da 6.31');
+    run(`dashHoraEscolher('banhofixo','15:30')`);
+    h = LIN650(DIA650).html;
+    assert.ok(/onclick="banhoDiaMudarHora\(this\.dataset\.ch,this\.dataset\.dia\)">Mudar só 09\/10 para 15:30</.test(h), h);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '${DIA650}')`), true);
+    const ex = EXC650(DIA650);
+    igual([ex.hora, ex.quem, typeof ex.ts, 'pular' in ex], ['15:30', 'Recepção Teste', 'number', false]);
+    igual(run('DASH_BFX_HORA'), null, 'o painel fecha');
+    igual(run('__conf650'), 1);
+    assert.ok(run('__au649').some((t) => /^Rafael — mudou a hora do banho fixo de 09\/10\/2026 para 15:30 \(só este dia; o combinado é 10:00\)/.test(t)), JSON.stringify(run('__au649')));
+    // a linha: a hora que está na planilha continua em destaque até a conferência (6.34), com o aviso e o «voltar»
+    h = LIN650(DIA650).html;
+    assert.ok(/class="dash-auto-hora"[^>]*>10:00</.test(h) && /hora mudada só neste dia \(o combinado é 10:00\)/.test(h)
+      && /a hora nova vai para a planilha na próxima conferência/.test(h) && />voltar para 10:00<\/button>/.test(h), h);
+    // a conferência acerta a "Hora Banho"
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(run('__pl649'), [{ v: V_RAF650, h: '15:30' }]);
+    igual(run('__pc649').filter((c) => c.acao === 'lancar').map((c) => [c.valor, c.hora]), [[V_RAF650, '15:30']]);
+    // "outro horário" (fora da grade) num dia futuro
+    REG650(SEX650, [V_RAF650], '10:00');
+    run(`banhoDiaHoraAbrir('${RAF650}', '${SEX650}'); dashHoraOutro('banhofixo', '18:10');`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '${SEX650}')`), true);
+    igual(EXC650(SEX650).hora, '18:10');
+    // hora inválida não grava
+    run(`banhoDiaHoraAbrir('${RAF650}', '2026-10-23'); DASH_HORA.banhofixo='25:99';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '2026-10-23')`), false);
+    igual(EXC650('2026-10-23'), null);
+    // o "ainda vem" do dia (Banho de quem faltou) não se perde ao mudar a hora
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/excecoes/2026-10-30', {manter:true, motivo:'ainda vem', quem:'Outra Teste', ts:1});
+      banhoDiaHoraAbrir('${RAF650}', '2026-10-30'); DASH_HORA.banhofixo='14:00';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '2026-10-30')`), true);
+    const e30 = EXC650('2026-10-30');
+    igual([e30.manter, e30.motivo, e30.hora], [true, 'ainda vem', '14:00']);
+  } finally { run(SOLTA650); }
+});
+// ---- P4 — desfazer -------------------------------------------------------------------------------------
+provaAsync('6.50 P4 (AC3) — «pôr de volta» desfaz o tirar daquele dia (o banho volta para a planilha); «voltar para 10:00» desfaz a hora; o banho liberado porque faltou não ganha «pôr de volta»', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00'); run(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}];`);
+    await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`);
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(pl649(), [], 'saiu da planilha');
+    run(`REP_PLAN_CACHE['${DIA650}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:__dbPega('daycare/dashboard-auto/${DIA650}')};`);
+    run('__au649=[]; __conf650=0;');
+    igual(await run(`banhoDiaPorDeVolta('${RAF650}', '${DIA650}')`), true);
+    igual(EXC650(DIA650), null, 'a exceção do dia sumiu');
+    igual(run('__conf650'), 1);
+    assert.ok(run('__au649').some((t) => /^Rafael — pôs de volta o banho fixo de 09\/10\/2026/.test(t)), JSON.stringify(run('__au649')));
+    igual(run('dashBanhoFixoFora(zHojeISO(), {}, dashAutoListaDoDia(zHojeISO(), "banho"))').length, 0, 'sai de "não vai para a TV"');
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(run('__pl649'), [{ v: V_RAF650, h: '10:00' }], 'a conferência põe de novo, com a hora do combinado');
+    run(`REP_PLAN_CACHE['${DIA650}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:__dbPega('daycare/dashboard-auto/${DIA650}')};`);
+    igual(LIN650(DIA650).n, 1, 'a linha automática volta');
+    // «voltar para 10:00»
+    run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}'); DASH_HORA.banhofixo='16:45';`);
+    await run(`banhoDiaMudarHora('${RAF650}', '${DIA650}')`);
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(run('__pl649'), [{ v: V_RAF650, h: '16:45' }]);
+    run(`REP_PLAN_CACHE['${DIA650}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:__dbPega('daycare/dashboard-auto/${DIA650}')};`);
+    assert.ok(/onclick="banhoDiaVoltarHora\(this\.dataset\.ch,this\.dataset\.dia\)">voltar para 10:00</.test(LIN650(DIA650).html));
+    run('__au649=[];');
+    igual(await run(`banhoDiaVoltarHora('${RAF650}', '${DIA650}')`), true);
+    igual(EXC650(DIA650), null);
+    assert.ok(run('__au649').some((t) => /^Rafael — voltou o banho fixo de 09\/10\/2026 para a hora do combinado \(10:00\)/.test(t)), JSON.stringify(run('__au649')));
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(run('__pl649'), [{ v: V_RAF650, h: '10:00' }], 'a planilha volta para 10:00');
+    // escolher a hora do combinado no painel também volta (é o mesmo «voltar»)
+    run(`banhoDiaHoraAbrir('${RAF650}', '${SEX650}'); DASH_HORA.banhofixo='11:00';`); await run(`banhoDiaMudarHora('${RAF650}', '${SEX650}')`);
+    run(`banhoDiaHoraAbrir('${RAF650}', '${SEX650}'); DASH_HORA.banhofixo='10:00';`); await run(`banhoDiaMudarHora('${RAF650}', '${SEX650}')`);
+    igual(EXC650(SEX650), null);
+    // liberado porque faltou (Hoje na Zêluz): sem «pôr de volta», e o pedido direto não desfaz
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/excecoes/${DIA650}', {pular:true, motivo:'faltou', quem:'Outra Teste', ts:1});`);
+    const g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(/horário liberado porque faltou/.test(g) && !/banhoDiaPorDeVolta/.test(g), g);
+    igual(await run(`banhoDiaPorDeVolta('${RAF650}', '${DIA650}')`), false);
+    igual(EXC650(DIA650).motivo, 'faltou');
+  } finally { run(SOLTA650); }
+});
+// ---- P5 — quem pode -------------------------------------------------------------------------------------
+provaAsync('6.50 P5 (AC4) — quem pode tirar à mão nos Lançamentos do dia pode tirar e mudar a hora do banho fixo do dia (consultora, supervisão, gestão; o monitor com a tela concedida, mesmo sem editar a ficha); sem a tela, não; o combinado continua só em Banhos recorrentes', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    const pode = () => run('banhoDiaPode()');
+    for (const r of ['consultora', 'supervisor', 'gestao', 'diretoria']) { run(`document.body.dataset.role='${r}';`); igual(pode(), true, r); }
+    // monitor sem a tela: nem botão, nem gravação, nem pergunta
+    run(`document.body.dataset.role='monitor'; usuarioAtual=function(){ return {nome:'Mon Teste', role:'monitor', paginas:['peso']}; };`);
+    igual(pode(), false);
+    assert.ok(!/banhoDia/.test(LIN650(DIA650).html), 'sem botões');
+    run('__perg650=[];');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), false);
+    run(`DASH_HORA.banhofixo='15:00';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '${DIA650}')`), false);
+    igual([EXC650(), run('__perg650.length')], [null, 0]);
+    // monitor com Lançamentos do dia concedida no Time: pode o dia (a ficha ele continua sem poder editar)
+    run(`usuarioAtual=function(){ return {nome:'Mon Teste', role:'monitor', paginas:['dashdc']}; };`);
+    igual([pode(), run('canEditPel()')], [true, false]);
+    igual(run("pelCamposBarrados({banho_rec:{}})"), ['banho_rec'], 'pelo setPelExtra a ficha seria barrada: o dia grava só a exceção');
+    assert.ok(/>tirar só este dia</.test(LIN650(DIA650).html));
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    igual(EXC650(DIA650).pular, true);
+    igual(run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec')`).hora, '10:00', 'o combinado intocado');
+    // o combinado: Banhos recorrentes continua só para quem edita a ficha
+    run(`BANHO_RASC['${RAF650}']=banhoRecNormal(banhoRecDe(PELUDINHOS[0]));`);
+    run(`banhosSet('${RAF650}', 'dia', 'qui'); banhosLigar('${RAF650}', false);`);
+    igual([run(`BANHO_RASC['${RAF650}'].dia`), run(`BANHO_RASC['${RAF650}'].ativo`)], ['sex', true], 'nem o dia nem o interruptor mudam');
+    igual(await run(`banhosPularDia('${RAF650}', '${SEX650}')`), false);
+    igual(EXC650(SEX650), null);
+  } finally { run(SOLTA650); }
+});
+// ---- P6 — o rastro ---------------------------------------------------------------------------------------
+provaAsync('6.50 P6 (AC5) — o rastro de tirar, mudar e desfazer tem o FILHOt, o dia e quem fez; a exceção do dia aparece na linha do FILHOt em Banhos recorrentes, com quem', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00'); REG650(SEX650, [V_RAF650], '10:00');
+    await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`);
+    run(`banhoDiaHoraAbrir('${RAF650}', '${SEX650}'); DASH_HORA.banhofixo='15:30';`); await run(`banhoDiaMudarHora('${RAF650}', '${SEX650}')`);
+    await run(`banhoDiaPorDeVolta('${RAF650}', '${DIA650}')`);
+    await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`);
+    const au = run('__au650').filter((x) => x.a === 'banho-recorrente');
+    igual(au.length, 4);
+    au.forEach((x) => {
+      assert.ok(/^Rafael — /.test(x.b) && /(09\/10\/2026|16\/10\/2026)/.test(x.b) && /nos Lançamentos do dia$/.test(x.b), x.b);
+      igual([x.m.alvo, x.m.pet, x.m.quem], [RAF650, 'Rafael', 'Recepção Teste']);
+    });
+    igual(au.map((x) => x.m.dia), [DIA650, SEX650, DIA650, DIA650]);
+    const l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/Exceções: 09\/10 \(pulado, por Recepção Teste\) <span[^>]*>desfazer<\/span> · 16\/10 às 15:30 \(por Recepção Teste\) <span[^>]*>desfazer<\/span>/.test(l), l);
+  } finally { run(SOLTA650); }
+});
+// ---- P7 — Banhos recorrentes: qual dia --------------------------------------------------------------------
+provaAsync('6.50 P7 (AC6) — Banhos recorrentes: escolher qual dia pular ou mudar a hora entre os próximos 14 do combinado (semanal e quinzenal); «Pular o próximo» continua', async () => {
+  run(ARMA650);
+  try {
+    const br = () => run('banhoRecDe(PELUDINHOS[0])');
+    const sem = run(`banhosProximosDias(banhoRecDe(PELUDINHOS[0]), '${DIA650}', 14)`);
+    igual(sem.length, 14);
+    igual([sem[0], sem[1], sem[13]], ['2026-10-09', '2026-10-16', '2027-01-08'], 'as próximas 14 sextas, a partir de hoje');
+    FIXO650(0, { ativo: true, freq: 'quinzenal', dia: 'sex', hora: '10:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    const qz = run(`banhosProximosDias(banhoRecDe(PELUDINHOS[0]), '${DIA650}', 14)`);
+    igual([qz.length, qz[0], qz[1], qz[13]], [14, '2026-10-16', '2026-10-30', '2027-04-16'], 'quinzenal: de 14 em 14 dias, na paridade do combinado');
+    FIXO650(0, { ativo: true, freq: 'semanal', dia: 'sex', hora: '10:00', desde: '2026-11-20', sham: 'SEM SHAMPOO' });
+    igual(run(`banhosProximosDias(banhoRecDe(PELUDINHOS[0]), '${DIA650}', 2)`), ['2026-11-20', '2026-11-27'], 'o combinado que ainda vai começar: a partir do "a partir de"');
+    FIXO650(0, { ativo: true, freq: 'semanal', dia: 'sex', hora: '10:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    // a linha: a lista dos 14 dias, o próximo escolhido
+    let l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/<span class="cad-lb"[^>]*>Um dia só<\/span>/.test(l), l);
+    igual((l.match(/<option value="20\d\d-\d\d-\d\d"/g) || []).length, 14);
+    assert.ok(/<option value="2026-10-09" selected>sex 09\/10<\/option>/.test(l), l);
+    assert.ok(/data-ch="rafael__rui-teste" onchange="banhosEscolherDia\(this\.dataset\.ch,this\.value\)"/.test(l), l);
+    // escolher 23/10 e pular só ele
+    run(`banhosEscolherDia('${RAF650}', '2026-10-23')`);
+    l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/<option value="2026-10-23" selected>/.test(l) && /data-dia="2026-10-23" onclick="banhosPularDia\(this\.dataset\.ch,this\.dataset\.dia\)">Pular este dia</.test(l), l);
+    run('__perg650=[];');
+    igual(await run(`banhosPularDia('${RAF650}', '2026-10-23')`), true);
+    igual(run('__perg650[0].t'), 'Pular o banho de 23/10/2026?');
+    igual(EXC650('2026-10-23').pular, true);
+    igual([EXC650(DIA650), EXC650(SEX650)], [null, null], 'só o dia escolhido');
+    l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/<option value="2026-10-23" selected>sex 23\/10 — pulado<\/option>/.test(l) && /onclick="banhosTirarExcecao\(this\.dataset\.ch,this\.dataset\.dia\)">Pôr de volta este dia</.test(l), l);
+    // mudar a hora de 30/10
+    run(`banhosEscolherDia('${RAF650}', '2026-10-30')`);
+    igual(await run(`banhosMudarHoraDia('${RAF650}', '2026-10-30')`), true);
+    igual(run('__txt650[0].t'), 'Que horas fica o banho de 30/10/2026?');
+    igual(EXC650('2026-10-30').hora, '14:30');
+    assert.ok(/<option value="2026-10-30" selected>sex 30\/10 — às 14:30<\/option>/.test(run('banhosLinhaHTML(PELUDINHOS[0])')));
+    // «Pular o próximo» continua (o próximo é hoje)
+    igual(await run(`banhosPular('${RAF650}')`), true);
+    igual(EXC650(DIA650).pular, true);
+    // dia fora do combinado ou que já passou: nada
+    igual(await run(`banhosPularDia('${RAF650}', '2026-10-22')`), false);
+    igual(await run(`banhosPularDia('${RAF650}', '${PASSOU650}')`), false);
+    igual([EXC650('2026-10-22'), EXC650(PASSOU650)], [null, null]);
+  } finally { run(SOLTA650); }
+});
+// ---- P8 — sábado em Banhos recorrentes ---------------------------------------------------------------------
+provaAsync('6.50 P8 (AC7) — Banhos recorrentes oferece Sáb: o combinado de sábado é gravado com o dia, cai no sábado (semanal e quinzenal) e a linha não diz "não vem ao Day Care no sábado"', async () => {
+  run(ARMA650);
+  try {
+    igual(run('BANHO_DIAS.map(function(d){ return d[1]; })'), ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']);
+    igual(run("banhoRecNormal({ativo:true, dia:'sab', hora:'09:30'}).dia"), 'sab', 'o sábado não é apagado ao ler');
+    run(`banhosLigar('${MEL650}', true);`);
+    let l = run('banhosLinhaHTML(PELUDINHOS[1])');
+    assert.ok(/onclick="banhosSet\('mel__lia-teste','dia','sab'\)"[^>]*>Sáb<\/button>/.test(l), l);
+    run(`banhosSet('${MEL650}', 'dia', 'sab'); banhosSet('${MEL650}', 'hora', '09:30'); banhosSet('${MEL650}', 'sham', 'SEM SHAMPOO');`);
+    igual(run(`BANHO_RASC['${MEL650}'].desde`), SAB650, 'a partir do próximo sábado');
+    run(`banhosSalvar('${MEL650}')`); await espera649();
+    const g = run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec')`);
+    igual([g.ativo, g.dia, g.hora, g.desde], [true, 'sab', '09:30', SAB650]);
+    igual(run(`banhoRecProxima(banhoRecDe(PELUDINHOS[1]), '${DIA650}', true)`), SAB650);
+    igual(run(`banhoRecTexto(banhoRecDe(PELUDINHOS[1]))`), 'banho semanal sáb 09:30', 'o sábado com acento; os outros dias como sempre (qui, sex)');
+    igual(run("banhoRecTexto({ativo:true, freq:'quinzenal', dia:'qui', hora:'10:00'})"), 'banho quinzenal qui 10:00');
+    FIXO650(1, { ativo: true, freq: 'quinzenal', dia: 'sab', hora: '09:30', desde: SAB650, sham: 'SEM SHAMPOO' });
+    igual(run(`banhosProximosDias(banhoRecDe(PELUDINHOS[1]), '${DIA650}', 3)`), [SAB650, '2026-10-24', '2026-11-07']);
+    // a linha não avisa "não vem ao Day Care no sábado" (no sábado não há Day Care: ele vem para o banho)
+    const a = run(`banhosAvisoDiaSemDaycare(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]))`);
+    assert.ok(!/não vem ao Day Care/.test(a) && /o Day Care não abre/.test(a) && /vai sozinho para a planilha do sábado/.test(a), a);
+    // a quinta continua avisando (a 6.21 não muda)
+    assert.ok(/não vem ao Day Care na sexta/.test(run(`banhosAvisoDiaSemDaycare(PELUDINHOS[1], {ativo:true, dia:'sex'})`)));
+  } finally { run(SOLTA650); }
+});
+// ---- P9 — sábado no automático ------------------------------------------------------------------------------
+provaAsync('6.50 P9 (AC7) — sábado no automático: o banho fixo vai para a planilha do sábado com a hora (sem Day Care no sábado, ele vem para o banho); no dia de semana sem Day Care continua de fora; feriado, falta avisada, faltou e pular tiram; mudar a hora vale', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sab', hora: '09:30', desde: '2026-09-05', sham: 'SEM SHAMPOO' });
+    const calc = (dia) => JSON.parse(JSON.stringify(run(`dashAutoCalcular('${dia}')`)));
+    const ch = run(`dashAutoIdent(${JSON.stringify(V_MEL650)})`);
+    // sábado que vem (hoje é sexta): vai, com a hora
+    let o = calc(SAB650);
+    igual(o.banho, [V_MEL650]);
+    igual(o._horas.banho[ch], '09:30');
+    // o mesmo combinado num dia de semana em que ela não vem ao Day Care: continua de fora (FI2 da 6.49)
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sex', hora: '09:30', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    igual(calc(SEX650).banho.indexOf(V_MEL650), -1);
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]), '${DIA650}', false, '${DIA650}').cod`), 'naovem');
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sab', hora: '09:30', desde: '2026-09-05', sham: 'SEM SHAMPOO' });
+    // hoje É sábado
+    run(`zHojeISO=function(){ return '${SAB650}'; }; repHojeISO=zHojeISO; APP_DIA_ABERTO='${SAB650}'; DASH_DIA_SEL='${SAB650}'; __turma649=[];`);
+    o = calc(SAB650);
+    igual(o.banho, [V_MEL650], 'hoje, sábado, sem ninguém na turma');
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]), '${SAB650}', false, '${SAB650}')`), null);
+    const motivo = () => run(`(dashBanhoFixoMotivo(PELUDINHOS[1], banhoRecDe(PELUDINHOS[1]), '${SAB650}', false, '${SAB650}')||{}).cod`);
+    // feriado
+    run(`orcFechado=function(){ return 'Dia de teste'; };`);
+    igual([calc(SAB650).banho.length, motivo()], [0, 'feriado']);
+    run('orcFechado=__bk649.of;');
+    // falta avisada para o sábado
+    run(`__rl649['Mel|Lia Teste']=[{_id:'c1', tipo:'credito', data:'${SAB650}', motivo:'viagem'}];`);
+    igual([calc(SAB650).banho.length, motivo()], [0, 'avisada']);
+    run(`__rl649={};`);
+    // faltou na chamada de hoje
+    run(`dcChamada[dcKey('Mel','Lia Teste')]='faltou';`);
+    igual([calc(SAB650).banho.length, motivo()], [0, 'faltou']);
+    run(`dcChamada={};`);
+    // pular só este dia (pelos Lançamentos do dia)
+    REG650(SAB650, [V_MEL650], '09:30');
+    assert.ok(/data-ch="mel__lia-teste" data-dia="2026-10-10"[^>]*>tirar só este dia</.test(LIN650(SAB650).html));
+    await run(`banhoDiaTirar('${MEL650}', '${SAB650}')`);
+    igual(run('__perg650[0].t'), 'Tirar o banho de Mel de 10/10?');
+    igual([calc(SAB650).banho.length, motivo()], [0, 'pulado']);
+    await run(`banhoDiaPorDeVolta('${MEL650}', '${SAB650}')`);
+    // mudar a hora só este dia
+    run(`banhoDiaHoraAbrir('${MEL650}', '${SAB650}'); DASH_HORA.banhofixo='11:15';`);
+    await run(`banhoDiaMudarHora('${MEL650}', '${SAB650}')`);
+    o = calc(SAB650);
+    igual([o.banho, o._horas.banho[ch]], [[V_MEL650], '11:15']);
+    // a conferência do sábado lança na planilha do sábado, com a hora
+    run(`__dbPoe('daycare/dashboard-auto/${SAB650}', null); __pl649=[]; __pc649=[];`);
+    await run(`dashAutoSincronizar('${SAB650}')`); await espera649();
+    igual(run('__pc649').filter((c) => c.acao === 'lancar').map((c) => [c.dia, c.coluna, c.colunaHora, c.hora, c.valor]), [[SAB650, 'Banho', 'Hora Banho', '11:15', V_MEL650]]);
+    igual(run('__pl649'), [{ v: V_MEL650, h: '11:15' }]);
+  } finally { run(SOLTA650); }
+});
+// ---- P10 — a planilha sem o sábado ---------------------------------------------------------------------------
+provaAsync('6.50 P10 (AC7) — a planilha sem as linhas do sábado: a linha diz isso (e não "a planilha recusou — nao achei…"); o app não cria linha nem aba', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sab', hora: '09:30', desde: '2026-09-05', sham: 'SEM SHAMPOO' });
+    // a ponte de mentira, com a aba de outubro só nos dias de semana (como a da 6.49, mas sem o sábado)
+    run(`__pcSem650=dashPonteChamar; dashPonteChamar=function(d){ __pc649.push(JSON.parse(JSON.stringify(d)));
+      if(d.dia==='${SAB650}' && d.acao==='lerDia') return Promise.resolve({ok:true, aba:'2026 DayCare Outubro', linhas:0, conteudo:{}});
+      if(d.dia==='${SAB650}' && d.acao==='lancar') return Promise.resolve({ok:false, erro:'nao achei nenhuma linha de ${SAB650} na aba 2026 DayCare Outubro'});
+      return __pcSem650(d); };`);
+    await run(`dashAutoSincronizar('${SAB650}')`); await espera649();
+    igual(run('__pc649').map((c) => c.acao), ['lerDia', 'lancar'], 'só ler e lançar: nada de criar mês, coluna ou linha');
+    const reg = run(`__dbPega('daycare/dashboard-auto/${SAB650}')`);
+    igual(reg.banho, [V_MEL650]);
+    run(`REP_PLAN_CACHE['${SAB650}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:__dbPega('daycare/dashboard-auto/${SAB650}')};`);
+    const h = LIN650(SAB650).html;
+    assert.ok(/a planilha não tem as linhas do sábado 10\/10 na aba do mês: não foi para a planilha nem para a TV\. O app não cria linha nem aba; peça à Gestão para pôr o dia na planilha/.test(h), h);
+    assert.ok(!/recusou/.test(h) && !/nao achei/.test(h), h);
+    // num dia de semana, a mesma frase com "da"
+    igual(run(`dashPlanilhaSemDiaTexto('2026-10-15', 'nao achei nenhuma linha de 2026-10-15 na aba 2026 DayCare Outubro')`),
+      'a planilha não tem as linhas da quinta 15/10 na aba do mês: não foi para a planilha nem para a TV. O app não cria linha nem aba; peça à Gestão para pôr o dia na planilha');
+    // e a aba do mês que não existe
+    igual(run(`dashPlanilhaSemDiaTexto('2026-11-07', 'nao achei a aba "2026 DayCare Novembro"')`),
+      'a planilha não tem a aba "2026 DayCare Novembro": não foi para a planilha nem para a TV. O app não cria aba; peça à Gestão para criar o mês na planilha');
+    igual(run(`dashPlanilhaSemDiaTexto('${SAB650}', 'a coluna não existe')`), '', 'outra recusa continua "a planilha recusou"');
+  } finally { run('dashPonteChamar=__pcSem650;'); run(SOLTA650); }
+});
+// ---- P11 — o que não muda ------------------------------------------------------------------------------------
+prova('6.50 P11 (AC8) — o lançado à mão continua com «tirar»; as outras colunas do automático não ganham botões; a TV não acusa o pulado que ainda está na planilha; nada da 6.50 chama o check-in, os pertences, pendAvisarChegada nem as funções ck*/ckt*/pt*', () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    run(`REP_PLAN_CACHE['${DIA650}'].auto.reposicao=['Mel/Poodle']; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec', {ativo:true, freq:'semanal', dia:'sex', hora:'11:00', desde:'2026-09-04', sham:'SEM SHAMPOO'});`);
+    assert.ok(!/banhoDia/.test(run(`dashAutoLinhas('reposicao', '${DIA650}', null)`).html), 'a Reposição não ganha botões');
+    // a linha à mão do Banho tem o «tirar» de sempre e não os botões do banho fixo
+    run(`__els650={}; document.getElementById=function(id){ if(!__els650[id]) __els650[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __els650[id]; };
+      __rd650=renderDash; renderDash=__bk649.rd; DASH_DADOS={banho:{m1:{valor:'Fiona/SRD', hora:'13:00', ts:Date.now()-600000, planilha_ok:true}}}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${DIA650}'};`);
+    try { run('renderDash()'); } finally { run('renderDash=__rd650;'); }
+    const tela = run('__els650.dashBlocos.innerHTML');
+    const mao = (tela.split('<div class="pair"').find((x) => x.indexOf('<strong>Fiona/SRD</strong>') >= 0) || '').split('<div class="pair dash-auto"')[0];
+    assert.ok(/onclick="dashRemover\('banho','m1'\)">tirar</.test(mao) && !/banhoDia/.test(mao), mao);
+    // a TV: o pulado que a conferência ainda não tirou não vira "NÃO está na planilha que a TV lê"
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/excecoes/${DIA650}', {pular:true, quem:'Recepção Teste', ts:Date.now()});
+      DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${DIA650}'};
+      tvTabelaGuardar('${DIA650}', 'aba', {cols:[{label:'Data'},{label:'Banho'}], rows:[]}, Date.now()+1);`);
+    igual(run('dashTvBanhoLinhas()').map((l) => l.texto), []);
+    igual(run('dashTvAvisoHTML()'), '');
+    // a área protegida
+    const nomes = ['banhoDiaPode', 'banhoDiaFixoDaLinha', 'banhoDiaMapaFichas', 'banhoDiaDoFixo', 'banhoDiaSaindoTexto', 'banhoDiaPorDeVoltaBotao', 'dashBanhoFixoPuladosHTML', 'banhoDiaRotulo', 'banhosDiaValido', 'banhoDiaNome', 'banhoDiaGravar', 'banhoDiaTirar', 'banhoDiaPorDeVolta', 'banhoDiaHoraAbrir', 'banhoDiaHoraFechar',
+      'banhoDiaHoraPainelHTML', 'banhoDiaMudarHora', 'banhoDiaVoltarHora', 'banhoDiaAcoesHTML', 'banhoDiaDepois', 'banhoRecDiaSemDaycare', 'dashPlanilhaSemDiaTexto',
+      'banhosProximosDias', 'banhosUmDiaHTML', 'banhosEscolherDia', 'banhosPularDia', 'banhosMudarHoraDia', 'dashBanhoFixoForaHTML', 'dashBanhoFixoClassificar', 'dashAutoLinhas',
+      'banhoRecExcecaoTx', 'banhoDiaDepoisTarde', 'banhoDiaJaPassou', 'banhosGravarExcecao', 'banhosTirarExcecao', 'dashDadosDeHoje'];
+    nomes.forEach((n) => {
+      const src = run(`String(${n})`);
+      assert.ok(!/\b(ck[A-Z]\w*|ckt\w*|pt[A-Z]\w*|pendAvisarChegada|banhoFaltaEstaAqui|banhoFaltaIrAoCheckin)\s*\(/.test(src), n);
+    });
+  } finally { run(SOLTA650); }
+});
+// ---- P12 — o xará e a falha de gravação ----------------------------------------------------------------------
+provaAsync('6.50 P12 — xarás: tirar o banho da Fiona/SRD não toca no da Fiona/Buldogue (a pergunta diz qual); o banho fixo desligado em outro aparelho não grava e avisa; a falha do banco avisa e não muda nada', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(2, { ativo: true, freq: 'semanal', dia: 'sex', hora: '13:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    FIXO650(3, { ativo: true, freq: 'semanal', dia: 'sex', hora: '14:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    const vS = run('banhoRecValorPlanilha(PELUDINHOS[2], banhoRecDe(PELUDINHOS[2]))'), vB = run('banhoRecValorPlanilha(PELUDINHOS[3], banhoRecDe(PELUDINHOS[3]))');
+    REG650(DIA650, [vS, vB], '13:00');
+    const h = LIN650(DIA650).html;
+    igual((h.match(/>tirar só este dia</g) || []).length, 2);
+    assert.ok(/data-ch="fiona__bia-teste"/.test(h) && /data-ch="fiona__ivo-teste"/.test(h), h);
+    await run(`banhoDiaTirar('fiona__bia-teste', '${DIA650}')`);
+    igual(run('__perg650[0].t'), 'Tirar o banho de Fiona/SRD de 09/10?', 'com xará, o nome com a raça');
+    igual([EXC650(DIA650, 2).pular, EXC650(null, 3)], [true, null]);
+    igual(LIN650(DIA650).n, 1, 'a Fiona/Buldogue continua na linha do automático');
+    // desligado em outro aparelho: a gravação não acontece e a tela avisa
+    run(`__za649=[]; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3])+'/banho_rec/ativo', false); __perg650=[];`);
+    run(`__bkDe650=banhoRecDe; banhoRecDe=function(p){ var b=__bkDe650(p); if(b && p.tutor==='Ivo Teste') b.ativo=true; return b; };`);   // a memória deste aparelho ainda acha que está ligado
+    try { igual(await run(`banhoDiaTirar('fiona__ivo-teste', '${DIA650}')`), false); } finally { run('banhoRecDe=__bkDe650;'); }
+    igual(EXC650(null, 3), null);
+    assert.ok(/NÃO TIREI O BANHO/.test(run('__za649[0][0]')) && /foi desligado em Banhos recorrentes/.test(run('__za649[0][1][0]')) && !/conexão/.test(run('__za649[0][1].join(" ")')), JSON.stringify(run('__za649')));
+    // o banco recusa: avisa, e nada muda
+    run(`__za649=[]; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3])+'/banho_rec/ativo', true);
+      __bkRef650=DB.ref; DB.ref=function(p){ var r=__bkRef650(p); if(/banho_rec$/.test(p)) r.transaction=function(){ return Promise.reject(new Error('PERMISSION_DENIED')); }; return r; };`);
+    try { igual(await run(`banhoDiaTirar('fiona__ivo-teste', '${DIA650}')`), false); } finally { run('DB.ref=__bkRef650;'); }
+    igual(EXC650(null, 3), null);
+    assert.ok(/NÃO TIREI O BANHO/.test(run('__za649[0][0]')) && /PERMISSION_DENIED/.test(run('__za649[0][1][0]')), JSON.stringify(run('__za649')));
+    igual(run('__conf650'), 1, 'só o tirar que gravou pediu a conferência');
+  } finally { run(SOLTA650); }
+});
+
+// ---- P13 — o banho fixo que o automático ainda não confirmou ---------------------------------------------------
+provaAsync('6.50 P13 (AC1, AC2) — o banho fixo de hoje que o automático ainda não confirmou (a conferência parada) também tem «tirar só este dia» e «mudar a hora só este dia»; tirado, vai para "não vai para a TV" e nada vai para a planilha', async () => {
+  run(ARMA650);
+  try {
+    // o registro de hoje foi lido, mas a conferência ainda não escreveu o Rafael (a ponte caiu)
+    run(`REP_PLAN_CACHE['${DIA650}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:{_estado_v:2, _ts:Date.now()-60000, banho:[], _estado:{}}};`);
+    let g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(/Banho fixo de hoje que o automático ainda não confirmou \(1\)/.test(g), g);
+    assert.ok(/data-ch="rafael__rui-teste" data-dia="2026-10-09" onclick="banhoDiaTirar\(this\.dataset\.ch,this\.dataset\.dia\)">tirar só este dia</.test(g)
+      && /onclick="banhoDiaHoraAbrir\(this\.dataset\.ch,this\.dataset\.dia\)">mudar a hora só este dia</.test(g), g);
+    // o painel dos horários abre ali mesmo
+    run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}')`);
+    assert.ok(/Hora do banho de Rafael só em 09\/10/.test(run('dashBanhoFixoForaHTML({})')));
+    run('banhoDiaHoraFechar()');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(!/ainda não confirmou/.test(g) && /Banho fixo de hoje que não vai para a TV \(1\)/.test(g) && /pulado só hoje \(por Recepção Teste/.test(g) && !/sai da planilha/.test(g), g);
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(ponte649('lancar'), [], 'a conferência não lança o banho tirado');
+  } finally { run(SOLTA650); }
+});
+// ---- P14 — a tela acompanha na hora, sem esperar o ouvinte do cadastro -----------------------------------------
+provaAsync('6.50 P14 (AC1) — com a ficha lida da memória do aparelho (pelCadCache, como no app): tirado, a linha vai para "não vai para a TV" no mesmo redesenho, sem esperar o ouvinte do cadastro; o combinado na memória continua', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    // a ficha de verdade (pelExtra lê a memória do cadastro); o banco de mentira não tem ouvinte
+    run(`pelExtra=__bk649.pe; pelCadCache={}; PELUDINHOS.forEach(function(p){ pelCadCache[pelKey(p)]=__dbPega('daycare/cadastro/'+pelKey(p))||{}; });`);
+    igual(LIN650(DIA650).n, 1);
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    igual(run(`pelCadCache[pelKey(PELUDINHOS[0])].banho_rec.excecoes['${DIA650}'].pular`), true, 'a memória acompanha a gravação');
+    igual(run(`pelCadCache[pelKey(PELUDINHOS[0])].dias`), ['seg', 'qua', 'sex'], 'o resto da ficha na memória fica');
+    igual(LIN650(DIA650).n, 0);
+    assert.ok(/pulado só hoje \(por Recepção Teste/.test(run('dashBanhoFixoForaHTML({})')));
+  } finally { run(SOLTA650); }
+});
+
+// ================================================================== 6.50 QA (Quinn) — provas independentes, dado inventado
+// Juntadas à Fase 0 na 2ª rodada da 6.50. Q2 e Q10 eram observações e viraram provas (B1 e B3 corrigidos). Q11 e Q12
+// comparam com o aparelho na versão ANTERIOR: rodam quando QA_BASE aponta para o index.html dela.
+console.log('\n6.50 QA — provas independentes do QA (Quinn)');
+const OBS650 = [];
+// O banco com a TRANSAÇÃO como a do Firebase: a 1ª passada usa a memória do aparelho (que pode estar velha
+// ou fria = null); o servidor só aceita se o que ele tem é o que a passada viu; senão roda de novo com o do
+// servidor. Devolver undefined na 1ª passada aborta ali mesmo (sem ir ao servidor), como no SDK.
+const TXREAL650 = `__txLocal={}; __txAntes=null; __txRuns=0; __dbRef650=DB.ref;
+  DB={ref:function(p){ var r=__dbRef650(p);
+    r.transaction=function(fn){
+      __dbEsc649.push(['transaction', p]);
+      var cl=function(x){ return x==null?null:JSON.parse(JSON.stringify(x)); };
+      var base=Object.prototype.hasOwnProperty.call(__txLocal,p)?__txLocal[p]:__dbPega(p); if(base===undefined) base=null;
+      __txRuns++; var r1=fn(cl(base));
+      if(r1===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return cl(base); }}});
+      if(__txAntes){ var f=__txAntes; __txAntes=null; f(); }
+      for(var i=0;i<25;i++){
+        var srv=__dbPega(p);
+        if(JSON.stringify(srv)===JSON.stringify(base)){ __dbPoe(p, r1); delete __txLocal[p]; return Promise.resolve({committed:true, snapshot:{val:function(){ return __dbPega(p); }}}); }
+        base=srv; __txRuns++; r1=fn(cl(srv));
+        if(r1===undefined){ delete __txLocal[p]; return Promise.resolve({committed:false, snapshot:{val:function(){ return cl(srv); }}}); }
+      }
+      return Promise.reject(new Error('maxretry'));
+    };
+    return r; }};`;
+const BRP650 = `'daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec'`;
+const COMB650 = { ativo: true, freq: 'semanal', dia: 'sex', hora: '10:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' };
+
+provaAsync('6.50 QA Q1 — corrida: a transação parte do que o BANCO tem (combinado mudado em outro aparelho, exceção de outro dia, cache frio, gravação no meio)', async () => {
+  run(ARMA650); run(TXREAL650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    // (a) memória do aparelho velha: o banco já tem hora 11:00, shampoo na bolsa e a exceção de 16/10 de outro aparelho
+    run(`__txLocal[${BRP650}]=${JSON.stringify(COMB650)};
+      __dbPoe(${BRP650}, {ativo:true, freq:'semanal', dia:'sex', hora:'11:00', desde:'2026-09-04', sham:'SHAMPOO', onde:'NA BOLSA', excecoes:{'2026-10-16':{hora:'15:00', quem:'Outro Aparelho', ts:1}}});`);
+    // a ficha na memória do aparelho (pelExtra/pelCadCache) também é a velha
+    run(`__pe650q=pelExtra; pelExtra=function(p){ var x=__dbPega('daycare/cadastro/'+pelKey(p))||{}; if(p===PELUDINHOS[0]) x.banho_rec=${JSON.stringify(COMB650)}; return x; };`);
+    try { igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true); } finally { run('pelExtra=__pe650q;'); }
+    let b = run(`__dbPega(${BRP650})`);
+    igual([b.hora, b.sham, b.onde, b.excecoes['2026-10-16'].hora, b.excecoes[DIA650].pular, run('__txRuns')], ['11:00', 'SHAMPOO', 'NA BOLSA', '15:00', true, 2], '(a) o combinado e a exceção do outro aparelho ficam');
+    // (b) cache frio (null): a 1ª passada não apaga nada; a 2ª, com o banco, grava
+    run(`__txRuns=0; __txLocal[${BRP650}]=null;`);
+    igual(await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`), true);
+    b = run(`__dbPega(${BRP650})`);
+    igual([b.ativo, b.hora, b.excecoes[SEX650].pular, b.excecoes['2026-10-16'] ? 'tem' : 'sumiu', run('__txRuns')], [true, '11:00', true, 'tem', 2], '(b) cache frio');
+    // (c) outro aparelho salva o combinado (setPelExtra, o nó inteiro) ENTRE a leitura e a gravação desta transação
+    run(`__txRuns=0; __txAntes=function(){ var x=__dbPega(${BRP650}); x.hora='12:00'; x.excecoes['2026-10-30']={pular:true, quem:'Outro Aparelho', ts:2}; __dbPoe(${BRP650}, x); };`);
+    run(`banhoDiaHoraAbrir('${RAF650}', '2026-10-23'); DASH_HORA.banhofixo='16:15';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '2026-10-23')`), true);
+    b = run(`__dbPega(${BRP650})`);
+    igual([b.hora, b.excecoes['2026-10-23'].hora, b.excecoes['2026-10-30'].pular, b.excecoes[DIA650].pular, run('__txRuns')], ['12:00', '16:15', true, true, 2], '(c) refaz com o do banco');
+    // (d) desligado no banco, ligado na memória do aparelho: não grava, avisa
+    run(`__za649=[]; __txLocal[${BRP650}]=__dbPega(${BRP650}); var x=__dbPega(${BRP650}); x.ativo=false; __dbPoe(${BRP650}, x);
+      __bkDe650=banhoRecDe; banhoRecDe=function(p){ var q=__bkDe650(p); if(q && p===PELUDINHOS[0]) q.ativo=true; return q; };`);
+    try { igual(await run(`banhoDiaTirar('${RAF650}', '2026-11-06')`), false); } finally { run('banhoRecDe=__bkDe650;'); }
+    b = run(`__dbPega(${BRP650})`);
+    igual([b.ativo, b.excecoes['2026-11-06'] || null], [false, null], '(d) nada gravado no combinado desligado');
+    assert.ok(/NÃO TIREI O BANHO/.test(run('__za649[0][0]')), JSON.stringify(run('__za649')));
+    // (e) o contrário: a memória diz desligado e o banco diz ligado — o SDK aborta na 1ª passada (sem ir ao banco)
+    run(`__za649=[]; var y=__dbPega(${BRP650}); y.ativo=true; __dbPoe(${BRP650}, y); __txLocal[${BRP650}]=Object.assign({}, y, {ativo:false});`);
+    const re = await run(`banhoDiaTirar('${RAF650}', '2026-11-13')`);
+    OBS650.push('Q1e: memória do SDK dizendo "desligado" (velha) e banco ligado → ' + (re ? 'gravou' : ('não gravou; aviso: ' + JSON.stringify(run('__za649').map((z) => z[1][0]))) + ' (o SDK aborta na 1ª passada; tocar de novo depois de sincronizar resolve)'));
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q2 — corrida ao contrário: o «tirar» já gravado e, depois, o «Pular este dia» de Banhos recorrentes num aparelho com a cópia velha: a exceção de hoje fica (B1)', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    run(`__velho650=__dbPega(${BRP650});`);
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    igual(EXC650(DIA650).pular, true);
+    // o outro aparelho (Gestão em Banhos recorrentes) ainda não recebeu a mudança: a ficha dele é a velha
+    run(`document.body.dataset.role='gestao'; usuarioAtual=function(){ return {nome:'Gestão Teste', role:'gestao'}; };
+      __pe650=pelExtra; pelExtra=function(p){ var x=__dbPega('daycare/cadastro/'+pelKey(p))||{}; if(p===PELUDINHOS[0]) x.banho_rec=JSON.parse(JSON.stringify(__velho650)); return x; };`);
+    try { igual(await run(`banhosPularDia('${RAF650}', '${SEX650}')`), true); await espera649(); } finally { run('pelExtra=__pe650;'); }
+    const ex = run(`__dbPega(${BRP650}+'/excecoes')`) || {};
+    // 2ª rodada (B1): «Pular este dia» grava só a exceção, pela transação — a de hoje fica
+    igual([!!(ex[DIA650] && ex[DIA650].pular), !!(ex[SEX650] && ex[SEX650].pular)], [true, true], 'a exceção dos Lançamentos do dia fica; a de 16/10 entra');
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q3 — a fila de 20 s de verdade: 30 FILHOts tirados em seguida = 1 conferência (dashAutoRodar(true) uma vez); depois dela, um pedido novo abre outra; falha não pede conferência', async () => {
+  run(ARMA650);
+  try {
+    run(`banhoAutoPedirConferencia=__bk650.pc; clearTimeout(BANHO_AUTO_T); BANHO_AUTO_T=null; __tm=[]; __st650=setTimeout; setTimeout=function(f,ms){ __tm.push({f:f, ms:ms}); return __tm.length; };
+      __rodou=[]; __dar650=dashAutoRodar; dashAutoRodar=function(f){ __rodou.push(f); return Promise.resolve({ok:true}); };
+      for(var i=1;i<=30;i++){ var p={n:'Teste'+i, raca:'SRD', tutor:'Tutor Teste', dias:['sex']}; PELUDINHOS.push(p);
+        __dbPoe('daycare/cadastro/'+pelKey(p), {dias:['sex'], banho_rec:{ativo:true, freq:'semanal', dia:'sex', hora:'10:00', desde:'2026-09-04', sham:'SEM SHAMPOO'}}); }`);
+    try {
+      for (let i = 1; i <= 30; i++) igual(await run(`banhoDiaTirar(dcKey('Teste${i}','Tutor Teste'), '${DIA650}')`), true, 'Teste' + i);
+      igual(run('__tm.filter(function(t){ return t.ms===20000; }).length'), 1, 'um temporizador só');
+      run('__tm.filter(function(t){ return t.ms===20000; })[0].f()');
+      igual(run('__rodou'), [true], 'uma passada, forçada');
+      igual(run('BANHO_AUTO_T'), null);
+      igual(await run(`banhoDiaPorDeVolta(dcKey('Teste1','Tutor Teste'), '${DIA650}')`), true);
+      igual(run('__tm.filter(function(t){ return t.ms===20000; }).length'), 2, 'depois da passada, outro pedido abre outra fila');
+      // falha (combinado desligado): não pede conferência
+      run(`__tm=[]; clearTimeout(BANHO_AUTO_T); BANHO_AUTO_T=null; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[5])+'/banho_rec/ativo', false);
+        __bkDe650=banhoRecDe; banhoRecDe=function(p){ var q=__bkDe650(p); if(q) q.ativo=true; return q; };`);
+      try { igual(await run(`banhoDiaTirar(dcKey('Teste2','Tutor Teste'), '2026-10-23')`), false); } finally { run('banhoRecDe=__bkDe650;'); }
+      igual(run('__tm.filter(function(t){ return t.ms===20000; }).length'), 0, 'falhou: nenhuma conferência pedida');
+    } finally { run('setTimeout=__st650; dashAutoRodar=__dar650; BANHO_AUTO_T=null;'); }
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q4 — a planilha: tirar manda «remover» só da célula do automático; o lançado à mão (mesmo texto) fica; o pôr de volta devolve; o xará não sai', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(2, { ativo: true, freq: 'semanal', dia: 'sex', hora: '13:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    FIXO650(3, { ativo: true, freq: 'semanal', dia: 'sex', hora: '14:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    const vS = run('banhoRecValorPlanilha(PELUDINHOS[2], banhoRecDe(PELUDINHOS[2]))'), vB = run('banhoRecValorPlanilha(PELUDINHOS[3], banhoRecDe(PELUDINHOS[3]))');
+    // (i) Rafael: o automático escreveu; a Fiona/Buldogue: a recepção lançou à mão com o MESMO texto do fixo
+    REG650(DIA650, [V_RAF650, vS, vB], '10:00');
+    run(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}, {v:${JSON.stringify(vS)}, h:'13:00'}, {v:${JSON.stringify(vB)}, h:'14:00'}];
+      __dbPoe('daycare/dashboard/${DIA650}/banho/m1', {valor:${JSON.stringify(vB)}, hora:'14:00', ts:Date.now()-60000, planilha_ok:true});`);
+    await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`);
+    await run(`banhoDiaTirar('fiona__bia-teste', '${DIA650}')`);
+    // a recepção pula a Fiona/Buldogue em Banhos recorrentes (Gestão): a célula é da mão, não sai
+    run(`document.body.dataset.role='gestao';`);
+    await run(`banhosPularDia('fiona__ivo-teste', '${DIA650}')`);
+    run('__pc649=[];');
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(ponte649('remover').sort(), [V_RAF650, vS].sort(), 'só as células do automático');
+    igual(pl649(), [vB], 'o lançado à mão continua na planilha');
+    // (ii) a célula que uma PESSOA escreveu direto na planilha (fora do app, sem registro do automático): o pular não a tira
+    run(`__dbPoe('daycare/dashboard-auto/${SEX650}', null); delete REP_PLAN_CACHE['${SEX650}']; __pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}]; __pc649=[];`);
+    await run(`dashAutoSincronizar('${SEX650}')`); await espera649();
+    const reg = run(`__dbPega('daycare/dashboard-auto/${SEX650}')`) || {};
+    await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`);
+    run('__pc649=[];');
+    await run(`dashAutoSincronizar('${SEX650}')`); await espera649();
+    OBS650.push('Q4ii: célula escrita por uma pessoa direto na planilha (sem registro) e depois «tirar só este dia»: o automático ' + (ponte649('remover').length ? 'TIROU a célula (o registro tinha: ' + JSON.stringify(reg.banho || []) + ')' : 'não tirou') + '.');
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q5 — quem pode: monitor só com Banhos recorrentes concedido não pode o dia; veterinária sem a tela não; plantonista com Lançamentos do dia concedido pode; sem permissão, o painel de horas não abre nem com DASH_BFX_HORA armado', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    run(`document.body.dataset.role='monitor'; usuarioAtual=function(){ return {nome:'Mon Teste', role:'monitor', paginas:['banhos']}; };`);
+    igual(run('banhoDiaPode()'), false, 'Banhos recorrentes concedido não dá o dia');
+    // a gravação confere de novo (não só os botões)
+    igual(await run(`banhoDiaGravar('${RAF650}', '${DIA650}', function(){ return {pular:true, quem:'x', ts:1}; }, 'x')`), { ok: false, erro: 'sem permissão' });
+    igual(EXC650(DIA650), null);
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), false);
+    igual(run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}')`), false);
+    run(`DASH_BFX_HORA={chave:'${RAF650}', dia:'${DIA650}'};`);
+    assert.ok(!/Hora do banho de/.test(LIN650(DIA650).html), 'o painel não abre sem permissão');
+    run('DASH_BFX_HORA=null;');
+    run(`document.body.dataset.role='vet'; usuarioAtual=function(){ return {nome:'Vet Teste', role:'vet', paginas:['peso']}; };`);
+    igual(run('banhoDiaPode()'), false, 'vet');
+    run(`document.body.dataset.role='plantonista'; usuarioAtual=function(){ return {nome:'Plan Teste', role:'plantonista', paginas:['dashdc']}; }; quemSou=function(){ return 'Plan Teste'; };`);
+    igual(run('banhoDiaPode()'), true, 'plantonista com a tela');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), true);
+    igual(EXC650(DIA650).quem, 'Plan Teste');
+    igual(await run(`banhoDiaPorDeVolta('${RAF650}', '${DIA650}')`), true);
+    // a transação desse papel só mexe na exceção: o resto do combinado é byte a byte o mesmo
+    const antes = JSON.stringify(Object.assign({}, run(`__dbPega(${BRP650})`), { excecoes: undefined }));
+    run(`banhoDiaHoraAbrir('${RAF650}', '${SEX650}'); DASH_HORA.banhofixo='09:45';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '${SEX650}')`), true);
+    igual(JSON.stringify(Object.assign({}, run(`__dbPega(${BRP650})`), { excecoes: undefined })), antes);
+    // e o setPelExtra continua barrando o combinado para ela
+    igual(run('pelCamposBarrados({banho_rec:{}})'), ['banho_rec']);
+  } finally { run(SOLTA650); }
+});
+
+provaAsync("6.50 QA Q6 — tutor com apóstrofo (Ana D'Ávila): os botões da linha, do grupo e de Banhos recorrentes funcionam (o onclick lê do data-ch; todo onclick é JS válido)", async () => {
+  run(ARMA650);
+  try {
+    run(`PELUDINHOS.push({n:'Nina', raca:'Poodle', tutor:"Ana D'Ávila", dias:['sex']});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[4]), {dias:['sex'], banho_rec:{ativo:true, freq:'semanal', dia:'sex', hora:'11:00', desde:'2026-09-04', sham:'SEM SHAMPOO'}});`);
+    const ch = run("dcKey('Nina', \"Ana D'Ávila\")");
+    const vN = run('banhoRecValorPlanilha(PELUDINHOS[4], banhoRecDe(PELUDINHOS[4]))');
+    REG650(DIA650, [vN], '11:00');
+    const ents = (s) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    const checaOnclicks = (html, rot) => {
+      const re = /onclick="([^"]*)"/g; let m, n = 0;
+      while ((m = re.exec(html))) { n++; try { new Function(ents(m[1])); } catch (e) { throw new Error(rot + ': onclick inválido: ' + m[1]); } }
+      return n;
+    };
+    const h = LIN650(DIA650).html;
+    const dch = (h.match(/data-ch="([^"]*)" data-dia="2026-10-09" onclick="banhoDiaTirar/) || [])[1];
+    igual(ents(dch || ''), ch, 'o data-ch é a chave');
+    assert.ok(checaOnclicks(h, 'linha') >= 2);
+    igual(await run(`banhoDiaTirar(${JSON.stringify(ch)}, '${DIA650}')`), true);
+    igual(run('__perg650[0].t'), 'Tirar o banho de Nina de 09/10?');
+    igual(run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[4])+'/banho_rec/excecoes/${DIA650}')`).pular, true);
+    const g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(/>pôr de volta</.test(g), g); checaOnclicks(g, 'grupo');
+    run(`document.body.dataset.role='gestao';`);
+    const bl = run('banhosLinhaHTML(PELUDINHOS[4])');
+    assert.ok(/Um dia só/.test(bl) && /desfazer/.test(bl), bl); checaOnclicks(bl, 'Banhos recorrentes');
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q7 — quinzenal e desligado: na semana em que o quinzenal não cai, nem botão nem gravação; no dia dele, sim; combinado desligado (registro velho na tela): sem botões', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(0, { ativo: true, freq: 'quinzenal', dia: 'sex', hora: '10:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });   // 04/09, 18/09, 02/10, 16/10…
+    REG650(DIA650, [V_RAF650], '10:00'); REG650(SEX650, [V_RAF650], '10:00');
+    assert.ok(!/banhoDia/.test(LIN650(DIA650).html), 'semana sem o quinzenal: sem botões');
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), false);
+    igual(EXC650(DIA650), null);
+    assert.ok(/banhoDiaTirar/.test(LIN650(SEX650).html));
+    igual(await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`), true);
+    // desligado: o registro de 23/10 ainda tem a linha (a conferência ainda não passou)
+    REG650('2026-10-30', [V_RAF650], '10:00');
+    FIXO650(0, { ativo: false, freq: 'quinzenal', dia: 'sex', hora: '10:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    const h = LIN650('2026-10-30').html;
+    assert.ok(h.indexOf(V_RAF650) >= 0 && !/banhoDia/.test(h), h);
+    igual(await run(`banhoDiaTirar('${RAF650}', '2026-10-30')`), false);
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q8 — mudar a hora e voltar com o "ainda vem" do dia: o «voltar para» devolve a hora do combinado e mantém o "ainda vem"; a hora mudada (ainda no registro) não aparece em "não vai para a TV"', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00'); run(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}];`);
+    run(`__dbPoe(${BRP650}+'/excecoes/${DIA650}', {manter:true, motivo:'ainda vem', quem:'Outra Teste', ts:1});`);
+    run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}'); DASH_HORA.banhofixo='15:45';`);
+    igual(await run(`banhoDiaMudarHora('${RAF650}', '${DIA650}')`), true);
+    igual([EXC650(DIA650).manter, EXC650(DIA650).hora], [true, '15:45']);
+    // a hora mudada e ainda no registro: continua na linha do automático, e não no grupo da TV
+    igual(LIN650(DIA650).n, 1);
+    const g = run('dashBanhoFixoForaHTML({})');
+    assert.ok(!/Rafael/.test(g), 'não duplica no grupo: ' + g);
+    igual(await run(`banhoDiaVoltarHora('${RAF650}', '${DIA650}')`), true);
+    const e = EXC650(DIA650);
+    igual([e.manter, e.motivo, 'hora' in e], [true, 'ainda vem', false], 'o "ainda vem" fica');
+    await run(`dashAutoSincronizar('${DIA650}')`); await espera649();
+    igual(run('__pl649'), [{ v: V_RAF650, h: '10:00' }]);
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q9 — o sábado: domingo continua fora; morador não vai; quinzenal de sábado na paridade; "ainda vem" vence a falta avisada no sábado; feriado no sábado tira', async () => {
+  run(ARMA650);
+  try {
+    igual(run("banhoRecNormal({ativo:true, dia:'dom', hora:'09:00'}).dia"), '', 'domingo não entra no combinado');
+    igual(run("BANHO_DIAS.some(function(d){ return d[0]==='dom'; })"), false);
+    const calc = (dia) => JSON.parse(JSON.stringify(run(`dashAutoCalcular('${dia}')`))).banho;
+    FIXO650(1, { ativo: true, freq: 'quinzenal', dia: 'sab', hora: '09:30', desde: SAB650, sham: 'SEM SHAMPOO' });
+    igual([calc(SAB650).length, calc('2026-10-17').length, calc('2026-10-24').length], [1, 0, 1], 'quinzenal: 10/10 e 24/10, não 17/10');
+    // falta avisada para o sábado, mas a recepção disse "ainda vem"
+    run(`__rl649['Mel|Lia Teste']=[{_id:'c1', tipo:'credito', data:'${SAB650}', motivo:'viagem'}];`);
+    igual(calc(SAB650).length, 0, 'falta avisada tira');
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec/excecoes/${SAB650}', {manter:true, motivo:'ainda vem', quem:'Teste', ts:1});`);
+    igual(calc(SAB650).length, 1, '"ainda vem" vence');
+    run(`__rl649={};`);
+    // morador com banho de sábado: fora (a planilha do Day Care não é dele)
+    run(`__pc650=pelCategoria; pelCategoria=function(p){ return (p && p.n==='Mel')?'morador':__pc650(p); };`);
+    try { igual(calc(SAB650).length, 0, 'morador'); } finally { run('pelCategoria=__pc650;'); }
+    // feriado num sábado
+    run(`orcFechado=function(iso){ return iso==='${SAB650}'?'Feriado Teste':''; };`);
+    igual(calc(SAB650).length, 0, 'feriado');
+    run('orcFechado=__bk649.of;');
+    // inativo: fora
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/inativo', 'Sim');`);
+    igual(calc(SAB650).length, 0, 'inativo');
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q10 — o dia virou com a tela aberta: o botão de ontem não grava e diz para atualizar (B3); gravar amanhã com o aparelho no dia velho avisa "GRAVADO NESTE DIA"', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'sab', hora: '09:30', desde: '2026-09-05', sham: 'SEM SHAMPOO' });
+    REG650(DIA650, [V_RAF650], '10:00');
+    const h = LIN650(DIA650).html;   // desenhado na sexta
+    assert.ok(/banhoDiaTirar/.test(h));
+    // meia-noite: o relógio vira, o aparelho continua com o dia em que abriu
+    run(`zHojeISO=function(){ return '${SAB650}'; }; repHojeISO=zHojeISO; APP_DIA_ABERTO='${DIA650}'; __za649=[]; __perg650=[];`);
+    igual(await run(`banhoDiaTirar('${RAF650}', '${DIA650}')`), false);
+    igual(EXC650(DIA650), null, 'ontem não grava');
+    // 2ª rodada (B3): avisa e manda atualizar
+    igual(run('__za649.length ? __za649[0][0] : ""'), 'ESSE DIA JÁ PASSOU');
+    igual(run('__za649[0][1]'), ['O banho de 09/10 já passou: não dá para tirar nem mudar a hora dele.', 'Esta tela está aberta desde 09/10: toque na faixa do topo para atualizar.']);
+    igual(run('__perg650.length'), 0, 'sem pergunta');
+    igual(await run(`banhoDiaTirar('${MEL650}', '${SAB650}')`), true);
+    igual(run('__za649.map(function(z){ return z[0]; })').filter((t) => t === 'GRAVADO NESTE DIA').length, 1, 'o aviso do aparelho com o dia velho');
+  } finally { run(SOLTA650); }
+});
+
+// ---- o aparelho na versão anterior (o index.html da base 6d6515e), lado a lado com o novo
+const BASE650 = process.env.QA_BASE;
+if (BASE650) {
+  const ctxOld = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(fs.readFileSync(BASE650, 'utf8')), ctxOld, { filename: 'base.html#script', timeout: 15000 });
+  const runOld = (c) => vm.runInContext(c, ctxOld);
+  runOld('_repVeioTs=Date.now();');
+  const REGold = (dia, lista, hora) => runOld(`(function(){ var est={}; ${JSON.stringify(lista)}.forEach(function(v){
+      est[dashAutoIdent(v)]={planilha_ok:true, ts:Date.now()-600000, hora:${JSON.stringify(hora || '')}, escrito:Date.now()-600000}; });
+    var a={_estado_v:2, _ts:Date.now()-60000, banho:${JSON.stringify(lista)}, _estado:{banho:est}};
+    __dbPoe('daycare/dashboard-auto/${dia}', a); REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:JSON.parse(JSON.stringify(a))}; })()`);
+  provaAsync('6.50 QA Q11 — aparelho na versão ANTERIOR junto com o novo: lê o «pular»/«hora» do dia gravados pelo novo; e o banho fixo de SÁBADO (OBSERVAÇÃO: o que a conferência dele faz)', async () => {
+    runOld(ARMA650);
+    try {
+      // a exceção do dia gravada pelo app novo: o velho respeita (o mesmo campo)
+      REGold(DIA650, [V_RAF650], '10:00');
+      runOld(`__pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}]; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/excecoes/${DIA650}', {pular:true, quem:'Recepção Teste', ts:1});`);
+      await runOld(`dashAutoSincronizar('${DIA650}')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      igual(runOld('__pc649').filter((c) => c.acao === 'remover').map((c) => c.valor), [V_RAF650], 'o velho tira o pulado pelo novo');
+      runOld(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/excecoes/${DIA650}', {hora:'15:30', quem:'Recepção Teste', ts:1}); __pc649=[];`);
+      await runOld(`dashAutoSincronizar('${DIA650}')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      igual(runOld('__pl649'), [{ v: V_RAF650, h: '15:30' }], 'o velho acerta a hora mudada pelo novo');
+      // sábado: a Mel tem banho fixo de sábado, que o novo pôs na planilha do sábado
+      runOld(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec', {ativo:true, freq:'semanal', dia:'sab', hora:'09:30', desde:'2026-09-05', sham:'SEM SHAMPOO'});`);
+      REGold(SAB650, [V_MEL650], '09:30');
+      runOld(`__pl649=[{v:${JSON.stringify(V_MEL650)}, h:'09:30'}]; __pc649=[];`);
+      await runOld(`dashAutoSincronizar('${SAB650}')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      const rem = runOld('__pc649').filter((c) => c.acao === 'remover').map((c) => c.valor);
+      OBS650.push('Q11a: conferência do aparelho na versão anterior no sábado com o banho fixo de sábado na planilha → remover: ' + JSON.stringify(rem) + '; planilha depois: ' + JSON.stringify(runOld('__pl649')));
+      // o velho lê o combinado de sábado sem o dia
+      OBS650.push('Q11b: o aparelho velho lê o combinado de sábado como dia="' + runOld('banhoRecDe(PELUDINHOS[1]).dia') + '"; texto: "' + runOld('banhoRecTexto(banhoRecDe(PELUDINHOS[1]))') + '"');
+      // e o «desfazer» de uma exceção nesse combinado, no aparelho velho (Banhos recorrentes)
+      runOld(`document.body.dataset.role='gestao'; __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec/excecoes/2026-10-17', {pular:true, quem:'Teste', ts:1});`);
+      runOld(`banhosTirarExcecao('${MEL650}', '2026-10-17')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      OBS650.push('Q11c: «desfazer» da exceção do sábado no aparelho velho → combinado no banco: ' + JSON.stringify(runOld(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec')`)));
+      // a célula escrita por uma pessoa direto na planilha e o pular de Banhos recorrentes, no aparelho VELHO (é da 6.49?)
+      runOld(`__dbPoe('daycare/dashboard-auto/${SEX650}', null); delete REP_PLAN_CACHE['${SEX650}']; __pl649=[{v:${JSON.stringify(V_RAF650)}, h:'10:00'}]; __pc649=[];`);
+      await runOld(`dashAutoSincronizar('${SEX650}')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      await runOld(`banhosGravarExcecao('${RAF650}', '${SEX650}', {pular:true, quem:'Teste', ts:1}, 'pulou')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      runOld('__pc649=[];');
+      await runOld(`dashAutoSincronizar('${SEX650}')`); for (let i = 0; i < 300; i++) await Promise.resolve();
+      OBS650.push('Q11d: na versão ANTERIOR, a mesma célula escrita por uma pessoa e o «Pular» de Banhos recorrentes → remover: ' + JSON.stringify(runOld('__pc649').filter((c) => c.acao === 'remover').map((c) => c.valor)));
+    } finally { runOld(SOLTA650); }
+  });
+  provaAsync('6.50 QA Q12 — nada muda nos dias de semana: o automático novo e o velho querem o MESMO banho fixo de segunda a sexta (14 dias, com falta avisada, feriado, quinzenal, xarás, quem não vem)', async () => {
+    const monta = `PELUDINHOS.push({n:'Bob', raca:'Pug', tutor:'Ju Teste', dias:['seg','ter']}, {n:'Lua', raca:'SRD', tutor:'Re Teste', dias:['qua']});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec', {ativo:true, freq:'semanal', dia:'sex', hora:'10:00', desde:'2026-09-04', sham:'SEM SHAMPOO'});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[1])+'/banho_rec', {ativo:true, freq:'semanal', dia:'qui', hora:'11:00', desde:'2026-09-03', sham:'LOJA', onde:'NA LOJA'});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[2])+'/banho_rec', {ativo:true, freq:'quinzenal', dia:'sex', hora:'13:00', desde:'2026-10-09', sham:'SEM SHAMPOO'});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3])+'/banho_rec', {ativo:true, freq:'semanal', dia:'sex', hora:'14:00', desde:'2026-09-04', sham:'SEM SHAMPOO', excecoes:{'2026-10-16':{pular:true, quem:'x', ts:1}, '2026-10-23':{hora:'08:15', quem:'x', ts:1}}});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[4])+'/banho_rec', {ativo:true, freq:'semanal', dia:'seg', hora:'09:00', desde:'2026-09-07', sham:'SEM SHAMPOO'});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[5])+'/banho_rec', {ativo:true, freq:'semanal', dia:'qua', hora:'15:00', desde:'2026-09-02', sham:'SEM SHAMPOO'});
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[4]), Object.assign(__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[4])), {dias:['seg','ter']}));
+      __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[5]), Object.assign(__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[5])), {dias:['qua']}));
+      __rl649['Bob|Ju Teste']=[{_id:'c9', tipo:'credito', data:'2026-10-12', motivo:'viagem'}];
+      orcFechado=function(iso){ return iso==='2026-10-15'?'Feriado Teste':(new Date(iso+'T12:00:00').getDay()===0?'domingo':''); };`;
+    run(ARMA650); runOld(ARMA650);
+    try {
+      run(monta); runOld(monta);
+      const dias = []; for (let i = 0; i <= 14; i++) { const d = run(`orcMaisDias('${DIA650}', ${i})`); const w = run(`new Date('${d}T12:00:00').getDay()`); if (w >= 1 && w <= 5) dias.push(d); }
+      const dif = [];
+      for (const d of dias) {
+        const a = JSON.parse(JSON.stringify(run(`dashAutoCalcular('${d}')`))); const b = JSON.parse(JSON.stringify(runOld(`dashAutoCalcular('${d}')`)));
+        if (JSON.stringify([a.banho, a._horas.banho]) !== JSON.stringify([b.banho, b._horas.banho])) dif.push([d, a.banho, b.banho]);
+      }
+      igual(dif, [], 'os dias de semana não mudam');
+      igual(dias.length, 11);
+    } finally { run(SOLTA650); runOld(SOLTA650); }
+  });
+}
+
+provaAsync('6.50 QA Q13 — vocabulário e forma dos textos novos que a tela mostra (sem palavra proibida, sem emoji, Zêluz com acento, sem "nao" sem til)', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const novos = ['banhoDiaTirar', 'banhoDiaPorDeVolta', 'banhoDiaHoraPainelHTML', 'banhoDiaMudarHora', 'banhoDiaVoltarHora', 'banhoDiaAcoesHTML', 'banhoDiaSaindoTexto', 'banhoDiaPorDeVoltaBotao',
+    'dashBanhoFixoPuladosHTML', 'dashPlanilhaSemDiaTexto', 'banhoDiaDepois', 'banhoDiaGravar', 'banhosUmDiaHTML', 'banhoDiaRotulo',
+    'banhoRecExcecaoTx', 'banhoDiaDepoisTarde', 'banhoDiaJaPassou'];
+  // banhosAvisoDiaSemDaycare: só o ramo novo (o do sábado); o resto é da 6.21
+  ctx.__sabTxt = run("banhosAvisoDiaSemDaycare({n:'Mel', tutor:'Lia Teste'}, {ativo:true, dia:'sab', hora:'09:30'})");
+  if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ctx.__sabTxt) || /\b(cachorro|cão|animal|dono)\b/i.test(ctx.__sabTxt)) throw new Error('aviso do sábado: ' + ctx.__sabTxt);
+  const ruins = [];
+  novos.forEach((n) => {
+    const corpo = run(`String(${n})`);
+    // só os textos entre aspas (o que vai para a tela), sem os comentários
+    const textos = (corpo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').match(/'(?:[^'\\]|\\.)*'/g) || []).join(' ');
+    if (/\b(cachorro|cão|cães|animal|bicho|dono|funcionário)\b/i.test(textos)) ruins.push(n + ': vocabulário');
+    if (/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(textos)) ruins.push(n + ': emoji');
+    if (/Zeluz|Zéluz/.test(textos)) ruins.push(n + ': Zêluz sem acento');
+    if (/\bnao\b|\bvoce\b|\bsabado\b/i.test(textos.replace(/n\[ãa\]o/g, ''))) ruins.push(n + ': palavra sem acento');
+  });
+  igual(ruins, []);
+  assert.ok(src.length > 0);
+});
+
+provaAsync('6.50 QA Q14 — o nome na pergunta: o xará INATIVO não conta (a pergunta diz só "Fiona"); com os dois ativos, diz qual', async () => {
+  run(ARMA650);
+  try {
+    FIXO650(2, { ativo: true, freq: 'semanal', dia: 'sex', hora: '13:00', desde: '2026-09-04', sham: 'SEM SHAMPOO' });
+    igual(run('banhoDiaNome(PELUDINHOS[2])'), 'Fiona/SRD');
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3])+'/inativo', 'Sim');`);
+    igual(run('banhoDiaNome(PELUDINHOS[2])'), 'Fiona');
+    igual(await run(`banhoDiaTirar('fiona__bia-teste', '${DIA650}')`), true);
+    igual(run('__perg650[0].t'), 'Tirar o banho de Fiona de 09/10?');
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA Q15 — trocar de dia na tela: com a lista à mão de OUTRO dia ainda na memória, o grupo do dia futuro espera reler (não desenha com a lista errada)', async () => {
+  run(ARMA650);
+  try {
+    REG650(SEX650, [V_RAF650], '10:00');
+    await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`);
+    run(`DASH_DADOS={banho:{}}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${DIA650}'};`);
+    igual(run(`dashBanhoFixoForaHTML(DASH_DADOS.banho, '${SEX650}')`), '', 'a lista ainda é de 09/10');
+    run(`DASH_DADOS_DE={obj:DASH_DADOS, dia:'${SEX650}'};`);
+    assert.ok(/Banho fixo de 16\/10 que não vai para a TV \(1\)/.test(run(`dashBanhoFixoForaHTML(DASH_DADOS.banho, '${SEX650}')`)));
+  } finally { run(SOLTA650); }
+});
+
+provaAsync('6.50 QA — observações (não são falha)', async () => { OBS650.forEach((o) => console.log('      OBS ' + o)); });
+// ================================================================== 6.50 — 2ª rodada: os achados do QA (M2, B1 a B4 e o erro da 6.49)
+console.log('\n6.50 — 2ª rodada: os achados do QA (a linha de Banhos recorrentes em dia, a exceção pela transação, sem rede, o dia que passou)');
+// A ficha de verdade lida da memória do aparelho (pelCadCache, como no app); o banco de mentira não tem ouvinte.
+const MEM650 = `pelExtra=__bk649.pe; pelCadCache={}; PELUDINHOS.forEach(function(p){ pelCadCache[pelKey(p)]=__dbPega('daycare/cadastro/'+pelKey(p))||{}; });
+  document.body.dataset.role='gestao'; usuarioAtual=function(){ return {nome:'Gestão Teste', role:'gestao'}; };`;
+provaAsync('6.50 R2-1 (M2) — Banhos recorrentes mostra o estado novo NA HORA: «Pular este dia» → "— pulado" e «Pôr de volta este dia»; «Pôr de volta» → o dia de volta; «Salvar» → o combinado novo (sem esperar o ouvinte do cadastro)', async () => {
+  run(ARMA650);
+  try {
+    run(MEM650);
+    run(`__rl650=0; banhosRenderLinha=function(){ __rl650++; };`);
+    run(`banhosEscolherDia('${RAF650}', '2026-10-23')`);
+    igual(await run(`banhosPularDia('${RAF650}', '2026-10-23')`), true);
+    let l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/<option value="2026-10-23" selected>sex 23\/10 — pulado<\/option>/.test(l) && />Pôr de volta este dia</.test(l) && /Exceções: 23\/10 \(pulado, por Recepção Teste\)/.test(l), l);
+    assert.ok(run('__rl650') >= 2, 'a linha redesenha depois de gravar');
+    igual(await run(`banhosTirarExcecao('${RAF650}', '2026-10-23')`), true);
+    l = run('banhosLinhaHTML(PELUDINHOS[0])');
+    assert.ok(/<option value="2026-10-23" selected>sex 23\/10<\/option>/.test(l) && />Pular este dia</.test(l) && !/Exceções:/.test(l), l);
+    // «Salvar» com a hora nova: a frase do combinado já é a nova
+    run(`banhosSet('${RAF650}', 'hora', '11:00');`);
+    run(`banhosSalvar('${RAF650}')`); await espera649();
+    igual(run(`pelCadCache[pelKey(PELUDINHOS[0])].banho_rec.hora`), '11:00', 'a memória acompanha o Salvar');
+    assert.ok(/Combinado: <strong>banho semanal sex 11:00<\/strong>/.test(run('banhosLinhaHTML(PELUDINHOS[0])')));
+  } finally { run(SOLTA650); }
+});
+provaAsync('6.50 R2-2 (B1) — Banhos recorrentes grava só a exceção do dia, pela transação: a cópia velha do aparelho não desfaz o combinado mudado em outro aparelho; quem não edita a ficha continua barrado (nada gravado)', async () => {
+  run(ARMA650);
+  try {
+    run(`document.body.dataset.role='gestao'; __velho650b=__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec');`);
+    // outro aparelho mudou a hora do combinado para 12:00; este ainda tem a cópia de 10:00
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec/hora', '12:00');
+      __pe650b=pelExtra; pelExtra=function(p){ var x=__dbPega('daycare/cadastro/'+pelKey(p))||{}; if(p===PELUDINHOS[0]) x.banho_rec=JSON.parse(JSON.stringify(__velho650b)); return x; };`);
+    try { igual(await run(`banhosPularDia('${RAF650}', '${SEX650}')`), true); } finally { run('pelExtra=__pe650b;'); }
+    const b = run(`__dbPega('daycare/cadastro/'+pelKey(PELUDINHOS[0])+'/banho_rec')`);
+    igual([b.hora, b.excecoes[SEX650].pular], ['12:00', true], 'a hora de 12:00 fica');
+    igual(run('__dbEsc649').filter((e) => /banho_rec$/.test(e[1])).map((e) => e[0]), ['transaction']);
+    igual(run('__dbEsc649').filter((e) => e[0] === 'update' && /cadastro/.test(e[1])).length, 0, 'nada pelo setPelExtra');
+    // quem não edita a ficha (monitor com Banhos recorrentes concedido), chamando a gravação por fora: barrado
+    run(`document.body.dataset.role='monitor'; usuarioAtual=function(){ return {nome:'Mon Teste', role:'monitor', paginas:['banhos']}; }; __dbEsc649=[];`);
+    igual(await run(`banhosGravarExcecao('${RAF650}', '2026-10-23', {pular:true, quem:'Mon Teste', ts:1}, 'pulou')`), false);
+    igual([EXC650('2026-10-23'), run('__dbEsc649').filter((e) => /cadastro/.test(e[1])).length], [null, 0]);
+    assert.ok(/Não salvei: sem permissão/.test(run(`BANHO_MSG['${RAF650}'].txt`)), run(`BANHO_MSG['${RAF650}'].txt`));
+  } finally { run(SOLTA650); }
+});
+provaAsync('6.50 R2-3 (B2) — sem rede: em 6 s a tela diz que o banco não respondeu (sem desistir); quando a conexão volta, grava, faz o rastro e pede a conferência; se aí o banco recusar, avisa; em Banhos recorrentes, a linha diz que ainda não foi', async () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    run(`__tm650=[]; __st650b=setTimeout; setTimeout=function(f, ms){ __tm650.push({f:f, ms:ms}); return __tm650.length; };
+      __solta650=null; __rd650b=0; renderDash=function(){ __rd650b++; };
+      __dbRef650b=DB.ref; DB={ref:function(p){ var r=__dbRef650b(p); if(/banho_rec$/.test(p)){ var orig=r.transaction; r.transaction=function(fn){
+        return new Promise(function(res, rej){ __solta650=function(falha){ if(falha) rej(new Error(falha)); else orig(fn).then(res, rej); }; }); }; } return r; }};`);
+    try {
+      const pr = run(`banhoDiaTirar('${RAF650}', '${DIA650}')`);
+      await espera649();
+      igual(run('__tm650.filter(function(t){ return t.ms===6000; }).length'), 1, 'o prazo de 6 s');
+      run('__tm650.filter(function(t){ return t.ms===6000; })[0].f()');
+      igual(await pr, false, 'não confirmou');
+      igual(run('__za649[0]'), ['O BANCO NÃO RESPONDEU', ['Em 6 segundos o banco não confirmou a gravação: a conexão pode ter caído.',
+        'Ela fica na fila e é feita sozinha quando a conexão voltar; a linha muda nessa hora. Confira a linha em instantes.']]);
+      igual([EXC650(DIA650), run('__conf650'), run('__au650.length')], [null, 0, 0], 'ainda nada');
+      // a conexão volta: grava, com o rastro e a conferência, e a tela redesenha
+      const rd = run('__rd650b');
+      run('__solta650()'); await espera649();
+      igual([EXC650(DIA650).pular, run('__conf650'), run('__au650.filter(function(a){ return a.a==="banho-recorrente"; }).length')], [true, 1, 1]);
+      assert.ok(run('__rd650b') > rd, 'a tela redesenha quando o banco responde');
+      // o banco responde depois do prazo com recusa: avisa
+      run(`__za649=[]; __tm650=[];`);
+      const pr2 = run(`banhoDiaTirar('${RAF650}', '${SEX650}')`); await espera649();
+      run('__tm650.filter(function(t){ return t.ms===6000; })[0].f()'); await pr2;
+      run(`__za649=[]; __solta650('PERMISSION_DENIED');`); await espera649();
+      igual(run('__za649[0][0]'), 'A GRAVAÇÃO NÃO FOI FEITA');
+      assert.ok(/PERMISSION_DENIED/.test(run('__za649[0][1][0]')));
+      igual(EXC650(SEX650), null);
+      // Banhos recorrentes: a linha diz que ainda não foi (e quem chama espera a resposta do banco)
+      run(`document.body.dataset.role='gestao'; __tm650=[];`);
+      const pr3 = run(`banhosGravarExcecao('${RAF650}', '2026-10-23', {pular:true, quem:'Gestão Teste', ts:1}, 'pulou o banho de 23/10/2026')`); await espera649();
+      run('__tm650.filter(function(t){ return t.ms===6000; })[0].f()'); await espera649();
+      assert.ok(/O banco ainda não respondeu \(a conexão pode ter caído\): a gravação vai sozinha quando a conexão voltar\./.test(run(`BANHO_MSG['${RAF650}'].txt`)), run(`BANHO_MSG['${RAF650}'].txt`));
+      run('__solta650()');
+      igual(await pr3, true);
+      assert.ok(/✅ pulou o banho de 23\/10\/2026/.test(run(`BANHO_MSG['${RAF650}'].txt`)));
+    } finally { run('setTimeout=__st650b;'); }
+  } finally { run(SOLTA650); }
+});
+provaAsync('6.50 R2-4 (B3, B4) — o dia que já passou avisa nos botões da linha e em «Um dia só» (com a tela aberta desde ontem, manda atualizar); o texto do dia futuro diz "Se o banho já está na planilha"', async () => {
+  run(ARMA650);
+  try {
+    // tela aberta desde ontem (09/10), o relógio já em 10/10
+    run(`zHojeISO=function(){ return '${SAB650}'; }; repHojeISO=zHojeISO; APP_DIA_ABERTO='${DIA650}';`);
+    for (const f of ['banhoDiaTirar', 'banhoDiaPorDeVolta', 'banhoDiaMudarHora', 'banhoDiaVoltarHora']) {
+      run('__za649=[];');
+      igual(await run(`${f}('${RAF650}', '${DIA650}')`), false, f);
+      igual(run('__za649.map(function(z){ return z[0]; })'), ['ESSE DIA JÁ PASSOU'], f);
+    }
+    run('__za649=[];'); igual(run(`banhoDiaHoraAbrir('${RAF650}', '${DIA650}')`), false); igual(run('__za649[0][0]'), 'ESSE DIA JÁ PASSOU');
+    run(`document.body.dataset.role='gestao'; __za649=[];`);
+    igual(await run(`banhosPularDia('${RAF650}', '${DIA650}')`), false);
+    igual(run('__za649[0]'), ['ESSE DIA JÁ PASSOU', ['O banho de 09/10 já passou: não dá para tirar nem mudar a hora dele.', 'Esta tela está aberta desde 09/10: toque na faixa do topo para atualizar.']]);
+    // aparelho em dia, dia que passou: "escolha hoje ou um dia à frente"
+    run(`APP_DIA_ABERTO='${SAB650}'; __za649=[];`);
+    igual(await run(`banhosMudarHoraDia('${RAF650}', '${DIA650}')`), false);
+    igual(run('__za649[0][1][1]'), 'Escolha hoje ou um dia à frente.');
+    igual(EXC650(), null, 'nada gravado');
+    // B4: o dia futuro, na pergunta
+    run(`zHojeISO=function(){ return '${DIA650}'; }; repHojeISO=zHojeISO; APP_DIA_ABERTO='${DIA650}'; document.body.dataset.role='consultora'; __perg650=[];`);
+    await run(`banhoDiaTirar('${RAF650}', '${SEX650}')`);
+    igual(run('__perg650[0].l[1]'), 'Se o banho já está na planilha de 16/10, sai na próxima conferência, em instantes.');
+  } finally { run(SOLTA650); }
+});
+prova('6.50 R2-5 (6.49, à parte) — a tela aberta durante a carga (o monitor só com os Lançamentos do dia): sem DASH_DADOS_DE, a TV não confere nada (como no dia virado) e o renderDash não desenha nem quebra; com tudo pronto, desenha', () => {
+  run(ARMA650);
+  try {
+    REG650(DIA650, [V_RAF650], '10:00');
+    run('__dd650=DASH_DADOS_DE; DASH_DADOS_DE=undefined;');
+    try {
+      igual(run(`dashDadosDeHoje('${DIA650}')`), false);
+      igual(run('dashTvHoje()'), '');
+      igual(run('dashTvBanhoLinhas(true).length'), 0);
+      igual(run('dashTvAvisoHTML()'), '');
+      // o renderDash de verdade, com as listas da tela ainda sem valor (como no meio da carga)
+      run(`__els650={}; document.getElementById=function(id){ if(!__els650[id]) __els650[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __els650[id]; };
+        __di650=DASH_ITENS; __da650=DASH_DADOS; DASH_ITENS=undefined; DASH_DADOS=undefined; __rd650c=renderDash; renderDash=__bk649.rd;`);
+      try { run('renderDash()'); igual(run("__els650.dashBlocos ? __els650.dashBlocos.innerHTML : ''"), '', 'não desenha durante a carga'); }
+      finally { run('DASH_ITENS=__di650; DASH_DADOS=__da650;'); }
+    } finally { run('DASH_DADOS_DE=__dd650;'); }
+    // tudo pronto: desenha, e a regra de sempre vale
+    run(`DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${DIA650}'};`);
+    try { run('renderDash()'); } finally { run('renderDash=__rd650c;'); }
+    assert.ok(/tirar só este dia/.test(run('__els650.dashBlocos.innerHTML')), 'desenha com tudo pronto');
+    igual(run(`dashDadosDeHoje('${DIA650}')`), true);
+    run(`DASH_DADOS_DE={obj:DASH_DADOS, dia:'2026-10-08'};`);
+    igual(run(`dashDadosDeHoje('${DIA650}')`), false);
+  } finally { run(SOLTA650); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
