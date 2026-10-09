@@ -3468,10 +3468,14 @@
       <!-- Zona de risco — deletar o lançamento do dia. Fica no rodapé da ficha, longe do toque
            acidental. Só a equipe (.so-equipe: gestão/supervisão/diretoria/monitor) vê; plantonista não.
            Cancela SÓ a pernoite de hoje — o cadastro do FILHOt continua salvo. Ver cancelarPernoiteFicha(). -->
+      <!-- 6.53: com estadia (check-in), o botão abre o cartaz "Corrigir esta hospedagem" (trocar a
+           ficha ou excluir, com motivo e senha); o texto e o campo do motivo mudam em hospZonaRiscoRotulo(). -->
       <div class="card so-equipe" id="hf-zonarisco" style="display:none;border:1.5px solid var(--crm-critico);background:rgba(197,49,37,.05);margin-top:14px">
         <h2 style="font-size:16px;color:var(--crm-critico);margin-bottom:6px">Zona de risco</h2>
-        <div class="hint" style="margin-bottom:10px">Cancela apenas a pernoite/hospedagem de hoje. O cadastro do FILHOt continua salvo — se ele voltar outro dia, é só adicionar de novo.</div>
-        <button class="btn" style="background:var(--crm-critico);color:#fff;font-weight:800" onclick="cancelarPernoiteFicha(this)">🗑️ Deletar este peludinho do Hotel (hoje)</button>
+        <div class="hint" id="hfZrHint" style="margin-bottom:10px">Tira só o lançamento de hoje. O cadastro do FILHOt continua salvo: se ele voltar outro dia, é só adicionar de novo. Escreva o motivo (pelo menos 4 palavras) e toque duas vezes no botão.</div>
+        <div id="hfZrMotivoBox" style="margin-bottom:10px"><label for="hfZrMotivo" style="display:block;font-size:13.5px;font-weight:800;color:var(--crm-critico)">Por que este lançamento sai? (pelo menos 4 palavras)</label>
+          <input id="hfZrMotivo" class="cad-in" type="text" autocomplete="off" placeholder="Ex.: lancei o FILHOt no dia errado" style="margin-top:5px"></div>
+        <button class="btn" id="hfZrBtn" style="background:var(--crm-critico);color:#fff;font-weight:800;white-space:normal" onclick="cancelarPernoiteFicha(this)">🗑️ Deletar este peludinho do Hotel (hoje)</button>
       </div>
 
     </div>
@@ -5126,13 +5130,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-06"></script>
+<script src="resposta-tutor.js?v=2026-10-09-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-06"></script>
+<script src="painel-logica.js?v=2026-10-09-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5144,7 +5148,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-06"></script>
+<script src="financeiro-logica.js?v=2026-10-09-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5280,6 +5284,7 @@
       // embrulhado — toda gravação em daycare/cadastro e auaulandia/estadias passa a
       // incrementar o carimbo da coleção sozinha. Ver o bloco CARIMBO DE VERSÃO.
       try{ zLigarCarimboNasGravacoes(); }catch(e){} /* silencioso de propósito: sem o embrulho o app segue como antes — só perde a economia */
+      try{ hospSinalAgendaOuvir(); }catch(e){} /* silencioso de propósito: 6.53 (K2) — sem o ouvinte, o alarme se refaz no próximo carregamento */
       // O banco acabou de ficar pronto: esvazia o bolso da auditoria (rastros que não
       // subiram porque o banco recusou ou ainda estava reconectando). Ver o bloco
       // "AUDITORIA — BOLSO LOCAL E REENVIO".
@@ -5792,7 +5797,15 @@
     //  MESMO grupo dos Lançamentos do dia, das Pendências de prevenção e do Vence amanhã:
     //  quem fala com o tutor é quem cobra a prevenção. O monitor não entra — a lista dele
     //  é a Chamada, com o FILHOt na frente, e não o balcão.
-    'hoje-na-casa':             ['consultora','supervisor','gestao','diretoria']
+    'hoje-na-casa':             ['consultora','supervisor','gestao','diretoria'],
+    // ===== 6.53 — corrigir a hospedagem (o caso da Frida, 08/out/2026) ================
+    // "Precisa de justificar e assinar quem fez e porque" (Adriana, 08/10). Quem ABRE o
+    // cartaz "Corrigir esta hospedagem" é quem faz o check-in: a recepção (consultoras),
+    // a Supervisão, a Gestão e a Diretoria. Quem ASSINA a troca de ficha e a exclusão, com a
+    // própria senha, é a Supervisão, a Gestão e a Diretoria (FR1): a Consultora abre e chama
+    // uma delas, que digita a senha ali mesmo. O app grava o nome, nunca a senha (FR2).
+    'corrigir-hospedagem':          ['consultora','supervisor','gestao','diretoria'],
+    'assinar-correcao-hospedagem':  ['supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -12696,6 +12709,7 @@
     // manual (deleta o lançamento) ou da planilha/estadia (remove do Plantão de hoje via override).
     const _rzr=(document.body.dataset.role||''); const _podeRem=(_rzr==='gestao'||_rzr==='supervisor'||_rzr==='diretoria'||_rzr==='monitor');
     const zr=document.getElementById('hf-zonarisco'); if(zr) zr.style.display=_podeRem?'block':'none';
+    try{ if(typeof hospZonaRiscoRotulo==='function') hospZonaRiscoRotulo(h); }catch(e){} /* silencioso de propósito: sem o rótulo novo, o botão continua seguro (com estadia ele abre o cartaz) */
     updateDateLabel(); // sincroniza o navegador de dia dentro da ficha
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -14979,6 +14993,7 @@
   // abriu (6.47); sem ele, vale o dia da tela.
   function registrarDoseAgendadaGlobal(it,doseId,diaAlarme){
     if(!DB||!it) return;
+    if(typeof hospMedMovido==='function' && hospMedMovido(it, function(){ registrarDoseAgendadaGlobal(it, doseId, diaAlarme); })) return;   // 6.53 (K2): o remédio mudou de ficha numa troca de ficha
     // A dose de Tyross de 29/08 entrou assinada como "Plantonista" — o papel, não a
     // pessoa. Dose de remédio sem responsável não é registro, é boato: bloqueia e pede o nome.
     const _quem=pessoaDoTurno();
@@ -17996,6 +18011,12 @@
   //   4 - nome igual + um tutor é começo do outro  (João x João Francisco...)
   //   5 - nome igual e ÚNICO na lista              (sem xará, não há como errar)
   // Nome sozinho havendo xará NUNCA casa — há três Mayas no cadastro (22/ago/2026).
+  // A FRIDA (6.53, 08/out/2026): a cliente nova "Frida / Ana Carolina" caiu no passo 5 —
+  // havia uma só Frida no cadastro, a Frida SRD de OUTRA tutora — e o check-in abriu a ficha
+  // errada. O xará era a própria cliente nova. Agora o passo 5 só vale quando um dos dois
+  // lados não tem tutor; com os dois tutores escritos e diferentes, devolve -1 e a tela
+  // pergunta. E o passo 4 para no FIM DE UMA PALAVRA e só vale com UMA ficha ("Ana" casava
+  // com "Ana Paula" e com "Ana Carolina" e levava a primeira — K20 da crítica).
   // Devolve o índice em PELUDINHOS, ou -1. Função pura: é ela que o harness prova.
   function orcAcharPeludinho(lista, pet, tutorOrc){
     lista=lista||[]; pet=pet||{};
@@ -18014,13 +18035,42 @@
     if(!mesmoNome.length) return -1;
     if(tut){
       for(i=0;i<mesmoNome.length;i++) if(nrm(lista[mesmoNome[i]].tutor||'')===tut) return mesmoNome[i];
+      var comeco=[];
       for(i=0;i<mesmoNome.length;i++){
         var t=nrm(lista[mesmoNome[i]].tutor||'');
-        if(t && (t.indexOf(tut)===0 || tut.indexOf(t)===0)) return mesmoNome[i];
+        if(t && (t.indexOf(tut+' ')===0 || tut.indexOf(t+' ')===0)) comeco.push(mesmoNome[i]);
       }
+      if(comeco.length===1) return comeco[0];
+      if(comeco.length>1) return -1;              // "Ana" com "Ana Paula" e "Ana Carolina": PARA
     }
-    // Sem xará, o nome basta. Com xará, PARA — nome sozinho não identifica ninguém.
-    return (mesmoNome.length===1)?mesmoNome[0]:-1;
+    // Sem xará, o nome basta — quando um dos lados não tem tutor. Com os dois tutores escritos
+    // e diferentes, não é o mesmo FILHOt (a Frida). Com xará, PARA.
+    if(mesmoNome.length!==1) return -1;
+    if(tut && nrm(lista[mesmoNome[0]].tutor||'')) return -1;
+    return mesmoNome[0];
+  }
+  // O aviso da busca quando o orçamento é de uma cliente nova com o nome de um FILHOt que já
+  // existe (6.53): a tela diz de quem é cada um, e o Novo Hóspede já vem preenchido.
+  function orcAvisoOutroTutor(lista, pet, tutorOrc){
+    pet=pet||{};
+    var nrm=(typeof jsNorm==='function')?jsNorm:function(x){ return String(x||'').toLowerCase(); };
+    var nome=String(pet.nome||'').trim(), tut=String(pet.tutor||tutorOrc||'').trim();
+    if(!nome||!tut) return '';
+    var outros=(lista||[]).filter(function(p){ var t=nrm((p&&p.tutor)||''); return p && nrm(p.n||'')===nrm(nome) && t && t!==nrm(tut); });
+    if(!outros.length) return '';
+    return 'Na lista, '+nome+' é de '+outros.map(function(p){ return p.tutor; }).join(', ')+'. Neste orçamento, '+nome+' é de '+tut
+      +': se é a primeira vez na Zêluz, toque em Novo Hóspede, que já está preenchido.';
+  }
+  function orcAvisoNaBusca(lista, pet, o){
+    pet=pet||{};
+    var t=orcAvisoOutroTutor(lista, pet, (o&&o.tutor)||''); if(!t) return false;
+    var box=document.getElementById('ciResults');
+    if(box) box.innerHTML='<div class="dc-faltas" style="margin-bottom:10px"><strong>'+esc(t)+'</strong></div>'+(box.innerHTML||'');
+    var pon=function(id, v){ var el=document.getElementById(id); if(el&&!el.value) el.value=v||''; };
+    pon('ciNovoNome', pet.nome); pon('ciNovoTutor', pet.tutor||(o&&o.tutor)||''); pon('ciNovoRaca', pet.raca||'');
+    var pn=document.getElementById('ciNovoPainel'); if(pn) pn.style.display='block';
+    var tt=document.getElementById('ciToggleNovoTxt'); if(tt) tt.textContent='Fechar cadastro de novo hóspede';
+    return true;
   }
   // ===== AS DATAS DO ORÇAMENTO MANDAM (item C — Adriana, 17/set/2026) ================
   // "O botão Check-in do orçamento não leva as datas do orçamento: pega a data da última
@@ -18073,6 +18123,7 @@
       if(idx<0){
         var b=document.getElementById('ciBusca');
         if(b){ b.value=pet.nome||''; try{ if(typeof renderCiBusca==='function') renderCiBusca(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
+        try{ orcAvisoNaBusca(lista, pet, o); }catch(e){} /* silencioso de propósito: sem o aviso, a busca continua preenchida e ninguém é aberto sozinho */
         return false;
       }
       // O bilhete passa a levar a chave da FICHA achada (QA M2): quando o orçamento foi feito
@@ -18332,6 +18383,19 @@
     var quem=orcQuemPelaSenha(senha);
     if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi cancelada.\n\nConfira a senha e tente de novo.'); return; }
     if(!DB){ alert('Sem conexão com o banco agora — a reserva não foi cancelada. Tente de novo em instantes.'); return; }
+    orcCancelarGravar(id, motivo, quem).then(function(r){
+      if(r&&r.ok) return;
+      alert('NÃO consegui cancelar: '+((r&&r.erro)||'sem resposta')+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+    });
+  }
+  // A gravação do cancelamento, separada da conversa (6.53): o Excluir da hospedagem cancela a
+  // reserva com o MESMO motivo e a MESMA assinatura, sem perguntar tudo de novo. Devolve
+  // {ok} ou {ok:false, erro}. `quem` = {nome, role} de quem digitou a senha.
+  function orcCancelarGravar(id, motivo, quem){
+    var o=ORC_LISTA_CACHE[id]||{};
+    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
+    quem=quem||{};
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
     var agora=new Date();
     var pp=function(x){ return String(x).padStart(2,'0'); };
     var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
@@ -18347,7 +18411,7 @@
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_ts']=Date.now();
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_em_br']=brDataHora;
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_motivo']=motivo;
-    DB.ref().update(patchCan).then(function(){
+    return DB.ref().update(patchCan).then(function(){
       if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status='cancelado';
       if(typeof audit==='function') audit('orcamento-cancelado','cancelou a reserva de '+nomes+' ('+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+') — '+motivo,{pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'',quem:quem.nome});
       if(acertoCan.estornadas&&typeof audit==='function') audit('reposicao-baixa-orcamento',
@@ -18357,9 +18421,10 @@
       orcTirarDaPlanilha(id, quem.nome, brDataHora);
       if(acertoCan.estornadas&&typeof zAlertao==='function') zAlertao('RESERVAS DEVOLVIDAS À FICHA',
         [repOrcResumo(acertoCan), acertoCan.linhas.join(' · ')], {ok:true, botao:'Certo'});
+      return {ok:true};
     }).catch(function(e){
-      alert('NÃO consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi alterado. Confira a internet e tente de novo.');
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcCancelar)', e);
+      return {ok:false, erro:String((e&&e.message)||e)};
     });
   }
   // ===== CANCELAR UMA RESERVA NÃO PODE APAGAR A NOITE DA OUTRA (17/set/2026) ========
@@ -19798,7 +19863,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-06';
+  const APP_VERSAO='2026-10-09-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -21978,8 +22043,10 @@
         });
       });
       // Só a estadia mais recente de cada FILHOt (evita reaparecer estadias antigas do mesmo pet)
+      // 6.53 (4ª rodada, QA R3): a mais recente entre as NÃO canceladas — a hospedagem excluída
+      // (lançada em dobro) não esconde a verdadeira do mesmo FILHOt; a cancelada só vale sozinha.
       var maisRecente={};
-      Object.values(r[1]||{}).forEach(function(e){ if(!e||!e.nome) return; var kk=((e.refKey||(e.nome+'__'+(e.tutor||'')))+'').toLowerCase(); if(!maisRecente[kk]||(e._ts||0)>(maisRecente[kk]._ts||0)) maisRecente[kk]=e; });
+      Object.values(r[1]||{}).forEach(function(e){ if(!e||!e.nome) return; var kk=((e.refKey||(e.nome+'__'+(e.tutor||'')))+'').toLowerCase(); if(hospEstadiaGanha(e, maisRecente[kk])) maisRecente[kk]=e; });
       var hojeISOk=dataKeyAtual();
       Object.values(maisRecente).forEach(function(e){
         if((e.status||'ativa')!=='ativa') return; // check-out feito → sai do plantão
@@ -22354,9 +22421,10 @@
       if(typeof zCampo==='function'){
         zCampo(cabeca, [corpo,
             'O motivo é obrigatório: é ele que explica, depois, por que '+nome+' sumiu da lista — e é o que permite trazê-lo de volta se for engano.'],
-          { campoId:'hospRemMotivo', rotulo:'Por que '+nome+' está saindo do Plantão?',
+          { campoId:'hospRemMotivo', rotulo:'Por que '+nome+' está saindo do Plantão? (pelo menos 4 palavras)',
             dica:'Ex.: lancei a Maya da tutora errada', minimo:8,
-            erro:'Preciso do motivo escrito (pelo menos 8 letras) para tirar '+nome+' da lista.',
+            erro:'Preciso do motivo escrito (pelo menos 4 palavras) para tirar '+nome+' da lista.',
+            validar:function(v){ var r=motivoQuatroPalavras(v); return r.ok?'':r.erro; },
             botao:'Confirmar — tirar '+nome+' do Plantão de hoje'+(est?(ate?(' (está hospedado até '+ate+')'):' (está hospedado)'):''),
             botaoNao:'Não tirar — deixar '+nome+' na lista',
             aoCancelar:function(){ try{ clearTimeout(btn._armT); btn.dataset.armed=''; btn.dataset.motivo=''; btn.textContent=btn.dataset.label||'✕'; btn.title='Remover do Plantão de hoje'; btn.style.background=''; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ },
@@ -22367,9 +22435,11 @@
     // 2º toque: o motivo já foi escrito no campo da tela.
     var motivo=(((btn&&btn.dataset.motivo)||(document.getElementById('hospRemMotivo')||{}).value||'')+'').trim();
     if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.dataset.motivo=''; btn.textContent=btn.dataset.label||'✕'; btn.style.background=''; }
-    if(motivo.length<8){
+    // 6.53 (FR3): pelo menos 4 palavras, 3 diferentes — a mesma régua da correção da hospedagem.
+    const _mvR=motivoQuatroPalavras(motivo);
+    if(!_mvR.ok){
       if(typeof zAlertao==='function') zAlertao('NÃO TIREI '+nome.toUpperCase()+' DA LISTA',
-        ['Falta o motivo escrito.',
+        [motivo?_mvR.erro:'Falta o motivo escrito.',
          'É o que explica, depois, por que ele sumiu — e é o que permite trazê-lo de volta se for engano.'],
         {botao:'Vou escrever o motivo'});
       return;
@@ -22496,39 +22566,47 @@
     // O que este botão vai fazer AGORA — decidido antes de armar, para o texto do botão
     // dizer exatamente o que acontece no 2º toque.
     var _acao=_cr?'estadia':(h.manualKey?'manual':'override');
-    var _rotulo=(_acao==='estadia')
-      ? ('Confirmar — cancelar a estadia de '+_nome+' (sai do Plantão e do Day Care)')
-      : ((_acao==='manual')
-          ? ('Confirmar — deletar '+_nome+' da AuAulândia de hoje')
-          : ('Confirmar — tirar '+_nome+' do Hotel só de hoje'));
+    // 6.53 (a Frida): com estadia, o botão NÃO cancela mais sozinho, sem motivo e com o texto
+    // "(hoje)" cancelando a estadia inteira. Abre o cartaz "Corrigir esta hospedagem" — trocar a
+    // ficha, excluir ou corrigir —, com o motivo de 4 palavras e a senha da Gestão ou da Supervisão.
+    if(_acao==='estadia'){
+      if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; }
+      if(typeof hospCorrigirAbrir==='function') hospCorrigirAbrir(_cr.id, {origem:'plantao'});
+      return;
+    }
+    var _rotulo=(_acao==='manual')
+      ? ('Confirmar — deletar '+_nome+' da AuAulândia de hoje')
+      : ('Confirmar — tirar '+_nome+' do Hotel só de hoje');
     if(btn && btn.dataset.armed!=='1'){
       btn.dataset.armed='1';
       if(!btn.dataset.label) btn.dataset.label=btn.textContent;
       btn.textContent=_rotulo;
       btn.style.background='var(--crm-atencao-text)';
       clearTimeout(btn._armT);
-      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Deletar'; btn.style.background=''; } }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 6000);
+      // 60 s (eram 6): o motivo é escrito no cartão entre os dois toques (6.53).
+      btn._armT=setTimeout(function(){ try{ if(btn.dataset.armed==='1'){ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Deletar'; btn.style.background=''; } }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 60000);
+      try{ var _zm=document.getElementById('hfZrMotivo'); if(_zm&&_zm.focus) _zm.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco) */
       return;
     }
-    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.textContent=btn.dataset.label||'Deletar'; }
-    if(_acao==='estadia'){
-      if(!DB){ if(typeof zAlertao==='function') zAlertao('SEM INTERNET AGORA',['A estadia de '+_nome+' NÃO foi cancelada. Nada mudou.','Tente de novo em instantes.'],{botao:'Entendi'}); return; }
-      DB.ref('auaulandia/estadias/'+_cr.id).update({status:'cancelada', canceladaPor:(typeof quemSou==='function'?quemSou():'-'), canceladaTs:Date.now()}).then(function(){
-        if(typeof audit==='function') audit('estadia-cancelada','cancelou estadia (lancamento errado) pela ficha',{pet:h.nome||'',id:_cr.id});
-        if(typeof fecharPlantao==='function') fecharPlantao();
-        carregarHospedes();
-      }).catch(function(e){
-        if(typeof zAlertao==='function') zAlertao('NÃO CANCELEI A ESTADIA',['A estadia de '+_nome+' continua ativa.','Motivo: '+((e&&e.message)||e),'Nada foi alterado.'],{botao:'Entendi'});
-      });
+    // 2º toque: o motivo escrito no cartão da Zona de risco (4 palavras — FR3).
+    var _zrMot=String(((btn&&btn.dataset.motivo)||'')||(((document.getElementById('hfZrMotivo')||{}).value||'')+'')).trim();
+    if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.dataset.motivo=''; btn.style.background=''; btn.textContent=btn.dataset.label||'Deletar'; }
+    var _zrMv=motivoQuatroPalavras(_zrMot);
+    if(!_zrMv.ok){
+      if(typeof zAlertao==='function') zAlertao('NÃO DELETEI '+_nome.toUpperCase(),
+        [_zrMot?_zrMv.erro:'Falta o motivo escrito no cartão da Zona de risco (pelo menos 4 palavras).',
+         'É o motivo que explica, depois, por que '+_nome+' saiu da lista de hoje. Escreva e toque duas vezes no botão.'],
+        {botao:'Vou escrever o motivo'});
       return;
     }
+    try{ var _zm2=document.getElementById('hfZrMotivo'); if(_zm2) _zm2.value=''; }catch(e){} /* silencioso de propósito: limpar o campo é enfeite */
     // Registro que NÃO é manual (veio da planilha ou de uma estadia): a Gestão tem autonomia de
     // tirá-lo do Plantão de hoje via override "removidos" (não mexe na planilha nem no cadastro).
     if(_acao==='override'){
       if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
       const dk=dataKeyAtual();
-      DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}).then(function(){
-        if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (override)',{pet:h.nome||'',dia:dk});
+      DB.ref('auaulandia/removidos/'+dk+'/'+hospRemKey(h)).set({nome:h.nome||'', tutor:h.tutor||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), motivo:_zrMot}).then(function(){
+        if(typeof audit==='function') audit('hospede-removido','removeu do Plantão (override) — '+_zrMot,{pet:h.nome||'',dia:dk,motivo:_zrMot});
         if(typeof fecharPlantao==='function') fecharPlantao();
         carregarHospedes();
       }).catch(function(e){
@@ -22540,7 +22618,7 @@
     if(!DB){ const i=hospedes.indexOf(h); if(i>=0) hospedes.splice(i,1); if(typeof fecharPlantao==='function') fecharPlantao(); renderHosp(); return; }
     DB.ref('auaulandia/manuais/'+dia+'/'+h.manualKey).remove()
       .then(function(){
-        if(typeof audit==='function') audit('hospede-cancelado','deletou lançamento do dia (pela ficha)',{pet:h.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(h):(h.tutor||'')),dia:dia});
+        if(typeof audit==='function') audit('hospede-cancelado','deletou lançamento do dia (pela ficha) — '+_zrMot,{pet:h.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(h):(h.tutor||'')),dia:dia,motivo:_zrMot});
         if(typeof fecharPlantao==='function') fecharPlantao();
         carregarManuais();
       })
@@ -54189,7 +54267,9 @@
         +falta.map(function(h){
           var nome=h.nome||h.pet||h.n||'';
           var idx=-1;
-          try{ idx=PELUDINHOS.findIndex(function(p){ return jsNorm(pelNome(p))===jsNorm(nome); }); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+          // Nome E tutor da linha da planilha, pela escada do orçamento (6.53): "o primeiro de
+          // mesmo nome" abria a Frida de outra tutora. Na dúvida, preenche a busca e ninguém abre.
+          try{ idx=hospIdxDaLinha(PELUDINHOS, h); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
           var raca=h.raca||''; var tutor=h.tutor||'';
           return '<div class="ci-item" style="cursor:pointer" onclick="'+(idx>=0?('ciEscolher('+idx+')'):('document.getElementById(\'ciBusca\').value='+JSON.stringify(nome)+';renderCiBusca()'))+'">'
             +'<div><div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(nome)+'</div>'
@@ -54212,6 +54292,13 @@
     }).join('');
   }
   function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // A linha "sem check-in" da planilha → a ficha no cadastro, pela mesma escada do orçamento
+  // (orcAcharPeludinho), com o nome e o tutor da linha. -1 = não abre ninguém sozinho.
+  function hospIdxDaLinha(lista, h){
+    h=h||{};
+    var tutor=String(h.tutor||'').trim();
+    return orcAcharPeludinho(lista, {nome:String(h.nome||h.pet||h.n||''), tutor:tutor}, tutor);
+  }
 
   // ===== CADASTRO INCOMPLETO — o check-in é o momento de completar =====
   // Decisão da Adriana (29/jul/2026): "Quando hospedarem novamente, iremos fazer o check-in e aí
@@ -54669,6 +54756,32 @@
       el.value=''; el.focus(); return;
     }
     if(typeof isoParaBR==='function') el.value=isoParaBR(iso); }
+  // As travas do Novo Hóspede, numa função só (6.53): o "É um FILHOt novo" da troca de ficha
+  // usa as MESMAS regras. Devolve {nivel, p, html}:
+  //   'identico' — nome+tutor+raça idênticos a outro cadastro (ou mesmo nome e tutor, sem raça): bloqueia;
+  //   'mesmoNT'  — mesmo nome e mesmo tutor, raça diferente (QA23): bloqueia;
+  //   'homonimo' — mesmo nome, outro tutor: pede a confirmação de que é outro FILHOt;
+  //   'ok'       — pode cadastrar.
+  function ciNovoHospedeTrava(nome, tutor, raca){
+    // Nível 1 — nome+tutor+raça idênticos a OUTRO cadastro: é o mesmo FILHOt em duplicidade. Bloqueia.
+    const gemeo=(typeof achaPorIdNR==='function')?achaPorIdNR(nome,tutor,raca,'__none__'):null;
+    const exatoNT=PELUDINHOS.find(function(p){ return pelKey(p)===pelKey({n:nome,tutor:tutor}); });
+    if(gemeo||(raca===''&&exatoNT)){
+      const g=gemeo||exatoNT;
+      return {nivel:'identico', p:g, html:'Já existe um cadastro idêntico: "'+esc(pelNome(g))+'"'+(pelGet(g,'raca')?(' · '+esc(pelGet(g,'raca'))):'')+' · tutor '+(esc(pelGet(g,'tutor'))||'—')+'. Busque acima em vez de duplicar.'};
+    }
+    // MESMO NOME E MESMO TUTOR, RAÇA DIFERENTE (QA23, 27/set/2026): a ficha mora na chave
+    // nome+tutor. Cadastrar gravava por cima da ficha que já existe — com dias vazios (o
+    // auluno saía da chamada do Day Care), raça, nascimento, sexo, peso e microchip novos.
+    // Dois FILHOts da mesma família com o mesmo nome precisam de nomes diferentes.
+    if(exatoNT){
+      return {nivel:'mesmoNT', p:exatoNT, html:'Já existe "'+esc(pelNome(exatoNT))+'"'+(pelGet(exatoNT,'raca')?(' · '+esc(pelGet(exatoNT,'raca'))):'')+' com o tutor "'+(esc(pelGet(exatoNT,'tutor'))||'—')+'". '
+        +'Se for o mesmo FILHOt, busque acima. Se for outro FILHOt da mesma família, escreva o nome com um complemento (ex.: "'+esc(nome)+(raca?(' '+esc(raca)):' 2')+'").'};
+    }
+    const parecido=PELUDINHOS.find(function(p){ return jsNorm(pelNome(p))===jsNorm(nome) && pelKey(p)!==pelKey({n:nome,tutor:tutor}); });
+    if(parecido) return {nivel:'homonimo', p:parecido, html:''};
+    return {nivel:'ok', p:null, html:''};
+  }
   function ciCriarNovoHospede(btn){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nEl=document.getElementById('ciNovoNome'), tEl=document.getElementById('ciNovoTutor'), rEl=document.getElementById('ciNovoRaca'), w=document.getElementById('ciNovoWarn');
@@ -54684,28 +54797,13 @@
     const idadeAprox=((document.getElementById('ciNovoIdadeAprox')||{}).value||'').trim();
     if(w) w.textContent='';
     if(!nome){ if(w) w.textContent='Escreva o nome do FILHOt.'; if(nEl) nEl.focus(); return; }
-    // Nível 1 — nome+tutor+raça idênticos a OUTRO cadastro: é o mesmo FILHOt em duplicidade. Bloqueia.
-    const gemeo=(typeof achaPorIdNR==='function')?achaPorIdNR(nome,tutor,raca,'__none__'):null;
-    const exatoNT=PELUDINHOS.find(function(p){ return pelKey(p)===pelKey({n:nome,tutor:tutor}); });
-    if(gemeo||(raca===''&&exatoNT)){
-      const g=gemeo||exatoNT;
-      if(w) w.innerHTML='Já existe um cadastro idêntico: "'+esc(pelNome(g))+'"'+(pelGet(g,'raca')?(' · '+esc(pelGet(g,'raca'))):'')+' · tutor '+(esc(pelGet(g,'tutor'))||'—')+'. Busque acima em vez de duplicar.';
-      return;
-    }
-    // MESMO NOME E MESMO TUTOR, RAÇA DIFERENTE (QA23, 27/set/2026): a ficha mora na chave
-    // nome+tutor. Cadastrar gravava por cima da ficha que já existe — com dias vazios (o
-    // auluno saía da chamada do Day Care), raça, nascimento, sexo, peso e microchip novos.
-    // Dois FILHOts da mesma família com o mesmo nome precisam de nomes diferentes.
-    if(exatoNT){
-      if(w) w.innerHTML='Já existe "'+esc(pelNome(exatoNT))+'"'+(pelGet(exatoNT,'raca')?(' · '+esc(pelGet(exatoNT,'raca'))):'')+' com o tutor "'+(esc(pelGet(exatoNT,'tutor'))||'—')+'". '
-        +'Se for o mesmo FILHOt, busque acima. Se for outro FILHOt da mesma família, escreva o nome com um complemento (ex.: "'+esc(nome)+(raca?(' '+esc(raca)):' 2')+'").';
-      return;
-    }
+    const _trava=ciNovoHospedeTrava(nome, tutor, raca);
+    if(_trava.nivel==='identico'||_trava.nivel==='mesmoNT'){ if(w) w.innerHTML=_trava.html; return; }
     // Nível 2 — mesmo nome (homônimo), tutor/raça diferentes: pode ser outro FILHOt real. Só avisa.
     // O aviso vive na PRÓPRIA TELA (o texto em #ciNovoWarn) e a confirmação são dois toques
     // no botão — nunca janela nativa, que o navegador do tablet pode suprimir e responder
     // "cancelar" sozinho, deixando a consultora sem entender por que o cadastro não sai.
-    const parecido=PELUDINHOS.find(function(p){ return jsNorm(pelNome(p))===jsNorm(nome) && pelKey(p)!==pelKey({n:nome,tutor:tutor}); });
+    const parecido=(_trava.nivel==='homonimo')?_trava.p:null;
     if(parecido && btn && btn.dataset.armed!=='1'){
       btn.dataset.armed='1';
       if(!btn.dataset.label) btn.dataset.label=btn.textContent;
@@ -55892,6 +55990,8 @@
         // medicação errada só sai por aqui.
         +'<button type="button" class="btn" style="width:100%;margin-top:8px;background:#B3261E;color:#fff" onclick="ciCorrigirExistente(\''+escAttr(ativa.id)+'\')">✎ Corrigir informação errada</button>'
         +'<div style="font-size:12.5px;color:#6b5f4b;font-weight:600;margin-top:6px">Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha <strong>SUBSTITUIR</strong>.</div>'
+        // 6.53 (a Frida): a hospedagem foi lançada no FILHOt errado, ou não aconteceu.
+        +(podePapel('corrigir-hospedagem')?('<button type="button" class="btn" style="width:100%;margin-top:8px;background:#6b5f4b;color:#fff;white-space:normal" onclick="hospCorrigirAbrir(\''+escAttr(ativa.id)+'\',{origem:\'checkin\'})">Foi no FILHOt errado ou não aconteceu? Trocar a ficha ou excluir</button>'):'')
         +'</div>';
     }).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */;
   }
@@ -56221,6 +56321,16 @@
         if(err){ err.style.display='block'; err.textContent=op.erro||('Escreva pelo menos '+(op.minimo||0)+' letras — é isso que explica, depois, o que aconteceu.'); }
         try{ if(inp&&inp.focus) inp.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
         return;
+      }
+      // op.validar (6.53): uma régua a mais, que devolve o texto do erro (ou '' quando passa) —
+      // o motivo de 4 palavras é conferido aqui mesmo, sem fechar o cartaz.
+      if(typeof op.validar==='function'){
+        var _ev=''; try{ _ev=op.validar(v)||''; }catch(e){ _ev=''; } /* sem a régua extra, vale a de cima */
+        if(_ev){
+          if(err){ err.style.display='block'; err.textContent=_ev; }
+          try{ if(inp&&inp.focus) inp.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
+          return;
+        }
       }
       var escolhido=sel?sel.value:undefined;
       d.remove(); if(typeof op.fn==='function') op.fn(v, escolhido);
@@ -56641,6 +56751,12 @@
       // Motivo e nome vêm dos campos que já estão à vista no cartão vermelho "Modo CORRIGIR"
       // (ver ciCorrigirExistente) — nunca de janela nativa no caminho de gravar.
       const _motivo=(((document.getElementById('ciCorrigirMotivo')||{}).value)||'').trim();
+      const _mvC=motivoQuatroPalavras(_motivo);   // 6.53 (FR3): a mesma régua de 4 palavras
+      if(_motivo && !_mvC.ok){
+        zAlertao('CORREÇÃO NÃO SALVA',[_mvC.erro,'O campo do motivo está no cartão vermelho, no alto da tela. Nada foi mudado — a ficha continua preenchida aqui.'],
+          {botao:'Escrever o motivo', aoFechar:function(){ try{ const _el=document.getElementById('ciCorrigirMotivo'); if(_el){ _el.scrollIntoView({behavior:'smooth',block:'center'}); _el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }});
+        return;
+      }
       if(!_motivo){
         zAlertao('CORREÇÃO NÃO SALVA',['Falta dizer POR QUE esta informação está sendo alterada.','O campo está no cartão vermelho, no alto da tela. Nada foi mudado — a ficha continua preenchida aqui.'],
           {botao:'Escrever o motivo', aoFechar:function(){ try{ const _el=document.getElementById('ciCorrigirMotivo'); if(_el){ _el.scrollIntoView({behavior:'smooth',block:'center'}); _el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }});
@@ -56698,9 +56814,17 @@
     const st=document.getElementById('ci-status');
     const motivo=((await zTexto('Por que o check-in que já existe está errado?',
       ['O desta tela vai para o lugar dele — inclusive a medicação.','O de antes fica guardado no histórico da estadia, com o seu nome e o motivo.'],
-      {rotulo:'Motivo', dica:'Ex.: a medicação estava errada', botao:'Substituir', cor:'#234D67', minimo:3,
-       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o check-in mudou.'}))||'').trim();
+      {rotulo:'Motivo (pelo menos 4 palavras)', dica:'Ex.: a medicação estava errada', botao:'Substituir', cor:'#234D67', minimo:3,
+       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o check-in mudou.',
+       validar:function(v){ var r=motivoQuatroPalavras(v); return r.ok?'':r.erro; }}))||'').trim();
     if(!motivo){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o check-in que já existe continua como estava.'; } return; }
+    // 6.53 (FR3): a mesma régua de 4 palavras do Trocar a ficha e do Excluir.
+    const _mvS=motivoQuatroPalavras(motivo);
+    if(!_mvS.ok){
+      zAlertao('O CHECK-IN NÃO FOI SUBSTITUÍDO', [_mvS.erro, 'Nada foi salvo: o check-in que já existe continua como estava.'], {botao:'Entendi'});
+      if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — o motivo precisa de pelo menos 4 palavras.'; }
+      return;
+    }
     const e=(ativa&&ativa.e)||{};
     const antes={ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''};
     pacote.correcao={motivo:'substituiu o check-in: '+motivo, quem:(typeof quemSou==='function'?quemSou():'-'),
@@ -57569,7 +57693,9 @@
       ex: ex||{},
       quemDeixou: est.quemDeixou||'',
       assinatura: null,
-      foto: null
+      foto: null,
+      // 6.53: "Ficha corrigida em DD/MM: estava na ficha de outro FILHOt" (troca de ficha).
+      nota: (typeof hospNotaTrocaFicha==='function')?hospNotaTrocaFicha(est):''
     };
   }
   function ciBuildPdfBlob(){ return ciFichaPdfBlob(ciFichaFonteTela()); }
@@ -57599,7 +57725,8 @@
     S.push({titulo:'ESTADIA', linhas:[
       {k:'Entrada', v:ciBRdata(d.entrada)+(a.dias?('  ('+a.dias+' dia(s))'):'')},
       {k:'Saída', v:(d.saida?ciBRdata(d.saida):'a confirmar')+(_per?('  ·  '+_per):'')}
-    ].concat(_qd?[{k:'Quem trouxe', v:_qd}]:[])
+    ].concat(F.nota?[{k:'Correção', v:F.nota}]:[])
+     .concat(_qd?[{k:'Quem trouxe', v:_qd}]:[])
      .concat((d.ficha&&d.ficha.coleira&&d.ficha.coleira.tem)?[{k:'Coleira antipulga ou repelente', v:ciColeiraTexto(d.ficha.coleira)}]:[])
      .concat((d.ficha&&d.ficha.medEmUso==='Não')?[{k:'Medicação em uso', v:'não — o tutor disse que não toma nenhum remédio agora'}]:[])});
     // --- emergência: contatos e identificação (Adriana, 31/ago) ---
@@ -57865,7 +57992,8 @@
     Object.keys(v||{}).forEach(function(id){
       var e=v[id]||{}; var k=e.refKey; if(!k) return;
       var atual=CF_ESTADIAS[k];
-      if(!atual || (e._ts||0)>(atual.e._ts||0)) CF_ESTADIAS[k]={id:id,e:e};
+      // 6.53 (4ª rodada, QA R3): a mais recente entre as NÃO canceladas (hospEstadiaGanha).
+      if(hospEstadiaGanha(e, atual&&atual.e)) CF_ESTADIAS[k]={id:id,e:e};
     });
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     // Quem acabou de fazer check-in sai do cartão "Chegam pelos orçamentos fechados" (25/set).
@@ -57985,12 +58113,13 @@
     const selos=(temFicha?'<span class="he-tag agora">ALIMENTAÇÃO NA FICHA</span>':'<span class="he-tag saiu">SEM FICHA DE CHECK-IN</span>')
               + (nMed?'<span class="he-tag achegar">'+nMed+' MEDICAÇÃO'+(nMed>1?'S':'')+'</span>':'');
     const alt=e.alterado_por?('<div class="he-sub" style="color:var(--z-gold-deep)">Data alterada por '+escAttr(e.alterado_por)+(e.alteracao_anterior&&e.alteracao_anterior.saida?(' — antes saía '+((typeof ciBRdata==='function')?ciBRdata(e.alteracao_anterior.saida):e.alteracao_anterior.saida)):'')+'</div>'):'';
+    const _xc=hospCorrLinha(id, e, st);   // 6.53: EXCLUÍDA, ficha trocada e o cartaz "Corrigir esta hospedagem"
     return '<div class="hosp-est">'
       + av
       + '<div class="he-main" style="cursor:pointer" onclick="hospAbrirFicha(\''+id+'\')">'
-      + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+tag[1]+'</span></div>'
+      + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+(_xc.tag||tag[1])+'</span></div>'
       + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
-      + '<div class="he-sub">'+selos+'</div>'+alt+'</div>'
+      + '<div class="he-sub">'+selos+'</div>'+alt+_xc.sub+'</div>'
       + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
       + '<div class="he-acoes">'
       + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
@@ -58001,6 +58130,7 @@
       + ((hospPodeAntecipada()&&st==='agora'&&hospNoitesNaoUsadas(e, hospHojeISO())>0)
           ?'<button class="btn btn-gold" onclick="hospSaidaAntecipada(\''+id+'\')">Saída antecipada</button>':'')
       + '<button class="btn" onclick="hospAbrirFicha(\''+id+'\')">Abrir ficha</button>'
+      + _xc.botao
       + ((e.status||'ativa')!=='ativa'&&e.encerradaEm
           ?'<div class="he-sub" style="width:100%;color:var(--muted)">Baixa em '+((typeof ciBRdata==='function')?ciBRdata(e.encerradaEm):e.encerradaEm)+(e.encerradaPor?(' — '+escAttr(e.encerradaPor)):'')+'</div>':'')
       + '</div></div>';
@@ -58051,7 +58181,12 @@
   // O orçamento fechado desta hospedagem — é nele que saida_real e credito_noites ficam
   // registrados. Achado pela mesma dupla do check-in (chave do pet) e pelo cruzamento de
   // período: é a régua que o item B passou a usar. Sem orçamento, devolve ''.
-  function hospOrcamentoDaEstadia(e){
+  // 6.53 (2ª rodada, QA A5 / FR7): a estadia ligada à ficha errada (o caso da Frida: estadia na
+  // ficha da Frida da Tutora Auluna, orçamento "Frida / Ana Carolina") não acha o orçamento pela
+  // ficha. Sem achado, vale o orçamento fechado das mesmas datas com o mesmo nome e OUTRO tutor
+  // (a régua da sugestão do "FILHOt novo"), só quando é UM — e a tela do Excluir diz de quem é
+  // e pergunta. A Saída antecipada (dinheiro) continua só com a régua da ficha: {estrito:true}.
+  function hospOrcamentoDaEstadia(e, op){
     e=e||{};
     var lista=[];
     try{ lista=(typeof orcListaArray==='function')?orcListaArray():[]; }catch(x){ return ''; }
@@ -58066,7 +58201,27 @@
         if(orcMesmoPetEm(alvo, {tutor:(e.tutor||'')}, pp, o)) achado=o.id;
       });
     });
-    return achado;
+    if(achado || (op&&op.estrito)) return achado;
+    // o orçamento de quem JÁ tem a própria estadia (a outra Frida, que veio de verdade) não entra
+    var outras=[];
+    try{ Object.keys((typeof EST_TODAS!=='undefined'&&EST_TODAS)||{}).forEach(function(id){
+      var x=EST_TODAS[id]; if(!x||String(x.status||'ativa')==='cancelada'||String(x.refKey||'')===String(e.refKey||'')) return;
+      outras.push(x);
+    }); }catch(x){ outras=[]; } /* sem o índice das estadias, vale a régua do nome e do tutor */
+    var outros=[];
+    lista.forEach(function(o){
+      if(!o||(o.status||'')!=='fechado') return;
+      if(!orcPeriodoSobrepoe({entrada:(e.entrada||''), saida:(e.saida||e.entrada||'')}, o)) return;
+      if((o.pets||[]).some(function(pp){
+        var t=String((pp&&pp.tutor)||o.tutor||'').trim();
+        if(!pp || jsNorm(pp.nome||'')!==jsNorm(e.nome||'') || !t || jsNorm(t)===jsNorm(e.tutor||'')) return false;
+        return !outras.some(function(x){
+          return orcPeriodoSobrepoe({entrada:(x.entrada||''), saida:(x.saida||x.entrada||'')}, o)
+            && orcMesmoPetEm({key:(x.refKey||''), nome:(x.nome||''), tutor:(x.tutor||'')}, {tutor:(x.tutor||'')}, pp, o);
+        });
+      }) && outros.indexOf(o.id)<0) outros.push(o.id);
+    });
+    return outros.length===1?outros[0]:'';
   }
   async function hospConfirmarAntecipada(id){
     if(!hospPodeAntecipada()){ alert('Sem permissão para lançar saída antecipada.'); return; }
@@ -58088,7 +58243,7 @@
     const perDe=((typeof ciBRdata==='function')?ciBRdata(e.entrada||''):(e.entrada||''));
     const perAte=((typeof ciBRdata==='function')?ciBRdata(e.saida||''):(e.saida||''));
     const motivo='Saída antecipada — hospedagem '+perDe+' a '+perAte;
-    const orcId=hospOrcamentoDaEstadia(e);
+    const orcId=hospOrcamentoDaEstadia(e, {estrito:true});
     if(!await zPergunta('Saída antecipada de '+(e.nome||'esta hospedagem')+'?',
       ['Foi embora em: '+((typeof ciBRdata==='function')?ciBRdata(real):real)+' — a saída combinada era '+(perAte||'sem data')+'.',
        noites+(noites===1?' noite não usada vira 1 crédito':' noites não usadas viram '+noites+' créditos')+' na ficha dele.',
@@ -58212,7 +58367,9 @@
         const jaTem=g.agora.some(function(o){ return jsNorm(o.e.nome||'')===jsNorm(h.nome||''); });
         if(jaTem) return;
         if(q && jsNorm([h.nome,tutorDe(h),h.raca].join(' ')).indexOf(q)<0) return;
-        const reg={nome:h.nome, tutor:(typeof tutorDe==='function'?tutorDe(h):(h.tutor||'')), raca:h.raca||'', refKey:h.refKey||''};
+        // O tutor é o que a PLANILHA escreve (6.53, porta 4 da Frida): tutorDe() cai no "nome
+        // único" e trazia a tutora de outra Frida; "Registrar datas" gravava a estadia nela.
+        const reg={nome:h.nome, tutor:(h.tutor||''), raca:h.raca||'', refKey:h.refKey||''};
         HOSP_SO_PLANILHA.push(reg);
         g.agora.push({id:'', e:Object.assign({}, reg, {entrada:'', saida:'', status:'ativa', _soPlanilha:true, _spIdx:HOSP_SO_PLANILHA.length-1})});
       });
@@ -58456,7 +58613,9 @@
     let fichaAnterior=null, deQuando='';
     Object.keys(EST_TODAS||{}).forEach(function(id){
       const e=EST_TODAS[id]||{};
-      const mesmo = (p.refKey && e.refKey===p.refKey) || (jsNorm(e.nome||'')===jsNorm(p.nome||''));
+      // Só da MESMA ficha (refKey), nunca pelo nome e nunca de estadia excluída (6.53, porta 4
+      // da Frida): pelo nome, a cliente nova herdava a comida de outra Frida.
+      const mesmo = !!(p.refKey && e.refKey===p.refKey) && String(e.status||'ativa')!=='cancelada';
       if(!mesmo || !e.ficha) return;
       if(!fichaAnterior || (e._ts||0)>(fichaAnterior._ts||0)){ fichaAnterior=Object.assign({},e.ficha,{_ts:e._ts||0}); deQuando=e.entrada||''; }
     });
@@ -58503,6 +58662,1513 @@
     }
     const i=PELUDINHOS.indexOf(p); if(i<0) return;
     pelOrigem='hospedes'; irParaView('ficha'); abrirPeludinho(i);
+  }
+  // ==================================================================================
+  // ===== CORRIGIR A HOSPEDAGEM — TROCAR A FICHA, EXCLUIR, COM MOTIVO E ASSINATURA (6.53)
+  // "Pedi ontem para poder excluir hospedagem. Entrou uma Frida Spitz … apareceu outra Frida
+  //  a SRD que é aluna! … Precisa de justificar e assinar quem fez e porque. E não aceitar
+  //  por exemplo 1 palavra apenas. … Um mínimo de palavras. Sei lá 4 palavras." (Adriana, 08/10)
+  // "Preciso que tudo no app possa ser excluído, modificado, alterado e etc." (Adriana, 09/10)
+  //
+  // A Frida Spitz (cliente nova, tutora Ana Carolina) foi ligada à ÚNICA Frida do cadastro,
+  // a Frida SRD, aluna do Day Care, de outra tutora. As portas que faziam isso estão
+  // fechadas (orcAcharPeludinho, a lista "sem check-in" do Check-in e o "Registrar datas" de
+  // Hóspedes de hoje). Para o que já aconteceu, a linha da hospedagem ganha três saídas, num
+  // cartaz só (Hóspedes de hoje, o quadro "já está hospedado" do Check-in e a Zona de risco
+  // do Plantão):
+  //   1. TROCAR A FICHA — a estadia é a mesma; mudam só refKey, nome, tutor e raça. Comida,
+  //      remédio, pertences, assinatura do tutor e Conferência continuam. O remédio nascido
+  //      no check-in muda de agenda com o mesmo id (e o estoque); as doses já dadas são
+  //      COPIADAS (as originais ficam: histórico de dose não se apaga). A ficha errada perde
+  //      só o que se sabe que estava vazio antes do check-in; o resto vai para "Conferir".
+  //   2. EXCLUIR — só o que não aconteceu: status 'cancelada' + o objeto `exclusao`. Nunca
+  //      apaga o nó. Com prova de que o FILHOt dormiu aqui, fica travado.
+  //   3. CORRIGIR — o ✎ Corrigir de sempre, aberto na ficha DA ESTADIA.
+  // Motivo com 4 palavras (motivoQuatroPalavras) e a senha da própria pessoa (Gestão ou
+  // Supervisão): o app grava o NOME, nunca a senha. Rastro em 4 lugares: a estadia,
+  // auaulandia/hospedagem-correcoes, a auditoria do dia e o grupo da Gestão no Telegram.
+  // Mensagem para a tutora e a veterinária NÃO sai sozinha: o texto fica pronto, à vista
+  // da Gestão, e só ganha o botão de copiar quando a Adriana aprovar o modelo (FR8).
+  // ==================================================================================
+  // O relógio da correção, num lugar só (as provas usam um relógio fixo).
+  function hospAgora(){ return Date.now(); }
+  // ===== O MOTIVO: 4 PALAVRAS, 3 DIFERENTES (FR3) ===================================
+  // A pontuação não conta; número sozinho não é palavra; "ok ok ok ok" e "a a a a" não
+  // explicam nada. Devolve {ok, erro} — a MESMA função vale no Trocar a ficha, no Excluir,
+  // no ✎ Corrigir, no SUBSTITUIR, no × e na Zona de risco do Plantão (e na story 6.54).
+  function motivoQuatroPalavras(texto){
+    var MIN=4, DIFERENTES=3, LETRAS=2;
+    var t=String(texto==null?'':texto);
+    t=(typeof jsNorm==='function')?jsNorm(t):t.toLowerCase();
+    var pal=t.split(/[^a-z0-9]+/).filter(function(w){ return /[a-z]/.test(w); });
+    if(pal.length<MIN) return {ok:false, erro:'Escreva o que aconteceu em pelo menos '+MIN+' palavras (faltam '+(MIN-pal.length)+').'};
+    var dif={};
+    pal.forEach(function(w){ if(w.replace(/[^a-z]/g,'').length>=LETRAS) dif[w]=1; });
+    if(Object.keys(dif).length<DIFERENTES) return {ok:false, erro:'Escreva o que aconteceu com palavras que expliquem: pelo menos '+DIFERENTES+' palavras diferentes, de 2 letras ou mais (por exemplo: "não é a ficha dela").'};
+    return {ok:true, erro:''};
+  }
+  // ===== A ASSINATURA: A SENHA DA PRÓPRIA PESSOA (FR1, FR2) ===========================
+  // Mesmo jeito do Cancelar reserva (orcQuemPelaSenha): a senha é conferida e esquecida.
+  // Senha de posto (Plantonista, Monitor 1, Recepção) não assina: o posto não responde por
+  // nada. Assina quem tem 'assinar-correcao-hospedagem' (Supervisão, Gestão e Diretoria).
+  function hospAssinarPorSenha(senha){
+    var s=String(senha==null?'':senha).trim();
+    if(!s) return {ok:false, nome:'', papel:'', erro:'Digite a sua senha: é ela que assina a correção.'};
+    var q=null; try{ q=(typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null; }catch(e){ q=null; } /* sem a lista de senhas, ninguém assina */
+    if(!q||!q.nome) return {ok:false, nome:'', papel:'', erro:'Essa senha não é de ninguém cadastrado. Nada foi gravado.'};
+    var posto=false; try{ posto=LOGIN_GENERICO.test(String(q.nome).trim()); }catch(e){ posto=false; } /* sem a régua do posto, vale a do papel logo abaixo */
+    if(posto) return {ok:false, nome:'', papel:'', erro:'Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Chame a Gestão ou a Supervisão.'};
+    if(!podePapel('assinar-correcao-hospedagem', String(q.role||''))) return {ok:false, nome:'', papel:'', erro:'Essa senha é de '+q.nome+', que não pode assinar a correção da hospedagem. Chame a Gestão ou a Supervisão para digitar a senha delas aqui.'};
+    return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
+  }
+  var HOSP_PAPEL_ROTULO={gestao:'Gestão', supervisor:'Supervisão', diretoria:'Diretoria'};
+  // ===== DATAS E RÓTULOS ==============================================================
+  // O id que o Firebase dá à estadia guarda o milissegundo em que ela nasceu (os 8 primeiros
+  // caracteres). É a hora do check-in — o _ts não serve, porque o Corrigir regrava (K8).
+  var HOSP_PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+  function hospPushTs(id){
+    id=String(id||''); if(id.length<12) return 0;
+    var ts=0;
+    for(var i=0;i<8;i++){ var v=HOSP_PUSH_CHARS.indexOf(id.charAt(i)); if(v<0) return 0; ts=ts*64+v; }
+    return (ts>1577836800000 && ts<4102444800000)?ts:0;    // entre 2020 e 2100; fora disso não é um id de verdade
+  }
+  function hospCriadaEm(id, e){ return hospPushTs(id)||Number((e&&e.criado_ts)||0)||Number((e&&e._ts)||0)||0; }
+  function hospIsoDe(ts){ var d=new Date(Number(ts)||0), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function hospDiaBR(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m?(m[3]+'/'+m[2]):String(iso||''); }
+  function hospQuandoBR(ts){ var d=new Date(Number(ts)||0), p=function(x){ return String(x).padStart(2,'0'); };
+    return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' às '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function hospRotulo(x){ x=x||{}; return [x.nome||'', x.raca||'', x.tutor||''].filter(Boolean).join(' · '); }
+  function hospPl(n, um, varios){ return n+' '+(n===1?um:varios); }
+  function hospLimpo(o){ return JSON.parse(JSON.stringify(o==null?null:o)); }   // o Firebase recusa campo undefined
+  function hospQuemLogado(){ try{ return (typeof quemSou==='function')?String(quemSou()||'-'):'-'; }catch(e){ return '-'; } }
+  // Os dias da estadia que já aconteceram (da entrada até hoje ou até a saída).
+  function hospDiasDaEstadia(e, hoje){
+    e=e||{}; var iso=/^\d{4}-\d{2}-\d{2}$/, ent=String(e.entrada||'');
+    if(!iso.test(ent)) return [];
+    hoje=String(hoje||((typeof zHojeISO==='function')?zHojeISO():''));
+    var fim=String(e.saida||''); if(!iso.test(fim)||(iso.test(hoje)&&fim>hoje)) fim=hoje;
+    var out=[], d=ent;
+    while(iso.test(d) && d<=fim && out.length<62){ out.push(d); d=addDiasISO(d,1); }
+    return out;
+  }
+  // Todos os dias da estadia (os que vêm também): é neles que a linha da planilha sai do Plantão.
+  function hospDiasDoPeriodo(e){
+    e=e||{}; var iso=/^\d{4}-\d{2}-\d{2}$/, ent=String(e.entrada||''), fim=String(e.saida||ent);
+    if(!iso.test(ent)) return [];
+    if(!iso.test(fim)||fim<ent) fim=ent;
+    var out=[], d=ent;
+    while(iso.test(d) && d<=fim && out.length<62){ out.push(d); d=addDiasISO(d,1); }
+    return out;
+  }
+  // ===== PROVA DE QUE O FILHOt DORMIU AQUI (FR4) =====================================
+  // Dose registrada, relatório do plantão, Conferência concluída, check-out ou saída
+  // antecipada. Com qualquer uma, Excluir não grava: a saída é Trocar a ficha.
+  function hospProvaDeEstadia(e, logs, rels){
+    e=e||{}; var provas=[];
+    Object.keys(logs||{}).sort().forEach(function(dia){
+      var doses=(logs||{})[dia]||{};
+      Object.keys(doses).sort().forEach(function(did){
+        var d=doses[did]; if(!d||typeof d!=='object') return;
+        provas.push('dose de remédio registrada em '+hospDiaBR(dia)+' ('+(d.nome||'remédio')+(d.horario?(' das '+d.horario):'')+(d.quem?(', por '+d.quem):'')+')');
+      });
+    });
+    Object.keys(rels||{}).sort().forEach(function(dia){
+      var r=(rels||{})[dia];
+      if(r&&typeof r==='object'&&Object.keys(r).length) provas.push('relatório do plantão de '+hospDiaBR(dia));
+    });
+    if(e.conferencia&&e.conferencia.concluida) provas.push('Conferência concluída'+(e.conferencia.por?(' por '+e.conferencia.por):''));
+    if(e.checkout||String(e.status||'')==='finalizada') provas.push('check-out feito');
+    if(e.saida_antecipada) provas.push('saída antecipada registrada');
+    return {bloqueia:provas.length>0, provas:provas};
+  }
+  // ===== O PLANO DA TROCA (função pura — é ela que as provas olham) ===================
+  // Recebe a estadia, a agenda de remédios e o registro de doses da ficha errada, as duas
+  // fichas e a auditoria do dia do check-in. Devolve o que muda de ficha, o que é copiado,
+  // o que sai da ficha errada (só o que se sabe que estava vazio) e o que vai para
+  // "Conferir" (não muda sozinho). A janela do check-in vai da criação da estadia (menos
+  // 6 h: a tela fica aberta enquanto o tutor conta tudo) até agora.
+  var HOSP_JANELA_ANTES=6*3600000;
+  // A dose só é copiada com os dados que a regra v2 do banco exige (K15).
+  function hospDoseCopiavel(d){ return !!d && typeof d.nome==='string' && typeof d.u==='string' && typeof d.ts==='number' && typeof d.quem==='string' && typeof d.horario==='string'; }
+  var HOSP_CAMPOS_CADASTRO=['raca','tutor','nasc','chip','microchip','vetNome','vetTel','vetClinica','vetEnd'];
+  function hospPlanoDaTroca(o){
+    o=o||{};
+    var e=o.e||{}, de=o.de||{}, para=o.para||{};
+    var agora=Number(o.agora)||hospAgora();
+    var criada=hospCriadaEm(o.id, e);
+    var J={de:(criada?criada-HOSP_JANELA_ANTES:0), ate:agora};
+    var naJ=function(ts){ ts=Number(ts)||0; return !!(ts && J.de && ts>=J.de && ts<=J.ate); };
+    var rDe=hospRotulo(de), rPara=hospRotulo(para);
+    var nrm=function(x){ return (typeof jsNorm==='function')?jsNorm(String(x||'')):String(x||'').toLowerCase().trim(); };
+    var P={janela:J, mover:[], copiarLog:[], fichaLevar:{}, fichaTirar:[], fichaVista:{}, conferir:[], naoMexe:[], remedioDaAntigaDado:[]};
+    var conf=function(c){ c.k='c'+P.conferir.length+'_'+c.tipo; P.conferir.push(c); };
+    // --- a agenda de remédios da ficha errada
+    var ag=o.agenda||{}, moverIds={};
+    Object.keys(ag).forEach(function(id){
+      var it=ag[id]||{}, nm=String(it.nome||'remédio');
+      if(it.confirmado_em_checkin && naJ(it.confirmado_em_checkin.ts)){
+        P.naoMexe.push(id);
+        conf({tipo:'remedio-confirmado', ficha:'ambas', itemId:id, aba:'ps-med',
+          texto:'"'+nm+'" é remédio da ficha de '+rDe+' e foi confirmado no check-in desta hospedagem. Ele continua na ficha de '+de.nome+' e NÃO vai para a ficha certa: confira com a tutora de '+rPara+' se '+para.nome+' toma esse remédio, e com a veterinária se alguma dose foi dada.'});
+        return;
+      }
+      if(it.mudou_em_checkin && naJ(it.mudou_em_checkin.ts)){
+        P.naoMexe.push(id);
+        conf({tipo:'remedio-mudou', ficha:'ambas', itemId:id, aba:'ps-med',
+          texto:'"'+nm+'" é remédio da ficha de '+rDe+' e foi marcado como "Mudou" no check-in desta hospedagem: a dose dele pode ter sido trocada pela de '+para.nome+'. O valor de antes não ficou guardado: confira na aba Medicamentos das duas fichas.'});
+        return;
+      }
+      if(it.paradoEm && naJ(it.paradoEm.ts) && /check-in da hospedagem/i.test(String(it.paradoEm.motivo||''))){
+        P.naoMexe.push(id);
+        conf({tipo:'remedio-parou', ficha:'antiga', itemId:id, aba:'ps-med',
+          texto:'"'+nm+'" é remédio da ficha de '+rDe+' e virou "Parou de tomar" no check-in desta hospedagem (quem respondeu foi a tutora de '+para.nome+'). Se '+de.nome+' continua tomando, toque em "Desfazer o parou".'});
+        return;
+      }
+      if(/^ci_/.test(id) && naJ((typeof medItemQuando==='function')?medItemQuando(id, it):0)){
+        P.mover.push({id:id, item:it}); moverIds[id]=1;
+        return;
+      }
+      P.naoMexe.push(id);
+    });
+    // --- as doses já dadas: as do remédio que muda de ficha são copiadas (com os dados que a
+    // regra v2 do banco exige); as dos outros remédios da ficha errada foram dadas à hóspede.
+    var vale=hospDoseCopiavel;
+    var incompletas=[];
+    Object.keys(o.logs||{}).sort().forEach(function(dia){
+      var doses=(o.logs||{})[dia]||{};
+      Object.keys(doses).sort().forEach(function(did){
+        var d=doses[did]; if(!d||typeof d!=='object') return;
+        var itId=String(d.itemId||String(did).replace(/_\d{2}-\d{2}$/,''));
+        if(moverIds[itId]){
+          if(vale(d)) P.copiarLog.push({dia:dia, doseId:did, dose:d});
+          else incompletas.push(hospDiaBR(dia)+' '+(d.nome||'remédio')+(d.horario?(' das '+d.horario):''));
+        } else {
+          P.remedioDaAntigaDado.push({dia:dia, doseId:did, nome:String(d.nome||''), horario:String(d.horario||''), quem:String(d.quem||'')});
+        }
+      });
+    });
+    if(incompletas.length) conf({tipo:'dose-incompleta', ficha:'nova', aba:'ps-med',
+      texto:(incompletas.length===1?'Uma dose do remédio que mudou de ficha foi registrada sem todos os dados e por isso não foi copiada: ':'Doses do remédio que mudou de ficha foram registradas sem todos os dados e por isso não foram copiadas: ')
+        +incompletas.join('; ')+'. Confira na ficha de '+rPara+' se '+(incompletas.length===1?'essa dose aparece como dada.':'essas doses aparecem como dadas.')});
+    // --- a ficha errada (o cadastro)
+    var fa=o.ficha||{}, fn=o.fichaNova||{};
+    var vazioNaNova=function(c){ var v=fn[c]; return v==null||v===''||(typeof v==='object'&&!Object.keys(v).length); };
+    var tirar=function(c){ if(P.fichaTirar.indexOf(c)>=0) return; P.fichaTirar.push(c); P.fichaVista[c]=fa[c]; };
+    var ap=fa.alim_plano;
+    if(ap && typeof ap==='object'){
+      var apc=ap.conf||{};
+      if(naJ(apc.ts)){
+        // "Confirmado" só grava na ficha quando ela NÃO tinha plano (o check-in só confirma o que
+        // já existe): o plano é da hóspede e estava vazio na ficha errada.
+        if(String(apc.estado||'')==='confirmado'){ if(vazioNaNova('alim_plano')) P.fichaLevar.alim_plano=ap; tirar('alim_plano'); }
+        else conf({tipo:'comida-mudou', ficha:'antiga', aba:'ps-rotina',
+          texto:'"O que ele come" da ficha de '+rDe+' foi trocado ("Mudou") no check-in desta hospedagem, e o de antes não ficou guardado: confira com a tutora de '+de.nome+' e corrija na ficha.'});
+      } else {
+        // A ficha errada já tinha plano: o check-in começou com ele (K1). A comida desta
+        // hospedagem pode ser a de outro FILHOt.
+        conf({tipo:'comida-da-antiga', ficha:'nova', aba:'ps-rotina',
+          texto:'A comida desta hospedagem começou com o que a ficha de '+rDe+' dizia: confira com a tutora de '+rPara+' se é isso mesmo que '+para.nome+' come.'});
+      }
+    }
+    var selos=['restricao_nenhuma','alergia_nenhuma'].filter(function(c){ return fa[c] && naJ(fa[c].ts); });
+    if(selos.length){
+      // A tutora da hóspede disse "não tem": vale para a ficha certa (K9). Na ficha errada,
+      // o que havia antes foi apagado e não ficou guardado — risco no almoço do Day Care.
+      selos.forEach(function(c){ if(vazioNaNova(c)) P.fichaLevar[c]=fa[c]; });
+      conf({tipo:'alergia-apagada', ficha:'antiga', aba:'ps-atencao',
+        texto:'No check-in desta hospedagem ficou registrado "sem restrição nem alergia" na ficha de '+rDe+'. Se '+de.nome+' tinha alergia ou restrição, ela foi apagada: confira hoje (o almoço do Day Care depende disso).'});
+    }
+    var aud=o.auditoria||{};
+    var recs=Array.isArray(aud)?aud:Object.keys(aud).map(function(k){ return aud[k]; });
+    recs.forEach(function(r){
+      if(!r||!naJ(r.ts)) return;
+      if(r.acao==='checkin' && /restri..o\/alergia atualizada/i.test(String(r.detalhe||'')) && nrm(r.pet)===nrm(e.nome||de.nome)){
+        var v=String(r.restricao||'').trim();
+        if(v && vazioNaNova('restricao')) P.fichaLevar.restricao=v;
+        conf({tipo:'restricao-gravada', ficha:'antiga', aba:'ps-atencao',
+          texto:'No check-in desta hospedagem a restrição da ficha de '+rDe+' foi regravada'+(v?(' com "'+v+'"'):' em branco')+'. O que estava antes não ficou guardado: confira com a tutora de '+de.nome+'.'});
+        return;
+      }
+      // O cartão "cadastro incompleto" do check-in só mostra o campo que estava VAZIO: o que
+      // ele gravou é da hóspede, sai da ficha errada e vai para a certa.
+      if(r.acao==='cadastro-completado-checkin' && nrm(r.detalhe)===nrm(de.nome)){
+        String(r.campos||'').split(',').map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(c){
+          (c==='chip'?['chip','microchip']:[c]).forEach(function(cc){
+            if(HOSP_CAMPOS_CADASTRO.indexOf(cc)<0) return;
+            if(fa[cc]==null||fa[cc]==='') return;
+            if(vazioNaNova(cc)) P.fichaLevar[cc]=fa[cc];
+            tirar(cc);
+          });
+        });
+      }
+    });
+    if(P.remedioDaAntigaDado.length){
+      var msg=hospMsgRemedioDado({de:de, para:para, doses:P.remedioDaAntigaDado});
+      conf({tipo:'remedio-dado', ficha:'ambas', aba:'ps-med', msgVet:msg.vet, msgTutora:msg.tutora,
+        texto:'O registro mostra '+hospPl(P.remedioDaAntigaDado.length, 'dose', 'doses')+' de remédio da ficha de '+rDe+' '+(P.remedioDaAntigaDado.length===1?'dada':'dadas')+' a '+para.nome+' nesta hospedagem: '
+          +P.remedioDaAntigaDado.map(function(x){ return x.nome+' em '+hospDiaBR(x.dia)+(x.horario?(' às '+x.horario):''); }).join('; ')+'. Avise a veterinária. Os textos para a veterinária e para a tutora estão prontos logo abaixo.'});
+    }
+    var dias=hospDiasDaEstadia(e, o.hoje);
+    if(dias.length) conf({tipo:'daycare', ficha:'antiga', aba:'',
+      texto:'Registros do Day Care (chamada, check-in do corpo e fotos) feitos com a hóspede na ficha de '+rDe+' nos dias '+dias.map(hospDiaBR).join(', ')+' não foram movidos (área protegida): confira na Chamada desses dias.'});
+    if(e.saida_antecipada) conf({tipo:'credito', ficha:'antiga', aba:'',
+      texto:'A saída antecipada desta hospedagem lançou crédito de noites na ficha de '+rDe+': confira em Reposições.'});
+    return P;
+  }
+  // FR8: mensagem a cliente é decisão da Adriana. O texto fica pronto e à vista da Gestão;
+  // o botão de copiar só aparece quando este modelo for aprovado (aí esta linha vira true).
+  var HOSP_MSG_REMEDIO_APROVADO=false;
+  function hospMsgRemedioDado(o){
+    o=o||{}; var de=o.de||{}, para=o.para||{}, doses=o.doses||[];
+    var lista=doses.map(function(x){ return x.nome+' em '+hospDiaBR(x.dia)+(x.horario?(' às '+x.horario):''); }).join('; ');
+    var primeiro=String(para.tutor||'').trim().split(/\s+/)[0]||'';
+    return {
+      vet:'Veterinária, na hospedagem de '+(para.nome||'')+' ('+hospRotulo(para)+'), o registro de doses mostra remédio da ficha de outro FILHOt ('+hospRotulo(de)+') dado a '+(para.nome||'')+': '+lista+'. A estadia tinha sido lançada na ficha errada e já foi corrigida. Por favor, avalie '+(para.nome||'')+' e diga se é preciso acompanhar ou avisar a família.',
+      tutora:'Oi'+(primeiro?(', '+primeiro):'')+', como está? Aqui é da Zêluz. Na hospedagem de '+(para.nome||'')+', encontramos um erro nosso de registro: '+(para.nome||'')+' recebeu '+lista+', que não estava no que você nos passou. A nossa veterinária já está avaliando e vamos acompanhar '+(para.nome||'')+' de perto. Podemos conversar agora?'
+    };
+  }
+  // ===== A ESTADIA DEPOIS DA TROCA (o que a transação grava) ========================
+  // Só refKey, nome, tutor, raça, trocaFicha, correcoes e _ts mudam. A troca vira um item
+  // de LISTA (trocaFicha/{tk}): a 2ª troca não apaga a 1ª (K16). Recusa quando a estadia já
+  // não é a de quando o cartaz abriu (outra pessoa mexeu — AC16).
+  var HOSP_ERRO_MEXEU='Nada foi gravado: outra pessoa mexeu nesta hospedagem agora. Feche este cartaz e abra de novo.';
+  function hospTrocaPatch(atual, aberto, reg){
+    aberto=aberto||{}; reg=reg||{};
+    if(!atual||typeof atual!=='object') return {ok:false, erro:'Esta hospedagem não existe mais no sistema. Nada foi gravado.'};
+    if(String(atual.status||'ativa')==='cancelada') return {ok:false, erro:'Esta hospedagem foi excluída: não dá para trocar a ficha dela.'};
+    if(hospTrocaIncompleta(atual)) return {ok:false, erro:HOSP_ERRO_METADE};
+    var de=reg.de||{}, para=reg.para||{};
+    if(String(atual.refKey||'')!==String(de.refKey||'') || String(atual.refKey||'')!==String(aberto.refKey||'')) return {ok:false, erro:HOSP_ERRO_MEXEU};
+    if((Number(atual._ts)||0)!==(Number(aberto._ts)||0)) return {ok:false, erro:HOSP_ERRO_MEXEU};
+    if(!para.refKey) return {ok:false, erro:'Falta escolher a ficha certa.'};
+    var novo=hospLimpo(atual);
+    novo.refKey=String(para.refKey); novo.nome=String(para.nome||atual.nome||''); novo.tutor=String(para.tutor||''); novo.raca=String(para.raca||'');
+    var tf=Object.assign({}, atual.trocaFicha||{});
+    tf[reg.tk]=hospLimpo({ de:{refKey:de.refKey||'', nome:de.nome||'', tutor:de.tutor||'', raca:de.raca||''},
+      para:{refKey:para.refKey||'', nome:para.nome||'', tutor:para.tutor||'', raca:para.raca||''},
+      motivo:reg.motivo||'', quem:reg.quem||'', quem_papel:reg.quem_papel||'', logado:reg.logado||'',
+      ts:Number(reg.ts)||0, quando_br:reg.quando_br||'', plano:reg.plano||{}, conferir:reg.conferir||[], completa:false });
+    novo.trocaFicha=tf;
+    var hist=Array.isArray(atual.correcoes)?atual.correcoes.slice():[];
+    hist.push({quando:Number(reg.ts)||0, quem:reg.quem||'', motivo:'troca de ficha: '+(reg.motivo||''),
+      mudou:['FILHOt: '+hospRotulo(de)+' → '+hospRotulo(para)],
+      antes:{refKey:atual.refKey||'', nome:atual.nome||'', tutor:atual.tutor||'', raca:atual.raca||''}});
+    novo.correcoes=hist;
+    novo._ts=Number(reg.ts)||Date.now();
+    return {ok:true, novo:novo, erro:''};
+  }
+  // ===== A ESTADIA DEPOIS DA EXCLUSÃO =================================================
+  // Status 'cancelada' (NÃO um status novo: todas as telas já ignoram 'cancelada', e um
+  // status novo contaria noite no acerto) + o objeto exclusao. O nó nunca é apagado.
+  function hospExclusaoPatch(atual, aberto, reg){
+    aberto=aberto||{}; reg=reg||{};
+    if(!atual||typeof atual!=='object') return {ok:false, erro:'Esta hospedagem não existe mais no sistema. Nada foi gravado.'};
+    if(String(atual.status||'ativa')==='cancelada') return {ok:false, erro:'Esta hospedagem já foi excluída.'};
+    if(hospTrocaIncompleta(atual)) return {ok:false, erro:HOSP_ERRO_METADE};
+    if(String(atual.refKey||'')!==String(aberto.refKey||'') || (Number(atual._ts)||0)!==(Number(aberto._ts)||0)) return {ok:false, erro:HOSP_ERRO_MEXEU};
+    var pr=hospProvaDeEstadia(atual, {}, {});
+    if(pr.bloqueia) return {ok:false, erro:'Esta hospedagem tem prova de que o FILHOt dormiu aqui ('+pr.provas.join('; ')+'): ela não pode ser excluída. Use "Trocar a ficha".'};
+    var novo=hospLimpo(atual);
+    novo.status='cancelada'; novo.canceladaPor=String(reg.quem||'-'); novo.canceladaTs=Number(reg.ts)||Date.now();
+    var ex=Object.assign({}, atual.exclusao||{});
+    ex[reg.tk]=hospLimpo({ motivo:reg.motivo||'', motivo_tipo:'lancada-por-engano', quem:reg.quem||'', quem_papel:reg.quem_papel||'',
+      logado:reg.logado||'', ts:Number(reg.ts)||0, quando_br:reg.quando_br||'', status_antes:String(atual.status||'ativa'),
+      planilha:reg.planilha||'', orcamento:reg.orcamento||'', orcamento_id:reg.orcamento_id||'' });
+    novo.exclusao=ex;
+    // o _ts NÃO muda (4ª rodada, QA R3): a hora da exclusão fica em canceladaTs, e a excluída não
+    // vira a "mais recente" da ficha. Quem chegar depois vê o status "cancelada" e não grava.
+    return {ok:true, novo:novo, erro:''};
+  }
+  // O "parou" que a exclusão grava no remédio nascido no check-in: o mesmo formato do
+  // "Não está em uso" do check-in (ciMedMarcarParou). Nada é apagado.
+  function hospParouPatch(it, quem, motivo, hoje, quando, ts){
+    it=it||{};
+    var hist=Array.isArray(it.historico)?it.historico.slice():[];
+    hist.push({quem:quem||'-', quando:quando||'', acao:'Parou de tomar — '+motivo});
+    return {continuo:false, dataFim:(addDiasISO(hoje,-1)||hoje), historico:hist,
+      paradoEm:{quem:quem||'-', data:hoje, quando:quando||'', ts:Number(ts)||Date.now(), motivo:motivo}};
+  }
+  // ===== LEITURAS DA ESTADIA ==========================================================
+  function hospTrocaUltima(e){
+    var tf=(e&&e.trocaFicha)||{}, best=null;
+    Object.keys(tf).forEach(function(tk){ var t=tf[tk]||{}; if(!best||(Number(t.ts)||0)>(Number(best.tf.ts)||0)) best={tk:tk, tf:t}; });
+    return best;
+  }
+  function hospTrocaIncompleta(e){
+    var tf=(e&&e.trocaFicha)||{}, best=null;
+    Object.keys(tf).forEach(function(tk){
+      var t=tf[tk]||{};
+      if(t.completa!==false) return;
+      if(String((e&&e.refKey)||'')!==String((t.para&&t.para.refKey)||'')) return;
+      if(!best||(Number(t.ts)||0)>(Number(best.tf.ts)||0)) best={tk:tk, tf:t};
+    });
+    return best;
+  }
+  function hospExclusaoUltima(e){
+    var x=(e&&e.exclusao)||{}, best=null;
+    Object.keys(x).forEach(function(k){ var v=x[k]||{}; if(!best||(Number(v.ts)||0)>(Number(best.ts)||0)) best=v; });
+    return best;
+  }
+  // "Conferir" não some sozinho: só com "Conferido" e o nome (AC8).
+  function hospPendenciasAbertas(e){
+    var out=[], tf=(e&&e.trocaFicha)||{};
+    Object.keys(tf).sort().forEach(function(tk){
+      var t=tf[tk]||{}, feitos=t.conferidos||{};
+      (Array.isArray(t.conferir)?t.conferir:[]).forEach(function(c){
+        if(!c||!c.k||feitos[c.k]) return;
+        out.push(Object.assign({tk:tk, de:t.de||{}, para:t.para||{}}, c));
+      });
+    });
+    return out;
+  }
+  // A nota da folha reemitida (AC15).
+  function hospNotaTrocaFicha(est){
+    var u=hospTrocaUltima(est); if(!u) return '';
+    return 'Ficha corrigida em '+hospDiaBR(hospIsoDe(u.tf.ts))+': estava na ficha de outro FILHOt ('+hospRotulo(u.tf.de)+').';
+  }
+  // ===== A PLANILHA DEPOIS DA TROCA (K10) =============================================
+  // O card da planilha acha a agenda pelo nome e pelo tutor (medAgendaKey). Se a planilha
+  // escreve o tutor de um jeito que não leva à ficha certa, a tela avisa antes de gravar.
+  function hospAvisoPlanilha(cards, lista, para){
+    para=para||{}; var ruins=[];
+    var nrm=function(x){ return (typeof jsNorm==='function')?jsNorm(String(x||'')):String(x||'').toLowerCase(); };
+    (cards||[]).forEach(function(c){
+      if(!c||nrm(c.nome)!==nrm(para.nome)) return;
+      var bk=PELUDINHOS, k='';
+      try{ PELUDINHOS=lista||[]; k=medAgendaKey({nome:c.nome, tutor:c.tutor||'', refKey:c.refKey||''}); }
+      catch(e){ k=''; } /* sem a conta, o aviso fica de fora — a troca continua certa */
+      finally{ PELUDINHOS=bk; }
+      if(k!==para.refKey) ruins.push(c.tutor||'sem tutor');
+    });
+    if(!ruins.length) return '';
+    return 'Na planilha de hoje, a linha de '+para.nome+' traz "'+ruins.join('", "')+'" como tutor: o Plantão pode continuar ligando essa linha a outra ficha. Peça para corrigir a planilha para "'+(para.tutor||'')+'" (ou só o primeiro nome).';
+  }
+  // Os cards de HOJE que vieram da planilha (não são lançamento manual nem estadia).
+  function hospCardsDaPlanilha(nome){
+    var n=(typeof jsNorm==='function')?jsNorm(nome||''):String(nome||'').toLowerCase();
+    return (hospedes||[]).filter(function(h){ return h && !h.manualKey && !h.hospede && !h.mascote && jsNorm(h.nome||'')===n; });
+  }
+  function hospCardDaPlanilha(e){
+    var cs=hospCardsDaPlanilha((e&&e.nome)||'');
+    for(var i=0;i<cs.length;i++){ try{ if(hospMesmoFilhot(cs[i], e)) return cs[i]; }catch(x){} /* silencioso de propósito: sem a régua, sem card */ }
+    return null;
+  }
+  // A sugestão do "É um FILHOt novo": o orçamento fechado das mesmas datas com o mesmo nome
+  // e OUTRO tutor (o caso da Frida: "Frida / Ana Carolina").
+  function hospSugestaoNovo(e){
+    e=e||{}; var sug={nome:e.nome||'', tutor:'', raca:'', de:''};
+    try{
+      (orcListaArray()||[]).forEach(function(o){
+        if(sug.tutor||!o||String(o.status||'')!=='fechado') return;
+        if(!orcPeriodoSobrepoe({entrada:e.entrada||'', saida:e.saida||e.entrada||''}, o)) return;
+        (o.pets||[]).forEach(function(p){
+          if(sug.tutor||!p||jsNorm(p.nome||'')!==jsNorm(e.nome||'')) return;
+          var t=String(p.tutor||o.tutor||'').trim();
+          if(!t||jsNorm(t)===jsNorm(e.tutor||'')) return;
+          sug={nome:p.nome||e.nome||'', tutor:t, raca:p.raca||'', de:'do orçamento fechado de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')};
+        });
+      });
+    }catch(x){} /* silencioso de propósito: sem orçamentos em mão, a pessoa escreve */
+    return sug;
+  }
+  // Os orçamentos em mão (a tela de Orçamentos pode nunca ter sido aberta neste aparelho): os
+  // mesmos 60 mais recentes que a lista de Orçamentos lê, uma vez só.
+  var HOSP_ORC_LENDO=null;
+  function hospGarantirOrcamentos(){
+    if(Object.keys(ORC_LISTA_CACHE||{}).length || !DB) return Promise.resolve(false);
+    if(HOSP_ORC_LENDO) return HOSP_ORC_LENDO;
+    var r=DB.ref('auaulandia/orcamentos'), q=(typeof r.limitToLast==='function')?r.limitToLast(60):r;
+    HOSP_ORC_LENDO=q.once('value').then(function(sn){
+      var v=(sn&&sn.val)?sn.val():null;
+      if(v && !Object.keys(ORC_LISTA_CACHE||{}).length) ORC_LISTA_CACHE=v;
+      HOSP_ORC_LENDO=null; return true;
+    }).catch(function(e){ HOSP_ORC_LENDO=null; _logLeituraFalhou('auaulandia/orcamentos (correção da hospedagem)', e); return false; });
+    return HOSP_ORC_LENDO;
+  }
+  function hospTrocarCandidatos(q){
+    var S=HOSP_CORR, atual=S?String((S.e||{}).refKey||''):'';
+    var n=(typeof jsNorm==='function')?jsNorm(q||''):String(q||'').toLowerCase();
+    if(!n) return [];
+    return (PELUDINHOS||[]).map(function(p,i){ return {idx:i, refKey:pelKey(p), nome:pelNome(p), raca:pelGet(p,'raca')||'', tutor:pelGet(p,'tutor')||''}; })
+      .filter(function(c){ return c.refKey!==atual && jsNorm([c.nome,c.tutor,c.raca].join(' ')).indexOf(n)>=0; })
+      .slice(0,20);
+  }
+  // ===== O CARTAZ =====================================================================
+  var HOSP_CORR=null;          // o cartaz aberto: {id, e, aberto, origem, passo, alvo, plano, ...}
+  var HOSP_MED_MOVIDOS={};     // 'chaveAntiga|itemId' → chave nova (K2: o alarme velho não grava na ficha antiga)
+  var HOSP_ERRO_METADE='A troca de ficha anterior ficou pela metade. Toque em «Retomar a troca de ficha» e espere terminar; só depois dá para trocar de novo ou excluir. Nada foi gravado.';
+  var HOSP_SO_LEITURA='Trocar a ficha, excluir ou marcar "Conferido" é com a Recepção, a Supervisão ou a Gestão: chame a Amanda ou a Gestão. Nada foi gravado.';
+  function hospCorrigirAbrir(id, op){
+    op=op||{};
+    var origem=op.origem||'hospedes';
+    // A Zona de risco do Plantão também abre. Quem não corrige (o Monitor vê a zona) só LÊ:
+    // nada de Trocar, Excluir, Corrigir nem «Conferido» (2ª rodada, QA A4); a tela pede para
+    // chamar a Recepção, a Amanda ou a Gestão.
+    var leitura=!podePapel('corrigir-hospedagem');
+    if(leitura && origem!=='plantao'){
+      zAlertao('SÓ A RECEPÇÃO, A SUPERVISÃO E A GESTÃO CORRIGEM UMA HOSPEDAGEM', ['Chame a recepção, a Amanda ou a Gestão.'], {botao:'Entendi'});
+      return;
+    }
+    var e=(typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null;
+    if(!e||!e.nome){
+      zAlertao('NÃO ACHEI ESTA HOSPEDAGEM', ['Ela pode ter acabado de mudar em outro aparelho. Atualize a tela e tente de novo.'], {botao:'Entendi'});
+      return;
+    }
+    HOSP_CORR={id:id, origem:origem, e:hospLimpo(e), aberto:{_ts:Number(e._ts)||0, refKey:String(e.refKey||''), status:String(e.status||'ativa')},
+      passo:(op.passo==='conferir'?'conferir':'menu'), alvo:null, plano:null, provas:null, msg:'', resultado:null, busca:String(e.nome||''), leitura:leitura};
+    hospCorrRender();
+  }
+  function hospCorrFechar(){
+    var S=HOSP_CORR; HOSP_CORR=null; hospCorrRender();
+    if(!S||!S.resultado) return;
+    // Depois de gravar, a tela de onde o cartaz abriu não pode continuar mostrando o antes.
+    try{ if(S.origem==='plantao' && typeof fecharPlantao==='function') fecharPlantao(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(S.origem==='checkin' && typeof ciChecarHospedado==='function') ciChecarHospedado(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+  }
+  // O que a pessoa já escreveu não some quando o cartaz se redesenha (o motivo, as escolhas,
+  // a ficha nova). A senha nunca é guardada: depois de um erro, ela é digitada de novo.
+  function hospCorrGuardarTela(S){
+    var v=function(id){ var el=document.getElementById(id); return (el&&typeof el.value==='string')?el.value:null; };
+    var m=v('hospCorrMotivo'); if(m!==null) S.motivoTxt=m;
+    if(S.passo==='trocar'){
+      var n=v('hospCorrNNome'), t=v('hospCorrNTutor'), r=v('hospCorrNRaca');
+      if(n!==null||t!==null||r!==null) S.sug=Object.assign({}, S.sug||{}, {nome:(n!==null?n:(S.sug||{}).nome), tutor:(t!==null?t:(S.sug||{}).tutor), raca:(r!==null?r:(S.sug||{}).raca)});
+      var hm=document.getElementById('hospCorrNHom'); if(hm&&typeof hm.checked==='boolean') S.homOk=hm.checked;
+    }
+    try{ ['hospCorrPl','hospCorrOrc'].forEach(function(nm){ var x=document.querySelector('input[name="'+nm+'"]:checked'); if(x&&typeof x.value==='string') S['esc_'+nm]=x.value; }); }catch(e){} /* silencioso de propósito: sem as escolhas guardadas, a pessoa marca de novo */
+  }
+  function hospCorrRender(semGuardar){
+    var box=document.getElementById('hospCorrBox');
+    if(!HOSP_CORR){ if(box&&box.parentNode) box.parentNode.removeChild(box); return; }
+    if(!box){ box=document.createElement('div'); box.id='hospCorrBox'; document.body.appendChild(box); }
+    else if(!semGuardar){ try{ hospCorrGuardarTela(HOSP_CORR); }catch(e){} /* silencioso de propósito: guarda defensiva */ }
+    box.style.cssText='position:fixed;inset:0;z-index:99990;background:rgba(16,10,8,.72);display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box';
+    box.innerHTML=hospCorrHtml(HOSP_CORR);
+    if(HOSP_CORR.msg){ try{ box.scrollTop=0; }catch(e){} /* silencioso de propósito: o erro fica no alto do cartaz */ }
+  }
+  function hospCorrVal(id){ var el=document.getElementById(id); return el?(((el.value)||'')+''):''; }
+  function hospCorrEscolher(op){
+    var S=HOSP_CORR; if(!S) return;
+    S.msg='';
+    if(S.leitura && op!=='menu'){ S.passo='menu'; S.msg=HOSP_SO_LEITURA; hospCorrRender(); return; }
+    if(op!=='menu' && hospTrocaIncompleta(S.e)){ S.passo='menu'; S.msg=HOSP_ERRO_METADE; hospCorrRender(); return; }
+    if(op==='trocar'){
+      S.passo='trocar'; S.alvo=null; S.plano=null; S.sug=hospSugestaoNovo(S.e); hospCorrRender();
+      // Sem os orçamentos em mão, lê e completa o que a pessoa ainda não escreveu (o tutor e a raça
+      // do orçamento fechado das mesmas datas).
+      if(!(S.sug&&S.sug.tutor)) hospGarantirOrcamentos().then(function(){
+        if(HOSP_CORR!==S || S.passo!=='trocar') return;
+        var nv=hospSugestaoNovo(S.e); if(!nv.tutor) return;
+        try{ hospCorrGuardarTela(S); }catch(e){} /* silencioso de propósito: guarda defensiva */
+        var cur=S.sug||{};
+        S.sug={nome:cur.nome||nv.nome, tutor:cur.tutor||nv.tutor, raca:cur.raca||nv.raca, de:nv.de};
+        hospCorrRender(true);
+      });
+      return;
+    }
+    if(op==='excluir'){ hospExcluirPreparar(); return; }
+    if(op==='corrigir'){ hospCorrigirInformacao(S.id); return; }
+    S.passo='menu'; hospCorrRender();
+  }
+  // "Corrigir comida, remédio, datas ou pertences": abre o Check-in na ficha DA ESTADIA e só
+  // então liga o ✎ Corrigir (K14) — nunca na última ficha aberta no Check-in.
+  function hospCorrigirInformacao(id){
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||(HOSP_CORR&&HOSP_CORR.e)||{};
+    var idx=(PELUDINHOS||[]).findIndex(function(p){ return pelKey(p)===String(e.refKey||''); });
+    if(idx<0){
+      if(HOSP_CORR){ HOSP_CORR.msg='A ficha desta hospedagem não está no cadastro. Se ela foi lançada no FILHOt errado, use "Trocar a ficha" primeiro.'; hospCorrRender(); }
+      return false;
+    }
+    HOSP_CORR=null; hospCorrRender();
+    try{ abrirItemDoMenu('checkin'); }catch(x){} /* silencioso de propósito: sem o menu, o check-in abre do jeito que der */
+    try{ ciEscolher(idx); }catch(x){} /* silencioso de propósito: guarda defensiva */
+    try{ ciCorrigirExistente(id); }catch(x){} /* silencioso de propósito: guarda defensiva */
+    return true;
+  }
+  function hospTrocarBuscar(){
+    var S=HOSP_CORR; if(!S) return;
+    S.busca=hospCorrVal('hospCorrBusca');
+    var r=document.getElementById('hospCorrRes'); if(r) r.innerHTML=hospTrocarResultadosHtml(S.busca);
+  }
+  function hospTrocarAlvo(idx){
+    var S=HOSP_CORR, p=(PELUDINHOS||[])[idx]; if(!S||!p) return;
+    S.alvo={idx:idx, refKey:pelKey(p), nome:pelNome(p), tutor:pelGet(p,'tutor')||'', raca:pelGet(p,'raca')||'', novo:false};
+    hospTrocarPreparar();
+  }
+  // A ficha nova nasce com as MESMAS travas do Novo Hóspede (ciNovoHospedeTrava): idêntica
+  // bloqueia; mesmo nome e mesmo tutor bloqueia; homônima pede a confirmação.
+  function hospTrocarAlvoNovo(d){
+    var S=HOSP_CORR; if(!S) return false;
+    d=d||{};
+    var nome=String(d.nome||'').trim(), tutor=String(d.tutor||'').trim(), raca=String(d.raca||'').trim();
+    S.alvo=null;
+    if(!nome){ S.msg='Escreva o nome do FILHOt.'; hospCorrRender(); return false; }
+    if(!tutor){ S.msg='Escreva o nome do tutor: é ele que separa '+nome+' de outro FILHOt com o mesmo nome.'; hospCorrRender(); return false; }
+    var tv=ciNovoHospedeTrava(nome, tutor, raca);
+    if(tv.nivel==='identico'||tv.nivel==='mesmoNT'){
+      S.msg='Já existe "'+hospRotulo({nome:pelNome(tv.p), raca:pelGet(tv.p,'raca'), tutor:pelGet(tv.p,'tutor')})+'" com esse nome e esse tutor: escolha essa ficha na busca, em vez de criar outra.';
+      hospCorrRender(); return false;
+    }
+    if(tv.nivel==='homonimo' && !d.homonimoOk){
+      S.msg='Já existe outro FILHOt chamado '+nome+', de '+(pelGet(tv.p,'tutor')||'tutor não informado')+'. Se é outro FILHOt, de outra família, marque "É outro FILHOt" e toque de novo.';
+      hospCorrRender(); return false;
+    }
+    S.msg='';
+    S.alvo={refKey:pelKey({n:nome, tutor:tutor}), nome:nome, tutor:tutor, raca:raca, novo:true, homonimoOk:!!d.homonimoOk};
+    return true;
+  }
+  function hospTrocarAlvoNovoTela(){
+    var ok=hospTrocarAlvoNovo({nome:hospCorrVal('hospCorrNNome'), tutor:hospCorrVal('hospCorrNTutor'), raca:hospCorrVal('hospCorrNRaca'),
+      homonimoOk:!!((document.getElementById('hospCorrNHom')||{}).checked)});
+    if(ok) hospTrocarPreparar();
+  }
+  // Lê UMA vez, quando a ficha certa é escolhida: a agenda e o registro de doses da ficha
+  // errada nos dias da estadia, as duas fichas e a auditoria do dia do check-in (R6).
+  function hospLerDadosDaTroca(id, e, de, para){
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
+    var k=String(de.refKey||'');
+    var dias=hospDiasDaEstadia(e, (typeof hospHojeISO==='function')?hospHojeISO():'');
+    var criada=hospCriadaEm(id, e), diaAud=criada?hospIsoDe(criada):String(e.entrada||'');
+    return Promise.all([
+      k?ler('auaulandia/medicacao-agenda/'+k+'/itens'):Promise.resolve(null),
+      Promise.all(dias.map(function(d){ return k?ler('auaulandia/medicacao-log/'+d+'/'+k).then(function(v){ return [d, v]; }):Promise.resolve([d, null]); })),
+      k?ler('daycare/cadastro/'+k):Promise.resolve(null),
+      para.novo?Promise.resolve(null):ler('daycare/cadastro/'+para.refKey),
+      /^\d{4}-\d{2}-\d{2}$/.test(diaAud)?ler('daycare/auditoria/'+diaAud):Promise.resolve(null)
+    ]).then(function(r){
+      var logs={}; (r[1]||[]).forEach(function(x){ if(x[1]) logs[x[0]]=x[1]; });
+      var fichaNova=para.novo?{n:para.nome, tutor:para.tutor, raca:para.raca}:(r[3]||{});
+      return {agenda:r[0]||{}, logs:logs, ficha:r[2]||{}, fichaNova:fichaNova, auditoria:r[4]||{}};
+    });
+  }
+  async function hospTrocarPreparar(){
+    var S=HOSP_CORR; if(!S||!S.alvo) return;
+    var e=S.e||{}, de={refKey:String(e.refKey||''), nome:e.nome||'', tutor:e.tutor||'', raca:e.raca||''};
+    var para=Object.assign({}, S.alvo);
+    if(para.refKey===de.refKey){ S.alvo=null; S.msg='Essa é a ficha em que a hospedagem já está. Escolha a ficha certa.'; hospCorrRender(); return; }
+    S.passo='carregando'; S.msg=''; hospCorrRender();
+    try{
+      var dados=await hospLerDadosDaTroca(S.id, e, de, para);
+      S.de=de; S.para=para;
+      S.plano=hospPlanoDaTroca({id:S.id, e:e, de:de, para:para, agenda:dados.agenda, logs:dados.logs, ficha:dados.ficha,
+        fichaNova:dados.fichaNova, auditoria:dados.auditoria, agora:hospAgora(), hoje:((typeof hospHojeISO==='function')?hospHojeISO():'')});
+      S.avisoPlanilha=hospAvisoPlanilha(hospCardsDaPlanilha(e.nome), para.novo?(PELUDINHOS||[]).concat([{n:para.nome, tutor:para.tutor, raca:para.raca}]):(PELUDINHOS||[]), para);
+      S.passo='trocar-confirmar';
+    }catch(err){
+      S.passo='trocar';
+      S.msg='Não consegui ler o que o check-in mexeu: '+((err&&err.message)||err)+'. Nada foi gravado. Confira a internet e tente de novo.';
+    }
+    if(HOSP_CORR===S) hospCorrRender();
+  }
+  // Grava só se ainda não existe (idempotente): retomar a troca nunca duplica nada.
+  function hospGravarSeNaoExiste(caminho, valor){
+    return DB.ref(caminho).transaction(function(cur){ if(cur!==null && cur!==undefined) return; return valor; });
+  }
+  // De qual remédio é a dose do registro (o id da dose é "item_HH-MM").
+  function hospDoseItemId(doseId, d){ return String((d&&d.itemId)||String(doseId||'').replace(/_\d{2}-\d{2}$/,'')); }
+  // O estoque do remédio que mudou de ficha desconta as doses que a ficha antiga contou depois
+  // de o item ser copiado (ou que chegaram lá depois). A marca é a mesma do desconto do alarme
+  // (descontarEstoquePorDose: "dia__dose"): o que já está marcado não desconta de novo.
+  function hospEstoqueAcertar(key, itemId, conta){
+    conta=(conta||[]).filter(function(x){ return x&&x.ck; });
+    if(!conta.length) return Promise.resolve(false);
+    return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').transaction(function(est){
+      if(est===null||est===undefined) return null;   // sem cópia local: o servidor responde com o valor de verdade
+      var contavel=(est.modo==='contavel' || (est.modo==null && (typeof est.inicial==='number' || typeof est.restante==='number')));
+      if(!contavel) return;
+      est.contados=est.contados||{};
+      var mudou=false;
+      conta.forEach(function(x){
+        if(est.contados[x.ck]) return;
+        var base=(typeof est.restante==='number')?est.restante:(typeof est.inicial==='number'?est.inicial:null);
+        if(base==null) return;
+        est.contados[x.ck]=true; est.restante=Math.max(0, base-(qtdNum(x.q)||0)); mudou=true;
+      });
+      if(!mudou) return;
+      return est;
+    }).then(function(r){ return !!(r&&r.committed); });
+  }
+  // O mapa do K2 ("este remédio saiu desta ficha"): marcar A→B apaga o B→A de uma troca anterior
+  // (trocar de volta não pode travar o «Dei agora» na ficha onde o remédio está — QA A2).
+  function hospMarcarMovidos(de, para, itens){
+    (itens||[]).forEach(function(id){
+      HOSP_MED_MOVIDOS[String(de)+'|'+String(id)]=String(para||'');
+      delete HOSP_MED_MOVIDOS[String(para||'')+'|'+String(id)];
+    });
+  }
+  function hospGravarSinalAgenda(v){
+    try{ return Promise.resolve(DB.ref('auaulandia/sinais/agenda').set(v)).catch(function(x){ _logFalhaGrav('auaulandia/sinais/agenda (troca de ficha)', x); }); }
+    catch(x){ _logFalhaGrav('auaulandia/sinais/agenda (troca de ficha)', x); return Promise.resolve(); }
+  }
+  function hospCriarFichaNova(para, ass, agora){
+    var nome=String(para.nome||'').trim(), tutor=String(para.tutor||'').trim(), raca=String(para.raca||'').trim();
+    var tv=ciNovoHospedeTrava(nome, tutor, raca);
+    if(tv.nivel==='identico'||tv.nivel==='mesmoNT') return Promise.resolve({ok:false, erro:'Já existe uma ficha com esse nome e esse tutor: escolha essa ficha na busca. Nada foi gravado.'});
+    if(tv.nivel==='homonimo' && !para.homonimoOk) return Promise.resolve({ok:false, erro:'Já existe outro FILHOt com esse nome: confirme que é outro FILHOt antes de criar a ficha. Nada foi gravado.'});
+    var novo={n:nome, raca:raca, freq:'', tutor:tutor, nasc:'', dias:[]};
+    var key=pelKey(novo);
+    var reg={_novo:true, n:nome, tutor:tutor, raca:raca, nasc:'', dias:[], freq:'', criado_na_troca_de_ficha:{quem:ass.nome, ts:agora}};
+    return DB.ref('daycare/cadastro/'+key).update(hospLimpo(reg)).then(function(){
+      if(!(PELUDINHOS||[]).some(function(x){ return pelKey(x)===key; })){
+        PELUDINHOS.push(novo);
+        PELUDINHOS.sort(function(a,b){ return jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor||'').localeCompare(jsNorm(b.tutor||'')); });
+      }
+      try{ pelCadCache[key]=Object.assign({}, pelCadCache[key]||{}, hospLimpo(reg)); }catch(x){} /* silencioso de propósito: o cadastro vivo chega pelo ouvinte */
+      try{ localStorage.setItem('zeluz_pel_'+key, JSON.stringify(reg)); }catch(x){} /* silencioso de propósito: guardar no aparelho é conveniência */
+      if(typeof audit==='function') audit('checkin','novo hóspede cadastrado na troca de ficha da hospedagem',{pet:nome, tutor:tutor, raca:raca});
+      return {ok:true, refKey:key};
+    }).catch(function(err){
+      _logFalhaGrav('daycare/cadastro/ (troca de ficha — ficha nova)', err);
+      return {ok:false, erro:'Não consegui criar a ficha nova ('+((err&&err.message)||err)+'). Nada foi gravado na hospedagem.'};
+    });
+  }
+  // O que a troca guarda dentro da estadia para poder ser RETOMADA (K7): o que muda de
+  // agenda, o que é copiado e o que a ficha antiga perde, com o valor que estava lá.
+  function hospPlanoParaGuardar(pl){
+    pl=pl||{};
+    return hospLimpo({mover:pl.mover||[], copiarLog:pl.copiarLog||[], fichaLevar:pl.fichaLevar||{}, fichaTirar:pl.fichaTirar||[], fichaVista:pl.fichaVista||{}});
+  }
+  async function hospTrocarGravar(motivo, senha){
+    var S=HOSP_CORR;
+    var falha=function(t){ if(S){ S.msg=t; if(HOSP_CORR===S) hospCorrRender(); } return {ok:false, erro:t}; };
+    if(!S||S.passo!=='trocar-confirmar'||!S.alvo||!S.plano) return falha('Escolha a ficha certa antes de gravar.');
+    if(S.gravando) return falha('Já estou gravando esta correção: espere o aviso.');
+    var m=motivoQuatroPalavras(motivo); if(!m.ok) return falha(m.erro);
+    var ass=hospAssinarPorSenha(senha); senha=null;
+    if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha('Sem conexão com o banco agora. Nada foi gravado: tente de novo em instantes.');
+    S.gravando=true;
+    try{
+      var id=S.id, de=S.de, para=Object.assign({}, S.para), agora=hospAgora(), mot=String(motivo).trim();
+      // 1) a estadia ainda é a de quando o cartaz abriu? (antes de criar qualquer coisa)
+      var s0=await DB.ref('auaulandia/estadias/'+id).once('value');
+      var pre=hospTrocaPatch((s0&&s0.val)?s0.val():null, S.aberto, {tk:'conferencia', de:de, para:{refKey:para.refKey||'?'}, ts:agora});
+      if(!pre.ok) return falha(pre.erro);
+      // 2) a ficha nova (com as travas do Novo Hóspede)
+      if(para.novo){
+        var cr=await hospCriarFichaNova(para, ass, agora);
+        if(!cr.ok) return falha(cr.erro);
+        para.refKey=cr.refKey;
+      }
+      // 3) a estadia, numa transação: só grava se ela ainda está na ficha de onde sai e com o
+      // mesmo _ts de quando o cartaz abriu (K7). Pelo caminho dela: o carimbo sobe (K3).
+      var tk='t'+agora;
+      var reg={tk:tk, de:de, para:{refKey:para.refKey, nome:para.nome, tutor:para.tutor, raca:para.raca}, motivo:mot, quem:ass.nome,
+        quem_papel:ass.papel, logado:hospQuemLogado(), ts:agora, quando_br:hospQuandoBR(agora), plano:hospPlanoParaGuardar(S.plano),
+        conferir:hospLimpo(S.plano.conferir||[])};
+      var erroTx='';
+      var res=await DB.ref('auaulandia/estadias/'+id).transaction(function(cur){
+        if(cur===null||cur===undefined) return null;   // sem cópia local: o servidor responde com o valor de verdade
+        var r=hospTrocaPatch(cur, S.aberto, reg);
+        if(!r.ok){ erroTx=r.erro; return; }
+        return r.novo;
+      });
+      var vNovo=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+      if(!res||!res.committed||!vNovo||!((vNovo.trocaFicha||{})[tk])) return falha(erroTx||HOSP_ERRO_MEXEU);
+      try{ if(typeof EST_TODAS!=='undefined'&&EST_TODAS) EST_TODAS[id]=vNovo; }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+      S.e=hospLimpo(vNovo); S.tk=tk;
+      hospEstadiaLocal(id, vNovo);
+      // 4) o rastro (hospedagem-correcoes e auditoria gravam agora); o aviso no Telegram corre em
+      //    paralelo e NÃO segura o remédio (3ª rodada, O7): a resposta é esperada depois, com prazo.
+      var tgP=hospRastro('trocou-ficha', id, vNovo, reg, S.plano);
+      // 5) a agenda, as doses e as fichas (idempotente; dá para retomar)
+      var ap;
+      try{ ap=await hospTrocaAplicar(id, tk, vNovo.trocaFicha[tk], ass.nome); }
+      catch(errAp){ ap={ok:false, erro:(errAp&&errAp.message)||String(errAp)}; }
+      var tg=await tgP;
+      if(ap&&ap.ok){ try{ S.e.trocaFicha[tk].completa=true; if(EST_TODAS[id]&&EST_TODAS[id].trocaFicha&&EST_TODAS[id].trocaFicha[tk]) EST_TODAS[id].trocaFicha[tk].completa=true; }catch(x){} /* silencioso de propósito: o ouvinte traz o valor do banco */ }
+      S.resultado={acao:'troca', tg:!!tg.ok, tgErro:tg.erro||'', aplicado:!!(ap&&ap.ok), apErro:(ap&&ap.erro)||'', de:de, para:reg.para};
+      S.passo='feito'; S.msg='';
+      hospCorrDepois();
+      if(HOSP_CORR===S) hospCorrRender();
+      if(!(ap&&ap.ok)) return {ok:false, tg:!!tg.ok, erro:'A troca de ficha ficou pela metade: a estadia já está na ficha certa, mas o remédio ou a ficha antiga ainda não foram arrumados ('+((ap&&ap.erro)||'sem resposta')+'). Toque em "Retomar a troca de ficha" quando a internet voltar.'};
+      return {ok:true, tg:!!tg.ok};
+    }catch(err){
+      _logFalhaGrav('auaulandia/estadias (troca de ficha)', err);
+      return falha('Não consegui gravar a troca de ficha ('+((err&&err.message)||err)+'). Confira a internet: se a estadia já mudou, o cartaz mostra "Retomar".');
+    }finally{ S.gravando=false; }
+  }
+  // A parte da troca que dá para retomar (K7): grava na agenda nova ANTES de tirar da antiga,
+  // copia as doses (as originais ficam), leva para a ficha certa o que está vazio nela e tira
+  // da ficha errada só o que continua igual ao que o plano viu.
+  // 2ª rodada (QA A1): o remédio, o estoque e as doses são lidos NA HORA (não do retrato de
+  // quando o cartaz abriu); o sinal sai ANTES de o remédio deixar a agenda antiga; depois de
+  // mover, o registro de doses da ficha antiga é relido e o que faltar é copiado, sem duplicar.
+  async function hospTrocaAplicar(id, tk, tf, quem){
+    tf=tf||{}; var de=tf.de||{}, para=tf.para||{}, pl=tf.plano||{};
+    if(!DB) throw new Error('sem conexão com o banco');
+    if(!de.refKey||!para.refKey) throw new Error('a troca não diz de qual ficha para qual');
+    var agora=hospAgora(), quando=(typeof agoraBR==='function')?agoraBR():hospQuandoBR(agora), rDe=hospRotulo(de);
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
+    var naAntiga=function(itId){ return 'auaulandia/medicacao-agenda/'+de.refKey+'/itens/'+itId; };
+    var mover=Array.isArray(pl.mover)?pl.mover:[];
+    var movidos={}, ids=[]; mover.forEach(function(x){ if(x&&x.id&&!movidos[x.id]){ movidos[x.id]=1; ids.push(x.id); } });
+    // os dias em que o registro de doses da ficha antiga é relido: os da estadia até hoje e os do plano
+    var est=ids.length?await ler('auaulandia/estadias/'+id):null;
+    var dias=hospDiasDaEstadia(est||{}, (typeof hospHojeISO==='function')?hospHojeISO():'');
+    (Array.isArray(pl.copiarLog)?pl.copiarLog:[]).forEach(function(c){ if(c&&c.dia&&dias.indexOf(c.dia)<0) dias.push(c.dia); });
+    var lerDoses=function(){ return Promise.all(dias.map(function(d){ return ler('auaulandia/medicacao-log/'+d+'/'+de.refKey).then(function(v){ return [d, v||{}]; }); })); };
+    // as doses dos remédios que mudam de ficha, num registro lido (só as completas — K15)
+    var dosesMovidas=function(lidos){
+      var out=[], juntar=function(c){ out.push(c); };
+      (lidos||[]).forEach(function(x){ Object.keys(x[1]||{}).forEach(function(did){
+        var d=x[1][did]; if(!d||typeof d!=='object') return;
+        if(movidos[hospDoseItemId(did, d)] && hospDoseCopiavel(d)) juntar({dia:x[0], doseId:did, dose:d});
+      }); });
+      return out;
+    };
+    // copia para a ficha certa só o que falta, uma vez cada (as originais ficam)
+    var copiadas={};
+    var copiarDoses=async function(cop){
+      for(var j=0;j<(cop||[]).length;j++){
+        var c=cop[j]||{}; if(!c.dia||!c.doseId||!c.dose||copiadas[c.dia+'|'+c.doseId]) continue;
+        copiadas[c.dia+'|'+c.doseId]=1;
+        await hospGravarSeNaoExiste('auaulandia/medicacao-log/'+c.dia+'/'+para.refKey+'/'+c.doseId,
+        Object.assign({}, c.dose, {copiado_de:de.refKey, copiado_em:agora, copiado_por:quem||'-'}));
+      }
+    };
+    // 1) ANTES de o remédio aparecer na ficha certa (3ª rodada, QA R1): as doses dele já dadas —
+    //    as do plano e as de uma leitura de agora. O aparelho que recarrega no 1º sinal já vê a
+    //    dose dada, e o alarme não toca de novo.
+    var pre=ids.length?await lerDoses():[];
+    await copiarDoses((Array.isArray(pl.copiarLog)?pl.copiarLog:[]).concat(dosesMovidas(pre)));
+    // 2) a agenda nova recebe o item VIVO da antiga (o estoque de agora); o retrato do plano é
+    //    só a reserva, quando o item já saiu de lá (retomar).
+    for(var i=0;i<mover.length;i++){
+      var mv=mover[i]||{}; if(!mv.id) continue;
+      var vivo=await ler(naAntiga(mv.id));
+      var it=hospLimpo(vivo||mv.item||{});
+      var hist=Array.isArray(it.historico)?it.historico.slice():[];
+      hist.push({quem:quem||'-', quando:quando, acao:'Mudou de ficha: veio da ficha de '+rDe+' na troca de ficha de '+hospDiaBR(hospIsoDe(tf.ts||agora))+', por '+(quem||'-')});
+      it.historico=hist; it.trocado_de=de.refKey;
+      await hospGravarSeNaoExiste('auaulandia/medicacao-agenda/'+para.refKey+'/itens/'+mv.id, it);
+    }
+    // o sinal leva para onde a estadia foi (nome, tutor, raça): o Plantão dos outros aparelhos
+    // acerta o card dela na hora (3ª rodada, QA R2)
+    var sinal={tipo:'troca', ts:agora, de:de.refKey, para:para.refKey, nome:para.nome||'', tutor:para.tutor||'', raca:para.raca||'', itens:ids, estadia:id};
+    var ultimos={}, antes=[];
+    if(ids.length){
+      await DB.ref('auaulandia/medicacao-agenda/'+para.refKey).update({nome:para.nome||'', tutor:para.tutor||'', estadiaId:id, _ts:agora, _quem:quem||'-'});
+      // 3) o sinal ANTES de tirar da agenda antiga (K2): o «Dei agora» de outro aparelho deixa de
+      //    gravar lá e o alarme recarrega já com o remédio (e as doses dadas) na ficha certa.
+      hospMarcarMovidos(de.refKey, para.refKey, ids);
+      await hospGravarSinalAgenda(sinal);
+      // 4) o último retrato da agenda antiga (o estoque contado) e do registro dela; só então sai.
+      antes=await lerDoses();
+      for(var r=0;r<ids.length;r++){
+        ultimos[ids[r]]=await ler(naAntiga(ids[r]));
+        await DB.ref(naAntiga(ids[r])).remove();
+      }
+    }
+    // O aviso "está acabando" aberto para um remédio que mudou de ficha vai junto (K12): a
+    // Recepção liga para a tutora certa, e o "Resolver" acha o remédio.
+    var avs=(typeof AVISOS_ESTOQUE_CACHE!=='undefined'&&AVISOS_ESTOQUE_CACHE)?AVISOS_ESTOQUE_CACHE:{};
+    for(var a in avs){
+      var av=avs[a]||{};
+      if(String(av.key||'')!==String(de.refKey) || !movidos[av.itemId] || String(av.status||'')==='resolvido') continue;
+      await DB.ref('auaulandia/avisos-estoque/'+a).update({key:para.refKey, hospNome:para.nome||'', tutor:para.tutor||'', trocado_de:{key:de.refKey, ts:agora, por:quem||'-'}});
+    }
+    // 5) as doses relidas DEPOIS de o remédio sair da agenda antiga (a dose dada em outro aparelho
+    //    no meio da troca): só as que faltam.
+    var depois=ids.length?await lerDoses():[];
+    await copiarDoses(dosesMovidas(depois));
+    // 6) o estoque da agenda nova desconta o que a antiga contou e a nova ainda não, e a dose que
+    //    chegou na antiga depois do último retrato — pela mesma marca dia+dose do desconto do
+    //    alarme: nada é descontado duas vezes.
+    if(ids.length){
+      var jaAntes={}; antes.forEach(function(x){ Object.keys(x[1]||{}).forEach(function(did){ jaAntes[x[0]+'__'+did]=1; }); });
+      for(var n=0;n<ids.length;n++){
+        var idM=ids[n], ult=ultimos[idM]||null, conta=[];
+        var qItem=String((ult&&ult.q)||(((mover.filter(function(x){ return x&&x.id===idM; })[0])||{}).item||{}).q||'');
+        var cont=(ult&&ult.estoque&&ult.estoque.contados)||{};
+        Object.keys(cont).forEach(function(ck){ if(cont[ck]) conta.push({ck:ck, q:qItem}); });
+        depois.forEach(function(x){ Object.keys(x[1]||{}).forEach(function(did){
+          var d=x[1][did]; if(!d||typeof d!=='object'||d.avulso===true||hospDoseItemId(did, d)!==idM) return;
+          if(!jaAntes[x[0]+'__'+did]) conta.push({ck:x[0]+'__'+did, q:String(d.q||qItem)});
+        }); });
+        if(conta.length){
+          try{ await hospEstoqueAcertar(para.refKey, idM, conta); }
+          catch(x){ _logFalhaGrav('estoque do remédio que mudou de ficha '+idM, x); }
+        }
+      }
+    }
+    var lev=pl.fichaLevar||{};
+    if(Object.keys(lev).length){
+      var sN=await DB.ref('daycare/cadastro/'+para.refKey).once('value'), fNova=((sN&&sN.val)?sN.val():null)||{}, pN={};
+      Object.keys(lev).forEach(function(c){ var v=fNova[c]; if(v==null||v===''||(typeof v==='object'&&!Object.keys(v).length)) pN[c]=lev[c]; });
+      if(Object.keys(pN).length){
+        await DB.ref('daycare/cadastro/'+para.refKey).update(hospLimpo(pN));
+        try{ pelCadCache[para.refKey]=Object.assign({}, pelCadCache[para.refKey]||{}, hospLimpo(pN)); }catch(x){} /* silencioso de propósito: o cadastro vivo chega pelo ouvinte */
+      }
+    }
+    var tir=Array.isArray(pl.fichaTirar)?pl.fichaTirar:[], vista=pl.fichaVista||{};
+    if(tir.length){
+      var sA=await DB.ref('daycare/cadastro/'+de.refKey).once('value'), fAnt=((sA&&sA.val)?sA.val():null)||{}, pA={};
+      tir.forEach(function(c){ if(fAnt[c]!==undefined && JSON.stringify(fAnt[c])===JSON.stringify(vista[c])) pA[c]=null; });
+      if(Object.keys(pA).length){
+        await DB.ref('daycare/cadastro/'+de.refKey).update(pA);
+        try{ var pc=Object.assign({}, pelCadCache[de.refKey]||{}); Object.keys(pA).forEach(function(c){ delete pc[c]; }); pelCadCache[de.refKey]=pc; }catch(x){} /* silencioso de propósito */
+        try{ var lc=JSON.parse(localStorage.getItem('zeluz_pel_'+de.refKey)||'{}'); Object.keys(pA).forEach(function(c){ delete lc[c]; }); localStorage.setItem('zeluz_pel_'+de.refKey, JSON.stringify(lc)); }catch(x){} /* silencioso de propósito: a cópia local é conveniência */
+        // O espelho do cadastro na AuAulândia (o cartão "cadastro incompleto" grava nos dois).
+        try{
+          var ck=cadKey({nome:de.nome, tutor:de.tutor}), cm=(cadCache||{})[ck], pM={};
+          if(cm) Object.keys(pA).forEach(function(c){ if(cm[c]!==undefined && JSON.stringify(cm[c])===JSON.stringify(vista[c])) pM[c]=null; });
+          if(Object.keys(pM).length) await DB.ref('auaulandia/cadastro/'+ck).update(pM);
+        }catch(x){ _logFalhaGrav('auaulandia/cadastro (troca de ficha — espelho)', x); }
+      }
+    }
+    await DB.ref('auaulandia/estadias/'+id+'/trocaFicha/'+tk).update({completa:true, completa_ts:hospAgora()});
+    // K2: de novo, com tudo no lugar — em TODA troca, mesmo sem remédio movido (3ª rodada, QA R2):
+    // a estadia mudou de ficha, e os outros aparelhos remontam o Plantão e o alarme.
+    await hospGravarSinalAgenda(Object.assign({}, sinal, {ts:hospAgora(), fase:'feito'}));
+    return {ok:true};
+  }
+  async function hospRetomarTroca(id, tk){
+    if(!DB) return {ok:false, erro:'Sem conexão com o banco agora. Tente de novo em instantes.'};
+    var e=null; try{ var s=await DB.ref('auaulandia/estadias/'+id).once('value'); e=(s&&s.val)?s.val():null; }catch(x){ e=null; } /* sem a leitura, não há o que retomar */
+    var tf=e&&e.trocaFicha&&e.trocaFicha[tk];
+    if(!tf) return {ok:false, erro:'Não achei esta troca de ficha para retomar.'};
+    if(tf.completa) return {ok:true, jaEstava:true};
+    if(String(e.refKey||'')!==String((tf.para&&tf.para.refKey)||'')) return {ok:false, erro:'A estadia mudou de ficha de novo depois desta troca: confira com a Gestão antes de retomar.'};
+    try{ var ap=await hospTrocaAplicar(id, tk, tf, tf.quem||'-'); hospCorrDepois(); return ap; }
+    catch(err){ return {ok:false, erro:'Ainda não deu para terminar a troca ('+((err&&err.message)||err)+'). Tente de novo quando a internet voltar.'}; }
+  }
+  // O prazo da espera pelo Telegram (3ª rodada, O7): a ponte lenta não segura a tela. O pedido
+  // não é cancelado; passado o prazo, a tela diz que o aviso não confirmou.
+  var HOSP_TG_PRAZO=20000;
+  var HOSP_TG_ERRO_PRAZO='a ponte do Telegram não respondeu em '+Math.round(HOSP_TG_PRAZO/1000)+' segundos';
+  function hospComPrazo(pr, ms, erro){
+    return new Promise(function(ok){
+      var feito=false, fim=function(v){ if(feito) return; feito=true; ok(v); };
+      try{ setTimeout(function(){ fim({ok:false, erro:erro}); }, ms); }catch(e){} /* silencioso de propósito: sem relógio, espera a resposta */
+      Promise.resolve(pr).then(fim, function(e){ fim({ok:false, erro:String((e&&e.message)||e)}); });
+    });
+  }
+  // Os 4 lugares do rastro (AC8): a estadia (já gravada), auaulandia/hospedagem-correcoes, a
+  // auditoria do dia e o grupo da Gestão no Telegram. A falha do Telegram não desfaz nada:
+  // ela volta para a tela dizer (AC13).
+  function hospRastro(acao, id, est, reg, extra){
+    est=est||{}; reg=reg||{}; extra=extra||{};
+    var papel=HOSP_PAPEL_ROTULO[reg.quem_papel]||reg.quem_papel||'';
+    var assinado='assinado por '+(reg.quem||'-')+(papel?(' ('+papel+')'):'')+((reg.logado&&reg.logado!=='-')?(', no aparelho de '+reg.logado):'')+', em '+(reg.quando_br||'');
+    var no={acao:acao, estadia:id, nome:est.nome||'', motivo:reg.motivo||'', quem:reg.quem||'', quem_papel:reg.quem_papel||'',
+      logado:reg.logado||'', ts:Number(reg.ts)||Date.now(), quando_br:reg.quando_br||''};
+    var texto='', detalhe='';
+    if(acao==='trocou-ficha'){
+      no.de=reg.de||{}; no.para=reg.para||{};
+      no.itensMovidos=(extra.mover||[]).map(function(x){ return x.id; });
+      no.dosesCopiadas=(extra.copiarLog||[]).length;
+      no.fichaLevou=Object.keys(extra.fichaLevar||{}); no.fichaTirou=(extra.fichaTirar||[]).slice();
+      no.conferir=(extra.conferir||[]).map(function(c){ return c.texto; });
+      detalhe=(est.nome||'')+' — saiu da ficha de '+hospRotulo(reg.de)+' para '+hospRotulo(reg.para)+' — motivo: '+(reg.motivo||'')+' — '+assinado;
+      texto='HOSPEDAGEM CORRIGIDA: '+detalhe+'.'+((extra.conferir||[]).length?(' Para conferir: '+hospPl(extra.conferir.length, 'item', 'itens')+', em Hóspedes de hoje.'):'');
+    } else {
+      no.entrada=est.entrada||''; no.saida=est.saida||''; no.refKey=est.refKey||'';
+      no.planilha=reg.planilha||''; no.orcamento=reg.orcamento||'';
+      detalhe=(est.nome||'')+' ('+hospDiaBR(est.entrada||'')+' a '+hospDiaBR(est.saida||est.entrada||'')+') — lançada por engano — motivo: '+(reg.motivo||'')+' — '+assinado;
+      texto='HOSPEDAGEM EXCLUÍDA: '+detalhe+'.'
+        +(reg.planilha==='tirar'?' Saiu do Plantão nos dias da estadia.':'')
+        +(reg.orcamento==='cancelar'?' A reserva (orçamento) também foi cancelada.':'');
+    }
+    try{ var pr=DB.ref('auaulandia/hospedagem-correcoes/'+id).push(hospLimpo(no)); if(pr&&typeof pr.catch==='function') pr.catch(function(e){ _logFalhaGrav('auaulandia/hospedagem-correcoes', e); }); }
+    catch(e){ _logFalhaGrav('auaulandia/hospedagem-correcoes', e); }
+    try{ if(typeof audit==='function') audit(acao==='trocou-ficha'?'hospedagem-ficha-trocada':'hospedagem-excluida', detalhe,
+      {pet:est.nome||'', estadia:id, assinou:reg.quem||'', papel:reg.quem_papel||'', de:((reg.de||{}).refKey)||est.refKey||'', para:((reg.para||{}).refKey)||''}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return hospComPrazo(Promise.resolve().then(function(){ return (typeof tgCfgPronta==='function')?tgCfgPronta():null; }).then(function(c){
+      if(!c||!c.url) return {ok:false, erro:'a ponte do Telegram não está configurada'};
+      return tgAvisar({grupo:'gestao', texto:texto});
+    }), HOSP_TG_PRAZO, HOSP_TG_ERRO_PRAZO)
+      .then(function(r){ return {ok:!!(r&&r.ok), erro:(r&&r.erro)||''}; })
+      .catch(function(e){ return {ok:false, erro:String((e&&e.message)||e)}; });
+  }
+  // Depois de gravar: as outras telas releem o que mudou.
+  function hospCorrDepois(){
+    try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(typeof renderHospedesAba==='function') renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(typeof orcCarregarEstadias==='function') orcCarregarEstadias(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+  }
+  // ===== EXCLUIR ======================================================================
+  // A prova de que o FILHOt dormiu aqui, lida no banco: a agenda e as doses da ficha da estadia
+  // e os relatórios do plantão (na chave do tutor da estadia, do card da planilha e — K11 — da
+  // ficha de onde a estadia saiu numa troca anterior). Lida ao abrir "Excluir" e DE NOVO na hora
+  // de gravar (2ª rodada, QA A3): o que chegou com o cartaz aberto também trava.
+  function hospLerProvasExcluir(S, e, dias){
+    e=e||{}; dias=dias||[];
+    var k=String(e.refKey||'');
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
+    var tutores=[e.tutor||''].concat(S.card?[S.card.tutor||'']:[]).filter(function(t, i, a){ return a.indexOf(t)===i; });
+    var pares=tutores.map(function(t){ return {nome:e.nome||'', tutor:t}; });
+    Object.keys(e.trocaFicha||{}).forEach(function(tk){
+      var d=(e.trocaFicha[tk]||{}).de||{};
+      if(d.nome && !pares.some(function(p){ return jsNorm(p.nome)===jsNorm(d.nome) && jsNorm(p.tutor)===jsNorm(d.tutor||''); })) pares.push({nome:d.nome, tutor:d.tutor||''});
+    });
+    return Promise.all([
+      k?ler('auaulandia/medicacao-agenda/'+k+'/itens'):Promise.resolve(null),
+      Promise.all(dias.map(function(d){ return k?ler('auaulandia/medicacao-log/'+d+'/'+k).then(function(v){ return [d, v]; }):Promise.resolve([d, null]); })),
+      Promise.all(dias.map(function(d){
+        return Promise.all(pares.map(function(p){ return ler('auaulandia/relatorios/'+fichaKeyDe(p, new Date(d+'T12:00:00'))); }))
+          .then(function(vs){ return [d, vs.filter(function(v){ return v&&typeof v==='object'&&Object.keys(v).length; })[0]||null]; });
+      }))
+    ]).then(function(r){
+      var logs={}, rels={};
+      (r[1]||[]).forEach(function(x){ if(x[1]) logs[x[0]]=x[1]; });
+      (r[2]||[]).forEach(function(x){ if(x[1]) rels[x[0]]=x[1]; });
+      return {agenda:r[0]||{}, logs:logs, rels:rels};
+    });
+  }
+  async function hospExcluirPreparar(){
+    var S=HOSP_CORR; if(!S) return;
+    S.passo='carregando'; S.msg=''; hospCorrRender();
+    try{
+      if(!DB) throw new Error('sem conexão com o banco');
+      var e=S.e||{};
+      var dias=hospDiasDaEstadia(e, (typeof hospHojeISO==='function')?hospHojeISO():'');
+      S.card=hospCardDaPlanilha(e);
+      var lido=await hospLerProvasExcluir(S, e, dias);
+      S.provas=hospProvaDeEstadia(e, lido.logs, lido.rels);
+      await hospGarantirOrcamentos();
+      S.nascidos=hospPlanoDaTroca({id:S.id, e:e, agenda:lido.agenda||{}, logs:{}, ficha:{}, auditoria:{}, de:{}, para:{}, agora:hospAgora()}).mover;
+      // FR7 (QA A5): pela ficha; sem achado, o orçamento da mesma data e nome com OUTRO tutor — a tela diz de quem é
+      var orcFicha=hospOrcamentoDaEstadia(e, {estrito:true});
+      S.orcId=orcFicha||hospOrcamentoDaEstadia(e)||'';
+      S.orcOutro=!!(S.orcId && !orcFicha);
+      S.passo='excluir';
+    }catch(err){
+      S.passo='menu';
+      S.msg='Não consegui conferir se o FILHOt dormiu aqui ('+((err&&err.message)||err)+'). Nada foi gravado. Confira a internet e tente de novo.';
+    }
+    if(HOSP_CORR===S) hospCorrRender();
+  }
+  // As chaves da linha no Plantão: a do card da planilha e a da estadia (hospRemKey).
+  function hospChavesRemocao(e, card){
+    var out=[], vis={};
+    [card, {nome:(e&&e.nome)||'', tutor:(e&&e.tutor)||''}].forEach(function(h){
+      if(!h||!h.nome) return; var k=hospRemKey(h); if(vis[k]) return; vis[k]=1;
+      out.push({k:k, nome:h.nome||'', tutor:h.tutor||''});
+    });
+    return out;
+  }
+  async function hospExcluirGravar(motivo, senha, escolhas){
+    var S=HOSP_CORR; escolhas=escolhas||{};
+    var falha=function(t){ if(S){ S.msg=t; if(HOSP_CORR===S) hospCorrRender(); } return {ok:false, erro:t}; };
+    if(!S||S.passo!=='excluir') return falha('Toque em "Excluir" no cartaz antes de gravar.');
+    if(S.provas&&S.provas.bloqueia) return falha('Esta hospedagem tem prova de que o FILHOt dormiu aqui: ela não pode ser excluída. Use "Trocar a ficha".');
+    if(S.gravando) return falha('Já estou gravando: espere o aviso.');
+    var m=motivoQuatroPalavras(motivo); if(!m.ok) return falha(m.erro);
+    var ass=hospAssinarPorSenha(senha); senha=null;
+    if(!ass.ok) return falha(ass.erro);
+    var pl=String(escolhas.planilha||''), oc=String(escolhas.orcamento||'');
+    if(S.card && !/^(tirar|manter)$/.test(pl)) return falha('Diga o que fazer com a linha da planilha: tirar do Plantão nos dias desta estadia, ou deixar.');
+    if(S.orcId && !/^(cancelar|manter)$/.test(oc)) return falha('Diga o que fazer com o orçamento desta hospedagem: cancelar a reserva também, ou deixar como está.');
+    if(!/^(tirar|manter)$/.test(pl)) pl='';
+    if(!S.orcId) oc='';
+    if(!DB) return falha('Sem conexão com o banco agora. Nada foi gravado: tente de novo em instantes.');
+    S.gravando=true;
+    try{
+      var id=S.id, agora=hospAgora(), mot=String(motivo).trim();
+      var reg={tk:'x'+agora, motivo:mot, quem:ass.nome, quem_papel:ass.papel, logado:hospQuemLogado(), ts:agora, quando_br:hospQuandoBR(agora),
+        planilha:pl, orcamento:oc, orcamento_id:(oc?S.orcId:'')};
+      var s0=await DB.ref('auaulandia/estadias/'+id).once('value'), eV=(s0&&s0.val)?s0.val():null;
+      var pre=hospExclusaoPatch(eV, S.aberto, reg);
+      if(!pre.ok) return falha(pre.erro);
+      // QA A3: a dose e o relatório que chegaram com o cartaz aberto também travam — lidos agora.
+      var lido=await hospLerProvasExcluir(S, eV, hospDiasDaEstadia(eV, (typeof hospHojeISO==='function')?hospHojeISO():hospIsoDe(agora)));
+      var pvAgora=hospProvaDeEstadia(eV, lido.logs, lido.rels);
+      if(pvAgora.bloqueia){
+        S.provas=pvAgora;
+        return falha('Enquanto este cartaz estava aberto, apareceu prova de que o FILHOt dormiu aqui ('+pvAgora.provas[0]+'). Nada foi gravado: esta hospedagem não pode ser excluída. Use "Trocar a ficha".');
+      }
+      var erroTx='';
+      var res=await DB.ref('auaulandia/estadias/'+id).transaction(function(cur){
+        if(cur===null||cur===undefined) return null;
+        var r=hospExclusaoPatch(cur, S.aberto, reg);
+        if(!r.ok){ erroTx=r.erro; return; }
+        return r.novo;
+      });
+      var vNovo=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+      if(!res||!res.committed||!vNovo||!((vNovo.exclusao||{})[reg.tk])) return falha(erroTx||HOSP_ERRO_MEXEU);
+      try{ if(typeof EST_TODAS!=='undefined'&&EST_TODAS) EST_TODAS[id]=vNovo; }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+      S.e=hospLimpo(vNovo);
+      // o rastro grava agora; o Telegram corre em paralelo e não segura o alarme (3ª rodada, O7)
+      var tgP=hospRastro('excluiu', id, vNovo, reg, {});
+      hospEstadiaLocal(id, vNovo);
+      var ext=[];
+      // o alarme dos remédios nascidos neste check-in para (marca "parou", com o motivo)
+      var k=String(vNovo.refKey||''), hoje=(typeof hospHojeISO==='function')?hospHojeISO():hospIsoDe(agora), quando=(typeof agoraBR==='function')?agoraBR():hospQuandoBR(agora);
+      for(var i=0;i<(S.nascidos||[]).length;i++){
+        var nid=S.nascidos[i].id; if(!k||!nid) continue;
+        try{
+          var sI=await DB.ref('auaulandia/medicacao-agenda/'+k+'/itens/'+nid).once('value'), it=(sI&&sI.val)?sI.val():null;
+          if(it && !it.paradoEm) await DB.ref('auaulandia/medicacao-agenda/'+k+'/itens/'+nid).update(hospParouPatch(it, ass.nome, 'hospedagem excluída (lançada por engano): '+mot, hoje, quando, agora));
+        }catch(x){ ext.push('o alarme de um remédio não parou'); _logFalhaGrav('parar o alarme do remédio da hospedagem excluída', x); }
+      }
+      if((S.nascidos||[]).length) try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+      // a linha da planilha sai do Plantão nos dias da estadia, com o mesmo motivo
+      if(pl==='tirar'){
+        var dias=hospDiasDoPeriodo(vNovo), chaves=hospChavesRemocao(vNovo, S.card), ps=[];
+        dias.forEach(function(d){ chaves.forEach(function(ch){
+          ps.push(DB.ref('auaulandia/removidos/'+d+'/'+ch.k).set({nome:ch.nome, tutor:ch.tutor, quem:ass.nome, ts:agora, motivo:mot,
+            origem:'override', tinha_estadia:true, estadia_ate:vNovo.saida||'', exclusao_estadia:id}));
+        }); });
+        try{ await Promise.all(ps); }catch(x){ ext.push('a linha da planilha não saiu do Plantão em todos os dias'); _logFalhaGrav('auaulandia/removidos (exclusão da hospedagem)', x); }
+      }
+      // os outros aparelhos tiram a hospedagem do Plantão e do alarme (3ª rodada, QA R2)
+      await hospGravarSinalAgenda({tipo:'exclusao', ts:agora, de:k, para:'', itens:[], estadia:id});
+      // o orçamento: cancelado com o mesmo motivo e a mesma assinatura
+      var orcR=null;
+      if(oc==='cancelar' && S.orcId){
+        orcR=await orcCancelarGravar(S.orcId, mot, {nome:ass.nome, role:ass.papel});
+        if(!orcR||!orcR.ok) ext.push('o orçamento NÃO foi cancelado ('+((orcR&&orcR.erro)||'sem resposta')+'): cancele em Orçamentos');
+      }
+      var tg=await tgP;
+      S.resultado={acao:'excluir', tg:!!tg.ok, tgErro:tg.erro||'', extras:ext, planilha:pl, orcamento:oc};
+      S.passo='feito'; S.msg='';
+      hospCorrDepois();
+      if(HOSP_CORR===S) hospCorrRender();
+      return {ok:true, tg:!!tg.ok, extras:ext};
+    }catch(err){
+      _logFalhaGrav('auaulandia/estadias (exclusão da hospedagem)', err);
+      return falha('Não consegui excluir ('+((err&&err.message)||err)+'). Confira a internet e tente de novo.');
+    }finally{ S.gravando=false; }
+  }
+  // ===== CONFERIR (a pendência da Gestão) ==============================================
+  async function hospNomeDeQuemConfere(){
+    var q=hospQuemLogado();
+    var posto=false; try{ posto=LOGIN_GENERICO.test(String(q).trim()); }catch(e){ posto=false; } /* sem a régua, vale o nome */
+    if(q&&q!=='-'&&!posto&&(typeof nomeAssinaturaValido!=='function'||nomeAssinaturaValido(q))) return q;
+    var n=((await zTexto('Quem está conferindo?', ['Escreva o seu nome: ele fica registrado junto com o "Conferido".'], {rotulo:'Seu nome', botao:'Conferido', cor:'#234D67'}))||'').trim();
+    if(!n||(typeof nomeAssinaturaValido==='function'&&!nomeAssinaturaValido(n))) return '';
+    return n;
+  }
+  // Quem marca «Conferido»: quem corrige a hospedagem (Recepção, Supervisão, Gestão, Diretoria).
+  // O Monitor que abriu pela Zona de risco só lê (2ª rodada, QA A4).
+  function hospPodeConferir(){ return podePapel('corrigir-hospedagem'); }
+  async function hospConferido(id, tk, k, nome){
+    if(!hospPodeConferir()) return {ok:false, erro:'Só a Recepção, a Supervisão e a Gestão marcam "Conferido". A pendência continua aberta.'};
+    if(!DB) return {ok:false, erro:'Sem conexão com o banco agora.'};
+    var quem=String(nome||'').trim()||await hospNomeDeQuemConfere();
+    if(!quem) return {ok:false, erro:'Sem o nome de quem conferiu, a pendência continua aberta.'};
+    return hospMarcarConferido(id, tk, k, quem);
+  }
+  // A marca em si (sem conferir papel): quem chama já conferiu (o «Conferido» acima, ou o
+  // «Desfazer o parou», que é de quem mexe na medicação).
+  async function hospMarcarConferido(id, tk, k, quem){
+    if(!DB) return {ok:false, erro:'Sem conexão com o banco agora.'};
+    var v={quem:quem, ts:hospAgora()};
+    try{ await DB.ref('auaulandia/estadias/'+id+'/trocaFicha/'+tk+'/conferidos/'+k).set(v); }
+    catch(err){ return {ok:false, erro:'Não consegui marcar ('+((err&&err.message)||err)+').'}; }
+    [((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null), (HOSP_CORR&&HOSP_CORR.id===id)?HOSP_CORR.e:null].forEach(function(e){
+      try{ if(e&&e.trocaFicha&&e.trocaFicha[tk]){ e.trocaFicha[tk].conferidos=Object.assign({}, e.trocaFicha[tk].conferidos||{}); e.trocaFicha[tk].conferidos[k]=v; } }catch(x){} /* silencioso de propósito: o ouvinte traz o valor do banco */
+    });
+    try{ if(typeof audit==='function') audit('hospedagem-conferido','conferiu um item da troca de ficha',{estadia:id, item:k, quem:quem}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  async function hospConferidoTela(id, tk, k){
+    var r=await hospConferido(id, tk, k);
+    if(!r.ok && HOSP_CORR) HOSP_CORR.msg=r.erro;
+    try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    hospCorrRender();
+  }
+  // "Desfazer o parou": o remédio da ficha antiga volta, com uso contínuo ou até uma data.
+  async function hospDesfazerParou(id, tk, k, modo, dataFim){
+    if(!canEditMed()) return {ok:false, erro:'Só a Veterinária, a Supervisão e a Gestão mexem na medicação da ficha.'};
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||((HOSP_CORR&&HOSP_CORR.id===id)?HOSP_CORR.e:null)||{};
+    var tf=(e.trocaFicha||{})[tk]||{}, c=(tf.conferir||[]).filter(function(x){ return x&&x.k===k; })[0];
+    var chave=String((tf.de&&tf.de.refKey)||'');
+    if(!c||!c.itemId||!chave) return {ok:false, erro:'Não achei o remédio desta pendência.'};
+    if(modo==='ate' && !/^\d{4}-\d{2}-\d{2}$/.test(String(dataFim||''))) return {ok:false, erro:'Escolha a data em que o remédio termina.'};
+    var no='auaulandia/medicacao-agenda/'+chave+'/itens/'+c.itemId;
+    var s=await DB.ref(no).once('value'), it=(s&&s.val)?s.val():null;
+    if(!it) return {ok:false, erro:'Esse remédio não está mais na ficha.'};
+    var quem=await hospNomeDeQuemConfere(); if(!quem) return {ok:false, erro:'Sem o nome de quem desfez, nada foi mudado.'};
+    var hist=Array.isArray(it.historico)?it.historico.slice():[];
+    hist.push({quem:quem, quando:(typeof agoraBR==='function')?agoraBR():'', acao:'Desfez o "parou" (troca de ficha da hospedagem): '+(modo==='ate'?('tomar até '+ciBRdata(dataFim)):'uso contínuo')});
+    await DB.ref(no).update({continuo:(modo!=='ate'), dataFim:(modo==='ate'?dataFim:null), paradoEm:null, historico:hist});
+    try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    return hospMarcarConferido(id, tk, k, quem);
+  }
+  function hospDesfazerParouTela(id, tk, k){
+    if(!canEditMed()){ zAlertao('SÓ A VETERINÁRIA, A SUPERVISÃO E A GESTÃO', ['Desfazer o "parou" muda a medicação da ficha.'], {botao:'Entendi'}); return; }
+    var depois=function(r){ if(HOSP_CORR) HOSP_CORR.msg=(r&&r.ok)?'':((r&&r.erro)||''); hospCorrRender(); };
+    zEscolha('O REMÉDIO VOLTA PARA A FICHA', ['Como ele continua?'], [
+      {t:'Uso contínuo', cor:'#1E8449', fn:function(){ hospDesfazerParou(id, tk, k, 'continuo', '').then(depois); }},
+      {t:'Tomar até uma data', cor:'#234D67', fn:function(){
+        zTexto('Até quando ele toma?', ['Escolha a data do último dia.'], {rotulo:'Último dia', tipo:'date', botao:'Confirmar', cor:'#234D67'})
+          .then(function(d){ if(d) hospDesfazerParou(id, tk, k, 'ate', d).then(depois); else hospCorrRender(); }); }},
+      {t:'Voltar sem mudar', cor:'#6b5f4b', fn:function(){ hospCorrRender(); }}]);
+  }
+  function hospAbrirFichaAba(refKey, aba){
+    var i=(PELUDINHOS||[]).findIndex(function(p){ return pelKey(p)===refKey; });
+    if(i<0){ zAlertao('NÃO ACHEI A FICHA', ['Essa ficha não está no cadastro deste aparelho. Atualize a tela e tente de novo.'], {botao:'Entendi'}); return; }
+    HOSP_CORR=null; hospCorrRender();
+    pelOrigem='hospedes'; irParaView('ficha'); abrirPeludinho(i);
+    if(aba) setTimeout(function(){ try{ var bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'"+aba+"'")>=0; }); if(bt) bt.click(); }catch(e){} /* silencioso de propósito: enfeite de tela */ }, 60);
+  }
+  function hospCopiar(t){
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(String(t||'')); zAlertao('TEXTO COPIADO', ['Cole na conversa com quem vai receber.'], {ok:true, botao:'Certo'}); return; } }catch(e){} /* silencioso de propósito: sem a área de transferência, o texto continua na tela para copiar à mão */
+    zAlertao('COPIE O TEXTO À MÃO', ['Este aparelho não deixou copiar sozinho: selecione o texto na caixa e copie.'], {botao:'Entendi'});
+  }
+  // ===== OS BOTÕES DA TELA ============================================================
+  function hospTrocarGravarTela(){
+    var m=hospCorrVal('hospCorrMotivo'), s=hospCorrVal('hospCorrSenha');
+    var el=document.getElementById('hospCorrSenha'); if(el) el.value='';   // a senha não fica na tela
+    hospTrocarGravar(m, s);
+  }
+  function hospExcluirGravarTela(){
+    var m=hospCorrVal('hospCorrMotivo'), s=hospCorrVal('hospCorrSenha');
+    var el=document.getElementById('hospCorrSenha'); if(el) el.value='';
+    var rad=function(nome){ var x=document.querySelector('input[name="'+nome+'"]:checked'); return x?x.value:''; };
+    hospExcluirGravar(m, s, {planilha:rad('hospCorrPl'), orcamento:rad('hospCorrOrc')});
+  }
+  function hospRetomarTrocaTela(id, tk){
+    if(HOSP_CORR) HOSP_CORR.msg='Retomando a troca de ficha…';
+    hospCorrRender();
+    hospRetomarTroca(id, tk).then(function(r){
+      var e=(typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null;
+      if(r&&r.ok&&e&&e.trocaFicha&&e.trocaFicha[tk]) e.trocaFicha[tk].completa=true;
+      if(HOSP_CORR&&HOSP_CORR.id===id){
+        if(r&&r.ok&&HOSP_CORR.e&&HOSP_CORR.e.trocaFicha&&HOSP_CORR.e.trocaFicha[tk]) HOSP_CORR.e.trocaFicha[tk].completa=true;
+        HOSP_CORR.msg=(r&&r.ok)?'':((r&&r.erro)||'');
+        if(r&&r.ok){ HOSP_CORR.passo='menu'; HOSP_CORR.okMsg='A troca de ficha terminou: o remédio e a ficha antiga foram arrumados.'; }
+      }
+      hospCorrRender();
+    });
+  }
+  function hospCorrContar(){
+    var el=document.getElementById('hospCorrConta'); if(!el) return;
+    var r=motivoQuatroPalavras(hospCorrVal('hospCorrMotivo'));
+    el.textContent=r.ok?'Motivo suficiente.':r.erro;
+    el.style.color=r.ok?'#1E8449':'#6b5f4b';
+  }
+  function hospReemitirDaCorrecao(){
+    var S=HOSP_CORR; if(!S) return;
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[S.id]:null)||S.e;
+    try{ reemitirFichaPdf(e, {nome:e.nome, tutor:e.tutor, raca:e.raca, refKey:e.refKey}); }catch(x){ _logFalhaGrav('reemitir a ficha depois da troca de ficha', x); }
+  }
+  // ===== O DESENHO DO CARTAZ (função pura sobre o estado — as provas leem o texto) ======
+  var HOSP_CORR_BTN='display:block;width:100%;box-sizing:border-box;text-align:left;border:2px solid #234D67;background:#FFFFFF;color:#234D67;border-radius:14px;padding:12px 14px;margin:0 0 10px;font-family:inherit;font-size:15px;line-height:1.35;cursor:pointer;white-space:normal';
+  var HOSP_CORR_IN='width:100%;box-sizing:border-box;margin-top:5px;padding:12px;border:2px solid #234D67;border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:#234D67;background:#FFFFFF';
+  function hospCorrBotao(txt, onclick, cor){
+    return '<button type="button" style="display:block;width:100%;box-sizing:border-box;border:0;border-radius:14px;background:'+(cor||'#234D67')+';color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:14px;margin:8px 0 0;cursor:pointer;white-space:normal" onclick="'+onclick+'">'+esc(txt)+'</button>';
+  }
+  function hospTrocarResultadosHtml(q){
+    var lista=hospTrocarCandidatos(q);
+    if(!String(q||'').trim()) return '<div class="hint">Escreva o nome do FILHOt, do tutor ou a raça.</div>';
+    if(!lista.length) return '<div class="hint">Nenhuma outra ficha com esse nome. Se é a primeira vez na Zêluz, crie a ficha nova logo abaixo.</div>';
+    return lista.map(function(c){
+      return '<button type="button" style="'+HOSP_CORR_BTN+'" onclick="hospTrocarAlvo('+c.idx+')"><strong>'+esc(c.nome)+'</strong> · '+esc(c.raca||'raça a confirmar')+' · tutor '+esc(c.tutor||'a confirmar')+'</button>';
+    }).join('');
+  }
+  function hospPendenciasHtml(id, e){
+    var pend=hospPendenciasAbertas(e); if(!pend.length) return '';
+    // «Conferido» só para quem corrige a hospedagem (QA A4); «Desfazer o parou» só para quem mexe na medicação.
+    var podeConf=hospPodeConferir(), podeMed=(typeof canEditMed==='function')&&canEditMed();
+    var h='<div style="margin-top:14px;padding:12px;border-radius:14px;background:#FDF3D6;border:2px solid #DEB428">'
+      +'<div style="font-weight:800;margin-bottom:6px">Conferir (não muda sozinho; some só com "Conferido" e o nome) — '+pend.length+(pend.length===1?' item':' itens')+'</div>';
+    pend.forEach(function(c){
+      var fichas=c.ficha==='nova'?[c.para]:(c.ficha==='ambas'?[c.de, c.para]:[c.de]);
+      h+='<div style="border-top:1px dashed #DEB428;padding:8px 0">'
+        +'<div style="font-size:14.5px;font-weight:600">'+esc(c.texto)+'</div>'
+        +hospMsgsHtml(c)
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'
+        +(c.aba?fichas.filter(function(f){ return f&&f.refKey; }).map(function(f){ return '<button type="button" class="btn" onclick="hospAbrirFichaAba(\''+jsAspas(f.refKey)+'\',\''+jsAspas(c.aba)+'\')">Abrir a ficha de '+esc(f.nome||'')+'</button>'; }).join(''):'')
+        +((podeMed&&c.tipo==='remedio-parou'&&c.itemId)?'<button type="button" class="btn btn-gold" onclick="hospDesfazerParouTela(\''+jsAspas(id)+'\',\''+jsAspas(c.tk)+'\',\''+jsAspas(c.k)+'\')">Desfazer o parou</button>':'')
+        +(podeConf?'<button type="button" class="btn btn-primary" onclick="hospConferidoTela(\''+jsAspas(id)+'\',\''+jsAspas(c.tk)+'\',\''+jsAspas(c.k)+'\')">Conferido</button>':'')
+        +'</div></div>';
+    });
+    if(!podeConf) h+='<div style="margin-top:6px;font-size:13.5px;font-weight:700">Só leitura: quem marca "Conferido" é a Recepção, a Supervisão ou a Gestão.</div>';
+    return h+'</div>';
+  }
+  // AC9 / FR8: o texto para a veterinária e para a tutora fica pronto, à vista da Gestão, e
+  // só ganha "Copiar" quando a Adriana aprovar o modelo. Nada é enviado pelo app.
+  function hospMsgsHtml(c){
+    if(!c||(!c.msgVet&&!c.msgTutora)) return '';
+    var ap=!!HOSP_MSG_REMEDIO_APROVADO, h='';
+    [['Texto para a veterinária', c.msgVet], ['Texto para a tutora', c.msgTutora]].forEach(function(x){
+      if(!x[1]) return;
+      h+='<div style="margin-top:8px"><div style="font-size:13px;font-weight:800">'+esc(x[0])+'</div>'
+        +'<textarea readonly rows="4" style="'+HOSP_CORR_IN+';font-size:14px;font-weight:500">'+esc(x[1])+'</textarea>'
+        +(ap?'<button type="button" class="btn" onclick="hospCopiar(this.previousElementSibling.value)">Copiar</button>':'')+'</div>';
+    });
+    if(!ap) h+='<div style="margin-top:6px;font-size:13px;font-weight:800;color:#B3261E">Modelo aguardando a aprovação da Adriana: não envie ainda. Nada é enviado pelo app.</div>';
+    return h;
+  }
+  function hospCorrHtml(S){
+    if(!S) return '';
+    var e=S.e||{};
+    var cab=hospRotulo({nome:e.nome, raca:e.raca, tutor:e.tutor});
+    var per=(e.entrada?hospDiaBR(e.entrada):'—')+' → '+(e.saida?hospDiaBR(e.saida):'a confirmar');
+    var titulo={menu:'Corrigir esta hospedagem', trocar:'Trocar a ficha — para qual FILHOt?', carregando:'Um momento…',
+      'trocar-confirmar':'Trocar a ficha — confira antes de gravar', excluir:'Excluir a hospedagem', feito:'Correção gravada',
+      conferir:'Conferir depois da troca de ficha'}[S.passo]||'Corrigir esta hospedagem';
+    var h='<div style="background:#FFFDF6;border-radius:18px;max-width:620px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;margin:0 auto;font-family:Poppins,system-ui,-apple-system,sans-serif">'
+      +'<div style="background:#234D67;color:#FFFDF6;padding:16px 18px"><div style="font-weight:800;font-size:20px;line-height:1.2">'+esc(titulo)+'</div>'
+      +'<div style="font-size:14px;font-weight:600;opacity:.92;margin-top:4px;overflow-wrap:anywhere">'+esc(cab)+' · '+esc(per)+'</div></div>'
+      +'<div style="padding:16px 18px;color:#234D67;font-size:15.5px;line-height:1.45;overflow-wrap:anywhere">';
+    if(S.msg) h+='<div role="alert" style="background:#FDECEA;border:2px solid #B3261E;color:#B3261E;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.msg)+'</div>';
+    if(S.okMsg){ h+='<div style="background:#E8F5EC;border:2px solid #1E8449;color:#1E8449;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.okMsg)+'</div>'; S.okMsg=''; }
+    var motivoSenha=function(rotuloBotao, onclick){
+      return '<label for="hospCorrMotivo" style="display:block;margin-top:14px;font-weight:800">Por que esta correção? (pelo menos 4 palavras)</label>'
+        +'<input id="hospCorrMotivo" type="text" autocomplete="off" oninput="hospCorrContar()" value="'+escAttr(S.motivoTxt||'')+'" placeholder="Ex.: não é a ficha dela, cliente nova" style="'+HOSP_CORR_IN+'">'
+        +'<div id="hospCorrConta" style="font-size:13px;font-weight:700;color:#6b5f4b;margin-top:4px">Escreva o que aconteceu em pelo menos 4 palavras.</div>'
+        +'<label for="hospCorrSenha" style="display:block;margin-top:12px;font-weight:800">Senha de quem assina (Gestão ou Supervisão)</label>'
+        +'<input id="hospCorrSenha" type="password" autocomplete="new-password" style="'+HOSP_CORR_IN+'">'
+        +'<div style="font-size:13px;font-weight:600;color:#6b5f4b;margin-top:4px">A Consultora pode abrir e chamar a Gestão ou a Amanda para digitar a senha aqui. O app grava o nome de quem digitou a senha, nunca a senha.</div>'
+        +hospCorrBotao(rotuloBotao, onclick, '#B3261E');
+    };
+    var voltar=function(txt){ return hospCorrBotao(txt||'Voltar', "hospCorrEscolher('menu')", '#6b5f4b'); };
+    var fechar=hospCorrBotao('Fechar sem mudar nada', 'hospCorrFechar()', '#6b5f4b');
+    if(S.passo==='carregando'){
+      h+='<div class="hint">Lendo o que o check-in mexeu nas fichas e conferindo a hospedagem…</div>';
+    } else if(S.passo==='menu' || S.passo==='conferir'){
+      var inc=hospTrocaIncompleta(e);
+      if(inc){
+        h+='<div style="padding:12px;border-radius:14px;background:#FDECEA;border:2px solid #B3261E;margin-bottom:12px"><div style="font-weight:800">A troca de ficha de '+esc(inc.tf.quando_br||'')+' ficou pela metade.</div>'
+          +'<div style="font-size:14.5px;font-weight:600">A estadia já está na ficha de '+esc(hospRotulo(inc.tf.para))+', mas o remédio ou a ficha antiga ainda não foram arrumados.</div>'
+          +(S.leitura?'<div style="font-size:14.5px;font-weight:800;margin-top:6px">Chame a Recepção, a Amanda ou a Gestão para retomar.</div>'
+            :hospCorrBotao('Retomar a troca de ficha', "hospRetomarTrocaTela('"+jsAspas(S.id)+"','"+jsAspas(inc.tk)+"')", '#B3261E'))+'</div>';
+      }
+      if(S.passo==='menu'){
+        if(String(e.status||'ativa')==='cancelada'){
+          var ex=hospExclusaoUltima(e);
+          h+='<div style="font-weight:700">Esta hospedagem foi excluída'+(ex?(' em '+esc(ex.quando_br||'')+' por '+esc(ex.quem||'-')+' — '+esc(ex.motivo||'')):'')+'.</div>';
+        } else if(inc && !S.leitura){
+          h+='<div style="font-weight:700">Antes de trocar de novo, excluir ou corrigir, termine a troca de ficha que ficou pela metade (o botão acima).</div>';
+        } else if(S.leitura){
+          h+='<div style="font-weight:700">Esta hospedagem tem check-in. Se foi lançada no FILHOt errado ou não aconteceu, chame a Recepção, a Amanda ou a Gestão: elas abrem a correção, com o motivo e a senha de quem assina.</div>';
+        } else {
+          var op=function(qual, tit, quando){ return '<button type="button" style="'+HOSP_CORR_BTN+'" onclick="hospCorrEscolher(\''+qual+'\')"><strong>'+esc(tit)+'</strong><br><span style="font-size:14px;font-weight:600;color:#6b5f4b">'+esc(quando)+'</span></button>'; };
+          h+=op('trocar', 'Foi lançada no FILHOt errado — trocar a ficha', 'Quando o FILHOt que está aqui é outro: a estadia passa para a ficha certa e tudo o que foi registrado continua.')
+            +op('excluir', 'Não aconteceu (lançada por engano) — excluir', 'Quando o FILHOt não veio: a hospedagem sai do Plantão e fica no histórico como EXCLUÍDA. Nada é apagado.')
+            +op('corrigir', 'Corrigir comida, remédio, datas ou pertences', 'Quando o FILHOt é o certo, mas uma informação está errada: abre o ✎ Corrigir do Check-in.');
+        }
+      }
+      h+=hospPendenciasHtml(S.id, e);
+      h+=fechar;
+    } else if(S.passo==='trocar'){
+      var sug=S.sug||hospSugestaoNovo(e);
+      h+='<label for="hospCorrBusca" style="display:block;font-weight:800">Busque a ficha certa (nome, tutor ou raça)</label>'
+        +'<input id="hospCorrBusca" type="text" autocomplete="off" value="'+escAttr(S.busca||'')+'" oninput="hospTrocarBuscar()" style="'+HOSP_CORR_IN+'">'
+        +'<div id="hospCorrRes" style="margin-top:10px">'+hospTrocarResultadosHtml(S.busca)+'</div>'
+        +'<div style="margin-top:14px;padding:12px;border-radius:14px;background:#FFFFFF;border:2px dashed #234D67">'
+        +'<div style="font-weight:800">É um FILHOt novo? Criar a ficha</div>'
+        +(sug.de?('<div style="font-size:13.5px;font-weight:600;color:#6b5f4b">Já preenchido '+esc(sug.de)+'.</div>'):'')
+        +'<label for="hospCorrNNome" style="display:block;margin-top:8px;font-weight:700;font-size:14px">Nome do FILHOt</label><input id="hospCorrNNome" type="text" autocomplete="off" value="'+escAttr(sug.nome||'')+'" style="'+HOSP_CORR_IN+'">'
+        +'<label for="hospCorrNTutor" style="display:block;margin-top:8px;font-weight:700;font-size:14px">Tutor</label><input id="hospCorrNTutor" type="text" autocomplete="off" value="'+escAttr(sug.tutor||'')+'" style="'+HOSP_CORR_IN+'">'
+        +'<label for="hospCorrNRaca" style="display:block;margin-top:8px;font-weight:700;font-size:14px">Raça</label><input id="hospCorrNRaca" type="text" autocomplete="off" list="racasList" value="'+escAttr(sug.raca||'')+'" style="'+HOSP_CORR_IN+'">'
+        +'<label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:14px;font-weight:700"><input id="hospCorrNHom" type="checkbox"'+(S.homOk?' checked':'')+' style="width:20px;height:20px;flex:0 0 auto"> É outro FILHOt, de outra família (mesmo nome de uma ficha que já existe)</label>'
+        +hospCorrBotao('Criar a ficha nova e continuar', 'hospTrocarAlvoNovoTela()', '#234D67')+'</div>'
+        +voltar();
+    } else if(S.passo==='trocar-confirmar'){
+      var pl=S.plano||{}, de=S.de||{}, para=S.para||{}, rDe=hospRotulo(de);
+      h+='<div style="padding:12px;border-radius:14px;background:#FFFFFF;border:2px solid #234D67">'
+        +'<div><strong>Sai de: '+esc(rDe)+'</strong></div>'
+        +'<div><strong>Vai para: '+esc(hospRotulo(para))+'</strong>'+(para.novo?' (ficha nova)':'')+'</div>'
+        +'<div style="margin-top:6px;font-size:14.5px;font-weight:600">Continua igual: comida, remédios, pertences, assinatura do tutor, Conferência e fotos.</div></div>';
+      var vai=[];
+      (pl.mover||[]).forEach(function(m){
+        var n=(pl.copiarLog||[]).filter(function(c){ return String((c.dose&&c.dose.itemId)||String(c.doseId).replace(/_\d{2}-\d{2}$/,''))===m.id; }).length;
+        vai.push('Remédio "'+((m.item&&m.item.nome)||'remédio')+'" (com o estoque)'+(n?(' e '+hospPl(n, 'dose já dada, copiada', 'doses já dadas, copiadas')):''));
+      });
+      Object.keys(pl.fichaLevar||{}).forEach(function(c){ vai.push(HOSP_CAMPO_ROTULO[c]||c); });
+      if(vai.length) h+='<div style="margin-top:12px;font-weight:800">Vai para a ficha certa</div><ul style="margin:4px 0 0 18px;padding:0">'+vai.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')+'</ul>';
+      if((pl.fichaTirar||[]).length) h+='<div style="margin-top:12px;font-weight:800">Sai da ficha de '+esc(rDe)+' (estava vazio antes do check-in)</div><ul style="margin:4px 0 0 18px;padding:0">'
+        +pl.fichaTirar.map(function(c){ return '<li>'+esc(HOSP_CAMPO_ROTULO[c]||c)+'</li>'; }).join('')+'</ul>';
+      if((pl.conferir||[]).length){
+        h+='<div style="margin-top:12px;padding:12px;border-radius:14px;background:#FDF3D6;border:2px solid #DEB428"><div style="font-weight:800">Conferir na ficha de '+esc(rDe)+' e nesta hospedagem (não muda sozinho; vira pendência da Gestão)</div>'
+          +'<ul style="margin:4px 0 0 18px;padding:0">'+pl.conferir.map(function(c){ return '<li style="margin-bottom:6px">'+esc(c.texto)+hospMsgsHtml(c)+'</li>'; }).join('')+'</ul></div>';
+      }
+      if(S.avisoPlanilha) h+='<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:#FDECEA;border:2px solid #B3261E;font-weight:700">'+esc(S.avisoPlanilha)+'</div>';
+      h+=motivoSenha('Trocar a ficha', 'hospTrocarGravarTela()')+hospCorrBotao('Voltar e escolher outra ficha', "hospCorrEscolher('trocar')", '#6b5f4b');
+    } else if(S.passo==='excluir'){
+      var pv=S.provas||{provas:[]};
+      if(pv.bloqueia){
+        h+='<div style="font-weight:800;color:#B3261E">Esta hospedagem não pode ser excluída: há prova de que o FILHOt dormiu aqui.</div>'
+          +'<ul style="margin:6px 0 0 18px;padding:0">'+pv.provas.slice(0,6).map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')
+          +(pv.provas.length>6?('<li>e mais '+(pv.provas.length-6)+'</li>'):'')+'</ul>'
+          +'<div style="margin-top:10px;font-weight:600">Se a hospedagem foi lançada no FILHOt errado, troque a ficha: tudo o que foi registrado continua.</div>'
+          +hospCorrBotao('Trocar a ficha', "hospCorrEscolher('trocar')", '#234D67')+voltar();
+      } else {
+        h+='<div style="font-weight:700">Excluir a hospedagem de '+esc(e.nome||'')+' ('+esc(per)+')?</div>'
+          +'<div style="font-size:14.5px;font-weight:600;margin-top:4px">Ela sai do Plantão, da Conferência, do Check-out, da chamada do Day Care, da contagem de check-in e do acerto. Fica em "Já saíram — histórico" com o selo EXCLUÍDA, o motivo e quem assinou. Nada é apagado.</div>';
+        if(e.valor_cent) h+='<div style="margin-top:8px;font-weight:700">Pernoite com valor: '+esc(fmtCent(Number(e.valor_cent)||0))+'. A noite sai do relatório de pernoites'+(String(e.origem||'')==='daycare-pernoite'?'; a fila da pernoite do Day Care não reabre sozinha':'')+'.</div>';
+        if((S.nascidos||[]).length) h+='<div style="margin-top:8px;font-size:14.5px;font-weight:600">O alarme destes remédios, lançados neste check-in, para (nada é apagado): '+esc(S.nascidos.map(function(x){ return (x.item&&x.item.nome)||'remédio'; }).join(', '))+'.</div>';
+        var radio=function(nome, val, txt){ return '<label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14.5px;font-weight:600"><input type="radio" name="'+nome+'" value="'+val+'"'+(S['esc_'+nome]===val?' checked':'')+' style="width:20px;height:20px;flex:0 0 auto"> '+esc(txt)+'</label>'; };
+        var dTodos=hospDiasDoPeriodo(e);
+        var perTxt=dTodos.length?(hospDiaBR(dTodos[0])+' a '+hospDiaBR(dTodos[dTodos.length-1])):per;
+        h+='<div style="margin-top:12px;font-weight:800">A linha da planilha</div>'
+          +(S.card?(radio('hospCorrPl','tirar','Tirar '+(e.nome||'')+' do Plantão nos dias desta estadia ('+perTxt+'), com o mesmo motivo')
+                   +radio('hospCorrPl','manter','Deixar no Plantão (se '+(e.nome||'')+' está aqui de verdade, o caso é trocar a ficha)'))
+                 :('<div style="font-size:14.5px;font-weight:600">Não achei '+esc(e.nome||'')+' na planilha de hoje.</div>'
+                   +radio('hospCorrPl','tirar','Tirar do Plantão nos dias desta estadia ('+perTxt+') mesmo assim, se a linha aparecer')));
+        if(S.orcId){
+          var o=(ORC_LISTA_CACHE||{})[S.orcId]||{};
+          var oPet=(o.pets||[]).filter(function(p){ return p && jsNorm(p.nome||'')===jsNorm(e.nome||''); })[0]||{};
+          h+='<div style="margin-top:12px;font-weight:800">O orçamento desta hospedagem</div>'
+            +(S.orcOutro?('<div style="font-size:14.5px;font-weight:700;color:#B3261E">Este orçamento é de '+esc(oPet.nome||e.nome||'')+', de '+esc(String(oPet.tutor||o.tutor||'outro tutor'))
+              +' (outro tutor): a hospedagem pode ter sido lançada na ficha errada. Cancele a reserva só se ela era desta hospedagem.</div>'):'')
+            +radio('hospCorrOrc','cancelar','Cancelar também a reserva (orçamento fechado de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+'), com o mesmo motivo e a mesma senha')
+            +radio('hospCorrOrc','manter','Deixar o orçamento como está (a reserva continua valendo)');
+        }
+        h+=motivoSenha('Excluir esta hospedagem', 'hospExcluirGravarTela()')+voltar();
+      }
+    } else if(S.passo==='feito'){
+      var R=S.resultado||{};
+      if(R.acao==='troca'){
+        h+='<div style="font-weight:800;color:#1E8449">Pronto: a hospedagem de '+esc((R.para&&R.para.nome)||e.nome||'')+' está na ficha de '+esc(hospRotulo(R.para))+'.</div>';
+        if(!R.aplicado) h+='<div style="margin-top:8px;font-weight:800;color:#B3261E">O remédio ou a ficha antiga ainda não foram arrumados ('+esc(R.apErro||'sem resposta')+'). Toque em "Retomar a troca de ficha" quando a internet voltar.</div>'
+          +hospCorrBotao('Retomar a troca de ficha', "hospRetomarTrocaTela('"+jsAspas(S.id)+"','"+jsAspas(S.tk||'')+"')", '#B3261E');
+        if(S.avisoPlanilha) h+='<div style="margin-top:8px;font-weight:700;color:#B3261E">'+esc(S.avisoPlanilha)+'</div>';
+        h+=hospCorrBotao('Reemitir a ficha em PDF', 'hospReemitirDaCorrecao()', '#234D67');
+      } else {
+        h+='<div style="font-weight:800;color:#1E8449">Pronto: a hospedagem de '+esc(e.nome||'')+' foi excluída. Ela fica no histórico como EXCLUÍDA.</div>'
+          +(R.planilha==='tirar'?'<div style="margin-top:6px;font-weight:600">Saiu do Plantão nos dias da estadia.</div>':'')
+          +(R.orcamento==='cancelar'?'<div style="margin-top:6px;font-weight:600">A reserva (orçamento) também foi cancelada.</div>':'');
+        (R.extras||[]).forEach(function(t){ h+='<div style="margin-top:6px;font-weight:800;color:#B3261E">Atenção: '+esc(t)+'.</div>'; });
+      }
+      h+=R.tg?'<div style="margin-top:8px;font-weight:600">O grupo da Gestão no Telegram foi avisado.</div>'
+             :(R.tgErro===HOSP_TG_ERRO_PRAZO
+               ?'<div style="margin-top:8px;font-weight:800;color:#B3261E">O aviso no grupo da Gestão não confirmou em '+Math.round(HOSP_TG_PRAZO/1000)+' segundos: confira o grupo antes de avisar de novo ('+esc(R.tgErro)+'). A correção está gravada.</div>'
+               :'<div style="margin-top:8px;font-weight:800;color:#B3261E">O aviso no grupo da Gestão não saiu ('+esc(R.tgErro||'sem resposta')+'): a correção está gravada. Avise a Gestão por mensagem.</div>');
+      h+=hospPendenciasHtml(S.id, e);
+      h+=hospCorrBotao('Fechar', 'hospCorrFechar()', '#6b5f4b');
+    }
+    return h+'</div></div>';
+  }
+  var HOSP_CAMPO_ROTULO={alim_plano:'"O que ele come"', restricao:'Restrição alimentar', alergia:'Alergia', restricao_nenhuma:'"Sem restrição"',
+    alergia_nenhuma:'"Sem alergia"', raca:'Raça', tutor:'Tutor', nasc:'Nascimento', chip:'Microchip', microchip:'Microchip',
+    vetNome:'Veterinário(a) de emergência', vetTel:'Telefone do veterinário(a) de emergência', vetClinica:'Clínica de emergência', vetEnd:'Endereço da clínica de emergência'};
+  // ===== A LINHA DE HÓSPEDES DE HOJE ===================================================
+  // O selo EXCLUÍDA (com o motivo e quem), a troca de ficha feita, e os botões do cartaz.
+  function hospCorrLinha(id, e, st){
+    var out={tag:'', sub:'', botao:''};
+    e=e||{};
+    var ex=hospExclusaoUltima(e);
+    if(st==='cancelada' && ex){
+      out.tag='EXCLUÍDA';
+      out.sub+='<div class="he-sub" style="color:var(--crm-critico)">Excluída'+(ex.quando_br?(' em '+escAttr(ex.quando_br)):'')+' por '+escAttr(ex.quem||'-')+' — '+escAttr(ex.motivo||'')+'</div>';
+    }
+    var tu=hospTrocaUltima(e);
+    if(tu) out.sub+='<div class="he-sub" style="color:var(--z-gold-deep)">Ficha trocada em '+escAttr(tu.tf.quando_br||'')+' por '+escAttr(tu.tf.quem||'-')+': estava na ficha de '+escAttr(hospRotulo(tu.tf.de))+'</div>';
+    if(hospTrocaIncompleta(e)) out.sub+='<div class="he-sub" style="color:var(--crm-critico);font-weight:800">Troca de ficha pela metade: abra a correção e toque em "Retomar".</div>';
+    var pode=podePapel('corrigir-hospedagem'), pend=hospPendenciasAbertas(e);
+    if(pode && st!=='cancelada') out.botao+='<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="hospCorrigirAbrir(\''+jsAspas(id)+'\',{origem:\'hospedes\'})">Corrigir esta hospedagem</button>';
+    if(pode && pend.length) out.botao+='<button class="btn btn-gold" onclick="hospCorrigirAbrir(\''+jsAspas(id)+'\',{origem:\'hospedes\', passo:\'conferir\'})">Conferir ('+pend.length+')</button>';
+    return out;
+  }
+  // ===== A ZONA DE RISCO DO PLANTÃO ===================================================
+  // Com estadia, o botão abre o cartaz (o "(hoje)" sai: a estadia é inteira). Sem estadia,
+  // continua o "tirar de hoje", agora com o motivo de 4 palavras escrito no próprio cartão.
+  function hospZrEstadia(h){
+    try{
+      var k=(typeof medAgendaKey==='function')?medAgendaKey(h):'';
+      var c=(k&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[k]:null;
+      if(c&&c.id&&c.e&&((c.e.status||'ativa')==='ativa')) return c;
+    }catch(e){} /* silencioso de propósito: sem o índice das estadias, vale o "tirar de hoje" */
+    return null;
+  }
+  function hospZonaRiscoRotulo(h){
+    var cr=hospZrEstadia(h);
+    var bt=document.getElementById('hfZrBtn'), hint=document.getElementById('hfZrHint'), box=document.getElementById('hfZrMotivoBox'), inp=document.getElementById('hfZrMotivo');
+    if(bt){ try{ clearTimeout(bt._armT); }catch(e){} /* silencioso de propósito: sem relógio armado, nada a parar */ bt.dataset.armed=''; bt.dataset.motivo=''; bt.style.background='var(--crm-critico)';
+      bt.textContent=cr?'Corrigir esta hospedagem (trocar a ficha ou excluir)':'🗑️ Deletar este peludinho do Hotel (hoje)'; bt.dataset.label=bt.textContent; }
+    if(hint) hint.textContent=cr
+      ?'Esta hospedagem tem check-in: a correção pede o motivo (pelo menos 4 palavras) e a senha da Gestão ou da Supervisão. O cadastro do FILHOt continua salvo.'
+      :'Tira só o lançamento de hoje. O cadastro do FILHOt continua salvo: se ele voltar outro dia, é só adicionar de novo. Escreva o motivo (pelo menos 4 palavras) e toque duas vezes no botão.';
+    if(box) box.style.display=cr?'none':'block';
+    if(inp) inp.value='';
+  }
+  // ===== O SINAL DA AGENDA (K2) =======================================================
+  // A troca grava auaulandia/sinais/agenda; todo aparelho ouve e recarrega o alarme. O "Dei
+  // agora" de um aparelho que ainda está com a tela velha não grava na ficha antiga.
+  // 3ª rodada (QA R2): o tablet do Plantão que montou a lista ANTES da troca tem o card da
+  // estadia na ficha antiga; recarregar só o alarme lia a chave antiga (o remédio que mudou
+  // sumia e os remédios da outra ficha continuavam tocando). Agora o sinal acerta o card da
+  // estadia na hora, recarrega o alarme e remonta a lista do Plantão.
+  function hospSinalAgenda(v, primeira){
+    if(!v||!v.de||!Array.isArray(v.itens)) return;
+    hospMarcarMovidos(v.de, v.para, v.itens);
+    if(primeira) return;
+    try{ hospCardsDoSinal(v); }catch(e){} /* silencioso de propósito: a remontagem logo abaixo acerta a lista */
+    try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: o próximo carregamento resolve */
+    try{ if(typeof hospRecarregarAgendar==='function') hospRecarregarAgendar(); }catch(e){} /* silencioso de propósito: o próximo carregamento resolve */
+  }
+  // O card da estadia (hospede:true) na lista deste aparelho: na troca, passa para a ficha nova;
+  // na exclusão, sai. Só quando a ficha antiga não tem OUTRA hospedagem ativa (aí o card pode ser
+  // dela, e quem decide é a remontagem da lista).
+  function hospCardsDoSinal(v){
+    if(!v||!v.de||typeof hospedes==='undefined'||!Array.isArray(hospedes)) return false;
+    var de=String(v.de), est=((typeof EST_TODAS!=='undefined'&&EST_TODAS)||{});
+    var outra=Object.keys(est).some(function(id){ var x=est[id]; return id!==v.estadia && x && String(x.refKey||'')===de && String(x.status||'ativa')==='ativa'; });
+    if(outra) return false;
+    var doCard=function(h){ return h && h.hospede && !h.manualKey && String(h.refKey||'')===de; }, mudou=false;
+    if(v.tipo==='exclusao'){
+      var n=hospedes.length; hospedes=hospedes.filter(function(h){ return !doCard(h); }); mudou=hospedes.length!==n;
+    } else if(v.para && String(v.para)!==de){
+      hospedes.forEach(function(h){
+        if(!doCard(h)) return;
+        h.refKey=String(v.para); if(v.nome) h.nome=String(v.nome); h.tutor=String(v.tutor||''); h.raca=String(v.raca||''); mudou=true;
+      });
+    }
+    if(mudou){ try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} } /* silencioso de propósito: redesenho de tela */
+    return mudou;
+  }
+  var HOSP_SINAL_LIGADO=false;
+  function hospSinalAgendaOuvir(){
+    if(HOSP_SINAL_LIGADO||!DB) return;
+    HOSP_SINAL_LIGADO=true;
+    var primeira=true;
+    try{
+      DB.ref('auaulandia/sinais/agenda').on('value', function(s){
+        var v=(s&&s.val)?s.val():null, p=primeira; primeira=false;
+        if(v&&v.ts&&(Date.now()-Number(v.ts))<3*86400000) hospSinalAgenda(v, p);   // sinal de mais de 3 dias não interessa
+      });
+    }catch(e){ HOSP_SINAL_LIGADO=false; } /* sem o ouvinte, o alarme se refaz no próximo carregamento */
+  }
+  // Devolve true quando o «Dei agora» NÃO pode gravar agora (o chamador para). Antes de recusar,
+  // confere no banco (2ª rodada, QA A2 / K2 da crítica): se o remédio está nesta ficha e não na
+  // outra (trocaram a ficha de volta), a marca sai e a dose é gravada (deNovo); se não está, avisa.
+  function hospMedMovido(it, deNovo){
+    var k=it?(String(it.key||'')+'|'+String(it.itemId||'')):'', para=k?HOSP_MED_MOVIDOS[k]:'';
+    if(!para) return false;
+    var avisar=function(){
+      try{ zAlertao('ESTE REMÉDIO MUDOU DE FICHA',
+        ['"'+((it&&it.nome)||'Este remédio')+'" passou para a ficha certa numa troca de ficha da hospedagem. A dose NÃO foi registrada aqui.',
+         'A tela vai ser atualizada: registre a dose de novo no FILHOt certo.'], {botao:'Atualizar'}); }catch(e){} /* silencioso de propósito: sem o cartaz, a dose ainda não é gravada */
+      try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    };
+    if(!DB || typeof deNovo!=='function'){ avisar(); return true; }
+    var feito=false;
+    var decidir=function(aqui){ if(feito) return; feito=true; if(aqui){ delete HOSP_MED_MOVIDOS[k]; deNovo(); } else avisar(); };
+    try{ setTimeout(function(){ decidir(false); }, 6000); }catch(e){} /* silencioso de propósito: sem relógio, vale a resposta do banco */
+    var existe=function(p){ return DB.ref(p).once('value').then(function(s){ return !!((s&&s.val)?s.val():null); }); };
+    try{
+      Promise.all([existe('auaulandia/medicacao-agenda/'+it.key+'/itens/'+it.itemId), existe('auaulandia/medicacao-agenda/'+para+'/itens/'+it.itemId)])
+        .then(function(r){ decidir(r[0] && !r[1]); }, function(){ decidir(false); });
+    }catch(e){ decidir(false); }
+    return true;
+  }
+  // O índice das estadias DESTE aparelho acompanha a gravação na hora (4ª rodada, QA R3): o
+  // Check-in, a Conferência e a Zona de risco de quem trocou ou excluiu não esperam o ouvinte.
+  // Só quando o índice já foi lido inteiro (sem isso, uma estadia sozinha pareceria a lista toda).
+  function hospEstadiaLocal(id, v){
+    try{
+      if(typeof EST_TODAS==='undefined'||!EST_TODAS||!id||!v) return;
+      EST_TODAS[id]=v;
+      if(typeof CF_ESTADIAS_LIDO!=='undefined' && CF_ESTADIAS_LIDO && typeof _cfIndexarEstadias==='function') _cfIndexarEstadias(Object.assign({}, EST_TODAS));
+    }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+  }
+  // Qual estadia vale para a ficha (Plantão e índice das estadias): a NÃO cancelada ganha da
+  // cancelada; entre iguais, a mais recente (_ts). 6.53, 4ª rodada (QA R3).
+  function hospEstadiaGanha(e, atual){
+    if(!e) return false;
+    if(!atual) return true;
+    var vale=function(x){ return String((x&&x.status)||'ativa')!=='cancelada'; };
+    if(vale(e)!==vale(atual)) return vale(e);
+    return (Number(e._ts)||0)>(Number(atual._ts)||0);
   }
   function cfPendente(h){
     var k=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var reg=k?CF_ESTADIAS[k]:null; if(!reg) return null;

@@ -19274,7 +19274,9 @@ prova('6.38 P38-34 — área protegida: repSaldo e hospConfirmarAntecipada idên
   const fn = (n) => { const i = src.indexOf('function ' + n + '('); let d = 0, j = src.indexOf('{', i); for (; j < src.length; j++) { if (src[j] === '{') d++; else if (src[j] === '}') { d--; if (!d) break; } } return src.slice(i, j + 1); };
   const h = (t) => require('crypto').createHash('sha256').update(t).digest('hex');
   igual(h(fn('repSaldo')), '566c707e9b91295e7f498532b5c59c00772525fe829081ed5b3864266aed6c9c', 'repSaldo');
-  igual(h(fn('hospConfirmarAntecipada')), '92559dd9d743c9816f185bc13d411608a61ff0b112c0c8c6401461a32efe3440', 'hospConfirmarAntecipada');
+  // 6.53 (publicação): a única linha que mudou é hospOrcamentoDaEstadia(e, {estrito:true}) — o orçamento
+  // de outro tutor não é mais oferecido; a regra das 24 horas não chama esta função.
+  igual(h(fn('hospConfirmarAntecipada')), '3166d64efac7ae34a39badc3d219f11fb6778270ebef6ee3751986859d349cde', 'hospConfirmarAntecipada');
   const nomes = (src.match(/function (ck[A-Za-z0-9_]*|ckt[A-Za-z0-9_]*|pt[A-Z][A-Za-z0-9_]*)\(/g) || []).map((s) => s.slice(9, -1));
   assert.ok(nomes.length > 50, 'a sonda achou as funções protegidas: ' + nomes.length);
   for (const n of nomes) assert.ok(!/repSaldoReposicao|repTrocasPendentes|repDesmarcar|repDesfechoGravar|repComoDesmarcar|repPrazo\(/.test(fn(n)), n);
@@ -19747,6 +19749,1790 @@ prova('6.38 R3-03 (re-gate R2-03) — o quadro da mesa cobre os dois tipos: as q
   } finally { P.solta(); }
 });
 
+// ================================================================== 6.53 — corrigir a hospedagem (caso da Frida)
+// "Pedi ontem para poder excluir hospedagem. Entrou uma Frida Spitz … apareceu outra Frida a SRD que é aluna! …
+//  Precisa de justificar e assinar quem fez e porque. E não aceitar por exemplo 1 palavra apenas." (Adriana, 08/10)
+// Tudo inventado: a Frida da "Tutora Auluna" (SRD, aluna) e a Frida da "Ana Carolina" (Spitz, cliente nova).
+// O relógio é fixo: o check-in foi em 07/10 às 14h, a correção é em 09/10 às 10h.
+console.log('\n6.53 — Corrigir a hospedagem: trocar a ficha, excluir o que não aconteceu, com motivo e assinatura (caso da Frida)');
+const DIA653 = '2026-10-09';
+const P653 = '-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+// o id que o Firebase daria a uma estadia gravada nesse milissegundo (os 8 primeiros caracteres são o relógio)
+const pid653 = (ts, resto) => { let s = '', t = ts; for (let i = 0; i < 8; i++) { s = P653.charAt(t % 64) + s; t = Math.floor(t / 64); } return s + (resto || 'Frida0000001'); };
+const TS653 = new Date(2026, 9, 7, 14, 0, 0).getTime();
+const AGORA653 = new Date(2026, 9, 9, 10, 0, 0).getTime();
+const ID653 = pid653(TS653);
+const IT_SPITZ653 = 'ci_' + (TS653 - 600000) + '_ab12';   // nasceu no check-in: é o remédio da Spitz
+const IT_CONF653 = 'fmn_1700000000000_x1';                 // remédio da Frida SRD "Confirmado" no check-in
+const IT_PAROU653 = 'vet_1700000000000_y1';                // remédio da Frida SRD que virou "Parou de tomar" no check-in
+const IT_VELHO653 = 'fmn_1690000000000_z1';                // remédio antigo da Frida SRD, que ninguém tocou
+const DE653 = { refKey: 'frida__tutora auluna', nome: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD' };
+const PARA653 = { refKey: 'frida__ana carolina', nome: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz' };
+const SENHA653 = 'senhaGestora653';
+const EST653 = () => ({ refKey: DE653.refKey, nome: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD', entrada: '2026-10-07', saida: '2026-10-12',
+  status: 'ativa', ficha: { alim: { tipo: 'Ração', qtd: '40' }, medEmUso: 'Sim' },
+  medicacao: [{ nome: 'Ômega Spitz', q: '1', u: 'cápsula', horarios: ['20:00'] }],
+  pertences: [{ k: 'comida', nome: 'Ração', uid: 'u1' }], alimentacao: { semRacao: false },
+  assinatura: 'data:image/png;base64,QUFB', assinado_por: 'Ana Carolina Teste',
+  conferencia: { concluida: true, por: 'Encãotadora Teste' }, origem: 'checkin', criado_por: 'Consultora Teste', _ts: TS653 });
+const AGENDA653 = () => ({
+  [IT_SPITZ653]: { nome: 'Ômega Spitz', q: '1', u: 'cápsula', horarios: ['20:00'], dataInicio: '2026-10-07', continuo: true,
+    estoque: { modo: 'contagem', inicial: 10, restante: 7 }, historico: [{ quem: 'Consultora Teste', quando: '07/10 13:50', acao: 'Criou (check-in)' }] },
+  [IT_CONF653]: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true,
+    confirmado_em_checkin: { quem: 'Consultora Teste', quando: '07/10 13:55', ts: TS653 - 300000 } },
+  [IT_PAROU653]: { nome: 'Vitamina Auluna', q: '1', u: 'comprimido', horarios: ['12:00'], continuo: false, dataFim: '2026-10-06',
+    paradoEm: { quem: 'Consultora Teste', data: '2026-10-07', quando: '07/10 14:01', ts: TS653 + 60000, motivo: 'no check-in da hospedagem, o tutor disse que não está em uso' } },
+  [IT_VELHO653]: { nome: 'Probiótico', q: '1', u: 'sachê', horarios: ['09:00'], continuo: true },
+});
+const DOSE653 = (it, nome, hr, u, ts) => Object.assign({ itemId: it, nome: nome, q: '1', horario: hr, quem: 'Zelosa Teste', ts: ts, avulso: false }, u ? { u: u } : {});
+const LOGS653 = () => ({
+  '2026-10-07': { [IT_SPITZ653 + '_20-00']: DOSE653(IT_SPITZ653, 'Ômega Spitz', '20:00', 'cápsula', TS653 + 6 * 3600000) },
+  '2026-10-08': { [IT_SPITZ653 + '_20-00']: DOSE653(IT_SPITZ653, 'Ômega Spitz', '20:00', 'cápsula', TS653 + 30 * 3600000),
+                  [IT_CONF653 + '_08-00']: DOSE653(IT_CONF653, 'Apoquel', '08:00', 'comprimido', TS653 + 18 * 3600000),
+                  [IT_SPITZ653 + '_08-00']: DOSE653(IT_SPITZ653, 'Ômega Spitz', '08:00', '', TS653 + 18 * 3600000) },
+});
+const FICHA653 = () => ({ n: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD',
+  alim_plano: { refs: [{ nome: 'Jantar', racao: 40 }], conf: { estado: 'confirmado', quem: 'Consultora Teste', ts: TS653 - 120000 } },
+  restricao: '', alergia: '', restricao_nenhuma: { quem: 'Consultora Teste', ts: TS653 - 180000 },
+  alergia_nenhuma: { quem: 'Consultora Teste', ts: TS653 - 180000 }, nasc: '2024-03-01', vetNome: 'Dra. Teste Spitz' });
+const AUD653 = () => ({ a1: { acao: 'cadastro-completado-checkin', detalhe: 'Frida', campos: 'nasc, vetNome', ts: TS653 - 200000, quem: 'Consultora Teste' },
+  a2: { acao: 'checkin', detalhe: 'estadia criada', pet: 'Frida', ts: TS653 } });
+const PLANO653 = (extra) => run('hospPlanoDaTroca(' + JSON.stringify(Object.assign({ id: ID653, e: EST653(), de: DE653, para: PARA653,
+  agenda: AGENDA653(), logs: LOGS653(), ficha: FICHA653(), fichaNova: {}, auditoria: AUD653(), agora: AGORA653, hoje: DIA653 }, extra || {})) + ')');
+// Só microtarefas (como o espera649): uma volta do laço de eventos aqui faria o Node acusar as
+// rejeições que provas antigas deixam penduradas (a fila do Telegram do caso Toshi, num banco de
+// mentira sem push) — elas não são desta story e não mudam nada aqui.
+const espera653 = async (n) => { for (let i = 0; i < (n || 3000); i++) await Promise.resolve(); };
+// O palco: banco de mentira (uma árvore, com once/set/update/remove/push/transaction e o update de vários
+// caminhos pela raiz), relógio, senhas inventadas, auditoria e Telegram de mentira. Tudo volta no SOLTA653.
+const ARMA653 = `__bk653={P:PELUDINHOS, db:DB, au:audit, za:zAlertao, zp:zPergunta, zt:zTexto, zc:zCampo, ze:zEscolha, hz:zHojeISO, hh:hospHojeISO,
+    rh:repHojeISO, et:EST_TODAS, cf:CF_ESTADIAS, cfl:CF_ESTADIAS_LIDO, ch:carregarHospedes, cam:carregarAgendaMedTodos, rha:renderHospedesAba,
+    qs:quemSou, sr:senhasRuntime, mo:MONITORES, tg:tgAvisar, tgc:tgCfgPronta, pcc:pelCadCache, ola:orcListaArray, hos:hospedes,
+    hca:(typeof hospCorrigirAbrir!=='undefined'?hospCorrigirAbrir:undefined), hag:(typeof hospAgora!=='undefined'?hospAgora:undefined),
+    cur:currentHosp, mak:medAgendaKey, rf:reemitirFichaPdf, ce:ciEscolher, aim:abrirItemDoMenu, cce:ciCorrigirExistente,
+    olc:ORC_LISTA_CACHE, otp:orcTirarDaPlanilha, ocl:orcCarregarLista, al:alert, fp:fecharPlantao, cm:carregarManuais, rhs:renderHosp,
+    ge:document.getElementById, dk:dataKeyAtual, rcb:renderCiBusca, zmu:zMapaUma, cad:cadCache, hnp:hospNovaPernoite, aec:AVISOS_ESTOQUE_CACHE};
+  __db653={}; __esc653=[]; __n653=0; __au653=[]; __za653=[]; __tg653=[]; __tgOk653=true;
+  __get653=function(p){ var o=__db653; var ps=String(p||'').split('/').filter(Boolean); for(var i=0;i<ps.length;i++){ if(o==null||typeof o!=='object') return null; o=o[ps[i]]; } return (o===undefined)?null:JSON.parse(JSON.stringify(o)); };
+  __put653=function(p, v){ var ps=String(p||'').split('/').filter(Boolean), o=__db653; for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]]||typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+    if(v===null||v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); };
+  DB={ref:function(p){ p=String(p||''); var r={ key:(p.split('/').pop()||null),
+    once:function(){ var v=__get653(p); return Promise.resolve({val:function(){ return v; }, exists:function(){ return v!==null; }}); },
+    set:function(v){ __esc653.push(['set', p, v]); __put653(p, v); return Promise.resolve(); },
+    update:function(v){ __esc653.push(['update', p, v]); Object.keys(v||{}).forEach(function(k){ __put653(p?(p+'/'+k):k, v[k]); }); return Promise.resolve(); },
+    remove:function(){ __esc653.push(['remove', p]); __put653(p, null); return Promise.resolve(); },
+    push:function(v){ var k='k653_'+(++__n653); var f=DB.ref(p+'/'+k); if(v!==undefined){ var pr=f.set(v); f.then=function(a,b){ return pr.then(a,b); }; f.catch=function(b){ return pr.catch(b); }; } return f; },
+    transaction:function(fn){ var r=fn(__get653(p)); if(r===undefined){ __esc653.push(['transaction-desistiu', p]); return Promise.resolve({committed:false, snapshot:{val:function(){ return __get653(p); }}}); }
+      __esc653.push(['transaction', p, r]); __put653(p, r); return Promise.resolve({committed:true, snapshot:{val:function(){ return __get653(p); }}}); },
+    on:function(){}, off:function(){} }; return r; }};
+  audit=function(a, d, m){ __au653.push([a, String(d||''), JSON.parse(JSON.stringify(m||{}))]); };
+  zAlertao=function(t, l){ __za653.push([t, l]); }; zHojeISO=function(){ return '${DIA653}'; }; hospHojeISO=zHojeISO; repHojeISO=zHojeISO;
+  dataKeyAtual=function(){ return '${DIA653}'; }; hospAgora=function(){ return ${AGORA653}; };
+  quemSou=function(){ return 'Recepção'; }; MONITORES=[];
+  senhasRuntime=function(){ return {'${SENHA653}':{role:'gestao', nome:'Gestora Teste'}, 'senhaPosto653':{role:'plantonista', nome:'Plantonista'},
+    'senhaAmanda653':{role:'supervisor', nome:'Amanda Teste'}, 'senhaBia653':{role:'consultora', nome:'Bia Consultora Teste'},
+    'senhaMon653':{role:'monitor', nome:'Monitor 1'}, 'senhaCaio653':{role:'monitor', nome:'Caio Teste'}}; };
+  tgCfgPronta=function(){ return Promise.resolve({url:'https://ponte.teste/x'}); };
+  tgAvisar=function(d){ __tg653.push(JSON.parse(JSON.stringify(d))); return Promise.resolve(__tgOk653?{ok:true}:{ok:false, erro:'a ponte não respondeu'}); };
+  carregarHospedes=function(){}; carregarAgendaMedTodos=function(){}; renderHospedesAba=function(){}; carregarManuais=function(){}; renderHosp=function(){};
+  fecharPlantao=function(){}; orcTirarDaPlanilha=function(){}; orcCarregarLista=function(){}; alert=function(){};
+  orcListaArray=function(){ return Object.keys(ORC_LISTA_CACHE).map(function(k){ return Object.assign({id:k}, ORC_LISTA_CACHE[k]); }); };
+  ORC_LISTA_CACHE={}; hospedes=[]; pelCadCache={}; EST_TODAS={}; CF_ESTADIAS={}; cadCache={}; hospNovaPernoite=false; AVISOS_ESTOQUE_CACHE={};`;
+const SOLTA653 = `PELUDINHOS=__bk653.P; DB=__bk653.db; audit=__bk653.au; zAlertao=__bk653.za; zPergunta=__bk653.zp; zTexto=__bk653.zt; zCampo=__bk653.zc;
+  zEscolha=__bk653.ze; zHojeISO=__bk653.hz; hospHojeISO=__bk653.hh; repHojeISO=__bk653.rh; EST_TODAS=__bk653.et; CF_ESTADIAS=__bk653.cf;
+  CF_ESTADIAS_LIDO=__bk653.cfl; carregarHospedes=__bk653.ch; carregarAgendaMedTodos=__bk653.cam; renderHospedesAba=__bk653.rha;
+  quemSou=__bk653.qs; senhasRuntime=__bk653.sr; MONITORES=__bk653.mo; tgAvisar=__bk653.tg; tgCfgPronta=__bk653.tgc; pelCadCache=__bk653.pcc;
+  orcListaArray=__bk653.ola; hospedes=__bk653.hos; hospCorrigirAbrir=__bk653.hca; hospAgora=__bk653.hag; currentHosp=__bk653.cur;
+  medAgendaKey=__bk653.mak; reemitirFichaPdf=__bk653.rf; ciEscolher=__bk653.ce; abrirItemDoMenu=__bk653.aim; ciCorrigirExistente=__bk653.cce;
+  ORC_LISTA_CACHE=__bk653.olc; orcTirarDaPlanilha=__bk653.otp; orcCarregarLista=__bk653.ocl; alert=__bk653.al; fecharPlantao=__bk653.fp;
+  carregarManuais=__bk653.cm; renderHosp=__bk653.rhs; document.getElementById=__bk653.ge; dataKeyAtual=__bk653.dk; renderCiBusca=__bk653.rcb;
+  zMapaUma=__bk653.zmu; cadCache=__bk653.cad; hospNovaPernoite=__bk653.hnp; AVISOS_ESTOQUE_CACHE=__bk653.aec;
+  if(typeof HOSP_CORR!=='undefined') HOSP_CORR=null; if(typeof HOSP_MED_MOVIDOS!=='undefined') HOSP_MED_MOVIDOS={};`;
+// A Frida da Tutora Auluna no banco, com o check-in da Spitz por cima (o caso da linha 27).
+const semear653 = (e) => {
+  ctx.__seed653 = { e: e || EST653(), ag: AGENDA653(), logs: LOGS653(), ficha: FICHA653(), aud: AUD653() };
+  run(`__put653('auaulandia/estadias/${ID653}', __seed653.e);
+    __put653('auaulandia/medicacao-agenda/${DE653.refKey}', {nome:'Frida', tutor:'Tutora Auluna', itens:__seed653.ag});
+    Object.keys(__seed653.logs).forEach(function(d){ __put653('auaulandia/medicacao-log/'+d+'/${DE653.refKey}', __seed653.logs[d]); });
+    __put653('daycare/cadastro/${DE653.refKey}', __seed653.ficha);
+    __put653('daycare/auditoria/2026-10-07', __seed653.aud);
+    EST_TODAS={}; EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}');
+    PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}, {n:'Frida', tutor:'Tutora Auluna', raca:'SRD'}];
+    pelCadCache={}; pelCadCache['${DE653.refKey}']=__get653('daycare/cadastro/${DE653.refKey}');
+    AVISOS_ESTOQUE_CACHE={av1:{key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', medNome:'Ômega Spitz', hospNome:'Frida', tutor:'Tutora Auluna', status:'pendente'},
+      av2:{key:'${DE653.refKey}', itemId:'${IT_VELHO653}', medNome:'Probiótico', hospNome:'Frida', tutor:'Tutora Auluna', status:'pendente'}};
+    __put653('auaulandia/avisos-estoque', AVISOS_ESTOQUE_CACHE);
+    __esc653=[]; __au653=[]; __tg653=[]; __za653=[];`);
+};
+const tudo653 = () => JSON.stringify([run('__db653'), run('__esc653'), run('__au653'), run('__tg653'), run('__za653')]);
+
+prova('6.53 F0.H1 — orcAcharPeludinho: a cliente nova "Frida / Ana Carolina" não cai na única Frida de outra tutora; sem tutor, o nome único basta; "João" × "João Francisco…" acha; três Mayas param; "Ana" com duas Anas para (K20)', () => {
+  ctx.__L653 = [{ n: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD' }];
+  assert.strictEqual(run("orcAcharPeludinho(__L653, {key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina'}, 'Ana Carolina')"), -1, 'a Frida da Ana Carolina não cai na Frida de outra tutora');
+  assert.strictEqual(run("orcAcharPeludinho(__L653, {nome:'Frida'}, '')"), 0, 'orçamento sem tutor: o nome único basta');
+  ctx.__L653b = [{ n: 'Frida', tutor: '', raca: 'SRD' }];
+  assert.strictEqual(run("orcAcharPeludinho(__L653b, {nome:'Frida', tutor:'Ana Carolina'}, 'Ana Carolina')"), 0, 'ficha sem tutor: o nome único basta');
+  ctx.__L653c = [{ n: 'Pipoca', tutor: 'João Francisco Peixoto' }, { n: 'Maya', tutor: 'Luciana' }, { n: 'Maya', tutor: 'Marcela' }, { n: 'Maya', tutor: 'Rita' }];
+  assert.strictEqual(run("orcAcharPeludinho(__L653c, {nome:'Pipoca', tutor:'João'}, 'João')"), 0);
+  assert.strictEqual(run("orcAcharPeludinho(__L653c, {nome:'Maya'}, '')"), -1);
+  ctx.__L653d = [{ n: 'Frida', tutor: 'Ana Paula' }, { n: 'Frida', tutor: 'Ana Carolina' }];
+  assert.strictEqual(run("orcAcharPeludinho(__L653d, {nome:'Frida', tutor:'Ana'}, 'Ana')"), -1, 'K20: "Ana" casa com duas tutoras — para');
+  assert.strictEqual(run("orcAcharPeludinho(__L653d, {nome:'Frida', tutor:'Ana Carolina'}, '')"), 1);
+  ctx.__L653e = [{ n: 'Frida', tutor: 'Mariana Souza' }];
+  assert.strictEqual(run("orcAcharPeludinho(__L653e, {nome:'Frida', tutor:'Maria'}, 'Maria')"), -1, 'K20: "Maria" não é "Mariana"');
+});
+prova('6.53 F0.H1b — o aviso da busca do orçamento: "Na lista, Frida é de Tutora Auluna. Neste orçamento, Frida é de Ana Carolina…"', () => {
+  const t = run("orcAvisoOutroTutor(__L653, {nome:'Frida', tutor:'Ana Carolina'}, 'Ana Carolina')");
+  assert.ok(/Na lista, Frida é de Tutora Auluna\. Neste orçamento, Frida é de Ana Carolina: se é a primeira vez na Zêluz, toque em Novo Hóspede/.test(t), t);
+  assert.strictEqual(run("orcAvisoOutroTutor(__L653, {nome:'Bolt', tutor:'Rui'}, 'Rui')"), '', 'sem xará de outra tutora, sem aviso');
+  assert.strictEqual(run("orcAvisoOutroTutor(__L653, {nome:'Frida'}, '')"), '', 'sem tutor no orçamento, sem aviso');
+});
+prova('6.53 F0.H2 — a lista "sem check-in" (busca vazia) usa nome e tutor da linha da planilha: a Frida da Ana Carolina abre a ficha dela; só com a Frida de outra tutora, não abre ninguém', () => {
+  ctx.__L653f = [{ n: 'Frida', tutor: 'Tutora Auluna' }, { n: 'Frida', tutor: 'Ana Carolina' }];
+  assert.strictEqual(run("hospIdxDaLinha(__L653f, {nome:'Frida', tutor:'Ana Carolina'})"), 1);
+  assert.strictEqual(run("hospIdxDaLinha(__L653, {nome:'Frida', tutor:'Ana Carolina'})"), -1);
+  assert.strictEqual(run("hospIdxDaLinha(__L653, {nome:'Frida', tutor:''})"), 0, 'linha sem tutor e nome único: abre');
+  const src = fs.readFileSync(APP, 'utf8');
+  const corpo = src.slice(src.indexOf('function renderCiBusca(){'), src.indexOf('function renderCiBusca(){') + 4000);
+  assert.ok(/hospIdxDaLinha\(PELUDINHOS, h\)/.test(corpo) && !/PELUDINHOS\.findIndex\(function\(p\)\{ return jsNorm\(pelNome\(p\)\)===jsNorm\(nome\); \}\)/.test(corpo), 'a busca vazia não acha mais "o primeiro de mesmo nome"');
+});
+prova('6.53 F0.H3 — motivoQuatroPalavras: 4 palavras, pelo menos 3 diferentes de 2 letras ou mais; a pontuação não conta; a tela diz quantas faltam', () => {
+  const m = (t) => run('motivoQuatroPalavras(' + JSON.stringify(t) + ')');
+  ['erro', 'Frida errada', 'ok ok ok ok', 'a a a a', '1 2 3 4', '', '   ', 'é é é é é'].forEach((t) => assert.strictEqual(m(t).ok, false, t));
+  ['não é a ficha dela', 'Frida, errada!!! ficha... outra', 'lançada na Frida da Auluna por engano'].forEach((t) => assert.strictEqual(m(t).ok, true, t));
+  assert.strictEqual(m('Frida errada').erro, 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 2).');
+  assert.strictEqual(m('erro').erro, 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 3).');
+  assert.strictEqual(m('1 2 3 4').erro, 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 4).');
+  assert.ok(/3 palavras diferentes/.test(m('ok ok ok ok').erro), m('ok ok ok ok').erro);
+  assert.strictEqual(run('motivoQuatroPalavras(null)').ok, false);
+  assert.strictEqual(run('motivoQuatroPalavras()').ok, false);
+  assert.strictEqual(m('não é a ficha dela').erro, '');
+});
+prova('6.53 F0.H4 — hospProvaDeEstadia: dose no registro, relatório do plantão, Conferência concluída, check-out ou saída antecipada travam o Excluir; estadia sem nada libera', () => {
+  const p = (e, logs, rels) => run('hospProvaDeEstadia(' + JSON.stringify(e) + ',' + JSON.stringify(logs || {}) + ',' + JSON.stringify(rels || {}) + ')');
+  const limpa = { refKey: 'bolt__rui teste', nome: 'Bolt', entrada: '2026-10-08', saida: '2026-10-10', status: 'ativa' };
+  igual(p(limpa), { bloqueia: false, provas: [] });
+  const r1 = p(limpa, { '2026-10-08': { 'ci_1_20-00': { nome: 'Apoquel', horario: '20:00', quem: 'Zelosa Teste', ts: 1 } } });
+  assert.ok(r1.bloqueia && /dose de remédio/.test(r1.provas.join(' ')) && /Apoquel/.test(r1.provas.join(' ')), JSON.stringify(r1));
+  assert.ok(p(limpa, {}, { '2026-10-08': { noite: { passou: true } } }).bloqueia, 'relatório do plantão');
+  assert.ok(p(Object.assign({}, limpa, { conferencia: { concluida: true } })).bloqueia, 'Conferência concluída');
+  assert.ok(p(Object.assign({}, limpa, { status: 'finalizada', checkout: { ts: 1 } })).bloqueia, 'check-out');
+  assert.ok(p(Object.assign({}, limpa, { saida_antecipada: { em: '2026-10-09' } })).bloqueia, 'saída antecipada');
+  assert.strictEqual(p(Object.assign({}, limpa, { conferencia: { concluida: false } }), { '2026-10-08': {} }, { '2026-10-08': null }).bloqueia, false, 'dia sem dose e sem relatório não é prova');
+});
+prova('6.53 F0.H5 — hospPlanoDaTroca, caso Frida: o remédio da Spitz muda de agenda com as doses copiadas; o que é da Frida SRD vai para "Conferir"; a comida e os campos que estavam vazios vão para a ficha certa; o resto não se mexe', () => {
+  const pl = PLANO653();
+  igual(pl.mover.map((x) => x.id), [IT_SPITZ653]);
+  igual(pl.mover[0].item.estoque, { modo: 'contagem', inicial: 10, restante: 7 }, 'K12: o estoque vai junto, intacto');
+  igual(pl.copiarLog.map((x) => x.dia + '|' + x.doseId).sort(), ['2026-10-07|' + IT_SPITZ653 + '_20-00', '2026-10-08|' + IT_SPITZ653 + '_20-00']);
+  igual(pl.remedioDaAntigaDado.map((x) => x.dia + '|' + x.nome + '|' + x.horario), ['2026-10-08|Apoquel|08:00'], 'K1: a dose do remédio da Frida SRD dada à Spitz');
+  igual(Object.keys(pl.fichaLevar).sort(), ['alergia_nenhuma', 'alim_plano', 'nasc', 'restricao_nenhuma', 'vetNome']);
+  igual(pl.fichaTirar.slice().sort(), ['alim_plano', 'nasc', 'vetNome']);
+  const tipos = pl.conferir.map((c) => c.tipo);
+  ['remedio-confirmado', 'remedio-parou', 'alergia-apagada', 'remedio-dado', 'daycare', 'dose-incompleta'].forEach((t) => assert.ok(tipos.indexOf(t) >= 0, t + ' em ' + tipos.join(',')));
+  assert.ok([IT_VELHO653, IT_CONF653, IT_PAROU653].every((id) => pl.naoMexe.indexOf(id) >= 0), JSON.stringify(pl.naoMexe));
+  igual(pl.conferir.filter((c) => c.tipo === 'remedio-parou')[0].itemId, IT_PAROU653, 'o "Desfazer o parou" sabe qual remédio');
+  assert.ok(pl.conferir.every((c) => c.k && c.texto && /^(antiga|nova|ambas)$/.test(c.ficha)), 'cada item tem chave, texto e ficha');
+  const dado = pl.conferir.filter((c) => c.tipo === 'remedio-dado')[0];
+  assert.ok(dado.msgVet && dado.msgTutora && /Apoquel/.test(dado.msgVet) && /^Oi, Ana, /.test(dado.msgTutora) && /Zêluz/.test(dado.msgTutora), JSON.stringify(dado));
+  // a comida que a ficha da Frida SRD já tinha antes do check-in: não se mexe; a Spitz pode ter comido o que era dela (K1)
+  const f2 = FICHA653(); f2.alim_plano.conf.ts = TS653 - 30 * 86400000;
+  const pl2 = PLANO653({ ficha: f2 });
+  assert.ok(!('alim_plano' in pl2.fichaLevar) && pl2.fichaTirar.indexOf('alim_plano') < 0);
+  assert.ok(pl2.conferir.some((c) => c.tipo === 'comida-da-antiga'), JSON.stringify(pl2.conferir.map((c) => c.tipo)));
+  // "Mudou" na comida: o valor de antes não ficou guardado — vai para "Conferir", nada sai sozinho
+  const f3 = FICHA653(); f3.alim_plano.conf.estado = 'mudou';
+  const pl3 = PLANO653({ ficha: f3 });
+  assert.ok(pl3.conferir.some((c) => c.tipo === 'comida-mudou') && !('alim_plano' in pl3.fichaLevar) && pl3.fichaTirar.indexOf('alim_plano') < 0);
+  // a ficha certa já tinha o campo: ele não é sobrescrito (mas sai da ficha errada, que estava vazia)
+  const pl4 = PLANO653({ fichaNova: { nasc: '2023-05-05' } });
+  assert.ok(!('nasc' in pl4.fichaLevar) && pl4.fichaTirar.indexOf('nasc') >= 0, JSON.stringify(pl4.fichaLevar));
+  // a janela vem do id da estadia (K8), e não do _ts que o Corrigir regrava
+  const e5 = EST653(); e5._ts = AGORA653 - 60000;
+  igual(PLANO653({ e: e5 }).mover.map((x) => x.id), [IT_SPITZ653], 'K8: o _ts regravado não anda a janela');
+  // a restrição declarada no check-in é da Spitz: vai para a ficha certa (K9) e fica em "Conferir" na antiga
+  const aud6 = AUD653(); aud6.a3 = { acao: 'checkin', detalhe: 'restrição/alergia atualizada', pet: 'Frida', restricao: 'frango', ts: TS653 - 100000 };
+  const pl6 = PLANO653({ auditoria: aud6 });
+  assert.strictEqual(pl6.fichaLevar.restricao, 'frango');
+  assert.ok(pl6.conferir.some((c) => c.tipo === 'restricao-gravada'));
+});
+prova('6.53 F0.H6 — hospTrocaPatch: só refKey, nome, tutor, raça, trocaFicha, correções e _ts mudam; comida, remédio, pertences, assinatura, Conferência, datas, valor e origem ficam iguais; outra pessoa mexeu, não grava', () => {
+  ctx.__a653 = EST653();
+  ctx.__r653 = { tk: 't' + AGORA653, de: DE653, para: PARA653, motivo: 'não é a ficha dela, cliente nova', quem: 'Gestora Teste', quem_papel: 'gestao',
+    logado: 'Recepção', ts: AGORA653, quando_br: '09/10/2026 às 10:00', plano: { mover: [IT_SPITZ653] } };
+  const ab = '{_ts:' + TS653 + ', refKey:"' + DE653.refKey + '"}';
+  const r = run('hospTrocaPatch(__a653, ' + ab + ', __r653)');
+  assert.strictEqual(r.ok, true, r.erro);
+  const atual = EST653();
+  const mud = Object.keys(Object.assign({}, atual, r.novo)).filter((k) => JSON.stringify(atual[k]) !== JSON.stringify(r.novo[k])).sort();
+  igual(mud, ['_ts', 'correcoes', 'raca', 'refKey', 'trocaFicha', 'tutor']);
+  ['ficha', 'medicacao', 'pertences', 'alimentacao', 'assinatura', 'assinado_por', 'conferencia', 'checkout', 'entrada', 'saida', 'valor_cent', 'origem', 'status']
+    .forEach((k) => assert.strictEqual(JSON.stringify(r.novo[k]), JSON.stringify(atual[k]), k));
+  igual([r.novo.refKey, r.novo.nome, r.novo.tutor, r.novo.raca], [PARA653.refKey, 'Frida', 'Ana Carolina', 'Spitz']);
+  const t = r.novo.trocaFicha[ctx.__r653.tk];
+  igual([t.de.refKey, t.para.refKey, t.motivo, t.quem, t.quem_papel, t.logado, t.completa], [DE653.refKey, PARA653.refKey, ctx.__r653.motivo, 'Gestora Teste', 'gestao', 'Recepção', false]);
+  const c = r.novo.correcoes[r.novo.correcoes.length - 1];
+  assert.ok(/FILHOt: Frida · SRD · Tutora Auluna → Frida · Spitz · Ana Carolina/.test(c.mudou.join(' ')), JSON.stringify(c));
+  igual(c.antes, { refKey: DE653.refKey, nome: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD' });
+  // a 2ª troca não apaga a 1ª (K16): uma lista, não um objeto só
+  ctx.__a653x = r.novo; ctx.__r653x = Object.assign({}, ctx.__r653, { tk: 't2', de: PARA653, para: DE653 });
+  // (4ª rodada, O13) com a 1ª troca pela metade, a 2ª não grava: primeiro o «Retomar»
+  const r2m = run('hospTrocaPatch(__a653x, {_ts:' + AGORA653 + ', refKey:"' + PARA653.refKey + '"}, __r653x)');
+  assert.ok(r2m.ok === false && /pela metade/.test(r2m.erro), JSON.stringify(r2m));
+  ctx.__a653x.trocaFicha[ctx.__r653.tk].completa = true;
+  const r2 = run('hospTrocaPatch(__a653x, {_ts:' + AGORA653 + ', refKey:"' + PARA653.refKey + '"}, __r653x)');
+  assert.ok(r2.ok && r2.novo.trocaFicha[ctx.__r653.tk] && r2.novo.trocaFicha.t2 && r2.novo.correcoes.length === 2, JSON.stringify(r2.erro));
+  // concorrência (AC16): o _ts do banco não é o de quando o cartaz abriu
+  assert.strictEqual(run('hospTrocaPatch(__a653, {_ts:1, refKey:"' + DE653.refKey + '"}, __r653)').ok, false);
+  // a estadia já não está na ficha de onde sairia (outro aparelho trocou antes)
+  ctx.__a653b = Object.assign(EST653(), { refKey: 'outra__ficha' });
+  assert.strictEqual(run('hospTrocaPatch(__a653b, ' + ab + ', __r653)').ok, false);
+  ctx.__a653c = Object.assign(EST653(), { status: 'cancelada' });
+  assert.strictEqual(run('hospTrocaPatch(__a653c, ' + ab + ', __r653)').ok, false, 'estadia excluída não troca de ficha');
+});
+prova('6.53 F0.H7 — hospExclusaoPatch: status "cancelada" + exclusão (o nó nunca é apagado, nada vira null); com prova de que dormiu aqui ou mexida por outra pessoa, não grava', () => {
+  ctx.__x653 = Object.assign(EST653(), { conferencia: { concluida: false } });
+  ctx.__rx653 = { tk: 'x' + AGORA653, motivo: 'lançada por engano, ela não veio', quem: 'Amanda Teste', quem_papel: 'supervisor', logado: 'Recepção',
+    ts: AGORA653, quando_br: '09/10/2026 às 10:00', planilha: 'tirar', orcamento: 'manter' };
+  const ab = '{_ts:' + TS653 + ', refKey:"' + DE653.refKey + '"}';
+  const r = run('hospExclusaoPatch(__x653, ' + ab + ', __rx653)');
+  assert.strictEqual(r.ok, true, r.erro);
+  const atual = Object.assign(EST653(), { conferencia: { concluida: false } });
+  const mud = Object.keys(Object.assign({}, atual, r.novo)).filter((k) => JSON.stringify(atual[k]) !== JSON.stringify(r.novo[k])).sort();
+  // (4ª rodada, QA R3) o _ts não muda: a excluída não vira a "mais recente" da ficha; a hora fica em canceladaTs
+  igual(mud, ['canceladaPor', 'canceladaTs', 'exclusao', 'status']);
+  igual([r.novo._ts, r.novo.canceladaTs], [TS653, AGORA653]);
+  assert.strictEqual(r.novo.status, 'cancelada');
+  const x = r.novo.exclusao[ctx.__rx653.tk];
+  igual([x.motivo, x.motivo_tipo, x.quem, x.quem_papel, x.logado], [ctx.__rx653.motivo, 'lancada-por-engano', 'Amanda Teste', 'supervisor', 'Recepção']);
+  assert.ok(mud.every((k) => r.novo[k] !== null && r.novo[k] !== undefined), 'nenhum campo vira null');
+  [{ conferencia: { concluida: true } }, { status: 'finalizada', checkout: { ts: 1 } }, { saida_antecipada: { em: '2026-10-08' } }].forEach((extra) => {
+    ctx.__x653b = Object.assign(EST653(), { conferencia: { concluida: false } }, extra);
+    assert.strictEqual(run('hospExclusaoPatch(__x653b, ' + ab + ', __rx653)').ok, false, JSON.stringify(extra));
+  });
+  assert.strictEqual(run('hospExclusaoPatch(__x653, {_ts:2, refKey:"' + DE653.refKey + '"}, __rx653)').ok, false, 'outra pessoa mexeu');
+  ctx.__x653c = Object.assign(EST653(), { status: 'cancelada' });
+  assert.strictEqual(run('hospExclusaoPatch(__x653c, ' + ab + ', __rx653)').ok, false, 'já excluída');
+  // (4ª rodada, O13) com uma troca de ficha pela metade, não exclui: primeiro o «Retomar»
+  ctx.__x653d = Object.assign(EST653(), { conferencia: { concluida: false }, trocaFicha: { t1: { de: PARA653, para: DE653, completa: false, ts: 1 } } });
+  const rd = run('hospExclusaoPatch(__x653d, ' + ab + ', __rx653)');
+  assert.ok(rd.ok === false && /pela metade/.test(rd.erro), JSON.stringify(rd));
+});
+prova('6.53 F0.H8 — guarda (já valia antes): a hospedagem excluída ("cancelada") não cobre o dia, não conta no acerto, não é reposição, não é check-in do orçamento e não é falta automática', () => {
+  const e = Object.assign(EST653(), { status: 'cancelada' });
+  ctx.__h8 = e;
+  assert.strictEqual(run("estadiaCobreDia(__h8, '2026-10-08')"), false);
+  assert.strictEqual(run("repEstadiaCobre(__h8, '2026-10-08')"), false);
+  assert.strictEqual(run('estStatusDe(__h8)'), 'cancelada');
+  assert.strictEqual(run("orcCheckinJaFeito({x:__h8}, {key:'frida__tutora auluna', nome:'Frida', tutor:'Tutora Auluna'}, {entrada:'2026-10-07', saida:'2026-10-12'})"), false);
+  igual(run("faltaDormiuAqui('2026-10-08', {x:__h8}, {}, {}, {})").pk, {});
+  run('__bkH8={et:EST_TODAS, ap:acertoPernoitesNaNoite}; EST_TODAS={x:__h8}; acertoPernoitesNaNoite=function(){ return []; };');
+  try { igual(run("acertoHospedesNaNoite('2026-10-08')"), []); }
+  finally { run('EST_TODAS=__bkH8.et; acertoPernoitesNaNoite=__bkH8.ap;'); }
+});
+prova('6.53 F0.H9 — hospAssinarPorSenha: a Gestão e a Supervisão assinam com a própria senha; senha de posto, de monitor, de consultora, errada ou vazia não assinam; a senha nunca volta no resultado', () => {
+  run(ARMA653);
+  try {
+    const a = (s) => run('hospAssinarPorSenha(' + JSON.stringify(s) + ')');
+    igual([a(SENHA653).ok, a(SENHA653).nome, a(SENHA653).papel], [true, 'Gestora Teste', 'gestao']);
+    igual([a('senhaAmanda653').ok, a('senhaAmanda653').nome, a('senhaAmanda653').papel], [true, 'Amanda Teste', 'supervisor']);
+    ['senhaPosto653', 'senhaMon653', 'senhaCaio653', 'senhaBia653', '0000', '', '  '].forEach((s) => assert.strictEqual(a(s).ok, false, s));
+    assert.ok(/posto/.test(a('senhaPosto653').erro) && /posto/.test(a('senhaMon653').erro), a('senhaPosto653').erro);
+    assert.ok(/Caio Teste/.test(a('senhaCaio653').erro) && /não pode assinar/.test(a('senhaCaio653').erro), a('senhaCaio653').erro);
+    assert.ok(/não é de ninguém/.test(a('0000').erro));
+    assert.ok(JSON.stringify(a(SENHA653)).indexOf(SENHA653) < 0, 'a senha não volta no resultado');
+  } finally { run(SOLTA653); }
+});
+prova('6.53 AC3 — quem abre "Corrigir esta hospedagem": Consultora, Supervisão, Gestão e Diretoria; quem assina: Supervisão, Gestão e Diretoria (a Consultora abre e chama uma delas)', () => {
+  const PAP = ['consultora', 'supervisor', 'gestao', 'diretoria', 'monitor', 'plantonista', 'vet', 'aprendiz'];
+  igual(PAP.map((p) => run("podePapel('corrigir-hospedagem','" + p + "')")), [true, true, true, true, false, false, false, false]);
+  igual(PAP.map((p) => run("podePapel('assinar-correcao-hospedagem','" + p + "')")), [false, true, true, true, false, false, false, false]);
+});
+prova('6.53 AC3/AC9 — Hóspedes de hoje: a linha tem "Corrigir esta hospedagem" para quem pode; Monitor, Plantonista e Veterinária não veem; a excluída mostra EXCLUÍDA, o motivo e quem, e não abre o cartaz de novo', () => {
+  ctx.__e653 = EST653();
+  const html = (papel) => { run("document.body.dataset.role='" + papel + "'"); return run("hospAbaLinha({id:'" + ID653 + "', e:__e653}, 0)"); };
+  try {
+    ['consultora', 'supervisor', 'gestao', 'diretoria'].forEach((p) => assert.ok(/Corrigir esta hospedagem/.test(html(p)), p));
+    ['monitor', 'plantonista', 'vet'].forEach((p) => assert.ok(!/Corrigir esta hospedagem/.test(html(p)), p));
+    ctx.__e653 = Object.assign(EST653(), { status: 'cancelada', exclusao: { x1: { motivo: 'lançada por engano, ela não veio', quem: 'Amanda Teste', quem_papel: 'supervisor', ts: AGORA653, quando_br: '09/10/2026 às 10:00' } } });
+    const h = html('gestao');
+    assert.ok(/EXCLUÍDA/.test(h) && /lançada por engano, ela não veio/.test(h) && /Amanda Teste/.test(h), h);
+    assert.ok(!/Corrigir esta hospedagem/.test(h), 'a excluída não abre o cartaz de novo');
+  } finally { run("document.body.dataset.role='gestao'"); }
+});
+provaAsync('6.53 F0.H10 — Zona de risco do Plantão com estadia: o botão abre o cartaz da correção (motivo e senha); nenhum toque grava "cancelada" sozinho', async () => {
+  run(ARMA653);
+  try {
+    run(`__abriu653=[]; hospCorrigirAbrir=function(id, op){ __abriu653.push([id, (op||{}).origem||'']); };
+      currentHosp={nome:'Frida', tutor:'Tutora Auluna', refKey:'${DE653.refKey}'};
+      medAgendaKey=function(){ return '${DE653.refKey}'; }; CF_ESTADIAS={'${DE653.refKey}':{id:'${ID653}', e:{status:'ativa'}}};
+      __btn653={textContent:'Corrigir', dataset:{}, style:{}};`);
+    run('cancelarPernoiteFicha(__btn653)'); await espera653();
+    run('cancelarPernoiteFicha(__btn653)'); await espera653();
+    igual(run('__esc653.length'), 0, 'nada gravado');
+    igual(run('__abriu653'), [[ID653, 'plantao'], [ID653, 'plantao']]);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 AC14 — Zona de risco sem estadia (lançamento manual de hoje): o "(hoje)" continua, agora com o motivo de 4 palavras escrito no próprio cartão; motivo curto não apaga', async () => {
+  run(ARMA653);
+  try {
+    run(`currentHosp={nome:'Bolt', tutor:'Rui Teste', manualKey:'mk1', manualDia:'${DIA653}'}; medAgendaKey=function(){ return 'bolt__rui teste'; }; CF_ESTADIAS={};
+      __zr653={hfZrMotivo:{value:''}}; document.getElementById=function(id){ return __zr653[id]||__bk653.ge.call(document, id); };
+      __btn653={textContent:'Deletar', dataset:{}, style:{}};`);
+    run('cancelarPernoiteFicha(__btn653)'); await espera653();
+    assert.ok(/hoje/.test(run('__btn653.textContent')) && run('__btn653.dataset.armed') === '1', 'o 1º toque arma, e o botão diz o que vai acontecer');
+    igual(run('__esc653.length'), 0);
+    run("__zr653.hfZrMotivo.value='erro'; cancelarPernoiteFicha(__btn653)"); await espera653();
+    igual(run('__esc653.length'), 0, 'motivo curto: nada apagado');
+    assert.ok(run('__za653').some((z) => /faltam 3/.test(JSON.stringify(z))), JSON.stringify(run('__za653')));
+    run('cancelarPernoiteFicha(__btn653)'); await espera653();
+    run("__zr653.hfZrMotivo.value='lancei o Bolt no dia errado'; cancelarPernoiteFicha(__btn653)"); await espera653();
+    igual(run("__esc653.map(function(x){ return x[0]+' '+x[1]; })"), ['remove auaulandia/manuais/' + DIA653 + '/mk1']);
+    assert.ok(run('__au653').some((a) => /lancei o Bolt no dia errado/.test(a[1] + JSON.stringify(a[2]))), 'o motivo vai para a auditoria');
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(/id="hfZrMotivo"/.test(src) && /id="hfZrBtn"[^>]*onclick="cancelarPernoiteFicha\(this\)"/.test(src), 'o campo do motivo mora no cartão da Zona de risco');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F1 — Trocar a ficha da Frida, do começo ao fim: a estadia vai para a ficha certa (campo a campo); o remédio muda de agenda com o mesmo id e o estoque; as doses são copiadas (as originais ficam); a ficha da Frida SRD perde o que estava vazio; o rastro vai para 4 lugares; a senha não aparece em lugar nenhum', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'trocar-confirmar', JSON.stringify(run('HOSP_CORR.msg')));
+    const antes = run(`__get653('auaulandia/estadias/${ID653}')`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova da Ana Carolina', '${SENHA653}')`); await espera653();
+    assert.ok(r && r.ok, JSON.stringify(r));
+    const dep = run(`__get653('auaulandia/estadias/${ID653}')`);
+    igual([dep.refKey, dep.nome, dep.tutor, dep.raca], [PARA653.refKey, 'Frida', 'Ana Carolina', 'Spitz']);
+    ['ficha', 'medicacao', 'pertences', 'alimentacao', 'assinatura', 'assinado_por', 'conferencia', 'checkout', 'entrada', 'saida', 'valor_cent', 'origem', 'status']
+      .forEach((k) => assert.strictEqual(JSON.stringify(dep[k]), JSON.stringify(antes[k]), 'AC6: ' + k + ' não muda'));
+    const tk = Object.keys(dep.trocaFicha)[0];
+    igual([dep.trocaFicha[tk].quem, dep.trocaFicha[tk].quem_papel, dep.trocaFicha[tk].logado, dep.trocaFicha[tk].completa], ['Gestora Teste', 'gestao', 'Recepção', true]);
+    // a ficha nova nasceu com as travas do Novo Hóspede, e levou o que estava vazio na ficha da Frida SRD
+    const fn = run(`__get653('daycare/cadastro/${PARA653.refKey}')`);
+    igual([fn.n, fn.tutor, fn.raca, fn.nasc, fn.vetNome, !!fn.alim_plano, !!fn.restricao_nenhuma], ['Frida', 'Ana Carolina', 'Spitz', '2024-03-01', 'Dra. Teste Spitz', true, true]);
+    const fa = run(`__get653('daycare/cadastro/${DE653.refKey}')`);
+    igual([('nasc' in fa), ('vetNome' in fa), ('alim_plano' in fa), !!fa.restricao_nenhuma], [false, false, false, true], 'a ficha da Frida SRD perde só o que se sabe que estava vazio');
+    assert.ok(run('PELUDINHOS').some((p) => p.n === 'Frida' && p.tutor === 'Ana Carolina'), 'a ficha nova entra no cadastro em memória');
+    // o remédio: mesmo id, mesmo estoque, na agenda certa; sai da antiga; o resto da antiga fica
+    const agN = run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}')`);
+    const agA = run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens')`);
+    igual(agN.itens[IT_SPITZ653].estoque, { modo: 'contagem', inicial: 10, restante: 7 });
+    assert.ok(/veio da ficha de Frida · SRD · Tutora Auluna/.test(agN.itens[IT_SPITZ653].historico.slice(-1)[0].acao), JSON.stringify(agN.itens[IT_SPITZ653].historico));
+    igual([agN.estadiaId, agN.nome, agN.tutor], [ID653, 'Frida', 'Ana Carolina']);
+    igual(Object.keys(agA).sort(), [IT_CONF653, IT_PAROU653, IT_VELHO653].sort());
+    const av = run(`__get653('auaulandia/avisos-estoque')`);
+    igual([av.av1.key, av.av1.tutor, av.av1.trocado_de.key, av.av2.key], [PARA653.refKey, 'Ana Carolina', DE653.refKey, DE653.refKey], 'K12: o aviso de estoque do remédio que mudou vai junto; o do que ficou, não');
+    const ordem = run('__esc653').map((x) => x[0] + ' ' + x[1]);
+    const iNovo = ordem.indexOf('transaction auaulandia/medicacao-agenda/' + PARA653.refKey + '/itens/' + IT_SPITZ653);
+    const iTira = ordem.indexOf('remove auaulandia/medicacao-agenda/' + DE653.refKey + '/itens/' + IT_SPITZ653);
+    assert.ok(iNovo >= 0 && iTira > iNovo, 'grava na nova ANTES de tirar da antiga: ' + ordem.join(' | '));
+    // as doses: copiadas com copiado_de; as originais ficam
+    const l7 = run(`__get653('auaulandia/medicacao-log/2026-10-07/${PARA653.refKey}')`);
+    const l8 = run(`__get653('auaulandia/medicacao-log/2026-10-08/${PARA653.refKey}')`);
+    igual([Object.keys(l7), Object.keys(l8)], [[IT_SPITZ653 + '_20-00'], [IT_SPITZ653 + '_20-00']]);
+    igual([l7[IT_SPITZ653 + '_20-00'].copiado_de, l7[IT_SPITZ653 + '_20-00'].quem], [DE653.refKey, 'Zelosa Teste']);
+    igual(Object.keys(run(`__get653('auaulandia/medicacao-log/2026-10-08/${DE653.refKey}')`)).length, 3, 'as originais ficam');
+    // AC15: a chamada do Day Care deixa de ver a Frida SRD como hóspede; o orçamento reconhece o check-in
+    run(`_cfIndexarEstadias({'${ID653}': __get653('auaulandia/estadias/${ID653}')})`);
+    igual([!!run(`CF_ESTADIAS['${PARA653.refKey}']`), !!run(`CF_ESTADIAS['${DE653.refKey}']`)], [true, false]);
+    assert.strictEqual(run(`orcCheckinJaFeito({x:__get653('auaulandia/estadias/${ID653}')}, {key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina'}, {entrada:'2026-10-07', saida:'2026-10-12'})`), true);
+    // o rastro: estadia (acima), hospedagem-correcoes, auditoria e o grupo da Gestão
+    const hc = run(`__get653('auaulandia/hospedagem-correcoes/${ID653}')`);
+    const hc1 = hc[Object.keys(hc)[0]];
+    igual([hc1.acao, hc1.de.refKey, hc1.para.refKey, hc1.quem, hc1.quem_papel, hc1.logado], ['trocou-ficha', DE653.refKey, PARA653.refKey, 'Gestora Teste', 'gestao', 'Recepção']);
+    assert.ok(run('__au653').some((a) => a[0] === 'hospedagem-ficha-trocada' && /Tutora Auluna/.test(a[1]) && /Ana Carolina/.test(a[1]) && /não é a ficha dela/.test(a[1])), JSON.stringify(run('__au653')));
+    const tg = run('__tg653');
+    assert.ok(tg.length === 1 && tg[0].grupo === 'gestao' && /^HOSPEDAGEM CORRIGIDA: Frida/.test(tg[0].texto), JSON.stringify(tg));
+    // AC9: a mensagem para a tutora e para a veterinária NÃO sai sozinha
+    assert.ok(!/Olá|Oi, /.test(tg[0].texto), 'o grupo da Gestão recebe o aviso, não a mensagem da tutora');
+    // K2: os outros aparelhos ouvem o sinal e este já sabe que o remédio mudou de ficha
+    igual(run(`__get653('auaulandia/sinais/agenda').itens`), [IT_SPITZ653]);
+    assert.strictEqual(run(`HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']`), PARA653.refKey);
+    assert.ok(tudo653().indexOf(SENHA653) < 0, 'a senha não aparece no banco, na auditoria nem no Telegram');
+    assert.strictEqual(run('HOSP_CORR.passo'), 'feito');
+    // K3: a estadia é gravada pelo caminho dela (o carimbo de auaulandia/estadias sobe), nunca pela raiz
+    const esc = run('__esc653');
+    assert.ok(esc.some((x) => x[0] === 'transaction' && x[1] === 'auaulandia/estadias/' + ID653) && run("zColecaoCarimbada('auaulandia/estadias/" + ID653 + "')") === 'auaulandia/estadias', 'pelo caminho da estadia');
+    assert.ok(esc.every((x) => x[1] !== '' && !/^auaulandia\/estadias\/?$/.test(x[1])), 'nada pela raiz: ' + esc.filter((x) => x[1] === '').length);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F2 (AC16) — outra pessoa mexeu na estadia depois de o cartaz abrir: nada é gravado (nem a ficha nova) e a tela pede para abrir de novo', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    run(`(function(){ var e=__get653('auaulandia/estadias/${ID653}'); e._ts=e._ts+5000; __put653('auaulandia/estadias/${ID653}', e); })(); __esc653=[];`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova da Ana Carolina', '${SENHA653}')`); await espera653();
+    assert.strictEqual(r.ok, false);
+    assert.ok(/outra pessoa/.test(r.erro) && /abra de novo/.test(r.erro), r.erro);
+    igual(run('__esc653').filter((x) => !/desistiu/.test(x[0])).length, 0, 'nada gravado');
+    assert.strictEqual(run(`__get653('daycare/cadastro/${PARA653.refKey}')`), null);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F3 (AC3/AC4/AC12) — sem senha, senha errada, de posto, de monitor ou de consultora, ou motivo curto: nada é gravado e a tela diz por quê', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'checkin'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const casos = [['não é a ficha dela', ''], ['não é a ficha dela', '0000'], ['não é a ficha dela', 'senhaPosto653'], ['não é a ficha dela', 'senhaMon653'],
+      ['não é a ficha dela', 'senhaBia653'], ['Frida errada', SENHA653], ['ok ok ok ok', SENHA653]];
+    for (const [m, s] of casos) {
+      run('__esc653=[];');
+      const r = await run('hospTrocarGravar(' + JSON.stringify(m) + ', ' + JSON.stringify(s) + ')'); await espera653();
+      assert.ok(r.ok === false && r.erro, JSON.stringify([m, s, r]));
+      igual(run('__esc653.length'), 0, JSON.stringify([m, s]));
+    }
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F4 (AC13) — o Telegram falhou: a troca fica gravada e a tela diz que o aviso não saiu', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__tgOk653=false; hospCorrigirAbrir('${ID653}'); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok && r.tg === false, JSON.stringify(r));
+    assert.strictEqual(run(`__get653('auaulandia/estadias/${ID653}').refKey`), PARA653.refKey);
+    assert.ok(/aviso no grupo da Gestão não saiu/.test(run('hospCorrHtml(HOSP_CORR)')), 'a tela diz');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F5 (AC5) — trocar para uma ficha que JÁ existe: a escolha mostra nome, raça e tutor; a ficha atual não aparece na lista; a homônima pede confirmação antes de criar', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`PELUDINHOS.push({n:'Frida', tutor:'Ana Carolina', raca:'Spitz'}); hospCorrigirAbrir('${ID653}'); hospCorrEscolher('trocar');`);
+    const lista = run(`hospTrocarCandidatos('frida')`);
+    igual(lista.map((x) => x.nome + ' · ' + x.raca + ' · ' + x.tutor), ['Frida · Spitz · Ana Carolina'], 'a ficha atual (Frida SRD) não é oferecida');
+    run(`PELUDINHOS.pop(); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'});`);
+    assert.ok(/outro FILHOt/.test(run('HOSP_CORR.msg')) && !run('HOSP_CORR.alvo'), 'homônima: pede a confirmação de que é outro FILHOt');
+    run(`hospTrocarAlvoNovo({nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', homonimoOk:true});`);
+    assert.ok(/Já existe/.test(run('HOSP_CORR.msg')) && !run('HOSP_CORR.alvo'), 'idêntica: bloqueia');
+    run(`hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    assert.ok(run('HOSP_CORR.alvo') && run('HOSP_CORR.alvo.novo') === true);
+    await run('hospTrocarPreparar()'); await espera653();
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/Sai de: Frida · SRD · Tutora Auluna/.test(h) && /Vai para: Frida · Spitz · Ana Carolina/.test(h) && /Continua igual/.test(h), h.slice(0, 600));
+    assert.ok(/Conferir na ficha de Frida · SRD/.test(h) && /aguardando a aprovação da Adriana/.test(h), 'AC9: o texto da tutora aparece, mas não sai antes de a Adriana aprovar o modelo');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F6 (AC9/AC7) — Excluir o que foi lançado por engano: "cancelada" + exclusão; o nó fica; o alarme do remédio nascido no check-in para (nada apagado); a linha da planilha sai do Plantão nos dias da estadia; o orçamento é cancelado com o mesmo motivo e a mesma assinatura', async () => {
+  run(ARMA653);
+  try {
+    const TSB = new Date(2026, 9, 9, 8, 0).getTime(), IDB = pid653(TSB, 'Bolt00000001'), ITB = 'ci_' + (TSB - 60000) + '_b1';
+    ctx.__eb653 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', valor_cent: 15000, pernoite: true, _ts: TSB };
+    run(`__put653('auaulandia/estadias/${IDB}', __eb653); EST_TODAS={'${IDB}':__get653('auaulandia/estadias/${IDB}')};
+      __put653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITB}', {nome:'Apoquel', q:'1', u:'comprimido', horarios:['20:00'], continuo:true, historico:[{acao:'Criou (check-in)'}]});
+      PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[{nome:'Bolt', tutor:'Rui', raca:'Beagle'}];
+      ORC_LISTA_CACHE={o9:{status:'fechado', entrada:'2026-10-09', saida:'2026-10-11', tutor:'Rui Teste', pets:[{key:'bolt__rui teste', nome:'Bolt', tutor:'Rui Teste'}]}};
+      __put653('auaulandia/orcamentos/o9', ORC_LISTA_CACHE.o9); __esc653=[];`);
+    run(`hospCorrigirAbrir('${IDB}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'excluir', JSON.stringify(run('HOSP_CORR.msg')));
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/R\$ 150,00/.test(h), 'o valor da pernoite aparece em R$ com centavos');
+    assert.ok(/planilha/.test(h) && /orçamento/.test(h), 'a mesma tela pergunta da planilha e do orçamento');
+    const sem = await run(`hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})`); await espera653();
+    assert.ok(sem.ok === false && /planilha/.test(sem.erro), 'sem dizer o que fazer com a planilha, não grava: ' + JSON.stringify(sem));
+    igual(run('__esc653.length'), 0);
+    const r = await run(`hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {planilha:'tirar', orcamento:'cancelar'})`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const e = run(`__get653('auaulandia/estadias/${IDB}')`);
+    assert.ok(e && e.status === 'cancelada' && e.nome === 'Bolt', 'o nó continua lá');
+    const x = e.exclusao[Object.keys(e.exclusao)[0]];
+    igual([x.motivo, x.quem, x.quem_papel, x.logado, x.planilha, x.orcamento], ['lançada por engano, ele não veio', 'Amanda Teste', 'supervisor', 'Recepção', 'tirar', 'cancelar']);
+    const it = run(`__get653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITB}')`);
+    assert.ok(it && it.paradoEm && /hospedagem excluída/.test(it.paradoEm.motivo) && it.continuo === false, JSON.stringify(it));
+    const rem = ['2026-10-09', '2026-10-10', '2026-10-11'].map((d) => run("__get653('auaulandia/removidos/" + d + "')"));
+    rem.forEach((v, i) => { const k = Object.keys(v || {})[0]; assert.ok(k && v[k].motivo === 'lançada por engano, ele não veio' && v[k].quem === 'Amanda Teste', 'dia ' + i + ': ' + JSON.stringify(v)); });
+    const o = run(`__get653('auaulandia/orcamentos/o9')`);
+    igual([o.status, o.cancelado_por, o.cancelado_motivo], ['cancelado', 'Amanda Teste', 'lançada por engano, ele não veio']);
+    const hc = run(`__get653('auaulandia/hospedagem-correcoes/${IDB}')`);
+    igual(hc[Object.keys(hc)[0]].acao, 'excluiu');
+    assert.ok(run('__au653').some((a) => a[0] === 'hospedagem-excluida' && /lançada por engano, ele não veio/.test(a[1])));
+    assert.ok(run('__tg653').some((t) => t.grupo === 'gestao' && /^HOSPEDAGEM EXCLUÍDA: Bolt/.test(t.texto)));
+    assert.ok(tudo653().indexOf('senhaAmanda653') < 0, 'a senha não aparece em lugar nenhum');
+    // K3: só o orçamento vai pela raiz (o cancelamento de sempre); a estadia, pelo caminho dela
+    assert.ok(run('__esc653').filter((x) => x[1] === '').every((x) => !Object.keys(x[2] || {}).some((k) => /^auaulandia\/estadias/.test(k))), 'a estadia nunca pela raiz');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F7 (AC5/AC10) — Excluir com prova de que o FILHOt dormiu aqui (dose dada): não grava e oferece Trocar a ficha', async () => {
+  run(ARMA653);
+  try {
+    semear653(Object.assign(EST653(), { conferencia: { concluida: false } }));
+    run(`hospCorrigirAbrir('${ID653}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.provas.bloqueia'), true);
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/dose de remédio/.test(h) && /Trocar a ficha/.test(h), h.slice(0, 500));
+    const r = await run(`hospExcluirGravar('lançada por engano, ela não veio', '${SENHA653}', {planilha:'manter', orcamento:'manter'})`); await espera653();
+    assert.ok(r.ok === false, JSON.stringify(r));
+    igual(run('__esc653.length'), 0);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F8 (K7) — a troca que ficou pela metade (sem internet no meio) é retomada: grava só o que falta, sem duplicar', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}'); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    // a estadia trocou, e a internet caiu antes da agenda: o "aplicar" nunca rodou
+    run(`__bkAp653=hospTrocaAplicar; hospTrocaAplicar=function(){ return Promise.reject(new Error('sem internet')); };`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    run('hospTrocaAplicar=__bkAp653;');
+    assert.ok(r.ok === false && /pela metade/.test(r.erro), JSON.stringify(r));
+    const e1 = run(`__get653('auaulandia/estadias/${ID653}')`);
+    const tk = Object.keys(e1.trocaFicha)[0];
+    igual([e1.refKey, e1.trocaFicha[tk].completa], [PARA653.refKey, false]);
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}')`), 'a agenda ainda não mudou');
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); hospCorrigirAbrir('${ID653}');`);
+    assert.ok(/Retomar a troca de ficha/.test(run('hospCorrHtml(HOSP_CORR)')), 'o cartaz oferece retomar');
+    const r2 = await run("hospRetomarTroca('" + ID653 + "', '" + tk + "')"); await espera653();
+    assert.ok(r2.ok, JSON.stringify(r2));
+    const r3 = await run("hospRetomarTroca('" + ID653 + "', '" + tk + "')"); await espera653();
+    assert.ok(r3.ok, 'retomar de novo não estraga nada');
+    assert.strictEqual(run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}')`), null);
+    igual(run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}').estoque.restante`), 7);
+    igual(Object.keys(run(`__get653('auaulandia/medicacao-log/2026-10-08/${PARA653.refKey}')`)).length, 1, 'a dose copiada uma vez só');
+    assert.strictEqual(run("__get653('auaulandia/estadias/" + ID653 + "').trocaFicha['" + tk + "'].completa"), true);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F9 (AC8) — "Conferir na ficha da Frida SRD": a pendência só some com "Conferido" e o nome; "Desfazer o parou" devolve o remédio com uso contínuo', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}'); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}');`);
+    const pend = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`);
+    assert.ok(pend.length >= 5, JSON.stringify(pend.map((p) => p.tipo)));
+    const parou = pend.filter((p) => p.tipo === 'remedio-parou')[0];
+    run(`quemSou=function(){ return 'Gestora Teste'; };`);
+    const r = await run("hospDesfazerParou('" + ID653 + "', '" + parou.tk + "', '" + parou.k + "', 'continuo', '')"); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const it = run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_PAROU653}')`);
+    assert.ok(it.continuo === true && !it.paradoEm && !it.dataFim && /Desfez o "parou"/.test(it.historico.slice(-1)[0].acao), JSON.stringify(it));
+    const outra = pend.filter((p) => p.k !== parou.k)[0];
+    const r2 = await run("hospConferido('" + ID653 + "', '" + outra.tk + "', '" + outra.k + "')"); await espera653();
+    assert.ok(r2.ok, JSON.stringify(r2));
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}');`);
+    const pend2 = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`);
+    igual(pend2.length, pend.length - 2, 'as duas pendências conferidas saíram da lista');
+    const e = run(`__get653('auaulandia/estadias/${ID653}')`);
+    igual([e.trocaFicha[outra.tk].conferidos[outra.k].quem, e.trocaFicha[parou.tk].conferidos[parou.k].quem], ['Gestora Teste', 'Gestora Teste']);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F10 (K2) — um remédio que mudou de ficha: o "Dei agora" de um aparelho com a tela velha NÃO grava a dose na ficha antiga; o sinal faz os outros aparelhos recarregarem o alarme', async () => {
+  run(ARMA653);
+  try {
+    run(`HOSP_MED_MOVIDOS={}; __cam653=0; carregarAgendaMedTodos=function(){ __cam653++; };`);
+    run(`hospSinalAgenda({ts:${AGORA653}, de:'${DE653.refKey}', para:'${PARA653.refKey}', itens:['${IT_SPITZ653}'], estadia:'${ID653}'}, false)`);
+    igual([run(`HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']`), run('__cam653')], [PARA653.refKey, 1]);
+    run(`registrarDoseAgendadaGlobal({key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00'}, '${IT_SPITZ653}_20-00')`); await espera653();
+    igual(run('__esc653.length'), 0, 'nenhuma dose gravada na ficha antiga');
+    assert.ok(run('__za653').some((z) => /MUDOU DE FICHA/.test(z[0])), JSON.stringify(run('__za653')));
+    // o sinal de quando o aparelho abre (o último valor guardado) não dispara recarga à toa
+    const nAntes = run('__cam653');
+    run(`hospSinalAgenda({ts:${AGORA653}, de:'a', para:'b', itens:['x']}, true)`);
+    igual(run('__cam653'), nAntes);
+    igual(run("HOSP_MED_MOVIDOS['a|x']"), 'b', 'mas o aparelho que acabou de abrir também sabe o que mudou de ficha');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F11 (AC1) — o botão Check-in do orçamento de cliente nova (Frida / Ana Carolina) não abre a Frida de outra tutora: abre a busca com o aviso e o Novo Hóspede preenchido', async () => {
+  run(ARMA653);
+  try {
+    run(`__els653={ciBusca:{value:''}, ciResults:{innerHTML:''}, ciNovoPainel:{style:{display:'none'}}, ciNovoNome:{value:''}, ciNovoTutor:{value:''}, ciNovoRaca:{value:''}, ciToggleNovoTxt:{textContent:''}};
+      document.getElementById=function(id){ return __els653[id]||null; }; __ce653=[]; ciEscolher=function(i){ __ce653.push(i); }; abrirItemDoMenu=function(){};
+      renderCiBusca=function(){ __els653.ciResults.innerHTML='<div>lista</div>'; }; zMapaUma=function(){ return Promise.resolve({}); };
+      PELUDINHOS=[{n:'Frida', tutor:'Tutora Auluna', raca:'SRD'}];
+      ORC_LISTA_CACHE={o1:{status:'fechado', tutor:'Ana Carolina', entrada:'2026-10-07', saida:'2026-10-12', pets:[{key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}]}};`);
+    const r = await run("orcAbrirCheckin('o1')"); await espera653();
+    assert.strictEqual(r, false);
+    igual(run('__ce653'), [], 'nenhuma ficha aberta sozinha');
+    igual([run('__els653.ciBusca.value'), run('__els653.ciNovoNome.value'), run('__els653.ciNovoTutor.value'), run('__els653.ciNovoRaca.value'), run('__els653.ciNovoPainel.style.display')],
+      ['Frida', 'Frida', 'Ana Carolina', 'Spitz', 'block']);
+    assert.ok(/Neste orçamento, Frida é de Ana Carolina/.test(run('__els653.ciResults.innerHTML')), run('__els653.ciResults.innerHTML'));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 F12 (K5) — "Registrar datas" de quem está só na planilha usa o tutor da planilha; a hospedagem nova copia a comida só da mesma ficha, nunca de outra Frida nem de estadia excluída', async () => {
+  run(ARMA653);
+  try {
+    run(`tutorDe653=tutorDe; tutorDe=function(){ return 'Tutora Auluna'; }; hospedes=[{nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}]; EST_TODAS={};`);
+    try { run('__bk653.rha()'); } finally { run('tutorDe=tutorDe653;'); }
+    igual(run('HOSP_SO_PLANILHA[0].tutor'), 'Ana Carolina');
+    run(`EST_TODAS={a:{refKey:'${DE653.refKey}', nome:'Frida', tutor:'Tutora Auluna', ficha:{alim:{tipo:'Ração', qtd:'40'}}, entrada:'2026-09-01', saida:'2026-09-03', status:'encerrada', _ts:1},
+      b:{refKey:'frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', ficha:{alim:{tipo:'Natural', qtd:'80'}}, entrada:'2026-09-20', saida:'2026-09-21', status:'cancelada', _ts:2}};`);
+    run(`_hospGravarNova({nome:'Frida', tutor:'Ana Carolina', refKey:''}, '2026-10-09', '2026-10-12', false)`); await espera653();
+    const novo = run('__esc653').filter((x) => x[0] === 'set' && /^auaulandia\/estadias\//.test(x[1]))[0][2];
+    assert.ok(!novo.ficha, 'sem a ficha certa, nada é copiado: ' + JSON.stringify(novo.ficha));
+    run('__esc653=[];');
+    run(`_hospGravarNova({nome:'Frida', tutor:'Ana Carolina', refKey:'frida__ana carolina'}, '2026-10-09', '2026-10-12', false)`); await espera653();
+    const novo2 = run('__esc653').filter((x) => x[0] === 'set' && /^auaulandia\/estadias\//.test(x[1]))[0][2];
+    assert.ok(!novo2.ficha, 'a estadia excluída não empresta a comida');
+  } finally { run(SOLTA653); }
+});
+prova('6.53 AC3 (FR3) — a mesma régua de 4 palavras vale no ✎ Corrigir, no SUBSTITUIR e no × do Plantão', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const sal = src.slice(src.indexOf('  function ciSalvar(){'), src.indexOf('  async function ciSubstituirExistente('));
+  assert.ok(/const _motivo=[\s\S]{0,300}motivoQuatroPalavras\(_motivo\)/.test(sal), '✎ Corrigir');
+  const sub = src.slice(src.indexOf('  async function ciSubstituirExistente('), src.indexOf('  async function ciSubstituirExistente(') + 2500);
+  assert.ok(/motivoQuatroPalavras\(motivo\)/.test(sub) && /validar:/.test(sub), 'SUBSTITUIR');
+  const rem = src.slice(src.indexOf('  function removerHospedeCard(i, btn){'), src.indexOf('  function hospEstadiaAtivaDe(h){'));
+  assert.ok(/motivoQuatroPalavras\(motivo\)/.test(rem) && /validar:/.test(rem), '× do Plantão');
+});
+provaAsync('6.53 AC3 (FR3) — SUBSTITUIR com "Frida errada" não grava; com 4 palavras, grava', async () => {
+  run(`__bkS653={zt:zTexto, gr:__ciGravar, tr:__ciTravar, qs:quemSou, za:zAlertao, h:ciHosp};
+    ciHosp={nome:'Toshi', tutor:'Ana'}; quemSou=function(){ return 'Adriana'; }; __ciTravar=function(){}; zAlertao=function(){};
+    __grav653=[]; __ciGravar=function(m, id){ __grav653.push([m, id]); };
+    __ativa653={id:'est1', e:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[], medicacao:[]}};
+    __pac653={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{}};`);
+  try {
+    run(`zTexto=function(){ return Promise.resolve('Frida errada'); };`);
+    await run('ciSubstituirExistente(__ativa653, __pac653)');
+    igual(run('__grav653.length'), 0);
+    run(`zTexto=function(){ return Promise.resolve('a medicação estava errada'); };`);
+    await run('ciSubstituirExistente(__ativa653, __pac653)');
+    igual(run('__grav653'), [['corrigir', 'est1']]);
+  } finally { run('zTexto=__bkS653.zt; __ciGravar=__bkS653.gr; __ciTravar=__bkS653.tr; quemSou=__bkS653.qs; zAlertao=__bkS653.za; ciHosp=__bkS653.h;'); }
+});
+provaAsync('6.53 AC3 (FR3) — × do Plantão: "lancei errado" (2 palavras) não tira; "lancei a Maya da tutora errada" tira', async () => {
+  run(ARMA653);
+  try {
+    run(`hospedes=[{nome:'Maya', tutor:'Ana', manualKey:'mk2', manualDia:'${DIA653}'}]; hospEstadiaAtivaDe=function(){ return null; };
+      __b653={textContent:'✕', dataset:{armed:'1', motivo:'lancei errado'}, style:{}};`);
+    run('removerHospedeCard(0, __b653)'); await espera653();
+    igual(run('__esc653.length'), 0);
+    run(`__b653.dataset.armed='1'; __b653.dataset.motivo='lancei a Maya da tutora errada'; removerHospedeCard(0, __b653)`); await espera653();
+    assert.ok(run('__esc653').some((x) => /manuais\/2026-10-09\/mk2/.test(x[1])), JSON.stringify(run('__esc653')));
+  } finally { run(SOLTA653); }
+});
+prova('6.53 AC15 — o PDF reemitido diz "Ficha corrigida em DD/MM: estava na ficha de outro FILHOt"', () => {
+  ctx.__pdf653 = Object.assign(EST653(), { refKey: PARA653.refKey, tutor: 'Ana Carolina', raca: 'Spitz',
+    trocaFicha: { t1: { de: DE653, para: PARA653, ts: AGORA653, quem: 'Gestora Teste', motivo: 'não é a ficha dela' } } });
+  const F = run('ciFichaFonteEstadia(__pdf653, {})');
+  assert.ok(/^Ficha corrigida em 09\/10: estava na ficha de outro FILHOt/.test(F.nota || ''), JSON.stringify(F.nota));
+  assert.strictEqual(run('ciFichaFonteEstadia(' + JSON.stringify(EST653()) + ', {}).nota'), '');
+  const src = fs.readFileSync(APP, 'utf8');
+  const pdf = src.slice(src.indexOf('  function ciFichaPdfBlob(F){'), src.indexOf('  function ciFichaPdfBlob(F){') + 3500);
+  assert.ok(/F\.nota/.test(pdf), 'a folha imprime a nota');
+});
+prova('6.53 K10 — antes de gravar, a tela avisa quando a planilha escreve a tutora de um jeito que não leva à ficha certa', () => {
+  ctx.__lis653 = [{ n: 'Frida', tutor: 'Tutora Auluna', raca: 'SRD' }, { n: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz' }];
+  const av = (t) => run("hospAvisoPlanilha([{nome:'Frida', tutor:" + JSON.stringify(t) + "}], __lis653, " + JSON.stringify(PARA653) + ")");
+  assert.ok(/Carol/.test(av('Carol')) && /planilha/.test(av('Carol')), av('Carol'));
+  igual([av('Ana Carolina'), av('Ana')], ['', '']);
+});
+provaAsync('6.53 K14 — "Corrigir comida, remédio, datas ou pertences" abre o Check-in na ficha DA ESTADIA (não na última aberta) e liga o ✎ Corrigir', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__seq653=[]; abrirItemDoMenu=function(v){ __seq653.push('menu:'+v); }; ciEscolher=function(i){ __seq653.push('ficha:'+PELUDINHOS[i].n+'|'+PELUDINHOS[i].tutor); };
+      ciCorrigirExistente=function(id){ __seq653.push('corrigir:'+id); };`);
+    run(`hospCorrigirAbrir('${ID653}'); hospCorrEscolher('corrigir');`); await espera653();
+    igual(run('__seq653'), ['menu:checkin', 'ficha:Frida|Tutora Auluna', 'corrigir:' + ID653]);
+  } finally { run(SOLTA653); }
+});
+
+// ================================================================== 6.53 QA — as provas do QA independente (Quinn), 2ª rodada
+// Levadas do gate da 6.53 (scratchpad/qa653/probe/minhas653.js) para cá, para os defeitos plantados
+// pelo QA caírem na Fase 0 sozinha. Dados inventados (Frida da "Tutora Auluna" e da "Ana Carolina",
+// Bolt do "Rui Teste"). Sem banco, sem rede.
+//   G* = guardas (cada uma pega um defeito plantado pelo QA).
+//   A* = os achados do gate (A1 a A5), corrigidos na 2ª rodada, e a A6.
+console.log('\n6.53 QA — as provas do QA independente (2ª rodada)');
+const SOL653q = (ms) => 'hospAgora=function(){ return ' + (AGORA653 + (ms || 0)) + '; };';
+async function trocar653qa(antesDeGravar, motivo) {
+  semear653();
+  run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+  await run('hospTrocarPreparar()'); await espera653();
+  assert.strictEqual(run('HOSP_CORR.passo'), 'trocar-confirmar', JSON.stringify(run('HOSP_CORR.msg')));
+  if (antesDeGravar) antesDeGravar();
+  const r = await run('hospTrocarGravar(' + JSON.stringify(motivo || 'não é a ficha dela, cliente nova') + `, '${SENHA653}')`); await espera653();
+  return r;
+}
+const TSB653q = new Date(2026, 9, 9, 8, 0).getTime();
+const IDB653q = pid653(TSB653q, 'Bolt00000001');
+const ITB653q = 'ci_' + (TSB653q - 60000) + '_b1';
+function semearBolt653q(extra) {
+  ctx.__ebq = Object.assign({ refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q }, extra || {});
+  run(`__put653('auaulandia/estadias/${IDB653q}', __ebq); EST_TODAS={'${IDB653q}':__get653('auaulandia/estadias/${IDB653q}')};
+    __put653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITB653q}', {nome:'Apoquel', q:'1', u:'comprimido', horarios:['20:00'], continuo:true, historico:[{acao:'Criou (check-in)'}]});
+    PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[]; ORC_LISTA_CACHE={}; __esc653=[];`);
+}
+
+// ---------------------------------------------------------------- G — guardas
+prova('6.53 QA G1 — motivoQuatroPalavras: maiúsculas, acentos, hífen, número no meio, emoji, repetição e palavra de 1 letra', () => {
+  const m = (t) => run('motivoQuatroPalavras(' + JSON.stringify(t) + ')').ok;
+  const sim = ['NÃO É A FICHA DELA', 'não-é-a-ficha-dela', 'lancei 2 vezes a Frida errada', 'Frida 🐶 errada, ficha da outra', "tutora D'Ávila não é desta Frida",
+    'ação reação canção ação', 'trocou a ficha; era outra'];
+  const nao = ['ficha ficha ficha dela', 'ok, ok, ok, beleza', 'a b c d e f', '🐶 🐶 🐶 🐶', '1º 2º 3º 4º', 'çç çç çç çç', 'Frida errada 123 456', 'x y z ficha', '...', 'Frida\nerrada'];
+  sim.forEach((t) => assert.strictEqual(m(t), true, 'deveria passar: ' + t));
+  nao.forEach((t) => assert.strictEqual(m(t), false, 'deveria recusar: ' + t));
+});
+prova('6.53 QA G2 — orcAcharPeludinho: tutor com apóstrofo e acento; "Ana Carolina Souza" × "Ana Carolina"; ficha de mesmo tutor ganha da de outro', () => {
+  ctx.__Lq = [{ n: 'Frida', tutor: "Ana D'Ávila" }];
+  assert.strictEqual(run("orcAcharPeludinho(__Lq, {nome:'Frida', tutor:\"Ana D'Avila\"}, '')"), 0, 'acento não separa a mesma tutora');
+  assert.strictEqual(run("orcAcharPeludinho(__Lq, {nome:'frida', tutor:'Ana Davila'}, '')"), -1, 'escrito de outro jeito: a tela pergunta (lado seguro)');
+  ctx.__Lq2 = [{ n: 'Frida', tutor: 'Ana Carolina' }];
+  assert.strictEqual(run("orcAcharPeludinho(__Lq2, {nome:'Frida', tutor:'Ana Carolina Souza'}, '')"), 0);
+  ctx.__Lq3 = [{ n: 'Frida', tutor: 'Ana Carolina' }, { n: 'Frida', tutor: 'Ana Carolina Souza' }];
+  assert.strictEqual(run("orcAcharPeludinho(__Lq3, {nome:'Frida', tutor:'Ana Carolina'}, '')"), 0, 'o tutor exato ganha do começo de nome');
+  // a Saída antecipada procura com a chave da estadia (passo 1) — continua achando quem tem ficha
+  ctx.__Lq4 = [{ n: 'Pipoca', tutor: 'João Francisco Peixoto' }];
+  assert.strictEqual(run("orcAcharPeludinho(__Lq4, {key:'pipoca__joão francisco peixoto', nome:'Pipoca', tutor:'João'}, 'João')"), 0);
+  assert.strictEqual(run("orcAcharPeludinho(__Lq4, {key:'avulso__pipoca__joao', nome:'Pipoca', tutor:'João'}, 'João')"), 0, '"João" × "João Francisco…" continua');
+});
+provaAsync('6.53 QA G3 — a senha não aparece em lugar nenhum: banco, rastro, auditoria, Telegram, avisos, console, aparelho (localStorage) e o estado do cartaz', async () => {
+  run(ARMA653);
+  const logs = []; const orig = {};
+  ['log', 'warn', 'error', 'info'].forEach((k) => { orig[k] = ctx.console[k]; });
+  const ls = []; const lsOrig = ctx.localStorage;
+  try {
+    ctx.localStorage = { getItem() { return null; }, setItem(k, v) { ls.push(String(k) + '=' + String(v)); }, removeItem() {} };
+    run('__lsq=localStorage;');
+    ['log', 'warn', 'error', 'info'].forEach((k) => { ctx.console[k] = function () { logs.push(Array.from(arguments).map(String).join(' ')); }; });
+    // erro de senha primeiro (o cartaz se redesenha com a mensagem) e depois a certa
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    await run("hospTrocarGravar('não é a ficha dela, cliente nova', 'senhaMon653')"); await espera653();
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const estado = JSON.stringify(run('HOSP_CORR')) + run('hospCorrHtml(HOSP_CORR)');
+    // e uma exclusão com a senha da Supervisão
+    semearBolt653q();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const rx = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(rx.ok, JSON.stringify(rx));
+    const tudo = tudo653() + estado + JSON.stringify(run('HOSP_CORR')) + logs.join('\n') + ls.join('\n');
+    ['senhaGestora653', 'senhaAmanda653', 'senhaMon653'].forEach((s) => assert.ok(tudo.indexOf(s) < 0, 'a senha ' + s + ' apareceu'));
+  } finally {
+    ['log', 'warn', 'error', 'info'].forEach((k) => { ctx.console[k] = orig[k]; });
+    ctx.localStorage = lsOrig; run(SOLTA653);
+  }
+});
+provaAsync('6.53 QA G4 — AC9: nada vai para a tutora; o Telegram da Gestão não leva o texto da tutora; sem a aprovação não há «Copiar», com a aprovação aparece', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok, JSON.stringify(r));
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}');`);
+    const pend = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`);
+    const dado = pend.filter((p) => p.tipo === 'remedio-dado')[0];
+    assert.ok(dado && dado.msgTutora, 'o texto da tutora está pronto');
+    const tg = JSON.stringify(run('__tg653'));
+    assert.ok(tg.indexOf(dado.msgTutora.slice(0, 30)) < 0 && tg.indexOf('Podemos conversar') < 0, 'o Telegram não leva o texto da tutora');
+    assert.strictEqual(run('__tg653').length, 1, 'uma mensagem só, para o grupo da Gestão');
+    assert.strictEqual(run('__tg653')[0].grupo, 'gestao');
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes', passo:'conferir'});`);
+    let h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/aguardando a aprovação da Adriana/.test(h) && !/>Copiar</.test(h), 'sem a aprovação, sem «Copiar»');
+    run('HOSP_MSG_REMEDIO_APROVADO=true;');
+    h = run('hospCorrHtml(HOSP_CORR)');
+    run('HOSP_MSG_REMEDIO_APROVADO=false;');
+    assert.ok(/>Copiar</.test(h), 'com a aprovação, o «Copiar» aparece');
+    const src = fs.readFileSync(APP, 'utf8');
+    const usos = (src.match(/msgTutora/g) || []).length;
+    assert.ok(usos <= 4, 'msgTutora só no plano e na tela: ' + usos);
+    assert.ok(!/tgAvisar\([^)]*msgTutora/.test(src) && !/wa\.me[^\n]*msgTutora/.test(src), 'nenhum envio automático');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G5 — dois aparelhos trocam a mesma estadia ao mesmo tempo: só o 1º grava; o 2º não cria ficha nem mexe na agenda', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    run('__SA=HOSP_CORR;');
+    run(`hospCorrigirAbrir('${ID653}', {origem:'checkin'}); hospTrocarAlvoNovo({nome:'Frida Spitz', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    run('__SB=HOSP_CORR; HOSP_CORR=__SA;');
+    const a = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(a.ok, JSON.stringify(a));
+    run(SOL653q(60000) + ' HOSP_CORR=__SB; __esc653=[];');
+    const b = await run("hospTrocarGravar('não é a ficha dela, é outra', 'senhaAmanda653')"); await espera653();
+    assert.ok(b.ok === false && /outra pessoa/.test(b.erro), JSON.stringify(b));
+    igual(run('__esc653').filter((x) => !/desistiu/.test(x[0])).length, 0, 'o 2º aparelho não gravou nada');
+    assert.strictEqual(run("__get653('daycare/cadastro/frida spitz__ana carolina')"), null, 'nenhuma ficha órfã');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G6 — Excluir não apaga dose nem item: o log e a agenda continuam; o nó da estadia continua inteiro', async () => {
+  run(ARMA653);
+  try {
+    semearBolt653q();
+    const antes = run(`__get653('auaulandia/estadias/${IDB653q}')`);
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.ok(!run('__esc653').some((x) => x[0] === 'remove'), 'nenhum remove: ' + JSON.stringify(run('__esc653').map((x) => x[0] + ' ' + x[1])));
+    const dep = run(`__get653('auaulandia/estadias/${IDB653q}')`);
+    Object.keys(antes).filter((k) => ['status', '_ts'].indexOf(k) < 0).forEach((k) => assert.strictEqual(JSON.stringify(dep[k]), JSON.stringify(antes[k]), k));
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITB653q}')`), 'o item do remédio continua (parado)');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G7 — a troca não tira a noite do acerto da plantonista (a estadia continua "ativa"); a exclusão tira', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok);
+    const e = run(`__get653('auaulandia/estadias/${ID653}')`);
+    assert.strictEqual(e.status, 'ativa');
+    ctx.__eq = e;
+    run('__bkQ={et:EST_TODAS, ap:acertoPernoitesNaNoite}; EST_TODAS={x:__eq}; acertoPernoitesNaNoite=function(){ return []; };');
+    let n;
+    try { n = run("acertoHospedesNaNoite('2026-10-08')"); } finally { run('EST_TODAS=__bkQ.et; acertoPernoitesNaNoite=__bkQ.ap;'); }
+    assert.ok(Array.isArray(n) && n.length === 1, 'a noite de 08/10 continua no acerto: ' + JSON.stringify(n));
+  } finally { run(SOLTA653); }
+});
+prova('6.53 QA G8 — vocabulário e marca nos textos da 6.53: sem "cachorro/cão/animal/bicho/dono/funcionário", "Zêluz" com acento, sem emoji novo', () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const trecho = (fn) => { const a = src.indexOf('  function ' + fn + '('); assert.ok(a >= 0, fn); return src.slice(a, src.indexOf('\n  }\n', a)); };
+  const a0 = src.indexOf('  // ===== CORRIGIR A HOSPEDAGEM'), a1 = src.indexOf('  function cfPendente(h){');
+  assert.ok(a0 > 0 && a1 > a0, 'o bloco da 6.53');
+  const add = src.slice(a0, a1) + ['orcAvisoOutroTutor', 'orcAvisoNaBusca', 'hospIdxDaLinha', 'ciNovoHospedeTrava', 'hospOrcamentoDaEstadia'].map(trecho).join('\n');
+  const proib = add.match(/\b(cachorros?|c[ãa]es|c[ãa]o|animal|animais|bichos?|donos?|donas?|funcion[áa]rios?)\b/gi) || [];
+  assert.deepStrictEqual(proib, [], 'palavras proibidas: ' + proib.join(','));
+  assert.ok(!/Zeluz|Zéluz/.test(add.replace(/zeluz_pel_|zeluz-|\/zeluz\//g, '')), 'Zêluz sem acento');
+  const emo = add.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || [];
+  assert.ok(emo.every((x) => x === '🗑' || x === '✎' || x === '✕'), 'emoji novo: ' + emo.join(' '));
+});
+
+// ---------------------------------------------------------------- A — achados (o certo; falha = achado)
+provaAsync('6.53 QA A1 — remédio: a dose dada no outro aparelho DEPOIS de abrir o cartaz e ANTES da senha aparece dada na ficha certa (sem "faltou" falso, sem dose em dobro) e o estoque vai certo', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(() => {
+      // 20:00 de 09/10: a plantonista deu a cápsula pelo alarme do tablet (chave da Frida SRD) enquanto a recepção chamava a Gestão
+      run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_20-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', quem:'Zelosa Teste', ts:${AGORA653 + 36000000}, avulso:false});
+        __put653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}/estoque', {modo:'contagem', inicial:10, restante:6, contados:{'2026-10-09__${IT_SPITZ653}_20-00':true}});
+        ${SOL653q(36600000)}`);
+    });
+    assert.ok(r.ok, JSON.stringify(r));
+    const l9 = run(`__get653('auaulandia/medicacao-log/2026-10-09/${PARA653.refKey}')`) || {};
+    const it = run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}')`) || {};
+    const falhas = [];
+    if (!l9[IT_SPITZ653 + '_20-00']) falhas.push('a dose das 20:00 de 09/10 NÃO foi copiada para a ficha certa (o alarme da ficha certa diz que falta)');
+    if (!it.estoque || it.estoque.restante !== 6) falhas.push('o estoque foi com o valor velho: ' + JSON.stringify(it.estoque));
+    assert.deepStrictEqual(falhas, []);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA A2 — remédio: trocar a ficha de volta (a 1ª troca foi para a ficha errada) não trava o «Dei agora» do remédio na ficha onde ele está agora', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok, JSON.stringify(r));
+    run(SOL653q(3600000) + ` EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'hospedes'});`);
+    const idx = run(`PELUDINHOS.findIndex(function(p){ return pelKey(p)==='${DE653.refKey}'; })`);
+    run(`HOSP_CORR.alvo={idx:${idx}, refKey:'${DE653.refKey}', nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', novo:false};`);
+    await run('hospTrocarPreparar()'); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'trocar-confirmar', JSON.stringify(run('HOSP_CORR.msg')));
+    const r2 = await run(`hospTrocarGravar('a primeira troca foi errada, volta', 'senhaAmanda653')`); await espera653();
+    assert.ok(r2.ok, JSON.stringify(r2));
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}')`), 'o remédio voltou para a agenda da Frida SRD (onde a estadia está)');
+    run('__za653=[];');
+    run(`registrarDoseAgendadaGlobal({key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', hospNome:'Frida'}, '${IT_SPITZ653}_20-00')`); await espera653();
+    const za = run('__za653').map((z) => z[0]);
+    assert.ok(!za.some((t) => /MUDOU DE FICHA/.test(t)), 'o «Dei agora» do remédio, que agora mora na ficha da estadia, foi recusado com "ESTE REMÉDIO MUDOU DE FICHA": ' + za.join(' | ') + ' · mapa: ' + JSON.stringify(run('HOSP_MED_MOVIDOS')));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA A3 — Excluir: a prova de que o FILHOt dormiu aqui é conferida na hora de gravar (dose e relatório que chegaram com o cartaz aberto travam)', async () => {
+  run(ARMA653);
+  try {
+    semearBolt653q();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'excluir');
+    assert.strictEqual(!!run('HOSP_CORR.provas.bloqueia'), false);
+    // com o cartaz aberto, esperando a Gestão chegar para digitar a senha: a plantonista dá a dose das 20:00 e escreve o relatório
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/bolt__rui teste/${ITB653q}_20-00', {itemId:'${ITB653q}', nome:'Apoquel', q:'1', u:'comprimido', horario:'20:00', quem:'Zelosa Teste', ts:${TSB653q + 12 * 3600000}});
+      __put653('auaulandia/relatorios/'+fichaKeyDe({nome:'Bolt', tutor:'Rui Teste'}, new Date('2026-10-09T12:00:00')), {noite:{passou:true}}); ${SOL653q(12 * 3600000)} __esc653=[];`);
+    const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(r.ok === false, 'excluiu a estadia de quem tomou remédio e tem relatório do plantão: ' + JSON.stringify(r) + ' status=' + run(`__get653('auaulandia/estadias/${IDB653q}').status`));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA A4 — permissão: o Monitor (Zona de risco do Plantão) abre o cartaz, mas não marca "Conferido" (alergia apagada, remédio dado) nem vê o botão', async () => {
+  run(ARMA653);
+  const papel = run('document.body.dataset.role');
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok);
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); document.body.dataset.role='monitor'; HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'plantao'});`);
+    assert.ok(run('HOSP_CORR'), 'o monitor abre pelo Plantão (decisão documentada)');
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    const pend = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`);
+    const alergia = pend.filter((p) => p.tipo === 'alergia-apagada')[0];
+    const tk = Object.keys(run(`EST_TODAS['${ID653}'].trocaFicha`))[0];
+    const c = await run(`hospConferido('${ID653}', '${tk}', '${alergia.k}', 'Caio Teste')`); await espera653();
+    const falhas = [];
+    if (/>Conferido</.test(h)) falhas.push('o cartaz do Monitor mostra «Conferido» (' + (h.match(/>Conferido</g) || []).length + ' botões)');
+    if (c && c.ok) falhas.push('hospConferido aceitou o Monitor e fechou "alergia apagada" (sem checar o papel)');
+    assert.deepStrictEqual(falhas, []);
+  } finally { run("document.body.dataset.role='" + papel + "'"); run(SOLTA653); }
+});
+provaAsync('6.53 QA A5 — Excluir de uma estadia ligada à ficha errada (Frida na ficha da Frida SRD) oferece cancelar o orçamento da Ana Carolina (FR7)', async () => {
+  run(ARMA653);
+  try {
+    semear653(Object.assign(EST653(), { conferencia: { concluida: false } }));
+    run(`ORC_LISTA_CACHE={oF:{status:'fechado', entrada:'2026-10-07', saida:'2026-10-12', tutor:'Ana Carolina', pets:[{key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}]}};`);
+    const id = run(`hospOrcamentoDaEstadia(__get653('auaulandia/estadias/${ID653}'))`);
+    assert.strictEqual(id, 'oF', 'o orçamento da Frida da Ana Carolina não foi achado para a estadia ligada à Frida SRD');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA A6 — Hóspedes de hoje: a linha "SÓ NA PLANILHA" (sem estadia) não oferece «Corrigir esta hospedagem» (que daria "NÃO ACHEI ESTA HOSPEDAGEM")', async () => {
+  const papel = run('document.body.dataset.role');
+  try {
+    run("document.body.dataset.role='gestao'");
+    ctx.__sp = { nome: 'Frida', tutor: 'Ana Carolina', raca: '', refKey: '', entrada: '', saida: '', status: 'ativa', _soPlanilha: true, _spIdx: 0 };
+    const h = run("hospAbaLinha({id:'', e:__sp}, 0)");
+    assert.ok(!/Corrigir esta hospedagem/.test(h), 'a linha só da planilha mostra «Corrigir esta hospedagem»');
+  } finally { run("document.body.dataset.role='" + papel + "'"); }
+});
+
+// ---------------------------------------------------------------- G (2ª leva) — guardas para os defeitos plantados
+provaAsync('6.53 QA G9 — a dose de HOJE já dada antes de abrir o cartaz é copiada para a ficha certa', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_20-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', quem:'Zelosa Teste', ts:${AGORA653 + 36000000}, avulso:false}); ${SOL653q(36600000)}`);
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.ok(run(`__get653('auaulandia/medicacao-log/2026-10-09/${PARA653.refKey}/${IT_SPITZ653}_20-00')`), 'a dose de hoje foi copiada');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G10 — a ficha errada não perde um campo que alguém corrigiu entre abrir o cartaz e gravar', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(() => { run(`__put653('daycare/cadastro/${DE653.refKey}/nasc', '2019-01-01');`); });
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.strictEqual(run(`__get653('daycare/cadastro/${DE653.refKey}/nasc')`), '2019-01-01');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G17 — a ficha certa (que já existe) não perde o que alguém escreveu nela entre abrir o cartaz e gravar', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__put653('daycare/cadastro/${PARA653.refKey}', {n:'Frida', tutor:'Ana Carolina', raca:'Spitz'}); PELUDINHOS.push({n:'Frida', tutor:'Ana Carolina', raca:'Spitz'});
+      hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); HOSP_CORR.alvo={idx:2, refKey:'${PARA653.refKey}', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', novo:false};`);
+    await run('hospTrocarPreparar()'); await espera653();
+    assert.ok('nasc' in run('HOSP_CORR.plano.fichaLevar'), JSON.stringify(run('HOSP_CORR.plano.fichaLevar')));
+    run(`__put653('daycare/cadastro/${PARA653.refKey}/nasc', '2022-02-02');`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, é a outra Frida', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    assert.strictEqual(run(`__get653('daycare/cadastro/${PARA653.refKey}/nasc')`), '2022-02-02');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G11 — Excluir + cancelar o orçamento: se o cancelamento do orçamento falha, a tela diz', async () => {
+  run(ARMA653);
+  try {
+    semearBolt653q();
+    run(`ORC_LISTA_CACHE={o9:{status:'fechado', entrada:'2026-10-09', saida:'2026-10-11', tutor:'Rui Teste', pets:[{key:'bolt__rui teste', nome:'Bolt', tutor:'Rui Teste'}]}};
+      __put653('auaulandia/orcamentos/o9', ORC_LISTA_CACHE.o9);
+      __dbq=DB; DB={ref:function(p){ var r=__dbq.ref(p); if(!p){ r.update=function(){ return Promise.reject(new Error('sem rede')); }; } return r; }};`);
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.orcId'), 'o9');
+    const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {orcamento:'cancelar'})"); await espera653();
+    assert.ok(r.ok && (r.extras || []).some((t) => /orçamento NÃO foi cancelado/.test(t)), JSON.stringify(r));
+  } finally { run('DB=__dbq;'); run(SOLTA653); }
+});
+provaAsync('6.53 QA G12 — escolher, na troca, a mesma ficha em que a hospedagem já está: recusa', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); HOSP_CORR.alvo={idx:1, refKey:'${DE653.refKey}', nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', novo:false};`);
+    await run('hospTrocarPreparar()'); await espera653();
+    assert.ok(run('HOSP_CORR.passo') !== 'trocar-confirmar' && /já está/.test(run('HOSP_CORR.msg')), run('HOSP_CORR.msg'));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G13 — o aviso da Gestão no Telegram leva o motivo e quem assinou (troca e exclusão)', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(null, 'não é a ficha dela, cliente nova');
+    assert.ok(r.ok);
+    semearBolt653q();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+    const tg = run('__tg653');
+    assert.ok(tg.some((t) => /HOSPEDAGEM CORRIGIDA/.test(t.texto) && /não é a ficha dela, cliente nova/.test(t.texto) && /Gestora Teste/.test(t.texto)), JSON.stringify(tg));
+    assert.ok(tg.some((t) => /HOSPEDAGEM EXCLUÍDA/.test(t.texto) && /lançada por engano, ele não veio/.test(t.texto) && /Amanda Teste/.test(t.texto)), JSON.stringify(tg));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G14 — "Conferido" num aparelho com login de posto: sem o nome de uma pessoa, a pendência continua aberta', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok);
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); quemSou=function(){ return 'Recepção'; }; zTexto=function(){ return Promise.resolve(''); };`);
+    const pend = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`);
+    const c = await run(`hospConferido('${ID653}', '${pend[0].tk}', '${pend[0].k}')`); await espera653();
+    assert.ok(c.ok === false, JSON.stringify(c));
+    assert.strictEqual(run(`hospPendenciasAbertas(__get653('auaulandia/estadias/${ID653}')).length`), pend.length);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G15 — "Desfazer o parou" (mexe na medicação da Frida SRD): o Monitor e a Consultora não conseguem', async () => {
+  run(ARMA653);
+  const papel = run('document.body.dataset.role');
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok);
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}');`);
+    const parou = run(`hospPendenciasAbertas(EST_TODAS['${ID653}'])`).filter((p) => p.tipo === 'remedio-parou')[0];
+    for (const pp of ['monitor', 'consultora']) {
+      run("document.body.dataset.role='" + pp + "'; quemSou=function(){ return 'Caio Teste'; };");
+      const d = await run(`hospDesfazerParou('${ID653}', '${parou.tk}', '${parou.k}', 'continuo', '')`); await espera653();
+      assert.ok(d.ok === false, pp + ': ' + JSON.stringify(d));
+    }
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_PAROU653}').paradoEm`), 'o parou continua');
+  } finally { run("document.body.dataset.role='" + papel + "'"); run(SOLTA653); }
+});
+provaAsync('6.53 QA G16 — Excluir: o relatório do plantão gravado na chave do card da planilha (tutor escrito de outro jeito) trava', async () => {
+  run(ARMA653);
+  try {
+    semearBolt653q();
+    run(`hospedes=[{nome:'Bolt', tutor:'Rui', raca:'Beagle'}];
+      __put653('auaulandia/relatorios/'+fichaKeyDe({nome:'Bolt', tutor:'Rui'}, new Date('2026-10-09T12:00:00')), {noite:{passou:true}});`);
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.provas && HOSP_CORR.provas.bloqueia'), true, JSON.stringify(run('HOSP_CORR.provas')));
+  } finally { run(SOLTA653); }
+});
+prova('6.53 QA G18 — Zona de risco: com check-in, o campo do motivo some e o botão diz «Corrigir esta hospedagem»; sem check-in, o campo aparece e o botão diz "(hoje)"', () => {
+  run(`__zrq={hfZrBtn:{textContent:'', dataset:{}, style:{}}, hfZrHint:{textContent:''}, hfZrMotivoBox:{style:{}}, hfZrMotivo:{value:'x'}};
+    __geq=document.getElementById; document.getElementById=function(id){ return __zrq[id]||null; };
+    __cfq=CF_ESTADIAS; __mkq=medAgendaKey; medAgendaKey=function(h){ return (h&&h.refKey)||''; };
+    CF_ESTADIAS={'frida__x':{id:'e1', e:{status:'ativa'}}};`);
+  try {
+    run("hospZonaRiscoRotulo({nome:'Frida', refKey:'frida__x'})");
+    igual([run('__zrq.hfZrMotivoBox.style.display'), /Corrigir esta hospedagem/.test(run('__zrq.hfZrBtn.textContent'))], ['none', true]);
+    run("hospZonaRiscoRotulo({nome:'Bolt', refKey:'bolt__y'})");
+    igual([run('__zrq.hfZrMotivoBox.style.display'), /\(hoje\)/.test(run('__zrq.hfZrBtn.textContent')), run('__zrq.hfZrMotivo.value')], ['block', true, '']);
+  } finally { run('document.getElementById=__geq; CF_ESTADIAS=__cfq; medAgendaKey=__mkq;'); }
+});
+provaAsync('6.53 QA G19 — retomar a troca de novo não regrava o que já está na ficha certa (o item com a dose nova da veterinária e o estoque, a dose copiada)', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok, JSON.stringify(r));
+    const e = run(`__get653('auaulandia/estadias/${ID653}')`); const tk = Object.keys(e.trocaFicha)[0];
+    run(`__put653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}/q', '2');
+      __put653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}/estoque/restante', 5);
+      __put653('auaulandia/medicacao-log/2026-10-08/${PARA653.refKey}/${IT_SPITZ653}_20-00/conferido_vet', true);`);
+    ctx.__tfq = e.trocaFicha[tk];
+    await run(`hospTrocaAplicar('${ID653}', '${tk}', __tfq, 'Gestora Teste')`); await espera653();
+    const it = run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}')`);
+    igual([it.q, it.estoque.restante], ['2', 5], 'o item da ficha certa não volta ao retrato velho');
+    assert.strictEqual(run(`__get653('auaulandia/medicacao-log/2026-10-08/${PARA653.refKey}/${IT_SPITZ653}_20-00/conferido_vet')`), true, 'a dose copiada não é regravada');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA G20 — hospCriarFichaNova (2ª barreira): homônima sem a confirmação não cria ficha', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    const r = await run(`hospCriarFichaNova({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}, {nome:'Gestora Teste'}, ${AGORA653})`); await espera653();
+    assert.ok(r.ok === false, JSON.stringify(r));
+    assert.strictEqual(run(`__get653('daycare/cadastro/${PARA653.refKey}')`), null);
+  } finally { run(SOLTA653); }
+});
+
+// ================================================================== 6.53 R2 — 2ª rodada: o que a correção dos achados do QA garante
+console.log('\n6.53 R2 — 2ª rodada: remédio lido na hora, trocar de volta, Excluir relido, só leitura, orçamento de outro tutor');
+const AG_CONT653 = () => run(`__put653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}/estoque', {modo:'contavel', inicial:10, restante:8,
+  contados:{'2026-10-07__${IT_SPITZ653}_20-00':true, '2026-10-08__${IT_SPITZ653}_20-00':true}});`);
+const DOSE_JANELA653 = `__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_20-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', quem:'Zelosa Teste', ts:${AGORA653 + 36000000}, avulso:false});`;
+const CONTA_JANELA653 = `var __e=__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}/estoque'); __e.restante=__e.restante-1; __e.contados['2026-10-09__${IT_SPITZ653}_20-00']=true;
+  __put653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}/estoque', __e);`;
+async function trocaR2653(antes) {
+  semear653(); AG_CONT653();
+  run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+  await run('hospTrocarPreparar()'); await espera653();
+  if (antes) antes();
+  const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+  assert.ok(r.ok, JSON.stringify(r));
+  return {
+    est: run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}/estoque')`),
+    l9: run(`__get653('auaulandia/medicacao-log/2026-10-09/${PARA653.refKey}/${IT_SPITZ653}_20-00')`),
+  };
+}
+provaAsync('6.53 R2 A1 — estoque contável: sem dose no meio, a ficha certa recebe o estoque como está (nada é descontado duas vezes)', async () => {
+  run(ARMA653);
+  try {
+    const x = await trocaR2653();
+    igual([x.est.restante, Object.keys(x.est.contados).length], [8, 2]);
+    assert.strictEqual(x.l9, null, 'nenhuma dose inventada em 09/10');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 R2 A1 — a dose dada no instante entre a cópia do remédio e a saída dele da ficha antiga vai para a ficha certa e desconta UMA vez', async () => {
+  run(ARMA653);
+  try {
+    // no 2º "olhar" do remédio na ficha antiga (o último antes de ele sair), a plantonista já tinha dado a cápsula
+    const x = await trocaR2653(() => run(`__dbr653=DB; __vez653=0; DB={ref:function(p){ var r=__dbr653.ref(p);
+      if(p==='auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}'){ var o=r.once; r.once=function(){ if(++__vez653===2){ ${DOSE_JANELA653} ${CONTA_JANELA653} } return o.apply(r, arguments); }; }
+      return r; }};`));
+    run('DB=__dbr653;');
+    assert.ok(x.l9 && x.l9.copiado_de === DE653.refKey, 'a dose das 20:00 de 09/10 foi copiada');
+    igual([x.est.restante, !!x.est.contados['2026-10-09__' + IT_SPITZ653 + '_20-00']], [7, true]);
+  } finally { run('if(typeof __dbr653!=="undefined"&&__dbr653) DB=__dbr653;'); run(SOLTA653); }
+});
+provaAsync('6.53 R2 A1 — a dose gravada na ficha antiga quando o remédio acabou de sair (o desconto de lá não acontece) é copiada e descontada na ficha certa', async () => {
+  run(ARMA653);
+  try {
+    const x = await trocaR2653(() => run(`__dbr653=DB; __feito653=0; DB={ref:function(p){ var r=__dbr653.ref(p);
+      if(p==='auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}'){ var rm=r.remove; r.remove=function(){ var pr=rm.apply(r, arguments); if(!__feito653++){ ${DOSE_JANELA653} } return pr; }; }
+      return r; }};`));
+    run('DB=__dbr653;');
+    assert.ok(x.l9, 'a dose foi copiada');
+    igual([x.est.restante, !!x.est.contados['2026-10-09__' + IT_SPITZ653 + '_20-00']], [7, true]);
+  } finally { run('if(typeof __dbr653!=="undefined"&&__dbr653) DB=__dbr653;'); run(SOLTA653); }
+});
+provaAsync('6.53 R2 A1 — a ordem: o sinal sai ANTES de o remédio deixar a ficha antiga, e de novo no fim', async () => {
+  run(ARMA653);
+  try {
+    await trocaR2653();
+    const ordem = run('__esc653').map((x) => x[0] + ' ' + x[1]);
+    const sinais = ordem.map((t, i) => (t === 'set auaulandia/sinais/agenda' ? i : -1)).filter((i) => i >= 0);
+    const tira = ordem.indexOf('remove auaulandia/medicacao-agenda/' + DE653.refKey + '/itens/' + IT_SPITZ653);
+    assert.ok(sinais.length === 2 && sinais[0] < tira && sinais[1] > tira, ordem.join(' | '));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 R2 A2 — «Dei agora» com a marca velha "saiu desta ficha": o banco diz que o remédio está aqui (e não na outra), a marca sai e a dose segue; com o remédio na outra ficha, recusa', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`HOSP_MED_MOVIDOS={}; HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']='${PARA653.refKey}'; __za653=[];`);
+    run(`registrarDoseAgendadaGlobal({key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', hospNome:'Frida'}, '${IT_SPITZ653}_20-00')`); await espera653();
+    assert.ok(!run('__za653').some((z) => /MUDOU DE FICHA/.test(z[0])), JSON.stringify(run('__za653')));
+    assert.strictEqual(run(`HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']`), undefined, 'a marca velha saiu');
+    // no meio de uma troca (o remédio já está nas duas agendas): recusa e avisa
+    run(`__put653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}', {nome:'Ômega Spitz'}); HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']='${PARA653.refKey}'; __za653=[]; __esc653=[];`);
+    run(`registrarDoseAgendadaGlobal({key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', hospNome:'Frida'}, '${IT_SPITZ653}_20-00')`); await espera653();
+    assert.ok(run('__za653').some((z) => /MUDOU DE FICHA/.test(z[0])), JSON.stringify(run('__za653')));
+    igual(run('__esc653.length'), 0, 'nenhuma dose gravada na ficha antiga');
+    // o sinal de uma troca de volta apaga a marca do sentido contrário
+    run(`HOSP_MED_MOVIDOS={}; hospSinalAgenda({ts:${AGORA653}, de:'${DE653.refKey}', para:'${PARA653.refKey}', itens:['${IT_SPITZ653}']}, true);
+      hospSinalAgenda({ts:${AGORA653}, de:'${PARA653.refKey}', para:'${DE653.refKey}', itens:['${IT_SPITZ653}']}, true);`);
+    igual(run('HOSP_MED_MOVIDOS'), { [PARA653.refKey + '|' + IT_SPITZ653]: DE653.refKey });
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 R2 A3 — Excluir, K11: o relatório do plantão gravado na ficha de onde a estadia saiu numa troca anterior trava', async () => {
+  run(ARMA653);
+  try {
+    ctx.__eK11 = { refKey: PARA653.refKey, nome: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz', entrada: '2026-10-07', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TS653,
+      trocaFicha: { t1: { tk: 't1', de: DE653, para: PARA653, completa: true, quem: 'Gestora Teste', ts: TS653 + 60000 } } };
+    run(`__put653('auaulandia/estadias/${ID653}', __eK11); EST_TODAS={'${ID653}':__get653('auaulandia/estadias/${ID653}')}; hospedes=[];
+      __put653('auaulandia/relatorios/'+fichaKeyDe({nome:'Frida', tutor:'Tutora Auluna'}, new Date('2026-10-08T12:00:00')), {noite:{passou:true}});`);
+    run(`hospCorrigirAbrir('${ID653}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.provas && HOSP_CORR.provas.bloqueia'), true, JSON.stringify(run('HOSP_CORR.provas')));
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 R2 A3 — Excluir travado na hora de gravar: a tela passa a mostrar a prova e oferece Trocar a ficha', async () => {
+  run(ARMA653);
+  try {
+    semearBolt653q();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/bolt__rui teste/${ITB653q}_20-00', {itemId:'${ITB653q}', nome:'Apoquel', q:'1', u:'comprimido', horario:'20:00', quem:'Zelosa Teste', ts:${TSB653q + 12 * 3600000}}); __esc653=[];`);
+    const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(r.ok === false && /Trocar a ficha/.test(r.erro), JSON.stringify(r));
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/não pode ser excluída/.test(h) && /dose de remédio/.test(h), h.slice(0, 400));
+    igual(run('__esc653.filter(function(x){ return x[0]!=="transaction-desistiu"; }).length'), 0, 'nada gravado');
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 R2 A4 — só leitura: o Monitor que abre pela Zona de risco não vê Trocar, Excluir nem Corrigir; tocar não grava; pelo Hóspedes de hoje ele não abre; a Consultora não vê «Desfazer o parou»', async () => {
+  run(ARMA653);
+  const papel = run('document.body.dataset.role');
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok);
+    run(`EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); document.body.dataset.role='monitor'; HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'plantao'}); __esc653=[];`);
+    assert.strictEqual(run('HOSP_CORR.leitura'), true);
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(!/trocar a ficha<\/strong>/i.test(h) && !/excluir<\/strong>/i.test(h) && !/>Desfazer o parou</.test(h) && !/>Conferido</.test(h) && /chame a Recepção, a Amanda ou a Gestão/.test(h), h.slice(0, 600));
+    for (const op of ['trocar', 'excluir', 'corrigir']) {
+      run(`hospCorrEscolher('${op}')`); await espera653();
+      igual([run('HOSP_CORR.passo'), run('HOSP_CORR.msg') === run('HOSP_SO_LEITURA')], ['menu', true], op);
+    }
+    igual(run('__esc653.length'), 0, 'nada gravado');
+    run(`HOSP_CORR=null; __za653=[]; hospCorrigirAbrir('${ID653}', {origem:'hospedes'});`);
+    assert.strictEqual(run('HOSP_CORR'), null, 'pelo Hóspedes de hoje, o Monitor não abre');
+    run(`document.body.dataset.role='consultora'; hospCorrigirAbrir('${ID653}', {origem:'hospedes', passo:'conferir'});`);
+    const hc = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/>Conferido</.test(hc) && !/>Desfazer o parou</.test(hc), 'a Consultora confere, mas não mexe na medicação');
+  } finally { run("document.body.dataset.role='" + papel + "'"); run(SOLTA653); }
+});
+provaAsync('6.53 R2 A5 — o orçamento de outro tutor: só quando é um; nunca o de quem já tem a própria estadia; a Saída antecipada continua só pela ficha; a tela do Excluir diz de quem é', async () => {
+  run(ARMA653);
+  try {
+    semear653(Object.assign(EST653(), { conferencia: { concluida: false } }));
+    const oF = { status: 'fechado', entrada: '2026-10-07', saida: '2026-10-12', tutor: 'Ana Carolina', pets: [{ key: 'avulso__frida__ana carolina', nome: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz' }] };
+    ctx.__oF = oF;
+    const achar = (op) => run(`hospOrcamentoDaEstadia(__get653('auaulandia/estadias/${ID653}')${op ? ', ' + op : ''})`);
+    run('ORC_LISTA_CACHE={oF:__oF};');
+    igual([achar(), achar('{estrito:true}')], ['oF', '']);
+    run("ORC_LISTA_CACHE={oF:__oF, oG:Object.assign({}, __oF, {tutor:'Gabi Teste', pets:[{nome:'Frida', tutor:'Gabi Teste'}]})};");
+    igual(achar(), '', 'dois orçamentos de outros tutores: não escolhe');
+    run(`ORC_LISTA_CACHE={oF:__oF}; EST_TODAS['outra']={refKey:'${PARA653.refKey}', nome:'Frida', tutor:'Ana Carolina', entrada:'2026-10-07', saida:'2026-10-12', status:'ativa'};`);
+    igual(achar(), '', 'a outra Frida já tem a própria estadia: o orçamento é dela');
+    run(`delete EST_TODAS['outra']; __put653('auaulandia/estadias/${ID653}/conferencia', {concluida:false}); __put653('auaulandia/medicacao-log', null);
+      EST_TODAS['${ID653}']=__get653('auaulandia/estadias/${ID653}'); hospCorrigirAbrir('${ID653}'); hospCorrEscolher('excluir');`); await espera653();
+    igual([run('HOSP_CORR.orcId'), run('HOSP_CORR.orcOutro')], ['oF', true]);
+    assert.ok(/outro tutor/.test(run('hospCorrHtml(HOSP_CORR)')), 'a tela diz que o orçamento é de outro tutor');
+    const src = fs.readFileSync(APP, 'utf8');
+    const ant = src.slice(src.indexOf('  async function hospConfirmarAntecipada('), src.indexOf('  async function hospConfirmarAntecipada(') + 4000);
+    assert.ok(/hospOrcamentoDaEstadia\(e, \{estrito:true\}\)/.test(ant), 'a Saída antecipada (crédito e orçamento) continua só pela ficha');
+  } finally { run(SOLTA653); }
+});
+
+// ================================================================== 6.53 QA2 — as provas do re-gate do QA (Quinn), levadas para a Fase 0 na 3ª rodada
+// De scratchpad/qa653/probe/r2653.js. R1 e R2 são os achados do re-gate (corrigidos na 3ª rodada); RG1 a RG4, as guardas.
+console.log('\n6.53 QA2 — as provas do re-gate do QA (3ª rodada)');
+const IT_OK653q2 = IT_SPITZ653;
+const DOSE_HOJE653q2 = (hr, ts) => `{itemId:'${IT_OK653q2}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'${hr}', quem:'Zelosa Teste', ts:${ts}, avulso:false}`;
+// o alarme de um aparelho, com o relógio às 20h30 e a dose das 20h00 na lista dele (a função de verdade, só o relógio e a tela de mentira)
+const ALARME_STUB653q2 = `__toques=[]; __bkAl={pr:papelRecebeAlarmeMed, eh:ehHojeAua, dr:medDespRedesenhar, af:medAdiadoForaDaAgenda, am:medAdiadoMostrarDescarte, ao:medAdiadoDeOutroDia,
+    nd:medNaoDarFeito, ma:minutosAte, mo:mostrarDespertadorMed, ml:medLogHoje, mat:MED_AGENDA_TODOS};
+  papelRecebeAlarmeMed=function(){ return true; }; ehHojeAua=function(){ return true; }; medDespRedesenhar=function(){}; medAdiadoForaDaAgenda=function(){};
+  medAdiadoMostrarDescarte=function(){}; medAdiadoDeOutroDia=function(){ return false; }; medNaoDarFeito=function(){ return false; };
+  minutosAte=function(h){ return h==='20:00'?-30:600; }; mostrarDespertadorMed=function(it, d){ __toques.push(it.key+'|'+d); }; despMedNaTela=null;`;
+const ALARME_SOLTA653q2 = `papelRecebeAlarmeMed=__bkAl.pr; ehHojeAua=__bkAl.eh; medDespRedesenhar=__bkAl.dr; medAdiadoForaDaAgenda=__bkAl.af; medAdiadoMostrarDescarte=__bkAl.am;
+  medAdiadoDeOutroDia=__bkAl.ao; medNaoDarFeito=__bkAl.nd; minutosAte=__bkAl.ma; mostrarDespertadorMed=__bkAl.mo; medLogHoje=__bkAl.ml; MED_AGENDA_TODOS=__bkAl.mat; despMedNaTela=null;`;
+
+provaAsync('6.53 QA2 R1 — o 1º sinal da troca (antes da cópia das doses): um aparelho que recarrega nesse instante NÃO toca o alarme da dose que já foi dada', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    // 20h00 de 09/10: a cápsula foi dada (na ficha antiga) antes de a recepção abrir a troca; a troca é às 20h30
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_OK653q2}_20-00', ${DOSE_HOJE653q2('20:00', AGORA653 + 36000000)}); ${SOL653q(37800000)}
+      __snapR1=null; __dbrR1=DB.ref; DB.ref=function(p){ var r=__dbrR1(p); if(p==='auaulandia/sinais/agenda'){ var s0=r.set; r.set=function(v){
+        if(!v.fase && !__snapR1) __snapR1={para:v.para, item:__get653('auaulandia/medicacao-agenda/'+v.para+'/itens/${IT_OK653q2}'), log:__get653('auaulandia/medicacao-log/2026-10-09/'+v.para)};
+        return s0(v); }; } return r; };`);
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const snap = run('__snapR1');
+    assert.ok(snap && snap.item, 'no 1º sinal o remédio já está na ficha certa: ' + JSON.stringify(snap));
+    // o aparelho que recarrega no 1º sinal vê a agenda e o registro desse instante
+    ctx.__logR1 = { [PARA653.refKey]: snap.log || {} };
+    run(ALARME_STUB653q2 + ` MED_AGENDA_TODOS=[{hospNome:'Frida', key:'${PARA653.refKey}', itemId:'${IT_OK653q2}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00'}];
+      medLogHoje=function(){ return Promise.resolve(__logR1); };`);
+    try { run('checarDespertadorMed()'); await espera653(); } finally { /* solto abaixo */ }
+    const toques = run('__toques');
+    run(ALARME_SOLTA653q2);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(toques)), [], 'no 1º sinal, a dose das 20h00 (já dada) ainda não está copiada na ficha certa, e o alarme dela TOCA no aparelho que recarregou: ' + JSON.stringify(toques) + ' · registro da ficha certa no 1º sinal: ' + JSON.stringify(snap.log));
+  } finally { run('DB=__dbrR1?{ref:__dbrR1}:DB;'); run(SOLTA653); }
+});
+
+provaAsync('6.53 QA2 R2 — outro aparelho (o tablet do Plantão, com a lista de hóspedes de antes da troca): depois do sinal, o alarme continua com o remédio que mudou de ficha', async () => {
+  run(ARMA653);
+  try {
+    const r = await trocar653qa(); assert.ok(r.ok, JSON.stringify(r));
+    // o tablet do Plantão: a lista foi montada antes da troca (o card da estadia com a chave antiga) e ninguém chamou carregarHospedes
+    run(`hospedes=[{nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', refKey:'${DE653.refKey}', hospede:true, saidaHoje:false}];
+      carregarAgendaMedTodos=__bk653.cam; __bkR2={mg:carregarMedAtrasadaGestora, vg:medVigiaGravar}; carregarMedAtrasadaGestora=function(){}; medVigiaGravar=function(){};
+      MED_AGENDA_TODOS=[];`);
+    try {
+      run(`hospSinalAgenda(__get653('auaulandia/sinais/agenda'), false)`); await espera653(6000);
+    } finally { run('carregarMedAtrasadaGestora=__bkR2.mg; medVigiaGravar=__bkR2.vg;'); }
+    const lista = run('MED_AGENDA_TODOS').map((x) => x.key + '|' + x.itemId + '|' + x.horario);
+    assert.ok(lista.some((x) => x.indexOf('|' + IT_OK653q2 + '|') >= 0), 'o alarme do tablet perdeu o "Ômega Spitz" (a lista do Plantão ainda aponta para a ficha antiga, de onde o remédio saiu): ' + JSON.stringify(lista));
+  } finally { run('MED_AGENDA_TODOS=[];'); run(SOLTA653); }
+});
+
+provaAsync('6.53 QA2 RG1 — «Dei agora» com a marca "saiu desta ficha": sem resposta do banco em 6 s, recusa e não grava; a resposta atrasada não grava depois; com o banco respondendo, grava UMA vez', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    // o remédio voltou para esta ficha (a de origem) e o aparelho tem a marca velha
+    run(`HOSP_MED_MOVIDOS={'${DE653.refKey}|${IT_OK653q2}':'${PARA653.refKey}'}; __tmr=[]; __bkST=setTimeout; setTimeout=function(f){ __tmr.push(f); return 1; };
+      __bkPT=pessoaDoTurno; pessoaDoTurno=function(){ return 'Zelosa Teste'; }; __bkTD=medTgAvisarDose; medTgAvisarDose=function(){}; __bkRM=renderMedAgendaHoje; renderMedAgendaHoje=function(){};
+      __lento=null; __dbrG=DB.ref; DB.ref=function(p){ var r=__dbrG(p); if(__lento && /medicacao-agenda/.test(p)){ r.once=function(){ return new Promise(function(ok){ __lento.push(function(){ ok({val:function(){ return __get653(p); }}); }); }); }; } return r; };`);
+    const it = `{key:'${DE653.refKey}', itemId:'${IT_OK653q2}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', hospNome:'Frida'}`;
+    // 1) banco lento: o relógio de 6 s vence
+    run(`__lento=[]; __za653=[]; registrarDoseAgendadaGlobal(${it}, '${IT_OK653q2}_20-00', '2026-10-09');`); await espera653();
+    run('__tmr.forEach(function(f){ f(); }); __tmr=[];'); await espera653();
+    assert.ok(run('__za653').some((z) => /MUDOU DE FICHA/.test(z[0])), 'recusou e avisou');
+    // a resposta chega depois do prazo: não grava
+    run('var __l=__lento; __lento=null; __l.forEach(function(f){ f(); });'); await espera653();
+    assert.strictEqual(run(`__get653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_OK653q2}_20-00')`), null, 'a resposta atrasada não gravou');
+    // 2) banco respondendo, dois toques seguidos: uma dose só
+    run(`registrarDoseAgendadaGlobal(${it}, '${IT_OK653q2}_20-00', '2026-10-09'); registrarDoseAgendadaGlobal(${it}, '${IT_OK653q2}_20-00', '2026-10-09');`); await espera653();
+    const d = run(`__get653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}')`) || {};
+    assert.ok(d[IT_OK653q2 + '_20-00'] && d[IT_OK653q2 + '_20-00'].quem === 'Zelosa Teste', 'gravou: ' + JSON.stringify(d));
+    assert.strictEqual(Object.keys(d).filter((k) => k.indexOf(IT_OK653q2) === 0).length, 1, 'uma dose só');
+    // 3) remédio nas duas fichas (troca no meio): recusa
+    run(`HOSP_MED_MOVIDOS={'${DE653.refKey}|${IT_OK653q2}':'${PARA653.refKey}'}; __put653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_OK653q2}', {nome:'Ômega Spitz'}); __za653=[];`);
+    run(`registrarDoseAgendadaGlobal(${it}, '${IT_OK653q2}_08-00', '2026-10-09');`); await espera653();
+    assert.strictEqual(run(`__get653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_OK653q2}_08-00')`), null, 'no meio da troca, não grava');
+    assert.ok(run('__za653').some((z) => /MUDOU DE FICHA/.test(z[0])));
+  } finally {
+    run('setTimeout=__bkST; pessoaDoTurno=__bkPT; medTgAvisarDose=__bkTD; renderMedAgendaHoje=__bkRM; DB={ref:__dbrG};'); run(SOLTA653);
+  }
+});
+
+provaAsync('6.53 QA2 RG2 — Excluir relê na hora: Conferência concluída e check-out que chegaram com o cartaz aberto também travam', async () => {
+  for (const extra of [{ conferencia: { concluida: true, por: 'Encãotadora Teste' } }, { checkout: { ts: 1 }, status: 'finalizada' }, { saida_antecipada: { em: '2026-10-09' } }]) {
+    run(ARMA653);
+    try {
+      semearBolt653q();
+      run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+      assert.strictEqual(run('HOSP_CORR.passo'), 'excluir');
+      ctx.__xq = extra;
+      run(`(function(){ var e=__get653('auaulandia/estadias/${IDB653q}'); Object.assign(e, __xq); __put653('auaulandia/estadias/${IDB653q}', e); })(); __esc653=[];`);
+      const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653();
+      assert.ok(r.ok === false, JSON.stringify(extra) + ' → ' + JSON.stringify(r));
+      assert.notStrictEqual(run(`__get653('auaulandia/estadias/${IDB653q}').status`), 'cancelada');
+    } finally { run(SOLTA653); }
+  }
+});
+
+provaAsync('6.53 QA2 RG3 — estoque contável: dose no meio da troca + «Retomar» de novo: desconta uma vez só, e a dose copiada uma vez só', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`(function(){ var it=__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_OK653q2}'); it.estoque={modo:'contavel', inicial:10, restante:7, contados:{'2026-10-07__${IT_OK653q2}_20-00':true,'2026-10-08__${IT_OK653q2}_20-00':true,'2026-10-08__${IT_OK653q2}_08-00':true}};
+      __put653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_OK653q2}', it); })();`);
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    // com o cartaz aberto: a dose das 20h00 de hoje, dada e descontada na ficha antiga
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_OK653q2}_20-00', ${DOSE_HOJE653q2('20:00', AGORA653 + 36000000)});
+      (function(){ var p='auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_OK653q2}/estoque'; var e=__get653(p); e.restante=6; e.contados['2026-10-09__${IT_OK653q2}_20-00']=true; __put653(p, e); })(); ${SOL653q(36600000)}`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const e = run(`__get653('auaulandia/estadias/${ID653}')`); const tk = Object.keys(e.trocaFicha)[0];
+    ctx.__tfR = e.trocaFicha[tk];
+    await run(`hospTrocaAplicar('${ID653}', '${tk}', __tfR, 'Gestora Teste')`); await espera653();
+    await run(`hospTrocaAplicar('${ID653}', '${tk}', __tfR, 'Gestora Teste')`); await espera653();
+    const est = run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_OK653q2}/estoque')`);
+    assert.strictEqual(est.restante, 6, JSON.stringify(est));
+    const l9 = run(`__get653('auaulandia/medicacao-log/2026-10-09/${PARA653.refKey}')`) || {};
+    assert.deepStrictEqual(Object.keys(l9), [IT_OK653q2 + '_20-00']);
+  } finally { run(SOLTA653); }
+});
+
+provaAsync('6.53 QA2 RG4 — orçamento de outro tutor: com dois candidatos, nenhum; com a outra Frida já hospedada, não é o dela; a Saída antecipada (estrito) não vê; a tela avisa em vermelho e não marca nada sozinha', async () => {
+  run(ARMA653);
+  try {
+    semear653(Object.assign(EST653(), { conferencia: { concluida: false } }));
+    const est = `__get653('auaulandia/estadias/${ID653}')`;
+    run(`ORC_LISTA_CACHE={oF:{status:'fechado', entrada:'2026-10-07', saida:'2026-10-12', tutor:'Ana Carolina', pets:[{key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}]}};`);
+    assert.strictEqual(run(`hospOrcamentoDaEstadia(${est})`), 'oF');
+    assert.strictEqual(run(`hospOrcamentoDaEstadia(${est}, {estrito:true})`), '');
+    run(`ORC_LISTA_CACHE.oG={status:'fechado', entrada:'2026-10-10', saida:'2026-10-11', tutor:'Bia Outra', pets:[{nome:'Frida', tutor:'Bia Outra'}]};`);
+    assert.strictEqual(run(`hospOrcamentoDaEstadia(${est})`), '', 'dois candidatos: nenhum');
+    run(`delete ORC_LISTA_CACHE.oG; EST_TODAS['zz']={refKey:'frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', entrada:'2026-10-07', saida:'2026-10-12', status:'ativa'};`);
+    assert.strictEqual(run(`hospOrcamentoDaEstadia(${est})`), '', 'a Frida da Ana Carolina já tem a estadia dela: o orçamento é dela');
+    run(`delete EST_TODAS['zz']; hospCorrigirAbrir('${ID653}'); hospCorrEscolher('excluir');`); await espera653();
+    // (a Frida da Tutora Auluna tem dose no registro: o Excluir trava; a pergunta do orçamento é conferida na tela de uma estadia sem prova)
+    run(`HOSP_CORR.provas={bloqueia:false, provas:[]}; HOSP_CORR.passo='excluir';`);
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(run('HOSP_CORR.orcOutro') === true && /outro tutor/.test(h) && /Ana Carolina/.test(h), h.slice(0, 300));
+    assert.ok(!/name="hospCorrOrc"[^>]*checked/.test(h), 'nenhuma opção do orçamento vem marcada');
+  } finally { run(SOLTA653); }
+});
+
+// ================================================================== 6.53 R3 — 3ª rodada: dois aparelhos, o 1º sinal, o Telegram que demora e as provas que faltavam
+console.log('\n6.53 R3 — 3ª rodada: o tablet que só recebe o sinal, o 1º sinal com as doses, o Telegram que demora, n03/n06/n08/n11/n16');
+// O APARELHO B (o tablet do Plantão): o app inteiro carregado num segundo sandbox, com o MESMO banco de mentira do
+// aparelho A (o que troca) e o ouvinte do sinal ligado como o do app (hospSinalAgenda com primeira=false).
+let ctxB653 = null;
+const runB653 = (c) => { if (!ctxB653) { ctxB653 = vm.createContext(makeSandbox()); vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctxB653, { filename: 'index.html#B', timeout: 15000 }); vm.runInContext('_repVeioTs=Date.now();', ctxB653); } return vm.runInContext(c, ctxB653); };
+const LIGAR_B653 = () => {
+  ctx.__ouvB653 = runB653(`__bkB653={db:DB, hos:hospedes, et:EST_TODAS, mg:carregarMedAtrasadaGestora, vg:medVigiaGravar, rh:renderHosp, ra:hospRecarregarAgendar, mat:MED_AGENDA_TODOS, mm:HOSP_MED_MOVIDOS};
+    carregarMedAtrasadaGestora=function(){}; medVigiaGravar=function(){}; renderHosp=function(){}; __remontouB=0; hospRecarregarAgendar=function(){ __remontouB++; }; HOSP_MED_MOVIDOS={};
+    __sinaisB=[]; (function(v){ __sinaisB.push(v); hospSinalAgenda(v, false); })`);
+  run(`__ouvintes653=[__ouvB653]; __dbS653=DB; DB={ref:function(p){ var r=__dbS653.ref(p); if(p==='auaulandia/sinais/agenda'){ var s0=r.set; r.set=function(v){ var pr=s0(v);
+    __ouvintes653.forEach(function(f){ f(JSON.parse(JSON.stringify(v))); }); return pr; }; } return r; }};`);
+  ctxB653.__dbA653 = run('__dbS653');
+  runB653('DB=__dbA653;');
+};
+const SOLTA_B653 = () => { if (ctxB653) runB653(`if(typeof __bkB653!=='undefined'&&__bkB653){ DB=__bkB653.db; hospedes=__bkB653.hos; EST_TODAS=__bkB653.et; carregarMedAtrasadaGestora=__bkB653.mg; medVigiaGravar=__bkB653.vg;
+  renderHosp=__bkB653.rh; hospRecarregarAgendar=__bkB653.ra; MED_AGENDA_TODOS=__bkB653.mat; HOSP_MED_MOVIDOS=__bkB653.mm; __bkB653=null; }`); };
+const alarmeB653 = () => runB653('MED_AGENDA_TODOS').map((x) => x.key + '|' + x.itemId);
+provaAsync('6.53 R3 R2 — DOIS aparelhos: o tablet do Plantão (lista montada antes da troca) só recebe o sinal; o card da estadia vai para a ficha certa, o remédio que mudou continua no alarme e os remédios da outra ficha param de tocar para ela', async () => {
+  run(ARMA653);
+  try {
+    LIGAR_B653();
+    semear653();
+    // o tablet B montou o Plantão antes da troca: o card da estadia na ficha da Frida da Tutora Auluna
+    runB653('0'); ctxB653.__estB = run(`__get653('auaulandia/estadias/${ID653}')`);
+    runB653(`hospedes=[{nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', refKey:'${DE653.refKey}', hospede:true, saidaHoje:false}]; EST_TODAS={'${ID653}':__estB}; MED_AGENDA_TODOS=[];`);
+    runB653('carregarAgendaMedTodos()'); await espera653(6000);
+    const antes = alarmeB653();
+    assert.ok(antes.indexOf(DE653.refKey + '|' + IT_SPITZ653) >= 0 && antes.indexOf(DE653.refKey + '|' + IT_VELHO653) >= 0, 'antes: ' + JSON.stringify(antes));
+    // o aparelho A (a recepção) troca a ficha
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`);
+    await espera653(6000);
+    assert.ok(r.ok, JSON.stringify(r));
+    const card = runB653("hospedes.map(function(h){ return h.refKey+'|'+h.tutor; })");
+    igual(card, [PARA653.refKey + '|Ana Carolina']);
+    const al = alarmeB653();
+    assert.ok(al.indexOf(PARA653.refKey + '|' + IT_SPITZ653) >= 0, 'o "Ômega Spitz" continua no alarme do tablet, na ficha certa: ' + JSON.stringify(al));
+    assert.ok(!al.some((x) => x.indexOf(DE653.refKey + '|') === 0), 'os remédios da Frida da Tutora Auluna não tocam mais para esta hóspede: ' + JSON.stringify(al));
+    igual([runB653('__sinaisB.length'), runB653('__remontouB') >= 2, runB653(`HOSP_MED_MOVIDOS['${DE653.refKey}|${IT_SPITZ653}']`)], [2, true, PARA653.refKey]);
+  } finally { SOLTA_B653(); run(SOLTA653); }
+});
+provaAsync('6.53 R3 R1 — DOIS aparelhos: no 1º sinal (o tablet recarrega ali), a ficha certa já tem o remédio E as doses já dadas', async () => {
+  run(ARMA653);
+  try {
+    LIGAR_B653();
+    run(`__no1o653=null; __ouvintes653.unshift(function(v){ if(!v.fase && !__no1o653) __no1o653={item:__get653('auaulandia/medicacao-agenda/'+v.para+'/itens/${IT_SPITZ653}'),
+      l7:__get653('auaulandia/medicacao-log/2026-10-07/'+v.para), l8:__get653('auaulandia/medicacao-log/2026-10-08/'+v.para)}; });`);
+    const r = await trocar653qa(() => runB653(`hospedes=[{nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', refKey:'${DE653.refKey}', hospede:true}]; EST_TODAS={};`));
+    await espera653(6000);
+    assert.ok(r.ok, JSON.stringify(r));
+    const s = run('__no1o653');
+    assert.ok(s && s.item, 'no 1º sinal o remédio já está na ficha certa');
+    assert.ok(s.l7 && s.l7[IT_SPITZ653 + '_20-00'] && s.l8 && s.l8[IT_SPITZ653 + '_20-00'], 'e as doses das 20:00 de 07/10 e 08/10 também: ' + JSON.stringify([s.l7, s.l8]));
+  } finally { SOLTA_B653(); run(SOLTA653); }
+});
+provaAsync('6.53 R3 R2 — DOIS aparelhos: a exclusão tira o card e o alarme da hospedagem do tablet que só recebe o sinal; troca sem remédio também manda o sinal', async () => {
+  run(ARMA653);
+  try {
+    LIGAR_B653();
+    semearBolt653q();
+    runB653('0'); ctxB653.__estBolt = run(`__get653('auaulandia/estadias/${IDB653q}')`);
+    runB653(`hospedes=[{nome:'Bolt', tutor:'Rui Teste', raca:'Beagle', refKey:'bolt__rui teste', hospede:true}]; EST_TODAS={'${IDB653q}':__estBolt}; MED_AGENDA_TODOS=[];`);
+    runB653('carregarAgendaMedTodos()'); await espera653(6000);
+    assert.ok(alarmeB653().indexOf('bolt__rui teste|' + ITB653q) >= 0, 'antes: o Apoquel do Bolt no alarme do tablet');
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const x = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})"); await espera653(6000);
+    assert.ok(x.ok, JSON.stringify(x));
+    igual([runB653('hospedes.length'), alarmeB653().filter((k) => k.indexOf('bolt__') === 0)], [0, []]);
+    igual(runB653('__sinaisB.map(function(v){ return v.tipo; })'), ['exclusao']);
+    // troca de uma hospedagem sem remédio nascido no check-in: o sinal sai do mesmo jeito
+    runB653('__sinaisB=[];');
+    ctx.__eSemRem = Object.assign(EST653(), { refKey: 'pipoca__rui teste', nome: 'Pipoca', tutor: 'Rui Teste', raca: 'Poodle' });
+    run(`__put653('auaulandia/estadias/${ID653}', __eSemRem); EST_TODAS={'${ID653}':__get653('auaulandia/estadias/${ID653}')}; PELUDINHOS.push({n:'Pipoca', tutor:'Rui Teste', raca:'Poodle'});
+      hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Pipoca', tutor:'Ana Carolina', raca:'Poodle', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    const t = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653(6000);
+    assert.ok(t.ok, JSON.stringify(t));
+    igual(runB653('__sinaisB.map(function(v){ return [v.tipo, v.fase||"", v.itens.length]; })'), [['troca', 'feito', 0]]);
+  } finally { SOLTA_B653(); run(SOLTA653); }
+});
+provaAsync('6.53 R3 O7 — o Telegram que não responde não segura o remédio: a troca move a agenda antes; com o prazo vencido, a tela diz que o aviso não confirmou', async () => {
+  run(ARMA653);
+  try {
+    run(`__tmr653=[]; __bkST653=setTimeout; setTimeout=function(f){ __tmr653.push(f); return 1; }; tgAvisar=function(){ return new Promise(function(){}); };`);
+    semear653();
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    let fim = null;
+    run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`).then((x) => { fim = x; });
+    await espera653(6000);
+    assert.strictEqual(fim, null, 'a tela ainda espera o Telegram');
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}')`) && !run(`__get653('auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}')`),
+      'o remédio já mudou de ficha sem esperar o Telegram');
+    assert.strictEqual(run(`__get653('auaulandia/estadias/${ID653}').trocaFicha[Object.keys(__get653('auaulandia/estadias/${ID653}').trocaFicha)[0]].completa`), true);
+    run('__tmr653.forEach(function(f){ f(); }); __tmr653=[];'); await espera653(3000);
+    assert.ok(fim && fim.ok === true && fim.tg === false, JSON.stringify(fim));
+    assert.ok(/não respondeu em 20 segundos/.test(run('HOSP_CORR.resultado.tgErro')), run('HOSP_CORR.resultado.tgErro'));
+  } finally { run('setTimeout=__bkST653;'); run(SOLTA653); }
+});
+provaAsync('6.53 R3 n08 — o acerto do estoque desconta a quantidade da dose (2 comprimidos), não sempre 1', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`(function(){ var p='auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}'; var it=__get653(p); it.q='2'; it.estoque={modo:'contavel', inicial:20, restante:16,
+      contados:{'2026-10-07__${IT_SPITZ653}_20-00':true, '2026-10-08__${IT_SPITZ653}_20-00':true}}; __put653(p, it); })();`);
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    // a dose de 2 comprimidos chega na ficha antiga no instante em que o remédio sai de lá (o desconto de lá não acontece)
+    run(`__dbr653=DB; __f653=0; DB={ref:function(p){ var r=__dbr653.ref(p);
+      if(p==='auaulandia/medicacao-agenda/${DE653.refKey}/itens/${IT_SPITZ653}'){ var rm=r.remove; r.remove=function(){ var pr=rm.apply(r, arguments); if(!__f653++){
+        __put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_20-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'2', u:'cápsula', horario:'20:00', quem:'Zelosa Teste', ts:${AGORA653 + 36000000}, avulso:false}); } return pr; }; }
+      return r; }};`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    run('DB=__dbr653;');
+    assert.ok(r.ok, JSON.stringify(r));
+    igual(run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}/estoque/restante')`), 14);
+  } finally { run('if(typeof __dbr653!=="undefined"&&__dbr653) DB=__dbr653;'); run(SOLTA653); }
+});
+provaAsync('6.53 R3 n16 — o «Dei agora» refeito depois da conferência no banco grava no DIA do alarme (a dose de ontem não cai em hoje — 6.47 C1)', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__bkPT653=pessoaDoTurno; pessoaDoTurno=function(){ return 'Zelosa Teste'; }; __bkTD653=medTgAvisarDose; medTgAvisarDose=function(){}; __bkRM653=renderMedAgendaHoje; renderMedAgendaHoje=function(){};
+      HOSP_MED_MOVIDOS={'${DE653.refKey}|${IT_SPITZ653}':'${PARA653.refKey}'}; __za653=[];`);
+    run(`registrarDoseAgendadaGlobal({key:'${DE653.refKey}', itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'14:00', hospNome:'Frida'}, '${IT_SPITZ653}_14-00', '2026-10-07')`);
+    await espera653(6000);
+    assert.ok(run(`__get653('auaulandia/medicacao-log/2026-10-07/${DE653.refKey}/${IT_SPITZ653}_14-00')`), 'a dose ficou no dia do alarme (07/10)');
+    assert.strictEqual(run(`__get653('auaulandia/medicacao-log/${DIA653}/${DE653.refKey}/${IT_SPITZ653}_14-00')`), null, 'e não caiu em hoje');
+  } finally { run('pessoaDoTurno=__bkPT653; medTgAvisarDose=__bkTD653; renderMedAgendaHoje=__bkRM653;'); run(SOLTA653); }
+});
+prova('6.53 R3 n06 — troca pela metade: quem só lê (Monitor) não vê «Retomar» e é mandado chamar a Recepção; a Gestão vê', () => {
+  const papel = run('document.body.dataset.role');
+  ctx.__eInc653 = Object.assign(EST653(), { refKey: PARA653.refKey, nome: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz',
+    trocaFicha: { t1: { tk: 't1', de: DE653, para: PARA653, completa: false, quando_br: '09/10/2026 às 10:00', ts: AGORA653, quem: 'Gestora Teste' } } });
+  run(`__bkET653=EST_TODAS; EST_TODAS={'${ID653}':__eInc653};`);
+  try {
+    run(`document.body.dataset.role='monitor'; HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'plantao'});`);
+    const hm = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(!/>Retomar a troca de ficha</.test(hm) && /para retomar/.test(hm), hm.slice(0, 500));
+    run(`document.body.dataset.role='gestao'; HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'hospedes'});`);
+    assert.ok(/>Retomar a troca de ficha</.test(run('hospCorrHtml(HOSP_CORR)')));
+  } finally { run("document.body.dataset.role='" + papel + "'; HOSP_CORR=null; EST_TODAS=__bkET653;"); }
+});
+provaAsync('6.53 R3 n11 — orçamento de outro tutor: a hospedagem EXCLUÍDA da outra Frida não toma o orçamento dela', async () => {
+  run(ARMA653);
+  try {
+    semear653(Object.assign(EST653(), { conferencia: { concluida: false } }));
+    run(`ORC_LISTA_CACHE={oF:{status:'fechado', entrada:'2026-10-07', saida:'2026-10-12', tutor:'Ana Carolina', pets:[{key:'avulso__frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz'}]}};
+      EST_TODAS['zz']={refKey:'${PARA653.refKey}', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', entrada:'2026-10-07', saida:'2026-10-12', status:'cancelada'};`);
+    assert.strictEqual(run(`hospOrcamentoDaEstadia(__get653('auaulandia/estadias/${ID653}'))`), 'oF');
+  } finally { run(SOLTA653); }
+});
+
+prova('6.53 R3 R2 — o card da outra hospedagem fica: se a ficha de onde a estadia saiu tem OUTRA hospedagem ativa, o sinal não mexe no card (a remontagem da lista decide)', () => {
+  run(`__bkH653=hospedes; __bkE653=EST_TODAS; __bkR653=renderHosp; renderHosp=function(){};
+    hospedes=[{nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', refKey:'${DE653.refKey}', hospede:true}];
+    EST_TODAS={'${ID653}':{refKey:'${PARA653.refKey}', nome:'Frida', status:'ativa'}, outra:{refKey:'${DE653.refKey}', nome:'Frida', tutor:'Tutora Auluna', status:'ativa'}};`);
+  try {
+    const sinal = `{tipo:'troca', de:'${DE653.refKey}', para:'${PARA653.refKey}', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', itens:[], estadia:'${ID653}'}`;
+    igual([run(`hospCardsDoSinal(${sinal})`), run('hospedes[0].refKey')], [false, DE653.refKey]);
+    run(`delete EST_TODAS.outra;`);
+    igual([run(`hospCardsDoSinal(${sinal})`), run('hospedes[0].refKey'), run('hospedes[0].tutor')], [true, PARA653.refKey, 'Ana Carolina']);
+  } finally { run('hospedes=__bkH653; EST_TODAS=__bkE653; renderHosp=__bkR653;'); }
+});
+provaAsync('6.53 R3 O7 — Excluir com o Telegram que não responde: o alarme do remédio nascido no check-in para antes, sem esperar o aviso', async () => {
+  run(ARMA653);
+  try {
+    run(`__tmr653=[]; __bkST653=setTimeout; setTimeout=function(f){ __tmr653.push(f); return 1; }; tgAvisar=function(){ return new Promise(function(){}); };`);
+    semearBolt653q();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    let fim = null;
+    run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {})").then((x) => { fim = x; });
+    await espera653(6000);
+    assert.strictEqual(fim, null, 'a tela ainda espera o Telegram');
+    assert.ok(run(`__get653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITB653q}').paradoEm`), 'o alarme já parou');
+    assert.strictEqual(run("__get653('auaulandia/sinais/agenda').tipo"), 'exclusao', 'e o sinal já saiu');
+    run('__tmr653.forEach(function(f){ f(); }); __tmr653=[];'); await espera653(3000);
+    assert.ok(fim && fim.ok === true && fim.tg === false, JSON.stringify(fim));
+  } finally { run('setTimeout=__bkST653;'); run(SOLTA653); }
+});
+
+// ================================================================== 6.53 QA3 — as provas do re-gate 2 do QA (Quinn), levadas para a Fase 0 na 4ª rodada
+// De scratchpad/qa653/probe/r3653.js. R3 e R3b são o achado do re-gate 2 (corrigido na 4ª rodada); RG5 a RG8, as guardas.
+// Ajuste único: a R3 chama o carregarManuais de verdade (__bk653.cm) — o palco ARMA653 troca o carregarManuais por
+// uma função vazia, e a prova original chamava a vazia (o Plantão dava 0 card mesmo com o código certo).
+console.log('\n6.53 QA3 — as provas do re-gate 2 do QA (4ª rodada)');
+const IDA3653q3 = pid653(TSB653q - 86400000, 'BoltLegit001');
+const semearDuplicada653q3 = () => {
+  // a hospedagem VERDADEIRA do Bolt (08 a 12/10, criada em 08/10) e a lançada por engano (09 a 11/10, criada hoje)
+  ctx.__ea3 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TSB653q - 86400000 };
+  ctx.__eb3 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q };
+  run(`__put653('auaulandia/estadias/${IDA3653q3}', __ea3); __put653('auaulandia/estadias/${IDB653q}', __eb3);
+    EST_TODAS={'${IDA3653q3}':__get653('auaulandia/estadias/${IDA3653q3}'), '${IDB653q}':__get653('auaulandia/estadias/${IDB653q}')};
+    PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[{nome:'Bolt', tutor:'Rui Teste', raca:'Beagle', refKey:'bolt__rui teste', hospede:true}]; ORC_LISTA_CACHE={}; __esc653=[];`);
+};
+provaAsync('6.53 QA3 R3 — Excluir a hospedagem lançada em dobro: a VERDADEIRA do mesmo FILHOt continua no Plantão, na Conferência e na Zona de risco (e no alarme)', async () => {
+  run(ARMA653);
+  try {
+    semearDuplicada653q3();
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    assert.strictEqual(run('HOSP_CORR.passo'), 'excluir', JSON.stringify(run('HOSP_CORR.msg')));
+    const r = await run("hospExcluirGravar('lançada duas vezes, a primeira vale', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    // o índice das estadias (Conferência, Check-out, Zona de risco, chamada do Day Care) e o Plantão, como qualquer aparelho os monta
+    run(`_cfIndexarEstadias(__get653('auaulandia/estadias'));`);
+    const cf = run(`CF_ESTADIAS['bolt__rui teste'] ? CF_ESTADIAS['bolt__rui teste'].id + '|' + CF_ESTADIAS['bolt__rui teste'].e.status : ''`);
+    run(`hospedes=[]; __zmq=zMapaUma; zMapaUma=function(p){ return Promise.resolve(__get653(p)||{}); }; __avq=hospAvisoFalha; hospAvisoFalha=function(){};`);
+    try { run('__bk653.cm()'); await espera653(6000); } finally { run('zMapaUma=__zmq; hospAvisoFalha=__avq;'); }
+    const plantao = run(`hospedes.filter(function(h){ return h.nome==='Bolt'; }).length`);
+    const zr = run(`!!hospZrEstadia({nome:'Bolt', tutor:'Rui Teste', refKey:'bolt__rui teste'})`);
+    const falhas = [];
+    if (cf !== IDA3653q3 + '|ativa') falhas.push('CF_ESTADIAS (Conferência/Check-out/Zona de risco/chamada) aponta para a EXCLUÍDA: ' + cf);
+    if (plantao !== 1) falhas.push('o Bolt sumiu do Plantão (a excluída virou a "mais recente" dele): ' + plantao + ' card(s)');
+    if (!zr) falhas.push('a Zona de risco do Bolt não acha mais a hospedagem dele (volta ao "tirar do Hotel só de hoje")');
+    assert.deepStrictEqual(falhas, []);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA3 RG5 — sinal: dois hóspedes de mesmo nome (tutores diferentes) — só o card da ficha que mudou é trocado; a outra Frida continua', async () => {
+  run(ARMA653);
+  try {
+    run(`EST_TODAS={}; hospedes=[{nome:'Frida', tutor:'Tutora Auluna', raca:'SRD', refKey:'frida__tutora auluna', hospede:true}, {nome:'Frida', tutor:'Beatriz Teste', raca:'Poodle', refKey:'frida__beatriz teste', hospede:true}, {nome:'Frida', tutor:'Ana Carolina', raca:''}];
+      __rh=0; renderHosp=function(){ __rh++; }; carregarAgendaMedTodos=function(){}; __rag=hospRecarregarAgendar; hospRecarregarAgendar=function(){};`);
+    try {
+      run(`hospSinalAgenda({tipo:'troca', ts:${AGORA653}, de:'frida__tutora auluna', para:'frida__ana carolina', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', itens:[], estadia:'e1'}, false)`);
+    } finally { run('hospRecarregarAgendar=__rag;'); }
+    const h = run('hospedes').map((x) => x.tutor + '|' + (x.refKey || ''));
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(h)), ['Ana Carolina|frida__ana carolina', 'Beatriz Teste|frida__beatriz teste', 'Ana Carolina|']);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA3 RG6 — sinal de exclusão: com OUTRA hospedagem ativa na mesma ficha, o card fica (o alarme do hóspede que continua aqui não para)', async () => {
+  run(ARMA653);
+  try {
+    run(`EST_TODAS={a1:{refKey:'bolt__rui teste', status:'ativa'}, b1:{refKey:'bolt__rui teste', status:'cancelada'}}; hospedes=[{nome:'Bolt', tutor:'Rui Teste', refKey:'bolt__rui teste', hospede:true}];
+      carregarAgendaMedTodos=function(){}; __rag=hospRecarregarAgendar; hospRecarregarAgendar=function(){};`);
+    try { run(`hospSinalAgenda({tipo:'exclusao', ts:${AGORA653}, de:'bolt__rui teste', para:'', itens:[], estadia:'b1'}, false)`); }
+    finally { run('hospRecarregarAgendar=__rag;'); }
+    assert.strictEqual(run('hospedes.length'), 1);
+  } finally { run(SOLTA653); }
+});
+provaAsync('6.53 QA3 RG7 — R1: no 1º sinal, a ficha certa já tem as doses dadas antes (do plano e lidas na hora), e só as do remédio que muda', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_20-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'20:00', quem:'Zelosa Teste', ts:${AGORA653 + 36000000}, avulso:false}); ${SOL653q(37800000)}
+      __snap3=null; __dbr3=DB.ref; DB.ref=function(p){ var r=__dbr3(p); if(p==='auaulandia/sinais/agenda'){ var s0=r.set; r.set=function(v){ if(!v.fase && !__snap3) __snap3={item:!!__get653('auaulandia/medicacao-agenda/'+v.para+'/itens/${IT_SPITZ653}'), logs:[__get653('auaulandia/medicacao-log/2026-10-07/'+v.para), __get653('auaulandia/medicacao-log/2026-10-08/'+v.para), __get653('auaulandia/medicacao-log/2026-10-09/'+v.para)]}; return s0(v); }; } return r; };`);
+    run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+    await run('hospTrocarPreparar()'); await espera653();
+    // com o cartaz aberto, ANTES da senha: a dose das 08h00 de hoje (fora do plano) e uma dose do Apoquel da Frida SRD
+    run(`__put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_SPITZ653}_08-00', {itemId:'${IT_SPITZ653}', nome:'Ômega Spitz', q:'1', u:'cápsula', horario:'08:00', quem:'Zelosa Teste', ts:${AGORA653}, avulso:false});
+      __put653('auaulandia/medicacao-log/2026-10-09/${DE653.refKey}/${IT_CONF653}_08-00', {itemId:'${IT_CONF653}', nome:'Apoquel', q:'1', u:'comprimido', horario:'08:00', quem:'Zelosa Teste', ts:${AGORA653}, avulso:false});`);
+    const r = await run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    const s = run('__snap3');
+    assert.ok(s && s.item, 'o 1º sinal saiu com o remédio na ficha certa');
+    const l9 = s.logs[2] || {};
+    assert.ok(l9[IT_SPITZ653 + '_20-00'] && l9[IT_SPITZ653 + '_08-00'], 'no 1º sinal, as doses de hoje já estão na ficha certa: ' + JSON.stringify(Object.keys(l9)));
+    const fim = run(`__get653('auaulandia/medicacao-log/2026-10-09/${PARA653.refKey}')`) || {};
+    assert.ok(!fim[IT_CONF653 + '_08-00'], 'a dose do Apoquel da Frida SRD não vai para a ficha certa');
+    const tot = [run(`__get653('auaulandia/medicacao-log/2026-10-07/${PARA653.refKey}')`), run(`__get653('auaulandia/medicacao-log/2026-10-08/${PARA653.refKey}')`), fim].map((x) => Object.keys(x || {}).length);
+    assert.deepStrictEqual(tot, [1, 1, 2], 'uma cópia de cada dose do remédio que mudou');
+  } finally { run('DB=__dbr3?{ref:__dbr3}:DB;'); run(SOLTA653); }
+});
+provaAsync('6.53 QA3 RG8 — O7: o Telegram lento não segura o remédio; com o prazo vencido, a tela diz e o app não manda de novo', async () => {
+  run(ARMA653);
+  try {
+    semear653();
+    run(`__tgPend=[]; tgAvisar=function(d){ __tg653.push(JSON.parse(JSON.stringify(d))); return new Promise(function(ok){ __tgPend.push(ok); }); };
+      __tmr3=[]; __bkST3=setTimeout; setTimeout=function(f, ms){ if(ms===HOSP_TG_PRAZO) __tmr3.push(f); return 1; };`);
+    try {
+      run(`hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); hospTrocarAlvoNovo({nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', homonimoOk:true});`);
+      await run('hospTrocarPreparar()'); await espera653();
+      const pr = run(`hospTrocarGravar('não é a ficha dela, cliente nova', '${SENHA653}')`); await espera653();
+      // o Telegram ainda não respondeu: o remédio já mudou de ficha
+      assert.ok(run(`__get653('auaulandia/medicacao-agenda/${PARA653.refKey}/itens/${IT_SPITZ653}')`), 'o remédio mudou antes da resposta do Telegram');
+      // (Fase 0) sem o prazo armado, a espera abaixo nunca termina: falha aqui, em vez de travar a rodada inteira
+      assert.ok(run('__tmr3.length') > 0, 'o prazo do Telegram foi armado');
+      run('__tmr3.forEach(function(f){ f(); });'); const r = await pr; await espera653();
+      assert.ok(r.ok && r.tg === false, JSON.stringify(r));
+      assert.ok(/não respondeu em 20 segundos/.test(run('hospCorrHtml(HOSP_CORR)')), 'a tela diz');
+      run('__tgPend.forEach(function(ok){ ok({ok:true}); });'); await espera653();
+      assert.strictEqual(run('__tg653').length, 1, 'o app mandou o aviso uma vez só');
+    } finally { run('setTimeout=__bkST3;'); }
+  } finally { run(SOLTA653); }
+});
+
+provaAsync('6.53 QA3 R3b — a lançada por engano é a MAIS ANTIGA (a verdadeira foi lançada depois): antes da 6.53 o cancelar não mexia no _ts e a verdadeira seguia no índice; com o Excluir, ela some', async () => {
+  run(ARMA653);
+  try {
+    // a errada foi criada primeiro (07/10) e a verdadeira depois (08/10)
+    ctx.__ea3 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TSB653q - 86400000 };
+    ctx.__eb3 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q - 2 * 86400000 };
+    run(`__put653('auaulandia/estadias/${IDA3653q3}', __ea3); __put653('auaulandia/estadias/${IDB653q}', __eb3);
+      EST_TODAS={'${IDA3653q3}':__get653('auaulandia/estadias/${IDA3653q3}'), '${IDB653q}':__get653('auaulandia/estadias/${IDB653q}')};
+      PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[]; ORC_LISTA_CACHE={}; __esc653=[];`);
+    // o jeito de antes (Zona de risco da base): status 'cancelada' sem mexer no _ts
+    run(`(function(){ var e=__get653('auaulandia/estadias/${IDB653q}'); e.status='cancelada'; e.canceladaTs=1; _cfIndexarEstadias({'${IDA3653q3}':__get653('auaulandia/estadias/${IDA3653q3}'), '${IDB653q}':e}); })();`);
+    const antes = run(`CF_ESTADIAS['bolt__rui teste'].id`);
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const r = await run("hospExcluirGravar('lançada duas vezes, a segunda vale', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(r.ok, JSON.stringify(r));
+    run(`_cfIndexarEstadias(__get653('auaulandia/estadias'));`);
+    const depois = run(`CF_ESTADIAS['bolt__rui teste'].id + '|' + CF_ESTADIAS['bolt__rui teste'].e.status`);
+    assert.strictEqual(antes, IDA3653q3, 'o jeito de antes mantinha a verdadeira no índice');
+    assert.strictEqual(depois, IDA3653q3 + '|ativa', 'com o Excluir da 6.53 (o _ts vai para agora), o índice aponta para a excluída: ' + depois);
+  } finally { run(SOLTA653); }
+});
+
+// ================================================================== 6.53 R4 — 4ª rodada: a duplicada excluída não esconde a verdadeira; troca pela metade; card manual; o texto do prazo
+console.log('\n6.53 R4 — 4ª rodada: a hospedagem verdadeira continua (Plantão, índice, alarme, dois aparelhos), troca pela metade, card manual, texto do prazo');
+prova('6.53 R4 R3 — hospEstadiaGanha: a NÃO cancelada ganha da cancelada (mesmo mais nova); entre iguais, a mais recente; a cancelada sozinha ainda vale', () => {
+  const g = (a, b) => run('hospEstadiaGanha(' + JSON.stringify(a) + ', ' + JSON.stringify(b) + ')');
+  igual([g({ status: 'cancelada', _ts: 9 }, { status: 'ativa', _ts: 1 }), g({ status: 'ativa', _ts: 1 }, { status: 'cancelada', _ts: 9 }),
+    g({ status: 'ativa', _ts: 5 }, { status: 'ativa', _ts: 3 }), g({ status: 'ativa', _ts: 3 }, { status: 'ativa', _ts: 5 }),
+    g({ status: 'cancelada', _ts: 5 }, null), g({ status: 'finalizada', _ts: 5 }, { status: 'ativa', _ts: 3 })], [false, true, true, false, true, true]);
+  // o índice das estadias (Conferência, Check-out, Zona de risco, chamada do Day Care), em qualquer ordem de chegada
+  run(`__bkCF653=[CF_ESTADIAS, EST_TODAS, CF_ESTADIAS_LIDO];`);
+  try {
+    run(`_cfIndexarEstadias({b:{refKey:'bolt__rui teste', status:'cancelada', _ts:9}, a:{refKey:'bolt__rui teste', status:'ativa', _ts:1}});`);
+    const x = run(`CF_ESTADIAS['bolt__rui teste'].id`);
+    run(`_cfIndexarEstadias({a:{refKey:'bolt__rui teste', status:'ativa', _ts:1}, b:{refKey:'bolt__rui teste', status:'cancelada', _ts:9}});`);
+    igual([x, run(`CF_ESTADIAS['bolt__rui teste'].id`)], ['a', 'a']);
+  } finally { run('CF_ESTADIAS=__bkCF653[0]; EST_TODAS=__bkCF653[1]; CF_ESTADIAS_LIDO=__bkCF653[2];'); }
+});
+provaAsync('6.53 R4 R3 — DOIS aparelhos: a recepção exclui a hospedagem lançada em dobro; o tablet do Plantão continua com o FILHOt, o remédio da hospedagem verdadeira no alarme e o índice na verdadeira', async () => {
+  run(ARMA653);
+  try {
+    LIGAR_B653();
+    const IDV = pid653(TSB653q - 86400000, 'BoltVerd0001'), ITV = 'ci_' + (TSB653q - 86400000 - 60000) + '_v1';
+    ctx.__eV = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TSB653q - 86400000 };
+    ctx.__eD = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q };
+    run(`__put653('auaulandia/estadias/${IDV}', __eV); __put653('auaulandia/estadias/${IDB653q}', __eD);
+      __put653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITV}', {nome:'Antibiótico Teste', q:'1', u:'comprimido', horarios:['21:00'], continuo:true, historico:[{acao:'Criou (check-in)'}]});
+      EST_TODAS={'${IDV}':__get653('auaulandia/estadias/${IDV}'), '${IDB653q}':__get653('auaulandia/estadias/${IDB653q}')};
+      PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[]; ORC_LISTA_CACHE={}; __esc653=[];`);
+    runB653('0'); ctxB653.__todas = run(`__get653('auaulandia/estadias')`);
+    runB653(`hospedes=[{nome:'Bolt', tutor:'Rui Teste', raca:'Beagle', refKey:'bolt__rui teste', hospede:true}]; _cfIndexarEstadias(__todas); MED_AGENDA_TODOS=[];`);
+    runB653('carregarAgendaMedTodos()'); await espera653(6000);
+    assert.ok(alarmeB653().indexOf('bolt__rui teste|' + ITV) >= 0, 'antes: o antibiótico da hospedagem verdadeira no alarme do tablet');
+    // a recepção (aparelho A) exclui a duplicada
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const x = await run("hospExcluirGravar('lançada duas vezes, a primeira vale', 'senhaAmanda653', {})"); await espera653(6000);
+    assert.ok(x.ok, JSON.stringify(x));
+    // o tablet: o sinal não tira o card (a ficha tem outra hospedagem ativa); a remontagem (com a lista e o índice de verdade) também não
+    igual(runB653('hospedes.map(function(h){ return h.nome+"|"+h.refKey; })'), ['Bolt|bolt__rui teste']);
+    ctxB653.__todas = run(`__get653('auaulandia/estadias')`);
+    runB653(`_cfIndexarEstadias(__todas); hospedes=[]; __zmB=zMapaUma; zMapaUma=function(p){ return __dbA653.ref(p).once('value').then(function(s){ return s.val()||{}; }); };
+      __avB=hospAvisoFalha; hospAvisoFalha=function(){};`);
+    try { runB653('carregarManuais()'); await espera653(6000); } finally { runB653('zMapaUma=__zmB; hospAvisoFalha=__avB;'); }
+    igual([runB653('hospedes.filter(function(h){ return h.nome==="Bolt"; }).length'), runB653(`CF_ESTADIAS['bolt__rui teste'].id + '|' + CF_ESTADIAS['bolt__rui teste'].e.status`),
+      !!runB653(`hospZrEstadia({nome:'Bolt', tutor:'Rui Teste', refKey:'bolt__rui teste'})`)], [1, IDV + '|ativa', true]);
+    runB653('MED_AGENDA_TODOS=[]; carregarAgendaMedTodos()'); await espera653(6000);
+    assert.ok(alarmeB653().indexOf('bolt__rui teste|' + ITV) >= 0, 'depois: o antibiótico continua no alarme do tablet: ' + JSON.stringify(alarmeB653()));
+    assert.ok(!run(`__get653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITV}').paradoEm`), 'e não foi parado (não nasceu na duplicada)');
+  } finally { SOLTA_B653(); run(SOLTA653); }
+});
+provaAsync('6.53 R4 O13 — troca pela metade: o cartaz só oferece «Retomar»; Trocar, Excluir e Corrigir são recusados sem gravar', async () => {
+  run(ARMA653);
+  try {
+    ctx.__eM = Object.assign(EST653(), { refKey: PARA653.refKey, nome: 'Frida', tutor: 'Ana Carolina', raca: 'Spitz', conferencia: { concluida: false },
+      trocaFicha: { t1: { tk: 't1', de: DE653, para: PARA653, completa: false, quando_br: '09/10/2026 às 10:00', ts: AGORA653, quem: 'Gestora Teste' } } });
+    run(`__put653('auaulandia/estadias/${ID653}', __eM); EST_TODAS={'${ID653}':__get653('auaulandia/estadias/${ID653}')}; HOSP_CORR=null; hospCorrigirAbrir('${ID653}', {origem:'hospedes'}); __esc653=[];`);
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/>Retomar a troca de ficha</.test(h) && !/trocar a ficha<\/strong>/i.test(h) && !/excluir<\/strong>/i.test(h) && !/Corrigir comida, remédio/.test(h), h.slice(0, 700));
+    for (const op of ['trocar', 'excluir', 'corrigir']) {
+      run(`hospCorrEscolher('${op}')`); await espera653();
+      igual([run('HOSP_CORR.passo'), /pela metade/.test(run('HOSP_CORR.msg'))], ['menu', true], op);
+    }
+    igual(run('__esc653.length'), 0, 'nada gravado');
+  } finally { run(SOLTA653); }
+});
+prova('6.53 R4 O12 — o sinal não mexe no card de lançamento manual (manualKey) da ficha antiga; mexe no da estadia', () => {
+  run(`__bkH653=hospedes; __bkE653=EST_TODAS; __bkR653=renderHosp; renderHosp=function(){}; EST_TODAS={};
+    hospedes=[{nome:'Frida', tutor:'Tutora Auluna', refKey:'${DE653.refKey}', hospede:true, manualKey:'mk9', manualDia:'${DIA653}'}, {nome:'Frida', tutor:'Tutora Auluna', refKey:'${DE653.refKey}', hospede:true}];`);
+  try {
+    run(`hospCardsDoSinal({tipo:'troca', de:'${DE653.refKey}', para:'${PARA653.refKey}', nome:'Frida', tutor:'Ana Carolina', raca:'Spitz', itens:[], estadia:'${ID653}'})`);
+    igual(run('hospedes.map(function(h){ return (h.manualKey||"-")+"|"+h.refKey; })'), ['mk9|' + DE653.refKey, '-|' + PARA653.refKey]);
+    // a exclusão da estadia (agora na ficha certa): sai o card dela; o manual de outra ficha fica
+    run(`hospCardsDoSinal({tipo:'exclusao', de:'${PARA653.refKey}', para:'', itens:[], estadia:'${ID653}'})`);
+    igual(run('hospedes.map(function(h){ return h.manualKey||"-"; })'), ['mk9']);
+  } finally { run('hospedes=__bkH653; EST_TODAS=__bkE653; renderHosp=__bkR653;'); }
+});
+prova('6.53 R4 O15 — depois do prazo, a tela diz que o aviso "não confirmou em 20 segundos: confira o grupo antes de avisar de novo" (e não que "não saiu")', () => {
+  run(`__bkHC653=HOSP_CORR; HOSP_CORR={id:'x', e:{nome:'Frida', status:'ativa'}, passo:'feito', resultado:{acao:'troca', tg:false, tgErro:HOSP_TG_ERRO_PRAZO, aplicado:true, de:{nome:'Frida'}, para:{nome:'Frida', refKey:'x'}}};`);
+  try {
+    const h = run('hospCorrHtml(HOSP_CORR)');
+    assert.ok(/não confirmou em 20 segundos: confira o grupo antes de avisar de novo/.test(h) && !/não saiu/.test(h), h.slice(-900));
+    run(`HOSP_CORR.resultado.tgErro='a ponte do Telegram não está configurada';`);
+    assert.ok(/não saiu/.test(run('hospCorrHtml(HOSP_CORR)')), 'a falha de verdade continua dizendo "não saiu"');
+  } finally { run('HOSP_CORR=__bkHC653;'); }
+});
+
+provaAsync('6.53 R4 R3 — o aparelho que exclui acerta o PRÓPRIO índice na hora (Check-in, Conferência, Zona de risco), sem esperar o ouvinte; com o índice ainda não lido, não inventa um', async () => {
+  run(ARMA653);
+  try {
+    ctx.__eV4 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TSB653q - 86400000 };
+    ctx.__eD4 = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q };
+    run(`__put653('auaulandia/estadias/v4', __eV4); __put653('auaulandia/estadias/${IDB653q}', __eD4); PELUDINHOS=[{n:'Bolt', tutor:'Rui Teste', raca:'Beagle'}]; hospedes=[]; ORC_LISTA_CACHE={};
+      _cfIndexarEstadias(__get653('auaulandia/estadias'));`);
+    igual(run(`CF_ESTADIAS['bolt__rui teste'].id`), IDB653q, 'antes: a duplicada (mais nova) é a do índice');
+    run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+    const x = await run("hospExcluirGravar('lançada duas vezes, a primeira vale', 'senhaAmanda653', {})"); await espera653();
+    assert.ok(x.ok, JSON.stringify(x));
+    igual([run(`CF_ESTADIAS['bolt__rui teste'].id`), run(`EST_TODAS['${IDB653q}'].status`)], ['v4', 'cancelada']);
+    // índice ainda não lido (aparelho abrindo): a gravação não monta um índice com uma estadia só
+    run(`CF_ESTADIAS_LIDO=false; CF_ESTADIAS={}; EST_TODAS={}; hospEstadiaLocal('qq', {refKey:'zz', status:'ativa'});`);
+    igual([run('CF_ESTADIAS_LIDO'), Object.keys(run('CF_ESTADIAS')).length, Object.keys(run('EST_TODAS'))], [false, 0, ['qq']]);
+  } finally { run('CF_ESTADIAS_LIDO=__bk653.cfl;'); run(SOLTA653); }
+});
 
 // ------------------------------------------------ o fim
 fila.then(() => {
