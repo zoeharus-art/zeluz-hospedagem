@@ -5130,13 +5130,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-08"></script>
+<script src="resposta-tutor.js?v=2026-10-09-09"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-08"></script>
+<script src="painel-logica.js?v=2026-10-09-09"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5148,7 +5148,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-08"></script>
+<script src="financeiro-logica.js?v=2026-10-09-09"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5716,6 +5716,13 @@
     //  fica de fora — a lista dele é a Chamada, com o FILHOt na frente, e não o balcão.
     'prevencao-lancar-na-tela':  ['gestao','diretoria','supervisor','consultora'],
     'gestao-role':              ['gestao','diretoria'],
+    // ===== 6.56 — o lançado por engano no Day Care (09/out/2026) ======================
+    // Quem dá o desfecho das ocorrências do Day Care e responde às perguntas do Day Care na
+    // Recepção (a tela so-recepcao) é quem reabre a ocorrência e corrige ou cancela o chamado
+    // de comida, assinando com a PRÓPRIA senha. «Lançada por engano» e «Tirar a diária
+    // avulsa» pedem, além disso, a senha da Gestão ('gestao-role'). Conferido na função
+    // que grava, não só na tela.
+    'corrigir-engano-dc':       ['consultora','supervisor','gestao','diretoria'],
     'ver-plano':                ['gestao','supervisor','diretoria','consultora'],
     'aba-hospedes':             ['gestao','supervisor','diretoria','consultora'],
     // ===== FASE 2.1 — a fatia do Monitor no Painel unificado ==========================
@@ -14039,7 +14046,10 @@
     ids.sort(function(a,b){ return (PT_CHAMADOS[a].ts||0)-(PT_CHAMADOS[b].ts||0); });
     el.innerHTML=ids.map(function(k){
       var c=PT_CHAMADOS[k]||{};
+      // 6.56: o cancelado (foi engano) fica riscado, com quem, quando e o motivo.
+      if(c.cancelado) return chamadoCanceladoHTML(k, c);
       var respondido=!!c.resposta;
+      var ed=(CHAMADO_EDIT && CHAMADO_EDIT.k===k)?String(CHAMADO_EDIT.modo||''):'';
       var hora=''; try{ var d=new Date(c.ts), p=function(x){return String(x).padStart(2,'0');}; hora=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       return '<div class="avr-card '+(respondido?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(c.pet||'')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(c.tutor||'')+'</span>'
@@ -14048,7 +14058,10 @@
         +'</div><span class="avr-chip '+(respondido?'resolvido':'pendente')+'">'+(respondido?'RESPONDIDO':'AGUARDANDO')+'</span></div>'
         +(respondido
           ? '<div class="avr-resolvido-banner" style="text-align:left">'+escAttr(c.resposta)+'<div style="font-weight:600;font-size:12.5px;margin-top:4px">por '+escAttr(c.respondido_por||'-')+'</div></div>'
-          : '<div class="avr-form"><div class="ff-tit">O que a monitora deve fazer?</div>'
+            // 6.56: o antes de cada correção à vista, e «Corrigir a resposta» / «Cancelar o chamado»
+            +chamadoCorrecoesHTML(c)
+            +(ed==='corrigir'?chamadoFormCorrigirHTML(k, c):(ed==='cancelar'?chamadoFormCancelarHTML(k, c):chamadoBotoesHTML(k, true)))
+          : (ed==='cancelar') ? chamadoFormCancelarHTML(k, c) : '<div class="avr-form"><div class="ff-tit">O que a monitora deve fazer?</div>'
             +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px">'
             +['O tutor autorizou pegar na loja. Favor pegar na recepção',
               'O tutor autorizou comida natural da casa',
@@ -14065,31 +14078,52 @@
             +'<div><label class="cad-lb">O quê</label><input class="cad-in" id="chalim_'+k+'" placeholder="Ex: Livelong lata"></div>'
             +'<div><label class="cad-lb">Quanto</label><input class="cad-in" id="chqtd_'+k+'" placeholder="Ex: meia lata"></div>'
             +'</div>'
-            +'<input id="chquem_'+k+'" style="margin-top:8px" placeholder="Seu nome">'
-            +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoResponder(\''+k+'\')">Responder ao Day Care</button></div></div>')
+            // 6.56 (EN3): a resposta é assinada com a SENHA da própria pessoa — o app grava o nome
+            +'<label for="chsenha_'+escAttr(k)+'" style="display:block;margin-top:10px;font-size:14px;font-weight:800;color:var(--z-blue)">Sua senha</label>'
+            +'<input id="chsenha_'+escAttr(k)+'" type="password" autocomplete="off" style="margin-top:4px" placeholder="assina a resposta">'
+            +'<div class="hint" style="margin-top:-4px;margin-bottom:6px">A sua senha assina a resposta: o app grava o seu nome, nunca a senha.</div>'
+            +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoResponder(\''+k+'\')">Responder ao Day Care</button></div></div>'
+            +chamadoBotoesHTML(k, false))
         +'</div>';
     }).join('');
   }
   function chamadoSugestao(k,btn){ var t=document.getElementById('chresp_'+k); if(t) t.value=btn.textContent; }
-  function chamadoResponder(k){
+  // 6.56 (QA, SEC-001 / EN3, aplicada pela recomendação): a resposta é assinada com a SENHA da
+  // própria pessoa, como na 6.53 — conferida e esquecida; o app grava o NOME do cadastro em
+  // `respondido_por` e `respondido_login` (quem assinou, não a pessoa do turno) e a marca
+  // `respondido_assinado`, que é o que «quem respondeu corrige» confere. Ler e gravar na mesma
+  // transação: não responde por cima de quem já respondeu nem de um chamado cancelado.
+  async function chamadoResponder(k){
     var r=((document.getElementById('chresp_'+k)||{}).value||'').trim();
-    var q=((document.getElementById('chquem_'+k)||{}).value||'').trim();
-    if(!r){ alert('Escreva a solução — é isso que a monitora vai ler.'); return; }
-    if(!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Assine com o seu nome. Quem respondeu responde pela solução.'); return; }
-    if(!DB) return;
+    var senha=((document.getElementById('chsenha_'+k)||{}).value||'').trim();
+    if(!r){ alert('Escreva a solução — é isso que a monitora vai ler.'); return false; }
+    if(!podePapel('corrigir-engano-dc')){ alert(ENGANO_SO_RECEPCAO); return false; }
+    var ass=enganoAssinar(senha, 'recepcao');
+    if(!ass.ok){ alert(ass.erro); return false; }
+    if(!DB) return false;
     var alim=((document.getElementById('chalim_'+k)||{}).value||'').trim();
     var qtd=((document.getElementById('chqtd_'+k)||{}).value||'').trim();
-    var ops=[DB.ref('daycare/chamados-recepcao/'+dcDataKey()+'/'+k).update({
-      resposta:r, respondido_por:nomeProprio(q), respondido_em:Date.now(), status:'respondido',
-      alimento_hoje:alim, quantidade_hoje:qtd
-    })];
+    var dia=dcDataKey(), ts=Date.now(), estado='';
+    try{
+      await DB.ref('daycare/chamados-recepcao/'+dia+'/'+k).transaction(function(c){
+        if(c===null||c===undefined){ estado='sumiu'; return null; }   // cache frio: o SDK decide com o servidor
+        if(c.cancelado){ estado='cancelado'; return c; }
+        if(c.resposta){ estado='respondido'; return c; }
+        estado='ok';
+        return Object.assign({}, c, {resposta:r, respondido_por:ass.nome, respondido_em:ts, status:'respondido',
+          alimento_hoje:alim, quantidade_hoje:qtd, respondido_login:ass.nome, respondido_papel:ass.papel, respondido_assinado:true});
+      });
+    }catch(e){ alert('Não consegui responder: '+((e&&e.message)||e)); return false; }
+    if(estado==='sumiu'){ alert('Não achei este chamado no banco. Atualize a tela. Nada foi gravado.'); return false; }
+    if(estado==='cancelado'){ alert('Este chamado foi cancelado (foi engano). Nada foi gravado.'); return false; }
+    if(estado==='respondido'){ alert('Outra pessoa já respondeu a este chamado. Para mudar a resposta, use «Corrigir a resposta». Nada foi gravado.'); return false; }
     // A comida diferente vira EXCEÇÃO DO DIA — a ficha permanente não é tocada.
-    if(alim) ops.push(DB.ref('daycare/almoco-excecao/'+dcDataKey()+'/'+k).set({
-      oque:alim, quanto:qtd, quem:nomeProprio(q), ts:Date.now()
-    }));
-    Promise.all(ops).then(function(){
-      if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r+(alim?(' · hoje come '+alim+' '+qtd):''),{quem:q});
-    }).catch(function(e){ alert('Não consegui responder: '+((e&&e.message)||e)); });
+    if(alim){
+      try{ await DB.ref('daycare/almoco-excecao/'+dia+'/'+k).set({oque:alim, quanto:qtd, quem:ass.nome, ts:ts}); }
+      catch(e){ alert('A resposta foi gravada, mas a comida de hoje não chegou ao Almoço ('+((e&&e.message)||e)+'). Use «Corrigir a resposta» para gravar de novo.'); }
+    }
+    if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r+(alim?(' · hoje come '+alim+' '+qtd):''),{quem:ass.nome});
+    return true;
   }
   var _recepcaoPrevN=null;
   function atualizarBadgeRecepcao(){
@@ -14261,10 +14295,16 @@
     o=o||{};
     var itens=Array.isArray(o.itens)?o.itens:[];
     var texto=(o.origem||'check-in')+': '+(itens.join(' · ')||'')+(o.coco?((itens.length?' · ':'')+o.coco):'');
+    // 6.56: a ficha (refKey), a hora, a anulação e a trilha viajam junto — é delas que saem o
+    // "já existe", o riscado da «Lançada por engano» e o rastro do «Reabrir».
     return { dcDia:dia, dcId:id, estadiaId:'dc:'+dia, ocId:id,
       pet:o.pet, tutor:o.tutor||'', texto:texto, quem:o.quem||'-', ts:o.ts||0,
-      avisado:o.desfecho||null, daycare:true };
+      avisado:o.desfecho||null, daycare:true,
+      refKey:o.refKey||'', hora:o.hora||'', anulada:o.anulada||null, trilha:o.trilha||null };
   }
+  // 6.56: a «Lançada por engano» (o objeto `anulada`) sai daqui — e, por isso, da fila da
+  // Recepção, da Mesa e dos painéis que contam por esta função. Ela continua no banco e
+  // aparece riscada na gaveta própria (ocorrenciasDayCareAnuladas).
   function ocorrenciasDayCare(){
     const out=[];
     Object.keys(DC_OCORR||{}).forEach(function(dia){
@@ -14272,10 +14312,11 @@
       Object.keys(doDia).forEach(function(id){
         const o=doDia[id]||{};
         if(!o.pet) return;
+        if(o.anulada) return;
         out.push(ocorrDayCareItem(dia, id, o));
       });
     });
-    return out;
+    return ocorrDcMarcarRepetidas(out);
   }
   // Desfechos que a Coordenação pode dar (Adriana pediu que a ocorrência não morra sem desfecho).
   const OCORR_DESFECHOS=[
@@ -14644,17 +14685,26 @@
     var id=o.estadiaId+'__'+o.ocId;
     var quando=o.ts?new Date(o.ts).toLocaleString('pt-BR'):'';
     var chip=o.avisado?'<span class="avr-chip resolvido">RESOLVIDA</span>':'<span class="avr-chip pendente">'+(o.daycare?'SEM DESFECHO':'FALTA AVISAR')+'</span>';
+    // 6.56: só a ocorrência do Day Care ganha «Lançada por engano», o aviso de repetida e a
+    // trilha. A da hospedagem sai exatamente como antes.
+    var dc=!!o.daycare;
+    var btnEngano=dc?('<button class="btn" style="'+ENGANO_BTN_ESTILO+'" onclick="ocorrDcEnganoAbrir(\''+jsAspas(id)+'\')">Lançada por engano</button>'):'';
     var corpo=o.avisado
       ? '<div class="avr-trilha"><div class="avr-tl resol"><div class="avr-tl-meta">'+escAttr(o.avisado.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(o.avisado.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(o.avisado.assinatura||'')+'</div></div></div>'
-        +'<div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ocorrReabrir(\''+id+'\')">Reabrir</button></div>'
+        +'<div style="text-align:right;margin-top:8px">'+(dc?(btnEngano+' '):'')+'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ocorrReabrir(\''+id+'\')">Reabrir</button></div>'
       : '<div class="avr-form"><div class="ff-tit">O que foi feito?</div><textarea id="ocr_acao_'+id+'" placeholder="Descreva: liguei para o tutor e expliquei &middot; levei &agrave; vet, ela avaliou &middot; estou de olho hoje"></textarea><input id="ocr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns">'
         +OCORR_DESFECHOS.map(function(d){ return '<button class="btn '+(d.k==='tutor'?'btn-primary':'')+'" '+(d.k==='tutor'?'':'style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" ')+'onclick="ocorrResolver(\''+id+'\',\''+d.k+'\')">'+d.t+'</button>'; }).join('')
-        +'</div></div>';
+        +btnEngano
+        +'</div>'+(dc?'<p class="avr-dica-fecho">«Lançada por engano» é para a ocorrência que não devia existir (FILHOt errado, não aconteceu). Pede o motivo e a senha da Gestão; ela sai da fila e fica riscada no fim da lista.</p>':'')+'</div>';
+    var repetida=(dc && o.repetidaDe)
+      ? '<div class="avr-sub" style="color:var(--crm-critico);font-weight:800">Já existe: a mesma ocorrência de '+escAttr(o.pet||'')+' foi registrada às '+escAttr(o.repetidaDe.hora||'')+' (o check-in foi salvo de novo). Se esta é a repetida, toque em «Lançada por engano».</div>'
+      : '';
     return '<div class="avr-card '+(o.avisado?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
       +'<div class="avr-nome">'+escAttr(o.pet||'FILHOt')+'</div>'
       +'<div class="avr-sub">'+(o.tutor?('Tutor: '+escAttr(o.tutor)+' — '):'')+escAttr(o.texto)+'</div>'
       +'<div class="avr-sub">Registrado por '+escAttr(o.quem)+(quando?(' · '+escAttr(quando)):'')+'</div>'
-      +'</div>'+chip+'</div><div class="avr-body">'+corpo+'</div></div>';
+      +repetida
+      +'</div>'+chip+'</div><div class="avr-body">'+(dc?ocorrDcTrilhaHTML(o.trilha):'')+corpo+'</div></div>';
   }
   // ===== O QUE FALTA RESOLVER FICA NA CARA — Adriana, 19/ago/2026 ================
   // "Erro 1: está lá para baixo — tudo sem desfecho precisa estar na cara, não para
@@ -14690,8 +14740,10 @@
     if(el) el.innerHTML=_ocorrPainelHTML(
       ocorrenciasLoja().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorr');
     var elDc=document.getElementById('ocorrDayCareRecepcaoList');
+    // 6.56: depois da fila e dos resolvidos, a gaveta das «Lançadas por engano», riscadas.
     if(elDc) elDc.innerHTML=_ocorrPainelHTML(
-      ocorrenciasDayCare().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorrDc');
+      ocorrenciasDayCare().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorrDc')
+      +ocorrDcAnuladasHTML(ocorrenciasDayCareAnuladas());
   }
   function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
   // Desfecho da ocorrência — vale para as duas origens (hospedagem e Day Care).
@@ -14705,24 +14757,1052 @@
       alert('Assine com o SEU NOME — um ponto ou uma letra solta não diz quem resolveu.'); return; }
     var reg={acao:acao, assinatura:assina, desfecho:tipo, quando:agoraBR(), ts:Date.now()};
     var ehDayCare=(r.estadiaId||'').indexOf('dc:')===0;
-    var caminho = ehDayCare
-      ? ('daycare/ocorrencias/'+r.estadiaId.slice(3)+'/'+r.ocId+'/desfecho')
-      : ('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor');
+    // 6.56 (QA, REL-002): o desfecho do Day Care é gravado por transação no nó da ocorrência — o
+    // banco decide. A «Lançada por engano» não recebe desfecho, nem pela tela velha de outro aparelho.
+    if(ehDayCare) return ocorrDcDarDesfecho(r.estadiaId.slice(3), r.ocId, reg, tipo, acao, assina);
+    var caminho='auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor';
     DB.ref(caminho).set(reg).then(function(){
-      if(ehDayCare){
-        DB.ref('daycare/ocorrencias/'+r.estadiaId.slice(3)+'/'+r.ocId+'/status').set('resolvida').catch(function(e){ _logFalhaGrav('daycare/ocorrencias/ (ocorrResolver)', e); });
-        try{ (DC_OCORR[r.estadiaId.slice(3)]||{})[r.ocId].desfecho=reg; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-        try{ renderOcorrenciasRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      }
       if(typeof audit==='function') audit('ocorrencia-desfecho', tipo+': '+acao.slice(0,60), {assinou:assina});
     }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); });
   }
   async function ocorrReabrir(id){
     var r=_ocorrSplit(id); if(!r||!DB) return;
+    // 6.56 (B04): o «Reabrir» do Day Care escrevia em auaulandia/estadias/dc:{dia}/... — um nó
+    // que não existe —, e a ocorrência continuava resolvida. Agora ele reabre o nó do Day Care,
+    // com motivo, a senha da própria pessoa e o desfecho de antes guardado na trilha.
+    if((r.estadiaId||'').indexOf('dc:')===0) return ocorrDcReabrirAbrir(r.estadiaId.slice(3), r.ocId);
     if(!await zPergunta('Reabrir esta ocorrência?',
       ['Ela volta a aparecer como "falta avisar".'],
       {sim:'Reabrir', nao:'Deixar como está', cor:'#234D67'})) return;
     DB.ref('auaulandia/estadias/'+r.estadiaId+'/ocorrencias/'+r.ocId+'/avisadoTutor').set(null).catch(function(e){ _logFalhaGrav('auaulandia/estadias/ (ocorrReabrir)', e); });
+  }
+
+  // =====================================================================================
+  // ===== 6.56 — O LANÇADO POR ENGANO NO DAY CARE, FORA DA ÁREA PROTEGIDA (09/out/2026) ==
+  // Caso Tonico: a ocorrência do check-in do corpo foi lançada no FILHOt errado. Ela já tinha
+  // ido para a fila da Recepção, para a Mesa e para os grupos de Urgências e da Veterinária,
+  // e o «Reabrir» não fazia nada. A auditoria de 09/out (S1, B04, B06 e A05) pediu três
+  // saídas, no padrão único de corrigir e anular (seção 4):
+  //   1. OCORRÊNCIA — «Lançada por engano» (motivo + senha da Gestão): sai da fila, das
+  //      contagens, da Mesa e dos painéis; fica riscada, com quem, quando e o motivo; o mesmo
+  //      grupo do Telegram recebe uma linha de correção (o tutor, nada). A Gestão desfaz. O
+  //      «Reabrir» reabre de verdade. A repetida (check-in salvo de novo) diz "já existe".
+  //   2. CHAMADO DE COMIDA — quem respondeu corrige no mesmo dia (ou a Gestão, sempre), com o
+  //      antes e o depois; o chamado aberto por engano é cancelado com motivo. A exceção do
+  //      almoço acompanha.
+  //   3. DIÁRIA AVULSA — «Tirar a diária avulsa» (motivo + senha da Gestão, é dinheiro): o
+  //      registro sai do nó vivo e fica INTEIRO em daycare/avulsos-anulados (o molde do
+  //      excluirCadastroPel); a célula que o app escreveu sai da planilha (regra da 6.49).
+  // Área protegida intocada: nada aqui muda ck*, ckt*, pt*, pendAvisarChegada nem #v-daycare.
+  // O "avisa antes de gravar" da ocorrência repetida, o cancelar do lado do Day Care e anular
+  // exame e pertences dependem da autorização da Adriana (decisão 2 da auditoria).
+  // Nada se apaga: anular é marcar, riscar e tirar das contagens. A senha é conferida e
+  // esquecida — o app grava o NOME de quem assinou, nunca a senha.
+  // =====================================================================================
+  var ENGANO_BTN_ESTILO='background:#FFFFFF;color:var(--crm-critico,#B3261E);border:1.5px solid var(--crm-critico,#B3261E)';
+  var ENGANO_SO_RECEPCAO='Esta correção é da Recepção (Consultora de Bem-Estar, Supervisão ou Gestão): este aparelho entrou com outro papel. Nada foi gravado.';
+  var ENGANO_SEM_BANCO='Sem conexão com o banco agora: nada foi gravado. Tente de novo em instantes.';
+  // O cartão de ATENÇÃO (QA da 6.56, REQ-003): o que pede conferência ou decisão da Gestão não
+  // sai no cartão verde de «pronto», com o sinal de feito — sai num cartão próprio, na cor de
+  // atenção da casa (--crm-atencao-text), para não passar batido.
+  var ENGANO_COR_ATENCAO='var(--crm-atencao-text,#8A6D00)';
+  function enganoAtencao(titulo, linhas){
+    zEscolha(titulo, linhas, [{t:'Entendi', cor:ENGANO_COR_ATENCAO}], {corTitulo:ENGANO_COR_ATENCAO});
+  }
+  // A escolha da Gestão num cartão da própria página: devolve o `v` do botão tocado.
+  function enganoEscolher(titulo, linhas, botoes, op){
+    return new Promise(function(res){
+      zEscolha(titulo, linhas, (botoes||[]).map(function(b){ return {t:b.t, cor:b.cor, fn:function(){ res(b.v); }}; }), op||{});
+    });
+  }
+  // O MOTIVO (4 palavras, 3 diferentes) é o motivoQuatroPalavras da 6.53, num lugar só (perto
+  // de hospAgora): a mesma régua da correção da hospedagem.
+  // ===== A ASSINATURA: A SENHA DE UMA PESSOA =============================================
+  // Mesmo jeito do Cancelar reserva (orcQuemPelaSenha): a senha é conferida e esquecida.
+  // Senha de posto (Recepção, Monitor 3, Plantonista) não assina: o posto não responde por
+  // nada. nivel 'gestao' → só a Gestão (e a Diretoria); nivel 'recepcao' → quem trabalha na
+  // Recepção ('corrigir-engano-dc').
+  function enganoAssinar(senha, nivel){
+    var falha=function(erro){ return {ok:false, nome:'', papel:'', erro:erro}; };
+    var s=String(senha==null?'':senha).trim();
+    if(!s) return falha('Digite a senha: é ela que assina. Nada foi gravado.');
+    var q=null; try{ q=(typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null; }catch(e){ q=null; } /* sem a lista de senhas, ninguém assina */
+    if(!q||!q.nome) return falha('Essa senha não é de ninguém cadastrado. Nada foi gravado.');
+    var posto=false; try{ posto=LOGIN_GENERICO.test(String(q.nome).trim()); }catch(e){ posto=false; } /* sem a régua do posto, vale a do papel logo abaixo */
+    if(posto) return falha('Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.');
+    var gestao=(nivel==='gestao');
+    if(!podePapel(gestao?'gestao-role':'corrigir-engano-dc', String(q.role||''))) return falha(gestao
+      ? ('Essa senha é de '+q.nome+', que não pode assinar isto: precisa da senha da Gestão. Nada foi gravado.')
+      : ('Essa senha é de '+q.nome+', que não pode assinar a correção da Recepção. Nada foi gravado.'));
+    return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
+  }
+  // Uma chave nova por registro de rastro (trilha, correções): nada é sobrescrito.
+  function enganoChave(ts){ return 't'+(ts||Date.now())+Math.random().toString(36).slice(2,6); }
+  // Pede o motivo na caixa da casa e confere as 4 palavras ANTES de seguir: se faltar, pergunta
+  // de novo, já com o que foi escrito e com o que falta. null = a pessoa desistiu.
+  async function enganoPedirMotivo(titulo, linhas, op){
+    op=op||{};
+    var valor='', erro='';
+    for(var i=0;i<8;i++){
+      var v=await zTexto(titulo, (linhas||[]).concat(erro?[erro]:[]), {rotulo:op.rotulo||'Motivo (pelo menos 4 palavras)',
+        dica:op.dica||'', valor:valor, botao:op.botao||'Continuar', botaoNao:'Cancelar — não mexer em nada', cor:'#234D67'});
+      if(v==null) return null;
+      var m=motivoQuatroPalavras(v);
+      if(m.ok) return String(v).trim();
+      valor=String(v); erro=m.erro;
+    }
+    return null;
+  }
+  function enganoPedirSenha(titulo, linhas, rotulo){
+    return Promise.resolve(zTexto(titulo, linhas||[], {rotulo:rotulo||'Sua senha', tipo:'password',
+      botao:'Confirmar', botaoNao:'Cancelar — não mexer em nada', cor:'#234D67'}))
+      .then(function(v){ return (v==null)?null:String(v).trim(); });
+  }
+  function enganoLer(caminho){
+    return DB.ref(caminho).once('value').then(function(s){ return (s&&s.val)?s.val():null; });
+  }
+
+  // ===================================================================== 1. A OCORRÊNCIA
+  function ocorrDcNo(dia, ocId){ return 'daycare/ocorrencias/'+dia+'/'+ocId; }
+  function ocorrDcGuardarNaMemoria(dia, ocId, v){
+    try{ if(!DC_OCORR[dia]) DC_OCORR[dia]={}; if(v) DC_OCORR[dia][ocId]=v; }catch(e){} /* silencioso de propósito: a memória se acerta na próxima leitura */
+    try{ renderOcorrenciasRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // A mesma ocorrência registrada de novo no mesmo dia (o check-in salvo duas vezes): mesmo
+  // FILHOt, mesmo texto. A primeira é a original; as outras dizem "já existe".
+  function ocorrDcAssinatura(it){ return String((it&&it.dcDia)||'')+'|'+jsNorm(String((it&&(it.refKey||it.pet))||''))+'|'+jsNorm(String((it&&it.texto)||'')); }
+  function ocorrDcHoraDe(it){
+    var h=String((it&&it.hora)||'').trim(); if(/^\d{1,2}:\d{2}$/.test(h)) return h;
+    if(!(it&&it.ts)) return '';
+    var d=new Date(it.ts), p=function(x){ return String(x).padStart(2,'0'); };
+    return p(d.getHours())+':'+p(d.getMinutes());
+  }
+  function ocorrDcMarcarRepetidas(lista){
+    var primeiro={};
+    (lista||[]).slice().sort(function(a,b){ return (a.ts||0)-(b.ts||0); }).forEach(function(it){
+      var s=ocorrDcAssinatura(it);
+      if(!primeiro[s]){ primeiro[s]=it; return; }
+      it.repetidaDe={id:primeiro[s].ocId, hora:ocorrDcHoraDe(primeiro[s])};
+    });
+    return lista||[];
+  }
+  // Já existe, neste dia, uma ocorrência válida deste FILHOt com este texto? Devolve o id da
+  // primeira (ou ''). É a pergunta que o check-in fará antes de gravar, quando a Adriana
+  // autorizar mexer na área protegida; hoje ela marca a repetida na Recepção.
+  function ocorrDcJaExiste(doDia, refKey, texto, exceto){
+    var alvo=jsNorm(String(refKey||''))+'|'+jsNorm(String(texto||'')), achou='', menor=Infinity;
+    Object.keys(doDia||{}).forEach(function(id){
+      if(id===exceto) return;
+      var o=(doDia||{})[id]||{}; if(!o.pet||o.anulada) return;
+      var it=ocorrDayCareItem('', id, o);
+      if(jsNorm(String(o.refKey||o.pet||''))+'|'+jsNorm(it.texto)!==alvo) return;
+      if((o.ts||0)<menor){ menor=o.ts||0; achou=id; }
+    });
+    return achou;
+  }
+  function ocorrenciasDayCareAnuladas(){
+    var out=[];
+    Object.keys(DC_OCORR||{}).forEach(function(dia){
+      var doDia=DC_OCORR[dia]||{};
+      Object.keys(doDia).forEach(function(id){ var o=doDia[id]||{}; if(o.pet && o.anulada) out.push(ocorrDayCareItem(dia, id, o)); });
+    });
+    return out.sort(function(a,b){ return ((b.anulada||{}).ts||0)-((a.anulada||{}).ts||0); });
+  }
+  var OCORR_DC_TRILHA_ROT={'reaberta':'Reaberta', 'lancada-por-engano':'Lançada por engano', 'engano-desfeito':'«Lançada por engano» desfeita'};
+  function ocorrDcTrilhaHTML(trilha){
+    var L=Object.keys(trilha||{}).map(function(k){ return (trilha||{})[k]||{}; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    if(!L.length) return '';
+    return '<div class="avr-trilha">'+L.map(function(t){
+      var antes=(t.acao==='reaberta' && t.antes && t.antes.acao)?(' Desfecho de antes: "'+escAttr(t.antes.acao)+'"'+(t.antes.assinatura?(' — '+escAttr(t.antes.assinatura)):'')+'.'):'';
+      return '<div class="avr-tl"><div class="avr-tl-meta">'+escAttr(t.quando||'')+'</div>'
+        +'<div class="avr-tl-acao">'+escAttr(OCORR_DC_TRILHA_ROT[t.acao]||t.acao||'')+' por '+escAttr(t.por||'-')+': "'+escAttr(t.motivo||'')+'".'+antes+'</div></div>';
+    }).join('')+'</div>';
+  }
+  function ocorrDcGruposNomes(g){ return (g||[]).map(function(x){ return (x==='vet')?'grupo da Veterinária':'grupo de Urgências'; }); }
+  // "ao grupo de Urgências e ao grupo da Veterinária" / "o grupo de Urgências e o grupo da Veterinária"
+  function ocorrDcNomesGrupos(g){ var n=ocorrDcGruposNomes(g); return n.length?('ao '+n.join(' e ao ')):''; }
+  function ocorrDcGruposSujeito(g){ var n=ocorrDcGruposNomes(g); return n.length?('o '+n.join(' e o ')):''; }
+  // semAtencao: sem o que pede conferência (o cartão riscado mostra isso à parte, na cor de atenção).
+  function ocorrDcLinhaCorrecao(c, semAtencao){
+    if(!c) return '';
+    var nf=(c.nao_foram||[]).map(function(x){ return ' '+ocorrDcLinhaNaoFoi(x); }).join('');
+    if(semAtencao){ nf=''; if(c.conferir) return ''; }
+    if(c.motivo && !(c.grupos||[]).length) return 'Telegram: '+c.motivo+'.'+nf;
+    if(!(c.grupos||[]).length) return 'Ela não tinha ido a nenhum grupo do Telegram: nenhuma correção foi mandada.'+nf;
+    var fila=Object.keys(c.enviados||{}).filter(function(g){ return !c.enviados[g]; });
+    return 'Correção mandada '+ocorrDcNomesGrupos(c.grupos)+(fila.length?(' (para '+ocorrDcGruposSujeito(fila)+', ficou na fila e sai sozinha)'):'')+'. O tutor não recebe nada.'+nf;
+  }
+  // O que pede conferência ou decisão da Gestão, linha por linha.
+  function ocorrDcAtencaoLinhas(c){
+    if(!c) return [];
+    return ((c.conferir && c.motivo)?['Telegram: '+c.motivo+'.']:[]).concat((c.nao_foram||[]).map(ocorrDcLinhaNaoFoi));
+  }
+  // A irmã válida que a trava do dia barrou: a Gestão decide se manda à mão.
+  function ocorrDcLinhaNaoFoi(x){
+    return 'A ocorrência "'+String((x&&x.texto)||'')+'"'+((x&&x.hora)?(' ('+x.hora+')'):'')+' não foi ao grupo: o grupo recebe uma mensagem por FILHOt, por dia e por origem. A Gestão decide se manda à mão.';
+  }
+  function ocorrDcAnuladaCardHTML(o){
+    var id=o.estadiaId+'__'+o.ocId, a=o.anulada||{};
+    var quando=o.ts?new Date(o.ts).toLocaleString('pt-BR'):'';
+    var corr=ocorrDcLinhaCorrecao(a.correcao, true), aten=ocorrDcAtencaoLinhas(a.correcao);
+    return '<div class="avr-card resolvido"><div class="avr-head"><div class="avr-info">'
+      +'<div class="avr-nome"><s>'+escAttr(o.pet||'FILHOt')+'</s></div>'
+      +'<div class="avr-sub" style="text-decoration:line-through">'+(o.tutor?('Tutor: '+escAttr(o.tutor)+' — '):'')+escAttr(o.texto)+'</div>'
+      +'<div class="avr-sub">Registrado por '+escAttr(o.quem)+(quando?(' · '+escAttr(quando)):'')+'</div>'
+      +'</div><span class="avr-chip resolvido">LANÇADA POR ENGANO</span></div><div class="avr-body">'
+      +ocorrDcTrilhaHTML(o.trilha)
+      +'<div class="avr-resolvido-banner" style="text-align:left">Lançada por engano por '+escAttr(a.por||'-')+(a.quando?(' em '+escAttr(a.quando)):'')
+      +' — "'+escAttr(a.motivo||'')+'"'+(corr?('<div style="font-weight:600;font-size:12.5px;margin-top:4px">'+escAttr(corr)+'</div>'):'')+'</div>'
+      +(aten.length?('<div class="dc-pend-note" data-atencao="telegram" style="margin:8px 0 0;text-align:left">'+aten.map(function(t){ return escAttr(t); }).join('<br>')+'</div>'):'')
+      +'<div style="text-align:right;margin-top:8px"><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="ocorrDcDesfazerAbrir(\''+jsAspas(id)+'\')">Desfazer (senha da Gestão)</button></div>'
+      +'</div></div>';
+  }
+  function ocorrDcAnuladasHTML(lista){
+    if(!(lista||[]).length) return '';
+    return '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:9px 0">'
+      +'Lançadas por engano ('+lista.length+') — riscadas, com quem, quando e o motivo</summary>'
+      +lista.map(ocorrDcAnuladaCardHTML).join('')+'</details>';
+  }
+  // A ocorrência foi a algum grupo do Telegram? A porta é a mesma do check-in (urgAvisar): a
+  // trava do dia em daycare/urgencias-enviadas/{dia}/corpo-{ficha}-{ent|sai} (Urgências) e
+  // vet--corpo-... (Veterinária). Trava presente = a mensagem saiu ou está na fila de reenvio.
+  // O grupo recebe UMA mensagem por FILHOt, por dia e por origem, mesmo que o check-in seja
+  // salvo de novo (a trava do dia): a da irmã mais ANTIGA (as "irmãs" são as ocorrências do
+  // mesmo FILHOt, do mesmo dia e da mesma origem). Por isso a decisão compara TEXTOS com o
+  // dessa mensagem (QA da 6.56, REQ-001) e decide pelo ESTADO dela (QA da 6.56, REQ-004):
+  //   - a mensagem que o grupo viu (a irmã mais antiga) ainda vale: nada sai — a anulada é a
+  //     repetida («o mesmo texto») ou nunca foi ao grupo («não foi ao grupo»);
+  //   - ela já está anulada: conta o que o grupo ainda ACREDITA (tudo dela; nada, se a correção
+  //     já saiu; ou o «continua valendo» da correção parcial) e refaz a cobertura sem a de agora;
+  //   - a anulada tem outro texto e não sustenta nada do que o grupo acredita: nada sai;
+  //   - OUTRA irmã válida com o MESMO texto: a mensagem continua verdadeira — nada sai (a
+  //     repetida anulada não pode desmentir a original). Irmã válida de texto diferente NÃO
+  //     cala a correção: ela nunca foi ao grupo (a trava barrou), e a tela da Gestão diz isso
+  //     («A ocorrência "…" não foi ao grupo»), sem mandar nada sozinha;
+  //   - ponto e alerta (QA da 6.56, REQ-002 e REQ-005): as unidades do que o grupo acredita
+  //     (cada «Ponto: alerta» do check-in) que continuam numa irmã válida continuam verdadeiras.
+  //     TODOS continuam → nada sai, e a tela diz onde continuam. SÓ PARTE → nada sai sozinho: a
+  //     tela mostra à Gestão o que o grupo viu e o que continua valendo, e a Gestão escolhe
+  //     «Mandar a correção» (a linha diz o que continua valendo) ou «Não mandar». NENHUM → sai;
+  //   - a tela pergunta sobre uma PRÉVIA; se a gravação decidir diferente (outro aparelho mexeu
+  //     nas irmãs nesses segundos), nada sai sozinho: «confira à mão» (QA da 6.56, REL-003);
+  //   - sem conseguir ler a trava ou as irmãs, nada sai sozinho: a tela diz «não consegui
+  //     conferir os grupos: confira à mão» (nunca «não tinha ido a grupo nenhum»);
+  //   - o que o grupo acredita agora é a última linha de correção mandada a ele (ocorrDcCrenca):
+  //     já disse "foi engano" → anular de novo não repete; disse "foi engano" e a ocorrência
+  //     do mesmo texto volta a valer → sai "vale de novo".
+  // O texto da correção fala da irmã mais antiga: é a mensagem que o grupo viu.
+  function ocorrDcChaveTelegram(o){
+    var k=String((o&&o.refKey)||'').trim(); if(!k) return '';
+    var tipo=/check-out/i.test(String((o&&o.origem)||''))?'sai':'ent';
+    return ('corpo-'+k+'-'+tipo).replace(/[.#$\[\]\/]/g,'-');
+  }
+  // O que o grupo acredita agora sobre as irmãs: a última correção mandada ('engano' ou 'vale'),
+  // com o registro dela (`corr`): a correção parcial diz o que continuou valendo.
+  function ocorrDcCrenca(doDia, ch){
+    var ult={estado:'vale', grupos:[], ts:0, corr:null};
+    var ve=function(estado, c){ if(c && (c.grupos||[]).length && Number(c.ts||0)>=ult.ts) ult={estado:estado, grupos:c.grupos.slice(), ts:Number(c.ts||0), corr:c}; };
+    Object.keys(doDia||{}).forEach(function(id){
+      var x=(doDia||{})[id]||{}; if(ocorrDcChaveTelegram(x)!==ch) return;
+      if(x.anulada) ve('engano', x.anulada.correcao);
+      Object.keys(x.trilha||{}).forEach(function(t){ var e=(x.trilha||{})[t]||{};
+        if(e.acao==='engano-desfeito'){ ve('engano', (e.antes||{}).correcao); ve('vale', e.correcao); } });
+    });
+    return ult;
+  }
+  // As UNIDADES de uma ocorrência (QA da 6.56, REQ-005): cada ponto com cada alerta. O check-in
+  // grava a linha como «Ponto: alerta1, alerta2» (ckSalvar), com pontos e alertas de listas fixas
+  // (CK_PONTOS: nenhum rótulo tem «:» nem «,»): «Pele: vermelhidão, coceira» são duas unidades,
+  // Pele/vermelhidão e Pele/coceira. A linha sem alerta («Pele») é o ponto inteiro. O cocô é uma
+  // unidade. A ocorrência sem nada vira uma unidade só, o texto inteiro.
+  // { k: chave normalizada, t: como se escreve, p: o ponto, soPonto }
+  function ocorrDcUnidade(p, a){
+    var pp=String(p==null?'':p).trim(), aa=String(a==null?'':a).trim();
+    return {k:jsNorm(pp)+'|'+jsNorm(aa), t:aa?(pp+': '+aa):pp, p:jsNorm(pp), soPonto:!aa};
+  }
+  function ocorrDcUnidadesDe(x){
+    x=x||{}; var out=[], visto={};
+    var poe=function(u){ if(u && u.p && !visto[u.k]){ visto[u.k]=true; out.push(u); } };
+    (Array.isArray(x.itens)?x.itens:[]).forEach(function(linha){
+      var s=String(linha==null?'':linha).trim(); if(!s) return;
+      var m=s.match(/^([^:]+):\s*(.+)$/);
+      if(!m){ poe(ocorrDcUnidade(s, '')); return; }
+      m[2].split(/\s*,\s*/).forEach(function(a){ if(String(a).trim()) poe(ocorrDcUnidade(m[1], a)); });
+    });
+    if(x.coco) poe(ocorrDcUnidade('Cocô', x.coco));
+    if(!out.length){ var t=ocorrDayCareItem('', '', x).texto; poe({k:'texto|'+jsNorm(t), t:t, p:'texto|'+jsNorm(t), soPonto:false}); }
+    return out;
+  }
+  // Um conjunto de unidades: a unidade está nele? (o ponto sem alerta vale por qualquer alerta do ponto)
+  function ocorrDcConjunto(us){
+    var c={k:{}, p:{}}; (us||[]).forEach(function(u){ c.k[u.k]=true; c.p[u.p]=true; }); return c;
+  }
+  function ocorrDcCobre(c, u){ return !!(c.k[u.k] || (u.soPonto && c.p[u.p])); }
+  // O que o grupo ACREDITA que vale, da mensagem que ele viu (`rep`): tudo dela, se nenhuma
+  // correção «foi engano» saiu; nada, se saiu; ou o que a correção parcial disse que continuava.
+  function ocorrDcOQueOGrupoCre(rep, crenca){
+    var us=ocorrDcUnidadesDe(rep);
+    if(!crenca || crenca.estado!=='engano') return us;
+    var p=(crenca.corr&&crenca.corr.parcial)||null;
+    if(!p || p.escolha!=='mandar') return [];
+    var ks={}; (p.chaves||[]).forEach(function(k){ ks[k]=true; });
+    return us.filter(function(u){ return ks[u.k]; });
+  }
+  // O que o grupo acredita (`cre`) continua valendo nas irmãs válidas? Unidade por unidade.
+  function ocorrDcCobertura(dia, cre, validas){
+    var vivo=ocorrDcConjunto([].concat.apply([], (validas||[]).map(ocorrDcUnidadesDe)));
+    var cont=(cre||[]).filter(function(u){ return ocorrDcCobre(vivo, u); }), deix=(cre||[]).filter(function(u){ return !ocorrDcCobre(vivo, u); });
+    var cc=ocorrDcConjunto(cont);
+    var onde=(validas||[]).filter(function(x){ return ocorrDcUnidadesDe(x).some(function(u){ return cc.k[u.k] || cc.p[u.p] && cont.some(function(c){ return c.soPonto && c.p===u.p; }); }); })
+      .sort(function(a,b){ return Number((a||{}).ts||0)-Number((b||{}).ts||0); })
+      .map(function(x){ return {hora:ocorrDcHoraDe(x), texto:ocorrDayCareItem(dia, '', x).texto}; });
+    return {todos:(cre||[]).length>0 && !deix.length, continuam:cont.map(function(u){ return u.t; }), deixam:deix.map(function(u){ return u.t; }),
+      chaves:cont.map(function(u){ return u.k; }), onde:onde};
+  }
+  // A irmã traz algo que o grupo não viu? (uma unidade fora da mensagem que foi ao grupo)
+  function ocorrDcTrazNovo(x, rep){
+    var viu=ocorrDcConjunto(ocorrDcUnidadesDe(rep));
+    return ocorrDcUnidadesDe(x).some(function(u){ return !ocorrDcCobre(viu, u); });
+  }
+  // "na de 09:00" / "nas de 09:00 e 09:30"
+  function ocorrDcOndeTxt(onde){
+    var h=(onde||[]).map(function(x){ return x.hora||'-'; });
+    if(!h.length) return '';
+    return (h.length>1?'nas de ':'na de ')+(h.length>1?(h.slice(0,-1).join(', ')+' e '+h[h.length-1]):h[0]);
+  }
+  // A decisão em poucas letras, para comparar a prévia (a tela que perguntou) com a gravação.
+  function ocorrDcDecisaoChave(g){
+    if(!g) return '';
+    var t=g.falhou?'falhou':g.naoFoi?'naoFoi':g.outraValida?'outra':g.continuaValendo?'tudo':g.jaCorrigida?'ja':g.parcial?'parte':(g.grupos||[]).length?'manda':'nada';
+    return [t, (g.continuam||[]).join('·'), (g.deixam||[]).join('·'), (g.parcial?(g.gruposParcial||[]):(g.grupos||[])).join(','), g.residual?'r':''].join('|');
+  }
+  // acao 'anular' (antes de dizer "foi engano") ou 'desfazer' (antes de dizer "vale de novo").
+  function ocorrDcGruposAvisados(dia, ocId, o, acao){
+    var ch=ocorrDcChaveTelegram(o);
+    var vazio={grupos:[], outraValida:false, continuaValendo:false, parcial:false, jaCorrigida:false, naoFoi:false, falhou:false, rep:o, naoForam:[],
+      continuam:[], deixam:[], chaves:[], onde:[], gruposParcial:[], residual:false, voltaValer:[]};
+    if(!DB||!ch) return Promise.resolve(vazio);
+    var falhou=false, falhouIrmas=false;
+    var pega=function(p, irmasDoDia){ return enganoLer(p).catch(function(e){ falhou=true; if(irmasDoDia) falhouIrmas=true; _logLeituraFalhou(p+' (6.56, a correção do Telegram)', e); return null; }); };
+    return Promise.all([pega('daycare/urgencias-enviadas/'+dia+'/'+ch), pega('daycare/urgencias-enviadas/'+dia+'/vet--'+ch), pega('daycare/ocorrencias/'+dia, true)])
+      .then(function(r){
+        var doDia=Object.assign({}, r[2]||{}); doDia[ocId]=o;          // a de agora, como ficou gravada
+        var txt=function(x){ return jsNorm(ocorrDayCareItem(dia, '', x||{}).texto); };
+        var irmas=Object.keys(doDia).filter(function(id){ var x=doDia[id]||{}; return x.pet && ocorrDcChaveTelegram(x)===ch; });
+        var repId=irmas.slice().sort(function(a,b){ return Number((doDia[a]||{}).ts||0)-Number((doDia[b]||{}).ts||0); })[0];
+        var rep=doDia[repId]||o, tRep=txt(rep), foi=!!(r[0]||r[1]);
+        // as irmãs válidas que o grupo NUNCA viu (outro texto, barradas pela trava do dia)
+        var naoForam=foi?irmas.filter(function(id){ var x=doDia[id]||{}; return id!==ocId && !x.anulada && txt(x)!==tRep; })
+          .filter(function(id){ return ocorrDcTrazNovo(doDia[id], rep); })   // REQ-002: a que só repete o que o grupo viu, ele já viu
+          .map(function(id){ var x=doDia[id]||{}; return {id:id, texto:ocorrDayCareItem(dia, id, x).texto, hora:ocorrDcHoraDe(x)}; }):[];
+        var base=Object.assign({}, vazio, {rep:rep, naoForam:naoForam});
+        var mesmoTexto=(txt(o)===tRep);
+        var crenca=ocorrDcCrenca(doDia, ch);
+        var cre=ocorrDcOQueOGrupoCre(rep, crenca);          // o que o grupo acredita que vale, da mensagem que viu
+        if(acao==='desfazer'){
+          // desfazer decide pelo que foi mandado (a crença), lido nas irmãs: sem lê-las, nada sai sozinho
+          if(falhouIrmas) return Object.assign(base, {falhou:true});
+          if(crenca.estado==='engano' && mesmoTexto) return Object.assign(base, {grupos:crenca.grupos});
+          // outra irmã volta a valer com o que o grupo leu como «foi engano»: nada sai sozinho, a Gestão confere
+          var creC=ocorrDcConjunto(cre), viuC=ocorrDcConjunto(ocorrDcUnidadesDe(rep));
+          var volta=(crenca.estado==='engano')?ocorrDcUnidadesDe(o).filter(function(u){ return ocorrDcCobre(viuC, u) && !ocorrDcCobre(creC, u); }).map(function(u){ return u.t; }):[];
+          return Object.assign(base, {voltaValer:volta});
+        }
+        if(!foi) return Object.assign(base, {falhou:falhou});
+        if(falhou) return Object.assign(base, {falhou:true});        // leu parte (uma trava, sem as irmãs): na dúvida, nada sai sozinho
+        // REQ-004: decide pelo estado da MENSAGEM que o grupo viu (a irmã mais antiga), não pelo
+        // texto da que está sendo anulada.
+        var vale=function(id){ return id!==ocId && !(doDia[id]||{}).anulada; };
+        // 1) a mensagem que o grupo viu ainda vale: nada sai (esta é repetida ou nunca foi ao grupo)
+        if(vale(repId)) return Object.assign(base, mesmoTexto?{outraValida:true}:{naoFoi:true});
+        // 2) esta nunca foi ao grupo e não sustenta nada do que o grupo acredita: nada muda para ele
+        var creC2=ocorrDcConjunto(cre);
+        if(repId!==ocId && !mesmoTexto && !ocorrDcUnidadesDe(o).some(function(u){ return ocorrDcCobre(creC2, u) || cre.some(function(c){ return ocorrDcCobre(ocorrDcConjunto([u]), c); }); }))
+          return Object.assign(base, {naoFoi:true});
+        // 3) o grupo já recebeu «foi engano» de tudo: nada se repete
+        if(!cre.length) return Object.assign(base, {jaCorrigida:true});
+        var residual=(crenca.estado==='engano');             // a correção parcial já saiu: o grupo acredita só no resto
+        var outra=irmas.some(function(id){ var x=doDia[id]||{}; return id!==ocId && !x.anulada && txt(x)===tRep; });
+        if(outra) return Object.assign(base, {outraValida:true});
+        // 4) refaz a cobertura do que o grupo acredita, sem a de agora: tudo → nada; parte → a Gestão escolhe; nada → sai
+        var cob=ocorrDcCobertura(dia, cre, irmas.filter(vale).map(function(id){ return doDia[id]; }));
+        var itensCob={continuam:cob.continuam, deixam:cob.deixam, chaves:cob.chaves, onde:cob.onde, residual:residual};
+        if(cob.todos) return Object.assign(base, itensCob, {continuaValendo:true});
+        var g=[]; if(r[0]) g.push('urgencia'); if(r[1]) g.push('vet');
+        if(cob.continuam.length) return Object.assign(base, itensCob, {parcial:true, gruposParcial:g});   // grupos vazio: a Gestão escolhe
+        return Object.assign(base, itensCob, {grupos:g});
+      });
+  }
+  function ocorrDcQuando(o, dia){
+    var d=String(dia||'').split('-'), dm=(d.length===3)?(d[2]+'/'+d[1]):'', h=ocorrDcHoraDe(o);
+    return dm+(h?(', '+h):'');
+  }
+  // A linha de correção, em texto (sem HTML): "Correção: a ocorrência de Tonico de 09/10,
+  // 08:15, foi lançada por engano — Gestora". Só ao grupo interno; nunca ao tutor.
+  function ocorrDcTextoCorrecao(o, dia, quem, desfeita){
+    return 'Correção: a ocorrência de '+String((o&&o.pet)||'FILHOt')+' de '+ocorrDcQuando(o, dia)+', '
+      +(desfeita?'vale de novo: não foi lançada por engano':'foi lançada por engano')+' — '+String(quem||'-');
+  }
+  // Com parte do que o grupo viu ainda valendo e a escolha «Mandar a correção», a linha diz o
+  // que continua valendo: "… foi lançada por engano — Gestora. Continua valendo: Pele: vermelhidão".
+  // Se a correção parcial já tinha saído (o grupo acredita só no resto), a nova diz o que
+  // também deixou de valer: "… — Gestora. Também não vale mais: Pele: vermelhidão".
+  function ocorrDcContinuaValendo(g, desfeita){
+    if(desfeita || !g) return '';
+    var manda=(g.parcial && g.escolha==='mandar') || (!g.parcial && (g.grupos||[]).length>0), s='';
+    if(manda && g.residual && (g.deixam||[]).length) s+='. Também não vale mais: '+g.deixam.join(' · ');
+    if(g.parcial && g.escolha==='mandar' && (g.continuam||[]).length) s+='. Continua valendo: '+g.continuam.join(' · ');
+    return s;
+  }
+  // Manda a correção aos grupos e grava o que aconteceu em `caminho`. Devolve o registro.
+  // `soSeAnulada` (ts): grava em anulada/correcao só se a anulação ainda for a mesma — se a
+  // Gestão desfizer no meio do envio, o registro não ressuscita um `anulada` pela metade.
+  function ocorrDcCorrigirNoTelegram(o, dia, g, quem, desfeita, chave, caminho, soSeAnulada){
+    var grupos=((g&&g.grupos)||[]).slice();
+    var reg={grupos:grupos, ts:Date.now()};
+    if(g && (g.naoForam||[]).length) reg.nao_foram=g.naoForam.map(function(x){ return {texto:x.texto, hora:x.hora}; });
+    if(g&&g.mudou){
+      reg.motivo='a situação mudou entre a pergunta e a gravação (outra ocorrência dele foi mexida em outro aparelho): nada saiu; confira à mão no grupo e, se precisar, mande a correção';
+      reg.conferir=true; reg.previa_mudou=true;
+    }
+    else if(g&&g.naoFoi) reg.motivo='esta ocorrência não foi ao grupo: o grupo só recebeu a de '+ocorrDcHoraDe(g.rep)+' ("'+ocorrDayCareItem('', '', g.rep||{}).texto+'"); nenhuma correção sai';
+    else if(g&&g.outraValida) reg.motivo='outra ocorrência igual dele (o mesmo texto), do mesmo dia, continua valendo; o grupo não recebe correção';
+    else if(g&&g.continuaValendo) reg.motivo='o que o grupo viu às '+ocorrDcHoraDe(g.rep)+' ('+(g.continuam||[]).join(' · ')+') continua valendo '+ocorrDcOndeTxt(g.onde)+'; o grupo não recebe correção';
+    else if(g&&g.jaCorrigida) reg.motivo='o grupo já recebeu a correção desta ocorrência (de outra igual do mesmo dia); nada se repete';
+    else if(g&&g.parcial){
+      reg.parcial={viu:ocorrDayCareItem('', '', g.rep||{}).texto, hora:ocorrDcHoraDe(g.rep), continuam:(g.continuam||[]).slice(), deixam:(g.deixam||[]).slice(),
+        chaves:(g.chaves||[]).slice(), residual:!!g.residual,
+        onde:(g.onde||[]).map(function(x){ return {hora:x.hora, texto:x.texto}; }), escolha:g.escolha||''};
+      var pv='parte do que o grupo viu às '+ocorrDcHoraDe(g.rep)+' continua valendo '+ocorrDcOndeTxt(g.onde)+' ('+(g.continuam||[]).join(' · ')+')';
+      if(g.escolha==='nao-mandar') reg.motivo=pv+'; a Gestão escolheu não mandar a correção';
+      else if(g.escolha!=='mandar'){ reg.motivo=pv+': nada saiu sozinho; a Gestão decide se manda a correção à mão'; reg.conferir=true; }
+    }
+    else if(g&&(g.voltaValer||[]).length){
+      reg.motivo='o grupo leu «foi lançada por engano» da de '+ocorrDcHoraDe(g.rep)+'; com esta de volta, volta a valer: '+g.voltaValer.join(' · ')+'. Nada saiu sozinho: confira à mão se o grupo precisa saber';
+      reg.conferir=true;
+    }
+    else if(g&&g.falhou){
+      reg.motivo=desfeita?'não consegui conferir os grupos: confira à mão se o grupo recebeu a correção e, se recebeu, avise que ela vale de novo'
+        :'não consegui conferir os grupos: confira à mão se ela foi ao grupo e, se foi, mande a correção';
+      reg.conferir=true;
+    }
+    var gravar=function(){
+      if(!soSeAnulada) return DB.ref(caminho).set(reg).catch(function(e){ _logFalhaGrav(caminho+' (6.56)', e); }).then(function(){ return reg; });
+      return DB.ref(caminho).transaction(function(a){
+        if(a===null||a===undefined) return null;          // cache frio: o SDK decide com o servidor
+        if(Number(a.ts)!==Number(soSeAnulada)) return a;   // outra anulação (ou desfeita): não mexe
+        var n=Object.assign({}, a); n.correcao=reg; return n;
+      }).catch(function(e){ _logFalhaGrav(caminho+' (6.56)', e); }).then(function(){ return reg; });
+    };
+    if(!grupos.length) return gravar();
+    var texto=medTgEsc(ocorrDcTextoCorrecao((g&&g.rep)||o, dia, quem, desfeita)+ocorrDcContinuaValendo(g, desfeita));
+    reg.enviados={};
+    return Promise.all(grupos.map(function(gr){
+      return Promise.resolve().then(function(){ return urgAvisar(chave, texto, gr); })
+        .then(function(ok){ reg.enviados[gr]=!!ok; }, function(){ reg.enviados[gr]=false; });
+    })).then(gravar);
+  }
+  // ----- «Lançada por engano» (motivo + senha da Gestão) -----
+  // op.parcial: a escolha da Gestão quando só parte do que o grupo viu continua valendo
+  // ('mandar' ou 'nao-mandar'). Sem a escolha, nada sai sozinho. op.previa: a decisão da tela
+  // que perguntou (ocorrDcDecisaoChave); se a gravação decidir outra coisa, nada sai (REL-003).
+  async function ocorrDcAnular(dia, ocId, motivo, senha, op){
+    var falha=function(erro){ return {ok:false, erro:erro, grupos:[], envio:Promise.resolve(null)}; };
+    if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'gestao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var ts=Date.now(), mot=String(motivo).trim(), tk=enganoChave(ts);
+    var reg={motivo:mot, por:ass.nome, papel:ass.papel, login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts};
+    var estado='', res=null;
+    try{
+      res=await DB.ref(ocorrDcNo(dia, ocId)).transaction(function(atual){
+        if(atual===null||atual===undefined){ estado='sumiu'; return null; }   // cache frio: o SDK decide com o servidor
+        if(atual.anulada){ estado='ja'; return atual; }
+        estado='ok';
+        var n=Object.assign({}, atual);
+        n.anulada=Object.assign({status_antes:String(atual.status||(atual.desfecho?'resolvida':'aberta'))}, reg);
+        n.status='anulada';
+        n.trilha=Object.assign({}, atual.trilha||{});
+        n.trilha[tk]=Object.assign({acao:'lancada-por-engano'}, reg);
+        return n;
+      });
+    }catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi gravado.'); }
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(estado==='sumiu'||!v) return falha('Não achei esta ocorrência no banco. Atualize a tela. Nada foi gravado.');
+    if(estado==='ja') return falha('Esta ocorrência já estava marcada como lançada por engano'+((v.anulada&&v.anulada.por)?(', por '+v.anulada.por):'')+'. Nada mudou.');
+    if(estado!=='ok' || !(res&&res.committed)) return falha('O banco não confirmou a gravação. Atualize a tela e confira.');
+    ocorrDcGuardarNaMemoria(dia, ocId, v);
+    if(typeof audit==='function') audit('ocorrencia-engano', 'lançada por engano: a ocorrência de '+(v.pet||'')+' ('+(v.origem||'check-in')+', '+ocorrDcQuando(v, dia)+') — '+mot, {assinou:ass.nome, pet:v.pet||''});
+    var g=await ocorrDcGruposAvisados(dia, ocId, v, 'anular');
+    if(op && typeof op.previa==='string' && ocorrDcDecisaoChave(g)!==op.previa) g=Object.assign({}, g, {grupos:[], mudou:true});
+    else if(g.parcial){
+      var esc=String((op&&op.parcial)||''); g.escolha=(esc==='mandar'||esc==='nao-mandar')?esc:'';
+      if(g.escolha==='mandar') g.grupos=(g.gruposParcial||[]).slice();
+    }
+    var envio=ocorrDcCorrigirNoTelegram(v, dia, g, ass.nome, false, 'engano-'+ocId+'-'+ts, ocorrDcNo(dia, ocId)+'/anulada', ts)
+      .then(function(c){ try{ var m=(DC_OCORR[dia]||{})[ocId]; if(m && m.anulada && Number(m.anulada.ts)===ts) m.anulada.correcao=c; renderOcorrenciasRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return c; });
+    return {ok:true, erro:'', grupos:g.grupos, outraValida:g.outraValida, jaCorrigida:g.jaCorrigida, naoFoi:g.naoFoi, falhou:g.falhou,
+      continuaValendo:!!g.continuaValendo, parcial:!!g.parcial, escolha:g.escolha||'', continuam:g.continuam||[], deixam:g.deixam||[], onde:g.onde||[],
+      residual:!!g.residual, mudou:!!g.mudou,
+      rep:{hora:ocorrDcHoraDe(g.rep), texto:ocorrDayCareItem(dia, '', g.rep||{}).texto}, naoForam:g.naoForam||[], envio:envio};
+  }
+  // ----- desfazer a «Lançada por engano» (só a Gestão) -----
+  async function ocorrDcDesfazerEngano(dia, ocId, motivo, senha){
+    var falha=function(erro){ return {ok:false, erro:erro, grupos:[], envio:Promise.resolve(null)}; };
+    if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'gestao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var ts=Date.now(), mot=String(motivo).trim(), tk=enganoChave(ts), antes=null;
+    var reg={motivo:mot, por:ass.nome, papel:ass.papel, login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts};
+    var estado='', res=null;
+    try{
+      res=await DB.ref(ocorrDcNo(dia, ocId)).transaction(function(atual){
+        if(atual===null||atual===undefined){ estado='sumiu'; return null; }
+        if(!atual.anulada){ estado='nao'; return atual; }
+        estado='ok'; antes=atual.anulada;
+        var n=Object.assign({}, atual);
+        delete n.anulada;
+        n.status=String(antes.status_antes||(atual.desfecho?'resolvida':'aberta'));
+        n.trilha=Object.assign({}, atual.trilha||{});
+        n.trilha[tk]=Object.assign({acao:'engano-desfeito', antes:antes}, reg);
+        return n;
+      });
+    }catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi gravado.'); }
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(estado==='sumiu'||!v) return falha('Não achei esta ocorrência no banco. Atualize a tela. Nada foi gravado.');
+    if(estado==='nao') return falha('Esta ocorrência não está marcada como lançada por engano. Nada mudou.');
+    if(estado!=='ok' || !(res&&res.committed)) return falha('O banco não confirmou a gravação. Atualize a tela e confira.');
+    ocorrDcGuardarNaMemoria(dia, ocId, v);
+    if(typeof audit==='function') audit('ocorrencia-engano-desfeito', 'desfez a «lançada por engano» da ocorrência de '+(v.pet||'')+' — '+mot, {assinou:ass.nome, pet:v.pet||''});
+    // O grupo que recebeu "foi engano" precisa saber que a ocorrência vale de novo.
+    var foi=await ocorrDcGruposAvisados(dia, ocId, v, 'desfazer');
+    var envio=(foi.grupos.length || foi.falhou || (foi.voltaValer||[]).length)
+      ? ocorrDcCorrigirNoTelegram(v, dia, foi, ass.nome, true, 'engano-desfeito-'+ocId+'-'+ts, ocorrDcNo(dia, ocId)+'/trilha/'+tk+'/correcao')
+      : Promise.resolve(null);
+    return {ok:true, erro:'', grupos:foi.grupos, falhou:!!foi.falhou, voltaValer:foi.voltaValer||[], rep:{hora:ocorrDcHoraDe(foi.rep)}, envio:envio};
+  }
+  // ----- «Reabrir» do Day Care (a senha da própria pessoa) -----
+  async function ocorrDcReabrir(dia, ocId, motivo, senha){
+    var falha=function(erro){ return {ok:false, erro:erro}; };
+    if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'recepcao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var ts=Date.now(), mot=String(motivo).trim(), tk=enganoChave(ts);
+    var reg={motivo:mot, por:ass.nome, papel:ass.papel, login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts};
+    var estado='', res=null;
+    try{
+      res=await DB.ref(ocorrDcNo(dia, ocId)).transaction(function(atual){
+        if(atual===null||atual===undefined){ estado='sumiu'; return null; }
+        if(atual.anulada){ estado='anulada'; return atual; }
+        if(!atual.desfecho){ estado='aberta'; return atual; }
+        estado='ok';
+        var n=Object.assign({}, atual), antes=atual.desfecho;
+        delete n.desfecho;
+        n.status='aberta';
+        n.trilha=Object.assign({}, atual.trilha||{});
+        n.trilha[tk]=Object.assign({acao:'reaberta', antes:antes}, reg);
+        return n;
+      });
+    }catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi gravado.'); }
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(estado==='sumiu'||!v) return falha('Não achei esta ocorrência no banco. Atualize a tela. Nada foi gravado.');
+    if(estado==='anulada') return falha('Esta ocorrência está como lançada por engano: quem a devolve é a Gestão, pelo «Desfazer». Nada mudou.');
+    if(estado==='aberta') return falha('Esta ocorrência já está aberta, sem desfecho. Nada mudou.');
+    if(estado!=='ok' || !(res&&res.committed)) return falha('O banco não confirmou a gravação. Atualize a tela e confira.');
+    ocorrDcGuardarNaMemoria(dia, ocId, v);
+    if(typeof audit==='function') audit('ocorrencia-reaberta', 'reabriu a ocorrência de '+(v.pet||'')+' — '+mot, {assinou:ass.nome, pet:v.pet||''});
+    return {ok:true, erro:''};
+  }
+  // ----- o desfecho do Day Care (chamado por ocorrResolver): transação, abortando na anulada -----
+  function ocorrDcDarDesfecho(dia, ocId, reg, tipo, acao, assina){
+    var estado='';
+    return DB.ref(ocorrDcNo(dia, ocId)).transaction(function(atual){
+      if(atual===null||atual===undefined){ estado='sumiu'; return null; }   // cache frio: o SDK decide com o servidor
+      if(atual.anulada){ estado='anulada'; return atual; }
+      estado='ok';
+      return Object.assign({}, atual, {desfecho:reg, status:'resolvida'});
+    }).then(function(res){
+      var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+      if(estado==='anulada'){
+        if(v) ocorrDcGuardarNaMemoria(dia, ocId, v);
+        alert('Esta ocorrência foi marcada como lançada por engano. Atualize a tela: ela está riscada no fim da lista. O desfecho não foi gravado.');
+        return false;
+      }
+      if(estado!=='ok' || !v){ alert('Não achei esta ocorrência no banco. Atualize a tela. O desfecho não foi gravado.'); return false; }
+      ocorrDcGuardarNaMemoria(dia, ocId, v);
+      if(typeof audit==='function') audit('ocorrencia-desfecho', tipo+': '+acao.slice(0,60), {assinou:assina});
+      return true;
+    }).catch(function(e){ alert('Erro ao registrar: '+(e&&e.message||e)); return false; });
+  }
+  // ----- os botões -----
+  function ocorrDcDoId(id){
+    var r=_ocorrSplit(id); if(!r||(r.estadiaId||'').indexOf('dc:')!==0) return null;
+    var dia=r.estadiaId.slice(3), o=((DC_OCORR||{})[dia]||{})[r.ocId]||null;
+    return o?{dia:dia, ocId:r.ocId, o:o, it:ocorrDayCareItem(dia, r.ocId, o)}:null;
+  }
+  async function ocorrDcEnganoAbrir(id){
+    var x=ocorrDcDoId(id);
+    if(!x){ zAlertao('NÃO ACHEI ESTA OCORRÊNCIA', ['Atualize a tela e tente de novo.'], {botao:'Entendi'}); return; }
+    if(!podePapel('corrigir-engano-dc')){ zAlertao('ESTA CORREÇÃO É DA RECEPÇÃO', [ENGANO_SO_RECEPCAO], {botao:'Entendi'}); return; }
+    var pet=x.o.pet||'FILHOt';
+    if(!await zPergunta('Lançada por engano?', [
+        pet+' — '+x.it.texto+' ('+(ocorrDcHoraDe(x.o)||'-')+', registrada por '+(x.o.quem||'-')+').',
+        'Ela sai da fila, das contagens e da Mesa. Nada é apagado: fica riscada, com quem, quando e o motivo.',
+        'Se ela já foi a um grupo do Telegram, o mesmo grupo recebe uma linha de correção. O tutor não recebe nada.',
+        'Pede o motivo e a senha da Gestão.'],
+      {sim:'Continuar', nao:'Deixar como está', cor:'#234D67', corTitulo:'#234D67'})) return;
+    // REQ-002: se só parte do que o grupo viu continua valendo, a Gestão escolhe ANTES de mandar.
+    var prev=null; try{ prev=await ocorrDcGruposAvisados(x.dia, x.ocId, x.o, 'anular'); }catch(e){ prev=null; } /* sem a prévia, a decisão é feita depois de gravar: na dúvida, nada sai sozinho */
+    var escolha='';
+    if(prev && prev.parcial){
+      escolha=await enganoEscolher('PARTE DO QUE O GRUPO VIU CONTINUA VALENDO', ocorrDcParcialLinhas(prev), [
+          {t:'Mandar a correção', v:'mandar', cor:'#234D67'}, {t:'Não mandar', v:'nao-mandar', cor:'#234D67'},
+          {t:'Cancelar — não mexer em nada', v:'', cor:'#6b5f4b'}], {corTitulo:ENGANO_COR_ATENCAO});
+      if(!escolha) return;
+    }
+    var mot=await enganoPedirMotivo('Por que a ocorrência de '+pet+' foi lançada por engano?', ['Fica registrado com o nome de quem assinar e a hora.'], {dica:'ex.: não era ele, foi o FILHOt errado'});
+    if(!mot) return;
+    var senha=await enganoPedirSenha('Senha da Gestão', ['A Gestão confirma: a ocorrência de '+pet+' foi lançada por engano.'], 'Senha da Gestão');
+    if(!senha) return;
+    var r=await ocorrDcAnular(x.dia, x.ocId, mot, senha, prev?{parcial:escolha, previa:ocorrDcDecisaoChave(prev)}:{parcial:escolha});
+    if(!r.ok){ zAlertao('NADA FOI GRAVADO', [r.erro], {botao:'Entendi'}); return; }
+    var tg=r.mudou ? '' : r.naoFoi ? ('Esta ocorrência não foi ao grupo do Telegram: o grupo só recebeu a de '+r.rep.hora+' ("'+r.rep.texto+'"). Nenhuma correção foi mandada.')
+      : r.outraValida ? 'Outra ocorrência igual dele (o mesmo texto), do mesmo dia, continua valendo: o grupo do Telegram não recebe correção.'
+      : r.continuaValendo ? ('O que o grupo do Telegram viu às '+r.rep.hora+' ('+r.continuam.join(' · ')+') continua valendo '+ocorrDcOndeTxt(r.onde)+': o grupo não recebe correção.')
+      : r.jaCorrigida ? 'O grupo do Telegram já recebeu a correção desta ocorrência: nada se repete.'
+      : r.parcial ? (r.escolha==='mandar' ? ('A correção vai '+ocorrDcNomesGrupos(r.grupos)+', dizendo o que continua valendo ('+r.continuam.join(' · ')+'). O tutor não recebe nada.')
+          : r.escolha==='nao-mandar' ? 'A Gestão escolheu não mandar a correção: o grupo do Telegram não recebe nada.' : '')
+      : r.falhou ? ''
+      : (r.grupos.length && r.residual) ? ('A correção vai '+ocorrDcNomesGrupos(r.grupos)+', dizendo que também não vale mais: '+r.deixam.join(' · ')+'. O tutor não recebe nada.')
+      : (r.grupos.length ? ('A correção vai '+ocorrDcNomesGrupos(r.grupos)+'. O tutor não recebe nada.') : 'Ela não tinha ido a nenhum grupo do Telegram: nenhuma correção foi mandada.');
+    var aten=[].concat((r.naoForam||[]).map(ocorrDcLinhaNaoFoi)), feito=[pet+' saiu da fila e das contagens. A ocorrência fica riscada no fim desta lista, com quem, quando e o motivo.'].concat(tg?[tg]:[]);
+    if(r.parcial && !r.escolha) aten.unshift('Parte do que o grupo viu continua valendo: nada saiu sozinho. Confira no grupo do Telegram e decida se manda a correção à mão.');
+    if(r.falhou) aten.unshift('Não consegui conferir os grupos: confira à mão no grupo do Telegram se esta ocorrência foi e, se foi, mande a correção.');
+    if(r.mudou) aten.unshift('Enquanto você respondia, outra ocorrência dele mudou em outro aparelho: nada saiu para o Telegram. Confira no grupo e, se precisar, mande a correção à mão.');
+    // o que pede conferência vai num cartão de ATENÇÃO, nunca no verde de «pronto»
+    if(aten.length) enganoAtencao('LANÇADA POR ENGANO — CONFIRA O TELEGRAM', aten.concat(feito));
+    else zAlertao('LANÇADA POR ENGANO', feito, {ok:true, botao:'Fechar'});
+  }
+  // O cartão da escolha: o que o grupo viu, o que continua valendo e o que deixa de valer.
+  function ocorrDcParcialLinhas(g){
+    var rep=ocorrDayCareItem('', '', (g&&g.rep)||{});
+    return [(g&&g.residual)
+        ? ('O grupo do Telegram já recebeu a correção da de '+(ocorrDcHoraDe(g&&g.rep)||'-')+' e acredita que continua valendo: '+((g.continuam||[]).concat(g.deixam||[])).join(' · ')+'.')
+        : ('O grupo do Telegram recebeu a de '+(ocorrDcHoraDe(g&&g.rep)||'-')+': "'+rep.texto+'".'),
+      'Continua valendo '+ocorrDcOndeTxt(g&&g.onde)+': '+((g&&g.continuam)||[]).join(' · ')+'.',
+      'Deixa de valer: '+((g&&g.deixam)||[]).join(' · ')+'.',
+      '«Mandar a correção»: o grupo lê que a de '+(ocorrDcHoraDe(g&&g.rep)||'-')+' foi engano e o que continua valendo. «Não mandar»: o grupo não recebe nada.'];
+  }
+  async function ocorrDcDesfazerAbrir(id){
+    var x=ocorrDcDoId(id);
+    if(!x){ zAlertao('NÃO ACHEI ESTA OCORRÊNCIA', ['Atualize a tela e tente de novo.'], {botao:'Entendi'}); return; }
+    if(!podePapel('corrigir-engano-dc')){ zAlertao('ESTA CORREÇÃO É DA RECEPÇÃO', [ENGANO_SO_RECEPCAO], {botao:'Entendi'}); return; }
+    var pet=x.o.pet||'FILHOt', a=x.o.anulada||{};
+    var pv=null; try{ pv=await ocorrDcGruposAvisados(x.dia, x.ocId, x.o, 'desfazer'); }catch(e){ pv=null; } /* sem a prévia, a pergunta fica genérica; a decisão é refeita ao gravar */
+    var foi=(pv&&pv.grupos)||[], volta=(pv&&pv.voltaValer)||[];
+    var mot=await enganoPedirMotivo('Desfazer a «Lançada por engano» de '+pet+'?', [
+        'A ocorrência volta para a fila como estava'+(a.status_antes==='resolvida'?' (resolvida, com o desfecho de antes)':' (sem desfecho)')+'. A anulação fica guardada na trilha.',
+        (!pv || pv.falhou) ? 'Não consegui conferir agora o que o grupo do Telegram recebeu: confira depois de desfazer.'
+        : foi.length?(ocorrDcGruposSujeito(foi).replace(/^o/,'O')+(foi.length>1?' recebem':' recebe')+' uma linha de correção: a ocorrência vale de novo.')
+        : volta.length?('O grupo leu «foi lançada por engano» da de '+ocorrDcHoraDe(pv.rep)+'; com esta de volta, volta a valer: '+volta.join(' · ')+'. Nada sai sozinho: a Gestão confere à mão.')
+        :'O grupo do Telegram não recebeu «foi lançada por engano» desta ocorrência: nenhuma mensagem sai.',
+        'Pede o motivo e a senha da Gestão.'], {dica:'ex.: era ele mesmo, a veterinária confirmou'});
+    if(!mot) return;
+    var senha=await enganoPedirSenha('Senha da Gestão', ['A Gestão confirma: a ocorrência de '+pet+' vale de novo.'], 'Senha da Gestão');
+    if(!senha) return;
+    var r=await ocorrDcDesfazerEngano(x.dia, x.ocId, mot, senha);
+    if(!r.ok){ zAlertao('NADA FOI GRAVADO', [r.erro], {botao:'Entendi'}); return; }
+    if(r.falhou){ enganoAtencao('A OCORRÊNCIA VALE DE NOVO — CONFIRA O TELEGRAM', ['Não consegui conferir os grupos: confira à mão se o grupo do Telegram recebeu a correção e, se recebeu, avise que ela vale de novo.', pet+' voltou para a fila.']); return; }
+    if((r.voltaValer||[]).length){ enganoAtencao('A OCORRÊNCIA VALE DE NOVO — CONFIRA O TELEGRAM', ['O grupo do Telegram leu «foi lançada por engano» da de '+r.rep.hora+'; com esta de volta, volta a valer: '+r.voltaValer.join(' · ')+'. Nada saiu sozinho: confira no grupo e, se precisar, avise à mão.', pet+' voltou para a fila.']); return; }
+    zAlertao('A OCORRÊNCIA VALE DE NOVO', [pet+' voltou para a fila.', r.grupos.length?('A linha de correção vai '+ocorrDcNomesGrupos(r.grupos)+'.'):'Nenhuma mensagem saiu.'], {ok:true, botao:'Fechar'});
+  }
+  async function ocorrDcReabrirAbrir(dia, ocId){
+    var x=ocorrDcDoId('dc:'+dia+'__'+ocId);
+    if(!x){ zAlertao('NÃO ACHEI ESTA OCORRÊNCIA', ['Atualize a tela e tente de novo.'], {botao:'Entendi'}); return; }
+    if(!podePapel('corrigir-engano-dc')){ zAlertao('ESTA CORREÇÃO É DA RECEPÇÃO', [ENGANO_SO_RECEPCAO], {botao:'Entendi'}); return; }
+    var pet=x.o.pet||'FILHOt';
+    var mot=await enganoPedirMotivo('Reabrir a ocorrência de '+pet+'?', [
+        'Ela volta para a fila, sem desfecho. O desfecho de antes fica guardado na trilha, com o seu nome, a hora e o motivo.'],
+      {rotulo:'Por que reabrir? (pelo menos 4 palavras)', dica:'ex.: a tutora ainda não respondeu', botao:'Continuar'});
+    if(!mot) return;
+    var senha=await enganoPedirSenha('Digite a SUA senha para reabrir', ['É o seu nome que fica registrado.'], 'Sua senha');
+    if(!senha) return;
+    var r=await ocorrDcReabrir(dia, ocId, mot, senha);
+    if(!r.ok){ zAlertao('NADA FOI REABERTO', [r.erro], {botao:'Entendi'}); return; }
+    zAlertao('OCORRÊNCIA REABERTA', [pet+' voltou para a fila, sem desfecho.', 'O desfecho de antes ficou guardado na trilha do cartão.'], {ok:true, botao:'Fechar'});
+  }
+
+  // ===================================================================== 2. O CHAMADO DE COMIDA
+  // Quem respondeu é a MESMA pessoa? (QA da 6.56, SEC-001 / EN3, aplicada pela recomendação)
+  // Desde a 6.56 a resposta é assinada com a SENHA da própria pessoa: o app grava o nome do
+  // cadastro em `respondido_login` e a marca `respondido_assinado`. A comparação é por essa
+  // identidade, nunca pelo nome digitado: resposta sem a marca (assinada com nome digitado,
+  // antes desta versão) só a Gestão corrige.
+  function chamadoRespondeuEla(nome, c){
+    var n=jsNorm(String(nome||''));
+    return !!(n && c && c.respondido_assinado===true && jsNorm(String(c.respondido_login||''))===n);
+  }
+  // A exceção do almoço que acompanha a correção. Nunca apaga: a de antes vai em `antes`; sem
+  // comida na resposta nova, a exceção fica com o «O quê» vazio (a tarja some) e `retirada`.
+  function chamadoExcecaoNova(excAntes, alim, qtd, quem, motivo, ts){
+    var a=excAntes||null;
+    if(alim){
+      if(a && String(a.oque||'')===alim && String(a.quanto||'')===qtd) return null;   // igual: não mexe
+      var n={oque:alim, quanto:qtd, quem:quem, ts:ts, motivo_correcao:motivo};
+      if(a) n.antes=a;
+      return n;
+    }
+    if(a && a.oque) return {oque:'', quanto:'', quem:quem, ts:ts, retirada:{motivo:motivo, por:quem, ts:ts}, antes:a};
+    return null;
+  }
+  // A exceção do almoço é gravada DEPOIS da transação do chamado (são nós diferentes): lida de
+  // novo nessa hora, para a de antes ser a que está no banco. Falhar aqui é dito na tela.
+  function chamadoGravarExcecao(excNo, fazer){
+    return enganoLer(excNo).then(function(excAntes){
+      var exc=fazer(excAntes); if(!exc) return {exc:null, aviso:''};
+      return DB.ref(excNo).set(exc).then(function(){ return {exc:exc, aviso:''}; });
+    }).catch(function(e){
+      _logFalhaGrav(excNo+' (6.56, a comida de hoje do chamado)', e);
+      return {exc:null, aviso:'A comida de hoje no Almoço não mudou ('+((e&&e.message)||e)+'): confira a tarja do Almoço e, se precisar, corrija de novo.'};
+    });
+  }
+  // Ler e gravar na MESMA transação (QA da 6.56, REL-002): o aparelho com a tela velha não grava
+  // por cima de um chamado que outro aparelho já cancelou, corrigiu ou respondeu.
+  async function chamadoCorrigir(dia, k, novo, motivo, senha){
+    var falha=function(erro){ return {ok:false, erro:erro}; };
+    if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    novo=novo||{};
+    var resp=String(novo.resposta||'').trim(), alim=String(novo.alimento||'').trim(), qtd=String(novo.quantidade||'').trim();
+    if(!resp) return falha('Escreva a resposta nova: é ela que o Day Care vai ler. Nada foi gravado.');
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'recepcao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var base='daycare/chamados-recepcao/'+dia+'/'+k, excNo='daycare/almoco-excecao/'+dia+'/'+k;
+    var gestao=podePapel('gestao-role', ass.papel), hoje=(typeof zHojeISO==='function')?zHojeISO():dcDataKey();
+    var ts=Date.now(), mot=String(motivo).trim(), ck=enganoChave(ts);
+    var estado='', quemRespondeu='', antes=null, depois=null, pet='';
+    try{
+      await DB.ref(base).transaction(function(c){
+        if(c===null||c===undefined){ estado='sumiu'; return null; }   // cache frio: o SDK decide com o servidor
+        if(c.cancelado){ estado='cancelado'; return c; }
+        if(!c.resposta){ estado='sem-resposta'; return c; }
+        if(!gestao){
+          if(!chamadoRespondeuEla(ass.nome, c)){ estado='outra-pessoa'; quemRespondeu=String(c.respondido_por||'-'); return c; }
+          if(dia!==hoje){ estado='outro-dia'; return c; }
+        }
+        var a={resposta:String(c.resposta||''), respondido_por:String(c.respondido_por||''), alimento_hoje:String(c.alimento_hoje||''), quantidade_hoje:String(c.quantidade_hoje||'')};
+        if(a.resposta===resp && a.alimento_hoje===alim && a.quantidade_hoje===qtd){ estado='igual'; return c; }
+        estado='ok'; antes=a; pet=String(c.pet||'');
+        depois={resposta:resp, respondido_por:ass.nome, alimento_hoje:alim, quantidade_hoje:qtd};
+        var n=Object.assign({}, c, {resposta:resp, respondido_por:ass.nome, respondido_login:ass.nome, respondido_papel:ass.papel, respondido_assinado:true,
+          alimento_hoje:alim, quantidade_hoje:qtd, status:'respondido',            // o nome volta a piscar para quem perguntou
+          corrigido_por:ass.nome, corrigido_em:ts});
+        n.correcoes=Object.assign({}, c.correcoes||{});
+        n.correcoes[ck]={antes:a, depois:depois, motivo:mot, por:ass.nome, papel:ass.papel,
+          login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts};
+        return n;
+      });
+    }catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi gravado.'); }
+    if(estado==='sumiu') return falha('Não achei este chamado no banco. Atualize a tela. Nada foi gravado.');
+    if(estado==='cancelado') return falha('Este chamado foi cancelado: não há resposta para corrigir. Nada foi gravado.');
+    if(estado==='sem-resposta') return falha('Este chamado ainda não foi respondido: responda pelo formulário dele.');
+    if(estado==='outra-pessoa') return falha('Quem corrige é quem assinou a resposta com a própria senha ('+quemRespondeu+'), no mesmo dia, ou a Gestão. Nada foi gravado.');
+    if(estado==='outro-dia') return falha('Esta resposta é de outro dia: depois do mesmo dia, só a Gestão corrige. Nada foi gravado.');
+    if(estado==='igual') return falha('Nada mudou: a resposta, a comida e a quantidade estão iguais às de antes.');
+    if(estado!=='ok') return falha('O banco não confirmou a gravação. Atualize a tela e confira.');
+    var x=await chamadoGravarExcecao(excNo, function(excAntes){ return chamadoExcecaoNova(excAntes, alim, qtd, ass.nome, mot, ts); });
+    if(typeof audit==='function') audit('chamado-corrigido', 'corrigiu a resposta ao Day Care sobre '+pet+': «'+antes.resposta+'» → «'+resp+'»'
+      +(x.exc?(x.exc.oque?(' · hoje come '+x.exc.oque+(x.exc.quanto?(' '+x.exc.quanto):'')):' · a comida de hoje saiu do Almoço'):'')+' — '+mot, {assinou:ass.nome, pet:pet});
+    return {ok:true, erro:'', antes:antes, depois:depois, excecao:x.exc, avisoAlmoco:x.aviso};
+  }
+  async function chamadoCancelar(dia, k, motivo, senha){
+    var falha=function(erro){ return {ok:false, erro:erro}; };
+    if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'recepcao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var base='daycare/chamados-recepcao/'+dia+'/'+k, excNo='daycare/almoco-excecao/'+dia+'/'+k;
+    var ts=Date.now(), mot=String(motivo).trim(), estado='', jaPor='', pet='';
+    try{
+      await DB.ref(base).transaction(function(c){
+        if(c===null||c===undefined){ estado='sumiu'; return null; }
+        if(c.cancelado){ estado='ja'; jaPor=String(c.cancelado.por||''); return c; }
+        estado='ok'; pet=String(c.pet||'');
+        var antes={status:String(c.status||''), resposta:String(c.resposta||''), respondido_por:String(c.respondido_por||''),
+          alimento_hoje:String(c.alimento_hoje||''), quantidade_hoje:String(c.quantidade_hoje||'')};
+        return Object.assign({}, c, {
+          cancelado:{motivo:mot, por:ass.nome, papel:ass.papel, login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts, antes:antes},
+          status:'cancelado',
+          // O Day Care lê a resposta (a tela dos pertences e o Almoço): com ela, para de esperar.
+          resposta:'Foi engano, chamado cancelado: '+mot, respondido_por:ass.nome, respondido_login:ass.nome, respondido_em:ts,
+          alimento_hoje:'', quantidade_hoje:''});
+      });
+    }catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi gravado.'); }
+    if(estado==='sumiu') return falha('Não achei este chamado no banco. Atualize a tela. Nada foi gravado.');
+    if(estado==='ja') return falha('Este chamado já foi cancelado'+(jaPor?(', por '+jaPor):'')+'. Nada mudou.');
+    if(estado!=='ok') return falha('O banco não confirmou a gravação. Atualize a tela e confira.');
+    var x=await chamadoGravarExcecao(excNo, function(excAntes){
+      return (excAntes && excAntes.oque)?{oque:'', quanto:'', quem:ass.nome, ts:ts, retirada:{motivo:mot, por:ass.nome, ts:ts}, antes:excAntes}:null; });
+    if(typeof audit==='function') audit('chamado-cancelado', 'cancelou o chamado de comida de '+pet+' (foi engano) — '+mot, {assinou:ass.nome, pet:pet});
+    return {ok:true, erro:'', avisoAlmoco:x.aviso};
+  }
+  // ----- a tela: o chamado que está sendo corrigido ou cancelado (um de cada vez) -----
+  var CHAMADO_EDIT={};
+  var CHAMADO_BTN2='background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)';
+  function chamadoEditar(k, modo){ CHAMADO_EDIT=k?{k:k, modo:modo}:{}; try{ renderChamadosRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }
+  function chamadoBotoesHTML(k, respondido){
+    return '<div class="avr-form-btns" style="margin-top:8px">'
+      +(respondido?('<button class="btn" style="'+CHAMADO_BTN2+'" onclick="chamadoEditar(\''+jsAspas(k)+'\',\'corrigir\')">Corrigir a resposta</button>'):'')
+      +'<button class="btn" style="'+ENGANO_BTN_ESTILO+'" onclick="chamadoEditar(\''+jsAspas(k)+'\',\'cancelar\')">'+(respondido?'Cancelar o chamado (foi engano)':'Foi engano — cancelar o chamado')+'</button></div>';
+  }
+  function chamadoCorrecoesHTML(c){
+    var L=Object.keys((c&&c.correcoes)||{}).map(function(x){ return c.correcoes[x]||{}; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    if(!L.length) return '';
+    return '<div class="avr-trilha">'+L.map(function(t){
+      var a=t.antes||{};
+      return '<div class="avr-tl"><div class="avr-tl-meta">'+escAttr(t.quando||'')+'</div>'
+        +'<div class="avr-tl-acao">Corrigida por '+escAttr(t.por||'-')+': "'+escAttr(t.motivo||'')+'". Antes: «'+escAttr(a.resposta||'')+'»'
+        +(a.alimento_hoje?(' · comida: '+escAttr(a.alimento_hoje)+(a.quantidade_hoje?(' '+escAttr(a.quantidade_hoje)):'')):'')
+        +(a.respondido_por?(' — '+escAttr(a.respondido_por)):'')+'.</div></div>';
+    }).join('')+'</div>';
+  }
+  function chamadoFormCorrigirHTML(k, c){
+    return '<div class="avr-form"><div class="ff-tit">Corrigir a resposta</div>'
+      +'<div class="hint">O que está escrito agora fica guardado como «antes», com o seu nome, a hora e o motivo. Quem assinou a resposta com a própria senha corrige no mesmo dia; depois disso, ou outra pessoa, só a Gestão.</div>'
+      +'<textarea id="chEdResp">'+escAttr(c.resposta||'')+'</textarea>'
+      +'<div class="ff-tit" style="margin-top:9px">O que ele vai comer hoje</div>'
+      +'<div class="cad-grid2" style="margin-top:6px">'
+      +'<div><label class="cad-lb">O quê</label><input class="cad-in" id="chEdAlim" value="'+escAttr(c.alimento_hoje||'')+'"></div>'
+      +'<div><label class="cad-lb">Quanto</label><input class="cad-in" id="chEdQtd" value="'+escAttr(c.quantidade_hoje||'')+'"></div></div>'
+      +'<div class="hint">Apague «O quê» para tirar a comida de hoje do Almoço.</div>'
+      +'<label for="chEdMotivo" style="display:block;margin-top:10px;font-size:14px;font-weight:800;color:var(--z-blue)">Por que corrigir? (pelo menos 4 palavras)</label>'
+      +'<input id="chEdMotivo" style="margin-top:4px" placeholder="ex.: a tutora mandou outra mensagem">'
+      +'<label for="chEdSenha" style="display:block;margin-top:6px;font-size:14px;font-weight:800;color:var(--z-blue)">Sua senha</label>'
+      +'<input id="chEdSenha" type="password" autocomplete="off" style="margin-top:4px" placeholder="assina a correção">'
+      +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoCorrigirGravar(\''+jsAspas(k)+'\')">Gravar a correção</button>'
+      +'<button class="btn" style="'+CHAMADO_BTN2+'" onclick="chamadoEditar(\'\',\'\')">Voltar</button></div></div>';
+  }
+  function chamadoFormCancelarHTML(k, c){
+    return '<div class="avr-form"><div class="ff-tit">Cancelar o chamado (foi engano)</div>'
+      +'<div class="hint">O chamado fica riscado, com o seu nome, a hora e o motivo. O Day Care lê «Foi engano, chamado cancelado» e para de esperar'
+      +(c.alimento_hoje?'; a comida de hoje sai do Almoço':'')+'. Nada é apagado.</div>'
+      +'<label for="chEdMotivo" style="display:block;margin-top:10px;font-size:14px;font-weight:800;color:var(--z-blue)">Por que cancelar? (pelo menos 4 palavras)</label>'
+      +'<input id="chEdMotivo" style="margin-top:4px" placeholder="ex.: a comida estava na mochila dele">'
+      +'<label for="chEdSenha" style="display:block;margin-top:6px;font-size:14px;font-weight:800;color:var(--z-blue)">Sua senha</label>'
+      +'<input id="chEdSenha" type="password" autocomplete="off" style="margin-top:4px" placeholder="assina o cancelamento">'
+      +'<div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoCancelarGravar(\''+jsAspas(k)+'\')">Cancelar o chamado</button>'
+      +'<button class="btn" style="'+CHAMADO_BTN2+'" onclick="chamadoEditar(\'\',\'\')">Voltar</button></div></div>';
+  }
+  function chamadoCanceladoHTML(k, c){
+    var x=c.cancelado||{}, a=x.antes||{};
+    var hora=''; try{ var d=new Date(c.ts), p=function(v){ return String(v).padStart(2,'0'); }; if(c.ts) hora=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){} /* silencioso de propósito: sem a hora, a linha sai sem ela */
+    return '<div class="avr-card resolvido"><div class="avr-head"><div class="avr-info">'
+      +'<strong><s>'+escAttr(c.pet||'')+'</s></strong> <span style="color:var(--muted);font-size:12px">'+escAttr(c.tutor||'')+'</span>'
+      +'<div style="font-size:13px;color:var(--z-blue);text-decoration:line-through">'+escAttr(c.motivo||'')+'</div>'
+      +'<div style="font-size:12px;color:var(--muted)">perguntado por '+escAttr(c.quem||'-')+(hora?(' às '+hora):'')+'</div>'
+      +'</div><span class="avr-chip resolvido">CANCELADO</span></div>'
+      +'<div class="avr-resolvido-banner" style="text-align:left">Cancelado por '+escAttr(x.por||'-')+(x.quando?(' em '+escAttr(x.quando)):'')+' — "'+escAttr(x.motivo||'')+'"'
+      +(a.resposta?('<div style="font-weight:600;font-size:12.5px;margin-top:4px">Resposta de antes: «'+escAttr(a.resposta)+'»'+(a.alimento_hoje?(' · comida: '+escAttr(a.alimento_hoje)):'')+'</div>'):'')
+      +'</div></div>';
+  }
+  async function chamadoCorrigirGravar(k){
+    var c=(PT_CHAMADOS||{})[k]||{};
+    var val=function(id){ return String(((document.getElementById(id)||{}).value)||'').trim(); };
+    var novo={resposta:val('chEdResp'), alimento:val('chEdAlim'), quantidade:val('chEdQtd')};
+    var motivo=val('chEdMotivo'), senha=val('chEdSenha');
+    if(!novo.resposta){ zAlertao('FALTA A RESPOSTA', ['Escreva a resposta nova: é ela que o Day Care vai ler.'], {botao:'Entendi'}); return; }
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok){ zAlertao('FALTA O MOTIVO', [mv.erro], {botao:'Entendi'}); return; }
+    var com=function(r, a, q){ return '«'+r+'»'+(a?(' · hoje come '+a+(q?(' '+q):'')):' · sem comida de hoje'); };
+    if(!await zPergunta('Gravar a correção?', ['Antes: '+com(c.resposta||'', c.alimento_hoje||'', c.quantidade_hoje||''),
+        'Depois: '+com(novo.resposta, novo.alimento, novo.quantidade), 'Motivo: '+motivo],
+      {sim:'Gravar a correção', nao:'Voltar', cor:'#234D67', corTitulo:'#234D67'})) return;
+    var r=await chamadoCorrigir(c.dia||dcDataKey(), k, novo, motivo, senha);
+    if(!r.ok){ zAlertao('A CORREÇÃO NÃO FOI GRAVADA', [r.erro], {botao:'Entendi'}); return; }
+    CHAMADO_EDIT={}; try{ renderChamadosRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    zAlertao('RESPOSTA CORRIGIDA', ['O Day Care vê a resposta nova: o nome de '+(c.pet||'')+' volta a piscar na tela dos pertences.',
+      r.excecao?(r.excecao.oque?('O Almoço mostra a comida nova: '+r.excecao.oque+(r.excecao.quanto?(' · '+r.excecao.quanto):'')+'.'):'A comida de hoje saiu do Almoço.'):(r.avisoAlmoco||'O Almoço continua como estava.')],
+      {ok:true, botao:'Fechar'});
+  }
+  async function chamadoCancelarGravar(k){
+    var c=(PT_CHAMADOS||{})[k]||{};
+    var val=function(id){ return String(((document.getElementById(id)||{}).value)||'').trim(); };
+    var r=await chamadoCancelar(c.dia||dcDataKey(), k, val('chEdMotivo'), val('chEdSenha'));
+    if(!r.ok){ zAlertao('O CHAMADO NÃO FOI CANCELADO', [r.erro], {botao:'Entendi'}); return; }
+    CHAMADO_EDIT={}; try{ renderChamadosRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    zAlertao('CHAMADO CANCELADO', ['O Day Care lê «Foi engano, chamado cancelado» e para de esperar a resposta.', 'O chamado fica riscado nesta lista, com o seu nome, a hora e o motivo.'].concat(r.avisoAlmoco?[r.avisoAlmoco]:[]), {ok:true, botao:'Fechar'});
+  }
+
+  // ===================================================================== 3. A DIÁRIA AVULSA
+  // A diária avulsa de HOJE vem de dois lugares que o app escreve: a Chamada (daycare/avulsos,
+  // «+ Diária avulsa») e os Lançamentos do dia (daycare/dashboard/{dia}/avulso, com o valor).
+  // «Tirar» move os dois para daycare/avulsos-anulados/{dia}, inteiros, no MESMO update
+  // (atômico): saem da turma, das contagens e do Financeiro, e nada se perde. O que está
+  // escrito à mão na planilha o app não tira (regra da 6.49): diz na tela.
+  var AVULSA_ANULADAS={dia:'', lista:{}};
+  function avulsaLancDe(x){
+    x=x||{};
+    if(x.chave) return String(x.chave);
+    try{ if(typeof dashForaDoCadastro==='function' && dashForaDoCadastro(x)) return ''; }catch(e){} /* silencioso de propósito: sem a régua, segue pelo texto */
+    var limpo=String(x.valor||'').replace(/\s*\(.*\)\s*$/,'').trim(); if(!limpo) return '';
+    try{ var m=(typeof planCasar==='function')?planCasar(limpo):null; if(m&&m.p&&!m.ambiguo) return dcKey(m.p.n, m.p.tutor); }catch(e){} /* silencioso de propósito: sem casar, não é dele */
+    return '';
+  }
+  function avulsaFontesDoDia(dia, k){
+    return Promise.all([enganoLer('daycare/avulsos/'+dia), enganoLer('daycare/dashboard/'+dia+'/avulso')]).then(function(r){
+      var ch=[], la=[];
+      Object.keys(r[0]||{}).forEach(function(id){ var a=(r[0]||{})[id]||{}; if(dcKey(a.nome||'', a.tutor||'')===k) ch.push({id:id, reg:a}); });
+      Object.keys(r[1]||{}).forEach(function(id){ var x=(r[1]||{})[id]||{}; if(avulsaLancDe(x)===k) la.push({id:id, reg:x}); });
+      return {chamada:ch, lanc:la, todosLanc:r[1]||{}};
+    });
+  }
+  // Na planilha do dia, este FILHOt como avulso numa célula que NÃO é de lançamento do app
+  // (texto diferente de todos os lançamentos de hoje) = escrito à mão por uma pessoa.
+  function avulsaAMaoNaPlanilha(dia, k, valoresDoApp){
+    try{
+      if(!planDia || (planDia.dia && planDia.dia!==dia)) return [];
+      var doApp={}; (valoresDoApp||[]).forEach(function(v){ doApp[jsNorm(String(v||''))]=1; doApp[jsNorm(String(v||'').replace(/\s*\(.*\)\s*$/,''))]=1; });
+      return (planDia.avulso||[]).filter(function(it){ return it&&it.p&&dcKey(it.p.n, it.p.tutor)===k && !doApp[jsNorm(String(it.txt||''))]; })
+        .map(function(it){ return String(it.txt||''); });
+    }catch(e){ return []; } /* sem a planilha lida, não há o que acusar */
+  }
+  function avulsaNomeDe(k, f){
+    try{ var o=(turmaDoDia()||[]).filter(function(x){ return dcKey(x.p.n, x.p.tutor)===k; })[0]; if(o) return (typeof o.i==='number')?pelNome(o.p):(o.p.n||''); }catch(e){} /* silencioso de propósito: segue pelos registros */
+    if(f && f.chamada[0]) return f.chamada[0].reg.nome||'';
+    if(f && f.lanc[0]) return String(f.lanc[0].reg.valor||'').split('/')[0].replace(/\s*\(.*$/,'').trim();
+    return String(k||'').split('__')[0];
+  }
+  function avulsaCentDe(f){ return ((f&&f.lanc)||[]).reduce(function(t,x){ var v=((x.reg||{}).det||{}).valor_cent; return t+((typeof v==='number'&&v>0)?Math.round(v):0); }, 0); }
+  // O que fica depois de tirar (área protegida ou rastro do dia): é dito antes de confirmar.
+  function avulsaOQueFica(k){
+    var L=[];
+    try{ var m=(Z_MAPAS||{})['daycare/checkin-corpo/'+dcDataKey()]; var ck=(m&&m.mapa)?m.mapa[k]:null; if(ck) L.push('o check-in do corpo'+(ck.hora?(' das '+ck.hora):'')); }catch(e){} /* silencioso de propósito: sem o retrato, não afirma nada */
+    try{ var st=(dcChamada||{})[k]; if(st) L.push('a marca «'+(st==='veio'?'veio':(st==='faltou'?'faltou':st))+'» da Chamada'); }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+    return L.length?('Continua: '+L.join(' e ')+' (anular o exame do corpo depende da autorização da Adriana).'):'';
+  }
+  function avulsaTirarDaPlanilha(dia, f, ts){
+    var it=null; try{ it=(typeof dashItem==='function')?dashItem('avulso'):null; }catch(e){ it=null; } /* sem o item, não há coluna */
+    if(!f.lanc.length || !(it && dashVaiParaPlanilha(it))) return Promise.resolve([]);
+    var vivos=Object.assign({}, f.todosLanc||{}); f.lanc.forEach(function(x){ delete vivos[x.id]; });
+    return Promise.all(f.lanc.map(function(x){
+      var reg=x.reg||{}, val=String(reg.valor||'').trim(), caminho='daycare/avulsos-anulados/'+dia+'/lancamento__'+x.id+'__'+ts+'/planilha', pr;
+      if(!val) pr=Promise.resolve({ok:false, aviso:'O lançamento não tinha texto: não há célula para tirar.'});
+      else if(dashMesmoTextoEmOutro(vivos, x.id, val)) pr=Promise.resolve({ok:true, mantida:true, aviso:'A célula «'+val+'» continua na planilha: o mesmo texto está em outro lançamento de hoje.'});
+      else if(reg.planilha_ok!==true) pr=Promise.resolve({ok:false, duvida:true, aviso:'O app não confirmou que escreveu «'+val+'» na planilha: se a célula estiver lá, tire à mão.'});
+      else pr=Promise.resolve().then(function(){ return dashEspelhar('avulso', x.id, reg, 'remover', dia); }).then(function(r){
+          return (r&&r.ok)?{ok:true}:{ok:false, erro:String((r&&r.erro)||'a ponte não respondeu'), aviso:'A célula «'+val+'» pode ter ficado na planilha ('+((r&&r.erro)||'a ponte não respondeu')+'): tire à mão.'};
+        }, function(e){ return {ok:false, erro:String((e&&e.message)||e), aviso:'A célula «'+val+'» pode ter ficado na planilha: tire à mão.'}; });
+      return pr.then(function(p){ p.ts=Date.now(); return DB.ref(caminho).set(p).catch(function(e){ _logFalhaGrav(caminho+' (6.56)', e); }).then(function(){ return p; }); });
+    }));
+  }
+  async function avulsaTirar(k, motivo, senha){
+    var falha=function(erro){ return {ok:false, erro:erro, envio:Promise.resolve([])}; };
+    if(typeof ehHoje==='function' && !ehHoje()) return falha('A diária avulsa sai só no dia de hoje: volte para a turma de hoje para tirar. Nada foi gravado.');
+    var mv=motivoQuatroPalavras(motivo); if(!mv.ok) return falha(mv.erro);
+    var ass=enganoAssinar(senha, 'gestao'); if(!ass.ok) return falha(ass.erro);
+    if(!DB) return falha(ENGANO_SEM_BANCO);
+    var dia=dcDataKey(), f=null;
+    try{ f=await avulsaFontesDoDia(dia, k); }
+    catch(e){ return falha('Não consegui ler a diária avulsa no banco agora: nada foi tirado. Tente de novo em instantes.'); }
+    var nome=avulsaNomeDe(k, f);
+    if(!f.chamada.length && !f.lanc.length){
+      var soMao=avulsaAMaoNaPlanilha(dia, k, []);
+      return falha(soMao.length
+        ? (nome+' está como avulso só na planilha, escrito à mão («'+soMao.join('», «')+'»): o app não tira o que uma pessoa escreveu. Tire à mão na planilha. Nada foi gravado.')
+        : ('Não achei a diária avulsa de '+nome+' lançada hoje pelo app. Nada foi gravado.'));
+    }
+    var ts=Date.now(), mot=String(motivo).trim();
+    var base={chave:k, nome:nome, motivo:mot, por:ass.nome, papel:ass.papel, login:(typeof quemSou==='function'?quemSou():'-'), quando:carimboBR(ts), ts:ts};
+    var arq='daycare/avulsos-anulados/'+dia+'/', patch={};
+    // A chave do arquivo leva o carimbo de tempo (QA da 6.56, REL-001): a «+ Diária avulsa» grava
+    // na chave da ficha, e a mesma diária tirada duas vezes no dia guarda os DOIS registros.
+    f.chamada.forEach(function(x){ var c='daycare/avulsos/'+dia+'/'+x.id; patch[c]=null; patch[arq+'chamada__'+x.id+'__'+ts]=Object.assign({origem:'chamada', caminho:c, registro:x.reg}, base); });
+    f.lanc.forEach(function(x){ var c='daycare/dashboard/'+dia+'/avulso/'+x.id; patch[c]=null; patch[arq+'lancamento__'+x.id+'__'+ts]=Object.assign({origem:'lancamento', caminho:c, registro:x.reg}, base); });
+    try{ await DB.ref().update(patch); }
+    catch(e){ return falha('O banco não aceitou: '+((e&&e.message)||e)+'. Nada foi tirado.'); }
+    // a memória do aparelho acompanha (a turma, os Lançamentos do dia, a gaveta das riscadas)
+    try{ dcAvulsos=(dcAvulsos||[]).filter(function(a){ return dcKey(a.nome||'', a.tutor||'')!==k; }); }catch(e){} /* silencioso de propósito: a Chamada relê logo abaixo */
+    try{ DC_DASH_TURMA.quando=0; DC_DASH_TURMA.avulso=(DC_DASH_TURMA.avulso||[]).filter(function(it){ return !(it&&it.p&&dcKey(it.p.n, it.p.tutor)===k); }); }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+    try{ if(typeof dashDia==='function' && dashDia()===dia && DASH_DADOS && DASH_DADOS.avulso) f.lanc.forEach(function(x){ delete DASH_DADOS.avulso[x.id]; }); }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+    try{ if(AVULSA_ANULADAS.dia!==dia) AVULSA_ANULADAS={dia:dia, lista:{}}; Object.keys(patch).forEach(function(p){ if(p.indexOf(arq)===0 && patch[p]) AVULSA_ANULADAS.lista[p.slice(arq.length)]=patch[p]; }); }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+    if(typeof audit==='function') audit('avulsa-tirada', 'tirou a diária avulsa de '+nome+' ('+[f.chamada.length?'Chamada':'', f.lanc.length?'Lançamentos do dia':''].filter(Boolean).join(' e ')+') — '+mot, {assinou:ass.nome, alvo:k, pet:nome});
+    var envio=avulsaTirarDaPlanilha(dia, f, ts).then(function(ps){
+      try{ if(typeof dcGarantirPlanilha==='function') dcGarantirPlanilha(true); }catch(e){} /* silencioso de propósito: a planilha se relê na próxima volta */
+      try{ f.lanc.forEach(function(x, i){ var a=(AVULSA_ANULADAS.lista||{})['lancamento__'+x.id+'__'+ts]; if(a && (ps||[])[i]) a.planilha=ps[i]; }); }catch(e){} /* silencioso de propósito: a faixa se acerta na próxima leitura */
+      return ps;
+    });
+    try{ carregarChamada(); }catch(e){} /* silencioso de propósito: a Chamada relê sozinha na próxima abertura */
+    return {ok:true, erro:'', nome:nome, chamada:f.chamada.length, lanc:f.lanc.length, valor_cent:avulsaCentDe(f),
+      aMao:avulsaAMaoNaPlanilha(dia, k, f.lanc.map(function(x){ return (x.reg||{}).valor; })), envio:envio};
+  }
+  function avulsaAnuladasCarregar(){
+    if(!DB) return Promise.resolve();
+    var dia=dcDataKey();
+    return enganoLer('daycare/avulsos-anulados/'+dia).then(function(v){
+      AVULSA_ANULADAS={dia:dia, lista:v||{}};
+      try{ if(dcAtiv==='chamada') renderDaycare(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    }).catch(function(e){ _logLeituraFalhou('daycare/avulsos-anulados/'+dia+' (Chamada)', e); });
+  }
+  function avulsaAnuladasHTML(){
+    try{
+      if(typeof ehHoje==='function' && !ehHoje()) return '';
+      if(AVULSA_ANULADAS.dia!==dcDataKey()) return '';
+      var porChave={};
+      Object.keys(AVULSA_ANULADAS.lista||{}).forEach(function(id){
+        var a=AVULSA_ANULADAS.lista[id]||{}, c=(a.chave||a.nome||id)+'|'+(a.ts||'');
+        if(!porChave[c]) porChave[c]={a:a, avisos:[]};
+        if(a.planilha && a.planilha.aviso && (!a.planilha.ok || a.planilha.mantida)) porChave[c].avisos.push(a.planilha.aviso);
+      });
+      var L=Object.keys(porChave).map(function(c){ return porChave[c]; }).sort(function(x,y){ return (y.a.ts||0)-(x.a.ts||0); });
+      if(!L.length) return '';
+      return '<div class="dc-pend-note"><strong>Diárias avulsas tiradas hoje ('+L.length+'):</strong> '+L.map(function(x){
+        var a=x.a, h=''; try{ var d=new Date(a.ts), p=function(v){ return String(v).padStart(2,'0'); }; h=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){} /* silencioso de propósito: sem a hora, a linha sai sem ela */
+        return '<s>'+escAttr(a.nome||'')+'</s> — tirada por '+escAttr(a.por||'-')+(h?(' às '+h):'')+' — "'+escAttr(a.motivo||'')+'"'
+          +(x.avisos.length?(' ('+escAttr(x.avisos.join(' '))+')'):'');
+      }).join(' · ')+'</div>';
+    }catch(e){ return ''; } /* a faixa é informação: falhar não pode derrubar a Chamada */
+  }
+  async function avulsaTirarAbrir(k){
+    if(typeof ehHoje==='function' && !ehHoje()){ zAlertao('ESSE DIA NÃO É HOJE', ['A diária avulsa sai só no dia de hoje. Volte para a turma de hoje para tirar.'], {botao:'Entendi'}); return; }
+    if(!DB){ zAlertao('SEM CONEXÃO', [ENGANO_SEM_BANCO], {botao:'Entendi'}); return; }
+    var dia=dcDataKey(), f=null;
+    try{ f=await avulsaFontesDoDia(dia, k); }
+    catch(e){ zAlertao('NÃO CONSEGUI LER A DIÁRIA', ['O banco não respondeu agora. Nada foi tirado. Tente de novo em instantes.'], {botao:'Entendi'}); return; }
+    var nome=avulsaNomeDe(k, f), mao=avulsaAMaoNaPlanilha(dia, k, f.lanc.map(function(x){ return (x.reg||{}).valor; }));
+    if(!f.chamada.length && !f.lanc.length){
+      zAlertao('O APP NÃO LANÇOU ESTA DIÁRIA', mao.length
+        ? [nome+' está como avulso só na planilha, escrito à mão («'+mao.join('», «')+'»).', 'O app não tira o que uma pessoa escreveu: tire à mão na planilha. Na próxima leitura, ele sai da Chamada.']
+        : ['Não achei a diária avulsa de '+nome+' lançada hoje pelo app. Atualize a tela.'], {botao:'Entendi'});
+      return;
+    }
+    var cent=avulsaCentDe(f);
+    var L=['Sai da Chamada, do Check-in, dos Pertences, do Almoço e das contagens do Day Care de hoje.'];
+    if(f.lanc.length) L.push('Sai dos Lançamentos do dia'+(cent>0?(' e do Financeiro ('+fmtCent(cent)+')'):'')+'.');
+    if(f.lanc.some(function(x){ return (x.reg||{}).planilha_ok===true; })) L.push('Sai da planilha e da TV: o app tira só a célula que ele escreveu.');
+    if(f.lanc.some(function(x){ return (x.reg||{}).planilha_ok!==true; })) L.push('A planilha: o app não confirmou que escreveu a célula; se ela estiver lá, tire à mão.');
+    if(mao.length) L.push('Na planilha está escrito à mão («'+mao.join('», «')+'»): o app não tira o que uma pessoa escreveu. Tire à mão; até lá, ele continua na Chamada.');
+    var fica=avulsaOQueFica(k); if(fica) L.push(fica);
+    L.push('Nada é apagado: a diária fica anulada e riscada, com quem, quando e o motivo.');
+    L.push('Pede o motivo e a senha da Gestão (é dinheiro).');
+    if(!await zPergunta('Tirar a diária avulsa de '+nome+'?', L, {sim:'Continuar', nao:'Deixar como está', cor:'#234D67', corTitulo:'#234D67'})) return;
+    var mot=await enganoPedirMotivo('Por que tirar a diária avulsa de '+nome+'?', ['Fica registrado com o nome de quem assinar e a hora.'], {dica:'ex.: lançada no FILHOt errado, era outro'});
+    if(!mot) return;
+    var senha=await enganoPedirSenha('Senha da Gestão', ['A Gestão confirma: a diária avulsa de '+nome+' sai.'], 'Senha da Gestão');
+    if(!senha) return;
+    var r=await avulsaTirar(k, mot, senha);
+    if(!r.ok){ zAlertao('NADA FOI TIRADO', [r.erro], {botao:'Entendi'}); return; }
+    var ok=[r.nome+' saiu da turma de hoje. A diária fica riscada em «Diárias avulsas tiradas hoje», no alto da Chamada.'];
+    if(r.lanc) ok.push('Saiu dos Lançamentos do dia'+(r.valor_cent>0?(' e do Financeiro ('+fmtCent(r.valor_cent)+')'):'')+'.');
+    if(r.aMao.length) ok.push('Na planilha, o que está escrito à mão continua: tire à mão.');
+    zAlertao('DIÁRIA AVULSA TIRADA', ok, {ok:true, botao:'Fechar'});
+    // O resultado da planilha chega depois: se a célula ficou, a tela diz.
+    Promise.resolve(r.envio).then(function(ps){
+      var av=(ps||[]).filter(function(p){ return p && p.aviso && (!p.ok || p.mantida); }).map(function(p){ return p.aviso; });
+      if(av.length) zAlertao('A PLANILHA PRECISA DE UMA OLHADA', av, {botao:'Entendi'});
+      try{ if(dcAtiv==='chamada') renderDaycare(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    });
   }
 
   // ---- Recepção: avisos de RAÇÃO (Onda 4 — absorve o alerta do sistema antigo) ----
@@ -19867,7 +20947,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-08';
+  const APP_VERSAO='2026-10-09-09';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -33120,7 +34200,8 @@
         <div class="dc-stat pend"><b>${nPend}</b>falta marcar</div>
       </div>
       ${faltas.length?`<div class="dc-faltas"><strong>Faltaram hoje (${faltas.length}):</strong> ${faltas.join(', ')}</div>`:''}
-      ${nPend?`<div class="dc-pend-note"><strong>Ainda sem chamada (${nPend}):</strong> ${pendentes.join(', ')}</div>`:''}`;
+      ${nPend?`<div class="dc-pend-note"><strong>Ainda sem chamada (${nPend}):</strong> ${pendentes.join(', ')}</div>`:''}
+      ${avulsaAnuladasHTML()}`;
     document.getElementById('dcGrid').innerHTML =
       `<div class="pet add" onclick="adicionarAvulsa()"><div class="plus">+</div><div class="t">Diária avulsa<br><span style="font-size:10px;font-weight:600;color:var(--muted)">aulino do dia</span></div></div>`+
       filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=(typeof o.i==='number')?fotoDoPel(p):'';
@@ -33149,6 +34230,7 @@
             <button class="dc-btn faltou ${st==='faltou'?'on':''}" onclick="marcarPresenca('${k}','faltou')">✕ Faltou</button>
           </div>
           ${typeof o.i==='number'?`<button class="banho-toggle ${dcBanho[k]?'on':''}" onclick="toggleBanho('${k}')">${dcBanho[k]?'Tem banho hoje':'Marcar banho'}</button>`:''}
+          ${((o.avulso||o.daPlanilha==='avulso') && ehHoje())?`<button type="button" class="banho-toggle" style="${ENGANO_BTN_ESTILO}" onclick="avulsaTirarAbrir('${jsAspas(k)}')">Tirar a diária avulsa</button>`:''}
         </div>`;
       }).join('');
   }
@@ -33261,6 +34343,7 @@
       // A chamada NÃO é lida com once(): ela fica viva (chamadaVivaLigar, logo acima). O
       // zMapaUma abaixo é servido do MESMO retrato — não há segundo download.
       chamadaVivaLigar();
+      try{ avulsaAnuladasCarregar(); }catch(e){} /* silencioso de propósito (6.56): a faixa das diárias tiradas hoje é informação — falhar não trava a Chamada */
       Promise.all([
         zMapaUma(chamadaNo()).then(v=>{ dcChamada=Object.assign({}, v||{}); }).catch(function(e){ _logLeituraFalhou('daycare/chamada/ (carregarChamada)', e); }),
         // O check-in do corpo do dia, pelo mesmo ouvinte que a tela do Check-in usa: é dele
@@ -65356,6 +66439,7 @@
     Object.keys(d.ocorrDC||{}).forEach(function(id){
       var o=(d.ocorrDC||{})[id]||{};
       if(!o.pet) return;
+      if(o.anulada) return;   // 6.56: «Lançada por engano» sai das contagens e dos painéis
       var it=(typeof ocorrDayCareItem==='function')?ocorrDayCareItem(d.dia,id,o):null;
       if(it) out.push({ lado:'Day Care', nome:it.pet, texto:it.texto, ts:it.ts, resolvido:!!it.avisado });
     });

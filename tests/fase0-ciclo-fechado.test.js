@@ -23090,6 +23090,1661 @@ provaAsync('6.55 R4 N5 — «já foi embora» é só da hospedagem que CONTÉM o
     assert.strictEqual(run(`contatoJaFoiEmbora('${K655}', '2026-10-06', PELUDINHOS[0], '2026-10-10')`), '', 'com B em curso, está na casa');
   } finally { solta655f(); }
 });
+
+// ================================================================== 6.56 — o lançado por engano no Day Care (caso Tonico)
+console.log('\n6.56 — Desfazer o lançado por engano no Day Care, fora da área protegida: ocorrência, chamado e diária avulsa (09/out/2026)');
+// Tudo INVENTADO: Tonico (tutora Rita Teste), Pipoca (Lia Teste), Pingo (Caio Teste) e as pessoas "Teste".
+// Relógio FIXO em sexta, 09/10/2026, 10:05 (Date trocado no sandbox), banco e porta do Telegram de mentira.
+const DIA656 = '2026-10-09', ONTEM656 = '2026-10-08';
+const T656 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+run('var __RD656=Date;');
+const relogio656 = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD656(${ms}); return new (Function.prototype.bind.apply(__RD656,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD656.prototype; Date.UTC=__RD656.UTC; Date.parse=__RD656.parse;`);
+const K_TON = 'tonico__rita-teste', K_PIP = 'pipoca__lia-teste', K_PIN = 'pingo__caio-teste';
+const ID_TON = 'dc:' + DIA656 + '__oc1';
+const OC_TON = (extra) => Object.assign({ pet: 'Tonico', tutor: 'Rita Teste', refKey: K_TON, hora: '08:15', quem: 'Encãotadora Teste',
+  origem: 'check-in de entrada', itens: ['Pele: vermelhidão'], coco: '', status: 'aberta', ts: T656(9, 8, 15) }, extra || {});
+const ARMA656 = `__bk656={db:DB, au:audit, ua:urgAvisar, mon:MONITORES, hz:zHojeISO, oc:DC_OCORR, pc:PT_CHAMADOS, ae:ALM_EXCECOES, za:zAlertao, zp:zPergunta, zt:zTexto, ze:zEscolha,
+    ro:document.body.dataset.role, rr:renderOcorrenciasRecepcao, rc:renderChamadosRecepcao, cc:carregarChamada, rd:renderDaycare, de:dashEspelhar,
+    av:dcAvulsos, dd:dcDia, pd:planDia, dt:DC_DASH_TURMA, P:PELUDINHOS, gp:(typeof dcGarantirPlanilha==='function'?dcGarantirPlanilha:null), dsel:DASH_DIA_SEL, ddad:DASH_DADOS};
+  __seq656=0; __db656={}; __esc656=[]; __falha656=''; __stale656={};
+  __pega656=function(p){ var o=__db656; var ps=String(p||'').split('/').filter(Boolean); for(var i=0;i<ps.length;i++){ if(o==null||typeof o!=='object') return null; o=o[ps[i]]; } return (o===undefined)?null:JSON.parse(JSON.stringify(o)); };
+  __poe656=function(p, v){ var ps=String(p||'').split('/').filter(Boolean), o=__db656; for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]]||typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+    if(v===null||v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); };
+  DB={ref:function(p){ p=String(p||''); return {
+    key:p.split('/').pop(),
+    // __stale656[p]: o aparelho com a cópia velha (a leitura devolve o que ele tinha; a transação vê o banco)
+    once:function(){ var v=(p in __stale656)?JSON.parse(JSON.stringify(__stale656[p])):__pega656(p); return Promise.resolve({val:function(){ return v; }, exists:function(){ return v!=null; }}); },
+    set:function(v){ if(__falha656) return Promise.reject(new Error(__falha656)); __esc656.push(['set', p]); __poe656(p, v); return Promise.resolve(); },
+    update:function(o){ if(__falha656) return Promise.reject(new Error(__falha656)); __esc656.push(['update', p, Object.keys(o||{}).sort()]);
+      Object.keys(o||{}).forEach(function(k){ __poe656(p?(p+'/'+k):k, o[k]); }); return Promise.resolve(); },
+    remove:function(){ __esc656.push(['remove', p]); __poe656(p, null); return Promise.resolve(); },
+    transaction:function(fn){ if(__falha656) return Promise.reject(new Error(__falha656)); __esc656.push(['transaction', p]); var r=fn(__pega656(p));
+      if(r!==undefined) __poe656(p, r); return Promise.resolve({committed:r!==undefined, snapshot:{val:function(){ return __pega656(p); }}}); },
+    push:function(){ return DB.ref(p+'/-p'+(++__seq656)); },
+    on:function(e, cb){ return cb; }, off:function(){}
+  }; }};
+  __au656=[]; audit=function(a, d, m){ __au656.push([a, String(d||''), m||{}]); };
+  __tg656=[]; urgAvisar=function(chave, texto, grupo){ __tg656.push({chave:chave, texto:texto, grupo:grupo||'urgencia'}); return Promise.resolve(true); };
+  MONITORES=[{id:'t1', nome:'Gestora Teste', senha:'9101', role:'gestao'}, {id:'t2', nome:'Bia Consultora Teste', senha:'9102', role:'consultora'},
+    {id:'t3', nome:'Monitor 3', senha:'9103', role:'monitor'}, {id:'t4', nome:'Recepção', senha:'9104', role:'consultora'},
+    {id:'t5', nome:'Carla Consultora Teste', senha:'9105', role:'consultora'}, {id:'t6', nome:'Amanda Supervisora Teste', senha:'9106', role:'supervisor'},
+    {id:'t7', nome:'Dani Encãotadora Teste', senha:'9107', role:'monitor'}];
+  zHojeISO=function(){ var d=new Date(),p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); };
+  DC_OCORR={}; PT_CHAMADOS={}; ALM_EXCECOES={}; __za656=[]; zAlertao=function(t, l){ __za656.push([t, l]); };
+  __ze656=[]; __zeq656=[]; zEscolha=function(t, l, b, op){ __ze656.push([t, l, (b||[]).map(function(x){ return x.t; }), op||{}]);
+    // sem botão na fila, toca «Cancelar»/«Entendi»: um cartão inesperado não pode deixar a prova pendurada (ela falha na asserção)
+    var q=__zeq656.shift(), bt=(b||[]).filter(function(x){ return x.t===q; })[0]||(b||[]).filter(function(x){ return /^Cancelar|^Entendi$/.test(x.t); })[0];
+    if(bt && typeof bt.fn==='function') bt.fn(); };
+  renderOcorrenciasRecepcao=function(){}; renderChamadosRecepcao=function(){}; __cc656=0; carregarChamada=function(){ __cc656++; }; renderDaycare=function(){};
+  __de656=[]; dashEspelhar=function(k, id, reg, acao, dia){ __de656.push([k, id, reg.valor, acao, dia]); return Promise.resolve({ok:true}); };
+  if(typeof dcGarantirPlanilha==='function') dcGarantirPlanilha=function(){};
+  document.body.dataset.role='consultora';`;
+const SOLTA656 = `Date=__RD656; DB=__bk656.db; audit=__bk656.au; urgAvisar=__bk656.ua; MONITORES=__bk656.mon; zHojeISO=__bk656.hz; DC_OCORR=__bk656.oc; PT_CHAMADOS=__bk656.pc;
+  ALM_EXCECOES=__bk656.ae; zAlertao=__bk656.za; zPergunta=__bk656.zp; zTexto=__bk656.zt; zEscolha=__bk656.ze; document.body.dataset.role=__bk656.ro; renderOcorrenciasRecepcao=__bk656.rr;
+  renderChamadosRecepcao=__bk656.rc; carregarChamada=__bk656.cc; renderDaycare=__bk656.rd; dashEspelhar=__bk656.de; dcAvulsos=__bk656.av; dcDia=__bk656.dd;
+  planDia=__bk656.pd; DC_DASH_TURMA=__bk656.dt; PELUDINHOS=__bk656.P; if(__bk656.gp) dcGarantirPlanilha=__bk656.gp; DASH_DIA_SEL=__bk656.dsel; DASH_DADOS=__bk656.ddad;`;
+const espera656 = async (n) => { for (let i = 0; i < (n || 200); i++) await Promise.resolve(); };
+const db656 = (p) => run(`__pega656(${JSON.stringify(p)})`);
+const poe656 = (p, v) => run(`__poe656(${JSON.stringify(p)}, ${JSON.stringify(v)})`);
+// o Tonico: a ocorrência do check-in de entrada das 08:15, que foi aos grupos de Urgências e da Veterinária
+const palcoTonico656 = (extraOc, semTravas) => {
+  poe656('daycare/ocorrencias/' + DIA656 + '/oc1', OC_TON(extraOc));
+  if (!semTravas) {
+    poe656('daycare/urgencias-enviadas/' + DIA656 + '/corpo-' + K_TON + '-ent', { ts: T656(9, 8, 15) });
+    poe656('daycare/urgencias-enviadas/' + DIA656 + '/vet--corpo-' + K_TON + '-ent', { ts: T656(9, 8, 15) });
+  }
+  run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')};`);
+};
+const cadeia656 = (o) => JSON.stringify(o);
+// o registro do arquivo das avulsas tiradas: a chave é {origem}__{id}__{ts} (QA da 6.56, REL-001)
+const arq656 = (pref) => { const a = db656('daycare/avulsos-anulados/' + DIA656) || {}; const k = Object.keys(a).find((x) => x.indexOf(pref + '__') === 0); return k ? a[k] : null; };
+
+prova('6.56 — motivoQuatroPalavras: no mínimo 4 palavras e 3 diferentes de 2 letras ou mais (a régua das 6.53 e 6.54)', () => {
+  const r = (t) => run(`motivoQuatroPalavras(${JSON.stringify(t)})`);
+  igual(r('foi lançada por engano').ok, true);
+  igual(r('Não é o Tonico, era outro FILHOt').ok, true);
+  for (const t of ['erro', 'foi engano', 'lançada por engano', 'a a a a', 'ok ok ok ok', '1 2 3 4', '', null]) {
+    const x = r(t); igual(x.ok, false, String(t)); assert.ok(x.erro.length > 10, 'diz o que falta: ' + t);
+  }
+  assert.ok(/faltam 2/.test(r('foi engano').erro), r('foi engano').erro);
+});
+
+prova('6.56 — a assinatura é a senha de uma PESSOA: a Gestão assina o que pede Gestão; consultora, posto e senha desconhecida não', () => {
+  run(ARMA656);
+  try {
+    const a = (s, n) => run(`enganoAssinar(${JSON.stringify(s)}, '${n}')`);
+    igual([a('9101', 'gestao').ok, a('9101', 'gestao').nome, a('9101', 'gestao').papel], [true, 'Gestora Teste', 'gestao']);
+    igual(a('9102', 'gestao').ok, false, 'consultora não assina pela Gestão');
+    assert.ok(/não pode/.test(a('9102', 'gestao').erro), a('9102', 'gestao').erro);
+    igual([a('9102', 'recepcao').ok, a('9102', 'recepcao').nome], [true, 'Bia Consultora Teste']);
+    igual(a('9104', 'recepcao').ok, false, 'a senha do posto "Recepção" não é de uma pessoa');
+    assert.ok(/posto/.test(a('9104', 'recepcao').erro));
+    igual(a('9107', 'recepcao').ok, false, 'Encãotadora não assina a correção da Recepção');
+    igual(a('0000', 'gestao').ok, false); igual(a('', 'gestao').ok, false);
+    igual(run(`podePapel('corrigir-engano-dc','gestao') && podePapel('corrigir-engano-dc','diretoria') && podePapel('corrigir-engano-dc','consultora') && podePapel('corrigir-engano-dc','supervisor')`), true);
+    igual(run(`podePapel('corrigir-engano-dc','monitor') || podePapel('corrigir-engano-dc','plantonista') || podePapel('corrigir-engano-dc','vet')`), false);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC1 — Tonico «Lançada por engano»: motivo e senha da Gestão; fica riscada, com quem, quando e o motivo; nada é apagado e a senha não é guardada', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    igual(r.ok, true, JSON.stringify(r));
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    igual([o.status, o.anulada.motivo, o.anulada.por, o.anulada.papel, o.anulada.quando, o.anulada.ts, o.anulada.status_antes],
+      ['anulada', 'não era o Tonico, foi o FILHOt errado', 'Gestora Teste', 'gestao', '09/10 10:05', T656(9, 10, 5), 'aberta']);
+    // nada apagado: o que o check-in gravou continua igual
+    igual([o.pet, o.tutor, o.refKey, o.hora, o.quem, o.origem, o.itens, o.ts], ['Tonico', 'Rita Teste', K_TON, '08:15', 'Encãotadora Teste', 'check-in de entrada', ['Pele: vermelhidão'], T656(9, 8, 15)]);
+    const tr = Object.values(o.trilha || {});
+    igual(tr.map((t) => [t.acao, t.por, t.motivo]), [['lancada-por-engano', 'Gestora Teste', 'não era o Tonico, foi o FILHOt errado']]);
+    assert.ok(cadeia656(run('__db656')).indexOf('9101') < 0, 'a senha não foi parar no banco');
+    assert.ok(run('__au656').some((a) => a[0] === 'ocorrencia-engano' && /Tonico/.test(a[1])), 'rastro na auditoria');
+    // a memória do aparelho acompanha
+    igual(run(`DC_OCORR['${DIA656}'].oc1.status`), 'anulada');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC1 — a «Lançada por engano» sai da fila da Recepção, das contagens, da Mesa e dos Dashboards — e aparece riscada na gaveta', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc2', OC_TON({ pet: 'Bolota', tutor: 'Nina Teste', refKey: 'bolota__nina-teste', ts: T656(9, 8, 40), hora: '08:40' }));
+    run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')}; renderOcorrenciasRecepcao=__bk656.rr;`);
+    igual(run('ocorrenciasDayCare().length'), 2);
+    const mesaAntes = run('mesaOcorrAbertas()');
+    await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    igual(run('ocorrenciasDayCare().map(function(o){ return o.pet; })'), ['Bolota'], 'a fila');
+    igual(run('mesaOcorrAbertas()'), mesaAntes - 1, 'a Mesa');
+    const loja = run(`paDadosLoja({}, {}, ocorrenciasDayCare(), '${DIA656}')`);
+    igual([loja.abertos.map((a) => a.titulo), loja.resolvidos.length], [['Ocorrência de Bolota'], 0], 'Dashboard da Supervisão: nem aberta nem resolvida');
+    const probs = run(`poProblemasDoDia({dia:'${DIA656}', ocorrDC:__pega656('daycare/ocorrencias/${DIA656}'), avisosPlantao:{}})`);
+    igual(probs.map((p) => p.nome), ['Bolota'], 'Painel da Operação');
+    // a Recepção: a fila sem o Tonico; a gaveta «Lançadas por engano» com ele riscado
+    run(`__el656={}; __gid656=document.getElementById; document.getElementById=function(id){ if(!__el656[id]) __el656[id]={innerHTML:''}; return __el656[id]; };`);
+    try { run('renderOcorrenciasRecepcao()'); } finally { run('document.getElementById=__gid656;'); }
+    const h = run("__el656.ocorrDayCareRecepcaoList.innerHTML");
+    const fila = h.slice(0, h.indexOf('Lançadas por engano'));
+    assert.ok(/Bolota/.test(fila) && !/Tonico/.test(fila), 'na fila só a Bolota');
+    const gav = h.slice(h.indexOf('Lançadas por engano'));
+    assert.ok(/Lançadas por engano \(1\)/.test(gav), gav.slice(0, 200));
+    assert.ok(/<s>Tonico<\/s>/.test(gav) && /line-through|<s>/.test(gav), 'riscada');
+    assert.ok(/Gestora Teste/.test(gav) && /09\/10 10:05/.test(gav) && /não era o Tonico, foi o FILHOt errado/.test(gav), 'quem, quando e o motivo');
+    assert.ok(/ocorrDcDesfazerAbrir\(/.test(gav), 'com o Desfazer da Gestão');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC1 — motivo curto, senha de consultora, senha de posto e aparelho de Encãotador: nada é gravado (o papel é conferido na função que grava)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const antes = cadeia656(db656('daycare/ocorrencias'));
+    const casos = [['foi engano', '9101', 'consultora', /palavras/], ['não era o Tonico, foi o FILHOt errado', '9102', 'consultora', /Gestão/],
+      ['não era o Tonico, foi o FILHOt errado', '9104', 'consultora', /posto/], ['não era o Tonico, foi o FILHOt errado', '0000', 'consultora', /não é de ninguém/],
+      ['não era o Tonico, foi o FILHOt errado', '9101', 'monitor', /Recepção|papel/]];
+    for (const [m, s, papel, rx] of casos) {
+      run(`document.body.dataset.role='${papel}';`);
+      const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', ${JSON.stringify(m)}, '${s}')`);
+      igual(r.ok, false, m + ' / ' + s + ' / ' + papel); assert.ok(rx.test(r.erro), r.erro);
+    }
+    igual(cadeia656(db656('daycare/ocorrencias')), antes, 'nada mudou no banco');
+    igual(run('__tg656.length'), 0, 'nenhuma mensagem');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC2 — a correção vai aos MESMOS grupos que receberam a ocorrência, com a linha combinada; o tutor não recebe nada', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    igual(r.grupos, ['urgencia', 'vet']);
+    await r.envio; await espera656();
+    const linha = 'Correção: a ocorrência de Tonico de 09/10, 08:15, foi lançada por engano — Gestora Teste';
+    igual(run('__tg656').map((t) => [t.grupo, t.texto]), [['urgencia', linha], ['vet', linha]]);
+    const c = db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao');
+    igual([c.grupos, c.enviados], [['urgencia', 'vet'], { urgencia: true, vet: true }]);
+    // nenhuma mensagem pronta ao tutor, nenhuma janela de WhatsApp
+    assert.ok(!run('__au656').some((a) => /tutor/i.test(a[0])), 'nada para o tutor no rastro');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC2 — sem ter ido a grupo nenhum, nenhuma correção sai; a ocorrência repetida anulada não desmente a que continua valendo', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(null, true);
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    igual([r.ok, r.grupos], [true, []]); await r.envio; await espera656();
+    igual(run('__tg656.length'), 0, 'sem trava do Telegram, sem correção');
+    // agora a repetida: o check-in do Tonico foi salvo duas vezes, a 1ª foi aos grupos e continua valendo
+    run('__db656={}; __tg656=[];');
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc9', OC_TON({ ts: T656(9, 8, 17), hora: '08:17' }));
+    const r2 = await run(`ocorrDcAnular('${DIA656}', 'oc9', 'repetida: o check-in foi salvo de novo', '9101')`);
+    igual([r2.ok, r2.grupos], [true, []]); await r2.envio; await espera656();
+    igual(run('__tg656.length'), 0, 'a 1ª continua valendo: o grupo não recebe "foi engano"');
+    assert.ok(/outra/.test(db656('daycare/ocorrencias/' + DIA656 + '/oc9/anulada/correcao').motivo));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC2 — a repetida, nas duas ordens e com desfazer no meio: o grupo recebe UMA linha «foi engano» (com a hora da mensagem que ele viu) e «vale de novo» só quando acreditava no engano', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc9', OC_TON({ ts: T656(9, 8, 17), hora: '08:17' }));
+    const anula = async (id, ms) => { relogio656(ms); const r = await run(`ocorrDcAnular('${DIA656}', '${id}', 'não era o Tonico, foi o FILHOt errado', '9101')`); igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656(); return r; };
+    const desfaz = async (id, ms) => { relogio656(ms); const r = await run(`ocorrDcDesfazerEngano('${DIA656}', '${id}', 'era o Tonico mesmo, a vet confirmou', '9101')`); igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656(); return r; };
+    const msgs = () => run('__tg656').map((t) => t.grupo + ': ' + t.texto);
+    const r1 = await anula('oc1', T656(9, 10, 5));
+    igual([r1.outraValida, msgs()], [true, []], 'a 2ª igual continua valendo: nada sai');
+    const r2 = await anula('oc9', T656(9, 10, 6));
+    const engano = 'Correção: a ocorrência de Tonico de 09/10, 08:15, foi lançada por engano — Gestora Teste';
+    igual([r2.grupos, msgs()], [['urgencia', 'vet'], ['urgencia: ' + engano, 'vet: ' + engano]], 'a última das duas manda uma vez, com a hora que o grupo viu');
+    run('__tg656=[];');
+    await desfaz('oc1', T656(9, 10, 7));
+    const vale = 'Correção: a ocorrência de Tonico de 09/10, 08:15, vale de novo: não foi lançada por engano — Gestora Teste';
+    igual(msgs(), ['urgencia: ' + vale, 'vet: ' + vale], 'o grupo acreditava no engano: recebe «vale de novo»');
+    run('__tg656=[];');
+    const r4 = await anula('oc1', T656(9, 10, 8));
+    igual([r4.grupos, msgs()], [['urgencia', 'vet'], ['urgencia: ' + engano, 'vet: ' + engano]], 'anulada de novo: «foi engano» de novo');
+    run('__tg656=[];');
+    // o grupo já sabe do engano: desfazer a oc9 (que não é a que o grupo acredita) manda «vale de novo»; anular de novo a oc9, «foi engano»
+    await desfaz('oc9', T656(9, 10, 9));
+    igual(msgs().length, 2);
+    run('__tg656=[];');
+    const r6 = await anula('oc9', T656(9, 10, 10));
+    igual(msgs().length, 2, JSON.stringify(r6));
+    // já corrigida: com as duas anuladas e o grupo sabendo, nada se repete
+    igual(run(`ocorrDcCrenca(__pega656('daycare/ocorrencias/${DIA656}'), ocorrDcChaveTelegram(__pega656('daycare/ocorrencias/${DIA656}/oc1'))).estado`), 'engano');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC4 — a Gestão desfaz a «Lançada por engano»: volta para a fila como estava, com rastro, e o grupo que recebeu a correção é avisado', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`); await r.envio; await espera656();
+    relogio656(T656(9, 11, 30)); run('__tg656=[];');
+    const neg = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era o Tonico mesmo, a vet confirmou', '9102')`);
+    igual(neg.ok, false, 'consultora não desfaz'); igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'anulada');
+    const d = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era o Tonico mesmo, a vet confirmou', '9101')`);
+    igual(d.ok, true, JSON.stringify(d)); await d.envio; await espera656();
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    igual([o.status, o.anulada || null], ['aberta', null]);
+    const tr = Object.values(o.trilha).sort((a, b) => a.ts - b.ts);
+    igual(tr.map((t) => t.acao), ['lancada-por-engano', 'engano-desfeito']);
+    igual([tr[1].por, tr[1].motivo, tr[1].antes.motivo, tr[1].quando], ['Gestora Teste', 'era o Tonico mesmo, a vet confirmou', 'não era o Tonico, foi o FILHOt errado', '09/10 11:30']);
+    igual(run('ocorrenciasDayCare().map(function(o){ return o.pet+":"+(!!o.avisado); })'), ['Tonico:false'], 'voltou para a fila, sem desfecho');
+    const linha = 'Correção: a ocorrência de Tonico de 09/10, 08:15, vale de novo: não foi lançada por engano — Gestora Teste';
+    igual(run('__tg656').map((t) => [t.grupo, t.texto]), [['urgencia', linha], ['vet', linha]]);
+    // já desfeita: não desfaz de novo
+    igual((await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era o Tonico mesmo, a vet confirmou', '9101')`)).ok, false);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC1 — anular duas vezes não grava de novo nem manda a correção duas vezes; uma resolvida também pode ser anulada (e volta resolvida ao desfazer)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656({ status: 'resolvida', desfecho: { acao: 'liguei para a tutora', assinatura: 'Bia', desfecho: 'nada', quando: '09/10 09:00', ts: T656(9, 9, 0) } });
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`); await r.envio; await espera656();
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/status_antes'), 'resolvida');
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/desfecho/acao'), 'liguei para a tutora', 'o desfecho antigo continua');
+    const r2 = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    igual(r2.ok, false); assert.ok(/já/.test(r2.erro), r2.erro);
+    igual(run('__tg656.length'), 2, 'só as duas correções da primeira vez');
+    igual(Object.keys(db656('daycare/ocorrencias/' + DIA656 + '/oc1/trilha')).length, 1);
+    const d = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era o Tonico mesmo, a vet confirmou', '9101')`); await d.envio;
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'resolvida');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC4 — «Reabrir» do Day Care reabre de verdade (antes escrevia na estadia e não mudava nada): motivo, a senha da própria pessoa e o desfecho antigo guardado', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const desf = { acao: 'liguei para a tutora', assinatura: 'Bia', desfecho: 'tutor', quando: '09/10 09:00', ts: T656(9, 9, 0) };
+    palcoTonico656({ status: 'resolvida', desfecho: desf });
+    igual(run('ocorrenciasDayCare()[0].avisado.acao'), 'liguei para a tutora');
+    const curto = await run(`ocorrDcReabrir('${DIA656}', 'oc1', 'voltou', '9102')`); igual(curto.ok, false);
+    const enc = await run(`ocorrDcReabrir('${DIA656}', 'oc1', 'a tutora ainda não respondeu nada', '9107')`); igual(enc.ok, false, 'Encãotadora não reabre pela Recepção');
+    const r = await run(`ocorrDcReabrir('${DIA656}', 'oc1', 'a tutora ainda não respondeu nada', '9102')`);
+    igual(r.ok, true, JSON.stringify(r));
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    igual([o.status, o.desfecho || null], ['aberta', null]);
+    const t = Object.values(o.trilha)[0];
+    igual([t.acao, t.por, t.papel, t.motivo, t.antes], ['reaberta', 'Bia Consultora Teste', 'consultora', 'a tutora ainda não respondeu nada', desf]);
+    igual(run('ocorrenciasDayCare().map(function(o){ return !!o.avisado; })'), [false], 'volta para a fila');
+    assert.ok(!run('__esc656').some((e) => /auaulandia\/estadias/.test(e[1])), 'não escreve mais na estadia');
+    // a ocorrência da hospedagem continua no caminho de sempre
+    run(`zPergunta=function(){ return Promise.resolve(true); };`);
+    await run(`ocorrReabrir('E1__o1')`); await espera656();
+    assert.ok(run('__esc656').some((e) => e[1] === 'auaulandia/estadias/E1/ocorrencias/o1/avisadoTutor'), 'hospedagem: igual a antes');
+  } finally { run(SOLTA656); }
+});
+provaAsync('6.56 AC4 — o botão «Reabrir» (ocorrReabrir) com o id do Day Care reabre o nó do Day Care e não escreve na estadia (o defeito da auditoria, B04)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const desf = { acao: 'liguei para a tutora', assinatura: 'Bia', desfecho: 'tutor', quando: '09/10 09:00', ts: T656(9, 9, 0) };
+    palcoTonico656({ status: 'resolvida', desfecho: desf });
+    run(`__zt656=['a tutora ainda não respondeu nada', '9102']; zTexto=function(){ return Promise.resolve(__zt656.shift()); }; zPergunta=function(){ return Promise.resolve(true); };`);
+    await run(`ocorrReabrir('${ID_TON}')`); await espera656();
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'aberta', 'o botão Reabrir reabre a ocorrência do Day Care');
+    assert.ok(!run('__esc656').some((e) => /auaulandia\/estadias/.test(e[1])), 'e não escreve na estadia');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 — os botões de verdade: «Lançada por engano» na Recepção e «Tirar a diária avulsa» na Chamada perguntam, pedem motivo e senha, gravam e dizem o que fizeram', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    run(`__perg656=[]; zPergunta=function(t, l){ __perg656.push([t, l]); return Promise.resolve(true); };
+      __zt656=['não era o Tonico, foi o FILHOt errado', '9101']; zTexto=function(){ return Promise.resolve(__zt656.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'anulada');
+    assert.ok(/Lançada por engano/i.test(run('__perg656[0][0]')) && /Tonico/.test(cadeia656(run('__perg656[0]'))), cadeia656(run('__perg656[0]')));
+    igual(run('__za656.map(function(z){ return z[0]; })'), ['LANÇADA POR ENGANO']);
+    assert.ok(/Urgências/.test(cadeia656(run('__za656[0][1]'))) && /Veterinária/.test(cadeia656(run('__za656[0][1]'))), 'diz quem recebe a correção');
+    // motivo curto: pergunta de novo, com o que falta; desistir não grava nada
+    run(`__db656={}; __za656=[]; __zt656=['erro', null];`); palcoTonico656();
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'aberta', 'desistiu: nada gravado');
+    // a diária avulsa
+    palcoPingo656(true, true);
+    run(`__perg656=[]; __za656=[]; __zt656=['lançada no FILHOt errado, era o Pingo da Ana', '9101'];`);
+    await run(`avulsaTirarAbrir('${K_PIN}')`); await espera656();
+    igual(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'), null);
+    const linhas = cadeia656(run('__perg656[0][1]'));
+    assert.ok(/R\$ 120,00/.test(linhas) && /Financeiro/.test(linhas) && /planilha/.test(linhas) && /senha da Gestão/.test(linhas), linhas);
+    igual(run('__za656[0][0]'), 'DIÁRIA AVULSA TIRADA');
+    // senha errada: diz o porquê e não grava
+    palcoPingo656(false);
+    run(`__za656=[]; __zt656=['lançada no FILHOt errado, era o Pingo da Ana', '9102'];`);
+    await run(`avulsaTirarAbrir('${K_PIN}')`); await espera656();
+    igual(run('__za656[0][0]'), 'NADA FOI TIRADO');
+    assert.ok(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'));
+  } finally { run(SOLTA656); }
+});
+
+prova('6.56 AC4 — o cartão da Recepção: aberta com «Lançada por engano»; resolvida com «Reabrir» e «Lançada por engano»; a trilha à vista', () => {
+  run(ARMA656);
+  try {
+    const it = run(`ocorrDayCareItem('${DIA656}', 'oc1', ${JSON.stringify(OC_TON())})`);
+    const h1 = run(`ocorrCardHTML(${JSON.stringify(it)})`);
+    assert.ok(/Avisei o tutor/.test(h1) && /ocorrDcEnganoAbrir\('dc:2026-10-09__oc1'\)/.test(h1) && />Lançada por engano</.test(h1), h1.slice(-600));
+    const it2 = run(`ocorrDayCareItem('${DIA656}', 'oc1', ${JSON.stringify(OC_TON({ status: 'aberta', trilha: { t1: { acao: 'reaberta', por: 'Bia Consultora Teste', motivo: 'a tutora ainda não respondeu nada', quando: '09/10 10:05', ts: 1 } },
+      desfecho: { acao: 'liguei', assinatura: 'Bia', desfecho: 'tutor', quando: '09/10 11:00', ts: 2 } }))})`);
+    const h2 = run(`ocorrCardHTML(${JSON.stringify(it2)})`);
+    assert.ok(/ocorrReabrir\(/.test(h2) && /ocorrDcEnganoAbrir\(/.test(h2), 'resolvida: Reabrir e Lançada por engano');
+    assert.ok(/Reaberta por Bia Consultora Teste/.test(h2) && /a tutora ainda não respondeu nada/.test(h2), 'a trilha aparece');
+    // a da hospedagem não ganha nada novo
+    const h3 = run(`ocorrCardHTML({estadiaId:'E1', ocId:'o1', pet:'Theo', texto:'mancando', quem:'Giulia', ts:2, avisado:null})`);
+    assert.ok(!/ocorrDcEnganoAbrir/.test(h3) && /Avisei o tutor/.test(h3));
+  } finally { run(SOLTA656); }
+});
+
+prova('6.56 AC3 — uma ocorrência por FILHOt e por dia: a 2ª igual (mesmo FILHOt, mesmo dia, mesmo texto) diz "já existe"; a diferente e a de outro dia, não', () => {
+  run(ARMA656);
+  try {
+    run(`DC_OCORR={'${DIA656}':{oc1:${JSON.stringify(OC_TON())}, oc9:${JSON.stringify(OC_TON({ ts: T656(9, 8, 17), hora: '08:17' }))},
+      oc5:${JSON.stringify(OC_TON({ ts: T656(9, 8, 20), hora: '08:20', itens: ['Orelhas: cera'] }))}},
+      '${ONTEM656}':{oc7:${JSON.stringify(OC_TON({ ts: T656(8, 8, 15) }))}}};`);
+    const L = run('ocorrenciasDayCare()');
+    const por = {}; L.forEach((o) => { por[o.ocId] = o.repetidaDe || null; });
+    igual(por.oc1, null, 'a primeira é a original');
+    igual([por.oc9 && por.oc9.id, por.oc9 && por.oc9.hora], ['oc1', '08:15'], 'a repetida aponta para a original');
+    igual([por.oc5, por.oc7], [null, null], 'texto diferente e outro dia não são repetidas');
+    const h = run(`ocorrCardHTML(ocorrenciasDayCare().filter(function(o){ return o.ocId==='oc9'; })[0])`);
+    assert.ok(/Já existe/.test(h) && /08:15/.test(h), h.slice(0, 600));
+    igual(run(`ocorrDcJaExiste(DC_OCORR['${DIA656}'], '${K_TON}', 'check-in de entrada: Pele: vermelhidão')`), 'oc1');
+    igual(run(`ocorrDcJaExiste(DC_OCORR['${DIA656}'], '${K_TON}', 'check-in de entrada: Patas: corte')`), '');
+    // a original anulada não faz a seguinte virar "repetida": a seguinte é a que vale
+    run(`DC_OCORR['${DIA656}'].oc1.anulada={motivo:'x', ts:1}; DC_OCORR['${DIA656}'].oc1.status='anulada';`);
+    igual(run('ocorrenciasDayCare().filter(function(o){ return o.ocId==="oc9"; })[0].repetidaDe || null'), null);
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ o chamado de comida (Pipoca)
+const CH_PIP = (extra) => Object.assign({ pet: 'Pipoca', tutor: 'Lia Teste', raca: 'Poodle', dia: DIA656, motivo: 'almoça pela ficha, mas não trouxe comida',
+  quem: 'Dani Encãotadora Teste', ts: T656(9, 8, 50), status: 'visto', resposta: 'O tutor autorizou ração da casa', respondido_por: 'Bia Consultora Teste',
+  respondido_login: 'Bia Consultora Teste', respondido_assinado: true, respondido_em: T656(9, 9, 0), alimento_hoje: 'Ração da casa', quantidade_hoje: '1 xícara' }, extra || {});
+const EXC_PIP = { oque: 'Ração da casa', quanto: '1 xícara', quem: 'Bia', ts: T656(9, 9, 0) };
+const palcoPipoca656 = (ch, exc) => {
+  poe656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, ch || CH_PIP());
+  if (exc !== null) poe656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP, exc || EXC_PIP);
+  run(`PT_CHAMADOS=__pega656('daycare/chamados-recepcao/${DIA656}')||{}; ALM_EXCECOES=__pega656('daycare/almoco-excecao/${DIA656}')||{};`);
+};
+
+provaAsync('6.56 AC5 — quem respondeu corrige no mesmo dia: o antes e o depois no rastro, a exceção do almoço acompanha e o nome volta a piscar no Day Care', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPipoca656();
+    const novo = { resposta: 'O tutor autorizou comida natural da casa', alimento: 'Comida natural', quantidade: '80 g' };
+    const r = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'a tutora mandou mensagem trocando a comida', '9102')`);
+    igual(r.ok, true, JSON.stringify(r));
+    const c = db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP);
+    igual([c.resposta, c.alimento_hoje, c.quantidade_hoje, c.status, c.respondido_por, c.corrigido_por], ['O tutor autorizou comida natural da casa', 'Comida natural', '80 g', 'respondido', 'Bia Consultora Teste', 'Bia Consultora Teste']);
+    const cor = Object.values(c.correcoes);
+    igual(cor.length, 1);
+    igual([cor[0].antes.resposta, cor[0].antes.alimento_hoje, cor[0].antes.respondido_por, cor[0].depois.resposta, cor[0].motivo, cor[0].por, cor[0].quando],
+      ['O tutor autorizou ração da casa', 'Ração da casa', 'Bia Consultora Teste', 'O tutor autorizou comida natural da casa', 'a tutora mandou mensagem trocando a comida', 'Bia Consultora Teste', '09/10 10:05']);
+    const e = db656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP);
+    igual([e.oque, e.quanto, e.quem, e.antes.oque], ['Comida natural', '80 g', 'Bia Consultora Teste', 'Ração da casa']);
+    run(`ALM_EXCECOES=__pega656('daycare/almoco-excecao/${DIA656}'); PT_CHAMADOS=__pega656('daycare/chamados-recepcao/${DIA656}');`);
+    const h = run(`almExcecaoHTML('${K_PIP}')`);
+    assert.ok(/Comida natural/.test(h) && /80 g/.test(h) && !/Ração da casa/.test(h), h);
+    assert.ok(cadeia656(run('__db656')).indexOf('9102') < 0, 'a senha não foi parar no banco');
+    assert.ok(run('__au656').some((a) => a[0] === 'chamado-corrigido'));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC5 — outra consultora não corrige; quem respondeu não corrige no dia seguinte; a Gestão corrige; nada muda sem mudança', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPipoca656();
+    const novo = { resposta: 'O tutor autorizou petisco', alimento: '', quantidade: '' };
+    const antes = cadeia656(run('__db656'));
+    const outra = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'a tutora mandou mensagem trocando a comida', '9105')`);
+    igual(outra.ok, false); assert.ok(/respondeu|Gestão/.test(outra.erro), outra.erro);
+    const curto = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'trocou', '9102')`); igual(curto.ok, false);
+    const vazio = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'', alimento:'', quantidade:''}, 'a tutora mandou mensagem trocando a comida', '9102')`); igual(vazio.ok, false);
+    const igualAntes = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou ração da casa', alimento:'Ração da casa', quantidade:'1 xícara'}, 'a tutora mandou mensagem trocando a comida', '9102')`);
+    igual(igualAntes.ok, false); assert.ok(/nada mudou|igual/i.test(igualAntes.erro), igualAntes.erro);
+    run(`document.body.dataset.role='monitor';`);
+    igual((await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'a tutora mandou mensagem trocando a comida', '9101')`)).ok, false, 'aparelho do Encãotador não grava');
+    run(`document.body.dataset.role='consultora';`);
+    igual(cadeia656(run('__db656')), antes, 'nada gravado');
+    // o dia seguinte: quem respondeu já não corrige; a Gestão corrige
+    relogio656(T656(10, 9, 0));
+    const ontem = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'a tutora mandou mensagem trocando a comida', '9102')`);
+    igual(ontem.ok, false); assert.ok(/mesmo dia|Gestão/.test(ontem.erro), ontem.erro);
+    const g = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${JSON.stringify(novo)}, 'a tutora mandou mensagem trocando a comida', '9101')`);
+    igual(g.ok, true, JSON.stringify(g));
+    // a comida saiu da resposta: a exceção do almoço é retirada (riscada, guardada), não apagada
+    const e = db656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP);
+    igual([e.oque, e.retirada.por, e.retirada.motivo, e.antes.oque], ['', 'Gestora Teste', 'a tutora mandou mensagem trocando a comida', 'Ração da casa']);
+    run(`ALM_EXCECOES=__pega656('daycare/almoco-excecao/${DIA656}'); PT_CHAMADOS=__pega656('daycare/chamados-recepcao/${DIA656}');`);
+    const h = run(`almExcecaoHTML('${K_PIP}')`);
+    assert.ok(!/SÓ HOJE/.test(h) && /O tutor autorizou petisco/.test(h), h);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC5 — cancelar o chamado aberto por engano: motivo, a senha da própria pessoa; sai da Mesa, o Day Care para de esperar, nada é apagado', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const aberto = { pet: 'Pipoca', tutor: 'Lia Teste', raca: 'Poodle', dia: DIA656, motivo: 'almoça pela ficha, mas não trouxe comida', quem: 'Dani Encãotadora Teste', ts: T656(9, 8, 50), status: 'aberto' };
+    palcoPipoca656(aberto, null);
+    igual(run(`/NÃO TROUXE COMIDA/.test(almExcecaoHTML('${K_PIP}'))`), true, 'antes: o almoço espera a resposta');
+    const curto = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'engano', '9105')`); igual(curto.ok, false);
+    const posto = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9104')`); igual(posto.ok, false);
+    const r = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9105')`);
+    igual(r.ok, true, JSON.stringify(r));
+    const c = db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP);
+    igual([c.status, c.cancelado.motivo, c.cancelado.por, c.cancelado.quando, c.cancelado.antes.status, c.motivo, c.quem, c.ts],
+      ['cancelado', 'a comida estava na mochila dela', 'Carla Consultora Teste', '09/10 10:05', 'aberto', 'almoça pela ficha, mas não trouxe comida', 'Dani Encãotadora Teste', T656(9, 8, 50)]);
+    igual(c.resposta, 'Foi engano, chamado cancelado: a comida estava na mochila dela', 'o Day Care lê a resposta e para de esperar');
+    run(`PT_CHAMADOS=__pega656('daycare/chamados-recepcao/${DIA656}');`);
+    igual(run(`/NÃO TROUXE COMIDA/.test(almExcecaoHTML('${K_PIP}'))`), false, 'o almoço não espera mais');
+    run(`MESA_CHAMADOS=__pega656('daycare/chamados-recepcao/${DIA656}');`);
+    igual(run('Object.keys(MESA_CHAMADOS).filter(function(k){ return (MESA_CHAMADOS[k]||{}).status==="aberto"; }).length'), 0, 'a Mesa não conta mais');
+    igual((await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9105')`)).ok, false, 'cancelado não cancela de novo');
+    igual((await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'outra coisa qualquer', alimento:'', quantidade:''}, 'a tutora mandou mensagem trocando a comida', '9101')`)).ok, false, 'cancelado não se corrige');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC5 — cancelar o chamado já respondido retira a exceção do almoço (guardada, não apagada)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPipoca656();
+    const r = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9102')`);
+    igual(r.ok, true, JSON.stringify(r));
+    const c = db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP);
+    igual([c.cancelado.antes.resposta, c.cancelado.antes.alimento_hoje], ['O tutor autorizou ração da casa', 'Ração da casa']);
+    const e = db656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP);
+    igual([e.oque, e.retirada.motivo, e.antes.oque], ['', 'a comida estava na mochila dela', 'Ração da casa']);
+  } finally { run(SOLTA656); }
+});
+
+prova('6.56 AC5 — a tela das Perguntas do Day Care: respondida com «Corrigir a resposta» e «Cancelar»; aguardando com «Foi engano»; cancelada riscada com o motivo', () => {
+  run(ARMA656);
+  try {
+    run(`renderChamadosRecepcao=__bk656.rc; __el656={}; __gid656=document.getElementById; document.getElementById=function(id){ if(!__el656[id]) __el656[id]={innerHTML:'', value:''}; return __el656[id]; };`);
+    try {
+      run(`PT_CHAMADOS={'${K_PIP}':${JSON.stringify(CH_PIP({ correcoes: { c1: { antes: { resposta: 'O tutor autorizou petisco', respondido_por: 'Bia' }, depois: { resposta: 'O tutor autorizou ração da casa' }, motivo: 'a tutora mandou mensagem trocando a comida', por: 'Bia Consultora Teste', quando: '09/10 09:30', ts: 1 } } }))},
+        'zeca__teo-teste':{pet:'Zeca', tutor:'Teo Teste', motivo:'almoça pela ficha, mas não trouxe comida', quem:'Dani', ts:${T656(9, 8, 55)}, status:'aberto'},
+        'lua__ana-teste':{pet:'Lua', tutor:'Ana Teste', motivo:'almoça pela ficha, mas não trouxe comida', quem:'Dani', ts:${T656(9, 9, 5)}, status:'cancelado', resposta:'Foi engano, chamado cancelado: a comida estava na mochila',
+          cancelado:{motivo:'a comida estava na mochila', por:'Carla Consultora Teste', quando:'09/10 10:00', ts:4, antes:{status:'aberto'}}}}; CHAMADO_EDIT={};`);
+      run('renderChamadosRecepcao()');
+      const h = run('__el656.chamadosRecepcaoList.innerHTML');
+      const ini = (nome) => h.lastIndexOf('<div class="avr-card', h.indexOf(nome));
+      const pip = h.slice(ini('Pipoca'), ini('Zeca')), zec = h.slice(ini('Zeca'), ini('Lua')), lua = h.slice(ini('Lua'));
+      assert.ok(/Corrigir a resposta/.test(pip) && /Cancelar o chamado/.test(pip), 'respondida: corrigir e cancelar');
+      assert.ok(/Corrigida por Bia Consultora Teste/.test(pip) && /O tutor autorizou petisco/.test(pip), 'o antes da correção à vista');
+      assert.ok(/Responder ao Day Care/.test(zec) && /Foi engano/.test(zec), 'aguardando: responder ou foi engano');
+      assert.ok(/CANCELADO/.test(lua) && /<s>/.test(lua) && /a comida estava na mochila/.test(lua) && /Carla Consultora Teste/.test(lua), 'cancelada riscada');
+      assert.ok(!/Corrigir a resposta/.test(lua), 'cancelada não se corrige');
+      // modo de correção: os campos abertos com o valor atual
+      run(`CHAMADO_EDIT={k:'${K_PIP}', modo:'corrigir'}; renderChamadosRecepcao();`);
+      const h2 = run('__el656.chamadosRecepcaoList.innerHTML');
+      assert.ok(/id="chEdResp"/.test(h2) && /O tutor autorizou ração da casa/.test(h2) && /id="chEdSenha"/.test(h2) && /type="password"/.test(h2) && /id="chEdMotivo"/.test(h2), 'campos da correção');
+    } finally { run('document.getElementById=__gid656;'); }
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ a diária avulsa (Pingo)
+const PIN_CAD = { n: 'Pingo', tutor: 'Caio Teste', raca: 'SRD', dias: [], freq: '' };
+const palcoPingo656 = (comLanc, planOk) => {
+  run(`PELUDINHOS=__bk656.P.concat([${JSON.stringify(PIN_CAD)}]); dcDia=HOJE_DIA;`);
+  poe656('daycare/avulsos/' + DIA656 + '/pingo__caio teste', { nome: 'Pingo', tutor: 'Caio Teste', raca: 'SRD', key: 'pingo__caio teste' });
+  if (comLanc) poe656('daycare/dashboard/' + DIA656 + '/avulso/-L1', { valor: 'Pingo/SRD', hora: '', quem: 'Bia', ts: T656(9, 8, 0), chave: K_PIN, planilha_ok: planOk === undefined ? true : planOk, det: { valor_cent: 12000, matriculado: false } });
+  run(`dcAvulsos=Object.values(__pega656('daycare/avulsos/${DIA656}')||{}); planDia={banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:true, dia:'${DIA656}'};`);
+};
+
+provaAsync('6.56 AC6 — «Tirar a diária avulsa» da Chamada: motivo e senha da Gestão; anulada e guardada inteira, fora da turma; consultora e motivo curto não tiram', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(false);
+    igual(run(`turmaDoDia().some(function(o){ return dcKey(o.p.n,o.p.tutor)==='${K_PIN}'; })`), true, 'antes: na turma');
+    const neg = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9102')`); igual(neg.ok, false); assert.ok(/Gestão/.test(neg.erro), neg.erro);
+    igual((await run(`avulsaTirar('${K_PIN}', 'engano', '9101')`)).ok, false);
+    assert.ok(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'), 'nada saiu');
+    const r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`);
+    igual(r.ok, true, JSON.stringify(r));
+    igual(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'), null, 'saiu do nó vivo (a turma)');
+    const arq = db656('daycare/avulsos-anulados/' + DIA656);
+    const a = Object.values(arq);
+    igual(a.length, 1);
+    igual([a[0].origem, a[0].caminho, a[0].registro, a[0].chave, a[0].nome, a[0].motivo, a[0].por, a[0].papel, a[0].quando],
+      ['chamada', 'daycare/avulsos/' + DIA656 + '/pingo__caio teste', { nome: 'Pingo', tutor: 'Caio Teste', raca: 'SRD', key: 'pingo__caio teste' }, K_PIN, 'Pingo',
+        'lançada no FILHOt errado, era o Pingo da Ana', 'Gestora Teste', 'gestao', '09/10 10:05']);
+    igual(run(`turmaDoDia().some(function(o){ return dcKey(o.p.n,o.p.tutor)==='${K_PIN}'; })`), false, 'depois: fora da turma (e das contagens)');
+    assert.ok(run('__cc656') >= 1, 'a Chamada relê');
+    assert.ok(cadeia656(run('__db656')).indexOf('9101') < 0, 'a senha não foi parar no banco');
+    assert.ok(run('__au656').some((x) => x[0] === 'avulsa-tirada' && /Pingo/.test(x[1])));
+    // a riscada aparece na Chamada
+    run(`AVULSA_ANULADAS={dia:'${DIA656}', lista:__pega656('daycare/avulsos-anulados/${DIA656}')};`);
+    const h = run('avulsaAnuladasHTML()');
+    assert.ok(/<s>Pingo<\/s>/.test(h) && /Gestora Teste/.test(h) && /lançada no FILHOt errado/.test(h), h);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC6 — a avulsa que estava nos Lançamentos do dia (com valor): sai de lá e do Financeiro, e a célula que o app escreveu sai da planilha de HOJE', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(true, true);
+    run(`DASH_DIA_SEL='2026-10-06';`);   // a tela dos Lançamentos aberta em outro dia não manda no dia da planilha
+    const somaAntes = run(`recAvulsoSomar({'${DIA656}':__pega656('daycare/dashboard/${DIA656}/avulso')})`);
+    igual(somaAntes.total_cent, 12000);
+    const r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`);
+    igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656();
+    igual(db656('daycare/dashboard/' + DIA656 + '/avulso/-L1'), null, 'saiu dos Lançamentos do dia');
+    igual(run(`recAvulsoSomar({'${DIA656}':__pega656('daycare/dashboard/${DIA656}/avulso')||{}})`).total_cent, 0, 'fora do Financeiro');
+    igual(run('__de656'), [['avulso', '-L1', 'Pingo/SRD', 'remover', DIA656]], 'a ponte tira a célula de hoje');
+    const a = arq656('lancamento__-L1');
+    igual([a.origem, a.registro.det.valor_cent, a.registro.valor, a.planilha.ok], ['lancamento', 12000, 'Pingo/SRD', true]);
+    assert.ok(arq656('chamada__pingo__caio teste'), 'a da Chamada também');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC6 — regra da 6.49: só o que o app escreveu sai da planilha (sem confirmação de escrita, com o mesmo texto em outro lançamento, ou escrito à mão: a célula fica e a tela diz)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    // 1) o app não confirmou que escreveu (planilha_ok null): não pede à ponte; avisa
+    palcoPingo656(true, null);
+    let r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`); await r.envio; await espera656();
+    igual(run('__de656.length'), 0, 'na dúvida, a célula fica');
+    assert.ok(/tire à mão/.test(arq656('lancamento__-L1').planilha.aviso));
+    // 2) outro lançamento vivo com o mesmo texto: a célula fica (é dele também)
+    run('__db656={}; __de656=[];');
+    palcoPingo656(true, true);
+    // o xará: outro Pingo (da Ana Teste), lançado com o mesmo texto — a célula é dele também
+    poe656('daycare/dashboard/' + DIA656 + '/avulso/-L2', { valor: 'Pingo/SRD', hora: '', quem: 'Carla', ts: T656(9, 8, 30), planilha_ok: true, chave: 'pingo__ana-teste' });
+    r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`); await r.envio; await espera656();
+    igual(run('__de656.length'), 0, 'a célula do outro lançamento fica');
+    igual(arq656('lancamento__-L1').planilha.mantida, true);
+    // 3) só escrito à mão na planilha: o app não tem o que tirar, e diz
+    run('__db656={}; __de656=[];');
+    run(`PELUDINHOS=__bk656.P.concat([${JSON.stringify(PIN_CAD)}]); dcAvulsos=[]; planDia={banho:[], avulso:[{txt:'Pingo', p:PELUDINHOS[PELUDINHOS.length-1], campo:'avulso'}], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:true, dia:'${DIA656}'};`);
+    r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`);
+    igual(r.ok, false); assert.ok(/à mão/.test(r.erro) && /planilha/.test(r.erro), r.erro);
+    igual([run('__de656.length'), db656('daycare/avulsos-anulados')], [0, null]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 AC6 — só hoje: com a turma de outro dia aberta, nada sai; e o botão só aparece no cartão do avulso de hoje', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(false);
+    run(`dcDia=(HOJE_DIA==='seg'?'ter':'seg');`);
+    const r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`);
+    igual(r.ok, false); assert.ok(/hoje/.test(r.erro), r.erro);
+    assert.ok(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'), 'nada saiu');
+    // um FILHOt de reposição (da planilha) na mesma turma: o botão é só da diária avulsa
+    run(`dcDia=HOJE_DIA; renderDaycare=__bk656.rd; PELUDINHOS=PELUDINHOS.concat([{n:'Fixo', tutor:'Zé Teste', raca:'SRD', dias:[], freq:''}]);
+      planDia.reposicao=[{txt:'Fixo', p:PELUDINHOS[PELUDINHOS.length-1], campo:'reposicao'}];`);
+    run(`__el656={}; __gid656=document.getElementById; document.getElementById=function(id){ if(!__el656[id]) __el656[id]={innerHTML:'', textContent:'', value:''}; return __el656[id]; };`);
+    try {
+      run('renderDaycare()');
+      const g = run('__el656.dcGrid.innerHTML');
+      assert.ok(/Fixo/.test(g), 'a reposição está na turma');
+      assert.ok(/avulsaTirarAbrir\('pingo__caio-teste'\)/.test(g) && /Tirar a diária avulsa/.test(g), 'o cartão do Pingo tem o botão');
+      igual((g.match(/Tirar a diária avulsa/g) || []).length, 1, 'só no avulso');
+      run(`dcDia=(HOJE_DIA==='seg'?'ter':'seg'); renderDaycare();`);
+      assert.ok(!/Tirar a diária avulsa/.test(run('__el656.dcGrid.innerHTML')), 'em outro dia, não');
+    } finally { run('document.getElementById=__gid656;'); }
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ 6.56, 2ª rodada (QA): REQ-001, REL-001, REL-002, EN3 e as sondas P4 a P7
+const OC_OLHOS = (extra) => OC_TON(Object.assign({ ts: T656(9, 9, 0), hora: '09:00', itens: ['Olhos: secreção'] }, extra || {}));
+const TXT_OLHOS = 'check-in de entrada: Olhos: secreção';
+const ENGANO656 = 'Correção: a ocorrência de Tonico de 09/10, 08:15, foi lançada por engano — Gestora Teste';
+const VALE656 = 'Correção: a ocorrência de Tonico de 09/10, 08:15, vale de novo: não foi lançada por engano — Gestora Teste';
+const msgs656 = () => run('__tg656').map((t) => t.grupo + ': ' + t.texto);
+const anula656 = async (id, ms) => { relogio656(ms); const r = await run(`ocorrDcAnular('${DIA656}', '${id}', 'não era o Tonico, foi o FILHOt errado', '9101')`); igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656(); return r; };
+const desfaz656 = async (id, ms) => { relogio656(ms); const r = await run(`ocorrDcDesfazerEngano('${DIA656}', '${id}', 'era o Tonico mesmo, a vet confirmou', '9101')`); igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656(); return r; };
+
+provaAsync('6.56 R2 REQ-001 (ordem A) — a irmã válida de OUTRO texto não cala a correção da que foi ao grupo; a tela da Gestão diz que a outra não foi ao grupo', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc2', OC_OLHOS());
+    run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')};`);
+    const r = await anula656('oc1', T656(9, 10, 5));
+    igual([r.grupos, r.outraValida, r.naoFoi], [['urgencia', 'vet'], false, false]);
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656], 'o grupo viu a pele (08:15): a correção sai');
+    igual(r.naoForam.map((x) => [x.texto, x.hora]), [[TXT_OLHOS, '09:00']]);
+    const c = db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao');
+    igual(c.nao_foram, [{ texto: TXT_OLHOS, hora: '09:00' }]);
+    // a tela: o botão de verdade
+    run('__db656={}; __tg656=[]; __za656=[];'); palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc2', OC_OLHOS());
+    run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')};
+      zPergunta=function(){ return Promise.resolve(true); }; __zt656=['não era o Tonico, foi o FILHOt errado', '9101']; zTexto=function(){ return Promise.resolve(__zt656.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    // 3ª rodada (REQ-003): com «não foi ao grupo», o cartão final é o de ATENÇÃO, não o verde de «pronto»
+    igual(run('__za656.length'), 0, 'nada no cartão verde');
+    const fim = run('__ze656[__ze656.length-1]');
+    assert.ok(fim[0] === 'LANÇADA POR ENGANO — CONFIRA O TELEGRAM' && /crm-atencao/.test(fim[3].corTitulo), JSON.stringify(fim));
+    const linhas = fim[1];
+    assert.ok(linhas.some((l) => /A correção vai ao grupo de Urgências e ao grupo da Veterinária/.test(l)), JSON.stringify(linhas));
+    assert.ok(linhas.some((l) => l.indexOf('A ocorrência "' + TXT_OLHOS + '" (09:00) não foi ao grupo') === 0), JSON.stringify(linhas));
+    assert.ok(!linhas.some((l) => /igual/.test(l)), 'não diz «igual» quando o texto é outro');
+    igual(run('__tg656.length'), 2, 'nada sai sozinho para a de 09:00: a Gestão decide');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 REQ-001 (ordem B) — anular primeiro a que NUNCA foi ao grupo: nada sai e a tela diz qual o grupo viu; depois a que foi: a correção sai; desfazer só manda «vale de novo» para a do mesmo texto', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc2', OC_OLHOS());
+    run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')}; zPergunta=function(){ return Promise.resolve(true); };
+      __zt656=['os olhos eram de outro FILHOt, não dele', '9101']; zTexto=function(){ return Promise.resolve(__zt656.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('dc:${DIA656}__oc2')`); await espera656();
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc2/status'), 'anulada');
+    igual(run('__tg656.length'), 0, 'o grupo nunca viu a de 09:00');
+    const c2 = db656('daycare/ocorrencias/' + DIA656 + '/oc2/anulada/correcao');
+    assert.ok(/não foi ao grupo/.test(c2.motivo) && /08:15/.test(c2.motivo) && /Pele: vermelhidão/.test(c2.motivo), c2.motivo);
+    const l = run('__za656[0][1]');
+    assert.ok(l.some((x) => /Esta ocorrência não foi ao grupo do Telegram: o grupo só recebeu a de 08:15/.test(x)), JSON.stringify(l));
+    const r1 = await anula656('oc1', T656(9, 10, 6));
+    igual([r1.grupos, msgs656()], [['urgencia', 'vet'], ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656]], 'a de 08:15 foi ao grupo: a correção sai');
+    run('__tg656=[];');
+    await desfaz656('oc2', T656(9, 10, 7));
+    igual(msgs656(), [], 'a de 09:00 nunca foi ao grupo: desfazer não manda «vale de novo»');
+    await desfaz656('oc1', T656(9, 10, 8));
+    igual(msgs656(), ['urgencia: ' + VALE656, 'vet: ' + VALE656]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 REQ-001 (mesmo texto) — a irmã válida com o MESMO texto cala a correção, e a tela diz «o mesmo texto»', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc9', OC_TON({ ts: T656(9, 8, 17), hora: '08:17' }));
+    run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')}; zPergunta=function(){ return Promise.resolve(true); };
+      __zt656=['não era o Tonico, foi o FILHOt errado', '9101']; zTexto=function(){ return Promise.resolve(__zt656.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(run('__tg656.length'), 0);
+    assert.ok(run('__za656[0][1]').some((x) => /Outra ocorrência igual dele \(o mesmo texto\)/.test(x)), JSON.stringify(run('__za656[0][1]')));
+    assert.ok(/o mesmo texto/.test(db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao').motivo));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 REL-001 — tirar a mesma avulsa da Chamada duas vezes no dia guarda os DOIS registros no arquivo', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(false);
+    igual((await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`)).ok, true);
+    relogio656(T656(9, 11, 0));
+    poe656('daycare/avulsos/' + DIA656 + '/pingo__caio teste', { nome: 'Pingo', tutor: 'Caio Teste', raca: 'SRD', key: 'pingo__caio teste' });
+    run(`dcAvulsos=Object.values(__pega656('daycare/avulsos/${DIA656}')||{});`);
+    igual((await run(`avulsaTirar('${K_PIN}', 'de novo lançada por engano na chamada', '9101')`)).ok, true);
+    const arq = db656('daycare/avulsos-anulados/' + DIA656) || {};
+    igual(Object.keys(arq).sort(), ['chamada__pingo__caio teste__' + T656(9, 10, 5), 'chamada__pingo__caio teste__' + T656(9, 11, 0)]);
+    igual(Object.values(arq).map((a) => a.motivo).sort(), ['de novo lançada por engano na chamada', 'lançada no FILHOt errado, era o Pingo da Ana']);
+    run(`AVULSA_ANULADAS={dia:'${DIA656}', lista:__pega656('daycare/avulsos-anulados/${DIA656}')};`);
+    assert.ok(/Diárias avulsas tiradas hoje \(2\)/.test(run('avulsaAnuladasHTML()')), 'a faixa mostra as duas');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (sonda P4 do QA) — a Supervisão não assina o que pede a senha da Gestão: anular, desfazer e tirar a avulsa', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const r1 = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9106')`);
+    palcoPingo656(false);
+    const r2 = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9106')`);
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1'); o.anulada = { motivo: 'x', por: 'Gestora Teste', ts: 1, status_antes: 'aberta' }; poe656('daycare/ocorrencias/' + DIA656 + '/oc1', o);
+    const r3 = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era ele mesmo, a veterinária confirmou', '9106')`);
+    igual([r1.ok, r2.ok, r3.ok], [false, false, false]);
+    for (const r of [r1, r2, r3]) assert.ok(/Amanda Supervisora Teste/.test(r.erro) && /Gestão/.test(r.erro), r.erro);
+    assert.ok(db656('daycare/avulsos/' + DIA656 + '/pingo__caio teste'), 'a avulsa continua');
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/motivo'), 'x');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (sonda P5 do QA) — aparelho de Encãotador: cancelar, corrigir e responder o chamado são recusados na função que grava, mesmo com senha válida da Recepção', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    poe656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, CH_PIP({ status: 'aberto', resposta: undefined, respondido_por: undefined, respondido_login: undefined, respondido_assinado: undefined, alimento_hoje: undefined, quantidade_hoje: undefined }));
+    const antes = cadeia656(db656('daycare/chamados-recepcao'));
+    run(`document.body.dataset.role='monitor';`);
+    const r1 = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dele', '9102')`);
+    run(`__gid656=document.getElementById; document.getElementById=function(id){ if(id==='chresp_${K_PIP}') return {value:'O tutor autorizou petisco'}; if(id==='chsenha_${K_PIP}') return {value:'9102'}; return {value:''}; };
+      __al656=[]; __alert656=alert; alert=function(m){ __al656.push(String(m)); };`);
+    let r3;
+    try { r3 = await run(`chamadoResponder('${K_PIP}')`); } finally { run('document.getElementById=__gid656; alert=__alert656;'); }
+    igual(cadeia656(db656('daycare/chamados-recepcao')), antes, 'nada mudou');
+    poe656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, CH_PIP());
+    const antes2 = cadeia656(db656('daycare/chamados-recepcao'));
+    const r2 = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '9102')`);
+    igual([r1.ok, r2.ok, r3], [false, false, false]);
+    for (const e of [r1.erro, r2.erro, run('__al656[0]')]) assert.ok(/Recepção/.test(e), e);
+    igual(cadeia656(db656('daycare/chamados-recepcao')), antes2, 'nada mudou');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (sonda P6 do QA) — desfazer uma anulação que NÃO foi a grupo nenhum não manda «vale de novo»', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(null, true);
+    await anula656('oc1', T656(9, 10, 5));
+    const d = await desfaz656('oc1', T656(9, 10, 30));
+    igual([d.grupos, run('__tg656.length')], [[], 0]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (sonda P7 do QA) — «Tirar a diária avulsa» é UM update atômico: os nós vivos (null) e o arquivo no mesmo update', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(true, true);
+    run('__esc656=[];');
+    igual((await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`)).ok, true);
+    const ups = run('__esc656').filter((e) => e[0] === 'update' || e[0] === 'set' || e[0] === 'remove');
+    const ts = T656(9, 10, 5);
+    igual(ups.filter((e) => e[0] === 'update').length, 1, 'um update só');
+    igual(ups[0][2], ['daycare/avulsos-anulados/' + DIA656 + '/chamada__pingo__caio teste__' + ts, 'daycare/avulsos-anulados/' + DIA656 + '/lancamento__-L1__' + ts,
+      'daycare/avulsos/' + DIA656 + '/pingo__caio teste', 'daycare/dashboard/' + DIA656 + '/avulso/-L1'].sort());
+    assert.ok(!ups.slice(1).some((e) => /daycare\/avulsos\/|daycare\/dashboard\//.test(e[1])), 'nenhuma outra gravação nos nós vivos: ' + JSON.stringify(ups));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (q13) — «Reabrir» numa «Lançada por engano» é recusado: quem a devolve é a Gestão, pelo «Desfazer»', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656({ status: 'resolvida', desfecho: { acao: 'liguei para a tutora', assinatura: 'Bia', desfecho: 'tutor', quando: '09/10 09:00', ts: T656(9, 9, 0) } });
+    await anula656('oc1', T656(9, 10, 5));
+    const antes = cadeia656(db656('daycare/ocorrencias'));
+    const r = await run(`ocorrDcReabrir('${DIA656}', 'oc1', 'a tutora ainda não respondeu nada', '9102')`);
+    igual(r.ok, false); assert.ok(/Gestão/.test(r.erro) && /Desfazer/.test(r.erro), r.erro);
+    igual(cadeia656(db656('daycare/ocorrencias')), antes, 'nada mudou');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 REL-002 (q14, sonda P3 do QA) — a tela velha não dá desfecho a uma «Lançada por engano»: o desfecho do Day Care é gravado por transação', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();                                   // a memória deste aparelho: SEM a anulação
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    o.anulada = { motivo: 'não era o Tonico, foi o FILHOt errado', por: 'Gestora Teste', ts: T656(9, 10, 0), status_antes: 'aberta' }; o.status = 'anulada';
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc1', o);   // outro aparelho anulou
+    const forms = `__gid656=document.getElementById; document.getElementById=function(id){ if(id==='ocr_acao_${ID_TON}') return {value:'liguei para a tutora e expliquei tudo'}; if(id==='ocr_assina_${ID_TON}') return {value:'Bia Consultora'}; return __gid656.call(document,id); };
+      __al656=[]; __alert656=alert; alert=function(m){ __al656.push(String(m)); };`;
+    run(forms);
+    let ok1;
+    try { ok1 = await run(`ocorrResolver('${ID_TON}','tutor')`); await espera656(); } finally { run('document.getElementById=__gid656; alert=__alert656;'); }
+    const d = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    igual([ok1, !!d.desfecho, d.status, !!d.anulada], [false, false, 'anulada', true]);
+    assert.ok(/lançada por engano/.test(run('__al656[0]')), run('__al656[0]'));
+    igual(run(`DC_OCORR['${DIA656}'].oc1.status`), 'anulada', 'a memória do aparelho se acerta');
+    // sem anulação: desfecho e status juntos, numa transação só
+    run('__db656={}; __esc656=[];'); palcoTonico656(); run(forms);
+    let ok2;
+    try { ok2 = await run(`ocorrResolver('${ID_TON}','tutor')`); await espera656(); } finally { run('document.getElementById=__gid656; alert=__alert656;'); }
+    const d2 = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    igual([ok2, d2.status, d2.desfecho.acao, d2.desfecho.assinatura, d2.desfecho.desfecho], [true, 'resolvida', 'liguei para a tutora e expliquei tudo', 'Bia Consultora', 'tutor']);
+    igual(run('__esc656').filter((e) => /daycare\/ocorrencias/.test(e[1])).map((e) => e[0]), ['transaction']);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 SEC-001 (q17) — «quem respondeu» é a identidade da senha: outra «Bia» não corrige; a resposta antiga, assinada com nome digitado, só a Gestão corrige', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    run(`MONITORES=MONITORES.concat([{id:'t8', nome:'Bia Souza Teste', senha:'9108', role:'consultora'}]);`);
+    palcoPipoca656();
+    const novo = "{resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}";
+    const r = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${novo}, 'a tutora mandou outra mensagem agora', '9108')`);
+    igual(r.ok, false); assert.ok(/Bia Consultora Teste/.test(r.erro), r.erro);
+    // a resposta de antes da 6.56: nome digitado, sem a assinatura pela senha
+    poe656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, CH_PIP({ respondido_por: 'Bia', respondido_login: 'Bia Consultora Teste', respondido_assinado: undefined }));
+    igual((await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${novo}, 'a tutora mandou outra mensagem agora', '9102')`)).ok, false, 'sem a marca da senha, a própria Bia não corrige');
+    const g = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', ${novo}, 'a tutora mandou outra mensagem agora', '9101')`);
+    igual(g.ok, true, JSON.stringify(g));
+    const c = db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP);
+    igual([c.respondido_por, c.respondido_login, c.respondido_assinado], ['Gestora Teste', 'Gestora Teste', true]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 EN3 (q28) — a resposta ao Day Care é assinada com a senha da própria pessoa: grava o nome (quem assinou, não a pessoa do turno), nunca a senha', async () => {
+  run(ARMA656); relogio656(T656(9, 9, 0));
+  try {
+    const aberto = { pet: 'Pipoca', tutor: 'Lia Teste', raca: 'Poodle', dia: DIA656, motivo: 'almoça pela ficha, mas não trouxe comida', quem: 'Dani Encãotadora Teste', ts: T656(9, 8, 50), status: 'aberto' };
+    poe656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, aberto);
+    run(`__bkq656=quemSou; quemSou=function(){ return 'Pessoa do Turno Teste'; }; __al656=[]; __alert656=alert; alert=function(m){ __al656.push(String(m)); };
+      __form656={}; __gid656=document.getElementById; document.getElementById=function(id){ return {value:(__form656[id]||'')}; };`);
+    const responde = async (senha) => { run(`__form656={'chresp_${K_PIP}':'O tutor autorizou ração da casa', 'chalim_${K_PIP}':'Ração da casa', 'chqtd_${K_PIP}':'1 xícara', 'chsenha_${K_PIP}':${JSON.stringify(senha)}}; __al656=[];`); return run(`chamadoResponder('${K_PIP}')`); };
+    try {
+      for (const [s, rx] of [['', /senha/], ['0000', /não é de ninguém/], ['9104', /posto/], ['9107', /não pode assinar/]]) {
+        igual(await responde(s), false, s); assert.ok(rx.test(run('__al656[0]')), run('__al656[0]'));
+      }
+      igual(db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP + '/resposta'), null, 'nada gravado');
+      igual(await responde('9102'), true);
+      const c = db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP);
+      igual([c.resposta, c.respondido_por, c.respondido_login, c.respondido_papel, c.respondido_assinado, c.status, c.quem],
+        ['O tutor autorizou ração da casa', 'Bia Consultora Teste', 'Bia Consultora Teste', 'consultora', true, 'respondido', 'Dani Encãotadora Teste']);
+      igual(db656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP + '/quem'), 'Bia Consultora Teste');
+      assert.ok(cadeia656(run('__db656')).indexOf('9102') < 0, 'a senha não foi para o banco');
+      // a outra consultora, com a tela velha, responde por cima: recusado (a transação vê a resposta)
+      igual(await responde('9105'), false); assert.ok(/já respondeu/.test(run('__al656[0]')), run('__al656[0]'));
+      igual(db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP + '/respondido_por'), 'Bia Consultora Teste');
+      // e quem assinou corrige: a identidade gravada é a dela
+      relogio656(T656(9, 10, 5));
+      igual((await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'', quantidade:''}, 'a tutora mandou outra mensagem agora', '9102')`)).ok, true);
+    } finally { run('quemSou=__bkq656; alert=__alert656; document.getElementById=__gid656;'); }
+    // a tela: o campo é de senha
+    run(`renderChamadosRecepcao=__bk656.rc; __el656={}; __gid656=document.getElementById; document.getElementById=function(id){ if(!__el656[id]) __el656[id]={innerHTML:'', value:''}; return __el656[id]; };
+      PT_CHAMADOS={'${K_PIP}':${JSON.stringify(aberto)}}; CHAMADO_EDIT={};`);
+    try { run('renderChamadosRecepcao()'); } finally { run('document.getElementById=__gid656;'); }
+    const h = run('__el656.chamadosRecepcaoList.innerHTML');
+    assert.ok(/id="chsenha_pipoca__lia-teste" type="password"/.test(h) && !/placeholder="Seu nome"/.test(h), h.slice(-700));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 REL-002 — o aparelho com a cópia velha: corrigir ou cancelar o chamado decide pelo banco (a transação), não pela leitura velha', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const caminho = 'daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP;
+    palcoPipoca656();
+    // outro aparelho cancelou; este ainda lê a resposta da Bia
+    run(`__stale656[${JSON.stringify(caminho)}]=__pega656(${JSON.stringify(caminho)});`);
+    igual((await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9105')`)).ok, true);
+    const cancelado = cadeia656(db656(caminho));
+    const r1 = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '9102')`);
+    igual(r1.ok, false); assert.ok(/cancelado/.test(r1.erro), r1.erro);
+    const r2 = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dela', '9102')`);
+    igual(r2.ok, false); assert.ok(/já foi cancelado, por Carla Consultora Teste/.test(r2.erro), r2.erro);
+    igual(cadeia656(db656(caminho)), cancelado, 'o cancelamento ficou intacto');
+    // a Gestão corrigiu; a Bia, com a cópia velha (ainda dela), não corrige por cima
+    run('__db656={}; __stale656={};'); palcoPipoca656();
+    run(`__stale656[${JSON.stringify(caminho)}]=__pega656(${JSON.stringify(caminho)});`);
+    igual((await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou comida natural', alimento:'Comida natural', quantidade:'80 g'}, 'a Gestão falou com a tutora agora', '9101')`)).ok, true);
+    const r3 = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '9102')`);
+    igual(r3.ok, false); assert.ok(/Gestora Teste/.test(r3.erro), r3.erro);
+    igual(db656(caminho + '/resposta'), 'O tutor autorizou comida natural');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R2 (q08, q09, q27) — a linha do Telegram escapa o HTML; a anulação guarda o login do aparelho; a correção não é gravada numa anulação que já mudou', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656({ pet: 'Tico & <Teco>' });
+    run(`__bkq656=quemSou; quemSou=function(){ return 'Aparelho Recepção Teste'; };`);
+    let r;
+    try { r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`); await r.envio; await espera656(); }
+    finally { run('quemSou=__bkq656;'); }
+    igual(run('__tg656[0].texto'), 'Correção: a ocorrência de Tico &amp; &lt;Teco&gt; de 09/10, 08:15, foi lançada por engano — Gestora Teste');
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/login'), 'Aparelho Recepção Teste');
+    // a anulação mudou (desfeita e anulada de novo) enquanto a correção era mandada: o registro não vai para a nova
+    const no = 'daycare/ocorrencias/' + DIA656 + '/oc1/anulada';
+    const a = db656(no); delete a.correcao; a.ts = T656(9, 11, 0); poe656(no, a);
+    await run(`ocorrDcCorrigirNoTelegram(__pega656('daycare/ocorrencias/${DIA656}/oc1'), '${DIA656}', {grupos:[]}, 'Gestora Teste', false, 'k', '${no}', ${T656(9, 10, 5)})`);
+    igual(db656(no + '/correcao'), null, 'a anulação de 11:00 não herda o registro da de 10:05');
+    await run(`ocorrDcCorrigirNoTelegram(__pega656('daycare/ocorrencias/${DIA656}/oc1'), '${DIA656}', {grupos:[]}, 'Gestora Teste', false, 'k', '${no}', ${T656(9, 11, 0)})`);
+    assert.ok(db656(no + '/correcao'), 'a da mesma anulação é gravada');
+  } finally { run(SOLTA656); }
+});
+
+prova('6.56 R2 (q25) — a faixa «Diárias avulsas tiradas hoje» não aparece com a turma de outro dia aberta', () => {
+  run(ARMA656 + ' __bkaa656=AVULSA_ANULADAS;');
+  try {
+    run(`AVULSA_ANULADAS={dia:dcDataKey(), lista:{x:{chave:'${K_PIN}', nome:'Pingo', por:'Gestora Teste', motivo:'lançada no FILHOt errado, era outro', ts:1}}};`);
+    run('dcDia=HOJE_DIA;'); assert.ok(/<s>Pingo<\/s>/.test(run('avulsaAnuladasHTML()')));
+    run(`dcDia=(HOJE_DIA==='seg'?'ter':'seg');`); igual(run('avulsaAnuladasHTML()'), '');
+  } finally { run(SOLTA656 + ' AVULSA_ANULADAS=__bkaa656;'); }
+});
+
+provaAsync('6.56 R2 — a ocorrência que foi só ao grupo da Veterinária: a correção vai só a ele (nunca a um grupo que não a recebeu)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(null, true);
+    poe656('daycare/urgencias-enviadas/' + DIA656 + '/vet--corpo-' + K_TON + '-ent', { ts: T656(9, 8, 15) });
+    const r = await anula656('oc1', T656(9, 10, 5));
+    igual([r.grupos, msgs656()], [['vet'], ['vet: ' + ENGANO656]]);
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ 6.56, 3ª rodada: as sondas R1 a R10 do re-gate do QA (qa656/r2/sondas656b.js), na Fase 0
+const qa2log = () => {};   // as sondas imprimiam o que viram; na Fase 0, as asserções bastam
+const R2_OC = (id, h, m, itens, extra) => poe656('daycare/ocorrencias/' + DIA656 + '/' + id, OC_TON(Object.assign({ ts: T656(9, h, m), hora: String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'), itens: itens }, extra || {})));
+const R2_REL = () => run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')};`);
+const R2_TG = () => run('__tg656').map((t) => t.grupo + ': ' + t.texto);
+const R2_FORM = (vals) => run(`__f656=${JSON.stringify(vals)}; __gid656=document.getElementById; document.getElementById=function(id){ if(id in __f656) return {value:__f656[id]}; return __gid656.call(document,id); };
+  __al656=[]; __alert656=(typeof alert==='function')?alert:null; alert=function(m){ __al656.push(String(m)); };`);
+const R2_SOLTA_FORM = () => run('document.getElementById=__gid656; alert=__alert656;');
+
+provaAsync('6.56 QA2 R1 — a P1 do 1º gate: irmã de texto diferente não cala mais a correção, e a tela diz que a de 09:00 não foi ao grupo', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(); R2_OC('oc2', 9, 0, ['Olhos: secreção']); R2_REL();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`);
+    await r.envio; await espera656();
+    const c = db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao') || {};
+    qa2log('    [R1] grupos=' + JSON.stringify(r.grupos) + ' tg=' + JSON.stringify(R2_TG()) + ' nao_foram=' + JSON.stringify(c.nao_foram));
+    igual(r.grupos, ['urgencia', 'vet']);
+    igual(run('__tg656.length'), 2);
+    assert.ok((c.nao_foram || []).length === 1 && /Olhos/.test(c.nao_foram[0].texto) && c.nao_foram[0].hora === '09:00');
+    assert.ok(/não foi ao grupo/.test(run(`ocorrDcLinhaCorrecao(__pega656('daycare/ocorrencias/${DIA656}/oc1/anulada/correcao'))`)));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R2 — 3 irmãs (A 08:15 X, B 08:17 X, C 09:00 Y): anular C, A, B e desfazer C, A, B — o grupo recebe UM «foi engano» e UM «vale de novo», por grupo', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); R2_OC('ocB', 8, 17, ['Pele: vermelhidão']); R2_OC('ocC', 9, 0, ['Olhos: secreção']); R2_REL();
+    const passos = [];
+    const faz = async (fn, id, mot, t) => { relogio656(t); const r = await run(`${fn}('${DIA656}', '${id}', '${mot}', '9101')`); await (r.envio || Promise.resolve()); await espera656();
+      passos.push(fn.replace('ocorrDc', '') + ' ' + id + ' ok=' + r.ok + ' grupos=' + JSON.stringify(r.grupos) + (r.naoFoi ? ' naoFoi' : '') + (r.outraValida ? ' outraValida' : '') + (r.jaCorrigida ? ' jaCorrigida' : '') + ' tg=' + run('__tg656.length')); return r; };
+    await faz('ocorrDcAnular', 'ocC', 'olhos estavam bons, foi engano', T656(9, 10, 1));
+    await faz('ocorrDcAnular', 'oc1', 'não era o Tonico, foi o FILHOt errado', T656(9, 10, 2));
+    await faz('ocorrDcAnular', 'ocB', 'repetida do mesmo engano de hoje', T656(9, 10, 3));
+    await faz('ocorrDcDesfazerEngano', 'ocC', 'era ele mesmo, a veterinária confirmou', T656(9, 10, 4));
+    await faz('ocorrDcDesfazerEngano', 'oc1', 'era ele mesmo, a veterinária confirmou', T656(9, 10, 5));
+    await faz('ocorrDcDesfazerEngano', 'ocB', 'era ele mesmo, a veterinária confirmou', T656(9, 10, 6));
+    passos.forEach((p) => qa2log('    [R2] ' + p));
+    qa2log('    [R2] tg=' + JSON.stringify(R2_TG()));
+    const tg = R2_TG();
+    igual(tg.length, 4, 'um «foi engano» e um «vale de novo» por grupo');
+    igual(tg.filter((t) => /08:15, foi lançada por engano —/.test(t)).length, 2);
+    igual(tg.filter((t) => /vale de novo/.test(t)).length, 2);
+    assert.ok(tg.every((t) => /de 09\/10, 08:15,/.test(t)), 'a hora é a da mensagem que o grupo viu');
+    igual(run('ocorrenciasDayCare().length'), 3, 'as três voltaram');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R3 — 3 irmãs (A X, B Y, C Y): anular A manda a correção e lista as DUAS que não foram ao grupo; anular B e C não manda nada', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(); R2_OC('ocB', 8, 40, ['Olhos: secreção']); R2_OC('ocC', 9, 0, ['Olhos: secreção']); R2_REL();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'não era o Tonico, foi o FILHOt errado', '9101')`); await r.envio; await espera656();
+    relogio656(T656(9, 10, 6));
+    const rb = await run(`ocorrDcAnular('${DIA656}', 'ocB', 'repetida do check-in salvo de novo', '9101')`); await rb.envio; await espera656();
+    const c = db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao') || {};
+    qa2log('    [R3] A: grupos=' + JSON.stringify(r.grupos) + ' nao_foram=' + JSON.stringify(c.nao_foram) + ' | B: grupos=' + JSON.stringify(rb.grupos) + ' naoFoi=' + rb.naoFoi + ' tg=' + run('__tg656.length'));
+    igual([r.grupos.length, (c.nao_foram || []).length, rb.grupos.length, !!rb.naoFoi, run('__tg656.length')], [2, 2, 0, true, 2]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R4 — a P3 do 1º gate: o aparelho com a tela velha não dá desfecho numa anulada (transação)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656();
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    o.anulada = { motivo: 'não era o Tonico, foi o FILHOt errado', por: 'Gestora Teste', ts: T656(9, 10, 0), status_antes: 'aberta' }; o.status = 'anulada';
+    poe656('daycare/ocorrencias/' + DIA656 + '/oc1', o);   // outro aparelho anulou; o DC_OCORR daqui é o de antes
+    R2_FORM({ ['ocr_acao_' + ID_TON]: 'liguei para a tutora e expliquei tudo', ['ocr_assina_' + ID_TON]: 'Bia Consultora' });
+    let ret; try { ret = await run(`ocorrResolver('${ID_TON}','tutor')`); await espera656(); } finally { R2_SOLTA_FORM(); }
+    const d = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    qa2log('    [R4] ret=' + ret + ' status=' + d.status + ' desfecho=' + !!d.desfecho + ' alertas=' + JSON.stringify(run('__al656')));
+    igual([!!d.desfecho, d.status, ret], [false, 'anulada', false]);
+    // e o fluxo normal continua: uma ocorrência aberta recebe o desfecho
+    R2_OC('ocN', 9, 30, ['Patas: corte'], { pet: 'Bolota', refKey: 'bolota__nina-teste' }); R2_REL();
+    R2_FORM({ ['ocr_acao_dc:' + DIA656 + '__ocN']: 'liguei para a tutora e expliquei tudo', ['ocr_assina_dc:' + DIA656 + '__ocN']: 'Bia Consultora' });
+    try { ret = await run(`ocorrResolver('dc:${DIA656}__ocN','tutor')`); await espera656(); } finally { R2_SOLTA_FORM(); }
+    const n = db656('daycare/ocorrencias/' + DIA656 + '/ocN');
+    igual([ret, n.status, n.desfecho.assinatura, n.desfecho.desfecho], [true, 'resolvida', 'Bia Consultora', 'tutor']);
+    igual(run(`DC_OCORR['${DIA656}'].ocN.status`), 'resolvida', 'a memória do aparelho acompanha');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R5 — a P2 do 1º gate: duas tiradas no mesmo dia ficam as duas no arquivo e na faixa', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(false);
+    let r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`); igual(r.ok, true);
+    relogio656(T656(9, 11, 0));
+    poe656('daycare/avulsos/' + DIA656 + '/pingo__caio teste', { nome: 'Pingo', tutor: 'Caio Teste', raca: 'SRD', key: 'pingo__caio teste' });
+    run(`dcAvulsos=Object.values(__pega656('daycare/avulsos/${DIA656}')||{});`);
+    r = await run(`avulsaTirar('${K_PIN}', 'de novo lançada por engano na chamada', '9101')`); igual(r.ok, true);
+    const arq = db656('daycare/avulsos-anulados/' + DIA656) || {};
+    run(`AVULSA_ANULADAS={dia:'${DIA656}', lista:__pega656('daycare/avulsos-anulados/${DIA656}')};`);
+    const h = run('avulsaAnuladasHTML()');
+    qa2log('    [R5] chaves=' + JSON.stringify(Object.keys(arq)) + ' faixa=' + h.replace(/<[^>]+>/g, '').slice(0, 260));
+    igual(Object.keys(arq).length, 2);
+    assert.ok(/tiradas hoje \(2\)/.test(h) && /10:05/.test(h) && /11:00/.test(h), h);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R6 — a chave nova (__ts) nos leitores: o aviso da planilha chega à faixa, na memória e relido do banco', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPingo656(true, null);   // o app não confirmou a escrita: a célula fica e a tela avisa
+    const r = await run(`avulsaTirar('${K_PIN}', 'lançada no FILHOt errado, era o Pingo da Ana', '9101')`); igual(r.ok, true); await r.envio; await espera656();
+    const arq = db656('daycare/avulsos-anulados/' + DIA656) || {};
+    const kl = Object.keys(arq).find((k) => /^lancamento__-L1__\d+$/.test(k));
+    const memo = run('avulsaAnuladasHTML()');
+    run(`AVULSA_ANULADAS={dia:'', lista:{}};`); await run('avulsaAnuladasCarregar()'); await espera656();
+    const relido = run('avulsaAnuladasHTML()');
+    qa2log('    [R6] chave=' + kl + ' planilha=' + JSON.stringify((arq[kl] || {}).planilha) + ' | memoria=' + /tire à mão/.test(memo) + ' relido=' + /tire à mão/.test(relido));
+    assert.ok(kl && arq[kl].planilha && /tire à mão/.test(arq[kl].planilha.aviso), 'o resultado da planilha fica no MESMO registro do arquivo');
+    igual(Object.keys(arq).filter((k) => /\/|planilha/.test(k)).length, 0, 'nenhum registro solto (planilha sem o resto)');
+    assert.ok(/tire à mão/.test(memo) && /tire à mão/.test(relido));
+    igual(run(`recAvulsoSomar({'${DIA656}':__pega656('daycare/dashboard/${DIA656}/avulso')||{}})`).total_cent, 0, 'o Financeiro lê o nó vivo');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R7 — EN3, responder: só aparelho da Recepção, só senha de PESSOA da Recepção; grava o nome e a marca, nunca a senha; não responde por cima', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const no = 'daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP;
+    const aberto = CH_PIP({ status: 'aberto', resposta: undefined, respondido_por: undefined, respondido_em: undefined, alimento_hoje: undefined, quantidade_hoje: undefined });
+    const form = (senha) => ({ ['chresp_' + K_PIP]: 'O tutor autorizou ração da casa', ['chalim_' + K_PIP]: 'Ração da casa', ['chqtd_' + K_PIP]: '1 xícara', ['chsenha_' + K_PIP]: senha });
+    const tenta = async (papel, senha) => { run(`document.body.dataset.role='${papel}';`); R2_FORM(form(senha)); let r; try { r = await run(`chamadoResponder('${K_PIP}')`); } finally { R2_SOLTA_FORM(); } return [r, run('__al656').join(' | ')]; };
+    poe656(no, aberto); const antes = cadeia656(db656(no));
+    const casos = [['monitor', '9102'], ['consultora', '9104'], ['consultora', '9107'], ['consultora', '0000'], ['consultora', '']];
+    for (const [p, s] of casos) { const [r, al] = await tenta(p, s); qa2log('    [R7] ' + p + '/' + (s || 'vazia') + ' → ' + r + ' :: ' + al.slice(0, 120)); igual(r, false, p + '/' + s); }
+    igual(cadeia656(db656(no)), antes, 'nada gravado nas recusas');
+    const [ok] = await tenta('consultora', '9102'); igual(ok, true);
+    const c = db656(no);
+    igual([c.status, c.respondido_por, c.respondido_login, c.respondido_assinado, c.respondido_papel], ['respondido', 'Bia Consultora Teste', 'Bia Consultora Teste', true, 'consultora']);
+    igual(db656('daycare/almoco-excecao/' + DIA656 + '/' + K_PIP).quem, 'Bia Consultora Teste');
+    assert.ok(cadeia656(run('__db656')).indexOf('9102') < 0, 'a senha não foi para o banco');
+    const [dup, al2] = await tenta('consultora', '9105'); qa2log('    [R7] 2ª resposta (tela velha) → ' + dup + ' :: ' + al2);
+    igual([dup, db656(no).respondido_por], [false, 'Bia Consultora Teste'], 'não responde por cima');
+    poe656(no, Object.assign({}, aberto, { cancelado: { motivo: 'a comida estava na mochila', por: 'Carla Consultora Teste', ts: 1 }, status: 'cancelado' }));
+    const [canc, al3] = await tenta('consultora', '9105'); qa2log('    [R7] responder o cancelado → ' + canc + ' :: ' + al3);
+    igual(canc, false);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R8 — EN3, corrigir: resposta antiga de nome digitado só a Gestão; a assinada só quem assinou (a outra «Bia» não), a Supervisão não corrige a de outra', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    run(`MONITORES=MONITORES.concat([{id:'t8', nome:'Bia Souza Teste', senha:'9108', role:'consultora'}]);`);
+    const no = 'daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP;
+    const corr = async (s, txt) => run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:${JSON.stringify(txt)}, alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '${s}')`);
+    poe656(no, CH_PIP({ respondido_por: 'Bia', respondido_login: undefined, respondido_assinado: undefined }));   // a antiga: «Bia» digitado, sem a marca
+    const a1 = await corr('9102', 'O tutor autorizou petisco');
+    const a2 = await corr('9101', 'O tutor autorizou petisco');
+    qa2log('    [R8] antiga: Bia(9102)=' + a1.ok + ' :: ' + (a1.erro || '') + ' | Gestão=' + a2.ok);
+    igual([a1.ok, a2.ok], [false, true]);
+    poe656(no, CH_PIP({ respondido_por: 'Bia Consultora Teste', respondido_login: 'Bia Consultora Teste', respondido_assinado: true }));
+    const b1 = await corr('9108', 'O tutor autorizou petisco de frango');
+    const b2 = await corr('9106', 'O tutor autorizou petisco de frango');
+    const b3 = await corr('9102', 'O tutor autorizou petisco de frango');
+    qa2log('    [R8] assinada: outra Bia=' + b1.ok + ' Supervisora=' + b2.ok + ' a própria Bia=' + b3.ok);
+    igual([b1.ok, b2.ok, b3.ok], [false, false, true]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R9 — transações com a cópia velha: corrigir o cancelado, cancelar duas vezes, e a exceção do almoço relida na hora', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    const no = 'daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP, exc = 'daycare/almoco-excecao/' + DIA656 + '/' + K_PIP;
+    poe656(no, CH_PIP({ respondido_por: 'Bia Consultora Teste', respondido_login: 'Bia Consultora Teste', respondido_assinado: true }));
+    run(`PT_CHAMADOS={'${K_PIP}':__pega656('${no}')};`);           // a tela deste aparelho
+    const c1 = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dele', '9105')`); // outro aparelho cancela
+    const r = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '9102')`);
+    const c2 = await run(`chamadoCancelar('${DIA656}', '${K_PIP}', 'a comida estava na mochila dele', '9102')`);
+    const d = db656(no);
+    qa2log('    [R9] cancela=' + c1.ok + ' | corrigir o cancelado=' + r.ok + ' :: ' + r.erro + ' | cancelar de novo=' + c2.ok + ' :: ' + c2.erro + ' | status=' + d.status + ' resposta=' + d.resposta);
+    igual([c1.ok, r.ok, c2.ok, d.status, /Foi engano/.test(d.resposta)], [true, false, false, 'cancelado', true]);
+    // exceção relida: outro aparelho trocou a comida de hoje depois que esta tela abriu
+    poe656(no, CH_PIP({ respondido_por: 'Bia Consultora Teste', respondido_login: 'Bia Consultora Teste', respondido_assinado: true }));
+    poe656(exc, { oque: 'Petisco', quanto: '2', quem: 'Carla Consultora Teste', ts: T656(9, 10, 0) });
+    const r2 = await run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou frango cozido', alimento:'Frango cozido', quantidade:'meia porção'}, 'a tutora mandou outra mensagem agora', '9102')`);
+    const e = db656(exc);
+    qa2log('    [R9] exceção nova=' + JSON.stringify({ oque: e.oque, antes: (e.antes || {}).oque }));
+    igual([r2.ok, e.oque, (e.antes || {}).oque], [true, 'Frango cozido', 'Petisco']);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA2 R10 — irmã que CONTÉM o texto que o grupo viu (o check-in salvo de novo com um ponto a mais): anular a 1ª manda «foi engano» sobre algo que continua valendo?', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656(); R2_OC('oc2', 9, 0, ['Pele: vermelhidão', 'Olhos: secreção']); R2_REL();
+    const r = await run(`ocorrDcAnular('${DIA656}', 'oc1', 'repetida, a de 09:00 tem tudo', '9101')`); await r.envio; await espera656();
+    const c = db656('daycare/ocorrencias/' + DIA656 + '/oc1/anulada/correcao') || {};
+    qa2log('    [R10] grupos=' + JSON.stringify(r.grupos) + ' tg=' + run('__tg656.length') + ' nao_foram=' + JSON.stringify(c.nao_foram) + ' aviso=' + JSON.stringify((run('__za656').slice(-1)[0] || [])[1] || []).slice(0, 300));
+    igual(run('__tg656.length'), 0, 'a pele continua valendo na de 09:00: «foi engano» ao grupo seria falso');
+  } finally { run(SOLTA656); }
+});
+// ------------------------------------------------------------ 6.56, 3ª rodada (re-gate do QA): REQ-002, c23, c08, c22 e REQ-003
+// A Pele das 08:15 foi aos 2 grupos (palcoTonico656). As irmãs: o check-in salvo de novo no mesmo dia.
+const OC3_656 = (id, h, m, itens, extra) => poe656('daycare/ocorrencias/' + DIA656 + '/' + id, OC_TON(Object.assign({ ts: T656(9, h, m), hora: String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'), itens: itens }, extra || {})));
+const REL3_656 = () => run(`DC_OCORR={'${DIA656}':__pega656('daycare/ocorrencias/${DIA656}')};`);
+const anula3_656 = async (id, op, ms) => { relogio656(ms || T656(9, 10, 5)); const r = await run(`ocorrDcAnular('${DIA656}', '${id}', 'repetida, a outra de hoje tem tudo', '9101'${op ? ', ' + JSON.stringify(op) : ''})`); igual(r.ok, true, JSON.stringify(r)); await r.envio; await espera656(); return r; };
+const corr3_656 = (id) => db656('daycare/ocorrencias/' + DIA656 + '/' + id + '/anulada/correcao') || {};
+const PELE_OLHOS = ['Pele: vermelhidão', 'Olhos: secreção'];
+// os botões de verdade: zPergunta diz sim, zTexto responde motivo e senha, zEscolha toca o botão da fila __zeq656
+const tela3_656 = (botoes) => run(`zPergunta=function(){ return Promise.resolve(true); }; __zt656=['repetida, a outra de hoje tem tudo', '9101'];
+  zTexto=function(){ return Promise.resolve(__zt656.shift()); }; __zeq656=${JSON.stringify(botoes || [])}; __za656=[]; __ze656=[];`);
+// a leitura que falha (sem rede): só os caminhos que casam com a régua
+const lerFalha3_656 = (re) => run(`__ref3_656=DB.ref; DB.ref=function(p){ var r=__ref3_656(p); if(${re}.test(String(p))) r.once=function(){ return Promise.reject(new Error('sem rede')); }; return r; };`);
+
+provaAsync('6.56 R3 REQ-002 (sonda R10 do QA) — a irmã de 09:00 CONTÉM o que o grupo viu às 08:15: anular a das 08:15 não manda nada, e a tela diz onde continua valendo', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    const r = await anula3_656('oc1');
+    igual(run('__tg656.length'), 0, 'a pele continua valendo na de 09:00: «foi engano» ao grupo seria falso');
+    igual([r.grupos, r.continuaValendo, r.parcial, r.continuam], [[], true, false, ['Pele: vermelhidão']]);
+    const c = corr3_656('oc1');
+    assert.ok(/continua valendo na de 09:00/.test(c.motivo) && /Pele: vermelhidão/.test(c.motivo) && !c.conferir, JSON.stringify(c));
+    igual(c.nao_foram, [{ texto: 'check-in de entrada: Pele: vermelhidão · Olhos: secreção', hora: '09:00' }], 'os olhos nunca foram ao grupo: a Gestão decide');
+    // a ordem inversa: anular primeiro a de 09:00 (o grupo nunca a viu) — nada sai; depois a das 08:15 — agora sai
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    const r2 = await anula3_656('oc2');
+    igual([r2.naoFoi, run('__tg656.length')], [true, 0]);
+    await anula3_656('oc1', null, T656(9, 10, 6));
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656], 'nada mais vale: a correção sai');
+    // a tela: o botão de verdade diz por que nada saiu (e o «não foi ao grupo» vai no cartão de atenção)
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656(); tela3_656();
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const card = run('__ze656[__ze656.length-1]');
+    igual(run('__za656.length'), 0, 'nada no cartão verde de «pronto»');
+    assert.ok(card[1].some((l) => /O que o grupo do Telegram viu às 08:15 \(Pele: vermelhidão\) continua valendo na de 09:00: o grupo não recebe correção/.test(l)), JSON.stringify(card));
+    assert.ok(card[1].some((l) => /não foi ao grupo/.test(l)) && /crm-atencao/.test(card[3].corTitulo), JSON.stringify(card));
+    igual(run('__tg656.length'), 0);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 REQ-002 (em duas irmãs) — o que o grupo viu (pele e olhos) continua valendo em duas irmãs, um item em cada: nada sai, e a tela diz as duas horas', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); OC3_656('oc3', 9, 30, ['Olhos: secreção']); REL3_656();
+    const r = await anula3_656('oc1');
+    igual([r.continuaValendo, r.parcial, r.grupos, run('__tg656.length')], [true, false, [], 0]);
+    igual(r.onde.map((x) => x.hora), ['09:00', '09:30']);
+    assert.ok(/continua valendo nas de 09:00 e 09:30/.test(corr3_656('oc1').motivo), corr3_656('oc1').motivo);
+    igual(r.naoForam, [], 'as duas só repetem itens do que o grupo viu: não há o que mandar à mão');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 REQ-002 (parte vale) — a das 08:15 tinha pele e olhos; a de 09:00 só a pele: nada sai sozinho; «Não mandar» não manda; «Mandar a correção» manda e diz o que continua valendo', async () => {
+  run(ARMA656);
+  const palco = () => { run('__db656={}; __tg656=[];'); palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); REL3_656(); };
+  try {
+    // 1) sem a escolha da Gestão (a função direto): nada sai, e o registro pede conferência
+    palco();
+    let r = await anula3_656('oc1');
+    igual([r.parcial, r.escolha, r.grupos, run('__tg656.length')], [true, '', [], 0]);
+    igual([r.continuam, r.deixam], [['Pele: vermelhidão'], ['Olhos: secreção']]);
+    let c = corr3_656('oc1');
+    assert.ok(c.conferir === true && /nada saiu sozinho/.test(c.motivo) && /a Gestão decide/.test(c.motivo), JSON.stringify(c));
+    igual([c.parcial.continuam, c.parcial.deixam, c.parcial.escolha], [['Pele: vermelhidão'], ['Olhos: secreção'], '']);
+    // 2) «Não mandar»: nada sai; desfazer depois também não manda nada (o grupo nunca ouviu «foi engano»)
+    palco();
+    r = await anula3_656('oc1', { parcial: 'nao-mandar' });
+    igual([r.escolha, run('__tg656.length')], ['nao-mandar', 0]);
+    c = corr3_656('oc1');
+    assert.ok(/a Gestão escolheu não mandar a correção/.test(c.motivo) && !c.conferir, JSON.stringify(c));
+    await desfaz656('oc1', T656(9, 10, 7));
+    igual(run('__tg656.length'), 0, 'o grupo nunca ouviu «foi engano»: nada de «vale de novo»');
+    // 3) «Mandar a correção»: aos 2 grupos, dizendo o que continua valendo; desfazer manda «vale de novo»
+    palco();
+    r = await anula3_656('oc1', { parcial: 'mandar' });
+    const linha = ENGANO656 + '. Continua valendo: Pele: vermelhidão';
+    igual(msgs656(), ['urgencia: ' + linha, 'vet: ' + linha]);
+    igual(corr3_656('oc1').grupos, ['urgencia', 'vet']);
+    run('__tg656=[];');
+    await desfaz656('oc1', T656(9, 10, 8));
+    igual(msgs656(), ['urgencia: ' + VALE656, 'vet: ' + VALE656]);
+    // a pergunta do desfazer não diz «não tinha ido a nenhum grupo»: o grupo recebeu a ocorrência, só não recebeu «foi engano»
+    palco();
+    await anula3_656('oc1', { parcial: 'nao-mandar' });
+    run(`__ztl656=[]; zTexto=function(t, l){ __ztl656.push(l); return Promise.resolve(null); };`);
+    await run(`ocorrDcDesfazerAbrir('${ID_TON}')`); await espera656();
+    const pergunta = run('__ztl656[0]') || [];
+    assert.ok(pergunta.some((l) => /O grupo do Telegram não recebeu «foi lançada por engano» desta ocorrência: nenhuma mensagem sai/.test(l)) && !pergunta.some((l) => /não tinha ido/.test(l)), JSON.stringify(pergunta));
+    igual(db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), 'anulada', 'desistiu no motivo: nada mudou');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 REQ-002 (a tela) — com parte valendo, a Gestão escolhe ANTES de mandar: o cartão mostra o que o grupo viu e o que continua valendo; «Cancelar» não grava nada', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  const palco = () => { run('__db656={}; __tg656=[];'); palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); REL3_656(); };
+  try {
+    palco(); tela3_656(['Cancelar — não mexer em nada']);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const esc = run('__ze656[0]');
+    igual(esc[0], 'PARTE DO QUE O GRUPO VIU CONTINUA VALENDO');
+    igual(esc[2], ['Mandar a correção', 'Não mandar', 'Cancelar — não mexer em nada']);
+    assert.ok(esc[1][0] === 'O grupo do Telegram recebeu a de 08:15: "check-in de entrada: Pele: vermelhidão · Olhos: secreção".', JSON.stringify(esc[1]));
+    assert.ok(esc[1][1] === 'Continua valendo na de 09:00: Pele: vermelhidão.' && esc[1][2] === 'Deixa de valer: Olhos: secreção.', JSON.stringify(esc[1]));
+    assert.ok(/crm-atencao/.test(esc[3].corTitulo), 'cartão de atenção');
+    igual([db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), run('__tg656.length'), run('__zt656.length')], ['aberta', 0, 2], 'cancelar: nada gravado, nem motivo nem senha pedidos');
+    // «Não mandar»: grava, nada sai, e o cartão final é o verde (não há o que conferir)
+    palco(); tela3_656(['Não mandar']);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual([db656('daycare/ocorrencias/' + DIA656 + '/oc1/status'), run('__tg656.length')], ['anulada', 0]);
+    assert.ok(run('__za656[0][1]').some((l) => /A Gestão escolheu não mandar a correção/.test(l)), JSON.stringify(run('__za656')));
+    // «Mandar a correção»: a linha sai com o que continua valendo
+    palco(); tela3_656(['Mandar a correção']);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(msgs656(), ['urgencia: ' + ENGANO656 + '. Continua valendo: Pele: vermelhidão', 'vet: ' + ENGANO656 + '. Continua valendo: Pele: vermelhidão']);
+    assert.ok(run('__za656[0][1]').some((l) => /A correção vai ao grupo de Urgências e ao grupo da Veterinária, dizendo o que continua valendo \(Pele: vermelhidão\)/.test(l)), JSON.stringify(run('__za656')));
+    // sem nada em comum (pele × olhos): é como sempre, a correção sai sem perguntar
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, ['Olhos: secreção']); REL3_656(); tela3_656();
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(run('__ze656').filter((c) => c[0] === 'PARTE DO QUE O GRUPO VIU CONTINUA VALENDO').length, 0, 'nada em comum: não pergunta');
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 c23 — sem conseguir ler a trava (ou as irmãs), nada sai sozinho e a tela diz «não consegui conferir os grupos: confira à mão», nunca «não tinha ido a grupo nenhum»', async () => {
+  run(ARMA656);
+  try {
+    // 1) as duas travas sem leitura
+    palcoTonico656(); lerFalha3_656('/urgencias-enviadas/');
+    const r = await anula3_656('oc1');
+    igual([r.falhou, r.grupos, run('__tg656.length')], [true, [], 0]);
+    const c = corr3_656('oc1');
+    assert.ok(c.conferir === true && /^não consegui conferir os grupos: confira à mão/.test(c.motivo), JSON.stringify(c));
+    const l = run(`ocorrDcLinhaCorrecao(__pega656('daycare/ocorrencias/${DIA656}/oc1/anulada/correcao'))`);
+    assert.ok(/não consegui conferir os grupos: confira à mão/.test(l) && !/não tinha ido/.test(l), l);
+    const card = run(`ocorrDcAnuladaCardHTML(ocorrDayCareItem('${DIA656}', 'oc1', __pega656('daycare/ocorrencias/${DIA656}/oc1')))`);
+    assert.ok(/data-atencao="telegram"[^>]*>Telegram: não consegui conferir os grupos: confira à mão/.test(card) && !/não tinha ido/.test(card), card.slice(-900));
+    // 2) a trava lida, mas as irmãs do dia não: na dúvida, nada sai sozinho
+    run(SOLTA656); run(ARMA656); palcoTonico656(); lerFalha3_656(`/^daycare\\/ocorrencias\\/${DIA656}$/`);
+    const r2 = await anula3_656('oc1');
+    igual([r2.falhou, run('__tg656.length')], [true, 0]);
+    // 3) a tela: o cartão é de atenção e manda conferir à mão
+    run(SOLTA656); run(ARMA656); palcoTonico656(); lerFalha3_656('/urgencias-enviadas/'); tela3_656();
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const fim = run('__ze656[__ze656.length-1]');
+    igual(run('__za656.length'), 0);
+    assert.ok(fim[0] === 'LANÇADA POR ENGANO — CONFIRA O TELEGRAM' && fim[1][0] === 'Não consegui conferir os grupos: confira à mão no grupo do Telegram se esta ocorrência foi e, se foi, mande a correção.', JSON.stringify(fim));
+    assert.ok(!fim[1].some((x) => /não tinha ido/.test(x)), JSON.stringify(fim));
+    // 4) desfazer sem ler as irmãs: nada sai sozinho, e a tela manda conferir
+    run(SOLTA656); run(ARMA656); palcoTonico656();
+    await anula3_656('oc1'); run('__tg656=[];');
+    lerFalha3_656(`/^daycare\\/ocorrencias\\/${DIA656}$/`);
+    relogio656(T656(9, 10, 9));
+    const d = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc1', 'era o Tonico mesmo, a vet confirmou', '9101')`); await d.envio; await espera656();
+    igual([d.ok, d.falhou, d.grupos, run('__tg656.length')], [true, true, [], 0]);
+    const tr = Object.values(db656('daycare/ocorrencias/' + DIA656 + '/oc1/trilha')).find((t) => t.acao === 'engano-desfeito');
+    assert.ok(tr.correcao && tr.correcao.conferir === true && /confira à mão se o grupo recebeu a correção/.test(tr.correcao.motivo), JSON.stringify(tr));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 c22 — «não foram ao grupo» lista só as irmãs VÁLIDAS: a anulada não entra', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656();
+    OC3_656('oc2', 9, 0, ['Olhos: secreção'], { anulada: { motivo: 'os olhos eram de outro FILHOt', por: 'Gestora Teste', ts: T656(9, 9, 30), status_antes: 'aberta' }, status: 'anulada' });
+    OC3_656('oc3', 9, 30, ['Patas: corte']);
+    REL3_656();
+    const r = await anula3_656('oc1');
+    igual(r.naoForam.map((x) => x.hora), ['09:30'], 'a de 09:00 está anulada: não é «não foi ao grupo»');
+    igual(corr3_656('oc1').nao_foram, [{ texto: 'check-in de entrada: Patas: corte', hora: '09:30' }]);
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R3 c08 — EN3: a resposta antiga, de nome digitado (mesmo o nome inteiro do cadastro), não vale como assinatura: só a Gestão corrige', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoPipoca656(CH_PIP({ respondido_por: 'Bia Consultora Teste', respondido_login: undefined, respondido_assinado: undefined }));
+    const corr = (s) => run(`chamadoCorrigir('${DIA656}', '${K_PIP}', {resposta:'O tutor autorizou petisco', alimento:'Petisco', quantidade:'2'}, 'a tutora mandou outra mensagem agora', '${s}')`);
+    const bia = await corr('9102');
+    igual(bia.ok, false, 'o nome digitado, mesmo igual ao do cadastro, não é a senha');
+    assert.ok(/assinou a resposta com a própria senha/.test(bia.erro), bia.erro);
+    igual(db656('daycare/chamados-recepcao/' + DIA656 + '/' + K_PIP + '/resposta'), 'O tutor autorizou ração da casa', 'nada gravado');
+    igual((await corr('9101')).ok, true, 'a Gestão corrige');
+  } finally { run(SOLTA656); }
+});
+
+prova('6.56 R3 REQ-003 — a senha da resposta tem rótulo visível («Sua senha»); o cartão riscado mostra o «não foi ao grupo» numa faixa de atenção, fora do verde', () => {
+  run(ARMA656);
+  try {
+    run(`renderChamadosRecepcao=__bk656.rc; __el656={}; __gid656=document.getElementById; document.getElementById=function(id){ if(!__el656[id]) __el656[id]={innerHTML:'', value:''}; return __el656[id]; };`);
+    try {
+      run(`PT_CHAMADOS={'zeca__teo-teste':{pet:'Zeca', tutor:'Teo Teste', motivo:'almoça pela ficha, mas não trouxe comida', quem:'Dani', ts:${T656(9, 8, 55)}, status:'aberto'}}; CHAMADO_EDIT={}; renderChamadosRecepcao();`);
+      const h = run('__el656.chamadosRecepcaoList.innerHTML');
+      assert.ok(/<label for="chsenha_zeca__teo-teste"[^>]*>Sua senha<\/label><input id="chsenha_zeca__teo-teste" type="password"/.test(h), h.slice(-900));
+      assert.ok(/o app grava o seu nome, nunca a senha/.test(h));
+      run(`PT_CHAMADOS={'${K_PIP}':${JSON.stringify(CH_PIP())}}; CHAMADO_EDIT={k:'${K_PIP}', modo:'corrigir'}; renderChamadosRecepcao();`);
+      const h2 = run('__el656.chamadosRecepcaoList.innerHTML');
+      assert.ok(/<label for="chEdSenha"[^>]*>Sua senha<\/label>/.test(h2) && /<label for="chEdMotivo"[^>]*>Por que corrigir\?/.test(h2), 'corrigir: rótulos visíveis');
+      run(`CHAMADO_EDIT={k:'${K_PIP}', modo:'cancelar'}; renderChamadosRecepcao();`);
+      assert.ok(/<label for="chEdSenha"[^>]*>Sua senha<\/label>/.test(run('__el656.chamadosRecepcaoList.innerHTML')), 'cancelar: rótulo visível');
+    } finally { run('document.getElementById=__gid656;'); }
+    const o = OC_TON({ status: 'anulada', anulada: { motivo: 'não era o Tonico, foi o FILHOt errado', por: 'Gestora Teste', quando: '09/10 10:05', ts: 1,
+      correcao: { grupos: ['urgencia', 'vet'], enviados: { urgencia: true, vet: true }, ts: 2, nao_foram: [{ texto: 'check-in de entrada: Olhos: secreção', hora: '09:00' }] } } });
+    const card = run(`ocorrDcAnuladaCardHTML(ocorrDayCareItem('${DIA656}', 'oc1', ${JSON.stringify(o)}))`);
+    const banner = card.slice(card.indexOf('avr-resolvido-banner'), card.indexOf('data-atencao'));
+    assert.ok(/Correção mandada ao grupo de Urgências e ao grupo da Veterinária/.test(banner) && !/não foi ao grupo/.test(banner), 'o verde só diz o que foi feito');
+    assert.ok(/class="dc-pend-note" data-atencao="telegram"[^>]*>A ocorrência &quot;check-in de entrada: Olhos: secreção&quot; \(09:00\) não foi ao grupo/.test(card) || /class="dc-pend-note" data-atencao="telegram"[^>]*>A ocorrência "check-in de entrada: Olhos: secreção" \(09:00\) não foi ao grupo/.test(card), card.slice(-700));
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ 6.56, 4ª rodada: as sondas T1 a T11 da conferência final do QA (qa656/r3/sondas656c.js), na Fase 0
+const qa3log = () => {};   // as sondas imprimiam o que viram; na Fase 0, as asserções bastam
+const QC_PELE = 'Pele: vermelhidão', QC_OLHO = 'Olhos: secreção';
+const qcAnula = async (id, t, op) => { relogio656(t); const r = await run(`ocorrDcAnular('${DIA656}', '${id}', 'não era o Tonico, foi o FILHOt errado', '9101'${op ? (', ' + JSON.stringify(op)) : ''})`); await (r.envio || Promise.resolve()); await espera656(); return r; };
+const qcCorr = (id) => db656('daycare/ocorrencias/' + DIA656 + '/' + id + '/anulada/correcao') || {};
+const qcTom = (itens, coco) => { poe656('daycare/ocorrencias/' + DIA656 + '/oc1', OC_TON({ itens: itens, coco: coco || '' }));
+  poe656('daycare/urgencias-enviadas/' + DIA656 + '/corpo-' + K_TON + '-ent', { ts: T656(9, 8, 15) });
+  poe656('daycare/urgencias-enviadas/' + DIA656 + '/vet--corpo-' + K_TON + '-ent', { ts: T656(9, 8, 15) }); };
+const qcLog = (tag, r, id) => qa3log('    [' + tag + '] ' + JSON.stringify({ grupos: r.grupos, cv: r.continuaValendo, parcial: r.parcial, escolha: r.escolha, naoFoi: r.naoFoi, outra: r.outraValida, falhou: r.falhou, tg: run('__tg656.length'), motivo: (qcCorr(id).motivo || '').slice(0, 140), conferir: qcCorr(id).conferir || false }));
+
+provaAsync('6.56 QA3 T1 — R10: a irmã que contém tudo o que o grupo viu segura a correção, e diz onde', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE]); R2_OC('oc2', 9, 0, [QC_PELE, QC_OLHO]); R2_REL();
+    const r = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T1', r, 'oc1');
+    igual([r.continuaValendo, run('__tg656.length')], [true, 0]);
+    assert.ok(/na de 09:00/.test(qcCorr('oc1').motivo), qcCorr('oc1').motivo);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T2 — parcial (o grupo viu Pele e Olhos; vale só a Pele): Mandar, Não mandar e sem escolha', async () => {
+  run(ARMA656);
+  try {
+    const palco = () => { run('__db656={}; __tg656=[];'); qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_PELE]); R2_REL(); };
+    palco(); const a = await qcAnula('oc1', T656(9, 10, 5), { parcial: 'mandar' }); qcLog('T2 mandar', a, 'oc1');
+    const tga = R2_TG(); qa3log('    [T2] texto=' + JSON.stringify(tga[0]));
+    igual([a.parcial, a.escolha, tga.length, qcCorr('oc1').parcial.escolha], [true, 'mandar', 2, 'mandar']);
+    assert.ok(tga.every((t) => /foi lançada por engano — Gestora Teste\. Continua valendo: Pele: vermelhidão$/.test(t)), JSON.stringify(tga));
+    palco(); const b = await qcAnula('oc1', T656(9, 10, 6), { parcial: 'nao-mandar' }); qcLog('T2 nao', b, 'oc1');
+    igual([b.escolha, run('__tg656.length'), qcCorr('oc1').parcial.escolha, !!qcCorr('oc1').conferir], ['nao-mandar', 0, 'nao-mandar', false]);
+    palco(); const c = await qcAnula('oc1', T656(9, 10, 7)); qcLog('T2 sem escolha', c, 'oc1');
+    igual([c.escolha, run('__tg656.length'), qcCorr('oc1').conferir], ['', 0, true]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T3 — pela tela: «Cancelar» no cartão da escolha não grava nada; «Mandar» grava e manda com «Continua valendo»', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  run(`__bkZE=zEscolha; __bkZP=zPergunta; __bkZT=zTexto;`);
+  try {
+    const palco = () => { run('__db656={}; __tg656=[]; __za656=[];'); qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_PELE]); R2_REL(); };
+    const tela = async (botao) => {
+      run(`__esc=[]; __tx=['não era o Tonico, foi o FILHOt errado','9101'];
+        zPergunta=function(){ return Promise.resolve(true); };
+        zTexto=function(){ return Promise.resolve(__tx.shift()); };
+        zEscolha=function(t, l, b){ __esc.push({t:t, l:l, b:b.map(function(x){ return x.t; })}); var x=b[${botao}]; if(x && x.fn) x.fn(); };`);
+      await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+      return run('__esc');
+    };
+    palco(); const e1 = await tela(2);
+    qa3log('    [T3] cartão: ' + JSON.stringify(e1[0] ? { t: e1[0].t, l: e1[0].l, b: e1[0].b } : null).slice(0, 700));
+    igual([!!db656('daycare/ocorrencias/' + DIA656 + '/oc1').anulada, run('__tg656.length')], [false, 0], 'Cancelar: nada');
+    palco(); await tela(0);
+    const o = db656('daycare/ocorrencias/' + DIA656 + '/oc1');
+    qa3log('    [T3] mandar: anulada=' + !!o.anulada + ' tg=' + JSON.stringify(R2_TG()) + ' cartões=' + JSON.stringify(run('__za656').map((z) => z[0])));
+    igual([!!o.anulada, run('__tg656.length')], [true, 2]);
+  } finally { run(`zEscolha=__bkZE; zPergunta=__bkZP; zTexto=__bkZT;`); run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T4 — vale em duas somadas (Pele na de 09:00, Olhos na de 09:30): nada sai, e diz «nas de 09:00 e 09:30»', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_PELE]); R2_OC('oc3', 9, 30, [QC_OLHO]); R2_REL();
+    const r = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T4', r, 'oc1');
+    igual([r.continuaValendo, run('__tg656.length')], [true, 0]);
+    assert.ok(/nas de 09:00 e 09:30/.test(qcCorr('oc1').motivo), qcCorr('oc1').motivo);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T5 — bordas da comparação: ordem das linhas, acento e espaço, cocô, ocorrência sem itens', async () => {
+  run(ARMA656);
+  try {
+    const caso = async (tag, viu, coco, irma, cocoIrma) => { run('__db656={}; __tg656=[];'); qcTom(viu, coco); R2_OC('oc2', 9, 0, irma, { coco: cocoIrma || '' }); R2_REL();
+      const r = await qcAnula('oc1', T656(9, 10, 5)); qcLog(tag, r, 'oc1'); return r; };
+    const ordem = await caso('T5 ordem', [QC_PELE, QC_OLHO], '', [QC_OLHO, QC_PELE]);
+    const acento = await caso('T5 acento', [QC_PELE], '', ['pele:  vermelhidao']);
+    const coco = await caso('T5 cocô igual', [], 'DIARREIA', [QC_PELE], 'DIARREIA');
+    const cocoDif = await caso('T5 cocô diferente', [], 'DIARREIA', [], 'PASTOSO');
+    const vazio = await caso('T5 sem itens', [], '', []);
+    igual([ordem.continuaValendo, acento.continuaValendo || acento.outraValida, coco.continuaValendo, cocoDif.grupos.length, vazio.ok, run('__tg656.length')], [true, true, true, 2, true, 0]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T6 — item PARECIDO (o mesmo ponto com um alerta a mais): «Pele: vermelhidão» × «Pele: vermelhidão, coceira»', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE]); R2_OC('oc2', 9, 0, ['Pele: vermelhidão, coceira']); R2_REL();
+    const r = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T6', r, 'oc1');
+    qa3log('    [T6] tg=' + JSON.stringify(R2_TG()));
+    igual(run('__tg656.length'), 0, 'a vermelhidão da pele continua valendo na de 09:00: «foi engano» sem perguntar seria falso');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T7 — a ORDEM das anulações: anular primeiro a que o grupo viu (coberta) e depois a que cobria — o grupo fica sem correção?', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE]); R2_OC('oc2', 9, 0, [QC_PELE, QC_OLHO]); R2_REL();
+    const a = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T7 1ª', a, 'oc1');
+    const b = await qcAnula('oc2', T656(9, 10, 6)); qcLog('T7 2ª', b, 'oc2');
+    qa3log('    [T7] tg=' + JSON.stringify(R2_TG()) + ' válidas=' + run('ocorrenciasDayCare().length'));
+    igual(run('__tg656.length'), 2, 'nada mais vale do que o grupo viu (08:15, pele): a correção tem de sair (ou a Gestão ser chamada a decidir)');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T8 — o mesmo, com as linhas em outra ordem (mesmo conteúdo): anular a de 08:15 e depois a de 09:00', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_OLHO, QC_PELE]); R2_REL();
+    const a = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T8 1ª', a, 'oc1');
+    const b = await qcAnula('oc2', T656(9, 10, 6)); qcLog('T8 2ª', b, 'oc2');
+    igual(run('__tg656.length'), 2, 'as duas anuladas: o grupo precisa da correção');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T9 — prévia × gravação: a Gestão escolhe «Não mandar» e, antes de gravar, outro aparelho anula a irmã que cobria — sai alguma coisa?', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  run(`__bkZE=zEscolha; __bkZP=zPergunta; __bkZT=zTexto;`);
+  try {
+    qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_PELE]); R2_REL();
+    run(`__tx=['não era o Tonico, foi o FILHOt errado','9101']; __n=0;
+      zPergunta=function(){ return Promise.resolve(true); };
+      zEscolha=function(t, l, b){ var x=b[1]; if(x && x.fn) x.fn(); };   // «Não mandar»
+      zTexto=function(){ if(++__n===1){ var o=__pega656('daycare/ocorrencias/${DIA656}/oc2'); o.anulada={motivo:'outro aparelho', por:'Gestora Teste', ts:1, status_antes:'aberta'}; o.status='anulada'; __poe656('daycare/ocorrencias/${DIA656}/oc2', o); }
+        return Promise.resolve(__tx.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const c = qcCorr('oc1');
+    qa3log('    [T9] tg=' + JSON.stringify(R2_TG()) + ' correcao=' + JSON.stringify({ grupos: c.grupos, parcial: c.parcial, motivo: c.motivo }));
+    igual(run('__tg656.length'), 0, 'a Gestão escolheu «Não mandar»');
+  } finally { run(`zEscolha=__bkZE; zPergunta=__bkZP; zTexto=__bkZT;`); run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T10 — c23: sem ler as travas, nada sai e a tela pede conferência à mão (anular e desfazer)', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    qcTom([QC_PELE]); R2_REL();
+    run(`__ref0=DB.ref; DB.ref=function(p){ var x=__ref0(p); if(/urgencias-enviadas/.test(p)) x.once=function(){ return Promise.reject(new Error('sem rede')); }; return x; };`);
+    const r = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T10', r, 'oc1');
+    igual([r.falhou, run('__tg656.length'), qcCorr('oc1').conferir], [true, 0, true]);
+    assert.ok(/não consegui conferir os grupos/.test(qcCorr('oc1').motivo));
+  } finally { run('DB.ref=__ref0;'); run(SOLTA656); }
+});
+
+provaAsync('6.56 QA3 T11 — somadas e depois uma delas anulada: A (Pele · Olhos) coberta por B (Pele) e C (Olhos); anular A e depois C — o grupo continua achando que há secreção nos olhos?', async () => {
+  run(ARMA656);
+  try {
+    qcTom([QC_PELE, QC_OLHO]); R2_OC('oc2', 9, 0, [QC_PELE]); R2_OC('oc3', 9, 30, [QC_OLHO]); R2_REL();
+    const a = await qcAnula('oc1', T656(9, 10, 5)); qcLog('T11 A', a, 'oc1');
+    const c = await qcAnula('oc3', T656(9, 10, 6)); qcLog('T11 C', c, 'oc3');
+    assert.ok(c.parcial || run('__tg656.length') > 0 || qcCorr('oc3').conferir, 'os Olhos que o grupo viu deixaram de valer: a Gestão tem de ser chamada a decidir');
+  } finally { run(SOLTA656); }
+});
+// ------------------------------------------------------------ 6.56, 4ª rodada (conferência final do QA): REQ-004, REL-003 e REQ-005
+const OLHOS_PELE = ['Olhos: secreção', 'Pele: vermelhidão'];
+const tg4_656 = () => run('__tg656.length');
+
+provaAsync('6.56 R4 REQ-004 (T7 do QA) — anular a das 08:15 (coberta pela de 09:00) e DEPOIS a de 09:00: a correção sai, sobre a das 08:15; na ordem inversa também', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    const a = await anula3_656('oc1');
+    igual([a.continuaValendo, tg4_656()], [true, 0], 'a pele continua valendo na de 09:00: nada sai');
+    const b = await anula3_656('oc2', null, T656(9, 10, 6));
+    igual([b.grupos, b.naoFoi], [['urgencia', 'vet'], false], 'a mensagem das 08:15 já não vale e nada mais a sustenta');
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656], 'a linha fala da mensagem que o grupo viu (08:15)');
+    // a ordem inversa: a de 09:00 primeiro (a das 08:15 ainda vale: nada), depois a das 08:15 (sai)
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    igual((await anula3_656('oc2')).naoFoi, true);
+    igual(tg4_656(), 0);
+    await anula3_656('oc1', null, T656(9, 10, 6));
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656]);
+    // pela tela: a 2ª anulação diz que a correção vai aos grupos, no cartão verde (nada para conferir)
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    await anula3_656('oc1'); run('__tg656=[];'); tela3_656();
+    await run(`ocorrDcEnganoAbrir('dc:${DIA656}__oc2')`); await espera656();
+    igual(msgs656(), ['urgencia: ' + ENGANO656, 'vet: ' + ENGANO656]);
+    assert.ok(run('__za656[0][1]').some((l) => /A correção vai ao grupo de Urgências e ao grupo da Veterinária\. O tutor não recebe nada\./.test(l)), JSON.stringify(run('__za656')));
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R4 REQ-004 (T11 do QA, nas duas ordens) — A (pele e olhos) coberta por B (pele) e C (olhos): anulada A, anular C pede a escolha da Gestão; «Mandar» diz o que continua; depois anular B manda «também não vale mais»', async () => {
+  run(ARMA656);
+  const palco = () => { run('__db656={}; __tg656=[];'); palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); OC3_656('oc3', 9, 30, ['Olhos: secreção']); REL3_656(); };
+  try {
+    palco();
+    igual((await anula3_656('oc1')).continuaValendo, true);
+    let c = await anula3_656('oc3', null, T656(9, 10, 6));
+    igual([c.parcial, c.escolha, c.continuam, c.deixam, tg4_656()], [true, '', ['Pele: vermelhidão'], ['Olhos: secreção'], 0], 'sem a escolha: nada sai sozinho');
+    assert.ok(corr3_656('oc3').conferir === true, JSON.stringify(corr3_656('oc3')));
+    // com «Mandar a correção»
+    palco(); await anula3_656('oc1');
+    c = await anula3_656('oc3', { parcial: 'mandar' }, T656(9, 10, 6));
+    const parc = ENGANO656 + '. Continua valendo: Pele: vermelhidão';
+    igual(msgs656(), ['urgencia: ' + parc, 'vet: ' + parc]);
+    igual(corr3_656('oc3').parcial.chaves, ['pele|vermelhidao'], 'o registro guarda o que o grupo ainda acredita');
+    // depois, anular B (a pele): o grupo acreditava na pele; agora nada a sustenta
+    run('__tg656=[];');
+    const b = await anula3_656('oc2', null, T656(9, 10, 7));
+    igual([b.residual, b.grupos], [true, ['urgencia', 'vet']]);
+    const resid = ENGANO656 + '. Também não vale mais: Pele: vermelhidão';
+    igual(msgs656(), ['urgencia: ' + resid, 'vet: ' + resid]);
+    // e não manda duas vezes: desfazer B devolve a pele (o grupo leu «foi engano»): a Gestão confere, nada sai sozinho
+    run('__tg656=[];');
+    relogio656(T656(9, 10, 8));
+    const d = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc2', 'era o Tonico mesmo, a vet confirmou', '9101')`); await d.envio; await espera656();
+    igual([d.ok, d.grupos, d.voltaValer, tg4_656()], [true, [], ['Pele: vermelhidão'], 0]);
+    const tr = Object.values(db656('daycare/ocorrencias/' + DIA656 + '/oc2/trilha')).find((t) => t.acao === 'engano-desfeito');
+    assert.ok(tr.correcao.conferir === true && /volta a valer: Pele: vermelhidão/.test(tr.correcao.motivo), JSON.stringify(tr.correcao));
+    const b2 = await anula3_656('oc2', null, T656(9, 10, 9));
+    igual([b2.grupos, tg4_656()], [[], 0], 'anular B de novo: o grupo já leu «também não vale mais»; nada se repete');
+    // a ordem inversa: C primeiro (a das 08:15 ainda vale: nada), depois A: só a pele continua → a Gestão escolhe
+    palco();
+    igual((await anula3_656('oc3')).naoFoi, true);
+    const a = await anula3_656('oc1', null, T656(9, 10, 6));
+    igual([a.parcial, a.continuam, a.deixam, tg4_656()], [true, ['Pele: vermelhidão'], ['Olhos: secreção'], 0]);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R4 REQ-004 — a correção que já saiu não sai de novo: anulada a das 08:15 com a correção mandada, anular a irmã de outro texto não manda nada', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); OC3_656('oc2', 9, 0, ['Olhos: secreção']); REL3_656();
+    await anula3_656('oc1');
+    igual(tg4_656(), 2, 'nada da pele em outra: a correção sai');
+    run('__tg656=[];');
+    const b = await anula3_656('oc2', null, T656(9, 10, 6));
+    igual([b.naoFoi, b.grupos, tg4_656()], [true, [], 0], 'a de 09:00 nunca foi ao grupo e o grupo já leu «foi engano» da pele');
+    // a mesma pele repetida (mesmo texto) depois da correção: «já recebeu a correção», nada se repete
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc9', 8, 17, ['Pele: vermelhidão']); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    await anula3_656('oc1');                                  // a repetida (08:17) segura: nada
+    await anula3_656('oc9', null, T656(9, 10, 6));            // a de 09:00 segura: nada
+    await anula3_656('oc2', null, T656(9, 10, 7));            // nada mais: sai
+    igual(tg4_656(), 2);
+    run('__tg656=[];');
+    relogio656(T656(9, 10, 8));
+    const d = await run(`ocorrDcDesfazerEngano('${DIA656}', 'oc9', 'era o Tonico mesmo, a vet confirmou', '9101')`); await d.envio; await espera656();
+    igual(msgs656(), ['urgencia: ' + VALE656, 'vet: ' + VALE656], 'a repetida (o mesmo texto) volta: «vale de novo»');
+    run('__tg656=[];');
+    const e = await anula3_656('oc9', null, T656(9, 10, 9));
+    igual([e.grupos.length, tg4_656()], [2, 2], 'depois do «vale de novo», anular de novo manda «foi engano» outra vez (a última palavra do grupo era «vale»)');
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R4 REL-003 (T9 do QA) — a Gestão escolheu sobre uma prévia; se a gravação decide outra coisa, nada sai, fica «conferir» e a tela diz', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    // «Não mandar» e, antes de gravar, outro aparelho anula a irmã que cobria a pele
+    palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); REL3_656();
+    run(`zPergunta=function(){ return Promise.resolve(true); }; __za656=[]; __ze656=[]; __zeq656=['Não mandar']; __tx4=['repetida, a outra de hoje tem tudo', '9101']; __n4=0;
+      zTexto=function(){ if(++__n4===1){ var o=__pega656('daycare/ocorrencias/${DIA656}/oc2'); o.anulada={motivo:'outro aparelho', por:'Gestora Teste', ts:1, status_antes:'aberta'}; o.status='anulada'; __poe656('daycare/ocorrencias/${DIA656}/oc2', o); }
+        return Promise.resolve(__tx4.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const c = corr3_656('oc1');
+    igual([tg4_656(), c.conferir, c.previa_mudou], [0, true, true], 'a Gestão escolheu «Não mandar» sobre outra situação');
+    assert.ok(/a situação mudou entre a pergunta e a gravação/.test(c.motivo), c.motivo);
+    const fim = run('__ze656[__ze656.length-1]');
+    assert.ok(fim[0] === 'LANÇADA POR ENGANO — CONFIRA O TELEGRAM' && /^Enquanto você respondia, outra ocorrência dele mudou em outro aparelho: nada saiu/.test(fim[1][0]), JSON.stringify(fim));
+    // o contrário: a prévia era «tudo continua» (nada a perguntar) e, antes de gravar, a irmã que cobria foi anulada
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    run(`__za656=[]; __ze656=[]; __tx4=['repetida, a outra de hoje tem tudo', '9101']; __n4=0;`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual([tg4_656(), corr3_656('oc1').conferir], [0, true], 'a gravação diria «manda», mas a tela tinha dito «nada sai»');
+    // sem mudança entre a prévia e a gravação, o caminho de sempre (a escolha vale)
+    run('__db656={}; __tg656=[];'); palcoTonico656({ itens: PELE_OLHOS }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); REL3_656();
+    run(`__za656=[]; __ze656=[]; __zeq656=['Mandar a correção']; __tx4=['repetida, a outra de hoje tem tudo', '9101']; __n4=1;`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    igual(tg4_656(), 2);
+    assert.ok(!corr3_656('oc1').conferir);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R4 REQ-005 (T6 do QA) — ponto e alerta: «Pele: vermelhidão» × «Pele: vermelhidão, coceira» segura a correção; o contrário é «parte vale»; o ponto sem alerta vale por qualquer alerta dele', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); OC3_656('oc2', 9, 0, ['Pele: vermelhidão, coceira']); REL3_656();
+    const a = await anula3_656('oc1');
+    igual([a.continuaValendo, a.continuam, tg4_656()], [true, ['Pele: vermelhidão'], 0], 'a vermelhidão continua na de 09:00');
+    igual(a.naoForam.map((x) => x.hora), ['09:00'], 'a coceira nunca foi ao grupo: a Gestão decide se manda à mão');
+    // o grupo viu vermelhidão e coceira; a de 09:00 só tem a vermelhidão: parte vale
+    run('__db656={}; __tg656=[];'); palcoTonico656({ itens: ['Pele: vermelhidão, coceira'] }); OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); REL3_656();
+    const b = await anula3_656('oc1');
+    igual([b.parcial, b.continuam, b.deixam, tg4_656()], [true, ['Pele: vermelhidão'], ['Pele: coceira'], 0]);
+    // o ponto sem alerta («Pele») é coberto por qualquer alerta da pele
+    run('__db656={}; __tg656=[];'); palcoTonico656({ itens: ['Pele'] }); OC3_656('oc2', 9, 0, ['Pele: coceira']); REL3_656();
+    igual((await anula3_656('oc1')).continuaValendo, true);
+    // pontos diferentes não se cobrem
+    run('__db656={}; __tg656=[];'); palcoTonico656(); OC3_656('oc2', 9, 0, ['Orelhas: vermelhidão']); REL3_656();
+    igual((await anula3_656('oc1')).grupos, ['urgencia', 'vet']);
+    // a ocorrência sem itens nem cocô (o check-in não grava assim, mas o dado antigo pode ter): conta o texto inteiro; sozinha, a correção sai
+    run('__db656={}; __tg656=[];'); palcoTonico656({ itens: [], coco: '' }); REL3_656();
+    igual((await anula3_656('oc1')).grupos, ['urgencia', 'vet']);
+    // as unidades: o que o check-in grava («Ponto: a1, a2») e o cocô
+    igual(run(`ocorrDcUnidadesDe({itens:['Pele e pelagem: Pele vermelha, Pulga', 'Olhos'], coco:'DIARREIA'}).map(function(u){ return u.t; })`),
+      ['Pele e pelagem: Pele vermelha', 'Pele e pelagem: Pulga', 'Olhos', 'Cocô: DIARREIA']);
+    // nenhum rótulo de ponto ou de alerta do check-in tem «:» ou «,» (a separação é exata para o que o app grava)
+    igual(run(`CK_PONTOS.filter(function(p){ return /[:,]/.test(p.t||'') || (p.alertas||[]).some(function(a){ return /[:,]/.test(a); }); }).length`), 0);
+  } finally { run(SOLTA656); }
+});
+
+provaAsync('6.56 R4 — o «Desfazer» pergunta pela mesma decisão: a irmã de outro texto que devolve o que o grupo leu como engano pede conferência (pela tela)', async () => {
+  run(ARMA656);
+  try {
+    palcoTonico656(); OC3_656('oc2', 9, 0, PELE_OLHOS); REL3_656();
+    await anula3_656('oc1'); await anula3_656('oc2', null, T656(9, 10, 6));   // a 2ª manda a correção (REQ-004)
+    run('__tg656=[];');
+    run(`__ztl656=[]; __zt656=['era o Tonico mesmo, a vet confirmou', '9101']; zTexto=function(t, l){ __ztl656.push(l); return Promise.resolve(__zt656.shift()); }; __za656=[]; __ze656=[];`);
+    relogio656(T656(9, 10, 8));
+    await run(`ocorrDcDesfazerAbrir('dc:${DIA656}__oc2')`); await espera656();
+    const pergunta = run('__ztl656[0]') || [];
+    assert.ok(pergunta.some((l) => /O grupo leu «foi lançada por engano» da de 08:15; com esta de volta, volta a valer: Pele: vermelhidão\. Nada sai sozinho/.test(l)), JSON.stringify(pergunta));
+    igual(tg4_656(), 0);
+    const fim = run('__ze656[__ze656.length-1]');
+    assert.ok(fim[0] === 'A OCORRÊNCIA VALE DE NOVO — CONFIRA O TELEGRAM' && /volta a valer: Pele: vermelhidão/.test(fim[1][0]), JSON.stringify(fim));
+  } finally { run(SOLTA656); }
+});
+
+// ------------------------------------------------------------ 6.56, conferência final 2 (QA): TEST-003 — a prévia compara o CONTEÚDO da decisão, não só o tipo
+provaAsync('6.56 QA4 e07 — prévia «parte» (vale Pele e Olhos); antes de gravar, outra irmã é anulada; a gravação dá «parte» com só a Pele: nada sai e fica «previa_mudou»', async () => {
+  run(ARMA656); relogio656(T656(9, 10, 5));
+  try {
+    palcoTonico656({ itens: ['Pele: vermelhidão', 'Olhos: secreção', 'Patas: corte'] });
+    OC3_656('oc2', 9, 0, ['Pele: vermelhidão']); OC3_656('oc3', 9, 30, ['Olhos: secreção']); REL3_656();
+    const prev = await run(`ocorrDcGruposAvisados('${DIA656}', 'oc1', DC_OCORR['${DIA656}'].oc1, 'anular')`);
+    igual([prev.parcial, prev.continuam], [true, ['Pele: vermelhidão', 'Olhos: secreção']], 'a prévia: parte vale (Pele e Olhos)');
+    // a Gestão escolhe «Mandar a correção»; enquanto digita o motivo, outro aparelho anula a de 09:30 (os Olhos)
+    run(`zPergunta=function(){ return Promise.resolve(true); }; __za656=[]; __ze656=[]; __zeq656=['Mandar a correção']; __tx5=['repetida, a outra de hoje tem tudo', '9101']; __n5=0;
+      zTexto=function(){ if(++__n5===1){ var o=__pega656('daycare/ocorrencias/${DIA656}/oc3'); o.anulada={motivo:'outro aparelho', por:'Gestora Teste', ts:1, status_antes:'aberta'}; o.status='anulada'; __poe656('daycare/ocorrencias/${DIA656}/oc3', o); }
+        return Promise.resolve(__tx5.shift()); };`);
+    await run(`ocorrDcEnganoAbrir('${ID_TON}')`); await espera656();
+    const c = corr3_656('oc1');
+    igual([run('__tg656.length'), c.previa_mudou, c.conferir], [0, true, true], 'nada sai: a Gestão escolheu sobre outro conteúdo');
+    assert.ok(/a situação mudou entre a pergunta e a gravação/.test(c.motivo), c.motivo);
+    // e a gravação de fato continuou «parte», só com a Pele: o tipo é o mesmo, o conteúdo mudou
+    const g = await run(`ocorrDcGruposAvisados('${DIA656}', 'oc1', __pega656('daycare/ocorrencias/${DIA656}/oc1'), 'anular')`);
+    igual([g.parcial, g.continuam], [true, ['Pele: vermelhidão']], 'a gravação: parte vale, só a Pele');
+  } finally { run(SOLTA656); }
+});
+
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
