@@ -5721,7 +5721,7 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{\n(?:    try\{ medOntemBatida\(Date\.now\(\)\); \}[^\n]*\n)?(?:    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}[^\n]*\n)?    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9]|9-0[1-9])';/.test(src));
+  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9]|9-(0[1-9]|[1-9][0-9]))';/.test(src)); // a partir de 09/10 a versão do dia passa de -09 (publicação da 6.52: -10)
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -24743,6 +24743,1261 @@ provaAsync('6.56 QA4 e07 — prévia «parte» (vale Pele e Olhos); antes de gra
     const g = await run(`ocorrDcGruposAvisados('${DIA656}', 'oc1', __pega656('daycare/ocorrencias/${DIA656}/oc1'), 'anular')`);
     igual([g.parcial, g.continuam], [true, ['Pele: vermelhidão']], 'a gravação: parte vale, só a Pele');
   } finally { run(SOLTA656); }
+});
+
+// ================================================================== 6.52 — o banho do hospedado (09/out/2026)
+// "Rafael e Theo estão hospedados e por isso não tomarão banho hoje e sim na terça quando vão embora. Se eu marcar no
+//  check-in de hospedagem que terá banho no final — esse banho pode ir para o dia de saída, mas faltará o horário muitas
+//  das vezes e terá que pedir um alerta para o consultor verificar o horário depois, para lançar no dashboard."
+//  (Adriana, quadro de pedidos, linha 85, 09/10/2026)
+console.log('\n6.52 — Banho do hospedado: o banho na saída vai para o dia da saída, com alerta de hora, e o banho fixo sai dos dias da estadia (Adriana, 09/out/2026)');
+// Tudo inventado. Hoje é sexta, 09/10/2026 (relógio parado). Rafael/Spitz (Rui Teste, banho fixo às sextas 10:00) e
+// Theo/Golden (Teo Teste, banho fixo às segundas 11:00, vem ao Day Care seg e ter) estão hospedados de sexta 09/10 a
+// terça 13/10, com «Banho na saída? Sim»: o do Rafael sem hora («a confirmar»), o do Theo às 15:00, «Hidratação».
+// A planilha de mentira guarda as células POR DIA (a ponte de verdade acha a linha pela data). A segunda 12/10 é
+// feriado de verdade; o palco desliga os feriados (orcFechado) para o banho fixo de segunda contar, e uma prova liga de novo.
+const HOJE652 = '2026-10-09', SEG652 = '2026-10-12', TER652 = '2026-10-13', QUA652 = '2026-10-14', DOM652 = '2026-10-11';
+const V_RAF652 = 'Rafael/Spitz (BANHO DE SAÍDA)', V_THEO652 = 'Theo/Golden (BANHO DE SAÍDA · HIDRATAÇÃO)';
+const FX_RAF652 = 'Rafael/Spitz (SEM SHAMPOO)', FX_THEO652 = 'Theo/Golden (SEM SHAMPOO)';
+const ARMA652 = ARMA650 + `
+  __bk652={et:EST_TODAS, cf:CF_ESTADIAS, lido:CF_ESTADIAS_LIDO, hb:DASH_HORA.banhosaida, ho:DASH_HORA_OUTRO.banhosaida, hf:DASH_HORA_FIM.banhosaida,
+    bh:(typeof DASH_BSAIDA_HORA==='undefined'?null:DASH_BSAIDA_HORA), hr:hojeRedesenhar};
+  PELUDINHOS.push({n:'Theo', raca:'Golden', tutor:'Teo Teste', dias:['seg','ter']});
+  __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[4]), {dias:['seg','ter'], banho_rec:{ativo:true, freq:'semanal', dia:'seg', hora:'11:00', desde:'2026-09-07', sham:'SEM SHAMPOO'}});
+  orcFechado=function(){ return ''; };
+  __hr652=0; hojeRedesenhar=function(){ __hr652++; };
+  EST_TODAS={}; CF_ESTADIAS={}; CF_ESTADIAS_LIDO=true;
+  __est652=function(id, e){ __dbPoe('auaulandia/estadias/'+id, e); EST_TODAS[id]=__dbPega('auaulandia/estadias/'+id); };
+  __est652('est_raf', {refKey:pelKey(PELUDINHOS[0]), nome:'Rafael', tutor:'Rui Teste', raca:'Spitz', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa',
+    ficha:{banho:'Sim', spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}});
+  __est652('est_theo', {refKey:pelKey(PELUDINHOS[4]), nome:'Theo', tutor:'Teo Teste', raca:'Golden', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa',
+    ficha:{banho:'Sim', spa:{banho:'Sim', tipo:'Hidratação', horario:'15:00', aConfirmar:false}}});
+  // a ponte de mentira, com uma planilha POR DIA (o mesmo texto não duplica, como a ponte)
+  __pld652={}; __pc652=[];
+  dashPonteChamar=function(d){ __pc652.push(JSON.parse(JSON.stringify(d)));
+    var L=__pld652[d.dia]=__pld652[d.dia]||[];
+    if(d.acao==='lerDia') return Promise.resolve({ok:true, conteudo:{Banho:L.map(function(c){ return c.v; })}});
+    if(d.acao==='lancar'){ var c=L.filter(function(x){ return jsNorm(x.v)===jsNorm(d.valor); })[0];
+      if(c){ if(d.hora) c.h=d.hora; return Promise.resolve({ok:true, jaEstava:true}); }
+      L.push({v:d.valor, h:d.hora||''}); return Promise.resolve({ok:true}); }
+    if(d.acao==='remover'){ var n=L.length; __pld652[d.dia]=L.filter(function(x){ return jsNorm(x.v)!==jsNorm(d.valor); }); return Promise.resolve({ok:true, removidos:n-__pld652[d.dia].length}); }
+    return Promise.resolve({ok:false, erro:'acao'}); };`;
+const SOLTA652 = `EST_TODAS=__bk652.et; CF_ESTADIAS=__bk652.cf; CF_ESTADIAS_LIDO=__bk652.lido; hojeRedesenhar=__bk652.hr;
+  if(__bk652.hb===undefined) delete DASH_HORA.banhosaida; else DASH_HORA.banhosaida=__bk652.hb;
+  if(__bk652.ho===undefined) delete DASH_HORA_OUTRO.banhosaida; else DASH_HORA_OUTRO.banhosaida=__bk652.ho;
+  if(__bk652.hf===undefined) delete DASH_HORA_FIM.banhosaida; else DASH_HORA_FIM.banhosaida=__bk652.hf;
+  if(typeof DASH_BSAIDA_HORA!=='undefined') DASH_BSAIDA_HORA=__bk652.bh;
+  ['${HOJE652}','${DOM652}','${SEG652}','${TER652}','${QUA652}'].forEach(function(d){ delete REP_PLAN_CACHE[d]; });` + SOLTA650;
+const DIA652 = (d) => run(`zHojeISO=function(){ return '${d}'; }; repHojeISO=zHojeISO; APP_DIA_ABERTO='${d}'; DASH_DIA_SEL='${d}';`);
+const PL652 = (dia) => run(`(__pld652['${dia}']||[]).map(function(c){ return c.v+(c.h?(' '+c.h):''); })`);
+const PC652 = (acao) => run('__pc652').filter((c) => c.acao === acao).map((c) => c.dia + ' ' + c.valor + (c.hora ? (' ' + c.hora) : ''));
+const SPA652 = (id) => run(`__dbPega('auaulandia/estadias/${id}/ficha/spa')`);
+const SYNC652 = async (dia) => JSON.parse(JSON.stringify(await run(`dashAutoSincronizar('${dia}')`)));
+const CACHE652 = (dia) => run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, reposicao:{}, auto:__dbPega('daycare/dashboard-auto/${dia}')||{}};`);
+const CALC652 = (dia) => JSON.parse(JSON.stringify(run(`dashAutoCalcular('${dia}')`)));
+const ID652 = (v) => run(`dashAutoIdent(${JSON.stringify(v)})`);
+
+// ---- P1 — o banho na saída com hora vai para o dia da saída ---------------------------------------------------
+provaAsync('6.52 P1 (AC1) — banho na saída com hora: o automático o põe na planilha do dia da saída (Banho + Hora Banho), com a identidade da ficha; a linha dos Lançamentos do dia diz «automático · banho de saída», com «tirar» e «mudar a hora»; o lançado à mão não dobra', async () => {
+  run(ARMA652);
+  try {
+    // a conta do automático: só no dia da saída, com a hora da estadia, e a identidade é a ficha do Theo
+    const c13 = CALC652(TER652);
+    igual(c13.banho, [V_THEO652], 'no dia da saída, o banho de saída (o do Rafael não tem hora)');
+    igual(ID652(V_THEO652), 'f:' + run("dcKey('Theo','Teo Teste')"), 'a identidade é a ficha (6.49), não o texto');
+    igual(c13._horas.banho[ID652(V_THEO652)], '15:00');
+    igual(CALC652(QUA652).banho, [], 'depois da saída, nada');
+    igual(CALC652(DOM652).banho, [], 'nos dias da estadia, nada');
+    // a passada escreve na planilha do dia da saída, com a hora
+    const r = await SYNC652(TER652);
+    assert.ok(r.ok && r.posto === 1, JSON.stringify(r));
+    igual(PC652('lancar'), [TER652 + ' ' + V_THEO652 + ' 15:00']);
+    igual(run("__pc652.filter(function(c){ return c.acao==='lancar'; })[0].coluna+'|'+__pc652.filter(function(c){ return c.acao==='lancar'; })[0].colunaHora"), 'Banho|Hora Banho');
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    const reg = run(`__dbPega('daycare/dashboard-auto/${TER652}')`);
+    igual(reg.banho, [V_THEO652], 'no registro do automático (é dele: o passo 2 o tira quando não valer mais)');
+    igual(reg._estado.banho[ID652(V_THEO652)].hora, '15:00');
+    // a linha nos Lançamentos do dia de terça
+    CACHE652(TER652);
+    const h = LIN650(TER652).html;
+    assert.ok(/<strong>Theo\/Golden \(BANHO DE SAÍDA · HIDRATAÇÃO\)<\/strong> <span class="dash-auto-hora"[^>]*>15:00<\/span> <span class="dash-auto-tag">automático · banho de saída<\/span>/.test(h), h);
+    assert.ok(/data-id="est_theo"[^>]*onclick="banhoSaidaTirar\(this\.dataset\.id\)">tirar<\/button>/.test(h), h);
+    assert.ok(/data-id="est_theo"[^>]*onclick="banhoSaidaHoraAbrir\(this\.dataset\.id,this\.dataset\.onde\)">mudar a hora<\/button>/.test(h), h);
+    assert.ok(!/banhoDia(Tirar|HoraAbrir)/.test(h), 'não são os botões do banho fixo');
+    // a 2ª passada não escreve de novo
+    run('__pc652=[];'); await SYNC652(TER652);
+    igual(PC652('lancar'), [], 'já está lá, com a hora');
+    // LANÇADO À MÃO: o mesmo FILHOt lançado à mão no dia da saída — o automático não escreve o dele por cima
+    run(`__pld652={}; __pc652=[]; __dbPoe('daycare/dashboard-auto/${TER652}', null);
+      __dbPoe('daycare/dashboard/${TER652}/banho/m1', {valor:'Theo/Golden', hora:'15:30', ts:Date.now()-600000, planilha_ok:true});
+      __pld652['${TER652}']=[{v:'Theo/Golden', h:'15:30'}];`);
+    await SYNC652(TER652);
+    igual(PC652('lancar'), [], 'o lançado à mão vale: nada de banho em dobro');
+    igual(PL652(TER652), ['Theo/Golden 15:30']);
+    CACHE652(TER652);
+    igual(run(`dashAutoLinhas('banho', '${TER652}', dashChavesDaMao({m1:{valor:'Theo/Golden'}}))`).n, 0, 'uma linha só nos Lançamentos do dia: a da recepção');
+  } finally { run(SOLTA652); }
+});
+
+// ---- P2 — sem hora: o alerta, desde a véspera, e definir a hora --------------------------------------------------
+provaAsync('6.52 P2 (AC2) — sem hora («a confirmar»): nada vai para a planilha; o alerta «Banho de saída sem hora: Rafael, terça 13/10 — definir a hora» aparece desde a véspera (no Hoje na Zêluz e nos Lançamentos do dia) até alguém escrever a hora pelos horários prontos (até 17:30); com a hora, segue o AC1', async () => {
+  run(ARMA652);
+  try {
+    igual(CALC652(TER652).banho, [V_THEO652], 'o Rafael sem hora não entra');
+    await SYNC652(TER652);
+    assert.ok(PC652('lancar').every((x) => x.indexOf('Rafael') < 0), 'nada do Rafael na planilha');
+    // o alerta: só da véspera (segunda 12/10) até o dia da saída
+    const al = (d) => { DIA652(d); return JSON.parse(JSON.stringify(run(`banhoSaidaAlertas('${d}').map(function(b){ return banhoSaidaAlertaTexto(b); })`))); };
+    igual(al(HOJE652), [], 'sexta: ainda não');
+    igual(al(DOM652), [], 'domingo: ainda não');
+    igual(al(SEG652), ['Banho de saída sem hora: Rafael, terça 13/10 — definir a hora'], 'segunda, a véspera');
+    igual(al(TER652), ['Banho de saída sem hora: Rafael, terça 13/10 — definir a hora'], 'terça, o dia');
+    igual(al(QUA652), [], 'depois: não');
+    DIA652(SEG652);
+    // no Hoje na Zêluz (antes do Banho de quem faltou) e no alto dos Lançamentos do dia
+    run(`__bkH652={hl:hojeLista, ge:document.getElementById, bf:banhoFaltaCardHTML, pc:prevCorrigeOkHTML, sc:hojeSemCheckinCardHTML};
+      hojeLista=function(){ return []; }; banhoFaltaCardHTML=function(){ return '<!--FALTOU-->'; }; prevCorrigeOkHTML=function(){ return ''; }; hojeSemCheckinCardHTML=function(){ return ''; };
+      __els652={}; document.getElementById=function(id){ if(!__els652[id]) __els652[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __els652[id]; };`);
+    try {
+      run('hojeRender()');
+      const hj = run('__els652.hojeRoot.innerHTML'), hjTxt = hj.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
+      assert.ok(hjTxt.indexOf('Banho de saída sem hora: Rafael, terça 13/10 — definir a hora') > 0 && hj.indexOf('Banho de saída sem hora') < hj.indexOf('<!--FALTOU-->'), hj);
+      assert.ok(/data-id="est_raf" data-onde="hoje" onclick="banhoSaidaHoraAbrir\(this\.dataset\.id,this\.dataset\.onde\)">definir a hora<\/button>/.test(hj), hj);
+      run(`__rd652=renderDash; renderDash=__bk649.rd; DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${SEG652}'};`);
+      try { run('renderDash()'); } finally { run('renderDash=__rd652;'); }
+      const alto = run('__els652.dashPonteAviso.innerHTML');
+      CACHE652(TER652);
+      run(`DASH_DIA_SEL='${TER652}'; DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${TER652}'}; renderDash=__bk649.rd;`);
+      try { run('renderDash()'); } finally { run(`renderDash=__rd652; DASH_DIA_SEL='${SEG652}';`); }
+      assert.ok(/Banho de saída sem hora \(1\)/.test(run('__els652.dashBlocos.innerHTML')), 'o cartão Banho do dia da saída, na tela de verdade');
+      assert.ok(alto.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').indexOf('Banho de saída sem hora: Rafael, terça 13/10 — definir a hora') >= 0 && /data-onde="dash"/.test(alto), alto);
+      // quem não pode mexer lê o alerta inteiro, sem botão
+      run("document.body.dataset.role='monitor';");
+      const semBt = run(`banhoSaidaAlertaHTML('hoje')`);
+      assert.ok(semBt.replace(/<[^>]+>/g, '').indexOf('Banho de saída sem hora: Rafael, terça 13/10 — definir a hora') >= 0 && !/<button/.test(semBt), semBt);
+      run("document.body.dataset.role='consultora';");
+    } finally { run('hojeLista=__bkH652.hl; document.getElementById=__bkH652.ge; banhoFaltaCardHTML=__bkH652.bf; prevCorrigeOkHTML=__bkH652.pc; hojeSemCheckinCardHTML=__bkH652.sc;'); }
+    // no cartão Banho do dia da saída, a linha sem hora
+    CACHE652(TER652);
+    const cart = run(`banhoSaidaCartaoHTML({}, '${TER652}')`);
+    assert.ok(/Banho de saída sem hora \(1\)/.test(cart) && /<strong>Rafael\/Spitz<\/strong>/.test(cart) && /definir a hora/.test(cart), cart);
+    // definir a hora: os horários prontos da 6.26 (até 17:30), escolher e gravar
+    igual(run(`banhoSaidaHoraAbrir('est_raf', 'hoje')`), true);
+    igual(JSON.parse(JSON.stringify(run('DASH_BSAIDA_HORA'))), { id: 'est_raf', onde: 'hoje' });
+    const grade = JSON.parse(JSON.stringify(run("dashHoraGrade('banhosaida')")));
+    igual([grade[0], grade[grade.length - 1]], ['08:00', '17:30'], 'de 15 em 15, até 17:30');
+    const painel = run(`banhoSaidaAlertaHTML('hoje')`);
+    assert.ok(/Hora do banho de saída de Rafael \(terça 13\/10\)/.test(painel) && /dashHoraHora\('banhosaida','14'\)/.test(painel) && /Escolha a hora/.test(painel), painel);
+    // hora inválida: avisa e não grava
+    run("DASH_HORA.banhosaida='25:99';");
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), false);
+    igual(run('__za649.length ? __za649[__za649.length-1][0] : ""'), 'ESCOLHA A HORA');
+    igual(SPA652('est_raf').horario, '', 'nada gravado');
+    run("dashHoraEscolher('banhosaida', '14:30');");
+    assert.ok(/Definir 13\/10 às 14:30/.test(run(`banhoSaidaAlertaHTML('hoje')`)), 'o botão diz o que vai gravar');
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    const spa = SPA652('est_raf');
+    igual([spa.banho, spa.horario, spa.aConfirmar, spa.hora_por.quem, spa.hora_por.de], ['Sim', '14:30', false, 'Recepção Teste', '']);
+    igual(run('EST_TODAS.est_raf.ficha.spa.horario'), '14:30', 'a memória do aparelho acompanha na hora');
+    igual(run('__conf650'), 1, 'pede a conferência (a mesma fila de 20 s)');
+    igual(run('DASH_BSAIDA_HORA'), null, 'o painel fecha');
+    igual(al(SEG652), [], 'o alerta some');
+    DIA652(SEG652);
+    igual(CALC652(TER652).banho.sort(), [V_RAF652, V_THEO652].sort(), 'com a hora, segue o AC1');
+    await SYNC652(TER652);
+    assert.ok(PL652(TER652).indexOf(V_RAF652 + ' 14:30') >= 0, JSON.stringify(PL652(TER652)));
+  } finally { run(SOLTA652); }
+});
+
+// ---- P3 — mudou a saída, cancelou, excluiu ou «Não» ---------------------------------------------------------------
+provaAsync('6.52 P3 (AC3) — a saída mudou: o banho sai do dia antigo e vai para o novo; cancelada, excluída (6.53) ou «Não»: sai; só sai o que o automático escreveu — a célula escrita por uma pessoa fica', async () => {
+  run(ARMA652);
+  try {
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    // a saída passou para quarta
+    run(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {saida:'${QUA652}'}));`);
+    run('__pc652=[];');
+    await SYNC652(TER652); await SYNC652(QUA652);
+    igual(PC652('remover'), [TER652 + ' ' + V_THEO652], 'sai de terça');
+    igual(PC652('lancar'), [QUA652 + ' ' + V_THEO652 + ' 15:00'], 'vai para quarta');
+    igual([PL652(TER652), PL652(QUA652)], [[], [V_THEO652 + ' 15:00']]);
+    // cancelada (e "excluída" da 6.53, que grava status 'cancelada' com o objeto exclusao): sai
+    const caso = async (mexer, rot) => {
+      run(`__pld652={}; __pc652=[]; __dbPoe('daycare/dashboard-auto/${QUA652}', null);
+        __est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {saida:'${QUA652}', status:'ativa', ficha:{banho:'Sim', spa:{banho:'Sim', tipo:'Hidratação', horario:'15:00', aConfirmar:false}}}));`);
+      await SYNC652(QUA652);
+      igual(PL652(QUA652), [V_THEO652 + ' 15:00'], rot + ': antes');
+      // a célula escrita por uma pessoa direto na planilha, com o mesmo FILHOt
+      run(`__pld652['${QUA652}'].push({v:'Theo/Golden', h:'09:00'});`);
+      run(mexer);
+      await SYNC652(QUA652);
+      igual(PL652(QUA652), ['Theo/Golden 09:00'], rot + ': só sai o que o automático escreveu');
+    };
+    await caso(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {status:'cancelada'}));`, 'cancelada');
+    await caso(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {status:'cancelada', exclusao:{t1:{motivo:'lançada por engano na ficha errada', quem:'Gestão Teste'}}}));`, 'excluída (6.53)');
+    await caso(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {ficha:{banho:'Não', spa:{banho:'Não', tipo:'', horario:'', aConfirmar:false}}}));`, '«Não»');
+    await caso(`__dbPoe('auaulandia/estadias/est_theo', null); delete EST_TODAS.est_theo;`, 'o nó apagado');
+    // a hora mudou na estadia: a planilha recebe a hora nova (a mesma régua do banho fixo)
+    run(`__pld652={}; __pc652=[]; __dbPoe('daycare/dashboard-auto/${TER652}', null);
+      __est652('est_theo', {refKey:pelKey(PELUDINHOS[4]), nome:'Theo', tutor:'Teo Teste', raca:'Golden', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa', ficha:{banho:'Sim', spa:{banho:'Sim', tipo:'Hidratação', horario:'15:00', aConfirmar:false}}});`);
+    await SYNC652(TER652);
+    run(`EST_TODAS.est_theo.ficha.spa.horario='16:45';`);
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 16:45']);
+  } finally { run(SOLTA652); }
+});
+
+// ---- P4 — B1: o banho fixo sai dos dias da estadia ---------------------------------------------------------------
+provaAsync('6.52 P4 (AC4, B1) — com «Banho na saída? Sim», o banho fixo sai dos dias da estadia (da entrada à véspera) e da planilha; nos Lançamentos do dia fica em "não vai para a TV" com «hospedado — banho na saída em 13/10»; com «Não», volta; no dia da saída, um banho só', async () => {
+  run(ARMA652);
+  try {
+    run('__turma649=[0, 2, 3];');
+    // hoje (sexta, entrada): o banho fixo do Rafael não vai
+    igual(CALC652(HOJE652).banho, [], 'o banho fixo das sextas do Rafael fica fora');
+    const fora = JSON.parse(JSON.stringify(run(`dashBanhoFixoClassificar('${HOJE652}', {}, []).fora`)));
+    igual(fora.map((o) => [o.nome, o.cod, o.txt]), [['Rafael/Spitz', 'hospedado', 'hospedado — banho na saída em 13/10']]);
+    igual(run(`banhoRecFraseDia(PELUDINHOS[0], '${HOJE652}', '${HOJE652}')`), '', 'o Hoje na Zêluz não anuncia o banho fixo que não vai acontecer');
+    REG650(HOJE652, [], '');
+    run(`DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${HOJE652}'};`);
+    const g = run(`dashBanhoFixoForaHTML({}, '${HOJE652}')`);
+    assert.ok(/Banho fixo de hoje que não vai para a TV \(1\)/.test(g) && /hospedado — banho na saída em 13\/10/.test(g) && /data-fora="hospedado"/.test(g), g);
+    // o banho fixo que já estava na planilha (escrito antes do check-in) sai na próxima conferência
+    REG650(HOJE652, [FX_RAF652], '10:00');
+    run(`__pld652['${HOJE652}']=[{v:${JSON.stringify(FX_RAF652)}, h:'10:00'}];`);
+    igual(LIN650(HOJE652).n, 0, 'a linha do automático sai na hora (vai para "não vai para a TV")');
+    const g2 = run(`dashBanhoFixoForaHTML({}, '${HOJE652}')`);
+    assert.ok(/hospedado — banho na saída em 13\/10 — sai da planilha e da TV na próxima conferência, em instantes/.test(g2), g2);
+    igual(run('dashTvBanhoLinhas(true).map(function(l){ return l.texto; })'), [], 'a TV não o acusa de faltar');
+    await SYNC652(HOJE652);
+    igual(PL652(HOJE652), [], 'a conferência tira o banho fixo da planilha');
+    // segunda (dia da estadia, dia futuro na tela): o do Theo também, com o motivo
+    igual(CALC652(SEG652).banho, [], 'o banho fixo das segundas do Theo fica fora');
+    REG650(SEG652, [], ''); run(`DASH_DADOS_DE={obj:DASH_DADOS, dia:'${SEG652}'};`);
+    const gs = run(`dashBanhoFixoForaHTML({}, '${SEG652}')`);
+    assert.ok(/Banho fixo de 12\/10 que não vai para a TV \(1\)/.test(gs) && /<strong>Theo\/Golden<\/strong>/.test(gs) && /hospedado — banho na saída em 13\/10/.test(gs), gs);
+    // com o feriado de verdade (segunda 12/10), o motivo continua sendo a hospedagem
+    run('orcFechado=__bk649.of;');
+    igual(JSON.parse(JSON.stringify(run(`dashBanhoFixoClassificar('${SEG652}', {}, []).fora`))).map((o) => o.txt), ['hospedado — banho na saída em 13/10']);
+    run("orcFechado=function(){ return ''; };");
+    // «Não»: o banho fixo continua nos dias dele
+    run(`EST_TODAS.est_raf.ficha.spa.banho='Não'; EST_TODAS.est_raf.ficha.banho='Não';`);
+    igual(CALC652(HOJE652).banho, [FX_RAF652], '«Não»: o banho fixo vai');
+    igual(run(`banhoRecFraseDia(PELUDINHOS[0], '${HOJE652}', '${HOJE652}')`), '🛁 banho hoje 10:00 (fixo)', '«Não»: o Hoje na Zêluz diz o banho fixo de hoje');
+    igual(run(`dashBanhoFixoMotivo(PELUDINHOS[0], banhoRecDe(PELUDINHOS[0]), '${HOJE652}', true, '${HOJE652}')`), null);
+    // cancelada: também volta
+    run(`EST_TODAS.est_raf.ficha.spa.banho='Sim'; EST_TODAS.est_raf.status='cancelada';`);
+    igual(CALC652(HOJE652).banho, [FX_RAF652], 'cancelada: o banho fixo vai');
+    run(`EST_TODAS.est_raf.status='ativa';`);
+    // antes da entrada e depois da saída, o banho fixo vai: a próxima sexta (16/10) é depois da saída
+    igual(CALC652('2026-10-16').banho, [FX_RAF652], 'depois da saída, o banho fixo volta');
+    run(`EST_TODAS.est_raf.entrada='2026-10-16'; EST_TODAS.est_raf.saida='2026-10-20';`);
+    igual(CALC652(HOJE652).banho, [FX_RAF652], 'antes da entrada (a hospedagem é da semana que vem), o banho fixo vai');
+    igual(CALC652('2026-10-16').banho, [], 'e na sexta da hospedagem, não');
+    run(`EST_TODAS.est_raf.entrada='${HOJE652}'; EST_TODAS.est_raf.saida='${TER652}';`);
+    // NO DIA DA SAÍDA, UM BANHO SÓ: a Mel tem banho fixo às terças e sai na terça às 16:00
+    FIXO650(1, { ativo: true, freq: 'semanal', dia: 'ter', hora: '10:00', desde: '2026-09-01', sham: 'SEM SHAMPOO' });
+    run(`__est652('est_mel', {refKey:pelKey(PELUDINHOS[1]), nome:'Mel', tutor:'Lia Teste', raca:'Poodle', entrada:'${DOM652}', saida:'${TER652}', status:'ativa', ficha:{spa:{banho:'Sim', tipo:'', horario:'16:00', aConfirmar:false}}});`);
+    const c13 = CALC652(TER652);
+    igual(c13.banho.sort(), ['Mel/Poodle (BANHO DE SAÍDA)', V_THEO652].sort(), 'o de saída, nunca o fixo junto');
+    // o banho fixo dela já estava na planilha de terça (escrito antes do check-in): a conferência troca pelo de saída
+    REG650(TER652, [V_MEL650], '10:00');
+    run(`__pld652['${TER652}']=[{v:${JSON.stringify(V_MEL650)}, h:'10:00'}]; __pc652=[];`);
+    await SYNC652(TER652);
+    igual(PL652(TER652).sort(), ['Mel/Poodle (BANHO DE SAÍDA) 16:00', V_THEO652 + ' 15:00'].sort(), 'um banho só da Mel: o de saída');
+    CACHE652(TER652);
+    const fMel = JSON.parse(JSON.stringify(run(`dashBanhoFixoClassificar('${TER652}', {}, dashAutoListaDoDia('${TER652}', 'banho')).fora`))).filter((o) => /^Mel/.test(o.nome));
+    igual(fMel.map((o) => [o.cod, !!o.saindo]), [['hospedado', false]], 'o banho de saída no registro não é o banho fixo: nada "sai em instantes"');
+    // «Não» na Mel: o banho fixo dela continua na terça
+    run(`EST_TODAS.est_mel.ficha.spa.banho='Não';`);
+    igual(CALC652(TER652).banho.sort(), [V_MEL650, V_THEO652].sort());
+  } finally { run(SOLTA652); }
+});
+
+// ---- P5 — «tirar», «pôr de volta» e «mudar a hora» na linha do banho de saída ----------------------------------
+provaAsync('6.52 P5 (AC5) — a linha do banho de saída tem «tirar» (pergunta antes, grava na estadia, vai para "não vai para a TV" com «pôr de volta»), «mudar a hora» (os horários prontos) e «pôr de volta»; quem não pode tirar um lançamento à mão não vê os botões', async () => {
+  run(ARMA652);
+  try {
+    await SYNC652(TER652); CACHE652(TER652);
+    // «tirar»: a pergunta, e «Manter» não grava
+    run('__resp650=false; __perg650=[];');
+    igual(await run(`banhoSaidaTirar('est_theo')`), false);
+    const pg = JSON.parse(JSON.stringify(run('__perg650[0]')));
+    igual([pg.t, pg.l, pg.o], ['Tirar o banho de saída de Theo de 13/10?',
+      ['Se o banho já está na planilha de 13/10, sai na próxima conferência, em instantes.', 'O banho fixo continua fora dos dias da hospedagem. Para desfazer, toque em «pôr de volta».'],
+      { sim: 'Tirar o banho de saída', nao: 'Manter' }]);
+    assert.strictEqual(SPA652('est_theo').tirado, undefined, 'desistiu: nada gravado');
+    igual(run('__conf650'), 0);
+    run('__resp650=true;');
+    igual(await run(`banhoSaidaTirar('est_theo')`), true);
+    const t = SPA652('est_theo').tirado;
+    igual([t.dia, t.quem, typeof t.ts], [TER652, 'Recepção Teste', 'number']);
+    igual(SPA652('est_theo').horario, '15:00', 'o resto da estadia não muda');
+    igual(run('__conf650'), 1, 'pede a conferência');
+    igual(LIN650(TER652).n, 0, 'sai das linhas do automático na hora');
+    const c = run(`banhoSaidaCartaoHTML({}, '${TER652}')`);
+    assert.ok(/Banho de saída que não vai para a TV \(1\)/.test(c) && /tirado \(por Recepção Teste, em [0-9/]+ às [0-9:]+\) — sai da planilha na próxima conferência, em instantes/.test(c), c);
+    assert.ok(/data-id="est_theo"[^>]*onclick="banhoSaidaPorDeVolta\(this\.dataset\.id\)">pôr de volta<\/button>/.test(c), c);
+    igual(CALC652(TER652).banho, [], 'o automático não o quer mais');
+    await SYNC652(TER652);
+    igual(PL652(TER652), [], 'a conferência tira da planilha');
+    // o «tirar» é daquele dia: com a saída em outro dia, ele vale de novo (AC3: vai para o dia novo)
+    run(`EST_TODAS.est_theo.saida='${QUA652}';`);
+    igual(CALC652(QUA652).banho, [V_THEO652]);
+    run(`EST_TODAS.est_theo.saida='${TER652}';`);
+    // «pôr de volta»
+    igual(await run(`banhoSaidaPorDeVolta('est_theo')`), true);
+    assert.strictEqual(SPA652('est_theo').tirado, undefined);
+    igual(run('__conf650'), 2);
+    igual(CALC652(TER652).banho, [V_THEO652]);
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    CACHE652(TER652);
+    // «mudar a hora»: o painel abre logo abaixo da linha
+    igual(run(`banhoSaidaHoraAbrir('est_theo', 'linha')`), true);
+    igual(run('DASH_HORA.banhosaida'), '15:00', 'começa na hora de agora');
+    const hp = LIN650(TER652).html;
+    assert.ok(/Hora do banho de saída de Theo \(terça 13\/10\)/.test(hp) && /dashHoraHora\('banhosaida','16'\)/.test(hp), hp);
+    run("dashHoraEscolher('banhosaida', '16:15');");
+    assert.ok(/Mudar 13\/10 para 16:15/.test(LIN650(TER652).html));
+    igual(await run(`banhoSaidaMudarHora('est_theo')`), true);
+    igual([SPA652('est_theo').horario, SPA652('est_theo').hora_por.de], ['16:15', '15:00']);
+    run('__pc652=[];');
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 16:15'], 'a planilha recebe a hora nova');
+    // a mesma hora: nada a gravar
+    run("DASH_HORA.banhosaida='16:15'; DASH_BSAIDA_HORA={id:'est_theo', onde:'linha'};");
+    const tx0 = run("__dbEsc649.filter(function(x){ return x[0]==='transaction'; }).length");
+    igual(await run(`banhoSaidaMudarHora('est_theo')`), false);
+    igual(run("__dbEsc649.filter(function(x){ return x[0]==='transaction'; }).length"), tx0, 'nem abre a gravação');
+    // QUEM PODE: o monitor sem os Lançamentos do dia não vê os botões nem grava
+    run("document.body.dataset.role='monitor'; __conf650=0;");
+    CACHE652(TER652);
+    assert.ok(!/banhoSaida(Tirar|HoraAbrir)/.test(LIN650(TER652).html), 'sem botões');
+    igual(await run(`banhoSaidaTirar('est_theo')`), false);
+    assert.strictEqual(SPA652('est_theo').tirado, undefined);
+    igual(run('__conf650'), 0);
+    // o banho de saída desmarcado em outro aparelho: não grava e avisa
+    run("document.body.dataset.role='consultora'; __dbPoe('auaulandia/estadias/est_theo/ficha/spa/banho', 'Não');");
+    igual(await run(`banhoSaidaTirar('est_theo')`), false);
+    assert.strictEqual(SPA652('est_theo').tirado, undefined);
+    igual(JSON.parse(JSON.stringify(run('__za649[__za649.length-1]'))), ['NÃO TIREI O BANHO DE SAÍDA',
+      ['O banho na saída desta hospedagem foi desmarcado em outro aparelho: nada foi gravado.', 'Se o banho estava na planilha, ele sai na próxima conferência.']]);
+  } finally { run(SOLTA652); }
+});
+
+// ---- P6 — o rastro -------------------------------------------------------------------------------------------------
+provaAsync('6.52 P6 (AC6) — rastro na auditoria de cada mudança (hora definida, tirado, posto de volta, hora mudada), com o FILHOt, o dia, a estadia e quem', async () => {
+  run(ARMA652);
+  try {
+    DIA652(SEG652);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    await run(`banhoSaidaMudarHora('est_raf')`);
+    run('__resp650=true;');
+    await run(`banhoSaidaTirar('est_theo')`);
+    await run(`banhoSaidaPorDeVolta('est_theo')`);
+    run(`banhoSaidaHoraAbrir('est_theo', 'linha'); dashHoraEscolher('banhosaida', '16:00');`);
+    await run(`banhoSaidaMudarHora('est_theo')`);
+    const au = JSON.parse(JSON.stringify(run("__au650.filter(function(a){ return a.a==='banho-saida'; })")));
+    igual(au.map((a) => a.b), [
+      'Rafael — definiu a hora do banho de saída de 13/10/2026: 14:30 (no Hoje na Zêluz)',
+      'Theo — tirou o banho de saída de 13/10/2026 (nos Lançamentos do dia)',
+      'Theo — pôs de volta o banho de saída de 13/10/2026, às 15:00 (nos Lançamentos do dia)',
+      'Theo — mudou a hora do banho de saída de 13/10/2026 de 15:00 para 16:00 (nos Lançamentos do dia)']);
+    igual(au.map((a) => [a.m.estadia, a.m.pet, a.m.quem, a.m.dia]), [
+      ['est_raf', 'Rafael', 'Recepção Teste', TER652], ['est_theo', 'Theo', 'Recepção Teste', TER652],
+      ['est_theo', 'Theo', 'Recepção Teste', TER652], ['est_theo', 'Theo', 'Recepção Teste', TER652]]);
+    // e na estadia: quem definiu a hora e quem tirou (a linha diz)
+    igual(SPA652('est_raf').hora_por.quem, 'Recepção Teste');
+  } finally { run(SOLTA652); }
+});
+
+// ---- P7 — o que não muda ------------------------------------------------------------------------------------------
+prova('6.52 P7 (AC7) — nada da 6.52 chama o check-in do corpo, os pertences, pendAvisarChegada nem as funções ck*/ckt*/pt*; sem estadia com banho na saída, o automático e o cartão Banho ficam como antes', () => {
+  run(ARMA652);
+  try {
+    const nomes = ['banhoSaidaDe', 'banhoSaidaTexto', 'banhoSaidaEhTexto', 'banhoSaidaDoDia', 'banhoSaidaAlertas', 'banhoSaidaAlertaTexto', 'banhoSaidaAlertaHTML',
+      'banhoSaidaCartaoHTML', 'banhoSaidaAcoesHTML', 'banhoSaidaTirar', 'banhoSaidaPorDeVolta', 'banhoSaidaHoraAbrir', 'banhoSaidaHoraFechar', 'banhoSaidaMudarHora',
+      'banhoSaidaGuardarNaCorrecao', 'banhoSaidaSemHoraDaVezPassada', 'ciPreencherUltimaEstadia', 'banhoSaidaTx', 'banhoSaidaGravar', 'banhoSaidaDepois', 'banhoSaidaRedesenhar', 'banhoSaidaEstadiasMudaram', 'banhoSaidaHoraPainelHTML',
+      'dashAutoCalcular', 'dashAutoSincronizar', 'dashAutoLinhas', 'dashBanhoFixoMotivo', 'dashBanhoFixoClassificar', 'dashBanhoFixoPuladosHTML', 'dashTvBanhoLinhas', 'hojeRender', 'renderDash'];
+    nomes.forEach((n) => {
+      const src = run(`String(${n})`);
+      assert.ok(!/\b(ck[A-Z]\w*|ckt\w*|pt[A-Z]\w*|pendAvisarChegada|banhoFaltaEstaAqui)\s*\(/.test(src), n);
+    });
+    // sem nenhuma estadia com «Sim», o banho fixo do Rafael vai como sempre
+    run('EST_TODAS={}; __turma649=[0, 2, 3];');
+    igual(CALC652(HOJE652).banho, [FX_RAF652]);
+    igual(run(`banhoSaidaCartaoHTML({}, '${TER652}')`), '');
+    igual(run(`banhoSaidaAlertaHTML('hoje')`), '');
+  } finally { run(SOLTA652); }
+});
+
+// ---- P8 — a TV, no dia da saída ------------------------------------------------------------------------------------
+provaAsync('6.52 P8 (AC1, 6.49) — no dia da saída, a linha do banho de saída diz se está na planilha que a TV lê; tirado e ainda na planilha, não é cobrado da TV', async () => {
+  run(ARMA652);
+  try {
+    DIA652(TER652);
+    run('__turma649=[];');
+    await SYNC652(TER652); CACHE652(TER652);
+    run(`DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:'${TER652}'};`);
+    igual(run('dashTvBanhoLinhas(true).map(function(l){ return l.texto; })'), [V_THEO652]);
+    run(`tvTabelaGuardar('${TER652}', '2026 DayCare Outubro', {cols:[{label:'Data'},{label:'Banho'},{label:'Hora Banho'}], rows:[{c:[{v:'Date(2026,9,13)', f:'13/10/2026'}, {v:${JSON.stringify(V_THEO652)}}, {v:'15:00'}]}]}, Date.now()+1);`);
+    assert.ok(/na planilha que a TV lê ✓/.test(LIN650(TER652).html), LIN650(TER652).html);
+    run('__resp650=true;');
+    await run(`banhoSaidaTirar('est_theo')`);
+    igual(run('dashTvBanhoLinhas(true).map(function(l){ return l.texto; })'), [], 'tirado: não é banho de hoje');
+    igual(run('dashTvAvisoHTML()'), '');
+    const c = run(`banhoSaidaCartaoHTML({}, '${TER652}')`);
+    assert.ok(/sai da planilha e da TV na próxima conferência, em instantes/.test(c), c);
+  } finally { run(SOLTA652); }
+});
+
+// ---- P9 — as hospedagens ainda não desceram neste aparelho -------------------------------------------------------
+provaAsync('6.52 P9 — com as hospedagens ainda não lidas neste aparelho, a conferência não tira da planilha o banho de saída que o automático escreveu (nem o troca pelo banho fixo); lidas, a regra volta', async () => {
+  run(ARMA652);
+  try {
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    run('CF_ESTADIAS_LIDO=false; __pc652=[];');
+    let r = await SYNC652(TER652);
+    assert.ok(r.ok, JSON.stringify(r));
+    igual(PC652('remover'), [], 'não tira');
+    igual(run(`__dbPega('daycare/dashboard-auto/${TER652}').banho`), [V_THEO652], 'continua no registro (é do automático)');
+    // o banho fixo de um dia da saída não troca o de saída enquanto não se sabe
+    FIXO650(4, { ativo: true, freq: 'semanal', dia: 'ter', hora: '11:00', desde: '2026-09-01', sham: 'SEM SHAMPOO' });
+    await SYNC652(TER652);
+    igual(PC652('remover'), [], 'o banho de saída fica');
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    // lidas, mas vazias (a leitura falhou): o mesmo cuidado
+    run('CF_ESTADIAS_LIDO=true; __et652=EST_TODAS; EST_TODAS={};');
+    await SYNC652(TER652);
+    igual(PC652('remover'), []);
+    // lidas de verdade, com a hospedagem cancelada: sai
+    run(`EST_TODAS=__et652; EST_TODAS.est_theo.status='cancelada';`);
+    FIXO650(4, { ativo: false, freq: 'semanal', dia: 'ter', hora: '11:00', desde: '2026-09-01', sham: 'SEM SHAMPOO' });
+    await SYNC652(TER652);
+    igual(PC652('remover'), [TER652 + ' ' + V_THEO652]);
+    igual(PL652(TER652), []);
+  } finally { run(SOLTA652); }
+});
+
+// ---- P10 — check-out, baixa e saída antecipada -------------------------------------------------------------------
+prova('6.52 P10 — check-out no dia da saída: o banho continua (ele aconteceu); check-out antes da saída e saída antecipada: sai do dia da saída; «Dar baixa» no dia: continua; recusada: nada; sem saída: nada', () => {
+  run(ARMA652);
+  try {
+    const vai = () => CALC652(TER652).banho.indexOf(V_THEO652) >= 0;
+    const ter15 = new Date(2026, 9, 13, 17, 0, 0).getTime(), dom = new Date(2026, 9, 11, 10, 0, 0).getTime();
+    run(`EST_TODAS.est_theo.status='finalizada'; EST_TODAS.est_theo.checkout={ts:${ter15}};`);
+    igual(vai(), true, 'check-out na terça');
+    run(`EST_TODAS.est_theo.checkout={ts:${dom}};`);
+    igual(vai(), false, 'check-out no domingo, antes da saída');
+    run(`EST_TODAS.est_theo.status='encerrada'; delete EST_TODAS.est_theo.checkout; EST_TODAS.est_theo.encerradaEm='${TER652}';`);
+    igual(vai(), true, 'baixa no dia da saída');
+    run(`EST_TODAS.est_theo.saida_antecipada={em:'${TER652}', noites:1};`);
+    igual(vai(), false, 'saída antecipada');
+    run(`delete EST_TODAS.est_theo.saida_antecipada; EST_TODAS.est_theo.status='recusada';`);
+    igual(vai(), false, 'recusada');
+    run(`EST_TODAS.est_theo.status=''; EST_TODAS.est_theo.saida='';`);
+    igual(vai(), false, 'sem a data de saída');
+    run(`EST_TODAS.est_theo.saida='${TER652}'; delete EST_TODAS.est_theo.ficha.spa; EST_TODAS.est_theo.ficha.banho='Sim';`);
+    igual(vai(), false, 'a ficha antiga (só ficha.banho, sem a hora): não vai sem hora');
+    // o alerta é só da hospedagem em curso (não do check-out já feito)
+    run(`EST_TODAS.est_raf.status='finalizada'; EST_TODAS.est_raf.checkout={ts:${ter15}};`);
+    DIA652(TER652);
+    igual(run(`banhoSaidaAlertas('${TER652}').map(function(o){ return o.id; })`), ['est_theo'], 'o do Rafael (check-out feito) não avisa; o do Theo (ficha antiga, sem hora, em curso) avisa');
+    // a ficha vem do vínculo (refKey): a estadia escrita com outro tutor e sem raça continua sendo o Theo/Golden
+    run(`EST_TODAS.est_theo.ficha={banho:'Sim', spa:{banho:'Sim', tipo:'Hidratação', horario:'15:00', aConfirmar:false}}; EST_TODAS.est_theo.tutor='Teodoro'; EST_TODAS.est_theo.raca='';`);
+    igual(vai(), true, 'pelo vínculo, o texto é o da ficha: "Theo/Golden (BANHO DE SAÍDA · HIDRATAÇÃO)"');
+  } finally { run(SOLTA652); }
+});
+
+// ---- P11 — xarás --------------------------------------------------------------------------------------------------
+prova('6.52 P11 (6.49) — xarás: a Fiona/SRD hospedada com banho na saída e a Fiona/Buldogue com banho fixo no mesmo dia — as duas vão, cada uma com a sua hora; nos dias da estadia, o banho fixo que sai é só o da hospedada', () => {
+  run(ARMA652);
+  try {
+    const fx = (dia) => { FIXO650(2, { ativo: true, freq: 'semanal', dia: dia, hora: '13:00', desde: '2026-09-01', sham: 'SEM SHAMPOO' });
+      FIXO650(3, { ativo: true, freq: 'semanal', dia: dia, hora: '14:00', desde: '2026-09-01', sham: 'SEM SHAMPOO' }); };
+    fx('ter');
+    run(`__dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[2])+'/dias', ['seg','ter']); __dbPoe('daycare/cadastro/'+pelKey(PELUDINHOS[3])+'/dias', ['seg','ter']);
+      __est652('est_fs', {refKey:pelKey(PELUDINHOS[2]), nome:'Fiona', tutor:'Bia Teste', raca:'SRD', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa', ficha:{spa:{banho:'Sim', horario:'15:30', aConfirmar:false}}});`);
+    const vB = run('banhoRecValorPlanilha(PELUDINHOS[3], banhoRecDe(PELUDINHOS[3]))'), vS = run('dashNomePlanilha(PELUDINHOS[2])') + ' (BANHO DE SAÍDA)';
+    const c = CALC652(TER652);
+    igual(c.banho.slice().sort(), [vB, vS, V_THEO652].sort(), 'a Fiona/Buldogue (banho fixo) e a Fiona/SRD (banho de saída)');
+    igual([c._horas.banho[ID652(vS)], c._horas.banho[ID652(vB)]], ['15:30', '14:00']);
+    assert.notStrictEqual(ID652(vS), ID652(vB));
+    fx('seg');
+    igual(CALC652(SEG652).banho, [run('banhoRecValorPlanilha(PELUDINHOS[3], banhoRecDe(PELUDINHOS[3]))')], 'segunda: só o banho fixo da Fiona/Buldogue');
+    const f = JSON.parse(JSON.stringify(run(`dashBanhoFixoClassificar('${SEG652}', {}, []).fora`)));
+    igual(f.map((o) => [o.nome, o.cod]), [['Theo/Golden', 'hospedado'], [run('dashNomePlanilha(PELUDINHOS[2])'), 'hospedado']], 'o Theo (11:00) e a Fiona/SRD (13:00); a Fiona/Buldogue vai');
+    igual([run(`banhoRecFraseDia(PELUDINHOS[2], '${SEG652}', '${SEG652}')`), run(`banhoRecFraseDia(PELUDINHOS[3], '${SEG652}', '${SEG652}')`)], ['', '🛁 banho hoje 14:00 (fixo)'],
+      'no Hoje na Zêluz, some só a frase da Fiona hospedada');
+  } finally { run(SOLTA652); }
+});
+
+// ---- P12 — corrigir ou acrescentar no check-in não apaga o «tirar» nem quem definiu a hora --------------------------
+provaAsync('6.52 P12 (AC5, AC6) — acrescentar ou corrigir o check-in (que regrava a ficha inteira) guarda o «tirar» e quem definiu a hora; com «Não», o «tirar» não fica; a hora que a tela trouxe continua a da estadia', async () => {
+  // a regra pura
+  const g = (ficha, antes) => JSON.parse(JSON.stringify(run(`(function(){ var f=${JSON.stringify(ficha)}; banhoSaidaGuardarNaCorrecao(f, ${JSON.stringify(antes)}); return f; })()`)));
+  const tir = { dia: TER652, quem: 'Ana Teste', ts: 1 }, hp = { quem: 'Ana Teste', ts: 2, de: '' };
+  igual(g({ spa: { banho: 'Sim', tipo: '', horario: '14:30', aConfirmar: false } }, { ficha: { spa: { banho: 'Sim', horario: '14:30', aConfirmar: false, tirado: tir, hora_por: hp } } }).spa,
+    { banho: 'Sim', tipo: '', horario: '14:30', aConfirmar: false, tirado: tir, hora_por: hp });
+  igual(g({ spa: { banho: 'Não', tipo: '', horario: '', aConfirmar: false } }, { ficha: { spa: { banho: 'Sim', horario: '14:30', tirado: tir, hora_por: hp } } }).spa,
+    { banho: 'Não', tipo: '', horario: '', aConfirmar: false }, '«Não»: nada fica');
+  igual(g({ spa: { banho: 'Sim', tipo: '', horario: '16:00', aConfirmar: false } }, { ficha: { spa: { banho: 'Sim', horario: '14:30', tirado: tir, hora_por: hp } } }).spa,
+    { banho: 'Sim', tipo: '', horario: '16:00', aConfirmar: false, tirado: tir }, 'a hora mudou no check-in: quem definiu a de antes não vale para a nova');
+  igual(g({ spa: { banho: 'Sim' } }, {}).spa, { banho: 'Sim' }, 'sem nada antes: nada muda');
+  // o histórico da correção não acusa "spa" por causa do rastro; a hora mudada, sim
+  const dif = (antesSpa, depoisSpa) => JSON.parse(JSON.stringify(run(`ciDiffCorrecao({ficha:{spa:${JSON.stringify(antesSpa)}}, medicacao:[], entrada:'', saida:''}, {ficha:{spa:${JSON.stringify(depoisSpa)}}, entrada:'', saida:''}, {})`)));
+  igual(dif({ banho: 'Sim', horario: '14:30', aConfirmar: false, tirado: tir, hora_por: hp }, { banho: 'Sim', horario: '14:30', aConfirmar: false }), []);
+  igual(dif({ banho: 'Sim', horario: '14:30', aConfirmar: false, tirado: tir }, { banho: 'Sim', horario: '16:00', aConfirmar: false }).length, 1);
+  // de verdade: o «Acrescentar» do check-in grava a ficha com o «tirar» de antes
+  run(`__bkN652={db:DB, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, au:audit, qs:quemSou};
+    ciHosp={nome:'Theo', tutor:'Teo Teste', refKey:'theo__teo teste'}; audit=function(){}; __ciTravar=function(){}; quemSou=function(){ return 'Recepção Teste'; };
+    __estN652={nome:'Theo', medicacao:[], pertences:[], ficha:{spa:{banho:'Sim', tipo:'', horario:'15:00', aConfirmar:false, tirado:${JSON.stringify(tir)}, hora_por:${JSON.stringify(hp)}}}};
+    __escN652={}; DB={ref:function(p){ return {
+      once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estN652 : null; }}); },
+      update:function(v){ __escN652[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
+      set:function(v){ __escN652['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+    ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
+  try {
+    run(`__ciGravar('acrescentar', 'est1', {dados:{entrada:'${HOJE652}', saida:'${TER652}', ficha:{spa:{banho:'Sim', tipo:'', horario:'15:00', aConfirmar:false}}, pertences:[]}, meds:{}, temMed:false, key:'theo__teo teste'});`);
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+    const up = run(`__escN652['auaulandia/estadias/est1']`);
+    assert.ok(up && up.ficha && up.ficha.spa, JSON.stringify(Object.keys(run('__escN652'))));
+    igual([up.ficha.spa.tirado, up.ficha.spa.hora_por], [tir, hp]);
+  } finally { run('DB=__bkN652.db; ciQuemRecebeu=__bkN652.qr; ciHosp=__bkN652.h; __ciTravar=__bkN652.tr; audit=__bkN652.au; quemSou=__bkN652.qs; ciEditandoId=null;'); }
+});
+
+// ---- P13 — a tela acompanha ---------------------------------------------------------------------------------------
+prova('6.52 P13 — os horários prontos redesenham o Hoje na Zêluz quando o painel está lá; uma mudança no banho de saída de uma hospedagem (de outro aparelho) redesenha as telas uma vez; mudança em outra coisa da estadia, não', () => {
+  run(ARMA652);
+  try {
+    run(`DASH_BSAIDA_HORA={id:'est_raf', onde:'hoje'}; __rdc652=0; __rd652b=renderDash; renderDash=function(){ __rdc652++; }; __tv652=tvBanhoTelaVisivel; __vis652=true; tvBanhoTelaVisivel=function(){ return __vis652; };`);
+    try {
+      run("dashHoraEscolher('banhosaida', '14:00');");
+      igual([run('DASH_HORA.banhosaida'), run('__hr652')], ['14:00', 1], 'o Hoje na Zêluz redesenha');
+      run("dashHoraAbrirOutro('banhosaida');");
+      igual(run('__hr652'), 2);
+      run("dashHoraEscolher('banho', '10:00');");
+      igual(run('__hr652'), 2, 'o relógio do Banho não mexe no Hoje');
+      // o ouvinte das estadias
+      run('__hr652=0; __rdc652=0; banhoSaidaEstadiasMudaram();');
+      const base = [run('__hr652'), run('__rdc652')];
+      run('banhoSaidaEstadiasMudaram();');
+      igual([run('__hr652'), run('__rdc652')], base, 'nada mudou: nada redesenha');
+      run(`EST_TODAS.est_raf=JSON.parse(JSON.stringify(EST_TODAS.est_raf)); EST_TODAS.est_raf.ficha.obsGeral='estranha lugar novo';`);
+      run('banhoSaidaEstadiasMudaram();');
+      igual([run('__hr652'), run('__rdc652')], base, 'outra coisa da estadia: nada');
+      run(`EST_TODAS.est_raf.ficha.spa.horario='13:00'; EST_TODAS.est_raf.ficha.spa.aConfirmar=false;`);
+      run('banhoSaidaEstadiasMudaram();');
+      igual([run('__hr652'), run('__rdc652')], [base[0] + 1, base[1] + 1], 'a hora definida em outro aparelho: as duas telas redesenham');
+      // o ouvinte das estadias de verdade (_cfIndexarEstadias) passa pela mesma conta
+      run(`__bkCf652={rh:(typeof renderHospedesAba==='function'?renderHospedesAba:null)}; __n652=JSON.parse(JSON.stringify(EST_TODAS)); __n652.est_theo.ficha.spa.horario='17:00';`);
+      run('_cfIndexarEstadias(__n652);');
+      igual([run('__hr652'), run('__rdc652'), run('EST_TODAS.est_theo.ficha.spa.horario')], [base[0] + 2, base[1] + 2, '17:00'], 'o ouvinte redesenha');
+      run('_cfIndexarEstadias(JSON.parse(JSON.stringify(EST_TODAS)));');
+      igual([run('__hr652'), run('__rdc652')], [base[0] + 2, base[1] + 2], 'as mesmas estadias: nada');
+      base[0] += 1; base[1] += 1;
+      // os Lançamentos do dia fechados não se desenham (abrir a tela desenha)
+      run(`__vis652=false; EST_TODAS.est_raf.ficha.spa.horario='13:15';`);
+      run('banhoSaidaEstadiasMudaram();');
+      igual([run('__hr652'), run('__rdc652')], [base[0] + 2, base[1] + 1]);
+    } finally { run('renderDash=__rd652b; tvBanhoTelaVisivel=__tv652;'); }
+  } finally { run(SOLTA652); }
+});
+
+// ---- P14 — BS1: no check-in novo, a hora do banho de saída não vem da última hospedagem ---------------------------
+provaAsync('6.52 P14 (BS1) — no check-in novo, o banho de saída vem da última hospedagem («Sim» e «Qual banho?»), mas a hora não: fica «a confirmar» (o alerta pede a hora); a última hospedagem não é alterada; corrigir a mesma estadia continua trazendo a hora dela; «Não» continua «Não»', async () => {
+  run(`__bk14={db:DB, ck:ciKey, h:ciHosp, pa:(typeof ciPlanoAplicarDaFicha==='function'?ciPlanoAplicarDaFicha:undefined), ge:document.getElementById,
+      ss:setSeg, bc:ciBanhoChange, cr:ciCarregarRefs, cc:ciCalcRacao, cd:ciCalcDias};
+    __campos14=function(){ return {ciBanhoHora:{value:''}, ciBanhoConfirmar:{checked:false}, ciBanhoTipo:{value:''}}; }; __c14=__campos14();
+    __segs14={}; setSeg=function(id, v){ __segs14[id]=v; }; ciBanhoChange=function(){}; ciCarregarRefs=function(){}; ciCalcRacao=function(){ return {}; }; ciCalcDias=function(){};
+    document.getElementById=function(id){ return __c14[id] || __bk14.ge.call(document, id); };
+    ciPlanoAplicarDaFicha=function(){}; ciHosp={nome:'Theo', tutor:'Teo Teste', refKey:'theo__teo teste'}; ciKey=function(){ return 'theo__teo teste'; };
+    __ult14={refKey:'theo__teo teste', nome:'Theo', tutor:'Teo Teste', raca:'Golden', entrada:'2026-09-01', saida:'2026-09-05', status:'finalizada',
+      ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'Hidratação', horario:'14:00', aConfirmar:false}}, pertences:[]};
+    __ult14Antes=JSON.stringify(__ult14);
+    DB={ref:function(){ var r={orderByChild:function(){ return r; }, equalTo:function(){ return r; }, limitToLast:function(){ return r; },
+      once:function(){ return Promise.resolve({val:function(){ return {e1:__ult14}; }}); }}; return r; }};`);
+  try {
+    const tela = () => JSON.parse(JSON.stringify(run('[__segs14.ciBanho||"", __c14.ciBanhoTipo.value, __c14.ciBanhoHora.value, __c14.ciBanhoConfirmar.checked]')));
+    // o check-in NOVO, pré-preenchido da última hospedagem
+    run('ciPreencherUltimaEstadia();');
+    await espera649(300);
+    igual(tela(), ['Sim', 'Hidratação', '', true], 'o «Sim» e o «Qual banho?» vêm; a hora não: «a confirmar»');
+    igual(run('__ult14Antes===JSON.stringify(__ult14)'), true, 'a última hospedagem não é alterada (a cópia é só da tela)');
+    // a mesma estadia, aberta para corrigir ou acrescentar: a hora dela continua
+    run('__c14=__campos14(); __segs14={};');
+    await run(`ciAplicarEstadiaNaFicha(__ult14, 'Você está CORRIGINDO o check-in.')`);
+    igual(tela(), ['Sim', 'Hidratação', '14:00', false], 'corrigir: a hora da estadia');
+    // «Não» na última hospedagem: continua «Não», nada de «a confirmar»
+    run(`__c14=__campos14(); __segs14={}; __ult14.ficha.banho='Não'; __ult14.ficha.spa={banho:'Não', tipo:'', horario:'', aConfirmar:false};`);
+    run('ciPreencherUltimaEstadia();');
+    await espera649(300);
+    igual(tela(), ['Não', '', '', false]);
+    // a regra pura: a ficha antiga (só ficha.banho, sem spa) também vem «a confirmar»
+    igual(JSON.parse(JSON.stringify(run(`banhoSaidaSemHoraDaVezPassada({ficha:{banho:'Sim'}}).ficha.spa`))), { horario: '', aConfirmar: true });
+  } finally {
+    run(`DB=__bk14.db; ciKey=__bk14.ck; ciHosp=__bk14.h; if(__bk14.pa===undefined) delete globalThis.ciPlanoAplicarDaFicha; else ciPlanoAplicarDaFicha=__bk14.pa;
+      document.getElementById=__bk14.ge; setSeg=__bk14.ss; ciBanhoChange=__bk14.bc; ciCarregarRefs=__bk14.cr; ciCalcRacao=__bk14.cc; ciCalcDias=__bk14.cd;`);
+  }
+});
+
+// ================================================================== 6.52 — 2ª rodada (QA independente, 09/out/2026)
+// O QA deu FAIL: o alerta caía em dia fechado (A1), «Acrescentar»/«Corrigir» abertos antes apagavam a hora (M1), e a
+// Fase 0 deixava passar defeitos que importam (M3). Decisões pela recomendação: BS3 (a hora é de uma saída) e BS4
+// (check-out no dia, antes da hora do banho, tira o banho). Mais B1 (dia fechado), B2 (ficha antiga) e B6 (dois aparelhos).
+// Tudo inventado (os mesmos Rafael e Theo de antes, tutores "Teste"), relógio parado.
+console.log('\n6.52 R2 — 2ª rodada: o alerta desde o último dia aberto (A1), a hora que não se perde no Acrescentar/Corrigir (M1), a hora de uma saída (BS3), check-out antes do banho (BS4), dia fechado (B1), ficha antiga (B2), dois aparelhos (B6)');
+const FER652 = 'orcFechado=__bk649.of;';   // os feriados de verdade (o palco da 6.52 os desliga)
+const AL652 = (d) => { DIA652(d); return JSON.parse(JSON.stringify(run(`banhoSaidaAlertas('${d}').map(function(b){ return banhoSaidaAlertaTexto(b); })`))); };
+const ALID652 = (d) => { DIA652(d); return run(`banhoSaidaAlertas('${d}').map(function(b){ return b.id; }).join(',')`); };
+const TXT652 = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+provaAsync('6.52 R2 A1 — com os feriados de verdade (domingo 11/10 e a segunda 12/10, Nossa Senhora Aparecida), o alerta da saída de terça 13/10 começa no SÁBADO 10/10 (o último dia aberto antes dela) e vai até a terça; com a véspera aberta, começa na véspera', async () => {
+  run(ARMA652); run(FER652);
+  try {
+    igual([run("orcFechado('2026-10-10')||''"), run(`orcFechado('${DOM652}')`), run(`orcFechado('${SEG652}')`), run(`orcFechado('${TER652}')||''`)], ['', 'domingo', 'Nossa Senhora Aparecida', '']);
+    igual(run(`banhoSaidaAlertaDesde('${TER652}')`), '2026-10-10');
+    igual([HOJE652, '2026-10-10', DOM652, SEG652, TER652, QUA652].map(ALID652), ['', 'est_raf', 'est_raf', 'est_raf', 'est_raf', '']);
+    igual(AL652('2026-10-10'), ['Banho de saída sem hora: Rafael, terça 13/10 — definir a hora']);
+    // na tela de sábado: o Hoje na Zêluz e o alto dos Lançamentos do dia
+    DIA652('2026-10-10');
+    const h = run(`banhoSaidaAlertaHTML('hoje')`);
+    assert.ok(TXT652(h).indexOf('Banho de saída sem hora: Rafael, terça 13/10 — definir a hora') >= 0 && /data-id="est_raf" data-onde="hoje"/.test(h), h);
+    assert.ok(/data-onde="dash"/.test(run(`banhoSaidaAlertaHTML('dash')`)));
+    // a véspera aberta: a saída na quarta 14/10 avisa só desde a terça
+    run(`EST_TODAS.est_raf.saida='${QUA652}';`);
+    igual(['2026-10-10', SEG652, TER652, QUA652, '2026-10-15'].map(ALID652), ['', '', 'est_raf', 'est_raf', '']);
+    // sem feriado nenhum (o palco): a véspera
+    run("orcFechado=function(){ return ''; };");
+    run(`EST_TODAS.est_raf.saida='${TER652}';`);
+    igual(['2026-10-10', DOM652, SEG652].map(ALID652), ['', '', 'est_raf']);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 B1 — saída num dia em que a casa não abre (domingo 11/10; o feriado de segunda 12/10): nada vai sozinho para a planilha (e o que uma versão anterior escreveu sai); o alerta pede para combinar o banho, desde o último dia aberto, com «tirar» (que o tira do alerta); o cartão do dia diz o motivo', async () => {
+  run(ARMA652); run(FER652);
+  try {
+    run(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {saida:'${DOM652}'}));`);
+    igual(CALC652(DOM652).banho, [], 'domingo: nada vai para a planilha');
+    REG650(DOM652, [V_THEO652], '15:00');
+    run(`__pld652['${DOM652}']=[{v:${JSON.stringify(V_THEO652)}, h:'15:00'}]; __pc652=[];`);
+    await SYNC652(DOM652);
+    igual([PC652('lancar'), PC652('remover'), PL652(DOM652)], [[], [DOM652 + ' ' + V_THEO652], []], 'o banho escrito antes no domingo sai (é do automático)');
+    igual(AL652(HOJE652), [], 'sexta: ainda não');
+    igual(AL652('2026-10-10'), ['Banho de saída: Theo, domingo 11/10 — a saída é num dia em que a casa está fechada: combinar o banho',
+      'Banho de saída sem hora: Rafael, terça 13/10 — definir a hora'], 'sábado: os dois, pela ordem da saída');
+    DIA652('2026-10-10');
+    const h = run(`banhoSaidaAlertaHTML('hoje')`);
+    assert.ok(/<h2[^>]*>Banho de saída para combinar<\/h2>/.test(h) && /data-id="est_theo"[^>]*onclick="banhoSaidaTirar\(this\.dataset\.id\)">tirar</.test(h)
+      && !/data-id="est_theo"[^>]*onclick="banhoSaidaHoraAbrir/.test(h) && TXT652(h).indexOf('Confira com o tutor o dia da saída e combine o banho') >= 0, h);
+    CACHE652(DOM652);
+    const c = TXT652(run(`banhoSaidaCartaoHTML({}, '${DOM652}')`));
+    assert.ok(c.indexOf('Banho de saída em dia fechado (1)') >= 0 && c.indexOf('a casa não abre neste dia (domingo): não vai para a planilha — combinar o banho') >= 0, c);
+    // «tirar» o tira do alerta
+    igual(await run(`banhoSaidaTirar('est_theo')`), true);
+    igual(AL652('2026-10-10'), ['Banho de saída sem hora: Rafael, terça 13/10 — definir a hora']);
+    // o feriado: a saída na segunda 12/10, com o nome do feriado
+    run(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {saida:'${SEG652}'}));`);
+    igual(AL652('2026-10-10')[0], 'Banho de saída: Theo, segunda 12/10 (feriado: Nossa Senhora Aparecida) — a saída é num dia em que a casa está fechada: combinar o banho');
+    igual(CALC652(SEG652).banho, [], 'feriado: nada vai');
+    // só o alerta de dia fechado: o título dele
+    run(`EST_TODAS.est_raf.ficha.spa.horario='14:00'; EST_TODAS.est_raf.ficha.spa.aConfirmar=false;`);
+    assert.ok(/<h2[^>]*>Banho de saída em dia fechado<\/h2>/.test(run(`banhoSaidaAlertaHTML('hoje')`)));
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 BS3 — a hora é de uma saída: «definir a hora» grava o dia (horaDia); a saída mudou (aba Hóspedes, de verdade) → a hora volta a «a confirmar», o banho sai do dia antigo, nada vai para o novo e o alerta pede de novo, lembrando a hora de antes; o painel vem com ela escolhida e um toque confirma para o dia novo; a hora de antes da 2ª rodada (sem o dia) segue a mudança de datas', async () => {
+  run(ARMA652);
+  run(`__bkS={ge:document.getElementById, hp:hospAbaPode, al:(typeof alert==='function'?alert:null), ch:(typeof carregarHospedes==='function'?carregarHospedes:null), rh:renderHospedesAba, cf:checarFaltasDaEstadia};
+    __cS={}; document.getElementById=function(id){ return __cS[id]||null; }; hospAbaPode=function(){ return true; }; alert=function(){};
+    carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
+    __datas652=function(id, ent, sai){ __cS={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id); };`);
+  try {
+    DIA652(SEG652);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual([SPA652('est_raf').horario, SPA652('est_raf').horaDia], ['14:30', TER652], 'a hora leva o dia da saída');
+    await SYNC652(TER652);
+    assert.ok(PL652(TER652).indexOf(V_RAF652 + ' 14:30') >= 0);
+    // a saída do Rafael passa para sexta 16/10, pela aba Hóspedes de verdade
+    await run(`__datas652('est_raf', '${HOJE652}', '2026-10-16')`);
+    await espera649(50);
+    run(`EST_TODAS.est_raf=__dbPega('auaulandia/estadias/est_raf');`);
+    const o = JSON.parse(JSON.stringify(run(`(function(){ var o=banhoSaidaDe('est_raf', EST_TODAS.est_raf); return {hora:o.hora, semHora:o.semHora, velha:o.horaVelha}; })()`)));
+    igual(o, { hora: '', semHora: true, velha: { hora: '14:30', dia: TER652 } }, 'a hora era de terça: «a confirmar»');
+    run('__pc652=[];');
+    await SYNC652(TER652); await SYNC652('2026-10-16');
+    igual([PC652('remover'), PC652('lancar').filter((x) => /Rafael\/Spitz \(BANHO/.test(x))], [[TER652 + ' ' + V_RAF652], []], 'sai de terça; nada vai para sexta sem a hora');
+    igual(AL652('2026-10-15'), ['Banho de saída sem hora: Rafael, sexta 16/10 (a saída mudou: a hora era 14:30, para 13/10) — definir a hora']);
+    // um toque: o painel já vem com 14:30
+    DIA652('2026-10-15');
+    igual(run(`banhoSaidaHoraAbrir('est_raf', 'hoje')`), true);
+    igual(run('DASH_HORA.banhosaida'), '14:30');
+    const p = TXT652(run(`banhoSaidaAlertaHTML('hoje')`));
+    assert.ok(p.indexOf('A saída mudou: a hora era 14:30, para 13/10. Confirme com o tutor.') >= 0 && p.indexOf('Definir 16/10 às 14:30') >= 0, p);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual([SPA652('est_raf').horario, SPA652('est_raf').horaDia], ['14:30', '2026-10-16']);
+    igual(run('__au650.filter(function(a){ return a.a==="banho-saida"; }).map(function(a){ return a.b; }).pop()'), 'Rafael — definiu a hora do banho de saída de 16/10/2026: 14:30 (no Hoje na Zêluz)');
+    igual(CALC652('2026-10-16').banho.filter((x) => /BANHO DE SAÍDA/.test(x)), [V_RAF652]);
+    igual(AL652('2026-10-15'), []);
+    // a hora de antes da 2ª rodada (o Theo: 15:00, sem o dia): as datas mudadas na aba Hóspedes a tornam «a confirmar»…
+    await run(`__datas652('est_theo', '${HOJE652}', '${QUA652}')`);
+    await espera649(50);
+    run(`EST_TODAS.est_theo=__dbPega('auaulandia/estadias/est_theo');`);
+    igual(AL652(TER652), ['Banho de saída sem hora: Theo, quarta 14/10 (a saída mudou: a hora era 15:00, para 13/10) — definir a hora']);
+    // …a não ser que alguém tenha escrito a hora depois da mudança
+    run(`EST_TODAS.est_theo.ficha.spa.hora_por={quem:'Ana Teste', ts:EST_TODAS.est_theo.alterado_ts+1, de:''};`);
+    igual(AL652(TER652), []);
+    // sem mudança de datas, a hora sem o dia continua valendo (a do check-in de antes)
+    run(`delete EST_TODAS.est_theo.alteracao_anterior; delete EST_TODAS.est_theo.ficha.spa.hora_por;`);
+    igual(run(`banhoSaidaDe('est_theo', EST_TODAS.est_theo).hora`), '15:00');
+  } finally {
+    run(`document.getElementById=__bkS.ge; hospAbaPode=__bkS.hp; if(__bkS.al) alert=__bkS.al; if(__bkS.ch) carregarHospedes=__bkS.ch; renderHospedesAba=__bkS.rh; checarFaltasDaEstadia=__bkS.cf;`);
+    run(SOLTA652);
+  }
+});
+
+prova('6.52 R2 BS3 — a hora no check-in: o check-in novo grava a hora com o dia da saída; «Corrigir»/«Acrescentar» que mudam a saída sem mexer na hora deixam a hora com o dia de antes (volta a «a confirmar»); a hora escrita na tela vale para a saída gravada', () => {
+  const g = (modo, dados, antes, abriu) => JSON.parse(JSON.stringify(run(`(function(){ var d=${JSON.stringify(dados)}; banhoSaidaNaGravacao('${modo}', d, ${JSON.stringify(antes)}, ${JSON.stringify(abriu)}); return d.ficha.spa; })()`)));
+  const tela = (h, c) => ({ banho: 'Sim', tipo: 'Hidratação', horario: h, aConfirmar: !!c });
+  igual(g('novo', { saida: TER652, ficha: { spa: tela('15:00') } }, {}, null), Object.assign(tela('15:00'), { horaDia: TER652 }), 'check-in novo');
+  igual(g('novo', { saida: TER652, ficha: { spa: tela('', true) } }, {}, null), tela('', true), '«a confirmar»: sem dia');
+  // corrigir: a saída muda de 13/10 para 16/10, a hora da tela é a do banco (15:00, sem o dia — de antes da 2ª rodada)
+  const antes = { saida: TER652, ficha: { spa: { banho: 'Sim', tipo: 'Hidratação', horario: '15:00', aConfirmar: false } } };
+  igual(g('corrigir', { saida: '2026-10-16', ficha: { spa: tela('15:00') } }, antes, tela('15:00')).horaDia, TER652, 'sem mexer no banho: a hora fica com o dia de antes');
+  igual(g('corrigir', { saida: '2026-10-16', ficha: { spa: Object.assign(tela('15:00'), { tipo: 'Tosa' }) } }, antes, tela('15:00')).horaDia, TER652, 'mexeu no tipo, a hora é a mesma: o dia de antes');
+  igual(g('corrigir', { saida: '2026-10-16', ficha: { spa: tela('16:00') } }, antes, tela('15:00')).horaDia, '2026-10-16', 'a hora escrita agora: a saída gravada');
+  igual(g('acrescentar', { saida: TER652, ficha: { spa: tela('15:00') } }, { saida: TER652, ficha: { spa: Object.assign({}, antes.ficha.spa, { horaDia: TER652 }) } }, tela('15:00')).horaDia, TER652);
+  igual(run(`banhoSaidaSemRastro({banho:'Sim', horario:'15:00', horaDia:'${TER652}', tirado:{dia:'${TER652}'}, hora_por:{ts:1}})`), { banho: 'Sim', horario: '15:00' }, 'o dia da hora não é correção');
+});
+
+prova('6.52 R2 BS4 — check-out no próprio dia da saída ANTES da hora do banho: o banho sai (ele foi embora antes); na hora do banho ou depois, fica; a planilha perde o que estava escrito', () => {
+  run(ARMA652);
+  try {
+    const ts = (h, m) => new Date(2026, 9, 13, h, m, 0).getTime();   // hora local do processo (rodar também com TZ=America/Sao_Paulo)
+    run(`EST_TODAS.est_theo.status='finalizada'; EST_TODAS.est_theo.checkout={ts:${ts(8, 0)}};`);
+    igual(CALC652(TER652).banho, [], 'check-out às 08:00, banho às 15:00: sai');
+    igual(run(`banhoSaidaHoraLocal(${ts(8, 0)})`), '08:00');
+    run(`EST_TODAS.est_theo.checkout={ts:${ts(15, 0)}};`);
+    igual(CALC652(TER652).banho, [V_THEO652], 'na hora do banho: fica');
+    run(`EST_TODAS.est_theo.checkout={ts:${ts(16, 10)}};`);
+    igual(CALC652(TER652).banho, [V_THEO652], 'depois do banho: fica (ele tomou)');
+    run(`EST_TODAS.est_theo.checkout={ts:${new Date(2026, 9, 12, 18, 0, 0).getTime()}};`);
+    igual(CALC652(TER652).banho, [], 'o check-out da véspera (BS2)');
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 BS4 — o banho escrito sai da planilha (e da TV) quando o check-out é feito antes da hora', async () => {
+  run(ARMA652);
+  try {
+    DIA652(TER652);
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    run(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {status:'finalizada', checkout:{ts:${new Date(2026, 9, 13, 9, 30, 0).getTime()}}}));`);
+    run('__pc652=[];');
+    await SYNC652(TER652);
+    igual([PC652('remover'), PL652(TER652)], [[TER652 + ' ' + V_THEO652], []]);
+  } finally { run(SOLTA652); }
+});
+
+// O check-in de mentira: os campos do banho e as datas (o resto da tela não importa aqui).
+const CITELA652 = `__bkM={ge:document.getElementById, ss:setSeg, sv:segVal, bc:ciBanhoChange, cr:ciCarregarRefs, cc:ciCalcRacao, cd:ciCalcDias,
+    rd:ciRespostasDaEstadia, st:window.scrollTo, qr:ciQuemRecebeu, h:ciHosp, tr:__ciTravar, abriu:CI_SPA_ABRIU, ed:ciEditandoId, co:ciCorrigindoId, an:window.__ciAntes, db:DB};
+  __cM=function(){ return {ciBanhoHora:{value:''}, ciBanhoConfirmar:{checked:false}, ciBanhoTipo:{value:''}, ciEntrada:{value:''}, ciSaida:{value:''}}; }; __cT=__cM();
+  __segT={}; setSeg=function(id, v){ __segT[id]=v; }; segVal=function(id){ return __segT[id]||''; };
+  ciBanhoChange=function(){}; ciCarregarRefs=function(){}; ciCalcRacao=function(){ return {}; }; ciCalcDias=function(){}; ciRespostasDaEstadia=function(){}; window.scrollTo=function(){};
+  document.getElementById=function(id){ return __cT[id]||null; };
+  ciHosp={nome:'Rafael', tutor:'Rui Teste', refKey:pelKey(PELUDINHOS[0])}; __ciTravar=function(){}; ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };
+  __dbT=DB; DB={ref:function(p){ var r=__dbT.ref(p); return {once:r.once, set:r.set, transaction:r.transaction, remove:r.remove, push:function(){ return __dbT.ref(p+'/x'); },
+    update:function(v){ var w=r.update(v); if(/^auaulandia\\/estadias\\/[^/]+$/.test(p)) EST_TODAS[p.split('/').pop()]=__dbPega(p); return w; } }; }};
+  __salvar652=function(modo, id, extra){ return __ciGravar(modo, id, Object.assign({dados:{entrada:__cT.ciEntrada.value||'${HOJE652}', saida:__cT.ciSaida.value||'${TER652}',
+    ficha:{banho:segVal('ciBanho'), alim:{tipo:'Ração'}, spa:ciBanhoDaTela()}, pertences:[{nome:'Coleira'}]}, meds:{}, temMed:false, key:pelKey(PELUDINHOS[0])}, extra||{})); };`;
+const CISOLTA652 = `document.getElementById=__bkM.ge; setSeg=__bkM.ss; segVal=__bkM.sv; ciBanhoChange=__bkM.bc; ciCarregarRefs=__bkM.cr; ciCalcRacao=__bkM.cc; ciCalcDias=__bkM.cd;
+  ciRespostasDaEstadia=__bkM.rd; window.scrollTo=__bkM.st; ciQuemRecebeu=__bkM.qr; ciHosp=__bkM.h; __ciTravar=__bkM.tr; CI_SPA_ABRIU=__bkM.abriu; ciEditandoId=__bkM.ed;
+  ciCorrigindoId=__bkM.co; window.__ciAntes=__bkM.an; DB=__bkM.db;`;
+
+provaAsync('6.52 R2 M1 — «Acrescentar» aberto ANTES de outro aparelho definir a hora e salvo depois, sem mexer no banho (no dia da saída): a hora fica (14:30, com quem definiu), a planilha não perde o banho e o alerta não volta; o mesmo pelo «Corrigir» e pelo «Acrescentar» do check-in novo (pré-preenchido «a confirmar»); mexendo no banho na tela, vale a tela', async () => {
+  run(ARMA652); run(CITELA652);
+  try {
+    DIA652(TER652);
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}, pertences:[]}));`);
+    // B abre o «Acrescentar» (de verdade): a tela traz «a confirmar», e o retrato fica
+    run(`ciAcrescentarNoExistente('est_raf');`);
+    await espera649(300);
+    igual(JSON.parse(JSON.stringify(run('CI_SPA_ABRIU'))), { banho: 'Sim', tipo: '', horario: '', aConfirmar: true });
+    // A define 14:30 nos Lançamentos do dia; a conferência escreve na planilha de terça
+    run(`banhoSaidaHoraAbrir('est_raf', 'dash'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    await SYNC652(TER652);
+    igual(PL652(TER652).filter((x) => /^Rafael/.test(x)), [V_RAF652 + ' 14:30']);
+    // B salva o «Acrescentar» (um pertence novo), sem ter mexido no banho
+    run('__dbEsc649=[];');
+    run(`__salvar652('acrescentar', 'est_raf');`);
+    await espera649(400);
+    assert.ok(run(`__dbEsc649.some(function(e){ return e[0]==='update' && e[1]==='auaulandia/estadias/est_raf'; })`), 'o «Acrescentar» gravou');
+    const spa = SPA652('est_raf');
+    igual([spa.horario, spa.aConfirmar, spa.horaDia, spa.hora_por && spa.hora_por.quem], ['14:30', false, TER652, 'Recepção Teste'], 'a hora do banco fica');
+    run('__pc652=[];');
+    await SYNC652(TER652);
+    igual([PC652('remover'), PL652(TER652).filter((x) => /^Rafael/.test(x))], [[], [V_RAF652 + ' 14:30']], 'a planilha não perde o banho');
+    igual(AL652(TER652), [], 'o alerta não volta');
+    // o mesmo pelo «Corrigir» (de verdade): aberto antes de a hora mudar para 16:00 em outro aparelho, salvo com o motivo
+    run(`ciCorrigirExistente('est_raf');`);
+    await espera649(300);
+    igual(JSON.parse(JSON.stringify(run('CI_SPA_ABRIU'))), { banho: 'Sim', tipo: '', horario: '14:30', aConfirmar: false });
+    DIA652(TER652);
+    run(`banhoSaidaHoraAbrir('est_raf', 'dash'); dashHoraEscolher('banhosaida', '16:00');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    const dif = JSON.parse(JSON.stringify(run(`ciDiffCorrecao(window.__ciAntes, {entrada:'${HOJE652}', saida:'${TER652}', ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:ciBanhoDaTela()}}, {})`)));
+    assert.ok(!dif.some((d) => /^spa/.test(d)), 'o histórico da correção não acusa o banho que a tela não mudou: ' + JSON.stringify(dif));
+    // o «Substituir» do check-in novo: a tela (pré-preenchida «a confirmar» pelo BS1, sem mexer no banho) contra o banco (16:00)
+    run(`__abriu652=CI_SPA_ABRIU; CI_SPA_ABRIU={banho:'Sim', tipo:'', horario:'', aConfirmar:true};`);
+    const difS = JSON.parse(JSON.stringify(run(`ciDiffCorrecao({ficha:{spa:{banho:'Sim', tipo:'', horario:'16:00', aConfirmar:false, horaDia:'${TER652}'}}, medicacao:[], entrada:'', saida:''}, {ficha:{spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}, entrada:'', saida:''}, {})`)));
+    igual(difS.filter((d) => /^spa/.test(d)), [], 'o banho que a tela não mudou não entra no histórico');
+    run('CI_SPA_ABRIU=__abriu652;');
+    run(`__salvar652('corrigir', 'est_raf', {correcao:{motivo:'a tutora mudou a ração hoje', quem:'Ana Teste', diff:[]}});`);
+    await espera649(400);
+    igual([SPA652('est_raf').horario, SPA652('est_raf').horaDia], ['16:00', TER652], 'corrigir: a hora do banco (16:00) fica');
+    // o «Acrescentar» que nasce do check-in NOVO (pré-preenchido da última hospedagem, «a confirmar» pelo BS1)
+    run(`ciEditandoId=null; CI_SPA_ABRIU=null;`);
+    await run(`ciAplicarEstadiaNaFicha(banhoSaidaSemHoraDaVezPassada(__dbPega('auaulandia/estadias/est_raf')), 'Ficha pré-preenchida da última estadia — confira e ajuste.')`);
+    igual(JSON.parse(JSON.stringify(run('CI_SPA_ABRIU'))), { banho: 'Sim', tipo: '', horario: '', aConfirmar: true });
+    run(`__salvar652('acrescentar', 'est_raf');`);
+    await espera649(400);
+    igual(SPA652('est_raf').horario, '16:00', 'o check-in novo que acrescenta não apaga a hora');
+    // mexendo no banho na tela: vale a tela, com o dia da saída gravada
+    run(`ciAcrescentarNoExistente('est_raf');`);
+    await espera649(300);
+    run(`__cT.ciBanhoHora.value='17:00';`);
+    run(`__salvar652('acrescentar', 'est_raf');`);
+    await espera649(400);
+    const s2 = SPA652('est_raf');
+    igual([s2.horario, s2.aConfirmar, s2.horaDia], ['17:00', false, TER652]);
+  } finally { run(CISOLTA652); run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 B2 — a ficha antiga (só ficha.banho, sem o spa): «definir a hora» grava (o spa nasce com a hora, o dia e quem definiu, sem o aviso falso de «desmarcado»), o alerta sai e o banho vai; também com a transação do Firebase de verdade (retrato frio); com «Não» no banco, nada', async () => {
+  run(ARMA652);
+  try {
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', obsGeral:'come devagar'}}));`);
+    igual(ALID652(SEG652), 'est_raf');
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    const spa = SPA652('est_raf');
+    igual([spa.banho, spa.horario, spa.aConfirmar, spa.horaDia, spa.hora_por.quem], ['Sim', '14:30', false, TER652, 'Recepção Teste']);
+    igual(run(`__dbPega('auaulandia/estadias/est_raf/ficha/obsGeral')`), 'come devagar', 'o resto da ficha fica');
+    igual(run('__za649.length'), 0, 'nenhum aviso');
+    igual(ALID652(SEG652), '');
+    igual(CALC652(TER652).banho.sort(), [V_RAF652, V_THEO652].sort());
+    // a transação como a do Firebase (o retrato local frio = null nas duas passadas)
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim'}}));`);
+    run(TXREAL650);
+    run(`__txLocal['auaulandia/estadias/est_raf/ficha/spa']=null; __txLocal['auaulandia/estadias/est_raf/ficha']=null; __txRuns=0;`);
+    DIA652(SEG652);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '15:15');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual([SPA652('est_raf').horario, SPA652('est_raf').horaDia], ['15:15', TER652]);
+    // «Não» na ficha antiga: nada é gravado, e o aviso é o do desmarcado
+    run(`__dbPoe('auaulandia/estadias/est_raf/ficha', {banho:'Não'}); EST_TODAS.est_raf.ficha={banho:'Sim'}; __za649=[];`);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '16:00');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), false);
+    igual([run(`__dbPega('auaulandia/estadias/est_raf/ficha')`), run('__za649[0][0]')], [{ banho: 'Não' }, 'NÃO GRAVEI A HORA']);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 B6 — dois aparelhos: o painel aberto em B quando A grava a hora (ou tira) continua, dizendo o que mudou e com a hora de agora (a escolha de B não some calada); B relê o registro do automático do dia depois da conferência de A (35 s e 95 s) e a linha deixa de dizer "sai na próxima conferência"', async () => {
+  run(ARMA652);
+  try {
+    DIA652(SEG652);
+    // B abre «definir a hora» do Rafael no Hoje na Zêluz e escolhe 16:00
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '16:00');`);
+    // A grava 11:00: a memória de B recebe pelo ouvinte das estadias
+    run(`EST_TODAS.est_raf=JSON.parse(JSON.stringify(EST_TODAS.est_raf)); EST_TODAS.est_raf.ficha.spa={banho:'Sim', tipo:'', horario:'11:00', aConfirmar:false, horaDia:'${TER652}', hora_por:{quem:'Ana Teste', ts:1, de:''}};`);
+    const h = TXT652(run(`banhoSaidaAlertaHTML('hoje')`));
+    assert.ok(h.indexOf('Rafael, terça 13/10: a hora foi definida em outro aparelho: 11:00.') >= 0 && h.indexOf('Agora está às 11:00.') >= 0 && h.indexOf('Mudar 13/10 para 16:00') >= 0, h);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual(run('__au650.filter(function(a){ return a.a==="banho-saida"; }).map(function(a){ return a.b; }).pop()'), 'Rafael — mudou a hora do banho de saída de 13/10/2026 de 11:00 para 16:00 (no Hoje na Zêluz)');
+    igual(run(`banhoSaidaAlertaHTML('hoje')`), '', 'gravou: o painel fecha');
+    // tirado em outro aparelho: a linha diz, e o painel vira «Fechar»
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); EST_TODAS.est_raf.ficha.spa.tirado={dia:'${TER652}', quem:'Ana Teste', ts:Date.now()};`);
+    const t = run(`banhoSaidaAlertaHTML('hoje')`);
+    assert.ok(TXT652(t).indexOf('Rafael, terça 13/10: o banho de saída foi tirado em outro aparelho.') >= 0 && /onclick="banhoSaidaHoraFechar\(\)">Fechar</.test(t) && !/banhoSaidaMudarHora/.test(t), t);
+    run('banhoSaidaHoraFechar();');
+    // a linha do tirado: B relê o registro do dia depois da conferência de A
+    DIA652(TER652);
+    await SYNC652(TER652);
+    CACHE652(TER652);
+    run(`__velho652=JSON.parse(JSON.stringify(REP_PLAN_CACHE['${TER652}']));`);
+    run(`__tm652=[]; __st652=setTimeout; setTimeout=function(f, ms){ __tm652.push({f:f, ms:ms}); return __tm652.length; };
+      __tv652=tvBanhoTelaVisivel; tvBanhoTelaVisivel=function(){ return true; }; __rd652b=renderDash; __rdc652=0; renderDash=function(){ __rdc652++; };`);
+    try {
+      run('BANHO_SAIDA_ASSIN=banhoSaidaAssinatura();');
+      // A tira o Theo e a conferência dele passa (o registro e a planilha de terça perdem o Theo)
+      run(`EST_TODAS.est_theo=JSON.parse(JSON.stringify(EST_TODAS.est_theo)); EST_TODAS.est_theo.ficha.spa.tirado={dia:'${TER652}', quem:'Ana Teste', ts:Date.now()};`);
+      igual(run('banhoSaidaEstadiasMudaram()'), true);
+      igual(run('__tm652.map(function(t){ return t.ms; })'), [35000, 95000]);
+      await SYNC652(TER652);
+      run(`REP_PLAN_CACHE['${TER652}']=__velho652;`);   // a memória de B ainda é a de antes
+      assert.ok(TXT652(run(`banhoSaidaCartaoHTML({}, '${TER652}')`)).indexOf('sai da planilha e da TV na próxima conferência, em instantes') >= 0, 'antes de reler');
+      run('__tm652[0].f();');
+      await espera649(100);
+      const c = TXT652(run(`banhoSaidaCartaoHTML({}, '${TER652}')`));
+      assert.ok(c.indexOf('Banho de saída que não vai para a TV (2)') >= 0 && c.indexOf('sai da planilha') < 0, c);   // o Theo e o Rafael (tirado acima)
+      assert.ok(run('__rdc652') >= 2, 'redesenhou depois de reler');
+    } finally { run('setTimeout=__st652; tvBanhoTelaVisivel=__tv652; renderDash=__rd652b;'); }
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 R2 q17 — todas as gravações da 6.52 chegam ao banco com a transação do Firebase de verdade (TXREAL650: a 1ª passada vê o retrato local frio, null): definir a hora, mudar a hora, tirar e pôr de volta', async () => {
+  run(ARMA652); run(TXREAL650);
+  try {
+    const frio = (id) => run(`__txLocal['auaulandia/estadias/${id}/ficha/spa']=null; __txLocal['auaulandia/estadias/${id}/ficha']=null; __txRuns=0; __dbEsc649=[];`);
+    const txs = () => run(`__dbEsc649.filter(function(t){ return t[0]==='transaction'; }).map(function(t){ return t[1].split('/').slice(3).join('/'); })`);
+    DIA652(SEG652);
+    frio('est_raf');
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual([SPA652('est_raf').horario, run('__txRuns'), txs()], ['14:30', 2, ['ficha/spa']], 'definir: a 2ª passada grava, numa transação só no spa (não regrava a ficha inteira)');
+    frio('est_theo');
+    run(`banhoSaidaHoraAbrir('est_theo', 'linha'); dashHoraEscolher('banhosaida', '16:15');`);
+    igual(await run(`banhoSaidaMudarHora('est_theo')`), true);
+    igual([SPA652('est_theo').horario, run('__txRuns'), txs()], ['16:15', 2, ['ficha/spa']], 'mudar a hora');
+    frio('est_theo');
+    igual(await run(`banhoSaidaTirar('est_theo')`), true);
+    igual([SPA652('est_theo').tirado.dia, run('__txRuns')], [TER652, 2], 'tirar');
+    run(`EST_TODAS.est_theo=__dbPega('auaulandia/estadias/est_theo');`);
+    frio('est_theo');
+    igual(await run(`banhoSaidaPorDeVolta('est_theo')`), true);
+    igual([SPA652('est_theo').tirado || null, run('__txRuns')], [null, 2], 'pôr de volta');
+    igual(run('__conf650'), 4, 'cada gravação pede a conferência');
+  } finally { run(SOLTA652); }
+});
+
+// ---- As provas do QA (Quinn, qa652/probe/qa-b.js), G1 a G9 — cada uma pega um defeito plantado que a Fase 0 deixava passar
+console.log('\n6.52 QA — provas do QA independente (G1 a G9)');
+provaAsync('6.52 QA G1 [q10,q11] — a frase do Hoje na Zêluz volta depois da saída e vale antes da entrada', async () => {
+  run(ARMA652);
+  try {
+    igual(run(`banhoRecFraseDia(PELUDINHOS[0], '2026-10-16', '${HOJE652}')`), '🛁 banho 16/10 10:00 (fixo)', 'depois da saída');
+    run(`EST_TODAS.est_raf.entrada='2026-10-16'; EST_TODAS.est_raf.saida='2026-10-20';`);
+    igual(run(`banhoRecFraseDia(PELUDINHOS[0], '${HOJE652}', '${HOJE652}')`), '🛁 banho hoje 10:00 (fixo)', 'antes da entrada');
+    igual(run(`banhoRecFraseDia(PELUDINHOS[0], '2026-10-16', '${HOJE652}')`), '', 'na sexta da hospedagem, não');
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G2 [q17] — a gravação no spa com o retrato local frio (null), como no SDK de verdade: grava na 2ª passada', async () => {
+  run(ARMA652); run(TXREAL650);
+  try {
+    DIA652(SEG652);
+    run(`__txRuns=0; __txLocal['auaulandia/estadias/est_raf/ficha/spa']=null;`);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual([SPA652('est_raf').horario, run('__txRuns')], ['14:30', 2]);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G3 [q24] — o aparelho que ainda não leu as hospedagens mas já tem UMA na memória (6.53, hospEstadiaLocal) não tira o banho de saída das outras', async () => {
+  run(ARMA652);
+  try {
+    await SYNC652(TER652);
+    igual(PL652(TER652), [V_THEO652 + ' 15:00']);
+    run(`CF_ESTADIAS_LIDO=false; EST_TODAS={est_raf:EST_TODAS.est_raf}; __pc652=[];`);
+    await SYNC652(TER652);
+    igual(PC652('remover'), [], 'o do Theo fica');
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G4 [q26] — no dia da saída, a hora mudada em outro aparelho redesenha as telas', async () => {
+  run(ARMA652);
+  try {
+    DIA652(TER652);
+    run('BANHO_SAIDA_ASSIN=banhoSaidaAssinatura();');
+    run(`EST_TODAS.est_theo.ficha.spa.horario='16:00';`);
+    igual(run('banhoSaidaEstadiasMudaram()'), true);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G5 [q42] — check-out às 22:30 da véspera (relógio de São Paulo): o banho de saída sai', async () => {
+  run(ARMA652);
+  try {
+    const ts = new Date(2026, 9, 12, 22, 30, 0).getTime();   // hora local do processo (rodar também com TZ=America/Sao_Paulo)
+    run(`EST_TODAS.est_theo.status='finalizada'; EST_TODAS.est_theo.checkout={ts:${ts}};`);
+    igual(CALC652(TER652).banho.indexOf(V_THEO652) >= 0, false);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G6 [q38] — o banho de saída sem hora, tirado, sai do alerta', async () => {
+  run(ARMA652);
+  try {
+    DIA652(SEG652);
+    igual(run(`banhoSaidaAlertas('${SEG652}').map(function(o){ return o.id; })`), ['est_raf']);
+    igual(await run(`banhoSaidaTirar('est_raf')`), true);
+    igual(run(`banhoSaidaAlertas('${SEG652}').length`), 0);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G7 [q20] — a tela aberta desde ontem: «tirar» do dia que já passou não grava', async () => {
+  run(ARMA652);
+  try {
+    DIA652(QUA652);
+    igual(await run(`banhoSaidaTirar('est_theo')`), false);
+    igual(SPA652('est_theo').tirado || null, null);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G8 [q13] — o «Qual banho?» mudou e a conferência ainda não passou: a linha antiga continua com os botões da hospedagem', async () => {
+  run(ARMA652);
+  try {
+    DIA652(TER652);
+    await SYNC652(TER652); CACHE652(TER652);
+    run(`EST_TODAS.est_theo.ficha.spa.tipo='Tosa';`);
+    const h = LIN650(TER652).html;
+    assert.ok(/data-id="est_theo"[^>]*onclick="banhoSaidaTirar/.test(h), h);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA G9 [q32] — «Qual banho?» escrito com parênteses: um par de parênteses só no texto, e a identidade da ficha', async () => {
+  run(ARMA652);
+  try {
+    run(`EST_TODAS.est_theo.ficha.spa.tipo='Hidratação (pelo longo)';`);
+    const t = CALC652(TER652).banho[0];
+    igual([t, ID652(t)], ['Theo/Golden (BANHO DE SAÍDA · HIDRATAÇÃO PELO LONGO)', 'f:' + run("dcKey('Theo','Teo Teste')")]);
+  } finally { run(SOLTA652); }
+});
+
+provaAsync('6.52 QA resto [q02,q03,q15,q16,q18,q19,q31,q34,q44] — os outros defeitos plantados pelo QA: a entrada inválida não estende o B1; a hora inválida é «sem hora»; o cartão não diz "a caminho" antes de ler o registro nem desenha dia que passou; a transação não confirmada não conta; sem permissão não grava; "9h30" vira 09:30; «tirar» de novo não grava nem deixa rastro; o tirado não aparece com o lançado à mão', async () => {
+  run(ARMA652);
+  try {
+    // q02: a entrada inválida cai para o dia da saída (o B1 não vale antes)
+    run(`EST_TODAS.est_raf.entrada='sem data'; EST_TODAS.est_raf.saida='2026-10-16';`);
+    assert.ok(CALC652(HOJE652).banho.indexOf(FX_RAF652) >= 0, 'sexta 09/10: o banho fixo do Rafael vai (a estadia sem entrada válida não o tira)');
+    run(`EST_TODAS.est_raf.entrada='${HOJE652}'; EST_TODAS.est_raf.saida='${TER652}';`);
+    // q03: a hora inválida na ficha é «sem hora» (não vai; o alerta pede)
+    run(`EST_TODAS.est_theo.ficha.spa.horario='25:99';`);
+    igual(CALC652(TER652).banho, [], 'nada vai com a hora inválida');
+    igual(ALID652(SEG652), 'est_raf,est_theo');
+    run(`EST_TODAS.est_theo.ficha.spa.horario='15:00';`);
+    // q15: antes de ler o registro do dia, o cartão não diz "ainda não confirmou"
+    DIA652(TER652);
+    run(`delete REP_PLAN_CACHE['${TER652}'];`);
+    assert.ok(TXT652(run(`banhoSaidaCartaoHTML({}, '${TER652}')`)).indexOf('ainda não confirmou') < 0);
+    // q16: o cartão de um dia que já passou não se desenha
+    DIA652(QUA652);
+    igual(run(`banhoSaidaCartaoHTML({}, '${TER652}')`), '');
+    DIA652(SEG652);
+    // q19: sem permissão, nada é gravado
+    run("document.body.dataset.role='monitor';");
+    igual(JSON.parse(JSON.stringify(await run(`banhoSaidaGravar('est_raf', function(s){ s.horario='10:00'; return s; }, 'x', '${TER652}')`))), { ok: false, erro: 'sem permissão' });
+    igual(SPA652('est_raf').horario, '');
+    run("document.body.dataset.role='consultora';");
+    // q31: "9h30" vira 09:30 (a hora normalizada)
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); DASH_HORA.banhosaida='9h30';`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    igual(SPA652('est_raf').horario, '09:30');
+    // q18: a transação que o banco não confirma não conta como gravada
+    run(`__dbQ=DB; DB={ref:function(p){ var r=__dbQ.ref(p); r.transaction=function(){ return Promise.resolve({committed:false, snapshot:{val:function(){ return __dbPega(p); }}}); }; return r; }}; __za649=[];`);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '16:00');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), false);
+    igual([run('__za649[0][0]'), run('__za649[0][1][0]')], ['NÃO GRAVEI A HORA', 'Não consegui gravar: o banco não confirmou a gravação.']);
+    run('DB=__dbQ; banhoSaidaHoraFechar();');
+    // q34: «tirar» de novo não grava, não deixa rastro, não pede conferência
+    igual(await run(`banhoSaidaTirar('est_theo')`), true);
+    run(`EST_TODAS.est_theo=__dbPega('auaulandia/estadias/est_theo');`);
+    const rastro = () => [run('__au650.filter(function(a){ return a.a==="banho-saida"; }).length'), run('__conf650')];
+    const r0 = rastro();
+    igual(await run(`banhoSaidaTirar('est_theo')`), false);
+    igual(rastro(), r0, 'nada de novo');
+    // q44: o tirado não aparece no cartão quando a recepção lançou o mesmo FILHOt à mão
+    DIA652(TER652); CACHE652(TER652);
+    assert.ok(TXT652(run(`banhoSaidaCartaoHTML({}, '${TER652}')`)).indexOf('Banho de saída que não vai para a TV (1)') >= 0);
+    igual(run(`banhoSaidaCartaoHTML({m1:{valor:'Theo/Golden'}}, '${TER652}')`).indexOf('não vai para a TV'), -1);
+  } finally { run(SOLTA652); }
+});
+
+// ================================================================== 6.52 — 3ª rodada (re-gate do QA: CONCERNS, 09/out/2026)
+// R1: «Acrescentar»/«Corrigir» juntam o banho campo a campo (da tela, só o que a pessoa mudou). R2: as provas G10 a
+// G12 do QA. R3: as datas mudadas e desfeitas na aba Hóspedes (13 → 16 → 13). R4: a assinatura só com o «Sim».
+console.log('\n6.52 QA2 — provas do re-gate do QA (G10 a G12)');
+provaAsync('6.52 QA2 G10 [r02] — BS3 pelo «Corrigir» de verdade: a saída muda de 13/10 para 16/10 sem mexer no banho; a hora (com o dia 13/10) não vai para 16/10 e o alerta pede de novo', async () => {
+  run(ARMA652); run(CITELA652);
+  try {
+    DIA652(SEG652);
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}, pertences:[]}));`);
+    run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    run(`ciCorrigirExistente('est_raf');`); await espera649(300);
+    run(`__cT.ciSaida.value='2026-10-16';`);
+    run(`__salvar652('corrigir', 'est_raf', {correcao:{motivo:'a tutora vai buscar na sexta', quem:'Ana Teste', diff:[]}});`); await espera649(400);
+    igual([run(`__dbPega('auaulandia/estadias/est_raf').saida`), SPA652('est_raf').horaDia], ['2026-10-16', TER652]);
+    igual(CALC652('2026-10-16').banho.filter((v) => /^Rafael\/Spitz \(BANHO DE SA/.test(v)), [], 'a hora de 13/10 não vai sozinha para 16/10');
+    igual(AL652('2026-10-15'), ['Banho de saída sem hora: Rafael, sexta 16/10 (a saída mudou: a hora era 14:30, para 13/10) — definir a hora']);
+  } finally { run(CISOLTA652); run(SOLTA652); }
+});
+
+provaAsync('6.52 QA2 G11 [r09] — «Acrescentar»: quem escreve só o «Qual banho?» tem o «Qual banho?» gravado', async () => {
+  run(ARMA652); run(CITELA652);
+  try {
+    DIA652(SEG652);
+    run(`__est652('est_theo', Object.assign(__dbPega('auaulandia/estadias/est_theo'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'15:00', aConfirmar:false, horaDia:'${TER652}'}}, pertences:[]}));`);
+    run(`ciHosp={nome:'Theo', tutor:'Teo Teste', refKey:pelKey(PELUDINHOS[4])}; ciAcrescentarNoExistente('est_theo');`); await espera649(300);
+    run(`__cT.ciBanhoTipo.value='Hidratação';`);
+    run(`__salvar652('acrescentar', 'est_theo');`); await espera649(400);
+    const s = SPA652('est_theo');
+    igual([s.tipo, s.horario, s.horaDia], ['Hidratação', '15:00', TER652]);
+  } finally { run(CISOLTA652); run(SOLTA652); }
+});
+
+provaAsync('6.52 QA2 G12 [resíduo do M1] — «Acrescentar» aberto antes; outro aparelho define 14:30; quem salva escreve só o «Qual banho?»: fica o «Qual banho?» E a hora', async () => {
+  run(ARMA652); run(CITELA652);
+  try {
+    DIA652(TER652);
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}, pertences:[]}));`);
+    run(`ciAcrescentarNoExistente('est_raf');`); await espera649(300);
+    run(`banhoSaidaHoraAbrir('est_raf', 'dash'); dashHoraEscolher('banhosaida', '14:30');`);
+    await run(`banhoSaidaMudarHora('est_raf')`);
+    run(`__cT.ciBanhoTipo.value='Hidratação';`);
+    run(`__salvar652('acrescentar', 'est_raf');`); await espera649(400);
+    const s = SPA652('est_raf');
+    igual([s.tipo, s.horario, s.aConfirmar, !!s.hora_por], ['Hidratação', '14:30', false, true]);
+  } finally { run(CISOLTA652); run(SOLTA652); }
+});
+
+console.log('\n6.52 R3 — 3ª rodada');
+provaAsync('6.52 R3 R1 — «Acrescentar»/«Corrigir» juntam campo a campo: o «Qual banho?» escrito não leva a hora do banco embora (a planilha não perde o banho, o alerta não volta); desmarcar «a confirmar» sem escrever a hora não é hora nova; a hora escrita na tela vale, com o dia da saída, sem o «quem definiu» de outra hora; mudar o «Sim/Não» leva a tela inteira; o histórico da correção diz só o que a tela mudou', async () => {
+  run(ARMA652); run(CITELA652);
+  try {
+    DIA652(TER652);
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}, pertences:[]}));`);
+    // o caso do QA (G12) até a planilha: abre, A define 14:30, a conferência escreve, B salva só com o «Qual banho?»
+    run(`ciAcrescentarNoExistente('est_raf');`); await espera649(300);
+    run(`banhoSaidaHoraAbrir('est_raf', 'dash'); dashHoraEscolher('banhosaida', '14:30');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    await SYNC652(TER652);
+    run(`__cT.ciBanhoTipo.value='Hidratação';`);
+    run(`__salvar652('acrescentar', 'est_raf');`); await espera649(400);
+    const s1 = SPA652('est_raf');
+    igual([s1.tipo, s1.horario, s1.aConfirmar, s1.horaDia, s1.hora_por && s1.hora_por.quem], ['Hidratação', '14:30', false, TER652, 'Recepção Teste']);
+    run('__pc652=[];');
+    await SYNC652(TER652);
+    igual(PC652('remover'), [TER652 + ' ' + V_RAF652], 'sai só o texto antigo (sem o «Qual banho?»)…');
+    igual(PL652(TER652).filter((x) => /^Rafael/.test(x)), ['Rafael/Spitz (BANHO DE SAÍDA · HIDRATAÇÃO) 14:30'], '…e entra o novo, com a hora: o banho continua na planilha');
+    igual(AL652(TER652), [], 'o alerta não volta');
+    // desmarcar «a confirmar» sem escrever a hora (M1c): a hora do banco fica
+    run(`__est652('est_raf', Object.assign(__dbPega('auaulandia/estadias/est_raf'), {ficha:{banho:'Sim', alim:{tipo:'Ração'}, spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}}));`);
+    run(`ciAcrescentarNoExistente('est_raf');`); await espera649(300);
+    run(`banhoSaidaHoraAbrir('est_raf', 'dash'); dashHoraEscolher('banhosaida', '15:45');`);
+    igual(await run(`banhoSaidaMudarHora('est_raf')`), true);
+    run(`__cT.ciBanhoConfirmar.checked=false;`);
+    run(`__salvar652('acrescentar', 'est_raf');`); await espera649(400);
+    igual([SPA652('est_raf').horario, SPA652('est_raf').aConfirmar, SPA652('est_raf').horaDia], ['15:45', false, TER652]);
+    // a pura: a hora escrita na tela vale (com a saída gravada), sem o «quem definiu» da outra hora; marcar «a confirmar» tira a hora
+    const J = (a, n, abriu, sai, ant) => JSON.parse(JSON.stringify(run(`banhoSaidaJuntar(${JSON.stringify(a)}, ${JSON.stringify(n)}, ${JSON.stringify(abriu)}, '${sai}', '${ant}')`)));
+    const banco = { banho: 'Sim', tipo: 'Tosa', horario: '14:30', aConfirmar: false, horaDia: TER652, hora_por: { quem: 'Ana Teste', ts: 1, de: '' }, tirado: { dia: TER652, quem: 'Ana Teste', ts: 2 } };
+    const abriu = { banho: 'Sim', tipo: 'Tosa', horario: '', aConfirmar: true };
+    igual(J(banco, { banho: 'Sim', tipo: 'Tosa', horario: '16:00', aConfirmar: false }, abriu, '2026-10-16', TER652),
+      { banho: 'Sim', tipo: 'Tosa', horario: '16:00', aConfirmar: false, horaDia: '2026-10-16', tirado: banco.tirado }, 'a hora escrita agora: vale, com o dia da saída gravada; o «tirar» fica');
+    igual(J(banco, { banho: 'Sim', tipo: 'Tosa', horario: '', aConfirmar: true }, { banho: 'Sim', tipo: 'Tosa', horario: '14:30', aConfirmar: false }, TER652, TER652),
+      { banho: 'Sim', tipo: 'Tosa', horario: '', aConfirmar: true, tirado: banco.tirado }, 'marcar «a confirmar» tira a hora');
+    igual(J(banco, { banho: 'Não', tipo: '', horario: '', aConfirmar: false }, abriu, TER652, TER652), null, 'mudar o «Sim/Não»: a tela inteira');
+    igual(J(banco, { banho: 'Sim', tipo: 'Tosa', horario: '', aConfirmar: true }, null, TER652, TER652), null, 'sem o retrato: a tela');
+    igual(J({ banho: 'Sim', tipo: '', horario: '15:00', aConfirmar: false }, { banho: 'Sim', tipo: 'Hidratação', horario: '15:00', aConfirmar: false },
+      { banho: 'Sim', tipo: '', horario: '15:00', aConfirmar: false }, '2026-10-16', TER652).horaDia, TER652, 'a hora do banco sem o dia fica com a saída de antes (BS3)');
+    // sem o retrato da tela (quem chama sem abrir), a hora igual à do banco fica com o dia de antes (BS3) — a regra de sempre
+    const g3 = (dados, antes) => JSON.parse(JSON.stringify(run(`(function(){ var d=${JSON.stringify(dados)}; banhoSaidaNaGravacao('corrigir', d, ${JSON.stringify(antes)}, null); return d.ficha; })()`)));
+    igual(g3({ saida: '2026-10-16', ficha: { banho: 'Sim', spa: { banho: 'Sim', tipo: 'Tosa', horario: '15:00', aConfirmar: false } } },
+      { saida: TER652, ficha: { spa: { banho: 'Sim', tipo: '', horario: '15:00', aConfirmar: false } } }).spa.horaDia, TER652, 'sem retrato: a mesma hora, o dia de antes');
+    // outro aparelho desmarcou o «Sim» depois de a tela abrir; quem salva não mexeu no banho: fica o «Não» do banco, também na cópia ficha.banho
+    const g4 = JSON.parse(JSON.stringify(run(`(function(){ var d={saida:'${TER652}', ficha:{banho:'Sim', spa:{banho:'Sim', tipo:'', horario:'', aConfirmar:true}}};
+      banhoSaidaNaGravacao('acrescentar', d, {saida:'${TER652}', ficha:{banho:'Não', spa:{banho:'Não', tipo:'', horario:'', aConfirmar:false}}}, {banho:'Sim', tipo:'', horario:'', aConfirmar:true});
+      return d.ficha; })()`)));
+    igual([g4.banho, g4.spa.banho], ['Não', 'Não'], 'o «Não» do banco, nas duas cópias');
+    // o histórico da correção: só o «Qual banho?»
+    run(`__abriuR3=CI_SPA_ABRIU; CI_SPA_ABRIU={banho:'Sim', tipo:'', horario:'', aConfirmar:true};`);
+    const dif = JSON.parse(JSON.stringify(run(`ciDiffCorrecao({ficha:{spa:{banho:'Sim', tipo:'', horario:'14:30', aConfirmar:false, horaDia:'${TER652}'}}, medicacao:[], entrada:'', saida:'${TER652}'}, {ficha:{spa:{banho:'Sim', tipo:'Hidratação', horario:'', aConfirmar:true}}, entrada:'', saida:'${TER652}'}, {})`)));
+    run('CI_SPA_ABRIU=__abriuR3;');
+    const sp = dif.filter((d) => /^spa/.test(d));
+    assert.ok(sp.length === 1 && /Hidratação/.test(sp[0]) && /"horario":"14:30"[^→]*→[^→]*"horario":"14:30"/.test(sp[0]), JSON.stringify(dif));
+  } finally { run(CISOLTA652); run(SOLTA652); }
+});
+
+provaAsync('6.52 R3 R3 — datas mudadas e desfeitas na aba Hóspedes (13 → 16 → 13): a hora de antes (sem o dia) fica marcada com 13/10 na mesma gravação; em 16/10 o alerta diz «a hora era 15:00, para 13/10»; de volta a 13/10, a hora volta a valer e o alerta some', async () => {
+  run(ARMA652);
+  run(`__bkS3={ge:document.getElementById, hp:hospAbaPode, al:(typeof alert==='function'?alert:null), ch:(typeof carregarHospedes==='function'?carregarHospedes:null), rh:renderHospedesAba, cf:checarFaltasDaEstadia, db:DB};
+    __cS3={}; document.getElementById=function(id){ return __cS3[id]||null; }; hospAbaPode=function(){ return true; }; alert=function(){};
+    carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
+    __dbS3=DB; DB={ref:function(p){ var r=__dbS3.ref(p); return Object.assign({}, r, {update:function(v){
+      Object.keys(v||{}).forEach(function(k){ __dbPoe(p+'/'+k, v[k]); }); __dbEsc649.push(['update', p]); return Promise.resolve(); }}); }};
+    __datas3=function(id, ent, sai){ __cS3={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id).then(function(){ EST_TODAS[id]=__dbPega('auaulandia/estadias/'+id); }); };`);
+  try {
+    await run(`__datas3('est_theo', '${HOJE652}', '2026-10-16')`); await espera649(50);
+    igual(SPA652('est_theo').horaDia, TER652, 'a hora de antes (sem o dia) é marcada com a saída para a qual valia');
+    igual(AL652('2026-10-15'), ['Banho de saída sem hora: Theo, sexta 16/10 (a saída mudou: a hora era 15:00, para 13/10) — definir a hora']);
+    await run(`__datas3('est_theo', '${HOJE652}', '${TER652}')`); await espera649(50);
+    igual(SPA652('est_theo').horaDia, TER652, 'a marca não muda');
+    igual(AL652(SEG652), [ 'Banho de saída sem hora: Rafael, terça 13/10 — definir a hora' ], 'o Theo de volta a 13/10: sem alerta');
+    igual(CALC652(TER652).banho, [V_THEO652], 'a hora volta a valer');
+    igual(CALC652(TER652)._horas.banho[ID652(V_THEO652)], '15:00');
+  } finally {
+    run(`document.getElementById=__bkS3.ge; hospAbaPode=__bkS3.hp; if(__bkS3.al) alert=__bkS3.al; if(__bkS3.ch) carregarHospedes=__bkS3.ch; renderHospedesAba=__bkS3.rh; checarFaltasDaEstadia=__bkS3.cf; DB=__bkS3.db;`);
+    run(SOLTA652);
+  }
+});
+
+prova('6.52 R3 R4 — o retrato das estadias só tem as com «Sim» no banho de saída: o check-in, o check-out e as datas de quem não tem banho de saída não redesenham a tela nem agendam a releitura do registro; o «Sim» que vira «Não» redesenha', () => {
+  run(ARMA652);
+  try {
+    run(`__tmR4=[]; __stR4=setTimeout; setTimeout=function(f, ms){ __tmR4.push(ms); return __tmR4.length; };
+      __tvR4=tvBanhoTelaVisivel; tvBanhoTelaVisivel=function(){ return true; }; __rdR4=renderDash; __rdcR4=0; renderDash=function(){ __rdcR4++; };`);
+    try {
+      DIA652(SEG652);
+      run(`EST_TODAS.est_bia={nome:'Bia', tutor:'Ana Teste', raca:'SRD', entrada:'${SEG652}', saida:'${QUA652}', status:'ativa', ficha:{banho:'Não', spa:{banho:'Não', tipo:'', horario:'', aConfirmar:false}}};`);
+      run('BANHO_SAIDA_ASSIN=banhoSaidaAssinatura(); __hr652=0;');
+      igual(run('banhoSaidaAssinatura().indexOf("est_bia")'), -1, 'sem banho de saída, fora do retrato');
+      run(`EST_TODAS.est_bia.saida='2026-10-16';`);
+      igual([run('banhoSaidaEstadiasMudaram()'), run('__tmR4.length'), run('__rdcR4'), run('__hr652')], [false, 0, 0, 0], 'as datas da Bia (sem banho de saída): nada');
+      run(`EST_TODAS.est_bia.status='finalizada'; EST_TODAS.est_bia.checkout={ts:Date.now()};`);
+      igual(run('banhoSaidaEstadiasMudaram()'), false, 'o check-out da Bia: nada');
+      run(`EST_TODAS.est_nova={nome:'Nova', tutor:'Ivo Teste', entrada:'${SEG652}', saida:'${QUA652}', status:'ativa', ficha:{banho:'Não'}};`);
+      igual(run('banhoSaidaEstadiasMudaram()'), false, 'um check-in sem banho de saída: nada');
+      run(`EST_TODAS.est_theo.ficha.spa.banho='Não'; EST_TODAS.est_theo.ficha.banho='Não';`);
+      igual([run('banhoSaidaEstadiasMudaram()'), run('__tmR4')], [true, [35000, 95000]], 'o «Sim» do Theo virou «Não»: redesenha e relê');
+    } finally { run('setTimeout=__stR4; tvBanhoTelaVisivel=__tvR4; renderDash=__rdR4;'); }
+  } finally { run(SOLTA652); }
+});
+
+// ================================================================== 6.52 — conferência final do QA (PASS, 09/out/2026)
+// G14 e G15 do QA (qa652/r3/pr3/qa-g3.js), como estão: pegam os defeitos s05 (a aba Hóspedes grava horaDia também sem
+// hora) e s08 (a marca só quando a saída vai para depois) do qa652/r3/mutqa3.py.
+console.log('\n6.52 QA3 — provas da conferência final do QA (G14 e G15)');
+// hospSalvarDatas de verdade (a aba Hóspedes): o update, uma chamada só
+const HOSP3 = `__bkH3={ge:document.getElementById, hp:hospAbaPode, zp:zPergunta, al:alert, ch:(typeof carregarHospedes==='function'?carregarHospedes:null), rh:renderHospedesAba, cf:checarFaltasDaEstadia, db:DB};
+  __datas3={hospEdIni:'', hospEdFim:''}; document.getElementById=function(id){ return (id in __datas3)?{value:__datas3[id]}:null; };
+  hospAbaPode=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); }; alert=function(){}; carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
+  __upd3=[]; __dbH3=DB; DB={ref:function(p){ var r=__dbH3.ref(p); return {once:r.once, set:r.set, transaction:r.transaction, remove:r.remove,
+    update:function(v){ __upd3.push([p, JSON.parse(JSON.stringify(v))]); Object.keys(v).forEach(function(k){ __dbPoe(p+'/'+k, v[k]); }); EST_TODAS[p.split('/').pop()]=__dbPega(p); return Promise.resolve(); } }; }};`;
+const HOSPSOLTA3 = `document.getElementById=__bkH3.ge; hospAbaPode=__bkH3.hp; zPergunta=__bkH3.zp; alert=__bkH3.al; if(__bkH3.ch) carregarHospedes=__bkH3.ch; renderHospedesAba=__bkH3.rh; checarFaltasDaEstadia=__bkH3.cf; DB=__bkH3.db;`;
+const DATAS3 = async (id, ent, sai) => { run(`__datas3.hospEdIni='${ent}'; __datas3.hospEdFim='${sai}';`); await run(`hospSalvarDatas('${id}')`); await espera649(50); };
+
+provaAsync('6.52 QA3 G14 [s05] aba Hóspedes: quem não tem hora do banho de saída (sem banho, «Não», «a confirmar») grava só as datas', async () => {
+  run(ARMA652); run(HOSP3);
+  try {
+    run(`__est652('est_bia', {refKey:'bia__ana teste', nome:'Bia', tutor:'Ana Teste', raca:'SRD', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa'});
+      __est652('est_nao', {refKey:'mel__lia teste', nome:'Mel', tutor:'Lia Teste', raca:'Poodle', entrada:'${HOJE652}', saida:'${TER652}', status:'ativa', ficha:{banho:'Não', spa:{banho:'Não', tipo:'', horario:'', aConfirmar:false}}});`);
+    await DATAS3('est_bia', HOJE652, '2026-10-16'); await DATAS3('est_nao', HOJE652, '2026-10-16'); await DATAS3('est_raf', HOJE652, '2026-10-16');
+    igual(JSON.parse(JSON.stringify(run('__upd3'))).map((u) => Object.keys(u[1]).sort().join(',')), Array(3).fill('alteracao_anterior,alterado_por,alterado_ts,entrada,saida'));
+    igual(run(`__dbPega('auaulandia/estadias/est_bia/ficha')`), null, 'nada de ficha/spa em quem não tem');
+  } finally { run(HOSPSOLTA3); run(SOLTA652); }
+});
+provaAsync('6.52 QA3 G15 [s08] aba Hóspedes: hora antiga sem dia, 13 → 12 → 13 (a saída adiantada e desfeita): de volta a 13/10, a hora vale', async () => {
+  run(ARMA652); run(HOSP3);
+  try {
+    await DATAS3('est_theo', HOJE652, SEG652);
+    igual(run(`__dbPega('auaulandia/estadias/est_theo/ficha/spa').horaDia`), TER652);
+    await DATAS3('est_theo', HOJE652, TER652);
+    igual(CALC652(TER652).banho.indexOf(V_THEO652) >= 0, true);
+  } finally { run(HOSPSOLTA3); run(SOLTA652); }
 });
 
 // ------------------------------------------------ o fim
