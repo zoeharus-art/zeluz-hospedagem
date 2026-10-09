@@ -5130,13 +5130,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-10"></script>
+<script src="resposta-tutor.js?v=2026-10-09-11"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-10"></script>
+<script src="painel-logica.js?v=2026-10-09-11"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5148,7 +5148,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-10"></script>
+<script src="financeiro-logica.js?v=2026-10-09-11"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6589,8 +6589,9 @@
   // internet, ou o Extrato só está a caminho.
   function repExtratoEsperaTexto(){
     if(REPO_ERRO){
-      var m=String((REPO_ERRO&&REPO_ERRO.message)||REPO_ERRO||'');
-      return 'Não consegui trazer o Extrato de reposições: '+(/permission/i.test(m)?'o banco recusou a leitura (permissão)':(m||'erro sem descrição'))
+      // 6.48 (LOW-6): o motivo pelo tradutor, como leitura — na recusa, «o sistema recusou a leitura» (K22); nos
+      // outros casos, o motivo em português. O cru continua no REPO_ERRO (e no _logLeituraFalhou).
+      return 'Não consegui trazer o Extrato de reposições: '+zErroMotivo(REPO_ERRO, 'banco', '', {leitura:true})
         +'. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
     }
     try{ if(typeof navigator!=='undefined' && navigator && navigator.onLine===false)
@@ -7377,10 +7378,11 @@
   // sufixo (-2 depois de um estorno); quem decide se a falta já existe é o servidor.
   const _L0=repLancamentos(p)||[];
   // Erro na hora (antes de qualquer promessa): solta a trava e diz, em vez de prendê-la (re-QA da 6.39).
-  let _grav;
+  let _grav, _gravou=false;   // 6.48 (K1): o erro de DEPOIS da gravação não diz "Nada foi salvo"
   try{ _grav=Promise.all(regs.map(function(r){ return repGravar(p, r, repFaltaChave(r.data, _L0)); })); }
   catch(e){ _grav=Promise.reject(e); }
   _grav.then(function(refs){
+      _gravou=true;
       // SÓ O QUE ESTA CHAMADA GRAVOU (6.46): a transação recusa a falta que o outro aparelho acabou
       // de lançar. Rastro, saldo, mensagem e pedido de encaixe contam só as que entraram agora.
       // (A recusa é committed===false; qualquer outra resposta é gravação.)
@@ -7447,7 +7449,7 @@
           .catch(function(e){
             if(typeof zAlertao==='function') zAlertao('A FALTA ENTROU, MAS NÃO AVISEI A MÁRCIA',
               // o pedido que a Márcia já está autorizando (ou já autorizou) não é apagado (3ª rodada da 6.46)
-              [(e && e.vagaAviso)?e.message:('Não consegui gravar o pedido de encaixe: '+((e&&e.message)||e)+'.'),
+              [(e && e.vagaAviso)?e.message:('Não consegui gravar o pedido de encaixe: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))),
                'A falta avisada está salva. Fale com a Márcia sobre o dia '+repBRdata(volta)+'.'],{botao:'Entendi'});
           });
       }
@@ -7478,18 +7480,34 @@
       // A conexão caiu no meio da transação (4ª rodada da 6.46, QA646C-03): o SDK a aborta com
       // 'disconnect' já enviada, e ela pode ter entrado. "Nada foi salvo" seria falso.
       var caiu=repConexaoCaiu(e);
+      // 6.48: o motivo em português e a regra G — com 1 dia, a recusa diz "Nada foi salvo"; com 2 ou
+      // mais (período, alguns dias), uma das gravações pode ter entrado: manda conferir o Extrato.
+      var _mot=zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})), _um=(regs.length<=1);
+      var _fim=function(hoje, cartaz){
+        if(!_um && !_gravou && zErroTipo(e, {origem:'banco'})==='permissao')
+          return cartaz?'Confira o Extrato antes de lançar de novo; avise a Gestão.':('Confira o Extrato de '+pelNome(p)+' antes de lançar de novo; avise a Gestão.');
+        return zErroGrav(e, {nada:'Nada foi salvo.', unica:_um, onde:'no Extrato', gravou:_gravou, k1:true, hoje:hoje});
+      };
+      // Gravou e depois falhou (K1): não se sabe o que entrou — o título é o da 6.46, num cartaz
+      // (o modal já pode ter sido fechado).
+      if(!caiu && _gravou){
+        if(_mesmo()) soltar();
+        if(typeof zAlertao==='function') zAlertao('NÃO SEI SE A FALTA AVISADA ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+_mot,
+          _fim('', true)], {botao:'Entendi'});
+        return;
+      }
       // O modal já é de outro lançamento: o aviso não vai para a linha dele (re-QA da 6.39).
       if(!_mesmo()){
         if(typeof zAlertao==='function'){
           if(caiu) zAlertao('NÃO SEI SE A FALTA AVISADA ENTROU', ['A conexão caiu no meio do lançamento da falta avisada de '+pelNome(p)+'.',
             'Confira no Extrato o que entrou antes de lançar de novo.'], {botao:'Entendi'});
-          else zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+((e&&e.message)||e)+'.',
-            'Nada foi salvo. Lance de novo.'], {botao:'Entendi'});
+          else zAlertao('A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de '+pelNome(p)+': '+_mot,
+            _fim('Nada foi salvo. Lance de novo.', true)], {botao:'Entendi'});
         }
         return;
       }
       soltar();
-      w.textContent=caiu?REP_CONEXAO_CAIU_FALTA:('Não consegui lançar: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.');
+      w.textContent=caiu?REP_CONEXAO_CAIU_FALTA:('Não consegui lançar: '+_mot+' '+_fim('Nada foi salvo — tente de novo.'));
     });
   }
   // O prazo à vista na confirmação de toda marcação (6.38, tabela 5.5). Marcada para hoje (P5): o prazo
@@ -7682,12 +7700,19 @@
     var quemD=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     var de=cm.de||String(cred.data||'');
     var refC=function(){ return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+cred._id); };
+    // 6.48 (K1): `gravou` = o dia já saiu do crédito; o erro de depois não diz "Nada foi mudado".
+    var gravou=false;
     var tirarDia=function(marca){
-      return refC().update({volta:'', volta_desmarcada:Object.assign({dia:dia, quem:quemD, ts:Date.now(), relogio:repRelogio()}, marca||{})});
+      return refC().update({volta:'', volta_desmarcada:Object.assign({dia:dia, quem:quemD, ts:Date.now(), relogio:repRelogio()}, marca||{})})
+        .then(function(x){ gravou=true; return x; });
     };
     var depois=function(){ try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
       setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 400); };
-    var falhou=function(e){ alert('Não consegui desmarcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); };
+    var falhou=function(e){ alert('Não consegui desmarcar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+'\n\n'
+      +zErroGrav(e, {nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:'Nada foi mudado. Tente de novo.'})); };
+    // A7: desfazer a troca (1 gravação: o estorno ou o dia que sai), com o erro de depois à parte (K1).
+    var falhouTroca=function(e, feito){ alert('Não consegui desfazer a troca: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+'\n\n'
+      +zErroGrav(e, {nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:feito, k1:true, hoje:'Nada foi mudado.'})); };
     var rastro=function(txt){ if(typeof audit==='function') audit('reposicao-desmarcada', txt, {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:nome}); };
     // ---- o dia já tem um uso (2ª marcação, ou ele já veio): tira o dia, não conta outra
     if(cm.modo==='so-tira'){
@@ -7794,11 +7819,13 @@
       if(!esc2) return;
       if(esc2==='volta'){
         var dzV={estorna:true, texto:'Volta a vir '+repNoDia(de)+': a falta avisada sai.'};
+        var feitoV=false;
         return repTrocaDesfazer(p, cred, dia, dzV).then(function(){
+          feitoV=true;
           repMsgModal('✅ Troca desfeita', [nome+' não vem '+repNoDia(dia)+'.', dzV.texto],
             repMensagem(p,'troca-desfeita',{de:de, para:dia, estorna:true, livres:repLivresParaMarcar(p, 0)}), repTelDe(p));
           depois();
-        }).catch(function(e){ alert('Não consegui desfazer a troca: '+((e&&e.message)||e)+'\n\nNada foi mudado.'); });
+        }).catch(function(e){ falhouTroca(e, feitoV); });
       }
       var livV=repLivresParaMarcar(p, -1);
       return tirarDia(Object.assign({}, marcaPrazo, {virou_reposicao:true, motivo:'troca desfeita'}, marcaAviso)).then(function(){
@@ -7830,11 +7857,13 @@
     if(!escolheu) return;
     if(escolheu==='volta'){
       var dzF={estorna:true, texto:Ele+' vem no dia '+(fem?'dela':'dele')+', '+repDiaSemanaComData(de)+': a troca foi desfeita.'};
+      var feitoF=false;
       return repTrocaDesfazer(p, cred, dia, dzF).then(function(){
+        feitoF=true;
         repMsgModal('✅ Troca desfeita', [nome+' não vem '+repNoDia(dia)+'.', dzF.texto],
           repMensagem(p,'troca-desfeita',{de:de, para:dia, estorna:true, livres:repLivresParaMarcar(p, 0)}), repTelDe(p));
         depois();
-      }).catch(function(e){ alert('Não consegui desfazer a troca: '+((e&&e.message)||e)+'\n\nNada foi mudado.'); });
+      }).catch(function(e){ falhouTroca(e, feitoF); });
     }
     if(escolheu==='zeluz' || escolheu==='excecao'){
       var zel=(escolheu==='zeluz');
@@ -7979,12 +8008,14 @@
       if(!await zPergunta(pelNome(p)+' veio hoje pela TROCA?',
         ['No lugar de '+repBRdata(tcHoje.troca.de)+'. Não é reposição: as reposições '+(repEhFemea(p)?'dela':'dele')+' continuam '+(s-1)+'.'],
         {sim:'Veio', nao:'Não veio'})) return;
+      var gravouT=false;
       repGravar(p,{tipo:'uso', data:hojeU, motivo:'troca', obs:'Veio pela troca de '+repBRdata(tcHoje.troca.de), credito:tcHoje._id}, chaveHoje).then(function(x){
+        gravouT=true;
         if(jaRegistrado(x)) return;
         if(typeof audit==='function') audit('reposicao-uso', pelNome(p)+' — veio pela troca de '+repBRdata(tcHoje.troca.de), {});
         if(typeof zAlertao==='function') zAlertao('TROCA CUMPRIDA', [pelNome(p)+' veio hoje, no lugar de '+repBRdata(tcHoje.troca.de)+'.', 'As reposições continuam '+(s-1)+'.'], {botao:'Fechar'});
         setTimeout(renderReposicao, 300);
-      }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
+      }).catch(function(e){ alert(repUsarFalhou(e, gravouT)); });
       return;
     }
     if(!await zPergunta('Marcar reposição de '+pelNome(p)+'?',
@@ -7998,7 +8029,9 @@
       {rotulo:'Observação', botao:'Confirmar', cor:'#234D67'}))||'').trim();
     var regU={tipo:'uso', data:hojeU, motivo:'reposicao', obs:obs};
     if(credHoje) regU.credito=credHoje._id;
+    var gravouU=false;
     repGravar(p, regU, chaveHoje).then(function(x){
+      gravouU=true;
       if(jaRegistrado(x)) return;
       if(typeof audit==='function') audit('reposicao-uso', pelNome(p), {obs:obs});
       var _sd=Math.max(0, s-1);   // s foi lido antes de gravar; o cache ainda não desceu
@@ -8006,7 +8039,13 @@
         [pelNome(p)+' repôs hoje. Saldo agora: '+_sd+'.'],
         repMensagem(p,'uso',{saldo:_sd}), repTelDe(p));
       setTimeout(renderReposicao, 300);
-    }).catch(function(e){ alert('Não consegui marcar: '+((e&&e.message)||e)); });
+    }).catch(function(e){ alert(repUsarFalhou(e, gravouU)); });
+  }
+  // 6.48: «Veio repor hoje» que falhou (A9, A10). A gravação é transação no nó do dia ou um push:
+  // a conexão que cai no meio ("disconnect") e o erro de depois da gravação (K1) não dizem "Nada foi salvo".
+  function repUsarFalhou(e, gravou){
+    return ('Não consegui marcar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '
+      +zErroGrav(e, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:''})).trim();
   }
   async function repEstornar(i,id){
     const p=PELUDINHOS[i]; if(!p||!id) return;
@@ -8015,10 +8054,13 @@
       ['O lançamento original NÃO é apagado: fica no extrato, e o estorno entra como uma linha nova explicando o erro.'],
       {rotulo:'Motivo do estorno', botao:'Estornar', minimo:3}))||'').trim();
     if(!motivo) return;
+    var gravou=false;
     repGravar(p,{tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:motivo, estornaId:id}).then(function(){
+      gravou=true;
       if(typeof audit==='function') audit('reposicao-estorno', pelNome(p), {motivo:motivo});
       setTimeout(function(){ renderReposicao(); repAbrirExtrato(i); }, 300);
-    }).catch(function(e){ alert('Não consegui estornar: '+((e&&e.message)||e)); });
+    }).catch(function(e){ alert(('Não consegui estornar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '
+      +zErroGrav(e, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:''})).trim()); });
   }
   // ===== DESFAZER A REPOSIÇÃO (Adriana, 25/set/2026) ===================================
   // "Uma tutora cancelou a reposição da Safira na quarta e não consigo remarcar e nem
@@ -8601,7 +8643,7 @@
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id+'/volta_desmarcada/visto').set({quem:quem, ts:Date.now()}).then(function(){
       setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300);
-    }, function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+    }, function(e){ alert(zErroAviso('Não consegui gravar', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:false, hoje:'Nada foi mudado. Tente de novo.'})); });
   }
   function repConferirContar(i, dia){ return repContarNaoVeio(i, dia); }
   function repConferirVeio(i, dia){ return repVeioNoDia(i, dia, {conferido:true}); }
@@ -8637,7 +8679,7 @@
     if(!await zPergunta(nome+' não veio '+repNoDia(dia)+'?', linhas, {sim:'Contar: não veio', nao:'Voltar'})) return;
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), r=null;
     try{ r=await repDesfechoGravar(p, cred, 'nao_veio', {conferido:{quem:quem, ts:Date.now()}, reler:true}, L); }
-    catch(e){ alert('Não consegui gravar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); return; }
+    catch(e){ alert(zErroAviso('Não consegui gravar', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:false, hoje:'Nada foi mudado. Tente de novo.'})); return; }
     var redesenhar=function(){ setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300); };
     if(!r || !r.committed){
       if(typeof zAlertao==='function') zAlertao('ESSE DIA JÁ TEM UM DESFECHO', [r&&r.incerto?('Não consegui conferir agora o dia '+D+' de '+nome+': confira no Extrato quando a tela atualizar.')
@@ -8678,12 +8720,14 @@
     var depois=repSaldoRepDepois(p, null, (function(){ var m={}; m[cred._id]={volta:''}; return m; })());
     var vd={dia:dia, quem:quem, ts:Date.now(), relogio:repRelogio(), excecao:{quem:quem, motivo:motivo}};
     if(troca) vd.virou_reposicao=true;
+    var gravouX=false;
     DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+cred._id).update({volta:'', volta_desmarcada:vd}).then(function(){
+      gravouX=true;
       if(typeof audit==='function') audit('reposicao-excecao', nome+' — '+(troca?'a troca de ':'a reposição de ')+D+' não foi contada (Gestão): '+motivo,
         {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:nome});
       if(typeof zAlertao==='function') zAlertao('NÃO CONTADA', [troca?('A troca de '+nome+' virou reposição. Saldo agora '+depois+'.'):(nome+': a reposição de '+D+' voltou a ficar sem dia. Saldo agora '+depois+'.')], {botao:'Fechar'});
       setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300);
-    }).catch(function(e){ alert('Não consegui gravar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+    }).catch(function(e){ alert(zErroAviso('Não consegui gravar', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:gravouX, k1:true, hoje:'Nada foi mudado. Tente de novo.'})); });
   }
   // ===== "ELE VEIO" NO DIA QUE JÁ PASSOU (Adriana, 01/out/2026) ======================
   // "O Billy Paul estava marcado para 30/09 e aqui diz que ele não repôs. Ele repôs, sim:
@@ -8830,7 +8874,7 @@
     var gravou=false, rG=null;
     // O MESMO nó de todos os desfechos do dia (6.38): «ele veio», a baixa e o «não veio» não dobram.
     try{ rG=await repDesfechoGravar(p, cred, 'veio', op.conferido?{conferido:{quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()}}:{}, L); gravou=!!(rG && rG.committed); }
-    catch(e){ alert('Não consegui marcar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); return; }
+    catch(e){ alert(zErroAviso('Não consegui marcar', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:false, hoje:'Nada foi mudado. Tente de novo.'})); return; }
     var redesenhar=function(){ setTimeout(function(){ try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300); };
     if(!gravou){
       // O que já está lá pode ser o "não veio" da baixa (crítica C21): a frase diz qual desfecho.
@@ -9008,7 +9052,9 @@
       {rotulo:'Motivo (ex.: a tutora cancelou)', botao:'Devolver', minimo:3}))||'').trim();
     if(!porque) return;
     var livres=repLivresParaMarcar(p, 0)+1;   // o cache só soma a devolução quando o banco responde
+    var gravouD=false;
     repDevolverUsoGravar(p, uso, porque).then(function(){
+      gravouD=true;
       if(typeof audit==='function') audit('reposicao-devolvida', pelNome(p)+' — a reposição de '+repBRdata(uso.data)+' voltou para o saldo: '+porque,
         {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
       if(uso.motivo==='troca'){
@@ -9026,7 +9072,7 @@
           .concat(doLanc?['Confira os Lançamentos do dia '+repBRdata(uso.data)+': se ela ainda estiver lá, tire.']:[]),
         repMensagem(p,'desmarcada',{volta:uso.data, livres:livres}), repTelDe(p));
       setTimeout(function(){ try{ renderReposicao(); repAbrirExtrato(i); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300);
-    }).catch(function(e){ alert('Não consegui devolver: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+    }).catch(function(e){ alert(zErroAviso('Não consegui devolver', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:gravouD, k1:true, hoje:'Nada foi mudado. Tente de novo.'})); });
   }
   // A DEVOLUÇÃO DA GESTÃO (P3, 6.38) de um uso com desfecho: num update só, na raiz dos lançamentos —
   // o estorno (dev-{uso}, devolvido_gestao) e o dia que sai do crédito, com a exceção. O dia marcado
@@ -9053,7 +9099,9 @@
     }
     var depois=repSaldoRepDepois(p, [Object.assign({_id:'dev-'+uso._id}, est)], muda, s);
     var livres=repLivresParaMarcar(p, 0)+((cred && cred.volta)?0:1);
+    var gravouG=false;
     DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos').update(up).then(function(){
+      gravouG=true;
       if(typeof audit==='function') audit('reposicao-devolvida', pelNome(p)+' — '+(troca?('a troca de '+de+' → '+D+' virou reposição'):('a reposição de '+D+' voltou para o saldo'))
         +' (Gestão, regra das 24 horas): '+motivo, {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)});
       repMsgModal('Reposição devolvida pela Gestão',
@@ -9061,7 +9109,7 @@
         troca?repMensagem(p,'troca-desfeita',{de:String(cred.troca.de||cred.data||''), para:String(uso.data||''), estorna:false, livres:livres})
              :repMensagem(p,'desmarcada',{volta:uso.data, livres:livres}), repTelDe(p));
       setTimeout(function(){ try{ renderReposicao(); repAbrirExtrato(i); }catch(e){ /* a tela pode já ter sido fechada */ } }, 300);
-    }).catch(function(e){ alert('Não consegui devolver: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+    }).catch(function(e){ alert(zErroAviso('Não consegui devolver', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:gravouG, k1:true, hoje:'Nada foi mudado. Tente de novo.'})); });
   }
   // O que o Extrato diz do dia que saiu do crédito: " · estava marcada para 23/09 e foi
   // remarcada (por Ana)" ou " · desmarcada de 23/09 (por Ana)".
@@ -9748,8 +9796,169 @@
   // (contada do FIM da passada) e pula; a outra confere (QA34). Entra o Chrome ("Failed to
   // fetch"), o Safari ("Load failed", "connection was lost", "appears to be offline", "request
   // timed out", "conexão de rede"), o Firefox ("NetworkError") e o prazo de 12 s da ponte.
-  function repPlanEhQuedaConexao(msg){ return /failed to fetch|networkerror|network request failed|\bload failed\b|connection was lost|appears to be offline|request timed out|conex[aã]o de rede|ponte não respondeu/i.test(String(msg||'')); }
+  // 6.48: a régua é a do tradutor único (zErroTipo): queda ou prazo. As frases da 6.12 não mudam.
+  function repPlanEhQuedaConexao(msg){ var t=zErroTipo(msg); return t==='queda' || t==='prazo'; }
   function repPlanQuedaTexto(){ return 'a conexão com a planilha caiu; o app tenta de novo sozinho em até '+(2*DASH_AUTO_MIN)+' min'; }
+  /* ===== O ERRO DITO EM PORTUGUÊS (Story 6.48, 09/out/2026) =====================================
+   * A recepção lia "Failed to fetch" e "PERMISSION_DENIED: Permission denied" em Reposições, nos
+   * Lançamentos do dia e em Orçamentos (quadro de 08/10, linha 33: "Banho da Cristal não apareceu
+   * («a planilha recusou — Failed to fetch»)"). Um tradutor só, usado SÓ na hora de MOSTRAR:
+   *   · o cru continua no banco (planilha_msg, cancelado_planilha_msg, _erro.msg, o msg do banho de
+   *     quem faltou), nos retornos {ok:false, erro} e na auditoria — as regras que leem o cru
+   *     (dashPlanFilaSemColuna, dashPlanFilaErroDeConfig, a fila do Telegram, esta régua) e a Gestão,
+   *     que diagnostica pela Linha do tempo, continuam vendo o que a ponte e o banco disseram;
+   *   · zErroBruto: o texto cru, sem perder nada e sem "[object Object]" nem "undefined";
+   *   · zErroTipo: '' (vazio) · semBanco · prazo · queda · permissao · ponte · tecnico · texto;
+   *   · zErroMotivo: o motivo curto, em minúscula e sem ponto final (vem depois de ":");
+   *   · zErroTexto: o motivo com a ação do tipo (o app tenta sozinho / toque de novo / avise a Gestão).
+   * Sem internet, a gravação no banco NÃO dá erro (ela espera e grava quando a internet volta): o
+   * .catch de gravação no banco só vê a recusa, a conexão que caiu no meio de uma transação
+   * ("disconnect"), o aparelho sem banco (login anônimo que falhou) ou erro do próprio app — por
+   * isso "Confira a internet" não é dito ali (zErroGrav). A palavra-chave da ponte (`token`) vira
+   * ••• em todos os ramos. O retorno é texto puro: quem põe em innerHTML continua escapando. */
+  function zErroBruto(e){
+    if(e===null || e===undefined) return '';
+    if(typeof e==='string') return e;
+    if(typeof e==='number' || typeof e==='boolean') return String(e);
+    if(typeof e!=='object') return '';
+    if(e.ok===false) return zErroBruto(e.erro);                     // a resposta da ponte: {ok:false, erro}
+    var m=(typeof e.message==='string')?e.message:'';
+    if(m) return m;
+    if(e.name==='AbortError') return 'AbortError';
+    if(e.code!==undefined && e.code!==null && typeof e.code!=='object' && String(e.code)) return String(e.code);
+    return '';
+  }
+  // De onde veio (K7): a resposta da ponte ({ok:false, erro}) ou o que o ponto diz (`ctx.origem`).
+  function zErroOrigem(e, ctx){
+    if(ctx && ctx.origem) return String(ctx.origem);
+    return (e && typeof e==='object' && e.ok===false)?'ponte':'';
+  }
+  function zErroSemInternet(){
+    try{ return typeof navigator!=='undefined' && !!navigator && navigator.onLine===false; }
+    catch(x){ return false; } /* silencioso de propósito: sem o navigator, não se afirma "sem internet" */
+  }
+  function zErroTipo(e, ctx){
+    var t=zErroBruto(e).trim();
+    if(!t || /^\[object \w+\]$/.test(t)) return '';   // LOW-2: um String(objeto) que chegou pronto é resposta vazia
+    if(/^sem conexão com o banco$|banco reconectando|banco desconectado/i.test(t)) return 'semBanco';
+    if(/request timed out|tempo limite da solicita|\baborterror\b|operation was aborted|user aborted a request|signal is aborted|não respondeu em \d+ ?(s|segundos)\b|não respondeu a tempo|^timeout$/i.test(t)) return 'prazo';
+    // os passageiros (K7), ancorados no começo: a composição dos Orçamentos ("Nala/Bia: … | Irma/Bia:
+    // Exception: Lock timeout.") não vira prazo
+    if(/^a planilha está ocupada|^exce(ption|ção):.*(lock timeout|timed out|too many times)|^too many requests/i.test(t)) return 'prazo';
+    if(/failed to fetch|networkerror|network request failed|\bload failed\b|connection was lost|appears to be offline|could not connect to the server|hostname could not be found|client is offline|network-request-failed|conex[aã]o de rede|parece estar (offline|desconectad)|n[ãa]o foi poss[ií]vel conectar ao servidor|n[ãa]o foi poss[ií]vel encontrar um servidor|^cancell?ed\.?$|^cancelad[oa]\.?$|ponte não respondeu(?! como esperado)|^net$|^disconnect$/i.test(t)) return 'queda';
+    // LOW-6 (4ª rodada): o ouvinte do banco cancelado sem serviço («unavailable at /…: The service is unavailable») é queda
+    if(/^unavailable at \/|the service is unavailable/i.test(t)) return 'queda';
+    if(/permission[_ -]?denied|doesn'?t have permission|missing or insufficient permissions/i.test(t)) return 'permissao';
+    if(/^token invalido$|^senha invalida$|PONTE_SENHA|^\s*<|^acao desconhecida: |^grupo nao configurado na ponte: |não respondeu como esperado/i.test(t)) return 'ponte';
+    if(zErroOrigem(e, ctx)==='ponte' && /^exce(ption|ção):|^(TypeError|ReferenceError)\b|do not have permission|required permissions|autoriza/i.test(t)) return 'ponte';
+    if(/^(TypeError|ReferenceError|RangeError|SyntaxError)\b|cannot (read|set) propert|is not a function|is not defined|is not iterable|Reference\.\w+ failed|first argument|maximum call stack|unexpected token|quotaexceeded|notallowederror|securityerror|^maxretry$|^set$|^undefined$|^null$/i.test(t)) return 'tecnico';
+    // LOW-6 (4ª rodada): o pedido grande demais para o banco («too_big at /…») é erro do app (o que ele mandou ou pediu)
+    if(/^too_big at \//i.test(t)) return 'tecnico';
+    return 'texto';
+  }
+  // `alvo`: 'planilha' | 'telegram' | 'banco'. `ctx.agora` = a falha acabou de acontecer (só aí o
+  // navigator.onLine diz algo: numa mensagem guardada, nunca — K12). `ctx.leitura` = recusa de leitura.
+  function zErroMotivo(e, alvo, token, ctx){
+    ctx=ctx||{};
+    var tipo=zErroTipo(e, ctx), t=zErroBruto(e).trim(), tk=String(token||'');
+    var A=(alvo==='telegram'||alvo==='banco')?alvo:'planilha';
+    var mascara=function(x){ x=String(x==null?'':x); return (tk.length>=6)?x.split(tk).join('•••'):x; };
+    var corta=function(x){ x=mascara(x).replace(/[.\s]+$/,''); return (x.length>120)?x.slice(0,120):x; };
+    if(tipo==='') return {planilha:'não recebi resposta da ponte da planilha', telegram:'não recebi resposta da ponte do Telegram', banco:'não recebi resposta do banco'}[A];
+    if(tipo==='semBanco') return 'este aparelho abriu o app sem ligação com o sistema';
+    if(tipo==='prazo'){
+      var n=/(\d+) ?(?:s|segundos)\b/i.exec(t);
+      return {planilha:'a planilha não respondeu a tempo', telegram:'o Telegram não respondeu a tempo', banco:'o banco não respondeu a tempo'}[A]+(n?(' ('+n[1]+' s)'):'');
+    }
+    if(tipo==='queda'){
+      if(/^disconnect$/i.test(t)) return 'a conexão caiu no meio da gravação';
+      if(ctx.agora===true && zErroSemInternet()) return 'este aparelho está sem internet';
+      return {planilha:'a conexão com a planilha caiu', telegram:'a conexão com o Telegram caiu', banco:'a conexão com o banco caiu'}[A];
+    }
+    if(tipo==='permissao') return (ctx.leitura || /access the desired data/i.test(t))?'o sistema recusou a leitura':'o sistema recusou a gravação';
+    if(tipo==='ponte'){
+      if(/token invalido|PONTE_SENHA|^\s*</i.test(t)) return mascara(orcPonteMotivo({erro:t}, tk)).replace(/\.$/,'');
+      if(/^senha invalida$/i.test(t)) return 'a senha guardada no app não bate com a da ponte do Telegram';
+      var ac=/^acao desconhecida:\s*(.*)$/i.exec(t); if(ac) return 'a ponte publicada é antiga e não conhece o pedido "'+corta(ac[1])+'"';
+      var gr=/^grupo nao configurado na ponte:\s*(.*)$/i.exec(t); if(gr) return 'a ponte do Telegram não tem o grupo "'+corta(gr[1])+'"';
+      if(/não respondeu como esperado/i.test(t)) return 'a ponte respondeu sem confirmar o envio';
+      return 'a ponte deu erro do lado do Google ('+corta(t)+')';
+    }
+    if(tipo==='tecnico' && /^too_big at \//i.test(t)) return ctx.leitura?'a leitura ficou grande demais':'a gravação ficou grande demais';
+    if(tipo==='tecnico') return 'erro inesperado do app ('+corta(t)+')';
+    var x=mascara(t).replace(/[.\s]+$/,'');
+    if(A==='telegram' && /^(Bad Request|Forbidden|Unauthorized)/i.test(x)) return 'o Telegram recusou ('+x+')';
+    return x;
+  }
+  // O ponto final da frase, sem dobrar ("excedido!" não vira "excedido!.", regra QA38 F6).
+  function zErroFrase(m){ m=String(m==null?'':m).replace(/\s+$/,''); return /[.!?…]$/.test(m)?m:(m+'.'); }
+  function zErroInicial(m){ m=String(m==null?'':m); return m.charAt(0).toUpperCase()+m.slice(1); }
+  // A ação do tipo, com o espaço na frente (ou ''). `ctx = {alvo, refaz, botao, token, agora, origem}`;
+  // `refaz` (minutos) só onde o app tenta de novo sozinho, conferido no código.
+  function zErroAcao(e, ctx){
+    ctx=ctx||{};
+    var tipo=zErroTipo(e, ctx), t=zErroBruto(e).trim(), refaz=Number(ctx.refaz)||0;
+    if(tipo==='queda' && /^disconnect$/i.test(t)) return ' Confira na tela se ficou marcado antes de tocar de novo.';
+    if((tipo==='queda' || tipo==='prazo') && refaz>0)
+      return (ctx.agora===true && zErroSemInternet())?' O app tenta de novo sozinho quando a internet voltar, enquanto estiver aberto.'
+        :(' O app tenta de novo sozinho em até '+refaz+' min, enquanto estiver aberto.');
+    if(tipo==='queda' || tipo==='prazo' || tipo==='')
+      return ctx.botao?(' Confira a internet e toque em «'+ctx.botao+'» de novo; se continuar, avise a Gestão.')
+        :' Confira a internet e tente de novo; se continuar, avise a Gestão.';
+    if(tipo==='semBanco') return ' Feche e abra o app com a internet ligada; se continuar, avise a Gestão.';
+    if(tipo==='permissao' || tipo==='ponte') return ' Avise a Gestão.';
+    if(tipo==='tecnico') return ' Avise a Gestão com um print desta tela.';
+    return '';
+  }
+  // A palavra-chave da ponte da planilha do Day Care (para a máscara •••), sem quebrar antes de ela chegar.
+  function dashPonteToken(){
+    try{ return (typeof DASH_PONTE!=='undefined' && DASH_PONTE && DASH_PONTE.token)?String(DASH_PONTE.token):''; }
+    catch(x){ return ''; } /* silencioso de propósito: sem a ponte carregada, não há o que mascarar */
+  }
+  function zErroTexto(e, ctx){
+    ctx=ctx||{};
+    return zErroFrase(zErroMotivo(e, ctx.alvo, ctx.token, ctx))+zErroAcao(e, ctx);
+  }
+  // A FRASE DE UMA GRAVAÇÃO NO BANCO QUE FALHOU (regra G da 6.48): o fim que vem depois de
+  // "{o prefixo de cada ponto}: {motivo}.". `o`:
+  //   nada   — a frase do "nada" que o ponto já usa ('Nada foi salvo.', 'Nada mudou.'…);
+  //   unica  — uma gravação só (pode dizer "Nada…" na recusa); com várias, manda conferir;
+  //   onde   — 'no Extrato' | 'na lista' | 'na lista de Orçamentos' | 'no cartão do Hoje na Zêluz';
+  //   gravou — true: o erro veio DEPOIS de gravar (K1); false: a própria gravação falhou;
+  //            sem valor: não dá para saber;
+  //   k1     — o .catch também pega erro de depois da gravação (sem `gravou`, vale "Confira…");
+  //   hoje   — a ação que o ponto já tem para o texto da própria gravação;
+  //   verbo  — 'entrou' (padrão) ou, para quem tira, 'saiu'.
+  function zErroGrav(e, o){
+    o=o||{};
+    var tipo=zErroTipo(e, {origem:'banco'}), t=zErroBruto(e).trim();
+    var nada=o.nada?(String(o.nada)+' '):'', verbo=o.verbo||'entrou';
+    var onde=(o.onde===undefined || o.onde===null)?'na tela':String(o.onde), confira='Confira '+(onde?(onde+' '):'');
+    if(tipo==='queda' && /^disconnect$/i.test(t)) return 'Confira na tela se ficou marcado antes de tocar de novo.';
+    if(tipo==='semBanco') return ((o.gravou===true)?'':nada)+'Feche e abra o app com a internet ligada; se continuar, avise a Gestão.';   // LOW-7: gravou → sem o «Nada…»
+    var depois=(o.gravou===true) || (o.k1 && o.gravou!==false && (tipo==='tecnico' || tipo==='texto' || tipo==='ponte'))
+      || tipo==='queda' || tipo==='prazo' || tipo==='';
+    if(depois) return confira+'se '+verbo+' antes de tentar de novo; avise a Gestão'+(tipo==='tecnico'?' com um print desta tela.':'.');
+    if(tipo==='permissao') return o.unica?(nada+'Avise a Gestão.'):(confira+'o que '+verbo+' antes de tentar de novo; avise a Gestão.');
+    if(tipo==='tecnico') return o.unica?(nada+'Avise a Gestão com um print desta tela.'):(confira+'o que '+verbo+' antes de tentar de novo; avise a Gestão com um print desta tela.');
+    if(tipo==='ponte') return 'Avise a Gestão.';
+    return (o.hoje!==undefined && o.hoje!==null)?String(o.hoje):(nada+'Tente de novo.');
+  }
+  // Os «Salvar» da configuração (6.48, REL-002 e LOW-3): um `set` só. Gravou e a tela quebrou depois (K1), ou não dá
+  // para saber (a queda, o prazo, o vazio): «{Motivo}. Confira se salvou antes de tentar de novo…», sem o prefixo que
+  // afirma "Não salvou"; a própria gravação recusada: «{prefixo}: {motivo}. Nada foi salvo. {a ação da regra G}» —
+  // nunca "Confira a internet".
+  function zErroSalvouTexto(prefixo, e, gravou){
+    var fim=zErroGrav(e, {nada:'Nada foi salvo.', unica:true, onde:'', verbo:'salvou', gravou:!!gravou, hoje:'Nada foi salvo.'});
+    if(gravou || /^Confira /.test(fim)) return zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' '+fim;
+    return String(prefixo||'')+': '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '+fim;
+  }
+  // "{prefixo}: {motivo}." + o fim da regra G, separados por `o.sep` (padrão: um espaço).
+  function zErroAviso(prefixo, e, o){
+    o=o||{};
+    var fim=zErroGrav(e, o);
+    return String(prefixo||'')+': '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true, leitura:!!o.leitura}))+(fim?((o.sep!==undefined?o.sep:' ')+fim):'');
+  }
   function repPlanLinhaHTML(p, dia, tipo){
     var rot=(tipo==='faltas')?('Falta avisada de '+repBRdata(dia)):('Reposição em '+repBRdata(dia));
     var e=repPlanEstado(dia, p, tipo);
@@ -9757,7 +9966,11 @@
       +escAttr(dia)+'\',this)">'+rotulo+'</button>'; };
     var cor='var(--muted)', txt='', acao='';
     if(e.estado==='ok'){ cor='var(--crm-ok)'; txt='lançada na planilha ✓'+(e.ts?(' '+repPlanQuando(e.ts)):''); }
-    else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='NÃO foi para a planilha — '+(repPlanEhQuedaConexao(e.msg)?repPlanQuedaTexto():e.msg); acao=bt('tentar de novo'); }
+    // 6.48 (REQ-002, decisão de execução): na queda, a promessa da 6.12 só com a conferência viva (a mesma
+    // régua do cartaz, K4); sem ela, a linha diz o mesmo que o cartaz. O botão é «Mandar agora» também aqui:
+    // é o nome que o cartaz manda tocar.
+    else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt='NÃO foi para a planilha — '+(repPlanEhQuedaConexao(e.msg)
+      ?(repConferenciaVivaJa()?repPlanQuedaTexto():repPlanQuedaSemPromessaTexto()):zErroMotivo(e.msg, 'planilha', dashPonteToken())); acao=bt('Mandar agora'); }
     else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='vai para a planilha em até '+DASH_AUTO_MIN+' min'; acao=bt('Mandar agora'); }
     else if(e.estado==='fora'){ cor='var(--z-gold-deep)';
       txt='fora da conferência automática (ela cuida de hoje até '+repBRdata(repPlanFimJanela())+')'; acao=bt('Mandar agora'); }
@@ -9843,9 +10056,18 @@
         else alert(falta.join('\n'));
         return null;
       }
+      // A PROVA DE QUE ALGUÉM ESTÁ CONFERINDO (6.48, crítica K4), lida ANTES da conferência deste
+      // toque (que regrava o _ts de hoje): este aparelho com a conferência automática ligada, ou o
+      // registro do automático de hoje conferido há menos de 2×DASH_AUTO_MIN. Sem ela, a tela não
+      // promete "o app tenta de novo sozinho": manda tocar «Mandar agora» de novo.
+      return repConferenciaViva().then(function(viva){
       return dashAutoSincronizar(dia).then(function(r){
         return vagasCarregarDia(dia, true).then(function(){
           solta();
+          // REQ-002: depois do toque, a linha segue o cartaz: o _ts de hoje que está na tela agora (regravado
+          // por ESTE toque, ou o mesmo de antes) não vira prova; vale a leitura de antes do toque, até chegar outro.
+          try{ var __hj=zHojeISO(); REP_CONF_TS_DO_TOQUE=Number((((__hj&&REP_PLAN_CACHE[__hj])||{}).auto||{})._ts)||0; }
+          catch(x){} /* silencioso de propósito: sem a marca, a linha só fica sem promessa a mais */
           try{ renderReposicao(); }catch(e){ _logFalhaGrav('repMandarAgora (redesenho)', e); }
           if(r && r.ok){
             var l=['Dia '+repBRdata(dia)+': '+(r.posto||0)+' lançado(s) na planilha e '+(r.tirado||0)+' tirado(s).',
@@ -9853,18 +10075,68 @@
             if(typeof zAlertao==='function') zAlertao('CONFERIDO COM A PLANILHA', l, {botao:'Fechar'});
             else alert(l.join('\n'));
           } else {
-            var e2=[String((r&&r.erro)||'a ponte não respondeu'),
-              'O lançamento continua salvo aqui no app — só não chegou à planilha.'];
+            var e2=repNaoFoiLinhas(r, (viva && repPlanNaJanela(dia))?(2*DASH_AUTO_MIN):0, 'Mandar agora');
             if(typeof zAlertao==='function') zAlertao('NÃO FOI PARA A PLANILHA', e2, {botao:'Entendi'});
             else alert(e2.join('\n'));
           }
           return r;
         });
       });
+      });
     }).catch(function(e){
       solta();
-      alert('Não consegui conferir com a planilha: '+((e&&e.message)||e));
+      alert('Não consegui conferir com a planilha: '+zErroTexto(e, {alvo:'planilha', origem:'app', token:dashPonteToken()}));
     });
+  }
+  // A conferência automática está rodando? (6.48, K4) Este aparelho com ela ligada, ou o _ts do
+  // registro de hoje com menos de 2×DASH_AUTO_MIN. Sem banco ou sem leitura: não se promete.
+  function repConferenciaViva(){
+    try{
+      if(typeof DASH_AUTO_LIGADO!=='undefined' && DASH_AUTO_LIGADO) return Promise.resolve(true);
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      REP_CONF_TS_LIDO=0;   // REQ-002: a leitura que falha não deixa a de antes valendo para a linha
+      if(!DB || !hoje) return Promise.resolve(false);
+      return DB.ref('daycare/dashboard-auto/'+hoje+'/_ts').once('value').then(function(s){
+        var ts=Number((s && typeof s.val==='function')?(s.val()||0):0);
+        REP_CONF_TS_LIDO=ts;   // REQ-002: a linha do crédito usa a MESMA leitura (repConferenciaVivaJa)
+        return !!(ts && (Date.now()-ts)>=0 && (Date.now()-ts)<2*DASH_AUTO_MIN*60000);
+      }).catch(function(){ return false; });
+    }catch(x){ return Promise.resolve(false); } /* silencioso de propósito: sem a prova, a tela não promete */
+  }
+  // A MESMA RÉGUA SEM ESPERAR O BANCO (6.48, REQ-002), para a linha do crédito, desenhada na hora: este
+  // aparelho com a conferência ligada, ou o _ts de hoje — o do registro do automático já lido nesta tela
+  // ou o lido pelo último «Mandar agora» — com menos de 2×DASH_AUTO_MIN. Sem leitura nenhuma, não promete.
+  // Depois de um «Mandar agora», o _ts que estava na tela logo depois do toque (REP_CONF_TS_DO_TOQUE: o que
+  // o próprio toque gravou, ou o mesmo de antes) não prova que alguém confere sozinho: vale a leitura de
+  // ANTES do toque, a mesma do cartaz — e um _ts novo, que chegar depois.
+  var REP_CONF_TS_LIDO=0, REP_CONF_TS_DO_TOQUE=0;
+  function repConferenciaVivaJa(){
+    try{
+      if(typeof DASH_AUTO_LIGADO!=='undefined' && DASH_AUTO_LIGADO) return true;
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'', c=hoje?REP_PLAN_CACHE[hoje]:null;
+      var tc=Number(((c&&c.auto)||{})._ts)||0;
+      if(tc && tc===REP_CONF_TS_DO_TOQUE) tc=0;
+      var ts=Math.max(tc, Number(REP_CONF_TS_LIDO)||0), d=Date.now()-ts;
+      return !!(ts && d>=0 && d<2*DASH_AUTO_MIN*60000);
+    }catch(x){ return false; } /* silencioso de propósito: sem a prova, a linha não promete */
+  }
+  // A linha da queda sem a promessa: o mesmo que o cartaz manda fazer.
+  function repPlanQuedaSemPromessaTexto(){ return 'a conexão com a planilha caiu; confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão'; }
+  // «NÃO FOI PARA A PLANILHA» (6.48): as duas linhas, ditas em português, do «Mandar agora» (Reposições;
+  // desde a 2ª rodada, também o nome do botão depois da falha) e do «reenviar» (Lançamentos do dia). `refaz` =
+  // minutos em que o app tenta sozinho (0 = não tenta); `botao` = o botão que a pessoa toca de novo.
+  function repNaoFoiLinhas(r, refaz, botao){
+    // LOW-1: a ponte que respondeu vazio no lerDia chega aqui com a frase do próprio app (o dashAutoSincronizar,
+    // que não se toca, a escreve): é a resposta vazia (K18), e não "a planilha recusou".
+    if(r && r.ok===false && String(r.erro||'')==='não consegui ler o dia na planilha') r={ok:false, erro:''};
+    var tk=dashPonteToken(), tipo=zErroTipo(r, {origem:'ponte'});
+    var ctx={alvo:'planilha', refaz:refaz, botao:botao, token:tk, agora:true, origem:'ponte'};
+    var m=zErroMotivo(r, 'planilha', tk, ctx), base='O lançamento continua salvo aqui no app';
+    if(tipo==='queda' || tipo==='prazo' || tipo==='')
+      return [zErroFrase(zErroInicial(m)), base+'.'+zErroAcao(r, ctx)];
+    if(tipo==='ponte' || tipo==='texto')
+      return ['A planilha recusou: '+zErroFrase(m), base+' — só não chegou à planilha.'+zErroAcao(r, ctx)];
+    return [zErroFrase(zErroInicial(m)), base+' — só não chegou à planilha.'+zErroAcao(r, ctx)];
   }
 
   /* ---- PEDIDO DE ENCAIXE: a recepção avisa, a Márcia autoriza ---------------------
@@ -10088,11 +10360,13 @@
       if(aut) DASH_DET.avulso.autorizacao=aut;
       try{ delete DASH_SEL.avulso; delete DASH_SEL_I.avulso; }catch(e){ /* nada escolhido: segue */ }
       var pr=dashLancar('avulso', dashNomePlanilha(p), idx);
-      if(!pr || typeof pr.then!=='function') return false;   // já estava lançado: dashLancar avisou
+      if(!pr || typeof pr.then!=='function') return 'ja';   // já estava lançado: dashLancar avisou
       return pr;
     }).then(function(ok){
       devolver();
-      return ok!==false;
+      // 6.48 (REQ-001): TRÊS estados — 'ja' (o dashLancar não lançou: já estava), false (a gravação
+      // falhou: o dashLancar já disse o motivo) e true (entrou). Antes, a falha virava "já estava".
+      return (ok==='ja')?'ja':(ok!==false);
     }).catch(function(e){ devolver(); throw e; });
   }
   // A MÁRCIA AUTORIZA — e o lançamento acontece no mesmo gesto.
@@ -10203,7 +10477,7 @@
       try{ reserva=await vagasReservar(dia, chave, quem, ped); }
       catch(e){
         _logFalhaGrav('reservar o pedido de encaixe de '+(ped.pet||'')+' em '+dia, e);
-        alert('Não consegui autorizar: '+((e&&e.message)||e)+'. O pedido continua em aberto.');
+        alert('Não consegui autorizar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' O pedido continua em aberto.');
         return;
       }
       if(!reserva || !reserva.ok){ alert((reserva&&reserva.texto)||'Este pedido não está mais em aberto. Atualize a tela.'); return; }
@@ -10329,7 +10603,7 @@
     // «Recusar», com o avulso cobrado). Agora o pedido fecha como atendido, sem lançar nada.
     else if(ehAvulso) acao=vagasAvulsoNoDiaLer(p, dia).then(function(a){
       if(a && !a.erro){ avulsoJa=a; return 'jaLancado'; }
-      return dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut);
+      return dxLancarAvulso(p, dia, valor, !!pay.matriculado, aut).then(function(r){ return (r==='ja')?false:r; });   // 6.48: como antes, 'ja' e a falha
     });
     // O REFEITO RECONFERE A TROCA (5ª rodada da 6.46, QA646D-04): a troca desta autorização que entrou e
     // foi desfeita no meio (o tutor desistiu) não é refeita sem a pergunta — o pedido volta a ficar em
@@ -10431,10 +10705,11 @@
         });
     }).catch(function(e){
       var msg=String((e&&e.message)||e).replace(/\.+$/,'');   // a frase segue com ponto: sem "..".
+      var mot=zErroMotivo(e, 'banco', '', {agora:true});   // 6.48: o que a tela diz (o cru fica no `msg`, para a regra)
       if(autorizou){
         // O pedido já está autorizado: o que falhou foi só a tela de confirmação.
         _logFalhaGrav('mostrar a confirmação do encaixe de '+(ped.pet||'')+' em '+dia+' (o pedido já está autorizado)', e);
-        alert('O encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+' está autorizado, mas não consegui mostrar a confirmação: '+msg+'.');
+        alert('O encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+' está autorizado, mas não consegui mostrar a confirmação: '+zErroFrase(mot));
         return;
       }
       if(lancou){
@@ -10447,7 +10722,7 @@
         try{ vagasPedRedesenhar(); }catch(x){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ }
         var caiu=(msg==='disconnect') || (typeof navigator!=='undefined' && !!navigator && navigator.onLine===false);
         alert('Lancei o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+', mas não consegui marcar o pedido como autorizado ('
-          +(caiu?'a conexão caiu':msg)+'). Toque em «Autorizar» de novo'+(caiu?' quando a internet voltar':'')+': nada entra duas vezes.');
+          +(caiu?'a conexão caiu':mot)+'). Toque em «Autorizar» de novo'+(caiu?' quando a internet voltar':'')+': nada entra duas vezes.');
         return;
       }
       if(msg==='disconnect'){
@@ -10466,7 +10741,7 @@
         // A falta desse dia entrou por outro aparelho com outro dia de repor: a frase diz o que fazer.
         if(e && e.repAviso){ alert(e.message+'\n\n'+vagasDevolvidoTexto(d)); return; }
         _logFalhaGrav('autorizar o encaixe de '+(ped.pet||'')+' em '+dia, e);
-        alert('Não consegui autorizar: '+msg+'. '+vagasDevolvidoTexto(d));
+        alert('Não consegui autorizar: '+zErroFrase(mot)+' '+vagasDevolvidoTexto(d));
       });
     }).then(function(x){ if(pend) delete pend.andando; return x; },
       function(e){ if(pend) delete pend.andando; throw e; });
@@ -10749,7 +11024,7 @@
       });
     }catch(e){
       _logFalhaGrav('recusar o encaixe de '+(ped.pet||'')+' em '+dia, e);
-      alert('Não consegui recusar: '+((e&&e.message)||e));
+      alert(zErroAviso('Não consegui recusar', e, {nada:'Nada foi mudado.', unica:true, onde:'nos pedidos de encaixe', gravou:false, hoje:''}).trim());
       return;
     }
     if(!(res && res.committed && fez)){
@@ -11300,11 +11575,14 @@
         try{ renderReposicao(); }catch(e){ /* a tela pode já ter sido fechada */ }
       });
     };
-    var falhou=function(e){ solta(); diz('Não consegui: '+((e&&e.message)||e)+'. Nada foi salvo — tente de novo.'); };
+    // 6.48: `gravou` = a troca, a reposição ou o avulso já entrou; o erro de depois não diz "Nada foi salvo" (K1).
+    var gravou=false;
+    var falhou=function(e){ solta(); diz(zErroAviso('Não consegui', e, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:'Nada foi salvo — tente de novo.'})); };
     // A troca é transação: a conexão que cai no meio ('disconnect') pode tê-la deixado gravada (4ª
     // rodada da 6.46, QA646C-03). A tela não diz "Nada foi salvo".
     if(v.tipo==='troca'){
       repTrocaGravar(p, v.de, dia, aut).then(function(r){
+        gravou=true;
         // A mesma troca acabou de ser feita em outro aparelho (6.46): nada entrou de novo.
         if(r && r.jaFeita){ solta(); diz(repTrocaJaFeitaTexto(r, v.de, dia)); return; }
         repAuditDiaDele(p, dia);
@@ -11327,6 +11605,7 @@
       // Contado ANTES de gravar: o cache local só soma a marcação quando o banco responde.
       var livresDepois=repLivresParaMarcar(p, +1);
       repAgendarVolta(p, cred._id, dia, aut).then(function(){
+        gravou=true;
         // A MENSAGEM PRONTA PARA O TUTOR, na hora (Adriana, 25/set/2026) — e não só quando
         // ele vem repor. É agora que a consultora está com o telefone na mão.
         repAuditDiaDele(p, dia);
@@ -11351,7 +11630,10 @@
       return;
     }
     dxLancarAvulso(p, dia, v.valor_cent, v.matriculado, aut).then(function(ok){
-      if(ok===false){ solta(); diz('Ele já estava lançado como Avulso em '+repBRdata(dia)+'.'); return; }
+      if(ok==='ja'){ solta(); diz('Ele já estava lançado como Avulso em '+repBRdata(dia)+'.'); return; }
+      // 6.48 (REQ-001): a gravação falhou — o dashLancar já mostrou o motivo; a linha não diz o contrário
+      if(ok===false){ solta(); diz(''); return; }
+      gravou=true;
       pronto([pelNome(p)+' entra como AVULSO em '+fmtBR(dia)+' — '+fmtCent(v.valor_cent)
         +' ('+(v.matriculado?'matriculado':'não matriculado')+').',
         'Está nos Lançamentos do dia '+fmtBR(dia)+': vai para a planilha e para a TV.']
@@ -11374,7 +11656,9 @@
       ? {valor_cent:v.valor_cent, matriculado:!!v.matriculado}
       : ((v.tipo==='troca') ? {volta:dia, troca:{de:v.de, para:dia}}
         : {credito_id:(cred&&cred._id)||'', data:(cred&&cred.data)||'', volta:dia});
+    var pediu=false;   // 6.48 (K1): o pedido já gravou; o erro de depois não diz "Nada foi salvo"
     vagasPedir(dia, p, (v.tipo==='troca')?'reposicao':v.tipo, pay).then(function(){
+      pediu=true;
       dxFechar();
       var l=['A Márcia recebeu o pedido de encaixe de '+pelNome(p)+' em '+fmtBR(dia)+(v.tipo==='troca'?(' (troca: no lugar de '+fmtBR(v.de)+')'):'')+'.',
         (v.tipo==='troca')
@@ -11387,7 +11671,7 @@
       if(e && e.vagaAviso){ if(w) w.textContent=e.message; return; }
       // O pedido é transação (3ª rodada): a conexão que cai no meio pode tê-lo deixado gravado (4ª rodada).
       if(repConexaoCaiu(e)){ if(w) w.textContent=REP_CONEXAO_CAIU_PEDIDO; return; }
-      if(w) w.textContent='Não consegui avisar a Márcia: '+((e&&e.message)||e)+'. Nada foi salvo.';
+      if(w) w.textContent=zErroAviso('Não consegui avisar a Márcia', e, {nada:'Nada foi salvo.', unica:true, onde:'nos pedidos de encaixe', gravou:pediu, k1:true, hoje:'Nada foi salvo.'});
     });
   }
   function renderReposicao(){
@@ -18621,7 +18905,9 @@
     var acerto=repOrcAcerto(id, reg);
     var patch=Object.assign({}, acerto.patch);
     patch['auaulandia/orcamentos/'+id]=reg;
+    var gravou=false;   // 6.48 (K1)
     DB.ref().update(patch).then(function(){
+      gravou=true;
       var extra=repOrcResumo(acerto);
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'+(extra?(' '+extra):''); }
       if(typeof audit==='function') audit('orcamento-criado','orçamento de '+reg.pets.map(function(p){return p.nome;}).join(' e ')+' — '+fmtCent(reg.total_cent),{pet:(reg.pets[0]||{}).nome||''});
@@ -18632,7 +18918,12 @@
       try{ orcCalcular(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       orcCarregarLista();
     }).catch(function(e){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO foi salvo: '+((e&&e.message)||e)+'. Copie a mensagem antes de sair da tela.'; }
+      var _gS='';
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent=gravou
+        ? ('⚠️ '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Confira a lista antes de tentar de novo.')
+        : (/^Confira /.test(_gS=zErroGrav(e, {unica:true, onde:'na lista', gravou:false, hoje:''}))
+          ? ('⚠️ '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' '+_gS)   // sem saber (a queda, o prazo): não afirma "NÃO foi salvo"
+          : ('⚠️ NÃO foi salvo: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+(' '+_gS).replace(/\s+$/,'')+' Copie a mensagem antes de sair da tela.')); }
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcSalvar)', e);
     });
   }
@@ -18699,7 +18990,9 @@
     var acertoEd=repOrcAcerto(id, novoO);
     var raizEd=Object.assign({}, acertoEd.patch);
     Object.keys(patch).forEach(function(campo){ raizEd['auaulandia/orcamentos/'+id+'/'+campo]=patch[campo]; });
+    var gravouEd=false;   // 6.48 (K1)
     DB.ref().update(raizEd).then(function(){
+      gravouEd=true;
       ORC_LISTA_CACHE[id]=novoO;
       if(acertoEd.baixadas||acertoEd.estornadas||acertoEd.reservadas){
         if(typeof audit==='function') audit('reposicao-baixa-orcamento',
@@ -18727,7 +19020,13 @@
       else if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Reserva alterada.'+(_rep?(' '+_rep):''); }
       return _id;
     }).catch(function(e){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e)+'. Nada foi alterado.'; }
+      // 6.48: a recusa diz o motivo; o erro do app (ou de depois da gravação) não afirma "Nada foi alterado"; sem
+      // saber (a queda, o prazo, o vazio), também não afirma "NÃO salvou".
+      var _tE=zErroTipo(e, {origem:'banco'}), _gE=zErroGrav(e, {nada:'Nada foi alterado.', unica:true, onde:'na lista', gravou:false, hoje:'Nada foi alterado.'});
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent=(gravouEd || _tE==='tecnico')
+        ? ('⚠️ '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Confira a lista antes de tentar de novo.')
+        : (/^Confira /.test(_gE) ? ('⚠️ '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' '+_gE)
+          : ('⚠️ NÃO salvou: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '+_gE)); }
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcSalvarEdicao)', e);
     });
   }
@@ -19300,11 +19599,33 @@
   }
   // "Lançado na planilha" / "NÃO entrou na planilha" + reenviar. Um lugar só, usado pelo
   // card de trabalho e pela linha do histórico — a frase não pode divergir entre as duas.
+  // 6.48: o motivo gravado (cru) é dito em português na hora de mostrar. Na queda (o .catch gravou
+  // "Failed to fetch"), a planilha pode ter recebido tudo, uma parte ou nada: a frase não afirma "NÃO
+  // entrou" e pede UM «reenviar», depois de 1 minuto (a ponte da Hospedagem não tem trava: dois envios ao
+  // mesmo tempo duplicam — K11). A composição dos vários FILHOts passa como está.
   function orcPlanilhaHtml(id, o){
-    return (o.planilha_ok===true)
-      ? '<div style="font-size:12px;color:var(--crm-ok);margin-top:4px">Lançado na planilha</div>'
-      : '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(o.planilha_msg)):'')
-        +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button></div>';
+    var bt=' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 4px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button></div>';
+    if(o.planilha_ok===true) return '<div style="font-size:12px;color:var(--crm-ok);margin-top:4px">Lançado na planilha</div>';
+    if(orcPlanilhaCaiu(o, o.planilha_msg))
+      return '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">A planilha não confirmou — a conexão caiu antes da resposta. Espere 1 minuto e toque em reenviar uma vez só: o que já entrou não se repete.'+bt;
+    return '<div style="font-size:12px;color:var(--crm-critico);margin-top:4px">NÃO entrou na planilha'+(o.planilha_msg?(' — '+escAttr(orcPlanilhaMotivo(o, o.planilha_msg))):'')+bt;
+  }
+  // A composição gravada pelo .then do envio (e do cancelamento): «{FILHOt}/{raça}/{tutor}: …», com « | »
+  // entre os FILHOts — os mesmos nomes do orcLinhasPlanilha. Ela passa igual; o tradutor vale só para o
+  // texto gravado pelo .catch.
+  function orcEhComposicao(o, msg){
+    var m=String(msg||''), nomes=[];
+    if(!m) return false;
+    try{ nomes=orcLinhasPlanilha(o||{}, '').map(function(L){ return String(L.peludoTutor||''); }); }
+    catch(x){ nomes=[]; } /* silencioso de propósito: sem os nomes, o texto é tratado como o do .catch */
+    return nomes.some(function(n){ return !!n && m.indexOf(n+': ')===0; });
+  }
+  function orcPlanilhaCaiu(o, msg){ return !!msg && !orcEhComposicao(o, msg) && repPlanEhQuedaConexao(msg); }
+  // O motivo para a tela: a composição como está; o resto pelo tradutor (a palavra-chave mascarada).
+  function orcPlanilhaMotivo(o, msg){
+    if(orcEhComposicao(o, msg)) return String(msg);
+    if(orcPlanilhaCaiu(o, msg)) return 'a conexão com a planilha caiu antes da resposta';
+    return zErroMotivo(msg, 'planilha', (orcSheetsCfg||{}).token||'');
   }
   // ===== AS LINHAS DO HISTÓRICO (seções 2 e 3) ======================================
   // Adriana, 17/set/2026: "UMA linha por item". Nada de card, nada de botão além do que
@@ -19328,9 +19649,10 @@
         ? '<span style="color:var(--muted)">'+escAttr(motivo)+'</span>'
         : '<span style="color:var(--crm-critico);font-weight:700">sem motivo registrado</span>';
     } else {
+      // 6.48 (K10): a mesma regra do cartão — na queda, "a planilha não confirmou", e não "NÃO entrou"
       fim=(o.planilha_ok===true)
         ? '<span style="color:var(--crm-ok);font-weight:700">lançado na planilha</span>'
-        : '<span style="color:var(--crm-critico);font-weight:700">NÃO entrou na planilha</span>'
+        : '<span style="color:var(--crm-critico);font-weight:700">'+(orcPlanilhaCaiu(o, o.planilha_msg)?'a planilha não confirmou':'NÃO entrou na planilha')+'</span>'
           +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 2px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button>';
     }
     var detalhe='';
@@ -19340,10 +19662,10 @@
       L.push('Orçamento feito em '+orcDataBR(o.criado_em)+' por '+(o.criado_por||'-'));
       if(g===2){
         if(o.cancelado_por) L.push('Cancelado por '+o.cancelado_por+(o.cancelado_em_br?(' em '+o.cancelado_em_br):''));
-        if(o.cancelado_planilha_msg) L.push('Planilha: '+o.cancelado_planilha_msg);
+        if(o.cancelado_planilha_msg) L.push('Planilha: '+orcPlanilhaMotivo(o, o.cancelado_planilha_msg));
         if((o.status||'')==='nao_fechou') L.push('O tutor não fechou esta reserva — ela nunca ocupou vaga.');
       } else {
-        if(o.planilha_msg) L.push('Planilha: '+o.planilha_msg);
+        if(o.planilha_msg) L.push('Planilha: '+orcPlanilhaMotivo(o, o.planilha_msg));
       }
       detalhe='<div style="grid-column:1/-1;font-size:12.5px;color:var(--z-blue-soft);line-height:1.5;padding:6px 0 2px">'
         +L.map(function(t){ return escAttr(t); }).join('<br>')+'</div>';
@@ -19469,7 +19791,9 @@
     if(!DB){ alert('Sem conexão com o banco agora — a reserva não foi cancelada. Tente de novo em instantes.'); return; }
     orcCancelarGravar(id, motivo, quem).then(function(r){
       if(r&&r.ok) return;
-      alert('NÃO consegui cancelar: '+((r&&r.erro)||'sem resposta')+'\n\nNada foi alterado. Confira a internet e tente de novo.');
+      // 6.48: o motivo em português e a regra G. A gravação é um update só (atômico): a recusa diz "Nada
+      // foi alterado"; o .catch do orcCancelarGravar também pega o erro de depois (K1): aí, conferir a lista.
+      alert(zErroAviso('NÃO consegui cancelar', (r&&r.erro)||'', {sep:'\n\n', nada:'Nada foi alterado.', verbo:'a reserva foi cancelada', unica:true, onde:'na lista de Orçamentos', k1:true, hoje:'Nada foi alterado. Tente de novo.'}));
     });
   }
   // A gravação do cancelamento, separada da conversa (6.53): o Excluir da hospedagem cancela a
@@ -19652,8 +19976,15 @@
       .catch(function(e){
         DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:false, cancelado_planilha_msg:String((e&&e.message)||e)}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcTirarDaPlanilha)', e); });
         orcCarregarLista();
-        zAlertao('CANCELADA NO SISTEMA — MAS NÃO FALEI COM A PLANILHA',
-          ['Motivo: '+((e&&e.message)||e),'A vaga continua ocupada na planilha. Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
+        // 6.48: na queda, a planilha pode ter tirado ou não — "A vaga continua ocupada" afirmava o que a
+        // queda não prova. A frase manda conferir as linhas do calendário.
+        var _tT=zErroTipo(e);
+        if(_tT==='queda' || _tT==='prazo') zAlertao('CANCELADA NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU',
+          ['A conexão com a planilha caiu antes da resposta: não sei se '+peludoTutor+' saiu da planilha.',
+           'Confira as linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' na aba do calendário: se ainda estiver lá, apague à mão e risque a linha na aba Hospedagem.'],
+          {botao:'Entendi'});
+        else zAlertao('CANCELADA NO SISTEMA — MAS NÃO FALEI COM A PLANILHA',
+          ['Motivo: '+zErroFrase(zErroMotivo(e, 'planilha', cfg.token, {origem:'app'})),'A vaga continua ocupada na planilha. Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
           {botao:'Entendi'});
       });
   }
@@ -19845,8 +20176,16 @@
       })
       .catch(function(e){
         DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:false, planilha_msg:String((e&&e.message)||e)}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
-        zAlertao('FECHADO — MAS NÃO CONSEGUI FALAR COM A PLANILHA',
-          ['Motivo: '+((e&&e.message)||e)],
+        // 6.48: a queda de qualquer FILHOt derruba a corrente aqui — pode ter entrado tudo, uma parte ou
+        // nada. O «reenviar» não repete o que já entrou ("ja estava la"), mas dois envios ao mesmo tempo
+        // duplicam (K11): espere 1 minuto e toque UMA vez. Lançar à mão faria a reserva entrar duas vezes.
+        var _tC=zErroTipo(e);
+        if(_tC==='queda' || _tC==='prazo') zAlertao('FECHADO — MAS A PLANILHA NÃO CONFIRMOU',
+          ['A conexão com a planilha caiu antes da resposta: pode ter entrado tudo, uma parte ou nada.',
+           'Quando a internet voltar, espere 1 minuto e toque em «reenviar» uma vez só, na lista de Orçamentos: o que já entrou não se repete.'],
+          {botao:'Entendi', rodape:'O orçamento está salvo como FECHADO. Não lance à mão: com o «reenviar», a reserva entraria duas vezes. Se continuar sem entrar, avise a Gestão.'});
+        else zAlertao('FECHADO — MAS NÃO CONSEGUI FALAR COM A PLANILHA',
+          ['Motivo: '+zErroFrase(zErroMotivo(e, 'planilha', cfg.token, {origem:'app'}))],
           {botao:'Entendi', rodape:'O orçamento está salvo como FECHADO. Lance à mão nas duas abas — ou tente de novo pelo botão "reenviar" na lista.'});
       });
   }
@@ -19930,14 +20269,16 @@
     var tokenFinal=tok||((orcSheetsCfg&&orcSheetsCfg.token)||'');
     var novo={url:url, token:tokenFinal};
     if(!DB){ orcSheetsCfg=novo; if(st){ st.textContent='Sem banco: vale só neste aparelho.'; } return; }
+    var gravouSh=false;   // 6.48 (REL-002)
     DB.ref('auaulandia/config/orcamento/sheets').set(novo).then(function(){
+      gravouSh=true;
       orcSheetsCfg=novo;
       // A senha NUNCA é escrita de volta: o campo zera e só o aviso muda.
       var _t=document.getElementById('orcShToken'); if(_t) _t.value='';
       var _ts=document.getElementById('orcShTokenSt'); if(_ts) _ts.innerHTML=orcShTokenStatusHTML();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O próximo orçamento marcado como "Fechou" já cai na planilha.':'Ponte desligada — o lançamento volta a ser à mão.'; }
       if(typeof audit==='function') audit('orcamento-ponte-planilha',url?'ligou a ponte com a planilha':'desligou a ponte',{});
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent=zErroSalvouTexto('Não salvou', e, gravouSh); } });
   }
   function orcTestarSheets(){
     var url=((document.getElementById('orcShUrl')||{}).value||'').trim();
@@ -19952,7 +20293,12 @@
       if(st){ st.style.color=(t.indexOf('no ar')>=0)?'var(--crm-ok)':'var(--crm-atencao-text)';
         st.textContent=(t.indexOf('no ar')>=0)?'✅ A planilha respondeu. A ponte está de pé.':'Respondeu, mas não do jeito esperado: '+t.slice(0,120); }
     }).catch(function(e){
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui falar com a planilha: '+((e&&e.message)||e)+'. Confira se publicou como "qualquer pessoa".'; }
+      // 6.48: "Failed to fetch" é a queda E a ponte publicada sem acesso a "qualquer pessoa" (o Google
+      // bloqueia a resposta): a frase diz as duas coisas, em ordem.
+      var _tS=zErroTipo(e);
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent=(_tS==='queda' || _tS==='prazo' || _tS==='')
+        ? 'Não consegui falar com a planilha: a conexão caiu ou a ponte não aceita o pedido. Confira a internet; se ela estiver boa, confira no Apps Script se a publicação está com acesso "qualquer pessoa".'
+        : ('Não consegui falar com a planilha: '+zErroTexto(e, {alvo:'planilha', origem:'app'})); }
     });
   }
   function orcLerReal(id){ var v=((document.getElementById(id)||{}).value||'').replace(/\./g,'').replace(',','.'); var n=parseFloat(v); return isNaN(n)?null:Math.round(n*100); }
@@ -19995,14 +20341,16 @@
     var mudou=orcDifPrecos(antes,novo);
     var avisoFim=(!pf||!df)?' O fim de ano continua SEM valor — orçamento dessa temporada ainda não fecha.':'';
     if(!DB){ orcPrecosCfg=novo; if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Sem banco: vale só neste aparelho até a internet voltar.'+avisoFim; } orcRenderTemporada(); orcCalcular(); return; }
+    var gravouPr=false;   // 6.48 (REL-002)
     DB.ref('auaulandia/config/orcamento/precos').set(novo).then(function(){
+      gravouPr=true;
       orcPrecosCfg=novo;
       if(st){ st.style.color=avisoFim?'var(--crm-atencao-text)':'var(--crm-ok)'; st.textContent='✅ Tabela salva — vale para todos os orçamentos novos.'+avisoFim; }
       if(typeof audit==='function') audit('orcamento-precos',
         mudou.length?('alterou a tabela de hospedagem — '+mudou.join(' · ')):'salvou a tabela de hospedagem sem mudar valor nenhum',
         {antes:antes, depois:novo});
       orcRenderConfig(); orcRenderTemporada(); orcCalcular();
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ NÃO salvou: '+((e&&e.message)||e); } });
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent=zErroSalvouTexto('⚠️ NÃO salvou', e, gravouPr); } });
   }
   function orcAddFeriado(){
     var d=((document.getElementById('orcFerData')||{}).value||'').trim();
@@ -20947,7 +21295,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-10';
+  const APP_VERSAO='2026-10-09-11';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -26650,11 +26998,15 @@
         :((d.quem||'Alguém')+' já '+(d.decisao==='liberando'?'está liberando':'liberou')+' o horário do banho.'))],
       {botao:'Fechar', ok:true});
   }
-  function banhoFaltaSemRegistro(o, e){
+  // `decidiu` (6.48, K1): a decisão já foi gravada (a transação entrou) e o erro veio depois. A recusa do
+  // banco e a conexão que caiu no meio ("disconnect") têm frase própria; "Confira a conexão" saiu: sem
+  // internet, a gravação espera e grava sozinha (ela não chega aqui).
+  function banhoFaltaSemRegistro(o, e, decidiu){
     _logFalhaGrav('banho de quem faltou ('+o.chave+')', e);
     try{ if(typeof hojeRedesenhar==='function') hojeRedesenhar(); }catch(e2){} /* silencioso de propósito: redesenho de tela */
-    banhoFaltaMostrar('⚠ NÃO CONSEGUI REGISTRAR', ['Não consegui gravar a decisão sobre o banho de '+o.nome+': '+banhoFaltaSemPonto((e&&e.message)||e)+'.',
-      'Nada mudou. Confira a conexão e toque de novo no Hoje na Zêluz.'], {botao:'Entendi'});
+    banhoFaltaMostrar('⚠ NÃO CONSEGUI REGISTRAR', ['Não consegui gravar a decisão sobre o banho de '+o.nome+': '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
+      zErroGrav(e, {nada:'Nada mudou.', unica:true, onde:'no cartão do Hoje na Zêluz', gravou:!!decidiu, k1:true,
+        hoje:'Nada mudou. Toque de novo no Hoje na Zêluz; se repetir, avise a Gestão.'})], {botao:'Entendi'});
     return false;
   }
   // "Ainda vem": o horário fica com ele. No banho fixo, o "manter" do dia faz o automático
@@ -26663,8 +27015,9 @@
     if(!DB) return Promise.resolve(false);
     if(BANHO_FALTA_TRAVA[o.chave]) return Promise.resolve(false);
     BANHO_FALTA_TRAVA[o.chave]=1;
-    var fim=function(v){ delete BANHO_FALTA_TRAVA[o.chave]; return v; };
+    var fim=function(v){ delete BANHO_FALTA_TRAVA[o.chave]; return v; }, decidiu=false;
     return banhoFaltaReivindicar(o, dia, 'mantido', banhoFaltaRefazer(o)).then(function(res){
+      if(res && res.ok) decidiu=true;
       // «Está aqui» com o "ainda vem" já gravado por outro aparelho: o banho já está segurado,
       // não há o que avisar (QA73).
       if(!res.ok && porque==='aqui' && res.outro && res.outro.decisao==='mantido'){
@@ -26693,7 +27046,7 @@
           return false;
         });
       });
-    }).catch(function(e){ return banhoFaltaSemRegistro(o, e); }).then(fim, fim);
+    }).catch(function(e){ return banhoFaltaSemRegistro(o, e, decidiu); }).then(fim, fim);
   }
   // Um passo de "liberar" → {saiu, conf, msg}: `saiu` = algo mudou de verdade; `conf` = a
   // planilha confirmou. A ponte antiga não conta o que tirou: sem `removidos`, vale o ok.
@@ -26705,7 +27058,7 @@
     if(!DB) return Promise.resolve(false);
     if(BANHO_FALTA_TRAVA[o.chave]) return Promise.resolve(false);
     BANHO_FALTA_TRAVA[o.chave]=1;
-    var fim=function(v){ delete BANHO_FALTA_TRAVA[o.chave]; return v; };
+    var fim=function(v){ delete BANHO_FALTA_TRAVA[o.chave]; return v; }, decidiu=false;
     var refazer=banhoFaltaRefazer(o);
     // Chegou enquanto a pergunta estava aberta? A chamada de AGORA manda: quem está na casa
     // não perde o banho (QA31).
@@ -26717,8 +27070,11 @@
         banhoFaltaAgendar();
         return false;
       }
-      return banhoFaltaReivindicar(o, dia, 'liberando', refazer).then(banhoFaltaLiberarAgora);
-    }).catch(function(e){ return banhoFaltaSemRegistro(o, e); }).then(fim, fim);
+      return banhoFaltaReivindicar(o, dia, 'liberando', refazer).then(function(res){
+        if(res && res.ok) decidiu=true;
+        return banhoFaltaLiberarAgora(res);
+      });
+    }).catch(function(e){ return banhoFaltaSemRegistro(o, e, decidiu); }).then(fim, fim);
     function banhoFaltaLiberarAgora(res){
       if(!res.ok){ banhoFaltaJaDecidido(o, res.outro); return false; }
       // RELÊ AGORA a planilha e os Lançamentos do dia: o que este aparelho tinha na memória
@@ -26762,8 +27118,10 @@
         var falha=rs.filter(function(x){ return !x.conf; })[0]||null;
         if(!saiu){
           return banhoFaltaGravarDecisao(o, dia, Object.assign({}, res.reg, {decisao:'falhou', acao:'liberar', ts:Date.now(), msg:falha?falha.msg:''})).then(function(){
-            banhoFaltaMostrar('⚠ NÃO LIBEREI O HORÁRIO', ['Não consegui tirar o banho de '+o.nome+': '+(falha?falha.msg:'nada saiu')+'.',
-              'O banho continua na planilha. Tente de novo pelo Hoje na Zêluz, ou tire à mão: '+banhoFaltaOndeTirar(o)+'.'], {botao:'Entendi'});
+            // 6.48: o motivo em português; na queda ou no prazo, a ponte pode ter tirado (não se afirma "continua")
+            var _qd=!!(falha && repPlanEhQuedaConexao(falha.msg));
+            banhoFaltaMostrar('⚠ NÃO LIBEREI O HORÁRIO', ['Não consegui tirar o banho de '+o.nome+': '+zErroFrase(falha?zErroMotivo(falha.msg, 'planilha', dashPonteToken()):'nada saiu'),
+              (_qd?'Não sei se saiu da planilha: confira. ':'O banho continua na planilha. ')+'Tente de novo pelo Hoje na Zêluz, ou tire à mão: '+banhoFaltaOndeTirar(o)+'.'], {botao:'Entendi'});
             return false;
           });
         }
@@ -26777,7 +27135,7 @@
           if(typeof audit==='function') audit('banho-falta', o.nome+' faltou — horário do banho liberado'+(o.hora?(' ('+o.hora+')'):'')
             +(falha?' (a planilha não confirmou tudo)':''), {alvo:o.chave, pet:o.nome});
           if(falha) banhoFaltaMostrar('⚠ PARTE NÃO SAIU DA PLANILHA',
-            ['O banho de '+o.nome+' saiu do app, mas a planilha não confirmou: '+falha.msg+'.', 'Tire o que sobrou da planilha à mão, para a TV não chamar.'],
+            ['O banho de '+o.nome+' saiu do app, mas a planilha não confirmou: '+zErroFrase(zErroMotivo(falha.msg, 'planilha', dashPonteToken())), 'Tire o que sobrou da planilha à mão, para a TV não chamar.'],
             {botao:'Fechar'});
           else banhoFaltaMostrar('✅ HORÁRIO LIBERADO',
             jaLivre
@@ -26973,7 +27331,7 @@
     }).catch(function(e){
       _logFalhaGrav('presença pelo aviso do banho '+k, e);
       delete BANHO_FALTA_VISTO[dia+'|'+k];   // nada foi feito: a pergunta volta
-      banhoFaltaMostrar('⚠ A PRESENÇA NÃO FOI MARCADA', ['Não consegui marcar '+o.nome+' na chamada: '+((e&&e.message)||e)+'.',
+      banhoFaltaMostrar('⚠ A PRESENÇA NÃO FOI MARCADA', ['Não consegui marcar '+o.nome+' na chamada: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
         'Marque ✓ Veio em Day Care › Chamada.'], {botao:'Entendi'});
       return false;
     }).then(function(v){ delete BANHO_FALTA_TRAVA['aqui|'+k]; return v; });
@@ -27078,10 +27436,10 @@
       if(feito.chamada){
         // A chamada já voltou; o banho não (QA da 6.41, B2).
         banhoFaltaMostrar('⚠ DESFIZ SÓ A CHAMADA', ['A chamada de hoje de '+nome+' voltou '+(rec.antes==='faltou'?'para "faltou".':'para "sem marcação".'),
-          'Não consegui devolver o banho: '+banhoFaltaSemPonto((e&&e.message)||e)+'. Ele continua segurado ("ainda vem"): se não vier, toque em «Liberar o horário» no Hoje na Zêluz.'], {botao:'Entendi'});
+          'Não consegui devolver o banho: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' Ele continua segurado ("ainda vem"): se não vier, toque em «Liberar o horário» no Hoje na Zêluz.'], {botao:'Entendi'});
         return false;
       }
-      banhoFaltaMostrar('⚠ NÃO CONSEGUI DESFAZER', ['Não consegui desfazer o «Está aqui» de '+nome+': '+banhoFaltaSemPonto((e&&e.message)||e)+'.',
+      banhoFaltaMostrar('⚠ NÃO CONSEGUI DESFAZER', ['Não consegui desfazer o «Está aqui» de '+nome+': '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
         'Corrija em Day Care › Chamada e, se precisar, libere o horário do banho no Hoje na Zêluz.'], {botao:'Entendi'});
       return false;
     }).then(fim, fim);
@@ -27125,7 +27483,7 @@
       else if(dec==='liberando' && !banhoFaltaEmAberto(d, agora)) situ='<span style="color:var(--muted);font-weight:700">liberando…</span>';
       else if(dec==='liberando') situ='<span style="color:var(--crm-critico);font-weight:700">a liberação não terminou</span> '+botao(o);
       else if(dec==='mantido') situ='<span style="color:var(--muted);font-weight:700">'+escAttr(d.quem||'a recepção')+' disse que ainda vem</span> '+botao(o)+aqui(o);
-      else if(dec==='falhou') situ='<span style="color:var(--crm-critico);font-weight:700">não deu certo'+(d.msg?(': '+escAttr(d.msg)):'')+'</span> '+botao(o)
+      else if(dec==='falhou') situ='<span style="color:var(--crm-critico);font-weight:700">não deu certo'+(d.msg?(': '+escAttr(zErroMotivo(d.msg, 'planilha', dashPonteToken()))):'')+'</span> '+botao(o)
         +((d.acao==='manter' && pode)?(' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaManterUI(this.dataset.k)">Ainda vem</button>'):'');
       else situ=botao(o)+aqui(o);
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
@@ -32656,7 +33014,7 @@
     if(!pelAtual) return;
     var i=-1; try{ i=PELUDINHOS.indexOf(pelAtual); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
     if(i<0){ alert('Não achei este FILHOt na lista.'); return; }
-    try{ repAbrirExtrato(i); }catch(e){ alert('Não consegui abrir o extrato: '+((e&&e.message)||e)); }
+    try{ repAbrirExtrato(i); }catch(e){ alert('Não consegui abrir o extrato: '+zErroTexto(e, {alvo:'banco', origem:'app'})); }
   }
   function renderPelFicha(){
     try{
@@ -41969,7 +42327,7 @@
         txt=(__pre?(__pre+'; '):'')+repPlanQuedaTexto();
       }
       // A planilha sem o dia (o sábado) ou sem a aba do mês (6.50): dito em português, sem a mensagem crua da ponte.
-      else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt=dashPlanilhaSemDiaTexto(dia, e.msg)||('a planilha recusou — '+e.msg); }
+      else if(e.estado==='falhou'){ cor='var(--crm-critico)'; txt=dashPlanilhaSemDiaTexto(dia, e.msg)||('a planilha recusou — '+zErroMotivo(e.msg, 'planilha', dashPonteToken())); }
       else if(e.estado==='espera'){ cor='var(--z-gold-deep)'; txt='a caminho da planilha'; }
       else if(e.estado==='fora'){ cor='var(--z-gold-deep)'; txt='fora da conferência automática'; }
       else if(e.estado==='antigo'){ cor='var(--z-gold-deep)'; txt='registro anterior a esta versão — não sei dizer'; }
@@ -42398,9 +42756,10 @@
       TV_BANHO_QUER=Date.now()+TV_BANHO_DEPOIS_MS;
       if(!(r&&r.ok)){
         var m=String((r&&r.erro)||'a ponte não respondeu');
-        if(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) m='a conexão com a planilha caiu';
+        // 6.48: na queda, a frase de sempre; fora dela, o motivo pelo tradutor (a recusa com código vira frase)
+        m=(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m))?'a conexão com a planilha caiu':zErroMotivo((r&&r.erro)?r:m, 'planilha', dashPonteToken());
         __tentou.forEach(function(n){ if(TV_BANHO_PUS[n]===__pus) delete TV_BANHO_PUS[n]; });
-        if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI PÔR DE NOVO', [m+'.', 'A conferência de hoje não foi até o fim. Tente de novo em alguns minutos.'], {botao:'Entendi'});
+        if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI PÔR DE NOVO', [zErroFrase(m), 'A conferência de hoje não foi até o fim. Tente de novo em alguns minutos.'], {botao:'Entendi'});
       }
       var redesenhar=function(){ try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */ };
       try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(hoje, true).then(redesenhar, redesenhar); else redesenhar(); }
@@ -42515,7 +42874,8 @@
     var a=((REP_PLAN_CACHE[hoje]||{}).auto)||{}, er=a._erro;
     if(er && er.msg){
       var m=String(er.msg);
-      if(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) m='a conexão com a planilha caiu';
+      // 6.48: na queda, como estava; fora dela, o motivo pelo tradutor
+      m=(typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m))?'a conexão com a planilha caiu':zErroMotivo(m, 'planilha', dashPonteToken());
       return 'ainda não foi para a planilha: a última conferência não conseguiu ler a planilha ('+m+'); o app tenta de novo sozinho em até '+DASH_AUTO_MIN+' min';
     }
     return 'vai para a planilha na próxima conferência, em até '+DASH_AUTO_MIN+' min';
@@ -42736,7 +43096,10 @@
       zAlertao(titulo, ['O banho fixo deste FILHOt foi desligado em Banhos recorrentes (em outro aparelho): nada foi gravado.',
         'A linha sai da planilha e da TV na próxima conferência.'], {botao:'Entendi'});
     } else if(r && !r.ok && r.erro!=='sem permissão' && typeof zAlertao==='function'){
-      zAlertao(titulo, ['Não consegui gravar: '+String(r.erro||'o banco recusou')+'.', 'Nada mudou. Confira a conexão e tente de novo.'], {botao:'Entendi'});
+      // 6.48: a transação na ficha. A recusa diz "o sistema recusou a gravação"; a conexão que cai no
+      // meio ("disconnect") não diz "Nada mudou"; "Confira a conexão" saiu (sem internet, ela espera).
+      zAlertao(titulo, ['Não consegui gravar: '+zErroFrase(zErroMotivo(r.erro||'o banco recusou', 'banco', '', {agora:true})),
+        zErroGrav(r.erro||'o banco recusou', {nada:'Nada mudou.', unica:true, onde:'na lista', gravou:false, hoje:'Nada mudou. Tente de novo.'})], {botao:'Entendi'});
     }
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
     return !!(r && r.ok && !r.nada);
@@ -42744,7 +43107,7 @@
   // A resposta que chegou depois do aviso "O BANCO NÃO RESPONDEU".
   function banhoDiaDepoisTarde(r){
     if(r && !r.ok && typeof zAlertao==='function')
-      zAlertao('A GRAVAÇÃO NÃO FOI FEITA', ['O banco respondeu depois: '+(r.desligado?'o banho fixo deste FILHOt foi desligado em Banhos recorrentes':String(r.erro||'recusou'))+'.', 'Nada mudou neste dia.'], {botao:'Entendi'});
+      zAlertao('A GRAVAÇÃO NÃO FOI FEITA', ['O banco respondeu depois: '+zErroFrase(r.desligado?'o banho fixo deste FILHOt foi desligado em Banhos recorrentes':zErroMotivo(r.erro||'recusou', 'banco')), 'Nada mudou neste dia.'], {botao:'Entendi'});
     try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
   }
   // O DIA JÁ PASSOU (2ª rodada do QA, B3): a tela aberta desde ontem e o toque num botão de ontem. Avisa e
@@ -43914,7 +44277,9 @@
     // Campo em branco = mantém a senha que já está guardada. Assim dá para corrigir a URL
     // sem precisar redigitar a senha (e sem ela nunca ter aparecido na tela).
     var tokenFinal=token||((DASH_PONTE&&DASH_PONTE.token)||'');
+    var gravouPt=false;   // 6.48 (REL-002)
     DB.ref('daycare/config/ponte-planilha').set({url:url, token:tokenFinal}).then(function(){
+      gravouPt=true;
       DASH_PONTE={url:url, token:tokenFinal};
       var _t=document.getElementById('dashPonteToken'); if(_t) _t.value='';
       var _ts=document.getElementById('dashPonteTokenSt');
@@ -43924,7 +44289,7 @@
       if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O que for lançado daqui vai para a planilha e aparece na TV.':'Ponte desligada — o app guarda tudo, mas a TV não recebe.'; }
       if(typeof audit==='function') audit('dashboard-daycare', url?'ligou a ponte com a planilha do Day Care':'desligou a ponte',{});
       renderDash();
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent=zErroSalvouTexto('Não salvou', e, gravouPt); } });
   }
   // Só a Diretoria vê a senha, e por 12 segundos — tempo de conferir, não de alguém copiar.
   function dashRevelarSenha(){
@@ -44003,7 +44368,7 @@
         st.style.color='var(--crm-ok)';
         st.textContent=n?('✅ Criei '+n+' coluna(s): '+r.criadas.join(' · ')):'Todas as abas já tinham as colunas. Nada a fazer.';
         if(typeof audit==='function') audit('dashboard-daycare','criou colunas na planilha: '+n,{});
-      } else { st.style.color='var(--crm-critico)'; st.textContent='Não consegui: '+((r&&r.erro)||'a ponte não respondeu'); }
+      } else { st.style.color='var(--crm-critico)'; st.textContent='Não consegui: '+zErroTexto(r, {alvo:'planilha', botao:'Criar as colunas que faltam nos meses', token:dashPonteToken(), agora:true}); }
     });
   }
   // ===== A TELA NÃO PULA (Adriana, 06/out/2026) =============================================
@@ -45037,7 +45402,7 @@
       // errado vira cobrança errada (a lei do Banco: falta avisada é dinheiro).
       _logFalhaGrav('abater reposição de '+pelNome(p)+' (Lançamentos do dia)', e);
       if(typeof zAlertao==='function') zAlertao('⚠ O LANÇAMENTO ENTROU, MAS O SALDO NÃO DESCEU',
-        ['A reposição de '+pelNome(p)+' foi lançada, mas não consegui abater 1 do Banco de Reposições: '+((e&&e.message)||e)+'.',
+        ['A reposição de '+pelNome(p)+' foi lançada, mas não consegui abater 1 do Banco de Reposições: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
          'Abra a tela de Reposições e marque o uso à mão — senão o saldo fica maior do que a verdade.'],
         {botao:'Vou marcar à mão'});
       return false;
@@ -45203,8 +45568,9 @@
     // — as Pendências de prevenção — precisa SABER se o lançamento entrou antes de dar a
     // pendência por resolvida. Os outros pontos de chamada ignoram o retorno, como sempre.
     var gravar=function(abaterRep, pRep, saldoRep){
-      var ref=DB.ref(dashNo()+'/'+k).push();
+      var ref=DB.ref(dashNo()+'/'+k).push(), gravou=false;
       return ref.set(reg).then(function(){
+        gravou=true;   // 6.48 (K1): daqui em diante o lançamento já entrou
         DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
         var b=document.getElementById('dashB_'+k); if(b) b.value='';
         var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
@@ -45248,7 +45614,7 @@
         }
         dashEspelhar(k, ref.key, reg, 'lancar');
         return true;
-      }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); return false; });
+      }).catch(function(e){ alert(dashLancarFalhou(e, gravou)); return false; });
     };
     if(k!=='reposicao') return gravar(false);
     // ---- Reposição: casar a ficha e conferir o saldo ANTES de gravar ----------------
@@ -53842,7 +54208,8 @@
     var t=btn.textContent; btn.disabled=true; btn.textContent='conferindo a planilha…';
     dashAutoRodar(true).then(function(r){
       btn.disabled=false;
-      var _motivo=function(m){ return (typeof repPlanEhQuedaConexao==='function' && repPlanEhQuedaConexao(m)) ? 'a conexão com a planilha caiu' : (m||'não consegui'); };
+      // 6.48: o motivo pelo tradutor (na queda, a MESMA frase da 6.12; na recusa, a frase do código).
+      var _motivo=function(m){ return zErroMotivo(m, 'planilha', dashPonteToken(), {origem:'ponte'}); };
       btn.textContent=!r.ok
         ? ('❌ '+_motivo(r.erro))
         : (r.falhas
@@ -53875,17 +54242,43 @@
     // O dia vai EXPLÍCITO: é o dia aberto na tela (o botão mora na linha daquele dia).
     // Reenviar o carrapaticida de 03/09 com a tela em 03/09 manda para a planilha de
     // 03/09 — nunca para o dia em que alguém por acaso estiver olhando depois.
+    var diaR=dashDia();   // 6.48: o dia do pedido, para a conta do refaz (a mesma leitura do dashDia() abaixo)
     dashEspelhar(k,id,reg,'lancar',dashDia()).then(function(r){
       if(btn){ btn.disabled=false; btn.textContent=txt||'reenviar'; }
       if(r&&r.ok){ if(typeof zAlertao==='function') zAlertao('ENVIADO PARA A PLANILHA',[(reg.valor||'')+' entrou na planilha e vai aparecer na TV.'],{botao:'Fechar'});
                    else alert('Enviado para a planilha.'); return; }
-      var e=(r&&r.erro)||'a ponte não respondeu';
-      if(typeof zAlertao==='function') zAlertao('NÃO FOI PARA A PLANILHA',[e,'O lançamento continua salvo aqui no app — só não chegou à planilha.'],{botao:'Entendi'});
-      else alert('Não foi para a planilha: '+e);
+      // 6.48: na queda e no prazo a linha pode ter entrado — o título não afirma "NÃO FOI". O app tenta
+      // sozinho só se o lançamento não esgotou as 5 tentativas da fila e o dia está na janela da fila
+      // (hoje−7) e da conferência (até hoje+DASH_AUTO_DIAS).
+      var tipo=zErroTipo(r, {origem:'ponte'}), queda=(tipo==='queda' || tipo==='prazo');
+      var l=repNaoFoiLinhas(r, dashReenviarRefaz(reg, diaR)?(2*DASH_AUTO_MIN):0, 'reenviar');
+      var tit=queda?'A PLANILHA NÃO CONFIRMOU':'NÃO FOI PARA A PLANILHA';
+      if(typeof zAlertao==='function') zAlertao(tit, l, {botao:'Entendi'});
+      else alert(tit+'\n'+l.join('\n'));
     }).catch(function(e){
       if(btn){ btn.disabled=false; btn.textContent=txt||'reenviar'; }
-      alert('Não foi para a planilha: '+((e&&e.message)||e));
+      alert('Não foi para a planilha: '+zErroFrase(zErroMotivo(e, 'planilha', dashPonteToken(), {origem:'app'}))+' O lançamento continua salvo aqui no app.'+zErroAcao(e, {alvo:'planilha', origem:'app'}));
     });
+  }
+  // O «reenviar» que falhou: a fila (dashPlanFilaTentar, a cada 10 min, em todo aparelho, hoje e os 7
+  // dias anteriores) e a conferência (hoje até hoje+DASH_AUTO_DIAS) repõem o lançamento que não
+  // esgotou as tentativas. Fora disso, só um toque de novo (6.48, AC4).
+  // O lançamento que não salvou (6.48, B5). O .catch do dashLancar também pega o erro de DEPOIS de
+  // gravar (K1): aí, e no erro do app, a tela não afirma "Não salvou" — manda conferir a lista.
+  function dashLancarFalhou(e, gravou){
+    var tipo=zErroTipo(e, {origem:'banco'}), m=zErroMotivo(e, 'banco', '', {agora:true});
+    var caiuNoMeio=(tipo==='queda' && /^disconnect$/i.test(zErroBruto(e).trim()));
+    if(gravou || tipo==='tecnico' || tipo==='prazo' || tipo==='' || (tipo==='queda' && !caiuNoMeio))
+      return zErroFrase(zErroInicial(m))+' Confira na lista se o lançamento apareceu antes de lançar de novo; avise a Gestão.';
+    return ('Não salvou: '+zErroFrase(m)+' '+zErroGrav(e, {nada:'Nada foi lançado.', unica:true, onde:'na lista', gravou:false, hoje:''})).trim();
+  }
+  function dashReenviarRefaz(reg, dia){
+    try{
+      if(dashPlanFilaMorto(reg)) return false;
+      var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+      if(!hoje || !/^\d{4}-\d{2}-\d{2}$/.test(String(dia||''))) return false;
+      return dia>=orcMaisDias(hoje, -7) && dia<=orcMaisDias(hoje, DASH_AUTO_DIAS);
+    }catch(x){ return false; } /* silencioso de propósito: sem a conta, a tela não promete */
   }
   // O MESMO TEXTO EM OUTRO LANÇAMENTO (crítica C2 da 6.49). Dois aparelhos lançaram a mesma
   // Fiona com o mesmo texto: a ponte respondeu "já estava" ao segundo, e a célula na planilha é
@@ -53954,7 +54347,7 @@
     }
     var fica=repSaldoRepDepois(p, novos, muda, rDev.saldo), livres=repLivresParaMarcar(p, (modo==='excecao')?-1:0);
     try{ await DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos').update(up); }
-    catch(e){ alert('Não consegui tirar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); return; }
+    catch(e){ alert(zErroAviso('Não consegui tirar', e, {sep:'\n\n', nada:'Nada foi mudado.', unica:true, onde:'no Extrato', gravou:false, hoje:'Nada foi mudado. Tente de novo.'})); return; }
     if(typeof audit==='function') audit(modo==='excecao'?'reposicao-excecao':'reposicao-desmarcada', nome+' — tirado dos Lançamentos do dia '+repBRdata(diaR)
       +(modo==='excecao'?(' sem contar (exceção da Gestão): '+motivo):(' fora do prazo ('+repPrazoTexto(diaR)+'): '+(troca?'a troca é perdida':'conta como usada'))),
       {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:nome});
@@ -53962,7 +54355,7 @@
     catch(e){
       _logFalhaGrav('tirar dos Lançamentos do dia (o dia já saiu da reposição) — '+nome+' '+diaR, e);
       if(typeof zAlertao==='function') zAlertao('O LANÇAMENTO CONTINUA NOS LANÇAMENTOS DO DIA', [nome+': o dia '+dCur+' saiu da reposição'+(modo==='excecao'?' sem contar':', contando como usada')
-        +', mas não consegui tirar o lançamento: '+((e&&e.message)||e)+'.', 'Toque em «Tirar» de novo: não desconta outra reposição.'], {botao:'Vou tirar de novo'});
+        +', mas não consegui tirar o lançamento: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})), 'Toque em «Tirar» de novo: não desconta outra reposição.'], {botao:'Vou tirar de novo'});
       return;
     }
     if(DASH_DADOS[k]) delete DASH_DADOS[k][id];
@@ -54026,7 +54419,9 @@
       if(escolha==='fora' || escolha==='excecao') return dashRemoverRepForaPrazo(k, id, reg, rDev, credDia, diaR, escolha);
       desmarcarTambem=(escolha==='ambos');
     } else if(!await zPergunta('Tirar '+reg.valor+' de '+it.t+'?', linhasTirar, {sim:'Tirar', nao:'Manter'})) return;
+    var tirou=false;   // 6.48 (K1): o lançamento já saiu; o erro de depois não diz "Nada foi tirado"
     DB.ref(dashNo()+'/'+k+'/'+id).remove().then(function(){
+      tirou=true;
       if(rDev && rDev.uso && !jaContou){
         var pD=rDev.p, sD=rDev.saldo, livresD=0;
         var estT=!!(desmarcarTambem && dzR && dzR.estorna);
@@ -54073,7 +54468,7 @@
         }).catch(function(e){
           _logFalhaGrav('devolver a reposição tirada de '+pelNome(pD)+' ('+diaR+')', e);
           if(typeof zAlertao==='function') zAlertao('⚠ TIREI DA LISTA, MAS O SALDO NÃO VOLTOU',
-            ['A reposição de '+pelNome(pD)+' saiu dos Lançamentos do dia, mas não consegui devolver o dia ao saldo: '+((e&&e.message)||e)+'.',
+            ['A reposição de '+pelNome(pD)+' saiu dos Lançamentos do dia, mas não consegui devolver o dia ao saldo: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
              'Abra a tela de Reposições › Extrato dele › «Devolver» no uso de '+repBRdata(diaR)+'.'],
             {botao:'Vou devolver à mão'});
         });
@@ -54096,7 +54491,10 @@
         var _relerPlan=function(){ try{ if(typeof dcGarantirPlanilha==='function') dcGarantirPlanilha(true); }catch(e){} /* silencioso de propósito: o cartão se acerta na próxima leitura da planilha */ };
         Promise.resolve(_espRem).then(_relerPlan, _relerPlan);
       }
-    }).catch(function(e){ alert('Não removeu: '+((e&&e.message)||e)); });
+    }).catch(function(e){
+      if(tirou) alert(zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' '+zErroGrav(e, {gravou:true, onde:'na lista', verbo:'saiu'}));
+      else alert(zErroAviso('Não removeu', e, {nada:'Nada foi tirado.', unica:true, onde:'na lista', verbo:'saiu', gravou:false, hoje:''}).trim());
+    });
   }
   // ===================================================================================
   // ===== A FILA DAS PERNOITES DO DAY CARE (Adriana, 23/set/2026) =====================
@@ -54332,7 +54730,7 @@
       // não chega ao check-in — e a noite dele fica sem ficha de comida e de remédio.
       _logFalhaGrav('fila de pernoites de '+o.nome, e);
       if(typeof zAlertao==='function') zAlertao('A PERNOITE NÃO CHEGOU AO CHECK-IN',
-        ['O lançamento de '+o.nome+' entrou nos Lançamentos do dia, mas não consegui pôr a pernoite na fila do check-in: '+((e&&e.message)||e)+'.',
+        ['O lançamento de '+o.nome+' entrou nos Lançamentos do dia, mas não consegui pôr a pernoite na fila do check-in: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
          'Abra o Check-in da hospedagem e faça a pernoite dele à mão — senão o plantão não sabe que ele dorme aqui.'],
         {botao:'Vou fazer à mão'});
       return false;
@@ -54509,7 +54907,7 @@
     }).catch(function(e){
       _logLeituraFalhou(pernNo(dia)+'/'+chave+' (pernConferirNoite)', e);
       if(typeof zAlertao==='function') zAlertao('NÃO CONSEGUI CONFERIR ESTA NOITE',
-        ['O erro foi: '+((e&&e.message)||e)+'.','Nada foi feito. Tente de novo em instantes — outro aparelho pode já ter resolvido.'],{botao:'Entendi'});
+        ['O motivo: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})),'Nada foi feito. Tente de novo em instantes — outro aparelho pode já ter resolvido.'],{botao:'Entendi'});
     });
   }
   // `dia` (opcional, Fase 0): a noite de um dia anterior — a entrada é aquela noite.
@@ -54586,7 +54984,7 @@
       // feito — e alguém faria o segundo. Isto NÃO pode ficar mudo.
       _logFalhaGrav('fechar a fila da pernoite', e);
       if(typeof zAlertao==='function') zAlertao('A PERNOITE CONTINUA NA FILA',
-        ['O check-in foi salvo, mas não consegui marcar a pernoite como feita: '+((e&&e.message)||e)+'.',
+        ['O check-in foi salvo, mas não consegui marcar a pernoite como feita: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
          'No Check-in ela ainda vai aparecer como aguardando. NÃO faça o check-in de novo — isso criaria uma segunda estadia. Avise a Gestão.'],
         {botao:'Entendi'});
       return false;
@@ -54639,13 +55037,15 @@
             throw {__desistiu:true};
           })
         : DB.ref(pernNo(dia)+'/'+chave).update(up);
+      var cancelou=false;   // 6.48 (K1)
       gravar.then(function(){
+        cancelou=true;
         if(anterior) pernAtrasTirar(dia, chave);
         else if(PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up);
         try{ if(typeof audit==='function') audit('pernoite-daycare','cancelou a pernoite de '+pernNomeLimpo(r.nome||'')+' — '+up.cancel_motivo,{pet:pernNomeLimpo(r.nome||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
         pernCartaoRender();
         try{ if(typeof renderDash==='function') renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-      }).catch(function(e){ if(e&&e.__desistiu) return; alert('Não consegui cancelar: '+((e&&e.message)||e)+'\n\nNada foi mudado. Tente de novo em instantes.'); });
+      }).catch(function(e){ if(e&&e.__desistiu) return; alert(zErroAviso('Não consegui cancelar', e, {sep:'\n\n', nada:'Nada foi mudado.', verbo:'a pernoite foi cancelada', unica:true, onde:'na lista', gravou:cancelou, k1:true, hoje:'Nada foi mudado. Tente de novo.'})); });
     });
   }
   // ===== QUEM AINDA NÃO TEM MICROCHIP — Adriana, 19/ago/2026 =====================

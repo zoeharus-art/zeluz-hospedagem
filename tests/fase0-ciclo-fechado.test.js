@@ -3215,7 +3215,8 @@ prova('Hoje na Zêluz: textos neutros, botão em "ainda vem" e em "falhou"', () 
       BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={mel:{decisao:'liberado', quem:'Márcia'}, bol:{decisao:'mantido', quem:'Carla'}, tob:{decisao:'falhou', msg:'a ponte não respondeu'}};`);
     const h = run('banhoFaltaCardHTML()');
     assert.ok(/horário liberado por Márcia/.test(h) && /\(fixo\)/.test(h) && /falta avisada/.test(h), h);
-    assert.ok(/Carla disse que ainda vem/.test(h) && /não deu certo: a ponte não respondeu/.test(h) && (h.match(/Liberar o horário/g) || []).length === 3, h);
+    // 6.48 (ajuste previsto): o motivo gravado é dito em português na hora de mostrar
+    assert.ok(/Carla disse que ainda vem/.test(h) && /não deu certo: a conexão com a planilha caiu/.test(h) && (h.match(/Liberar o horário/g) || []).length === 3, h);
     run(`BANHO_FALTA_DIA='2026-01-01';`);
     assert.strictEqual(run('banhoFaltaCardHTML()'), '', 'lista de outro dia não aparece');
     run(`BANHO_FALTA_DIA='${dia}'; BANHO_FALTA_DEC={}; BANHO_FALTA=[BANHO_FALTA[0]]; banhoFaltaPerguntar('${dia}');`);
@@ -3586,9 +3587,11 @@ prova('o automático diz que a conexão caiu e que tenta de novo sozinho; recusa
     // Reposições: a mesma régua na linha do crédito
     const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda' };
     const chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
+    // 6.48 (REQ-002): a promessa da linha só com a conferência viva (aqui, o _ts de hoje de 1 min atrás); o botão é «Mandar agora»
     set('faltas', chP, [], 'Failed to fetch');
+    run(`REP_PLAN_CACHE['${dia}'].auto._ts=Date.now()-60000;`);
     let l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
-    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(l) && /tentar de novo/.test(l) && !/Failed to fetch/.test(l), l);
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(l) && />Mandar agora</.test(l) && !/Failed to fetch/.test(l), l);
     set('faltas', chP, [], 'a planilha não tem a coluna Faltas Avisadas');
     l = run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
     assert.ok(/NÃO foi para a planilha — a planilha não tem a coluna Faltas Avisadas/.test(l), l);
@@ -14046,7 +14049,8 @@ provaAsync('6.46 R11 — o ouvinte do Extrato com erro: a leitura recusada pelo 
   const bloco = (i0 > 0 && i1 > i0) ? src.slice(i0, i1) : '';
   const m = /\},\s*(?:\/\/[^\n]*\n\s*)*(function\(e\)\{ REPO_ERRO=e\|\|new Error\('leitura recusada'\);[^\n]*\})\);/.exec(bloco);
   assert.ok(m, 'o ouvinte de daycare/reposicao tem o callback de erro: ' + bloco.slice(0, 600));
-  const ERRO = 'Não consegui trazer o Extrato de reposições: o banco recusou a leitura (permissão). Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
+  // 6.48 (LOW-6): na recusa, a frase da K22 («o sistema recusou a leitura»), pelo tradutor
+  const ERRO = 'Não consegui trazer o Extrato de reposições: o sistema recusou a leitura. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
   const SEMNET = 'Este aparelho está sem internet e ainda não trouxe o Extrato de reposições. Sem ele, a mesma falta poderia entrar duas vezes: quando a internet voltar, confirme de novo.';
   const B = palco646(false);
   try {
@@ -17907,7 +17911,9 @@ provaAsync('6.50 P12 — xarás: tirar o banho da Fiona/SRD não toca no da Fion
       __bkRef650=DB.ref; DB.ref=function(p){ var r=__bkRef650(p); if(/banho_rec$/.test(p)) r.transaction=function(){ return Promise.reject(new Error('PERMISSION_DENIED')); }; return r; };`);
     try { igual(await run(`banhoDiaTirar('fiona__ivo-teste', '${DIA650}')`), false); } finally { run('DB.ref=__bkRef650;'); }
     igual(EXC650(null, 3), null);
-    assert.ok(/NÃO TIREI O BANHO/.test(run('__za649[0][0]')) && /PERMISSION_DENIED/.test(run('__za649[0][1][0]')), JSON.stringify(run('__za649')));
+    // 6.48 (ajuste previsto): a recusa do banco em português, sem «Confira a conexão»
+    assert.ok(/NÃO TIREI O BANHO/.test(run('__za649[0][0]')) && /o sistema recusou a gravação/.test(run('__za649[0][1][0]'))
+      && !/Confira a conexão/.test(JSON.stringify(run('__za649[0][1]'))), JSON.stringify(run('__za649')));
     igual(run('__conf650'), 1, 'só o tirar que gravou pediu a conferência');
   } finally { run(SOLTA650); }
 });
@@ -18422,7 +18428,8 @@ provaAsync('6.50 R2-3 (B2) — sem rede: em 6 s a tela diz que o banco não resp
       run('__tm650.filter(function(t){ return t.ms===6000; })[0].f()'); await pr2;
       run(`__za649=[]; __solta650('PERMISSION_DENIED');`); await espera649();
       igual(run('__za649[0][0]'), 'A GRAVAÇÃO NÃO FOI FEITA');
-      assert.ok(/PERMISSION_DENIED/.test(run('__za649[0][1][0]')));
+      // 6.48 (ajuste previsto): a recusa do banco em português
+      igual(run('__za649[0][1][0]'), 'O banco respondeu depois: o sistema recusou a gravação.');
       igual(EXC650(SEX650), null);
       // Banhos recorrentes: a linha diz que ainda não foi (e quem chama espera a resposta do banco)
       run(`document.body.dataset.role='gestao'; __tm650=[];`);
@@ -25999,6 +26006,1466 @@ provaAsync('6.52 QA3 G15 [s08] aba Hóspedes: hora antiga sem dia, 13 → 12 →
     igual(CALC652(TER652).banho.indexOf(V_THEO652) >= 0, true);
   } finally { run(HOSPSOLTA3); run(SOLTA652); }
 });
+
+
+
+
+// ⟦6.48 início⟧
+// ================================================================== 6.48 — o erro técnico dito em português
+// Quadro de 08/10/2026, linha 33: "Banho da Cristal não apareceu («a planilha recusou — Failed to fetch»)". A
+// recepção via "Failed to fetch" e "PERMISSION_DENIED" em Reposições, nos Lançamentos do dia e em Orçamentos.
+// Um tradutor só (zErroBruto, zErroTipo, zErroMotivo, zErroTexto), usado só na hora de MOSTRAR: o cru
+// continua no banco, nos retornos e na auditoria. Dados INVENTADOS (Fredo, Tablito, Frida, Nala…), relógio
+// fixo onde importa (hoje = 2026-10-09).
+console.log('\n6.48 — o erro técnico dito em português (Reposições, Lançamentos do dia, Banho de quem faltou e Orçamentos)');
+// O que não pode aparecer na tela fora do parêntese de «erro inesperado do app (…)» e de «a ponte deu
+// erro do lado do Google (…)» (AC2).
+const CRU648 = /Failed to fetch|Load failed|NetworkError|Network request failed|connection was lost|appears to be offline|request timed out|AbortError|Client is offline|PERMISSION_DENIED|permission_denied|\bdisconnect\b|Cannot read propert|is not a function|undefined|\[object Object\]|\bnull\b/;
+const foraParen648 = (t) => String(t).replace(/(erro inesperado do app|a ponte deu erro do lado do Google) \((?:[^()]|\([^()]*\))*\)/g, '$1 (…)');
+const semCru648 = (t, msg) => assert.ok(!CRU648.test(foraParen648(t)), (msg || 'cru na tela') + ': ' + t);
+const SEM_INTERNET648 = /Confira a internet|Confira a conexão|em instantes/;
+const TK648 = 'tk-SEGREDO-4471';
+const espera648 = async () => { for (let i = 0; i < 60; i++) await Promise.resolve(); };
+const Q648 = ['Failed to fetch', 'TypeError: Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'Network request failed',
+  'The network connection was lost.', 'The Internet connection appears to be offline.', 'Could not connect to the server.',
+  'A server with the specified hostname could not be found.', 'A conexão de rede foi perdida.',
+  'Não foi possível encontrar um servidor com o nome de host especificado.', 'cancelled', 'Client is offline.',
+  'Firebase: Error (auth/network-request-failed).', 'a ponte não respondeu', 'net', 'disconnect'];
+const P648 = ['a ponte não respondeu em 12s', 'a ponte do Telegram não respondeu em 20 segundos', 'o banco não respondeu a tempo (12s)',
+  'The request timed out.', 'The operation was aborted. ', 'signal is aborted without reason', 'timeout',
+  'a planilha está ocupada; tente de novo em instantes', 'Exception: Lock timeout',
+  'Exception: Service Spreadsheets timed out while accessing document with id x.', 'Too Many Requests: retry after 5'];
+const SB648 = ['sem conexão com o banco', 'banco reconectando…'];
+const PERM648 = ['PERMISSION_DENIED: Permission denied', 'permission_denied',
+  "permission_denied at /daycare/x: Client doesn't have permission to access the desired data."];
+const PONTE648 = ['token invalido', 'senha invalida', 'PONTE_SENHA não configurada nas Propriedades do script', '<!DOCTYPE html><html>…',
+  '\n  <html>…', 'acao desconhecida: lerDia', 'grupo nao configurado na ponte: diario', 'a ponte não respondeu como esperado'];
+const TEC648 = ["TypeError: Cannot read properties of undefined (reading 'n')", 'x is not a function',
+  "Reference.update failed: First argument contains undefined in property 'a'", 'maxretry', 'set', 'undefined'];
+const TXT648 = ['a aba "Out/2026" nao tem a coluna "Banho"', 'Upload failed', 'o tutor não respondeu', 'Foi engano, chamado cancelado: x',
+  'Bad Request: chat not found', 'sem permissão', 'Nala/Bia: 2 noites · linha 20 | Irma/Bia: Exception: Lock timeout.'];
+const tipo648 = (x) => run(`zErroTipo(${JSON.stringify(x)})`);
+
+prova('6.48 P1 — a tabela de verdade do zErroTipo (queda, prazo, sem banco, recusa, ponte, erro do app, texto e vazio)', () => {
+  Q648.forEach((x) => igual(tipo648(x), 'queda', 'queda: ' + x));
+  P648.forEach((x) => igual(tipo648(x), 'prazo', 'prazo: ' + x));
+  SB648.forEach((x) => igual(tipo648(x), 'semBanco', 'sem banco: ' + x));
+  PERM648.forEach((x) => igual(tipo648(x), 'permissao', 'recusa: ' + x));
+  PONTE648.forEach((x) => igual(tipo648(x), 'ponte', 'ponte: ' + JSON.stringify(x)));
+  TEC648.forEach((x) => igual(tipo648(x), 'tecnico', 'erro do app: ' + x));
+  TXT648.forEach((x) => igual(tipo648(x), 'texto', 'texto: ' + x));
+  igual(run('zErroTipo(appDiaVelhoTexto())'), 'texto', 'o aparelho com o dia velho não é queda');
+  // objetos: a resposta da ponte, o Error, o AbortError sem mensagem, o erro do Firebase com código
+  igual(run('zErroTipo({ok:false, erro:"Failed to fetch"})'), 'queda');
+  igual(run('zErroTipo(new Error("Load failed"))'), 'queda');
+  igual(run('zErroTipo({name:"AbortError", message:""})'), 'prazo');
+  igual(run('zErroTipo({code:"PERMISSION_DENIED", message:"PERMISSION_DENIED: Permission denied"})'), 'permissao');
+  // o erro do Apps Script veio da PONTE: não culpa o app (K7)
+  igual(run(`zErroTipo({ok:false, erro:"TypeError: Cannot read properties of null (reading 'getRange')"})`), 'ponte');
+  igual(run('zErroTipo({ok:false, erro:"Exception: You do not have permission to call UrlFetchApp.fetch"})'), 'ponte');
+  igual(run('zErroTipo({ok:false, erro:"Exceção: a planilha foi apagada"})'), 'ponte');
+  igual(run(`zErroTipo("TypeError: Cannot read properties of null (reading 'getRange')")`), 'tecnico', 'sem origem conhecida: erro do app');
+  // vazio
+  ['""', 'null', 'undefined', '{}', '{ok:false}', 'new Error("")'].forEach((x) => igual(run(`zErroTipo(${x})`), '', 'vazio: ' + x));
+});
+prova('6.48 P1b — o zErroBruto nunca devolve "[object Object]" nem "undefined", e não perde o cru', () => {
+  igual(run('zErroBruto({ok:false, erro:"token invalido"})'), 'token invalido');
+  igual(run('zErroBruto({ok:false, erro:new Error("Load failed")})'), 'Load failed');
+  igual(run('zErroBruto(new Error("PERMISSION_DENIED: Permission denied"))'), 'PERMISSION_DENIED: Permission denied');
+  igual(run('zErroBruto({name:"AbortError", message:""})'), 'AbortError');
+  igual(run('zErroBruto({code:"PERMISSION_DENIED"})'), 'PERMISSION_DENIED');
+  igual(run('zErroBruto("a hora 16:15 não foi gravada — Failed to fetch")'), 'a hora 16:15 não foi gravada — Failed to fetch');
+  ['null', 'undefined', '{}', '{ok:false}', '{erro:{}}', '[]', 'function(){}'].forEach((x) => {
+    const b = run(`zErroBruto(${x})`);
+    assert.ok(b === '' , 'vazio: ' + x + ' → ' + JSON.stringify(b));
+  });
+  // e o motivo de um objeto sem mensagem também não vira "[object Object]"
+  semCru648(run('zErroMotivo({}, "banco")'));
+  semCru648(run('zErroTexto(undefined, {alvo:"planilha"})'));
+});
+prova('6.48 P2 — repPlanEhQuedaConexao é a régua do tradutor: verdadeiro só para queda e prazo; as provas da 6.12 seguem iguais', () => {
+  Q648.concat(P648).forEach((x) => igual(run(`repPlanEhQuedaConexao(${JSON.stringify(x)})`), true, 'queda ou prazo: ' + x));
+  SB648.concat(PERM648, PONTE648, TEC648, TXT648, ['', 'a ponte não respondeu como esperado']).forEach((x) =>
+    igual(run(`repPlanEhQuedaConexao(${JSON.stringify(x)})`), false, 'não é queda: ' + JSON.stringify(x)));
+  // o que a 6.34 grava junto da hora continua sendo queda (a frase da 6.12 não muda)
+  igual(run("repPlanEhQuedaConexao('a hora 16:15 não foi gravada — Failed to fetch')"), true);
+  igual(run("repPlanEhQuedaConexao('o banho saiu da planilha para acertar a hora e ainda não voltou — Failed to fetch')"), true);
+});
+prova('6.48 P3 — zErroMotivo: o motivo curto, em português, pelo alvo; a palavra-chave nunca aparece', () => {
+  const m = (e, alvo, tk, ctx) => run(`zErroMotivo(${e}, ${JSON.stringify(alvo)}, ${JSON.stringify(tk || '')}, ${ctx || '{}'})`);
+  igual(m('"Failed to fetch"', 'planilha'), 'a conexão com a planilha caiu', 'a MESMA frase da 6.12');
+  igual(m('"Load failed"', 'telegram'), 'a conexão com o Telegram caiu');
+  igual(m('"Client is offline."', 'banco'), 'a conexão com o banco caiu');
+  igual(m('"disconnect"', 'banco'), 'a conexão caiu no meio da gravação');
+  // sem internet: só para a falha que acabou de acontecer (K12)
+  run('__bkOn648=navigator.onLine; navigator.onLine=false;');
+  try {
+    igual(m('"Failed to fetch"', 'planilha', '', '{agora:true}'), 'este aparelho está sem internet');
+    igual(m('"Failed to fetch"', 'planilha'), 'a conexão com a planilha caiu', 'mensagem guardada: navigator.onLine não vale');
+    igual(run('zErroTexto("Failed to fetch", {alvo:"planilha", refaz:10, agora:true})'),
+      'este aparelho está sem internet. O app tenta de novo sozinho quando a internet voltar, enquanto estiver aberto.');
+  } finally { run('navigator.onLine=__bkOn648;'); }
+  igual(m('"a ponte não respondeu em 12s"', 'planilha'), 'a planilha não respondeu a tempo (12 s)');
+  igual(m('"a ponte do Telegram não respondeu em 20 segundos"', 'telegram'), 'o Telegram não respondeu a tempo (20 s)');
+  igual(m('"o banco não respondeu a tempo (12s)"', 'banco'), 'o banco não respondeu a tempo (12 s)');
+  igual(m('"The request timed out."', 'planilha'), 'a planilha não respondeu a tempo');
+  igual(m('"Exception: Lock timeout"', 'planilha'), 'a planilha não respondeu a tempo', 'passageiro: o motivo do prazo');
+  igual(m('"a planilha está ocupada; tente de novo em instantes"', 'planilha'), 'a planilha não respondeu a tempo');
+  igual(m('"PERMISSION_DENIED: Permission denied"', 'banco'), 'o sistema recusou a gravação');
+  igual(m('"permission_denied"', 'banco'), 'o sistema recusou a gravação');
+  igual(m(JSON.stringify("permission_denied at /daycare/x: Client doesn't have permission to access the desired data."), 'banco'), 'o sistema recusou a leitura');
+  igual(m('"permission_denied"', 'banco', '', '{leitura:true}'), 'o sistema recusou a leitura');
+  igual(m('"sem conexão com o banco"', 'banco'), 'este aparelho abriu o app sem ligação com o sistema');
+  igual(m('"token invalido"', 'planilha'), 'a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script', 'a frase do orcPonteMotivo, sem o ponto');
+  igual(m('"PONTE_SENHA não configurada nas Propriedades do script"', 'telegram'), 'falta a palavra-chave PONTE_SENHA nas Propriedades do Apps Script');
+  igual(m('"<!DOCTYPE html><html>Entrar</html>"', 'planilha'), 'a ponte respondeu com uma página, e não com os dados: a URL mudou ou o Apps Script pede nova autorização');
+  igual(m('"senha invalida"', 'telegram'), 'a senha guardada no app não bate com a da ponte do Telegram');
+  igual(m('"acao desconhecida: lerDia"', 'planilha'), 'a ponte publicada é antiga e não conhece o pedido "lerDia"');
+  igual(m('"grupo nao configurado na ponte: diario"', 'telegram'), 'a ponte do Telegram não tem o grupo "diario"');
+  igual(m('"a ponte não respondeu como esperado"', 'telegram'), 'a ponte respondeu sem confirmar o envio', 'K8: não é "a conexão caiu"');
+  igual(m(`{ok:false, erro:"TypeError: Cannot read properties of null (reading 'getRange')"}`, 'planilha'),
+    "a ponte deu erro do lado do Google (TypeError: Cannot read properties of null (reading 'getRange'))");
+  // o erro do app, cortado em 120 caracteres
+  const longo = 'TypeError: ' + 'x'.repeat(300);
+  const mt = m(JSON.stringify(longo), 'banco');
+  igual(mt, 'erro inesperado do app (' + longo.slice(0, 120) + ')');
+  // texto: igual, sem ponto dobrado, com "!", "?" e a pontuação de dentro respeitados (QA38 F6)
+  igual(m('"a aba \\"Out/2026\\" nao tem a coluna \\"Banho\\"."', 'planilha'), 'a aba "Out/2026" nao tem a coluna "Banho"');
+  igual(m('"Limite diário excedido!"', 'planilha'), 'Limite diário excedido!');
+  igual(m('"Quem autorizou?"', 'planilha'), 'Quem autorizou?');
+  igual(m('"o tutor não respondeu; ligue de novo às 15h."', 'planilha'), 'o tutor não respondeu; ligue de novo às 15h');
+  igual(run('zErroFrase(zErroMotivo("Limite diário excedido!", "planilha"))'), 'Limite diário excedido!', 'sem "!."');
+  igual(m('"Bad Request: chat not found"', 'telegram'), 'o Telegram recusou (Bad Request: chat not found)');
+  igual(m('"Bad Request: chat not found"', 'planilha'), 'Bad Request: chat not found');
+  // vazio, pelo alvo (K18)
+  igual(m('""', 'planilha'), 'não recebi resposta da ponte da planilha');
+  igual(m('null', 'telegram'), 'não recebi resposta da ponte do Telegram');
+  igual(m('{}', 'banco'), 'não recebi resposta do banco');
+  // a palavra-chave vira ••• em TODOS os ramos, inclusive dentro dos parênteses (K7)
+  [[`"recusei o pedido ${TK648}"`, 'planilha'], [`{ok:false, erro:"Exception: falhou com ${TK648} no corpo"}`, 'planilha'],
+   [`"TypeError: ${TK648} is not a function"`, 'banco'], [`"acao desconhecida: ${TK648}"`, 'planilha'],
+   [`"grupo nao configurado na ponte: ${TK648}"`, 'telegram'], [`"Bad Request: ${TK648}"`, 'telegram']].forEach(([e, a]) => {
+    const r = m(e, a, TK648);
+    assert.ok(!/tk-SEGREDO-4471/.test(r) && /•••/.test(r), 'máscara: ' + e + ' → ' + r);
+  });
+});
+prova('6.48 P4 — zErroTexto: o motivo com a ação certa por tipo e por refaz', () => {
+  const t = (e, ctx) => run(`zErroTexto(${e}, ${ctx})`);
+  igual(t('"Failed to fetch"', '{alvo:"planilha", refaz:10}'), 'a conexão com a planilha caiu. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.');
+  igual(t('"a ponte não respondeu em 12s"', '{alvo:"planilha", refaz:10}'), 'a planilha não respondeu a tempo (12 s). O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.');
+  igual(t('"Failed to fetch"', '{alvo:"planilha", botao:"Mandar agora"}'), 'a conexão com a planilha caiu. Confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão.');
+  igual(t('"Failed to fetch"', '{alvo:"planilha"}'), 'a conexão com a planilha caiu. Confira a internet e tente de novo; se continuar, avise a Gestão.');
+  igual(t('""', '{alvo:"planilha", refaz:10, botao:"reenviar"}'), 'não recebi resposta da ponte da planilha. Confira a internet e toque em «reenviar» de novo; se continuar, avise a Gestão.', 'vazio: a ação da queda, sem promessa');
+  igual(t('"disconnect"', '{alvo:"banco", refaz:10}'), 'a conexão caiu no meio da gravação. Confira na tela se ficou marcado antes de tocar de novo.');
+  igual(t('"sem conexão com o banco"', '{alvo:"banco"}'), 'este aparelho abriu o app sem ligação com o sistema. Feche e abra o app com a internet ligada; se continuar, avise a Gestão.');
+  igual(t('"PERMISSION_DENIED: Permission denied"', '{alvo:"banco"}'), 'o sistema recusou a gravação. Avise a Gestão.');
+  igual(t('"token invalido"', '{alvo:"planilha", refaz:10}'), 'a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script. Avise a Gestão.');
+  igual(t('"x is not a function"', '{alvo:"banco"}'), 'erro inesperado do app (x is not a function). Avise a Gestão com um print desta tela.');
+  igual(t('"a aba não tem a coluna"', '{alvo:"planilha", refaz:10}'), 'a aba não tem a coluna.', 'texto: o motivo fala por si');
+});
+prova('6.48 P4b — a regra G (zErroGrav): "Nada foi…" só na gravação única recusada; o erro de depois manda conferir (K1); nunca "Confira a internet"', () => {
+  const g = (e, o) => run(`zErroGrav(${e}, ${o})`);
+  const U = "{nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:false, k1:true, hoje:'Nada foi salvo — tente de novo.'}";
+  igual(g('"permission_denied"', U), 'Nada foi salvo. Avise a Gestão.');
+  igual(g('"permission_denied"', "{nada:'Nada foi salvo.', unica:false, onde:'no Extrato', gravou:false}"), 'Confira no Extrato o que entrou antes de tentar de novo; avise a Gestão.');
+  igual(g('"sem conexão com o banco"', U), 'Nada foi salvo. Feche e abra o app com a internet ligada; se continuar, avise a Gestão.');
+  igual(g('"disconnect"', U), 'Confira na tela se ficou marcado antes de tocar de novo.');
+  igual(g('"sem rede"', U), 'Nada foi salvo — tente de novo.', 'erro da própria gravação, texto: a ação de hoje');
+  igual(g('"x is not a function"', U), 'Nada foi salvo. Avise a Gestão com um print desta tela.', 'erro do app ANTES de gravar');
+  const D = "{nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:true, k1:true, hoje:'Nada foi salvo — tente de novo.'}";
+  igual(g('"x is not a function"', D), 'Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.');
+  igual(g('"sem rede"', D), 'Confira no Extrato se entrou antes de tentar de novo; avise a Gestão.');
+  igual(g('"x is not a function"', "{nada:'Nada foi mudado.', unica:true, onde:'na lista', k1:true}"), 'Confira na lista se entrou antes de tentar de novo; avise a Gestão com um print desta tela.', 'sem como saber: confere');
+  igual(g('"x is not a function"', "{gravou:true, onde:'na lista', verbo:'saiu'}"), 'Confira na lista se saiu antes de tentar de novo; avise a Gestão com um print desta tela.');
+  [U, D].forEach((o) => [Q648, P648, SB648, PERM648, TEC648, TXT648].forEach((L) => L.forEach((x) =>
+    assert.ok(!SEM_INTERNET648.test(g(JSON.stringify(x), o)), 'sem "Confira a internet": ' + x + ' → ' + g(JSON.stringify(x), o)))));
+});
+// ---- P5 — Reposições: «Mandar agora» (repMandarAgora; desde a 2ª rodada, o botão da linha tem esse nome também depois da falha)
+// A conferência fingida responde `__sinc648`; a prova de conferência (K4) é DASH_AUTO_LIGADO ou o _ts de hoje.
+const MANDAR648 = async (dia, sinc, op) => {
+  op = op || {};
+  ctx.__sinc648 = sinc;
+  run(`__bk648m={pp:dashPontePronta, sy:dashAutoSincronizar, vc:vagasCarregarDia, rr:renderReposicao, za:zAlertao, al:alert, db:DB,
+      li:DASH_AUTO_LIGADO, hz:zHojeISO, dv:appDiaVelho, dp:DASH_PONTE};
+    __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); }; __al648=[]; alert=function(t){ __al648.push(String(t)); };
+    DASH_PONTE={url:'https://script.google.com/macros/s/x/exec', token:'${TK648}'};
+    dashPontePronta=function(){ return ${op.pendura ? 'new Promise(function(){})' : 'Promise.resolve(DASH_PONTE)'}; };
+    __sy648=0; dashAutoSincronizar=function(){ __sy648++; return ${op.syErro ? 'Promise.reject(new Error(' + JSON.stringify(op.syErro) + '))' : 'Promise.resolve(__sinc648)'}; };
+    vagasCarregarDia=function(){ ${op.vcErro ? 'throw new TypeError(' + JSON.stringify(op.vcErro) + ');' : ''} return Promise.resolve(null); };
+    renderReposicao=function(){}; zHojeISO=function(){ return '2026-10-09'; }; appDiaVelho=function(){ return false; };
+    DASH_AUTO_LIGADO=${!!op.ligado}; __ts648=${op.ts == null ? 'null' : ('Date.now()-' + Number(op.ts) + '*60000')}; __lidoTs648=[];
+    DB={ref:function(p){ return {once:function(){ __lidoTs648.push(p); return Promise.resolve({val:function(){ return /^daycare\\/dashboard-auto\\/2026-10-09\\/_ts$/.test(p)?__ts648:null; }}); }}; }};
+    __bt648={textContent:'Mandar agora', disabled:false};`);
+  try {
+    run(`repMandarAgora('${dia}', __bt648)`); await espera648();
+    return { za: J630('__za648'), al: J630('__al648'), bt: run('__bt648.textContent'), lido: J630('__lidoTs648'), sy: run('__sy648') };
+  } finally {
+    run(`dashPontePronta=__bk648m.pp; dashAutoSincronizar=__bk648m.sy; vagasCarregarDia=__bk648m.vc; renderReposicao=__bk648m.rr; zAlertao=__bk648m.za;
+      alert=__bk648m.al; DB=__bk648m.db; DASH_AUTO_LIGADO=__bk648m.li; zHojeISO=__bk648m.hz; appDiaVelho=__bk648m.dv; DASH_PONTE=__bk648m.dp;`);
+  }
+};
+const SALVO648 = 'O lançamento continua salvo aqui no app';
+provaAsync('6.48 P5 — «Mandar agora» com "Failed to fetch": promete "o app tenta de novo sozinho" só com o dia na janela E alguém conferindo (K4); senão, manda tocar de novo', async () => {
+  const Q = { ok: false, erro: 'Failed to fetch' };
+  // hoje, com a conferência ligada neste aparelho
+  let r = await MANDAR648('2026-10-09', Q, { ligado: true });
+  igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A conexão com a planilha caiu.', SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.']]]);
+  igual(r.lido, [], 'com a conferência ligada aqui, nem lê o _ts');
+  // hoje, conferência desligada aqui e o _ts de outro aparelho de 3 min atrás: alguém está conferindo
+  r = await MANDAR648('2026-10-09', Q, { ligado: false, ts: 3 });
+  igual(r.za[0][1][1], SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.');
+  igual(r.lido, ['daycare/dashboard-auto/2026-10-09/_ts'], 'o _ts de hoje, lido ANTES da conferência');
+  // hoje, sem prova de conferência (o _ts tem 30 min): não promete (K4)
+  for (const ts of [30, 15, 11, null]) {
+    r = await MANDAR648('2026-10-09', Q, { ligado: false, ts: ts });
+    igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A conexão com a planilha caiu.', SALVO648 + '. Confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão.']]], '_ts ' + ts);
+  }
+  // hoje+20: fora da conferência automática, mesmo com ela ligada
+  r = await MANDAR648('2026-10-29', Q, { ligado: true });
+  igual(r.za[0][1], ['A conexão com a planilha caiu.', SALVO648 + '. Confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão.']);
+  // hoje+14 ainda está na janela
+  r = await MANDAR648('2026-10-23', Q, { ligado: true });
+  assert.ok(/tenta de novo sozinho/.test(r.za[0][1][1]), JSON.stringify(r.za));
+  // Safari e Firefox: a mesma frase
+  for (const x of ['Load failed', 'NetworkError when attempting to fetch resource.', 'The network connection was lost.']) {
+    r = await MANDAR648('2026-10-09', { ok: false, erro: x }, { ligado: true });
+    igual(r.za[0][1][0], 'A conexão com a planilha caiu.', x);
+  }
+  r.za.forEach((z) => z[1].forEach((l) => semCru648(l)));
+});
+provaAsync('6.48 P5b — «Mandar agora»: o prazo, a recusa com código, o texto da ponte, a resposta vazia e o erro do app', async () => {
+  let r = await MANDAR648('2026-10-09', { ok: false, erro: 'a ponte não respondeu em 12s' }, { ligado: true });
+  igual(r.za[0][1], ['A planilha não respondeu a tempo (12 s).', SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.']);
+  r = await MANDAR648('2026-10-09', { ok: false, erro: 'token invalido' }, { ligado: true });
+  igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A planilha recusou: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.',
+    SALVO648 + ' — só não chegou à planilha. Avise a Gestão.']]]);
+  r = await MANDAR648('2026-10-09', { ok: false, erro: 'a aba "Out/2026" nao tem a coluna "Faltas Avisadas"' }, { ligado: true });
+  igual(r.za[0][1], ['A planilha recusou: a aba "Out/2026" nao tem a coluna "Faltas Avisadas".', SALVO648 + ' — só não chegou à planilha.']);
+  r = await MANDAR648('2026-10-09', { ok: false }, { ligado: true });
+  igual(r.za[0][1], ['Não recebi resposta da ponte da planilha.', SALVO648 + '. Confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão.'], 'vazio: sem promessa (K18)');
+  // a resposta que repete o pedido (com a palavra-chave) não a mostra
+  r = await MANDAR648('2026-10-09', { ok: false, erro: 'pedido recusado: {"token":"' + TK648 + '"}' }, { ligado: true });
+  assert.ok(!/tk-SEGREDO/.test(JSON.stringify(r.za)) && /•••/.test(r.za[0][1][0]), JSON.stringify(r.za));
+  // o erro do próprio app no .catch (K14)
+  r = await MANDAR648('2026-10-09', { ok: false, erro: 'Failed to fetch' }, { ligado: true, vcErro: "Cannot read properties of undefined (reading 'auto')" });
+  igual(r.al, ["Não consegui conferir com a planilha: erro inesperado do app (Cannot read properties of undefined (reading 'auto')). Avise a Gestão com um print desta tela."]);
+  igual([r.bt, r.za.length], ['Mandar agora', 0], 'o botão volta');
+  // K13 (documentado, à parte X6): sem internet nenhuma, a leitura do banco espera e o botão fica em "mandando…"
+  r = await MANDAR648('2026-10-09', { ok: false, erro: 'Failed to fetch' }, { ligado: true, pendura: true });
+  igual([r.bt, r.za.length, r.al.length, r.sy], ['mandando…', 0, 0, 0], 'comportamento de hoje (K13): nada é dito enquanto o banco não responde');
+});
+prova('6.48 A3 — a linha do crédito em Reposições: a recusa em português (a queda continua a frase da 6.12)', () => {
+  const dia = run('zHojeISO()');
+  run(`__bkQC648={c:REP_PLAN_CACHE['${dia}'], dp:DASH_PONTE}; DASH_PONTE={url:'x', token:'${TK648}'};`);
+  try {
+    const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda Teste' };
+    const chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
+    const linha = (msg) => {
+      run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{faltas:[], _estado_v:1, _estado:{faltas:{${JSON.stringify(chP)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
+      return run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`);
+    };
+    assert.ok(/NÃO foi para a planilha — a palavra-chave guardada no app não bate com a PONTE_SENHA/.test(linha('token invalido')), linha('token invalido'));
+    assert.ok(/NÃO foi para a planilha — o sistema recusou a gravação/.test(linha('PERMISSION_DENIED: Permission denied')));
+    // sem a conferência viva (REQ-002): a queda diz o mesmo que o cartaz, sem a promessa
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão/.test(linha('Exception: Lock timeout')), 'passageiro: a régua da 6.12');
+    assert.ok(/NÃO foi para a planilha — a conexão com a planilha caiu; confira a internet e toque em «Mandar agora» de novo/.test(linha('Failed to fetch')), 'a 6.12 sem a prova');
+    assert.ok(/>Mandar agora</.test(linha('token invalido')) && !/tentar de novo/.test(linha('token invalido')), 'o botão é «Mandar agora» também depois da falha');
+    assert.ok(/NÃO foi para a planilha — a planilha não tem a coluna Faltas Avisadas/.test(linha('a planilha não tem a coluna Faltas Avisadas')));
+    const l = linha('recusei: ' + TK648);
+    assert.ok(!/tk-SEGREDO/.test(l) && /•••/.test(l), l);
+    [PERM648, TEC648, PONTE648].forEach((L) => L.forEach((x) => semCru648(linha(x).replace(/<[^>]+>/g, ''), 'A3 ' + x)));
+  } finally { run(`if(__bkQC648.c) REP_PLAN_CACHE['${dia}']=__bkQC648.c; else delete REP_PLAN_CACHE['${dia}']; DASH_PONTE=__bkQC648.dp;`); }
+});
+// ---- P6 / P13 — Reposições: as gravações no banco (regra G, K1, K2, K3, K22)
+// O palco: as funções de fora viram de mentira; `__falha648` é o erro que a gravação fingida devolve.
+const NOMES648R = ['PELUDINHOS', 'repLancamentos', 'repPodeLancar', 'repEhGestao', 'DB', 'alert', 'zAlertao', 'zPergunta', 'zTexto', 'repMsgModal',
+  'renderReposicao', 'audit', 'repGravar', 'repHojeISO', 'repHojeServidor', 'repSaldoReposicao', 'repSaldoRepDepois', 'repLivresParaMarcar', 'repLivresSemDia',
+  'pelExtra', 'setTimeout', 'repComoDesmarcar', 'repSaldoParaUsarHoje', 'repReservado', 'repDiaTemUso', 'repTrocaPendenteDoDia', 'repVeioCredito',
+  'repDesfechoGravar', 'repUsoDevolvivelPor', 'repDevolverUsoGravar', 'repFeriadoNome', 'repNaRegra', 'repMotivoSemLer', 'vagasCarregarDia', 'pessoaDoTurno',
+  'quemSou', 'repAbrirExtrato', 'repTelDe', 'dxVeredito', 'dxTrocaAtual', 'REP_FER_LENDO', 'REPO_LIDO', 'vagasDoDia', 'repCreditoLivre', 'repAgendarVolta',
+  'vagasPedir', 'dxPel', 'dxDia', 'dxFechar', 'document.getElementById', 'repAuditDiaDele'];
+const PALCO648R = (extra) => run(NOMES648R.map((n) => `__bk648r[${JSON.stringify(n)}]=${n};`).join('').replace(/^/, '__bk648r={};') + `
+  PELUDINHOS=[{n:'Fredo', raca:'SRD', tutor:'Eleonora Teste'}]; __L648=[]; repLancamentos=function(){ return __L648; };
+  repPodeLancar=function(){ return true; }; __gestao648=false; repEhGestao=function(){ return __gestao648; };
+  __al648=[]; alert=function(t){ __al648.push(String(t)); }; __za648=[]; zAlertao=function(t,l){ __za648.push([t, l]); };
+  zPergunta=function(){ return Promise.resolve(true); }; __zt648='a tutora avisou a tempo'; zTexto=function(){ return Promise.resolve(__zt648); };
+  __mm648=[]; __mmErro648=''; repMsgModal=function(t,l){ if(__mmErro648) throw new TypeError(__mmErro648); __mm648.push([t,l]); };
+  renderReposicao=function(){}; audit=function(){}; setTimeout=function(){ return 0; }; repAuditDiaDele=function(){};
+  repHojeISO=function(){ return '2026-10-09'; }; repHojeServidor=function(){ return '2026-10-09'; };
+  repSaldoReposicao=function(){ return 2; }; repSaldoRepDepois=function(){ return 1; }; repLivresParaMarcar=function(){ return 1; }; repLivresSemDia=function(){ return 1; };
+  pelExtra=function(){ return {sexo:'Macho'}; }; vagasCarregarDia=function(){ return Promise.resolve(null); };
+  pessoaDoTurno=function(){ return 'Recepção Teste'; }; quemSou=function(){ return 'Recepção Teste'; }; repAbrirExtrato=function(){}; repTelDe=function(){ return ''; };
+  __falha648=null; __grav648=[];
+  var __pr648=function(c, v){ __grav648.push(c); return __falha648?Promise.reject(__falha648):Promise.resolve(v); };
+  DB={ref:function(p){ return {update:function(){ return __pr648(p); }, set:function(){ return __pr648(p); }, remove:function(){ return __pr648(p); },
+    once:function(){ return Promise.resolve({val:function(){ return null; }}); },
+    transaction:function(){ return __pr648(p, {committed:true, snapshot:{val:function(){ return {}; }}}); } }; }};
+  repGravar=function(){ return __pr648('repGravar', {committed:true, key:'k9'}); };
+  repDesfechoGravar=function(){ return __pr648('repDesfechoGravar', {committed:true}); };
+  repDevolverUsoGravar=function(){ return __pr648('repDevolverUsoGravar'); };
+  repAgendarVolta=function(){ return __pr648('repAgendarVolta'); };
+  vagasPedir=function(){ return __pr648('vagasPedir'); };
+  ${extra || ''}`);
+const SOLTA648R = () => run(NOMES648R.map((n) => `${n}=__bk648r[${JSON.stringify(n)}];`).join(''));
+const FALHA648 = (msg) => run(`__falha648=new Error(${JSON.stringify(msg)});`);
+const TEC648E = "Cannot read properties of undefined (reading 'l')";
+const RECUSA_MUDADO648 = (pre) => pre + ': o sistema recusou a gravação.\n\nNada foi mudado. Avise a Gestão.';
+const CAIU648 = (pre, sep) => pre + ': a conexão caiu no meio da gravação.' + (sep || ' ') + 'Confira na tela se ficou marcado antes de tocar de novo.';
+const CRED648 = { _id: 'c1', tipo: 'credito', data: '2026-10-06', volta: '2026-10-13', motivo: 'viagem' };
+
+provaAsync('6.48 P6 — «desmarcar» (repDesmarcar): a recusa diz "Nada foi mudado. Avise a Gestão."; o erro de depois de gravar (K1) manda conferir o Extrato', async () => {
+  PALCO648R(`__L648=[${JSON.stringify(CRED648)}]; repComoDesmarcar=function(){ return {modo:'livre', opcoes:[], de:'2026-10-06'}; };`);
+  try {
+    FALHA648('PERMISSION_DENIED: Permission denied');
+    await run("repDesmarcar(0, '2026-10-13')"); await espera648();
+    igual(J630('__al648'), [RECUSA_MUDADO648('Não consegui desmarcar')]);
+    // a gravação entrou e a tela de depois quebrou: não diz "Nada foi mudado" (K1)
+    run(`__al648=[]; __falha648=null; __mmErro648=${JSON.stringify(TEC648E)};`);
+    await run("repDesmarcar(0, '2026-10-13')"); await espera648();
+    igual(J630('__al648'), ['Não consegui desmarcar: erro inesperado do app (' + TEC648E + ').\n\nConfira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']);
+    // o texto da própria gravação: a ação de hoje, sem "em instantes"
+    run(`__al648=[]; __mmErro648=''; __falha648=new Error('sem rede');`);
+    await run("repDesmarcar(0, '2026-10-13')"); await espera648();
+    igual(J630('__al648'), ['Não consegui desmarcar: sem rede.\n\nNada foi mudado. Tente de novo.']);
+    // desfazer a troca (A7)
+    run(`__al648=[]; __falha648=new Error('PERMISSION_DENIED: Permission denied'); repComoDesmarcar=function(){ return {modo:'troca-dentro', troca:true, opcoes:['troca-volta'], de:'2026-10-06'}; };
+      zEscolha=(function(f){ __bk648r.ze=f; return function(t,l,b){ b[0].fn(); }; })(zEscolha);`);
+    try { await run("repDesmarcar(0, '2026-10-13')"); await espera648(); } finally { run('zEscolha=__bk648r.ze;'); }
+    igual(J630('__al648'), ['Não consegui desfazer a troca: o sistema recusou a gravação.\n\nNada foi mudado. Avise a Gestão.']);
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 P6 — «Veio repor hoje» (repUsar) e «Estornar» (repEstornar): recusa, "disconnect" (K2) e o erro de depois (K1)', async () => {
+  PALCO648R(`repSaldoParaUsarHoje=function(){ return 2; }; repReservado=function(){ return 0; }; repDiaTemUso=function(){ return false; }; repTrocaPendenteDoDia=function(){ return null; };`);
+  try {
+    FALHA648('PERMISSION_DENIED: Permission denied');
+    await run('repUsar(0)'); await espera648();
+    igual(J630('__al648'), ['Não consegui marcar: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.']);
+    run("__al648=[]; __falha648=new Error('disconnect');"); await run('repUsar(0)'); await espera648();
+    igual(J630('__al648'), [CAIU648('Não consegui marcar')], 'a transação pode ter entrado: sem "Nada foi salvo"');
+    run(`__al648=[]; __falha648=null; __mmErro648=${JSON.stringify(TEC648E)};`); await run('repUsar(0)'); await espera648();
+    igual(J630('__al648'), ['Não consegui marcar: erro inesperado do app (' + TEC648E + '). Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']);
+    run("__al648=[]; __mmErro648=''; __falha648=new Error('permission_denied');"); await run("repEstornar(0, 'c1')"); await espera648();
+    igual(J630('__al648'), ['Não consegui estornar: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.']);
+    run("__al648=[]; __falha648=new Error('sem rede');"); await run("repEstornar(0, 'c1')"); await espera648();
+    igual(J630('__al648'), ['Não consegui estornar: sem rede.']);
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 P6 — «ele veio» (repVeioNoDia, transação): "permission_denied" é a recusa; "maxretry" é erro do app; "disconnect" sem "Nada foi mudado"', async () => {
+  PALCO648R(`repDiaTemUso=function(){ return false; }; repVeioCredito=function(){ return ${JSON.stringify(Object.assign({}, CRED648, { volta: '2026-10-07' }))}; };`);
+  try {
+    for (const [cru, esperado] of [['permission_denied', RECUSA_MUDADO648('Não consegui marcar')],
+      ['disconnect', CAIU648('Não consegui marcar', '\n\n')],
+      ['maxretry', 'Não consegui marcar: erro inesperado do app (maxretry).\n\nNada foi mudado. Avise a Gestão com um print desta tela.'],
+      ['sem conexão com o banco', 'Não consegui marcar: este aparelho abriu o app sem ligação com o sistema.\n\nNada foi mudado. Feche e abra o app com a internet ligada; se continuar, avise a Gestão.']]) {
+      run(`__al648=[]; __za648=[]; __falha648=new Error(${JSON.stringify(cru)});`);
+      await run("repVeioNoDia(0, '2026-10-07')"); await espera648();
+      igual(J630('__al648'), [esperado], cru);
+    }
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 P6/P13 — «Devolver» (repDevolverUso e, da Gestão, repDevolverDesfecho R4), «conferido» (R1), «não veio» (R2) e «não contar» (R3): sem cru e sem "conferir a internet"', async () => {
+  PALCO648R(`__L648=[${JSON.stringify(CRED648)}, {_id:'u1', tipo:'uso', data:'2026-10-06', motivo:'reposicao'}, {_id:'u2', tipo:'uso', data:'2026-10-07', desfecho:'nao_veio', credito:'c1'}];
+    repUsoDevolvivelPor=function(){ return true; }; repDiaTemUso=function(){ return false; }; repFeriadoNome=function(){ return ''; };
+    repNaRegra=function(){ return true; }; repMotivoSemLer=function(){ return ''; };
+    repVeioCredito=function(){ return ${JSON.stringify(Object.assign({}, CRED648, { volta: '2026-10-07' }))}; };`);
+  try {
+    const caso = async (codigo, cru) => { run(`__al648=[]; __za648=[]; __falha648=new Error(${JSON.stringify(cru)});`); await run(codigo); await espera648(); return J630('__al648'); };
+    igual(await caso("repDevolverUso(0, 'u1')", 'PERMISSION_DENIED: Permission denied'), [RECUSA_MUDADO648('Não consegui devolver')], 'A13');
+    run('__gestao648=true;');
+    igual(await caso("repDevolverUso(0, 'u2')", 'PERMISSION_DENIED: Permission denied'), [RECUSA_MUDADO648('Não consegui devolver')], 'R4');
+    igual(await caso("repConferirVisto(0, 'c1')", 'PERMISSION_DENIED: Permission denied'), [RECUSA_MUDADO648('Não consegui gravar')], 'R1');
+    run('__gestao648=false;');
+    igual(await caso("repContarNaoVeio(0, '2026-10-07')", 'disconnect'), [CAIU648('Não consegui gravar', '\n\n')], 'R2 (K2)');
+    igual(await caso("repContarNaoVeio(0, '2026-10-07')", 'permission_denied'), [RECUSA_MUDADO648('Não consegui gravar')], 'R2');
+    run(`__gestao648=true; __L648=[${JSON.stringify(Object.assign({}, CRED648, { volta: '2026-10-07' }))}];`);
+    igual(await caso("repConferirNaoContar(0, '2026-10-07')", 'PERMISSION_DENIED: Permission denied'), [RECUSA_MUDADO648('Não consegui gravar')], 'R3');
+    igual(await caso("repConferirNaoContar(0, '2026-10-07')", "TypeError: Cannot read properties of null (reading 'x')"),
+      ["Não consegui gravar: erro inesperado do app (TypeError: Cannot read properties of null (reading 'x')).\n\nNada foi mudado. Avise a Gestão com um print desta tela."],
+      'R3: o erro da PRÓPRIA gravação (a promessa do banco rejeitou)');
+    // R3, K1: a gravação entrou e o cartaz de depois quebrou — não diz "Nada foi mudado"
+    run("__al648=[]; __falha648=null; zAlertao=function(){ throw new TypeError('x is not a function'); };");
+    await run("repConferirNaoContar(0, '2026-10-07')"); await espera648();
+    igual(J630('__al648'), ['Não consegui gravar: erro inesperado do app (x is not a function).\n\nConfira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.'], 'R3 (K1)');
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 P6 — «Dia extra» (dxConfirmar, dxPedir): a recusa diz "Nada foi salvo. Avise a Gestão."; depois de gravar (K1), confere o Extrato', async () => {
+  PALCO648R(`REPO_LIDO=true; REP_FER_LENDO=false; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxFechar=function(){};
+    __dx648={dxWarn:{textContent:''}, dxOk:{disabled:false, textContent:''}}; document.getElementById=function(id){ return __dx648[id]||null; };
+    dxTrocaAtual=function(){ return false; }; vagasDoDia=function(){ return {lido:true, cheio:false}; };
+    repCreditoLivre=function(){ return ${JSON.stringify(Object.assign({}, CRED648, { volta: '' }))}; };
+    __vd648={ok:true, tipo:'reposicao'}; dxVeredito=function(){ return __vd648; };`);
+  try {
+    FALHA648('PERMISSION_DENIED: Permission denied');
+    run('dxConfirmar()'); await espera648();
+    igual(run('__dx648.dxWarn.textContent'), 'Não consegui: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.');
+    run(`__dx648.dxWarn.textContent=''; __falha648=null; __mmErro648=${JSON.stringify(TEC648E)}; dxConfirmar();`); await espera648();
+    igual(run('__dx648.dxWarn.textContent'), 'Não consegui: erro inesperado do app (' + TEC648E + '). Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.');
+    run(`__dx648.dxWarn.textContent=''; __mmErro648=''; __falha648=new Error('PERMISSION_DENIED: Permission denied'); __vd648={ok:true, tipo:'avulso', valor_cent:9700, matriculado:true}; dxPedir();`); await espera648();
+    igual(run('__dx648.dxWarn.textContent'), 'Não consegui avisar a Márcia: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.');
+    run(`__dx648.dxWarn.textContent=''; __falha648=new Error('sem rede'); dxPedir();`); await espera648();
+    igual(run('__dx648.dxWarn.textContent'), 'Não consegui avisar a Márcia: sem rede. Nada foi salvo.', 'o texto de hoje');
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 P6 — «+ Falta» (repConfirmar): 1 dia recusado diz "Nada foi salvo"; 2 dias mandam conferir o Extrato; sem banco (K3); o erro de depois de gravar (K1)', async () => {
+  const recusa = (B, cru) => { const ref0 = B.ref; B.ref = (c) => { const r = ref0(c); if (/lancamentos\/fa-/.test(c)) r.transaction = () => Promise.reject(new Error(cru)); return r; }; };
+  let B = palco646(false);
+  try {
+    recusa(B, 'permission_denied');
+    igual(await falta646('2026-10-13', ''), 'Não consegui lançar: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.');
+    const w2 = await periodo646('2026-10-13', '2026-10-20', '');
+    igual(w2, 'Não consegui lançar: o sistema recusou a gravação. Confira o Extrato de Fredo antes de lançar de novo; avise a Gestão.');
+    assert.ok(!/Nada foi salvo/.test(w2), 'com 2 dias, uma das gravações pode ter entrado (D22)');
+  } finally { solta646(); }
+  B = palco646(false);
+  try {
+    run('DB=null;');
+    igual(await falta646('2026-10-13', ''), 'Não consegui lançar: este aparelho abriu o app sem ligação com o sistema. Nada foi salvo. Feche e abra o app com a internet ligada; se continuar, avise a Gestão.');
+  } finally { solta646(); }
+  // a transação entrou e a confirmação quebrou: o cartaz é o da 6.46, sem "Nada foi salvo" (K1)
+  B = palco646(false);
+  try {
+    run(ZA646 + `repMsgModal=function(){ throw new TypeError(${JSON.stringify(TEC648E)}); };`);
+    try {
+      const w = await falta646('2026-10-13', '');
+      igual(J630('__za646'), [['NÃO SEI SE A FALTA AVISADA ENTROU', ['Não consegui lançar a falta avisada de Fredo: erro inesperado do app (' + TEC648E + ').',
+        'Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']]]);
+      assert.ok(!/Nada foi salvo/.test(w), w);
+      igual(creditos646(B), ['2026-10-13→-'], 'a falta entrou mesmo');
+    } finally { run(ZA646_VOLTA); }
+  } finally { solta646(); }
+  // o modal já é de outro lançamento: o cartaz (A5)
+  B = palco646(false);
+  try {
+    run(ZA646);
+    const ref0 = B.ref; B.ref = (c) => { const r = ref0(c); if (/lancamentos\/fa-/.test(c)) r.transaction = () => { run('REP_LANC_GER++;'); return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };
+    try {
+      await falta646('2026-10-13', '');
+      igual(J630('__za646'), [['A FALTA AVISADA NÃO ENTROU', ['Não consegui lançar a falta avisada de Fredo: o sistema recusou a gravação.', 'Nada foi salvo. Avise a Gestão.']]]);
+    } finally { run(ZA646_VOLTA); }
+  } finally { solta646(); }
+  // "disconnect": a frase da 6.46, igual
+  B = palco646(false);
+  try { recusa(B, 'disconnect'); igual(await falta646('2026-10-13', ''), run('REP_CONEXAO_CAIU_FALTA')); } finally { solta646(); }
+});
+provaAsync('6.48 P6 — encaixe (vagasAutorizar, vagasRecusar): o motivo em português; "disconnect" na recusa sem "Nada foi mudado"', async () => {
+  let B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run("__bkR648=dxLancarAvulso; dxLancarAvulso=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); };");
+    try { await autoriza646(); igual(J630('__al646'), ['Não consegui autorizar: o sistema recusou a gravação. O pedido continua em aberto.']); }
+    finally { run('dxLancarAvulso=__bkR648;'); }
+  } finally { solta646(); }
+  for (const [cru, esperado] of [['permission_denied', 'Não consegui recusar: o sistema recusou a gravação. Nada foi mudado. Avise a Gestão.'],
+    ['disconnect', CAIU648('Não consegui recusar')]]) {
+    B = palco646(true);
+    try {
+      prepPed646(B, PEDTROCA646());
+      const ref0 = B.ref; B.ref = (c) => { const r = ref0(c); if (/vagas-pedidos/.test(c)) r.transaction = () => Promise.reject(new Error(cru)); return r; };
+      run("__zt646='Sem vaga';");
+      await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
+      igual(J630('__al646'), [esperado], cru);
+    } finally { solta646(); }
+  }
+});
+// ---- P7 / P14 — Lançamentos do dia: «reenviar» (dashReenviar)
+const REENVIAR648 = async (resp, reg, dia, op) => {
+  op = op || {};
+  ctx.__esp648 = resp;
+  run(`__bk648d={dd:DASH_DADOS, di:dashDia, hz:zHojeISO, esp:dashEspelhar, za:zAlertao, al:alert, dp:DASH_PONTE};
+    DASH_PONTE={url:'x', token:'${TK648}'}; zHojeISO=function(){ return '2026-10-09'; }; dashDia=function(){ return '${dia || '2026-10-09'}'; };
+    dashEspelhar=function(){ return ${op.rejeita ? 'Promise.reject(new TypeError(' + JSON.stringify(op.rejeita) + '))' : 'Promise.resolve(__esp648)'}; };
+    __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); }; __al648=[]; alert=function(t){ __al648.push(String(t)); };
+    DASH_DADOS={banho:{L1:${JSON.stringify(Object.assign({ valor: 'TOBI', hora: '10:00', planilha_ok: false }, reg || {}))}}};`);
+  try {
+    run("dashReenviar('banho', 'L1', null)"); await espera648();
+    return { za: J630('__za648'), al: J630('__al648') };
+  } finally { run('DASH_DADOS=__bk648d.dd; dashDia=__bk648d.di; zHojeISO=__bk648d.hz; dashEspelhar=__bk648d.esp; zAlertao=__bk648d.za; alert=__bk648d.al; DASH_PONTE=__bk648d.dp;'); }
+};
+provaAsync('6.48 P7 — «reenviar» com "Failed to fetch": «A PLANILHA NÃO CONFIRMOU»; promete o refaz só sem as 5 tentativas esgotadas e com o dia entre hoje−7 e hoje+14', async () => {
+  const Q = { ok: false, erro: 'Failed to fetch' };
+  const SOZINHO = SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.';
+  const TOQUE = SALVO648 + '. Confira a internet e toque em «reenviar» de novo; se continuar, avise a Gestão.';
+  let r = await REENVIAR648(Q, { planilha_tent: 1 });
+  igual(r.za, [['A PLANILHA NÃO CONFIRMOU', ['A conexão com a planilha caiu.', SOZINHO]]]);
+  r = await REENVIAR648(Q, { planilha_tent: 5 });
+  igual(r.za, [['A PLANILHA NÃO CONFIRMOU', ['A conexão com a planilha caiu.', TOQUE]]], 'esgotou as 5 tentativas: a fila desistiu');
+  r = await REENVIAR648(Q, { planilha_desisti: true });
+  igual(r.za[0][1][1], TOQUE, 'a fila desistiu de vez');
+  r = await REENVIAR648(Q, {}, '2026-09-29');
+  igual(r.za[0][1][1], TOQUE, 'hoje−10: fora da fila');
+  r = await REENVIAR648(Q, {}, '2026-10-02');
+  igual(r.za[0][1][1], SOZINHO, 'hoje−7: ainda na fila');
+  r = await REENVIAR648(Q, {}, '2026-10-23');
+  igual(r.za[0][1][1], SOZINHO, 'hoje+14: a conferência passa');
+  r = await REENVIAR648(Q, {}, '2026-10-24');
+  igual(r.za[0][1][1], TOQUE, 'hoje+15: ninguém passa');
+  r = await REENVIAR648({ ok: false, erro: 'a ponte não respondeu em 12s' }, {});
+  igual(r.za, [['A PLANILHA NÃO CONFIRMOU', ['A planilha não respondeu a tempo (12 s).', SOZINHO]]]);
+  r = await REENVIAR648({ ok: false, erro: 'token invalido' }, {});
+  igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A planilha recusou: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.', SALVO648 + ' — só não chegou à planilha. Avise a Gestão.']]]);
+  r = await REENVIAR648({ ok: false, erro: 'a aba "Out/2026" nao tem a coluna "Banho"' }, {});
+  igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A planilha recusou: a aba "Out/2026" nao tem a coluna "Banho".', SALVO648 + ' — só não chegou à planilha.']]]);
+  r = await REENVIAR648(Q, {}, '2026-10-09', { rejeita: 'x is not a function' });
+  igual(r.al, ['Não foi para a planilha: erro inesperado do app (x is not a function). ' + SALVO648 + '. Avise a Gestão com um print desta tela.']);
+});
+provaAsync('6.48 P14 — de ponta a ponta, com o dashEspelhar de verdade: a tela diz «A PLANILHA NÃO CONFIRMOU» e o cru continua guardado ("Failed to fetch" no planilha_msg e na auditoria)', async () => {
+  run(`__bk648e={dp:DASH_PONTE, pc:dashPonteChamar, db:DB, rd:renderDash, au:audit, di:dashDia, za:zAlertao, dd:DASH_DADOS, hz:zHojeISO};
+    DASH_PONTE={url:'x', token:'${TK648}'}; dashPonteChamar=function(){ return Promise.resolve({ok:false, erro:'Failed to fetch'}); };
+    __tx648=[]; DB={ref:function(p){ return {transaction:function(fn){ var r=fn({valor:'TOBI', hora:'10:00'}); __tx648.push({p:p, r:JSON.parse(JSON.stringify(r))}); return Promise.resolve({committed:true}); }}; }};
+    renderDash=function(){}; __au648=[]; audit=function(a,d){ __au648.push([a,d]); }; dashDia=function(){ return '2026-10-09'; }; zHojeISO=function(){ return '2026-10-09'; };
+    __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); }; DASH_DADOS={banho:{L1:{valor:'TOBI', hora:'10:00', planilha_ok:false}}};`);
+  try {
+    run("dashReenviar('banho', 'L1', null)"); await espera648();
+    igual(J630('__za648'), [['A PLANILHA NÃO CONFIRMOU', ['A conexão com a planilha caiu.', SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.']]]);
+    igual(run('__tx648[0].r.planilha_msg'), 'Failed to fetch', 'o planilha_msg fica cru (a fila e a Gestão leem o cru)');
+    assert.ok(J630('__au648').some((a) => a[1] === 'NÃO foi para a planilha: TOBI em Banho — Failed to fetch'), JSON.stringify(J630('__au648')));
+  } finally { run('DASH_PONTE=__bk648e.dp; dashPonteChamar=__bk648e.pc; DB=__bk648e.db; renderDash=__bk648e.rd; audit=__bk648e.au; dashDia=__bk648e.di; zAlertao=__bk648e.za; DASH_DADOS=__bk648e.dd; zHojeISO=__bk648e.hz;'); }
+});
+// ---- P8 / P13 — Lançamentos do dia: as gravações e as linhas da 6.49 e da 6.50
+const LANCD648 = `__bk648l={dd:DASH_DADOS, db:DB, di:dashDia, esp:dashEspelhar, rd:renderDash, al:alert, pc:planCasar, au:audit, zp:zPergunta, rdp:dashRemoverDaPlanilha, za:zAlertao, hz:zHojeISO, dp:DASH_PONTE};
+  DASH_DADOS={}; dashDia=function(){ return '2026-10-09'; }; zHojeISO=function(){ return '2026-10-09'; }; dashEspelhar=function(){ return Promise.resolve({ok:true}); };
+  __rdErro648=''; renderDash=function(){ if(__rdErro648) throw new TypeError(__rdErro648); };
+  __al648=[]; alert=function(t){ __al648.push(String(t)); }; planCasar=function(){ return null; }; audit=function(){}; zPergunta=function(){ return Promise.resolve(true); };
+  dashRemoverDaPlanilha=function(){ return Promise.resolve({ok:true}); }; __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); };
+  DASH_PONTE={url:'x', token:'${TK648}'};
+  __falha648=null; __gr648=[]; var __pr648=function(c){ __gr648.push(c); return __falha648?Promise.reject(__falha648):Promise.resolve(); };
+  DB={ref:function(p){ return {push:function(){ return {key:'NOVO', set:function(){ return __pr648(p); }}; }, set:function(){ return __pr648(p); }, update:function(){ return __pr648(p); },
+    remove:function(){ return __pr648(p); }, transaction:function(){ return __pr648(p); }, once:function(){ return Promise.resolve({val:function(){ return null; }}); }}; }};`;
+const LANCD648_VOLTA = 'DASH_DADOS=__bk648l.dd; DB=__bk648l.db; dashDia=__bk648l.di; dashEspelhar=__bk648l.esp; renderDash=__bk648l.rd; alert=__bk648l.al; planCasar=__bk648l.pc; audit=__bk648l.au; zPergunta=__bk648l.zp; dashRemoverDaPlanilha=__bk648l.rdp; zAlertao=__bk648l.za; zHojeISO=__bk648l.hz; DASH_PONTE=__bk648l.dp;';
+provaAsync('6.48 P8 — «Lançar» (dashLancar) e «Tirar» (dashRemover): a recusa diz "Nada foi lançado/tirado"; depois de gravar (K1) e no erro do app, a tela não afirma "Não salvou"', async () => {
+  run(LANCD648);
+  try {
+    FALHA648('PERMISSION_DENIED: Permission denied');
+    const pr = run("dashLancar('vet', 'Tobi/SRD', -1, '10:00')"); const v1 = await pr; await espera648();
+    igual([v1, J630('__al648')], [false, ['Não salvou: o sistema recusou a gravação. Nada foi lançado. Avise a Gestão.']], 'e o return false fica (a pendência continua aberta)');
+    // a gravação entrou e o redesenho de depois quebrou (K1)
+    run(`__al648=[]; __falha648=null; DASH_DADOS={}; __rdErro648=${JSON.stringify(TEC648E)};`);
+    const v2 = await run("dashLancar('vet', 'Tobi/SRD', -1, '10:00')"); await espera648();
+    igual([v2, J630('__al648')], [false, ['Erro inesperado do app (' + TEC648E + '). Confira na lista se o lançamento apareceu antes de lançar de novo; avise a Gestão.']]);
+    assert.ok(!/Não salvou/.test(run('__al648[0]')), 'o lançamento pode ter entrado: não diz "Não salvou"');
+    // o mesmo com um erro de texto depois de gravar: também não diz "Não salvou" (K1)
+    run(`__al648=[]; DASH_DADOS={}; __rdErro648=''; renderDash=function(){ throw new Error('a lista não desenhou'); };`);
+    const v3 = await run("dashLancar('vet', 'Tobi/SRD', -1, '10:00')"); await espera648();
+    igual([v3, J630('__al648')], [false, ['A lista não desenhou. Confira na lista se o lançamento apareceu antes de lançar de novo; avise a Gestão.']]);
+    run(`renderDash=function(){ if(__rdErro648) throw new TypeError(__rdErro648); };`);
+    // «Tirar»
+    run(`__al648=[]; __rdErro648=''; __falha648=new Error('PERMISSION_DENIED: Permission denied'); DASH_DADOS={vet:{L1:{valor:'TOBI/SRD', hora:'10:00'}}};`);
+    await run("dashRemover('vet', 'L1')"); await espera648();
+    igual(J630('__al648'), ['Não removeu: o sistema recusou a gravação. Nada foi tirado. Avise a Gestão.']);
+    run(`__al648=[]; __falha648=null; DASH_DADOS={vet:{L1:{valor:'TOBI/SRD', hora:'10:00'}}}; __rdErro648=${JSON.stringify(TEC648E)};`);
+    await run("dashRemover('vet', 'L1')"); await espera648();
+    igual(J630('__al648'), ['Erro inesperado do app (' + TEC648E + '). Confira na lista se saiu antes de tentar de novo; avise a Gestão com um print desta tela.'], 'K1: já saiu');
+  } finally { run(LANCD648_VOLTA); }
+});
+provaAsync('6.48 P8 — «Conferir a planilha agora» (dashAutoBotao) e a linha do automático (dashAutoLinhas): a recusa com código vira frase; a queda é a da 6.12', async () => {
+  run(`__bkAB648={ar:dashAutoRodar, dc:dashCarregar, dp:DASH_PONTE}; DASH_PONTE={url:'x', token:'${TK648}'}; dashCarregar=function(){};
+    __rAB648=null; dashAutoRodar=function(){ return Promise.resolve(__rAB648); };`);
+  try {
+    const botao = async (r) => { ctx.__r648 = r; run('__rAB648=__r648; __bt648={textContent:"Conferir a planilha agora", disabled:false}; dashAutoBotao(__bt648);'); await espera648(); return run('__bt648.textContent'); };
+    igual(await botao({ ok: false, erro: 'token invalido' }), '❌ a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script');
+    igual(await botao({ ok: false, erro: 'Failed to fetch' }), '❌ a conexão com a planilha caiu', 'a frase da 6.12');
+    igual(await botao({ ok: true, falhas: 1, dias: 15, erroFalha: 'acao desconhecida: lerDia' }), '⚠ não consegui ler 1 de 15 dia(s): a ponte publicada é antiga e não conhece o pedido "lerDia"');
+    igual(await botao({ ok: false, erro: '' }), '❌ não recebi resposta da ponte da planilha', 'vazio (K18)');
+  } finally { run('dashAutoRodar=__bkAB648.ar; dashCarregar=__bkAB648.dc; DASH_PONTE=__bkAB648.dp;'); }
+  const dia = run('zHojeISO()');
+  run(`__bkQC648b={c:REP_PLAN_CACHE['${dia}'], dp:DASH_PONTE}; DASH_PONTE={url:'x', token:'${TK648}'};`);
+  try {
+    const v = 'Cristal/Yorkshire (SEM SHAMPOO)', ch = run(`vagasNomeChave(${JSON.stringify(v)})`);
+    const linha = (msg) => { run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v])}, _estado_v:1, _estado:{banho:{${JSON.stringify(ch)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
+      return run(`dashAutoLinhas('banho', '${dia}', null).html`); };
+    assert.ok(/a planilha recusou — a palavra-chave guardada no app não bate com a PONTE_SENHA/.test(linha('token invalido')), linha('token invalido'));
+    assert.ok(/a planilha recusou — o sistema recusou a gravação/.test(linha('PERMISSION_DENIED: Permission denied')));
+    assert.ok(/a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min/.test(linha('Failed to fetch')), 'a 6.12 igual');
+    const l = linha('recusei: ' + TK648);
+    assert.ok(!/tk-SEGREDO/.test(l) && /•••/.test(l), l);
+  } finally { run(`if(__bkQC648b.c) REP_PLAN_CACHE['${dia}']=__bkQC648b.c; else delete REP_PLAN_CACHE['${dia}']; DASH_PONTE=__bkQC648b.dp;`); }
+});
+provaAsync('6.48 P8/P13 — «tirar só este dia» do banho fixo (banhoDiaDepois L2, banhoDiaDepoisTarde L3): a recusa em português, sem «Confira a conexão»; "disconnect" sem "Nada mudou"', async () => {
+  run(`__bkBD648={za:zAlertao, rd:renderDash, dv:appDiaVelho}; __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); }; renderDash=function(){}; appDiaVelho=function(){ return false; };`);
+  try {
+    const depois = (r) => { ctx.__r648 = r; run('__za648=[]; banhoDiaDepois(__r648, "NÃO TIREI O BANHO");'); return J630('__za648'); };
+    igual(depois({ ok: false, erro: 'permission_denied' }), [['NÃO TIREI O BANHO', ['Não consegui gravar: o sistema recusou a gravação.', 'Nada mudou. Avise a Gestão.']]]);
+    igual(depois({ ok: false, erro: 'disconnect' }), [['NÃO TIREI O BANHO', ['Não consegui gravar: a conexão caiu no meio da gravação.', 'Confira na tela se ficou marcado antes de tocar de novo.']]]);
+    igual(depois({ ok: false, erro: 'o banco não confirmou a gravação' }), [['NÃO TIREI O BANHO', ['Não consegui gravar: o banco não confirmou a gravação.', 'Nada mudou. Tente de novo.']]]);
+    igual(depois({ ok: false, erro: 'sem permissão' }), [], 'o "sem permissão" do próprio app fica de fora (6.50)');
+    run('__za648=[]; banhoDiaDepoisTarde({ok:false, erro:"PERMISSION_DENIED: Permission denied"});');
+    igual(J630('__za648'), [['A GRAVAÇÃO NÃO FOI FEITA', ['O banco respondeu depois: o sistema recusou a gravação.', 'Nada mudou neste dia.']]]);
+  } finally { run('zAlertao=__bkBD648.za; renderDash=__bkBD648.rd; appDiaVelho=__bkBD648.dv;'); }
+});
+provaAsync('6.48 P13 — «pôr de novo» na TV (dashTvPorDeNovo L4) e o banho fixo a caminho (L5): fora da queda, a frase do código; na queda, como estava', async () => {
+  run(`__bkTV648={sy:dashAutoSincronizar, za:zAlertao, rd:renderDash, vc:vagasCarregarDia, tl:dashTvBanhoLinhas, hz:zHojeISO, dp:DASH_PONTE, dv:appDiaVelho};
+    DASH_PONTE={url:'x', token:'${TK648}'}; __za648=[]; zAlertao=function(t,l){ __za648.push([t,l]); }; renderDash=function(){}; vagasCarregarDia=function(){ return Promise.resolve(null); };
+    dashTvBanhoLinhas=function(){ return []; }; zHojeISO=function(){ return '2026-10-09'; }; appDiaVelho=function(){ return false; }; DASH_TV_PONDO=false;
+    __rTV648=null; dashAutoSincronizar=function(){ return Promise.resolve(__rTV648); };`);
+  try {
+    const por = async (r) => { ctx.__r648 = r; run('__za648=[]; __rTV648=__r648; DASH_TV_PONDO=false;'); await run('dashTvPorDeNovo(null)'); await espera648(); return J630('__za648'); };
+    igual(await por({ ok: false, erro: 'token invalido' }), [['NÃO CONSEGUI PÔR DE NOVO', ['a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.', 'A conferência de hoje não foi até o fim. Tente de novo em alguns minutos.']]]);
+    igual((await por({ ok: false, erro: 'Failed to fetch' }))[0][1][0], 'a conexão com a planilha caiu.');
+    igual((await por({ ok: false, erro: "TypeError: Cannot read properties of null (reading 'getRange')" }))[0][1][0],
+      "a ponte deu erro do lado do Google (TypeError: Cannot read properties of null (reading 'getRange')).", 'K7: a ponte, não o app');
+    run(`__bkC648=REP_PLAN_CACHE['2026-10-09']; REP_PLAN_CACHE['2026-10-09']={ts:Date.now(), avulso:{}, auto:{_erro:{msg:'token invalido', ts:1}}};`);
+    try {
+      igual(run("dashBanhoFixoACaminhoTexto('2026-10-09')"), 'ainda não foi para a planilha: a última conferência não conseguiu ler a planilha (a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script); o app tenta de novo sozinho em até 5 min');
+      run(`REP_PLAN_CACHE['2026-10-09'].auto._erro.msg='Failed to fetch';`);
+      igual(run("dashBanhoFixoACaminhoTexto('2026-10-09')"), 'ainda não foi para a planilha: a última conferência não conseguiu ler a planilha (a conexão com a planilha caiu); o app tenta de novo sozinho em até 5 min', 'como estava (X9 à parte)');
+    } finally { run(`if(__bkC648) REP_PLAN_CACHE['2026-10-09']=__bkC648; else delete REP_PLAN_CACHE['2026-10-09'];`); }
+  } finally { run('dashAutoSincronizar=__bkTV648.sy; zAlertao=__bkTV648.za; renderDash=__bkTV648.rd; vagasCarregarDia=__bkTV648.vc; dashTvBanhoLinhas=__bkTV648.tl; zHojeISO=__bkTV648.hz; DASH_PONTE=__bkTV648.dp; appDiaVelho=__bkTV648.dv; DASH_TV_PONDO=false;'); }
+});
+provaAsync('6.48 P8/P13 — «Tirar» fora do prazo (dashRemoverRepForaPrazo L1), o abatimento (B6) e a ponte (dashSalvarPonte B13, dashCriarColunas B14)', async () => {
+  PALCO648R(`repDesfechoRegistro=(function(f){ __bk648r.dr=f; return function(){ return {obs:'fora do prazo', relogio:'servidor'}; }; })(repDesfechoRegistro);
+    repTrocaPendenteDoDia=function(){ return null; }; dashDia=(function(f){ __bk648r.di=f; return function(){ return '2026-10-09'; }; })(dashDia);
+    dashNo=(function(f){ __bk648r.dn=f; return function(){ return 'daycare/dashboard/2026-10-09'; }; })(dashNo);`);
+  try {
+    const p = '{n:"Fredo", raca:"SRD", tutor:"Eleonora Teste"}';
+    FALHA648('PERMISSION_DENIED: Permission denied');
+    await run(`dashRemoverRepForaPrazo('reposicao', 'L1', {valor:'FREDO/SRD'}, {p:${p}, uso:{_id:'u1'}, saldo:2}, {_id:'c1', data:'2026-10-06', volta:'2026-10-09'}, '2026-10-09', 'fora')`); await espera648();
+    igual(J630('__al648'), [RECUSA_MUDADO648('Não consegui tirar')], 'L1: o update de vários caminhos é um só (atômico)');
+    // o update entrou e o lançamento não saiu
+    run(`__al648=[]; __falha648=null; DB=(function(d){ return {ref:function(c){ var r=d.ref(c); if(/dashboard/.test(c)) r.remove=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; }}; })(DB);`);
+    await run(`dashRemoverRepForaPrazo('reposicao', 'L1', {valor:'FREDO/SRD'}, {p:${p}, uso:{_id:'u1'}, saldo:2}, {_id:'c1', data:'2026-10-06', volta:'2026-10-09'}, '2026-10-09', 'fora')`); await espera648();
+    const z = J630('__za648');
+    igual(z.length, 1); igual(z[0][0], 'O LANÇAMENTO CONTINUA NOS LANÇAMENTOS DO DIA');
+    assert.ok(/mas não consegui tirar o lançamento: o sistema recusou a gravação\.$/.test(z[0][1][0]), z[0][1][0]);
+    // B6: o abatimento falhou depois de lançar
+    run(`__za648=[]; __falha648=new Error('permission_denied');`);
+    await run(`dashRepAbater(${p}, 2, 'L1')`); await espera648();
+    assert.ok(/não consegui abater 1 do Banco de Reposições: o sistema recusou a gravação\.$/.test(run('__za648[0][1][0]')), JSON.stringify(J630('__za648')));
+  } finally { run('repDesfechoRegistro=__bk648r.dr; dashDia=__bk648r.di; dashNo=__bk648r.dn;'); SOLTA648R(); }
+  // a ponte do Day Care (só Gestão e Diretoria)
+  run(`__bkPT648={db:DB, ge:document.getElementById, dp:DASH_PONTE, pc:dashPonteChamar};
+    __el648={dashPonteUrl:{value:'https://script.google.com/macros/s/x/exec'}, dashPonteToken:{value:''}, dashPonteStatus:{style:{}, textContent:''}};
+    document.getElementById=function(id){ return __el648[id]||null; }; DASH_PONTE={url:'https://script.google.com/macros/s/x/exec', token:'${TK648}'};
+    DB={ref:function(){ return {set:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }}; }};
+    __rPC648=null; dashPonteChamar=function(){ return Promise.resolve(__rPC648); };`);
+  try {
+    run('dashSalvarPonte()'); await espera648();
+    igual(run('__el648.dashPonteStatus.textContent'), 'Não salvou: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.');
+    run("__rPC648={ok:false, erro:'token invalido'}; dashCriarColunas();"); await espera648();
+    igual(run('__el648.dashPonteStatus.textContent'), 'Não consegui: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script. Avise a Gestão.');
+    run("__rPC648={ok:false, erro:'Failed to fetch'}; dashCriarColunas();"); await espera648();
+    igual(run('__el648.dashPonteStatus.textContent'), 'Não consegui: a conexão com a planilha caiu. Confira a internet e toque em «Criar as colunas que faltam nos meses» de novo; se continuar, avise a Gestão.');
+  } finally { run('DB=__bkPT648.db; document.getElementById=__bkPT648.ge; DASH_PONTE=__bkPT648.dp; dashPonteChamar=__bkPT648.pc;'); }
+});
+provaAsync('6.48 P8 — a pernoite (pernCancelar B12): a recusa diz "Nada foi mudado. Avise a Gestão."; "disconnect" sem "Nada foi mudado"', async () => {
+  for (const [cru, esperado] of [['permission_denied', RECUSA_MUDADO648('Não consegui cancelar')], ['disconnect', CAIU648('Não consegui cancelar', '\n\n')]]) {
+    ctx.__cru648 = cru;
+    run(`__bkpDB=DB; __bkpZT=zTexto; __bkpZA=zAlertao; __bkpPH=pernHoje; __bkpPA=PERN_ATRAS; __bkpAL=alert; __al648=[];
+      DB={ref:function(){ return {transaction:function(){ return Promise.reject(new Error(__cru648)); },
+        once:function(){ return Promise.resolve({val:function(){ return {nome:'Thor', status:'aguardando', chave:'thor__bia'}; }}); }}; }}; alert=function(t){ __al648.push(String(t)); };
+      zTexto=function(){ return Promise.resolve('a tutora buscou às 18h40'); }; zAlertao=function(){}; pernHoje=function(){ return '2026-09-25'; };
+      PERN_ATRAS=[{_dia:'2026-09-24', _chave:'thor__bia', chave:'thor__bia', nome:'Thor'}];`);
+    try {
+      run("pernCancelar('thor__bia','2026-09-24')"); await espera648();
+      igual(J630('__al648'), [esperado], cru);
+    } finally { run('DB=__bkpDB; zTexto=__bkpZT; zAlertao=__bkpZA; pernHoje=__bkpPH; PERN_ATRAS=__bkpPA; alert=__bkpAL;'); }
+  }
+});
+// ---- P9 / P14 — Orçamentos: fechamento, cancelamento, cartão, histórico e a composição
+const ORC648 = `__bkOP648={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlertao, fe:(typeof fetch!=='undefined'?fetch:undefined), nr:orcNoitesDeOutraReserva, cl:orcCarregarLista,
+    al:alert, zp:zPergunta, zt:zTexto, qs:orcQuemPelaSenha, la:ORC_LINHA_ABERTA};
+  ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Teste', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000, status:'fechado'},
+    duas:{pets:[{nome:'Nala', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000},{nome:'Irma', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000}], entrada:'2026-10-01', saida:'2026-10-03', noites:2, total_cent:60000, status:'fechado'}};
+  orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'${TK648}'};
+  __upOP648=[]; __upFalha648=null; DB={ref:function(p){ return {update:function(v){ __upOP648.push({p:p, v:JSON.parse(JSON.stringify(v))}); return __upFalha648?Promise.reject(__upFalha648):Promise.resolve(); }}; }};
+  __alOP648=[]; zAlertao=function(t,l,op){ __alOP648.push({t:t, l:l, r:(op&&op.rodape)||''}); }; __al648=[]; alert=function(t){ __al648.push(String(t)); };
+  __feErro648=new TypeError('Failed to fetch'); fetch=function(){ return Promise.reject(__feErro648); };
+  orcNoitesDeOutraReserva=function(){ return []; }; orcCarregarLista=function(){}; ORC_LINHA_ABERTA={};`;
+const ORC648_VOLTA = 'ORC_LISTA_CACHE=__bkOP648.oc; orcSheetsCfg=__bkOP648.sc; DB=__bkOP648.db; zAlertao=__bkOP648.za; fetch=__bkOP648.fe; orcNoitesDeOutraReserva=__bkOP648.nr; orcCarregarLista=__bkOP648.cl; alert=__bkOP648.al; zPergunta=__bkOP648.zp; zTexto=__bkOP648.zt; orcQuemPelaSenha=__bkOP648.qs; ORC_LINHA_ABERTA=__bkOP648.la;';
+provaAsync('6.48 P9 — Orçamentos: o fechamento com a conexão caída diz «A PLANILHA NÃO CONFIRMOU», «espere 1 minuto», «uma vez só», sem «Lance à mão»; o planilha_msg fica cru', async () => {
+  run(ORC648);
+  try {
+    run("orcEnviarPlanilha('frida')"); await espera648();
+    igual(J630('__alOP648'), [{ t: 'FECHADO — MAS A PLANILHA NÃO CONFIRMOU',
+      l: ['A conexão com a planilha caiu antes da resposta: pode ter entrado tudo, uma parte ou nada.',
+        'Quando a internet voltar, espere 1 minuto e toque em «reenviar» uma vez só, na lista de Orçamentos: o que já entrou não se repete.'],
+      r: 'O orçamento está salvo como FECHADO. Não lance à mão: com o «reenviar», a reserva entraria duas vezes. Se continuar sem entrar, avise a Gestão.' }]);
+    assert.ok(!/Lance à mão/.test(JSON.stringify(J630('__alOP648'))), 'sem «Lance à mão» (D17)');
+    igual([run('__upOP648[0].v.planilha_ok'), run('__upOP648[0].v.planilha_msg')], [false, 'Failed to fetch'], 'o cru fica gravado (AC11)');
+    // o erro do próprio app (o .then quebrou): o título e o rodapé de hoje, com o motivo em português
+    run("__alOP648=[]; __upOP648=[]; fetch=function(){ throw new TypeError('x is not a function'); }; orcEnviarPlanilha('frida');"); await espera648();
+    igual(J630('__alOP648'), [{ t: 'FECHADO — MAS NÃO CONSEGUI FALAR COM A PLANILHA', l: ['Motivo: erro inesperado do app (x is not a function).'],
+      r: 'O orçamento está salvo como FECHADO. Lance à mão nas duas abas — ou tente de novo pelo botão "reenviar" na lista.' }]);
+    igual(run('__upOP648[0].v.planilha_msg'), 'x is not a function');
+  } finally { run(ORC648_VOLTA); }
+});
+provaAsync('6.48 P9 — Orçamentos: o cartão e a linha do histórico dizem «a planilha não confirmou» na queda (K10), «NÃO entrou» com o motivo na recusa, e a composição passa igual (D12)', async () => {
+  run(ORC648);
+  try {
+    const o = (msg, extra) => JSON.stringify(Object.assign({}, run("ORC_LISTA_CACHE.frida"), { planilha_ok: false, planilha_msg: msg }, extra || {}));
+    let h = run(`orcPlanilhaHtml('frida', ${o('Failed to fetch')})`);
+    assert.ok(/A planilha não confirmou — a conexão caiu antes da resposta\. Espere 1 minuto e toque em reenviar uma vez só: o que já entrou não se repete\./.test(h)
+      && /onclick="orcEnviarPlanilha\('frida'\)">reenviar/.test(h) && !/NÃO entrou na planilha/.test(h) && !/Failed to fetch/.test(h), h);
+    h = run(`orcPlanilhaHtml('frida', ${o('Load failed')})`);
+    assert.ok(/A planilha não confirmou/.test(h), 'Safari: ' + h);
+    h = run(`orcLinhaHistoricoHtml('frida', ${o('Failed to fetch')}, 1)`);
+    assert.ok(/>a planilha não confirmou</.test(h) && /reenviar/.test(h) && !/NÃO entrou na planilha/.test(h), h);
+    run("ORC_LINHA_ABERTA={frida:true};");
+    h = run(`orcLinhaHistoricoHtml('frida', ${o('Failed to fetch')}, 1)`);
+    assert.ok(/Planilha: a conexão com a planilha caiu antes da resposta/.test(h) && !/Failed to fetch/.test(h), h);
+    h = run(`orcLinhaHistoricoHtml('frida', ${o('', { status: 'cancelado', cancelado_planilha_msg: 'Failed to fetch' })}, 2)`);
+    assert.ok(/Planilha: a conexão com a planilha caiu antes da resposta/.test(h) && !/Failed to fetch/.test(h), 'o cancelado: ' + h);
+    run("ORC_LINHA_ABERTA={};");
+    // recusa com código, gravada pelo .catch (a resposta que não é JSON): o motivo em português, sem a palavra-chave
+    h = run(`orcPlanilhaHtml('frida', ${o('token invalido')})`);
+    assert.ok(/NÃO entrou na planilha — a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script/.test(h), h);
+    h = run(`orcPlanilhaHtml('frida', ${o('TypeError: x is not a function')})`);
+    assert.ok(/NÃO entrou na planilha — erro inesperado do app \(TypeError: x is not a function\)/.test(h), h);
+    // a composição (o .then) passa IGUAL: nem o erro do Apps Script dentro dela vira "erro inesperado do app"
+    const comp = "Nala/Bia: 2 noites · linha 20 | Irma/Bia: TypeError: Cannot read properties of null (reading 'getRange').";
+    h = run(`orcPlanilhaHtml('duas', ${JSON.stringify(Object.assign({}, J630('ORC_LISTA_CACHE.duas'), { planilha_ok: false, planilha_msg: comp }))})`);
+    assert.ok(/NÃO entrou na planilha — Nala\/Bia: 2 noites · linha 20 \| Irma\/Bia: TypeError: Cannot read properties of null/.test(h) && !/erro inesperado/.test(h), h);
+    const comp2 = 'Nala/Bia: 2 noites · linha 20 | Irma/Bia: Exception: Lock timeout.';
+    igual(run(`orcPlanilhaMotivo(ORC_LISTA_CACHE.duas, ${JSON.stringify(comp2)})`), comp2, 'a composição da Frida (QA38), igual');
+    igual(run(`orcPlanilhaMotivo(ORC_LISTA_CACHE.duas, ${JSON.stringify('Nala/Bia: Failed to fetch')})`), 'Nala/Bia: Failed to fetch', 'composição nunca é tratada como queda');
+  } finally { run(ORC648_VOLTA); }
+});
+provaAsync('6.48 P9 — Orçamentos: o cancelamento com a conexão caída diz «não sei se», «Confira as linhas», sem «A vaga continua ocupada»; orcCancelar recusado diz «Nada foi alterado. Avise a Gestão.»', async () => {
+  run(ORC648);
+  try {
+    run("orcTirarDaPlanilha('frida', 'Márcia Teste', '09/10/2026 às 10:00')"); await espera648();
+    igual(J630('__alOP648'), [{ t: 'CANCELADA NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU',
+      l: ['A conexão com a planilha caiu antes da resposta: não sei se Frida/Ana Teste saiu da planilha.',
+        'Confira as linhas de 01/10/2026 a 04/10/2026 na aba do calendário: se ainda estiver lá, apague à mão e risque a linha na aba Hospedagem.'], r: '' }]);
+    assert.ok(!/A vaga continua ocupada/.test(JSON.stringify(J630('__alOP648'))), 'D21');
+    igual(run('__upOP648[0].v.cancelado_planilha_msg'), 'Failed to fetch', 'o cru fica gravado (AC11)');
+    // orcCancelar: a recusa do banco
+    run(`__upFalha648=new Error('PERMISSION_DENIED: Permission denied'); zPergunta=function(){ return Promise.resolve(true); };
+      __ztN648=0; zTexto=function(){ __ztN648++; return Promise.resolve(__ztN648===1?'a viagem foi desmarcada':'senha123'); };
+      orcQuemPelaSenha=function(){ return {nome:'Márcia Teste', role:'gestao'}; };`);
+    await run("orcCancelar('frida')"); await espera648();
+    igual(J630('__al648'), ['NÃO consegui cancelar: o sistema recusou a gravação.\n\nNada foi alterado. Avise a Gestão.']);
+    assert.ok(!SEM_INTERNET648.test(run('__al648[0]')), 'sem «Confira a internet» (D16)');
+  } finally { run(ORC648_VOLTA); }
+});
+// ---- P10 / P14 — Banho de quem faltou (cartão do Hoje na Zêluz)
+provaAsync('6.48 P10 — «NÃO LIBEREI O HORÁRIO» com a conexão caída: «Não sei se saiu da planilha» e o fim «tire à mão: {onde}.»; o msg gravado fica cru; o cartão traduz o registro antigo', async () => {
+  run(BF_STUBS);
+  try {
+    const d2 = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')");
+    run(`__alertas=[]; __espResp={ok:false, erro:'Failed to fetch'}; __plan.dia='${d2}'; __plan.banho=[{p:{n:'Jasmine', tutor:'Ana'}, hora:'10:00', txt:'JASMINE'}];`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'10:00'}], porque:'faltou'}, '${d2}')`); await tick();
+    const al = J630('__alertas');
+    igual(al[0].t, '⚠ NÃO LIBEREI O HORÁRIO');
+    igual(al[0].l, ['Não consegui tirar o banho de Jasmine: a conexão com a planilha caiu.',
+      'Não sei se saiu da planilha: confira. Tente de novo pelo Hoje na Zêluz, ou tire à mão: direto na planilha.']);
+    igual(run(`__banco['daycare/banho-falta/${d2}/${kJ}'].msg`), 'Failed to fetch', 'o msg gravado fica cru (AC11)');
+    // a recusa com código: o banho continua (a frase de hoje), com o motivo em português
+    run(`__alertas=[]; __espResp={ok:false, erro:'token invalido'}; delete __banco['daycare/banho-falta/${d2}/${kJ}'];`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'10:00'}], porque:'faltou'}, '${d2}')`); await tick();
+    igual(J630('__alertas')[0].l, ['Não consegui tirar o banho de Jasmine: a palavra-chave guardada no app não bate com a PONTE_SENHA gravada no Apps Script.',
+      'O banho continua na planilha. Tente de novo pelo Hoje na Zêluz, ou tire à mão: direto na planilha.']);
+    // o cartão: o registro antigo, gravado cru, é dito em português
+    const dia = run('dcDataKey()');
+    run(`BANHO_FALTA=[{chave:'tob', nome:'Toby', hora:'12:00', origem:'planilha', porque:'faltou'}]; BANHO_FALTA_DIA='${dia}';
+      BANHO_FALTA_DEC={tob:{decisao:'falhou', msg:'Failed to fetch'}};`);
+    let h = run('banhoFaltaCardHTML()');
+    assert.ok(/não deu certo: a conexão com a planilha caiu/.test(h) && !/Failed to fetch/.test(h), h);
+    run(`BANHO_FALTA_DEC={tob:{decisao:'falhou', msg:'PERMISSION_DENIED: Permission denied'}};`);
+    h = run('banhoFaltaCardHTML()');
+    assert.ok(/não deu certo: o sistema recusou a gravação/.test(h), h);
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('6.48 P10 — «PARTE NÃO SAIU DA PLANILHA»: o motivo em português, e o planilha_msg gravado fica cru', async () => {
+  run(BF_STUBS);
+  try {
+    const d2 = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')");
+    run(`__alertas=[]; __espResp={ok:false, erro:'Failed to fetch'}; __plan.dia='${d2}'; __plan.banho=[];
+      __banco['daycare/dashboard/${d2}/banho/L9']={chave:'${kJ}', valor:'JASMINE', hora:'10:00'};`);
+    await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'lancamento', lancs:[{id:'L9', reg:{valor:'JASMINE', hora:'10:00'}}], txts:[], porque:'faltou'}, '${d2}')`); await tick();
+    const al = J630('__alertas');
+    igual(al[0].t, '⚠ PARTE NÃO SAIU DA PLANILHA', JSON.stringify(al));
+    igual(al[0].l[0], 'O banho de Jasmine saiu do app, mas a planilha não confirmou: a conexão com a planilha caiu.');
+    igual(run(`__banco['daycare/banho-falta/${d2}/${kJ}'].planilha_msg`), 'Failed to fetch', 'o cru fica gravado');
+  } finally { run(BF_VOLTA); }
+});
+provaAsync('6.48 P10 — a decisão do banho (banhoFaltaSemRegistro): a recusa diz "Nada mudou. Avise a Gestão."; "disconnect" sem "Nada mudou" (K2); o erro de depois (K1); nunca «Confira a conexão»', async () => {
+  run(BF_STUBS);
+  try {
+    const d2 = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')");
+    const O = `{chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE'}], porque:'faltou'}`;
+    const caso = async (txErro, extra) => { run(`__alertas=[]; BANHO_FALTA_TRAVA={}; __txErro=${JSON.stringify(txErro)}; delete __banco['daycare/banho-falta/${d2}/${kJ}']; ${extra || ''}`);
+      await run(`banhoFaltaManter(${O}, '${d2}')`); await tick(); return J630('__alertas'); };
+    igual(await caso('permission_denied'), [{ t: '⚠ NÃO CONSEGUI REGISTRAR', l: ['Não consegui gravar a decisão sobre o banho de Jasmine: o sistema recusou a gravação.', 'Nada mudou. Avise a Gestão.'] }]);
+    igual(await caso('disconnect'), [{ t: '⚠ NÃO CONSEGUI REGISTRAR', l: ['Não consegui gravar a decisão sobre o banho de Jasmine: a conexão caiu no meio da gravação.', 'Confira na tela se ficou marcado antes de tocar de novo.'] }]);
+    igual(await caso('sem rede'), [{ t: '⚠ NÃO CONSEGUI REGISTRAR', l: ['Não consegui gravar a decisão sobre o banho de Jasmine: sem rede.', 'Nada mudou. Toque de novo no Hoje na Zêluz; se repetir, avise a Gestão.'] }]);
+    // a decisão entrou e o rastro quebrou depois (K1)
+    const k1 = await caso(null, `audit=function(){ throw new TypeError('x is not a function'); };`);
+    igual(k1, [{ t: '⚠ NÃO CONSEGUI REGISTRAR', l: ['Não consegui gravar a decisão sobre o banho de Jasmine: erro inesperado do app (x is not a function).',
+      'Confira no cartão do Hoje na Zêluz se entrou antes de tentar de novo; avise a Gestão com um print desta tela.'] }]);
+    igual(run(`__banco['daycare/banho-falta/${d2}/${kJ}'].decisao`), 'mantido', 'a decisão entrou mesmo');
+  } finally { run(BF_VOLTA); }
+});
+// ---- P12 — a varredura (K16), mais larga na 2ª rodada (TEST-001: o QA reintroduziu o cru como «(e && e.message)», «String(e)»
+// e a variável «msg», e a varredura antiga pulava a linha inteira que chamasse o tradutor) e na 3ª (TEST-002: as 9 formas do QA —
+// e.toString(), (e||{}).message, um nome de erro qualquer no catch, JSON.stringify(r), e['message'], ${e.message}, String(e) numa
+// variável, o {ok:false, motivo} e o erro dentro de um array). Agora, em cada linha do script:
+//  1. sai o que não vai para a tela — a chamada do tradutor, do rastro (audit, _logFalhaGrav, console) e das regras, com os
+//     argumentos; as condições (if/while, a do ternário, comparações, /…/.test); o que é guardado (erro:, msg:, motivo:,
+//     …_msg:, .planilha_msg=…); e a frase do próprio app (repAviso/vagaAviso, e a lista EXCECAO648);
+//  2. o que SOBRA não pode ter cru: .message depois de qualquer nome, «)» ou «]»; ['message']; e.toString(); JSON.stringify do erro
+//     ou da resposta; String(e); o «||e» e o «+e»; o erro no começo ou no fim de um array ou num ${…}; o erro levado direto à tela;
+//     os campos .erro/.msg/…_msg — nem a variável que recebeu um deles na mesma função, inclusive um objeto montado com ele (marcada;
+//     recebendo o traduzido, sai). O nome do erro vale também quando a função o batiza (catch(falhaExt), .catch(function(r)…).
+// As telas desta entrega (LOTE_A648) não podem ter nenhum ponto; as outras ficam congeladas na contagem de hoje (um ponto
+// cru novo, em qualquer função, derruba a prova). A contagem de fora inclui o que a varredura larga não sabe separar (um
+// campo «msg» do próprio app, por exemplo): ela só não pode CRESCER.
+const LOTE_A648 = ['repMandarAgora', 'repNaoFoiLinhas', 'repConferenciaViva', 'repConferenciaVivaJa', 'repPlanQuedaSemPromessaTexto', 'repPlanLinhaHTML', 'repConfirmar',
+  'repDesmarcar', 'repTrocaDesfazer', 'repUsar', 'repUsarFalhou', 'repEstornar', 'repVeioNoDia', 'repDevolverUso', 'repDevolverDesfecho', 'repConferirVisto',
+  'repContarNaoVeio', 'repConferirNaoContar', 'dxConfirmar', 'dxPedir', 'dxLancarAvulso', 'vagasPedir', 'vagasRecusar', 'vagasAutorizar', 'repFichaExtrato',
+  'dashReenviar', 'dashReenviarRefaz', 'dashLancarFalhou', 'dashAutoBotao', 'dashAutoLinhas', 'dashLancar', 'dashRepAbater', 'dashRemover',
+  'pernGravarDoLancamento', 'pernConferirNoite', 'pernMarcarCheckinFeito', 'pernCancelar', 'dashSalvarPonte', 'dashCriarColunas', 'dashRemoverRepForaPrazo',
+  'banhoDiaDepois', 'banhoDiaDepoisTarde', 'dashTvPorDeNovo', 'dashBanhoFixoACaminhoTexto', 'banhoFaltaSemRegistro', 'banhoFaltaManter', 'banhoFaltaExecutar',
+  'banhoFaltaLiberarAgora', 'banhoFaltaCardHTML', 'banhoFaltaEstaAqui', 'banhoFaltaDesfazerAqui', 'orcEnviarPlanilha', 'orcPlanilhaHtml', 'orcLinhaHistoricoHtml',
+  'orcTirarDaPlanilha', 'orcCancelar', 'orcSalvar', 'orcSalvarEdicao', 'orcTestarSheets', 'orcSalvarSheets', 'orcSalvarPrecos',
+  'repExtratoEsperaTexto'];
+// Nas telas desta entrega, o que fica: o motivo da ponte que vira o texto gravado do banho (banhoFaltaSemPonto, AC11).
+const REGRA648 = { banhoFaltaPonteMsg: 1 };
+// Fora desta entrega: a área protegida e as pontes compartilhadas (não se tocam).
+const PROTEGIDA648 = { ckDesfazerFalta: 1, ckMarcarFalta: 1, ckFotoFalhou: 2, ckAvisarVet: 3, ckSalvar: 3, ptAvisarRecepcao: 1,
+  ptSalvarSaida: 1, ptSalvar: 1, eaSalvarTexto: 1, fotoAtivApagar: 1, fotoAtivSalvar: 1, dashAutoSincronizar: 4,
+  _audReenviarBolso: 1, audit: 2 };
+// Fora desta entrega: os lotes B e C («2ª entrega», F1) — com o Quem chamar hoje da 6.55 (contatoCfgSalvar, contatoFinalizarGravar,
+// contatoReabrir, REL-001) — e o resto do app, congelados na contagem de hoje.
+const SEGUNDA648 = { mesaAtencaoTratei: 1, hospResponderMesmo: 1, salvarFoto: 1, salvarMedAgenda: 1, chamadoResponder: 2, ocorrResolver: 1,
+  registrarDoseAgendadaGlobal: 1, registrarDoseAvulsa: 1, medTgAvisarDose: 2, tgTravaIlegivel: 1, urgAvisar: 2, confirmarRecebimento: 1,
+  _vMed: 3, plantaoAvisoGestao: 2, fecharTurnoEAvisar: 1, acertoRecalcular: 1, acertoMarcar: 1, acertoSalvarTabela: 1,
+  liberarAparelhoDaLista: 1, salvarMonitores: 1, autorizarAparelho: 1, escolherHospede: 1, salvarPernAgendado: 1, cancelarHospedeManual: 1,
+  removerHospedeCard: 4, hospTrazerDeVolta: 1, cancelarPernoiteFicha: 3, vetSalvarObs: 1, vetRemoverReavaliacao: 1, vetSalvarMed: 1,
+  vetSuspenderMed: 1, vetReativarMed: 1, salvarConsultaVet: 1, vetCienteFimMed: 1, zFalta: 5, setPelExtra: 1,
+  escovaFalhaTexto: 1, prevMarcarAvisado: 1, pesoTentar: 3, fmedRender: 1, fmedSalvar: 1, fmedParou: 1,
+  excluirCadastroPel: 1, escolherAvulso: 1, desenhar: 1, porImagem: 1, irmSalvar: 1, irmDesfazer: 1,
+  avisarGrupoComida: 4, anivEnviarTelegram: 4, anivBotao: 1, algCarregar: 1, algColarConfirmar: 1, iaRevGravarRegistro: 1,
+  iaRevAplicarCorrecao: 2, iaRevLimpar: 2, algPesqSalvarCampanha: 1, algPesqEnviada: 1, algCurGravar: 2, algCurNada: 1,
+  algResponder: 1, algRender: 1, eaHistInit: 1, resumoDiaEnviar: 4, resumoDiaBotao: 1, avisoPlanilha: 1,
+  pendResolverConfirmado: 1, pendTirarConfirmado: 1, vencGravar: 1, vencLancarConfirmado: 1, vencRender: 1, contatoCfgSalvar: 1,
+  contatoHistoricoJunto: 1, contatoFinalizarGravar: 1, contatoReabrir: 1, banhosSalvar: 2, banhosGravarExcecao: 2, dashAutoRodarAgora: 1,
+  relAbrirNaTela: 1, relCheckinHoje: 1, relPertencesHoje: 1, tgSalvarCfg: 1, tgTestar: 1, cfgRefSalvar: 1,
+  cfgPrevSalvar: 2, cfgVencSalvar: 1, cfgFotosSalvar: 1, cfgValoresSalvar: 1, cfgEntradaSalvar: 1, fotoConfResponder: 2,
+  fotoConfDesfazer: 1, protoPerguntasHTML: 3, ciCorrigirExistente: 1, ciAcrescentarNoExistente: 1, zCampo: 1, medPendenciaEsqueceu: 1,
+  ciSalvar: 2, ciSubstituirExistente: 2, __ciGravar: 3, ciFichaAoTelegram: 3, ciFichaObrigatoria: 4, ciFichaLinhasFalha: 1,
+  ciBaixarFichaPdf: 1, reemitirFichaPdf: 1, hospConfirmarAntecipada: 1, hospConfirmarBaixa: 1, hospSalvarDatas: 1, _hospGravarNova: 1,
+  hospTrocarGravar: 6, hospExcluirGravar: 6, hospCorrContar: 1, hospCorrHtml: 1, cfConfirmarRacao: 1, cfConfirmarComida: 1,
+  cfAddOcorrencia: 1, cfRemoverOcorrencia: 1, cfFecharConferencia: 1, empAvisarAtrasoNoTelegram: 1, empStatusGrupo: 1, empReenviarGrupo: 1,
+  empAvisar: 1, empAvisarDia: 1, empDispensarDia: 1, coFecharEtapa1: 1, coFinalizar: 1, coGerarPDF: 1,
+  lpGravar: 1, lpEstornar: 1, pmCardAvisos: 1, pdSalvarEscala: 1, pdSalvarPlano: 1, pdEscolherPlano: 1,
+  poProblemasDoDia: 1,
+  // 6.56 (o lançado por engano no Day Care: a ocorrência, o chamado de comida e a diária avulsa, publicada em 488dbd4) e 6.52 (o banho
+  // na saída, fc87a63): fora das três telas — 2ª entrega (REL-003). O cru é o «O banco não aceitou: {e.message}», o r.erro que o
+  // carrega e o r.erro da ponte; o texto das duas réguas da 6.53 que essas funções mostram está na EXCECAO648.
+  ocorrDcAnular: 1, ocorrDcDesfazerEngano: 1, ocorrDcReabrir: 1, ocorrDcDarDesfecho: 1, ocorrDcEnganoAbrir: 1, ocorrDcDesfazerAbrir: 1,
+  ocorrDcReabrirAbrir: 1, chamadoGravarExcecao: 1, chamadoCorrigir: 1, chamadoCancelar: 1, chamadoCorrigirGravar: 1, chamadoCancelarGravar: 1,
+  avulsaTirarDaPlanilha: 1, avulsaTirar: 1, avulsaTirarAbrir: 1, banhoSaidaDepois: 1, banhoSaidaDepoisTarde: 1 };
+// O .motivo de DADO (4ª rodada, TEST-003): a régua larga lê todo «.motivo», e fora das três telas ele quase sempre é o motivo
+// que a pessoa escreveu (a falta, a remoção, a correção, o cancelamento) ou a frase do próprio app (o veredito, a vacina, o
+// Empório) — não é erro. Fica congelado por função, na contagem de hoje: um .motivo novo, em qualquer função, derruba a prova.
+const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada: 3, renderTrocas: 1, dxVeredictoHTML: 1, repAbrirExtrato: 1,
+  renderMovimento: 1, medAssinatura: 1, medAgendaRowHTML: 2, renderChamadosRecepcao: 1, ocorrDcTrilhaHTML: 1, ocorrDcLinhaCorrecao: 1,
+  ocorrDcAtencaoLinhas: 1, ocorrDcAnuladaCardHTML: 1, chamadoCorrecoesHTML: 1, chamadoCanceladoHTML: 2, avulsaAnuladasHTML: 1, avisoRacaoCardHTML: 1,
+  renderMedAgendaHoje: 1, medTgTexto: 1, removerHospedeCard: 3, renderRemovidosHoje: 1, renovHistHTML: 1, desfazerRenovacao: 1,
+  confirmarRenovacao: 3, renderVetInstrucoesFicha: 1, renderVcReavalAtual: 1, renderVetMedList: 1, nomeDaKey: 1, prevLancar: 2,
+  pbSalvar: 2, vermFichaTextoHTML: 1, avisoAlmocoFicha: 1, blocoReposicaoFicha: 1, fmedFrase: 1, eaCongelar: 1,
+  eaColunaHTML: 1, eaHistDetalheHTML: 1, resumoDiaMontar: 1, vermBlocoPainelHTML: 1, vermLinhaVencHTML: 1, vencBlocoLancHTML: 1,
+  contatoEventoHTML: 2, turmaListaDoDia: 1, turmaRender: 1, turmaTabelaHTML: 1, pernAvisarPlantao: 1, pernAnterioresHTML: 1,
+  pernCartaoHojeHTML: 1, blocoUrgenteHTML: 1, __ciGravar: 1, hospRastro: 1, hospCorrHtml: 1, hospCorrLinha: 1,
+  cfResolvidosHTML: 1, empAvisarAtrasoNoTelegram: 1, renderEmporio: 3, lpCobrancaHTML: 1, pmCardPlano: 1, pmCardAvisos: 1,
+  pdRender: 2, pcQuadroAlmoco: 1, poVet: 1, poCardFaltas: 1, poCardComida: 1, poCardPernoites: 2,
+  poCardEA: 1, paLinhas: 2, recListaHTML: 1, recBaixarExcel: 1 };
+const VARRE648_CORPO = (texto, EXCECAO) => {
+  const linhas = texto.split('\n');
+  // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
+  const fecha = (s, i) => { let d = 1, q = null;
+    for (; i < s.length && d > 0; i++) { const c = s[i];
+      if (q) { if (c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+      if (c === "'" || c === '"' || c === '`') q = c; else if (c === '(') d++; else if (c === ')') d--; }
+    return i; };
+  const tira = (s, re, marca) => { let m, n = 0; while ((m = new RegExp(re.source).exec(s)) && n++ < 60) s = s.slice(0, m.index) + marca + s.slice(fecha(s, m.index + m[0].length)); return s; };
+  // 1) o que NÃO vai para a tela: o tradutor, o rastro, as regras, a gravação NO BANCO (.update/.set/.push/.transaction só de
+  //    DB.ref(…), .ref(…), .child(…), ref ou …Ref — o Array.push e o Map.set continuam varridos, TEST-004),
+  //    o localStorage, a cópia JSON.parse(JSON.stringify(…)) e o corpo do pedido à ponte (body:JSON.stringify(…)) — a chamada
+  //    inteira, com os argumentos
+  const CHAMADA = /\b(?:zErro\w*|audit|_logFalhaGrav|_logLeituraFalhou|console\.\w+|repPlanEhQuedaConexao|repConexaoCaiu|orcPlanilha(?:Caiu|Motivo)|_motivo|dashPlanilhaSemDiaTexto|(?:localStorage|sessionStorage)\.setItem|JSON\.parse|body\s*:\s*JSON\.stringify)\s*\(|(?:\.(?:ref|child)\((?:[^()]|\([^()]*\))*\)|\bref\b|\b\w+Ref\b)\s*\.(?:update|set|push|transaction)\s*\(/;
+  // 2) as condições (if/while): ler o cru para decidir não é mostrar
+  const CONDICAO = /\b(?:if|while)\s*\(/;
+  // 3) o que é GUARDADO (gravação, resposta para quem chamou): o valor das chaves erro/msg/motivo/…_msg num objeto
+  const tiraGuardado = (s) => { const re = /((?:^|[{,])\s*)(erro|msg|motivo|\w+_msg)\s*:/g; let m, out = '', p = 0;
+    while ((m = re.exec(s))) { let i = m.index + m[0].length, d = 0, q = null;
+      for (; i < s.length; i++) { const c = s[i];
+        if (q) { if (c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+        if (c === "'" || c === '"' || c === '`') q = c; else if ('([{'.includes(c)) d++; else if (')]}'.includes(c)) { if (d === 0) break; d--; } else if (c === ',' && d === 0) break; }
+      out += s.slice(p, m.index + m[0].length) + '⟨g⟩'; p = i; re.lastIndex = i; }
+    return out + s.slice(p); };
+  // 4) a regra que só LÊ: comparações com texto, /…/.test(…), a condição do ternário; e a frase do próprio app (repAviso/vagaAviso)
+  const tiraRegra = (s) => s
+    .replace(/\(\s*e\s*&&\s*e\.(?:repAviso|vagaAviso)\s*\)\s*\?\s*e\.message\s*:/g, '⟨a⟩')
+    .replace(/(?:String\([^()]*(?:\([^()]*\))*[^()]*\)|[\w$.]+(?:\|\|'')?)\s*[!=]==?\s*(?:'[^']*'|"[^"]*")/g, '⟨c⟩')
+    .replace(/(?:'[^']*'|"[^"]*")\s*[!=]==?\s*[\w$.]+/g, '⟨c⟩')
+    .replace(/\/(?:[^/\\\n]|\\.)+\/[gimsuy]*\.test\([^()]*(?:\([^()]*\))*[^()]*\)/g, '⟨t⟩')
+    .replace(/\((?:[^()'"?:]|\([^()]*\))*\)\s*\?(?=\s*[^?.\s])/g, '⟨?⟩')
+    .replace(/!?[\w$.]+\s*\?(?=\s*[^?.\s])/g, '⟨?⟩');
+  // 5) os nomes de erro: os de sempre e os que a própria função dá ao erro — catch(nome), .catch(function(nome)…, .catch(nome=>…),
+  //    o 2º argumento do .then (…}, function(nome){ e …}, nome=>) e o .then(null, …)
+  const NOMES = ['e', 'err', 'erro', 'error', 'e1', 'e2', '_e', 'er', 'errAp'];
+  const PEGA_NOME = /\bcatch\s*\(\s*([A-Za-z_$][\w$]*)\s*\)|\.catch\(\s*(?:async\s+)?function\s*\(\s*([A-Za-z_$][\w$]*)|\.catch\(\s*(?:async\s*)?\(?\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>|\}\s*,\s*(?:async\s+)?function\s*\(\s*([A-Za-z_$][\w$]*)\s*\)|\}\s*,\s*(?:async\s*)?\(?\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>|\.then\(\s*null\s*,\s*(?:(?:async\s+)?function\s*\(\s*([A-Za-z_$][\w$]*)|\(?\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>)/g;
+  const esc = (x) => x.replace(/\$/g, '\\$');
+  // o cru: .message depois de qualquer nome, ")" ou "]"; ['message']; e.toString(); o erro virado texto ((e+''), ''+e, 'x: '+e);
+  // JSON.stringify do erro ou da resposta (r, res…); o .motivo de uma resposta (o do próprio app na EXCECAO648);
+  // String(e); o «||e», o «+e», o erro dentro de um array (…, e].join) ou de um `${e}`; o erro levado direto à tela; os campos que
+  // guardam o cru (.erro, .msg, …_msg) — e a variável que recebeu um deles (marcada abaixo)
+  const cruDe = (nomes) => { const N = '(?:' + nomes.map(esc).join('|') + ')';
+    return new RegExp(['[\\w$\\])]\\s*\\.message\\b', "\\[\\s*['\"]message['\"]\\s*\\]", '(?<![\\w$.])' + N + '\\s*\\.toString\\(\\s*\\)', 'JSON\\.stringify\\(\\s*(?:' + N + '|r|res|resp|resposta|y)\\s*\\)',
+      '(?<![\\w$.])' + N + '\\s*\\+\\s*[\'"`]', '[\'"`]\\s*\\+\\s*' + N + '(?![\\w$.\\[(])', 'String\\(\\s*' + N + '\\s*\\)', '\\|\\|\\s*' + N + '\\s*\\)', '\\+\\s*' + N + '\\s*(?=[+);,`]|$)', '\\[\\s*' + N + '\\s*,', ',\\s*' + N + '\\s*\\]',
+      '\\$\\{\\s*' + N + '\\s*\\}', '\\b(?:alert|diz)\\(\\s*' + N + '\\s*\\)', 'textContent\\s*=\\s*' + N + '\\s*(?:;|$)',
+      '\\.(?:erro|msg|motivo)\\b', '\\.\\w+_msg\\b'].join('|')); };
+  const atribCruDe = (nomes) => new RegExp('^\\s*\\(?\\s*(?:' + nomes.map(esc).join('|') + ')\\s*\\)?\\s*(?:\\|\\|\\s*\'\'\\s*)?$');
+  const ATRIB = /(?:^\s*|[;{(,]\s*|\b(?:var|let|const)\s+)(?<![\w$.])([A-Za-z_$][\w$]*)\s*=(?![=>])([^;]*)/g;
+  // usar = ler a variável; não conta a atribuição a ela nem a uma propriedade dela (up.planilha_desisti=true)
+  const usa = (v, s) => new RegExp('(?<![\\w$.])' + esc(v) + '(?![\\w$])(?!\\s*(?:\\.[\\w$]+)*\\s*=[^=>])').test(s.replace(/\b(?:var|let|const)\s+[\w$]+/g, ''));
+  let fn = '(topo)'; const a = {}, onde = {}, sujo = {}, nomesFn = {};
+  linhas.forEach((l0) => {
+    const x = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l0); if (x) fn = x[1];
+    if (/^\s*(\/\/|\*|\/\*)/.test(l0) || /^(zErro\w*|orcPonteMotivo|orcPlanilhaMotivo)$/.test(fn)) return;     // comentário; os tradutores
+    if ((EXCECAO || []).some((t) => l0.includes(t))) return;          // a frase do próprio app (a lista diz por quê)
+    const NF = nomesFn[fn] = nomesFn[fn] || NOMES.slice();
+    let pm; PEGA_NOME.lastIndex = 0; while ((pm = PEGA_NOME.exec(l0))) { const nm = pm[1] || pm[2] || pm[3] || pm[4] || pm[5] || pm[6] || pm[7]; if (nm && !NF.includes(nm)) NF.push(nm); }
+    const CRU = cruDe(NF), CRU_ATRIB = atribCruDe(NF);
+    // sem o guardado ainda: o objeto montado com o cru e posto numa variável a marca (o {ok:false, motivo:String(e)})
+    const lT = tiraRegra(tira(tira(l0.replace(/\/\/ .*$/, '').replace(/\/\*.*?\*\//g, '')
+      .replace(/if\(\s*e\s*&&\s*e\.(?:repAviso|vagaAviso)\s*\)\s*\{[^{}]*\}/g, '⟨a⟩')
+      .replace(/[\w$.\]\[]+\.(?:\w+_msg|erro|msg|motivo)\s*=(?!=)[^;]*/g, '⟨g⟩'), CHAMADA, '⟨⟩'), CONDICAO, 'if⟨⟩'));
+    const S = sujo[fn] = sujo[fn] || [];
+    // a variável que RECEBE o cru fica marcada nesta função; o trecho da atribuição não é tela (o resto da linha é)
+    let m, resto = lT, cortes = []; ATRIB.lastIndex = 0;
+    while ((m = ATRIB.exec(lT))) {
+      // o lado direito vai até a vírgula, o ";" ou o ")" de fora
+      const ini = m.index + m[0].length - m[2].length; let i = ini, d = 0, q = null;
+      for (; i < lT.length; i++) { const c = lT[i];
+        if (q) { if (c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+        if (c === "'" || c === '"' || c === '`') q = c; else if ('([{'.includes(c)) d++; else if (')]}'.includes(c)) { if (d === 0) break; d--; } else if ((c === ',' || c === ';') && d === 0) break; }
+      const rhs = lT.slice(ini, i); ATRIB.lastIndex = ini;
+      if (/^\s*(?:async\s+)?(?:function\b|\(?[\w$,\s]*\)?\s*=>)/.test(rhs)) continue;   // uma função (o tratador do erro) não guarda o cru
+      const cru = CRU.test(rhs) || CRU_ATRIB.test(rhs) || S.some((v) => v !== m[1] && usa(v, rhs));
+      if (cru) { if (!S.includes(m[1])) S.push(m[1]); cortes.push([m.index, i]); }
+      else if (S.includes(m[1])) S.splice(S.indexOf(m[1]), 1);
+    }
+    cortes.reverse().forEach(([x0, x1]) => { resto = resto.slice(0, x0) + ' ⟨=⟩ ' + resto.slice(x1); });
+    resto = tiraGuardado(resto);
+    if (CRU.test(resto) || S.some((v) => usa(v, resto))) { a[fn] = (a[fn] || 0) + 1; (onde[fn] = onde[fn] || []).push(l0.trim().slice(0, 170)); }
+  });
+  return { a, onde };
+};
+// A frase do próprio app que passa por um campo de nome «msg» (não é cru): a linha inteira, com o porquê.
+const EXCECAO648 = [
+  "else if(e.estado==='nao-entra'){ txt=e.msg; }",       // repPlanLinhaHTML: o msg do estado 'nao-entra' é do app ("morador não entra…")
+  "var __pre=/^(a hora |não consegui tirar a hora|o banho saiu da planilha)/.test(String(e.msg||''))",   // dashAutoLinhas: só o começo que o app escreveu
+  // 6.56 (fora das três telas): o «erro» das duas réguas comuns da 6.53 é frase do próprio app, nunca o cru
+  "if(!mv.ok) return falha(mv.erro);",                       // motivoQuatroPalavras: «Escreva o que aconteceu em pelo menos 4 palavras…» (6 funções)
+  "if(!ass.ok) return falha(ass.erro);",                     // enganoAssinar (6.56) e hospAssinarPorSenha (6.53, hospTrocarGravar/hospExcluirGravar): «Digite a senha…», «Essa senha não é de ninguém cadastrado…»
+  "if(!ass.ok){ alert(ass.erro); return false; }",           // chamadoResponder: a mesma frase do enganoAssinar
+  "if(!mv.ok){ zAlertao('FALTA O MOTIVO', [mv.erro], {botao:'Entendi'}); return; }",   // chamadoCorrigirGravar: a frase do motivoQuatroPalavras
+  // 4ª rodada (o .motivo e o corte de .push): o veredito do app e o dado da ficha, nunca o cru
+  "if(!v.ok){ diz(v.motivo); return; }",                     // dxConfirmar: v = dxVeredito («Esse dia já passou…», «… já está marcado em …»)
+  "if(!v.ok){ if(w) w.textContent=v.motivo; return; }",      // dxPedir: o mesmo veredito
+  "if(!vt.ok && !jaLocal && trocaDaFalta){ ehTroca=false; comoRep=vt.motivo; }",   // vagasAutorizar: vt = dxVereditoTroca (frase do app)
+  "else if(!vt.ok && !jaLocal){ alert('Esta troca não vale mais: '+vt.motivo+",   // vagasAutorizar: o mesmo veredito da troca
+  "if(sx!==sy) D.push(rot+': \"'+String(x==null?'—':(typeof x==='object'?JSON.stringify(x):x))",   // ciDiffCorrecao: o valor de um campo da ficha no resumo da correção (dado)
+];
+const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
+prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
+  const { a, onde } = VARRE648();
+  const cruNoLoteA = LOTE_A648.filter((f) => a[f]);
+  assert.ok(!cruNoLoteA.length, 'cru nas telas da 1ª entrega: ' + cruNoLoteA.map((f) => f + ' → ' + JSON.stringify(onde[f])).join(' · '));
+  const permitido = {};   // a soma das listas (uma função pode ter cru congelado E .motivo de dado)
+  [REGRA648, PROTEGIDA648, SEGUNDA648, DADO648].forEach((L) => Object.keys(L).forEach((f) => { permitido[f] = (permitido[f] || 0) + L[f]; }));
+  const novos = Object.keys(a).filter((f) => !(f in permitido) || a[f] > permitido[f]);
+  assert.ok(!novos.length, 'ponto cru novo fora da lista permitida: ' + novos.map((f) => f + ' (' + a[f] + ') → ' + JSON.stringify(onde[f])).join(' · '));
+  // a lista não esconde tela desta entrega
+  igual(LOTE_A648.filter((f) => f in permitido), [], 'nenhuma tela da 1ª entrega na lista permitida');
+  // e as funções existem no script (o nome na lista não é de enfeite; o banhoFaltaLiberarAgora mora dentro do banhoFaltaExecutar)
+  const fonte648 = extractMainScript(fs.readFileSync(APP, 'utf8'));
+  const faltam = LOTE_A648.filter((f) => !new RegExp('\\bfunction\\s+' + f + '\\s*\\(').test(fonte648));
+  igual(faltam, [], 'funções da lista: ' + faltam.join(', '));
+  // e cada linha da EXCECAO648 existe no script (uma exceção que não acha nada é exceção velha)
+  igual(EXCECAO648.filter((t) => !fonte648.includes(t)), [], 'exceções que não existem mais');
+});
+prova('6.48 P12b — a própria varredura acha o cru escrito de outros jeitos (Q14, Q21, Q25, as 9 formas do re-gate e as 6 da conferência final, TEST-002/TEST-003) e não acusa o que passa pelo tradutor, a regra, o guardado e o dado', () => {
+  const amostra = (corpo) => VARRE648_CORPO('  function teste648(e, r){\n' + corpo + '\n  }', []).a.teste648 || 0;
+  const CRUS = [
+    "alert('O check-in foi salvo, mas não consegui marcar a pernoite como feita: '+(e && e.message)+'.');",
+    "alert('Não consegui pôr a pernoite na fila do check-in: '+String(e)+'.');",
+    "var msg=String((e&&e.message)||e).replace(/\\.+$/,''); var mot=zErroMotivo(e, 'banco', '', {agora:true});\n    alert('Lancei o encaixe ('+(caiu?'a conexão caiu':msg)+').');",
+    "alert(zErroTexto(e, {alvo:'banco'})+' '+e.message);",
+    "if(w) w.textContent='Não consegui: '+String(err)+' '+zErroAviso('Não consegui', e, {});",
+    "st.textContent=(r&&r.erro)||'';",
+    "var cru=e; diz('Não consegui: '+cru);",
+    "alert(e);",
+    "w.textContent='Não consegui: '+e;",
+    "zAlertao('NÃO FOI', ['Motivo: '+x.message]);",
+    // as 9 formas do QA (re-gate, TEST-002, tools/p12qa.py)
+    "alert('O check-in foi salvo, mas não consegui marcar a pernoite como feita: '+e.toString()+'.');",
+    "alert('Não consegui pôr a pernoite na fila do check-in: '+(e||{}).message+'.');",
+    "try{ repAbrirExtrato(i); }catch(falhaExt){ alert('Não consegui abrir o extrato: '+falhaExt.message); }",
+    "st.textContent='Não consegui: '+JSON.stringify(r);",
+    "alert('Não consegui marcar '+o.nome+' na chamada: '+e['message']+'.');",
+    "alert(`Tirei da planilha, mas não consegui tirar o lançamento: ${e.message}.`);",
+    "st.textContent=(function(){ var txt=String(e); return 'Não consegui falar com a planilha: '+txt; })();",
+    "var resQA={ok:false, motivo:String((e&&e.message)||e)}; alert('Não consegui recusar: '+resQA.motivo);",
+    "DB.ref('x').set(1).then(function(){}, function(e){ alert(['Não consegui gravar:', e].join(' ')); });",
+    // e outros jeitos: o nome que a própria função dá ao erro, o REPO_ERRO, o `${e}`
+    "p.catch(function(falhou){ diz('Não consegui: '+String(falhou)); });",
+    "return 'Não consegui trazer o Extrato: '+String((REPO_ERRO&&REPO_ERRO.message)||REPO_ERRO||'');",
+    "alert(`Não consegui: ${e}`);",
+    // as 6 formas da conferência final (TEST-003, tools/p12qa3.py) — G2 e G6 também provam o corte da gravação (TEST-004)
+    "DB.ref('x').set(1).then(function(){}, function(problema){ alert('Não consegui gravar: '+problema); });",
+    "if(o.planilha_msg) L.push('Planilha: '+o.planilha_msg);",
+    "alert('Não consegui conferir com a planilha: '+(e+''));",
+    "catch(e){ alert('Não consegui tirar: '+JSON.stringify(e)); return; }",
+    "st.textContent='Não consegui: '+r.motivo;",
+    "try{ repAbrirExtrato(i); }catch(e){ var L=[]; L.push('Não consegui abrir o extrato: '+e.message); alert(L.join(' ')); }",
+    // e: o nome do erro numa arrow do 2º argumento, o ''+e, o Map.set com o cru
+    "p.then(function(){}, (falhou) => { diz('Não consegui: '+String(falhou)); });",
+    "alert(''+e);",
+    "MAPA.set('aviso', 'Não consegui: '+e.message); mostrar(MAPA);",
+  ];
+  igual(CRUS.map(amostra), CRUS.map(() => 1), 'o cru, de cada jeito');
+  const LIMPOS = [
+    "alert('Não consegui: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})));",
+    "if(e && e.repAviso){ diz(e.message); return; }",
+    "var msg=String((e&&e.message)||e); if(msg==='disconnect'){ alert('A conexão caiu.'); }",
+    "DB.ref('x').update({planilha_ok:false, planilha_msg:String((e&&e.message)||e)});",
+    "_logFalhaGrav('x', e); audit('x', 'falhou: '+e.message, {});",
+    "var m=String(r.erro); m=zErroMotivo(m, 'planilha'); alert('Motivo: '+m);",
+    "return {ok:false, erro:String((e&&e.message)||e)};",
+    "w.textContent=(e && e.vagaAviso)?e.message:('Não consegui: '+zErroFrase(zErroMotivo(e, 'banco')));",
+    // o dado, e não o erro: a comparação e a chave por JSON.stringify, o argumento de um onclick, o corpo do pedido à ponte,
+    // a cópia por JSON.parse, o tratador do erro guardado numa variável e a propriedade gravada num objeto marcado
+    "return JSON.stringify(a.dias_mes||null)===JSON.stringify(b.dias_mes||null);",
+    "return '<button onclick=\"orcNovoComNome('+JSON.stringify(escAttr(nm))+')\">Outro</button>';",
+    "fetch(url, {method:'POST', body:JSON.stringify({token:tk, acao:'cancelar'})});",
+    "var antes=JSON.parse(JSON.stringify(orcPrecos()));",
+    "var trata=function(x){ alert(zErroTexto(x, {alvo:'banco'})); }; p.catch(trata);",
+    "var up={planilha_ok:false, planilha_msg:String((e&&e.message)||e)}; up.planilha_desisti=true; DB.ref('x').update(up);",
+    // a gravação no banco continua cortada (DB.ref(…), .child(…), ref, …Ref); o Array.push de texto do app e o .motivo gravado não acusam
+    "DB.ref('daycare/x/'+dia).child(id).set({erro:String(e)}); ref.set({msg:e.message}); noRef.update({planilha_msg:String(e)});",
+    "L.push('Entrou como reposição: o dia de repor ficou combinado.');",
+    "out.motivo='Esse dia já passou. Escolha hoje ou um dia à frente.'; return out;",
+  ];
+  igual(LIMPOS.map(amostra), LIMPOS.map(() => 0), 'o que passa pelo tradutor, a regra e o guardado');
+});
+// ---- P15 — segurança (R5): o motivo é texto de fora; toda tela que usa innerHTML continua escapando
+prova('6.48 P15 — o motivo traduzido continua escapado (repPlanLinhaHTML, dashAutoLinhas, orcPlanilhaHtml, orcLinhaHistoricoHtml, banhoFaltaCardHTML)', () => {
+  const XSS = 'recusei <img src=x onerror=alert(1)>';
+  const dia = run('zHojeISO()');
+  run(`__bkX648={c:REP_PLAN_CACHE['${dia}'], la:ORC_LINHA_ABERTA, bf:BANHO_FALTA, bd:BANHO_FALTA_DEC, bdia:BANHO_FALTA_DIA};`);
+  try {
+    const v = 'Cristal/Yorkshire', ch = run(`vagasNomeChave(${JSON.stringify(v)})`);
+    const p = { n: 'Tablito', raca: 'SRD', tutor: 'Duda Teste' }, chP = run(`vagasNomeChave(dashNomePlanilha(${JSON.stringify(p)}))`);
+    for (const msg of [XSS, '<img src=x onerror=alert(1)>', 'token invalido']) {
+      run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), avulso:{}, auto:{banho:${JSON.stringify([v])}, faltas:[], _estado_v:1, _estado:{banho:{${JSON.stringify(ch)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}},
+        faltas:{${JSON.stringify(chP)}:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`);
+      const hs = [run(`repPlanLinhaHTML(${JSON.stringify(p)}, '${dia}', 'faltas')`), run(`dashAutoLinhas('banho', '${dia}', null).html`)];
+      const o = JSON.stringify({ pets: [{ nome: 'Frida', tutor: 'Ana Teste' }], entrada: '2026-10-01', saida: '2026-10-04', planilha_ok: false, planilha_msg: msg });
+      run('ORC_LINHA_ABERTA={x9:true};');
+      hs.push(run(`orcPlanilhaHtml('x9', ${o})`), run(`orcLinhaHistoricoHtml('x9', ${o}, 1)`));
+      run(`BANHO_FALTA=[{chave:'tob', nome:'Toby', hora:'12:00', origem:'planilha', porque:'faltou'}]; BANHO_FALTA_DIA=dcDataKey(); BANHO_FALTA_DEC={tob:{decisao:'falhou', msg:${JSON.stringify(msg)}}};`);
+      hs.push(run('banhoFaltaCardHTML()'));
+      hs.forEach((h, i) => assert.ok(!/<img/.test(h), 'escapado (' + i + '): ' + h));
+      if (msg === XSS) hs.forEach((h, i) => assert.ok(/&lt;img/.test(h), 'o texto aparece escapado (' + i + '): ' + h));
+      // a página no lugar dos dados e a palavra-chave: a frase, nunca o HTML nem o código (todas as cinco telas)
+      if (msg !== XSS) hs.forEach((h, i) => assert.ok(/a ponte respondeu com uma página|a palavra-chave guardada no app não bate/.test(h), 'traduzido (' + i + '): ' + h));
+    }
+  } finally { run(`if(__bkX648.c) REP_PLAN_CACHE['${dia}']=__bkX648.c; else delete REP_PLAN_CACHE['${dia}']; ORC_LINHA_ABERTA=__bkX648.la; BANHO_FALTA=__bkX648.bf; BANHO_FALTA_DEC=__bkX648.bd; BANHO_FALTA_DIA=__bkX648.bdia;`); }
+});
+provaAsync('6.48 P9 — Configurações › Valores da hospedagem (só Gestão): «Testar agora» com a queda diz as duas causas; «Salvar» recusado diz «Nada foi salvo. Avise a Gestão.»', async () => {
+  run(`__bkSH648={ge:document.getElementById, fe:(typeof fetch!=='undefined'?fetch:undefined), db:DB, sc:orcSheetsCfg};
+    __elSH648={orcShUrl:{value:'https://script.google.com/macros/s/x/exec'}, orcShToken:{value:''}, orcShStatus:{style:{}, textContent:''}};
+    document.getElementById=function(id){ return __elSH648[id]||null; }; orcSheetsCfg={url:'', token:'${TK648}'};
+    fetch=function(){ return Promise.reject(new TypeError('Failed to fetch')); };
+    DB={ref:function(){ return {set:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }}; }};`);
+  try {
+    run('orcTestarSheets()'); await espera648();
+    igual(run('__elSH648.orcShStatus.textContent'), 'Não consegui falar com a planilha: a conexão caiu ou a ponte não aceita o pedido. Confira a internet; se ela estiver boa, confira no Apps Script se a publicação está com acesso "qualquer pessoa".');
+    run('orcSalvarSheets()'); await espera648();
+    igual(run('__elSH648.orcShStatus.textContent'), 'Não salvou: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.');
+  } finally { run('document.getElementById=__bkSH648.ge; fetch=__bkSH648.fe; DB=__bkSH648.db; orcSheetsCfg=__bkSH648.sc;'); }
+});
+// ==== 6.48, 2ª rodada do QA (09/out/2026): REQ-001, REQ-002, REL-002, os 18 defeitos que escaparam (TEST-001) e os baixos
+console.log('\n6.48 — 2ª rodada: «Dia extra» em três estados, a linha da queda com a régua do cartaz, os «Salvar» da Gestão e as provas que faltavam');
+// ---- REQ-002 — a linha do crédito em Reposições e o cartaz do «Mandar agora» dizem a MESMA coisa (decisão de execução)
+const PL648 = { n: 'Tablito', raca: 'SRD', tutor: 'Duda Teste' };
+const PROMETE648 = 'NÃO foi para a planilha — a conexão com a planilha caiu; o app tenta de novo sozinho em até 10 min';
+const SEMPROMESSA648 = 'NÃO foi para a planilha — a conexão com a planilha caiu; confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão';
+const CARTAZ_PROMETE648 = SALVO648 + '. O app tenta de novo sozinho em até 10 min, enquanto estiver aberto.';
+const CARTAZ_SEM648 = SALVO648 + '. Confira a internet e toque em «Mandar agora» de novo; se continuar, avise a Gestão.';
+// O registro do automático de hoje (09/10): a falta do Tablito NÃO foi para a planilha; `ts` = minutos do _ts (null = sem _ts).
+const REG648F = (msg, ts) => `REP_PLAN_CACHE['2026-10-09']={ts:Date.now(), avulso:{}, auto:{faltas:[], _estado_v:1${ts == null ? '' : ', _ts:Date.now()-(' + Number(ts) + ')*60000'},
+  _estado:{faltas:{[vagasNomeChave(dashNomePlanilha(${JSON.stringify(PL648)}))]:{planilha_ok:false, planilha_msg:${JSON.stringify(msg)}, ts:1}}}}};`;
+const LINHA648F = () => { const h = run(`repPlanLinhaHTML(${JSON.stringify(PL648)}, '2026-10-09', 'faltas')`);
+  return [(/<span>Falta avisada de 09\/10\/2026 — ([^<]*)<\/span>/.exec(h) || [])[1] || h, (/<button[^>]*>([^<]*)<\/button>/.exec(h) || [])[1] || '']; };
+const PALCO648F = () => run(`__bk648f={c:REP_PLAN_CACHE['2026-10-09'], hz:zHojeISO, li:DASH_AUTO_LIGADO, tl:REP_CONF_TS_LIDO, tt:REP_CONF_TS_DO_TOQUE, dp:DASH_PONTE,
+    pp:dashPontePronta, sy:dashAutoSincronizar, vc:vagasCarregarDia, rr:renderReposicao, za:zAlertao, al:alert, db:DB, dv:appDiaVelho};
+  zHojeISO=function(){ return '2026-10-09'; }; DASH_AUTO_LIGADO=false; REP_CONF_TS_LIDO=0; REP_CONF_TS_DO_TOQUE=0; DASH_PONTE={url:'x', token:'${TK648}'};`);
+const SOLTA648F = () => run(`if(__bk648f.c) REP_PLAN_CACHE['2026-10-09']=__bk648f.c; else delete REP_PLAN_CACHE['2026-10-09']; zHojeISO=__bk648f.hz;
+  DASH_AUTO_LIGADO=__bk648f.li; REP_CONF_TS_LIDO=__bk648f.tl; REP_CONF_TS_DO_TOQUE=__bk648f.tt; DASH_PONTE=__bk648f.dp; dashPontePronta=__bk648f.pp;
+  dashAutoSincronizar=__bk648f.sy; vagasCarregarDia=__bk648f.vc; renderReposicao=__bk648f.rr; zAlertao=__bk648f.za; alert=__bk648f.al; DB=__bk648f.db; appDiaVelho=__bk648f.dv;`);
+prova('6.48 R2 REQ-002 — a linha do crédito promete «o app tenta de novo sozinho» só com a conferência viva (a régua do K4); sem ela, diz o mesmo que o cartaz; o botão é «Mandar agora»', () => {
+  PALCO648F();
+  try {
+    const L = (msg, ts) => { run(REG648F(msg, ts)); return LINHA648F(); };
+    igual(L('Failed to fetch', null), [SEMPROMESSA648, 'Mandar agora'], 'sem leitura nenhuma do _ts: não promete');
+    igual(L('Failed to fetch', 3), [PROMETE648, 'Mandar agora'], 'o _ts de hoje de 3 min');
+    igual(L('Failed to fetch', 9), [PROMETE648, 'Mandar agora'], '9 min: ainda dentro de 2×DASH_AUTO_MIN');
+    igual(L('Failed to fetch', 11), [SEMPROMESSA648, 'Mandar agora'], '11 min: ninguém conferindo');
+    igual(L('Failed to fetch', -5), [SEMPROMESSA648, 'Mandar agora'], 'o _ts do futuro (relógio adiantado de outro aparelho) não é prova');
+    igual(L('Load failed', 30), [SEMPROMESSA648, 'Mandar agora'], 'Safari, 30 min');
+    igual(L('a ponte não respondeu em 12s', null)[0], SEMPROMESSA648, 'o prazo: a mesma frase da 6.12, sem a promessa');
+    run('DASH_AUTO_LIGADO=true;');
+    igual(L('Failed to fetch', null), [PROMETE648, 'Mandar agora'], 'a conferência ligada neste aparelho');
+    run('DASH_AUTO_LIGADO=false; REP_CONF_TS_LIDO=Date.now()-2*60000;');
+    igual(L('Failed to fetch', null), [PROMETE648, 'Mandar agora'], 'o _ts lido pelo último «Mandar agora», de 2 min');
+    run('REP_CONF_TS_LIDO=Date.now()-11*60000;');
+    igual(L('Failed to fetch', null)[0], SEMPROMESSA648, 'o lido, de 11 min');
+    run('REP_CONF_TS_LIDO=0;');
+    // o _ts que o próprio toque regravou não prova que alguém confere sozinho
+    run(REG648F('Failed to fetch', 1)); run(`REP_CONF_TS_DO_TOQUE=REP_PLAN_CACHE['2026-10-09'].auto._ts;`);
+    igual(LINHA648F()[0], SEMPROMESSA648, 'o _ts do próprio toque');
+    run('REP_CONF_TS_DO_TOQUE=0;');
+    // a recusa com código: a frase do código, o mesmo botão (nunca «tentar de novo»)
+    const r = L('token invalido', 3);
+    assert.ok(/^NÃO foi para a planilha — a palavra-chave guardada no app não bate com a PONTE_SENHA/.test(r[0]) && r[1] === 'Mandar agora', JSON.stringify(r));
+    // a frase sem promessa é a do cartaz, letra por letra (o «Mandar agora» que o cartaz manda tocar é o botão da linha)
+    igual(run('repPlanQuedaSemPromessaTexto()'), CARTAZ_SEM648.replace(SALVO648 + '. C', 'a conexão com a planilha caiu; c').replace(/\.$/, ''));
+  } finally { SOLTA648F(); }
+});
+// O toque de verdade: o cartaz e, depois dele, a linha. `ts` = o _ts lido pelo toque (null = sem; 'falha' = a leitura falha);
+// `tela` = o _ts que a tela já tinha; `grava` = a passada deste toque regrava o _ts de hoje (a conferência rodou até o fim).
+const TOQUE648F = async (op) => {
+  ctx.__op648f = op;
+  run(REG648F('Failed to fetch', op.tela));
+  run(`__za648f=[]; zAlertao=function(t,l){ __za648f.push([t,l]); }; alert=function(){};
+    dashPontePronta=function(){ return Promise.resolve(DASH_PONTE); };
+    dashAutoSincronizar=function(){ if(__op648f.grava) REP_PLAN_CACHE['2026-10-09'].auto._ts=Date.now(); return Promise.resolve(__op648f.sinc); };
+    vagasCarregarDia=function(){ return Promise.resolve(null); }; renderReposicao=function(){}; appDiaVelho=function(){ return false; };
+    DB={ref:function(p){ return {once:function(){ if(__op648f.ts==='falha') return Promise.reject(new Error('Client is offline'));
+      return Promise.resolve({val:function(){ return (__op648f.ts==null)?null:(Date.now()-__op648f.ts*60000); }}); }}; }};
+    __bt648f={textContent:'Mandar agora', disabled:false};`);
+  run(`repMandarAgora('2026-10-09', __bt648f)`); await espera648();
+  return { za: J630('__za648f'), linha: LINHA648F() };
+};
+provaAsync('6.48 R2 REQ-002 — depois do «Mandar agora», o cartaz e a linha dizem a mesma coisa: a queda sem prova (QA, 30 min), a conferência que rodou e regravou o _ts, a leitura que falha (Q01) e o _ts do futuro (Q02)', async () => {
+  PALCO648F();
+  const Q = { ok: false, erro: 'Failed to fetch' };
+  try {
+    // o cenário do QA: o _ts de 30 min, a conferência desligada aqui
+    let r = await TOQUE648F({ tela: 30, ts: 30, sinc: Q });
+    igual(r.za, [['NÃO FOI PARA A PLANILHA', ['A conexão com a planilha caiu.', CARTAZ_SEM648]]]);
+    igual(r.linha, [SEMPROMESSA648, 'Mandar agora'], 'a linha, depois do cartaz');
+    // alguém conferindo (3 min): os dois prometem
+    r = await TOQUE648F({ tela: 3, ts: 3, sinc: Q });
+    igual([r.za[0][1][1], r.linha], [CARTAZ_PROMETE648, [PROMETE648, 'Mandar agora']]);
+    // Q01: logo depois, a leitura do _ts falha — o cartaz não promete, e a linha também não: nem pelo _ts de 3 min que a tela
+    // tinha, nem pela leitura do toque anterior
+    r = await TOQUE648F({ tela: 3, ts: 'falha', sinc: Q });
+    igual([r.za[0][1][1], r.linha[0]], [CARTAZ_SEM648, SEMPROMESSA648]);
+    // a conferência deste toque rodou até o fim e regravou o _ts de hoje; a falta do Tablito continua sem ir: a linha
+    // não toma o _ts do próprio toque como prova
+    r = await TOQUE648F({ tela: 30, ts: 30, sinc: { ok: true, posto: 0, tirado: 0 }, grava: true });
+    igual(r.za.map((z) => z[0]), ['CONFERIDO COM A PLANILHA']);
+    igual(r.linha, [SEMPROMESSA648, 'Mandar agora'], 'o _ts regravado pelo toque');
+    // ...e um _ts novo, de outro aparelho, que chega depois: aí, sim
+    run(`REP_PLAN_CACHE['2026-10-09'].auto._ts=Date.now()-60000;`);
+    igual(LINHA648F()[0], PROMETE648, 'o _ts de outro aparelho, depois do toque');
+    // Q02: o _ts do futuro (outro aparelho com o relógio 5 min adiantado)
+    r = await TOQUE648F({ tela: -5, ts: -5, sinc: Q });
+    igual([r.za[0][1][1], r.linha[0]], [CARTAZ_SEM648, SEMPROMESSA648]);
+  } finally { SOLTA648F(); }
+});
+// ---- REQ-001 — «Dia extra» avulso: três estados
+provaAsync('6.48 R2 REQ-001 — «Dia extra» avulso: já estava (só a frase do «já estava»), a gravação falhou (só o motivo, nunca «já estava») e entrou; a autorização da Márcia, como antes', async () => {
+  PALCO648R(`REPO_LIDO=true; REP_FER_LENDO=false; dxPel=PELUDINHOS[0]; dxDia='2026-10-14'; dxFechar=function(){};
+    __dx648={dxWarn:{textContent:''}, dxOk:{disabled:false, textContent:''}}; document.getElementById=function(id){ return __dx648[id]||null; };
+    dxTrocaAtual=function(){ return false; }; vagasDoDia=function(){ return {lido:true, cheio:false}; };
+    dxVeredito=function(){ return {ok:true, tipo:'avulso', valor_cent:9700, matriculado:true}; };
+    __bkDL648f=dashLancar; __bkRD648f=renderDash; renderDash=function(){};`);
+  try {
+    const caso = async (dl, db) => {
+      run(`__za648=[]; __al648=[]; dashLancar=${dl}; ${db || ''}`);
+      run('dxConfirmar()'); await espera648();
+      return { linha: run('__dx648.dxWarn.textContent'), cartaz: J630('__za648').map((z) => z[0]), al: J630('__al648'), solto: !run('__dx648.dxOk.disabled') };
+    };
+    // já estava: o dashLancar avisa e não devolve promessa
+    igual(await caso("function(){ alert('Fredo já está nos Lançamentos do dia.'); return undefined; }"),
+      { linha: 'Ele já estava lançado como Avulso em 14/10/2026.', cartaz: [], al: ['Fredo já está nos Lançamentos do dia.'], solto: true });
+    // a gravação falhou: o dashLancar já disse o motivo (devolve false); a linha do modal não diz o contrário
+    igual(await caso("function(){ alert('Não salvou: o sistema recusou a gravação. Nada foi lançado. Avise a Gestão.'); return Promise.resolve(false); }"),
+      { linha: '', cartaz: [], al: ['Não salvou: o sistema recusou a gravação. Nada foi lançado. Avise a Gestão.'], solto: true });
+    // entrou
+    const ok = await caso('function(){ return Promise.resolve(true); }');
+    igual([ok.linha, ok.cartaz, ok.al], ['', ['DIA EXTRA MARCADO'], []]);
+    // de ponta a ponta, com o dashLancar de verdade e o banco recusando (o cenário QA-1)
+    const qa1 = await caso('__bkDL648f', `DB={ref:function(p){ return {once:function(){ return Promise.resolve({val:function(){ return {}; }}); },
+      push:function(){ return {key:'kR2', set:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }}; },
+      set:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); },
+      update:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); },
+      transaction:function(){ return Promise.reject(new Error('permission_denied')); } }; }};`);
+    assert.ok(qa1.al.length === 1 && /o sistema recusou a gravação/.test(qa1.al[0]) && /Nada foi lançado/.test(qa1.al[0]), JSON.stringify(qa1));
+    igual([qa1.linha, qa1.cartaz, qa1.solto], ['', [], true], 'nunca «já estava lançado» depois da recusa');
+    // o dxLancarAvulso, direto: 'ja' · false · true
+    for (const [dl, esperado] of [['function(){ return undefined; }', 'ja'], ['function(){ return Promise.resolve(false); }', false], ['function(){ return Promise.resolve(true); }', true]]) {
+      run(`__rDX648=null; dashLancar=${dl}; dxLancarAvulso(PELUDINHOS[0], '2026-10-14', 9700, true, null).then(function(r){ __rDX648=r; });`); await espera648();
+      igual(run('__rDX648'), esperado, dl);
+    }
+  } finally { run('dashLancar=__bkDL648f; renderDash=__bkRD648f;'); SOLTA648R(); }
+  // a Márcia autorizando o avulso que «já estava» (o dashLancar não lançou): como antes da 6.48, «Não consegui lançar»,
+  // e não «está encaixado»
+  const B = palco646(true);
+  try {
+    prepPed646(B, PEDAVULSO646());
+    run("__bkDL648g=dashLancar; dashLancar=function(){ return undefined; };");
+    try {
+      await autoriza646();
+      const al = J630('__al646');
+      assert.ok(al.length === 1 && /^Não consegui lançar/.test(al[0]) && !/encaixado/.test(al[0]), JSON.stringify(al));
+      igual(B.le(PED646()).status, 'pedido', 'o pedido continua em aberto');
+    } finally { run('dashLancar=__bkDL648g;'); }
+  } finally { solta646(); }
+});
+// ---- REL-002 — os «Salvar» da Gestão: gravou e a tela de depois quebrou
+provaAsync('6.48 R2 REL-002 — «Salvar» a ponte do Day Care, a dos Orçamentos e a tabela de preços: gravou e a tela de depois quebrou → «Confira se salvou…», nunca «Nada foi salvo»; recusado → «Nada foi salvo. Avise a Gestão.»', async () => {
+  const QUEBRA = "Cannot read properties of undefined (reading 'k1')";
+  const DEPOIS = 'Erro inesperado do app (' + QUEBRA + '). Confira se salvou antes de tentar de novo; avise a Gestão com um print desta tela.';
+  const caso = async (fn, quebra, campos, st, falha) => {
+    run(`__bkK1648={gi:document.getElementById, db:DB, q:${quebra || 'null'}, au:audit, dp:DASH_PONTE, sc:orcSheetsCfg, pc:orcPrecosCfg, rt:orcRenderTemporada, ca:orcCalcular, rc:orcRenderConfig};
+      __gravK1648=[]; __elK1648=${JSON.stringify(campos)}; __elK1648[${JSON.stringify(st)}]={style:{}, textContent:''};
+      document.getElementById=function(id){ return __elK1648[id]||null; };
+      DB={ref:function(p){ return {set:function(v){ __gravK1648.push(p); return ${falha ? 'Promise.reject(new Error(' + JSON.stringify(falha) + '))' : 'Promise.resolve()'}; }}; }};
+      audit=function(){}; orcRenderTemporada=function(){}; orcCalcular=function(){}; orcRenderConfig=function(){};
+      ${quebra ? quebra + '=function(){ throw new TypeError(' + JSON.stringify(QUEBRA) + '); };' : ''}`);
+    try { run(fn + '()'); await espera648(); return [run(`__elK1648[${JSON.stringify(st)}].textContent`), J630('__gravK1648').length]; }
+    finally { run(`document.getElementById=__bkK1648.gi; DB=__bkK1648.db; ${quebra ? quebra + '=__bkK1648.q;' : ''} audit=__bkK1648.au; DASH_PONTE=__bkK1648.dp;
+      orcSheetsCfg=__bkK1648.sc; orcPrecosCfg=__bkK1648.pc; orcRenderTemporada=__bkK1648.rt; orcCalcular=__bkK1648.ca; orcRenderConfig=__bkK1648.rc;`); }
+  };
+  const PONTE = { dashPonteUrl: { value: 'https://script.google.com/macros/s/R2/exec' }, dashPonteToken: { value: 'tk-R2-777777' }, dashPonteTokenSt: { innerHTML: '' } };
+  const SHEETS = { orcShUrl: { value: 'https://script.google.com/macros/s/R2/exec' }, orcShToken: { value: '' }, orcShTokenSt: { innerHTML: '' } };
+  const PRECOS = { orcPvBaixa: { value: '100,00' }, orcPvAlta: { value: '120,00' }, orcDvBaixa: { value: '80,00' }, orcDvAlta: { value: '90,00' },
+    orcPvFim: { value: '150,00' }, orcDvFim: { value: '110,00' }, orcFimDe: { value: '21/12' }, orcFimAte: { value: '11/01' } };
+  igual(await caso('dashSalvarPonte', 'renderDash', PONTE, 'dashPonteStatus'), [DEPOIS, 1], 'a ponte do Day Care');
+  igual(await caso('orcSalvarSheets', 'orcShTokenStatusHTML', SHEETS, 'orcShStatus'), [DEPOIS, 1], 'a ponte dos Orçamentos');
+  igual(await caso('orcSalvarPrecos', 'orcRenderConfig', PRECOS, 'orcCfgStatus'), [DEPOIS, 1], 'a tabela de preços');
+  igual(await caso('dashSalvarPonte', '', PONTE, 'dashPonteStatus', 'PERMISSION_DENIED: Permission denied'), ['Não salvou: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.', 1]);
+  igual(await caso('orcSalvarSheets', '', SHEETS, 'orcShStatus', 'PERMISSION_DENIED: Permission denied'), ['Não salvou: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.', 1]);
+  igual(await caso('orcSalvarPrecos', '', PRECOS, 'orcCfgStatus', 'PERMISSION_DENIED: Permission denied'), ['⚠️ NÃO salvou: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.', 1]);
+  // sem saber (LOW-3): nem «Confira a internet», nem «Não salvou… Nada foi salvo»
+  const q = await caso('orcSalvarPrecos', '', PRECOS, 'orcCfgStatus', 'Failed to fetch');
+  assert.ok(!SEM_INTERNET648.test(q[0]) && !/Nada foi salvo|NÃO salvou/.test(q[0]) && /Confira se salvou antes de tentar de novo/.test(q[0]), q[0]);
+});
+// ---- TEST-001 — as provas que faltavam (os 18 defeitos plantados do QA que escaparam)
+provaAsync('6.48 R2 — Orçamentos: o PRAZO do Safari no fechar e no cancelar (Q05, Q06); a máscara da palavra-chave (Q09); o cancelamento que entrou e a tela de depois quebrou (K1, Q22)', async () => {
+  run(ORC648);
+  try {
+    run("__feErro648=new Error('The request timed out.'); orcEnviarPlanilha('frida')"); await espera648();
+    let al = J630('__alOP648');
+    igual(al.map((x) => x.t), ['FECHADO — MAS A PLANILHA NÃO CONFIRMOU'], JSON.stringify(al));
+    assert.ok(!/Lance à mão|request timed out/.test(JSON.stringify(al)), JSON.stringify(al));
+    run("__alOP648=[]; __upOP648=[]; orcTirarDaPlanilha('frida', 'Márcia Teste', '09/10/2026 às 10:00')"); await espera648();
+    al = J630('__alOP648');
+    igual(al.map((x) => x.t), ['CANCELADA NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU'], JSON.stringify(al));
+    assert.ok(!/A vaga continua ocupada|request timed out/.test(JSON.stringify(al)), JSON.stringify(al));
+    // Q09: a palavra-chave da ponte dos Orçamentos nunca aparece, no motivo e no cartão
+    const tk = 'a ponte recusou a senha ' + TK648;
+    const mot = run(`orcPlanilhaMotivo(ORC_LISTA_CACHE.frida, ${JSON.stringify(tk)})`);
+    assert.ok(!/tk-SEGREDO/.test(mot) && /•••/.test(mot), mot);
+    const h = run(`orcPlanilhaHtml('frida', ${JSON.stringify(Object.assign({}, J630('ORC_LISTA_CACHE.frida'), { planilha_ok: false, planilha_msg: tk }))})`);
+    assert.ok(!/tk-SEGREDO/.test(h) && /•••/.test(h), h);
+    // Q22: o cancelamento entrou e o que vem depois quebrou (o .catch do orcCancelarGravar pega os dois)
+    run(`__upFalha648=null; __al648=[]; zPergunta=function(){ return Promise.resolve(true); }; __ztN648=0;
+      zTexto=function(){ __ztN648++; return Promise.resolve(__ztN648%2===1?'a viagem foi desmarcada':'senha123'); };
+      orcQuemPelaSenha=function(){ return {nome:'Márcia Teste', role:'gestao'}; }; __bkAU648=audit; audit=function(){ throw new TypeError('x is not a function'); };`);
+    try {
+      await run("orcCancelar('frida')"); await espera648();
+      igual(J630('__al648'), ['NÃO consegui cancelar: erro inesperado do app (x is not a function).\n\nConfira na lista de Orçamentos se a reserva foi cancelada antes de tentar de novo; avise a Gestão com um print desta tela.']);
+      run(`__al648=[]; audit=function(){ throw new Error('Upload failed'); };`);
+      await run("orcCancelar('frida')"); await espera648();
+      igual(J630('__al648'), ['NÃO consegui cancelar: Upload failed.\n\nConfira na lista de Orçamentos se a reserva foi cancelada antes de tentar de novo; avise a Gestão.'], 'o texto de depois: nunca «Nada foi alterado»');
+    } finally { run('audit=__bkAU648;'); }
+  } finally { run(ORC648_VOLTA); }
+});
+// O orçamento novo e a mudança de datas, com o banco de mentira: `__upFalhaOS648` = o erro do update; `__auQuebra648` = o
+// rastro que quebra DEPOIS de gravar.
+const ORCS648 = `__bkOS648={tp:ORC_TEMP, ca:ORC_CALC, ed:ORC_EDITANDO, ea:ORC_EDIT_ANTES, db:DB, ge:document.getElementById, du:orcDuplicados, ac:repOrcAcerto,
+    rr:repOrcResumo, au:audit, oc:orcCalcular, cl:orcCarregarLista, lc:ORC_LISTA_CACHE, zp:zPergunta, zt:zTexto, qs:orcQuemPelaSenha, lp:orcLiberarNaPlanilha,
+    ep:orcEnviarPlanilha, rs:orcRenderSel, ra:orcRenderAvisoEdicao, za:zAlertao, al:alert, dk:ORC_DUP_OK, ri:ORC_RESERVA_IGNORAR, se:ORC_SEL, rp:ORC_REP};
+  ORC_TEMP='baixa'; ORC_DUP_OK=null; ORC_EDITANDO=null; ORC_EDIT_ANTES=null;
+  ORC_CALC={entrada:'2026-10-20', saida:'2026-10-23', saidaPedida:'2026-10-23', noites:3, temporada:'baixa', alta:false, total:45000, p1:22500, p2:22500,
+    pets:[{sel:{key:'fridaK', nome:'Frida', raca:'', tutor:'Ana Teste', rotulo:'Avulso', compromisso:'', trocas:{}}, ordem:1, off:0, nDia:3, nPer:3,
+      repUsa:0, repEconomia:0, liqDia:45000, brutoPer:0, total:45000}]};
+  ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Teste'}], entrada:'2026-10-01', saida:'2026-10-04', total_cent:45000, status:'fechado'}};
+  __elOS648={orcSalvoStatus:{style:{}, textContent:''}, orcMsg:{value:''}}; document.getElementById=function(id){ return __elOS648[id]||null; };
+  orcDuplicados=function(){ return []; }; repOrcAcerto=function(){ return {patch:{}, reservadas:0, baixadas:0, estornadas:0, linhas:[]}; }; repOrcResumo=function(){ return ''; };
+  __auQuebra648=null; audit=function(){ if(__auQuebra648) throw __auQuebra648; }; orcCalcular=function(){}; orcCarregarLista=function(){};
+  orcLiberarNaPlanilha=function(){ return Promise.resolve(); }; orcEnviarPlanilha=function(){}; orcRenderSel=function(){}; orcRenderAvisoEdicao=function(){};
+  zAlertao=function(){}; alert=function(){}; zPergunta=function(){ return Promise.resolve(true); };
+  __ztOS648=0; zTexto=function(){ __ztOS648++; return Promise.resolve(__ztOS648%2===1?'a tutora antecipou a viagem':'senha123'); };
+  orcQuemPelaSenha=function(){ return {nome:'Márcia Teste', role:'gestao'}; };
+  __upFalhaOS648=null; DB={ref:function(p){ return {push:function(){ return Object.assign(Promise.resolve(), {key:'novoR2'}); },
+    update:function(){ return __upFalhaOS648?Promise.reject(__upFalhaOS648):Promise.resolve(); }}; }};`;
+const ORCS648_VOLTA = `ORC_TEMP=__bkOS648.tp; ORC_CALC=__bkOS648.ca; ORC_EDITANDO=__bkOS648.ed; ORC_EDIT_ANTES=__bkOS648.ea; DB=__bkOS648.db; document.getElementById=__bkOS648.ge;
+  orcDuplicados=__bkOS648.du; repOrcAcerto=__bkOS648.ac; repOrcResumo=__bkOS648.rr; audit=__bkOS648.au; orcCalcular=__bkOS648.oc; orcCarregarLista=__bkOS648.cl;
+  ORC_LISTA_CACHE=__bkOS648.lc; zPergunta=__bkOS648.zp; zTexto=__bkOS648.zt; orcQuemPelaSenha=__bkOS648.qs; orcLiberarNaPlanilha=__bkOS648.lp;
+  orcEnviarPlanilha=__bkOS648.ep; orcRenderSel=__bkOS648.rs; orcRenderAvisoEdicao=__bkOS648.ra; zAlertao=__bkOS648.za; alert=__bkOS648.al; ORC_DUP_OK=__bkOS648.dk;
+  ORC_RESERVA_IGNORAR=__bkOS648.ri; ORC_SEL=__bkOS648.se; ORC_REP=__bkOS648.rp;`;
+provaAsync('6.48 R2 — Orçamentos: «Salvar orçamento» (orcSalvar, Q11) e «Salvar a alteração» (orcSalvarEdicao, Q10): o erro de depois de gravar (K1) e o erro do app antes não afirmam «NÃO salvou»; a recusa diz o motivo; sem saber, sem «Confira a internet» (LOW-3)', async () => {
+  const st = () => run('__elOS648.orcSalvoStatus.textContent');
+  const DEPOIS = '⚠️ Erro inesperado do app (x is not a function). Confira a lista antes de tentar de novo.';
+  run(ORCS648);
+  try {
+    // orcSalvar
+    run("__auQuebra648=new TypeError('x is not a function'); orcSalvar();"); await espera648();
+    igual(st(), DEPOIS, 'orcSalvar: gravou e o rastro quebrou (K1)');
+    run("__auQuebra648=null; __upFalhaOS648=new Error('PERMISSION_DENIED: Permission denied'); orcSalvar();"); await espera648();
+    igual(st(), '⚠️ NÃO foi salvo: o sistema recusou a gravação. Avise a Gestão. Copie a mensagem antes de sair da tela.');
+    run("__upFalhaOS648=new Error('Failed to fetch'); orcSalvar();"); await espera648();
+    assert.ok(!SEM_INTERNET648.test(st()) && !/NÃO foi salvo/.test(st()) && /Confira na lista se entrou antes de tentar de novo/.test(st()), 'sem saber: ' + st());
+    // orcSalvarEdicao
+    run(`__upFalhaOS648=null; ORC_EDITANDO='frida'; ORC_EDIT_ANTES={entrada:'2026-10-01', saida:'2026-10-04', total_cent:45000};
+      __auQuebra648=new TypeError('x is not a function');`);
+    await run('orcSalvarEdicao()'); await espera648();
+    igual(st(), DEPOIS, 'orcSalvarEdicao: gravou e o rastro quebrou (K1)');
+    run(`__auQuebra648=null; ORC_EDITANDO='frida'; __upFalhaOS648=new TypeError('x is not a function');`);
+    await run('orcSalvarEdicao()'); await espera648();
+    igual(st(), DEPOIS, 'orcSalvarEdicao: o erro do app antes de gravar (Q10): sem «Nada foi alterado»');
+    run(`ORC_EDITANDO='frida'; __upFalhaOS648=new Error('PERMISSION_DENIED: Permission denied');`);
+    await run('orcSalvarEdicao()'); await espera648();
+    igual(st(), '⚠️ NÃO salvou: o sistema recusou a gravação. Nada foi alterado. Avise a Gestão.');
+    run(`ORC_EDITANDO='frida'; __upFalhaOS648=new Error('Failed to fetch');`);
+    await run('orcSalvarEdicao()'); await espera648();
+    assert.ok(!SEM_INTERNET648.test(st()) && !/NÃO salvou|Nada foi alterado/.test(st()) && /Confira na lista se entrou antes de tentar de novo/.test(st()), 'sem saber: ' + st());
+  } finally { run(ORCS648_VOLTA); }
+});
+provaAsync('6.48 R2 — Reposições, depois de gravar (K1): «Estornar» (repEstornar, Q24) e «Avisar a Márcia» do Dia extra (dxPedir, Q23) mandam conferir, sem «Nada foi salvo»', async () => {
+  PALCO648R(`REPO_LIDO=true; REP_FER_LENDO=false; dxPel=PELUDINHOS[0]; dxDia='2026-10-14';
+    __dx648={dxWarn:{textContent:''}, dxOk:{disabled:false, textContent:''}}; document.getElementById=function(id){ return __dx648[id]||null; };
+    dxTrocaAtual=function(){ return false; }; vagasDoDia=function(){ return {lido:true, cheio:true}; };
+    dxVeredito=function(){ return {ok:true, tipo:'avulso', valor_cent:9700, matriculado:true}; };
+    dxFechar=function(){ throw new TypeError('x is not a function'); }; audit=function(){ throw new TypeError('x is not a function'); };`);
+  try {
+    await run("repEstornar(0, 'c1')"); await espera648();
+    igual(J630('__al648'), ['Não consegui estornar: erro inesperado do app (x is not a function). Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']);
+    run('dxPedir()'); await espera648();
+    igual(run('__dx648.dxWarn.textContent'), 'Não consegui avisar a Márcia: erro inesperado do app (x is not a function). Confira nos pedidos de encaixe se entrou antes de tentar de novo; avise a Gestão com um print desta tela.');
+    igual(run('__grav648'), ['repGravar', 'vagasPedir'], 'as duas gravações entraram');
+  } finally { SOLTA648R(); }
+});
+provaAsync('6.48 R2 — a pernoite: o cancelamento que entrou e a tela de depois quebrou (pernCancelar, K1, Q12); a LEITURA recusada diz «recusou a leitura» (pernConferirNoite, Q17)', async () => {
+  run(`__bkpDB=DB; __bkpZT=zTexto; __bkpZA=zAlertao; __bkpPH=pernHoje; __bkpPA=PERN_ATRAS; __bkpAL=alert; __bkpCR=pernCartaoRender; __al648=[]; __za648=[]; __k1648=false;
+    DB={ref:function(){ return {transaction:function(){ __k1648=true; return Promise.resolve({committed:true, snapshot:{val:function(){ return {status:'cancelado'}; }}}); },
+      once:function(){ return Promise.resolve({val:function(){ return {nome:'Thor', status:'aguardando', chave:'thor__bia'}; }}); }}; }};
+    alert=function(t){ __al648.push(String(t)); }; zAlertao=function(t,l){ __za648.push([t,l]); };
+    zTexto=function(){ return Promise.resolve('a tutora buscou às 18h40'); }; pernHoje=function(){ return '2026-09-25'; };
+    pernCartaoRender=function(){ if(__k1648) throw new TypeError('x is not a function'); };
+    PERN_ATRAS=[{_dia:'2026-09-24', _chave:'thor__bia', chave:'thor__bia', nome:'Thor'}];`);
+  try {
+    run("pernCancelar('thor__bia','2026-09-24')"); await espera648();
+    igual(J630('__al648'), ['Não consegui cancelar: erro inesperado do app (x is not a function).\n\nConfira na lista se a pernoite foi cancelada antes de tentar de novo; avise a Gestão com um print desta tela.']);
+    run(`__za648=[]; DB={ref:function(){ return {once:function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }}; }};`);
+    run("pernConferirNoite('2026-09-23', 'thor__bia', function(){})"); await espera648();
+    igual(J630('__za648'), [['NÃO CONSEGUI CONFERIR ESTA NOITE', ['O motivo: o sistema recusou a leitura.', 'Nada foi feito. Tente de novo em instantes — outro aparelho pode já ter resolvido.']]]);
+  } finally { run('DB=__bkpDB; zTexto=__bkpZT; zAlertao=__bkpZA; pernHoje=__bkpPH; PERN_ATRAS=__bkpPA; alert=__bkpAL; pernCartaoRender=__bkpCR;'); }
+});
+provaAsync('6.48 R2 — «NÃO LIBEREI O HORÁRIO» no PRAZO (Q07): «Não sei se saiu da planilha», e não «O banho continua na planilha»', async () => {
+  run(BF_STUBS);
+  try {
+    const d2 = '2026-09-28', kJ = run("dcKey('Jasmine','Ana')");
+    for (const x of ['a ponte não respondeu em 12s', 'The request timed out.']) {
+      run(`__alertas=[]; __espResp={ok:false, erro:${JSON.stringify(x)}}; __plan.dia='${d2}'; __plan.banho=[{p:{n:'Jasmine', tutor:'Ana'}, hora:'10:00', txt:'JASMINE'}];
+        delete __banco['daycare/banho-falta/${d2}/${kJ}'];`);
+      await run(`banhoFaltaExecutar({chave:'${kJ}', nome:'Jasmine', hora:'10:00', origem:'planilha', lancs:[], txts:[{txt:'JASMINE', hora:'10:00'}], porque:'faltou'}, '${d2}')`); await tick();
+      const al = J630('__alertas');
+      igual(al[0].t, '⚠ NÃO LIBEREI O HORÁRIO', x);
+      assert.ok(/^Não sei se saiu da planilha: confira\./.test(al[0].l[1]) && !/O banho continua na planilha/.test(JSON.stringify(al)) && !/request timed out/.test(JSON.stringify(al)), x + ': ' + JSON.stringify(al));
+    }
+  } finally { run(BF_VOLTA); }
+});
+prova('6.48 R2 — o tradutor nas bordas: a recusa do Firestore (Q15), a reticência «…» (Q16), «[object Object]» (LOW-2) e a ponte que respondeu vazio no «Mandar agora» (LOW-1)', () => {
+  igual(['Missing or insufficient permissions.', 'FirebaseError: Missing or insufficient permissions.'].map((x) => run(`zErroTipo(${JSON.stringify(x)})`)), ['permissao', 'permissao']);
+  igual(['a ponte respondeu…', 'excedido!', 'o banco recusou?', 'a conexão caiu'].map((x) => run(`zErroFrase(${JSON.stringify(x)})`)),
+    ['a ponte respondeu…', 'excedido!', 'o banco recusou?', 'a conexão caiu.']);
+  igual(run("zErroTipo('[object Object]')"), '', 'LOW-2: «[object Object]» é o vazio');
+  igual(run("zErroMotivo('[object Object]', 'banco')"), run("zErroMotivo('', 'banco')"));
+  igual(run("zErroTexto('[object Object]', {alvo:'planilha'})"), run("zErroTexto('', {alvo:'planilha'})"));
+  assert.ok(!/object Object/.test(run("zErroTexto('[object Object]', {alvo:'planilha'})")));
+  // LOW-1: a frase que o dashAutoSincronizar (não se toca) escreve quando a ponte responde vazio no lerDia é a resposta vazia (K18)
+  igual(J630("repNaoFoiLinhas({ok:false, erro:'não consegui ler o dia na planilha'}, 0, 'Mandar agora')"), J630("repNaoFoiLinhas({ok:false, erro:''}, 0, 'Mandar agora')"));
+  assert.ok(!/recusou/.test(run("repNaoFoiLinhas({ok:false, erro:'não consegui ler o dia na planilha'}, 0, 'Mandar agora')[0]")));
+});
+// ==== 6.48, 3ª rodada (re-gate do QA, 09/out/2026): LOW-6 e LOW-7
+console.log('\n6.48 — 3ª rodada: a trava do Extrato pelo tradutor e o «sem banco» depois de gravar');
+prova('6.48 R3 LOW-6 — a trava do Extrato (repExtratoEsperaTexto): na recusa da leitura, «o sistema recusou a leitura» (K22); nos outros casos, o motivo pelo tradutor; o cru continua no REPO_ERRO', () => {
+  run('__bkRE648=REPO_ERRO;');
+  try {
+    const FIM = '. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.';
+    const T = (erro) => { run(`REPO_ERRO=${erro};`); return run('repExtratoEsperaTexto()'); };
+    const INI = 'Não consegui trazer o Extrato de reposições: ';
+    // a recusa do ouvinte (o texto do SDK) e a da gravação: as duas, ditas como LEITURA
+    igual(T(`new Error("permission_denied at /daycare/reposicao: Client doesn't have permission to access the desired data.")`), INI + 'o sistema recusou a leitura' + FIM);
+    igual(T(`new Error('PERMISSION_DENIED: Permission denied')`), INI + 'o sistema recusou a leitura' + FIM);
+    // os outros casos, pelo tradutor
+    igual(T(`new TypeError("Cannot read properties of undefined (reading 'lancamentos')")`), INI + "erro inesperado do app (Cannot read properties of undefined (reading 'lancamentos'))" + FIM);
+    igual(T(`new Error('Client is offline.')`), INI + 'a conexão com o banco caiu' + FIM);
+    igual(T(`new Error('')`), INI + 'não recebi resposta do banco' + FIM, 'o erro sem descrição');
+    igual(T(`new Error('leitura recusada')`), INI + 'leitura recusada' + FIM, 'o texto do próprio app (o ouvinte cancelado sem erro)');
+    igual(T(`{code:'PERMISSION_DENIED'}`), INI + 'o sistema recusou a leitura' + FIM, 'o objeto sem message: o code');
+    for (const x of [`new Error('PERMISSION_DENIED: Permission denied')`, `new TypeError('x is not a function')`, `new Error('Failed to fetch')`]) semCru648(T(x), 'LOW-6 ' + x);
+    // o cru continua guardado onde estava (o REPO_ERRO; o _logLeituraFalhou não mudou)
+    run(`REPO_ERRO=new Error('PERMISSION_DENIED: Permission denied');`);
+    igual(run('REPO_ERRO.message'), 'PERMISSION_DENIED: Permission denied');
+  } finally { run('REPO_ERRO=__bkRE648;'); }
+});
+prova('6.48 R3 LOW-7 — «sem conexão com o banco» depois de gravar não diz «Nada foi salvo» (zErroGrav e zErroSalvouTexto); antes de gravar, continua dizendo', () => {
+  const FECHE = 'Feche e abra o app com a internet ligada; se continuar, avise a Gestão.';
+  igual(run(`zErroGrav('sem conexão com o banco', {nada:'Nada foi salvo.', unica:true, gravou:true})`), FECHE);
+  igual(run(`zErroGrav('sem conexão com o banco', {nada:'Nada foi salvo.', unica:true, gravou:false})`), 'Nada foi salvo. ' + FECHE);
+  igual(run(`zErroGrav('sem conexão com o banco', {nada:'Nada foi salvo.', unica:true})`), 'Nada foi salvo. ' + FECHE, 'sem saber se gravou: a frase de antes');
+  igual(run(`zErroSalvouTexto('Não salvou', 'sem conexão com o banco', true)`), 'Este aparelho abriu o app sem ligação com o sistema. ' + FECHE);
+  igual(run(`zErroSalvouTexto('Não salvou', 'sem conexão com o banco', false)`), 'Não salvou: este aparelho abriu o app sem ligação com o sistema. Nada foi salvo. ' + FECHE);
+});
+// ==== 6.48, 4ª rodada (conferência final do QA, 09/out/2026): o resto do LOW-6
+console.log('\n6.48 — 4ª rodada: o ouvinte do banco sem serviço e o pedido grande demais, ditos em português');
+prova('6.48 R4 LOW-6 — «unavailable at /…» (e «The service is unavailable») é queda: a trava do Extrato diz «a conexão com o banco caiu»; o cru fica no REPO_ERRO', () => {
+  run('__bkRE648d=REPO_ERRO;');
+  try {
+    const UNV = 'unavailable at /daycare/reposicao: The service is unavailable';
+    igual([UNV, UNV + '.', 'The service is unavailable.', 'Error: The service is unavailable'].map((x) => run(`zErroTipo(${JSON.stringify(x)})`)), ['queda', 'queda', 'queda', 'queda']);
+    igual(run(`zErroMotivo(${JSON.stringify(UNV)}, 'banco', '', {leitura:true})`), 'a conexão com o banco caiu');
+    run(`REPO_ERRO=new Error(${JSON.stringify(UNV)});`);
+    const t = run('repExtratoEsperaTexto()');
+    igual(t, 'Não consegui trazer o Extrato de reposições: a conexão com o banco caiu. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.');
+    assert.ok(!/unavailable|The service/i.test(t), t);
+    igual(run('REPO_ERRO.message'), UNV, 'o cru continua guardado');
+    // na gravação: a regra G da queda (não sei se entrou), nunca «Confira a internet»
+    igual(run(`zErroAviso('Não consegui', ${JSON.stringify(UNV)}, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:false})`),
+      'Não consegui: a conexão com o banco caiu. Confira no Extrato se entrou antes de tentar de novo; avise a Gestão.');
+    // o «unavailable» que não é do banco continua sendo o que era
+    igual(run(`zErroTipo('o serviço da ponte está indisponível')`), 'texto');
+  } finally { run('REPO_ERRO=__bkRE648d;'); }
+});
+prova('6.48 R4 LOW-6 — «too_big at /…» é erro do app: «a gravação ficou grande demais» (na leitura, «a leitura ficou grande demais»), com «avise a Gestão»; o cru fica no REPO_ERRO', () => {
+  run('__bkRE648e=REPO_ERRO;');
+  try {
+    const BIG = 'too_big at /daycare/reposicao: Data to write exceeds the maximum size that can be modified with a single request.';
+    igual(run(`zErroTipo(${JSON.stringify(BIG)})`), 'tecnico');
+    igual(run(`zErroMotivo(${JSON.stringify(BIG)}, 'banco', '', {agora:true})`), 'a gravação ficou grande demais');
+    igual(run(`zErroAviso('Não consegui', ${JSON.stringify(BIG)}, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:false})`),
+      'Não consegui: a gravação ficou grande demais. Nada foi salvo. Avise a Gestão com um print desta tela.');
+    run(`REPO_ERRO=new Error(${JSON.stringify(BIG)});`);
+    const t = run('repExtratoEsperaTexto()');
+    igual(t, 'Não consegui trazer o Extrato de reposições: a leitura ficou grande demais. Sem ele, a mesma falta poderia entrar duas vezes, então nada foi lançado. Feche e abra o app de novo; se continuar, avise a Gestão.');
+    assert.ok(!/too_big|exceeds/i.test(t), t);
+    igual(run('REPO_ERRO.message'), BIG, 'o cru continua guardado');
+    // o outro erro do app continua «erro inesperado do app (…)»
+    igual(run(`zErroMotivo('TypeError: x is not a function', 'banco')`), 'erro inesperado do app (TypeError: x is not a function)');
+  } finally { run('REPO_ERRO=__bkRE648e;'); }
+});
+// ⟦6.48 fim⟧
 
 // ------------------------------------------------ o fim
 fila.then(() => {
