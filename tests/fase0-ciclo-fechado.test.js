@@ -9783,7 +9783,15 @@ const monta630 = async (opts, corpo) => {
     pelCadCache[pelKey(__t630)]=JSON.parse(JSON.stringify(__o630.ex));
     PELUDINHOS=[__t630]; pelAtual=__t630;
     zHojeISO=function(){ return __o630.hoje; }; hojeISO=function(){ return __o630.hoje; };
-    setPelExtra=function(p,o){ var c=JSON.parse(JSON.stringify(o)); __log630.grav.push(c); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(o))); return Promise.resolve({ok:true}); };
+    setPelExtra=function(p,o){ var c={}, cam={}; Object.keys(o||{}).forEach(function(x){ if(x.indexOf('/')>=0) cam[x]=o[x]; else c[x]=o[x]; });
+      c=JSON.parse(JSON.stringify(c)); __log630.grav.push(c); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(c)));
+      // 6.57 (palco): a resposta da troca de categoria agora vem na MESMA gravação do plano, como 'renov_hist/{id}/{campo}'. O banco
+      // deste palco recebe cada registro como recebia antes (um update no nó dele) e o cache da ficha muda junto; a linha nova e a
+      // saída da antiga (dois segmentos) continuam fora, como antes (o renovHistGravar e o remove eram de mentira aqui).
+      var porReg={}; Object.keys(cam).forEach(function(x){ var ps=x.split('/'); if(ps.length>2) (porReg[ps.slice(0,2).join('/')]=porReg[ps.slice(0,2).join('/')]||{})[ps.slice(2).join('/')]=cam[x]; });
+      Object.keys(porReg).forEach(function(rg){ DB.ref('daycare/cadastro/'+pelKey(p)+'/'+rg).update(porReg[rg]);
+        var cc=pelCadCache[pelKey(p)], ps=rg.split('/'); if(cc && cc[ps[0]] && cc[ps[0]][ps[1]]){ cc[ps[0]]=Object.assign({}, cc[ps[0]]); cc[ps[0]][ps[1]]=Object.assign({}, cc[ps[0]][ps[1]], porReg[rg]); } });
+      return Promise.resolve({ok:true}); };
     renovHistGravar=function(k,a,m){ __log630.hist.push({a:JSON.parse(JSON.stringify(a)), m:m}); return Promise.resolve(); };
     audit=function(a,d,m){ __log630.rastro.push({acao:a, detalhe:String(d), alvo:(m&&m.alvo)||''}); };
     zPergunta=function(t,l,op){ __log630.perg.push({t:t, l:l, op:op}); return Promise.resolve(__log630.resp.length?__log630.resp.shift():false); };
@@ -26875,7 +26883,12 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   pdRender: 2, pcQuadroAlmoco: 1, poVet: 1, poCardFaltas: 1, poCardComida: 1, poCardPernoites: 2,
   poCardEA: 1, paLinhas: 2, recListaHTML: 1, recBaixarExcel: 1,
   // 6.54 (o Palito): o motivo que a pessoa escreveu, lido no histórico, no PDF e na tela de conferir
-  mcrTrocaPorDatas: 1, mcrPdfApendice: 1, mcrDepoisDeSalvar: 1, mcrMotivoHTML: 2, mcrConferirHTML: 1 };
+  mcrTrocaPorDatas: 1, mcrPdfApendice: 1, mcrDepoisDeSalvar: 1, mcrMotivoHTML: 2, mcrConferirHTML: 1,
+  // 6.57 (a base comum de corrigir e anular, fora das três telas): o motivo que a pessoa escreveu no cartaz — no riscado
+  // (corrRiscadoHTML), no campo que volta preenchido (corrCartazHTML) e no registro que segue para a tela e para o rastro
+  // (corrConfirmar: o «semResposta», o «pronto», o «falhou» e o rastro tardio levam o reg, que carrega o motivo; o erro do banco
+  // vai só para gravacao-FALHOU e, na tela, pelo zErroMotivo do corrCartazHTML)
+  corrRiscadoHTML: 1, corrCartazHTML: 1, corrConfirmar: 4 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -26987,6 +27000,9 @@ const EXCECAO648 = [
   "var le={}; t.leitura.forEach(function(x){ le[x.id]=x.motivo; });",   // mcrRemediosHTML: o motivo da leitura é frase do app («Suspenso pela veterinária…», «Termina hoje…»)
   "+'<div class=\"mcr-mut\" id=\"mcrMotivoDica\">'+esc(v.ok?'Motivo ok.':v.erro)+'</div>'",   // mcrMotivoHTML: v = motivoQuatroPalavras
   "var r=motivoQuatroPalavras(M.motivo); d.textContent=r.ok?'Motivo ok.':r.erro;",   // mcrSetMotivo: r = motivoQuatroPalavras
+  // 6.57 (fora das três telas): no cartaz «Corrigir / Anular / Reabrir», as frases das duas réguas comuns — nunca o cru
+  "if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }",   // corrConfirmar: mv = motivoQuatroPalavras («Escreva o que aconteceu…»)
+  "if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }",   // corrConfirmar: ass = corrAssinar («Essa senha é de um posto…», «Quem assina: …»)
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -29686,6 +29702,1171 @@ prova('6.54 QA7 H14 (C6-1) — raiz ci_ de fora da janela: a Gabapentina do Pali
   const P = planoQ7(cena, ag, {});
   igual([idsQ7(P).indexOf(CIOLDT) >= 0, idsQ7(P).indexOf(VOLDT) >= 0, P.escolher.some((c) => c.id === CIOLDT || c.id === VOLDT)], [false, false, false], 'as duas continuações ficam na ficha do Palito aluno, sem pergunta');
   assert.ok(P.naoMexe.indexOf(CIOLDT) >= 0 && P.naoMexe.indexOf(VOLDT) >= 0, 'e ficam como "não mexe"');
+});
+// ================================================================== 6.57 — a base comum de corrigir e anular (S0)
+console.log('\n6.57 — A base comum de corrigir e anular: o cartaz «Corrigir / Anular / Reabrir», o antes e o depois da ficha, o «Salvo» só com o banco e o papel na função que grava');
+// Tudo INVENTADO: Tonico (tutora Rita Teste), Tâmara (Viajante Teste), Pipoca (Lia Teste) e as pessoas «Teste». Relógio
+// FIXO em sexta, 09/10/2026, 10:00 (Date trocado no sandbox). Banco de mentira que conta gravações, sabe recusar (PERMISSION_DENIED)
+// e sabe ficar sem responder (para o prazo de 20 segundos, com o setTimeout de mentira).
+const DIA657 = '2026-10-09';
+const T657 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+run('var __RD657=(typeof __RD656!=="undefined")?__RD656:Date;');
+const SENHA657 = 'senhaSecreta657';
+const ARMA657 = `__bk657={db:DB, au:audit, za:zAlertao, ze:zEscolha, zp:zPergunta, zt:zTexto, al:alert, st:setTimeout, sr:senhasRuntime, mo:MONITORES,
+    ro:document.body.dataset.role, ge:document.getElementById, qs:document.querySelector, P:PELUDINHOS, pcc:pelCadCache, ls:localStorage,
+    hz:zHojeISO, hj:hojeISO, D:Date, pa:pelAtual, rpf:renderPelFicha, rp:renderPel, rd:renderDaycare, ap:abrirPeludinho, fna:fecharNovoAluno,
+    rh:renderHosp, ch:carregarHospedes, mr:mesaRender, rr:renderRelatorios, pr:pendRender, rds:renderDash, drp:dashRemoverDaPlanilha,
+    ocl:orcCarregarLista, otp:orcTirarDaPlanilha, olc:ORC_LISTA_CACHE, pa2:PEND_ABERTAS, dd:DASH_DADOS, dsel:DASH_DIA_SEL, ch2:currentHosp,
+    ca:__cadAberto, ckf:__cadKeyFixa, cfl:cadFormLer, ah:atualizarHeader, rr2:renovRascunho, zf:zFalta, zl:zLimparFalta, mm:mmBlocoHTML, ipa:irParaAbaPlano,
+    pc:planosCfg, fc:FOTO_CONF, fca:FOTO_CONF_AGORA, ft:FOTOS, ma:MESA_ATENCAO, hm:HOSP_MESMO, gd:(typeof gdCarregar==='function'?gdCarregar:null),
+    algr:ALG_RESP, algc:algCur, algp:algPelDe, alge:algEntrevistaReg, alga:algAvisarGestao, nap:NA_PRE_CAD, naf:NA_AFAZER,
+    lte:LT_ESTADO, ltd:LT_DADOS, ltdia:LT_DIA, irv:irParaView,
+    ss:(typeof sessionStorage!=='undefined'?sessionStorage:undefined), ca2:(typeof CORR_ATUAL!=='undefined'?CORR_ATUAL:undefined)};
+  __db657={}; __esc657=[]; __n657=0; __au657=[]; __za657=[]; __ze657=[]; __al657=[]; __tm657=[]; __recusa657=null; __pendura657=null; __pend657=[];
+  __zpq657=[]; __ztq657=[]; __zp657=[]; __zt657=[]; __el657={}; __ls657={}; __ab657=[]; __fna657=0; __view657={id:'v-ficha'};
+  __login657={nome:'Gestora Teste', role:'gestao'};
+  __get657=function(p){ var o=__db657; var ps=String(p||'').split('/').filter(Boolean); for(var i=0;i<ps.length;i++){ if(o==null||typeof o!=='object') return null; o=o[ps[i]]; } return (o===undefined)?null:JSON.parse(JSON.stringify(o)); };
+  __put657=function(p, v){ var ps=String(p||'').split('/').filter(Boolean), o=__db657; for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]]||typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+    if(v===null||v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); };
+  // a resposta do banco: recusa (PERMISSION_DENIED), fica sem responder (até a prova soltar) ou grava
+  __resp657=function(op, p, info, fazer){
+    if(__recusa657 && new RegExp(__recusa657).test(p)){ __esc657.push([op+'-RECUSADO', p]); return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }
+    if(__pendura657 && new RegExp(__pendura657).test(p)) return new Promise(function(ok, nao){
+      __pend657.push({p:p, ok:function(){ fazer(); __esc657.push([op, p, info]); ok(); }, nao:function(){ __esc657.push([op+'-RECUSADO', p]); nao(new Error('PERMISSION_DENIED: Permission denied')); }}); });
+    fazer(); __esc657.push([op, p, info]); return Promise.resolve();
+  };
+  DB={ref:function(p){ p=String(p||''); var r={ key:(p.split('/').pop()||null),
+    once:function(){ var v=__get657(p); return Promise.resolve({val:function(){ return v; }, exists:function(){ return v!==null; }}); },
+    set:function(v){ return __resp657('set', p, null, function(){ __put657(p, v); }); },
+    update:function(v){ return __resp657('update', p, Object.keys(v||{}).sort(), function(){ Object.keys(v||{}).forEach(function(k){ __put657(p?(p+'/'+k):k, v[k]); }); }); },
+    remove:function(){ return __resp657('remove', p, null, function(){ __put657(p, null); }); },
+    push:function(v){ var k='r657_'+String(++__n657).padStart(3,'0'); var f=DB.ref(p+'/'+k); if(v!==undefined){ var pr=f.set(v); f.then=function(a,b){ return pr.then(a,b); }; f.catch=function(b){ return pr.catch(b); }; } return f; },
+    transaction:function(fn){ var r=fn(__get657(p)); if(r===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __get657(p); }}});
+      return __resp657('transaction', p, null, function(){ __put657(p, r); }).then(function(){ return {committed:true, snapshot:{val:function(){ return __get657(p); }}}; }); },
+    on:function(){}, off:function(){} }; return r; }};
+  audit=function(a, d, m){ __au657.push([a, String(d||''), JSON.parse(JSON.stringify(m||{}))]); };
+  zAlertao=function(t, l, op){ __za657.push([t, l, op||{}]); }; zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); };
+  zPergunta=function(t, l, op){ __zp657.push([t, l]); return Promise.resolve(__zpq657.length?__zpq657.shift():true); };
+  zTexto=function(t, l, op){ __zt657.push([t, l]); return Promise.resolve(__ztq657.length?__ztq657.shift():null); };
+  alert=function(t){ __al657.push(String(t)); };
+  setTimeout=function(fn, ms){ __tm657.push({fn:fn, ms:ms}); return __tm657.length; };
+  senhasRuntime=function(){ var m={}; m['${SENHA657}']={role:'gestao', nome:'Gestora Teste'}; m['s-amanda']={role:'supervisor', nome:'Amanda Supervisora Teste'};
+    m['s-bia']={role:'consultora', nome:'Bia Consultora Teste'}; m['s-posto']={role:'plantonista', nome:'Plantonista'}; m['s-recep']={role:'consultora', nome:'Recepção'};
+    m['s-caio']={role:'monitor', nome:'Caio Encãotador Teste'}; m['s-vera']={role:'vet', nome:'Vera Veterinária Teste', paginas:['orcamento']}; return m; };
+  MONITORES=[{id:'t1', nome:'Caio Encãotador Teste', senha:'s-caio', role:'monitor', paginas:[]}, {id:'t2', nome:'Vera Veterinária Teste', senha:'s-vera', role:'vet', paginas:['orcamento']}];
+  document.body.dataset.role='gestao';
+  document.getElementById=function(id){ return Object.prototype.hasOwnProperty.call(__el657, id)?__el657[id]:__bk657.ge.call(document, id); };
+  document.querySelector=function(s){ return (s==='.view.active')?__view657:null; };
+  sessionStorage={getItem:function(k){ return (k==='zeluz_login' && __login657)?JSON.stringify(__login657):null; }, setItem:function(){}, removeItem:function(){}};
+  localStorage={getItem:function(k){ return Object.prototype.hasOwnProperty.call(__ls657, k)?__ls657[k]:null; }, setItem:function(k, v){ __ls657[k]=String(v); }, removeItem:function(k){ delete __ls657[k]; }};
+  zHojeISO=function(){ return '${DIA657}'; }; hojeISO=zHojeISO;
+  Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${T657(9, 10, 0)}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${T657(9, 10, 0)}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;
+  PELUDINHOS=[{n:'Tonico', tutor:'Rita Teste', raca:'SRD', dias:['seg']}]; pelCadCache={}; pelAtual=null;
+  renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){}; abrirPeludinho=function(i){ __ab657.push(i); }; fecharNovoAluno=function(){ __fna657++; };
+  renderHosp=function(){}; carregarHospedes=function(){}; mesaRender=function(){}; renderRelatorios=function(){}; pendRender=function(){}; renderDash=function(){};
+  dashRemoverDaPlanilha=function(){ return Promise.resolve(); }; orcCarregarLista=function(){}; orcTirarDaPlanilha=function(){}; ORC_LISTA_CACHE={};
+  atualizarHeader=function(){}; zFalta=function(l){ __za657.push(['zFalta', l]); return true; }; zLimparFalta=function(){}; mmBlocoHTML=function(){ return ''; };
+  irParaAbaPlano=function(){}; irParaView=function(){}; if(typeof gdCarregar==='function') gdCarregar=function(){};
+  FOTO_CONF={}; FOTO_CONF_AGORA={}; FOTOS={}; MESA_ATENCAO={}; HOSP_MESMO={}; NA_PRE_CAD=''; NA_AFAZER={};`;
+const SOLTA657 = `DB=__bk657.db; audit=__bk657.au; zAlertao=__bk657.za; zEscolha=__bk657.ze; zPergunta=__bk657.zp; zTexto=__bk657.zt; alert=__bk657.al;
+  setTimeout=__bk657.st; senhasRuntime=__bk657.sr; MONITORES=__bk657.mo; document.body.dataset.role=__bk657.ro; document.getElementById=__bk657.ge;
+  document.querySelector=__bk657.qs; PELUDINHOS=__bk657.P; pelCadCache=__bk657.pcc; localStorage=__bk657.ls; zHojeISO=__bk657.hz; hojeISO=__bk657.hj;
+  Date=__bk657.D; pelAtual=__bk657.pa; renderPelFicha=__bk657.rpf; renderPel=__bk657.rp; renderDaycare=__bk657.rd; abrirPeludinho=__bk657.ap;
+  fecharNovoAluno=__bk657.fna; renderHosp=__bk657.rh; carregarHospedes=__bk657.ch; mesaRender=__bk657.mr; renderRelatorios=__bk657.rr; pendRender=__bk657.pr;
+  renderDash=__bk657.rds; dashRemoverDaPlanilha=__bk657.drp; orcCarregarLista=__bk657.ocl; orcTirarDaPlanilha=__bk657.otp; ORC_LISTA_CACHE=__bk657.olc;
+  PEND_ABERTAS=__bk657.pa2; DASH_DADOS=__bk657.dd; DASH_DIA_SEL=__bk657.dsel; currentHosp=__bk657.ch2; __cadAberto=__bk657.ca; __cadKeyFixa=__bk657.ckf;
+  cadFormLer=__bk657.cfl; atualizarHeader=__bk657.ah; renovRascunho=__bk657.rr2; zFalta=__bk657.zf; zLimparFalta=__bk657.zl; mmBlocoHTML=__bk657.mm;
+  irParaAbaPlano=__bk657.ipa; planosCfg=__bk657.pc; FOTO_CONF=__bk657.fc; FOTO_CONF_AGORA=__bk657.fca; FOTOS=__bk657.ft; MESA_ATENCAO=__bk657.ma; HOSP_MESMO=__bk657.hm;
+  if(__bk657.gd) gdCarregar=__bk657.gd; ALG_RESP=__bk657.algr; algCur=__bk657.algc; algPelDe=__bk657.algp; algEntrevistaReg=__bk657.alge; algAvisarGestao=__bk657.alga;
+  NA_PRE_CAD=__bk657.nap; NA_AFAZER=__bk657.naf; LT_ESTADO=__bk657.lte; LT_DADOS=__bk657.ltd; LT_DIA=__bk657.ltdia; irParaView=__bk657.irv;
+  if(__bk657.ss===undefined){ try{ delete globalThis.sessionStorage; }catch(e){ sessionStorage=undefined; } } else sessionStorage=__bk657.ss;
+  if(typeof CORR_ATUAL!=='undefined') CORR_ATUAL=__bk657.ca2;`;
+const espera657 = async (n) => { for (let i = 0; i < (n || 400); i++) await Promise.resolve(); };
+const db657 = (p) => run(`__get657(${JSON.stringify(p)})`);
+const K657 = 'tonico__rita teste';
+const P657 = "PELUDINHOS[0]";
+// A ficha do Tonico no banco (e na cópia do aparelho, como o ouvinte deixaria)
+const fichaTonico657 = (extra) => {
+  ctx.__f657 = Object.assign({ n: 'Tonico', tutor: 'Rita Teste', raca: 'SRD', dias: ['seg'], comp_casa: 'brinca com todos', medos: '', alergia: '' }, extra || {});
+  run(`__put657('daycare/cadastro/${K657}', __f657); pelCadCache['${K657}']=__get657('daycare/cadastro/${K657}'); __esc657=[]; __au657=[];`);
+};
+const aud657 = (acao) => J630(`__au657.filter(function(a){ return a[0]===${JSON.stringify(acao)}; })`);
+const escritas657 = () => J630('__esc657');
+// o cartaz em teste: abre com op padrão, devolve a promessa (em __p657) e anota o que a tela recebeu para gravar (__gr657)
+const abreCorr657 = (op) => run(`__gr657=[]; __grq657=[]; __p657=corrAbrir(Object.assign({oque:'a dose do Apoquel de Tonico', tela:'Cuidado Vet', original:{caminho:'auaulandia/medicacao-agenda/tonico/it1', id:'it1'},
+    nivel:'propria', capacidade:'corrigir-hospedagem',
+    gravar:function(reg){ __gr657.push(JSON.parse(JSON.stringify(reg))); if(__grq657.length) return __grq657.shift()(); return Promise.resolve({ok:true}); }}, ${op}));`);
+const cartaz657 = () => String(run('corrCartazHTML(CORR_ATUAL)') || '');
+const CAMPOS657 = "{acao:'corrigir', campos:[{c:'hora', rotulo:'Hora', valor:'08:00'}, {c:'dose', rotulo:'Dose', valor:'1 comprimido'}]}";
+
+// ---- AC1 — o cartaz único -----------------------------------------------------------------------------------------
+provaAsync('6.57 P1 (AC1.1) — Corrigir: os campos vêm com o valor atual; sem mudança, «Nada mudou» e nada é gravado; mudou a hora, o cartaz mostra «Antes → Depois» e só então pede motivo e senha', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657);
+    const h0 = cartaz657();
+    assert.ok(/value="08:00"/.test(h0) && /value="1 comprimido"/.test(h0), 'os campos abrem com o valor atual');
+    assert.ok(!/id="corrMotivo"/.test(h0) && !/id="corrSenha"/.test(h0), 'a primeira tela ainda não pede motivo nem senha');
+    run(`corrToque('continuar', {valores:['08:00', '1 comprimido']})`);
+    const h1 = cartaz657();
+    assert.ok(/Nada mudou/.test(h1), 'sem mudança, o cartaz diz «Nada mudou»');
+    igual(run('CORR_ATUAL.passo'), 'campos');
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']})`);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    const h2 = cartaz657();
+    assert.ok(/Antes → Depois/.test(h2), 'o título «Antes → Depois»');
+    assert.ok(/Hora[^]*«08:00»[^]*→[^]*«09:00»/.test(h2), 'a hora: antes e depois');
+    assert.ok(h2.indexOf('1 comprimido') < 0, 'o campo que não mudou não entra no antes e depois');
+    assert.ok(/id="corrMotivo"/.test(h2) && /id="corrSenha"[^>]*type="password"|type="password"[^>]*id="corrSenha"/.test(h2), 'só agora pede o motivo e a senha');
+    run(`corrToque('cancelar')`); await espera657();
+    const res = await run('__p657');
+    igual([res.ok, res.cancelado, run('__gr657.length'), escritas657().length], [false, true, 0, 0], 'cancelado: nada foi gravado');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P2 (AC1.2) — Anular: o cartaz mostra a lista inteira do que sai junto (vem da tela) e a frase do riscado antes de pedir motivo e senha', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657("{acao:'anular', oque:'o exame do corpo de Tonico (09/10)', cascata:['o alarme da veterinária', 'a pendência com o tutor', 'a linha da planilha e da TV', 'os pontos da Encãotadora'], nivel:'gestao'}");
+    igual(run('CORR_ATUAL.passo'), 'conferir', 'anular vai direto para conferir');
+    const h = cartaz657();
+    ['o alarme da veterinária', 'a pendência com o tutor', 'a linha da planilha e da TV', 'os pontos da Encãotadora'].forEach((t) => assert.ok(h.indexOf(t) >= 0, 'na lista: ' + t));
+    assert.ok(h.indexOf('O registro fica riscado, com quem, quando e o motivo. Nada é apagado.') >= 0, 'a frase do riscado');
+    assert.ok(/id="corrMotivo"/.test(h) && /id="corrSenha"/.test(h));
+    assert.ok(/Senha da Gestão/.test(h) && /a Gestão ou a Diretoria/.test(h), 'o nível Gestão diz quem assina');
+    run(`corrToque('cancelar')`); await espera657();
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P3 (AC1.3) — Reabrir: mostra o estado de volta e o que volta junto; a volta é um registro novo (a tela recebe acao reabrir, antes e depois), nunca a remoção do anterior', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657("{acao:'reabrir', oque:'a ocorrência de Tonico', estado:'anulada', paraEstado:'aberta', volta:['a ocorrência volta para a fila da Recepção', 'a contagem da Mesa'], nivel:'gestao'}");
+    const h = cartaz657();
+    assert.ok(/Volta a ficar[^]*aberta/.test(h), 'o estado de volta');
+    assert.ok(h.indexOf('a ocorrência volta para a fila da Recepção') >= 0 && h.indexOf('a contagem da Mesa') >= 0, 'o que volta junto');
+    assert.ok(/A volta é um registro novo/.test(h), 'a volta é um registro novo');
+    await run(`corrToque('confirmar', {motivo:'foi lançada por engano na ficha errada', senha:'${SENHA657}'})`); await espera657();
+    const g = J630('__gr657');
+    igual(g.length, 1);
+    igual([g[0].acao, g[0].antes, g[0].depois, g[0].original, g[0].por, g[0].papel], ['reabrir', { estado: 'anulada' }, { estado: 'aberta' }, { caminho: 'auaulandia/medicacao-agenda/tonico/it1', id: 'it1' }, 'Gestora Teste', 'gestao']);
+    igual(escritas657().filter((e) => /^remove/.test(e[0])).length, 0, 'nada é removido pelo componente');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P4 (AC1.4) — motivo de 1 palavra, de 3 palavras e «ok ok ok ok»: recusado na própria tela, sem fechar, com o texto de motivoQuatroPalavras', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657);
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']})`);
+    for (const m of ['engano', 'foi um engano', 'ok ok ok ok']) {
+      await run(`corrToque('confirmar', {motivo:${JSON.stringify(m)}, senha:'${SENHA657}'})`); await espera657();
+      igual(run('CORR_ATUAL.passo'), 'conferir', 'o cartaz continua aberto: ' + m);
+      const esperado = run(`motivoQuatroPalavras(${JSON.stringify(m)}).erro`);
+      assert.ok(cartaz657().indexOf(run('esc(' + JSON.stringify(esperado) + ')')) >= 0, 'o texto da régua da 6.53 para «' + m + '»: ' + esperado);
+    }
+    assert.ok(/faltam 3/.test(run(`motivoQuatroPalavras('engano').erro`)));
+    igual(run('__gr657.length'), 0, 'nada foi para a gravação');
+    run(`corrToque('cancelar')`); await espera657();
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P5 (AC1.5) — a assinatura: no nível própria, posto, «Recepção», senha de ninguém, nome digitado e quem não tem a capacidade são recusados (a tela diz quem assina); no nível Gestão, a Supervisão é recusada e a Gestão assina', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657);
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']})`);
+    const tenta = async (s) => { await run(`corrToque('confirmar', {motivo:'a hora foi digitada errada no lançamento', senha:${JSON.stringify(s)}})`); await espera657(); return [run('CORR_ATUAL.passo'), String(run('CORR_ATUAL.aviso') || '')]; };
+    let [p, a] = await tenta('s-posto'); igual(p, 'conferir'); assert.ok(/posto/.test(a), a);
+    [p, a] = await tenta('s-recep'); igual(p, 'conferir'); assert.ok(/posto \(Recepção\)/.test(a), a);
+    [p, a] = await tenta('0000'); igual(p, 'conferir'); assert.ok(/não é de ninguém/.test(a), a);
+    [p, a] = await tenta('Gestora Teste'); igual(p, 'conferir', 'nome digitado não vale como assinatura'); assert.ok(/não é de ninguém/.test(a), a);
+    [p, a] = await tenta('s-caio'); igual(p, 'conferir'); assert.ok(/Caio Encãotador Teste/.test(a) && /Quem assina: a Consultora de Bem-Estar, a Supervisão, a Gestão ou a Diretoria\. Nada foi gravado\.$/.test(a), a);
+    igual(run('__gr657.length'), 0, 'senha recusada: nada é gravado');
+    [p, a] = await tenta('s-bia'); igual(p, 'pronto', 'a Consultora tem a capacidade e assina');
+    igual(J630('__gr657[0].por'), 'Bia Consultora Teste');
+    // nível Gestão
+    abreCorr657("{acao:'anular', oque:'a dose de 08:00 do Apoquel', cascata:['o alarme'], nivel:'gestao'}");
+    const tentaG = async (s) => { await run(`corrToque('confirmar', {motivo:'a dose foi lançada no FILHOt errado', senha:${JSON.stringify(s)}})`); await espera657(); return [run('CORR_ATUAL.passo'), String(run('CORR_ATUAL.aviso') || '')]; };
+    [p, a] = await tentaG('s-amanda'); igual(p, 'conferir'); assert.ok(/Amanda Supervisora Teste/.test(a) && /a Gestão ou a Diretoria/.test(a), a);
+    [p, a] = await tentaG('s-bia'); igual(p, 'conferir');
+    [p] = await tentaG(SENHA657); igual(p, 'pronto', 'a Gestão assina');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P6 (AC1.5) — a senha é conferida e esquecida: não aparece no registro, no banco, na auditoria, no cartaz nem na memória da tela depois de fechar', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657 + ", {gravar:function(reg){ __gr657.push(JSON.parse(JSON.stringify(reg))); return DB.ref('daycare/correcoes-teste/'+reg.ts).set(reg).then(function(){ return {ok:true}; }); }}");
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']})`);
+    await run(`corrToque('confirmar', {motivo:'a hora foi digitada errada no lançamento', senha:'${SENHA657}'})`); await espera657();
+    igual(run('CORR_ATUAL.passo'), 'pronto');
+    const html = cartaz657();
+    run(`corrToque('fechar')`); await espera657();
+    const tudo = JSON.stringify([run('__db657'), run('__au657'), run('__esc657'), run('__gr657'), run('CORR_ATUAL'), html, run('__ls657')]);
+    igual(tudo.indexOf(SENHA657), -1, 'a senha não ficou em lugar nenhum');
+    assert.ok(tudo.indexOf('Gestora Teste') >= 0, 'o NOME de quem assinou ficou');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P7 (AC1.6, AC1.7) — «Pronto» só depois do {ok:true}; com {ok:false} ou erro, «NADA FOI GRAVADO», o motivo em português e o registro como estava, sem entrada de correção (a falha vai para gravacao-FALHOU)', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657);
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']}); __res657=null; __grq657=[function(){ return new Promise(function(ok){ __res657=ok; }); }];`);
+    run(`corrToque('confirmar', {motivo:'a hora foi digitada errada no lançamento', senha:'${SENHA657}'})`); await espera657();
+    igual(run('CORR_ATUAL.passo'), 'gravando', 'esperando o banco');
+    assert.ok(!/Pronto/.test(cartaz657()) && /Gravando/.test(cartaz657()), 'sem «Pronto» antes do banco');
+    igual(aud657('registro-corrigido').length, 0, 'nem o rastro');
+    run('__res657({ok:true})'); await espera657();
+    igual(run('CORR_ATUAL.passo'), 'pronto');
+    assert.ok(/Pronto/.test(cartaz657()));
+    const rc = aud657('registro-corrigido');
+    igual(rc.length, 1, 'uma entrada nova na auditoria');
+    const m = rc[0][2];
+    igual([m.oque, m.tela, m.original, m.antes, m.depois, m.motivo, m.por, m.papel, m.login], ['a dose do Apoquel de Tonico', 'Cuidado Vet',
+      { caminho: 'auaulandia/medicacao-agenda/tonico/it1', id: 'it1' }, { hora: '08:00' }, { hora: '09:00' }, 'a hora foi digitada errada no lançamento', 'Gestora Teste', 'gestao', 'Gestora Teste']);
+    assert.ok(/Hora: «08:00» → «09:00»/.test(rc[0][1]), 'o resumo antes → depois: ' + rc[0][1]);
+    const res = await run('__p657'); igual([res.ok, res.reg.por], [true, 'Gestora Teste']);
+    // {ok:false} e erro
+    for (const falha of ["function(){ return Promise.resolve({ok:false, erro:new Error('PERMISSION_DENIED: Permission denied')}); }",
+      "function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }", "function(){ throw new Error('PERMISSION_DENIED: Permission denied'); }"]) {
+      run('__au657=[];');
+      abreCorr657(CAMPOS657);
+      run(`corrToque('continuar', {valores:['09:00', '1 comprimido']}); __grq657=[${falha}];`);
+      await run(`corrToque('confirmar', {motivo:'a hora foi digitada errada no lançamento', senha:'${SENHA657}'})`); await espera657();
+      igual(run('CORR_ATUAL.passo'), 'falhou', falha);
+      const h = cartaz657();
+      assert.ok(/NADA FOI GRAVADO/.test(h) && /recusou a gravação/.test(h) && /continua como estava/.test(h), h.slice(0, 600));
+      assert.ok(!/Pronto/.test(h));
+      igual([aud657('registro-corrigido').length, aud657('gravacao-FALHOU').length], [0, 1], 'sem correção na auditoria; a falha em gravacao-FALHOU');
+      const r2 = await run('__p657'); igual(r2.ok, false);
+    }
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P8 (AC1.6, AC3.5) — sem resposta em 20 segundos, o cartaz diz que o banco ainda não confirmou (o prazo do hospComPrazo); a correção só entra no rastro quando o banco confirmar', async () => {
+  run(ARMA657);
+  try {
+    abreCorr657(CAMPOS657);
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']}); __res657=null; __grq657=[function(){ return new Promise(function(ok){ __res657=ok; }); }];`);
+    run(`corrToque('confirmar', {motivo:'a hora foi digitada errada no lançamento', senha:'${SENHA657}'})`); await espera657();
+    const prazos = J630('__tm657.map(function(t){ return t.ms; })');
+    assert.ok(prazos.indexOf(20000) >= 0, 'o prazo é de 20 segundos: ' + JSON.stringify(prazos));
+    igual(run('CORR_PRAZO'), 20000);
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); })'); await espera657();
+    igual(run('CORR_ATUAL.passo'), 'semResposta');
+    assert.ok(/AINDA NÃO CONFIRMOU/.test(cartaz657()) && /Confira/.test(cartaz657()));
+    igual(aud657('registro-corrigido').length, 0, 'sem o ok, sem rastro');
+    run('__res657({ok:true})'); await espera657();
+    igual(aud657('registro-corrigido').length, 1, 'o banco confirmou depois: o rastro entra');
+  } finally { run(SOLTA657); }
+});
+prova('6.57 P9 (AC1.8) — o desenho riscado: quem, quando, o motivo e o botão «Reabrir» (44 px), com todo texto escapado', () => {
+  run(ARMA657);
+  try {
+    const reg = { acao: 'anular', oque: 'a dose <b>08:00</b>', motivo: 'foi no FILHOt errado <script>x</script>', por: 'Gestora "Teste"', papel: 'gestao', quando: '09/10/2026 às 10:00', ts: T657(9, 10, 0), antes: { estado: 'valendo' }, depois: { estado: 'anulado' } };
+    ctx.__reg657 = reg;
+    const h = String(run(`corrRiscadoHTML(__reg657, "reabrirTeste('a1')")`));
+    assert.ok(/line-through/.test(h), 'riscado');
+    assert.ok(h.indexOf('Gestora "Teste"') >= 0 || h.indexOf('Gestora &quot;Teste&quot;') >= 0, 'quem');
+    assert.ok(h.indexOf('09/10/2026 às 10:00') >= 0, 'quando');
+    assert.ok(h.indexOf('&lt;script&gt;') >= 0 && h.indexOf('<script>') < 0 && h.indexOf('<b>08:00') < 0, 'texto escapado');
+    assert.ok(/<button[^>]*onclick="reabrirTeste\('a1'\)"[^>]*>Reabrir<\/button>/.test(h) && /min-height:44px/.test(h), 'o botão Reabrir');
+    assert.ok(/Gestão/.test(h), 'o papel em português');
+  } finally { run(SOLTA657); }
+});
+
+// ---- AC2 — o antes e o depois da ficha ------------------------------------------------------------------------------
+provaAsync('6.57 P10 (AC2.1, AC2.2) — setPelExtra: o campo mudado ganha o rastro inteiro em daycare/ficha-rastro e a linha na auditoria (de, para, quem, papel, tela); o campo igual não gera nada', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    const r = await run(`setPelExtra(${P657}, {comp_casa:'evita machos', medos:''})`); await espera657();
+    igual(r.ok, true);
+    const fr = db657('daycare/ficha-rastro/' + K657) || {};
+    const ids = Object.keys(fr);
+    igual(ids.length, 1, 'um registro (o medos continuou vazio)');
+    const x = fr[ids[0]];
+    igual([x.acao, x.campo, x.de, x.para, x.quem, x.papel, x.tela, x.origem, x.ts], ['ficha-campo', 'comp_casa', 'brinca com todos', 'evita machos', 'Gestora Teste', 'gestao', 'Cadastro de Peludinhos', 'pessoa', T657(9, 10, 0)]);
+    const a = aud657('ficha-campo');
+    igual(a.length, 1);
+    igual([a[0][2].campo, a[0][2].de, a[0][2].para, a[0][2].tela, a[0][2].origem, a[0][2].rastro, a[0][2].alvo], ['comp_casa', 'brinca com todos', 'evita machos', 'Cadastro de Peludinhos', 'pessoa', ids[0], K657]);
+    assert.ok(/Tonico/.test(a[0][1]) && /Comportamento: Em casa/.test(a[0][1]), a[0][1]);
+    // a ordem: primeiro a ficha, depois o rastro
+    const e = escritas657().map((w) => w[0] + ' ' + w[1]);
+    assert.ok(e[0] === 'update daycare/cadastro/' + K657 && /^set daycare\/ficha-rastro\/tonico__rita teste\/r657_/.test(e[1]), JSON.stringify(e));
+    // de novo, com o mesmo valor: nada (o ouvinte do cadastro, zMapaVivo, já trouxe o banco para a cópia deste aparelho)
+    run(`pelCadCache['${K657}']=__get657('daycare/cadastro/${K657}'); __esc657=[]; __au657=[];`);
+    await run(`setPelExtra(${P657}, {comp_casa:'evita machos'})`); await espera657();
+    igual([Object.keys(db657('daycare/ficha-rastro/' + K657)).length, aud657('ficha-campo').length], [1, 0], 'campo igual: nenhum registro');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P11 (AC2.5) — setPelExtra com o banco recusando: nenhum registro de mudança; a falha continua em gravacao-FALHOU (e, com o banco aceitando, o registro entra)', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    run(`__recusa657='^daycare/cadastro';`);
+    const r = await run(`setPelExtra(${P657}, {comp_casa:'evita machos'})`); await espera657();
+    igual(r.ok, false);
+    igual([db657('daycare/ficha-rastro'), aud657('ficha-campo').length, aud657('gravacao-FALHOU').length], [null, 0, 1]);
+    // a mesma mudança, com o banco aceitando: aí sim o registro da mudança entra
+    run(`__recusa657=null; __au657=[];`);
+    const r2 = await run(`setPelExtra(${P657}, {comp_casa:'evita machos'})`); await espera657();
+    igual([r2.ok, Object.keys(db657('daycare/ficha-rastro/' + K657) || {}).length, aud657('ficha-campo').length, aud657('gravacao-FALHOU').length], [true, 1, 1, 0]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P12 (AC2.3) — a foto: o rastro diz só «foto trocada», nunca a imagem; os pesos não entram no rastro', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    const IMG = 'data:image/jpeg;base64,QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=';
+    const r = await run(`setPelExtra(${P657}, {foto:'${IMG}'})`); await espera657();
+    igual(r.ok, true);
+    const fr = db657('daycare/ficha-rastro/' + K657) || {};
+    const v = Object.keys(fr).map((k) => fr[k]);
+    igual(v.map((x) => [x.campo, x.para]), [['foto', 'foto trocada']]);
+    const tudo = JSON.stringify([fr, run('__au657')]);
+    igual(tudo.indexOf('base64'), -1, 'a imagem não entra no rastro nem na auditoria');
+    run('__au657=[];');
+    await run(`setPelExtra(${P657}, {pesos:[{data:'2026-10-09', kg:8.2, quem:'Gestora Teste'}]})`); await espera657();
+    igual([Object.keys(db657('daycare/ficha-rastro/' + K657)).length, aud657('ficha-campo').length], [1, 0], 'pesos: sem registro');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P13 (AC2.4) — o que o app grava sozinho sai marcado como automático, com a tela de origem: prevColeiraRecalcular e algTratarAuto', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657({ col_nome: 'Seresto', col_t: '2026-06-01', col_p: '2026-11-01' });
+    run(`prevColeiraRecalcular(${P657}, pelExtra(${P657}))`); await espera657();
+    let fr = db657('daycare/ficha-rastro/' + K657) || {};
+    let v = Object.keys(fr).map((k) => fr[k]).filter((x) => x.campo === 'col_p');
+    igual(v.length, 1, 'a coleira recalculada deixou rastro');
+    igual([v[0].origem, v[0].quem, v[0].tela !== ''], ['automatico', 'automático', true]);
+    const a = aud657('ficha-campo').filter((x) => x[2].campo === 'col_p');
+    igual([a.length, a[0][2].origem, a[0][2].quem], [1, 'automatico', 'automático'], 'na auditoria, «quem» não é a pessoa logada');
+    // a resposta do tutor tratada sozinha
+    run(`__au657=[]; ALG_RESP={k1:{resposta:'Ele tem alergia a frango'}};
+      algCur=function(){ return {campos:{q1:{txt:'frango', campo:'alergia', atual:''}}}; }; algPelDe=function(){ return ${P657}; };
+      algEntrevistaReg=function(){ return null; }; algAvisarGestao=function(){};`);
+    await run(`algTratarAuto('k1')`); await espera657();
+    fr = db657('daycare/ficha-rastro/' + K657) || {};
+    v = Object.keys(fr).map((k) => fr[k]).filter((x) => x.campo === 'alergia');
+    igual(v.length, 1);
+    igual([v[0].origem, v[0].quem, v[0].para], ['automatico', 'automático', 'frango']);
+    assert.ok(/Pesquisa/.test(v[0].tela), 'a tela de origem: ' + v[0].tela);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P14 (AC2.6) — onCadGravar, onBrinq e setHospAlergia (Plantão › ficha do hóspede) deixam o mesmo rastro do antes e do depois', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657({ brinquedos: 'corda' });
+    __hosp657();
+    // setHospAlergia
+    run(`setHospAlergia('alergia', 'frango')`); await espera657();
+    // onBrinq
+    run(`__el657['hf-brinq']={value:'bolinha'}; onBrinq();`); await espera657();
+    // onCadGravar (a raça)
+    run(`__cadKeyFixa='${K657}'; __cadAberto={nasc:'', idadeAprox:'', raca:'SRD', corPelo:'', sexo:'', castrado:'', tutor:'Rita Teste', chip:''};
+      cadFormLer=function(){ return {nasc:'', idadeAprox:'', raca:'Poodle', corPelo:'', sexo:'', castrado:'', tutor:'Rita Teste', chip:''}; }; onCadGravar();`); await espera657();
+    const fr = db657('daycare/ficha-rastro/' + K657) || {};
+    const v = Object.keys(fr).sort().map((k) => fr[k]);
+    igual(v.map((x) => [x.campo, x.de, x.para, x.tela]), [['alergia', '', 'frango', 'Plantão da noite'], ['brinquedos', 'corda', 'bolinha', 'Plantão da noite'], ['raca', 'SRD', 'Poodle', 'Plantão da noite']]);
+    igual(aud657('ficha-campo').map((a) => a[2].campo), ['alergia', 'brinquedos', 'raca']);
+    // banco recusando: nada de rastro
+    run(`__recusa657='^(daycare|auaulandia)/cadastro'; __au657=[];`);
+    run(`setHospAlergia('restricao', 'sem glúten')`); await espera657();
+    igual([Object.keys(db657('daycare/ficha-rastro/' + K657)).length, aud657('ficha-campo').length], [3, 0]);
+  } finally { run(SOLTA657); }
+});
+function __hosp657() { run(`currentHosp={nome:'Tonico', tutor:'Rita Teste', refKey:'${K657}'}; __view657={id:'v-hospedagem'};`); }
+provaAsync('6.57 P15 (AC2.1) — texto acima de 4.000 letras: cortado com «(cortado)» no rastro (4.000 no total); a auditoria leva 120 letras', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    const longo = 'Ele brinca com bolinha e corda. '.repeat(200);   // 6.400 letras
+    ctx.__longo657 = longo;
+    await run(`setPelExtra(${P657}, {obs_tutor:__longo657})`); await espera657();
+    const fr = db657('daycare/ficha-rastro/' + K657) || {};
+    const x = fr[Object.keys(fr)[0]];
+    igual([x.para.length, /\(cortado\)$/.test(x.para), x.para.slice(0, 50)], [4000, true, longo.slice(0, 50)]);
+    const a = aud657('ficha-campo')[0][2];
+    igual([a.para.length, a.para], [120, longo.slice(0, 120)]);
+  } finally { run(SOLTA657); }
+});
+
+// ---- AC3 — «Salvo» só depois do banco -------------------------------------------------------------------------------
+provaAsync('6.57 P16 (AC3.1, AC3.5) — a ficha: «Salvando…» enquanto o banco não responde; «✓ Salvo» só com o ok; recusa em vermelho, com o motivo; sem resposta em 20 s, «ainda não confirmou»; o caminho só da foto também', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    // a barra que se vê de qualquer aba da ficha (o #pel-saved mora só na Identificação) diz o mesmo
+    run(`__el657['pel-saved']={textContent:'', style:{}}; __el657['v-ficha']={classList:{contains:function(c){ return c==='active'; }}};
+      __el657['pel-ficha']={style:{display:'block'}, appendChild:function(){}};
+      __el657['pelSalvoBarra']={textContent:'', style:{}}; __pendura657='^daycare/cadastro';`);
+    const pr = run(`__pr657=setPelExtra(${P657}, {comp_casa:'evita machos'})`); void pr; await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), 'Salvando…', 'antes do banco');
+    igual([run(`__el657.pelSalvoBarra.textContent`), run(`__el657.pelSalvoBarra.style.display`)], ['Salvando…', 'block'], 'a barra da ficha também');
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); })'); await espera657();
+    assert.ok(/ainda não confirmou/.test(run(`__el657['pel-saved'].textContent`)), run(`__el657['pel-saved'].textContent`));
+    run('__pend657[0].ok()'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), '✓ Salvo', 'o banco confirmou');
+    // recusa
+    run(`__pendura657=null; __recusa657='^daycare/cadastro';`);
+    await run(`setPelExtra(${P657}, {comp_casa:'late para portões'})`); await espera657();
+    const t = run(`__el657['pel-saved'].textContent`);
+    assert.ok(/^⚠/.test(t) && /NÃO salvou no sistema/.test(t) && /o sistema recusou a gravação/.test(t), t);
+    igual(run(`__el657['pel-saved'].style.color`), 'var(--crm-critico)');
+    igual([run(`__el657.pelSalvoBarra.textContent`), run(`__el657.pelSalvoBarra.style.color`)], [t, 'var(--crm-critico)'], 'a recusa também na barra da ficha');
+    // só a foto: «Salvando…» até o salvarFotoCad responder
+    run(`__recusa657=null; __pendura657='^daycare/fotos/'; __el657['pel-saved'].textContent='';`);
+    run(`setPelExtra(${P657}, {foto:'data:image/jpeg;base64,QUJD'})`); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), 'Salvando…', 'a foto também espera o banco');
+    run('__pend657[__pend657.length-1].ok()'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), '✓ Salvo');
+    run(`__pendura657=null; __recusa657='^daycare/fotos/';`);
+    const rf = await run(`setPelExtra(${P657}, {foto:'data:image/jpeg;base64,REVG'})`); await espera657();
+    igual(rf.ok, false);
+    assert.ok(/^⚠ A foto NÃO foi salva no sistema/.test(run(`__el657['pel-saved'].textContent`)), run(`__el657['pel-saved'].textContent`));
+  } finally { run(SOLTA657); }
+});
+// O plano da Tâmara (o palco do 6.30, agora com o banco de mentira e as funções de verdade: setPelExtra e renovHistGravar)
+const plano657 = (ex, hoje, rasc) => {
+  ctx.__ex657 = ex; ctx.__rasc657 = rasc || null;
+  run(`__t657={n:'Tâmara', tutor:'Viajante Teste', raca:'SRD', dias:['seg']}; PELUDINHOS=[__t657]; pelAtual=__t657;
+    __put657('daycare/cadastro/'+pelKey(__t657), __ex657); pelCadCache[pelKey(__t657)]=__get657('daycare/cadastro/'+pelKey(__t657));
+    zHojeISO=function(){ return '${hoje}'; }; hojeISO=zHojeISO; renovRascunho=__rasc657?Object.assign({_k:pelKey(__t657)}, __rasc657):null;
+    __esc657=[]; __au657=[]; __za657=[];`);
+};
+const KT657 = () => run('pelKey(__t657)');
+provaAsync('6.57 P17 (AC3.2) — «Confirmar» o plano com papel sem permissão: barrado ANTES de qualquer gravação (nem o histórico), com «BARROU» na auditoria', async () => {
+  run(ARMA657);
+  try {
+    plano657(EX630(GOLD1X630()), '2026-12-21', { inicio: '2026-12-21' });
+    run(`document.body.dataset.role='monitor'; __login657={nome:'Caio Encãotador Teste', role:'monitor'};`);
+    await run('confirmarRenovacao()'); await espera657();
+    igual(escritas657(), [], 'nada foi gravado');
+    const b = J630('__au657').filter((a) => /^BARROU/.test(a[1]));
+    igual(b.length, 1, 'um BARROU na auditoria: ' + JSON.stringify(run('__au657')));
+    assert.ok(J630('__za657').some((z) => /Nada foi gravado/.test(JSON.stringify(z[1]))), 'a tela diz que nada foi gravado');
+    igual(J630('__zp657').length, 0, 'nem chegou a perguntar');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P18 (AC3.2) — «Confirmar» com o banco recusando: nem o plano nem o histórico mudam, «O PLANO NÃO FOI GRAVADO» e nenhum rastro «renovacao»; com o banco aceitando, o plano e a linha do histórico vão numa gravação só, e só então «PLANO GRAVADO»', async () => {
+  run(ARMA657);
+  try {
+    plano657(EX630(GOLD1X630()), '2026-12-21', { inicio: '2026-12-21' });
+    const antes = JSON.stringify(db657('daycare/cadastro/' + KT657()));
+    run(`__recusa657='^daycare/cadastro'; __zpq657=[true, true, true];`);
+    await run('confirmarRenovacao()'); await espera657();
+    igual(JSON.stringify(db657('daycare/cadastro/' + KT657())), antes, 'a ficha no banco continua igual');
+    igual(JSON.stringify(run(`pelCadCache[pelKey(__t657)]`)), antes, 'e a cópia deste aparelho também');
+    const tit = J630('__za657').map((z) => z[0]);
+    assert.ok(tit.indexOf('O PLANO NÃO FOI GRAVADO') >= 0 && tit.indexOf('PLANO GRAVADO') < 0, JSON.stringify(tit));
+    igual(aud657('renovacao').length, 0, 'sem rastro «renovacao»');
+    // aceitando
+    plano657(EX630(GOLD1X630()), '2026-12-21', { inicio: '2026-12-21' });
+    run(`__recusa657=null; __zpq657=[true, true, true];`);
+    await run('confirmarRenovacao()'); await espera657();
+    const w = escritas657().filter((e) => /^daycare\/cadastro/.test(e[1]));
+    igual(w.length, 1, 'uma gravação só no nó da ficha: ' + JSON.stringify(w));
+    igual(w[0][1], 'daycare/cadastro/' + KT657());
+    assert.ok(w[0][2].indexOf('renov') >= 0 && w[0][2].some((k) => /^renov_hist\//.test(k)), 'o plano e a linha do histórico juntos: ' + JSON.stringify(w[0][2]));
+    const f = db657('daycare/cadastro/' + KT657());
+    igual([f.renov.inicio, Object.keys(f.renov_hist || {}).length], ['2026-12-21', 1]);
+    igual([J630('__za657').map((z) => z[0]).indexOf('PLANO GRAVADO') >= 0, aud657('renovacao').length], [true, 1]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P19 (AC3.3) — «Desfazer a última renovação» com o banco recusando: a linha do histórico continua, o plano não volta e a tela diz que nada mudou', async () => {
+  run(ARMA657);
+  try {
+    const atual = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', fim: '2027-03-31', mesRenov: 'março de 2027', quando: '2026-12-21' };
+    const ant = Object.assign({}, GOLD1X630(), { substituidoEm: T657(9, 9, 0), por: 'Gestora Teste', motivo: 'renovação', motivo_conferido: true });
+    plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
+    run(`__recusa657='^daycare/cadastro/[^/]+$'; __zpq657=[true];`);
+    await run('desfazerRenovacao()'); await espera657();
+    const f = db657('daycare/cadastro/' + KT657());
+    igual([f.renov.inicio, Object.keys(f.renov_hist)], ['2026-12-21', ['h1']], 'nada mudou no banco');
+    const tit = J630('__za657').map((z) => z[0]);
+    assert.ok(tit.indexOf('RENOVAÇÃO DESFEITA') < 0 && tit.some((t) => /NÃO FOI DESFEITA/.test(t)), JSON.stringify(tit));
+    assert.ok(/Nada mudou/.test(JSON.stringify(run('__za657'))));
+    igual(aud657('renovacao-desfeita').length, 0);
+    // aceitando: uma gravação só (o plano que volta, a linha nova e a saída da antiga)
+    plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
+    run(`__recusa657=null; __zpq657=[true];`);
+    await run('desfazerRenovacao()'); await espera657();
+    const w = escritas657().filter((e) => /^daycare\/cadastro/.test(e[1]));
+    igual(w.length, 1, JSON.stringify(w));
+    const f2 = db657('daycare/cadastro/' + KT657());
+    igual([f2.renov.inicio, Object.keys(f2.renov_hist).indexOf('h1'), Object.keys(f2.renov_hist).length], ['2026-10-05', -1, 1]);
+    igual([J630('__za657').map((z) => z[0]).indexOf('RENOVAÇÃO DESFEITA') >= 0, aud657('renovacao-desfeita').length], [true, 1]);
+  } finally { run(SOLTA657); }
+});
+const novoAluno657 = () => {
+  run(`document.body.dataset.role='consultora'; __login657={nome:'Bia Consultora Teste', role:'consultora'};
+    __el657.naNome={value:'Pipoca'}; __el657.naRaca={value:'SRD'}; __el657.naTutor={value:'Lia Teste'}; __el657.naTel={value:'31999990000'};
+    __el657.naWarn={textContent:'', innerHTML:''}; NA_AFAZER={}; NA_PREV.forEach(function(it){ NA_AFAZER[it.k]=true; __el657['naP_'+it.k]={value:''}; });`);
+};
+provaAsync('6.57 P20 (AC3.4) — «Criar e abrir a ficha» com o banco recusando: a ficha não abre, a lista fica igual, o formulário mantém o digitado, «O CADASTRO NÃO FOI SALVO» e sem rastro «cadastro-novo»; aceitando, abre', async () => {
+  run(ARMA657);
+  try {
+    novoAluno657();
+    run(`__recusa657='^daycare/cadastro';`);
+    await run('criarAluno()'); await espera657();
+    igual([run('PELUDINHOS.length'), J630('__ab657').length, run('__fna657'), run('__el657.naNome.value'), aud657('cadastro-novo').length], [1, 0, 0, 'Pipoca', 0]);
+    assert.ok(J630('__za657').some((z) => z[0] === 'O CADASTRO NÃO FOI SALVO'), JSON.stringify(run('__za657')));
+    igual(run(`__ls657['zeluz_pel_pipoca__lia teste']===undefined`), true, 'nem a cópia deste aparelho');
+    // aceitando
+    run(`__recusa657=null; __za657=[];`);
+    await run('criarAluno()'); await espera657();
+    igual([run('PELUDINHOS.length'), J630('__ab657').length, run('__fna657'), aud657('cadastro-novo').length], [2, 1, 1, 1]);
+    igual(db657('daycare/cadastro/pipoca__lia teste').n, 'Pipoca');
+  } finally { run(SOLTA657); }
+});
+
+// ---- AC4 — o papel conferido na função que grava ----------------------------------------------------------------------
+const barrou657 = () => J630('__au657').filter((a) => a[0] === 'sem-permissao' && /^BARROU /.test(a[1]));
+const papel657 = (role, nome, paginas) => run(`document.body.dataset.role='${role}'; __login657={nome:${JSON.stringify(nome)}, role:'${role}'${paginas ? ', paginas:' + JSON.stringify(paginas) : ''}}; __au657=[]; __esc657=[]; __za657=[];`);
+provaAsync('6.57 P21 (AC4) — «Tratei» da atenção da entrevista: a Consultora e a Supervisão são barradas (BARROU, nada gravado); a Gestão grava', async () => {
+  run(ARMA657);
+  try {
+    run(`MESA_ATENCAO={k1:{nome:'Tonico', ts:1}};`);
+    for (const [r, n] of [['consultora', 'Bia Consultora Teste'], ['supervisor', 'Amanda Supervisora Teste']]) {
+      papel657(r, n);
+      run(`mesaAtencaoTratei('k1')`); await espera657();
+      igual([escritas657().length, barrou657().length], [0, 1], r);
+      assert.ok(J630('__za657').some((z) => /a Gestão ou a Diretoria/.test(JSON.stringify(z[1]))), 'a tela diz quem pode');
+    }
+    papel657('gestao', 'Gestora Teste');
+    run(`mesaAtencaoTratei('k1')`); await espera657();
+    igual([escritas657().map((e) => e[0] + ' ' + e[1]), barrou657().length], [['set daycare/entrevista-atencao/k1/tratado'], 0]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P22 (AC4) — «É o mesmo FILHOt?»: a plantonista e o Encãotador são barrados; o cartão mostra «Quem responde é a Recepção, a Supervisão ou a Gestão», sem botões; a Consultora grava', async () => {
+  run(ARMA657);
+  try {
+    ctx.__h657 = { nome: 'Nelson', tutor: 'Lara Teste', suspeita: { nome: 'Nelson mandela', tutor: 'Lara Teste' } };
+    const ch = run('hospParChave(__h657, __h657.suspeita)');
+    for (const [r, n] of [['plantonista', 'Plantonista'], ['monitor', 'Caio Encãotador Teste']]) {
+      papel657(r, n);
+      const h = String(run('hospSuspeitaHTML(__h657)'));
+      assert.ok(/Quem responde é a Recepção, a Supervisão ou a Gestão/.test(h) && h.indexOf('hospResponderMesmo(') < 0, r + ': ' + h);
+      run(`hospResponderMesmo('${ch}', true)`); await espera657();
+      igual([escritas657().length, barrou657().length], [0, 1], r);
+    }
+    papel657('consultora', 'Bia Consultora Teste');
+    assert.ok(String(run('hospSuspeitaHTML(__h657)')).indexOf('hospResponderMesmo(') >= 0, 'a Consultora vê os botões');
+    run(`hospResponderMesmo('${ch}', false)`); await espera657();
+    igual([escritas657().map((e) => e[0] + ' ' + e[1]), barrou657().length], [['set daycare/hospede-mesmo/' + ch], 0]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P23 (AC4) — «Fotos a conferir» (responder e desfazer): o Encãotador sem a tela é barrado; com Relatórios concedido no Time, grava', async () => {
+  run(ARMA657);
+  try {
+    papel657('monitor', 'Caio Encãotador Teste', []);
+    run(`fotoConfResponder('${K657}', 'tonico__rita', false)`); await espera657();
+    igual([escritas657().length, barrou657().length], [0, 1], 'responder: barrado');
+    run(`__au657=[]; FOTO_CONF_AGORA['${K657}||tonico__rita']='nao'; fotoConfDesfazer('${K657}', 'tonico__rita')`); await espera657();
+    igual([escritas657().length, barrou657().length], [0, 1], 'desfazer: barrado');
+    papel657('monitor', 'Caio Encãotador Teste', ['relatorios']);
+    run(`fotoConfResponder('${K657}', 'tonico__rita', false)`); await espera657();
+    igual([escritas657().map((e) => e[0]), barrou657().length], [['set'], 0], 'com a tela concedida: grava');
+    run(`__esc657=[]; fotoConfDesfazer('${K657}', 'tonico__rita')`); await espera657();
+    igual(escritas657().map((e) => e[0]), ['remove']);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`fotoConfResponder('${K657}', 'tonico__rita', false)`); await espera657();
+    igual([escritas657().length, barrou657().length], [1, 0], 'a Consultora (Relatórios pelo papel) grava');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P24 (AC4) — Orçamento: senha de posto e de Encãotador recusadas no Cancelar e no Mudar as datas; orcCancelarGravar confere quem assinou; a Supervisão (o Excluir da 6.53) e quem recebeu a tela no Time cancelam', async () => {
+  run(ARMA657);
+  try {
+    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __esc657=[]; __al657=[]; __au657=[];`);
+    // Cancelar reserva (a conversa)
+    for (const s of ['s-posto', 's-caio']) {
+      seed(); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${s}'];`);
+      await run(`orcCancelar('o1')`); await espera657();
+      igual(escritas657().length, 0, 'Cancelar com ' + s + ': nada gravado');
+      assert.ok(J630('__al657').some((t) => (s === 's-posto' ? /posto/ : /Caio Encãotador Teste, que não trabalha no Orçamento/).test(t)), JSON.stringify(run('__al657')));
+    }
+    // Mudar as datas
+    for (const s of ['s-posto', 's-caio']) {
+      seed();
+      run(`ORC_EDITANDO='o1'; ORC_EDIT_ANTES={entrada:'2026-10-20', saida:'2026-10-22', total_cent:30000};
+        ORC_CALC={entrada:'2026-10-21', saida:'2026-10-23', total:30000, pets:[{sel:{nome:'Tonico'}}]}; __zpq657=[true]; __ztq657=['a tutora mudou a data da viagem', '${s}'];`);
+      await run('orcSalvarEdicao()'); await espera657();
+      igual(escritas657().length, 0, 'Mudar as datas com ' + s + ': nada gravado');
+      assert.ok(J630('__al657').some((t) => /NÃO foi alterada/.test(t)), JSON.stringify(run('__al657')));
+    }
+    // a função que grava confere quem assinou (tela velha, console)
+    for (const q of [{ nome: 'Plantonista', role: 'plantonista' }, { nome: 'Caio Encãotador Teste', role: 'monitor' }]) {
+      seed();
+      const r = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', ${JSON.stringify(q)})`); await espera657();
+      igual([r.ok, escritas657().length, barrou657().length], [false, 0, 1], q.nome);
+    }
+    for (const q of [{ nome: 'Amanda Supervisora Teste', role: 'supervisor' }, { nome: 'Vera Veterinária Teste', role: 'vet' }]) {
+      seed();
+      const r = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', ${JSON.stringify(q)})`); await espera657();
+      igual([r.ok, db657('auaulandia/orcamentos/o1/status'), barrou657().length], [true, 'cancelado', 0], q.nome);
+      run(`__put657('auaulandia/orcamentos/o1', null);`);
+    }
+  } finally { run(SOLTA657); run('ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_CALC=null;'); }
+});
+provaAsync('6.57 P25 (AC4) — «Tirar pendência» de prevenção: o Encãotador é barrado; a Veterinária com a tela concedida no Time grava', async () => {
+  run(ARMA657);
+  try {
+    const seed = () => run(`PEND_ABERTAS={'${K657}':{vermifugo:{status:'aberta', nome:'Tonico', base:'Tonico/SRD'}}};`);
+    seed(); papel657('monitor', 'Caio Encãotador Teste');
+    run(`pendTirarConfirmado('${K657}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa')`); await espera657();
+    igual([escritas657().length, barrou657().length], [0, 1]);
+    seed(); papel657('vet', 'Vera Veterinária Teste', ['pendencias']);
+    run(`pendTirarConfirmado('${K657}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa')`); await espera657();
+    igual([escritas657().map((e) => e[0] + ' ' + e[1]), barrou657().length], [['update daycare/pendencias/' + K657 + '/vermifugo'], 0]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P26 (AC4) — «Tirar» nos Lançamentos do dia (dashRemover e o caminho fora do prazo): o Encãotador é barrado antes de qualquer pergunta; com a tela concedida, tira', async () => {
+  run(ARMA657);
+  try {
+    const seed = () => run(`DASH_DIA_SEL='${DIA657}'; DASH_DADOS={saicedo:{id1:{valor:'Tonico/SRD'}}};`);
+    seed(); papel657('monitor', 'Caio Encãotador Teste');
+    await run(`dashRemover('saicedo', 'id1')`); await espera657();
+    igual([escritas657().length, J630('__zp657').length, barrou657().length], [0, 0, 1], 'barrado antes da pergunta');
+    run('__zt657=[]; __au657=[];');
+    await run(`dashRemoverRepForaPrazo('reposicao', 'id2', {valor:'Tonico/SRD'}, {p:${P657}, uso:{_id:'u1'}, saldo:1}, {_id:'c1'}, '${DIA657}', 'excecao')`); await espera657();
+    igual([escritas657().length, J630('__zt657').length, barrou657().length], [0, 0, 1], 'fora do prazo: barrado antes do motivo');
+    seed(); papel657('vet', 'Vera Veterinária Teste', ['dashdc']); run('__zpq657=[true]; __zt657=[]; __ztq657=[""];');
+    await run(`dashRemoverRepForaPrazo('reposicao', 'id2', {valor:'Tonico/SRD'}, {p:${P657}, uso:{_id:'u1'}, saldo:1}, {_id:'c1'}, '${DIA657}', 'excecao')`); await espera657();
+    igual([J630('__zt657').length, barrou657().length], [1, 0], 'com a tela: chega ao motivo');
+    seed(); run('__esc657=[]; __zpq657=[true];');
+    await run(`dashRemover('saicedo', 'id1')`); await espera657();
+    igual([escritas657().map((e) => e[0] + ' ' + e[1]), barrou657().length], [['remove daycare/dashboard/' + DIA657 + '/saicedo/id1'], 0]);
+  } finally { run(SOLTA657); }
+});
+
+// ---- AC5 — a Linha do tempo em português ----------------------------------------------------------------------------
+const esc657 = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const FAMILIA657 = ['aviso-tipo-corrigido', 'estoque-aviso-reaberto', 'exclusao_cadastro', 'falta-desfeita', 'hospede-cancelado', 'hospede-removido', 'hospede-restaurado',
+  'irmaos-desfazer', 'orcamento-cancelado', 'orcamento-cancelado-calendario-preservado', 'pagamento-estornado', 'plano-meio-mes-desfeito', 'racao-aviso-reaberto',
+  'renovacao-desfeita', 'reposicao-desmarcada', 'reposicao-devolvida', 'reposicao-estorno', 'reposicao-troca-desfeita', 'vet-reavaliacao-removida',
+  'hospedagem-ficha-trocada', 'hospedagem-excluida'];
+const DA656_654_657 = ['hospedagem-mudanca', 'ocorrencia-engano', 'ocorrencia-engano-desfeito', 'ocorrencia-reaberta', 'chamado-corrigido', 'chamado-cancelado', 'avulsa-tirada'];
+prova('6.57 P27 (AC5) — a Linha do tempo em português: as ações que esta story grava, as 21 da família de correção (e as 7 da 6.54 e da 6.56), gravacao-FALHOU e «BARROU»; a mesma tradução nas duas telas; a ação antiga sem tradução aparece como hoje', () => {
+  run(ARMA657);
+  try {
+    // as ações que o código novo grava (a enumeração sai do próprio código: audit('…') dentro das funções da 6.57)
+    const fonte = extractMainScript(fs.readFileSync(APP, 'utf8'));
+    const novas = new Set(['ficha-campo', 'registro-corrigido', 'registro-anulado', 'registro-reaberto', 'sem-permissao', 'gravacao-FALHOU', 'renovacao', 'renovacao-desfeita', 'cadastro-novo']);
+    const re = /\n {2}(?:async\s+)?function\s+((?:corr|pelRastro|pelSalvo)\w*)\s*\(/g; let m;
+    while ((m = re.exec(fonte))) {
+      const corpo = fonte.slice(m.index, m.index + 6000).split(/\n {2}(?:async\s+)?function\s/)[1] || '';
+      (corpo.match(/audit\('([\w-]+)'/g) || []).forEach((x) => novas.add(x.replace(/^audit\('|'$/g, '')));
+    }
+    assert.ok(novas.size >= 9, [...novas].join(', '));
+    const nome = (a) => run(`acaoNome(${JSON.stringify(a)})`);
+    const semTraducao = [...novas, ...FAMILIA657, ...DA656_654_657].filter((a) => nome(a) === a || /^[a-z]+[-_][a-z]/.test(nome(a)));
+    igual(semTraducao, [], 'sem tradução');
+    // o BARROU (o porteiro antigo do setPelExtra e o novo) e a falha de gravação
+    assert.ok(/^Tentativa sem permissão: alteração de comp_casa .*Nada foi gravado\.$/.test(run(`acaoRotulo({acao:'ficha', detalhe:'BARROU alteração de comp_casa (papel sem permissão)'})`)));
+    assert.ok(/^A gravação NÃO chegou ao sistema: ficha do cadastro tonico/.test(run(`acaoRotulo({acao:'gravacao-FALHOU', detalhe:'ficha do cadastro tonico__rita teste', erro:'PERMISSION_DENIED: Permission denied'})`)));
+    // a linha do «Mudou», como a Gestão lê
+    const fc = { acao: 'ficha-campo', detalhe: 'x', pet: 'Tonico', campo: 'comp_casa', rotulo: 'Comportamento: Em casa', de: 'brinca com todos', para: 'evita machos', tela: 'Cadastro de Peludinhos', origem: 'pessoa', hora: '10:00', quem: 'Gestora Teste', ts: 1 };
+    ctx.__fc657 = fc;
+    igual(run('acaoRotulo(__fc657)'), 'Mudou "Comportamento: Em casa" de Tonico: "brinca com todos" → "evita machos" (Cadastro de Peludinhos)');
+    // as duas telas usam a mesma tradução
+    run(`LT_ESTADO='ok'; LT_DADOS={a:__fc657, b:{acao:'registro-anulado', detalhe:'a dose de 08:00 do Apoquel, motivo: foi no FILHOt errado, assinado por Gestora Teste (Gestão)', hora:'10:01', quem:'Gestora Teste', ts:2},
+      c:{acao:'acao-velha-x', detalhe:'algo', hora:'10:02', quem:'Gestora Teste', ts:3}, d:{acao:'sem-permissao', detalhe:'BARROU tirar uma pendência de prevenção (Encãotador sem permissão)', hora:'10:03', quem:'Caio', ts:4}};`);
+    const lt = String(run('ltLinhasHTML()'));
+    assert.ok(lt.indexOf('Mudou "Comportamento: Em casa" de Tonico: "brinca com todos" → "evita machos" (Cadastro de Peludinhos)') >= 0, lt);
+    assert.ok(lt.indexOf('Anulou (lançado por engano) a dose de 08:00 do Apoquel, motivo: foi no FILHOt errado, assinado por Gestora Teste (Gestão)') >= 0, lt);
+    assert.ok(lt.indexOf('Tentativa sem permissão: tirar uma pendência de prevenção (Encãotador sem permissão). Nada foi gravado.') >= 0, lt);
+    assert.ok(lt.indexOf('acao-velha-x — algo') >= 0, 'a antiga sem tradução continua como hoje');
+    const pf = String(run('blocoPessoasFezHojeHTML(LT_DADOS)'));
+    assert.ok(pf.indexOf(esc657(nome('ficha-campo'))) >= 0 && pf.indexOf(esc657(nome('registro-anulado'))) >= 0 && pf.indexOf('ficha-campo') < 0, pf);
+  } finally { run(SOLTA657); }
+});
+
+// ---- AC6 — reaproveitar, sem duplicar -------------------------------------------------------------------------------
+prova('6.57 P28 (AC6.2, guarda) — hospAssinarPorSenha devolve as mesmas mensagens da 6.53, letra por letra, nos 4 casos; enganoAssinar também (6.56)', () => {
+  run(ARMA657);
+  try {
+    const h = (s) => J630(`hospAssinarPorSenha(${JSON.stringify(s)})`);
+    igual(h(''), { ok: false, nome: '', papel: '', erro: 'Digite a sua senha: é ela que assina a correção.' });
+    igual(h('0000'), { ok: false, nome: '', papel: '', erro: 'Essa senha não é de ninguém cadastrado. Nada foi gravado.' });
+    igual(h('s-posto'), { ok: false, nome: '', papel: '', erro: 'Essa senha é de um posto (Plantonista), não de uma pessoa: senha de posto não assina. Chame a Gestão ou a Supervisão.' });
+    igual(h('s-bia'), { ok: false, nome: '', papel: '', erro: 'Essa senha é de Bia Consultora Teste, que não pode assinar a correção da hospedagem. Chame a Gestão ou a Supervisão para digitar a senha delas aqui.' });
+    igual(h('s-amanda'), { ok: true, nome: 'Amanda Supervisora Teste', papel: 'supervisor', erro: '' });
+    const e = (s, n) => J630(`enganoAssinar(${JSON.stringify(s)}, '${n}')`);
+    igual(e('', 'gestao').erro, 'Digite a senha: é ela que assina. Nada foi gravado.');
+    igual(e('s-posto', 'recepcao').erro, 'Essa senha é de um posto (Plantonista), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.');
+    igual(e('s-bia', 'gestao').erro, 'Essa senha é de Bia Consultora Teste, que não pode assinar isto: precisa da senha da Gestão. Nada foi gravado.');
+    igual(e('s-caio', 'recepcao').erro, 'Essa senha é de Caio Encãotador Teste, que não pode assinar a correção da Recepção. Nada foi gravado.');
+    igual(e('s-bia', 'recepcao'), { ok: true, nome: 'Bia Consultora Teste', papel: 'consultora', erro: '' });
+  } finally { run(SOLTA657); }
+});
+prova('6.57 P29 (AC6) — uma assinatura só, um prazo só e um motivo só: hospAssinarPorSenha e enganoAssinar chamam corrAssinar; hospComPrazo é apelido de corrComPrazo; motivoQuatroPalavras existe uma vez; as capacidades novas moram na tabela PERM; orcQuemPelaSenha não mudou', () => {
+  const fonte = extractMainScript(fs.readFileSync(APP, 'utf8'));
+  const corpo = (f) => { const i = fonte.search(new RegExp('\\n {2}(?:async\\s+)?function\\s+' + f + '\\s*\\(')); assert.ok(i >= 0, f); return fonte.slice(i + 1).split(/\n {2}(?:async\s+)?function\s/)[0].split(/\n {2}(?:\/\/|var |const |let )/)[0]; };
+  assert.ok(/corrAssinar\(/.test(corpo('hospAssinarPorSenha')) && /corrAssinar\(/.test(corpo('enganoAssinar')), 'as duas assinaturas chamam a geral');
+  assert.ok(!/orcQuemPelaSenha|LOGIN_GENERICO/.test(corpo('hospAssinarPorSenha')) && !/orcQuemPelaSenha|LOGIN_GENERICO/.test(corpo('enganoAssinar')), 'sem cópia da régua');
+  assert.ok(/corrComPrazo\(/.test(corpo('hospComPrazo')), 'hospComPrazo é apelido');
+  igual((fonte.match(/\bfunction\s+motivoQuatroPalavras\s*\(/g) || []).length, 1, 'motivoQuatroPalavras uma vez só');
+  const PAP = ['consultora', 'supervisor', 'gestao', 'diretoria', 'monitor', 'plantonista', 'vet', 'aprendiz'];
+  igual(PAP.map((p) => run(`podePapel('conferir-fotos','${p}')`)), [true, true, true, true, false, false, false, false]);
+  igual(PAP.map((p) => run(`podePapel('assinar-orcamento','${p}')`)), [true, true, true, true, false, false, false, false]);
+  igual(corpo('orcQuemPelaSenha').trim(), `function orcQuemPelaSenha(senha){
+    var s=String(senha||'').trim(); if(!s) return null;
+    try{ var m=(typeof senhasRuntime==='function')?senhasRuntime():SENHAS; var u=m[s];
+      if(u&&u.nome) return {nome:u.nome, role:u.role||''}; }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
+    try{ var f=(MONITORES||[]).find(function(x){ return x&&String(x.senha||'').trim()===s; });
+      if(f) return {nome:f.nome||'', role:f.role||'monitor'}; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    return null;
+  }`, 'orcQuemPelaSenha igual à da base');
+});
+
+// ---- AC8 — nada do que funciona quebra (guardas) --------------------------------------------------------------------
+provaAsync('6.57 P30 (AC2.8, guarda) — setPelExtra nunca rejeita: barrado, sem banco, banco recusando e só a foto resolvem sempre {ok}', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    const pega = async (codigo) => { try { const r = await run(codigo); await espera657(); return (r && typeof r.ok === 'boolean') ? r.ok : 'sem ok'; } catch (e) { return 'REJEITOU: ' + e.message; } };
+    papel657('monitor', 'Caio Encãotador Teste');
+    const barrado = await pega(`setPelExtra(${P657}, {comp_casa:'x y z'})`);
+    papel657('gestao', 'Gestora Teste');
+    run('__bkdb657=DB; DB=null;');
+    const semBanco = await pega(`setPelExtra(${P657}, {comp_casa:'x y z'})`);
+    run('DB=__bkdb657; __recusa657=".*";');
+    const recusa = await pega(`setPelExtra(${P657}, {comp_casa:'x y z'})`);
+    const recusaFoto = await pega(`setPelExtra(${P657}, {foto:'data:image/jpeg;base64,QUJD'})`);
+    run('__recusa657=null;');
+    const foto = await pega(`setPelExtra(${P657}, {foto:'data:image/jpeg;base64,QUJD'})`);
+    igual([barrado, semBanco, recusa, recusaFoto, foto], [false, false, false, false, true]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 P31 (AC2.7, AC8, guarda) — nenhuma gravação nova dentro de daycare/cadastro nem pela raiz; com a Gestão, o que funcionava continua (Tratei, «É o mesmo», fotos, pendência, Tirar)', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    __hosp657();
+    await run(`setPelExtra(${P657}, {comp_casa:'evita machos', foto:'data:image/jpeg;base64,QUJD'})`);
+    run(`setHospAlergia('alergia', 'frango')`); await espera657();
+    const w = escritas657();
+    const ruins = w.filter((e) => (e[1] === '' && (e[2] || []).some((k) => /^daycare\/cadastro/.test(k))) || /^daycare\/cadastro\/[^/]+\/./.test(e[1]));
+    igual(ruins, [], 'gravação na raiz ou dentro da ficha: ' + JSON.stringify(ruins));
+    assert.ok(w.some((e) => /^set daycare\/ficha-rastro\//.test(e[0] + ' ' + e[1])), 'o rastro mora fora do cadastro');
+    // a Gestão faz tudo o que fazia
+    papel657('gestao', 'Gestora Teste');
+    run(`MESA_ATENCAO={k1:{nome:'Tonico'}}; mesaAtencaoTratei('k1');
+      fotoConfResponder('${K657}', 'tonico__rita', false);
+      PEND_ABERTAS={'${K657}':{vermifugo:{status:'aberta', nome:'Tonico', base:'Tonico/SRD'}}}; pendTirarConfirmado('${K657}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa');
+      hospResponderMesmo('nelson~lara||nelson mandela~lara', true);
+      DASH_DIA_SEL='${DIA657}'; DASH_DADOS={saicedo:{id1:{valor:'Tonico/SRD'}}}; __zpq657=[true];`);
+    await run(`dashRemover('saicedo', 'id1')`); await espera657();
+    igual([escritas657().map((e) => e[0] + ' ' + e[1].split('/').slice(0, 2).join('/')).sort(), barrou657().length],
+      [['remove daycare/dashboard', 'set daycare/entrevista-atencao', 'set daycare/foto-confirmada', 'set daycare/hospede-mesmo', 'update daycare/pendencias'], 0]);
+  } finally { run(SOLTA657); }
+});
+// ---- 2ª rodada do QA (FAIL) — H-1, M-1 a M-4 e L-1 a L-5 ------------------------------------------------------------
+// Mesmo palco (ARMA657/SOLTA657), tudo inventado. Os cenários das provas QA657-A1, B1, C1, D4, F1, F2, G1 e I1 do QA
+// entram aqui, com a régua do que a correção tem de garantir.
+const PEL_ZERA657 = 'PEL_SALVO.pend=0; PEL_SALVO.falhou=false; PEL_SALVO.fichas={};';
+// espera a promessa da tela, mas não para sempre: no código de antes, ela pode nunca responder (a prova falha, não trava).
+// Só micro-tarefas: nenhum relógio de verdade anda (os relógios pendentes das outras provas não disparam aqui).
+const ate657 = (pr) => Promise.race([pr, espera657(2000).then(() => 'PENDENTE')]);
+provaAsync('6.57 R2-1 (H-1, AC2.6) — setHospAlergia com a ficha SEM o campo (a primeira alergia e a primeira restrição): o banco aceitando deixa o rastro «(vazio) → frango»; recusando, nada; sem resposta, só depois do ok; onCadGravar e onBrinq com o campo ausente também, e o rastro do onCadGravar segue o ok da FICHA, não do espelho', async () => {
+  run(ARMA657);
+  try {
+    const semCampo = () => { fichaTonico657(); run(`delete pelCadCache['${K657}'].alergia; __put657('daycare/cadastro/${K657}/alergia', null); __ls657={}; __put657('daycare/ficha-rastro', null);`); __hosp657(); };
+    const rastro = () => { const fr = db657('daycare/ficha-rastro/' + K657) || {}; return Object.keys(fr).sort().map((k) => [fr[k].campo, fr[k].de, fr[k].para]); };
+    // aceitando (QA657-A1)
+    semCampo();
+    run(`setHospAlergia('alergia', 'frango')`); await espera657();
+    run(`setHospAlergia('restricao', 'sem glúten')`); await espera657();
+    igual(rastro(), [['alergia', '', 'frango'], ['restricao', '', 'sem glúten']], 'a primeira alergia e a primeira restrição deixam rastro');
+    igual(aud657('ficha-campo').map((a) => [a[2].campo, a[2].de, a[2].para]), [['alergia', '', 'frango'], ['restricao', '', 'sem glúten']], 'e a linha na auditoria');
+    igual([db657('daycare/cadastro/' + K657 + '/alergia'), db657('daycare/cadastro/' + K657 + '/restricao')], ['frango', 'sem glúten']);
+    // recusando: nada de rastro; a falha vai para gravacao-FALHOU
+    semCampo();
+    run(`__recusa657='^daycare/cadastro/';`);
+    run(`setHospAlergia('alergia', 'frango')`); await espera657();
+    run(`setHospAlergia('restricao', 'sem glúten')`); await espera657();
+    igual([rastro(), aud657('ficha-campo').length, aud657('gravacao-FALHOU').length], [[], 0, 2], 'recusado: nenhum rastro');
+    // sem resposta: o rastro só sai com o ok
+    semCampo();
+    run(`__recusa657=null; __pendura657='^daycare/cadastro/';`);
+    run(`setHospAlergia('restricao', 'sem glúten')`); await espera657();
+    igual([rastro(), aud657('ficha-campo').length], [[], 0], 'antes do ok: nada');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(rastro(), [['restricao', '', 'sem glúten']], 'com o ok: o rastro');
+    // onCadGravar: o microchip que a ficha nunca teve; o rastro segue o ok da ficha (daycare), não o do espelho (auaulandia)
+    const cad = (chip) => run(`__pendura657=null; __cadKeyFixa='${K657}'; __cadAberto={nasc:'', idadeAprox:'', raca:'SRD', corPelo:'', sexo:'', castrado:'', tutor:'Rita Teste', chip:''};
+      cadFormLer=function(){ return {nasc:'', idadeAprox:'', raca:'SRD', corPelo:'', sexo:'', castrado:'', tutor:'Rita Teste', chip:'${chip}'}; }; onCadGravar();`);
+    semCampo();
+    run(`__recusa657='^daycare/cadastro/';`); cad('900000000000001'); await espera657();
+    igual(rastro(), [], 'a ficha recusou (o espelho aceitou): nenhum rastro');
+    semCampo();
+    run(`__recusa657='^auaulandia/cadastro/';`); cad('900000000000002'); await espera657();
+    igual(rastro(), [['chip', '', '900000000000002'], ['microchip', '', '900000000000002']], 'a ficha aceitou (o espelho recusou): o rastro, com o antes vazio');
+    // onBrinq com a ficha sem brinquedos
+    semCampo();
+    run(`__recusa657=null; __el657['hf-brinq']={value:'bolinha'}; onBrinq();`); await espera657();
+    igual(rastro(), [['brinquedos', '', 'bolinha']]);
+  } finally { run(SOLTA657); }
+});
+// O palco da barra do «Salvo»: a tela da ficha (v-ficha), a ficha aberta (pel-ficha) e o createElement de mentira.
+const BARRA657 = `__ce657b=document.createElement; __ba657b=document.body.appendChild; __corpo657=[];
+  __naFicha657=true; __fichaVis657='block';
+  __el657['v-ficha']={classList:{contains:function(c){ return c==='active' && __naFicha657; }}};
+  __el657['pel-ficha']={style:{get display(){ return __fichaVis657; }}, filhos:[], appendChild:function(el){ this.filhos.push(el); if(el.id) __el657[el.id]=el; }};
+  __el657['pel-saved']={textContent:'', style:{}}; __el657['pelSalvoBarra']=null;   // a barra ainda não existe: nasce na primeira gravação
+  document.createElement=function(t){ return {tag:t, id:'', style:{cssText:'', display:''}, textContent:'', setAttribute:function(){}, addEventListener:function(){}}; };
+  document.body.appendChild=function(el){ __corpo657.push(el); };`;
+const SOLTA_BARRA657 = `document.createElement=__ce657b; document.body.appendChild=__ba657b; delete __el657.pelSalvoBarra; ${PEL_ZERA657}`;
+provaAsync('6.57 R2-2 (M-1, AC3.1) — a barra do «Salvo» mora dentro da ficha aberta: trocou de tela antes do ok, ela não fica «Salvando…» por cima da outra tela; a resposta de outra ficha não pinta nada; o automático (a coleira) não mostra «Salvando…» nem «✓ Salvo» e não segura o «✓ Salvo» de quem digita; com duas gravações saindo, «✓ Salvo» só depois da última', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657({ col_nome: 'Seresto', col_t: '2026-06-01', col_p: '2026-11-01' });
+    run(BARRA657 + PEL_ZERA657 + `__pendura657='^daycare/cadastro/';`);
+    // digitou um campo (o onchange sai ainda na ficha): «Salvando…» na barra, que nasce DENTRO da ficha
+    const p1 = run(`setPelExtra(${P657}, {comp_casa:'evita machos'})`); void p1; await espera657();
+    igual([run('__el657.pelSalvoBarra?__el657.pelSalvoBarra.textContent:null'), run('__el657.pelSalvoBarra.style.display'), run("__el657['pel-ficha'].filhos.length"), run('__corpo657.length')],
+      ['Salvando…', 'block', 1, 0], 'a barra nasce dentro da ficha (some junto com ela), nunca solta na página');
+    // tocou no menu: a tela mudou antes de o banco responder; o ok chega com a pessoa no Início
+    run('__naFicha657=false;');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual([run('__el657.pelSalvoBarra.style.display'), run('PEL_SALVO.pend')], ['none', 0], 'fora da ficha, a barra se esconde (não fica «Salvando…» presa)');
+    // voltou para a lista (a mesma tela, a ficha fechada) e a recusa chegou: também se esconde
+    run(`__naFicha657=true; __fichaVis657='block';`);
+    run(`setPelExtra(${P657}, {comp_casa:'late para portões'})`); await espera657();
+    igual(run('__el657.pelSalvoBarra.style.display'), 'block');
+    run(`__fichaVis657='none';`);
+    run('__pend657.forEach(function(x){ x.nao(); }); __pend657=[];'); await espera657();
+    igual(run('__el657.pelSalvoBarra.style.display'), 'none', 'a ficha fechada: a recusa não fica por cima da lista');
+    // outra ficha aberta quando a resposta chega: não pinta a ficha errada
+    run(`__fichaVis657='block'; ${PEL_ZERA657} __el657['pel-saved'].textContent=''; __el657.pelSalvoBarra.textContent='';`);
+    run(`setPelExtra(${P657}, {comp_casa:'brinca só com as fêmeas'})`); await espera657();
+    run(`pelAtual={n:'Quindim', tutor:'Outra Teste'}; __el657['pel-saved'].textContent=''; __el657.pelSalvoBarra.textContent='';`);
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual([run(`__el657['pel-saved'].textContent`), run('__el657.pelSalvoBarra.textContent'), run('PEL_SALVO.pend')], ['', '', 0], 'a ficha do Quindim não recebe o «✓ Salvo» do Tonico');
+    run('pelAtual=null;');
+    // o automático: a coleira se corrige ao abrir a ficha — sem «Salvando…», sem «✓ Salvo», fora da conta
+    run(`${PEL_ZERA657} __el657['pel-saved'].textContent=''; __el657.pelSalvoBarra.textContent=''; __el657.pelSalvoBarra.style.display='none';`);
+    run(`prevColeiraRecalcular(${P657}, pelExtra(${P657}))`); await espera657();
+    igual([run(`__el657['pel-saved'].textContent`), run('__el657.pelSalvoBarra.style.display'), run('PEL_SALVO.pend'), run('__pend657.length')], ['', 'none', 0, 1], 'o automático grava calado');
+    // quem digita, com o automático ainda sem resposta: o «✓ Salvo» dela não espera o automático
+    run(`setPelExtra(${P657}, {medos:'trovão'})`); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), 'Salvando…');
+    run('__pend657[1].ok(); __pend657.splice(1, 1);'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), '✓ Salvo', 'o automático pendurado não segura o «✓ Salvo» de quem digita');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), '✓ Salvo', 'o ok do automático não pinta nada');
+    // duas gravações de quem digita saindo juntas: «✓ Salvo» só depois da última (o defeito q28 do QA)
+    run(`${PEL_ZERA657} __el657['pel-saved'].textContent='';`);
+    run(`setPelExtra(${P657}, {medos:'fogos'})`); run(`setPelExtra(${P657}, {comp_pessoas:'adora visitas'})`); await espera657();
+    run('__pend657[0].ok(); __pend657.splice(0, 1);'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), 'Salvando…', 'uma ainda está saindo');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(run(`__el657['pel-saved'].textContent`), '✓ Salvo');
+  } finally { run(SOLTA657); run(SOLTA_BARRA657); }
+});
+provaAsync('6.57 R2-3 (M-2, AC2.1) — sem internet, o Caio muda, sai, a Bia entra no mesmo tablet e a internet volta: o rastro e a auditoria dizem Caio, Encãotador, na hora da mudança (setPelExtra, setHospAlergia, o cartaz, o plano confirmado depois do prazo)', async () => {
+  run(ARMA657);
+  const T1 = T657(9, 10, 0), T2 = T657(9, 10, 47);
+  try {
+    fichaTonico657();
+    run(`document.body.dataset.role='monitor'; __login657={nome:'Caio Encãotador Teste', role:'monitor'}; __pendura657='^daycare/cadastro/';`);
+    const pr = run(`setPelExtra(${P657}, {pesos:[{kg:8, data:'2026-10-09'}], alergia:'frango'})`);
+    __hosp657();
+    run(`setHospAlergia('restricao', 'sem glúten')`); await espera657();
+    // o Caio sai; a Bia entra (o logout não recarrega a página); 47 minutos depois, a internet volta
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora'; Date.now=function(){ return ${T2}; };`);
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await pr; await espera657();
+    const fr = db657('daycare/ficha-rastro/' + K657) || {};
+    igual(Object.keys(fr).map((k) => [fr[k].campo, fr[k].quem, fr[k].papel, fr[k].ts]).sort(),
+      [['alergia', 'Caio Encãotador Teste', 'monitor', T1], ['restricao', 'Caio Encãotador Teste', 'monitor', T1]], 'o rastro é do Caio, na hora da mudança');
+    igual(aud657('ficha-campo').map((a) => [a[2].campo, a[2].quem, a[2].role, a[2].ts, a[2].hora]).sort(),
+      [['alergia', 'Caio Encãotador Teste', 'monitor', T1, '10:00'], ['restricao', 'Caio Encãotador Teste', 'monitor', T1, '10:00']], 'e a linha da auditoria também');
+    // o cartaz: a Bia assina no tablet em que o Caio está logado; o banco só responde depois que a Bia entra no lugar dele
+    run(`Date.now=function(){ return ${T1}; }; __login657={nome:'Caio Encãotador Teste', role:'monitor'}; document.body.dataset.role='monitor'; __au657=[]; __resolve657=null;`);
+    run(`__pC=corrAbrir({acao:'anular', oque:'a dose do Apoquel de Tonico', tela:'Cuidado Vet', nivel:'propria', capacidade:'corrigir-hospedagem', cascata:[],
+      gravar:function(){ return new Promise(function(ok){ __resolve657=ok; }); }});`);
+    run(`corrToque('confirmar', {motivo:'a dose foi lançada no horário errado', senha:'s-bia'})`); await espera657();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await espera657();
+    const rC = (await ate657(run('__pC'))) || {};
+    igual(rC.semResposta, true);
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora'; Date.now=function(){ return ${T2}; };`);
+    run('__resolve657({ok:true});'); await espera657();
+    const an = aud657('registro-anulado');
+    igual(an.map((a) => [a[2].quem, a[2].role, a[2].ts, a[2].por]), [['Caio Encãotador Teste', 'monitor', T1, 'Bia Consultora Teste']], 'quem estava no tablet e quem assinou, na hora da confirmação');
+    run(`corrToque('fechar')`);
+    // o plano confirmado depois do prazo: o rastro «renovacao» é de quem confirmou
+    run(`Date.now=function(){ return ${T1}; };`);
+    plano657(EX630(GOLD1X630()), '2026-12-21', { inicio: '2026-12-21' });
+    run(`document.body.dataset.role='gestao'; __login657={nome:'Gestora Teste', role:'gestao'}; __pendura657='^daycare/cadastro'; __pend657=[]; __tm657=[]; __zpq657=[true, true, true];`);
+    const prP = run('confirmarRenovacao()'); await espera657();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await ate657(prP); await espera657();
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora'; Date.now=function(){ return ${T2}; };`);
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(aud657('renovacao').map((a) => [a[2].quem, a[2].role, a[2].ts]), [['Gestora Teste', 'gestao', T1]]);
+    // o Desfazer confirmado depois do prazo: o rastro «renovacao-desfeita» é de quem desfez
+    run(`Date.now=function(){ return ${T1}; };`);
+    const atualD = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', fim: '2027-03-31', mesRenov: 'março de 2027', quando: '2026-12-21' };
+    const antD = Object.assign({}, GOLD1X630(), { substituidoEm: T657(9, 9, 0), por: 'Gestora Teste', motivo: 'renovação', motivo_conferido: true });
+    plano657(EX630(atualD, { renov_hist: { h1: antD } }), '2026-12-22', null);
+    run(`document.body.dataset.role='gestao'; __login657={nome:'Gestora Teste', role:'gestao'}; __pendura657='^daycare/cadastro'; __pend657=[]; __tm657=[]; __zpq657=[true];`);
+    const prD = run('desfazerRenovacao()'); await espera657();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await ate657(prD); await espera657();
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora'; Date.now=function(){ return ${T2}; };`);
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(aud657('renovacao-desfeita').map((a) => [a[2].quem, a[2].role, a[2].ts]), [['Gestora Teste', 'gestao', T1]]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 R2-4 (M-3, AC5.1, AC5.3) — Linha do tempo e resumo por pessoa: a ação usada para várias coisas tem nome neutro (pendência aberta, resolvida e avisada; alergia NÃO gravada e conferida; aviso não mandado; leitura que falhou), e o «BARROU» conta como tentativa', async () => {
+  const casos = [
+    { acao: 'pendencia-prevencao', detalhe: 'abriu pendência de Vermífugo para Tonico — não veio em 2026-10-09', hora: '09:00', quem: 'Bia' },
+    { acao: 'pendencia-prevencao', detalhe: 'resolveu a pendência de Vermífugo de Tonico (era do dia 2026-10-01) — lançado hoje', hora: '09:01', quem: 'Bia' },
+    { acao: 'pendencia-prevencao', detalhe: 'avisou na chegada: Tonico tem 1 pendência(s) aberta(s)', hora: '09:02', quem: 'Caio' },
+    { acao: 'alergia-ficha', detalhe: 'NÃO gravou na ficha de tonico__rita teste: PERMISSION_DENIED', hora: '09:03', quem: 'Gestora' },
+    { acao: 'alergia-ficha', detalhe: 'conferiu sem mudar nada: tonico__rita teste', hora: '09:04', quem: 'Gestora' },
+    { acao: 'entrevista-atencao', detalhe: 'NÃO avisou a Gestão sobre k1: timeout', hora: '09:05', quem: 'automático' },
+    { acao: 'hospedes', detalhe: 'NÃO consegui ler as duplicidades já resolvidas: timeout', hora: '09:06', quem: 'Plantonista' },
+    { acao: 'hospedagem-mudanca', detalhe: 'NÃO avisou o grupo do plantão (o grupo não está na ponte): Tonico', hora: '09:07', quem: 'Plantonista' },
+    { acao: 'ficha', detalhe: 'BARROU alteração de comp_casa (papel sem permissão)', hora: '09:08', quem: 'Caio' },
+  ];
+  ctx.__lt657 = casos;
+  const linhas = J630('__lt657.map(function(a){ return acaoRotulo(a); })');
+  igual(linhas.slice(0, 8), [
+    'Pendência de prevenção — abriu pendência de Vermífugo para Tonico — não veio em 2026-10-09',
+    'Pendência de prevenção — resolveu a pendência de Vermífugo de Tonico (era do dia 2026-10-01) — lançado hoje',
+    'Pendência de prevenção — avisou na chegada: Tonico tem 1 pendência(s) aberta(s)',
+    'Ficha pela resposta do tutor — NÃO gravou na ficha de tonico__rita teste: PERMISSION_DENIED',
+    'Ficha pela resposta do tutor — conferiu sem mudar nada: tonico__rita teste',
+    'Atenção da entrevista — NÃO avisou a Gestão sobre k1: timeout',
+    'Duplicidade de hóspede — NÃO consegui ler as duplicidades já resolvidas: timeout',
+    'Comida ou remédio do hóspede — NÃO avisou o grupo do plantão (o grupo não está na ponte): Tonico']);
+  igual(linhas[8], 'Tentativa sem permissão: alteração de comp_casa (papel sem permissão). Nada foi gravado.');
+  const resumo = String(run(`blocoPessoasFezHojeHTML(__lt657.map(function(a,i){ return Object.assign({ts:i+1, role:'consultora'}, a); }))`)).replace(/<[^>]+>/g, '|');
+  assert.ok(resumo.indexOf('Pendência de prevenção (2)') >= 0, 'Bia abriu e resolveu: ' + resumo);
+  assert.ok(/Pendência de prevenção \(1\) · Tentativa sem permissão \(1\)|Tentativa sem permissão \(1\) · Pendência de prevenção \(1\)/.test(resumo), 'Caio avisou e foi barrado: ' + resumo);
+  assert.ok(resumo.indexOf('Ficha pela resposta do tutor (2)') >= 0 && resumo.indexOf('Ficha do FILHOt') < 0, resumo);
+  assert.ok(!/Tirou uma pendência|preenchida pela resposta|Deu por tratada|Respondeu «É o mesmo|Mudou a comida/.test(resumo + linhas.join('\n')), 'nenhum rótulo de uma variante só');
+});
+provaAsync('6.57 R2-5 (M-4, L-2, L-5) — o cartaz: quem tem o papel assina mesmo sem a tela concedida; no nível Gestão, a tela concedida no Time NÃO assina; o campo do Corrigir sai escapado; o rastro leva o motivo e quem assinou, sem parênteses dentro de parênteses; o riscado mostra o nome do campo e a data brasileira; outro cartaz não abre por cima de um que grava', async () => {
+  run(ARMA657);
+  try {
+    const M = 'a dose foi lançada no horário errado';
+    const tenta = async (op, senha) => {
+      abreCorr657(op);
+      const r = await run(`corrToque('confirmar', {motivo:${JSON.stringify(M)}, senha:${JSON.stringify(senha)}})`); await espera657();
+      const o = { ok: !!(r && r.ok), passo: run('CORR_ATUAL?CORR_ATUAL.passo:null'), aviso: run('CORR_ATUAL?CORR_ATUAL.aviso:null'), gravou: run('__gr657.length'), quem: cartaz657() };
+      run(`corrToque('fechar')`); await espera657();
+      return o;
+    };
+    // nível própria com a tela concedida: o papel basta (a Bia não tem a tela); a tela basta (a Vera não tem o papel)
+    const P1 = "{acao:'anular', cascata:['o alarme'], telaConcedida:'orcamento'}";
+    igual([(await tenta(P1, 's-bia')).gravou, (await tenta(P1, 's-vera')).gravou, (await tenta(P1, 's-caio')).gravou], [1, 1, 0], 'Bia (papel), Vera (tela), Caio (nenhum)');
+    // nível Gestão: a tela concedida no Time não assina dinheiro e remédio (decisão 1)
+    const G = "{acao:'anular', nivel:'gestao', cascata:['o alarme'], telaConcedida:'orcamento'}";
+    abreCorr657(G);
+    assert.ok(/Quem assina: a Gestão ou a Diretoria\. O app grava/.test(cartaz657()), 'o cartaz não oferece a tela do Time no nível Gestão: ' + cartaz657());
+    run(`corrToque('fechar')`);
+    const vG = await tenta(G, 's-vera');
+    igual([vG.gravou, vG.passo], [0, 'conferir']);
+    assert.ok(/Vera Veterinária Teste/.test(vG.aviso) && /Quem assina: a Gestão ou a Diretoria\. Nada foi gravado\.$/.test(vG.aviso), vG.aviso);
+    igual((await tenta(G, SENHA657)).gravou, 1, 'a Gestora assina');
+    // o rastro: o motivo e quem assinou, com o papel entre parênteses sem outro parêntese dentro
+    run('__au657=[];');
+    abreCorr657(CAMPOS657);
+    run(`corrToque('continuar', {valores:['09:00', '1 comprimido']})`);
+    await run(`corrToque('confirmar', {motivo:${JSON.stringify(M)}, senha:'s-bia'})`); await espera657();
+    const rc = aud657('registro-corrigido');
+    igual(rc.length, 1);
+    igual(rc[0][1], 'a dose do Apoquel de Tonico: Hora: «08:00» → «09:00», motivo: ' + M + ', assinado por Bia Consultora Teste (Consultora de Bem-Estar)');
+    assert.ok(!/\([^()]*\(/.test(rc[0][1]), 'sem parênteses dentro de parênteses');
+    const regC = J630('__gr657')[0];
+    igual(regC.rotulos, { hora: 'Hora' }, 'o registro leva o nome do campo');
+    run(`corrToque('fechar')`);
+    // o campo do Corrigir: o valor sai escapado
+    abreCorr657(`{acao:'corrigir', campos:[{c:'hora', rotulo:'Hora', valor:${JSON.stringify('08:00"><img src=x onerror=alert(1)>')}}]}`);
+    const hx = cartaz657();
+    assert.ok(hx.indexOf('<img src=x') < 0 && !/value="[^"]*</.test(hx), 'HTML cru no campo: ' + hx.slice(hx.indexOf('id="corrC_0"'), hx.indexOf('id="corrC_0"') + 160));
+    run(`corrToque('fechar')`);
+    // o riscado: o nome do campo (nunca a chave técnica) e a data no jeito brasileiro
+    const risc = String(run(`corrRiscadoHTML({acao:'corrigir', oque:'a comida de Tonico', por:'Bia Consultora Teste', papel:'consultora', quando:'09/10/2026 às 10:00', motivo:${JSON.stringify(M)},
+      antes:{alim_racao_qtd:'80 g', vence:'2026-10-01'}, depois:{alim_racao_qtd:'95 g', vence:'2026-10-31'}, rotulos:{vence:'Vence em'}})`));
+    assert.ok(risc.indexOf('alim_racao_qtd') < 0 && risc.indexOf('Quanto de ração por refeição') >= 0 && risc.indexOf('Vence em') >= 0, risc);
+    assert.ok(risc.indexOf('01/10/2026') >= 0 && risc.indexOf('31/10/2026') >= 0 && risc.indexOf('2026-10-01') < 0, risc);
+    assert.ok(/por Bia Consultora Teste \(Consultora de Bem-Estar\), em/.test(risc), risc);
+    // outro cartaz enquanto um grava (o QA657-D4, na ordem certa): o novo não abre; o primeiro termina com o resultado de verdade
+    run('__resolve657=null; __gravou657=0; __au657=[]; __za657=[];');
+    run(`__pA=corrAbrir({acao:'anular', oque:'a dose A', nivel:'propria', capacidade:'corrigir-hospedagem', cascata:[], gravar:function(){ return new Promise(function(ok){ __resolve657=function(){ __gravou657++; ok({ok:true}); }; }); }});`);
+    run(`corrToque('confirmar', {motivo:${JSON.stringify(M)}, senha:'s-bia'})`); await espera657();
+    run(`__rB657=null; corrAbrir({acao:'anular', oque:'a dose B', nivel:'propria', capacidade:'corrigir-hospedagem', cascata:[], gravar:function(){ return Promise.resolve({ok:true}); }}).then(function(x){ __rB657=x; });`); await espera657();
+    const rB = J630('__rB657') || {};
+    igual([rB.ok, rB.ocupado, run('CORR_ATUAL.op.oque'), run('CORR_ATUAL.passo')], [false, true, 'a dose A', 'gravando'], 'o B não abre por cima do A');
+    assert.ok(J630('__za657').some((z) => z[0] === 'ESPERE A OUTRA GRAVAÇÃO'), JSON.stringify(run('__za657')));
+    run('__resolve657();'); await espera657();
+    const rA = (await ate657(run('__pA'))) || {};
+    igual([rA.ok, !!rA.cancelado, run('__gravou657'), aud657('registro-anulado').length, run('CORR_ATUAL.passo')], [true, false, 1, 1, 'pronto'], 'o A não ouve «cancelado»: ouve o resultado de verdade');
+    run(`corrToque('fechar')`);
+    // nos outros passos nada foi gravado ainda: o novo fecha o anterior, que ouve «cancelado» (verdade)
+    run(`__pA2=corrAbrir({acao:'anular', oque:'a dose C', nivel:'propria', capacidade:'corrigir-hospedagem', cascata:[], gravar:function(){ return Promise.resolve({ok:true}); }});`);
+    run(`__pB2=corrAbrir({acao:'anular', oque:'a dose D', nivel:'propria', capacidade:'corrigir-hospedagem', cascata:[], gravar:function(){ return Promise.resolve({ok:true}); }});`);
+    const rA2 = (await ate657(run('__pA2'))) || {};
+    igual([rA2.cancelado, run('CORR_ATUAL.op.oque')], [true, 'a dose D']);
+    run(`corrToque('fechar')`);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 R2-6 (M-4, L-1) — o plano e o cadastro novo depois do prazo de 20 s: o rastro «renovacao» e a ficha nova só com o ok do banco; dois toques em «Criar e abrir a ficha» dão um cadastro, um rastro e uma ficha aberta; o cache tira a linha que saiu', async () => {
+  run(ARMA657);
+  try {
+    // o plano: sem resposta em 20 s, «O BANCO AINDA NÃO CONFIRMOU» e nada de rastro; com o ok, o rastro
+    plano657(EX630(GOLD1X630()), '2026-12-21', { inicio: '2026-12-21' });
+    run(`__pendura657='^daycare/cadastro'; __zpq657=[true, true, true];`);
+    const prP = run('confirmarRenovacao()'); await espera657();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await ate657(prP); await espera657();
+    assert.ok(J630('__za657').some((z) => z[0] === 'O BANCO AINDA NÃO CONFIRMOU'), JSON.stringify(run('__za657')));
+    igual(aud657('renovacao').length, 0, 'antes do ok: sem rastro');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(aud657('renovacao').length, 1, 'o banco confirmou depois: o rastro entra');
+    assert.ok(/o banco confirmou depois de 20 segundos/.test(aud657('renovacao')[0][1]), aud657('renovacao')[0][1]);
+    // o cache da ficha: a linha que saiu do histórico SAI do cache (não fica como null)
+    const atual = { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-12-21', fim: '2027-03-31', mesRenov: 'março de 2027', quando: '2026-12-21' };
+    const ant = Object.assign({}, GOLD1X630(), { substituidoEm: T657(9, 9, 0), por: 'Gestora Teste', motivo: 'renovação', motivo_conferido: true });
+    plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
+    run(`__pendura657=null; __zpq657=[true];`);
+    await run('desfazerRenovacao()'); await espera657();
+    const hc = run(`JSON.stringify(Object.keys((pelCadCache[pelKey(__t657)]||{}).renov_hist||{}))`);
+    igual([JSON.parse(hc).indexOf('h1'), JSON.parse(hc).length], [-1, 1], 'o cache: a linha h1 saiu, a nova entrou');
+    // o cadastro novo: sem resposta em 20 s, a ficha não abre; com o ok, abre uma vez
+    novoAluno657();
+    run(`__pendura657='^daycare/cadastro/pipoca'; __tm657=[]; __za657=[];`);
+    const prN = run('criarAluno()'); await espera657();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await ate657(prN); await espera657();
+    igual([J630('__ab657').length, aud657('cadastro-novo').length, run('PELUDINHOS.length')], [0, 0, 1], 'o prazo venceu: a ficha não abre sem o ok');
+    assert.ok(J630('__za657').some((z) => z[0] === 'O BANCO AINDA NÃO CONFIRMOU'));
+    // o segundo toque enquanto o banco não respondeu: espera (QA657-C1)
+    run('criarAluno()'); await espera657();
+    assert.ok(/já está sendo salvo/.test(run('__el657.naWarn.textContent')), run('__el657.naWarn.textContent'));
+    // a Bia sai e a Gestora entra antes de o banco responder: o rastro é da Bia (M-2)
+    run(`__login657={nome:'Gestora Teste', role:'gestao'}; document.body.dataset.role='gestao';`);
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual(aud657('cadastro-novo').map((a) => [a[2].quem, a[2].role]), [['Bia Consultora Teste', 'consultora']], 'quem cadastrou');
+    igual([J630('__ab657').length, aud657('cadastro-novo').length, run("PELUDINHOS.filter(function(p){ return pelKey(p)==='pipoca__lia teste'; }).length"), run('__fna657')], [1, 1, 1, 1], 'um cadastro, um rastro, uma ficha');
+    // dois toques seguidos antes do banco (o QA657-C1 do jeito dele)
+    run(`PELUDINHOS=PELUDINHOS.filter(function(p){ return pelKey(p)!=='pipoca__lia teste'; }); __put657('daycare/cadastro/pipoca__lia teste', null); __au657=[]; __ab657=[]; __fna657=0; __esc657=[];`);
+    novoAluno657();
+    run(`__pendura657='^daycare/cadastro/pipoca';`);
+    const c1 = run('criarAluno()'), c2 = run('criarAluno()'); await espera657();
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await ate657(c1); await ate657(c2); await espera657();
+    igual([escritas657().filter((e) => /^daycare\/cadastro\/pipoca/.test(e[1])).length, aud657('cadastro-novo').length, J630('__ab657').length, run('__fna657')], [1, 1, 1, 1]);
+    // recusado, a marca sai: tentar de novo funciona
+    run(`PELUDINHOS=PELUDINHOS.filter(function(p){ return pelKey(p)!=='pipoca__lia teste'; }); __put657('daycare/cadastro/pipoca__lia teste', null); __au657=[]; __ab657=[]; __pendura657=null;`);
+    novoAluno657();
+    run(`__recusa657='^daycare/cadastro/pipoca';`);
+    await run('criarAluno()'); await espera657();
+    run('__recusa657=null;');
+    await run('criarAluno()'); await espera657();
+    igual([J630('__ab657').length, aud657('cadastro-novo').length], [1, 1], 'depois da recusa, o segundo toque grava');
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 R2-7 (L-3, AC2.8) — setPelExtra com o banco lançando NA HORA (undefined no patch): devolve {ok:false}, sem lançar; o «Salvando…» não fica preso e a próxima gravação boa diz «✓ Salvo»', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657();
+    run(`${PEL_ZERA657} __el657['pel-saved']={style:{}, textContent:''}; __dbOk657=DB;
+      DB={ref:function(p){ var r=__dbOk657.ref(p); if(/^daycare\\/cadastro\\//.test(p)) r.update=function(){ throw new Error('Reference.update failed: First argument contains undefined in property'); }; return r; }};`);
+    let lancou = null, r1 = null;
+    try { r1 = await run(`setPelExtra(${P657}, {comp_casa:'a'})`); } catch (e) { lancou = String(e.message); }
+    await espera657();
+    igual([lancou, r1 && r1.ok, run('PEL_SALVO.pend')], [null, false, 0], 'não lança, devolve {ok:false} e a conta volta');
+    assert.ok(/^⚠/.test(run(`__el657['pel-saved'].textContent`)), run(`__el657['pel-saved'].textContent`));
+    igual(aud657('gravacao-FALHOU').length, 1, 'a falha fica em gravacao-FALHOU');
+    run('DB=__dbOk657;');
+    const r2 = await run(`setPelExtra(${P657}, {comp_casa:'b'})`); await espera657();
+    igual([r2.ok, run(`__el657['pel-saved'].textContent`), run('PEL_SALVO.pend')], [true, '✓ Salvo', 0]);
+  } finally { run(SOLTA657); run(PEL_ZERA657); }
+});
+provaAsync('6.57 R2-8 (L-4, AC4) — Orçamento com xarás: a mesma pessoa cancela com a senha (as telas dela vão junto até a gravação); sem a senha, vale a sessão dela; com xarás e sem nada, ninguém é escolhido pelo nome (pede a senha)', async () => {
+  run(ARMA657);
+  try {
+    run(`MONITORES=[{id:'t1', nome:'Ana Teste', senha:'s-ana1', role:'monitor', paginas:[]}, {id:'t2', nome:'Ana Teste', senha:'s-ana2', role:'monitor', paginas:['orcamento']}];
+      __sr657b=senhasRuntime; senhasRuntime=function(){ var m=__sr657b(); m['s-ana1']={role:'monitor', nome:'Ana Teste', paginas:[]}; m['s-ana2']={role:'monitor', nome:'Ana Teste', paginas:['orcamento']}; return m; };`);
+    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __put657('auaulandia/orcamentos/o1', null); __esc657=[]; __al657=[]; __au657=[];`);
+    // a Ana que recebeu a tela Orçamento, pela senha dela: cancela (antes, a gravação procurava pelo nome e achava a outra Ana)
+    seed(); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', 's-ana2'];`);
+    await run(`orcCancelar('o1')`); await espera657();
+    igual([db657('auaulandia/orcamentos/o1/status'), barrou657().length], ['cancelado', 0], 'Ana (com a tela) cancela: ' + JSON.stringify(run('__al657')));
+    // a outra Ana, pela senha dela: barrada
+    seed(); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', 's-ana1'];`);
+    await run(`orcCancelar('o1')`); await espera657();
+    igual([escritas657().length, J630('__al657').some((t) => /Ana Teste, que não trabalha no Orçamento/.test(t))], [0, true]);
+    // sem a senha e sem as telas (tela velha, console), com xarás e a sessão de OUTRA pessoa: ninguém é escolhido pelo nome
+    seed();
+    const r3 = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', {nome:'Ana Teste', role:'monitor'})`); await espera657();
+    igual([r3.ok, escritas657().length], [false, 0]);
+    assert.ok(/Há 2 pessoas com o nome Ana Teste no Time/.test(r3.erro), r3.erro);
+    // nem quando quem está logado é OUTRA pessoa que tem a tela Orçamento (a Vera): ela não responde pela Ana
+    seed(); papel657('vet', 'Vera Veterinária Teste', ['orcamento']);
+    const r3b = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', {nome:'Ana Teste', role:'monitor'})`); await espera657();
+    igual([r3b.ok, escritas657().length], [false, 0], 'a sessão da Vera não assina pela Ana');
+    // a sessão é da própria Ana (com a tela): vale a sessão
+    seed(); papel657('monitor', 'Ana Teste', ['orcamento']);
+    const r4 = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', {nome:'Ana Teste', role:'monitor'})`); await espera657();
+    igual([r4.ok, db657('auaulandia/orcamentos/o1/status')], [true, 'cancelado']);
+    // com as telas junto, a sessão não decide: a Ana sem a tela é barrada mesmo no tablet da Ana com a tela
+    seed();
+    const r5 = await run(`orcCancelarGravar('o1', 'a viagem foi desmarcada pela tutora', {nome:'Ana Teste', role:'monitor', paginas:[]})`); await espera657();
+    igual([r5.ok, escritas657().length], [false, 0]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.57 R2-9 (M-4, L-5) — a Linha do tempo: gravacao-FALHOU com o motivo em português; a data do campo no jeito brasileiro; o nome da tela sem parênteses dentro de parênteses; a frase de quem tira um lançamento segue a régua da tela', async () => {
+  run(ARMA657);
+  try {
+    const m = run(`zErroMotivo('PERMISSION_DENIED: Permission denied', 'banco', '', {})`);
+    igual(run(`acaoRotulo({acao:'gravacao-FALHOU', detalhe:'ficha do cadastro tonico', erro:'PERMISSION_DENIED: Permission denied'})`),
+      'A gravação NÃO chegou ao sistema: ficha do cadastro tonico (' + m + ')');
+    const l = run(`acaoRotulo({acao:'ficha-campo', campo:'col_p', rotulo:'Coleira — vence em', pet:'Tonico', de:'2026-10-01', para:'2026-10-31', tela:'Cadastro de Peludinhos (a ficha se corrige ao abrir)', origem:'automatico'})`);
+    igual(l, 'Mudou "Coleira — vence em" de Tonico: "01/10/2026" → "31/10/2026" (Cadastro de Peludinhos — a ficha se corrige ao abrir) — automático');
+    // o detalhe gravado na auditoria também
+    fichaTonico657({ col_nome: 'Seresto', col_t: '2026-06-01', col_p: '2026-11-01' });
+    run(`prevColeiraRecalcular(${P657}, pelExtra(${P657}))`); await espera657();
+    const d = aud657('ficha-campo').filter((a) => a[2].campo === 'col_p').map((a) => a[1])[0] || '';
+    assert.ok(/«01\/11\/2026» → «\d{2}\/\d{2}\/\d{4}»/.test(d) && !/\([^()]*\(/.test(d), d);
+    // quem tira um lançamento: a frase sai da régua (telaVemDoPapel), não de uma lista escrita à mão
+    run(`__tvp657=telaVemDoPapel; telaVemDoPapel=function(k, r){ return k==='dashdc' && (r==='vet' || r==='gestao'); }; __za657=[];`);
+    run(`dashBarrarTirar('saicedo', 'id1')`);
+    run('telaVemDoPapel=__tvp657;');
+    const z = J630('__za657')[0] || [];
+    igual((z[1] || [])[0], 'Quem pode tirar um lançamento dos Lançamentos do dia: a Gestão ou a Veterinária, ou quem recebeu a tela «' + run(`corrTelaNome('dashdc')`) + '» no Time.');
+  } finally { run('if(typeof __tvp657!=="undefined") telaVemDoPapel=__tvp657;'); run(SOLTA657); }
+});
+// ---- Re-gate do QA (CONCERNS) — L-7: a conta do «Salvo» é por ficha -------------------------------------------------
+provaAsync('6.57 QA2 J3 (L-7, AC3.1) — a recusa da ficha A, chegando com a ficha B aberta, não prende o «✓ Salvo» da B (e não pinta a B de vermelho); a A pendurada também não segura a B; a recusa da A fica em gravacao-FALHOU', async () => {
+  run(ARMA657);
+  const r = {};
+  try {
+    fichaTonico657();
+    run(`PELUDINHOS.push({n:'Quindim', tutor:'Lia Teste', raca:'SRD', dias:['ter']}); __put657('daycare/cadastro/quindim__lia teste', {n:'Quindim', tutor:'Lia Teste', comp_casa:'calmo'});
+      pelCadCache['quindim__lia teste']=__get657('daycare/cadastro/quindim__lia teste');
+      __el657['pel-saved']={style:{}, textContent:''}; pelAtual=PELUDINHOS[0]; ${PEL_ZERA657} __pendura657='^daycare/cadastro/';`);
+    // o cenário do QA (QA657R2-J3): a A sai, a pessoa abre a B e grava; a A é recusada; a B grava
+    const pA = run(`setPelExtra(PELUDINHOS[0], {comp_casa:'evita machos'})`); await espera657();
+    run('pelAtual=PELUDINHOS[1];');   // abriu a ficha do Quindim
+    const pB = run(`setPelExtra(PELUDINHOS[1], {comp_casa:'brinca com todos'})`); await espera657();
+    run('__pend657[0].nao();'); await pA; await espera657();     // a ficha A (Tonico) foi recusada
+    r.depoisDaRecusaA = run("__el657['pel-saved'].textContent");
+    run('__pend657[1].ok(); __pend657=[];'); await pB; await espera657();   // a ficha B (Quindim) gravou
+    r.pelSavedNaB = run("__el657['pel-saved'].textContent"); r.pend = run('PEL_SALVO.pend');
+    r.falhaA = aud657('gravacao-FALHOU').map((a) => a[1]);
+    igual([r.depoisDaRecusaA, r.pelSavedNaB, r.pend], ['Salvando…', '✓ Salvo', 0], 'a B gravou: «✓ Salvo»; a recusa da A não pinta a B: ' + JSON.stringify(r));
+    assert.ok(r.falhaA.length === 1 && /tonico__rita teste/.test(r.falhaA[0]), 'a recusa da A fica em gravacao-FALHOU: ' + JSON.stringify(r.falhaA));
+    // a A ainda sem resposta quando a B grava: a B não espera a A; o ok tardio da A não pinta nada na B
+    run(`pelAtual=PELUDINHOS[0]; ${PEL_ZERA657} __el657['pel-saved'].textContent='';`);
+    run(`setPelExtra(PELUDINHOS[0], {medos:'trovão'})`); await espera657();
+    run('pelAtual=PELUDINHOS[1];');
+    run(`setPelExtra(PELUDINHOS[1], {medos:'fogos'})`); await espera657();
+    run('__pend657[1].ok(); __pend657.splice(1, 1);'); await espera657();
+    igual(run("__el657['pel-saved'].textContent"), '✓ Salvo', 'a B gravou e não espera a A pendurada');
+    run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
+    igual([run("__el657['pel-saved'].textContent"), run('PEL_SALVO.pend')], ['✓ Salvo', 0], 'o ok tardio da A não muda a B');
+    // de volta à A: a próxima gravação dela começa limpa (a recusa antiga não segura o «✓ Salvo»)
+    run(`pelAtual=PELUDINHOS[0]; __el657['pel-saved'].textContent=''; __pendura657=null;`);
+    await run(`setPelExtra(PELUDINHOS[0], {comp_pessoas:'adora visitas'})`); await espera657();
+    igual(run("__el657['pel-saved'].textContent"), '✓ Salvo');
+  } finally { run(SOLTA657); run(PEL_ZERA657); }
 });
 // ------------------------------------------------ o fim
 fila.then(() => {

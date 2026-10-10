@@ -5174,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-12"></script>
+<script src="resposta-tutor.js?v=2026-10-09-13"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-12"></script>
+<script src="painel-logica.js?v=2026-10-09-13"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-12"></script>
+<script src="financeiro-logica.js?v=2026-10-09-13"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5865,7 +5865,17 @@
     // ===== Story 6.55 — desfazer o «Finalizar» de uma conversa com o tutor ============
     // No mesmo dia, quem finalizou desfaz (regra na própria função). Depois do dia, só a
     // Supervisão, a Gestão e a Diretoria — sempre com o motivo, que fica no histórico.
-    'desfazer-finalizar-contato': ['supervisor','gestao','diretoria']
+    'desfazer-finalizar-contato': ['supervisor','gestao','diretoria'],
+    // ===== Story 6.57 — o papel conferido na FUNÇÃO que grava (09/out/2026) ================
+    // "O app está engessado... Preciso que tudo no app possa ser excluído, modificado, alterado"
+    // (Adriana, 09/10). Corrigir e anular passa a ter régua dentro da função, não só no menu.
+    // «Fotos a conferir» (Relatórios): quem vê Relatórios pelo papel (a classe so-gestao) — e
+    // também quem recebeu a tela Relatórios no Time (paginaConcedida, conferida na função).
+    'conferir-fotos':           ['consultora','supervisor','gestao','diretoria'],
+    // A senha que assina o Orçamento (Cancelar reserva, Mudar as datas): de uma PESSOA cujo
+    // papel vê o Orçamento (so-recepcao) — ou que recebeu a tela Orçamento no Time. Senha de
+    // posto e de quem não trabalha no Orçamento não assinam (corrAssinar, orcAssinaturaRecusa).
+    'assinar-orcamento':        ['consultora','supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -6410,6 +6420,9 @@
       .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   }
   function mesaAtencaoTratei(k){
+    // 6.57 (AC4): a régua dentro da função — a fatia Gestão da mesa é da Gestão e da Diretoria
+    // (mesaFatiasDoPapel); uma tela velha ou o console não passam por cima disso.
+    if(!podePapel('gestao-role')){ corrBarrar('dar por tratada a atenção da entrevista', corrQuemPode('gestao-role'), {alvo:k}); return; }
     if(!DB) return;
     var reg={quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
     DB.ref('daycare/entrevista-atencao/'+k+'/tratado').set(reg).then(function(){
@@ -12247,6 +12260,12 @@
     if(!currentHosp) return;
     const key=currentHosp.refKey;
     if(key){
+      // 6.57 (AC2.6): o "antes" que este aparelho mostrava, e quem mudou (com o papel e a hora), tirados
+      // ANTES de a cópia do aparelho receber o valor novo (2ª rodada, H-1 e M-2: lido depois, a primeira
+      // alergia de um FILHOt saía com o «antes» igual ao «depois» e não deixava rastro nenhum). O rastro
+      // só sai com o ok do banco.
+      var _antesA={}; _antesA[campo]=pelRastroAntesDaChave(key, campo);
+      var _quemA=corrQuemAgora();
       let local={}; try{ local=JSON.parse(localStorage.getItem('zeluz_pel_'+key)||'{}'); }catch(e){} /* silencioso de propósito: sem valor guardado vale o padrão já definido acima */
       local[campo]=val;
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(local)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
@@ -12257,7 +12276,9 @@
         // A resposta pode chegar com outro hóspede aberto: só pinta a tela de quem gravou (QA22).
         var _hG=currentHosp;
         DB.ref('daycare/cadastro/'+key).update({[campo]:val})
-          .then(function(){ if(currentHosp===_hG) _hfAlergiaSt('var(--crm-ok)','✅ Salvo — vale em todos os aparelhos.'); })
+          .then(function(){
+            try{ var _pA={}; _pA[campo]=val; pelRastroCampos(key, _antesA, _pA, {nome:(_hG&&_hG.nome)||'', quem:_quemA}); }catch(e){ _logFalhaGrav('rastro da ficha '+key, e); }
+            if(currentHosp===_hG) _hfAlergiaSt('var(--crm-ok)','✅ Salvo — vale em todos os aparelhos.'); })
           .catch(function(e){ _logFalhaGrav('alergia/'+campo,e);
             if(currentHosp===_hG) _hfAlergiaSt('var(--crm-critico)','⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema. Verifique a conexão e salve de novo.'); });
       } else {
@@ -12301,21 +12322,27 @@
   // (a tarja vermelha em hf-pills já mostra o dado a todos, inclusive plantonista, em modo leitura).
   // A pergunta que a tela faz quando duas linhas parecem o mesmo FILHOt. Aparece no
   // card, com os dois nomes escritos por extenso — ninguém responde no escuro.
+  // 6.57 (S0-P1): quem responde «É o mesmo / São dois». Quem não responde continua vendo a pergunta.
+  function hospPodeResponderMesmo(){ try{ return podePapel('corrigir-hospedagem'); }catch(e){ return false; } /* silencioso de propósito: sem saber o papel, não responde */ }
+  var HOSP_MESMO_QUEM='Quem responde é a Recepção, a Supervisão ou a Gestão.';
   function hospSuspeitaHTML(h){
     if(!h||!h.suspeita) return '';
     var o=h.suspeita, ch=hospParChave(h,o);
     HOSP_PAR_VIVO[ch]={a:h, b:o};
+    var resposta=hospPodeResponderMesmo()
+      ? ('<div style="display:flex;gap:5px;margin-top:5px">'
+        +'<button type="button" class="btn btn-primary" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1"'
+        +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',true)">É o mesmo</button>'
+        +'<button type="button" class="btn" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1;'
+        +'background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)"'
+        +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',false)">São dois</button>'
+        +'</div>')
+      : ('<div style="margin-top:5px;font-size:11px;font-weight:700;color:var(--crm-atencao-text);line-height:1.35">'+HOSP_MESMO_QUEM+'</div>');
     return '<div style="margin-top:5px;padding:6px 7px;border-radius:9px;background:rgba(241,196,15,.16);'
       +'border:1.5px solid var(--crm-atencao);text-align:left" onclick="event.stopPropagation()">'
       +'<div style="font-size:11px;font-weight:800;color:var(--crm-atencao-text);line-height:1.35">'
       +'É o mesmo FILHOt que <strong>'+escAttr(o.nome)+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</strong>?</div>'
-      +'<div style="display:flex;gap:5px;margin-top:5px">'
-      +'<button type="button" class="btn btn-primary" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1"'
-      +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',true)">É o mesmo</button>'
-      +'<button type="button" class="btn" style="padding:4px 9px;font-size:11px;font-weight:800;flex:1;'
-      +'background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)"'
-      +' onclick="event.stopPropagation();hospResponderMesmo(\''+ch+'\',false)">São dois</button>'
-      +'</div></div>';
+      +resposta+'</div>';
   }
   // Os pares ainda sem resposta, para as telas da Gestão gritarem (caso Nelson, 01/set).
   function hospParesPendentes(){
@@ -12335,10 +12362,13 @@
         +'<div style="font-weight:800;font-size:14px;color:var(--crm-critico)">POSSÍVEL DUPLICADO — responda para juntar</div>'
         +'<div style="font-size:13px;margin-top:4px"><strong>'+la+'</strong> e <strong>'+lb+'</strong> parecem o MESMO FILHOt. '
         +'Enquanto ninguém responde, ele conta DUAS vezes em relatórios, medicação e cobrança.</div>'
-        +'<div style="display:flex;gap:6px;margin-top:7px">'
-        +'<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="hospResponderMesmo(\''+p.ch+'\',true)">É o mesmo</button>'
-        +'<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="hospResponderMesmo(\''+p.ch+'\',false)">São dois</button>'
-        +'</div></div>';
+        +(hospPodeResponderMesmo()
+          ? ('<div style="display:flex;gap:6px;margin-top:7px">'
+            +'<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12.5px;font-weight:800" onclick="hospResponderMesmo(\''+p.ch+'\',true)">É o mesmo</button>'
+            +'<button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;font-weight:800;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" onclick="hospResponderMesmo(\''+p.ch+'\',false)">São dois</button>'
+            +'</div>')
+          : ('<div class="hint" style="margin-top:6px;font-weight:700">'+HOSP_MESMO_QUEM+'</div>'))
+        +'</div>';
     }).join('');
   }
   function renderHospAlergiaBlock(h){
@@ -12436,6 +12466,9 @@
   // O par que está na tela agora, por chave — é dele que a resposta tira quem vence.
   var HOSP_PAR_VIVO={};
   function hospResponderMesmo(chave, ehMesmo){
+    // 6.57 (AC4): «É o mesmo» errado junta remédio, comida e cobrança de dois FILHOts (H10). Responde
+    // quem faz e corrige o check-in: a Recepção, a Supervisão, a Gestão e a Diretoria (S0-P1).
+    if(!hospPodeResponderMesmo()){ corrBarrar('responder «É o mesmo FILHOt?»', corrQuemPode('corrigir-hospedagem'), {alvo:chave}); return; }
     if(!DB) return;
     var reg={mesmo:!!ehMesmo, quem:(typeof quemSou==='function'?quemSou():'-'),
              quando:(typeof zHojeISO==='function')?zHojeISO():'', ts:Date.now()};
@@ -13231,12 +13264,19 @@
     // mora — senão a ficha diria, ao mesmo tempo, o número e "não tem" (QA21 B1).
     if(cad.chip) cad.microchip=cad.chip;
     if(!Object.keys(cad).length){ atualizarHeader(Object.assign({}, __cadAberto||{}, cadTela)); return {apagados:_apagados, recusados:_rec, gravou:false}; }
+    // 6.57 (2ª rodada, M-2): quem mudou, com o papel e a hora, tirado AGORA (o ok pode chegar depois
+    // que outra pessoa entrou no aparelho).
+    var _quemC=corrQuemAgora();
     setInfo(currentHosp,cad);
     // Sem banco, nada foi para a ficha: o "aberto" não avança, e a próxima gravação tenta de novo.
     if(!DB){ _logFalhaGrav('cadastro (banco reconectando)', new Error('banco reconectando')); return {apagados:_apagados, recusados:_rec, gravou:false, semBanco:true}; }
     // Chave FIXA da ficha aberta — nunca recalculada a partir do que está sendo digitado.
     var _ck=__cadKeyFixa||cadKey(currentHosp);
-    DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(daycare)',e)); // cadastro ÚNICO: espelha no mestre do Day Care — só o que mudou
+    // 6.57 (AC2.6): o "antes" que este aparelho mostrava, tirado antes de o cache mudar; o rastro
+    // do antes e do depois só sai com o ok da ficha (daycare/cadastro).
+    var _antesC={}; Object.keys(cad).forEach(function(c){ _antesC[c]=pelRastroAntesDaChave(_ck, c); });
+    var _nomeC=(currentHosp&&currentHosp.nome)||'', _cadC=Object.assign({}, cad);
+    DB.ref('auaulandia/cadastro/'+_ck).update(cad).catch(e=>_logFalhaGrav('cadastro(auaulandia)',e)); DB.ref('daycare/cadastro/'+_ck).update(cad).then(function(){ try{ pelRastroCampos(_ck, _antesC, _cadC, {nome:_nomeC, quem:_quemC}); }catch(e){ _logFalhaGrav('rastro da ficha '+_ck, e); } }).catch(e=>_logFalhaGrav('cadastro(daycare)',e)); // cadastro ÚNICO: espelha no mestre do Day Care — só o que mudou
     __cadAberto=Object.assign({}, __cadAberto||{}, cad);
     __cadGravouDesdeAbrir=true;
     if(typeof pelCadCache!=='undefined') pelCadCache[_ck]=Object.assign({},pelCadCache[_ck]||{},cad);
@@ -13299,7 +13339,15 @@
     // O ponto de partida da comparação: o que a pessoa VIU ao abrir (onCadGravar grava só a diferença).
     __cadAberto=cadFormLer();
   }
-  function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||''; setInfo(currentHosp,{brinquedos:v}); if(DB) DB.ref('auaulandia/cadastro/'+cadKey(currentHosp)).update({brinquedos:v}).catch(e=>_logFalhaGrav('brinquedos',e)); }
+  function onBrinq(){ if(!currentHosp) return; const v=document.getElementById('hf-brinq').value||'';
+    // 6.57 (AC2.6): o "antes" que o Plantão mostrava (a ficha por cima do espelho), e o rastro só com o ok.
+    const _k=cadKey(currentHosp), _h=currentHosp;
+    let _antesB=null; try{ _antesB=Object.assign({}, getCad(_h)||{}, (pelCadCache&&pelCadCache[_k])||{}).brinquedos; }catch(e){ _antesB=null; } /* silencioso de propósito: sem a leitura, o "antes" fica vazio */
+    const _quemB=corrQuemAgora();   // 2ª rodada (M-2): quem mudou, tirado agora
+    setInfo(currentHosp,{brinquedos:v});
+    if(DB) DB.ref('auaulandia/cadastro/'+_k).update({brinquedos:v})
+      .then(function(){ try{ pelRastroCampos(_k, {brinquedos:(_antesB===undefined)?null:_antesB}, {brinquedos:v}, {nome:_h.nome||'', quem:_quemB}); }catch(e){ _logFalhaGrav('rastro da ficha '+_k, e); } })
+      .catch(e=>_logFalhaGrav('brinquedos',e)); }
   // A FICHA-MESTRE MANDA (27/set/2026): o espelho auaulandia/cadastro é a cópia antiga do
   // Plantão; a ficha daycare/cadastro é a que o Day Care, o check-in e o almoço leem. O
   // formulário abre com a ficha por cima do espelho — e a leitura do banco só redesenha se a
@@ -15194,19 +15242,15 @@
   // Senha de posto (Recepção, Monitor 3, Plantonista) não assina: o posto não responde por
   // nada. nivel 'gestao' → só a Gestão (e a Diretoria); nivel 'recepcao' → quem trabalha na
   // Recepção ('corrigir-engano-dc').
+  // 6.57: a régua mora na função geral (corrAssinar); aqui ficam só as frases da 6.56, letra por letra.
   function enganoAssinar(senha, nivel){
-    var falha=function(erro){ return {ok:false, nome:'', papel:'', erro:erro}; };
-    var s=String(senha==null?'':senha).trim();
-    if(!s) return falha('Digite a senha: é ela que assina. Nada foi gravado.');
-    var q=null; try{ q=(typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null; }catch(e){ q=null; } /* sem a lista de senhas, ninguém assina */
-    if(!q||!q.nome) return falha('Essa senha não é de ninguém cadastrado. Nada foi gravado.');
-    var posto=false; try{ posto=LOGIN_GENERICO.test(String(q.nome).trim()); }catch(e){ posto=false; } /* sem a régua do posto, vale a do papel logo abaixo */
-    if(posto) return falha('Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.');
     var gestao=(nivel==='gestao');
-    if(!podePapel(gestao?'gestao-role':'corrigir-engano-dc', String(q.role||''))) return falha(gestao
-      ? ('Essa senha é de '+q.nome+', que não pode assinar isto: precisa da senha da Gestão. Nada foi gravado.')
-      : ('Essa senha é de '+q.nome+', que não pode assinar a correção da Recepção. Nada foi gravado.'));
-    return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
+    return corrAssinar(senha, gestao?'gestao-role':'corrigir-engano-dc', gestao?'isto':'a correção da Recepção', {
+      vazia:'Digite a senha: é ela que assina. Nada foi gravado.',
+      posto:function(nome){ return 'Essa senha é de um posto ('+nome+'), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.'; },
+      semPapel:function(nome){ return gestao
+        ? ('Essa senha é de '+nome+', que não pode assinar isto: precisa da senha da Gestão. Nada foi gravado.')
+        : ('Essa senha é de '+nome+', que não pode assinar a correção da Recepção. Nada foi gravado.'); }});
   }
   // Uma chave nova por registro de rastro (trilha, correções): nada é sobrescrito.
   function enganoChave(ts){ return 't'+(ts||Date.now())+Math.random().toString(36).slice(2,6); }
@@ -19044,6 +19088,9 @@
       {rotulo:'Sua senha', tipo:'password', botao:'Confirmar a mudança'}))||'').trim();
     var quem=senha?orcQuemPelaSenha(senha):null;
     if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi alterada.'); return; }
+    // 6.57 (AC4): a senha tem de ser de uma PESSOA que trabalha no Orçamento (não de posto).
+    var barraE=orcAssinaturaRecusa(quem, senha);
+    if(barraE){ corrBarrar('assinar o Orçamento', corrQuemPode('assinar-orcamento','orcamento'), {orcamento:id}, {calado:true}); alert(barraE+' A reserva NÃO foi alterada.'); return; }
     var agora=new Date(), pp=function(x){ return String(x).padStart(2,'0'); };
     var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando a alteração…'; }
@@ -19876,6 +19923,11 @@
     if(!senha){ alert('Cancelamento não confirmado — a senha é obrigatória.'); return; }
     var quem=orcQuemPelaSenha(senha);
     if(!quem){ alert('Essa senha não é de ninguém cadastrado. A reserva NÃO foi cancelada.\n\nConfira a senha e tente de novo.'); return; }
+    // 6.57 (AC4): a senha tem de ser de uma PESSOA que trabalha no Orçamento (não de posto).
+    var barraC=orcAssinaturaRecusa(quem, senha);
+    if(barraC){ corrBarrar('assinar o Orçamento', corrQuemPode('assinar-orcamento','orcamento'), {orcamento:id}, {calado:true}); alert(barraC+' A reserva NÃO foi cancelada.'); return; }
+    // as telas de quem assinou vão junto: a conferência do orcCancelarGravar é a mesma, sem a senha (L-4)
+    quem=Object.assign({}, quem, {paginas:corrPaginasDaPessoa(quem.nome, senha)});
     if(!DB){ alert('Sem conexão com o banco agora — a reserva não foi cancelada. Tente de novo em instantes.'); return; }
     orcCancelarGravar(id, motivo, quem).then(function(r){
       if(r&&r.ok) return;
@@ -19887,10 +19939,42 @@
   // A gravação do cancelamento, separada da conversa (6.53): o Excluir da hospedagem cancela a
   // reserva com o MESMO motivo e a MESMA assinatura, sem perguntar tudo de novo. Devolve
   // {ok} ou {ok:false, erro}. `quem` = {nome, role} de quem digitou a senha.
+  // 6.57 (AC4): quem assina o Orçamento — a senha de uma PESSOA (não de posto) cujo papel vê o
+  // Orçamento ('assinar-orcamento') ou que recebeu a tela Orçamento no Time. Devolve '' (pode) ou a
+  // frase do porquê. O orcQuemPelaSenha não muda: a 6.53 e a 6.56 dependem dele.
+  // As telas de quem assinou (2ª rodada, L-4): pela senha; sem a senha, as que vieram junto com
+  // {nome, role, paginas} (o Cancelar as leva da senha conferida, e a mesma pessoa passa com e sem a
+  // senha). Sem nenhuma das duas (tela velha, console): a sessão deste aparelho, se é a mesma pessoa; ou
+  // a pessoa do Time com esse nome, se só UMA tem esse nome. Com xarás, não dá para saber quem é: antes,
+  // o primeiro da lista decidia. A sessão de OUTRA pessoa não responde por quem assinou (a tela velha no
+  // tablet da Recepção passaria qualquer senha).
+  function orcAssinaturaRecusa(quem, senha){
+    quem=quem||{};
+    var nome=String(quem.nome||'').trim();
+    if(!nome) return 'Essa senha não é de ninguém cadastrado.';
+    if(corrEhPosto(nome)) return 'Essa senha é de um posto ('+nome+'), não de uma pessoa: senha de posto não assina o Orçamento. Use a senha da própria pessoa.';
+    if(podePapel('assinar-orcamento', String(quem.role||''))) return '';
+    var pags=[], xaras=0;
+    if(String(senha||'').trim()) pags=corrPaginasDaPessoa(nome, senha);
+    else if(Array.isArray(quem.paginas)) pags=quem.paginas;
+    else {
+      var u={}; try{ u=_sessao()||{}; }catch(e){ u={}; } /* silencioso de propósito: sem sessão, vale a lista do Time */
+      var mesmos=[]; try{ mesmos=(MONITORES||[]).filter(function(x){ return x && String(x.nome||'').trim()===nome; }); }catch(e){ mesmos=[]; } /* silencioso de propósito: sem a lista, nada foi concedido — vale o papel */
+      if(String(u.nome||'').trim()===nome && Array.isArray(u.paginas)) pags=u.paginas;
+      else if(mesmos.length===1) pags=Array.isArray(mesmos[0].paginas)?mesmos[0].paginas:[];
+      else xaras=mesmos.length;
+    }
+    if(pags.indexOf('orcamento')>=0) return '';
+    if(xaras>1) return 'Há '+xaras+' pessoas com o nome '+nome+' no Time: sem a senha, não dá para saber quem assinou. Assine de novo com a senha da própria pessoa.';
+    return 'Essa senha é de '+nome+', que não trabalha no Orçamento. Quem assina: '+corrQuemPode('assinar-orcamento','orcamento')+'.';
+  }
   function orcCancelarGravar(id, motivo, quem){
     var o=ORC_LISTA_CACHE[id]||{};
     var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
     quem=quem||{};
+    // 6.57 (AC4): conferido também aqui, na função que grava (tela velha, console, o Excluir da 6.53).
+    var barraG=orcAssinaturaRecusa(quem);
+    if(barraG){ corrBarrar('assinar o Orçamento', corrQuemPode('assinar-orcamento','orcamento'), {orcamento:id}, {calado:true}); return Promise.resolve({ok:false, barrou:true, erro:barraG}); }
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
     var agora=new Date();
     var pp=function(x){ return String(x).padStart(2,'0'); };
@@ -21383,7 +21467,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-12';
+  const APP_VERSAO='2026-10-09-13';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -25416,13 +25500,22 @@
   // conferido=false só no refazer de um registro antigo, cujo motivo ninguém decidiu.
   // O motivo do histórico como se lê: a troca de categoria grava a chave ("virou hospede").
   function renovMotivoRotulo(m){ return String(m||'').replace(/^virou hospede$/, 'virou hóspede'); }
-  function renovHistGravar(k, antigo, motivo, conferido){
+  // `lote` (6.57): a linha entra no lote como 'renov_hist/{id novo}' e quem chamou a grava JUNTO com
+  // o plano, numa gravação só no nó da ficha (tudo ou nada) — nada é gravado aqui.
+  function renovHistGravar(k, antigo, motivo, conferido, lote){
     if(!antigo||!(antigo.plano||antigo.inicio)) return Promise.resolve();
     var reg=Object.assign({}, antigo, {substituidoEm:Date.now(), por:renovQuemAgora(), motivo:(motivo||'renovação')});
     if(conferido===false) delete reg.motivo_conferido; else reg.motivo_conferido=true;
+    if(lote){ lote['renov_hist/'+renovHistNovoId(k)]=reg; return Promise.resolve(); }
     if(!DB){ _logFalhaGrav('histórico de renovação '+k+' (banco reconectando)', new Error('banco reconectando')); return Promise.resolve(); }
     return DB.ref('daycare/cadastro/'+k+'/renov_hist').push(reg)
       .catch(function(e){ _logFalhaGrav('histórico de renovação '+k, e); });
+  }
+  // O id da linha nova do histórico, sem gravar nada (push() sem valor só gera a chave).
+  function renovHistNovoId(k){
+    var local='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    try{ var r=DB?DB.ref('daycare/cadastro/'+k+'/renov_hist').push():null; return (r && r.key)?String(r.key):local; }
+    catch(e){ return local; } /* sem o banco, a chave nasce aqui (a gravação vai falhar e dizer) */
   }
   // Quem desfaz é quem já podia mexer no plano: a recepção (consultoras), a Supervisão e a
   // Gestão. Nada de permissão nova — a tabela PERM continua sendo o lugar único.
@@ -25507,10 +25600,14 @@
     // ele vai marcado, e o fechamento do mês pede "confira" quando o conta.
     // A marca vai junto quando o plano marcado volta e sai de novo (5ª rodada): o "desfeita" guarda
     // refeito_do_que_voltou, e o refazer seguinte devolve a marca.
+    // 6.57 (AC3.3): a linha nova do histórico, o plano que volta e a saída da linha antiga vão numa
+    // gravação SÓ, no nó da ficha (tudo ou nada). Antes, a linha antiga saía mesmo se o plano não
+    // voltasse.
+    const loteD={};
     if(String(ant.motivo||'')==='desfeita' && !antPagoC) await renovHistGravar(k, (antAntigoC||ant.refeito_do_que_voltou===true)?Object.assign({}, atual, {refeito_de_antigo:true}):atual,
-      ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true);
+      ant.motivo_do_que_voltou||'renovação', ant.conferido_do_que_voltou===true, loteD);
     else await renovHistGravar(k, Object.assign({}, atual, {motivo_do_que_voltou:(antPagoC?'renovação':String(ant.motivo||'')),
-      conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}, (ant.refeito_de_antigo===true)?{refeito_do_que_voltou:true}:{}), 'desfeita');
+      conferido_do_que_voltou:(antPagoC?false:(ant.motivo_conferido===true))}, (ant.refeito_de_antigo===true)?{refeito_do_que_voltou:true}:{}), 'desfeita', undefined, loteD);
     const volta={ plano:ant.plano||'', aulas:ant.aulas||'', inicio:ant.inicio||'', fim:ant.fim||'',
                   mesRenov:ant.mesRenov||'', quando:ant.quando||'', ordemPet:ant.ordemPet||1 };
     if(ant.vig_inicio) volta.vig_inicio=ant.vig_inicio;   // o período volta com o começo que tinha
@@ -25520,15 +25617,34 @@
     // 6.44: o valor fechado do plano que volta volta junto (sem ele, vale a conta pela tabela).
     if(ant.valor_plano_cent) volta.valor_plano_cent=ant.valor_plano_cent;
     if(ant.mensalidade_cent) volta.mensalidade_cent=ant.mensalidade_cent;
-    await setPelExtra(pelAtual,{renov:volta});
-    if(DB) DB.ref('daycare/cadastro/'+k+'/renov_hist/'+ant._id).remove()
-      .catch(function(e){ _logFalhaGrav('tirar do histórico '+k+'/'+ant._id, e); });
-    renovRascLimpar();
-    if(typeof audit==='function') audit('renovacao-desfeita',
-      'voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')
-      +' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
-      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
-    renderPelFicha();
+    loteD['renov_hist/'+ant._id]=null;
+    const pD=pelAtual, nomeD=pelNome(pD), alvoD=dcKey(pD.n,pD.tutor);
+    const quemD=corrQuemAgora();   // 2ª rodada (M-2): o rastro leva quem desfez, mesmo se o banco responder depois
+    const grD=setPelExtra(pD, Object.assign({renov:volta}, loteD), {soDepoisDoOk:true});
+    const rD=await corrComPrazo(grD, CORR_PRAZO, CORR_PRAZO_ERRO);
+    const feitoD=function(){
+      renovRascLimpar();
+      if(typeof audit==='function') audit('renovacao-desfeita',
+        'voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')
+        +' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
+        Object.assign({alvo:alvoD}, corrQuemMeta(quemD)));
+      renderPelFicha();
+    };
+    if(rD && rD.semResposta){
+      // o banco ainda pode responder: o rastro e a ficha só mudam quando ele confirmar
+      grD.then(function(r2){ if(r2 && r2.ok) feitoD(); });
+      if(typeof zAlertao==='function') zAlertao('O BANCO AINDA NÃO CONFIRMOU',
+        [nomeD+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
+         'Confira em «Renovações anteriores» se o plano voltou antes de tocar em Desfazer de novo.'], {botao:'Entendi'});
+      return;
+    }
+    if(rD && rD.ok===false){
+      if(typeof zAlertao==='function') zAlertao('A RENOVAÇÃO NÃO FOI DESFEITA',
+        [nomeD+': '+zErroFrase(zErroMotivo(rD.erro, 'banco', '', {agora:true})),
+         'O plano e as «Renovações anteriores» continuam como estavam. Nada mudou.'], {botao:'Entendi'});
+      return;
+    }
+    feitoD();
     if(typeof zAlertao==='function') zAlertao('RENOVAÇÃO DESFEITA',
       [(volta.dias_mes&&renovDiasMesValido(volta))
         ? ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', com os dias mudando por mês ('+renovAulasRotulo(volta)+').')
@@ -25739,6 +25855,10 @@
   // O CONFIRMAR é a única porta do banco: valida, mostra o resumo, pergunta, e só então grava.
   async function confirmarRenovacao(){
     if(!pelAtual) return;
+    // 6.57 (AC3.2): quem não pode mexer no plano é barrado ANTES de qualquer gravação, pela mesma
+    // régua do Desfazer (renovPodeDesfazer). Antes, a linha do histórico era gravada e só o porteiro
+    // do setPelExtra barrava — e a tela ainda dizia «PLANO GRAVADO».
+    if(!renovPodeDesfazer()){ corrBarrar('confirmar o plano', corrQuemPode('ver-plano'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)}); return; }
     const ex=pelExtra(pelAtual), gravado=renovDe(ex), r=renovEdit(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     const aulas=nAulasDe(pelAtual);
@@ -26036,35 +26156,47 @@
     // tentativas iguais viraram quatro "renovações anteriores" do Baque e do Nelson).
     // 6.44: a correção vai para o histórico dita como correção — o fechamento do mês não conta
     // duas vezes o mesmo pagamento (o plano corrigido e o que entrou no lugar dele).
-    if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, correcaoC?'correção':'renovação');
+    // 6.57 (AC3.2): o plano novo, a linha do histórico e a resposta da troca de categoria vão numa
+    // gravação SÓ, no nó da ficha (tudo ou nada): o lote junta as linhas, e o setPelExtra grava.
+    const loteC={};
+    if(!renovMesmoPlano(gravado, novo)) await renovHistGravar(k, gravado, correcaoC?'correção':'renovação', undefined, loteC);
     // A resposta sobre o plano que saiu na troca de categoria vai para o registro dele: "pagamento
     // novo" conta os dois (decidido pelo app); "correção" conta um só (o registro vira correção, e
     // o rastro diz qual era a troca).
     if(virouC){
       const upV=virouNovoC?{motivo_conferido:true}:{motivo:'correção', motivo_antes:String(virouC.motivo||''), motivo_conferido:true};
-      if(DB) await DB.ref('daycare/cadastro/'+k+'/renov_hist/'+virouC._id).update(upV)
-        .then(function(){
-          // a ficha aberta já mostra a resposta em "Renovações anteriores" (o ouvinte do cadastro confirma logo depois)
-          try{ const cV=pelCadCache[k]; if(cV && cV.renov_hist && cV.renov_hist[virouC._id]){
-            const rhV=Object.assign({}, cV.renov_hist); rhV[virouC._id]=Object.assign({}, rhV[virouC._id], upV);
-            pelCadCache[k]=Object.assign({}, cV, {renov_hist:rhV}); } }
-          catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige a tela logo depois */
-        })
-        .catch(function(e){ _logFalhaGrav('histórico de renovação '+k+'/'+virouC._id, e); });
-      else _logFalhaGrav('histórico de renovação '+k+' (banco reconectando)', new Error('banco reconectando'));
+      // na MESMA gravação do plano (6.57); a ficha aberta mostra a resposta depois do ok (o cache da ficha)
+      Object.keys(upV).forEach(function(cV){ loteC['renov_hist/'+virouC._id+'/'+cV]=upV[cV]; });
     }
     // Vigência que NÃO é mais do meio do mês não herda o "para onde voltar" da anterior:
     // aquele vencimento já foi para "Renovações anteriores". Herdar faria o Desfazer do
     // meio do mês devolver uma data de outro ciclo (Adriana, 22/set/2026).
     if(!regMMConf) delete novo.fim_anterior;
-    await setPelExtra(pelAtual,{renov:novo});
+    const pC=pelAtual, nomeC=pelNome(pC), alvoC=dcKey(pC.n,pC.tutor);
+    const quemC=corrQuemAgora();   // 2ª rodada (M-2): o rastro leva quem confirmou, mesmo se o banco responder depois
+    const grC=setPelExtra(pC, Object.assign({renov:novo}, loteC), {soDepoisDoOk:true});
+    const rC=await corrComPrazo(grC, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(rC && rC.semResposta){
+      // o banco ainda pode responder: o rastro «renovacao» e a ficha só mudam quando ele confirmar
+      grC.then(function(r2){ if(r2 && r2.ok){ renovRascLimpar(); if(typeof audit==='function') audit('renovacao', 'renovou o plano '+novo.plano+' de '+nomeC+' (o banco confirmou depois de '+Math.round(CORR_PRAZO/1000)+' segundos)', Object.assign({alvo:alvoC}, corrQuemMeta(quemC))); renderPelFicha(); } });
+      if(typeof zAlertao==='function') zAlertao('O BANCO AINDA NÃO CONFIRMOU',
+        [nomeC+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
+         'Confira o plano na ficha antes de tocar em Confirmar de novo.'], {botao:'Entendi'});
+      return;
+    }
+    if(rC && rC.ok===false){
+      if(typeof zAlertao==='function') zAlertao('O PLANO NÃO FOI GRAVADO',
+        [nomeC+': '+zErroFrase(zErroMotivo(rC.erro, 'banco', '', {agora:true})),
+         'Nem o plano nem as «Renovações anteriores» mudaram. Confira a internet e toque em Confirmar de novo.'], {botao:'Entendi'});
+      return;
+    }
     renovRascLimpar();
     if(typeof audit==='function') audit('renovacao',
       'renovou o plano '+novo.plano+' ('+(mudamC?('dias por mês: '+mesesC.map(function(m){ return renovDiasRotulo(m.dias); }).join(' | ')):(aulas+'x, dias '+diasTxt))+') '
       +(renovVigOutra(novo)?('pago em '+fmtBR(novo.inicio)+' · vale de '+fmtBR(novo.vig_inicio)):('de '+fmtBR(novo.inicio)))
       +' até '+fmtBR(novo.fim)+(mudamC?(' · valor do plano '+renovBRL(valorGravaC)):(' · valor do plano '+fmtCent(valorGravaC)+' ('+contaC+')'))
       +(virouC?(' · o plano que saiu quando a ficha '+renovMotivoRotulo(virouC.motivo)+' ('+fmtBR(virouC.inicio)+'): '+(virouNovoC?'pagamento novo, os dois contam':'correção, um pagamento só')):''),
-      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
+      {alvo:alvoC});
     renderPelFicha();
     if(typeof zAlertao==='function') zAlertao('PLANO GRAVADO',
       (mudamC
@@ -28825,7 +28957,211 @@
       return true;
     });
   }
-  function setPelExtra(p,patch){
+  // ===== 6.57 — O ANTES E O DEPOIS DA FICHA (AC2) ========================================
+  // "A ficha muda sem guardar o que era nem quem mudou" (revisão de 09/10, F06 e F09: alergia é
+  // dado de saúde). Todo campo gravado pelo setPelExtra — e pelo onCadGravar, onBrinq e
+  // setHospAlergia, no Plantão — deixa, DEPOIS do ok do banco, dois registros novos:
+  //   daycare/ficha-rastro/{chave}/{id novo} — o campo, o valor de antes e o de depois inteiros
+  //     (até 4.000 letras; acima disso, cortado com «(cortado)»), quem, o papel, quando, a tela e
+  //     a origem ('pessoa' ou 'automatico'). Só criar, no molde do daycare/contatos-log da 6.55.
+  //     FORA de daycare/cadastro: lá dentro o rastro desceria inteiro em todo aparelho a cada
+  //     mudança (a coleção é carimbada) — e nunca por uma gravação a partir da raiz.
+  //   daycare/auditoria/{dia} — a linha campo/de/para (o molde do prevAuditManual), com o de e o
+  //     para em até 120 letras (o corte do setHospAlergia) e o id do registro inteiro.
+  // O "antes" é o que ESTE aparelho mostrava (pelExtra). Campo com o mesmo valor não gera nada. A
+  // foto entra só como «foto trocada», nunca a imagem; os pesos ficam fora (a pesagem já guarda
+  // data e quem; corrigir peso é a S3). O que o app grava sozinho sai como «automático», com a
+  // tela de origem. Gravação recusada não gera registro: a falha segue em gravacao-FALHOU.
+  var PEL_RASTRO_MAX=4000, PEL_RASTRO_AUD=120, PEL_RASTRO_CORTE=' (cortado)';
+  var PEL_RASTRO_FORA={pesos:1};
+  var PEL_RASTRO_ROTULO={n:'Nome', tutor:'Tutor', tel:'Telefone do tutor', raca:'Raça', nasc:'Nascimento', idadeAprox:'Idade aproximada',
+    corPelo:'Cor do pelo', sexo:'Sexo', castrado:'Castrado?', dias:'Dias da semana', freq:'Frequência', renov:'Plano', foto:'Foto',
+    tutor2:'Tutor 2 (guarda compartilhada)', tutorPrinc:'Tutor principal', matricula:'Data de matrícula', checkup_fez:'Já fez check-up?',
+    vetNome:'Veterinário(a) — nome', vetTel:'Veterinário(a) — telefone', vetClinica:'Clínica — nome', vetEnd:'Clínica — endereço',
+    alimentacao:'Alimentação em casa', passeia:'Passeia?', banheiro:'Xixi e cocô', alim_racao_marca:'Ração (marca)',
+    alim_racao_qtd:'Quanto de ração por refeição', alim_nat:'Comida natural (o quê)', alim_nat_qtd:'Quanto de natural por refeição',
+    alim_horarios:'Horários das refeições', alim_refs:'Em quais refeições', alim_mistura:'Mistura ração com natural?', alim_obs:'Observação da comida',
+    alim_plano:'O que ele come', comp_casa:'Comportamento: Em casa', comp_pessoas:'Comportamento: Com pessoas',
+    comp_peludos:'Comportamento: Com outros peludos', medos:'Comportamento: Medos', atacou:'Comportamento: Já atacou outro peludo?',
+    brincadeira:'Comportamento: Brincadeira favorita', alergia:'Alergia', restricao:'Restrição alimentar', alergia_nenhuma:'Sem alergia',
+    restricao_nenhuma:'Sem restrição', medicacao:'Medicação', problema:'Algum problema de saúde', obs_tutor:'O que o tutor contou',
+    manias:'Manias', adaptacao:'Em adaptação (45 dias)?', adaptacao_desde:'Adaptação começou em', adaptacao_tipo:'Adaptação de quê?',
+    ansioso:'Come em comedouro lento?', matilha:'Matilha (Enriquecimento Ambiental)', brinquedos:'Brinquedos', chip:'Microchip',
+    microchip:'Microchip', inativo:'Inativo', tipoSaida:'Tipo de saída', dataSaida:'Data de saída', dataObito:'Data do falecimento',
+    entrevista:'Entrevista (resposta do tutor)', escova_dc:'Escova no Day Care', ea_restr:'Restrição no Enriquecimento'};
+  function pelRastroRotulo(c){
+    c=String(c||'');
+    if(PEL_RASTRO_ROTULO[c]) return PEL_RASTRO_ROTULO[c];
+    try{
+      var it=(PREV_ITENS||[]).filter(function(x){ return x.k===c || x.base===c || x.nomeK===c || (x.k+'_manual')===c; })[0];
+      if(it) return it.nome+(c===it.k?' — vence em':(c===it.base?' — última':(c===it.nomeK?' — produto':' — vence em (digitado à mão)')));
+    }catch(e){} /* silencioso de propósito: sem a lista da prevenção, vale o rótulo de baixo */
+    try{ if(typeof HOSP_CAMPO_ROTULO!=='undefined' && HOSP_CAMPO_ROTULO[c]) return String(HOSP_CAMPO_ROTULO[c]).replace(/"/g,''); }
+    catch(e){} /* silencioso de propósito: sem a tabela do Plantão, vale o rótulo de baixo */
+    try{ var a=(typeof algCampoNome==='function')?algCampoNome(c):c; if(a && a!==c) return a; }
+    catch(e){} /* silencioso de propósito: sem a tabela da pesquisa, vale o nome técnico */
+    return c;
+  }
+  function pelRastroNome(k, op){
+    if(op && op.nome) return String(op.nome);
+    try{ var p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===k; })[0]; if(p) return String(pelNome(p)||p.n||''); }
+    catch(e){} /* silencioso de propósito: sem a lista, vale o nome da chave */
+    var n=String(k||'').split('__')[0]||''; return n.charAt(0).toUpperCase()+n.slice(1);
+  }
+  function pelRastroCorta(t, max){
+    t=String(t==null?'':t);
+    return (t.length>max)?(t.slice(0, max-PEL_RASTRO_CORTE.length)+PEL_RASTRO_CORTE):t;
+  }
+  // O plano em uma linha (a auditoria; o rastro guarda o JSON inteiro).
+  function pelRastroPlanoTexto(r){
+    try{ var pl=planos()[r.plano]||{};
+      return (pl.rotulo||r.plano||'sem plano')+' · '+renovAulasRotulo(r)+' · '+((r.vig_inicio||r.inicio)?fmtBR(r.vig_inicio||r.inicio):'—')+' → '+(r.fim?fmtBR(r.fim):'—'); }
+    catch(e){ return corrValorTexto(r); } /* silencioso de propósito: plano torto vira o JSON dele */
+  }
+  // O resumo de 120 letras da auditoria.
+  function pelRastroResumo(c, v){
+    var t;
+    if(c==='foto') t='foto trocada';
+    else if(c==='renov' && v && typeof v==='object') t=pelRastroPlanoTexto(v);
+    else if(Array.isArray(v) && v.every(function(x){ return typeof x==='string' || typeof x==='number'; })) t=v.join(', ');
+    else t=corrValorTexto(v);
+    return String(t).slice(0, PEL_RASTRO_AUD);
+  }
+  // O "antes" que este aparelho mostrava, tirado ANTES de qualquer mudança.
+  function pelRastroAntesDaChave(k, campo){
+    var o={}; try{ o=Object.assign({}, JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}'), (pelCadCache&&pelCadCache[k])||{}); }catch(e){ o={}; } /* silencioso de propósito: sem a ficha deste aparelho, o "antes" fica vazio */
+    var v=o[campo]; try{ return (v===undefined)?null:JSON.parse(JSON.stringify(v)); }catch(e){ return null; } /* silencioso de propósito: valor que não copia fica vazio no "antes" */
+  }
+  function pelRastroAntes(p, patch){
+    var ex={}; try{ ex=pelExtra(p)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem a ficha deste aparelho, o "antes" fica vazio */
+    var a={};
+    Object.keys(patch||{}).forEach(function(c){
+      if(c.indexOf('/')>=0 || c==='foto') return;
+      try{ a[c]=(ex[c]===undefined)?null:JSON.parse(JSON.stringify(ex[c])); }catch(e){ a[c]=null; } /* silencioso de propósito: valor que não copia fica vazio no "antes" */
+    });
+    return a;
+  }
+  // Os registros do antes e do depois — chamar SÓ depois do ok do banco.
+  // op = {tela, origem:'pessoa'|'automatico', nome, quem}. quem = o corrQuemAgora() tirado NA HORA da
+  // mudança (2ª rodada, M-2): o ok pode chegar depois que outra pessoa entrou no aparelho. Sem ele,
+  // vale quem está logado agora.
+  function pelRastroCampos(k, antes, patch, op){
+    op=op||{}; antes=antes||{};
+    if(!k || !DB) return [];
+    var auto=(op.origem==='automatico');
+    var q=(op.quem && typeof op.quem==='object')?op.quem:corrQuemAgora();
+    var login=String(q.login||'-');
+    var tela=String(op.tela||corrTelaAtual()||'');
+    var nome=pelRastroNome(k, op);
+    var feitos=[];
+    Object.keys(patch||{}).forEach(function(c){
+      if(c.indexOf('/')>=0 || PEL_RASTRO_FORA[c]) return;
+      var de, para;
+      if(c==='foto'){ de=''; para='foto trocada'; }
+      else { de=corrValorTexto(antes[c]); para=corrValorTexto(patch[c]); if(de===para) return; }
+      var reg={ts:q.ts, quem:auto?'automático':login, papel:auto?'':String(q.papel||''), acao:'ficha-campo', tela:tela,
+        origem:auto?'automatico':'pessoa', campo:c, de:pelRastroCorta(de, PEL_RASTRO_MAX), para:pelRastroCorta(para, PEL_RASTRO_MAX)};
+      var id='';
+      try{ var rf=DB.ref('daycare/ficha-rastro/'+k).push(reg); id=String((rf&&rf.key)||'');
+        if(rf && typeof rf.catch==='function') rf.catch(function(e){ _logFalhaGrav('rastro da ficha '+k+' ('+c+')', e); }); }
+      catch(e){ _logFalhaGrav('rastro da ficha '+k+' ('+c+')', e); }
+      var rot=pelRastroRotulo(c), deA=(c==='foto')?'':pelRastroResumo(c, antes[c]), paraA=pelRastroResumo(c, patch[c]);
+      var det=nome+' — '+rot+': '+((c==='foto')?'foto trocada':(corrQ(corrDataBR(deA))+' → '+corrQ(corrDataBR(paraA))))+(auto?(' (automático'+(tela?(', em '+corrSemParenteses(tela)):'')+')'):'');
+      try{ if(typeof audit==='function') audit('ficha-campo', det, Object.assign({alvo:k, pet:nome, campo:c, rotulo:rot, de:deA, para:paraA,
+        tela:tela, origem:auto?'automatico':'pessoa', rastro:id}, auto?{quem:'automático', role:'automatico', aparelho:login, ts:q.ts, hora:q.hora}:corrQuemMeta(q))); }
+      catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      feitos.push({campo:c, id:id});
+    });
+    return feitos;
+  }
+  // ===== 6.57 — «SALVO» SÓ DEPOIS DO BANCO (AC3.1) =======================================
+  // O lugar do «Salvo» na ficha (#pel-saved): «Salvando…» enquanto o banco não responde; «✓ Salvo»
+  // só com o ok (e só quando nenhuma outra gravação ainda está saindo); a recusa fica em vermelho,
+  // com o motivo em português, até a próxima gravação; sem resposta em 20 segundos, a tela diz
+  // que o banco ainda não confirmou.
+  // A conta é POR FICHA (re-gate, L-7): fichas[k] = {pend, falhou}. Com uma marca só para o app inteiro,
+  // a recusa da ficha A que chegava com a B aberta deixava a B em «Salvando…» depois de gravada, e a
+  // recusa da A não aparecia para ninguém (ela continua em gravacao-FALHOU). pend = todas as gravações
+  // que ainda estão saindo, de qualquer ficha (só a conta geral).
+  var PEL_SALVO={pend:0, fichas:{}};
+  function pelSalvoFicha(k){
+    k=String(k||'');
+    if(!PEL_SALVO.fichas || typeof PEL_SALVO.fichas!=='object') PEL_SALVO.fichas={};
+    if(!PEL_SALVO.fichas[k]) PEL_SALVO.fichas[k]={pend:0, falhou:false};
+    return PEL_SALVO.fichas[k];
+  }
+  function pelSalvoFalhaTexto(r, op){
+    op=op||{};
+    var m=zErroMotivo(r&&r.erro, 'banco', '', {agora:true});
+    if(op.foto) return (zErroTipo(r&&r.erro, {origem:'banco'})==='texto')?('⚠ '+String(m).split(/\n/)[0]):('⚠ A foto NÃO foi salva no sistema: '+zErroFrase(m));
+    if(op.semCopia) return '⚠ NÃO salvou no sistema: '+zErroFrase(m)+' Nada mudou.';
+    return '⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema: '+zErroFrase(m)+' Salve de novo em instantes.';
+  }
+  // A barra do «Salvo» que se vê de QUALQUER aba da ficha: o #pel-saved mora só na aba Identificação,
+  // e quem muda o Comportamento ou a Atenção não via nada. Tocar fecha.
+  // 2ª rodada (M-1): a barra mora DENTRO da ficha aberta (#pel-ficha), como o #pel-saved. Trocou de
+  // tela ou voltou para a lista, ela some junto (antes ficava «Salvando…» por cima do Início); abriu
+  // outra ficha, ela nasce de novo, vazia. E se a resposta chega com a ficha fechada, ela se esconde.
+  function pelSalvoBarra(cor, txt){
+    try{
+      var vf=document.getElementById('v-ficha'), pf=document.getElementById('pel-ficha');
+      var b=document.getElementById('pelSalvoBarra');
+      var aberta=!!(vf && vf.classList && vf.classList.contains('active')===true && pf && pf.style && pf.style.display!=='none');
+      if(!aberta){ if(b && b.style) b.style.display='none'; return; }
+      if(!b){
+        b=document.createElement('div'); b.id='pelSalvoBarra'; b.setAttribute('role','status');
+        b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:9000;max-width:560px;margin:0 auto;padding:10px 14px;border-radius:12px;background:var(--z-cream);border:2px solid currentColor;font-size:14px;font-weight:800;line-height:1.35;box-shadow:var(--shadow-lg);overflow-wrap:anywhere';
+        b.addEventListener('click', function(){ b.style.display='none'; });
+        pf.appendChild(b);
+      }
+      b.style.color=cor; b.textContent=txt; b.style.display=txt?'block':'none';
+    }catch(e){} /* silencioso de propósito: enfeite de tela — o #pel-saved e o resultado continuam */
+  }
+  // op.k (2ª rodada, M-1): a ficha de quem gravou. A resposta que chega com OUTRA ficha aberta só acerta
+  // a conta; não pinta nada na ficha errada.
+  function pelSalvoMostrar(estado, r, op){
+    op=op||{};
+    var s=null; try{ s=document.getElementById('pel-saved'); }catch(e){ s=null; } /* silencioso de propósito: fora da ficha não há onde mostrar */
+    var outra=false; try{ outra=!!(op.k && pelAtual && pelKey(pelAtual)!==op.k); }catch(e){ outra=false; } /* silencioso de propósito: sem saber a ficha aberta, mostra como antes */
+    var poe=function(cor, txt){ if(outra) return; pelSalvoBarra(cor, txt); if(!s) return; try{ s.style.color=cor; s.textContent=txt; }catch(e){} /* silencioso de propósito: enfeite de tela — o resultado volta para quem chamou */ };
+    var F=pelSalvoFicha(op.k);     // a conta da ficha de quem gravou (L-7)
+    if(estado==='salvando'){ PEL_SALVO.pend++; F.pend++; F.falhou=false; poe('var(--muted)', 'Salvando…'); return; }
+    if(estado==='semResposta'){
+      if(F.pend>0 && !F.falhou) poe('var(--z-gold-deep)', '⏳ O banco ainda não confirmou ('+Math.round(CORR_PRAZO/1000)+' segundos): '
+        +(op.semCopia?'nada mudou ainda.':'o dado está anotado neste aparelho.')+' Confira antes de salvar de novo.');
+      return;
+    }
+    PEL_SALVO.pend=Math.max(0, PEL_SALVO.pend-1); F.pend=Math.max(0, F.pend-1);
+    if(estado==='falhou'){ F.falhou=true; poe('var(--crm-critico)', pelSalvoFalhaTexto(r, op)); return; }
+    if(F.falhou || F.pend>0) return;     // a falha DESTA ficha fica à vista; outra gravação DESTA ficha ainda está saindo
+    poe('var(--crm-ok)', '✓ Salvo');
+    try{ setTimeout(function(){
+      try{ if(s && s.textContent==='✓ Salvo') s.textContent=''; }catch(e){} /* silencioso de propósito: enfeite de tela */
+      try{ var b=document.getElementById('pelSalvoBarra'); if(b && b.textContent==='✓ Salvo') b.style.display='none'; }catch(e){} /* silencioso de propósito: enfeite de tela */
+    }, 1200); }
+    catch(e){} /* silencioso de propósito: sem relógio, o «✓ Salvo» fica */
+  }
+  function pelSalvoPrazo(pr, op){
+    try{ corrComPrazo(pr, CORR_PRAZO, CORR_PRAZO_ERRO).then(function(x){ if(x && x.semResposta) pelSalvoMostrar('semResposta', null, op); }); }
+    catch(e){} /* silencioso de propósito: sem o prazo, a tela espera a resposta de verdade */
+  }
+  // O patch pode trazer caminhos ('renov_hist/{id}': a linha do histórico na MESMA gravação do
+  // plano). Eles não vão para a cópia deste aparelho; o cache da ficha recebe cada um no lugar.
+  function pelSemCaminhos(o){ var r={}; Object.keys(o||{}).forEach(function(c){ if(c.indexOf('/')<0) r[c]=o[c]; }); return r; }
+  function pelAplicarNoCache(k, patch){
+    var c=Object.assign({}, (typeof pelCadCache!=='undefined' && pelCadCache[k])||{});
+    Object.keys(patch||{}).forEach(function(x){
+      var ps=x.split('/'), v=patch[x], o=c;
+      for(var i=0;i<ps.length-1;i++){ o[ps[i]]=Object.assign({}, (o[ps[i]] && typeof o[ps[i]]==='object')?o[ps[i]]:{}); o=o[ps[i]]; }
+      if(v===null || v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    });
+    pelCadCache[k]=c;
+  }
+  // op (6.57, opcional): {tela, origem:'automatico', nome} vão para o rastro do antes e do depois;
+  // soDepoisDoOk — a cópia deste aparelho e o cache da ficha só mudam DEPOIS do ok do banco (o
+  // plano: «nem o plano nem o histórico mudaram» quando a gravação falha).
+  function setPelExtra(p,patch,op){
+    op=op||{};
     // Porteiro: a tela já esconde os campos, mas esconder não é impedir.
     var _barrados=pelCamposBarrados(patch);
     if(_barrados.length){
@@ -28834,38 +29170,74 @@
       return Promise.resolve({ok:false, erro:'sem permissão para alterar a ficha'});
     }
     const k=pelKey(p);
+    // 6.57: o "antes" que ESTE aparelho mostrava, tirado antes de qualquer mudança (o rastro só sai com o ok).
+    const _antes=pelRastroAntes(p, patch);
+    // 2ª rodada (M-2): quem mudou, com o papel e a hora, tirado AGORA, e não quando o banco responder.
+    const _opR={tela:op.tela||'', origem:op.origem||'', nome:op.nome||'', quem:corrQuemAgora()};
+    // 2ª rodada (M-1): o que o app grava sozinho (a coleira que se corrige ao abrir a ficha, a resposta
+    // do tutor) não mostra «Salvando…» nem «✓ Salvo», nem conta no «Salvando…» de quem digita: ninguém
+    // mexeu em nada. A falha continua em gravacao-FALHOU, e a conta é refeita na próxima vez.
+    const _mostra=(op.origem!=='automatico');
     // Foto é o único campo que não vai para o cadastro nem para a cópia local da ficha:
     // ela é pesada e tem nó próprio, que só desce quando muda.
     if(patch && patch.foto){
-      try{ salvarFotoCad(k, patch.foto).catch(function(e){
+      let _pFoto;
+      try{ _pFoto=Promise.resolve(salvarFotoCad(k, patch.foto)).then(function(){ return {ok:true}; }, function(e){
         _logFalhaGrav('foto do cadastro '+k, e);
         // Foto recusada por falta de tutor na ficha: quem tirou PRECISA saber na hora, senão
         // fica achando que guardou (a falha muda que já mordeu esta casa cinco vezes).
         try{ alert((e&&e.message)||'A foto não foi guardada.'); }catch(e2){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-      }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+        return {ok:false, erro:e};
+      }); }
+      catch(e){ _logFalhaGrav('foto do cadastro '+k, e); _pFoto=Promise.resolve({ok:false, erro:e}); }
+      // 6.57: o rastro diz só «foto trocada» (nunca a imagem), e só depois do ok do banco.
+      _pFoto=_pFoto.then(function(rf){ if(rf.ok){ try{ pelRastroCampos(k, _antes, {foto:true}, _opR); }catch(e){ _logFalhaGrav('rastro da foto '+k, e); } } return rf; });
       patch=Object.assign({},patch); delete patch.foto;
       if(!Object.keys(patch).length){
-        const s0=document.getElementById('pel-saved'); if(s0){ s0.style.color='var(--crm-ok)'; s0.textContent='✓ Salvo'; setTimeout(()=>{ if(s0) s0.textContent=''; },1200); }
-        return Promise.resolve({ok:true});
+        // 6.57 (AC3.1): só a foto também espera o banco para dizer «✓ Salvo».
+        if(_mostra){ pelSalvoMostrar('salvando', null, {k:k}); pelSalvoPrazo(_pFoto, {k:k}); }
+        return _pFoto.then(function(rf){ if(_mostra) pelSalvoMostrar(rf.ok?'ok':'falhou', rf, {foto:true, k:k}); return rf; });
       }
     }
-    const o=pelExtra(p); Object.assign(o,patch); delete o.foto; localStorage.setItem('zeluz_pel_'+k,JSON.stringify(o));
+    const o=pelExtra(p); Object.assign(o,patch); delete o.foto;
+    const _local=pelSemCaminhos(o);
+    if(!op.soDepoisDoOk){ try{ localStorage.setItem('zeluz_pel_'+k,JSON.stringify(_local)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ }
     // Esta função devolve SEMPRE uma promessa que RESOLVE — nunca recusa — com {ok:true} ou
     // {ok:false, erro}. Quem precisa esperar a gravação para só então dizer "✅ salvo"
     // (ciSalvarCadastroFalta) lê o ok; e os ~48 chamadores que ignoram o retorno não geram
     // "Uncaught (in promise)" no aparelho da monitora. O rastro da falha continua na auditoria.
     let _pFicha;
     if(DB){
-      _pFicha=DB.ref('daycare/cadastro/'+k).update(patch)
+      // 6.57 (AC3.1): «Salvando…» até o banco responder; «✓ Salvo» e o rastro do antes e do
+      // depois só com o ok; a recusa aparece em vermelho, com o motivo em português.
+      // Promise.resolve: a resposta do banco vira uma promessa de verdade (o .then seguinte lê o ok).
+      if(_mostra) pelSalvoMostrar('salvando', null, {k:k});
+      // 2ª rodada (L-3): o Firebase lança NA HORA quando o patch tem um undefined. Isso também vira
+      // {ok:false, erro} (o contrato), e o «Salvando…» não fica preso (a conta volta).
+      let _pUp;
+      try{ _pUp=Promise.resolve(DB.ref('daycare/cadastro/'+k).update(patch)); }
+      catch(e){ _pUp=Promise.reject(e); }
+      _pFicha=_pUp
         .then(function(){ return {ok:true}; })
-        .catch(function(e){ _logFalhaGrav('ficha do cadastro '+k, e); return {ok:false, erro:e}; });
+        .catch(function(e){ _logFalhaGrav('ficha do cadastro '+k, e); return {ok:false, erro:e}; })
+        .then(function(res){
+          if(res.ok){
+            if(op.soDepoisDoOk){
+              try{ localStorage.setItem('zeluz_pel_'+k,JSON.stringify(_local)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+              try{ pelAplicarNoCache(k, patch); }catch(e){} /* silencioso de propósito: o ouvinte do cadastro acerta o cache logo depois */
+            }
+            try{ pelRastroCampos(k, _antes, patch, _opR); }catch(e){ _logFalhaGrav('rastro da ficha '+k, e); }
+          }
+          if(_mostra) pelSalvoMostrar(res.ok?'ok':'falhou', res, {semCopia:!!op.soDepoisDoOk, k:k});
+          return res;
+        });
+      if(_mostra) pelSalvoPrazo(_pFicha, {semCopia:!!op.soDepoisDoOk, k:k});
     } else {
       _logFalhaGrav('ficha do cadastro '+k+' (banco reconectando)', new Error('banco reconectando'));
-      const sx=document.getElementById('pel-saved');
-      if(sx){ sx.style.color='var(--crm-critico)'; sx.textContent='⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema — banco reconectando. Salve de novo em instantes.'; }
+      const sx=_mostra?document.getElementById('pel-saved'):null;
+      if(sx){ sx.style.color='var(--crm-critico)'; sx.textContent=op.soDepoisDoOk?'⚠ NÃO salvou no sistema — banco reconectando. Nada mudou: tente de novo em instantes.':'⚠ Anotado NESTE aparelho, mas NÃO salvou no sistema — banco reconectando. Salve de novo em instantes.'; }
       return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
     }
-    const s=document.getElementById('pel-saved'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='✓ Salvo'; setTimeout(()=>{ if(s) s.textContent=''; },1200); }
     // FECHAMENTO POR ASSUNTO (25/set/2026): data de prevenção gravada, de qualquer tela, confere
     // se algum assunto conversado com o tutor ficou resolvido. Só depois da gravação dar certo.
     // "Não escova no Day Care" (29/set/2026, QA40) também fecha a conversa da escova já mandada.
@@ -32441,7 +32813,8 @@
     var novo=addDiasISO(ex.col_t, d);
     if(!novo || novo===(ex.col_p||'')) return false;
     var antigo=ex.col_p||'';
-    setPelExtra(p, {col_p:novo});
+    // 6.57 (AC2.4): gravação que o app faz sozinho — o rastro sai como «automático», com a tela.
+    setPelExtra(p, {col_p:novo}, {origem:'automatico', tela:'Cadastro de Peludinhos (a ficha se corrige ao abrir)'});
     try{ if(typeof audit==='function') audit('coleira-recalculada',
       (pelNome(p)||'')+': coleira '+(ex.col_nome||'sem marca')+' vale '+d+' dias — trocar em '+fmtBR(novo)
       +(antigo?(' (antes '+fmtBR(antigo)+')'):' (antes sem data)'),
@@ -34113,6 +34486,10 @@
     var algo=!!((d&&d.value)||(v&&v.value));
     if(NA_AFAZER[k] && algo) naAFazer(k);
   }
+  // 6.57 (2ª rodada, L-1): a ficha que está sendo criada (pela chave). O segundo toque em «Criar e abrir a
+  // ficha», antes de o banco responder, espera: um cadastro, um rastro, uma ficha aberta. A marca sai
+  // quando o banco responde (sim ou não); sem resposta, ela fica até ele responder.
+  var NA_SALVANDO={};
   async function criarAluno(){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
     const nome=(document.getElementById('naNome').value||'').trim();
@@ -34174,24 +34551,64 @@
       if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
       return;
     }
-    PELUDINHOS.push(novo);
-    PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
     const reg=Object.assign({_novo:true,n:nome,tutor:tutor,raca:raca,tel:tel,nasc:'',dias:[],freq:''}, prevPatch);
-    try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
-    if(DB) DB.ref('daycare/cadastro/'+key).update(reg).catch(function(e){ _logFalhaGrav('daycare/cadastro/ (criarAluno)', e); });
-    // A ficha nasceu do pré-cadastro do avulso: ele sai da fila e passa a apontar para ela.
-    // Marcado DEPOIS de a ficha existir — nunca antes, senão a fila perderia quem ainda falta.
-    if(NA_PRE_CAD){ try{ preCadMarcarPromovido(NA_PRE_CAD, key); }catch(e){ _logFalhaGrav('marcar o pré-cadastro como promovido', e); } }
-    NA_AFAZER={};
-    if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, {pet:nome});
-    if(prevManual.length && typeof audit==='function') audit('prevencao-proxima-manual',
-      nome+': no cadastro novo, '+prevManual.join(' · ')+' — digitado à mão',
-      {pet:nome, campo:'cadastro-novo', de:'', para:prevManual.join(' · ')});
-    fecharNovoAluno();
-    renderPel();
-    const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
-    if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
+    // 6.57 (AC3.4): a ficha só abre como criada DEPOIS do ok do banco. Antes, o FILHOt entrava na
+    // lista deste aparelho e a ficha abria como salva mesmo quando a gravação era recusada. Com a
+    // falha, o que foi digitado continua no formulário para tentar de novo.
+    const preCad=NA_PRE_CAD;
+    // o rastro leva quem cadastrou, tirado agora (2ª rodada, M-2): o ok pode chegar depois do prazo
+    const quemNA=corrQuemAgora();
+    let feitoJa=false;
+    const feito=function(){
+      if(feitoJa) return; feitoJa=true;
+      if(!PELUDINHOS.some(p=>pelKey(p)===key)){
+        PELUDINHOS.push(novo);
+        PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
+      }
+      try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+      // A ficha nasceu do pré-cadastro do avulso: ele sai da fila e passa a apontar para ela.
+      // Marcado DEPOIS de a ficha existir — nunca antes, senão a fila perderia quem ainda falta.
+      if(preCad){ try{ preCadMarcarPromovido(preCad, key); }catch(e){ _logFalhaGrav('marcar o pré-cadastro como promovido', e); } }
+      NA_AFAZER={};
+      if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, Object.assign({pet:nome}, corrQuemMeta(quemNA)));
+      if(prevManual.length && typeof audit==='function') audit('prevencao-proxima-manual',
+        nome+': no cadastro novo, '+prevManual.join(' · ')+' — digitado à mão',
+        Object.assign({pet:nome, campo:'cadastro-novo', de:'', para:prevManual.join(' · ')}, corrQuemMeta(quemNA)));
+      fecharNovoAluno();
+      renderPel();
+      const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
+      if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
+    };
+    if(!DB){
+      _logFalhaGrav('daycare/cadastro/ (criarAluno, banco reconectando)', new Error('banco reconectando'));
+      if(w) w.textContent='O cadastro NÃO foi salvo: este aparelho está sem ligação com o sistema. Tente de novo em instantes.';
+      if(typeof zAlertao==='function') zAlertao('O CADASTRO NÃO FOI SALVO', [nome+': este aparelho está sem ligação com o sistema agora.',
+        'O que você digitou continua no formulário: tente de novo em instantes.'], {botao:'Entendi'});
+      return;
+    }
+    if(NA_SALVANDO[key]){ if(w) w.textContent='O cadastro de '+nome+' já está sendo salvo: espere a confirmação do banco.'; return; }
+    NA_SALVANDO[key]=true;
+    if(w) w.textContent='Salvando o cadastro…';
+    let prA;
+    try{ prA=Promise.resolve(DB.ref('daycare/cadastro/'+key).update(reg)); }
+    catch(e){ prA=Promise.reject(e); }
+    prA=prA.then(function(){ return {ok:true}; },
+      function(e){ _logFalhaGrav('daycare/cadastro/ (criarAluno)', e); return {ok:false, erro:e}; });
+    prA.then(function(){ delete NA_SALVANDO[key]; });
+    const rA=await corrComPrazo(prA, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(rA && rA.ok){ if(w) w.textContent=''; feito(); return; }
+    if(rA && rA.semResposta){
+      // o banco ainda pode responder: a ficha abre quando ele confirmar
+      prA.then(function(r2){ if(r2 && r2.ok) feito(); });
+      if(w) w.textContent='O banco ainda não confirmou o cadastro. A ficha abre sozinha quando ele confirmar.';
+      if(typeof zAlertao==='function') zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
+        'A ficha abre sozinha quando o banco confirmar. Confira em Cadastro de Peludinhos antes de cadastrar de novo.'], {botao:'Entendi'});
+      return;
+    }
+    if(w) w.textContent='O cadastro NÃO foi salvo: '+zErroFrase(zErroMotivo(rA&&rA.erro, 'banco', '', {agora:true}));
+    if(typeof zAlertao==='function') zAlertao('O CADASTRO NÃO FOI SALVO', [nome+': '+zErroFrase(zErroMotivo(rA&&rA.erro, 'banco', '', {agora:true})),
+      'O que você digitou continua no formulário: confira a internet e toque em «Criar e abrir a ficha» de novo.'], {botao:'Entendi'});
   }
   // Excluir cadastro DE VERDADE — só Diretoria (ver ehDiretoriaRole/botão em camposSaidaFicha).
   // Diferente de inativar: aqui o registro some do sistema. Por segurança: 2 confirmações
@@ -39900,7 +40317,8 @@
       var ev=algEntrevistaReg(k, c, p);
       if(ev) patch.entrevista=ev;
       if(!Object.keys(patch).length && !divergencias.length) return Promise.resolve(false);
-      var grava=Object.keys(patch).length?setPelExtra(p, patch):Promise.resolve({ok:true});
+      // 6.57 (AC2.4): o tratamento automático grava como «automático» no rastro (não como a pessoa logada).
+      var grava=Object.keys(patch).length?setPelExtra(p, patch, {origem:'automatico', tela:'Pesquisa com a Família Multiespécie (resposta do tutor)'}):Promise.resolve({ok:true});
       if(!grava||typeof grava.then!=='function') grava=Promise.resolve({ok:true});
       return grava.then(function(){
         var reg={quando:(typeof zHojeISO==='function')?zHojeISO():'', quem:'autom\u00E1tico (resposta do tutor)',
@@ -46248,6 +46666,8 @@
       {corTitulo:'#234D67'});
   }
   function pendTirarConfirmado(chave,item,motivo,rotulo){
+    // 6.57 (AC4): a mesma régua da tela (podeTela), conferida na função que grava.
+    if(!podeTela('pendencias-prevencao','pendencias')){ corrBarrar('tirar uma pendência de prevenção', corrQuemPode('pendencias-prevencao','pendencias'), {alvo:chave, item:item}); return; }
     var r=pendAchar(chave,item); if(!r||!DB) return;
     if(!motivo){ alert('Escolha o motivo — sem ele a pendência não sai da lista.'); return; }
     var reg={status:'cancelada', motivo:motivo, motivo_texto:(rotulo||''), cancelado_ts:Date.now(),
@@ -54446,7 +54866,23 @@
   // depois sai o lançamento. Nenhum uso novo: um segundo uso deixaria o saldo em −2 no meio (e para
   // sempre, se a devolução falhasse). Se o update falha, nada sai. A exceção da Gestão devolve o uso
   // (dev-, devolvido_gestao) e tira o dia, com o motivo, no mesmo update.
+  // 6.57 (AC4): quem tira um lançamento à mão nos Lançamentos do dia — quem vê a tela pelo papel ou a
+  // recebeu no Time (a régua que a 6.50 escreveu no banhoDiaPode). Conferido na função que grava.
+  function dashPodeTirar(){
+    try{ var r=(typeof papelDoCorpo==='function')?papelDoCorpo():''; return telaVemDoPapel('dashdc', r) || paginaConcedida('dashdc'); }
+    catch(e){ return false; } /* silencioso de propósito: sem saber o papel, não tira */
+  }
+  // A frase de quem pode sai da MESMA régua do dashPodeTirar (os papéis que veem a tela), não de uma
+  // lista escrita à mão (2ª rodada, L-5).
+  function dashBarrarTirar(k, id){
+    var papeis=CORR_PAPEL_ORDEM.filter(function(r){
+      try{ return telaVemDoPapel('dashdc', r); }
+      catch(e){ return false; } /* silencioso de propósito: papel que não se lê fica fora da frase */
+    });
+    corrBarrar('tirar um lançamento dos Lançamentos do dia', corrPapeisTexto(papeis, 'dashdc'), {item:k, id:id});
+  }
   async function dashRemoverRepForaPrazo(k, id, reg, rDev, credDia, diaR, modo){
+    if(!dashPodeTirar()){ dashBarrarTirar(k, id); return; }
     var p=rDev.p, uso=rDev.uso, troca=repTrocaViva(credDia), nome=pelNome(p), dCur=String(repBRdata(diaR)).slice(0,5);
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), agora=Date.now(), up={}, muda={}, novos=[], motivo='';
     if(modo==='excecao'){
@@ -54493,6 +54929,7 @@
       troca?repMensagem(p,'troca-desmarcada-fora',{de:String(((credDia.troca||{}).de)||credDia.data||''), para:diaR}):repMensagem(p,'desmarcada-fora',{volta:diaR, livres:livres}), repTelDe(p));
   }
   async function dashRemover(k,id){
+    if(!dashPodeTirar()){ dashBarrarTirar(k, id); return; }
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
     // REPOSIÇÃO (25/set/2026): o lançamento abateu 1 do Banco; tirar devolve esse dia.
@@ -56242,7 +56679,10 @@
       });
   }
   function fotoConfChave(v){ return String(v||'').replace(/[.#$\/\[\]]/g,'_'); }
+  // 6.57 (AC4): quem vê Relatórios pelo papel ('conferir-fotos') ou recebeu a tela no Time.
+  function fotoConfPode(){ try{ return podeTela('conferir-fotos','relatorios'); }catch(e){ return false; } /* silencioso de propósito: sem saber o papel, não grava */ }
   function fotoConfResponder(chaveFicha, chaveFoto, ehEle){
+    if(!fotoConfPode()){ corrBarrar('responder as fotos a conferir', corrQuemPode('conferir-fotos','relatorios'), {alvo:chaveFicha}); return; }
     var ck=fotoConfChave(chaveFicha), cf=fotoConfChave(chaveFoto);
     FOTO_CONF[ck]=FOTO_CONF[ck]||{};
     FOTO_CONF[ck][cf]=ehEle?'sim':'nao';
@@ -56379,6 +56819,7 @@
   // Desfaz uma resposta dada agora: tira a marca e devolve a linha para a lista.
   // Se tinha copiado a foto ("é ele"), a copia sai também — a original nunca foi tocada.
   function fotoConfDesfazer(chaveFicha, chaveFoto){
+    if(!fotoConfPode()){ corrBarrar('desfazer a resposta das fotos a conferir', corrQuemPode('conferir-fotos','relatorios'), {alvo:chaveFicha}); return; }
     var par=chaveFicha+'||'+chaveFoto;
     var era=FOTO_CONF_AGORA[par];
     delete FOTO_CONF_AGORA[par];
@@ -57580,7 +58021,9 @@
         if(!P.prim || hr<P.prim) P.prim=hr;
         if((a.ts||0)>=P.tsUlt){ P.tsUlt=(a.ts||0); P.ult=hr; }
       }
-      P.acoes[a.acao]=(P.acoes[a.acao]||0)+1;
+      // 6.57 (2ª rodada, M-3): a tentativa barrada conta como tentativa, seja qual for a ação que a gravou
+      var grupo=/^BARROU\b/.test(String(a.detalhe==null?'':a.detalhe))?'sem-permissao':a.acao;
+      P.acoes[grupo]=(P.acoes[grupo]||0)+1;
     });
     return Object.keys(por).map(function(q){
       var P=por[q];
@@ -57597,7 +58040,7 @@
     if(!lista.length) return '<div class="hint">Nenhuma ação registrada hoje ainda. A primeira marcação de qualquer Zeloso já aparece aqui.</div>';
     return '<div class="p-tl">'+lista.map(function(P){
       var resumo=Object.keys(P.acoes).map(function(a){
-        return (ACAO_LABEL[a]||a)+' ('+P.acoes[a]+')'; }).join(' · ');
+        return acaoNome(a)+' ('+P.acoes[a]+')'; }).join(' · ');
       return '<div class="p-pessoa"><div class="p-pessoa-h"><b>'+esc(P.nome)+'</b>'
         +'<span class="p-pessoa-role">'+esc(P.role||'')+'</span>'
         +'<span class="p-pessoa-n">'+P.n+(P.n===1?' ação':' ações')+'</span></div>'
@@ -57719,13 +58162,10 @@
       .filter(Boolean).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
     if(!aud.length) return '<div class="p-empty">Nenhum registro neste dia.</div>';
     return '<div class="p-tl">'+aud.map(function(a){
-      var det=a.detalhe?(' — '+a.detalhe):'';
-      if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet)){
-        det=' — '+(a.med||'medicamento')+(a.horario?(' às '+a.horario):'')+(a.pet?(' ('+a.pet+')'):'');
-      }
+      // 6.57 (AC5): a tradução mora num lugar só (acaoRotulo, logo abaixo do ACAO_LABEL)
       return '<div class="p-tl-item"><span class="p-tl-h">'+esc(a.hora||'--:--')+'</span>'
         +'<span class="p-tl-q">'+esc(a.quem||'-')+'</span>'
-        +'<span class="p-tl-a">'+esc((ACAO_LABEL[a.acao]||a.acao||'')+det)+'</span></div>';
+        +'<span class="p-tl-a">'+esc(acaoRotulo(a))+'</span></div>';
     }).join('')+'</div>';
   }
   function ltRender(){
@@ -57765,7 +58205,54 @@
     almoco_exec:'Confirmou execução', atividade:'Atividade', banho:'Banho', relatorio:'Relatório assinado',
     checkout:'Protocolo do Plantão', prep_ini:'Iniciou preparação', prep_fim:'Encerrou preparação',
     final_ini:'Iniciou finalização', final_fim:'Encerrou finalização', abertura_m1:'Abertura (Monitor 1)',
-    'medicacao-dose':'Dose dada', 'medicacao-dose-avulsa':'Dose avulsa dada' };
+    'medicacao-dose':'Dose dada', 'medicacao-dose-avulsa':'Dose avulsa dada',
+    // ===== 6.57 — a tradução num lugar só (AC5) ===================================================
+    // As ações que a base comum de corrigir e anular grava, as que as funções tocadas por ela gravam
+    // e a família de corrigir, desfazer e anular que já existia (21), mais as da 6.54 e da 6.56. As
+    // outras (cerca de 200) continuam com o nome técnico até a S13 (K11). Vale para as duas telas que
+    // leem esta tabela: a Linha do tempo (acaoRotulo) e o resumo por pessoa (acaoNome).
+    // 2ª rodada (M-3): a ação usada para várias coisas (abriu, resolveu, avisou, não consegui…) leva um
+    // nome NEUTRO, e o detalhe diz o que foi; nunca o nome de uma só das variantes.
+    'ficha-campo':'Mudou um campo da ficha', 'registro-corrigido':'Corrigiu', 'registro-anulado':'Anulou (lançado por engano)',
+    'registro-reaberto':'Reabriu', 'sem-permissao':'Tentativa sem permissão', 'gravacao-FALHOU':'A gravação NÃO chegou ao sistema',
+    'ficha':'Ficha do FILHOt', renovacao:'Confirmou o plano', 'cadastro-novo':'Cadastrou um FILHOt novo',
+    'prevencao-proxima-manual':'Digitou à mão o vencimento da prevenção', 'coleira-recalculada':'A troca da coleira foi recalculada',
+    'alergia-ficha':'Ficha pela resposta do tutor', 'entrevista-atencao':'Atenção da entrevista',
+    hospedes:'Duplicidade de hóspede', foto:'Foto do FILHOt', 'pendencia-prevencao':'Pendência de prevenção',
+    'dashboard-daycare':'Lançamentos do dia', 'alergia-sem-ficha':'Alergia de hóspede sem ficha ligada',
+    'aviso-tipo-corrigido':'Corrigiu o tipo do aviso de estoque', 'estoque-aviso-reaberto':'Reabriu o aviso de estoque',
+    'exclusao_cadastro':'Excluiu o cadastro', 'falta-desfeita':'Desfez a falta', 'hospede-cancelado':'Cancelou o hóspede do dia',
+    'hospede-removido':'Tirou o hóspede do Plantão', 'hospede-restaurado':'Trouxe o hóspede de volta ao Plantão',
+    'irmaos-desfazer':'Desfez a ligação de irmãos', 'orcamento-cancelado':'Cancelou a reserva (orçamento)',
+    'orcamento-cancelado-calendario-preservado':'Cancelou a reserva sem liberar o calendário', 'pagamento-estornado':'Estornou o pagamento',
+    'plano-meio-mes-desfeito':'Desfez o registro de meio de mês', 'racao-aviso-reaberto':'Reabriu o aviso de ração',
+    'renovacao-desfeita':'Desfez a renovação do plano', 'reposicao-desmarcada':'Desmarcou a reposição',
+    'reposicao-devolvida':'Devolveu a reposição ao saldo', 'reposicao-estorno':'Estornou a reposição',
+    'reposicao-troca-desfeita':'Desfez a troca da reposição', 'vet-reavaliacao-removida':'Tirou a reavaliação da Veterinária',
+    'hospedagem-ficha-trocada':'Corrigiu a hospedagem (trocou a ficha)', 'hospedagem-excluida':'Excluiu a hospedagem',
+    'hospedagem-mudanca':'Comida ou remédio do hóspede', 'ocorrencia-engano':'Ocorrência lançada por engano',
+    'ocorrencia-engano-desfeito':'Desfez a «lançada por engano» da ocorrência', 'ocorrencia-reaberta':'Reabriu a ocorrência',
+    'chamado-corrigido':'Corrigiu a resposta do chamado de comida', 'chamado-cancelado':'Cancelou o chamado de comida',
+    'avulsa-tirada':'Tirou a diária avulsa' };
+  function acaoNome(acao){ return ACAO_LABEL[acao]||String(acao||''); }
+  // A linha inteira de um registro da auditoria, em português. Ação sem tradução continua como hoje
+  // (o nome técnico e o detalhe), sem quebrar a tela.
+  function acaoRotulo(a){
+    a=a||{};
+    var acao=String(a.acao||''), det=String(a.detalhe==null?'':a.detalhe);
+    if(/^BARROU\b/.test(det)) return 'Tentativa sem permissão: '+det.replace(/^BARROU\s*/,'').replace(/[.\s]+$/,'')+'. Nada foi gravado.';
+    if(acao==='gravacao-FALHOU') return acaoNome(acao)+': '+det+(a.erro?(' ('+zErroMotivo(a.erro, 'banco', '', {})+')'):'');
+    if(acao==='ficha-campo' && a.campo){
+      // a data no jeito brasileiro; o nome da tela sem parênteses dentro de parênteses (2ª rodada, L-5)
+      var q=function(v){ v=corrDataBR(v); return v?('"'+v+'"'):'(vazio)'; };
+      return 'Mudou "'+(a.rotulo||a.campo)+'" de '+(a.pet||'')+': '+((a.campo==='foto')?'foto trocada':(q(a.de)+' → '+q(a.para)))
+        +(a.tela?(' ('+corrSemParenteses(a.tela)+')'):'')+((a.origem==='automatico')?' — automático':'');
+    }
+    if(/^registro-(corrigido|anulado|reaberto)$/.test(acao)) return acaoNome(acao)+(det?(' '+det):'');
+    if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet))
+      return acaoNome(acao)+' — '+(a.med||'medicamento')+(a.horario?(' às '+a.horario):'')+(a.pet?(' ('+a.pet+')'):'');
+    return acaoNome(acao)+(det?(' — '+det):'');
+  }
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
     if(el.style.display==='block'){ el.style.display='none'; return; }
@@ -60072,6 +60559,389 @@
       cfg.aoCancelar=function(){ res(null); };
       zCampo(titulo, linhas, cfg);
     });
+  }
+  // =====================================================================================
+  // ===== STORY 6.57 — A BASE COMUM DE CORRIGIR, ANULAR E REABRIR (S0, 09/out/2026) =======
+  // "O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no
+  //  app possa ser excluído, modificado, alterado e etc." (Adriana, 09/out/2026)
+  // Uma peça SÓ, sem tela própria (seção 4 da revisão tela por tela): as telas das stories S1
+  // a S14 chamam corrAbrir(op) e recebem o mesmo cartaz, com as mesmas regras:
+  //   CORRIGIR — os campos vêm com o valor atual; antes de pedir motivo e senha, o cartaz mostra
+  //              «Antes → Depois» do que mudou; sem mudança, «Nada mudou» e nada é gravado.
+  //   ANULAR   — («lançado por engano») mostra a lista inteira do que sai junto (quem manda a
+  //              lista é a tela) e diz que o registro fica riscado: nada é apagado.
+  //   REABRIR  — mostra o estado para o qual volta e o que volta junto; a volta é um registro
+  //              novo, nunca a remoção do anterior (também desfaz uma anulação).
+  // O motivo é o motivoQuatroPalavras (6.53), chamado e nunca copiado. A assinatura é a senha da
+  // própria pessoa (corrAssinar, a função geral que a 6.53 e a 6.56 passam a usar); no nível
+  // «gestao», só a Gestão e a Diretoria assinam (decisão 1 da revisão, pela recomendação). A senha
+  // é conferida e esquecida: nenhum registro, rastro ou memória da tela guarda a senha. «Pronto»,
+  // «Anulado» e «Desfeito» só depois do {ok:true} da função que grava (a da tela); sem resposta
+  // em 20 segundos, o cartaz diz que o banco ainda não confirmou. O rastro (uma entrada nova na
+  // auditoria do dia, com o antes e o depois) só sai com o ok.
+  //   op = {acao:'corrigir'|'anular'|'reabrir', titulo, oque, tela, original:{caminho, id},
+  //         campos:[{c, rotulo, valor, grande}], cascata:[texto], estado, paraEstado, volta:[texto],
+  //         nivel:'propria'|'gestao', capacidade, telaConcedida, gravar:function(reg) → Promise<{ok, erro}>}
+  //   corrAbrir(op) → Promise<{ok, cancelado, semResposta, erro, reg}>
+  // =====================================================================================
+  var CORR_PRAZO=20000;
+  var CORR_PRAZO_ERRO='o banco não respondeu em '+Math.round(CORR_PRAZO/1000)+' segundos';
+  // O prazo, num lugar só (o hospComPrazo da 6.53 virou apelido deste). Passado o prazo, devolve
+  // {ok:false, erro, semResposta:true}; o pedido NÃO é cancelado — quem chamou ainda pode esperar
+  // a resposta de verdade (e só então gravar o rastro).
+  function corrComPrazo(pr, ms, erro){
+    return new Promise(function(ok){
+      var feito=false, fim=function(v){ if(feito) return; feito=true; ok(v); };
+      try{ setTimeout(function(){ fim({ok:false, erro:erro, semResposta:true}); }, ms); }catch(e){} /* silencioso de propósito: sem relógio, espera a resposta */
+      Promise.resolve(pr).then(fim, function(e){ fim({ok:false, erro:String((e&&e.message)||e)}); });
+    });
+  }
+  // Quem está mudando, com o papel e a hora, tirado NA HORA da mudança (2ª rodada, M-2): a resposta
+  // do banco pode chegar depois que outra pessoa entrou no mesmo aparelho (o logout não recarrega a
+  // página, e o Firebase guarda a fila sem internet). O rastro e a linha da auditoria levam ESTE
+  // quem, nunca o de quem está logado quando o banco responde.
+  function corrQuemAgora(){
+    var u={}; try{ u=_sessao()||{}; }catch(e){ u={}; } /* silencioso de propósito: sem sessão, quem fica com o traço */
+    var ts=Date.now();
+    return {login:String(u.nome||((typeof quemSou==='function')?quemSou():'-')||'-'), papel:String(u.role||''), ts:ts, hora:corrHora(ts)};
+  }
+  function corrHora(ts){
+    try{ var d=new Date(Number(ts)||Date.now()), p=function(x){ return String(x).padStart(2,'0'); }; return p(d.getHours())+':'+p(d.getMinutes()); }
+    catch(e){ return ''; } /* silencioso de propósito: sem a hora, o audit() põe a de agora */
+  }
+  // O mesmo quem na linha da auditoria (sem isto, o audit() leria a sessão da hora da resposta).
+  function corrQuemMeta(q){ q=q||corrQuemAgora(); return {quem:String(q.login||'-'), role:String(q.papel||'-'), ts:q.ts, hora:q.hora}; }
+  // Data guardada em ISO aparece no jeito brasileiro (a Linha do tempo, o rastro e o riscado).
+  function corrDataBR(v){ v=String(v==null?'':v); return /^\d{4}-\d{2}-\d{2}$/.test(v)?fmtBR(v):v; }
+  // Texto que vai DENTRO de parênteses não leva parênteses próprios (o nome da tela, por exemplo).
+  function corrSemParenteses(t){ return String(t==null?'':t).replace(/\s*\(([^()]*)\)/g, ' — $1').replace(/[()]/g, ''); }
+  // ===== QUEM É QUEM, EM PORTUGUÊS ======================================================
+  // A consultora é «Consultora de Bem-Estar» (o nome da marca), sem parênteses: o nome do papel vai
+  // dentro de parênteses na assinatura e no «BARROU» (2ª rodada, L-5).
+  var CORR_PAPEL_NOME={consultora:'Consultora de Bem-Estar', supervisor:'Supervisão', gestao:'Gestão', diretoria:'Diretoria',
+    vet:'Veterinária', monitor:'Encãotador', plantonista:'Plantonista', aprendiz:'Aprendiz', conferencia:'Conferência'};
+  var CORR_PAPEL_ARTIGO={monitor:'o', aprendiz:'o'};
+  var CORR_PAPEL_ORDEM=['consultora','supervisor','gestao','diretoria','vet','conferencia','monitor','plantonista','aprendiz'];
+  function corrPapelNome(r){ return CORR_PAPEL_NOME[r]||String(r||''); }
+  function corrTelaNome(k){
+    var t='';
+    try{ NAV_PAGINAS_ALL.forEach(function(g){ (g.itens||[]).forEach(function(x){ if(x.k===k) t=x.t; }); }); }
+    catch(e){ t=''; } /* silencioso de propósito: sem a lista das telas, vale a chave */
+    return t||String(k||'');
+  }
+  // "a Consultora de Bem-Estar, a Supervisão, a Gestão ou a Diretoria[, ou quem recebeu a tela «X» no Time]"
+  function corrPapeisTexto(lista, tela){
+    var L=(lista||[]).slice().sort(function(a,b){ var x=CORR_PAPEL_ORDEM.indexOf(a), y=CORR_PAPEL_ORDEM.indexOf(b); return (x<0?99:x)-(y<0?99:y); });
+    var ns=L.map(function(r){ return (CORR_PAPEL_ARTIGO[r]||'a')+' '+corrPapelNome(r); });
+    var t=(ns.length>1)?(ns.slice(0,-1).join(', ')+' ou '+ns[ns.length-1]):(ns[0]||'');
+    if(tela) t+=(t?', ou ':'')+'quem recebeu a tela «'+corrTelaNome(tela)+'» no Time';
+    return t;
+  }
+  function corrQuemPode(capacidade, tela){ return corrPapeisTexto(PERM[capacidade]||[], tela); }
+  // A tela aberta agora (o título dela), para o rastro dizer ONDE a mudança foi feita.
+  function corrTelaAtual(){
+    try{ var v=document.querySelector('.view.active'); var id=String((v&&v.id)||'').replace(/^v-/,'');
+      return (id && titles[id])?String(titles[id][0]):''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem a tela ativa, o rastro fica sem o nome dela */
+  }
+  function corrEhPosto(nome){
+    try{ return LOGIN_GENERICO.test(String(nome||'').trim()); }
+    catch(e){ return false; } /* silencioso de propósito: sem a régua do posto, vale a do papel */
+  }
+  // As telas que a Gestão concedeu a uma pessoa no Time, pela senha dela. Sem a senha, nada (2ª rodada,
+  // L-4): pelo nome, com dois xarás, o primeiro da lista decidia pela pessoa errada.
+  function corrPaginasDaPessoa(nome, senha){
+    try{
+      var s=String(senha||'').trim(), m=(typeof senhasRuntime==='function')?senhasRuntime():{};
+      if(!s) return [];
+      if(m[s] && Array.isArray(m[s].paginas)) return m[s].paginas.slice();
+      var f=(MONITORES||[]).filter(function(x){ return x && String(x.senha||'').trim()===s; })[0];
+      return (f && Array.isArray(f.paginas))?f.paginas.slice():[];
+    }catch(e){ return []; } /* silencioso de propósito: sem a lista, nada foi concedido — vale o papel */
+  }
+  // ===== A ASSINATURA: A SENHA DA PRÓPRIA PESSOA (a função geral, AC6.2) =================
+  // Mesmo jeito do Cancelar reserva (orcQuemPelaSenha, que não muda): a senha é conferida e
+  // esquecida. Nome digitado não assina (não é senha de ninguém). Senha de posto (Plantonista,
+  // Monitor 1, Recepção: a régua LOGIN_GENERICO) não assina: o posto não responde por nada. Assina
+  // quem tem a `capacidade` (a tabela PERM) — ou, com op.tela, quem recebeu aquela tela no Time.
+  // op.vazia, op.posto(nome) e op.semPapel(nome): as frases de quem chama (a 6.53 e a 6.56 mantêm
+  // as delas, letra por letra). Devolve {ok, nome, papel, erro} — nunca a senha.
+  function corrAssinar(senha, capacidade, oQueAssina, op){
+    op=op||{};
+    var falha=function(erro){ return {ok:false, nome:'', papel:'', erro:erro}; };
+    var oq=String(oQueAssina||'isto');
+    var s=String(senha==null?'':senha).trim();
+    if(!s) return falha(op.vazia||('Digite a sua senha: é ela que assina '+oq+'. Nada foi gravado.'));
+    var q=null; try{ q=(typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null; }catch(e){ q=null; } /* sem a lista de senhas, ninguém assina */
+    if(!q||!q.nome) return falha('Essa senha não é de ninguém cadastrado. Nada foi gravado.');
+    if(corrEhPosto(q.nome)) return falha(op.posto?op.posto(q.nome):('Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.'));
+    var pode=!!capacidade && podePapel(capacidade, String(q.role||''));
+    if(!pode && op.tela) pode=corrPaginasDaPessoa(q.nome, s).indexOf(op.tela)>=0;
+    if(!pode) return falha(op.semPapel?op.semPapel(q.nome):('Essa senha é de '+q.nome+', que não pode assinar '+oq+'. Quem assina: '+corrQuemPode(capacidade, op.tela)+'. Nada foi gravado.'));
+    return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
+  }
+  // ===== O PAPEL CONFERIDO NA FUNÇÃO QUE GRAVA (AC4) ======================================
+  // A tela esconder o botão não é impedir: uma tela velha aberta em outro aparelho, ou o console,
+  // chamam a função do mesmo jeito. Quem não pode fica barrado ANTES de qualquer gravação, a
+  // tela diz quem pode e fica um «BARROU» na auditoria (o padrão do porteiro do setPelExtra).
+  // op.calado: quem chamou já mostra a frase (o Orçamento, no alerta dele).
+  function corrBarrar(oque, quemPode, meta, op){
+    op=op||{};
+    var papel=''; try{ papel=papelDoCorpo(); }catch(e){ papel=''; } /* silencioso de propósito: sem o papel, o rastro diz só o que foi barrado */
+    try{ if(typeof audit==='function') audit('sem-permissao', 'BARROU '+oque+' ('+(corrPapelNome(papel)||'papel desconhecido')+' sem permissão)', Object.assign({barrou:true}, meta||{})); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    if(!op.calado){
+      try{ if(typeof zAlertao==='function') zAlertao(op.titulo||'ESTA AÇÃO NÃO É SUA', ['Quem pode '+oque+': '+quemPode+'.', 'Nada foi gravado.'], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: sem o cartaz, o rastro já registrou o barrado */
+    }
+    return {ok:false, barrou:true, erro:'sem permissão para '+oque};
+  }
+  // ===== O REGISTRO PADRÃO E O RASTRO =====================================================
+  // O valor como texto (para comparar e para mostrar): vazio, sim/não, número, ou o JSON.
+  function corrValorTexto(v){
+    if(v===null || v===undefined) return '';
+    if(typeof v==='boolean') return v?'sim':'não';
+    if(typeof v==='object'){ try{ return JSON.stringify(v); }catch(e){ return ''; } } /* silencioso de propósito: valor que não vira texto fica vazio */
+    return String(v);
+  }
+  function corrQ(v){ v=String(v==null?'':v); return v?('«'+v+'»'):'(vazio)'; }
+  // O que mudou entre o valor de agora (campos[i].valor) e o digitado (valores[i]).
+  function corrMudancas(campos, valores){
+    var out=[];
+    (campos||[]).forEach(function(x, i){
+      var antes=corrValorTexto(x.valor).trim(), depois=String((valores||[])[i]==null?'':(valores||[])[i]).trim();
+      if(antes===depois) return;
+      out.push({c:String(x.c||''), rotulo:String(x.rotulo||x.c||''), de:(x.valor===undefined||x.valor===null)?'':x.valor, para:depois});
+    });
+    return out;
+  }
+  // O registro padrão: o mesmo para as três ações (os nomes de campo da 6.56, mais acao, tela,
+  // oque, original, antes e depois). `por` e `papel` são de quem ASSINOU; `login` e `loginPapel`, de
+  // quem está logado no aparelho NA HORA da confirmação (2ª rodada, M-2); `rotulos`, o nome de cada
+  // campo corrigido, para o riscado (2ª rodada, L-5). A senha não entra.
+  function corrRegistro(op, mud, ass, motivo, ts){
+    op=op||{}; ass=ass||{}; ts=Number(ts)||Date.now();
+    var antes={}, depois={}, rotulos={}, q=corrQuemAgora();
+    if(op.acao==='corrigir') (mud||[]).forEach(function(m){ antes[m.c]=m.de; depois[m.c]=m.para; rotulos[m.c]=String(m.rotulo||m.c||''); });
+    else if(op.acao==='anular'){ antes={estado:String(op.estado||'valendo')}; depois={estado:'anulado'}; }
+    else { antes={estado:String(op.estado||'')}; depois={estado:String(op.paraEstado||'reaberto')}; }
+    return {acao:String(op.acao||''), tela:String(op.tela||''), oque:String(op.oque||''),
+      original:{caminho:String((op.original||{}).caminho||''), id:String((op.original||{}).id||'')},
+      antes:antes, depois:depois, rotulos:rotulos, motivo:String(motivo||'').trim(), por:String(ass.nome||''), papel:String(ass.papel||''),
+      login:String(q.login||'-'), loginPapel:String(q.papel||''), quando:renovQuandoBR(ts), ts:ts};
+  }
+  // A entrada nova na auditoria do dia (só depois do ok): o resumo «antes → depois», o motivo e
+  // quem assinou; os valores vão cortados em 120 letras (o registro inteiro fica com a tela).
+  var CORR_ACAO_RASTRO={corrigir:'registro-corrigido', anular:'registro-anulado', reabrir:'registro-reaberto'};
+  function corrResumo(o){
+    var r={}; Object.keys(o||{}).forEach(function(k){ r[k]=corrValorTexto(o[k]).slice(0, 120); }); return r;
+  }
+  function corrRastro(reg, mud){
+    reg=reg||{};
+    var ass='motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-')+(reg.papel?(' ('+corrPapelNome(reg.papel)+')'):'');
+    var det=String(reg.oque||'');
+    if(reg.acao==='corrigir') det+=': '+(mud||[]).map(function(m){ return m.rotulo+': '+corrQ(corrDataBR(corrValorTexto(m.de).slice(0, 120)))+' → '+corrQ(corrDataBR(String(m.para).slice(0, 120))); }).join('; ');
+    else if(reg.acao==='reabrir') det+=' (volta a ficar '+String((reg.depois||{}).estado||'')+')';
+    try{ if(typeof audit==='function') audit(CORR_ACAO_RASTRO[reg.acao]||'registro-corrigido', det+', '+ass,
+      {tela:reg.tela||'', oque:reg.oque||'', original:reg.original||{}, antes:corrResumo(reg.antes), depois:corrResumo(reg.depois),
+       motivo:String(reg.motivo||''), por:reg.por||'', papel:reg.papel||'', login:reg.login||'', quando:reg.quando||'',
+       // 2ª rodada (M-2): quem estava logado na hora da confirmação, mesmo se o banco responder depois
+       quem:String(reg.login||'-'), role:String(reg.loginPapel||'-'), ts:Number(reg.ts)||undefined, hora:reg.ts?corrHora(reg.ts):undefined}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+  }
+  // ===== O DESENHO RISCADO, COM «REABRIR» (regra 9 da seção 4) ============================
+  // O que foi corrigido ou anulado não some da tela: fica riscado, com quem, quando, o motivo e o
+  // botão «Reabrir» (aoReabrir = o onclick da tela). Todo texto passa por esc/escAttr.
+  function corrRiscadoHTML(reg, aoReabrir){
+    reg=reg||{};
+    var rot={corrigir:'Corrigido', anular:'Anulado (lançado por engano)', reabrir:'Reaberto'}[reg.acao]||'Corrigido';
+    var h='<div class="corr-riscado" style="margin:8px 0;padding:10px 12px;border-radius:12px;border:1.5px dashed var(--line);background:var(--z-cream-warm);color:var(--z-blue);overflow-wrap:anywhere">'
+      +'<div style="font-weight:800;text-decoration:line-through;opacity:.75">'+esc(reg.oque||'')+'</div>';
+    if(reg.acao==='corrigir') Object.keys(reg.depois||{}).forEach(function(c){
+      var rc=String((reg.rotulos||{})[c]||pelRastroRotulo(c));    // o nome do campo, nunca a chave técnica (2ª rodada, L-5)
+      h+='<div style="font-size:13px;margin-top:3px">'+esc(rc)+': <span style="text-decoration:line-through">'+esc(corrQ(corrDataBR(corrValorTexto((reg.antes||{})[c]))))+'</span> → '+esc(corrQ(corrDataBR(corrValorTexto(reg.depois[c]))))+'</div>';
+    });
+    h+='<div style="font-size:13px;font-weight:700;margin-top:4px">'+esc(rot)+' por '+esc(reg.por||'-')+(reg.papel?(' ('+esc(corrPapelNome(reg.papel))+')'):'')+', em '+esc(reg.quando||'')+'</div>'
+      +'<div style="font-size:13px;margin-top:2px">Motivo: '+esc(reg.motivo||'')+'</div>';
+    if(aoReabrir) h+='<button type="button" class="btn" style="margin-top:8px;min-height:44px;padding:10px 16px;font-size:14px;font-weight:800;background:var(--z-blue);color:var(--z-cream);border:0;border-radius:12px" onclick="'+escAttr(aoReabrir)+'">Reabrir</button>';
+    return h+'</div>';
+  }
+  // ===== O CARTAZ ==========================================================================
+  // Um cartaz por vez (CORR_ATUAL). Os passos: 'campos' (só no Corrigir) → 'conferir' (o antes e
+  // o depois, ou a lista do que sai, com motivo e senha) → 'gravando' → 'pronto' | 'falhou' |
+  // 'semResposta'. A promessa do corrAbrir resolve quando o resultado é conhecido (ou ao cancelar).
+  var CORR_ATUAL=null;
+  var CORR_TITULO_OK={corrigir:'Pronto', anular:'Anulado', reabrir:'Desfeito'};
+  var CORR_BOTAO={corrigir:'Gravar a correção', anular:'Anular (lançado por engano)', reabrir:'Reabrir'};
+  var CORR_OQUE_ASSINA={corrigir:'esta correção', anular:'esta anulação', reabrir:'esta reabertura'};
+  // Com outro cartaz GRAVANDO (2ª rodada, L-2), o novo não abre: fechar aquele diria «cancelado» a uma
+  // gravação que ainda pode entrar. Quem chamou recebe {ok:false, ocupado:true}; o outro termina com o
+  // resultado de verdade. Nos outros passos, nada foi gravado ainda: fechar é honesto.
+  var CORR_OCUPADO='Outra correção ainda está gravando: espere a confirmação do banco e abra de novo. Nada foi gravado.';
+  function corrAbrir(op){
+    op=Object.assign({}, op||{});
+    op.acao=(op.acao==='anular'||op.acao==='reabrir')?op.acao:'corrigir';
+    if(!op.tela) op.tela=corrTelaAtual();
+    if(CORR_ATUAL && CORR_ATUAL.passo==='gravando'){
+      try{ if(typeof zAlertao==='function') zAlertao('ESPERE A OUTRA GRAVAÇÃO', [CORR_OCUPADO], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: sem o cartaz de aviso, quem chamou recebe a mesma frase */
+      return Promise.resolve({ok:false, ocupado:true, erro:CORR_OCUPADO});
+    }
+    if(CORR_ATUAL) corrFechar();
+    return new Promise(function(fim){
+      CORR_ATUAL={op:op, passo:(op.acao==='corrigir')?'campos':'conferir', valores:(op.campos||[]).map(function(x){ return corrValorTexto(x.valor); }),
+        mud:[], motivo:'', aviso:'', erro:null, res:null, fim:fim};
+      corrDesenhar();
+    });
+  }
+  function corrTitulo(op){
+    if(op.titulo) return String(op.titulo);
+    return ({corrigir:'Corrigir ', anular:'Anular ', reabrir:'Reabrir '}[op.acao]||'Corrigir ')+String(op.oque||'');
+  }
+  function corrNivelSenha(op){ return (op.nivel==='gestao')?'gestao-role':String(op.capacidade||''); }
+  var CORR_CAMPO_ESTILO='width:100%;box-sizing:border-box;margin-top:6px;padding:12px;min-height:48px;border:2px solid var(--z-blue);border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:var(--z-blue);background:var(--z-white)';
+  // fundo vazio = o botão de contorno (Cancelar): branco, com o texto e a borda no azul da marca
+  function corrBotaoHTML(qual, txt, fundo){
+    var cor=fundo?('background:'+fundo+';color:var(--z-cream);border:0'):'background:var(--z-white);color:var(--z-blue);border:2px solid var(--z-blue)';
+    return '<button type="button" style="width:100%;min-height:48px;'+cor+';border-radius:14px;font-family:inherit;font-weight:800;font-size:16px;padding:12px;cursor:pointer;white-space:normal" onclick="corrToque(\''+qual+'\')">'+esc(txt)+'</button>';
+  }
+  function corrListaHTML(itens){
+    return '<ul style="margin:6px 0 0;padding-left:20px">'+(itens||[]).map(function(t){ return '<li style="margin:3px 0">'+esc(t)+'</li>'; }).join('')+'</ul>';
+  }
+  function corrCartazHTML(S){
+    S=S||CORR_ATUAL; if(!S) return '';
+    var op=S.op, topo=corrTitulo(op), cor='var(--z-blue)', corpo='', bts='';
+    var aviso=S.aviso?('<div id="corrAviso" role="alert" style="margin-top:10px;color:var(--crm-critico);font-weight:800">'+esc(S.aviso)+'</div>'):'';
+    var cancelar=corrBotaoHTML('cancelar', 'Cancelar — não mexer em nada', '');
+    if(S.passo==='campos'){
+      corpo='<div style="font-size:15px">Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.</div>'
+        +(op.campos||[]).map(function(x, i){
+          var v=String((S.valores||[])[i]==null?'':S.valores[i]);
+          return '<label for="corrC_'+i+'" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+esc(x.rotulo||x.c||'')+'</label>'
+            +(x.grande?('<textarea id="corrC_'+i+'" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(v)+'</textarea>')
+                      :('<input id="corrC_'+i+'" type="text" value="'+escAttr(v)+'" style="'+CORR_CAMPO_ESTILO+'">'));
+        }).join('')+aviso;
+      bts=corrBotaoHTML('continuar', 'Continuar', 'var(--z-blue)')+cancelar;
+    } else if(S.passo==='conferir'){
+      if(op.acao==='corrigir') corpo='<div style="font-weight:800;font-size:16px">Antes → Depois</div>'
+        +(S.mud||[]).map(function(m){ return '<div style="margin-top:6px"><strong>'+esc(m.rotulo)+'</strong>: <span style="text-decoration:line-through">'
+          +esc(corrQ(corrValorTexto(m.de)))+'</span> → '+esc(corrQ(m.para))+'</div>'; }).join('');
+      else if(op.acao==='anular') corpo=((op.cascata||[]).length?('<div style="font-weight:800">Sai junto:</div>'+corrListaHTML(op.cascata)):'<div>Nada mais sai junto.</div>')
+        +'<div style="margin-top:8px">O registro fica riscado, com quem, quando e o motivo. Nada é apagado.</div>';
+      else corpo='<div><strong>Volta a ficar:</strong> '+esc(op.paraEstado||'reaberto')+'</div>'
+        +((op.volta||[]).length?('<div style="margin-top:6px;font-weight:800">Volta junto:</div>'+corrListaHTML(op.volta)):'')
+        +'<div style="margin-top:8px">A volta é um registro novo: o que foi decidido antes continua guardado, com quem, quando e o motivo.</div>';
+      var gestao=(op.nivel==='gestao');
+      corpo+='<label for="corrMotivo" style="display:block;margin-top:14px;font-size:15px;font-weight:800">Motivo (pelo menos 4 palavras)</label>'
+        +'<textarea id="corrMotivo" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(S.motivo||'')+'</textarea>'
+        +'<label for="corrSenha" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+(gestao?'Senha da Gestão':'Sua senha')+'</label>'
+        +'<input id="corrSenha" type="password" autocomplete="off" value="" style="'+CORR_CAMPO_ESTILO+'">'
+        +'<div style="margin-top:6px;font-size:14px;color:var(--z-blue-soft)">Quem assina: '+esc(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida))+'. O app grava o nome de quem assinou, nunca a senha.</div>'
+        +aviso;
+      bts=corrBotaoHTML('confirmar', CORR_BOTAO[op.acao]||'Gravar', (op.acao==='anular')?'var(--crm-critico)':'var(--z-blue)')
+        +((op.acao==='corrigir')?corrBotaoHTML('voltar', 'Voltar e mudar os campos', 'var(--z-blue)'):'')+cancelar;
+    } else if(S.passo==='gravando'){
+      corpo='<div>Gravando… espere a confirmação do banco.</div>';
+    } else if(S.passo==='pronto'){
+      var rg=(S.res&&S.res.reg)||{};
+      topo=CORR_TITULO_OK[op.acao]||'Pronto'; cor='var(--crm-ok)';
+      corpo='<div>Gravado no sistema, assinado por '+esc(rg.por||'-')+(rg.papel?(' ('+esc(corrPapelNome(rg.papel))+')'):'')+', em '+esc(rg.quando||'')+'.</div>'
+        +'<div style="margin-top:6px">O rastro ficou na Linha do tempo do dia.</div>';
+      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-ok)');
+    } else if(S.passo==='falhou'){
+      topo='NADA FOI GRAVADO'; cor='var(--crm-critico)';
+      corpo='<div>'+esc(zErroFrase(zErroInicial(zErroMotivo(S.erro, 'banco', '', {agora:true}))))+'</div>'
+        +'<div style="margin-top:6px">O registro continua como estava.'+esc(zErroAcao(S.erro, {alvo:'banco', agora:true}))+'</div>';
+      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-critico)');
+    } else if(S.passo==='semResposta'){
+      topo='O BANCO AINDA NÃO CONFIRMOU'; cor='var(--z-gold-deep)';
+      corpo='<div>Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.</div>'
+        +'<div style="margin-top:6px">Confira na tela se a mudança entrou antes de tentar de novo.</div>';
+      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--z-gold-deep)');
+    }
+    return '<div style="background:var(--z-cream);border-radius:20px;max-width:580px;width:100%;box-sizing:border-box;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:'+cor+';color:var(--z-cream);padding:16px 20px;font-weight:800;font-size:21px;line-height:1.2;overflow-wrap:anywhere">'+esc(topo)+'</div>'
+      +'<div style="padding:16px 20px;overflow:auto;color:var(--z-blue);font-size:16px;line-height:1.5;font-weight:600;overflow-wrap:anywhere">'+corpo+'</div>'
+      +(bts?('<div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:9px">'+bts+'</div>'):'')
+      +'</div>';
+  }
+  function corrDesenhar(){
+    var S=CORR_ATUAL, d=null;
+    try{ d=document.getElementById('corrBox'); }catch(e){ d=null; } /* silencioso de propósito: sem a página, não há o que desenhar */
+    if(!S){ try{ if(d && typeof d.remove==='function') d.remove(); }catch(e){} /* silencioso de propósito: o cartaz já saiu da página */ return; }
+    try{
+      if(!d){
+        d=document.createElement('div'); d.id='corrBox';
+        d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:Poppins,system-ui,-apple-system,sans-serif';
+        document.body.appendChild(d);
+      }
+      d.innerHTML=corrCartazHTML(S);
+    }catch(e){} /* silencioso de propósito: enfeite de tela — o estado do cartaz (CORR_ATUAL) continua certo */
+  }
+  function corrLerDom(id){
+    try{ var el=document.getElementById(id); return (el && typeof el.value==='string')?el.value:''; }
+    catch(e){ return ''; } /* silencioso de propósito: sem o campo na página, vale o vazio */
+  }
+  function corrFechar(){
+    var S=CORR_ATUAL; CORR_ATUAL=null; corrDesenhar();
+    if(S && S.fim){ var f=S.fim; S.fim=null; f({ok:false, cancelado:true}); }
+  }
+  function corrTerminar(S, passo, res){
+    if(!S) return;
+    S.passo=passo; S.res=res;
+    if(S===CORR_ATUAL) corrDesenhar();
+    if(S.fim){ var f=S.fim; S.fim=null; f(res); }
+  }
+  // O toque nos botões do cartaz. `dados` (opcional) traz os valores sem ler a página.
+  function corrToque(qual, dados){
+    var S=CORR_ATUAL; if(!S) return Promise.resolve(null);
+    dados=dados||{};
+    if(qual==='cancelar' || qual==='fechar'){ corrFechar(); return Promise.resolve(null); }
+    if(qual==='voltar' && S.passo==='conferir' && S.op.acao==='corrigir'){
+      S.motivo=String(('motivo' in dados)?dados.motivo:corrLerDom('corrMotivo')); S.passo='campos'; S.aviso=''; corrDesenhar(); return Promise.resolve(null);
+    }
+    if(qual==='continuar' && S.passo==='campos'){
+      var vals=Array.isArray(dados.valores)?dados.valores:(S.op.campos||[]).map(function(x, i){ return corrLerDom('corrC_'+i); });
+      S.valores=vals.map(function(v){ return String(v==null?'':v); });
+      S.mud=corrMudancas(S.op.campos, S.valores);
+      if(!S.mud.length){ S.aviso='Nada mudou: nenhum campo foi alterado. Nada será gravado.'; corrDesenhar(); return Promise.resolve({ok:false, nada:true}); }
+      S.aviso=''; S.passo='conferir'; corrDesenhar(); return Promise.resolve({ok:true});
+    }
+    if(qual==='confirmar' && S.passo==='conferir') return corrConfirmar(S, dados);
+    return Promise.resolve(null);
+  }
+  async function corrConfirmar(S, dados){
+    var op=S.op;
+    var motivo=String(('motivo' in dados)?dados.motivo:corrLerDom('corrMotivo')).trim();
+    var senha=('senha' in dados)?dados.senha:corrLerDom('corrSenha');
+    // a senha sai da página na hora (e o redesenho não a devolve): conferida e esquecida
+    try{ var elS=document.getElementById('corrSenha'); if(elS && typeof elS.value==='string') elS.value=''; }catch(e){} /* silencioso de propósito: sem o campo na página, não há o que limpar */
+    S.motivo=motivo;
+    var mv=motivoQuatroPalavras(motivo);
+    if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }
+    var gestao=(op.nivel==='gestao');
+    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida});
+    senha='';
+    if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }
+    var reg=corrRegistro(op, S.mud, ass, motivo, Date.now()), mud=(S.mud||[]).slice();
+    S.passo='gravando'; S.aviso=''; corrDesenhar();
+    var pr;
+    try{ pr=(typeof op.gravar==='function')?Promise.resolve(op.gravar(JSON.parse(JSON.stringify(reg)))):Promise.resolve({ok:false, erro:'a tela não disse como gravar'}); }
+    catch(e){ pr=Promise.resolve({ok:false, erro:e}); }
+    var resp=pr.then(function(r){ return (r && r.ok===true)?{ok:true}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou'}; },
+      function(e){ return {ok:false, erro:e}; });
+    var r=await corrComPrazo(resp, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      // o banco ainda pode responder: o rastro só entra se ele confirmar
+      resp.then(function(r2){ if(r2.ok) corrRastro(reg, mud); else _logFalhaGrav('correção — '+reg.oque, r2.erro); });
+      corrTerminar(S, 'semResposta', {ok:false, semResposta:true, reg:reg});
+      return S.res;
+    }
+    if(r && r.ok){ corrRastro(reg, mud); corrTerminar(S, 'pronto', {ok:true, reg:reg}); return S.res; }
+    _logFalhaGrav('correção — '+reg.oque, r&&r.erro);
+    S.erro=(r&&r.erro)||'';
+    corrTerminar(S, 'falhou', {ok:false, erro:S.erro, reg:reg});
+    return S.res;
   }
   var ciEditandoId=null; // quando setado, o Salvar ACRESCENTA nesta estadia em vez de criar outra
   function ciBloqueia(motivo, texto, focoId){
@@ -63923,15 +64793,12 @@
   // Mesmo jeito do Cancelar reserva (orcQuemPelaSenha): a senha é conferida e esquecida.
   // Senha de posto (Plantonista, Monitor 1, Recepção) não assina: o posto não responde por
   // nada. Assina quem tem 'assinar-correcao-hospedagem' (Supervisão, Gestão e Diretoria).
+  // 6.57: a régua mora na função geral (corrAssinar); aqui ficam só as frases da 6.53, letra por letra.
   function hospAssinarPorSenha(senha){
-    var s=String(senha==null?'':senha).trim();
-    if(!s) return {ok:false, nome:'', papel:'', erro:'Digite a sua senha: é ela que assina a correção.'};
-    var q=null; try{ q=(typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null; }catch(e){ q=null; } /* sem a lista de senhas, ninguém assina */
-    if(!q||!q.nome) return {ok:false, nome:'', papel:'', erro:'Essa senha não é de ninguém cadastrado. Nada foi gravado.'};
-    var posto=false; try{ posto=LOGIN_GENERICO.test(String(q.nome).trim()); }catch(e){ posto=false; } /* sem a régua do posto, vale a do papel logo abaixo */
-    if(posto) return {ok:false, nome:'', papel:'', erro:'Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Chame a Gestão ou a Supervisão.'};
-    if(!podePapel('assinar-correcao-hospedagem', String(q.role||''))) return {ok:false, nome:'', papel:'', erro:'Essa senha é de '+q.nome+', que não pode assinar a correção da hospedagem. Chame a Gestão ou a Supervisão para digitar a senha delas aqui.'};
-    return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
+    return corrAssinar(senha, 'assinar-correcao-hospedagem', 'a correção da hospedagem', {
+      vazia:'Digite a sua senha: é ela que assina a correção.',
+      posto:function(nome){ return 'Essa senha é de um posto ('+nome+'), não de uma pessoa: senha de posto não assina. Chame a Gestão ou a Supervisão.'; },
+      semPapel:function(nome){ return 'Essa senha é de '+nome+', que não pode assinar a correção da hospedagem. Chame a Gestão ou a Supervisão para digitar a senha delas aqui.'; }});
   }
   var HOSP_PAPEL_ROTULO={gestao:'Gestão', supervisor:'Supervisão', diretoria:'Diretoria'};
   // ===== DATAS E RÓTULOS ==============================================================
@@ -64930,13 +65797,8 @@
   // não é cancelado; passado o prazo, a tela diz que o aviso não confirmou.
   var HOSP_TG_PRAZO=20000;
   var HOSP_TG_ERRO_PRAZO='a ponte do Telegram não respondeu em '+Math.round(HOSP_TG_PRAZO/1000)+' segundos';
-  function hospComPrazo(pr, ms, erro){
-    return new Promise(function(ok){
-      var feito=false, fim=function(v){ if(feito) return; feito=true; ok(v); };
-      try{ setTimeout(function(){ fim({ok:false, erro:erro}); }, ms); }catch(e){} /* silencioso de propósito: sem relógio, espera a resposta */
-      Promise.resolve(pr).then(fim, function(e){ fim({ok:false, erro:String((e&&e.message)||e)}); });
-    });
-  }
+  // 6.57: o prazo ganhou um nome geral (corrComPrazo, na base comum de corrigir e anular); este é o apelido.
+  function hospComPrazo(pr, ms, erro){ return corrComPrazo(pr, ms, erro); }
   // Os 4 lugares do rastro (AC8): a estadia (já gravada), auaulandia/hospedagem-correcoes, a
   // auditoria do dia e o grupo da Gestão no Telegram. A falha do Telegram não desfaz nada:
   // ela volta para a tela dizer (AC13).

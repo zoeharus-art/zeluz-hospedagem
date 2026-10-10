@@ -2,6 +2,61 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 09/out/2026 (v 2026-10-09-13) — A base comum de corrigir e anular (S0 da revisão tela por tela)
+
+> Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app possa ser excluído, modificado, alterado e etc."* Esta entrega é a peça comum que as próximas 14 entregas (S1 a S14) vão usar em cada tela. Ela não cria tela nova no menu: muda o que já existe em seis lugares e deixa pronto o cartaz único.
+
+### (BB) O cartaz único «Corrigir / Anular / Reabrir» (sem tela própria; as telas das próximas entregas o chamam)
+
+| Antes | Agora |
+|---|---|
+| Cada tela inventava o seu jeito de corrigir (a 6.53 e a 6.56 fizeram cada uma o seu cartaz) | **Um cartaz só**, com três ações: **Corrigir** (os campos vêm com o valor de agora; antes da senha, o cartaz mostra «Antes → Depois» do que mudou; sem mudança, «Nada mudou» e nada é gravado), **Anular («lançado por engano»)** (a lista inteira do que sai junto — alarme, pendência, linha da planilha e da TV, crédito, pontos — e a frase "O registro fica riscado, com quem, quando e o motivo. Nada é apagado.") e **Reabrir** (o estado para o qual volta e o que volta junto; a volta é um registro novo) |
+| — | **Motivo** de no mínimo 4 palavras (a régua da 6.53, a mesma do app inteiro), recusado na própria tela, sem fechar |
+| — | **Assinatura com a senha da própria pessoa.** Senha de posto (Plantonista, Monitor 1, Recepção), senha de ninguém e nome digitado não assinam. No nível «Gestão» (anular dinheiro e remédio: decisão 1, pela recomendação), só a Gestão e a Diretoria. Recusada a senha, a tela diz por quê e quem assina. O app grava o nome, nunca a senha |
+| — | **«Pronto», «Anulado» ou «Desfeito» só depois de o banco confirmar.** Recusado: «NADA FOI GRAVADO», o motivo em português e "O registro continua como estava". Sem resposta em 20 segundos: «O BANCO AINDA NÃO CONFIRMOU — confira na tela antes de tentar de novo» |
+| — | **Rastro:** cada correção vira uma entrada nova na Linha do tempo do dia, com o antes e o depois, o motivo, quem assinou e o papel. O que foi corrigido ou anulado pode aparecer riscado, com quem, quando, o motivo e o botão «Reabrir» |
+
+### (BC) Cadastro de Peludinhos › qualquer campo da ficha (e Plantão › ficha do hóspede)
+
+| Antes | Agora |
+|---|---|
+| A ficha mudava sem guardar o que era nem quem mudou (a alergia é dado de saúde) | **Todo campo mudado guarda o antes e o depois**, inteiros, com quem, quando, a tela e se foi uma pessoa ou o app sozinho (a coleira recalculada ao abrir a ficha e a resposta do tutor tratada sozinha saem como «automático»). Fica num lugar novo do banco (`daycare/ficha-rastro`), fora do cadastro, e na Linha do tempo do dia: «Mudou "Comportamento: Em casa" de {FILHOt}: "antes" → "depois" (Cadastro de Peludinhos)». Data aparece no jeito brasileiro («01/10/2026»). A foto entra só como «foto trocada»; o peso fica de fora (a pesagem já guarda data e quem). Vale também para o Plantão: dados do hóspede, brinquedos e alergia ou restrição — inclusive a **primeira** alergia ou restrição de um FILHOt que nunca teve uma («(vazio) → "frango"») |
+| — | **O rastro fica no nome de quem mudou**, com o papel e a hora da mudança, mesmo quando o tablet está sem internet e outra pessoa entra no lugar antes de o banco confirmar |
+| «✓ Salvo» aparecia antes de o banco responder (e só na aba Identificação) | **«Salvando…» enquanto o banco não responde; «✓ Salvo» só com o ok.** Recusado: em vermelho, "Anotado NESTE aparelho, mas NÃO salvou no sistema", com o motivo em português. Sem resposta em 20 segundos: "O banco ainda não confirmou". O aviso aparece também numa barra no pé da tela, em qualquer aba da ficha (tocar fecha); a barra **some junto com a ficha** ao trocar de tela ou voltar para a lista, e a resposta de uma ficha nunca aparece em outra nem segura o «✓ Salvo» de outra. O que o app grava sozinho (a coleira recalculada ao abrir a ficha) não mostra «Salvando…» nem «✓ Salvo». A foto também espera o banco |
+
+### (BD) Cadastro de Peludinhos › Plano («Confirmar» e «Desfazer a última renovação»)
+
+| Antes | Agora |
+|---|---|
+| Quem não podia mexer no plano tocava em Confirmar: a linha do histórico era gravada e a tela dizia «PLANO GRAVADO» | **Barrado antes de gravar qualquer coisa**, com a frase de quem pode (Consultora de Bem-Estar, Supervisão, Gestão e Diretoria) e o registro na Linha do tempo |
+| O plano novo, a linha do histórico e a resposta da troca de categoria eram três gravações separadas | **Uma gravação só, tudo ou nada.** «PLANO GRAVADO» só depois do ok; recusado: «O PLANO NÃO FOI GRAVADO — nem o plano nem as Renovações anteriores mudaram» |
+| O «Desfazer» tirava a linha do histórico mesmo quando o plano não voltava | **Uma gravação só:** o plano que volta, a linha nova e a saída da antiga. Recusado: «A RENOVAÇÃO NÃO FOI DESFEITA — nada mudou» |
+
+### (BE) Cadastro de Peludinhos › «Novo cadastro» («Criar e abrir a ficha»)
+
+| Antes | Agora |
+|---|---|
+| A ficha abria como criada e o FILHOt entrava na lista deste aparelho mesmo com a gravação recusada | **A ficha só abre depois do ok do banco.** Recusado: «O CADASTRO NÃO FOI SALVO», o FILHOt não entra na lista e o que foi digitado continua no formulário para tentar de novo |
+| — | **Dois toques seguidos** em «Criar e abrir a ficha» antes de o banco responder: o segundo espera («O cadastro de {FILHOt} já está sendo salvo: espere a confirmação do banco.»). Um cadastro, um rastro, uma ficha aberta |
+
+### (BF) O papel conferido na função que grava (não só no menu)
+
+| Onde | Quem pode agora (uma tela velha em outro aparelho ou o console também são barrados, com o registro na Linha do tempo) |
+|---|---|
+| O que fazer hoje › «Tratei — pode tirar da mesa» (atenção da entrevista) | Gestão e Diretoria |
+| Plantão e Hóspedes de hoje › «É o mesmo FILHOt?» | Consultora de Bem-Estar (Recepção), Supervisão, Gestão e Diretoria. Quem não responde (Encãotador, plantonista) continua vendo a pergunta, com a frase «Quem responde é a Recepção, a Supervisão ou a Gestão.» (pergunta S0-P1 à Adriana) |
+| Relatórios › «Fotos a conferir» (É ele / Não é / desfazer) | Quem vê Relatórios pelo papel (Consultora de Bem-Estar, Supervisão, Gestão e Diretoria) ou recebeu a tela Relatórios no Time |
+| Orçamento › «Cancelar reserva» e «Mudar as datas» (e o Excluir da hospedagem) | A senha tem de ser de uma pessoa (não de posto) que trabalha no Orçamento: Consultora de Bem-Estar, Supervisão, Gestão e Diretoria, ou quem recebeu a tela Orçamento no Time. Com dois nomes iguais no Time, vale a pessoa da senha digitada (antes, a gravação procurava pelo nome e podia achar a outra) |
+| Pendências de prevenção › «Tirar pendência» | Quem vê a tela pelo papel ou a recebeu no Time |
+| Lançamentos do dia › «Tirar» (também o caminho fora do prazo da reposição) | Quem vê a tela pelo papel (Consultora de Bem-Estar, Supervisão, Gestão e Diretoria) ou a recebeu no Time; a frase de quem pode sai da mesma regra da tela |
+
+### (BG) Dashboards › Linha do tempo do dia (e Configurações › Logins e segurança, o resumo por pessoa)
+
+| Antes | Agora |
+|---|---|
+| As ações de corrigir, desfazer e anular apareciam com o nome técnico (`renovacao-desfeita`, `gravacao-FALHOU`…) | **Em português, num lugar só, nas duas telas:** as ações desta entrega (Mudou um campo da ficha, Corrigiu, Anulou (lançado por engano), Reabriu, Tentativa sem permissão… Nada foi gravado.), as 21 de corrigir, desfazer e anular que já existiam, as da 6.54 e da 6.56, e «A gravação NÃO chegou ao sistema: … (o motivo)». As outras ações antigas continuam com o nome de hoje até a S13 |
+| A mesma ação usada para coisas diferentes aparecia com o nome de uma só delas («Tirou uma pendência de prevenção» para quem abriu ou avisou) | **Nome neutro e o detalhe diz o que foi:** «Pendência de prevenção — abriu…», «Ficha pela resposta do tutor — conferiu sem mudar nada…», «Atenção da entrevista», «Duplicidade de hóspede», «Comida ou remédio do hóspede». No resumo por pessoa, a tentativa barrada conta como «Tentativa sem permissão» |
+
 ## O que mudou em 09/out/2026 (v 2026-10-09-12) — Mudar a comida e o remédio do hóspede depois do check-in (caso do Palito: 45 g, e não 50 g)
 
 > Adriana, 08/out/2026 (quadro de pedidos, linha 82): *"O Palito come 45 gramas e não 50 como colocamos no checkin, precisamos conseguir alterar medicação e comida dos hóspedes c/ quantidade, marca, ração ou patê ou comida etc! assim como medicação, e de forma simples."* E em 09/10: *"Preciso que tudo no app possa ser excluído, modificado, alterado e etc."* Até aqui a comida só mudava pelo «✎ Corrigir informação errada» do Check-in (a tela inteira, com assinatura e reconfirmação de cada remédio) e o remédio, pelo «Salvar agenda» do Plantão — que, mudando o horário depois de a dose de hoje ter sido dada, fazia o alarme tocar a dose do horário novo: **dose em dobro**. (Story 6.54 — feita, ainda sem versão publicada; o @devops carimba a versão e a data deste título.)
