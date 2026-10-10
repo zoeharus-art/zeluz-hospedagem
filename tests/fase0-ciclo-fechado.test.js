@@ -3918,7 +3918,7 @@ provaAsync('QA43 — o SUBSTITUIR guarda no histórico a assinatura e os pertenc
       once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1'
         ? {nome:'Toshi', medicacao:[{nome:'Apoquel'}], pertences:[{uid:'p1', n:'Caminha'}], ficha:{}, assinatura:'data:image/png;base64,ANTIGA', assinado_por:'Márcia', entregaSemTutor:false, quemDeixou:null} : null; }}); },
       update:function(v){ __upQ43[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
-      set:function(v){ return Promise.resolve(); } }; }};
+      set:function(v){ return Promise.resolve(); }, transaction:function(fn){ var r=fn(null); return Promise.resolve({committed:r!==undefined}); }, }; }};
     ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
   try {
     run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]}, meds:{m1:{nome:'Enalapril', q:'1', u:'comprimido', horarios:['20:00']}}, temMed:true, key:'toshi__ana', substituir:true, sig:'data:image/png;base64,NOVA', assina:'Ana Tutora', correcao:{motivo:'substituiu o check-in: remédio errado', quem:'Adriana', diff:[]}});`);
@@ -4046,7 +4046,7 @@ provaAsync('QA44 — Corrigir com "Sim" reescreve só o que está em vigor: "já
     __escN5={}; DB={ref:function(p){ return {
       once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estN5 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agN5 : null); }}); },
       update:function(v){ __escN5[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
-      set:function(v){ __escN5['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+      set:function(v){ __escN5['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); }, transaction:function(fn){ var r=fn(null); return Promise.resolve({committed:r!==undefined}); }, }; }};
     __qrN5=[]; ciQuemRecebeu=function(itens){ __qrN5.push(itens); return Promise.resolve('Ana'); };`);
   try {
     run(`__ciGravar('corrigir', 'est1', {dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[{uid:'u-r', k:'outro', nome:'Casaco vermelho de lã', spec:''}, {uid:'u-moch', k:'mochila', nome:'Mochila — azul'}]},
@@ -4101,7 +4101,7 @@ provaAsync('QA46 — Corrigir com "Sim": o que a veterinária parou depois fica 
     __escM2={}; DB={ref:function(p){ return {
       once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estM2 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agM2 : null); }}); },
       update:function(v){ __escM2[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
-      set:function(v){ __escM2['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+      set:function(v){ __escM2['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); }, transaction:function(fn){ var r=fn(null); return Promise.resolve({committed:r!==undefined}); }, }; }};
     ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
   try {
     // "Tudo igual": a tela manda Apoquel e Ômega com os ids que carregou
@@ -4194,7 +4194,7 @@ provaAsync('QA49 — Corrigir: o remédio que a veterinária parou ou apagou dep
     __escQ9={}; DB={ref:function(p){ return {
       once:function(){ return Promise.resolve({val:function(){ return p==='auaulandia/estadias/est1' ? __estQ9 : ((p.indexOf('medicacao-agenda/')>=0 && p.slice(-6)==='/itens') ? __agQ9 : null); }}); },
       update:function(v){ __escQ9[p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); },
-      set:function(v){ __escQ9['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); } }; }};
+      set:function(v){ __escQ9['SET '+p]=JSON.parse(JSON.stringify(v)); return Promise.resolve(); }, transaction:function(fn){ var r=fn(null); return Promise.resolve({committed:r!==undefined}); }, }; }};
     ciQuemRecebeu=function(){ return Promise.resolve('Ana'); };`);
   try {
     run(`__pQ9={dados:{entrada:'2026-09-29', saida:'2026-10-02', ficha:{}, pertences:[]},
@@ -25443,7 +25443,8 @@ provaAsync('6.52 R2 BS3 — a hora é de uma saída: «definir a hora» grava o 
   run(`__bkS={ge:document.getElementById, hp:hospAbaPode, al:(typeof alert==='function'?alert:null), ch:(typeof carregarHospedes==='function'?carregarHospedes:null), rh:renderHospedesAba, cf:checarFaltasDaEstadia};
     __cS={}; document.getElementById=function(id){ return __cS[id]||null; }; hospAbaPode=function(){ return true; }; alert=function(){};
     carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
-    __datas652=function(id, ent, sai){ __cS={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id); };`);
+    __datas652=function(id, ent, sai){ __cS={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id).then(__palco666); };
+    __palco666=function(){ var sr=senhasRuntime; senhasRuntime=function(){ var m={}; try{ m=sr()||{}; }catch(x){} m['s-palco666']={role:'consultora', nome:'Recepção Palco Teste'}; return m; }; var r=null; try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL) r=corrToque('confirmar', {motivo:'a tutora mudou a data da viagem', senha:'s-palco666'}); } finally { senhasRuntime=sr; } return Promise.resolve(r).then(function(){ return (typeof HOSP_DATAS_P!=='undefined')?HOSP_DATAS_P:null; }); };`);
   try {
     DIA652(SEG652);
     run(`banhoSaidaHoraAbrir('est_raf', 'hoje'); dashHoraEscolher('banhosaida', '14:30');`);
@@ -25959,7 +25960,8 @@ provaAsync('6.52 R3 R3 — datas mudadas e desfeitas na aba Hóspedes (13 → 16
     carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
     __dbS3=DB; DB={ref:function(p){ var r=__dbS3.ref(p); return Object.assign({}, r, {update:function(v){
       Object.keys(v||{}).forEach(function(k){ __dbPoe(p+'/'+k, v[k]); }); __dbEsc649.push(['update', p]); return Promise.resolve(); }}); }};
-    __datas3=function(id, ent, sai){ __cS3={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id).then(function(){ EST_TODAS[id]=__dbPega('auaulandia/estadias/'+id); }); };`);
+    __datas3=function(id, ent, sai){ __cS3={hospEdIni:{value:ent}, hospEdFim:{value:sai}}; return hospSalvarDatas(id).then(__palco666).then(function(){ EST_TODAS[id]=__dbPega('auaulandia/estadias/'+id); }); };
+    __palco666=function(){ var sr=senhasRuntime; senhasRuntime=function(){ var m={}; try{ m=sr()||{}; }catch(x){} m['s-palco666']={role:'consultora', nome:'Recepção Palco Teste'}; return m; }; var r=null; try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL) r=corrToque('confirmar', {motivo:'a tutora mudou a data da viagem', senha:'s-palco666'}); } finally { senhasRuntime=sr; } return Promise.resolve(r).then(function(){ return (typeof HOSP_DATAS_P!=='undefined')?HOSP_DATAS_P:null; }); };`);
   try {
     await run(`__datas3('est_theo', '${HOJE652}', '2026-10-16')`); await espera649(50);
     igual(SPA652('est_theo').horaDia, TER652, 'a hora de antes (sem o dia) é marcada com a saída para a qual valia');
@@ -26006,9 +26008,10 @@ const HOSP3 = `__bkH3={ge:document.getElementById, hp:hospAbaPode, zp:zPergunta,
   __datas3={hospEdIni:'', hospEdFim:''}; document.getElementById=function(id){ return (id in __datas3)?{value:__datas3[id]}:null; };
   hospAbaPode=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); }; alert=function(){}; carregarHospedes=function(){}; renderHospedesAba=function(){}; checarFaltasDaEstadia=function(){};
   __upd3=[]; __dbH3=DB; DB={ref:function(p){ var r=__dbH3.ref(p); return {once:r.once, set:r.set, transaction:r.transaction, remove:r.remove,
-    update:function(v){ __upd3.push([p, JSON.parse(JSON.stringify(v))]); Object.keys(v).forEach(function(k){ __dbPoe(p+'/'+k, v[k]); }); EST_TODAS[p.split('/').pop()]=__dbPega(p); return Promise.resolve(); } }; }};`;
+    update:function(v){ __upd3.push([p, JSON.parse(JSON.stringify(v))]); Object.keys(v).forEach(function(k){ __dbPoe(p+'/'+k, v[k]); }); EST_TODAS[p.split('/').pop()]=__dbPega(p); return Promise.resolve(); } }; }};
+  __palco666=function(){ var sr=senhasRuntime; senhasRuntime=function(){ var m={}; try{ m=sr()||{}; }catch(x){} m['s-palco666']={role:'consultora', nome:'Recepção Palco Teste'}; return m; }; var r=null; try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL) r=corrToque('confirmar', {motivo:'a tutora mudou a data da viagem', senha:'s-palco666'}); } finally { senhasRuntime=sr; } return Promise.resolve(r).then(function(){ return (typeof HOSP_DATAS_P!=='undefined')?HOSP_DATAS_P:null; }); };`;
 const HOSPSOLTA3 = `document.getElementById=__bkH3.ge; hospAbaPode=__bkH3.hp; zPergunta=__bkH3.zp; alert=__bkH3.al; if(__bkH3.ch) carregarHospedes=__bkH3.ch; renderHospedesAba=__bkH3.rh; checarFaltasDaEstadia=__bkH3.cf; DB=__bkH3.db;`;
-const DATAS3 = async (id, ent, sai) => { run(`__datas3.hospEdIni='${ent}'; __datas3.hospEdFim='${sai}';`); await run(`hospSalvarDatas('${id}')`); await espera649(50); };
+const DATAS3 = async (id, ent, sai) => { run(`__datas3.hospEdIni='${ent}'; __datas3.hospEdFim='${sai}';`); await run(`hospSalvarDatas('${id}').then(__palco666)`); await espera649(50); };
 
 provaAsync('6.52 QA3 G14 [s05] aba Hóspedes: quem não tem hora do banho de saída (sem banho, «Não», «a confirmar») grava só as datas', async () => {
   run(ARMA652); run(HOSP3);
@@ -26933,7 +26936,16 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // (vagasDecisaoTexto), na troca riscada (trocaCanceladasHTML) e no cartaz do «Reabrir» da troca (trocaReabrirAbrir), e guardado no
   // arquivo da diária anulada (vagasAvulsoAnular, a mesma chave `motivo` da 6.56); e o motivo da falta avisada (cio, viagem…), pelo
   // rótulo de REP_MOTIVOS, em «Qual falta este dia repõe?» (dxFaltasHTML). O erro do banco vai para o cartaz da 6.57 (zErroMotivo).
-  vagasDecisaoTexto: 1, vagasAvulsoAnular: 1, trocaCanceladasHTML: 1, trocaReabrirAbrir: 1, dxFaltasHTML: 1 };
+  vagasDecisaoTexto: 1, vagasAvulsoAnular: 1, trocaCanceladasHTML: 1, trocaReabrirAbrir: 1, dxFaltasHTML: 1,
+  // 6.66 (check-in, Hóspedes de hoje e avisos à Recepção: funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a
+  // pessoa escreveu no cartaz da 6.57 (reg.motivo), levado ao aviso retirado e reaberto (a linha da trilha «Retirado: …», «Reaberto: …»
+  // e o retirado guardado em retiradas_desfeitas), à linha «Corrigida por … : motivo» do aviso, ao histórico do remédio que parou na
+  // correção do check-in («Parou de tomar — motivo» e o paradoEm), à lista «Correções deste check-in», às linhas de Hóspedes de hoje
+  // («Datas mudadas por …», «Reaberta em …»), ao texto do grupo da Gestão da hospedagem reaberta e ao estorno dos créditos da saída
+  // antecipada desfeita (obs, o rastro e o registro guardado para o «Terminar agora»). O erro do banco vai para gravacao-FALHOU e, na
+  // tela, pelo zErroMotivo do cartaz da 6.57.
+  avisoRetirarGravar: 1, avisoTrilhaHTML: 1, avisoReabrirGravar: 2, avisoRacaoReabrirGravar: 2, ciMedTiradoParado: 2, ciCorrecoesHTML: 1,
+  hospLinha666: 3, hospReabriuRastro: 1, hospAntecipadaDesfazerGravar: 3 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -27059,6 +27071,8 @@ const EXCECAO648 = [
   // 6.61, 2ª rodada (fora das três telas): a frase da régua das 24 horas da 6.38 (repRemarcarBarrado devolve um Error com repAviso e
   // a frase do app: «A reposição marcada para … já passou do prazo para desmarcar…»), levada à Márcia — nunca o cru
   "if(bar) return String(bar.message||'A régua do prazo não deixa mudar este dia.')+fim;",   // vagasMudarConferir: bar = repRemarcarBarrado
+  // 6.66 (fora das três telas): a régua do motivo de 4 palavras dos avisos à Recepção — a frase do motivoQuatroPalavras, nunca o cru
+  "function avisoMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // avisoMotivoErro: chamada no Encerrar, no Retirar e no Reabrir
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -40806,6 +40820,1479 @@ provaAsync('6.65 QA2 Q32 (re-gate) — vermIntervaloDoBanco: com a ficha na cóp
     igual(run('vermIntervaloDoBanco(__bq)'), 15);
   });
 });
+}
+{
+// ================================================================== 6.66 — a AuAulândia, parte 1: o remédio do check-in pela régua, os pertences, as datas, a baixa, a saída antecipada, «É o mesmo» e os avisos à Recepção
+console.log('\n6.66 — O check-in grava o remédio pela régua (a 3ª porta), e o que a hospedagem lança errado tem volta: pertences, datas, baixa, saída antecipada, «É o mesmo» e os avisos à Recepção');
+// Tudo INVENTADO: Biscoito (tutora Rita Teste), as pessoas «Teste» e os remédios. Relógio FIXO em sexta, 09/10/2026, 10:00 (o mesmo das
+// 6.54 a 6.62); o banco de mentira da 6.57 (conta gravações e transações). Apoquel de 1 vez por dia às 08:00, dado às 08:04, salvo indicação.
+// As provas marcadas com * na story falham na base c71e55d (v 2026-10-09-19).
+const EID666 = 'est666', EP666 = 'auaulandia/estadias/' + EID666;
+const PE666 = (data, extra) => Object.assign({ quem: 'Plantonista Teste', data: data || DIA658, quando: '09/10 08:20', ts: T658(9, 8, 20), motivo: 'o tutor pediu para parar' }, extra || {});
+const DUP666 = (extra) => APQ659(Object.assign({ continuo: true, paradoEm: PE666(ONTEM658) }, extra || {}));
+const OME666 = (extra) => Object.assign(OME658(), { dataInicio: '2026-10-01', historico: [{ quem: 'Rita Teste', quando: '01/10 09:00', acao: 'Criou (check-in)' }] }, extra || {});
+const DADA666 = () => ({ 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) });
+const PERT666 = () => [{ uid: 'p1', k: 'mochila', nome: 'Mochila — azul' }];
+const EST666 = (extra) => Object.assign({ nome: 'Biscoito', tutor: 'Rita Teste', refKey: K658, entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa',
+  medicacao: [{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'] }], pertences: PERT666(), ficha: {} }, extra || {});
+const MOT666 = 'a tutora ligou para corrigir o horário';
+// a parte do check-in no palco: o FILHOt aberto, «quem recebeu» respondido (e anotado na ordem das gravações), a ficha em PDF que volta ok
+const ARMA666C = `__bk666c={qr:ciQuemRecebeu, tr:__ciTravar, h:ciHosp, fo:ciFichaObrigatoria, fl:ciFichaLinhaOk, ed:ciEditandoId, co:ciCorrigindoId,
+    ml:(typeof CI_MED_LIDO!=='undefined'?CI_MED_LIDO:undefined)};
+  ciHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; __ciTravar=function(){}; __qr666=[];
+  ciQuemRecebeu=function(it){ __qr666.push(JSON.parse(JSON.stringify(it||[]))); __esc657.push(['quem-recebeu', '-']); return Promise.resolve('Gestora Teste'); };
+  ciFichaObrigatoria=function(){ return Promise.resolve({ok:true}); }; ciFichaLinhaOk=function(){ return 'A ficha em PDF foi para o grupo da Gestão.'; };`;
+const SOLTA666C = `ciQuemRecebeu=__bk666c.qr; __ciTravar=__bk666c.tr; ciHosp=__bk666c.h; ciFichaObrigatoria=__bk666c.fo; ciFichaLinhaOk=__bk666c.fl;
+  ciEditandoId=__bk666c.ed; ciCorrigindoId=__bk666c.co; if(__bk666c.ml!==undefined) CI_MED_LIDO=__bk666c.ml;`;
+// O Salvar do check-in de verdade (__ciGravar, nos quatro modos), com a tela que leu a agenda antes (o carimbo e os itens, o que a
+// ciPreencherMedicacao guarda). o.mudaBanco: outro aparelho grava depois que a tela leu. Devolve a agenda, a estadia, as gravações,
+// os cartazes e a fila do alarme de hoje e de amanhã.
+const ci666 = async (modo, o) => {
+  o = o || {};
+  const r = {};
+  arma659();
+  try {
+    relogio658(o.agora || T658(9, 10, 0));
+    semear658({ itens: o.itens || { apq: APQ659() }, log: o.log || DADA666() });
+    if (modo !== 'novo') put658(EP666, o.est || EST666());
+    run(ARMA666C);
+    const lidos = o.lidos || J658(`__get657('${AG658}/itens')`);
+    const P = Object.assign({ dados: { entrada: '2026-10-08', saida: '2026-10-12', ficha: {}, pertences: o.pertences || PERT666() },
+      meds: o.meds || {}, temMed: o.temMed !== false, key: K658, medCarregados: o.car || { ids: { apq: 1 }, sigs: {} },
+      medLido: (o.lido === false) ? null : { key: K658, ts: 500, itens: lidos, lido: true } }, o.P || {});
+    if (modo === 'corrigir' && !P.correcao) P.correcao = { motivo: MOT666, quem: 'Gestora Teste', diff: o.diff || ['Medicação'] };
+    ctx.__P666 = P;
+    run(`__P666=JSON.parse(JSON.stringify(__P666)); __esc657=[]; __za657=[]; __ze657=[]; __au657=[]; __tm657=[];`);
+    if (o.mudaBanco) o.mudaBanco();
+    if (o.palco) run(o.palco);
+    run(`__ciGravar(${JSON.stringify(modo)}, ${modo === 'novo' ? 'null' : JSON.stringify(EID666)}, __P666);`);
+    await espera659(3000);
+    if (o.depois) await o.depois(r);
+    r.itens = db658(AG658 + '/itens') || {}; r.ts = db658(AG658 + '/_ts');
+    const ests = db658('auaulandia/estadias') || {};
+    r.est = (modo === 'novo') ? (Object.keys(ests).filter((k) => k !== EID666).map((k) => ests[k])[0] || null) : ests[EID666];
+    r.esc = run('__esc657').map((e) => e[0] + ' ' + String(e[1]).replace(AG658, 'AG').replace(/auaulandia\/estadias\/[^/]+/, 'EST'));
+    r.za = J658('__za657'); r.ze = J658('__ze657'); r.au = J658('__au657'); r.qr = J658('__qr666'); r.P = J658('__P666');
+    r.st = String(run(`(function(){ var s=document.getElementById('ci-status'); return s&&typeof s.textContent==='string'?s.textContent:''; })()`) || '');
+  } finally { try { run(SOLTA666C); } finally { solta659(); } }
+  r.hoje = await filaQA659f0(r.itens, 9); r.amanha = await filaQA659f0(r.itens, 10);
+  return r;
+};
+const zaTit666 = (r, re) => (r.za || []).filter((z) => re.test(String(z[0] || '')));
+const linhas666 = (r, re) => { const z = zaTit666(r, re)[0]; return z ? z[1] : null; };
+const FRASE_DUPLO666 = 'O remédio Apoquel voltou a tocar depois do «Parou de tomar» de 08/10/2026 (Plantonista Teste): o horário, o período e a frequência dele não mudam por aqui. Para encerrar, use «Parou de tomar» na ficha (aba Medicamentos); para mudar o horário, use «Parou de tomar» e depois «Voltou a tomar», com o horário novo. Nada foi salvo.';
+const TROCA666 = 'Horário mudou de 08:00 para 20:00 a partir de sábado, 10/10 — Check-in: a dose das 08:00 de hoje já foi dada';
+
+// ---- AC1 — o remédio do check-in passa pela régua, pela trava e pela recusa (MC6, a 3ª porta) -------------------------------------------------
+for (const [n, modo, rot, extra] of [['P1', 'corrigir', 'AC1.1, caminho 1) ✎ Corrigir', {}], ['P2', 'corrigir', 'AC1.1) SUBSTITUIR', { substituir: true, sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }],
+  ['P3', 'acrescentar', 'AC1.2, caminho 2) Acrescentar', {}]]) {
+  provaAsync('6.66 ' + n + ' (' + rot + ': o Apoquel 08:00 dado às 08:04, a tela com 20:00 — hoje a fila pede só a das 08:00 (já dada); o 20:00 começa amanhã, na linha nova da troca por datas; o histórico diz «Check-in: …»; a confirmação traz a frase da régua. Base: hoje ["apq@20:00"]', async () => {
+    const r = await ci666(modo, { meds: { apq: APQ659({ horarios: ['20:00'] }) }, P: extra });
+    igual([r.hoje, r.amanha], [['apq@08:00'], ['mcr_t_apq_20261010@20:00']], JSON.stringify([r.hoje, r.amanha, r.esc]));
+    const hn = ((r.itens.mcr_t_apq_20261010 || {}).historico || []).map((x) => x.acao);
+    assert.ok(hn.indexOf(TROCA666) >= 0, JSON.stringify(hn));
+    igual([r.itens.apq.horarios, r.itens.apq.dataFim, r.itens.apq.trocadoPor, r.itens.mcr_t_apq_20261010.dataInicio], [['08:00'], DIA658, 'mcr_t_apq_20261010', AMANHA658]);
+    // o histórico que já existia não se perde (o «Prescreveu» da veterinária)
+    assert.ok(hn.indexOf('Prescreveu') >= 0 && (r.itens.apq.historico || []).some((x) => x.acao === 'Prescreveu'), JSON.stringify(r.itens.apq.historico));
+    const L = linhas666(r, /CORREÇÃO SALVA|CHECK-IN SUBSTITUÍDO|ACRESCENTADO/) || [];
+    assert.ok(L.some((l) => /^Check-in: Apoquel/.test(l)), 'a confirmação diz o que a régua fez: ' + JSON.stringify(r.za));
+    if (modo === 'corrigir') assert.ok((r.est.correcoes || []).slice(-1)[0].mudou.some((l) => /^Check-in: Apoquel/.test(l)), 'a linha da correção também');
+    assert.ok(r.au.some((a) => a[0] === 'checkin-regua'), 'o rastro da régua (checkin-regua)');
+  });
+}
+provaAsync('6.66 P39 (AC1.1, achado da implementação) — o Apoquel tirado da tela com «Remover item» e escrito de novo às 20:00 é o mesmo remédio (fica com o id da linha antiga): a régua vale — hoje só a das 08:00 (já dada), o 20:00 amanhã; nada vira «Parou de tomar». Base: hoje ["ci_novo@20:00"]', async () => {
+  const r = await ci666('corrigir', { meds: { ci_novo: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: true, tipo: 'medicamento', origem: 'vet' } } });
+  igual([r.hoje, r.amanha, (r.P.medParados || []).length, !!r.itens.apq.paradoEm, !!r.itens.ci_novo], [['apq@08:00'], ['mcr_t_apq_20261010@20:00'], 0, false, false], JSON.stringify([r.hoje, Object.keys(r.itens)]));
+  assert.ok((r.itens.mcr_t_apq_20261010.historico || []).some((h) => h.acao === TROCA666), JSON.stringify(r.itens.mcr_t_apq_20261010.historico));
+});
+provaAsync('6.66 P4 (AC1.2) — check-in novo com o remédio da ficha «Mudou» o horário e uma dose dada hoje na mesma agenda (a hospedagem que terminou de manhã): a régua — hoje só a das 08:00 (dada), o 20:00 amanhã. Base: hoje ["apq@20:00"]', async () => {
+  const r = await ci666('novo', { meds: { apq: APQ659({ horarios: ['20:00'] }) }, P: { sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' } });
+  igual([r.hoje, r.amanha], [['apq@08:00'], ['mcr_t_apq_20261010@20:00']], JSON.stringify([r.hoje, r.amanha, r.esc]));
+  assert.ok(r.est && r.est.status === 'ativa', 'a estadia nova nasceu');
+  const L = linhas666(r, /CHECK-IN SALVO/) || [];
+  assert.ok(L.some((l) => /^Check-in: Apoquel/.test(l)), JSON.stringify(r.za));
+});
+provaAsync('6.66 P5 (AC1.3) — o estado duplo na lista, o horário mudado: nada é gravado (nem a estadia, nem a agenda) e a tela diz a frase da 6.62 com o nome do remédio; a dose (e o resto) muda', async () => {
+  const res = [];
+  for (const modo of ['corrigir', 'acrescentar', 'novo']) {
+    const r = await ci666(modo, { itens: { apq: DUP666() }, meds: { apq: DUP666({ horarios: ['20:00'] }) } });
+    res.push([modo, r.esc.filter((e) => !/^quem-recebeu/.test(e)), (linhas666(r, /O CHECK-IN NÃO FOI SALVO/) || [])[0], r.itens.apq.horarios]);
+  }
+  igual(res.map((x) => x.slice(1)), res.map(() => [[], FRASE_DUPLO666, ['08:00']]), JSON.stringify(res));
+  // o suspenso (lido assim pela tela): a frase da 6.62 do suspenso, nada gravado
+  const SUS = APQ659({ suspenso: true, suspensoPor: 'Vera Veterinária Teste', suspensoMotivo: 'esperar o exame de sangue', suspensoTs: T658(9, 8, 30) });
+  const su = await ci666('acrescentar', { itens: { apq: SUS }, meds: { apq: Object.assign({}, SUS, { horarios: ['20:00'] }) } });
+  igual([su.esc.filter((e) => !/^quem-recebeu/.test(e)), (linhas666(su, /O CHECK-IN NÃO FOI SALVO/) || [])[0]],
+    [[], 'O remédio Apoquel está suspenso: o horário não muda enquanto ele estiver suspenso, para a dose de hoje não ser pedida de novo. Reative primeiro e depois mude o horário. Nada foi salvo.'], JSON.stringify(su.esc));
+  // a dose muda (AC1.4 da 6.62): grava, sem frase de recusa
+  const d = await ci666('corrigir', { itens: { apq: DUP666() }, meds: { apq: DUP666({ q: '2' }) } });
+  igual([d.itens.apq.q, d.itens.apq.horarios, !!d.itens.apq.paradoEm, zaTit666(d, /NÃO FOI SALVO/).length], ['2', ['08:00'], true, 0], JSON.stringify(d.esc));
+});
+provaAsync('6.66 P6 (AC1.4) — outro aparelho grava a agenda depois que a tela abriu: nada é gravado (nem a estadia, nem a agenda), a ficha continua preenchida, a frase manda «Ler a medicação de novo», e o botão relê; a trava sem resposta em 20 s: nada gravado', async () => {
+  // (a) o Plantão gravou a agenda (o carimbo andou) entre a leitura da tela e o Salvar
+  const a = await ci666('corrigir', { meds: { apq: APQ659({ q: '2' }) },
+    mudaBanco: () => { put658(AG658 + '/_ts', 777); put658(AG658 + '/itens/apq/obs', 'com comida (o Plantão escreveu)'); } });
+  const fr = linhas666(a, /O CHECK-IN NÃO FOI SALVO/) || [];
+  igual([a.esc.filter((e) => !/^(quem-recebeu|transaction)/.test(e)), fr[0], a.itens.apq.q, a.ts],
+    [[], 'A agenda de remédio de Biscoito mudou em outro aparelho depois que esta tela abriu. Nada foi salvo. Toque em «Ler a medicação de novo», confira com o tutor e salve.', '1', 777], JSON.stringify(a.esc));
+  igual(zaTit666(a, /O CHECK-IN NÃO FOI SALVO/)[0][2].botao, 'Ler a medicação de novo');
+  // «Ler a medicação de novo»: relê o carimbo e os itens; a linha mexida fica, com a marca «mudou em outro aparelho»
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ obs: 'com comida (o Plantão escreveu)' }) }, log: DADA666() });
+    put658(AG658 + '/_ts', 777);
+    ctx.__lidoA666 = { apq: APQ659() };
+    run(`__bk666l={ck:ciKey, fl:ciMedFichaLinhas, am:ciAddMed, ch:ciMedEmUsoChange}; ciKey=function(){ return '${K658}'; };
+      __marca666=[]; __lin666=[{dataset:{id:'apq', conf:'mudou'}, insertAdjacentHTML:function(p, h){ __marca666.push(h); }, parentNode:{removeChild:function(){}}}];
+      ciMedFichaLinhas=function(){ return __lin666; }; __am666=[]; ciAddMed=function(it, op){ __am666.push(op.agendaId); }; ciMedEmUsoChange=function(){};
+      CI_MED_LIDO={key:'${K658}', ts:500, itens:JSON.parse(JSON.stringify(__lidoA666)), lido:true};`);
+    try {
+      await run('ciMedLerDeNovo()'); await espera659();
+      igual([run('CI_MED_LIDO.ts'), /Mudou em outro aparelho/.test(run('__marca666.join("")')), J658('__am666'), run('CI_MED_LIDO.itens.apq.obs')], [777, true, [], 'com comida (o Plantão escreveu)']);
+    } finally { run('ciKey=__bk666l.ck; ciMedFichaLinhas=__bk666l.fl; ciAddMed=__bk666l.am; ciMedEmUsoChange=__bk666l.ch;'); }
+  } finally { solta659(); }
+  // (b) a trava não responde: 20 segundos (CORR_PRAZO) e nada é gravado
+  const b = await ci666('corrigir', { meds: { apq: APQ659({ q: '2' }) }, palco: `__mt666=mcrTravaAgenda; mcrTravaAgenda=function(){ return new Promise(function(){}); };`,
+    depois: async () => { try { const t = run('__tm657').filter((x) => x.ms === run('CORR_PRAZO')); t.forEach((x) => x.fn()); await espera659(); } finally { run('mcrTravaAgenda=__mt666;'); } } });
+  const fb = linhas666(b, /O CHECK-IN NÃO FOI SALVO/) || [];
+  igual([b.esc.filter((e) => !/^quem-recebeu/.test(e)), /^O banco ainda não respondeu à conferência da agenda de remédio de Biscoito/.test(fb[0] || ''), b.itens.apq.q], [[], true, '1'], JSON.stringify([b.esc, fb]));
+});
+provaAsync('6.66 P7 (AC1.4, guarda) — sem mudança no banco: grava; o carimbo anda uma vez (o mesmo na trava e na agenda); a ordem «quem recebeu → trava → estadia → agenda» (a QA42 continua)', async () => {
+  const r = await ci666('corrigir', { meds: { apq: APQ659({ q: '2' }) }, pertences: PERT666().concat([{ uid: 'p2', k: 'cama', nome: 'Caminha — cinza' }]),
+    palco: `CI_MED_LIDO={key:'${K658}', ts:500, itens:__get657('${AG658}/itens'), lido:true};`, depois: async (x) => { x.lidoDepois = run("typeof CI_MED_LIDO!=='undefined' && CI_MED_LIDO ? CI_MED_LIDO.ts : null"); } });
+  const ord = r.esc.filter((e) => /^(quem-recebeu|transaction AG\/_ts|update EST$|set AG\/itens$)/.test(e));
+  igual(ord, ['quem-recebeu -', 'transaction AG/_ts', 'update EST', 'set AG/itens'], JSON.stringify(r.esc));
+  igual([r.ts, r.esc.filter((e) => /^transaction AG\/_ts/.test(e)).length, r.itens.apq.q, r.lidoDepois], [T658(9, 10, 0), 1, '2', T658(9, 10, 0)]);
+});
+provaAsync('6.66 P8 (AC1.5) — ✎ Corrigir tira da lista um remédio em vigor (o Ômega 3): ele fica na agenda, «Parou de tomar» com o motivo «na correção do check-in: …», o histórico intacto, e a confirmação diz como anular. Base: o item some', async () => {
+  const r = await ci666('corrigir', { itens: { apq: APQ659(), ome: OME666() }, car: { ids: { apq: 1, ome: 1 }, sigs: {} }, meds: { apq: APQ659() }, diff: ['Medicação REMOVIDA: Ômega 3'] });
+  const o = r.itens.ome || {};
+  igual([!!r.itens.ome, o.continuo, o.dataFim, (o.paradoEm || {}).motivo, (o.historico || []).map((x) => x.acao)],
+    [true, false, ONTEM658, 'na correção do check-in: ' + MOT666, ['Criou (check-in)', 'Parou de tomar — na correção do check-in: ' + MOT666]], JSON.stringify(r.itens));
+  const L = linhas666(r, /CORREÇÃO SALVA/) || [];
+  assert.ok(L.indexOf('Ômega 3 saiu da lista: ficou como "já não toma mais". Se ele foi lançado por engano, use «Lançado por engano» na ficha (aba Medicamentos), com a senha da Gestão.') >= 0, JSON.stringify(L));
+  assert.ok(r.au.some((a) => a[0] === 'checkin-remedio-parou'), 'o rastro da parada');
+});
+provaAsync('6.66 P9 (AC1.5) — o tirado com a dose de hoje já dada: hoje e amanhã o alarme não pede mais nada dele; ele aparece em «Já não toma mais» na ficha', async () => {
+  const log = Object.assign(DADA666(), { 'ome_08-00': DOSE658('ome', 'Ômega 3', '08:00', 'cápsula', T658(9, 8, 6)) });
+  const r = await ci666('corrigir', { itens: { apq: APQ659(), ome: OME666() }, log, car: { ids: { apq: 1, ome: 1 }, sigs: {} }, meds: { apq: APQ659() }, diff: ['Medicação REMOVIDA: Ômega 3'] });
+  igual([r.hoje.filter((x) => /^ome/.test(x)), r.amanha.filter((x) => /^ome/.test(x))], [[], []], JSON.stringify([r.hoje, r.amanha]));
+  ctx.__fi666 = r.itens;
+  const o = J658(`(function(){ var b=FMED_ITENS; FMED_ITENS=JSON.parse(JSON.stringify(__fi666)); try{ return fmedOrdem(); } finally { FMED_ITENS=b; } })()`);
+  igual([o.vivos, o.parados], [['apq'], ['ome']]);
+});
+provaAsync('6.66 P10 (AC1.6, guarda) — remédio novo (id ci_…) e mudança só de dose: gravam como sempre (o novo toca hoje; a dose vale na próxima de hoje, A4 da 6.54)', async () => {
+  const r = await ci666('corrigir', { meds: { apq: APQ659({ q: '2' }), ci_1: { nome: 'Ômega 3', q: '1', u: 'cápsula', horarios: ['20:00'], continuo: true, tipo: 'suplemento', origem: 'tutor' } } });
+  igual([r.hoje, r.amanha, r.itens.apq.q, r.itens.apq.horarios, !!r.itens.mcr_t_apq_20261010], [['apq@08:00', 'ci_1@20:00'], ['apq@08:00', 'ci_1@20:00'], '2', ['08:00'], false], JSON.stringify(r.itens));
+});
+provaAsync('6.66 P11 (AC1.2, AC1.7, guarda) — a Ficha › Medicamentos troca por datas UMA vez (a régua não foi parar dentro da medAgendaGravarItens); o alarme da 6.47 e a gravação da agenda letra por letra iguais às da base', async () => {
+  let it = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA666() });
+    ctx.__fp666 = { apq: Object.assign(JSON.parse(JSON.stringify(db658(AG658 + '/itens/apq'))), { horarios: ['20:00'] }) };
+    run(`fmedPodeEditar=function(){ return true; }; medLinhaDoPel=function(){ return ''; };` + FICHA658() + `__el657['fmed-status']={style:{}, textContent:''}; fmedColetar=function(){ return JSON.parse(JSON.stringify(__fp666)); }; __esc657=[]; __zp657=[];`);
+    await run('fmedSalvar()'); await espera659();
+    it = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  igual(Object.keys(it).sort(), ['apq', 'mcr_t_apq_20261010'], JSON.stringify(Object.keys(it)));
+  igual([await filaQA659f0(it, 9), await filaQA659f0(it, 10)], [['apq@08:00'], ['mcr_t_apq_20261010@20:00']]);
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const BASE = { carregarAgendaMedTodos: 'deb5deb515266386da1daa0c4f6239f8b873e8dbc4e51c832008f93914ea1bcd', medVigenteEm: '9de3a1429cb6d81ebdf3733be5efec9f6d86dcf36628309731055c54dc45fcb7',
+    medOntemTeto: '7da0747bd9e668e951d49e2875ce246844c381176f8593089f6bd47b2974fffe', medAgendaGravarItens: '25f628deb71f8375ac55b9fe5ca8cf3dc7e11a5c17bce3511daaf63139fe7dc8',
+    mcrTravaAgenda: '64a75a2ee28d747166219568207a981836edc2cc383635dab2aee600e78708ef', ciMedEmVigor: '559210893b82e28014cbab120d8792a2dd236c7d3c041d5e88627cbc9ad7c901' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(run(n + '.toString()')); });
+  igual(agora, BASE);
+});
+
+// ---- AC2 e AC3 — o estado duplo chega ao check-in; o carimbo sem a trava -----------------------------------------------------------------------
+provaAsync('6.66 P12 (AC2.1, caminho 4) — o estado duplo (parado, mas tocando) vem para a lista do check-in, com a linha da 6.62 («Voltou a tocar depois do «Parou de tomar» de …»); o parado de verdade e o suspenso, não. Base: não vem', async () => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: DUP666(), ome: OME666({ continuo: false, dataFim: DIA658, paradoEm: PE666() }), zen: APQ659({ nome: 'Zenrelia', suspenso: true, suspensoPor: 'Vera Veterinária Teste' }), vit: OME666({ nome: 'Vitamina C' }) }, log: {} });
+    run(`__bk666p={ck:ciKey, am:ciAddMed, me:ciMedEmUso, mc:ciMedEmUsoChange, ss:setSeg}; ciKey=function(){ return '${K658}'; }; __add666=[]; __html666='';
+      __el657['ciMeds']={innerHTML:'', insertAdjacentHTML:function(p, h){ __html666+=h; }}; __el657['ciEntrada']={value:'2026-10-08'};
+      ciMedEmUso=function(){ return 'Sim'; }; ciMedEmUsoChange=function(){}; setSeg=function(){};
+      __db1666=DB; __lidas666=[]; DB={ref:function(p){ var r=__db1666.ref(p); var o=r.once; r.once=function(){ __lidas666.push(String(p).replace('${AG658}', 'AG')); return o.apply(r, arguments); }; return r; }};`);
+    try {
+      run('ciPreencherMedicacao()'); await espera659();
+      run('DB=__db1666;');
+      igual([J658('__lidas666'), run('CI_MED_LIDO.ts'), Object.keys(J658('CI_MED_LIDO.itens')).length], [['AG/_ts', 'AG/itens'], 500, 4], 'o carimbo lido antes dos itens e guardado com eles');
+      const html = String(run('__html666'));
+      const ids = (html.match(/data-id="([^"]+)"/g) || []).map((x) => x.slice(9, -1)).filter((x, i, a) => a.indexOf(x) === i).sort();
+      igual(ids, ['apq', 'vit'], html.slice(0, 300));
+      assert.ok(html.indexOf('Voltou a tocar depois do «Parou de tomar» de 08/10/2026 (Plantonista Teste). Para encerrar: «Parou de tomar» na ficha (aba Medicamentos).') >= 0, 'a linha da 6.62');
+      igual(Object.keys(J658('CI_MED_CARREGADOS.ids')).sort(), ['apq', 'vit']);
+    } finally { run('ciKey=__bk666p.ck; ciAddMed=__bk666p.am; ciMedEmUso=__bk666p.me; ciMedEmUsoChange=__bk666p.mc; setSeg=__bk666p.ss;'); }
+  } finally { solta659(); }
+});
+provaAsync('6.66 P13 (AC2.2) — «Não está em uso» com o estado duplo na tela: a parada da 6.62 o alcança (termina ontem, «Parou de tomar — no check-in da hospedagem, o tutor disse que não está em uso»); amanhã o alarme não o pede. Base: fica tocando', async () => {
+  let it = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: DUP666() }, log: DADA666() });
+    await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659();
+    it = db658(AG658 + '/itens/apq');
+  } finally { solta659(); }
+  igual([it.continuo, it.dataFim, (it.historico || []).slice(-1)[0].acao, await filaQA659f0({ apq: it }, 10)],
+    [false, ONTEM658, 'Parou de tomar — no check-in da hospedagem, o tutor disse que não está em uso', []], JSON.stringify(it));
+});
+provaAsync('6.66 P14 (AC3, BAIXO-R2-2 da 6.62) — o «não está em uso» com a trava sem resposta em 20 s: o carimbo anda (uma escrita simples, antes da parada) e a parada grava; um «Salvar agenda» do Plantão aberto antes é recusado. Base: o carimbo fica e o Plantão regrava o «uso contínuo»', async () => {
+  let st = '', it = null, ts = null, ordem = [];
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA666() });
+    // o Plantão abriu a agenda antes (leu o carimbo 500)
+    const formP = { apq: Object.assign(JSON.parse(JSON.stringify(db658(AG658 + '/itens/apq'))), { obs: 'com comida' }) };
+    run(`__mt666=mcrTravaAgenda; mcrTravaAgenda=function(){ return new Promise(function(){}); }; __esc657=[]; __tm657=[];`);
+    try {
+      run(`__pp666=ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}]);`); await espera659();
+      run('__tm657.filter(function(x){ return x.ms===CORR_PRAZO; }).forEach(function(x){ x.fn(); });'); await espera659();
+    } finally { run('mcrTravaAgenda=__mt666;'); }
+    ordem = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).map((e) => e[0] + ' ' + e[1].replace(AG658, 'AG'));
+    ts = db658(AG658 + '/_ts');
+    ctx.__fp666 = formP;
+    run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=JSON.parse(JSON.stringify(__fp666)); MED_AGENDA_TS={key:'${K658}', ts:500, lido:true};
+      __el657['mag-status']={style:{}, textContent:''}; coletarMedAgendaForm=function(){ return JSON.parse(JSON.stringify(__fp666)); }; __esc657=[];`);
+    run('salvarMedAgenda()'); await espera659();
+    st = String(run("__el657['mag-status'].textContent") || '');
+    it = db658(AG658 + '/itens/apq');
+  } finally { solta659(); }
+  igual([ordem, ts, it.continuo, !!it.paradoEm, /mudou em outro aparelho/.test(st)], [['set AG/_ts', 'update AG/itens/apq'], T658(9, 10, 0), false, true, true], JSON.stringify([ordem, st]));
+});
+// ---- AC4 a AC6 — os pertences no ✎ Corrigir, «Tirar este item» e «voltar ao antes» ------------------------------------------------------------
+// a tela do Check-in no palco: a ficha que o ✎ Corrigir carrega (ciAplicarEstadiaNaFicha guarda os pertences na tela), os campos do
+// cartão vermelho, o «Salvar» que só anota o que iria para o __ciGravar
+const ARMA666T = `__bk666t={ap:ciAplicarEstadiaNaFicha, rd:ciRespostasDaEstadia, cf:ciColetarFicha, cm:ciColetarMeds, fb:ciFaltandoBloqueios, ad:ciAssinaturaDataURL, ck:ciKey,
+    gr:__ciGravar, tr:__ciTravar, me:ciMedEmUso, as:ciAlimSemRacaoEstadia, h:ciHosp, ps:ciPertSel, co:ciCorrigindoId, ed:ciEditandoId, an:window.__ciAntes,
+    acr:(typeof CI_ACR_ESTADIA!=='undefined'?CI_ACR_ESTADIA:undefined), am:ciAddMed, mu:ciMedEmUsoChange, ss:setSeg, mg:MED_GATE_ULTIMO['auaulandia|${K658}']};
+  ciHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; ciKey=function(){ return '${K658}'; }; __apl666=[]; __grav666=[]; __am666=[];
+  ciAplicarEstadiaNaFicha=function(e){ __apl666.push(JSON.parse(JSON.stringify(e))); ciPertSel=JSON.parse(JSON.stringify(Array.isArray(e.pertences)?e.pertences:ciPertSel)); return Promise.resolve(); };
+  ciRespostasDaEstadia=function(){}; ciFaltandoBloqueios=function(){ return []; }; ciAssinaturaDataURL=function(){ return 'data:image/png;base64,X'; };
+  ciColetarFicha=function(){ return {entrada:'2026-10-08', saida:'2026-10-12', ficha:{}, pertences:JSON.parse(JSON.stringify(ciPertSel||[]))}; };
+  __meds666={apq:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['08:00']}}; ciColetarMeds=function(){ return JSON.parse(JSON.stringify(__meds666)); }; ciMedEmUso=function(){ return 'Sim'; }; ciAlimSemRacaoEstadia=function(){ return null; };
+  __ciGravar=function(m, id, p){ __grav666.push({m:m, id:id, p:JSON.parse(JSON.stringify(p))}); }; __ciTravar=function(){};
+  ciAddMed=function(it, op){ __am666.push([op&&op.agendaId, (it||{}).horarios]); }; ciMedEmUsoChange=function(){}; setSeg=function(){}; MED_GATE_ULTIMO['auaulandia|${K658}']=true;
+  __el657['ciJaHospedado']={innerHTML:'', style:{}}; __el657['ciAssinaNome']={value:'Rita Teste'}; __el657['ciSemTutor']={checked:false};
+  __el657['ciCorrigirMotivo']={value:''}; __el657['ciCorrigirQuem']={value:'Gestora Teste'}; __el657['ci-status']={style:{}, textContent:''};
+  __el657['ciEntrada']={value:''}; __el657['ciSaida']={value:''}; __el657['ciMeds']={innerHTML:'', insertAdjacentHTML:function(){}};`;
+const SOLTA666T = `ciAplicarEstadiaNaFicha=__bk666t.ap; ciRespostasDaEstadia=__bk666t.rd; ciColetarFicha=__bk666t.cf; ciColetarMeds=__bk666t.cm; ciFaltandoBloqueios=__bk666t.fb;
+  ciAssinaturaDataURL=__bk666t.ad; ciKey=__bk666t.ck; __ciGravar=__bk666t.gr; __ciTravar=__bk666t.tr; ciMedEmUso=__bk666t.me; ciAlimSemRacaoEstadia=__bk666t.as; ciHosp=__bk666t.h;
+  ciPertSel=__bk666t.ps; ciCorrigindoId=__bk666t.co; ciEditandoId=__bk666t.ed; window.__ciAntes=__bk666t.an; if(__bk666t.acr!==undefined) CI_ACR_ESTADIA=__bk666t.acr;
+  ciAddMed=__bk666t.am; ciMedEmUsoChange=__bk666t.mu; setSeg=__bk666t.ss; MED_GATE_ULTIMO['auaulandia|${K658}']=__bk666t.mg;`;
+const PERTC666 = () => [{ uid: 'p1', k: 'outro', nome: 'Casaco vermelho de lã' }, { uid: 'p2', k: 'mochila', nome: 'Mochila — azul' }];
+const tela666 = async (fn) => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA666() });
+    put658(EP666, EST666({ pertences: PERTC666() }));
+    run(ARMA666T);
+    try { return await fn(); } finally { run(SOLTA666T); }
+  } finally { solta659(); }
+};
+provaAsync('6.66 P15 (AC4.1) — ✎ Corrigir só dos pertences: o Salvar grava (sem «NADA MUDOU»), e o «mudou» diz o que saiu, o que entrou e o que mudou (por uid; o item antigo sem uid, pelo tipo e pela linha). Base: «NADA MUDOU»', async () => {
+  const r = await tela666(async () => {
+    await run(`ciCorrigirExistente('${EID666}')`); await espera659();
+    // a pessoa tira o casaco vermelho, descreve melhor a mochila e acrescenta um casaco azul
+    run(`ciPertSel=[{uid:'p2', k:'mochila', nome:'Mochila — azul-marinho'}, {uid:'p3', k:'outro', nome:'Casaco azul'}]; __el657['ciCorrigirMotivo'].value='a tutora trocou o casaco na entrada';`);
+    run('ciSalvar()'); await espera659();
+    return { g: J658('__grav666'), za: J658('__za657').map((z) => z[0]) };
+  });
+  igual([r.za, r.g.length, r.g[0] && r.g[0].m], [[], 1, 'corrigir'], JSON.stringify(r));
+  igual(r.g[0].p.correcao.diff, ['Pertences: saiu «Casaco vermelho de lã»; entrou «Casaco azul»; mudou «Mochila — azul» → «Mochila — azul-marinho»']);
+  // o item antigo, sem uid (gravado antes do uid), é achado pelo tipo e pela linha: reescrever igual não é mudança
+  igual([run(`ciPertDiff([{k:'roupa', nome:'Roupa', spec:'bege'}], [{k:'roupa', nome:'Roupa', spec:'bege'}])`), run(`ciPertDiff([{k:'roupa', nome:'Roupa', spec:'bege'}], [])`)], ['', 'Pertences: saiu «Roupa — bege»']);
+});
+provaAsync('6.66 P16 (AC4.2) — o «antes» de todo ✎ Corrigir (não só o do SUBSTITUIR) guarda os pertences de antes. Base: sem os pertences', async () => {
+  const r = await ci666('corrigir', { meds: { apq: APQ659() }, est: EST666({ pertences: PERTC666() }), pertences: [{ uid: 'p2', k: 'mochila', nome: 'Mochila — azul' }],
+    diff: ['Pertences: saiu «Casaco vermelho de lã»'] });
+  const c = (r.est.correcoes || []).slice(-1)[0] || {};
+  igual([(c.antes || {}).pertences, r.est.pertences, c.mudou], [PERTC666(), [{ uid: 'p2', k: 'mochila', nome: 'Mochila — azul' }], ['Pertences: saiu «Casaco vermelho de lã»']], JSON.stringify(c));
+});
+provaAsync('6.66 P17 (AC4.3, guarda) — descrever melhor um item do mesmo tipo (ou tirar um item) não reabre a Conferência; a solução fica em conferencia/resolvidos, com o «mudou»', async () => {
+  const r = await ci666('corrigir', { meds: { apq: APQ659() }, est: EST666({ pertences: PERTC666(), conferencia: { concluida: true } }),
+    pertences: [{ uid: 'p2', k: 'mochila', nome: 'Mochila — azul-marinho' }], diff: ['Pertences: saiu «Casaco vermelho de lã»; mudou «Mochila — azul» → «Mochila — azul-marinho»'] });
+  const conf = r.est.conferencia || {}, res = conf.resolvidos || {};
+  const sol = res[Object.keys(res)[0]] || {};
+  igual([conf.concluida, Object.keys(res).length, sol.mudou, r.qr.length], [true, 1, ['Pertences: saiu «Casaco vermelho de lã»; mudou «Mochila — azul» → «Mochila — azul-marinho»'], 0], JSON.stringify(conf));
+});
+provaAsync('6.66 P18 (AC5.1, AC5.2) — Acrescentar: o cartão diz «Acrescentar só SOMA…» e cada item gravado tem «Tirar este item» (44 px); o toque liga o ✎ Corrigir na mesma estadia, com o item fora e o motivo começado; com acréscimo não salvo, recusa; o Salvar tira o pertence e para o remédio', async () => {
+  const r = await tela666(async () => {
+    await run(`ciAcrescentarNoExistente('${EID666}')`); await espera659();
+    const card = String(run("__el657['ciJaHospedado'].innerHTML"));
+    // com um acréscimo ainda não salvo na tela: recusa, sem trocar de modo
+    run(`ciPertSel=ciPertSel.concat([{uid:'p9', k:'cama', nome:'Caminha — cinza'}]);`);
+    await run(`ciTirarItem('${EID666}', 'pertence', 'u:p1')`); await espera659();
+    const recusa = J658('__za657').map((z) => [z[0], z[1][0]]); const modo1 = [run('ciEditandoId'), run('ciCorrigindoId')];
+    // sem acréscimo: liga o ✎ Corrigir com o casaco fora
+    run(`ciPertSel=ciPertSel.filter(function(p){ return p.uid!=='p9'; }); __za657=[];`);
+    await run(`ciTirarItem('${EID666}', 'pertence', 'u:p1')`); await espera659();
+    const card2 = String(run("__el657['ciJaHospedado'].innerHTML"));
+    const modo2 = [run('ciEditandoId'), run('ciCorrigindoId'), J658('ciPertSel').map((p) => p.uid)];
+    // o Salvar segue o ✎ Corrigir: o motivo começado e completado pela pessoa
+    run(`__el657['ciCorrigirMotivo'].value='Tirar do check-in: Casaco vermelho de lã — a tutora levou de volta';`);
+    run('ciSalvar()'); await espera659();
+    // o remédio: a linha da tela sai e o motivo diz o nome
+    run(`__lin666=[{dataset:{id:'apq'}, querySelector:function(){ return {value:'Apoquel'}; }, parentNode:{removeChild:function(){ __tirou666=1; }}}]; __tirou666=0;
+      __bkfl666=ciMedFichaLinhas; ciMedFichaLinhas=function(){ return __lin666; }; ciEditandoId='${EID666}'; CI_ACR_ESTADIA=JSON.parse(JSON.stringify(__get657('${EP666}')));`);
+    let comecoMed = '';
+    try { comecoMed = run(`ciTirarAplicar(CI_ACR_ESTADIA, [{tipo:'remedio', chave:'a:apq'}])`); } finally { run('ciMedFichaLinhas=__bkfl666;'); }
+    return { card, recusa, modo1, card2, modo2, g: J658('__grav666'), comecoMed, tirou: run('__tirou666') };
+  });
+  assert.ok(r.card.indexOf('Acrescentar só SOMA: nada que já está no check-in sai por aqui. Para tirar um item, toque em «Tirar este item» ao lado dele.') >= 0, r.card.slice(0, 400));
+  igual([(r.card.match(/>Tirar este item</g) || []).length, (r.card.match(/min-height:44px[^"]*"[^>]*onclick="ciTirarItem/g) || []).length], [3, 3], 'dois pertences e um remédio, com 44 px');
+  igual(r.recusa, [['SALVE PRIMEIRO', 'Salve primeiro o que você acrescentou; depois toque em «Tirar este item».']]);
+  igual(r.modo1, [EID666, null]);
+  igual(r.modo2, [null, EID666, ['p2']]);
+  assert.ok(r.card2.indexOf('value="Tirar do check-in: Casaco vermelho de lã — "') >= 0, r.card2.slice(0, 600));
+  igual([r.g.length, r.g[0].m, r.g[0].p.dados.pertences.map((p) => p.uid), r.g[0].p.correcao.diff], [1, 'corrigir', ['p2'], ['Pertences: saiu «Casaco vermelho de lã»']]);
+  igual([r.comecoMed, r.tirou], ['Tirar do check-in: Apoquel — ', 1]);
+});
+provaAsync('6.66 P19 (AC5.3) — o aviso final do Acrescentar que lista o que a pessoa apagou da tela e não saiu oferece «Tirar agora pelo Corrigir» (com os itens guardados para o ✎ Corrigir). Base: só «Entendi»', async () => {
+  const r = await ci666('acrescentar', { meds: { apq: APQ659() }, est: EST666({ pertences: PERTC666() }), pertences: [{ uid: 'p2', k: 'mochila', nome: 'Mochila — azul' }] });
+  const z = (r.ze || []).filter((x) => /NADA FOI REMOVIDO/.test(x[0]))[0];
+  assert.ok(z, JSON.stringify([r.ze, r.za.map((x) => x[0])]));
+  igual([z[2], z[1].indexOf('• Casaco vermelho de lã') >= 0, r.P.naoRemovidosItens], [['Tirar agora pelo Corrigir', 'Entendi'], true, [{ tipo: 'pertence', chave: 'u:p1' }]]);
+});
+provaAsync('6.66 P20 (AC6) — «Correções deste check-in (N)», da mais nova para a mais antiga; «Começar a correção por esta versão» liga o ✎ Corrigir com a tela da versão (sem gravar nada); a correção antiga sem pertences diz a frase; com a tela alterada, pergunta antes', async () => {
+  const C = [{ quando: T658(8, 9, 0), quem: 'Bia Consultora Teste', motivo: 'a tutora corrigiu a ração na saída', mudou: ['alim: "x" → "y"'], antes: { ficha: {}, medicacao: [{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'], agendaId: 'apq' }], entrada: '2026-10-08', saida: '2026-10-11' } },
+    { quando: T658(9, 9, 0), quem: 'Gestora Teste', motivo: 'a tutora trocou o casaco na entrada', mudou: ['Pertences: saiu «Casaco vermelho de lã»'], antes: { ficha: {}, medicacao: [], pertences: PERTC666(), entrada: '2026-10-08', saida: '2026-10-12' } }];
+  const r = await tela666(async () => {
+    put658(EP666, EST666({ pertences: [{ uid: 'p2', k: 'mochila', nome: 'Mochila — azul' }], correcoes: C }));
+    ctx.__e666 = db658(EP666);
+    const html = String(run(`ciCorrecoesHTML(__e666, 'checkin', '${EID666}')`));
+    run(`CI_MED_LIDO={key:'${K658}', ts:500, itens:__get657('${AG658}/itens'), lido:true}; CI_MED_LENDO=null; __esc657=[];`);
+    // a versão de 09/10 (com os pertences)
+    await run(`ciCorrigirPelaVersao('${EID666}', 1)`); await espera659();
+    const v1 = { co: run('ciCorrigindoId'), pert: J658('ciPertSel').map((p) => p.uid), card: String(run("__el657['ciJaHospedado'].innerHTML")), esc: J658('__esc657') };
+    // a de 08/10 (sem pertences guardados; o Apoquel da versão volta para a lista, pela agenda de agora)
+    await run(`ciCorrigirPelaVersao('${EID666}', 0)`); await espera659();
+    const v0 = { pert: J658('ciPertSel').map((p) => p.uid), card: String(run("__el657['ciJaHospedado'].innerHTML")), am: J658('__am666'), ent: run("__el657['ciSaida'].value") };
+    // com a tela alterada e não salva: a pergunta antes («não» = nada muda)
+    run(`ciPertSel=ciPertSel.concat([{uid:'p9', k:'cama', nome:'Caminha — cinza'}]); __zpq657=[false]; __zp657=[]; __apl666=[];`);
+    await run(`ciCorrigirPelaVersao('${EID666}', 1)`); await espera659();
+    const perg = J658('__zp657'), apl = J658('__apl666').length;
+    return { html, v1, v0, perg, apl, esc: J658('__esc657'), grav: J658('__grav666').length };
+  });
+  assert.ok(r.html.indexOf('Correções deste check-in (2)') >= 0 && r.html.indexOf('Gestora Teste') < r.html.indexOf('Bia Consultora Teste'), 'a mais nova primeiro');
+  igual([(r.html.match(/Começar a correção por esta versão/g) || []).length, r.html.indexOf('Motivo: a tutora trocou o casaco na entrada') >= 0, r.html.indexOf('Pertences: saiu «Casaco vermelho de lã»') >= 0], [2, true, true]);
+  igual([r.v1.co, r.v1.pert, r.v1.esc], [EID666, ['p1', 'p2'], []]);
+  assert.ok(/value="Voltar à versão de [^"]+: "/.test(r.v1.card), r.v1.card.slice(0, 600));
+  assert.ok(r.v0.card.indexOf('Esta correção não guardou os pertences: eles continuam como estão.') >= 0, 'a frase da correção antiga');
+  igual([r.v0.pert, r.v0.am.map((x) => x[0]), r.v0.ent], [['p2'], ['apq'], '2026-10-11'], 'os pertences de agora; o Apoquel da versão volta para a lista');
+  igual([r.perg.length, /O que está na tela e não foi salvo será trocado pela versão de .+\. Continuar\?/.test(r.perg[0][1][0]), r.apl, r.esc, r.grav], [1, true, 0, [], 0], JSON.stringify(r.perg));
+});
+// ---- AC7 a AC9 — Hóspedes de hoje: Mudar datas, a hospedagem excluída, a baixa e a saída antecipada -------------------------------------------
+// o palco de Hóspedes de hoje: a lista das estadias (EST_TODAS) lida do banco de mentira, a tela que não desenha, o aviso do esticar
+// contado, o Telegram pronto, o Biscoito com ficha (é ela que recebe o crédito da saída antecipada)
+const ARMA666H = `__bk666h={rha:renderHospedesAba, cf:checarFaltasDaEstadia, ce:(typeof orcCarregarEstadias==='function'?orcCarregarEstadias:null), tc:tgCfgPronta, zf:zFalta,
+    ham:(typeof HOSP_ANT_MEIO!=='undefined'?HOSP_ANT_MEIO:undefined), hae:hospAbaEdit, hab:hospAbaBaixa, haa:hospAbaAntecipada, rc:REPO_CACHE, cam:carregarAgendaMedTodos};
+  renderHospedesAba=function(){}; __cf666=0; checarFaltasDaEstadia=function(){ __cf666++; }; if(__bk666h.ce) orcCarregarEstadias=function(){}; carregarAgendaMedTodos=function(){};
+  tgCfgPronta=function(){ return Promise.resolve({url:'https://ponte.teste'}); }; zFalta=function(l){ var f=(l||[]).filter(function(x){ return x&&x.msg; }); if(f.length) __za657.push(['zFalta', f]); return f.length>0; };
+  if(typeof HOSP_ANT_MEIO!=='undefined') HOSP_ANT_MEIO={}; hospAbaEdit=null; hospAbaBaixa=null; hospAbaAntecipada=null; REPO_CACHE={};
+  PELUDINHOS=PELUDINHOS.concat([{n:'Biscoito', tutor:'Rita Teste', raca:'Spitz Alemão'}]);`;
+const SOLTA666H = `renderHospedesAba=__bk666h.rha; checarFaltasDaEstadia=__bk666h.cf; if(__bk666h.ce) orcCarregarEstadias=__bk666h.ce; tgCfgPronta=__bk666h.tc; zFalta=__bk666h.zf;
+  if(__bk666h.ham!==undefined) HOSP_ANT_MEIO=__bk666h.ham; hospAbaEdit=__bk666h.hae; hospAbaBaixa=__bk666h.hab; hospAbaAntecipada=__bk666h.haa; REPO_CACHE=__bk666h.rc; carregarAgendaMedTodos=__bk666h.cam;`;
+const hosp666 = async (est, fn) => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA666() });
+    put658(EP666, est);
+    run(ARMA666H);
+    run(`EST_TODAS={}; EST_TODAS['${EID666}']=__get657('${EP666}'); __esc657=[]; __au657=[]; __za657=[]; __ze657=[]; __tg658=[];`);
+    try { return await fn(); } finally { run(SOLTA666H); }
+  } finally { solta659(); }
+};
+const sync666 = () => run(`EST_TODAS['${EID666}']=__get657('${EP666}');`);
+const linha666 = () => { sync666(); return String(run(`hospAbaLinha({id:'${EID666}', e:EST_TODAS['${EID666}']}, 0)`) || ''); };
+const escEst666 = () => run('__esc657').filter((e) => /^auaulandia\/estadias\/est666/.test(String(e[1])) && !/RECUSADO/.test(e[0])).map((e) => e[0] + ' ' + String(e[1]).replace(EP666, 'EST'));
+// o cartaz da 6.57 sem esperar o resultado (a promessa só volta quando o cartaz fecha): a pessoa escreve o motivo e a senha
+const MOT_DATAS666 = 'a tutora mudou a data da viagem';
+provaAsync('6.66 P21 (AC7.1, AC7.2) — Mudar datas pelo cartaz da 6.57: antes → depois, motivo de 4 palavras e a própria senha (o Encãotador não assina); sem mudança, «Nada mudou»; duas mudanças, as duas em datas_historico, e o alteracao_anterior continua; a linha mostra a última com «ver as 2 mudanças». Base: grava com um toque', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-14'};`);
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    o.cartaz = cartaz658(); o.esc0 = escEst666();
+    o.curto = await assina658('s-bia', 'mudou'); o.caio = await assina658('s-caio', MOT_DATAS666); o.esc1 = escEst666();
+    o.ok = await assina658('s-bia', MOT_DATAS666); await espera659();
+    o.e1 = db658(EP666); o.za = J658('__za657').map((z) => z[0]);
+    // a 2ª mudança (a lista já tem a estadia nova)
+    sync666(); run(`__el657['hospEdFim']={value:'2026-10-15'};`);
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    o.ok2 = await assina658(SENHA657, 'o voo da tutora foi remarcado'); await espera659();
+    o.e2 = db658(EP666);
+    // sem mudança: «Nada mudou» no próprio cartaz
+    sync666(); run('__esc657=[];');
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    o.nada = cartaz658(); o.esc3 = escEst666().length;
+    run(`if(CORR_ATUAL) corrToque('fechar');`);
+    o.linha = linha666();
+    return o;
+  });
+  assert.ok(/12\/10\/2026/.test(r.cartaz) && /14\/10\/2026/.test(r.cartaz), 'o cartaz mostra a saída antes → depois: ' + r.cartaz.slice(0, 300));
+  igual([r.esc0, r.curto[0], /4 palavras/.test(r.curto[1]), r.caio[0], /Caio Encãotador Teste, que não pode assinar/.test(r.caio[1]), r.esc1], [[], 'conferir', true, 'conferir', true, []], JSON.stringify(r.caio));
+  assert.ok(r.ok[0] === null || r.ok[0] === 'pronto', 'gravou e o cartaz fechou com «Datas salvas»: ' + JSON.stringify(r.ok));
+  igual([r.e1.saida, r.e1.alteracao_anterior, Object.keys(r.e1.datas_historico || {}).length, r.za.indexOf('DATAS SALVAS') >= 0], ['2026-10-14', { entrada: '2026-10-08', saida: '2026-10-12' }, 1, true]);
+  const H = Object.values(r.e2.datas_historico || {}).sort((a, b) => a.registro.ts - b.registro.ts);
+  igual(H.map((h) => [h.saida_antes, h.saida, h.motivo, h.registro.por]), [['2026-10-12', '2026-10-14', MOT_DATAS666, 'Bia Consultora Teste'], ['2026-10-14', '2026-10-15', 'o voo da tutora foi remarcado', 'Gestora Teste']]);
+  igual([r.e2.alteracao_anterior, r.e2.saida], [{ entrada: '2026-10-08', saida: '2026-10-14' }, '2026-10-15']);
+  igual([/Nada mudou/.test(r.nada), r.esc3], [true, 0]);
+  assert.ok(/Datas mudadas por Gestora Teste em 09\/10\/2026 às 10:00: o voo da tutora foi remarcado/.test(r.linha) && /ver as 2 mudanças/.test(r.linha), r.linha.slice(0, 900));
+});
+const EXC666 = () => EST666({ status: 'cancelada', canceladaPor: 'Amanda Supervisora Teste', canceladaTs: T658(9, 9, 0),
+  exclusao: { x1: { tk: 'x1', motivo: 'lançada na ficha errada por engano', quem: 'Amanda Supervisora Teste', quem_papel: 'supervisor', ts: T658(9, 9, 0), planilha: 'tirar', orcamento: 'cancelar', orcamento_id: 'orc666' } } });
+provaAsync('6.66 P22 (AC7.3) — a estadia excluída: «Mudar datas» não a reabre; «Reabrir a hospedagem» pede a senha de quem exclui (a Consultora não assina; a Supervisão assina); a cascata; os dias tirados de hoje em diante voltam; os remédios parados não religam; a reserva continua cancelada; a exclusão fica; o grupo da Gestão recebe a linha. Base: reabre com um toque', async () => {
+  const r = await hosp666(EXC666(), async () => {
+    const o = {};
+    const rem = { nome: 'Biscoito', tutor: 'Rita Teste', quem: 'Amanda Supervisora Teste', motivo: 'lançada na ficha errada por engano', origem: 'override', exclusao_estadia: EID666 };
+    put658('auaulandia/removidos/2026-10-08/biscoito__rita teste', rem); put658('auaulandia/removidos/2026-10-09/biscoito__rita teste', rem); put658('auaulandia/removidos/2026-10-10/biscoito__rita teste', rem);
+    put658(AG658 + '/itens/apq', APQ659({ continuo: false, dataFim: ONTEM658, paradoEm: PE666(DIA658, { ts: T658(9, 9, 0), motivo: 'hospedagem excluída (lançada por engano): lançada na ficha errada por engano', quem: 'Amanda Supervisora Teste' }) }));
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-12'}; __esc657=[];`);
+    run(`hospEditarDatas('${EID666}')`); await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    o.recusa = J658('__za657').map((z) => [z[0], (z[1] || [])[0]]); o.esc0 = escEst666(); o.linha0 = linha666();
+    run(`__za657=[]; __p666=hospReabrirExcluidaAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['08/10/2026', '12/10/2026']})`); await espera659();
+    o.cartaz = cartaz658();
+    o.bia = await assina658('s-bia', 'a hospedagem aconteceu de verdade'); o.esc1 = escEst666();
+    o.ok = await assina658('s-amanda', 'a hospedagem aconteceu de verdade'); await espera659();
+    o.e = db658(EP666); o.rem = [db658('auaulandia/removidos/2026-10-08/biscoito__rita teste'), db658('auaulandia/removidos/2026-10-09/biscoito__rita teste'), db658('auaulandia/removidos/2026-10-10/biscoito__rita teste')].map((x) => !!x);
+    o.apq = db658(AG658 + '/itens/apq'); o.tg = J658('__tg658'); o.au = J658('__au657').map((a) => a[0]);
+    o.corr = db658('auaulandia/hospedagem-correcoes/' + EID666) || {};
+    o.linha = linha666();
+    return o;
+  });
+  igual([r.recusa.map((x) => x[0]), r.recusa[0][1], r.esc0], [['AS DATAS NÃO MUDAM POR AQUI', 'AS DATAS NÃO MUDAM POR AQUI'],
+    'Esta hospedagem foi excluída: ela não volta por «Mudar datas». Para ela voltar, use «Reabrir a hospedagem», com a senha de quem exclui (Supervisão, Gestão ou Diretoria).', []], JSON.stringify(r.recusa));
+  igual([/>Reabrir a hospedagem</.test(r.linha0), />Mudar datas</.test(r.linha0)], [true, false]);
+  for (const t of ['Biscoito volta ao Plantão nos dias da estadia, de hoje em diante (09/10, 10/10).', 'Os remédios que pararam com a exclusão (Apoquel) não voltam sozinhos: confira com a veterinária e use «Voltou a tomar» na ficha (aba Medicamentos).',
+    'A reserva do orçamento cancelada junto continua cancelada.']) assert.ok(r.cartaz.indexOf(t) >= 0, t + ' — ' + r.cartaz.slice(0, 900));
+  igual([r.bia[0], /Bia Consultora Teste, que não pode assinar/.test(r.bia[1]), r.esc1, r.ok[0]], ['conferir', true, [], 'pronto'], JSON.stringify(r.bia));
+  const re = Object.values(r.e.reaberturas || {});
+  igual([r.e.status, !!r.e.exclusao.x1, re.length, (re[0] || {}).exclusao, ((re[0] || {}).dias_de_volta || []).map((d) => d.dia), (re[0] || {}).remedios_parados, r.rem],
+    ['ativa', true, 1, 'x1', ['2026-10-09', '2026-10-10'], ['Apoquel'], [true, false, false]], JSON.stringify(r.e));
+  igual([!!r.apq.paradoEm, r.apq.continuo], [true, false], 'o remédio parado pela exclusão não religa');
+  assert.ok(r.tg.some((t) => t.grupo === 'gestao' && /^HOSPEDAGEM REABERTA: Biscoito/.test(t.texto)), JSON.stringify(r.tg));
+  assert.ok(r.au.indexOf('estadia-reaberta') >= 0 && Object.values(r.corr).some((c) => c.acao === 'reabriu'), JSON.stringify(r.au));
+  assert.ok(/Reaberta em [^<]+ por Amanda Supervisora Teste: a hospedagem aconteceu de verdade/.test(r.linha) && !/EXCLUÍDA/.test(r.linha), r.linha.slice(0, 900));
+});
+provaAsync('6.66 P23 (AC7.4) — a estadia encerrada pela baixa: «Mudar datas» manda «Desfazer a baixa»; pela saída antecipada, «Desfazer a saída antecipada»; nada é gravado. Base: abre o formulário e reabre', async () => {
+  const res = [];
+  for (const [est, fr] of [[EST666({ status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Gestora Teste', encerradaTs: T658(9, 9, 0), saida_combinada: '2026-10-12' }),
+    'Esta hospedagem teve baixa em 09/10/2026. Para ela voltar, use «Desfazer a baixa».'],
+  [EST666({ status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Gestora Teste', encerradaTs: T658(9, 9, 0), saida_real: '2026-10-09', credito_noites: 3, saida_antecipada: { em: '2026-10-09', noites: 3, por: 'Gestora Teste', ts: T658(9, 9, 0), orcamento: '' } }),
+    'Esta hospedagem teve saída antecipada em 09/10/2026. Para ela voltar, use «Desfazer a saída antecipada».']]) {
+    const r = await hosp666(est, async () => {
+      run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-14'};`);
+      run(`hospEditarDatas('${EID666}')`); await run(`hospSalvarDatas('${EID666}')`); await espera659();
+      return { za: J658('__za657').map((z) => [z[0], (z[1] || [])[0]]), esc: escEst666(), edit: run('hospAbaEdit'), st: db658(EP666).status };
+    });
+    res.push([r.za, r.esc, r.edit, r.st, fr]);
+  }
+  igual(res.map((x) => [x[0], x[1], x[2], x[3]]), res.map((x) => [[['AS DATAS NÃO MUDAM POR AQUI', x[4]], ['AS DATAS NÃO MUDAM POR AQUI', x[4]]], [], null, 'encerrada']), JSON.stringify(res));
+});
+provaAsync('6.66 P24 (AC7.5, guarda) — a estadia finalizada (check-out feito): «Mudar datas» como hoje — pergunta se reabre e reabre com as datas novas (a 6.67 traz «Reabrir o check-out»)', async () => {
+  const r = await hosp666(EST666({ status: 'finalizada', checkout: { ts: T658(9, 9, 0), quem: 'Gestora Teste' }, saida: '2026-10-09' }), async () => {
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-13'}; __zp657=[];`);
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    // a resposta do cartaz (no código novo; na base não há cartaz e a gravação já aconteceu)
+    if (run("typeof CORR_ATUAL!=='undefined' && !!CORR_ATUAL")) { await assina658('s-bia', MOT_DATAS666); await espera659(); }
+    return { perg: J658('__zp657').map((z) => z[0]), e: db658(EP666) };
+  });
+  igual([r.perg, r.e.status, r.e.saida], [['Esta hospedagem está marcada como encerrada'], 'ativa', '2026-10-13'], JSON.stringify(r));
+});
+provaAsync('6.66 P25 (AC8) — Dar baixa guarda a saída combinada (a linha diz qual era); «Desfazer a baixa» (44 px) volta a «ativa» com ela, a baixa inteira vai para baixas_desfeitas e sai do topo; a baixa de ontem pede a Gestão. Base: sem saída combinada nem volta', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    run(`__el657['hospBxData']={value:'2026-10-09'};`);
+    await run(`hospConfirmarBaixa('${EID666}')`); await espera659();
+    o.e0 = db658(EP666); o.linha = linha666();
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    o.cartaz = cartaz658();
+    o.ok = await assina658('s-bia', 'a tutora não veio buscar hoje'); await espera659();
+    o.e1 = db658(EP666); o.au = J658('__au657').map((a) => a[0]);
+    // a baixa de ontem: a Consultora não desfaz; a Gestão desfaz
+    put658(EP666, Object.assign(db658(EP666), { status: 'encerrada', saida: '2026-10-08', encerradaEm: '2026-10-08', encerradaPor: 'Bia Consultora Teste', encerradaTs: T658(8, 18, 0), saida_combinada: '2026-10-12' }));
+    sync666();
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    o.cartaz2 = cartaz658();
+    o.bia = await assina658('s-bia', 'a tutora não veio buscar ontem'); o.st2 = db658(EP666).status;
+    o.ges = await assina658(SENHA657, 'a tutora não veio buscar ontem'); await espera659();
+    o.e2 = db658(EP666);
+    return o;
+  });
+  igual([r.e0.status, r.e0.saida, r.e0.saida_combinada, r.e0.encerradaEm], ['encerrada', '2026-10-09', '2026-10-12', '2026-10-09']);
+  assert.ok(/Baixa em 09\/10\/2026 — Gestora Teste \(a saída combinada era 12\/10\/2026\)/.test(r.linha) && /min-height:44px[^"]*" onclick="hospBaixaDesfazerAbrir/.test(r.linha), r.linha.slice(0, 1200));
+  assert.ok(/Biscoito volta ao Plantão e ao alarme do remédio\./.test(r.cartaz), r.cartaz.slice(0, 600));
+  const bd = Object.values(r.e1.baixas_desfeitas || {});
+  igual([r.ok[0], r.e1.status, r.e1.saida, r.e1.encerradaEm, r.e1.saida_combinada, bd.length, (bd[0] || {}).encerradaEm, (bd[0] || {}).saida_combinada, ((bd[0] || {}).registro || {}).por],
+    ['pronto', 'ativa', '2026-10-12', null, null, 1, '2026-10-09', '2026-10-12', 'Bia Consultora Teste'], JSON.stringify(r.e1));
+  assert.ok(r.au.indexOf('estadia-baixa-desfeita') >= 0);
+  assert.ok(/Os dias entre a baixa \(08\/10\) e hoje ficam sem relatório do Plantão: confira com a equipe\./.test(r.cartaz2), r.cartaz2.slice(0, 600));
+  igual([r.bia[0], /Bia Consultora Teste, que não pode assinar/.test(r.bia[1]), r.st2, r.ges[0], r.e2.status, Object.keys(r.e2.baixas_desfeitas || {}).length], ['conferir', true, 'encerrada', 'pronto', 'ativa', 2], JSON.stringify(r.bia));
+});
+// A saída antecipada de verdade (hospConfirmarAntecipada, a da 6.38, sem mudar uma letra): o Biscoito foi embora hoje, 3 noites antes
+const ant666 = async () => {
+  run(`__el657['hospAntData']={value:'2026-10-09'};`);
+  await run(`hospConfirmarAntecipada('${EID666}')`); await espera659();
+  // o orçamento da hospedagem (a 6.38 acha pelo tutor; aqui ele é posto direto, com o que ela grava nele)
+  put658(EP666 + '/saida_antecipada/orcamento', 'orc666'); put658('auaulandia/orcamentos/orc666', { nome: 'Biscoito', tutor: 'Rita Teste', saida_real: '2026-10-09', credito_noites: 3 });
+  sync666();
+};
+const LANC666 = 'daycare/reposicao/' + K658 + '/lancamentos';
+provaAsync('6.66 P26 (AC9.1 a AC9.3) — «Desfazer a saída antecipada» (44 px, a senha da Gestão): a cascata lida do banco (cada noite, o orçamento, o saldo antes → depois); a Consultora não assina; os créditos sa- estornados numa transação, com o mesmo lote; a estadia ativa com a saída combinada; os campos em saidas_antecipadas_desfeitas; o orçamento sem a saída antecipada (guardada ao lado)', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    o.L0 = db658(LANC666) || {}; o.linha = linha666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    o.cartaz = cartaz658();
+    o.bia = await assina658('s-bia', 'a tutora voltou e o FILHOt ficou'); o.L1 = db658(LANC666) || {};
+    o.ok = await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    o.L = db658(LANC666) || {}; o.e = db658(EP666); o.orc = db658('auaulandia/orcamentos/orc666'); o.au = J658('__au657').map((a) => a[0]);
+    return o;
+  });
+  igual(Object.keys(r.L0).sort(), ['sa-est666-1', 'sa-est666-2', 'sa-est666-3'], 'a saída antecipada lançou 3 créditos');
+  assert.ok(/min-height:44px[^"]*" onclick="hospAntecipadaDesfazerAbrir/.test(r.linha), r.linha.slice(0, 1200));
+  for (const t of ['A hospedagem volta a «ativa», com a saída combinada de 12/10/2026.', 'A noite de 09/10 sai do saldo de reposição de Biscoito.', 'A noite de 10/10 sai do saldo de reposição de Biscoito.',
+    'A noite de 11/10 sai do saldo de reposição de Biscoito.', 'volta a não ter saída antecipada.', 'Saldo de reposição de Biscoito: 3 → 0.']) assert.ok(r.cartaz.indexOf(t) >= 0, t + ' — ' + r.cartaz.slice(0, 1500));
+  igual([r.bia[0], /Bia Consultora Teste/.test(r.bia[1]), Object.keys(r.L1).length, r.ok[0]], ['conferir', true, 3, 'pronto'], JSON.stringify(r.bia));
+  const est = Object.keys(r.L).filter((k) => /^est-/.test(k)).sort();
+  igual([est, est.map((k) => r.L[k].estornaId), est.map((k) => r.L[k].lote_estorno).filter((x, i, a) => a.indexOf(x) === i).length, est.map((k) => r.L[k].corr.por)],
+    [['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3'], ['sa-est666-1', 'sa-est666-2', 'sa-est666-3'], 1, ['Gestora Teste', 'Gestora Teste', 'Gestora Teste']]);
+  const d = Object.values(r.e.saidas_antecipadas_desfeitas || {})[0] || {};
+  igual([r.e.status, r.e.saida, r.e.saida_antecipada, r.e.saida_real, r.e.credito_noites, r.e.encerradaEm, d.saida_real, d.credito_noites, (d.saida_antecipada || {}).noites, d.estornos],
+    ['ativa', '2026-10-12', null, null, null, null, '2026-10-09', 3, 3, ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3']], JSON.stringify(r.e));
+  igual([r.orc.saida_real, r.orc.credito_noites, Object.values(r.orc.saida_antecipada_desfeita || {}).map((x) => [x.saida_real, x.credito_noites])], [null, null, [['2026-10-09', 3]]]);
+  assert.ok(r.au.indexOf('hospedagem-saida-antecipada-desfeita') >= 0, JSON.stringify(r.au));
+});
+provaAsync('6.66 P27 (AC9.2, AC9.4) — o crédito já usado: a cascata traz a frase da casa absorvendo e ele também é estornado; o meio feito (a estadia recusada): «Os créditos foram estornados; a hospedagem ainda não voltou» e «Terminar agora» completa sem estornar de novo', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    put658(LANC666 + '/u1', { tipo: 'uso', data: '2026-10-09', credito: 'sa-est666-1', quem: 'Recepção Teste', ts: T658(9, 9, 30) });
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    o.cartaz = cartaz658();
+    run(`__recusa657='^auaulandia/estadias/est666$';`);
+    o.r1 = await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    run('__recusa657=null;');
+    o.ze = J658('__ze657'); o.e1 = db658(EP666); o.L1 = db658(LANC666) || {}; o.linha = linha666();
+    // «Terminar agora» só completa a 2ª parte (não abre cartaz: se abrisse, a prova fecha e acusa)
+    run(`__pt666=hospAntecipadaTerminar('${EID666}');`); await espera659();
+    o.cartazTerminar = !!run("typeof CORR_ATUAL!=='undefined' && CORR_ATUAL"); run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    o.e2 = db658(EP666); o.L2 = db658(LANC666) || {};
+    return o;
+  });
+  assert.ok(r.cartaz.indexOf('Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1: o dia usado continua usado, e a casa absorve.') >= 0
+    && r.cartaz.indexOf('(este crédito já foi usado)') >= 0, r.cartaz.slice(0, 1500));
+  const est = (L) => Object.keys(L).filter((k) => /^est-/.test(k)).sort();
+  igual([est(r.L1), r.e1.status, !!r.e1.saida_antecipada], [['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3'], 'encerrada', true]);
+  assert.ok(r.ze.some((z) => z[0] === 'OS CRÉDITOS FORAM ESTORNADOS; A HOSPEDAGEM AINDA NÃO VOLTOU' && z[2][0] === 'Terminar agora'), JSON.stringify(r.ze));
+  assert.ok(/Terminar agora \(a hospedagem ainda não voltou\)/.test(r.linha), r.linha.slice(0, 1200));
+  const d = Object.values(r.e2.saidas_antecipadas_desfeitas || {})[0] || {};
+  igual([r.cartazTerminar, r.e2.status, r.e2.saida, est(r.L2), d.estornos], [false, 'ativa', '2026-10-12', ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3'], ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3']], 'nada em dobro');
+});
+provaAsync('6.66 P28 (AC9.5, AC9.6, EN2) — o check-out feito recusa (nada gravado); depois de desfeita, «Saída antecipada» não aparece e a abertura recusa com a frase; a hospConfirmarAntecipada com o texto idêntico (o hash da 6.38 P38-34)', async () => {
+  const a = await hosp666(EST666({ status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', checkout: { ts: T658(9, 9, 30) }, saida_real: '2026-10-09', credito_noites: 3,
+    saida_antecipada: { em: '2026-10-09', noites: 3, por: 'Gestora Teste', ts: T658(9, 9, 0), orcamento: '' } }), async () => {
+    await run(`hospAntecipadaDesfazerAbrir('${EID666}')`); await espera659();
+    return { za: J658('__za657').map((z) => z[0]), aberto: !!run("typeof CORR_ATUAL!=='undefined' && CORR_ATUAL"), esc: escEst666() };
+  });
+  igual(a, { za: ['REABRA O CHECK-OUT PRIMEIRO'], aberto: false, esc: [] });
+  const b = await hosp666(EST666(), async () => {
+    await ant666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar'); __za657=[];`);
+    const linha = linha666();
+    run(`hospSaidaAntecipada('${EID666}')`);
+    return { linha, za: J658('__za657').map((z) => [z[0], (z[1] || [])[0]]), aba: run('hospAbaAntecipada') };
+  });
+  const FR = /^A saída antecipada desta hospedagem foi desfeita em .+ por Gestora Teste\. Lançar de novo pelo app ainda não é possível: o crédito sairia zerado\. Use «Dar baixa» com a data certa e avise a Gestão\.$/;
+  igual([/>Saída antecipada</.test(b.linha), /foi desfeita em .+ por Gestora Teste\. Lançar de novo pelo app ainda não é possível/.test(b.linha), b.za.length, b.za[0] && b.za[0][0], FR.test((b.za[0] || [])[1] || ''), b.aba],
+    [false, true, 1, 'A SAÍDA ANTECIPADA JÁ FOI DESFEITA', true, null], JSON.stringify(b.za));
+  const src = fs.readFileSync(APP, 'utf8');
+  const fn = (n) => { const i = src.indexOf('function ' + n + '('); let d = 0, j = src.indexOf('{', i); for (; j < src.length; j++) { if (src[j] === '{') d++; else if (src[j] === '}') { d--; if (!d) break; } } return src.slice(i, j + 1); };
+  igual(crypto658.createHash('sha256').update(fn('hospConfirmarAntecipada')).digest('hex'), '3166d64efac7ae34a39badc3d219f11fb6778270ebef6ee3751986859d349cde');
+});
+provaAsync('6.66 P29 (AC9.7) — depois de desfeita, o Excluir da 6.53 não conta a saída antecipada como prova e a troca de ficha não a leva para «Conferir»', async () => {
+  const e = await hosp666(EST666(), async () => {
+    await ant666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`);
+    return db658(EP666);
+  });
+  ctx.__e666 = e;
+  const pv = J658(`hospProvaDeEstadia(__e666, {}, {})`);
+  const pl = J658(`hospPlanoDaTroca({id:'${EID666}', e:__e666, de:{refKey:'${K658}', nome:'Biscoito', tutor:'Rita Teste'}, para:{refKey:'quindim__rita teste', nome:'Quindim', tutor:'Rita Teste'}, agenda:{}, logs:{}, ficha:{}, fichaNova:{}, auditoria:{}, agora:${T658(9, 10, 0)}, hoje:'${DIA658}'})`);
+  igual([pv.bloqueia, pv.provas, (pl.conferir || []).filter((c) => c.tipo === 'credito').length, !!Object.keys(e.saidas_antecipadas_desfeitas || {}).length], [false, [], 0, true]);
+});
+// ---- AC10 — «É o mesmo / São dois»: desfazer a resposta e os pares respondidos -------------------------------------------------------------------
+const NEL_A666 = { nome: 'Nelson', tutor: 'Lara Teste' }, NEL_B666 = { nome: 'Nelson mandela', tutor: 'Lara Teste' };
+provaAsync('6.66 P30 (AC10) — «Pares já respondidos (N)» com quem e quando; «Desfazer esta resposta» (44 px; a própria senha de quem responde; o Encãotador barrado); o par do microchip sem o botão; a resposta vai para o histórico e sai; a pergunta volta no cartão, em Hóspedes de hoje e na Mesa; o outro aparelho vê pelo ouvinte, sem recarregar', async () => {
+  const o = {};
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    ctx.__na666 = NEL_A666; ctx.__nb666 = NEL_B666;
+    const ch = run('hospParChave(__na666, __nb666)'); o.ch = ch;
+    put658('daycare/hospede-mesmo/' + ch, { mesmo: true, quem: 'Bia Consultora Teste', quando: DIA658, ts: T658(9, 9, 0), fica: NEL_A666, sai: NEL_B666, par: { a: NEL_A666, b: NEL_B666 } });
+    run(`__bk666m={db:DB, ou:(typeof HOSP_MESMO_OUVINDO!=='undefined'?HOSP_MESMO_OUVINDO:undefined), ho:hospedes, ch:carregarHospedes, mr:mesaRender};
+      __db0666=DB; __on666=[]; DB={ref:function(p){ var r=__db0666.ref(p); if(p==='daycare/hospede-mesmo'){ r.on=function(ev, cb){ __on666.push(cb); cb({val:function(){ return __get657(p); }}); }; } return r; }};
+      if(typeof HOSP_MESMO_OUVINDO!=='undefined') HOSP_MESMO_OUVINDO=false; HOSP_MESMO={}; __ch666=0; carregarHospedes=function(){ __ch666++; }; mesaRender=function(){};
+      hospedes=[{nome:'Tonico', tutor:'Rita Teste', juntouPeloChip:true, tambemNaPlanilhaComo:'Tonico SRD · Rita Teste'}];`);
+    try {
+      await run('hospCarregarMesmo()'); await espera659();
+      o.junto = J658('hospJuntarDuplicados([JSON.parse(JSON.stringify(__na666)), JSON.parse(JSON.stringify(__nb666))]).length');
+      papel657('consultora', 'Bia Consultora Teste');
+      o.lista = String(run('hospParesRespondidosHtml()'));
+      papel657('monitor', 'Caio Encãotador Teste');
+      o.listaCaio = String(run('hospParesRespondidosHtml()'));
+      run(`hospMesmoDesfazerAbrir('${ch}')`); await espera659();
+      o.barrou = J658('__au657').filter((a) => /^BARROU/.test(a[1])).length; o.cartazCaio = !!run("typeof CORR_ATUAL!=='undefined' && CORR_ATUAL");
+      papel657('consultora', 'Bia Consultora Teste');
+      run(`__p666=hospMesmoDesfazerAbrir('${ch}');`); await espera659();
+      o.cartaz = cartaz658();
+      o.caio = await assina658('s-caio', 'os dois são FILHOts diferentes'); o.esc1 = J658('__esc657').length;
+      o.ok = await assina658('s-bia', 'os dois são FILHOts diferentes'); await espera659();
+      o.no = db658('daycare/hospede-mesmo/' + ch); o.hist = db658('daycare/hospede-mesmo-historico/' + ch) || {}; o.au = J658('__au657').map((a) => a[0]);
+      // o outro aparelho (o celular da Plantonista, com o Plantão aberto) ainda tinha a resposta: o ouvinte traz o banco
+      run(`HOSP_MESMO={}; HOSP_MESMO['${ch}']={mesmo:true, fica:__na666, sai:__nb666}; __ch666=0;`);
+      run(`__on666.forEach(function(cb){ cb({val:function(){ return __get657('daycare/hospede-mesmo'); }}); });`); await espera659();
+      o.chamou = run('__ch666'); o.mem = J658('HOSP_MESMO');
+      run('hospedes=hospJuntarDuplicados([JSON.parse(JSON.stringify(__na666)), JSON.parse(JSON.stringify(__nb666))]);');
+      o.separados = J658('hospedes.length'); o.pend = J658('hospParesPendentes().length'); o.pendHtml = String(run('hospParesPendentesHtml()'));
+      o.cartao = String(run('hospSuspeitaHTML(hospedes[0])'));
+    } finally { run('DB=__bk666m.db; if(__bk666m.ou!==undefined) HOSP_MESMO_OUVINDO=__bk666m.ou; hospedes=__bk666m.ho; carregarHospedes=__bk666m.ch; mesaRender=__bk666m.mr; HOSP_MESMO={};'); }
+  } finally { solta659(); }
+  igual(o.junto, 1, 'com a resposta, o Plantão mostra um só');
+  for (const t of ['Pares já respondidos (2)', 'Nelson · Lara Teste e Nelson mandela · Lara Teste', 'É o mesmo: fica Nelson · Lara Teste, sai Nelson mandela · Lara Teste', 'respondido por Bia Consultora Teste em 09/10 09:00', 'É o mesmo: juntado pelo microchip'])
+    assert.ok(o.lista.indexOf(t) >= 0, t + ' — ' + o.lista.slice(0, 900));
+  igual([(o.lista.match(/>Desfazer esta resposta</g) || []).length, /min-height:44px[^"]*" onclick="hospMesmoDesfazerAbrir/.test(o.lista), (o.listaCaio.match(/>Desfazer esta resposta</g) || []).length, o.barrou, o.cartazCaio], [1, true, 0, 1, false]);
+  assert.ok(o.cartaz.indexOf('A pergunta "É o mesmo FILHOt?" volta para Nelson · Lara Teste e Nelson mandela · Lara Teste. Até alguém responder de novo, os dois aparecem separados no Plantão, em Hóspedes de hoje e nas contagens.') >= 0, o.cartaz.slice(0, 900));
+  igual([o.caio[0], /Caio Encãotador Teste, que não pode assinar/.test(o.caio[1]), o.esc1, o.ok[0]], ['conferir', true, 0, 'pronto'], JSON.stringify(o.caio));
+  const H = Object.values(o.hist);
+  igual([o.no, H.length, (H[0] || {}).resposta && H[0].resposta.mesmo, ((H[0] || {}).dada || {}).quem, (((H[0] || {}).desfeita || {}).registro || {}).por, o.au.indexOf('hospedes-resposta-desfeita') >= 0],
+    [null, 1, true, 'Bia Consultora Teste', 'Bia Consultora Teste', true], JSON.stringify(o.hist));
+  igual([o.chamou > 0, o.mem, o.separados, o.pend > 0, /POSSÍVEL DUPLICADO/.test(o.pendHtml), /É o mesmo FILHOt que/.test(o.cartao)], [true, {}, 2, true, true, true]);
+});
+
+// ---- AC11 e AC12 — os avisos à Recepção -------------------------------------------------------------------------------------------------------
+const AVE666 = (extra) => Object.assign({ key: K658, itemId: 'apq', medNome: 'Apoquel', hospNome: 'Biscoito', pet: 'Biscoito', tutor: 'Rita Teste', modo: 'contavel', restante: 2, unidade: 'comprimido',
+  motivo: 'manual', status: 'pendente', entries: [], criado_por: 'Plantonista Teste', _ts: T658(9, 9, 0) }, extra || {});
+const AVR666 = (extra) => Object.assign({ hospNome: 'Biscoito', tutor: 'Rita Teste', estadiaId: EID666, tipo: 'racao', itemNome: 'Ração/comida', deficit: 300, unidade: 'g', status: 'pendente', entries: [],
+  criado_por: 'Encãotadora Teste', _ts: T658(9, 9, 10) }, extra || {});
+const ARMA666A = `__bk666a={ae:AVISOS_ESTOQUE_CACHE, ar:AVISOS_RACAO_CACHE, mg:MED_AGENDA_GERAL, ch:cfHosp, ce:cfEstadiaId, at:__avisoTravado};`;
+const SOLTA666A = 'AVISOS_ESTOQUE_CACHE=__bk666a.ae; AVISOS_RACAO_CACHE=__bk666a.ar; MED_AGENDA_GERAL=__bk666a.mg; cfHosp=__bk666a.ch; cfEstadiaId=__bk666a.ce; __avisoTravado=__bk666a.at;';
+const avisos666 = async (fn) => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ estoque: { modo: 'contavel', inicial: 20, restante: 2, acabando: { quem: 'Plantonista Teste', ts: T658(9, 9, 0) } } }) }, log: DADA666() });
+    put658('auaulandia/avisos-estoque/a1', AVE666()); put658('auaulandia/avisos-racao/r1', AVR666());
+    run(ARMA666A);
+    run(`AVISOS_ESTOQUE_CACHE=__get657('auaulandia/avisos-estoque')||{}; AVISOS_RACAO_CACHE=__get657('auaulandia/avisos-racao')||{}; __esc657=[]; __au657=[]; __za657=[]; __al657=[];`);
+    papel657('consultora', 'Bia Consultora Teste');
+    try { return await fn(); } finally { run(SOLTA666A); }
+  } finally { solta659(); }
+};
+const syncAv666 = () => run(`AVISOS_ESTOQUE_CACHE=__get657('auaulandia/avisos-estoque')||{}; AVISOS_RACAO_CACHE=__get657('auaulandia/avisos-racao')||{};`);
+provaAsync('6.66 P31 (AC11.1 a AC11.3) — «Retirar este aviso (foi engano)» (44 px; a própria senha de quem trabalha na Recepção): o aviso sai do número da Recepção, de avisoAbertoDoItem, da Mesa, dos painéis e da trava de repetido; fica em «Retirados», com «Reabrir»; a marca «acabando» sai; nada é apagado; varredura: todo leitor passa pelo predicado único', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    o.card = String(run("avisoCardHTML('a1')")); o.cardR = String(run("avisoRacaoCardHTML('r1')"));
+    run('atualizarBadgeRecepcao();'); o.n0 = run('_recepcaoPrevN');
+    run(`__p666=avisoRetirarAbrir('estoque', 'a1');`); await espera659();
+    o.cartaz = cartaz658();
+    o.caio = await assina658('s-caio', 'o aviso foi tocado sem querer'); o.esc1 = J658('__esc657').length;
+    o.ok = await assina658('s-bia', 'o aviso foi tocado sem querer'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`);
+    run(`__p666=avisoRetirarAbrir('racao', 'r1');`); await espera659();
+    o.okR = await assina658('s-bia', 'a ração estava na mochila'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`);
+    syncAv666();
+    o.a1 = db658('auaulandia/avisos-estoque/a1'); o.r1 = db658('auaulandia/avisos-racao/r1'); o.acab = db658(AG658 + '/itens/apq/estoque/acabando');
+    o.au = J658('__au657').filter((a) => /aviso-retirado$/.test(a[0])).map((a) => [a[0], a[2].quem, a[2].assinou]);
+    run('atualizarBadgeRecepcao();'); o.n1 = run('_recepcaoPrevN');
+    o.aberto = J658(`avisoAbertoDoItem('${K658}', 'apq')`); o.mesa = J658('contarPendencias().faltas');
+    o.painel = J658(`paDadosLoja(AVISOS_ESTOQUE_CACHE, AVISOS_RACAO_CACHE, [], '${DIA658}').abertos.length`);
+    run(`__el657['avisosEstoqueList']={innerHTML:''};`); run('renderAvisosEstoque();'); o.lista = String(run("__el657['avisosEstoqueList'].innerHTML"));
+    // a trava de aviso repetido da Conferência: com o de ração retirado, a falta de agora gera um aviso novo
+    run(`cfHosp={nome:'Biscoito', tutor:'Rita Teste'}; cfEstadiaId='${EID666}'; __avisoTravado={}; __esc657=[];`);
+    run('cfCriarAvisoRacao(250, "g")'); await espera659();
+    o.novo = Object.keys(db658('auaulandia/avisos-racao') || {}).length;
+    return o;
+  });
+  assert.ok(/min-height:44px[^"]*" onclick="avisoRetirarAbrir\('estoque','a1'\)">Retirar este aviso \(foi engano\)</.test(r.card) && /Retirar este aviso \(foi engano\)/.test(r.cardR), r.card.slice(-700));
+  for (const t of ['O aviso sai da lista de abertos, do número da Recepção e dos painéis. Fica guardado em «Retirados», riscado, com quem, quando e o motivo. Nada é apagado.', 'A marca "está acabando" do Apoquel sai.'])
+    assert.ok(r.cartaz.indexOf(t) >= 0, t);
+  igual([r.caio[0], r.esc1, r.ok[0], r.okR[0]], ['conferir', 0, 'pronto', 'pronto'], JSON.stringify(r.caio));
+  igual([r.a1.status, r.a1.retirado.motivo, r.a1.retirado.registro.por, r.a1.retirado.status_antes, r.a1.entries.slice(-1)[0].acao, r.a1.medNome, r.acab, r.r1.status],
+    ['retirado', 'o aviso foi tocado sem querer', 'Bia Consultora Teste', 'pendente', 'Retirado: o aviso foi tocado sem querer', 'Apoquel', null, 'retirado']);
+  igual(r.au, [['estoque-aviso-retirado', 'Bia Consultora Teste', 'Bia Consultora Teste'], ['racao-aviso-retirado', 'Bia Consultora Teste', 'Bia Consultora Teste']]);
+  igual([r.n0, r.n1, r.aberto, r.mesa, r.painel, r.novo], [2, 0, null, 0, 0, 2]);
+  assert.ok(/Retirados \(1\)/.test(r.lista) && /avisoReabrirAbrir\('estoque','a1'\)/.test(r.lista) && /Retirado \(foi engano\)/.test(r.lista), r.lista.slice(-900));
+  // varredura: nenhum leitor dos avisos compara o status com 'resolvido' por conta própria (fora do predicado e da escrita)
+  const src = extractMainScript(fs.readFileSync(APP, 'utf8')).split('\n');
+  const dono = (i) => { for (let j = i; j >= 0; j--) { const m = /^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\(/.exec(src[j]); if (m) return m[1]; } return '?'; };
+  const cru = []; src.forEach((l, i) => { if (/\.status\b[^;]{0,24}'resolvido'|'resolvido'[^;]{0,24}\.status\b/.test(l) && !/^\s*\/\//.test(l)) cru.push(dono(i)); });
+  igual(cru.filter((x, i, a) => a.indexOf(x) === i).sort(), ['avisoEncerrado', 'avisoEncerradoHerdado', 'avisoEntradaCorrigirGravar']);
+});
+provaAsync('6.66 P32 (AC11.4) — trocar o tipo do aviso de ração pede o motivo de 4 palavras e a própria senha; o tipo novo é gravado e a troca fica em tipo_trocas. Base: troca sem motivo', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    run(`__p666=avisoTrocarTipo('r1', 'comida-natural');`); await espera659();
+    o.cartaz = cartaz658(); o.esc0 = J658('__esc657').length;
+    o.curto = await assina658('s-bia', 'errado');
+    o.ok = await assina658('s-bia', 'o aviso nasceu com o tipo errado'); await espera659();
+    o.r1 = db658('auaulandia/avisos-racao/r1'); o.au = J658('__au657').filter((a) => a[0] === 'aviso-tipo-corrigido').map((a) => [a[2].de, a[2].para, a[2].quem, a[2].assinou]);
+    return o;
+  });
+  igual([/O que faltou/.test(r.cartaz), /Comida natural/.test(r.cartaz), r.esc0, r.curto[0], r.ok[0]], [true, true, 0, 'conferir', 'pronto'], r.cartaz.slice(0, 500));
+  const t = Object.values(r.r1.tipo_trocas || {});
+  igual([r.r1.tipo, r.r1.itemNome, t.length, (t[0] || {}).de, (t[0] || {}).para, (t[0] || {}).motivo, ((t[0] || {}).registro || {}).por, r.au],
+    ['comida-natural', 'Comida natural', 1, 'racao', 'comida-natural', 'o aviso nasceu com o tipo errado', 'Bia Consultora Teste', [['racao', 'comida-natural', 'Bia Consultora Teste', 'Bia Consultora Teste']]]);
+});
+provaAsync('6.66 P33 (AC11.5) — o aviso de estoque cujo remédio já não está baixo: o cartão diz «O estoque voltou: 30 comprimidos (conferido em …)» e oferece «Encerrar: o estoque voltou», que só preenche o motivo (nada encerra sozinho); a pessoa assina e encerra pelo caminho de sempre', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    run(`MED_AGENDA_GERAL={}; MED_AGENDA_GERAL['${K658}']={itens:{apq:${JSON.stringify(APQ659({ estoque: { modo: 'contavel', inicial: 30, restante: 30 } }))}}};
+      AVISOS_ESTOQUE_CACHE.a1.motivo='projecao'; __el657['avr_acao_a1']={value:'', focus:function(){}}; __el657['avr_assina_a1']={value:'', focus:function(){}};`);
+    o.card = String(run("avisoCardHTML('a1')"));
+    run("avisoEstoqueVoltouEncerrar('a1', 'O estoque voltou para 30 comprimidos')"); await espera659();
+    o.texto = run("__el657['avr_acao_a1'].value"); o.esc0 = J658('__esc657').length; o.st0 = db658('auaulandia/avisos-estoque/a1').status;
+    run("__el657['avr_assina_a1'].value='Bia Consultora Teste';"); run("avisoResolver('a1')"); await espera659();
+    o.a1 = db658('auaulandia/avisos-estoque/a1');
+    // a projeção ainda baixa: nada aparece
+    run(`MED_AGENDA_GERAL['${K658}'].itens.apq.estoque.restante=2; AVISOS_ESTOQUE_CACHE.a1.status='pendente';`);
+    o.card2 = String(run("avisoCardHTML('a1')"));
+    // o horário trocado por datas (6.54) levou o estoque para a linha nova: vale o estoque dela (o aviso «manual» com a marca lá)
+    run(`AVISOS_ESTOQUE_CACHE.a1.motivo='manual'; MED_AGENDA_GERAL['${K658}'].itens={apq:${JSON.stringify(APQ659({ continuo: false, dataFim: DIA658, trocadoPor: 'mcr_t_apq_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_apq_20261010' }))},
+      mcr_t_apq_20261010:${JSON.stringify(APQ659({ horarios: ['20:00'], dataInicio: AMANHA658, estoque: { modo: 'contavel', inicial: 20, restante: 2, acabando: { quem: 'Wandela Teste', ts: T658(9, 9, 0) } } }))}};`);
+    o.card3 = String(run("avisoCardHTML('a1')"));
+    run(`MED_AGENDA_GERAL['${K658}'].itens.mcr_t_apq_20261010.estoque={modo:'contavel', inicial:30, restante:30};`);
+    o.card4 = String(run("avisoCardHTML('a1')"));
+    // sem estoque nenhum no remédio: nada se afirma
+    run(`MED_AGENDA_GERAL['${K658}'].itens={apq:${JSON.stringify(APQ659({ estoque: null }))}};`);
+    o.card5 = String(run("avisoCardHTML('a1')"));
+    return o;
+  });
+  assert.ok(/O estoque voltou: 30 comprimidos \(conferido em 09\/10 10:00\)/.test(r.card) && />Encerrar: o estoque voltou</.test(r.card), r.card.slice(0, 1500));
+  igual([r.texto, r.esc0, r.st0, r.a1.status, r.a1.resolvido_motivo, r.a1.resolvido_por], ['O estoque voltou para 30 comprimidos', 0, 'pendente', 'resolvido', 'O estoque voltou para 30 comprimidos', 'Bia Consultora Teste']);
+  igual([/O estoque voltou/.test(r.card2), /O estoque voltou/.test(r.card3), /O estoque voltou: 30 comprimidos/.test(r.card4), /O estoque voltou/.test(r.card5)], [false, false, true, false]);
+});
+provaAsync('6.66 P34 (AC12) — «Corrigir esta entrada» (uma entrada nova; a antiga riscada, com o texto intacto e quem corrigiu); o nome escrito validado e o login como «quem» no rastro; «Encerrar» com 4 palavras; «Reabrir» pelo cartaz, com 4 palavras e a senha (estoque e ração)', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    put658('auaulandia/avisos-estoque/a1/entries', [{ acao: 'liguei para a tutora', assinatura: 'Bia Consultora Teste', quando: '09/10 09:00', ts: T658(9, 9, 0) }]); syncAv666();
+    o.trilha = String(run("avisoTrilhaHTML('estoque', 'a1', AVISOS_ESTOQUE_CACHE.a1)"));
+    run(`__p666=avisoEntradaCorrigirAbrir('estoque', 'a1', 0);`); await espera659();
+    await run(`corrToque('continuar', {valores:['liguei para a tutora às 9h; ela traz o remédio amanhã']})`); await espera659();
+    o.okC = await assina658('s-bia', 'escrevi a providência pela metade'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`); syncAv666();
+    o.E = db658('auaulandia/avisos-estoque/a1/entries'); o.trilha2 = String(run("avisoTrilhaHTML('estoque', 'a1', AVISOS_ESTOQUE_CACHE.a1)"));
+    // o nome escrito (rotina): «a» não vale; o login é o «quem» do rastro e o nome escrito é o «assinou»
+    papel657('gestao', 'Gestora Teste');
+    run(`__el657['avr_acao_a1']={value:'liguei de novo para a tutora'}; __el657['avr_assina_a1']={value:'a'}; avisoAddEntrada('a1');`); await espera659();
+    o.alNome = J658('__al657').slice(-1)[0]; o.escNome = J658('__esc657').length;
+    run(`__el657['avr_assina_a1'].value='Bia Consultora Teste'; avisoAddEntrada('a1');`); await espera659();
+    o.audEnt = J658('__au657').filter((a) => a[0] === 'estoque-aviso-entrada').map((a) => [a[2].quem, a[2].assinou]);
+    syncAv666();
+    // «Encerrar» com 4 palavras
+    run(`__el657['avr_acao_a1'].value='resolvido'; __al657=[]; __esc657=[]; avisoResolver('a1');`); await espera659();
+    o.alEnc = J658('__al657').slice(-1)[0]; o.escEnc = J658('__esc657').length;
+    run(`__el657['avr_acao_a1'].value='a tutora trouxe o remédio hoje'; avisoResolver('a1');`); await espera659();
+    syncAv666(); o.st1 = db658('auaulandia/avisos-estoque/a1').status;
+    // «Reabrir» pelo cartaz da 6.57
+    run(`__esc657=[]; __p666=avisoReabrir('a1');`); await espera659();
+    o.cartazR = cartaz658();
+    o.curtoR = await assina658('s-bia', 'abc'); o.escR = J658('__esc657').length;
+    o.okR = await assina658('s-bia', 'a tutora não trouxe o remédio'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`);
+    o.a1 = db658('auaulandia/avisos-estoque/a1'); o.audR = J658('__au657').filter((a) => a[0] === 'estoque-aviso-reaberto').length;
+    // a ração: o mesmo nome validado, as 4 palavras e o Reabrir pelo cartaz
+    run(`__el657['avrr_acao_r1']={value:'ok'}; __el657['avrr_assina_r1']={value:'Bia Consultora Teste'}; __al657=[]; avisoRacaoResolver('r1');`); await espera659();
+    o.alR = J658('__al657').slice(-1)[0];
+    run(`__el657['avrr_acao_r1'].value='a ração estava na mochila'; avisoRacaoResolver('r1');`); await espera659(); syncAv666();
+    run(`__p666=avisoRacaoReabrir('r1');`); await espera659();
+    o.okRR = await assina658('s-bia', 'a ração acabou de novo hoje'); await espera659();
+    o.r1 = db658('auaulandia/avisos-racao/r1');
+    return o;
+  });
+  assert.ok(/min-height:44px[^"]*" onclick="avisoEntradaCorrigirAbrir\('estoque','a1',0\)">Corrigir esta entrada</.test(r.trilha), r.trilha);
+  igual([r.okC[0] === null || r.okC[0] === 'pronto', r.E.length, r.E[0].acao, r.E[0].corrigida.quem, r.E[0].corrigida.motivo, r.E[1].acao, r.E[1].corrige],
+    [true, 2, 'liguei para a tutora', 'Bia Consultora Teste', 'escrevi a providência pela metade', 'Correção da entrada de 09/10 09:00: liguei para a tutora às 9h; ela traz o remédio amanhã', T658(9, 9, 0)]);
+  assert.ok(/text-decoration:line-through/.test(r.trilha2) && /Corrigida por Bia Consultora Teste em 09\/10 10:00: escrevi a providência pela metade/.test(r.trilha2), r.trilha2);
+  igual([/Escreva o seu nome de verdade/.test(r.alNome || ''), r.escNome, r.audEnt], [true, 0, [['Gestora Teste', 'Bia Consultora Teste']]]);
+  igual([/pelo menos 4 palavras/.test(r.alEnc || ''), r.escEnc, r.st1], [true, 0, 'resolvido'], JSON.stringify(r.alEnc));
+  igual([/Reabrir este aviso/.test(r.cartazR), r.curtoR[0], r.escR, r.okR[0] === null || r.okR[0] === 'pronto', r.a1.status, r.a1.entries.slice(-1)[0].acao, r.a1.reaberto_motivo, r.audR],
+    [true, 'conferir', 0, true, 'em_processo', 'Reaberto: a tutora não trouxe o remédio', 'a tutora não trouxe o remédio', 1]);
+  igual([/pelo menos 4 palavras/.test(r.alR || ''), r.okRR[0] === null || r.okRR[0] === 'pronto', r.r1.status, r.r1.entries.slice(-1)[0].acao], [true, true, 'em_processo', 'Reaberto: a ração acabou de novo hoje']);
+});
+
+// ---- AC13 — a dose anulada nas contas da 6.53 ---------------------------------------------------------------------------------------------------
+provaAsync('6.66 P35 (AC13, caminho 5) — a dose anulada (6.58): o Excluir segue (não é prova de que dormiu aqui); a troca de ficha não a conta como dada (a cópia continua levando a anulada); o acerto do estoque da ficha nova não a desconta. Base: bloqueia:true', async () => {
+  const AN = { anulada: { quem: 'Gestora Teste', motivo: 'registrada no FILHOt errado', ts: T658(9, 9, 0) } };
+  const pv = J658(`hospProvaDeEstadia({}, {'2026-10-09':{'apq_08-00':${JSON.stringify(DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4), AN))}}}, {})`);
+  const pv2 = J658(`hospProvaDeEstadia({}, {'2026-10-09':{'apq_08-00':${JSON.stringify(DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)))}}}, {})`);
+  igual([pv, pv2.bloqueia], [{ bloqueia: false, provas: [] }, true]);
+  // a troca de ficha (o molde da 6.53): a dose do Apoquel da ficha errada, anulada, não conta como dada à hóspede; a cópia vai
+  const L = LOGS653(); const dk = IT_CONF653 + '_08-00'; L['2026-10-08'][dk] = Object.assign({}, L['2026-10-08'][dk], AN);
+  ctx.__pl666 = { id: ID653, e: EST653(), de: DE653, para: PARA653, agenda: AGENDA653(), logs: L, ficha: FICHA653(), fichaNova: {}, auditoria: AUD653(), agora: AGORA653, hoje: DIA653 };
+  const P = J658('hospPlanoDaTrocaValendo(__pl666)'), T = J658('hospPlanoDaTroca(__pl666)');
+  igual([(P.remedioDaAntigaDado || []).some((x) => x.nome === 'Apoquel'), (T.remedioDaAntigaDado || []).some((x) => x.nome === 'Apoquel'), JSON.stringify(P.copiarLog) === JSON.stringify(T.copiarLog)], [false, true, true], JSON.stringify(P.remedioDaAntigaDado));
+  // o estoque: a anulada não desconta (nenhuma transação); a válida desconta
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659({ estoque: { modo: 'contavel', inicial: 20, restante: 11, contados: {} } }) }, log: {} });
+    run('__esc657=[];');
+    const r1 = await run(`hospEstoqueAcertar('${K658}', 'apq', [{ck:'2026-10-09__apq_08-00', q:'1', anulada:true}])`); await espera659();
+    const e1 = [r1, J658('__esc657').length, db658(AG658 + '/itens/apq/estoque/restante')];
+    await run(`hospEstoqueAcertar('${K658}', 'apq', [{ck:'2026-10-09__apq_08-00', q:'1'}])`); await espera659();
+    igual([e1, db658(AG658 + '/itens/apq/estoque/restante')], [[false, 0, 11], 10]);
+  } finally { solta659(); }
+});
+
+// ---- AC14 a AC18 — quem assina, a Linha do tempo, o H02 e o que não pode mudar -----------------------------------------------------------------------
+provaAsync('6.66 P36 (AC14, AC15) — senha de posto não assina e o nome digitado não vale (é a senha que assina); as ações novas e as antigas da lista aparecem em português na Linha do tempo; nenhuma senha em registro, rastro ou auditoria', async () => {
+  const r = await hosp666(EST666({ status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Gestora Teste', encerradaTs: T658(9, 9, 0), saida_combinada: '2026-10-12' }), async () => {
+    const o = {};
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    o.posto = await assina658('s-posto', 'a tutora não veio buscar hoje');
+    o.nome = await assina658('Bia Consultora Teste', 'a tutora não veio buscar hoje');
+    o.ok = await assina658('s-bia', 'a tutora não veio buscar hoje'); await espera659();
+    o.tudo = JSON.stringify(run('__db657')) + JSON.stringify(run('__au657'));
+    return o;
+  });
+  igual([r.posto[0], /senha de posto não assina/.test(r.posto[1]), r.nome[0], /Essa senha não é de ninguém cadastrado/.test(r.nome[1]), r.ok[0]], ['conferir', true, 'conferir', true, 'pronto'], JSON.stringify([r.posto, r.nome]));
+  igual(['s-bia', 's-posto', SENHA657].map((s) => r.tudo.indexOf('"' + s + '"')), [-1, -1, -1], 'nenhuma senha gravada');
+  const acoes = ['checkin-regua', 'checkin-remedio-parou', 'estadia-datas', 'estadia-baixa', 'estadia-reaberta', 'estadia-baixa-desfeita', 'hospedagem-saida-antecipada', 'hospedagem-saida-antecipada-desfeita',
+    'hospedes', 'hospedes-resposta-desfeita', 'estoque-aviso-entrada', 'estoque-aviso-resolvido', 'estoque-aviso-reaberto', 'estoque-aviso-retirado', 'racao-aviso-entrada', 'racao-aviso-resolvido',
+    'racao-aviso-reaberto', 'racao-aviso-retirado', 'aviso-tipo-corrigido', 'aviso-entrada-corrigida', 'medicacao-agenda-dedupe'];
+  const sem = acoes.filter((a) => run(`acaoNome(${JSON.stringify(a)})`) === a);
+  igual(sem, [], 'sem tradução: ' + sem.join(', '));
+  assert.ok(/^Desfez a baixa da hospedagem/.test(run(`acaoRotulo({acao:'estadia-baixa-desfeita', detalhe:'desfez a baixa'})`)), run(`acaoRotulo({acao:'estadia-baixa-desfeita', detalhe:'x'})`));
+});
+provaAsync('6.66 P37 (H02, guarda) — a hospedagem com a saída já passada: «Corrigir esta hospedagem» › Corrigir abre o ✎ Corrigir pelo id da estadia', async () => {
+  const r = await hosp666(EST666({ entrada: '2026-10-01', saida: '2026-10-05' }), async () => {
+    run(`__bk666i={ai:abrirItemDoMenu, ce:ciEscolher, cc:ciCorrigirExistente, hc:HOSP_CORR, hr:hospCorrRender}; __ci666=[];
+      abrirItemDoMenu=function(){}; ciEscolher=function(i){ __ci666.push(['escolher', PELUDINHOS[i].n]); }; ciCorrigirExistente=function(id){ __ci666.push(['corrigir', id]); }; HOSP_CORR=null; hospCorrRender=function(){};`);
+    try { return { ok: run(`hospCorrigirInformacao('${EID666}')`), ci: J658('__ci666') }; }
+    finally { run('abrirItemDoMenu=__bk666i.ai; ciEscolher=__bk666i.ce; ciCorrigirExistente=__bk666i.cc; HOSP_CORR=__bk666i.hc; hospCorrRender=__bk666i.hr;'); }
+  });
+  igual(r, { ok: true, ci: [['escolher', 'Biscoito'], ['corrigir', EID666]] });
+});
+provaAsync('6.66 P38 (AC17, AC18, guarda) — a área protegida e as declarações ck*/pt* sem mudança; nenhuma função nova começa com ck ou pt; hospConfirmarAntecipada, repSaldo, as 26 do livro-caixa, as guardas das pontes, a régua, a trava e o alarme letra por letra iguais aos da base; nenhuma prova antiga saiu do arquivo nem falhou (a régua de 35 cenários, o alarme contra a base, o RG2 e o regate567 rodam fora, no scratchpad)', async () => {
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const nomes = run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  const html = fs.readFileSync(APP, 'utf8');
+  const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
+  const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
+  igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+  const BASE = {"repSaldo": "566c707e9b91295e7f498532b5c59c00772525fe829081ed5b3864266aed6c9c", "repAnulados": "6e310abb12aca9e4e23b627bd38d5b7d8f79395c19d767c3a560783c02a3f587", "repAgendaDe": "6250ee1d9dcd111e953577bdbf238caa605b0bd060188daff1d41b6d24ae7916", "repAgendaDeL": "26d9ab54f79e6d431390c5a9ed9ac5d6c5ecc3b185b681053da39f5cc0d8d94f", "repSaldoDe": "66cfbca5de0062599b253ac3d253f0c4a73fd36c5aedcee99e0ffe365c425e1a", "repSaldoReposicao": "300b3fd968334c7beee48a8c39dc8017e0dd60c2b0c6889c7aeced7c94b07253", "repSaldoReposicaoDe": "4c40b17e4573d280fced0b8fdd80011b35b6635e89262463398f80a128e7ffbf", "repSaldoRepDepois": "056465752fd250dce69fb5374b0da3edc8f08a372a7ce04fcb4262899a04d4a4", "repTetosDe": "f4bf8f7e9b0e5c37656bfec99ed9b733cd0d4fb91da75df6ea764ede13700731", "repTetoVencidas": "c98fa52623cd05028b2806f86f7726a05910289a03d23213c6bab9007edeb574", "repTrocasPendentesLista": "4b385e6e6aed312bf4b80d56de0569df5035ad8cc09eda5a43c48a314d46a4e8", "repVoltasVencidas": "50c7396bdde63eeadae143c005306ed1b46e73aad1701efeeec3ec8c8714c1e5", "repVoltasVencidasValendo": "9f280e810abe51240ad3b2ddd6b37bedff4af9c521afcfa3df9fb58657e29477", "repVencidasSemDesfecho": "aa10590f67b3a659eb7c8bea6eba0019f20b88dc8fb5055ee1c4a001dab19d0f", "repLivresParaMarcar": "0e3be33e19678e9bb089202ac7a8f35a27c187297378841e00b8c6b10dfde8a8", "repCreditoLivre": "c067dcf0ae259d45de5116111c1136a628b9b2be3e1aa089e570b1166fcaf7a1", "repRepetidas": "edaa3359be68bf3aca24d49ccf389ebfa5b6c817de44ba62988d84a24873ae1d", "repCreditoVivoNaData": "60be90cc31b12d3dd080b999395108d7f74b447ad2929461f9b0a36c65fa1e4f", "repFaltaChave": "b992f24f940cd0e7b6859e3bb6b0815a3d8cb28bd9c1e51e507025386782840e", "repVeioChave": "8546c8e199b4ee96a9ca5fc89f783f574f42516418caf07deeac918c388dd8ae", "repDiaTemUso": "b950e48dd4e895daa8956a567a8d78ca80c5cdc369cd464839f2cc1b3dc211a4", "repVeioDevolvido": "28a52eb718b1dc8f5df5fa90eed50a1cbea0944ee6f0040e155079aa57e351cc", "repExtratoPares": "1779749be00c5ee6fb9e7d2e3c7319798e7953ffc340fd99338c707f33784a90", "repDesfechoRegistro": "ed2fc57bd306e5427237b862c2bc03372366099b8e8ba7370ef9e4f2063fd1d7", "repDesfechoGravar": "62279ae41b19ae4d4d69545522c4471ae852d7769c3334fdce437c76d7e1d99c", "repBaixaPelaPresenca": "f47db188a17d584f92a06512fccf5e72b11dcc579d74848495e7201404912de5", "banhoFaltaAgendar": "7d2036b8abdc5e8e52b429c2d93b58e3695039ba2222934d3b46e3e57dddecca", "banhoFaltaVerificar": "1bd91886890b46db62644529be03bb5e51a7711eeb7208d47778f6e2e73e6b3e", "ckRedesenharDeFora": "2bc367e117371b22b548ceb15dfb5cd7e8889d5a98dd87eabf89c7c75acf8466", "pendAvisarChegada": "afd47e11d9a89feddbb49380bf058a8421874353472c17c423bb653302b803e8", "tgAvisar": "fe030a1d1f9175992bed0d2416d57ebb298ab60f55dd7990c1f9682d16ef1c49", "tgAvisarAlteracao": "a2992b21868f9377003340f350e3b2b93421697d83c57e2cb300ecbd281440e9", "dashPonteChamarJa": "dcddee702d3a081a5a619b60737fcc3b604e41131d26309da44a6427a8dfaa1c", "dashEspelhar": "b391f81b75745520a46daaa65f2284a4a3a4b475797e642167e09e922d9b6405", "dashAutoSincronizar": "ba29c5cfc857f2c630014f1c649bbeb2788dcfc00db27f3137a607d3161bdf1a", "hospConfirmarAntecipada": "626c463d53e361d819dc385be496f223e5114d22e3f745d1ba4ee060ba6b8d8e", "medTocaDepoisDeHoje": "a15191d36b756f139803e519b66e9a41be6a0a6c3027c4688740e2cfeeb1e50f", "medAgendaToca": "b8e6e081565815561679fa5a1ad2849112c8e585a1e4b45a3fa4f5754f7a6b08", "medAgendaRecusa": "5f7c1c8d9ad87cf3aa3c59c44a5b64054fb8f72f2d2cc4464423de38734552c3", "medAgendaRecusaDaTela": "e846c0a88ecd84341de8a314a4ffe994fb21cc4b1c8c93e3fef8a0e045ea05cf", "mcrReguaDaAgenda": "1a85ebb971f86c45d94625b564326540d505b8b4f2e073362218401f6653f248", "mcrAgendaRegua": "b4b9b00c706caae89d5f244456bd389ba1940f11b71e660718e2d3c6cd281c69", "medDoseValendo": "192a5c12ce8aff3bd066a5c55718853fdd33559500d9c9657309584a1144a0d5", "medItemAnulado": "fc6ae76333bbf135f6f05e5a7584d1304e88098b7467e53b9774e883b73db416", "hospPlanoDaTroca": "c9bb8f5d958fb597ad150c577896cacd602a588e7bedec6047df446d342f950c", "repTransacaoExtrato": "8c5dd1d9c5aae5dc7218873406d5b3ac88ea52d98fe9613d781ca95801d63787", "repLoteEstornarGravar": "8e3122cea6575a93921b7fa85bf44f4b4fe5d8ec6fae866cbfff5886d62a38b6"};
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(run(n + '.toString()')); });
+  igual(agora, BASE, 'letra por letra iguais às da base c71e55d');
+  const src = fs.readFileSync(__filename, 'utf8');
+  const conta = {}; ['6.38', '6.47', '6.52', '6.53', '6.54', '6.57', '6.58', '6.59', '6.60', '6.61', '6.62', '6.65', 'QA42', 'QA43', 'QA44', 'QA46', 'QA49'].forEach((v) => { conta[v] = (src.match(new RegExp("prova(?:Async)?\\('" + v.replace('.', '\\.') + "[ ']", 'g')) || []).length; });
+  igual(conta, { '6.38': 55, '6.47': 49, '6.52': 42, '6.53': 95, '6.54': 98, '6.57': 41, '6.58': 105, '6.59': 89, '6.60': 51, '6.61': 55, '6.62': 46, '6.65': 86, QA42: 1, QA43: 1, QA44: 4, QA46: 3, QA49: 3 }, 'nenhuma prova antiga saiu do arquivo');
+  const caiu = falhas.filter((f) => /^(6\.(38|47|48|52|53|54|57|58|59|60|61|62|65)\b|QA4[2-9]\b)/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+// ---- 2ª rodada (o gate CONCERNS do QA, Quinn, 10/10) — as 20 provas de ataque do QA (QA01 a QA20), com o resultado certo depois da correção,
+// e as provas dos defeitos plantados pelo QA que passavam pela Fase 0 (QA21 a QA36). O roteiro de cada ataque é o do QA (scratchpad/qa666/ataque-*.js).
+console.log('\n6.66 — 2ª rodada: o ataque do QA (a dose dada com a pergunta aberta, «Ler a medicação de novo», a baixa da tela velha, os estornos do meio feito) e os defeitos que passavam');
+const qaGrav666 = (r) => r.esc.filter((e) => !/^quem-recebeu/.test(e) && !/^transaction AG\/_ts/.test(e) && !/^regua/.test(e));
+// MÉDIO-1: 07:30, o Apoquel das 08:00 vai para 20:00 junto com material novo; a pergunta «quem recebeu» fica aberta até 08:20 e a Plantonista
+// dá a das 08:00 às 08:05 (o alarme da agenda antiga). A régua anotada na ordem das gravações (para ver que ela vem depois da pergunta).
+const QA_TOCTOU666 = async (modo) => {
+  ctx.__qaHook666 = () => {
+    relogio658(T658(9, 8, 20));
+    put658(LOG658 + '/apq_08-00', DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 5)));
+  };
+  let r;
+  try {
+    r = await ci666(modo, { agora: T658(9, 7, 30), log: {}, meds: { apq: APQ659({ horarios: ['20:00'] }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]),
+      palco: `ciQuemRecebeu=function(it){ __qr666.push(JSON.parse(JSON.stringify(it||[]))); __esc657.push(['quem-recebeu', '-']); __qaHook666(); return Promise.resolve('Gestora Teste'); };
+        __mr666=mcrReguaDaAgenda; mcrReguaDaAgenda=function(){ __esc657.push(['regua', '-']); return __mr666.apply(this, arguments); };` });
+  } finally { run("if(typeof __mr666!=='undefined' && __mr666){ mcrReguaDaAgenda=__mr666; __mr666=null; }"); }
+  r.log = db658(LOG658) || {};
+  return r;
+};
+for (const [n, modo] of [['01', 'acrescentar'], ['02', 'corrigir']]) {
+  provaAsync('6.66 QA' + n + ' (MÉDIO-1, ' + modo + ') — a dose dada com a pergunta «quem recebeu» aberta conta: a régua lê o registro DEPOIS da pergunta, logo antes da trava — hoje só a das 08:00 (dada às 08:05), o 20:00 amanhã; a ordem «pergunta → régua → trava». 1ª rodada e base: hoje ["apq@20:00"] (dose em dobro)', async () => {
+    const r = await QA_TOCTOU666(modo);
+    const apqHoje = r.hoje.filter((x) => /^(apq|mcr_t_apq)/.test(x));
+    igual([r.qr.length, Object.keys(r.log), apqHoje, r.amanha], [1, ['apq_08-00'], ['apq@08:00'], ['mcr_t_apq_20261010@20:00']], 'DOSE EM DOBRO? ' + JSON.stringify([r.hoje, r.amanha]));
+    igual(r.esc.filter((e) => /^(quem-recebeu|regua|transaction AG\/_ts)/.test(e)), ['quem-recebeu -', 'regua -', 'transaction AG/_ts'], JSON.stringify(r.esc));
+    const L = linhas666(r, /CORREÇÃO SALVA|ACRESCENTADO/) || [];
+    assert.ok(L.some((l) => /^Check-in: Apoquel/.test(l)), 'a confirmação diz o que a régua fez: ' + JSON.stringify(r.za));
+  });
+}
+provaAsync('6.66 QA03 (MÉDIO-1, controle) — o check-in novo não pergunta nada entre a régua e a trava: às 07:30, sem dose dada, o horário novo vale hoje', async () => {
+  const r = await ci666('novo', { agora: T658(9, 7, 30), log: {}, meds: { apq: APQ659({ horarios: ['20:00'] }) }, P: { sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' } });
+  igual([r.hoje, r.amanha], [['apq@20:00'], ['apq@20:00']]);
+});
+provaAsync('6.66 QA04 — duas vezes por dia, a das 08:00 já dada: a tela muda para 09:00 e 21:00 (✎ Corrigir, SUBSTITUIR, Acrescentar e novo): hoje 08:00 e 20:00, amanhã 09:00 e 21:00 — nunca três doses num dia', async () => {
+  const out = [];
+  for (const [modo, P] of [['corrigir', {}], ['corrigir', { substituir: true, sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }], ['acrescentar', {}], ['novo', { sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }]]) {
+    const zen = ZEN658({ estoque: { modo: 'contavel', inicial: 20, restante: 11 } });
+    const r = await ci666(modo, { itens: { zen }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, car: { ids: { zen: 1 }, sigs: {} },
+      meds: { zen: Object.assign({}, zen, { horarios: ['09:00', '21:00'] }) }, P });
+    out.push([modo + (P.substituir ? '/subst' : ''), r.hoje, r.amanha]);
+  }
+  out.forEach((x) => {
+    igual(x[1].map((d) => d.split('@')[1]).sort(), ['08:00', '20:00'], x[0] + ' hoje');
+    igual(x[2].map((d) => d.split('@')[1]).sort(), ['09:00', '21:00'], x[0] + ' amanhã');
+  });
+});
+// LOW-6: o remédio escrito de novo com outro nome é remédio novo (como em toda porta); a confirmação avisa
+const QA05_AV666 = 'Atenção: «Apoquel 16 mg» entrou como remédio novo e toca hoje às 20:00. «Apoquel», que saiu da lista, já teve a dose de hoje (08:00). Se é o mesmo remédio, confira com a veterinária antes das 20:00: a dose de hoje pode sair em dobro.';
+provaAsync('6.66 QA05 (LOW-6) — ✎ Corrigir: o Apoquel tirado e escrito de novo às 20:00 — «APOQUEL» herda o id (a régua vale); «Apoquel 16 mg» é remédio novo (toca hoje), e a confirmação avisa que o Apoquel que saiu já teve a dose de hoje (com o registro do dia) ou que ela pode já ter sido dada (sem ele); sem dose hoje, ou com o Apoquel ainda na lista, nenhum aviso', async () => {
+  const N16 = (extra) => Object.assign({ nome: 'Apoquel 16 mg', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: true, tipo: 'medicamento', origem: 'vet', dataInicio: '2026-10-01' }, extra || {});
+  const comDia = async (o, dia) => {
+    try { return await ci666('corrigir', Object.assign({ palco: `__sd666=selectedDate; selectedDate=${dia ? 'new Date(2026, 9, 1, 12, 0, 0)' : 'new Date()'};` }, o)); }
+    finally { run("if(typeof __sd666!=='undefined' && __sd666){ selectedDate=__sd666; __sd666=null; }"); }
+  };
+  const a = await ci666('corrigir', { meds: { ci_n1: N16({ nome: 'APOQUEL' }) } });
+  const b = await comDia({ meds: { ci_n2: N16() } });
+  const c = await comDia({ meds: { ci_n2: N16() } }, 'outro dia');
+  const d = await comDia({ agora: T658(9, 7, 30), log: {}, meds: { ci_n2: N16() } });
+  const e = await comDia({ meds: { apq: APQ659(), ci_n2: N16() } });
+  // o registro manda, não o relógio: a das 08:00 não dada às 10:00 → sem aviso; a das 08:00 dada adiantada às 07:50, com a tela às 07:55 → aviso
+  const f = await comDia({ log: {}, meds: { ci_n2: N16() } });
+  const g = await comDia({ agora: T658(9, 7, 55), log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 7, 50)) }, meds: { ci_n2: N16() } });
+  igual([a.hoje, a.amanha, (a.P.medAvisos || []).length], [['apq@08:00'], ['mcr_t_apq_20261010@20:00'], 0], 'o mesmo nome em maiúsculas herda o id');
+  const Lb = linhas666(b, /CORREÇÃO SALVA/) || [], Lc = linhas666(c, /CORREÇÃO SALVA/) || [];
+  igual([b.hoje, b.P.medParados, Lb.filter((l) => /^Atenção:/.test(l))], [['ci_n2@20:00'], ['Apoquel'], [QA05_AV666]], JSON.stringify(Lb));
+  assert.ok(b.au.some((x) => x[0] === 'checkin-remedio-parecido') && run("acaoNome('checkin-remedio-parecido')") === 'Check-in: aviso do remédio novo parecido com um que saiu da lista', 'o rastro do aviso, em português na Linha do tempo');
+  igual(Lc.filter((l) => /^Atenção:/.test(l)), [QA05_AV666.replace('já teve a dose de hoje (08:00)', 'tinha dose hoje às 08:00 (pode já ter sido dada)')], JSON.stringify(Lc));
+  igual([(linhas666(d, /CORREÇÃO SALVA/) || []).filter((l) => /^Atenção:/.test(l)), (linhas666(e, /CORREÇÃO SALVA/) || []).filter((l) => /^Atenção:/.test(l)),
+    (linhas666(f, /CORREÇÃO SALVA/) || []).filter((l) => /^Atenção:/.test(l)), (linhas666(g, /CORREÇÃO SALVA/) || []).filter((l) => /^Atenção:/.test(l))], [[], [], [], [QA05_AV666]]);
+});
+provaAsync('6.66 QA06 — a meia-noite: a tela abriu em 09/10 e grava às 00:10 de 10/10 (✎ Corrigir 08:00 → 20:00; a das 08:00 de 09/10 dada): uma dose por dia; também o Apoquel das 23:30 dado às 23:35 e mudado para 00:30 depois da meia-noite', async () => {
+  const a = await ci666('corrigir', { agora: T658(10, 0, 10), meds: { apq: APQ659({ horarios: ['20:00'] }) } });
+  const f10a = await filaQA659f0(a.itens, 10), f11a = await filaQA659f0(a.itens, 11);
+  const ap23 = APQ659({ horarios: ['23:30'] });
+  const b = await ci666('corrigir', { agora: T658(10, 0, 10), itens: { apq: ap23 }, log: { 'apq_23-30': DOSE658('apq', 'Apoquel', '23:30', 'comprimido', T658(9, 23, 35)) },
+    meds: { apq: Object.assign({}, ap23, { horarios: ['00:30'] }) } });
+  const f10b = await filaQA659f0(b.itens, 10), f11b = await filaQA659f0(b.itens, 11);
+  assert.ok(f10a.length === 1 && f11a.length === 1, 'uma dose por dia (08:00→20:00): ' + JSON.stringify([f10a, f11a]));
+  assert.ok(f10b.length <= 1 && f11b.length === 1, 'uma dose por dia (23:30→00:30): ' + JSON.stringify([f10b, f11b]));
+});
+const qaPlantaoTroca666 = () => {
+  const velho = Object.assign(APQ659(), { continuo: false, dataFim: DIA658, trocadoPor: 'mcr_t_apq_20261010' });
+  const novo = Object.assign(APQ659({ horarios: ['20:00'] }), { dataInicio: AMANHA658, continuacaoDe: 'apq' });
+  put658(AG658 + '/itens/apq', velho); put658(AG658 + '/itens/mcr_t_apq_20261010', novo); put658(AG658 + '/_ts', 777);
+};
+provaAsync('6.66 QA07 — dois aparelhos: o Plantão troca o Apoquel por datas depois que o check-in abriu; o ✎ Corrigir velho é recusado; depois de «Ler a medicação de novo» (linha não mexida e linha mexida), hoje só 08:00 e amanhã só 20:00', async () => {
+  const a = await ci666('corrigir', { meds: { apq: APQ659({ q: '2' }) }, mudaBanco: qaPlantaoTroca666 });
+  const recusou = !!linhas666(a, /O CHECK-IN NÃO FOI SALVO/);
+  const ag = () => ({ apq: Object.assign(APQ659(), { continuo: false, dataFim: DIA658, trocadoPor: 'mcr_t_apq_20261010' }), mcr_t_apq_20261010: Object.assign(APQ659({ horarios: ['20:00'] }), { dataInicio: AMANHA658, continuacaoDe: 'apq' }) });
+  const b = await ci666('corrigir', { itens: ag(), car: { ids: { mcr_t_apq_20261010: 1 }, sigs: {} }, meds: { mcr_t_apq_20261010: Object.assign(APQ659({ horarios: ['20:00'] }), { dataInicio: AMANHA658 }) } });
+  const c = await ci666('corrigir', { itens: ag(), car: { ids: { apq: 1, mcr_t_apq_20261010: 1 }, sigs: {} }, meds: { apq: APQ659(), mcr_t_apq_20261010: Object.assign(APQ659({ horarios: ['20:00'] }), { dataInicio: AMANHA658 }) } });
+  igual([recusou, a.itens.apq.q, b.hoje, b.amanha], [true, '1', ['apq@08:00'], ['mcr_t_apq_20261010@20:00']]);
+  assert.ok(c.hoje.filter((x) => /apq/.test(x)).length <= 1 && c.amanha.filter((x) => /apq/.test(x)).length <= 1, 'a linha mexida não pode pedir duas doses: ' + JSON.stringify([c.hoje, c.amanha]));
+});
+provaAsync('6.66 QA08 — a trava sem resposta em 20 s no Acrescentar, no SUBSTITUIR e no check-in novo: nada gravado e a tela diz que o banco não respondeu', async () => {
+  const res = [];
+  for (const [modo, P] of [['acrescentar', {}], ['corrigir', { substituir: true, sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }], ['novo', { sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }]]) {
+    const r = await ci666(modo, { meds: { apq: APQ659({ q: '2' }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]), P,
+      palco: `__mt666=mcrTravaAgenda; mcrTravaAgenda=function(){ return new Promise(function(){}); };`,
+      depois: async () => { try { const t = run('__tm657').filter((x) => x.ms === run('CORR_PRAZO')); t.forEach((x) => x.fn()); await espera659(); } finally { run('mcrTravaAgenda=__mt666;'); } } });
+    res.push([modo + (P.substituir ? '/subst' : ''), qaGrav666(r), (linhas666(r, /O CHECK-IN NÃO FOI SALVO/) || [])[0] || '', r.itens.apq.q]);
+  }
+  res.forEach((x) => { igual([x[1], /^O banco ainda não respondeu/.test(x[2]), x[3]], [[], true, '1'], x[0]); });
+});
+provaAsync('6.66 QA09 — a sondagem do @sm (C1 e C2) com a cópia lida que a tela manda: a régua; sem a cópia lida: a trava recusa (nada gravado)', async () => {
+  const out = {};
+  for (const modo of ['corrigir', 'acrescentar']) {
+    const com = await ci666(modo, { meds: { apq: APQ659({ horarios: ['20:00'] }) } });
+    const sem = await ci666(modo, { lido: false, meds: { apq: APQ659({ horarios: ['20:00'] }) } });
+    out[modo] = { com: [com.hoje, com.amanha], sem: [sem.hoje, qaGrav666(sem).length] };
+  }
+  igual([out.corrigir.com, out.acrescentar.com], [[['apq@08:00'], ['mcr_t_apq_20261010@20:00']], [['apq@08:00'], ['mcr_t_apq_20261010@20:00']]]);
+  igual([out.corrigir.sem, out.acrescentar.sem], [[['apq@08:00'], 0], [['apq@08:00'], 0]]);
+});
+provaAsync('6.66 QA10 (LOW-1, decisão estreita aceita) — o «não está em uso» com a trava RECUSANDO com erro: a parada grava sem andar o carimbo (a 6.62 P26(c) fixa isso; o «sem resposta» de verdade anda o carimbo, P14)', async () => {
+  arma659();
+  let ts, it;
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA666() });
+    run(`__mtq666=mcrTravaAgenda; mcrTravaAgenda=function(){ return Promise.reject(new Error('transaction failed: disconnect')); };`);
+    try { await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659(); } finally { run('mcrTravaAgenda=__mtq666;'); }
+    ts = db658(AG658 + '/_ts'); it = db658(AG658 + '/itens/apq');
+  } finally { solta659(); }
+  igual([ts, !!it.paradoEm, it.continuo], [500, true, false]);
+});
+const qaEst666 = (L) => Object.keys(L || {}).filter((k) => /^est-/.test(k)).sort();
+provaAsync('6.66 QA11 — «Desfazer a saída antecipada» com a noite de 10/10 já estornada à mão: a cascata diz «já estava estornada», só as outras duas são estornadas, o estorno antigo fica intacto e o saldo vai de 2 a 0; o registro aponta só os estornos desta desfeita', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    put658(LANC666 + '/est-sa-est666-2', { tipo: 'estorno', data: DIA658, motivo: 'estorno', obs: 'estornado à mão pela Gestão', estornaId: 'sa-est666-2', corr: { por: 'Gestora Teste' }, quem: 'Gestora Teste', ts: T658(9, 9, 40) });
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    o.cartaz = cartaz658();
+    o.ok = await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    o.L = db658(LANC666) || {}; o.e = db658(EP666);
+    return o;
+  });
+  assert.ok(r.cartaz.indexOf('A noite de 10/10: já estava estornada.') >= 0 && r.cartaz.indexOf('Saldo de reposição de Biscoito: 2 → 0.') >= 0, r.cartaz.slice(0, 1500));
+  igual([r.ok[0], qaEst666(r.L), r.L['est-sa-est666-2'].obs, r.L['est-sa-est666-1'].lote_estorno === r.L['est-sa-est666-3'].lote_estorno, r.e.status, ((Object.values(r.e.saidas_antecipadas_desfeitas || {})[0] || {}).estornos || []).slice().sort()],
+    ['pronto', ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3'], 'estornado à mão pela Gestão', true, 'ativa', ['est-sa-est666-1', 'est-sa-est666-3']]);
+});
+provaAsync('6.66 QA12 (LOW-5) — o meio feito: os créditos estornados no aparelho A, a estadia recusada; o aparelho B (sem a memória) abre o cartaz de novo: nada é estornado de novo, a estadia volta e o registro da desfeita aponta os 3 estornos do Extrato (1ª rodada: [])', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    run(`__recusa657='^auaulandia/estadias/est666$';`);
+    try { o.a = await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659(); } finally { run('__recusa657=null;'); }
+    run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    o.L1 = db658(LANC666) || {}; o.st1 = db658(EP666).status;
+    run('HOSP_ANT_MEIO={};');   // o aparelho B não tem a memória do A
+    run(`__p666=hospAntecipadaTerminar('${EID666}');`); await espera659();
+    o.cartazB = cartaz658();
+    o.b = await assina658(SENHA657, 'terminar o desfazer da saída antecipada'); await espera659();
+    o.L2 = db658(LANC666) || {}; o.e = db658(EP666);
+    return o;
+  });
+  const d = Object.values(r.e.saidas_antecipadas_desfeitas || {})[0] || {};
+  igual([qaEst666(r.L1).length, r.st1, r.b[0], qaEst666(r.L2), r.e.status, (r.cartazB.match(/já estava estornada/g) || []).length, (d.estornos || []).slice().sort()],
+    [3, 'encerrada', 'pronto', ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3'], 'ativa', 3, ['est-sa-est666-1', 'est-sa-est666-2', 'est-sa-est666-3']], JSON.stringify(d));
+});
+provaAsync('6.66 QA13 — dois aparelhos: o A desfaz; o B, com o cartaz aberto antes, assina depois: recusado, nenhum estorno a mais', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    o.a = await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    run(`__qb666=null; hospAntecipadaDesfazerGravar('${EID666}', {papel:'gestao', por:'Gestora Teste', login:'Gestora Teste', motivo:'a tutora voltou e o FILHOt ficou', ts:${T658(9, 10, 5)}}, '2026-10-12').then(function(x){ __qb666=x; });`);
+    await espera659(); o.b = J658('__qb666');
+    o.L2 = db658(LANC666) || {}; o.e = db658(EP666);
+    return o;
+  });
+  igual([r.a[0], r.b && r.b.ok, qaEst666(r.L2).length, Object.keys(r.e.saidas_antecipadas_desfeitas || {}).length], ['pronto', false, 3, 1]);
+});
+provaAsync('6.66 QA14 (LOW-4, EN2) — a tela velha com o formulário da saída antecipada aberto antes da desfeita: depois da desfeita, a linha mostra a frase da EN2 no lugar do formulário (sem «Confirmar saída antecipada» e sem o botão «Saída antecipada»). 1ª rodada: o formulário continuava e confirmava', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    run(`__p666=hospAntecipadaDesfazerAbrir('${EID666}');`); await espera659();
+    await assina658(SENHA657, 'a tutora voltou e o FILHOt ficou'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    sync666();
+    run(`hospAbaAntecipada='${EID666}';`);   // o outro aparelho tinha o formulário aberto
+    o.form = String(run(`hospAbaLinha({id:'${EID666}', e:EST_TODAS['${EID666}']}, 0)`) || '');
+    return o;
+  });
+  igual([/Confirmar saída antecipada/.test(r.form), /hospConfirmarAntecipada\(/.test(r.form), /hospSaidaAntecipada\(/.test(r.form), /A saída antecipada desta hospedagem foi desfeita em /.test(r.form)], [false, false, false, true], r.form.slice(0, 900));
+});
+const EXCQA666 = { x1: { tk: 'x1', motivo: 'lançada no FILHOt errado', quem: 'Amanda Supervisora Teste', quem_papel: 'supervisor', ts: T658(9, 9, 30) } };
+provaAsync('6.66 QA15 (LOW-2) — a hospedagem excluída e a baixa de uma tela velha: a baixa relê o banco e não grava; a excluída que já recebeu a baixa por cima (dado antigo) mostra «Reabrir a hospedagem» e não «Desfazer a baixa»; o «Desfazer a baixa» recusa (também na gravação, com a senha da Consultora) e manda para a «Reabrir»; a «Reabrir» (a senha de quem exclui) volta a «ativa», guarda a baixa e tira do topo a baixa e o «cancelada por». 1ª rodada: a Consultora reabria pelo «Desfazer a baixa»', async () => {
+  const a = await hosp666(EST666({ status: 'cancelada', exclusao: EXCQA666, canceladaPor: 'Amanda Supervisora Teste', canceladaTs: T658(9, 9, 30) }), async () => {
+    const o = {};
+    run(`hospAbaBaixa='${EID666}'; __el657['hospBxData']={value:'2026-10-09'}; EST_TODAS['${EID666}']=Object.assign({}, EST_TODAS['${EID666}'], {status:'ativa'});`);   // a tela velha ainda via «ativa»
+    await run(`hospConfirmarBaixa('${EID666}')`); await espera659();
+    o.e = db658(EP666); o.za = J658('__za657').map((z) => [z[0], (z[1] || [])[0]]); o.esc = escEst666();
+    return o;
+  });
+  igual([a.e.status, !!a.e.encerradaEm, a.esc], ['cancelada', false, []], JSON.stringify(a.esc));
+  assert.ok(a.za.some((z) => z[0] === 'A BAIXA NÃO FOI DADA' && /^Esta hospedagem foi excluída em outro aparelho\. A baixa não foi dada\./.test(z[1] || '')), JSON.stringify(a.za));
+  const B = { status: 'encerrada', exclusao: EXCQA666, canceladaPor: 'Amanda Supervisora Teste', canceladaTs: T658(9, 9, 30), saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Bia Consultora Teste', encerradaTs: T658(9, 9, 40), saida_combinada: '2026-10-12' };
+  const b = await hosp666(EST666(B), async () => {
+    const o = {};
+    o.linha = linha666();
+    run(`hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    o.za = J658('__za657').map((z) => [z[0], (z[1] || [])[0]]); o.cartaz = !!run("typeof CORR_ATUAL!=='undefined' && CORR_ATUAL");
+    run(`__rb666=null; hospBaixaDesfazerGravar('${EID666}', {papel:'consultora', por:'Bia Consultora Teste', login:'Bia Consultora Teste', motivo:'a tutora não veio buscar hoje', ts:${T658(9, 10, 1)}, depois:{saida:'12/10/2026'}}, true, EST_TODAS['${EID666}']).then(function(x){ __rb666=x; });`); await espera659();
+    o.grav = J658('__rb666'); o.e1 = db658(EP666); o.datas = String(run(`hospDatasRecusaTexto(EST_TODAS['${EID666}'])`) || '');
+    run(`__p666=hospReabrirExcluidaAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['08/10/2026', '12/10/2026']})`); await espera659();
+    o.bia = await assina658('s-bia', 'a exclusão foi um engano');
+    o.sup = await assina658('s-amanda', 'a exclusão foi um engano'); await espera659();
+    o.e2 = db658(EP666);
+    return o;
+  });
+  igual([/>Reabrir a hospedagem</.test(b.linha), /hospBaixaDesfazerAbrir/.test(b.linha), />Mudar datas</.test(b.linha)], [true, false, false], b.linha.slice(0, 900));
+  igual([b.za[0] && b.za[0][0], b.cartaz, b.grav && b.grav.ok, /use «Reabrir a hospedagem»/.test((b.grav || {}).erro || ''), b.e1.status, /^Esta hospedagem foi excluída: ela não volta por «Mudar datas»/.test(b.datas)], ['ESTA HOSPEDAGEM FOI EXCLUÍDA', false, false, true, 'encerrada', true], JSON.stringify([b.za, b.grav, b.datas]));
+  const re = Object.values(b.e2.reaberturas || {})[0] || {};
+  igual([b.bia[0], b.sup[0], b.e2.status, 'encerradaEm' in b.e2, 'saida_combinada' in b.e2, 'canceladaPor' in b.e2, (re.baixa_por_cima || {}).encerradaEm, !!b.e2.exclusao.x1],
+    ['conferir', 'pronto', 'ativa', false, false, false, '2026-10-09', true], JSON.stringify(b.e2));
+});
+provaAsync('6.66 QA16 (q24) — «Mudar datas»: o cartaz aberto; outro aparelho exclui a hospedagem; a assinatura chega depois: nada gravado (a gravação relê a estadia)', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-14'};`);
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    put658(EP666 + '/status', 'cancelada'); put658(EP666 + '/exclusao', { x1: { motivo: 'lançada no FILHOt errado', ts: T658(9, 10, 1) } });
+    o.ok = await assina658('s-bia', MOT_DATAS666); await espera659();
+    o.e = db658(EP666);
+    return o;
+  });
+  igual([r.e.status, r.e.saida, Object.keys(r.e.datas_historico || {}).length], ['cancelada', '2026-10-12', 0]);
+});
+provaAsync('6.66 QA17 (LOW-3) — «Desfazer a baixa»: a baixa das 23:58 de 09/10, o cartaz aberto às 23:59 (baixa de hoje) e assinado às 00:01 de 10/10: a Consultora é barrada (a baixa já é de ontem: a Gestão); a Gestão desfaz. 1ª rodada: a Consultora desfazia', async () => {
+  const BX = { status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Bia Consultora Teste', encerradaTs: T658(9, 23, 58), saida_combinada: '2026-10-12' };
+  const r = await hosp666(EST666(BX), async () => {
+    const o = {};
+    relogio658(T658(9, 23, 59));
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    relogio658(T658(10, 0, 1));
+    o.bia = await assina658('s-bia', 'a tutora não veio buscar ontem'); await espera659();
+    o.st1 = db658(EP666).status; o.au = J658('__au657').filter((a) => /^BARROU/.test(a[1])).length;
+    run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    o.ges = await assina658(SENHA657, 'a tutora não veio buscar ontem'); await espera659();
+    o.e = db658(EP666);
+    return o;
+  });
+  igual([r.st1, r.au > 0, r.ges[0], r.e.status], ['encerrada', true, 'pronto', 'ativa'], JSON.stringify([r.bia, r.ges]));
+});
+provaAsync('6.66 QA18 — «É o mesmo»: dois aparelhos desfazem a mesma resposta: o 2º não grava nada de novo; nenhum FILHOt de outro par é tocado', async () => {
+  const o = {};
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    ctx.__na666 = NEL_A666; ctx.__nb666 = NEL_B666;
+    const ch = run('hospParChave(__na666, __nb666)');
+    const ch2 = run(`hospParChave({nome:'Mel', tutor:'Ana Teste'}, {nome:'Mel Spitz', tutor:'Ana Teste'})`);
+    put658('daycare/hospede-mesmo/' + ch, { mesmo: true, quem: 'Bia Consultora Teste', quando: DIA658, ts: T658(9, 9, 0), fica: NEL_A666, sai: NEL_B666, par: { a: NEL_A666, b: NEL_B666 } });
+    put658('daycare/hospede-mesmo/' + ch2, { mesmo: false, quem: 'Bia Consultora Teste', quando: DIA658, ts: T658(9, 9, 5) });
+    run(`HOSP_MESMO=__get657('daycare/hospede-mesmo')||{};`);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p666=hospMesmoDesfazerAbrir('${ch}');`); await espera659();
+    o.a = await assina658('s-bia', 'os dois são FILHOts diferentes'); await espera659();
+    run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    run(`__qm666=null; hospMesmoDesfazerGravar('${ch}', {por:'Amanda Supervisora Teste', papel:'supervisor', motivo:'os dois são FILHOts diferentes', ts:${T658(9, 10, 3)}}).then(function(x){ __qm666=x; });`);
+    await espera659(); o.b = J658('__qm666');
+    o.hist = db658('daycare/hospede-mesmo-historico/' + ch) || {}; o.outro = db658('daycare/hospede-mesmo/' + ch2); o.no = db658('daycare/hospede-mesmo/' + ch);
+    o.histOutro = db658('daycare/hospede-mesmo-historico/' + ch2);
+  } finally { run('HOSP_MESMO={};'); solta659(); }
+  igual([o.a[0], o.b && o.b.ok, Object.keys(o.hist).length, o.no, o.outro && o.outro.mesmo, o.histOutro], ['pronto', false, 1, null, false, null]);
+});
+provaAsync('6.66 QA19 — aviso de estoque: retirar → o número da Recepção desce; «Reabrir» (4 palavras e a senha) → o número volta; a marca «está acabando» não volta junto (como o «Reabrir» de sempre)', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    run('atualizarBadgeRecepcao();'); o.n0 = run('_recepcaoPrevN');
+    run(`__p666=avisoRetirarAbrir('estoque', 'a1');`); await espera659();
+    o.ret = await assina658('s-bia', 'o aviso foi tocado sem querer'); await espera659(); run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    syncAv666(); run('atualizarBadgeRecepcao();'); o.n1 = run('_recepcaoPrevN');
+    run(`__p666=avisoReabrirAbrir('estoque', 'a1');`); await espera659();
+    o.curto = await assina658('s-bia', 'engano');
+    o.reab = await assina658('s-bia', 'o estoque ainda está acabando'); await espera659(); run(`if(CORR_ATUAL) corrToque('fechar');`); await espera659();
+    syncAv666(); run('atualizarBadgeRecepcao();'); o.n2 = run('_recepcaoPrevN');
+    o.a1 = db658('auaulandia/avisos-estoque/a1'); o.acab = db658(AG658 + '/itens/apq/estoque/acabando');
+    o.aberto = J658(`avisoAbertoDoItem('${K658}', 'apq')`);
+    return o;
+  });
+  igual([r.n0, r.n1, r.n2, r.curto[0], r.a1.status, Object.keys(r.a1.retiradas_desfeitas || {}).length, !!r.aberto, r.acab], [2, 1, 2, 'conferir', 'em_processo', 1, true, null]);
+});
+// MÉDIO-2: «Ler a medicação de novo» na tela — as linhas como o Check-in as desenha (o campo e o dataset), a impressão de quando chegaram
+// (data-lido, a mesma conta da ciMedLinhaFp), a faixa «Confirmado/Mudou» e a lista (#ciMeds) onde a linha nova entra.
+const QA20_LINHA666 = (id, conf, campos) => `(function(){ var el={dataset:{id:'${id}', conf:'${conf}'}, __c:${JSON.stringify(campos)}, __m:[], parentNode:__pai666,
+    querySelectorAll:function(s){ if(s==='.on') return []; return this.__c.map(function(c){ return {type:'text', value:c[1], getAttribute:function(){ return c[0]; }, closest:function(){ return null; }}; }); },
+    querySelector:function(){ return null; }, insertAdjacentHTML:function(p, h){ this.__m.push(h); }};
+  el.dataset.lido=ciMedLinhaFp(el); return el; })()`;
+provaAsync('6.66 QA20 (MÉDIO-2) — a Veterinária muda a dose do Zenrelia (1 → 2), o «tomar até» do Apoquel (termina hoje) e a observação do Ômega em outro aparelho; a trava recusa; «Ler a medicação de novo»: a linha só «Confirmada» (Apoquel) e a «Mudou» sem mudança de verdade (Ômega) ganham o valor do banco, no mesmo lugar, sem a confirmação e com a marca do valor novo; a que a pessoa mudou de verdade (Zenrelia) fica como ela deixou, com a marca «No banco agora: …» e a confirmação zerada; o 2º Salvar não desfaz o fim do Apoquel. 1ª rodada: as três só ganhavam a marca e o 2º Salvar regravava o valor velho', async () => {
+  const antes = { apq: APQ659(), zen: ZEN658(), ome: OME666() };
+  const novo = { apq: APQ659({ continuo: false, dataFim: DIA658 }), zen: ZEN658({ q: '2' }), ome: OME666({ obs: 'com comida' }) };
+  ctx.__qaA666 = antes; ctx.__qaN666 = novo;
+  // (a) a releitura (pura): «Confirmado» sozinho não é mexer
+  const rl = J658(`ciMedReleitura(__qaA666, __qaN666, {apq:{tocado:true, mexido:false}, zen:{tocado:true, mexido:false}, ome:{tocado:true, mexido:false}}, '${DIA658}')`);
+  const rm = J658(`ciMedReleitura(__qaA666, __qaN666, {apq:{tocado:true, mexido:false}, zen:{tocado:true, mexido:true}, ome:{tocado:true, mexido:false}}, '${DIA658}')`);
+  igual([rl.trocar.slice().sort(), rl.marcar, rm.trocar.slice().sort(), rm.marcar], [['apq', 'ome', 'zen'], [], ['apq', 'ome'], ['zen']]);
+  // (b) na tela
+  let t = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: novo, log: DADA666() }); put658(AG658 + '/_ts', 777);
+    run(`__bk666r={ck:ciKey, fl:ciMedFichaLinhas, am:ciAddMed, ch:ciMedEmUsoChange, ml:CI_MED_LIDO, cm:__el657['ciMeds']}; ciKey=function(){ return '${K658}'; };
+      __tirou666=[]; __antesDe666=[]; __pai666={removeChild:function(x){ __tirou666.push(x.dataset.id); }, insertBefore:function(n, x){ __antesDe666.push([n.dataset.id, x.dataset.id]); }};
+      __novas666=[]; __el657['ciMeds']={get lastElementChild(){ return __novas666.length?__novas666[__novas666.length-1]:null; }};
+      ciAddMed=function(it, op){ __novas666.push({dataset:{id:op.agendaId, conf:''}, it:JSON.parse(JSON.stringify(it)), daFicha:!!op.daFicha, __m:[], insertAdjacentHTML:function(p, h){ this.__m.push(h); }}); };
+      __apqL=${QA20_LINHA666('apq', 'ok', [['m', 'Apoquel'], ['q', '1'], ['h', '08:00'], ['fim', '']])};
+      __zenL=${QA20_LINHA666('zen', 'mudou', [['m', 'Zenrelia'], ['q', '1'], ['h', '08:00'], ['h', '20:00'], ['obs', '']])};
+      __omeL=${QA20_LINHA666('ome', 'mudou', [['m', 'Ômega 3'], ['q', '1'], ['h', '08:00'], ['obs', '']])};
+      __zenL.__c[4]=['obs', 'dar depois do passeio'];   // a pessoa mudou o Zenrelia de verdade (a observação)
+      ciMedFichaLinhas=function(){ return [__apqL, __zenL, __omeL]; }; ciMedEmUsoChange=function(){};
+      CI_MED_LIDO={key:'${K658}', ts:500, itens:JSON.parse(JSON.stringify(__qaA666)), lido:true};`);
+    try {
+      await run('ciMedLerDeNovo()'); await espera659();
+      t = { novas: J658('__novas666.map(function(n){ return {id:n.dataset.id, it:n.it, daFicha:n.daFicha, conf:n.dataset.conf, m:n.__m.join(" ")}; })'), tirou: J658('__tirou666'), antesDe: J658('__antesDe666'),
+        zen: J658('({conf:__zenL.dataset.conf, m:__zenL.__m.join(" ")})'), ts: run('CI_MED_LIDO.ts') };
+    } finally { run(`ciKey=__bk666r.ck; ciMedFichaLinhas=__bk666r.fl; ciAddMed=__bk666r.am; ciMedEmUsoChange=__bk666r.ch; CI_MED_LIDO=__bk666r.ml; __el657['ciMeds']=__bk666r.cm;`); }
+  } finally { solta659(); }
+  const nv = {}; t.novas.forEach((n) => { nv[n.id] = n; });
+  igual([Object.keys(nv).sort(), t.tirou.slice().sort(), t.antesDe.slice().sort(), nv.apq.it.continuo, nv.apq.it.dataFim, nv.ome.it.obs, nv.apq.daFicha, nv.apq.conf, t.ts],
+    [['apq', 'ome'], ['apq', 'ome'], [['apq', 'apq'], ['ome', 'ome']], false, DIA658, 'com comida', true, '', 777], JSON.stringify(t));
+  assert.ok(nv.apq.m.indexOf('Mudou em outro aparelho. A linha agora mostra o que está no banco: 1 comprimido às 08:00, tomar até 09/10/2026. Confira com o tutor e toque em Confirmado ou Mudou.') >= 0, nv.apq.m);
+  igual([t.zen.conf, t.zen.m.indexOf('Mudou em outro aparelho. No banco agora: 2 comprimidos às 08:00 e 20:00, uso contínuo. A tela ficou com o que você mudou: confira com o tutor e toque em Confirmado ou Mudou de novo.') >= 0], ['', true], t.zen.m);
+  // (c) o 2º Salvar, com a tela como ficou (o Apoquel e o Ômega com o valor do banco, o Zenrelia como a pessoa deixou) e a cópia lida nova
+  const r = await ci666('corrigir', { itens: JSON.parse(JSON.stringify(novo)), lidos: JSON.parse(JSON.stringify(novo)), car: { ids: { apq: 1, zen: 1, ome: 1 }, sigs: {} },
+    meds: { apq: nv.apq.it, ome: nv.ome.it, zen: ZEN658({ obs: 'dar depois do passeio' }) } });
+  igual([r.itens.apq.continuo, r.itens.apq.dataFim, r.amanha.filter((x) => /^apq/.test(x)), r.itens.ome.obs, zaTit666(r, /NÃO FOI SALVO/).length], [false, DIA658, [], 'com comida', 0], JSON.stringify([r.itens.apq, r.amanha]));
+});
+// ---- os defeitos plantados do QA que passavam pela Fase 0 (LOW-7) ------------------------------------------------------------------------------------
+const NOVO_APQ666 = (extra) => Object.assign({ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: true, tipo: 'medicamento', origem: 'vet', dataInicio: '2026-10-01' }, extra || {});
+provaAsync('6.66 QA21 (q07) — o id herdado só com UMA linha antiga do mesmo nome: com duas (o Apoquel das 08:00 e o das 14:00), o Apoquel escrito de novo fica remédio novo e as duas antigas viram «Parou de tomar»', async () => {
+  const r = await ci666('corrigir', { itens: { apq: APQ659(), apq2: APQ659({ horarios: ['14:00'] }) }, car: { ids: { apq: 1, apq2: 1 }, sigs: {} }, meds: { ci_n: NOVO_APQ666() } });
+  igual([!!r.itens.ci_n, (r.P.medHerdados || []).length, !!(r.itens.apq || {}).paradoEm, !!(r.itens.apq2 || {}).paradoEm], [true, 0, true, true], JSON.stringify(Object.keys(r.itens)));
+});
+provaAsync('6.66 QA22 (q08) — o id herdado não vem de linha que já não está em uso: o Apoquel parado ontem e um Apoquel escrito de novo às 20:00 — o novo fica novo (toca hoje) e o parado continua parado', async () => {
+  const PAR = APQ659({ continuo: false, dataFim: ONTEM658, paradoEm: PE666(ONTEM658) });
+  const r = await ci666('corrigir', { itens: { apq: PAR }, lidos: { apq: PAR }, car: { ids: { apq: 1 }, sigs: {} }, meds: { ci_n: NOVO_APQ666() } });
+  igual([!!r.itens.ci_n, (r.P.medHerdados || []).length, r.itens.apq.continuo, !!r.itens.apq.paradoEm, r.hoje.filter((x) => /^ci_n/.test(x))], [true, 0, false, true, ['ci_n@20:00']], JSON.stringify([Object.keys(r.itens), r.hoje]));
+});
+provaAsync('6.66 QA23 (q11) — a agenda só com remédio parado: a lista do check-in fica vazia, mas a cópia lida (com o carimbo) é guardada — o Salvar com remédio novo passa pela trava', async () => {
+  const PAR = OME666({ continuo: false, dataFim: ONTEM658, paradoEm: PE666(ONTEM658) });
+  let lido = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { ome: PAR }, log: {} });
+    run(`__bk666q={ck:ciKey, am:ciAddMed, me:ciMedEmUso, mc:ciMedEmUsoChange, ss:setSeg, ml:CI_MED_LIDO, cm:__el657['ciMeds']}; ciKey=function(){ return '${K658}'; }; __add666=[]; ciAddMed=function(it, op){ __add666.push(op&&op.agendaId); };
+      __el657['ciMeds']={innerHTML:'', insertAdjacentHTML:function(){}}; ciMedEmUso=function(){ return 'Sim'; }; ciMedEmUsoChange=function(){}; setSeg=function(){}; CI_MED_LIDO=null;`);
+    try {
+      run('ciPreencherMedicacao()'); await espera659();
+      lido = J658('({add:__add666, key:CI_MED_LIDO&&CI_MED_LIDO.key, ts:CI_MED_LIDO&&CI_MED_LIDO.ts, lido:CI_MED_LIDO&&CI_MED_LIDO.lido})');
+    } finally { run(`ciKey=__bk666q.ck; ciAddMed=__bk666q.am; ciMedEmUso=__bk666q.me; ciMedEmUsoChange=__bk666q.mc; setSeg=__bk666q.ss; CI_MED_LIDO=__bk666q.ml; __el657['ciMeds']=__bk666q.cm;`); }
+  } finally { solta659(); }
+  igual(lido, { add: [], key: K658, ts: 500, lido: true });
+  const r = await ci666('novo', { itens: { ome: PAR }, log: {}, lidos: { ome: PAR }, car: { ids: {}, sigs: {} },
+    meds: { ci_1: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: true, tipo: 'medicamento', origem: 'vet', dataInicio: DIA658 } }, P: { sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' } });
+  igual([!!r.itens.ci_1, zaTit666(r, /NÃO FOI SALVO/).length], [true, 0]);
+});
+provaAsync('6.66 QA24 (q20) — «Começar a correção por esta versão» com um remédio da versão que hoje está parado: ele não volta para a tela (a nota manda «Voltou a tomar»)', async () => {
+  const C = [{ quando: T658(8, 9, 0), quem: 'Bia Consultora Teste', motivo: 'a tutora corrigiu a ração na saída', mudou: ['alim: "x" → "y"'], antes: { ficha: {}, medicacao: [{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'], agendaId: 'apq' }], entrada: '2026-10-08', saida: '2026-10-11' } }];
+  const r = await tela666(async () => {
+    put658(AG658 + '/itens/apq', APQ659({ continuo: false, dataFim: ONTEM658, paradoEm: PE666(ONTEM658) }));
+    put658(EP666, EST666({ correcoes: C }));
+    run(`CI_MED_LIDO={key:'${K658}', ts:500, itens:__get657('${AG658}/itens'), lido:true}; CI_MED_LENDO=null; __esc657=[];`);
+    await run(`ciCorrigirPelaVersao('${EID666}', 0)`); await espera659();
+    return { am: J658('__am666'), card: String(run("__el657['ciJaHospedado'].innerHTML")) };
+  });
+  igual(r.am, [], JSON.stringify(r.am));
+  assert.ok(r.card.indexOf('Apoquel estava nesta versão, mas hoje não está em uso na agenda: para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).') >= 0, r.card.slice(0, 900));
+});
+prova('6.66 QA25 (q21, q22) — Mudar datas: a saída antes da entrada é recusada; a data que não existe (31/02/2026, que o relógio empurraria para 03/03) também', () => {
+  igual([run(`hospDatasValidar(['12/10/2026', '10/10/2026'])`), run(`hospDataDoCartaz('31/02/2026')`), run(`hospDatasValidar(['31/02/2026', '12/10/2026'])`), run(`hospDataDoCartaz('29/02/2028')`), run(`hospDataDoCartaz('2026-02-30')`)],
+    ['A saída não pode ser antes da entrada. Confira as datas.', null, 'Escreva a data de ENTRADA como 12/10/2026.', '2028-02-29', null]);
+});
+provaAsync('6.66 QA26 (q23) — Mudar datas com a gravação da estadia recusada no meio: o histórico foi gravado ANTES e fica marcado «não entrou»; as datas não mudam', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-14'};`);
+    await run(`hospSalvarDatas('${EID666}')`); await espera659();
+    run(`__recusa657='^auaulandia/estadias/est666$';`);
+    try { o.ok = await assina658('s-bia', MOT_DATAS666); await espera659(); } finally { run('__recusa657=null;'); }
+    o.e = db658(EP666);
+    return o;
+  });
+  const H = Object.values(r.e.datas_historico || {});
+  igual([r.e.saida, H.length, (H[0] || {}).nao_entrou, (H[0] || {}).saida], ['2026-10-12', 1, true, '2026-10-14'], JSON.stringify(r.e.datas_historico));
+});
+provaAsync('6.66 QA27 (q25) — «Desfazer a baixa»: o cartaz aberto com a baixa de 09/10; outro aparelho troca a baixa (agora de 08/10) antes da assinatura: nada gravado', async () => {
+  const BX = { status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Bia Consultora Teste', encerradaTs: T658(9, 9, 0), saida_combinada: '2026-10-12' };
+  const r = await hosp666(EST666(BX), async () => {
+    const o = {};
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    put658(EP666 + '/encerradaEm', '2026-10-08'); put658(EP666 + '/saida', '2026-10-08');
+    o.ok = await assina658('s-bia', 'a tutora não veio buscar hoje'); await espera659();
+    o.e = db658(EP666);
+    return o;
+  });
+  igual([r.e.status, r.e.encerradaEm, Object.keys(r.e.baixas_desfeitas || {}).length], ['encerrada', '2026-10-08', 0]);
+});
+prova('6.66 QA28 (q29) — os créditos da saída antecipada desta hospedagem são achados pela chave inteira «sa-{id}-»: os de outra estadia com o id que começa igual (est6661) não entram', () => {
+  const L = [{ _id: 'sa-est666-1', tipo: 'credito', seq: 1 }, { _id: 'sa-est6661-1', tipo: 'credito', seq: 1 }, { _id: 'sa-est666-2', tipo: 'credito', seq: 2 }];
+  igual(J658(`hospCreditosSa(${JSON.stringify(L)}, 'est666').map(function(c){ return c.l._id; })`), ['sa-est666-1', 'sa-est666-2']);
+});
+provaAsync('6.66 QA29 (q31, q32, q33) — a linha da hospedagem: com saída antecipada, só «Desfazer a saída antecipada» (sem «Desfazer a baixa»); com o check-out feito, nenhum dos dois; a «Reabrir» tira o «cancelada por» do topo', async () => {
+  const SA = { status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Gestora Teste', encerradaTs: T658(9, 9, 0), saida_real: '2026-10-09', credito_noites: 3, saida_antecipada: { em: '2026-10-09', noites: 3, por: 'Gestora Teste', ts: T658(9, 9, 0), orcamento: '' } };
+  const r = await hosp666(EST666(SA), async () => {
+    const a = linha666();
+    put658(EP666 + '/checkout', { ts: T658(9, 9, 30), quem: 'Gestora Teste' });
+    return { a, b: linha666() };
+  });
+  igual([/hospAntecipadaDesfazerAbrir/.test(r.a), /hospBaixaDesfazerAbrir/.test(r.a), /hospAntecipadaDesfazerAbrir/.test(r.b), /hospBaixaDesfazerAbrir/.test(r.b)], [true, false, false, false]);
+  const c = await hosp666(EST666({ status: 'cancelada', exclusao: EXCQA666, canceladaPor: 'Amanda Supervisora Teste', canceladaTs: T658(9, 9, 30) }), async () => {
+    run(`__p666=hospReabrirExcluidaAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['08/10/2026', '12/10/2026']})`); await espera659();
+    const ok = await assina658('s-amanda', 'a hospedagem aconteceu de verdade'); await espera659();
+    return { ok, e: db658(EP666) };
+  });
+  igual([c.ok[0], c.e.status, 'canceladaPor' in c.e, 'canceladaTs' in c.e], ['pronto', 'ativa', false, false]);
+});
+provaAsync('6.66 QA30 (q34) — «Desfazer esta resposta» com a gravação do histórico recusada no meio: a resposta NÃO sai (o histórico vem antes de tirar a resposta)', async () => {
+  const o = {};
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    ctx.__na666 = NEL_A666; ctx.__nb666 = NEL_B666;
+    const ch = run('hospParChave(__na666, __nb666)');
+    put658('daycare/hospede-mesmo/' + ch, { mesmo: true, quem: 'Bia Consultora Teste', quando: DIA658, ts: T658(9, 9, 0), fica: NEL_A666, sai: NEL_B666, par: { a: NEL_A666, b: NEL_B666 } });
+    run(`HOSP_MESMO=__get657('daycare/hospede-mesmo')||{};`);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__recusa657='^daycare/hospede-mesmo-historico/';`);
+    try {
+      run(`__qm666=null; hospMesmoDesfazerGravar('${ch}', {por:'Bia Consultora Teste', login:'Bia Consultora Teste', papel:'consultora', motivo:'os dois são FILHOts diferentes', ts:${T658(9, 10, 3)}}).then(function(x){ __qm666=x; });`);
+      await espera659();
+    } finally { run('__recusa657=null;'); }
+    o.r = J658('__qm666'); o.no = db658('daycare/hospede-mesmo/' + ch); o.hist = db658('daycare/hospede-mesmo-historico/' + ch);
+  } finally { run('HOSP_MESMO={};'); solta659(); }
+  igual([o.r && o.r.ok, !!o.no, o.hist], [false, true, null], JSON.stringify(o));
+});
+provaAsync('6.66 QA31 (q36, q37, q38) — os avisos: a entrada «Retirado» leva quem estava logado no «quem» e quem assinou na «assinatura»; a correção da entrada de encerramento continua de encerramento; duas trocas de tipo, as duas guardadas', async () => {
+  const r = await avisos666(async () => {
+    const o = {};
+    run(`__r666=null; avisoRetirarGravar('estoque', 'a1', {por:'Gestora Teste', login:'Bia Consultora Teste', papel:'gestao', motivo:'o aviso foi tocado sem querer', ts:${T658(9, 10, 1)}}).then(function(x){ __r666=x; });`); await espera659();
+    o.ret = J658('__r666'); o.a1 = db658('auaulandia/avisos-estoque/a1');
+    const ent = { acao: 'Resolvido: a tutora trouxe mais', quem: 'Bia Consultora Teste', quando: '09/10 09:30', ts: T658(9, 9, 30), resolucao: true };
+    put658('auaulandia/avisos-estoque/a2', AVE666({ status: 'resolvido', entries: [ent], resolvido_motivo: 'a tutora trouxe mais' })); syncAv666();
+    run(`__r666=null; avisoEntradaCorrigirGravar('estoque', 'a2', 0, ${JSON.stringify({ ts: ent.ts, acao: ent.acao, quando: ent.quando })}, {por:'Bia Consultora Teste', login:'Bia Consultora Teste', papel:'consultora', motivo:'o texto saiu errado', ts:${T658(9, 10, 2)}, depois:{texto:'a tutora trouxe 2 caixas'}}).then(function(x){ __r666=x; });`); await espera659();
+    o.cor = J658('__r666'); o.a2 = db658('auaulandia/avisos-estoque/a2');
+    run(`__r666=null; avisoTipoGravar('r1', 'racao', {por:'Bia Consultora Teste', login:'Bia Consultora Teste', papel:'consultora', motivo:'era comida natural mesmo', ts:${T658(9, 10, 3)}, depois:{tipo:'Comida natural'}}).then(function(x){ __r666=x; });`); await espera659();
+    syncAv666();
+    run(`__r666=null; avisoTipoGravar('r1', 'comida-natural', {por:'Bia Consultora Teste', login:'Bia Consultora Teste', papel:'consultora', motivo:'era ração mesmo, desculpe', ts:${T658(9, 10, 4)}, depois:{tipo:'Ração/comida'}}).then(function(x){ __r666=x; });`); await espera659();
+    o.r1 = db658('auaulandia/avisos-racao/r1');
+    return o;
+  });
+  const E = (r.a1.entries || []).slice(-1)[0] || {}, E2 = r.a2.entries || [];
+  igual([r.ret.ok, E.retirada, E.quem, E.assinatura], [true, true, 'Bia Consultora Teste', 'Gestora Teste'], JSON.stringify(E));
+  igual([r.cor.ok, E2.length, (E2[1] || {}).resolucao, !!((E2[0] || {}).corrigida), r.a2.resolvido_motivo], [true, 2, true, true, 'a tutora trouxe 2 caixas'], JSON.stringify(E2));
+  const tt = r.r1.tipo_trocas || {};
+  igual([Object.keys(tt).length, Object.values(tt).map((x) => x.para).sort(), r.r1.tipo], [2, ['comida-natural', 'racao'], 'racao'], JSON.stringify(tt));
+});
+prova('6.66 QA32 (q40) — a troca de ficha: a dose anulada do remédio que muda de ficha (o Ômega Spitz) vai na cópia (o registro, riscado), e só as que valem contam', () => {
+  const AN = { anulada: { quem: 'Gestora Teste', motivo: 'registrada no horário errado', ts: TS653 + 7 * 3600000 } };
+  const L = LOGS653(); const dk = IT_SPITZ653 + '_20-00'; L['2026-10-07'][dk] = Object.assign({}, L['2026-10-07'][dk], AN);
+  ctx.__pl666b = { id: ID653, e: EST653(), de: DE653, para: PARA653, agenda: AGENDA653(), logs: L, ficha: FICHA653(), fichaNova: {}, auditoria: AUD653(), agora: AGORA653, hoje: DIA653 };
+  const P = J658('hospPlanoDaTrocaValendo(__pl666b)');
+  const c = (P.copiarLog || []).filter((x) => x.dia === '2026-10-07' && x.doseId === dk)[0];
+  igual([!!c, !!(c && c.dose && c.dose.anulada), (P.copiarLog || []).length], [true, true, 2], JSON.stringify(P.copiarLog));   // a de 08/10 às 08:00 sem a medida não é copiada (dose-incompleta, 6.53)
+});
+// ---- as escolhas da 2ª rodada que não estavam em prova nenhuma ---------------------------------------------------------------------------------------
+provaAsync('6.66 QA33 (MÉDIO-1, guarda) — a recusa da 6.62 continua ANTES da pergunta «quem recebeu»: com o estado duplo e o horário mudado, nem a pergunta aparece, e nada é gravado', async () => {
+  const a = await ci666('acrescentar', { itens: { apq: DUP666() }, meds: { apq: DUP666({ horarios: ['20:00'] }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]) });
+  igual([a.qr.length, qaGrav666(a), (linhas666(a, /O CHECK-IN NÃO FOI SALVO/) || [])[0]], [0, [], FRASE_DUPLO666]);
+});
+provaAsync('6.66 QA34 (LOW-5) — «Reabrir a hospedagem» confere quem ASSINOU também na gravação (não só pelo cartaz): com o registro de uma Consultora, nada é gravado', async () => {
+  const r = await hosp666(EST666({ status: 'cancelada', exclusao: EXCQA666, canceladaPor: 'Amanda Supervisora Teste', canceladaTs: T658(9, 9, 30) }), async () => {
+    run(`__rr666=null; hospReabrirExcluidaGravar('${EID666}', {papel:'consultora', por:'Bia Consultora Teste', login:'Bia Consultora Teste', motivo:'a hospedagem aconteceu de verdade', ts:${T658(9, 10, 1)}, depois:{entrada:'08/10/2026', saida:'12/10/2026'}}, {removidos:[], parados:[], ex:{}}).then(function(x){ __rr666=x; });`); await espera659();
+    return { r: J658('__rr666'), e: db658(EP666), esc: escEst666() };
+  });
+  igual([!!(r.r && r.r.ok), r.e.status, r.esc], [false, 'cancelada', []], JSON.stringify(r.r));
+});
+provaAsync('6.66 QA35 (LOW-5) — a guarda da 6.60 na desfeita da saída antecipada: um «est-» que já existe para um crédito que ainda vale (sem apontar para ele) não é regravado — nada é gravado e a tela manda chamar a Gestão', async () => {
+  const r = await hosp666(EST666(), async () => {
+    const o = {};
+    await ant666();
+    put658(LANC666 + '/est-sa-est666-1', { tipo: 'estorno', data: DIA658, motivo: 'estorno', obs: 'lançado pela metade', quem: 'Gestora Teste', ts: T658(9, 9, 40) });
+    run(`__qb666=null; hospAntecipadaDesfazerGravar('${EID666}', {papel:'gestao', por:'Gestora Teste', login:'Gestora Teste', motivo:'a tutora voltou e o FILHOt ficou', ts:${T658(9, 10, 5)}}, '2026-10-12').then(function(x){ __qb666=x; });`);
+    await espera659(); o.b = J658('__qb666');
+    o.L = db658(LANC666) || {}; o.e = db658(EP666);
+    return o;
+  });
+  igual([r.b && r.b.ok, /já existe no Extrato/.test((r.b || {}).erro || ''), r.L['est-sa-est666-1'].obs, qaEst666(r.L), r.e.status], [false, true, 'lançado pela metade', ['est-sa-est666-1'], 'encerrada'], JSON.stringify(r.b));
+});
+{ // 6.66 QA re-gate (Quinn): ataques do re-gate levados à Fase 0 na publicação — a régua depois da pergunta, a releitura, o aviso do nome parecido, a baixa depois da «Reabrir»
+// ================================================================== QA 6.66 (Quinn) — re-gate: ataques novos contra a 2ª rodada
+console.log('\nQA666R — re-gate do QA: a régua depois da pergunta, a releitura, o aviso do nome parecido e a exclusão');
+const qrHook = (relogioMs, dia, hh, mm) => { ctx.__qaHook = () => { relogio658(relogioMs); put658('auaulandia/medicacao-log/' + dia + '/' + K658 + '/apq_08-00', DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, hh, mm))); }; };
+const QR_PALCO = `ciQuemRecebeu=function(it){ __qr666.push(JSON.parse(JSON.stringify(it||[]))); __esc657.push(['quem-recebeu', '-']); __qaHook(); return Promise.resolve('Gestora Teste'); };`;
+// --- QA666R-01: o TOCTOU nos três modos que perguntam (✎ Corrigir, SUBSTITUIR, Acrescentar): a dose dada por outro aparelho com a pergunta aberta
+provaAsync('6.66 QA re-gate · QA666R-01 — 07:30, o Apoquel 08:00 → 20:00 com material novo; a pergunta «quem recebeu» aberta até 08:20; outro aparelho registra a das 08:00 às 08:05: hoje só a das 08:00, amanhã a das 20:00 — no ✎ Corrigir, no SUBSTITUIR e no Acrescentar', async () => {
+  const res = [];
+  for (const [modo, P] of [['corrigir', {}], ['corrigir', { substituir: true, sig: 'data:image/png;base64,NOVA', assina: 'Rita Teste' }], ['acrescentar', {}]]) {
+    qrHook(T658(9, 8, 20), DIA658, 8, 5);
+    const r = await ci666(modo, { agora: T658(9, 7, 30), log: {}, meds: { apq: APQ659({ horarios: ['20:00'] }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]), P, palco: QR_PALCO });
+    const L = linhas666(r, /CORREÇÃO SALVA|CHECK-IN SUBSTITUÍDO|ACRESCENTADO/) || [];
+    res.push([modo + (P.substituir ? '/subst' : ''), r.qr.length, r.hoje, r.amanha, L.some((l) => /^Check-in: Apoquel: a dose das 08:00 de hoje já foi dada/.test(l))]);
+  }
+  console.log('      ' + JSON.stringify(res));
+  res.forEach((x) => igual(x.slice(1), [1, ['apq@08:00'], ['mcr_t_apq_20261010@20:00'], true], x[0]));
+});
+// --- QA666R-02: a pergunta aberta e outro aparelho grava a agenda (o carimbo anda): a trava recusa depois da régua, nada é gravado
+provaAsync('6.66 QA re-gate · QA666R-02 — a pergunta «quem recebeu» aberta e o Plantão grava a agenda no meio: a régua roda, a trava recusa, nada é gravado (nem a Conferência)', async () => {
+  ctx.__qaHook = () => { put658(AG658 + '/_ts', 777); put658(AG658 + '/itens/apq/obs', 'com comida (o Plantão escreveu)'); };
+  const r = await ci666('corrigir', { meds: { apq: APQ659({ horarios: ['20:00'] }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]), palco: QR_PALCO });
+  const grav = r.esc.filter((e) => !/^(quem-recebeu|transaction AG\/_ts)/.test(e));
+  console.log('      gravações=' + JSON.stringify(grav) + ' | ' + ((linhas666(r, /NÃO FOI SALVO/) || [])[0] || '').slice(0, 90));
+  igual([grav, r.itens.apq.horarios, /mudou em outro aparelho/.test((linhas666(r, /NÃO FOI SALVO/) || [])[0] || '')], [[], ['08:00'], true]);
+});
+// --- QA666R-03: a pergunta aberta antes da meia-noite e respondida depois
+provaAsync('6.66 QA re-gate · QA666R-03 — ✎ Corrigir às 23:50 de 09/10 (a das 08:00 dada) com material novo; a pergunta respondida às 00:10 de 10/10: uma dose por dia em 09, 10 e 11/10', async () => {
+  ctx.__qaHook = () => { relogio658(T658(10, 0, 10)); };
+  const r = await ci666('corrigir', { agora: T658(9, 23, 50), meds: { apq: APQ659({ horarios: ['20:00'] }) }, pertences: PERT666().concat([{ uid: 'p9', k: 'cama', nome: 'Caminha — cinza' }]), palco: QR_PALCO });
+  const f9 = await filaQA659f0(r.itens, 9), f10 = await filaQA659f0(r.itens, 10), f11 = await filaQA659f0(r.itens, 11);
+  console.log('      09/10 ' + JSON.stringify(f9) + ' 10/10 ' + JSON.stringify(f10) + ' 11/10 ' + JSON.stringify(f11) + ' | frases=' + JSON.stringify((r.P.medRegua || {}).frases));
+  assert.ok(f9.length === 1 && f10.length === 1 && f11.length === 1, 'uma dose por dia: ' + JSON.stringify([f9, f10, f11]));
+});
+// --- QA666R-04: a releitura (pura) com a marca nova «mexido»
+prova('6.66 QA re-gate · QA666R-04 — ciMedReleitura: a linha só confirmada (mexido=false) troca pelo valor do banco; a linha mudada de verdade (mexido=true) fica e é marcada; a que saiu da lista: sai (não mexida) ou fica marcada (mexida); a antiga «tocado» sozinha não conta mais', () => {
+  ctx.__qA = { apq: APQ659(), zen: ZEN658(), ome: OME666() };
+  ctx.__qN = { apq: APQ659({ q: '2' }), zen: ZEN658({ q: '2' }), ome: OME666({ paradoEm: PE666(DIA658), continuo: false, dataFim: ONTEM658 }) };
+  const a = J658(`ciMedReleitura(__qA, __qN, {apq:{tocado:true, mexido:false}, zen:{tocado:true, mexido:true}, ome:{tocado:true, mexido:false}}, '${DIA658}')`);
+  const b = J658(`ciMedReleitura(__qA, __qN, {apq:{tocado:true}, zen:{tocado:true}, ome:{tocado:true, mexido:true}}, '${DIA658}')`);
+  console.log('      ' + JSON.stringify(a) + ' | ' + JSON.stringify(b));
+  igual([a.trocar, a.marcar, a.sair, b.trocar.sort(), b.ficaMarcada], [['apq'], ['zen'], ['ome'], ['apq', 'zen'], ['ome']]);
+});
+// --- QA666R-05: o aviso do nome parecido (LOW-6): Ômega 3 tirado com dose hoje e Ômega 6 novo à noite; nomes curtos; o novo que só toca amanhã
+provaAsync('6.66 QA re-gate · QA666R-05 — o aviso do remédio parecido: «Ômega 3» tirado (dado às 08:06) e «Ômega 6» novo às 20:00 → avisa e não muda a agenda; «Apo» (3 letras) não avisa; o novo que começa amanhã não avisa', async () => {
+  const log = Object.assign(DADA666(), { 'ome_08-00': DOSE658('ome', 'Ômega 3', '08:00', 'cápsula', T658(9, 8, 6)) });
+  const it6 = (extra) => Object.assign({ nome: 'Ômega 6', q: '1', u: 'cápsula', horarios: ['20:00'], continuo: true, tipo: 'suplemento', origem: 'tutor', dataInicio: '2026-10-01' }, extra || {});
+  const a = await ci666('corrigir', { itens: { apq: APQ659(), ome: OME666() }, log, car: { ids: { apq: 1, ome: 1 }, sigs: {} }, meds: { apq: APQ659(), ci_6: it6() } });
+  const b = await ci666('corrigir', { itens: { apq: APQ659(), ome: OME666({ nome: 'Apo D' }) }, log, car: { ids: { apq: 1, ome: 1 }, sigs: {} }, meds: { apq: APQ659(), ci_6: it6({ nome: 'Apo E' }) } });
+  const c = await ci666('corrigir', { itens: { apq: APQ659(), ome: OME666() }, log, car: { ids: { apq: 1, ome: 1 }, sigs: {} }, meds: { apq: APQ659(), ci_6: it6({ dataInicio: AMANHA658 }) } });
+  const av = (r) => (linhas666(r, /CORREÇÃO SALVA/) || []).filter((l) => /^Atenção: /.test(l));
+  console.log('      Ômega: ' + JSON.stringify(av(a)) + ' hoje ' + JSON.stringify(a.hoje) + ' | Apo: ' + av(b).length + ' | amanhã: ' + av(c).length + ' | rastro=' + JSON.stringify(a.au.filter((x) => x[0] === 'checkin-remedio-parecido').length));
+  igual([av(a).length, a.hoje, av(b).length, av(c).length, a.au.some((x) => x[0] === 'checkin-remedio-parecido')], [1, ['apq@08:00', 'ci_6@20:00'], 0, 0, true]);
+});
+provaAsync('6.66 QA re-gate · QA666S-01 — a hospedagem excluída (10:05) e reaberta pela «Reabrir a hospedagem» (10:10): a baixa vale e o «Desfazer a baixa» aparece e desfaz com a senha da Consultora (a exclusão antiga não trava mais nada)', async () => {
+  const ex = { x1: { tk: 'x1', motivo: 'lançada no FILHOt errado', quem: 'Amanda Supervisora Teste', quem_papel: 'supervisor', ts: T658(9, 10, 5) } };
+  const e = EST666({ status: 'ativa', exclusao: ex, reaberturas: { r1: { motivo: 'a hospedagem aconteceu de verdade', registro: { por: 'Amanda Supervisora Teste', ts: T658(9, 10, 10), quando: '09/10 10:10' } } } });
+  const r = await hosp666(e, async () => {
+    const o = {};
+    relogio658(T658(9, 10, 20));
+    run(`__el657['hospBxData']={value:'2026-10-09'};`);
+    await run(`hospConfirmarBaixa('${EID666}')`); await espera659();
+    o.e0 = db658(EP666); o.linha = linha666();
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    o.ok = await assina658('s-bia', 'a tutora não veio buscar hoje'); await espera659();
+    o.e1 = db658(EP666);
+    return o;
+  });
+  console.log('      baixa: ' + r.e0.status + ' | botão «Desfazer a baixa»=' + /hospBaixaDesfazerAbrir/.test(r.linha) + ' «Reabrir»=' + /hospReabrirExcluidaAbrir/.test(r.linha) + ' | desfazer: ' + r.ok[0] + ' → ' + r.e1.status + ' saída ' + r.e1.saida);
+  igual([r.e0.status, /hospBaixaDesfazerAbrir/.test(r.linha), /hospReabrirExcluidaAbrir/.test(r.linha), r.ok[0], r.e1.status, r.e1.saida], ['encerrada', true, false, 'pronto', 'ativa', '2026-10-12']);
+});
+provaAsync('6.66 QA re-gate · QA666S-02 — a hospedagem nunca excluída: a baixa de uma tela velha que viu «ativa» numa hospedagem que já teve baixa em outro aparelho não grava de novo (a 1ª baixa fica como está)', async () => {
+  const r = await hosp666(EST666({ status: 'encerrada', saida: '2026-10-09', encerradaEm: '2026-10-09', encerradaPor: 'Bia Consultora Teste', encerradaTs: T658(9, 9, 0), saida_combinada: '2026-10-12' }), async () => {
+    run(`hospAbaBaixa='${EID666}'; __el657['hospBxData']={value:'2026-10-08'}; EST_TODAS['${EID666}']=Object.assign({}, EST_TODAS['${EID666}'], {status:'ativa'});`);
+    await run(`hospConfirmarBaixa('${EID666}')`); await espera659();
+    return { e: db658(EP666), za: J658('__za657').map((z) => [z[0], (z[1] || [])[0]]) };
+  });
+  console.log('      ' + JSON.stringify([r.e.encerradaEm, r.e.saida_combinada, r.za]));
+  igual([r.e.encerradaEm, r.e.encerradaPor, r.e.saida_combinada], ['2026-10-09', 'Bia Consultora Teste', '2026-10-12']);
+});
+}
 }
 // ------------------------------------------------ o fim
 fila.then(() => {

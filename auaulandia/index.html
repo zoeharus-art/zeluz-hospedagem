@@ -5184,13 +5184,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-19"></script>
+<script src="resposta-tutor.js?v=2026-10-09-20"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-19"></script>
+<script src="painel-logica.js?v=2026-10-09-20"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5202,7 +5202,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-19"></script>
+<script src="financeiro-logica.js?v=2026-10-09-20"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6567,7 +6567,7 @@
       B.push(quadroVence);
       B.push(quadroRespPend);
       if(MESA_EXPAND.atencao) EXTRA+=mesaAtencaoHtml();
-      if(MESA_EXPAND.duplicados){ try{ EXTRA+='<div style="margin-top:12px">'+(typeof hospParesPendentesHtml==='function'?hospParesPendentesHtml():'')+'</div>'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
+      if(MESA_EXPAND.duplicados){ try{ EXTRA+='<div style="margin-top:12px">'+(typeof hospParesPendentesHtml==='function'?hospParesPendentesHtml():'')+(typeof hospParesRespondidosHtml==='function'?hospParesRespondidosHtml():'')+'</div>'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     } else if(MESA_FATIA==='supervisao'){
       B.push(mesaBox(nvl(estOk,P.conferir),'Check-in a conferir','o monitor confere corpo e pertences de quem chegou','#B3261E',ir('conferencia')));
       B.push(mesaBox(nvl(hospOk&&estOk,P.semCheckin),'Sem check-in lançado','hospedado sem ficha lançada','#B3261E',ir('checkin')));
@@ -14155,7 +14155,23 @@
       }, 1500);
       return Promise.resolve();
     }
-    return DB.ref('daycare/hospede-mesmo').once('value').then(function(s){ HOSP_MESMO=s.val()||{}; })
+    // 6.66 (AC10.5): as respostas passam a ser OUVIDAS (on('value') no nó pequeno daycare/hospede-mesmo): a resposta dada ou
+    // desfeita em outro aparelho chega ao Plantão aberto sem recarregar. A 1ª leitura resolve como antes; as seguintes remontam.
+    var _ref=DB.ref('daycare/hospede-mesmo');
+    if(typeof _ref.on==='function'){
+      if(HOSP_MESMO_OUVINDO) return Promise.resolve();
+      return new Promise(function(ok){
+        var primeira=true;
+        try{
+          _ref.on('value', function(s){
+            HOSP_MESMO=(s&&s.val&&s.val())||{};
+            if(primeira){ primeira=false; HOSP_MESMO_OUVINDO=true; ok(); return; }
+            hospMesmoMudou();
+          }, function(e){ if(primeira){ primeira=false; hospMesmoFalhou(e); ok(); } });
+        }catch(e){ hospMesmoFalhou(e); ok(); }
+      });
+    }
+    return _ref.once('value').then(function(s){ HOSP_MESMO=s.val()||{}; })
       .catch(function(e){
         try{ if(typeof audit==='function') audit('hospedes','NÃO consegui ler as duplicidades já resolvidas: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
         // A corrida com o login anônimo fazia esta leitura falhar UMA vez e ficar vazia a
@@ -14168,6 +14184,17 @@
           hospCarregarMesmo().then(function(){ try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
         }, 4000);
       });
+  }
+  // 6.66: o ouvinte das respostas está ligado? E a falha da 1ª leitura do ouvinte: tenta de novo, como a leitura única fazia.
+  var HOSP_MESMO_OUVINDO=false;
+  function hospMesmoFalhou(e){
+    try{ if(typeof audit==='function') audit('hospedes','NÃO consegui ouvir as duplicidades já resolvidas: '+zErroMotivo(e, 'banco', '', {leitura:true}),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    HOSP_MESMO_LIDO=false;
+    setTimeout(function(){
+      if(HOSP_MESMO_LIDO) return;
+      HOSP_MESMO_LIDO=true;
+      hospCarregarMesmo().then(function(){ try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela */ });
+    }, 4000);
   }
   // O par que está na tela agora, por chave — é dele que a resposta tira quem vence.
   var HOSP_PAR_VIVO={};
@@ -14192,6 +14219,8 @@
         reg.fica={nome:fica.nome||'', tutor:fica.tutor||''};
         reg.sai={nome:sai.nome||'', tutor:sai.tutor||''};
       }
+      // 6.66 (AC10.1): os dois nomes por extenso ficam na resposta (a lista dos pares já respondidos os mostra)
+      if(par && par.a && par.b) reg.par={a:{nome:par.a.nome||'', tutor:par.a.tutor||''}, b:{nome:par.b.nome||'', tutor:par.b.tutor||''}};
     }catch(e){} /* silencioso de propósito: guarda defensiva — sem o par vivo, a resposta simples ainda vale */
     HOSP_MESMO[chave]=reg;
     DB.ref('daycare/hospede-mesmo/'+chave).set(reg).catch(function(e){
@@ -14263,6 +14292,262 @@
       }
     }
     return lista.filter(function(_,i){ return !fora[i]; });
+  }
+
+  // ===== 6.66 (AC10) — «É O MESMO / SÃO DOIS»: DESFAZER ESTA RESPOSTA E OS PARES RESPONDIDOS (H10) =====================
+  // Um «É o mesmo» errado esconde um FILHOt da Plantonista. A resposta passa a ter volta: «Desfazer esta resposta» (a própria
+  // senha, a régua de quem responde: corrigir-hospedagem, 6.57 S0-P1). A resposta inteira vai para um registro novo em
+  // daycare/hospede-mesmo-historico/{chave} (só cria) e sai de daycare/hospede-mesmo/{chave} (é uma marca sem dinheiro nem
+  // remédio: sai, com rastro). As respostas passam a ser OUVIDAS (hospCarregarMesmo): o celular da Plantonista vê a volta.
+  // Os nomes por extenso de um par: a resposta guarda o par (hospResponderMesmo); a antiga, pelo par vivo na tela ou pela chave.
+  function hospMesmoNomes(ch, r){
+    r=r||{};
+    var tx=function(x){ x=x||{}; return String(x.nome||'')+(x.tutor?(' · '+String(x.tutor)):''); };
+    if(r.par && r.par.a && r.par.b) return [tx(r.par.a), tx(r.par.b)];
+    if(r.fica && r.sai) return [tx(r.fica), tx(r.sai)];
+    var v=HOSP_PAR_VIVO[ch]; if(v && v.a && v.b) return [tx(v.a), tx(v.b)];
+    var cap=function(s){ return String(s||'').replace(/(^|\s)\S/g, function(m){ return m.toUpperCase(); }); };
+    return String(ch||'').split('||').map(function(p){ var q=p.split('~'); return cap(q[0])+(q[1]?(' · '+cap(q[1])):''); });
+  }
+  // A lista «Pares já respondidos (N)», fechada: a resposta, quem e quando, e «Desfazer esta resposta». O par juntado pelo
+  // microchip (identificador, não resposta) aparece sem o botão.
+  function hospParesRespondidosHtml(){
+    var L=[], pode=hospPodeResponderMesmo();
+    Object.keys(HOSP_MESMO||{}).sort().forEach(function(ch){
+      var r=HOSP_MESMO[ch]; if(!r || typeof r!=='object') return;
+      var n=hospMesmoNomes(ch, r);
+      var resp=r.mesmo?('É o mesmo'+((r.fica&&r.sai)?(': fica '+String(r.fica.nome||'')+(r.fica.tutor?(' · '+r.fica.tutor):'')+', sai '+String(r.sai.nome||'')+(r.sai.tutor?(' · '+r.sai.tutor):'')):'')):'São dois';
+      L.push('<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--z-white);border:1.5px solid var(--line);overflow-wrap:anywhere">'
+        +'<div style="font-weight:800;font-size:14px;color:var(--z-blue)">'+esc(n[0]||'')+' e '+esc(n[1]||'')+'</div>'
+        +'<div style="font-size:13.5px;color:var(--z-blue)">'+esc(resp)+'</div>'
+        +'<div style="font-size:12.5px;color:var(--muted)">respondido por '+esc(r.quem||'-')+(r.ts?(' em '+esc(carimboBR(r.ts))):(r.quando?(' em '+esc(hospDataBR(r.quando))):''))+'</div>'
+        +(pode?('<button type="button" class="btn" style="margin-top:8px;min-height:44px;padding:8px 14px;font-size:14px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px" onclick="hospMesmoDesfazerAbrir(\''+jsAspas(ch)+'\')">Desfazer esta resposta</button>'):'')
+        +'</div>');
+    });
+    (hospedes||[]).forEach(function(h){
+      if(!h || !h.juntouPeloChip || !h.tambemNaPlanilhaComo) return;
+      L.push('<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--z-white);border:1.5px solid var(--line);overflow-wrap:anywhere">'
+        +'<div style="font-weight:800;font-size:14px;color:var(--z-blue)">'+esc(String(h.nome||'')+(h.tutor?(' · '+h.tutor):''))+' e '+esc(h.tambemNaPlanilhaComo)+'</div>'
+        +'<div style="font-size:13.5px;color:var(--z-blue)">É o mesmo: juntado pelo microchip</div></div>');
+    });
+    if(!L.length) return '';
+    return '<details style="margin:10px 0"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:var(--z-blue)">Pares já respondidos ('+L.length+')</summary>'+L.join('')+'</details>';
+  }
+  function hospMesmoDesfazerAbrir(ch){
+    if(!hospPodeResponderMesmo()) return Promise.resolve(corrBarrar('desfazer a resposta «É o mesmo FILHOt?»', corrQuemPode('corrigir-hospedagem'), {alvo:ch}));
+    var r=(HOSP_MESMO||{})[ch];
+    if(!r){ zAlertao('ESTA RESPOSTA JÁ FOI DESFEITA', ['Atualize a tela.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var n=hospMesmoNomes(ch, r);
+    return corrAbrir({acao:'reabrir', titulo:'Desfazer a resposta «É o mesmo FILHOt?»', oque:'a resposta «'+(r.mesmo?'É o mesmo':'São dois')+'» para '+n[0]+' e '+n[1],
+      original:{caminho:'daycare/hospede-mesmo/'+ch, id:String(ch)}, estado:(r.mesmo?'É o mesmo':'São dois'), paraEstado:'sem resposta (a pergunta volta)',
+      volta:['A pergunta "É o mesmo FILHOt?" volta para '+n[0]+' e '+n[1]+'. Até alguém responder de novo, os dois aparecem separados no Plantão, em Hóspedes de hoje e nas contagens.'],
+      capacidade:'corrigir-hospedagem', nivel:'propria', tituloOk:'Resposta desfeita', botao:'Desfazer esta resposta',
+      gravar:function(reg){ return hospMesmoDesfazerGravar(ch, reg); }}).then(function(x){ if(x && x.ok) hospMesmoMudou(); return x; });
+  }
+  async function hospMesmoDesfazerGravar(ch, reg){
+    if(!hospPodeResponderMesmo()) return corrBarrar('desfazer a resposta «É o mesmo FILHOt?»', corrQuemPode('corrigir-hospedagem'), {alvo:ch});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    reg=reg||{};
+    var s=await DB.ref('daycare/hospede-mesmo/'+ch).once('value'), cur=(s&&s.val)?s.val():null;
+    if(!cur) return {ok:false, erro:'Esta resposta já foi desfeita em outro aparelho. Nada foi gravado de novo.'};
+    var hist=null; try{ var sh=await DB.ref('daycare/hospede-mesmo-historico/'+ch).once('value'); hist=(sh&&sh.val)?sh.val():null; }catch(x){ hist=null; } /* silencioso de propósito: sem a leitura, a chave do instante */
+    var k=hospChaveNova(hist, 'h', Number(reg.ts)||Date.now());
+    try{ await DB.ref('daycare/hospede-mesmo-historico/'+ch+'/'+k).set(hospLimpo({resposta:cur, dada:{quem:cur.quem||'', ts:cur.ts||0}, desfeita:{registro:reg}})); }
+    catch(x){ return {ok:false, erro:x}; }
+    try{ await DB.ref('daycare/hospede-mesmo/'+ch).remove(); }
+    catch(x){ return {ok:false, erro:x}; }
+    try{ delete HOSP_MESMO[ch]; }catch(x){} /* silencioso de propósito: o ouvinte traz o valor do banco */
+    try{ if(typeof audit==='function') audit('hospedes-resposta-desfeita', 'desfez a resposta "'+(cur.mesmo?'é o mesmo':'são dois')+'" para '+hospMesmoNomes(ch, cur).join(' e ')+' — motivo: '+String(reg.motivo||''), {alvo:ch, assinou:reg.por||''}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  // As respostas mudaram (aqui ou em outro aparelho): a lista do Plantão é REMONTADA (a junção e a pergunta voltam) e as telas
+  // que mostram os pares se redesenham.
+  function hospMesmoMudou(){
+    try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ var vh=document.getElementById('v-hospedes'); if(vh&&vh.classList&&vh.classList.contains('active')&&typeof renderHospedesAba==='function') renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(typeof mesaRender==='function') mesaRender(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+  }
+  // ===== 6.66 (AC11, AC12) — OS AVISOS À RECEPÇÃO: RETIRAR, TROCAR O TIPO, O ESTOQUE QUE VOLTOU, A TRILHA (H16, H17) =====
+  // Quem assina: quem trabalha na Recepção (recepcao-avisos), com a própria senha. Retirar = o aviso nasceu por engano: sai da
+  // lista de abertos e de TODAS as contas (avisoEncerrado diz sim para «retirado» — um predicado só), fica guardado em
+  // «Retirados», riscado. Nada é apagado.
+  // Quem trabalha na Recepção (a Consultora de Bem-Estar, a Supervisão, a Gestão e a Diretoria): é a capacidade da tela
+  // so-recepcao que já existe ('corrigir-engano-dc', 6.56), os mesmos quatro papéis. A tabela PERM não ganha capacidade nova
+  // (a 6.65 P22 fixa o texto dela).
+  var AVISO_CAP='corrigir-engano-dc';
+  function avisoPodeRecepcao(){ return podePapel(AVISO_CAP); }
+  function avisoColecao(col){ return (col==='racao')?'auaulandia/avisos-racao':'auaulandia/avisos-estoque'; }
+  function avisoCache(col){ return ((col==='racao')?AVISOS_RACAO_CACHE:AVISOS_ESTOQUE_CACHE)||{}; }
+  function avisoTitulo(col, a){
+    a=a||{};
+    if(col!=='racao') return 'Remédio '+String(a.medNome||'')+' — '+String(a.hospNome||'');
+    var t=(a.tipo==='medicacao')?('Remédio '+String(a.itemNome||'')):(a.tipo==='medicacao-sem-contagem')?('Contar o remédio '+String(a.itemNome||'')):(a.tipo==='comida-natural')?'Comida natural':'Ração/comida';
+    return t+' — '+String(a.hospNome||'');
+  }
+  function avisoRetirado(a){ return !!a && String(a.status||'')==='retirado'; }
+  function avisoRetirarBotaoHTML(col, id){
+    return '<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-size:14px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px;white-space:normal" onclick="avisoRetirarAbrir(\''+jsAspas(col)+'\',\''+jsAspas(id)+'\')">Retirar este aviso (foi engano)</button>';
+  }
+  function avisoRetirarAbrir(col, id){
+    if(!avisoPodeRecepcao()) return Promise.resolve(corrBarrar('retirar um aviso da Recepção', corrQuemPode(AVISO_CAP), {aviso:id}));
+    var a=avisoCache(col)[id];
+    if(!a || avisoRetirado(a)){ zAlertao('ESTE AVISO JÁ SAIU', ['Atualize a tela: ele pode ter sido retirado em outro aparelho.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var cas=['O aviso sai da lista de abertos, do número da Recepção e dos painéis. Fica guardado em «Retirados», riscado, com quem, quando e o motivo. Nada é apagado.'];
+    if(col!=='racao' && a.key && a.itemId) cas.push('A marca "está acabando" do '+String(a.medNome||'remédio')+' sai.');
+    return corrAbrir({acao:'anular', titulo:'Retirar este aviso', oque:'o aviso «'+avisoTitulo(col, a)+'»', original:{caminho:avisoColecao(col)+'/'+id, id:String(id)},
+      estado:'aberto', cascata:cas, capacidade:AVISO_CAP, nivel:'propria', botao:'Retirar o aviso (foi engano)', tituloOk:'Aviso retirado',
+      rotulo:'Retirado (foi engano)', rotuloAcao:'Retirou', gravar:function(reg){ return avisoRetirarGravar(col, id, reg); }});
+  }
+  async function avisoRetirarGravar(col, id, reg){
+    if(!avisoPodeRecepcao()) return corrBarrar('retirar um aviso da Recepção', corrQuemPode(AVISO_CAP), {aviso:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    reg=reg||{};
+    var mot=String(reg.motivo||''), ts=Number(reg.ts)||Date.now(), erroTx='', antes=null;
+    var res=await DB.ref(avisoColecao(col)+'/'+id).transaction(function(cur){
+      if(cur===null||cur===undefined) return null;
+      if(avisoRetirado(cur)){ erroTx='Este aviso já foi retirado em outro aparelho. Nada foi gravado de novo.'; return; }
+      antes=cur;
+      var novo=JSON.parse(JSON.stringify(cur));
+      novo.retirado={status_antes:String(cur.status||'pendente'), registro:reg}; novo.retirado.motivo=mot;
+      novo.status='retirado';
+      novo.entries=(Array.isArray(cur.entries)?cur.entries.slice():[]).concat([{acao:'Retirado: '+mot, assinatura:String(reg.por||'-'), quem:String(reg.login||'-'), quando:agoraBR(), ts:ts, retirada:true}]);
+      return novo;
+    });
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(!res || !res.committed || !v || !avisoRetirado(v)) return {ok:false, erro:erroTx||'Este aviso mudou em outro aparelho. Nada foi gravado: feche e abra de novo.'};
+    // a marca «está acabando» do remédio sai junto (como no «Encerrar» de sempre)
+    if(col!=='racao' && antes && antes.key && antes.itemId) try{ await DB.ref('auaulandia/medicacao-agenda/'+antes.key+'/itens/'+antes.itemId+'/estoque/acabando').set(null); }
+      catch(x){ _logFalhaGrav('auaulandia/medicacao-agenda/ (retirar o aviso de estoque)', x); }
+    try{ if(typeof audit==='function') audit(col==='racao'?'racao-aviso-retirado':'estoque-aviso-retirado', 'retirou o aviso «'+avisoTitulo(col, antes)+'» (foi engano) — motivo: '+mot, {aviso:id, quem:String(reg.login||'-'), assinou:String(reg.por||'')}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  // «Retirados (N)», fechada, depois dos resolvidos: riscados, com «Reabrir».
+  function avisoRetiradosHTML(col, ids){
+    if(!ids.length) return '';
+    var C=avisoCache(col);
+    return '<details style="margin-top:10px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:var(--muted);font-size:13.5px">Retirados ('+ids.length+') — avisos que nasceram por engano</summary>'
+      +ids.map(function(id){ var a=C[id]||{}, r=((a.retirado||{}).registro)||{};
+        var reg=Object.assign({}, r, {acao:'anular', oque:avisoTitulo(col, a), rotulo:'Retirado (foi engano)'});
+        return corrRiscadoHTML(reg, avisoPodeRecepcao()?('avisoReabrirAbrir(\''+jsAspas(col)+'\',\''+jsAspas(id)+'\')'):''); }).join('')
+      +'</details>';
+  }
+  // O «Reabrir» (AC12.4) — do encerrado e do retirado — pelo cartaz «reabrir» da 6.57: motivo de 4 palavras e a própria senha.
+  function avisoReabrirAbrir(col, id){
+    if(!avisoPodeRecepcao()) return Promise.resolve(corrBarrar('reabrir um aviso da Recepção', corrQuemPode(AVISO_CAP), {aviso:id}));
+    var a=avisoCache(col)[id];
+    if(!a || !avisoEncerrado(a)){ zAlertao('ESTE AVISO JÁ ESTÁ ABERTO', ['Atualize a tela.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir este aviso', oque:'o aviso «'+avisoTitulo(col, a)+'»', original:{caminho:avisoColecao(col)+'/'+id, id:String(id)},
+      estado:(avisoRetirado(a)?'retirado (foi engano)':'encerrado'), paraEstado:'aberto (em processo)',
+      volta:['O aviso volta para a lista de abertos e para o número da Recepção.'], capacidade:AVISO_CAP, nivel:'propria', tituloOk:'Aviso reaberto',
+      gravar:function(reg){ return (col==='racao')?avisoRacaoReabrirGravar(id, reg):avisoReabrirGravar(id, reg); }});
+  }
+  // A régua do motivo de 4 palavras nos avisos (a frase do motivoQuatroPalavras, chamado, nunca copiado).
+  function avisoMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }
+  // O nome escrito na rotina (providência e encerrar) é validado como o das ocorrências (AC12.2).
+  function avisoNomeErro(n){ return (typeof nomeAssinaturaValido==='function' && !nomeAssinaturaValido(n))?'Escreva o seu nome de verdade (o nome de quem fez), não um apelido, um ponto ou uma letra só.':''; }
+  // AC11.5 — PURA: o aviso de estoque aberto cujo remédio já não está baixo (a projeção deixou de dizer «baixo», ou a marca
+  // «acabando» foi limpa depois do aviso). null = não voltou (ou não dá para saber).
+  function avisoEstoqueVoltou(a, it, agora){
+    a=a||{}; it=it||null;
+    if(!it || avisoEncerrado(a)) return null;
+    var est=it.estoque||{}, p=projecaoEstoque(it);
+    var voltouProj=!!(p && !p.baixo), voltouMarca=(String(a.motivo||'')==='manual' && !!it.estoque && !est.acabando && !p);   // sem o estoque no remédio, não se afirma nada
+    if(!voltouProj && !voltouMarca) return null;
+    return {restante:(p?p.restante:null), unidade:String(it.u||''), quando:carimboBR(Number(agora)||Date.now())};
+  }
+  function avisoEstoqueVoltouHTML(id, a){
+    var it=null; try{ var ag=((((typeof MED_AGENDA_GERAL!=='undefined'&&MED_AGENDA_GERAL)||{})[a.key]||{}).itens||{}); it=ag[a.itemId]||null;
+      // o horário trocado por datas (6.54) leva o estoque para a linha nova (estoqueMovidoPara): o estoque do aviso é o dela
+      for(var n=0; it && it.estoqueMovidoPara && ag[it.estoqueMovidoPara] && n<10; n++) it=ag[it.estoqueMovidoPara]; }catch(x){ it=null; } /* silencioso de propósito: sem a agenda, não se afirma nada */
+    var v=avisoEstoqueVoltou(a, it);
+    if(!v) return '';
+    var qt=(v.restante!=null)?(v.restante+' '+((v.restante>1&&MED_PLURAL[v.unidade])?MED_PLURAL[v.unidade]:(v.unidade||'unidades'))):'sem a marca "está acabando"';
+    return '<div style="margin:8px 0;padding:10px 12px;border-radius:12px;background:#E8F5EC;border:1.5px solid #1E8449;color:#1E8449;font-weight:800;font-size:14px">O estoque voltou: '+esc(qt)+' (conferido em '+esc(v.quando)+')'
+      +'<button type="button" class="btn" style="display:block;margin-top:8px;min-height:44px;padding:8px 14px;font-weight:800;background:#1E8449;color:#fff;border:0;border-radius:12px" onclick="avisoEstoqueVoltouEncerrar(\''+jsAspas(id)+'\',\''+jsAspas(v.restante!=null?('O estoque voltou para '+qt):'O estoque voltou: a marca "está acabando" saiu')+'\')">Encerrar: o estoque voltou</button></div>';
+  }
+  // Preenche o motivo do «Encerrar» de sempre; a pessoa confere, escreve o nome e toca em «Encerrar». Nada encerra sozinho.
+  function avisoEstoqueVoltouEncerrar(id, texto){
+    var t=document.getElementById('avr_acao_'+id); if(t){ t.value=String(texto||''); try{ t.focus(); }catch(x){} } /* silencioso de propósito: sem foco, o texto já está lá */
+    var n=document.getElementById('avr_assina_'+id); if(n){ try{ n.focus(); }catch(x){} } /* silencioso de propósito: sem foco, a pessoa toca no campo */
+  }
+  // A trilha (AC12.1): cada entrada com «Corrigir esta entrada»; a corrigida fica riscada, com o texto intacto e quem corrigiu.
+  function avisoTrilhaHTML(col, id, a){
+    var E=(a&&a.entries)||[];
+    if(!E.length) return '';
+    var pode=avisoPodeRecepcao();
+    return '<div class="avr-trilha">'+E.map(function(e, i){
+      e=e||{}; var cr=e.corrigida||null;
+      return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div>'
+        +'<div class="avr-tl-acao"'+(cr?' style="text-decoration:line-through;opacity:.75"':'')+'>"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div>'
+        +(cr?('<div style="font-size:12px;color:var(--muted)">Corrigida por '+esc(cr.quem||'-')+' em '+esc(carimboBR(cr.ts))+': '+esc(cr.motivo||'')+'</div>'):'')
+        +((pode && !cr && !e.retirada)?('<button type="button" style="margin-top:4px;min-height:44px;padding:6px 12px;font-size:13px;font-weight:700;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--line);border-radius:10px;cursor:pointer" onclick="avisoEntradaCorrigirAbrir(\''+jsAspas(col)+'\',\''+jsAspas(id)+'\','+i+')">Corrigir esta entrada</button>'):'')
+        +'</div>';
+    }).join('')+'</div>';
+  }
+  function avisoEntradaCorrigirAbrir(col, id, idx){
+    if(!avisoPodeRecepcao()) return Promise.resolve(corrBarrar('corrigir uma entrada da trilha do aviso', corrQuemPode(AVISO_CAP), {aviso:id}));
+    var a=avisoCache(col)[id], e=((a&&a.entries)||[])[idx];
+    if(!e || e.corrigida){ zAlertao('ESTA ENTRADA JÁ FOI CORRIGIDA', ['Atualize a tela.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var mesmoDia=!!(e.ts && hospIsoDe(e.ts)===zHojeISO());
+    return corrAbrir({acao:'corrigir', titulo:'Corrigir esta entrada', oque:'a entrada de '+String(e.quando||'')+' do aviso «'+avisoTitulo(col, a)+'»',
+      original:{caminho:avisoColecao(col)+'/'+id+'/entries/'+idx, id:String(idx)}, capacidade:AVISO_CAP, nivel:'propria',
+      assinaNome:(mesmoDia?String(e.assinatura||''):''), tituloOk:'Entrada corrigida',
+      camposTexto:'A entrada de antes fica na trilha, riscada, com o texto intacto. A correção entra como uma entrada nova.',
+      campos:[{c:'texto', rotulo:'O que foi feito', valor:String(e.acao||''), grande:true}],
+      gravar:function(reg){ return avisoEntradaCorrigirGravar(col, id, idx, e, reg); }});
+  }
+  async function avisoEntradaCorrigirGravar(col, id, idx, vista, reg){
+    if(!avisoPodeRecepcao()) return corrBarrar('corrigir uma entrada da trilha do aviso', corrQuemPode(AVISO_CAP), {aviso:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    reg=reg||{};
+    var novoTxt=String((reg.depois||{}).texto||'').trim(), ts=Number(reg.ts)||Date.now(), erroTx='';
+    if(!novoTxt) return {ok:false, erro:'Escreva o texto certo da entrada. Nada foi gravado.'};
+    var res=await DB.ref(avisoColecao(col)+'/'+id).transaction(function(cur){
+      if(cur===null||cur===undefined) return null;
+      var E=Array.isArray(cur.entries)?cur.entries.slice():[], old=E[idx];
+      if(!old || old.corrigida || Number(old.ts)!==Number(vista.ts) || String(old.acao||'')!==String(vista.acao||'')){ erroTx='Esta entrada mudou em outro aparelho. Nada foi gravado: feche e abra de novo.'; return; }
+      var c={quem:String(reg.por||'-'), ts:ts, registro:reg}; c.motivo=String(reg.motivo||'');
+      E[idx]=Object.assign({}, old, {corrigida:c});
+      var nova={acao:'Correção da entrada de '+String(old.quando||'')+': '+novoTxt, assinatura:String(reg.por||'-'), quem:String(reg.login||'-'), quando:agoraBR(), ts:ts, corrige:Number(old.ts)||0};
+      if(old.resolucao) nova.resolucao=true;
+      if(old.reabertura) nova.reabertura=true;
+      E.push(nova);
+      var novo=JSON.parse(JSON.stringify(cur)); novo.entries=E;
+      if(old.resolucao && String(cur.status||'')==='resolvido') novo.resolvido_motivo=novoTxt;
+      return novo;
+    });
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(!res || !res.committed || !v) return {ok:false, erro:erroTx||'Este aviso mudou em outro aparelho. Nada foi gravado.'};
+    try{ if(typeof audit==='function') audit('aviso-entrada-corrigida', 'corrigiu a entrada de '+String(vista.quando||'')+' do aviso «'+avisoTitulo(col, v)+'»: "'+String(vista.acao||'')+'" → "'+novoTxt+'"', {aviso:id, quem:String(reg.login||'-'), assinou:String(reg.por||'')}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  // Trocar o tipo do aviso de ração (AC11.4): o cartaz «corrigir», com o motivo e a própria senha; a troca fica em tipo_trocas.
+  var AVISO_TIPO_ROT={racao:'Ração/comida', 'comida-natural':'Comida natural', medicacao:'Remédio'};
+  function avisoTipoTrocarAbrir(id, novo){
+    if(!avisoPodeRecepcao()) return Promise.resolve(corrBarrar('corrigir o tipo do aviso', corrQuemPode(AVISO_CAP), {aviso:id}));
+    var a=AVISOS_RACAO_CACHE[id]; if(!a) return Promise.resolve(null);
+    var de=a.tipo||'racao'; if(!AVISO_TIPO_ROT[novo] || novo===de) return Promise.resolve(null);
+    var op=['Ração/comida','Comida natural','Remédio'];
+    var p=corrAbrir({acao:'corrigir', titulo:'O que faltou?', oque:'o tipo do aviso de '+String(a.hospNome||''), original:{caminho:'auaulandia/avisos-racao/'+id, id:String(id)},
+      capacidade:AVISO_CAP, nivel:'propria', tituloOk:'Tipo corrigido',
+      campos:[{c:'tipo', rotulo:'O que faltou', valor:AVISO_TIPO_ROT[de]||'Ração/comida', opcoes:op}],
+      gravar:function(reg){ return avisoTipoGravar(id, de, reg); }});
+    try{ corrToque('continuar', {valores:[AVISO_TIPO_ROT[novo]]}); }catch(x){} /* silencioso de propósito: o cartaz fica nos campos */
+    return p;
+  }
+  async function avisoTipoGravar(id, de, reg){
+    if(!avisoPodeRecepcao()) return corrBarrar('corrigir o tipo do aviso', corrQuemPode(AVISO_CAP), {aviso:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    reg=reg||{};
+    var rot=String((reg.depois||{}).tipo||''), novo=Object.keys(AVISO_TIPO_ROT).filter(function(k){ return AVISO_TIPO_ROT[k]===rot; })[0];
+    if(!novo) return {ok:false, erro:'Escolha o que faltou. Nada foi gravado.'};
+    var ts=Number(reg.ts)||Date.now(), patch={tipo:novo, itemNome:AVISO_TIPO_ROT[novo], tipoCorrigidoPor:String(reg.por||'-'), tipoCorrigidoEm:ts};
+    var tr={de:de, para:novo, registro:reg}; tr.motivo=String(reg.motivo||'');
+    patch['tipo_trocas/'+hospChaveNova((AVISOS_RACAO_CACHE[id]||{}).tipo_trocas, 't', ts)]=JSON.parse(JSON.stringify(tr));
+    try{ await DB.ref('auaulandia/avisos-racao/'+id).update(patch); }
+    catch(x){ return {ok:false, erro:x}; }
+    try{ if(typeof audit==='function') audit('aviso-tipo-corrigido', id, {de:de, para:novo, quem:String(reg.login||'-'), assinou:String(reg.por||'')}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
   }
   function ehRacaLike(x){ x=(typeof jsNorm==='function')?jsNorm(x||''):String(x||'').toLowerCase().trim(); if(!x) return false;
     if(_RACAS_EXTRA.indexOf(x)>=0) return true;
@@ -16133,7 +16418,8 @@
     ((a.entries)||[]).forEach(function(x){ if(x&&!x.resolucao&&(x.ts||0)>(e.ts||0)) depois=true; });
     return !depois;                                          // providência posterior reabre de fato
   }
-  function avisoEncerrado(a){ a=a||{}; return (a.status==='resolvido')||avisoEncerradoHerdado(a); }
+  // 6.66 (AC11.3): o aviso RETIRADO (nasceu por engano) conta como encerrado em todas as contas — um predicado só.
+  function avisoEncerrado(a){ a=a||{}; return (a.status==='resolvido')||(a.status==='retirado')||avisoEncerradoHerdado(a); }
   // O status que a tela mostra e que as contagens usam — um lugar só, para nenhuma lista
   // discordar de outra sobre o que ainda está aberto.
   function avisoStatusEfetivo(a){
@@ -16375,11 +16661,10 @@
     }
     else if(a.modo==='contavel' && typeof a.restante==='number') det.push('Restam ~'+a.restante+' '+((a.restante>1&&MED_PLURAL[a.unidade])?MED_PLURAL[a.unidade]:(a.unidade||'unidades')));
     det.push(motivo);
-    var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
-      return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
-    }).join('')+'</div>':'';
+    var trilha=avisoTrilhaHTML('estoque', id, a);   // 6.66 (AC12.1): «Corrigir esta entrada»; a corrigida, riscada
     var form=(status!=='resolvido')
-      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo, com o seu nome e a hora.</p></div>'
+      ? avisoEstoqueVoltouHTML(id, a)+'<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avr_acao_'+id+'" placeholder="O que foi feito? (ex.: liguei para o tutor, ele traz amanhã)"></textarea><input id="avr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo (pelo menos 4 palavras), com o seu nome e a hora.</p></div>'
+        +avisoRetirarBotaoHTML('estoque', id)   // 6.66 (AC11.1)
       : avisoFechoHTML(a, 'avisoReabrir', id, 'estoque encaminhado');
     return '<div class="avr-card '+cls+'"><div class="avr-head"><div class="avr-info"><div class="avr-nome">'+escAttr(a.medNome||'Medicamento')+'</div><div class="avr-sub">'+escAttr(a.hospNome||'')+(a.tutor?(' · Tutor: '+escAttr(a.tutor)):'')+' — '+escAttr(det.join(' · '))+'</div></div>'+chip+'</div><div class="avr-body">'+trilha+form+'</div></div>';
   }
@@ -16423,27 +16708,31 @@
     var ids=Object.keys(AVISOS_ESTOQUE_CACHE||{});
     ids.sort(function(a,b){ return (AVISOS_ESTOQUE_CACHE[b]._ts||0)-(AVISOS_ESTOQUE_CACHE[a]._ts||0); });
     var abertos=ids.filter(function(id){ return !avisoEncerrado(AVISOS_ESTOQUE_CACHE[id]); });
-    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_ESTOQUE_CACHE[id]); });
+    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_ESTOQUE_CACHE[id]) && !avisoRetirado(AVISOS_ESTOQUE_CACHE[id]); });
+    var retirados=ids.filter(function(id){ return avisoRetirado(AVISOS_ESTOQUE_CACHE[id]); });   // 6.66 (AC11.3): «Retirados (N)», depois dos resolvidos
     el.innerHTML=_painelPendencias(
       abertos.map(avisoCardHTML).join(''), fechados.map(avisoCardHTML).join(''),
       abertos.length, fechados.length, 'REMÉDIO(S) ACABANDO — sem providência registrada',
       abertos.map(function(id){ return (AVISOS_ESTOQUE_CACHE[id]||{}).pet||''; }).filter(Boolean),
-      'Nenhum aviso de estoque de medicação. Tudo em dia por aqui.', 'gvEstoque');
+      'Nenhum aviso de estoque de medicação. Tudo em dia por aqui.', 'gvEstoque')+avisoRetiradosHTML('estoque', retirados);
   }
   function avisoAddEntrada(id){
     var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avr_assina_'+id)||{}).value||'').trim();
     if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
+    var _ne=avisoNomeErro(assina); if(_ne){ alert(_ne); return; }   // 6.66 (AC12.2): o nome validado
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
     DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:(avisoEncerrado(a)?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoAddEntrada)', e); });
-    if(typeof audit==='function') audit('estoque-aviso-entrada',a.key,{med:a.medNome||'',quem:assina});
+    if(typeof audit==='function') audit('estoque-aviso-entrada',a.key,{med:a.medNome||'',quem:quemSou(),assinou:assina});   // 6.66 (AC12.2): o login é o «quem»
   }
   // ENCERRAR — o desfecho vai para o NÓ, não fica só na trilha (a lição do Kakinho).
   function avisoResolver(id){
     var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avr_assina_'+id)||{}).value||'').trim();
     if(!acao||!assina){ alert('Escreva o motivo do encerramento e assine para encerrar.'); return; }
+    var _mq=avisoMotivoErro(acao); if(_mq){ alert(_mq); return; }   // 6.66 (AC12.3): o motivo de 4 palavras
+    var _ne=avisoNomeErro(assina); if(_ne){ alert(_ne); return; }   // 6.66 (AC12.2): o nome validado
     if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
     DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'resolvido',
@@ -16451,19 +16740,26 @@
       reaberto_por:null, reaberto_em:null, reaberto_motivo:null}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoResolver)', e); });
     // baixa a flag "acabando" do item, já que foi resolvido
     if(a.key&&a.itemId) DB.ref('auaulandia/medicacao-agenda/'+a.key+'/itens/'+a.itemId+'/estoque/acabando').set(null).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (avisoResolver)', e); });
-    if(typeof audit==='function') audit('estoque-aviso-resolvido',a.key,{med:a.medNome||'',quem:assina});
+    if(typeof audit==='function') audit('estoque-aviso-resolvido',a.key,{med:a.medNome||'',quem:quemSou(),assinou:assina});
   }
   // REABRIR — pede motivo, deixa rastro e carimba quem/quando. Antes gravava calado, e foi
   // por um toque nele que o encerramento do Kakinho se desfez sem ninguém saber.
-  function avisoReabrir(id){
-    if(!DB) return; var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return;
-    avisoPedirMotivoReabrir(function(motivo, quem){
-      var entries=(a.entries||[]).slice();
-      entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:Date.now(), reabertura:true});
-      DB.ref('auaulandia/avisos-estoque/'+id).update({entries:entries, status:'em_processo',
-        reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoReabrir)', e); });
-      if(typeof audit==='function') audit('estoque-aviso-reaberto', id, {quem:quem, motivo:motivo});
-    });
+  // 6.66 (AC12.4): o «Reabrir» passa pelo cartaz «reabrir» da 6.57 (motivo de 4 palavras e a própria senha); a trilha e o rastro
+  // continuam como eram. Também reabre o aviso retirado (o registro da retirada fica em retiradas_desfeitas).
+  function avisoReabrir(id){ return avisoReabrirAbrir('estoque', id); }
+  async function avisoReabrirGravar(id, reg){
+    if(!avisoPodeRecepcao()) return corrBarrar('reabrir um aviso da Recepção', corrQuemPode(AVISO_CAP), {aviso:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var a=AVISOS_ESTOQUE_CACHE[id]; if(!a) return {ok:false, erro:'Não achei este aviso. Atualize a tela. Nada foi gravado.'};
+    var quem=String((reg||{}).por||'-'), motivo=String((reg||{}).motivo||'').trim(), ts=Date.now();
+    var entries=(a.entries||[]).slice();
+    entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:ts, reabertura:true});
+    var up={entries:entries, status:'em_processo', reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo};
+    if(avisoRetirado(a)){ up.retirado=null; up['retiradas_desfeitas/'+hospChaveNova(a.retiradas_desfeitas, 'r', ts)]=JSON.parse(JSON.stringify(a.retirado||{})); }
+    try{ await DB.ref('auaulandia/avisos-estoque/'+id).update(up); }
+    catch(e){ _logFalhaGrav('auaulandia/avisos-estoque/ (avisoReabrir)', e); return {ok:false, erro:e}; }
+    if(typeof audit==='function') audit('estoque-aviso-reaberto', id, {quem:quem, motivo:motivo});
+    return {ok:true};
   }
 
   // ---- Recepção: OCORRÊNCIAS dos hóspedes (item 3 — a loja precisa ver) ----
@@ -18034,11 +18330,10 @@
       : ('Faltam '+escAttr(a.deficit!=null?a.deficit:'?')+' '+(a.unidade||'g')+' para a estadia'
           +(a.trazido!=null&&a.necessario!=null?(' (mandaram '+escAttr(a.trazido)+', precisa de '+escAttr(a.necessario)+')'):''))
           +(a.motivo?(' — '+escAttr(a.motivo)):'');
-    var trilha=(a.entries&&a.entries.length)?'<div class="avr-trilha">'+a.entries.map(function(e){
-      return '<div class="avr-tl'+(e.resolucao?' resol':'')+'"><div class="avr-tl-meta">'+escAttr(e.quando||'')+'</div><div class="avr-tl-acao">"'+escAttr(e.acao||'')+'"</div><div class="avr-tl-assina">— '+escAttr(e.assinatura||'')+'</div></div>';
-    }).join('')+'</div>':'';
+    var trilha=avisoTrilhaHTML('racao', id, a);   // 6.66 (AC12.1): «Corrigir esta entrada»; a corrigida, riscada
     var form=(status!=='resolvido')
-      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que resolve? (ex.: tem 7 comprimidos, dá até o fim da estadia)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo, com o seu nome e a hora — é o caso de "tem 7, dá até o final".</p></div>'
+      ? '<div class="avr-form"><div class="ff-tit">Registrar providência</div><textarea id="avrr_acao_'+id+'" placeholder="O que resolve? (ex.: tem 7 comprimidos, dá até o fim da estadia)"></textarea><input id="avrr_assina_'+id+'" placeholder="Seu nome (assinatura)"><div class="avr-form-btns"><button class="btn btn-primary" onclick="avisoRacaoAddEntrada(\''+id+'\')">Registrar</button><button class="btn btn-gold" onclick="avisoRacaoResolver(\''+id+'\')">Encerrar</button></div><p class="avr-dica-fecho">Encerrar tira o chamado da lista de abertos. O que você escrever fica como motivo (pelo menos 4 palavras), com o seu nome e a hora — é o caso de "tem 7, dá até o final".</p></div>'
+        +avisoRetirarBotaoHTML('racao', id)   // 6.66 (AC11.1)
       : avisoFechoHTML(a, 'avisoRacaoReabrir', id, 'ração encaminhada');
     // O mesmo canal atende ração e medicação (itens 3 e 4) — o título diz qual é qual.
     var _rot=(a.tipo==='medicacao')?('💊 Remédio '+escAttr(a.itemNome||''))
@@ -18063,21 +18358,23 @@
     var ids=Object.keys(AVISOS_RACAO_CACHE||{});
     ids.sort(function(a,b){ return (AVISOS_RACAO_CACHE[b]._ts||0)-(AVISOS_RACAO_CACHE[a]._ts||0); });
     var abertos=ids.filter(function(id){ return !avisoEncerrado(AVISOS_RACAO_CACHE[id]); });
-    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_RACAO_CACHE[id]); });
+    var fechados=ids.filter(function(id){ return avisoEncerrado(AVISOS_RACAO_CACHE[id]) && !avisoRetirado(AVISOS_RACAO_CACHE[id]); });
+    var retirados=ids.filter(function(id){ return avisoRetirado(AVISOS_RACAO_CACHE[id]); });   // 6.66 (AC11.3)
     el.innerHTML=_painelPendencias(
       abertos.map(avisoRacaoCardHTML).join(''), fechados.map(avisoRacaoCardHTML).join(''),
       abertos.length, fechados.length, 'SEM RAÇÃO SUFICIENTE — sem providência registrada',
       abertos.map(function(id){ return (AVISOS_RACAO_CACHE[id]||{}).pet||''; }).filter(Boolean),
-      'Nenhum aviso de ração. Tudo em dia por aqui.', 'gvRacao');
+      'Nenhum aviso de ração. Tudo em dia por aqui.', 'gvRacao')+avisoRetiradosHTML('racao', retirados);
   }
   function avisoRacaoAddEntrada(id){
     var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avrr_assina_'+id)||{}).value||'').trim();
     if(!acao||!assina){ alert('Escreva o que foi feito e o seu nome para registrar.'); return; }
+    var _ne=avisoNomeErro(assina); if(_ne){ alert(_ne); return; }   // 6.66 (AC12.2): o nome validado
     if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now()});
     DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:(avisoEncerrado(a)?'resolvido':'em_processo')}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoAddEntrada)', e); });
-    if(typeof audit==='function') audit('racao-aviso-entrada',id,{quem:assina});
+    if(typeof audit==='function') audit('racao-aviso-entrada',id,{quem:quemSou(),assinou:assina});   // 6.66 (AC12.2): o login é o «quem»
   }
   // ENCERRAR — este é o botão do caso do Kakinho. O desfecho vai para o NÓ (resolvido_por,
   // resolvido_em, resolvido_motivo) e não fica só na trilha: assim nenhuma resposta some
@@ -18086,23 +18383,30 @@
     var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
     var assina=((document.getElementById('avrr_assina_'+id)||{}).value||'').trim();
     if(!acao||!assina){ alert('Escreva o motivo do encerramento e assine para encerrar.'); return; }
+    var _mq=avisoMotivoErro(acao); if(_mq){ alert(_mq); return; }   // 6.66 (AC12.3): o motivo de 4 palavras
+    var _ne=avisoNomeErro(assina); if(_ne){ alert(_ne); return; }   // 6.66 (AC12.2): o nome validado
     if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
     var entries=(a.entries||[]).slice(); entries.push({acao:acao,assinatura:assina,quando:agoraBR(),ts:Date.now(),resolucao:true});
     DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'resolvido',
       resolvido_por:assina, resolvido_em:Date.now(), resolvido_motivo:acao,
       reaberto_por:null, reaberto_em:null, reaberto_motivo:null}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoResolver)', e); });
-    if(typeof audit==='function') audit('racao-aviso-resolvido',id,{quem:assina,motivo:acao});
+    if(typeof audit==='function') audit('racao-aviso-resolvido',id,{quem:quemSou(),assinou:assina,motivo:acao});
   }
   // REABRIR — com motivo, com rastro na trilha e na auditoria.
-  function avisoRacaoReabrir(id){
-    if(!DB) return; var a=AVISOS_RACAO_CACHE[id]; if(!a) return;
-    avisoPedirMotivoReabrir(function(motivo, quem){
-      var entries=(a.entries||[]).slice();
-      entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:Date.now(), reabertura:true});
-      DB.ref('auaulandia/avisos-racao/'+id).update({entries:entries, status:'em_processo',
-        reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo}).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoReabrir)', e); });
-      if(typeof audit==='function') audit('racao-aviso-reaberto', id, {quem:quem, motivo:motivo});
-    });
+  function avisoRacaoReabrir(id){ return avisoReabrirAbrir('racao', id); }   // 6.66 (AC12.4)
+  async function avisoRacaoReabrirGravar(id, reg){
+    if(!avisoPodeRecepcao()) return corrBarrar('reabrir um aviso da Recepção', corrQuemPode(AVISO_CAP), {aviso:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var a=AVISOS_RACAO_CACHE[id]; if(!a) return {ok:false, erro:'Não achei este aviso. Atualize a tela. Nada foi gravado.'};
+    var quem=String((reg||{}).por||'-'), motivo=String((reg||{}).motivo||'').trim(), ts=Date.now();
+    var entries=(a.entries||[]).slice();
+    entries.push({acao:'Reaberto: '+motivo, assinatura:quem, quando:agoraBR(), ts:ts, reabertura:true});
+    var up={entries:entries, status:'em_processo', reaberto_por:quem, reaberto_em:Date.now(), reaberto_motivo:motivo};
+    if(avisoRetirado(a)){ up.retirado=null; up['retiradas_desfeitas/'+hospChaveNova(a.retiradas_desfeitas, 'r', ts)]=JSON.parse(JSON.stringify(a.retirado||{})); }
+    try{ await DB.ref('auaulandia/avisos-racao/'+id).update(up); }
+    catch(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoRacaoReabrir)', e); return {ok:false, erro:e}; }
+    if(typeof audit==='function') audit('racao-aviso-reaberto', id, {quem:quem, motivo:motivo});
+    return {ok:true};
   }
 
   // ===== Relatório do turno: medicação em SIM/NÃO (item 3) =====
@@ -23760,7 +24064,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-19';
+  const APP_VERSAO='2026-10-09-20';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -62858,7 +63162,17 @@
     'vet-observacao':'Observação da Veterinária para o tutor', 'vet-observacao-editada':'Editou a observação para o tutor',
     'vet-observacao-retirada':'Retirou a observação para o tutor', 'vet-observacao-reaberta':'Reabriu a observação para o tutor',
     'vet-medicacao-suspensa':'Suspendeu um remédio (Veterinária)', 'vet-medicacao-fim-ciente':'Deu «Ciente» do fim da receita',
-    'vet-medicacao-ciente-desfeito':'Desfez o «Ciente» do fim da receita («Ainda preciso reavaliar»)' };
+    'vet-medicacao-ciente-desfeito':'Desfez o «Ciente» do fim da receita («Ainda preciso reavaliar»)',
+    // ===== 6.66 — o check-in pela régua, Hóspedes de hoje e os avisos à Recepção (AC15): as ações novas e as que as funções
+    // tocadas já gravavam com o nome técnico
+    'checkin-regua':'Check-in: a régua do remédio (horário mudado depois da dose de hoje)', 'checkin-remedio-parecido':'Check-in: aviso do remédio novo parecido com um que saiu da lista', 'checkin-remedio-parou':'Check-in: remédio tirado da lista (parou de tomar)',
+    'estadia-datas':'Mudou as datas da hospedagem', 'estadia-baixa':'Deu baixa na hospedagem', 'estadia-reaberta':'Reabriu a hospedagem excluída',
+    'estadia-baixa-desfeita':'Desfez a baixa da hospedagem', 'hospedagem-saida-antecipada':'Saída antecipada da hospedagem (crédito de noites)',
+    'hospedagem-saida-antecipada-desfeita':'Desfez a saída antecipada da hospedagem', 'hospedes-resposta-desfeita':'Desfez a resposta «É o mesmo FILHOt?»',
+    'estoque-aviso-entrada':'Registrou providência no aviso de estoque', 'estoque-aviso-resolvido':'Encerrou o aviso de estoque',
+    'estoque-aviso-retirado':'Retirou o aviso de estoque (foi engano)', 'racao-aviso-entrada':'Registrou providência no aviso de falta (ração ou remédio)',
+    'racao-aviso-resolvido':'Encerrou o aviso de falta (ração ou remédio)', 'racao-aviso-retirado':'Retirou o aviso de falta (foi engano)',
+    'aviso-entrada-corrigida':'Corrigiu uma entrada da trilha do aviso', 'medicacao-agenda-dedupe':'Juntou remédios repetidos na agenda' };
   function acaoNome(acao){ return ACAO_LABEL[acao]||String(acao||''); }
   // A linha inteira de um registro da auditoria, em português. Ação sem tradução continua como hoje
   // (o nome técnico e o detalhe), sem quebrar a tela.
@@ -63379,7 +63693,7 @@
     ciRenderPert({});
     // coleira e "está em uso de alguma medicação?": em branco — é o tutor quem responde
     try{ ciColeiraAplicar(null); }catch(e){} /* silencioso de propósito: tela sem o cartão da coleira */
-    setSeg('ciMedEmUso',''); CI_MED_NAO_TOCADO=false; CI_MED_CARREGADOS=null;
+    setSeg('ciMedEmUso',''); CI_MED_NAO_TOCADO=false; CI_MED_CARREGADOS=null; CI_MED_LIDO=null;
     var _meb=document.getElementById('ciMedEmUsoBox'); if(_meb) _meb.style.display='none';
     // medicação vazia por padrão (1 linha, que só aparece com "Sim")
     document.getElementById('ciMeds').innerHTML=''; ciAddMed();
@@ -64129,6 +64443,12 @@
   // que a pessoa viu e tirou; o que a veterinária começou ou parou depois fica (QA46 M2).
   // null = a tela não chegou a ler a agenda (vale a regra antiga).
   var CI_MED_CARREGADOS=null;
+  // 6.66 (AC1.4): a cópia da agenda que ESTA tela leu, com o carimbo `_ts` lido junto (antes dos itens): {key, ts, itens, lido}.
+  // É com ela que o Salvar confere a recusa (6.62), a régua (6.54) e a trava (mcrTravaAgenda): se outro aparelho gravou a agenda
+  // depois que a tela abriu, nada é gravado. null = a tela não chegou a ler a agenda (a trava só passa sem agenda no banco).
+  var CI_MED_LIDO=null;
+  // A leitura em andamento (para quem precisa da lista pronta, como «Começar a correção por esta versão»).
+  var CI_MED_LENDO=null;
   // O que o Salvar leva da medicação: quem parou, o "Não", e o que a tela carregou (QA46 M3 —
   // num lugar só, com prova de comportamento).
   function ciMedPacoteCampos(){
@@ -64205,6 +64525,15 @@
     if(!it.continuo && it.dataFim && String(it.dataFim)<hoje) return false;
     return true;
   }
+  // 6.66 (AC2) — PURA: o estado duplo da 6.62 no Check-in — a parada guardada (`paradoEm`) e o remédio ainda tocando depois de
+  // hoje (medAgendaToca), com horário. O tutor confirma; o «Não está em uso» o alcança; a recusa vale para ele.
+  function ciMedDuplo(it, hoje){
+    it=it||{}; hoje=hoje||zHojeISO();
+    return !!it.paradoEm && medAgendaToca(it, hoje) && (Array.isArray(it.horarios)?it.horarios:[]).some(horaOk);
+  }
+  // 6.66 (AC2.4) — PURA: o que vem para a lista do Check-in: o remédio em vigor (ciMedEmVigor, como sempre) ou o estado duplo.
+  // Para todo remédio sem `paradoEm`, é o ciMedEmVigor letra por letra.
+  function ciMedNaLista(it, hoje){ return ciMedEmVigor(it, hoje) || ciMedDuplo(it, hoje); }
   // O mesmo registro do "Parou" da aba Medicamentos (fmedParou): nada é apagado, o item
   // desce para "Já não toma mais", com quem ouviu do tutor, quando e por quê. Termina ONTEM,
   // para o despertador não chamar hoje.
@@ -64230,14 +64559,14 @@
         var todos=(sAll&&sAll.val&&sAll.val())||{};
         var ids={}, sigs={};
         lista.forEach(function(x){ if(x&&x.id){ ids[x.id]=1; if(todos[x.id]) sigs[medAssinatura(todos[x.id])]=1; } });
-        return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje) && (ids[id] || sigs[medAssinatura(todos[id])]); })
+        return Object.keys(todos).filter(function(id){ return ciMedNaLista(todos[id], hoje) && (ids[id] || sigs[medAssinatura(todos[id])]); })
           .map(function(id){ return {id:id, nome:String((todos[id]||{}).nome||'')}; });
       }).catch(function(e){ _logFalhaGrav('ler a agenda para marcar "já não toma mais"', e); return lista; }).then(function(alvos){
         return Promise.all(alvos.map(function(x){
           var no=AG+'/itens/'+x.id;
           return DB.ref(no).once('value').then(function(s){
             var it=(s&&s.val&&s.val())||null; if(!it) return null;
-            if(!ciMedEmVigor(it, hoje)) return null;   // já parado ou suspenso por alguém: não sobrescreve (QA46)
+            if(!ciMedNaLista(it, hoje)) return null;   // já parado ou suspenso por alguém: não sobrescreve (QA46); 6.66: o estado duplo, sim (AC2.2)
             var hist=Array.isArray(it.historico)?it.historico.slice():[];
             hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():''), acao:'Parou de tomar — '+motivo});
             return {x:x, no:no, up:{continuo:false, dataFim:ontem, historico:hist,
@@ -64247,7 +64576,11 @@
       }).then(function(pl){
         var vai=(pl||[]).filter(Boolean); if(!vai.length) return [];
         var trava; try{ trava=mcrTravaAgenda(AG+'/_ts', visto, Date.now()); }catch(e){ trava=Promise.reject(e); }
-        return trava.then(function(passou){ return passou?'ok':'mexeu'; }, function(e){ _logFalhaGrav('andar o carimbo da agenda no "não está em uso" do check-in', e); return 'sem'; }).then(function(t){
+        // 6.66 (AC3, o BAIXO-R2-2 da 6.62): a trava que NÃO RESPONDE em 20 segundos (a rede ruim) não segura a parada: o carimbo
+        // anda por uma escrita simples (o instante de agora) ANTES da parada, e um «Salvar agenda» do Plantão ou um «Salvar
+        // medicamentos» da Ficha abertos antes passam a ser recusados pela trava deles. A trava que RECUSA com erro (o caminho
+        // 'sem' da 6.62) continua como era: a parada grava sem o carimbo (a prova 6.62 P26 fica como está).
+        return ciMedTravaOuCarimbo(AG, trava.then(function(passou){ return passou?'ok':'mexeu'; }, function(e){ _logFalhaGrav('andar o carimbo da agenda no "não está em uso" do check-in', e); return 'sem'; })).then(function(t){
           if(t==='mexeu' && n<3) return rodada(n+1);   // outro aparelho gravou a agenda no meio: lê tudo de novo
           if(t==='mexeu') _logFalhaGrav('andar o carimbo da agenda no "não está em uso" do check-in', new Error('a agenda mudou em outro aparelho três vezes seguidas'));
           return Promise.all(vai.map(function(v){
@@ -64290,6 +64623,9 @@
     if(!base.dataInicio && ent) base.dataInicio=ent;
     wrap.insertAdjacentHTML('beforeend', medAgendaRowHTML(id, base, {confirmar:!!(opts&&opts.daFicha)}));
     medQuandoSyncTodos('#ciMeds');
+    // 6.66 (2ª rodada, MÉDIO-2 do QA): a linha que veio da agenda guarda como chegou à tela — «Ler a medicação de novo» sabe se a
+    // pessoa a mudou de verdade ou só tocou em «Confirmado»
+    if(opts&&opts.daFicha){ try{ var _nv=wrap.lastElementChild; if(_nv && _nv.dataset) _nv.dataset.lido=ciMedLinhaFp(_nv); }catch(e){} /* silencioso de propósito: sem a marca, vale a resposta «Mudou» */ }
   }
   // Ação do BOTÃO "+ Acrescentar" no Check-in — gate de papel (Consultora/Gestão/Supervisão/Diretoria/Vet).
   // As chamadas programáticas de ciAddMed (linha inicial, pré-preenchimento) continuam livres.
@@ -64361,14 +64697,21 @@
   }
   function ciPreencherMedicacao(){
     if(!DB) return; const key=ciKey(); if(!key) return;
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){
+    // 6.66 (AC1.4): o carimbo `_ts` da agenda é lido ANTES dos itens e guardado com eles (CI_MED_LIDO). Lido antes: se outro
+    // aparelho gravar entre as duas leituras, o carimbo fica velho e a trava do Salvar recusa (o lado seguro).
+    var _tsLido=null, _tsOk=false;
+    CI_MED_LENDO=DB.ref('auaulandia/medicacao-agenda/'+key+'/_ts').once('value').then(function(s){ _tsLido=(s&&s.val)?s.val():null; _tsOk=true; }, function(){ _tsOk=false; })
+    .then(function(){ if(ciKey()!==key) return null; return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value'); })
+    .then(function(s){
       // A pessoa trocou de FILHOt antes de a leitura voltar: esta lista não é dele (QA49 B7).
-      if(ciKey()!==key) return;
+      if(!s || ciKey()!==key) return;
       const brutos=s.val()||{};
+      CI_MED_LIDO={key:key, ts:(_tsOk?_tsLido:null), itens:JSON.parse(JSON.stringify(brutos)), lido:_tsOk};
       // DADO ANTIGO JÁ DUPLICADO: a agenda da Lisa chegava com 4 VitaC iguais. A tela mostra
       // UM só por assinatura — e, ao salvar, medAgendaGravarItens remove os repetidos do
       // banco com rastro. A Consultora não precisa mais apagar linha por linha.
-      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); }).filter(function(id){ return !itens[id].trocadoPor; });   // trocadoPor (6.54): o horário novo está no item seguinte
+      // 6.66 (AC2.1): o estado duplo da 6.62 (parado, mas tocando) também vem, para o tutor confirmar.
+      const itens=medDedupe(brutos).itens; const ids=Object.keys(itens).filter(function(id){ return ciMedEmVigor(itens[id]); }).concat(Object.keys(itens).filter(function(id){ return ciMedDuplo(itens[id]); })).filter(function(id){ return !itens[id].trocadoPor; });   // trocadoPor (6.54): o horário novo está no item seguinte
       CI_MED_CARREGADOS={ids:{}, sigs:{}};
       ids.forEach(function(id){ CI_MED_CARREGADOS.ids[id]=1; CI_MED_CARREGADOS.sigs[medAssinatura(itens[id])]=1; });
       if(!ids.length) return;
@@ -64824,6 +65167,7 @@
         +(typeof mcrBotaoCheckinHTML==='function'?mcrBotaoCheckinHTML(ativa.id):'')
         +'<button type="button" class="btn" style="width:100%;margin-top:8px;background:#B3261E;color:#fff" onclick="ciCorrigirExistente(\''+escAttr(ativa.id)+'\')">✎ Corrigir informação errada</button>'
         +'<div style="font-size:12.5px;color:#6b5f4b;font-weight:600;margin-top:6px">Corrigir substitui o que está errado, inclusive a medicação. Já preencheu tudo nesta tela? Toque em Salvar e escolha <strong>SUBSTITUIR</strong>.</div>'
+        +ciCorrecoesHTML(ativa.e, 'checkin', ativa.id)   // 6.66 (AC6): as correções deste check-in, com «Começar a correção por esta versão»
         // 6.53 (a Frida): a hospedagem foi lançada no FILHOt errado, ou não aconteceu.
         +(podePapel('corrigir-hospedagem')?('<button type="button" class="btn" style="width:100%;margin-top:8px;background:#6b5f4b;color:#fff;white-space:normal" onclick="hospCorrigirAbrir(\''+escAttr(ativa.id)+'\',{origem:\'checkin\'})">Foi no FILHOt errado ou não aconteceu? Trocar a ficha ou excluir</button>'):'')
         +'</div>';
@@ -64839,14 +65183,18 @@
   // ERRADA isso não serve: a medicação errada continuaria lá. Corrigir SUBSTITUI, exige o
   // motivo, guarda o antes e o depois, e devolve para a Conferência.
   var ciCorrigindoId=null;
-  function ciCorrigirExistente(id){
+  function ciCorrigirExistente(id, op){
     if(!DB) return;
-    DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
+    return DB.ref('auaulandia/estadias/'+id).once('value').then(function(s){
       const e=s.val()||{}; if(!e.nome) return;
       return ciAplicarEstadiaNaFicha(e,'Você está CORRIGINDO o check-in. Ajuste o que estava errado e salve — vou pedir o motivo.').then(function(){
         ciRespostasDaEstadia(e);
         ciEditandoId=null; ciCorrigindoId=id; ciSalvoAgora=false;
         window.__ciAntes=JSON.parse(JSON.stringify({ficha:e.ficha||{}, medicacao:e.medicacao||[], pertences:e.pertences||[], entrada:e.entrada||'', saida:e.saida||''}));
+        // 6.66: «Tirar este item» (AC5.2) e «Começar a correção por esta versão» (AC6.2) mudam a tela aqui, depois do «antes»
+        return ciCorrigirOp(e, op);
+      }).then(function(o){
+        o=o||{};
         const el=document.getElementById('ciJaHospedado');
         if(el) el.innerHTML='<div style="background:#FDECEA;border:2px solid #B3261E;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
           +'<div style="font-weight:800;font-size:17px;color:#B3261E;margin-bottom:4px">✎ Modo CORRIGIR ligado</div>'
@@ -64855,7 +65203,8 @@
           // nativa na hora de salvar — e no tablet essa janela pode ser suprimida, voltando
           // vazia: a correção era cancelada e ninguém entendia por quê.
           +'<label for="ciCorrigirMotivo" style="display:block;margin-top:12px;font-size:13.5px;font-weight:800;color:#B3261E">Por que esta informação está sendo alterada? (obrigatório)</label>'
-          +'<input id="ciCorrigirMotivo" type="text" placeholder="Ex.: a tutora ligou às 10h — a alimentação estava errada" style="width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:2px solid #B3261E;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:#234D67;background:#FFFFFF">'
+          +((o.notas||[]).length?('<div style="margin-top:10px;font-size:13.5px;font-weight:700;color:#234D67">'+o.notas.map(esc).join('<br>')+'</div>'):'')
+          +'<input id="ciCorrigirMotivo" type="text" value="'+escAttr(o.comeco||'')+'" placeholder="Ex.: a tutora ligou às 10h — a alimentação estava errada" style="width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:2px solid #B3261E;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:#234D67;background:#FFFFFF">'
           +'<label for="ciCorrigirQuem" style="display:block;margin-top:10px;font-size:13.5px;font-weight:800;color:#B3261E">Seu nome (quem está corrigindo)</label>'
           +'<input id="ciCorrigirQuem" type="text" value="'+escAttr((typeof quemSou==='function'?quemSou():'')||'')+'" placeholder="Escreva o seu nome" style="width:100%;box-sizing:border-box;margin-top:5px;padding:11px;border:2px solid #B3261E;border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:#234D67;background:#FFFFFF">'
           +'</div>';
@@ -64902,6 +65251,8 @@
         if(saiu.length) D.push('Medicação REMOVIDA: '+saiu.join(' · '));
         if(entrou.length) D.push('Medicação NOVA: '+entrou.join(' · '));
       }
+      const _pd=ciPertDiff(antes.pertences, dados.pertences);   // 6.66 (AC4.1): os pertences também (o que saiu, o que entrou, o que mudou)
+      if(_pd) D.push(_pd);
     }catch(e){ _logFalhaGrav('ciDiffCorrecao', e); }
     return D;
   }
@@ -64911,14 +65262,536 @@
       const e=s.val()||{}; if(!e.nome) return;
       return ciAplicarEstadiaNaFicha(e,'Você está ACRESCENTANDO no check-in que já existe. Complete o que falta e salve.').then(function(){
         ciRespostasDaEstadia(e);
-        ciEditandoId=id; ciSalvoAgora=false;
+        ciEditandoId=id; ciSalvoAgora=false; CI_ACR_ESTADIA=JSON.parse(JSON.stringify(e));
         const el=document.getElementById('ciJaHospedado');
         if(el) el.innerHTML='<div style="background:#E8F5EC;border:2px solid #1E8449;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
           +'<div style="font-weight:800;font-size:17px;color:#1E8449;margin-bottom:4px">✅ Modo ACRESCENTAR ligado</div>'
-          +'<div style="font-size:14px;color:#234D67;font-weight:600">Tudo que você mudar aqui entra no check-in que já existe de '+esc(e.nome)+' — nada é duplicado. O que for novo volta para a Conferência.</div></div>';
+          +'<div style="font-size:14px;color:#234D67;font-weight:600">Tudo que você mudar aqui entra no check-in que já existe de '+esc(e.nome)+' — nada é duplicado. O que for novo volta para a Conferência.</div>'
+          +ciAcrescentarItensHTML(id, e)+'</div>';
         window.scrollTo({top:0,behavior:'smooth'});
       });
     }).catch(function(err){ zAlertao('Não consegui abrir o check-in',[String((err&&err.message)||err)]); });
+  }
+
+  // =====================================================================================
+  // ===== STORY 6.66 — O CHECK-IN PELA RÉGUA (S6, parte 1; 10/out/2026) =================
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/10). O remédio do Check-in passa a ser
+  // gravado pela MESMA régua das outras telas (a 3ª porta, MC6 da 6.54): a recusa do parado, do suspenso e do estado duplo
+  // (6.62), a troca por datas do horário mudado depois da dose de hoje (6.54, porta «Check-in») e a trava da agenda
+  // (mcrTravaAgenda, o carimbo que a tela leu). Nos quatro modos: o check-in novo, o Acrescentar, o ✎ Corrigir e o SUBSTITUIR.
+  // A régua e a trava ficam no __ciGravar, e NÃO dentro da medAgendaGravarItens: a Ficha › Medicamentos já passa pela régua
+  // antes de chamá-la, e duas réguas em seguida trocariam por datas duas vezes.
+  // =====================================================================================
+  // A cópia lida da agenda, para o pacote do Salvar (só a deste FILHOt).
+  function ciMedLidoCopia(key){ return (CI_MED_LIDO && CI_MED_LIDO.key===key)?JSON.parse(JSON.stringify(CI_MED_LIDO)):null; }
+  // 6.66 (AC3): a trava do «não está em uso» com prazo. Sem resposta em CORR_PRAZO (a rede ruim): o carimbo anda por uma escrita
+  // simples, mandada antes da parada (o Firebase manda na ordem), e a parada segue ('carimbo'). Recusa ou resposta: como era.
+  function ciMedTravaOuCarimbo(AG, pr){
+    return corrComPrazo(pr, CORR_PRAZO, CORR_PRAZO_ERRO).then(function(t){
+      if(typeof t==='string') return t;
+      if(!(t && t.semResposta)) return 'sem';
+      try{ Promise.resolve(DB.ref(AG+'/_ts').set(Date.now())).catch(function(e){ _logFalhaGrav('andar o carimbo da agenda (o "não está em uso" do check-in, a trava sem resposta)', e); }); }
+      catch(e){ _logFalhaGrav('andar o carimbo da agenda (o "não está em uso" do check-in, a trava sem resposta)', e); return 'sem'; }
+      return 'carimbo';
+    });
+  }
+  // 6.66 — PURA: a linha nova com o MESMO nome de uma linha que a tela mostrava e que saiu dela (a pessoa tocou em «Remover item»
+  // e escreveu o remédio de novo) é a mesma linha: fica com o id da antiga, para a régua ver a dose de hoje dela. Sem isto, o
+  // Apoquel reescrito às 20:00 tocaria hoje, com a das 08:00 já dada. Só com UMA antiga e UMA nova daquele nome; a antiga sem
+  // horário (nunca tocou) não entra: ela é trocada pela nova, como sempre foi. Muda `meds`; devolve [{de, para, nome}].
+  function ciMedHerdarIds(meds, agenda, car, hoje){
+    var out=[]; meds=meds||{}; agenda=agenda||{};
+    if(!car || !car.ids) return out;
+    var nrm=function(v){ return jsNorm(String(v==null?'':v)).trim(); };
+    var saiu={}, novos={};
+    Object.keys(agenda).forEach(function(id){
+      var it=agenda[id];
+      if(!it || meds[id]!==undefined || !car.ids[id] || !ciMedNaLista(it, hoje)) return;
+      if(!(Array.isArray(it.horarios)?it.horarios:[]).some(horaOk)) return;
+      var n=nrm(it.nome); if(n) (saiu[n]=saiu[n]||[]).push(id);
+    });
+    Object.keys(meds).forEach(function(id){
+      if(agenda[id]!==undefined) return;
+      var n=nrm((meds[id]||{}).nome); if(n) (novos[n]=novos[n]||[]).push(id);
+    });
+    Object.keys(saiu).forEach(function(n){
+      if(saiu[n].length!==1 || !novos[n] || novos[n].length!==1) return;
+      var de=novos[n][0], para=saiu[n][0];
+      meds[para]=meds[de]; delete meds[de];
+      out.push({de:de, para:para, nome:String((meds[para]||{}).nome||'')});
+    });
+    return out;
+  }
+  // 6.66 (AC1.1 a AC1.3) — 1ª parte, ANTES da pergunta «quem recebeu» e de qualquer gravação do __ciGravar: o id herdado
+  // (ciMedHerdarIds) e a recusa da 6.62 contra a cópia que a tela leu (medAgendaRecusaDaTela). Não lê nem grava nada: a recusa
+  // aparece antes da pergunta. Devolve {ok, recusa, trava}: trava=true quando a agenda vai ser gravada — aí a régua
+  // (ciMedPreparar) e a trava (ciMedTravar) vêm DEPOIS da pergunta, uma logo antes da outra (2ª rodada, MÉDIO-1 do QA).
+  function ciMedConferirTela(modo, P, agora){
+    P=P||{}; P.meds=P.meds||{};
+    var L=P.medLido||null, lidos=(L && L.key===P.key && L.itens)?L.itens:{}, hoje=zHojeISO();
+    P.medHerdados=ciMedHerdarIds(P.meds, agora||lidos, P.medCarregados, hoje);
+    var recusa=medAgendaRecusaDaTela(P.meds, lidos, hoje);
+    if(recusa) return {ok:false, recusa:recusa};
+    var grava=(modo==='corrigir')?!(!P.temMed && P.medEmUsoNao):!!P.temMed;
+    return {ok:true, trava:grava};
+  }
+  // 6.66 — 2ª parte, DEPOIS da pergunta «quem recebeu» e logo antes da trava (2ª rodada, MÉDIO-1 do QA): a régua da 6.54 com a
+  // porta «Check-in» (mcrReguaDaAgenda) lê o registro de doses de hoje NESTA hora — a dose dada enquanto a pergunta estava aberta
+  // conta (a trava só olha o carimbo da agenda, e o registro de dose não anda o carimbo). A recusa da 6.62 é refeita com o dia de
+  // agora (a pergunta pode ter passado da meia-noite). Não grava nada. Deixa em P: medFinal (o que vai para a agenda: os itens e a
+  // linha nova da troca por datas), medRegua (as frases) e medAvisos (o remédio novo parecido com um tirado que já teve dose hoje).
+  // Devolve {ok, recusa, erro}.
+  async function ciMedPreparar(modo, P){
+    P=P||{}; P.meds=P.meds||{};
+    var L=P.medLido||null, lidos=(L && L.key===P.key && L.itens)?L.itens:{}, hoje=zHojeISO();
+    var quem=String((P.correcao&&P.correcao.quem)||((typeof quemSou==='function')?quemSou():'-')||'-');
+    var recusa=medAgendaRecusaDaTela(P.meds, lidos, hoje);
+    if(recusa) return {ok:false, recusa:recusa};
+    var quando=(typeof agoraBR==='function')?agoraBR():'';
+    // o histórico do remédio que já existe é o da agenda (a tela começa um histórico novo, «Criou (check-in)»): nada se apaga
+    Object.keys(P.meds).forEach(function(id){ if(lidos[id] && P.meds[id]) P.meds[id].historico=(Array.isArray(lidos[id].historico)?lidos[id].historico.slice():[]); });
+    (P.medHerdados||[]).forEach(function(h){
+      var it=P.meds[h.para]; if(!it) return;
+      it.historico=(Array.isArray(it.historico)?it.historico:[]).concat([{quem:quem, quando:quando, acao:'Escrito de novo no check-in (a linha antiga foi tirada da lista e o mesmo remédio foi escrito outra vez): continua o mesmo remédio'}]);
+    });
+    var rg;
+    try{ rg=await mcrReguaDaAgenda(P.key, P.meds, lidos, quem, 'checkin'); }
+    catch(e){ return {ok:false, erro:e}; }
+    Object.keys(rg.itens||{}).forEach(function(id){
+      if(!lidos[id] || rg.trocados[id]) return;   // a troca por datas já leva a linha dela no histórico
+      var ac=medDiffAcao(lidos[id], rg.itens[id]);
+      if(ac){ var h=Array.isArray(rg.itens[id].historico)?rg.itens[id].historico.slice():[]; h.push({quem:quem, quando:quando, acao:ac+' (check-in)'}); rg.itens[id].historico=h; }
+    });
+    P.medRegua={frases:(rg.frases||[]).slice(), trocados:Object.keys(rg.trocados||{}), novos:Object.keys(rg.novos||{})};
+    P.medFinal=Object.assign({}, rg.itens||{}, rg.novos||{});
+    P.medAvisos=await ciMedParecidosAviso(P, lidos, hoje);
+    return {ok:true};
+  }
+  // A régua (ciMedPreparar) e a trava (ciMedTravar), uma logo depois da outra, depois de toda pergunta do Salvar. false = nada foi
+  // gravado e a tela já disse por quê.
+  async function ciMedReguaETrava(modo, P){
+    var rg=await ciMedPreparar(modo, P);
+    if(!rg.ok){ ciMedRecusado(rg); return false; }
+    var tv=await ciMedTravar(P);
+    if(!tv.ok){ ciMedTravaRecusou(tv); return false; }
+    return true;
+  }
+  // 6.66 (2ª rodada, LOW-6 do QA) — PURA: o remédio NOVO da tela (id que a agenda não tem) com o nome parecido — a mesma 1ª
+  // palavra, de 4 letras ou mais — de um remédio que a tela mostrava, saiu da lista e teve dose hoje (`dadas(it, id)`: os horários
+  // de hoje dados, ou que já passaram). Os dois NÃO são juntados (remédio novo é novo, em todas as portas; «Ômega 3» e «Ômega 6»
+  // são remédios diferentes, e a régua por um nome parecido adiaria um remédio de verdade), mas a confirmação avisa antes da
+  // próxima dose de hoje. `agoraMin`: o relógio em minutos. Devolve [{novo, nomeNovo, tirado, nomeTirado, dadas, tocaHoje}].
+  function ciMedParecidos(meds, lidos, car, hoje, agoraMin, dadas){
+    var out=[]; meds=meds||{}; lidos=lidos||{};
+    if(!car || !car.ids) return out;
+    var p1=function(n){ var w=(jsNorm(String(n==null?'':n)).trim().split(/\s+/)[0]||''); return w.length>=4?w:''; };
+    var tirados=Object.keys(lidos).filter(function(id){
+      var it=lidos[id]; return !!it && meds[id]===undefined && !!car.ids[id] && ciMedNaLista(it, hoje) && !!p1(it.nome) && dadas(it, id).length>0;
+    });
+    if(!tirados.length) return out;
+    Object.keys(meds).forEach(function(id){
+      var it=meds[id]||{}; if(lidos[id]!==undefined) return;
+      var w=p1(it.nome); if(!w || !medVigenteEm(it, hoje) || !medFreqHoje(it, hoje)) return;
+      var toca=(Array.isArray(it.horarios)?it.horarios:[]).filter(function(h){ return horaOk(h) && mcrMinDe(h)>agoraMin; });
+      if(!toca.length) return;
+      tirados.forEach(function(t){
+        if(p1(lidos[t].nome)!==w) return;
+        out.push({novo:id, nomeNovo:String(it.nome||''), tirado:t, nomeTirado:String(lidos[t].nome||''), dadas:dadas(lidos[t], t), tocaHoje:toca});
+      });
+    });
+    return out;
+  }
+  // x.pode: sem o registro de doses, «dada» é o horário de hoje que já passou.
+  function ciMedParecidoFrase(x){
+    return 'Atenção: «'+x.nomeNovo+'» entrou como remédio novo e toca hoje às '+x.tocaHoje.join(' e ')+'. «'+x.nomeTirado+'», que saiu da lista, '
+      +(x.pode?('tinha dose hoje às '+x.dadas.join(' e ')+' (pode já ter sido dada)'):('já teve a dose de hoje ('+x.dadas.join(' e ')+')'))
+      +'. Se é o mesmo remédio, confira com a veterinária antes das '+x.tocaHoje[0]+': a dose de hoje pode sair em dobro.';
+  }
+  // As doses de hoje vêm do registro do dia (medLogHoje, com o filtro da dose anulada) quando a tela está no dia de hoje; sem ele,
+  // vale o relógio. Nada muda na régua nem na gravação: só a frase. Devolve as frases.
+  async function ciMedParecidosAviso(P, lidos, hoje){
+    var agora=mcrAgoraMin();
+    if(!ciMedParecidos(P.meds, lidos, P.medCarregados, hoje, -1, function(){ return ['?']; }).length) return [];
+    var log=null;
+    try{ if(DB && typeof dataKeyAtual==='function' && dataKeyAtual()===hoje){ var todos=await medLogHoje(); log=((todos||{})[P.key])||{}; } }
+    catch(e){ log=null; } /* silencioso de propósito: sem o registro, vale o relógio (o horário de hoje que já passou) */
+    var dadas=log?function(it, id){ return mcrDadosHoje(it, id, log); }
+      :function(it){ return (Array.isArray(it.horarios)?it.horarios:[]).filter(function(h){ return horaOk(h) && mcrMinDe(h)<=agora; }); };
+    return ciMedParecidos(P.meds, lidos, P.medCarregados, hoje, agora, dadas).map(function(x){ x.pode=!log; return ciMedParecidoFrase(x); });
+  }
+  // 6.66 (AC1.4): a trava da agenda no Check-in — o carimbo que a tela leu (CI_MED_LIDO); grava o carimbo novo (o mesmo que a
+  // gravação da agenda leva). 20 segundos sem resposta (CORR_PRAZO): nada é gravado. Devolve {ok, mexeu, semResposta, erro}.
+  function ciMedTravar(P){
+    var L=P.medLido||null, visto=(L && L.key===P.key)?L.ts:null, ts0=Date.now(), pr;
+    try{ pr=mcrTravaAgenda('auaulandia/medicacao-agenda/'+P.key+'/_ts', visto, ts0); }catch(e){ pr=Promise.reject(e); }
+    return corrComPrazo(pr, CORR_PRAZO, CORR_PRAZO_ERRO).then(function(r){
+      if(r===true){ P.medTs0=ts0; return {ok:true, ts0:ts0}; }
+      if(r===false) return {ok:false, mexeu:true};
+      return {ok:false, semResposta:!!(r && r.semResposta), erro:(r && r.erro)||''};
+    });
+  }
+  // A recusa (6.62) ou a régua que não conseguiu ler as doses de hoje: nada foi gravado e a ficha continua preenchida.
+  function ciMedRecusado(r){
+    try{ __ciTravar(false); }catch(e){} /* silencioso de propósito: o botão destrava sozinho em 25 s */
+    r=r||{};
+    var frase=r.recusa?String(r.recusa):('Não consegui conferir as doses de remédio de hoje ('+zErroMotivo(r.erro, 'banco', '', {agora:true})+'). Nada foi salvo: a ficha continua preenchida. Toque em Salvar de novo.');
+    var st=document.getElementById('ci-status');
+    if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+frase; }
+    try{ if(typeof zAlertao==='function') zAlertao('O CHECK-IN NÃO FOI SALVO', [frase, 'A ficha continua preenchida na tela.'], {botao:'Entendi'}); }catch(e){} /* silencioso de propósito: o status da tela já diz */
+    try{ if(typeof audit==='function') audit('checkin-bloqueado', 'remédio recusado pela régua do check-in: '+frase, {pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+  }
+  // A trava recusou (outro aparelho mudou a agenda) ou não respondeu: nada foi gravado.
+  var CI_MED_MUDOU_FRASE='A agenda de remédio de {FILHOt} mudou em outro aparelho depois que esta tela abriu. Nada foi salvo. Toque em «Ler a medicação de novo», confira com o tutor e salve.';
+  function ciMedTravaRecusou(tv){
+    try{ __ciTravar(false); }catch(e){} /* silencioso de propósito: o botão destrava sozinho em 25 s */
+    tv=tv||{};
+    var nome=((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||'este FILHOt');
+    var frase=tv.mexeu?CI_MED_MUDOU_FRASE.replace('{FILHOt}', nome)
+      :('O banco ainda não respondeu à conferência da agenda de remédio de '+nome+' ('+zErroMotivo(tv.erro||CORR_PRAZO_ERRO, 'banco', '', {agora:true})+'). Nada foi salvo: a ficha continua preenchida. Confira a internet e toque em Salvar de novo.');
+    var st=document.getElementById('ci-status');
+    if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+frase; }
+    try{ if(typeof zAlertao==='function') zAlertao('O CHECK-IN NÃO FOI SALVO', [frase], tv.mexeu?{botao:'Ler a medicação de novo', aoFechar:function(){ ciMedLerDeNovo(); }}:{botao:'Entendi'}); }
+    catch(e){} /* silencioso de propósito: o status da tela já diz */
+    try{ if(typeof audit==='function') audit('checkin-bloqueado', (tv.mexeu?'a agenda de remédio mudou em outro aparelho':'a trava da agenda não respondeu')+' — nada foi salvo', {pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    try{ ciMedLerDeNovoBotao(true); }catch(e){} /* silencioso de propósito: o cartaz já tem o botão */
+  }
+  // 6.66 (AC1.5): o remédio que a correção TIROU da lista (a pessoa viu e tirou) não sai da agenda — vira «Parou de tomar», com o
+  // mesmo registro do «não está em uso» (ciMedMarcarParou): termina ontem, o histórico ganha a linha, `paradoEm` com quem e quando.
+  // A cópia repetida de um remédio que FICOU (a mesma assinatura) continua saindo, como a limpeza da Lisa; a linha sem horário
+  // (nunca tocou) também sai, como sempre. Devolve o item parado, ou null (sai).
+  function ciMedTiradoParado(P, it, sigsFica, hoje){
+    it=it||{};
+    if(sigsFica && sigsFica[medAssinatura(it)]) return null;
+    if(!(Array.isArray(it.horarios)?it.horarios:[]).some(horaOk)) return null;
+    var quem=String((P&&P.correcao&&P.correcao.quem)||((typeof quemSou==='function')?quemSou():'-')||'-');
+    var motivo='na correção do check-in: '+String((P&&P.correcao&&P.correcao.motivo)||'').trim();
+    var quando=(typeof agoraBR==='function')?agoraBR():'';
+    var hist=Array.isArray(it.historico)?it.historico.slice():[];
+    hist.push({quem:quem, quando:quando, acao:'Parou de tomar — '+motivo});
+    return Object.assign({}, it, {continuo:false, dataFim:(addDiasISO(hoje,-1)||hoje), historico:hist,
+      paradoEm:{quem:quem, data:hoje, quando:quando, ts:Date.now(), motivo:motivo}});
+  }
+  // As assinaturas do que fica na agenda pela tela (e as das cópias lidas dela): é por elas que a cópia repetida é reconhecida.
+  function ciMedAssinaturasQueFicam(P, fica){
+    var s={}, lidos=(P && P.medLido && P.medLido.itens)?P.medLido.itens:{};
+    Object.keys(fica||{}).forEach(function(id){ s[medAssinatura(fica[id])]=1; if(lidos[id]) s[medAssinatura(lidos[id])]=1; });
+    return s;
+  }
+  // As linhas que a confirmação final ganha: as frases da régua e o remédio que saiu da lista.
+  function ciMedLinhasDaRegua(P){
+    var L=((P && P.medRegua && P.medRegua.frases)||[]).map(function(f){ return 'Check-in: '+f; }).concat((P && P.medAvisos)||[]);
+    ((P && P.medParados)||[]).forEach(function(n){
+      L.push(n+' saiu da lista: ficou como "já não toma mais". Se ele foi lançado por engano, use «Lançado por engano» na ficha (aba Medicamentos), com a senha da Gestão.');
+    });
+    return L;
+  }
+  // As frases da régua que entram na linha da correção (correcoes[].mudou).
+  function ciMedFrasesDaRegua(P){ return ((P && P.medRegua && P.medRegua.frases)||[]).map(function(f){ return 'Check-in: '+f; }); }
+  // Depois de salvar: a cópia lida passa a ser a que acabou de ser gravada (o 2º Salvar desta tela não esbarra na própria trava).
+  function ciMedLidoDepoisDeSalvar(P){
+    try{
+      if(!P || !P.medTs0 || !CI_MED_LIDO || CI_MED_LIDO.key!==P.key) return;
+      CI_MED_LIDO.ts=P.medTs0;
+      CI_MED_LIDO.itens=JSON.parse(JSON.stringify(P.medAgendaFinal || Object.assign({}, CI_MED_LIDO.itens||{}, P.medFinal||{})));
+    }catch(e){ CI_MED_LIDO=null; } /* silencioso de propósito: sem a cópia, o próximo Salvar pede «Ler a medicação de novo» */
+  }
+  // ===== «LER A MEDICAÇÃO DE NOVO» (AC1.4) ===========================================
+  // PURA: o que a releitura muda na tela. `antes` = a cópia lida antes; `novo` = a agenda de agora; `tela` = {id:{mexido}} as linhas
+  // da tela que vieram da agenda; mexido = a pessoa MUDOU a linha de verdade (os campos estão diferentes de como a linha chegou da
+  // agenda). Só tocar em «Confirmado» não é mexer (2ª rodada, MÉDIO-2 do QA): toda linha da agenda precisa de «Confirmado» ou
+  // «Mudou» antes do Salvar, e a linha só confirmada que ficasse com o valor velho regravaria a dose e o fim de antes por cima do
+  // outro aparelho. Devolve {trocar:[ids] (a linha que ninguém mudou: ganha o valor do banco e perde a confirmação), marcar:[ids]
+  // (a linha mudada que também mudou no banco: fica como a pessoa deixou, a marca diz o valor do banco e a confirmação é zerada),
+  // sair:[ids] (a linha que ninguém mudou e saiu da lista), ficaMarcada:[ids] (a mudada que saiu da lista), novos:[ids] (o que
+  // entrou na lista em outro aparelho)}.
+  function ciMedReleitura(antes, novo, tela, hoje){
+    antes=antes||{}; novo=novo||{}; tela=tela||{}; hoje=hoje||zHojeISO();
+    var out={trocar:[], marcar:[], sair:[], ficaMarcada:[], novos:[]};
+    var naLista=function(it){ return !!it && ciMedNaLista(it, hoje) && !it.trocadoPor; };
+    Object.keys(tela).forEach(function(id){
+      var a=antes[id], n=novo[id], mexido=!!(tela[id]&&tela[id].mexido);
+      if(!naLista(n)){ (mexido?out.ficaMarcada:out.sair).push(id); return; }
+      if(a && vagasJsonEstavel(a)===vagasJsonEstavel(n)) return;   // qualquer campo mudado no banco (a dose, o horário, a observação, o estoque, o histórico)
+      (mexido?out.marcar:out.trocar).push(id);
+    });
+    var vistos=medDedupe(novo).itens;
+    Object.keys(vistos).forEach(function(id){ if(tela[id]===undefined && naLista(vistos[id]) && !antes[id]) out.novos.push(id); });
+    return out;
+  }
+  // O botão «Ler a medicação de novo», ao lado da lista (aparece depois que a trava recusou).
+  function ciMedLerDeNovoBotao(mostrar){
+    var ms=document.getElementById('ci-med-status'); if(!ms || !ms.parentNode) return;
+    var b=document.getElementById('ciMedRelerBtn');
+    if(!mostrar){ if(b && b.parentNode) b.parentNode.removeChild(b); return; }
+    if(b) return;
+    b=document.createElement('button'); b.type='button'; b.id='ciMedRelerBtn'; b.className='btn';
+    b.style.cssText='display:block;width:100%;min-height:44px;margin:8px 0;background:var(--z-blue);color:var(--z-cream);font-weight:800';
+    b.textContent='Ler a medicação de novo'; b.onclick=function(){ ciMedLerDeNovo(); };
+    ms.parentNode.insertBefore(b, ms.nextSibling);
+  }
+  // 6.66 (2ª rodada, MÉDIO-2 do QA) — a «impressão» do que a pessoa pode mudar numa linha de remédio: os campos e os botões
+  // marcados, fora a faixa «Confirmado / Mudou». Guardada quando a linha vem da agenda (ciAddMed, data-lido).
+  function ciMedLinhaFp(el){
+    try{
+      if(!el || typeof el.querySelectorAll!=='function') return '';
+      var fora=function(x){ return !(x && typeof x.closest==='function' && x.closest('.ci-med-conf')); };
+      var v=[];
+      Array.prototype.forEach.call(el.querySelectorAll('input,textarea,select'), function(x){
+        if(fora(x)) v.push(String((x.getAttribute && x.getAttribute('data-c'))||'')+'='+((x.type==='checkbox'||x.type==='radio')?(x.checked?'1':'0'):String(x.value==null?'':x.value))); });
+      Array.prototype.forEach.call(el.querySelectorAll('.on'), function(x){ if(fora(x)) v.push('on:'+String(x.className||'')+':'+String(x.textContent||'').trim()); });
+      return v.join('\u0001');
+    }catch(e){ return ''; } /* silencioso de propósito: sem a impressão, vale a resposta «Mudou» */
+  }
+  // A pessoa mudou esta linha de verdade? Pela impressão de quando ela chegou; sem a impressão, pela resposta «Mudou».
+  function ciMedLinhaMexida(el){
+    var lido=(el && el.dataset)?el.dataset.lido:'';
+    if(typeof lido==='string' && lido) return ciMedLinhaFp(el)!==lido;
+    return !!(el && el.dataset && el.dataset.conf==='mudou');
+  }
+  // O remédio como está no banco, em uma linha: «2 comprimidos às 08:00 e 20:00, uso contínuo, observação: «…»».
+  function ciMedValorTexto(it){
+    it=it||{};
+    var hs=(Array.isArray(it.horarios)?it.horarios:[]).filter(horaOk);
+    var p=[(medDoseTxt(it)||'')+(hs.length?(' às '+hs.join(' e ')):'')];
+    p.push(it.continuo?'uso contínuo':(it.dataFim?('tomar até '+corrDataBR(it.dataFim)):'sem data de fim'));
+    if(String(it.obs||'').trim()) p.push('observação: «'+String(it.obs).trim()+'»');
+    return p.filter(Boolean).join(', ');
+  }
+  // A confirmação da linha volta a zero (a faixa pede de novo ao tutor).
+  function ciMedConfZerar(el, txt){
+    if(!el) return;
+    try{ if(el.dataset) el.dataset.conf=''; }catch(e){} /* silencioso de propósito: sem o dataset, a linha não tinha confirmação */
+    try{
+      var faixa=(typeof el.querySelector==='function')?el.querySelector('.ci-med-conf'):null; if(!faixa) return;
+      faixa.classList.remove('ok'); faixa.classList.remove('mudou');
+      Array.prototype.forEach.call(faixa.querySelectorAll('button'), function(b){ b.classList.remove('on'); b.textContent=(b.dataset.cf==='ok')?'Confirmado':'Mudou'; });
+      var sp=faixa.querySelector('span'); if(sp) sp.textContent=txt||'Confirme com o tutor: é isso mesmo?';
+    }catch(e){} /* silencioso de propósito: redesenho da faixa — o dataset já zerou a confirmação */
+  }
+  // A linha que ninguém mudou ganha o valor do banco no MESMO lugar da lista, sem a confirmação. Devolve a linha nova (ou null).
+  function ciMedTrocarLinha(el, it, id){
+    var w=document.getElementById('ciMeds'), ult=(w && w.lastElementChild)||null, nv=null;
+    ciAddMed(it, {daFicha:true, agendaId:id});
+    try{ nv=(w && w.lastElementChild && w.lastElementChild!==ult)?w.lastElementChild:null; if(nv && el && el.parentNode) el.parentNode.insertBefore(nv, el); }
+    catch(e){} /* silencioso de propósito: a linha nova fica no fim da lista */
+    try{ if(el && el.parentNode) el.parentNode.removeChild(el); }catch(e){} /* silencioso de propósito: a linha já saiu */
+    return nv;
+  }
+  // Relê a agenda (o carimbo antes dos itens) e acerta só a lista: a linha que a pessoa MUDOU fica como ela deixou, com a marca
+  // do valor do banco e a confirmação zerada; a que ela só confirmou (ou nem tocou) ganha o valor do banco e perde a confirmação;
+  // o que entrou em outro aparelho aparece para o tutor confirmar.
+  function ciMedLerDeNovo(){
+    if(!DB) return Promise.resolve(null);
+    var key=ciKey(); if(!key) return Promise.resolve(null);
+    var AG='auaulandia/medicacao-agenda/'+key, ts=null, tsOk=false;
+    return DB.ref(AG+'/_ts').once('value').then(function(s){ ts=(s&&s.val)?s.val():null; tsOk=true; }, function(){ tsOk=false; })
+      .then(function(){ return DB.ref(AG+'/itens').once('value'); }).then(function(s){
+        if(ciKey()!==key) return null;
+        var novo=(s&&s.val&&s.val())||{}, antes=(CI_MED_LIDO && CI_MED_LIDO.key===key && CI_MED_LIDO.itens)||{};
+        var linhas={}, els={};
+        ciMedFichaLinhas().forEach(function(el){ var id=el.dataset.id||''; if(!id) return; linhas[id]={tocado:!!el.dataset.conf, mexido:ciMedLinhaMexida(el)}; els[id]=el; });
+        var r=ciMedReleitura(antes, novo, linhas);
+        var marca=function(el, txt){ try{ el.insertAdjacentHTML('afterbegin', '<div class="ci-med-mudou" style="background:#FDECEA;border:1.5px solid var(--crm-critico);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">'+esc(txt)+'</div>'); }catch(e){} /* silencioso de propósito: sem a marca, a frase do status diz */ };
+        r.marcar.forEach(function(id){ ciMedConfZerar(els[id], 'Mudou em outro aparelho: confira com o tutor de novo.');
+          marca(els[id], 'Mudou em outro aparelho. No banco agora: '+ciMedValorTexto(novo[id])+'. A tela ficou com o que você mudou: confira com o tutor e toque em Confirmado ou Mudou de novo.'); });
+        r.ficaMarcada.forEach(function(id){ ciMedConfZerar(els[id], 'Saiu da lista em outro aparelho: confira com a veterinária.');
+          marca(els[id], 'Saiu da lista em outro aparelho (parou, foi suspenso ou apagado): confira com a veterinária e tire esta linha se for o caso.'); });
+        r.sair.forEach(function(id){ try{ els[id].parentNode.removeChild(els[id]); }catch(e){} /* silencioso de propósito: a linha já saiu */ });
+        r.trocar.forEach(function(id){ var nv=ciMedTrocarLinha(els[id], novo[id], id);
+          if(nv) marca(nv, 'Mudou em outro aparelho. A linha agora mostra o que está no banco: '+ciMedValorTexto(novo[id])+'. Confira com o tutor e toque em Confirmado ou Mudou.'); });
+        r.novos.forEach(function(id){ ciAddMed(novo[id], {daFicha:true, agendaId:id}); });
+        CI_MED_LIDO={key:key, ts:(tsOk?ts:null), itens:JSON.parse(JSON.stringify(novo)), lido:tsOk};
+        var car={ids:{}, sigs:{}};
+        ciMedFichaLinhas().forEach(function(el){ var id=el.dataset.id||''; if(id && novo[id]){ car.ids[id]=1; car.sigs[medAssinatura(novo[id])]=1; } });
+        CI_MED_CARREGADOS=car;
+        try{ ciMedEmUsoChange(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        ciMedLerDeNovoBotao(false);
+        var st=document.getElementById('ci-status');
+        if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='A medicação foi lida de novo'+((r.marcar.length||r.ficaMarcada.length||r.trocar.length)?' — as linhas marcadas mudaram em outro aparelho: confira com o tutor':'')+'. Toque em Salvar quando terminar.'; }
+        return r;
+      }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (ciMedLerDeNovo)', e); return null; });
+  }
+  // ===== OS PERTENCES NO ✎ CORRIGIR (AC4) ==============================================
+  // PURA: o que mudou nos pertences entre o check-in de antes e a tela, por `uid` (o item antigo, sem uid, pelo tipo e pela
+  // linha). '' = nada mudou; senão «Pertences: saiu «…»; entrou «…»; mudou «…» → «…»».
+  function ciPertLista(v){
+    if(Array.isArray(v)) return v.filter(function(p){ return p && (p.k||p.nome); });
+    if(v && typeof v==='object') return Object.keys(v).map(function(k){ return {k:k, nome:ciPertNome(k), spec:((v[k]||{}).spec)||''}; });
+    return [];
+  }
+  function ciPertDiff(antes, depois){
+    var A=ciPertLista(antes), B=ciPertLista(depois), usado={}, saiu=[], mudou=[];
+    var lin=function(p){ return ciPertLinha(p); }, tipo=function(p){ return jsNorm(String((p&&p.k)||'')); };
+    A.forEach(function(a){
+      var ix=-1;
+      for(var i=0;i<B.length;i++){ if(!usado[i] && a.uid && B[i].uid===a.uid){ ix=i; break; } }
+      if(ix<0) for(var j=0;j<B.length;j++){ if(!usado[j] && !a.uid && !B[j].uid && tipo(B[j])===tipo(a) && jsNorm(lin(B[j]))===jsNorm(lin(a))){ ix=j; break; } }
+      if(ix<0){ saiu.push(lin(a)); return; }
+      usado[ix]=1;
+      if(jsNorm(lin(B[ix]))!==jsNorm(lin(a))) mudou.push('«'+lin(a)+'» → «'+lin(B[ix])+'»');
+    });
+    var entrou=B.filter(function(b, i){ return !usado[i]; }).map(lin);
+    var P=[];
+    if(saiu.length) P.push('saiu '+saiu.map(function(t){ return '«'+t+'»'; }).join(', '));
+    if(entrou.length) P.push('entrou '+entrou.map(function(t){ return '«'+t+'»'; }).join(', '));
+    if(mudou.length) P.push('mudou '+mudou.join(', '));
+    return P.length?('Pertences: '+P.join('; ')):'';
+  }
+  // ===== ACRESCENTAR: «TIRAR ESTE ITEM» (AC5) ==========================================
+  // A estadia como estava quando o Acrescentar abriu (é contra ela que a tela sabe se há acréscimo ainda não salvo).
+  var CI_ACR_ESTADIA=null;
+  var CI_ACR_FRASE='Acrescentar só SOMA: nada que já está no check-in sai por aqui. Para tirar um item, toque em «Tirar este item» ao lado dele.';
+  function ciTirarBotaoHTML(id, tipo, chave){
+    return '<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-size:14px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px;white-space:normal" onclick="ciTirarItem(\''+jsAspas(id)+'\',\''+jsAspas(tipo)+'\',\''+jsAspas(chave)+'\')">Tirar este item</button>';
+  }
+  // O cartão verde do Acrescentar: a frase e cada item já gravado no check-in, com «Tirar este item».
+  function ciAcrescentarItensHTML(id, e){
+    e=e||{};
+    var linha=function(txt, tipo, chave){ return '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid rgba(0,0,0,.08)">'
+      +'<span style="flex:1 1 160px;min-width:0;font-size:14px;font-weight:700;color:#234D67;overflow-wrap:anywhere">'+esc(txt)+'</span>'+ciTirarBotaoHTML(id, tipo, chave)+'</div>'; };
+    var pert=ciPertLista(e.pertences), meds=(Array.isArray(e.medicacao)?e.medicacao:[]).filter(function(m){ return m && m.nome; });
+    var h='<div style="margin-top:10px;font-size:14px;font-weight:800;color:#234D67">'+esc(CI_ACR_FRASE)+'</div>';
+    if(pert.length||meds.length) h+='<div style="margin-top:6px">'
+      +pert.map(function(p, i){ return linha('Pertence: '+ciPertLinha(p), 'pertence', p.uid?('u:'+p.uid):('i:'+i)); }).join('')
+      +meds.map(function(m, i){ return linha('Remédio: '+m.nome, 'remedio', m.agendaId?('a:'+m.agendaId):('n:'+String(m.nome))); }).join('')
+      +'</div>';
+    return h;
+  }
+  // PURA: há acréscimo na tela que ainda não foi salvo? (pertence ou remédio que a estadia gravada não tem)
+  function ciAcrescimosNaoSalvos(e, pertTela, medsTela){
+    e=e||{};
+    var ch=function(p){ return jsNorm(ciPertLinha(p)); };
+    var tem={}; ciPertLista(e.pertences).forEach(function(p){ tem[ch(p)]=1; });
+    var nomes={}; (Array.isArray(e.medicacao)?e.medicacao:[]).forEach(function(m){ if(m) nomes[jsNorm(m.nome||'')]=1; });
+    var pert=ciPertLista(pertTela).filter(function(p){ return !tem[ch(p)]; }).map(ciPertLinha);
+    var meds=Object.keys(medsTela||{}).map(function(id){ return (medsTela[id]||{}).nome||''; }).filter(function(n){ return n && !nomes[jsNorm(n)]; });
+    return pert.concat(meds);
+  }
+  // «Tirar este item»: desliga o Acrescentar e liga o ✎ Corrigir na mesma estadia, com o item já fora da tela e o motivo começado.
+  function ciTirarItem(id, tipo, chave){ return ciTirarItens(id, [{tipo:tipo, chave:chave}]); }
+  function ciTirarItens(id, itens){
+    var e=CI_ACR_ESTADIA||{};
+    var falta=[]; try{ falta=ciAcrescimosNaoSalvos(e, (ciColetarFicha()||{}).pertences, ciColetarMeds()); }catch(x){ falta=[]; } /* silencioso de propósito: sem a tela, não há o que perder */
+    if(falta.length && ciEditandoId===id){
+      zAlertao('SALVE PRIMEIRO', ['Salve primeiro o que você acrescentou; depois toque em «Tirar este item».', 'Ainda não salvo: '+falta.join(', ')+'.'], {botao:'Entendi'});
+      return Promise.resolve(null);
+    }
+    ciEditandoId=null;
+    return ciCorrigirExistente(id, {tirar:itens||[]});
+  }
+  // No ✎ Corrigir: tira da tela os itens pedidos e devolve o começo do motivo («Tirar do check-in: {item} — »).
+  function ciTirarAplicar(e, itens){
+    var nomes=[];
+    (itens||[]).forEach(function(t){
+      t=t||{}; var c=String(t.chave||'');
+      if(t.tipo==='pertence'){
+        var lista=ciPertLista(e.pertences), alvo=null;
+        if(/^u:/.test(c)) alvo=lista.filter(function(p){ return p.uid===c.slice(2); })[0]||null;
+        else if(/^i:/.test(c)) alvo=lista[parseInt(c.slice(2),10)]||null;
+        if(!alvo) return;
+        var antes=(ciPertSel||[]).length;
+        ciPertSel=(ciPertSel||[]).filter(function(p){ return !(alvo.uid?(p.uid===alvo.uid):(jsNorm(ciPertLinha(p))===jsNorm(ciPertLinha(alvo)))); });
+        if(ciPertSel.length<antes){ nomes.push(ciPertLinha(alvo)); try{ ciDrawPert(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }
+      } else if(t.tipo==='remedio'){
+        var nm='';
+        ciMedFichaLinhas().concat(Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem'))).forEach(function(el){
+          if(!el || !el.parentNode) return;
+          var n=((el.querySelector('[data-c=m]')||{}).value||'').trim();
+          var bate=/^a:/.test(c)?((el.dataset.id||'')===c.slice(2)):(jsNorm(n)===jsNorm(c.slice(2)));
+          if(bate){ nm=nm||n; try{ el.parentNode.removeChild(el); }catch(x){} /* silencioso de propósito: a linha já saiu */ }
+        });
+        if(nm) nomes.push(nm);
+      }
+    });
+    try{ ciMedTudoIgualRender(); }catch(x){} /* silencioso de propósito: redesenho do botão */
+    return nomes.length?('Tirar do check-in: '+nomes.join(', ')+' — '):'';
+  }
+  // ===== «CORREÇÕES DESTE CHECK-IN» E «VOLTAR AO ANTES» (AC6) ==========================
+  // A lista das correções da estadia (correcoes), da mais nova para a mais antiga, fechada, com o antes → depois e
+  // «Começar a correção por esta versão». origem: 'checkin' (o quadro do Check-in) ou 'hosp' (o cartaz da 6.53).
+  function ciCorrecoesHTML(e, origem, id){
+    var C=Array.isArray(e&&e.correcoes)?e.correcoes:[];
+    if(!C.length) return '';
+    var fn=(origem==='hosp')?'hospCorrigirPelaVersao':'ciCorrigirPelaVersao';
+    var itens=C.map(function(c, i){ return {c:c||{}, i:i}; }).reverse().map(function(x){
+      var c=x.c, quando=c.quando?carimboBR(c.quando):'', mud=Array.isArray(c.mudou)?c.mudou:[];
+      return '<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:#FFFFFF;border:1.5px solid rgba(35,77,103,.25);overflow-wrap:anywhere">'
+        +'<div style="font-weight:800;font-size:14px;color:#234D67">'+esc(quando||'sem data')+' — '+esc(c.quem||'-')+'</div>'
+        +'<div style="font-size:13.5px;margin-top:2px;color:#234D67">Motivo: '+esc(c.motivo||'—')+'</div>'
+        +(mud.length?('<ul style="margin:4px 0 0;padding-left:18px;font-size:13px;color:#234D67">'+mud.map(function(m){ return '<li>'+esc(String(m))+'</li>'; }).join('')+'</ul>'):'')
+        +(c.antes?('<button type="button" class="btn" style="margin-top:8px;min-height:44px;padding:8px 14px;font-size:14px;font-weight:800;background:var(--z-blue);color:var(--z-cream);border:0;border-radius:12px;white-space:normal" onclick="'+fn+'(\''+jsAspas(id)+'\','+x.i+')">Começar a correção por esta versão</button>'):'')
+        +'</div>';
+    }).join('');
+    return '<details style="margin-top:10px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:#234D67">Correções deste check-in ('+C.length+')</summary>'+itens+'</details>';
+  }
+  // A tela tem mudança ainda não salva no ✎ Corrigir ou no Acrescentar?
+  function ciTelaTemMudanca(){
+    try{
+      if(ciCorrigindoId && window.__ciAntes) return ciDiffCorrecao(window.__ciAntes, ciColetarFicha(), ciColetarMeds()).length>0;
+      if(ciEditandoId && CI_ACR_ESTADIA) return ciAcrescimosNaoSalvos(CI_ACR_ESTADIA, (ciColetarFicha()||{}).pertences, ciColetarMeds()).length>0;
+    }catch(e){ return true; } /* silencioso de propósito: sem saber, pergunta */
+    return false;
+  }
+  // «Começar a correção por esta versão»: liga o ✎ Corrigir com a tela preenchida pelo «antes» daquela correção. Nada é gravado
+  // sem o Salvar; o Salvar segue o ✎ Corrigir inteiro (o remédio pela régua, o que sai vira «Parou de tomar»).
+  async function ciCorrigirPelaVersao(id, idx){
+    if(!DB) return null;
+    var s=await DB.ref('auaulandia/estadias/'+id).once('value'), e=(s&&s.val&&s.val())||{};
+    var c=(Array.isArray(e.correcoes)?e.correcoes:[])[idx];
+    if(!c || !c.antes){ zAlertao('NÃO ACHEI ESTA VERSÃO', ['A correção pode ter mudado em outro aparelho. Feche e abra de novo.'], {botao:'Entendi'}); return null; }
+    var quando=c.quando?carimboBR(c.quando):'sem data';
+    if(ciTelaTemMudanca() && !await zPergunta('Trocar o que está na tela?', ['O que está na tela e não foi salvo será trocado pela versão de '+quando+'. Continuar?'],
+      {sim:'Continuar', nao:'Voltar sem trocar'})) return null;
+    return ciCorrigirExistente(id, {versao:{idx:idx, quando:quando}});
+  }
+  // Aplica na tela o «antes» de uma correção (depois que o ✎ Corrigir carregou a estadia de agora). Devolve {motivo, notas}.
+  async function ciVersaoAplicar(e, versao){
+    var c=(Array.isArray(e.correcoes)?e.correcoes:[])[versao.idx]||{}, a=c.antes||{}, notas=[];
+    var est=Object.assign({}, e, {entrada:(a.entrada!==undefined?a.entrada:e.entrada), saida:(a.saida!==undefined?a.saida:e.saida), ficha:(a.ficha||e.ficha||{})});
+    delete est.pertences;
+    await ciAplicarEstadiaNaFicha(est, '');
+    var _e=document.getElementById('ciEntrada'); if(_e && a.entrada!==undefined) _e.value=a.entrada||'';
+    var _s=document.getElementById('ciSaida'); if(_s && a.saida!==undefined) _s.value=a.saida||'';
+    if(Array.isArray(a.pertences)) ciRenderPert(a.pertences);
+    else notas.push('Esta correção não guardou os pertences: eles continuam como estão.');
+    // o remédio: a lista lida da agenda tem de estar pronta (a régua confere contra ela)
+    try{ if(CI_MED_LENDO) await CI_MED_LENDO; }catch(x){} /* silencioso de propósito: sem a lista, as linhas ficam como a tela tinha */
+    var lidos=(CI_MED_LIDO && CI_MED_LIDO.key===ciKey())?(CI_MED_LIDO.itens||{}):{}, hoje=zHojeISO();
+    var meds=(Array.isArray(a.medicacao)?a.medicacao:[]).filter(function(m){ return m && m.nome; });
+    var wrap=document.getElementById('ciMeds');
+    if(wrap){
+      Array.prototype.slice.call(document.querySelectorAll('#ciMeds .magitem')).forEach(function(el){ try{ el.parentNode.removeChild(el); }catch(x){} /* silencioso de propósito: a linha já saiu */ });
+      var postos=0;
+      meds.forEach(function(m){
+        var aid=String(m.agendaId||''), ag=aid?lidos[aid]:null;
+        if(ag && ciMedNaLista(ag, hoje)){ ciAddMed(Object.assign({}, ag, m), {daFicha:true, agendaId:aid}); postos++; }
+        else notas.push(m.nome+' estava nesta versão, mas hoje não está em uso na agenda: para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).');
+      });
+      setSeg('ciMedEmUso', postos?'Sim':((a.ficha&&a.ficha.medEmUso)||(meds.length?'Sim':''))); CI_MED_NAO_TOCADO=false;
+      try{ ciMedEmUsoChange(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    }
+    return {comeco:'Voltar à versão de '+versao.quando+': ', notas:notas};
+  }
+  // O que o ✎ Corrigir faz depois de carregar a estadia: voltar a uma versão (AC6.2) ou tirar itens (AC5.2). Devolve {comeco, notas}.
+  async function ciCorrigirOp(e, op){
+    op=op||{};
+    if(op.versao) return ciVersaoAplicar(e, op.versao);
+    if(op.tirar && op.tirar.length) return {comeco:ciTirarAplicar(e, op.tirar), notas:[]};
+    return {comeco:'', notas:[]};
+  }
+  // Os pertences que o Acrescentar não tirou, para o «Tirar agora pelo Corrigir» (AC5.3).
+  function ciNaoRemovidosItens(P){ return ((P && P.naoRemovidosItens)||[]).slice(); }
+  // O rastro do que a régua fez no Check-in (AC1.6) e do remédio que saiu da lista (AC1.5) — depois do ok.
+  function ciMedReguaRastro(P, key){
+    var fr=(P && P.medRegua && P.medRegua.frases)||[], av=(P && P.medAvisos)||[];
+    if(fr.length) try{ if(typeof audit==='function') audit('checkin-regua', fr.join(' · '), {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    if(av.length) try{ if(typeof audit==='function') audit('checkin-remedio-parecido', av.join(' · '), {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+  }
+  function ciMedParouRastro(P, key){
+    var n=(P && P.medParados)||[];
+    if(!n.length) return;
+    var mot='na correção do check-in: '+String((P.correcao&&P.correcao.motivo)||'').trim();
+    try{ if(typeof audit==='function') audit('checkin-remedio-parou', 'PAROU DE TOMAR — '+n.join(', ')+' — motivo: '+mot, {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||'')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
   }
 
   // ---- GATE de segurança ----
@@ -66004,7 +66877,7 @@
     // "Não trouxe a ração, aí vai ter que pegar comida úmida." Vai para a ESTADIA, não para
     // a ficha: é o que aconteceu HOJE, e a ficha continua dizendo o que ele come de verdade.
     const alimSem=(typeof ciAlimSemRacaoEstadia==='function')?ciAlimSemRacaoEstadia():null;
-    const pacote=Object.assign({ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem },
+    const pacote=Object.assign({ dados:dados, meds:meds, temMed:temMed, semTutor:semTutor, assina:assina, sig:sig, quemDeixou:quemDeixou, key:key, alimSem:alimSem, medLido:ciMedLidoCopia(key) },
                    ciMedPacoteCampos());
     // TRAVA DURA anti-duplicidade (item 15, caso Ozzy 01/ago/2026: 3 check-ins do mesmo dia).
     // O cache local pode estar atrasado, então a checagem vai ao BANCO antes de criar qualquer coisa.
@@ -66242,8 +67115,8 @@
       // A veterinária parou ou apagou um remédio DEPOIS que a lista carregou (QA49 B5/B8): ele
       // não volta pela tela. Sai também da estadia e do PDF, e o aviso final diz qual foi.
       P.medVetMudou=[];
+      let _agAgora=null;
       if(P.temMed && P.medCarregados && P.medCarregados.ids){
-        let _agAgora=null;
         try{ const _sAg=await DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value'); _agAgora=(_sAg&&_sAg.val&&_sAg.val())||{}; }
         catch(e){ _agAgora=null; } /* silencioso de propósito: sem a leitura, vale a tela — a regravação da agenda ainda protege o parado */
         if(_agAgora){
@@ -66251,12 +67124,15 @@
           Object.keys(meds).forEach(function(id){
             if(!P.medCarregados.ids[id]) return;
             const ag=_agAgora[id];
-            if(ag && ciMedEmVigor(ag, _hjV)) return;
+            if(ag && ciMedNaLista(ag, _hjV)) return;   // 6.66 (AC2.4): o estado duplo que a tela mostrou continua
             P.medVetMudou.push(String((meds[id]&&meds[id].nome)||'remédio')+(ag?' (parado)':' (apagado)'));
             delete meds[id];
           });
         }
       }
+      // 6.66 (AC1): a recusa (6.62) do remédio — antes da pergunta «quem recebeu» e de qualquer gravação; a régua vem depois da pergunta
+      const _rgm=ciMedConferirTela(modo, P, _agAgora);
+      if(!_rgm.ok){ ciMedRecusado(_rgm); return; }
       // ===== RESOLVIDO NÃO VOLTA PARA A CONFERÊNCIA (Adriana, 12/ago/2026) ==============
       // "O Otávio viu que faltou a roupa, escreveu que faltou, a Amanda corrigiu e disse:
       //  resolvido. No entanto isso voltou à conferência do check-in, está dando retrabalho.
@@ -66295,6 +67171,11 @@
           linhas:['Escreva o nome de quem recebeu o material e ouviu o tutor. Se foi você, escreva o seu nome.']}:null);
         if(_rec===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
         P.recebidoPor=_rec;
+      }
+      // 6.66 (AC1.1, AC1.4; 2ª rodada): a régua e a trava da agenda — DEPOIS da pergunta (a dose dada com ela aberta conta) e antes
+      // de QUALQUER gravação (a Conferência, a estadia, a agenda)
+      if(_rgm.trava && !(await ciMedReguaETrava(modo, P))) return;
+      if(chegouNovo.length){
         ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
           concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
           recebido_por:_rec, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
@@ -66313,8 +67194,8 @@
       // A estadia só é regravada DEPOIS da pergunta "quem recebeu" (QA42).
       const hist=Array.isArray(antes.correcoes)?antes.correcoes.slice():[];
       hist.push({ quando:Date.now(), quem:(P.correcao&&P.correcao.quem)||quemSou(),
-                  motivo:(P.correcao&&P.correcao.motivo)||'', mudou:(P.correcao&&P.correcao.diff)||[],
-                  antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], entrada:antes.entrada||'', saida:antes.saida||'' } });
+                  motivo:(P.correcao&&P.correcao.motivo)||'', mudou:((P.correcao&&P.correcao.diff)||[]).concat(ciMedFrasesDaRegua(P)),
+                  antes:{ ficha:antes.ficha||{}, medicacao:antes.medicacao||[], pertences:antes.pertences||[], entrada:antes.entrada||'', saida:antes.saida||'' } });   // 6.66 (AC4.2): os pertences de antes, sempre
       // SUBSTITUIR troca a assinatura e os pertences: os de antes ficam no histórico (QA43).
       if(P.substituir){ const _ant=hist[hist.length-1].antes;
         _ant.assinatura=antes.assinatura||null; _ant.assinado_por=antes.assinado_por||null;
@@ -66337,7 +67218,8 @@
       // não existe mais.
       // Deduplicado por assinatura antes de escrever: corrigir REESCREVE o nó, então é aqui
       // que o dado antigo repetido (os 4 VitaC da Lisa) para de voltar (24/set/2026).
-      var _medsCorr=P.temMed?medDedupe(meds):{sai:[],itens:null,nomes:[]};
+      const _medsRegua=P.medFinal||meds;   // 6.66: o que a régua devolveu (a linha da troca por datas incluída)
+      { const meds=_medsRegua; var _medsCorr=P.temMed?medDedupe(meds):{sai:[],itens:null,nomes:[]}; }
       // "Não está em uso" no corrigir NÃO apaga a agenda (QA39 A3): quem parou fica em "já não
       // toma mais", com o histórico — é o ciMedMarcarParou, depois de salvar, que marca.
       if(!(!P.temMed && P.medEmUsoNao)){
@@ -66350,16 +67232,20 @@
         // então alguém parou depois (QA44 N5, QA46 M2).
         // E o que está em vigor e a tela NÃO carregou (a veterinária começou depois) também fica:
         // só sai o que a pessoa viu e tirou, e as cópias repetidas dele (QA46 M2).
-        var _hojeC=zHojeISO(), _car=P.medCarregados||null;
+        var _hojeC=zHojeISO(), _car=P.medCarregados||null, _sigsFica=ciMedAssinaturasQueFicam(P, fica), _parados=[];
         Object.keys(jaLa).forEach(function(id){
           var it=jaLa[id];
-          if(!ciMedEmVigor(it, _hojeC)){ fica[id]=it; return; }
+          if(!ciMedNaLista(it, _hojeC)){ fica[id]=it; return; }   // 6.66 (AC2.4): o estado duplo que a tela mostrou segue a tela
           if(fica[id]!==undefined) return;
           // Sem o registro (a lista não chegou a carregar), ninguém viu nada: nada em vigor sai (QA49 B6).
           if(!_car || (!(_car.ids||{})[id] && !(_car.sigs||{})[medAssinatura(it)])) fica[id]=it;
+          // 6.66 (AC1.5): o que a pessoa viu e tirou da lista NÃO sai da agenda — vira «Parou de tomar» (ciMedTiradoParado)
+          else { var _pp=ciMedTiradoParado(P, it, _sigsFica, _hojeC); if(_pp){ fica[id]=_pp; _parados.push(String(it.nome||id)); } }
         });
+        P.medParados=_parados; P.medAgendaFinal=fica;
         var sumiram=Object.keys(jaLa).filter(function(id){ return fica[id]===undefined; });
         return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').set(Object.keys(fica).length?fica:null).then(function(){
+          ciMedParouRastro(P, key);
           if(sumiram.length && typeof audit==='function')
             audit('medicacao-agenda-dedupe','a correção do check-in tirou '+sumiram.length+' item(ns) da agenda'
               +(_medsCorr.sai.length?(' — '+_medsCorr.sai.length+' era(m) repetido(s)'):'')
@@ -66368,7 +67254,7 @@
         });
       }).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (check-in corrigir)', e); }));
       }
-      if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:Date.now(), _quem:quemSou() }));
+      if(P.temMed) ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:estadiaId, _ts:(P.medTs0||Date.now()), _quem:quemSou() }));
     }
     else if(modo==='acrescentar'){
       // A mesma regra da janela, aqui dentro, com o que está gravado (QA46 M1): vale também
@@ -66376,6 +67262,9 @@
       // veterinária já parou tudo na agenda — e a estadia continuaria com a lista.
       if(ciAcrescentarBarrado({e:antes}, P, ciEditandoId?'corrigir':'substituir')){ __ciTravar(false); return; }
       ref=DB.ref('auaulandia/estadias/'+estadiaId);
+      // 6.66 (AC1.2): a recusa do remédio, antes da pergunta «quem recebeu» e de qualquer gravação; a régua vem depois da pergunta
+      const _rgmA=ciMedConferirTela(modo, P, null);
+      if(!_rgmA.ok){ ciMedRecusado(_rgmA); return; }
       const pertAntes=Array.isArray(antes.pertences)?antes.pertences:[];
       const chaveP=function(p){ return jsNorm((p&&(p.nome||p.k))||'')+'|'+jsNorm((p&&p.spec)||''); };
       const jaTem={}; pertAntes.forEach(function(p){ jaTem[chaveP(p)]=1; });
@@ -66398,6 +67287,8 @@
       const _agoraCh={}; (dados.pertences||[]).forEach(function(p){ _agoraCh[chaveP(p)]=1; });
       P.naoRemovidos=pertAntes.filter(function(p){ return !_agoraCh[chaveP(p)]; })
                               .map(function(p){ return (p.nome||p.k||'item')+(p.spec?(' — '+p.spec):''); });
+      P.naoRemovidosItens=pertAntes.map(function(p, i){ return {p:p, i:i}; }).filter(function(x){ return x.p && !_agoraCh[chaveP(x.p)]; })
+        .map(function(x){ return {tipo:'pertence', chave:(x.p.uid?('u:'+x.p.uid):('i:'+x.i))}; });
       // Voltou a ter coisa para conferir → a conferência REABRE e a Wandela vê de novo,
       // sabendo O QUE chegou e QUEM pegou na mão. A pergunta vem ANTES de gravar (QA42).
       var _rec2=null;
@@ -66406,6 +67297,8 @@
         if(_rec2===null){ __ciTravar(false); if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Nada foi salvo — falta dizer quem recebeu o material.'; } return; }
         P.recebidoPor=_rec2;
       }
+      // 6.66 (AC1.2, AC1.4; 2ª rodada): a régua e a trava da agenda — depois da pergunta e antes de qualquer gravação
+      if(_rgmA.trava && !(await ciMedReguaETrava(modo, P))) return;
       ops.push(ref.update({
         entrada:dados.entrada, saida:dados.saida, ficha:dados.ficha,
         pertences:pertFinal, medicacao:medAntes.concat(medNovas),
@@ -66423,6 +67316,10 @@
         }));
       }
     } else {
+      // 6.66 (AC1.2): o check-in novo também passa pela recusa, pela régua e pela trava antes de gravar
+      const _rgmN=ciMedConferirTela(modo, P, null);
+      if(!_rgmN.ok){ ciMedRecusado(_rgmN); return; }
+      if(_rgmN.trava && !(await ciMedReguaETrava(modo, P))) return;
       ref=DB.ref('auaulandia/estadias').push();
       const _ehPern=(typeof ciEhPernoite==='function' && ciEhPernoite());
       const _pernTemp=(typeof pernTemporadaDoDia==='function')?pernTemporadaDoDia(dados.entrada||''):'baixa';
@@ -66457,8 +67354,9 @@
     // Liga a medicação à espinha (mesmo nó do despertador) para já disparar os alarmes.
     // ANTI-HULK: grava metadados + CADA remédio item a item (update), nunca sobrescreve o nó inteiro.
     if(P.temMed && modo!=='corrigir'){   // no corrigir a agenda já foi reescrita acima
+      const meds=P.medFinal||P.meds;   // 6.66 (AC1.2): o que a régua devolveu (a linha da troca por datas incluída)
       const eid=(modo==='acrescentar')?estadiaId:ref.key;
-      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:eid, _ts:Date.now(), _quem:quemSou() }));
+      ops.push(DB.ref('auaulandia/medicacao-agenda/'+key).update({ nome:ciHosp.nome||'', tutor:ciHosp.tutor||'', estadiaId:eid, _ts:(P.medTs0||Date.now()), _quem:quemSou() }));
       // ⚠ 24/set/2026 — AQUI nascia a duplicata da Lisa. O laço de antes fazia
       // `itens/{mid}.update(...)` com o id que a TELA tinha inventado; agora ciAddMed
       // conserva o id da agenda, e esta porta ainda deduplica por assinatura e REMOVE o que
@@ -66467,6 +67365,7 @@
     }
     Promise.all(ops).then(function(){
       __ciTravar(false); ciSalvoAgora=true;
+      ciMedLidoDepoisDeSalvar(P); ciMedReguaRastro(P, key);   // 6.66 (AC1.4, AC1.6)
       // "Não está em uso": os remédios da ficha ficam como "já não toma mais", com quem ouviu
       // do tutor. No corrigir a agenda já foi reescrita acima.
       if(P.medParou && P.medParou.length){
@@ -66511,12 +67410,13 @@
       const _petTit=_pet.toUpperCase();
       const _estadiaTxt=(_pet||'O FILHOt')+' — estadia de '+ciBRdata(dados.entrada)+' até '+(dados.saida?ciBRdata(dados.saida):'data a confirmar')+'.';
       const _eid=(modo==='novo')?ref.key:estadiaId;
-      let _tit='', _linhas=[], _rodape='', _botao='Fechar';
+      let _tit='', _linhas=[], _rodape='', _botao='Fechar', _tirar=[];
       if(modo==='corrigir'){
         ciCorrigindoId=null; window.__ciAntes=null;
         _tit=(P.substituir?'✅ CHECK-IN SUBSTITUÍDO — ':'✅ CORREÇÃO SALVA — ')+_petTit;
         _linhas=((P.correcao&&P.correcao.diff)||['A ficha foi atualizada.']).slice();
         if(P.medVetMudou && P.medVetMudou.length) _linhas.push('Mexido pela veterinária enquanto você corrigia — ficou como ela deixou: '+P.medVetMudou.join(', ')+'.');
+        _linhas=_linhas.concat(ciMedLinhasDaRegua(P));   // 6.66 (AC1.5, AC1.6): o que a régua fez e o remédio que saiu da lista
         _rodape='Motivo: '+((P.correcao&&P.correcao.motivo)||'—')+' · registrado por '+((P.correcao&&P.correcao.quem)||'—')+'. '
                +((P.chegouNovo&&P.chegouNovo.length)
                   ? ((P.substituir?'SUBSTITUIU O CHECK-IN (':'CHEGOU MATERIAL NOVO (')+P.chegouNovo.join(', ')+'): voltou para a Conferência para alguém conferir o que entrou.')
@@ -66534,18 +67434,21 @@
             ['———', 'Estes itens você tirou da tela, mas eles CONTINUAM no check-in:']
           ).concat(_nr.map(function(x){ return '• '+x; }));
           _rodape='Esta tela só ACRESCENTA — ela nunca apaga, para não perder pertence do tutor. Para TIRAR um item de verdade, abra o check-in em CORRIGIR: lá você diz o motivo, assina, e o item sai.';
+          _tirar=ciNaoRemovidosItens(P);   // 6.66 (AC5.3): «Tirar agora pelo Corrigir»
           if(typeof audit==='function') audit('checkin-remocao-ignorada','tentou remover no modo acrescentar: '+_nr.join(' | '),{pet:_pet});
         } else {
           _tit='✅ ACRESCENTADO AO CHECK-IN DE '+_petTit;
-          _linhas=(novosItens.length?novosItens:['A ficha foi atualizada.']).slice();
+          _linhas=(novosItens.length?novosItens:['A ficha foi atualizada.']).slice().concat(ciMedLinhasDaRegua(P));
           _rodape=novosItens.length?'Voltou para a Conferência: a conferente vai ver o que entrou de novo e conferir.':'Nada novo para conferir.';
         }
       } else {
         _tit='✅ CHECK-IN SALVO';
-        _linhas=[_estadiaTxt, 'Já aparece na Conferência e no Plantão.'];
+        _linhas=[_estadiaTxt, 'Já aparece na Conferência e no Plantão.'].concat(ciMedLinhasDaRegua(P));
       }
       ciFichaObrigatoria(_eid, _pet).then(function(f){
         if(f.ok){
+          // 6.66 (AC5.3): o que a pessoa apagou da tela e não saiu — «Tirar agora pelo Corrigir» leva ao ✎ Corrigir sem esses itens
+          if(_tirar.length){ zEscolha(_tit, _linhas.concat([ciFichaLinhaOk(f), _rodape]), [{t:'Tirar agora pelo Corrigir', cor:'#B3261E', fn:function(){ ciTirarItens(_eid, _tirar); }}, {t:'Entendi', cor:'#6b5f4b', fn:function(){}}]); return; }
           zAlertao(_tit, _linhas.concat([ciFichaLinhaOk(f)]),
             {ok:(_tit.indexOf('⚠')<0), botao:_botao, rodape:_rodape||undefined});
           return;
@@ -67804,7 +68707,7 @@
   }
   // 6.62 (S3-P12, AC5): de qual tela veio a mudança — o rótulo da linha do histórico da troca por datas e a frase «perto».
   // Sem a porta (a régua de 35 cenários e as provas da 6.54 chamam assim), os textos de sempre, do «Salvar agenda».
-  var MCR_PORTA_ROTULO={plantao:'Salvar agenda do Plantão', ficha:'Ficha › Medicamentos', vet:'Cuidado Vet'};
+  var MCR_PORTA_ROTULO={plantao:'Salvar agenda do Plantão', ficha:'Ficha › Medicamentos', vet:'Cuidado Vet', checkin:'Check-in'};
   function mcrAgendaRegua(itens, prev, log, hoje, agoraMin, quem, quando, ts, porta){
     var out={itens:{}, novos:{}, trocados:{}, frases:[]};
     var rotulo=MCR_PORTA_ROTULO[porta]||MCR_PORTA_ROTULO.plantao;
@@ -68854,7 +69757,7 @@
     // foi desenhado na tela de Orçamento, e ela corrigiu — "quem já está hospedado sai da
     // lista de orçamentos". O cartaz abre na própria linha, sem modal que o teclado do
     // celular esconde, e mostra a conta ANTES de confirmar.
-    if(hospAbaAntecipada===id){
+    if(hospAbaAntecipada===id && !hospAntecipadaDesfeita(e)){   // 6.66 (2ª rodada, LOW-4 do QA): desfeita em outro aparelho, a linha mostra a frase (hospLinha666), não o formulário
       const hj=hospHojeISO();
       const prev=e.saida||'';
       const real=(document.getElementById('hospAntData')||{}).value||hj;
@@ -68890,28 +69793,28 @@
     const nMed=Array.isArray(e.medicacao)?e.medicacao.length:0;
     const selos=(temFicha?'<span class="he-tag agora">ALIMENTAÇÃO NA FICHA</span>':'<span class="he-tag saiu">SEM FICHA DE CHECK-IN</span>')
               + (nMed?'<span class="he-tag achegar">'+nMed+' MEDICAÇÃO'+(nMed>1?'S':'')+'</span>':'');
-    const alt=e.alterado_por?('<div class="he-sub" style="color:var(--z-gold-deep)">Data alterada por '+escAttr(e.alterado_por)+(e.alteracao_anterior&&e.alteracao_anterior.saida?(' — antes saía '+((typeof ciBRdata==='function')?ciBRdata(e.alteracao_anterior.saida):e.alteracao_anterior.saida)):'')+'</div>'):'';
+    const alt=(e.alterado_por && !hospDatasHistLista(e).length)?('<div class="he-sub" style="color:var(--z-gold-deep)">Data alterada por '+escAttr(e.alterado_por)+(e.alteracao_anterior&&e.alteracao_anterior.saida?(' — antes saía '+((typeof ciBRdata==='function')?ciBRdata(e.alteracao_anterior.saida):e.alteracao_anterior.saida)):'')+'</div>'):'';
     const _xc=hospCorrLinha(id, e, st);   // 6.53: EXCLUÍDA, ficha trocada e o cartaz "Corrigir esta hospedagem"
+    const _x6=hospLinha666(id, e, st);   // 6.66: as datas mudadas, a reabertura, a saída antecipada desfeita e os botões de desfazer
     return '<div class="hosp-est">'
       + av
       + '<div class="he-main" style="cursor:pointer" onclick="hospAbrirFicha(\''+id+'\')">'
       + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+(_xc.tag||tag[1])+'</span></div>'
       + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
-      + '<div class="he-sub">'+selos+'</div>'+alt+_xc.sub+'</div>'
+      + '<div class="he-sub">'+selos+'</div>'+alt+_xc.sub+_x6.sub+'</div>'
       + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
       + '<div class="he-acoes">'
-      + (hospAbaPode()?'<button class="btn btn-primary" onclick="hospEditarDatas(\''+id+'\')">Mudar datas</button>':'')
+      + _x6.botoes   // 6.66 (AC7.3, AC8.2, AC9.1): «Mudar datas» (ou «Reabrir a hospedagem», na excluída) e os «Desfazer»
       + ((typeof mcrBotaoHospedesHTML==='function')?mcrBotaoHospedesHTML(id, e, st):'')
       + ((hospAbaPode()&&(e.status||'ativa')==='ativa')
           ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Dar baixa</button>':'')
       // Só quem está na casa AGORA pode sair antes — e só Gestão, Diretoria ou Supervisão,
       // porque lançar crédito é mexer no que o tutor paga.
-      + ((hospPodeAntecipada()&&st==='agora'&&hospNoitesNaoUsadas(e, hospHojeISO())>0)
+      + ((hospPodeAntecipada()&&st==='agora'&&hospNoitesNaoUsadas(e, hospHojeISO())>0&&!hospAntecipadaDesfeita(e))   // 6.66 (AC9.6, EN2): desfeita, não volta
           ?'<button class="btn btn-gold" onclick="hospSaidaAntecipada(\''+id+'\')">Saída antecipada</button>':'')
       + '<button class="btn" onclick="hospAbrirFicha(\''+id+'\')">Abrir ficha</button>'
       + _xc.botao
-      + ((e.status||'ativa')!=='ativa'&&e.encerradaEm
-          ?'<div class="he-sub" style="width:100%;color:var(--muted)">Baixa em '+((typeof ciBRdata==='function')?ciBRdata(e.encerradaEm):e.encerradaEm)+(e.encerradaPor?(' — '+escAttr(e.encerradaPor)):'')+'</div>':'')
+      + hospBaixaLinhaHTML(e)   // 6.66 (AC8.1): com a saída combinada
       + '</div></div>';
   }
   // ===== A CONTA DA SAÍDA ANTECIPADA ===============================================
@@ -68944,6 +69847,9 @@
   }
   function hospSaidaAntecipada(id){
     if(!hospPodeAntecipada()){ alert('Só a Gestão, a Diretoria ou a Supervisão podem lançar uma saída antecipada — ela gera crédito na ficha.'); return; }
+    // 6.66 (AC9.6, EN2): depois de desfeita, lançar de novo daria um crédito zerado (a chave sa-{estadia}-{n} é a mesma)
+    var _ed=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||{};
+    if(hospAntecipadaDesfeita(_ed)){ zAlertao('A SAÍDA ANTECIPADA JÁ FOI DESFEITA', [hospAntecipadaDesfeitaTexto(_ed)], {botao:'Entendi'}); return; }
     hospAbaAntecipada=id; hospAbaBaixa=null; hospAbaEdit=null; hospNovaPend=null; renderHospedesAba();
     setTimeout(function(){ try{ const el=document.getElementById('hospAntData'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },50);
   }
@@ -69117,8 +70023,12 @@
        'Quem deu a baixa: '+quem,
        'Ele sai do Plantão. Se voltar, é um check-in novo.'],
       {sim:'Dar baixa', nao:'Cancelar'})) return;
+    // 6.66 (2ª rodada, LOW-2 do QA): a tela pode estar velha — a baixa só vale na hospedagem que AINDA está ativa no banco
+    const _bxRec=await hospBaixaRecusa(id);
+    if(_bxRec){ hospAbaBaixa=null; try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */ zAlertao('A BAIXA NÃO FOI DADA', [_bxRec], {botao:'Entendi'}); return; }
     DB.ref('auaulandia/estadias/'+id).update({
-      status:'encerrada', saida:dt, encerradaEm:dt, encerradaPor:quem, encerradaTs:Date.now()
+      status:'encerrada', saida:dt, encerradaEm:dt, encerradaPor:quem, encerradaTs:Date.now(),
+      saida_combinada:(e.saida||'')   // 6.66 (AC8.1): a saída combinada de antes fica guardada (o «Desfazer a baixa» volta a ela)
     }).then(function(){
       if(typeof audit==='function') audit('estadia-baixa','deu baixa na hospedagem de '+(e.nome||'')+' — foi embora em '+dt,{pet:e.nome||''});
       hospAbaBaixa=null;
@@ -69177,10 +70087,15 @@
     h+=bloco('Hospedados agora',g.agora,'Ninguém hospedado no momento.');
     h+=bloco('A chegar',g.achegar,'Nenhum check-in agendado para os próximos dias.');
     h+=bloco('Já saíram — histórico',g.saiu,'Nenhuma hospedagem encerrada ainda.',40);
+    // 6.66 (AC10.1): os pares «É o mesmo / São dois» já respondidos, com «Desfazer esta resposta»
+    try{ h+=hospParesRespondidosHtml(); if(!HOSP_MESMO_OUVINDO && !HOSP_ABA_MESMO_PEDIU){ HOSP_ABA_MESMO_PEDIU=true; hospCarregarMesmo().then(function(){ try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }); } }
+    catch(x){} /* silencioso de propósito: sem a lista dos pares, a aba continua */
     box.innerHTML=h;
   }
+  var HOSP_ABA_MESMO_PEDIU=false;
   function hospEditarDatas(id){
     if(!hospAbaPode()){ alert('Só a Gestão, a Supervisão, a Consultora ou a Diretoria podem mudar as datas de uma hospedagem.'); return; }
+    if(hospDatasRecusa(id)) return;   // 6.66 (AC7.3, AC7.4): a excluída e a encerrada não voltam por aqui
     hospAbaEdit=id; hospNovaPend=null; renderHospedesAba();
     setTimeout(function(){ try{ const el=document.getElementById('hospEdFim'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },50);
   }
@@ -69297,36 +70212,19 @@
     if(!sai && !await zPergunta('Sem data de saída',
       [(e.nome||'O FILHOt')+' fica no Plantão todos os dias até alguém encerrar a hospedagem.'],
       {sim:'Salvar assim mesmo', nao:'Voltar e preencher'})) return;
-    const patch={ entrada:ent, saida:sai,
-      alterado_por:(typeof quemSou==='function'?quemSou():'-'), alterado_ts:Date.now(),
-      alteracao_anterior:{entrada:e.entrada||'', saida:e.saida||''} };
-    // 6.52 (BS3): a hora do banho de saída escrita sem o dia (antes da 2ª rodada) fica marcada com a saída para a qual
-    // valia, na mesma gravação — se a saída voltar a ela (13 → 16 → 13), a hora volta a valer, e o alerta diz a data certa.
-    try{ var _sp=((e.ficha||{}).spa)||{};
-      if(sai!==(e.saida||'') && /^\d{4}-\d{2}-\d{2}$/.test(String(e.saida||'')) && String(_sp.horario||'') && !_sp.horaDia) patch['ficha/spa/horaDia']=e.saida;
-    }catch(x){} /* silencioso de propósito: sem a marca, vale a regra pela alteracao_anterior (banhoSaidaHoraDia) */
-    // Estadia já encerrada e datas esticadas para a frente = o FILHOt continua aqui. Reabre.
-    const st=(e.status||'ativa');
-    if(st!=='ativa'){
-      if(!await zPergunta('Esta hospedagem está marcada como '+(st==='cancelada'?'CANCELADA':'encerrada'),
+    // 6.66 (AC7.3, AC7.4): a excluída (status cancelada) e a encerrada pela baixa ou pela saída antecipada não voltam por aqui
+    if(hospDatasRecusa(id)) return;
+    // A estadia finalizada (check-out feito): reabre com a pergunta de sempre, até a 6.67 («Reabrir o check-out»)
+    if((e.status||'ativa')!=='ativa' && !await zPergunta('Esta hospedagem está marcada como encerrada',
         ['Reabrir '+(e.nome||'a hospedagem')+' com as novas datas? Ele volta a aparecer no Plantão.'],
         {sim:'Reabrir', nao:'Deixar como está', cor:'#234D67'})) return;
-      patch.status='ativa'; patch.reabertaPor=(typeof quemSou==='function'?quemSou():'-'); patch.reabertaTs=Date.now();
-    }
     if(!DB){ alert('Sem conexão com o banco agora — tente de novo em instantes.'); return; }
-    // Item 3 — a estadia esticou (o tutor perdeu o voo): o remédio e a comida que ele trouxe
-    // foram contados para a data ANTIGA. Guarda o quanto esticou para o alerta explicar.
-    var _esticou=(!!sai && !!e.saida && sai>e.saida);
-    DB.ref('auaulandia/estadias/'+id).update(patch).then(function(){
-      if(typeof audit==='function') audit('estadia-datas','mudou as datas da hospedagem',{pet:e.nome||'',de:(e.entrada||'')+'>'+(e.saida||''),para:ent+'>'+sai});
-      hospAbaEdit=null;
-      if(typeof carregarHospedes==='function') carregarHospedes();
-      renderHospedesAba();
-      var _est=Object.assign({},e,patch);
-      checarFaltasDaEstadia(id,_est,(_esticou?('a estadia foi esticada de '+((typeof ciBRdata==='function')?ciBRdata(e.saida):e.saida)+' para '+((typeof ciBRdata==='function')?ciBRdata(sai):sai)):'as datas mudaram'));
-      alert('Datas salvas. '+(e.nome||'O FILHOt')+' fica de '+((typeof ciBRdata==='function')?ciBRdata(ent):ent)+' até '+(sai?((typeof ciBRdata==='function')?ciBRdata(sai):sai):'data a confirmar')+'.\n\nEle já aparece no Plantão nesses dias, mesmo que a planilha não tenha sido atualizada.');
-    }).catch(function(err){ alert('Erro ao salvar as datas: '+((err&&err.message)||err)); });
+    // 6.66 (AC7.1, AC7.2): o cartaz «corrigir» da 6.57 — antes → depois, o motivo de 4 palavras e a própria senha; o histórico
+    // inteiro em datas_historico. A tela volta logo (o cartaz fica aberto); o resultado fica em HOSP_DATAS_P.
+    HOSP_DATAS_P=hospDatasAbrir(id, e, ent, sai, (e.status||'ativa')!=='ativa');
+    return {aberto:true};
   }
+  var HOSP_DATAS_P=null;
   // Nova hospedagem: reaproveita a MESMA busca do "Adicionar hóspede" (cadastro-mestre,
   // com aviso de alergia) — o tipo 'estadia' faz o escolherHospede cair aqui em vez de
   // criar um lançamento solto de hoje.
@@ -69554,6 +70452,7 @@
       var doses=(logs||{})[dia]||{};
       Object.keys(doses).sort().forEach(function(did){
         var d=doses[did]; if(!d||typeof d!=='object') return;
+        if(!medDoseValendo(d)) return;   // 6.66 (AC13.1): a dose anulada (6.58) não é prova de que o FILHOt dormiu aqui
         provas.push('dose de remédio registrada em '+hospDiaBR(dia)+' ('+(d.nome||'remédio')+(d.horario?(' das '+d.horario):'')+(d.quem?(', por '+d.quem):'')+')');
       });
     });
@@ -69652,7 +70551,7 @@
     var S=HOSP_CORR; if(!S||S.passo!=='trocar-confirmar'||!S.plano||!S.dadosPlano) return;
     var c=(S.plano.escolher||[])[i]; if(!c||(v!=='levar'&&v!=='deixar')) return;
     S.escolhas=Object.assign({}, S.escolhas||{}); S.escolhas[c.id]=v;
-    S.plano=hospPlanoDaTroca(Object.assign({}, S.dadosPlano, {escolhas:S.escolhas}));
+    S.plano=hospPlanoDaTrocaValendo(Object.assign({}, S.dadosPlano, {escolhas:S.escolhas}));
     hospCorrRender();
   }
   // A linha de cada remédio em "Vai para a ficha certa": a troca por datas tem duas linhas do mesmo
@@ -69675,6 +70574,18 @@
     hospMcrDaEstadia(agAnt, vis, est).forEach(function(x){ vis[x]=1; mover.push({id:x, item:agAnt[x]}); });
     var agNova=(para&&para.refKey&&mover.length)?((await ler('auaulandia/medicacao-agenda/'+para.refKey+'/itens'))||{}):{};
     return {mover:mover, choques:hospChoques(mover, agNova, de&&de.refKey), agAnt:agAnt};
+  }
+  // 6.66 (AC13.2): a dose anulada (6.58, «Desfazer esta dose») não conta como dose dada na troca de ficha — nem a do remédio
+  // da ficha errada dada à hóspede, nem a que vai copiada (o cartaz conta só as que valem). A cópia continua levando a anulada:
+  // é o registro, riscado. O hospPlanoDaTroca não muda (a 6.62 P21 o fixa): a conta vem do plano feito com o registro sem as
+  // anuladas; a cópia, do plano com o registro inteiro.
+  function hospPlanoDaTrocaValendo(o){
+    o=o||{};
+    var semAn={};
+    Object.keys(o.logs||{}).forEach(function(d){ var x=(o.logs||{})[d]||{}, y={}; Object.keys(x).forEach(function(k){ if(medDoseValendo(x[k])) y[k]=x[k]; }); semAn[d]=y; });
+    var P=hospPlanoDaTroca(Object.assign({}, o, {logs:semAn})), T=hospPlanoDaTroca(o);
+    P.copiarLog=T.copiarLog;
+    return P;
   }
   function hospPlanoDaTroca(o){
     o=o||{};
@@ -70186,7 +71097,7 @@
       S.de=de; S.para=para; S.escolhas={};
       S.dadosPlano={id:S.id, e:e, de:de, para:para, agenda:dados.agenda, logs:dados.logs, ficha:dados.ficha,
         fichaNova:dados.fichaNova, auditoria:dados.auditoria, agora:hospAgora(), hoje:((typeof hospHojeISO==='function')?hospHojeISO():'')};
-      S.plano=hospPlanoDaTroca(S.dadosPlano);
+      S.plano=hospPlanoDaTrocaValendo(S.dadosPlano);
       S.avisoPlanilha=hospAvisoPlanilha(hospCardsDaPlanilha(e.nome), para.novo?(PELUDINHOS||[]).concat([{n:para.nome, tutor:para.tutor, raca:para.raca}]):(PELUDINHOS||[]), para);
       S.passo='trocar-confirmar';
     }catch(err){
@@ -70205,7 +71116,7 @@
   // de o item ser copiado (ou que chegaram lá depois). A marca é a mesma do desconto do alarme
   // (descontarEstoquePorDose: "dia__dose"): o que já está marcado não desconta de novo.
   function hospEstoqueAcertar(key, itemId, conta){
-    conta=(conta||[]).filter(function(x){ return x&&x.ck; });
+    conta=(conta||[]).filter(function(x){ return x&&x.ck&&!x.anulada; });   // 6.66 (AC13.3): a dose anulada não desconta
     if(!conta.length) return Promise.resolve(false);
     return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').transaction(function(est){
       if(est===null||est===undefined) return null;   // sem cópia local: o servidor responde com o valor de verdade
@@ -70295,7 +71206,7 @@
         +' não está mais na ficha de '+hospRotulo(de)+'); feche e abra de novo.');
       // C5-3: um remédio lançado na ficha errada DEPOIS que este cartaz abriu ainda não foi escolhido
       if(S.dadosPlano){
-        var aindaNao=hospPlanoDaTroca(Object.assign({}, S.dadosPlano, {e:(s0&&s0.val)?(s0.val()||S.dadosPlano.e):S.dadosPlano.e, agenda:nh.agAnt||{}, escolhas:S.escolhas||{}, agora:hospAgora()})).escolher
+        var aindaNao=hospPlanoDaTrocaValendo(Object.assign({}, S.dadosPlano, {e:(s0&&s0.val)?(s0.val()||S.dadosPlano.e):S.dadosPlano.e, agenda:nh.agAnt||{}, escolhas:S.escolhas||{}, agora:hospAgora()})).escolher
           .filter(function(c){ return !(S.plano.escolher||[]).some(function(x){ return x.id===c.id; }); });
         if(aindaNao.length) return falha('Enquanto este cartaz estava aberto, foi lançado na ficha de '+hospRotulo(de)+' o remédio '+aindaNao.map(function(c){ return '"'+c.nome+'"'; }).join(', ')
           +'. Nada foi gravado: feche este cartaz e abra de novo, para escolher se ele vai para a ficha certa ou fica.');
@@ -70431,7 +71342,7 @@
     var avs=(typeof AVISOS_ESTOQUE_CACHE!=='undefined'&&AVISOS_ESTOQUE_CACHE)?AVISOS_ESTOQUE_CACHE:{};
     for(var a in avs){
       var av=avs[a]||{};
-      if(String(av.key||'')!==String(de.refKey) || !movidos[av.itemId] || String(av.status||'')==='resolvido') continue;
+      if(String(av.key||'')!==String(de.refKey) || !movidos[av.itemId] || avisoEncerrado(av)) continue;   // 6.66 (AC11.3): o predicado único (o retirado também fica)
       await DB.ref('auaulandia/avisos-estoque/'+a).update({key:para.refKey, hospNome:para.nome||'', tutor:para.tutor||'', trocado_de:{key:de.refKey, ts:agora, por:quem||'-'}});
     }
     // 5) as doses relidas DEPOIS de o remédio sair da agenda antiga (a dose dada em outro aparelho
@@ -70450,7 +71361,7 @@
         Object.keys(cont).forEach(function(ck){ if(cont[ck]) conta.push({ck:ck, q:qItem}); });
         depois.forEach(function(x){ Object.keys(x[1]||{}).forEach(function(did){
           var d=x[1][did]; if(!d||typeof d!=='object'||d.avulso===true||hospDoseItemId(did, d)!==idM) return;
-          if(!jaAntes[x[0]+'__'+did]) conta.push({ck:x[0]+'__'+did, q:String(d.q||qItem)});
+          if(!jaAntes[x[0]+'__'+did]) conta.push({ck:x[0]+'__'+did, q:String(d.q||qItem), anulada:!medDoseValendo(d)});
         }); });
         if(conta.length){
           try{ await hospEstoqueAcertar(para.refKey, idM, conta); }
@@ -70923,6 +71834,7 @@
         }
       }
       h+=hospPendenciasHtml(S.id, e);
+      if(S.passo==='menu' && !S.leitura) h+=ciCorrecoesHTML(e, 'hosp', S.id);   // 6.66 (AC6.1)
       h+=fechar;
     } else if(S.passo==='trocar'){
       var sug=S.sug||hospSugestaoNovo(e);
@@ -70962,7 +71874,7 @@
       }
       var vai=[];
       (pl.mover||[]).forEach(function(m){
-        var n=(pl.copiarLog||[]).filter(function(c){ return String((c.dose&&c.dose.itemId)||String(c.doseId).replace(/_\d{2}-\d{2}$/,''))===m.id; }).length;
+        var n=(pl.copiarLog||[]).filter(function(c){ return String((c.dose&&c.dose.itemId)||String(c.doseId).replace(/_\d{2}-\d{2}$/,''))===m.id && medDoseValendo(c.dose); }).length;   // 6.66 (AC13.2): a anulada vai copiada, mas não conta
         vai.push(hospRemedioQueVaiTxt(m.item)+(n?(' e '+hospPl(n, 'dose já dada, copiada', 'doses já dadas, copiadas')):''));
       });
       Object.keys(pl.fichaLevar||{}).forEach(function(c){ vai.push(HOSP_CAMPO_ROTULO[c]||c); });
@@ -71051,6 +71963,515 @@
     if(pode && st!=='cancelada') out.botao+='<button class="btn" style="background:var(--crm-critico);color:#fff" onclick="hospCorrigirAbrir(\''+jsAspas(id)+'\',{origem:\'hospedes\'})">Corrigir esta hospedagem</button>';
     if(pode && pend.length) out.botao+='<button class="btn btn-gold" onclick="hospCorrigirAbrir(\''+jsAspas(id)+'\',{origem:\'hospedes\', passo:\'conferir\'})">Conferir ('+pend.length+')</button>';
     return out;
+  }
+
+  // =====================================================================================
+  // ===== STORY 6.66 — HÓSPEDES DE HOJE: DATAS, BAIXA, SAÍDA ANTECIPADA (S6, parte 1) ====
+  // Mudar datas com motivo, a própria senha e o histórico inteiro (H07); a hospedagem excluída só volta por «Reabrir a
+  // hospedagem», com a senha de quem exclui; a baixa guarda a saída combinada e tem «Desfazer a baixa» (H08); «Desfazer a saída
+  // antecipada» estorna os créditos `sa-` e reabre a estadia, com a senha da Gestão (H09). Tudo pelo cartaz da 6.57 (corrAbrir),
+  // com o registro novo ao lado do antigo: nada se apaga. A hospConfirmarAntecipada (fixada pela 6.38 P38-34) não muda.
+  // =====================================================================================
+  // PURA: a chave do registro novo de um histórico que só cresce (datas_historico, baixas_desfeitas, reaberturas…): o prefixo e o
+  // instante; no mesmo milissegundo de outro registro, ganha _2, _3… — nunca sobrescreve o que já está lá.
+  function hospChaveNova(o, pre, ts){ o=o||{}; var k=pre+ts, n=1; while(Object.prototype.hasOwnProperty.call(o, k)){ n++; k=pre+ts+'_'+n; } return k; }
+  // Data escrita no cartaz (12/10/2026 ou 2026-10-12) → AAAA-MM-DD; '' = vazia; null = inválida.
+  function hospDataDoCartaz(v){
+    v=String(v==null?'':v).trim(); if(!v) return '';
+    var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v), iso='';
+    if(m) iso=m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+    else if(/^\d{4}-\d{2}-\d{2}$/.test(v)) iso=v;
+    else return null;
+    var d=new Date(iso+'T12:00:00');
+    if(isNaN(d) || hospIsoDe(d.getTime())!==iso) return null;
+    return iso;
+  }
+  function hospDataBR(iso){ return iso?corrDataBR(iso):''; }
+  // A régua dos campos de data do cartaz (entrada obrigatória; saída vazia pede a confirmação na própria tela).
+  function hospDatasValidar(v){
+    var ent=hospDataDoCartaz(v[0]), sai=hospDataDoCartaz(v[1]);
+    if(ent===null || !ent) return 'Escreva a data de ENTRADA como 12/10/2026.';
+    if(sai===null) return 'Escreva a data de SAÍDA como 12/10/2026 (ou deixe em branco).';
+    if(sai && sai<ent) return 'A saída não pode ser antes da entrada. Confira as datas.';
+    if(!sai) return {aviso:'Sem data de saída: o FILHOt fica no Plantão todos os dias até alguém encerrar a hospedagem.'};
+    return '';
+  }
+  // O que a linha da estadia mostra no lugar do «Mudar datas» (AC7.3, AC7.4): a estadia excluída só volta por «Reabrir a
+  // hospedagem»; a encerrada pela baixa ou pela saída antecipada, pelo «Desfazer» dela. '' = pode mudar as datas.
+  function hospDatasRecusaTexto(e){
+    e=e||{}; var st=String(e.status||'ativa');
+    if(hospExcluidaAinda(e)) return 'Esta hospedagem foi excluída: ela não volta por «Mudar datas». Para ela voltar, use «Reabrir a hospedagem», com a senha de quem exclui (Supervisão, Gestão ou Diretoria).';
+    if(st==='encerrada' && e.saida_antecipada) return 'Esta hospedagem teve saída antecipada em '+(hospDataBR((e.saida_antecipada||{}).em||e.encerradaEm)||'data sem registro')+'. Para ela voltar, use «Desfazer a saída antecipada».';
+    if(st==='encerrada') return 'Esta hospedagem teve baixa em '+(hospDataBR(e.encerradaEm)||'data sem registro')+'. Para ela voltar, use «Desfazer a baixa».';
+    return '';
+  }
+  function hospDatasRecusa(id){
+    var t=hospDatasRecusaTexto(((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||{});
+    if(!t) return false;
+    try{ zAlertao('AS DATAS NÃO MUDAM POR AQUI', [t, 'Nada foi gravado.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */
+    return true;
+  }
+  // AC7.1: o cartaz «corrigir» da 6.57 com a entrada e a saída do formulário da linha (antes → depois), o motivo e a própria
+  // senha (aba-hospedes). Devolve a promessa do cartaz (o resultado), já aberto no passo de conferir.
+  function hospDatasAbrir(id, e, ent, sai, reabre){
+    var nm=String((e&&e.nome)||'esta hospedagem');
+    var p=corrAbrir({acao:'corrigir', titulo:'Mudar as datas de '+nm, oque:'as datas da hospedagem de '+nm,
+      original:{caminho:'auaulandia/estadias/'+id, id:String(id)}, capacidade:'aba-hospedes', nivel:'propria', tituloOk:'Datas salvas',
+      camposTexto:'Escreva as datas como 12/10/2026. Sem data de saída, deixe a saída em branco.',
+      campos:[{c:'entrada', rotulo:'Entrada', valor:hospDataBR(e.entrada)}, {c:'saida', rotulo:'Saída', valor:hospDataBR(e.saida)}],
+      validar:hospDatasValidar,
+      gravar:function(reg){ return hospDatasGravar(id, reg, !!reabre); }});
+    try{ corrToque('continuar', {valores:[hospDataBR(ent), hospDataBR(sai)]}); }catch(x){} /* silencioso de propósito: o cartaz fica nos campos */
+    return p.then(function(r){ if(r && r.ok) hospDatasDepois(id); return r; });
+  }
+  // A gravação de «Mudar datas»: o update de sempre (entrada, saída, quem, quando, a anterior — a 6.52 lê o alteracao_anterior)
+  // e um registro NOVO em datas_historico (o antes, o depois, o motivo e o registro da 6.57). Nada é sobrescrito: a 2ª mudança é
+  // outro registro. O papel é conferido de novo aqui.
+  async function hospDatasGravar(id, reg, reabre){
+    if(!hospAbaPode()) return corrBarrar('mudar as datas de uma hospedagem', corrQuemPode('aba-hospedes'), {estadia:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    reg=reg||{};
+    var s=await DB.ref('auaulandia/estadias/'+id).once('value'), e=(s&&s.val)?s.val():null;
+    if(!e) return {ok:false, erro:'Esta hospedagem não existe mais no sistema. Nada foi gravado.'};
+    var recusa=hospDatasRecusaTexto(e);
+    if(recusa) return {ok:false, erro:recusa};
+    var dep=reg.depois||{};
+    var ent=('entrada' in dep)?hospDataDoCartaz(dep.entrada):String(e.entrada||'');
+    var sai=('saida' in dep)?hospDataDoCartaz(dep.saida):String(e.saida||'');
+    if(!ent || sai===null || ent===null) return {ok:false, erro:'As datas do cartaz não são válidas. Nada foi gravado.'};
+    var ts=Number(reg.ts)||Date.now(), quem=String(reg.por||'-');
+    var patch={ entrada:ent, saida:sai, alterado_por:quem, alterado_ts:ts, alteracao_anterior:{entrada:e.entrada||'', saida:e.saida||''} };
+    // 6.52 (BS3): a hora do banho de saída escrita sem o dia fica marcada com a saída para a qual valia, na mesma gravação
+    try{ var _sp=((e.ficha||{}).spa)||{};
+      if(sai!==(e.saida||'') && /^\d{4}-\d{2}-\d{2}$/.test(String(e.saida||'')) && String(_sp.horario||'') && !_sp.horaDia) patch['ficha/spa/horaDia']=e.saida;
+    }catch(x){} /* silencioso de propósito: sem a marca, vale a regra pela alteracao_anterior (banhoSaidaHoraDia) */
+    if(reabre && String(e.status||'ativa')!=='ativa'){ patch.status='ativa'; patch.reabertaPor=quem; patch.reabertaTs=ts; }
+    var k=hospChaveNova(e.datas_historico, 'dh', ts);
+    var hist={entrada_antes:e.entrada||'', saida_antes:e.saida||'', entrada:ent, saida:sai, status_antes:String(e.status||'ativa'), registro:hospLimpo(reg)};
+    hist.motivo=String(reg.motivo||'');
+    try{ await DB.ref('auaulandia/estadias/'+id+'/datas_historico/'+k).set(hist); }
+    catch(x){ return {ok:false, erro:x}; }
+    try{ await DB.ref('auaulandia/estadias/'+id).update(patch); }
+    catch(x){
+      try{ DB.ref('auaulandia/estadias/'+id+'/datas_historico/'+k+'/nao_entrou').set(true).catch(function(y){ _logFalhaGrav('marcar a mudança de datas que não entrou', y); }); }catch(y){ _logFalhaGrav('marcar a mudança de datas que não entrou', y); }
+      return {ok:false, erro:x};
+    }
+    try{ if(typeof audit==='function') audit('estadia-datas','mudou as datas da hospedagem',{pet:e.nome||'',de:(e.entrada||'')+'>'+(e.saida||''),para:ent+'>'+sai, assinou:quem}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    HOSP_DATAS_FEITO[id]={antes:e, depois:Object.assign({}, e, patch)};
+    return {ok:true};
+  }
+  var HOSP_DATAS_FEITO={};
+  // Depois do ok: a lista, o aviso do esticar (checarFaltasDaEstadia) e a frase final de sempre.
+  function hospDatasDepois(id){
+    var f=HOSP_DATAS_FEITO[id]||{}, e=f.antes||{}, n=f.depois||{}; delete HOSP_DATAS_FEITO[id];
+    hospAbaEdit=null;
+    try{ if(typeof carregarHospedes==='function') carregarHospedes(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    var esticou=(!!n.saida && !!e.saida && n.saida>e.saida);
+    try{ checarFaltasDaEstadia(id, n, (esticou?('a estadia foi esticada de '+((typeof ciBRdata==='function')?ciBRdata(e.saida):e.saida)+' para '+((typeof ciBRdata==='function')?ciBRdata(n.saida):n.saida)):'as datas mudaram')); }
+    catch(x){ _logFalhaGrav('checarFaltasDaEstadia (mudar datas)', x); }
+    try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(x){} /* silencioso de propósito: o cartaz pode já ter sido fechado */
+    try{ zAlertao('DATAS SALVAS', ['Datas salvas. '+(n.nome||'O FILHOt')+' fica de '+((typeof ciBRdata==='function')?ciBRdata(n.entrada):n.entrada)+' até '+(n.saida?((typeof ciBRdata==='function')?ciBRdata(n.saida):n.saida):'data a confirmar')+'.',
+      'Ele já aparece no Plantão nesses dias, mesmo que a planilha não tenha sido atualizada.'], {ok:true, botao:'Fechar'}); }
+    catch(x){} /* silencioso de propósito: o cartaz da 6.57 já disse «Datas salvas» */
+  }
+  // A linha da estadia: a última mudança de datas e o histórico (AC7.2), a baixa com a saída combinada (AC8.1), a reabertura
+  // (AC7.3), a saída antecipada desfeita (AC9.6) e os botões novos (AC8.2, AC9.1, AC7.3). PURA de gravação.
+  function hospDatasHistLista(e){
+    var h=(e&&e.datas_historico)||{};
+    return Object.keys(h).filter(function(k){ return h[k] && !h[k].nao_entrou; })
+      .sort(function(a,b){ return ((Number((h[b].registro||{}).ts)||0)-(Number((h[a].registro||{}).ts)||0)) || ((a<b)?1:((a>b)?-1:0)); })
+      .map(function(k){ return h[k]; });
+  }
+  function hospLinha666(id, e, st){
+    e=e||{}; var out={sub:'', botoes:''}, pode=hospAbaPode();
+    var B=function(txt, fn, cor){ return '<button class="btn" style="min-height:44px;'+(cor||'')+'" onclick="'+fn+'(\''+jsAspas(id)+'\')">'+esc(txt)+'</button>'; };
+    var hs=hospDatasHistLista(e);
+    if(hs.length){
+      var u=hs[0], r=u.registro||{};
+      out.sub+='<div class="he-sub" style="color:var(--z-gold-deep)">Datas mudadas por '+esc(r.por||'-')+' em '+esc(r.quando||'')+': '+esc(u.motivo||'')
+        +(hs.length>1?(' — <a href="#" onclick="hospDatasVerTodas(\''+jsAspas(id)+'\');return false" style="color:inherit;font-weight:800">ver as '+hs.length+' mudanças</a>'):'')+'</div>';
+      if(HOSP_DATAS_ABERTAS[id]) out.sub+='<div class="he-sub">'+hs.map(function(x){ var rr=x.registro||{};
+        return esc((rr.quando||'')+' — '+(rr.por||'-')+': '+hospDataBR(x.entrada_antes)+' a '+(hospDataBR(x.saida_antes)||'sem saída')+' → '+hospDataBR(x.entrada)+' a '+(hospDataBR(x.saida)||'sem saída')+' — '+(x.motivo||'')); }).join('<br>')+'</div>';
+    }
+    var reab=hospUltimoDe(e.reaberturas);
+    if(reab && String(e.status||'ativa')!=='cancelada') out.sub+='<div class="he-sub" style="color:var(--z-gold-deep)">Reaberta em '+esc((reab.registro||{}).quando||'')+' por '+esc((reab.registro||{}).por||'-')+': '+esc(reab.motivo||'')+'</div>';
+    var sad=hospUltimoDe(e.saidas_antecipadas_desfeitas);
+    if(sad && !e.saida_antecipada) out.sub+='<div class="he-sub" style="color:var(--crm-critico);font-weight:700">'+esc(hospAntecipadaDesfeitaTexto(e))+'</div>';
+    var exAinda=hospExcluidaAinda(e);   // 2ª rodada (LOW-2): a excluída que recebeu baixa de uma tela velha volta só pela «Reabrir»
+    if(st==='cancelada' || exAinda){ if(pode) out.botoes+=B('Reabrir a hospedagem', 'hospReabrirExcluidaAbrir', 'background:var(--z-blue);color:var(--z-cream)'); }
+    else if(pode) out.botoes+=B('Mudar datas', 'hospEditarDatas', 'background:var(--z-blue);color:var(--z-cream)');
+    if(pode && String(e.status||'')==='encerrada' && e.saida_antecipada && !hospCheckoutFeito(e))
+      out.botoes+=B(HOSP_ANT_MEIO[id]?'Terminar agora (a hospedagem ainda não voltou)':'Desfazer a saída antecipada', HOSP_ANT_MEIO[id]?'hospAntecipadaTerminar':'hospAntecipadaDesfazerAbrir', 'background:var(--crm-critico);color:#fff');
+    else if(pode && String(e.status||'')==='encerrada' && !e.saida_antecipada && e.encerradaEm && !exAinda)
+      out.botoes+=B('Desfazer a baixa', 'hospBaixaDesfazerAbrir', 'background:var(--crm-critico);color:#fff');
+    return out;
+  }
+  // «Baixa em {data} — {quem} (a saída combinada era {data})» (AC8.1): a linha de sempre, com a saída combinada.
+  function hospBaixaLinhaHTML(e){
+    e=e||{};
+    if((e.status||'ativa')==='ativa' || !e.encerradaEm) return '';
+    return '<div class="he-sub" style="width:100%;color:var(--muted)">Baixa em '+esc((typeof ciBRdata==='function')?ciBRdata(e.encerradaEm):e.encerradaEm)+(e.encerradaPor?(' — '+esc(e.encerradaPor)):'')
+      +(e.saida_combinada?(' (a saída combinada era '+esc(hospDataBR(e.saida_combinada))+')'):'')+'</div>';
+  }
+  var HOSP_DATAS_ABERTAS={};
+  function hospDatasVerTodas(id){ HOSP_DATAS_ABERTAS[id]=!HOSP_DATAS_ABERTAS[id]; try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }
+  function hospUltimoDe(o){
+    var best=null; Object.keys(o||{}).forEach(function(k){ var v=(o||{})[k]; if(v && (!best || (Number((v.registro||{}).ts)||0)>(Number((best.registro||{}).ts)||0))) best=v; });
+    return best;
+  }
+  function hospCheckoutFeito(e){ e=e||{}; return !!e.checkout || String(e.status||'')==='finalizada'; }
+  // ===== «REABRIR A HOSPEDAGEM» EXCLUÍDA (AC7.3) =======================================
+  // A cascata, lida do banco na hora: os dias tirados do Plantão pela exclusão (de hoje em diante), os remédios parados pela
+  // exclusão (não religam: «Voltou a tomar» na ficha) e a reserva do orçamento (continua cancelada, S7).
+  async function hospReabrirLer(id, e){
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s&&s.val)?s.val():null; }); };
+    var ex=hospExclusaoUltima(e)||{}, hoje=hospHojeISO(), dias=hospDiasDoPeriodo(e).filter(function(d){ return d>=hoje; });
+    var removidos=[];
+    for(var i=0;i<dias.length;i++){
+      var v=(await ler('auaulandia/removidos/'+dias[i]))||{};
+      Object.keys(v).forEach(function(k){ var r=v[k]||{}; if(String(r.exclusao_estadia||'')===String(id)) removidos.push({dia:dias[i], chave:k, nome:String(r.nome||''), tutor:String(r.tutor||'')}); });
+    }
+    var parados=[], k=String(e.refKey||'');
+    if(k){
+      var ag=(await ler('auaulandia/medicacao-agenda/'+k+'/itens'))||{};
+      Object.keys(ag).forEach(function(iid){ var it=ag[iid]||{}, pe=it.paradoEm||{};
+        if(pe && /hospedagem excluída/i.test(String(pe.motivo||'')) && (!ex.ts || Math.abs((Number(pe.ts)||0)-Number(ex.ts))<15*60000)) parados.push(String(it.nome||iid)); });
+    }
+    return {ex:ex, removidos:removidos, parados:parados};
+  }
+  async function hospReabrirExcluidaAbrir(id){
+    if(!hospAbaPode()) return corrBarrar('reabrir uma hospedagem excluída', corrQuemPode('aba-hospedes'), {estadia:id});
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||{};
+    if(!hospExcluidaAinda(e)){ zAlertao('ESTA HOSPEDAGEM NÃO ESTÁ EXCLUÍDA', ['Atualize a tela: ela pode ter sido reaberta em outro aparelho.'], {botao:'Entendi'}); return null; }
+    if(!DB) return null;
+    var lido;
+    try{ lido=await hospReabrirLer(id, e); }
+    catch(x){ zAlertao('NÃO CONSEGUI LER A HOSPEDAGEM', ['Motivo: '+zErroMotivo(x, 'banco', '', {agora:true})+'. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+    var nm=String(e.nome||'O FILHOt'), volta=[nm+' volta ao Plantão nos dias da estadia, de hoje em diante'+(lido.removidos.length?(' ('+lido.removidos.map(function(r){ return hospDiaBR(r.dia); }).filter(function(d, i, a){ return a.indexOf(d)===i; }).join(', ')+').'):'.')];
+    if(lido.parados.length) volta.push('Os remédios que pararam com a exclusão ('+lido.parados.join(', ')+') não voltam sozinhos: confira com a veterinária e use «Voltou a tomar» na ficha (aba Medicamentos).');
+    if(String(lido.ex.orcamento||'')==='cancelar') volta.push('A reserva do orçamento cancelada junto continua cancelada.');
+    volta.push('A exclusão continua guardada na hospedagem, com a reabertura ao lado. O grupo da Gestão recebe uma linha.');
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir a hospedagem de '+nm, oque:'a hospedagem de '+nm+' ('+hospDiaBR(e.entrada||'')+' a '+hospDiaBR(e.saida||e.entrada||'')+')',
+      original:{caminho:'auaulandia/estadias/'+id, id:String(id)}, estado:'excluída', paraEstado:'ativa (no Plantão)', volta:volta,
+      capacidade:'assinar-correcao-hospedagem', nivel:'propria', tituloOk:'Hospedagem reaberta', botao:'Reabrir a hospedagem',
+      camposTexto:'Confira as datas da estadia (pode mudar aqui mesmo) e toque em «Continuar».',
+      campos:[{c:'entrada', rotulo:'Entrada', valor:hospDataBR(e.entrada)}, {c:'saida', rotulo:'Saída', valor:hospDataBR(e.saida)}], validar:hospDatasValidar,
+      gravar:function(reg){ return hospReabrirExcluidaGravar(id, reg, lido); }}).then(function(r){
+        if(r && r.ok){ hospCorrDepois();
+          if(lido.parados.length) try{ zEscolha('HOSPEDAGEM REABERTA', [nm+' voltou ao Plantão.', 'Os remédios que pararam com a exclusão ('+lido.parados.join(', ')+') não voltaram: confira com a veterinária e use «Voltou a tomar» na ficha.'],
+            [{t:'Abrir a ficha (aba Medicamentos)', cor:'#234D67', fn:function(){ hospAbrirFichaAba(String(e.refKey||''), 'ps-med'); }}, {t:'Fechar', cor:'#6b5f4b', fn:function(){}}]); }catch(x){} /* silencioso de propósito: o cartaz já disse */
+        }
+        return r;
+      });
+  }
+  async function hospReabrirExcluidaGravar(id, reg, lido){
+    if(!hospAbaPode()) return corrBarrar('reabrir uma hospedagem excluída', corrQuemPode('aba-hospedes'), {estadia:id});
+    reg=reg||{};
+    // 6.66 (2ª rodada, LOW-5 do QA): a capacidade de quem ASSINOU, conferida aqui também (não só pelo cartaz)
+    if(!podePapel('assinar-correcao-hospedagem', String(reg.papel||''))) return corrBarrar('reabrir uma hospedagem excluída', corrQuemPode('assinar-correcao-hospedagem'), {estadia:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    lido=lido||{removidos:[], parados:[], ex:{}};
+    var dep=reg.depois||{}, ts=Number(reg.ts)||Date.now(), k='r'+ts, erroTx='';
+    var res=await DB.ref('auaulandia/estadias/'+id).transaction(function(cur){
+      if(cur===null||cur===undefined) return null;
+      if(!hospExcluidaAinda(cur)){ erroTx='Esta hospedagem já foi reaberta em outro aparelho. Nada foi gravado de novo.'; return; }
+      var ent=('entrada' in dep)?hospDataDoCartaz(dep.entrada):String(cur.entrada||''), sai=('saida' in dep)?hospDataDoCartaz(dep.saida):String(cur.saida||'');
+      if(!ent || ent===null || sai===null){ erroTx='As datas do cartaz não são válidas. Nada foi gravado.'; return; }
+      var novo=hospLimpo(cur), exk=''; Object.keys(cur.exclusao||{}).forEach(function(x){ if(!exk || (Number((cur.exclusao[x]||{}).ts)||0)>(Number((cur.exclusao[exk]||{}).ts)||0)) exk=x; });
+      k=hospChaveNova(cur.reaberturas, 'r', ts);
+      novo.reaberturas=Object.assign({}, cur.reaberturas||{});
+      novo.reaberturas[k]=hospLimpo({exclusao:exk, dias_de_volta:lido.removidos||[], remedios_parados:lido.parados||[], cancelada:{por:cur.canceladaPor||'', ts:cur.canceladaTs||0},
+        entrada_antes:cur.entrada||'', saida_antes:cur.saida||'', motivo:String(reg.motivo||''), registro:reg});
+      // a baixa dada por cima da exclusão (a tela velha, LOW-2): fica guardada na reabertura e sai do topo
+      if(String(cur.status||'')==='encerrada'){ novo.reaberturas[k].baixa_por_cima=hospLimpo({encerradaEm:cur.encerradaEm||'', encerradaPor:cur.encerradaPor||'', encerradaTs:cur.encerradaTs||0, saida_combinada:cur.saida_combinada||''});
+        delete novo.encerradaEm; delete novo.encerradaPor; delete novo.encerradaTs; delete novo.saida_combinada; }
+      novo.status='ativa'; novo.entrada=ent; novo.saida=sai;
+      delete novo.canceladaPor; delete novo.canceladaTs;
+      return novo;
+    });
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(!res || !res.committed || !v || !((v.reaberturas||{})[k])) return {ok:false, erro:erroTx||HOSP_ERRO_MEXEU};
+    try{ if(typeof EST_TODAS!=='undefined'&&EST_TODAS) EST_TODAS[id]=v; }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+    // os dias tirados do Plantão pela exclusão deixam de valer (o mesmo efeito do «Trazer de volta»); quais eram ficou em reaberturas
+    var ps=(lido.removidos||[]).map(function(r){ return DB.ref('auaulandia/removidos/'+r.dia+'/'+r.chave).remove(); });
+    try{ await Promise.all(ps); }catch(x){ _logFalhaGrav('auaulandia/removidos (reabrir a hospedagem excluída)', x); }
+    await hospGravarSinalAgenda({tipo:'reabertura', ts:ts, de:'', para:String(v.refKey||''), itens:[], estadia:id});
+    hospReabriuRastro(id, v, reg);
+    return {ok:true};
+  }
+  // O rastro da reabertura: a correção da hospedagem (o mesmo lugar da troca e da exclusão), a auditoria e o grupo da Gestão.
+  function hospReabriuRastro(id, v, reg){
+    var papel=HOSP_PAPEL_ROTULO[reg.papel]||corrPapelNome(reg.papel)||'';
+    var linha=(v.nome||'')+' ('+hospDiaBR(v.entrada||'')+' a '+hospDiaBR(v.saida||v.entrada||'')+') — reaberta depois da exclusão — motivo: '+String(reg.motivo||'')
+      +' — assinado por '+(reg.por||'-')+(papel?(' ('+papel+')'):'')+', em '+(reg.quando||'');
+    try{ var pr=DB.ref('auaulandia/hospedagem-correcoes/'+id).push(hospLimpo({acao:'reabriu', estadia:id, nome:v.nome||'', motivo:String(reg.motivo||''), quem:reg.por||'', quem_papel:reg.papel||'', logado:reg.login||'', ts:Number(reg.ts)||Date.now(), quando_br:reg.quando||''}));
+      if(pr && typeof pr.catch==='function') pr.catch(function(e){ _logFalhaGrav('auaulandia/hospedagem-correcoes', e); }); }
+    catch(e){ _logFalhaGrav('auaulandia/hospedagem-correcoes', e); }
+    try{ if(typeof audit==='function') audit('estadia-reaberta', linha, {pet:v.nome||'', estadia:id, assinou:reg.por||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    try{ Promise.resolve((typeof tgCfgPronta==='function')?tgCfgPronta():null).then(function(c){ if(c && c.url) return tgAvisar({grupo:'gestao', texto:'HOSPEDAGEM REABERTA: '+linha+'.'}); })
+      .catch(function(e){ _logFalhaGrav('Telegram (hospedagem reaberta)', e); }); }
+    catch(e){ _logFalhaGrav('Telegram (hospedagem reaberta)', e); }
+  }
+  // 6.66 (2ª rodada, LOW-2 do QA): a hospedagem continua excluída? «cancelada», ou com uma exclusão mais nova que a última volta
+  // (a «Reabrir a hospedagem», ou o reabrir antigo do «Mudar datas», reabertaTs). Uma baixa dada por cima da exclusão (a tela velha)
+  // não tira a hospedagem da exclusão: ela volta só pela «Reabrir a hospedagem», com a régua de quem exclui.
+  function hospExcluidaAinda(e){
+    e=e||{};
+    if(String(e.status||'')==='cancelada') return true;
+    var ex=hospExclusaoUltima(e); if(!ex) return false;
+    var re=hospUltimoDe(e.reaberturas), volta=Math.max(re?(Number((re.registro||{}).ts)||0):0, Number(e.reabertaTs)||0);
+    return (Number(ex.ts)||0)>volta;
+  }
+  // A baixa relê a hospedagem antes de gravar (LOW-2): '' = ainda ativa no banco; senão, a frase (nada é gravado).
+  async function hospBaixaRecusa(id){
+    var r=await corrComPrazo(DB.ref('auaulandia/estadias/'+id).once('value'), CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.ok===false && !(r.val)) return 'Não consegui conferir a hospedagem no banco ('+zErroMotivo(r.erro, 'banco', '', {agora:true})+'). A baixa não foi dada: confira a internet e tente de novo.';
+    var cur=(r && typeof r.val==='function')?r.val():null;
+    if(!cur) return 'Esta hospedagem não está mais no sistema. A baixa não foi dada.';
+    var st=String(cur.status||'ativa');
+    if(st==='ativa') return '';
+    if(hospExcluidaAinda(cur)) return 'Esta hospedagem foi excluída em outro aparelho. A baixa não foi dada. Se a exclusão foi engano, use «Reabrir a hospedagem», com a senha da Supervisão, da Gestão ou da Diretoria.';
+    if(st==='encerrada') return 'Esta hospedagem já teve baixa em outro aparelho'+(cur.encerradaEm?(' (em '+hospDataBR(cur.encerradaEm)+')'):'')+'. Nada foi gravado de novo.';
+    return 'Esta hospedagem mudou em outro aparelho. A baixa não foi dada: atualize a tela.';
+  }
+  // ===== «DESFAZER A BAIXA» (AC8) ======================================================
+  function hospBaixaDeHoje(e){ return !!(e && e.encerradaTs && hospIsoDe(e.encerradaTs)===hospHojeISO()); }
+  function hospBaixaDesfazerAbrir(id){
+    if(!hospAbaPode()) return Promise.resolve(corrBarrar('desfazer a baixa de uma hospedagem', corrQuemPode('aba-hospedes'), {estadia:id}));
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||{};
+    if(String(e.status||'')!=='encerrada' || e.saida_antecipada || !e.encerradaEm){ zAlertao('NÃO HÁ BAIXA PARA DESFAZER', ['Atualize a tela: a hospedagem pode ter mudado em outro aparelho.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    if(hospExcluidaAinda(e)){ zAlertao('ESTA HOSPEDAGEM FOI EXCLUÍDA', [HOSP_BAIXA_EXCLUIDA], {botao:'Entendi'}); return Promise.resolve(null); }
+    var nm=String(e.nome||'O FILHOt'), hoje=hospHojeISO(), deHoje=hospBaixaDeHoje(e);
+    var volta=[nm+' volta ao Plantão e ao alarme do remédio.'];
+    if(String(e.encerradaEm)<hoje) volta.push('Os dias entre a baixa ('+hospDiaBR(e.encerradaEm)+') e hoje ficam sem relatório do Plantão: confira com a equipe.');
+    if(!e.saida_combinada) volta.push('A baixa não guardou a saída combinada: escreva a saída no campo (ou deixe em branco, sem data de saída).');
+    return corrAbrir({acao:'reabrir', titulo:'Desfazer a baixa de '+nm, oque:'a baixa da hospedagem de '+nm+' (em '+hospDiaBR(e.encerradaEm)+')',
+      original:{caminho:'auaulandia/estadias/'+id, id:String(id)}, estado:'baixa em '+hospDataBR(e.encerradaEm), paraEstado:'ativa, no Plantão', volta:volta,
+      capacidade:'aba-hospedes', nivel:deHoje?'propria':'gestao', tituloOk:'Baixa desfeita', botao:'Desfazer a baixa',
+      camposTexto:'Confira a saída combinada (12/10/2026). Sem saída, deixe em branco.',
+      campos:[{c:'saida', rotulo:'Saída combinada', valor:hospDataBR(e.saida_combinada||'')}],
+      validar:function(v){ var s=hospDataDoCartaz(v[0]); if(s===null) return 'Escreva a saída como 12/10/2026 (ou deixe em branco).'; if(s && e.entrada && s<e.entrada) return 'A saída não pode ser antes da entrada ('+hospDiaBR(e.entrada)+').'; if(!s) return {aviso:'Sem data de saída: o FILHOt fica no Plantão todos os dias até alguém encerrar a hospedagem.'}; return ''; },
+      gravar:function(reg){ return hospBaixaDesfazerGravar(id, reg, deHoje, e); }}).then(function(r){ if(r && r.ok) hospCorrDepois(); return r; });
+  }
+  var HOSP_BAIXA_EXCLUIDA='Esta hospedagem foi excluída, e a baixa foi dada por cima da exclusão. «Desfazer a baixa» não a traz de volta: use «Reabrir a hospedagem», com a senha da Supervisão, da Gestão ou da Diretoria. Nada foi gravado.';
+  async function hospBaixaDesfazerGravar(id, reg, deHoje, aberto){
+    if(!hospAbaPode()) return corrBarrar('desfazer a baixa de uma hospedagem', corrQuemPode('aba-hospedes'), {estadia:id});
+    reg=reg||{};
+    // 6.66 (2ª rodada, LOW-3 do QA): «de hoje» é decidido AGORA, na gravação — o cartaz aberto às 23:59 e assinado às 00:01 já
+    // desfaz uma baixa de ontem, e a de dia anterior pede a Gestão
+    var gestao=podePapel('gestao-role', String(reg.papel||''));
+    if(!(deHoje && hospBaixaDeHoje(aberto)) && !gestao) return corrBarrar('desfazer a baixa dada em dia anterior', corrQuemPode('gestao-role'), {estadia:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var ts=Number(reg.ts)||Date.now(), k='b'+ts, erroTx='', dep=reg.depois||{};
+    var res=await DB.ref('auaulandia/estadias/'+id).transaction(function(cur){
+      if(cur===null||cur===undefined) return null;
+      if(String(cur.status||'')!=='encerrada' || cur.saida_antecipada || String(cur.encerradaEm||'')!==String((aberto||{}).encerradaEm||'')){ erroTx='Esta baixa mudou em outro aparelho. Nada foi gravado: feche e abra de novo.'; return; }
+      if(hospExcluidaAinda(cur)){ erroTx=HOSP_BAIXA_EXCLUIDA; return; }
+      if(!hospBaixaDeHoje(cur) && !gestao){ erroTx='A baixa já é de dia anterior: desfazer pede a senha da Gestão. Nada foi gravado.'; return; }
+      var sai=('saida' in dep)?hospDataDoCartaz(dep.saida):String(cur.saida_combinada||'');
+      if(sai===null){ erroTx='A saída do cartaz não é válida. Nada foi gravado.'; return; }
+      var novo=hospLimpo(cur);
+      k=hospChaveNova(cur.baixas_desfeitas, 'b', ts);
+      novo.baixas_desfeitas=Object.assign({}, cur.baixas_desfeitas||{});
+      novo.baixas_desfeitas[k]=hospLimpo({encerradaEm:cur.encerradaEm||'', encerradaPor:cur.encerradaPor||'', encerradaTs:cur.encerradaTs||0, saida_combinada:cur.saida_combinada||'',
+        saida_da_baixa:cur.saida||'', motivo:String(reg.motivo||''), registro:reg});
+      novo.status='ativa'; novo.saida=sai;
+      delete novo.encerradaEm; delete novo.encerradaPor; delete novo.encerradaTs; delete novo.saida_combinada;
+      return novo;
+    });
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(!res || !res.committed || !v || !((v.baixas_desfeitas||{})[k])) return {ok:false, erro:erroTx||HOSP_ERRO_MEXEU};
+    try{ if(typeof EST_TODAS!=='undefined'&&EST_TODAS) EST_TODAS[id]=v; }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+    try{ if(typeof audit==='function') audit('estadia-baixa-desfeita', 'desfez a baixa da hospedagem de '+(v.nome||'')+' — volta a ativa, saída '+(v.saida||'sem data')+' — motivo: '+String(reg.motivo||''), {pet:v.nome||'', estadia:id, assinou:reg.por||''}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  // ===== «DESFAZER A SAÍDA ANTECIPADA» (AC9) ===========================================
+  // PURA: a saída combinada antes da saída antecipada — a gravada, ou a data da saída mais as noites lançadas (o
+  // hospNoitesNaoUsadas ao contrário).
+  function hospSaidaCombinada(e){
+    e=e||{};
+    if(e.saida_combinada) return String(e.saida_combinada);
+    var sa=e.saida_antecipada||{}, em=String(sa.em||e.saida_real||''), n=Number(sa.noites!=null?sa.noites:e.credito_noites)||0;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(em)) return String(e.saida||'');
+    return n>0?(addDiasISO(em, n)||em):em;
+  }
+  // PURA: os créditos `sa-{estadia}-{n}` desta hospedagem no Extrato e o estado de cada um: valendo, estornado ou usado.
+  function hospCreditosSa(L, id){
+    var an=repAnulados(L||[]);
+    return (L||[]).filter(function(l){ return l && l.tipo==='credito' && String(l._id||'').indexOf('sa-'+id+'-')===0; })
+      .sort(function(a,b){ return (Number(a.seq)||0)-(Number(b.seq)||0); })
+      .map(function(l){ return {l:l, estornado:!!an[l._id], usado:!an[l._id] && !!repCreditoUsoDe(L, l._id)}; });
+  }
+  function hospAntecipadaDesfeita(e){ return !!(e && !e.saida_antecipada && Object.keys(e.saidas_antecipadas_desfeitas||{}).length); }
+  function hospAntecipadaDesfeitaTexto(e){
+    var d=hospUltimoDe((e||{}).saidas_antecipadas_desfeitas)||{}, r=d.registro||{};
+    return 'A saída antecipada desta hospedagem foi desfeita em '+(r.quando||'data sem registro')+' por '+(r.por||'-')+'. Lançar de novo pelo app ainda não é possível: o crédito sairia zerado. Use «Dar baixa» com a data certa e avise a Gestão.';
+  }
+  // O FILHOt da ficha (o mesmo jeito da hospConfirmarAntecipada achar o Banco de Reposições).
+  function hospPelDaEstadia(e){
+    e=e||{}; var pel=null;
+    try{ pel=(typeof repPelaChave==='function'&&e.refKey)?repPelaChave(e.refKey):null; }catch(x){ pel=null; } /* silencioso de propósito: sem a ficha, sem crédito */
+    if(!pel){ try{ var lista=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[])||[];
+      var idx=(typeof orcAcharPeludinho==='function')?orcAcharPeludinho(lista, {key:(e.refKey||''), nome:(e.nome||''), tutor:(e.tutor||'')}, e.tutor||''):-1;
+      if(idx>=0) pel=lista[idx]; }catch(x){ pel=null; } } /* silencioso de propósito: sem a ficha, sem crédito */
+    return pel;
+  }
+  var HOSP_ANT_MEIO={};   // id → {reg, combinada} da desfeita que estornou os créditos e não reabriu a estadia (AC9.4)
+  var HOSP_ANT_EST_EXISTE='Um estorno desta saída antecipada já existe no Extrato e não bate com o crédito. Nada foi gravado: chame a Gestão para conferir o Extrato de reposições.';   // a guarda da 6.60 (2ª rodada, LOW-5)
+  async function hospAntecipadaDesfazerAbrir(id){
+    if(!hospAbaPode()) return corrBarrar('desfazer a saída antecipada', corrQuemPode('aba-hospedes'), {estadia:id});
+    if(!DB) return null;
+    var s=await DB.ref('auaulandia/estadias/'+id).once('value'), e=(s&&s.val)?s.val():null;
+    if(!e || !e.saida_antecipada){ zAlertao('NÃO HÁ SAÍDA ANTECIPADA PARA DESFAZER', ['Ela pode ter sido desfeita em outro aparelho. Atualize a tela.'], {botao:'Entendi'}); return null; }
+    if(hospCheckoutFeito(e)){ zAlertao('REABRA O CHECK-OUT PRIMEIRO', ['O check-out desta hospedagem já foi feito: a saída antecipada só se desfaz depois de reabrir o check-out. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+    var nm=String(e.nome||'o FILHOt'), comb=hospSaidaCombinada(e), sa=e.saida_antecipada||{}, pel=hospPelDaEstadia(e), L=[], cred=[];
+    if(pel){ try{ var sL=await DB.ref('daycare/reposicao/'+pelKey(pel)+'/lancamentos').once('value'), o=(sL&&sL.val)?(sL.val()||{}):{};
+      L=Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]); }); }catch(x){ L=[]; } } /* silencioso de propósito: sem o Extrato, a cascata diz só o que leu */
+    cred=hospCreditosSa(L, id);
+    var volta=['A hospedagem volta a «ativa», com a saída combinada de '+(hospDataBR(comb)||'sem data')+'.'], usados=0;
+    cred.forEach(function(c){
+      var noite=addDiasISO(String(c.l.data||sa.em||''), (Number(c.l.seq)||1)-1)||c.l.data;
+      if(c.estornado) volta.push('A noite de '+hospDiaBR(noite)+': já estava estornada.');
+      else { volta.push('A noite de '+hospDiaBR(noite)+' sai do saldo de reposição de '+nm+(c.usado?' (este crédito já foi usado)':'')+'.'); if(c.usado) usados++; }
+    });
+    var orc=String(sa.orcamento||'');
+    if(orc) volta.push('O orçamento '+((typeof repOrcCurto==='function')?repOrcCurto(orc):orc)+' volta a não ter saída antecipada.');
+    volta.push('Se o check-out já foi feito, reabra o check-out primeiro.');
+    var vivos=cred.filter(function(c){ return !c.estornado; });
+    if(pel && vivos.length){
+      var ests=vivos.map(function(c){ return {_id:'est-'+c.l._id, tipo:'estorno', estornaId:c.l._id}; });
+      var antes=null, depois=null;
+      try{ ctxRepoCacheTemp(pel, L, function(){ antes=repSaldoReposicao(pel); depois=repSaldoRepDepois(pel, ests, null, antes); }); }catch(x){ antes=null; } /* silencioso de propósito: sem a conta, a linha do saldo não aparece */
+      if(antes!==null) volta.push('Saldo de reposição de '+nm+': '+antes+' → '+depois+'.');
+    }
+    var aviso=usados?((usados===1)?REP_ESTORNO_USADO:('Créditos desta saída antecipada já foram usados ('+usados+'). Estornar deixa o saldo de reposição em 0 e o livro-caixa negativo: os dias usados continuam usados, e a casa absorve.')):'';
+    return corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Desfazer a saída antecipada de '+nm, oque:'a saída antecipada de '+nm+' (foi embora em '+hospDiaBR(sa.em||e.saida_real||'')+')',
+      original:{caminho:'auaulandia/estadias/'+id, id:String(id)}, estado:'encerrada (saída antecipada)', paraEstado:'ativa, com a saída combinada de '+(hospDataBR(comb)||'sem data'),
+      volta:volta, aviso:aviso, tituloOk:'Saída antecipada desfeita', botao:'Desfazer a saída antecipada',
+      gravar:function(reg){ return hospAntecipadaDesfazerGravar(id, reg, comb); }}).then(function(r){
+        if(r && r.ok){ hospCorrDepois(); try{ if(typeof orcCarregarLista==='function') orcCarregarLista(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }
+        else if(HOSP_ANT_MEIO[id]){
+          try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL) corrFechar(); }catch(x){} /* silencioso de propósito: o cartaz pode já ter sido fechado */
+          try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */
+          try{ zEscolha('OS CRÉDITOS FORAM ESTORNADOS; A HOSPEDAGEM AINDA NÃO VOLTOU', ['A primeira parte entrou: os créditos de noite desta saída antecipada saíram do saldo de reposição.',
+            'A hospedagem ainda está encerrada. Toque em «Terminar agora»: ela volta a «ativa», sem estornar nada de novo.'],
+            [{t:'Terminar agora', cor:'#B3261E', fn:function(){ hospAntecipadaTerminar(id); }}, {t:'Fechar', cor:'#6b5f4b', fn:function(){}}]); }catch(x){} /* silencioso de propósito: a linha da hospedagem mostra «Terminar agora» */
+        }
+        return r;
+      });
+  }
+  // A conta do saldo com o Extrato lido agora (o REPO_CACHE do aparelho pode estar atrasado), sem mexer no livro-caixa.
+  function ctxRepoCacheTemp(pel, L, fn){
+    var k=pelKey(pel), bk=REPO_CACHE[k], o={};
+    (L||[]).forEach(function(l){ var c=Object.assign({}, l); delete c._id; o[l._id]=c; });
+    REPO_CACHE[k]=Object.assign({}, bk||{}, {lancamentos:o});
+    try{ fn(); } finally{ if(bk===undefined) delete REPO_CACHE[k]; else REPO_CACHE[k]=bk; }
+  }
+  // As duas partes (AC9.3): 1) numa transação no Extrato, um estorno para cada crédito `sa-` desta hospedagem que ainda vale NA
+  // HORA (chave est-{id}, o mesmo lote_estorno, o registro 6.57); 2) a estadia volta a «ativa» com a saída combinada, os campos da
+  // saída antecipada vão para saidas_antecipadas_desfeitas, e o orçamento perde a saída antecipada (o registro fica ao lado).
+  // «Desfeita» só com as duas. A 1ª sem a 2ª: a tela diz o que ficou e «Terminar agora» completa (AC9.4).
+  async function hospAntecipadaDesfazerGravar(id, reg, comb){
+    if(!hospAbaPode()) return corrBarrar('desfazer a saída antecipada', corrQuemPode('aba-hospedes'), {estadia:id});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return corrBarrar('desfazer a saída antecipada (crédito de reposição)', corrQuemPode('gestao-role'), {estadia:id});
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var s=await DB.ref('auaulandia/estadias/'+id).once('value'), e=(s&&s.val)?s.val():null;
+    if(!e || !e.saida_antecipada) return {ok:false, erro:'Outro aparelho já desfez a saída antecipada desta hospedagem. Nada foi gravado.'};
+    if(hospCheckoutFeito(e)) return {ok:false, erro:'O check-out desta hospedagem já foi feito: reabra o check-out primeiro. Nada foi gravado.'};
+    var pel=hospPelDaEstadia(e), ests=[], jaEst=[];
+    if(pel){
+      var LE='SA'+(Number(reg.ts)||Date.now()), hoje=repHojeISO(), mot=String(reg.motivo||''), quem=String(reg.por||'-'), ts=Date.now();
+      var r1;
+      try{
+        r1=await repTransacaoExtrato(pel, function(L){
+          var c=hospCreditosSa(L, id); if(!c.length) return {ids:[], ja:[], aplica:function(){}};
+          var vivos=c.filter(function(x){ return !x.estornado; });
+          // a guarda da 6.60: nada se apaga — um est- que já existe não é regravado (2ª rodada, LOW-5 do QA)
+          if(vivos.some(function(x){ return !!repLancDe(L, 'est-'+x.l._id); })) return {recusa:HOSP_ANT_EST_EXISTE};
+          // os estornos que a 1ª parte desta desfeita já fez (em outro aparelho, sem a memória): entram no registro da estadia
+          var ja=L.filter(function(l){ return l && l.tipo==='estorno' && /^SA/.test(String(l.lote_estorno||'')) && c.some(function(x){ return x.estornado && x.l._id===l.estornaId; }); })
+            .map(function(l){ return l._id; }).sort();
+          return {ids:vivos.map(function(x){ return x.l._id; }), ja:ja, todos:c.map(function(x){ return x.l._id; }), aplica:function(o){
+            vivos.forEach(function(x){ o['est-'+x.l._id]={tipo:'estorno', data:hoje, motivo:'estorno', obs:mot, estornaId:x.l._id, lote_estorno:LE, corr:reg, quem:quem, ts:ts}; }); }};
+        });
+      }catch(x){ return {ok:false, erro:x}; }
+      if(!r1.ok && r1.recusa!==REP_NAO_ACHEI_EXTRATO) return {ok:false, erro:r1.recusa||'a gravação não confirmou'};
+      ests=((r1.info||{}).ids||[]).map(function(x){ return 'est-'+x; });
+      jaEst=((r1.info||{}).ja||[]).filter(function(x){ return ests.indexOf(x)<0; });
+      if(ests.length) try{ repRastro('reposicao-lote-estornado', pel, pelNome(pel)+' — estornados os créditos da saída antecipada da hospedagem ('+ests.length+'), assinado por '+(reg.por||'-')+': '+mot); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    }
+    ests=ests.concat(jaEst);
+    HOSP_ANT_MEIO[id]={reg:reg, comb:comb, ests:ests};
+    var r2=await hospAntecipadaTerminarGravar(id, reg, comb, ests);
+    if(!r2.ok) return {ok:false, erro:(ests.length?('Os créditos foram estornados; a hospedagem ainda não voltou ('+zErroMotivo(r2.erro, 'banco', '', {agora:true})+'). Toque em «Terminar agora» na linha da hospedagem.'):r2.erro)};
+    return {ok:true};
+  }
+  // A 2ª parte (também o «Terminar agora»): a estadia e o orçamento. Reconhece os estornos já gravados (nada em dobro).
+  async function hospAntecipadaTerminarGravar(id, reg, comb, ests){
+    var ts=Number(reg.ts)||Date.now(), k='d'+ts, erroTx='', orc='', guard=null;
+    var res;
+    try{
+      res=await DB.ref('auaulandia/estadias/'+id).transaction(function(cur){
+        if(cur===null||cur===undefined) return null;
+        if(!cur.saida_antecipada){ erroTx='Outro aparelho já desfez a saída antecipada desta hospedagem.'; return; }
+        if(hospCheckoutFeito(cur)){ erroTx='O check-out desta hospedagem já foi feito: reabra o check-out primeiro.'; return; }
+        var novo=hospLimpo(cur);
+        orc=String((cur.saida_antecipada||{}).orcamento||'');
+        guard={saida_antecipada:cur.saida_antecipada, saida_real:cur.saida_real||'', credito_noites:(cur.credito_noites!=null?cur.credito_noites:null),
+          encerradaEm:cur.encerradaEm||'', encerradaPor:cur.encerradaPor||'', encerradaTs:cur.encerradaTs||0, saida_combinada:comb||'', saida_da_baixa:cur.saida||'',
+          estornos:(ests||[]).slice(), motivo:String(reg.motivo||''), registro:reg};
+        k=hospChaveNova(cur.saidas_antecipadas_desfeitas, 'd', ts);
+        novo.saidas_antecipadas_desfeitas=Object.assign({}, cur.saidas_antecipadas_desfeitas||{});
+        novo.saidas_antecipadas_desfeitas[k]=hospLimpo(guard);
+        novo.status='ativa'; novo.saida=comb||cur.saida||'';
+        ['saida_antecipada','saida_real','credito_noites','encerradaEm','encerradaPor','encerradaTs','saida_combinada'].forEach(function(c){ delete novo[c]; });
+        return novo;
+      });
+    }catch(x){ return {ok:false, erro:x}; }
+    var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+    if(!res || !res.committed || !v || !((v.saidas_antecipadas_desfeitas||{})[k])) return {ok:false, erro:erroTx||HOSP_ERRO_MEXEU};
+    try{ if(typeof EST_TODAS!=='undefined'&&EST_TODAS) EST_TODAS[id]=v; }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz de novo */
+    delete HOSP_ANT_MEIO[id];
+    if(orc){
+      try{
+        var so=await DB.ref('auaulandia/orcamentos/'+orc).once('value'), o=(so&&so.val)?so.val():null;
+        if(o && (o.saida_real || o.credito_noites!=null)){
+          var up={saida_real:null, credito_noites:null}; up['saida_antecipada_desfeita/'+k]=hospLimpo({saida_real:o.saida_real||'', credito_noites:(o.credito_noites!=null?o.credito_noites:null), registro:reg});
+          await DB.ref('auaulandia/orcamentos/'+orc).update(up);
+        }
+      }catch(x){ _logFalhaGrav('auaulandia/orcamentos (desfazer a saída antecipada)', x); }
+    }
+    try{ if(typeof audit==='function') audit('hospedagem-saida-antecipada-desfeita', (v.nome||'')+' volta a ativa, com a saída combinada de '+(comb||'—')+' — '+(ests||[]).length+' crédito(s) estornado(s) — motivo: '+String(reg.motivo||''), {pet:v.nome||'', estadia:id, assinou:reg.por||''}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    return {ok:true};
+  }
+  // «Terminar agora» (AC9.4): com a desfeita em memória, completa só a 2ª parte; sem ela (outro aparelho), o cartaz de novo —
+  // ele relê o Extrato, vê os créditos já estornados e não estorna em dobro.
+  async function hospAntecipadaTerminar(id){
+    if(!hospAbaPode()) return corrBarrar('desfazer a saída antecipada', corrQuemPode('aba-hospedes'), {estadia:id});
+    var m=HOSP_ANT_MEIO[id];
+    if(!m) return hospAntecipadaDesfazerAbrir(id);
+    var r=await hospAntecipadaTerminarGravar(id, m.reg, m.comb, m.ests);
+    if(r.ok){ zAlertao('SAÍDA ANTECIPADA DESFEITA', ['A hospedagem voltou a «ativa», com a saída combinada de '+(hospDataBR(m.comb)||'sem data')+'.'], {ok:true, botao:'Fechar'}); hospCorrDepois(); }
+    else zAlertao('A HOSPEDAGEM AINDA NÃO VOLTOU', ['Os créditos já foram estornados. '+zErroMotivo(r.erro, 'banco', '', {agora:true})+'.', 'Toque em «Terminar agora» de novo em instantes.'], {botao:'Entendi'});
+    return r;
+  }
+
+  // «Começar a correção por esta versão» pelo cartaz «Corrigir esta hospedagem» (6.53): abre o Check-in na ficha da estadia
+  // (como o «Corrigir» de lá) e só então liga o ✎ Corrigir com a versão escolhida (AC6.2).
+  function hospCorrigirPelaVersao(id, idx){
+    var e=((typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS[id]:null)||(HOSP_CORR&&HOSP_CORR.e)||{};
+    var i=(PELUDINHOS||[]).findIndex(function(p){ return pelKey(p)===String(e.refKey||''); });
+    if(i<0){
+      if(HOSP_CORR){ HOSP_CORR.msg='A ficha desta hospedagem não está no cadastro. Se ela foi lançada no FILHOt errado, use "Trocar a ficha" primeiro.'; hospCorrRender(); }
+      return false;
+    }
+    HOSP_CORR=null; hospCorrRender();
+    try{ abrirItemDoMenu('checkin'); }catch(x){} /* silencioso de propósito: sem o menu, o check-in abre do jeito que der */
+    try{ ciEscolher(i); }catch(x){} /* silencioso de propósito: guarda defensiva */
+    try{ ciCorrigirPelaVersao(id, idx); }catch(x){} /* silencioso de propósito: guarda defensiva */
+    return true;
   }
   // ===== A ZONA DE RISCO DO PLANTÃO ===================================================
   // Com estadia, o botão abre o cartaz (o "(hoje)" sai: a estadia é inteira). Sem estadia,
@@ -71695,13 +73116,8 @@
   }
   // A Recepção corrige o item quando o aviso nasceu com o rótulo errado (o caso do Arthur:
   // o chamado dizia ração e o que faltava era comprimido).
-  function avisoTrocarTipo(id, novo){
-    if(!DB||!id) return;
-    var rot={racao:'Ração/comida', 'comida-natural':'Comida natural', medicacao:'Remédio'};
-    var patch={tipo:novo, itemNome:rot[novo]||'Ração/comida', tipoCorrigidoPor:(typeof quemSou==='function'?quemSou():'-'), tipoCorrigidoEm:Date.now()};
-    DB.ref('auaulandia/avisos-racao/'+id).update(patch).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao/ (avisoTrocarTipo)', e); });
-    if(typeof audit==='function') audit('aviso-tipo-corrigido', id, {para:novo});
-  }
+  // 6.66 (AC11.4): trocar o tipo pede o motivo de 4 palavras e a própria senha (o cartaz da 6.57); a troca fica em tipo_trocas.
+  function avisoTrocarTipo(id, novo){ if(!id) return Promise.resolve(null); return avisoTipoTrocarAbrir(id, novo); }
   // ---- Medicação: testar os alarmes (bipDespertador de verdade + confirmação humana) ----
   function renderCfMed(){
     var el=document.getElementById('cfMedList'); var card=document.getElementById('cf-med-card'); if(!el||!card) return;
