@@ -5174,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-13"></script>
+<script src="resposta-tutor.js?v=2026-10-09-14"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-13"></script>
+<script src="painel-logica.js?v=2026-10-09-14"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-13"></script>
+<script src="financeiro-logica.js?v=2026-10-09-14"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5875,7 +5875,11 @@
     // A senha que assina o Orçamento (Cancelar reserva, Mudar as datas): de uma PESSOA cujo
     // papel vê o Orçamento (so-recepcao) — ou que recebeu a tela Orçamento no Time. Senha de
     // posto e de quem não trabalha no Orçamento não assinam (corrAssinar, orcAssinaturaRecusa).
-    'assinar-orcamento':        ['consultora','supervisor','gestao','diretoria']
+    'assinar-orcamento':        ['consultora','supervisor','gestao','diretoria'],
+    // ===== Story 6.58 — corrigir e reabrir a medicação dos Lançamentos do dia (10/out/2026) ===========
+    // Os mesmos papéis que veem a tela Lançamentos do dia (telaVemDoPapel('dashdc')); quem recebeu a tela no
+    // Time também assina (a tela concedida, conferida no cartaz). Tirar (anular) pede a senha da Gestão.
+    'corrigir-lancamento-dia':  ['consultora','supervisor','gestao','diretoria']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -13623,7 +13627,7 @@
     const ficha=(typeof MED_AGENDA_GERAL!=='undefined'?MED_AGENDA_GERAL:{})[key]||{};
     const itens=ficha.itens||{};
     return Object.keys(itens).map(function(id){ return Object.assign({_id:id}, itens[id]||{}); })
-      .filter(function(it){ return it.continuo===true && !it.suspenso && nomeMedOk(it.nome); });
+      .filter(function(it){ return it.continuo===true && !it.suspenso && !medItemAnulado(it) && nomeMedOk(it.nome); });   // 6.58: nem o «lançado por engano»
   }
   // "Enalapril 1 comprimido, 45 min antes do jantar e antes do café" — dois registros do
   // MESMO remédio viram uma frase só, que é como o tutor fala.
@@ -13709,6 +13713,60 @@
     return String(base).toLowerCase().replace(/[.#$\[\]\/]/g,'-');
   }
   function magDoseId(itemId,horario){ return itemId+'_'+String(horario||'').replace(':','-'); }
+  // ===== STORY 6.58 — A DOSE ANULADA E O REMÉDIO ANULADO (10/out/2026) ======================
+  // «Desfazer esta dose» não apaga nada: a dose ganha a marca `anulada` (o registro padrão da 6.57) no
+  // PRÓPRIO nó do registro (a regra v2 aceita atualizar e recusa apagar). Quem LÊ o registro trata a dose
+  // anulada como não dada — o filtro mora nos pontos de leitura (a lista fechada da story), e as funções
+  // puras que decidem o alarme (6.47 e 6.54) não mudam uma letra. O remédio da agenda «lançado por engano»
+  // ganha a marca `anulado` (com a parada da 6.54) e sai do alarme, do check-in e do Cuidado Vet.
+  function medDoseValendo(reg){ return !!reg && !reg.anulada; }
+  // 4ª rodada (R3-BAIXO-1 e R3-BAIXO-2 do QA): a cópia de uma dose (o espelho da 6.32, a cópia do «Voltou a tomar») vale
+  // só enquanto a dose de origem vale. Com a origem anulada no registro do dia (o inteiro, sem filtro), a cópia conta
+  // como anulada mesmo sem a marca dela — a escrita das cópias que falhou depois da transação, ou a cópia gravada no
+  // mesmo instante da anulação em outro aparelho: o estado se cura na leitura, sem depender de alguém tocar. A cadeia é
+  // seguida até a raiz (a cópia de uma cópia). Sem cópia, nada muda (a dose anulada continua igual à ausente).
+  function medDoseValeNoMapa(doses, d){
+    doses=(doses && typeof doses==='object')?doses:{};
+    return medDoseValendo(doses[d]) && medDoseOrigemVale(doses, d);
+  }
+  // Só a origem: nenhuma dose acima desta na cadeia `espelho_de` está anulada (a própria dose fica com o medDoseValendo).
+  function medDoseOrigemVale(doses, d){
+    doses=(doses && typeof doses==='object')?doses:{};
+    var vistos={}, cur=doses[d];
+    while(cur && cur.espelho_de && !vistos[cur.espelho_de]){
+      vistos[cur.espelho_de]=1; var o=doses[cur.espelho_de];
+      if(!o) break;
+      if(o.anulada) return false;
+      cur=o;
+    }
+    return true;
+  }
+  // {doseId:reg} sem as anuladas e sem as cópias de dose anulada (uma cópia: o objeto lido não é mexido).
+  function medDosesSemAnuladas(doses){
+    var vale=medDosesSoValendo(doses), out={};
+    Object.keys(vale).forEach(function(d){ if(medDoseOrigemVale(doses, d)) out[d]=vale[d]; });
+    return out;
+  }
+  function medDosesSoValendo(doses){
+    var out={}; doses=(doses && typeof doses==='object')?doses:{};
+    Object.keys(doses).forEach(function(d){ if(medDoseValendo(doses[d])) out[d]=doses[d]; });
+    return out;
+  }
+  // {chave:{doseId:reg}} sem as anuladas (a cópia viva do zMapaVivo não é mexida).
+  function medLogSemAnuladas(mapa){
+    var out={}; mapa=(mapa && typeof mapa==='object')?mapa:{};
+    Object.keys(mapa).forEach(function(k){ out[k]=medDosesSemAnuladas(mapa[k]); });
+    return out;
+  }
+  function medItemAnulado(it){ return !!(it && it.anulado); }
+  // O registro inteiro de antes (sem a lista dele mesmo) entra na lista `anteriores` da dose registrada de
+  // novo: a anulação nunca é sobrescrita.
+  function medDoseAnteriores(atual){
+    atual=atual||{};
+    var antes=Array.isArray(atual.anteriores)?atual.anteriores.slice():[], sem={};
+    Object.keys(atual).forEach(function(k){ if(k!=='anteriores') sem[k]=atual[k]; });
+    return antes.concat([sem]);
+  }
   let MED_AGENDA_ITENS={}; // itens salvos da agenda do FILHOt aberto na ficha: {itemId:{nome,q,u,horarios}}
   // 6.54 (conferência final do QA): o carimbo da agenda (_ts) que o formulário leu. O «Salvar agenda» só grava se
   // ele ainda é o mesmo (mcrTravaAgenda): um formulário aberto antes de uma troca ou de um «Parou» feitos em outro
@@ -13771,9 +13829,11 @@
     var qd=(it.quando&&it.quando.ref&&it.quando.ref!=='fixo')
       ? (n(it.quando.ref)+'|'+((it.quando.rel==='depois')?'depois':'antes')+'|'+(parseInt(it.quando.min,10)||0))
       : '';
-    return [n(it.nome), q, n(it.u), n(it.local), hs, n(it.tipo||'medicamento'),
+    var a=[n(it.nome), q, n(it.u), n(it.local), hs, n(it.tipo||'medicamento'),
             (it.continuo===true?'continuo':''), n(it.dataFim), qd, n(it.motivo),
-            (it.suspenso?'suspenso':''), (it.paradoEm?'parou':'')].join('§');
+            (it.suspenso?'suspenso':''), (it.paradoEm?'parou':'')];
+    if(medItemAnulado(it)) a.push('anulado');   // 6.58: o anulado nunca é "o mesmo" que um vivo
+    return a.join('§');
   }
   // QUANDO aquele item foi criado. O id do check-in e o da ficha carregam o relógio
   // ('ci_1758…', 'fmn_1758…', 'novo_1758…'); os outros caem para o carimbo que o próprio
@@ -13796,6 +13856,7 @@
     Object.keys(mapa).forEach(function(id){
       var it=mapa[id]||{};
       if(typeof nomeMedOk==='function' && !nomeMedOk(it.nome)) return;   // rascunho: fica como está
+      if(medItemAnulado(it)) return;   // 6.58: o remédio «lançado por engano» é registro: fica como está
       var a=medAssinatura(it);
       var ts=medItemQuando(id,it);
       var atual=porAss[a];
@@ -13917,12 +13978,13 @@
       ? ('<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">'
           +(opts.novo
             ? ('<button type="button" class="ativ-del" title="Descartar esta linha que ainda não foi salva" onclick="fmedDescartar(\''+id+'\')">× Descartar (ainda não salvo)</button>')
-            : ('<button type="button" class="ativ-del" title="Encerrar este medicamento sem apagar o histórico" onclick="fmedParou(\''+id+'\')">Parou de tomar</button>'))
+            : fmedRodapeHTML(id, item))
           +'</div>')
-      : '<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItem(\''+id+'\')">🗑️ Remover item</button></div>';
+      : '<div style="text-align:right;margin-top:6px"><button type="button" class="ativ-del so-equipe" title="Remover este item da lista" onclick="magRemoverItemAnular(\''+id+'\')">🗑️ Remover item</button></div>';
     return '<div class="magitem" data-id="'+id+'"'+(opts.confirmar?' data-daficha="1" data-conf=""':'')+'>'
       +confBanner
       +paradoBanner
+      +medRetomadoHTML(item)
       +suspBanner
       +contBadge
       +tipoToggle
@@ -14010,7 +14072,10 @@
   // Remoção EXPLÍCITA, item a item (Fundação 1 — anti-Hulk). Como o "Salvar agenda" nunca mais
   // sobrescreve o nó inteiro, apagar um remédio precisa deletar SÓ aquele item no banco. Um rascunho
   // ainda não salvo é só removido da tela (não existe no banco). Guarda de papel: só quem edita medicação.
-  async function magRemoverItem(id){
+  // soTela (6.58, 2ª rodada, BAIXO-1 do QA): chamado pelo «Remover item» do Plantão para um rascunho — nunca apaga do
+  // banco. Se, com a pergunta aberta, o «Salvar agenda» transformou o rascunho em remédio salvo, vai para o «Lançado
+  // por engano» (a Gestão assina; nada é apagado).
+  async function magRemoverItem(id, soTela){
     const el=document.querySelector('.magitem[data-id="'+id+'"]'); if(!el) return;
     const noCard=!!(el.closest&&el.closest('#magItens'));
     if(noCard){ if(!canEditMed()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover medicação.'); return; } }
@@ -14018,6 +14083,7 @@
     if(!await zPergunta('Remover este medicamento da agenda?',
       ['Ele sai da agenda deste FILHOt. O histórico do que já foi dado continua guardado.'],
       {sim:'Remover', nao:'Manter'})) return;
+    if(soTela && noCard && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){ medAgendaAnularAbrir(medAgendaKey(), id, 'plantao'); return; }   // o cartaz segue sozinho
     // Card diário: se o item já estava persistido, remove DELE no banco (nunca via sobrescrita do nó).
     if(noCard && DB && currentHosp && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){
       const key=medAgendaKey(); if(!key) return;
@@ -14055,7 +14121,8 @@
   function renderMedAgenda(){
     const wrap=document.getElementById('magItens'); if(!wrap) return;
     const ids=Object.keys(MED_AGENDA_ITENS);
-    wrap.innerHTML = ids.length ? ids.map(id=>medAgendaRowHTML(id,MED_AGENDA_ITENS[id])).join('') : '<div class="hint">Nenhum medicamento agendado ainda.</div>';
+    // 6.58: o remédio «lançado por engano» aparece riscado e só leitura (fora do formulário do «Salvar agenda»)
+    wrap.innerHTML = ids.length ? ids.map(id=>medItemAnulado(MED_AGENDA_ITENS[id])?medAgendaAnuladoHTML(id,MED_AGENDA_ITENS[id],''):medAgendaRowHTML(id,MED_AGENDA_ITENS[id])).join('') : '<div class="hint">Nenhum medicamento agendado ainda.</div>';
     medQuandoSyncTodos('#magItens');
     renderMedAgendaHoje();
   }
@@ -14084,6 +14151,9 @@
       if(inicial!=null) est.inicial=inicial;
       if(restante!=null) est.restante=restante;
       if(pe.modo==='contavel' && pe.acabando) est.acabando=true;
+      // 6.58 (2ª rodada, MÉDIO-3 do QA): as marcas do estoque ficam — contados (cada dose que descontou: é por ela que
+      // o «Desfazer esta dose» devolve, uma vez só), devolvidos (o rastro da devolução) e herdado (a troca de linha)
+      ['contados','devolvidos','herdado'].forEach(function(c){ if(pe[c] && typeof pe[c]==='object') est[c]=JSON.parse(JSON.stringify(pe[c])); });
       return est;
     }
     const nb=box.querySelector('.mag-est-nivel button.on'); const nivel=nb?(nb.dataset.n||'cheio'):'cheio';
@@ -14098,6 +14168,7 @@
     const prev0=prevMapa||MED_AGENDA_ITENS||{};
     document.querySelectorAll((sel||'#magItens')+' .magitem').forEach(function(el){
       const id=el.dataset.id;
+      if(medItemAnulado(prev0[id])) return;   // 6.58: o remédio anulado nunca é regravado pelo formulário
       const nome=(el.querySelector('[data-c=m]').value||'').trim();
       const q=(el.querySelector('[data-c=q]').value||'').trim();
       const ub=el.querySelector('.medunits button.on'); const u=ub?ub.textContent.trim():'';
@@ -14230,7 +14301,7 @@
     var est=it.estoque||{};
     if(est.modo!=='contavel') return null;              // líquido/pote: não se conta unidade
     if(typeof est.inicial!=='number') return null;      // ninguém contou o que o tutor trouxe
-    if(it.suspenso) return null;
+    if(it.suspenso || it.anulado) return null;          // 6.58: o «lançado por engano» não é cobrado
     var qd=(typeof qtdNum==='function')?qtdNum(it.q):null;
     if(qd==null||qd<=0) return null;                    // pomada / medidor do cliente: dose sem número
     var nH=(it.horarios||[]).length; if(!nH) return null;
@@ -16315,6 +16386,7 @@
     var medsForaDeVigencia=[];
     try{ Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){ var it=MED_AGENDA_ITENS[id]||{};
       if(it.suspenso){ medsForaDeVigencia.push(Object.assign({__id:id,__motivo:'suspensa pela veterinária'}, it)); return; }
+      if(medItemAnulado(it)){ medsForaDeVigencia.push(Object.assign({__id:id,__motivo:'lançado por engano (anulado)'}, it)); return; }   // 6.58
       // Item 10 — a pomada Crema 64 da Dolly "sumiu" do plantão porque o período dela terminou
       // em 29/07. Sumir sem dizer nada parece defeito do sistema: agora aparece como ENCERRADA.
       if(typeof medVigenteEm==='function' && !medVigenteEm(it)){ medsForaDeVigencia.push(Object.assign({__id:id,__motivo:(it.dataFim?('terminou em '+((typeof ciBRdata==='function')?ciBRdata(it.dataFim):it.dataFim)):'fora do período')}, it)); return; }
@@ -16335,9 +16407,10 @@
         (it.horarios&&it.horarios.length?it.horarios:['']).forEach(function(hr){
           var doseId=(typeof magDoseId==='function'&&it.__id)?magDoseId(it.__id,hr):null;
           var log=null; try{ log=doseId?MED_AGENDA_LOG[doseId]:null; }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */
+          if(!medDoseValendo(log) || !medDoseOrigemVale(MED_AGENDA_LOG, doseId)) log=null;   // 6.58: a dose anulada não conta como dada (4ª rodada: nem a cópia de dose anulada)
           if(!log){ // procura por equivalência (cópias da mesma dose gravadas em outro item)
             try{ Object.keys(MED_AGENDA_LOG||{}).forEach(function(d){ var L=MED_AGENDA_LOG[d];
-              if(L&&!L.avulso&&jsNorm(L.nome||'')===jsNorm(it.nome||'')&&String(L.horario||'')===String(hr)) log=L; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+              if(L&&!L.avulso&&medDoseValendo(L)&&jsNorm(L.nome||'')===jsNorm(it.nome||'')&&String(L.horario||'')===String(hr)&&medDoseOrigemVale(MED_AGENDA_LOG, d)) log=L; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
           }
           var m=hMin(hr);
           linhas.push({nome:it.nome||'medicamento', hr:hr, det:[comoDar,obs].filter(Boolean).join(' · '),
@@ -16401,7 +16474,7 @@
   function medIrmasDaDose(itens, alvo){
     var out=[], chave=medDoseChave(alvo);
     Object.keys(itens||{}).forEach(function(id){
-      var it=itens[id]||{}; if(it.suspenso) return;
+      var it=itens[id]||{}; if(it.suspenso || medItemAnulado(it)) return;   // 6.58: nem no «lançado por engano»
       (it.horarios||[]).forEach(function(h){
         if(medDoseChave({nome:it.nome,q:it.q,u:it.u,local:it.local,h:h})===chave) out.push({itemId:id, horario:h});
       });
@@ -16418,17 +16491,25 @@
       const it=MED_AGENDA_ITENS[id]||{};
       if(it.suspenso) return; // Onda 3: suspensa pela vet — não pede dose nem entra no placar do dia
       if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje
+      // 6.58: o remédio «lançado por engano» não pede dose — só as doses já registradas hoje aparecem
+      const remAnulado=medItemAnulado(it);
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
-        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,obs:it.obs,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});
+        if(remAnulado && !log) return;
+        const vale=medDoseValendo(log) && medDoseOrigemVale(MED_AGENDA_LOG, doseId);   // 6.58 (L2): a dose anulada não é "dado" (4ª rodada: nem a cópia de dose anulada)
+        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,obs:it.obs,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:vale,quem:vale?log.quem:'',ts:vale?log.ts:0,
+          reg:log||null, anulada:!!(log&&log.anulada), semDar:remAnulado});
       });
     });
     // Camada 4 — placar do dia: "Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...".
     // Calculado ANTES de somar as avulsas (o placar é só das doses agendadas de verdade).
-    const placarHTML=renderPlacarMedDia(rows);
+    // 6.58: a dose anulada conta como não dada; a de um remédio anulado não entra (ele não pede dose).
+    // 2ª rodada: a dose dada no remédio anulado que virou cópia na linha nova do «Voltou a tomar» conta uma vez só.
+    const copiadas={}; rows.forEach(function(r){ if(r.reg && r.reg.espelho_de && !r.anulada) copiadas[r.reg.espelho_de]=1; });
+    const placarHTML=renderPlacarMedDia(rows.filter(function(r){ return !(r.semDar && (!r.feito || copiadas[r.doseId])); }));
     // doses avulsas de hoje (não agendadas) — só para conferência, não têm "Dei agora"
     Object.keys(MED_AGENDA_LOG).forEach(function(doseId){
-      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,local:log.local||'',obs:log.motivo||'',h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});
+      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,local:log.local||'',obs:log.motivo||'',h:log.horario,feito:medDoseValendo(log),quem:log.quem,ts:log.ts,avulso:true,reg:log,anulada:!!log.anulada});
     });
     if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
     // ANTI-DUPLICAÇÃO: se a agenda tem itens repetidos (mesmo nome+dose no mesmo horário), mostra
@@ -16438,7 +16519,7 @@
     var vistos={}; var unicas=[];
     rows.forEach(function(r){
       var k=medDoseChave(r)+'|'+(r.avulso?'av':'ag');
-      if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if(r.feito && !ex.feito){ unicas[vistos[k]]=r; } return; }
+      if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if((r.feito && !ex.feito) || (r.feito===ex.feito && ex.semDar && !r.semDar)){ unicas[vistos[k]]=r; } return; }   // 6.58: a linha viva antes da anulada
       vistos[k]=unicas.length; unicas.push(r);
     });
     unicas.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
@@ -16454,9 +16535,28 @@
         +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
-          : (r.id?'<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\',this)">Dei agora</button>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>'))
+          : ((r.id && !r.semDar)?'<button type="button" class="btn btn-gold" onclick="registrarDoseAgendada(\''+r.id+'\',\''+r.h+'\',this)">Dei agora</button>'
+            :(r.anulada?'<span class="mag-dose-ok" style="color:var(--muted)">anulada</span>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>')))
+        +medDoseAcoesHTML(r)
       +'</div>';
     }).join('');
+  }
+  // 6.58 (AC1.1, AC1.7, AC2): os botões da dose registrada e o riscado da anulada, numa linha inteira dentro da
+  // linha da dose (a .mag-dose quebra a linha). «Desfazer esta dose» em toda dose dada (agendada ou avulsa),
+  // visível a quem vê a linha (quem assina é a Gestão, no cartaz); «Corrigir» só na avulsa (a agendada vem da agenda).
+  function medJsArg(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+  var MED_DOSE_BT='min-height:44px;padding:10px 14px;font-family:inherit;font-size:14px;font-weight:800;border-radius:12px;cursor:pointer;background:var(--z-white);';
+  function medDoseAcoesHTML(r){
+    r=r||{}; if(!r.reg || !r.doseId) return '';
+    var principal=String(r.reg.espelho_de||r.doseId);
+    if(r.feito){
+      return '<div class="mag-dose-acoes" style="flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">'
+        +(r.avulso?'<button type="button" style="'+MED_DOSE_BT+'color:var(--z-blue);border:2px solid var(--z-blue)" onclick="'+escAttr("medDoseCorrigirAbrir('"+medJsArg(r.doseId)+"')")+'">Corrigir</button>':'')
+        +'<button type="button" style="'+MED_DOSE_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="'+escAttr("medDoseAnularAbrir('"+medJsArg(principal)+"')")+'">Desfazer esta dose</button>'
+        +'</div>';
+    }
+    if(r.anulada && r.reg.anulada) return '<div style="flex-basis:100%">'+corrRiscadoHTML(r.reg.anulada, "medDoseReabrirAbrir('"+medJsArg(principal)+"')")+'</div>';
+    return '';
   }
   // Registro pela FICHA aberta (currentHosp) — usado tanto pelo botão "Dei agora" da agenda
   // quanto internamente. Sem relatório, sem assinatura: salva direto, na hora.
@@ -16528,14 +16628,103 @@
     catch(e){ _diaOutro=''; } /* silencioso de propósito: sem o adiar carregado, vale o dia da tela */
     // Só fecha o alarme na tela que é DESTA dose, do mesmo dia (5ª rodada, R4-1): registrar outra dose pela ficha não
     // apaga o alarme de ontem que voltou com a tela em hoje (ele não volta sozinho depois de fechado).
+    var _regGravado=reg;   // 6.58: a dose como foi gravada (com a anulação de antes guardada dentro, se houver)
     const _fecharSeDaDose=function(){ if(typeof fecharDespertadorMed==='function' && despMedNaTela===_sk && (despMedAtualDia||_diaLog)===_diaLog) fecharDespertadorMed(); };
     const _diaLog=diaAlarme||_diaOutro||dataKeyAtual();
     DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key+'/'+doseId).transaction(function(atual){
-      if(atual) return;          // já assinada — aborta sem escrever
-      return reg;
+      if(atual && !atual.anulada) return;          // já assinada — aborta sem escrever
+      // 6.58 (AC1.8): a dose ANULADA é registrada de novo; a anulação (o registro inteiro de antes) fica
+      // guardada dentro da dose nova, em `anteriores` — nunca é sobrescrita.
+      _regGravado=(atual && atual.anulada)?Object.assign({}, reg, {anteriores:medDoseAnteriores(atual)}):reg;
+      return _regGravado;
     }).then(function(res){
       const jaTinha=res&&res.snapshot?res.snapshot.val():null;
-      if(!res || !res.committed){
+      // 6.58, 4ª rodada (R3-BAIXO-1 e R3-BAIXO-2 do QA): quem segura o registro é uma cópia cuja dose de origem foi anulada
+      // (ela já vale como anulada na leitura: o alarme e o Plantão pedem a dose). A cópia recebe a marca da origem — a
+      // anulação que a Gestão assinou — e o registro tenta de novo, uma vez: a cópia anulada vai para `anteriores`.
+      if((!res || !res.committed) && jaTinha && jaTinha.espelho_de && !jaTinha.anulada && !it.__copiaCompletada){
+        var _Pdia='auaulandia/medicacao-log/'+_diaLog+'/'+it.key;
+        return medLerNo(_Pdia).then(function(logD){
+          logD=logD||{};
+          var raiz=medDoseRaizAnulada(logD, doseId);
+          if(!raiz){ registrarDoseJaFeita(it, doseId, diaAlarme, _diaLog, jaTinha, _fecharSeDaDose); return; }
+          // 5ª rodada (R4-BAIXO-1 do QA): a marca entra por transação no nó da dose, só se ele ainda é a MESMA cópia sem
+          // marca (o mesmo espelho_de e o mesmo instante). Outro aparelho registrou primeiro: a recusa de sempre, com o
+          // registro de agora. Outro aparelho já marcou a cópia: segue para o registro (a cópia anulada vai para anteriores).
+          var _estado='';
+          return DB.ref(_Pdia+'/'+doseId).transaction(function(atual){
+            if(atual===null || atual===undefined){ _estado='sumiu'; return null; }   // cache frio: o servidor responde com o valor de verdade
+            if(String(atual.espelho_de||'')!==String(jaTinha.espelho_de||'') || Number(atual.ts)!==Number(jaTinha.ts)){ _estado='outro'; return; }
+            if(atual.anulada){ _estado='marcada'; return; }
+            _estado='marcou'; return Object.assign({}, atual, {anulada:raiz.anulada});
+          }).then(function(rt){
+            var agora=(rt && rt.snapshot && typeof rt.snapshot.val==='function')?rt.snapshot.val():null;
+            var marcou=!!(rt && rt.committed && agora && agora.anulada && String(agora.espelho_de||'')===String(jaTinha.espelho_de||'') && Number(agora.ts)===Number(jaTinha.ts));
+            var jaMarcada=!!(!marcou && agora && agora.anulada && String(agora.espelho_de||'')===String(jaTinha.espelho_de||'') && Number(agora.ts)===Number(jaTinha.ts));
+            if(agora && !marcou && !jaMarcada){ registrarDoseJaFeita(it, doseId, diaAlarme, _diaLog, agora, _fecharSeDaDose); return; }   // sem registro nenhum agora: segue para o registro
+            if(marcou){
+              try{ if(typeof audit==='function') audit('medicacao-dose-anulada', (jaTinha.nome||'remédio')+' das '+(jaTinha.horario||'--:--')+': a cópia de uma dose anulada recebeu a anulação antes do registro novo',
+                {alvo:it.key, dose:doseId, origem:raiz.doseId, dia:_diaLog, completou:true, copias:1, por:raiz.anulada.por||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+            }
+            registrarDoseAgendadaGlobal(Object.assign({}, it, {__copiaCompletada:true}), doseId, diaAlarme);
+          });
+        }).catch(function(e){
+          // a leitura ou a marca falhou: nada foi registrado (não é «já foi assinada») — o alarme continua pedindo
+          _logFalhaGrav('registro sobre a cópia de dose anulada '+doseId, e);
+          try{ zAlertao('NÃO CONSEGUI REGISTRAR A DOSE', ['A dose de '+(it.nome||'medicamento')+' das '+(it.horario||'--:--')+' NÃO foi registrada: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
+            'Toque de novo em «Dei agora» (ou em «Dei o remédio» no alarme).'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: a falha já foi para gravacao-FALHOU */
+          try{ renderMedAgendaHoje(); }catch(x){} /* silencioso de propósito: redesenho de tela — solta o botão «Registrando…» */
+        });
+      }
+      if(!res || !res.committed){ registrarDoseJaFeita(it, doseId, diaAlarme, _diaLog, jaTinha, _fecharSeDaDose); return; }
+      // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma
+      // dose, mesmo local, mesmo horário). Só roda quando ESTA assinatura venceu a trava —
+      // senão o espelho da segunda pessoa gravava por cima do da primeira.
+      // 6.58 (AC1.8): a cópia ANULADA que já estava no registro vai para dentro da cópia nova (lida aqui, com o
+      // registro do dia): a anulação também não é sobrescrita nas cópias.
+      Promise.all([DB.ref('auaulandia/medicacao-agenda/'+it.key+'/itens').once('value'), DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key).once('value')]).then(function(rr){
+        const irmas=medIrmasDaDose(rr[0].val()||{}, {nome:it.nome,q:it.q,u:it.u,local:it.local,h:it.horario});
+        const jaLog=(rr[1] && typeof rr[1].val==='function' && rr[1].val())||{};
+        const extras={};
+        irmas.forEach(function(x){
+          const did=magDoseId(x.itemId,x.horario);
+          if(did===doseId) return;
+          const copia=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId}), ja=jaLog[did];
+          if(ja && ja.anulada) copia.anteriores=medDoseAnteriores(ja);
+          else if(ja && Array.isArray(ja.anteriores)) copia.anteriores=ja.anteriores.slice();
+          extras[did]=copia;
+        });
+        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key).update(extras);
+      }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
+      // Dada: sai da lista da dose de ontem na hora (6.47, crítica C3) — a pergunta da faixa e a
+      // espera da tela não podem continuar falando de uma dose que acabou de ser registrada.
+      try{ delete despMedOntemPend[it.key+'__'+doseId]; }catch(e){} /* silencioso de propósito: sem a lista da dose de ontem carregada, não há o que tirar */
+      // A dose dada pelo ALARME depois do horário seguro (a de ontem, e desde a 4ª rodada a de hoje também): a próxima
+      // dose do mesmo remédio avisa (6.47, 2ª rodada). O «Dei agora» da ficha não marca (4ª rodada, QA3-B): ele
+      // costuma registrar depois a dose dada na hora (o pedido do vigia da manhã).
+      try{ if(diaAlarme) medTardiaMarcar(it, doseId, _diaLog, reg.ts); }catch(e){} /* silencioso de propósito: sem a marca, a próxima dose abre com o texto de sempre */
+      // A ficha aberta só recebe a dose quando é do mesmo dia do registro (a dose de ontem não
+      // aparece dada na ficha de hoje).
+      if(currentHosp && medAgendaKey(currentHosp)===it.key && dataKeyAtual()===_diaLog){ MED_AGENDA_LOG[doseId]=_regGravado; renderMedAgendaHoje(); }
+      if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
+      try{ medTgAvisarDose(reg, it.hospNome||''); }catch(e){ _logFalhaGrav('telegram da dose '+doseId, e); }
+      if(typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(it.key,it.itemId,doseId,it.q,_diaLog); // Onda 2: desconta do estoque contável e projeta o fim (6.47: marcado no dia do registro)
+      _fecharSeDaDose();
+      // Pela ficha, no dia do adiado (5ª rodada, R4-2): solta o botão «Registrando…» (a linha da ficha é a dose do dia da
+      // tela, que continua por dar) e diz onde a dose foi registrada, sem cobrir um alarme na tela.
+      if(_diaOutro){
+        try{ renderMedAgendaHoje(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(!despMedNaTela){ var _hjD=zHojeISO(), _dtD=dataKeyAtual();
+          zAlertao('DOSE REGISTRADA NO DIA DELA', ['A dose de '+(it.nome||'medicamento')+' das '+(it.horario||'--:--')+' '+medRotuloDia(_diaOutro, _hjD)+' foi registrada no dia dela.',
+            'A das '+(it.horario||'--:--')+' '+((_dtD===_hjD) ? 'de hoje' : medRotuloDia(_dtD, _hjD))+' continua por dar.'], {ok:true}); } }
+        catch(e){} /* silencioso de propósito: o registro já foi feito; o aviso é reforço */
+      }
+      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
+    }).catch(function(e){ alert('Erro ao registrar a dose: '+e.message); });
+  }
+  // A dose já tinha registro quando a assinatura chegou (o caminho de sempre do registrarDoseAgendadaGlobal, separado na 4ª
+  // rodada da 6.58 para o registro sobre a cópia de dose anulada voltar a ele quando a origem vale).
+  function registrarDoseJaFeita(it, doseId, diaAlarme, _diaLog, jaTinha, _fecharSeDaDose){
         // Alguém assinou primeiro: dizer QUEM e QUANDO — sem isso a segunda pessoa acha
         // que o botão falhou e tenta de novo (foi assim que virou dose dupla).
         var _hQ='';
@@ -16554,45 +16743,18 @@
         if(currentHosp && medAgendaKey(currentHosp)===it.key && jaTinha && dataKeyAtual()===_diaLog){ MED_AGENDA_LOG[doseId]=jaTinha; }
         try{ renderMedAgendaHoje(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         _fecharSeDaDose();
-        return;
-      }
-      // Item 8 — marca a dose em TODAS as fichas iguais deste FILHOt (mesmo remédio, mesma
-      // dose, mesmo local, mesmo horário). Só roda quando ESTA assinatura venceu a trava —
-      // senão o espelho da segunda pessoa gravava por cima do da primeira.
-      DB.ref('auaulandia/medicacao-agenda/'+it.key+'/itens').once('value').then(function(s){
-        const irmas=medIrmasDaDose(s.val()||{}, {nome:it.nome,q:it.q,u:it.u,local:it.local,h:it.horario});
-        const extras={};
-        irmas.forEach(function(x){
-          const did=magDoseId(x.itemId,x.horario);
-          if(did!==doseId) extras[did]=Object.assign({},reg,{itemId:x.itemId, espelho_de:doseId});
-        });
-        if(Object.keys(extras).length) return DB.ref('auaulandia/medicacao-log/'+_diaLog+'/'+it.key).update(extras);
-      }).catch(function(e){ _logFalhaGrav('espelho de dose '+doseId, e); });
-      // Dada: sai da lista da dose de ontem na hora (6.47, crítica C3) — a pergunta da faixa e a
-      // espera da tela não podem continuar falando de uma dose que acabou de ser registrada.
-      try{ delete despMedOntemPend[it.key+'__'+doseId]; }catch(e){} /* silencioso de propósito: sem a lista da dose de ontem carregada, não há o que tirar */
-      // A dose dada pelo ALARME depois do horário seguro (a de ontem, e desde a 4ª rodada a de hoje também): a próxima
-      // dose do mesmo remédio avisa (6.47, 2ª rodada). O «Dei agora» da ficha não marca (4ª rodada, QA3-B): ele
-      // costuma registrar depois a dose dada na hora (o pedido do vigia da manhã).
-      try{ if(diaAlarme) medTardiaMarcar(it, doseId, _diaLog, reg.ts); }catch(e){} /* silencioso de propósito: sem a marca, a próxima dose abre com o texto de sempre */
-      // A ficha aberta só recebe a dose quando é do mesmo dia do registro (a dose de ontem não
-      // aparece dada na ficha de hoje).
-      if(currentHosp && medAgendaKey(currentHosp)===it.key && dataKeyAtual()===_diaLog){ MED_AGENDA_LOG[doseId]=reg; renderMedAgendaHoje(); }
-      if(typeof audit==='function') audit('medicacao-dose',it.key,{pet:it.hospNome||'',med:it.nome,horario:it.horario,quem:reg.quem,assinou:reg.quem});
-      try{ medTgAvisarDose(reg, it.hospNome||''); }catch(e){ _logFalhaGrav('telegram da dose '+doseId, e); }
-      if(typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(it.key,it.itemId,doseId,it.q,_diaLog); // Onda 2: desconta do estoque contável e projeta o fim (6.47: marcado no dia do registro)
-      _fecharSeDaDose();
-      // Pela ficha, no dia do adiado (5ª rodada, R4-2): solta o botão «Registrando…» (a linha da ficha é a dose do dia da
-      // tela, que continua por dar) e diz onde a dose foi registrada, sem cobrir um alarme na tela.
-      if(_diaOutro){
-        try{ renderMedAgendaHoje(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-        try{ if(!despMedNaTela){ var _hjD=zHojeISO(), _dtD=dataKeyAtual();
-          zAlertao('DOSE REGISTRADA NO DIA DELA', ['A dose de '+(it.nome||'medicamento')+' das '+(it.horario||'--:--')+' '+medRotuloDia(_diaOutro, _hjD)+' foi registrada no dia dela.',
-            'A das '+(it.horario||'--:--')+' '+((_dtD===_hjD) ? 'de hoje' : medRotuloDia(_dtD, _hjD))+' continua por dar.'], {ok:true}); } }
-        catch(e){} /* silencioso de propósito: o registro já foi feito; o aviso é reforço */
-      }
-      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); // dose registrada: some do alerta da Gestora sozinho
-    }).catch(function(e){ alert('Erro ao registrar a dose: '+e.message); });
+  }
+  // PURA (4ª rodada): a dose de origem anulada de uma cópia, seguindo a cadeia `espelho_de` no registro do dia — {doseId,
+  // anulada} da primeira anulada, ou null quando a origem vale (ou não está no registro).
+  function medDoseRaizAnulada(log, d){
+    log=log||{}; var vistos={}, cur=log[d];
+    while(cur && cur.espelho_de && !vistos[cur.espelho_de]){
+      var e=String(cur.espelho_de); vistos[e]=1; var o=log[e];
+      if(!o) return null;
+      if(o.anulada) return {doseId:e, anulada:o.anulada};
+      cur=o;
+    }
+    return null;
   }
   // Pomada/aplicação avulsa pede o LOCAL e esconde a quantidade (item 11).
   function magAvUnidadeMudou(){
@@ -16644,6 +16806,406 @@
       renderMedAgendaHoje();
       if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+  }
+
+  // ===== STORY 6.58 — DESFAZER A DOSE, REABRIR E CORRIGIR A AVULSA (H15, 10/out/2026) =====================
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026)
+  // A dose dada no FILHOt errado não se desfazia: o alarme sumia, o estoque descontava e a Gestão deixava de
+  // ver o atraso. Agora: «Desfazer esta dose» (a Gestão assina, com motivo) marca a dose e as cópias dela como
+  // anuladas numa escrita só, no nó do dia; nada some. O estoque volta UMA vez (a marca `contados`), o alarme
+  // volta pela régua da 6.47 (sem mudar a régua) e o grupo do plantão recebe a correção. «Reabrir» desfaz a
+  // anulação; «Dei agora» registra de novo, guardando a anulação dentro da dose (registrarDoseAgendadaGlobal).
+  var MED_ANULAR_AVISO='Se a dose FOI dada, não anule: o alarme vai pedir de novo e o FILHOt pode receber dose em dobro. Se ela foi dada em outro FILHOt, registre lá.';
+  var MED_TELA_PLANTAO='Plantão › Agenda de Medicação';
+  // A dose e as cópias dela no mesmo FILHOt (o espelho da 6.32): a principal primeiro.
+  function medDoseGrupo(log, principal){
+    log=log||{}; var out=[];
+    if(log[principal]) out.push(principal);
+    Object.keys(log).forEach(function(d){ if(d!==principal && log[d] && log[d].espelho_de===principal) out.push(d); });
+    return out;
+  }
+  // "a dose de Zenrelia das 08:00 de Biscoito (registrada por Wandela Teste às 08:04)"
+  function medDoseOque(r, nomeH){
+    r=r||{};
+    return (r.avulso?'a dose avulsa de ':'a dose de ')+(r.nome||'remédio')+' das '+(r.horario||'--:--')+' de '+(nomeH||'este FILHOt')
+      +' (registrada por '+(r.quem||'—')+(r.ts?(' às '+corrHora(r.ts)):'')+')';
+  }
+  // PURA (AC1.2, AC1.4): o estoque da dose — volta a quantidade dela quando ela descontou (a marca do dia), uma vez só.
+  function medDoseEstoque(o){
+    o=o||{}; var r=o.reg||{}, it=o.item||null, est=(it&&it.estoque)||null, ck=String(o.dia||'')+'__'+String(o.doseId||'');
+    if(r.avulso) return {devolve:false, txt:'o estoque não muda (a dose avulsa não desconta)'};
+    if(!it) return {devolve:false, txt:'o estoque não muda (o remédio não está mais na agenda)'};
+    if(!est && it.estoqueMovidoPara) return {devolve:false, txt:'o estoque não volta sozinho: ele passou para a linha nova deste remédio ('+(it.retomadoPor?'o «Voltou a tomar»':'a troca de horário')+'); se esta dose não foi dada, acerte a quantidade na agenda'};
+    if(!mcrEhContavel(est)) return {devolve:false, txt:'o estoque não muda ('+(medEhLocal(it.u)?'pomada não é contada':((est&&est.daCasa)?'remédio da casa':'frasco ou pote não é contado'))+')'};
+    if(!(est.contados && est.contados[ck]===true)) return {devolve:false, txt:'o estoque não muda (esta dose não tinha descontado)'};
+    var q=qtdNum(r.q)||0, base=(typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null);
+    if(base==null || !(q>0)) return {devolve:false, txt:'o estoque não muda'};
+    var para=Math.round((base+q)*100)/100;
+    return {devolve:true, q:q, de:base, para:para, txt:'o estoque: volta '+(fmtQtd(r.q, r.u||it.u)||mcrQtdTexto(q))+': de '+mcrQtdTexto(base)+' para '+mcrQtdTexto(para)};
+  }
+  // PURA (AC1.2, AC1.5): o que o alarme faz com a dose anulada — a régua da 6.47, chamada e não copiada. Hoje, o
+  // alarme pede a dose (sem limite de atraso, como sempre); ontem, só dentro da janela (medOntemNaJanela).
+  function medDoseCascataAlarme(o){
+    o=o||{}; var r=o.reg||{}, it=o.item||null, dia=String(o.dia||''), hoje=String(o.hoje||''), hr=String(r.horario||'');
+    if(r.avulso) return 'o alarme: a dose avulsa não tem alarme a voltar';
+    var vale=function(d){ return !!it && !it.suspenso && !medItemAnulado(it) && medVigenteEm(it, d) && (it.horarios||[]).indexOf(hr)>=0; };
+    // 3ª rodada (R2-BAIXO-1 do QA): a dose de origem com cópia numa linha que ainda toca (o «Voltou a tomar» que começou
+    // hoje): o alarme volta a pedir a dose pela linha da cópia, e é essa linha que a régua olha.
+    var itemIdQ=r.itemId, pela='';
+    if(!vale(dia)) (o.copiasItens||[]).some(function(c){ var it0=it; it=(c&&c.item)||null; if(vale(dia)){ itemIdQ=c.itemId; pela=', pela linha nova deste remédio'; return true; } it=it0; return false; });
+    if(dia===hoje){
+      if(!vale(hoje)) return 'o alarme não volta a pedir esta dose: o remédio não é mais dado hoje neste horário';
+      var m=minutosAte(hr);
+      return (m!==null && m>0) ? ('o alarme pede esta dose no horário dela ('+hr+')'+pela)
+        : ('O alarme volta a pedir esta dose agora'+pela+' (o horário dela, '+hr+', já passou; o alarme só para quando alguém registrar)');
+    }
+    var itQ={key:o.key, itemId:itemIdQ, horario:hr}, ts=medDoseTsNoDia(dia, hr), teto=medOntemTeto(itQ, o.fila||[]);
+    var ate=(ts!==null)?corrHora(ts+teto):'';
+    if(dia===addDiasISO(hoje,-1) && vale(dia) && medOntemNaJanela(itQ, dia, Number(o.agora)||Date.now(), o.fila||[]))
+      return 'O alarme volta a pedir esta dose agora'+pela+' (até '+ate+')';
+    return 'Passou do horário seguro'+(ate?(' ('+ate+')'):'')+': o alarme não toca de novo; a dose aparece como "faltou" para a Gestão';
+  }
+  // PURA (AC1.2): a cascata inteira, montada a partir do banco.
+  function medDoseCascata(o){
+    o=o||{}; var r=o.reg||{}, L=[], dose=medDoseTxt(r);
+    L.push('a dose: '+(r.nome||'remédio')+(dose?(', '+dose):'')+', '+(r.avulso?'avulsa, às ':'das ')+(r.horario||'--:--')+', registrada por '+(r.quem||'—')+(r.ts?(' às '+corrHora(r.ts)):''));
+    L.push(medDoseEstoque(o).txt);
+    L.push(medDoseCascataAlarme(o));
+    var cop=(o.copias||[]).filter(function(c){ return c && c.reg; });
+    if(cop.length) L.push('as cópias desta dose em outras linhas de '+(o.hospNome||'este FILHOt')+' saem junto: '
+      +cop.map(function(c){ return (c.reg.nome||'remédio')+' das '+(c.reg.horario||'--:--')+' (outra linha da agenda)'; }).join('; '));
+    L.push('O grupo do plantão (Gestão) recebe a correção');
+    return L;
+  }
+  // O texto da correção para o grupo do plantão (AC1.6): o FILHOt, o remédio, o horário, quem registrou, quem mexeu e o motivo.
+  function medTgCorrecaoTexto(o){
+    o=o||{}; var r=o.reg||{}, c=o.corr||{};
+    var tit={anulada:'DOSE ANULADA (lançada por engano)', reaberta:'ANULAÇÃO DESFEITA (a dose volta a valer)', corrigida:'DOSE AVULSA CORRIGIDA'}[o.acao]||'CORREÇÃO DE REMÉDIO';
+    var L=['<b>CORREÇÃO — '+medTgEsc(tit)+'</b>', '<b>'+medTgEsc(o.hospNome||'?')+'</b> — '+medTgEsc(r.nome||'')+' ('+medTgEsc(medDoseTxt(r)||'—')+')',
+      (r.avulso?'Dose avulsa das ':'Dose das ')+medTgEsc(r.horario||'—'),
+      'Quem registrou: '+medTgEsc(r.quem||'—')+(r.ts?(' às '+medTgEsc(corrHora(r.ts))):'')];
+    var quem=medTgEsc(c.por||'—')+(c.papel?(' ('+medTgEsc(corrPapelNome(c.papel))+')'):'');
+    if(o.acao==='anulada'){ L.push('Quem anulou: '+quem); if(!r.avulso) L.push('O alarme volta a pedir esta dose pela régua de sempre.'); }
+    else if(o.acao==='reaberta'){ L.push('Quem reabriu: '+quem); L.push('A dose volta a contar como dada.'); }
+    else if(o.acao==='corrigida'){ L.push('Quem corrigiu: '+quem); (o.mudou||[]).forEach(function(m){ L.push(medTgEsc(m)); }); }
+    L.push('Motivo: '+medTgEsc(c.motivo||''));
+    return L.join('\n');
+  }
+  // Ao grupo do plantão (gestao), como as doses; com a ponte falhando, a mensagem entra na fila (medTgGuardar).
+  function medTgAvisarCorrecao(texto){
+    if(typeof tgAvisar!=='function'){ medTgGuardar(texto, 'a ponte do Telegram não carregou neste aparelho'); return Promise.resolve(false); }
+    var pr;
+    try{ pr=Promise.resolve(tgAvisar({grupo:'gestao', texto:texto})); }catch(e){ pr=Promise.reject(e); }
+    return pr.then(function(r){
+      if(r && r.ok) return true;
+      medTgGuardar(texto, zErroMotivo(r, 'telegram', '', {}));
+      return false;
+    }, function(e){ medTgGuardar(texto, zErroMotivo(e, 'telegram', '', {})); return false; });
+  }
+  // A devolução do estoque (AC1.4): transação no estoque do remédio — só devolve se ESTA dose descontou
+  // (`contados[dia__dose]===true`), marca `false` (o registro de novo desconta outra vez) e guarda o rastro.
+  // Duas anulações, dois aparelhos ou o toque repetido devolvem uma vez só.
+  function medEstoqueDevolver(key, itemId, doseId, q, dia, reg){
+    if(!DB||!key||!itemId) return Promise.resolve({ok:true, devolveu:false});
+    var qNum=qtdNum(q)||0, ck=String(dia||'')+'__'+String(doseId||''), ts=Number(reg&&reg.ts)||Date.now(), info={};
+    var marca=ck+'__'+ts;
+    return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+itemId+'/estoque').transaction(function(est){
+      if(est===null || est===undefined) return null;      // cache frio: o servidor responde com o valor de verdade
+      if(!(est.contados && est.contados[ck]===true) || !(qNum>0)) return;   // esta dose não descontou: nada a devolver
+      var base=(typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null);
+      if(base==null) return;
+      est.contados[ck]=false;
+      est.devolvidos=est.devolvidos||{};
+      est.devolvidos[marca]={q:qNum, quem:String((reg&&reg.por)||'-'), ts:ts, motivo:String((reg&&reg.motivo)||'')};
+      est.restante=Math.round((base+qNum)*100)/100;
+      info={de:base, para:est.restante};
+      return est;
+    }).then(function(res){
+      var v=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null;
+      var devolveu=!!(res && res.committed && v && v.devolvidos && v.devolvidos[marca]);
+      if(devolveu){
+        try{ if(MED_AGENDA_ITENS[itemId] && currentHosp && medAgendaKey(currentHosp)===key){ MED_AGENDA_ITENS[itemId].estoque=v; renderMedAgendaHoje(); } }catch(e){} /* silencioso de propósito: a memória da ficha se acerta ao reabrir */
+        try{ if(typeof audit==='function') audit('medicacao-estoque-devolvido', 'dose anulada ('+doseId+', '+dia+'): o estoque voltou de '+mcrQtdTexto(info.de)+' para '+mcrQtdTexto(info.para),
+          {alvo:key, item:itemId, de:info.de, para:info.para, quem:String((reg&&reg.por)||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      }
+      return {ok:true, devolveu:devolveu, de:info.de, para:info.para};
+    }, function(e){
+      _logFalhaGrav('estoque devolvido (dose anulada) '+itemId, e);
+      return {ok:false, erro:e};
+    });
+  }
+  function medLerNo(p){ return DB.ref(p).once('value').then(function(s){ return (s && typeof s.val==='function')?s.val():null; }); }
+  function medDoseFalhaAbrir(titulo, e){
+    try{ zAlertao(titulo, [zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true}))), 'Nada foi mudado. Feche a ficha, abra de novo e tente outra vez.'], {botao:'Entendi'}); }
+    catch(x){} /* silencioso de propósito: sem o cartaz, nada foi gravado */
+    return null;
+  }
+  // «Desfazer esta dose» (AC1). doseId: a dose da linha (a principal ou uma cópia); a cascata vem do banco.
+  function medDoseAnularAbrir(doseId){
+    if(!currentHosp || !DB) return Promise.resolve(null);
+    var key=medAgendaKey(); if(!key) return Promise.resolve(null);
+    var dia=dataKeyAtual(), hoje=zHojeISO(), nomeH=currentHosp.nome||'este FILHOt', P='auaulandia/medicacao-log/'+dia+'/'+key;
+    return Promise.all([medLerNo(P), medLerNo('auaulandia/medicacao-agenda/'+key+'/itens')]).then(function(rr){
+      var log=rr[0]||{}, itens=rr[1]||{}, r0=log[doseId];
+      if(!r0){ zAlertao('NÃO ACHEI ESTA DOSE', ['A dose não está no registro deste dia. Feche a ficha e abra de novo.'], {botao:'Entendi'}); return null; }
+      var principal=String(r0.espelho_de||doseId), r=log[principal]||r0;
+      // 3ª rodada (R2-MÉDIO-2 do QA): a dose já anulada com cópia que ainda vale (a escrita das cópias falhou depois da
+      // transação, ou a cópia nasceu de uma leitura de antes da anulação): «Desfazer» completa as cópias com a MESMA marca,
+      // já assinada — sem nova senha, sem devolver o estoque de novo e sem outra mensagem ao grupo.
+      var faltam=r.anulada?medDoseGrupo(log, principal).filter(function(d){ return d!==principal && medDoseValendo(log[d]); }):[];
+      if(faltam.length) return medDoseCompletarCopias({key:key, dia:dia, hoje:hoje, principal:principal, log:log, itens:itens, faltam:faltam, nomeH:nomeH});
+      if(r.anulada){
+        medDoseLembrar(key, dia, log, medDoseGrupo(log, principal));
+        zAlertao('ESTA DOSE JÁ FOI ANULADA', ['Anulada por '+(r.anulada.por||'outra pessoa')+(r.anulada.quando?(', em '+r.anulada.quando):'')+'. Nada foi gravado de novo.'], {botao:'Entendi'});
+        return null;
+      }
+      var item=r.itemId?(itens[r.itemId]||null):null, grupo=medDoseGrupo(log, principal);
+      var copias=grupo.filter(function(d){ return d!==principal && medDoseValendo(log[d]); }).map(function(d){ return {doseId:d, reg:log[d]}; });
+      var copiasItens=copias.map(function(c){ return {itemId:c.reg.itemId, item:c.reg.itemId?(itens[c.reg.itemId]||null):null}; });
+      var o={reg:r, doseId:principal, item:item, copias:copias, copiasItens:copiasItens, dia:dia, hoje:hoje, agora:Date.now(), fila:MED_AGENDA_TODOS||[], key:key, hospNome:nomeH};
+      return corrAbrir({acao:'anular', nivel:'gestao', genero:'f', titulo:'Desfazer esta dose', oque:medDoseOque(r, nomeH), tela:MED_TELA_PLANTAO,
+        original:{caminho:P+'/'+principal, id:principal}, estado:'dada', cascata:medDoseCascata(o), aviso:MED_ANULAR_AVISO,
+        gravar:function(reg){ return medDoseAnularGravar({key:key, dia:dia, principal:principal, vista:r, nomeH:nomeH, reg:reg}); }});
+    }, function(e){ return medDoseFalhaAbrir('NÃO CONSEGUI ABRIR A DOSE', e); });
+  }
+  // A gravação (AC1.3): relê o dia, confere que a dose ainda é a que o cartaz mostrou e marca a dose e as cópias
+  // numa escrita só, no nó do dia. Nenhum campo da dose muda nem some.
+  function medDoseAnularGravar(g){
+    var P='auaulandia/medicacao-log/'+g.dia+'/'+g.key;
+    return medLerNo(P).then(function(v){
+      var log=v||{}, atual=log[g.principal];
+      if(!atual) return {ok:false, erro:'A dose não está mais no registro: nada foi anulado.'};
+      if(atual.anulada) return {ok:false, erro:'Esta dose já foi anulada por '+(atual.anulada.por||'outra pessoa')+(atual.anulada.quando?(', em '+atual.anulada.quando):'')+'. Nada foi gravado de novo.'};
+      if(Number(atual.ts)!==Number(g.vista.ts)) return {ok:false, erro:'A dose mudou em outro aparelho. Nada foi gravado: feche a ficha e abra de novo.'};
+      var grupo=medDoseGrupo(log, g.principal).filter(function(d){ return medDoseValendo(log[d]); }), up={};
+      grupo.forEach(function(d){ if(d!==g.principal) up[d+'/anulada']=g.reg; });
+      // 2ª rodada (BAIXO-2 do QA): a marca da dose grava por TRANSAÇÃO — dois «Desfazer» no mesmo instante: o segundo vê
+      // a marca do primeiro e não grava (nem manda outra mensagem ao grupo). As regras v2 só deixam gravar no nível da
+      // dose, então as cópias dela (o espelho da 6.32) vão logo depois, numa escrita só.
+      var porque='';
+      return DB.ref(P+'/'+g.principal).transaction(function(d){
+        if(d===null || d===undefined){ porque='sumiu'; return null; }      // cache frio: o servidor responde com o valor de verdade
+        if(d.anulada){ porque='anulada'; return; }
+        if(Number(d.ts)!==Number(g.vista.ts)){ porque='mudou'; return; }
+        porque=''; return Object.assign({}, d, {anulada:g.reg});
+      }).then(function(res){
+        var dv=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null;
+        if(!(res && res.committed) || !dv || !dv.anulada || Number(dv.anulada.ts)!==Number(g.reg.ts)){
+          if(dv && dv.anulada) return {ok:false, erro:'Esta dose já foi anulada por '+(dv.anulada.por||'outra pessoa')+(dv.anulada.quando?(', em '+dv.anulada.quando):'')+'. Nada foi gravado de novo.'};
+          if(!dv) return {ok:false, erro:'A dose não está mais no registro: nada foi anulado.'};
+          return {ok:false, erro:'A dose mudou em outro aparelho. Nada foi gravado: feche a ficha e abra de novo.'};
+        }
+        var depois=function(){ try{ medDoseAnularDepois(g, log, grupo); }catch(e){ _logFalhaGrav('depois de anular a dose '+g.principal, e); } return {ok:true}; };
+        if(!Object.keys(up).length) return depois();
+        return DB.ref(P).update(up).then(depois, function(e){
+          _logFalhaGrav('as cópias da dose anulada '+g.principal, e);
+          try{ zAlertao('A DOSE FOI ANULADA, MAS AS CÓPIAS DELA NÃO', ['A dose de '+((log[g.principal]||{}).nome||'remédio')+' foi anulada; as cópias dela em outras linhas do mesmo FILHOt NÃO: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})),
+            'A cópia dela na outra linha já conta como desfeita: o alarme pede a dose pela linha que toca, e «Dei agora» registra por cima dela. Nada mais a fazer.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: a falha já foi para gravacao-FALHOU */
+          grupo=[g.principal];
+          return depois();
+        });
+      });
+    });
+  }
+  // 3ª rodada (R2-MÉDIO-2 do QA): as cópias que ficaram valendo depois de a dose de origem ser anulada recebem a MESMA
+  // marca da origem, numa escrita só no nó do dia (as regras v2 deixam gravar o nó da dose). Nada mais se repete: o
+  // estoque já voltou (ou não tinha o que voltar) e a mensagem ao grupo já foi com a anulação da origem.
+  function medDoseCompletarCopias(c){
+    var P='auaulandia/medicacao-log/'+c.dia+'/'+c.key, r=c.log[c.principal]||{}, marca=r.anulada, up={};
+    c.faltam.forEach(function(d){ up[d+'/anulada']=marca; });
+    return DB.ref(P).update(up).then(function(){
+      var log2=Object.assign({}, c.log);
+      c.faltam.forEach(function(d){ log2[d]=Object.assign({}, c.log[d], {anulada:marca}); });
+      medDoseLembrar(c.key, c.dia, log2, c.faltam);
+      var copiasItens=c.faltam.map(function(d){ var x=c.log[d]||{}; return {itemId:x.itemId, item:x.itemId?((c.itens||{})[x.itemId]||null):null}; });
+      var alarme=medDoseCascataAlarme({reg:r, item:r.itemId?((c.itens||{})[r.itemId]||null):null, copiasItens:copiasItens, dia:c.dia, hoje:c.hoje, agora:Date.now(), fila:MED_AGENDA_TODOS||[], key:c.key});
+      try{ if(typeof audit==='function') audit('medicacao-dose-anulada', (r.nome||'remédio')+' das '+(r.horario||'--:--')+' de '+c.nomeH+': as cópias que faltavam ('+c.faltam.length+') receberam a anulação feita por '+(marca.por||'-'),
+        {alvo:c.key, pet:c.nomeH, med:r.nome||'', horario:r.horario||'', dia:c.dia, dose:c.principal, copias:c.faltam.length, completou:true, por:marca.por||''}); }
+      catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      try{ zAlertao('AS CÓPIAS DA DOSE FORAM ANULADAS', ['A dose de '+(r.nome||'remédio')+' das '+(r.horario||'--:--')+' já tinha sido anulada por '+(marca.por||'outra pessoa')+(marca.quando?(', em '+marca.quando):'')
+        +'; agora as cópias dela também ('+c.faltam.length+').', alarme.charAt(0).toUpperCase()+alarme.slice(1)+'.', 'O estoque e a mensagem ao grupo já tinham ido com a anulação: nada foi repetido.'], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: o banco já confirmou e a linha já foi redesenhada */
+      return {ok:true, completou:c.faltam.length};
+    }, function(e){
+      _logFalhaGrav('as cópias da dose anulada '+c.principal+' (completar)', e);
+      try{ zAlertao('NÃO CONSEGUI ANULAR AS CÓPIAS', [zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})), 'Nada foi mudado. Toque de novo em «Desfazer esta dose» na cópia.'], {botao:'Entendi'}); }
+      catch(x){} /* silencioso de propósito: a falha já foi para gravacao-FALHOU */
+      return {ok:false};
+    });
+  }
+  // A memória da ficha aberta (o mesmo FILHOt, o mesmo dia) recebe o que o banco confirmou.
+  function medDoseLembrar(key, dia, log, ids, muda){
+    try{
+      if(!(currentHosp && medAgendaKey(currentHosp)===key && dataKeyAtual()===dia)) return;
+      (ids||[]).forEach(function(d){ if(log[d]) MED_AGENDA_LOG[d]=muda?muda(log[d], d):log[d]; });
+      renderMedAgendaHoje();
+    }catch(e){} /* silencioso de propósito: redesenho de tela — a ficha se acerta ao reabrir */
+  }
+  // Depois do ok (AC1.4, AC1.6, AC7): a tela, o estoque (uma vez), o rastro próprio e a correção ao grupo.
+  function medDoseAnularDepois(g, log, grupo){
+    var r=log[g.principal]||{};
+    medDoseLembrar(g.key, g.dia, log, grupo, function(x){ return Object.assign({}, x, {anulada:g.reg}); });
+    if(!r.avulso && r.itemId){
+      medEstoqueDevolver(g.key, r.itemId, g.principal, r.q, g.dia, g.reg).then(function(res){
+        if(res && res.ok) return;
+        try{ zAlertao('A DOSE FOI ANULADA, MAS O ESTOQUE NÃO VOLTOU', ['A dose de '+(r.nome||'remédio')+' das '+(r.horario||'--:--')+' foi anulada.',
+          'O estoque NÃO voltou: '+zErroFrase(zErroMotivo(res&&res.erro, 'banco', '', {agora:true})),
+          'Para acertar: Plantão › Agenda de Medicação › estoque do remédio (corrija a quantidade que veio).'], {botao:'Vou acertar'}); }
+        catch(e){} /* silencioso de propósito: a falha já foi para gravacao-FALHOU */
+      });
+    }
+    try{ if(typeof audit==='function') audit('medicacao-dose-anulada', (r.nome||'remédio')+' das '+(r.horario||'--:--')+' de '+g.nomeH+' (registrada por '+(r.quem||'—')+'): anulada por '+(g.reg.por||'-')+' — '+String(g.reg.motivo||''),
+      {alvo:g.key, pet:g.nomeH, med:r.nome||'', horario:r.horario||'', dia:g.dia, dose:g.principal, copias:grupo.length-1, registrou:r.quem||'', por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    medTgAvisarCorrecao(medTgCorrecaoTexto({acao:'anulada', hospNome:g.nomeH, reg:r, corr:g.reg}));
+    try{ if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora(); }catch(e){} /* silencioso de propósito: o painel se acerta na próxima volta */
+  }
+  // «Reabrir» a dose anulada (AC1.7): a dose volta a valer pelo registro original; a anulação e a reabertura
+  // ficam no histórico da dose (anulacoes_desfeitas). Recusado se a dose já foi registrada de novo.
+  function medDoseReabrirAbrir(doseId){
+    if(!currentHosp || !DB) return Promise.resolve(null);
+    var key=medAgendaKey(); if(!key) return Promise.resolve(null);
+    var dia=dataKeyAtual(), nomeH=currentHosp.nome||'este FILHOt', P='auaulandia/medicacao-log/'+dia+'/'+key;
+    return Promise.all([medLerNo(P), medLerNo('auaulandia/medicacao-agenda/'+key+'/itens')]).then(function(rr){
+      var log=rr[0]||{}, itens=rr[1]||{}, r0=log[doseId];
+      if(!r0){ zAlertao('NÃO ACHEI ESTA DOSE', ['A dose não está no registro deste dia. Feche a ficha e abra de novo.'], {botao:'Entendi'}); return null; }
+      var principal=String(r0.espelho_de||doseId), r=log[principal]||r0, grupo=medDoseGrupo(log, principal);
+      if(!r.anulada){
+        medDoseLembrar(key, dia, log, grupo);
+        zAlertao('NÃO HÁ O QUE REABRIR', [medDoseNaoReabreTxt(r)], {botao:'Entendi'});
+        return null;
+      }
+      // 6.58, 4ª rodada (O-1 do QA): a cópia desta dose foi registrada de novo (na linha nova do «Voltou a tomar», por
+      // exemplo): reabrir faria as duas valerem. A recusa é a mesma da dose registrada de novo numa linha só.
+      var deNovo=medDoseCopiaRegistradaDeNovo(log, principal);
+      if(deNovo){
+        medDoseLembrar(key, dia, log, grupo);
+        zAlertao('NÃO HÁ O QUE REABRIR', [medDoseNaoReabreTxt(deNovo)], {botao:'Entendi'});
+        return null;
+      }
+      var item=r.itemId?(itens[r.itemId]||null):null, est=item&&item.estoque, ck=dia+'__'+principal, q=qtdNum(r.q)||0;
+      var base=(est && typeof est.restante==='number')?est.restante:null;
+      var volta=['a dose volta a contar como dada, pelo registro de '+(r.quem||'—')+(r.ts?(' às '+corrHora(r.ts)):''),
+        (!r.avulso && mcrEhContavel(est) && est.contados && est.contados[ck]===false && base!=null && q>0)
+          ? ('o estoque desconta de novo: de '+mcrQtdTexto(base)+' para '+mcrQtdTexto(Math.max(0, Math.round((base-q)*100)/100)))
+          : 'o estoque não muda',
+        r.avulso?'a dose avulsa não tem alarme':'o alarme cala: a dose deixa de ser pedida'];
+      if(grupo.length>1) volta.push('as cópias desta dose em outras linhas de '+nomeH+' voltam junto');
+      volta.push('O grupo do plantão (Gestão) recebe a correção');
+      return corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Reabrir esta dose', oque:medDoseOque(r, nomeH), tela:MED_TELA_PLANTAO,
+        original:{caminho:P+'/'+principal, id:principal}, estado:'anulada', paraEstado:'dada (o registro de '+(r.quem||'—')+(r.ts?(' às '+corrHora(r.ts)):'')+')', volta:volta,
+        gravar:function(reg){ return medDoseReabrirGravar({key:key, dia:dia, principal:principal, vista:r, nomeH:nomeH, reg:reg}); }});
+    }, function(e){ return medDoseFalhaAbrir('NÃO CONSEGUI ABRIR A DOSE', e); });
+  }
+  // PURA (4ª rodada): a dose que valia como cópia desta (espelho_de) e foi registrada de novo — a cópia anulada ficou
+  // em `anteriores` — ou null.
+  function medDoseCopiaRegistradaDeNovo(log, principal){
+    log=log||{}; var achou=null;
+    Object.keys(log).forEach(function(d){
+      var x=log[d]; if(achou || d===principal || !x || !Array.isArray(x.anteriores)) return;   // 5ª rodada (R4-MÉDIO-1): também o registro de novo desfeito
+      if(x.anteriores.some(function(a){ return a && String(a.espelho_de||'')===String(principal); })) achou=x;
+    });
+    return achou;
+  }
+  function medDoseNaoReabreTxt(r){
+    r=r||{};
+    // 5ª rodada (R4-MÉDIO-1 do QA): o registro de novo da cópia (na linha que toca) também foi desfeito — a dose volta a
+    // contar reabrindo ESSE registro, não o de antes (que valeria numa linha que não toca, e o alarme continuaria pedindo)
+    if(r.anulada && Array.isArray(r.anteriores) && r.anteriores.length) return 'Esta dose já foi registrada de novo por '+(r.quem||'outra pessoa')+(r.ts?(' às '+corrHora(r.ts)):'')
+      +', na linha que toca (esse registro também foi desfeito). Para a dose voltar a contar, reabra o registro de '+(r.quem||'quem a registrou de novo')+' nessa linha. Nada foi gravado.';
+    if(Array.isArray(r.anteriores) && r.anteriores.length) return 'Esta dose já foi registrada de novo por '+(r.quem||'outra pessoa')+(r.ts?(' às '+corrHora(r.ts)):'')+': não há anulação a reabrir. Nada foi gravado.';
+    return 'Esta dose não está anulada (outro aparelho já reabriu). Nada foi gravado.';
+  }
+  function medDoseReabrirGravar(g){
+    var P='auaulandia/medicacao-log/'+g.dia+'/'+g.key;
+    return medLerNo(P).then(function(v){
+      var log=v||{}, atual=log[g.principal];
+      if(!atual) return {ok:false, erro:'A dose não está mais no registro: nada foi reaberto.'};
+      if(!atual.anulada) return {ok:false, erro:medDoseNaoReabreTxt(atual)};
+      if(Number(atual.anulada.ts)!==Number((g.vista.anulada||{}).ts)) return {ok:false, erro:'A anulação desta dose mudou em outro aparelho. Nada foi gravado: feche a ficha e abra de novo.'};
+      var deNovo=medDoseCopiaRegistradaDeNovo(log, g.principal);   // 4ª rodada (O-1): a cópia foi registrada de novo enquanto o cartaz estava aberto
+      if(deNovo) return {ok:false, erro:medDoseNaoReabreTxt(deNovo)};
+      var grupo=medDoseGrupo(log, g.principal).filter(function(d){ return log[d] && log[d].anulada; }), up={};
+      grupo.forEach(function(d){ up[d+'/anulada']=null; up[d+'/anulacoes_desfeitas/'+g.reg.ts]={anulada:log[d].anulada, reaberta:g.reg}; });
+      return DB.ref(P).update(up).then(function(){
+        try{
+          medDoseLembrar(g.key, g.dia, log, grupo, function(x, d){ var y=Object.assign({}, x); delete y.anulada; y.anulacoes_desfeitas=Object.assign({}, x.anulacoes_desfeitas||{}); y.anulacoes_desfeitas[g.reg.ts]={anulada:x.anulada, reaberta:g.reg}; return y; });
+          if(!atual.avulso && atual.itemId && typeof descontarEstoquePorDose==='function') descontarEstoquePorDose(g.key, atual.itemId, g.principal, atual.q, g.dia);
+          if(typeof audit==='function') audit('medicacao-dose-reaberta', (atual.nome||'remédio')+' das '+(atual.horario||'--:--')+' de '+g.nomeH+': a anulação foi desfeita por '+(g.reg.por||'-')+' — '+String(g.reg.motivo||''),
+            {alvo:g.key, pet:g.nomeH, med:atual.nome||'', horario:atual.horario||'', dia:g.dia, dose:g.principal, por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')});
+          medTgAvisarCorrecao(medTgCorrecaoTexto({acao:'reaberta', hospNome:g.nomeH, reg:atual, corr:g.reg}));
+          if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();
+        }catch(e){ _logFalhaGrav('depois de reabrir a dose '+g.principal, e); }
+        return {ok:true};
+      });
+    });
+  }
+  // PURA (AC2.1): as réguas do registro da avulsa (as mesmas do registrarDoseAvulsa) sobre os valores do cartaz:
+  // [nome, quantidade, medida, local, horário, por que foi dada]. Devolve '' ou a frase do que falta.
+  function medAvulsaUnidade(u){ var t=jsNorm(String(u||'').trim()); var a=MED_UNIDADES.filter(function(x){ return jsNorm(x)===t; }); return a.length?a[0]:''; }
+  function medAvulsaValidar(v){
+    v=v||[]; var nome=String(v[0]||'').trim(), q=String(v[1]||'').trim(), u=medAvulsaUnidade(v[2]), local=String(v[3]||'').trim(), h=String(v[4]||'').trim();
+    if(!nomeMedOk(nome)) return 'Escreva o nome do medicamento por extenso.';
+    if(!horaOk(h)) return 'Escreva o horário assim: 12:30.';
+    if(!u) return 'Escreva a medida, uma destas: '+MED_UNIDADES.join(', ')+'.';
+    if(medEhLocal(u)){ if(!local) return 'Escreva ONDE você passou (ex: na patinha da frente direita).'; }
+    else if(qtdNum(q)==null) return 'Escreva a quantidade em número (ex: 1, 0,5, 10).';
+    return '';
+  }
+  // «Corrigir» a dose avulsa (AC2): no mesmo dia, quem registrou (o mesmo nome) ou editar-medicacao, com a própria
+  // senha; de dia anterior, só a Gestão. O mesmo registro é atualizado e guarda o antes e o depois.
+  function medDoseCorrigirAbrir(doseId){
+    if(!currentHosp || !DB) return Promise.resolve(null);
+    var key=medAgendaKey(); if(!key) return Promise.resolve(null);
+    var dia=dataKeyAtual(), nomeH=currentHosp.nome||'este FILHOt', P='auaulandia/medicacao-log/'+dia+'/'+key;
+    return medLerNo(P).then(function(v){
+      var log=v||{}, r=log[doseId];
+      if(!r || !r.avulso){ zAlertao('SÓ A DOSE AVULSA SE CORRIGE AQUI', ['A dose agendada vem da agenda: se ela está errada, use «Desfazer esta dose» ou corrija o remédio na agenda.'], {botao:'Entendi'}); return null; }
+      if(r.anulada){ medDoseLembrar(key, dia, log, [doseId]); zAlertao('ESTA DOSE ESTÁ ANULADA', ['Reabra a dose antes de corrigir. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+      var mesmoDia=(dia===zHojeISO());
+      return corrAbrir({acao:'corrigir', titulo:'Corrigir a dose avulsa', oque:medDoseOque(r, nomeH), tela:MED_TELA_PLANTAO, original:{caminho:P+'/'+doseId, id:doseId},
+        campos:[{c:'nome', rotulo:'Remédio', valor:r.nome||''}, {c:'q', rotulo:'Quantidade (em número; vazio na pomada)', valor:r.q||''},
+          {c:'u', rotulo:'Medida ('+MED_UNIDADES.join(', ')+')', valor:r.u||''}, {c:'local', rotulo:'Onde passou (pomada ou aplicação)', valor:r.local||''},
+          {c:'horario', rotulo:'Horário (ex: 12:30)', valor:r.horario||''}, {c:'motivo', rotulo:'Por que foi dada', valor:r.motivo||''}],
+        validar:function(vals){ return medAvulsaValidar(vals); },
+        nivel:mesmoDia?'propria':'gestao', capacidade:'editar-medicacao', assinaNome:mesmoDia?String(r.quem||''):'',
+        gravar:function(reg){ return medDoseCorrigirGravar({key:key, dia:dia, doseId:doseId, vista:r, nomeH:nomeH, reg:reg}); }});
+    }, function(e){ return medDoseFalhaAbrir('NÃO CONSEGUI ABRIR A DOSE', e); });
+  }
+  function medDoseCorrigirGravar(g){
+    var P='auaulandia/medicacao-log/'+g.dia+'/'+g.key;
+    return medLerNo(P).then(function(v){
+      var log=v||{}, atual=log[g.doseId];
+      if(!atual || !atual.avulso) return {ok:false, erro:'A dose não está mais no registro: nada foi corrigido.'};
+      if(atual.anulada) return {ok:false, erro:'Esta dose foi anulada em outro aparelho. Nada foi gravado.'};
+      if(Number(atual.ts)!==Number(g.vista.ts)) return {ok:false, erro:'A dose mudou em outro aparelho. Nada foi gravado: feche a ficha e abra de novo.'};
+      var d=g.reg.depois||{}, novo={};
+      ['nome','q','u','local','horario','motivo'].forEach(function(c){ novo[c]=(c in d)?String(d[c]).trim():String(atual[c]==null?'':atual[c]); });
+      novo.u=medAvulsaUnidade(novo.u)||String(atual.u||'');
+      var falta=medAvulsaValidar([novo.nome, novo.q, novo.u, novo.local, novo.horario]);
+      if(falta) return {ok:false, erro:falta+' Nada foi gravado.'};
+      if(medEhLocal(novo.u)) novo.q='';
+      var up={};
+      ['nome','q','u','local','horario','motivo'].forEach(function(c){
+        var val=novo[c], antes=String(atual[c]==null?'':atual[c]);
+        if(val===antes) return;
+        up[g.doseId+'/'+c]=(val==='' && (c==='local' || c==='motivo'))?null:val;
+      });
+      up[g.doseId+'/correcoes/'+g.reg.ts]=g.reg;
+      return DB.ref(P).update(up).then(function(){
+        try{
+          var depois=Object.assign({}, atual); Object.keys(up).forEach(function(k){ var c=k.split('/')[1]; if(c!=='correcoes') depois[c]=(up[k]===null)?undefined:up[k]; });
+          depois.correcoes=Object.assign({}, atual.correcoes||{}); depois.correcoes[g.reg.ts]=g.reg;
+          var mem={}; mem[g.doseId]=JSON.parse(JSON.stringify(depois));
+          medDoseLembrar(g.key, g.dia, mem, [g.doseId]);
+          var mud=Object.keys(g.reg.depois||{}).map(function(c){ return String((g.reg.rotulos||{})[c]||c)+': '+corrQ(corrValorTexto((g.reg.antes||{})[c]))+' → '+corrQ(corrValorTexto(g.reg.depois[c])); });
+          if(typeof audit==='function') audit('medicacao-dose-corrigida', (atual.nome||'remédio')+' (avulsa, '+(atual.horario||'--:--')+') de '+g.nomeH+': '+mud.join('; ')+' — '+String(g.reg.motivo||''),
+            {alvo:g.key, pet:g.nomeH, med:atual.nome||'', horario:atual.horario||'', dia:g.dia, dose:g.doseId, por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')});
+          medTgAvisarCorrecao(medTgCorrecaoTexto({acao:'corrigida', hospNome:g.nomeH, reg:atual, corr:g.reg, mudou:mud}));
+        }catch(e){ _logFalhaGrav('depois de corrigir a dose avulsa '+g.doseId, e); }
+        return {ok:true};
+      });
+    });
   }
 
   // ===== CAMADA 4 — Medicação atrasada vira ALERTA que sobe pra Gestora =====
@@ -16883,10 +17445,12 @@
   // 07/set/2026 — economia: o placar de doses do dia era relido INTEIRO do banco a cada
   // volta (30 s no alarme, 60 s no painel da Gestão), em todos os aparelhos. Agora o dia
   // desce uma vez (zMapaVivo) e cada dose nova chega sozinha; reler vira consulta de memória.
+  // 6.58 (L1): a dose anulada conta como não dada — no painel da Gestão, na junção do Day Care e no despertador
+  // (também a dose de ontem). A cópia viva do zMapaVivo não é mexida: o filtro devolve um mapa novo.
   function medLogHoje(){
     var p='auaulandia/medicacao-log/'+dataKeyAtual();
-    if(typeof zMapaUma==='function') return zMapaUma(p).then(function(v){ return Object.assign({},v); });
-    return DB.ref(p).once('value').then(function(s){ return s.val()||{}; });
+    if(typeof zMapaUma==='function') return zMapaUma(p).then(function(v){ return medLogSemAnuladas(v); });
+    return DB.ref(p).once('value').then(function(s){ return medLogSemAnuladas(s.val()); });
   }
   function dosesMedDoDia(){
     if(!DB||!MED_AGENDA_TODOS||!MED_AGENDA_TODOS.length) return Promise.resolve([]);
@@ -17883,7 +18447,7 @@
           .then(function(s){ return {h:h, v:s.val()||{}}; }).catch(function(){ return {h:h, v:{}}; });
       }));
       Promise.all(jobs).then(function(r){
-        var medLog=r[0], estadias=r[1], fichas=r.slice(2);
+        var medLog=medLogSemAnuladas(r[0]), estadias=r[1], fichas=r.slice(2);   // 6.58: só as doses que valem
         var doses=0;
         Object.keys(medLog).forEach(function(k){ doses+=Object.keys(medLog[k]||{}).length; });
         var passados=[], faltando=[], naoComeu=[], atencao=[];
@@ -21467,7 +22031,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-13';
+  const APP_VERSAO='2026-10-09-14';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -22042,10 +22606,19 @@
       __medOutroDiaLendo=0;
       var v=null;
       try{ v=(sn && typeof sn.val==='function') ? sn.val() : null; }catch(e){ v=null; } /* silencioso de propósito: sem o valor, conta como sem registro (o alarme manda conferir) */
-      if(v){
+      var soltar=function(){
         // Dada, aqui ou em outro aparelho: o adiado acabou (não é descarte, a dose tem registro). A hora desse
         // registro não marca a próxima dose (4ª rodada, QA3-B): só o «Dei o remédio» do alarme marca.
-        medAdiadoSoltar(sk); delete despMedSnoozePend[sk]; if(!despMedNaTela) checarDespertadorMed(); return;
+        medAdiadoSoltar(sk); delete despMedSnoozePend[sk]; if(!despMedNaTela) checarDespertadorMed();
+      };
+      if(medDoseValendo(v)){   // 6.58: a dose anulada não fecha o adiado
+        if(!v.espelho_de){ soltar(); return; }
+        // 6.58, 4ª rodada: a cópia fecha o adiado só se a dose de origem ainda vale (a cópia de dose anulada conta como anulada)
+        return DB.ref('auaulandia/medicacao-log/'+dia+'/'+it.key).once('value').then(function(s2){
+          var dd=null; try{ dd=(s2 && typeof s2.val==='function') ? s2.val() : null; }catch(e){ dd=null; } /* silencioso de propósito: sem o dia, vale a cópia lida */
+          if(dd && !medDoseValeNoMapa(dd, doseId)){ abrir(); return; }
+          soltar();
+        }, function(){ soltar(); });
       }
       abrir();
     }).catch(function(e){
@@ -27753,7 +28326,7 @@
         const itens=s.val(); if(!itens) return;
         Object.keys(itens).forEach(function(id){
           const it=itens[id]||{};
-          if(it.suspenso){ susp[key+'__'+id]=1; return; } // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk); 6.47: o adiado dela não volta
+          if(it.suspenso || medItemAnulado(it)){ susp[key+'__'+id]=1; return; } // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk); 6.47: o adiado dela não volta; 6.58: nem a anulada
           if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme
           // saidaHoje (6.47): quem tem saída neste dia — a dose da noite dele não toca depois da meia-noite.
           // continuaEm (6.54, K17): o remédio que trocou de horário por datas continua AMANHÃ no item novo; a dose
@@ -27761,7 +28334,7 @@
           // Só quando o novo vai MESMO ser dado amanhã (3ª rodada, N1): suspenso pela veterinária, parado ou fora
           // do dia, a última dose do antigo fica com o teto de sempre da 6.47.
           var nv=it.trocadoPor?itens[it.trocadoPor]:null, amanhaC=addDiasISO(diaCarga,1);
-          var cont=(nv && Array.isArray(nv.horarios) && nv.dataInicio===amanhaC && !nv.suspenso && !nv.paradoEm && medVigenteEm(nv, amanhaC))?nv.horarios.slice():null;
+          var cont=(nv && Array.isArray(nv.horarios) && nv.dataInicio===amanhaC && !nv.suspenso && !nv.paradoEm && !medItemAnulado(nv) && medVigenteEm(nv, amanhaC))?nv.horarios.slice():null;
           (it.horarios||[]).forEach(function(hr){ var e={hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr, saidaHoje:!!h.saidaHoje}; if(cont) e.continuaEm=cont; lista.push(e); });
         });
       }).catch(function(e){ __medAgendaFalhas++; _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });
@@ -28311,6 +28884,7 @@
     if(!ids.length){ wrap.innerHTML='<div class="hint">Nenhuma medicação em vigor. Use o botão abaixo para prescrever.</div>'; return; }
     wrap.innerHTML=ids.map(function(id){
       var it=VET_MED_CACHE[id]||{};
+      if(medItemAnulado(it)) return '<div class="vet-med-item suspenso">'+medAgendaAnuladoHTML(id, it, '')+'</div>';   // 6.58: só leitura
       var qtd=(typeof medDoseTxt==='function')?medDoseTxt(it):((it.q||'')+' '+(it.u||''));
       var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(it):'';
       var encerrado=(typeof medVigenteEm==='function')&&!it.suspenso&&!medVigenteEm(it)&&!!it.dataFim;
@@ -28407,7 +28981,13 @@
     if(prev.estoque) item.estoque=prev.estoque; // preserva estoque já contado, se houver
     // reativa se estava suspenso e a vet salvou uma alteração
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
-    DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item).then(function(){
+    // 6.58 (AC4.3): o remédio anulado não é regravado aqui (o set do item inteiro apagaria a marca e o
+    // ressuscitaria). Confere no banco, na hora; o conserto inteiro do Cuidado Vet é da 6.59.
+    (vetMedEditId?DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id+'/anulado').once('value').then(function(s){ return !!((s && typeof s.val==='function')?s.val():null); }):Promise.resolve(false)).then(function(anul){
+      if(anul || medItemAnulado(prev)) return 'anulado';
+      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item);
+    }).then(function(rAnul){
+      if(rAnul==='anulado'){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Este remédio foi lançado por engano (anulado): não dá para alterar aqui. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).'; } return; }
       DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')),_ts:Date.now(),_quem:quem}).catch(function(e){ _logFalhaGrav('cabeçalho da medicação (vet) '+key, e); });
       if(typeof audit==='function') audit('vet-medicacao',key,{pet:vetHosp.nome||'',med:nome,acao:acao,quem:quem});
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ '+acao+' — já vale na ficha e nos alarmes.'; }
@@ -28438,11 +29018,20 @@
   async function vetReativarMed(id){
     if(!vetHosp||!podeAlterarVet()) return;
     var it=VET_MED_CACHE[id]; if(!it) return;
+    if(medItemAnulado(it)){ alert('Este remédio foi lançado por engano (anulado): não se reativa. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).'); return; }   // 6.58
     var motivo=((await zTexto('Reativar "'+(it.nome||'este medicamento')+'"',
       ['O motivo fica registrado.'],
       {rotulo:'Motivo da reativação', botao:'Reativar', cor:'#234D67', minimo:3}))||'').trim();
     if(!motivo){ alert('É preciso informar o motivo para reativar.'); return; }
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    // 6.58 (2ª rodada, MÉDIO-4 do QA): relê o remédio no banco antes de gravar — a memória da tela pode ser de antes
+    // do «Lançado por engano» (e regravaria o histórico velho por cima da linha da anulação)
+    var noBanco=null;
+    try{ noBanco=await medLerNo('auaulandia/medicacao-agenda/'+key+'/itens/'+id); }
+    catch(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (vetReativarMed)', e); alert(zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})))+' Nada foi mudado.'); return; }
+    if(!noBanco){ alert('Este remédio não está mais na agenda. Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return; }
+    if(medItemAnulado(noBanco)){ alert('Este remédio foi lançado por engano (anulado) em outro aparelho: não se reativa. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return; }
+    it=noBanco;
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Reativou',motivo:motivo});
     // 6.54 (7ª rodada, C6-3 — extensão da trava F3): reativa e anda o carimbo da agenda na mesma escrita;
     // um «Salvar agenda» com o formulário de antes (que leu "suspenso") é recusado e não suspende de novo.
@@ -28760,6 +29349,7 @@
         if(it.trocadoPor) return;              // 6.54: trocou de horário (o novo continua) — não é fim de receita
         if(it.continuo) return;                // uso contínuo não acaba
         if(it.suspenso) return;                // já foi suspenso — a vet decidiu, não precisa avisar
+        if(medItemAnulado(it)) return;         // 6.58: lançado por engano — não é fim de receita
         if(!it.dataFim) return;
         if(hj < it.dataFim) return;            // ainda está em uso
         if(it.fimCiente) return;               // vet já deu ciência
@@ -34049,10 +34639,11 @@
   }
   // Os de uso contínuo primeiro; os encerrados descem, como registro do que já foi.
   function fmedOrdem(){
-    const ids=Object.keys(FMED_ITENS||{});
+    const ids=Object.keys(FMED_ITENS||{}).filter(function(i){ return !medItemAnulado(FMED_ITENS[i]); });   // 6.58: o anulado tem seção própria
     const vivos=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo===true; });
     const parados=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo!==true; });
-    return {vivos:vivos, parados:parados};
+    const anulados=Object.keys(FMED_ITENS||{}).filter(function(i){ return medItemAnulado(FMED_ITENS[i]); });
+    return {vivos:vivos, parados:parados, anulados:anulados};
   }
   function fmedDesenhar(){
     const wrap=document.getElementById('fmedItens'); if(!wrap) return;
@@ -34069,6 +34660,12 @@
       h+='<h3 class="cad-sub" style="margin-top:16px">Já não toma mais</h3>'
         +'<div class="hint" style="margin-bottom:8px">Fica registrado: o que foi dado um dia não se apaga. Para voltar a dar, acrescente de novo com a data de hoje.</div>'
         +o.parados.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
+    }
+    // 6.58 (AC4.3): o remédio «lançado por engano», riscado, com quem, quando, o motivo e «Reabrir» (= «Voltou a tomar»)
+    if(o.anulados.length){
+      h+='<h3 class="cad-sub" style="margin-top:16px">Lançados por engano</h3>'
+        +'<div class="hint" style="margin-bottom:8px">Anulados: não tocam o alarme nem entram no check-in. Nada foi apagado. «Reabrir» faz o remédio voltar a ser dado, numa linha nova.</div>'
+        +o.anulados.map(function(id){ var it=FMED_ITENS[id]||{}; return medAgendaAnuladoHTML(id, it, (pode && !it.retomadoPor)?("medAgendaVoltouAbrir('"+medJsArg(FMED_KEY)+"','"+medJsArg(id)+"','ficha')"):''); }).join('');
     }
     wrap.innerHTML=h;
     medQuandoSyncTodos('#fmedItens');
@@ -34134,7 +34731,7 @@
     const st=document.getElementById('fmed-status');
     if(!fmedPodeEditar()){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Você não tem permissão para alterar medicação.'; } return; }
     if(!FMED_KEY||!pelAtual) return;
-    const itens=fmedColetar();
+    let itens=fmedColetar();
     const probs=fmedValidar(itens);
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando — não salvei. Tente de novo em instantes.'; } return; }
@@ -34146,6 +34743,11 @@
     if(!ok) return;
     const quem=quemSou(), ts0=Date.now(), keyF=FMED_KEY;
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
+    // 6.58 (AC4.8, MC6 da 6.54 — a parte da ficha): a régua do «Salvar agenda» (mcrReguaDaAgenda). O horário mudado
+    // depois de a dose de hoje ter sido dada (ou já passado) começa amanhã, por troca de datas, com as mesmas frases.
+    let rg=null;
+    try{ rg=await mcrReguaDaAgenda(keyF, itens, FMED_ITENS, quem); }catch(e){ rg=null; _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar, régua)', e); }
+    if(!rg){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui conferir as doses de hoje. Nada foi salvo: tente de novo.'; } return; }
     // 6.54 (conferência final): a mesma trava do «Salvar agenda» — a aba aberta antes de uma troca ou de um
     // «Parou» feitos em outro aparelho não regrava o remédio antigo.
     let passou=false;
@@ -34154,21 +34756,24 @@
     const ops=[];
     ops.push(DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY).update({
       nome:pelNome(pelAtual)||'', tutor:(typeof pelGet==='function'?pelGet(pelAtual,'tutor'):'')||'', _ts:ts0, _quem:quem }));
-    Object.keys(itens).forEach(function(id){
-      const it=itens[id];
-      const acao=medDiffAcao(FMED_ITENS[id], it);
+    Object.keys(rg.itens).forEach(function(id){
+      const it=rg.itens[id];
+      // o remédio que trocou de horário por datas (6.58, a régua) já leva a linha da troca no histórico
+      const acao=rg.trocados[id]?null:medDiffAcao(FMED_ITENS[id], it);
       if(acao){ const hist=Array.isArray(it.historico)?it.historico.slice():[]; hist.push({quem:quem, quando:agoraBR(), acao:acao+' (ficha)'}); it.historico=hist; }
       it.informado_por={quem:quem, quando:agoraBR(), ts:Date.now()};
     });
+    Object.keys(rg.novos).forEach(function(nid){ rg.novos[nid].informado_por={quem:quem, quando:agoraBR(), ts:Date.now()}; });
     // A MESMA porta do check-in: grava o que fica, remove o repetido e deixa o rastro
     // 'medicacao-agenda-dedupe'. Duas telas, uma régua só (24/set/2026).
+    itens=Object.assign({}, rg.itens, rg.novos);   // 6.58: o que a régua devolveu (a linha da troca por datas incluída)
     ops.push(medAgendaGravarItens(FMED_KEY, itens, 'ficha Medicamentos'));
     Promise.all(ops).then(function(){
       return Promise.all([DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens').once('value'), DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/_ts').once('value')]);
     }).then(function(rr){
       var s=rr[0]; FMED_TS_LIDO=(rr[1].val()!=null)?rr[1].val():null;
       FMED_ITENS=medDedupe(s.val()||{}).itens; FMED_CARREGOU=true; fmedDesenhar();
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'; }
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'+(rg.frases.length?(' '+rg.frases.join(' ')):''); }
       if(typeof audit==='function') audit('ficha-medicamentos', resumo.join(' | '),
         {alvo:FMED_KEY, pet:pelNome(pelAtual)||'', quem:quem});
       try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações na aba Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
@@ -34189,18 +34794,27 @@
        'Nada é apagado: o item desce para "Já não toma mais", com quem registrou e quando.'],
       {rotulo:'Motivo', dica:'Ex: tratamento encerrado pela vet', botao:'Registrar que parou',
        botaoNao:'Voltar — continua tomando', minimo:3,
-       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o remédio saiu.'});
+       erro:'Escreva o motivo em poucas palavras — é ele que explica, depois, por que o remédio saiu.',
+       // 6.58 (AC4.7): o motivo de 4 palavras (motivoQuatroPalavras), no lugar das 3 letras de antes
+       validar:function(v){ var mq=motivoQuatroPalavras(v); return mq.ok?'':mq.erro; }});
     if(motivo==null) return;
-    const quem=quemSou(), hoje=zHojeISO();
+    const mq4=motivoQuatroPalavras(motivo);
+    if(!mq4.ok){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+mq4.erro; } return; }
+    const quem=quemSou(), hoje=zHojeISO(), keyF=FMED_KEY, ts0=Date.now();
     const hist=Array.isArray(it.historico)?it.historico.slice():[];
     hist.push({quem:quem, quando:agoraBR(), acao:'Parou de tomar — '+(motivo||'sem motivo informado')});
     if(st){ st.style.color='var(--muted)'; st.textContent='Registrando...'; }
-    DB.ref('auaulandia/medicacao-agenda/'+FMED_KEY+'/itens/'+id).update({
-      continuo:false, dataFim:hoje, historico:hist,
-      paradoEm:{quem:quem, data:hoje, quando:agoraBR(), ts:Date.now(), motivo:(motivo||'')}
-    }).then(function(){
-      FMED_ITENS[id]=Object.assign({}, it, {continuo:false, dataFim:hoje, historico:hist,
-        paradoEm:{quem:quem, data:hoje, quando:agoraBR(), ts:Date.now(), motivo:(motivo||'')}});
+    // 6.58 (AC4.7): a mesma trava do «Salvar agenda»; a parada e o carimbo da agenda numa escrita só (um «Salvar
+    // agenda» com o formulário de antes é recusado e não ressuscita o remédio parado).
+    let passou=false;
+    try{ passou=await mcrTravaAgenda('auaulandia/medicacao-agenda/'+keyF+'/_ts', FMED_TS_LIDO, ts0); }catch(e){ passou=false; _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedParou, trava)', e); }
+    if(!passou){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='A agenda de '+(pelAtual?pelNome(pelAtual):'este FILHOt')+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'; } return; }
+    const parada={continuo:false, dataFim:hoje, historico:hist,
+      paradoEm:{quem:quem, data:hoje, quando:agoraBR(), ts:Date.now(), motivo:(motivo||'')}};
+    const upP={}; Object.keys(parada).forEach(function(c){ upP['itens/'+id+'/'+c]=parada[c]; }); upP._ts=ts0; upP._quem=quem;
+    DB.ref('auaulandia/medicacao-agenda/'+keyF).update(upP).then(function(){
+      if(FMED_KEY===keyF) FMED_TS_LIDO=ts0;
+      FMED_ITENS[id]=Object.assign({}, it, parada);
       fmedDesenhar();
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Registrado: '+(it.nome||'o medicamento')+' já não é mais dado. O histórico continua guardado.'; }
       if(typeof audit==='function') audit('ficha-medicamentos',
@@ -34210,9 +34824,452 @@
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(function(e){
       _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedParou)', e);
-      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não registrei: '+((e&&e.message)||e); }
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não registrei: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true})); }
     });
   }
+  // ===== STORY 6.58 — O REMÉDIO DA AGENDA: «LANÇADO POR ENGANO», «VOLTOU A TOMAR» (F10, 10/out/2026) =======
+  // O remédio lançado no FILHOt errado não se excluía, não existia «Voltou a tomar» e o «Remover item» do
+  // Plantão apagava sem motivo nem nome no rastro. Agora:
+  //  · «Lançado por engano» (Ficha › Medicamentos) e «Remover item» (Plantão): a Gestão assina; a corrente
+  //    inteira do remédio (a troca por datas da 6.54) fica parada AGORA pela régua da 6.54 (mcrParou), com a
+  //    marca `anulado`, uma linha no histórico e o carimbo da agenda — numa escrita só, depois da trava
+  //    (mcrTravaAgenda) com o carimbo que a tela leu. Nada é apagado: o remédio aparece riscado.
+  //  · «Voltou a tomar» (e o «Reabrir» do anulado): nasce uma linha nova que continua a antiga (o id de
+  //    continuação da 6.54, `mcr_t_…`), com o estoque herdado. Começa hoje só se a régua da 6.54 deixar e a
+  //    linha antiga não valer mais hoje; senão, no próximo dia dele. Nunca as duas tocam no mesmo dia.
+  // O remédio ainda toca (hoje ou depois)? Suspenso, parado, anulado ou terminado: não.
+  function medAgendaToca(it, hoje){
+    return !!it && !it.suspenso && !it.paradoEm && !medItemAnulado(it) && (it.continuo===true || !it.dataFim || String(it.dataFim)>=String(hoje||''));
+  }
+  // A parada da 6.54 só vale para quem ainda ia tocar; no que já parou (ou terminou), só a marca e o histórico:
+  // o mcrParou com 'agora' num remédio terminado o faria valer até hoje.
+  function medAgendaPodeParar(it, hoje){ it=it||{}; return !it.suspenso && !it.paradoEm && (it.continuo===true || !it.dataFim || String(it.dataFim)>=String(hoje||'')); }
+  // A corrente do remédio, dentro da mesma agenda: para trás pelo continuacaoDe, para a frente pelo trocadoPor, pelo
+  // retomadoPor e por quem diz que continua esta linha. Em ordem, da raiz à ponta (pelo começo; sem começo, antes).
+  function medCorrenteDe(itens, id){
+    itens=itens||{}; if(!itens[id]) return [];
+    var vistos={}, fila=[String(id)], out=[];
+    while(fila.length && out.length<60){
+      var cur=fila.shift(); if(vistos[cur] || !itens[cur]) continue;
+      vistos[cur]=1; out.push(cur);
+      var it=itens[cur]||{};
+      [it.continuacaoDe, it.trocadoPor, it.retomadoPor].forEach(function(x){ if(x && itens[x] && !vistos[x]) fila.push(String(x)); });
+      Object.keys(itens).forEach(function(o){ if(!vistos[o] && itens[o] && itens[o].continuacaoDe===cur) fila.push(o); });
+    }
+    return out.sort(function(a, b){ var x=String((itens[a]||{}).dataInicio||''), y=String((itens[b]||{}).dataInicio||''); return (x<y)?-1:((x>y)?1:((a<b)?-1:(a>b?1:0))); });
+  }
+  // PURA (AC4.2): os campos que a anulação grava numa linha da corrente.
+  function medAgendaAnularCampos(it, id, o){
+    o=o||{}; it=it||{};
+    var mot='lançado por engano: '+String(o.motivo||'');
+    if(medAgendaPodeParar(it, o.hoje)){
+      var dados=mcrDadosHoje(it, id, o.logH||{});
+      var ontem={faltam:mcrOntemFaltam(it, id, o.hoje, o.logO||{}, o.agoraMin), dados:mcrDadosHoje(it, id, o.logO||{})};
+      return mcrParou(it, 'agora', dados, o.hoje, o.quem, mot, o.quando, o.ts, ontem);
+    }
+    var hist=Array.isArray(it.historico)?it.historico.slice():[];
+    hist.push({quem:o.quem||'-', quando:o.quando||'', acao:'Lançado por engano (anulado) — '+String(o.motivo||''), motivo:mot, ts:o.ts||0});
+    return {historico:hist};
+  }
+  // PURA (AC4.1): a cascata do «Lançado por engano», montada a partir do banco.
+  function medAgendaCascata(o){
+    o=o||{}; var itens=o.itens||{}, cor=o.corrente||[], hoje=o.hoje, L=[], faltam=[], dadas=[], continua=[];
+    cor.forEach(function(x){
+      var it=itens[x]||{};
+      if(medAgendaPodeParar(it, hoje) && medVigenteEm(it, hoje)){
+        var d=mcrDadosHoje(it, x, o.logH||{});
+        (it.horarios||[]).forEach(function(h){ if(d.indexOf(h)<0) faltam.push('hoje às '+h); });
+      }
+      if(medAgendaPodeParar(it, hoje)) mcrOntemFaltam(it, x, hoje, o.logO||{}, o.agoraMin).forEach(function(h){ faltam.push('a de ontem das '+h+' (sem registro), que o alarme ainda tocaria'); });
+      (it.horarios||[]).forEach(function(h){ var r=(o.logH||{})[magDoseId(x, h)]; if(r) dadas.push('hoje às '+h+' ('+(r.quem||'—')+')'); });
+      if(x!==o.id) continua.push((it.nome||'remédio')+' '+((it.horarios||[]).join(', ')||'')+(it.dataInicio?(', que começa em '+fmtBR(it.dataInicio)):''));
+    });
+    L.push(faltam.length?('as doses que ainda não foram dadas não serão mais pedidas: '+faltam.join('; ')):'nenhuma dose por dar hoje: nada mais será pedido');
+    L.push(dadas.length?('as doses já dadas continuam no histórico: '+dadas.join('; ')):'nenhuma dose dada hoje (o histórico dos outros dias continua guardado)');
+    if(continua.length) L.push('as continuações do mesmo remédio saem junto: '+continua.join('; '));
+    if(o.estadia) L.push('a hospedagem ativa de '+(o.hospNome||'este FILHOt')+' continua; o remédio deixa de tocar nela e fica na lista só para o Check-out devolver');
+    if(cor.some(function(x){ return (itens[x]||{}).estoque; })) L.push('o estoque fica guardado no remédio (nada é apagado)');
+    if(o.aviso) L.push('o aviso de estoque aberto continua aberto (a Recepção encerra pela tela dela)');
+    return L;
+  }
+  function medAgendaNomeTela(origem){ return (origem==='plantao')?MED_TELA_PLANTAO:'Ficha › Medicamentos'; }
+  function medAgendaCarimboDaTela(key, origem){
+    if(origem==='plantao') return (MED_AGENDA_TS && MED_AGENDA_TS.key===key && MED_AGENDA_TS.lido)?MED_AGENDA_TS.ts:null;
+    return (FMED_KEY===key)?FMED_TS_LIDO:null;
+  }
+  function medAgendaNomeFilhot(origem){
+    try{ if(origem==='plantao') return (currentHosp&&currentHosp.nome)||'este FILHOt'; return (pelAtual?pelNome(pelAtual):'')||'este FILHOt'; }
+    catch(e){ return 'este FILHOt'; } /* silencioso de propósito: sem o nome, a frase diz "este FILHOt" */
+  }
+  function medAgendaEstadiaAtiva(key){
+    try{ var r=mcrEstadiaDoHosp(key, (typeof EST_TODAS!=='undefined'?EST_TODAS:{})||{}, zHojeISO()); return r.id?r:null; }
+    catch(e){ return null; } /* silencioso de propósito: sem o índice das estadias, a frase da hospedagem não entra */
+  }
+  // «Lançado por engano» (AC4.1, AC4.2) — origem 'ficha' (Ficha › Medicamentos) ou 'plantao' («Remover item»).
+  function medAgendaAnularAbrir(key, id, origem){
+    origem=(origem==='plantao')?'plantao':'ficha';
+    var cap=(origem==='plantao')?'editar-medicacao':'editar-medicacao-checkin';
+    if(!podePapel(cap)){ corrBarrar('anular um remédio da agenda («Lançado por engano»)', corrQuemPode(cap), {alvo:key, item:id}); return Promise.resolve(null); }
+    if(!DB || !key || !id) return Promise.resolve(null);
+    var hoje=zHojeISO(), AG='auaulandia/medicacao-agenda/'+key, nomeH=medAgendaNomeFilhot(origem), tsLido=medAgendaCarimboDaTela(key, origem);
+    return Promise.all([medLerNo(AG+'/itens'), medLerNo('auaulandia/medicacao-log/'+hoje+'/'+key), medLerNo('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+key)]).then(function(rr){
+      var itens=rr[0]||{}, it=itens[id];
+      if(!it){ zAlertao('ESTE REMÉDIO NÃO ESTÁ MAIS NA AGENDA', ['Feche e abra de novo para ver a agenda de agora. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+      if(medItemAnulado(it)){ zAlertao('ESTE REMÉDIO JÁ FOI ANULADO', ['Anulado por '+(it.anulado.por||'outra pessoa')+(it.anulado.quando?(', em '+it.anulado.quando):'')+'. Nada foi gravado de novo.'], {botao:'Entendi'}); return null; }
+      var cor=medCorrenteDe(itens, id).filter(function(x){ return !medItemAnulado(itens[x]); });
+      var cascata=medAgendaCascata({itens:itens, corrente:cor, id:id, logH:medDosesSemAnuladas(rr[1]), logO:medDosesSemAnuladas(rr[2]), hoje:hoje, agoraMin:mcrAgoraMin(),
+        hospNome:nomeH, estadia:medAgendaEstadiaAtiva(key), aviso:avisoAbertoDoItem(key, id)});
+      return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Lançado por engano', tela:medAgendaNomeTela(origem),
+        oque:'o remédio '+(it.nome||'')+' ('+(medDoseTxt(it)||'—')+(((it.horarios||[]).length)?(', '+it.horarios.join(' e ')):'')+') da agenda de '+nomeH,
+        original:{caminho:AG+'/itens/'+id, id:id}, estado:'na agenda', cascata:cascata,
+        aviso:'Se o remédio é de verdade e só mudou, não anule: use «Parou de tomar» ou mude a dose e o horário na agenda.',
+        gravar:function(reg){ return medAgendaAnularGravar({key:key, id:id, corrente:cor, tsLido:tsLido, nomeH:nomeH, origem:origem, reg:reg}); }});
+    }, function(e){ return medDoseFalhaAbrir('NÃO CONSEGUI ABRIR O REMÉDIO', e); });
+  }
+  // A gravação (AC4.2): a trava com o carimbo da tela; relê; cada linha da corrente parada agora + a marca + o
+  // histórico + o carimbo da agenda, numa escrita só. A hospedagem ativa (o mesmo FILHOt) ganha, na mesma escrita,
+  // o «parou» na linha do remédio da lista dela (a conta "vai faltar" e a Conferência deixam de cobrar o remédio).
+  function medAgendaAnularGravar(g){
+    var AG='auaulandia/medicacao-agenda/'+g.key, hoje=zHojeISO(), ts0=Date.now(), quem=quemSou(), quando=agoraBR();
+    var travado={ok:false, erro:'A agenda de '+g.nomeH+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'};
+    return mcrTravaAgenda(AG+'/_ts', g.tsLido, ts0).then(function(passou){
+      if(!passou) return travado;
+      var eh=medAgendaEstadiaAtiva(g.key);
+      return Promise.all([medLerNo(AG+'/itens'), medLerNo('auaulandia/medicacao-log/'+hoje+'/'+g.key), medLerNo('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+g.key),
+        eh?medLerNo('auaulandia/estadias/'+eh.id+'/medicacao'):Promise.resolve(null)]).then(function(rr){
+        var itens=rr[0]||{}, logH=medDosesSemAnuladas(rr[1]), logO=medDosesSemAnuladas(rr[2]), lista=Array.isArray(rr[3])?rr[3]:null, up={}, nomes=[];
+        var o={hoje:hoje, logH:logH, logO:logO, agoraMin:mcrAgoraMin(), quem:quem, motivo:g.reg.motivo, quando:quando, ts:ts0};
+        g.corrente.forEach(function(x){
+          var it=itens[x]; if(!it || medItemAnulado(it)) return;
+          var p=medAgendaAnularCampos(it, x, o);
+          Object.keys(p).forEach(function(c){ up[AG+'/itens/'+x+'/'+c]=p[c]; });
+          up[AG+'/itens/'+x+'/anulado']=Object.assign({}, g.reg, {linha:x, corrente:g.corrente.slice(),
+            era:{continuo:it.continuo===true, dataFim:String(it.dataFim||''), horarios:Array.isArray(it.horarios)?it.horarios.slice():[]}});   // 2ª rodada: como a linha estava
+          nomes.push(it.nome||x);
+          if(lista){ var i=mcrCasarNaLista(lista, x, it); if(i>=0 && lista[i] && !lista[i].parouEm){
+            up['auaulandia/estadias/'+eh.id+'/medicacao/'+i+'/parouEm']={data:hoje, quem:quem, motivo:'lançado por engano: '+String(g.reg.motivo||'')};
+            up['auaulandia/estadias/'+eh.id+'/medicacao/'+i+'/anulado']=true; } }
+        });
+        if(!nomes.length) return {ok:false, erro:'O remédio já foi anulado em outro aparelho. Nada foi gravado de novo.'};
+        up[AG+'/_ts']=ts0; up[AG+'/_quem']=quem;
+        return DB.ref().update(up).then(function(){
+          try{ medAgendaAnularDepois(g, nomes, ts0, !!(eh && Object.keys(up).some(function(k){ return k.indexOf('auaulandia/estadias/')===0; }))); }catch(e){ _logFalhaGrav('depois de anular o remédio '+g.id, e); }
+          return {ok:true};
+        });
+      });
+    });
+  }
+  // Relê a agenda e o carimbo na tela que fez a mudança (o 2º toque na mesma tela não fica preso na trava).
+  function medAgendaRecarregar(key, origem){
+    var AG='auaulandia/medicacao-agenda/'+key;
+    return Promise.all([medLerNo(AG+'/itens'), medLerNo(AG+'/_ts')]).then(function(r){
+      if(origem==='plantao'){ if(currentHosp && medAgendaKey(currentHosp)===key){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_TS={key:key, ts:(r[1]!=null)?r[1]:null, lido:true}; renderMedAgenda(); } }
+      else if(FMED_KEY===key){ FMED_ITENS=medDedupe(r[0]||{}).itens; FMED_TS_LIDO=(r[1]!=null)?r[1]:null; FMED_CARREGOU=true; fmedDesenhar(); }
+    }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (depois da 6.58)', e); });
+  }
+  function medAgendaAnularDepois(g, nomes, ts0, mexeuEstadia){
+    if(g.origem==='plantao'){ if(MED_AGENDA_TS && MED_AGENDA_TS.key===g.key && MED_AGENDA_TS.lido) MED_AGENDA_TS.ts=ts0; }
+    else if(FMED_KEY===g.key) FMED_TS_LIDO=ts0;
+    medAgendaRecarregar(g.key, g.origem);
+    if(mexeuEstadia){ try{ zCarimbar('auaulandia/estadias'); }catch(e){} /* silencioso de propósito: sem o carimbo, a cópia de outro aparelho se acerta na próxima mudança */ }
+    try{ if(typeof audit==='function') audit('medicacao-agenda-anulada', nomes.join(', ')+' — '+g.nomeH+': lançado por engano, anulado por '+(g.reg.por||'-')+' — '+String(g.reg.motivo||''),
+      {alvo:g.key, pet:g.nomeH, med:nomes.join(', '), item:g.id, linhas:g.corrente.join(' '), tela:medAgendaNomeTela(g.origem), por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: a fila se refaz na próxima leitura */
+  }
+  // O remédio anulado na tela (AC4.3): riscado, só leitura (fora do formulário: o «Salvar agenda» nunca o regrava).
+  function medAgendaAnuladoHTML(id, it, aoReabrir){
+    it=it||{}; var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(it):'';
+    return '<div class="mag-anulado" data-anulado="'+escAttr(id)+'" style="border:1px dashed var(--line);border-radius:11px;padding:10px 12px;margin-bottom:12px;background:var(--z-white);overflow-wrap:anywhere">'
+      +'<div style="font-weight:800;color:var(--z-blue);text-decoration:line-through;opacity:.8">'+esc(it.nome||'Medicamento')+'</div>'
+      +'<div style="font-size:13px;font-weight:600;color:var(--muted)">'+esc([medDoseTxt(it), (it.horarios||[]).join(', '), per].filter(Boolean).join(' · '))+'</div>'
+      +corrRiscadoHTML(it.anulado||{}, aoReabrir||'')
+      +medRetomadoHTML(it)
+      +'</div>';
+  }
+  function medRetomadoHTML(it){
+    it=it||{}; if(!it.retomadoPor) return '';
+    return '<div style="font-size:13px;font-weight:800;color:var(--crm-ok);margin-top:4px">Voltou a tomar'+(it.retomadoEm?(' em '+esc(fmtBR(it.retomadoEm))):'')+' → linha nova</div>';
+  }
+  // O rodapé da linha salva na Ficha › Medicamentos: «Parou de tomar» enquanto toca; «Voltou a tomar» quando não toca
+  // mais (parado, terminado; o suspenso só a veterinária reativa); «Lançado por engano» sempre.
+  var MED_BT_FICHA='min-height:44px;padding:8px 12px;font-family:inherit;font-size:14px;font-weight:800;border-radius:12px;cursor:pointer;background:var(--z-white);';
+  function fmedRodapeHTML(id, item){
+    item=item||{}; var hoje=zHojeISO(), k=medJsArg(FMED_KEY), j=medJsArg(id), h='';
+    if(medAgendaToca(item, hoje)) h+='<button type="button" class="ativ-del" title="Encerrar este medicamento sem apagar o histórico" onclick="fmedParou(\''+id+'\')">Parou de tomar</button>';
+    else if(!item.suspenso && !item.retomadoPor) h+='<button type="button" style="'+MED_BT_FICHA+'color:var(--crm-ok);border:2px solid var(--crm-ok)" title="Voltar a dar este remédio, numa linha nova" onclick="'+escAttr("medAgendaVoltouAbrir('"+k+"','"+j+"','ficha')")+'">Voltou a tomar</button>';
+    h+='<button type="button" style="'+MED_BT_FICHA+'color:var(--crm-critico);border:2px solid var(--crm-critico)" title="Anular este remédio, lançado por engano (nada é apagado)" onclick="'+escAttr("medAgendaAnularAbrir('"+k+"','"+j+"','ficha')")+'">Lançado por engano</button>';
+    return h;
+  }
+  // «Remover item» do Plantão (AC4.6): o remédio SALVO vira o mesmo «Lançado por engano» (a Gestão assina, nada é
+  // apagado); o rascunho que nunca foi salvo, e a linha do Check-in, continuam saindo só da tela (magRemoverItem).
+  function magRemoverItemAnular(id){
+    var el=null; try{ el=document.querySelector('.magitem[data-id="'+id+'"]'); }catch(e){ el=null; } /* silencioso de propósito: sem a linha, não há o que tirar */
+    var noCard=!!(el && el.closest && el.closest('#magItens'));
+    if(noCard && currentHosp && MED_AGENDA_ITENS && MED_AGENDA_ITENS[id]){
+      if(!canEditMed()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover medicação.'); return Promise.resolve(null); }
+      return medAgendaAnularAbrir(medAgendaKey(), id, 'plantao');
+    }
+    return magRemoverItem(id, true);
+  }
+  // ---- «Voltou a tomar» (AC4.4, AC4.5) ----
+  // A linha pode voltar? '' = pode; senão, o porquê.
+  function medVoltouPode(itens, id, hoje){
+    itens=itens||{}; var it=itens[id];
+    if(!it) return 'Este remédio não está mais na agenda. Feche e abra de novo.';
+    if(it.suspenso) return 'Este remédio foi suspenso pela veterinária: só ela reativa, no Cuidado Vet.';
+    if(medAgendaToca(it, hoje)) return 'Este remédio ainda está em uso: não há o que retomar.';
+    var viva=medCorrenteDe(itens, id).filter(function(x){ return x!==id && medAgendaToca(itens[x], hoje); })[0];
+    if(viva) return 'Este remédio já voltou a ser dado, pela linha '+(itens[viva].dataInicio?('que começa em '+fmtBR(itens[viva].dataInicio)):'nova')+'. Mude por ela.';
+    return '';
+  }
+  // PURA (AC4.4, AC4.5; 2ª rodada, MÉDIO-1 e MÉDIO-2 do QA; 3ª rodada, R2-ALTO-1 e R2-MÉDIO-1): quando a linha nova começa.
+  // Começar HOJE é seguro quando nenhuma dose pode sair em dobro, a mais nem perdida:
+  //   · não é madrugada (a dose de ontem ainda pode tocar, 6.47);
+  //   · hoje é dia do remédio pela contagem da linha antiga;
+  //   · nenhuma linha deste remédio ainda toca hoje (senão as duas tocariam no mesmo dia);
+  //   · a régua da troca de horário da 6.54, dos horários de antes (os da linha antes do «Lançado por engano» e os das
+  //     doses dadas hoje) para os novos, não recusa «hoje»: a dose dada hoje num horário que SAI recusa (seria dose a
+  //     mais), como o horário que sai sem registro já passado ou a menos de 15 minutos, e o horário que ENTRA já passado;
+  //   · todo horário novo que já passou (ou está a menos de 15 minutos) tem a dose dada hoje.
+  // Então toda dose dada hoje cai num horário da linha nova, passada ou não (o registro adiantado também), e vira cópia
+  // nela: o alarme não a pede de novo. Senão, a linha nova começa no próximo dia dele pela contagem da linha antiga (o
+  // «próximo sim» do dia sim, dia não, como na troca por datas), e a tela diz quais horários de hoje ficam sem alarme.
+  // o = {antiga, horarios, hoje, agoraMin, continuo, dataFim, dados:{'HH:MM':true} (dadas hoje nos horários novos),
+  //      dadasHoje:['HH:MM'] (TODO horário com dose dada hoje na corrente), antes:['HH:MM'] (os horários de antes),
+  //      pendentes:['HH:MM'] (horários que este remédio ainda toca hoje), querHoje: true | false | undefined}
+  function medVoltouInicio(o){
+    o=o||{}; var ant=o.antiga||{}, hs=(o.horarios||[]).slice(), hoje=String(o.hoje||'');
+    var item={horarios:hs, freq:ant.freq||null, continuo:!!o.continuo, dataFim:o.continuo?'':String(o.dataFim||''), dataInicio:(ant.dataInicio && String(ant.dataInicio)<=hoje)?ant.dataInicio:null};
+    var regra=mcrRegraHorario({antes:[], depois:hs, dadosHoje:[], agoraMin:o.agoraMin, hoje:hoje, item:item});
+    var agora=(typeof o.agoraMin==='number')?o.agoraMin:mcrAgoraMin(), dados=o.dados||{};
+    // sem a lista de quem ainda toca hoje (quem chama a função pura direto): a linha antiga, se ela vale hoje, toca hoje
+    // os horários dela que não foram dados
+    var pend=Array.isArray(o.pendentes)?o.pendentes.slice().sort()
+      : ((!ant.suspenso && !medItemAnulado(ant) && medVigenteEm(ant, hoje))?(ant.horarios||[]).filter(function(h){ return !dados[h]; }).sort():[]);
+    var ancora={freq:ant.freq||null, dataInicio:item.dataInicio||hoje};
+    var diaDele=medFreqHoje(ancora, hoje);
+    var passou=function(h){ var m=mcrMinDe(h); return m!==null && m-agora<MCR_FOLGA_MIN; };
+    // 3ª rodada (R2-ALTO-1 do QA): a cópia é de TODA dose dada hoje num horário da linha nova, passada ou não
+    var copias=hs.filter(function(h){ return dados[h]; }), semDose=hs.filter(function(h){ return passou(h) && !dados[h]; });
+    // 3ª rodada (R2-MÉDIO-1 do QA): a régua da troca de horário da 6.54, dos horários de antes para os novos
+    var unico=function(h, i, a){ return a.indexOf(h)===i; };
+    var dadas=(Array.isArray(o.dadasHoje)?o.dadasHoje:Object.keys(dados).filter(function(h){ return dados[h]; })).filter(horaOk);
+    var antes=(Array.isArray(o.antes)?o.antes:medVoltouAntes([ant], hoje)).concat(dadas).filter(horaOk).filter(unico).sort();
+    var regraTroca=mcrRegraHorario({antes:antes, depois:hs, dadosHoje:dadas, agoraMin:agora, hoje:hoje, item:Object.assign({}, item, {dataInicio:ancora.dataInicio})});
+    // (a madrugada e o horário que ENTRA já passado têm a frase própria logo abaixo; daqui vale o horário que SAI)
+    var recusaTroca=String(((regraTroca.bloqueios||[]).filter(function(b){ return !/^Antes das 06:00|^O horário novo das/.test(b); }))[0]||'').replace(/[.\s]+$/,'');
+    var naoHoje='';
+    if(regra.madrugada){ naoHoje=String((regra.bloqueios||[])[0]||'antes das 06:00 a mudança começa no dia seguinte').replace(/[.\s]+$/,''); naoHoje=naoHoje.charAt(0).toLowerCase()+naoHoje.slice(1); }
+    else if(!diaDele) naoHoje='hoje não é dia deste remédio';
+    else if(pend.length) naoHoje='a linha antiga ainda toca hoje às '+pend.join(', ')+' (as doses de hoje ficam nela)';
+    else if(recusaTroca) naoHoje=recusaTroca.charAt(0).toLowerCase()+recusaTroca.slice(1);
+    else if(semDose.length) naoHoje=(semDose.length>1?'os horários das ':'o horário das ')+semDose.join(', ')+' de hoje já '+(semDose.length>1?'passaram':'passou')
+      +' (ou falta menos de 15 minutos) e a dose não foi registrada';
+    var seguro=!naoHoje;
+    if(seguro && o.querHoje!==false){
+      var futuras=hs.filter(function(h){ return !dados[h]; });
+      return {inicio:hoje, hoje:true, seguro:true, copias:copias, semAlarme:[], naoHoje:'',
+        porque:copias.length
+          ? ((copias.length>1?'as doses de hoje das ':'a dose de hoje das ')+copias.join(', ')+' já '+(copias.length>1?'foram dadas e continuam':'foi dada e continua')+' contando: o alarme não '+(copias.length>1?'as':'a')+' pede de novo'+(futuras.length?('; hoje ele pede a das '+futuras.join(', ')):'; hoje ele não pede mais nenhuma'))
+          : 'nenhum horário de hoje já passou e nenhuma linha deste remédio toca hoje'};
+    }
+    // a linha antiga que ainda toca hoje fica com o dia (como na troca por datas); sem ela, o horário de hoje que não foi
+    // dado e que a linha nova (começando depois) não pede é dito na tela
+    var semAlarme=(diaDele && !pend.length)?hs.filter(function(h){ return !dados[h]; }):[];
+    return {inicio:mcrInicioNovo(ancora, hoje), hoje:false, seguro:seguro, copias:[], semAlarme:semAlarme, naoHoje:naoHoje,
+      porque:seguro?'foi escolhido começar depois de hoje':naoHoje};
+  }
+  // PURA (3ª rodada, R2-MÉDIO-1 do QA): os horários que as linhas desta corrente tocaram HOJE — os «de antes» da régua da
+  // troca de horário. A linha que parou hoje (o «Parou de tomar» ou o «Lançado por engano», que para «agora») tocava
+  // hoje até parar, com os horários de antes da parada (a marca do anulado guarda `era`); a que parou antes de hoje, não.
+  function medVoltouAntes(linhas, hoje){
+    var out=[];
+    (linhas||[]).forEach(function(it){
+      it=it||{}; if(it.suspenso) return;
+      var era=(it.anulado && it.anulado.era)||null;
+      var hs=(era && Array.isArray(era.horarios) && era.horarios.length)?era.horarios:(it.horarios||[]);
+      var parouHoje=!!(it.paradoEm && String(it.paradoEm.data||'')===String(hoje||''));
+      var tocou=parouHoje?(!(it.dataInicio && String(hoje)<String(it.dataInicio)) && medFreqHoje(it, hoje)):medVigenteEm(it, hoje);
+      if(tocou) hs.forEach(function(h){ if(horaOk(h) && out.indexOf(h)<0) out.push(h); });
+    });
+    return out.sort();
+  }
+  // O id da linha nova: o de continuação da 6.54 (mcrIdTroca). Ocupado por OUTRO remédio: recusa (mcrIdTrocaOcupado
+  // e a corrente). Ocupado por uma linha parada da MESMA corrente: o próximo livre ("_2", "_3"), nunca por cima.
+  function medVoltouId(itens, antigoId, inicio){
+    itens=itens||{}; var base=mcrIdTroca(antigoId, inicio), cor=medCorrenteDe(itens, antigoId), id=base, k=1;
+    while(itens[id] && k<50){
+      // outro remédio (fora da corrente; para o id de troca, o mcrIdTrocaOcupado da 6.54 diz o mesmo): nunca por cima
+      if(cor.indexOf(id)<0) return {id:'', ocupado:true, outro:mcrIdTrocaOcupado(itens, id, antigoId)};
+      k++; id=base+'_'+k;
+    }
+    return itens[id]?{id:'', ocupado:true}:{id:id};
+  }
+  // PURA: a linha nova, que continua a antiga (os dados para conferir e mudar, o estoque herdado, o histórico).
+  var MED_VOLTOU_COPIA=['nome','q','u','local','obs','tipo','origem','freq','quando','derivado_de','motivo'];
+  function medVoltouNovo(ant, antigoId, o){
+    ant=ant||{}; o=o||{}; var novo={};
+    MED_VOLTOU_COPIA.forEach(function(c){ if(ant[c]!==undefined && ant[c]!==null) novo[c]=JSON.parse(JSON.stringify(ant[c])); });
+    if(JSON.stringify((ant.horarios||[]).slice().sort())!==JSON.stringify((o.horarios||[]).slice().sort())){ delete novo.quando; delete novo.derivado_de; }
+    novo.horarios=(o.horarios||[]).slice();
+    if(o.q!=null) novo.q=String(o.q);
+    if(o.local!=null) novo.local=String(o.local);
+    novo.dataInicio=o.inicio;
+    if(o.continuo) novo.continuo=true; else { novo.continuo=false; novo.dataFim=o.dataFim; }
+    novo.continuacaoDe=antigoId;
+    // 2ª rodada: a linha antiga que ainda toca hoje fica sem estoque (ele passa agora): as doses dela de hoje saem já
+    var est=mcrEstoqueHerdado(ant.estoque, (o.dosesHoje?ant.q:novo.q), o.dosesHoje||0, antigoId, o.ts||0); if(est) novo.estoque=est;
+    var linha={quem:o.quem||'-', quando:o.quando||'', acao:'Voltou a tomar (continua a linha de '+(ant.dataInicio?fmtBR(ant.dataInicio):'antes')+'), a partir de '+fmtBR(o.inicio)+' — '+String(o.motivo||''), motivo:String(o.motivo||''), ts:o.ts||0};
+    novo.historico=(Array.isArray(ant.historico)?ant.historico.slice():[]).concat([linha]);
+    novo.informado_por={quem:o.quem||'-', quando:o.quando||'', ts:o.ts||0};
+    return novo;
+  }
+  // Os campos do cartaz → {q, local, horarios, continuo, dataFim} ou {falta} (a frase do que falta).
+  function medVoltouLer(vals, ant, hoje){
+    vals=vals||[]; ant=ant||{}; var local=medEhLocal(ant.u), out={};
+    var v0=String(vals[0]||'').trim(), hsT=String(vals[1]||''), ate=String(vals[2]||'').trim();
+    if(local){ if(!v0) return {falta:'Escreva ONDE passar (o local de aplicação).'}; out.local=v0; out.q=''; }
+    else if(medEhTextoLivre(ant.u)){ if(!v0) return {falta:'Escreva a descrição da dose (ex: 1 medida no medidor do tutor).'}; out.q=v0; }
+    else { if(qtdNum(v0)==null) return {falta:'Escreva a quantidade em número (ex: 1, 1/2, 0,5).'}; out.q=v0; }
+    var hs=hsT.split(/[,;\s]+/).filter(Boolean).map(function(h){ return normHora(h)||h; });
+    if(!hs.length || hs.some(function(h){ return !horaOk(h); })) return {falta:'Escreva os horários assim: 08:00, 20:00.'};
+    out.horarios=hs.filter(function(h, i){ return hs.indexOf(h)===i; }).sort();
+    if(/cont[ií]nuo/i.test(ate)){ out.continuo=true; out.dataFim=''; }
+    else {
+      var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(ate);
+      if(!m) return {falta:'Escreva até quando (ex: 20/10/2026) ou «uso contínuo».'};
+      var iso=m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(iso) || fmtBR(iso)!==(String(m[1]).padStart(2,'0')+'/'+String(m[2]).padStart(2,'0')+'/'+m[3]) || iso<hoje) return {falta:'«Tomar até» tem de ser uma data de hoje em diante (ex: 20/10/2026), ou «uso contínuo».'};
+      out.continuo=false; out.dataFim=iso;
+    }
+    // 2ª rodada (MÉDIO-1): «Começar hoje?» — vazio vale o recomendado (hoje, quando é seguro)
+    var v3=jsNorm(String(vals[3]==null?'':vals[3]));
+    if(/^(s|sim|hoje)\b/.test(v3)) out.querHoje=true;
+    else if(/^(n|nao|amanha)\b/.test(v3)) out.querHoje=false;
+    else if(v3) return {falta:'Em «Começar hoje?», escreva «sim» ou «não».'};
+    return out;
+  }
+  // O que a tela mostra (e o que a gravação confere de novo): quando começa, o id, o que volta junto.
+  // logHoje: o registro de hoje deste FILHOt (as doses dadas hoje, pelo filtro da dose anulada).
+  function medVoltouPlano(itens, id, vals, hoje, agoraMin, logHoje){
+    itens=itens||{}; var ant=itens[id]||{}, l=medVoltouLer(vals, ant, hoje);
+    if(l.falta) return {falta:l.falta};
+    var lg=medDosesSemAnuladas(logHoje), cor=medCorrenteDe(itens, id), dados={}, origem={}, pend=[], dadas={};
+    // 3ª rodada (R2-ALTO-1 e R2-MÉDIO-1 do QA): TODA dose dada hoje nesta corrente, em qualquer horário, passada ou não.
+    // A cópia de uma cópia aponta para a dose de origem (o «Desfazer» nela leva todas as cópias, medDoseGrupo).
+    Object.keys(lg).sort().forEach(function(d){
+      var x=lg[d]; if(!x || x.avulso || cor.indexOf(String(x.itemId||''))<0) return;
+      var h=normHora(x.horario)||String(x.horario||''); if(!horaOk(h) || dadas[h]) return;
+      var pd=d, vistosPd={};   // 4ª rodada: a raiz da cadeia (o lg já não tem cópia de dose anulada: medDoseValeNoMapa)
+      while(lg[pd] && lg[pd].espelho_de && lg[lg[pd].espelho_de] && !vistosPd[pd]){ vistosPd[pd]=1; pd=String(lg[pd].espelho_de); }
+      dadas[h]={doseId:pd, reg:lg[pd]};
+    });
+    l.horarios.forEach(function(h){ if(dadas[h]){ dados[h]=true; origem[h]=dadas[h]; } });
+    var antes=medVoltouAntes(cor.map(function(x){ return itens[x]; }), hoje);
+    cor.forEach(function(x){
+      var it=itens[x]||{};
+      if(it.suspenso || medItemAnulado(it) || !medVigenteEm(it, hoje)) return;
+      (it.horarios||[]).forEach(function(h){ if(!lg[magDoseId(x, h)] && pend.indexOf(h)<0) pend.push(h); });
+    });
+    pend.sort();
+    var ini=medVoltouInicio({antiga:ant, horarios:l.horarios, hoje:hoje, agoraMin:agoraMin, continuo:l.continuo, dataFim:l.dataFim, dados:dados, dadasHoje:Object.keys(dadas).sort(), antes:antes, pendentes:pend, querHoje:l.querHoje});
+    if(l.querHoje===true && !ini.hoje) return {falta:'Não dá para começar hoje: '+ini.naoHoje+'. Escreva «não» em «Começar hoje?».'};
+    if(!l.continuo && l.dataFim<ini.inicio) return {falta:'O remédio terminaria ('+fmtBR(l.dataFim)+') antes de começar ('+fmtBR(ini.inicio)+'): mude «Tomar até».'};
+    var nid=medVoltouId(itens, id, ini.inicio);
+    if(!nid.id) return {falta:'Já existe outro remédio na agenda no lugar da linha nova. Nada foi gravado: confira a lista.'};
+    var est=ant.estoque, estTxt='';
+    if(mcrEhContavel(est)){ var R=(typeof est.restante==='number')?est.restante:((typeof est.inicial==='number')?est.inicial:null); estTxt=(R!=null)?('o estoque restante passa para a linha nova: '+mcrQtdTexto(R)+' '+((R>1&&MED_PLURAL[ant.u])?MED_PLURAL[ant.u]:(ant.u||'unidades'))):'o estoque passa para a linha nova'; }
+    else if(est) estTxt='o estoque (frasco ou pote) passa para a linha nova';
+    var porque=String(ini.porque||''); porque=porque?(porque.charAt(0).toLowerCase()+porque.slice(1)):'';
+    var volta=['a linha nova começa '+(ini.hoje?'hoje, ':'')+mcrDiaTexto(ini.inicio)+(porque?(' — '+porque):''),
+      'dose: '+(medDoseTxt(Object.assign({}, ant, {q:l.q, local:(l.local!=null?l.local:ant.local)}))||'—')+'; horários: '+l.horarios.join(', ')+'; '+(l.continuo?'uso contínuo':('até '+fmtBR(l.dataFim)))];
+    // 2ª rodada (MÉDIO-1 do QA): o horário de hoje que nenhuma linha vai pedir é dito com todas as letras
+    if(ini.semAlarme.length) volta.push('ATENÇÃO: '+(ini.semAlarme.length>1?'as doses de hoje das ':'a dose de hoje das ')+ini.semAlarme.join(', ')+' não '
+      +(ini.semAlarme.length>1?'serão pedidas':'será pedida')+' pelo alarme (a linha nova começa '+mcrDiaTexto(ini.inicio)+'): se a veterinária mandar dar hoje, registre como dose avulsa');
+    if(estTxt) volta.push(estTxt);
+    volta.push('a linha antiga continua como está, com «Voltou a tomar em '+fmtBR(hoje)+' → linha nova»');
+    return {ler:l, inicio:ini, novoId:nid.id, volta:volta, origem:origem, pendentes:pend};
+  }
+  // O «Tomar até» que o cartaz já traz (2ª rodada, BAIXO-4 do QA): o que a linha valia antes do «Lançado por engano»
+  // (a marca guarda), ou vazio quando não se sabe (a pessoa escolhe).
+  function medVoltouAteInicial(ant, hoje){
+    ant=ant||{}; var era=(ant.anulado && ant.anulado.era)||null;
+    if(era){ if(era.continuo) return 'uso contínuo'; if(era.dataFim && String(era.dataFim)>=String(hoje||'')) return fmtBR(era.dataFim); return ''; }
+    if(!ant.paradoEm && ant.continuo===true) return 'uso contínuo';
+    return (!ant.paradoEm && ant.dataFim && String(ant.dataFim)>=String(hoje||''))?fmtBR(ant.dataFim):'';
+  }
+  // «Voltou a tomar» e o «Reabrir» do remédio anulado (AC4.4): editar-medicacao-checkin, a própria senha, o motivo.
+  function medAgendaVoltouAbrir(key, id, origem){
+    origem=(origem==='plantao')?'plantao':'ficha';
+    if(!canEditCheckinMed()){ corrBarrar('registrar «Voltou a tomar»', corrQuemPode('editar-medicacao-checkin'), {alvo:key, item:id}); return Promise.resolve(null); }
+    if(!DB || !key || !id) return Promise.resolve(null);
+    var hoje=zHojeISO(), AG='auaulandia/medicacao-agenda/'+key, nomeH=medAgendaNomeFilhot(origem), tsLido=medAgendaCarimboDaTela(key, origem);
+    return Promise.all([medLerNo(AG+'/itens'), medLerNo('auaulandia/medicacao-log/'+hoje+'/'+key).then(function(v){ return medDosesSemAnuladas(v); })]).then(function(rr){
+      var itens=rr[0]||{}, logH=rr[1]||{}, ant=itens[id], nao=medVoltouPode(itens, id, hoje);
+      if(nao){ zAlertao('NÃO DÁ PARA RETOMAR AGORA', [nao, 'Nada foi gravado.'], {botao:'Entendi'}); return null; }
+      var local=medEhLocal(ant.u), plano=null, vistos=[], era=(ant.anulado && ant.anulado.era)||{};
+      var hs0=(Array.isArray(era.horarios) && era.horarios.length)?era.horarios:(ant.horarios||[]), ate0=medVoltouAteInicial(ant, hoje);
+      var vals0=[local?(ant.local||''):(ant.q||''), hs0.join(', '), ate0||'uso contínuo', ''];
+      var p0=medVoltouPlano(itens, id, vals0, hoje, mcrAgoraMin(), logH);
+      return corrAbrir({acao:'reabrir', nivel:'propria', capacidade:'editar-medicacao-checkin', titulo:'Voltou a tomar '+(ant.nome||'o remédio'), tela:medAgendaNomeTela(origem),
+        oque:'o remédio '+(ant.nome||'')+' da agenda de '+nomeH, original:{caminho:AG+'/itens/'+id, id:id},
+        estado:medItemAnulado(ant)?'lançado por engano (anulado)':'não toca mais', paraEstado:'em uso, numa linha nova',
+        botao:'Gravar «Voltou a tomar»', tituloOk:'Pronto',
+        camposTexto:'Confira a dose, os horários, até quando e se começa hoje, e toque em «Continuar». A linha antiga não muda: o remédio volta numa linha nova.',
+        campos:[{c:local?'local':'q', rotulo:local?'Onde passar':'Quantidade', valor:local?(ant.local||''):(ant.q||'')},
+          {c:'horarios', rotulo:'Horários (ex: 08:00, 20:00)', valor:hs0.join(', ')},
+          {c:'ate', rotulo:'Tomar até (ex: 20/10/2026) ou «uso contínuo»', valor:ate0},
+          {c:'hoje', rotulo:'Começar hoje? (sim ou não)', valor:(!p0.falta && p0.inicio.hoje)?'sim':'não'}],
+        validar:function(vals){ vistos=vals.slice(); plano=medVoltouPlano(itens, id, vals, hoje, mcrAgoraMin(), logH); if(plano.falta) return String(plano.falta); return {volta:plano.volta}; },
+        gravar:function(reg){ return medAgendaVoltouGravar({key:key, id:id, tsLido:tsLido, nomeH:nomeH, origem:origem, reg:reg, vals:vistos, visto:plano}); }});
+    }, function(e){ return medDoseFalhaAbrir('NÃO CONSEGUI ABRIR O REMÉDIO', e); });
+  }
+  function medAgendaVoltouGravar(g){
+    var AG='auaulandia/medicacao-agenda/'+g.key, hoje=zHojeISO(), ts0=Date.now(), quem=quemSou(), quando=agoraBR();
+    return mcrTravaAgenda(AG+'/_ts', g.tsLido, ts0).then(function(passou){
+      if(!passou) return {ok:false, erro:'A agenda de '+g.nomeH+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'};
+      return medLerNo(AG+'/itens').then(function(v){
+        var itens=v||{}, ant=itens[g.id], nao=medVoltouPode(itens, g.id, hoje);
+        if(nao) return {ok:false, erro:nao+' Nada foi gravado.'};
+        var LOGH='auaulandia/medicacao-log/'+hoje+'/'+g.key;
+        return medLerNo(LOGH).then(function(v0){
+          var logH=medDosesSemAnuladas(v0);   // a dose anulada não conta como dada (a cópia sairia de uma dose desfeita)
+          var p=medVoltouPlano(itens, g.id, g.vals, hoje, mcrAgoraMin(), logH);
+          if(p.falta) return {ok:false, erro:p.falta};
+          if(!g.visto || p.inicio.inicio!==g.visto.inicio.inicio) return {ok:false, erro:'O começo da linha nova mudou enquanto o cartaz estava aberto (agora: '+mcrDiaTexto(p.inicio.inicio)+'). Nada foi gravado: abra de novo para conferir.'};
+          var novo=medVoltouNovo(ant, g.id, {horarios:p.ler.horarios, q:p.ler.q, local:p.ler.local, continuo:p.ler.continuo, dataFim:p.ler.dataFim, inicio:p.inicio.inicio, quem:quem, quando:quando, ts:ts0, motivo:g.reg.motivo,
+            dosesHoje:p.inicio.hoje?0:p.pendentes.length});
+          var hist=(Array.isArray(ant.historico)?ant.historico.slice():[]).concat([{quem:quem, quando:quando, acao:'Voltou a tomar em '+fmtBR(hoje)+' → linha nova, a partir de '+fmtBR(p.inicio.inicio)+' — '+String(g.reg.motivo||''), motivo:String(g.reg.motivo||''), ts:ts0}]);
+          var up={}; up['itens/'+p.novoId]=novo; up['itens/'+g.id+'/retomadoPor']=p.novoId; up['itens/'+g.id+'/retomadoEm']=hoje; up['itens/'+g.id+'/historico']=hist;
+          if(ant.estoque){ up['itens/'+g.id+'/estoque']=null; up['itens/'+g.id+'/estoqueMovidoPara']=p.novoId; }
+          up._ts=ts0; up._quem=quem;
+          // 2ª rodada (MÉDIO-1 do QA): começou hoje — a dose de hoje já dada continua contando. A linha nova recebe uma
+          // cópia dela (o espelho da 6.32: «Desfazer» na dose de origem desfaz a cópia junto), na MESMA escrita da agenda.
+          var copias={}, root={};
+          (p.inicio.copias||[]).forEach(function(h){
+            var o=p.origem[h]; if(!o) return;
+            copias[magDoseId(p.novoId, h)]={itemId:p.novoId, nome:String(o.reg.nome||ant.nome||''), q:(o.reg.q==null?'':o.reg.q), u:String(o.reg.u||ant.u||''), local:String(o.reg.local||''),
+              horario:h, quem:String(o.reg.quem||'-'), ts:Number(o.reg.ts)||ts0, avulso:false, espelho_de:o.doseId};
+          });
+          Object.keys(up).forEach(function(k){ root[AG+'/'+k]=up[k]; });
+          Object.keys(copias).forEach(function(d){ root[LOGH+'/'+d]=copias[d]; });
+          return DB.ref().update(root).then(function(){
+            try{
+              if(g.origem==='plantao'){ if(MED_AGENDA_TS && MED_AGENDA_TS.key===g.key && MED_AGENDA_TS.lido) MED_AGENDA_TS.ts=ts0; } else if(FMED_KEY===g.key) FMED_TS_LIDO=ts0;
+              if(currentHosp && medAgendaKey(currentHosp)===g.key && dataKeyAtual()===hoje) Object.keys(copias).forEach(function(d){ MED_AGENDA_LOG[d]=copias[d]; });
+              medAgendaRecarregar(g.key, g.origem);
+              if(typeof audit==='function') audit('medicacao-agenda-voltou', (ant.nome||'remédio')+' — '+g.nomeH+': voltou a tomar a partir de '+fmtBR(p.inicio.inicio)+' (linha nova), por '+(g.reg.por||'-')+' — '+String(g.reg.motivo||''),
+                {alvo:g.key, pet:g.nomeH, med:ant.nome||'', item:g.id, novo:p.novoId, inicio:p.inicio.inicio, copias:Object.keys(copias).length, por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')});
+              if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+            }catch(e){ _logFalhaGrav('depois de «Voltou a tomar» '+g.id, e); }
+            return {ok:true};
+          });
+        });
+      });
+    });
+  }
+
   function voltarPel(){ renovRascLimpar();   // sair da ficha descarta o rascunho do plano que não foi confirmado
     if(pelOrigem==='renovacao'){ irParaView('renovacao'); return; }
     if(pelOrigem==='vacinas'){ document.getElementById('pel-ficha').style.display='none'; document.getElementById('pel-lista').style.display='block'; irParaView('vacinas'); return; }
@@ -44772,7 +45829,8 @@
       DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; })
         .catch(function(e){ try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */ }),
       DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=dashLimparFantasmas(s.val()||{}); DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; })
-        .catch(function(){ DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; })
+        .catch(function(){ DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; }),
+      dashMedAnuladosCarregar(__diaLido)   // 6.58: as medicações tiradas do dia (o riscado do cartão de Medicação)
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
       if(u&&DASH_PONTE) u.value=DASH_PONTE.url||'';
@@ -45079,7 +46137,7 @@
                  // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
                  +dashTvMaoHTML(it.k, o, id)
                  +'</span>'
-                 +'<span class="val"><button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
+                 +'<span class="val">'+((it.k==='medicacao')?dashMedCorrigirBotaoHTML(id):'')+'<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+aut.html+'</div>')
           : (aut.n
             ? ('<div style="margin-top:6px">'+aut.html+'</div>')
@@ -45088,6 +46146,8 @@
         // 6.50: num dia futuro, o banho fixo pulado só naquele dia, com o «pôr de volta».
         // 6.52: o banho de saída do dia que não está nas linhas do automático (sem hora, a caminho, tirado).
         +((it.k==='banho')?(dashBanhoFixoForaHTML(lista, __diaDash)+banhoSaidaCartaoHTML(lista, __diaDash)):'')
+        // 6.58: a medicação tirada (lançada por engano) fica riscada no mesmo cartão, com «Reabrir»
+        +((it.k==='medicacao')?dashMedAnuladasHTML():'')
         +'<div style="margin-top:8px">'
         +(DASH_FORA[it.k]
           ? dashForaPainelHTML(it)
@@ -54930,6 +55990,7 @@
   }
   async function dashRemover(k,id){
     if(!dashPodeTirar()){ dashBarrarTirar(k, id); return; }
+    if(k==='medicacao') return dashMedAnularAbrir(id);   // 6.58 (AC5.3): tirar a medicação é anular, com a senha da Gestão
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
     // REPOSIÇÃO (25/set/2026): o lançamento abateu 1 do Banco; tirar devolve esse dia.
@@ -55054,6 +56115,290 @@
       else alert(zErroAviso('Não removeu', e, {nada:'Nada foi tirado.', unica:true, onde:'na lista', verbo:'saiu', gravou:false, hoje:''}).trim());
     });
   }
+  // ===== STORY 6.58 — LANÇAMENTOS DO DIA › MEDICAÇÃO: CORRIGIR SEM PERDER O ALARME, TIRAR COM A SENHA DA GESTÃO (C06) ==
+  // A medicação do dia só mudava tirando e lançando de novo, e o alarme sumia no intervalo. Agora:
+  //  · «Corrigir» (o remédio e como dar, onde está, a hora): o MESMO lançamento é atualizado e guarda o antes e o
+  //    depois (o alarme passa do valor antigo para o novo sem intervalo). Recusa mudar a hora de uma dose já dada,
+  //    e recusa a correção que separaria esta dose da dose igual do check-in de pertences (as duas tocariam).
+  //  · «tirar»: a senha da Gestão (decisão 1). Numa escrita só, o lançamento sai da lista viva do dia e fica guardado
+  //    inteiro, com a marca de anulado, em daycare/dashboard-anulados/{dia}/medicacao — e aparece riscado no mesmo
+  //    cartão, com «Reabrir» (que lança de novo, como registro novo).
+  var DASH_MED_ANULADOS={}, DASH_MED_ANULADOS_DIA='';
+  var DASH_MED_TELA='Lançamentos do dia › Medicação';
+  function dashMedPodeCorrigir(){ return podeTela('corrigir-lancamento-dia', 'dashdc'); }
+  // O nome do FILHOt na célula, sem o detalhe "(QUAL · ONDE)".
+  function dashMedValorBase(reg){
+    reg=reg||{}; var v=String(reg.valor||''), det=reg.det||{};
+    var suf=' ('+[det.qual, det.onde].filter(Boolean).join(' · ')+')';
+    if((det.qual||det.onde) && v.slice(-suf.length)===suf) return v.slice(0, v.length-suf.length);
+    var i=v.lastIndexOf(' (');
+    return (i>0 && /\)$/.test(v))?v.slice(0, i):v;
+  }
+  function dashMedOndeCanon(v){ var t=jsNorm(String(v||'').trim()), a=DASH_MED_ONDE.filter(function(o){ return jsNorm(o.v)===t || jsNorm(o.t)===t; }); return a.length?a[0].v:''; }
+  // PURA (AC5.1): o lançamento corrigido — a célula, o detalhe e a hora no formato que o dashLancar grava.
+  function dashMedNovoReg(reg, qual, onde, hora){
+    var det=Object.assign({}, (reg&&reg.det)||{}), q=dashDetTextoLimpo(qual), o=dashMedOndeCanon(onde);
+    if(q) det.qual=q; else delete det.qual;
+    if(o) det.onde=o; else delete det.onde;
+    var partes=[det.qual, det.onde].filter(Boolean);
+    return {valor:dashMedValorBase(reg)+(partes.length?(' ('+partes.join(' · ')+')'):''), det:det, hora:medHoraHHMM(hora)};
+  }
+  // PURA (AC5.1): a régua dos campos do cartaz [qual, onde, hora].
+  function dashMedValidar(v){
+    v=v||[];
+    if(!dashDetTextoLimpo(v[0])) return 'Escreva qual remédio e como dar (ex.: Otomax — gotas no ouvido).';
+    if(!dashMedOndeCanon(v[1])) return 'Escreva onde está o remédio: '+DASH_MED_ONDE.map(function(o){ return o.v; }).join(' ou ')+'.';
+    if(!horaOk(String(v[2]||'').trim())) return 'Escreva a hora assim: 09:00.';
+    return '';
+  }
+  // PURA (AC5.2): a dose deste lançamento na fila do alarme de hoje — a dele, ou, quando a junção a escondeu atrás
+  // da dose do check-in de pertences, a dessa (a regra `dada` do medJuntarDoDia). log = o registro do dia (só as que valem).
+  function dashMedDoseDoLanc(id, lanc, dcDoses, lancDoses, log){
+    var l=(lancDoses||[]).filter(function(x){ return x.itemId==='lanc_'+id; })[0];
+    if(!l) return null;
+    var fila=medJuntarDoDia(dcDoses, lancDoses, log);
+    if(fila.indexOf(l)>=0) return {dose:l, doseId:magDoseId(l.itemId, l.horario)};
+    var par=null, melhor=1e9;
+    (dcDoses||[]).forEach(function(d){ if(!medMesmaDose(l, d)) return; var dif=Math.abs(medMinutosDe(l.horario)-medMinutosDe(d.horario)); if(dif<melhor){ melhor=dif; par=d; } });
+    return par?{dose:par, doseId:magDoseId(par.itemId, par.horario), juntou:true}:{dose:l, doseId:magDoseId(l.itemId, l.horario)};
+  }
+  // PURA (AC5.2): a correção pode ir? '' = pode; senão, o porquê. o = {id, antes, depois (o lançamento corrigido),
+  // dcDia (daycare/med-dia do dia), lancs (a lista do dia), chamada, log ({chave:{doseId:reg}}, só as que valem)}.
+  function dashMedCorrecaoRecusa(o){
+    o=o||{}; var a=o.antes||{}, chave=String(a.chave||'').trim(), k='dc__'+chave;
+    if(!chave) return '';
+    var dc=medDosesDoCheckinDia(o.dcDia).filter(function(d){ return d.key===k; });
+    var lancsA=Object.assign({}, o.lancs||{}); lancsA[o.id]=a;
+    var lancsD=Object.assign({}, o.lancs||{}); lancsD[o.id]=Object.assign({}, a, o.depois||{});
+    var la=medDosesDosLancamentos(lancsA, o.chamada).filter(function(d){ return d.key===k; });
+    var ld=medDosesDosLancamentos(lancsD, o.chamada).filter(function(d){ return d.key===k; });
+    var log=o.log||{}, L=log[k]||{};
+    var horaA=medHoraHHMM(a.hora), horaD=medHoraHHMM((o.depois||{}).hora);
+    if(horaA && horaD && horaA!==horaD){
+      var dd=dashMedDoseDoLanc(o.id, a, dc, la, log), r=dd?L[dd.doseId]:null;
+      if(r) return 'A dose das '+horaA+' já foi dada por '+(r.quem||'outra pessoa')+(r.ts?(' às '+corrHora(r.ts)):'')+': mudar a hora agora faria o alarme pedir de novo. Nada foi gravado.';
+      // 2ª rodada (ALTO-1): sem registro, com a hora antiga já passada (ou a menos de 15 minutos) — a dose escondida
+      // atrás da do check-in de pertences (junção) não tem alarme próprio, e a separação já é recusada abaixo
+      var vel=(dd && !dd.juntou)?dashMedHoraAntigaRecusa(horaA, o.agoraMin, 'Nada foi gravado: confira com a plantonista se a dose das '+horaA+' foi dada (e registre) antes de mudar a hora; mudar agora faria o alarme pedir a dose de novo na hora nova.'):'';
+      if(vel) return vel;
+    }
+    var antes=medJuntarDoDia(dc, la, log).length, depois=medJuntarDoDia(dc, ld, log).length;
+    if(depois>antes) return 'Com essa mudança, este remédio e o mesmo remédio do check-in de pertences de hoje deixariam de ser uma dose só, e as duas tocariam no alarme. Nada foi gravado: confira a hora e o nome do remédio.';
+    return '';
+  }
+  // 2ª rodada (ALTO-1 do QA): a régua da 6.54 para a hora ANTIGA — passou, ou falta menos de 15 minutos, e a dose não
+  // tem registro: o alarme dela pode estar aberto no celular da plantonista. Mudar a hora (ou lançar de novo) faria o
+  // alarme pedir a dose de novo na hora nova: dose em dobro. A frase é a da régua da 6.54 (mcrRegraHorario), mais o que fazer.
+  function dashMedHoraAntigaRecusa(h, agoraMin, oQueFazer){
+    var hh=medHoraHHMM(h); if(!hh) return '';
+    var B=mcrRegraHorario({antes:[hh], depois:[], dadosHoje:[], agoraMin:agoraMin, item:{}, novo:true}).bloqueios||[];
+    return B.length?(B[0]+' '+oQueFazer):'';
+  }
+  // A leitura de hoje para a régua do AC5.2 (o registro do dia passa pelo filtro da dose anulada).
+  function dashMedLerDia(dia, chave){
+    var ler=function(p){ return DB.ref(p).once('value').then(function(s){ return (s && typeof s.val==='function')?(s.val()||{}):{}; }); };
+    return Promise.all([ler('daycare/med-dia/'+dia), ler('daycare/dashboard/'+dia+'/medicacao'), ler('daycare/chamada/'+dia),
+      chave?ler('auaulandia/medicacao-log/'+dia+'/dc__'+chave):Promise.resolve({})]).then(function(r){
+      var log={}; if(chave) log['dc__'+chave]=medDosesSemAnuladas(r[3]);
+      return {dcDia:r[0], lancs:r[1], chamada:r[2], log:log};
+    });
+  }
+  // O lançamento ainda é o que o cartaz mostrou? A correção feita em outro aparelho não muda o carimbo (ts), mas muda o
+  // texto, a hora ou o detalhe: confere os quatro (o detalhe campo a campo, sem depender da ordem das chaves).
+  function dashMedMesmoLanc(a, b){
+    a=a||{}; b=b||{};
+    var det=function(o){ o=(o&&typeof o==='object')?o:{}; return Object.keys(o).sort().map(function(k){ return k+'='+JSON.stringify(o[k]); }).join('|'); };
+    return Number(a.ts)===Number(b.ts) && String(a.valor||'')===String(b.valor||'') && String(a.hora||'')===String(b.hora||'') && det(a.det)===det(b.det);
+  }
+  // «Corrigir» a medicação do dia (AC5.1, AC5.2).
+  function dashMedCorrigirAbrir(id){
+    if(!dashMedPodeCorrigir()){ corrBarrar('corrigir a medicação dos Lançamentos do dia', corrQuemPode('corrigir-lancamento-dia', 'dashdc'), {item:'medicacao', id:id}); return Promise.resolve(null); }
+    var reg=(DASH_DADOS.medicacao||{})[id]; if(!reg || !DB) return Promise.resolve(null);
+    var dia=dashDia(), det=reg.det||{}, ehHoje=(dia===dcDataKey());
+    return corrAbrir({acao:'corrigir', titulo:'Corrigir a medicação', oque:'a medicação de '+(dashMedValorBase(reg)||'—')+' (Lançamentos do dia, '+fmtBR(dia)+')', tela:DASH_MED_TELA,
+      original:{caminho:'daycare/dashboard/'+dia+'/medicacao/'+id, id:id},
+      campos:[{c:'qual', rotulo:'Qual remédio e como dar', valor:det.qual||''}, {c:'onde', rotulo:'Onde está o remédio ('+DASH_MED_ONDE.map(function(o){ return o.v; }).join(' ou ')+')', valor:det.onde||''},
+        {c:'hora', rotulo:'Hora (ex: 09:00)', valor:medHoraHHMM(reg.hora)||String(reg.hora||'')}],
+      validar:function(vals){ return dashMedValidar(vals); },
+      nivel:'propria', capacidade:'corrigir-lancamento-dia', telaConcedida:'dashdc',
+      gravar:function(r){ return dashMedCorrigirGravar({id:id, dia:dia, ehHoje:ehHoje, vista:reg, reg:r}); }});
+  }
+  function dashMedCorrigirGravar(g){
+    var P='daycare/dashboard/'+g.dia+'/medicacao/'+g.id;
+    return medLerNo(P).then(function(atual){
+      if(!atual) return {ok:false, erro:'Este lançamento já foi tirado em outro aparelho. Nada foi gravado.'};
+      if(!dashMedMesmoLanc(atual, g.vista)) return {ok:false, erro:'Este lançamento mudou em outro aparelho. Nada foi gravado: feche e abra de novo.'};
+      var d=g.reg.depois||{}, det=atual.det||{};
+      var novo=dashMedNovoReg(atual, ('qual' in d)?d.qual:det.qual, ('onde' in d)?d.onde:det.onde, ('hora' in d)?d.hora:atual.hora);
+      var reg={valor:novo.valor, det:novo.det, hora:novo.hora};
+      var conferir=g.ehHoje?dashMedLerDia(g.dia, String(atual.chave||'').trim()):Promise.resolve(null);
+      return conferir.then(function(D){
+        if(D){ var nao=dashMedCorrecaoRecusa({id:g.id, antes:atual, depois:reg, dcDia:D.dcDia, lancs:D.lancs, chamada:D.chamada, log:D.log, agoraMin:mcrAgoraMin()}); if(nao) return {ok:false, erro:nao}; }
+        var up={valor:novo.valor, det:novo.det, hora:novo.hora};
+        up['correcoes/'+g.reg.ts]={antes:{valor:atual.valor||'', hora:atual.hora||'', det:atual.det||null}, depois:{valor:novo.valor, hora:novo.hora, det:novo.det}, registro:g.reg};
+        return DB.ref(P).update(up).then(function(){
+          try{ dashMedCorrigirDepois(g, atual, Object.assign({}, atual, {valor:novo.valor, det:novo.det, hora:novo.hora})); }catch(e){ _logFalhaGrav('depois de corrigir a medicação '+g.id, e); }
+          return {ok:true};
+        });
+      });
+    });
+  }
+  // Depois do ok (AC5.1): a fila do alarme relê o lançamento (o mesmo registro: sem intervalo); a planilha e a TV.
+  // Texto mudado: a linha nova vai antes de a antiga sair. Só a hora mudou: tira a antiga e lança a nova (a ponte
+  // procura pelo texto), e diz o resultado de cada passo; a falha aparece no cartão («NÃO foi para a TV», «reenviar»).
+  function dashMedCorrigirDepois(g, antigo, novo){
+    if(DASH_DADOS.medicacao && DASH_DADOS.medicacao[g.id] && dashDia()===g.dia) DASH_DADOS.medicacao[g.id]=Object.assign({}, DASH_DADOS.medicacao[g.id], {valor:novo.valor, det:novo.det, hora:novo.hora});
+    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    if(g.ehHoje){ try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }catch(e){} /* silencioso de propósito: a fila se refaz na próxima leitura */ }
+    try{ if(typeof audit==='function') audit('dashboard-medicacao-corrigida', (antigo.valor||'')+' → '+(novo.valor||'')+(String(antigo.hora||'')!==String(novo.hora||'')?(' (hora '+(antigo.hora||'—')+' → '+(novo.hora||'—')+')'):'')+' — '+String(g.reg.motivo||''),
+      {pet:novo.valor||'', id:g.id, dia:g.dia, por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    var mudouTexto=String(antigo.valor||'')!==String(novo.valor||''), mudouHora=String(antigo.hora||'')!==String(novo.hora||'');
+    var passo=function(pr){ return Promise.resolve(pr).then(function(r){ return !!(r && r.ok); }, function(){ return false; }); };
+    if(mudouTexto){
+      return passo(dashEspelhar('medicacao', g.id, novo, 'lancar', g.dia)).then(function(ok){
+        if(!ok){
+          try{ zAlertao('A CORREÇÃO AINDA NÃO CHEGOU À PLANILHA', ['O lançamento foi corrigido no app, mas a planilha (e a TV) ainda mostram «'+(antigo.valor||'')+'».',
+            'Toque em «reenviar» no cartão de Medicação. Depois, confira na planilha se a linha antiga saiu.'], {botao:'Entendi'}); }catch(e){} /* silencioso de propósito: o cartão já mostra «NÃO foi para a TV» */
+          return false;
+        }
+        return passo(dashRemoverDaPlanilha('medicacao', g.id, antigo));
+      });
+    }
+    if(mudouHora){
+      return passo(dashEspelhar('medicacao', g.id, antigo, 'remover', g.dia)).then(function(tirou){
+        return passo(dashEspelhar('medicacao', g.id, novo, 'lancar', g.dia)).then(function(lancou){
+          try{ zAlertao((tirou && lancou)?'A PLANILHA RECEBEU A HORA NOVA':'A PLANILHA NÃO RECEBEU TUDO', [
+            (tirou?'Tirei da planilha a linha das '+(antigo.hora||'—')+'.':'NÃO consegui tirar da planilha a linha das '+(antigo.hora||'—')+'.'),
+            (lancou?'Lancei na planilha a linha das '+(novo.hora||'—')+'.':'NÃO consegui lançar na planilha a linha das '+(novo.hora||'—')+': toque em «reenviar» no cartão de Medicação.')], {ok:(tirou && lancou), botao:'Entendi'}); }
+          catch(e){} /* silencioso de propósito: o cartão já mostra «NÃO foi para a TV» */
+          return tirou && lancou;
+        });
+      });
+    }
+    return Promise.resolve(true);
+  }
+  // «tirar» (AC5.3): depois do porteiro da 6.57 (dashPodeTirar), a senha da Gestão.
+  function dashMedAnularAbrir(id){
+    var reg=(DASH_DADOS.medicacao||{})[id]; if(!reg || !DB) return Promise.resolve(null);
+    var dia=dashDia(), ehHoje=(dia===dcDataKey()), chave=String(reg.chave||'').trim();
+    var abrir=function(dose){
+      var cascata=[];
+      if(ehHoje && chave && medHoraHHMM(reg.hora)) cascata.push('sai do alarme (a dose das '+medHoraHHMM(reg.hora)+')');
+      cascata.push('sai da planilha e da TV');
+      if(dose) cascata.push('a dose já dada hoje continua no registro, com o nome de quem deu: '+(dose.quem||'—')+(dose.ts?(' às '+corrHora(dose.ts)):''));
+      cascata.push('se este lançamento resolveu uma pendência de prevenção, ela não é reaberta aqui');
+      return corrAbrir({acao:'anular', nivel:'gestao', genero:'f', titulo:'Tirar a medicação (lançada por engano)', oque:'a medicação de '+(reg.valor||'—')+' (Lançamentos do dia, '+fmtBR(dia)+')', tela:DASH_MED_TELA,
+        original:{caminho:'daycare/dashboard/'+dia+'/medicacao/'+id, id:id}, estado:'lançada', cascata:cascata,
+        gravar:function(r){ return dashMedAnularGravar({id:id, dia:dia, ehHoje:ehHoje, vista:reg, reg:r}); }});
+    };
+    if(!(ehHoje && chave)) return abrir(null);
+    return dashMedLerDia(dia, chave).then(function(D){
+      var k='dc__'+chave, dc=medDosesDoCheckinDia(D.dcDia).filter(function(d){ return d.key===k; }), la=medDosesDosLancamentos(D.lancs, D.chamada).filter(function(d){ return d.key===k; });
+      var dd=dashMedDoseDoLanc(id, reg, dc, la, D.log);
+      return abrir(dd?((D.log[k]||{})[dd.doseId]||null):null);
+    }, function(){ return abrir(null); });
+  }
+  function dashMedAnularGravar(g){
+    var P='daycare/dashboard/'+g.dia+'/medicacao/'+g.id;
+    return medLerNo(P).then(function(atual){
+      if(!atual) return {ok:false, erro:'Este lançamento já foi tirado em outro aparelho. Nada foi gravado.'};
+      if(!dashMedMesmoLanc(atual, g.vista)) return {ok:false, erro:'Este lançamento mudou em outro aparelho. Nada foi gravado: feche e abra de novo.'};
+      var guardado=Object.assign({}, atual, {anulado:g.reg}), up={};
+      up['dashboard/'+g.dia+'/medicacao/'+g.id]=null;
+      up['dashboard-anulados/'+g.dia+'/medicacao/'+g.id]=guardado;
+      return DB.ref('daycare').update(up).then(function(){
+        try{
+          if(DASH_DADOS.medicacao && dashDia()===g.dia) delete DASH_DADOS.medicacao[g.id];
+          if(dashDia()===g.dia){
+            if(DASH_MED_ANULADOS_DIA!==g.dia){ DASH_MED_ANULADOS={}; DASH_MED_ANULADOS_DIA=g.dia; }
+            DASH_MED_ANULADOS[g.id]=guardado;   // o riscado aparece já, com «Reabrir»
+          }
+          renderDash();
+          if(typeof audit==='function') audit('dashboard-medicacao-anulada', (atual.valor||'')+(atual.hora?(' ('+atual.hora+')'):'')+': tirada dos Lançamentos do dia por '+(g.reg.por||'-')+' — '+String(g.reg.motivo||''),
+            {pet:atual.valor||'', id:g.id, dia:g.dia, por:g.reg.por||'', quem:String(g.reg.login||'-'), role:String(g.reg.loginPapel||'-')});
+          if(g.ehHoje && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+          dashRemoverDaPlanilha('medicacao', g.id, atual);
+        }catch(e){ _logFalhaGrav('depois de tirar a medicação '+g.id, e); }
+        return {ok:true};
+      });
+    });
+  }
+  // «Reabrir» a medicação tirada (AC5.4): lança de novo, como registro novo, com a trava de repetido do dashLancar e
+  // a régua do AC5.2 (a dose já dada hoje: lançar de novo faria o alarme pedir de novo).
+  function dashMedReabrirAbrir(id){
+    var an=DASH_MED_ANULADOS[id]; if(!an || !DB) return Promise.resolve(null);
+    if(an.reaberto){ zAlertao('ESTA MEDICAÇÃO JÁ FOI LANÇADA DE NOVO', ['Por '+((an.reaberto.registro||{}).por||'outra pessoa')+'. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var dia=DASH_MED_ANULADOS_DIA;
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir a medicação', oque:'a medicação de '+(an.valor||'—')+' (Lançamentos do dia, '+fmtBR(dia)+')', tela:DASH_MED_TELA,
+      original:{caminho:'daycare/dashboard-anulados/'+dia+'/medicacao/'+id, id:id}, estado:'tirada (lançada por engano)', paraEstado:'lançada de novo (um registro novo)',
+      volta:['entra de novo nos Lançamentos do dia, na planilha e na TV'].concat((dia===dcDataKey() && an.chave && medHoraHHMM(an.hora))?['volta ao alarme (a dose das '+medHoraHHMM(an.hora)+')']:[]),
+      nivel:'propria', capacidade:'corrigir-lancamento-dia', telaConcedida:'dashdc',
+      gravar:function(r){ return dashMedReabrirGravar({id:id, dia:dia, vista:an, reg:r}); }});
+  }
+  function dashMedReabrirGravar(g){
+    var A='daycare/dashboard-anulados/'+g.dia+'/medicacao/'+g.id, ehHoje=(g.dia===dcDataKey()), chave=String(g.vista.chave||'').trim();
+    return Promise.all([medLerNo(A), medLerNo('daycare/dashboard/'+g.dia+'/medicacao')]).then(function(rr){
+      var an=rr[0], lista=rr[1]||{};
+      if(!an) return {ok:false, erro:'Não achei esta medicação tirada. Nada foi gravado.'};
+      if(an.reaberto) return {ok:false, erro:'Esta medicação já foi lançada de novo por '+((an.reaberto.registro||{}).por||'outra pessoa')+'. Nada foi gravado.'};
+      // a trava de repetido do dashLancar: o mesmo texto (e, com as duas chaves, a mesma ficha) já lançado hoje
+      var repetido=Object.keys(lista).some(function(i){ var r=lista[i]||{}; if(jsNorm(r.valor||'')!==jsNorm(an.valor||'')) return false; if(an.chave && r.chave) return String(r.chave)===String(an.chave); return true; });
+      if(repetido) return {ok:false, erro:(an.valor||'Esta medicação')+' já está lançado em Medicação neste dia. Nada foi gravado.'};
+      var conferir=(ehHoje && chave)?dashMedLerDia(g.dia, chave):Promise.resolve(null);
+      return conferir.then(function(D){
+        if(D){
+          var k='dc__'+chave, dc=medDosesDoCheckinDia(D.dcDia).filter(function(d){ return d.key===k; });
+          var comVelho=Object.assign({}, D.lancs); comVelho[g.id]=an;
+          var la=medDosesDosLancamentos(comVelho, D.chamada).filter(function(d){ return d.key===k; });
+          var dd=dashMedDoseDoLanc(g.id, an, dc, la, D.log), r=dd?((D.log[k]||{})[dd.doseId]):null;
+          if(r && !dd.juntou) return {ok:false, erro:'A dose das '+medHoraHHMM(an.hora)+' deste lançamento já foi dada por '+(r.quem||'outra pessoa')+(r.ts?(' às '+corrHora(r.ts)):'')+': lançar de novo faria o alarme pedir de novo. Nada foi gravado.'};
+          // 2ª rodada (ALTO-1): o mesmo caso sem registro — o alarme do lançamento tirado pode estar aberto no celular
+          var velR=(dd && !dd.juntou && !r)?dashMedHoraAntigaRecusa(an.hora, mcrAgoraMin(), 'Nada foi gravado: confira com a plantonista se a dose das '+medHoraHHMM(an.hora)+' foi dada (e registre) antes de lançar de novo; lançar agora faria o alarme pedir a dose de novo.'):'';
+          if(velR) return {ok:false, erro:velR};
+        }
+        var novoId=DB.ref('daycare/dashboard/'+g.dia+'/medicacao').push().key;
+        var novo={valor:an.valor||'', hora:an.hora||'', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), planilha_ok:null, reaberto_de:{id:g.id, por:g.reg.por||'', ts:g.reg.ts}};
+        if(an.chave) novo.chave=an.chave;
+        if(an.det) novo.det=an.det;
+        var up={}; up['dashboard/'+g.dia+'/medicacao/'+novoId]=novo; up['dashboard-anulados/'+g.dia+'/medicacao/'+g.id+'/reaberto']={novoId:novoId, registro:g.reg};
+        return DB.ref('daycare').update(up).then(function(){
+          try{
+            if(dashDia()===g.dia){ DASH_DADOS.medicacao=DASH_DADOS.medicacao||{}; DASH_DADOS.medicacao[novoId]=novo; }
+            if(DASH_MED_ANULADOS_DIA===g.dia && DASH_MED_ANULADOS[g.id]) DASH_MED_ANULADOS[g.id]=Object.assign({}, DASH_MED_ANULADOS[g.id], {reaberto:{novoId:novoId, registro:g.reg}});
+            renderDash();
+            if(typeof audit==='function') audit('dashboard-daycare','lançou de novo '+(novo.valor||'')+' em Medicação (reaberta, por '+(g.reg.por||'-')+')',{pet:novo.valor||''});
+            if(ehHoje && typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
+            dashEspelhar('medicacao', novoId, novo, 'lancar', g.dia);
+          }catch(e){ _logFalhaGrav('depois de reabrir a medicação '+g.id, e); }
+          return {ok:true};
+        });
+      });
+    });
+  }
+  // O riscado da medicação tirada, no mesmo cartão (AC5.3).
+  function dashMedAnuladasHTML(){
+    if(DASH_MED_ANULADOS_DIA!==dashDia()) return '';
+    var ids=Object.keys(DASH_MED_ANULADOS||{}).sort(function(a, b){ return (Number((DASH_MED_ANULADOS[a]||{}).ts)||0)-(Number((DASH_MED_ANULADOS[b]||{}).ts)||0); });
+    if(!ids.length) return '';
+    return '<div style="margin-top:8px"><div style="font-size:12.5px;font-weight:800;color:var(--muted)">Tiradas (lançadas por engano)</div>'
+      +ids.map(function(id){
+        var an=DASH_MED_ANULADOS[id]||{}, rr=an.reaberto;
+        return corrRiscadoHTML(an.anulado||{}, rr?'':("dashMedReabrirAbrir('"+medJsArg(id)+"')"))
+          +(rr?('<div style="font-size:12.5px;font-weight:800;color:var(--crm-ok);margin:-4px 0 8px">Lançada de novo por '+esc((rr.registro||{}).por||'—')+(rr.registro&&rr.registro.quando?(', em '+esc(rr.registro.quando)):'')+'.</div>'):'');
+      }).join('')+'</div>';
+  }
+  function dashMedCorrigirBotaoHTML(id){
+    return ' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:800;padding:0 6px;min-height:44px;min-width:44px" onclick="'+escAttr("dashMedCorrigirAbrir('"+medJsArg(id)+"')")+'">corrigir</button>';
+  }
+  function dashMedAnuladosCarregar(dia){
+    if(!DB) return Promise.resolve();
+    return DB.ref('daycare/dashboard-anulados/'+dia+'/medicacao').once('value').then(function(s){
+      if(dashDia()!==dia) return;
+      DASH_MED_ANULADOS=(s && typeof s.val==='function' && s.val())||{}; DASH_MED_ANULADOS_DIA=dia;
+    }, function(e){ _logLeituraFalhou('daycare/dashboard-anulados/ (medicação tirada)', e); });
+  }
+
   // ===================================================================================
   // ===== A FILA DAS PERNOITES DO DAY CARE (Adriana, 23/set/2026) =====================
   // "Esse lançamento não precisa ir para a tabela. Não precisa ir para o dashboard — pode
@@ -58233,7 +59578,14 @@
     'hospedagem-mudanca':'Comida ou remédio do hóspede', 'ocorrencia-engano':'Ocorrência lançada por engano',
     'ocorrencia-engano-desfeito':'Desfez a «lançada por engano» da ocorrência', 'ocorrencia-reaberta':'Reabriu a ocorrência',
     'chamado-corrigido':'Corrigiu a resposta do chamado de comida', 'chamado-cancelado':'Cancelou o chamado de comida',
-    'avulsa-tirada':'Tirou a diária avulsa' };
+    'avulsa-tirada':'Tirou a diária avulsa',
+    // ===== 6.58 — o remédio: a dose, a agenda e a medicação do dia (AC7) ===========================
+    'medicacao-dose-anulada':'Desfez uma dose de remédio (lançada por engano)', 'medicacao-dose-reaberta':'Reabriu uma dose de remédio anulada',
+    'medicacao-dose-corrigida':'Corrigiu uma dose avulsa de remédio', 'medicacao-estoque-devolvido':'O estoque do remédio voltou (dose anulada)',
+    'medicacao-agenda-anulada':'Anulou um remédio da agenda (lançado por engano)', 'medicacao-agenda-voltou':'Voltou a tomar um remédio',
+    'dashboard-medicacao-corrigida':'Corrigiu a medicação dos Lançamentos do dia', 'dashboard-medicacao-anulada':'Tirou a medicação dos Lançamentos do dia (lançada por engano)',
+    'ficha-medicamentos':'Medicamentos da ficha', 'telegram-medicacao':'Aviso de remédio ao Telegram',
+    'vet-medicacao':'Prescrição da Veterinária', 'vet-medicacao-reativada':'Reativou um remédio (Veterinária)' };
   function acaoNome(acao){ return ACAO_LABEL[acao]||String(acao||''); }
   // A linha inteira de um registro da auditoria, em português. Ação sem tradução continua como hoje
   // (o nome técnico e o detalhe), sem quebrar a tela.
@@ -59576,7 +60928,7 @@
   // ele que vem para a lista do check-in, liga o "Sim" sozinho e entra no "Tudo igual".
   function ciMedEmVigor(it, hoje){
     it=it||{}; hoje=hoje||zHojeISO();
-    if(it.suspenso || it.paradoEm) return false;
+    if(it.suspenso || it.paradoEm || medItemAnulado(it)) return false;   // 6.58: nem o «lançado por engano»
     if(!it.continuo && it.dataFim && String(it.dataFim)<hoje) return false;
     return true;
   }
@@ -60583,6 +61935,12 @@
   //         campos:[{c, rotulo, valor, grande}], cascata:[texto], estado, paraEstado, volta:[texto],
   //         nivel:'propria'|'gestao', capacidade, telaConcedida, gravar:function(reg) → Promise<{ok, erro}>}
   //   corrAbrir(op) → Promise<{ok, cancelado, semResposta, erro, reg}>
+  // 6.58 (o remédio, 10/out/2026) — quatro acréscimos, todos opcionais (quem não os usa vê o cartaz de sempre):
+  //   op.aviso        — uma frase fixa, em vermelho, no passo de conferir («Se a dose FOI dada, não anule…»);
+  //   op.validar(valores, mud) — a régua da tela sobre os campos, na própria tela: devolve '' (passa), o texto
+  //                     do erro (fica nos campos) ou {volta, cascata, aviso, paraEstado} para o passo de conferir;
+  //   op.camposTexto  — a frase de cima dos campos; e o «Reabrir» também pode trazer campos (o «Voltou a tomar»);
+  //   op.assinaNome   — além da capacidade, assina também esta pessoa (quem registrou a dose, no mesmo dia).
   // =====================================================================================
   var CORR_PRAZO=20000;
   var CORR_PRAZO_ERRO='o banco não respondeu em '+Math.round(CORR_PRAZO/1000)+' segundos';
@@ -60677,7 +62035,8 @@
     if(corrEhPosto(q.nome)) return falha(op.posto?op.posto(q.nome):('Essa senha é de um posto ('+q.nome+'), não de uma pessoa: senha de posto não assina. Use a senha da própria pessoa.'));
     var pode=!!capacidade && podePapel(capacidade, String(q.role||''));
     if(!pode && op.tela) pode=corrPaginasDaPessoa(q.nome, s).indexOf(op.tela)>=0;
-    if(!pode) return falha(op.semPapel?op.semPapel(q.nome):('Essa senha é de '+q.nome+', que não pode assinar '+oq+'. Quem assina: '+corrQuemPode(capacidade, op.tela)+'. Nada foi gravado.'));
+    if(!pode && op.nome && String(q.nome).trim()===String(op.nome).trim()) pode=true;   // 6.58: quem registrou (o mesmo nome)
+    if(!pode) return falha(op.semPapel?op.semPapel(q.nome):('Essa senha é de '+q.nome+', que não pode assinar '+oq+'. Quem assina: '+corrQuemPode(capacidade, op.tela)+(op.nome?(', ou '+op.nome+', que registrou'):'')+'. Nada foi gravado.'));
     return {ok:true, nome:String(q.nome), papel:String(q.role||''), erro:''};
   }
   // ===== O PAPEL CONFERIDO NA FUNÇÃO QUE GRAVA (AC4) ======================================
@@ -60724,11 +62083,14 @@
     var antes={}, depois={}, rotulos={}, q=corrQuemAgora();
     if(op.acao==='corrigir') (mud||[]).forEach(function(m){ antes[m.c]=m.de; depois[m.c]=m.para; rotulos[m.c]=String(m.rotulo||m.c||''); });
     else if(op.acao==='anular'){ antes={estado:String(op.estado||'valendo')}; depois={estado:'anulado'}; }
-    else { antes={estado:String(op.estado||'')}; depois={estado:String(op.paraEstado||'reaberto')}; }
-    return {acao:String(op.acao||''), tela:String(op.tela||''), oque:String(op.oque||''),
+    else { antes={estado:String(op.estado||'')}; depois={estado:String(op.paraEstado||'reaberto')};
+      (mud||[]).forEach(function(m){ antes[m.c]=m.de; depois[m.c]=m.para; rotulos[m.c]=String(m.rotulo||m.c||''); }); }   // 6.58: o «Voltou a tomar»
+    var reg={acao:String(op.acao||''), tela:String(op.tela||''), oque:String(op.oque||''),
       original:{caminho:String((op.original||{}).caminho||''), id:String((op.original||{}).id||'')},
       antes:antes, depois:depois, rotulos:rotulos, motivo:String(motivo||'').trim(), por:String(ass.nome||''), papel:String(ass.papel||''),
       login:String(q.login||'-'), loginPapel:String(q.papel||''), quando:renovQuandoBR(ts), ts:ts};
+    if(op.genero==='f') reg.genero='f';   // 6.58 (2ª rodada): «Anulada (lançada por engano)» — a dose, a medicação
+    return reg;
   }
   // A entrada nova na auditoria do dia (só depois do ok): o resumo «antes → depois», o motivo e
   // quem assinou; os valores vão cortados em 120 letras (o registro inteiro fica com a tela).
@@ -60754,7 +62116,7 @@
   // botão «Reabrir» (aoReabrir = o onclick da tela). Todo texto passa por esc/escAttr.
   function corrRiscadoHTML(reg, aoReabrir){
     reg=reg||{};
-    var rot={corrigir:'Corrigido', anular:'Anulado (lançado por engano)', reabrir:'Reaberto'}[reg.acao]||'Corrigido';
+    var rot=(reg.acao==='anular' && reg.genero==='f')?'Anulada (lançada por engano)':({corrigir:'Corrigido', anular:'Anulado (lançado por engano)', reabrir:'Reaberto'}[reg.acao]||'Corrigido');
     var h='<div class="corr-riscado" style="margin:8px 0;padding:10px 12px;border-radius:12px;border:1.5px dashed var(--line);background:var(--z-cream-warm);color:var(--z-blue);overflow-wrap:anywhere">'
       +'<div style="font-weight:800;text-decoration:line-through;opacity:.75">'+esc(reg.oque||'')+'</div>';
     if(reg.acao==='corrigir') Object.keys(reg.depois||{}).forEach(function(c){
@@ -60789,11 +62151,13 @@
     }
     if(CORR_ATUAL) corrFechar();
     return new Promise(function(fim){
-      CORR_ATUAL={op:op, passo:(op.acao==='corrigir')?'campos':'conferir', valores:(op.campos||[]).map(function(x){ return corrValorTexto(x.valor); }),
+      CORR_ATUAL={op:op, passo:corrComCampos(op)?'campos':'conferir', valores:(op.campos||[]).map(function(x){ return corrValorTexto(x.valor); }),
         mud:[], motivo:'', aviso:'', erro:null, res:null, fim:fim};
       corrDesenhar();
     });
   }
+  // 6.58: o «Reabrir» também pode trazer campos para conferir e mudar (o «Voltou a tomar» do remédio).
+  function corrComCampos(op){ op=op||{}; return op.acao==='corrigir' || (op.acao==='reabrir' && Array.isArray(op.campos) && op.campos.length>0); }
   function corrTitulo(op){
     if(op.titulo) return String(op.titulo);
     return ({corrigir:'Corrigir ', anular:'Anular ', reabrir:'Reabrir '}[op.acao]||'Corrigir ')+String(op.oque||'');
@@ -60814,7 +62178,7 @@
     var aviso=S.aviso?('<div id="corrAviso" role="alert" style="margin-top:10px;color:var(--crm-critico);font-weight:800">'+esc(S.aviso)+'</div>'):'';
     var cancelar=corrBotaoHTML('cancelar', 'Cancelar — não mexer em nada', '');
     if(S.passo==='campos'){
-      corpo='<div style="font-size:15px">Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.</div>'
+      corpo='<div style="font-size:15px">'+esc(op.camposTexto||'Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.')+'</div>'
         +(op.campos||[]).map(function(x, i){
           var v=String((S.valores||[])[i]==null?'':S.valores[i]);
           return '<label for="corrC_'+i+'" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+esc(x.rotulo||x.c||'')+'</label>'
@@ -60830,21 +62194,24 @@
         +'<div style="margin-top:8px">O registro fica riscado, com quem, quando e o motivo. Nada é apagado.</div>';
       else corpo='<div><strong>Volta a ficar:</strong> '+esc(op.paraEstado||'reaberto')+'</div>'
         +((op.volta||[]).length?('<div style="margin-top:6px;font-weight:800">Volta junto:</div>'+corrListaHTML(op.volta)):'')
+        +((S.mud||[]).length?('<div style="margin-top:8px;font-weight:800">Antes → Depois</div>'+(S.mud||[]).map(function(m){ return '<div style="margin-top:6px"><strong>'+esc(m.rotulo)+'</strong>: <span style="text-decoration:line-through">'
+          +esc(corrQ(corrValorTexto(m.de)))+'</span> → '+esc(corrQ(m.para))+'</div>'; }).join('')):'')
         +'<div style="margin-top:8px">A volta é um registro novo: o que foi decidido antes continua guardado, com quem, quando e o motivo.</div>';
+      if(op.aviso) corpo+='<div role="alert" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:2px solid var(--crm-critico);color:var(--crm-critico);font-weight:800">'+esc(op.aviso)+'</div>';
       var gestao=(op.nivel==='gestao');
       corpo+='<label for="corrMotivo" style="display:block;margin-top:14px;font-size:15px;font-weight:800">Motivo (pelo menos 4 palavras)</label>'
         +'<textarea id="corrMotivo" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(S.motivo||'')+'</textarea>'
         +'<label for="corrSenha" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+(gestao?'Senha da Gestão':'Sua senha')+'</label>'
         +'<input id="corrSenha" type="password" autocomplete="off" value="" style="'+CORR_CAMPO_ESTILO+'">'
-        +'<div style="margin-top:6px;font-size:14px;color:var(--z-blue-soft)">Quem assina: '+esc(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida))+'. O app grava o nome de quem assinou, nunca a senha.</div>'
+        +'<div style="margin-top:6px;font-size:14px;color:var(--z-blue-soft)">Quem assina: '+esc(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida)+((!gestao && op.assinaNome)?(', ou '+op.assinaNome+', que registrou'):''))+'. O app grava o nome de quem assinou, nunca a senha.</div>'
         +aviso;
-      bts=corrBotaoHTML('confirmar', CORR_BOTAO[op.acao]||'Gravar', (op.acao==='anular')?'var(--crm-critico)':'var(--z-blue)')
-        +((op.acao==='corrigir')?corrBotaoHTML('voltar', 'Voltar e mudar os campos', 'var(--z-blue)'):'')+cancelar;
+      bts=corrBotaoHTML('confirmar', op.botao||((op.acao==='anular' && op.genero==='f')?'Anular (lançada por engano)':CORR_BOTAO[op.acao])||'Gravar', (op.acao==='anular')?'var(--crm-critico)':'var(--z-blue)')
+        +(corrComCampos(op)?corrBotaoHTML('voltar', 'Voltar e mudar os campos', 'var(--z-blue)'):'')+cancelar;
     } else if(S.passo==='gravando'){
       corpo='<div>Gravando… espere a confirmação do banco.</div>';
     } else if(S.passo==='pronto'){
       var rg=(S.res&&S.res.reg)||{};
-      topo=CORR_TITULO_OK[op.acao]||'Pronto'; cor='var(--crm-ok)';
+      topo=op.tituloOk||((op.acao==='anular' && op.genero==='f')?'Anulada':CORR_TITULO_OK[op.acao])||'Pronto'; cor='var(--crm-ok)';
       corpo='<div>Gravado no sistema, assinado por '+esc(rg.por||'-')+(rg.papel?(' ('+esc(corrPapelNome(rg.papel))+')'):'')+', em '+esc(rg.quando||'')+'.</div>'
         +'<div style="margin-top:6px">O rastro ficou na Linha do tempo do dia.</div>';
       bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-ok)');
@@ -60897,14 +62264,20 @@
     var S=CORR_ATUAL; if(!S) return Promise.resolve(null);
     dados=dados||{};
     if(qual==='cancelar' || qual==='fechar'){ corrFechar(); return Promise.resolve(null); }
-    if(qual==='voltar' && S.passo==='conferir' && S.op.acao==='corrigir'){
+    if(qual==='voltar' && S.passo==='conferir' && corrComCampos(S.op)){
       S.motivo=String(('motivo' in dados)?dados.motivo:corrLerDom('corrMotivo')); S.passo='campos'; S.aviso=''; corrDesenhar(); return Promise.resolve(null);
     }
     if(qual==='continuar' && S.passo==='campos'){
       var vals=Array.isArray(dados.valores)?dados.valores:(S.op.campos||[]).map(function(x, i){ return corrLerDom('corrC_'+i); });
       S.valores=vals.map(function(v){ return String(v==null?'':v); });
       S.mud=corrMudancas(S.op.campos, S.valores);
-      if(!S.mud.length){ S.aviso='Nada mudou: nenhum campo foi alterado. Nada será gravado.'; corrDesenhar(); return Promise.resolve({ok:false, nada:true}); }
+      if(!S.mud.length && S.op.acao==='corrigir'){ S.aviso='Nada mudou: nenhum campo foi alterado. Nada será gravado.'; corrDesenhar(); return Promise.resolve({ok:false, nada:true}); }
+      // 6.58: a régua da tela confere os valores aqui mesmo, sem fechar (e pode dizer o que volta junto)
+      if(typeof S.op.validar==='function'){
+        var ev=''; try{ ev=S.op.validar(S.valores.slice(), S.mud.slice()); }catch(e){ ev='Não consegui conferir os valores ('+zErroMotivo(e, 'banco', '', {})+'). Nada foi gravado.'; }
+        if(typeof ev==='string' && ev){ S.aviso=ev; corrDesenhar(); return Promise.resolve({ok:false, onde:'campos'}); }
+        if(ev && typeof ev==='object') ['volta', 'cascata', 'aviso', 'paraEstado'].forEach(function(c){ if(ev[c]!==undefined) S.op[c]=ev[c]; });
+      }
       S.aviso=''; S.passo='conferir'; corrDesenhar(); return Promise.resolve({ok:true});
     }
     if(qual==='confirmar' && S.passo==='conferir') return corrConfirmar(S, dados);
@@ -60920,7 +62293,7 @@
     var mv=motivoQuatroPalavras(motivo);
     if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }
     var gestao=(op.nivel==='gestao');
-    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida});
+    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome});
     senha='';
     if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }
     var reg=corrRegistro(op, S.mud, ass, motivo, Date.now()), mud=(S.mud||[]).slice();
@@ -61129,7 +62502,7 @@
           // remédio já suspenso pela veterinária não é surpresa: alguém já decidiu por ele.
           // Nem o que já está em "já não toma mais" (QA44 N4): perguntar de novo a cada estadia,
           // e uma resposta errada, o ressuscitaria.
-          return x.nome && !x.item.suspenso && !x.item.paradoEm;
+          return x.nome && !x.item.suspenso && !x.item.paradoEm && !medItemAnulado(x.item);   // 6.58: nem o «lançado por engano»
         });
         if(!lista.length) return [];
         return medEstadiaEncerrada(no.estadiaId).then(function(acabou){
@@ -63193,7 +64566,7 @@
     // Sem horário mudado, só a arrumação da linha que já trocou (A6/A12): sem ler o registro.
     if(!mudou||!DB) return Promise.resolve(mcrAgendaRegua(itens, prev, {}, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()));
     // Sem o registro de hoje, vale a régua do relógio (horário que passou ou está perto não muda hoje).
-    return DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s){ return s.val()||{}; }, function(){ return {}; })
+    return DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s){ return medDosesSemAnuladas(s.val()); }, function(){ return {}; })   // 6.58: a anulada não conta
       .then(function(log){ return mcrAgendaRegua(itens, prev, log, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()); });
   }
   // ---- O PDF reemitido: a seção "ALTERAÇÕES DEPOIS DO CHECK-IN", numa página a mais (K15).
@@ -63558,7 +64931,7 @@
                                       ler('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+M.key).catch(function(){ return null; }), ler(AG+'/_ts')]),
                          prazo(15000, 'o banco não respondeu a tempo (15 s)')])
     .then(function(r){
-      var est=r[0], itens=r[1]||{}, log=r[2]||{}, ja=r[3], logOntem=r[4]||{}, agTs=(r[5]==null?null:r[5]);
+      var est=r[0], itens=r[1]||{}, log=medDosesSemAnuladas(r[2]), ja=r[3], logOntem=medDosesSemAnuladas(r[4]), agTs=(r[5]==null?null:r[5]);   // 6.58: a anulada não conta
       // A10: o dia virou com a tela aberta. O que valia "hoje" mudou: volta ao «Conferir» com o dia novo.
       if(!ja && M.hoje!==hoje){
         var era=M.hoje; M.hoje=hoje; M.log=log; M.logOntem=logOntem; M.salvando=false; M.etapa='conferir';
@@ -63690,8 +65063,8 @@
       var key=medAgendaKey({refKey:est.refKey, nome:est.nome, tutor:est.tutor});
       return Promise.all([
         DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s2){ return s2.val()||{}; }),
-        DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s3){ return s3.val()||{}; }).catch(function(){ return {}; }),
-        DB.ref('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+key).once('value').then(function(s4){ return s4.val()||{}; }).catch(function(){ return {}; })
+        DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s3){ return medDosesSemAnuladas(s3.val()); }).catch(function(){ return {}; }),   // 6.58: a anulada não conta
+        DB.ref('auaulandia/medicacao-log/'+addDiasISO(hoje,-1)+'/'+key).once('value').then(function(s4){ return medDosesSemAnuladas(s4.val()); }).catch(function(){ return {}; })
       ]).then(function(r){
         var mestre=mcrMestreDe(est);
         var mr=mestre?{raca:pelGet(mestre,'raca'), tutor:pelGet(mestre,'tutor')}:null;

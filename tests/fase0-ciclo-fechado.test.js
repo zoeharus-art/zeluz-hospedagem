@@ -26888,7 +26888,13 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // (corrRiscadoHTML), no campo que volta preenchido (corrCartazHTML) e no registro que segue para a tela e para o rastro
   // (corrConfirmar: o «semResposta», o «pronto», o «falhou» e o rastro tardio levam o reg, que carrega o motivo; o erro do banco
   // vai só para gravacao-FALHOU e, na tela, pelo zErroMotivo do corrCartazHTML)
-  corrRiscadoHTML: 1, corrCartazHTML: 1, corrConfirmar: 4 };
+  corrRiscadoHTML: 1, corrCartazHTML: 1, corrConfirmar: 4,
+  // 6.58 (o remédio: a dose, a agenda e a medicação do dia, fora das três telas): o motivo que a pessoa escreveu no cartaz, levado
+  // ao texto do grupo da Gestão (medTgCorrecaoTexto), ao histórico do remédio anulado (medAgendaAnularCampos, e as chaves que o
+  // medAgendaAnularGravar copia dele para a escrita única) e ao da linha nova do «Voltou a tomar» (medVoltouNovo,
+  // medAgendaVoltouGravar: o histórico e o rastro); e o motivo da dose avulsa (o dado que a pessoa escreveu) no campo do «Corrigir»
+  // (medDoseCorrigirAbrir). O erro do banco dessas funções vai para gravacao-FALHOU e, na tela, pelo zErroMotivo.
+  medTgCorrecaoTexto: 1, medDoseCorrigirAbrir: 1, medAgendaAnularCampos: 2, medAgendaAnularGravar: 1, medVoltouNovo: 1, medAgendaVoltouGravar: 2 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -27003,6 +27009,9 @@ const EXCECAO648 = [
   // 6.57 (fora das três telas): no cartaz «Corrigir / Anular / Reabrir», as frases das duas réguas comuns — nunca o cru
   "if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }",   // corrConfirmar: mv = motivoQuatroPalavras («Escreva o que aconteceu…»)
   "if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }",   // corrConfirmar: ass = corrAssinar («Essa senha é de um posto…», «Quem assina: …»)
+  // 6.58 (fora das três telas): o «Parou de tomar» com a régua das 4 palavras — a frase do motivoQuatroPalavras, nunca o cru
+  "validar:function(v){ var mq=motivoQuatroPalavras(v); return mq.ok?'':mq.erro; }});",   // fmedParou: a régua na própria caixa do zTexto
+  "if(!mq4.ok){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+mq4.erro; } return; }",   // fmedParou: a mesma régua, conferida de novo antes de gravar
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -30868,6 +30877,2593 @@ provaAsync('6.57 QA2 J3 (L-7, AC3.1) — a recusa da ficha A, chegando com a fic
     igual(run("__el657['pel-saved'].textContent"), '✓ Salvo');
   } finally { run(SOLTA657); run(PEL_ZERA657); }
 });
+// ================================================================== 6.58 — o remédio: a dose, a agenda e a medicação do dia (S3, parte 1)
+console.log('\n6.58 — O remédio: «Desfazer esta dose», «Reabrir», «Corrigir» a avulsa, «Lançado por engano», «Voltou a tomar», «Remover item» como anular, «Parou de tomar» com 4 palavras, a régua no «Salvar medicamentos» e a medicação do dia (corrigir e tirar)');
+// Tudo INVENTADO: Biscoito (tutora Rita Teste), as pessoas «Teste» e os remédios. Relógio FIXO em sexta, 09/10/2026, 10:00 (o mesmo
+// das 6.54 e 6.57); o banco de mentira da 6.57 (conta gravações, sabe recusar e ficar sem responder). As provas marcadas com * na
+// story falham na base 0e71b31 (as funções e as marcas da 6.58 não existem lá).
+const crypto658 = require('crypto');
+const DIA658 = '2026-10-09', ONTEM658 = '2026-10-08', AMANHA658 = '2026-10-10';
+const K658 = 'biscoito__rita teste', AG658 = 'auaulandia/medicacao-agenda/' + K658, LOG658 = 'auaulandia/medicacao-log/' + DIA658 + '/' + K658;
+const KDC658 = 'biscoito__rita-teste';
+const T658 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+const MOTIVO658 = 'a dose foi registrada no FILHOt errado';
+const espera658 = async (n) => { for (let i = 0; i < (n || 600); i++) await Promise.resolve(); };
+const db658 = (p) => run(`__get657(${JSON.stringify(p)})`);
+const put658 = (p, v) => { ctx.__v658 = v; run(`__put657(${JSON.stringify(p)}, __v658)`); };
+const J658 = (c) => JSON.parse(JSON.stringify(run(c) === undefined ? null : run(c)));
+// a parte da 6.58 do palco (o resto é o ARMA657): a ficha aberta do Biscoito, o Telegram, a ponte da planilha e as senhas
+const ARMA658X = `__bk658={ch:currentHosp, it:MED_AGENDA_ITENS, lg:MED_AGENDA_LOG, ts:MED_AGENDA_TS, sd:selectedDate, tg:tgAvisar, zm:zMapaUma, ca:carregarAgendaMedTodos,
+    cm:carregarMedAtrasadaGestora, todos:MED_AGENDA_TODOS, pdt:pessoaDoTurno, fk:FMED_KEY, fi:FMED_ITENS, fc:FMED_CARREGOU, ft:FMED_TS_LIDO, vc:VET_MED_CACHE,
+    vh:vetHosp, vme:vetMedEditId, est:EST_TODAS, ho:hospedes, mg:MED_AGENDA_GERAL, de:dashEspelhar, sr:senhasRuntime, av:AVISOS_ESTOQUE_CACHE, pl:pelAtual,
+    hm:HOSP_MED_MOVIDOS, pdn:pedirNomeDoTurno, qsa:document.querySelectorAll, mdn:mostrarDespertadorMed, prm:papelRecebeAlarmeMed, dmt:despMedNaTela,
+    dma:(typeof DASH_MED_ANULADOS!=='undefined'?DASH_MED_ANULADOS:null), dmd:(typeof DASH_MED_ANULADOS_DIA!=='undefined'?DASH_MED_ANULADOS_DIA:null), pav:podeAlterarVet,
+    cem:canEditMed, fpe:fmedPodeEditar, rma:renderMedAgenda, mlp:medLinhaDoPel, fco:fmedColetar, cmf:coletarMedAgendaForm, vk:vetKey, rpd:renderPlacarMedDia, fs:fetchSheet};
+  currentHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; selectedDate=new Date(${T658(9, 10, 0)});
+  __tg658=[]; __tgOk658=true; tgAvisar=function(o){ __tg658.push(JSON.parse(JSON.stringify(o))); return Promise.resolve(__tgOk658?{ok:true}:{ok:false, erro:'a ponte não respondeu'}); };
+  zMapaUma=function(p){ return Promise.resolve(__get657(p)||{}); };
+  __ca658=0; carregarAgendaMedTodos=function(){ __ca658++; }; carregarMedAtrasadaGestora=function(){};
+  __pessoa658='Wandela Teste'; pessoaDoTurno=function(){ return __pessoa658; }; pedirNomeDoTurno=function(){};
+  MED_AGENDA_ITENS={}; MED_AGENDA_LOG={}; MED_AGENDA_TS={key:'', ts:null, lido:false}; MED_AGENDA_TODOS=[]; FMED_KEY=''; FMED_ITENS={}; FMED_CARREGOU=false; FMED_TS_LIDO=null;
+  VET_MED_CACHE={}; vetHosp=null; vetMedEditId=null; EST_TODAS={}; hospedes=[]; MED_AGENDA_GERAL={}; AVISOS_ESTOQUE_CACHE={}; HOSP_MED_MOVIDOS={};
+  __dash658=[]; __dashOk658=true; dashEspelhar=function(k, id, reg, acao, dia){ __dash658.push([acao, k, id, String((reg||{}).valor||''), String((reg||{}).hora||'')]); return Promise.resolve(__dashOk658?{ok:true}:{ok:false, erro:'a ponte não respondeu'}); };
+  dashRemoverDaPlanilha=function(k, id, reg){ __dash658.push(['remover-planilha', k, id, String((reg||{}).valor||''), String((reg||{}).hora||'')]); return Promise.resolve({ok:true}); };
+  senhasRuntime=function(){ var m=__bk658.sr(); m['s-wandela']={role:'plantonista', nome:'Wandela Teste'}; m['s-gilda']={role:'monitor', nome:'Gilda Teste'};
+    m['s-vera-dash']={role:'vet', nome:'Vera Veterinária Teste', paginas:['dashdc']}; return m; };
+  if(typeof DASH_MED_ANULADOS!=='undefined'){ DASH_MED_ANULADOS={}; DASH_MED_ANULADOS_DIA=''; }
+  __qs658={}; document.querySelectorAll=function(s){ return __qs658[s]||[]; };
+  __el657['magHoje']={innerHTML:''}; __el657['magItens']={innerHTML:'', querySelectorAll:function(){ return []; }}; __el657['mag-status']={style:{}, textContent:''};
+  __el657['fmedItens']={innerHTML:'', querySelectorAll:function(){ return []; }}; __el657['fmedAcoes']={innerHTML:''}; __el657['fmed-status']={style:{}, textContent:''};
+  __el657['vetMedList']={innerHTML:''}; __el657['vetMed-status']={style:{}, textContent:''}; __el657['pelMedLinha']={innerHTML:''};
+  __abre658=[]; mostrarDespertadorMed=function(it, doseId, dia){ __abre658.push([it.key, doseId, dia]); }; papelRecebeAlarmeMed=function(){ return true; }; despMedNaTela=null;
+  podeAlterarVet=function(){ return true; };`;
+const SOLTA658X = `currentHosp=__bk658.ch; MED_AGENDA_ITENS=__bk658.it; MED_AGENDA_LOG=__bk658.lg; MED_AGENDA_TS=__bk658.ts; selectedDate=__bk658.sd; tgAvisar=__bk658.tg;
+  zMapaUma=__bk658.zm; carregarAgendaMedTodos=__bk658.ca; carregarMedAtrasadaGestora=__bk658.cm; MED_AGENDA_TODOS=__bk658.todos; pessoaDoTurno=__bk658.pdt;
+  FMED_KEY=__bk658.fk; FMED_ITENS=__bk658.fi; FMED_CARREGOU=__bk658.fc; FMED_TS_LIDO=__bk658.ft; VET_MED_CACHE=__bk658.vc; vetHosp=__bk658.vh; vetMedEditId=__bk658.vme;
+  EST_TODAS=__bk658.est; hospedes=__bk658.ho; MED_AGENDA_GERAL=__bk658.mg; dashEspelhar=__bk658.de; senhasRuntime=__bk658.sr; AVISOS_ESTOQUE_CACHE=__bk658.av;
+  pelAtual=__bk658.pl; HOSP_MED_MOVIDOS=__bk658.hm; pedirNomeDoTurno=__bk658.pdn; document.querySelectorAll=__bk658.qsa; mostrarDespertadorMed=__bk658.mdn;
+  papelRecebeAlarmeMed=__bk658.prm; despMedNaTela=__bk658.dmt; podeAlterarVet=__bk658.pav; canEditMed=__bk658.cem; fmedPodeEditar=__bk658.fpe;
+  renderMedAgenda=__bk658.rma; medLinhaDoPel=__bk658.mlp; fmedColetar=__bk658.fco; coletarMedAgendaForm=__bk658.cmf; vetKey=__bk658.vk; renderPlacarMedDia=__bk658.rpd; fetchSheet=__bk658.fs;
+  if(typeof DASH_MED_ANULADOS!=='undefined'){ DASH_MED_ANULADOS=__bk658.dma||{}; DASH_MED_ANULADOS_DIA=__bk658.dmd||''; }`;
+// as funções de verdade do Plantão (desenhar e coletar), guardadas na carga: um palco antigo, da 6.54, deixa moldes no lugar ao terminar
+run('__rmaReal658=renderMedAgenda; __cmfReal658=coletarMedAgendaForm;');
+const arma658 = () => { run(ARMA657); run(ARMA658X); };
+const solta658 = () => { try { run(SOLTA658X); } finally { run(SOLTA657); } };
+// o relógio (e o "hoje") em outro instante, no mesmo molde do ARMA657
+const relogio658 = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;
+  zHojeISO=function(){ var d=new Date(), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }; hojeISO=zHojeISO;`);
+// os dados do Biscoito: Zenrelia (08:00 e 20:00, contável, 11 no estoque, a dose das 08:00 descontada), a cópia dela das 08:00 (outra
+// linha da agenda, o espelho da 6.32), o Ômega 3 (frasco) e a dose avulsa de Dipirona.
+const ZEN658 = (extra) => Object.assign({ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], continuo: true, tipo: 'medicamento', origem: 'vet',
+  estoque: { modo: 'contavel', inicial: 20, restante: 11, contados: { '2026-10-09__zen_08-00': true } } }, extra || {});
+const ZEN2_658 = () => ({ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, tipo: 'medicamento', origem: 'tutor' });
+const OME658 = () => ({ nome: 'Ômega 3', q: '1', u: 'cápsula', horarios: ['08:00'], continuo: true, tipo: 'suplemento', origem: 'tutor', estoque: { modo: 'naocontavel', nivel: 'cheio' } });
+const DOSE658 = (itemId, nome, hr, u, ts, extra) => Object.assign({ itemId: itemId, nome: nome, q: '1', u: u || 'comprimido', horario: hr, quem: 'Wandela Teste', ts: ts, avulso: false }, extra || {});
+const AVU658 = 'avulso_' + T658(9, 9, 31);
+const semear658 = (o) => {
+  o = o || {};
+  put658(AG658, { nome: 'Biscoito', tutor: 'Rita Teste', _ts: 500, itens: o.itens || { zen: ZEN658(), zen2: ZEN2_658(), ome: OME658() } });
+  const log = o.log || {
+    'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)),
+    'zen2_08-00': DOSE658('zen2', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { espelho_de: 'zen_08-00' }),
+    'ome_08-00': DOSE658('ome', 'Ômega 3', '08:00', 'cápsula', T658(9, 8, 6)),
+    [AVU658]: { itemId: null, nome: 'Dipirona', q: '10', u: 'gota', motivo: 'febre de 39 graus', horario: '09:30', quem: 'Wandela Teste', ts: T658(9, 9, 31), avulso: true } };
+  put658(LOG658, log);
+  run(`MED_AGENDA_ITENS=__get657('${AG658}/itens')||{}; MED_AGENDA_LOG=__get657('${LOG658}')||{}; MED_AGENDA_TS={key:'${K658}', ts:500, lido:true}; __esc657=[]; __au657=[]; __tg658=[]; __za657=[];`);
+};
+const cartaz658 = () => String(run('corrCartazHTML(CORR_ATUAL)') || '');
+const assina658 = async (senha, motivo) => { await run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo || MOTIVO658)}, senha:${JSON.stringify(senha)}})`); await espera658(); return [run('CORR_ATUAL?CORR_ATUAL.passo:null'), String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || '')]; };
+const fecha658 = async () => { run(`if(CORR_ATUAL) corrToque('fechar');`); await espera658(); };
+const escLog658 = () => run('__esc657').filter((e) => /medicacao-log/.test(e[1]) && !/RECUSADO/.test(e[0]));
+const aud658 = (acao) => J658(`__au657.filter(function(a){ return a[0]===${JSON.stringify(acao)}; })`);
+const hoje658 = () => String(run("__el657['magHoje'].innerHTML") || '');
+// abre o «Desfazer esta dose» e espera o cartaz
+const anular658 = async (doseId) => { run(`__p658=medDoseAnularAbrir(${JSON.stringify(doseId)});`); await espera658(); };
+
+// ---- AC1 — «Desfazer esta dose» -------------------------------------------------------------------------------------
+provaAsync('6.58 P1 (AC1.1) — «Desfazer esta dose» na linha da dose dada (a agendada e a avulsa), com 44 px; sem dose dada, sem botão; «Corrigir» só na avulsa', async () => {
+  arma658();
+  try {
+    semear658();
+    run('renderMedAgendaHoje()');
+    const h = hoje658();
+    const n = (re) => (h.match(re) || []).length;
+    igual([n(/Desfazer esta dose/g), n(/>Corrigir</g)], [3, 1], 'Zenrelia 08:00 (a cópia é a mesma linha), Ômega 3 08:00 e a avulsa; «Corrigir» só na avulsa');
+    assert.ok(/min-height:44px[^"]*"[^>]*onclick="medDoseAnularAbrir\('zen_08-00'\)">Desfazer esta dose/.test(h), 'o botão da Zenrelia 08:00, com 44 px');
+    assert.ok(/onclick="medDoseCorrigirAbrir\('avulso_\d+'\)">Corrigir/.test(h), 'o «Corrigir» da avulsa');
+    const linha20 = h.split('class="mag-dose').slice(1).filter((x) => /20:00/.test(x))[0] || '';
+    assert.ok(/Dei agora/.test(linha20) && !/Desfazer/.test(linha20), 'a dose das 20:00 (não dada) tem «Dei agora» e nenhum «Desfazer»');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P2 (AC1.2) — o cartaz traz a cascata do banco: a dose, o estoque (contável: de 11 para 12; frasco e avulsa: não muda), o alarme (volta agora; ontem fora da janela: passou do horário seguro), as cópias, o grupo e o aviso fixo', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00');
+    const op = J658('CORR_ATUAL.op');
+    igual([op.acao, op.nivel, op.titulo], ['anular', 'gestao', 'Desfazer esta dose']);
+    igual(op.cascata[0], 'a dose: Zenrelia, 1 comprimido, das 08:00, registrada por Wandela Teste às 08:04');
+    igual(op.cascata[1], 'o estoque: volta 1 comprimido: de 11 para 12');
+    assert.ok(/^O alarme volta a pedir esta dose agora/.test(op.cascata[2]) && /08:00/.test(op.cascata[2]), op.cascata[2]);
+    igual(op.cascata[3], 'as cópias desta dose em outras linhas de Biscoito saem junto: Zenrelia das 08:00 (outra linha da agenda)');
+    igual(op.cascata[4], 'O grupo do plantão (Gestão) recebe a correção');
+    igual(op.aviso, 'Se a dose FOI dada, não anule: o alarme vai pedir de novo e o FILHOt pode receber dose em dobro. Se ela foi dada em outro FILHOt, registre lá.');
+    const h = cartaz658();
+    assert.ok(h.indexOf('Se a dose FOI dada, não anule') >= 0 && /Senha da Gestão/.test(h), 'o aviso e a senha da Gestão no cartaz');
+    await fecha658();
+    // aberto pela cópia, o cartaz é o da dose principal (a mesma cascata)
+    await anular658('zen2_08-00'); igual(J658('CORR_ATUAL.op.original.id'), 'zen_08-00', 'pela cópia, abre a principal'); await fecha658();
+    await anular658('ome_08-00'); igual(J658('CORR_ATUAL.op.cascata[1]'), 'o estoque não muda (frasco ou pote não é contado)'); await fecha658();
+    await anular658(AVU658);
+    igual(J658('CORR_ATUAL.op.cascata').slice(0, 3), ['a dose: Dipirona, 10 gotas, avulsa, às 09:30, registrada por Wandela Teste às 09:31', 'o estoque não muda (a dose avulsa não desconta)', 'o alarme: a dose avulsa não tem alarme a voltar']);
+    await fecha658();
+    // a dose de ONTEM das 08:00, aberta hoje às 10:00: passou do horário seguro (o teto da 6.47)
+    put658('auaulandia/medicacao-log/' + ONTEM658 + '/' + K658, { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(8, 8, 1)) });
+    run(`selectedDate=new Date(${T658(8, 10, 0)}); MED_AGENDA_TODOS=[{key:'${K658}', itemId:'zen', horario:'08:00'}, {key:'${K658}', itemId:'zen', horario:'20:00'}];`);
+    await anular658('zen_08-00');
+    igual(J658('CORR_ATUAL.op.cascata[2]'), 'Passou do horário seguro (11:00): o alarme não toca de novo; a dose aparece como "faltou" para a Gestão');
+    await fecha658();
+  } finally { solta658(); }
+});
+provaAsync('6.58 P3 (AC1.3, AC6) — nível Gestão: a Supervisão, a Veterinária, o posto e a própria plantonista são recusados e nada é gravado; a Gestão assina', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00');
+    for (const s of ['s-amanda', 's-vera', 's-posto', 's-wandela']) {
+      const [p, a] = await assina658(s);
+      igual(p, 'conferir', 'recusado: ' + s); assert.ok(/a Gestão ou a Diretoria|posto/.test(a), a);
+    }
+    igual(escLog658().length, 0, 'nada gravado no registro');
+    const [p] = await assina658(SENHA657);
+    igual(p, 'pronto', 'a Gestão assina');
+    assert.ok(/Anulada/.test(cartaz658()), '«Anulada» (a dose, no feminino) depois do ok');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P4 (AC1.3, AC7.3; 2ª rodada, BAIXO-2) — a marca da dose por transação no nó da dose e a da cópia numa escrita só no nó do dia (o registro 6.57); nenhum campo some nem muda; a senha não está em nó nenhum nem na auditoria', async () => {
+  arma658();
+  try {
+    semear658();
+    const antes = db658(LOG658);
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    const w = escLog658();
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['transaction ' + LOG658 + '/zen_08-00', 'update ' + LOG658], 'a dose por transação (a regra v2 só deixa gravar no nível da dose); a cópia numa escrita só');
+    igual(w[1][2], ['zen2_08-00/anulada'], 'a cópia');
+    const depois = db658(LOG658);
+    ['zen_08-00', 'zen2_08-00'].forEach((d) => {
+      const a = Object.assign({}, depois[d]); delete a.anulada;
+      igual(a, antes[d], 'nenhum campo da dose mudou: ' + d);
+      igual([depois[d].anulada.acao, depois[d].anulada.motivo, depois[d].anulada.por, depois[d].anulada.papel], ['anular', MOTIVO658, 'Gestora Teste', 'gestao']);
+    });
+    igual([depois['ome_08-00'], depois[AVU658]], [antes['ome_08-00'], antes[AVU658]], 'as outras doses não mudaram');
+    assert.ok(JSON.stringify(run('__db657')).indexOf(SENHA657) < 0 && JSON.stringify(run('__au657')).indexOf(SENHA657) < 0, 'a senha em lugar nenhum');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P5 (AC1.3) — banco recusando: «NADA FOI GRAVADO»; a dose continua dada; o estoque igual; nenhuma auditoria de correção e nenhuma mensagem ao grupo', async () => {
+  arma658();
+  try {
+    semear658();
+    run(`__recusa657='medicacao-log';`);
+    await anular658('zen_08-00');
+    const [p] = await assina658(SENHA657);
+    igual(p, 'falhou'); assert.ok(/NADA FOI GRAVADO/.test(cartaz658()));
+    igual([!!db658(LOG658)['zen_08-00'].anulada, db658(AG658 + '/itens/zen/estoque/restante')], [false, 11], 'a dose continua dada e o estoque igual');
+    igual([aud658('registro-anulado').length, aud658('medicacao-dose-anulada').length, run('__tg658.length')], [0, 0, 0]);
+    // a tela também não mudou: a memória da ficha e a linha do Plantão continuam com a dose dada (o «Anulado» só depois do banco)
+    igual([!!run("MED_AGENDA_LOG['zen_08-00'].anulada"), !!run("MED_AGENDA_LOG['zen2_08-00'].anulada")], [false, false], 'a memória da ficha igual');
+    run('renderMedAgendaHoje()');
+    const h = hoje658();
+    assert.ok(/onclick="medDoseAnularAbrir\('zen_08-00'\)">Desfazer esta dose/.test(h) && !/corr-riscado/.test(h), 'a linha continua dada, sem riscado');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P6 (AC1.4) — o estoque volta exatamente a dose, uma vez só (dois aparelhos, o toque repetido); registrar de novo desconta uma vez; a devolução recusada é avisada e vai para gravacao-FALHOU', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    let est = db658(AG658 + '/itens/zen/estoque');
+    igual([est.restante, est.contados['2026-10-09__zen_08-00'], Object.keys(est.devolvidos || {}).length], [12, false, 1], 'voltou 1, a marca do dia em false, o rastro');
+    const dv = est.devolvidos[Object.keys(est.devolvidos)[0]];
+    igual([dv.q, dv.quem, dv.motivo], [1, 'Gestora Teste', MOTIVO658]);
+    // o segundo aparelho (o mesmo cartaz aberto antes) e o toque repetido: não devolvem de novo
+    const r2 = await run(`medDoseAnularGravar({key:'${K658}', dia:'${DIA658}', principal:'zen_08-00', vista:__get657('${LOG658}/zen_08-00'), nomeH:'Biscoito', reg:{ts:${T658(9, 10, 1)}, por:'Outra Teste', motivo:'x'}})`);
+    assert.ok(r2 && r2.ok === false && /já foi anulada por Gestora Teste/.test(r2.erro), JSON.stringify(r2));
+    const r3 = await run(`medEstoqueDevolver('${K658}', 'zen', 'zen_08-00', '1', '${DIA658}', {ts:${T658(9, 10, 2)}, por:'Outra Teste', motivo:'x'})`); await espera658();
+    igual([r3.devolveu, db658(AG658 + '/itens/zen/estoque/restante')], [false, 12], 'a devolução repetida não devolve');
+    // registrar de novo: desconta uma vez
+    run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    est = db658(AG658 + '/itens/zen/estoque');
+    igual([est.restante, est.contados['2026-10-09__zen_08-00']], [11, true], 'registrada de novo: desconta de novo, uma vez');
+    // a devolução recusada pelo banco
+    semear658(); run(`__recusa657='/estoque$';`);
+    await anular658('zen_08-00'); const [p] = await assina658(SENHA657); await espera658();
+    igual(p, 'pronto', 'a anulação entrou');
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 11, 'o estoque não voltou');
+    const za = J658('__za657').filter((z) => /A DOSE FOI ANULADA, MAS O ESTOQUE NÃO VOLTOU/.test(z[0]));
+    assert.ok(za.length === 1 && /Plantão › Agenda de Medicação › estoque/.test(za[0][1].join(' ')), JSON.stringify(za));
+    assert.ok(aud658('gravacao-FALHOU').some((a) => /estoque devolvido/.test(a[1])), 'a falha na auditoria');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P7 (AC1.5) — hoje: a dose anulada volta à fila do despertador; o placar diz «faltou»; o painel da Gestão mostra o atraso', async () => {
+  arma658();
+  try {
+    semear658();
+    run(`MED_AGENDA_TODOS=[{hospNome:'Biscoito', key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', horario:'08:00'}, {hospNome:'Biscoito', key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', horario:'20:00'}];`);
+    run('checarDespertadorMed()'); await espera658();
+    igual(J658('__abre658'), [], 'antes: a das 08:00 está dada, a das 20:00 ainda não chegou');
+    let doses = await run('dosesMedDoDia()');
+    igual(JSON.parse(JSON.stringify(doses)).map((d) => d.horario + ':' + d.status), ['08:00:cumprida', '20:00:pendente']);
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    run('despMedNaTela=null; __abre658=[]; checarDespertadorMed()'); await espera658();
+    igual(J658('__abre658'), [[K658, 'zen_08-00', DIA658]], 'depois: o alarme pede a dose das 08:00');
+    doses = await run('dosesMedDoDia()');
+    igual(JSON.parse(JSON.stringify(doses)).map((d) => d.horario + ':' + d.status), ['08:00:atrasada', '20:00:pendente'], 'o painel da Gestão');
+    run('renderMedAgendaHoje()');
+    assert.ok(/Zenrelia<\/strong> — 0 de 3 doses dadas: 08:00 \(—faltou—\), 08:00 \(—faltou—\), 20:00 \(—pendente—\)/.test(hoje658()), 'o placar (a cópia da agenda conta como no placar de sempre): ' + hoje658().slice(0, 400));
+    assert.ok(/corr-riscado/.test(hoje658()) && /medDoseReabrirAbrir\('zen_08-00'\)/.test(hoje658()), 'o riscado com «Reabrir»');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P8 (AC1.5) — ontem: a anulada dentro da janela da 6.47 volta a tocar (a régua lê o registro pelo filtro); fora da janela, não; a cascata diz até quando', async () => {
+  arma658();
+  try {
+    const LO = 'auaulandia/medicacao-log/' + ONTEM658 + '/' + K658;
+    put658(AG658, { nome: 'Biscoito', _ts: 500, itens: { noite: { nome: 'Gabapentina', q: '1', u: 'cápsula', horarios: ['23:30'], continuo: true } } });
+    put658(LO, { 'noite_23-30': DOSE658('noite', 'Gabapentina', '23:30', 'cápsula', T658(8, 23, 31), { anulada: { acao: 'anular', motivo: 'era de outro FILHOt', por: 'Gestora Teste', ts: T658(9, 0, 10) } }) });
+    const fila = [{ key: K658, itemId: 'noite', horario: '23:30' }];
+    ctx.__fila658 = fila;
+    run(`selectedDate=new Date(${T658(8, 12, 0)});`);    // a tela ainda em ontem (o dia automático da 6.32)
+    const pend = async (t) => { const log = await run('medLogHoje()'); ctx.__lg658 = log; return Object.keys(run(`medOntemPendentes(__fila658, __lg658, {}, '${ONTEM658}', ${t})`)); };
+    igual(await pend(T658(9, 0, 30)), [K658 + '__noite_23-30'], '00:30: dentro da janela (3 h), a anulada toca');
+    igual(await pend(T658(9, 2, 31)), [], '02:31: fora da janela, não toca');
+    // a base: sem o filtro, a anulada contava como dada e não tocava nunca
+    igual(Object.keys(run(`medOntemPendentes(__fila658, {'${K658}':__get657('${LO}')}, {}, '${ONTEM658}', ${T658(9, 0, 30)})`)), [], 'sem o filtro (o registro cru), ela sumia do alarme');
+    // a cascata do «Desfazer» de uma dose de ontem dentro da janela
+    put658(LO, { 'noite_23-30': DOSE658('noite', 'Gabapentina', '23:30', 'cápsula', T658(8, 23, 31)) });
+    relogio658(T658(9, 0, 30)); run(`MED_AGENDA_TODOS=__fila658; MED_AGENDA_ITENS=__get657('${AG658}/itens');`);
+    await anular658('noite_23-30');
+    igual(J658('CORR_ATUAL.op.cascata[2]'), 'O alarme volta a pedir esta dose agora (até 02:30)');
+    await fecha658();
+  } finally { solta658(); }
+});
+// o vigia do servidor (integracao-telegram/Codigo.gs), carregado de verdade num sandbox do Apps Script (o molde dos tests/ponte-*.test.js)
+const ponte658 = (agora, banco) => {
+  const quando = new Date(agora); const pedidos = []; const logs = [];
+  const resp = (c, t) => ({ getResponseCode() { return c; }, getContentText() { return t; } });
+  const sb = {
+    console, Logger: { log(m) { logs.push(String(m)); } },
+    PropertiesService: { getScriptProperties() { return { getProperty() { return null; } }; } },
+    ContentService: { MimeType: { JSON: 'JSON' }, createTextOutput(t) { return { setMimeType() { return this; }, getContent() { return t; } }; } },
+    SpreadsheetApp: { getActiveSpreadsheet() { return { getSheetByName() { return null; }, getSheets() { return []; } }; } },
+    Utilities: { formatDate(d, f, fmt) { d = (d instanceof Date) ? d : quando; const p = (n) => String(n).padStart(2, '0');
+      if (fmt === 'HH:mm') return p(d.getHours()) + ':' + p(d.getMinutes()); if (fmt === 'yyyy-MM-dd') return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+      if (fmt === 'u') { const g = d.getDay(); return String(g === 0 ? 7 : g); } return ''; }, newBlob() { return {}; }, base64Decode() { return []; } },
+    UrlFetchApp: { fetch(url, o) { o = o || {}; const m = String(o.method || 'get').toLowerCase(); pedidos.push({ url: String(url), m, payload: o.payload });
+      if (url.indexOf('identitytoolkit.googleapis.com') >= 0) return resp(200, JSON.stringify({ idToken: 'tk' }));
+      if (url.indexOf('api.telegram.org') >= 0) return resp(200, JSON.stringify({ ok: true }));
+      if (url.indexOf('firebaseio.com') >= 0) { const c = String(url).split('firebaseio.com/')[1].split('.json')[0]; if (m === 'put') return resp(200, String(o.payload || 'null'));
+        return resp(200, JSON.stringify(Object.prototype.hasOwnProperty.call(banco, c) ? banco[c] : null)); }
+      throw new Error('URL inesperada: ' + url); } },
+  };
+  sb.Date = class extends Date { constructor(...a) { if (!a.length) super(quando.getTime()); else super(...a); } static now() { return quando.getTime(); } };
+  vm.createContext(sb);
+  vm.runInContext(fs.readFileSync(PONTE, 'utf8'), sb, { filename: 'Codigo.gs' });
+  const tg = () => pedidos.filter((p) => p.url.indexOf('api.telegram.org') >= 0).map((p) => { let c = p.payload; if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } } return String((c || {}).text || '').replace(/&#(\d+);/g, (t, n) => String.fromCharCode(Number(n))); });
+  return { sb, tg, logs };
+};
+prova('6.58 P9 (AC1.5, L10) — o vigia do servidor (Codigo.gs): a dose anulada conta como sem registro de dia, na noite de ontem e no teste de bancada; a dose que vale continua calando a cobrança', () => {
+  const anul = { acao: 'anular', motivo: 'era de outro FILHOt', por: 'Gestora Teste', ts: 1 };
+  const esp = { ts: 1, esperadas: { 'biscoito__rita teste__zen_08-00': { key: K658, doseId: 'zen_08-00', hospNome: 'Biscoito', nome: 'Zenrelia', q: '1', u: 'comprimido', horario: '08:00' } } };
+  const banco = (dose) => ({ ['auaulandia/med-vigia/' + DIA658]: esp, ['auaulandia/medicacao-log/' + DIA658]: { [K658]: { 'zen_08-00': dose } } });
+  let P = ponte658('2026-10-09T10:00:00', banco(DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', 1)));
+  P.sb.vigiaMedicacao(); igual(P.tg().length, 0, 'a dose que vale: nada a cobrar');
+  P = ponte658('2026-10-09T10:00:00', banco(DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', 1, { anulada: anul })));
+  P.sb.vigiaMedicacao(); igual(P.tg().length, 1, 'a anulada: cobra'); assert.ok(/MEDICAÇÃO SEM REGISTRO/.test(P.tg()[0]) && /Biscoito/.test(P.tg()[0]), P.tg()[0]);
+  // a noite de ontem (22:00), na primeira rodada da manhã
+  const espO = { ts: 1, esperadas: { x: { key: K658, doseId: 'noite_22-00', hospNome: 'Biscoito', nome: 'Gabapentina', q: '1', u: 'cápsula', horario: '22:00' } } };
+  const bancoO = (dose) => ({ ['auaulandia/med-vigia/' + ONTEM658]: espO, ['auaulandia/medicacao-log/' + ONTEM658]: { [K658]: { 'noite_22-00': dose } }, ['auaulandia/med-vigia/' + DIA658]: { semDoses: true, ts: 1 } });
+  P = ponte658('2026-10-09T07:00:00', bancoO(DOSE658('noite', 'Gabapentina', '22:00', 'cápsula', 1)));
+  P.sb.vigiaMedicacao(); igual(P.tg().length, 0, 'a de ontem que vale: nada');
+  P = ponte658('2026-10-09T07:00:00', bancoO(DOSE658('noite', 'Gabapentina', '22:00', 'cápsula', 1, { anulada: anul })));
+  P.sb.vigiaMedicacao(); assert.ok(P.tg().length === 1 && /DOSE DE ONTEM SEM REGISTRO/.test(P.tg()[0]), JSON.stringify(P.tg()));
+  // o teste de bancada
+  P = ponte658('2026-10-09T10:00:00', banco(DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', 1, { anulada: anul })));
+  P.sb.vigiaMedicacao_TESTE(); assert.ok(P.logs.some((l) => /^FALTA Biscoito - Zenrelia as 08:00/.test(l)), JSON.stringify(P.logs));
+});
+provaAsync('6.58 P10 (AC1.8) — registrar de novo depois de anular: grava; a anulação fica inteira dentro da dose, também na cópia; dois aparelhos, uma dose só (a trava da 6.32)', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    run(`__pessoa658='Gilda Teste'; MED_AGENDA_TODOS=[]; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    let L = db658(LOG658);
+    igual([L['zen_08-00'].quem, !!L['zen_08-00'].anulada, L['zen_08-00'].anteriores.length, L['zen_08-00'].anteriores[0].quem, L['zen_08-00'].anteriores[0].anulada.motivo], ['Gilda Teste', false, 1, 'Wandela Teste', MOTIVO658]);
+    igual([L['zen2_08-00'].quem, L['zen2_08-00'].espelho_de, !!L['zen2_08-00'].anulada, L['zen2_08-00'].anteriores[0].anulada.motivo], ['Gilda Teste', 'zen_08-00', false, MOTIVO658], 'a cópia guarda a anulação dela');
+    // o segundo aparelho, com o «Dei agora» da tela velha: não registra de novo e diz quem assinou
+    run(`__pessoa658='Outra Pessoa Teste'; __za657=[]; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    L = db658(LOG658);
+    igual(L['zen_08-00'].quem, 'Gilda Teste', 'uma dose só');
+    assert.ok(J658('__za657').some((z) => /ESTA DOSE JÁ FOI REGISTRADA/.test(z[0]) && /Gilda Teste/.test(z[1].join(' '))), 'diz quem assinou');
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 11, 'o estoque desconta uma vez');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P11 (AC1.7) — Reabrir: a dose volta a dada (o estoque desconta e o alarme cala), com a anulação e a reabertura no histórico; recusado se a dose foi registrada de novo', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel')], ['reabrir', 'gestao']);
+    assert.ok(J658('CORR_ATUAL.op.volta').indexOf('o estoque desconta de novo: de 12 para 11') >= 0, JSON.stringify(J658('CORR_ATUAL.op.volta')));
+    let [p] = await assina658('s-amanda', 'a anulação foi um engano da Gestão'); igual(p, 'conferir', 'a Supervisão não reabre');
+    [p] = await assina658(SENHA657, 'a anulação foi um engano da Gestão'); igual(p, 'pronto');
+    const L = db658(LOG658);
+    igual([!!L['zen_08-00'].anulada, !!L['zen2_08-00'].anulada], [false, false], 'a dose e a cópia voltam a valer');
+    const h = L['zen_08-00'].anulacoes_desfeitas[Object.keys(L['zen_08-00'].anulacoes_desfeitas)[0]];
+    igual([h.anulada.motivo, h.reaberta.acao, h.reaberta.motivo], [MOTIVO658, 'reabrir', 'a anulação foi um engano da Gestão']);
+    igual([db658(AG658 + '/itens/zen/estoque/restante'), db658(AG658 + '/itens/zen/estoque/contados')['2026-10-09__zen_08-00']], [11, true], 'o estoque descontou de novo');
+    const doses = await run(`MED_AGENDA_TODOS=[{hospNome:'Biscoito', key:'${K658}', itemId:'zen', nome:'Zenrelia', horario:'08:00'}]; dosesMedDoDia()`);
+    igual(JSON.parse(JSON.stringify(doses))[0].status, 'cumprida', 'o alarme cala');
+    // registrada de novo depois da anulação: o Reabrir é recusado e diz por quem e quando
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    relogio658(T658(9, 10, 20)); run(`__pessoa658='Gilda Teste'; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    run(`__za657=[]; __p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    const za = J658('__za657');
+    assert.ok(za.length && za[0][0] === 'NÃO HÁ O QUE REABRIR' && /registrada de novo por Gilda Teste às 10:20/.test(za[0][1][0]), JSON.stringify(za));
+    // e a gravação com o cartaz aberto antes (outra tela) também recusa
+    const r = await run(`medDoseReabrirGravar({key:'${K658}', dia:'${DIA658}', principal:'zen_08-00', vista:{anulada:{ts:1}}, nomeH:'Biscoito', reg:{ts:2, por:'x', motivo:'y'}})`);
+    assert.ok(r.ok === false && /registrada de novo por Gilda Teste/.test(r.erro), JSON.stringify(r));
+  } finally { solta658(); }
+});
+provaAsync('6.58 P12 (AC1.6) — a mensagem de correção vai ao grupo gestao, com o FILHOt, o remédio, o horário, quem registrou, quem anulou e o motivo; com a ponte falhando, entra na fila (auaulandia/med-tg-fila)', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657);
+    const tg = J658('__tg658');
+    igual(tg.length, 1); igual(tg[0].grupo, 'gestao');
+    ['DOSE ANULADA', 'Biscoito', 'Zenrelia', 'Dose das 08:00', 'Quem registrou: Wandela Teste às 08:04', 'Quem anulou: Gestora Teste (Gestão)', 'Motivo: ' + MOTIVO658].forEach((t) => assert.ok(tg[0].texto.indexOf(t) >= 0, t + ' em: ' + tg[0].texto));
+    semear658(); run('__tgOk658=false;');
+    await anular658('zen_08-00'); await assina658(SENHA657); await espera658();
+    const fila = db658('auaulandia/med-tg-fila') || {};
+    const it = fila[Object.keys(fila)[0]] || {};
+    assert.ok(/DOSE ANULADA/.test(it.texto || '') && it.grupo === 'gestao' && it.tentativas === 0, JSON.stringify(fila));
+  } finally { solta658(); }
+});
+provaAsync('6.58 P13 (AC1.9) — a avulsa anulada: o estoque não muda (nenhuma transação no estoque), não há alarme; o riscado, o grupo e o Reabrir valem igual', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658(AVU658); const [p] = await assina658(SENHA657, 'a dipirona foi dada em outro FILHOt');
+    igual(p, 'pronto');
+    igual(run('__esc657').filter((e) => /estoque/.test(e[1])).length, 0, 'nada no estoque');
+    igual(db658(LOG658)[AVU658].anulada.motivo, 'a dipirona foi dada em outro FILHOt');
+    run('renderMedAgendaHoje()');
+    assert.ok(/anulada<\/span>/.test(hoje658()) && new RegExp("medDoseReabrirAbrir\\('" + AVU658 + "'\\)").test(hoje658()), 'riscado com «Reabrir», sem «Dei agora»');
+    igual(J658('__tg658').length, 1, 'o grupo recebe');
+  } finally { solta658(); }
+});
+// ---- AC2 — «Corrigir» a dose avulsa ----------------------------------------------------------------------------------
+provaAsync('6.58 P14 (AC2, AC6) — corrigir a avulsa: no mesmo dia, quem registrou e quem tem editar-medicacao assinam, outra pessoa não; de dia anterior, só a Gestão; o antes e o depois no registro; as réguas do registro; a correção vai ao grupo', async () => {
+  arma658();
+  try {
+    semear658();
+    const abre = async () => { run(`__p658=medDoseCorrigirAbrir('${AVU658}');`); await espera658(); };
+    await abre();
+    igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel'), J658('CORR_ATUAL.op.campos').map((c) => c.valor)], ['corrigir', 'propria', ['Dipirona', '10', 'gota', '', '09:30', 'febre de 39 graus']]);
+    // as réguas do registro, na própria tela
+    for (const [v, re] of [[['D', '10', 'gota', '', '09:30', ''], /nome do medicamento/], [['Dipirona', '10', 'xícara', '', '09:30', ''], /medida/], [['Dipirona', 'dez', 'gota', '', '09:30', ''], /quantidade em número/],
+      [['Dipirona', '10', 'gota', '', '9h', ''], /horário assim/], [['Pomada X', '', 'pomada', '', '09:30', ''], /ONDE você passou/]]) {
+      run(`corrToque('continuar', {valores:${JSON.stringify(v)}})`);
+      igual(run('CORR_ATUAL.passo'), 'campos'); assert.ok(re.test(run('CORR_ATUAL.aviso')), run('CORR_ATUAL.aviso'));
+    }
+    run(`corrToque('continuar', {valores:['Dipirona', '12', 'gota', '', '09:30', 'febre de 39 graus']})`); igual(run('CORR_ATUAL.passo'), 'conferir');
+    assert.ok(/Wandela Teste, que registrou/.test(cartaz658()), 'o cartaz diz que quem registrou também assina');
+    let [p, a] = await assina658('s-bia', 'a quantidade foi digitada errada'); igual(p, 'conferir', 'a consultora não tem editar-medicacao'); assert.ok(/Wandela Teste, que registrou/.test(a), a);
+    [p] = await assina658('s-wandela', 'a quantidade foi digitada errada'); igual(p, 'pronto', 'quem registrou assina');
+    let d = db658(LOG658)[AVU658];
+    igual([d.q, d.nome, d.quem, d.ts], ['12', 'Dipirona', 'Wandela Teste', T658(9, 9, 31)], 'o mesmo registro, atualizado');
+    const c = d.correcoes[Object.keys(d.correcoes)[0]];
+    igual([c.antes, c.depois, c.por], [{ q: '10' }, { q: '12' }, 'Wandela Teste'], 'o antes e o depois dentro dele');
+    assert.ok(J658('__tg658').some((t) => /DOSE AVULSA CORRIGIDA/.test(t.texto) && /Quantidade[^\n]*«10» → «12»/.test(t.texto)), JSON.stringify(J658('__tg658')));
+    // a Supervisão (editar-medicacao) também assina no mesmo dia
+    await abre(); run(`corrToque('continuar', {valores:['Dipirona', '12', 'gota', '', '09:45', 'febre de 39 graus']})`);
+    [p] = await assina658('s-amanda', 'o horário foi digitado errado'); igual(p, 'pronto'); igual(db658(LOG658)[AVU658].horario, '09:45');
+    // de dia anterior: só a Gestão
+    const LO = 'auaulandia/medicacao-log/' + ONTEM658 + '/' + K658, AVO = 'avulso_' + T658(8, 21, 0);
+    put658(LO, { [AVO]: { itemId: null, nome: 'Dipirona', q: '10', u: 'gota', horario: '21:00', quem: 'Wandela Teste', ts: T658(8, 21, 0), avulso: true } });
+    run(`selectedDate=new Date(${T658(8, 12, 0)}); __p658=medDoseCorrigirAbrir('${AVO}');`); await espera658();
+    igual(J658('CORR_ATUAL.op.nivel'), 'gestao');
+    run(`corrToque('continuar', {valores:['Dipirona', '8', 'gota', '', '21:00', '']})`);
+    for (const s of ['s-wandela', 's-amanda']) { [p] = await assina658(s, 'a quantidade de ontem estava errada'); igual(p, 'conferir', 'de dia anterior, ' + s + ' não assina'); }
+    [p] = await assina658(SENHA657, 'a quantidade de ontem estava errada'); igual(p, 'pronto');
+    igual(db658(LO)[AVO].q, '8');
+  } finally { solta658(); }
+});
+// ---- AC3 — o alarme da 6.47 fica igual -------------------------------------------------------------------------------
+// O texto das funções puras na base 0e71b31 (sha256 do .toString()): nenhuma letra muda.
+const PURAS_BASE658 = {
+ "statusDoseMed": "2f6157644aecaad3982dd5875cfafb463d566622a7cba05d55d97fdc82d3045f",
+ "medOntemTeto": "7da0747bd9e668e951d49e2875ce246844c381176f8593089f6bd47b2974fffe",
+ "medOntemNaJanela": "56148f99c6e25debe67d25ce2a320bbff4ee3fc79cb598ae690c15f0c62c4d0b",
+ "medOntemPendentes": "902a27e12a259451701899c45e573cbe6edfb1c13e9c51c1a5f750970097d08c",
+ "medDosesDosLancamentos": "7a17af2f623d08cd043f3e3f0d11b5afcbb796b8d811b5b3959a6d5be1a35136",
+ "medJuntarDoDia": "6e8092df7678c0f4d5408d7cc495ff5aca035b4aff9577fa17002073b76ece79",
+ "mcrRegraHorario": "0dcbeabf0e7106e157e5ec60086b1bd026bd3aae2367d8b262a258f119700001",
+ "mcrDadosHoje": "84406fbe2b8309d17b6cbb6e6932792dc0c9e5cfaafc3b2d82866e46ef8c1004",
+ "mcrOntemFaltam": "b5ad10752a497bcf616677b62fdb10e85652aac85b8baa3411749e349bdb5aa6",
+ "mcrParou": "8dc5df9d0dfedecc6fb3d4cf883270917177e58a4f8d95442ad6c25a0bb59b5c"
+};
+prova('6.58 P15 (AC3.1, guarda) — as funções puras que decidem o alarme (6.47 e 6.54) estão idênticas, letra por letra, às da base 0e71b31', () => {
+  const dif = Object.keys(PURAS_BASE658).filter((n) => crypto658.createHash('sha256').update(String(run(n + '.toString()'))).digest('hex') !== PURAS_BASE658[n]);
+  igual(dif, [], 'mudaram: ' + dif.join(', '));
+  igual(Object.keys(PURAS_BASE658).length, 10);
+});
+// As três funções de leitura que a 6.58 mudou, como eram na base 0e71b31 (o .toString(), palavra por palavra): a régua da prova 16.
+const BASE_TEXTOS658 = {"medLogHoje": "function medLogHoje(){\n    var p='auaulandia/medicacao-log/'+dataKeyAtual();\n    if(typeof zMapaUma==='function') return zMapaUma(p).then(function(v){ return Object.assign({},v); });\n    return DB.ref(p).once('value').then(function(s){ return s.val()||{}; });\n  }", "carregarAgendaMedTodos": "function carregarAgendaMedTodos(){\n    if(!DB){ MED_AGENDA_TODOS=[]; return; }\n    var ger=++__medAgendaGeracao;\n    var lista=[], susp={}, diaCarga=dataKeyAtual();   // o dia da lista de hóspedes desta carga (6.47, 4ª rodada: MED_AGENDA_DIA); susp: 5ª rodada\n    __medAgendaFalhas=0;\n    const jobs=(hospedes||[]).map(function(h){\n      const key=medAgendaKey(h); if(!key) return Promise.resolve();\n      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(s){\n        const itens=s.val(); if(!itens) return;\n        Object.keys(itens).forEach(function(id){\n          const it=itens[id]||{};\n          if(it.suspenso){ susp[key+'__'+id]=1; return; } // Onda 3: medicação suspensa pela vet não gera alarme (mata o caso Hulk); 6.47: o adiado dela não volta\n          if(!medVigenteEm(it)) return; // parou no dia do término (ou ainda não começou) — não gera alarme\n          // saidaHoje (6.47): quem tem saída neste dia — a dose da noite dele não toca depois da meia-noite.\n          // continuaEm (6.54, K17): o remédio que trocou de horário por datas continua AMANHÃ no item novo; a dose\n          // dele de hoje, atrasada, não toca além da metade do intervalo até a 1ª dose do novo (medOntemTeto).\n          // Só quando o novo vai MESMO ser dado amanhã (3ª rodada, N1): suspenso pela veterinária, parado ou fora\n          // do dia, a última dose do antigo fica com o teto de sempre da 6.47.\n          var nv=it.trocadoPor?itens[it.trocadoPor]:null, amanhaC=addDiasISO(diaCarga,1);\n          var cont=(nv && Array.isArray(nv.horarios) && nv.dataInicio===amanhaC && !nv.suspenso && !nv.paradoEm && medVigenteEm(nv, amanhaC))?nv.horarios.slice():null;\n          (it.horarios||[]).forEach(function(hr){ var e={hospNome:h.nome||'', key:key, itemId:id, nome:it.nome||'', q:it.q||'', u:it.u||'', local:it.local||'', obs:it.obs||'', horario:hr, saidaHoje:!!h.saidaHoje}; if(cont) e.continuaEm=cont; lista.push(e); });\n        });\n      }).catch(function(e){ __medAgendaFalhas++; _logLeituraFalhou('auaulandia/medicacao-agenda/ (carregarAgendaMedTodos)', e); });\n    });\n    // Leitura ÚNICA (once), de propósito: zMapaUma abriria um ouvinte permanente num nó de\n    // UM dia, e ouvinte de dia que ninguém fecha é conexão e download para sempre.\n    var ler=function(caminho, rotulo){\n      return DB.ref(caminho).once('value').then(function(s){ return s.val()||{}; })\n        // Leitura que falhou conta como falha (Fase 0): o retrato do vigia sai \"parcial\", e\n        // o servidor não acha que não havia dose.\n        .catch(function(e){ __medAgendaFalhas++; _logFalhaGrav(rotulo+' (carregarAgendaMedTodos)', e); return {}; });\n    };\n    Promise.all(jobs).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */.then(function(){\n      // ===== A MEDICAÇÃO DO DAY CARE ENTRA NO MESMO ALARME (Adriana, 13/ago/2026) ====\n      // \"O horário precisa virar alarme — isso é importantíssimo.\" O remédio que o tutor\n      // manda com o auluno do dia é tão remédio quanto o do hóspede. Em vez de um segundo\n      // despertador (que ninguém manteria), a dose do Day Care entra na MESMA fila: mesmo\n      // som, mesma confirmação, mesmo registro de quem deu.\n      // Fase 0 (25/set/2026): o remédio lançado na recepção entra na mesma fila, e as duas\n      // portas se juntam numa regra só (medJuntarDoDia, logo abaixo).\n      var hojeDc=dcDataKey();\n      return Promise.all([\n        DB.ref('daycare/med-dia/'+hojeDc).once('value').then(function(s){ return s.val()||{}; })\n          .catch(function(e){ __medAgendaFalhas++; _logFalhaGrav('daycare/med-dia/ (carregarAgendaMedTodos)', e); return {}; }),\n        ler('daycare/dashboard/'+hojeDc+'/medicacao', 'daycare/dashboard/…/medicacao'),\n        ler('daycare/chamada/'+hojeDc, 'daycare/chamada/'),\n        (typeof medLogHoje==='function'?medLogHoje():Promise.resolve({})).catch(function(){ return {}; }) /* silencioso de propósito: sem o registro de hoje, a regra fica com a dose do check-in de pertences, a de sempre */\n      ]).then(function(r){\n        medJuntarDoDia(medDosesDoCheckinDia(r[0]), medDosesDosLancamentos(r[1], r[2]), r[3])\n          .forEach(function(d){ lista.push(d); });\n      });\n    }).then(function(){\n      if(ger!==__medAgendaGeracao) return;          // outra carga começou depois: ela é que vale\n      MED_AGENDA_TODOS=lista; MED_AGENDA_DIA=diaCarga; MED_AGENDA_INTEIRA=!(__medAgendaFalhas>0); MED_AGENDA_SUSPENSOS=susp;\n      if(typeof carregarMedAtrasadaGestora==='function') carregarMedAtrasadaGestora();\n      medVigiaGravar();\n    }).catch(function(e){ _logFalhaGrav('agenda de medicação do dia (carregarAgendaMedTodos)', e); });\n  }", "renderMedAgendaHoje": "function renderMedAgendaHoje(){\n    try{ if(typeof renderRelMedConfirm==='function') renderRelMedConfirm(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */\n    const el=document.getElementById('magHoje'); if(!el) return;\n    // Estoque de entrada não interessa a quem só dá o remédio (plantonista): esconde pra ela.\n    const _magRole=(document.body.dataset.role||''); const estoqueHTML=(_magRole==='plantonista')?'':renderEstoqueResumo();\n    const rows=[];\n    Object.keys(MED_AGENDA_ITENS).forEach(function(id){\n      const it=MED_AGENDA_ITENS[id]||{};\n      if(it.suspenso) return; // Onda 3: suspensa pela vet — não pede dose nem entra no placar do dia\n      if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje\n      (it.horarios||[]).forEach(function(h){\n        const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];\n        rows.push({id:id,doseId:doseId,nome:it.nome,q:it.q,u:it.u,local:it.local,obs:it.obs,continuo:it.continuo,dataInicio:it.dataInicio,dataFim:it.dataFim,freq:it.freq,h:h,tipo:it.tipo||'medicamento',feito:!!log,quem:log&&log.quem,ts:log&&log.ts});\n      });\n    });\n    // Camada 4 — placar do dia: \"Optivet — 3 de 4 doses dadas: 10:32 (Giulia), 16:30 (—faltou—)...\".\n    // Calculado ANTES de somar as avulsas (o placar é só das doses agendadas de verdade).\n    const placarHTML=renderPlacarMedDia(rows);\n    // doses avulsas de hoje (não agendadas) — só para conferência, não têm \"Dei agora\"\n    Object.keys(MED_AGENDA_LOG).forEach(function(doseId){\n      const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,local:log.local||'',obs:log.motivo||'',h:log.horario,feito:true,quem:log.quem,ts:log.ts,avulso:true});\n    });\n    if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class=\"hint\">Nenhum horário agendado para hoje.</div>'; return; }\n    // ANTI-DUPLICAÇÃO: se a agenda tem itens repetidos (mesmo nome+dose no mesmo horário), mostra\n    // UMA linha só. Se qualquer cópia já foi dada, a linha aparece como \"dado\" (prefere o registro feito).\n    // O LOCAL entra na chave: o Romeo toma Cortavance às 14:00 nos OUVIDOS e às 14:00 nas\n    // PATINHAS. Sem o local, as duas viravam uma linha só e uma aplicação sumia da tela.\n    var vistos={}; var unicas=[];\n    rows.forEach(function(r){\n      var k=medDoseChave(r)+'|'+(r.avulso?'av':'ag');\n      if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if(r.feito && !ex.feito){ unicas[vistos[k]]=r; } return; }\n      vistos[k]=unicas.length; unicas.push(r);\n    });\n    unicas.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });\n    el.innerHTML=estoqueHTML+placarHTML+unicas.map(function(r){\n      const dose=(typeof medDoseTxt==='function')?medDoseTxt({nome:r.nome,q:r.q,u:r.u,local:r.local}):fmtQtd(r.q,r.u);\n      return '<div class=\"mag-dose'+(r.feito?' feito':'')+'\">'\n        +'<div class=\"mag-dose-info\" style=\"flex:1;min-width:0\">'\n          +'<div style=\"font-size:11px;font-weight:800;color:var(--muted)\">'+escAttr(r.h||'--:--')+(r.avulso?' · avulsa':'')+'</div>'\n          +'<div style=\"font-size:17px;font-weight:800;color:var(--z-blue);line-height:1.2\">'+escAttr(r.nome||'')+'</div>'\n          +(dose?'<div style=\"font-size:14px;font-weight:700;color:var(--z-gold-deep)\">'+escAttr(dose)+'</div>':'')\n          +(function(){ var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(r):''; return per?'<div style=\"font-size:12.5px;font-weight:700;color:var(--muted)\">'+escAttr(per)+'</div>':''; })()\n          +(r.obs?'<div style=\"font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:3px;line-height:1.25\">▸ '+escAttr(r.obs)+'</div>':'')\n        +'</div>'\n        +(r.feito\n          ? '<div class=\"mag-dose-ok\">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'\n          : (r.id?'<button type=\"button\" class=\"btn btn-gold\" onclick=\"registrarDoseAgendada(\\''+r.id+'\\',\\''+r.h+'\\',this)\">Dei agora</button>':'<span class=\"mag-dose-ok\" style=\"color:var(--muted)\">registrada</span>'))\n      +'</div>';\n    }).join('');\n  }"};
+provaAsync('6.58 P16 (AC3.2, guarda) — sem dose anulada e sem remédio anulado, a fila do alarme, o teto, as doses de ontem, o despertador, o placar, o painel da Gestão e o retrato do vigia são idênticos aos da base, num sorteio de 120 agendas × 6 horas', async () => {
+  arma658();
+  run(`__b658={}; Object.keys(__bt658=${JSON.stringify(BASE_TEXTOS658)}).forEach(function(n){ __b658[n]=eval('('+__bt658[n]+')'); }); __n658={mlh:medLogHoje, cat:__bk658.ca, rmh:renderMedAgendaHoje};
+    __placares658=[]; __rpm658=renderPlacarMedDia; renderPlacarMedDia=function(r){ var h=__rpm658(r); __placares658.push(h); return h; };`);
+  const usa = (base) => run(base ? 'medLogHoje=__b658.medLogHoje; carregarAgendaMedTodos=__b658.carregarAgendaMedTodos; renderMedAgendaHoje=__b658.renderMedAgendaHoje;'
+    : 'medLogHoje=__n658.mlh; carregarAgendaMedTodos=__n658.cat; renderMedAgendaHoje=__n658.rmh;');
+  let seed = 58; const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const H = ['00:15', '02:00', '06:00', '07:30', '08:00', '09:30', '12:00', '14:00', '18:00', '20:00', '22:00', '23:30'];
+  const dif = []; let n = 0;
+  try {
+    for (let s = 0; s < 120; s++) {
+      const itens = {}; const ni = 1 + Math.floor(rnd() * 3);
+      for (let i = 0; i < ni; i++) {
+        const hs = []; const nh = 1 + Math.floor(rnd() * 3); for (let j = 0; j < nh; j++) { const h = pick(H); if (hs.indexOf(h) < 0) hs.push(h); }
+        const it = { nome: 'Rem' + i, q: '1', u: 'comprimido', horarios: hs.sort(), continuo: rnd() < 0.6 };
+        if (!it.continuo) it.dataFim = pick([ONTEM658, DIA658, AMANHA658, '2026-10-12']);
+        if (rnd() < 0.2) it.dataInicio = pick(['2026-10-05', DIA658, AMANHA658]);
+        if (rnd() < 0.1) it.suspenso = true;
+        if (rnd() < 0.1) it.paradoEm = { quem: 'Ana Teste', data: DIA658 };
+        itens['ci_' + i] = it;
+      }
+      const log = {}, logO = {};
+      Object.keys(itens).forEach((id) => (itens[id].horarios || []).forEach((h) => {
+        if (rnd() < 0.4) log[id + '_' + h.replace(':', '-')] = { quem: 'Wandela Teste', ts: T658(9, 7, 0), nome: itens[id].nome, horario: h };
+        if (rnd() < 0.4) logO[id + '_' + h.replace(':', '-')] = { quem: 'Wandela Teste', ts: T658(8, 7, 0), nome: itens[id].nome, horario: h };
+      }));
+      ctx.__ag658 = itens; ctx.__lg658 = log; ctx.__lo658 = logO;
+      const t = T658(9, 6 + Math.floor(rnd() * 17), Math.floor(rnd() * 60)), tOntem = T658(9, 0, Math.floor(rnd() * 300));
+      const roda = async (base) => {
+        usa(base);
+        run(`__db657={}; __put657('${AG658}/itens', __ag658); __put657('${LOG658}', __lg658); __put657('auaulandia/medicacao-log/${ONTEM658}/${K658}', __lo658);
+          hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; selectedDate=new Date(${T658(9, 10, 0)}); __esc657=[];`);
+        relogio658(t);
+        run('carregarAgendaMedTodos()'); await espera658();
+        const out = {};
+        out.fila = J658('MED_AGENDA_TODOS');
+        out.vigia = J658(`__get657('auaulandia/med-vigia/${DIA658}')`); if (out.vigia) delete out.vigia.ts;
+        out.teto = J658('MED_AGENDA_TODOS.map(function(e){ return medOntemTeto(e, MED_AGENDA_TODOS); })');
+        out.painel = JSON.parse(JSON.stringify(await run('dosesMedDoDia()')));
+        run(`despMedNaTela=null; __abre658=[]; checarDespertadorMed();`); await espera658();
+        out.desp = J658('__abre658');
+        // ontem: a tela ainda no dia de ontem (a régua da 6.47 lê o registro pelo medLogHoje)
+        run(`selectedDate=new Date(${T658(8, 12, 0)});`);
+        const lgO = await run('medLogHoje()'); ctx.__lgo658 = lgO;
+        out.ontem = J658(`medOntemPendentes(MED_AGENDA_TODOS, __lgo658, {}, '${ONTEM658}', ${tOntem})`);
+        run(`selectedDate=new Date(${T658(9, 10, 0)}); MED_AGENDA_ITENS=__get657('${AG658}/itens')||{}; MED_AGENDA_LOG=__get657('${LOG658}')||{}; __placares658=[]; renderMedAgendaHoje();`);
+        out.placar = J658('__placares658');
+        return JSON.stringify(out);
+      };
+      for (let k = 0; k < 6; k++) {
+        n++;
+        const a = await roda(false), b = await roda(true);
+        if (a !== b) { dif.push(s + '/' + k); if (dif.length < 3) console.log('      diferença: ' + a.slice(0, 300) + ' ≠ ' + b.slice(0, 300)); }
+      }
+    }
+  } finally { usa(false); run('renderPlacarMedDia=__rpm658;'); solta658(); }
+  console.log('      ' + n + ' sorteios comparados com a base (fila, vigia, teto, painel, despertador, ontem, placar); diferenças: ' + dif.length);
+  igual(dif, []);
+});
+// ---- a lista fechada dos pontos de leitura (prova 17) -----------------------------------------------------------------
+// Toda função que cita 'auaulandia/medicacao-log/' (fora de comentário e do rótulo do rastro) está aqui, com o que faz:
+// filtro = lê pelo filtro da dose anulada; memoria = guarda a anulada na memória da ficha (quem desenha conta pelo filtro);
+// anulada = lê a anulada DE PROPÓSITO (para guardá-la, mostrá-la ou desfazê-la); escrita = só grava; S6 = a 6.53, sem mudança (Fora).
+const LEITURA658 = {
+  medLogHoje: 'filtro', resumoDoTurno: 'filtro', medAdiadoDeOutroDia: 'filtro', mcrReguaDaAgenda: 'filtro', mcrGravar: 'filtro', mcrAbrirEstadia: 'filtro',
+  medAgendaAnularAbrir: 'filtro', medAgendaAnularGravar: 'filtro', dashMedLerDia: 'filtro',
+  // 2ª rodada: o «Voltou a tomar» lê as doses de hoje (a cópia da dose dada para a linha nova que começa hoje)
+  medAgendaVoltouAbrir: 'filtro', medAgendaVoltouGravar: 'filtro',
+  carregarMedAgenda: 'memoria',
+  registrarDoseAgendadaGlobal: 'anulada', medDoseAnularAbrir: 'anulada', medDoseAnularGravar: 'anulada', medDoseReabrirAbrir: 'anulada', medDoseReabrirGravar: 'anulada',
+  // 3ª rodada (R2-MÉDIO-2): completa as cópias que ficaram valendo com a marca da origem (escrita; a leitura é a do medDoseAnularAbrir)
+  medDoseCompletarCopias: 'anulada',
+  medDoseCorrigirAbrir: 'anulada', medDoseCorrigirGravar: 'anulada',
+  registrarDoseAvulsa: 'escrita',
+  hospLerDadosDaTroca: 'S6', hospTrocaAplicar: 'S6', hospLerProvasExcluir: 'S6' };
+prova('6.58 P17 (AC1.5, risco 1) — a varredura: toda leitura de auaulandia/medicacao-log no app está na lista fechada; as de filtro passam pelo filtro; a memória da ficha é desenhada pelo filtro', () => {
+  const linhas = extractMainScript(fs.readFileSync(APP, 'utf8')).split('\n'); let fn = '(topo)'; const vistos = {};
+  linhas.forEach((l) => {
+    const x = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (x) fn = x[1];
+    if (/^\s*(\/\/|\*|\/\*)/.test(l) || l.indexOf('auaulandia/medicacao-log/') < 0) return;
+    const semRotulo = l.replace(/_log(?:LeituraFalhou|FalhaGrav)\([^)]*\)/g, '');
+    if (semRotulo.indexOf('auaulandia/medicacao-log/') < 0) return;      // só o rótulo do rastro
+    vistos[fn] = 1;
+  });
+  const fora = Object.keys(vistos).filter((f) => !LEITURA658[f]);
+  igual(fora, [], 'leitura fora da lista: ' + fora.join(', '));
+  const sumiu = Object.keys(LEITURA658).filter((f) => !vistos[f]);
+  igual(sumiu, [], 'função da lista que não lê mais (lista velha): ' + sumiu.join(', '));
+  const corpo = (f) => String(run(f + '.toString()'));
+  const semFiltro = Object.keys(LEITURA658).filter((f) => LEITURA658[f] === 'filtro' && !/medDosesSemAnuladas\(|medLogSemAnuladas\(|medDoseValendo\(/.test(corpo(f)));
+  igual(semFiltro, [], 'lê sem o filtro: ' + semFiltro.join(', '));
+  const semAnulada = Object.keys(LEITURA658).filter((f) => LEITURA658[f] === 'anulada' && !/\.anulada\b/.test(corpo(f)));
+  igual(semAnulada, [], 'diz ler a anulada e não a trata: ' + semAnulada.join(', '));
+  ['renderMedAgendaHoje', 'renderRelMedConfirm'].forEach((f) => assert.ok(/medDoseValendo\(/.test(corpo(f)), f + ' desenha a memória pelo filtro'));
+  igual(Object.keys(vistos).length, 24);
+});
+// ---- AC4 — o remédio da agenda ---------------------------------------------------------------------------------------
+const FICHA658 = (extra) => `pelAtual={n:'Biscoito', tutor:'Rita Teste'}; FMED_KEY='${K658}'; FMED_ITENS=medDedupe(__get657('${AG658}/itens')||{}).itens; FMED_CARREGOU=true; FMED_TS_LIDO=__get657('${AG658}/_ts'); ${extra || ''}`;
+const anularRem658 = async (id, origem) => { run(`__p658=medAgendaAnularAbrir('${K658}', ${JSON.stringify(id)}, ${JSON.stringify(origem || 'ficha')});`); await espera658(); };
+provaAsync('6.58 P18 (AC4.1, AC4.2) — «Lançado por engano» na ficha: o cartaz com a cascata; a Gestão; escrita única com a parada da 6.54 (inclusive a dose de ontem de madrugada), a marca, o histórico e o carimbo; a trava recusa com a agenda mudada', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    run(`AVISOS_ESTOQUE_CACHE={a1:{key:'${K658}', itemId:'zen', status:'pendente'}};` + FICHA658());
+    await anularRem658('zen');
+    const op = J658('CORR_ATUAL.op');
+    igual([op.acao, op.nivel, op.titulo], ['anular', 'gestao', 'Lançado por engano']);
+    igual(op.cascata, ['as doses que ainda não foram dadas não serão mais pedidas: hoje às 20:00', 'as doses já dadas continuam no histórico: hoje às 08:00 (Wandela Teste)',
+      'o estoque fica guardado no remédio (nada é apagado)', 'o aviso de estoque aberto continua aberto (a Recepção encerra pela tela dela)']);
+    let [p] = await assina658('s-amanda', 'o remédio foi lançado no FILHOt errado'); igual(p, 'conferir', 'a Supervisão não anula');
+    run('__esc657=[];');
+    [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto');
+    const w = run('__esc657').filter((e) => !(e[0] === 'transaction' && /\/_ts$/.test(e[1])) && !/RECUSADO/.test(e[0]) && !/medicacao-log|estoque/.test(e[1]));
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update '], 'uma escrita só (a trava anda o carimbo antes, por transação)');
+    igual(w[0][2].filter((k) => k.indexOf(AG658) === 0).map((k) => k.slice(AG658.length + 1)).sort(),
+      ['_quem', '_ts', 'itens/zen/anulado', 'itens/zen/continuo', 'itens/zen/dataFim', 'itens/zen/historico', 'itens/zen/horarios', 'itens/zen/paradoEm']);
+    const it = db658(AG658 + '/itens/zen');
+    igual([it.continuo, it.dataFim, it.horarios, it.anulado.motivo, it.anulado.por, !!it.paradoEm, /lançado por engano/.test(it.historico.slice(-1)[0].acao), it.estoque.restante],
+      [false, DIA658, ['08:00'], 'o remédio foi lançado no FILHOt errado', 'Gestora Teste', true, true, 11]);
+    igual(db658(AG658 + '/_ts') === run('FMED_TS_LIDO'), true, 'a tela guarda o carimbo novo');
+    // de madrugada: a dose de ontem que o alarme ainda tocaria também sai (a régua da 6.54)
+    put658(AG658, { nome: 'Biscoito', _ts: 600, itens: { noite: { nome: 'Gabapentina', q: '1', u: 'cápsula', horarios: ['08:00', '23:30'], continuo: true } } });
+    put658('auaulandia/medicacao-log/' + DIA658 + '/' + K658, { 'noite_08-00': DOSE658('noite', 'Gabapentina', '08:00', 'cápsula', T658(9, 8, 0)) });
+    relogio658(T658(10, 0, 40)); run(FICHA658());
+    await anularRem658('noite');
+    assert.ok(J658('CORR_ATUAL.op.cascata[0]').indexOf('a de ontem das 23:30 (sem registro), que o alarme ainda tocaria') >= 0, J658('CORR_ATUAL.op.cascata[0]'));
+    [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto');
+    const it2 = db658(AG658 + '/itens/noite');
+    igual([it2.dataFim, it2.horarios], [DIA658, ['08:00']], 'ontem (09/10) fica só com a dose dada; a das 23:30 de ontem não toca');
+    // a trava: outro aparelho mudou a agenda depois que a ficha leu
+    semear658({ itens: { zen: ZEN658() } }); relogio658(T658(9, 10, 0)); run(FICHA658());
+    await anularRem658('zen');
+    put658(AG658 + '/_ts', 999);
+    [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado');
+    igual(p, 'falhou'); assert.ok(/A agenda de Biscoito mudou em outro aparelho\. Nada foi salvo: feche e abra de novo\./.test(cartaz658()), cartaz658());
+    igual(!!db658(AG658 + '/itens/zen').anulado, false, 'nada gravado');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P19 (AC4.3) — o remédio anulado fica fora do alarme (também com a dose de hoje dada e anulada depois), do check-in, do "vai faltar" e da «Receita encerrada»; o medDedupe não o junta; a ficha o mostra riscado com «Reabrir»; no Plantão, só leitura e fora do «Salvar agenda»; no Cuidado Vet, sem botões, e o vetSalvarMed recusa', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658(), zen2: ZEN2_658() } });
+    run(FICHA658()); await anularRem658('zen'); await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado');
+    const fila = async () => { run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+    igual(await fila(), ['zen2@08:00'], 'a Zenrelia anulada sai da fila (a cópia, que é outro remédio vivo, fica)');
+    // a dose das 08:00 da anulada, anulada depois: continua fora
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    igual(await fila(), ['zen2@08:00'], 'a dose anulada de um remédio anulado não traz o remédio de volta');
+    const it = db658(AG658 + '/itens/zen');
+    igual([run(`ciMedEmVigor(__get657('${AG658}/itens/zen'), '${DIA658}')`), run(`ciMedEmVigor({continuo:true, anulado:{por:'x'}}, '${DIA658}')`)], [false, false], 'o check-in (também sem a parada)');
+    igual(run(`medCoberturaEstadia({anulado:true, q:'1', horarios:['08:00'], estoque:{modo:'contavel', inicial:2}}, '${DIA658}', '2026-10-15')`), null, 'a conta "vai faltar"');
+    run(`MED_AGENDA_GERAL={'${K658}':{nome:'Biscoito', itens:{v1:{nome:'Antibiótico', origem:'vet', continuo:false, dataFim:'${ONTEM658}', anulado:{por:'x'}}, v2:{nome:'Antibiótico B', origem:'vet', continuo:false, dataFim:'${ONTEM658}'}}}}; hojeISO=function(){ return '${DIA658}'; };`);
+    igual(J658('medsEncerradasPend()').map((p) => p.id), ['v2'], '«Receita encerrada» só para o vivo');
+    ctx.__vivo658 = { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true };
+    const dd = J658(`medDedupe({a:__vivo658, b:Object.assign({}, __vivo658, {anulado:{por:'x'}}), c:Object.assign({}, __vivo658, {anulado:{por:'y'}})})`);
+    igual([Object.keys(dd.itens).sort(), dd.sai], [['a', 'b', 'c'], []], 'o medDedupe não junta nem tira o anulado');
+    // a ficha: a seção «Lançados por engano»
+    run(FICHA658('fmedDesenhar();'));
+    const f = String(run("__el657['fmedItens'].innerHTML"));
+    assert.ok(/Lançados por engano/.test(f) && /corr-riscado/.test(f) && /medAgendaVoltouAbrir\('biscoito__rita teste','zen','ficha'\)">Reabrir/.test(f), 'riscado com «Reabrir»');
+    assert.ok(!/class="magitem" data-id="zen"/.test(f), 'fora do formulário da ficha');
+    // o Plantão: só leitura, fora do «Salvar agenda»
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); __rmaReal658();`);
+    const pl = String(run("__el657['magItens'].innerHTML"));
+    assert.ok(/data-anulado="zen"/.test(pl) && !/class="magitem" data-id="zen"/.test(pl) && /class="magitem" data-id="zen2"/.test(pl), 'riscado e só leitura');
+    ctx.__elZen = { dataset: { id: 'zen' }, querySelector() { return { value: 'Zenrelia' }; }, querySelectorAll() { return []; } };
+    run(`__qs658['#magItens .magitem']=[__elZen];`);
+    igual(Object.keys(run('__cmfReal658()')), [], 'uma linha velha do anulado no formulário não é coletada');
+    // o Cuidado Vet
+    run(`VET_MED_CACHE=__get657('${AG658}/itens'); renderVetMedList();`);
+    const v = String(run("__el657['vetMedList'].innerHTML"));
+    const blocoZen = v.split('vet-med-item').filter((x) => /data-anulado="zen"/.test(x))[0] || '';
+    assert.ok(blocoZen && !/vetAbrirAlterarMed|vetSuspenderMed|vetReativarMed/.test(blocoZen), 'sem «Alterar» nem «Suspender»');
+    run(`vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; vetMedEditId='zen'; vetKey=function(){ return '${K658}'; };
+      __el657['vetMedForm']={querySelector:function(){ return null; }}; __el657['vmNome']={value:'Zenrelia'}; __el657['vmQtd']={value:'2'}; __el657['vmMotivo']={value:'dose nova da veterinária'}; __el657['vmIni']={value:'${DIA658}'}; __el657['vmFim']={value:''}; __el657['vmLocal']={value:''};
+      document.querySelector=function(s){ if(s==='#vmUnidades button.on') return {textContent:'comprimido'}; if(s==='#vetMedForm .mag-continuo.on') return {}; if(s==='#vmTipo button.on') return {textContent:'Medicamento'}; return null; };
+      __qs658['#vmHorarios [data-c=h]']=[{value:'08:00'}]; __esc657=[]; vetSalvarMed();`); await espera658();
+    igual(run('__esc657').filter((e) => /itens\/zen$/.test(e[1]) && e[0] === 'set').length, 0, 'o vetSalvarMed não regrava o anulado');
+    assert.ok(/lançado por engano \(anulado\)/.test(String(run("__el657['vetMed-status'].textContent"))), String(run("__el657['vetMed-status'].textContent")));
+    igual(!!db658(AG658 + '/itens/zen').anulado, true, 'a marca continua');
+    ctx.__itZen = it;
+  } finally { solta658(); }
+});
+provaAsync('6.58 P20 (AC4.2) — a corrente: anular a linha antiga de uma troca da 6.54 anula também a nova, e vice-versa, numa escrita só', async () => {
+  arma658();
+  try {
+    const TR = 'mcr_t_ci_1_20261010';
+    const itens = () => ({ ci_1: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: false, dataFim: DIA658, trocadoPor: TR },
+      [TR]: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['09:00'], continuo: true, dataInicio: AMANHA658, continuacaoDe: 'ci_1' } });
+    for (const alvo of ['ci_1', TR]) {
+      semear658({ itens: itens(), log: {} }); run(FICHA658());
+      await anularRem658(alvo);
+      assert.ok(J658('CORR_ATUAL.op.cascata').some((l) => /continuações do mesmo remédio saem junto/.test(l)), 'a cascata diz a corrente');
+      run('__esc657=[];'); await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado');
+      const ag = db658(AG658 + '/itens');
+      igual([!!ag.ci_1.anulado, !!ag[TR].anulado], [true, true], 'as duas linhas: ' + alvo);
+      igual(run('__esc657').filter((e) => e[0] === 'update').length, 1, 'uma escrita só');
+      igual([run(`medVigenteEm(__get657('${AG658}/itens/${TR}'), '${AMANHA658}')`)], [false], 'a nova não começa amanhã');
+    }
+  } finally { solta658(); }
+});
+const voltou658 = async (id, vals) => { run(`__p658=medAgendaVoltouAbrir('${K658}', ${JSON.stringify(id)}, 'ficha');`); await espera658(); if (vals) run(`corrToque('continuar', {valores:${JSON.stringify(vals)}})`); };
+provaAsync('6.58 P21 (AC4.4) — «Voltou a tomar»: linha mcr_t_ com continuacaoDe e o estoque herdado; hoje só com a régua; amanhã quando a antiga ainda vale hoje ou um horário passou; id ocupado recusa; a corrente segue para a troca de ficha da 6.53', async () => {
+  arma658();
+  try {
+    const PAR = (extra) => Object.assign({ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: false, dataFim: ONTEM658, dataInicio: '2026-10-01',
+      paradoEm: { quem: 'Ana Teste', data: ONTEM658, motivo: 'a veterinária suspendeu ontem' }, estoque: { modo: 'contavel', inicial: 20, restante: 7 } }, extra || {});
+    // parado ontem, horário 20:00 (à frente): começa hoje
+    semear658({ itens: { zen: PAR() }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '20:00', 'uso contínuo']);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    const volta = J658('CORR_ATUAL.op.volta');
+    assert.ok(/^a linha nova começa hoje, sexta, 09\/10/.test(volta[0]) && volta.indexOf('o estoque restante passa para a linha nova: 7 comprimidos') >= 0, JSON.stringify(volta));
+    let [p, a] = await assina658('s-caio', 'a veterinária liberou de novo hoje'); igual(p, 'conferir', 'o Encãotador não retoma'); assert.ok(/Consultora de Bem-Estar/.test(a), a);
+    [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); igual(p, 'pronto', 'a Consultora (editar-medicacao-checkin) retoma com a própria senha');
+    let ag = db658(AG658 + '/itens');
+    const N = 'mcr_t_zen_20261009';
+    igual([!!ag[N], ag[N].continuacaoDe, ag[N].dataInicio, ag[N].continuo, ag[N].horarios, ag[N].estoque.restante, ag[N].estoque.herdado.de], [true, 'zen', DIA658, true, ['20:00'], 7, 'zen']);
+    igual([ag.zen.retomadoPor, ag.zen.retomadoEm, ag.zen.estoque === undefined, ag.zen.estoqueMovidoPara, ag.zen.continuo, ag.zen.dataFim], [N, DIA658, true, N, false, ONTEM658], 'a antiga continua como estava, com a marca e o estoque movido');
+    igual(run(`hospMcrRaiz('${N}', __get657('${AG658}/itens'))`), 'zen', 'a troca de ficha da 6.53 segue a corrente até a raiz');
+    // horário das 08:00 (já passou): amanhã
+    semear658({ itens: { zen: PAR({ horarios: ['08:00'] }) }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '08:00', '20/10/2026']);
+    assert.ok(/^a linha nova começa sábado, 10\/10 — o horário das 08:00 de hoje já passou \(ou falta menos de 15 minutos\) e a dose não foi registrada/.test(J658('CORR_ATUAL.op.volta[0]')), J658('CORR_ATUAL.op.volta[0]'));
+    [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); igual(p, 'pronto');
+    igual(db658(AG658 + '/itens/mcr_t_zen_20261010').dataFim, '2026-10-20');
+    // parada HOJE (com a dose de hoje dada): a antiga ainda vale hoje → amanhã
+    semear658({ itens: { zen: PAR({ dataFim: DIA658, horarios: ['08:00'], paradoEm: { quem: 'Ana Teste', data: DIA658 } }) }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '21:00', 'uso contínuo']);
+    assert.ok(/^a linha nova começa sábado, 10\/10 — a linha antiga ainda toca hoje às 08:00 \(as doses de hoje ficam nela\)/.test(J658('CORR_ATUAL.op.volta[0]')), J658('CORR_ATUAL.op.volta[0]'));
+    await fecha658();
+    // o id ocupado por OUTRO remédio: recusa sem gravar
+    semear658({ itens: { zen: PAR(), mcr_t_zen_20261009: { nome: 'Outro remédio', q: '1', u: 'gota', horarios: ['10:00'], continuo: true, continuacaoDe: 'outro' } }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '20:00', 'uso contínuo']);
+    igual(run('CORR_ATUAL.passo'), 'campos'); assert.ok(/Já existe outro remédio na agenda no lugar da linha nova/.test(run('CORR_ATUAL.aviso')), run('CORR_ATUAL.aviso'));
+    await fecha658();
+    // a linha ainda em uso: não há o que retomar
+    semear658({ itens: { zen: ZEN658() }, log: {} }); run(FICHA658() + '__za657=[];');
+    await voltou658('zen');
+    assert.ok(J658('__za657').some((z) => z[0] === 'NÃO DÁ PARA RETOMAR AGORA' && /ainda está em uso/.test(z[1][0])), JSON.stringify(J658('__za657')));
+    // o «Reabrir» do anulado é o «Voltou a tomar», e a mesma corrente parada não é sobrescrita (o próximo id livre)
+    semear658({ itens: { zen: ZEN658({ horarios: ['20:00'] }) }, log: {} }); run(FICHA658());
+    await anularRem658('zen'); await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); await fecha658();
+    run(FICHA658()); await voltou658('zen', ['1', '20:00', 'uso contínuo']);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    ag = db658(AG658 + '/itens');
+    igual([!!ag.zen.anulado, ag.zen.retomadoPor, ag.mcr_t_zen_20261009.continuacaoDe, !!ag.mcr_t_zen_20261009.anulado], [true, 'mcr_t_zen_20261009', 'zen', false]);
+  } finally { solta658(); }
+});
+provaAsync('6.58 P22 (AC4.5) — «Voltou a tomar», nada em dobro e nada perdido: horários × hora do dia × dose dada hoje × linha antiga vigente — em nenhum dia as duas tocam juntas, e quando a régua escolhe hoje, toda dose de hoje da linha nova toca', async () => {
+  arma658();
+  const HS = [['07:00'], ['10:10'], ['11:00'], ['08:00', '20:00'], ['21:00'], ['00:30']];
+  const HORAS = [[5, 30], [9, 55], [10, 0], [13, 0], [22, 0]];
+  const erros = []; let casos = 0, hoje = 0;
+  try {
+    for (const hs of HS) for (const [hh, mm] of HORAS) for (const vigente of [false, true]) for (const dada of [false, true]) {
+      if (dada && !vigente) continue;     // a dose de hoje dada só existe se a antiga valia hoje
+      casos++;
+      const ant = { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: false, dataInicio: '2026-10-01', dataFim: vigente ? DIA658 : ONTEM658,
+        paradoEm: { quem: 'Ana Teste', data: vigente ? DIA658 : ONTEM658 } };
+      ctx.__ant658 = ant;
+      relogio658(T658(9, hh, mm));
+      const ini = J658(`medVoltouInicio({antiga:__ant658, horarios:${JSON.stringify(hs)}, hoje:'${DIA658}', agoraMin:${hh * 60 + mm}, continuo:true})`);
+      if (ini.hoje) hoje++;
+      const novo = J658(`medVoltouNovo(__ant658, 'zen', {horarios:${JSON.stringify(hs)}, q:'1', continuo:true, inicio:'${ini.inicio}', quem:'Bia', quando:'x', ts:1, motivo:'teste'})`);
+      for (const dia of [DIA658, AMANHA658, '2026-10-11']) {
+        ctx.__dia658 = dia; ctx.__ag658 = { zen: Object.assign({}, ant, { retomadoPor: 'mcr_t_zen_x' }), mcr_t_zen_x: novo };
+        run(`__db657={}; __put657('${AG658}/itens', __ag658); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; selectedDate=new Date(__dia658+'T12:00:00');`);
+        run('__bk658.ca()'); await espera658();
+        const f = J658('MED_AGENDA_TODOS');
+        const velha = f.filter((e) => e.itemId === 'zen'), nova = f.filter((e) => e.itemId === 'mcr_t_zen_x');
+        // a antiga não pede dose nova (as horas dela de hoje já foram tratadas: dada ou parada); "tocar junto" = as duas na fila do dia
+        if (velha.length && nova.length) erros.push(hs + ' ' + hh + ':' + mm + ' ' + dia + ': as duas tocam');
+        if (dia === DIA658 && ini.hoje && nova.length !== hs.length) erros.push(hs + ' ' + hh + ':' + mm + ': a régua escolheu hoje e faltou dose de hoje');
+        if (dia === DIA658 && ini.hoje && hs.some((h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3)) - (hh * 60 + mm) < 15)) erros.push(hs + ' ' + hh + ':' + mm + ': hoje com horário passado ou a menos de 15 min');
+        if (dia > DIA658 && !nova.length) erros.push(hs + ' ' + hh + ':' + mm + ' ' + dia + ': a linha nova não tocou depois de começar');
+        if (vigente && ini.hoje) erros.push(hs + ' ' + hh + ':' + mm + ': começou hoje com a antiga ainda valendo');
+      }
+    }
+  } finally { solta658(); }
+  console.log('      ' + casos + ' casos; a régua escolheu hoje em ' + hoje);
+  igual([erros.slice(0, 5), casos > 70, hoje > 5], [[], true, true]);
+});
+provaAsync('6.58 P23 (AC4.6) — «Remover item» do Plantão: o remédio salvo vira anulado (nada apagado; a auditoria diz o nome e o FILHOt); o rascunho sai só da tela; a trava do C7-1 continua', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    ctx.__elR = { dataset: { id: 'zen' }, removido: false, closest(s) { return s === '#magItens' ? {} : null; }, remove() { this.removido = true; } };
+    run(`canEditMed=function(){ return true; }; document.querySelector=function(q){ return /magitem/.test(q)?__elR:null; }; zPergunta=function(){ return Promise.resolve(true); };`);
+    run(`__p658=magRemoverItemAnular('zen');`); await espera658();
+    igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel'), J658('CORR_ATUAL.op.tela')], ['anular', 'gestao', 'Plantão › Agenda de Medicação']);
+    run('__esc657=[];'); const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto');
+    igual(run('__esc657').filter((e) => e[0] === 'remove' || (e[0] === 'update' && (e[2] || []).some((k) => /itens\/zen$/.test(k)))).length, 0, 'nada apagado');
+    igual([!!db658(AG658 + '/itens/zen').anulado, ctx.__elR.removido], [true, false], 'anulado, e a linha não some sozinha (a tela redesenha riscado)');
+    const a = aud658('medicacao-agenda-anulada');
+    assert.ok(a.length === 1 && /Zenrelia/.test(a[0][1]) && /Biscoito/.test(a[0][1]), JSON.stringify(a));
+    assert.ok(aud658('registro-anulado').some((x) => /Zenrelia/.test(x[1]) && /Biscoito/.test(x[1])), 'o rastro da 6.57 também diz o remédio e o FILHOt');
+    // o rascunho (não salvo): sai só da tela, sem cartaz
+    ctx.__elR = { dataset: { id: 'novo_1' }, removido: false, closest(s) { return s === '#magItens' ? {} : null; }, remove() { this.removido = true; } };
+    run(`CORR_ATUAL=null; __esc657=[];`); await run(`magRemoverItemAnular('novo_1')`); await espera658();
+    igual([ctx.__elR.removido, run('CORR_ATUAL'), run('__esc657').length], [true, null, 0], 'o rascunho sai da tela e nada vai ao banco');
+    // a trava (C7-1): a tela leu o carimbo; outro aparelho mudou a agenda; nada sai
+    semear658({ itens: { zen: ZEN658() } });
+    ctx.__elR = { dataset: { id: 'zen' }, removido: false, closest(s) { return s === '#magItens' ? {} : null; }, remove() { this.removido = true; } };
+    run(`__p658=magRemoverItemAnular('zen');`); await espera658();
+    put658(AG658 + '/_ts', 777);
+    const [p2] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado');
+    igual(p2, 'falhou'); assert.ok(/mudou em outro aparelho/.test(cartaz658()));
+    igual([!!db658(AG658 + '/itens/zen').anulado, run('MED_AGENDA_TS.ts')], [false, 500], 'nada sai e a tela não copia o carimbo do outro aparelho');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P24 (AC4.7) — «Parou de tomar»: o motivo de 3 palavras é recusado (na tela e na função); a parada e o carimbo numa escrita só; o «Salvar agenda» velho é recusado e não ressuscita o remédio', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    run(`__zt658=[]; zTexto=function(t, l, op){ __zt658.push(op); return Promise.resolve(__ztq657.length?__ztq657.shift():null); }; fmedPodeEditar=function(){ return true; };` + FICHA658());
+    run(`__ztq657=['acabou o remédio'];`); await run(`fmedParou('zen')`); await espera658();
+    assert.ok(/pelo menos 4 palavras/.test(String(run("__el657['fmed-status'].textContent"))), String(run("__el657['fmed-status'].textContent")));
+    igual(!!db658(AG658 + '/itens/zen').paradoEm, false, 'nada gravado');
+    const v = run(`__zt658[0].validar`);
+    assert.ok(typeof v === 'function' && /faltam 1/.test(v('acabou o remédio')) && v('a veterinária encerrou o tratamento') === '', 'a régua de 4 palavras também na própria caixa');
+    run(`__esc657=[]; __ztq657=['a veterinária encerrou o tratamento'];`); await run(`fmedParou('zen')`); await espera658();
+    const w = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !(e[0] === 'transaction' && /\/_ts$/.test(e[1])));
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update ' + AG658], 'uma escrita só');
+    igual(w[0][2], ['_quem', '_ts', 'itens/zen/continuo', 'itens/zen/dataFim', 'itens/zen/historico', 'itens/zen/paradoEm']);
+    igual([db658(AG658 + '/itens/zen').paradoEm.motivo, run('FMED_TS_LIDO') === db658(AG658 + '/_ts')], ['a veterinária encerrou o tratamento', true]);
+    // o «Salvar agenda» com o formulário de antes (que leu o carimbo 500): recusado, e o remédio não volta a ser contínuo
+    run(`currentHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; canEditMed=function(){ return true; }; MED_AGENDA_TS={key:'${K658}', ts:500, lido:true};
+      MED_AGENDA_ITENS={zen:${JSON.stringify(ZEN658())}}; __formV=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); __formV.zen.obs='dar com comida';
+      coletarMedAgendaForm=function(){ return JSON.parse(JSON.stringify(__formV)); }; renderMedAgenda=function(){};`);
+    run('salvarMedAgenda()'); await espera658();
+    igual(String(run("__el657['mag-status'].textContent")), 'A agenda de Biscoito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+    igual([db658(AG658 + '/itens/zen').continuo, !!db658(AG658 + '/itens/zen').paradoEm], [false, true], 'o remédio parado não ressuscita');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P25 (AC4.8) — «Salvar medicamentos» com o horário mudado depois da dose de hoje: troca por datas para amanhã, com a frase da régua do «Salvar agenda»', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ horarios: ['08:00'], dataInicio: '2026-10-01' }) } });
+    run(`fmedPodeEditar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); }; medLinhaDoPel=function(){ return ''; };` + FICHA658()
+      + `__formF=JSON.parse(JSON.stringify(FMED_ITENS)); __formF.zen.horarios=['09:00']; fmedColetar=function(){ return JSON.parse(JSON.stringify(__formF)); };`);
+    await run('fmedSalvar()'); await espera658();
+    const st = String(run("__el657['fmed-status'].textContent"));
+    assert.ok(/^✅ Medicamentos salvos\./.test(st) && /Zenrelia: a dose das 08:00 de hoje já foi dada\. O horário novo \(09:00\) começa amanhã, sábado, 10\/10; hoje continua 08:00\./.test(st), st);
+    const ag = db658(AG658 + '/itens');
+    igual([ag.zen.continuo, ag.zen.dataFim, ag.zen.horarios, ag.zen.trocadoPor, ag.mcr_t_zen_20261010.horarios, ag.mcr_t_zen_20261010.dataInicio, ag.mcr_t_zen_20261010.continuacaoDe],
+      [false, DIA658, ['08:00'], 'mcr_t_zen_20261010', ['09:00'], AMANHA658, 'zen']);
+  } finally { solta658(); }
+});
+// ---- AC5 — Lançamentos do dia › Medicação ---------------------------------------------------------------------------
+const DM658 = 'daycare/dashboard/' + DIA658 + '/medicacao';
+const LANC658 = (extra) => Object.assign({ valor: 'Biscoito/SRD (OTOMAX — GOTAS NO OUVIDO · NA BOLSA)', hora: '14:00', chave: KDC658, det: { qual: 'OTOMAX — GOTAS NO OUVIDO', onde: 'NA BOLSA' }, quem: 'Bia Consultora Teste', ts: T658(9, 9, 0), planilha_ok: true }, extra || {});
+const semearDash658 = (o) => {
+  o = o || {};
+  put658(DM658, o.lancs || { m1: LANC658() });
+  if (o.medDia) put658('daycare/med-dia/' + DIA658, o.medDia);
+  if (o.log) put658('auaulandia/medicacao-log/' + DIA658 + '/dc__' + KDC658, o.log);
+  run(`DASH_DIA_SEL='${DIA658}'; DASH_DADOS={medicacao:__get657('${DM658}')||{}}; __esc657=[]; __dash658=[]; __au657=[]; __za657=[]; __ca658=0;`);
+};
+const DESENHA658 = `__elsD658={}; document.getElementById=function(id){ if(!__elsD658[id]) __elsD658[id]={innerHTML:'', value:'', children:[], style:{}, classList:{contains:function(){ return false; }}, addEventListener:function(){}}; return __elsD658[id]; };
+  fetchSheet=function(){ return Promise.resolve({cols:[], rows:[]}); }; __bk657.rds();`;
+const corrigirDash658 = async (vals) => { run(`__p658=dashMedCorrigirAbrir('m1');`); await espera658(); run(`corrToque('continuar', {valores:${JSON.stringify(vals)}})`); };
+provaAsync('6.58 P26 (AC5.1) — corrigir a medicação do dia: o mesmo lançamento, com o antes e o depois; o alarme relê sem intervalo (o registro nunca sai); texto mudado: a linha nova vai à planilha antes de sair a antiga; ponte falhando: «NÃO foi para a TV» e «reenviar»; só a hora: tira e lança, com o resultado de cada passo', async () => {
+  arma658();
+  try {
+    semearDash658();
+    await corrigirDash658(['Otomax — 3 gotas no ouvido direito', 'NA BOLSA', '14:00']);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    let [p] = await assina658('s-caio', 'o remédio foi escrito pela metade'); igual(p, 'conferir', 'o Encãotador não corrige');
+    [p] = await assina658('s-bia', 'o remédio foi escrito pela metade'); igual(p, 'pronto', 'a Consultora corrige com a própria senha');
+    const r = db658(DM658).m1;
+    igual([r.valor, r.det.qual, r.hora, r.quem, r.ts], ['Biscoito/SRD (OTOMAX — 3 GOTAS NO OUVIDO DIREITO · NA BOLSA)', 'OTOMAX — 3 GOTAS NO OUVIDO DIREITO', '14:00', 'Bia Consultora Teste', T658(9, 9, 0)], 'o mesmo lançamento');
+    const c = r.correcoes[Object.keys(r.correcoes)[0]];
+    igual([c.antes.valor, c.depois.valor, c.registro.por], ['Biscoito/SRD (OTOMAX — GOTAS NO OUVIDO · NA BOLSA)', 'Biscoito/SRD (OTOMAX — 3 GOTAS NO OUVIDO DIREITO · NA BOLSA)', 'Bia Consultora Teste']);
+    igual(run('__esc657').filter((e) => /daycare\/dashboard/.test(e[1]) && (e[0] === 'remove' || e[0] === 'set')).length, 0, 'o lançamento nunca sai do banco (o alarme não perde a dose no meio)');
+    igual(run('__ca658'), 1, 'a fila do alarme relê');
+    igual(J658('__dash658').map((d) => d[0] + ' ' + d[3]), ['lancar Biscoito/SRD (OTOMAX — 3 GOTAS NO OUVIDO DIREITO · NA BOLSA)', 'remover-planilha Biscoito/SRD (OTOMAX — GOTAS NO OUVIDO · NA BOLSA)'], 'a nova antes de sair a antiga');
+    // a ponte falhando: a antiga fica e a tela avisa (o cartão mostra «NÃO foi para a TV» com «reenviar»)
+    semearDash658(); run('__dashOk658=false;');
+    await corrigirDash658(['Otomax — 2 gotas', 'NA BOLSA', '14:00']); await assina658('s-bia', 'o remédio foi escrito pela metade');
+    igual(J658('__dash658').map((d) => d[0]), ['lancar'], 'a antiga não sai antes da nova entrar');
+    assert.ok(J658('__za657').some((z) => z[0] === 'A CORREÇÃO AINDA NÃO CHEGOU À PLANILHA' && /reenviar/.test(z[1].join(' '))), JSON.stringify(J658('__za657')));
+    igual(J658('__dash658')[0].slice(0, 3), ['lancar', 'medicacao', 'm1'], 'a ponte marca o MESMO lançamento (planilha_ok)');
+    // o cartão de verdade (o renderDash), com o lançamento que a ponte marcou como não enviado: «NÃO foi para a TV», «reenviar» e «corrigir»
+    run(`DASH_DADOS.medicacao.m1.planilha_ok=false;` + DESENHA658);
+    const card = String(run('__elsD658.dashBlocos.innerHTML'));
+    assert.ok(/NÃO foi para a TV/.test(card) && /dashReenviar\('medicacao','m1'/.test(card) && /dashMedCorrigirAbrir\('m1'\)">corrigir/.test(card), card.slice(card.indexOf('Medicação'), card.indexOf('Medicação') + 900));
+    // só a hora: tira e lança, e diz o resultado de cada passo
+    semearDash658(); run('__dashOk658=true;');
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '15:00']); await assina658('s-bia', 'a hora foi lançada errada');
+    igual(J658('__dash658').map((d) => d[0] + ' ' + d[4]), ['remover 14:00', 'lancar 15:00']);
+    assert.ok(J658('__za657').some((z) => z[0] === 'A PLANILHA RECEBEU A HORA NOVA' && /Tirei da planilha a linha das 14:00/.test(z[1][0]) && /Lancei na planilha a linha das 15:00/.test(z[1][1])), JSON.stringify(J658('__za657')));
+    igual(db658(DM658).m1.hora, '15:00');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P27 (AC5.2) — corrigir a hora com a dose já dada: recusado, nada gravado; o remédio e onde continuam possíveis', async () => {
+  arma658();
+  try {
+    semearDash658({ log: { 'lanc_m1_14-00': { itemId: 'lanc_m1', nome: 'OTOMAX — GOTAS NO OUVIDO', horario: '14:00', quem: 'Caio Encãotador Teste', ts: T658(9, 9, 50), u: '' } } });
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '15:00']);
+    const [p] = await assina658('s-bia', 'a hora foi lançada errada');
+    igual(p, 'falhou');
+    assert.ok(/A dose das 14:00 já foi dada por Caio Encãotador Teste às 09:50: mudar a hora agora faria o alarme pedir de novo\./.test(cartaz658()), cartaz658());
+    igual(db658(DM658).m1.hora, '14:00', 'nada gravado');
+    await fecha658();
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA RECEPÇÃO', '14:00']);
+    const [p2] = await assina658('s-bia', 'o remédio está na recepção agora'); igual(p2, 'pronto', 'mudar onde está continua possível');
+    igual(db658(DM658).m1.det.onde, 'NA RECEPÇÃO');
+    // a dose anulada não conta como dada: a hora muda
+    semearDash658({ log: { 'lanc_m1_14-00': { itemId: 'lanc_m1', nome: 'OTOMAX', horario: '14:00', quem: 'Caio', ts: 1, u: '', anulada: { por: 'Gestora Teste' } } } });
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '15:00']);
+    const [p3] = await assina658('s-bia', 'a hora foi lançada errada'); igual(p3, 'pronto', 'a anulada não trava');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P28 (AC5.2) — a junção com a dose do check-in de pertences: corrigir separando é recusado; aproximando, juntam', async () => {
+  arma658();
+  try {
+    const MD = { [KDC658]: { nome: 'Biscoito', itens: { x: { nome: 'Otomax', dose: '3 gotas', horarios: ['14:00'] } } } };
+    semearDash658({ medDia: MD });
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '16:00']);
+    const [p] = await assina658('s-bia', 'a hora foi lançada errada');
+    igual(p, 'falhou'); assert.ok(/deixariam de ser uma dose só, e as duas tocariam no alarme/.test(cartaz658()), cartaz658());
+    igual(db658(DM658).m1.hora, '14:00');
+    await fecha658();
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '14:30']);
+    const [p2] = await assina658('s-bia', 'a hora foi lançada errada'); igual(p2, 'pronto', 'perto (ainda uma dose só): passa');
+    // aproximando: de duas doses para uma
+    semearDash658({ medDia: MD, lancs: { m1: LANC658({ hora: '16:00' }) } });
+    ctx.__md658 = MD;
+    const conta = () => run(`medJuntarDoDia(medDosesDoCheckinDia(__md658), medDosesDosLancamentos(__get657('${DM658}'), {}), {}).length`);
+    igual(conta(), 2, 'antes: duas doses');
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '14:20']);
+    const [p3] = await assina658('s-bia', 'a hora foi lançada errada'); igual(p3, 'pronto');
+    igual(conta(), 1, 'depois: juntam');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P29 (AC5.3, AC6) — tirar a medicação: a Gestão assina; a Veterinária com a tela no Time abre e é recusada; o lançamento sai da lista viva e fica riscado no cartão; o alarme, a planilha e a TV sem ele; a dose já dada continua no registro; a pendência igual', async () => {
+  arma658();
+  try {
+    const DOSE = { 'lanc_m1_14-00': { itemId: 'lanc_m1', nome: 'OTOMAX', horario: '14:00', quem: 'Caio Encãotador Teste', ts: T658(9, 9, 50), u: '' } };
+    semearDash658({ log: DOSE });
+    put658('daycare/pendencias/' + KDC658, { p1: { item: 'medicacao', dia: ONTEM658 } });
+    run(`__login657={nome:'Vera Veterinária Teste', role:'vet', paginas:['dashdc']}; document.body.dataset.role='vet';`);
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658();
+    igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel')], ['anular', 'gestao'], 'o porteiro da 6.57 deixa abrir (a tela no Time); quem assina é a Gestão');
+    const cas = J658('CORR_ATUAL.op.cascata');
+    igual(cas, ['sai do alarme (a dose das 14:00)', 'sai da planilha e da TV', 'a dose já dada hoje continua no registro, com o nome de quem deu: Caio Encãotador Teste às 09:50',
+      'se este lançamento resolveu uma pendência de prevenção, ela não é reaberta aqui']);
+    let [p] = await assina658('s-vera-dash', 'a medicação foi lançada no FILHOt errado'); igual(p, 'conferir', 'a Veterinária, mesmo com a tela concedida, não tira');
+    run('__esc657=[];');
+    [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'pronto');
+    const w = run('__esc657').filter((e) => /^daycare/.test(e[1]) && !/RECUSADO/.test(e[0]));
+    igual(w.map((e) => e[0] + ' ' + e[1] + ' ' + JSON.stringify(e[2])), ['update daycare ["dashboard-anulados/' + DIA658 + '/medicacao/m1","dashboard/' + DIA658 + '/medicacao/m1"]'], 'uma escrita só');
+    igual([(db658(DM658) || {}).m1 === undefined, db658('daycare/dashboard-anulados/' + DIA658 + '/medicacao/m1').anulado.motivo, db658('daycare/dashboard-anulados/' + DIA658 + '/medicacao/m1').valor],
+      [true, 'a medicação foi lançada no FILHOt errado', 'Biscoito/SRD (OTOMAX — GOTAS NO OUVIDO · NA BOLSA)'], 'sai da lista viva; fica guardado inteiro com a marca');
+    igual([run('__ca658'), J658('__dash658').map((d) => d[0])], [1, ['remover-planilha']], 'o alarme relê e a planilha (e a TV) tira');
+    igual(db658('auaulandia/medicacao-log/' + DIA658 + '/dc__' + KDC658), DOSE, 'a dose já dada continua no registro');
+    igual(db658('daycare/pendencias/' + KDC658), { p1: { item: 'medicacao', dia: ONTEM658 } }, 'a pendência igual');
+    const h = String(run('dashMedAnuladasHTML()'));
+    assert.ok(/corr-riscado/.test(h) && /dashMedReabrirAbrir\('m1'\)/.test(h) && /Gestora Teste/.test(h), 'riscado no cartão, com «Reabrir»');
+    run(`hospedes=[]; DB.ref('daycare/chamada/${DIA658}').set({});`);
+    ctx.__lanc658 = db658(DM658) || {};
+    igual(run('medDosesDosLancamentos(__lanc658, {}).length'), 0, 'fora da fila do alarme');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P30 (AC5.3) — tirar com o banco recusando: nada muda (escrita única)', async () => {
+  arma658();
+  try {
+    semearDash658();
+    run(`__recusa657='^daycare$';`);
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658();
+    const [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado');
+    igual(p, 'falhou'); assert.ok(/NADA FOI GRAVADO/.test(cartaz658()));
+    igual([!!db658(DM658).m1, db658('daycare/dashboard-anulados/' + DIA658), run('__ca658'), J658('__dash658').length], [true, null, 0, 0]);
+  } finally { solta658(); }
+});
+provaAsync('6.58 P31 (AC5.4) — reabrir a medicação tirada: lança de novo (registro novo), com a trava de repetido e a régua da dose já dada', async () => {
+  arma658();
+  try {
+    semearDash658();
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658(); await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); await fecha658();
+    run(`__p658=dashMedReabrirAbrir('m1');`); await espera658();
+    igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel')], ['reabrir', 'propria']);
+    run('__dash658=[]; __ca658=0;');
+    const [p] = await assina658('s-bia', 'foi tirada por engano da Gestão'); igual(p, 'pronto');
+    const lista = db658(DM658), ids = Object.keys(lista);
+    igual([ids.length, ids[0] !== 'm1', lista[ids[0]].valor, lista[ids[0]].reaberto_de.id, lista[ids[0]].chave], [1, true, 'Biscoito/SRD (OTOMAX — GOTAS NO OUVIDO · NA BOLSA)', 'm1', KDC658], 'um registro novo');
+    igual(db658('daycare/dashboard-anulados/' + DIA658 + '/medicacao/m1').reaberto.novoId, ids[0], 'o tirado guarda para onde voltou');
+    igual([J658('__dash658').map((d) => d[0]), run('__ca658')], [['lancar'], 1], 'planilha, TV e alarme');
+    // a trava de repetido: o mesmo texto já está lançado (outra tirada do mesmo)
+    semearDash658({ lancs: { m1: LANC658(), m2: LANC658({ ts: T658(9, 9, 5) }) } });
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658(); await assina658(SENHA657, 'a medicação foi lançada duas vezes hoje'); await fecha658();
+    run(`__p658=dashMedReabrirAbrir('m1');`); await espera658();
+    const [p2] = await assina658('s-bia', 'foi tirada por engano da Gestão');
+    igual(p2, 'falhou'); assert.ok(/já está lançado em Medicação neste dia/.test(cartaz658()), cartaz658());
+    // a dose do lançamento tirado já foi dada hoje: lançar de novo faria o alarme pedir de novo
+    semearDash658({ log: { 'lanc_m1_14-00': { itemId: 'lanc_m1', nome: 'OTOMAX', horario: '14:00', quem: 'Caio Encãotador Teste', ts: T658(9, 9, 50), u: '' } } });
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658(); await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); await fecha658();
+    run(`__p658=dashMedReabrirAbrir('m1');`); await espera658();
+    const [p3] = await assina658('s-bia', 'foi tirada por engano da Gestão');
+    igual(p3, 'falhou'); assert.ok(/já foi dada por Caio Encãotador Teste às 09:50: lançar de novo faria o alarme pedir de novo/.test(cartaz658()), cartaz658());
+  } finally { solta658(); }
+});
+provaAsync('6.58 P32 (AC5.5, guarda) — os outros tipos de lançamento continuam como hoje no «tirar» (o vet sai com a pergunta de sempre, sem cartaz)', async () => {
+  arma658();
+  try {
+    put658('daycare/dashboard/' + DIA658 + '/vet', { v1: { valor: 'Biscoito/SRD', hora: '15:00', quem: 'Bia', ts: 1, planilha_ok: true } });
+    run(`DASH_DIA_SEL='${DIA658}'; DASH_DADOS={vet:__get657('daycare/dashboard/${DIA658}/vet')}; zPergunta=function(){ return Promise.resolve(true); }; __esc657=[]; CORR_ATUAL=null;`);
+    await run(`dashRemover('vet', 'v1')`); await espera658();
+    igual([run('CORR_ATUAL'), run('__esc657').map((e) => e[0] + ' ' + e[1])], [null, ['remove daycare/dashboard/' + DIA658 + '/vet/v1']]);
+  } finally { solta658(); }
+});
+// ---- Provas a mais, dos defeitos plantados que a lista da story não pegava (e03, e05, e06, e08, e10, e15) -----------------
+provaAsync('6.58 P36 (AC1.5, L3) — o relatório do plantão (renderRelMedConfirm): a dose anulada não aparece como «já dado», nem pela cópia; o remédio anulado sai dos horários e aparece como lançado por engano', async () => {
+  arma658();
+  try {
+    semear658();
+    ctx.__slot658 = { innerHTML: '' };
+    run(`__qs658['.med-confirm-slot']=[__slot658];`);
+    const dados = () => { run('renderRelMedConfirm()'); return String(run('__slot658.innerHTML')); };
+    const n = (s) => (s.match(/já dado — Wandela Teste/g) || []).length;
+    igual(n(dados()), 3, 'antes: a Zenrelia das 08:00 (e a cópia) e o Ômega 3');
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    igual(n(dados()), 1, 'depois: só o Ômega 3 (a Zenrelia das 08:00 e a cópia dela deixam de contar como dadas)');
+    run(`MED_AGENDA_ITENS.zen=Object.assign({}, MED_AGENDA_ITENS.zen, {anulado:{por:'Gestora Teste', motivo:'o remédio foi lançado no FILHOt errado'}});`);
+    const h = dados();
+    assert.ok(/lançado por engano \(anulado\)/.test(h), 'o remédio anulado aparece como lançado por engano');
+    igual((h.match(/data-k="med\|Zenrelia\|20:00"/g) || []).length, 0, 'e sai dos horários (a dose das 20:00 não é pedida)');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P37 (AC1.3, dois aparelhos) — «Desfazer esta dose» com a dose registrada de novo em outro aparelho enquanto o cartaz estava aberto: recusado, nada gravado (a dose nova, dada de verdade, não é anulada)', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00');   // o cartaz mostra a dose das 08:04
+    const velha = db658(LOG658)['zen_08-00'];
+    put658(LOG658 + '/zen_08-00', Object.assign({}, velha, { quem: 'Gilda Teste', ts: T658(9, 9, 40), anteriores: [Object.assign({}, velha, { anulada: { por: 'Gestora Teste', motivo: 'outro aparelho', ts: T658(9, 9, 30) } })] }));
+    run('__esc657=[];');
+    const [p] = await assina658(SENHA657);
+    igual(p, 'falhou'); assert.ok(/mudou em outro aparelho/.test(cartaz658()), cartaz658());
+    igual([!!db658(LOG658)['zen_08-00'].anulada, db658(LOG658)['zen_08-00'].quem, escLog658().length, db658(AG658 + '/itens/zen/estoque/restante')], [false, 'Gilda Teste', 0, 11], 'a dose nova continua dada; nada gravado; o estoque igual');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P38 (AC4.2, AC4.3) — a hospedagem ativa: na mesma escrita do «Lançado por engano», a linha do remédio na lista da estadia ganha o «parou» e a marca (o "vai faltar" e a Conferência deixam de cobrar); a outra linha fica igual', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658(), ome: OME658() } });
+    run(`EST_TODAS={e1:{refKey:'${K658}', nome:'Biscoito', status:'ativa', entrada:'${ONTEM658}', saida:'2026-10-15'}};`);
+    put658('auaulandia/estadias/e1/medicacao', [{ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], agendaId: 'zen' }, { nome: 'Ômega 3', q: '1', u: 'cápsula', horarios: ['08:00'], agendaId: 'ome' }]);
+    run(FICHA658());
+    await anularRem658('zen');
+    assert.ok(J658('CORR_ATUAL.op.cascata').some((l) => /a hospedagem ativa de Biscoito continua/.test(l)), JSON.stringify(J658('CORR_ATUAL.op.cascata')));
+    run('__esc657=[];');
+    const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto');
+    const w = run('__esc657').filter((e) => e[0] === 'update' && e[1] === '');
+    igual(w.length, 1, 'uma escrita só');
+    const ks = J658(`__esc657.filter(function(e){ return e[0]==='update' && e[1]===''; })[0][2]`);
+    igual(ks.filter((k) => /^auaulandia\/estadias\//.test(k)), ['auaulandia/estadias/e1/medicacao/0/anulado', 'auaulandia/estadias/e1/medicacao/0/parouEm'], 'só a linha da Zenrelia, na mesma escrita');
+    const L = db658('auaulandia/estadias/e1/medicacao');
+    igual([L[0].anulado, L[0].parouEm.data, /lançado por engano/.test(L[0].parouEm.motivo), !!L[1].parouEm, !!L[1].anulado], [true, DIA658, true, false, false]);
+  } finally { solta658(); }
+});
+provaAsync('6.58 P39 (AC5.1, AC5.3, dois aparelhos) — «corrigir» e «tirar» com o lançamento corrigido em outro aparelho enquanto o cartaz estava aberto: recusados, nada gravado (a correção do outro aparelho não muda o carimbo)', async () => {
+  arma658();
+  try {
+    semearDash658();
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA RECEPÇÃO', '14:00']);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    put658(DM658 + '/m1', LANC658({ hora: '15:00', correcoes: { 1: { registro: { por: 'Bia Consultora Teste' } } } }));   // o outro aparelho corrigiu a hora
+    run('__esc657=[];');
+    let [p] = await assina658(SENHA657, 'o lugar do remédio foi lançado errado'); igual(p, 'falhou');
+    assert.ok(/mudou em outro aparelho/.test(cartaz658()), cartaz658());
+    igual([db658(DM658 + '/m1').hora, db658(DM658 + '/m1').det.onde, run('__esc657').filter((e) => /dashboard/.test(e[1]) && !/RECUSADO/.test(e[0])).length], ['15:00', 'NA BOLSA', 0], 'a correção do outro aparelho fica; nada gravado');
+    await fecha658();
+    semearDash658();
+    run(`__p658=dashRemover('medicacao', 'm1');`); await espera658();
+    put658(DM658 + '/m1', LANC658({ hora: '15:00' }));
+    run('__esc657=[];');
+    [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'falhou');
+    assert.ok(/mudou em outro aparelho/.test(cartaz658()), cartaz658());
+    igual([!!db658(DM658 + '/m1'), db658('daycare/dashboard-anulados/' + DIA658), run('__esc657').filter((e) => /^daycare/.test(e[1]) && !/RECUSADO/.test(e[0])).length], [true, null, 0]);
+    // a mesma tela, depois da PRÓPRIA correção (a memória do cartão com o detalhe noutra ordem): a 2ª correção passa
+    semearDash658();
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA RECEPÇÃO', '14:00']); [p] = await assina658(SENHA657, 'o lugar do remédio foi lançado errado'); igual(p, 'pronto'); await fecha658();
+    run(`DASH_DADOS.medicacao.m1=Object.assign({}, DASH_DADOS.medicacao.m1, {det:{onde:DASH_DADOS.medicacao.m1.det.onde, qual:DASH_DADOS.medicacao.m1.det.qual}});`);
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA RECEPÇÃO', '16:00']); [p] = await assina658(SENHA657, 'a hora do remédio foi lançada errada'); igual(p, 'pronto', 'a 2ª correção da mesma tela');
+    igual(db658(DM658 + '/m1').hora, '16:00');
+  } finally { solta658(); }
+});
+provaAsync('6.58 P40 (AC4.3, AC4.1) — o Cuidado Vet não reativa o remédio anulado (nada gravado); a ficha mostra «Lançado por engano» no remédio vivo, com 44 px', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ suspenso: true, anulado: { por: 'Gestora Teste', motivo: 'o remédio foi lançado no FILHOt errado' } }), zen2: ZEN2_658() } });
+    run(`VET_MED_CACHE=__get657('${AG658}/itens'); vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; __al657=[]; __esc657=[]; zTexto=function(){ return Promise.resolve('a veterinária pediu para voltar a dar'); };`);
+    await run(`vetReativarMed('zen')`); await espera658();
+    assert.ok(J658('__al657').some((a) => /lançado por engano \(anulado\): não se reativa/.test(a)), JSON.stringify(J658('__al657')));
+    igual([run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !/RECUSADO/.test(e[0])).length, !!db658(AG658 + '/itens/zen').suspenso], [0, true], 'nada gravado');
+    run(FICHA658('fmedDesenhar();'));
+    const f = String(run("__el657['fmedItens'].innerHTML"));
+    assert.ok(/style="min-height:44px[^"]*color:var\(--crm-critico\)[^"]*" title="Anular este remédio, lançado por engano \(nada é apagado\)" onclick="medAgendaAnularAbrir\('biscoito__rita teste','zen2','ficha'\)">Lançado por engano</.test(f), 'o botão no remédio vivo, com 44 px');
+  } finally { solta658(); }
+});
+// ---- AC7 — a Linha do tempo ------------------------------------------------------------------------------------------
+prova('6.58 P33 (AC7.1) — as ações novas aparecem em português na Linha do tempo e no resumo por pessoa (nenhuma em código técnico)', () => {
+  const NOVAS = ['medicacao-dose-anulada', 'medicacao-dose-reaberta', 'medicacao-dose-corrigida', 'medicacao-estoque-devolvido', 'medicacao-agenda-anulada', 'medicacao-agenda-voltou',
+    'dashboard-medicacao-corrigida', 'dashboard-medicacao-anulada', 'ficha-medicamentos', 'telegram-medicacao', 'vet-medicacao', 'vet-medicacao-reativada'];
+  NOVAS.forEach((a) => {
+    const nome = run(`acaoNome(${JSON.stringify(a)})`), linha = run(`acaoRotulo({acao:${JSON.stringify(a)}, detalhe:'Zenrelia de Biscoito'})`);
+    assert.ok(nome && nome !== a && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/.test(nome) && linha.indexOf(a) < 0 && /Zenrelia de Biscoito/.test(linha), a + ' → ' + nome + ' | ' + linha);
+  });
+  igual(run(`acaoNome('medicacao-dose-anulada')`), 'Desfez uma dose de remédio (lançada por engano)');
+});
+// ---- AC9 e AC10 — o que não pode mudar ------------------------------------------------------------------------------
+// A área protegida na base 0e71b31: as 155 funções ck*/ckt*/pt* e pendAvisarChegada (nome + texto, em ordem), o bloco #v-daycare e as
+// declarações ck*/pt* do topo (sha256): qualquer letra mudada, função nova ck*/pt* ou função que sumiu muda o hash.
+const PROT_BASE658 = {"n": 155, "funcoes": "a5d9eb9aa8c0f6d5e2b2e1590df57ed5820ee19ccbf57ef690520799b90fd2d5", "daycare": "d350ca846ae9d05eb969e43e2d80298354cb61b52d3709476590ddf989ecd589", "decl": "2c2151bda95393969743bbdb8982e37bd6952a5414950eecf0d934e9a41dc004"};
+prova('6.58 P34 (AC9, guarda) — a área protegida e as declarações ck*/pt* sem mudança; nenhuma função nova começa com ck ou pt', () => {
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const nomes = run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  const html = fs.readFileSync(APP, 'utf8');
+  const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
+  const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
+  igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+});
+// As provas das 6.47, 6.54 e 6.57 na base 0e71b31 (contadas pelo nome, no arquivo): nenhuma saiu e nenhuma falhou nesta rodada.
+const CONTA_BASE658 = {"6.47": 49, "6.54": 98, "6.57": 41};
+provaAsync('6.58 P35 (AC3.3, AC10, guarda) — as provas da 6.47, da 6.54 e da 6.57 continuam todas (contadas no arquivo) e passaram sem mudar asserção nesta rodada', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const conta = {}; ['6.47', '6.54', '6.57'].forEach((v) => { conta[v] = (src.match(new RegExp("prova(?:Async)?\\('" + v.replace('.', '\\.') + '[ \']', 'g')) || []).length; });
+  igual(conta, CONTA_BASE658, 'nenhuma prova antiga saiu do arquivo');
+  const caiu = falhas.filter((f) => /^6\.(47|54|57)\b/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+// ---- 6.58 QA — as 22 provas do QA independente (Quinn, gate de 10/out/2026), trazidas para a Fase 0 na 2ª rodada -------
+// (as 8 que falhavam — P01, P02, P05, P06, P10, P12, P13, P22 — passam com as correções; as outras pegavam defeitos que a
+// lista do dev deixava passar). Os nomes «QA658-Pnn» viraram «6.58 QA Pnn»; P03 e P09 ganharam asserções onde só mostravam.
+console.log('\n6.58 QA — as provas do QA independente: portas do remédio anulado, estoque em ciclo, telas velhas, «Voltou a tomar», «Remover item», Lançamentos');
+const MOT_Q = 'a dose foi registrada no FILHOt errado';
+const fila_Q = async (ms) => { if (ms) relogio658(ms); run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+
+provaAsync('6.58 QA P01 (AC4.3, check-in) — o remédio anulado não volta pela pergunta do check-in («tomava X — não toma mais?», medAnterioresDe/medGate)', async () => {
+  arma658();
+  try {
+    // um remédio que terminou por data na última estadia (sem «parou»), depois descoberto lançado por engano
+    semear658({ itens: { gaba: { nome: 'Gabapentina', q: '1', u: 'cápsula', horarios: ['20:00'], continuo: false, dataInicio: '2026-10-01', dataFim: '2026-10-05', tipo: 'medicamento', origem: 'vet' } }, log: {} });
+    put658(AG658 + '/estadiaId', 'e_old');
+    run(`EST_TODAS={e_old:{status:'encerrada', entrada:'2026-10-01', saida:'2026-10-05', nome:'Biscoito', tutor:'Rita Teste'}};` + FICHA658());
+    let ant = JSON.parse(JSON.stringify(await run(`medAnterioresDe('auaulandia', '${K658}')`)));
+    igual(ant.map((x) => x.id), ['gaba'], 'antes de anular, a pergunta do check-in existe (base)');
+    await anularRem658('gaba'); const [p] = await assina658(SENHA657, 'o remédio era de outro FILHOt da casa'); igual(p, 'pronto');
+    const it = db658(AG658 + '/itens/gaba');
+    console.log('      depois de anular: anulado=' + !!it.anulado + ' paradoEm=' + !!it.paradoEm + ' dataFim=' + it.dataFim);
+    ant = JSON.parse(JSON.stringify(await run(`medAnterioresDe('auaulandia', '${K658}')`)));
+    console.log('      medAnterioresDe depois de anular: ' + JSON.stringify(ant.map((x) => x.id)));
+    igual(ant.map((x) => x.id), [], 'o anulado não pode ir para a pergunta do check-in (o «Mudou a dose» o recriaria vivo, com id novo ci_)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P02 (AC4.4, AC4.5) — «Voltou a tomar» logo depois de «Lançado por engano» com a dose das 08:00 dada: a tela não pode dizer que as doses de hoje ficam na linha antiga se a das 20:00 não toca em nenhuma das duas', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo']);
+    const volta = J658('CORR_ATUAL.op.volta');
+    console.log('      o cartaz do «Voltou a tomar»: ' + JSON.stringify(volta));
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    const f = await fila_Q(T658(9, 19, 0));
+    console.log('      a fila do alarme hoje às 19:00: ' + JSON.stringify(f));
+    const tocaHoje20 = f.some((x) => /@20:00$/.test(x));
+    const avisa = volta.some((v) => /20:00/.test(v) && /(não|nenhuma)/.test(v) && !/^dose: /.test(v));
+    if (!tocaHoje20) assert.ok(avisa, 'a dose das 20:00 de hoje não toca em nenhuma linha e a tela diz: ' + JSON.stringify(volta[0]));
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P03 (AC1.4, AC1.7, AC1.8) — o estoque em ciclo: desfazer → reabrir → desfazer → «Dei agora» → desfazer = 12, 11, 12, 11, 12; dois aparelhos gravando no mesmo instante devolvem uma vez', async () => {
+  arma658();
+  try {
+    semear658();
+    const est = () => db658(AG658 + '/itens/zen/estoque');
+    const seq = [];
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658(); seq.push(est().restante);
+    run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658(); await assina658(SENHA657, 'a anulação foi um engano da Gestão'); await fecha658(); seq.push(est().restante);
+    relogio658(T658(9, 10, 5)); await anular658('zen_08-00'); await assina658(SENHA657); await fecha658(); seq.push(est().restante);
+    relogio658(T658(9, 10, 10)); run(`__pessoa658='Gilda Teste'; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658(); seq.push(est().restante);
+    relogio658(T658(9, 10, 15)); await anular658('zen_08-00'); await assina658(SENHA657); await fecha658(); seq.push(est().restante);
+    console.log('      estoque: ' + JSON.stringify(seq) + ' | devoluções no rastro: ' + Object.keys(est().devolvidos || {}).length);
+    igual(seq, [12, 11, 12, 11, 12]);
+    igual(Object.keys(est().devolvidos || {}).length, 3);
+    const L = db658(LOG658)['zen_08-00'];
+    igual([!!L.anulada, (L.anteriores || []).length, Object.keys(L.anulacoes_desfeitas || {}).length], [true, 1, 0], 'a dose de agora (Gilda) anulada; a de antes (anulada, reaberta e anulada de novo) guardada em anteriores');
+    igual(Object.keys((L.anteriores[0] || {}).anulacoes_desfeitas || {}).length, 1, 'a reabertura de antes continua no histórico, dentro de anteriores');
+    // dois aparelhos: as duas gravações começam no mesmo instante (as duas leituras antes de qualquer escrita)
+    semear658();
+    const g = (por, ts) => `medDoseAnularGravar({key:'${K658}', dia:'${DIA658}', principal:'zen_08-00', vista:__get657('${LOG658}/zen_08-00'), nomeH:'Biscoito', reg:{acao:'anular', ts:${ts}, por:'${por}', motivo:'${MOT_Q}'}})`;
+    run(`__r1=${g('Gestora A Teste', T658(9, 10, 20))}; __r2=${g('Gestora B Teste', T658(9, 10, 21))};`); await espera658();
+    const r1 = await run('__r1'), r2 = await run('__r2');
+    const L2 = db658(LOG658)['zen_08-00'];
+    console.log('      corrida: r1=' + JSON.stringify(r1) + ' r2=' + JSON.stringify(r2) + ' | marca que ficou: ' + L2.anulada.por + ' | estoque ' + est().restante + ' | mensagens ao grupo: ' + J658('__tg658').length + ' | rastros: ' + aud658('medicacao-dose-anulada').length);
+    igual(est().restante, 12, 'o estoque volta uma vez só');
+    igual([!!(r1 && r1.ok), !!(r2 && r2.ok), J658('__tg658').length, aud658('medicacao-dose-anulada').length, L2.anulada.por], [true, false, 1, 1, 'Gestora A Teste'],
+      '2ª rodada (BAIXO-2): a marca por transação — o segundo vê a marca do primeiro, não grava e não manda outra mensagem');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P04 (AC1.5, AC1.7, AC1.8) — telas velhas: A anula; B registra pelo alarme; A (tela velha com a anulada) toca «Dei agora» e «Reabrir»; C (tela velha com a dose dada) toca «Desfazer»: nenhuma dose em dobro, nada sobrescrito', async () => {
+  arma658();
+  try {
+    semear658();
+    const telaVelhaDada = J658('MED_AGENDA_LOG');
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    const telaVelhaAnulada = J658('MED_AGENDA_LOG');
+    // B: o alarme dá a dose de novo
+    relogio658(T658(9, 10, 30)); run(`__pessoa658='Gilda Teste'; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 11, 'B desconta uma vez');
+    // A, com a tela velha (a anulada): «Dei agora»
+    ctx.__tva = telaVelhaAnulada; run(`MED_AGENDA_LOG=JSON.parse(JSON.stringify(__tva)); __pessoa658='Wandela Teste'; __za657=[]; __esc657=[];`);
+    relogio658(T658(9, 10, 31)); run(`registrarDoseAgendada('zen', '08:00', null);`); await espera658();
+    const L = db658(LOG658)['zen_08-00'];
+    igual([L.quem, (L.anteriores || []).length], ['Gilda Teste', 1], 'a dose de B fica; A não registra de novo');
+    assert.ok(J658('__za657').some((z) => /JÁ FOI REGISTRADA/.test(z[0])), 'A vê que já foi registrada: ' + JSON.stringify(J658('__za657').map((z) => z[0])));
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 11, 'o estoque não desconta de novo');
+    // A, tela velha: «Reabrir» a anulação que não existe mais
+    run(`__za657=[]; __p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    assert.ok(J658('__za657').some((z) => z[0] === 'NÃO HÁ O QUE REABRIR'), JSON.stringify(J658('__za657')));
+    igual(run('CORR_ATUAL'), null, 'nenhum cartaz aberto');
+    // C, tela velha (a dose de Wandela dada): «Desfazer esta dose» lê o banco e mostra a dose de Gilda
+    ctx.__tvd = telaVelhaDada; run(`MED_AGENDA_LOG=JSON.parse(JSON.stringify(__tvd));`);
+    await anular658('zen_08-00');
+    const casc = J658('CORR_ATUAL.op.cascata');
+    assert.ok(/registrada por Gilda Teste/.test(casc[0]), 'o cartaz mostra a dose de agora: ' + casc[0]);
+    await fecha658();
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P05 (AC4.3, risco 4) — as portas: o anulado não volta pelo «Salvar agenda» (velho e novo), pelo «Salvar medicamentos», pela porta do check-in (medAgendaGravarItens), pelo Cuidado Vet, pela tela da 6.54, pela troca de ficha e pelo «Desfazer o parou»', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658(), apo: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['12:00'], continuo: true, tipo: 'medicamento', origem: 'vet' } } });
+    const tsPlantao = db658(AG658 + '/_ts');
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    const zenAnulado = JSON.stringify(db658(AG658 + '/itens/zen'));
+    const igualZen = (msg) => igual(JSON.stringify(db658(AG658 + '/itens/zen')), zenAnulado, msg);
+    // (a) o «Salvar agenda» do Plantão com a tela de antes (o carimbo velho): recusado
+    run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_ITENS.zen=${JSON.stringify(ZEN658())};
+      MED_AGENDA_TS={key:'${K658}', ts:${tsPlantao}, lido:true}; __formQ=JSON.parse(JSON.stringify(MED_AGENDA_ITENS)); delete __formQ.zen.estoque; coletarMedAgendaForm=function(){ return JSON.parse(JSON.stringify(__formQ)); }; __el657['mag-status']={style:{}, textContent:''};`);
+    run('salvarMedAgenda()'); await espera658();
+    assert.ok(/mudou em outro aparelho/.test(run("__el657['mag-status'].textContent")), run("__el657['mag-status'].textContent")); igualZen('(a) o formulário velho não regrava');
+    // (b) o «Salvar agenda» com a tela relida (o anulado na memória, riscado, fora do formulário): o anulado não muda
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true}; coletarMedAgendaForm=__cmfReal658;
+      __qs658={}; __qs658['#magItens .magitem']=[]; document.querySelectorAll=function(s){ return __qs658[s]||[]; };`);
+    // o formulário de verdade lê o DOM; simulamos o DOM com a linha do Apoquel (a do anulado não é .magitem)
+    run(`coletarMedAgendaForm=function(){ return {apo:{nome:'Apoquel', q:'1', u:'comprimido', horarios:['12:00'], tipo:'medicamento', origem:'vet', continuo:true, obs:'com comida'}}; };`);
+    run('salvarMedAgenda()'); await espera658();
+    assert.ok(/salva/.test(run("__el657['mag-status'].textContent")), run("__el657['mag-status'].textContent")); igualZen('(b) o «Salvar agenda» novo não toca no anulado');
+    igual(db658(AG658 + '/itens/apo').obs, 'com comida');
+    // (c) a porta do check-in e da ficha (medAgendaGravarItens) com uma linha viva igual ao anulado (sem a marca): o anulado não sai nem junta
+    await run(`medAgendaGravarItens('${K658}', {ci_novo:${JSON.stringify({ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], continuo: true, tipo: 'medicamento', origem: 'tutor' })}}, 'check-in')`); await espera658();
+    igualZen('(c) o anulado continua igual'); igual(!!db658(AG658 + '/itens/ci_novo'), true, 'a linha nova entra (não é juntada ao anulado)');
+    // (d) o Cuidado Vet aberto ANTES da anulação (o remédio estava suspenso pela veterinária): «Reativar» com a memória velha
+    semear658({ itens: { zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }) } });
+    run(`VET_MED_CACHE=__get657('${AG658}/itens'); vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; vetKey=function(){ return '${K658}'; }; vetCarregarMed=function(){};`);
+    run(FICHA658()); await anularRem658('zen'); [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    const histAntes = (db658(AG658 + '/itens/zen').historico || []).length;
+    run(`__al657=[]; zTexto=function(){ return Promise.resolve('a veterinária pediu para voltar a dar'); };`);
+    await run(`vetReativarMed('zen')`); await espera658();
+    const zr = db658(AG658 + '/itens/zen');
+    console.log('      (d) «Reativar» com a memória velha: anulado=' + !!zr.anulado + ' suspenso=' + !!zr.suspenso + ' continuo=' + zr.continuo + ' paradoEm=' + !!zr.paradoEm + ' | histórico: ' + histAntes + ' → ' + (zr.historico || []).length + ' linhas, «Lançado por engano» no histórico: ' + (zr.historico || []).some((h) => /Lançado por engano/.test(h.acao)) + ' | alertas: ' + JSON.stringify(J658('__al657')));
+    igual(!!zr.anulado, true, '(d) a marca de anulado continua');
+    const fd = await fila_Q(T658(9, 19, 0)); igual(fd.filter((x) => /^zen@/.test(x)), [], '(d) e o alarme não volta');
+    run(`MED_AGENDA_GERAL={}; MED_AGENDA_GERAL['${K658}']=__get657('${AG658}');`);
+    console.log('      (d) depois: «💊 toma remédio: ' + String(run(`medResumoTexto('${K658}')`) || '') + '» | texto pronto do lançamento: «' + String(run(`medTextoLancamento('${K658}')`) || '') + '» | pergunta do check-in: ' + JSON.stringify(JSON.parse(JSON.stringify(await run(`medAnterioresDe('auaulandia', '${K658}')`))).map((x) => x.id)));
+    const histOk = (zr.historico || []).some((h) => /Lançado por engano/.test(h.acao));
+    igual(histOk, true, '(d) a linha «Lançado por engano» do histórico não pode sumir');
+    semear658({ itens: { zen: ZEN658(), apo: { nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['12:00'], continuo: true, tipo: 'medicamento', origem: 'vet' } } });
+    run(FICHA658()); await anularRem658('zen'); [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    // (e) a tela da 6.54 («Mudar comida e remédio»): o anulado não é editável
+    const tela = J658(`mcrRemediosDaTela(__get657('${AG658}/itens'), '${DIA658}')`);
+    igual((tela.ed || tela.editaveis || []).indexOf('zen') < 0, true, '(e) o anulado fora da lista editável: ' + JSON.stringify(tela));
+    // (f) a troca de ficha da 6.53 leva o item limpo (hospLimpo) com a marca
+    igual(!!J658(`hospLimpo(__get657('${AG658}/itens/zen'))`).anulado, true, '(f) a troca de ficha leva a marca');
+    // (g) o «Desfazer o parou» (6.53) num remédio anulado: a marca fica e o alarme não volta; mas a linha «toma remédio» o mostra?
+    run(`__putQ=1;`); put658(AG658 + '/itens/zen/paradoEm', null); put658(AG658 + '/itens/zen/continuo', true); put658(AG658 + '/itens/zen/dataFim', null);
+    const f = await fila_Q(T658(9, 19, 0));
+    igual(f.filter((x) => /^zen@/.test(x)), [], '(g) o anulado sem «parou» continua fora do alarme');
+    run(`MED_AGENDA_GERAL={}; MED_AGENDA_GERAL['${K658}']=__get657('${AG658}');`);
+    const linha = String(run(`medResumoTexto('${K658}')`) || ''), lanc = String(run(`medTextoLancamento('${K658}')`) || '');
+    console.log('      (g) depois do «Desfazer o parou»: «toma remédio: ' + linha + '» | texto do lançamento: «' + lanc + '»');
+    igual(/Zenrelia/.test(linha), false, '(g) a linha «💊 toma remédio» e o texto pronto do lançamento não podem trazer o remédio anulado');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P06 (AC4.6, risco do dev) — «Remover item»: o caminho antigo (magRemoverItem, que apaga) não é alcançado por remédio salvo, nem quando o «Salvar agenda» termina com a pergunta aberta', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    // a linha de rascunho «novo_x» na tela do Plantão (ainda não salva)
+    const elQ = `{dataset:{id:'novo_x'}, closest:function(s){ return s==='#magItens'?{}:null; }, remove:function(){ __remQ++; }}`;
+    run(`__remQ=0; canEditMed=function(){ return true; }; MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true};
+      __qsQ=document.querySelector; document.querySelector=function(s){ return /novo_x/.test(s)?${elQ}:null; };
+      // a pergunta fica aberta; enquanto isso, o «Salvar agenda» da mesma tela termina e o rascunho vira remédio salvo
+      zPergunta=function(){ __put657('${AG658}/itens/novo_x', {nome:'Meloxicam', q:'1', u:'gota', horarios:['18:00'], continuo:true}); MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true}; return Promise.resolve(true); };
+      __esc657=[];`);
+    await run(`magRemoverItemAnular('novo_x')`); await espera658();
+    run('document.querySelector=__qsQ;');
+    const apagou = run('__esc657').some((e) => e[0] === 'update' && (e[2] || []).indexOf('itens/novo_x') >= 0);
+    console.log('      remédio salvo apagado pelo caminho antigo: ' + apagou + ' | rastro: ' + JSON.stringify(aud658('medicacao-agenda-remover').map((a) => a[2])));
+    igual([apagou, !!db658(AG658 + '/itens/novo_x')], [false, true], 'o remédio salvo nunca sai sem o anular (motivo + Gestão)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P07 (AC5.3, AC5.4) — Lançamentos: tirar → reabrir → tirar de novo → reabrir a primeira de novo (recusa); a fila de reenvio da planilha não devolve a tirada à TV', async () => {
+  arma658();
+  try {
+    semearDash658({ lancs: { m1: LANC658({ planilha_ok: false, planilha_msg: 'a ponte não respondeu' }) } });
+    run(`__p658=dashMedAnularAbrir('m1');`); await espera658();
+    let [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    igual([db658(DM658 + '/m1'), !!db658('daycare/dashboard-anulados/' + DIA658 + '/medicacao/m1').anulado], [null, true]);
+    // a fila de reenvio (a que age sobre planilha_ok:false) não acha a tirada
+    run(`__pcQ=[]; __dpcQ=dashPonteChamar; dashPonteChamar=function(o){ __pcQ.push(o); return Promise.resolve({ok:true}); };`);
+    const r = await run(`dashPlanFilaReenviar('${DIA658}', 'medicacao', 'm1')`); await espera658();
+    run('dashPonteChamar=__dpcQ;');
+    igual([r, J658('__pcQ').length, db658(DM658 + '/m1')], [false, 0, null], 'a fila não lança a tirada de volta na planilha');
+    // reabrir: registro novo
+    run(`__p658=dashMedReabrirAbrir('m1');`); await espera658(); [p] = await assina658('s-bia', 'a medicação era mesmo deste FILHOt'); igual(p, 'pronto'); await fecha658();
+    const vivos = Object.keys(db658(DM658) || {}); igual(vivos.length, 1);
+    const novo = vivos[0];
+    // tirar de novo (o reaberto)
+    run(`DASH_DADOS={medicacao:__get657('${DM658}')||{}};`);
+    run(`__p658=dashMedAnularAbrir('${novo}');`); await espera658(); [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado de novo'); igual(p, 'pronto'); await fecha658();
+    igual(Object.keys(db658('daycare/dashboard-anulados/' + DIA658 + '/medicacao')).sort(), ['m1', novo].sort());
+    // reabrir a primeira de novo: recusa (já foi lançada de novo)
+    run(`__za657=[]; __p658=dashMedReabrirAbrir('m1');`); await espera658();
+    assert.ok(J658('__za657').some((z) => /JÁ FOI LANÇADA DE NOVO/.test(z[0])), JSON.stringify(J658('__za657')));
+    igual(Object.keys(db658(DM658) || {}).length, 0, 'nada relançado');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P08 (AC1, dia anterior) — a dose de ONTEM no Plantão (a tela em ontem): desfazer anula no nó de ontem e devolve o estoque da marca de ontem; corrigir a avulsa de ontem só com a Gestão', async () => {
+  arma658();
+  try {
+    const LOGO = 'auaulandia/medicacao-log/' + ONTEM658 + '/' + K658;
+    semear658({ itens: { zen: ZEN658({ estoque: { modo: 'contavel', inicial: 20, restante: 10, contados: { '2026-10-08__zen_20-00': true, '2026-10-09__zen_08-00': true } } }) }, log: {} });
+    put658(LOGO, { 'zen_20-00': DOSE658('zen', 'Zenrelia', '20:00', 'comprimido', T658(8, 20, 5)), 'avulso_1': { itemId: null, nome: 'Dipirona', q: '10', u: 'gota', horario: '21:00', quem: 'Wandela Teste', ts: T658(8, 21, 0), avulso: true, motivo: 'febre' } });
+    run(`selectedDate=new Date(${T658(8, 12, 0)}); MED_AGENDA_LOG=__get657('${LOGO}')||{};`);
+    await anular658('zen_20-00');
+    const casc = J658('CORR_ATUAL.op.cascata');
+    console.log('      cascata da dose de ontem às 10:00 de hoje: ' + casc[2]);
+    let [p] = await assina658(SENHA657); igual(p, 'pronto'); await fecha658();
+    igual([!!db658(LOGO + '/zen_20-00/anulada'), db658(AG658 + '/itens/zen/estoque/restante'), db658(AG658 + '/itens/zen/estoque/contados')['2026-10-08__zen_20-00']], [true, 11, false]);
+    run(`__p658=medDoseCorrigirAbrir('avulso_1');`); await espera658();
+    igual(J658('CORR_ATUAL.op.nivel'), 'gestao', 'a avulsa de ontem: só a Gestão');
+    await fecha658();
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P09 (AC1.2, AC4.4, texto) — as frases: o botão do «Desfazer esta dose», o botão do «Voltou a tomar», a dose de uma troca com o estoque movido', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00');
+    const html = cartaz658(); const bt = (html.match(/>([^<]*lançad[ao] por engano[^<]*)</) || [])[1];
+    console.log('      botão do «Desfazer esta dose»: «' + bt + '»');
+    igual(bt, 'Anular (lançada por engano)', '2ª rodada (BAIXO-4): a dose, no feminino');
+    await fecha658();
+    // a dose de hoje do antigo de uma troca (o estoque foi para a linha nova): o que a cascata diz
+    semear658({ itens: { zen: ZEN658({ horarios: ['08:00'], continuo: false, dataFim: DIA658, trocadoPor: 'mcr_t_zen_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_zen_20261010' }),
+      mcr_t_zen_20261010: ZEN658({ horarios: ['09:00'], dataInicio: AMANHA658, continuacaoDe: 'zen', estoque: { modo: 'contavel', inicial: 20, restante: 11, herdado: { de: 'zen' } } }) },
+      log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await anular658('zen_08-00');
+    console.log('      cascata (troca, estoque movido): ' + J658('CORR_ATUAL.op.cascata')[1]);
+    assert.ok(/^o estoque não volta sozinho: ele passou para a linha nova/.test(J658('CORR_ATUAL.op.cascata')[1]), '2ª rodada (BAIXO-4): o motivo do estoque na troca por datas');
+    await fecha658();
+    // o botão e o título do «Voltou a tomar» (não «Reabrir» / «Desfeito»), o «Tomar até» que a linha tinha e o «Começar hoje?»
+    semear658({ itens: { zen: ZEN658({ horarios: ['20:00'] }) }, log: {} });
+    run(FICHA658()); await anularRem658('zen'); await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); await fecha658();
+    run(FICHA658() + `__p658=medAgendaVoltouAbrir('${K658}', 'zen', 'ficha');`); await espera658();
+    igual(J658('CORR_ATUAL.op.campos').map((c) => c.valor), ['1', '20:00', 'uso contínuo', 'sim'], 'o «Tomar até» e os horários de antes do «Lançado por engano»; começa hoje (20:00 à frente)');
+    run(`corrToque('continuar', {valores:['1', '20:00', 'uso contínuo', 'sim']})`);
+    assert.ok(/>Gravar «Voltou a tomar»</.test(cartaz658()) && !/>Reabrir</.test(cartaz658()), 'o botão diz «Voltou a tomar»');
+    const [p9] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p9, 'pronto');
+    assert.ok(/>Pronto</.test(cartaz658()) && !/Desfeito/.test(cartaz658()), 'o título do pronto');
+    await fecha658();
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P10 (AC5.2, "dose em dobro por causa de uma correção") — corrigir a hora de um lançamento DEPOIS de a hora antiga passar, com o alarme dela aberto no celular da plantonista (a dose ainda sem registro): o alarme pede a dose de novo na hora nova?', async () => {
+  arma658();
+  try {
+    semearDash658();                                   // m1: Otomax às 14:00, chave do Biscoito (Day Care), sem dose registrada
+    ctx.__dcKq = run('dcDataKey'); run(`hospedes=[]; dcDataKey=(function(f){ return function(){ return '${DIA658}'; }; })(dcDataKey);`);   // (na Fase 0: volta no fim)
+    relogio658(T658(9, 14, 20));
+    let f0 = await fila_Q(); console.log('      14:20, antes: a fila tem ' + JSON.stringify(f0));
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '16:00']);
+    const [p] = await assina658('s-bia', 'a hora foi lançada errada no papel'); await fecha658();
+    console.log('      a correção 14:00 → 16:00 às 14:20 (a dose das 14:00 sem registro): ' + p + ' | hora no banco: ' + db658(DM658).m1.hora);
+    // o alarme das 14:00 estava aberto no celular da plantonista: ela dá o remédio e toca «Dei o remédio» (o registro da dose das 14:00)
+    run(`__pessoa658='Caio Encãotador Teste'; registrarDoseAgendadaGlobal({key:'dc__${KDC658}', itemId:'lanc_m1', nome:'OTOMAX — GOTAS NO OUVIDO', q:'', u:'', local:'Day Care', horario:'14:00', hospNome:'Biscoito'}, 'lanc_m1_14-00');`); await espera658();
+    const f1 = await fila_Q(T658(9, 16, 0));
+    const log = db658('auaulandia/medicacao-log/' + DIA658 + '/dc__' + KDC658) || {};
+    const pede = f1.indexOf('lanc_m1@16:00') >= 0 && !log['lanc_m1_16-00'];
+    console.log('      16:00: a fila tem ' + JSON.stringify(f1) + '; registros do dia: ' + JSON.stringify(Object.keys(log)) + ' → o alarme pede a dose de novo: ' + pede);
+    igual(pede && p === 'pronto', false, 'a correção da hora com a hora antiga já passada (e sem registro) não pode armar uma segunda dose do mesmo lançamento no mesmo dia (a régua da 6.54 recusa o mesmo caso na agenda)');
+    igual(p, 'falhou', '2ª rodada (ALTO-1): recusada, com a frase da régua da 6.54');
+  } finally { run('dcDataKey=__dcKq;'); solta658(); }
+});
+
+provaAsync('6.58 QA P11 (comparação) — o mesmo caso na AGENDA (6.54, «Salvar agenda»): mudar 14:00 → 16:00 às 14:20, sem registro, começa amanhã', async () => {
+  arma658();
+  try {
+    semear658({ itens: { oto: { nome: 'Otomax', q: '3', u: 'gota', horarios: ['14:00'], continuo: true, tipo: 'medicamento', origem: 'vet' } }, log: {} });
+    relogio658(T658(9, 14, 20));
+    const r = JSON.parse(JSON.stringify(await run(`mcrReguaDaAgenda('${K658}', {oto:{nome:'Otomax', q:'3', u:'gota', horarios:['16:00'], continuo:true, tipo:'medicamento', origem:'vet'}}, __get657('${AG658}/itens'), 'Ana Teste')`)));
+    console.log('      régua da agenda: ' + JSON.stringify(r.frases));
+    assert.ok(Object.keys(r.novos || {}).length === 1 && r.trocados.oto, 'a agenda troca por datas (amanhã)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P12 (AC4.3) — a cópia da dose (o espelho da 6.32) não é gravada no remédio anulado igual a um vivo, e o placar não passa a mostrar dose dada no anulado', async () => {
+  arma658();
+  try {
+    // zen2 (a Zenrelia do tutor, 08:00) lançada por engano; a Zenrelia da vet (zen) continua
+    semear658({ itens: { zen: ZEN658(), zen2: ZEN2_658() }, log: {} });
+    run(FICHA658()); await anularRem658('zen2'); const [p] = await assina658(SENHA657, 'era repetido de outro remédio já lançado'); igual(p, 'pronto'); await fecha658();
+    run(`__pessoa658='Gilda Teste'; registrarDoseAgendadaGlobal({key:'${K658}', itemId:'zen', nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'08:00', hospNome:'Biscoito'}, 'zen_08-00');`); await espera658();
+    const L = db658(LOG658) || {};
+    console.log('      registros: ' + JSON.stringify(Object.keys(L)) + (L['zen2_08-00'] ? (' (a cópia no anulado: espelho_de=' + L['zen2_08-00'].espelho_de + ')') : ''));
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{}; __plQ=[]; __rpQ=renderPlacarMedDia; renderPlacarMedDia=function(r){ __plQ.push(r.map(function(x){ return x.id+'@'+x.h+':'+x.feito; })); return __rpQ(r); }; renderMedAgendaHoje(); renderPlacarMedDia=__rpQ;`);
+    console.log('      placar: ' + JSON.stringify(J658('__plQ')));
+    igual(!!L['zen2_08-00'], false, 'nenhuma dose nova é gravada no remédio anulado (o medIrmasDaDose pula o suspenso, mas não o anulado)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P13 (AC4.4, AC4.5) — «Voltou a tomar» de um remédio de dia sim, dia não: a linha nova não pode dar dois dias seguidos', async () => {
+  arma658();
+  try {
+    const ALT = ZEN658({ horarios: ['08:00'], freq: { tipo: 'alternado' }, dataInicio: '2026-10-01' });
+    semear658({ itens: { zen: ALT }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    igual([run(`medVigenteEm(__get657('${AG658}/itens/zen'), '2026-10-09')`), run(`medVigenteEm(__get657('${AG658}/itens/zen'), '2026-10-10')`)], [true, false], 'a régua antiga: dá no dia 09, não no 10');
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen', ['1', '08:00', 'uso contínuo']);
+    console.log('      cartaz: ' + J658('CORR_ATUAL.op.volta')[0]);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    const ag = db658(AG658 + '/itens'), nid = Object.keys(ag).filter((k) => /^mcr_t_/.test(k))[0], nv = ag[nid];
+    const dias = ['2026-10-10', '2026-10-11', '2026-10-12', '2026-10-13'].map((d) => d.slice(8) + ':' + run(`medVigenteEm(${JSON.stringify(nv)}, '${d}')`));
+    console.log('      linha nova ' + nid + ' (início ' + nv.dataInicio + ', freq ' + JSON.stringify(nv.freq) + '): dá nos dias ' + dias.join(' '));
+    igual(run(`medVigenteEm(${JSON.stringify(nv)}, '2026-10-10')`), false, 'deu no dia 09; dar de novo no dia 10 quebra o dia sim, dia não (dose a mais)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P14 (AC1.4) — a devolução volta exatamente a quantidade da dose (2 comprimidos), não 1', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ q: '2' }) }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { q: '2' }) } });
+    await anular658('zen_08-00');
+    const c = J658('CORR_ATUAL.op.cascata')[1]; console.log('      cascata: ' + c);
+    await assina658(SENHA657); await fecha658();
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 13);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P15 (AC1.2) — a cascata não promete alarme para o remédio suspenso pela veterinária (a dose dada antes da suspensão)', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }) }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await anular658('zen_08-00');
+    const c = J658('CORR_ATUAL.op.cascata')[2]; console.log('      cascata do alarme: ' + c); await fecha658();
+    igual(/O alarme volta a pedir/.test(c), false);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P16 (AC4.4, risco 4) — «Voltou a tomar» com a agenda mudada em outro aparelho depois que a tela leu: recusado, nada gravado', async () => {
+  arma658();
+  try {
+    const PAR = { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['20:00'], continuo: false, dataFim: ONTEM658, dataInicio: '2026-10-01', paradoEm: { quem: 'Ana Teste', data: ONTEM658 } };
+    semear658({ itens: { zen: PAR }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '20:00', 'uso contínuo']);
+    put658(AG658 + '/_ts', 777);   // outro aparelho gravou a agenda
+    const [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje');
+    console.log('      resultado: ' + p + ' | ' + String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || '').slice(0, 120));
+    igual([p, Object.keys(db658(AG658 + '/itens')).filter((k) => /^mcr_t_/.test(k)).length], ['falhou', 0]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P17 (AC1.6, AC1.7) — a mensagem ao grupo no «Reabrir» diz que a anulação foi desfeita (não «DOSE ANULADA»)', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    run('__tg658=[];'); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658(); await assina658(SENHA657, 'a anulação foi um engano da Gestão'); await fecha658();
+    const t = J658('__tg658').map((x) => x.texto).join('\n'); console.log('      ' + t.split('\n').slice(0, 2).join(' | '));
+    igual([/ANULAÇÃO DESFEITA/.test(t), /DOSE ANULADA/.test(t)], [true, false]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P18 (AC4.3) — o vetSalvarMed com a memória velha (o Cuidado Vet aberto antes da anulação) não regrava o anulado', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    const cacheVelho = JSON.stringify(db658(AG658 + '/itens'));
+    run(FICHA658()); await anularRem658('zen'); const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    const antes = JSON.stringify(db658(AG658 + '/itens/zen'));
+    run(`VET_MED_CACHE=${cacheVelho}; vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; vetKey=function(){ return '${K658}'; }; vetMedEditId='zen'; vetCarregarMed=function(){};
+      __vf={vmNome:{value:'Zenrelia'}, vmQtd:{value:'2'}, vmLocal:{value:''}, vmIni:{value:'2026-10-09'}, vmFim:{value:''}, vmMotivo:{value:'a dose mudou para dois comprimidos'}, 'vetMed-status':{style:{}, textContent:''}, vetMedForm:{}};
+      __gv=document.getElementById; __qv=document.querySelector; __qav=document.querySelectorAll; __cf=coletarFreqMed;
+      document.getElementById=function(id){ return __vf[id]||__gv(id); };
+      document.querySelector=function(s){ if(s==='#vmUnidades button.on') return {textContent:'comprimido'}; if(s==='#vetMedForm .mag-continuo.on') return {}; if(s==='#vmTipo button.on') return {textContent:'Medicamento'}; return null; };
+      document.querySelectorAll=function(s){ return s==='#vmHorarios [data-c=h]'?[{value:'08:00'},{value:'20:00'}]:[]; };
+      coletarFreqMed=function(){ return null; };`);
+    try { run('vetSalvarMed()'); await espera658(); } finally { run('document.getElementById=__gv; document.querySelector=__qv; document.querySelectorAll=__qav; coletarFreqMed=__cf;'); }
+    console.log('      status: ' + run("__vf['vetMed-status'].textContent"));
+    igual(JSON.stringify(db658(AG658 + '/itens/zen')), antes, 'o anulado não muda');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P19 (AC5.1, AC4.1, AC6) — quem abre: a Veterinária com a tela «Lançamentos do dia» no Time corrige; a Consultora (editar-medicacao-checkin) abre o «Lançado por engano» da ficha', async () => {
+  arma658();
+  try {
+    semearDash658();
+    run(`__login657={nome:'Vera Veterinária Teste', role:'vet'}; MONITORES=[{id:'t2', nome:'Vera Veterinária Teste', senha:'s-vera-dash', role:'vet', paginas:['dashdc']}];`);
+    await corrigirDash658(['Otomax — 3 gotas', 'NA BOLSA', '14:00']);
+    let [p, a] = await assina658('s-vera-dash', 'o remédio foi escrito pela metade');
+    console.log('      Veterinária com a tela no Time: ' + p + (a ? ' | ' + a.slice(0, 100) : ''));
+    igual(p, 'pronto');
+    await fecha658();
+    semear658({ itens: { zen: ZEN658() } });
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora';` + FICHA658());
+    run('__barra=[]; __cbQ=corrBarrar; corrBarrar=function(){ __barra.push(Array.prototype.slice.call(arguments)); };');
+    await anularRem658('zen');
+    run('corrBarrar=__cbQ;');
+    console.log('      Consultora abre o «Lançado por engano»: ' + (run('CORR_ATUAL') ? 'abriu' : 'barrada ' + JSON.stringify(J658('__barra'))));
+    igual(!!run('CORR_ATUAL'), true);
+    await fecha658();
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P20 (AC4.2) — anular com hospedagem ativa anda o carimbo das estadias (os outros aparelhos relêem a lista)', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    put658('auaulandia/estadias/e1', { nome: 'Biscoito', tutor: 'Rita Teste', refKey: K658, status: 'ativa', entrada: '2026-10-08', saida: '2026-10-12', medicacao: [{ nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], agendaId: 'zen' }] });
+    run(`EST_TODAS={e1:__get657('auaulandia/estadias/e1')};` + FICHA658());
+    await anularRem658('zen'); run('__esc657=[];'); const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto');
+    const carimbo = run('__esc657').filter((e) => /versoes\/estadias/.test(e[1]));
+    console.log('      escrita na lista da estadia: ' + !!db658('auaulandia/estadias/e1/medicacao/0/parouEm') + ' | carimbo: ' + JSON.stringify(carimbo.map((e) => e[0] + ' ' + e[1])));
+    igual(carimbo.length > 0, true);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P21 (AC1.6) — a mensagem de correção com a ponte do Telegram REJEITANDO (erro de rede) entra na fila', async () => {
+  arma658();
+  try {
+    semear658();
+    run(`tgAvisar=function(){ return Promise.reject(new Error('Failed to fetch')); };`);
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658(); await espera658();
+    const fila = db658('auaulandia/med-tg-fila'); console.log('      fila: ' + JSON.stringify(fila ? Object.keys(fila).length : null));
+    igual(!!fila && Object.keys(fila).length > 0, true);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA P22 (AC1.4, "devolução sem trava") — um «Salvar agenda» NOVO (não velho) entre a dose e o «Desfazer»: o estoque ainda volta, e o rastro da devolução não some', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    const elZen = `{dataset:{id:'zen'}, querySelector:function(s){ if(s==='.mag-estoque') return {dataset:{modo:'contavel'}, querySelector:function(q){ return q==='[data-c=einicial]'?{value:'20'}:null; }}; return null; }}`;
+    // o formulário do Plantão como ele é: o estoque sai do coletarEstoqueEl (a peça de verdade)
+    run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true};
+      coletarMedAgendaForm=function(){ var it=JSON.parse(JSON.stringify(MED_AGENDA_ITENS.zen)); var o={nome:it.nome, q:it.q, u:it.u, horarios:it.horarios, tipo:it.tipo, origem:it.origem, continuo:true, obs:'dar com comida'};
+        var e=coletarEstoqueEl(${elZen}, MED_AGENDA_ITENS.zen); if(e) o.estoque=e; return {zen:o}; }; __el657['mag-status']={style:{}, textContent:''};`);
+    run('salvarMedAgenda()'); await espera658();
+    const e1 = db658(AG658 + '/itens/zen/estoque');
+    console.log('      depois do «Salvar agenda» (só a observação mudou): ' + JSON.stringify(e1));
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658('zen_08-00');
+    console.log('      cascata: ' + J658('CORR_ATUAL.op.cascata')[1]);
+    await assina658(SENHA657); await fecha658();
+    const e2 = db658(AG658 + '/itens/zen/estoque');
+    console.log('      depois do «Desfazer esta dose»: restante ' + e2.restante + ' | devolvidos ' + JSON.stringify(Object.keys(e2.devolvidos || {})));
+    igual(e2.restante, 12, 'a dose das 08:00 tinha descontado (11): desfazer tem de voltar para 12');
+  } finally { solta658(); }
+});
+// ---- 6.58 QA, 2ª rodada — as lacunas: os 6 defeitos do QA que escapavam de tudo (q07, q13, q14, q20, q27, q35) e as
+// correções novas (a hora antiga no «Reabrir» dos Lançamentos, o «Voltou a tomar» que começa hoje ou avisa, a cópia).
+provaAsync('6.58 QA P23 (AC1.7, q07) — «Reabrir» a dose com a anulação trocada em outro aparelho enquanto o cartaz estava aberto (reaberta e anulada de novo): recusado, nada gravado', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    const d = db658(LOG658)['zen_08-00'];
+    put658(LOG658 + '/zen_08-00/anulada', Object.assign({}, d.anulada, { ts: T658(9, 10, 40), por: 'Outra Gestora Teste' }));
+    run('__esc657=[];');
+    const [p] = await assina658(SENHA657, 'a anulação foi um engano da Gestão');
+    igual(p, 'falhou'); assert.ok(/A anulação desta dose mudou em outro aparelho/.test(cartaz658()), cartaz658());
+    igual([db658(LOG658)['zen_08-00'].anulada.por, escLog658().length, db658(AG658 + '/itens/zen/estoque/restante')], ['Outra Gestora Teste', 0, 12], 'a anulação de agora fica; nada gravado; o estoque igual');
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P24 (AC1.2, q13) — a cascata da dose de ontem diz até quando pela régua da 6.47 COM a próxima dose do mesmo remédio (a fila): 23:30 e 01:00 dão teto de 45 minutos, «até 00:15»', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ horarios: ['01:00', '23:30'], estoque: null }) }, log: { 'zen_23-30': DOSE658('zen', 'Zenrelia', '23:30', 'comprimido', T658(9, 23, 32)) } });
+    relogio658(T658(10, 0, 5));
+    run(`selectedDate=new Date(${T658(9, 12, 0)}); MED_AGENDA_TODOS=[{key:'${K658}', itemId:'zen', horario:'01:00', nome:'Zenrelia'}, {key:'${K658}', itemId:'zen', horario:'23:30', nome:'Zenrelia'}];`);
+    await anular658('zen_23-30');
+    const c = J658('CORR_ATUAL.op.cascata')[2];
+    igual(c, 'O alarme volta a pedir esta dose agora (até 00:15)', 'o teto com a próxima dose (01:00): a metade do intervalo');
+    await fecha658();
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P25 (AC1.2, AC1.4, q14) — a dose que não descontou (sem a marca do dia): a cascata diz que o estoque não muda, e ele não muda', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ estoque: { modo: 'contavel', inicial: 20, restante: 11, contados: {} } }) } });
+    await anular658('zen_08-00');
+    igual(J658('CORR_ATUAL.op.cascata')[1], 'o estoque não muda (esta dose não tinha descontado)');
+    const [p] = await assina658(SENHA657); igual(p, 'pronto'); await fecha658();
+    igual(db658(AG658 + '/itens/zen/estoque/restante'), 11);
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P26 (AC4.4, q20) — «Voltou a tomar» de remédio de dias específicos (seg, qua e sex): a linha nova guarda a frequência e não toca no sábado', async () => {
+  arma658();
+  try {
+    const DIAS = ZEN658({ horarios: ['20:00'], freq: { tipo: 'dias', dias: ['seg', 'qua', 'sex'] }, continuo: false, dataFim: ONTEM658, dataInicio: '2026-10-01',
+      paradoEm: { quem: 'Ana Teste', data: ONTEM658 }, estoque: null });
+    semear658({ itens: { zen: DIAS }, log: {} }); run(FICHA658());
+    await voltou658('zen', ['1', '20:00', 'uso contínuo']);
+    const [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); igual(p, 'pronto');
+    const ag = db658(AG658 + '/itens'), nid = Object.keys(ag).filter((k) => /^mcr_t_/.test(k))[0], nv = ag[nid];
+    ctx.__nv658 = nv;
+    igual([JSON.stringify(nv.freq), run(`medVigenteEm(__nv658, '2026-10-09')`), run(`medVigenteEm(__nv658, '2026-10-10')`), run(`medVigenteEm(__nv658, '2026-10-12')`)],
+      [JSON.stringify({ tipo: 'dias', dias: ['seg', 'qua', 'sex'] }), true, false, true], 'sexta sim, sábado não, segunda sim');
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P27 (AC5.3, q27) — Lançamentos: a medicação tirada continua riscada no cartão depois de recarregar a tela (a carga do dia lê as tiradas)', async () => {
+  arma658();
+  try {
+    semearDash658();
+    run(`__p658=dashMedAnularAbrir('m1');`); await espera658();
+    const [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    run(`__bkDc658={m:dashCalCarregarMarcas, v:vagasCarregarDia, pf:pernFilaCarregar, tv:tvBanhoLigar, rd:renderDash, al:DASH_AUTO_LIGADO};
+      dashCalCarregarMarcas=function(){}; vagasCarregarDia=function(){ return Promise.resolve(); }; pernFilaCarregar=function(){}; tvBanhoLigar=function(){}; renderDash=function(){}; DASH_AUTO_LIGADO=true;
+      DASH_MED_ANULADOS={}; DASH_MED_ANULADOS_DIA='';`);
+    try { run('dashCarregar()'); await espera658(); }
+    finally { run('dashCalCarregarMarcas=__bkDc658.m; vagasCarregarDia=__bkDc658.v; pernFilaCarregar=__bkDc658.pf; tvBanhoLigar=__bkDc658.tv; renderDash=__bkDc658.rd; DASH_AUTO_LIGADO=__bkDc658.al;'); }
+    const h = String(run('dashMedAnuladasHTML()'));
+    assert.ok(/corr-riscado/.test(h) && /dashMedReabrirAbrir\('m1'\)/.test(h) && /Anulada \(lançada por engano\)/.test(h), 'o riscado volta com a carga, no feminino: ' + h.slice(0, 200));
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P28 (AC4.3, q35) — o adiado de ONTEM de um remédio anulado hoje não volta: a carga da agenda marca o anulado como fora, e o adiado é descartado (dizendo)', async () => {
+  arma658();
+  const k = K658 + '__zen_20-00';
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: {} });
+    run(FICHA658()); await anularRem658('zen'); const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    run(`despMedSnoozePend['${k}']=1; despMedSnoozeDia['${k}']='${ONTEM658}'; despMedSnooze['${k}']=1;
+      despMedSnoozeIt['${k}']={key:'${K658}', itemId:'zen', horario:'20:00', nome:'Zenrelia', hospNome:'Biscoito'};`);
+    await fila_Q();
+    igual(!!run(`MED_AGENDA_SUSPENSOS['${k.replace('_20-00', '')}']`), true, 'a carga marca o anulado como fora');
+    const fora = JSON.parse(JSON.stringify(run('medAdiadoForaDaAgenda()')));
+    igual([fora.length, !!run(`despMedSnoozePend['${k}']`)], [1, false], 'o adiado de ontem do anulado sai (e a tela diz)');
+  } finally { run(`delete despMedSnoozePend['${k}']; delete despMedSnoozeDia['${k}']; delete despMedSnooze['${k}']; delete despMedSnoozeIt['${k}'];`); solta658(); }
+});
+provaAsync('6.58 QA P29 (AC5.4, ALTO-1) — «Reabrir» a medicação tirada depois de a hora dela passar, sem registro da dose: recusado com a frase da régua da 6.54 (o alarme do lançamento tirado pode estar aberto); antes da hora, reabre', async () => {
+  arma658();
+  try {
+    semearDash658();
+    ctx.__dcK658 = run('dcDataKey'); run(`hospedes=[]; dcDataKey=function(){ return '${DIA658}'; };`);
+    run(`__p658=dashMedAnularAbrir('m1');`); await espera658(); let [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 14, 20));
+    run('__esc657=[];'); run(`__p658=dashMedReabrirAbrir('m1');`); await espera658();
+    [p] = await assina658('s-bia', 'foi tirada por engano da Gestão');
+    igual(p, 'falhou');
+    assert.ok(/O horário das 14:00 de hoje já passou e a dose não foi registrada: o alarme dela pode estar aberto no celular da plantonista\. Nada foi gravado: confira com a plantonista/.test(cartaz658()), cartaz658());
+    igual([Object.keys(db658(DM658) || {}).length, run('__esc657').filter((e) => /^daycare/.test(e[1]) && !/RECUSADO/.test(e[0])).length], [0, 0], 'nada relançado');
+    await fecha658();
+    relogio658(T658(9, 13, 40));   // a 20 minutos da hora: reabre
+    run(`__p658=dashMedReabrirAbrir('m1');`); await espera658(); [p] = await assina658('s-bia', 'foi tirada por engano da Gestão'); igual(p, 'pronto');
+  } finally { run('dcDataKey=__dcK658;'); solta658(); }
+});
+provaAsync('6.58 QA P30 (AC5.2, ALTO-1) — corrigir a hora: a menos de 15 minutos da hora antiga também recusa; a hora antiga à frente, corrige; só o texto (a hora igual), corrige mesmo depois da hora', async () => {
+  arma658();
+  try {
+    semearDash658();
+    ctx.__dcK658 = run('dcDataKey'); run(`hospedes=[]; dcDataKey=function(){ return '${DIA658}'; };`);
+    relogio658(T658(9, 13, 50));
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '16:00']);
+    let [p] = await assina658('s-bia', 'a hora foi lançada errada no papel'); igual(p, 'falhou');
+    assert.ok(/O horário das 14:00 está a menos de 15 minutos: o celular da plantonista pode tocar o horário antigo\. Nada foi gravado/.test(cartaz658()), cartaz658());
+    await fecha658();
+    relogio658(T658(9, 13, 30));
+    await corrigirDash658(['OTOMAX — GOTAS NO OUVIDO', 'NA BOLSA', '16:00']); [p] = await assina658('s-bia', 'a hora foi lançada errada no papel'); igual(p, 'pronto'); await fecha658();
+    igual(db658(DM658).m1.hora, '16:00');
+    relogio658(T658(9, 16, 30));
+    run(`DASH_DADOS={medicacao:__get657('${DM658}')||{}};`);
+    await corrigirDash658(['OTOMAX — 3 GOTAS NO OUVIDO', 'NA BOLSA', '16:00']); [p] = await assina658('s-bia', 'o remédio foi escrito pela metade'); igual(p, 'pronto', 'só o texto: a hora igual não arma dose nova');
+  } finally { run('dcDataKey=__dcK658;'); solta658(); }
+});
+provaAsync('6.58 QA P31 (AC4.4, AC4.5, MÉDIO-1) — «Voltou a tomar» que começa hoje: a dose de hoje já dada continua contando (cópia na linha nova, o alarme não a pede, o placar não dobra); «Desfazer» na dose de origem desfaz a cópia; «não» em «Começar hoje?» começa amanhã e avisa a dose de hoje sem alarme', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    // «não»: começa amanhã, e a tela diz que a das 20:00 de hoje não será pedida
+    await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'não']);
+    const v1 = J658('CORR_ATUAL.op.volta');
+    assert.ok(/^a linha nova começa sábado, 10\/10/.test(v1[0]) && v1.some((x) => /^ATENÇÃO: a dose de hoje das 20:00 não será pedida pelo alarme/.test(x)), JSON.stringify(v1));
+    await fecha658();
+    // o recomendado (vazio = «sim»): hoje, com a cópia da dose das 08:00
+    run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo']);
+    const v2 = J658('CORR_ATUAL.op.volta');
+    assert.ok(/^a linha nova começa hoje, sexta, 09\/10 — a dose de hoje das 08:00 já foi dada e continua contando: o alarme não a pede de novo; hoje ele pede a das 20:00/.test(v2[0]), v2[0]);
+    run('__esc657=[];'); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    const N = 'mcr_t_zen_20261009', L = db658(LOG658);
+    igual([L[N + '_08-00'].espelho_de, L[N + '_08-00'].quem, L[N + '_08-00'].itemId], ['zen_08-00', 'Wandela Teste', N], 'a cópia da dose de hoje');
+    igual(!!run(`MED_AGENDA_LOG['${N}_08-00']`), true, 'a tela aberta já desenha a dose das 08:00 da linha nova como dada (sem «Dei agora»)');
+    const w = run('__esc657').filter((e) => e[0] === 'update' && e[1] === '');
+    igual(w.length, 1, 'a linha nova, a marca na antiga, o carimbo e a cópia numa escrita só');
+    const f = await fila_Q(T658(9, 19, 0)); igual(f.filter((x) => /^mcr_t_/.test(x)), [N + '@08:00', N + '@20:00']);
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{}; __plQ2=[]; __rpQ2=renderPlacarMedDia; renderPlacarMedDia=function(r){ __plQ2.push(r.map(function(x){ return x.id+'@'+x.h+':'+x.feito; })); return __rpQ2(r); }; renderMedAgendaHoje(); renderPlacarMedDia=__rpQ2;`);
+    igual(J658('__plQ2')[0], [N + '@08:00:true', N + '@20:00:false'], 'o placar conta a dose das 08:00 uma vez só');
+    const l08 = hoje658().split('class="mag-dose').slice(1).filter((x) => /08:00/.test(x) && /Zenrelia/.test(x));
+    igual([l08.length, /uso contínuo/.test(l08[0] || ''), /até 09\/10\/2026/.test(l08[0] || '')], [1, true, false], 'a linha das 08:00 aparece pela linha nova (viva), não pela anulada');
+    relogio658(T658(9, 20, 1));
+    run(`__abre658=[]; MED_AGENDA_TODOS=MED_AGENDA_TODOS.filter(function(e){ return e.itemId===${JSON.stringify(N)}; }); papelRecebeAlarmeMed=function(){ return true; }; despMedNaTela=null; checarDespertadorMed();`); await espera658();
+    igual(J658('__abre658').map((a) => a[1]), [N + '_20-00'], 'o alarme pede só a das 20:00 (a das 08:00 foi dada)');
+    // «Desfazer» na dose de origem: a cópia sai junto, e o alarme volta a pedir a das 08:00 na linha nova
+    relogio658(T658(9, 20, 5)); run(`despMedNaTela=null; MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658('zen_08-00');
+    assert.ok(J658('CORR_ATUAL.op.cascata').some((x) => /as cópias desta dose/.test(x)), JSON.stringify(J658('CORR_ATUAL.op.cascata')));
+    [p] = await assina658(SENHA657, 'a dose foi registrada no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    igual(!!db658(LOG658)[N + '_08-00'].anulada, true, 'a cópia anulada junto');
+  } finally { solta658(); }
+});
+provaAsync('6.58 QA P32 (AC4.4, MÉDIO-1) — «Voltou a tomar» com a linha antiga parada que ainda toca hoje (o «Parou de tomar» de hoje): amanhã, a tela diz que a antiga fica com as doses de hoje (como na troca por datas); «sim» em «Começar hoje?» é recusado; o estoque das doses de hoje da antiga sai já', async () => {
+  arma658();
+  try {
+    const PAR = ZEN658({ horarios: ['08:00', '20:00'], continuo: false, dataFim: DIA658, paradoEm: { quem: 'Ana Teste', data: DIA658 },
+      estoque: { modo: 'contavel', inicial: 20, restante: 11, contados: { '2026-10-09__zen_08-00': true } } });
+    semear658({ itens: { zen: PAR }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen', ['1', '09:00, 21:00', 'uso contínuo', 'sim']);
+    assert.ok(/Não dá para começar hoje: a linha antiga ainda toca hoje às 20:00/.test(String(run('CORR_ATUAL.aviso'))), run('CORR_ATUAL.aviso'));
+    run(`corrToque('continuar', {valores:['1', '09:00, 21:00', 'uso contínuo', 'não']})`);
+    const v = J658('CORR_ATUAL.op.volta');
+    assert.ok(/^a linha nova começa sábado, 10\/10 — a linha antiga ainda toca hoje às 20:00 \(as doses de hoje ficam nela\)/.test(v[0]) && !v.some((x) => /^ATENÇÃO/.test(x)), JSON.stringify(v));
+    const [p] = await assina658('s-bia', 'a veterinária mudou o horário do remédio'); igual(p, 'pronto');
+    igual(db658(AG658 + '/itens/mcr_t_zen_20261010/estoque/restante'), 10, 'a dose das 20:00 de hoje da antiga já sai do estoque que passou (11 − 1)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P41 (AC1.3, dois aparelhos; 2ª rodada, BAIXO-2) — «Desfazer esta dose» com a dose registrada de novo em outro aparelho ENTRE a leitura e a gravação: a transação confere o carimbo da dose que o cartaz mostrou; recusado, nada gravado, a dose nova não é anulada', async () => {
+  arma658();
+  try {
+    semear658();
+    await anular658('zen_08-00');   // o cartaz mostra a dose das 08:04
+    const velha = db658(LOG658)['zen_08-00'];
+    // o outro aparelho grava no instante entre a leitura do registro e a transação da marca
+    ctx.__nova658 = Object.assign({}, velha, { quem: 'Gilda Teste', ts: T658(9, 9, 40), anteriores: [Object.assign({}, velha, { anulada: { por: 'Gestora Teste', motivo: 'outro aparelho', ts: T658(9, 9, 30) } })] });
+    run(`(function(){ var orig=DB.ref; DB.ref=function(p){ var r=orig(p); if(String(p)==='${LOG658}/zen_08-00'){ var t0=r.transaction; r.transaction=function(fn){ DB.ref=orig; __put657('${LOG658}/zen_08-00', __nova658); return t0(fn); }; } return r; }; })();`);
+    run('__esc657=[];');
+    const [p] = await assina658(SENHA657);
+    igual(p, 'falhou'); assert.ok(/mudou em outro aparelho/.test(cartaz658()), cartaz658());
+    igual([!!db658(LOG658)['zen_08-00'].anulada, db658(LOG658)['zen_08-00'].quem, escLog658().length, db658(AG658 + '/itens/zen/estoque/restante'), J658('__tg658').length], [false, 'Gilda Teste', 0, 11, 0],
+      'a dose nova continua dada; nada gravado; o estoque igual; nenhuma mensagem ao grupo');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P42 (AC4.4, AC4.5; 2ª rodada, MÉDIO-2) — «Voltou a tomar» de dia sim, dia não num dia «não» da linha antiga: não começa hoje (seriam dois dias seguidos), começa no próximo «sim» (amanhã, e não depois de amanhã), sem aviso falso de dose de hoje sem alarme', async () => {
+  arma658();
+  try {
+    const ALT = ZEN658({ horarios: ['20:00'], freq: { tipo: 'alternado' }, dataInicio: '2026-10-02' });
+    semear658({ itens: { zen: ALT }, log: {} });
+    igual(['2026-10-08', '2026-10-09', '2026-10-10'].map((d) => run(`medVigenteEm(__get657('${AG658}/itens/zen'), '${d}')`)), [true, false, true], 'a régua antiga: dá no dia 08, não no 09, dá no 10');
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen');
+    igual(J658('CORR_ATUAL.op.campos').map((c) => c.valor), ['1', '20:00', 'uso contínuo', 'não'], 'hoje não é dia dele: o recomendado é «não»');
+    run(`corrToque('continuar', {valores:['1', '20:00', 'uso contínuo', 'sim']})`);
+    assert.ok(/Não dá para começar hoje: hoje não é dia deste remédio/.test(String(run('CORR_ATUAL.aviso'))), run('CORR_ATUAL.aviso'));
+    run(`corrToque('continuar', {valores:['1', '20:00', 'uso contínuo', 'não']})`);
+    const v = J658('CORR_ATUAL.op.volta');
+    assert.ok(/^a linha nova começa sábado, 10\/10 — hoje não é dia deste remédio/.test(v[0]) && !v.some((x) => /^ATENÇÃO/.test(x)), JSON.stringify(v));
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    const ag = db658(AG658 + '/itens'), nid = Object.keys(ag).filter((k) => /^mcr_t_/.test(k))[0], nv = ag[nid];
+    igual([nid, nv.dataInicio], ['mcr_t_zen_20261010', '2026-10-10']);
+    igual(['2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12'].map((d) => run(`medVigenteEm(${JSON.stringify(nv)}, '${d}')`)), [false, true, false, true], 'a contagem segue a da linha antiga: 08 sim, 09 não, 10 sim');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P43 (AC4.3; 2ª rodada, MÉDIO-4a) — o Cuidado Vet aberto ANTES do «Lançado por engano» (a memória diz «suspenso», sem a marca): «Reativar» relê o banco, recusa e não grava nada', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }) } });
+    run(`VET_MED_CACHE=__get657('${AG658}/itens'); vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}; vetKey=function(){ return '${K658}'; }; vetCarregarMed=function(){};`);
+    run(FICHA658()); await anularRem658('zen'); const [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    igual(!!run(`medItemAnulado(VET_MED_CACHE.zen)`), false, 'a memória do Cuidado Vet é a de antes');
+    const antes = db658(AG658 + '/itens/zen');
+    run(`__al657=[]; __esc657=[]; zTexto=function(){ return Promise.resolve('a veterinária pediu para voltar a dar'); };`);
+    await run(`vetReativarMed('zen')`); await espera658();
+    assert.ok(J658('__al657').some((a) => /lançado por engano \(anulado\) em outro aparelho: não se reativa/.test(a)), JSON.stringify(J658('__al657')));
+    igual(run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !/RECUSADO/.test(e[0])).length, 0, 'nada gravado');
+    igual(db658(AG658 + '/itens/zen'), antes, 'o remédio anulado igual, letra por letra (o «suspenso» e o histórico)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P44 (AC4.4, AC4.5; 2ª rodada, MÉDIO-1) — «Voltou a tomar» de madrugada (03:00): não começa hoje, com o porquê da 6.47 (a dose de ontem ainda pode tocar), e a tela diz que as doses de hoje não serão pedidas', async () => {
+  arma658();
+  try {
+    relogio658(T658(9, 3, 0));
+    semear658({ itens: { zen: ZEN658() }, log: {} });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 3, 10)); run(FICHA658());
+    await voltou658('zen');
+    igual(J658('CORR_ATUAL.op.campos').map((c) => c.valor)[3], 'não', 'de madrugada o recomendado é «não»');
+    run(`corrToque('continuar', {valores:['1', '08:00, 20:00', 'uso contínuo', 'sim']})`);
+    igual(String(run('CORR_ATUAL.aviso')), 'Não dá para começar hoje: antes das 06:00 a mudança de horário começa no dia seguinte: de madrugada, o alarme ainda pode tocar a dose de ontem. Escreva «não» em «Começar hoje?».');
+    run(`corrToque('continuar', {valores:['1', '08:00, 20:00', 'uso contínuo', 'não']})`);
+    const v = J658('CORR_ATUAL.op.volta');
+    igual([v[0], v.filter((x) => /^ATENÇÃO/.test(x))], ['a linha nova começa sábado, 10/10 — antes das 06:00 a mudança de horário começa no dia seguinte: de madrugada, o alarme ainda pode tocar a dose de ontem',
+      ['ATENÇÃO: as doses de hoje das 08:00, 20:00 não serão pedidas pelo alarme (a linha nova começa sábado, 10/10): se a veterinária mandar dar hoje, registre como dose avulsa']]);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    igual(Object.keys(db658(AG658 + '/itens')).filter((k) => /^mcr_t_/.test(k)), ['mcr_t_zen_20261010']);
+  } finally { solta658(); }
+});
+{
+
+// ================================================================== 6.58, 3ª rodada — as provas do re-gate do QA (R2-01, R2-02, R2-03, R2-05, R2-06)
+console.log('\n6.58 QA R2 — as provas do re-gate do QA (rodada 2): «Começar hoje» e a cópia, a transação do «Desfazer», o rastro do estoque');
+const filaR = async (ms) => { if (ms) relogio658(ms); run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+const logR = () => db658(LOG658) || {};
+const pedeR = async (ms, hr) => { const f = await filaR(ms); const L = logR(); const de = f.filter((x) => x.endsWith('@' + hr)).filter((x) => { const [id] = x.split('@'); const d = L[id + '_' + hr.replace(':', '-')]; return !(d && !d.anulada); }); return { f, pede: de }; };
+
+
+provaAsync('6.58 QA R2-01 (MÉDIO-1) — a dose das 20:00 registrada ANTES da hora (dada mais cedo), «Lançado por engano» e «Voltou a tomar» com «sim»: a linha nova não pode pedir a das 20:00 de novo', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)), 'zen_20-00': DOSE658('zen', 'Zenrelia', '20:00', 'comprimido', T658(9, 18, 30)) } });
+    relogio658(T658(9, 19, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 19, 10)); run(FICHA658());
+    await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo']);
+    console.log('      cartaz: ' + J658('CORR_ATUAL.op.volta')[0] + ' | «Começar hoje?» veio: ' + J658('CORR_ATUAL.valores')[3]);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto');
+    const r = await pedeR(T658(9, 20, 1), '20:00');
+    console.log('      20:01: fila ' + JSON.stringify(r.f) + ' | registros ' + JSON.stringify(Object.keys(logR())) + ' | pede a das 20:00: ' + JSON.stringify(r.pede));
+    igual(r.pede, [], 'a das 20:00 já foi dada às 18:30 (registrada): pedir de novo é dose em dobro');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R2-02 (MÉDIO-1) — «Voltou a tomar» com «sim» e horários NOVOS (12:00 e 21:00) depois de a das 08:00 ter sido dada hoje: o dia não pode passar de 2 doses (a régua da 6.54 recusaria «hoje»)', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen', ['1', '12:00, 21:00', 'uso contínuo']);
+    console.log('      cartaz: ' + J658('CORR_ATUAL.op.volta')[0] + ' | «Começar hoje?»: ' + J658('CORR_ATUAL.valores')[3]);
+    [p] = await assina658('s-bia', 'a veterinária mudou os horários e voltou'); igual(p, 'pronto');
+    const a = await pedeR(T658(9, 12, 1), '12:00'), b = await pedeR(T658(9, 21, 1), '21:00');
+    const total = 1 + a.pede.length + b.pede.length;
+    console.log('      hoje: 08:00 dada + pede 12:00 ' + JSON.stringify(a.pede) + ' + pede 21:00 ' + JSON.stringify(b.pede) + ' = ' + total + ' doses de um remédio de 2 por dia');
+    // a régua da 6.54 no mesmo caso (agenda: 08:00, 20:00 → 12:00, 21:00 com a das 08:00 dada)
+    const rg = J658(`mcrRegraHorario({antes:['08:00','20:00'], depois:['12:00','21:00'], dadosHoje:['08:00'], agoraMin:630, hoje:'${DIA658}', item:{horarios:['12:00','21:00'], continuo:true}})`);
+    console.log('      régua da 6.54: podeHoje=' + rg.podeHoje + ' — ' + (rg.bloqueios || [])[0]);
+    assert.ok(total <= 2, 'o dia teve ' + total + ' doses');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R2-03 (BAIXO-2, estado meio-feito) — «Desfazer» da dose que tem cópia na linha do «Voltou a tomar»: a marca entra (transação), a escrita das cópias falha. O alarme pede a dose? O conselho da tela («Desfazer» na cópia) funciona?', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const nid = Object.keys(db658(AG658 + '/itens')).filter((k) => /^mcr_t_/.test(k))[0];
+    igual(!!logR()[nid + '_08-00'], true, 'a cópia nasceu');
+    // a dose das 08:00 NÃO foi dada (registro errado): «Desfazer» — a transação passa, a escrita das cópias (no nó do dia) é recusada
+    relogio658(T658(9, 10, 40)); run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{}; __recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')}; __za657=[];`);
+    run('__tg658=[];');
+    await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+    assert.ok(J658('__za657').some((z) => z[0] === 'A DOSE FOI ANULADA, MAS AS CÓPIAS DELA NÃO' && /A cópia dela na outra linha já conta como desfeita: o alarme pede a dose pela linha que toca/.test(z[1].join(' '))), JSON.stringify(J658('__za657')));
+    run('__recusa657=null;');
+    const L = logR();
+    console.log('      resultado: ' + p + ' | origem anulada: ' + !!(L['zen_08-00'] || {}).anulada + ' | cópia anulada: ' + !!(L[nid + '_08-00'] || {}).anulada + ' | aviso: ' + JSON.stringify(J658('__za657').map((z) => z[0])));
+    const r = await pedeR(T658(9, 10, 45), '08:00');
+    console.log('      10:45: o alarme pede a das 08:00? ' + JSON.stringify(r.pede));
+    // o conselho: «Desfazer esta dose» na cópia
+    run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{}; __za657=[];`);
+    await anular658(nid + '_08-00');
+    const abriu = !!run('CORR_ATUAL'); console.log('      «Desfazer» na cópia: ' + (abriu ? 'abre o cartaz' : 'sem cartaz (3ª rodada: completa direto) — ' + JSON.stringify(J658('__za657').map((z) => z[0] + ': ' + (z[1] || []).join(' ')))));
+    if (abriu) await fecha658();
+    // 3ª rodada (@dev): o «Desfazer» na cópia completa a anulação dela direto (a marca já assinada da origem), sem abrir
+    // cartaz — a asserção do QA («o alarme pede OU o cartaz abre») vira a do resultado pedido pelo gate
+    const L2 = logR(), r2 = await pedeR(T658(9, 10, 50), '08:00');
+    igual([!!(L2[nid + '_08-00'] || {}).anulada, ((L2[nid + '_08-00'] || {}).anulada || {}).por, ((L2[nid + '_08-00'] || {}).anulada || {}).ts], [true, L['zen_08-00'].anulada.por, L['zen_08-00'].anulada.ts], 'a cópia recebe a MESMA marca da origem');
+    igual(r2.pede, [nid + '@08:00'], 'o alarme volta a pedir a das 08:00 pela linha nova');
+    assert.ok(J658('__za657').some((z) => z[0] === 'AS CÓPIAS DA DOSE FORAM ANULADAS'), JSON.stringify(J658('__za657')));
+    igual(J658('__tg658').length, 1, 'uma mensagem ao grupo só (a da anulação da origem)');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R2-05 (MÉDIO-1) — «Voltou a tomar» com «sim» e depois «Desfazer» na dose de origem (a das 08:00 não foi dada): a cópia sai junto e o alarme volta a pedir a das 08:00 pela linha nova; e a cascata diz isso?', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); await fecha658();
+    const nid = Object.keys(db658(AG658 + '/itens')).filter((k) => /^mcr_t_/.test(k))[0];
+    relogio658(T658(9, 10, 40)); run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658(nid + '_08-00');   // tocado na linha da cópia (a linha viva)
+    const casc = J658('CORR_ATUAL.op.cascata'); console.log('      cascata: ' + JSON.stringify(casc.slice(1, 3)));
+    [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658();
+    const L = logR(); const r = await pedeR(T658(9, 10, 45), '08:00');
+    console.log('      origem anulada ' + !!L['zen_08-00'].anulada + ', cópia anulada ' + !!L[nid + '_08-00'].anulada + ' | 10:45 pede: ' + JSON.stringify(r.pede));
+    igual(r.pede, [nid + '@08:00'], 'a dose desfeita volta a ser pedida pela linha nova');
+    assert.ok(!/não volta a pedir/.test(casc[2]), 'a cascata diz que o alarme NÃO volta, mas ele volta (pela linha nova): ' + casc[2]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R2-06 (MÉDIO-3, rastro) — depois do «Desfazer», um «Salvar agenda» novo guarda o rastro da devolução (devolvidos) e a marca do dia', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() } });
+    await anular658('zen_08-00'); await assina658(SENHA657); await fecha658();
+    const elZen = `{dataset:{id:'zen'}, querySelector:function(s){ if(s==='.mag-estoque') return {dataset:{modo:'contavel'}, querySelector:function(q){ return q==='[data-c=einicial]'?{value:'20'}:null; }}; return null; }}`;
+    run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true};
+      coletarMedAgendaForm=function(){ var it=JSON.parse(JSON.stringify(MED_AGENDA_ITENS.zen)); var o={nome:it.nome, q:it.q, u:it.u, horarios:it.horarios, tipo:it.tipo, origem:it.origem, continuo:true, obs:'dar com comida'};
+        var e=coletarEstoqueEl(${elZen}, MED_AGENDA_ITENS.zen); if(e) o.estoque=e; return {zen:o}; }; __el657['mag-status']={style:{}, textContent:''};`);
+    run('salvarMedAgenda()'); await espera658();
+    const e = db658(AG658 + '/itens/zen/estoque');
+    console.log('      estoque depois do «Salvar agenda»: restante ' + e.restante + ' | contados ' + JSON.stringify(e.contados) + ' | devolvidos ' + Object.keys(e.devolvidos || {}).length);
+    igual([e.restante, (e.contados || {})['2026-10-09__zen_08-00'], Object.keys(e.devolvidos || {}).length], [12, false, 1]);
+  } finally { solta658(); }
+});
+}
+{
+// ================================================================== 6.58, 3ª rodada (@dev) — «Começar hoje» só quando toda dose de hoje vira cópia; as cópias que faltam; a cascata pela linha da cópia
+console.log('\n6.58 3ª rodada — «Começar hoje» (toda dose dada hoje cai num horário novo e vira cópia), as cópias que faltam, a cascata pela linha da cópia');
+const filaP = async (ms) => { if (ms) relogio658(ms); run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+const pedeP = async (ms, hr) => { const f = await filaP(ms); const L = db658(LOG658) || {}; return f.filter((x) => x.endsWith('@' + hr)).filter((x) => { const d = L[x.split('@')[0] + '_' + hr.replace(':', '-')]; return !(d && !d.anulada); }); };
+
+provaAsync('6.58 P45 (AC4.4, AC1.2; 3ª rodada, R2-ALTO-1 e R2-BAIXO-1) — «Voltou a tomar» com a das 20:00 registrada às 18:30: o cartaz cita as duas doses de hoje, as duas viram cópia e o alarme não pede nenhuma; «Desfazer» na das 20:00 pela linha nova: a cascata diz que o alarme pede no horário, pela linha nova, e às 20:01 ele pede uma vez', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)), 'zen_20-00': DOSE658('zen', 'Zenrelia', '20:00', 'comprimido', T658(9, 18, 30)) } });
+    relogio658(T658(9, 19, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 19, 10)); run(FICHA658());
+    await voltou658('zen');
+    igual(J658('CORR_ATUAL.op.campos').map((c) => c.valor), ['1', '08:00, 20:00', 'uso contínuo', 'sim']);
+    run(`corrToque('continuar', {valores:['1', '08:00, 20:00', 'uso contínuo', 'sim']})`);
+    igual(J658('CORR_ATUAL.op.volta')[0], 'a linha nova começa hoje, sexta, 09/10 — as doses de hoje das 08:00, 20:00 já foram dadas e continuam contando: o alarme não as pede de novo; hoje ele não pede mais nenhuma');
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = 'mcr_t_zen_20261009', L = db658(LOG658);
+    igual([L[N + '_08-00'].espelho_de, L[N + '_20-00'].espelho_de, L[N + '_20-00'].ts, L[N + '_20-00'].itemId], ['zen_08-00', 'zen_20-00', T658(9, 18, 30), N], 'as duas doses de hoje viram cópia na linha nova (a adiantada também)');
+    igual([await pedeP(T658(9, 19, 15), '08:00'), await pedeP(T658(9, 20, 1), '20:00')], [[], []], 'o alarme não pede nenhuma das duas');
+    // 19:20: a das 20:00 não tinha sido dada (registro adiantado errado): «Desfazer» tocado na linha nova (a cópia)
+    relogio658(T658(9, 19, 20)); run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658(N + '_20-00');
+    const casc = J658('CORR_ATUAL.op.cascata');
+    igual(casc[2], 'o alarme pede esta dose no horário dela (20:00), pela linha nova deste remédio', 'R2-BAIXO-1: a régua olha a linha da cópia, a que toca');
+    assert.ok(/^o estoque não volta sozinho: ele passou para a linha nova deste remédio \(o «Voltou a tomar»\)/.test(casc[1]), casc[1]);
+    [p] = await assina658(SENHA657, 'a dose das 20:00 não foi dada, registro adiantado errado'); igual(p, 'pronto'); await fecha658();
+    const L2 = db658(LOG658);
+    igual([!!L2['zen_20-00'].anulada, !!L2[N + '_20-00'].anulada, !!L2[N + '_08-00'].anulada], [true, true, false]);
+    igual(await pedeP(T658(9, 20, 1), '20:00'), [N + '@20:00'], 'às 20:01 o alarme pede a das 20:00 uma vez, pela linha nova');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P46 (AC4.5; 3ª rodada, R2-ALTO-1 e R2-MÉDIO-1) — a régua do «Começar hoje», caso a caso (horário antigo × novo × dose dada ou não × passou ou não) e numa grade: quando começa hoje, toda dose dada hoje cai num horário novo e vira cópia, e nenhum horário novo já passado fica sem dose', async () => {
+  arma658();
+  try {
+    const ANT = { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00', '20:00'], continuo: false, dataInicio: '2026-10-01' };
+    const vi = (hs, dadas, agora, extra) => {
+      const dados = {}; dadas.forEach((h) => { if (hs.indexOf(h) >= 0) dados[h] = true; });
+      ctx.__vi = Object.assign({ antiga: ANT, horarios: hs, hoje: DIA658, agoraMin: agora, continuo: true, dados, dadasHoje: dadas, antes: ['08:00', '20:00'], pendentes: [] }, extra || {});
+      relogio658(T658(9, Math.floor(agora / 60), agora % 60));
+      const r = J658('medVoltouInicio(__vi)'); return r.hoje ? ['hoje', r.copias] : ['amanhã', r.naoHoje];
+    };
+    const PASSOU_SEM = (h) => 'o horário das ' + h + ' de hoje já passou (ou falta menos de 15 minutos) e a dose não foi registrada';
+    const SAI_DADA = (h) => 'a dose das ' + h + ' de hoje já foi dada: o horário novo vale a partir de sábado, 10/10';
+    const casos = [
+      ['1. mesmos horários, a das 08:00 dada', vi(['08:00', '20:00'], ['08:00'], 630), ['hoje', ['08:00']]],
+      ['2. mesmos horários, a das 20:00 registrada adiantada', vi(['08:00', '20:00'], ['08:00', '20:00'], 630), ['hoje', ['08:00', '20:00']]],
+      ['3. mesmos horários, a das 08:00 passou sem dose', vi(['08:00', '20:00'], [], 630), ['amanhã', PASSOU_SEM('08:00')]],
+      ['4. horários novos, a das 08:00 (que sai) dada', vi(['12:00', '21:00'], ['08:00'], 630), ['amanhã', SAI_DADA('08:00')]],
+      ['5. horários novos, a das 08:00 (que sai) passou sem dose', vi(['12:00', '21:00'], [], 630), ['amanhã', 'o horário das 08:00 de hoje já passou e a dose não foi registrada: o alarme dela pode estar aberto no celular da plantonista']],
+      ['6. horários novos às 07:00, nada passou', vi(['12:00', '21:00'], [], 420), ['hoje', []]],
+      ['7. a das 20:00 sai (à frente, sem dose), a das 08:00 fica dada', vi(['08:00', '21:00'], ['08:00'], 630), ['hoje', ['08:00']]],
+      ['8. a das 20:00 sai, mas foi registrada adiantada', vi(['08:00', '21:00'], ['08:00', '20:00'], 630), ['amanhã', SAI_DADA('20:00')]],
+      ['9. horário novo a menos de 15 minutos', vi(['08:00', '10:35'], ['08:00'], 630), ['amanhã', PASSOU_SEM('10:35')]],
+      ['10. 19:50, a das 20:00 sem dose', vi(['08:00', '20:00'], ['08:00'], 1190), ['amanhã', PASSOU_SEM('20:00')]],
+      ['11. dose de hoje num horário de outra linha da corrente (09:00)', vi(['08:00', '20:00'], ['09:00'], 630), ['amanhã', SAI_DADA('09:00')]],
+    ];
+    // os «de antes» saem da marca do anulado (era) e da data da parada (medVoltouAntes), quando quem chama não os passa
+    const ANUL_DADA = Object.assign({}, ANT, { horarios: ['08:00'], dataFim: DIA658, paradoEm: { data: DIA658 }, anulado: { por: 'Gestora Teste', era: { horarios: ['08:00', '20:00'], continuo: true } } });
+    const ANUL_SEM = Object.assign({}, ANT, { dataFim: ONTEM658, paradoEm: { data: DIA658 }, anulado: { por: 'Gestora Teste', era: { horarios: ['08:00', '20:00'], continuo: true } } });
+    const PAROU_ONTEM = Object.assign({}, ANT, { dataFim: ONTEM658, paradoEm: { data: ONTEM658 } });
+    ctx.__an1 = ANUL_DADA; ctx.__an2 = ANUL_SEM; ctx.__an3 = PAROU_ONTEM;
+    igual([J658(`medVoltouAntes([__an1], '${DIA658}')`), J658(`medVoltouAntes([__an2], '${DIA658}')`), J658(`medVoltouAntes([__an3], '${DIA658}')`)], [['08:00', '20:00'], ['08:00', '20:00'], []],
+      'anulado hoje (com ou sem dose): os horários de antes da anulação; parado ontem: nenhum');
+    casos.push(['12. anulado às 19:50 (a das 20:00 cortada): a das 20:00 sai a menos de 15 minutos', vi(['08:00', '21:00'], ['08:00'], 1192, { antiga: ANUL_DADA, antes: undefined }),
+      ['amanhã', 'o horário das 20:00 está a menos de 15 minutos: o celular da plantonista pode tocar o horário antigo']]);
+    casos.push(['13. anulado hoje sem dose (dataFim ontem): a das 08:00 passou sem registro', vi(['12:00', '21:00'], [], 630, { antiga: ANUL_SEM, antes: undefined }),
+      ['amanhã', 'o horário das 08:00 de hoje já passou e a dose não foi registrada: o alarme dela pode estar aberto no celular da plantonista']]);
+    casos.push(['14. parado ontem: hoje não tocou, horários novos à frente', vi(['12:00', '21:00'], [], 630, { antiga: PAROU_ONTEM, antes: undefined }), ['hoje', []]]);
+    // quem chama a função pura sem a lista de quem ainda toca hoje: a linha antiga que vale hoje, com a das 20:00 por dar, segura o dia
+    casos.push(['15. a linha antiga ainda vale hoje (20:00 por dar), sem a lista dos pendentes', vi(['21:00'], [], 600, { antiga: Object.assign({}, ANT, { horarios: ['20:00'] }), antes: undefined, pendentes: undefined }),
+      ['amanhã', 'a linha antiga ainda toca hoje às 20:00 (as doses de hoje ficam nela)']]);
+    const errados = casos.filter((c) => JSON.stringify(c[1]) !== JSON.stringify(c[2])).map((c) => c[0] + ': ' + JSON.stringify(c[1]) + ' (esperado ' + JSON.stringify(c[2]) + ')');
+    igual(errados, [], 'casos');
+    // a grade: horários novos × doses dadas hoje × hora do dia
+    const HS = [['08:00', '20:00'], ['12:00', '21:00'], ['08:00', '21:00'], ['07:00'], ['20:00'], ['08:00', '14:00', '20:00'], ['22:00']];
+    const DADAS = [[], ['08:00'], ['20:00'], ['08:00', '20:00']];
+    const AGORA = [400, 630, 1110, 1190, 1250, 1350];
+    const furos = []; let n = 0, hoje = 0;
+    for (const hs of HS) for (const dadas of DADAS) for (const agora of AGORA) {
+      n++;
+      const dados = {}; dadas.forEach((h) => { if (hs.indexOf(h) >= 0) dados[h] = true; });
+      ctx.__vi = { antiga: ANT, horarios: hs, hoje: DIA658, agoraMin: agora, continuo: true, dados, dadasHoje: dadas, antes: ['08:00', '20:00'], pendentes: [] };
+      const r = J658('medVoltouInicio(__vi)');
+      if (!r.hoje) { if ((r.copias || []).length) furos.push(n + ': cópia sem começar hoje'); continue; }
+      hoje++;
+      const tag = hs.join('+') + ' / ' + (dadas.join('+') || '-') + ' / ' + agora;
+      if (dadas.some((h) => hs.indexOf(h) < 0)) furos.push(tag + ': dose dada hoje fora da linha nova (dose a mais)');
+      if (JSON.stringify(r.copias) !== JSON.stringify(dadas.slice().sort())) furos.push(tag + ': cópias ' + JSON.stringify(r.copias));
+      if (hs.some((h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3)) - agora < 15 && dadas.indexOf(h) < 0)) furos.push(tag + ': horário novo passado sem dose');
+      if (['08:00', '20:00'].some((h) => hs.indexOf(h) < 0 && dadas.indexOf(h) < 0 && Number(h.slice(0, 2)) * 60 + Number(h.slice(3)) - agora < 15)) furos.push(tag + ': horário que sai passado sem registro');
+    }
+    console.log('      ' + casos.length + ' casos conferidos; grade: ' + n + ' combinações, começa hoje em ' + hoje);
+    igual([furos.slice(0, 5), hoje > 10], [[], true]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P47 (AC1.3, AC1.6; 3ª rodada, R2-MÉDIO-2) — a escrita das cópias falhou depois da transação: «Desfazer» de novo na dose de origem (já anulada) completa a cópia com a MESMA marca, numa escrita só, sem outra mensagem nem outro estoque; o alarme volta a pedir pela linha nova; na 3ª vez, nada falta e nada é gravado', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = 'mcr_t_zen_20261009';
+    relogio658(T658(9, 10, 40)); run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{}; __recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')}; __tg658=[];`);
+    await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+    run('__recusa657=null;');
+    igual([!!db658(LOG658)['zen_08-00'].anulada, !!db658(LOG658)[N + '_08-00'].anulada, J658('__tg658').length], [true, false, 1], 'o meio-feito: a origem anulada, a cópia não');
+    const est0 = db658(AG658 + '/itens/' + N + '/estoque');
+    run(`__za657=[]; __esc657=[]; __au657=[]; MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658('zen_08-00');
+    const L = db658(LOG658);
+    igual([L[N + '_08-00'].anulada, run('CORR_ATUAL') ? 'abriu' : 'sem cartaz'], [L['zen_08-00'].anulada, 'sem cartaz'], 'a cópia recebe a marca da origem, sem nova senha');
+    igual(run('__esc657').filter((e) => !/RECUSADO/.test(e[0])).map((e) => [e[0], e[1], e[2]]), [['update', LOG658, [N + '_08-00/anulada']]], 'uma escrita só, só a marca da cópia');
+    igual([J658('__tg658').length, db658(AG658 + '/itens/' + N + '/estoque')], [1, est0], 'nenhuma mensagem nova; o estoque igual');
+    const za = J658('__za657').filter((z) => z[0] === 'AS CÓPIAS DA DOSE FORAM ANULADAS')[0];
+    assert.ok(za && /^O alarme volta a pedir esta dose agora, pela linha nova deste remédio/.test(za[1][1]) && /nada foi repetido/.test(za[1][2]), JSON.stringify(J658('__za657')));
+    assert.ok(J658('__au657').some((a) => a[0] === 'medicacao-dose-anulada' && a[2].completou === true && a[2].copias === 1), JSON.stringify(J658('__au657')));
+    igual(await pedeP(T658(9, 10, 45), '08:00'), [N + '@08:00'], 'o alarme volta a pedir a das 08:00 pela linha nova');
+    // 3ª vez: nada falta — a recusa de sempre, nada gravado
+    run(`__za657=[]; __esc657=[];`);
+    await anular658('zen_08-00');
+    igual([J658('__za657').map((z) => z[0]), run('__esc657').length], [['ESTA DOSE JÁ FOI ANULADA'], 0]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P48 (AC4.4, AC1.3; 3ª rodada, R2-ALTO-1) — «Voltou a tomar» duas vezes no mesmo dia (anulado, volta, anulado de novo, volta de novo): a cópia da cópia aponta para a dose de origem, e «Desfazer» nela leva as duas cópias', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N1 = 'mcr_t_zen_20261009';
+    relogio658(T658(9, 10, 40)); run(FICHA658()); await anularRem658(N1); [p] = await assina658(SENHA657, 'a linha nova foi lançada errada de novo'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); run(FICHA658()); await voltou658(N1, ['1', '08:00, 20:00', 'uso contínuo', 'sim']);
+    assert.ok(/^a linha nova começa hoje, sexta, 09\/10 — a dose de hoje das 08:00 já foi dada e continua contando/.test(J658('CORR_ATUAL.op.volta')[0]), J658('CORR_ATUAL.op.volta')[0]);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou de novo'); igual(p, 'pronto'); await fecha658();
+    const ag = db658(AG658 + '/itens'), N2 = Object.keys(ag).filter((k) => ag[k].continuacaoDe === N1)[0];
+    const L = db658(LOG658);
+    igual([!!N2, (L[N2 + '_08-00'] || {}).espelho_de, (L[N1 + '_08-00'] || {}).espelho_de], [true, 'zen_08-00', 'zen_08-00'], 'as duas cópias apontam para a dose de origem');
+    relogio658(T658(9, 11, 0)); run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+    await anular658(N2 + '_08-00');
+    [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    const L2 = db658(LOG658);
+    igual([!!L2['zen_08-00'].anulada, !!L2[N1 + '_08-00'].anulada, !!L2[N2 + '_08-00'].anulada], [true, true, true], 'a origem e as duas cópias anuladas');
+    igual(await pedeP(T658(9, 11, 5), '08:00'), [N2 + '@08:00'], 'o alarme volta a pedir a das 08:00 pela linha viva');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P49 (AC4.4; 3ª rodada, R2-MÉDIO-1) — «Voltou a tomar» com horários novos (12:00 e 21:00) depois da dose das 08:00: «sim» é recusado com a frase da 6.54 (a dose dada no horário que sai); com «não», o cartaz diz os horários de hoje sem alarme; nada é copiado', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658());
+    await voltou658('zen', ['1', '12:00, 21:00', 'uso contínuo', 'sim']);
+    igual(String(run('CORR_ATUAL.aviso')), 'Não dá para começar hoje: a dose das 08:00 de hoje já foi dada: o horário novo vale a partir de sábado, 10/10. Escreva «não» em «Começar hoje?».');
+    run(`corrToque('continuar', {valores:['1', '12:00, 21:00', 'uso contínuo', 'não']})`);
+    const v = J658('CORR_ATUAL.op.volta');
+    igual([v[0], v.filter((x) => /^ATENÇÃO/.test(x))], ['a linha nova começa sábado, 10/10 — a dose das 08:00 de hoje já foi dada: o horário novo vale a partir de sábado, 10/10',
+      ['ATENÇÃO: as doses de hoje das 12:00, 21:00 não serão pedidas pelo alarme (a linha nova começa sábado, 10/10): se a veterinária mandar dar hoje, registre como dose avulsa']]);
+    [p] = await assina658('s-bia', 'a veterinária mudou os horários e voltou'); igual(p, 'pronto');
+    igual([Object.keys(db658(AG658 + '/itens')).filter((k) => /^mcr_t_/.test(k)), Object.keys(db658(LOG658)).filter((k) => /^mcr_t_/.test(k))], [['mcr_t_zen_20261010'], []], 'a linha nova começa amanhã; nenhuma cópia');
+  } finally { solta658(); }
+});
+}
+{
+
+// ================================================================== 6.58, 4ª rodada — as provas do re-gate 3 do QA (R3-02 adaptada, R3-03, R3-05, R3-08, R3-10, R3-11)
+console.log('\n6.58 QA R3 — as provas do re-gate 3 do QA: a cópia de cópia, a meia-noite, dois «Voltou a tomar», a troca de amanhã, os «de antes», a ficha depois de completar');
+const filaQ = async (ms, diaMs) => { if (ms) relogio658(ms); run(`selectedDate=new Date(${diaMs || T658(9, 10, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+const logQ = () => db658(LOG658) || {};
+const pedeQ = async (ms, hr) => { const f = await filaQ(ms); const L = logQ(); return f.filter((x) => x.endsWith('@' + hr)).filter((x) => { const d = L[x.split('@')[0] + '_' + hr.replace(':', '-')]; return !(d && !d.anulada); }); };
+const novaQ = (pai) => { const ag = db658(AG658 + '/itens') || {}; return Object.keys(ag).filter((k) => ag[k].continuacaoDe === pai)[0]; };
+const memQ = () => run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+const dar658Q = async (itemId, hr) => { run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:${JSON.stringify(itemId)}, nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'Biscoito'}, magDoseId(${JSON.stringify(itemId)}, '${hr}'));`); await espera658(); };
+// a dose de ontem (6.47) às `agoraMs`, com a ficha no dia de ontem (o dia da fila e do registro)
+const ontemQ = async (agoraMs, ontemMs, ontemISO) => {
+  relogio658(agoraMs);
+  run(`selectedDate=new Date(${ontemMs}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658();
+  ctx.__qfo3 = J658('MED_AGENDA_TODOS');
+  ctx.__qlo3 = JSON.parse(JSON.stringify(await run('medLogHoje()')));
+  return J658(`medOntemPendentes(__qfo3, __qlo3, {}, '${ontemISO}', ${agoraMs})`);
+};
+
+
+provaAsync('6.58 QA R3-02 (cópia de cópia com a origem anulada, falha dupla; adaptada na 4ª rodada: a cópia de dose anulada vale como anulada) — meio-feito, e antes de alguém tocar na cópia a linha nova é anulada e volta de novo: o alarme já pede a dose desfeita no meio-feito; o 2º «Voltou a tomar» não copia a cópia (a dose desfeita não conta como dada); o «Desfazer» na origem completa a cópia e diz a verdade', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N1 = novaQ('zen');
+    relogio658(T658(9, 10, 40)); memQ(); run(`__recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')};`);
+    await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+    run('__recusa657=null;');
+    // o meio-feito se cura na leitura: a cópia da dose anulada não conta como dada, e o alarme pede a das 08:00 pela linha nova
+    igual([!!logQ()['zen_08-00'].anulada, !!(logQ()[N1 + '_08-00'] || {}).anulada, Object.keys(J658(`medDosesSemAnuladas(__get657('${LOG658}'))`)).indexOf(N1 + '_08-00')], [true, false, -1]);
+    relogio658(T658(9, 10, 42));
+    run(`MED_AGENDA_TODOS=[{hospNome:'Biscoito', key:'${K658}', itemId:'${N1}', nome:'Zenrelia', q:'1', u:'comprimido', horario:'08:00'}]; despMedNaTela=null; __abre658=[]; checarDespertadorMed();`); await espera658();
+    igual(J658('__abre658').map((a) => a[1]), [N1 + '_08-00'], 'o alarme pede a das 08:00 pela linha nova, sem ninguém tocar na cópia');
+    run('despMedNaTela=null; __abre658=[];');
+    relogio658(T658(9, 10, 45)); run(FICHA658()); await anularRem658(N1); [p] = await assina658(SENHA657, 'a linha nova foi lançada errada de novo'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); run(FICHA658()); await voltou658(N1, ['1', '08:00, 20:00', 'uso contínuo', 'sim']);
+    igual(String(run('CORR_ATUAL.aviso')), 'Não dá para começar hoje: o horário das 08:00 de hoje já passou (ou falta menos de 15 minutos) e a dose não foi registrada. Escreva «não» em «Começar hoje?».', 'a dose desfeita não é dose dada: nada a copiar');
+    run(`corrToque('continuar', {valores:['1', '08:00, 20:00', 'uso contínuo', 'não']})`);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou de novo'); igual(p, 'pronto'); await fecha658();
+    const N2 = novaQ(N1), L = logQ();
+    igual([!!N2, Object.keys(L).filter((d) => N2 && d.indexOf(N2 + '_') === 0)], [true, []], 'a linha nova começa amanhã e não copia a dose desfeita');
+    run('__za657=[];'); memQ(); await anular658('zen_08-00');
+    const za = J658('__za657').filter((z) => z[0] === 'AS CÓPIAS DA DOSE FORAM ANULADAS')[0];
+    assert.ok(za && /^O alarme não volta a pedir esta dose: o remédio não é mais dado hoje neste horário/.test(za[1][1]), JSON.stringify(J658('__za657')));
+    igual([!!logQ()[N1 + '_08-00'].anulada, J658('__tg658').length], [true, 1], 'a cópia que faltava completada; uma mensagem ao grupo só');
+  } finally { run('__recusa657=null;'); solta658(); }
+});
+
+provaAsync('6.58 QA R3-03 (a virada da meia-noite) — cartaz aberto às 23:55 e gravado às 00:05 (com «sim» e com «não»): nada grava; «Voltou» às 23:30 com a das 22:00 dada: às 00:30 a dose de ontem não é pedida; desfeita às 23:40, é pedida uma vez (pela linha nova)', async () => {
+  arma658();
+  try {
+    const Z = ZEN658({ horarios: ['10:00', '22:00'], estoque: { modo: 'contavel', inicial: 20, restante: 10, contados: { '2026-10-09__zen_10-00': true, '2026-10-09__zen_22-00': true } } });
+    const semeia = () => semear658({ itens: { zen: JSON.parse(JSON.stringify(Z)) }, log: { 'zen_10-00': DOSE658('zen', 'Zenrelia', '10:00', 'comprimido', T658(9, 10, 2)), 'zen_22-00': DOSE658('zen', 'Zenrelia', '22:00', 'comprimido', T658(9, 22, 1)) } });
+    const vira = async (resp) => {
+      semeia(); relogio658(T658(9, 23, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+      relogio658(T658(9, 23, 55)); run(FICHA658()); await voltou658('zen', ['1', '10:00, 22:00', 'uso contínuo', resp]);
+      const v = (J658('CORR_ATUAL.op.volta') || [])[0];
+      relogio658(T658(10, 0, 5)); const [p2] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); const a2 = String(run('CORR_ATUAL&&CORR_ATUAL.res?CORR_ATUAL.res.erro:""') || ''); await fecha658();
+      const ag = db658(AG658 + '/itens'), novas = Object.keys(ag).filter((k) => ag[k].continuacaoDe === 'zen');
+      const cop = Object.keys(db658('auaulandia/medicacao-log/' + AMANHA658 + '/' + K658) || {}).concat(Object.keys(logQ()).filter((k) => /^mcr_t_/.test(k)));
+      console.log('      «' + resp + '» às 23:55 → gravar às 00:05: ' + p2 + ' | ' + String(a2).slice(0, 200) + ' | linhas novas ' + JSON.stringify(novas) + ' | cópias ' + JSON.stringify(cop) + ' | cartaz: ' + String(v).slice(0, 70));
+      return [p2 === 'pronto', novas.length, cop.length];
+    };
+    igual(await vira('sim'), [false, 0, 0], '«sim» às 23:55, gravado às 00:05: nada grava');
+    igual(await vira('não'), [false, 0, 0], '«não» às 23:55, gravado às 00:05: o começo mudou, nada grava');
+    // 23:30, «sim»: as duas doses de hoje viram cópia; às 00:30 (janela da dose de ontem) nada é pedido
+    semeia(); relogio658(T658(9, 23, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 23, 30)); run(FICHA658()); await voltou658('zen', ['1', '10:00, 22:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = novaQ('zen');
+    const o1 = await ontemQ(T658(10, 0, 30), T658(9, 12, 0), DIA658);
+    console.log('      23:30 «sim» (linha ' + N + ', cópias ' + JSON.stringify(Object.keys(logQ()).filter((k) => /^mcr_t_/.test(k))) + ') → 00:30, dose de ontem pendente: ' + JSON.stringify(o1));
+    igual(o1, {}, 'a das 22:00 foi dada: a dose de ontem não é pedida (sem dose em dobro)');
+    // 23:40: a das 22:00 não tinha sido dada → «Desfazer» na origem; às 00:30 a dose de ontem é pedida uma vez, pela linha nova
+    relogio658(T658(9, 23, 40)); run(`selectedDate=new Date(${T658(9, 10, 0)});`); memQ();
+    await anular658('zen_22-00'); [p] = await assina658(SENHA657, 'a dose das 22:00 não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    const o2 = await ontemQ(T658(10, 0, 30), T658(9, 12, 0), DIA658);
+    console.log('      desfeita às 23:40 → 00:30, dose de ontem pendente: ' + JSON.stringify(Object.keys(o2)));
+    igual(Object.keys(o2), [K658 + '__' + N + '_22-00'], 'pedida uma vez, pela linha nova');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R3-05 (dois «Voltou a tomar» no mesmo dia, horários diferentes; outro remédio com dose no mesmo horário) — 1º «sim» com 08:00 e 20:00, anulado de novo, 2º «sim» com 08:00 e 21:00: a cópia é da Zenrelia (não do Ômega 3); o dia fica com 2 doses; a régua lembra os «de antes» das duas linhas', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658(), ome: OME658() }, log: { 'ome_08-00': DOSE658('ome', 'Ômega 3', '08:00', 'cápsula', T658(9, 8, 3)), 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N1 = novaQ('zen'), L1 = logQ();
+    igual([(L1[N1 + '_08-00'] || {}).espelho_de, (L1[N1 + '_08-00'] || {}).nome], ['zen_08-00', 'Zenrelia'], 'a cópia é da Zenrelia');
+    relogio658(T658(9, 10, 40)); run(FICHA658()); await anularRem658(N1); [p] = await assina658(SENHA657, 'a linha nova foi lançada errada'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); run(FICHA658());
+    const ag = db658(AG658 + '/itens'); ctx.__agq = ag;
+    const antes = J658(`medVoltouAntes(medCorrenteDe(__agq, '${N1}').map(function(x){ return __agq[x]; }), '${DIA658}')`);
+    await voltou658(N1, ['1', '08:00, 21:00', 'uso contínuo', 'sim']);
+    const v = (J658('CORR_ATUAL.op.volta') || [])[0], av = String(run('CORR_ATUAL.aviso') || '');
+    [p] = await assina658('s-bia', 'a veterinária mudou a da noite para 21:00'); await fecha658();
+    const N2 = novaQ(N1), L2 = logQ();
+    const a = await pedeQ(T658(9, 20, 1), '20:00'), b = await pedeQ(T658(9, 21, 1), '21:00');
+    console.log('      «de antes» (linhas da corrente): ' + JSON.stringify(antes) + ' | 2º «Voltou» ' + p + ': ' + String(v || av).slice(0, 120));
+    console.log('      cópia 2: ' + N2 + '_08-00 espelho_de=' + (L2[N2 + '_08-00'] || {}).espelho_de + ' nome=' + (L2[N2 + '_08-00'] || {}).nome + ' | 20:01 pede ' + JSON.stringify(a) + ' | 21:01 pede ' + JSON.stringify(b) + ' | total do dia: ' + (1 + a.length + b.length));
+    igual([antes, (L2[N2 + '_08-00'] || {}).espelho_de, a, b], [['08:00', '20:00'], 'zen_08-00', [], [N2 + '@21:00']]);
+    // e a variante «uma vez por dia às 12:00» às 10:50: a das 08:00 (dada) sai → recusa «hoje»
+    ctx.__vq = { antiga: db658(AG658 + '/itens/' + N1), horarios: ['12:00'], hoje: DIA658, agoraMin: 650, continuo: true, dados: {}, dadasHoje: ['08:00'], antes: antes, pendentes: [] };
+    const r12 = J658('medVoltouInicio(__vq)');
+    console.log('      variante 12:00 às 10:50: hoje=' + r12.hoje + ' — ' + r12.naoHoje);
+    igual(r12.hoje, false);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R3-08 (a troca de horário da 6.54 marcada para amanhã) — Zenrelia 08:00 e 20:00 hoje, 09:00 e 21:00 a partir de amanhã; «Lançado por engano» leva as duas linhas; «Voltou» com 08:00 e 21:00 e «sim»: a linha de amanhã não entra nos «de antes»; começa hoje, cópia da das 08:00, 20:01 nada, 21:01 pede uma vez', async () => {
+  arma658();
+  try {
+    const A = ZEN658({ dataInicio: '2026-10-01', continuo: false, dataFim: DIA658, trocadoPor: 'mcr_t_zen_20261010' });
+    const A2 = { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['09:00', '21:00'], continuo: true, tipo: 'medicamento', origem: 'vet', dataInicio: AMANHA658, continuacaoDe: 'zen' };
+    semear658({ itens: { zen: A, mcr_t_zen_20261010: A2 }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    relogio658(T658(9, 9, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    const ag = db658(AG658 + '/itens'); ctx.__agq = ag;
+    const antes = J658(`medVoltouAntes(medCorrenteDe(__agq, 'zen').map(function(x){ return __agq[x]; }), '${DIA658}')`);
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 21:00', 'uso contínuo', 'sim']);
+    const v = (J658('CORR_ATUAL.op.volta') || [])[0], av = String(run('CORR_ATUAL.aviso') || '');
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); await fecha658();
+    const ag2 = db658(AG658 + '/itens'), N = Object.keys(ag2).filter((k) => ag2[k].continuacaoDe === 'zen' && k !== 'mcr_t_zen_20261010')[0];
+    const a = await pedeQ(T658(9, 20, 1), '20:00'), b = await pedeQ(T658(9, 21, 1), '21:00');
+    console.log('      «de antes»: ' + JSON.stringify(antes) + ' (A2 parada hoje: ' + JSON.stringify((ag.mcr_t_zen_20261010 || {}).paradoEm && ag.mcr_t_zen_20261010.paradoEm.data) + ') | ' + p + ' | ' + String(v || av).slice(0, 120) + ' | linha ' + N + ' | 20:01 ' + JSON.stringify(a) + ' | 21:01 ' + JSON.stringify(b));
+    igual([antes, p, a, b], [['08:00', '20:00'], 'pronto', [], [N + '@21:00']]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R3-10 (os «de antes» seguem a corrente inteira) — a das 08:00 não foi dada; «Lançado por engano»; «Voltou» com 12:00 e 21:00 começa amanhã; essa linha também é anulada; o 2º «Voltou» (13:00 e 22:00, «sim») tem de lembrar a das 08:00 da linha de hoje (passou sem registro) e recusar «hoje»', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658({ estoque: { modo: 'contavel', inicial: 20, restante: 12 } }) }, log: {} });
+    relogio658(T658(9, 10, 0)); run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '12:00, 21:00', 'uso contínuo', 'não']); [p] = await assina658('s-bia', 'a veterinária mudou os horários'); igual(p, 'pronto'); await fecha658();
+    const N1 = novaQ('zen');
+    relogio658(T658(9, 10, 40)); run(FICHA658()); await anularRem658(N1); [p] = await assina658(SENHA657, 'a linha nova foi lançada errada'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); run(FICHA658()); await voltou658(N1, ['1', '13:00, 22:00', 'uso contínuo', 'sim']);
+    const av = String(run('CORR_ATUAL.aviso') || '');
+    console.log('      linha 1 ' + N1 + ' (início ' + db658(AG658 + '/itens/' + N1).dataInicio + ') | 2º «Voltou» com «sim»: ' + (av || 'passou: ' + String((J658('CORR_ATUAL.op.volta') || [])[0]).slice(0, 90)));
+    assert.ok(/Não dá para começar hoje: o horário das 08:00 de hoje já passou e a dose não foi registrada/.test(av), av);
+    await fecha658();
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R3-11 (a tela depois de completar as cópias) — meio-feito; «Desfazer» na cópia: a ficha aberta passa a mostrar a cópia anulada (a memória e o desenho), sem «Dado por» na linha nova das 08:00', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = novaQ('zen');
+    relogio658(T658(9, 10, 40)); memQ(); run(`__recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')};`);
+    await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+    run('__recusa657=null;'); memQ(); run(`renderMedAgendaHoje();`);
+    const antes = !!J658(`MED_AGENDA_LOG['${N}_08-00'].anulada`);
+    await anular658(N + '_08-00');
+    const mem = !!J658(`(MED_AGENDA_LOG['${N}_08-00']||{}).anulada`), html = hoje658();
+    console.log('      memória da ficha: antes ' + antes + ', depois ' + mem + ' | «Dado por» no desenho: ' + JSON.stringify((html.match(/✅ Dado por [^<]*/g) || [])));
+    igual([antes, mem], [false, true], 'a ficha aberta recebe a anulação da cópia');
+  } finally { run('__recusa657=null;'); solta658(); }
+});
+}
+{
+// ================================================================== 6.58, 4ª rodada (@dev) — a cópia vale só enquanto a dose de origem vale; o «Reabrir» depois do registro de novo na cópia
+console.log('\n6.58 4ª rodada — a cópia de dose anulada vale como anulada (a leitura cura o meio-feito e a corrida); o registro sobre ela; o «Reabrir» depois do registro de novo na cópia');
+const memR = () => run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+const novaR = (pai) => { const ag = db658(AG658 + '/itens') || {}; return Object.keys(ag).filter((k) => ag[k].continuacaoDe === pai)[0]; };
+const darR = async (itemId, hr) => { run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:${JSON.stringify(itemId)}, nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'Biscoito'}, magDoseId(${JSON.stringify(itemId)}, '${hr}'));`); await espera658(); };
+const alarmeR = async (ms, itemIds, hr) => {
+  relogio658(ms);
+  ctx.__todosR = itemIds.map((id) => ({ hospNome: 'Biscoito', key: K658, itemId: id, nome: 'Zenrelia', q: '1', u: 'comprimido', horario: hr }));
+  run('MED_AGENDA_TODOS=__todosR; despMedNaTela=null; __abre658=[]; checarDespertadorMed();'); await espera658();
+  const a = J658('__abre658').map((x) => x[1]); run('despMedNaTela=null; __abre658=[];'); return a;
+};
+// o meio-feito com a cópia do espelho da 6.32 (a linha irmã zen2): a origem anulada direto no banco, a cópia sem a marca
+const MEIO_ESPELHO = () => { semear658(); const L = db658(LOG658); put658(LOG658 + '/zen_08-00', Object.assign({}, L['zen_08-00'], { anulada: { acao: 'anular', por: 'Gestora Teste', papel: 'gestao', motivo: 'a dose não foi dada, registro errado', quando: '09/10/2026 09:40', ts: T658(9, 9, 40) } })); memR(); };
+
+provaAsync('6.58 P50 (AC1.5; 4ª rodada, R3-BAIXO-1) — a cópia cuja dose de origem está anulada (a escrita das cópias falhou) vale como anulada em todos os pontos de leitura: o registro do dia, o Plantão, o relatório e o alarme; com a origem valendo, nada muda', async () => {
+  arma658();
+  try {
+    MEIO_ESPELHO();
+    igual([!!db658(LOG658)['zen2_08-00'].anulada, db658(LOG658)['zen2_08-00'].espelho_de], [false, 'zen_08-00'], 'o meio-feito: a cópia sem a marca');
+    igual(Object.keys(J658(`medDosesSemAnuladas(__get657('${LOG658}'))`)).sort(), ['avulso_' + T658(9, 9, 31), 'ome_08-00'].sort(), 'o registro do dia (filtro): sem a origem anulada e sem a cópia dela');
+    igual(Object.keys((await run('medLogHoje()'))[K658] || {}).sort(), ['avulso_' + T658(9, 9, 31), 'ome_08-00'].sort(), 'o registro que o alarme lê (L1)');
+    // L2: a linha do Plantão (a memória da ficha)
+    run(`__plR=[]; __rpR=renderPlacarMedDia; renderPlacarMedDia=function(r){ __plR.push(r.map(function(x){ return x.id+'@'+x.h+':'+x.feito; })); return __rpR(r); }; renderMedAgendaHoje(); renderPlacarMedDia=__rpR;`);
+    igual(J658('__plR')[0].filter((x) => /@08:00/.test(x)).sort(), ['ome@08:00:true', 'zen2@08:00:false', 'zen@08:00:false'], 'o Plantão: a cópia não aparece como dada');
+    // L3: o relatório do plantão
+    ctx.__slotR = { innerHTML: '' }; run(`__qs658['.med-confirm-slot']=[__slotR]; renderRelMedConfirm();`);
+    igual((String(run('__slotR.innerHTML')).match(/já dado — Wandela Teste/g) || []).length, 1, 'o relatório: só o Ômega 3 conta como dado');
+    // o alarme pede a das 08:00 (as duas linhas, a irmã também)
+    igual((await alarmeR(T658(9, 10, 0), ['zen2'], '08:00')), ['zen2_08-00'], 'o alarme pede a das 08:00 na linha da cópia');
+    // com a origem valendo, a cópia vale (guarda: o espelho da 6.32 de sempre)
+    semear658(); memR();
+    igual(Object.keys(J658(`medDosesSemAnuladas(__get657('${LOG658}'))`)).indexOf('zen2_08-00') >= 0, true, 'a cópia de dose que vale continua dada');
+    igual((await alarmeR(T658(9, 10, 0), ['zen2'], '08:00')), [], 'e o alarme não a pede');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P51 (AC1.8; 4ª rodada, R3-BAIXO-1 e R3-BAIXO-2) — registrar a dose em cima da cópia de dose anulada: a cópia recebe a marca da origem e o registro passa (a cópia anulada vai para anteriores); na 2ª vez, a recusa de sempre; a cópia de dose que vale continua recusando sem gravar nada', async () => {
+  arma658();
+  try {
+    MEIO_ESPELHO();
+    run(`__za657=[]; __au657=[]; __pessoa658='Gilda Teste';`);
+    relogio658(T658(9, 10, 5)); await darR('zen2', '08:00');
+    const L = db658(LOG658), z2 = L['zen2_08-00'];
+    igual([z2.quem, !!z2.anulada, (z2.anteriores || []).length, ((z2.anteriores || [])[0] || {}).espelho_de, (((z2.anteriores || [])[0] || {}).anulada || {}).por, J658('__za657').length],
+      ['Gilda Teste', false, 1, 'zen_08-00', 'Gestora Teste', 0], 'o registro novo passa; a cópia anulada (com a marca da origem) fica em anteriores');
+    assert.ok(J658('__au657').some((a) => a[0] === 'medicacao-dose-anulada' && a[2].completou === true && a[2].origem === 'zen_08-00'), JSON.stringify(J658('__au657')));
+    igual((await alarmeR(T658(9, 10, 10), ['zen2'], '08:00')), [], 'o alarme não pede mais');
+    // 2ª vez: a recusa de sempre
+    run('__za657=[]; __esc657=[];'); await darR('zen2', '08:00');
+    igual([J658('__za657').map((z) => z[0]), run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && /zen2_08-00/.test(e[1])).length], [['ESTA DOSE JÁ FOI REGISTRADA'], 0]);
+    // a cópia de dose que vale (o espelho da 6.32 de sempre): recusa, nada gravado
+    semear658(); memR(); run('__za657=[]; __esc657=[];');
+    await darR('zen2', '08:00');
+    igual([J658('__za657').map((z) => z[0]), run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && /medicacao-log/.test(e[1])).length, !!db658(LOG658)['zen2_08-00'].anulada], [['ESTA DOSE JÁ FOI REGISTRADA'], 0, false]);
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P52 (AC4.4; 4ª rodada, R3-BAIXO-1) — a cadeia de cópias até a raiz: a cópia de uma cópia de dose anulada vale como anulada e o registro sobre ela passa; com a raiz valendo, o «Voltou a tomar» aponta a cópia nova para a raiz (não para a cópia do meio)', async () => {
+  arma658();
+  try {
+    const C1 = 'mcr_t_zen_20261009_08-00', C2 = 'aaa_volta_08-00';
+    const base = { zen: ZEN658(), mcr_t_zen_20261009: ZEN658({ continuacaoDe: 'zen' }), aaa_volta: ZEN658({ continuacaoDe: 'mcr_t_zen_20261009' }) };
+    const ANUL = { acao: 'anular', por: 'Gestora Teste', papel: 'gestao', motivo: 'a dose não foi dada, registro errado', quando: '09/10/2026 10:40', ts: T658(9, 10, 40) };
+    const log = (anulada) => ({ 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), anulada ? { anulada: ANUL } : {}),
+      [C1]: DOSE658('mcr_t_zen_20261009', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { espelho_de: 'zen_08-00' }),
+      [C2]: DOSE658('aaa_volta', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { espelho_de: C1 }) });
+    ctx.__lgR = log(true);
+    igual([J658(`Object.keys(medDosesSemAnuladas(__lgR))`), J658(`medDoseRaizAnulada(__lgR, '${C2}')`)], [[], { doseId: 'zen_08-00', anulada: ANUL }], 'a cadeia até a raiz: as duas cópias contam como anuladas');
+    ctx.__lgR = log(false);
+    igual(J658(`Object.keys(medDosesSemAnuladas(__lgR)).sort()`), [C2, C1, 'zen_08-00'].sort(), 'com a raiz valendo, as cópias valem');
+    // o registro em cima da cópia da cópia (a raiz anulada)
+    semear658({ itens: base, log: log(true) }); memR(); run(`__za657=[]; __pessoa658='Gilda Teste';`);
+    relogio658(T658(9, 10, 50)); await darR('aaa_volta', '08:00');
+    const L = db658(LOG658);
+    igual([L[C2].quem, !!L[C2].anulada, ((L[C2].anteriores || [])[0] || {}).espelho_de, J658('__za657').length], ['Gilda Teste', false, C1, 0], 'o registro passa; a cópia da cópia, anulada, fica em anteriores');
+    // o «Voltou a tomar» com a raiz valendo: a cópia nova aponta para a raiz (o primeiro registro lido é a cópia da cópia)
+    const itensV = { zen: ZEN658({ paradoEm: { data: DIA658 }, dataFim: DIA658, continuo: false, anulado: { por: 'Gestora Teste', era: { horarios: ['08:00', '20:00'], continuo: true } } }),
+      mcr_t_zen_20261009: ZEN658({ continuacaoDe: 'zen', paradoEm: { data: DIA658 }, dataFim: DIA658, continuo: false, anulado: { por: 'Gestora Teste', era: { horarios: ['08:00', '20:00'], continuo: true } } }),
+      aaa_volta: ZEN658({ continuacaoDe: 'mcr_t_zen_20261009', paradoEm: { data: DIA658 }, dataFim: DIA658, continuo: false, anulado: { por: 'Gestora Teste', era: { horarios: ['08:00', '20:00'], continuo: true } } }) };
+    ctx.__itV = itensV; ctx.__lgV = log(false);
+    const pl = J658(`medVoltouPlano(__itV, 'aaa_volta', ['1', '08:00, 20:00', 'uso contínuo', 'sim'], '${DIA658}', 630, __lgV)`);
+    igual([pl.inicio.hoje, pl.inicio.copias, pl.origem['08:00'].doseId], [true, ['08:00'], 'zen_08-00'], 'a cópia nova aponta para a raiz');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P53 (AC1.7; 4ª rodada, O-1 do QA) — «Reabrir» a dose de origem depois de a cópia dela (na linha nova do «Voltou a tomar») ter sido registrada de novo: recusado com a frase da dose registrada de novo numa linha só, no cartaz e na gravação; nada gravado', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = novaR('zen');
+    relogio658(T658(9, 10, 40)); memR(); await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    // a gravação: o cartaz do «Reabrir» aberto ANTES do registro de novo na linha nova
+    memR(); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    igual(run('CORR_ATUAL.passo'), 'conferir', 'o cartaz abre (ainda não há registro novo)');
+    run(`__pessoa658='Gilda Teste';`); relogio658(T658(9, 10, 50)); await darR(N, '08:00');
+    run('__esc657=[];');
+    const [p2] = await assina658(SENHA657, 'a anulação foi um engano da Gestão');
+    igual([p2, /Esta dose já foi registrada de novo por Gilda Teste às 10:50: não há anulação a reabrir\. Nada foi gravado\./.test(cartaz658()), run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && /medicacao-log/.test(e[1])).length], ['falhou', true, 0], 'na gravação: ' + cartaz658());
+    await fecha658();
+    // o cartaz: recusado logo ao abrir
+    run('__za657=[]; __esc657=[];'); memR(); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    const za = J658('__za657');
+    igual([za.map((z) => z[0]), za[0] && za[0][1][0], run('CORR_ATUAL') ? 'abriu' : 'sem cartaz'], [['NÃO HÁ O QUE REABRIR'], 'Esta dose já foi registrada de novo por Gilda Teste às 10:50: não há anulação a reabrir. Nada foi gravado.', 'sem cartaz']);
+    const L = db658(LOG658);
+    igual([!!L['zen_08-00'].anulada, !!L[N + '_08-00'].anulada], [true, false], 'uma dose das 08:00 só valendo (a da linha nova)');
+    // guarda (numa linha só, sem cópia nenhuma): a dose registrada de novo — a gravação do «Reabrir» continua recusando
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    relogio658(T658(9, 10, 0)); memR(); await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    const vista = db658(LOG658)['zen_08-00'];
+    relogio658(T658(9, 10, 20)); run(`__pessoa658='Gilda Teste';`); await darR('zen', '08:00');
+    ctx.__vistaR = vista; run('__esc657=[];');
+    const r = JSON.parse(JSON.stringify(await run(`medDoseReabrirGravar({key:'${K658}', dia:'${DIA658}', principal:'zen_08-00', vista:__vistaR, nomeH:'Biscoito', reg:{ts:2, por:'x', motivo:'y'}})`)));
+    igual([r.ok, /^Esta dose já foi registrada de novo por Gilda Teste às 10:20/.test(r.erro || ''), run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && /medicacao-log/.test(e[1])).length], [false, true, 0], JSON.stringify(r));
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P54 (AC1.5; 4ª rodada, R3-BAIXO-1, L6) — o adiado de ontem de uma cópia cuja dose de origem foi anulada: não é fechado como dado, o alarme abre', async () => {
+  arma658();
+  const k = K658 + '__zen2_20-00';
+  try {
+    semear658({ log: {} });
+    put658('auaulandia/medicacao-log/' + ONTEM658 + '/' + K658, {
+      'zen_20-00': DOSE658('zen', 'Zenrelia', '20:00', 'comprimido', T658(8, 20, 4), { anulada: { acao: 'anular', por: 'Gestora Teste', motivo: 'a dose não foi dada, registro errado', ts: T658(8, 21, 0) } }),
+      'zen2_20-00': DOSE658('zen2', 'Zenrelia', '20:00', 'comprimido', T658(8, 20, 4), { espelho_de: 'zen_20-00' }) });
+    relogio658(T658(9, 0, 30));
+    run(`__ehR=ehHojeAua; __osR=medOntemSincronizado; __asR=medAdiadoSoltar; __soltoR=[];
+      ehHojeAua=function(){ return true; }; medOntemSincronizado=function(){ return true; }; medAdiadoSoltar=function(s){ __soltoR.push(s); };
+      __medOutroDiaLendo=0; despMedNaTela=null; __abre658=[];
+      despMedSnoozePend['${k}']=1; despMedSnoozeDia['${k}']='${ONTEM658}'; despMedSnooze['${k}']=1;
+      despMedSnoozeIt['${k}']={key:'${K658}', itemId:'zen2', horario:'20:00', nome:'Zenrelia', hospNome:'Biscoito'};`);
+    run(`medAdiadoDeOutroDia('${DIA658}')`); await espera658(); await espera658();
+    igual([J658('__abre658').map((a) => a[1] + '@' + a[2]), J658('__soltoR')], [['zen2_20-00@' + ONTEM658], []], 'o alarme abre a dose de ontem; o adiado não é solto como dado');
+  } finally {
+    run(`ehHojeAua=__ehR; medOntemSincronizado=__osR; medAdiadoSoltar=__asR; delete despMedSnoozePend['${k}']; delete despMedSnoozeDia['${k}']; delete despMedSnooze['${k}']; delete despMedSnoozeIt['${k}']; despMedNaTela=null;`);
+    solta658();
+  }
+});
+
+provaAsync('6.58 P55 (AC1.5; 4ª rodada, R3-BAIXO-2) — a corrida: «Voltou a tomar» grava a cópia lida antes da anulação feita em outro aparelho no mesmo instante; a cópia nasce sem a marca, mas vale como anulada: o alarme pede a dose desfeita sem ninguém tocar, e o registro dela passa', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']);
+    // o aparelho A: a marca da anulação entra logo depois de B ler o registro do dia
+    ctx.__marcaR = { acao: 'anular', motivo: 'a dose não foi dada, registro errado', por: 'Gestora Teste', papel: 'gestao', quando: '09/10/2026 10:30', ts: T658(9, 10, 30) };
+    run(`__mlnR=medLerNo; __ganchoR=true; medLerNo=function(p){ return __mlnR(p).then(function(v){ if(__ganchoR && p===${JSON.stringify(LOG658)}){ __ganchoR=false; __put657(${JSON.stringify(LOG658 + '/zen_08-00/anulada')}, __marcaR); } return v; }); };`);
+    [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    run('medLerNo=__mlnR;');
+    const N = novaR('zen'), L = db658(LOG658);
+    igual([!!L['zen_08-00'].anulada, !!L[N + '_08-00'], !!(L[N + '_08-00'] || {}).anulada], [true, true, false], 'a corrida: a cópia gravada sem a marca, a origem anulada');
+    igual(await alarmeR(T658(9, 10, 35), [N], '08:00'), [N + '_08-00'], 'o alarme pede a das 08:00 pela linha nova, sem ninguém tocar');
+    run(`__za657=[]; __pessoa658='Gilda Teste';`); relogio658(T658(9, 10, 40)); await darR(N, '08:00');
+    const L2 = db658(LOG658);
+    igual([L2[N + '_08-00'].quem, !!L2[N + '_08-00'].anulada, ((L2[N + '_08-00'].anteriores || [])[0] || {}).espelho_de, J658('__za657').length], ['Gilda Teste', false, 'zen_08-00', 0], 'o registro passa');
+    igual(await alarmeR(T658(9, 10, 45), [N], '08:00'), [], 'e o alarme não pede mais');
+  } finally { run('if(typeof __mlnR==="function") medLerNo=__mlnR;'); solta658(); }
+});
+}
+{
+
+// ================================================================== 6.58, 5ª rodada — as provas do re-gate 4 do QA (R4-03, R4-05, R4-06, R4-07)
+console.log('\n6.58 QA R4 — as provas do re-gate 4 do QA: a corrida no registro sobre a cópia, ontem nas irmãs, o «Reabrir» depois do registro de novo desfeito, a origem fora do registro');
+const filaA = async (ms, diaMs) => { if (ms) relogio658(ms); run(`selectedDate=new Date(${diaMs || T658(9, 10, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+// o que o alarme pede: a fila contra o registro do dia pela leitura do APP (medDosesSemAnuladas, a mesma do medLogHoje)
+const pedeA = async (ms, hr) => { const f = await filaA(ms); const V = J658(`medDosesSemAnuladas(__get657('${LOG658}'))`) || {}; return f.filter((x) => x.endsWith('@' + hr)).filter((x) => !V[x.split('@')[0] + '_' + hr.replace(':', '-')]); };
+// o despertador de verdade (checarDespertadorMed), com a fila montada
+const despA = async (ms) => { relogio658(ms); run(`selectedDate=new Date(${T658(9, 10, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); run('despMedNaTela=null; __abre658=[]; checarDespertadorMed();'); await espera658(); const a = J658('__abre658').map((x) => x[1]); run('despMedNaTela=null; __abre658=[];'); return a; };
+const logA = () => db658(LOG658) || {};
+const novaA = (pai) => { const ag = db658(AG658 + '/itens') || {}; return Object.keys(ag).filter((k) => ag[k].continuacaoDe === pai)[0]; };
+const memA = () => run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+const darA = (itemId, hr, pessoa, dia) => { if (pessoa) run(`__pessoa658=${JSON.stringify(pessoa)};`); run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:${JSON.stringify(itemId)}, nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'Biscoito'}, magDoseId(${JSON.stringify(itemId)}, '${hr}')${dia ? `, '${dia}'` : ''});`); };
+const tgDoses = () => J658('__tg658').filter((t) => !/CORREÇÃO/.test(t.texto)).length;
+const jaReg = () => J658('__za657').filter((z) => z[0] === 'ESTA DOSE JÁ FOI REGISTRADA').length;
+// o meio-feito: «Voltou a tomar» com «sim» (cópia da das 08:00) e «Desfazer» na origem com a escrita das cópias recusada
+const meioFeitoA = async () => {
+  semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+  run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+  relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+  const N = novaA('zen');
+  relogio658(T658(9, 10, 40)); memA(); run(`__recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')};`);
+  await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+  run('__recusa657=null; __tg658=[]; __za657=[]; __au657=[];');
+  igual([!!logA()['zen_08-00'].anulada, !!(logA()[N + '_08-00'] || {}).anulada], [true, false], 'o meio-feito');
+  return N;
+};
+
+
+provaAsync('6.58 QA R4-03 (corrida estreita) — o aparelho B lê o registro do dia ANTES de o aparelho A terminar o registro sobre a cópia, e grava a marca DEPOIS: a marca da origem não pode cair sobre o registro novo de A; B tem de ouvir «ESTA DOSE JÁ FOI REGISTRADA»', async () => {
+  arma658();
+  try {
+    const N = await meioFeitoA();
+    const D = N + '_08-00', copia = logA()[D], marcaOrig = logA()['zen_08-00'].anulada;
+    // o registro de A, completo (a cópia com a marca da origem vai para anteriores), entra logo depois de B ler o dia
+    ctx.__regA4 = { itemId: N, nome: 'Zenrelia', q: '1', u: 'comprimido', local: null, horario: '08:00', quem: 'Aparelho A Teste', ts: T658(9, 10, 50), avulso: false, anteriores: [Object.assign({}, copia, { anulada: marcaOrig })] };
+    run(`__mlnR4=medLerNo; __ganchoR4=true; medLerNo=function(p){ return __mlnR4(p).then(function(v){ if(__ganchoR4 && p===${JSON.stringify(LOG658)}){ __ganchoR4=false; __put657(${JSON.stringify(LOG658 + '/' + D)}, __regA4); } return v; }); };`);
+    relogio658(T658(9, 10, 51)); darA(N, '08:00', 'Aparelho B Teste');
+    for (let i = 0; i < 4; i++) await espera658();
+    run('medLerNo=__mlnR4;');
+    const r = logA()[D] || {}, ant = (r.anteriores || []).map((x) => x.quem + (x.anulada ? ' (anulada por ' + x.anulada.por + ')' : ''));
+    console.log('      fica: ' + r.quem + ' | anteriores: ' + JSON.stringify(ant) + ' | mensagens de dose de B ' + tgDoses() + ' | B ouviu «já foi registrada»: ' + jaReg());
+    igual([r.quem, jaReg()], ['Aparelho A Teste', 1], 'o registro de A continua valendo e B é avisado (sem isso, o registro de A some em anteriores, «anulado» com a marca da Gestão, e B registra sem aviso)');
+  } finally { run('if(typeof __mlnR4==="function") medLerNo=__mlnR4; __recusa657=null;'); solta658(); }
+});
+
+provaAsync('6.58 QA R4-05 (ontem, o espelho da 6.32 entre linhas irmãs) — a das 22:00 de ontem registrada na linha 1, cópia na linha irmã; 00:20, «Desfazer» com a escrita das cópias recusada: às 00:30 a dose de ontem pendente é a MESMA de quando não há registro; o «Dei o remédio» do alarme (dia de ontem) na irmã completa e registra uma vez; depois nada pendente', async () => {
+  arma658();
+  try {
+    const itens = () => ({ zen: ZEN658({ horarios: ['10:00', '22:00'], estoque: { modo: 'contavel', inicial: 20, restante: 10 } }), zen2: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['22:00'], continuo: true, tipo: 'medicamento', origem: 'tutor', estoque: { modo: 'contavel', inicial: 10, restante: 5 } } });
+    // a referência: a das 22:00 sem registro nenhum
+    semear658({ itens: itens(), log: { 'zen_10-00': DOSE658('zen', 'Zenrelia', '10:00', 'comprimido', T658(9, 10, 2)) } });
+    const ref = Object.keys(await (async () => { relogio658(T658(10, 0, 30)); run(`selectedDate=new Date(${T658(9, 12, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); ctx.__fo4 = J658('MED_AGENDA_TODOS'); ctx.__lo4 = JSON.parse(JSON.stringify(await run('medLogHoje()'))); return J658(`medOntemPendentes(__fo4, __lo4, {}, '${DIA658}', ${T658(10, 0, 30)})`); })()).sort();
+    // o meio-feito de ontem
+    semear658({ itens: itens(), log: { 'zen_10-00': DOSE658('zen', 'Zenrelia', '10:00', 'comprimido', T658(9, 10, 2)), 'zen_22-00': DOSE658('zen', 'Zenrelia', '22:00', 'comprimido', T658(9, 22, 1)), 'zen2_22-00': DOSE658('zen2', 'Zenrelia', '22:00', 'comprimido', T658(9, 22, 1), { espelho_de: 'zen_22-00' }) } });
+    relogio658(T658(10, 0, 20)); run(`selectedDate=new Date(${T658(9, 12, 0)});`); memA(); run(`__recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')};`);
+    await anular658('zen_22-00'); let [p] = await assina658(SENHA657, 'a dose das 22:00 não foi dada'); await fecha658(); await espera658();
+    run('__recusa657=null; __tg658=[]; __za657=[];');
+    const ontem = async (ms) => { relogio658(ms); run(`selectedDate=new Date(${T658(9, 12, 0)}); __bk658.ca();`); await espera658(); ctx.__fo4 = J658('MED_AGENDA_TODOS'); ctx.__lo4 = JSON.parse(JSON.stringify(await run('medLogHoje()'))); return Object.keys(J658(`medOntemPendentes(__fo4, __lo4, {}, '${DIA658}', ${ms})`)).sort(); };
+    const o1 = await ontem(T658(10, 0, 30));
+    console.log('      «Desfazer» ' + p + ' (cópia anulada: ' + !!logA()['zen2_22-00'].anulada + ') | 00:30 pendente: ' + JSON.stringify(o1) + ' | sem registro nenhum: ' + JSON.stringify(ref));
+    igual(o1, ref, 'o meio-feito vale o mesmo que a dose ausente');
+    relogio658(T658(10, 0, 35)); run(`selectedDate=new Date(${T658(10, 10, 0)});`); darA('zen2', '22:00', 'Gilda Teste', DIA658); for (let i = 0; i < 4; i++) await espera658();
+    const L = logA(), o2 = await ontem(T658(10, 0, 40));
+    console.log('      «Dei o remédio» (ontem) na irmã: zen2 ' + L['zen2_22-00'].quem + ' (anteriores ' + (L['zen2_22-00'].anteriores || []).length + '), zen ' + (L['zen_22-00'].espelho_de ? 'cópia de ' + L['zen_22-00'].espelho_de : 'anulada ' + !!L['zen_22-00'].anulada) + ' | mensagens de dose ' + tgDoses() + ' | 00:40 pendente: ' + JSON.stringify(o2) + ' | registro de hoje intocado: ' + JSON.stringify(Object.keys(db658('auaulandia/medicacao-log/' + AMANHA658 + '/' + K658) || {})));
+    igual([L['zen2_22-00'].quem, !!L['zen2_22-00'].anulada, tgDoses(), o2, Object.keys(db658('auaulandia/medicacao-log/' + AMANHA658 + '/' + K658) || {})], ['Gilda Teste', false, 1, [], []]);
+  } finally { run('__recusa657=null;'); solta658(); }
+});
+
+provaAsync('6.58 QA R4-06 (O-1 por outra porta) — «Desfazer» na origem; a dose registrada de novo na linha nova; esse registro novo também desfeito; «Reabrir» da origem: se ele abre, a origem volta a valer na linha anulada e o alarme continua pedindo a das 08:00 pela linha nova (dose em dobro)', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = novaA('zen');
+    relogio658(T658(9, 10, 40)); memA(); await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); darA(N, '08:00', 'Gilda Teste'); await espera658(); await espera658();
+    relogio658(T658(9, 11, 0)); memA(); await anular658(N + '_08-00'); [p] = await assina658(SENHA657, 'o registro das 10:50 também estava errado'); await fecha658();
+    const L0 = logA();
+    console.log('      depois dos dois «Desfazer»: origem anulada ' + !!L0['zen_08-00'].anulada + ' | linha nova: ' + L0[N + '_08-00'].quem + ' anulada ' + !!L0[N + '_08-00'].anulada + ' (anteriores ' + (L0[N + '_08-00'].anteriores || []).length + ') | 11:05 pede ' + JSON.stringify(await pedeA(T658(9, 11, 5), '08:00')));
+    run('__za657=[];'); memA(); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    const abriu = !!run('CORR_ATUAL'); let pr = '';
+    if (abriu) { console.log('      cartaz do «Reabrir»: ' + JSON.stringify(J658('CORR_ATUAL.op.volta'))); [pr] = await assina658(SENHA657, 'a dose das 08:04 foi dada, sim'); await fecha658(); }
+    const L = logA(), r = await pedeA(T658(9, 11, 15), '08:00'), d = await despA(T658(9, 11, 15));
+    console.log('      «Reabrir» da origem: ' + (abriu ? ('abriu, ' + pr) : ('recusado ' + JSON.stringify(J658('__za657').map((z) => z[0] + ': ' + (z[1] || []).join(' ')))) ) + ' | origem valendo ' + !(L['zen_08-00'].anulada) + ' | 11:15 o alarme pede ' + JSON.stringify(r) + ' | despertador ' + JSON.stringify(d));
+    assert.ok(!(abriu && pr === 'pronto' && !L['zen_08-00'].anulada && r.length), 'a origem voltou a valer (a das 08:04 «foi dada») e o alarme continua pedindo a das 08:00 pela linha nova: dose em dobro');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 QA R4-07 (a origem fora do registro do dia) — a cópia cujo espelho_de aponta para uma dose que não está no registro (a cópia trazida pela troca de ficha da 6.53, por exemplo) vale como dada: o alarme não a pede', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { espelho_de: 'xyz_08-00', copiado_de: 'outro__tutor' }) } });
+    const v = Object.keys(J658(`medDosesSemAnuladas(__get657('${LOG658}'))`)), r = await pedeA(T658(9, 9, 0), '08:00');
+    console.log('      vale: ' + JSON.stringify(v) + ' | 09:00 pede ' + JSON.stringify(r));
+    igual([v, r], [['zen_08-00'], []]);
+  } finally { solta658(); }
+});
+}
+{
+// ================================================================== 6.58, 5ª rodada (@dev) — o «Reabrir» depois do registro de novo desfeito; a marca da origem por transação; o aviso das cópias
+console.log('\n6.58 5ª rodada — o «Reabrir» depois do registro de novo desfeito na linha que toca; a marca da origem na cópia por transação; o aviso da escrita das cópias');
+const memV = () => run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+const novaV = (pai) => { const ag = db658(AG658 + '/itens') || {}; return Object.keys(ag).filter((k) => ag[k].continuacaoDe === pai)[0]; };
+const darV = async (itemId, hr) => { run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:${JSON.stringify(itemId)}, nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'Biscoito'}, magDoseId(${JSON.stringify(itemId)}, '${hr}'));`); await espera658(); await espera658(); };
+const alarmeV = async (ms, itemIds, hr) => {
+  relogio658(ms);
+  ctx.__todosV = itemIds.map((id) => ({ hospNome: 'Biscoito', key: K658, itemId: id, nome: 'Zenrelia', q: '1', u: 'comprimido', horario: hr }));
+  run('MED_AGENDA_TODOS=__todosV; despMedNaTela=null; __abre658=[]; checarDespertadorMed();'); await espera658();
+  const a = J658('__abre658').map((x) => x[1]); run('despMedNaTela=null; __abre658=[];'); return a;
+};
+
+provaAsync('6.58 P56 (AC1.7; 5ª rodada, R4-MÉDIO-1) — «Reabrir» a dose de origem depois de o registro de novo na linha nova ter sido desfeito também: recusado, no cartaz e na gravação, com a frase que manda reabrir o registro da linha que toca; reabrindo esse registro, o alarme cala', async () => {
+  arma658();
+  try {
+    semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+    const N = novaV('zen'), D = N + '_08-00';
+    relogio658(T658(9, 10, 40)); memV(); await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); igual(p, 'pronto'); await fecha658();
+    relogio658(T658(9, 10, 50)); run(`__pessoa658='Gilda Teste';`); await darV(N, '08:00');
+    // o cartaz do «Reabrir» da origem aberto ANTES do 2º «Desfazer» (outra tela): a gravação também recusa
+    memV(); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    igual(J658('__za657').filter((z) => z[0] === 'NÃO HÁ O QUE REABRIR').length, 1, 'com o registro novo valendo, a recusa da 4ª rodada');
+    relogio658(T658(9, 11, 0)); memV(); await anular658(D); [p] = await assina658(SENHA657, 'o registro das 10:50 também estava errado'); igual(p, 'pronto'); await fecha658();
+    igual(await alarmeV(T658(9, 11, 5), [N], '08:00'), [D], 'depois dos dois «Desfazer», o alarme pede a das 08:00 pela linha nova');
+    const FRASE = 'Esta dose já foi registrada de novo por Gilda Teste às 10:50, na linha que toca (esse registro também foi desfeito). Para a dose voltar a contar, reabra o registro de Gilda Teste nessa linha. Nada foi gravado.';
+    run('__za657=[]; __esc657=[];'); memV(); run(`__p658=medDoseReabrirAbrir('zen_08-00');`); await espera658();
+    const za = J658('__za657');
+    igual([za.map((z) => z[0]), za[0] && za[0][1][0], run('CORR_ATUAL') ? 'abriu' : 'sem cartaz', run('__esc657').length], [['NÃO HÁ O QUE REABRIR'], FRASE, 'sem cartaz', 0], 'o cartaz recusa e diz o que fazer');
+    ctx.__vistaV = db658(LOG658)['zen_08-00'];
+    const r = JSON.parse(JSON.stringify(await run(`medDoseReabrirGravar({key:'${K658}', dia:'${DIA658}', principal:'zen_08-00', vista:__vistaV, nomeH:'Biscoito', reg:{ts:3, por:'x', motivo:'y'}})`)));
+    igual([r.ok, r.erro], [false, FRASE], 'a gravação também recusa');
+    igual([!!db658(LOG658)['zen_08-00'].anulada, await alarmeV(T658(9, 11, 10), [N], '08:00')], [true, [D]], 'nada mudou: a origem continua anulada e o alarme continua pedindo (sem dose em dobro escondida)');
+    // o caminho que a frase manda: reabrir o registro da linha nova
+    run('__za657=[];'); memV(); run(`__p658=medDoseReabrirAbrir('${D}');`); await espera658();
+    igual(J658('__za657').length, 0, 'o «Reabrir» do registro da linha nova abre');
+    [p] = await assina658(SENHA657, 'o registro das 10:50 estava certo'); igual(p, 'pronto'); await fecha658();
+    igual([!!db658(LOG658)[D].anulada, !!db658(LOG658)['zen_08-00'].anulada, await alarmeV(T658(9, 11, 15), [N], '08:00')], [false, true, []], 'a dose das 10:50 volta a valer e o alarme cala: uma dose só');
+  } finally { solta658(); }
+});
+
+provaAsync('6.58 P57 (AC1.8; 5ª rodada, R4-BAIXO-1) — a marca da origem na cópia entra por transação: se a cópia já foi marcada por outro aparelho, o registro segue (sem marcar de novo); se a escrita da marca falha, a tela diz que nada foi registrado (não «já foi assinada»)', async () => {
+  arma658();
+  try {
+    // o meio-feito com a cópia da linha irmã (zen2): a origem anulada direto no banco
+    const meio = () => { semear658(); const L = db658(LOG658); put658(LOG658 + '/zen_08-00', Object.assign({}, L['zen_08-00'], { anulada: { acao: 'anular', por: 'Gestora Teste', papel: 'gestao', motivo: 'a dose não foi dada, registro errado', quando: '09/10/2026 09:40', ts: T658(9, 9, 40) } })); memV(); };
+    // (a) outro aparelho marca a cópia entre a leitura do dia e a transação: o registro segue, sem regravar a marca
+    meio();
+    ctx.__marcaV = db658(LOG658)['zen_08-00'].anulada;
+    run(`__mlnV=medLerNo; __ganchoV=true; medLerNo=function(p){ return __mlnV(p).then(function(v){ if(__ganchoV && p===${JSON.stringify(LOG658)}){ __ganchoV=false; __put657(${JSON.stringify(LOG658 + '/zen2_08-00/anulada')}, __marcaV); } return v; }); };
+      __za657=[]; __au657=[]; __esc657=[]; __pessoa658='Gilda Teste';`);
+    relogio658(T658(9, 10, 5)); await darV('zen2', '08:00');
+    run('medLerNo=__mlnV;');
+    const z2 = db658(LOG658)['zen2_08-00'];
+    igual([z2.quem, !!z2.anulada, ((z2.anteriores || [])[0] || {}).espelho_de, J658('__za657').length, J658('__au657').filter((a) => a[0] === 'medicacao-dose-anulada' && a[2].completou).length,
+      run('__esc657').filter((e) => e[0] === 'transaction' && /zen2_08-00$/.test(e[1])).length], ['Gilda Teste', false, 'zen_08-00', 0, 0, 1], 'o registro passa uma vez; a marca não é regravada (uma transação só: a do registro)');
+    // (b) a escrita da marca falha: nada registrado, o aviso diz isso, e o alarme continua pedindo
+    meio();
+    run(`__za657=[]; __recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '/zen2_08-00$')}; __pessoa658='Gilda Teste';`);
+    relogio658(T658(9, 10, 10)); await darV('zen2', '08:00');
+    run('__recusa657=null;');
+    const za = J658('__za657');
+    igual([za.map((z) => z[0]), /NÃO foi registrada/.test((za[0] || [, []])[1][0] || ''), !!db658(LOG658)['zen2_08-00'].anulada, db658(LOG658)['zen2_08-00'].quem],
+      [['NÃO CONSEGUI REGISTRAR A DOSE'], true, false, 'Wandela Teste'], 'nada registrado; o aviso não diz «já foi assinada»');
+    igual(await alarmeV(T658(9, 10, 15), ['zen2'], '08:00'), ['zen2_08-00'], 'o alarme continua pedindo');
+    // (c) a corrida do QA (R4-03): outro aparelho registra entre a leitura do dia e a transação da marca — o registro dele
+    // fica intocado (sem a marca da origem por cima) e este aparelho ouve a recusa de sempre, sem gravar nada
+    meio();
+    const copiaV = db658(LOG658)['zen2_08-00'];
+    ctx.__regOutroV = { itemId: 'zen2', nome: 'Zenrelia', q: '1', u: 'comprimido', local: null, horario: '08:00', quem: 'Aparelho A Teste', ts: T658(9, 10, 20), avulso: false,
+      anteriores: [Object.assign({}, copiaV, { anulada: db658(LOG658)['zen_08-00'].anulada })] };
+    run(`__mlnV=medLerNo; __ganchoV=true; medLerNo=function(p){ return __mlnV(p).then(function(v){ if(__ganchoV && p===${JSON.stringify(LOG658)}){ __ganchoV=false; __put657(${JSON.stringify(LOG658 + '/zen2_08-00')}, __regOutroV); } return v; }); };
+      __za657=[]; __esc657=[]; __pessoa658='Aparelho B Teste';`);
+    relogio658(T658(9, 10, 21)); await darV('zen2', '08:00');
+    run('medLerNo=__mlnV;');
+    const zc = db658(LOG658)['zen2_08-00'];
+    igual([zc.quem, !!zc.anulada, J658('__za657').map((z) => z[0]), run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && /zen2_08-00$/.test(e[1])).length],
+      ['Aparelho A Teste', false, ['ESTA DOSE JÁ FOI REGISTRADA'], 0], 'o registro do outro aparelho intocado; este ouve a recusa e não grava nada');
+  } finally { run('if(typeof __mlnV==="function") medLerNo=__mlnV; __recusa657=null;'); solta658(); }
+});
+}
+{
+// ================================================================== 6.58 — a prova do re-gate 5 do QA (R5-01), trazida para a Fase 0 antes da publicação
+console.log('\n6.58 — re-gate 5 do QA: a transação da marca da cópia confere o espelho_de e o instante');
+const filaA = async (ms, diaMs) => { if (ms) relogio658(ms); run(`selectedDate=new Date(${diaMs || T658(9, 10, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); return J658('MED_AGENDA_TODOS').map((e) => e.itemId + '@' + e.horario); };
+// o que o alarme pede: a fila contra o registro do dia pela leitura do APP (medDosesSemAnuladas, a mesma do medLogHoje)
+const pedeA = async (ms, hr) => { const f = await filaA(ms); const V = J658(`medDosesSemAnuladas(__get657('${LOG658}'))`) || {}; return f.filter((x) => x.endsWith('@' + hr)).filter((x) => !V[x.split('@')[0] + '_' + hr.replace(':', '-')]); };
+// o despertador de verdade (checarDespertadorMed), com a fila montada
+const despA = async (ms) => { relogio658(ms); run(`selectedDate=new Date(${T658(9, 10, 0)}); hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __bk658.ca();`); await espera658(); run('despMedNaTela=null; __abre658=[]; checarDespertadorMed();'); await espera658(); const a = J658('__abre658').map((x) => x[1]); run('despMedNaTela=null; __abre658=[];'); return a; };
+const logA = () => db658(LOG658) || {};
+const novaA = (pai) => { const ag = db658(AG658 + '/itens') || {}; return Object.keys(ag).filter((k) => ag[k].continuacaoDe === pai)[0]; };
+const memA = () => run(`MED_AGENDA_ITENS=__get657('${AG658}/itens'); MED_AGENDA_LOG=__get657('${LOG658}')||{};`);
+const darA = (itemId, hr, pessoa, dia) => { if (pessoa) run(`__pessoa658=${JSON.stringify(pessoa)};`); run(`registrarDoseAgendadaGlobal({key:'${K658}', itemId:${JSON.stringify(itemId)}, nome:'Zenrelia', q:'1', u:'comprimido', local:'', horario:'${hr}', hospNome:'Biscoito'}, magDoseId(${JSON.stringify(itemId)}, '${hr}')${dia ? `, '${dia}'` : ''});`); };
+const tgDoses = () => J658('__tg658').filter((t) => !/CORREÇÃO/.test(t.texto)).length;
+const jaReg = () => J658('__za657').filter((z) => z[0] === 'ESTA DOSE JÁ FOI REGISTRADA').length;
+// o meio-feito: «Voltou a tomar» com «sim» (cópia da das 08:00) e «Desfazer» na origem com a escrita das cópias recusada
+const meioFeitoA = async () => {
+  semear658({ itens: { zen: ZEN658() }, log: { 'zen_08-00': DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+  run(FICHA658()); await anularRem658('zen'); let [p] = await assina658(SENHA657, 'o remédio foi lançado no FILHOt errado'); igual(p, 'pronto'); await fecha658();
+  relogio658(T658(9, 10, 30)); run(FICHA658()); await voltou658('zen', ['1', '08:00, 20:00', 'uso contínuo', 'sim']); [p] = await assina658('s-bia', 'era mesmo do Biscoito, voltou'); igual(p, 'pronto'); await fecha658();
+  const N = novaA('zen');
+  relogio658(T658(9, 10, 40)); memA(); run(`__recusa657=${JSON.stringify('medicacao-log/' + DIA658 + '/' + K658 + '$')};`);
+  await anular658('zen_08-00'); [p] = await assina658(SENHA657, 'a dose não foi dada, registro errado'); await fecha658(); await espera658();
+  run('__recusa657=null; __tg658=[]; __za657=[]; __au657=[];');
+  igual([!!logA()['zen_08-00'].anulada, !!(logA()[N + '_08-00'] || {}).anulada], [true, false], 'o meio-feito');
+  return N;
+};
+
+
+provaAsync('6.58 QA R5-01 (a cópia reescrita pelo espelho de um registro novo da origem, entre a leitura e a marca) — linhas irmãs; a origem anulada e a cópia sem marca; B toca «Dei agora» na irmã; antes de B marcar, A registra a origem de novo e o espelho reescreve a cópia (mesmo espelho_de, outro instante): B ouve «já foi registrada», a cópia nova fica sem marca, nada de B é gravado', async () => {
+  arma658();
+  try {
+    const itens = { zen: ZEN658({ horarios: ['08:00'] }), zen2: { nome: 'Zenrelia', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, tipo: 'medicamento', origem: 'tutor', estoque: { modo: 'contavel', inicial: 10, restante: 5 } } };
+    const marca = { acao: 'anular', motivo: 'a dose não foi dada', por: 'Gestora Teste', papel: 'gestao', quando: '09/10/2026 10:40', ts: T658(9, 10, 40) };
+    const X = DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { anulada: marca });
+    const Y = DOSE658('zen2', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4), { espelho_de: 'zen_08-00' });
+    semear658({ itens, log: { 'zen_08-00': X, 'zen2_08-00': Y } });
+    // o registro novo de A na origem e o espelho dele na irmã (mesmo espelho_de, outro instante), entram logo depois de B ler o dia
+    ctx.__x5 = Object.assign(DOSE658('zen', 'Zenrelia', '08:00', 'comprimido', T658(9, 10, 50)), { quem: 'Aparelho A Teste', anteriores: [X] });
+    ctx.__y5 = Object.assign(DOSE658('zen2', 'Zenrelia', '08:00', 'comprimido', T658(9, 10, 50), { espelho_de: 'zen_08-00' }), { quem: 'Aparelho A Teste' });
+    run(`__mln5=medLerNo; __g5=true; medLerNo=function(p){ return __mln5(p).then(function(v){ if(__g5 && p===${JSON.stringify(LOG658)}){ __g5=false; __put657(${JSON.stringify(LOG658 + '/zen_08-00')}, __x5); __put657(${JSON.stringify(LOG658 + '/zen2_08-00')}, __y5); } return v; }); }; __tg658=[]; __za657=[];`);
+    relogio658(T658(9, 10, 51)); darA('zen2', '08:00', 'Aparelho B Teste'); for (let i = 0; i < 4; i++) await espera658();
+    run('medLerNo=__mln5;');
+    const L = logA(), y = L['zen2_08-00'];
+    console.log('      irmã: ' + y.quem + ' (ts ' + (y.ts === T658(9, 10, 50) ? 'o de A' : y.ts) + ', anulada ' + !!y.anulada + ') | origem: ' + L['zen_08-00'].quem + ' | B ouviu: ' + JSON.stringify(J658('__za657').map((z) => z[0] + ': ' + (z[1] || [])[0])) + ' | mensagens de dose de B ' + tgDoses() + ' | estoque irmã ' + J658(`__get657('${AG658}/itens/zen2/estoque/restante')`));
+    igual([y.quem, !!y.anulada, jaReg(), tgDoses(), J658(`__get657('${AG658}/itens/zen2/estoque/restante')`)], ['Aparelho A Teste', false, 1, 0, 5]);
+  } finally { run('if(typeof __mln5==="function") medLerNo=__mln5;'); solta658(); }
+});
+}
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

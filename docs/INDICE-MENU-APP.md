@@ -1,6 +1,56 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08 e 09/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08, 09 e 10/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 10/out/2026 (v 2026-10-09-14) — O remédio: desfazer a dose, «Lançado por engano», «Voltou a tomar» e a medicação do dia (S3 da revisão tela por tela, parte 1)
+
+> Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) no remédio: a dose dada, o remédio da agenda e a medicação dos Lançamentos do dia. Ela não cria tela nova no menu. Regra de ouro: nada de dose em dobro, nada de dose perdida, e nenhuma dose dada some do histórico (anular deixa riscado).
+
+### (BH) Plantão › Agenda de Medicação › «Horários de hoje» (a dose dada)
+
+| Antes | Agora |
+|---|---|
+| A dose registrada no FILHOt errado não se desfazia: o alarme ficava calado, o estoque descontado e a Gestão deixava de ver o atraso | **«Desfazer esta dose»** em toda dose dada (agendada e avulsa), com 44 px. O cartaz mostra o que sai junto: a dose, o estoque (contável: «de 11 para 12»; frasco, pote e avulsa: não muda), o alarme (hoje: volta a pedir a dose agora; ontem: volta só dentro do horário seguro da 6.47, senão aparece como «faltou» para a Gestão), as cópias da dose em outras linhas do mesmo FILHOt e a mensagem ao grupo do plantão. Aviso fixo, em vermelho: «Se a dose FOI dada, não anule…». **Só a Gestão assina** (decisão 1) |
+| — | **Nada some:** a dose e as cópias ficam no registro, riscadas, com quem anulou, quando e o motivo, numa gravação só. O estoque volta **uma vez só** (dois aparelhos ou dois toques não devolvem duas vezes). O grupo do plantão (Gestão) recebe a correção; se o Telegram falhar, a mensagem entra na fila de reenvio. Se a gravação das cópias falhar depois da dose (ou a cópia nascer no mesmo instante da anulação, em outro aparelho), a cópia já conta como desfeita: o alarme e o Plantão pedem a dose de novo, e «Dei agora» registra por cima dela (com dois aparelhos ao mesmo tempo, um registra e o outro ouve «ESTA DOSE JÁ FOI REGISTRADA»). «Reabrir» a dose de origem depois de a cópia dela ser registrada de novo é recusado, como numa linha só; se esse registro novo também foi desfeito, a tela manda reabrir o registro da linha que toca. A dose com cópia na linha do «Voltou a tomar»: a cascata diz que o alarme volta a pedir a dose pela linha nova |
+| — | **A linha volta a «Dei agora»**, com o riscado («Anulada (lançada por engano)») e o botão **«Reabrir»** (a dose volta a contar como dada, o estoque desconta de novo e o alarme cala). Registrar de novo pelo «Dei agora» guarda a anulação de antes dentro da dose nova. Dois aparelhos: o segundo «Dei agora» é recusado («ESTA DOSE JÁ FOI REGISTRADA», com quem assinou); dois «Desfazer» no mesmo instante: o segundo vê que a dose já foi anulada e não manda outra mensagem |
+| — | **O estoque não se perde num «Salvar agenda»:** salvar a agenda (ou os Medicamentos da ficha) entre a dose e o «Desfazer» guarda as marcas do estoque; o «Desfazer» seguinte ainda devolve a dose |
+| A dose avulsa errada (nome, quantidade, hora) não se corrigia | **«Corrigir»** na dose avulsa: no mesmo dia, quem registrou (com a própria senha) ou quem tem «editar medicação»; de dia anterior, só a Gestão. O mesmo registro guarda o antes e o depois, e o grupo do plantão recebe a correção |
+
+### (BI) Cadastro de Peludinhos › aba Medicamentos (a ficha)
+
+| Antes | Agora |
+|---|---|
+| O remédio lançado no FILHOt errado só saía apagando | **«Lançado por engano»** em cada remédio salvo (44 px): a Gestão assina; o remédio para **agora** pela régua da 6.54 (a dose de hoje já dada continua no histórico; as que faltam não são mais pedidas, nem a de ontem que o alarme ainda tocaria) e as continuações do mesmo remédio (a troca por datas) saem junto, numa gravação só. Com hospedagem ativa, a linha do remédio na lista da estadia ganha o «parou» na mesma gravação. Nada é apagado: o remédio desce para a seção **«Lançados por engano»**, riscado, com **«Reabrir»** |
+| Não existia «Voltou a tomar»: para dar de novo, era preciso cadastrar outra vez (e o histórico se perdia) | **«Voltou a tomar»** (e o «Reabrir» do lançado por engano): a dose, os horários, até quando (o que a linha tinha antes do «Lançado por engano») e **«Começar hoje?»** vêm para conferir; o remédio volta numa **linha nova**, que continua a antiga, com o estoque que sobrou. Assina quem pode mexer no remédio do check-in, com a própria senha; o botão diz «Gravar «Voltou a tomar»» |
+| — | **«Começar hoje?» só quando é seguro:** não é madrugada, hoje é dia do remédio, nenhuma linha dele ainda toca hoje, todo horário novo que já passou tem a dose dada e **toda dose dada hoje cai num horário da linha nova** (a registrada antes da hora também). Essas doses **continuam contando**: a linha nova recebe uma cópia de cada uma, o cartaz cita todas e o alarme não as pede de novo. Dose dada hoje num horário que sai da agenda recusa «hoje» com a frase da troca de horário («A dose das 08:00 de hoje já foi dada: o horário novo vale a partir de…»), como o horário que sai sem registro já passado ou a menos de 15 minutos. Quando não é seguro, o cartaz diz o porquê e a linha nova começa no próximo dia dele |
+| — | **O horário de hoje sem alarme é dito com todas as letras:** «ATENÇÃO: a dose de hoje das 20:00 não será pedida pelo alarme (a linha nova começa sábado, 10/10): se a veterinária mandar dar hoje, registre como dose avulsa». Quando a linha antiga ainda toca hoje, ela fica com as doses de hoje (como na troca de horário por datas) |
+| — | **Dia sim, dia não:** a linha nova segue a contagem da linha antiga (o «próximo sim»); nunca dá dois dias seguidos. Dias específicos (seg, qua, sex) continuam os mesmos |
+| «Parou de tomar» aceitava motivo de 3 letras e não andava o carimbo da agenda | **Motivo de pelo menos 4 palavras** (na própria caixa) e o carimbo na mesma gravação: um «Salvar agenda» aberto antes, em outro aparelho, é recusado e não faz o remédio voltar |
+| «Salvar medicamentos» mudava o horário de hoje mesmo com a dose já dada | **A régua do «Salvar agenda»:** o horário mudado depois da dose de hoje começa amanhã, por troca de datas, com a mesma frase |
+
+### (BJ) Plantão › Agenda de Medicação (a lista) e Cuidado Vet
+
+| Antes | Agora |
+|---|---|
+| «Remover item» apagava o remédio salvo, sem motivo e sem nome no rastro | **O remédio salvo vira o mesmo «Lançado por engano»** (a Gestão assina; nada é apagado; a Linha do tempo diz o remédio e o FILHOt). O rascunho que nunca foi salvo continua saindo só da tela (pergunta S3-P1 à Adriana) |
+| — | **O remédio anulado aparece riscado e só leitura** no Plantão (fora do «Salvar agenda»: um formulário velho não o regrava) e no Cuidado Vet (sem «Alterar», «Suspender» e «Reativar»; a gravação e o «Reativar» da Veterinária releem o banco e recusam o anulado, sem apagar o histórico). Ele sai do alarme, do check-in (também da pergunta «tomava X — não toma mais?»), da linha «💊 toma remédio», do texto pronto do lançamento, da conta "vai faltar" e da «Receita encerrada», e não recebe cópia de dose de outra linha |
+| — | **O rascunho do «Remover item» nunca apaga remédio salvo:** se, com a pergunta aberta, o «Salvar agenda» transformou o rascunho em remédio salvo, o «Remover» vira o «Lançado por engano» |
+
+### (BK) Lançamentos do dia › Medicação
+
+| Antes | Agora |
+|---|---|
+| A medicação errada só mudava tirando e lançando de novo; no intervalo, o alarme sumia | **«corrigir»** (44 px) na linha da medicação: qual remédio e como dar, onde está e a hora. O **mesmo lançamento** guarda o antes e o depois, e o alarme passa do valor antigo para o novo sem intervalo. Recusa mudar a hora de uma dose já dada (o alarme pediria de novo); recusa mudar a hora quando **a hora antiga já passou (ou falta menos de 15 minutos) e a dose não foi registrada** — o alarme dela pode estar aberto no celular da plantonista, e a hora nova pediria a dose de novo (a mesma regra da agenda, 6.54); e recusa a correção que separaria esta dose da dose igual do check-in de pertences (as duas tocariam). Assina quem vê a tela pelo papel ou a recebeu no Time. Na planilha e na TV: texto mudado, a linha nova entra antes de a antiga sair; só a hora, tira e lança, dizendo o resultado de cada passo |
+| «tirar» apagava a medicação | **«tirar» pede a senha da Gestão** (decisão 1): o lançamento sai da lista viva e fica guardado inteiro, numa gravação só; aparece **riscado no mesmo cartão** («Anulada (lançada por engano)»), também depois de recarregar a tela, com **«Reabrir»** (lança de novo, como registro novo, com a trava de repetido, a régua da dose já dada e a da hora já passada sem registro). A dose já dada continua no registro, com o nome de quem deu |
+| — | **Dois aparelhos:** «corrigir» e «tirar» com o lançamento mudado em outro aparelho enquanto o cartaz estava aberto são recusados («mudou em outro aparelho. Nada foi gravado») |
+
+### (BL) Dashboards › Linha do tempo do dia (e Configurações › Logins e segurança, o resumo por pessoa)
+
+| Antes | Agora |
+|---|---|
+| — | **As ações novas em português:** Desfez uma dose de remédio (lançada por engano), Reabriu uma dose de remédio anulada, Corrigiu uma dose avulsa de remédio, O estoque do remédio voltou (dose anulada), Anulou um remédio da agenda (lançado por engano), Voltou a tomar um remédio, Corrigiu a medicação dos Lançamentos do dia, Tirou a medicação dos Lançamentos do dia (lançada por engano); e as que apareciam em código: Medicamentos da ficha, Aviso de remédio ao Telegram, Prescrição da Veterinária, Reativou um remédio (Veterinária) |
+
+> **Servidor (vigia do Telegram, `integracao-telegram/Codigo.gs`):** a dose anulada passa a contar como sem registro (de dia, na noite de ontem e no teste de bancada). Só vale depois de publicado no Apps Script pelo @devops com a Adriana (pergunta S3-P3). Até lá, o app cobra a dose anulada e o servidor não.
 
 ## O que mudou em 09/out/2026 (v 2026-10-09-13) — A base comum de corrigir e anular (S0 da revisão tela por tela)
 
