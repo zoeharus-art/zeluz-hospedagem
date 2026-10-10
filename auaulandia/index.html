@@ -5174,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-14"></script>
+<script src="resposta-tutor.js?v=2026-10-09-15"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-14"></script>
+<script src="painel-logica.js?v=2026-10-09-15"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-14"></script>
+<script src="financeiro-logica.js?v=2026-10-09-15"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5879,7 +5879,11 @@
     // ===== Story 6.58 — corrigir e reabrir a medicação dos Lançamentos do dia (10/out/2026) ===========
     // Os mesmos papéis que veem a tela Lançamentos do dia (telaVemDoPapel('dashdc')); quem recebeu a tela no
     // Time também assina (a tela concedida, conferida no cartaz). Tirar (anular) pede a senha da Gestão.
-    'corrigir-lancamento-dia':  ['consultora','supervisor','gestao','diretoria']
+    'corrigir-lancamento-dia':  ['consultora','supervisor','gestao','diretoria'],
+    // ===== Story 6.59 — corrigir a pesagem de HOJE (AC1.8, 10/out/2026) =================================
+    // Quem tem 'editar-peludinho' ou 'alterar-vet', com a própria senha (quem pesou também assina, pelo nome).
+    // Pesagem de dia anterior e anular qualquer pesagem: a Gestão (entra na dose do vermífugo).
+    'corrigir-peso-hoje':       ['consultora','supervisor','gestao','diretoria','vet']
   };
   // O papel de quem está no corpo, com a régua do ehDiretoriaRole: role 'diretoria' vale
   // por si; 'gestao' com souAdriana (a senha fixa da Adriana) É a Diretoria. A promoção
@@ -22031,7 +22035,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-14';
+  const APP_VERSAO='2026-10-09-15';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -28715,6 +28719,8 @@
   var vetHosp=null;            // hóspede aberto no Cuidado Vet
   var vetMedEditId=null;       // id do item sendo alterado (null = nova prescrição)
   var vcFotosBuf=[];           // fotos (base64) da consulta em edição
+  var VET_MED_TS={key:'', ts:null, lido:false};   // 6.59 (AC7.4): o carimbo da agenda (_ts) que o Cuidado Vet leu junto com os remédios
+  var VET_MED_HIST_ABERTO={};  // 6.59 (AC8.2): o histórico inteiro aberto, por remédio
 
   // Quem pode alterar/cancelar medicação e cancelar consultas — só estes papéis, sempre com motivo.
   function podeAlterarVet(){ return podePapel('alterar-vet'); }
@@ -28727,23 +28733,33 @@
   function vetObsListaDe(h){ if(!h) return []; var o=(VET_OBS_CACHE||{})[vetKey(h)]||{}; return Object.keys(o).map(function(k){ var v=o[k]||{}; v._id=k; return v; }).sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); }
   function renderVetInstrucoesFicha(h,elId){
     var el=document.getElementById(elId||'vf-instr'); if(!el) return;
-    var html='';
+    var html='', naVet=((elId||'vf-instr')==='vf-instr');   // 6.59: só no Cuidado Vet, os botões e o riscado
     var r=recomAtivaDe(h);
     if(r){
       var pills='';
       (r.cuidados||[]).forEach(function(c){ pills+='<span class="vet-recom-pill cuidado">'+escAttr(c)+'</span>'; });
       var reav=VET_REAVAL_CACHE[vetKey(h)];
-      var reavLine=(reav&&reav.data)?'<div style="margin-top:7px;font-size:12.5px;font-weight:700;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>':'';
+      var reavLine=vetReavalAtiva(reav)?'<div style="margin-top:7px;font-size:12.5px;font-weight:700;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>':'';
       html+='<div class="vet-instr-box"><div class="vt">Instruções da Veterinária</div>'
         +(pills?('<div style="margin-bottom:'+(r.texto?'7px':'0')+'">'+pills+'</div>'):'')
         +(r.texto?('<div style="font-size:13.5px;font-weight:600;color:var(--z-blue-soft);line-height:1.5">'+escAttr(r.texto)+'</div>'):'')
         +reavLine
-        +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div></div>';
+        +'<div style="margin-top:7px;font-size:11.5px;font-weight:700;color:var(--muted)">— '+escAttr(r.por||'Veterinária')+(r.ts?(' · '+new Date(r.ts).toLocaleDateString('pt-BR')):'')+'</div>'
+        // 6.59 (AC4.1): «Retirar instrução», no Cuidado Vet, para quem tem alterar-vet (motivo e a própria senha no cartaz)
+        +((naVet && podeAlterarVet())?'<button type="button" class="btn" style="margin-top:8px;min-height:44px;padding:10px 14px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px" onclick="vetInstrRetirar()">Retirar instrução</button>':'')
+        +'</div>';
+    } else if(naVet){
+      // 6.59 (AC4.2): a instrução retirada aparece riscada no Cuidado Vet, com quem, quando, o motivo e «Reabrir»
+      var rr=(VET_RECOM_CACHE||{})[vetKey(h)];
+      if(rr && rr.ativo===false && rr.retirada && typeof rr.retirada==='object')
+        html+='<div class="vet-instr-box" style="border-color:var(--line)"><div class="vt" style="color:var(--muted)">Instrução retirada</div>'
+          +'<div style="font-size:13.5px;font-weight:600;color:var(--muted);text-decoration:line-through;line-height:1.5">'+escAttr(vetInstrTexto(rr))+'</div>'
+          +corrRiscadoHTML(rr.retirada, podeAlterarVet()?'vetInstrReabrir()':'')+'</div>';
     }
-    // Observações/exames para o tutor (as 3 mais recentes) — visível a todos
-    var obs=vetObsListaDe(h);
+    // Observações/exames para o tutor (as 3 mais recentes) — visível a todos. 6.59 (AC6.2): a retirada não entra.
+    var obs=vetObsListaDe(h).filter(function(o){ return !o.retirada; });
     if(obs.length){
-      html+='<div class="vet-instr-box" style="border-color:var(--crm-info);margin-top:'+(r?'8px':'0')+'"><div class="vt" style="color:var(--crm-info)">Observações da Veterinária (para o tutor)</div>'
+      html+='<div class="vet-instr-box" style="border-color:var(--crm-info);margin-top:'+(html?'8px':'0')+'"><div class="vt" style="color:var(--crm-info)">Observações da Veterinária (para o tutor)</div>'
         +obs.slice(0,3).map(function(o){ return '<div style="font-size:13px;font-weight:600;color:var(--z-blue-soft);line-height:1.5;margin-top:4px">• '+escAttr(o.texto||'')+' <span style="color:var(--muted);font-weight:700;font-size:11px">(— '+escAttr(o.quem||'Vet')+(o.ts?(' · '+new Date(o.ts).toLocaleDateString('pt-BR')):'')+')</span></div>'; }).join('')
         +'</div>';
     }
@@ -28753,7 +28769,20 @@
     var el=document.getElementById('vetObsList'); if(!el) return;
     var obs=vetHosp?vetObsListaDe(vetHosp):[];
     if(!obs.length){ el.innerHTML='<div class="hint" style="margin-bottom:0">Nenhuma observação registrada ainda.</div>'; return; }
-    el.innerHTML=obs.map(function(o){ return '<div class="vet-hist-line"><strong>'+escAttr(o.texto||'')+'</strong> <span style="color:var(--muted)">(— '+escAttr(o.quem||'Vet')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span></div>'; }).join('');
+    // 6.59 (AC6): «Editar» e «Retirar» para quem tem alterar-vet; a retirada fica riscada, com «Reabrir»; a editada diz
+    // que o texto original fica guardado
+    var pode=podeAlterarVet();
+    el.innerHTML=obs.map(function(o){
+      var quem='<span style="color:var(--muted)">(— '+escAttr(o.quem||'Vet')+(o.ts?(' · '+new Date(o.ts).toLocaleString('pt-BR')):'')+')</span>';
+      if(o.retirada && typeof o.retirada==='object')
+        return '<div class="vet-hist-line" data-obs="'+escAttr(o._id)+'" style="overflow-wrap:anywhere"><span style="text-decoration:line-through;opacity:.75">'+escAttr(o.texto||'')+'</span> '+quem
+          +corrRiscadoHTML(o.retirada, pode?("vetObsReabrir('"+medJsArg(o._id)+"')"):'')+'</div>';
+      var ed=Object.keys((o.edicoes && typeof o.edicoes==='object')?o.edicoes:{}).length?' <span style="color:var(--muted);font-size:12px">(editada; o texto original fica guardado)</span>':'';
+      var bts=pode?('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'
+        +'<button type="button" style="'+VET_BT+'color:var(--z-blue);border:2px solid var(--z-blue)" onclick="'+escAttr("vetObsEditar('"+medJsArg(o._id)+"')")+'">Editar</button>'
+        +'<button type="button" style="'+VET_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="'+escAttr("vetObsRetirar('"+medJsArg(o._id)+"')")+'">Retirar</button></div>'):'';
+      return '<div class="vet-hist-line" data-obs="'+escAttr(o._id)+'" style="overflow-wrap:anywhere"><strong>'+escAttr(o.texto||'')+'</strong> '+quem+ed+bts+'</div>';
+    }).join('');
   }
   function vetSalvarObs(){
     var st=document.getElementById('vetObs-status'); if(!vetHosp) return;
@@ -28775,22 +28804,48 @@
     var el=document.getElementById('vcReavalAtual'); if(!el) return;
     var reav=h?VET_REAVAL_CACHE[vetKey(h)]:null;
     if(!reav||!reav.data){ el.innerHTML=''; return; }
+    var pode=podeAlterarVet(), oque='Reavaliação: '+vetReavalTexto(reav);
+    // 6.59 (AC5.2): a removida fica riscada (nunca apagada), com «Reabrir»
+    if(reav.removida && typeof reav.removida==='object'){
+      el.innerHTML='<div class="vet-instr-box" style="border-color:var(--line)"><div style="font-size:12.5px;font-weight:800;color:var(--muted);text-decoration:line-through">'+escAttr(oque)+'</div>'
+        +corrRiscadoHTML(reav.removida, pode?'vetReavalReabrir()':'')+'</div>';
+      return;
+    }
+    // 6.59 (AC5.1): a feita sai do quadro; aqui aparece como feita, com «Reabrir» (a própria senha)
+    if(reav.feita && typeof reav.feita==='object'){
+      el.innerHTML='<div class="vet-instr-box" style="border-color:var(--crm-ok)"><div style="font-size:12.5px;font-weight:800;color:var(--crm-ok)">'+escAttr(oque)+' — feita</div>'
+        +'<div style="font-size:12.5px;font-weight:700;color:var(--muted);margin-top:3px">Feita por '+escAttr(reav.feita.quem||'-')+(reav.feita.quando?(', em '+escAttr(reav.feita.quando)):'')+'</div>'
+        +(pode?'<button type="button" style="'+VET_BT+'margin-top:8px;color:var(--z-blue);border:2px solid var(--z-blue)" onclick="vetReavalReabrir()">Reabrir</button>':'')+'</div>';
+      return;
+    }
     el.innerHTML='<div class="vet-instr-box" style="border-color:var(--z-gold)"><div style="font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(fmtBR(reav.data))+(reav.motivo?(' — '+escAttr(reav.motivo)):'')+'</div>'
-      +'<div class="actions" style="margin-top:8px"><button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="vetRemoverReavaliacao()">Remover reavaliação</button></div></div>';
+      +'<div class="actions" style="margin-top:8px"><button type="button" class="btn" style="min-height:44px;background:var(--z-cream-warm);color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="vetRemoverReavaliacao()">Remover reavaliação</button></div></div>';
   }
-  async function vetRemoverReavaliacao(){
-    if(!vetHosp||!podeAlterarVet()){ alert('Apenas a Veterinária, a Gestão ou a Supervisão podem remover a reavaliação.'); return; }
-    var reav=VET_REAVAL_CACHE[vetKey(vetHosp)]; if(!reav||!reav.data){ return; }
-    if(!await zPergunta('Remover a reavaliação marcada de '+(vetHosp.nome||'este peludinho')+'?',
-      ['A data marcada sai da ficha e some dos avisos do dia.'],
-      {sim:'Remover', nao:'Manter'})) return;
-    if(!DB) return; var key=vetKey(vetHosp);
-    DB.ref('auaulandia/vet-reavaliacao/'+key).remove().then(function(){
-      if(typeof audit==='function') audit('vet-reavaliacao-removida',key,{pet:vetHosp.nome||'',quem:(typeof quemSou==='function'?quemSou():'Veterinária')});
-      var el=document.getElementById('vcReavalAtual'); if(el) el.innerHTML='';
-      renderVetInstrucoesFicha(vetHosp,'vf-instr');
-      if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje();
-    }).catch(function(e){ alert('Erro ao remover reavaliação: '+e.message); });
+  // 6.59 (AC5.2): remover pede o motivo de 4 palavras e a própria senha (o cartaz «anular» da 6.57); a reavaliação fica
+  // riscada (`removida`, com o registro), nunca apagada, e sai do quadro e da ficha.
+  function vetRemoverReavaliacao(){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('remover a reavaliação da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp)}));
+    var key=vetKey(vetHosp), reav=VET_REAVAL_CACHE[key], nome=vetHosp.nome||'este FILHOt';
+    if(!vetReavalAtiva(reav)) return Promise.resolve(null);
+    return corrAbrir({acao:'anular', titulo:'Remover a reavaliação', botao:'Remover reavaliação', tituloOk:'Removida', rotulo:'Removida', rotuloAcao:'Removeu', genero:'f',
+      oque:'a reavaliação de '+nome+' marcada para '+vetReavalTexto(reav), tela:'Cuidado Vet',
+      original:{caminho:'auaulandia/vet-reavaliacao/'+key, id:key}, estado:'marcada',
+      cascata:['a reavaliação sai do quadro «Reavaliação de hoje» e da ficha do FILHOt (no Cuidado Vet, fica riscada, com «Reabrir»)'],
+      nivel:'propria', capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-reavaliacao/'+key).then(function(cur){
+          if(!vetReavalAtiva(cur) || cur.data!==reav.data || Number(cur.ts||0)!==Number(reav.ts||0)) return {ok:false, erro:VET_MUDOU('A reavaliação')};
+          var up={removida:reg};
+          return DB.ref('auaulandia/vet-reavaliacao/'+key).update(up).then(function(){
+            VET_REAVAL_CACHE[key]=Object.assign({}, cur, up);
+            try{ if(typeof audit==='function') audit('vet-reavaliacao-removida', nome+' — reavaliação de '+fmtBR(cur.data)+' removida — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+              {alvo:key, pet:nome, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+            vetReavalRedesenhar(key);
+            return {ok:true};
+          });
+        });
+      }});
   }
 
   // ---- Abrir a tela e listar TODOS os hóspedes ----
@@ -28872,16 +28927,27 @@
   }
 
   // ---- Medicação em vigor (a fonte que dispara os alarmes) ----
+  // 6.59 (AC7.4): lê os remédios E o carimbo da agenda (_ts) juntos; o «Alterar», o «Suspender», o «Reativar» e o
+  // «Ainda preciso reavaliar» passam pela trava da 6.54 com este carimbo. A resposta de outro FILHOt não pinta a tela.
   function vetCarregarMed(h){
     VET_MED_CACHE={}; var wrap=document.getElementById('vetMedList');
     if(wrap) wrap.innerHTML='<div class="hint">Carregando medicação…</div>';
-    if(!DB||!h){ renderVetMedList(); return; }
-    DB.ref('auaulandia/medicacao-agenda/'+vetKey(h)+'/itens').once('value').then(function(s){ VET_MED_CACHE=s.val()||{}; renderVetMedList(); }).catch(function(){ VET_MED_CACHE={}; renderVetMedList(); });
+    if(!DB||!h){ VET_MED_TS={key:'', ts:null, lido:false}; renderVetMedList(); return; }
+    var key=vetKey(h), AG='auaulandia/medicacao-agenda/'+key;
+    if(!VET_MED_TS || VET_MED_TS.key!==key) VET_MED_TS={key:'', ts:null, lido:false};
+    // QA BAIXO-3: os remédios e o carimbo numa leitura só (a agenda inteira): ou a tela tem os dois, ou não tem nenhum
+    DB.ref(AG).once('value').then(function(s){ return (s && typeof s.val==='function')?(s.val()||{}):{}; })
+      .then(function(ag){
+        if(vetHosp && vetKey(vetHosp)!==key) return;
+        VET_MED_CACHE=(ag.itens && typeof ag.itens==='object')?ag.itens:{}; VET_MED_TS={key:key, ts:(ag._ts!=null)?ag._ts:null, lido:true};
+        renderVetMedList();
+      }).catch(function(e){ _logLeituraFalhou(AG+' (vetCarregarMed)', e); if(vetHosp && vetKey(vetHosp)!==key) return; VET_MED_CACHE={}; VET_MED_TS={key:'', ts:null, lido:false}; renderVetMedList(); });
   }
   function renderVetMedList(){
     var wrap=document.getElementById('vetMedList'); if(!wrap) return;
     var ids=Object.keys(VET_MED_CACHE||{});
     if(!ids.length){ wrap.innerHTML='<div class="hint">Nenhuma medicação em vigor. Use o botão abaixo para prescrever.</div>'; return; }
+    var hj=(typeof hojeISO==='function')?hojeISO():'', pode=podeAlterarVet(), keyV=vetHosp?vetKey(vetHosp):'';
     wrap.innerHTML=ids.map(function(id){
       var it=VET_MED_CACHE[id]||{};
       if(medItemAnulado(it)) return '<div class="vet-med-item suspenso">'+medAgendaAnuladoHTML(id, it, '')+'</div>';   // 6.58: só leitura
@@ -28891,16 +28957,24 @@
       if(encerrado) per=(per?per+' · ':'')+'ENCERRADO (não gera mais alarme)';
       var hor=(it.horarios||[]).join(' · ')+(per?(' · '+per):'');
       var origLbl=it.origem==='vet'?'Receita da vet':(it.origem==='familia'?'Autorizado pela família':'Rotina do tutor');
-      var hist=(Array.isArray(it.historico)&&it.historico.length)?('<div style="margin-top:8px">'+it.historico.slice(-4).map(function(x){ return '<div class="vet-hist-line"><strong>'+escAttr(x.acao||'')+'</strong>'+(x.motivo?(' — '+escAttr(x.motivo)):'')+' <span style="color:var(--muted)">('+escAttr(x.quem||'')+(x.quando?(' · '+escAttr(x.quando)):'')+')</span></div>'; }).join('')+'</div>'):'';
+      // QA ALTO-2: o remédio parado diz que parou (o «Alterar» dele não muda o horário)
+      var pe=(it.paradoEm && typeof it.paradoEm==='object')?it.paradoEm:null;
+      var parou=pe?('<div class="vet-med-susp" style="background:none;color:var(--crm-critico);padding:0;margin-top:6px">Parou de tomar'+((pe.data||it.dataFim)?(' em '+escAttr(fmtBR(pe.data||it.dataFim))):'')
+        +(pe.quem?(' · '+escAttr(pe.quem)):'')+(pe.motivo?(' — '+escAttr(pe.motivo)):'')+'</div>'):'';
+      var j=escAttr(medJsArg(id));
+      // 6.59 (AC7.6): «Lançada por engano» (o anular da 6.58, a Gestão assina); (AC9): «Ainda preciso reavaliar»
+      var engano=pode?('<button type="button" style="'+VET_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" title="Anular esta prescrição, lançada por engano (nada é apagado)" onclick="vetMedEngano(\''+j+'\')">Lançada por engano</button>'):'';
+      var reav=(pode && vetCienteDesfazivel(it, hj))?('<div class="vet-med-susp" style="background:none;color:var(--z-blue);padding:0;margin-top:8px">Ciente do término'+(it.fimCientePor?(' · '+escAttr(it.fimCientePor)):'')+'</div>'
+        +'<button type="button" style="'+VET_BT+'color:var(--z-blue);border:2px solid var(--z-blue)" onclick="'+escAttr("vetCienteDesfazer('"+medJsArg(keyV)+"','"+medJsArg(id)+"')")+'">Ainda preciso reavaliar</button>'):'';
       var btns;
       if(it.suspenso){
         btns='<div class="vet-med-susp">SUSPENSO'+(it.suspensoPor?(' · '+escAttr(it.suspensoPor)):'')+(it.suspensoMotivo?(' — '+escAttr(it.suspensoMotivo)):'')+'</div>'
-          +'<div class="vet-med-btns">'+(podeAlterarVet()?'<button type="button" class="btn btn-gold" onclick="vetReativarMed(\''+id+'\')">Reativar</button>':'')+'</div>';
+          +'<div class="vet-med-btns" style="flex-wrap:wrap">'+(pode?'<button type="button" class="btn btn-gold" style="min-height:44px" onclick="vetReativarMed(\''+id+'\')">Reativar</button>':'')+engano+'</div>';
       } else {
-        btns=podeAlterarVet()?('<div class="vet-med-btns"><button type="button" class="btn btn-primary" onclick="vetAbrirAlterarMed(\''+id+'\')">Alterar</button><button type="button" class="btn" style="background:var(--crm-critico);color:#fff" onclick="vetSuspenderMed(\''+id+'\')">Suspender</button></div>'):'';
+        btns=pode?('<div class="vet-med-btns" style="flex-wrap:wrap"><button type="button" class="btn btn-primary" style="min-height:44px" onclick="vetAbrirAlterarMed(\''+id+'\')">Alterar</button><button type="button" class="btn" style="min-height:44px;background:var(--crm-critico);color:#fff" onclick="vetSuspenderMed(\''+id+'\')">Suspender</button>'+engano+'</div>'):'';
       }
       return '<div class="vet-med-item'+(it.suspenso?' suspenso':'')+'"><div class="vet-med-top"><span class="vet-med-nome">'+escAttr(it.nome||'Medicamento')+'</span><span class="vet-med-orig'+(it.origem==='vet'?' vet':'')+'">'+origLbl+'</span></div>'
-        +'<div class="vet-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+(hor?(' · '+escAttr(hor)):'')+'</div>'+hist+btns+'</div>';
+        +'<div class="vet-med-det">'+(qtd?escAttr(qtd):'quantidade não informada')+(hor?(' · '+escAttr(hor)):'')+'</div>'+parou+vetMedHistHTML(it, id)+btns+reav+'</div>';
     }).join('');
   }
   function vetAddHorario(btn){ var wrap=document.getElementById('vmHorarios'); if(wrap) wrap.insertAdjacentHTML('beforeend','<span class="magHorario"><input data-c="h" inputmode="numeric" placeholder="07:30" onblur="normalizarHoraMed(this)"><button type="button" class="mag-rm-h" onclick="this.parentElement.remove()">×</button></span>'); }
@@ -28945,9 +29019,8 @@
     document.getElementById('vetMedForm').scrollIntoView({behavior:'smooth',block:'center'});
   }
   function vetFecharMedForm(){ var f=document.getElementById('vetMedForm'); if(f) f.style.display='none'; vetMedEditId=null; }
-  function vetSalvarMed(){
-    if(!vetHosp||!podeAlterarVet()) return;
-    var st=document.getElementById('vetMed-status');
+  // O formulário da prescrição, lido da tela (o mesmo jeito de sempre). vetSalvarMed(dados) aceita os valores prontos.
+  function vetMedColetarForm(){
     var nome=(document.getElementById('vmNome').value||'').trim();
     var q=(document.getElementById('vmQtd').value||'').trim();
     var ub=document.querySelector('#vmUnidades button.on'); var u=ub?ub.textContent.trim():'';
@@ -28958,89 +29031,201 @@
     var tb=document.querySelector('#vmTipo button.on'); var tipo=(tb&&/supl/i.test(tb.textContent))?'suplemento':'medicamento';
     var horarios=Array.prototype.map.call(document.querySelectorAll('#vmHorarios [data-c=h]'),function(inp){ return normHora(inp.value)||''; }).filter(Boolean);
     var motivo=(document.getElementById('vmMotivo').value||'').trim();
-    if(!nomeMedOk(nome)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o nome do medicamento por extenso.'; } return; }
-    if(!u){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Toque na medida (comprimido, ml, gota, pomada...).'; } return; }
-    if(medEhLocal(u)){ if(!local){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Pomada: escreva o LOCAL de aplicação.'; } return; } }
-    else if(medEhTextoLivre(u)){ if(!q){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a descrição da dose (ex: 1 medida no medidor do tutor).'; } return; } }
-    else if(qtdNum(q)==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'; } return; }
-    if(!horarios.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Cadastre pelo menos 1 horário válido (ex: 07:30).'; } return; }
-    if(!dataInicio){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de INÍCIO do medicamento.'; } return; }
-    if(!continuo && !dataFim){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data de TÉRMINO ou marque "Uso contínuo".'; } return; }
-    if(!motivo){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva o motivo da prescrição/alteração — fica registrado e assinado.'; } return; }
-    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
-    var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
-    var acao=vetMedEditId?'Alterou a prescrição':'Prescreveu';
-    var id=vetMedEditId||('vet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
-    var prev=VET_MED_CACHE[id]||{};
-    var hist=(Array.isArray(prev.historico)?prev.historico.slice():[]);
-    hist.push({quem:quem,quando:agoraBR(),acao:acao,motivo:motivo});
-    var item={nome:nome,q:(medEhLocal(u)?'':q),u:u,horarios:horarios,tipo:tipo,origem:'vet',historico:hist,dataInicio:dataInicio,continuo:continuo};
-    if(medEhLocal(u)) item.local=local;
-    if(!continuo) item.dataFim=dataFim; else item.dataFim=null;
-    var _fqV=coletarFreqMed(document.getElementById('vetMedForm')); if(_fqV && _fqV.tipo!=='diario') item.freq=_fqV; else item.freq=null;
-    if(prev.estoque) item.estoque=prev.estoque; // preserva estoque já contado, se houver
-    // reativa se estava suspenso e a vet salvou uma alteração
-    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando na ficha do peludinho…'; }
-    // 6.58 (AC4.3): o remédio anulado não é regravado aqui (o set do item inteiro apagaria a marca e o
-    // ressuscitaria). Confere no banco, na hora; o conserto inteiro do Cuidado Vet é da 6.59.
-    (vetMedEditId?DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id+'/anulado').once('value').then(function(s){ return !!((s && typeof s.val==='function')?s.val():null); }):Promise.resolve(false)).then(function(anul){
-      if(anul || medItemAnulado(prev)) return 'anulado';
-      return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens/'+id).set(item);
-    }).then(function(rAnul){
-      if(rAnul==='anulado'){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Este remédio foi lançado por engano (anulado): não dá para alterar aqui. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).'; } return; }
-      DB.ref('auaulandia/medicacao-agenda/'+key).update({nome:vetHosp.nome||'',tutor:(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')),_ts:Date.now(),_quem:quem}).catch(function(e){ _logFalhaGrav('cabeçalho da medicação (vet) '+key, e); });
-      if(typeof audit==='function') audit('vet-medicacao',key,{pet:vetHosp.nome||'',med:nome,acao:acao,quem:quem});
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ '+acao+' — já vale na ficha e nos alarmes.'; }
+    var freq=coletarFreqMed(document.getElementById('vetMedForm'));
+    return {nome:nome, q:q, u:u, local:local, dataInicio:dataInicio, continuo:continuo, dataFim:dataFim, tipo:tipo, horarios:horarios, motivo:motivo, freq:freq};
+  }
+  // ===== 6.59 (J05) — O «ALTERAR» SEM PERDER CAMPOS, COM A RÉGUA E A TRAVA DA 6.54 =================
+  // Antes: `set` do remédio inteiro (apagava o que outras telas gravaram: a troca por datas, a parada, o estoque…), sem a
+  // régua (o horário novo tocava hoje com a dose de hoje já dada) e sem a trava (um «Alterar» com a tela de antes
+  // ressuscitava o que outro aparelho mudou). Agora: só os campos do formulário mudam, por caminhos, numa escrita só com
+  // o carimbo da agenda; o horário mudado depois da dose de hoje começa amanhã (mcrReguaDaAgenda, a mesma do «Salvar
+  // agenda»); a agenda mudada em outro aparelho depois que esta tela a leu: nada é gravado (mcrTravaAgenda). O «Ciente»
+  // do término sai quando o fim (ou o uso contínuo) muda. O motivo pede 4 palavras.
+  // o motivo que a pessoa escreveu no formulário (dado)
+  function vetMotivoDe(f){ return String((f||{}).motivo||'').trim(); }
+  var VET_MED_CAMPOS=['nome','q','u','local','horarios','tipo','origem','dataInicio','continuo','dataFim','freq','historico'];
+  // PURA: os horários em ordem, para comparar o de antes com o do formulário.
+  function vetMedHorasIguais(a, b){
+    var n=function(l){ return (Array.isArray(l)?l:[]).map(function(h){ return normHora(h)||''; }).filter(Boolean).sort().join(','); };
+    return n(a)===n(b);
+  }
+  // PURA (QA ALTO-2; re-gate MÉDIO-R2-1): a régua da 6.54 não vale para o remédio parado («Parou de tomar») nem para o
+  // suspenso. No parado, o «Alterar» recusa tudo o que o faria voltar a tocar: o horário, o uso contínuo e o «tomar até»
+  // (a volta é pelo «Voltou a tomar» da ficha, da 6.58, que tira a parada passando pela régua); a dose e o resto mudam.
+  // No suspenso, recusa mudar o horário. `f` = o formulário (continuo, dataFim). '' = pode; senão, a frase da recusa.
+  function vetMedHoraRecusa(p, horarios, f){
+    p=p||{}; f=f||{};
+    var nm=String(p.nome||'sem nome'), mesmaHora=vetMedHorasIguais(p.horarios, horarios);
+    if(p.paradoEm){
+      var fimDe=function(x){ return x.continuo?'contínuo':String(x.dataFim||''); };
+      if(mesmaHora && fimDe(p)===fimDe(f)) return '';
+      var pe=(typeof p.paradoEm==='object')?p.paradoEm:{}, dia=pe.data||p.dataFim||'';
+      return 'O remédio '+nm+' parou de ser dado («Parou de tomar»'+(dia?(' em '+fmtBR(dia)):'')+(pe.quem?(', por '+String(pe.quem)):'')+'): o horário, o uso contínuo e '
+        +'o «tomar até» dele não mudam por aqui, para o alarme não pedir de novo uma dose já dada. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+    }
+    if(mesmaHora) return '';
+    if(p.suspenso) return 'O remédio '+nm+' está suspenso: o horário não muda enquanto ele estiver suspenso, para a dose de hoje não ser pedida de novo. Reative primeiro e depois mude o horário. Nada foi salvo.';
+    return '';
+  }
+  // PURA (QA BAIXO-4): o que aconteceu com o horário pedido. 'agora' = vale já (ou o horário não mudou); 'amanha' = a troca
+  // por datas da régua (começa amanhã); 'mantido' = a régua manteve o horário de antes.
+  function vetMedHoraComoFicou(p, form, alvo, trocado){
+    if(vetMedHorasIguais((p||{}).horarios, (form||{}).horarios)) return 'agora';
+    if(trocado) return 'amanha';
+    return vetMedHorasIguais((alvo||{}).horarios, (form||{}).horarios)?'agora':'mantido';
+  }
+  function vetSalvarMed(dados){
+    if(!vetHosp) return;
+    if(!podeAlterarVet()) return corrBarrar(vetMedEditId?'alterar a prescrição da Veterinária':'prescrever medicação no Cuidado Vet', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:vetMedEditId||''});
+    var st=document.getElementById('vetMed-status');
+    var diz=function(cor, t){ if(st){ st.style.color=cor; st.textContent=t; } };
+    var f=(dados && typeof dados==='object')?dados:vetMedColetarForm();
+    var nome=String(f.nome||'').trim(), q=String(f.q||'').trim(), u=String(f.u||'').trim(), local=String(f.local||'').trim();
+    var dataInicio=String(f.dataInicio||''), continuo=!!f.continuo, dataFim=continuo?'':String(f.dataFim||'');
+    var tipo=(f.tipo==='suplemento')?'suplemento':'medicamento', horarios=(f.horarios||[]).map(function(h){ return normHora(h)||''; }).filter(Boolean);
+    var motivo=vetMotivoDe(f);
+    if(!nomeMedOk(nome)){ diz('var(--crm-critico)', '✋ Escreva o nome do medicamento por extenso.'); return; }
+    if(!u){ diz('var(--crm-critico)', '✋ Toque na medida (comprimido, ml, gota, pomada...).'); return; }
+    if(medEhLocal(u)){ if(!local){ diz('var(--crm-critico)', '✋ Pomada: escreva o LOCAL de aplicação.'); return; } }
+    else if(medEhTextoLivre(u)){ if(!q){ diz('var(--crm-critico)', '✋ Escreva a descrição da dose (ex: 1 medida no medidor do tutor).'); return; } }
+    else if(qtdNum(q)==null){ diz('var(--crm-critico)', '✋ Escreva a quantidade em número (ex: 1, 0,5, 10).'); return; }
+    if(!horarios.length){ diz('var(--crm-critico)', '✋ Cadastre pelo menos 1 horário válido (ex: 07:30).'); return; }
+    if(!dataInicio){ diz('var(--crm-critico)', '✋ Informe a data de INÍCIO do medicamento.'); return; }
+    if(!continuo && !dataFim){ diz('var(--crm-critico)', '✋ Informe a data de TÉRMINO ou marque "Uso contínuo".'); return; }
+    var mv=motivoQuatroPalavras(motivo);
+    if(!motivo || !mv.ok){ diz('var(--crm-critico)', '✋ O motivo da prescrição ou da alteração fica registrado e assinado. '+vetMotivoFrase(motivo)); return; }
+    if(!DB){ diz('var(--crm-atencao-text)', 'Banco conectando…'); return; }
+    var key=vetKey(vetHosp), AG='auaulandia/medicacao-agenda/'+key, quem=(typeof quemSou==='function')?quemSou():'Veterinária', nomeH=vetHosp.nome||'este FILHOt';
+    var editId=vetMedEditId, acao=editId?'Alterou a prescrição':'Prescreveu';
+    var id=editId||('vet_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
+    var fq=(f.freq && typeof f.freq==='object' && f.freq.tipo && f.freq.tipo!=='diario')?f.freq:null;
+    // os campos do formulário; o que ele esvazia de propósito (fim com uso contínuo, frequência diária, local fora de
+    // pomada) vai a vazio, como antes
+    var form={nome:nome, q:(medEhLocal(u)?'':q), u:u, local:medEhLocal(u)?local:null, horarios:horarios, tipo:tipo, origem:'vet',
+      dataInicio:dataInicio, continuo:continuo, dataFim:continuo?null:dataFim, freq:fq};
+    var ts0=Date.now(), lido=!!(VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido), linha={quem:quem, quando:agoraBR(), acao:acao, motivo:motivo};
+    diz('var(--muted)', 'Salvando na ficha do peludinho…');
+    // relê a agenda no banco: é sobre o remédio de agora que os caminhos são gravados (6.58: o anulado não é regravado
+    // aqui), e a régua vê a agenda inteira (a linha de baixo de uma troca, o id da linha nova já ocupado). As recusas vêm
+    // antes da trava: a trava só anda o carimbo quando a gravação vai acontecer.
+    return (editId?medLerNo(AG+'/itens'):Promise.resolve(null)).then(function(todos){
+      var noBanco=editId?(((todos||{})[id])||null):null;
+      if(editId && (medItemAnulado(noBanco||{}) || medItemAnulado(VET_MED_CACHE[id]||{}))){ diz('var(--crm-critico)', '✋ Este remédio foi lançado por engano (anulado): não dá para alterar aqui. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).'); return {ok:false, anulado:true}; }
+      if(editId && !noBanco){ diz('var(--crm-critico)', '✋ Este remédio não está mais na agenda: nada foi salvo. Feche e abra de novo.'); return {ok:false}; }
+      // QA BAIXO-3: o «Alterar» grava o formulário desta tela; sem o carimbo que ela leu, não há como saber se o formulário
+      // é o de agora
+      if(editId && !lido){ diz('var(--crm-critico)', '✋ Não consegui conferir a agenda de '+nomeH+' (esta tela não leu o carimbo dela). Nada foi salvo: feche e abra de novo.'); return {ok:false, semCarimbo:true}; }
+      // QA ALTO-2 e re-gate MÉDIO-R2-1: a régua da 6.54 não vale para o remédio parado nem para o suspenso; mudar o horário
+      // deles aqui (ou, no parado, o uso contínuo e o «tomar até») faria o alarme pedir de novo a dose de hoje já dada
+      var recusaHora=editId?vetMedHoraRecusa(noBanco, horarios, form):'';
+      if(recusaHora){ diz('var(--crm-critico)', '✋ '+recusaHora); return {ok:false, horaRecusada:true}; }
+      var trava=lido?mcrTravaAgenda(AG+'/_ts', VET_MED_TS.ts, ts0):Promise.resolve(true);
+      return trava.then(function(passou){
+        if(!passou){ diz('var(--crm-critico)', 'A agenda de '+nomeH+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'); return {ok:false, trava:true}; }
+        var up={}, frases=[];
+        var fim=function(){ up.nome=vetHosp.nome||''; up.tutor=(typeof tutorDe==='function'?tutorDe(vetHosp):(vetHosp.tutor||'')); up._ts=ts0; up._quem=quem; return DB.ref(AG).update(up); };
+        if(!editId){
+          var novo=Object.assign({}, form); ['local','dataFim','freq'].forEach(function(c){ if(novo[c]==null) delete novo[c]; });
+          novo.historico=[linha];
+          up['itens/'+id]=novo;
+          return fim().then(function(){ return {ok:true}; });
+        }
+        var p=noBanco, it=Object.assign({}, p, form);
+        ['local','dataFim','freq'].forEach(function(c){ if(form[c]==null) delete it[c]; });
+        it.historico=Array.isArray(p.historico)?p.historico.slice():[];
+        // AC7.2: o fim (ou o uso contínuo) mudou → o «Ciente» do término sai e vira uma linha do histórico
+        var mudouFim=(!!p.continuo!==continuo) || (String(p.dataFim||'')!==String(form.dataFim||''));
+        var tiraCiente=!!p.fimCiente && mudouFim;
+        var itens={}, prev=Object.assign({}, todos||{}); itens[id]=it; prev[id]=p;
+        return mcrReguaDaAgenda(key, itens, prev, quem).then(function(rg){
+          var alvo=rg.itens[id]||it;
+          var hA=Array.isArray(alvo.historico)?alvo.historico.slice():it.historico.slice();
+          hA.push(linha);
+          if(tiraCiente) hA.push({quem:quem, quando:linha.quando, acao:'A data de término mudou: o aviso de receita encerrada volta a valer', motivo:motivo});
+          alvo.historico=hA;
+          var K=VET_MED_CAMPOS.slice(); if(rg.trocados[id]) K=K.concat(['trocadoPor','estoque','estoqueMovidoPara']);
+          K.forEach(function(c){ up['itens/'+id+'/'+c]=(alvo[c]===undefined)?null:alvo[c]; });
+          if(tiraCiente){ up['itens/'+id+'/fimCiente']=null; up['itens/'+id+'/fimCientePor']=null; up['itens/'+id+'/fimCienteTs']=null; }
+          Object.keys(rg.novos).forEach(function(nid){ var nv=rg.novos[nid]; nv.historico=(Array.isArray(nv.historico)?nv.historico.slice():[]).concat([linha]); up['itens/'+nid]=nv; });
+          frases=rg.frases||[];
+          // QA BAIXO-4: o que a tela diz segue o que a régua fez com o horário
+          var hora=vetMedHoraComoFicou(p, form, alvo, !!rg.trocados[id]);
+          return fim().then(function(){ return {ok:true, frases:frases, hora:hora}; });
+        });
+      });
+    }).then(function(res){
+      if(!res || !res.ok) return res;
+      if(lido && VET_MED_TS && VET_MED_TS.key===key) VET_MED_TS.ts=ts0;   // o «Alterar» seguinte, nesta tela, grava
+      if(typeof audit==='function') audit('vet-medicacao',key,{pet:nomeH,med:nome,acao:acao,quem:quem,troca:(res.frases||[]).join(' ')});
+      var fr=(res.frases||[]).length?(' '+res.frases.join(' ')):'';
+      if(res.hora==='mantido') diz('var(--crm-atencao-text)', '✋ A alteração foi gravada, mas o horário NÃO mudou.'+fr);
+      else if(res.hora==='amanha') diz('var(--crm-ok)', '✅ '+acao+' — gravada na ficha.'+fr);
+      else diz('var(--crm-ok)', '✅ '+acao+' — já vale na ficha e nos alarmes.'+fr);
       vetFecharMedForm();
       vetCarregarMed(vetHosp);
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // desce viva: rearma os alarmes
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+      return res;
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/medicacao-agenda/ (vetSalvarMed)', e);
+      diz('var(--crm-critico)', '⚠️ Não salvou: '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Nada foi gravado.');
+      return {ok:false};
+    });
   }
   async function vetSuspenderMed(id){
-    if(!vetHosp||!podeAlterarVet()) return;
+    if(!vetHosp) return;
+    if(!podeAlterarVet()) return corrBarrar('suspender um remédio no Cuidado Vet', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id});   // 6.59 (AC3.1)
     var it=VET_MED_CACHE[id]; if(!it) return;
-    var motivo=((await zTexto('Suspender "'+(it.nome||'este medicamento')+'"',
-      ['O motivo fica registrado e assinado com o seu nome.'],
-      {rotulo:'Motivo da suspensão', botao:'Suspender', minimo:3}))||'').trim();
-    if(!motivo){ alert('É preciso informar o motivo para suspender.'); return; }
+    // 6.59 (AC8.1): o motivo pede 4 palavras (motivoQuatroPalavras), no lugar das 3 letras de antes
+    var motivo=await vetMedMotivo('Suspender "'+(it.nome||'este medicamento')+'"', ['O motivo fica registrado e assinado com o seu nome.'],
+      {rotulo:'Motivo da suspensão', botao:'Suspender', falta:'É preciso informar o motivo para suspender.'});
+    if(motivo==null) return;
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
-    var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Suspendeu',motivo:motivo});
+    var AG='auaulandia/medicacao-agenda/'+key, ts0=Date.now(), nomeH=vetHosp.nome||'este FILHOt';
+    // 6.59: relê o remédio no banco (o histórico de agora; o anulado em outro aparelho não se suspende)
+    var noBanco=await vetMedRelerParaGravar(AG, id, 'suspender'); if(!noBanco) return;
+    // 6.59: a trava da 6.54 com o carimbo que esta tela leu (a tela que não leu o carimbo grava como antes)
+    if(!await vetMedTravar(key, AG, ts0, nomeH)) return;
+    var hist=(Array.isArray(noBanco.historico)?noBanco.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Suspendeu',motivo:motivo});
     // 6.54 (8ª rodada, C7-2 — extensão da trava F3): suspende e anda o carimbo da agenda na mesma escrita;
     // um «Salvar agenda» com o formulário de antes é recusado e não apaga a linha "Suspendeu" do histórico.
-    var upS={}; upS['itens/'+id+'/suspenso']=true; upS['itens/'+id+'/suspensoPor']=quem; upS['itens/'+id+'/suspensoMotivo']=motivo; upS['itens/'+id+'/suspensoTs']=Date.now();
-    upS['itens/'+id+'/historico']=hist; upS._ts=Date.now(); upS._quem=quem;
-    DB.ref('auaulandia/medicacao-agenda/'+key).update(upS).then(function(){
-      if(typeof audit==='function') audit('vet-medicacao-suspensa',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
+    var upS={}; upS['itens/'+id+'/suspenso']=true; upS['itens/'+id+'/suspensoPor']=quem; upS['itens/'+id+'/suspensoMotivo']=motivo; upS['itens/'+id+'/suspensoTs']=ts0;
+    upS['itens/'+id+'/historico']=hist; upS._ts=ts0; upS._quem=quem;
+    return DB.ref(AG).update(upS).then(function(){
+      if(typeof audit==='function') audit('vet-medicacao-suspensa',key,{pet:nomeH,med:it.nome||'',quem:quem,motivo:motivo});
+      if(VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido) VET_MED_TS.ts=ts0;
       vetCarregarMed(vetHosp);
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); // some dos alarmes na hora
-    }).catch(function(e){ alert('Erro ao suspender: '+e.message); });
+      // 6.59 (AC8.3): uma linha ao grupo do plantão, para FILHOt hospedado hoje
+      vetAvisarPlantao((noBanco.nome||it.nome||'Remédio')+' de '+nomeH+' SUSPENSO '+vetPeloQuem()+' — motivo: '+motivo, key, nomeH, 'vet-medicacao-suspensa');
+    }).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (vetSuspenderMed)', e); alert('Não suspendi: '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Nada foi mudado.'); });
   }
   async function vetReativarMed(id){
-    if(!vetHosp||!podeAlterarVet()) return;
+    if(!vetHosp) return;
+    if(!podeAlterarVet()) return corrBarrar('reativar um remédio no Cuidado Vet', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id});   // 6.59 (AC3.1)
     var it=VET_MED_CACHE[id]; if(!it) return;
     if(medItemAnulado(it)){ alert('Este remédio foi lançado por engano (anulado): não se reativa. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos).'); return; }   // 6.58
-    var motivo=((await zTexto('Reativar "'+(it.nome||'este medicamento')+'"',
-      ['O motivo fica registrado.'],
-      {rotulo:'Motivo da reativação', botao:'Reativar', cor:'#234D67', minimo:3}))||'').trim();
-    if(!motivo){ alert('É preciso informar o motivo para reativar.'); return; }
+    // 6.59 (AC8.1): o motivo pede 4 palavras
+    var motivo=await vetMedMotivo('Reativar "'+(it.nome||'este medicamento')+'"', ['O motivo fica registrado.'],
+      {rotulo:'Motivo da reativação', botao:'Reativar', cor:'#234D67', falta:'É preciso informar o motivo para reativar.'});
+    if(motivo==null) return;
     if(!DB) return; var key=vetKey(vetHosp); var quem=(typeof quemSou==='function')?quemSou():'Veterinária';
+    var AG='auaulandia/medicacao-agenda/'+key, ts0=Date.now(), nomeH=vetHosp.nome||'este FILHOt';
     // 6.58 (2ª rodada, MÉDIO-4 do QA): relê o remédio no banco antes de gravar — a memória da tela pode ser de antes
     // do «Lançado por engano» (e regravaria o histórico velho por cima da linha da anulação)
-    var noBanco=null;
-    try{ noBanco=await medLerNo('auaulandia/medicacao-agenda/'+key+'/itens/'+id); }
-    catch(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (vetReativarMed)', e); alert(zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})))+' Nada foi mudado.'); return; }
-    if(!noBanco){ alert('Este remédio não está mais na agenda. Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return; }
-    if(medItemAnulado(noBanco)){ alert('Este remédio foi lançado por engano (anulado) em outro aparelho: não se reativa. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return; }
+    var noBanco=await vetMedRelerParaGravar(AG, id, 'reativar'); if(!noBanco) return;
     it=noBanco;
+    if(!await vetMedTravar(key, AG, ts0, nomeH)) return;   // 6.59: a trava da 6.54 com o carimbo que esta tela leu
     var hist=(Array.isArray(it.historico)?it.historico.slice():[]); hist.push({quem:quem,quando:agoraBR(),acao:'Reativou',motivo:motivo});
     // 6.54 (7ª rodada, C6-3 — extensão da trava F3): reativa e anda o carimbo da agenda na mesma escrita;
     // um «Salvar agenda» com o formulário de antes (que leu "suspenso") é recusado e não suspende de novo.
-    var upV={}; ['suspenso','suspensoPor','suspensoMotivo','suspensoTs'].forEach(function(c){ upV['itens/'+id+'/'+c]=null; }); upV['itens/'+id+'/historico']=hist; upV._ts=Date.now(); upV._quem=quem;
-    DB.ref('auaulandia/medicacao-agenda/'+key).update(upV).then(function(){
-      if(typeof audit==='function') audit('vet-medicacao-reativada',key,{pet:vetHosp.nome||'',med:it.nome||'',quem:quem,motivo:motivo});
+    var upV={}; ['suspenso','suspensoPor','suspensoMotivo','suspensoTs'].forEach(function(c){ upV['itens/'+id+'/'+c]=null; }); upV['itens/'+id+'/historico']=hist; upV._ts=ts0; upV._quem=quem;
+    return DB.ref(AG).update(upV).then(function(){
+      if(typeof audit==='function') audit('vet-medicacao-reativada',key,{pet:nomeH,med:it.nome||'',quem:quem,motivo:motivo});
+      if(VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido) VET_MED_TS.ts=ts0;
       vetCarregarMed(vetHosp);
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
-    }).catch(function(e){ alert('Erro ao reativar: '+e.message); });
+      vetAvisarPlantao((it.nome||'Remédio')+' de '+nomeH+' REATIVADO '+vetPeloQuem()+' — motivo: '+motivo, key, nomeH, 'vet-medicacao-reativada');   // 6.59 (AC8.3)
+    }).catch(function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (vetReativarMed)', e); alert('Não reativei: '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Nada foi mudado.'); });
   }
 
   // ---- Fotos da consulta ----
@@ -29060,7 +29245,9 @@
 
   // ---- Salvar a consulta (receituário) + instruções + reavaliação ----
   function salvarConsultaVet(){
-    if(!vetHosp||!podeAlterarVet()) return;
+    if(!vetHosp) return;
+    // 6.59 (AC3.1): quem não tem alterar-vet ouve por quê, e fica o «BARROU» na auditoria (no lugar do return calado)
+    if(!podeAlterarVet()) return corrBarrar('salvar a consulta da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp)});
     var st=document.getElementById('vc-status');
     var data=(document.getElementById('vcData').value||'').trim();
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Informe a data da consulta.'; } return; }
@@ -29083,12 +29270,13 @@
     // recomendações + cuidados viram instruções ativas na ficha do peludinho.
     // ANTI-HULK: só grava quando HÁ recomendação/cuidado nesta consulta. Consulta sem recomendação
     // PRESERVA a instrução ativa que já existia (ex.: "usar elizabetano") — nunca desativa em silêncio.
-    // Para retirar uma instrução, a Vet usa "Remover recomendação".
+    // Para retirar uma instrução, a Vet usa «Retirar instrução» (6.59).
     var temInstr=!!(recom||cuidados.length);
     if(temInstr) ops.push(DB.ref('auaulandia/vet-recomendacoes/'+key).set({texto:recom,cuidados:cuidados,por:quem,ts:Date.now(),consultaId:consultaId,ativo:true}));
     // reavaliação (avisa no dia). ANTI-HULK: só grava quando há data válida. Campo em branco PRESERVA a
     // reavaliação existente — nunca apaga automaticamente. Para remover, a Vet usa "Remover reavaliação".
-    if(reaval&&/^\d{4}-\d{2}-\d{2}$/.test(reaval)) ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set({data:reaval,motivo:reavalMotivo,por:quem,ts:Date.now()}));
+    // 6.59 (AC3.4): a reavaliação guarda a consulta que a marcou (consultaId): anular a consulta a leva junto.
+    if(reaval&&/^\d{4}-\d{2}-\d{2}$/.test(reaval)) ops.push(DB.ref('auaulandia/vet-reavaliacao/'+key).set({data:reaval,motivo:reavalMotivo,por:quem,ts:Date.now(),consultaId:consultaId}));
     Promise.all(ops).then(function(){
       if(typeof audit==='function') audit('vet-consulta',key,{pet:vetHosp.nome||'',quem:quem,reavaliacao:reaval||''});
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Consulta salva. Recomendações já visíveis na ficha do peludinho.'; }
@@ -29099,7 +29287,7 @@
       renderVetInstrucoesFicha(vetHosp,'vf-instr');
       renderVcReavalAtual(vetHosp);
       vetCarregarConsultas(vetHosp);
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+    }).catch(function(e){ _logFalhaGrav('auaulandia/vet-consultas/ (salvarConsultaVet)', e); if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não salvou: '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true}))); } });
   }
   function vetCarregarConsultas(h){
     VET_CONSULTAS_CACHE={}; var el=document.getElementById('vetConsultasList');
@@ -29107,29 +29295,63 @@
     if(!DB||!h){ renderVetConsultas(); return; }
     DB.ref('auaulandia/vet-consultas/'+vetKey(h)).once('value').then(function(s){ VET_CONSULTAS_CACHE=s.val()||{}; renderVetConsultas(); }).catch(function(){ VET_CONSULTAS_CACHE={}; renderVetConsultas(); });
   }
+  // 6.59 (AC3.3, AC3.4): a versão de agora em cima, com PDF, WhatsApp, e-mail, «Corrigir» e «Anular»; a versão
+  // corrigida aparece riscada embaixo da nova, sem os botões; a anulada fica riscada, com quem, quando e o motivo.
+  function vetConsultaCorpoHTML(c){
+    c=c||{};
+    var linha=[], body='';
+    if(c.temperatura) linha.push('Temp: '+escAttr(c.temperatura)+' °C');
+    if(c.peso) linha.push('Peso: '+escAttr(c.peso)+' kg');
+    if(linha.length) body+='<div class="cc-body"><strong>'+linha.join(' · ')+'</strong></div>';
+    if(Array.isArray(c.cuidados)&&c.cuidados.length) body+='<div class="cc-body">Cuidados: '+c.cuidados.map(escAttr).join(', ')+'</div>';
+    if(c.recomendacoes) body+='<div class="cc-body">Recomendações: '+escAttr(c.recomendacoes)+'</div>';
+    if(c.obs) body+='<div class="cc-body">'+escAttr(c.obs)+'</div>';
+    if(c.reavaliacao) body+='<div class="cc-body" style="color:var(--z-gold-deep);font-weight:700">Reavaliar em '+escAttr(fmtBR(c.reavaliacao))+(c.reavaliacaoMotivo?(' — '+escAttr(c.reavaliacaoMotivo)):'')+'</div>';
+    return body;
+  }
+  // A primeira versão da corrente (pela corrigeDe): é pela data dela que a lista ordena (a correção não muda o lugar).
+  function vetConsultaRaiz(C, id){
+    var vistos={}, cur=id;
+    while(C[cur] && C[cur].corrigeDe && C[C[cur].corrigeDe] && !vistos[cur]){ vistos[cur]=1; cur=C[cur].corrigeDe; }
+    return cur;
+  }
   function renderVetConsultas(){
     var el=document.getElementById('vetConsultasList'); if(!el) return;
-    var ids=Object.keys(VET_CONSULTAS_CACHE||{});
+    var C=VET_CONSULTAS_CACHE||{}, ids=Object.keys(C);
     if(!ids.length){ el.innerHTML='<div class="hint">Nenhuma consulta registrada ainda.</div>'; return; }
-    ids.sort(function(a,b){ return (VET_CONSULTAS_CACHE[b].ts||0)-(VET_CONSULTAS_CACHE[a].ts||0); });
-    el.innerHTML=ids.map(function(id){
-      var c=VET_CONSULTAS_CACHE[id]||{};
-      var linha=[];
-      if(c.temperatura) linha.push('Temp: '+escAttr(c.temperatura)+' °C');
-      if(c.peso) linha.push('Peso: '+escAttr(c.peso)+' kg');
-      var body='';
-      if(linha.length) body+='<div class="cc-body"><strong>'+linha.join(' · ')+'</strong></div>';
-      if(Array.isArray(c.cuidados)&&c.cuidados.length) body+='<div class="cc-body">Cuidados: '+c.cuidados.map(escAttr).join(', ')+'</div>';
-      if(c.recomendacoes) body+='<div class="cc-body">Recomendações: '+escAttr(c.recomendacoes)+'</div>';
-      if(c.obs) body+='<div class="cc-body">'+escAttr(c.obs)+'</div>';
-      if(c.reavaliacao) body+='<div class="cc-body" style="color:var(--z-gold-deep);font-weight:700">Reavaliar em '+escAttr(fmtBR(c.reavaliacao))+(c.reavaliacaoMotivo?(' — '+escAttr(c.reavaliacaoMotivo)):'')+'</div>';
+    var pode=podeAlterarVet();
+    var topo=ids.filter(function(id){ var c=C[id]||{}; return !(c.corrigidaPor && C[c.corrigidaPor]); });
+    topo.sort(function(a,b){ return ((C[vetConsultaRaiz(C,b)]||{}).ts||0)-((C[vetConsultaRaiz(C,a)]||{}).ts||0); });
+    el.innerHTML=topo.map(function(id){
+      var c=C[id]||{}, j=escAttr(medJsArg(id));
       var fotos=(Array.isArray(c.fotos)&&c.fotos.length)?('<div class="vet-fotos">'+c.fotos.map(function(src){ return '<img src="'+src+'" alt="">'; }).join('')+'</div>'):'';
-      var pdf='<div class="cc-pdf" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
-        +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfImprimir(\''+id+'\')">PDF / Imprimir</button>'
-        +'<button type="button" class="btn btn-wa" onclick="vetPdfWhatsApp(\''+id+'\')">WhatsApp</button>'
-        +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfEmail(\''+id+'\')">E-mail (Gmail)</button>'
-        +'</div>';
-      return '<div class="vet-consulta-card"><div class="cc-data">'+escAttr(fmtBR(c.data)||c.data||'')+'</div><div class="cc-meta">— '+escAttr(c.por||'Veterinária')+'</div>'+body+fotos+pdf+'</div>';
+      var cab='<div class="cc-data">'+escAttr(fmtBR(c.data)||c.data||'')+'</div><div class="cc-meta">— '+escAttr(c.por||'Veterinária')+(c.corrigeDe?' · versão corrigida':'')+'</div>';
+      var card;
+      if(c.anulada && typeof c.anulada==='object'){
+        card='<div class="vet-consulta-card" data-consulta="'+escAttr(id)+'" style="opacity:.85"><div style="text-decoration:line-through">'+cab+vetConsultaCorpoHTML(c)+'</div>'+fotos+corrRiscadoHTML(c.anulada, '')+'</div>';
+      } else {
+        var pdf='<div class="cc-pdf" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+          +'<button type="button" class="btn" style="min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfImprimir(\''+j+'\')">PDF / Imprimir</button>'
+          +'<button type="button" class="btn btn-wa" style="min-height:44px" onclick="vetPdfWhatsApp(\''+j+'\')">WhatsApp</button>'
+          +'<button type="button" class="btn" style="min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vetPdfEmail(\''+j+'\')">E-mail (Gmail)</button>'
+          +'</div>';
+        var corr=pode?('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
+          +'<button type="button" style="'+VET_BT+'color:var(--z-blue);border:2px solid var(--z-blue)" onclick="vetConsultaCorrigir(\''+j+'\')">Corrigir</button>'
+          +'<button type="button" style="'+VET_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="vetConsultaAnular(\''+j+'\')">Anular</button></div>'):'';
+        var saiu=vetConsultaSaidasTexto(c);
+        card='<div class="vet-consulta-card" data-consulta="'+escAttr(id)+'">'+cab+vetConsultaCorpoHTML(c)+fotos
+          +(saiu?('<div class="cc-body" style="font-size:12.5px;color:var(--muted)">'+escAttr(saiu.replace(/ Avise o tutor da correção\.$/,''))+'</div>'):'')+pdf+corr+'</div>';
+      }
+      // as versões de antes, riscadas, embaixo da nova (sem PDF nem WhatsApp)
+      var antes='', vistos={}, cur=c.corrigeDe;
+      while(cur && C[cur] && !vistos[cur]){
+        vistos[cur]=1; var a=C[cur];
+        antes+='<div class="vet-consulta-card vet-consulta-velha" data-consulta="'+escAttr(cur)+'" style="opacity:.8;margin-left:10px">'
+          +'<div style="text-decoration:line-through"><div class="cc-data">'+escAttr(fmtBR(a.data)||a.data||'')+'</div><div class="cc-meta">— '+escAttr(a.por||'Veterinária')+' · versão anterior</div>'+vetConsultaCorpoHTML(a)+'</div>'
+          +((a.correcao && typeof a.correcao==='object')?corrRiscadoHTML(a.correcao, ''):'')+'</div>';
+        cur=a.corrigeDe;
+      }
+      return card+antes;
     }).join('');
   }
 
@@ -29264,6 +29486,8 @@
     var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
     var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
     if(!blob){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não foi possível gerar o PDF neste aparelho.'; } return; }
+    // 6.59 (AC3.2): a saída fica registrada na consulta (a falha só vai para o rastro); QA BAIXO-7: só depois de o PDF existir
+    vetConsultaSaida(id, 'pdf');
     try{
       var u=URL.createObjectURL(blob); var w=window.open(u,'_blank');
       if(!w){ ciBaixarBlob(blob,vetConsultaFileName(c)); }
@@ -29274,6 +29498,7 @@
   // WhatsApp — anexa o PDF (Web Share API); fallback baixa + abre wa.me. Mesmo padrão do Check-in.
   function vetPdfWhatsApp(id){
     var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
+    vetConsultaSaida(id, 'whatsapp');   // 6.59 (AC3.2)
     var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
     var nome=vetConsultaFileName(c); var txt=vetConsultaResumoTexto(c);
     if(blob){
@@ -29295,6 +29520,7 @@
   // E-mail (Gmail) — baixa o PDF e abre o compositor do Gmail. Mesmo padrão do Check-in.
   function vetPdfEmail(id){
     var c=VET_CONSULTAS_CACHE[id]; if(!c) return; var st=vetPdfStatus();
+    vetConsultaSaida(id, 'email');   // 6.59 (AC3.2)
     var assunto='Receituário — Cuidado Veterinário Zêluz — '+((vetHosp&&vetHosp.nome)||'');
     var corpo=vetConsultaResumoTexto(c)+'\n\n— Anexe ao e-mail o PDF do receituário que acabou de ser baixado.';
     var blob=null; try{ blob=vetConsultaBlob(c); }catch(e){ blob=null; }
@@ -29312,16 +29538,19 @@
     var hj=(typeof hojeISO==='function')?hojeISO():'';
     var pend=[];
     Object.keys(VET_REAVAL_CACHE||{}).forEach(function(key){
-      var r=VET_REAVAL_CACHE[key]; if(r&&r.data&&r.data<=hj) pend.push({key:key,r:r});
+      var r=VET_REAVAL_CACHE[key]; if(vetReavalAtiva(r)&&r.data<=hj) pend.push({key:key,r:r});   // 6.59: a feita e a removida saem
     });
     if(!pend.length){ el.innerHTML=''; return; }
     // tenta descobrir o nome pelo hóspede do dia
     function nomeDaKey(k){ var found=''; (hospedes||[]).forEach(function(h){ if(vetKey(h)===k) found=h.nome||''; }); return found; }
+    var pode=podeAlterarVet();
     var linhas=pend.map(function(p){
       var nome=nomeDaKey(p.key)||''; var venceu=p.r.data<hj;
-      return '<div style="margin-top:6px">'+(nome?('<strong>'+escAttr(nome)+'</strong> — '):'')+'reavaliação '+(venceu?'venceu em ':'marcada para ')+escAttr(fmtBR(p.r.data))+(p.r.motivo?(' ('+escAttr(p.r.motivo)+')'):'')+'</div>';
+      return '<div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0">'+(nome?('<strong>'+escAttr(nome)+'</strong> — '):'')+'reavaliação '+(venceu?'venceu em ':'marcada para ')+escAttr(fmtBR(p.r.data))+(p.r.motivo?(' ('+escAttr(p.r.motivo)+')'):'')+'</span>'
+        // 6.59 (AC5.1): «Feita» (o login, como o «Ciente»): sai do quadro
+        +(pode?('<button type="button" style="'+VET_BT+'color:var(--crm-ok);border:2px solid var(--crm-ok)" onclick="'+escAttr("vetReavalFeita('"+medJsArg(p.key)+"')")+'">Feita</button>'):'')+'</div>';
     }).join('');
-    el.innerHTML='<div class="vet-reaval-banner"><span data-icon="stethoscope"></span><div><div class="rr-tit">Reavaliação de hoje</div>'+linhas+'</div></div>';
+    el.innerHTML='<div class="vet-reaval-banner"><span data-icon="stethoscope"></span><div style="flex:1;min-width:0"><div class="rr-tit">Reavaliação de hoje</div>'+linhas+'</div></div>';
     try{ el.querySelectorAll('[data-icon]').forEach(function(x){ x.innerHTML=ic(x.dataset.icon); x.style.display='inline-flex'; }); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
 
@@ -29387,6 +29616,527 @@
       if(typeof audit==='function') audit('vet-medicacao-fim-ciente',key,{pet:ficha.nome||'',med:it.nome||'',quem:quem});
       if(vetHosp && vetKey(vetHosp)===key) vetCarregarMed(vetHosp);
     }).catch(function(e){ alert('Erro ao registrar ciência: '+e.message); });
+  }
+
+  // =====================================================================================================
+  // ===== STORY 6.59 — CUIDADO VET: CORRIGIR, ANULAR E DESFAZER (J01 a J07, 10/out/2026) ================
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026). A consulta, a
+  // instrução, a reavaliação e a observação ao tutor ganham o cartaz da 6.57 (corrigir, anular ou retirar, reabrir),
+  // sempre com motivo de 4 palavras e assinatura, nunca apagando nada. Quem assina (AC10):
+  //   corrigir a consulta do mesmo dia, editar ou retirar a observação do mesmo dia, retirar e reabrir a instrução,
+  //   reabrir a reavaliação feita e remover a reavaliação, «Ainda preciso reavaliar» → alterar-vet, a própria senha;
+  //   corrigir a consulta de dia anterior, anular a consulta, a observação de dia anterior → a Gestão;
+  //   «Feita» na reavaliação → alterar-vet, o login (como o «Ciente»).
+  // «O mesmo dia» é o dia em que o registro foi gravado (o carimbo `ts`), no relógio do aparelho.
+  // =====================================================================================================
+  var VET_BT='min-height:44px;padding:8px 12px;font-family:inherit;font-size:14px;font-weight:800;border-radius:12px;cursor:pointer;background:var(--z-white);';
+  function vetDiaDe(ts){ var d=new Date(Number(ts)||0), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function vetMesmoDia(ts){ return !!ts && vetDiaDe(ts)===((typeof hojeISO==='function')?hojeISO():''); }
+  function VET_MUDOU(oque){ return String(oque)+' mudou em outro aparelho depois que esta tela abriu. Nada foi gravado: feche e abra de novo.'; }
+  // A reavaliação que ainda vale — a «Feita» e a removida (riscada) saem do quadro, da ficha e do painel da Gestão.
+  function vetReavalAtiva(r){ return !!(r && r.data && !r.feita && !r.removida); }
+  // «09/10/2026 — reavaliar a córnea» (a data e o motivo que a Veterinária escreveu).
+  function vetReavalTexto(r){ r=r||{}; return fmtBR(r.data)+(r.motivo?(' — '+r.motivo):''); }
+  // A instrução em uma linha (os cuidados e o texto), para a cascata e para o riscado.
+  function vetInstrTexto(r){ r=r||{}; var c=Array.isArray(r.cuidados)?r.cuidados.filter(Boolean):[]; return [c.join(', '), String(r.texto||'').trim()].filter(Boolean).join(' — ')||'(sem texto)'; }
+  // Aplica um pedaço gravado (com caminhos 'a/b') na memória da tela, para a tela mudar já com o ok (o ouvinte confirma).
+  function vetAplicar(o, up){
+    var c=Object.assign({}, o||{});
+    Object.keys(up||{}).forEach(function(x){
+      var ps=x.split('/'), v=up[x], n=c;
+      for(var i=0;i<ps.length-1;i++){ n[ps[i]]=Object.assign({}, (n[ps[i]] && typeof n[ps[i]]==='object')?n[ps[i]]:{}); n=n[ps[i]]; }
+      if(v===null || v===undefined) delete n[ps[ps.length-1]]; else n[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    });
+    return c;
+  }
+  // A frase do motivo (o motivoQuatroPalavras, nunca copiado).
+  function vetMotivoFrase(t){ var mq=motivoQuatroPalavras(t); return mq.ok?'':String(mq.erro); }
+
+  // ---- AC3 — A CONSULTA: as saídas, «Corrigir» (versão nova) e «Anular» ---------------------------------
+  var VET_SAIDA_NOME={pdf:'PDF / impressão', whatsapp:'WhatsApp', email:'E-mail'};
+  // AC3.2: quem abriu ou compartilhou o receituário, como e quando — em vet-consultas/{chave}/{id}/saidas/{id novo}.
+  function vetConsultaSaida(id, como){
+    if(!DB || !vetHosp || !id) return Promise.resolve(false);
+    var key=vetKey(vetHosp), q=corrQuemAgora(), s={como:String(como||''), quem:String(q.login||'-'), papel:String(q.papel||''), ts:q.ts};
+    try{
+      var pr=DB.ref('auaulandia/vet-consultas/'+key+'/'+id+'/saidas').push(s);
+      return Promise.resolve(pr).then(function(ref){
+        var k=String((ref && ref.key) || (pr && pr.key) || q.ts);
+        var c=(VET_CONSULTAS_CACHE||{})[id]; if(c){ c.saidas=Object.assign({}, (c.saidas && typeof c.saidas==='object')?c.saidas:{}); c.saidas[k]=s; }
+        return true;
+      }, function(e){ _logFalhaGrav('saída do receituário ('+como+') — auaulandia/vet-consultas/'+key+'/'+id, e); return false; });
+    }catch(e){ _logFalhaGrav('saída do receituário ('+como+') — auaulandia/vet-consultas/'+key+'/'+id, e); return Promise.resolve(false); }
+  }
+  // AC3.5 (PURA): «Este receituário já saiu: WhatsApp em 09/10/2026 às 10:00, por …. Avise o tutor da correção.» ('' = não saiu)
+  function vetConsultaSaidasTexto(c){
+    var s=(c && c.saidas && typeof c.saidas==='object')?c.saidas:{};
+    var L=Object.keys(s).map(function(k){ return s[k]||{}; }).filter(function(x){ return x && x.ts; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    if(!L.length) return '';
+    return 'Este receituário já saiu: '+L.map(function(x){ return (VET_SAIDA_NOME[x.como]||String(x.como||'saída'))+' em '+fmtBR(vetDiaDe(x.ts))+' às '+corrHora(x.ts)+', por '+String(x.quem||'—'); }).join('; ')+'. Avise o tutor da correção.';
+  }
+  // A data no cartaz vai no jeito brasileiro (DD/MM/AAAA) e volta para o banco em AAAA-MM-DD; vazio fica vazio.
+  function vetDataDoCartaz(t){
+    t=String(t==null?'':t).trim(); if(!t) return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t); if(!m) return null;
+    var p=function(x){ return String(x).padStart(2,'0'); }, iso=m[3]+'-'+p(m[2])+'-'+p(m[1]);
+    var d=new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+    return (d.getFullYear()===Number(m[3]) && d.getMonth()===Number(m[2])-1 && d.getDate()===Number(m[1]))?iso:null;
+  }
+  var VET_CONSULTA_CAMPOS=[{c:'data', rotulo:'Data da consulta (DD/MM/AAAA)'}, {c:'temperatura', rotulo:'Temperatura (°C)'}, {c:'peso', rotulo:'Peso (kg)'},
+    {c:'cuidados', rotulo:'Cuidados especiais (separe com ponto e vírgula)'}, {c:'recomendacoes', rotulo:'Recomendações', grande:true},
+    {c:'obs', rotulo:'Observações da consulta', grande:true}, {c:'reavaliacao', rotulo:'Reavaliar em (DD/MM/AAAA; vazio = sem data)'}, {c:'reavaliacaoMotivo', rotulo:'Motivo da reavaliação'}];
+  function vetConsultaValorCartaz(c, campo){
+    if(campo==='data' || campo==='reavaliacao') return c[campo]?fmtBR(c[campo]):'';
+    if(campo==='cuidados') return (Array.isArray(c.cuidados)?c.cuidados:[]).join('; ');
+    return String(c[campo]==null?'':c[campo]);
+  }
+  function vetConsultaValorBanco(campo, v){
+    if(campo==='data' || campo==='reavaliacao') return vetDataDoCartaz(v)||'';
+    if(campo==='cuidados') return String(v||'').split(';').map(function(x){ return x.trim(); }).filter(Boolean);
+    return String(v==null?'':v).trim();
+  }
+  // PURA (QA MÉDIO-1): o que a correção de uma consulta faz com a reavaliação. Só mexe na reavaliação que nasceu desta
+  // consulta (o consultaId, ou a antiga sem consultaId com a data desta consulta); a de outra consulta fica como está.
+  // {acao, texto}: 'nada' | 'acompanha' (só o consultaId vai para a versão nova) | 'campos' (a data ou o motivo mudam, o
+  // de antes fica em `anteriores`) | 'remover' (a versão nova não tem reavaliação: fica riscada) | 'nova' (a data nova
+  // volta a ser marcada; a feita ou removida de antes fica no histórico) | 'outra' (a marcada agora é de outra consulta).
+  function vetReavalNaCorrecao(rv, c, id, novaData, novoMotivo){
+    c=c||{}; novaData=String(novaData||''); novoMotivo=String(novoMotivo||'');
+    var dela=!!(rv && rv.data && (rv.consultaId===id || (!rv.consultaId && c.reavaliacao && rv.data===c.reavaliacao)));
+    var ativa=vetReavalAtiva(rv);
+    var mudou=(novaData!==String(c.reavaliacao||'')) || (novoMotivo!==String(c.reavaliacaoMotivo||''));
+    var nova=fmtBR(novaData)+(novoMotivo?(' — '+novoMotivo):'');
+    if(dela){
+      if(!mudou) return ativa?{acao:'acompanha', texto:'A reavaliação marcada nesta consulta ('+vetReavalTexto(rv)+') acompanha a versão nova.'}:{acao:'nada', texto:''};
+      if(!novaData) return ativa?{acao:'remover', texto:'A reavaliação de '+vetReavalTexto(rv)+' sai junto: a versão nova não tem reavaliação (fica riscada no Cuidado Vet, com «Reabrir»).'}
+        :{acao:'nada', texto:''};
+      if(ativa) return {acao:'campos', texto:'A reavaliação marcada nesta consulta muda de '+vetReavalTexto(rv)+' para '+nova+' (a de antes fica no histórico).'};
+      if(novaData===rv.data) return {acao:'campos', texto:'O motivo da reavaliação de '+fmtBR(rv.data)+' (já '+(rv.feita?'feita':'removida')+') muda para «'+novoMotivo+'» (o de antes fica no histórico).'};
+      return {acao:'nova', texto:'A reavaliação de '+vetReavalTexto(rv)+' estava '+(rv.feita?'feita':'removida')+': a data nova, '+nova+', volta a ser marcada (a de antes fica no histórico).'};
+    }
+    if(!mudou || !novaData || novaData===String(c.reavaliacao||'')){
+      return (mudou && ativa)?{acao:'nada', texto:'A reavaliação marcada agora ('+vetReavalTexto(rv)+') é de outra consulta e continua como está.'}:{acao:'nada', texto:''};
+    }
+    if(ativa) return {acao:'outra', texto:'A reavaliação marcada agora ('+vetReavalTexto(rv)+') é de outra consulta e continua como está: a data corrigida ('+nova+') fica só no registro desta consulta.'};
+    return {acao:'nova', texto:'A reavaliação passa a ser '+nova+(rv && rv.data?(' (a de '+fmtBR(rv.data)+', '+(rv.feita?'feita':'removida')+', fica no histórico)'):'')+'.'};
+  }
+  // O pedaço gravado na reavaliação para a decisão acima (por campos: as feitas, as remoções e os registros ficam).
+  function vetReavalPedaco(dec, rv, key, novoId, reg, novaData, novoMotivo){
+    var up={}, B='vet-reavaliacao/'+key+'/';
+    if(!dec || dec.acao==='nada' || dec.acao==='outra') return up;
+    if(dec.acao==='acompanha'){ up[B+'consultaId']=novoId; return up; }
+    if(dec.acao==='remover'){ up[B+'removida']=Object.assign({}, reg, {rotulo:'Removida (a consulta corrigida não tem mais reavaliação)', rotuloAcao:'Removeu'}); up[B+'consultaId']=novoId; return up; }
+    if(rv && rv.data) up[B+'anteriores/'+reg.ts]={data:String(rv.data||''), motivo:String(rv.motivo||''), por:String(rv.por||''), ts:Number(rv.ts)||0, consultaId:rv.consultaId||null, correcao:reg.ts};
+    if(dec.acao==='nova' && rv){
+      if(rv.feita){ up[B+'feita']=null; up[B+'feitas/'+reg.ts]=rv.feita; }
+      if(rv.removida){ up[B+'removida']=null; up[B+'remocoes/'+reg.ts]=rv.removida; }
+    }
+    up[B+'data']=String(novaData||''); up[B+'motivo']=String(novoMotivo||''); up[B+'por']=reg.por||''; up[B+'ts']=reg.ts; up[B+'consultaId']=novoId;
+    return up;
+  }
+  // AC3.3: «Corrigir» — o cartaz com os campos da consulta (as fotos ficam); com o ok, nasce uma versão nova (c_{ts},
+  // corrigeDe), a anterior recebe corrigidaPor e fica riscada embaixo da nova; a instrução ativa que nasceu da anterior
+  // passa a ser a da versão nova. AC3.6: no mesmo dia, alterar-vet com a própria senha; de dia anterior, a Gestão.
+  function vetConsultaCorrigir(id){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('corrigir a consulta da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id}));
+    var key=vetKey(vetHosp), c=(VET_CONSULTAS_CACHE||{})[id], nome=vetHosp.nome||'este FILHOt';
+    if(!c){ zAlertao('ESTA CONSULTA NÃO ESTÁ MAIS NA LISTA', ['Feche e abra de novo. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    if(c.anulada || c.corrigidaPor){ zAlertao('ESTA NÃO É A VERSÃO DE AGORA', ['Esta consulta já foi '+(c.anulada?'anulada':'corrigida')+'. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var r=(VET_RECOM_CACHE||{})[key], reav=VET_REAVAL_CACHE[key];
+    var instr=!!(r && r.consultaId===id && r.ativo!==false);
+    var info=['As fotos da consulta ficam na versão nova.'];
+    if(instr) info.push('A instrução ativa na ficha nasceu desta consulta: ela passa a ser a da versão nova (os cuidados e as recomendações corrigidos).');
+    // QA MÉDIO-1: a linha da reavaliação segue os valores do cartaz (a decisão é refeita na gravação, com o banco)
+    var reavVista=reav?JSON.parse(JSON.stringify(reav)):null;
+    var linhaReav=function(nd, nm){ return vetReavalNaCorrecao(reavVista, c, id, nd, nm); };
+    var info0=linhaReav(c.reavaliacao, c.reavaliacaoMotivo).texto;
+    var saiu=vetConsultaSaidasTexto(c);
+    return corrAbrir({acao:'corrigir', titulo:'Corrigir a consulta de '+fmtBR(c.data), oque:'a consulta de '+fmtBR(c.data)+' de '+nome, tela:'Cuidado Vet', genero:'f',
+      original:{caminho:'auaulandia/vet-consultas/'+key+'/'+id, id:id}, nivel:vetMesmoDia(c.ts)?'propria':'gestao', capacidade:'alterar-vet',
+      campos:VET_CONSULTA_CAMPOS.map(function(x){ return {c:x.c, rotulo:x.rotulo, valor:vetConsultaValorCartaz(c, x.c), grande:!!x.grande}; }),
+      info:info0?info.concat([info0]):info, aviso:saiu||undefined,
+      validar:function(vals){
+        var d=vetDataDoCartaz(vals[0]); if(!d) return 'A data da consulta precisa ser uma data (DD/MM/AAAA). Nada foi gravado.';
+        if(vetDataDoCartaz(vals[6])===null) return 'A data da reavaliação precisa ser uma data (DD/MM/AAAA) ou ficar vazia. Nada foi gravado.';
+        var tem=[1,2,3,4,5].some(function(i){ return String(vals[i]||'').trim(); });
+        if(!tem) return 'Registre ao menos temperatura, peso, um cuidado, recomendação ou observação. Nada foi gravado.';
+        var lr=linhaReav(vetDataDoCartaz(vals[6])||'', String(vals[7]==null?'':vals[7]).trim()).texto;
+        return {info:lr?info.concat([lr]):info.slice()};
+      },
+      gravar:function(reg){
+        var novoId='c_'+reg.ts, base='auaulandia/vet-consultas/'+key+'/';
+        return Promise.all([medLerNo(base+id), medLerNo('auaulandia/vet-recomendacoes/'+key), medLerNo('auaulandia/vet-reavaliacao/'+key)]).then(function(rr){
+          var atual=rr[0];
+          if(!atual || atual.anulada || atual.corrigidaPor || Number(atual.ts||0)!==Number(c.ts||0)) return {ok:false, erro:VET_MUDOU('A consulta')};
+          var novo=JSON.parse(JSON.stringify(atual)); delete novo.saidas; delete novo.corrigidaPor; delete novo.correcao;
+          Object.keys(reg.depois||{}).forEach(function(campo){ novo[campo]=vetConsultaValorBanco(campo, reg.depois[campo]); });
+          novo.corrigeDe=id; novo.corrigidaEm=reg.ts; novo.correcao=reg;
+          var up={}; up['vet-consultas/'+key+'/'+novoId]=novo; up['vet-consultas/'+key+'/'+id+'/corrigidaPor']=novoId; up['vet-consultas/'+key+'/'+id+'/correcao']=reg;
+          var ri=rr[1];
+          if(ri && ri.consultaId===id && ri.ativo!==false){
+            var cuid=Array.isArray(novo.cuidados)?novo.cuidados:[];
+            if(String(novo.recomendacoes||'').trim() || cuid.length){ up['vet-recomendacoes/'+key+'/texto']=String(novo.recomendacoes||''); up['vet-recomendacoes/'+key+'/cuidados']=cuid; up['vet-recomendacoes/'+key+'/consultaId']=novoId; }
+            else { up['vet-recomendacoes/'+key+'/ativo']=false; up['vet-recomendacoes/'+key+'/retirada']=Object.assign({}, reg, {rotulo:'Retirada (a consulta corrigida não tem mais instrução)', rotuloAcao:'Retirou'}); up['vet-recomendacoes/'+key+'/consultaId']=novoId; }
+          }
+          // QA MÉDIO-1: a reavaliação só muda se for desta consulta, por campos (o histórico fica); a decisão com o banco
+          // tem de ser a mesma que o cartaz mostrou
+          var rv=rr[2], nd=/^\d{4}-\d{2}-\d{2}$/.test(String(novo.reavaliacao||''))?String(novo.reavaliacao):'', nm=String(novo.reavaliacaoMotivo||'');
+          var decB=vetReavalNaCorrecao(rv, atual, id, nd, nm), decV=vetReavalNaCorrecao(reavVista, c, id, nd, nm);
+          if(decB.acao!==decV.acao || decB.texto!==decV.texto) return {ok:false, erro:VET_MUDOU('A reavaliação')};
+          Object.assign(up, vetReavalPedaco(decB, rv, key, novoId, reg, nd, nm));
+          return DB.ref('auaulandia').update(up).then(function(){
+            VET_CONSULTAS_CACHE=vetAplicar(VET_CONSULTAS_CACHE, (function(){ var m={}; m[novoId]=novo; m[id+'/corrigidaPor']=novoId; m[id+'/correcao']=reg; return m; })());
+            try{ if(typeof audit==='function') audit('vet-consulta-corrigida', nome+' — consulta de '+fmtBR(atual.data)+' corrigida ('+Object.keys(reg.depois||{}).map(function(x){ return (reg.rotulos||{})[x]||x; }).join(', ')+') — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+              {alvo:key, pet:nome, item:id, novo:novoId, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+            vetDepoisDaConsulta();
+            return {ok:true};
+          });
+        });
+      }});
+  }
+  // AC3.4: «Anular» — a Gestão (motivo e senha); a consulta fica riscada; a instrução ativa que nasceu dela sai junto
+  // (o mesmo motivo); a reavaliação marcada nela vai junto (a antiga, sem consultaId, pergunta: «Tirar junto» ou «Manter»).
+  function vetConsultaAnular(id){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('anular a consulta da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id}));
+    var key=vetKey(vetHosp), c=(VET_CONSULTAS_CACHE||{})[id], nome=vetHosp.nome||'este FILHOt';
+    if(!c){ zAlertao('ESTA CONSULTA NÃO ESTÁ MAIS NA LISTA', ['Feche e abra de novo. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    if(c.anulada || c.corrigidaPor){ zAlertao('ESTA NÃO É A VERSÃO DE AGORA', ['Esta consulta já foi '+(c.anulada?'anulada':'corrigida')+'. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var r=(VET_RECOM_CACHE||{})[key], reav=VET_REAVAL_CACHE[key];
+    var instr=!!(r && r.consultaId===id && r.ativo!==false);
+    var reavDela=!!(reav && vetReavalAtiva(reav) && reav.consultaId===id);
+    var reavAntiga=!!(!reavDela && reav && vetReavalAtiva(reav) && !reav.consultaId && c.reavaliacao && reav.data===c.reavaliacao);
+    var pergunta=reavAntiga?zPergunta('A REAVALIAÇÃO DESTA CONSULTA', ['Esta consulta marcou a reavaliação de '+fmtBR(reav.data)+'.', 'Tirar junto (fica riscada no Cuidado Vet, com «Reabrir») ou manter marcada?'],
+      {sim:'Tirar junto', nao:'Manter', cor:'#B3261E', corTitulo:'#234D67'}):Promise.resolve(reavDela);
+    return pergunta.then(function(tirarReav){
+      var cascata=[];
+      if(instr) cascata.push('a instrução ativa que nasceu desta consulta sai junto, com o mesmo motivo: '+vetInstrTexto(r));
+      if(tirarReav) cascata.push('a reavaliação de '+fmtBR(reav.data)+' sai junto (fica riscada no Cuidado Vet)');
+      else if(reavAntiga) cascata.push('a reavaliação de '+fmtBR(reav.data)+' continua marcada (você escolheu manter)');
+      cascata.push('a consulta, as fotos e o receituário ficam guardados, riscados');
+      return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Anular a consulta de '+fmtBR(c.data), botao:'Anular a consulta (lançada por engano)', tituloOk:'Anulada', genero:'f',
+        oque:'a consulta de '+fmtBR(c.data)+' de '+nome, tela:'Cuidado Vet', original:{caminho:'auaulandia/vet-consultas/'+key+'/'+id, id:id}, estado:'registrada',
+        cascata:cascata, aviso:vetConsultaSaidasTexto(c)||undefined,
+        gravar:function(reg){
+          return Promise.all([medLerNo('auaulandia/vet-consultas/'+key+'/'+id), medLerNo('auaulandia/vet-recomendacoes/'+key), medLerNo('auaulandia/vet-reavaliacao/'+key)]).then(function(rr){
+            var atual=rr[0];
+            if(!atual || atual.anulada || atual.corrigidaPor) return {ok:false, erro:VET_MUDOU('A consulta')};
+            var up={}; up['vet-consultas/'+key+'/'+id+'/anulada']=reg;
+            var ri=rr[1], rv=rr[2], foram=[];
+            if(instr && ri && ri.consultaId===id && ri.ativo!==false){ up['vet-recomendacoes/'+key+'/ativo']=false; up['vet-recomendacoes/'+key+'/retirada']=Object.assign({}, reg, {rotulo:'Retirada (a consulta foi anulada)', rotuloAcao:'Retirou'}); foram.push('a instrução'); }
+            if(tirarReav && rv && vetReavalAtiva(rv) && rv.data===reav.data){ up['vet-reavaliacao/'+key+'/removida']=Object.assign({}, reg, {rotulo:'Removida (a consulta foi anulada)', rotuloAcao:'Removeu'}); foram.push('a reavaliação'); }
+            return DB.ref('auaulandia').update(up).then(function(){
+              VET_CONSULTAS_CACHE=vetAplicar(VET_CONSULTAS_CACHE, (function(){ var m={}; m[id+'/anulada']=reg; return m; })());
+              try{ if(typeof audit==='function') audit('vet-consulta-anulada', nome+' — consulta de '+fmtBR(atual.data)+' anulada (lançada por engano)'+(foram.length?(' — saiu junto: '+foram.join(' e ')):'')+' — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+                {alvo:key, pet:nome, item:id, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+              vetDepoisDaConsulta();
+              return {ok:true};
+            });
+          });
+        }});
+    });
+  }
+  function vetDepoisDaConsulta(){
+    try{ if(vetHosp){ renderVetConsultas(); renderVetInstrucoesFicha(vetHosp,'vf-instr'); renderVcReavalAtual(vetHosp); vetCarregarConsultas(vetHosp); } }
+    catch(e){} /* silencioso de propósito: redesenho de tela — os ouvintes acertam a tela logo depois */
+    try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+
+  // ---- AC4 — «Retirar instrução» e «Reabrir» --------------------------------------------------------------
+  function vetInstrRetirar(){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('retirar a instrução da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp)}));
+    var key=vetKey(vetHosp), r=recomAtivaDe(vetHosp), nome=vetHosp.nome||'este FILHOt';
+    if(!r){ zAlertao('NÃO HÁ INSTRUÇÃO ATIVA', ['Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var txt=vetInstrTexto(r);
+    return corrAbrir({acao:'anular', titulo:'Retirar instrução', botao:'Retirar instrução', tituloOk:'Retirada', rotulo:'Retirada', rotuloAcao:'Retirou', genero:'f',
+      oque:'a instrução da Veterinária de '+nome+' ('+txt+')', tela:'Cuidado Vet', original:{caminho:'auaulandia/vet-recomendacoes/'+key, id:key}, estado:'ativa',
+      cascata:['a tarja «Instruções da Veterinária» some da ficha do FILHOt e do card do Plantão: '+txt, 'o texto e os cuidados ficam guardados (riscados no Cuidado Vet, com «Reabrir»)', 'a consulta que criou a instrução continua no histórico'],
+      aviso:'Se a instrução ainda vale (elizabetano, isolamento, repouso), não retire: a plantonista deixa de vê-la.',
+      nivel:'propria', capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-recomendacoes/'+key).then(function(cur){
+          if(!cur || cur.ativo===false || Number(cur.ts||0)!==Number(r.ts||0) || String(cur.consultaId||'')!==String(r.consultaId||'')) return {ok:false, erro:VET_MUDOU('A instrução')};
+          var up={ativo:false, retirada:reg};
+          return DB.ref('auaulandia/vet-recomendacoes/'+key).update(up).then(function(){ vetInstrDepois(key, cur, up, 'vet-instrucao-retirada', 'retirada', reg); return {ok:true}; });
+        });
+      }});
+  }
+  function vetInstrReabrir(){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('reabrir a instrução da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp)}));
+    var key=vetKey(vetHosp), rr=(VET_RECOM_CACHE||{})[key], nome=vetHosp.nome||'este FILHOt';
+    if(!rr || rr.ativo!==false || !rr.retirada){ zAlertao('A INSTRUÇÃO NÃO ESTÁ RETIRADA', ['Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var txt=vetInstrTexto(rr);
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir a instrução', genero:'f', oque:'a instrução da Veterinária de '+nome+' ('+txt+')', tela:'Cuidado Vet',
+      original:{caminho:'auaulandia/vet-recomendacoes/'+key, id:key}, estado:'retirada', paraEstado:'ativa (à vista na ficha e no card do Plantão)',
+      volta:['a tarja «Instruções da Veterinária» volta à ficha do FILHOt e ao card do Plantão: '+txt],
+      nivel:'propria', capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-recomendacoes/'+key).then(function(cur){
+          if(!cur || cur.ativo!==false || !cur.retirada || Number(cur.ts||0)!==Number(rr.ts||0)) return {ok:false, erro:VET_MUDOU('A instrução')};
+          var up={ativo:true, retirada:null, reabertura:reg}; up['retiradas/'+reg.ts]=cur.retirada;
+          return DB.ref('auaulandia/vet-recomendacoes/'+key).update(up).then(function(){ vetInstrDepois(key, cur, up, 'vet-instrucao-reaberta', 'reaberta', reg); return {ok:true}; });
+        });
+      }});
+  }
+  function vetInstrDepois(key, cur, up, acao, verbo, reg){
+    VET_RECOM_CACHE[key]=vetAplicar(cur, up);
+    var nome=(vetHosp && vetKey(vetHosp)===key)?(vetHosp.nome||''):'';
+    try{ if(typeof audit==='function') audit(acao, (nome?(nome+' — '):'')+'instrução da Veterinária '+verbo+' ('+vetInstrTexto(cur)+') — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+      {alvo:key, pet:nome, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    try{ if(vetHosp) renderVetInstrucoesFicha(vetHosp,'vf-instr'); if(typeof renderHosp==='function') renderHosp(); if(typeof renderVetLista==='function') renderVetLista(); }
+    catch(e){} /* silencioso de propósito: redesenho de tela — o ouvinte das instruções acerta a tela logo depois */
+  }
+
+  // ---- AC5 — A REAVALIAÇÃO: «Feita», «Reabrir» e remover (riscada) ------------------------------------------
+  function vetNomeDaKey(k){
+    var nome='';
+    try{ if(vetHosp && vetKey(vetHosp)===k) nome=vetHosp.nome||''; (hospedes||[]).forEach(function(h){ if(!nome && vetKey(h)===k) nome=h.nome||''; });
+      if(!nome){ var p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===k; })[0]; if(p) nome=p.n||''; } }
+    catch(e){ nome=''; } /* silencioso de propósito: sem as listas, o rastro fica sem o nome */
+    return nome;
+  }
+  function vetReavalRedesenhar(key){
+    try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); if(vetHosp && vetKey(vetHosp)===key){ renderVcReavalAtual(vetHosp); renderVetInstrucoesFicha(vetHosp,'vf-instr'); } }
+    catch(e){} /* silencioso de propósito: redesenho de tela — o ouvinte da reavaliação acerta a tela logo depois */
+  }
+  // AC5.1: «Feita» no quadro «Reavaliação de hoje»: o login (como o «Ciente»); a reavaliação ganha `feita` e sai do quadro.
+  function vetReavalFeita(key){
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('marcar a reavaliação como feita', corrQuemPode('alterar-vet'), {alvo:key}));
+    var reav=VET_REAVAL_CACHE[key]; if(!vetReavalAtiva(reav) || !DB) return Promise.resolve(null);
+    var q=corrQuemAgora(), feita={quem:String(q.login||'-'), papel:String(q.papel||''), ts:q.ts, quando:renovQuandoBR(q.ts)}, nome=vetNomeDaKey(key);
+    return medLerNo('auaulandia/vet-reavaliacao/'+key).then(function(cur){
+      if(!vetReavalAtiva(cur) || cur.data!==reav.data){ zAlertao('A REAVALIAÇÃO MUDOU EM OUTRO APARELHO', [VET_MUDOU('A reavaliação')], {botao:'Entendi'}); return {ok:false}; }
+      return DB.ref('auaulandia/vet-reavaliacao/'+key).update({feita:feita}).then(function(){
+        VET_REAVAL_CACHE[key]=Object.assign({}, cur, {feita:feita});
+        try{ if(typeof audit==='function') audit('vet-reavaliacao-feita', (nome?(nome+' — '):'')+'reavaliação de '+fmtBR(cur.data)+' feita', Object.assign({alvo:key, pet:nome}, corrQuemMeta(q))); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        vetReavalRedesenhar(key);
+        return {ok:true};
+      });
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/vet-reavaliacao/'+key+' (Feita)', e);
+      try{ zAlertao('NÃO CONSEGUI MARCAR COMO FEITA', [zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Nada foi gravado.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, o rastro já registrou */
+      return {ok:false};
+    });
+  }
+  // «Reabrir» a feita ou a removida (a própria senha, alterar-vet): ela volta ao quadro e à ficha; o que foi decidido
+  // antes fica guardado (feitas/{ts}, remocoes/{ts}).
+  function vetReavalReabrir(){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('reabrir a reavaliação da Veterinária', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp)}));
+    var key=vetKey(vetHosp), reav=VET_REAVAL_CACHE[key], nome=vetHosp.nome||'este FILHOt';
+    if(!reav || !reav.data || (!reav.feita && !reav.removida)){ zAlertao('A REAVALIAÇÃO JÁ ESTÁ MARCADA', ['Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var era=reav.removida?'removida':'feita';
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir a reavaliação', genero:'f', oque:'a reavaliação de '+nome+' de '+vetReavalTexto(reav), tela:'Cuidado Vet',
+      original:{caminho:'auaulandia/vet-reavaliacao/'+key, id:key}, estado:era, paraEstado:'marcada (volta ao quadro «Reavaliação de hoje» e à ficha)',
+      volta:['a reavaliação de '+fmtBR(reav.data)+' volta a aparecer no quadro do dia e na ficha do FILHOt'], nivel:'propria', capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-reavaliacao/'+key).then(function(cur){
+          if(!cur || cur.data!==reav.data || (era==='feita'?!cur.feita:!cur.removida)) return {ok:false, erro:VET_MUDOU('A reavaliação')};
+          var up={reabertura:reg};
+          if(era==='feita'){ up.feita=null; up['feitas/'+reg.ts]=cur.feita; } else { up.removida=null; up['remocoes/'+reg.ts]=cur.removida; }
+          return DB.ref('auaulandia/vet-reavaliacao/'+key).update(up).then(function(){
+            VET_REAVAL_CACHE[key]=vetAplicar(cur, up);
+            try{ if(typeof audit==='function') audit('vet-reavaliacao-reaberta', nome+' — reavaliação de '+fmtBR(cur.data)+' reaberta (estava '+era+') — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+              {alvo:key, pet:nome, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+            vetReavalRedesenhar(key);
+            return {ok:true};
+          });
+        });
+      }});
+  }
+
+  // ---- AC6 — A OBSERVAÇÃO PARA O TUTOR: «Editar», «Retirar» e «Reabrir» -------------------------------------
+  var VET_OBS_AVISO='A Márcia pode já ter repassado esta observação ao tutor: avise a correção.';
+  function vetObsDe(id){ var key=vetHosp?vetKey(vetHosp):''; return key?(((VET_OBS_CACHE||{})[key]||{})[id]||null):null; }
+  function vetObsOque(o){ return 'a observação da Veterinária para o tutor de '+((vetHosp&&vetHosp.nome)||'este FILHOt')+(o&&o.ts?(' ('+fmtBR(vetDiaDe(o.ts))+')'):''); }
+  function vetObsDepois(key, id, cur, up, acao, verbo, reg){
+    VET_OBS_CACHE=Object.assign({}, VET_OBS_CACHE||{}); VET_OBS_CACHE[key]=Object.assign({}, VET_OBS_CACHE[key]||{}); VET_OBS_CACHE[key][id]=vetAplicar(cur, up);
+    var nome=(vetHosp && vetKey(vetHosp)===key)?(vetHosp.nome||''):'';
+    try{ if(typeof audit==='function') audit(acao, (nome?(nome+' — '):'')+'observação para o tutor '+verbo+' — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+      {alvo:key, pet:nome, item:id, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    try{ renderVetObsList(); if(vetHosp) renderVetInstrucoesFicha(vetHosp,'vf-instr'); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  function vetObsAbrirComum(id, oQue){
+    if(!vetHosp) return null;
+    if(!podeAlterarVet()) return {barrou:corrBarrar(oQue, corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id})};
+    var o=vetObsDe(id);
+    if(!o){ zAlertao('ESTA OBSERVAÇÃO NÃO ESTÁ MAIS NA LISTA', ['Feche e abra de novo. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+    return {o:o, key:vetKey(vetHosp), nivel:vetMesmoDia(o.ts)?'propria':'gestao'};
+  }
+  // AC6.1: «Editar» — o cartaz «corrigir» com o antes e o depois; o texto novo vale e o de antes fica em `edicoes`.
+  function vetObsEditar(id){
+    var a=vetObsAbrirComum(id, 'editar a observação da Veterinária'); if(!a) return Promise.resolve(null); if(a.barrou) return Promise.resolve(a.barrou);
+    var o=a.o, key=a.key;
+    if(o.retirada){ zAlertao('ESTA OBSERVAÇÃO FOI RETIRADA', ['Para ela voltar, toque em «Reabrir».'], {botao:'Entendi'}); return Promise.resolve(null); }
+    return corrAbrir({acao:'corrigir', titulo:'Editar a observação para o tutor', oque:vetObsOque(o), tela:'Cuidado Vet', genero:'f',
+      original:{caminho:'auaulandia/vet-observacoes/'+key+'/'+id, id:id}, campos:[{c:'texto', rotulo:'Observação para o tutor', valor:String(o.texto||''), grande:true}],
+      nivel:a.nivel, capacidade:'alterar-vet', aviso:VET_OBS_AVISO,
+      validar:function(v){ return String(v[0]||'').trim()?'':'A observação não pode ficar vazia (para tirar, use «Retirar»). Nada foi gravado.'; },
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-observacoes/'+key+'/'+id).then(function(cur){
+          if(!cur || cur.retirada || String(cur.texto||'')!==String(o.texto||'')) return {ok:false, erro:VET_MUDOU('A observação')};
+          var up={texto:String((reg.depois||{}).texto||'').trim()}; up['edicoes/'+reg.ts]=Object.assign({texto:String(cur.texto||'')}, reg);
+          return DB.ref('auaulandia/vet-observacoes/'+key+'/'+id).update(up).then(function(){ vetObsDepois(key, id, cur, up, 'vet-observacao-editada', 'editada', reg); return {ok:true}; });
+        });
+      }});
+  }
+  // AC6.2: «Retirar» — riscada (`retirada`, com o registro); some das três mais recentes da ficha.
+  function vetObsRetirar(id){
+    var a=vetObsAbrirComum(id, 'retirar a observação da Veterinária'); if(!a) return Promise.resolve(null); if(a.barrou) return Promise.resolve(a.barrou);
+    var o=a.o, key=a.key;
+    if(o.retirada){ zAlertao('ESTA OBSERVAÇÃO JÁ FOI RETIRADA', ['Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    return corrAbrir({acao:'anular', titulo:'Retirar a observação', botao:'Retirar a observação', tituloOk:'Retirada', rotulo:'Retirada', rotuloAcao:'Retirou', genero:'f',
+      oque:vetObsOque(o)+': «'+String(o.texto||'').slice(0, 120)+'»', tela:'Cuidado Vet', original:{caminho:'auaulandia/vet-observacoes/'+key+'/'+id, id:id}, estado:'à vista',
+      cascata:['a observação some das três mais recentes da ficha do FILHOt e do card do Plantão; no Cuidado Vet, fica riscada, com «Reabrir»'],
+      aviso:VET_OBS_AVISO, nivel:a.nivel, capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-observacoes/'+key+'/'+id).then(function(cur){
+          if(!cur || cur.retirada) return {ok:false, erro:VET_MUDOU('A observação')};
+          var up={retirada:reg};
+          return DB.ref('auaulandia/vet-observacoes/'+key+'/'+id).update(up).then(function(){ vetObsDepois(key, id, cur, up, 'vet-observacao-retirada', 'retirada', reg); return {ok:true}; });
+        });
+      }});
+  }
+  function vetObsReabrir(id){
+    var a=vetObsAbrirComum(id, 'reabrir a observação da Veterinária'); if(!a) return Promise.resolve(null); if(a.barrou) return Promise.resolve(a.barrou);
+    var o=a.o, key=a.key;
+    if(!o.retirada){ zAlertao('ESTA OBSERVAÇÃO JÁ ESTÁ À VISTA', ['Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    return corrAbrir({acao:'reabrir', titulo:'Reabrir a observação', genero:'f', oque:vetObsOque(o), tela:'Cuidado Vet', original:{caminho:'auaulandia/vet-observacoes/'+key+'/'+id, id:id},
+      estado:'retirada', paraEstado:'à vista na ficha', volta:['a observação volta à ficha do FILHOt (entre as três mais recentes, pela data dela)'], nivel:a.nivel, capacidade:'alterar-vet',
+      gravar:function(reg){
+        return medLerNo('auaulandia/vet-observacoes/'+key+'/'+id).then(function(cur){
+          if(!cur || !cur.retirada) return {ok:false, erro:VET_MUDOU('A observação')};
+          var up={retirada:null, reabertura:reg}; up['retiradas/'+reg.ts]=cur.retirada;
+          return DB.ref('auaulandia/vet-observacoes/'+key+'/'+id).update(up).then(function(){ vetObsDepois(key, id, cur, up, 'vet-observacao-reaberta', 'reaberta', reg); return {ok:true}; });
+        });
+      }});
+  }
+
+  // ---- AC7.6, AC8 e AC9 — a prescrição: «Lançada por engano», o motivo, a trava, o plantão e o «Ciente» -------
+  function vetMedHistTodo(id){ VET_MED_HIST_ABERTO[id]=!VET_MED_HIST_ABERTO[id]; renderVetMedList(); }
+  // AC8.2: as 4 últimas ações de cada remédio e «ver o histórico inteiro (N)», que abre todas.
+  function vetMedHistHTML(it, id){
+    var hl=Array.isArray((it||{}).historico)?it.historico:[], aberto=!!VET_MED_HIST_ABERTO[id], j=escAttr(medJsArg(id));
+    if(!hl.length) return '';
+    return '<div style="margin-top:8px">'+(aberto?hl:hl.slice(-4)).map(function(x){ var ac=String(x.acao||''), mo=String(x.motivo||'');   // a linha da régua (6.54) já traz o motivo na ação: sem repetir
+      return '<div class="vet-hist-line"><strong>'+escAttr(ac)+'</strong>'+((mo && ac.indexOf(mo)<0)?(' — '+escAttr(mo)):'')+' <span style="color:var(--muted)">('+escAttr(x.quem||'')+(x.quando?(' · '+escAttr(x.quando)):'')+')</span></div>'; }).join('')
+      +(hl.length>4?('<button type="button" style="'+VET_BT+'margin-top:6px;color:var(--z-blue);border:2px solid var(--z-blue)" onclick="vetMedHistTodo(\''+j+'\')">'+(aberto?'mostrar só as 4 últimas':('ver o histórico inteiro ('+hl.length+')'))+'</button>'):'')
+      +'</div>';
+  }
+  // AC7.6: o anular de remédio da agenda da 6.58 (cascata, a senha da Gestão, a corrente inteira, nada apagado).
+  function vetMedEngano(id){
+    if(!vetHosp) return Promise.resolve(null);
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('anular uma prescrição («Lançada por engano»)', corrQuemPode('alterar-vet'), {alvo:vetKey(vetHosp), item:id}));
+    return medAgendaAnularAbrir(vetKey(vetHosp), id, 'vet');
+  }
+  // AC8.1: o motivo de 4 palavras na própria caixa (zTexto com a régua) e conferido de novo antes de gravar.
+  function vetMedMotivo(titulo, linhas, o){
+    o=o||{};
+    return Promise.resolve(zTexto(titulo, linhas, {rotulo:o.rotulo, botao:o.botao, cor:o.cor, minimo:3,
+      erro:'Escreva o motivo em pelo menos 4 palavras: é ele que explica, depois, o que aconteceu.',
+      validar:function(v){ return vetMotivoFrase(v); }})).then(function(v){
+      var t=String(v==null?'':v).trim();
+      if(!t){ alert(o.falta||'É preciso informar o motivo.'); return null; }
+      var fr=vetMotivoFrase(t);
+      if(fr){ alert('Nada foi gravado. '+fr); return null; }
+      return t;
+    });
+  }
+  // Relê o remédio no banco antes de gravar (a memória da tela pode ser de antes); o anulado não se mexe aqui.
+  function vetMedRelerParaGravar(AG, id, verbo){
+    var rotulo={suspender:'não se suspende', reativar:'não se reativa', reavaliar:'não volta a avisar'}[verbo]||'não se mexe';
+    return medLerNo(AG+'/itens/'+id).then(function(noBanco){
+      if(!noBanco){ alert('Este remédio não está mais na agenda. Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return null; }
+      if(medItemAnulado(noBanco)){ alert('Este remédio foi lançado por engano (anulado) em outro aparelho: '+rotulo+'. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi mudado.'); try{ vetCarregarMed(vetHosp); }catch(e){} /* silencioso de propósito: a lista se acerta ao reabrir */ return null; }
+      return noBanco;
+    }, function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (Cuidado Vet, '+verbo+')', e); alert(zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})))+' Nada foi mudado.'); return null; });
+  }
+  // A trava da 6.54 com o carimbo que esta tela leu (vetCarregarMed). A tela que não leu o carimbo grava como antes
+  // (o mesmo do «Remover item» do Plantão, 6.54 C7-1).
+  function vetMedTravar(key, AG, ts0, nomeH){
+    return vetMedConferir(key, AG, ts0, nomeH).then(function(r){ if(!r.ok) alert(r.frase); return !!r.ok; });
+  }
+  // A trava da 6.54 para «Suspender», «Reativar» e «Ainda preciso reavaliar»: com o carimbo que a tela leu, a transação
+  // (mcrTravaAgenda). QA BAIXO-3: a tela que não leu o carimbo relê a agenda antes de gravar (o remédio já foi relido; a
+  // escrita continua uma só, com o carimbo novo); sem conseguir ler, nada é gravado. {ok} ou {ok:false, frase} (a frase
+  // já em português: o cru passa pelo zErroMotivo).
+  function vetMedConferir(key, AG, ts0, nomeH){
+    if(VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido){
+      return mcrTravaAgenda(AG+'/_ts', VET_MED_TS.ts, ts0).then(function(passou){
+        return passou?{ok:true, trava:true}:{ok:false, frase:'A agenda de '+nomeH+' mudou em outro aparelho. Nada foi salvo: feche e abra de novo.'};
+      }, function(e){ _logFalhaGrav('auaulandia/medicacao-agenda/ (Cuidado Vet, trava)', e); return {ok:false, frase:'Não consegui conferir a agenda: '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true})))+' Nada foi salvo.'}; });
+    }
+    return medLerNo(AG+'/_ts').then(function(){ return {ok:true, trava:false}; }, function(e){
+      _logLeituraFalhou(AG+'/_ts (Cuidado Vet, conferir)', e);
+      return {ok:false, frase:'Não consegui conferir a agenda de '+nomeH+': '+zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})))+' Nada foi salvo.'};
+    });
+  }
+  // «pela Veterinária (Vera)» ou, para a Gestão e a Supervisão, «no Cuidado Vet (Márcia)».
+  function vetPeloQuem(){
+    var r=''; try{ r=papelDoCorpo(); }catch(e){ r=''; } /* silencioso de propósito: sem o papel, a frase fica pelo Cuidado Vet */
+    var q=(typeof quemSou==='function')?quemSou():'-';
+    return (r==='vet'?'pela Veterinária':'no Cuidado Vet')+' ('+q+')';
+  }
+  // AC8.3: uma linha ao grupo do plantão da ponte, para FILHOt hospedado hoje (os aulunos do Day Care não têm plantão),
+  // no molde do mcrAvisarPlantao (6.54); sem o grupo na ponte, fica só a auditoria.
+  function vetAvisarPlantao(linha, key, nome, acao){
+    var est=null; try{ est=medAgendaEstadiaAtiva(key); }catch(e){ est=null; } /* silencioso de propósito: sem o índice das estadias, ninguém é avisado */
+    if(!est) return Promise.resolve(false);
+    if(typeof tgGrupoNaPonte!=='function' || typeof tgAvisar!=='function') return Promise.resolve(false);
+    var txt='Remédio de hóspede mudou no Cuidado Vet:\n'+medTgEsc(linha);
+    return tgGrupoNaPonte('plantao').then(function(tem){
+      if(!tem){ try{ audit(acao, 'NÃO avisou o grupo do plantão (o grupo não está na ponte): '+linha, {alvo:key, pet:nome}); }catch(e){} /* silencioso de propósito: rastro */ return false; }
+      return tgAvisar({grupo:'plantao', texto:txt}).then(function(r){
+        try{ audit(acao, ((r&&r.ok)?'avisou':'NÃO avisou')+' o grupo do plantão: '+linha, {alvo:key, pet:nome}); }catch(e){} /* silencioso de propósito: rastro */
+        return !!(r&&r.ok);
+      });
+    }).catch(function(e){ _logFalhaGrav('aviso do Cuidado Vet ao grupo do plantão', e); return false; });
+  }
+  // AC9 (PURA): o «Ciente» dá para desfazer? Só dentro da janela de 30 dias do aviso (fora dela, o aviso não voltaria).
+  function vetCienteDesfazivel(it, hj){
+    it=it||{};
+    return !!(it.fimCiente && it.origem==='vet' && !it.trocadoPor && !it.continuo && !it.suspenso && !medItemAnulado(it) && it.dataFim && hj && hj>=it.dataFim && !medFimForaDaJanela(it.dataFim, hj));
+  }
+  // AC9.1: «Ainda preciso reavaliar» (alterar-vet, a própria senha): o «Ciente» sai, vira uma linha do histórico com o
+  // motivo, o carimbo da agenda vai na mesma escrita e o aviso «Receita encerrada — precisa de nova avaliação?» volta.
+  function vetCienteDesfazer(key, id){
+    if(!podeAlterarVet()) return Promise.resolve(corrBarrar('desfazer o «Ciente» do término', corrQuemPode('alterar-vet'), {alvo:key, item:id}));
+    if(!DB || !key || !id) return Promise.resolve(null);
+    var AG='auaulandia/medicacao-agenda/'+key, hj=(typeof hojeISO==='function')?hojeISO():'';
+    var nomeH=vetNomeDaKey(key)||(((MED_AGENDA_GERAL||{})[key]||{}).nome)||'este FILHOt';
+    return medLerNo(AG+'/itens/'+id).then(function(it){
+      if(!vetCienteDesfazivel(it, hj)){ zAlertao('NÃO HÁ «CIENTE» PARA DESFAZER', ['O remédio não tem «Ciente do término» dentro da janela de '+MED_FIM_JANELA_DIAS+' dias. Nada foi gravado.'], {botao:'Entendi'}); return null; }
+      return corrAbrir({acao:'reabrir', titulo:'Ainda preciso reavaliar', botao:'Ainda preciso reavaliar', tituloOk:'Pronto', oque:'o «Ciente do término» de '+(it.nome||'um remédio')+' de '+nomeH, tela:'Cuidado Vet',
+        original:{caminho:AG+'/itens/'+id, id:id}, estado:'ciente do término'+(it.fimCientePor?(' (dado por '+it.fimCientePor+')'):''), paraEstado:'o aviso «Receita encerrada — precisa de nova avaliação?» de volta',
+        volta:['o aviso volta ao quadro do Cuidado Vet (até alguém dar «Ciente» de novo, dentro de '+MED_FIM_JANELA_DIAS+' dias do fim)'], nivel:'propria', capacidade:'alterar-vet',
+        gravar:function(reg){
+          var ts0=Date.now(), lido=!!(VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido);
+          return vetMedConferir(key, AG, ts0, nomeH).then(function(cf){
+            if(!cf.ok) return {ok:false, erro:cf.frase};
+            return medLerNo(AG+'/itens/'+id).then(function(cur){
+              if(!vetCienteDesfazivel(cur, hj)) return {ok:false, erro:VET_MUDOU('O remédio')};
+              var hist=(Array.isArray(cur.historico)?cur.historico.slice():[]);
+              hist.push({quem:reg.por||'-', quando:agoraBR(), acao:'Ainda preciso reavaliar — o «Ciente do término» foi desfeito', motivo:String(reg.motivo||''), ts:ts0});
+              var up={}; up['itens/'+id+'/fimCiente']=null; up['itens/'+id+'/fimCientePor']=null; up['itens/'+id+'/fimCienteTs']=null; up['itens/'+id+'/historico']=hist;
+              up._ts=ts0; up._quem=reg.por||'-';
+              return DB.ref(AG).update(up).then(function(){
+                if(lido && VET_MED_TS.key===key) VET_MED_TS.ts=ts0;
+                try{ if(typeof audit==='function') audit('vet-medicacao-ciente-desfeito', nomeH+' — '+(cur.nome||'remédio')+': «Ainda preciso reavaliar» — motivo: '+String(reg.motivo||'')+', assinado por '+(reg.por||'-'),
+                  {alvo:key, pet:nomeH, med:cur.nome||'', item:id, quem:String(reg.login||'-'), role:String(reg.loginPapel||'-')}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+                try{ if(MED_AGENDA_GERAL && MED_AGENDA_GERAL[key] && MED_AGENDA_GERAL[key].itens){ MED_AGENDA_GERAL[key].itens[id]=vetAplicar(cur, {fimCiente:null, fimCientePor:null, fimCienteTs:null, historico:hist}); } checarMedsEncerradas(); }
+                catch(e){} /* silencioso de propósito: o ouvinte da agenda acerta o aviso logo depois */
+                if(vetHosp && vetKey(vetHosp)===key) vetCarregarMed(vetHosp);
+                return {ok:true};
+              });
+            });
+          });
+        }});
+    }, function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (Ainda preciso reavaliar)', e); zAlertao('NÃO CONSEGUI LER O REMÉDIO', [zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true, leitura:true})))+' Nada foi gravado.'], {botao:'Entendi'}); return null; });
   }
 
   function pelInativo(p){ const ex=pelExtra(p); return !!(ex&&ex.inativo==='Sim'); }
@@ -29543,6 +30293,7 @@
     try{ podeAlergia=(typeof podePapel==='function') && podePapel('editar-alergia'); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     return Object.keys(patch||{}).filter(function(c){
       if(PEL_LIVRES[c]) return false;
+      if(/^pesos_corr\/\d{4}-\d{2}-\d{2}$/.test(c)) return false;   // 6.59 (AC1.8): a correção do peso, já assinada no cartaz
       if(podeAlergia && PEL_ALERGIA[c]) return false;
       return true;
     });
@@ -29578,7 +30329,8 @@
     manias:'Manias', adaptacao:'Em adaptação (45 dias)?', adaptacao_desde:'Adaptação começou em', adaptacao_tipo:'Adaptação de quê?',
     ansioso:'Come em comedouro lento?', matilha:'Matilha (Enriquecimento Ambiental)', brinquedos:'Brinquedos', chip:'Microchip',
     microchip:'Microchip', inativo:'Inativo', tipoSaida:'Tipo de saída', dataSaida:'Data de saída', dataObito:'Data do falecimento',
-    entrevista:'Entrevista (resposta do tutor)', escova_dc:'Escova no Day Care', ea_restr:'Restrição no Enriquecimento'};
+    entrevista:'Entrevista (resposta do tutor)', escova_dc:'Escova no Day Care', ea_restr:'Restrição no Enriquecimento',
+    peso_hoje:'Peso de hoje'};   // 6.59 (AC1.6): o valor trocado no mesmo dia
   function pelRastroRotulo(c){
     c=String(c||'');
     if(PEL_RASTRO_ROTULO[c]) return PEL_RASTRO_ROTULO[c];
@@ -33010,7 +33762,269 @@
   // --- Peso: registro MENSAL obrigatório (D8) ---
   // Sem pesagem no mês, vira alerta no dashboard. Guarda histórico para ver a evolução.
   function pesosDe(ex){ const a=ex.pesos; return Array.isArray(a)?a.slice():[]; }
-  function ultimoPeso(ex){ const a=pesosDe(ex).slice().sort((x,y)=>(x.data<y.data?1:-1)); return a[0]||null; }
+  // 6.59 (AC1.4): o último peso sai da lista CORRIGIDA (a anulada não conta; a corrigida conta com o kg novo).
+  function ultimoPeso(ex){ const a=pesosValidos(ex).slice().sort((x,y)=>(x.data<y.data?1:-1)); return a[0]||null; }
+  // ===== STORY 6.59 — O PESO: CORRIGIR E ANULAR SEM APAGAR (F07, 10/out/2026) ===========================
+  // "Um peso de outro dia (18 em vez de 8) não se corrige, entra na dose do vermífugo e faz o peso certo seguinte
+  //  avisar a veterinária por «variação suspeita»" (revisão tela por tela, F07). A correção mora AO LADO da lista,
+  // nunca dentro dela: daycare/cadastro/{chave}/pesos_corr/{data} = {estado:'corrigida'|'anulada'|'reaberta', data,
+  // kgDe (o kg da pesagem, como foi pesada), kgPara (no Corrigir), quemPesou, o registro da 6.57, anteriores:[…]}.
+  // O pesoGravar regrava a lista inteira a partir da cópia do aparelho (também pela atividade do Day Care, que não
+  // muda): uma marca dentro da lista seria apagada pela próxima pesagem de outro aparelho. Ao lado, nenhuma porta de
+  // pesar mexe nela. A correção vale para a pesagem com a mesma data, o mesmo kg e a mesma pessoa (pesar de novo no
+  // mesmo dia com o mesmo kg, pela mesma pessoa, é a mesma pesagem; com outro kg, a correção não vale para a nova).
+  function pesoCorrDe(ex, x){
+    var m=(ex && ex.pesos_corr && typeof ex.pesos_corr==='object')?ex.pesos_corr:null;
+    if(!m || !x || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.data||''))) return null;
+    var c=m[x.data];
+    if(!c || typeof c!=='object' || (c.estado!=='corrigida' && c.estado!=='anulada')) return null;
+    if(c.data && c.data!==x.data) return null;
+    if(!(Math.abs(Number(c.kgDe)-Number(x.kg))<0.0005)) return null;
+    if(String(c.quemPesou==null?'':c.quemPesou)!==String(x.quem==null?'':x.quem)) return null;
+    return c;
+  }
+  // PURA: a lista crua com a correção aplicada. Os leitores do peso (ultimoPeso, ultimoPesoDe) usam esta; o
+  // pesoGravar continua com a lista crua (pesosDe), e as duas listas da tela mostram a crua com a marca.
+  function pesosValidos(ex){
+    var out=[];
+    pesosDe(ex||{}).forEach(function(x){
+      var c=pesoCorrDe(ex, x);
+      if(!c){ out.push(x); return; }
+      if(c.estado==='anulada') return;
+      var kg=Number(c.kgPara);
+      if(isFinite(kg) && kg>0) out.push(Object.assign({}, x, {kg:kg, kgOriginal:x.kg, corrigida:true}));
+      else out.push(x);
+    });
+    return out;
+  }
+  // As listas de pesagem da Ficha › Prevenção › Peso e da tela Peso: todas as pesagens (as 6 últimas e «ver todas
+  // (N)»), cada uma com «Corrigir» e «Anular»; a anulada riscada e a corrigida com «era 18 kg», com quem, quando, o
+  // motivo e «Reabrir». origem = 'ficha' | 'tela'.
+  var PESO_VER_TODAS={};
+  var PESO_BT='min-height:44px;padding:8px 12px;font-family:inherit;font-size:14px;font-weight:800;border-radius:12px;cursor:pointer;background:var(--z-white);';
+  function pesoHistHTML(p, ex, origem){
+    var hist=pesosDe(ex||{}).slice().sort(function(a,b){ return (a.data<b.data?1:(a.data>b.data?-1:0)); });
+    if(!hist.length) return '';
+    var k=pelKey(p), todas=!!PESO_VER_TODAS[origem+'|'+k], mostra=todas?hist:hist.slice(0,6);
+    var arg=function(acao, data){ return escAttr("pesoCorrAbrir('"+medJsArg(origem)+"','"+medJsArg(k)+"','"+medJsArg(data)+"','"+acao+"')"); };
+    var h='<div class="peso-lista" style="margin-top:8px">'+mostra.map(function(x){
+      var data=String(x.data||''), temData=/^\d{4}-\d{2}-\d{2}$/.test(data);
+      var c=pesoCorrDe(ex, x), quem=x.quem?(' · pesou: '+x.quem):'';
+      var linha='<div style="font-weight:800;color:var(--z-blue)">'+esc(temData?fmtBR(data):'sem data')+': ';
+      if(c && c.estado==='anulada') linha+='<span style="text-decoration:line-through;opacity:.75">'+esc(pesoFmt(x.kg)+' kg')+'</span>';
+      else if(c) linha+=esc(pesoFmt(c.kgPara)+' kg')+' <span style="font-weight:700;color:var(--muted)">(era '+esc(pesoFmt(x.kg))+' kg)</span>';
+      else linha+=esc(pesoFmt(x.kg)+' kg');
+      linha+='<span style="font-weight:600;color:var(--muted);font-size:13px">'+esc(quem)+'</span></div>';
+      var bts='';
+      if(temData && c) bts=corrRiscadoHTML(c, "pesoCorrAbrir('"+medJsArg(origem)+"','"+medJsArg(k)+"','"+medJsArg(data)+"','reabrir')");
+      else if(temData) bts='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'
+        +'<button type="button" style="'+PESO_BT+'color:var(--z-blue);border:2px solid var(--z-blue)" onclick="'+arg('corrigir', data)+'">Corrigir</button>'
+        +'<button type="button" style="'+PESO_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="'+arg('anular', data)+'">Anular</button></div>';
+      return '<div class="peso-item" data-data="'+escAttr(data)+'" style="padding:8px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere">'+linha+bts+'</div>';
+    }).join('');
+    if(hist.length>6) h+='<button type="button" style="'+PESO_BT+'margin-top:8px;color:var(--z-blue);border:2px solid var(--z-blue)" onclick="'
+      +escAttr("pesoVerTodas('"+medJsArg(origem)+"','"+medJsArg(k)+"')")+'">'+(todas?'mostrar só as 6 últimas':('ver todas ('+hist.length+')'))+'</button>';
+    return h+'</div>';
+  }
+  function pesoVerTodas(origem, k){
+    PESO_VER_TODAS[origem+'|'+k]=!PESO_VER_TODAS[origem+'|'+k];
+    pesoRedesenhar(origem);
+  }
+  function pesoRedesenhar(origem){
+    try{ if(origem==='tela'){ if(typeof renderPesoTela==='function') renderPesoTela(); } else if(typeof renderPelFicha==='function') renderPelFicha(); }
+    catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  function pesoCorrFilhot(origem, k){
+    var p=null;
+    try{ p=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===k; })[0]||null; }catch(e){ p=null; } /* silencioso de propósito: sem a lista, vale a ficha aberta */
+    if(!p && origem==='ficha' && pelAtual && pelKey(pelAtual)===k) p=pelAtual;
+    if(!p && origem==='tela'){ var t=(PELUDINHOS||[])[PESOT_I]; if(t && pelKey(t)===k) p=t; }
+    return p;
+  }
+  // A dose do vermífugo pelo último peso, com a lista de agora e com a lista depois da correção (AC1.2).
+  function pesoDoseAntesDepois(ex, data, corrNova){
+    var hj=hojeISO();
+    var depoisEx=Object.assign({}, ex||{}); depoisEx.pesos_corr=Object.assign({}, (ex&&ex.pesos_corr)||{}); depoisEx.pesos_corr[data]=corrNova;
+    var a=vermAvaliar(ex||{}, hj), b=vermAvaliar(depoisEx, hj);
+    var fa=vermFrasePeso(a, hj), fb=vermFrasePeso(b, hj);
+    var dose=function(x){ return JSON.stringify([!!x.pesar, (x.dose&&x.dose.texto)||'']); };
+    var mudou=(dose(a)!==dose(b));
+    var texto=(fa===fb)?('Dose do vermífugo: não muda. '+fa)
+      :('Dose do vermífugo: '+fa.replace(/\.$/,'')+' → '+fb.charAt(0).toLowerCase()+fb.slice(1).replace(/\.$/,'')+(mudou?'':' (a dose não muda)'));
+    return {antes:fa, depois:fb, mudou:mudou, texto:texto};
+  }
+  // A pesagem seguinte (na lista crua, pela data) — a que pode ter avisado a veterinária por «variação suspeita».
+  function pesoSeguinte(ex, data){
+    return pesosDe(ex||{}).filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(String(x.data||'')) && x.data>data; })
+      .sort(function(a,b){ return a.data<b.data?-1:(a.data>b.data?1:0); })[0]||null;
+  }
+  // A auditoria daquele dia diz que a veterinária foi avisada sobre este FILHOt? true | false | null (não deu para ler).
+  // A linha é a do pesoAvisarVet: «avisou a veterinária sobre {nome} (…)».
+  function pesoVetAvisouEm(dia, nome){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dia||'')) || !DB) return Promise.resolve(null);
+    var alvo='avisou a veterinária sobre '+String(nome||'')+' (';
+    return DB.ref('daycare/auditoria/'+dia).once('value').then(function(s){
+      var v=(s && typeof s.val==='function')?s.val():null;
+      return Object.keys(v||{}).some(function(id){ var a=(v||{})[id]||{}; return a.acao==='peso' && String(a.detalhe||'').indexOf(alvo)===0; });
+    }, function(e){ _logLeituraFalhou('daycare/auditoria/'+dia+' (correção do peso)', e); return null; });
+  }
+  // PURA: a mensagem de correção ao grupo da Veterinária (sem emoji: a ponte não engole).
+  function pesoVetCorrecaoTexto(p, o){
+    o=o||{}; p=p||{};
+    var ident=(p.raca?(' · '+p.raca):'')+(p.tutor?(' (tutor: '+p.tutor+')'):'');
+    // QA BAIXO-6: o título e quem assina dizem o que aconteceu (corrigido, anulado ou desfeito)
+    var l=[(o.estado==='reaberta')?'PESO — A CORREÇÃO FOI DESFEITA':((o.estado==='anulada')?'PESO ANULADO':'PESO CORRIGIDO'), String(p.n||'')+ident, ''];
+    if(o.estado==='anulada') l.push('A pesagem de '+fmtBR(o.data)+' ('+pesoFmt(o.kgDe)+' kg) foi anulada: foi lançada por engano e não conta mais.');
+    else if(o.estado==='reaberta') l.push('A pesagem de '+fmtBR(o.data)+' volta a valer com '+pesoFmt(o.kgDe)+' kg (era '+o.eraTexto+').');
+    else l.push('Pesagem de '+fmtBR(o.data)+': era '+pesoFmt(o.kgDe)+' kg, o certo é '+pesoFmt(o.kgPara)+' kg.');
+    if(o.dose && o.dose.mudou) l.push(o.dose.texto);
+    if(o.seguinte) l.push('A variação avisada em '+fmtBR(o.seguinte)+' vinha da pesagem errada.');
+    l.push('');
+    l.push(((o.estado==='anulada')?'Anulado por: ':((o.estado==='reaberta')?'Desfeito por: ':'Corrigido por: '))+String(o.por||'-')+(o.papel?(' ('+corrPapelNome(o.papel)+')'):''));
+    l.push('Motivo: '+String(o.motivo||''));
+    return l.join('\n');
+  }
+  // Depois do ok do banco: a correção vai à veterinária quando a pesagem (ou a seguinte) a avisou; sem a auditoria do
+  // dia, a tela pergunta («sim» recomendado quando a dose do vermífugo mudou); sem o grupo na ponte, a tela diz que
+  // ela NÃO foi avisada e mostra o texto para mandar à mão.
+  function pesoVetCorrecao(p, o){
+    o=o||{};
+    var precisa=(o.avisou===true || o.avisouSeg===true), duvida=(!precisa && (o.avisou===null || o.avisouSeg===null));
+    if(!precisa && !duvida) return Promise.resolve({ok:true, semAviso:true});
+    var texto=pesoVetCorrecaoTexto(p, Object.assign({}, o, {seguinte:(o.avisouSeg===true)?o.seguinte:''}));
+    var pergunta=duvida ? zPergunta('AVISAR A VETERINÁRIA DA CORREÇÃO?',
+      ['Não consegui ler a auditoria do dia para saber se a veterinária foi avisada desta pesagem.',
+       (o.dose && o.dose.mudou)?'Recomendado: sim — a dose do vermífugo mudou com a correção.':'A dose do vermífugo não muda com a correção.'],
+      {sim:'Sim, avisar a veterinária', nao:'Não avisar', cor:'#234D67', corTitulo:'#234D67'}) : Promise.resolve(true);
+    return pergunta.then(function(sim){
+      if(!sim){ try{ audit(o.acaoAud||'peso-corrigido', 'não avisou a veterinária da correção do peso de '+(p.n||'')+' (a pessoa escolheu não avisar)', {alvo:o.k||'', pet:p.n||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        return {ok:true, semAviso:true}; }
+      var naoFoi=function(porque){
+        try{ audit(o.acaoAud||'peso-corrigido', 'NÃO avisou a veterinária da correção do peso de '+(p.n||'')+' ('+porque+'). Avise à mão.', {alvo:o.k||'', pet:p.n||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+        try{ zAlertao('A veterinária NÃO foi avisada', ['A correção ficou gravada na ficha, mas a mensagem não saiu: '+porque+'.', 'Mande este texto a ela, à mão:', texto], {botao:'Entendi'}); }
+        catch(e){} /* silencioso de propósito: sem o cartaz, a auditoria já registrou */
+        return {ok:false, erro:porque};
+      };
+      if(typeof tgAvisar!=='function' || typeof tgGrupoNaPonte!=='function') return naoFoi('a ponte do Telegram não carregou');
+      return tgGrupoNaPonte('vet').then(function(tem){
+        if(!tem) return naoFoi('a ponte publicada não tem o grupo da Veterinária');
+        return tgAvisar({grupo:'vet', texto:medTgEsc(texto)}).then(function(r){
+          if(!(r && r.ok)) return naoFoi('a ponte não confirmou o envio');
+          try{ audit(o.acaoAud||'peso-corrigido', 'avisou a veterinária da correção do peso de '+(p.n||''), {alvo:o.k||'', pet:p.n||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+          return {ok:true};
+        });
+      }).catch(function(){ return naoFoi('a ponte não respondeu'); });
+    });
+  }
+  // «Corrigir», «Anular» e «Reabrir» uma pesagem (AC1.2, AC1.3, AC1.8). O cartaz é o da 6.57.
+  function pesoCorrAbrir(origem, k, data, acao){
+    origem=(origem==='tela')?'tela':'ficha';
+    acao=(acao==='anular'||acao==='reabrir')?acao:'corrigir';
+    var p=pesoCorrFilhot(origem, k);
+    if(!p){ zAlertao('NÃO ACHEI ESTE FILHOt', ['Feche e abra a ficha de novo. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var ex=pelExtra(p)||{}, hj=hojeISO();
+    var x=pesosDe(ex).filter(function(y){ return y && y.data===data; })[0];
+    if(!x){ zAlertao('ESTA PESAGEM NÃO ESTÁ MAIS NA FICHA', ['Feche e abra a ficha de novo. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var c=pesoCorrDe(ex, x), nome=String(p.n||((typeof pelNome==='function')?pelNome(p):'')||'');
+    if(acao==='reabrir' && !c){ zAlertao('ESTA PESAGEM JÁ ESTÁ VALENDO', ['Ela não está corrigida nem anulada. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    if(acao!=='reabrir' && c && c.estado==='anulada'){ zAlertao('ESTA PESAGEM FOI ANULADA', ['Para ela voltar a valer, toque em «Reabrir».'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var kgAgora=c?Number(c.kgPara):Number(x.kg);
+    var hoje=(data===hj);
+    // quem assina: corrigir a de hoje, a própria senha (quem pesou também); dia anterior e anular, a Gestão
+    var gestao=(acao==='anular') || !hoje || (acao==='reabrir' && c && c.estado==='anulada');
+    var info=['Pesagem de '+fmtBR(data)+': '+pesoFmt(x.kg)+' kg'+(c && c.estado==='corrigida'?(' (corrigida para '+pesoFmt(c.kgPara)+' kg)'):'')+', pesada por '+(x.quem||'—')+'.'];
+    var seg=pesoSeguinte(ex, data);
+    var base={estado:'', data:data, kgDe:Number(x.kg), quemPesou:(x.quem==null?'':x.quem)};
+    return Promise.all([pesoVetAvisouEm(data, nome), seg?pesoVetAvisouEm(seg.data, nome):Promise.resolve(false)]).then(function(av){
+      var vetLinha=(av[0]===true||av[1]===true)?'A veterinária foi avisada sobre esta pesagem'+(av[1]===true?(' (ou pela variação da pesagem de '+fmtBR(seg.data)+')'):'')+': a correção vai para o grupo dela.'
+        :((av[0]===null||av[1]===null)?'Não consegui ler a auditoria daquele dia: depois de gravar, a tela pergunta se avisa a veterinária.':'');
+      var depoisVet=function(corr, reg){
+        var dose=pesoDoseAntesDepois(ex, data, corr);
+        return pesoVetCorrecao(p, {k:k, estado:corr.estado, data:data, kgDe:Number(x.kg), kgPara:corr.kgPara, eraTexto:(c && c.estado==='anulada')?'anulada':(pesoFmt(kgAgora)+' kg'),
+          dose:dose, seguinte:seg?seg.data:'', avisou:av[0], avisouSeg:seg?av[1]:false, por:reg.por, papel:reg.papel, motivo:reg.motivo,
+          acaoAud:(corr.estado==='anulada')?'peso-anulado':((corr.estado==='reaberta')?'peso-reaberto':'peso-corrigido')});
+      };
+      var gravar=function(estado){ return function(reg){
+        var corr=Object.assign({}, base, reg, {estado:estado});
+        if(estado==='corrigida') corr.kgPara=pesoCorrNovoKg(reg, kgAgora);
+        // QA BAIXO-1: relê pesos_corr/{data} no banco; se outro aparelho corrigiu, anulou ou reabriu depois que este cartaz
+        // abriu, nada é gravado (a correção dele não some)
+        var vista=((ex.pesos_corr||{})[data] && typeof (ex.pesos_corr||{})[data]==='object')?ex.pesos_corr[data]:null;
+        return medLerNo('daycare/cadastro/'+k+'/pesos_corr/'+data).then(function(noBanco){
+        if(vagasJsonEstavel(pesoCorrNormal(noBanco))!==vagasJsonEstavel(pesoCorrNormal(vista))) return {ok:false, erro:VET_MUDOU('A pesagem')};
+        // o que já estava em pesos_corr/{data} (de qualquer estado, também de uma pesagem de hoje já substituída) vai
+        // para `anteriores`: nada é apagado
+        var ja=(noBanco && typeof noBanco==='object')?JSON.parse(JSON.stringify(noBanco)):null;
+        if(ja){ var ant=Array.isArray(ja.anteriores)?ja.anteriores.slice():[]; delete ja.anteriores; corr.anteriores=ant.concat([ja]); }
+        return pesoCorrGravar(p, k, data, corr, nome).then(function(r){
+          if(r && r.ok){ try{ depoisVet(corr, reg); }catch(e){ _logFalhaGrav('aviso da correção do peso à veterinária', e); } pesoRedesenhar(origem); }
+          return r;
+        });
+        });
+      }; };
+      var op={tela:(origem==='tela')?'Peso':'Ficha › Prevenção › Peso', original:{caminho:'daycare/cadastro/'+k+'/pesos_corr/'+data, id:data},
+        nivel:gestao?'gestao':'propria', capacidade:'corrigir-peso-hoje', assinaNome:(!gestao && x.quem)?String(x.quem):'', genero:'f'};
+      if(acao==='corrigir'){
+        var antesDose=pesoDoseAntesDepois(ex, data, c||null).antes;
+        return corrAbrir(Object.assign(op, {acao:'corrigir', titulo:'Corrigir a pesagem de '+fmtBR(data), oque:'a pesagem de '+fmtBR(data)+' de '+nome,
+          campos:[{c:'kg', rotulo:'Peso certo (kg)', valor:pesoFmt(kgAgora)}], info:info.concat([antesDose]).concat(vetLinha?[vetLinha]:[]),
+          camposTexto:'Escreva o peso certo. Pode escrever 9,7 · 9.700 · 9700 (em gramas): é a mesma leitura da balança.',
+          validar:function(vals){
+            var r=pesoLer(vals[0]);
+            if(r.erro) return r.erro+' Nada foi gravado.';
+            if(Math.abs(r.kg-kgAgora)<0.0005) return 'Nada mudou: o peso escrito é o mesmo de agora ('+pesoFmt(kgAgora)+' kg). Nada será gravado.';
+            var dose=pesoDoseAntesDepois(ex, data, Object.assign({}, base, {estado:'corrigida', kgPara:r.kg}));
+            return {info:info.concat(['Peso novo: '+pesoFmt(r.kg)+' kg'+(r.como?(' ('+(r.como==='gramas'?'o número estava em gramas':r.como)+')'):'')+'.', dose.texto]).concat(vetLinha?[vetLinha]:[]),
+              aviso:(r.como==='acima do porte que a casa recebe')?('Confira: '+pesoFmt(r.kg)+' kg é acima dos '+PESO_MAIOR_DA_CASA+' kg do maior FILHOt da casa.'):undefined};
+          },
+          gravar:gravar('corrigida')}));
+      }
+      if(acao==='anular'){
+        var dA=pesoDoseAntesDepois(ex, data, Object.assign({}, base, {estado:'anulada'}));
+        return corrAbrir(Object.assign(op, {acao:'anular', titulo:'Anular a pesagem de '+fmtBR(data), oque:'a pesagem de '+fmtBR(data)+' ('+pesoFmt(kgAgora)+' kg) de '+nome,
+          estado:'valendo', info:info.concat(vetLinha?[vetLinha]:[]),
+          cascata:['a pesagem deixa de contar no último peso, no «pesado este mês», na régua de 30 dias e no quadro «Pesados hoje»', dA.texto],
+          aviso:'Se o FILHOt foi pesado certo e só mudou de peso, não anule: a pesagem de verdade fica valendo.',
+          gravar:gravar('anulada')}));
+      }
+      var dR=pesoDoseAntesDepois(ex, data, null);
+      return corrAbrir(Object.assign(op, {acao:'reabrir', titulo:'Reabrir a pesagem de '+fmtBR(data), oque:'a pesagem de '+fmtBR(data)+' de '+nome,
+        estado:(c.estado==='anulada')?'anulada':('corrigida para '+pesoFmt(c.kgPara)+' kg'), paraEstado:'valendo como foi pesada ('+pesoFmt(x.kg)+' kg)',
+        info:info.concat(vetLinha?[vetLinha]:[]), volta:['a pesagem volta a contar com '+pesoFmt(x.kg)+' kg', dR.texto.replace(/^Dose do vermífugo: /, 'a dose do vermífugo: ')],
+        gravar:gravar('reaberta')}));
+    });
+  }
+  // O kg novo do «Corrigir» é o que a pessoa escreveu, pela leitura da balança (o registro guarda o texto).
+  function pesoCorrNovoKg(reg, kgAgora){
+    var r=pesoLer(((reg||{}).depois||{}).kg);
+    return (r && !r.erro)?r.kg:kgAgora;
+  }
+  // A gravação: setPelExtra com o caminho pesos_corr/{data} (sobe o carimbo da coleção; a cópia deste aparelho muda
+  // só depois do ok, para a leitura corrigida valer na hora aqui). A lista `pesos` não muda. A ação própria vai para a
+  // auditoria depois do ok (o rastro da 6.57 sai pelo cartaz).
+  // PURA (re-gate O-R2-2): a correção como o Firebase a guarda — sem os objetos e listas vazios e sem os valores nulos —,
+  // para a cópia do aparelho (que ainda tem `rotulos:{}`) não parecer diferente do banco logo depois de gravar.
+  function pesoCorrNormal(v){
+    if(v===undefined || v===null) return null;
+    if(Array.isArray(v)){ var a=v.map(pesoCorrNormal).filter(function(x){ return x!==null; }); return a.length?a:null; }
+    if(typeof v!=='object') return v;
+    var o={}; Object.keys(v).forEach(function(k){ var x=pesoCorrNormal(v[k]); if(x!==null) o[k]=x; });
+    return Object.keys(o).length?o:null;
+  }
+  function pesoCorrGravar(p, k, data, corr, nome){
+    var patch={}; patch['pesos_corr/'+data]=corr;
+    return Promise.resolve(setPelExtra(p, patch, {soDepoisDoOk:true, tela:'Peso'})).then(function(r){
+      if(r && r.ok){
+        var acao=(corr.estado==='anulada')?'peso-anulado':((corr.estado==='reaberta')?'peso-reaberto':'peso-corrigido');
+        var det=nome+' — pesagem de '+fmtBR(data)+': '+((corr.estado==='anulada')?('anulada ('+pesoFmt(corr.kgDe)+' kg, lançada por engano)')
+          :((corr.estado==='reaberta')?('volta a valer com '+pesoFmt(corr.kgDe)+' kg'):(pesoFmt(corr.kgDe)+' kg → '+pesoFmt(corr.kgPara)+' kg')))
+          +' — motivo: '+String(corr.motivo||'')+', assinado por '+(corr.por||'-');
+        try{ audit(acao, det, {alvo:k, pet:nome, data:data, por:corr.por||'', quem:String(corr.login||'-'), role:String(corr.loginPapel||'-')}); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      }
+      return r||{ok:false, erro:'a gravação não confirmou'};
+    });
+  }
   function pesouEsteMes(ex){ const u=ultimoPeso(ex); if(!u||!/^\d{4}-\d{2}/.test(u.data||'')) return false;
     return u.data.slice(0,7)===hojeISO().slice(0,7); }
   // ===== O PESO NÃO PODE ACEITAR QUALQUER NÚMERO — Adriana, 28/ago/2026 ==========
@@ -33083,10 +34097,26 @@
   }
   function pesoGravar(p, kg){
     var ex=pelExtra(p)||{}, lista=pesosDe(ex), hj=hojeISO();
+    var antes=lista.filter(function(x){ return x && x.data===hj; })[0]||null;   // 6.59 (AC1.6): o valor de hoje que sai
     lista=lista.filter(function(x){ return x.data!==hj; });   // duas vezes no mesmo dia: vale a última
-    lista.push({data:hj, kg:kg, quem:(typeof quemSou==='function'?quemSou():'-')});
-    setPelExtra(p,{pesos:lista});
+    var novo={data:hj, kg:kg, quem:(typeof quemSou==='function'?quemSou():'-')};
+    lista.push(novo);
+    var pr=setPelExtra(p,{pesos:lista});
+    if(antes) pesoRastroTrocado(p, antes, novo, pr);
     return lista;
+  }
+  // 6.59 (AC1.6): a segunda pesagem do dia substitui a primeira; o valor de antes vai para o rastro da ficha
+  // (daycare/ficha-rastro, «Peso de hoje: 18 kg → 8 kg», com quem pesou), só depois do ok do banco. Quem mudou é
+  // tirado AGORA (corrQuemAgora), não quando o banco responder.
+  function pesoRastroTrocado(p, antes, novo, pr){
+    if(!antes || Math.abs(Number(antes.kg)-Number(novo.kg))<0.0005) return;
+    var k=pelKey(p), q=corrQuemAgora(), tela=corrTelaAtual();
+    var de=pesoFmt(antes.kg)+' kg (pesou: '+(antes.quem||'—')+')', para=pesoFmt(novo.kg)+' kg (pesou: '+(novo.quem||'—')+')';
+    Promise.resolve(pr).then(function(r){
+      if(!(r && r.ok)) return;
+      try{ pelRastroCampos(k, {peso_hoje:de}, {peso_hoje:para}, {quem:q, tela:tela, nome:p.n||''}); }
+      catch(e){ _logFalhaGrav('rastro do peso trocado no mesmo dia '+k, e); }
+    });
   }
   // O texto que a veterinária recebe. É a frase que ela mesma escreveu, com as duas datas,
   // os dois pesos e a diferença — sem emoji, que a ponte não engole.
@@ -33173,7 +34203,8 @@
     if(gravou && inp) inp.value='';
   }
   function blocoPeso(ex){
-    const hist=pesosDe(ex).slice().sort((a,b)=>(a.data<b.data?1:-1));
+    // 6.59 (AC1.4): o último e a evolução saem da lista corrigida; a lista inteira, com a marca, vem do pesoHistHTML
+    const hist=pesosValidos(ex).slice().sort((a,b)=>(a.data<b.data?1:-1));
     const u=hist[0], ok=pesouEsteMes(ex);
     let evol='';
     if(hist.length>=2){ const d=(hist[0].kg-hist[1].kg);
@@ -33189,7 +34220,7 @@
       +'<div class="hint" style="margin-top:2px">Pode escrever 9,7 · 9.700 · 9700 (em gramas). Mudança acima de 100 g avisa a veterinária.</div>'
       +'<div class="hint" style="margin-top:1px">A casa recebe até 21 kg — acima disso o app pergunta antes de gravar.</div>'
       +(u?'<div class="prev-calc" style="margin-top:8px">Último: <strong>'+String(u.kg).replace('.',',')+' kg</strong> em '+fmtBR(u.data)+evol+'</div>':'<div class="prev-nota">Ainda sem pesagem registrada.</div>')
-      +(hist.length>1?'<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+String(h.kg).replace('.',',')+' kg</span>'; }).join('')+'</div>':'')
+      +((pelAtual && pesosDe(ex).length)?pesoHistHTML(pelAtual, ex, 'ficha'):'')
       +'</div>';
   }
   // ===== BLOCOS DE PREVENÇÃO COM "SALVAR" — Adriana, 25/ago/2026 ====================
@@ -33731,7 +34762,7 @@
   // O último peso é o de MAIOR data, venha a lista na ordem que vier. Ficha antiga que
   // guardava só um número solto (ex.peso) continua valendo — e aparece "sem data".
   function ultimoPesoDe(ex){
-    var lista=(ex&&Array.isArray(ex.pesos))?ex.pesos:[];
+    var lista=pesosValidos(ex||{});   // 6.59 (AC1.4): a lista corrigida (a dose do vermífugo em todas as telas)
     var melhor=null;
     lista.forEach(function(r){
       if(!r||r.kg==null||r.kg==='') return;
@@ -34892,13 +35923,14 @@
     if(o.aviso) L.push('o aviso de estoque aberto continua aberto (a Recepção encerra pela tela dela)');
     return L;
   }
-  function medAgendaNomeTela(origem){ return (origem==='plantao')?MED_TELA_PLANTAO:'Ficha › Medicamentos'; }
+  function medAgendaNomeTela(origem){ return (origem==='plantao')?MED_TELA_PLANTAO:((origem==='vet')?'Cuidado Vet':'Ficha › Medicamentos'); }   // 6.59: o Cuidado Vet
   function medAgendaCarimboDaTela(key, origem){
     if(origem==='plantao') return (MED_AGENDA_TS && MED_AGENDA_TS.key===key && MED_AGENDA_TS.lido)?MED_AGENDA_TS.ts:null;
+    if(origem==='vet') return (VET_MED_TS && VET_MED_TS.key===key && VET_MED_TS.lido)?VET_MED_TS.ts:null;   // 6.59 (AC7.6)
     return (FMED_KEY===key)?FMED_TS_LIDO:null;
   }
   function medAgendaNomeFilhot(origem){
-    try{ if(origem==='plantao') return (currentHosp&&currentHosp.nome)||'este FILHOt'; return (pelAtual?pelNome(pelAtual):'')||'este FILHOt'; }
+    try{ if(origem==='plantao') return (currentHosp&&currentHosp.nome)||'este FILHOt'; if(origem==='vet') return (vetHosp&&vetHosp.nome)||'este FILHOt'; return (pelAtual?pelNome(pelAtual):'')||'este FILHOt'; }
     catch(e){ return 'este FILHOt'; } /* silencioso de propósito: sem o nome, a frase diz "este FILHOt" */
   }
   function medAgendaEstadiaAtiva(key){
@@ -34907,8 +35939,8 @@
   }
   // «Lançado por engano» (AC4.1, AC4.2) — origem 'ficha' (Ficha › Medicamentos) ou 'plantao' («Remover item»).
   function medAgendaAnularAbrir(key, id, origem){
-    origem=(origem==='plantao')?'plantao':'ficha';
-    var cap=(origem==='plantao')?'editar-medicacao':'editar-medicacao-checkin';
+    origem=(origem==='plantao'||origem==='vet')?origem:'ficha';   // 6.59 (AC7.6): «Lançada por engano» no Cuidado Vet
+    var cap=(origem==='plantao')?'editar-medicacao':((origem==='vet')?'alterar-vet':'editar-medicacao-checkin');
     if(!podePapel(cap)){ corrBarrar('anular um remédio da agenda («Lançado por engano»)', corrQuemPode(cap), {alvo:key, item:id}); return Promise.resolve(null); }
     if(!DB || !key || !id) return Promise.resolve(null);
     var hoje=zHojeISO(), AG='auaulandia/medicacao-agenda/'+key, nomeH=medAgendaNomeFilhot(origem), tsLido=medAgendaCarimboDaTela(key, origem);
@@ -34964,11 +35996,13 @@
     var AG='auaulandia/medicacao-agenda/'+key;
     return Promise.all([medLerNo(AG+'/itens'), medLerNo(AG+'/_ts')]).then(function(r){
       if(origem==='plantao'){ if(currentHosp && medAgendaKey(currentHosp)===key){ MED_AGENDA_ITENS=r[0]||{}; MED_AGENDA_TS={key:key, ts:(r[1]!=null)?r[1]:null, lido:true}; renderMedAgenda(); } }
+      else if(origem==='vet'){ if(vetHosp && vetKey(vetHosp)===key){ VET_MED_CACHE=r[0]||{}; VET_MED_TS={key:key, ts:(r[1]!=null)?r[1]:null, lido:true}; renderVetMedList(); } }   // 6.59
       else if(FMED_KEY===key){ FMED_ITENS=medDedupe(r[0]||{}).itens; FMED_TS_LIDO=(r[1]!=null)?r[1]:null; FMED_CARREGOU=true; fmedDesenhar(); }
     }).catch(function(e){ _logLeituraFalhou('auaulandia/medicacao-agenda/ (depois da 6.58)', e); });
   }
   function medAgendaAnularDepois(g, nomes, ts0, mexeuEstadia){
     if(g.origem==='plantao'){ if(MED_AGENDA_TS && MED_AGENDA_TS.key===g.key && MED_AGENDA_TS.lido) MED_AGENDA_TS.ts=ts0; }
+    else if(g.origem==='vet'){ if(VET_MED_TS && VET_MED_TS.key===g.key && VET_MED_TS.lido) VET_MED_TS.ts=ts0; }   // 6.59
     else if(FMED_KEY===g.key) FMED_TS_LIDO=ts0;
     medAgendaRecarregar(g.key, g.origem);
     if(mexeuEstadia){ try{ zCarimbar('auaulandia/estadias'); }catch(e){} /* silencioso de propósito: sem o carimbo, a cópia de outro aparelho se acerta na próxima mudança */ }
@@ -42562,7 +43596,7 @@
       var b=document.getElementById('pesoTelaB'); if(b) b.focus();
       return;
     }
-    var ex=pelExtra(p)||{}, hist=pesosDe(ex).slice().sort(function(a,b){ return (a.data<b.data?1:-1); });
+    var ex=pelExtra(p)||{}, hist=pesosValidos(ex).slice().sort(function(a,b){ return (a.data<b.data?1:-1); });   // 6.59: a lista corrigida
     var u=hist[0];
     var fot=(typeof fotoCad==='function')?fotoCad(pelKey(p)):'';
     el.innerHTML=pesoAtrasoHTML()+'<div class="card">'
@@ -42584,7 +43618,7 @@
       +(u?('<div class="prev-calc" style="margin-top:10px">Último: <strong>'+pesoFmt(u.kg)+' kg</strong> em '+fmtBR(u.data)
           +(pesoDiasDesde(u.data)===0?' (hoje)':(pesoDiasDesde(u.data)===1?' (ontem)':' (há '+pesoDiasDesde(u.data)+' dias)'))+'</div>')
         :'<div class="prev-nota" style="margin-top:10px">Nunca foi pesado. Este vai ser o primeiro peso da ficha dele.</div>')
-      +(hist.length>1?('<div class="peso-hist">'+hist.slice(0,6).map(function(h){ return '<span>'+fmtBR(h.data)+': '+pesoFmt(h.kg)+' kg</span>'; }).join('')+'</div>'):'')
+      +(pesosDe(ex).length?pesoHistHTML(p, ex, 'tela'):'')   // 6.59 (AC1.1): todas as pesagens, com «Corrigir» e «Anular»
       +'</div>'+pesoTelaHojeHTML();
     var i=document.getElementById('pesoTelaIn'); if(i) i.focus();
   }
@@ -49437,8 +50471,32 @@
       return m;
     });
   }
+  // 6.59 (QA ALTO-1): relê o `vet` do registro (na fila) e entrega a quem decide. Sem a releitura, vale a memória da tela,
+  // como nos mapas (vencLerMapas). Sem quem decida, nada é lido.
+  function vencVetDaFila(dia, chave, antesMem, decidirVet){
+    if(typeof decidirVet!=='function') return Promise.resolve(null);
+    var ler;
+    try{
+      var r=DB.ref(vencNo(dia,chave)+'/vet');
+      ler=(r && typeof r.once==='function')
+        ? r.once('value').then(function(s){ return s.val(); }, function(e){ _logLeituraFalhou(vencNo(dia,chave)+'/vet (vencVetDaFila)', e); return (antesMem||{}).vet||null; })
+        : Promise.resolve((antesMem||{}).vet||null);
+    }catch(e){ ler=Promise.resolve((antesMem||{}).vet||null); } /* silencioso de propósito: sem a releitura vale a memória, como nos mapas */
+    return ler.then(function(vetBanco){
+      try{ return decidirVet(vetBanco||null)||null; }
+      catch(e){ _logFalhaGrav('daycare/vencimentos/'+dia+'/'+chave+' (o recado à veterinária)', e); return null; }
+    });
+  }
+  // 6.59 (QA ALTO-1): quem decide o recado à veterinária viaja com o pedaço a gravar (vencComRecado) e decide DENTRO da
+  // fila, com o `vet` relido do banco depois da gravação anterior do mesmo registro; devolve o que juntar (ou null).
+  var VENC_VET_DECIDE=(typeof WeakMap==='function')?new WeakMap():null;
+  function vencComRecado(patch, decidir){
+    if(VENC_VET_DECIDE && patch && typeof patch==='object' && typeof decidir==='function') VENC_VET_DECIDE.set(patch, decidir);
+    return patch;
+  }
   function vencGravar(chave, patch, rotuloAudit, oOpc, diaOpc, semItens){
     var dia=diaOpc||vencDiaAlvo();
+    var decidirVet=(VENC_VET_DECIDE && patch && typeof patch==='object')?(VENC_VET_DECIDE.get(patch)||null):null;
     if(!DB||!dia||!chave) return Promise.resolve(false);
     var o=oOpc||vencAchar(chave, dia);
     // O retrato em que QUEM CHAMOU se baseou: é contra ele que se mede o que mudou.
@@ -49458,7 +50516,11 @@
       espera.then(function(){ clearTimeout(t); ok(); }, function(){ clearTimeout(t); ok(); });
     }) : Promise.resolve();
     var agora=antes.then(function(){ return vencLerMapas(dia, chave, campos); }).then(function(frescos){
+      return vencVetDaFila(dia, chave, antesMem, decidirVet).then(function(extraVet){ return [frescos, extraVet]; });
+    }).then(function(par){
+    var frescos=par[0], extraVet=par[1];
     var reg=Object.assign({}, patch);
+    if(extraVet && typeof extraVet==='object') Object.assign(reg, extraVet);
     if(frescos) campos.forEach(function(c){
       // undefined = a releitura falhou: fica o mapa montado pela memória, como antes.
       if(frescos[c]!==undefined) reg[c]=vencMesclarMapa(frescos[c], antesMem[c], patch[c]);
@@ -49776,7 +50838,7 @@
               dia:def.hoje?dia:(__periodo==='no dia dele'
                                   ? vencDiaAgendado(o, dia, hojeV)
                                   : (proximoDiaVet(hojeV)||dia)),
-              quem:quem, ts:agora};
+              quem:quem, ts:agora, tipo:tipo};   // 6.59 (AC2.3): o assunto que criou o recado
       patch.vet=vetReg;
     }
     // 6.55 (C15, o mesmo do lançamento): «Pode aplicar hoje» dado DEPOIS do dia da pergunta, por quem só
@@ -49785,16 +50847,26 @@
     if(vetH && vetH.dia) vetReg.dia=vetH.dia;
     var vetFora=(vetH && vetH.fora)?vetH:null;
     if(vetFora){ vetReg=null; delete patch.vet; }
+    // 6.59 (AC2.1, AC2.2): o recado de antes, deste assunto, sai do cartão e vai inteiro para vet_cancelados — na MESMA
+    // gravação da resposta; nada é apagado. A resposta nova sem recado cancela (a veterinária é avisada depois do ok);
+    // a nova para outro dia ou período substitui («No lugar de …»). QA ALTO-1: decidido na fila do vencGravar, com o
+    // recado relido do banco (outro aparelho, ou o toque anterior ainda gravando, pode tê-lo mudado).
+    var vetCanc=null;
+    var decidirVet=function(vetBanco){
+      vetCanc=vencVetCancelamento(vetBanco, vetReg, tipo, o, {quem:quem, ts:agora, v:v, rotulo:def.t||vencRespRotulo(v)||v});
+      return vencVetPedacoCancelado(vetCanc, vetReg, agora);
+    };
     var txt=(antes&&antes!==v)
       ? ('mudou a resposta de '+o.nome+' sobre '+rot+' de "'+vencRespRotulo(antes)+'" para "'+def.t+'"')
       : ('registrou a resposta do tutor de '+o.nome+' sobre '+rot+': "'+def.t+'"');
-    return vencGravar(chave, patch, txt+' (dia '+dia+')', o, dia, vencEhAntecipado(tipo)).then(function(ok){
+    return vencGravar(chave, vencComRecado(patch, decidirVet), txt+' (dia '+dia+')', o, dia, vencEhAntecipado(tipo)).then(function(ok){
       if(!ok) return false;
       // 6.55: a resposta entra no histórico do FILHOt (trocar de resposta é outro evento; nada se apaga).
       contatoLogGravar(chave, {acao:'respondeu', ts:agora, quem:quem, dia:dia, assunto:tipo, base:vencTipoBase(tipo),
         resposta:{v:v, rotulo:def.t||vencRespRotulo(v)||v}, pet:o.nome||'', tutor:o.tutor||''});
       CONTATO_RESP_ULT={chave:chave, dia:dia, tipo:tipo, nome:String(o.nome||''), rotulo:String(def.t||vencRespRotulo(v)||v), v:v, ts:Date.now()};
       if(vetReg) vencAvisarVet(o, vetReg);
+      if(vetCanc && !vetCanc.substitui) vencAvisarVetCancelado(o, vetCanc.antes, def.t||vencRespRotulo(v)||v);   // 6.59 (AC2.1)
       if(vetFora && typeof zAlertao==='function') zAlertao('A VETERINÁRIA NÃO FOI AVISADA',
         ['A resposta do tutor ficou registrada.', String(o.nome||'')+' não está na Zêluz hoje'
           +(vetFora.fim?(' (a hospedagem terminou em '+contatoDD(vetFora.fim)+')'):'')+': não dá para aplicar a vacina hoje.',
@@ -49949,11 +51021,15 @@
       (Array.isArray(auto.itens)?auto.itens:[]).forEach(function(x){ linhas.push('· '+x.texto+(x.jaEstava?' (já estava lançado antes — esse fica)':'')); });
       linhas.push('A resposta "'+vencRespRotulo((vencRespostaDe(r,tipo)||{}).v||auto.onde)+'" também sai, e o assunto volta a esperar resposta.');
     }
-    return Promise.resolve(
-      (typeof zPergunta==='function')
+    // 6.59 (AC2.1): o recado à veterinária deste assunto é cancelado junto (guardado) e ela é avisada. A pergunta diz o
+    // recado que está no banco agora (QA ALTO-1); a decisão de verdade é refeita na fila, na hora de gravar.
+    return vencVetDaFila(dia, chave, r, function(vetBanco){ return {v:vetBanco}; }).then(function(lido){
+      var vAgora=(lido && lido.v) || null;
+      if(vencVetCancelamento(vAgora, null, tipo, o, {})) linhas.push('O recado à veterinária ('+vencVetLinha(vAgora).replace(/\.$/,'')+') é cancelado, e ela é avisada.');
+      return (typeof zPergunta==='function')
         ? zPergunta((auto.foraDaEstadia?'Desfazer a resposta de ':'Desfazer o que foi lançado para ')+o.nome+'?', linhas, {sim:'Desfazer', nao:'Manter'})
-        : true
-    ).then(function(sim){
+        : true;
+    }).then(function(sim){
       if(!sim) return false;
       return vencAutoRemoverLancamentos(auto).then(function(res){
         // A memória de DEPOIS do "sim" (QA N5): durante a pergunta ela pode ter sido relida e
@@ -49961,10 +51037,18 @@
         var rAgora=vencRegDeDia(dia, chave)||r;
         var resps=Object.assign({}, rAgora.respostas||{}); delete resps[tipo];
         var autos=Object.assign({}, rAgora.auto||{}); delete autos[tipo];
-        return vencGravar(chave, {respostas:resps, auto:autos},
+        var patchD={respostas:resps, auto:autos}, quemD=(typeof quemSou==='function'?quemSou():'-'), tsD=Date.now();
+        // 6.59 (AC2.1; QA ALTO-1): o recado deste assunto, relido do banco na fila, sai junto (guardado)
+        var vetCancD=null;
+        var decidirVetD=function(vetBanco){
+          vetCancD=vencVetCancelamento(vetBanco, null, tipo, o, {quem:quemD, ts:tsD, v:'', rotulo:'(resposta desfeita)'});
+          return vencVetPedacoCancelado(vetCancD, null, tsD);
+        };
+        return vencGravar(chave, vencComRecado(patchD, decidirVetD),
           'DESFEZ a resposta de '+o.nome+' sobre '+rot+' (dia '+dia+')'
           +(res.tirados.length?(' — tirou dos Lançamentos do dia '+auto.dia+': '+res.tirados.join(' · ')):' — não havia lançamento a tirar')
           +(res.erros.length?(' — NÃO consegui tirar: '+res.erros.join(' · ')):''), o, dia, vencEhAntecipado(tipo)).then(function(okD){
+          if(okD && vetCancD) vencAvisarVetCancelado(o, vetCancD.antes, null);   // 6.59 (AC2.1)
           if(okD) contatoLogGravar(chave, {acao:'desfez_resposta', dia:dia, assunto:tipo, base:vencTipoBase(tipo),
             resposta:{v:String((vencRespostaDe(r,tipo)||{}).v||auto.onde||''), rotulo:vencRespRotulo((vencRespostaDe(r,tipo)||{}).v||auto.onde)||''}, pet:o.nome||'', tutor:o.tutor||''});
           try{ renderDash(); }catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
@@ -50112,13 +51196,19 @@
       vetReg={pet:(o.nome||''), dofilhot:(femeaV?'da ':'do ')+(o.nome||''), periodo:per,
               vacinas:vencJuntar(vacs.map(function(x){ return VENC_VACINA_NOME[x.k]||x.nome; })),
               dia:(per==='no dia dele')?vencDiaAgendado(o, dia, hojeV):(proximoDiaVet(hojeV)||dia),
-              quem:quem, ts:Date.now()};
+              quem:quem, ts:Date.now(), tipo:'vacina'};   // 6.59 (AC2.3): o assunto que criou o recado
     }
     // Só vacina vencendo → a resposta gravada é 'vet': quem faz é a veterinária, e o cartão
     // passa a cobrar o aviso a ela. Misturado com antiparasitário continua 'zeluz'.
     var patchResp={resposta:(vencSoVacina(o)?'vet':'zeluz'), resposta_quem:quem,
                    resposta_ts:Date.now(), onde:onde};
     if(vetReg) patchResp.vet=vetReg;
+    // 6.59 (AC2.2; QA ALTO-1): o recado novo para outro dia ou período fica no lugar do de antes (relido do banco na fila),
+    // que vai inteiro para vet_cancelados
+    var decidirVetL=vetReg?function(vetBanco){
+      var c=vencVetCancelamento(vetBanco, vetReg, 'vacina', o, {quem:quem, ts:vetReg.ts, v:'zeluz', rotulo:'Pode fazer na Zêluz (escolhido à mão)'});
+      return vencVetPedacoCancelado((c && c.substitui)?c:null, vetReg, vetReg.ts);
+    }:null;
     // ESCOLHER À MÃO também FECHA cada assunto (21/set/2026). Desde que a resposta passou a
     // ser por assunto, fechar só o cartão inteiro deixaria a vacina e o antiparasitário
     // eternamente pendentes no quadro do dashboard — duas telas discordando sobre a mesma
@@ -50133,7 +51223,7 @@
     patchResp.respostas=respsM;
     // A resposta do tutor é gravada ANTES do lançamento: mesmo que a planilha recuse, o que
     // o tutor disse não se perde. Foi ele que respondeu — não é o lançamento que autoriza.
-    vencGravar(chave, patchResp,
+    vencGravar(chave, vencComRecado(patchResp, decidirVetL),
       'registrou que o tutor de '+o.nome+' autorizou fazer na Zêluz em '+dia
       +(vetReg?(' — vacina de '+vetReg.vacinas+' para '+(((typeof fmtBR==='function')?fmtBR(vetReg.dia):'')||vetReg.dia)+', '+vetReg.periodo):''),
       o, dia).then(function(ok){
@@ -50203,8 +51293,85 @@
   function vencVetLinha(v){
     v=v||{};
     var quando=(((typeof fmtBR==='function')?fmtBR(v.dia||''):'')||String(v.dia||''));
+    // 6.59 (AC2.2): o recado que substitui outro diz qual
+    var sub=(v.substitui && typeof v.substitui==='object')?(' No lugar de '+(((typeof fmtBR==='function')?fmtBR(v.substitui.dia||''):'')||String(v.substitui.dia||''))
+      +(v.substitui.periodo?(' ('+String(v.substitui.periodo)+')'):'')+'.'):'';
     return 'Vacina de '+String(v.vacinas||'')+' '+String(v.dofilhot||v.pet||'')
-      +' — tutor autorizou para '+quando+' ('+String(v.periodo||'')+').';
+      +' — tutor autorizou para '+quando+' ('+String(v.periodo||'')+').'+sub;
+  }
+  // ===== 6.59 — O RECADO CANCELADO (E21, 10/out/2026) ===============================================
+  // "Trocar a resposta do tutor para «Não quer agora» não cancela o recado da vacina" (revisão, E21): a veterinária
+  // se preparava para uma vacina recusada. Agora a troca (ou o desfazer) da resposta do MESMO assunto tira o recado do
+  // cartão e o guarda inteiro em vet_cancelados/{ts} (com quem, quando e a resposta nova) e avisa a veterinária.
+  // O recado é de um assunto só (o `tipo` que o criou, a partir desta story): a troca de outro assunto nunca o cancela.
+  // O recado antigo, sem `tipo`, só cai pela troca do assunto que cria recado: a vacina, ou o «em aberto» com vacina.
+  function vencVetDoTipo(v, tipo, o){
+    if(!v || typeof v!=='object') return false;
+    if(v.tipo) return String(v.tipo)===String(tipo||'');
+    var base=vencTipoBase(tipo);
+    if(base==='vacina') return true;
+    if(base==='aberto'){
+      try{ return vencItensDoTipo(o||{}, 'aberto').some(function(x){ return !!VENC_VACINA_NOME[x.k]; }); }
+      catch(e){ return false; } /* silencioso de propósito: sem os itens, o recado antigo fica (não cancela o de outro assunto) */
+    }
+    return false;
+  }
+  // PURA: o que fazer com o recado de antes. null = nada; {guardado, antes} = cancelar; {guardado, antes, substitui} = o
+  // recado novo, para outro dia ou período, fica no lugar.
+  function vencVetCancelamento(vAntes, vNovo, tipo, o, q){
+    q=q||{};
+    if(!vencVetDoTipo(vAntes, tipo, o)) return null;
+    var antes=JSON.parse(JSON.stringify(vAntes));
+    var canc={quem:String(q.quem||'-'), ts:Number(q.ts)||0, resposta:{v:String(q.v||''), rotulo:String(q.rotulo||'')}};
+    if(vNovo){
+      if(String(vNovo.dia||'')===String(antes.dia||'') && String(vNovo.periodo||'')===String(antes.periodo||'')) return null;   // o mesmo recado
+      var sub={dia:String(antes.dia||''), periodo:String(antes.periodo||'')};
+      canc.substituidoPor={dia:String(vNovo.dia||''), periodo:String(vNovo.periodo||'')};
+      return {guardado:Object.assign({}, antes, {cancelado:canc}), antes:antes, substitui:sub};
+    }
+    return {guardado:Object.assign({}, antes, {cancelado:canc}), antes:antes};
+  }
+  // O pedaço da gravação para a decisão (QA ALTO-1): o recado de antes vai inteiro para vet_cancelados; sem recado novo,
+  // o cartão fica sem recado; com recado novo para outro dia ou período, ele diz qual substitui. Sem cancelamento, o
+  // recado novo não diz «No lugar de».
+  function vencVetPedacoCancelado(canc, vNovo, ts){
+    if(vNovo) delete vNovo.substitui;
+    if(!canc) return null;
+    var x={}; x['vet_cancelados/'+vencVetCancChave(ts)]=canc.guardado;
+    if(canc.substitui && vNovo) vNovo.substitui=canc.substitui; else x.vet=null;
+    return x;
+  }
+  // A chave do guardado: o instante e um sufixo (dois cancelamentos no mesmo milissegundo nunca se sobrescrevem).
+  function vencVetCancChave(ts){ return String(Number(ts)||Date.now())+'_'+Math.random().toString(36).slice(2,6); }
+  // PURA: a linha que vai ao grupo da Veterinária.
+  function vencVetCancelTexto(vAntes, respNova){
+    var v=Object.assign({}, vAntes||{}); delete v.substitui;   // o cancelado diz o recado que valia, sem o «No lugar de» dele
+    return 'CANCELADO — '+vencVetLinha(v).replace(/\.$/,'')+' — '
+      +(respNova?('o tutor mudou a resposta para "'+String(respNova)+'".'):'a resposta do tutor foi desfeita.')+' Não precisa preparar.';
+  }
+  // Depois do ok: avisa a veterinária, pelo mesmo caminho do recado (o grupo 'vet', só se a ponte o tiver). Sem o
+  // grupo, ou com a ponte falhando, a tela diz que ela NÃO foi avisada e mostra o texto pronto; a auditoria registra.
+  function vencAvisarVetCancelado(o, vAntes, respNova){
+    var texto=vencVetCancelTexto(vAntes, respNova);
+    var meta={alvo:((o&&o.chave)||''), pet:((vAntes&&vAntes.pet)||((o&&o.nome)||''))};
+    var naoFoi=function(porque){
+      try{ if(typeof audit==='function') audit('vence-amanha', 'NÃO avisei a veterinária do cancelamento ('+texto+'): '+porque+'. Avise à mão.', meta); }
+      catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      try{ if(typeof zAlertao==='function') zAlertao('A VETERINÁRIA NÃO FOI AVISADA DO CANCELAMENTO',
+        ['O recado da vacina saiu do cartão, mas a mensagem não chegou a ela: '+porque+'.', 'Mande este texto à veterinária, à mão:', texto], {botao:'Entendi'}); }
+      catch(e){} /* silencioso de propósito: sem o cartaz, a auditoria já registrou */
+      return {ok:false, erro:porque};
+    };
+    if(typeof tgAvisar!=='function' || typeof tgGrupoNaPonte!=='function') return Promise.resolve(naoFoi('a ponte do Telegram não carregou'));
+    return tgGrupoNaPonte('vet').then(function(tem){
+      if(!tem) return naoFoi('a ponte publicada não tem o grupo da Veterinária');
+      return tgAvisar({grupo:'vet', texto:medTgEsc(texto)}).then(function(r){
+        if(!(r && r.ok)) return naoFoi('a ponte não confirmou o envio');
+        try{ if(typeof audit==='function') audit('vence-amanha', 'avisou a veterinária: '+texto, meta); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        return r;
+      });
+    }).catch(function(){ return naoFoi('a ponte não respondeu'); });
   }
   function vencAvisarVet(o, v){
     if(typeof tgAvisar!=='function') return Promise.resolve({ok:false, erro:'ponte não carregada'});
@@ -59585,7 +60752,17 @@
     'medicacao-agenda-anulada':'Anulou um remédio da agenda (lançado por engano)', 'medicacao-agenda-voltou':'Voltou a tomar um remédio',
     'dashboard-medicacao-corrigida':'Corrigiu a medicação dos Lançamentos do dia', 'dashboard-medicacao-anulada':'Tirou a medicação dos Lançamentos do dia (lançada por engano)',
     'ficha-medicamentos':'Medicamentos da ficha', 'telegram-medicacao':'Aviso de remédio ao Telegram',
-    'vet-medicacao':'Prescrição da Veterinária', 'vet-medicacao-reativada':'Reativou um remédio (Veterinária)' };
+    'vet-medicacao':'Prescrição da Veterinária', 'vet-medicacao-reativada':'Reativou um remédio (Veterinária)',
+    // ===== 6.59 — o peso, o recado à veterinária e o Cuidado Vet (AC11) ===============================
+    'peso':'Peso do FILHOt', 'peso-corrigido':'Corrigiu uma pesagem', 'peso-anulado':'Anulou uma pesagem (lançada por engano)',
+    'peso-reaberto':'Reabriu uma pesagem (a correção foi desfeita)', 'vence-amanha':'Vencimentos: conversa com o tutor e recado à veterinária',
+    'vet-consulta':'Consulta da Veterinária', 'vet-consulta-corrigida':'Corrigiu uma consulta (versão nova)', 'vet-consulta-anulada':'Anulou uma consulta (lançada por engano)',
+    'vet-instrucao-retirada':'Retirou a instrução da Veterinária', 'vet-instrucao-reaberta':'Reabriu a instrução da Veterinária',
+    'vet-reavaliacao-feita':'Marcou a reavaliação como feita', 'vet-reavaliacao-reaberta':'Reabriu a reavaliação da Veterinária',
+    'vet-observacao':'Observação da Veterinária para o tutor', 'vet-observacao-editada':'Editou a observação para o tutor',
+    'vet-observacao-retirada':'Retirou a observação para o tutor', 'vet-observacao-reaberta':'Reabriu a observação para o tutor',
+    'vet-medicacao-suspensa':'Suspendeu um remédio (Veterinária)', 'vet-medicacao-fim-ciente':'Deu «Ciente» do fim da receita',
+    'vet-medicacao-ciente-desfeito':'Desfez o «Ciente» do fim da receita («Ainda preciso reavaliar»)' };
   function acaoNome(acao){ return ACAO_LABEL[acao]||String(acao||''); }
   // A linha inteira de um registro da auditoria, em português. Ação sem tradução continua como hoje
   // (o nome técnico e o detalhe), sem quebrar a tela.
@@ -59600,7 +60777,7 @@
       return 'Mudou "'+(a.rotulo||a.campo)+'" de '+(a.pet||'')+': '+((a.campo==='foto')?'foto trocada':(q(a.de)+' → '+q(a.para)))
         +(a.tela?(' ('+corrSemParenteses(a.tela)+')'):'')+((a.origem==='automatico')?' — automático':'');
     }
-    if(/^registro-(corrigido|anulado|reaberto)$/.test(acao)) return acaoNome(acao)+(det?(' '+det):'');
+    if(/^registro-(corrigido|anulado|reaberto)$/.test(acao)) return (a.rotuloAcao?String(a.rotuloAcao):acaoNome(acao))+(det?(' '+det):'');   // 6.59: «Retirou», «Removeu»
     if((a.acao==='medicacao-dose'||a.acao==='medicacao-dose-avulsa')&&(a.med||a.horario||a.pet))
       return acaoNome(acao)+' — '+(a.med||'medicamento')+(a.horario?(' às '+a.horario):'')+(a.pet?(' ('+a.pet+')'):'');
     return acaoNome(acao)+(det?(' — '+det):'');
@@ -62090,6 +63267,10 @@
       antes:antes, depois:depois, rotulos:rotulos, motivo:String(motivo||'').trim(), por:String(ass.nome||''), papel:String(ass.papel||''),
       login:String(q.login||'-'), loginPapel:String(q.papel||''), quando:renovQuandoBR(ts), ts:ts};
     if(op.genero==='f') reg.genero='f';   // 6.58 (2ª rodada): «Anulada (lançada por engano)» — a dose, a medicação
+    // 6.59: a ação que não é «lançado por engano» (retirar a instrução, remover a reavaliação, retirar a observação) diz o
+    // nome dela no riscado (rotulo: «Retirada») e na Linha do tempo (rotuloAcao: «Retirou»)
+    if(op.rotulo) reg.rotulo=String(op.rotulo);
+    if(op.rotuloAcao) reg.rotuloAcao=String(op.rotuloAcao);
     return reg;
   }
   // A entrada nova na auditoria do dia (só depois do ok): o resumo «antes → depois», o motivo e
@@ -62106,7 +63287,7 @@
     else if(reg.acao==='reabrir') det+=' (volta a ficar '+String((reg.depois||{}).estado||'')+')';
     try{ if(typeof audit==='function') audit(CORR_ACAO_RASTRO[reg.acao]||'registro-corrigido', det+', '+ass,
       {tela:reg.tela||'', oque:reg.oque||'', original:reg.original||{}, antes:corrResumo(reg.antes), depois:corrResumo(reg.depois),
-       motivo:String(reg.motivo||''), por:reg.por||'', papel:reg.papel||'', login:reg.login||'', quando:reg.quando||'',
+       motivo:String(reg.motivo||''), por:reg.por||'', papel:reg.papel||'', login:reg.login||'', quando:reg.quando||'', rotuloAcao:reg.rotuloAcao||undefined,
        // 2ª rodada (M-2): quem estava logado na hora da confirmação, mesmo se o banco responder depois
        quem:String(reg.login||'-'), role:String(reg.loginPapel||'-'), ts:Number(reg.ts)||undefined, hora:reg.ts?corrHora(reg.ts):undefined}); }
     catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
@@ -62116,7 +63297,7 @@
   // botão «Reabrir» (aoReabrir = o onclick da tela). Todo texto passa por esc/escAttr.
   function corrRiscadoHTML(reg, aoReabrir){
     reg=reg||{};
-    var rot=(reg.acao==='anular' && reg.genero==='f')?'Anulada (lançada por engano)':({corrigir:'Corrigido', anular:'Anulado (lançado por engano)', reabrir:'Reaberto'}[reg.acao]||'Corrigido');
+    var rot=reg.rotulo?String(reg.rotulo):((reg.acao==='anular' && reg.genero==='f')?'Anulada (lançada por engano)':({corrigir:'Corrigido', anular:'Anulado (lançado por engano)', reabrir:'Reaberto'}[reg.acao]||'Corrigido'));   // 6.59: reg.rotulo
     var h='<div class="corr-riscado" style="margin:8px 0;padding:10px 12px;border-radius:12px;border:1.5px dashed var(--line);background:var(--z-cream-warm);color:var(--z-blue);overflow-wrap:anywhere">'
       +'<div style="font-weight:800;text-decoration:line-through;opacity:.75">'+esc(reg.oque||'')+'</div>';
     if(reg.acao==='corrigir') Object.keys(reg.depois||{}).forEach(function(c){
@@ -62177,8 +63358,12 @@
     var op=S.op, topo=corrTitulo(op), cor='var(--z-blue)', corpo='', bts='';
     var aviso=S.aviso?('<div id="corrAviso" role="alert" style="margin-top:10px;color:var(--crm-critico);font-weight:800">'+esc(S.aviso)+'</div>'):'';
     var cancelar=corrBotaoHTML('cancelar', 'Cancelar — não mexer em nada', '');
+    // 6.59 (opcional): op.info — linhas neutras que a tela quer à vista nos campos e no conferir (a pesagem, a dose do
+    // vermífugo antes e depois, a instrução que passa para a versão nova); a régua da tela (op.validar) pode trocá-las
+    var info=(Array.isArray(op.info) && op.info.length)?('<div class="corr-info" style="margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--z-cream-warm);font-size:15px">'
+      +op.info.map(function(t){ return '<div style="margin:3px 0">'+esc(t)+'</div>'; }).join('')+'</div>'):'';
     if(S.passo==='campos'){
-      corpo='<div style="font-size:15px">'+esc(op.camposTexto||'Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.')+'</div>'
+      corpo='<div style="font-size:15px">'+esc(op.camposTexto||'Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.')+'</div>'+info
         +(op.campos||[]).map(function(x, i){
           var v=String((S.valores||[])[i]==null?'':S.valores[i]);
           return '<label for="corrC_'+i+'" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+esc(x.rotulo||x.c||'')+'</label>'
@@ -62197,6 +63382,7 @@
         +((S.mud||[]).length?('<div style="margin-top:8px;font-weight:800">Antes → Depois</div>'+(S.mud||[]).map(function(m){ return '<div style="margin-top:6px"><strong>'+esc(m.rotulo)+'</strong>: <span style="text-decoration:line-through">'
           +esc(corrQ(corrValorTexto(m.de)))+'</span> → '+esc(corrQ(m.para))+'</div>'; }).join('')):'')
         +'<div style="margin-top:8px">A volta é um registro novo: o que foi decidido antes continua guardado, com quem, quando e o motivo.</div>';
+      corpo+=info;   // 6.59
       if(op.aviso) corpo+='<div role="alert" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:2px solid var(--crm-critico);color:var(--crm-critico);font-weight:800">'+esc(op.aviso)+'</div>';
       var gestao=(op.nivel==='gestao');
       corpo+='<label for="corrMotivo" style="display:block;margin-top:14px;font-size:15px;font-weight:800">Motivo (pelo menos 4 palavras)</label>'
@@ -62276,7 +63462,7 @@
       if(typeof S.op.validar==='function'){
         var ev=''; try{ ev=S.op.validar(S.valores.slice(), S.mud.slice()); }catch(e){ ev='Não consegui conferir os valores ('+zErroMotivo(e, 'banco', '', {})+'). Nada foi gravado.'; }
         if(typeof ev==='string' && ev){ S.aviso=ev; corrDesenhar(); return Promise.resolve({ok:false, onde:'campos'}); }
-        if(ev && typeof ev==='object') ['volta', 'cascata', 'aviso', 'paraEstado'].forEach(function(c){ if(ev[c]!==undefined) S.op[c]=ev[c]; });
+        if(ev && typeof ev==='object') ['volta', 'cascata', 'aviso', 'paraEstado', 'info'].forEach(function(c){ if(ev[c]!==undefined) S.op[c]=ev[c]; });   // 6.59: 'info'
       }
       S.aviso=''; S.passo='conferir'; corrDesenhar(); return Promise.resolve({ok:true});
     }
@@ -71633,6 +72819,7 @@
       Object.keys((typeof VET_REAVAL_CACHE!=='undefined'&&VET_REAVAL_CACHE)||{}).forEach(function(k){
         var r=(VET_REAVAL_CACHE||{})[k]||{};
         if(!r.data || String(r.data)>hj) return;
+        if(typeof vetReavalAtiva==='function' && !vetReavalAtiva(r)) return;   // 6.59 (AC5): a feita e a removida saem
         itens.push({ tipo:'reavaliacao', grave:(String(r.data)<hj),
           nome:(poNomeDaVetKey(k)||'FILHOt sem nome na ficha'),
           texto:(String(r.data)<hj?'reavaliação venceu em ':'reavaliação marcada para ')

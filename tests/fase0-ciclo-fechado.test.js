@@ -26894,7 +26894,13 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // medAgendaAnularGravar copia dele para a escrita única) e ao da linha nova do «Voltou a tomar» (medVoltouNovo,
   // medAgendaVoltouGravar: o histórico e o rastro); e o motivo da dose avulsa (o dado que a pessoa escreveu) no campo do «Corrigir»
   // (medDoseCorrigirAbrir). O erro do banco dessas funções vai para gravacao-FALHOU e, na tela, pelo zErroMotivo.
-  medTgCorrecaoTexto: 1, medDoseCorrigirAbrir: 1, medAgendaAnularCampos: 2, medAgendaAnularGravar: 1, medVoltouNovo: 1, medAgendaVoltouGravar: 2 };
+  medTgCorrecaoTexto: 1, medDoseCorrigirAbrir: 1, medAgendaAnularCampos: 2, medAgendaAnularGravar: 1, medVoltouNovo: 1, medAgendaVoltouGravar: 2,
+  // 6.59 (o peso, o recado à veterinária e o Cuidado Vet, fora das três telas): o motivo que a pessoa escreveu — no formulário da
+  // prescrição (vetMotivoDe, a leitura única que o vetSalvarMed usa), no histórico do remédio (vetMedHistHTML, a mesma linha que o
+  // renderVetMedList já lia), no motivo da reavaliação que a Veterinária escreveu (vetReavalTexto), no texto da correção do peso ao
+  // grupo vet (pesoVetCorrecaoTexto) e na linha da ação própria da auditoria (pesoCorrGravar). O erro do banco dessas funções vai
+  // para gravacao-FALHOU e, na tela, pelo zErroMotivo.
+  vetMotivoDe: 1, vetMedHistHTML: 1, vetReavalTexto: 1, pesoVetCorrecaoTexto: 1, pesoCorrGravar: 1 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -27012,6 +27018,9 @@ const EXCECAO648 = [
   // 6.58 (fora das três telas): o «Parou de tomar» com a régua das 4 palavras — a frase do motivoQuatroPalavras, nunca o cru
   "validar:function(v){ var mq=motivoQuatroPalavras(v); return mq.ok?'':mq.erro; }});",   // fmedParou: a régua na própria caixa do zTexto
   "if(!mq4.ok){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+mq4.erro; } return; }",   // fmedParou: a mesma régua, conferida de novo antes de gravar
+  // 6.59 (fora das três telas): a frase da régua das 4 palavras (motivoQuatroPalavras) e a da leitura da balança (pesoLer) — nunca o cru
+  "function vetMotivoFrase(t){ var mq=motivoQuatroPalavras(t); return mq.ok?'':String(mq.erro); }",   // vetMotivoFrase: o motivo do «Alterar», do «Suspender», do «Reativar» e da nova prescrição
+  "if(r.erro) return r.erro+' Nada foi gravado.';",   // pesoCorrAbrir: r = pesoLer («130 kg não é peso de FILHOt…», «Só números. Ex.: 9,7»)
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -33462,6 +33471,1762 @@ provaAsync('6.58 QA R5-01 (a cópia reescrita pelo espelho de um registro novo d
     console.log('      irmã: ' + y.quem + ' (ts ' + (y.ts === T658(9, 10, 50) ? 'o de A' : y.ts) + ', anulada ' + !!y.anulada + ') | origem: ' + L['zen_08-00'].quem + ' | B ouviu: ' + JSON.stringify(J658('__za657').map((z) => z[0] + ': ' + (z[1] || [])[0])) + ' | mensagens de dose de B ' + tgDoses() + ' | estoque irmã ' + J658(`__get657('${AG658}/itens/zen2/estoque/restante')`));
     igual([y.quem, !!y.anulada, jaReg(), tgDoses(), J658(`__get657('${AG658}/itens/zen2/estoque/restante')`)], ['Aparelho A Teste', false, 1, 0, 5]);
   } finally { run('if(typeof __mln5==="function") medLerNo=__mln5;'); solta658(); }
+});
+}
+// ================================================================== 6.59 — peso, recado à veterinária e Cuidado Vet (S3, parte 2)
+console.log('\n6.59 — Peso, recado à veterinária e Cuidado Vet: corrigir, anular e desfazer, sempre com o motivo e sem apagar nada');
+// Tudo INVENTADO: Quindim (tutora Rita Teste), Biscoito (Rita Teste, a agenda da 6.58), Tico (Rita Teste, os Vencimentos da 6.55) e as
+// pessoas «Teste». Relógio FIXO em sexta, 09/10/2026, 10:00 (o do ARMA657). Banco de mentira que conta gravações e sabe recusar; a
+// ponte do Telegram de mentira, com os grupos `vet` e `plantao` (que podem sumir da ponte).
+const K659 = 'quindim__rita teste', AG659 = AG658;
+const PQ659 = () => [{ data: '2026-10-01', kg: 18, quem: 'Teste A' }, { data: '2026-10-08', kg: 8, quem: 'Teste B' }];
+// as funções de verdade, guardadas na carga (palcos antigos deixam moldes no lugar ao terminar, sem devolver)
+run('__real659={vcm:vetCarregarMed, rvm:renderVetMedList, rvc:renderVetConsultas, crh:checarReavaliacoesHoje, rva:renderVcReavalAtual, rvi:renderVetInstrucoesFicha, rvo:renderVetObsList, ati:(typeof ativTurmaPresente==="function"?ativTurmaPresente:null), aat:(typeof ativAvisoTurma==="function"?ativAvisoTurma:null), fde:(typeof fotoDe==="function"?fotoDe:null)};');
+// (os nomes novos desta story vão com typeof: as guardas, P9 e P34, também rodam na base, onde eles não existem)
+const ARMA659X = `__bk659={tgp:tgGrupoNaPonte, vrc:VET_RECOM_CACHE, vrv:VET_REAVAL_CACHE, voc:VET_OBS_CACHE, vcc:VET_CONSULTAS_CACHE, vmt:(typeof VET_MED_TS!=='undefined'?VET_MED_TS:undefined),
+    vha:(typeof VET_MED_HIST_ABERTO!=='undefined'?VET_MED_HIST_ABERTO:undefined), vcm:vetCarregarMed, rh:renderHosp, rvl:renderVetLista, pvt:(typeof PESO_VER_TODAS!=='undefined'?PESO_VER_TODAS:undefined), pti:PESOT_I, cme:checarMedsEncerradas,
+    cbo:(typeof ciBaixarBlob==='function'?ciBaixarBlob:null), wo:window.open, vcc2:vetCarregarConsultas};
+  __grupos659={vet:true, plantao:true}; tgGrupoNaPonte=function(n){ return Promise.resolve(!!__grupos659[n]); };
+  VET_RECOM_CACHE={}; VET_REAVAL_CACHE={}; VET_OBS_CACHE={}; VET_CONSULTAS_CACHE={}; VET_MED_TS={key:'', ts:null, lido:false}; VET_MED_HIST_ABERTO={}; PESO_VER_TODAS={}; PESOT_I=null;
+  vetCarregarMed=__real659.vcm; renderHosp=function(){}; renderVetLista=function(){}; checarMedsEncerradas=function(){};
+  vetCarregarConsultas=function(){}; ciBaixarBlob=function(){ return true; }; __ab659=[]; window.open=function(u){ __ab659.push(String(u)); return {}; };
+  PELUDINHOS=[{n:'Quindim', tutor:'Rita Teste', raca:'Spitz Alemão'}, {n:'Tonico', tutor:'Rita Teste', raca:'SRD'}];
+  ['vf-instr','vetObsList','vcReavalAtual','vetConsultasList','pesoTelaPainel','hf-vet-instr'].forEach(function(id){ __el657[id]={innerHTML:''}; });
+  __el657['vetReavalBanner']={innerHTML:'', querySelectorAll:function(){ return []; }}; __el657['vetFimMedBanner']={innerHTML:'', querySelectorAll:function(){ return []; }};
+  __el657['vc-status']={style:{}, textContent:''}; __el657['pesoTelaIn']={value:'', focus:function(){}}; __el657['pesoTelaB']={value:'', focus:function(){}};`;
+const SOLTA659X = `tgGrupoNaPonte=__bk659.tgp; VET_RECOM_CACHE=__bk659.vrc; VET_REAVAL_CACHE=__bk659.vrv; VET_OBS_CACHE=__bk659.voc; VET_CONSULTAS_CACHE=__bk659.vcc;
+  if(__bk659.vmt!==undefined) VET_MED_TS=__bk659.vmt; if(__bk659.vha!==undefined) VET_MED_HIST_ABERTO=__bk659.vha; vetCarregarMed=__bk659.vcm; renderHosp=__bk659.rh; renderVetLista=__bk659.rvl; if(__bk659.pvt!==undefined) PESO_VER_TODAS=__bk659.pvt;
+  PESOT_I=__bk659.pti; checarMedsEncerradas=__bk659.cme; if(__bk659.cbo) ciBaixarBlob=__bk659.cbo; window.open=__bk659.wo; vetCarregarConsultas=__bk659.vcc2;`;
+const arma659 = () => { arma658(); run(ARMA659X); };
+const solta659 = () => { try { run(SOLTA659X); } finally { solta658(); } };
+const espera659 = async (n) => { for (let i = 0; i < (n || 800); i++) await Promise.resolve(); };
+// a ficha do Quindim no banco e na cópia do aparelho (como o ouvinte deixaria), aberta na ficha
+const fichaQ659 = (pesos, extra) => {
+  ctx.__fq659 = Object.assign({ n: 'Quindim', tutor: 'Rita Teste', raca: 'Spitz Alemão', pesos: pesos || PQ659() }, extra || {});
+  run(`__put657('daycare/cadastro/${K659}', __fq659); pelCadCache['${K659}']=__get657('daycare/cadastro/${K659}'); pelAtual=PELUDINHOS[0]; __esc657=[]; __au657=[]; __tg658=[]; __za657=[]; __zp657=[];`);
+};
+const relerQ659 = () => run(`pelCadCache['${K659}']=__get657('daycare/cadastro/${K659}');`);
+const exQ659 = () => J658(`pelExtra(PELUDINHOS[0])`);
+const abrePeso659 = async (data, acao, origem) => { run(`__p659=pesoCorrAbrir(${JSON.stringify(origem || 'ficha')}, '${K659}', ${JSON.stringify(data)}, ${JSON.stringify(acao || 'corrigir')});`); await espera659(); };
+const audDia659 = (dia, linhas) => { const o = {}; (linhas || []).forEach((d, i) => { o['a' + i] = { acao: 'peso', detalhe: d, quem: 'Teste', ts: 1 }; }); put658('daycare/auditoria/' + dia, o); };
+const tgVet659 = () => J658('__tg658').filter((m) => m.grupo === 'vet');
+const tgPlantao659 = () => J658('__tg658').filter((m) => m.grupo === 'plantao');
+
+// ---- AC1 — o peso ---------------------------------------------------------------------------------------------------------
+provaAsync('6.59 P1 (AC1.1) — Peso: cada pesagem da Ficha › Prevenção › Peso e da tela Peso tem «Corrigir» e «Anular» (44 px); a lista mostra todas: as 6 últimas e «ver todas (N)»', async () => {
+  arma659();
+  try {
+    const muitas = []; for (let d = 1; d <= 8; d++) muitas.push({ data: '2026-10-0' + d, kg: 8 + d / 10, quem: 'Teste ' + d });
+    fichaQ659(muitas);
+    const ex = exQ659(); ctx.__ex659 = ex;
+    const f = String(run('blocoPeso(__ex659)'));
+    const itens = f.split('class="peso-item"').slice(1);
+    igual(itens.length, 6, 'as 6 últimas');
+    assert.ok(itens.every((x) => /pesoCorrAbrir\('ficha','quindim__rita teste','2026-10-0\d','corrigir'\)">Corrigir/.test(x) && /'anular'\)">Anular/.test(x)), 'cada uma com «Corrigir» e «Anular»');
+    assert.ok(/min-height:44px[^>]*>Corrigir/.test(f) && /min-height:44px[^>]*>Anular/.test(f), 'os botões com pelo menos 44 px');
+    assert.ok(/ver todas \(8\)/.test(f), '«ver todas (8)»');
+    run(`pesoVerTodas('ficha', '${K659}')`);
+    const f2 = String(run('blocoPeso(__ex659)'));
+    igual(f2.split('class="peso-item"').length - 1, 8, 'com «ver todas», as 8');
+    // a tela Peso
+    run(`PESOT_I=0; renderPesoTela();`);
+    const t = String(run("__el657['pesoTelaPainel'].innerHTML"));
+    igual(t.split('class="peso-item"').length - 1, 6, 'a tela Peso: as 6 últimas');
+    assert.ok(/pesoCorrAbrir\('tela','quindim__rita teste','2026-10-08','corrigir'\)">Corrigir/.test(t) && /ver todas \(8\)/.test(t), 'com «Corrigir» e «ver todas (8)»');
+    // uma pesagem só: também corrige (antes, a lista só aparecia com 2 ou mais)
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]); ctx.__ex659 = exQ659();
+    assert.ok(/'2026-10-01','corrigir'\)">Corrigir/.test(String(run('blocoPeso(__ex659)'))), 'a pesagem única também tem «Corrigir»');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P2 (AC1.2) — o cartaz: a pesagem (data, kg e quem pesou), o peso novo pela leitura da balança (130 recusado; 9700 lido como 9,7) e a dose do vermífugo antes e depois', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    await abrePeso659('2026-10-01', 'corrigir');
+    igual(run('CORR_ATUAL.passo'), 'campos');
+    const h0 = cartaz658();
+    assert.ok(/Pesagem de 01\/10\/2026: 18 kg, pesada por Teste A\./.test(h0), 'a pesagem, com data, kg e quem pesou');
+    assert.ok(/value="18"/.test(h0), 'o campo vem com o peso de agora');
+    assert.ok(/Pelo último peso, 18,0 kg em 01\/10: 2 comprimidos/.test(h0), 'a dose de agora');
+    run(`corrToque('continuar', {valores:['130']})`);
+    assert.ok(/130 kg não é peso de FILHOt/.test(String(run('CORR_ATUAL.aviso'))) && run('CORR_ATUAL.passo') === 'campos', '130 recusado, nos campos');
+    run(`corrToque('continuar', {valores:['18,0']})`);
+    assert.ok(/Nada mudou/.test(String(run('CORR_ATUAL.aviso'))), 'o mesmo peso escrito de outro jeito: nada mudou');
+    run(`corrToque('continuar', {valores:['9700']})`);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    const h1 = cartaz658();
+    assert.ok(/Peso novo: 9,7 kg \(o número estava em gramas\)\./.test(h1), '9700 lido como 9,7 kg: ' + h1.replace(/<[^>]+>/g, ' ').slice(0, 600));
+    assert.ok(/Dose do vermífugo: Pelo último peso, 18,0 kg em 01\/10: 2 comprimidos → pelo último peso, 9,7 kg em 01\/10: 1 comprimido/.test(h1), 'a dose antes e depois');
+    assert.ok(/Antes → Depois/.test(h1) && /id="corrMotivo"/.test(h1) && /Senha da Gestão/.test(h1), 'dia anterior: a senha da Gestão');
+    await fecha658();
+  } finally { solta659(); }
+});
+provaAsync('6.59 P3 (AC1.3) — com o ok, a correção fica ao lado da lista (pesos_corr/{data}, pelo setPelExtra, que sobe o carimbo da coleção); a lista `pesos` não muda; «Pronto» só com o ok', async () => {
+  arma659();
+  try {
+    fichaQ659();
+    const listaAntes = JSON.stringify(db658('daycare/cadastro/' + K659 + '/pesos'));
+    run('__vers659=__get657("daycare/versoes/cadastro")||0; delete DB.__carimboLigado; zLigarCarimboNasGravacoes();');
+    // o banco recusa: nada muda, nem na cópia do aparelho
+    run(`__recusa657='daycare/cadastro'`);
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    let [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma');
+    igual(p, 'falhou'); igual(db658('daycare/cadastro/' + K659 + '/pesos_corr'), null); igual(J658(`pelCadCache['${K659}'].pesos_corr||null`), null, 'a cópia do aparelho só muda com o ok');
+    await fecha658(); run(`__recusa657=null; __esc657=[];`);
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma');
+    igual(p, 'pronto');
+    const up = run('__esc657').filter((e) => e[0] === 'update' && e[1] === 'daycare/cadastro/' + K659);
+    igual(up.map((e) => e[2]), [['pesos_corr/2026-10-01']], 'uma escrita, pelo setPelExtra, só no caminho da correção');
+    const c = db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01');
+    igual([c.estado, c.data, c.kgDe, c.kgPara, c.quemPesou, c.acao, c.por, c.papel, c.motivo], ['corrigida', '2026-10-01', 18, 8, 'Teste A', 'corrigir', 'Gestora Teste', 'gestao', 'o peso era de outro FILHOt da turma']);
+    igual(JSON.stringify(db658('daycare/cadastro/' + K659 + '/pesos')), listaAntes, 'a lista crua, byte a byte igual');
+    assert.ok((db658('daycare/versoes/cadastro') || 0) > run('__vers659'), 'o carimbo da coleção subiu');
+    igual(J658(`pelCadCache['${K659}'].pesos_corr['2026-10-01'].estado`), 'corrigida', 'a cópia deste aparelho já lê a correção');
+    assert.ok(JSON.stringify(db658('daycare/cadastro/' + K659)).indexOf(SENHA657) < 0, 'a senha não entra no registro');
+    igual(aud658('peso-corrigido').length >= 1, true, 'a ação própria na auditoria');
+    assert.ok(aud658('registro-corrigido').length === 1, 'o rastro da 6.57');
+    // «Reabrir»: a pesagem volta a valer como foi pesada; a correção fica guardada em `anteriores` (nada é apagado)
+    await fecha658(); relerQ659();
+    await abrePeso659('2026-10-01', 'reabrir');
+    assert.ok(/Volta a ficar:<\/strong> valendo como foi pesada \(18 kg\)/.test(cartaz658()), 'o cartaz diz para onde volta');
+    let r = await assina658('s-bia', 'a correção foi feita na pesagem errada');
+    igual(r[0], 'conferir', 'dia anterior: a Gestão reabre');
+    [p] = await assina658(SENHA657, 'a correção foi feita na pesagem errada'); igual(p, 'pronto');
+    const c2 = db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01');
+    igual([c2.estado, c2.acao, c2.anteriores.length, c2.anteriores[0].estado, c2.anteriores[0].kgPara], ['reaberta', 'reabrir', 1, 'corrigida', 8]);
+    relerQ659(); igual(J658('pesosValidos(pelExtra(PELUDINHOS[0])).map(function(x){ return x.kg; })'), [18, 8], 'a de 01/10 volta a valer com 18 kg');
+    assert.ok(aud658('peso-reaberto').length >= 1, 'a ação própria');
+  } finally { run('delete DB.__carimboLigado;'); solta659(); }
+});
+provaAsync('6.59 P4 (AC1.4) — a leitura corrigida: o último peso, o "pesado este mês", a régua de 30 dias, o vermífugo, a variação da pesagem seguinte e «Pesados hoje»; a lista mostra a anulada riscada e a corrigida com «era 18 kg» e «Reabrir»', async () => {
+  arma659();
+  try {
+    const corr = (estado, kgPara) => ({ estado: estado, data: '2026-10-09', kgDe: 18, kgPara: kgPara, quemPesou: 'Teste A', acao: estado === 'anulada' ? 'anular' : 'corrigir', genero: 'f', por: 'Gestora Teste', papel: 'gestao', motivo: 'pesou o FILHOt errado agora', quando: '09/10/2026 às 10:00' });
+    ctx.__exA = { pesos: [{ data: '2026-09-01', kg: 8, quem: 'Teste B' }, { data: '2026-10-09', kg: 18, quem: 'Teste A' }], pesos_corr: { '2026-10-09': corr('anulada') } };
+    ctx.__exC = { pesos: ctx.__exA.pesos, pesos_corr: { '2026-10-09': corr('corrigida', 8.1) } };
+    ctx.__exN = { pesos: ctx.__exA.pesos };
+    // último peso e mês
+    igual([J658('ultimoPeso(__exN).kg'), J658('ultimoPeso(__exA).kg'), J658('ultimoPeso(__exC).kg')], [18, 8, 8.1]);
+    igual([run('pesouEsteMes(__exN)'), run('pesouEsteMes(__exA)'), run('pesouEsteMes(__exC)')], [true, false, true], 'a anulada não conta no mês');
+    // vermífugo (todas as telas leem ultimoPesoDe)
+    igual([J658('ultimoPesoDe(__exA)'), J658(`vermAvaliar(__exC, '2026-10-09').dose.texto`), J658(`vermAvaliar(__exN, '2026-10-09').dose.texto`)], [{ kg: 8, data: '2026-09-01' }, '1 comprimido', '2 comprimidos']);
+    // a variação da pesagem seguinte é medida contra o peso corrigido
+    igual([run('pesoVariacao(8.15, ultimoPeso(__exC)).suspeito'), run('pesoVariacao(8.15, ultimoPeso(__exN)).suspeito')], [false, true]);
+    // a régua de 30 dias e «Pesados hoje»
+    run(`pelCadCache['${K659}']=Object.assign({n:'Quindim', tutor:'Rita Teste'}, __exA); pelCadCache['tonico__rita teste']={pesos:[{data:'2026-10-09', kg:6, quem:'Teste B'}]};`);
+    const atraso = J658('pesoAtrasoLista()').map((o) => o.p.n + ':' + o.faixa);
+    assert.ok(atraso.indexOf('Quindim:atrasado') >= 0, 'com a de hoje anulada, a de 01/09 conta: 38 dias, atrasado — ' + atraso.join(' '));
+    const hojeA = String(run('pesoTelaHojeHTML()'));
+    assert.ok(hojeA.indexOf('Quindim') < 0 && hojeA.indexOf('Tonico') >= 0, '«Pesados hoje» sem a anulada');
+    run(`pelCadCache['${K659}']=Object.assign({n:'Quindim', tutor:'Rita Teste'}, __exC);`);
+    assert.ok(/Quindim[^]*8,1 kg/.test(String(run('pesoTelaHojeHTML()'))), '«Pesados hoje» com o kg corrigido');
+    // a balança da tela Peso (pesoTentar): 8,15 kg contra o corrigido (8,1) grava direto; contra a lista crua (18), pediria o «toque de novo»
+    run(`__pg659=pesoGravar; __pgs659=[]; pesoGravar=function(p, kg){ __pgs659.push(kg); }; __diz659=[]; PESO_CONF={};`);
+    try {
+      run(`pelCadCache['${K659}']=Object.assign({n:'Quindim', tutor:'Rita Teste'}, __exC);`);
+      const okC = run(`pesoTentar(PELUDINHOS[0], 'q659c', '8,15', function(m){ __diz659.push(m); })`);
+      run(`pelCadCache['${K659}']=Object.assign({n:'Quindim', tutor:'Rita Teste'}, __exN);`);
+      const okN = run(`pesoTentar(PELUDINHOS[0], 'q659n', '8,15', function(m){ __diz659.push(m); })`);
+      igual([okC, okN, J658('__pgs659')], [true, false, [8.15]], 'só a corrigida grava sem perguntar: ' + run('__diz659').join(' / '));
+      assert.ok(/ele pesava 18 kg em 09\/10\/2026/.test(run('__diz659').join(' / ')), 'a lista crua pede a confirmação');
+    } finally { run('pesoGravar=__pg659; PESO_CONF={};'); }
+    // a lista: riscada / «era 18 kg», com quem, quando, o motivo e «Reabrir»
+    const lA = String(run(`pesoHistHTML(PELUDINHOS[0], __exA, 'ficha')`)), lC = String(run(`pesoHistHTML(PELUDINHOS[0], __exC, 'tela')`));
+    assert.ok(/text-decoration:line-through;opacity:\.75">18 kg/.test(lA) && /Anulada \(lançada por engano\) por Gestora Teste/.test(lA) && /Motivo: pesou o FILHOt errado agora/.test(lA) && /'reabrir'\)">Reabrir/.test(lA), 'a anulada riscada, com «Reabrir»');
+    assert.ok(/8,1 kg <span[^>]*>\(era 18 kg\)<\/span>/.test(lC), 'a corrigida com «era 18 kg»: ' + lC.replace(/<[^>]+>/g, ' ').slice(0, 300));
+    assert.ok(/Corrigido por Gestora Teste/.test(lC) && /'reabrir'\)">Reabrir/.test(lC) && !/'2026-10-09','corrigir'/.test(lC), 'a corrigida com quem, quando e «Reabrir» (sem «Corrigir» por cima)');
+    // a ficha: o último é o corrigido
+    run(`pelAtual=PELUDINHOS[0];`); assert.ok(/Último: <strong>8,1 kg<\/strong>/.test(String(run('blocoPeso(__exC)'))), 'o «Último» da ficha é o corrigido');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P5 (AC1.5) — uma pesagem nova depois da correção: a lista crua continua inteira e a correção continua valendo; a pesagem de hoje substituída por outro kg não herda a correção (com o mesmo kg e a mesma pessoa, é a mesma pesagem)', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    let [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await fecha658(); relerQ659();
+    run(`pesoGravar(PELUDINHOS[0], 8.2);`); await espera659(); relerQ659();
+    const ex = exQ659();
+    igual(ex.pesos.map((x) => x.data + ':' + x.kg), ['2026-10-01:18', '2026-10-09:8.2'], 'a lista crua inteira, com a de 01/10 como foi pesada');
+    igual(ex.pesos_corr['2026-10-01'].estado, 'corrigida', 'a correção continua ao lado');
+    igual(J658('pesosValidos(' + JSON.stringify(ex) + ').map(function(x){ return x.data+":"+x.kg; })'), ['2026-10-01:8', '2026-10-09:8.2'], 'e continua valendo');
+    // a de hoje, corrigida, e depois pesada de novo
+    run(`__login657={nome:'Caio Encãotador Teste', role:'monitor'};`);
+    fichaQ659([{ data: '2026-10-09', kg: 18, quem: 'Caio Encãotador Teste' }]);
+    await abrePeso659('2026-10-09', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    [p] = await assina658('s-caio', 'pesei o FILHOt errado agora há pouco'); igual(p, 'pronto'); await fecha658(); relerQ659();
+    run(`pesoGravar(PELUDINHOS[0], 18);`); await espera659(); relerQ659();
+    igual(J658('ultimoPeso(pelExtra(PELUDINHOS[0])).kg'), 8, 'o mesmo kg pela mesma pessoa: é a mesma pesagem, continua corrigida');
+    run(`pesoGravar(PELUDINHOS[0], 9);`); await espera659(); relerQ659();
+    igual([J658('ultimoPeso(pelExtra(PELUDINHOS[0])).kg'), exQ659().pesos_corr['2026-10-09'].estado], [9, 'corrigida'], 'outro kg: a correção (guardada) não vale para a pesagem nova');
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'};`);
+    run(`pesoGravar(PELUDINHOS[0], 18);`); await espera659(); relerQ659();
+    igual([exQ659().pesos.filter((x) => x.data === '2026-10-09').map((x) => x.kg + ':' + x.quem), J658('ultimoPeso(pelExtra(PELUDINHOS[0])).kg')], [['18:Bia Consultora Teste'], 18],
+      'o mesmo kg pesado por OUTRA pessoa: é outra pesagem, a correção (de Caio) não vale para ela');
+    igual(J658(`pesoCorrDe({pesos_corr:{'2026-10-09':{estado:'corrigida', data:'2026-10-09', kgDe:18, kgPara:8, quemPesou:'Caio Encãotador Teste'}}}, {data:'2026-10-09', kg:18, quem:'Bia Consultora Teste'})`), null, 'pesoCorrDe: outra pessoa, nenhuma correção');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P6 (AC1.6) — a segunda pesagem do mesmo dia: o valor de antes vai para o rastro da ficha («Peso de hoje: 18 kg → 8 kg», com quem pesou), só com o ok; com o banco recusando, nenhum', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-08', kg: 8, quem: 'Teste B' }]);
+    run('pesoGravar(PELUDINHOS[0], 18);'); await espera659(); relerQ659();
+    igual(db658('daycare/ficha-rastro/' + K659), null, 'a primeira do dia não troca nada');
+    run(`__recusa657='daycare/cadastro'`);
+    run('pesoGravar(PELUDINHOS[0], 8);'); await espera659();
+    igual(db658('daycare/ficha-rastro/' + K659), null, 'o banco recusou: nenhum rastro');
+    run(`__recusa657=null;`); relerQ659();
+    run('pesoGravar(PELUDINHOS[0], 8);'); await espera659();
+    const r = db658('daycare/ficha-rastro/' + K659) || {}, regs = Object.keys(r).map((k) => r[k]);
+    igual(regs.map((x) => [x.campo, x.de, x.para, x.quem]), [['peso_hoje', '18 kg (pesou: Gestora Teste)', '8 kg (pesou: Gestora Teste)', 'Gestora Teste']]);
+    assert.ok(aud658('ficha-campo').some((a) => /Peso de hoje: «18 kg \(pesou: Gestora Teste\)» → «8 kg \(pesou: Gestora Teste\)»/.test(a[1])), JSON.stringify(aud658('ficha-campo')));
+    const ordem = run('__esc657').map((e) => e[0] + ' ' + e[1]);
+    assert.ok(ordem.indexOf('update daycare/cadastro/' + K659) < ordem.findIndex((x) => /ficha-rastro/.test(x)), 'o rastro sai depois da gravação');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P7 (AC1.7) — a veterinária: a pesagem que a avisou manda a correção ao grupo vet; a seguinte que avisou entra na mensagem; sem a auditoria legível, a pergunta («sim» recomendado com a dose mudada); sem o grupo, o texto para mandar à mão', async () => {
+  arma659();
+  try {
+    fichaQ659();
+    audDia659('2026-10-01', ['avisou a veterinária sobre Quindim (+10 kg)']);
+    audDia659('2026-10-08', ['avisou a veterinária sobre Quindim (-10 kg)']);
+    await abrePeso659('2026-10-01', 'corrigir');
+    assert.ok(/A veterinária foi avisada sobre esta pesagem/.test(cartaz658()), 'o cartaz diz que a correção vai para ela');
+    run(`corrToque('continuar', {valores:['8']})`);
+    let [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await espera659();
+    const m = tgVet659();
+    igual(m.length, 1, 'uma mensagem ao grupo vet');
+    const t = m[0].texto;
+    ['PESO CORRIGIDO', 'Quindim · Spitz Alemão (tutor: Rita Teste)', 'Pesagem de 01/10/2026: era 18 kg, o certo é 8 kg.', 'A variação avisada em 08/10/2026 vinha da pesagem errada.',
+      'Corrigido por: Gestora Teste (Gestão)', 'Motivo: o peso era de outro FILHOt da turma'].forEach((x) => assert.ok(t.indexOf(x) >= 0, x + ' — ' + t));
+    assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(t), 'sem emoji');
+    await fecha658();
+    // sem nenhum aviso naquele dia (nem na seguinte): nenhuma mensagem
+    fichaQ659(); put658('daycare/auditoria/2026-10-01', null); put658('daycare/auditoria/2026-10-08', null);
+    await abrePeso659('2026-10-01', 'anular');
+    [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await espera659();
+    igual(tgVet659().length, 0, 'a pesagem não tinha avisado ninguém');
+    await fecha658();
+    // a auditoria ilegível: a pergunta, com «sim» recomendado (a dose mudou: a de 01/10 é a última)
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    run(`__dbr659=DB.ref; DB.ref=function(p){ var r=__dbr659(p); if(/^daycare\\/auditoria\\//.test(String(p))) r.once=function(){ return Promise.reject(new Error('sem conexão')); }; return r; };`);
+    try {
+      await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+      run('__zpq657=[true];');
+      [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await espera659();
+      const perg = J658('__zp657').filter((x) => /AVISAR A VETERINÁRIA/.test(x[0]));
+      igual(perg.length, 1, 'a tela perguntou');
+      assert.ok(/Recomendado: sim — a dose do vermífugo mudou com a correção\./.test(perg[0][1].join(' ')), perg[0][1].join(' | '));
+      igual(tgVet659().length, 1, '«sim»: a mensagem saiu');
+      assert.ok(/Dose do vermífugo: Pelo último peso, 18,0 kg em 01\/10: 2 comprimidos → pelo último peso, 8,0 kg em 01\/10: 1 comprimido/.test(tgVet659()[0].texto), tgVet659()[0].texto);
+    } finally { run('DB.ref=__dbr659;'); }
+    await fecha658();
+    // sem o grupo vet na ponte: «A veterinária NÃO foi avisada» e o texto pronto
+    fichaQ659(); audDia659('2026-10-01', ['avisou a veterinária sobre Quindim (+10 kg)']); run('__grupos659.vet=false;');
+    await abrePeso659('2026-10-01', 'anular');
+    [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await espera659();
+    const al = J658('__za657').filter((x) => x[0] === 'A veterinária NÃO foi avisada');
+    igual(al.length, 1);
+    assert.ok(al[0][1].some((l) => /^PESO ANULADO\nQuindim/.test(l) && /foi anulada: foi lançada por engano/.test(l) && /\nAnulado por: /.test(l) && !/Corrigido por/.test(l)), JSON.stringify(al[0][1]));
+    igual(tgVet659().length, 0);
+    assert.ok(aud658('peso-anulado').some((a) => /NÃO avisou a veterinária da correção do peso de Quindim/.test(a[1])), 'a auditoria registra');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P8 (AC1.8) — quem assina: a de hoje, quem pesou (o mesmo nome) e quem tem editar-peludinho ou alterar-vet; outra pessoa recusada; dia anterior e anular, só a Gestão; o porteiro deixa passar pesos_corr/*', async () => {
+  arma659();
+  try {
+    const hoje = [{ data: '2026-10-09', kg: 18, quem: 'Caio Encãotador Teste' }];
+    const tenta = async (data, acao, senha) => { fichaQ659(data === '2026-10-09' ? hoje : PQ659()); await abrePeso659(data, acao); if (acao === 'corrigir') run(`corrToque('continuar', {valores:['8']})`); const r = await assina658(senha, 'o peso era de outro FILHOt da turma'); await fecha658(); return r; };
+    igual((await tenta('2026-10-09', 'corrigir', 's-caio'))[0], 'pronto', 'quem pesou (Encãotador) corrige a de hoje');
+    igual((await tenta('2026-10-09', 'corrigir', 's-bia'))[0], 'pronto', 'a Consultora (editar-peludinho)');
+    igual((await tenta('2026-10-09', 'corrigir', 's-vera'))[0], 'pronto', 'a Veterinária (alterar-vet)');
+    let r = await tenta('2026-10-09', 'corrigir', 's-gilda');
+    igual(r[0], 'conferir'); assert.ok(/Essa senha é de Gilda Teste, que não pode assinar esta correção.*ou Caio Encãotador Teste, que registrou/.test(r[1]), r[1]);
+    igual((await tenta('2026-10-09', 'corrigir', 's-posto'))[0], 'conferir', 'senha de posto não assina');
+    r = await tenta('2026-10-01', 'corrigir', 's-bia'); igual(r[0], 'conferir', 'dia anterior: a Consultora não'); assert.ok(/Quem assina: a Gestão ou a Diretoria/.test(r[1]), r[1]);
+    igual((await tenta('2026-10-01', 'corrigir', SENHA657))[0], 'pronto', 'dia anterior: a Gestão');
+    igual((await tenta('2026-10-09', 'anular', 's-caio'))[0], 'conferir', 'anular a de hoje: nem quem pesou');
+    igual((await tenta('2026-10-09', 'anular', SENHA657))[0], 'pronto', 'anular: a Gestão');
+    // o porteiro do setPelExtra
+    run(`document.body.dataset.role='monitor';`);
+    igual(J658(`pelCamposBarrados({'pesos_corr/2026-10-01':{estado:'anulada'}})`), [], 'o caminho da correção passa');
+    igual(J658(`pelCamposBarrados({'pesos_corr/2026-10-01':{}, tutor:'Outro', pesos_corr:{}})`), ['tutor', 'pesos_corr'], 'o resto continua barrado (também o nó inteiro)');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P9 (AC1.9, guarda) — a atividade Peso do Day Care: renderPesoAtiv e pesoAtivSalvar idênticas às da base, e o HTML que ela gera com a mesma ficha sem correção é igual com a leitura de antes e a de agora', async () => {
+  arma659();
+  try {
+    const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+    igual([h(run('renderPesoAtiv.toString()')), h(run('pesoAtivSalvar.toString()'))],
+      ['432ef6ad1d2da28af4d13513eeb83bf71725bbf67470c7d5f34391ff49ad9afa', 'a2e2e1176e1ffb5805b7a2d05ebdfb65b4de7ef32e5393d5d6ca508604312911']);
+    run(`__bkA659={ati:ativTurmaPresente, aat:ativAvisoTurma, fde:fotoDe, up:ultimoPeso};
+      ativTurmaPresente=function(){ return {lista:[{p:PELUDINHOS[0]}, {p:PELUDINHOS[1]}]}; }; ativAvisoTurma=function(){ return ''; }; fotoDe=function(){ return ''; };
+      ['genGrid','genResumo','genCount','genNotaTxt'].forEach(function(id){ __el657[id]={innerHTML:'', textContent:'', classList:{add:function(){}, remove:function(){}}}; });
+      pelCadCache['${K659}']={n:'Quindim', tutor:'Rita Teste', pesos:[{data:'2026-10-01', kg:18, quem:'Teste A'}, {data:'2026-10-08', kg:8, quem:'Teste B'}]};
+      pelCadCache['tonico__rita teste']={pesos:[{data:'2026-08-01', kg:6, quem:'Teste B'}]};`);
+    try {
+      run('renderPesoAtiv();'); const agora = String(run("__el657['genGrid'].innerHTML")) + String(run("__el657['genResumo'].innerHTML"));
+      run('ultimoPeso=function ultimoPeso(ex){ const a=pesosDe(ex).slice().sort((x,y)=>(x.data<y.data?1:-1)); return a[0]||null; };');   // a de antes (0e71b31)
+      run('renderPesoAtiv();'); const antes = String(run("__el657['genGrid'].innerHTML")) + String(run("__el657['genResumo'].innerHTML"));
+      assert.ok(agora.length > 200 && /Quindim/.test(agora), 'a atividade desenhou');
+      igual(agora, antes, 'o mesmo HTML');
+    } finally { run('ativTurmaPresente=__bkA659.ati; ativAvisoTurma=__bkA659.aat; fotoDe=__bkA659.fde; ultimoPeso=__bkA659.up;'); }
+  } finally { solta659(); }
+});
+prova('6.59 P10 (AC1.4, varredura) — todo leitor de `pesos` no app usa a lista corrigida, menos o pesoGravar (que grava a lista crua) e as listas que mostram a marca', () => {
+  const src = extractMainScript(fs.readFileSync(APP, 'utf8'));
+  const linhas = src.split('\n'); let fn = '(topo)'; const onde = {};
+  linhas.forEach((l) => { const m = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (m) fn = m[1];
+    if (/^\s*\/\//.test(l)) return;
+    if (/\.pesos\b(?!_)|\bpesosDe\(/.test(l.replace(/\/\/ .*$/, ''))) onde[fn] = (onde[fn] || 0) + 1; });
+  // zPdfDocBlob: `t.pesos` é a largura das colunas das tabelas do PDF (não é peso de FILHOt)
+  igual(Object.keys(onde).sort(), ['blocoPeso', 'pesoCorrAbrir', 'pesoGravar', 'pesoHistHTML', 'pesoSeguinte', 'pesosDe', 'pesosValidos', 'renderPesoTela', 'zPdfDocBlob'].sort(), JSON.stringify(onde));
+  // os leitores de verdade passam pela lista corrigida
+  const corpo = (n) => run(n + '.toString()');
+  assert.ok(/pesosValidos\(/.test(corpo('ultimoPeso')) && /pesosValidos\(/.test(corpo('ultimoPesoDe')), 'ultimoPeso e ultimoPesoDe');
+  assert.ok(/pesosValidos\(/.test(corpo('blocoPeso')) && /pesosValidos\(/.test(corpo('renderPesoTela')), 'o «Último» da ficha e da tela');
+  assert.ok(!/pesosValidos/.test(corpo('pesoGravar')) && /pesosDe\(ex\)/.test(corpo('pesoGravar')), 'o pesoGravar continua com a lista crua');
+  // pesoCorrAbrir e pesoSeguinte leem a lista crua para achar a pesagem (a marca) — não para o último peso
+  assert.ok(/pesosDe\(ex\)\.filter\(function\(y\)\{ return y && y\.data===data; \}\)/.test(corpo('pesoCorrAbrir')), 'o cartaz acha a pesagem na lista crua');
+});
+// ---- AC2 — o recado à veterinária (Vencimentos) ---------------------------------------------------------------------------
+// O Tico (os Vencimentos da 6.55) com a Raiva vencendo segunda, 12/10; a conversa de hoje, sexta 09/10.
+const DIA659V = '2026-10-09';
+const O_VAC659 = `{chave:'${K655}', p:PELUDINHOS[0], i:0, nome:'Tico', raca:'SRD', tutor:'Rita Teste', tel:'', sexo:'Macho',
+  itens:[{k:'vac_raiva_p', nome:'Raiva', vence:'2026-10-12', atrasado:false, vacina:true}, {k:'verm_p', nome:'Vermífugo', vence:'2026-10-12', atrasado:false, vacina:false}], atrasados:0}`;
+const ARMA659V = `__bkV659={tgp:tgGrupoNaPonte, tga:tgAvisar, zp:zPergunta, rd:renderDash};
+  __grupos659={vet:true}; __tg659=[]; __tgOk659=true; __zp659=[];
+  tgGrupoNaPonte=function(n){ return Promise.resolve(!!__grupos659[n]); };
+  tgAvisar=function(o){ __tg659.push(JSON.parse(JSON.stringify(o))); return Promise.resolve(__tgOk659?{ok:true}:{ok:false, erro:'a ponte não respondeu'}); };
+  zPergunta=function(t, l){ __zp659.push([t, l]); return Promise.resolve(true); }; renderDash=function(){};
+  VENC_DIA_SEL='${DIA659V}'; VENC_REG={}; VENC_REG_DIA='${DIA659V}'; __O659=${O_VAC659}; __VL655['${DIA659V}']=[__O659];`;
+const SOLTA659V = `tgGrupoNaPonte=__bkV659.tgp; tgAvisar=__bkV659.tga; zPergunta=__bkV659.zp; renderDash=__bkV659.rd;`;
+const recado659 = async (fn) => {
+  const db = arvore655({});
+  arma655(DIA659V, '10:00:00', db);
+  run(ARMA659V);
+  try { return await fn(db); } finally { try { run(SOLTA659V); } finally { solta655f(); } }
+};
+const responde659 = async (tipo, v) => { const r = await run(`vencResponderTipo('${K655}', ${JSON.stringify(tipo)}, ${JSON.stringify(v)}, '${DIA659V}', __O659)`); await drena655(); await drena655(); return r; };
+const regV659 = (db) => reg655(db, DIA659V);
+const cancV659 = (db) => { const c = regV659(db).vet_cancelados || {}; return Object.keys(c).sort().map((k) => c[k]); };
+
+provaAsync('6.59 P11 (AC2.1, AC2.5) — «Não quer agora» depois de «Aplicar aqui, de manhã»: o recado sai do cartão, vai inteiro para vet_cancelados (com quem, quando e a resposta nova), na mesma gravação, e o «CANCELADO» vai ao grupo vet', async () => {
+  await recado659(async (db) => {
+    igual(await responde659('vacina', 'vet_manha'), true);
+    const v0 = regV659(db).vet;
+    igual([v0.tipo, v0.dia, v0.periodo, v0.vacinas], ['vacina', '2026-10-13', 'manhã', 'Raiva'], 'o recado guarda o assunto que o criou');
+    igual(run('__tg659').map((m) => m.texto), ['Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (manhã).']);
+    assert.ok((run('vencVetAvisos()') || []).length === 1, 'a linha «Avisar a veterinária…» aparece');
+    run('__tg659=[];');
+    const antes = db.escritas.length;
+    igual(await responde659('vacina', 'nao'), true);
+    const r = regV659(db);
+    igual(['vet' in r, r.respostas.vacina.v], [false, 'nao'], 'o recado saiu do cartão');
+    const c = cancV659(db);
+    igual(c.length, 1, 'guardado, nunca apagado');
+    igual([c[0].dia, c[0].periodo, c[0].tipo, c[0].cancelado.quem, c[0].cancelado.resposta.v, c[0].cancelado.resposta.rotulo, typeof c[0].cancelado.ts], ['2026-10-13', 'manhã', 'vacina', 'Leticya', 'nao', 'Não quer agora', 'number']);
+    const gravs = db.escritas.slice(antes).filter((e) => /vencimentos/.test(e.p) && e.v && ('respostas' in e.v));
+    igual(gravs.length, 1, 'uma gravação só');
+    assert.ok(gravs[0].v.vet === null && Object.keys(gravs[0].v).some((k) => /^vet_cancelados\/\d+_[a-z0-9]+$/.test(k)), 'a resposta, o recado tirado e o guardado na MESMA gravação');
+    igual(run('__tg659').map((m) => [m.grupo, m.texto]), [['vet', 'CANCELADO — Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (manhã) — o tutor mudou a resposta para "Não quer agora". Não precisa preparar.']]);
+    igual((run('vencVetAvisos()') || []).length, 0, 'a linha do cartão some com o recado cancelado');
+    assert.ok(run('__AUD655').some((a) => /^vence-amanha :: avisou a veterinária: CANCELADO — /.test(a)), 'a auditoria');
+  });
+});
+provaAsync('6.59 P12 (AC2.1) — o desfazer da resposta (vencDesfazerAuto) cancela igual: o recado do «em aberto» com vacina vai para vet_cancelados e a veterinária é avisada', async () => {
+  await recado659(async (db) => {
+    const vet = { pet: 'Tico', dofilhot: 'do Tico', periodo: 'no dia dele', vacinas: 'Raiva', dia: '2026-10-12', quem: 'Ana', ts: T655(9, 9), tipo: 'aberto' };
+    const reg = { pet: 'Tico', tutor: 'Rita Teste', respostas: { aberto: { v: 'ab_bolsa', quem: 'Ana', ts: T655(9, 9) } }, auto: { aberto: { dia: DIA659V, onde: 'NA BOLSA', quem: 'Ana', ts: T655(9, 9), itens: [], falharam: [] } }, vet };
+    db.store.daycare = { vencimentos: { [DIA659V]: { [K655]: JSON.parse(JSON.stringify(reg)) } } };
+    ctx.__rg659 = reg; run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__rg659)); __O659.itens=[{k:'vac_raiva_p', nome:'Raiva', vence:'', sem_registro:true, vacina:true}];`);
+    igual(await run(`vencDesfazerAuto('${K655}', 'aberto', '${DIA659V}')`), true); await drena655(); await drena655();
+    assert.ok(run('__zp659')[0][1].some((l) => /O recado à veterinária \(Vacina de Raiva do Tico — tutor autorizou para 12\/10\/2026 \(no dia dele\)\) é cancelado, e ela é avisada\./.test(l)), 'a pergunta diz o que sai junto');
+    const r = regV659(db);
+    igual(['vet' in r, 'aberto' in (r.respostas || {})], [false, false]);
+    igual(cancV659(db).map((c) => [c.tipo, c.cancelado.resposta.rotulo]), [['aberto', '(resposta desfeita)']]);
+    igual(run('__tg659').map((m) => m.texto), ['CANCELADO — Vacina de Raiva do Tico — tutor autorizou para 12/10/2026 (no dia dele) — a resposta do tutor foi desfeita. Não precisa preparar.']);
+  });
+});
+provaAsync('6.59 P13 (AC2.2) — trocar o período da vacina: o recado novo diz «No lugar de …»; o anterior vai para vet_cancelados', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha'); run('__tg659=[];');
+    await responde659('vacina', 'vet_tarde');
+    const r = regV659(db);
+    igual([r.vet.periodo, r.vet.substitui], ['tarde', { dia: '2026-10-13', periodo: 'manhã' }]);
+    igual(run('__tg659').map((m) => m.texto), ['Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (tarde). No lugar de 13/10/2026 (manhã).']);
+    const c = cancV659(db);
+    igual([c.length, c[0].periodo, c[0].cancelado.substituidoPor, c[0].cancelado.resposta.rotulo], [1, 'manhã', { dia: '2026-10-13', periodo: 'tarde' }, 'Aplicar aqui, à tarde']);
+    // a mesma resposta de novo (o mesmo dia e período): nada é cancelado
+    await responde659('vacina', 'vet_tarde');
+    igual(cancV659(db).length, 1, 'repetir a resposta não cria cancelamento');
+    // o «Sim, pode fazer na Zêluz» escolhido à mão (vencLancarConfirmado), para outro período: guarda o tipo e substitui
+    run(`__O659.itens=[__O659.itens[0]]; VENC_ESCOLHA['${K655}']={__vet:{periodo:'manhã'}}; __tg659=[]; vencLancarConfirmado('${K655}');`); await drena655(); await drena655();
+    const r2 = regV659(db);
+    igual([r2.vet.periodo, r2.vet.tipo, r2.vet.substitui], ['manhã', 'vacina', { dia: '2026-10-13', periodo: 'tarde' }]);
+    igual(cancV659(db).length, 2, 'o de antes guardado');
+  });
+});
+provaAsync('6.59 P14 (AC2.3) — a troca de outro assunto não cancela o recado da vacina; o recado antigo, sem `tipo`, só cai pela vacina ou pelo «em aberto» com vacina', async () => {
+  igual([run(`vencVetDoTipo({tipo:'vacina'}, 'antip', {})`), run(`vencVetDoTipo({tipo:'vacina'}, 'vacina', {})`), run(`vencVetDoTipo({tipo:'vacina'}, 'ant_vacina', {})`)], [false, true, false]);
+  igual([run(`vencVetDoTipo({dia:'x'}, 'vacina', {})`), run(`vencVetDoTipo({dia:'x'}, 'ant_vacina', {})`), run(`vencVetDoTipo({dia:'x'}, 'antip', {})`),
+    run(`vencVetDoTipo({dia:'x'}, 'aberto', {itens:[{k:'vac_raiva_p', sem_registro:true}]})`), run(`vencVetDoTipo({dia:'x'}, 'aberto', {itens:[{k:'verm_p', sem_registro:true}]})`)], [true, true, false, true, false]);
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha'); run('__tg659=[];');
+    await responde659('antip', 'nao');
+    igual([regV659(db).vet.periodo, cancV659(db).length, run('__tg659').length], ['manhã', 0, 0], 'o «Não quer agora» do antiparasitário não mexe no recado da vacina');
+    // o recado antigo, sem tipo: a troca do antiparasitário não o derruba; a da vacina, sim
+    const vel = Object.assign({}, regV659(db).vet); delete vel.tipo;
+    db.store.daycare.vencimentos[DIA659V][K655].vet = vel; ctx.__vel659 = vel; run(`VENC_REG['${K655}'].vet=JSON.parse(JSON.stringify(__vel659));`);
+    await responde659('antip', 'casa');
+    igual(['vet' in regV659(db), cancV659(db).length], [true, 0], 'sem tipo: outro assunto não cancela');
+    await responde659('vacina', 'nao');
+    igual(['vet' in regV659(db), cancV659(db).length], [false, 1], 'sem tipo: a vacina cancela');
+  });
+});
+provaAsync('6.59 P15 (AC2.4) — sem o grupo vet na ponte (ou com a ponte falhando): «A VETERINÁRIA NÃO FOI AVISADA DO CANCELAMENTO», com o texto pronto; a auditoria registra', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha');
+    run('__grupos659.vet=false; __tg659=[];');
+    await responde659('vacina', 'nao');
+    igual(run('__tg659').length, 0);
+    const al = run('__ALE655').filter((a) => /^A VETERINÁRIA NÃO FOI AVISADA DO CANCELAMENTO :: /.test(a));
+    igual(al.length, 1, al.join(' / '));
+    assert.ok(al[0].indexOf('CANCELADO — Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (manhã) — o tutor mudou a resposta para "Não quer agora". Não precisa preparar.') > 0, 'o texto pronto para mandar à mão');
+    assert.ok(run('__AUD655').some((a) => /^vence-amanha :: NÃO avisei a veterinária do cancelamento \(CANCELADO — .*\): a ponte publicada não tem o grupo da Veterinária\. Avise à mão\./.test(a)), run('__AUD655').join(' / '));
+    igual(cancV659(db).length, 1, 'o cancelamento ficou gravado do mesmo jeito');
+    // a ponte com o grupo, mas falhando
+    await responde659('vacina', 'vet_manha'); run('__grupos659.vet=true; __tgOk659=false; __ALE655=[];');
+    await responde659('vacina', 'nao');
+    assert.ok(run('__ALE655').some((a) => /^A VETERINÁRIA NÃO FOI AVISADA DO CANCELAMENTO :: .*a ponte não confirmou o envio/.test(a)), run('__ALE655').join(' / '));
+  });
+});
+// ---- AC3 a AC9 — o Cuidado Vet (Biscoito, a agenda da 6.58) ---------------------------------------------------------------
+const VH659 = `vetHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'};`;
+const C1_659 = (extra) => Object.assign({ data: '2026-10-09', temperatura: '38,5', peso: '7,2', cuidados: ['Repouso'], recomendacoes: 'observar se volta a vomitar', obs: 'gastrite leve',
+  reavaliacao: '2026-10-12', reavaliacaoMotivo: 'reavaliar o estômago', fotos: ['data:image/jpeg;base64,AAAA'], por: 'Vera Veterinária Teste', ts: T657(9, 9, 0) }, extra || {});
+const RECOM659 = (consultaId, extra) => Object.assign({ texto: 'observar se volta a vomitar', cuidados: ['Repouso'], por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: consultaId, ativo: true }, extra || {});
+// semeia o Cuidado Vet do Biscoito: banco + memórias (como os ouvintes deixariam)
+const semearVet659 = (o) => {
+  o = o || {};
+  if (o.consultas) put658('auaulandia/vet-consultas/' + K658, o.consultas);
+  if (o.recom) put658('auaulandia/vet-recomendacoes/' + K658, o.recom);
+  if (o.reaval) put658('auaulandia/vet-reavaliacao/' + K658, o.reaval);
+  if (o.obs) put658('auaulandia/vet-observacoes/' + K658, o.obs);
+  run(`${VH659} VET_CONSULTAS_CACHE=__get657('auaulandia/vet-consultas/${K658}')||{}; VET_RECOM_CACHE={}; VET_REAVAL_CACHE={}; VET_OBS_CACHE={};
+    if(__get657('auaulandia/vet-recomendacoes/${K658}')) VET_RECOM_CACHE['${K658}']=__get657('auaulandia/vet-recomendacoes/${K658}');
+    if(__get657('auaulandia/vet-reavaliacao/${K658}')) VET_REAVAL_CACHE['${K658}']=__get657('auaulandia/vet-reavaliacao/${K658}');
+    if(__get657('auaulandia/vet-observacoes/${K658}')) VET_OBS_CACHE['${K658}']=__get657('auaulandia/vet-observacoes/${K658}');
+    __esc657=[]; __au657=[]; __za657=[]; __zp657=[]; __tg658=[];`);
+};
+const html659 = (id) => String(run(`__el657['${id}'].innerHTML`) || '');
+const motivo659 = 'a consulta foi lançada no FILHOt errado';
+
+provaAsync('6.59 P16 (AC3.1) — sem alterar-vet: «Salvar consulta», vetSalvarMed, vetSuspenderMed e vetReativarMed dizem quem pode, deixam o «BARROU» e não gravam nada', async () => {
+  arma659();
+  try {
+    semear658({ itens: { zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }), ome: OME658() } });
+    run(`${VH659} VET_MED_CACHE=__get657('${AG658}/itens'); podeAlterarVet=function(){ return false; }; document.body.dataset.role='consultora'; __esc657=[]; __au657=[]; __za657=[];
+      __ztq657=['um motivo de quatro palavras', 'um motivo de quatro palavras'];`);
+    const r = [];
+    r.push(run('salvarConsultaVet()'));
+    r.push(run(`vetSalvarMed({nome:'Zenrelia', q:'2', u:'comprimido', horarios:['08:00'], dataInicio:'${DIA658}', continuo:true, motivo:'a dose subiu para dois'})`));
+    r.push(await run(`vetSuspenderMed('ome')`));
+    r.push(await run(`vetReativarMed('zen')`));
+    await espera659();
+    igual(r.map((x) => !!(x && x.barrou)), [true, true, true, true], 'as quatro barram (no lugar do return calado)');
+    const b = aud658('sem-permissao').map((a) => a[1]);
+    igual(b.length, 4);
+    ['BARROU salvar a consulta da Veterinária', 'BARROU prescrever medicação no Cuidado Vet', 'BARROU suspender um remédio no Cuidado Vet', 'BARROU reativar um remédio no Cuidado Vet']
+      .forEach((t, i) => assert.ok(b[i].indexOf(t) === 0 && /Consultora de Bem-Estar sem permissão/.test(b[i]), b[i]));
+    const za = J658('__za657').filter((z) => z[0] === 'ESTA AÇÃO NÃO É SUA');
+    igual(za.length, 4); assert.ok(za.every((z) => /a Supervisão, a Gestão, a Diretoria ou a Veterinária/.test(z[1][0])), JSON.stringify(za[0]));
+    igual(run('__esc657').filter((e) => !/RECUSADO/.test(e[0]) && !/auditoria/.test(e[1])).length, 0, 'nada gravado');
+    igual(J658('__zt657').length, 0, 'nem pediu motivo');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P17 (AC3.2) — PDF, WhatsApp e e-mail registram a saída na consulta: como, quem e quando (o receituário abre do mesmo jeito; a falha só vai para o rastro)', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() } });
+    run(`vetPdfImprimir('c1'); vetPdfWhatsApp('c1'); vetPdfEmail('c1');`); await espera659();
+    const s = db658('auaulandia/vet-consultas/' + K658 + '/c1/saidas') || {};
+    igual(Object.keys(s).map((k) => [s[k].como, s[k].quem, s[k].ts]), [['pdf', 'Gestora Teste', T657(9, 10, 0)], ['whatsapp', 'Gestora Teste', T657(9, 10, 0)], ['email', 'Gestora Teste', T657(9, 10, 0)]]);
+    igual(Object.keys(J658('VET_CONSULTAS_CACHE.c1.saidas')).length, 3, 'a memória da tela também sabe (o aviso «já saiu» vale na hora)');
+    assert.ok(run('__ab659').some((u) => /wa\.me/.test(u)) && run('__ab659').some((u) => /mail\.google\.com/.test(u)), 'o WhatsApp e o Gmail abriram');
+    // o banco recusa a saída: o receituário abre do mesmo jeito, e a falha vai para o rastro
+    run(`__recusa657='saidas'; __ab659=[];`); run(`vetPdfEmail('c1');`); await espera659();
+    assert.ok(run('__ab659').some((u) => /mail\.google\.com/.test(u)), 'abriu mesmo assim');
+    assert.ok(aud658('gravacao-FALHOU').some((a) => /saída do receituário \(email\)/.test(a[1])), JSON.stringify(aud658('gravacao-FALHOU')));
+  } finally { solta659(); }
+});
+provaAsync('6.59 P18 (AC3.3, AC3.6) — corrigir a consulta: versão nova (corrigeDe, as fotos ficam); a anterior com corrigidaPor, riscada embaixo, sem PDF; a instrução que nasceu da anterior passa a ser a da versão nova', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, recom: RECOM659('c1'), reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    const h0 = cartaz658();
+    assert.ok(/value="09\/10\/2026"/.test(h0) && /value="Repouso"/.test(h0) && /observar se volta a vomitar/.test(h0) && /A instrução ativa na ficha nasceu desta consulta/.test(h0), 'os campos da consulta e o que vem junto');
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso; Não molhar a região', 'oferecer água aos poucos', 'gastrite leve', '12/10/2026', 'reavaliar o estômago']})`);
+    igual(run('CORR_ATUAL.passo'), 'conferir');
+    let [p] = await assina658('s-vera', 'a recomendação certa é outra'); igual(p, 'pronto');
+    const novoId = 'c_' + T657(9, 10, 0), C = db658('auaulandia/vet-consultas/' + K658);
+    igual([C[novoId].corrigeDe, C[novoId].recomendacoes, C[novoId].cuidados, C[novoId].fotos, C[novoId].ts, C[novoId].por, C[novoId].correcao.por],
+      ['c1', 'oferecer água aos poucos', ['Repouso', 'Não molhar a região'], ['data:image/jpeg;base64,AAAA'], T657(9, 9, 0), 'Vera Veterinária Teste', 'Vera Veterinária Teste']);
+    igual([C.c1.corrigidaPor, C.c1.recomendacoes, C.c1.correcao.motivo], [novoId, 'observar se volta a vomitar', 'a recomendação certa é outra'], 'a anterior fica, com corrigidaPor');
+    const rc = db658('auaulandia/vet-recomendacoes/' + K658);
+    igual([rc.texto, rc.cuidados, rc.consultaId, rc.ativo], ['oferecer água aos poucos', ['Repouso', 'Não molhar a região'], novoId, true], 'a instrução é a da versão nova');
+    igual(db658('auaulandia/vet-reavaliacao/' + K658).consultaId, novoId, 'a reavaliação acompanha a versão nova');
+    const w = run('__esc657').filter((e) => e[0] === 'update' && !/auditoria/.test(e[1]));
+    igual(w.map((e) => e[1]), ['auaulandia'], 'numa escrita só');
+    // a lista: a nova em cima com PDF e WhatsApp; a anterior riscada embaixo, sem os botões
+    run('renderVetConsultas();');
+    const L = html659('vetConsultasList'), velha = L.split('vet-consulta-velha')[1] || '';
+    assert.ok(L.indexOf('vetPdfImprimir(\'' + novoId + '\')') > 0 && L.indexOf('vetConsultaCorrigir(\'' + novoId + '\')') > 0, 'a versão nova com PDF e «Corrigir»');
+    assert.ok(velha && /data-consulta="c1"/.test(L) && !/vetPdf/.test(velha) && /text-decoration:line-through/.test(velha) && /Corrigido por Vera Veterinária Teste/.test(velha), 'a anterior riscada, sem PDF');
+    assert.ok(L.indexOf('data-consulta="' + novoId + '"') < L.indexOf('data-consulta="c1"'), 'embaixo da nova');
+    await fecha658();
+    // de dia anterior: a Gestão
+    semearVet659({ consultas: { c0: C1_659({ data: '2026-10-07', ts: T657(7, 9, 0) }) } });
+    run(`__p659=vetConsultaCorrigir('c0');`); await espera659();
+    run(`corrToque('continuar', {valores:['07/10/2026', '38,5', '7,2', 'Repouso', 'outra recomendação', 'gastrite leve', '12/10/2026', 'reavaliar o estômago']})`);
+    let r = await assina658('s-vera', 'a recomendação certa é outra');
+    igual(r[0], 'conferir'); assert.ok(/Quem assina: a Gestão ou a Diretoria/.test(r[1]), r[1]);
+    [p] = await assina658(SENHA657, 'a recomendação certa é outra'); igual(p, 'pronto');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P19 (AC3.4, AC3.6) — anular a consulta: a Gestão; a consulta fica riscada; a instrução nascida dela fica ativo:false; a reavaliação dela vai junto; a antiga (sem consultaId) pergunta «Tirar junto» ou «Manter»', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, recom: RECOM659('c1'), reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaAnular('c1');`); await espera659();
+    const h = cartaz658();
+    assert.ok(/a instrução ativa que nasceu desta consulta sai junto, com o mesmo motivo: Repouso — observar se volta a vomitar/.test(h) && /a reavaliação de 12\/10\/2026 sai junto/.test(h), 'a cascata');
+    let r = await assina658('s-vera', motivo659);
+    igual(r[0], 'conferir', 'a Veterinária não anula'); assert.ok(/Quem assina: a Gestão ou a Diretoria/.test(r[1]));
+    [r] = await assina658(SENHA657, motivo659); igual(r, 'pronto');
+    const c = db658('auaulandia/vet-consultas/' + K658 + '/c1');
+    igual([c.anulada.acao, c.anulada.por, c.anulada.motivo, c.recomendacoes, c.fotos.length], ['anular', 'Gestora Teste', motivo659, 'observar se volta a vomitar', 1], 'riscada, nada apagado');
+    const rc = db658('auaulandia/vet-recomendacoes/' + K658), rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rc.ativo, rc.texto, rc.retirada.motivo, rv.data, rv.removida.motivo], [false, 'observar se volta a vomitar', motivo659, '2026-10-12', motivo659]);
+    run(`VET_RECOM_CACHE['${K658}']=__get657('auaulandia/vet-recomendacoes/${K658}'); renderVetConsultas();`);
+    igual(run('recomAtivaDe(vetHosp)'), null, 'a tarja some');
+    const L = html659('vetConsultasList');
+    assert.ok(/Anulada \(lançada por engano\) por Gestora Teste/.test(L) && !/vetPdfImprimir\('c1'\)/.test(L), 'a consulta riscada, sem PDF');
+    await fecha658();
+    // a reavaliação antiga (sem consultaId) com a data da consulta: «Manter» e «Tirar junto»
+    for (const [tirar, esperado] of [[false, null], [true, 'removida']]) {
+      semearVet659({ consultas: { c2: C1_659({ ts: T657(9, 8, 0) }) }, reaval: { data: '2026-10-12', motivo: 'reavaliar', por: 'Vera Veterinária Teste', ts: T657(9, 8, 0) } });
+      run(`__zpq657=[${tirar}];`);
+      run(`__p659=vetConsultaAnular('c2');`); await espera659();
+      const perg = J658('__zp657').filter((x) => x[0] === 'A REAVALIAÇÃO DESTA CONSULTA');
+      igual(perg.length, 1, 'perguntou');
+      assert.ok(cartaz658().indexOf(tirar ? 'sai junto (fica riscada' : 'continua marcada (você escolheu manter)') > 0, 'a cascata diz o escolhido');
+      [r] = await assina658(SENHA657, motivo659); igual(r, 'pronto'); await fecha658();
+      igual(db658('auaulandia/vet-reavaliacao/' + K658).removida ? 'removida' : null, esperado, tirar ? '«Tirar junto»' : '«Manter»');
+    }
+    // uma consulta nova com reavaliação grava o consultaId
+    run(`${VH659} __vc659={vcData:'2026-10-09', vcTemp:'', vcPeso:'', vcCuidadoLivre:'', vcRecom:'', vcObs:'olhei o ouvido, só cera', vcReaval:'2026-10-14', vcReavalMotivo:'ver o ouvido'};
+      __gv659=document.getElementById; document.getElementById=function(id){ if(__vc659[id]!==undefined) return {value:__vc659[id]}; return __gv659(id); };`);
+    try { run('salvarConsultaVet();'); await espera659(); } finally { run('document.getElementById=__gv659;'); }
+    const rv2 = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv2.data, /^c_\d+$/.test(rv2.consultaId), 'removida' in rv2], ['2026-10-14', true, false], 'AC5.3: a consulta nova grava a reavaliação nova, com o consultaId');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P20 (AC3.5) — o cartaz de corrigir e o de anular de uma consulta com saídas avisam «Este receituário já saiu: … Avise o tutor da correção.»', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659({ saidas: { s1: { como: 'whatsapp', quem: 'Vera Veterinária Teste', ts: T657(9, 9, 30) }, s2: { como: 'pdf', quem: 'Bia Consultora Teste', ts: T657(9, 9, 45) } } }) } });
+    const AVISO = 'Este receituário já saiu: WhatsApp em 09/10/2026 às 09:30, por Vera Veterinária Teste; PDF / impressão em 09/10/2026 às 09:45, por Bia Consultora Teste. Avise o tutor da correção.';
+    igual(run(`vetConsultaSaidasTexto(VET_CONSULTAS_CACHE.c1)`), AVISO);
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'outra recomendação', 'gastrite leve', '12/10/2026', 'reavaliar o estômago']})`);
+    assert.ok(cartaz658().indexOf(esc657(AVISO)) > 0, 'no corrigir');
+    await fecha658();
+    run(`__p659=vetConsultaAnular('c1');`); await espera659();
+    assert.ok(cartaz658().indexOf(esc657(AVISO)) > 0, 'no anular');
+    await fecha658();
+    igual(run(`vetConsultaSaidasTexto({})`), '', 'sem saída, sem aviso');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P21 (AC4) — «Retirar instrução» (a própria senha, 4 palavras): ativo:false, sem apagar o texto; a tarja some da ficha e do card; riscada no Cuidado Vet com «Reabrir», que a devolve', async () => {
+  arma659();
+  try {
+    semearVet659({ recom: RECOM659('c1') });
+    run(`renderVetInstrucoesFicha(vetHosp, 'vf-instr');`);
+    assert.ok(/onclick="vetInstrRetirar\(\)">Retirar instrução/.test(html659('vf-instr')) && /min-height:44px[^>]*>Retirar instrução/.test(html659('vf-instr')), 'o botão no Cuidado Vet');
+    run(`renderVetInstrucoesFicha(vetHosp, 'hf-vet-instr');`);
+    assert.ok(!/vetInstrRetirar/.test(html659('hf-vet-instr')) && /Instruções da Veterinária/.test(html659('hf-vet-instr')), 'no card do Plantão, só a tarja');
+    run('__p659=vetInstrRetirar();'); await espera659();
+    assert.ok(/a tarja «Instruções da Veterinária» some da ficha do FILHOt e do card do Plantão: Repouso — observar se volta a vomitar/.test(cartaz658()), 'a cascata diz o que some');
+    let r = await assina658('s-vera', 'erro');
+    igual(r[0], 'conferir'); assert.ok(/pelo menos 4 palavras/.test(r[1]), '«erro» recusado');
+    r = await assina658('s-bia', 'a veterinária liberou o repouso');
+    igual(r[0], 'conferir', 'a Consultora não tem alterar-vet');
+    [r] = await assina658('s-vera', 'a veterinária liberou o repouso'); igual(r, 'pronto');
+    const rc = db658('auaulandia/vet-recomendacoes/' + K658);
+    igual([rc.ativo, rc.texto, rc.cuidados, rc.retirada.por, rc.retirada.rotulo, rc.retirada.rotuloAcao], [false, 'observar se volta a vomitar', ['Repouso'], 'Vera Veterinária Teste', 'Retirada', 'Retirou']);
+    igual(run('recomAtivaDe(vetHosp)'), null);
+    run(`renderVetInstrucoesFicha(vetHosp, 'hf-vet-instr'); renderVetInstrucoesFicha(vetHosp, 'vf-instr');`);
+    igual(html659('hf-vet-instr'), '', 'a tarja some do card do Plantão');
+    assert.ok(/Instrução retirada/.test(html659('vf-instr')) && /Retirada por Vera Veterinária Teste/.test(html659('vf-instr')) && /onclick="vetInstrReabrir\(\)">Reabrir/.test(html659('vf-instr')), 'riscada, com «Reabrir»');
+    assert.ok(aud658('registro-anulado').some((a) => a[2].rotuloAcao === 'Retirou') && aud658('vet-instrucao-retirada').length === 1, 'o rastro e a ação própria');
+    igual(run(`acaoRotulo({acao:'registro-anulado', rotuloAcao:'Retirou', detalhe:'a instrução da Veterinária de Biscoito'})`), 'Retirou a instrução da Veterinária de Biscoito', 'a Linha do tempo diz «Retirou», não «lançado por engano»');
+    await fecha658();
+    run('__p659=vetInstrReabrir();'); await espera659();
+    [r] = await assina658('s-vera', 'o repouso precisa continuar mais'); igual(r, 'pronto');
+    const rc2 = db658('auaulandia/vet-recomendacoes/' + K658);
+    igual([rc2.ativo, 'retirada' in rc2, Object.keys(rc2.retiradas || {}).length, rc2.reabertura.acao], [true, false, 1, 'reabrir'], 'volta ativa; a retirada fica guardada');
+    assert.ok(run('recomAtivaDe(vetHosp)') !== null, 'a tarja volta');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P22 (AC5) — a reavaliação: «Feita» tira do quadro (quem e quando, pelo login); «Reabrir» devolve; remover pede 4 palavras e a própria senha e deixa riscada, sem apagar', async () => {
+  arma659();
+  try {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}];`);
+    semearVet659({ reaval: { data: '2026-10-09', motivo: 'reavaliar a córnea', por: 'Vera Veterinária Teste', ts: T657(7, 9, 0) } });
+    run('checarReavaliacoesHoje();');
+    const q = html659('vetReavalBanner');
+    assert.ok(/Reavaliação de hoje/.test(q) && /Biscoito/.test(q) && /vetReavalFeita\(&#39;biscoito__rita teste&#39;\)|vetReavalFeita\('biscoito__rita teste'\)/.test(q) && /min-height:44px[^>]*>Feita/.test(q), 'o quadro com «Feita»');
+    const r0 = await run(`vetReavalFeita('${K658}')`); await espera659();
+    igual(r0 && r0.ok, true);
+    const rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv.data, rv.motivo, rv.feita.quem, rv.feita.ts], ['2026-10-09', 'reavaliar a córnea', 'Gestora Teste', T657(9, 10, 0)], 'feita, com quem e quando; nada apagado');
+    run('checarReavaliacoesHoje();'); igual(html659('vetReavalBanner'), '', 'sai do quadro');
+    run(`renderVcReavalAtual(vetHosp);`);
+    assert.ok(/— feita/.test(html659('vcReavalAtual')) && /Feita por Gestora Teste/.test(html659('vcReavalAtual')) && /onclick="vetReavalReabrir\(\)">Reabrir/.test(html659('vcReavalAtual')), 'no Cuidado Vet, como feita, com «Reabrir»');
+    run('__p659=vetReavalReabrir();'); await espera659();
+    let [p] = await assina658('s-vera', 'ainda falta ver a córnea'); igual(p, 'pronto'); await fecha658();
+    const rv2 = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual(['feita' in rv2, Object.keys(rv2.feitas || {}).length], [false, 1], 'volta ao quadro; a «Feita» fica guardada');
+    run('checarReavaliacoesHoje();'); assert.ok(/Biscoito/.test(html659('vetReavalBanner')), 'de volta ao quadro');
+    // remover: «erro» recusado; 4 palavras e a própria senha; riscada, nunca apagada
+    run('__p659=vetRemoverReavaliacao();'); await espera659();
+    let r = await assina658('s-vera', 'erro'); igual(r[0], 'conferir'); assert.ok(/pelo menos 4 palavras/.test(r[1]));
+    [p] = await assina658('s-vera', 'a córnea já está boa'); igual(p, 'pronto'); await fecha658();
+    const rv3 = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv3.data, rv3.removida.motivo, rv3.removida.rotulo], ['2026-10-09', 'a córnea já está boa', 'Removida'], 'riscada (removida), não apagada');
+    igual(run('__esc657').filter((e) => e[0] === 'remove').length, 0, 'nenhum remove()');
+    run('checarReavaliacoesHoje();'); igual(html659('vetReavalBanner'), '', 'sai do quadro');
+    run(`VET_RECOM_CACHE['${K658}']=${JSON.stringify(RECOM659('c1'))}; renderVetInstrucoesFicha(vetHosp, 'vf-instr'); renderVcReavalAtual(vetHosp);`);
+    assert.ok(!/Reavaliação marcada/.test(html659('vf-instr')), 'sai da ficha');
+    assert.ok(/Removida por Vera Veterinária Teste/.test(html659('vcReavalAtual')) && /line-through/.test(html659('vcReavalAtual')), 'riscada no Cuidado Vet');
+    igual(J658(`poVet({dia:'2026-10-09', vetFila:{}})`).filter((x) => x.tipo === 'reavaliacao').length, 0, 'e do painel da Gestão');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P23 (AC6) — a observação: editar guarda o original; retirar some da ficha e fica riscada no Cuidado Vet, com «Reabrir»; a de dia anterior, só a Gestão; o aviso da Márcia', async () => {
+  arma659();
+  try {
+    semearVet659({ obs: { o1: { texto: 'ouvido esquerdo com cera', quem: 'Vera Veterinária Teste', ts: T657(9, 9, 0) }, o0: { texto: 'patinhas ok', quem: 'Vera Veterinária Teste', ts: T657(7, 9, 0) } } });
+    run('renderVetObsList();');
+    assert.ok(/vetObsEditar\(&#39;o1&#39;\)|vetObsEditar\('o1'\)/.test(html659('vetObsList')) && /min-height:44px[^>]*>Retirar/.test(html659('vetObsList')), '«Editar» e «Retirar»');
+    run(`__p659=vetObsEditar('o1');`); await espera659();
+    run(`corrToque('continuar', {valores:['ouvido esquerdo com cera, sem inflamação']})`);
+    assert.ok(cartaz658().indexOf('A Márcia pode já ter repassado esta observação ao tutor: avise a correção.') > 0, 'o aviso da Márcia');
+    let [p] = await assina658('s-vera', 'faltou dizer que não inflamou'); igual(p, 'pronto'); await fecha658();
+    const o1 = db658('auaulandia/vet-observacoes/' + K658 + '/o1'), ed = Object.keys(o1.edicoes || {}).map((k) => o1.edicoes[k]);
+    igual([o1.texto, ed.length, ed[0].texto, ed[0].por, o1.ts], ['ouvido esquerdo com cera, sem inflamação', 1, 'ouvido esquerdo com cera', 'Vera Veterinária Teste', T657(9, 9, 0)], 'o original guardado na própria observação');
+    run(`__p659=vetObsRetirar('o1');`); await espera659();
+    assert.ok(cartaz658().indexOf('A Márcia pode já ter repassado') > 0, 'o aviso também no retirar');
+    [p] = await assina658('s-vera', 'a observação era de outro FILHOt'); igual(p, 'pronto'); await fecha658();
+    igual(db658('auaulandia/vet-observacoes/' + K658 + '/o1').retirada.rotulo, 'Retirada');
+    run(`renderVetInstrucoesFicha(vetHosp, 'vf-instr'); renderVetObsList();`);
+    assert.ok(html659('vf-instr').indexOf('ouvido esquerdo') < 0 && /patinhas ok/.test(html659('vf-instr')), 'some das três mais recentes da ficha');
+    assert.ok(/line-through;opacity:\.75">ouvido esquerdo com cera, sem inflamação/.test(html659('vetObsList')) && /vetObsReabrir\('o1'\)/.test(html659('vetObsList').replace(/&#39;/g, "'")), 'riscada no Cuidado Vet, com «Reabrir»');
+    run(`__p659=vetObsReabrir('o1');`); await espera659();
+    [p] = await assina658('s-vera', 'era deste FILHOt mesmo'); igual(p, 'pronto'); await fecha658();
+    igual(['retirada' in db658('auaulandia/vet-observacoes/' + K658 + '/o1'), Object.keys(db658('auaulandia/vet-observacoes/' + K658 + '/o1').retiradas || {}).length], [false, 1]);
+    // a de dia anterior: só a Gestão
+    run(`__p659=vetObsEditar('o0');`); await espera659();
+    run(`corrToque('continuar', {valores:['patinhas e unhas ok']})`);
+    let r = await assina658('s-vera', 'faltou falar das unhas'); igual(r[0], 'conferir'); assert.ok(/Quem assina: a Gestão ou a Diretoria/.test(r[1]), r[1]);
+    [p] = await assina658(SENHA657, 'faltou falar das unhas'); igual(p, 'pronto');
+  } finally { solta659(); }
+});
+// ---- AC7 — a prescrição: o «Alterar» por caminhos, o «Ciente», a régua, a trava, o motivo e «Lançada por engano» -----------
+// o «Alterar» de verdade (vetSalvarMed com os valores do formulário), com a tela aberta no remédio
+const altera659 = async (id, form) => { ctx.__fm659 = form; run(`vetMedEditId=${id ? JSON.stringify(id) : 'null'};`); const r = await run('vetSalvarMed(__fm659)'); await espera659(); return r; };
+const statusVet659 = () => String(run("__el657['vetMed-status'].textContent") || '');
+const APQ659 = (extra) => Object.assign({ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'], continuo: true, tipo: 'medicamento', origem: 'vet', dataInicio: '2026-10-01',
+  estoque: { modo: 'contavel', inicial: 20, restante: 11 }, historico: [{ quem: 'Vera Veterinária Teste', quando: '01/10 09:00', acao: 'Prescreveu', motivo: 'coceira forte nas patas' }] }, extra || {});
+const FORM659 = (it, extra) => Object.assign({ nome: it.nome, q: it.q, u: it.u, local: it.local || '', horarios: (it.horarios || []).slice(), dataInicio: it.dataInicio || '2026-10-01',
+  continuo: !!it.continuo, dataFim: it.dataFim || '', tipo: it.tipo || 'medicamento', freq: it.freq || null, motivo: 'a veterinária mudou a dose agora' }, extra || {});
+const abreVetMed659 = async () => { run(`${VH659} vetCarregarMed(vetHosp);`); await espera659(); };
+
+provaAsync('6.59 P24 (AC7.1) — vetSalvarMed por caminhos: trocadoPor, continuacaoDe, paradoEm, informado_por, confirmado_em_checkin, estoqueMovidoPara, retomadoPor, quando, derivado_de, obs, motivo, a suspensão e o estoque continuam; o que o formulário esvazia vai a vazio; numa escrita só, com o carimbo', async () => {
+  arma659();
+  try {
+    const extras = { continuacaoDe: 'ci_1', informado_por: { quem: 'Bia Consultora Teste', quando: '05/10 10:00', ts: 1 }, confirmado_em_checkin: { quem: 'Bia Consultora Teste', ts: 2 },
+      estoqueMovidoPara: 'mcr_t_x', retomadoPor: 'mcr_t_y', quando: { ref: 'fixo' }, derivado_de: 'fixo', obs: 'dar com comida', motivo: 'coceira forte', local: 'orelha', freq: { tipo: 'dias', dias: ['seg'] } };
+    semear658({ itens: { apq: APQ659(extras), sus: APQ659({ nome: 'Otomax', suspenso: true, suspensoPor: 'Dra. Teste', suspensoMotivo: 'esperar exame', suspensoTs: 3 }) }, log: {} });
+    await abreVetMed659();
+    igual(J658('VET_MED_TS'), { key: K658, ts: 500, lido: true }, 'a tela leu o carimbo da agenda junto com os remédios');
+    const antes = db658(AG658 + '/itens/apq');
+    run('__esc657=[];');
+    const r = await altera659('apq', FORM659(antes, { q: '2', freq: null }));
+    igual(r && r.ok, true, statusVet659());
+    const depois = db658(AG658 + '/itens/apq');
+    Object.keys(extras).filter((k) => ['local', 'freq'].indexOf(k) < 0).forEach((k) => igual(depois[k], antes[k], k + ' continua'));
+    igual([depois.q, depois.estoque, 'local' in depois, 'freq' in depois, depois.historico.length, depois.historico.slice(-1)[0].acao],
+      ['2', antes.estoque, false, false, 2, 'Alterou a prescrição'], 'a dose muda; o estoque continua; o local (fora de pomada) e a frequência diária vão a vazio, como antes');
+    const w = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !/RECUSADO/.test(e[0]) && e[0] !== 'transaction');
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update ' + AG658], 'uma escrita só, por caminhos');
+    assert.ok(w[0][2].indexOf('_ts') >= 0 && w[0][2].every((k) => k === '_ts' || k === '_quem' || k === 'nome' || k === 'tutor' || /^itens\/apq\/(nome|q|u|local|horarios|tipo|origem|dataInicio|continuo|dataFim|freq|historico)$/.test(k)), 'só os campos do formulário e o carimbo, na mesma escrita: ' + w[0][2].join(' '));
+    igual(run('__esc657').filter((e) => e[0] === 'transaction' && /\/_ts$/.test(e[1])).length, 1, 'passou pela trava (mcrTravaAgenda)');
+    // a tela antiga, que mostrava o Otomax ainda em vigor: o «Alterar» não tira a suspensão
+    run(`VET_MED_CACHE.sus=Object.assign({}, VET_MED_CACHE.sus); delete VET_MED_CACHE.sus.suspenso;`);
+    await altera659('sus', FORM659(db658(AG658 + '/itens/sus'), { q: '3', nome: 'Otomax' }));
+    const s = db658(AG658 + '/itens/sus');
+    igual([s.q, s.suspenso, s.suspensoPor, s.suspensoMotivo], ['3', true, 'Dra. Teste', 'esperar exame'], 'a suspensão continua');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P25 (AC7.2) — o «Ciente» com a data nova: mudou o fim, o «Ciente» sai e vira uma linha do histórico (o aviso volta); sem mudar o fim, o «Ciente» continua', async () => {
+  arma659();
+  try {
+    const V = (x) => APQ659(Object.assign({ continuo: false, dataFim: '2026-10-08', fimCiente: true, fimCientePor: 'Vera Veterinária Teste', fimCienteTs: 5 }, x || {}));
+    semear658({ itens: { v1: V(), v2: V({ nome: 'Antibiótico' }) }, log: {} });
+    await abreVetMed659();
+    await altera659('v1', FORM659(db658(AG658 + '/itens/v1'), { dataFim: '2026-10-15' }));
+    const a = db658(AG658 + '/itens/v1');
+    igual(['fimCiente' in a, 'fimCientePor' in a, a.dataFim], [false, false, '2026-10-15'], 'o «Ciente» saiu');
+    assert.ok(a.historico.some((h) => /A data de término mudou: o aviso de receita encerrada volta a valer/.test(h.acao)), 'a linha do histórico');
+    await abreVetMed659();
+    await altera659('v2', FORM659(db658(AG658 + '/itens/v2'), { q: '2' }));
+    const b = db658(AG658 + '/itens/v2');
+    igual([b.fimCiente, b.fimCientePor, b.q], [true, 'Vera Veterinária Teste', '2'], 'sem mudar o fim, o «Ciente» continua');
+    // o aviso volta com a data nova (quando o novo fim chegar), porque o «Ciente» não está mais lá
+    run(`MED_AGENDA_GERAL={'${K658}':{nome:'Biscoito', itens:__get657('${AG658}/itens')}}; hojeISO=function(){ return '2026-10-16'; };`);
+    igual(J658('medsEncerradasPend()').map((p) => p.id), ['v1'], 'em 16/10, o aviso da v1 volta (a v2 continua com o «Ciente»)');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P26 (AC7.3, AC7.7) — a régua no «Alterar»: o horário mudado com a dose de hoje dada começa amanhã (troca por datas), com a frase; as provas R28, S01, S02 e A4 a A6 da 6.54 repetidas pelo Cuidado Vet', async () => {
+  // cada caso: a agenda, a dose dada de hoje, a hora, o formulário; depois, a fila do alarme por dia (a carga de verdade da 6.54)
+  const casos = [
+    { id: 'R28', itens: { ci_1: Z654Q({ continuo: false, dataFim: '2026-10-10', origem: 'vet', dataInicio: '2026-10-01' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, min: 600,
+      form: { horarios: ['09:00'] }, esp: { 9: ['ci_1@08:00'], 10: ['mcr_t_ci_1_20261010@09:00'], 11: [] } },
+    { id: 'S01', itens: { ci_1: Z654Q({ freq: { tipo: 'alternado' }, dataInicio: '2026-10-05', origem: 'vet' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, min: 600,
+      form: { horarios: ['09:00'] }, esp: { 9: ['ci_1@08:00'], 10: [], 11: ['mcr_t_ci_1_20261011@09:00'], 12: [], 13: ['mcr_t_ci_1_20261011@09:00'] } },
+    { id: 'S02', itens: { ci_1: Z654Q({ horarios: ['20:00'], origem: 'vet', dataInicio: '2026-10-01' }) }, log: { 'ci_1_20-00': DOSE658('ci_1', 'Zenrelia', '20:00', 'comprimido', T658(9, 18, 20)) }, min: 18 * 60 + 30,
+      form: { horarios: ['21:00'] }, esp: { 9: ['ci_1@20:00'], 10: ['mcr_t_ci_1_20261010@21:00'], 11: ['mcr_t_ci_1_20261010@21:00'] } },
+    { id: 'A4', itens: { ci_1: Z654Q({ horarios: ['08:00', '20:00'], origem: 'vet', dataInicio: '2026-10-01' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, min: 600,
+      form: { q: '0,5', horarios: ['09:00', '20:00'] }, esp: { 9: ['ci_1@08:00', 'ci_1@20:00'], 10: ['mcr_t_ci_1_20261010@09:00', 'mcr_t_ci_1_20261010@20:00'] } },
+    { id: 'A5', itens: { ci_1: Z654Q({ continuo: false, dataFim: '2026-10-09', origem: 'vet', dataInicio: '2026-10-01' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, min: 600,
+      form: { horarios: ['09:00'], continuo: false, dataFim: '2026-10-14' }, esp: { 9: ['ci_1@08:00'], 10: ['mcr_t_ci_1_20261010@09:00'], 14: ['mcr_t_ci_1_20261010@09:00'], 15: [] } },
+    { id: 'A6', itens: { ci_1: Z654Q({ continuo: false, dataFim: '2026-10-09', trocadoPor: 'mcr_t_ci_1_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_ci_1_20261010', origem: 'vet', dataInicio: '2026-10-01' }),
+      mcr_t_ci_1_20261010: Z654Q({ horarios: ['10:00'], dataInicio: '2026-10-10', continuacaoDe: 'ci_1', origem: 'vet' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) }, min: 600,
+      form: { horarios: ['09:00'] }, esp: { 9: ['ci_1@08:00'], 10: ['mcr_t_ci_1_20261010@10:00'] } },
+  ];
+  for (const c of casos) {
+    let depois = null, status = '';
+    arma659();
+    try {
+      relogio658(T658(9, Math.floor(c.min / 60), c.min % 60));
+      semear658({ itens: JSON.parse(JSON.stringify(c.itens)), log: c.log });
+      await abreVetMed659();
+      const it = db658(AG658 + '/itens/ci_1');
+      const f = FORM659(it, Object.assign({ continuo: !!it.continuo, dataFim: it.dataFim || '' }, c.form));
+      const r = await altera659('ci_1', f);
+      status = statusVet659();
+      igual(r && r.ok, true, c.id + ': gravou — ' + status);
+      depois = db658(AG658 + '/itens');
+    } finally { solta659(); }
+    if (c.id === 'R28') { igual([!!depois.mcr_t_ci_1_20261010.continuo, depois.mcr_t_ci_1_20261010.dataFim], [false, '2026-10-10'], 'R28: o novo termina junto com a receita'); assert.ok(/O horário novo \(09:00\) começa amanhã, sábado, 10\/10; hoje continua 08:00\./.test(status), 'R28: a frase da régua na tela — ' + status); }
+    if (c.id === 'A4') { igual([depois.ci_1.q, depois.ci_1.horarios, depois.mcr_t_ci_1_20261010.q, depois.mcr_t_ci_1_20261010.estoque.restante], ['0,5', ['08:00', '20:00'], '0,5', 11.5], 'A4: a dose nova vale na próxima dose; o estoque herdado conta a dose nova'); }
+    if (c.id === 'A6') { igual([depois.ci_1.horarios, Object.keys(depois).filter((k) => /^mcr_t_/.test(k))], [['08:00'], ['mcr_t_ci_1_20261010']], 'A6: a linha de hoje continua 08:00, sem linha nova'); assert.ok(/mude a linha de baixo \(a que começa no sábado, 10\/10\)/.test(status), status); }
+    if (c.id !== 'A6') assert.ok(depois.ci_1.historico.slice(-1)[0].acao === 'Alterou a prescrição' && depois.ci_1.trocadoPor, c.id + ': a troca por datas, com a linha do «Alterar»');
+    run(ARMA654);
+    try { for (const d of Object.keys(c.esp)) igual(await fila654Q(depois, Number(d)), c.esp[d], c.id + ' — dia ' + d + '/10: nenhuma dose em dobro, nenhuma perdida'); }
+    finally { run(SOLTA654); }
+  }
+});
+provaAsync('6.59 P27 (AC7.4) — a trava no «Alterar»: a agenda mudada em outro aparelho depois que o Cuidado Vet a leu, nada gravado; depois de um «Suspender» na mesma tela, o «Alterar» seguinte grava', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), ome: OME658() }, log: {} });
+    await abreVetMed659();
+    put658(AG658 + '/_ts', 777); put658(AG658 + '/itens/ome/q', '2');   // outro aparelho gravou a agenda
+    run('__esc657=[];');
+    const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2' }));
+    igual(r && r.trava, true);
+    igual(statusVet659(), 'A agenda de Biscoito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.');
+    igual(db658(AG658 + '/itens/apq').q, '1', 'nada gravado');
+    igual(run('__esc657').filter((e) => e[0] === 'update' && /medicacao-agenda/.test(e[1])).length, 0);
+    // relida a tela: «Suspender» o Ômega e, na mesma tela, «Alterar» o Apoquel
+    await abreVetMed659();
+    run(`__ztq657=['o tutor pediu para parar o suplemento'];`);
+    await run(`vetSuspenderMed('ome')`); await espera659();
+    igual(db658(AG658 + '/itens/ome').suspenso, true);
+    igual(J658('VET_MED_TS.ts'), db658(AG658 + '/_ts'), 'a tela relê o carimbo depois de gravar');
+    const r2 = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2' }));
+    igual([r2 && r2.ok, db658(AG658 + '/itens/apq').q], [true, '2'], 'o «Alterar» seguinte, na mesma tela, grava: ' + statusVet659());
+    // o «Suspender» e o «Reativar» com a agenda mudada em outro aparelho: nada gravado
+    await espera659(); put658(AG658 + '/_ts', 888); run(`__esc657=[]; __al657=[]; __ztq657=['o tutor pediu para suspender', 'o tutor pediu para voltar'];`);
+    await run(`vetSuspenderMed('apq')`); await run(`vetReativarMed('ome')`); await espera659();
+    igual(J658('__al657').filter((a) => a === 'A agenda de Biscoito mudou em outro aparelho. Nada foi salvo: feche e abra de novo.').length, 2, JSON.stringify(J658('__al657')));
+    igual([!!db658(AG658 + '/itens/apq').suspenso, !!db658(AG658 + '/itens/ome').suspenso], [false, true], 'nada mudou');
+    igual(run('__esc657').filter((e) => e[0] === 'update' && /medicacao-agenda/.test(e[1])).length, 0);
+  } finally { solta659(); }
+});
+provaAsync('6.59 P28 (AC7.5, AC8.1) — o motivo de 4 palavras no «Alterar», no «Suspender» e no «Reativar» («erro» recusado)', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }) }, log: {} });
+    await abreVetMed659(); run('__esc657=[];');
+    await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2', motivo: 'erro' }));
+    assert.ok(/O motivo da prescrição ou da alteração fica registrado e assinado\. Escreva o que aconteceu em pelo menos 4 palavras/.test(statusVet659()), statusVet659());
+    run(`__ztOp659=[]; zTexto=function(t, l, op){ __ztOp659.push(op||{}); return Promise.resolve('erro'); };`);
+    await run(`vetSuspenderMed('apq')`); await run(`vetReativarMed('zen')`); await espera659();
+    igual(J658('__al657').filter((a) => /^Nada foi gravado\. Escreva o que aconteceu em pelo menos 4 palavras/.test(a)).length, 2, 'as duas recusam: ' + JSON.stringify(J658('__al657')));
+    igual(run('__ztOp659.map(function(o){ return typeof o.validar==="function" ? o.validar("erro") : "sem régua"; })').map((x) => /pelo menos 4 palavras/.test(x)), [true, true], 'a própria caixa confere as 4 palavras');
+    igual(run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !/RECUSADO/.test(e[0])).length, 0, 'nada gravado');
+    // a nova prescrição também pede 4 palavras
+    await altera659(null, { nome: 'Omeprazol', q: '1', u: 'comprimido', horarios: ['07:00'], dataInicio: '2026-10-09', continuo: true, motivo: 'gastrite' });
+    assert.ok(/pelo menos 4 palavras/.test(statusVet659()), statusVet659());
+    await altera659(null, { nome: 'Omeprazol', q: '1', u: 'comprimido', horarios: ['07:00'], dataInicio: '2026-10-09', continuo: true, motivo: 'proteger o estômago na gastrite' });
+    const novos = Object.keys(db658(AG658 + '/itens')).filter((k) => /^vet_/.test(k));
+    igual([novos.length, db658(AG658 + '/itens/' + novos[0]).historico[0].motivo], [1, 'proteger o estômago na gastrite'], 'com 4 palavras, prescreve');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P29 (AC7.6) — «Lançada por engano» no Cuidado Vet chama o anular da 6.58: a Gestão assina, a corrente inteira, nada apagado; o remédio aparece riscado, sem botões', async () => {
+  arma659();
+  try {
+    semear658({ itens: { zen: ZEN658(), zen2: ZEN2_658() } });
+    await abreVetMed659();
+    run('renderVetMedList();');
+    assert.ok(/vetMedEngano\(\\?'zen\\?'\)|vetMedEngano\('zen'\)/.test(html659('vetMedList')) && /min-height:44px[^>]*>Lançada por engano/.test(html659('vetMedList')), 'o botão, com 44 px');
+    run(`__p659=vetMedEngano('zen');`); await espera659();
+    const h = cartaz658();
+    assert.ok(/Lançado por engano/.test(h) && /Senha da Gestão/.test(h) && /da agenda de Biscoito$/.test(String(run('CORR_ATUAL.op.oque'))), 'o cartaz da 6.58: ' + String(run('CORR_ATUAL.op.oque')));
+    igual(run('CORR_ATUAL.op.tela'), 'Cuidado Vet');
+    let r = await assina658('s-vera', 'a receita era de outro FILHOt'); igual(r[0], 'conferir', 'a Veterinária não assina (decisão 1)');
+    [r] = await assina658(SENHA657, 'a receita era de outro FILHOt'); igual(r, 'pronto'); await espera659();
+    const it = db658(AG658 + '/itens/zen');
+    igual([!!it.anulado, it.anulado.motivo, it.nome, it.estoque.restante], [true, 'a receita era de outro FILHOt', 'Zenrelia', 11], 'anulado, nada apagado');
+    igual(J658('VET_MED_TS.ts'), db658(AG658 + '/_ts'), 'a tela relida (carimbo novo)');
+    run('renderVetMedList();');
+    const bloco = html659('vetMedList').split('vet-med-item').filter((x) => /data-anulado="zen"/.test(x))[0] || '';
+    assert.ok(bloco && /corr-riscado/.test(bloco) && !/vetAbrirAlterarMed|vetSuspenderMed|vetMedEngano/.test(bloco), 'riscado, sem botões');
+    assert.ok(aud658('medicacao-agenda-anulada').some((a) => a[2].tela === 'Cuidado Vet'), 'o rastro diz que foi no Cuidado Vet');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P30 (AC8.2) — o histórico inteiro no Cuidado Vet: as 4 últimas ações e «ver o histórico inteiro (N)», que mostra todas', async () => {
+  arma659();
+  try {
+    const h = []; for (let i = 1; i <= 6; i++) h.push({ quem: 'Teste ' + i, quando: '0' + i + '/10 09:00', acao: 'Ação número ' + i, motivo: 'motivo ' + i });
+    semear658({ itens: { apq: APQ659({ historico: h }) }, log: {} });
+    await abreVetMed659(); run('renderVetMedList();');
+    let L = html659('vetMedList');
+    igual([/Ação número 2/.test(L), /Ação número 3/.test(L), /Ação número 6/.test(L), /ver o histórico inteiro \(6\)/.test(L)], [false, true, true, true]);
+    run(`vetMedHistTodo('apq');`); L = html659('vetMedList');
+    igual([/Ação número 1/.test(L), /Ação número 6/.test(L), /mostrar só as 4 últimas/.test(L)], [true, true, true], 'todas');
+    // a linha da régua da 6.54 (mcrTrocaPorDatas) já traz o motivo dentro da ação: aparece uma vez só
+    const M = 'Salvar agenda do Plantão: a dose das 08:00 de hoje já foi dada';
+    semear658({ itens: { apq: APQ659({ historico: [{ quem: 'Vera Veterinária Teste', quando: '09/10 10:01', acao: 'Horário mudou de 08:00 para 09:00 a partir de sábado, 10/10 — ' + M, motivo: M }] }) }, log: {} });
+    await abreVetMed659(); run('renderVetMedList();'); L = html659('vetMedList');
+    igual(L.split(M).length - 1, 1, 'o motivo da régua uma vez só');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P31 (AC8.3) — Suspender e Reativar de FILHOt hospedado avisam o grupo plantao; aulunos do Day Care, sem aviso; sem o grupo na ponte, só a auditoria', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), zen: ZEN658({ suspenso: true, suspensoPor: 'Dra. Teste' }) }, log: {} });
+    run(`EST_TODAS={e1:{refKey:'${K658}', nome:'Biscoito', tutor:'Rita Teste', entrada:'2026-10-08', saida:'2026-10-12', status:'ativa'}};`);
+    await abreVetMed659();
+    run(`__ztq657=['esperar o exame de sangue', 'o exame de sangue veio normal'];`);
+    await run(`vetSuspenderMed('apq')`); await espera659();
+    await run(`vetReativarMed('zen')`); await espera659();
+    igual(tgPlantao659().map((m) => m.texto), ['Remédio de hóspede mudou no Cuidado Vet:\nApoquel de Biscoito SUSPENSO no Cuidado Vet (Gestora Teste) — motivo: esperar o exame de sangue',
+      'Remédio de hóspede mudou no Cuidado Vet:\nZenrelia de Biscoito REATIVADO no Cuidado Vet (Gestora Teste) — motivo: o exame de sangue veio normal']);
+    // a Veterinária: «pela Veterinária»
+    run(`document.body.dataset.role='vet'; __login657={nome:'Vera Veterinária Teste', role:'vet'}; __tg658=[]; __ztq657=['o exame vai ser refeito amanhã'];`);
+    await abreVetMed659(); await run(`vetSuspenderMed('zen')`); await espera659();
+    igual(tgPlantao659().map((m) => m.texto.split('\n')[1]), ['Zenrelia de Biscoito SUSPENSO pela Veterinária (Vera Veterinária Teste) — motivo: o exame vai ser refeito amanhã']);
+    // aulunos do Day Care (sem hospedagem): sem aviso
+    run(`EST_TODAS={}; __tg658=[]; __ztq657=['o exame vai ser refeito depois'];`);
+    await abreVetMed659(); await run(`vetReativarMed('zen')`); await espera659();
+    igual(tgPlantao659().length, 0, 'sem plantão para o Day Care');
+    // sem o grupo na ponte: só a auditoria
+    run(`EST_TODAS={e1:{refKey:'${K658}', nome:'Biscoito', tutor:'Rita Teste', entrada:'2026-10-08', saida:'2026-10-12', status:'ativa'}}; __grupos659.plantao=false; __tg658=[]; __au657=[]; __ztq657=['esperar mais um dia inteiro'];`);
+    await abreVetMed659(); await run(`vetSuspenderMed('zen')`); await espera659();
+    igual(tgPlantao659().length, 0);
+    assert.ok(aud658('vet-medicacao-suspensa').some((a) => /^NÃO avisou o grupo do plantão \(o grupo não está na ponte\): Zenrelia de Biscoito SUSPENSO/.test(a[1])), JSON.stringify(aud658('vet-medicacao-suspensa')));
+  } finally { solta659(); }
+});
+provaAsync('6.59 P32 (AC9) — «Ainda preciso reavaliar»: o «Ciente» sai, a linha no histórico com o motivo, o carimbo na mesma escrita, o aviso volta; fora da janela de 30 dias, sem botão', async () => {
+  arma659();
+  try {
+    const V = (x) => APQ659(Object.assign({ continuo: false, dataFim: '2026-10-08', fimCiente: true, fimCientePor: 'Vera Veterinária Teste', fimCienteTs: 5 }, x || {}));
+    semear658({ itens: { v1: V(), velho: V({ nome: 'Antigo', dataFim: '2026-08-01' }) }, log: {} });
+    run(`MED_AGENDA_GERAL={'${K658}':{nome:'Biscoito', itens:__get657('${AG658}/itens')}};`);
+    await abreVetMed659(); run('renderVetMedList();');
+    const L = html659('vetMedList').replace(/&#39;/g, "'");
+    assert.ok(/vetCienteDesfazer\('biscoito__rita teste','v1'\)">Ainda preciso reavaliar/.test(L), 'o botão no remédio com «Ciente» dentro da janela');
+    assert.ok(!/vetCienteDesfazer\('biscoito__rita teste','velho'\)/.test(L), 'fora da janela de 30 dias, sem botão');
+    igual(J658('medsEncerradasPend()').length, 0, 'com o «Ciente», sem aviso');
+    run('__esc657=[];');
+    run(`__p659=vetCienteDesfazer('${K658}', 'v1');`); await espera659();
+    assert.ok(/Ainda preciso reavaliar/.test(cartaz658()) && /Receita encerrada — precisa de nova avaliação\?/.test(cartaz658()));
+    let [p] = await assina658('s-vera', 'a coceira voltou, preciso ver'); igual(p, 'pronto'); await espera659();
+    const it = db658(AG658 + '/itens/v1');
+    igual(['fimCiente' in it, it.historico.slice(-1)[0].acao, it.historico.slice(-1)[0].motivo], [false, 'Ainda preciso reavaliar — o «Ciente do término» foi desfeito', 'a coceira voltou, preciso ver']);
+    const w = run('__esc657').filter((e) => e[0] === 'update' && /medicacao-agenda/.test(e[1]));
+    igual(w.length, 1); assert.ok(w[0][2].indexOf('_ts') >= 0 && w[0][2].indexOf('itens/v1/fimCiente') >= 0, 'o carimbo na mesma escrita');
+    igual(J658('medsEncerradasPend()').map((x) => x.id), ['v1'], 'o aviso «Receita encerrada» volta');
+    assert.ok(aud658('vet-medicacao-ciente-desfeito').length === 1);
+    run('__za657=[];'); await run(`vetCienteDesfazer('${K658}', 'velho')`); await espera659();
+    assert.ok(J658('__za657').some((z) => /NÃO HÁ «CIENTE» PARA DESFAZER/.test(z[0])), 'fora da janela, nada');
+  } finally { solta659(); }
+});
+prova('6.59 P33 (AC11) — a Linha do tempo: as ações novas traduzidas, também no resumo por pessoa', () => {
+  const NOVAS = ['peso-corrigido', 'peso-anulado', 'peso-reaberto', 'vence-amanha', 'vet-consulta-corrigida', 'vet-consulta-anulada', 'vet-instrucao-retirada', 'vet-instrucao-reaberta',
+    'vet-reavaliacao-feita', 'vet-reavaliacao-reaberta', 'vet-reavaliacao-removida', 'vet-observacao-editada', 'vet-observacao-retirada', 'vet-observacao-reaberta',
+    'vet-medicacao-ciente-desfeito', 'vet-medicacao-suspensa', 'vet-medicacao-reativada', 'vet-medicacao', 'vet-consulta', 'vet-observacao', 'vet-medicacao-fim-ciente', 'peso'];
+  NOVAS.forEach((a) => {
+    const nome = run(`acaoNome(${JSON.stringify(a)})`), linha = run(`acaoRotulo({acao:${JSON.stringify(a)}, detalhe:'Quindim — pesagem de 01/10/2026'})`);
+    assert.ok(nome && nome !== a && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/.test(nome) && linha.indexOf(a) < 0 && /Quindim — pesagem de 01\/10\/2026/.test(linha), a + ' → ' + nome + ' | ' + linha);
+  });
+  igual(run(`acaoNome('peso-anulado')`), 'Anulou uma pesagem (lançada por engano)');
+  igual(run(`acaoRotulo({acao:'registro-anulado', rotuloAcao:'Removeu', detalhe:'a reavaliação de Biscoito'})`), 'Removeu a reavaliação de Biscoito');
+  igual(run(`acaoRotulo({acao:'registro-anulado', detalhe:'o remédio Zenrelia'})`), 'Anulou (lançado por engano) o remédio Zenrelia', 'sem o rótulo, o de sempre');
+});
+// ---- 2ª rodada (re-gate do QA): o remédio parado, o carimbo, o recado relido do banco, a reavaliação da consulta, os textos ----
+provaAsync('6.59 P36 (AC7.3, AC7.7; QA ALTO-2) — o «Alterar» que muda o horário de um remédio parado ou suspenso é recusado (a frase diz o caminho), nada é gravado e o carimbo não anda; a dose do parado muda; a lista diz «Parou de tomar em …»', async () => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    const pe = { quem: 'Plantonista Teste', data: '2026-10-09', quando: '09/10 09:00', ts: T658(9, 9, 0), motivo: 'o tutor pediu para parar' };
+    semear658({ itens: { apq: APQ659({ continuo: false, dataFim: '2026-10-09', paradoEm: pe }), sus: APQ659({ nome: 'Otomax', suspenso: true, suspensoPor: 'Vera Veterinária Teste', suspensoMotivo: 'esperar o exame' }) },
+      log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659(); run('renderVetMedList();');
+    assert.ok(/Parou de tomar em 09\/10\/2026 · Plantonista Teste — o tutor pediu para parar/.test(html659('vetMedList')), 'a linha diz que parou');
+    const ts0 = db658(AG658 + '/_ts'); run('__esc657=[];');
+    let r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['20:00'] }));
+    igual([!!(r && r.ok), !!(r && r.horaRecusada)], [false, true]);
+    const FRASE_PARADO = '✋ O remédio Apoquel parou de ser dado («Parou de tomar» em 09/10/2026, por Plantonista Teste): o horário, o uso contínuo e o «tomar até» dele não mudam por aqui, para o alarme não pedir de novo uma dose já dada. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+    igual(statusVet659(), FRASE_PARADO);
+    r = await altera659('sus', FORM659(db658(AG658 + '/itens/sus'), { horarios: ['20:00'] }));
+    igual(statusVet659(), '✋ O remédio Otomax está suspenso: o horário não muda enquanto ele estiver suspenso, para a dose de hoje não ser pedida de novo. Reative primeiro e depois mude o horário. Nada foi salvo.');
+    igual([run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length, db658(AG658 + '/_ts')], [0, ts0], 'nada gravado, nem a transação do carimbo');
+    // re-gate MÉDIO-R2-1: no parado, o uso contínuo e o «tomar até» também são recusados (o remédio voltaria a tocar com a
+    // parada guardada, e a régua da 6.54 pula remédio parado)
+    for (const muda of [{ continuo: true, dataFim: '' }, { dataFim: '2026-10-12' }]) {
+      run('__esc657=[];');
+      r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda));
+      igual([!!(r && r.ok), !!(r && r.horaRecusada), statusVet659(), run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length], [false, true, FRASE_PARADO, 0], JSON.stringify(muda));
+    }
+    igual([db658(AG658 + '/itens/apq').continuo, db658(AG658 + '/itens/apq').dataFim, !!db658(AG658 + '/itens/apq').paradoEm, db658(AG658 + '/_ts')], [false, '2026-10-09', true, ts0], 'o parado continua parado; o carimbo não andou');
+    // a dose do parado (sem mudar o horário nem o fim) grava, pela régua de sempre
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2' }));
+    igual([!!(r && r.ok), db658(AG658 + '/itens/apq').q, db658(AG658 + '/itens/apq').horarios], [true, '2', ['08:00']], statusVet659());
+  } finally { solta659(); }
+  igual([run(`vetMedHoraRecusa({nome:'X', horarios:['08:00'], continuo:false, dataFim:'2026-10-09', paradoEm:{data:'2026-10-09'}}, ['08:00'], {continuo:false, dataFim:'2026-10-09'})`),
+    run(`vetMedHoraRecusa({nome:'X', horarios:['08:00','20:00']}, ['09:00'], {continuo:true})`), run(`vetMedHoraRecusa({nome:'X', horarios:['08:00'], continuo:true}, ['08:00'], {continuo:false, dataFim:'2026-10-20'})`)], ['', '', ''],
+    'o mesmo horário e o mesmo fim no parado, ou o remédio ativo: pode');
+});
+provaAsync('6.59 P37 (AC7.4; QA BAIXO-3) — o carimbo: o Cuidado Vet lê os remédios e o carimbo numa leitura só; a tela que não leu o carimbo não grava o «Alterar» (feche e abra de novo); o «Suspender» relê o carimbo antes (uma escrita só) e, sem conseguir ler, não grava', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), ome: OME658() }, log: {} });
+    run(`__lidos659=[]; __dbr659=DB.ref; DB.ref=function(p){ var r=__dbr659(p); var o=r.once; r.once=function(){ __lidos659.push(String(p)); return o.apply(this, arguments); }; return r; };`);
+    try { await abreVetMed659(); } finally { run('DB.ref=__dbr659;'); }
+    igual([J658('__lidos659').filter((p) => /medicacao-agenda/.test(p)), J658('VET_MED_TS').lido, J658('VET_MED_TS').ts], [[AG658], true, db658(AG658 + '/_ts')], 'uma leitura só, da agenda inteira');
+    // a tela sem o carimbo (aberta por outro caminho): o «Alterar» recusa
+    run(`VET_MED_TS={key:'', ts:null, lido:false}; __esc657=[];`);
+    const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2' }));
+    igual([!!(r && r.ok), !!(r && r.semCarimbo), db658(AG658 + '/itens/apq').q], [false, true, '1']);
+    assert.ok(/esta tela não leu o carimbo dela\)\. Nada foi salvo: feche e abra de novo\./.test(statusVet659()), statusVet659());
+    // o «Suspender» sem o carimbo: relê; com a leitura do carimbo falhando, não grava
+    run(`__dbr659=DB.ref; DB.ref=function(p){ var r=__dbr659(p); if(/\\/_ts$/.test(String(p))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; }; __ztq657=['esperar o exame de sangue']; __al657=[]; __esc657=[];`);
+    try { await run(`vetSuspenderMed('ome')`); await espera659(); } finally { run('DB.ref=__dbr659;'); }
+    igual([!!db658(AG658 + '/itens/ome').suspenso, run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length], [false, 0]);
+    assert.ok(J658('__al657').some((a) => /^Não consegui conferir a agenda de Biscoito: .*Nada foi salvo\.$/.test(a)), JSON.stringify(J658('__al657')));
+    // com a leitura: uma escrita só, com o carimbo novo
+    run(`__ztq657=['esperar o exame de sangue']; __esc657=[];`);
+    await run(`vetSuspenderMed('ome')`); await espera659();
+    const ag = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]));
+    igual([!!db658(AG658 + '/itens/ome').suspenso, ag.map((e) => e[0]), typeof db658(AG658 + '/_ts')], [true, ['update'], 'number']);
+  } finally { solta659(); }
+});
+provaAsync('6.59 P38 (AC2.1, AC2.2; QA ALTO-1) — o recado relido do banco também no desfazer (a pergunta diz o recado que está no banco) e no «escolher à mão» (substitui o recado que outro aparelho criou, com «No lugar de»)', async () => {
+  await recado659(async (db) => {
+    const vet = { pet: 'Tico', dofilhot: 'do Tico', periodo: 'no dia dele', vacinas: 'Raiva', dia: '2026-10-12', quem: 'Ana', ts: T655(9, 9), tipo: 'aberto' };
+    const reg = { pet: 'Tico', tutor: 'Rita Teste', respostas: { aberto: { v: 'ab_bolsa', quem: 'Ana', ts: T655(9, 9) } }, auto: { aberto: { dia: DIA659V, onde: 'NA BOLSA', quem: 'Ana', ts: T655(9, 9), itens: [], falharam: [] } }, vet };
+    db.store.daycare = { vencimentos: { [DIA659V]: { [K655]: JSON.parse(JSON.stringify(reg)) } } };
+    const mem = JSON.parse(JSON.stringify(reg)); delete mem.vet; ctx.__rg659 = mem;
+    run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__rg659)); __O659.itens=[{k:'vac_raiva_p', nome:'Raiva', vence:'', sem_registro:true, vacina:true}];`);
+    igual(await run(`vencDesfazerAuto('${K655}', 'aberto', '${DIA659V}')`), true); await drena655(); await drena655();
+    assert.ok(run('__zp659')[0][1].some((l) => /O recado à veterinária \(Vacina de Raiva do Tico — tutor autorizou para 12\/10\/2026 \(no dia dele\)\) é cancelado/.test(l)), 'a pergunta diz o recado do banco');
+    igual([('vet' in regV659(db)), cancV659(db).length, run('__tg659').map((m) => m.texto)],
+      [false, 1, ['CANCELADO — Vacina de Raiva do Tico — tutor autorizou para 12/10/2026 (no dia dele) — a resposta do tutor foi desfeita. Não precisa preparar.']]);
+  });
+  await recado659(async (db) => {
+    run(`__O659.itens=[__O659.itens[0]];`);
+    await responde659('vacina', 'vet_manha');                       // o aparelho A
+    run(`delete VENC_REG['${K655}'].vet; VENC_ESCOLHA['${K655}']={__vet:{periodo:'tarde'}}; __tg659=[];`);   // B, com a memória de antes
+    run(`vencLancarConfirmado('${K655}');`); await drena655(); await drena655();
+    const r = regV659(db), c = cancV659(db);
+    igual([r.vet.periodo, r.vet.substitui, c.length, c[0].periodo], ['tarde', { dia: '2026-10-13', periodo: 'manhã' }, 1, 'manhã']);
+    igual(run('__tg659').map((m) => m.texto), ['Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (tarde). No lugar de 13/10/2026 (manhã).']);
+  });
+});
+provaAsync('6.59 P39 (AC3.3; QA MÉDIO-1) — corrigir a consulta e a reavaliação dela: a data muda por campos (as feitas ficam; a de antes em `anteriores`); a feita volta a ser marcada com a data nova; o cartaz diz cada caso; a reavaliação mudada em outro aparelho depois do cartaz: nada gravado', async () => {
+  arma659();
+  try {
+    // (a) a reavaliação desta consulta, marcada: a data muda
+    semearVet659({ consultas: { c1: C1_659({ reavaliacao: '2026-10-12', reavaliacaoMotivo: 'reavaliar o estômago' }) },
+      reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1', feitas: { 5: { quem: 'Vera Veterinária Teste', ts: 5 } } } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    assert.ok(/A reavaliação marcada nesta consulta \(12\/10\/2026 — reavaliar o estômago\) acompanha a versão nova\./.test(cartaz658()), 'o cartaz abre dizendo que acompanha');
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '14/10/2026', 'reavaliar o estômago']})`);
+    assert.ok(/A reavaliação marcada nesta consulta muda de 12\/10\/2026 — reavaliar o estômago para 14\/10\/2026 — reavaliar o estômago \(a de antes fica no histórico\)\./.test(cartaz658()), cartaz658().replace(/<[^>]+>/g, ' ').slice(0, 700));
+    let [p] = await assina658('s-vera', 'a reavaliação certa é dia catorze'); igual(p, 'pronto'); await fecha658();
+    let rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv.data, rv.motivo, /^c_\d+$/.test(rv.consultaId), !!rv.feitas, Object.keys(rv.anteriores || {}).map((k) => rv.anteriores[k].data)], ['2026-10-14', 'reavaliar o estômago', true, true, ['2026-10-12']]);
+    // (b) a reavaliação desta consulta já feita: a data nova volta a ser marcada; a feita vai para o histórico
+    semearVet659({ consultas: { c1: C1_659({ reavaliacao: '2026-10-09', reavaliacaoMotivo: 'ver a pele' }) },
+      reaval: { data: '2026-10-09', motivo: 'ver a pele', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1', feita: { quem: 'Vera Veterinária Teste', ts: T657(9, 9, 30) } } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '16/10/2026', 'ver a pele de novo']})`);
+    assert.ok(/estava feita: a data nova, 16\/10\/2026 — ver a pele de novo, volta a ser marcada \(a de antes fica no histórico\)/.test(cartaz658()), 'o cartaz diz');
+    [p] = await assina658('s-vera', 'a pele precisa ser vista de novo'); igual(p, 'pronto'); await fecha658();
+    rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv.data, !!rv.feita, Object.keys(rv.feitas || {}).length, run(`vetReavalAtiva(__get657('auaulandia/vet-reavaliacao/${K658}'))`)], ['2026-10-16', false, 1, true]);
+    // (c) a reavaliação muda em outro aparelho depois que o cartaz abriu: nada gravado
+    semearVet659({ consultas: { c1: C1_659({ reavaliacao: '2026-10-12', reavaliacaoMotivo: 'reavaliar' }) }, reaval: { data: '2026-10-12', motivo: 'reavaliar', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '13/10/2026', 'reavaliar']})`);
+    put658('auaulandia/vet-reavaliacao/' + K658 + '/feita', { quem: 'Vera Veterinária Teste', ts: 9 });
+    [p] = await assina658('s-vera', 'a reavaliação certa é dia treze'); igual(p, 'falhou');
+    igual(Object.keys(db658('auaulandia/vet-consultas/' + K658)), ['c1'], 'nenhuma versão nova');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P40 (AC7.3, AC1.7, AC3.2; QA BAIXO-4, BAIXO-6, BAIXO-7) — a tela diz o que a régua fez com o horário (já vale / começa depois / não mudou); o PDF que não foi gerado não conta como saída', async () => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    // já vale: o horário de antes (20:00) ainda não chegou
+    semear658({ itens: { apq: APQ659({ horarios: ['20:00'] }) }, log: {} });
+    await abreVetMed659();
+    await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['21:00'] }));
+    igual(statusVet659(), '✅ Alterou a prescrição — já vale na ficha e nos alarmes.');
+    // começa depois: a dose das 08:00 já foi dada
+    semear658({ itens: { apq: APQ659({ horarios: ['08:00'] }) }, log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659();
+    await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['09:00'] }));
+    assert.ok(/^✅ Alterou a prescrição — gravada na ficha\. Apoquel: .*começa amanhã/.test(statusVet659()) && !/já vale/.test(statusVet659()), statusVet659());
+    igual(run(`vetMedHoraComoFicou({horarios:['08:00']}, {horarios:['09:00']}, {horarios:['08:00']}, false)`), 'mantido', 'a régua manteve: «não mudou»');
+  } finally { solta659(); }
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() } });
+    run(`__vb659=vetConsultaBlob; vetConsultaBlob=function(){ throw new Error('sem gerador de PDF'); };`);
+    try { run(`vetPdfImprimir('c1');`); await espera659(); } finally { run('vetConsultaBlob=__vb659;'); }
+    igual([db658('auaulandia/vet-consultas/' + K658 + '/c1/saidas'), J658('VET_CONSULTAS_CACHE.c1.saidas') || null], [null, null], 'o PDF não saiu: nenhuma saída');
+  } finally { solta659(); }
+});
+provaAsync('6.59 P41 (AC1.3, AC7.1, AC7.6; QA BAIXO-1, q29, q30) — o que mudou em outro aparelho depois que a tela abriu: a pesagem corrigida ou anulada lá não é regravada aqui (nada gravado); o remédio anulado por um aparelho que não anda o carimbo e o remédio que saiu da agenda: o «Alterar» diz o porquê e não grava', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    const anul = { estado: 'anulada', data: '2026-10-01', kgDe: 18, quemPesou: 'Teste A', acao: 'anular', por: 'Gestora Teste', motivo: 'a pesagem era de outro FILHOt', ts: 1 };
+    put658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01', anul);   // o aparelho A anulou; a cópia deste aparelho é de antes
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    const [p, h] = await assina658(SENHA657, 'o peso certo é oito quilos');
+    igual(p, 'falhou', 'nada gravado: ' + String(h || '').replace(/<[^>]+>/g, ' ').slice(0, 200));
+    assert.ok(/A pesagem mudou em outro aparelho depois que esta tela abriu\. Nada foi gravado: feche e abra de novo\./.test(cartaz658()), 'a frase');
+    igual(db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01'), anul, 'a anulação do outro aparelho continua igual, letra por letra');
+    await fecha658();
+    // AC1.6: a segunda pesagem do dia com o MESMO kg, por outra pessoa, não é valor trocado (sem rastro «Peso de hoje»)
+    fichaQ659([{ data: '2026-10-08', kg: 8, quem: 'Teste B' }]);
+    run(`__login657={nome:'Caio Encãotador Teste', role:'monitor'}; pesoGravar(PELUDINHOS[0], 18);`); await espera659(); relerQ659();
+    run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; pesoGravar(PELUDINHOS[0], 18);`); await espera659();
+    igual(db658('daycare/ficha-rastro/' + K659), null, 'o mesmo kg: nada no rastro');
+  } finally { solta659(); }
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), ome: OME658() }, log: {} });
+    await abreVetMed659();
+    // um aparelho com a versão antiga anula sem andar o carimbo: a memória desta tela não sabe, o banco sabe
+    put658(AG658 + '/itens/apq/anulado', { acao: 'anular', por: 'Gestora Teste', motivo: 'a receita era de outro FILHOt', ts: 1 });
+    run('__esc657=[];');
+    let r = await altera659('apq', FORM659(J658('VET_MED_CACHE.apq'), { q: '2' }));
+    igual([!!(r && r.ok), !!(r && r.anulado), run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length], [false, true, 0]);
+    assert.ok(/lançado por engano \(anulado\): não dá para alterar aqui/.test(statusVet659()), statusVet659());
+    // o remédio saiu da agenda (o carimbo também parado): o «Alterar» diz que ele não está mais lá
+    put658(AG658 + '/itens/ome', null);
+    r = await altera659('ome', FORM659(J658('VET_MED_CACHE.ome'), { q: '2' }));
+    igual([!!(r && r.ok), db658(AG658 + '/itens/ome'), statusVet659()], [false, null, '✋ Este remédio não está mais na agenda: nada foi salvo. Feche e abra de novo.']);
+  } finally { solta659(); }
+});
+provaAsync('6.59 P42 (AC1.3; re-gate O-R2-2) — logo depois de anular, o «Reabrir» no MESMO aparelho passa: o banco sem os objetos vazios (como o Firebase guarda) não é «mudou em outro aparelho»; uma mudança de verdade continua recusada', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    await abrePeso659('2026-10-01', 'anular'); let [p] = await assina658(SENHA657, 'o peso era de outro FILHOt'); igual(p, 'pronto'); await fecha658();
+    const c = db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01');
+    const vazios = Object.keys(c).filter((k) => c[k] && typeof c[k] === 'object' && !Array.isArray(c[k]) && !Object.keys(c[k]).length);
+    assert.ok(vazios.length > 0, 'a anulação tem objeto vazio (rotulos:{})');
+    vazios.forEach((k) => put658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01/' + k, null));   // o que o Firebase faz
+    await abrePeso659('2026-10-01', 'reabrir'); [p] = await assina658(SENHA657, 'a pesagem era deste FILHOt mesmo'); await fecha658();
+    igual([p, db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01').estado], ['pronto', 'reaberta'], 'o «Reabrir» logo depois, no mesmo aparelho');
+    igual([run(`vagasJsonEstavel(pesoCorrNormal({a:1, b:{}, c:[], d:null, e:{f:{}}}))`), run(`pesoCorrNormal({})`), run(`vagasJsonEstavel(pesoCorrNormal({a:{b:2}}))`)], ['{"a":1}', null, '{"a":{"b":2}}']);
+  } finally { solta659(); }
+});
+// ================================================================== 6.59 QA — as provas do QA independente (Quinn, o arquivo de provas do re-gate da 6.59)
+// Trazidas na 2ª rodada, com o nome «6.59 QA Pxx» e o texto do QA (P04 e P16 ficaram de fora: são o comportamento da
+// base, registrados na story como perguntas). Cada prova escreve o comportamento CERTO; se falhar, mostra o que o app fez.
+console.log('\n6.59 QA — as provas do QA independente (Quinn), trazidas para a Fase 0 na 2ª rodada: o recado com dois aparelhos, o remédio parado, a reavaliação da consulta, a pesagem com dois aparelhos, o carimbo e as lacunas da 1ª rodada');
+
+// ---- AC2 — o recado à veterinária com dois aparelhos (a memória dos Vencimentos é lida UMA vez: vencCarregar, once) ----------
+provaAsync('6.59 QA P01 (AC2.1) — o aparelho B, com a memória de antes do recado, troca a vacina para «Não quer agora»: o recado tem de cair', async () => {
+  await recado659(async (db) => {
+    igual(await responde659('vacina', 'vet_manha'), true);                 // aparelho A: cria o recado (a veterinária é avisada)
+    igual(!!regV659(db).vet, true, 'o recado nasceu');
+    // aparelho B: a tela dele abriu antes (a memória não tem a resposta nem o recado)
+    run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(VENC_REG['${K655}'])); delete VENC_REG['${K655}'].vet; delete VENC_REG['${K655}'].respostas;`);
+    run('__tg659=[];');
+    igual(await responde659('vacina', 'nao'), true);
+    const r = regV659(db), c = cancV659(db), tg = run('__tg659').map((m) => m.texto);
+    assert.ok(!('vet' in r) && c.length === 1 && tg.some((t) => /^CANCELADO — /.test(t)),
+      'o tutor disse «Não quer agora» e o recado CONTINUA no cartão: vet=' + JSON.stringify(r.vet || null) + ' | resposta=' + JSON.stringify((r.respostas || {}).vacina) + ' | vet_cancelados=' + c.length + ' | mensagens=' + JSON.stringify(tg));
+  });
+});
+provaAsync('6.59 QA P02 (AC2.1, AC2.2) — o aparelho B, com a memória do recado de MANHÃ, cancela depois que A trocou para TARDE: o cancelamento tem de ser do recado de tarde', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha');
+    const memManha = J658(`VENC_REG['${K655}']`);                         // B leu aqui
+    await responde659('vacina', 'vet_tarde');                              // A troca para tarde («No lugar de … manhã»)
+    igual(regV659(db).vet.periodo, 'tarde');
+    ctx.__mm659 = memManha; run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__mm659)); __tg659=[];`);
+    await responde659('vacina', 'nao');                                    // B, com a memória de manhã
+    const r = regV659(db), c = cancV659(db), tg = run('__tg659').map((m) => m.texto);
+    const tardeGuardado = c.some((x) => x.periodo === 'tarde' && x.cancelado && x.cancelado.resposta && x.cancelado.resposta.v === 'nao');
+    assert.ok(!('vet' in r) && tardeGuardado && tg.some((t) => /\(tarde\)/.test(t)),
+      'o recado de TARDE (o que valia) sumiu sem ser guardado como cancelado, e a mensagem fala do de MANHÃ: vet=' + JSON.stringify(r.vet || null)
+      + ' | vet_cancelados=' + JSON.stringify(c.map((x) => x.periodo + '/' + ((x.cancelado || {}).resposta || {}).v)) + ' | mensagens=' + JSON.stringify(tg));
+  });
+});
+provaAsync('6.59 QA P03 (AC2.1) — no MESMO aparelho, «manhã» e logo «Não quer agora» (o segundo toque antes do banco responder o primeiro): o recado tem de cair', async () => {
+  await recado659(async (db) => {
+    const p1 = run(`vencResponderTipo('${K655}', 'vacina', 'vet_manha', '${DIA659V}', __O659)`);
+    const p2 = run(`vencResponderTipo('${K655}', 'vacina', 'nao', '${DIA659V}', __O659)`);
+    await p1; await p2; await drena655(); await drena655(); await drena655();
+    const r = regV659(db);
+    assert.ok((r.respostas || {}).vacina && r.respostas.vacina.v === 'nao' && !('vet' in r),
+      'a resposta final é «Não quer agora» e o recado da manhã ficou: vet=' + JSON.stringify(r.vet || null) + ' | resposta=' + JSON.stringify((r.respostas || {}).vacina) + ' | vet_cancelados=' + cancV659(db).length);
+  });
+});
+// ---- AC1 — o peso ---------------------------------------------------------------------------------------------------------
+prova('6.59 QA P05 (AC1.8) — o porteiro do setPelExtra deixa passar SÓ pesos_corr/AAAA-MM-DD', () => {
+  run(`__ro659=document.body.dataset.role; document.body.dataset.role='monitor';`);
+  try {
+    const t = (c) => J658(`pelCamposBarrados(${JSON.stringify({ [c]: 1 })})`).length === 0;
+    igual(['pesos_corr/2026-10-01', 'pesos_corr/2026-10-01/kgPara', 'pesos_corr/2026-10-01/estado', 'pesos_corr', 'pesos_corr/x', 'pesos_corr/2026-10-01 ', 'pesos_corr/2026-1-01',
+      'pesos_corr//2026-10-01', 'pesos_corr/2026-10-01/../tutor', ' pesos_corr/2026-10-01', 'PESOS_CORR/2026-10-01', 'pesos_corrx/2026-10-01', 'tutor/pesos_corr/2026-10-01'].map(t),
+      [true, false, false, false, false, false, false, false, false, false, false, false, false]);
+  } finally { run('document.body.dataset.role=__ro659;'); }
+});
+prova('6.59 QA P06 (AC1.4) — leitores do peso fora da lista do dev: a busca de FILHOt («último peso»), o «peso velho» e o vermífugo da ficha usam a lista corrigida', () => {
+  const corr = { estado: 'anulada', data: '2026-10-09', kgDe: 18, quemPesou: 'Teste A', acao: 'anular' };
+  ctx.__exQ6 = { pesos: [{ data: '2026-06-01', kg: 8, quem: 'Teste B' }, { data: '2026-10-09', kg: 18, quem: 'Teste A' }], pesos_corr: { '2026-10-09': corr } };
+  igual(run(`pesoTextoBusca(__exQ6, '2026-10-09')`), '8,0 kg em 01/06 (há 130 dias)', 'a busca mostra o último peso VÁLIDO');
+  igual(run(`pesoVelhoBusca(__exQ6, '2026-10-09')`), true, 'o «peso velho» conta da pesagem válida');
+  igual(J658(`vermAvaliar(__exQ6, '2026-10-09').dose.texto`), '1 comprimido', 'o vermífugo pelo 8 kg');
+});
+provaAsync('6.59 QA P07 (AC1.3, «nada é apagado») — dois aparelhos: A anula a pesagem; B, com a cópia de antes, corrige a mesma: a anulação de A tem de ficar guardada em `anteriores`', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }]);
+    // aparelho A anulou (o banco já tem; a cópia de B não)
+    put658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01', { estado: 'anulada', data: '2026-10-01', kgDe: 18, quemPesou: 'Teste A', acao: 'anular', por: 'Gestora Teste', motivo: 'a pesagem era de outro FILHOt', ts: 1 });
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    const [p] = await assina658(SENHA657, 'o peso certo é oito quilos'); await fecha658();
+    const c = db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01') || {};
+    const ficou = (c.estado === 'anulada') || (Array.isArray(c.anteriores) && c.anteriores.some((x) => x.estado === 'anulada'));
+    assert.ok(ficou, 'cartaz ' + p + ': a anulação do aparelho A sumiu (nem no estado, nem em anteriores): ' + JSON.stringify({ estado: c.estado, anteriores: c.anteriores || null }));
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P08 (AC1.7) — a pesagem de HOJE que avisou a veterinária, corrigida por quem pesou: a correção vai ao grupo vet uma vez só (e não sai de novo no «Reabrir» sem aviso)', async () => {
+  arma659();
+  try {
+    run(`__login657={nome:'Caio Encãotador Teste', role:'monitor'};`);
+    fichaQ659([{ data: '2026-10-01', kg: 8, quem: 'Teste A' }, { data: '2026-10-09', kg: 18, quem: 'Caio Encãotador Teste' }]);
+    audDia659('2026-10-09', ['pesou 18 kg', 'avisou a veterinária sobre Quindim (+10 kg)']);
+    await abrePeso659('2026-10-09', 'corrigir'); run(`corrToque('continuar', {valores:['8,1']})`);
+    const [p] = await assina658('s-caio', 'pesei o FILHOt errado agora há pouco'); igual(p, 'pronto'); await espera659(); await fecha658();
+    const m = tgVet659();
+    igual(m.length, 1, 'uma mensagem: ' + JSON.stringify(m.map((x) => x.texto)));
+    assert.ok(/Pesagem de 09\/10\/2026: era 18 kg, o certo é 8,1 kg\./.test(m[0].texto), m[0].texto);
+  } finally { solta659(); }
+});
+
+// ---- AC3 — a consulta ------------------------------------------------------------------------------------------------------
+provaAsync('6.59 QA P09 (AC3.3, «nada é apagado») — corrigir o motivo da reavaliação de uma consulta ANTIGA não pode trocar a reavaliação marcada por uma consulta mais nova', async () => {
+  arma659();
+  try {
+    const c1 = C1_659({ data: '2026-10-07', ts: T657(7, 9, 0), reavaliacao: '2026-10-08', reavaliacaoMotivo: 'ver o estômago' });
+    const c2 = C1_659({ data: '2026-10-09', ts: T657(9, 8, 0), reavaliacao: '2026-10-15', reavaliacaoMotivo: 'ver a pele' });
+    const rvAtual = { data: '2026-10-15', motivo: 'ver a pele', por: 'Vera Veterinária Teste', ts: T657(9, 8, 0), consultaId: 'c2', feitas: { 1: { quem: 'Vera Veterinária Teste', ts: 1 } } };
+    semearVet659({ consultas: { c1: c1, c2: c2 }, reaval: rvAtual });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['07/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '08/10/2026', 'ver o estômago de novo']})`);
+    const h = cartaz658().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    console.log('      o cartaz (conferir): ' + h.slice(0, 900));
+    const [p] = await assina658(SENHA657, 'o motivo da reavaliação estava incompleto'); igual(p, 'pronto');
+    const rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    assert.ok(rv.data === '2026-10-15' && rv.consultaId === 'c2' && rv.feitas,
+      'a reavaliação marcada pela consulta de 09/10 (15/10, ver a pele) foi trocada pela de 07/10 e o histórico dela sumiu: ' + JSON.stringify(rv) + ' | o cartaz avisou? ' + /reavalia/i.test(h));
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P10 (AC3.3) — corrigir a consulta TIRANDO a data de reavaliação: a reavaliação que ela marcou não pode continuar pedindo no quadro sem aviso', async () => {
+  arma659();
+  try {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}];`);
+    semearVet659({ consultas: { c1: C1_659({ reavaliacao: '2026-10-09' }) }, reaval: { data: '2026-10-09', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '', '']})`);
+    const h = cartaz658().replace(/<[^>]+>/g, ' ');
+    const [p] = await assina658('s-vera', 'não precisa mais de reavaliação'); igual(p, 'pronto');
+    const rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    run(`VET_REAVAL_CACHE['${K658}']=__get657('auaulandia/vet-reavaliacao/${K658}'); checarReavaliacoesHoje();`);
+    const quadro = html659('vetReavalBanner');
+    const avisou = /reavaliação[^.]*continua/i.test(h);
+    assert.ok(!run(`vetReavalAtiva(__get657('auaulandia/vet-reavaliacao/${K658}'))`) || avisou,
+      'a versão nova não tem reavaliação, mas o quadro «Reavaliação de hoje» continua pedindo (e o cartaz não disse): ' + JSON.stringify({ data: rv.data, consultaId: rv.consultaId, removida: !!rv.removida }) + ' | quadro: ' + (/Biscoito/.test(quadro) ? 'pede' : 'não pede'));
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P11 (AC11.2) — a senha não aparece em nada que esta story grava (consulta, instrução, reavaliação, observação, peso, remédio) nem na auditoria', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, recom: RECOM659('c1'), reaval: { data: '2026-10-12', motivo: 'reavaliar', por: 'Vera', ts: T657(9, 9, 0), consultaId: 'c1' },
+      obs: { o1: { texto: 'ouvido com cera', quem: 'Vera', ts: T657(9, 9, 0) } } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'outra recomendação qualquer', 'gastrite leve', '12/10/2026', 'reavaliar']})`);
+    await assina658('s-vera', 'a recomendação certa é outra'); await fecha658();
+    run(`__p659=vetObsEditar('o1');`); await espera659(); run(`corrToque('continuar', {valores:['ouvido com cera, sem dor']})`);
+    await assina658('s-vera', 'faltou dizer que não dói'); await fecha658();
+    run(`__p659=vetObsRetirar('o1');`); await espera659(); await assina658('s-vera', 'a observação era de outro FILHOt'); await fecha658();
+    const tudo = JSON.stringify(run('__db657')) + JSON.stringify(run('__au657'));
+    igual([tudo.indexOf('s-vera'), tudo.indexOf(SENHA657)], [-1, -1], 'nenhuma senha no banco nem na auditoria');
+  } finally { solta659(); }
+});
+
+// ---- AC7 — a prescrição pelo Cuidado Vet: a régua, a trava e o remédio parado ----------------------------------------------
+// o alarme do dia d (a carga de verdade da 6.54, com o registro vazio): a lista de doses que o alarme pede no dia
+const filaQA659f0 = async (itens, d) => { run(ARMA654); try { return await fila654Q(itens, d); } finally { run(SOLTA654); } };
+provaAsync('6.59 QA P12 (AC7.3, ALTO-1 da 6.58 como molde) — 08:30, o alarme das 08:00 aberto no celular da plantonista (dose ainda sem registro): a Veterinária muda para 10:00 — uma dose só hoje', async () => {
+  let depois = null, status = '';
+  arma659();
+  try {
+    relogio658(T658(9, 8, 30));
+    semear658({ itens: { apq: APQ659({ horarios: ['08:00'] }) }, log: {} });
+    await abreVetMed659();
+    const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['10:00'] }));
+    status = statusVet659(); igual(r && r.ok, true, status);
+    depois = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  igual(await filaQA659f0(depois, 9), ['apq@08:00'], 'hoje: só a das 08:00 (a do alarme aberto) — ' + status);
+  igual(await filaQA659f0(depois, 10), ['mcr_t_apq_20261010@10:00'], 'amanhã: a das 10:00');
+});
+provaAsync('6.59 QA P13 (AC7.7) — remédio de 1 vez por dia, dado às 08:00 e PARADO hoje («depois de hoje»): às 10:00 a Veterinária muda o horário para 20:00 — o alarme não pode pedir uma 2ª dose hoje', async () => {
+  let depois = null, status = '', botaoAlterar = false;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    const parado = APQ659({ horarios: ['08:00'], continuo: false, dataFim: '2026-10-09', paradoEm: { quem: 'Plantonista Teste', data: '2026-10-09', quando: '09/10 09:00', ts: T658(9, 9, 0), motivo: 'o tutor pediu para parar' } });
+    semear658({ itens: { apq: parado }, log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659(); run('renderVetMedList();');
+    botaoAlterar = /vetAbrirAlterarMed\('apq'\)/.test(html659('vetMedList'));
+    const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['20:00'] }));
+    status = statusVet659(); depois = db658(AG658 + '/itens');
+    if (!(r && r.ok)) { console.log('      (o «Alterar» recusou: ' + status + ')'); return; }
+  } finally { solta659(); }
+  const hoje = await filaQA659f0(depois, 9);
+  console.log('      hoje o alarme pede: ' + JSON.stringify(hoje) + ' | amanhã: ' + JSON.stringify(await filaQA659f0(depois, 10)) + ' | botão «Alterar» na tela: ' + botaoAlterar + ' | ' + status);
+  assert.ok(!hoje.some((x) => /@20:00$/.test(x)), 'o «Alterar» está na tela (' + botaoAlterar + ') e gravou; hoje (a dose das 08:00 já dada) o alarme ainda pede ' + JSON.stringify(hoje) + ' de um remédio de 1 vez por dia: 2ª dose — ' + status);
+});
+provaAsync('6.59 QA P14 (risco 1 do dev) — a leitura do carimbo (_ts) falhou e a dos remédios não: o «Alterar» e o «Suspender» gravam SEM a trava por cima do que outro aparelho mudou', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659({ horarios: ['08:00'] }), ome: OME658() }, log: {} });
+    run(`__dbr659q=DB.ref; DB.ref=function(p){ var r=__dbr659q(p); if(/\\/_ts$/.test(String(p))) r.once=function(){ return Promise.reject(new Error('sem conexão')); }; return r; };`);
+    try { await abreVetMed659(); } finally { run('DB.ref=__dbr659q;'); }
+    const ts = J658('VET_MED_TS');
+    put658(AG658 + '/_ts', 999); put658(AG658 + '/itens/apq/q', '3');   // outro aparelho mudou a dose (e o carimbo) depois que esta tela leu
+    const r = await altera659('apq', FORM659(J658('VET_MED_CACHE.apq'), { obs: 'x', u: 'comprimido' }));   // a tela de antes (dose 1): o «Alterar» de outra coisa
+    const q = db658(AG658 + '/itens/apq').q;
+    run(`__ztq657=['o tutor pediu para suspender o remédio'];`); await run(`vetSuspenderMed('ome')`); await espera659();
+    const sus = !!db658(AG658 + '/itens/ome').suspenso;
+    assert.ok(!(r && r.ok) && !sus,
+      'VET_MED_TS=' + JSON.stringify(ts) + ': com a agenda mudada em outro aparelho, o «Alterar» gravou (' + JSON.stringify(r) + '; a dose do outro aparelho, 3, virou ' + q + ') e o «Suspender» gravou (' + sus + ') sem trava — ' + statusVet659());
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P15 (AC7.3, texto) — a régua recusa mudar o horário hoje («perto», «nada», «id ocupado»): a tela não pode dizer «✅ … já vale na ficha e nos alarmes»', async () => {
+  arma659();
+  try {
+    // A6 da 6.54: a linha de hoje que já trocou — mudar daqui para a frente é na linha de baixo
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { ci_1: Z654Q({ continuo: false, dataFim: '2026-10-09', trocadoPor: 'mcr_t_ci_1_20261010', estoque: null, estoqueMovidoPara: 'mcr_t_ci_1_20261010', origem: 'vet', dataInicio: '2026-10-01' }),
+      mcr_t_ci_1_20261010: Z654Q({ horarios: ['10:00'], dataInicio: '2026-10-10', continuacaoDe: 'ci_1', origem: 'vet' }) }, log: { 'ci_1_08-00': DOSE658('ci_1', 'Zenrelia', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659();
+    const it = db658(AG658 + '/itens/ci_1');
+    await altera659('ci_1', FORM659(it, { horarios: ['09:00'], continuo: false, dataFim: '2026-10-09' }));
+    const st = statusVet659();
+    assert.ok(!/✅ .*já vale na ficha e nos alarmes/.test(st) || !/continua 08:00/.test(st), 'a tela diz as duas coisas ao mesmo tempo: «' + st + '»');
+  } finally { solta659(); }
+});
+// ---- lacunas da Fase 0 achadas pelos meus defeitos plantados (estas passam no código do dev; servem de rede para o dev importar)
+provaAsync('6.59 QA P17 (AC1.2) — corrigir uma pesagem JÁ corrigida: o cartaz parte do peso de agora (8 kg), não do pesado (18); a correção nova guarda o kg pesado em kgDe', async () => {
+  arma659();
+  try {
+    const corr = { estado: 'corrigida', data: '2026-10-01', kgDe: 18, kgPara: 8, quemPesou: 'Teste A', acao: 'corrigir', por: 'Gestora Teste', papel: 'gestao', motivo: 'o peso era de outro FILHOt', ts: 1 };
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }], { pesos_corr: { '2026-10-01': corr } });
+    await abrePeso659('2026-10-01', 'corrigir');
+    assert.ok(/value="8"/.test(cartaz658()), 'o campo vem com o peso de agora (8): ' + (cartaz658().match(/value="[^"]*"/) || [''])[0]);
+    run(`corrToque('continuar', {valores:['8']})`);
+    assert.ok(/Nada mudou/.test(String(run('CORR_ATUAL.aviso'))), '8 de novo: nada mudou');
+    run(`corrToque('continuar', {valores:['8,5']})`);
+    const [p] = await assina658(SENHA657, 'o peso certo é oito e meio');
+    igual(p, 'pronto');
+    const c = db658('daycare/cadastro/' + K659 + '/pesos_corr/2026-10-01');
+    igual([c.estado, c.kgDe, c.kgPara, c.anteriores.length], ['corrigida', 18, 8.5, 1]);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P18 (AC1.7) — a auditoria do dia decide a mensagem: «NÃO avisou» não é aviso; outro FILHOt com o nome parecido não é aviso; a seguinte que avisou entra; a seguinte que não avisou não entra', async () => {
+  arma659();
+  try {
+    const caso = async (aud01, aud08, acao) => {
+      fichaQ659(); put658('daycare/auditoria/2026-10-01', null); put658('daycare/auditoria/2026-10-08', null);
+      if (aud01) audDia659('2026-10-01', aud01); if (aud08) audDia659('2026-10-08', aud08);
+      await abrePeso659('2026-10-01', acao || 'anular'); if ((acao || 'anular') === 'corrigir') run(`corrToque('continuar', {valores:['8']})`);
+      const [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); await espera659(); await fecha658();
+      return { p, msgs: tgVet659().map((m) => m.texto) };
+    };
+    let r = await caso(['NÃO avisou a veterinária sobre Quindim (+10 kg)'], null);
+    igual(r.msgs.length, 0, '«NÃO avisou» não é aviso: ' + JSON.stringify(r.msgs));
+    r = await caso(['avisou a veterinária sobre Quindim Junior (+1 kg)'], null);
+    igual(r.msgs.length, 0, 'o aviso do Quindim Junior não é do Quindim: ' + JSON.stringify(r.msgs));
+    r = await caso(null, ['avisou a veterinária sobre Quindim (-10 kg)'], 'corrigir');
+    igual(r.msgs.length, 1, 'só a seguinte avisou: a correção vai');
+    assert.ok(/A variação avisada em 08\/10\/2026 vinha da pesagem errada\./.test(r.msgs[0]), r.msgs[0]);
+    r = await caso(['avisou a veterinária sobre Quindim (+10 kg)'], null, 'corrigir');
+    igual(r.msgs.length, 1);
+    assert.ok(!/A variação avisada/.test(r.msgs[0]), 'a seguinte não avisou: a mensagem não fala dela — ' + r.msgs[0]);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P19 (AC1.6) — a segunda pesagem do dia com o MESMO kg não deixa rastro «Peso de hoje»', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-08', kg: 8, quem: 'Teste B' }]);
+    run('pesoGravar(PELUDINHOS[0], 18);'); await espera659(); relerQ659();
+    run('pesoGravar(PELUDINHOS[0], 18);'); await espera659();
+    igual(db658('daycare/ficha-rastro/' + K659), null);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P20 (AC1.8, decisão do dev) — «Reabrir» a pesagem anulada HOJE pede a Gestão (nem quem pesou)', async () => {
+  arma659();
+  try {
+    run(`__login657={nome:'Caio Encãotador Teste', role:'monitor'};`);
+    fichaQ659([{ data: '2026-10-09', kg: 18, quem: 'Caio Encãotador Teste' }], { pesos_corr: { '2026-10-09': { estado: 'anulada', data: '2026-10-09', kgDe: 18, quemPesou: 'Caio Encãotador Teste', acao: 'anular', por: 'Gestora Teste', motivo: 'pesou o FILHOt errado agora', ts: 1 } } });
+    await abrePeso659('2026-10-09', 'reabrir');
+    const r = await assina658('s-caio', 'a pesagem era deste FILHOt mesmo');
+    igual(r[0], 'conferir', 'quem pesou não reabre a anulada: ' + r[1]);
+    const [p] = await assina658(SENHA657, 'a pesagem era deste FILHOt mesmo'); igual(p, 'pronto');
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P21 (AC1.7) — com três pesagens, a «seguinte» é a PRÓXIMA (05/10), não a última (08/10)', async () => {
+  arma659();
+  try {
+    fichaQ659([{ data: '2026-10-01', kg: 18, quem: 'Teste A' }, { data: '2026-10-05', kg: 8, quem: 'Teste B' }, { data: '2026-10-08', kg: 8.05, quem: 'Teste B' }]);
+    igual(J658(`pesoSeguinte(pelExtra(PELUDINHOS[0]), '2026-10-01').data`), '2026-10-05');
+    audDia659('2026-10-05', ['avisou a veterinária sobre Quindim (-10 kg)']);
+    await abrePeso659('2026-10-01', 'corrigir'); run(`corrToque('continuar', {valores:['8']})`);
+    const [p] = await assina658(SENHA657, 'o peso era de outro FILHOt da turma'); igual(p, 'pronto'); await espera659();
+    const m = tgVet659(); igual(m.length, 1);
+    assert.ok(/A variação avisada em 05\/10\/2026 vinha da pesagem errada\./.test(m[0].texto), m[0].texto);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P22 (AC2.1) — o desfazer da resposta com a gravação RECUSADA: o recado fica e a veterinária NÃO recebe «CANCELADO»', async () => {
+  await recado659(async (db) => {
+    const vet = { pet: 'Tico', dofilhot: 'do Tico', periodo: 'no dia dele', vacinas: 'Raiva', dia: '2026-10-12', quem: 'Ana', ts: T655(9, 9), tipo: 'aberto' };
+    const reg = { pet: 'Tico', tutor: 'Rita Teste', respostas: { aberto: { v: 'ab_bolsa', quem: 'Ana', ts: T655(9, 9) } }, auto: { aberto: { dia: DIA659V, onde: 'NA BOLSA', quem: 'Ana', ts: T655(9, 9), itens: [], falharam: [] } }, vet };
+    db.store.daycare = { vencimentos: { [DIA659V]: { [K655]: JSON.parse(JSON.stringify(reg)) } } };
+    ctx.__rg659 = reg; run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__rg659)); __O659.itens=[{k:'vac_raiva_p', nome:'Raiva', vence:'', sem_registro:true, vacina:true}];`);
+    db.falhar = true;
+    await run(`vencDesfazerAuto('${K655}', 'aberto', '${DIA659V}')`); await drena655(); await drena655();
+    db.falhar = false;
+    igual([!!regV659(db).vet, run('__tg659').map((m) => m.texto)], [true, []], 'a gravação falhou: nada de «CANCELADO»');
+  });
+});
+provaAsync('6.59 QA P23 (AC3.3) — corrigir a consulta que mudou em outro aparelho depois que a tela abriu: nada é gravado', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() } });
+    put658('auaulandia/vet-consultas/' + K658 + '/c1/ts', T657(9, 9, 40));   // outro aparelho regravou a consulta
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'outra recomendação qualquer', 'gastrite leve', '12/10/2026', 'reavaliar o estômago']})`);
+    const [p] = await assina658('s-vera', 'a recomendação certa é outra');
+    igual(p, 'falhou', 'a consulta mudou: nada gravado');
+    igual(Object.keys(db658('auaulandia/vet-consultas/' + K658)), ['c1']);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P24 (AC3.2, AC3.3) — a versão nova não herda as saídas da anterior (ela ainda não saiu)', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659({ saidas: { s1: { como: 'whatsapp', quem: 'Vera Veterinária Teste', ts: T657(9, 9, 30) } } }) } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'outra recomendação qualquer', 'gastrite leve', '12/10/2026', 'reavaliar o estômago']})`);
+    const [p] = await assina658('s-vera', 'a recomendação certa é outra'); igual(p, 'pronto');
+    const C = db658('auaulandia/vet-consultas/' + K658), novo = C['c_' + T657(9, 10, 0)];
+    igual([!!novo, 'saidas' in novo, Object.keys(C.c1.saidas || {}).length], [true, false, 1]);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P25 (AC3.4) — anular uma consulta não retira a instrução que nasceu de OUTRA consulta', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659(), c2: C1_659({ data: '2026-10-09', ts: T657(9, 9, 30), recomendacoes: '', cuidados: [], reavaliacao: '' }) }, recom: RECOM659('c1') });
+    run(`__p659=vetConsultaAnular('c2');`); await espera659();
+    assert.ok(!/instrução ativa/.test(cartaz658()), 'a cascata não fala da instrução de outra consulta');
+    const [p] = await assina658(SENHA657, motivo659); igual(p, 'pronto');
+    igual(db658('auaulandia/vet-recomendacoes/' + K658).ativo, true);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P26 (AC3.4) — anular: a reavaliação antiga (sem consultaId) de OUTRA data não entra na pergunta nem sai junto', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c2: C1_659({ reavaliacao: '2026-10-12' }) }, reaval: { data: '2026-10-20', motivo: 'outra coisa', por: 'Vera Veterinária Teste', ts: T657(8, 8, 0) } });
+    run(`__p659=vetConsultaAnular('c2');`); await espera659();
+    igual(J658('__zp657').filter((x) => x[0] === 'A REAVALIAÇÃO DESTA CONSULTA').length, 0, 'não perguntou');
+    const [p] = await assina658(SENHA657, motivo659); igual(p, 'pronto');
+    igual(!!db658('auaulandia/vet-reavaliacao/' + K658).removida, false);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P27 (AC4.1) — «Retirar instrução» com a instrução TROCADA em outro aparelho (consulta nova): nada é retirado', async () => {
+  arma659();
+  try {
+    semearVet659({ recom: RECOM659('c1') });
+    put658('auaulandia/vet-recomendacoes/' + K658, RECOM659('c9', { texto: 'usar elizabetano', cuidados: ['Elizabetano'], ts: T657(9, 9, 45) }));
+    run('__p659=vetInstrRetirar();'); await espera659();
+    const [p] = await assina658('s-vera', 'a veterinária liberou o repouso');
+    igual(p, 'falhou'); igual(db658('auaulandia/vet-recomendacoes/' + K658).ativo, true, 'o elizabetano continua');
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P28 (AC5.1) — «Feita» numa reavaliação que mudou de data em outro aparelho: não marca', async () => {
+  arma659();
+  try {
+    semearVet659({ reaval: { data: '2026-10-09', motivo: 'reavaliar a córnea', por: 'Vera Veterinária Teste', ts: T657(7, 9, 0) } });
+    put658('auaulandia/vet-reavaliacao/' + K658, { data: '2026-10-15', motivo: 'nova data', por: 'Vera Veterinária Teste', ts: T657(9, 9, 50), consultaId: 'c9' });
+    await run(`vetReavalFeita('${K658}')`); await espera659();
+    igual(!!db658('auaulandia/vet-reavaliacao/' + K658).feita, false, 'a reavaliação de 15/10 não foi feita');
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P29 (AC7.1) — «Alterar» um remédio que saiu da agenda em outro aparelho: nada é gravado (nenhum remédio pela metade)', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), ome: OME658() }, log: {} });
+    await abreVetMed659();
+    const f = FORM659(db658(AG658 + '/itens/apq'), { q: '2' });
+    put658(AG658 + '/itens/apq', null);   // saiu da agenda (o carimbo não mudou: a trava não vê)
+    const r = await altera659('apq', f);
+    igual([!!(r && r.ok), db658(AG658 + '/itens/apq')], [false, null], statusVet659());
+  } finally { solta659(); }
+});
+prova('6.59 QA P30 (AC9) — «Ainda preciso reavaliar»: não na linha de hoje de uma troca por datas (o aviso não voltaria); sim no último dia da receita (o aviso já vale nesse dia)', () => {
+  igual(run(`vetCienteDesfazivel({fimCiente:true, origem:'vet', continuo:false, dataFim:'2026-10-08', trocadoPor:'mcr_t_x'}, '2026-10-09')`), false, 'linha trocada');
+  igual(run(`vetCienteDesfazivel({fimCiente:true, origem:'vet', continuo:false, dataFim:'2026-10-09'}, '2026-10-09')`), true, 'no último dia');
+  run(`__mag659=MED_AGENDA_GERAL; __hj659=hojeISO; MED_AGENDA_GERAL={k:{nome:'X', itens:{a:{origem:'vet', continuo:false, dataFim:'2026-10-09', nome:'Antibiótico'}}}}; hojeISO=function(){ return '2026-10-09'; };`);
+  try { igual(J658('medsEncerradasPend()').length, 1, 'no último dia o aviso «Receita encerrada» já aparece (sem o «Ciente»)'); }
+  finally { run('MED_AGENDA_GERAL=__mag659; hojeISO=__hj659;'); }
+});
+provaAsync('6.59 QA P31 (AC3.1, tela) — quem não tem alterar-vet não vê «Lançada por engano» nem «Ainda preciso reavaliar»', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659(), sus: APQ659({ nome: 'Otomax', suspenso: true, suspensoPor: 'Dra. Teste' }), v1: APQ659({ continuo: false, dataFim: '2026-10-08', fimCiente: true, fimCientePor: 'Vera' }) }, log: {} });
+    run(`document.body.dataset.role='consultora'; __login657={nome:'Bia Consultora Teste', role:'consultora'}; podeAlterarVet=function(){ return podePapel('alterar-vet'); };`);   // o ARMA658 deixa o podeAlterarVet sempre sim
+    await abreVetMed659(); run('renderVetMedList();');
+    const L = html659('vetMedList');
+    igual([/Lançada por engano/.test(L), /Ainda preciso reavaliar/.test(L), /vetAbrirAlterarMed/.test(L)], [false, false, false], 'a Consultora só vê');
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P32 (AC9.1) — «Ainda preciso reavaliar» com a agenda mudada em outro aparelho depois que a tela leu: nada é gravado', async () => {
+  arma659();
+  try {
+    semear658({ itens: { v1: APQ659({ continuo: false, dataFim: '2026-10-08', fimCiente: true, fimCientePor: 'Vera Veterinária Teste', fimCienteTs: 5 }) }, log: {} });
+    await abreVetMed659();
+    run(`__p659=vetCienteDesfazer('${K658}', 'v1');`); await espera659();
+    put658(AG658 + '/_ts', 777);
+    const [p] = await assina658('s-vera', 'a coceira voltou, preciso ver');
+    igual([p, db658(AG658 + '/itens/v1').fimCiente], ['falhou', true], 'a trava recusou');
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA P33 (AC8.1) — «Suspender» um remédio anulado em outro aparelho (a memória da tela é de antes): nada é gravado e o histórico da anulação fica', async () => {
+  arma659();
+  try {
+    semear658({ itens: { apq: APQ659() }, log: {} });
+    await abreVetMed659();
+    const hist = db658(AG658 + '/itens/apq/historico').concat([{ quem: 'Gestora Teste', quando: '09/10 09:59', acao: 'Lançado por engano' }]);
+    put658(AG658 + '/itens/apq/anulado', { acao: 'anular', por: 'Gestora Teste', motivo: 'a receita era de outro FILHOt', ts: 1 }); put658(AG658 + '/itens/apq/historico', hist);
+    run(`__ztq657=['esperar o exame de sangue'];`); await run(`vetSuspenderMed('apq')`); await espera659();
+    const it = db658(AG658 + '/itens/apq');
+    igual([!!it.suspenso, it.historico.length], [false, hist.length]);
+  } finally { solta659(); }
+});
+// ================================================================== 6.59 QA R2 — as provas do re-gate da 2ª rodada do QA (Quinn), trazidas para a Fase 0
+// na 3ª rodada, com o nome «6.59 QA R2-Pxx» e o texto do QA: P01 a P09, P11 a P13 e P16. As P10, P14 e P15 só registram (ficaram de
+// fora). A P17 foi adaptada: com o «Alterar» do parado recusado, o 1º passo da cadeia não acontece; o 2º (a régua da 6.54 com um
+// parado que toca) fica registrado para a story da régua.
+console.log('\n6.59 QA R2 — as provas do re-gate da 2ª rodada do QA: o recado nas três portas, o remédio parado, a reavaliação na correção');
+const O_MEL659R2F0 = `{chave:'${KMEL655}', p:PELUDINHOS[1], i:1, nome:'Mel', raca:'Poodle', tutor:'Ana Teste', tel:'', sexo:'Fêmea',
+  itens:[{k:'vac_raiva_p', nome:'Raiva', vence:'2026-10-12', atrasado:false, vacina:true}], atrasados:0}`;
+const regMel659r2f0 = (db) => reg655(db, DIA659V, KMEL655);
+
+// ---- ALTO-1 — o recado com dois aparelhos, nas três portas
+provaAsync('6.59 QA R2-P01 (AC2.1) — o recado já cancelado por A: B, com a memória do recado, toca «Não quer agora» de novo — nada de 2º «CANCELADO» nem 2º guardado', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha');
+    const memB = J658(`VENC_REG['${K655}']`);
+    await responde659('vacina', 'nao');
+    igual(cancV659(db).length, 1);
+    ctx.__mb659 = memB; run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__mb659)); __tg659=[];`);
+    await responde659('vacina', 'nao');
+    igual([cancV659(db).length, run('__tg659').map((m) => m.texto), 'vet' in regV659(db)], [1, [], false], 'o recado já tinha saído');
+  });
+});
+provaAsync('6.59 QA R2-P02 (AC2.1) — o desfazer em B (memória com o recado de 12/10) depois que o banco passou a ter o de 14/10: a pergunta, o guardado e o «CANCELADO» falam do de 14/10', async () => {
+  await recado659(async (db) => {
+    const vetMem = { pet: 'Tico', dofilhot: 'do Tico', periodo: 'no dia dele', vacinas: 'Raiva', dia: '2026-10-12', quem: 'Ana', ts: T655(9, 9), tipo: 'aberto' };
+    const vetBanco = Object.assign({}, vetMem, { dia: '2026-10-14', quem: 'Bia', ts: T655(9, 9, 30) });
+    const reg = { pet: 'Tico', tutor: 'Rita Teste', respostas: { aberto: { v: 'ab_bolsa', quem: 'Ana', ts: T655(9, 9) } }, auto: { aberto: { dia: DIA659V, onde: 'NA BOLSA', quem: 'Ana', ts: T655(9, 9), itens: [], falharam: [] } } };
+    db.store.daycare = { vencimentos: { [DIA659V]: { [K655]: Object.assign(JSON.parse(JSON.stringify(reg)), { vet: vetBanco }) } } };
+    ctx.__rg659 = Object.assign({}, reg, { vet: vetMem });
+    run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__rg659)); __O659.itens=[{k:'vac_raiva_p', nome:'Raiva', vence:'', sem_registro:true, vacina:true}];`);
+    igual(await run(`vencDesfazerAuto('${K655}', 'aberto', '${DIA659V}')`), true); await drena655(); await drena655();
+    const perg = (run('__zp659')[0] || [])[1] || [];
+    assert.ok(perg.some((l) => /14\/10\/2026/.test(l)), 'a pergunta: ' + JSON.stringify(perg));
+    igual(['vet' in regV659(db), cancV659(db).map((c) => c.dia), run('__tg659').map((m) => /14\/10\/2026/.test(m.texto))], [false, ['2026-10-14'], [true]]);
+  });
+});
+provaAsync('6.59 QA R2-P03 (AC2.2) — o «escolher à mão» em B (memória sem recado) depois que A gravou o recado de tarde: o de tarde é guardado e o novo diz «No lugar de … (tarde)»', async () => {
+  await recado659(async (db) => {
+    const memVazia = J658(`VENC_REG['${K655}']||null`);
+    await responde659('vacina', 'vet_tarde');                      // A
+    ctx.__mv659 = memVazia; run(`if(__mv659) VENC_REG['${K655}']=JSON.parse(JSON.stringify(__mv659)); else delete VENC_REG['${K655}']; __tg659=[];`);
+    run(`__O659.itens=[__O659.itens[0]]; VENC_ESCOLHA['${K655}']={__vet:{periodo:'manhã'}}; vencLancarConfirmado('${K655}');`); await drena655(); await drena655();
+    const r = regV659(db), c = cancV659(db);
+    igual([r.vet && r.vet.periodo, r.vet && r.vet.substitui && r.vet.substitui.periodo, c.map((x) => x.periodo)], ['manhã', 'tarde', ['tarde']]);
+    assert.ok(run('__tg659').some((m) => /No lugar de 13\/10\/2026 \(tarde\)/.test(m.texto)), JSON.stringify(run('__tg659')));
+  });
+});
+provaAsync('6.59 QA R2-P04 (o WeakMap) — dois FILHOts, respostas intercaladas sem esperar o banco: cada recado decide o seu (nada vaza de um registro para o outro)', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha');
+    await run(`vencResponderTipo('${KMEL655}', 'vacina', 'vet_manha', '${DIA659V}', ${O_MEL659R2F0})`); await drena655(); await drena655();
+    run('__tg659=[];');
+    const p1 = run(`vencResponderTipo('${K655}', 'vacina', 'nao', '${DIA659V}', __O659)`);
+    const p2 = run(`vencResponderTipo('${KMEL655}', 'vacina', 'vet_tarde', '${DIA659V}', ${O_MEL659R2F0})`);
+    const p3 = run(`vencResponderTipo('${K655}', 'antip', 'nao', '${DIA659V}', __O659)`);
+    await p1; await p2; await p3; await drena655(); await drena655(); await drena655();
+    const t = regV659(db), m = regMel659r2f0(db);
+    const ct = Object.keys(t.vet_cancelados || {}).map((k) => t.vet_cancelados[k]), cm = Object.keys(m.vet_cancelados || {}).map((k) => m.vet_cancelados[k]);
+    igual(['vet' in t, ct.map((x) => x.pet + '/' + x.periodo), m.vet && m.vet.periodo, m.vet && m.vet.substitui && m.vet.substitui.periodo, cm.map((x) => x.pet + '/' + x.periodo)],
+      [false, ['Tico/manhã'], 'tarde', 'manhã', ['Mel/manhã']], JSON.stringify(run('__tg659').map((x) => x.texto)));
+    const tg = run('__tg659').map((x) => x.texto);
+    igual([tg.filter((x) => /^CANCELADO — Vacina de Raiva do Tico/.test(x)).length, tg.filter((x) => /da Mel — tutor autorizou para .*\(tarde\)\. No lugar de/.test(x)).length, tg.length], [1, 1, 2]);
+  });
+});
+provaAsync('6.59 QA R2-P05 (a releitura que falha) — a leitura do recado na fila falha: vale a memória da tela (com o recado), e o recado cai', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha');
+    run(`__dbr659r2=DB.ref; DB.ref=function(p){ var r=__dbr659r2(p); if(/\\/vet$/.test(String(p))) r.once=function(){ return Promise.reject(new Error('sem conexão')); }; return r; }; __tg659=[];`);
+    try { await responde659('vacina', 'nao'); } finally { run('DB.ref=__dbr659r2;'); }
+    igual(['vet' in regV659(db), cancV659(db).length, run('__tg659').length], [false, 1, 1]);
+  });
+});
+provaAsync('6.59 QA R2-P06 (AC2.1) — o desfazer em B, cuja memória NÃO tem o recado (o banco tem): o recado cai e a veterinária é avisada', async () => {
+  await recado659(async (db) => {
+    const vet = { pet: 'Tico', dofilhot: 'do Tico', periodo: 'no dia dele', vacinas: 'Raiva', dia: '2026-10-12', quem: 'Ana', ts: T655(9, 9), tipo: 'aberto' };
+    const reg = { pet: 'Tico', tutor: 'Rita Teste', respostas: { aberto: { v: 'ab_bolsa', quem: 'Ana', ts: T655(9, 9) } }, auto: { aberto: { dia: DIA659V, onde: 'NA BOLSA', quem: 'Ana', ts: T655(9, 9), itens: [], falharam: [] } } };
+    db.store.daycare = { vencimentos: { [DIA659V]: { [K655]: Object.assign(JSON.parse(JSON.stringify(reg)), { vet: vet }) } } };
+    ctx.__rg659 = reg; run(`VENC_REG['${K655}']=JSON.parse(JSON.stringify(__rg659)); __O659.itens=[{k:'vac_raiva_p', nome:'Raiva', vence:'', sem_registro:true, vacina:true}];`);
+    await run(`vencDesfazerAuto('${K655}', 'aberto', '${DIA659V}')`); await drena655(); await drena655();
+    igual(['vet' in regV659(db), cancV659(db).length, run('__tg659').length], [false, 1, 1]);
+  });
+});
+provaAsync('6.59 QA R2-P07 (AC2.1, texto) — o recado que substituiu outro e depois é cancelado: o «CANCELADO» descreve o de tarde, sem o «No lugar de» dele', async () => {
+  await recado659(async (db) => {
+    await responde659('vacina', 'vet_manha'); await responde659('vacina', 'vet_tarde'); run('__tg659=[];');
+    await responde659('vacina', 'nao');
+    igual(run('__tg659').map((m) => m.texto), ['CANCELADO — Vacina de Raiva do Tico — tutor autorizou para 13/10/2026 (tarde) — o tutor mudou a resposta para "Não quer agora". Não precisa preparar.']);
+  });
+});
+
+// ---- ALTO-2 e MÉDIO-R2-1 — o remédio parado e o suspenso
+provaAsync('6.59 QA R2-P08 (AC7.3) — «Alterar» o horário do remédio parado: recusa com a frase, nada gravado e o carimbo NÃO anda (a recusa vem antes da trava)', async () => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ continuo: false, dataFim: '2026-10-09', paradoEm: { quem: 'Plantonista Teste', data: '2026-10-09', ts: 1, motivo: 'o tutor pediu para parar' } }) },
+      log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659(); run('__esc657=[];');
+    const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['20:00'] }));
+    igual([!!(r && r.horaRecusada), db658(AG658 + '/itens/apq').horarios, db658(AG658 + '/_ts'), run('__esc657').filter((e) => /medicacao-agenda/.test(e[1]) && !/RECUSADO/.test(e[0])).length], [true, ['08:00'], 500, 0]);
+    assert.ok(/parou de ser dado/.test(statusVet659()) && /Voltou a tomar/.test(statusVet659()), statusVet659());
+    // a mesma lista em outra ordem não é mudança de horário: a dose muda (pela régua) e grava
+    const r2 = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['08:00'], q: '2' }));
+    igual([!!(r2 && r2.ok), db658(AG658 + '/itens/apq').q], [true, '2'], statusVet659());
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA R2-P09 (AC7.3) — a lista do remédio parado com dois horários, mandada em outra ordem: não é mudança de horário (grava a dose)', async () => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { zen: ZEN658({ continuo: false, dataFim: '2026-10-09', paradoEm: { quem: 'Plantonista Teste', data: '2026-10-09', ts: 1, motivo: 'o tutor pediu para parar' } }) }, log: {} });
+    await abreVetMed659();
+    const r = await altera659('zen', FORM659(db658(AG658 + '/itens/zen'), { horarios: ['20:00', '08:00'], q: '2' }));
+    igual([!!(r && r.ok), db658(AG658 + '/itens/zen').q], [true, '2'], statusVet659());
+  } finally { solta659(); }
+});
+// ---- MÉDIO-1 — a reavaliação na correção da consulta
+provaAsync('6.59 QA R2-P11 (AC3.3) — entre o cartaz e a gravação, o MOTIVO da reavaliação desta consulta mudou em outro aparelho (a mesma ação): nada é gravado', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '14/10/2026', 'reavaliar o estômago']})`);
+    put658('auaulandia/vet-reavaliacao/' + K658 + '/motivo', 'reavaliar o estômago e o fígado');
+    const [p] = await assina658('s-vera', 'a data da reavaliação mudou');
+    igual([p, db658('auaulandia/vet-reavaliacao/' + K658).data, Object.keys(db658('auaulandia/vet-consultas/' + K658))], ['falhou', '2026-10-12', ['c1']]);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA R2-P12 (AC3.3) — o ouvinte trouxe a reavaliação nova para a memória entre o cartaz e a gravação: a decisão é a que o cartaz MOSTROU (nada é gravado)', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c1');`); await espera659();
+    run(`corrToque('continuar', {valores:['09/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '14/10/2026', 'reavaliar o estômago']})`);
+    const novaRv = { data: '2026-10-20', motivo: 'outra consulta', por: 'Vera Veterinária Teste', ts: T657(9, 9, 50), consultaId: 'c9' };
+    put658('auaulandia/vet-reavaliacao/' + K658, novaRv); ctx.__nrv659 = novaRv; run(`VET_REAVAL_CACHE['${K658}']=JSON.parse(JSON.stringify(__nrv659));`);
+    const [p] = await assina658('s-vera', 'a data da reavaliação mudou');
+    igual([p, db658('auaulandia/vet-reavaliacao/' + K658).data], ['falhou', '2026-10-20']);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA R2-P13 (AC3.3) — a reavaliação de OUTRA consulta, com a mesma data e consultaId próprio: corrigir esta consulta não mexe nela', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659({ ts: T657(9, 9, 0) }), c2: C1_659({ data: '2026-10-08', ts: T657(8, 9, 0), reavaliacao: '2026-10-12', reavaliacaoMotivo: 'ver a pata' }) },
+      reaval: { data: '2026-10-12', motivo: 'reavaliar o estômago', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c2');`); await espera659();
+    run(`corrToque('continuar', {valores:['08/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '12/10/2026', 'ver a pata de novo']})`);
+    const h = cartaz658().replace(/<[^>]+>/g, ' ');
+    const [p] = await assina658(SENHA657, 'o motivo estava incompleto'); igual(p, 'pronto');
+    const rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv.motivo, rv.consultaId], ['reavaliar o estômago', 'c1'], 'a de c1 continua; o cartaz disse: ' + (h.match(/A reavaliação[^.]*\./) || [''])[0]);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA R2-P16 (AC3.3) — corrigir a DATA de reavaliação de uma consulta antiga, com a reavaliação ativa de outra consulta: a ativa continua e o cartaz diz que a data corrigida fica só no registro', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c3: C1_659({ data: '2026-10-05', ts: T657(5, 9, 0), reavaliacao: '2026-10-06', reavaliacaoMotivo: 'ver a coceira' }) },
+      reaval: { data: '2026-10-12', motivo: 'ver a pele', por: 'Vera Veterinária Teste', ts: T657(9, 9, 0), consultaId: 'c1' } });
+    run(`__p659=vetConsultaCorrigir('c3');`); await espera659();
+    run(`corrToque('continuar', {valores:['05/10/2026', '38,5', '7,2', 'Repouso', 'observar se volta a vomitar', 'gastrite leve', '07/10/2026', 'ver a coceira']})`);
+    const h = cartaz658().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    assert.ok(/é de outra consulta e continua como está: a data corrigida \(07\/10\/2026 — ver a coceira\) fica só no registro desta consulta/.test(h), h.slice(0, 700));
+    const [p] = await assina658(SENHA657, 'a data da reavaliação estava errada'); igual(p, 'pronto');
+    const rv = db658('auaulandia/vet-reavaliacao/' + K658);
+    igual([rv.data, rv.motivo, rv.consultaId], ['2026-10-12', 'ver a pele', 'c1']);
+  } finally { solta659(); }
+});
+provaAsync('6.59 QA R2-P17 (a cadeia do P10; adaptada pelo @dev na 3ª rodada) — o remédio parado não volta a tocar pelo «Alterar» («uso contínuo» é recusado e nada é gravado; amanhã o alarme não pede); a régua da 6.54 com o parado que toca (o 2º passo) fica registrada para a story da régua', async () => {
+  let depois = null, r = null, st = '';
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ continuo: false, dataFim: '2026-10-09', paradoEm: { quem: 'Plantonista Teste', data: '2026-10-09', ts: 1, motivo: 'o tutor pediu para parar' } }) },
+      log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659(); run('__esc657=[];');
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { continuo: true, dataFim: '' }));
+    st = statusVet659(); depois = db658(AG658 + '/itens');
+    igual([!!(r && r.ok), !!(r && r.horaRecusada), run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length, depois.apq.continuo, !!depois.apq.paradoEm], [false, true, 0, false, true], st);
+    assert.ok(/parou de ser dado/.test(st) && /uso contínuo/.test(st) && /Voltou a tomar/.test(st), st);
+  } finally { solta659(); }
+  igual(await filaQA659f0(depois, 10), [], 'amanhã o alarme não pede o remédio parado');
+  // o 2º passo do QA (a régua da 6.54 chamada com um parado que toca, estado que o «Alterar» já não cria): só registrado
+  const base = APQ659({ continuo: true, horarios: ['08:00'], paradoEm: { quem: 'Plantonista Teste', data: '2026-10-08', ts: 1, motivo: 'o tutor pediu para parar' } });
+  arma659();
+  let reg = null;
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: base }, log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    ctx.__ap659 = base;
+    J658(`(function(){ var r=null; mcrReguaDaAgenda('${K658}', {apq:Object.assign({}, __ap659, {horarios:['20:00']})}, {apq:__ap659}, 'Teste do Plantão').then(function(x){ r=x; }); return __rg659r2=function(){ return r; }; })() && null`);
+    await espera659(); const x = J658('__rg659r2()'); reg = Object.assign({}, x.itens, x.novos);
+  } finally { solta659(); }
+  console.log('      (registrado para a story da régua da 6.54) o parado que toca, com o horário mudado depois da dose de hoje: hoje o alarme pede ' + JSON.stringify(await filaQA659f0(reg, 9)));
+});
+// ---- AC13 e AC14 — o que não pode mudar --------------------------------------------------------------------------------------
+prova('6.59 P34 (AC13, guarda) — a área protegida, a atividade Peso do Day Care e as pontes compartilhadas sem mudança; nenhuma função nova começa com ck ou pt; o ckGaleriaCarregar só chamado', () => {
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const nomes = run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  const html = fs.readFileSync(APP, 'utf8');
+  const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
+  const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
+  igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+  const BASE = { renderPesoAtiv: '432ef6ad1d2da28af4d13513eeb83bf71725bbf67470c7d5f34391ff49ad9afa', pesoAtivSalvar: 'a2e2e1176e1ffb5805b7a2d05ebdfb65b4de7ef32e5393d5d6ca508604312911',
+    tgAvisar: 'fe030a1d1f9175992bed0d2416d57ebb298ab60f55dd7990c1f9682d16ef1c49', tgAvisarAlteracao: 'a2992b21868f9377003340f350e3b2b93421697d83c57e2cb300ecbd281440e9',
+    dashPonteChamarJa: 'dcddee702d3a081a5a619b60737fcc3b604e41131d26309da44a6427a8dfaa1c', dashEspelhar: 'b391f81b75745520a46daaa65f2284a4a3a4b475797e642167e09e922d9b6405',
+    dashAutoSincronizar: 'ba29c5cfc857f2c630014f1c649bbeb2788dcfc00db27f3137a607d3161bdf1a', abrirVetFicha: '79a19e70ab5e4e58c04a3d86699f8e4f31cb2583382983af56dff2405f513e58',
+    pesoTentar: '7121f14ca1ed4c78ce77b1d806111408506934b602f9351885004988188fa728' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(run(n + '.toString()')); });
+  igual(agora, BASE, 'letra por letra iguais às da base');
+  igual((extractMainScript(html).match(/ckGaleriaCarregar\(/g) || []).length, 3, 'o ckGaleriaCarregar continua só chamado (a mesma conta da base)');
+});
+provaAsync('6.59 P35 (AC14, guarda) — as provas da 6.47, da 6.54, da 6.57 e da 6.58 continuam todas (contadas no arquivo) e passaram sem mudar asserção', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const conta = {}; ['6.47', '6.54', '6.57', '6.58'].forEach((v) => { conta[v] = (src.match(new RegExp("prova(?:Async)?\\('" + v.replace('.', '\\.') + '[ \']', 'g')) || []).length; });
+  igual(conta, { '6.47': 49, '6.54': 98, '6.57': 41, '6.58': 105 }, 'nenhuma prova antiga saiu do arquivo');
+  const caiu = falhas.filter((f) => /^6\.(47|54|57|58)\b/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+{
+// ================================================================== 6.59 — as provas do re-gate 3 do QA (R3-A3 e R3-B1), trazidas para a Fase 0 antes da publicação
+console.log('\n6.59 — re-gate 3 do QA: o remédio parado em «uso contínuo» no Cuidado Vet e a comparação da pesagem só sem os vazios');
+const PE659R3 = { quem: 'Plantonista Teste', data: '2026-10-09', quando: '09/10 09:00', ts: 1, motivo: 'o tutor pediu para parar' };
+const escAg659r3 = () => run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length;
+// a fila do dia (fila654Q) lista os horários do dia; o que o registro do dia já tem (a das 08:00, dada às 08:04) não é pedido de novo
+const pede659r3 = (fila, dadas) => fila.filter((x) => (dadas || []).indexOf(x) < 0);
+// ---- A3: o estado que o Plantão cria («uso contínuo» com a parada guardada): o «Alterar» do Cuidado Vet não muda o horário
+provaAsync('6.59 QA R3-A3 (S3-P12, a porta do Cuidado Vet) — o remédio em «uso contínuo» com `paradoEm` (o «Salvar agenda» do Plantão cria), dado às 08:00: o «Alterar» que muda o horário para 20:00 é recusado e nada é gravado', async () => {
+  let r = null, st = '', depois = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ continuo: true, horarios: ['08:00'], paradoEm: Object.assign({}, PE659R3, { data: '2026-10-08' }) }) },
+      log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+    await abreVetMed659(); run('__esc657=[];');
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['20:00'] }));
+    st = statusVet659(); depois = db658(AG658 + '/itens');
+    igual([!!(r && r.ok), !!(r && r.horaRecusada), escAg659r3(), depois.apq.horarios], [false, true, 0, ['08:00']], st);
+    // e a Veterinária que tenta encerrar esse remédio pelo «tomar até» (tirar o «uso contínuo»): o que a tela diz
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { continuo: false, dataFim: '2026-10-09' }));
+    console.log('      tirar o «uso contínuo» (fim hoje): ok=' + !!(r && r.ok) + ' | ' + statusVet659().slice(0, 220));
+  } finally { solta659(); }
+  igual(pede659r3(await filaQA659f0(depois, 9), ['apq@08:00']), [], 'hoje o alarme não pede de novo a das 08:00 nem pede 20:00');
+});
+// ---- B: a pesagem — o pesoCorrNormal só tira o que o Firebase não guarda; mudança de verdade continua recusada
+prova('6.59 QA R3-B1 (O-R2-2) — pesoCorrNormal: só os vazios saem; falso, zero, texto vazio, a lista com mais um item e o objeto de dentro mudado continuam diferentes', () => {
+  const N = (a) => run(`vagasJsonEstavel(pesoCorrNormal(${JSON.stringify(a)}))`);
+  const dif = [
+    [{ estado: 'anulada', kgDe: 18 }, { estado: 'reaberta', kgDe: 18 }],
+    [{ kgPara: 8 }, { kgPara: 18 }],
+    [{ anteriores: [{ kg: 18 }] }, { anteriores: [{ kg: 18 }, { kg: 9 }] }],
+    [{ anteriores: [{ kg: 18, marca: { por: 'A' } }] }, { anteriores: [{ kg: 18, marca: { por: 'B' } }] }],
+    [{ a: false }, {}], [{ a: 0 }, {}], [{ a: '' }, {}],
+  ];
+  const iguais = [[{ a: 1, rotulos: {} }, { a: 1 }], [{ a: 1, l: [] }, { a: 1 }], [{ a: 1, n: null }, { a: 1 }], [{ a: { b: {} } }, {}]];
+  igual(dif.map((x) => N(x[0]) === N(x[1])), dif.map(() => false), 'mudança de verdade');
+  igual(iguais.map((x) => N(x[0]) === N(x[1])), iguais.map(() => true), 'só os vazios');
 });
 }
 // ------------------------------------------------ o fim

@@ -2,6 +2,69 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 10/out/2026 (v 2026-10-09-15) — O peso, o recado à veterinária e o Cuidado Vet: corrigir, anular e desfazer (S3 da revisão tela por tela, parte 2)
+
+> Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) no peso, no recado à veterinária dos Vencimentos e no Cuidado Vet. Ela não cria tela nova no menu. Regra de ouro: nada é apagado (o que sai fica riscado, com quem, quando e o motivo), e a dose do vermífugo e o alarme do remédio seguem o dado corrigido.
+
+### (BM) Cadastro de Peludinhos › aba Prevenção › Peso e tela Peso
+
+| Antes | Agora |
+|---|---|
+| O peso errado (18 kg em vez de 8) não se corrigia e continuava valendo no vermífugo | **«Corrigir» e «Anular»** em cada pesagem (44 px). A lista mostra as 6 últimas e **«ver todas (N)»**. O cartaz traz a pesagem (data, kg, quem pesou), o peso novo (a mesma leitura da balança: 9,7 · 9.700 · 9700) e **a dose do vermífugo antes e depois** |
+| — | **Quem assina:** a pesagem de hoje, quem pesou ou quem pode mexer na ficha ou no Cuidado Vet, com a própria senha; a de dia anterior e o «Anular», **só a Gestão** (entra na dose do vermífugo) |
+| — | **Nada some:** a pesagem fica na lista como foi pesada; a corrigida aparece com **«(era 18 kg)»** e a anulada riscada, as duas com quem, quando, o motivo e **«Reabrir»**. O último peso, o «pesado este mês», a régua de 30 dias, o vermífugo, a variação da pesagem seguinte e «Pesados hoje» passam a usar o peso corrigido |
+| — | **Dois aparelhos:** se outro aparelho corrigiu, anulou ou reabriu a mesma pesagem depois que o cartaz abriu, nada é gravado («mudou em outro aparelho… feche e abra de novo»): a correção do outro não some |
+| A variação avisada à veterinária por um peso errado ficava sem correção | **A veterinária sabe:** se aquela pesagem (ou a seguinte) a avisou, o grupo dela recebe «PESO CORRIGIDO», «PESO ANULADO» ou «PESO — A CORREÇÃO FOI DESFEITA», com quem corrigiu, anulou ou desfez. Sem como saber, a tela pergunta (recomendado: sim, quando a dose muda). Sem o grupo na ponte, a tela mostra o texto pronto para mandar à mão |
+| A segunda pesagem do mesmo dia trocava o valor sem rastro | O valor de antes vai para o rastro da ficha: «Peso de hoje: 18 kg (pesou: …) → 8 kg (pesou: …)» |
+| — | **A atividade Peso do Day Care não mudou** (decisão 2) |
+
+### (BN) Vencimentos › recado à veterinária
+
+| Antes | Agora |
+|---|---|
+| O tutor mudava de ideia («Não quer agora») e a veterinária continuava preparando a vacina | O recado sai do cartão e fica guardado inteiro (com quem, quando e a resposta nova); o grupo da veterinária recebe **«CANCELADO — … Não precisa preparar.»**. Vale também para o desfazer da resposta |
+| — | **Trocar o período** (manhã → tarde): o recado novo diz «No lugar de 13/10/2026 (manhã).» |
+| — | **Dois aparelhos (ou dois toques seguidos):** o cancelamento confere o recado que está no banco na hora de gravar. A Consultora com a tela aberta antes que toca «Não quer agora» cancela o recado que a Gestão acabou de criar, e o «CANCELADO» diz o recado que valia (o de tarde, se ele trocou o de manhã) |
+| — | A troca de outro assunto (antiparasitário) não derruba o recado da vacina |
+| — | Sem o grupo da veterinária na ponte (ou com a ponte falhando): **«A VETERINÁRIA NÃO FOI AVISADA DO CANCELAMENTO»**, com o texto pronto para mandar à mão |
+
+### (BO) Cuidado Vet › consultas
+
+| Antes | Agora |
+|---|---|
+| A consulta errada não se corrigia nem se anulava | **«Corrigir»**: uma versão nova (as fotos ficam); a anterior desce riscada, sem PDF. A instrução que nasceu dela passa para a versão nova. No mesmo dia, a própria senha; de dia anterior, a Gestão |
+| — | **A reavaliação na correção:** só muda a reavaliação que nasceu daquela consulta; a de outra consulta continua como está. Tirar a data deixa a reavaliação riscada (com «Reabrir»); mudar a data ou o motivo guarda a de antes no histórico. O cartaz diz o que acontece com a reavaliação |
+| — | **«Anular»** (lançada por engano): só a Gestão; a consulta fica riscada; a instrução e a reavaliação nascidas dela saem junto; a reavaliação antiga pergunta «Tirar junto» ou «Manter» |
+| Ninguém sabia se o receituário já tinha saído | PDF (só quando o arquivo é gerado), WhatsApp e e-mail ficam registrados na consulta; o cartaz avisa **«Este receituário já saiu: … Avise o tutor da correção.»** |
+| Sem permissão, «Salvar consulta», «Alterar», «Suspender» e «Reativar» ficavam calados | Dizem quem pode e nada é gravado |
+
+### (BP) Cuidado Vet › instrução, reavaliação e observação
+
+| Antes | Agora |
+|---|---|
+| A instrução da veterinária só saía com uma consulta nova | **«Retirar instrução»** (a própria senha, motivo de 4 palavras): a tarja some da ficha e do card do Plantão; no Cuidado Vet fica riscada, com **«Reabrir»** |
+| A reavaliação feita continuava no quadro do dia | **«Feita»** no quadro «Reavaliação de hoje» (quem e quando, pelo login), com «Reabrir»; remover pede 4 palavras e a própria senha e deixa riscada |
+| A observação para o tutor não se editava | **«Editar»** guarda o original (aviso: a Márcia pode já ter repassado ao tutor); **«Retirar»** some da ficha e fica riscada, com «Reabrir». De dia anterior, a Gestão |
+
+### (BQ) Cuidado Vet › Medicação em vigor
+
+| Antes | Agora |
+|---|---|
+| «Alterar» regravava o remédio inteiro pela cópia da tela (perdia o que outras telas tinham gravado) | Grava só o que o formulário mudou; o resto continua. **A régua do «Salvar agenda»:** o horário mudado com a dose de hoje dada começa amanhã, com a frase na tela. **A trava:** a agenda mudada em outro aparelho depois que a tela abriu é recusada («Nada foi salvo: feche e abra de novo») |
+| «Alterar» mudava o horário do remédio parado ou suspenso, e o alarme pedia de novo a dose de hoje já dada | **Recusado**, com o caminho: o parado volta por «Voltou a tomar» na ficha; o suspenso, reativando antes. No parado, o «uso contínuo» e o «tomar até» também são recusados (ele voltaria a tocar). A linha do remédio parado diz **«Parou de tomar em …»** (quem e o motivo). A dose e o resto do parado continuam mudando |
+| — | **A tela diz o que aconteceu com o horário:** «✅ … já vale na ficha e nos alarmes» quando vale já; «✅ … gravada na ficha» com a frase do «começa amanhã»; quando a régua manteve o horário, «✋ A alteração foi gravada, mas o horário NÃO mudou», com o porquê |
+| — | **A tela que não leu o carimbo da agenda não grava o «Alterar»** («feche e abra de novo»); «Suspender», «Reativar» e «Ainda preciso reavaliar» releem o carimbo antes e, sem conseguir, não gravam |
+| O «Ciente» do término não voltava | Mudar o fim do tratamento tira o «Ciente» (vira linha do histórico); **«Ainda preciso reavaliar»** traz de volta o aviso «Receita encerrada», dentro dos 30 dias |
+| «Suspender» e «Reativar» aceitavam qualquer motivo | Motivo de pelo menos 4 palavras («erro» é recusado); FILHOt hospedado: o grupo do plantão recebe a mudança |
+| — | **«Lançada por engano»**: o anular do remédio da agenda (a Gestão assina; nada é apagado; o remédio fica riscado, sem botões) |
+| Só as 4 últimas ações do histórico | **«ver o histórico inteiro (N)»** |
+
+### (BR) Dashboards › Linha do tempo do dia (e Configurações › Logins e segurança, o resumo por pessoa)
+
+| Antes | Agora |
+|---|---|
+| — | **As ações novas em português:** Corrigiu uma pesagem, Anulou uma pesagem (lançada por engano), Reabriu uma pesagem (a correção foi desfeita), Vencimentos: conversa com o tutor e recado à veterinária, Corrigiu uma consulta (versão nova), Anulou uma consulta (lançada por engano), Retirou e Reabriu a instrução da Veterinária, Marcou a reavaliação como feita, Reabriu a reavaliação, Editou, Retirou e Reabriu a observação para o tutor, Suspendeu um remédio (Veterinária), Deu «Ciente» do fim da receita e Desfez o «Ciente» («Ainda preciso reavaliar»); e as que apareciam em código: Peso do FILHOt, Consulta da Veterinária, Observação da Veterinária para o tutor. A retirada e a remoção aparecem como «Retirou» e «Removeu», não como «lançado por engano» |
+
 ## O que mudou em 10/out/2026 (v 2026-10-09-14) — O remédio: desfazer a dose, «Lançado por engano», «Voltou a tomar» e a medicação do dia (S3 da revisão tela por tela, parte 1)
 
 > Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) no remédio: a dose dada, o remédio da agenda e a medicação dos Lançamentos do dia. Ela não cria tela nova no menu. Regra de ouro: nada de dose em dobro, nada de dose perdida, e nenhuma dose dada some do histórico (anular deixa riscado).
