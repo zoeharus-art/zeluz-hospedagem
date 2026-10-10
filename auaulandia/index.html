@@ -1803,6 +1803,14 @@
   .vg-ped strong{font-size:14.5px;font-weight:800;color:var(--z-blue);display:block}
   .vg-ped small{font-size:12px;font-weight:600;color:var(--muted)}
   .vg-ped .vg-acoes{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  /* 6.61: os pedidos já decididos (até o dia passar) e a troca antiga cancelada, riscada no dia */
+  .vg-dec-tit{margin:14px 0 6px;font-size:13px;font-weight:800;color:var(--z-blue)}
+  .vg-ped.vg-dec{border-color:var(--line);overflow-wrap:anywhere}
+  .vg-ped .vg-dec-st{display:block;margin-top:2px;color:var(--z-blue)}
+  .troca-canceladas{margin-top:7px;display:flex;flex-direction:column;gap:5px}
+  .troca-cancelada{font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere}
+  .troca-cancelada s{font-weight:800;color:var(--z-blue)}
+  .troca-lotado{display:block;margin-top:3px;color:#B3261E;font-weight:700}
   .rep-lanc{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
   .rep-lanc:last-child{border-bottom:none}
   .rep-lanc .lc-tipo{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;flex:0 0 auto;letter-spacing:.03em}
@@ -4980,13 +4988,15 @@
       <label class="rep-lb">Em que dia ele vem?</label>
       <input type="date" class="rep-in" id="dxData" min="2015-01-01" max="2035-12-31" onchange="dxDiaMudou()" onkeydown="return dataSoNoCalendario(event)">
 
-      <label class="dx-troca-lb"><input type="checkbox" id="dxTroca" onchange="dxTrocaMudou()"><span>É <strong>troca de dia</strong>: o tutor não quer usar reposição — ele deixa de vir num dia dele e vem neste.</span></label>
+      <label class="dx-troca-lb" id="dxTrocaLb"><input type="checkbox" id="dxTroca" onchange="dxTrocaMudou()"><span>É <strong>troca de dia</strong>: o tutor não quer usar reposição — ele deixa de vir num dia dele e vem neste.</span></label>
       <div id="dxTrocaBox" style="display:none">
         <label class="rep-lb">Em que dia dele ele NÃO vem?</label>
         <input type="date" class="rep-in" id="dxDe" min="2015-01-01" max="2035-12-31" onchange="dxTrocaMudou()" onkeydown="return dataSoNoCalendario(event)">
       </div>
 
       <div id="dxVeredito" style="margin-top:4px"></div>
+      <!-- 6.61 (AC8): «Qual falta este dia repõe?», quando há mais de uma falta livre -->
+      <div id="dxFaltas"></div>
       <div id="dxVagas"></div>
 
       <div class="rep-warn" id="dxWarn"></div>
@@ -5174,13 +5184,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-17"></script>
+<script src="resposta-tutor.js?v=2026-10-09-18"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-17"></script>
+<script src="painel-logica.js?v=2026-10-09-18"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5202,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-17"></script>
+<script src="financeiro-logica.js?v=2026-10-09-18"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -10182,22 +10192,8 @@
     try{ const k=pelKey(p); if((TROCA_CACHE[paraISO]||{})[k]) return 'Ele já tem troca marcada nesse dia.'; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     return '';
   }
-  function trocaLancar(p, deISO, paraISO, motivo){
-    if(!p||!DB) return Promise.reject(new Error('sem conexão'));
-    const erro=trocaValidar(p, paraISO);
-    if(erro) return Promise.reject(new Error(erro));
-    const livres=trocaVagasLivres(paraISO);
-    const confirmada=(livres>0);
-    const k=pelKey(p);
-    const reg={ nome:pelNome(p), tutor:pelGet(p,'tutor')||'', de:deISO||'', para:paraISO,
-                motivo:motivo||'', quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(),
-                status: confirmada?'confirmada':'pedido', ts:Date.now() };
-    return DB.ref('daycare/trocas/'+paraISO+'/'+k).set(reg).then(function(){
-      if(typeof audit==='function') audit('troca-'+reg.status,
-        pelNome(p)+': '+(deISO?fmtBR(deISO)+' → ':'')+fmtBR(paraISO), {alvo:dcKey(p.n,p.tutor), assinou:reg.quem});
-      return reg;
-    });
-  }
+  // 6.61 (AC6.4): o trocaLancar saiu — nenhum botão nem função o chamava desde que a troca passou a ser falta
+  // avisada + reposição pelo «Marcar reposição» (25/set/2026). O trocaValidar fica (a prova da 6.30 o usa).
   // A Gestora decide o que passa das 5. Ela avalia matilha e comportamento — o app só pergunta.
   async function trocaDecidir(dataISO,k,ok){
     if(!DB) return;
@@ -10206,8 +10202,10 @@
     if(!ok){
       const motivo=((await zTexto('Recusar a troca de '+(t.nome||'')+' para '+fmtBR(dataISO),
         ['Por quê? A recepção precisa saber o que dizer ao tutor.'],
-        {rotulo:'Motivo da recusa', botao:'Recusar a troca', minimo:3}))||'').trim();
+        {rotulo:'Motivo da recusa, em pelo menos 4 palavras (ex.: o dia já está lotado)', botao:'Recusar a troca', validar:repMotivoErro}))||'').trim();
       if(!motivo) return;
+      const mvT=repMotivoErro(motivo);   // 6.61 (AC5): conferido de novo aqui — sem motivo válido, nada é gravado
+      if(mvT){ alert(mvT+' Nada foi recusado.'); return; }
       DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'recusada', motivoDecisao:motivo,
         decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(e){ _logFalhaGrav('daycare/trocas/ (trocaDecidir)', e); });
       if(typeof audit==='function') audit('troca-recusada',(t.nome||'')+' em '+fmtBR(dataISO)+': '+motivo,{});
@@ -10217,13 +10215,23 @@
       decidiuQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), decidiuTs:Date.now()}).catch(function(e){ _logFalhaGrav('daycare/trocas/ (trocaDecidir)', e); });
     if(typeof audit==='function') audit('troca-confirmada',(t.nome||'')+' em '+fmtBR(dataISO)+' (acima das '+vagasLimite()+' vagas)',{});
   }
-  async function trocaCancelar(dataISO,k){
-    if(!DB) return;
-    if(!await zPergunta('Cancelar esta troca?',
-      ['A vaga volta a ficar livre e o crédito continua com ele.'],
-      {sim:'Cancelar a troca', nao:'Manter a troca'})) return;
-    DB.ref('daycare/trocas/'+dataISO+'/'+k).update({status:'cancelada',
-      canceladaQuem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), canceladaTs:Date.now()}).catch(function(e){ _logFalhaGrav('daycare/trocas/ (trocaCancelar)', e); });
+  // 6.61 (AC6): cancelar a troca antiga pede motivo de 4 palavras e a própria senha (o cartaz da 6.57), grava
+  // por transação só com a troca ainda confirmada e deixa rastro (troca-cancelada). Quem não lança reposição
+  // (os mesmos papéis de trocaPodeMexer) fica barrado na função, antes de qualquer gravação.
+  function trocaCancelar(dataISO,k){
+    if(!podePapel('lancar-reposicao')) return Promise.resolve(corrBarrar('cancelar uma troca da lista de troca', corrQuemPode('lancar-reposicao'), {dia:String(dataISO||''), alvo:String(k||'')}));
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return Promise.resolve(null); }
+    var t=(TROCA_CACHE[dataISO]||{})[k]||null;
+    if(!t || String(t.status||'')!=='confirmada'){ alert(trocaMudouTexto(t, 'Nada foi cancelado.')); return Promise.resolve(null); }
+    var nome=String(t.nome||''), D=fmtBR(dataISO).slice(0,5);
+    return corrAbrir({acao:'anular', nivel:'propria', capacidade:'lancar-reposicao', titulo:'Cancelar a troca de '+nome+' em '+D, botao:'Cancelar a troca',
+      tituloOk:'Troca cancelada', rotulo:'Cancelada', rotuloAcao:'Cancelou', genero:'f', oque:'a troca de '+nome+' para '+fmtBR(dataISO)+' (lista de troca)',
+      original:{caminho:'daycare/trocas/'+dataISO+'/'+k, id:String(k)}, estado:'confirmada',
+      cascata:['A vaga de '+D+' fica livre. A troca antiga é só a vaga: nada muda no Extrato de reposições.'],
+      gravar:function(reg){ return trocaCancelarGravar(dataISO, k, reg, t); }}).then(function(r){
+        if(r && r.ok){ try{ renderReposicao(); }catch(e){ /* silencioso de propósito: a tela de Reposições pode não estar aberta */ } }
+        return r;
+      });
   }
   // Próximos dias úteis com as vagas — é o que a recepção olha com o tutor no telefone.
   function trocaProximosDias(n){
@@ -10294,6 +10302,7 @@
               :(d.usadas+' de '+d.limite+' vagas · '+d.livres+' livre'+(d.livres===1?'':'s'))))
           +'</span></div>'
         +(vazio?'<div class="troca-vazio">ninguém marcado</div>':('<div class="troca-nomes">'+nomes+peds+'</div>'))
+        +trocaCanceladasHTML(d)   // 6.61 (AC6.3): a troca cancelada fica riscada no dia, com «Reabrir» quando há vaga
         +'</div>'; }).join('')+'</div>';
     h+='<div class="hint" style="margin-top:9px">São <strong>'+vagasLimite()+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
       +'Passou disso, o pedido sobe para ela — que avalia a matilha e o comportamento do FILHOt antes de abrir a vaga.</div>';
@@ -11073,7 +11082,7 @@
       fez=false; visto=atual||null;
       if(atual && vagasPedidoOcupado(atual, reg, p)) return;  // a Márcia já está nele (ou já o autorizou)
       fez=true;
-      return reg;
+      return vagasPedidoNovoSobre(atual, reg);   // 6.61 (QA661-03): a decisão de antes e o historico vão junto (nada se apaga)
     }).then(function(res){
       if(!(res && res.committed && fez)){
         var v=visto;
@@ -11765,19 +11774,29 @@
     if(st==='autorizando') return 'outro aparelho passou a autorizá-lo'+por((v.autorizando||{}).quem);
     if(st==='autorizado') return 'ele foi autorizado em outro aparelho'+por(v.autorizado_por);
     if(st==='recusado') return 'ele foi recusado em outro aparelho'+por(v.autorizado_por);
+    // 6.61: os estados novos — o pedido retirado e o encaixe desautorizado
+    if(st==='retirado') return 'ele foi retirado'+por((v.retirado||{}).por);
+    if(st==='desautorizado') return 'o encaixe foi desautorizado'+por((v.desautorizado||{}).por);
     return 'ele voltou a ficar em aberto';
   }
   // A frase de quando o pedido não está mais livre. `recusa`: quem tentava era o «Recusar».
+  // 6.61: `recusa` também pode ser o fim da frase de quem tentava (texto: «Nada foi retirado.», …).
   function vagasReservaTexto(v, recusa){
     if(!v) return 'Não achei este pedido. Atualize a tela e tente de novo.';
     var st=String(v.status||'pedido');
-    var fim=recusa?' A recusa não foi gravada.':' Nada foi lançado de novo.';
+    var fimS=(typeof recusa==='string')?(' '+recusa):'';
+    var fim=fimS||(recusa?' A recusa não foi gravada.':' Nada foi lançado de novo.');
     if(st==='autorizando'){ var q=vagasQuemReservou(v);
       return 'Este pedido já está sendo autorizado em outro aparelho'+(q?(' (por '+q+')'):'')+'.'+fim; }
     if(st==='autorizado'){ var qa=String(v.autorizado_por||'').trim();
       return 'Este pedido já foi autorizado'+(qa&&qa!=='-'?(' (por '+qa+')'):'')+'.'+fim; }
     if(st==='recusado'){ var qr=String(v.autorizado_por||'').trim();
-      return 'Este pedido já foi recusado'+(qr&&qr!=='-'?(' (por '+qr+')'):'')+'.'+(recusa?'':' Nada foi lançado.'); }
+      return 'Este pedido já foi recusado'+(qr&&qr!=='-'?(' (por '+qr+')'):'')+'.'+(fimS||(recusa?'':' Nada foi lançado.')); }
+    // 6.61: os estados novos (o pedido retirado e o encaixe desautorizado)
+    if(st==='retirado'){ var qt=vagasQuemDe((v.retirado||{}).por);
+      return 'Este pedido foi retirado'+(qt?(' (por '+qt+')'):'')+'.'+(fimS||(recusa?' A recusa não foi gravada.':' Nada foi lançado.')); }
+    if(st==='desautorizado'){ var qd=vagasQuemDe((v.desautorizado||{}).por);
+      return 'Este encaixe foi desautorizado'+(qd?(' (por '+qd+')'):'')+'.'+(fimS||(recusa?' A recusa não foi gravada.':' Nada foi lançado.')); }
     return 'Este pedido não está mais em aberto. Atualize a tela.';
   }
   // `viu` (4ª rodada da 6.46, ATK3-8): o pedido como a Márcia o viu na tela. Se no servidor ele já é
@@ -11821,6 +11840,7 @@
     var pay=(o&&o.payload)||{};
     if(String((o&&o.tipo)||'')==='avulso') return 'avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'');
     if(pay.troca && pay.troca.de) return 'troca, no lugar de '+fmtBR(pay.troca.de);
+    var mdT=vagasMudarDe(o); if(mdT) return 'reposição, mudando de '+fmtBR(mdT.dia);   // 6.61 (2ª rodada, QA661-01)
     return 'reposição';
   }
   // A reserva de outro aparelho vence em 2 min: o quadro se redesenha sozinho nessa hora (revisão
@@ -11868,8 +11888,10 @@
     }
     var motivo=((await zTexto('Recusar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia),
       ['Por quê? A recepção precisa saber o que dizer ao tutor.'],
-      {rotulo:'Motivo da recusa', botao:'Recusar o encaixe', minimo:3}))||'').trim();
+      {rotulo:'Motivo da recusa, em pelo menos 4 palavras (ex.: o dia já está lotado)', botao:'Recusar o encaixe', validar:repMotivoErro}))||'').trim();
     if(!motivo) return;
+    var mvR=repMotivoErro(motivo);   // 6.61 (AC5): conferido de novo aqui — sem motivo válido, nada é gravado
+    if(mvR){ alert(mvR+' Nada foi recusado.'); return; }
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     var fez=false, visto=null, res=null, agora=Date.now();
     try{
@@ -11917,10 +11939,13 @@
       // porque a Márcia decidiria achando que sabe a matilha inteira daquele dia.
       var jaTem='';
       try{ var vDia=vagasDoDia(o._dia); jaTem=vDia.lido?vagasNomesFrase(vDia):''; }catch(e){ jaTem=''; }
+      // 6.61 (AC1.1): «Retirar o pedido» (o tutor desistiu) no pedido em aberto e livre, para quem lança reposição
+      var ret=(vagasRetiravel(o) && repPodeLancar())?vagasRetirarBotaoHTML(o):'';
       h+='<div class="vg-ped"><div><strong>'+escAttr(o.pet||'')+'</strong>'
         +'<small>'+esc(fmtBR(o._dia))+' · '+esc((o.tipo==='avulso')
             ?('avulso'+(pay.valor_cent?(' de '+fmtCent(pay.valor_cent)):'')+(pay.matriculado?' (matriculado)':' (não matriculado)'))
-            :((pay.troca&&pay.troca.de)?('troca (no lugar de '+fmtBR(pay.troca.de).slice(0,5)+')'):'reposição'))
+            :((pay.troca&&pay.troca.de)?('troca (no lugar de '+fmtBR(pay.troca.de).slice(0,5)+')')
+              :(vagasMudarDe(o)?('reposição, mudando de '+fmtBR(vagasMudarDe(o).dia).slice(0,5)):'reposição')))   // 6.61 (2ª rodada, QA661-01)
         +' · pedido por '+esc(o.quem||'-')+'</small>'
         +(jaTem?('<small>nesse dia já estão: '+esc(jaTem)+'</small>'):'')+'</div>'
         // Em autorização num aparelho (6.46): sem botões — quem decide é quem está nele.
@@ -11931,9 +11956,10 @@
             +(o._incertoAqui?'A conexão caiu no meio da gravação; toque em «Autorizar» de novo.':'Lançado neste aparelho; falta marcar o pedido como autorizado.')+'</small>'
             +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button></div>')
         :pode?('<div class="vg-acoes">'
-            +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="vagasAutorizar(\''+jsD+'\',\''+jsK+'\')">Autorizar</button>'
-            +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vagasRecusar(\''+jsD+'\',\''+jsK+'\')">Recusar</button></div>')
-          :'<small style="margin-left:auto;color:var(--crm-critico);font-weight:800">com a Márcia</small>')
+            +'<button class="btn btn-primary" style="padding:7px 12px;font-size:13px" onclick="'+(vagasMudarDe(o)?'vagasMudarAutorizar':'vagasAutorizar')+'(\''+jsD+'\',\''+jsK+'\')">Autorizar</button>'
+            +'<button class="btn" style="padding:7px 12px;font-size:13px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="vagasRecusar(\''+jsD+'\',\''+jsK+'\')">Recusar</button>'
+            +ret+'</div>')
+          :('<small style="margin-left:auto;color:var(--crm-critico);font-weight:800">com a Márcia</small>'+(ret?('<div class="vg-acoes">'+ret+'</div>'):'')))
         +'</div>';
     });
     return h;
@@ -11942,14 +11968,900 @@
   // porque a decisão é só dela; por isso o botão pergunta antes.
   function vagasEncaixesCardHTML(){
     var L=vagasPedidosAbertos();
+    // 6.61 (AC4.1): os decididos (até o dia passar), abaixo dos pedidos em aberto — uma lista própria
+    var dec=''; try{ dec=vagasDecididosHTML(); }catch(e){ dec=''; _logFalhaGrav('vagasEncaixesCardHTML (decididos)', e); }
     var h='<article class="pm-card pm-rv"><h3 class="pm-tit">Pedidos de encaixe</h3>';
     if(!L.length){
+      if(dec) return h+'<p class="pm-sub">Nenhum pedido esperando a senhora agora.</p><div class="troca-pedidos">'+dec+'</div></article>';
       return h+'<p class="pm-sub">Nenhum dia estourou o limite de '+vagasLimite()
         +' vagas (reposição + avulso). Quando estourar, o pedido da recepção aparece aqui para a senhora autorizar.</p></article>';
     }
     return h+'<p class="pm-sub">A recepção precisou encaixar alguém num dia que já estava cheio. '
       +'<strong>Autorizar já lança</strong> — a reposição fica combinada, o avulso entra nos Lançamentos do dia.</p>'
-      +'<div class="troca-pedidos">'+vagasPedidosHTML()+'</div></article>';
+      +'<div class="troca-pedidos">'+vagasPedidosHTML()+dec+'</div></article>';
+  }
+  // =====================================================================================
+  // ===== STORY 6.61 — O DIA DE REPOR E AS VAGAS (S4 da revisão tela por tela, parte 2, 10/out/2026) =====
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026)
+  // O pedido de encaixe, a troca antiga e o dia de repor ganham o padrão único da S0 (o cartaz da 6.57).
+  // Nada se apaga: o que sai fica guardado, com quem, quando e o motivo.
+  //  · RETIRAR o pedido ainda não decidido (o tutor desistiu): quem lança reposição, com a própria senha.
+  //    Uma transação só grava com o pedido ainda em aberto e livre (sem a reserva viva da Márcia).
+  //  · DESAUTORIZAR o encaixe autorizado, num gesto: PRIMEIRO o encaixe sai pelo caminho que já existe (a
+  //    diária avulsa anulada como na 6.56; a reposição e a troca pelo «desmarcar» da 6.38, sem mudança);
+  //    DEPOIS o app relê e o pedido fecha. Se tirar falhar, o pedido fica como estava; se o pedido não
+  //    fechar, o toque seguinte acha o encaixe já fora e só fecha o pedido (nada sai duas vezes).
+  //  · REABRIR o pedido recusado, desautorizado ou retirado: a decisão anterior vai inteira para historico.
+  //  · Os decididos ficam à vista até o dia passar (regra 9), numa lista própria: a fila de abertos
+  //    (vagasPedidosAbertos) é a mesma de antes.
+  //  · A troca antiga (só a vaga) cancela com motivo, senha e rastro; fica riscada no dia, com «Reabrir».
+  //  · «Mudar o dia» da reposição marcada, num passo, pelas réguas de sempre (repRemarcarBarrado e
+  //    repAgendarVolta); e «Qual falta este dia repõe?» quando há mais de uma falta livre.
+  // A autorização da Márcia (vagasAutorizar), a reserva, as vagas do dia (vagasDoDia), repCreditoLivre,
+  // repDesmarcar, repAgendarVolta e avulsaTirar não mudam uma letra.
+  // 2ª RODADA (QA da 6.61, 10/out/2026):
+  //  · O pedido do «Mudar o dia» com o dia novo lotado leva `payload.mudar_de` (o dia de antes e o crédito). O
+  //    «Autorizar» dele passa por vagasMudarAutorizar, que relê o crédito no servidor ANTES de chamar o
+  //    vagasAutorizar (que continua o mesmo) e de novo depois da pergunta da Márcia: usado, desmarcado,
+  //    remarcado, estornado ou com o dia de antes já chegado, nada é autorizado (decisão do orquestrador, como
+  //    @po/@architect: opção (a) do QA661-01). A pergunta diz que o dia de antes fica livre, e a mensagem ao
+  //    tutor conta as livres de verdade (a mudança não gasta uma).
+  //  · «Desautorizar» relê o pedido depois da pergunta e só segue com a MESMA decisão que a tela mostrou; no
+  //    avulso, só sai a diária lançada por ESTA autorização (det.autorizacao); na reposição e na troca, só com
+  //    o mesmo crédito (QA661-02).
+  //  · «Pedir de novo» por cima de um pedido decidido guarda a decisão em historico (QA661-03). Quem podia pedir
+  //    de novo continua podendo, como na 6.46 (3ª rodada: a regra publicada só muda com a Adriana — S4-P12).
+  // 3ª RODADA (re-gate do QA): o «Retirar o pedido» volta a ser só do status «pedido» e confere antes se o encaixe
+  //    já entrou (QA661-R2-01); o «Autorizar» do «mudar o dia» reconhece a confirmação pela 1ª linha daquele pedido
+  //    e tem uma trava de reentrada por aparelho (QA661-R2-02 e R2-03).
+  // =====================================================================================
+  var VAGAS_DECIDIDOS_ST=['autorizado','recusado','desautorizado','retirado'];
+  // O encaixe que ESTE aparelho já tirou e cujo pedido ainda não fechou (o cartaz cancelado, o banco
+  // recusou): a lista diz «o encaixe já foi desfeito». O «Desautorizar» relê sempre antes de fazer nada.
+  var VAGAS_DESFEITOS={};
+  var VAGAS_OQUE_SAIU={avulso:'a diária avulsa saiu dos Lançamentos do dia', reposicao:'o dia de repor saiu do crédito',
+    troca:'a troca foi desfeita', nada:'o encaixe já tinha sido desfeito'};
+  var VAGAS_DESAUT_COMO={avulso:'a diária avulsa anulada nos Lançamentos do dia (como na 6.56)', reposicao:'o «desmarcar» de sempre (Reposições)',
+    troca:'o «desmarcar» de sempre da troca (Reposições)', nada:'o encaixe já tinha sido desfeito: só o pedido fechou'};
+  // Os campos da decisão que, ao reabrir, vão inteiros para historico (nada é apagado: só muda de lugar).
+  var VAGAS_DECISAO_CAMPOS=['motivo_recusa','autorizado_por','autorizado_ts','nota','retirado','desautorizado','autorizando','reaberto'];
+  function vagasQuemDe(q){ q=String(q==null?'':q).trim(); return (q && q!=='-')?q:''; }
+  // O texto dentro do '…' de um onclick: o jsAspas da casa (a barra invertida e o apóstrofo, depois o HTML).
+  function vagasJsArg(v){ return jsAspas(String(v==null?'':v)); }
+  function vagasSnapshotOu(res, visto){
+    try{ if(res && res.snapshot && typeof res.snapshot.val==='function') return res.snapshot.val(); }
+    catch(e){ return visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+    return visto;
+  }
+  // Pura: a decisão que a tela mostrou (o status e a hora dela). A transação só grava em cima da que a
+  // pessoa viu: o pedido pedido de novo, reaberto ou decidido em outro aparelho dá outra marca.
+  function vagasDecisaoMarca(o){
+    o=o||{}; var st=String(o.status||'pedido'), ts='';
+    if(st==='retirado') ts=(o.retirado||{}).ts;
+    else if(st==='desautorizado') ts=(o.desautorizado||{}).ts;
+    else if(st==='autorizado' || st==='recusado') ts=o.autorizado_ts;
+    else if(st==='pedido') ts=(o.reaberto||{}).ts||o.ts;
+    else if(st==='autorizando') ts=(o.autorizando||{}).ts;
+    return st+'|'+String(ts==null?'':ts);
+  }
+  // Quem decidiu, quando e o motivo, numa frase: "recusado por Márcia Teste em 09/10/2026 às 10:00: «…»".
+  function vagasDecisaoTexto(o){
+    o=o||{}; var st=String(o.status||''), q='', qd='', mot='', extra='';
+    if(st==='autorizado'){ q=o.autorizado_por; qd=repQuandoDe(o.autorizado_ts); extra=o.nota?(' ('+String(o.nota)+')'):''; }
+    else if(st==='recusado'){ q=o.autorizado_por; qd=repQuandoDe(o.autorizado_ts); mot=o.motivo_recusa; }
+    else if(st==='desautorizado' || st==='retirado'){
+      var r=o[st]||{}; q=r.por; qd=r.quando||repQuandoDe(r.ts); mot=r.motivo;
+      if(st==='desautorizado' && VAGAS_OQUE_SAIU[r.oque_saiu]) extra=' ('+VAGAS_OQUE_SAIU[r.oque_saiu]+')';
+    }
+    q=vagasQuemDe(q);
+    return st+(q?(' por '+q):'')+(qd?(' em '+qd):'')+extra+(String(mot||'').trim()?(': «'+String(mot).trim()+'»'):'');
+  }
+  // A frase de quando a transação não gravou: o estado real do pedido (com os estados novos). `mudou`: a
+  // decisão que a tela mostrou não é mais a do banco (outro aparelho mexeu enquanto o cartaz estava aberto).
+  function vagasNaoGravouTexto(v, mudou, nada){
+    if(!v) return 'Não achei este pedido no banco: ele deixou de existir. '+nada;
+    var st=String(v.status||'pedido'), qr=vagasQuemDe((v.reaberto||{}).por);
+    if(st==='pedido'){
+      if(!mudou) return (v.reaberto?('Este pedido foi reaberto'+(qr?(' (por '+qr+')'):'')+' e está na fila da Márcia. '):'Este pedido está na fila da Márcia: ainda não foi decidido. ')+nada;
+      return 'Enquanto o cartaz estava aberto, '+(v.reaberto?('o pedido foi reaberto'+(qr?(' (por '+qr+')'):'')):('o pedido foi feito de novo (agora é '+vagasPedidoTipoTexto(v)+')'))
+        +' e está na fila da Márcia. '+nada+' Atualize a tela e confira.';
+    }
+    if(mudou) return 'Enquanto o cartaz estava aberto, '+vagasPedidoEstado(v)+'. '+nada+' Atualize a tela e confira.';
+    return vagasReservaTexto(v, nada);
+  }
+  // Relido no servidor (2ª rodada, QA661-02): o pedido como está agora — {v} (null se não existe) ou {falhou},
+  // também sem resposta em 6 s (sem rede, a leitura esperaria a conexão voltar, e a tela ficaria calada).
+  function vagasPedidoReler(dia, chave){
+    var t=null, prazo=new Promise(function(ok){ t=setTimeout(function(){ ok({falhou:true}); }, 6000); });
+    var ler=enganoLer('daycare/vagas-pedidos/'+dia+'/'+chave).then(function(v){ return {v:v||null}; }, function(e){ return {falhou:true, e:e}; });
+    return Promise.race([ler, prazo]).then(function(r){
+      try{ clearTimeout(t); }catch(e){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+      return r;
+    });
+  }
+
+  // ===== PEDIR DE NOVO (2ª rodada, QA661-03) ===============================================
+  // Pura: o nó do pedido novo por cima do que estava lá. A decisão de antes (autorizado, recusado, retirado,
+  // desautorizado, ou o pedido reaberto) vai inteira para historico/{id}, com o pedido de antes; o historico
+  // de antes fica. O pedido em aberto sem nada disso é trocado pelo novo, como sempre foi (6.46).
+  function vagasPedidoNovoSobre(atual, reg){
+    if(!atual) return reg;
+    var st=String(atual.status||'pedido'), dec=(VAGAS_DECIDIDOS_ST.indexOf(st)>=0) || !!atual.reaberto;
+    if(!dec && !atual.historico) return reg;
+    var n=Object.assign({}, reg); n.historico=Object.assign({}, atual.historico||{});
+    if(dec){
+      var hk='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      var hist={status:st, ts:Date.now(), pedido_de_novo:true, pedido_antes:{quem:atual.quem||'', ts:atual.ts||0, tipo:atual.tipo||'', payload:atual.payload||null}};
+      VAGAS_DECISAO_CAMPOS.forEach(function(c){ if(atual[c]!==undefined && atual[c]!==null) hist[c]=atual[c]; });
+      n.historico[hk]=hist;
+    }
+    return n;
+  }
+
+  // ===== AC1 — RETIRAR O PEDIDO (o tutor desistiu) =========================================
+  // O pedido em aberto e livre (sem a reserva viva da Márcia; o «em autorização» e o já lançado por este
+  // aparelho continuam sem este botão). 3ª rodada (QA661-R2-01): só o status «pedido» — o pedido com a reserva
+  // vencida pode ter o encaixe já lançado (a conexão da Márcia caiu antes do «autorizado»): ele sai pelo
+  // «Recusar» da Gestão, que confere o lançamento (QA646C-02), ou pelo «Autorizar» de novo, que só o fecha.
+  function vagasRetiravel(o){ return !!o && String(o.status||'pedido')==='pedido' && vagasPedidoLivre(o) && !o._emAutorizacao && !o._lancadoAqui; }
+  // 3ª rodada (QA661-R2-01): o encaixe deste pedido já entrou? A mesma leitura do «Recusar» (vagasEncaixeLancadoTexto,
+  // QA646C-02): o avulso dele nos Lançamentos do dia; o dia de repor (o crédito do pedido) ou a troca no Extrato, no
+  // dia do pedido. '' = nada lançado; senão, a frase do «Retirar». Sem conseguir conferir, nada é retirado.
+  function vagasRetirarLancadoTexto(ped, p, dia){
+    var pay=(ped&&ped.payload)||{}, nome=String((ped&&ped.pet)||'').trim()||pelNome(p), D=repBRdata(dia);
+    var semLer='Não consegui conferir agora se o encaixe de '+nome+' em '+D+' já está lançado. Nada foi retirado: tente de novo em instantes.';
+    var fim=function(oque, desfazer){
+      return 'O encaixe já está lançado ('+oque+'): retirar o pedido não tira o lançamento. Nada foi retirado: se o tutor desistiu, '+desfazer
+        +' e depois retire o pedido; se '+nome+' vem, a Márcia fecha o pedido em «Autorizar».';
+    };
+    if(!DB) return Promise.resolve(semLer);
+    try{
+      if(String((ped&&ped.tipo)||'')==='avulso'){
+        // os Lançamentos do dia, lidos uma vez (com prazo de 6 s): a diária dele pelo nome da planilha (como o «Recusar»,
+        // vagasAvulsoDoFilhot) ou pela chave da ficha (como a anulação da 6.56, avulsaLancDe)
+        var k=''; try{ k=dcKey(p.n, p.tutor)||''; }catch(e){ k=''; } /* silencioso de propósito: sem a chave, vale o nome */
+        var t=null, prazo=new Promise(function(ok){ t=setTimeout(function(){ ok({semResposta:true}); }, 6000); });
+        var ler=DB.ref('daycare/dashboard/'+dia+'/avulso').once('value').then(function(sn){ return {lista:((sn && typeof sn.val==='function')?sn.val():null)||{}}; }, function(e){ return {erro:e}; });
+        return Promise.race([ler, prazo]).then(function(r){
+          try{ clearTimeout(t); }catch(e){ /* silencioso de propósito: o prazo vencido não muda nada */ }
+          if(!r || r.erro || r.semResposta) return semLer;
+          var lista=r.lista, tem=!!vagasAvulsoDoFilhot(p, lista) || (!!k && Object.keys(lista).some(function(id){ return avulsaLancDe(lista[id]||{})===k; }));
+          return tem?fim('o avulso de '+nome+' está nos Lançamentos do dia '+D, 'tire o avulso dos Lançamentos do dia '+D):'';
+        }, function(){ return semLer; });
+      }
+      var de=String(((pay.troca||{}).de)||''), cid=String(pay.credito_id||'');
+      if(!de && !cid) return Promise.resolve('');
+      return repRelerLancamentos(p).then(function(Lr){
+        if(!Lr) return semLer;
+        var an=repAnulados(Lr);
+        var vivo=Lr.filter(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===String(dia)
+          && (de?(!!l.troca && String(l.data||'')===de):(l._id===cid)); })[0];
+        if(!vivo) return '';
+        return de?fim('a troca '+repBRdata(de)+' → '+D+' está no Extrato de '+nome, 'desfaça a troca na tela de Reposições («desmarcar» ao lado de '+D+')')
+          :fim('o dia de repor '+D+' está marcado no Extrato de '+nome, 'desmarque o dia de repor na tela de Reposições («desmarcar» ao lado de '+D+')');
+      }, function(){ return semLer; });
+    }catch(e){ return Promise.resolve(semLer); }
+  }
+  function vagasRetirarBotaoHTML(o){
+    return '<button type="button" onclick="vagasRetirarAbrir(\''+vagasJsArg(o._dia)+'\',\''+vagasJsArg(o._chave)+'\')" style="'+REP_BOTAO_ESTILO+'color:var(--z-blue)">Retirar o pedido</button>';
+  }
+  function vagasRetirarAbrir(dia, chave){
+    if(!repPodeLancar()) return Promise.resolve(corrBarrar('retirar um pedido de encaixe', corrQuemPode('lancar-reposicao'), {dia:String(dia||''), alvo:String(chave||'')}));
+    var ped=vagasPedidoDe(dia, chave);
+    if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return Promise.resolve(null); }
+    if(String(ped.status||'pedido')!=='pedido' || !vagasPedidoLivre(ped)){ alert(vagasReservaTexto(ped, 'Nada foi retirado.')); return Promise.resolve(null); }
+    var p=repPelaChave(chave);
+    if(!p){ alert('Não achei a ficha de '+(ped.pet||'')+' neste aparelho. Abra a tela de Reposições e tente de novo.'); return Promise.resolve(null); }
+    var pet=String(ped.pet||''), D=repDataCurta(dia), pay=ped.payload||{};
+    var cas=['A Márcia deixa de ver o pedido. Nada foi lançado em '+D+'.'];
+    if(pay.credito_id){
+      // a falta que o pedido usa (payload.credito_id) não é tocada: a data dela pelo Extrato, ou a que o pedido guardou;
+      // e o dia de repor em que ela continua marcada (o pedido do «Mudar o dia», 2ª rodada, QA661-09)
+      var dataF=String(pay.data||''), voltaF='';
+      try{ var pR=repPelaChave(chave), cR=pR?repLancDe(repLancamentos(pR)||[], String(pay.credito_id)):null; if(cR && cR.data) dataF=String(cR.data); if(cR && cR.volta) voltaF=String(cR.volta); }
+      catch(e){ dataF=String(pay.data||''); } /* silencioso de propósito: sem o Extrato, vale a data que o pedido guardou */
+      var fimF=voltaF?(' continua no Extrato, marcada para '+repDataCurta(voltaF)+' (como estava).'):' continua no Extrato, sem dia de repor.';
+      cas.push(dataF?('A falta avisada de '+repDataCurta(dataF)+fimF):('A falta avisada deste pedido'+fimF));
+    }
+    // 3ª rodada (QA661-R2-01): «Nada foi lançado» só depois de conferir — ao abrir e de novo na assinatura
+    return vagasRetirarLancadoTexto(ped, p, dia).then(function(lt){
+      if(lt){ alert(lt); return null; }
+      return corrAbrir({acao:'anular', nivel:'propria', capacidade:'lancar-reposicao', titulo:'Retirar o pedido de encaixe de '+pet+' em '+D,
+        botao:'Retirar o pedido', tituloOk:'Pedido retirado', rotulo:'Retirado', rotuloAcao:'Retirou', oque:'o pedido de encaixe de '+pet+' em '+repBRdata(dia),
+        original:{caminho:'daycare/vagas-pedidos/'+dia+'/'+chave, id:String(chave)}, estado:'na fila da Márcia', cascata:cas,
+        gravar:function(reg){
+          return vagasRetirarLancadoTexto(ped, p, dia).then(function(lt2){ return lt2?{ok:false, erro:lt2}:vagasRetirarGravar(dia, chave, reg, ped); });
+        }}).then(function(r){
+          if(r && r.ok){ try{ vagasPedRedesenhar(); }catch(e){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ } }
+          return r;
+        });
+    });
+  }
+  // A transação: só com o pedido ainda em «pedido», livre e o MESMO que a tela mostrou. Os outros campos ficam
+  // como estavam; entra status:'retirado' e o registro da 6.57 em `retirado`.
+  function vagasRetirarGravar(dia, chave, reg, viu){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var fez=false, visto=null, mudou=false, marca=vagasDecisaoMarca(viu);
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).transaction(function(atual){
+      fez=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;                // cache frio: o servidor responde
+      if(String(atual.status||'pedido')!=='pedido' || !vagasPedidoLivre(atual, vagasAgora())) return;   // a Márcia reservou ou decidiu no meio
+      if(vagasDecisaoMarca(atual)!==marca){ mudou=true; return; }        // pedido de novo enquanto o cartaz estava aberto
+      fez=true;
+      return Object.assign({}, atual, {status:'retirado', retirado:reg});
+    }).then(function(res){
+      if(res && res.committed && fez){
+        if(typeof audit==='function') audit('vaga-retirada', String((viu||{}).pet||'')+' — pedido de encaixe em '+repBRdata(dia)+' retirado: '+String(reg.motivo||''),
+          {alvo:String((viu||{}).alvo||''), pet:String((viu||{}).pet||''), assinou:String(reg.por||'')});
+        return {ok:true};
+      }
+      return {ok:false, erro:vagasNaoGravouTexto(vagasSnapshotOu(res, visto), mudou, 'Nada foi retirado.')};
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+
+  // ===== AC2 — DESAUTORIZAR (o encaixe autorizado sai num gesto) ==========================
+  // Pura: o crédito do encaixe autorizado no Extrato, ou null. A troca: o crédito vivo com ela (o dia que
+  // sai e o dia do pedido). A reposição: o crédito vivo marcado para o dia do pedido com a marca desta
+  // autorização (`autorizacao`, a mesma que o vagasTrocaDesfeitaDepois lê) ou o crédito do pedido.
+  function vagasEncaixeNoExtrato(ped, L, dia){
+    var pay=(ped&&ped.payload)||{}, an=repAnulados(L||[]), de=String(((pay.troca||{}).de)||''), cid=String(pay.credito_id||'');
+    var aTs=+((ped&&ped.autorizado_ts)||0), aQ=String((ped&&ped.autorizado_por)||'');
+    var vivos=(L||[]).filter(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===String(dia); });
+    if(de) return vivos.filter(function(l){ return !!l.troca && String(l.data||'')===de; })[0]||null;
+    return vivos.filter(function(l){ return !!l.autorizacao && +l.autorizacao.ts===aTs && String(l.autorizacao.quem||'')===aQ; })[0]
+      || (cid?(vivos.filter(function(l){ return l._id===cid; })[0]||null):null);
+  }
+  // O encaixe autorizado já saiu? Pela memória deste aparelho (o 1º passo do «Desautorizar» terminou) e, na
+  // reposição e na troca, pelo Extrato deste aparelho. O avulso mora nos Lançamentos do dia do pedido, que
+  // esta lista não lê: só a memória diz. É só aviso: o «Desautorizar» relê sempre antes de fazer nada.
+  function vagasEncaixeDesfeito(o){
+    try{
+      if((VAGAS_DESFEITOS||{})[vagasLancadoChave(o._dia, o._chave)]) return true;
+      if(String(o.tipo||'')==='avulso' || !REPO_LIDO) return false;
+      var p=repPelaChave(o._chave); if(!p) return false;
+      return !vagasEncaixeNoExtrato(o, repLancamentos(p)||[], o._dia);
+    }catch(e){ return false; } /* silencioso de propósito: sem a conta, a lista não afirma que o encaixe saiu */
+  }
+  // Pura (2ª rodada, QA661-02): as diárias avulsas dos Lançamentos do dia lançadas por ESTA autorização — a
+  // marca que o lançamento da Márcia grava em det.autorizacao (quem e quando) é a mesma do pedido
+  // (autorizado_por, autorizado_ts). A diária lançada à mão pela recepção, ou por outra autorização, fica.
+  function vagasAvulsoDaAutorizacao(f, ped){
+    var aTs=+((ped&&ped.autorizado_ts)||0), aQ=String((ped&&ped.autorizado_por)||'');
+    return ((f&&f.lanc)||[]).filter(function(x){ var a=(((x&&x.reg)||{}).det||{}).autorizacao||{}; return aTs>0 && +a.ts===aTs && String(a.quem||'')===aQ; });
+  }
+  // A identidade do encaixe lido (o que sai e qual): a diária (os ids) ou o crédito. Igual antes e depois da
+  // pergunta, ou nada sai (2ª rodada, QA661-02).
+  function vagasEncaixeIdDe(est){
+    if(!est) return '';
+    if(est.oque==='avulso') return 'avulso:'+(((est.f||{}).lanc)||[]).map(function(x){ return x.id; }).sort().join(',');
+    return String(est.oque||'')+':'+String(((est.cred||{})._id)||'');
+  }
+  // Relido no servidor: o que está lançado agora para o pedido — {oque:'avulso'|'reposicao'|'troca'|'chamada'|'nada', …}
+  // ou {falhou}. O avulso pela mesma leitura da anulação da 6.56 (avulsaFontesDoDia), só o desta autorização
+  // (`outras`: as diárias dele no dia que não são desta autorização; 'chamada': a de hoje só na Chamada); a
+  // reposição e a troca pelo Extrato relido.
+  function vagasDesautorizarLer(ped, p, dia){
+    var pay=(ped&&ped.payload)||{};
+    try{
+      if(String((ped&&ped.tipo)||'')==='avulso'){
+        var k=''; try{ k=dcKey(p.n, p.tutor)||''; }catch(e){ k=''; } /* silencioso de propósito: sem a chave, nada é achado e a leitura diz */
+        return avulsaFontesDoDia(dia, k).then(function(f0){
+          var nossas=vagasAvulsoDaAutorizacao(f0, ped), ch=((f0&&f0.chamada)||[]).length;
+          var f={chamada:(f0&&f0.chamada)||[], lanc:nossas, todosLanc:(f0&&f0.todosLanc)||{}};
+          return {oque:nossas.length?'avulso':((ch && !((f0&&f0.lanc)||[]).length)?'chamada':'nada'), f:f, k:k, outras:((f0&&f0.lanc)||[]).length-nossas.length, chamada:ch};
+        }, function(e){ return {falhou:true, e:e}; });
+      }
+      return repRelerLancamentos(p).then(function(Lr){
+        if(!Lr) return {falhou:true};
+        var c=vagasEncaixeNoExtrato(ped, Lr, dia);
+        return {oque:c?((pay.troca && pay.troca.de)?'troca':'reposicao'):'nada', cred:c};
+      });
+    }catch(e){ return Promise.resolve({falhou:true, e:e}); }
+  }
+  // AC2.2: o que vai sair, pelo tipo do pedido, e o caminho que será aberto.
+  function vagasDesautorizarTexto(ped, p, dia, est){
+    var nome=String((ped&&ped.pet)||'')||pelNome(p), D=repDataCurta(dia), pay=(ped&&ped.payload)||{};
+    var naChamada='Na Chamada de hoje, '+nome+' continua como avulso: se não veio, tire lá, em «Tirar a diária avulsa».';
+    if(est.oque==='avulso'){
+      var vc=avulsaCentDe(est.f)||Math.round(+pay.valor_cent||0);
+      return 'A diária avulsa de '+nome+' em '+D+(vc>0?(' ('+fmtCent(vc)+')'):'')+' sai dos Lançamentos do dia e da planilha, e fica riscada, nunca apagada.'+(est.chamada?(' '+naChamada):'');
+    }
+    if(est.oque==='reposicao') return 'O dia de repor '+D+' sai do crédito e a vaga fica livre. A seguir, o «desmarcar» de sempre pergunta quem desistiu: a Zêluz (não conta) ou o tutor (dentro do prazo, não conta; fora do prazo, conta como usada).';
+    if(est.oque==='troca') return 'A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' é desfeita pelo «desmarcar» de sempre da troca.';
+    // 2ª rodada (QA661-07): a diária de hoje só na Chamada — a Chamada não é tocada daqui
+    if(est.oque==='chamada') return 'A diária avulsa de '+nome+' de hoje está só na Chamada, não nos Lançamentos do dia: tire-a na Chamada, em «Tirar a diária avulsa», e depois toque em «Desautorizar» de novo para fechar o pedido.';
+    if(est.outras) return 'A diária avulsa de '+nome+' que está nos Lançamentos do dia '+D+' não foi lançada por esta autorização: ela fica como está (para tirá-la, use os Lançamentos do dia). Só o pedido fecha.'+(est.chamada?(' '+naChamada):'');
+    return 'O encaixe já não está lá: só o pedido fecha.';
+  }
+  // O 2º toque depois de o encaixe sair por ESTE aparelho (2ª rodada, QA661-08): o que saiu no toque anterior.
+  function vagasDesautorizarJaSaiuTexto(ped, dia, oque){
+    var nome=String((ped&&ped.pet)||''), D=repDataCurta(dia), pay=(ped&&ped.payload)||{};
+    if(oque==='avulso') return 'A diária avulsa de '+nome+' em '+D+' já saiu dos Lançamentos do dia no toque anterior, neste aparelho: só o pedido fecha.';
+    if(oque==='troca') return 'A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' já foi desfeita no toque anterior, neste aparelho: só o pedido fecha.';
+    return 'O dia de repor '+D+' já saiu do crédito no toque anterior, neste aparelho: só o pedido fecha.';
+  }
+  async function vagasDesautorizarAbrir(dia, chave){
+    if(!vagasPodeEncaixar()) return corrBarrar('desautorizar um encaixe', corrQuemPode('decidir-troca'), {dia:String(dia||''), alvo:String(chave||'')});
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return null; }
+    var ped=vagasPedidoDe(dia, chave);
+    if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return null; }
+    if(String(ped.status||'')!=='autorizado'){ alert(vagasNaoGravouTexto(ped, false, 'Nada foi desautorizado.')); return null; }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(hoje && String(dia)<hoje){ alert('O dia '+repBRdata(dia)+' já passou: o encaixe não se desautoriza mais. Nada foi mudado.'); return null; }
+    var p=repPelaChave(chave);
+    if(!p){ alert('Não achei a ficha de '+(ped.pet||'')+' neste aparelho. Abra a tela de Reposições e tente de novo.'); return null; }
+    if(!REPO_LIDO){ alert(repExtratoEsperaTexto()); return null; }
+    var est=await vagasDesautorizarLer(ped, p, dia);
+    if(!est || est.falhou){ alert('Não consegui conferir agora o que está lançado para '+(ped.pet||'')+' em '+repBRdata(dia)+'. Nada foi mudado: tente de novo em instantes.'); return null; }
+    var nome=String(ped.pet||'')||pelNome(p), D=repDataCurta(dia), kL=vagasLancadoChave(dia, chave), marca=vagasDecisaoMarca(ped);
+    // a diária de hoje só na Chamada (2ª rodada, QA661-07): a Chamada não é tocada daqui, e o pedido não fecha com ela valendo
+    if(est.oque==='chamada'){ alert(vagasDesautorizarTexto(ped, p, dia, est)+' Nada foi mudado.'); return null; }
+    // o 2º toque depois de o encaixe sair por ESTE aparelho (2ª rodada, QA661-08): o registro diz o que saiu
+    var mem=(VAGAS_DESFEITOS||{})[kL], oqueReg=est.oque;
+    if(est.oque==='nada' && !est.outras && mem && mem.marca===marca && VAGAS_OQUE_SAIU[mem.oque]) oqueReg=mem.oque;
+    var linhas=[(oqueReg!==est.oque)?vagasDesautorizarJaSaiuTexto(ped, dia, oqueReg):vagasDesautorizarTexto(ped, p, dia, est)];
+    linhas.push(est.oque==='avulso'?'O motivo e a senha da Gestão assinam a anulação da diária e o pedido de uma vez. A autorização anterior fica guardada no pedido.'
+      :((est.oque==='nada')?'O pedido fecha como desautorizado, com o motivo e a senha da Gestão. A autorização anterior fica guardada.'
+        :'Depois, o pedido fecha como desautorizado, com o motivo e a senha da Gestão. A autorização anterior fica guardada.'));
+    if(!await zPergunta('Desautorizar o encaixe de '+nome+' em '+D+'?', linhas, {sim:'Continuar', nao:'Manter o encaixe'})) return null;
+    // A TELA VELHA (2ª rodada, QA661-02): a pessoa pode ter demorado na pergunta. Relê o pedido no servidor e só
+    // segue com a MESMA decisão que a tela mostrou; e relê o encaixe, que tem de ser o MESMO (a mesma diária, o
+    // mesmo crédito). Senão, nada sai e a tela diz o que mudou.
+    var rel=await vagasPedidoReler(dia, chave);
+    if(!rel || rel.falhou){ alert('Não consegui conferir agora o pedido de '+nome+' em '+repBRdata(dia)+'. Nada foi mudado: tente de novo em instantes.'); return null; }
+    if(vagasDecisaoMarca(rel.v)!==marca){
+      alert(rel.v?('Enquanto a pergunta estava aberta, '+vagasPedidoEstado(rel.v)+'. Nada foi desautorizado. Atualize a tela e confira.'):vagasNaoGravouTexto(null, true, 'Nada foi desautorizado.'));
+      return null;
+    }
+    if(est.oque!=='nada'){
+      var est2=await vagasDesautorizarLer(ped, p, dia);
+      if(!est2 || est2.falhou){ alert('Não consegui conferir agora o que está lançado para '+nome+' em '+repBRdata(dia)+'. Nada foi mudado: tente de novo em instantes.'); return null; }
+      if(vagasEncaixeIdDe(est2)!==vagasEncaixeIdDe(est)){
+        alert('Enquanto a pergunta estava aberta, o encaixe de '+nome+' em '+repBRdata(dia)+' mudou nos Lançamentos do dia ou no Extrato. Nada foi desautorizado: toque em «Desautorizar» de novo para conferir.');
+        return null;
+      }
+      est=est2;
+    }
+    if(est.oque==='avulso') return vagasDesautorizarAvulso(dia, chave, ped, p, est);
+    if(est.oque==='nada') return vagasDesautorizarFechar(dia, chave, ped, p, oqueReg);
+    // a reposição e a troca: o «desmarcar» da 6.38, sem mudança — as mesmas perguntas, as mesmas saídas, a mesma mensagem ao tutor
+    var i=(PELUDINHOS||[]).indexOf(p);
+    try{ await repDesmarcar(i, dia); }
+    catch(e){ _logFalhaGrav('desautorizar o encaixe de '+nome+' em '+dia+' (o «desmarcar»)', e); }
+    // o 2º passo só depois de reler: o encaixe saiu mesmo?
+    var Lr=await repRelerLancamentos(p);
+    if(!Lr){ alert('Não consegui reler o Extrato de '+nome+' agora. O pedido continua como autorizado: toque em «Desautorizar» de novo para conferir e fechar.'); return null; }
+    if(vagasEncaixeNoExtrato(ped, Lr, dia)){
+      alert((est.oque==='troca')?('A troca '+repDataCurta(String(((ped.payload||{}).troca||{}).de||''))+' → '+D+' de '+nome+' continua no Extrato: nada foi desfeito, e o pedido continua autorizado.')
+        :('O dia de repor '+D+' continua marcado no Extrato de '+nome+': nada foi desfeito, e o pedido continua autorizado.'));
+      return null;
+    }
+    VAGAS_DESFEITOS[kL]={ts:Date.now(), oque:est.oque, marca:marca};
+    try{ vagasPedRedesenhar(); }catch(e){} /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */
+    return vagasDesautorizarFechar(dia, chave, ped, p, est.oque);
+  }
+  // O avulso: um cartaz só (o motivo e a senha da Gestão), que anula a diária avulsa do dia do pedido e,
+  // com ela fora, fecha o pedido com o MESMO registro (AC2.4: a senha não é pedida de novo).
+  function vagasDesautorizarAvulso(dia, chave, ped, p, est){
+    var nome=String(ped.pet||'')||pelNome(p), D=repDataCurta(dia), anulou=null, fecho=null;
+    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Desautorizar o encaixe de '+nome+' em '+D, botao:'Desautorizar', tituloOk:'Encaixe desautorizado',
+      rotulo:'Desautorizado', rotuloAcao:'Desautorizou', oque:'o encaixe de '+nome+' em '+repBRdata(dia)+' (diária avulsa)',
+      original:{caminho:'daycare/vagas-pedidos/'+dia+'/'+chave, id:String(chave)}, estado:'autorizado',
+      cascata:[vagasDesautorizarTexto(ped, p, dia, est), 'O pedido fecha como desautorizado; a autorização anterior fica guardada.'],
+      gravar:function(reg){
+        // o cartaz pode ter ficado aberto enquanto a pessoa escrevia o motivo: o pedido ainda é o que a tela mostrou? (2ª rodada, QA661-02)
+        return vagasPedidoReler(dia, chave).then(function(rel){
+          if(!rel || rel.falhou) return {ok:false, erro:'Não consegui conferir o pedido agora. Nada foi tirado: tente de novo em instantes.'};
+          if(vagasDecisaoMarca(rel.v)!==vagasDecisaoMarca(ped)) return {ok:false, erro:vagasNaoGravouTexto(rel.v, true, 'Nada foi tirado.')};
+          return vagasAvulsoAnular(p, dia, est.k, reg, ped).then(function(a){
+            if(!a || !a.ok) return a||{ok:false, erro:'a anulação não confirmou'};
+            anulou=a;
+            VAGAS_DESFEITOS[vagasLancadoChave(dia, chave)]={ts:Date.now(), oque:'avulso', marca:vagasDecisaoMarca(ped)};
+            return vagasDesautorizarGravar(dia, chave, reg, 'avulso', ped).then(function(g){ fecho=g; return {ok:true}; },
+              function(e){ fecho={ok:false, erro:e}; return {ok:true}; });
+          });
+        });
+      }}).then(function(r){
+        if(!(r && r.ok)) return r;
+        if(fecho && fecho.ok) delete VAGAS_DESFEITOS[vagasLancadoChave(dia, chave)];
+        vagasDesautorizarDepois(nome, D, fecho, anulou);
+        return r;
+      });
+  }
+  // A confirmação do avulso: o que saiu, como o pedido ficou e «avise o tutor» (o avulso não tem mensagem pronta).
+  function vagasDesautorizarDepois(nome, D, fecho, anulou){
+    try{ if(CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(e){} /* silencioso de propósito: o cartaz pode já ter sido fechado */
+    try{ vagasPedRedesenhar(); }catch(e){} /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */
+    var ok=!!(fecho && fecho.ok), L=['A diária avulsa de '+nome+' em '+D+' saiu dos Lançamentos do dia e fica riscada, com quem, quando e o motivo.'];
+    if(anulou && anulou.aMao && anulou.aMao.length) L.push('Na planilha, o que está escrito à mão continua: tire à mão.');
+    if(ok) L.push('O pedido ficou como desautorizado. A autorização anterior continua guardada nele.');
+    else L.push('O pedido não fechou. '+zErroFrase(zErroInicial(zErroMotivo(fecho?fecho.erro:'', 'banco', '', {agora:true})))
+      +' Se ele ainda aparece como autorizado, toque em «Desautorizar» de novo: nada sai duas vezes, só o pedido fecha.');
+    L.push('Avise o tutor: o avulso não tem mensagem pronta.');
+    if(typeof zAlertao==='function') zAlertao(ok?'ENCAIXE DESAUTORIZADO':'O PEDIDO NÃO FECHOU', L, {ok:ok, botao:'Fechar'});
+    else alert(L.join('\n'));
+    // O resultado da planilha chega depois: se a célula ficou, a tela diz (o mesmo aviso da 6.56).
+    Promise.resolve(anulou && anulou.envio).then(function(ps){
+      var av=(ps||[]).filter(function(x){ return x && x.aviso && (!x.ok || x.mantida); }).map(function(x){ return x.aviso; });
+      if(av.length && typeof zAlertao==='function') zAlertao('A PLANILHA PRECISA DE UMA OLHADA', av, {botao:'Entendi'});
+    }, function(){ return null; });
+  }
+  // A DIÁRIA AVULSA DO DIA DO PEDIDO, ANULADA COMO NA 6.56. O «Tirar a diária avulsa» da Chamada (avulsaTirar)
+  // fica como está: ele só tira a de hoje, e tira junto a da Chamada. Aqui, só a dos Lançamentos do dia do
+  // pedido (daycare/dashboard/{dia}/avulso), que pode não ser hoje, com as mesmas peças da 6.56
+  // (avulsaFontesDoDia, avulsaTirarDaPlanilha, avulsaNomeDe) e o mesmo arquivo: guardada inteira em
+  // daycare/avulsos-anulados/{dia}, no MESMO update (atômico). A Chamada de hoje não é tocada. A assinatura
+  // é a do cartaz (o reg, sem a senha).
+  // 2ª rodada: só a diária lançada por ESTA autorização (QA661-02); e, depois do update, o que o avulsaTirar
+  // faz depois (QA661-11): a turma de hoje se refaz, a planilha se relê e o resultado dela fica na gaveta das
+  // riscadas. O dcAvulsos e o carregarChamada do avulsaTirar ficam de fora: a Chamada não é tocada aqui.
+  // (Follow-up registrado: extrair o núcleo comum com o avulsaTirar quando ele puder ser tocado.)
+  function vagasAvulsoAnular(p, dia, k, reg, ped){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    return avulsaFontesDoDia(dia, k).then(function(f0){
+      var f={chamada:(f0&&f0.chamada)||[], lanc:vagasAvulsoDaAutorizacao(f0, ped), todosLanc:(f0&&f0.todosLanc)||{}};
+      if(!f.lanc.length) return {ok:false, erro:'A diária avulsa de '+pelNome(p)+' lançada por esta autorização já não está nos Lançamentos do dia '+repBRdata(dia)+'. Nada foi tirado: feche e toque em «Desautorizar» de novo (só o pedido fecha).'};
+      var ts=Date.now(), nome=avulsaNomeDe(k, f), arq='daycare/avulsos-anulados/'+dia+'/', patch={};
+      var base={chave:k, nome:nome, motivo:String(reg.motivo||''), por:String(reg.por||''), papel:String(reg.papel||''), login:String(reg.login||''),
+        quando:carimboBR(ts), ts:ts, corr:reg, encaixe:{dia:dia, chave:String((ped&&ped.chave)||pelKey(p))}};
+      f.lanc.forEach(function(x){ var c='daycare/dashboard/'+dia+'/avulso/'+x.id; patch[c]=null; patch[arq+'lancamento__'+x.id+'__'+ts]=Object.assign({origem:'lancamento', caminho:c, registro:x.reg}, base); });
+      return DB.ref().update(patch).then(function(){
+        // a memória do aparelho acompanha: os Lançamentos do dia aberto, as vagas do dia e, se for hoje, a gaveta das riscadas
+        try{ if(typeof dashDia==='function' && dashDia()===dia && DASH_DADOS && DASH_DADOS.avulso) f.lanc.forEach(function(x){ delete DASH_DADOS.avulso[x.id]; }); }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+        try{ var cP=REP_PLAN_CACHE[dia]; if(cP && cP.avulso) f.lanc.forEach(function(x){ delete cP.avulso[x.id]; }); }catch(e){} /* silencioso de propósito: as vagas se refazem na próxima leitura */
+        try{ if(dia===dcDataKey()){ if(AVULSA_ANULADAS.dia!==dia) AVULSA_ANULADAS={dia:dia, lista:{}};
+          Object.keys(patch).forEach(function(c){ if(c.indexOf(arq)===0 && patch[c]) AVULSA_ANULADAS.lista[c.slice(arq.length)]=patch[c]; }); } }catch(e){} /* silencioso de propósito: a memória do aparelho se acerta na próxima leitura */
+        // a turma de hoje se refaz na próxima leitura (como no avulsaTirar)
+        try{ if(dia===dcDataKey() && DC_DASH_TURMA) DC_DASH_TURMA.quando=0; }catch(e){} /* silencioso de propósito: a turma se refaz na próxima leitura */
+        if(typeof audit==='function') audit('avulsa-tirada', 'tirou a diária avulsa de '+nome+' (Lançamentos do dia '+repBRdata(dia)+', ao desautorizar o encaixe) — '+String(reg.motivo||''),
+          {assinou:String(reg.por||''), alvo:k, pet:nome});
+        var envio=avulsaTirarDaPlanilha(dia, f, ts).then(function(ps){
+          try{ if(typeof dcGarantirPlanilha==='function') dcGarantirPlanilha(true); }catch(e){} /* silencioso de propósito: a planilha se relê na próxima volta */
+          try{ if(dia===dcDataKey()) f.lanc.forEach(function(x, i){ var a=(AVULSA_ANULADAS.lista||{})['lancamento__'+x.id+'__'+ts]; if(a && (ps||[])[i]) a.planilha=ps[i]; }); }catch(e){} /* silencioso de propósito: a faixa se acerta na próxima leitura */
+          return ps;
+        });
+        return {ok:true, nome:nome, lanc:f.lanc.length, valor_cent:avulsaCentDe(f),
+          aMao:avulsaAMaoNaPlanilha(dia, k, f.lanc.map(function(x){ return (x.reg||{}).valor; })), envio:envio};
+      }, function(e){ return {ok:false, erro:e}; });
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+  // A reposição, a troca e o encaixe que já não estava lá: o cartaz (anular, senha da Gestão) só fecha o pedido.
+  function vagasDesautorizarFechar(dia, chave, ped, p, oque){
+    var nome=String(ped.pet||'')||pelNome(p), D=repDataCurta(dia), pay=ped.payload||{};
+    var ja=(oque==='troca')?('A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' já foi desfeita: só o pedido fecha.')
+      :((oque==='reposicao')?('O dia de repor '+D+' já saiu do crédito: só o pedido fecha.')
+        :((oque==='avulso')?('A diária avulsa de '+nome+' em '+D+' já saiu dos Lançamentos do dia: só o pedido fecha.'):'O encaixe já não está lá: só o pedido fecha.'));
+    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Desautorizar o encaixe de '+nome+' em '+D, botao:'Fechar o pedido', tituloOk:'Encaixe desautorizado',
+      rotulo:'Desautorizado', rotuloAcao:'Desautorizou', oque:'o pedido de encaixe de '+nome+' em '+repBRdata(dia)+' (autorizado)',
+      original:{caminho:'daycare/vagas-pedidos/'+dia+'/'+chave, id:String(chave)}, estado:'autorizado', cascata:[ja, 'A autorização anterior fica guardada no pedido.'],
+      gravar:function(reg){ return vagasDesautorizarGravar(dia, chave, reg, oque, ped); }}).then(function(r){
+        if(r && r.ok){ delete VAGAS_DESFEITOS[vagasLancadoChave(dia, chave)]; try{ vagasPedRedesenhar(); }catch(e){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ } }
+        return r;
+      });
+  }
+  // A transação do 2º passo: só com o pedido ainda autorizado pela MESMA autorização que a tela mostrou.
+  // A autorização anterior (autorizado_por, autorizado_ts, nota) continua no nó; entra `desautorizado`.
+  function vagasDesautorizarGravar(dia, chave, reg, oque, viu){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var fez=false, visto=null, mudou=false, marca=vagasDecisaoMarca(viu), oq=VAGAS_OQUE_SAIU[oque]?String(oque):'nada';
+    var reg2=Object.assign({}, reg||{}, {oque_saiu:oq, como:VAGAS_DESAUT_COMO[oq]});
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).transaction(function(atual){
+      fez=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;                // cache frio: o servidor responde
+      if(String(atual.status||'')!=='autorizado') return;
+      if(vagasDecisaoMarca(atual)!==marca){ mudou=true; return; }
+      fez=true;
+      return Object.assign({}, atual, {status:'desautorizado', desautorizado:reg2});
+    }).then(function(res){
+      if(res && res.committed && fez){
+        if(typeof audit==='function') audit('vaga-desautorizada', String((viu||{}).pet||'')+' — encaixe de '+repBRdata(dia)+' desautorizado ('+VAGAS_OQUE_SAIU[oq]+'): '+String((reg||{}).motivo||''),
+          {alvo:String((viu||{}).alvo||''), pet:String((viu||{}).pet||''), assinou:String((reg||{}).por||'')});
+        return {ok:true};
+      }
+      return {ok:false, erro:vagasNaoGravouTexto(vagasSnapshotOu(res, visto), mudou, 'Nada foi gravado de novo.')};
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+
+  // ===== AC3 — REABRIR O PEDIDO RECUSADO, DESAUTORIZADO OU RETIRADO ==========================
+  function vagasReabrirAbrir(dia, chave){
+    var ped=vagasPedidoDe(dia, chave), st=String((ped&&ped.status)||'');
+    // o recusado e o desautorizado: a Gestão (decisão 1); o retirado: quem lança reposição, com a própria senha
+    var soGestao=(st!=='retirado');
+    if(soGestao?!vagasPodeEncaixar():!repPodeLancar())
+      return Promise.resolve(corrBarrar(soGestao?'reabrir um pedido de encaixe recusado ou desautorizado':'reabrir um pedido de encaixe retirado',
+        corrQuemPode(soGestao?'decidir-troca':'lancar-reposicao'), {dia:String(dia||''), alvo:String(chave||'')}));
+    if(!ped){ alert('Não achei este pedido. Atualize a tela e tente de novo.'); return Promise.resolve(null); }
+    if(['recusado','desautorizado','retirado'].indexOf(st)<0){ alert(vagasNaoGravouTexto(ped, false, 'Nada foi reaberto.')); return Promise.resolve(null); }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(hoje && String(dia)<hoje){ alert('O dia '+repBRdata(dia)+' já passou: o pedido não se reabre. Nada foi mudado.'); return Promise.resolve(null); }
+    var pet=String(ped.pet||''), D=repDataCurta(dia);
+    return corrAbrir({acao:'reabrir', nivel:soGestao?'gestao':'propria', capacidade:'lancar-reposicao', titulo:'Reabrir o pedido de encaixe de '+pet+' em '+D,
+      botao:'Reabrir o pedido', tituloOk:'Pedido reaberto', oque:'o pedido de encaixe de '+pet+' em '+repBRdata(dia),
+      original:{caminho:'daycare/vagas-pedidos/'+dia+'/'+chave, id:String(chave)}, estado:st, paraEstado:'em aberto, na fila da Márcia',
+      volta:['O pedido volta para a fila da Márcia. Nada é lançado agora: quem decide de novo é a Márcia.'],
+      info:['A decisão anterior: '+vagasDecisaoTexto(ped)+'.', 'Ela fica guardada no pedido, inteira: nada é apagado.'],
+      gravar:function(reg){ return vagasReabrirGravar(dia, chave, reg, ped); }}).then(function(r){
+        if(r && r.ok){ try{ vagasPedRedesenhar(); }catch(e){ /* silencioso de propósito: o quadro se acerta na próxima mudança dos pedidos */ } }
+        return r;
+      });
+  }
+  // A transação: só com o estado que a tela mostrou. A decisão anterior vai inteira para historico/{id}
+  // (status, motivo da recusa, quem decidiu, quando, o registro do retirar ou do desautorizar) e o pedido
+  // volta a 'pedido', com o registro da 6.57 em `reaberto`. O historico de antes fica.
+  function vagasReabrirGravar(dia, chave, reg, viu){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var fez=false, visto=null, mudou=false, marca=vagasDecisaoMarca(viu), hk='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), stV=String((viu||{}).status||'');
+    return DB.ref('daycare/vagas-pedidos/'+dia+'/'+chave).transaction(function(atual){
+      fez=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;                // cache frio: o servidor responde
+      if(vagasDecisaoMarca(atual)!==marca){ mudou=true; return; }
+      if(['recusado','desautorizado','retirado'].indexOf(String(atual.status||''))<0) return;
+      fez=true;
+      var hist={status:String(atual.status||''), ts:Date.now()}, n=Object.assign({}, atual);
+      VAGAS_DECISAO_CAMPOS.forEach(function(c){ if(atual[c]!==undefined && atual[c]!==null){ hist[c]=atual[c]; delete n[c]; } });
+      n.historico=Object.assign({}, atual.historico||{}); n.historico[hk]=hist;
+      n.status='pedido'; n.reaberto=reg;
+      return n;
+    }).then(function(res){
+      if(res && res.committed && fez){
+        if(typeof audit==='function') audit('vaga-reaberta', String((viu||{}).pet||'')+' — pedido de encaixe em '+repBRdata(dia)+' reaberto (estava '+stV+'): '+String((reg||{}).motivo||''),
+          {alvo:String((viu||{}).alvo||''), pet:String((viu||{}).pet||''), assinou:String((reg||{}).por||'')});
+        return {ok:true};
+      }
+      return {ok:false, erro:vagasNaoGravouTexto(vagasSnapshotOu(res, visto), mudou, 'Nada foi reaberto.')};
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+
+  // ===== AC4 — OS DECIDIDOS NÃO SOMEM (regra 9) ===========================================
+  // Pura sobre VAGAS_PEDIDOS: os pedidos autorizados, recusados, desautorizados e retirados de hoje em diante.
+  // A fila de abertos continua sendo vagasPedidosAbertos (o que as provas da 6.46 e o harness v-33 olham).
+  function vagasDecididos(){
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'', out=[];
+    Object.keys(VAGAS_PEDIDOS||{}).forEach(function(dia){
+      if(hoje && dia<hoje) return;            // até o dia passar
+      var d=VAGAS_PEDIDOS[dia]||{};
+      Object.keys(d).forEach(function(ch){
+        var o=d[ch]||{};
+        if(VAGAS_DECIDIDOS_ST.indexOf(String(o.status||''))<0) return;
+        out.push(Object.assign({}, o, {_dia:dia, _chave:ch}));
+      });
+    });
+    return out.sort(function(a,b){ return (a._dia<b._dia)?-1:((a._dia>b._dia)?1:((a.ts||0)-(b.ts||0))); });
+  }
+  function vagasDecididosHTML(){
+    var L=vagasDecididos(); if(!L.length) return '';
+    var gestao=vagasPodeEncaixar(), lanca=repPodeLancar();
+    var h='<div class="vg-dec-tit">Decididos (até o dia passar)</div>';
+    L.forEach(function(o){
+      var st=String(o.status||''), jsD=vagasJsArg(o._dia), jsK=vagasJsArg(o._chave), bt='';
+      var desf=(st==='autorizado') && vagasEncaixeDesfeito(o);
+      if(st==='autorizado' && gestao)
+        bt='<button type="button" onclick="vagasDesautorizarAbrir(\''+jsD+'\',\''+jsK+'\')" style="'+REP_BOTAO_ESTILO+'color:var(--crm-critico)">Desautorizar</button>';
+      else if(((st==='recusado' || st==='desautorizado') && gestao) || (st==='retirado' && lanca))
+        bt='<button type="button" onclick="vagasReabrirAbrir(\''+jsD+'\',\''+jsK+'\')" style="'+REP_BOTAO_ESTILO+'color:var(--z-blue)">Reabrir</button>';
+      var dec=desf?('autorizado — o encaixe já foi desfeito: «Desautorizar» só fecha o pedido ('+vagasDecisaoTexto(o)+')'):vagasDecisaoTexto(o);
+      h+='<div class="vg-ped vg-dec"><div><strong>'+escAttr(o.pet||'')+'</strong>'
+        +'<small>'+esc(fmtBR(o._dia))+' · '+esc(vagasPedidoTipoTexto(o))+' · pedido por '+esc(o.quem||'-')+'</small>'
+        +'<small class="vg-dec-st">'+esc(dec)+'</small></div>'
+        +(bt?('<div class="vg-acoes">'+bt+'</div>'):'')+'</div>';
+    });
+    return h;
+  }
+
+  // ===== AC6 — A TROCA ANTIGA (só a vaga, da lista de troca) ===============================
+  var TROCA_LOTADO_TXT='O dia está lotado: use «+ Marcar troca», que pede o encaixe à Márcia.';
+  function trocaCanceladasDoDia(dia){
+    var d=(TROCA_CACHE||{})[dia]||{};
+    return Object.keys(d).map(function(k){ return Object.assign({_k:k}, d[k]); }).filter(function(t){ return t && t.status==='cancelada'; })
+      .sort(function(a,b){ return (+a.canceladaTs||0)-(+b.canceladaTs||0); });
+  }
+  // A troca cancelada fica riscada no dia, com quem, quando e o motivo; com vaga no dia, «Reabrir»; sem vaga, a frase.
+  function trocaCanceladasHTML(d){
+    var L=trocaCanceladasDoDia(d.iso); if(!L.length) return '';
+    var pode=trocaPodeMexer();
+    return '<div class="troca-canceladas">'+L.map(function(t){
+      var c=t.cancelada||{}, q=vagasQuemDe(c.por||t.canceladaQuem), qd=c.quando||repQuandoDe(t.canceladaTs), mot=String(c.motivo||'').trim(), acao='';
+      if(pode && d.lido) acao=(d.livres>0)
+        ?('<button type="button" onclick="trocaReabrirAbrir(\''+vagasJsArg(d.iso)+'\',\''+vagasJsArg(t._k)+'\')" style="'+REP_BOTAO_ESTILO+'color:var(--z-blue);margin-top:4px">Reabrir</button>')
+        :('<small class="troca-lotado">'+esc(TROCA_LOTADO_TXT)+'</small>');
+      return '<div class="troca-cancelada"><s>'+escAttr(t.nome||'')+'</s> <small>troca cancelada'+(q?(' por '+esc(q)):'')+(qd?(' em '+esc(qd)):'')
+        +(mot?(': «'+esc(mot)+'»'):'')+'</small>'+acao+'</div>';
+    }).join('')+'</div>';
+  }
+  // `mudou`: a troca foi reaberta e cancelada de novo em outro aparelho enquanto o cartaz estava aberto.
+  function trocaMudouTexto(v, nada, mudou){
+    if(!v) return 'Não achei esta troca no banco: ela deixou de existir. '+nada;
+    var st=String(v.status||''), c=v.cancelada||{}, q=vagasQuemDe(c.por||v.canceladaQuem);
+    if(st==='cancelada' && mudou) return 'Enquanto o cartaz estava aberto, a troca foi cancelada de novo'+(q?(' (por '+q+')'):'')+'. '+nada+' Atualize a tela e confira.';
+    if(st==='cancelada') return 'Esta troca já foi cancelada'+(q?(' (por '+q+')'):'')+'. '+nada;
+    // 2ª rodada (QA661-05): cancelada e reaberta em outro aparelho enquanto o cartaz do cancelar estava aberto
+    if(st==='confirmada' && mudou) return 'Enquanto o cartaz estava aberto, a troca foi cancelada e reaberta em outro aparelho'
+      +(vagasQuemDe((v.reaberta||{}).por)?(' (reaberta por '+vagasQuemDe((v.reaberta||{}).por)+')'):'')+'. '+nada+' Atualize a tela e confira.';
+    if(st==='confirmada') return 'Esta troca já está confirmada de novo'+(vagasQuemDe((v.reaberta||{}).por)?(' (reaberta por '+vagasQuemDe((v.reaberta||{}).por)+')'):'')+'. '+nada;
+    return 'Esta troca mudou em outro aparelho (agora está '+(st||'sem estado')+'). '+nada;
+  }
+  // Pura (2ª rodada, QA661-05): a troca que a tela mostrou — o estado, a reabertura, o cancelamento e o histórico.
+  // Cancelada e reaberta em outro aparelho, a troca volta a «confirmada», mas com outra marca.
+  function trocaMarca(t){
+    t=t||{};
+    return String(t.status||'')+'|'+String((t.reaberta||{}).ts||'')+'|'+String(t.canceladaTs==null?'':t.canceladaTs)+'|'+Object.keys(t.historico||{}).length;
+  }
+  // A transação do cancelar: só com a troca ainda confirmada. Os campos de hoje (canceladaQuem,
+  // canceladaTs) e o registro da 6.57 em `cancelada`; o resto fica como estava.
+  function trocaCancelarGravar(dia, k, reg, viu){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var fez=false, visto=null, mudou=false, marcaV=trocaMarca(viu), nome=String((viu||{}).nome||''), quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
+    return DB.ref('daycare/trocas/'+dia+'/'+k).transaction(function(atual){
+      fez=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;                // cache frio: o servidor responde
+      if(String(atual.status||'')!=='confirmada') return;
+      if(trocaMarca(atual)!==marcaV){ mudou=true; return; }             // cancelada e reaberta no meio (2ª rodada)
+      fez=true;
+      return Object.assign({}, atual, {status:'cancelada', canceladaQuem:quem, canceladaTs:Date.now(), cancelada:reg});
+    }).then(function(res){
+      if(res && res.committed && fez){
+        if(typeof audit==='function') audit('troca-cancelada', nome+' — troca de '+fmtBR(dia)+' cancelada (a vaga ficou livre): '+String((reg||{}).motivo||''),
+          {alvo:String(k||''), pet:nome, assinou:String((reg||{}).por||'')});
+        return {ok:true};
+      }
+      return {ok:false, erro:trocaMudouTexto(vagasSnapshotOu(res, visto), 'Nada foi cancelado.', mudou)};
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+  function trocaReabrirAbrir(dataISO, k){
+    if(!podePapel('lancar-reposicao'))
+      return Promise.resolve(corrBarrar('reabrir uma troca cancelada', corrQuemPode('lancar-reposicao'), {dia:String(dataISO||''), alvo:String(k||'')}));
+    var t=(TROCA_CACHE[dataISO]||{})[k]||null;
+    if(!t || String(t.status||'')!=='cancelada'){ alert(trocaMudouTexto(t, 'Nada foi reaberto.')); return Promise.resolve(null); }
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(hoje && String(dataISO)<hoje){ alert('O dia '+fmtBR(dataISO)+' já passou: a troca não se reabre. Nada foi mudado.'); return Promise.resolve(null); }
+    var vg=trocaReabrirVaga(dataISO, t);
+    if(vg){ alert(vg); return Promise.resolve(null); }
+    var nome=String(t.nome||''), D=fmtBR(dataISO).slice(0,5), c=t.cancelada||{}, q=vagasQuemDe(c.por||t.canceladaQuem), qd=c.quando||repQuandoDe(t.canceladaTs);
+    return corrAbrir({acao:'reabrir', nivel:'propria', capacidade:'lancar-reposicao', titulo:'Reabrir a troca de '+nome+' em '+D, botao:'Reabrir a troca', tituloOk:'Troca reaberta',
+      oque:'a troca de '+nome+' para '+fmtBR(dataISO)+' (lista de troca)', original:{caminho:'daycare/trocas/'+dataISO+'/'+k, id:String(k)},
+      estado:'cancelada', paraEstado:'confirmada (ocupa uma vaga de '+D+')', volta:['A troca volta a ocupar uma vaga de '+D+'.'],
+      info:['Cancelada'+(q?(' por '+q):'')+(qd?(' em '+qd):'')+(String(c.motivo||'').trim()?(': «'+String(c.motivo).trim()+'»'):'')+'. O cancelamento fica guardado na troca.'],
+      gravar:function(reg){
+        var vg2=trocaReabrirVaga(dataISO, t); if(vg2) return Promise.resolve({ok:false, erro:vg2});
+        return trocaReabrirGravar(dataISO, k, reg, t);
+      }}).then(function(r){
+        if(r && r.ok){ try{ renderReposicao(); }catch(e){ /* silencioso de propósito: a tela de Reposições pode não estar aberta */ } }
+        return r;
+      });
+  }
+  // A vaga para reabrir: o dia lido, com vaga, e o FILHOt sem outro lugar nesse dia. '' = pode.
+  function trocaReabrirVaga(dataISO, t){
+    var v=vagasDoDia(dataISO), D=fmtBR(dataISO);
+    if(!v.lido) return 'Ainda estou conferindo as vagas de '+D+'. Espere um instante e toque de novo. Nada foi reaberto.';
+    if(v.livres<=0) return TROCA_LOTADO_TXT+' Nada foi reaberto.';
+    var ch=vagasNomeChave(String((t&&t.nome)||'')), oc=(v.ocupantes||[]).filter(function(o){ return o.chave===ch; })[0];
+    if(oc) return String((t&&t.nome)||'')+' já ocupa uma vaga em '+D+' ('+(VAGAS_TIPO_ROTULO[oc.tipo]||oc.tipo)+'). Nada foi reaberto.';
+    return '';
+  }
+  // A transação do reabrir: só com a troca ainda cancelada pelo MESMO cancelamento que a tela mostrou. O
+  // cancelamento vai inteiro para historico/{id}; a troca volta a 'confirmada', com o registro em `reaberta`.
+  function trocaReabrirGravar(dia, k, reg, viu){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var fez=false, visto=null, mudou=false, nome=String((viu||{}).nome||''), ctsV=String((viu||{}).canceladaTs==null?'':(viu||{}).canceladaTs), hk='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    return DB.ref('daycare/trocas/'+dia+'/'+k).transaction(function(atual){
+      fez=false; mudou=false; visto=atual||null;
+      if(atual===null || atual===undefined) return null;                // cache frio: o servidor responde
+      if(String(atual.status||'')!=='cancelada') return;
+      if(String(atual.canceladaTs==null?'':atual.canceladaTs)!==ctsV){ mudou=true; return; }   // reaberta e cancelada de novo no meio
+      fez=true;
+      var hist={status:'cancelada', ts:Date.now()}, n=Object.assign({}, atual);
+      ['canceladaQuem','canceladaTs','cancelada'].forEach(function(c){ if(atual[c]!==undefined && atual[c]!==null){ hist[c]=atual[c]; delete n[c]; } });
+      n.historico=Object.assign({}, atual.historico||{}); n.historico[hk]=hist;
+      n.status='confirmada'; n.reaberta=reg;
+      return n;
+    }).then(function(res){
+      if(res && res.committed && fez){
+        if(typeof audit==='function') audit('troca-reaberta', nome+' — troca de '+fmtBR(dia)+' reaberta (volta a ocupar a vaga): '+String((reg||{}).motivo||''),
+          {alvo:String(k||''), pet:nome, assinou:String((reg||{}).por||'')});
+        return {ok:true};
+      }
+      return {ok:false, erro:trocaMudouTexto(vagasSnapshotOu(res, visto), 'Nada foi reaberto.', mudou)};
+    }, function(e){ return {ok:false, erro:e}; });
+  }
+
+  // ===== AC7 — «MUDAR O DIA» DA REPOSIÇÃO MARCADA, NUM PASSO ==============================
+  // O modo da janela «Marcar reposição»: o FILHOt, o crédito e o dia marcado de agora. Só para a reposição
+  // (a troca muda pelo caminho dela, «+ Marcar troca» — a 6.38 decidiu).
+  var dxMudar=null;
+  function dxMudarAtual(){ return (dxMudar && dxPel && dxMudar.p===dxPel && !dxTroca)?{credId:dxMudar.credId, de:dxMudar.de}:null; }
+  function dxMudarBotaoHTML(i, dia){
+    return '<button type="button" onclick="dxMudarDiaAbrir('+i+',\''+vagasJsArg(dia)+'\')"'
+      +' style="display:inline-flex;align-items:center;vertical-align:middle;border:none;background:none;min-height:44px;padding:0 6px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">mudar o dia</button>';
+  }
+  function dxMudarDiaAbrir(i, dia){
+    var p=PELUDINHOS[i]; if(!p) return;
+    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o dia extra.'); return; }
+    var L=repLancamentos(p)||[], an=repAnulados(L);
+    // o mesmo crédito que o «desmarcar» acharia para esse dia
+    var cred=L.filter(function(l){ return l && l.tipo==='credito' && !an[l._id] && String(l.volta||'')===String(dia); })[0]||null;
+    if(!cred){ alert('Não achei a reposição marcada para '+repBRdata(dia)+'. Atualize a tela.'); return; }
+    if(repTrocaViva(cred)){ alert('«Mudar o dia» não vale para a troca ('+repDataCurta(String(((cred.troca||{}).de)||cred.data||''))+' → '+repDataCurta(dia)+'): use «desmarcar» e marque de novo em «+ Marcar troca».'); return; }
+    dxAbrir(p, {mudar:{credId:cred._id, de:String(dia)}});
+  }
+  // O veredito no modo «mudar o dia» (as réguas comuns — dia passado, fim de semana, feriado — já passaram
+  // em dxVeredito): o crédito ainda marcado para o dia de agora, não troca, o dia novo sem ele, e a régua do
+  // prazo de hoje (repRemarcarBarrado). O crédito conta como disponível para o dia novo.
+  function dxVereditoMudar(p, dia, mudar, out){
+    out.mudar=true; out.de=String((mudar&&mudar.de)||'');
+    var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){ L=[]; } /* silencioso de propósito: sem o Extrato, o crédito não é achado e o veredito diz */
+    var an=repAnulados(L), cid=String((mudar&&mudar.credId)||'');
+    var cred=L.filter(function(l){ return l && l._id===cid && l.tipo==='credito' && !an[l._id]; })[0]||null;
+    if(!cred || String(cred.volta||'')!==out.de){
+      out.motivo='A reposição de '+pelNome(p)+' marcada para '+repBRdata(out.de)+' mudou em outro aparelho (desmarcada, estornada ou remarcada). Feche esta janela e confira em Reposições.';
+      return out;
+    }
+    // 2ª rodada (QA661-06): guardas próprias — só o dia que ainda vai chegar (AC7.1) e a reposição ainda não
+    // usada (a régua do prazo deixa passar o dia que já teve o uso). A tela velha e o console param aqui.
+    var hojeM=(typeof zHojeISO==='function')?zHojeISO():'';
+    if(hojeM && out.de<=hojeM){
+      out.motivo='A reposição de '+pelNome(p)+' marcada para '+repBRdata(out.de)+' é de hoje ou de um dia que já passou: «Mudar o dia» vale só para um dia que ainda vai chegar. Feche esta janela e confira em Reposições.';
+      return out;
+    }
+    if(repCreditoUsoDe(L, cred._id)){
+      out.motivo='A reposição de '+pelNome(p)+' marcada para '+repBRdata(out.de)+' já foi usada: ela não muda de dia. Feche esta janela e confira em Reposições.';
+      return out;
+    }
+    if(repTrocaViva(cred)){ out.motivo='«Mudar o dia» não vale para a troca: use «desmarcar» e marque de novo em «+ Marcar troca».'; return out; }
+    var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
+    if(dia===out.de || v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; })){
+      out.jaTem=true; out.motivo=pelNome(p)+' já está marcado em '+repBRdata(dia)+'. Escolha outro dia.'; return out;
+    }
+    var bar=repRemarcarBarrado(cred, dia, L);
+    if(bar){ out.barrado=true; out.motivo=bar.message; return out; }
+    try{ out.livre=repLivresParaMarcar(p, -1); }catch(e){ out.livre=1; } /* silencioso de propósito: sem a conta, o crédito que muda conta como 1 */
+    out.ok=true; out.tipo='reposicao'; out.credito=cred._id; out.data=String(cred.data||'');
+    return out;
+  }
+  // O rastro próprio do «Mudar o dia» (o repAgendarVolta já grava o 'reposicao-agendada' de sempre).
+  function dxMudarRastro(p, cred, dia){
+    try{ if(typeof audit==='function') audit('reposicao-remarcada', pelNome(p)+' — o dia de repor mudou de '+repBRdata(String(cred.volta||''))+' para '+repBRdata(dia)
+      +' (a falta de '+repBRdata(String(cred.data||''))+'), sem desmarcar antes', {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+  }
+
+  // ===== AC7.4 — O PEDIDO DO «MUDAR O DIA» COM O DIA NOVO LOTADO (2ª rodada, QA661-01) =========
+  // DECISÃO (orquestrador, como @po/@architect — opção (a); o AC7.4 e o AC12.1 ficam): o pedido leva
+  // payload.mudar_de = {dia, credito_id} (o dia de antes e o crédito marcado nele). O «Autorizar» desse
+  // pedido chama vagasMudarAutorizar, que relê o crédito no servidor e só então chama o vagasAutorizar — que
+  // não muda uma letra. Sem isso, o tutor podia vir no dia de antes (a reposição usada) e a autorização
+  // depois passava o mesmo crédito para o dia novo: uma reposição de graça.
+  function vagasMudarDe(o){
+    var m=(((o&&o.payload)||{}).mudar_de)||null;
+    if(!m || !/^\d{4}-\d{2}-\d{2}$/.test(String(m.dia||'')) || !String(m.credito_id||'')) return null;
+    return {dia:String(m.dia), credito_id:String(m.credito_id)};
+  }
+  // Pura: '' se o crédito continua como no pedido (vivo, sem uso, marcado no dia de antes, que ainda não
+  // chegou, e a régua do prazo deixa mudar); senão, a frase para a Márcia.
+  function vagasMudarConferir(p, dia, md, L){
+    var nome=pelNome(p), De=repBRdata(md.dia), hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var fim=' Nada foi autorizado: o pedido continua em aberto. Recuse-o, com o motivo, e a recepção combina de novo com o tutor.';
+    if(hoje && md.dia<=hoje) return 'O dia de repor de antes ('+De+') já chegou: a mudança para '+repBRdata(dia)+' não vale mais (o dia de antes é conferido na baixa, como sempre).'+fim;
+    L=L||[]; var an=repAnulados(L);
+    var cred=L.filter(function(l){ return l && l._id===md.credito_id && l.tipo==='credito'; })[0]||null;
+    if(!cred || an[cred._id]) return 'A falta deste pedido não está mais no Extrato de '+nome+' (foi estornada).'+fim;
+    if(repCreditoUsoDe(L, cred._id)) return 'A reposição de '+nome+' marcada para '+De+' já foi usada: mudar o dia agora daria uma reposição a mais.'+fim;
+    var vAgora=String(cred.volta||'');
+    if(vAgora!==md.dia) return 'Depois do pedido, a reposição de '+nome+' '+(vAgora?('foi marcada para '+repBRdata(vAgora)):'foi desmarcada')+': ela não está mais em '+De+'.'+fim;
+    if(repTrocaViva(cred)) return '«Mudar o dia» não vale para a troca.'+fim;
+    var bar=repRemarcarBarrado(cred, dia, L);
+    if(bar) return String(bar.message||'A régua do prazo não deixa mudar este dia.')+fim;
+    return '';
+  }
+  // A linha a mais na pergunta da Márcia: o que acontece com o dia de antes.
+  function vagasMudarLinha(ped, md, dia, cred){
+    return 'É a MUDANÇA do dia de repor: '+String((ped&&ped.pet)||'')+' está marcado em '+fmtBR(md.dia)
+      +((cred&&cred.data)?(' (a falta de '+repBRdata(cred.data)+')'):'')+'. Autorizando, '+fmtBR(md.dia)+' fica livre e o dia de repor passa para '
+      +fmtBR(dia)+', com a mesma falta: nenhuma reposição a mais é contada.';
+  }
+  // A mensagem ao tutor da mudança autorizada: a da reposição marcada, com o prazo do dia novo e as livres de
+  // verdade (a mudança não gasta uma livre: a conta é a de antes de gravar, sem o +1 da reposição nova).
+  function vagasMudarMensagem(p, md, dia, livres){
+    repMsgModal('Dia de repor mudado', [pelNome(p)+' vem repor '+repNoDia(dia)+' (encaixe autorizado), no lugar de '+fmtBR(md.dia)+'.', repPrazoLinha(dia, false)],
+      repMensagem(p,'agendada',{volta:dia, livres:livres}), repTelDe(p));
+  }
+  // O «Autorizar» do pedido do «Mudar o dia». Antes de qualquer gravação, o crédito relido no servidor tem de
+  // estar como o pedido diz; e de novo depois que a Márcia responde a pergunta (ela pode demorar). A pergunta
+  // ganha a linha do dia de antes, e a confirmação, a mensagem certa ao tutor — pela pergunta e pela
+  // confirmação que o próprio vagasAutorizar abre, trocadas só durante esta chamada (uma vez cada, pelo
+  // título e, na confirmação, pela 1ª linha daquele pedido) e devolvidas no fim. Sem a mudança no pedido, ou no
+  // refeito de um toque anterior, é o «Autorizar» de sempre.
+  // 3ª rodada (QA661-R2-02 e R2-03): um «mudar o dia» por vez em cada aparelho. Com dois ao mesmo tempo (o 2º
+  // toque, ou outro pedido), as trocas da pergunta e da confirmação se cruzariam; o 2º espera o 1º terminar.
+  var VAGAS_MUDAR_ANDANDO='';
+  async function vagasMudarAutorizar(dia, chave){
+    var ped=vagasPedidoDe(dia, chave), md=vagasMudarDe(ped);
+    if(!md || !DB || !vagasPodeEncaixar() || !REPO_LIDO || (VAGAS_LANCADOS||{})[vagasLancadoChave(dia, chave)]) return vagasAutorizar(dia, chave);
+    var p=repPelaChave(chave);
+    if(!p) return vagasAutorizar(dia, chave);
+    if(VAGAS_MUDAR_ANDANDO){
+      alert('Ainda estou autorizando '+VAGAS_MUDAR_ANDANDO+'. Espere a confirmação aparecer (se ela não aparecer, feche e abra o app de novo). Nada foi autorizado agora.');
+      return null;
+    }
+    VAGAS_MUDAR_ANDANDO='o pedido de '+(String(ped.pet||'')||pelNome(p))+' em '+fmtBR(dia)+' (a mudança do dia de repor)';
+    try{ return await vagasMudarAutorizarAgora(dia, chave, ped, md, p); }
+    finally{ VAGAS_MUDAR_ANDANDO=''; }
+  }
+  async function vagasMudarAutorizarAgora(dia, chave, ped, md, p){
+    var nome=String(ped.pet||'')||pelNome(p);
+    var Lr=await repRelerLancamentos(p);
+    if(!Lr){ alert('Não consegui reler o Extrato de '+nome+' agora. Nada foi autorizado: o pedido continua em aberto. Tente de novo em instantes.'); return null; }
+    var bar=vagasMudarConferir(p, dia, md, Lr);
+    if(bar){ alert(bar); return null; }
+    var cred=repLancDe(Lr, md.credito_id)||{}, livres=0;
+    try{ livres=repLivresParaMarcar(p, 0); }catch(e){ livres=0; } /* silencioso de propósito: a mensagem sai com 0 */
+    var zP=zPergunta, zA=zAlertao, tituloP='Autorizar o encaixe de '+(ped.pet||'')+' em '+fmtBR(dia)+'?';
+    var linha1A=(ped.pet||'')+' está encaixado em '+fmtBR(dia)+'.';   // a 1ª linha que o vagasAutorizar escreve para ESTE pedido
+    var ganchoP=function(t, linhas, op){
+      if(t!==tituloP) return zP.apply(this, arguments);
+      zPergunta=zP;                                                       // uma vez só
+      var L2=(linhas||[]).slice(); L2.splice(Math.max(0, L2.length-1), 0, vagasMudarLinha(ped, md, dia, cred));
+      return Promise.resolve(zP.call(this, t, L2, op)).then(function(sim){
+        if(!sim) return sim;
+        return repRelerLancamentos(p).then(function(L3){
+          var b2=L3?vagasMudarConferir(p, dia, md, L3):('Não consegui reler o Extrato de '+nome+' agora. Nada foi autorizado: o pedido continua em aberto.');
+          if(b2){ alert(b2); return false; }
+          return true;
+        });
+      });
+    };
+    var ganchoA=function(t, l, op){
+      if(t!=='ENCAIXE AUTORIZADO' || !Array.isArray(l) || String(l[0]||'')!==linha1A) return zA.apply(this, arguments);   // a de outro pedido passa direto
+      zAlertao=zA;                                                        // uma vez só
+      var l2=Array.isArray(l)?l.slice():[String(l||'')];
+      l2.push('O dia '+fmtBR(md.dia)+' ficou livre: a reposição de '+nome+' mudou para '+fmtBR(dia)+', com a mesma falta.');
+      dxMudarRastro(p, {volta:md.dia, data:cred.data}, dia);
+      return zA.call(this, t, l2, Object.assign({}, op||{}, {botao:'Ver a mensagem para o tutor', aoFechar:function(){ vagasMudarMensagem(p, md, dia, livres); }}));
+    };
+    zPergunta=ganchoP; zAlertao=ganchoA;
+    try{ return await vagasAutorizar(dia, chave); }
+    finally{ if(zPergunta===ganchoP) zPergunta=zP; if(zAlertao===ganchoA) zAlertao=zA; }
+  }
+
+  // ===== AC8 — «QUAL FALTA ESTE DIA REPÕE?» =================================================
+  // Pura: as faltas livres (sem dia marcado, não estornadas, sem uso), da mais antiga para a mais nova — o
+  // MESMO filtro e a MESMA ordem de repCreditoLivre, que não muda (a primeira daqui é sempre a dela).
+  function repCreditosLivresLista(p){
+    try{
+      var L=repLancamentos(p)||[];
+      var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+      var gasto={}; L.forEach(function(l){ if(l && l.tipo==='uso' && !anulado[l._id] && l.credito) gasto[l.credito]=true; });
+      var livres=L.filter(function(l){ return l.tipo==='credito' && !l.volta && !anulado[l._id] && !gasto[l._id]; });
+      livres.sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')); });
+      return livres;
+    }catch(e){ _logFalhaGrav('repCreditosLivresLista', e); return []; }
+  }
+  var dxFaltaId='';
+  // A falta escolhida, se ainda é livre; senão, a mais antiga (como hoje).
+  function dxFaltaAtual(p){
+    var L=repCreditosLivresLista(p); if(!L.length) return '';
+    return L.some(function(l){ return l._id===dxFaltaId; })?dxFaltaId:L[0]._id;
+  }
+  function dxFaltaEscolher(id){ dxFaltaId=String(id||''); dxPintar(); }
+  // O crédito que recebe o dia: o do «mudar o dia»; a falta escolhida; ou o de sempre (repCreditoLivre).
+  function dxCreditoParaMarcar(p, v){
+    if(v && v.mudar) return repLancDe(repLancamentos(p)||[], v.credito);
+    var L=repCreditosLivresLista(p);
+    if(L.length>1) return repLancDe(L, dxFaltaAtual(p))||repCreditoLivre(p);
+    return repCreditoLivre(p);
+  }
+  function dxFaltasHTML(v){
+    if(!v || !v.ok || v.tipo!=='reposicao' || v.mudar || !dxPel) return '';
+    var L=repCreditosLivresLista(dxPel); if(L.length<2) return '';
+    var sel=dxFaltaAtual(dxPel);
+    return '<div class="dx-faltas"><div class="rep-lb" style="margin-top:12px">Qual falta este dia repõe?</div>'
+      +L.map(function(l){
+        var on=(l._id===sel), obs=String(l.obs||'').trim();
+        return '<button type="button" aria-pressed="'+(on?'true':'false')+'" onclick="dxFaltaEscolher(\''+vagasJsArg(l._id)+'\')" style="'+REP_BOTAO_ESTILO
+          +'display:block;width:100%;box-sizing:border-box;text-align:left;margin-top:6px;white-space:normal;overflow-wrap:anywhere;color:var(--z-blue);'
+          +(on?'border:2px solid var(--z-blue);background:var(--z-cream-warm);':'')+'">'
+          +esc('A falta de '+repBRdata(l.data)+' ('+repMotivoRotulo(l.motivo)+')'+(obs?(' — '+obs):'')+(on?' — escolhida':''))+'</button>';
+      }).join('')
+      +'<div class="rep-res-sub" style="padding:4px 2px">Sem escolher, vale a mais antiga.</div></div>';
   }
 
   /* ---- O DIA EXTRA: "ele vem no dia y" -------------------------------------------
@@ -11965,7 +12877,9 @@
   function dxTrocaAtual(){ return dxTroca?{de:dxDe}:null; }
   var DX_TIT_PADRAO='Marcar reposição ou dia extra — escolha o dia em que ele vem';
   function dxTituloPintar(){
-    var t=document.getElementById('dxTitulo'); if(t) t.textContent=dxTroca?'Troca de dia — o dia em que ele não vem e o dia em que vem':DX_TIT_PADRAO;
+    var mu=dxMudarAtual();   // 6.61 (AC7): o modo «mudar o dia»
+    var t=document.getElementById('dxTitulo'); if(t) t.textContent=dxTroca?'Troca de dia — o dia em que ele não vem e o dia em que vem'
+      :(mu?('Mudar o dia de repor — hoje marcada para '+repDiaSemanaComData(mu.de)):DX_TIT_PADRAO);
   }
   function dxTrocaMudou(){
     var c=document.getElementById('dxTroca'); dxTroca=!!(c&&c.checked);
@@ -11978,10 +12892,15 @@
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão marcam o dia extra.'); return; }
     dxPel=pel||null; dxDia='';
     dxTroca=!!(op&&op.troca); dxDe='';
+    // 6.61 (AC7): «Mudar o dia» — o crédito marcado e o dia de agora; a troca e a busca de outro FILHOt ficam de fora
+    dxMudar=(op && op.mudar && pel)?{p:pel, credId:String(op.mudar.credId||''), de:String(op.mudar.de||'')}:null; dxFaltaId='';
+    if(dxMudar) dxTroca=false;
     try{
       var _c=document.getElementById('dxTroca'); if(_c) _c.checked=dxTroca;
       var _d=document.getElementById('dxDe'); if(_d) _d.value='';
       var _b=document.getElementById('dxTrocaBox'); if(_b) _b.style.display=dxTroca?'block':'none';
+      var _lb=document.getElementById('dxTrocaLb'); if(_lb) _lb.style.display=dxMudar?'none':'';
+      var _bu=document.getElementById('dxBusca'); if(_bu) _bu.style.display=dxMudar?'none':'';
       dxTituloPintar();
     }catch(e){ /* enfeite de tela: sem os campos, a troca fica desligada */ }
     var el=document.getElementById('dxModal'); if(!el) return;
@@ -11989,7 +12908,7 @@
     var v=function(id,val){ var x=document.getElementById(id); if(x) x.value=val; };
     var h=function(id,val){ var x=document.getElementById(id); if(x) x.innerHTML=val; };
     v('dxBusca',''); v('dxData','');
-    h('dxResults',''); h('dxEscolhido',''); h('dxVeredito',''); h('dxVagas','');
+    h('dxResults',''); h('dxEscolhido',''); h('dxVeredito',''); h('dxVagas',''); h('dxFaltas','');
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
     dxPintar();
     // O recesso da Gestão entra na conta do feriado (6.43): quando a lista chega, a tela é refeita.
@@ -12027,7 +12946,8 @@
     dxPintar();
   }
   // A DECISÃO, em função pura: nada de tela, nada de banco. É ela que o harness prova.
-  function dxVeredito(p, dia, troca){
+  // 6.61 (AC7): `mudar` ({credId, de}) — o modo «mudar o dia». Sem ele, o veredito de sempre (prova de guarda).
+  function dxVeredito(p, dia, troca, mudar){
     var out={ok:false, tipo:'', saldo:0, livre:0, valor_cent:0, matriculado:false, motivo:'', jaTem:false};
     if(!p){ out.motivo='Escolha o peludinho primeiro.'; return out; }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')){ out.motivo='Escolha o dia em que ele vem.'; return out; }
@@ -12043,6 +12963,7 @@
     try{ out.trocas=repTrocasPendentes(p); out.livre=repLivresParaMarcar(p); }catch(e){ out.livre=out.saldo; }
     out.matriculado=dcMatriculado(p);
     if(troca) return dxVereditoTroca(p, dia, troca, out, hoje, sem);
+    if(mudar) return dxVereditoMudar(p, dia, mudar, out);
     var ch=vagasNomeChave(pelNome(p)), v=vagasDoDia(dia);
     if(v.reposicao.concat(v.avulso, v.troca).some(function(n){ return vagasNomeChave(n)===ch; })){
       out.jaTem=true;
@@ -12351,6 +13272,10 @@
         +'As reposições que já tinha ('+v.saldo+') não são usadas.'
         +(v.converte?(' A reposição que estava marcada para '+esc(repBRdata(dxDia))+' volta a ficar sem dia.'):'')+'</div>';
     }
+    if(v.tipo==='reposicao' && v.mudar){   // 6.61 (AC7)
+      return '<div class="rep-previa"><strong>MUDAR O DIA DE REPOR: de '+esc(repDiaSemanaComData(v.de))+' para '+esc(repDiaSemanaComData(dxDia))+'.</strong> '
+        +'O mesmo crédito (a falta de '+esc(repBRdata(v.data))+') muda de dia, sem desmarcar antes: não se cobra nada, e o tutor recebe uma mensagem só, com o prazo do dia novo.</div>';
+    }
     if(v.tipo==='reposicao'){
       return '<div class="rep-previa"><strong>Ele tem '+v.livre+' dia'+(v.livre===1?'':'s')
         +' de reposição: este dia é <b>REPOSIÇÃO</b></strong> — não se cobra nada. '
@@ -12367,13 +13292,14 @@
       +' como Avulso — vai para a planilha e para a TV.</div>';
   }
   function dxBotaoRotulo(){
-    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual());
+    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual(), dxMudarAtual());
     if(!v.ok) return 'Confirmar';
     var vg=vagasDoDia(dxDia);
     if(vg.cheio && vagasPodeEncaixar()) return 'Márcia autorizou';
     if(v.tipo==='troca') return 'Fazer a troca';
     // Dia que já é dele: o botão passa a pedir a confirmação com todas as letras.
     if(repEhDiaDele(dxPel, dxDia)) return REP_DIA_DELE_BOTAO;
+    if(v.mudar) return 'Mudar o dia';   // 6.61 (AC7)
     if(v.tipo==='avulso') return 'Lançar o avulso';
     return 'Marcar a reposição';
   }
@@ -12387,8 +13313,9 @@
           +(dcMatriculado(dxPel)?'matriculado':'sem plano ativo')+'</span>';
       } else { e.style.display='none'; e.innerHTML=''; }
     }
-    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual());
+    var v=dxVeredito(dxPel, dxDia, dxTrocaAtual(), dxMudarAtual());
     var vd=document.getElementById('dxVeredito'); if(vd) vd.innerHTML=dxVeredictoHTML(v);
+    var fx=document.getElementById('dxFaltas'); if(fx) fx.innerHTML=dxFaltasHTML(v);   // 6.61 (AC8)
     var vgEl=document.getElementById('dxVagas');
     // A faixa do "dia dele" vem PRIMEIRO: é o erro que ela quis evitar, não um detalhe.
     if(vgEl) vgEl.innerHTML=dxDia?(repDiaDeleAvisoHTML(dxPel, dxDia)+vagasAvisoHTML(dxDia,'dxPedir()')):'';
@@ -12408,7 +13335,7 @@
   function dxConfirmar(){
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
     var diz=function(t){ if(w) w.textContent=t; };
-    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual(), dxMudarAtual());
     if(!v.ok){ diz(v.motivo); return; }
     if(REP_FER_LENDO){ diz(REP_FER_ESPERA); return; }
     // Sem o Extrato (6.46): nem a troca sabe se a falta já entrou, nem o veredito sabe o saldo
@@ -12459,17 +13386,20 @@
       return;
     }
     if(v.tipo==='reposicao'){
-      var cred=repCreditoLivre(p);
+      // 6.61: o crédito do «mudar o dia» (AC7) ou a falta escolhida (AC8); sem escolha, o de sempre (repCreditoLivre)
+      var cred=dxCreditoParaMarcar(p, v);
       if(!cred){ solta(); diz('Não achei um crédito sem dia marcado para agendar. Abra o Extrato dele e confira.'); return; }
-      // Contado ANTES de gravar: o cache local só soma a marcação quando o banco responde.
-      var livresDepois=repLivresParaMarcar(p, +1);
+      // Contado ANTES de gravar: o cache local só soma a marcação quando o banco responde. No «mudar o dia», o
+      // crédito já estava marcado: as livres não mudam.
+      var livresDepois=repLivresParaMarcar(p, v.mudar?0:+1);
       repAgendarVolta(p, cred._id, dia, aut).then(function(){
         gravou=true;
         // A MENSAGEM PRONTA PARA O TUTOR, na hora (Adriana, 25/set/2026) — e não só quando
         // ele vem repor. É agora que a consultora está com o telefone na mão.
         repAuditDiaDele(p, dia);
+        if(v.mudar) dxMudarRastro(p, cred, dia);
         solta(); dxFechar();
-        repMsgModal('✅ Reposição marcada',
+        repMsgModal(v.mudar?'Dia de repor mudado':'✅ Reposição marcada',
           [pelNome(p)+' vem repor '+repNoDia(dia)+' — usando a falta de '+repBRdata(cred.data)
             +(cred.volta?(' (estava marcada para '+repBRdata(cred.volta)+')'):'')+'.',
            'Não se cobra nada: é reposição. A planilha daquele dia recebe a Reposição na próxima conferência (até '+DASH_AUTO_MIN+' min).',
@@ -12503,18 +13433,21 @@
   // autorizar. Mais nada é gravado agora — o dia continua lotado.
   function dxPedir(){
     var w=document.getElementById('dxWarn'); if(w) w.textContent='';
-    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual());
+    var p=dxPel, dia=dxDia, v=dxVeredito(p, dia, dxTrocaAtual(), dxMudarAtual());
     if(!v.ok){ if(w) w.textContent=v.motivo; return; }
     // Sem o Extrato (revisão da 6.46, QA646-05): o veredito não sabe o saldo, e o pedido sairia como
     // AVULSO para quem tem reposição — e a Márcia, ao autorizar, lançaria o avulso pelo tipo do pedido.
     if(!REPO_LIDO){ if(w) w.textContent=repExtratoEsperaTexto(); return; }
-    var cred=(v.tipo==='avulso'||v.tipo==='troca')?null:repCreditoLivre(p);
+    // 6.61: o crédito do «mudar o dia» ou a falta escolhida vão no pedido (credito_id), para a Márcia marcar esse
+    var cred=(v.tipo==='avulso'||v.tipo==='troca')?null:dxCreditoParaMarcar(p, v);
     // A troca pede a vaga como reposição (é o que ela ocupa), com a troca dentro: quando a
     // Márcia autoriza, o app faz a troca inteira — falta avisada e Reposição.
     var pay=(v.tipo==='avulso')
       ? {valor_cent:v.valor_cent, matriculado:!!v.matriculado}
       : ((v.tipo==='troca') ? {volta:dia, troca:{de:v.de, para:dia}}
         : {credito_id:(cred&&cred._id)||'', data:(cred&&cred.data)||'', volta:dia});
+    // 6.61 (2ª rodada, QA661-01): o pedido do «mudar o dia» diz qual dia sai (e o crédito), para o «Autorizar» conferir
+    if(v.mudar && cred) pay.mudar_de={dia:String(v.de||''), credito_id:String(cred._id||'')};
     var pediu=false;   // 6.48 (K1): o pedido já gravou; o erro de depois não diz "Nada foi salvo"
     vagasPedir(dia, p, (v.tipo==='troca')?'reposicao':v.tipo, pay).then(function(){
       pediu=true;
@@ -12522,7 +13455,10 @@
       var l=['A Márcia recebeu o pedido de encaixe de '+pelNome(p)+' em '+fmtBR(dia)+(v.tipo==='troca'?(' (troca: no lugar de '+fmtBR(v.de)+')'):'')+'.',
         (v.tipo==='troca')
           ? 'Nada foi lançado ainda: quando ela autorizar, o app faz a troca sozinho — falta avisada em '+fmtBR(v.de)+' e Reposição em '+fmtBR(dia)+'.'
-          : 'Nada foi lançado ainda: quando ela autorizar, o app lança sozinho e a recepção vê na tela de Reposições.'];
+          : (v.mudar
+            // 6.61 (2ª rodada, QA661-01): a mudança só vale com a reposição ainda no dia de antes
+            ? ('Nada mudou ainda: '+pelNome(p)+' continua marcado em '+fmtBR(v.de)+'. Quando ela autorizar, o dia de repor passa para '+fmtBR(dia)+' (a mesma falta) e '+fmtBR(v.de)+' fica livre. Se ele vier repor em '+fmtBR(v.de)+' antes disso, a mudança não vale mais.')
+            : 'Nada foi lançado ainda: quando ela autorizar, o app lança sozinho e a recepção vê na tela de Reposições.')];
       if(typeof zAlertao==='function') zAlertao('PEDIDO ENVIADO À MÁRCIA', l, {botao:'Fechar'});
       else alert(l.join('\n'));
     }).catch(function(e){
@@ -12547,7 +13483,7 @@
     // Os pedidos de encaixe que esperam a Márcia — a recepção precisa ver que estão presos.
     try{
       const bp=document.getElementById('repEncaixes');
-      if(bp) bp.innerHTML=vagasPedidosHTML();
+      if(bp) bp.innerHTML=vagasPedidosHTML()+vagasDecididosHTML();   // 6.61 (AC4.1): os decididos, abaixo dos em aberto
     }catch(e){ _logFalhaGrav('renderReposicao (pedidos de encaixe)', e); }
     const q=jsNorm((document.getElementById('repBusca')||{}).value||'');
     const todos=PELUDINHOS.map(function(p,i){ return {p:p,i:i,saldo:repSaldoReposicao(p)}; }).filter(function(o){ return !pelInativo(o.p); });
@@ -12594,7 +13530,9 @@
           var pzD=repPrazo(d);
           return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+')'):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
             +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'
-            +(pzD.dentro?(' até as 24h de '+String(repBRdata(pzD.limite)).slice(0,5)):' (fora do prazo)')):'');
+            +(pzD.dentro?(' até as 24h de '+String(repBRdata(pzD.limite)).slice(0,5)):' (fora do prazo)')
+            // 6.61 (AC7.1): «mudar o dia» da reposição marcada para um dia futuro (a troca muda pelo caminho dela)
+            +((!tc && d>hojeISO)?(' · '+dxMudarBotaoHTML(o.i, d)):'')):'');
         }).join(' · ')
         +(ag[0]===hojeISO?' — é HOJE':'')+'</div>'):'';
       // A MARCADA QUE JÁ PASSOU sem uso naquele dia (25/set/2026, Safira): antes sumia da tela
@@ -22822,7 +23760,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-17';
+  const APP_VERSAO='2026-10-09-18';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -61620,6 +62558,12 @@
     'reposicao-abatida-depois':'Abateu do saldo a Reposição lançada sem abater', 'reposicao-credito':'Lançou a falta avisada (crédito de reposição)',
     'reposicao-uso':'Registrou o uso da reposição', 'reposicao-excecao':'A Gestão não contou a reposição (exceção)',
     'reposicao-zeluz-desmarcou':'A Zêluz desmarcou a reposição (não conta)',
+    // ===== 6.61 — o dia de repor e as vagas (AC9) — as ações novas e as que as funções tocadas já gravavam ==========
+    'vaga-pedido':'Pediu encaixe à Márcia (dia lotado)', 'vaga-autorizada':'Autorizou o encaixe (dia lotado)', 'vaga-recusada':'Recusou o encaixe',
+    'vaga-retirada':'Retirou o pedido de encaixe', 'vaga-desautorizada':'Desautorizou o encaixe', 'vaga-reaberta':'Reabriu o pedido de encaixe',
+    'troca-confirmada':'Abriu vaga para a troca (lista de troca)', 'troca-recusada':'Recusou a troca (lista de troca)', 'troca-pedido':'Pediu troca acima das vagas (lista de troca antiga)',
+    'troca-cancelada':'Cancelou a troca (lista de troca)', 'troca-reaberta':'Reabriu a troca (lista de troca)',
+    'reposicao-agendada':'Marcou o dia de repor', 'reposicao-remarcada':'Mudou o dia de repor (sem desmarcar antes)',
     // ===== 6.58 — o remédio: a dose, a agenda e a medicação do dia (AC7) ===========================
     'medicacao-dose-anulada':'Desfez uma dose de remédio (lançada por engano)', 'medicacao-dose-reaberta':'Reabriu uma dose de remédio anulada',
     'medicacao-dose-corrigida':'Corrigiu uma dose avulsa de remédio', 'medicacao-estoque-devolvido':'O estoque do remédio voltou (dose anulada)',

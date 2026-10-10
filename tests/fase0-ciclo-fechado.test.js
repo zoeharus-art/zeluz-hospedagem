@@ -549,10 +549,25 @@ function bancoFalso(servidor) {
 // Uma de cada vez: as provas trocam o banco e as janelas do app, e duas ao mesmo tempo
 // pisariam uma na outra.
 let fila = Promise.resolve();
+// 6.61, 3ª rodada (QA661-R2-04): cada prova tem um prazo; e a rodada não sai calada com a fila presa.
+const PRAZO_PROVA = 120000;
+let filaPendentes = 0;
 function provaAsync(nome, fn) {
-  fila = fila.then(() => fn().then(() => { ok++; console.log('  ✓ ' + nome); },
-    (e) => { falhas.push(nome + ' — ' + e.message); console.log("  ✗ " + nome + "\n      " + e.message + (process.env.PILHA ? "\n" + e.stack : "")); }));
+  filaPendentes++;
+  fila = fila.then(() => {
+    let t = null;
+    const prazo = new Promise((ok, nao) => { t = setTimeout(() => nao(new Error('a prova não terminou em ' + (PRAZO_PROVA / 1000) + ' s (presa: um await que não volta)')), PRAZO_PROVA); });
+    return Promise.race([Promise.resolve().then(fn), prazo]).finally(() => clearTimeout(t));
+  }).then(() => { ok++; console.log('  ✓ ' + nome); },
+    (e) => { falhas.push(nome + ' — ' + e.message); console.log("  ✗ " + nome + "\n      " + e.message + (process.env.PILHA ? "\n" + e.stack : "")); })
+    .finally(() => { filaPendentes--; });
 }
+process.on('beforeExit', () => {
+  if (filaPendentes > 0) {
+    console.log('\n  ✗ A FILA DAS PROVAS NÃO TERMINOU: ' + filaPendentes + ' prova(s) ainda presa(s). FALHA (sem a linha das provas que passaram).');
+    process.exitCode = 1;
+  }
+});
 provaAsync('R-CANCEL — "Tutor buscou, cancelar" de noite anterior GRAVA (a transação pergunta ao banco)', async () => {
   const B = bancoFalso({ nome: 'Thor', status: 'aguardando', chave: 'thor__bia' });
   ctx.__B = B;
@@ -13849,7 +13864,7 @@ provaAsync('6.46 R5 (ATK5) — «Recusar» por transação, só a partir de pedi
     const rec = run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))");
     await autoriza646();
     igual(B.le(PED646()).status, 'autorizado');
-    run("__ztPend('Sem vaga mesmo');"); await rec; await espera646();
+    run("__ztPend('Sem vaga mesmo hoje');"); await rec; await espera646();
     const ped = B.le(PED646());
     igual([ped.status, ped.motivo_recusa == null, ped.autorizado_por, creditos646(B)], ['autorizado', true, 'Márcia Teste', ['2026-10-13→2026-10-14 troca']]);
     igual(J630('__al646').slice(-1), ['Este pedido já foi autorizado (por Márcia Teste). A recusa não foi gravada.']);
@@ -13869,7 +13884,7 @@ provaAsync('6.46 R5 (ATK5) — «Recusar» por transação, só a partir de pedi
   try {
     prepPed646(B, PEDTROCA646());
     run(`zTexto=function(){ __B646.poe('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0]), Object.assign({}, __B646.le('daycare/vagas-pedidos/2026-10-14/'+pelKey(PELUDINHOS[0])),
-      {status:'autorizando', autorizando:{quem:'Gestão Outra', ts:Date.now(), id:'outro'}})); return Promise.resolve('Sem vaga'); };`);
+      {status:'autorizando', autorizando:{quem:'Gestão Outra', ts:Date.now(), id:'outro'}})); return Promise.resolve('Sem vaga neste dia'); };`);
     await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
     igual([B.le(PED646()).status, J630('__al646')], ['autorizando', ['Este pedido já está sendo autorizado em outro aparelho (por Gestão Outra). A recusa não foi gravada.']]);
   } finally { solta646(); }
@@ -13878,10 +13893,10 @@ provaAsync('6.46 R5 (ATK5) — «Recusar» por transação, só a partir de pedi
     B = palco646(true);
     try {
       prepPed646(B, ped);
-      run("__zt646='Sem vaga mesmo';");
+      run("__zt646='Sem vaga mesmo hoje';");
       await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
       const p2 = B.le(PED646());
-      igual([p2.status, p2.motivo_recusa, p2.autorizado_por, p2.autorizando == null, J630('__al646')], ['recusado', 'Sem vaga mesmo', 'Márcia Teste', true, []]);
+      igual([p2.status, p2.motivo_recusa, p2.autorizado_por, p2.autorizando == null, J630('__al646')], ['recusado', 'Sem vaga mesmo hoje', 'Márcia Teste', true, []]);
       assert.ok(J630('__au639').some((a) => a[0] === 'vaga-recusada'), 'o rastro da recusa');
     } finally { solta646(); }
   }
@@ -15166,7 +15181,7 @@ provaAsync('6.46 W1 (QA646D-01) — a memória "lançado neste aparelho" só val
 });
 
 provaAsync('6.46 W2 (QA646D-02) — «Recusar» de avulso sem resposta da leitura dos Lançamentos do dia: em 6 s a tela diz que não conseguiu conferir, sem pedir o motivo e sem recusar; a leitura recusada pelo banco recusa como antes', async () => {
-  const RECUSA = `__al646=[]; __ztW2=0; __bkZTw2=zTexto; zTexto=function(){ __ztW2++; return Promise.resolve('Não cabe'); }; __pt646='Gestão C';`;
+  const RECUSA = `__al646=[]; __ztW2=0; __bkZTw2=zTexto; zTexto=function(){ __ztW2++; return Promise.resolve('Não cabe mais ninguém'); }; __pt646='Gestão C';`;
   // (a) sem rede: a leitura do avulso e a do pedido não respondem (sem o prazo, a tela ficava muda)
   let B = palco646(false);
   try {
@@ -26475,7 +26490,7 @@ provaAsync('6.48 P6 — encaixe (vagasAutorizar, vagasRecusar): o motivo em port
     try {
       prepPed646(B, PEDTROCA646());
       const ref0 = B.ref; B.ref = (c) => { const r = ref0(c); if (/vagas-pedidos/.test(c)) r.transaction = () => Promise.reject(new Error(cru)); return r; };
-      run("__zt646='Sem vaga';");
+      run("__zt646='Sem vaga neste dia';");
       await run("vagasRecusar('2026-10-14', pelKey(PELUDINHOS[0]))"); await espera646();
       igual(J630('__al646'), [esperado], cru);
     } finally { solta646(); }
@@ -26912,7 +26927,13 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // que volta ou que corrige; e o motivo que a pessoa escreveu no cartaz (reg.motivo), levado ao estorno (obs), ao rastro e ao Extrato
   // («desfeito por … : motivo»). Nenhum erro: o erro do banco vai para gravacao-FALHOU e, na tela, pelo zErroMotivo do cartaz da 6.57.
   repEstornarCascata: 1, repEstornarGravar: 2, repLoteEstornarGravar: 2, repLoteDepois: 1, repEstornoDesfazerAbrir: 3, repEstornoDesfazerGravar: 3,
-  repDevolucaoDesfazerAbrir: 2, repDevolucaoDesfazerGravar: 2, repCorrigirAbrir: 2, repCorrigirGravar: 5, repExtratoNovidades: 2, repExtratoLinhaHTML: 1 };
+  repDevolucaoDesfazerAbrir: 2, repDevolucaoDesfazerGravar: 2, repCorrigirAbrir: 2, repCorrigirGravar: 5, repExtratoNovidades: 2, repExtratoLinhaHTML: 1,
+  // 6.61 (o dia de repor e as vagas: funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a pessoa escreveu
+  // no cartaz (a recusa do encaixe, o retirar, o desautorizar, o cancelar a troca antiga), mostrado na lista «Decididos»
+  // (vagasDecisaoTexto), na troca riscada (trocaCanceladasHTML) e no cartaz do «Reabrir» da troca (trocaReabrirAbrir), e guardado no
+  // arquivo da diária anulada (vagasAvulsoAnular, a mesma chave `motivo` da 6.56); e o motivo da falta avisada (cio, viagem…), pelo
+  // rótulo de REP_MOTIVOS, em «Qual falta este dia repõe?» (dxFaltasHTML). O erro do banco vai para o cartaz da 6.57 (zErroMotivo).
+  vagasDecisaoTexto: 1, vagasAvulsoAnular: 1, trocaCanceladasHTML: 1, trocaReabrirAbrir: 1, dxFaltasHTML: 1 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -27035,6 +27056,9 @@ const EXCECAO648 = [
   "if(r.erro) return r.erro+' Nada foi gravado.';",   // pesoCorrAbrir: r = pesoLer («130 kg não é peso de FILHOt…», «Só números. Ex.: 9,7»)
   // 6.60 (fora das três telas): a régua do motivo de 4 palavras de Reposições — a frase do motivoQuatroPalavras, nunca o cru
   "function repMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // repMotivoErro: chamada na caixa (validar) e de novo dentro de cada função que grava
+  // 6.61, 2ª rodada (fora das três telas): a frase da régua das 24 horas da 6.38 (repRemarcarBarrado devolve um Error com repAviso e
+  // a frase do app: «A reposição marcada para … já passou do prazo para desmarcar…»), levada à Márcia — nunca o cru
+  "if(bar) return String(bar.message||'A régua do prazo não deixa mudar este dia.')+fim;",   // vagasMudarConferir: bar = repRemarcarBarrado
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -37714,6 +37738,1371 @@ provaAsync('6.60 QA q43 e q48 — «Lançar o período certo» de um lote de «A
     igual(run("repEstornoTipo(repLancamentos(PELUDINHOS[0]), repLancDe(repLancamentos(PELUDINHOS[0]), 'est-orc-x1'))"), '');
   } finally { solta660(); }
 });
+// ================================================================== 6.61 — o dia de repor e as vagas (S4 da revisão, parte 2)
+// Dentro do bloco da 6.60: o palco é o dela (arma660, semear660, CR660, op660, assina660, cartaz660…), com o da 6.61 por cima.
+{
+console.log('\n6.61 — O dia de repor e as vagas: retirar, desautorizar e reabrir o pedido de encaixe; a recusa com 4 palavras; a troca antiga com motivo, senha e rastro; «Mudar o dia» num passo; «Qual falta este dia repõe?»');
+// Tudo INVENTADO: Quindim (tutora Ana Teste), Bolota (Bia Teste) e as pessoas «Teste». Relógio FIXO em sexta, 09/10/2026, 10:00 (o do
+// ARMA657); 12/10 é feriado. O banco de mentira é o da 6.57 com o da 6.60 (o REPO_CACHE desce na hora); aqui os pedidos de encaixe
+// (VAGAS_PEDIDOS) e a lista de troca (TROCA_CACHE) também descem na hora, como os ouvintes de daycare/vagas-pedidos e daycare/trocas.
+// As senhas são as de mentira do ARMA657 (a da Gestão, a da Consultora «s-bia», a do posto, a do Encãotador).
+const crypto661 = require('crypto');
+const K661 = 'quindim__ana teste', KB661 = 'bolota__bia teste', DC661 = 'quindim__ana-teste';
+const NP661 = (dia, k) => 'daycare/vagas-pedidos/' + dia + '/' + (k || K661);
+const NO661 = 'daycare/reposicao/' + K661 + '/lancamentos';
+const NT661 = 'daycare/trocas/2026-10-14/' + KB661;
+const MOT661 = 'o tutor desistiu do encaixe';
+const MOTG661 = 'a matilha do dia mudou';
+const T661 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+const AUT661 = { quem: 'Márcia Teste', ts: T661(9, 9, 0) };
+const ARMA661X = `__bk661={tc:TROCA_CACHE, vgd:vagasGarantirDias, vcd:vagasCarregarDia, pt:pessoaDoTurno, vl:VAGAS_LANCADOS, ra:_repVeioTs,
+    vd:(typeof VAGAS_DESFEITOS==='undefined')?undefined:VAGAS_DESFEITOS, dx:[dxPel, dxDia, dxTroca, dxDe],
+    dm:(typeof dxMudar==='undefined')?undefined:dxMudar, df:(typeof dxFaltaId==='undefined')?undefined:dxFaltaId};
+  TROCA_CACHE={}; VAGAS_LANCADOS={}; if(typeof VAGAS_DESFEITOS!=='undefined') VAGAS_DESFEITOS={};
+  __resp657=(function(f){ return function(op, p, info, fazer){ return f(op, p, info, function(){ fazer(); VAGAS_PEDIDOS=__get657('daycare/vagas-pedidos')||{}; TROCA_CACHE=__get657('daycare/trocas')||{}; }); }; })(__resp657);
+  vagasGarantirDias=function(){ return Promise.resolve(false); }; vagasCarregarDia=function(d){ return Promise.resolve(REP_PLAN_CACHE[d]||null); };
+  __pt661='Recepção Teste'; pessoaDoTurno=function(){ return __pt661; }; _repVeioTs=Date.now();
+  ['repEncaixes','trocaWrap','repLista','repResumo','repCount','repBusca','dxModal','dxBusca','dxResults','dxEscolhido','dxData','dxVeredito','dxVagas','dxWarn','dxOk',
+   'dxTitulo','dxTroca','dxTrocaBox','dxDe','dxTrocaLb','dxFaltas','poCardEncaixes'].forEach(function(k){ __el657[k]=__fe660(); });`;
+const SOLTA661X = `TROCA_CACHE=__bk661.tc; vagasGarantirDias=__bk661.vgd; vagasCarregarDia=__bk661.vcd; pessoaDoTurno=__bk661.pt; VAGAS_LANCADOS=__bk661.vl; _repVeioTs=__bk661.ra;
+  if(__bk661.vd!==undefined) VAGAS_DESFEITOS=__bk661.vd; dxPel=__bk661.dx[0]; dxDia=__bk661.dx[1]; dxTroca=__bk661.dx[2]; dxDe=__bk661.dx[3];
+  if(__bk661.dm!==undefined) dxMudar=__bk661.dm; if(__bk661.df!==undefined) dxFaltaId=__bk661.df;`;
+// o palco nunca fica armado pela metade
+const arma661 = () => { arma660(); try { run(ARMA661X); } catch (e) { solta660(); throw e; } };
+const solta661 = () => { try { run(SOLTA661X); } finally { solta660(); } };
+const ped661 = (dia, extra, k) => Object.assign({ pet: k === KB661 ? 'Bolota' : 'Quindim', tutor: k === KB661 ? 'Bia Teste' : 'Ana Teste', tipo: 'reposicao', status: 'pedido',
+  dia: dia, quem: 'Recepção Teste', ts: T661(9, 8, 0), chave: k || K661, alvo: k === KB661 ? 'bolota__bia-teste' : DC661 }, extra || {});
+// grava direto no "servidor" e desce para os três caches, como os ouvintes (sem contar como gravação da tela)
+const poe661 = (c, v) => { ctx.__v661 = v; run(`__put657(${JSON.stringify(c)}, __v661); REPO_CACHE=__get657('daycare/reposicao')||{}; VAGAS_PEDIDOS=__get657('daycare/vagas-pedidos')||{}; TROCA_CACHE=__get657('daycare/trocas')||{};`); };
+const poePed661 = (dia, o, k) => poe661(NP661(dia, k), o);
+const pedDb661 = (dia, k) => J630(`__get657(${JSON.stringify(NP661(dia, k))})`);
+// o dia lido (as vagas conferidas), com N outros FILHOts de avulso ocupando vaga
+const vagas661 = (dia, n) => run(`REP_PLAN_CACHE['${dia}']={ts:Date.now(), auto:{}, reposicao:{}, avulso:{}}; for(var i=0;i<${n || 0};i++) REP_PLAN_CACHE['${dia}'].avulso['x'+i]={valor:'Outro'+i+' Teste'};`);
+const al661 = () => J630('__al657');
+const zp661 = () => J630('__zp657');
+const FUN661 = (nome) => { const src = fs.readFileSync(APP, 'utf8'); const m = new RegExp('\\n  (async )?function ' + nome + '\\(').exec(src); if (!m) return null;
+  const i = m.index + 1, j = src.indexOf('\n  }\n', i); return crypto661.createHash('sha256').update(src.slice(i, j + 4)).digest('hex').slice(0, 16); };
+const pedRep661 = (dia, extra) => ped661(dia, Object.assign({ status: 'autorizado', autorizado_por: AUT661.quem, autorizado_ts: AUT661.ts,
+  payload: { credito_id: 'fa-2026-10-08', data: '2026-10-08', volta: dia } }, extra || {}));
+const credRep661 = (dia, extra) => CR660('2026-10-08', Object.assign({ volta: dia, prazo24h: dia, volta_por: AUT661.quem, volta_ts: AUT661.ts, autorizacao: AUT661 }, extra || {}));
+const pedAv661 = (dia, extra) => ped661(dia, Object.assign({ tipo: 'avulso', status: 'autorizado', autorizado_por: AUT661.quem, autorizado_ts: AUT661.ts, nota: '',
+  payload: { valor_cent: 9700, matriculado: true } }, extra || {}));
+const L1_661 = { valor: 'Quindim (Ana Teste)', chave: DC661, det: { valor_cent: 9700, matriculado: true, autorizacao: AUT661 }, planilha_ok: false, quem: 'Márcia Teste', ts: AUT661.ts };
+const TRA661 = (extra) => Object.assign({ nome: 'Bolota', tutor: 'Bia Teste', de: '', para: '2026-10-14', motivo: 'troca', quem: 'Recepção X', status: 'confirmada', ts: T661(8, 10, 0) }, extra || {});
+const CR15_661 = () => CR660('2026-10-06', { volta: '2026-10-15', prazo24h: '2026-10-15', volta_por: 'Recepção X', volta_ts: T661(8, 11, 0) });
+const abreMudar661 = async (i, dia) => { run(`dxMudarDiaAbrir(${i || 0}, '${dia}')`); await espera657(); };
+const escolheDia661 = async (dia) => { run(`__el657.dxData.value='${dia}'; dxDiaMudou();`); await espera657(); };
+
+// ---- AC1 — Retirar o pedido ---------------------------------------------------------------------------------------
+provaAsync('6.61 P1 (AC1.1, AC1.2, AC4.3) — «Retirar o pedido» (44 px) só no pedido em aberto e livre, para quem lança reposição; o «em autorização» continua sem botões; o quadro da Consultora continua sem «Autorizar» e com «com a Márcia»; o cartaz da 6.57 (anular, a própria senha) com a cascata, com e sem a falta avisada', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08') });
+    poePed661('2026-10-14', ped661('2026-10-14', { payload: { credito_id: 'fa-2026-10-08', data: '2026-10-08', volta: '2026-10-14' } }));
+    poePed661('2026-10-15', ped661('2026-10-15', { status: 'autorizando', autorizando: { quem: 'Márcia Teste', ts: Date.now() - 10000, id: 'm1' } }, KB661), KB661);
+    poePed661('2026-10-16', ped661('2026-10-16', { tipo: 'avulso', payload: { valor_cent: 9700, matriculado: true } }, KB661), KB661);
+    papel657('consultora', 'Bia Consultora Teste');
+    const h = String(run('vagasPedidosHTML()'));
+    assert.ok(/<button type="button" onclick="vagasRetirarAbrir\('2026-10-14','quindim__ana teste'\)" style="[^"]*min-height:44px[^"]*">Retirar o pedido<\/button>/.test(h), h.slice(0, 1500));
+    assert.ok(/vagasRetirarAbrir\('2026-10-16','bolota__bia teste'\)/.test(h), 'o avulso em aberto também');
+    assert.ok(!/vagasRetirarAbrir\('2026-10-15'/.test(h) && /em autorização por Márcia Teste/.test(h), 'o «em autorização» continua sem botões');
+    const card = String(run('vagasEncaixesCardHTML()'));
+    assert.ok(card.indexOf('vagasAutorizar(') < 0 && card.indexOf('com a Márcia') > 0 && card.indexOf('Retirar o pedido') > 0, 'v-33: o quadro da Consultora');
+    papel657('gestao', 'Gestora Teste');
+    const hg = String(run('vagasPedidosHTML()'));
+    assert.ok(/vagasAutorizar\('2026-10-14','quindim__ana teste'\)/.test(hg) && /vagasRecusar\('2026-10-14','quindim__ana teste'\)/.test(hg) && /vagasRetirarAbrir\('2026-10-14'/.test(hg), 'a Gestão: «Autorizar», «Recusar» e «Retirar o pedido»');
+    papel657('monitor', 'Caio Encãotador Teste');
+    assert.ok(String(run('vagasPedidosHTML()')).indexOf('Retirar o pedido') < 0, 'quem não lança reposição não vê o botão');
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([op660('titulo'), op660('acao'), op660('nivel'), op660('capacidade'), op660('botao')], ['Retirar o pedido de encaixe de Quindim em 14/10', 'anular', 'propria', 'lancar-reposicao', 'Retirar o pedido']);
+    igual(op660('cascata'), ['A Márcia deixa de ver o pedido. Nada foi lançado em 14/10.', 'A falta avisada de 08/10 continua no Extrato, sem dia de repor.']);
+    const c = cartaz660();
+    assert.ok(/Sua senha/.test(c) && /Motivo \(pelo menos 4 palavras\)/.test(c) && /Quem assina: a Consultora de Bem-Estar, a Supervisão, a Gestão ou a Diretoria/.test(c), c);
+    await fecha660();
+    igual(await run('__p661'), { ok: false, cancelado: true });
+    run(`__p661=vagasRetirarAbrir('2026-10-16', '${KB661}');`); await espera657();
+    igual(op660('cascata'), ['A Márcia deixa de ver o pedido. Nada foi lançado em 16/10.']);
+    await fecha660();
+    igual(J630('__esc657').length, 0, 'cancelar não grava nada');
+  } finally { solta661(); }
+});
+provaAsync('6.61 P2 (AC1.3) — retirar grava por transação: «retirado» com o registro da 6.57, o resto do pedido igual, a falta avisada intacta no Extrato e o rastro; a Márcia reservando ou decidindo no meio, ou o pedido feito de novo: nada gravado e a frase do estado real', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08') });
+    const P = ped661('2026-10-14', { payload: { credito_id: 'fa-2026-10-08', data: '2026-10-08', volta: '2026-10-14' } });
+    poePed661('2026-10-14', P);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual(await assina660('s-bia', MOT661), ['pronto', '']);
+    const d = pedDb661('2026-10-14');
+    igual([d.status, d.retirado.acao, d.retirado.por, d.retirado.papel, d.retirado.motivo, d.retirado.original.caminho], ['retirado', 'anular', 'Bia Consultora Teste', 'consultora', MOT661, NP661('2026-10-14')]);
+    const resto = Object.assign({}, d), esperado = Object.assign({}, P); delete resto.status; delete resto.retirado; delete esperado.status;
+    igual(resto, esperado, 'os outros campos do pedido ficam como estavam');
+    igual(lanc660()['fa-2026-10-08'], CR660('2026-10-08'), 'a falta avisada continua no Extrato, sem dia de repor');
+    igual(aud660('vaga-retirada').map((a) => a[1]), ['Quindim — pedido de encaixe em 14/10/2026 retirado: ' + MOT661]);
+    igual(aud660('registro-anulado').length, 1, 'a entrada da 6.57, depois do ok');
+    assert.ok(JSON.stringify(J630('__db657')).indexOf('s-bia') < 0, 'a senha em nenhum nó');
+    assert.ok(J630('vagasPedidosAbertos()').every((o) => o._dia !== '2026-10-14'), 'saiu da fila da Márcia');
+    await fecha660();
+    // a Márcia reserva no meio (outro aparelho)
+    poePed661('2026-10-14', P);
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    poePed661('2026-10-14', Object.assign({}, P, { status: 'autorizando', autorizando: { quem: 'Márcia Teste', ts: Date.now(), id: 'm1' } }));
+    igual((await assina660('s-bia', MOT661))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi retirado.') >= 0, cartaz660());
+    igual(pedDb661('2026-10-14').status, 'autorizando');
+    await fecha660();
+    // a Márcia recusa no meio
+    poePed661('2026-10-14', P);
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    poePed661('2026-10-14', Object.assign({}, P, { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(9, 9, 30) }));
+    igual((await assina660('s-bia', MOT661))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Este pedido já foi recusado (por Márcia Teste). Nada foi retirado.') >= 0, cartaz660());
+    await fecha660();
+    // pedido de novo (outro encaixe) enquanto o cartaz estava aberto
+    poePed661('2026-10-14', P);
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    poePed661('2026-10-14', Object.assign({}, P, { ts: T661(9, 9, 45), tipo: 'avulso', payload: { valor_cent: 9700 } }));
+    igual((await assina660('s-bia', MOT661))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Enquanto o cartaz estava aberto, o pedido foi feito de novo (agora é avulso de R$ 97,00) e está na fila da Márcia. Nada foi retirado.') >= 0, cartaz660());
+    igual([pedDb661('2026-10-14').status, aud660('vaga-retirada').length], ['pedido', 1]);
+    await fecha660();
+    // a tela que ainda mostrava o pedido livre, com ele já reservado: a frase, sem cartaz
+    poePed661('2026-10-14', Object.assign({}, P, { status: 'autorizando', autorizando: { quem: 'Márcia Teste', ts: Date.now(), id: 'm1' } }));
+    run(`__al657=[]; vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([al661(), run('CORR_ATUAL')], [['Este pedido já está sendo autorizado em outro aparelho (por Márcia Teste). Nada foi retirado.'], null]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P3 (AC1.3, decisão 1) — retirar: a senha de posto, o nome digitado e a de quem não lança reposição recusados; o motivo de 3 palavras recusado; pelo console, o Encãotador fica barrado («BARROU»), sem cartaz e sem gravar', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', ped661('2026-10-14'));
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    const r = {};
+    for (const s of ['s-recep', 's-posto', 'Bia Consultora Teste', 's-caio']) r[s] = await assina660(s, MOT661);
+    assert.ok(/senha de posto não assina/.test(r['s-recep'][1]) && /senha de posto não assina/.test(r['s-posto'][1]), JSON.stringify(r));
+    igual(r['Bia Consultora Teste'], ['conferir', 'Essa senha não é de ninguém cadastrado. Nada foi gravado.']);
+    igual(r['s-caio'], ['conferir', 'Essa senha é de Caio Encãotador Teste, que não pode assinar esta anulação. Quem assina: a Consultora de Bem-Estar, a Supervisão, a Gestão ou a Diretoria. Nada foi gravado.']);
+    igual(await assina660('s-bia', 'o tutor desistiu'), ['conferir', 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).']);
+    igual([J630('__esc657').length, pedDb661('2026-10-14').status], [0, 'pedido']);
+    await fecha660();
+    papel657('monitor', 'Caio Encãotador Teste');
+    run(`vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([run('CORR_ATUAL'), barrou657().length, J630('__esc657').length], [null, 1, 0]);
+    assert.ok(/^BARROU retirar um pedido de encaixe \(Encãotador sem permissão\)/.test(barrou657()[0][1]), JSON.stringify(barrou657()));
+  } finally { solta661(); }
+});
+provaAsync('6.61 P4 (AC1.4) — pedir de novo sobre um pedido retirado vale: o vagasPedir aceita o pedido novo (o vagasPedidoOcupado é o mesmo da base) e ele volta à fila da Márcia', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', ped661('2026-10-14'));
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    await assina660('s-bia', MOT661); await fecha660();
+    igual(pedDb661('2026-10-14').status, 'retirado');
+    // a frase do estado real com o estado novo (o «Recusar» de uma tela velha, por exemplo)
+    igual([run(`vagasPedidoEstado(VAGAS_PEDIDOS['2026-10-14']['${K661}'])`), run(`vagasReservaTexto(VAGAS_PEDIDOS['2026-10-14']['${K661}'], true)`)],
+      ['ele foi retirado (por Bia Consultora Teste)', 'Este pedido foi retirado (por Bia Consultora Teste). A recusa não foi gravada.']);
+    papel657('gestao', 'Gestora Teste'); run('__al657=[];');
+    await run(`vagasRecusar('2026-10-14', '${K661}')`); await espera657();
+    igual([al661(), pedDb661('2026-10-14').status], [['Este pedido foi retirado (por Bia Consultora Teste). A recusa não foi gravada.'], 'retirado']);
+    igual(J630(`vagasPedidoOcupado(VAGAS_PEDIDOS['2026-10-14']['${K661}'], {tipo:'avulso', payload:{valor_cent:9700}}, PELUDINHOS[0])`), false);
+    await run(`vagasPedir('2026-10-14', PELUDINHOS[0], 'avulso', {valor_cent:9700, matriculado:true})`); await espera657();
+    const d = pedDb661('2026-10-14');
+    igual([d.status, d.tipo, d.payload.valor_cent, d.quem], ['pedido', 'avulso', 9700, 'Recepção Teste']);
+    assert.ok(J630('vagasPedidosAbertos()').some((o) => o._dia === '2026-10-14'), 'de volta à fila da Márcia');
+  } finally { solta661(); }
+});
+// ---- AC2 — Desautorizar ------------------------------------------------------------------------------------------
+provaAsync('6.61 P5 (AC2.1, AC4.1) — «Desautorizar» (44 px) só no autorizado de hoje em diante e só para a Gestão (decidir-troca); pelo console, a Consultora fica barrada; o dia que passou não se desautoriza', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedRep661('2026-10-14')); poePed661('2026-10-08', pedRep661('2026-10-08'));
+    const h = String(run('vagasDecididosHTML()'));
+    assert.ok(/<button type="button" onclick="vagasDesautorizarAbrir\('2026-10-14','quindim__ana teste'\)" style="[^"]*min-height:44px[^"]*">Desautorizar<\/button>/.test(h), h);
+    assert.ok(h.indexOf("'2026-10-08'") < 0 && h.indexOf('08/10/2026') < 0, 'o dia que já passou não aparece');
+    papel657('consultora', 'Bia Consultora Teste');
+    const hc = String(run('vagasDecididosHTML()'));
+    assert.ok(hc.indexOf('Desautorizar<') < 0 && hc.indexOf('autorizado por Márcia Teste') > 0, hc);
+    run(`vagasDesautorizarAbrir('2026-10-14', '${K661}')`); await espera657();
+    igual([run('CORR_ATUAL'), barrou657().length, J630('__esc657').length, zp661().length], [null, 1, 0, 0]);
+    assert.ok(/^BARROU desautorizar um encaixe \(Consultora de Bem-Estar sem permissão\)/.test(barrou657()[0][1]), JSON.stringify(barrou657()));
+    papel657('gestao', 'Gestora Teste');
+    run(`__al657=[]; vagasDesautorizarAbrir('2026-10-08', '${K661}')`); await espera657();
+    igual([al661(), zp661().length], [['O dia 08/10/2026 já passou: o encaixe não se desautoriza mais. Nada foi mudado.'], 0]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P6 (AC2.2, AC2.3, AC2.4, AC2.6) — desautorizar o avulso: a pergunta diz o que sai; o cartaz (senha da Gestão) anula a diária dos Lançamentos do dia do pedido, guardada inteira; DEPOIS o pedido fecha com o mesmo registro; a Chamada de hoje igual; «avise o tutor»', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14'));
+    poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    poe661('daycare/avulsos/2026-10-09/C1', { nome: 'Quindim', tutor: 'Ana Teste', quem: 'Recepção Teste' });
+    run(`__esc657=[]; __au657=[]; __za657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual(zp661()[0], ['Desautorizar o encaixe de Quindim em 14/10?', ['A diária avulsa de Quindim em 14/10 (R$ 97,00) sai dos Lançamentos do dia e da planilha, e fica riscada, nunca apagada.',
+      'O motivo e a senha da Gestão assinam a anulação da diária e o pedido de uma vez. A autorização anterior fica guardada no pedido.']]);
+    igual([op660('acao'), op660('nivel'), op660('botao'), op660('titulo')], ['anular', 'gestao', 'Desautorizar', 'Desautorizar o encaixe de Quindim em 14/10']);
+    igual((await assina660('s-bia', MOTG661))[1], 'Essa senha é de Bia Consultora Teste, que não pode assinar esta anulação. Quem assina: a Gestão ou a Diretoria. Nada foi gravado.');
+    igual(J630('__esc657').length, 0);
+    await assina660(SENHA657, MOTG661); await espera657();
+    igual(J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`), null, 'a diária saiu dos Lançamentos do dia do pedido');
+    const arq = J630(`__get657('daycare/avulsos-anulados/2026-10-14')`) || {}, ks = Object.keys(arq);
+    igual(ks.length, 1); assert.ok(/^lancamento__L1__\d+$/.test(ks[0]), ks[0]);
+    const a = arq[ks[0]];
+    igual([a.origem, a.caminho, a.registro, a.motivo, a.por, a.corr.acao, a.encaixe], ['lancamento', 'daycare/dashboard/2026-10-14/avulso/L1', L1_661, MOTG661, 'Gestora Teste', 'anular', { dia: '2026-10-14', chave: K661 }]);
+    igual(J630(`__get657('daycare/avulsos/2026-10-09/C1')`).nome, 'Quindim', 'a Chamada de hoje igual');
+    const d = pedDb661('2026-10-14');
+    igual([d.status, d.desautorizado.oque_saiu, d.desautorizado.por, d.desautorizado.motivo, d.autorizado_por, d.autorizado_ts, d.nota], ['desautorizado', 'avulso', 'Gestora Teste', MOTG661, 'Márcia Teste', AUT661.ts, '']);
+    // a ordem: o lançamento PRIMEIRO, o pedido DEPOIS
+    igual(J630('__esc657').map((e) => e[0] + ' ' + e[1]).filter((x) => /^update $|vagas-pedidos/.test(x)), ['update ', 'transaction ' + NP661('2026-10-14')]);
+    const za = J630('__za657').filter((z) => z[0] === 'ENCAIXE DESAUTORIZADO');
+    igual(za.length, 1); assert.ok(za[0][1].indexOf('Avise o tutor: o avulso não tem mensagem pronta.') >= 0, JSON.stringify(za));
+    igual([aud660('avulsa-tirada').length, aud660('vaga-desautorizada').length, aud660('registro-anulado').length], [1, 1, 1]);
+    assert.ok(JSON.stringify(J630('__db657')).indexOf(SENHA657) < 0, 'a senha em nenhum nó');
+  } finally { solta661(); }
+});
+provaAsync('6.61 P7 (AC2.2, AC2.3, AC2.4, S4-P9) — desautorizar a reposição: a pergunta e o «desmarcar» de sempre (sem mudança); dentro do prazo não conta; fora do prazo, «A Zêluz desmarcou» não conta e «contar como usada» conta; o pedido fecha depois, com o cartaz da Gestão', async () => {
+  const caso = async (dia, respostas, escolha) => {
+    semear660({ 'fa-2026-10-08': credRep661(dia), 'fa-2026-10-02': CR660('2026-10-02') });
+    poePed661(dia, pedRep661(dia));
+    run(`__zp657=[]; __zpq657=[]; __ztq657=${JSON.stringify(respostas || [])}; __zeq660=${JSON.stringify(escolha ? [escolha] : [])}; __mm660=[]; __al657=[];`);
+    const antes = saldos660();
+    run(`__p661=vagasDesautorizarAbrir('${dia}', '${K661}');`); await espera657(); await espera657();
+    return antes;
+  };
+  arma661();
+  try {
+    // dentro do prazo (14/10): o «desmarcar» de sempre, sem contar
+    let antes = await caso('2026-10-14');
+    igual(zp661()[0], ['Desautorizar o encaixe de Quindim em 14/10?', ['O dia de repor 14/10 sai do crédito e a vaga fica livre. A seguir, o «desmarcar» de sempre pergunta quem desistiu: a Zêluz (não conta) ou o tutor (dentro do prazo, não conta; fora do prazo, conta como usada).',
+      'Depois, o pedido fecha como desautorizado, com o motivo e a senha da Gestão. A autorização anterior fica guardada.']]);
+    assert.ok(/^Desmarcar a reposição de Quindim/.test(zp661()[1][0]), 'a pergunta do «desmarcar» de sempre: ' + JSON.stringify(zp661()));
+    igual([lanc660()['fa-2026-10-08'].volta, lanc660()['fa-2026-10-08'].volta_desmarcada.dentro_prazo, saldos660(), J630('__mm660').map((m) => m.t)], ['', true, antes, ['✅ Reposição desmarcada']]);
+    igual([op660('titulo'), op660('botao'), op660('nivel'), op660('cascata')[0]], ['Desautorizar o encaixe de Quindim em 14/10', 'Fechar o pedido', 'gestao', 'O dia de repor 14/10 já saiu do crédito: só o pedido fecha.']);
+    igual(pedDb661('2026-10-14').status, 'autorizado', 'o pedido ainda não fechou: falta a assinatura');
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    const d = pedDb661('2026-10-14');
+    igual([d.status, d.desautorizado.oque_saiu, d.desautorizado.por, d.autorizado_por], ['desautorizado', 'reposicao', 'Gestora Teste', 'Márcia Teste']);
+    await fecha660();
+    // fora do prazo (hoje, 09/10), «A Zêluz desmarcou»: não conta
+    const aviso = run('repAvisoCampo(repAgoraServidor())');
+    antes = await caso('2026-10-09', [aviso, 'a casa lotou hoje cedo'], 'A Zêluz desmarcou');
+    igual([lanc660()['fa-2026-10-08'].volta, !!lanc660()['fa-2026-10-08'].volta_desmarcada.zeluz, saldos660()], ['', true, antes]);
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual(pedDb661('2026-10-09').desautorizado.oque_saiu, 'reposicao');
+    await fecha660();
+    // fora do prazo, o tutor desistiu: conta como usada
+    antes = await caso('2026-10-09', [aviso], 'contar como usada');
+    igual([lanc660()['fa-2026-10-08'].volta, saldos660()[0]], ['', antes[0] - 1]);
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual(pedDb661('2026-10-09').status, 'desautorizado');
+  } finally { solta661(); }
+});
+provaAsync('6.61 P8 (AC2.2, AC2.3) — desautorizar a troca: a pergunta diz «A troca 13/10 → 14/10 é desfeita pelo «desmarcar» de sempre da troca»; o desfazer de sempre (vira reposição, ou volta a vir no dia dele); o pedido fecha depois', async () => {
+  arma661();
+  try {
+    const TR = CR660('2026-10-13', { motivo: 'troca', volta: '2026-10-14', prazo24h: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14', quem: 'Márcia Teste', ts: AUT661.ts }, nasceu_troca: true, autorizacao: AUT661 });
+    for (const esc of ['vira reposição', 'Volta a vir']) {
+      semear660({ 'fa-2026-10-13': TR });
+      poePed661('2026-10-14', ped661('2026-10-14', { status: 'autorizado', autorizado_por: AUT661.quem, autorizado_ts: AUT661.ts, payload: { volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' } } }));
+      run(`__zp657=[]; __zeq660=${JSON.stringify([esc])}; __mm660=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+      igual(zp661()[0][1][0], 'A troca 13/10 → 14/10 é desfeita pelo «desmarcar» de sempre da troca.');
+      const L = lanc660(), c = L['fa-2026-10-13'];
+      if (esc === 'vira reposição') igual([c.volta, c.volta_desmarcada.virou_reposicao], ['', true]);
+      else igual(Object.keys(L).filter((k) => L[k].tipo === 'estorno' && L[k].estornaId === 'fa-2026-10-13').length, 1, 'volta a vir no dia dele: a falta avisada sai');
+      igual(J630('__mm660').map((m) => m.t), [esc === 'Volta a vir' ? '✅ Troca desfeita' : 'Troca desmarcada'], 'a mensagem de sempre do «desmarcar» da troca');
+      igual(op660('cascata')[0], 'A troca 13/10 → 14/10 já foi desfeita: só o pedido fecha.');
+      igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+      igual([pedDb661('2026-10-14').status, pedDb661('2026-10-14').desautorizado.oque_saiu], ['desautorizado', 'troca']);
+      await fecha660();
+    }
+  } finally { solta661(); }
+});
+provaAsync('6.61 P9 (AC2.2, AC2.4) — desautorizar com o encaixe já tirado à mão: «O encaixe já não está lá: só o pedido fecha.» — nada é desmarcado nem anulado, só o pedido fecha (a reposição e o avulso)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08', { volta: '', volta_desmarcada: { dia: '2026-10-14', quem: 'Recepção X', ts: T661(9, 9, 30) }, autorizacao: AUT661 }) });
+    poePed661('2026-10-14', pedRep661('2026-10-14'));
+    run(`__zp657=[]; __mm660=[]; __esc657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual(zp661(), [['Desautorizar o encaixe de Quindim em 14/10?', ['O encaixe já não está lá: só o pedido fecha.', 'O pedido fecha como desautorizado, com o motivo e a senha da Gestão. A autorização anterior fica guardada.']]]);
+    igual([op660('cascata'), J630('__mm660').length, J630('__esc657').length], [['O encaixe já não está lá: só o pedido fecha.', 'A autorização anterior fica guardada no pedido.'], 0, 0]);
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual([pedDb661('2026-10-14').status, pedDb661('2026-10-14').desautorizado.oque_saiu, J630('__esc657').map((e) => e[0] + ' ' + e[1])], ['desautorizado', 'nada', ['transaction ' + NP661('2026-10-14')]]);
+    await fecha660();
+    // o avulso que já saiu dos Lançamentos do dia
+    poePed661('2026-10-16', pedAv661('2026-10-16'));
+    run(`__zp657=[]; __esc657=[]; __p661=vagasDesautorizarAbrir('2026-10-16', '${K661}');`); await espera657();
+    igual(zp661()[0][1][0], 'O encaixe já não está lá: só o pedido fecha.');
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual([pedDb661('2026-10-16').desautorizado.oque_saiu, J630(`__get657('daycare/avulsos-anulados')`)], ['nada', null]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P10 (AC2.5) — o 1º passo recusado ou cancelado: nada fecha, o pedido continua autorizado e a tela diz o que ficou (a anulação do avulso recusada pelo banco; o «desmarcar» cancelado)', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14'));
+    poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    run(`__recusa657='^$'; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual((await assina660(SENHA657, MOTG661))[0], 'falhou');
+    assert.ok(/NADA FOI GRAVADO/.test(cartaz660()) && /O sistema recusou a gravação\./.test(cartaz660()), cartaz660());
+    igual([pedDb661('2026-10-14').status, !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`), J630(`__get657('daycare/avulsos-anulados')`), aud660('vaga-desautorizada').length],
+      ['autorizado', true, null, 0]);
+    await fecha660(); run(`__recusa657=null;`);
+    // o «desmarcar» cancelado («Manter o dia»): nada sai, nada fecha, e a tela diz
+    semear660({ 'fa-2026-10-08': credRep661('2026-10-15') });
+    poePed661('2026-10-15', pedRep661('2026-10-15'));
+    run(`__zpq657=[true, false]; __al657=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657(); await espera657();
+    igual([run('CORR_ATUAL'), lanc660()['fa-2026-10-08'].volta, pedDb661('2026-10-15').status], [null, '2026-10-15', 'autorizado']);
+    igual(al661(), ['O dia de repor 15/10 continua marcado no Extrato de Quindim: nada foi desfeito, e o pedido continua autorizado.']);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P11 (AC2.5) — o encaixe saiu e o pedido não fechou: a tela diz, a lista mostra «autorizado — o encaixe já foi desfeito» e o «Desautorizar» seguinte só fecha o pedido (nada sai duas vezes)', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14'));
+    poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    run(`__recusa657='vagas-pedidos'; __za657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657();
+    await assina660(SENHA657, MOTG661); await espera657();
+    const za = J630('__za657').filter((z) => z[0] === 'O PEDIDO NÃO FECHOU');
+    igual(za.length, 1);
+    igual(za[0][1], ['A diária avulsa de Quindim em 14/10 saiu dos Lançamentos do dia e fica riscada, com quem, quando e o motivo.',
+      'O pedido não fechou. O sistema recusou a gravação. Se ele ainda aparece como autorizado, toque em «Desautorizar» de novo: nada sai duas vezes, só o pedido fecha.',
+      'Avise o tutor: o avulso não tem mensagem pronta.']);
+    igual(pedDb661('2026-10-14').status, 'autorizado');
+    let dec = txt660(run('vagasDecididosHTML()'));
+    assert.ok(dec.indexOf('autorizado — o encaixe já foi desfeito: «Desautorizar» só fecha o pedido (autorizado por Márcia Teste em 09/10/2026 às 09:00)') >= 0, dec);
+    run(`__recusa657=null; __zp657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657();
+    // 2ª rodada (QA661-08): o 2º toque diz o que saiu no toque anterior, e o registro também (não «nada»)
+    igual(zp661()[0][1][0], 'A diária avulsa de Quindim em 14/10 já saiu dos Lançamentos do dia no toque anterior, neste aparelho: só o pedido fecha.');
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual([pedDb661('2026-10-14').status, pedDb661('2026-10-14').desautorizado.oque_saiu, Object.keys(J630(`__get657('daycare/avulsos-anulados/2026-10-14')`)).length], ['desautorizado', 'avulso', 1]);
+    assert.ok(txt660(run('vagasDecididosHTML()')).indexOf('o encaixe já foi desfeito') < 0, 'fechado: a lista diz desautorizado');
+    await fecha660();
+    // a reposição: o encaixe saiu e o cartaz do pedido foi cancelado
+    semear660({ 'fa-2026-10-08': credRep661('2026-10-15') });
+    poePed661('2026-10-15', pedRep661('2026-10-15'));
+    run(`__zpq657=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657(); await espera657();
+    await fecha660();
+    igual([lanc660()['fa-2026-10-08'].volta, pedDb661('2026-10-15').status], ['', 'autorizado']);
+    dec = txt660(run('vagasDecididosHTML()'));
+    assert.ok(/15\/10\/2026[^]*autorizado — o encaixe já foi desfeito/.test(dec), dec);
+    run(`__zp657=[]; __mm660=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657();
+    igual([zp661()[0][1][0], J630('__mm660').length], ['O dia de repor 15/10 já saiu do crédito no toque anterior, neste aparelho: só o pedido fecha.', 0]);
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    igual([pedDb661('2026-10-15').status, pedDb661('2026-10-15').desautorizado.oque_saiu], ['desautorizado', 'reposicao']);
+  } finally { solta661(); }
+});
+// ---- AC3 — Reabrir ------------------------------------------------------------------------------------------------
+provaAsync('6.61 P12 (AC3.1, AC3.2, AC3.3) — «Reabrir» o recusado (a Gestão): o cartaz mostra a decisão anterior; a recusa vai inteira para historico; o pedido volta à fila da Márcia, sem lançar nada (e pode ser autorizado de novo); a Consultora não reabre', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08') });
+    const R = ped661('2026-10-14', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0),
+      payload: { credito_id: 'fa-2026-10-08', data: '2026-10-08', volta: '2026-10-14' } });
+    poePed661('2026-10-14', R);
+    papel657('consultora', 'Bia Consultora Teste');
+    assert.ok(String(run('vagasDecididosHTML()')).indexOf('vagasReabrirAbrir(') < 0, 'a Consultora não vê «Reabrir» no recusado');
+    run(`vagasReabrirAbrir('2026-10-14', '${K661}')`); await espera657();
+    igual([run('CORR_ATUAL'), barrou657().length], [null, 1]);
+    papel657('gestao', 'Gestora Teste');
+    const h = String(run('vagasDecididosHTML()'));
+    assert.ok(/<button type="button" onclick="vagasReabrirAbrir\('2026-10-14','quindim__ana teste'\)" style="[^"]*min-height:44px[^"]*">Reabrir<\/button>/.test(h), h);
+    assert.ok(txt660(h).indexOf('recusado por Márcia Teste em 08/10/2026 às 16:00: «o dia já está lotado»') >= 0, txt660(h));
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([op660('acao'), op660('nivel'), op660('volta'), op660('info')], ['reabrir', 'gestao', ['O pedido volta para a fila da Márcia. Nada é lançado agora: quem decide de novo é a Márcia.'],
+      ['A decisão anterior: recusado por Márcia Teste em 08/10/2026 às 16:00: «o dia já está lotado».', 'Ela fica guardada no pedido, inteira: nada é apagado.']]);
+    igual(await assina660(SENHA657, MOTG661), ['pronto', '']);
+    const d = pedDb661('2026-10-14'), hk = Object.keys(d.historico || {});
+    igual([d.status, d.reaberto.por, d.reaberto.acao, 'motivo_recusa' in d, 'autorizado_por' in d, hk.length], ['pedido', 'Gestora Teste', 'reabrir', false, false, 1]);
+    const hist = d.historico[hk[0]];
+    igual([hist.status, hist.motivo_recusa, hist.autorizado_por, hist.autorizado_ts], ['recusado', 'o dia já está lotado', 'Márcia Teste', T661(8, 16, 0)]);
+    igual([d.payload, d.ts, d.quem], [R.payload, R.ts, R.quem], 'o pedido em si fica como era');
+    igual(lanc660(), { 'fa-2026-10-08': CR660('2026-10-08') }, 'nada lançado no Extrato');
+    assert.ok(J630('vagasPedidosAbertos()').some((o) => o._dia === '2026-10-14'), 'de volta à fila');
+    igual(aud660('vaga-reaberta').length, 1);
+    await fecha660();
+    // e a Márcia pode autorizar de novo, pelo caminho de sempre (vagasAutorizar não muda)
+    vagas661('2026-10-14', 5);
+    await run(`vagasAutorizar('2026-10-14', '${K661}')`); await espera657(); await espera657();
+    igual([pedDb661('2026-10-14').status, lanc660()['fa-2026-10-08'].volta, Object.keys(pedDb661('2026-10-14').historico).length], ['autorizado', '2026-10-14', 1]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P13 (AC3.1, AC3.3) — «Reabrir» o retirado (quem lança reposição, a própria senha) e o desautorizado (a Gestão): a decisão anterior inteira no historico, nada apagado', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', ped661('2026-10-14'));
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    await assina660('s-bia', MOT661); await fecha660();
+    const ret = pedDb661('2026-10-14').retirado;
+    const h = String(run('vagasDecididosHTML()'));
+    assert.ok(/vagasReabrirAbrir\('2026-10-14','quindim__ana teste'\)/.test(h) && txt660(h).indexOf('retirado por Bia Consultora Teste') >= 0, txt660(h));
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([op660('nivel'), op660('capacidade')], ['propria', 'lancar-reposicao']);
+    igual(await assina660('s-bia', 'o tutor ligou de novo hoje'), ['pronto', '']);
+    let d = pedDb661('2026-10-14'), hist = d.historico[Object.keys(d.historico)[0]];
+    igual([d.status, 'retirado' in d, hist.status, hist.retirado], ['pedido', false, 'retirado', ret]);
+    await fecha660();
+    // o desautorizado: a Gestão; a Consultora com a própria senha não assina
+    poePed661('2026-10-16', ped661('2026-10-16', { status: 'desautorizado', autorizado_por: 'Márcia Teste', autorizado_ts: AUT661.ts, nota: '',
+      desautorizado: { acao: 'anular', por: 'Gestora Teste', papel: 'gestao', motivo: MOTG661, ts: T661(9, 9, 30), quando: '09/10/2026 às 09:30', oque_saiu: 'nada' } }));
+    assert.ok(String(run('vagasDecididosHTML()')).indexOf("vagasReabrirAbrir('2026-10-16'") < 0, 'a Consultora não reabre o desautorizado');
+    papel657('gestao', 'Gestora Teste');
+    run(`__p661=vagasReabrirAbrir('2026-10-16', '${K661}');`); await espera657();
+    igual(op660('info')[0], 'A decisão anterior: desautorizado por Gestora Teste em 09/10/2026 às 09:30 (o encaixe já tinha sido desfeito): «' + MOTG661 + '».');
+    igual(run(`vagasPedidoEstado(VAGAS_PEDIDOS['2026-10-16']['${K661}'])`), 'o encaixe foi desautorizado (por Gestora Teste)');
+    igual((await assina660('s-bia', 'a tutora confirmou de novo'))[1], 'Essa senha é de Bia Consultora Teste, que não pode assinar esta reabertura. Quem assina: a Gestão ou a Diretoria. Nada foi gravado.');
+    igual(await assina660(SENHA657, 'a tutora confirmou de novo'), ['pronto', '']);
+    d = pedDb661('2026-10-16'); hist = d.historico[Object.keys(d.historico)[0]];
+    igual([d.status, hist.status, hist.desautorizado.motivo, hist.autorizado_por, hist.autorizado_ts, 'autorizado_por' in d], ['pedido', 'desautorizado', MOTG661, 'Márcia Teste', AUT661.ts, false]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P14 (AC3.3) — reabrir com o estado mudado em outro aparelho (uma recusa nova; ou o mesmo pedido já reaberto): nada gravado e a frase do estado real', async () => {
+  arma661();
+  try {
+    const R = ped661('2026-10-14', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0) });
+    poePed661('2026-10-14', R);
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    poePed661('2026-10-14', Object.assign({}, R, { motivo_recusa: 'continua lotado hoje cedo', autorizado_ts: T661(9, 9, 50) }));
+    igual((await assina660(SENHA657, MOTG661))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Enquanto o cartaz estava aberto, ele foi recusado em outro aparelho (por Márcia Teste). Nada foi reaberto. Atualize a tela e confira.') >= 0, cartaz660());
+    igual([pedDb661('2026-10-14').motivo_recusa, pedDb661('2026-10-14').historico === undefined, aud660('vaga-reaberta').length], ['continua lotado hoje cedo', true, 0]);
+    await fecha660();
+    // dois aparelhos reabrindo o mesmo: o segundo ouve que já está na fila
+    poePed661('2026-10-14', R);
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    poePed661('2026-10-14', Object.assign({}, R, { status: 'pedido', motivo_recusa: undefined, reaberto: { por: 'Gestão B Teste', ts: T661(9, 9, 55) } }));
+    igual((await assina660(SENHA657, MOTG661))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Enquanto o cartaz estava aberto, o pedido foi reaberto (por Gestão B Teste) e está na fila da Márcia. Nada foi reaberto. Atualize a tela e confira.') >= 0, cartaz660());
+    igual(pedDb661('2026-10-14').reaberto.por, 'Gestão B Teste');
+  } finally { solta661(); }
+});
+// ---- AC4 — os decididos -------------------------------------------------------------------------------------------
+provaAsync('6.61 P15 (AC4.1, AC4.2) — a lista «Decididos (até o dia passar)» nas duas telas (Reposições e Dashboard da Márcia), com quem, quando e o motivo; a fila de abertos (vagasPedidosAbertos e vagasPedidosHTML) continua só com os em aberto', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-13', ped661('2026-10-13', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0) }));
+    poePed661('2026-10-14', ped661('2026-10-14', { status: 'autorizado', autorizado_por: 'Márcia Teste', autorizado_ts: AUT661.ts, nota: 'já estava feita por Recepção X' }));
+    poePed661('2026-10-16', ped661('2026-10-16', { status: 'retirado', retirado: { por: 'Bia Consultora Teste', motivo: MOT661, ts: T661(9, 9, 10), quando: '09/10/2026 às 09:10' } }));
+    poePed661('2026-10-15', ped661('2026-10-15', {}, KB661), KB661);
+    poePed661('2026-10-08', ped661('2026-10-08', { status: 'recusado', motivo_recusa: 'antigo demais para ver', autorizado_por: 'Márcia Teste', autorizado_ts: 1 }, KB661), KB661);
+    igual(J630('vagasPedidosAbertos().map(function(o){ return o._dia+"|"+o._chave; })'), ['2026-10-15|' + KB661]);
+    const ab = txt660(run('vagasPedidosHTML()'));
+    assert.ok(ab.indexOf('Bolota') >= 0 && ab.indexOf('Quindim') < 0 && ab.indexOf('Decididos') < 0, ab);
+    igual(J630('vagasDecididos().map(function(o){ return o._dia+"|"+o.status; })'), ['2026-10-13|recusado', '2026-10-14|autorizado', '2026-10-16|retirado']);
+    const dec = txt660(run('vagasDecididosHTML()'));
+    for (const t of ['Decididos (até o dia passar)', 'recusado por Márcia Teste em 08/10/2026 às 16:00: «o dia já está lotado»',
+      'autorizado por Márcia Teste em 09/10/2026 às 09:00 (já estava feita por Recepção X)', 'retirado por Bia Consultora Teste em 09/10/2026 às 09:10: «' + MOT661 + '»'])
+      assert.ok(dec.indexOf(t) >= 0, t + ' — ' + dec);
+    assert.ok(dec.indexOf('antigo demais') < 0, 'o dia que passou não aparece');
+    const card = String(run('vagasEncaixesCardHTML()'));
+    assert.ok(card.indexOf('Pedidos de encaixe') > 0 && card.indexOf('vagasAutorizar(') > 0 && card.indexOf('Decididos (até o dia passar)') > card.indexOf('vagasAutorizar('), 'no Dashboard da Márcia, abaixo dos em aberto');
+    run('__bk660.rr();');
+    const rep = String(run('__el657.repEncaixes.innerHTML'));
+    assert.ok(rep.indexOf('Bolota') >= 0 && rep.indexOf('Decididos (até o dia passar)') > rep.indexOf('Bolota'), 'na tela de Reposições, abaixo dos em aberto: ' + rep.slice(0, 400));
+    // sem pedido em aberto, o quadro da Márcia continua mostrando os decididos
+    poePed661('2026-10-15', null, KB661);
+    const card2 = txt660(run('vagasEncaixesCardHTML()'));
+    assert.ok(card2.indexOf('Nenhum pedido esperando a senhora agora.') >= 0 && card2.indexOf('Decididos (até o dia passar)') >= 0, card2);
+    // a chave com apóstrofo, barra invertida, aspas e & chega inteira à função do botão (o navegador lê o HTML e depois o JavaScript)
+    const cru = "Zé d'Ávila\\x__tutor \"&<";
+    const arg = String(run('vagasJsArg(' + JSON.stringify(cru) + ')'));
+    const lido = arg.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+    igual(Function("return '" + lido + "';")(), cru);
+  } finally { solta661(); }
+});
+// ---- AC5 — Recusar com 4 palavras -------------------------------------------------------------------------------
+provaAsync('6.61 P16 (AC5) — «Recusar» o encaixe e a troca antiga com 3 palavras: recusado na caixa (a régua diz quantas faltam) e de novo na função, nada gravado; com 4 palavras, a recusa de sempre', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', ped661('2026-10-14'));
+    run(`__ztq657=['Não cabe hoje']; __zto660=[]; __al657=[];`);
+    await run(`vagasRecusar('2026-10-14', '${K661}')`); await espera657();
+    igual([run('__zto660[0].op.rotulo'), run('typeof __zto660[0].op.validar'), run(`__zto660[0].op.validar('Não cabe hoje')`), run(`__zto660[0].op.validar('o dia já está lotado')`)],
+      ['Motivo da recusa, em pelo menos 4 palavras (ex.: o dia já está lotado)', 'function', 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).', '']);
+    igual([al661(), pedDb661('2026-10-14').status, aud660('vaga-recusada').length], [['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1). Nada foi recusado.'], 'pedido', 0]);
+    run(`__ztq657=['o dia já está lotado']; __al657=[];`);
+    await run(`vagasRecusar('2026-10-14', '${K661}')`); await espera657();
+    const d = pedDb661('2026-10-14');
+    igual([d.status, d.motivo_recusa, al661(), aud660('vaga-recusada').length], ['recusado', 'o dia já está lotado', [], 1]);
+    // a troca antiga
+    poe661('daycare/trocas/2026-10-15/' + KB661, TRA661({ para: '2026-10-15', status: 'pedido' }));
+    run(`__ztq657=['Sem vaga hoje']; __zto660=[]; __al657=[]; __esc657=[];`);
+    await run(`trocaDecidir('2026-10-15', '${KB661}', false)`); await espera657();
+    igual([run(`__zto660[0].op.validar('Sem vaga hoje')`), al661(), J630('__esc657').length], ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).', ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1). Nada foi recusado.'], 0]);
+    run(`__ztq657=['o dia já está lotado']; __al657=[];`);
+    await run(`trocaDecidir('2026-10-15', '${KB661}', false)`); await espera657();
+    const t = J630(`__get657('daycare/trocas/2026-10-15/${KB661}')`);
+    igual([t.status, t.motivoDecisao, aud660('troca-recusada').length], ['recusada', 'o dia já está lotado', 1]);
+  } finally { solta661(); }
+});
+// ---- AC6 — a troca antiga -----------------------------------------------------------------------------------------
+provaAsync('6.61 P17 (AC6.1, AC6.2) — cancelar a troca antiga: o «×» abre o cartaz da 6.57 (anular, a própria senha) com a cascata; «cancelada» com canceladaQuem, canceladaTs e o registro; o rastro troca-cancelada; o banco recusando: nada', async () => {
+  arma661();
+  try {
+    vagas661('2026-10-14', 0);
+    poe661(NT661, TRA661());
+    papel657('consultora', 'Bia Consultora Teste');
+    run('renderTrocas()');
+    assert.ok(/onclick="trocaCancelar\('2026-10-14','bolota__bia teste'\)"/.test(String(run('__el657.trocaWrap.innerHTML'))), String(run('__el657.trocaWrap.innerHTML')).slice(0, 600));
+    igual(J630(`vagasDoDia('2026-10-14').usadas`), 1);
+    run(`__p661=trocaCancelar('2026-10-14', '${KB661}');`); await espera657();
+    igual([op660('acao'), op660('nivel'), op660('capacidade'), op660('titulo'), op660('botao'), op660('cascata')],
+      ['anular', 'propria', 'lancar-reposicao', 'Cancelar a troca de Bolota em 14/10', 'Cancelar a troca', ['A vaga de 14/10 fica livre. A troca antiga é só a vaga: nada muda no Extrato de reposições.']]);
+    igual(await assina660('s-bia', 'o tutor cancelou a troca'), ['pronto', '']);
+    const t = J630(`__get657('${NT661}')`);
+    igual([t.status, t.canceladaQuem, t.canceladaTs, t.cancelada.por, t.cancelada.motivo, t.cancelada.acao, t.nome, t.para],
+      ['cancelada', 'Recepção Teste', T661(9, 10, 0), 'Bia Consultora Teste', 'o tutor cancelou a troca', 'anular', 'Bolota', '2026-10-14']);
+    igual(aud660('troca-cancelada').map((a) => a[1]), ['Bolota — troca de 14/10/2026 cancelada (a vaga ficou livre): o tutor cancelou a troca']);
+    igual(aud660('registro-anulado').length, 1);
+    assert.ok(JSON.stringify(J630('__db657')).indexOf('s-bia') < 0, 'a senha em nenhum nó');
+    igual(J630(`vagasDoDia('2026-10-14').usadas`), 0, 'a vaga ficou livre');
+    await fecha660();
+    // o banco recusando
+    poe661(NT661, TRA661());
+    run(`__recusa657='trocas'; __p661=trocaCancelar('2026-10-14', '${KB661}');`); await espera657();
+    igual((await assina660('s-bia', 'o tutor cancelou a troca'))[0], 'falhou');
+    assert.ok(/NADA FOI GRAVADO/.test(cartaz660()), cartaz660());
+    igual([J630(`__get657('${NT661}')`).status, aud660('troca-cancelada').length], ['confirmada', 1]);
+    await fecha660(); run('__recusa657=null; __au657=[];');
+    // outro aparelho cancela no meio: nada gravado de novo, e a frase diz quem cancelou
+    poe661(NT661, TRA661());
+    run(`__p661=trocaCancelar('2026-10-14', '${KB661}');`); await espera657();
+    poe661(NT661, TRA661({ status: 'cancelada', canceladaQuem: 'Recepção Y', canceladaTs: T661(9, 9, 55), cancelada: { por: 'Amanda Supervisora Teste', motivo: 'outro aparelho cancelou antes' } }));
+    igual((await assina660('s-bia', 'o tutor cancelou a troca'))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Esta troca já foi cancelada (por Amanda Supervisora Teste). Nada foi cancelado.') >= 0, cartaz660());
+    igual([J630(`__get657('${NT661}')`).cancelada.por, aud660('troca-cancelada').length], ['Amanda Supervisora Teste', 0]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P18 (AC6.3) — a troca cancelada fica riscada no dia, com quem, quando e o motivo; com vaga, «Reabrir» (a própria senha; volta a «confirmada», o cancelamento guardado em historico); sem vaga, a frase «O dia está lotado: use «+ Marcar troca», que pede o encaixe à Márcia.»', async () => {
+  arma661();
+  try {
+    vagas661('2026-10-14', 0);
+    const CANC = { acao: 'anular', por: 'Bia Consultora Teste', papel: 'consultora', motivo: 'o tutor cancelou a troca', quando: '09/10/2026 às 09:40', ts: T661(9, 9, 40) };
+    const CANCELADA = TRA661({ status: 'cancelada', canceladaQuem: 'Recepção Teste', canceladaTs: T661(9, 9, 40), cancelada: CANC });
+    poe661(NT661, CANCELADA);
+    papel657('consultora', 'Bia Consultora Teste');
+    run('renderTrocas()');
+    let h = String(run('__el657.trocaWrap.innerHTML'));
+    assert.ok(/<s>Bolota<\/s>/.test(h) && txt660(h).indexOf('troca cancelada por Bia Consultora Teste em 09/10/2026 às 09:40: «o tutor cancelou a troca»') >= 0, txt660(h).slice(0, 800));
+    assert.ok(/<button type="button" onclick="trocaReabrirAbrir\('2026-10-14','bolota__bia teste'\)" style="[^"]*min-height:44px[^"]*">Reabrir<\/button>/.test(h), h);
+    run(`__p661=trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    igual([op660('acao'), op660('nivel'), op660('paraEstado'), op660('info')], ['reabrir', 'propria', 'confirmada (ocupa uma vaga de 14/10)',
+      ['Cancelada por Bia Consultora Teste em 09/10/2026 às 09:40: «o tutor cancelou a troca». O cancelamento fica guardado na troca.']]);
+    igual(await assina660('s-bia', 'o tutor quer a troca de volta'), ['pronto', '']);
+    const t = J630(`__get657('${NT661}')`), hk = Object.keys(t.historico || {});
+    igual([t.status, t.reaberta.por, 'cancelada' in t, 'canceladaQuem' in t, hk.length], ['confirmada', 'Bia Consultora Teste', false, false, 1]);
+    igual([t.historico[hk[0]].status, t.historico[hk[0]].cancelada, t.historico[hk[0]].canceladaQuem], ['cancelada', CANC, 'Recepção Teste']);
+    igual([J630(`vagasDoDia('2026-10-14').usadas`), aud660('troca-reaberta').length], [1, 1]);
+    await fecha660();
+    // reaberta e cancelada de novo em outro aparelho enquanto o cartaz estava aberto: nada gravado
+    poe661(NT661, CANCELADA);
+    run(`__p661=trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    poe661(NT661, TRA661({ status: 'cancelada', canceladaQuem: 'Recepção Y', canceladaTs: T661(9, 9, 58), cancelada: Object.assign({}, CANC, { por: 'Amanda Supervisora Teste', ts: T661(9, 9, 58) }) }));
+    igual((await assina660('s-bia', 'o tutor quer a troca de volta'))[0], 'falhou');
+    assert.ok(cartaz660().indexOf('Enquanto o cartaz estava aberto, a troca foi cancelada de novo (por Amanda Supervisora Teste). Nada foi reaberto. Atualize a tela e confira.') >= 0, cartaz660());
+    igual([J630(`__get657('${NT661}')`).status, aud660('troca-reaberta').length], ['cancelada', 1]);
+    await fecha660();
+    // sem vaga no dia: a frase, sem «Reabrir»; pelo console, a mesma frase e nada gravado
+    poe661(NT661, CANCELADA);
+    vagas661('2026-10-14', 5);
+    run('renderTrocas()');
+    h = String(run('__el657.trocaWrap.innerHTML'));
+    assert.ok(txt660(h).indexOf('O dia está lotado: use «+ Marcar troca», que pede o encaixe à Márcia.') >= 0 && !/trocaReabrirAbrir\('2026-10-14'/.test(h), txt660(h).slice(0, 800));
+    run(`__al657=[]; __esc657=[]; trocaReabrirAbrir('2026-10-14', '${KB661}')`); await espera657();
+    igual([al661(), run('CORR_ATUAL'), J630('__esc657').length], [['O dia está lotado: use «+ Marcar troca», que pede o encaixe à Márcia. Nada foi reaberto.'], null, 0]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P19 (AC6.5) — trocaCancelar e trocaReabrirAbrir pelo console, por quem não lança reposição (o Encãotador): «BARROU», sem cartaz e sem gravar; trocaDecidir continua barrando quem não decide', async () => {
+  arma661();
+  try {
+    poe661(NT661, TRA661());
+    papel657('monitor', 'Caio Encãotador Teste');
+    run(`trocaCancelar('2026-10-14', '${KB661}'); trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    igual([run('CORR_ATUAL'), J630('__esc657').length, J630(`__get657('${NT661}')`).status], [null, 0, 'confirmada']);
+    igual(barrou657().map((a) => a[1].replace(/ \(.*$/, '')), ['BARROU cancelar uma troca da lista de troca', 'BARROU reabrir uma troca cancelada']);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__al657=[]; trocaDecidir('2026-10-14', '${KB661}', false)`); await espera657();
+    igual([al661(), J630('__esc657').length], [['Só a Gestão ou a Diretoria decide uma troca acima das ' + run('vagasLimite()') + ' vagas.'], 0]);
+  } finally { solta661(); }
+});
+prova('6.61 P20 (AC6.4) — trocaLancar saiu (nenhum chamador no app nem no harness); trocaValidar fica, e a prova da 6.30 que a usa passa', () => {
+  igual([run('typeof trocaLancar'), run('typeof trocaValidar')], ['undefined', 'function']);
+  const app = fs.readFileSync(APP, 'utf8'), harness = fs.readFileSync(path.join(__dirname, 'harness.js'), 'utf8');
+  igual([/\btrocaLancar\s*\(/.test(app), /\btrocaLancar\s*\(/.test(harness)], [false, false]);
+  igual(falhas.filter((f) => /^6\.30 P10\b/.test(f)), [], 'a 6.30 P10 (trocaValidar) passa');
+});
+// ---- AC7 — «Mudar o dia» -----------------------------------------------------------------------------------------
+provaAsync('6.61 P21 (AC7.1, AC7.2) — «mudar o dia» (44 px) ao lado de «desmarcar» só na reposição marcada para um dia futuro (não na troca, nem na de hoje); a janela «Marcar reposição» no modo novo; o veredito conta o crédito (sem o modo, manda desmarcar antes)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-13': CR660('2026-10-13', { motivo: 'troca', volta: '2026-10-14', prazo24h: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' }, nasceu_troca: true }),
+      'fa-2026-10-05': CR660('2026-10-05', { volta: '2026-10-09', prazo24h: '2026-10-09' }) });
+    run('__bk660.rr();');
+    const h = String(run('__el657.repLista.innerHTML'));
+    assert.ok(/<button type="button" onclick="dxMudarDiaAbrir\(0,'2026-10-15'\)" style="[^"]*min-height:44px[^"]*">mudar o dia<\/button>/.test(h), h.slice(0, 3000));
+    assert.ok(!/dxMudarDiaAbrir\(0,'2026-10-14'\)/.test(h) && !/dxMudarDiaAbrir\(0,'2026-10-09'\)/.test(h), 'nem na troca, nem no dia de hoje');
+    await abreMudar661(0, '2026-10-15');
+    igual([run('__el657.dxModal.classList.contains("on")'), J630('dxMudarAtual()'), run('__el657.dxTitulo.textContent'), run('__el657.dxTrocaLb.style.display'), run('__el657.dxBusca.style.display')],
+      [true, { credId: 'fa-2026-10-06', de: '2026-10-15' }, 'Mudar o dia de repor — hoje marcada para quinta-feira, 15/10', 'none', 'none']);
+    vagas661('2026-10-16', 0);
+    const vm = J630(`dxVeredito(PELUDINHOS[0], '2026-10-16', null, {credId:'fa-2026-10-06', de:'2026-10-15'})`);
+    igual([vm.ok, vm.tipo, vm.mudar, vm.credito], [true, 'reposicao', true, 'fa-2026-10-06']);
+    const vs = J630(`dxVeredito(PELUDINHOS[0], '2026-10-16', null)`);
+    igual([vs.ok, vs.marcadas], [false, true], 'sem o modo, o veredito de sempre: «desmarque o outro dia e marque de novo»');
+    await escolheDia661('2026-10-16');
+    igual(run('__el657.dxOk.textContent'), run('REP_DIA_DELE_BOTAO'), 'o Quindim vem todos os dias úteis: o aviso do dia dele vem primeiro, como sempre');
+    assert.ok(/MUDAR O DIA DE REPOR: de quinta-feira, 15\/10 para sexta-feira, 16\/10\./.test(txt660(run('__el657.dxVeredito.innerHTML'))), txt660(run('__el657.dxVeredito.innerHTML')));
+    run(`__al657=[]; dxMudarDiaAbrir(0, '2026-10-14');`);
+    igual(al661(), ['«Mudar o dia» não vale para a troca (13/10 → 14/10): use «desmarcar» e marque de novo em «+ Marcar troca».']);
+    // num dia que não é o dela (a Bolota vem às segundas e quartas), o botão diz «Mudar o dia»
+    semear660({ 'fa-2026-10-06': CR15_661() }, 1);
+    await abreMudar661(1, '2026-10-15'); await escolheDia661('2026-10-16');
+    igual([run('__el657.dxOk.textContent'), run('__el657.dxTitulo.textContent')], ['Mudar o dia', 'Mudar o dia de repor — hoje marcada para quinta-feira, 15/10']);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P22 (AC7.4, AC7.5) — «Mudar o dia» dentro do prazo: um passo, no mesmo crédito (repAgendarVolta): volta_desmarcada «remarcada para …», prazo24h novo, e UMA mensagem ao tutor («agendada», com o prazo do dia novo)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-01': CR660('2026-10-01') });
+    vagas661('2026-10-16', 0);
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    run(`__mm660=[]; __au657=[]; __esc657=[]; dxConfirmar();`); await espera657();
+    const c = lanc660()['fa-2026-10-06'];
+    igual([c.volta, c.prazo24h, c.volta_desmarcada.dia, c.volta_desmarcada.motivo, c.volta_por], ['2026-10-16', '2026-10-16', '2026-10-15', 'remarcada para 16/10/2026', 'Recepção Teste']);
+    igual(lanc660()['fa-2026-10-01'], CR660('2026-10-01'), 'a outra falta livre não foi tocada');
+    const mm = J630('__mm660');
+    igual([mm.length, mm[0].t], [1, 'Dia de repor mudado']);
+    igual(mm[0].x, run(`repMensagem(PELUDINHOS[0], 'agendada', {volta:'2026-10-16', livres:1})`), 'a mensagem de sempre da reposição marcada');
+    assert.ok(/sexta-feira, 16\/10/.test(mm[0].x), mm[0].x);
+    assert.ok(/estava marcada para 15\/10\/2026/.test(mm[0].l[0]), mm[0].l[0]);
+    igual([aud660('reposicao-agendada').length, aud660('reposicao-remarcada').map((a) => a[1])], [1, ['Quindim — o dia de repor mudou de 15/10/2026 para 16/10/2026 (a falta de 06/10/2026), sem desmarcar antes']]);
+    igual(J630('__esc657').map((e) => e[0] + ' ' + e[1]), ['update ' + NO661 + '/fa-2026-10-06'], 'uma gravação só, no mesmo crédito');
+  } finally { solta661(); }
+});
+provaAsync('6.61 P23 (AC7.3) — «Mudar o dia» fora do prazo: a marcada de hoje (ou o dia que virou com a janela aberta) para na guarda própria (2ª rodada, QA661-06); o aparelho com o relógio atrasado para na régua de repRemarcarBarrado (o dia do servidor); nada gravado; a marcada antes da regra das 24 horas segue a régua de hoje (muda)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-05': CR660('2026-10-05', { volta: '2026-10-09', prazo24h: '2026-10-09' }) });
+    vagas661('2026-10-16', 0);
+    const FRASE = (d, v) => 'A reposição marcada para ' + d + ' já passou do prazo para desmarcar (até as 24h de ' + v + '). Desmarque primeiro em Reposições (ela conta como usada) ou peça a exceção à Gestão.';
+    const HOJE = (d) => 'A reposição de Quindim marcada para ' + d + ' é de hoje ou de um dia que já passou: «Mudar o dia» vale só para um dia que ainda vai chegar. Feche esta janela e confira em Reposições.';
+    await abreMudar661(0, '2026-10-09'); await escolheDia661('2026-10-16');
+    run(`__esc657=[]; dxConfirmar();`); await espera657();
+    igual([run('__el657.dxWarn.textContent'), J630('__esc657').length, lanc660()['fa-2026-10-05'].volta], [HOJE('09/10/2026'), 0, '2026-10-09']);
+    // o dia virou com a janela aberta: conferido na hora de confirmar
+    semear660({ 'fa-2026-10-06': CR15_661() });
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    run(`__hz661=zHojeISO; zHojeISO=function(){ return '2026-10-15'; }; hojeISO=zHojeISO; __esc657=[];`);
+    try { run('dxConfirmar();'); await espera657(); } finally { run('zHojeISO=__hz661; hojeISO=zHojeISO;'); }
+    igual([run('__el657.dxWarn.textContent'), J630('__esc657').length], [HOJE('15/10/2026'), 0]);
+    // o aparelho com o relógio um dia atrasado (para ele, 15/10 ainda vai chegar): a régua do prazo, pelo dia do servidor, barra
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    run(`__hz661=zHojeISO; __hs661=repHojeServidor; zHojeISO=function(){ return '2026-10-14'; }; hojeISO=zHojeISO; repHojeServidor=function(){ return '2026-10-15'; }; __esc657=[];`);
+    try { run('dxConfirmar();'); await espera657(); } finally { run('zHojeISO=__hz661; hojeISO=zHojeISO; repHojeServidor=__hs661;'); }
+    igual([run('__el657.dxWarn.textContent'), J630('__esc657').length, lanc660()['fa-2026-10-06'].volta], [FRASE('15/10/2026', 'quarta-feira, 14/10'), 0, '2026-10-15']);
+    // o mesmo relógio atrasado com o dia novo lotado: o «Avisar a Márcia» também para na régua (nenhum pedido sai)
+    vagas661('2026-10-16', 5);
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    run(`__hz661=zHojeISO; __hs661=repHojeServidor; zHojeISO=function(){ return '2026-10-14'; }; hojeISO=zHojeISO; repHojeServidor=function(){ return '2026-10-15'; }; __el657.dxWarn.textContent='';`);
+    try { run('dxPedir();'); await espera657(); } finally { run('zHojeISO=__hz661; hojeISO=zHojeISO; repHojeServidor=__hs661;'); }
+    igual([run('__el657.dxWarn.textContent'), pedDb661('2026-10-16')], [FRASE('15/10/2026', 'quarta-feira, 14/10'), null]);
+    vagas661('2026-10-16', 0);
+    // a marcada antes da regra (sem prazo24h): a régua de hoje não a barra — muda
+    semear660({ 'fa-2026-10-05': CR660('2026-10-05', { volta: '2026-10-13' }) });
+    await abreMudar661(0, '2026-10-13'); await escolheDia661('2026-10-16');
+    run(`__mm660=[]; dxConfirmar();`); await espera657();
+    igual([lanc660()['fa-2026-10-05'].volta, lanc660()['fa-2026-10-05'].prazo24h, J630('__mm660').length], ['2026-10-16', '2026-10-16', 1]);
+    // o dia novo lotado: o «Avisar a Márcia» também não leva a reposição de hoje (nada é pedido)
+    vagas661('2026-10-16', 5); papel657('consultora', 'Bia Consultora Teste');
+    semear660({ 'fa-2026-10-05': CR660('2026-10-05', { volta: '2026-10-09', prazo24h: '2026-10-09' }) });
+    await abreMudar661(0, '2026-10-09'); await escolheDia661('2026-10-16');
+    run(`__el657.dxWarn.textContent=''; dxPedir();`); await espera657();
+    igual([run('__el657.dxWarn.textContent'), pedDb661('2026-10-16')], [HOJE('09/10/2026'), null]);
+  } finally { solta661(); }
+});
+provaAsync('6.61 P24 (AC7.2, AC7.4) — «Mudar o dia» com as réguas de sempre: feriado, fim de semana, dia passado e o dia novo já marcado recusados; o dia novo lotado: a Recepção pede à Márcia com o credito_id do crédito, a Gestão encaixa (a autorização no crédito)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-07': CR660('2026-10-07', { volta: '2026-10-20', prazo24h: '2026-10-20' }) });
+    const V = (dia) => J630(`dxVeredito(PELUDINHOS[0], '${dia}', null, {credId:'fa-2026-10-06', de:'2026-10-15'})`);
+    igual([V('2026-10-12').ok, V('2026-10-12').motivo], [false, run(`repFeriadoDiaRepor('2026-10-12')`)]);
+    igual(V('2026-10-10').motivo, 'O Day Care não funciona no fim de semana. Escolha um dia de semana.');
+    igual(V('2026-10-08').motivo, 'Esse dia já passou. Escolha hoje ou um dia à frente.');
+    igual([V('2026-10-20').ok, V('2026-10-20').motivo], [false, 'Quindim já está marcado em 20/10/2026. Escolha outro dia.']);
+    igual([V('2026-10-15').ok, V('2026-10-15').jaTem], [false, true]);
+    // lotado, pela Recepção: «Avisar a Márcia» leva o crédito
+    vagas661('2026-10-16', 5);
+    papel657('consultora', 'Bia Consultora Teste');
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    run('dxConfirmar();'); await espera657();
+    igual([run('__el657.dxWarn.textContent'), lanc660()['fa-2026-10-06'].volta], ['O dia 16/10/2026 está lotado (5 de 5). Toque em «Avisar a Márcia» — só ela abre o encaixe.', '2026-10-15']);
+    run('dxPedir();'); await espera657();
+    const p = pedDb661('2026-10-16');
+    igual([p.status, p.tipo, p.payload], ['pedido', 'reposicao', { credito_id: 'fa-2026-10-06', data: '2026-10-06', volta: '2026-10-16', mudar_de: { dia: '2026-10-15', credito_id: 'fa-2026-10-06' } }]);
+    // a Gestão encaixa no mesmo gesto
+    papel657('gestao', 'Gestora Teste');
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    igual(run('__el657.dxOk.textContent'), 'Márcia autorizou');
+    run('dxConfirmar();'); await espera657();
+    const c = lanc660()['fa-2026-10-06'];
+    igual([c.volta, c.autorizacao.quem, c.volta_desmarcada.motivo], ['2026-10-16', 'Recepção Teste', 'remarcada para 16/10/2026']);
+  } finally { solta661(); }
+});
+// O retrato do veredito sem o modo novo: 800 Extratos e dias sorteados (semente fixa), o JSON de cada dxVeredito.
+const VER661 = () => run(`(function(){
+    var seed=661, rnd=function(){ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    var dia=function(k){ var d=new Date(Date.UTC(2026, 9, 9+k)); return d.toISOString().slice(0,10); };
+    var bk=repLancamentos, Lx=[], out=[];
+    try{
+      repLancamentos=function(){ return Lx; };
+      for(var i=0;i<800;i++){
+        Lx=[]; var nc=Math.floor(rnd()*4);
+        for(var c=0;c<nc;c++){ var v=rnd()<0.5?dia(Math.floor(rnd()*14)-3):''; var cr={_id:'c'+c, tipo:'credito', data:dia(-5-Math.floor(rnd()*5)), volta:v, motivo:'viagem', ts:1000+c};
+          if(v && rnd()<0.6) cr.prazo24h=v; if(v && rnd()<0.2){ cr.troca={de:cr.data, para:v}; cr.nasceu_troca=true; } Lx.push(cr); }
+        if(rnd()<0.3 && Lx.length) Lx.push({_id:'e0', tipo:'estorno', estornaId:Lx[0]._id, ts:3000});
+        if(rnd()<0.3 && Lx.length) Lx.push({_id:'u0', tipo:'uso', data:dia(-2), credito:Lx[Lx.length-1]._id, ts:2000});
+        var d=dia(Math.floor(rnd()*16)-2), tr=(rnd()<0.25)?{de:dia(Math.floor(rnd()*10)-1)}:null;
+        out.push(JSON.stringify(dxVeredito(PELUDINHOS[0], d, tr)));
+      }
+    } finally { repLancamentos=bk; }
+    return out.join('|');
+  })()`);
+prova('6.61 P25 (AC7.6) — guarda: sem o modo «mudar o dia», dxVeredito dá o mesmo veredito da base num sorteio de 800 Extratos e dias (o retrato)', () => {
+  arma661();
+  try {
+    const r = VER661(), h = crypto661.createHash('sha256').update(r).digest('hex').slice(0, 16);
+    console.log('      retrato do veredito (800 sorteios): ' + h + ' — ' + (r.match(/"ok":true/g) || []).length + ' ok');
+    igual(h, '814feeacad6b15ba', 'o mesmo retrato do veredito da base');
+  } finally { solta661(); }
+});
+// ---- AC8 — «Qual falta este dia repõe?» --------------------------------------------------------------------------
+provaAsync('6.61 P26 (AC8.1, AC8.2) — «Qual falta este dia repõe?» com duas ou mais faltas livres (data e motivo, já escolhida a mais antiga); a escolhida recebe o dia; sem escolha, a mais antiga; com uma só, a pergunta não aparece', async () => {
+  arma661();
+  try {
+    const tres = { 'fa-2026-10-01': CR660('2026-10-01', { motivo: 'cio', obs: '' }), 'fa-2026-10-05': CR660('2026-10-05', { motivo: 'doente', obs: 'internado dois dias' }), 'fa-2026-10-07': CR660('2026-10-07') };
+    semear660(tres);
+    vagas661('2026-10-14', 0);
+    run('dxAbrir(PELUDINHOS[0])'); await espera657(); await escolheDia661('2026-10-14');
+    const h = String(run('__el657.dxFaltas.innerHTML')), t = txt660(h);
+    assert.ok(t.indexOf('Qual falta este dia repõe?') >= 0 && t.indexOf('A falta de 01/10/2026 (Cio) — escolhida') >= 0 && t.indexOf('A falta de 05/10/2026 (Doente / internado) — internado dois dias') >= 0
+      && t.indexOf('A falta de 07/10/2026 (Tutor viajou) — viagem curta') >= 0, t);
+    igual((h.match(/min-height:44px/g) || []).length, 3, '3 botões de 44 px');
+    run(`dxFaltaEscolher('fa-2026-10-05')`);
+    assert.ok(txt660(run('__el657.dxFaltas.innerHTML')).indexOf('A falta de 05/10/2026 (Doente / internado) — internado dois dias — escolhida') >= 0);
+    run('__mm660=[]; dxConfirmar();'); await espera657();
+    igual([lanc660()['fa-2026-10-05'].volta, lanc660()['fa-2026-10-01'].volta, lanc660()['fa-2026-10-07'].volta], ['2026-10-14', '', '']);
+    assert.ok(/usando a falta de 05\/10\/2026/.test(J630('__mm660')[0].l[0]), J630('__mm660')[0].l[0]);
+    // sem escolha: a mais antiga, como hoje
+    semear660(tres);
+    run('dxAbrir(PELUDINHOS[0])'); await espera657(); await escolheDia661('2026-10-14');
+    run('dxConfirmar();'); await espera657();
+    igual([lanc660()['fa-2026-10-01'].volta, lanc660()['fa-2026-10-05'].volta], ['2026-10-14', '']);
+    // uma falta livre só: sem a pergunta
+    semear660({ 'fa-2026-10-07': CR660('2026-10-07') });
+    run('dxAbrir(PELUDINHOS[0])'); await espera657(); await escolheDia661('2026-10-14');
+    igual(run('__el657.dxFaltas.innerHTML'), '');
+  } finally { solta661(); }
+});
+prova('6.61 P27 (AC8.3) — guarda: em 3.000 Extratos sorteados, a primeira da lista nova é sempre a de repCreditoLivre (o mesmo filtro, a mesma ordem); repCreditoLivre idêntica, letra por letra', () => {
+  arma661();
+  try {
+    const r = J630(`(function(){
+      var seed=6612, rnd=function(){ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+      var dia=function(k){ var d=new Date(Date.UTC(2026, 9, 9+k)); return d.toISOString().slice(0,10); };
+      var bk=repLancamentos, Lx=[], n=0, dif=0;
+      try{
+        repLancamentos=function(){ return Lx; };
+        for(var i=0;i<3000;i++){
+          Lx=[]; var nc=1+Math.floor(rnd()*5);
+          for(var c=0;c<nc;c++) Lx.push({_id:'c'+c, tipo:'credito', data:dia(-Math.floor(rnd()*4)), volta:(rnd()<0.3?dia(Math.floor(rnd()*6)-3):''), ts:Math.floor(rnd()*50)});
+          var ne=Math.floor(rnd()*2); for(var e=0;e<ne;e++) Lx.push({_id:'e'+e, tipo:'estorno', estornaId:Lx[Math.floor(rnd()*nc)]._id, ts:100+e});
+          var nu=Math.floor(rnd()*2); for(var u=0;u<nu;u++) Lx.push({_id:'u'+u, tipo:'uso', data:dia(-1), credito:Lx[Math.floor(rnd()*nc)]._id, ts:200+u});
+          Lx.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+          var lista=repCreditosLivresLista(PELUDINHOS[0]), um=repCreditoLivre(PELUDINHOS[0]);
+          if(lista.length){ n++; if(!um || lista[0]._id!==um._id) dif++; }
+          else if(um && !um.volta) dif++;
+        }
+      } finally { repLancamentos=bk; }
+      return {n:n, dif:dif};
+    })()`);
+    igual([r.n > 1000, r.dif], [true, 0]);
+  } finally { solta661(); }
+  igual(FUN661('repCreditoLivre'), '5ef3445cbf8e78cd');
+});
+// ---- AC9 — rastro e Linha do tempo ----------------------------------------------------------------------------------
+prova('6.61 P28 (AC9) — as ações novas e as que as funções tocadas já gravavam aparecem em português na Linha do tempo e no resumo por pessoa (nunca o código técnico)', () => {
+  const acoes = ['vaga-pedido', 'vaga-autorizada', 'vaga-recusada', 'vaga-retirada', 'vaga-desautorizada', 'vaga-reaberta', 'troca-confirmada', 'troca-recusada', 'troca-pedido',
+    'troca-cancelada', 'troca-reaberta', 'reposicao-agendada', 'reposicao-remarcada', 'avulsa-tirada', 'registro-anulado', 'registro-reaberto'];
+  const r = J630(`${JSON.stringify(acoes)}.map(function(a){ return [a, acaoNome(a), acaoRotulo({acao:a, detalhe:'Quindim — x'})]; })`);
+  igual(r.filter((x) => x[1] === x[0] || x[2].indexOf(x[0]) >= 0), [], 'nenhuma em código técnico');
+  igual(r.filter((x) => x[0] === 'vaga-retirada')[0][2], 'Retirou o pedido de encaixe — Quindim — x');
+  igual(r.filter((x) => x[0] === 'reposicao-remarcada')[0][1], 'Mudou o dia de repor (sem desmarcar antes)');
+});
+// ---- AC11 e AC12 — o que não muda --------------------------------------------------------------------------------------
+prova('6.61 P29 (AC12.1) — guarda: as funções da vaga e do dia de repor idênticas, letra por letra (sha-256): a autorização da Márcia e a reserva, as vagas do dia, repCreditoLivre, as réguas da 6.38, repAgendarVolta, repDesmarcar (o da 6.60) e avulsaTirar (6.56), só chamados', () => {
+  const BASE = { vagasDoDia: '4e7f10d3af914028', ocupantesDoDia: '4f9f802741f8235b', vagasPedidoLivre: 'b7ffffae65f0ec8a', vagasPedidoOcupado: 'bc6aee331738b90e',
+    vagasMesmoEncaixe: '551ed29876990057', vagasEncaixeDePe: 'cf182829fd83ad6f', vagasReservar: 'b9eb095d6082f6d1', vagasAutorizar: '895d0fa561bc4740',
+    repCreditoLivre: '5ef3445cbf8e78cd', repRemarcarBarrado: '1c4581e16b64e5e3', repComoDesmarcar: '8c88e3c171cd0f76', repAgendarVolta: '9534ea40e4c9a194',
+    repDesmarcar: '9bdada908f741490', avulsaTirar: '70aedf7c9760ed98', vagasPedidosAbertos: '5e4cfa90eab6cad7' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = FUN661(n); });
+  igual(agora, BASE);
+});
+prova('6.61 P30 (AC11) — guarda: a área protegida (ck*, ckt*, pt*, pendAvisarChegada e o #v-daycare) e as pontes idênticas; trocaCarregar e ckRedesenharDeFora letra por letra; banhoFaltaAgendar só chamada; nenhuma função nova começa com ck ou pt', () => {
+  const BASE = { trocaCarregar: '57dbfc8593a7a12b', ckRedesenharDeFora: 'c90b931912e9b863', pendAvisarChegada: 'fe2bf78d579085f7', banhoFaltaAgendar: 'b1b5389d48d87a59',
+    tgAvisar: '43b8ccf7bf832745', tgAvisarAlteracao: 'd24246f114e705f2', dashPonteChamarJa: '777b048c9f2cc12e', dashEspelhar: 'e40266eff5854105', dashAutoSincronizar: 'a8b827aa4708f438' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = FUN661(n); });
+  igual(agora, BASE);
+  const src = fs.readFileSync(APP, 'utf8');
+  const ckpt = [...src.matchAll(/\n  (?:async )?function ((?:ck|pt)[A-Za-z0-9_$]*)\(/g)].map((m) => m[1]).sort();
+  igual([ckpt.length, crypto661.createHash('sha256').update(ckpt.join(',')).digest('hex').slice(0, 16)], [154, 'ae3e07aa24d16046'], 'as mesmas funções ck*/pt* (nenhuma nova)');
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual(crypto661.createHash('sha256').update(src.slice(i, j)).digest('hex').slice(0, 16), 'd350ca846ae9d05e');
+});
+provaAsync('6.61 P31 (AC12.2) — as provas da 6.38, da 6.43, da 6.46 e da 6.48 passam (contadas); só as da lista do @sm ganharam palco (o motivo da recusa com 4 palavras)', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const nomes = [...src.matchAll(/\bprova(?:Async)?\('(6\.(?:38|43|46|48)\b[^']*)'/g)].map((m) => m[1]);
+  const caidas = falhas.filter((f) => /^6\.(38|43|46|48)\b/.test(f));
+  console.log('      provas da 6.38, 6.43, 6.46 e 6.48 no arquivo: ' + nomes.length + '; caídas: ' + caidas.length);
+  igual([nomes.length >= 150, caidas], [true, []]);
+});
+// ---- 2ª rodada (o QA da 6.61): os ataques do QA e as guardas dos defeitos que passavam vivos («6.61 QA661-…») ----------------
+// A pessoa demora na pergunta e o «outro aparelho» age antes da resposta (o padrão dos ataques do QA).
+const perguntaComOutro661 = (fnJs) => run(`__qaN661=0; zPergunta=function(t, l){ __zp657.push([t, l]); if(!__qaN661++){ (${fnJs})(); } return Promise.resolve(__zpq657.length?__zpq657.shift():true); };`);
+// o cartaz que ficou aberto (a prova caiu no meio) é fechado antes de desarmar o palco: nada pendente vaza para a próxima prova
+const fim661 = async () => { for (let i = 0; i < 3; i++) await espera657(); try { await fecha660(); } catch (e) { /* silencioso de propósito: sem cartaz aberto, nada a fechar */ } await espera657(); solta661(); };
+const FIMM661 = ' Nada foi autorizado: o pedido continua em aberto. Recuse-o, com o motivo, e a recepção combina de novo com o tutor.';
+// o pedido do «Mudar o dia» com o dia novo lotado, pelo caminho de verdade (a Recepção na janela, «Avisar a Márcia»)
+const pedirMudar661 = async (de, para) => {
+  vagas661(para, 5); papel657('consultora', 'Bia Consultora Teste');
+  await abreMudar661(0, de); await escolheDia661(para);
+  run('__za657=[]; dxPedir();'); await espera657();
+};
+
+provaAsync('6.61 QA661-01 A2 (AC7.4, decisão (a)) — o pedido do «Mudar o dia» leva mudar_de; o «Autorizar» dele passa pelo invólucro: a pergunta da Márcia diz que o dia de antes fica livre, o MESMO crédito muda de dia, a mensagem ao tutor conta as livres de verdade e a pergunta e a confirmação de sempre voltam ao lugar', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-01': CR660('2026-10-01') });
+    await pedirMudar661('2026-10-15', '2026-10-16');
+    igual(J630('__za657')[0][1][1], 'Nada mudou ainda: Quindim continua marcado em 15/10/2026. Quando ela autorizar, o dia de repor passa para 16/10/2026 (a mesma falta) e 15/10/2026 fica livre. Se ele vier repor em 15/10/2026 antes disso, a mudança não vale mais.');
+    igual(pedDb661('2026-10-16').payload.mudar_de, { dia: '2026-10-15', credito_id: 'fa-2026-10-06' });
+    papel657('gestao', 'Gestora Teste');
+    const hg = String(run('vagasPedidosHTML()'));
+    assert.ok(/vagasMudarAutorizar\('2026-10-16','quindim__ana teste'\)/.test(hg) && !/vagasAutorizar\('2026-10-16'/.test(hg), 'o «Autorizar» do pedido do «mudar o dia» passa pelo invólucro');
+    assert.ok(txt660(hg).indexOf('16/10/2026 · reposição, mudando de 15/10 · pedido por') >= 0, txt660(hg));
+    run(`__zpAntes661=zPergunta; __zaAntes661=zAlertao; __mm660=[]; __za657=[]; __zp657=[];`);
+    await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); await espera657();
+    igual(zp661()[0][1], ['O dia está com 5 de 5 vagas.', 'Vai ficar combinado que Quindim repõe em 16/10/2026.',
+      'É a MUDANÇA do dia de repor: Quindim está marcado em 15/10/2026 (a falta de 06/10/2026). Autorizando, 15/10/2026 fica livre e o dia de repor passa para 16/10/2026, com a mesma falta: nenhuma reposição a mais é contada.',
+      'Fica registrado que a autorização foi sua.']);
+    const L = lanc660();
+    igual([L['fa-2026-10-06'].volta, L['fa-2026-10-01'].volta || '', pedDb661('2026-10-16').status], ['2026-10-16', '', 'autorizado']);
+    const z = J630('__za657').filter((x) => x[0] === 'ENCAIXE AUTORIZADO')[0];
+    assert.ok(z && z[1].indexOf('O dia 15/10/2026 ficou livre: a reposição de Quindim mudou para 16/10/2026, com a mesma falta.') >= 0, JSON.stringify(J630('__za657')));
+    run(`(function(){ var z=__za657.filter(function(x){ return x[0]==='ENCAIXE AUTORIZADO'; })[0]; z[2].aoFechar(); })()`);
+    const mm = J630('__mm660');
+    const esperado = run(`repMensagem(PELUDINHOS[0], 'agendada', {volta:'2026-10-16', livres:repLivresParaMarcar(PELUDINHOS[0])})`);
+    igual([mm.length, mm[0].t, mm[0].x === esperado, run('repLivresParaMarcar(PELUDINHOS[0])')], [1, 'Dia de repor mudado', true, 1]);
+    igual([aud660('reposicao-remarcada').length, run('zPergunta===__zpAntes661'), run('zAlertao===__zaAntes661')], [1, true, true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-01 A13 — o pedido do «Mudar o dia» esperando; o tutor veio no dia de antes e a reposição foi usada; a Márcia autoriza depois: nada muda de dia (o dia de antes já chegou; ou a reposição já usada), nada é gravado, o pedido continua em aberto', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: '2026-10-13', prazo24h: '2026-10-13', volta_por: 'Recepção X', volta_ts: T661(8, 11, 0) }) });
+    await pedirMudar661('2026-10-13', '2026-10-16');
+    igual(pedDb661('2026-10-16').payload.mudar_de, { dia: '2026-10-13', credito_id: 'fa-2026-10-06' });
+    poe661(NO661 + '/u-2026-10-13', { tipo: 'uso', data: '2026-10-13', credito: 'fa-2026-10-06', motivo: 'reposicao', quem: 'baixa', ts: T661(13, 8, 0) });
+    const saldo = saldos660();
+    papel657('gestao', 'Gestora Teste');
+    // (a) 13/10: ele veio, a baixa contou; a Márcia toca «Autorizar» no mesmo dia
+    run(`__zpAntes661=zPergunta; __hz661=zHojeISO; zHojeISO=function(){ return '2026-10-13'; }; hojeISO=zHojeISO; __al657=[]; __zp657=[]; __esc657=[];`);
+    try { await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); } finally { run('zHojeISO=__hz661; hojeISO=zHojeISO;'); }
+    igual([al661(), zp661().length, J630('__esc657').length], [['O dia de repor de antes (13/10/2026) já chegou: a mudança para 16/10/2026 não vale mais (o dia de antes é conferido na baixa, como sempre).' + FIMM661], 0, 0]);
+    // (b) com o relógio de hoje: a reposição já usada também barra
+    run('__al657=[];');
+    await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657();
+    igual(al661(), ['A reposição de Quindim marcada para 13/10/2026 já foi usada: mudar o dia agora daria uma reposição a mais.' + FIMM661]);
+    igual([lanc660()['fa-2026-10-06'].volta, pedDb661('2026-10-16').status, saldos660(), run('zPergunta===__zpAntes661')], ['2026-10-13', 'pedido', saldo, true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-01 A14 — o pedido do «Mudar o dia» esperando; a recepção remarca, desmarca ou estorna a MESMA falta; ou remarca enquanto a Márcia responde a pergunta: a marcação nova não some calada, e nada é autorizado', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661() });
+    await pedirMudar661('2026-10-15', '2026-10-16');
+    papel657('gestao', 'Gestora Teste');
+    const tenta = async () => { run('__al657=[]; __zp657=[];'); await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); return al661(); };
+    poe661(NO661 + '/fa-2026-10-06', CR660('2026-10-06', { volta: '2026-10-20', prazo24h: '2026-10-20', volta_desmarcada: { dia: '2026-10-15', motivo: 'tutor pediu' } }));
+    igual(await tenta(), ['Depois do pedido, a reposição de Quindim foi marcada para 20/10/2026: ela não está mais em 15/10/2026.' + FIMM661]);
+    igual(lanc660()['fa-2026-10-06'].volta, '2026-10-20');
+    poe661(NO661 + '/fa-2026-10-06', CR660('2026-10-06'));
+    igual(await tenta(), ['Depois do pedido, a reposição de Quindim foi desmarcada: ela não está mais em 15/10/2026.' + FIMM661]);
+    poe661(NO661 + '/fa-2026-10-06', CR15_661());
+    poe661(NO661 + '/e1', { tipo: 'estorno', estornaId: 'fa-2026-10-06', ts: T661(9, 9, 30) });
+    igual(await tenta(), ['A falta deste pedido não está mais no Extrato de Quindim (foi estornada).' + FIMM661]);
+    poe661(NO661 + '/e1', null);
+    // a Márcia demora na pergunta, e a recepção remarca para 20/10 antes da resposta: a releitura depois do «sim» barra
+    ctx.__c20 = CR660('2026-10-06', { volta: '2026-10-20', prazo24h: '2026-10-20' });
+    run(`__zpAntes661=zPergunta; __zaAntes661=zAlertao;`);
+    perguntaComOutro661(`function(){ __put657('${NO661}/fa-2026-10-06', __c20); REPO_CACHE=__get657('daycare/reposicao')||{}; }`);
+    run(`__zpOutro661=zPergunta; __al657=[]; __zp657=[];`);
+    await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); await espera657();
+    igual([zp661().length, al661()], [1, ['Depois do pedido, a reposição de Quindim foi marcada para 20/10/2026: ela não está mais em 15/10/2026.' + FIMM661]]);
+    igual([lanc660()['fa-2026-10-06'].volta, pedDb661('2026-10-16').status, run('zPergunta===__zpOutro661'), run('zAlertao===__zaAntes661')], ['2026-10-20', 'pedido', true, true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-02 A3 — Desautorizar (avulso) com a tela velha: enquanto a Gestão responde, outro aparelho desautoriza, reabre e a Márcia autoriza de NOVO (outra diária): nada sai; com o cartaz aberto, o mesmo; e a diária lançada à mão pela recepção nunca sai', async () => {
+  arma661();
+  try {
+    const T2 = T661(9, 9, 50), AUT2 = { quem: 'Márcia Teste', ts: T2 };
+    const novo = () => { ctx.__qaPed2 = pedAv661('2026-10-14', { autorizado_ts: T2, historico: { h1: { status: 'desautorizado' } } });
+      ctx.__qaL2 = Object.assign({}, L1_661, { det: { valor_cent: 9700, matriculado: true, autorizacao: AUT2 }, ts: T2 }); };
+    const OUTRO = `function(){ __put657('daycare/dashboard/2026-10-14/avulso/L1', null); __put657('daycare/dashboard/2026-10-14/avulso/L2', __qaL2);
+      __put657('daycare/vagas-pedidos/2026-10-14/${K661}', __qaPed2); VAGAS_PEDIDOS=__get657('daycare/vagas-pedidos')||{}; }`;
+    // (a) durante a pergunta
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661); novo();
+    perguntaComOutro661(OUTRO);
+    run(`__al657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    igual([run('CORR_ATUAL?CORR_ATUAL.passo:null'), al661()], [null, ['Enquanto a pergunta estava aberta, ele foi autorizado em outro aparelho (por Márcia Teste). Nada foi desautorizado. Atualize a tela e confira.']]);
+    igual([!!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L2')`), pedDb661('2026-10-14').status, pedDb661('2026-10-14').autorizado_ts, J630(`__get657('daycare/avulsos-anulados/2026-10-14')`)], [true, 'autorizado', T2, null]);
+    // (b) com o cartaz aberto (a pessoa escrevendo o motivo)
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661); poe661('daycare/dashboard/2026-10-14/avulso/L2', null); novo();
+    run(`__zpq657=[]; zPergunta=function(t, l){ __zp657.push([t, l]); return Promise.resolve(true); }; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    igual(op660('botao'), 'Desautorizar');
+    run(`(${OUTRO})()`);
+    const r = await assina660(SENHA657, MOTG661);
+    igual([r[0], cartaz660().indexOf('NADA FOI GRAVADO Enquanto o cartaz estava aberto, ele foi autorizado em outro aparelho (por Márcia Teste). Nada foi tirado. Atualize a tela e confira.') >= 0,
+      !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L2')`), pedDb661('2026-10-14').autorizado_ts], ['falhou', true, true, T2], cartaz660());
+    await fecha660();
+    // (c) a diária da autorização e uma diária lançada à mão pela recepção (sem a marca da autorização): só a da autorização sai
+    poe661('daycare/dashboard/2026-10-14/avulso/L2', null);
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    poe661('daycare/dashboard/2026-10-14/avulso/L9', { valor: 'Quindim (Ana Teste)', chave: DC661, det: { valor_cent: 9700, matriculado: true }, quem: 'Recepção X', ts: T661(9, 9, 40) });
+    run(`__za657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    await assina660(SENHA657, MOTG661); await espera657();
+    igual(J630('__za657').map((z) => z[0])[0], 'ENCAIXE DESAUTORIZADO');
+    igual([J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`), !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L9')`), pedDb661('2026-10-14').status],
+      [null, true, 'desautorizado']);
+    await fecha660();
+    // (d) só a diária à mão: ela fica, e só o pedido fecha
+    poePed661('2026-10-15', pedAv661('2026-10-15'));
+    poe661('daycare/dashboard/2026-10-15/avulso/L8', { valor: 'Quindim (Ana Teste)', chave: DC661, det: { valor_cent: 9700, matriculado: true }, quem: 'Recepção X', ts: T661(9, 9, 40) });
+    run(`__zp657=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657(); await espera657();
+    igual(zp661()[0][1][0], 'A diária avulsa de Quindim que está nos Lançamentos do dia 15/10 não foi lançada por esta autorização: ela fica como está (para tirá-la, use os Lançamentos do dia). Só o pedido fecha.');
+    igual((await assina660(SENHA657, MOTG661))[0], 'pronto');
+    igual([!!J630(`__get657('daycare/dashboard/2026-10-15/avulso/L8')`), pedDb661('2026-10-15').status, pedDb661('2026-10-15').desautorizado.oque_saiu], [true, 'desautorizado', 'nada']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-02 A3b — Desautorizar (reposição) com a tela velha: enquanto a Gestão responde, a Márcia autoriza de novo (o mesmo dia) — nada é desmarcado; e a recepção desmarca no meio (o encaixe mudou) — nada fecha', async () => {
+  arma661();
+  try {
+    const T2 = T661(9, 9, 50), AUT2 = { quem: 'Márcia Teste', ts: T2 };
+    semear660({ 'fa-2026-10-08': credRep661('2026-10-14') });
+    poePed661('2026-10-14', pedRep661('2026-10-14'));
+    ctx.__qaPed2 = pedRep661('2026-10-14', { autorizado_ts: T2, historico: { h1: { status: 'desautorizado' } } });
+    ctx.__qaC2 = credRep661('2026-10-14', { autorizacao: AUT2, volta_ts: T2 });
+    perguntaComOutro661(`function(){ __put657('${NO661}/fa-2026-10-08', __qaC2); REPO_CACHE=__get657('daycare/reposicao')||{};
+      __put657('daycare/vagas-pedidos/2026-10-14/${K661}', __qaPed2); VAGAS_PEDIDOS=__get657('daycare/vagas-pedidos')||{}; }`);
+    run(`__mm660=[]; __al657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    igual([al661(), lanc660()['fa-2026-10-08'].volta, pedDb661('2026-10-14').status, J630('__mm660').length, run('CORR_ATUAL?CORR_ATUAL.passo:null')],
+      [['Enquanto a pergunta estava aberta, ele foi autorizado em outro aparelho (por Márcia Teste). Nada foi desautorizado. Atualize a tela e confira.'], '2026-10-14', 'autorizado', 0, null]);
+    // o pedido igual, mas o encaixe saiu no meio (a recepção desmarcou à mão): a releitura do encaixe barra
+    semear660({ 'fa-2026-10-08': credRep661('2026-10-15') });
+    poePed661('2026-10-15', pedRep661('2026-10-15'));
+    perguntaComOutro661(`function(){ __put657('${NO661}/fa-2026-10-08', Object.assign({}, __get657('${NO661}/fa-2026-10-08'), {volta:''})); REPO_CACHE=__get657('daycare/reposicao')||{}; }`);
+    run(`__mm660=[]; __al657=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657(); await espera657();
+    igual([al661(), pedDb661('2026-10-15').status, J630('__mm660').length],
+      [['Enquanto a pergunta estava aberta, o encaixe de Quindim em 15/10/2026 mudou nos Lançamentos do dia ou no Extrato. Nada foi desautorizado: toque em «Desautorizar» de novo para conferir.'], 'autorizado', 0]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-02 q26 — o fechamento do «Desautorizar» confere a autorização que a tela mostrou: a Márcia autoriza de novo com o cartaz «Fechar o pedido» aberto — nada é gravado, e o pedido continua autorizado (o novo)', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14'));
+    run(`__p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    igual(op660('botao'), 'Fechar o pedido');
+    poePed661('2026-10-14', pedAv661('2026-10-14', { autorizado_ts: T661(9, 9, 50), historico: { h1: { status: 'desautorizado' } } }));
+    const r = await assina660(SENHA657, MOTG661);
+    igual([r[0], cartaz660().indexOf('NADA FOI GRAVADO Enquanto o cartaz estava aberto, ele foi autorizado em outro aparelho (por Márcia Teste). Nada foi gravado de novo. Atualize a tela e confira.') >= 0,
+      pedDb661('2026-10-14').status, pedDb661('2026-10-14').autorizado_ts], ['falhou', true, 'autorizado', T661(9, 9, 50)], cartaz660());
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-02 q24 — «Desautorizar» sem o Extrato lido: a frase de sempre, sem pergunta e sem nada mudado', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    run(`__rl661=REPO_LIDO; REPO_LIDO=false; __al657=[]; __zp657=[];`);
+    try { run(`__p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); } finally { run('REPO_LIDO=__rl661;'); }
+    igual([al661(), zp661().length, !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`)], [[run('repExtratoEsperaTexto()')], 0, true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-02 q27 / QA661-11 — a diária anulada sai também da memória das vagas do dia (a vaga abre na hora); a de hoje refaz a turma, a planilha se relê, e a Chamada de hoje não é tocada', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    vagas661('2026-10-14', 4); run(`REP_PLAN_CACHE['2026-10-14'].avulso.L1={valor:'Quindim (Ana Teste)'};`);
+    const antes = J630(`vagasDoDia('2026-10-14')`);
+    run(`__al657=[]; __za657=[]; __p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    await assina660(SENHA657, MOTG661); await espera657();
+    igual([pedDb661('2026-10-14').status, al661(), J630('__za657').map((z) => z[0])[0]], ['desautorizado', [], 'ENCAIXE DESAUTORIZADO']); await fecha660();
+    const depois = J630(`vagasDoDia('2026-10-14')`);
+    igual([antes.usadas, depois.usadas, J630(`Object.keys(REP_PLAN_CACHE['2026-10-14'].avulso)`).indexOf('L1')], [5, 4, -1]);
+    // hoje (09/10): a diária dos Lançamentos sai; a da Chamada fica (a pergunta diz); a turma se refaz; a planilha se relê
+    poePed661('2026-10-09', pedAv661('2026-10-09')); poe661('daycare/dashboard/2026-10-09/avulso/L1', L1_661);
+    poe661('daycare/avulsos/2026-10-09/C1', { nome: 'Quindim', tutor: 'Ana Teste', key: 'x' });
+    run(`__dgp661=[]; __bkDgp661=dcGarantirPlanilha; dcGarantirPlanilha=function(f){ __dgp661.push(f); }; DC_DASH_TURMA.quando=123; __zp657=[];`);
+    try {
+      run(`__p661=vagasDesautorizarAbrir('2026-10-09', '${K661}');`); await espera657(); await espera657();
+      igual(zp661()[0][1][0], 'A diária avulsa de Quindim em 09/10 (R$ 97,00) sai dos Lançamentos do dia e da planilha, e fica riscada, nunca apagada. Na Chamada de hoje, Quindim continua como avulso: se não veio, tire lá, em «Tirar a diária avulsa».');
+      run('__za657=[];'); await assina660(SENHA657, MOTG661); await espera657();
+      igual([pedDb661('2026-10-09').status, J630('__za657').map((z) => z[0])[0]], ['desautorizado', 'ENCAIXE DESAUTORIZADO']);
+      igual([run('DC_DASH_TURMA.quando'), J630('__dgp661'), J630(`__get657('daycare/dashboard/2026-10-09/avulso/L1')`), !!J630(`__get657('daycare/avulsos/2026-10-09/C1')`)], [0, [true], null, true]);
+    } finally { run('dcGarantirPlanilha=__bkDgp661;'); }
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-07 A7 — Desautorizar o avulso de HOJE que está só na Chamada: a tela diz para tirar na Chamada e tocar de novo; nada muda, e o pedido não fecha com a diária valendo', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-09', pedAv661('2026-10-09'));
+    poe661('daycare/avulsos/2026-10-09/C1', { nome: 'Quindim', tutor: 'Ana Teste', key: 'x' });
+    run(`__al657=[]; __zp657=[];`);
+    run(`__p661=vagasDesautorizarAbrir('2026-10-09', '${K661}');`); await espera657();
+    igual([al661(), zp661().length, pedDb661('2026-10-09').status, !!J630(`__get657('daycare/avulsos/2026-10-09/C1')`)],
+      [['A diária avulsa de Quindim de hoje está só na Chamada, não nos Lançamentos do dia: tire-a na Chamada, em «Tirar a diária avulsa», e depois toque em «Desautorizar» de novo para fechar o pedido. Nada foi mudado.'], 0, 'autorizado', true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-03 A1 — «Pedir de novo» não apaga a decisão anterior (vai para historico, com o pedido de antes); quem podia pedir de novo continua podendo, como na 6.46 (a Consultora pede de novo o recusado, o desautorizado e o retirado — 3ª rodada, S4-P12 com a Adriana)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08') });
+    const pedir = async (dia) => { run('__e661=null;'); await run(`vagasPedir('${dia}', PELUDINHOS[0], 'avulso', {valor_cent:9700, matriculado:true}).catch(function(e){ __e661=e.message; })`); await espera657(); return run('__e661'); };
+    // recusado → reabrir (Gestão) → a Consultora pede de novo: os dois registros ficam no historico
+    poePed661('2026-10-14', ped661('2026-10-14', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0) }));
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual((await assina660(SENHA657, MOTG661))[0], 'pronto'); await fecha660();
+    papel657('consultora', 'Bia Consultora Teste');
+    igual(await pedir('2026-10-14'), null);
+    const d1 = pedDb661('2026-10-14'), h1 = Object.keys(d1.historico).map((k) => d1.historico[k]).sort((a, b) => a.ts - b.ts);
+    igual([d1.status, d1.tipo, d1.reaberto === undefined, h1.length, h1[0].status, h1[0].motivo_recusa, h1[1].status, !!h1[1].reaberto, h1[1].pedido_antes.tipo],
+      ['pedido', 'avulso', true, 2, 'recusado', 'o dia já está lotado', 'pedido', true, 'reposicao']);
+    // retirado → a Consultora pede de novo: o retirado vai para o historico
+    poePed661('2026-10-15', ped661('2026-10-15', { status: 'retirado', retirado: { por: 'Bia Consultora Teste', motivo: MOT661, ts: T661(9, 9, 10) } }));
+    igual(await pedir('2026-10-15'), null);
+    const d2 = pedDb661('2026-10-15'), h2 = Object.values(d2.historico || {});
+    igual([d2.status, h2.length, h2[0].status, h2[0].retirado.motivo], ['pedido', 1, 'retirado', MOT661]);
+    // recusado e desautorizado pela Gestão: a Consultora pede de novo, como na 6.46; a decisão fica no historico (nada se apaga)
+    poePed661('2026-10-16', ped661('2026-10-16', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0) }));
+    igual(await pedir('2026-10-16'), null);
+    const d3 = pedDb661('2026-10-16'), h3 = Object.values(d3.historico || {});
+    igual([d3.status, d3.motivo_recusa === undefined, d3.autorizado_por === undefined, h3.length, h3[0].status, h3[0].motivo_recusa, h3[0].autorizado_por],
+      ['pedido', true, true, 1, 'recusado', 'o dia já está lotado', 'Márcia Teste']);
+    poePed661('2026-10-19', pedAv661('2026-10-19', { status: 'desautorizado', desautorizado: { por: 'Gestora Teste', motivo: MOTG661, ts: T661(9, 9, 20), oque_saiu: 'avulso' } }));
+    igual(await pedir('2026-10-19'), null);
+    const d4 = pedDb661('2026-10-19'), h4 = Object.values(d4.historico || {});
+    igual([d4.status, d4.desautorizado === undefined, h4.length, h4[0].status, h4[0].desautorizado.motivo, h4[0].autorizado_por], ['pedido', true, 1, 'desautorizado', MOTG661, 'Márcia Teste']);
+    // o pedido em aberto comum (sem historico): trocado pelo novo, como sempre (6.46)
+    poePed661('2026-10-20', ped661('2026-10-20'));
+    igual(await pedir('2026-10-20'), null);
+    const d5 = pedDb661('2026-10-20');
+    igual([d5.tipo, d5.historico === undefined], ['avulso', true]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-05 A4 — cancelar a troca antiga com a tela velha: outro aparelho cancela e REABRE antes da assinatura; nada é cancelado, e a frase diz o que aconteceu', async () => {
+  arma661();
+  try {
+    vagas661('2026-10-14', 0);
+    poe661(NT661, TRA661());
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=trocaCancelar('2026-10-14', '${KB661}');`); await espera657();
+    poe661(NT661, TRA661({ status: 'confirmada', historico: { h1: { status: 'cancelada', canceladaQuem: 'Recepção Y', canceladaTs: T661(9, 9, 55) } }, reaberta: { por: 'Amanda Supervisora Teste', motivo: 'o tutor quer a troca', ts: T661(9, 9, 58) } }));
+    const r = await assina660('s-bia', 'o tutor cancelou a troca');
+    const t = J630(`__get657('${NT661}')`);
+    igual([r[0], cartaz660().indexOf('NADA FOI GRAVADO Enquanto o cartaz estava aberto, a troca foi cancelada e reaberta em outro aparelho (reaberta por Amanda Supervisora Teste). Nada foi cancelado. Atualize a tela e confira.') >= 0,
+      t.status, !!t.reaberta, aud660('troca-cancelada').length], ['falhou', true, 'confirmada', true, 0], cartaz660());
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-06 A5 — «Mudar o dia» pela tela velha: a reposição de HOJE já usada, ou uma reposição já usada (o uso aponta para ela), não muda de dia', async () => {
+  arma661();
+  try {
+    vagas661('2026-10-16', 0);
+    semear660({ 'fa-2026-10-05': CR660('2026-10-05', { volta: '2026-10-09', prazo24h: '2026-10-09' }),
+      'u-2026-10-09': { tipo: 'uso', data: '2026-10-09', credito: 'fa-2026-10-05', motivo: 'reposicao', quem: 'Recepção X', ts: T661(9, 8, 0) } });
+    await abreMudar661(0, '2026-10-09'); await escolheDia661('2026-10-16');
+    run(`__esc657=[]; dxConfirmar();`); await espera657();
+    igual([run('__el657.dxWarn.textContent'), J630('__esc657').length, lanc660()['fa-2026-10-05'].volta],
+      ['A reposição de Quindim marcada para 09/10/2026 é de hoje ou de um dia que já passou: «Mudar o dia» vale só para um dia que ainda vai chegar. Feche esta janela e confira em Reposições.', 0, '2026-10-09']);
+    semear660({ 'fa-2026-10-06': CR15_661(), 'u1': { tipo: 'uso', data: '2026-10-09', credito: 'fa-2026-10-06', motivo: 'reposicao', quem: 'Recepção X', ts: T661(9, 8, 0) } });
+    igual(J630(`dxVeredito(PELUDINHOS[0], '2026-10-16', null, {credId:'fa-2026-10-06', de:'2026-10-15'}).motivo`),
+      'A reposição de Quindim marcada para 15/10/2026 já foi usada: ela não muda de dia. Feche esta janela e confira em Reposições.');
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-06 q17 — «Mudar o dia» com a janela aberta e a reposição remarcada em outro aparelho: o veredito barra na hora de confirmar, nada gravado', async () => {
+  arma661();
+  try {
+    vagas661('2026-10-16', 0);
+    semear660({ 'fa-2026-10-06': CR15_661() });
+    await abreMudar661(0, '2026-10-15'); await escolheDia661('2026-10-16');
+    poe661(NO661 + '/fa-2026-10-06', CR660('2026-10-06', { volta: '2026-10-20', prazo24h: '2026-10-20' }));
+    run(`__esc657=[]; dxConfirmar();`); await espera657();
+    igual([run('__el657.dxWarn.textContent'), J630('__esc657').length, lanc660()['fa-2026-10-06'].volta],
+      ['A reposição de Quindim marcada para 15/10/2026 mudou em outro aparelho (desmarcada, estornada ou remarcada). Feche esta janela e confira em Reposições.', 0, '2026-10-20']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-09 A6 — «Retirar o pedido» do «Mudar o dia» lotado: a cascata diz que a falta continua marcada no dia de antes (não «sem dia de repor»)', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661() });
+    poePed661('2026-10-16', ped661('2026-10-16', { payload: { credito_id: 'fa-2026-10-06', data: '2026-10-06', volta: '2026-10-16', mudar_de: { dia: '2026-10-15', credito_id: 'fa-2026-10-06' } } }));
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p661=vagasRetirarAbrir('2026-10-16', '${K661}');`); await espera657();
+    igual(op660('cascata'), ['A Márcia deixa de ver o pedido. Nada foi lançado em 16/10.', 'A falta avisada de 06/10 continua no Extrato, marcada para 15/10 (como estava).']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-01 B1 — «Retirar o pedido» só no status «pedido» e só sem o encaixe lançado: a reserva vencida com a diária (ou o dia de repor) já lançada fica fora (sem botão, e a função recusa); o pedido em aberto com o avulso já nos Lançamentos ou o dia já marcado não é retirado («retirar não tira o lançamento»), na abertura e na assinatura', async () => {
+  arma661();
+  try {
+    const AUTx = { quem: 'Márcia Teste', ts: T661(9, 9, 40) }, agora = run('vagasAgora()');
+    // (a) a reserva vencida com a diária lançada (a conexão da Márcia caiu antes do «autorizado»): sem botão; a função não retira
+    poePed661('2026-10-14', ped661('2026-10-14', { tipo: 'avulso', status: 'autorizando', autorizando: { quem: 'Márcia Teste', ts: agora - 10 * 60000, id: 'm1' }, payload: { valor_cent: 9700, matriculado: true } }));
+    poe661('daycare/dashboard/2026-10-14/avulso/L1', Object.assign({}, L1_661, { det: { valor_cent: 9700, matriculado: true, autorizacao: AUTx }, ts: AUTx.ts }));
+    papel657('consultora', 'Bia Consultora Teste');
+    const h = String(run('vagasPedidosHTML()'));
+    assert.ok(!/vagasRetirarAbrir\('2026-10-14'/.test(h), 'a reserva vencida não ganha «Retirar o pedido»: ' + h.slice(0, 600));
+    run(`__al657=[]; __p661=vagasRetirarAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual([run('CORR_ATUAL?CORR_ATUAL.passo:null'), pedDb661('2026-10-14').status, !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`), al661().length], [null, 'autorizando', true, 1]);
+    // (b) o pedido em aberto com o avulso dele já nos Lançamentos do dia: a frase, nada retirado
+    poePed661('2026-10-15', ped661('2026-10-15', { tipo: 'avulso', payload: { valor_cent: 9700, matriculado: true } }));
+    poe661('daycare/dashboard/2026-10-15/avulso/L5', Object.assign({}, L1_661, { quem: 'Recepção X' }));
+    run(`__al657=[]; __p661=vagasRetirarAbrir('2026-10-15', '${K661}');`); await espera657();
+    igual([run('CORR_ATUAL?CORR_ATUAL.passo:null'), al661(), pedDb661('2026-10-15').status], [null,
+      ['O encaixe já está lançado (o avulso de Quindim está nos Lançamentos do dia 15/10/2026): retirar o pedido não tira o lançamento. Nada foi retirado: se o tutor desistiu, tire o avulso dos Lançamentos do dia 15/10/2026 e depois retire o pedido; se Quindim vem, a Márcia fecha o pedido em «Autorizar».'], 'pedido']);
+    // (c) a reposição: o crédito do pedido já marcado no dia do pedido
+    semear660({ 'fa-2026-10-08': CR660('2026-10-08', { volta: '2026-10-16', prazo24h: '2026-10-16', autorizacao: AUTx }) });
+    poePed661('2026-10-16', ped661('2026-10-16', { payload: { credito_id: 'fa-2026-10-08', data: '2026-10-08', volta: '2026-10-16' } }));
+    run(`__al657=[]; __p661=vagasRetirarAbrir('2026-10-16', '${K661}');`); await espera657();
+    igual([run('CORR_ATUAL?CORR_ATUAL.passo:null'), al661(), pedDb661('2026-10-16').status], [null,
+      ['O encaixe já está lançado (o dia de repor 16/10/2026 está marcado no Extrato de Quindim): retirar o pedido não tira o lançamento. Nada foi retirado: se o tutor desistiu, desmarque o dia de repor na tela de Reposições («desmarcar» ao lado de 16/10/2026) e depois retire o pedido; se Quindim vem, a Márcia fecha o pedido em «Autorizar».'], 'pedido']);
+    // (d) nada lançado ao abrir; o avulso entra (outro aparelho) antes da assinatura: a assinatura confere de novo e não retira
+    poePed661('2026-10-19', ped661('2026-10-19', { tipo: 'avulso', payload: { valor_cent: 9700, matriculado: true } }));
+    run(`__p661=vagasRetirarAbrir('2026-10-19', '${K661}');`); await espera657();
+    igual(op660('botao'), 'Retirar o pedido');
+    poe661('daycare/dashboard/2026-10-19/avulso/L7', Object.assign({}, L1_661, { quem: 'Recepção X' }));
+    const r = await assina660('s-bia', MOT661);
+    igual([r[0], cartaz660().indexOf('retirar o pedido não tira o lançamento') >= 0, pedDb661('2026-10-19').status], ['falhou', true, 'pedido'], cartaz660());
+    await fecha660();
+    // (e) sem conseguir ler os Lançamentos do dia: nada é retirado (sem conferir, não diz «Nada foi lançado»)
+    poePed661('2026-10-20', ped661('2026-10-20', { tipo: 'avulso', payload: { valor_cent: 9700, matriculado: true } }));
+    run(`__dbr661=DB.ref; DB.ref=function(c){ var r=__dbr661(c); if(String(c).indexOf('dashboard/2026-10-20/avulso')>=0) r.once=function(){ return Promise.reject(new Error('sem rede')); }; return r; }; __al657=[];`);
+    try { run(`__p661=vagasRetirarAbrir('2026-10-20', '${K661}');`); await espera657(); } finally { run('DB.ref=__dbr661;'); }
+    igual([run('CORR_ATUAL?CORR_ATUAL.passo:null'), al661(), pedDb661('2026-10-20').status],
+      [null, ['Não consegui conferir agora se o encaixe de Quindim em 20/10/2026 já está lançado. Nada foi retirado: tente de novo em instantes.'], 'pedido']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-04 q09/q10 — reabrir duas vezes guarda as duas decisões no historico; o pedido de um dia que já passou não se reabre', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', ped661('2026-10-14', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(8, 16, 0) }));
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual((await assina660(SENHA657, MOTG661))[0], 'pronto'); await fecha660();
+    poePed661('2026-10-14', Object.assign({}, pedDb661('2026-10-14'), { status: 'recusado', motivo_recusa: 'continua sem vaga hoje', autorizado_por: 'Márcia Teste', autorizado_ts: T661(9, 9, 30) }));
+    run(`__p661=vagasReabrirAbrir('2026-10-14', '${K661}');`); await espera657();
+    igual((await assina660(SENHA657, 'a recusa foi por engano')), ['pronto', '']); await fecha660();
+    const h = Object.values(pedDb661('2026-10-14').historico).sort((a, b) => a.ts - b.ts);
+    igual([h.length, h[0].motivo_recusa, h[1].motivo_recusa, !!h[1].reaberto], [2, 'o dia já está lotado', 'continua sem vaga hoje', true]);
+    poePed661('2026-10-08', ped661('2026-10-08', { status: 'recusado', motivo_recusa: 'o dia já está lotado', autorizado_por: 'Márcia Teste', autorizado_ts: T661(7, 16, 0) }));
+    run(`__al657=[];`);
+    run(`__p661=vagasReabrirAbrir('2026-10-08', '${K661}');`); await espera657();
+    igual([al661(), run('CORR_ATUAL?CORR_ATUAL.passo:null')], [['O dia 08/10/2026 já passou: o pedido não se reabre. Nada foi mudado.'], null]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-04 q11/q12/q13 — reabrir a troca: o FILHOt que já ocupa vaga no dia não reabre; a vaga é conferida de novo na assinatura; com as vagas do dia ainda não conferidas, nem «Reabrir» nem a frase do lotado', async () => {
+  arma661();
+  try {
+    const CAN = TRA661({ status: 'cancelada', canceladaQuem: 'Recepção Y', canceladaTs: T661(9, 9, 40), cancelada: { por: 'Bia Consultora Teste', motivo: 'o tutor cancelou a troca', ts: T661(9, 9, 40) } });
+    poe661(NT661, CAN);
+    papel657('consultora', 'Bia Consultora Teste');
+    // q11: Bolota já ocupa uma vaga em 14/10 (avulso lançado)
+    vagas661('2026-10-14', 3); run(`REP_PLAN_CACHE['2026-10-14'].avulso.b1={valor:'Bolota/Spitz'};`);
+    run('__al657=[];'); run(`__p661=trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    assert.ok(/^Bolota já ocupa uma vaga em 14\/10\/2026 \(.+\)\. Nada foi reaberto\.$/.test(al661()[0] || '') && !run('CORR_ATUAL'), JSON.stringify(al661()));
+    // q12: com vaga ao abrir; o dia lota antes da assinatura
+    vagas661('2026-10-14', 4);
+    run(`__p661=trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    igual(op660('botao'), 'Reabrir a troca');
+    run(`REP_PLAN_CACHE['2026-10-14'].avulso.x9={valor:'Outro9 Teste'};`);
+    const r = await assina660('s-bia', 'o tutor quer a troca de volta');
+    igual([r[0], cartaz660().indexOf('NADA FOI GRAVADO O dia está lotado: use «+ Marcar troca», que pede o encaixe à Márcia. Nada foi reaberto.') >= 0, J630(`__get657('${NT661}')`).status],
+      ['falhou', true, 'cancelada'], cartaz660());
+    await fecha660();
+    // q13: as vagas de 14/10 ainda não conferidas
+    run(`delete REP_PLAN_CACHE['2026-10-14'];`);
+    const html = String(run('trocaCanceladasHTML({iso:"2026-10-14", lido:vagasDoDia("2026-10-14").lido, livres:vagasDoDia("2026-10-14").livres})'));
+    igual([run(`vagasDoDia('2026-10-14').lido`), /troca cancelada/.test(html), /trocaReabrirAbrir/.test(html), /O dia está lotado/.test(html)], [false, true, false, false]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-04 q14/q34/q38 — a troca recusada não aparece riscada como cancelada; cancelar a troca que já foi cancelada não abre o cartaz; reabrir a troca já confirmada de novo diz quem reabriu', async () => {
+  arma661();
+  try {
+    poe661(NT661, TRA661({ status: 'recusada', recusadaQuem: 'Márcia Teste', motivo_recusa: 'o dia já está lotado' }));
+    igual(J630(`trocaCanceladasDoDia('2026-10-14')`), []);
+    papel657('consultora', 'Bia Consultora Teste');
+    poe661(NT661, TRA661({ status: 'cancelada', canceladaQuem: 'Recepção Y', canceladaTs: T661(9, 9, 40), cancelada: { por: 'Amanda Supervisora Teste', motivo: 'o tutor cancelou a troca' } }));
+    run('__al657=[];'); run(`__p661=trocaCancelar('2026-10-14', '${KB661}');`); await espera657();
+    igual([al661(), run('CORR_ATUAL?CORR_ATUAL.passo:null')], [['Esta troca já foi cancelada (por Amanda Supervisora Teste). Nada foi cancelado.'], null]);
+    poe661(NT661, TRA661({ status: 'confirmada', reaberta: { por: 'Amanda Supervisora Teste', motivo: 'o tutor quer a troca', ts: T661(9, 9, 58) } }));
+    run('__al657=[];'); run(`__p661=trocaReabrirAbrir('2026-10-14', '${KB661}');`); await espera657();
+    igual([al661(), run('CORR_ATUAL?CORR_ATUAL.passo:null')], [['Esta troca já está confirmada de novo (reaberta por Amanda Supervisora Teste). Nada foi reaberto.'], null]);
+  } finally { await fim661(); }
+});
+// ---- 3ª rodada (o re-gate do QA): o gancho reconhecido pela 1ª linha do pedido, a trava, o refeito e as guardas que faltavam ----
+// o pedido comum (reposição) da Bolota em 15/10, com a falta dela
+const pedBolota661 = () => {
+  semear660({ 'fb-2026-10-02': CR660('2026-10-02') }, 1);
+  poePed661('2026-10-15', ped661('2026-10-15', { payload: { credito_id: 'fb-2026-10-02', data: '2026-10-02', volta: '2026-10-15' } }, KB661), KB661);
+};
+const aoFecharAutorizado661 = () => run(`(function(){ var z=__za657.filter(function(x){ return x[0]==='ENCAIXE AUTORIZADO'; })[0]; if(z && z[2] && z[2].aoFechar) z[2].aoFechar(); })()`);
+const autorizados661 = () => J630(`__za657.filter(function(x){ return x[0]==='ENCAIXE AUTORIZADO'; }).map(function(x){ return x[1]; })`);
+
+provaAsync('6.61 QA661-R2-02 G1 — duas autorizações no mesmo aparelho: o «mudar o dia» do Quindim esperando o banco e o pedido comum da Bolota — a confirmação da Bolota fica só dela (sem a linha, o rastro nem a mensagem do Quindim); a do Quindim, quando o banco responde, leva a linha e a mensagem certa', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-01': CR660('2026-10-01') });
+    await pedirMudar661('2026-10-15', '2026-10-16');
+    pedBolota661();
+    papel657('gestao', 'Gestora Teste');
+    run(`__zpAntes661=zPergunta; __zaAntes661=zAlertao; __za657=[]; __zp657=[]; __mm660=[]; __au657=[]; __pendura657='vagas-pedidos/2026-10-16'; __pend657=[];`);
+    run(`__qaP1=vagasMudarAutorizar('2026-10-16', '${K661}');`); await espera657(); await espera657();
+    const pend = run('__pend657.length');
+    await run(`vagasAutorizar('2026-10-15', '${KB661}')`); await espera657(); await espera657();
+    const zB = autorizados661(); aoFecharAutorizado661();
+    const mmB = J630('__mm660'), audB = aud660('reposicao-remarcada').length;
+    run(`__pendura657=null; __pend657.forEach(function(x){ x.ok(); }); __za657=[]; __mm660=[];`); for (let i = 0; i < 4; i++) await espera657();
+    const zQ = autorizados661(); aoFecharAutorizado661();
+    const mmQ = J630('__mm660');
+    igual([pend > 0, zB.length, zB[0].some((x) => /Quindim/.test(x)), mmB.length, mmB[0].t, /Bolota/.test(mmB[0].x) && !/Quindim/.test(mmB[0].x), audB],
+      [true, 1, false, 1, '✅ Reposição marcada', true, 0]);
+    igual([zQ.length, zQ[0][zQ[0].length - 1], mmQ.length, mmQ[0].t, aud660('reposicao-remarcada').length, lanc660()['fa-2026-10-06'].volta, run('zPergunta===__zpAntes661'), run('zAlertao===__zaAntes661')],
+      [1, 'O dia 15/10/2026 ficou livre: a reposição de Quindim mudou para 16/10/2026, com a mesma falta.', 1, 'Dia de repor mudado', 1, '2026-10-16', true, true]);
+  } finally { run('__pendura657=null;'); await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-03 G2 — dois toques no «Autorizar» do mesmo pedido do «mudar o dia»: o 2º recebe «Ainda estou autorizando…», a pergunta tem a linha uma vez, o rastro uma vez, e nada fica pendurado para o encaixe seguinte', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661(), 'fa-2026-10-01': CR660('2026-10-01') });
+    await pedirMudar661('2026-10-15', '2026-10-16');
+    pedBolota661();
+    papel657('gestao', 'Gestora Teste');
+    run(`__zpAntes661=zPergunta; __zaAntes661=zAlertao; __za657=[]; __zp657=[]; __mm660=[]; __au657=[]; __al657=[];`);
+    run(`__qaP1=vagasMudarAutorizar('2026-10-16', '${K661}'); __qaP2=vagasMudarAutorizar('2026-10-16', '${K661}');`);
+    for (let i = 0; i < 6; i++) await espera657();
+    igual([zp661().length, zp661()[0][1].filter((x) => /MUDANÇA/.test(x)).length, aud660('reposicao-remarcada').length, al661(), lanc660()['fa-2026-10-06'].volta,
+      run('zPergunta===__zpAntes661'), run('zAlertao===__zaAntes661'), run('VAGAS_MUDAR_ANDANDO')],
+      [1, 1, 1, ['Ainda estou autorizando o pedido de Quindim em 16/10/2026 (a mudança do dia de repor). Espere a confirmação aparecer (se ela não aparecer, feche e abra o app de novo). Nada foi autorizado agora.'],
+        '2026-10-16', true, true, '']);
+    run(`__za657=[];`);
+    await run(`vagasAutorizar('2026-10-15', '${KB661}')`); await espera657(); await espera657();
+    const zB = autorizados661();
+    igual([zB.length, zB[0].some((x) => /Quindim/.test(x))], [1, false]);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-02 G3 / r10 — dentro do invólucro: «Não autorizar», a reserva recusada pelo banco e a pergunta que estoura — nada é gravado, a pergunta e a confirmação de sempre voltam ao lugar e a trava se solta', async () => {
+  arma661();
+  try {
+    semear660({ 'fa-2026-10-06': CR15_661() });
+    await pedirMudar661('2026-10-15', '2026-10-16');
+    papel657('gestao', 'Gestora Teste');
+    const volta = () => J630('[zPergunta===__zpAntes661, zAlertao===__zaAntes661, VAGAS_MUDAR_ANDANDO]');
+    // (a) «Não autorizar»
+    run(`__zpAntes661=zPergunta; __zaAntes661=zAlertao; __zpq657=[false]; __esc657=[];`);
+    await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657();
+    igual([volta(), J630('__esc657').length, pedDb661('2026-10-16').status, lanc660()['fa-2026-10-06'].volta], [[true, true, ''], 0, 'pedido', '2026-10-15']);
+    // (b) a reserva recusada pelo banco
+    run(`__recusa657='vagas-pedidos'; __al657=[];`);
+    try { await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); } finally { run('__recusa657=null;'); }
+    igual([volta(), lanc660()['fa-2026-10-06'].volta, al661().length], [[true, true, ''], '2026-10-15', 1]);
+    // (c) a pergunta de sempre estoura (erro de tela): o erro sobe, nada é gravado, tudo volta ao lugar
+    run(`__zpOk661=zPergunta; zPergunta=function(){ throw new Error('tela quebrada'); }; __zpAntes661=zPergunta;`);
+    let erro = '';
+    try { await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); } catch (e) { erro = e.message; }
+    await espera657();
+    const r = [volta(), erro, lanc660()['fa-2026-10-06'].volta];
+    run('zPergunta=__zpOk661;');
+    igual(r, [[true, true, ''], 'tela quebrada', '2026-10-15']);
+  } finally { run('__recusa657=null;'); await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-05 r05 — o refeito de uma autorização do «mudar o dia» que caiu no meio (o dia já mudou, o «autorizado» não gravou) vai direto ao «Autorizar» de sempre, que só fecha o pedido: o invólucro não o barra como «remarcada»', async () => {
+  arma661();
+  try {
+    const Tx = T661(9, 9, 45), AUTx = { quem: 'Gestora Teste', ts: Tx };
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: '2026-10-16', prazo24h: '2026-10-16', volta_por: 'Gestora Teste', volta_ts: Tx, autorizacao: AUTx,
+      volta_desmarcada: { dia: '2026-10-15', quem: 'Gestora Teste', ts: Tx, motivo: 'remarcada para 16/10/2026' } }) });
+    vagas661('2026-10-16', 5);
+    poePed661('2026-10-16', ped661('2026-10-16', { status: 'autorizando', autorizando: { quem: 'Gestora Teste', ts: run('vagasAgora()'), id: 'r5' },
+      payload: { credito_id: 'fa-2026-10-06', data: '2026-10-06', volta: '2026-10-16', mudar_de: { dia: '2026-10-15', credito_id: 'fa-2026-10-06' } } }));
+    papel657('gestao', 'Gestora Teste'); run(`__pt661='Gestora Teste';`);
+    ctx.__r5aut = AUTx;
+    run(`VAGAS_LANCADOS[vagasLancadoChave('2026-10-16', '${K661}')]={marca:{id:'r5'}, aut:__r5aut, cid:'fa-2026-10-06', incerto:true, ped:vagasPedidoMarca(VAGAS_PEDIDOS['2026-10-16']['${K661}'])};
+      __al657=[]; __zp657=[]; __za657=[];`);
+    await run(`vagasMudarAutorizar('2026-10-16', '${K661}')`); await espera657(); await espera657();
+    const d = pedDb661('2026-10-16');
+    igual([d.status, d.autorizado_ts, al661(), zp661().length, lanc660()['fa-2026-10-06'].volta], ['autorizado', Tx, [], 0, '2026-10-16']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-05 r07 — «Desautorizar» com a releitura do pedido falhando (sem rede) depois da pergunta: nada sai, e a tela diz', async () => {
+  arma661();
+  try {
+    poePed661('2026-10-14', pedAv661('2026-10-14')); poe661('daycare/dashboard/2026-10-14/avulso/L1', L1_661);
+    run(`__el661=enganoLer; enganoLer=function(c){ return /vagas-pedidos/.test(String(c))?Promise.reject(new Error('sem rede')):__el661(c); }; __al657=[];`);
+    try { run(`__p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657(); } finally { run('enganoLer=__el661;'); }
+    igual([al661(), run('CORR_ATUAL?CORR_ATUAL.passo:null'), !!J630(`__get657('daycare/dashboard/2026-10-14/avulso/L1')`), pedDb661('2026-10-14').status],
+      [['Não consegui conferir agora o pedido de Quindim em 14/10/2026. Nada foi mudado: tente de novo em instantes.'], null, true, 'autorizado']);
+  } finally { await fim661(); }
+});
+
+provaAsync('6.61 QA661-R2-05 r01/r02 — o 2º toque só usa a memória do toque anterior se ela é da MESMA autorização; e a diária desta autorização é reconhecida por quem E quando autorizou', async () => {
+  arma661();
+  try {
+    // r01: autorizado de novo (outra hora), sem diária lançada; a memória velha (outra autorização) não vale
+    poePed661('2026-10-14', pedAv661('2026-10-14', { autorizado_ts: T661(9, 9, 50) }));
+    run(`VAGAS_DESFEITOS[vagasLancadoChave('2026-10-14', '${K661}')]={ts:1, oque:'avulso', marca:'autorizado|${T661(9, 9, 0)}'}; __zp657=[];`);
+    run(`__p661=vagasDesautorizarAbrir('2026-10-14', '${K661}');`); await espera657(); await espera657();
+    igual(zp661()[0][1][0], 'O encaixe já não está lá: só o pedido fecha.');
+    igual((await assina660(SENHA657, MOTG661))[0], 'pronto');
+    igual(pedDb661('2026-10-14').desautorizado.oque_saiu, 'nada');
+    await fecha660();
+    // r02: a diária com a mesma hora, mas autorizada por outra pessoa, não é desta autorização
+    poePed661('2026-10-15', pedAv661('2026-10-15'));
+    poe661('daycare/dashboard/2026-10-15/avulso/L3', Object.assign({}, L1_661, { det: { valor_cent: 9700, matriculado: true, autorizacao: { quem: 'Outra Pessoa Teste', ts: AUT661.ts } } }));
+    run(`__zp657=[]; __p661=vagasDesautorizarAbrir('2026-10-15', '${K661}');`); await espera657(); await espera657();
+    igual(zp661()[0][1][0], 'A diária avulsa de Quindim que está nos Lançamentos do dia 15/10 não foi lançada por esta autorização: ela fica como está (para tirá-la, use os Lançamentos do dia). Só o pedido fecha.');
+  } finally { await fim661(); }
+});
+}
 }
 // ------------------------------------------------ o fim
 fila.then(() => {
