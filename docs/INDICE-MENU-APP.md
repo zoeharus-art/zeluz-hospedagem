@@ -2,6 +2,45 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 10/out/2026 (v 2026-10-09-19) — Vermífugo: a 2ª dose com 15 ou 21 dias, a série nova que a ficha não deixava começar e a tela que mostrava a data velha (caso Romeu, Story 6.65)
+
+> Adriana, 10/out/2026 (quadro de pedidos, linha 88): *"Dá a primeira dose hoje, atualiza e vai para 21 dias a segunda dose. Ou 15, depende do que o veterinário recomendar ... depois da última dose, então 21 ou 15 dias depois, vai renovar com 4 meses ... Ou, se o vermífugo é dose única: toma hoje e repete com 4 meses. Preciso dessa correção porque não está dando para fazer lá."* Nenhuma tela nova no menu: a escolha entra nas três portas que já gravam vermífugo (o painel rápido, a ficha e o «Lance aqui mesmo»). Ficha sem a escolha continua com 21 dias, como sempre; nada é gravado nas fichas antigas.
+
+### (CA) Vencimentos, Hoje na Zêluz e Prevenção › chip «Vermífugo» (o painel rápido)
+
+| Antes | Agora |
+|---|---|
+| «2 doses (repete em 21 dias)»: não existia 15 | «Dose única» e «2 doses»; com «2 doses» marcado aparece **«2ª dose com: 15 dias \| 21 dias»** (botões de 44 px), marcado pelo que a ficha diz (sem escolha na ficha, 21). A dica: «Duas doses: a 2ª vem 15 ou 21 dias depois da 1ª, o que o veterinário indicar, e o próximo, 4 meses depois da 2ª» |
+| — | «Feito hoje» com 15 dias em 10/10: a 2ª fica para **25/10** e o próximo vermífugo para **22/02/2027** (com 21: 31/10 e 28/02/2027). A escolha vai para a ficha **só quando muda** o que a ficha dizia, e passa para a série seguinte |
+| O verde «em dia até …» aparecia com o chip ainda na data antiga | **A lista já se redesenha com a data nova**, logo depois de gravar (vale para todo item: vacina, carrapaticida, coleira, vermífugo, exame de fezes) |
+
+### (CB) Cadastro de Peludinhos › FILHOt › Prevenção › Vermifugação (a ficha)
+
+| Antes | Agora |
+|---|---|
+| Com «2ª dose dada em» da série anterior preenchida, a 1ª dose nova era **recusada** («Essa data não faz sentido») ou gravava um próximo errado (quatro dias depois da 1ª) | A 1ª dose nova **começa a série nova**: a 2ª da série anterior sai sozinha e o próximo é contado da 2ª prevista. A 2ª desta mesma série (igual ou depois da 1ª) fica |
+| «2ª dose prevista (21 dias depois)», só texto | **«2ª dose com: 15 dias \| 21 dias»** e «2ª dose prevista (15 dias depois) 25/10/2026». Trocar 21 por 15 antes da 2ª refaz a conta (e avisa, se o próximo tinha sido digitado à mão); depois da 2ª dada, a troca vale para a série seguinte e não mexe no próximo. Tocar no que já está marcado não muda nada |
+| «2ª dose dada em» aceitava data no futuro (até 2035) e antes da 1ª: quem «programava» o 25/10 apagava a cobrança | **Recusado**, com a frase: «A 2ª dose (25/10/2026) está no futuro. Preencha «2ª dose dada em» só depois de a dose ser dada, com a data real.» ou «A 2ª dose (05/10/2026) ficou antes da 1ª (10/10/2026).» Nada é gravado e o que foi digitado fica na tela |
+| Depois da 2ª dada, continuava «2ª dose prevista 31/10/2026» | **«2ª dose dada em 25/10/2026»**, e «Pela conta: 22/02/2027 · 4 meses após a 2ª dose» |
+| «✓ Salvo» ao lado das datas antigas | A ficha **já mostra as datas novas** logo depois do «Salvar», em todos os blocos da Prevenção. Se o banco recusar a gravação, a tela e este aparelho voltam ao que está gravado no sistema (também a escolha de 15 ou 21 dias e a 2ª dose digitada) e aparece o aviso de falha de sempre. Nesse caso, o «✓ Salvo» do bloco e o verde do painel ainda aparecem: corrigir isso é da próxima entrega (Story 6.63) |
+
+### (CC) Prevenção › toque no nome › «Lance aqui mesmo»
+
+| Antes | Agora |
+|---|---|
+| A linha «Vermífugo» contava 4 meses da 1ª dose mesmo com 2 doses, e a 2ª da série anterior ficava | A linha diz **como está na ficha** («2 doses, a 2ª 15 dias depois da 1ª» ou «Dose única»); o «Vale até» sai da conta das 2 doses (22/02/2027 com 15 dias), e a 2ª da série anterior sai. Uma data escrita por cima continua valendo |
+| A linha «Vermífugo — 2ª dose» mostrava sempre «sem data», gravava num campo que nada lia e não mudava o próximo | Mostra a 2ª prevista pela conta; o lugar do «Vale até» virou **«Próximo vermífugo»**, só de leitura, com a data que o Salvar vai gravar. Salvar a 2ª grava a data real e o próximo 4 meses depois dela; 2ª antes da 1ª é recusada |
+| A linha da 2ª aparecia também em dose única | Continua na tela, mas diz **«Esta ficha está em dose única: não há 2ª dose.»** (ou «Registre primeiro a 1ª dose.»), e o Salvar dela não grava nada |
+
+### (CD) Configurações › Mensagens prontas e a Linha do tempo
+
+- O nome da mensagem passa a «Vermífugo — a 2ª dose (15 ou 21 dias depois da 1ª)». **O texto da mensagem ao tutor não mudou** (é da Adriana): o «{quando}» continua sendo o dia da visita.
+- No rastro da ficha (o antes e o depois), os campos novos saem em português: «Vermífugo — dias até a 2ª dose», «Vermífugo — quantas doses» e «Vermífugo — 2ª dose (data da conta)».
+
+- **Não mudou:** a dose pelo peso da 6.59, o exame de fezes («vale o mais recente»), as permissões (a Veterinária continua só vendo), o «Vence em» digitado à mão, os 4 meses (120 dias), as regras do banco e a área protegida do check-in. O painel continua limpando a 2ª dose em toda 1ª dose gravada por ele.
+- **Decisões aplicadas pela recomendação (podem mudar):** V-P1 (quem escolhe 15 ou 21: quem grava a 1ª dose — Consultora de Bem-Estar, Supervisão, Diretoria e Gestão), V-P2 («4 meses» continuam 120 dias), V-P3 (só 15 e 21; ficha sem escolha vale 21).
+- **Para a equipe:** o caminho provisório da story (marcar 21 mesmo quando o veterinário disse 15, apagar a 2ª antiga antes de salvar) deixa de ser necessário depois da publicação.
+
 ## O que mudou em 10/out/2026 (v 2026-10-09-18) — Encaixe e troca antiga: retirar, desautorizar e reabrir o pedido; e o dia de repor mudado num passo (S4 da revisão tela por tela, parte 2)
 
 > Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) nos pedidos de encaixe, na Lista de troca e na janela «Marcar reposição». Ela não cria tela nova no menu. Regra de ouro: nada é apagado (o pedido decidido fica na lista até o dia passar, com quem, quando e o motivo), uma vaga não é dada duas vezes nem perdida, e a conta do saldo não muda uma letra.
@@ -1623,8 +1662,8 @@ Cartão marcado "atualizado" antes desta versão e com a ficha ainda devendo **v
 
 ### (D) Vermífugo no quadro rápido (sem abrir a ficha)
 
-- **Dose única** ou **2 doses (repete em 21 dias)**, escolhido na hora de gravar. Com 2 doses:
-  - a 2ª fica prevista em 21 dias;
+- **Dose única** ou **2 doses (repete em 15 ou 21 dias, o que o veterinário indicar)**, escolhido na hora de gravar. Com 2 doses:
+  - a 2ª fica prevista em 15 ou 21 dias, o que o veterinário indicar;
   - o próximo vermífugo vem 4 meses depois da 2ª.
 - Gravar a **2ª dose** recalcula o próximo vermífugo **a partir dela**. Antes, a data ia para um campo que a conta não lia.
   - 2ª dose antes da 1ª é recusada.

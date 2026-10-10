@@ -515,7 +515,7 @@ async function dispensarCartazes(page, quantos) {
       ['Mensagens prontas', '{tutor}', '{ofilhot}', '{dofilhot}', '{quando}', '{vacina}', '{item}',
         '{valor_escova}', '{fecho}', 'Vacina — quando é preciso marcar horário',
         'Vacina — quando ele vem num dia de atendimento', 'Vermífugo, carrapaticida e coleira',
-        'Vermífugo — a 2ª dose (21 dias depois da 1ª)', 'Troca de escova de dentes',
+        'Vermífugo — a 2ª dose (15 ou 21 dias depois da 1ª)', 'Troca de escova de dentes',
         'O fecho da autorização', 'A cobrança — quando o tutor não responde',
         'Entrar na lista com quantos dias de folga', 'Cobrar resposta depois de (horas)',
         'Padrões do lançamento automático', 'Carrapaticida — quanto lançar',

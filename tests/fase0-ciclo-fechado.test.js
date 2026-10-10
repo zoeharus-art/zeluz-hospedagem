@@ -39104,6 +39104,1709 @@ provaAsync('6.61 QA661-R2-05 r01/r02 — o 2º toque só usa a memória do toque
 });
 }
 }
+{
+// ================================================================== 6.65 — vermífugo: a 2ª dose com 15 ou 21 dias e a série nova (caso Romeu)
+console.log('\n6.65 — vermífugo: a 2ª dose com 15 ou 21 dias, a série nova que a ficha não deixava começar e a tela que mostrava a data velha (Adriana, 10/out/2026)');
+// Tudo inventado: o FILHOt «Bento», da tutora «Ana Teste», com a ficha como a do Romeu. Relógio fixo: sábado, 10/10/2026
+// (zHojeISO). O banco de mentira (setPelExtra) anota cada patch e o aplica na cópia do cadastro em memória — menos na prova 15,
+// que usa o setPelExtra e o pelExtra de verdade sobre o banco de mentira da 6.57 (ARMA657), sem o ouvinte do cadastro.
+// Todas em fila (provaAsync): rodam depois das provas antigas e devolvem cada função trocada.
+const HOJE665 = '2026-10-10';
+// A série ANTERIOR, de 2 doses, completa e vencida: 1ª 20/05, 2ª 10/06, o próximo venceu em 08/10 (a ficha do Romeu, inventada).
+const ROMEU665 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+const arma665 = (ex, hoje) => {
+  ctx.__ex665 = JSON.parse(JSON.stringify(ex || {})); ctx.__hj665 = hoje || HOJE665;
+  run(`__bk665={P:PELUDINHOS, pcc:pelCadCache, sp:setPelExtra, zh:zHojeISO, za:zAlertao, ze:zEscolha, ge:document.getElementById, au:audit,
+      st:setTimeout, pr:pbRender, rp:renderPrevencao, vr:vencRender, hr:hojeRender, pa:pelAtual, pp:PB_PEND, ps:PB_SALVO, al:alert,
+      pod:prevCorrigePode, fc:prevCorrigeFecharConversa, ok:PREV_CORRIGE_OK, ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM,
+      ra:PREV_RECALC_AVISO, ro:document.body.dataset.role};
+    __g665=[]; __za665=[]; __ze665=[]; __al665=[]; __c665={}; __rd665=[];
+    __bento={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão'}; PELUDINHOS=[__bento];
+    pelCadCache={}; pelCadCache[pelKey(__bento)]=JSON.parse(JSON.stringify(__ex665));
+    setPelExtra=function(p, patch){ __g665.push(JSON.parse(JSON.stringify(patch))); Object.assign(pelCadCache[pelKey(p)], JSON.parse(JSON.stringify(patch))); return Promise.resolve({ok:true}); };
+    zHojeISO=function(){ return __hj665; };
+    zAlertao=function(t, l){ __za665.push([t, l]); }; zEscolha=function(t, l, ops){ __ze665.push([t, l, ops]); }; alert=function(m){ __al665.push(String(m)); };
+    document.getElementById=function(id){ return Object.prototype.hasOwnProperty.call(__c665, id)?__c665[id]:null; };
+    audit=function(){}; setTimeout=function(){ return 0; }; pbRender=function(b){ __rd665.push(b); }; renderPrevencao=function(){};
+    vencRender=function(){}; hojeRender=function(){}; prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){};
+    PREV_CORRIGE_OK={}; PREV_RECALC_AVISO={}; pelAtual=__bento; PB_PEND={}; PB_SALVO={}; document.body.dataset.role='gestao';`);
+};
+const solta665 = () => run(`PELUDINHOS=__bk665.P; pelCadCache=__bk665.pcc; setPelExtra=__bk665.sp; zHojeISO=__bk665.zh; zAlertao=__bk665.za;
+  zEscolha=__bk665.ze; document.getElementById=__bk665.ge; audit=__bk665.au; setTimeout=__bk665.st; pbRender=__bk665.pr;
+  renderPrevencao=__bk665.rp; vencRender=__bk665.vr; hojeRender=__bk665.hr; pelAtual=__bk665.pa; PB_PEND=__bk665.pp; PB_SALVO=__bk665.ps;
+  alert=__bk665.al; prevCorrigePode=__bk665.pod; prevCorrigeFecharConversa=__bk665.fc; PREV_CORRIGE_OK=__bk665.ok;
+  PREV_CORRIGE_ABERTO=__bk665.ab; PREV_CORRIGE_ORIGEM=__bk665.ori; PREV_RECALC_AVISO=__bk665.ra; document.body.dataset.role=__bk665.ro;`);
+// cada caso com a ficha dele (arma), e tudo volta no fim, mesmo com a prova falhando no meio
+const com665 = (ex, hoje, fn) => { arma665(ex, hoje); try { return fn(); } finally { solta665(); } };
+const G665 = () => J630('__g665');
+const ULT665 = () => { const g = G665(); return g.length ? g[g.length - 1] : null; };
+const ZA665 = () => J630('__za665');
+const K665 = () => run('pelKey(__bento)');                    // a chave da ficha e da Prevenção
+const DC665 = () => run('dcKey(__bento.n, __bento.tutor)');    // a chave dos Vencimentos e da Hoje na Zêluz
+// PAINEL RÁPIDO: «Como é este vermífugo?» (e = '1' dose única, '2' duas doses), «2ª dose com» (i = '15' ou '21'),
+// e «Feito hoje» (dt = 'hoje') ou «Feito em…» + «Gravar esta data». Sem e/i, o painel montado sem a escolha.
+const painel665 = (k, dt, marcas) => {
+  const ch = DC665(), id = ch + '_' + k;
+  ctx.__m665 = marcas || {}; ctx.__id665 = id;
+  run(`(function(){ var m=__m665, id=__id665;
+    if(m.e){ __c665['prevCorrE1_'+id]={checked:m.e==='1'}; __c665['prevCorrE2_'+id]={checked:m.e==='2'}; }
+    if(m.i){ __c665['prevCorrI15_'+id]={checked:m.i==='15'}; __c665['prevCorrI21_'+id]={checked:m.i==='21'}; } })()`);
+  if (dt === 'hoje') run(`prevCorrigeFeitoHoje(${JSON.stringify(ch)}, ${JSON.stringify(k)}, 'venc')`);
+  else { run(`__c665['prevCorrT_'+__id665]={value:${JSON.stringify(dt)}};`); run(`prevCorrigeFeitoEm(${JSON.stringify(ch)}, ${JSON.stringify(k)}, 'venc')`); }
+};
+// FICHA › Prevenção › Vermifugação: cada campo entra no rascunho (pbSet) e «Salvar vermífugo» grava (pbSalvar)
+const ficha665 = (campos) => { ctx.__fc665 = campos; run(`Object.keys(__fc665).forEach(function(c){ var o={}; o[c]=__fc665[c]; pbSet('verm', o); }); pbSalvar('verm');`); };
+// PREVENÇÃO › toque no nome › «Lance aqui mesmo»: o «Feito em» (com o recálculo do onchange), o que a pessoa escreveu
+// por cima no campo da validade (opcional) e o «Salvar». Devolve o que o campo da validade mostrava antes do Salvar.
+const lance665 = (k, dt, porCima) => {
+  ctx.__lk665 = k; ctx.__ld665 = dt; ctx.__lv665 = (porCima === undefined) ? null : porCima;
+  run(`(function(){ var ch=pelKey(__bento), ex=pelExtra(__bento);
+    __c665['prevT_'+ch+'_'+__lk665]={value:__ld665}; __c665['prevQ_'+ch+'_'+__lk665]={value:''}; __c665['prevN_'+ch+'_'+__lk665]={value:''};
+    __c665['prevP_'+ch+'_'+__lk665]={value:ex[__lk665]||''};
+    prevRecalcular(ch, __lk665);
+    if(__lv665!==null) __c665['prevP_'+ch+'_'+__lk665].value=__lv665;
+    __vale665=__c665['prevP_'+ch+'_'+__lk665].value;
+    prevLancar(ch, __lk665); })()`);
+  return run('__vale665');
+};
+const txt665 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»').replace(/\s+/g, ' ').trim();
+// O pedaço do «Lance aqui mesmo» de um item (a linha que tem o «Feito em» dele)
+const linha665 = (h, k) => h.split('<div style="border-top:1px solid var(--line);padding:9px 0').filter((s) => s.indexOf('id="prevT_') >= 0 && s.indexOf('_' + k + '"') >= 0 && s.indexOf('_' + k + '" value') >= 0)[0] || '';
+
+provaAsync('6.65 P01 (AC1.1, AC1.7) — vermIntervalo: 15 só com 15 (número ou texto); sem o campo, com 21, 30, 45, vazio, nulo ou texto: 21 (o padrão); o próximo continua 120 dias', async () => {
+  const casos = [[{}, 21], [{ verm_dose2_dias: '15' }, 15], [{ verm_dose2_dias: 15 }, 15], [{ verm_dose2_dias: 30 }, 21], [{ verm_dose2_dias: 21 }, 21],
+    [{ verm_dose2_dias: '21' }, 21], [{ verm_dose2_dias: null }, 21], [{ verm_dose2_dias: 45 }, 21], [{ verm_dose2_dias: '' }, 21],
+    [{ verm_dose2_dias: 'quinze' }, 21], [{ verm_dose2_dias: 0 }, 21], [{ verm_dose2_dias: 14 }, 21], [{ verm_dose2_dias: 16 }, 21], [null, 21]];
+  igual(casos.map(([ex]) => run(`vermIntervalo(${JSON.stringify(ex)})`)), casos.map((c) => c[1]));
+  igual([run('vermIntervalo()'), run('VERMIF_2A_DOSE'), run('VERMIF_PROX')], [21, 21, 120]);
+});
+provaAsync('6.65 P02 (AC2.2, C1) — painel rápido, «2 doses» e «15 dias», «Feito hoje» em 10/10/2026 numa ficha sem o campo: 2ª em 25/10, próximo 22/02/2027, o campo 15 gravado e a 2ª da série antiga limpa; o verde diz 22/02/2027', async () => {
+  com665(ROMEU665, HOJE665, () => {
+    painel665('verm_p', 'hoje', { e: '2', i: '15' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_dias: 15, verm_dose2_t: '', verm_2a: '2026-10-25', verm_p: '2027-02-22' }]);
+    const ok = J630('PREV_CORRIGE_OK');
+    igual(Object.keys(ok).map((c) => ok[c].texto), ['Bento — Vermífugo em dia até 22/02/2027']);
+    igual(ZA665(), []);
+  });
+  // e pelo «Feito em…» (a mesma porta), com a ficha já em 15: a escolha 15 que a ficha diz não é gravada de novo
+  com665(Object.assign({}, ROMEU665, { verm_dose2_dias: 15 }), HOJE665, () => {
+    painel665('verm_p', '2026-10-09', { e: '2', i: '15' });
+    igual(ULT665(), { verm_t: '2026-10-09', verm_dose2_t: '', verm_2a: '2026-10-24', verm_p: '2027-02-21' });
+  });
+});
+provaAsync('6.65 P03 (AC1, AC10) — a irmã da prova do painel com 15: 1ª em 01/09 → 2ª 16/09, próximo 14/01/2027; vermDose2Prevista com 15; Vencimentos (dia-alvo 19/10, margem 7) traz a 2ª «vence em 25/10» com 15 e nada com 21', async () => {
+  com665({ verm_dose2_dias: 15 }, '2026-09-25', () => {
+    painel665('verm_p', '2026-09-01', { e: '2' });     // sem a escolha na tela: vale a da ficha (AC2.4)
+    igual(ULT665(), { verm_t: '2026-09-01', verm_doses: '2 doses', verm_dose2_t: '', verm_2a: '2026-09-16', verm_p: '2027-01-14' });
+  });
+  igual(run("vermDose2Prevista({verm_doses:'2 doses', verm_t:'2026-09-01', verm_dose2_dias:15})"), '2026-09-16');
+  igual(run("vermDose2Prevista({verm_doses:'2 doses', verm_t:'2026-09-01', verm_dose2_dias:'15'})"), '2026-09-16');
+  igual(run("vermDose2Prevista({verm_doses:'2 doses', verm_t:'2026-09-01'})"), '2026-09-22', 'sem o campo: 21, como hoje');
+  igual(run("prevValor({verm_doses:'2 doses', verm_t:'2026-10-10', verm_dose2_dias:15}, PREV_ITENS.filter(function(x){ return x.k==='verm_dose2_p'; })[0])"), '2026-10-25');
+  const it15 = J630("vencItensDe({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-10-10', verm_2a:'2026-10-25', verm_p:'2027-02-22'}, '2026-10-19', 7, '2026-10-10')");
+  igual(it15.map((x) => [x.k, x.vence, run(`vencQuantoTexto(${JSON.stringify(x)}, '2026-10-10')`)]), [['verm_dose2_p', '2026-10-25', 'vence em ' + run("vencData('2026-10-25', '2026-10-10')")]]);
+  assert.ok(/25\/10/.test(run("vencData('2026-10-25', '2026-10-10')")), 'a data da 2ª na frase');
+  igual(J630("vencItensDe({verm_doses:'2 doses', verm_t:'2026-10-10', verm_2a:'2026-10-31', verm_p:'2027-02-28'}, '2026-10-19', 7, '2026-10-10')"), [], 'com 21 (sem o campo), 31/10 não entra');
+});
+provaAsync('6.65 P04 (AC3.1, C4, D1) — a ficha começa a série nova com a série antiga VENCIDA (2ª em 29/05): grava sem aviso, a 2ª antiga limpa, 2ª prevista 31/10 e próximo 28/02/2027 (com 15: 25/10 e 22/02/2027)', async () => {
+  const ANT = { verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_p: '2026-09-26' };
+  com665(ANT, HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10' });
+    igual([ZA665(), J630('__ze665.length')], [[], 0], 'nenhum aviso');
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' }]);
+    igual([J630('PB_PEND.verm || null'), run('PB_SALVO.verm')], [null, true]);
+  });
+  com665(Object.assign({}, ANT, { verm_dose2_dias: 15 }), HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-25', verm_p: '2027-02-22' }]);
+  });
+});
+provaAsync('6.65 P05 (AC3.2, C5, D1) — a série antiga AINDA NÃO VENCIDA (2ª em 16/06, próximo 14/10): a 1ª nova em 10/10 grava o próximo 28/02/2027, nunca 14/10/2026', async () => {
+  com665({ verm_doses: '2 doses', verm_t: '2026-05-26', verm_dose2_t: '2026-06-16', verm_p: '2026-10-14' }, HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10' });
+    igual(ZA665(), []);
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' }]);
+  });
+});
+provaAsync('6.65 P06 (AC3.3) — «Corrigir para»: a conta do pbItensParaChecagem ignora a 2ª antiga (28/02/2027; com 15, 22/02/2027); e o toque em «Corrigir para 10/10/2026» grava a série nova inteira', async () => {
+  ctx.__x665 = { verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29' };
+  igual(run("pbItensParaChecagem('verm', __x665)[0].recalc('2026-10-10')"), '2027-02-28');
+  ctx.__x665.verm_dose2_dias = 15;
+  igual(run("pbItensParaChecagem('verm', __x665)[0].recalc('2026-10-10')"), '2027-02-22');
+  igual(run("pbItensParaChecagem('verm', {verm_doses:'2 doses', verm_t:'2026-10-10', verm_dose2_t:'2026-10-29'})[0].recalc('2026-10-10')"), '2027-02-26', 'a 2ª real manda');
+  // a 1ª digitada com o ano errado (10/10/2025): a 2ª de 29/05/2026 parece desta série, o próximo cai em 26/09/2026 e a trava pergunta
+  com665({ verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' }, HOJE665, () => {
+    ficha665({ verm_t: '2025-10-10' });
+    igual(G665(), [], 'nada antes da resposta');
+    const ops = run('__ze665[0][2].map(function(o){ return o.t; })');
+    igual(J630('__ze665[0][2].map(function(o){ return o.t; })'), ['Corrigir para 10/10/2026', 'Está certo, deixar em atraso'], String(ops));
+    run('__ze665[0][2][0].fn()');
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' }]);
+  });
+});
+provaAsync('6.65 P07 (AC6.1, C9, D2) — «Lance aqui mesmo», 1ª dose com 2 doses e 15 e a 2ª antiga de 29/05: «Vale até» 22/02/2027; grava a 1ª, a 2ª prevista 25/10, o próximo e limpa a 2ª antiga, sem verm_dose2_p; dose única: 1ª + 120; a data escrita por cima continua valendo', async () => {
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' }, HOJE665, () => {
+    igual(lance665('verm_p', '2026-10-10'), '2027-02-22');
+    igual(G665(), [{ verm_t: '2026-10-10', verm_p: '2027-02-22', verm_2a: '2026-10-25', verm_dose2_t: '' }]);
+    igual(ZA665(), []);
+  });
+  com665({ verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' }, HOJE665, () => {
+    igual(lance665('verm_p', '2026-10-10'), '2027-02-28', 'sem o campo: 21');
+    igual(ULT665(), { verm_t: '2026-10-10', verm_p: '2027-02-28', verm_2a: '2026-10-31', verm_dose2_t: '' });
+  });
+  com665({ verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29', verm_dose2_dias: 15 }, HOJE665, () => {
+    igual(lance665('verm_p', '2026-10-10'), '2027-02-07');
+    igual(ULT665(), { verm_t: '2026-10-10', verm_p: '2027-02-07', verm_2a: '', verm_dose2_t: '' });
+  });
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_p: '2026-09-26' }, HOJE665, () => {
+    lance665('verm_p', '2026-10-10', '2027-03-15');      // o veterinário pediu outra data: escrita por cima
+    igual(ULT665(), { verm_t: '2026-10-10', verm_p: '2027-03-15', verm_2a: '2026-10-25', verm_dose2_t: '' });
+  });
+});
+provaAsync('6.65 P08 (AC6.2, AC6.3, C10, D2) — «Lance aqui mesmo», a 2ª dose em 25/10 (1ª 10/10, 15 dias): grava a 2ª e o próximo 22/02/2027, derruba o «à mão», nunca verm_dose2_p; a 2ª antes da 1ª é recusada e nada é gravado', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  com665(Object.assign({}, S15, { verm_p: '2027-03-30', verm_p_manual: true }), '2026-10-26', () => {
+    igual(lance665('verm_dose2_p', '2026-10-25'), '2027-02-22', 'o «Próximo vermífugo» que o Salvar vai gravar');
+    igual(G665(), [{ verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22', verm_p_manual: '' }]);
+  });
+  com665(S15, '2026-10-26', () => {
+    lance665('verm_dose2_p', '2026-10-05');
+    igual(G665(), [], 'nada gravado');
+    igual(ZA665(), [['Essa data não faz sentido', ['A 2ª dose (05/10/2026) ficou antes da 1ª (10/10/2026).',
+      'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.']]]);
+  });
+});
+provaAsync('6.65 P09 (AC4, C11, D4) — ficha: a 2ª digitada no futuro (25/10, relógio 10/10) é recusada e o rascunho fica; a 2ª digitada antes da 1ª é recusada; a 2ª antiga que veio do banco é limpa, nunca recusada; apagar a 2ª continua permitido', async () => {
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  com665(S21, HOJE665, () => {
+    ficha665({ verm_dose2_t: '2026-10-25' });
+    igual(G665(), []);
+    igual(ZA665(), [['Essa data não faz sentido', ['A 2ª dose (25/10/2026) está no futuro. Preencha «2ª dose dada em» só depois de a dose ser dada, com a data real.']]]);
+    igual(J630('PB_PEND.verm'), { verm_dose2_t: '2026-10-25' }, 'o rascunho fica');
+  });
+  com665(S21, HOJE665, () => {
+    ficha665({ verm_dose2_t: '2026-10-05' });
+    igual(G665(), []);
+    igual(ZA665(), [['Essa data não faz sentido', ['A 2ª dose (05/10/2026) ficou antes da 1ª (10/10/2026).',
+      'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija a 1ª dose aqui mesmo.']]]);
+  });
+  // a 1ª nova e a 2ª digitadas juntas, a 2ª antes da 1ª nova: recusa
+  com665(ROMEU665, HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10', verm_dose2_t: '2026-06-10' });
+    igual([G665(), ZA665().length], [[], 1]);
+  });
+  // a 2ª antiga do banco (10/06) com a 1ª nova: limpa, sem recusa
+  com665(ROMEU665, HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10' });
+    igual([ZA665(), ULT665().verm_dose2_t, ULT665().verm_p], [[], '', '2027-02-28']);
+  });
+  // apagar a 2ª dada continua permitido (a cobrança volta)
+  com665(Object.assign({}, S21, { verm_dose2_t: '2026-10-10' }), HOJE665, () => {
+    ficha665({ verm_dose2_t: '' });
+    igual([ZA665(), ULT665().verm_dose2_t, ULT665().verm_2a, ULT665().verm_p], [[], '', '2026-10-31', '2027-02-28']);
+  });
+  // o campo «2ª dose dada em»: max igual a hoje e o mesmo onchange
+  const h = com665(S21, HOJE665, () => run('blocoVerm(pelExtra(__bento))'));
+  assert.ok(h.indexOf(`<label>2ª dose dada em</label><input type="date" class="cad-in" value="" onchange="pbSet('verm',{verm_dose2_t:this.value})" min="2015-01-01" max="2026-10-10"`) >= 0, txt665(h));
+});
+provaAsync('6.65 P10 (AC3.6, AC3.7, C12) — ficha: trocar 21 por 15 antes da 2ª refaz a 2ª e o próximo (25/10; 22/02/2027) e derruba o «à mão» com o aviso; depois da 2ª real, trocar o intervalo grava o intervalo e não mexe no próximo nem no «à mão»', async () => {
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  com665(S21, HOJE665, () => {
+    ficha665({ verm_dose2_dias: 15 });
+    igual(G665(), [{ verm_dose2_dias: 15, verm_2a: '2026-10-25', verm_p: '2027-02-22' }]);
+  });
+  com665(Object.assign({}, S21, { verm_p: '2027-03-15', verm_p_manual: true }), HOJE665, () => {
+    ficha665({ verm_dose2_dias: 15 });
+    igual(G665(), [{ verm_dose2_dias: 15, verm_2a: '2026-10-25', verm_p: '2027-02-22', verm_p_manual: '' }]);
+    igual(run('!!PREV_RECALC_AVISO.verm_p'), true, 'o aviso «A próxima foi recalculada pela última dose.»');
+  });
+  const REAL = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-03-30', verm_p_manual: true };
+  com665(REAL, '2026-10-26', () => {
+    ficha665({ verm_dose2_dias: 15 });
+    igual(G665(), [{ verm_dose2_dias: 15, verm_2a: '2026-10-25' }], 'o próximo e o «à mão» ficam');
+    igual(run('!!PREV_RECALC_AVISO.verm_p'), false);
+  });
+  com665(Object.assign({}, REAL, { verm_dose2_dias: 15, verm_p: '2027-02-22', verm_p_manual: false }), '2026-10-26', () => {
+    ficha665({ verm_dose2_dias: 21 });
+    const g = ULT665();
+    igual([g.verm_dose2_dias, g.verm_p === undefined || g.verm_p === '2027-02-22', 'verm_p_manual' in g], [21, true, false]);
+  });
+});
+provaAsync('6.65 P11 (C6, C7, C8) — a série de 15 dias: a 2ª vence em 25/10 e aparece vencida em 26/10 (ficha e Vencimentos); dada em 25/10 (ficha), o próximo é 22/02/2027; dada atrasada em 29/10 (painel e ficha), 26/02/2027', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  ctx.__s665 = S15;
+  com665(S15, '2026-10-25', () => {
+    igual(J630('prevPendencias(__s665).venc').map((x) => x.nome), [], 'no dia 25/10 ainda não venceu');
+  });
+  com665(S15, '2026-10-26', () => {
+    igual(J630('prevPendencias(__s665).venc').map((x) => [x.nome, x.data]), [['Vermífugo — 2ª dose', '2026-10-25']]);
+    igual(J630("vencItensDe(__s665, '2026-10-26', 7, '2026-10-26')").map((x) => [x.k, x.vence, x.atrasado]), [['verm_dose2_p', '2026-10-25', true]]);
+  });
+  ctx.__s665b = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  com665(ctx.__s665b, '2026-10-26', () => {
+    igual(J630('prevPendencias(__s665b).venc'), [], 'com 21 (sem o campo), nada vencido em 26/10');
+  });
+  com665(S15, '2026-10-29', () => {
+    painel665('verm_dose2_p', '2026-10-29', {});
+    igual(ULT665(), { verm_dose2_t: '2026-10-29', verm_2a: '2026-10-29', verm_p: '2027-02-26' });
+  });
+  com665(S15, '2026-10-29', () => {
+    ficha665({ verm_dose2_t: '2026-10-29' });
+    igual(ULT665(), { verm_dose2_t: '2026-10-29', verm_2a: '2026-10-29', verm_p: '2027-02-26' });
+  });
+  // (C6) a 2ª dada no dia, 25/10, registrada pela ficha na segunda, 26/10: o próximo é 22/02/2027
+  com665(S15, '2026-10-26', () => {
+    ficha665({ verm_dose2_t: '2026-10-25' });
+    igual([ZA665(), ULT665()], [[], { verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }]);
+  });
+});
+provaAsync('6.65 P12 (AC1.5, guarda) — «Dose única» ignora o intervalo e não o grava: «Não vai ter 2ª dose» do painel, a ficha que volta para dose única (com o 21 tocado antes) e o painel com «Dose única» e o 15 marcado; o campo que já estava na ficha fica', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  com665(S15, HOJE665, () => {
+    run(`prevCorrigeDoseUnica(${JSON.stringify(DC665())}, 'venc')`);
+    igual(G665(), [{ verm_doses: 'Dose única', verm_dose2_t: '', verm_2a: '', verm_p: '2027-02-07' }]);
+    igual(run('pelCadCache[pelKey(__bento)].verm_dose2_dias'), 15, 'o campo fica na ficha');
+  });
+  com665(S15, HOJE665, () => {
+    ficha665({ verm_dose2_dias: 21, verm_doses: 'Dose única' });
+    igual(G665(), [{ verm_doses: 'Dose única', verm_2a: '', verm_dose2_t: '', verm_p: '2027-02-07' }]);
+  });
+  com665(ROMEU665, HOJE665, () => {
+    painel665('verm_p', 'hoje', { e: '1', i: '15' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_doses: 'Dose única', verm_dose2_t: '', verm_2a: '', verm_p: '2027-02-07' }]);
+  });
+});
+provaAsync('6.65 P13 (AC1.3, AC3.8) — nunca em massa: abrir a ficha e os painéis não grava nada; salvar só o nome não grava o campo; tocar no 21 que já está marcado (ficha sem o campo, com o «Vence em» à mão) não muda nada', async () => {
+  com665({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HOJE665, () => {
+    run(`blocoVerm(pbEx('verm')); prevEdicaoHTML({p:__bento, nome:'Bento'}); prevCorrigeVermHTML('verm_p', pelExtra(__bento), 'x', 'x', 'venc');
+      prevCorrigeVermHTML('verm_dose2_p', pelExtra(__bento), 'x', 'x', 'venc');`);
+    igual(G665(), [], 'desenhar não grava');
+    ficha665({ verm_nome: 'Drontal Plus' });
+    const g = ULT665();
+    igual([g.verm_nome, 'verm_dose2_dias' in g], ['Drontal Plus', false]);
+  });
+  const MAO = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-03-15', verm_p_manual: true };
+  com665(MAO, HOJE665, () => {
+    ficha665({ verm_dose2_dias: 21 });
+    const g = G665();
+    assert.ok(g.every((x) => !('verm_dose2_dias' in x) && !('verm_p' in x) && !('verm_p_manual' in x)), JSON.stringify(g));
+    igual([J630('PB_PEND.verm || null'), run('pelCadCache[pelKey(__bento)].verm_p'), run('pelCadCache[pelKey(__bento)].verm_p_manual'), run('!!PREV_RECALC_AVISO.verm_p')],
+      [null, '2027-03-15', true, false]);
+  });
+  // o 15 tocado e depois o 21 de novo (a ficha sem o campo): o rascunho volta ao que a ficha diz
+  com665(MAO, HOJE665, () => {
+    run(`pbSet('verm',{verm_dose2_dias:15}); pbSet('verm',{verm_dose2_dias:21}); pbSalvar('verm');`);
+    assert.ok(G665().every((x) => !('verm_dose2_dias' in x) && !('verm_p_manual' in x)), JSON.stringify(G665()));
+  });
+});
+provaAsync('6.65 P14 (AC2.3, guarda) — painel com a ficha sem o campo e o 21 marcado: o patch não traz verm_dose2_dias (31/10; 28/02/2027); o 21 marcado numa ficha que estava em 15 grava 21', async () => {
+  com665(ROMEU665, HOJE665, () => {
+    painel665('verm_p', 'hoje', { e: '2', i: '21' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' }]);
+  });
+  com665(Object.assign({}, ROMEU665, { verm_dose2_dias: 15 }), HOJE665, () => {
+    painel665('verm_p', 'hoje', { e: '2', i: '21' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_dose2_dias: 21, verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' }]);
+  });
+});
+provaAsync('6.65 P15 (AC7, D3) — a tela que redesenha logo depois de gravar já mostra o gravado (vermífugo pela ficha; carrapaticida, 2ª dose, dose única, exame de fezes e «Vence em» pelo painel em Vencimentos), sem o ouvinte; o porteiro barrando não toca na cópia em memória; o banco recusando devolve a cópia ao que era e redesenha; ficha fora da cópia não nasce lá', async () => {
+  run(ARMA657);
+  run(`__bk665b={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, pod:prevCorrigePode, fc:prevCorrigeFecharConversa,
+      vf:vencFecharAssuntosPelaFicha, ok:PREV_CORRIGE_OK, ce:canEditPel, pp:PB_PEND, ps:PB_SALVO, pdp:podePapel};`);
+  try {
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO; __rd665=[]; __vr665=[];
+      __bento={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão', dias:['seg']}; PELUDINHOS=[__bento]; pelAtual=__bento; PB_PEND={}; PB_SALVO={};
+      pbRender=function(b){ __rd665.push(JSON.parse(JSON.stringify(pbEx(b)))); };
+      vencRender=function(){ __vr665.push(JSON.parse(JSON.stringify(pelExtra(__bento)))); }; hojeRender=vencRender; renderPrevencao=function(){};
+      prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){}; PREV_CORRIGE_OK={};`);
+    const K = run('pelKey(__bento)'), DC = run('dcKey(__bento.n, __bento.tutor)');
+    const FICHA = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29',
+      verm_2a: '2026-05-29', verm_p: '2026-09-26', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29',
+      fezes_t: '2025-12-01', fezes_p: '2026-03-31' };   // um exame antigo (o vermífugo, mais recente, é o que vale): na cópia em memória, o banco vence a cópia local
+    const semeia = () => { ctx.__f665 = FICHA; ctx.__k665 = K;
+      run(`__put657('daycare/cadastro/'+__k665, __f665); pelCadCache={}; pelCadCache[__k665]=__get657('daycare/cadastro/'+__k665); __ls657={}; __rd665=[]; __vr665=[]; __esc657=[];`); };
+    const cache = () => J630('pelCadCache[__k665]');
+    const ultR = () => { const r = J630('__rd665'); return r[r.length - 1] || {}; };
+    const ultV = () => { const r = J630('__vr665'); return r[r.length - 1] || {}; };
+    const ectoP = run("addDiasISO('2026-10-10', ECTO_DUR['Bravecto'])");
+    // A) a ficha: «Salvar vermífugo» e a tela redesenha na hora com a série nova
+    semeia();
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSalvar('verm');`);
+    let r = ultR();
+    igual([r.verm_t, r.verm_dose2_t, r.verm_2a, r.verm_p], ['2026-10-10', '', '2026-10-31', '2027-02-28'], 'a ficha redesenhada logo depois do Salvar');
+    await espera657();
+    igual([cache().verm_t, cache().verm_p, run(`__get657('daycare/cadastro/'+__k665).verm_p`)], ['2026-10-10', '2027-02-28', '2027-02-28']);
+    // B) um item que não é vermífugo: o carrapaticida pelo painel, na tela Vencimentos
+    semeia();
+    run(`__el657['prevCorrP_'+${JSON.stringify(DC)}+'_ecto_p']={value:'Bravecto'}; prevCorrigeGravarFeito(${JSON.stringify(DC)}, 'ecto_p', '2026-10-10', 'venc');`);
+    r = ultV();
+    igual([r.ecto_t, r.ecto_p], ['2026-10-10', ectoP], 'Vencimentos redesenhada com o carrapaticida novo');
+    await espera657();
+    // C) o porteiro barrou: a cópia em memória não muda e a tela mostra o que era
+    semeia();
+    run(`canEditPel=function(){ return false; }; podePapel=function(c, p){ return c==='editar-alergia' ? false : __bk665b.pdp(c, p); };`);
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSalvar('verm');`);
+    igual(cache(), FICHA, 'a cópia em memória intacta');
+    igual(ultR().verm_t, '2026-05-08');
+    await espera657();
+    run('canEditPel=__bk665b.ce; podePapel=__bk665b.pdp;');
+    // D) o banco recusou: na hora a tela mostrou o gravado; com a recusa, a cópia volta ao que era e a tela redesenha com ela
+    semeia();
+    run(`__recusa657='^daycare/cadastro/';`);
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSalvar('verm');`);
+    const n0 = J630('__rd665').length;
+    igual(J630('__rd665')[n0 - 1].verm_t, '2026-10-10', 'na hora, a tela já mostra o gravado');
+    await espera657();
+    igual(cache(), FICHA, 'a cópia em memória voltou ao que era');
+    const rs = J630('__rd665');
+    assert.ok(rs.length > n0, 'a tela redesenhou depois da recusa');
+    igual([rs[rs.length - 1].verm_t, rs[rs.length - 1].verm_p], ['2026-05-08', '2026-09-26']);
+    // 2ª rodada: o PRIMEIRO redesenho depois da recusa já mostra o que o banco tem (não espera a leitura da ficha no banco)
+    igual([rs[n0].verm_t, rs[n0].verm_p, rs[n0].verm_dose2_t, rs[n0].verm_2a], ['2026-05-08', '2026-09-26', '2026-05-29', '2026-05-29']);
+    semeia();
+    run(`__el657['prevCorrP_'+${JSON.stringify(DC)}+'_ecto_p']={value:'Bravecto'}; prevCorrigeGravarFeito(${JSON.stringify(DC)}, 'ecto_p', '2026-10-10', 'venc');`);
+    const v0 = J630('__vr665').length;
+    await espera657();
+    igual(cache(), FICHA, 'o painel também volta');
+    assert.ok(J630('__vr665').length > v0, 'Vencimentos redesenhou depois da recusa');
+    igual([ultV().ecto_t, ultV().ecto_p], ['2026-07-01', '2026-09-29']);
+    run(`__recusa657=null;`);
+    // E) as outras gravações do painel (a 2ª dose, «Não vai ter 2ª dose», o exame de fezes e o «Vence em» à mão) também
+    //    redesenham já com o gravado
+    const PAINEL = [
+      ['a 2ª dose', `prevCorrigeGravarFeito(${JSON.stringify(DC)}, 'verm_dose2_p', '2026-10-09', 'venc');`, (x) => [x.verm_dose2_t, x.verm_p], ['2026-10-09', '2027-02-06']],
+      ['«Não vai ter 2ª dose»', `prevCorrigeDoseUnica(${JSON.stringify(DC)}, 'venc');`, (x) => [x.verm_doses, x.verm_p], ['Dose única', '2026-09-05']],
+      ['o exame de fezes', `__el657['prevCorrF_'+${JSON.stringify(DC)}+'_verm_p']={value:'2026-10-08'}; prevCorrigeExameFezes(${JSON.stringify(DC)}, 'venc');`, (x) => [x.fezes_t, x.fezes_p], ['2026-10-08', '2027-02-05']],
+      ['o «Vence em» à mão', `__el657['prevCorrV_'+${JSON.stringify(DC)}+'_ecto_p']={value:'2026-12-20'}; prevCorrigeVenceEm(${JSON.stringify(DC)}, 'ecto_p', 'venc');`, (x) => [x.ecto_p, x.ecto_p_manual], ['2026-12-20', true]],
+    ];
+    for (const [nome, cod, pega, quer] of PAINEL) {
+      semeia(); run(cod);
+      igual(pega(ultV()), quer, nome + ': Vencimentos redesenhada logo depois');
+      await espera657();
+    }
+    // F) a ficha que ainda não está na cópia em memória: nada é criado lá (o ouvinte traz a ficha do banco)
+    semeia(); run(`pelCadCache={};`);
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSalvar('verm');`);
+    igual(J630('pelCadCache[__k665] || null'), null, 'a ficha não nasce na cópia em memória');
+    await espera657();
+  } finally {
+    run(`pbRender=__bk665b.pr; vencRender=__bk665b.vr; hojeRender=__bk665b.hr; renderPrevencao=__bk665b.rp; prevCorrigePode=__bk665b.pod;
+      prevCorrigeFecharConversa=__bk665b.fc; vencFecharAssuntosPelaFicha=__bk665b.vf; PREV_CORRIGE_OK=__bk665b.ok; canEditPel=__bk665b.ce;
+      podePapel=__bk665b.pdp; PB_PEND=__bk665b.pp; PB_SALVO=__bk665b.ps;`);
+    run(SOLTA657);
+  }
+});
+provaAsync('6.65 P16 (AC9) — o rastro da ficha: «Vermífugo — dias até a 2ª dose», «Vermífugo — quantas doses», «Vermífugo — 2ª dose (data da conta)»; a 2ª dada continua «Vermífugo — 2ª dose — última»', async () => {
+  igual(['verm_dose2_dias', 'verm_doses', 'verm_2a', 'verm_dose2_t'].map((c) => run(`pelRastroRotulo('${c}')`)),
+    ['Vermífugo — dias até a 2ª dose', 'Vermífugo — quantas doses', 'Vermífugo — 2ª dose (data da conta)', 'Vermífugo — 2ª dose — última']);
+});
+provaAsync('6.65 P17 (AC3.5, AC8.1) — a ficha: «2ª dose com: 15 dias | 21 dias» e «2ª dose prevista (15 dias depois)» com 25/10/2026; sem o campo, 21 e 31/10/2026; com «Dose única», nenhum dos dois; Configurações diz «(15 ou 21 dias depois da 1ª)»', async () => {
+  com665({}, HOJE665, () => {
+    const h15 = run(`blocoVerm({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-10-10'})`);
+    assert.ok(h15.indexOf('<label>2ª dose prevista (15 dias depois)</label><div class="prev-calc">25/10/2026</div>') >= 0, txt665(h15));
+    assert.ok(/<label>2ª dose com<\/label>/.test(h15) && /class="on"[^>]*>15 dias<\/button>/.test(h15) && !/class="on"[^>]*>21 dias<\/button>/.test(h15), txt665(h15));
+    assert.ok(/Pela conta: 22\/02\/2027 · 4 meses após a 2ª dose/.test(h15), txt665(h15));
+    assert.ok(h15.indexOf(`onclick="pick(this);pbSet('verm',{verm_dose2_dias:15})"`) >= 0 && h15.indexOf(`onclick="pick(this);pbSet('verm',{verm_dose2_dias:21})"`) >= 0);
+    const h21 = run(`blocoVerm({verm_doses:'2 doses', verm_t:'2026-10-10'})`);
+    assert.ok(h21.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">31/10/2026</div>') >= 0, txt665(h21));
+    assert.ok(/class="on"[^>]*>21 dias<\/button>/.test(h21) && !/class="on"[^>]*>15 dias<\/button>/.test(h21));
+    assert.ok(/Pela conta: 28\/02\/2027/.test(h21));
+    const hU = run(`blocoVerm({verm_doses:'Dose única', verm_dose2_dias:15, verm_t:'2026-10-10'})`);
+    assert.ok(!/2ª dose com|2ª dose prevista|2ª dose dada/.test(txt665(hU)) && /Pela conta: 07\/02\/2027/.test(hU), txt665(hU));
+    // o 15 tocado na ficha aparece na hora (o rascunho), antes do Salvar
+    run(`PB_PEND={verm:{verm_dose2_dias:15}}; pelCadCache[pelKey(__bento)]={verm_doses:'2 doses', verm_t:'2026-10-10'};`);
+    assert.ok(run(`blocoVerm(pbEx('verm'))`).indexOf('(15 dias depois)</label><div class="prev-calc">25/10/2026<') >= 0);
+  });
+  igual(run("CFG_VENC_CAMPOS.filter(function(x){ return x.k==='verm2'; })[0].rot"), 'Vermífugo — a 2ª dose (15 ou 21 dias depois da 1ª)');
+});
+provaAsync('6.65 P18 (AC6.2 a AC6.4, D2) — «Lance aqui mesmo»: a linha da 2ª mostra a prevista pela conta (não «sem data») e o «Próximo vermífugo» só de leitura; a linha do vermífugo diz o esquema; com «Dose única» e sem a 1ª, a linha da 2ª continua com os campos e os botões, diz por quê e o Salvar dela não grava', async () => {
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, HOJE665, () => {
+    const K = K665(), h = run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`);
+    const l1 = linha665(h, 'verm_p'), l2 = linha665(h, 'verm_dose2_p');
+    assert.ok(l1 && l2, 'as duas linhas');
+    assert.ok(/2 doses, a 2ª 15 dias depois da 1ª/.test(txt665(l1)), txt665(l1));
+    const selo = run("seloValidade('2026-10-25')");
+    assert.ok(l2.indexOf(selo) >= 0 && l2.indexOf('>sem data<') < 0, txt665(l2));
+    assert.ok(l2.indexOf('<label class="cad-lb">Próximo vermífugo</label><input type="date" class="cad-in" id="prevP_' + K + '_verm_dose2_p"') >= 0 && /id="prevP_[^"]*_verm_dose2_p"[^>]*readonly/.test(l2), txt665(l2));
+    assert.ok(l2.indexOf('id="prevT_' + K + '_verm_dose2_p" value=""') >= 0, 'o Feito em vazio enquanto a 2ª não foi dada');
+  });
+  // a 2ª real: o Feito em mostra a data dada e o próximo que ela deu
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', () => {
+    const K = K665(), l2 = linha665(run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`), 'verm_dose2_p');
+    assert.ok(l2.indexOf('id="prevT_' + K + '_verm_dose2_p" value="2026-10-25"') >= 0 && /id="prevP_[^"]*_verm_dose2_p" value="2027-02-22"/.test(l2) && /dada em 25\/10\/2026/.test(txt665(l2)), txt665(l2));
+  });
+  const casos = [[{ verm_doses: 'Dose única', verm_t: '2026-10-10', verm_p: '2027-02-07' }, 'Esta ficha está em dose única: não há 2ª dose.', 'Dose única'],
+    [{ verm_doses: '2 doses' }, 'Registre primeiro a 1ª dose.', '2 doses, a 2ª 21 dias depois da 1ª']];
+  for (const [ficha, frase, esquema] of casos) {
+    com665(ficha, HOJE665, () => {
+      const K = K665(), h = run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`);
+      const l1 = linha665(h, 'verm_p'), l2 = linha665(h, 'verm_dose2_p');
+      assert.ok(txt665(l1).indexOf(esquema) >= 0, txt665(l1));
+      assert.ok(txt665(l2).indexOf(frase) >= 0, txt665(l2));
+      for (const t of [`id="prevT_${K}_verm_dose2_p"`, `id="prevP_${K}_verm_dose2_p"`, `id="prevQ_${K}_verm_dose2_p"`, `prevLancar('${K}','verm_dose2_p')`, `prevRecalcular('${K}','verm_dose2_p')`])
+        assert.ok(l2.indexOf(t) >= 0, 'faltou ' + t);
+      igual((l2.match(/prevOndeFoi\(/g) || []).length, 2, 'os dois «Quem deu»');
+      lance665('verm_dose2_p', '2026-10-10');
+      igual(G665(), [], 'o Salvar da 2ª não grava');
+      igual(ZA665().map((a) => a[1]).reduce((a, b) => a.concat(b), []).filter((x) => x.indexOf(frase) >= 0).length, 1, JSON.stringify(ZA665()));
+    });
+  }
+});
+provaAsync('6.65 P19 (AC3.9) — a ficha antiga com a 2ª gravada antes da 1ª (01/08 e 01/09), salva só pelo nome: a conta ignora a 2ª antiga e o próximo passa a 20/01/2027 ((01/09 + 21) + 120), sem aviso (comportamento novo, documentado)', async () => {
+  com665({ verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-08-01', verm_p: '2026-11-29' }, HOJE665, () => {
+    ficha665({ verm_nome: 'Drontal' });
+    igual(ZA665(), []);
+    igual(G665(), [{ verm_nome: 'Drontal', verm_2a: '2026-09-22', verm_p: '2027-01-20' }]);
+  });
+});
+provaAsync('6.65 P20 (AC5, D7) — depois da 2ª real (1ª 10/10, 2ª 25/10), o bloco diz «2ª dose dada em 25/10/2026» e não «2ª dose prevista»; o campo «2ª dose dada em» e o onchange continuam; «Pela conta» diz o próximo depois da 2ª', async () => {
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', () => {
+    const h = run('blocoVerm(pelExtra(__bento))'), t = txt665(h);
+    assert.ok(/2ª dose dada em 25\/10\/2026/.test(t) && !/2ª dose prevista/.test(t), t);
+    assert.ok(h.indexOf('<label>2ª dose dada em</label>') >= 0 && h.indexOf(`onchange="pbSet('verm',{verm_dose2_t:this.value})"`) >= 0 && h.indexOf('value="2026-10-25"') >= 0);
+    assert.ok(/Pela conta: 22\/02\/2027 · 4 meses após a 2ª dose/.test(h), t);
+  });
+  // só a 2ª antiga (anterior à 1ª): continua «2ª dose prevista»
+  com665({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-06-10' }, HOJE665, () => {
+    const t = txt665(run('blocoVerm(pelExtra(__bento))'));
+    assert.ok(/2ª dose prevista \(21 dias depois\) 31\/10\/2026/.test(t) && !/2ª dose dada em 10\/06/.test(t), t);
+  });
+});
+provaAsync('6.65 P21 (AC8.4, guarda) — a mensagem «verm2» ao tutor não muda: o texto de fábrica e a dica de Configurações letra por letra; a mensagem da ficha sem o campo (1ª em 10/10) no dia-alvo de segunda, 26/10, e depois de vencida, iguais às da base', async () => {
+  igual(run('VENC_TXT_PADRAO.verm2'), 'Olá, {tutor}, como vai?\nComo está {ofilhot}?\n💊 Passando para lembrar que {quando} vence o vermífugo {dofilhot} ☺️\nÉ dia da segunda dose, ainda tem o comprimido em casa?');
+  igual(run("CFG_VENC_CAMPOS.filter(function(x){ return x.k==='verm2'; })[0].dica"), 'Sai só para quem tem &ldquo;2 doses&rdquo; na ficha e ainda não teve a 2ª registrada.');
+  run('__bkVC665=VENC_CFG; VENC_CFG={};');
+  try {
+    const m = J630(`(function(){ var ex={verm_doses:'2 doses', verm_t:'2026-10-10', verm_2a:'2026-10-31', verm_p:'2027-02-28'};
+      var a=vencMensagens({nome:'Bento', tutor:'Ana Teste', sexo:'M', itens:vencItensDe(ex, '2026-10-26', 7, '2026-10-24')}, '2026-10-26', '2026-10-24');
+      var b=vencMensagens({nome:'Bento', tutor:'Ana Teste', sexo:'M', itens:vencItensDe(ex, '2026-11-02', 7, '2026-11-01')}, '2026-11-02', '2026-11-01');
+      return [a.map(function(x){ return x.tipo+'|'+x.texto; }), b.map(function(x){ return x.tipo+'|'+x.texto; })]; })()`);
+    igual(m, [['verm2|Olá, Ana, como vai?\nComo está o Bento?\n💊 Passando para lembrar que na segunda-feira (26/10), dia dele no Day Care vence o vermífugo do Bento ☺️\nÉ dia da segunda dose, ainda tem o comprimido em casa?'],
+      ['verm2|Olá, Ana, como vai?\nComo está o Bento?\n💊 Passando para lembrar que venceu em 31/10 o vermífugo do Bento ☺️\nÉ dia da segunda dose, ainda tem o comprimido em casa?']]);
+  } finally { run('VENC_CFG=__bkVC665;'); }
+});
+provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões, a dose pelo peso, o exame de fezes, o «Vence em» à mão e as telas que só leem idênticos aos da base 59f16a8 (sha-256 de cada função, num sandbox novo); nenhuma função nova ck*/pt*; as provas da 6.51 e as do vermífugo pelo painel passaram sem mudar', async () => {
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+  const BASE = { vermAvaliar: 'dbb338c2bf7e64b5', vermFaixaKg: '30b015b84cf0ada4', vermMargemKg: '17d894cb494ce621', vermNumTexto: 'fcf2a669fa302195',
+    vermNumLer: 'f3af1b973b05be92', vermDoseDe: 'ca0de65413eef7e3', vermPertoDaVirada: 'b40da171c0d5df85', vermFrasePeso: '34a4fcbaeed5260b',
+    vermAvaliarFicha: 'b33c7434482bf287', vermFichaTextoHTML: 'c750d8f6a0fe1eed', vermPreMarcar: '9c3b3baca86cbcb3', vermBlocoPainelHTML: 'fa6a626a6d27de72',
+    dashLancar: '6267457666ad76f3', vermPreMarcarVenc: '47968aea4c549131', vermLinhaVencHTML: '77149b646c2ec3b8', vencBlocoLancHTML: '60cc11bb3c70521e',
+    vermOuFezes: 'e29f34cc2ad21b05', prevDispensadoPorExame: 'f40ec4cc6325dbf0', prevForaDaCobranca: '0c57dfd57defbac2', podeVencManual: '88f0694c49496db7',
+    prevVenceManualSet: '4c84b3c948dc3bc1', prevPendencias: 'c87ce87973884715', alertaPrevencao: '8d52ba3995909460', prevFaltasDe: '521dab44ee9157f1',
+    vencItensDe: '9e9d1f75fb3e51f0', hojeAntecipar: '9b8fed3ad9122257', urgenciasGestao: 'c192dbd0f0779796', vencLancarAuto: '414f3b8869277485',
+    pelExtra: 'e874a3d2b3b8767a', setPelExtra: 'ded4cc5f9acc60cd', pelAplicarNoCache: 'c174a71c267e339b', pelCamposBarrados: '99703a2869112cec',
+    prevValor: 'c4bc834fdc1a5e09', addDiasISO: 'c3bc279a55f02afe', addMesesISO: '34de1566f1fe775c', podePapel: 'f79e84fc5f1bd977',
+    canEditPel: '712f761f9d9c3b93', prevCorrigePode: '9ee0f6648c608570' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
+  igual(agora, BASE, 'as funções que não mudam');
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('VERMIF_PROX')],
+    [155, '5bac486c669007ec', 'f79140b1c2844dd5', 120], 'a área protegida (nomes e texto), as permissões e os 120 dias');
+  const src = fs.readFileSync(APP, 'utf8');
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual([h(src.slice(i, j)), h(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+  assert.ok(src.indexOf(`+'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'`) >= 0, 'a linha «Dose pelo peso» do blocoVerm');
+  // as provas que o AC13 nomeia (as do vermífugo pelo painel, a B2 do exame de fezes e as três da 6.51) passaram nesta rodada
+  const NOMES = ['vermífugo em 2 doses pelo painel: 2ª prevista em 21 dias e próximo 4 meses depois dela', 'dose única pelo painel: próximo em 4 meses e a 2ª dose de antes sai',
+    'a 2ª dose gravada no painel RECALCULA o próximo vermífugo a partir dela', '2ª dose antes da 1ª é recusada (nada é gravado)', '"Não vai ter 2ª dose": vira dose única e o próximo conta da 1ª dose',
+    'B2 — exame de fezes depois da 1ª dose dispensa a 2ª'];
+  const me = fs.readFileSync(__filename, 'utf8');
+  igual(NOMES.map((n) => me.indexOf("prova('" + n) >= 0), NOMES.map(() => true), 'as provas continuam no arquivo');
+  igual((me.match(/\bprova(?:Async)?\(['"]6\.51 /g) || []).length, 3, 'as três da 6.51');
+  igual(falhas.filter((f) => NOMES.some((n) => f.indexOf(n) === 0) || /^6\.51 /.test(f) || /^v-31|^v-47/.test(f)), []);
+});
+provaAsync('6.65 P23 (AC3.4, guarda) — a 1ª corrigida para trás na mesma série (10/10 → 09/10, com a 2ª dada em 25/10): a 2ª real fica e o próximo conta dela (22/02/2027)', async () => {
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', () => {
+    ficha665({ verm_t: '2026-10-09' });
+    igual(ZA665(), []);
+    igual(G665(), [{ verm_t: '2026-10-09', verm_2a: '2026-10-25', verm_p: '2027-02-22' }]);
+  });
+  // e pelo «Lance aqui mesmo» (a mesma regra)
+  com665({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', () => {
+    lance665('verm_p', '2026-10-09');
+    const g = ULT665();
+    igual([g.verm_t, g.verm_p, g.verm_2a, 'verm_dose2_t' in g], ['2026-10-09', '2027-02-22', '2026-10-25', false]);
+  });
+});
+provaAsync('6.65 P24 (AC2.1, AC12) — o painel: «Dose única» e «2 doses» (sem «(repete em 21 dias)»), a dica com «15 ou 21», «2ª dose com: 15 dias | 21 dias» com o 21 marcado sem o campo e o 15 com 15; escondida com «Dose única» e aberta ao marcar «2 doses»; 44 px', async () => {
+  const H = (ex) => { ctx.__pv665 = ex; return run(`prevCorrigeVermHTML('verm_p', __pv665, 'bento__ana_verm_p', 'bento__ana', 'venc')`); };
+  const h21 = H({ verm_doses: '2 doses' }), h15 = H({ verm_doses: '2 doses', verm_dose2_dias: 15 }), hU = H({});
+  assert.ok(/> 2 doses<\/label>/.test(h21) && h21.indexOf('repete em 21 dias') < 0 && /> Dose única<\/label>/.test(h21), txt665(h21));
+  assert.ok(h21.indexOf('Dose única: o próximo vem em 4 meses. Duas doses: a 2ª vem 15 ou 21 dias depois da 1ª, o que o veterinário indicar, e o próximo, 4 meses depois da 2ª.') >= 0, txt665(h21));
+  assert.ok(/2ª dose com:/.test(txt665(h21)) && /id="prevCorrI21_bento__ana_verm_p" checked/.test(h21) && /id="prevCorrI15_bento__ana_verm_p">/.test(h21), h21);
+  assert.ok(/id="prevCorrI15_bento__ana_verm_p" checked/.test(h15) && /id="prevCorrI21_bento__ana_verm_p">/.test(h15), h15);
+  assert.ok(/> 15 dias<\/label>/.test(h21) && /> 21 dias<\/label>/.test(h21));
+  igual((h21.match(/min-height:44px[^"]*"><input type="radio" name="prevCorrI_/g) || []).length, 2, 'os dois botões novos com 44 px');
+  // aberta com «2 doses» na ficha; escondida com «Dose única» (ou sem esquema) e aberta ao marcar «2 doses»
+  assert.ok(/class="prev-verm-int" style="margin-top:6px">/.test(h21) && /class="prev-verm-int" style="margin-top:6px;display:none">/.test(hU), hU);
+  assert.ok(/id="prevCorrE2_bento__ana_verm_p" onchange="prevCorrigeVermEsquema\(this\)"/.test(hU) && /id="prevCorrE1_bento__ana_verm_p" checked onchange="prevCorrigeVermEsquema\(this\)"/.test(hU), hU);
+  const w = { style: { display: 'none' } }, box = { querySelector: (s) => (s === '.prev-verm-int' ? w : null) };
+  ctx.__e2665 = { id: 'prevCorrE2_x', checked: true, closest: (s) => (s === '.prev-verm-esq' ? box : null) };
+  ctx.__e1665 = { id: 'prevCorrE1_x', checked: true, closest: (s) => (s === '.prev-verm-esq' ? box : null) };
+  run('prevCorrigeVermEsquema(__e2665)'); igual(w.style.display, '');
+  run('prevCorrigeVermEsquema(__e1665)'); igual(w.style.display, 'none');
+});
+// ---- 6.65, 2ª rodada (gate do QA): REL-001, REL-002 e as provas que faltavam (TEST-001) ---------------------------------
+provaAsync('6.65 R2 P25 (REL-001) — o banco recusou: a cópia LOCAL deste aparelho também volta, campo a campo (o valor do banco; o campo que o banco não tinha sai), pela ficha e pelo painel; e o «mudou?» do intervalo é decidido pelo banco', async () => {
+  run(ARMA657);
+  run(`__bk665c={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, pod:prevCorrigePode, fc:prevCorrigeFecharConversa,
+      vf:vencFecharAssuntosPelaFicha, ok:PREV_CORRIGE_OK, pp:PB_PEND, ps:PB_SALVO};`);
+  try {
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;
+      __bento={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão'}; PELUDINHOS=[__bento]; pelAtual=__bento; PB_PEND={}; PB_SALVO={};
+      pbRender=function(){}; vencRender=function(){}; hojeRender=function(){}; renderPrevencao=function(){};
+      prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){}; PREV_CORRIGE_OK={};`);
+    const K = run('pelKey(__bento)'), DC = run('dcKey(__bento.n, __bento.tutor)');
+    ctx.__k665 = K;
+    const F = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+    const semeia = () => { ctx.__f665 = F; run(`__put657('daycare/cadastro/'+__k665, __f665); pelCadCache={}; pelCadCache[__k665]=__get657('daycare/cadastro/'+__k665);
+      __ls657={}; __ls657['zeluz_pel_'+__k665]=JSON.stringify(__f665); __recusa657='^daycare/cadastro/'; PB_PEND={}; PB_SALVO={};`); };
+    const local = () => JSON.parse(run("__ls657['zeluz_pel_'+__k665]||'{}'"));
+    const so = (o, cs) => cs.map((c) => (Object.prototype.hasOwnProperty.call(o, c) ? o[c] : '∅'));
+    const CS = ['verm_t', 'verm_dose2_t', 'verm_2a', 'verm_p', 'verm_dose2_dias'];
+    // a ficha: a série nova com 15 (o campo novo e os que o banco já tinha)
+    semeia();
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSet('verm',{verm_dose2_dias:15}); pbSalvar('verm');`);
+    igual(so(local(), CS), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'antes da resposta: a cópia local como o setPelExtra escreveu');
+    await espera657();
+    igual(so(local(), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'depois da recusa: a cópia local igual ao banco');
+    igual(so(J630('pelExtra(__bento)'), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'a ficha que a tela lê');
+    // o painel: «2 doses», «15 dias», «Feito hoje»
+    semeia();
+    run(`__el657['prevCorrE2_'+${JSON.stringify(DC)}+'_verm_p']={checked:true}; __el657['prevCorrI15_'+${JSON.stringify(DC)}+'_verm_p']={checked:true};
+      prevCorrigeFeitoHoje(${JSON.stringify(DC)}, 'verm_p', 'venc');`);
+    await espera657();
+    igual(so(local(), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'painel: a cópia local igual ao banco');
+    // o «mudou?» do intervalo vem do banco (a cópia do cadastro em memória), não da cópia local
+    run(`__ls657['zeluz_pel_'+__k665]=JSON.stringify(Object.assign({}, __f665, {verm_dose2_dias:15})); __recusa657=null;`);
+    igual([run('vermIntervalo(pelExtra(__bento))'), run('vermIntervaloDoBanco(__bento)')], [15, 21], 'a cópia local diz 15; o banco, 21');
+    run(`prevCorrigeFeitoHoje(${JSON.stringify(DC)}, 'verm_p', 'venc');`);
+    await espera657();
+    igual(so(run(`__get657('daycare/cadastro/'+__k665)`), CS), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'o painel grava o 15 no banco');
+    // a ficha também: com a série nova em dia (1ª 10/10, 21 no banco) e o 15 só na cópia local, tocar 15 não é «a mesma escolha»
+    ctx.__f665b = Object.assign({}, F, { verm_t: '2026-10-10', verm_dose2_t: '', verm_2a: '2026-10-31', verm_p: '2027-02-28' });
+    run(`__put657('daycare/cadastro/'+__k665, __f665b); pelCadCache={}; pelCadCache[__k665]=__get657('daycare/cadastro/'+__k665); __recusa657=null;
+      __ls657={}; __ls657['zeluz_pel_'+__k665]=JSON.stringify(Object.assign({}, __f665b, {verm_dose2_dias:15})); PB_PEND={}; PB_SALVO={};`);
+    run(`pbSet('verm',{verm_dose2_dias:15}); pbSalvar('verm');`);
+    await espera657();
+    igual(so(run(`__get657('daycare/cadastro/'+__k665)`), CS), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'a ficha grava o 15 no banco');
+  } finally {
+    run(`pbRender=__bk665c.pr; vencRender=__bk665c.vr; hojeRender=__bk665c.hr; renderPrevencao=__bk665c.rp; prevCorrigePode=__bk665c.pod;
+      prevCorrigeFecharConversa=__bk665c.fc; vencFecharAssuntosPelaFicha=__bk665c.vf; PREV_CORRIGE_OK=__bk665c.ok; PB_PEND=__bk665c.pp; PB_SALVO=__bk665c.ps;`);
+    run(SOLTA657);
+  }
+});
+provaAsync('6.65 R2 P26 (TEST-001: Q01, Q02, Q08, Q14, Q21, Q23, Q30) — a borda «2ª no mesmo dia da 1ª» (dada>=t) nos lugares que a usam: é a 2ª desta série, dada; e a 2ª válida com a 1ª inválida continua valendo', async () => {
+  igual([run("vermDose2Data({verm_doses:'2 doses', verm_t:'2026-10-10', verm_dose2_t:'2026-10-10'})"), run("vermDose2Prevista({verm_doses:'2 doses', verm_t:'2026-10-10', verm_dose2_t:'2026-10-10'})"),
+    run("vermDose2Data({verm_doses:'2 doses', verm_dose2_t:'2026-10-25'})"), run("vermDose2Data({verm_doses:'2 doses', verm_t:'x', verm_dose2_t:'2026-10-25'})")],
+    ['2026-10-10', '', '2026-10-25', '2026-10-25']);
+  com665({}, HOJE665, () => {
+    const t = txt665(run("blocoVerm({verm_doses:'2 doses', verm_t:'2026-10-10', verm_dose2_t:'2026-10-10'})"));
+    assert.ok(/2ª dose dada em 10\/10\/2026/.test(t) && !/2ª dose prevista/.test(t) && /Pela conta: 07\/02\/2027/.test(t), t);
+  });
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  com665(S21, HOJE665, () => {      // a ficha aceita a 2ª no mesmo dia da 1ª
+    ficha665({ verm_dose2_t: '2026-10-10' });
+    igual([ZA665(), G665()], [[], [{ verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }]]);
+  });
+  com665(S21, HOJE665, () => {      // o «Lance aqui mesmo» também
+    igual(lance665('verm_dose2_p', '2026-10-10'), '2027-02-07');
+    igual([ZA665(), G665()], [[], [{ verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }]]);
+  });
+  // a 1ª lançada no mesmo dia da 2ª que estava gravada: a 2ª é desta série e fica
+  com665({ verm_doses: '2 doses', verm_t: '2026-10-05', verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }, HOJE665, () => {
+    igual(lance665('verm_p', '2026-10-10'), '2027-02-07');
+    igual(G665(), [{ verm_t: '2026-10-10', verm_p: '2027-02-07', verm_2a: '2026-10-10' }]);
+  });
+  com665({ verm_doses: '2 doses', verm_t: '2026-10-05', verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }, HOJE665, () => {
+    ficha665({ verm_t: '2026-10-10' });
+    igual(G665(), [{ verm_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }]);
+  });
+});
+provaAsync('6.65 R2 P27 (TEST-001: Q09, Q10, Q13) — a série inteira registrada de uma vez na ficha (1ª nova e 2ª real no mesmo Salvar: a 2ª fica); passar para «2 doses» e digitar a 2ª no futuro no mesmo Salvar (recusado); «Pela conta» depois da 2ª atrasada (26/02/2027)', async () => {
+  com665(ROMEU665, '2026-10-26', () => {
+    ficha665({ verm_t: '2026-10-10', verm_dose2_t: '2026-10-25' });
+    igual([ZA665(), G665()], [[], [{ verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }]]);
+  });
+  com665({ verm_doses: 'Dose única', verm_t: '2026-10-01', verm_p: '2027-01-29' }, HOJE665, () => {
+    ficha665({ verm_doses: '2 doses', verm_dose2_t: '2026-10-25' });
+    igual([G665(), ZA665().map((a) => a[1][0])], [[], ['A 2ª dose (25/10/2026) está no futuro. Preencha «2ª dose dada em» só depois de a dose ser dada, com a data real.']]);
+  });
+  com665({}, '2026-10-30', () => {
+    const h = run("blocoVerm({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-10-10', verm_dose2_t:'2026-10-29', verm_2a:'2026-10-29', verm_p:'2027-02-26'})");
+    igual((h.match(/Pela conta: [0-9\/]+/) || [''])[0], 'Pela conta: 26/02/2027');
+  });
+});
+provaAsync('6.65 R2 P28 (TEST-001: Q18) — o rastro da ficha (6.57) guarda o «antes» certo: o passo do cache vem DEPOIS do setPelExtra, pela ficha e pelo painel', async () => {
+  run(ARMA657);
+  run(`__bk665d={pr:pbRender, vr:vencRender, pod:prevCorrigePode, fc:prevCorrigeFecharConversa, vf:vencFecharAssuntosPelaFicha, ok:PREV_CORRIGE_OK, pp:PB_PEND, ps:PB_SALVO};`);
+  try {
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;
+      __bento={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão'}; PELUDINHOS=[__bento]; pelAtual=__bento; PB_PEND={}; PB_SALVO={};
+      pbRender=function(){}; vencRender=function(){}; prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){};
+      vencFecharAssuntosPelaFicha=function(){}; PREV_CORRIGE_OK={};`);
+    const K = run('pelKey(__bento)'), DC = run('dcKey(__bento.n, __bento.tutor)');
+    ctx.__k665 = K;
+    ctx.__f665 = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08',
+      ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29' };
+    run(`__put657('daycare/cadastro/'+__k665, __f665); pelCadCache={}; pelCadCache[__k665]=__get657('daycare/cadastro/'+__k665); __ls657={};`);
+    const rastro = () => { const r = J630(`__get657('daycare/ficha-rastro/'+__k665)`) || {}; const o = {}; Object.keys(r).forEach((id) => { o[r[id].campo] = [r[id].de, r[id].para]; }); return o; };
+    run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSalvar('verm');`);
+    await espera657();
+    const r1 = rastro();
+    igual([r1.verm_t, r1.verm_p, r1.verm_dose2_t], [['2026-05-20', '2026-10-10'], ['2026-10-08', '2027-02-28'], ['2026-06-10', '']], 'a ficha');
+    run(`__put657('daycare/ficha-rastro/'+__k665, null); __el657['prevCorrP_'+${JSON.stringify(DC)}+'_ecto_p']={value:'Bravecto'}; prevCorrigeGravarFeito(${JSON.stringify(DC)}, 'ecto_p', '2026-10-10', 'venc');`);
+    await espera657();
+    igual(rastro().ecto_t, ['2026-07-01', '2026-10-10'], 'o painel');
+  } finally {
+    run(`pbRender=__bk665d.pr; vencRender=__bk665d.vr; prevCorrigePode=__bk665d.pod; prevCorrigeFecharConversa=__bk665d.fc; vencFecharAssuntosPelaFicha=__bk665d.vf;
+      PREV_CORRIGE_OK=__bk665d.ok; PB_PEND=__bk665d.pp; PB_SALVO=__bk665d.ps;`);
+    run(SOLTA657);
+  }
+});
+provaAsync('6.65 R2 P29 (TEST-001: Q22, Q24, Q25, Q27, Q28) — «Lance aqui mesmo»: a ficha sem «Quantas doses» é dose única (não lança 2ª); «Corrigir para» na 1ª dose em 2 doses (a 2ª prevista e o próximo saem da data corrigida); a linha da 2ª não mostra a 2ª da série anterior como dada; sem 2ª dose, o «Próximo vermífugo» fica vazio', async () => {
+  com665({ verm_t: '2026-10-01', verm_p: '2027-01-29' }, HOJE665, () => {
+    const l2 = linha665(run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`), 'verm_dose2_p');
+    assert.ok(txt665(l2).indexOf('Esta ficha está em dose única: não há 2ª dose.') >= 0, txt665(l2));
+    igual(lance665('verm_dose2_p', '2026-10-05'), '', 'o «Próximo vermífugo» vazio');
+    igual([G665(), ZA665().map((a) => a[1][0])], [[], ['Esta ficha está em dose única: não há 2ª dose.']]);
+  });
+  com665({ verm_doses: '2 doses' }, HOJE665, () => { igual(lance665('verm_dose2_p', '2026-10-05'), '', 'sem a 1ª: vazio'); igual(G665(), []); });
+  // a 1ª digitada com o ano errado (10/10/2025): a trava pergunta e «Corrigir para 10/10/2026» grava a série pela data corrigida
+  com665({ verm_doses: '2 doses', verm_t: '2025-05-01', verm_p: '2025-09-19' }, HOJE665, () => {
+    igual(lance665('verm_p', '2025-10-10'), '2026-02-28');
+    igual(G665(), [], 'nada antes da resposta');
+    igual(J630('__ze665[0][2].map(function(o){ return o.t; })'), ['Corrigir para 10/10/2026', 'Está certo, deixar em atraso']);
+    run('__ze665[0][2][0].fn()');
+    igual(G665(), [{ verm_t: '2026-10-10', verm_p: '2027-02-28', verm_2a: '2026-10-31' }]);
+  });
+  // a linha da 2ª com a 2ª da série ANTERIOR gravada: o «Feito em» vazio e o selo da prevista nova
+  com665(Object.assign({}, ROMEU665, { verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }), HOJE665, () => {
+    const K = K665(), l2 = linha665(run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`), 'verm_dose2_p');
+    assert.ok(l2.indexOf('id="prevT_' + K + '_verm_dose2_p" value=""') >= 0 && !/dada em/.test(txt665(l2)) && l2.indexOf(run("seloValidade('2026-10-31')")) >= 0, txt665(l2));
+    assert.ok(/id="prevP_[^"]*_verm_dose2_p" value=""/.test(l2), 'o «Próximo vermífugo» vazio');
+  });
+});
+}
+{
+// ================================================================== 6.65 QA — as 25 provas do QA independente (Quinn, gate de 10/out/2026), trazidas para a Fase 0 na 2ª rodada
+// O texto do QA (`scratchpad/qa665/blocoqa665.js`), com o prefixo «6.65 QA» no lugar de «QA665». Mudaram, marcadas «2ª rodada»: a Q19 e a Q19b
+// (REL-001: depois da recusa, a tela e a cópia local também voltam; a Q19b passou de registro a prova), a Q20 (REL-002: as duas
+// sequências com recusa ganharam asserção) e a Q24 (a fonte da base, que vinha de um arquivo do QA, virou sha-256 de cada função).
+// Tudo com o setPelExtra e o pelExtra DE VERDADE sobre o banco de mentira da 6.57 (ARMA657): cada porta grava no banco,
+// a tela de quem gravou é capturada no instante do redesenho, sem o ouvinte do cadastro. Dado inventado: o FILHOt «Bento»,
+// da tutora «Ana Teste», com a ficha como a do Romeu (série antiga: 1ª 20/05, 2ª 10/06, próximo venceu 08/10).
+console.log('\n6.65 QA — as provas do QA independente (Quinn): todas as portas, o banco de mentira e a tela logo depois de gravar');
+const HQ = '2026-10-10';
+const ROMEUQ = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+const BENTOQ = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', dias: ['seg', 'qua'] };
+const armaQ = (ficha, hoje, opc) => {
+  run(ARMA657);
+  ctx.__fq = Object.assign({}, BENTOQ, ficha || {}); ctx.__hq = hoje || HQ;
+  run(`__bkQ={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, pod:prevCorrigePode, fc:prevCorrigeFecharConversa,
+      vf:vencFecharAssuntosPelaFicha, ok:PREV_CORRIGE_OK, ce:canEditPel, pp:PB_PEND, ps:PB_SALVO, pdp:podePapel, ra:PREV_RECALC_AVISO,
+      ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM, prr:prevRedesenhar, ze:zEscolha};
+    zHojeISO=function(){ return __hq; }; hojeISO=zHojeISO;
+    __bq={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão', dias:['seg','qua']}; PELUDINHOS=[__bq]; pelAtual=__bq;
+    PB_PEND={}; PB_SALVO={}; PREV_CORRIGE_OK={}; PREV_RECALC_AVISO={};
+    __kq=pelKey(__bq); __dcq=dcKey(__bq.n, __bq.tutor);
+    __put657('daycare/cadastro/'+__kq, __fq); pelCadCache={}; pelCadCache[__kq]=__get657('daycare/cadastro/'+__kq); __ls657={}; __esc657=[];
+    __telas=[]; __zeFn=null;
+    zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn=b; };
+    pbRender=function(b){ var e=pbEx(b); __telas.push({tela:'ficha', b:b, ex:JSON.parse(JSON.stringify(e)), html:(PB_HTML[b]?PB_HTML[b](e):''), salvo:!!PB_SALVO[b]}); };
+    var cap=function(t){ return function(){ __telas.push({tela:t, ex:JSON.parse(JSON.stringify(pelExtra(__bq))), ok:JSON.parse(JSON.stringify(PREV_CORRIGE_OK))}); }; };
+    vencRender=cap('venc'); hojeRender=cap('hoje'); renderPrevencao=cap('prev'); prevRedesenhar=cap('prevR');
+    prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){};`);
+  if (opc && opc.semCache) run('pelCadCache={};');
+};
+const soltaQ = () => {
+  run(`pbRender=__bkQ.pr; vencRender=__bkQ.vr; hojeRender=__bkQ.hr; renderPrevencao=__bkQ.rp; prevCorrigePode=__bkQ.pod;
+    prevCorrigeFecharConversa=__bkQ.fc; vencFecharAssuntosPelaFicha=__bkQ.vf; PREV_CORRIGE_OK=__bkQ.ok; canEditPel=__bkQ.ce;
+    PB_PEND=__bkQ.pp; PB_SALVO=__bkQ.ps; podePapel=__bkQ.pdp; PREV_RECALC_AVISO=__bkQ.ra; PREV_CORRIGE_ABERTO=__bkQ.ab;
+    PREV_CORRIGE_ORIGEM=__bkQ.ori; prevRedesenhar=__bkQ.prr; zEscolha=__bkQ.ze;`);
+  run(SOLTA657);
+};
+const comQ = async (ficha, hoje, fn, opc) => { armaQ(ficha, hoje, opc); try { const r = await fn(); await espera657(); return r; } finally { soltaQ(); } };
+const dbQ = () => J630("__get657('daycare/cadastro/'+__kq)");
+const cacheQ = () => J630('pelCadCache[__kq]||null');
+const escQ = () => J630("__esc657.filter(function(e){ return /^daycare\\/cadastro\\//.test(e[1]); })");
+const telaQ = () => { const t = J630('__telas'); return t[t.length - 1] || null; };
+const zaQ = () => J630('__za657');
+const pegaQ = (o, cs) => cs.map((c) => (o && Object.prototype.hasOwnProperty.call(o, c)) ? o[c] : '∅');
+const VQ = ['verm_t', 'verm_dose2_t', 'verm_2a', 'verm_p', 'verm_dose2_dias'];
+// PAINEL: m.e '1' dose única / '2' duas doses; m.i '15' / '21'; dt 'hoje' ou a data do «Feito em…»; tela venc|hoje|prev
+const painelQ = (k, dt, m, tela) => {
+  ctx.__mq = m || {}; ctx.__kkq = k; ctx.__dtq = dt; ctx.__tlq = tela || 'venc';
+  run(`(function(){ var id=__dcq+'_'+__kkq, m=__mq;
+    if(m.e){ __el657['prevCorrE1_'+id]={checked:m.e==='1'}; __el657['prevCorrE2_'+id]={checked:m.e==='2'}; }
+    if(m.i){ __el657['prevCorrI15_'+id]={checked:m.i==='15'}; __el657['prevCorrI21_'+id]={checked:m.i==='21'}; }
+    if(__dtq==='hoje') prevCorrigeFeitoHoje(__dcq, __kkq, __tlq); else { __el657['prevCorrT_'+id]={value:__dtq}; prevCorrigeFeitoEm(__dcq, __kkq, __tlq); } })()`);
+};
+// FICHA: cada campo pelo pbSet (como o toque), «Salvar vermífugo» pelo pbSalvar
+const fichaQ = (campos, b) => { ctx.__fcq = campos; ctx.__bbq = b || 'verm'; run(`Object.keys(__fcq).forEach(function(c){ var o={}; o[c]=__fcq[c]; pbSet(__bbq, o); }); pbSalvar(__bbq);`); };
+// «LANCE AQUI MESMO»: o «Feito em» com o onchange (prevRecalcular), o que estiver escrito no campo da validade, e o «Salvar»
+const lanceQ = (k, dt, porCima) => {
+  ctx.__lkq = k; ctx.__ldq = dt; ctx.__lvq = (porCima === undefined) ? null : porCima;
+  run(`(function(){ var ch=__kq, ex=pelExtra(__bq);
+    __el657['prevT_'+ch+'_'+__lkq]={value:__ldq}; __el657['prevQ_'+ch+'_'+__lkq]={value:'Day Care'}; __el657['prevN_'+ch+'_'+__lkq]={value:''};
+    __el657['prevP_'+ch+'_'+__lkq]={value:ex[__lkq]||''};
+    prevRecalcular(ch, __lkq);
+    if(__lvq!==null) __el657['prevP_'+ch+'_'+__lkq].value=__lvq;
+    __valeQ=__el657['prevP_'+ch+'_'+__lkq].value;
+    prevLancar(ch, __lkq); })()`);
+  return run('__valeQ');
+};
+const listaQ = (ex, alvo, margem, hoje) => J630(`vencItensDe(${JSON.stringify(ex)}, '${alvo}', ${margem}, '${hoje}', {incluirSemRegistro:true}).filter(function(x){ return !x.sem_registro; }).map(function(x){ return [x.k, x.vence, x.atrasado, vencQuantoTexto(x, '${hoje}')]; })`);
+
+provaAsync('6.65 QA Q01 — vermIntervalo: as bordas (espaço, zero à esquerda, decimal, booleano, objeto) caem em 21, exceto 15 exato', async () => {
+  const casos = [[' 15 ', 15], ['015', 21], ['15.0', 21], [15.0, 15], [true, 21], [{}, 21], [NaN, 21], ['21 ', 21], ['15 dias', 21], [-15, 21], [1.5e1, 15]];
+  igual(casos.map(([v]) => run(`vermIntervalo({verm_dose2_dias:${JSON.stringify(v)}})`)), casos.map((c) => c[1]));
+  igual(run("vermIntervalo({verm_dose2_dias:NaN})"), 21);
+});
+provaAsync('6.65 QA Q02 — C1, C2, C3 pelo PAINEL de verdade, nas três telas (Vencimentos, Hoje na Zêluz, Prevenção): o banco recebe o certo e a tela redesenhada logo depois já mostra o gravado', async () => {
+  for (const tela of ['venc', 'hoje', 'prev']) {
+    await comQ(ROMEUQ, HQ, async () => {
+      painelQ('verm_p', 'hoje', { e: '2', i: '15' }, tela);
+      const t = telaQ();
+      igual([t.tela, ...pegaQ(t.ex, VQ)], [tela, '2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'C1 tela ' + tela);
+      igual(Object.values(t.ok).map((o) => o.texto), ['Bento — Vermífugo em dia até 22/02/2027']);
+      await espera657();
+      igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'C1 banco ' + tela);
+    });
+  }
+  await comQ(ROMEUQ, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '2', i: '21' }, 'venc');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-31', '2027-02-28', '∅'], 'C2: sem o campo');
+    igual(escQ().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]);
+  });
+  await comQ(ROMEUQ, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '1', i: '15' }, 'venc');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '', '2027-02-07', '∅', 'Dose única'], 'C3: dose única, sem o campo');
+  });
+});
+provaAsync('6.65 QA Q03 — C4 e C5 pela FICHA de verdade (série antiga vencida e não vencida), com o 15 escolhido no mesmo Salvar: sem aviso, a 2ª antiga sai, o campo 15 é gravado e o bloco redesenhado já mostra 25/10 e 22/02/2027', async () => {
+  for (const ant of [ROMEUQ, { verm_doses: '2 doses', verm_t: '2026-05-26', verm_dose2_t: '2026-06-16', verm_2a: '2026-06-16', verm_p: '2026-10-14' }]) {
+    await comQ(ant, HQ, async () => {
+      fichaQ({ verm_t: '2026-10-10', verm_dose2_dias: 15 });
+      const t = telaQ();
+      igual([t.tela, t.salvo, ...pegaQ(t.ex, VQ)], ['ficha', true, '2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+      assert.ok(t.html.indexOf('<label>2ª dose prevista (15 dias depois)</label><div class="prev-calc">25/10/2026</div>') >= 0, 'o rótulo e a data na tela');
+      assert.ok(/value="2027-02-22"/.test(t.html) || /22\/02\/2027/.test(t.html), 'o próximo na tela');
+      assert.ok(t.html.indexOf('<label>2ª dose dada em</label><input type="date" class="cad-in" value=""') >= 0, '«2ª dose dada em» vazio logo depois');
+      igual([zaQ(), J630('__ze657')], [[], []]);
+      await espera657();
+      igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+    });
+  }
+});
+provaAsync('6.65 QA Q04 — C6: a 2ª dada no dia 25/10 (série de 15), registrada em 26/10 pelas TRÊS portas (painel, ficha, «Lance aqui mesmo»): próximo 22/02/2027 nas três, verm_2a 25/10, sem verm_dose2_p', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const esperado = ['2026-10-10', '2026-10-25', '2026-10-25', '2027-02-22', 15];
+  await comQ(S15, '2026-10-26', async () => { painelQ('verm_dose2_p', '2026-10-25', {}, 'venc'); await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'painel'); igual(telaQ().ex.verm_p, '2027-02-22'); });
+  await comQ(S15, '2026-10-26', async () => { fichaQ({ verm_dose2_t: '2026-10-25' }); await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'ficha'); });
+  await comQ(S15, '2026-10-26', async () => {
+    igual(lanceQ('verm_dose2_p', '2026-10-25'), '2027-02-22', 'o «Próximo vermífugo» antes do Salvar');
+    await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'lance');
+    igual('verm_dose2_p' in dbQ(), false, 'nenhum verm_dose2_p');
+    igual(dbQ().verm_dose2_por, 'Day Care', '«Quem deu» vai junto, como antes');
+  });
+});
+provaAsync('6.65 QA Q05 — C7: a série de 15 nas listas (Vencimentos, Hoje na Zêluz, Prevenção e a Gestão «não podem frequentar»): vence em 25/10, vencida desde 26/10; com 21 (sem o campo), nada até 31/10', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  igual(listaQ(S15, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-10-25', false, 'vence em 25/10']]);
+  igual(listaQ(S21, '2026-10-19', 7, '2026-10-17'), []);
+  igual(listaQ(S15, '2026-10-26', 0, '2026-10-26'), [['verm_dose2_p', '2026-10-25', true, 'venceu em 25/10']]);
+  await comQ(S15, '2026-10-26', async () => {
+    const u = J630('urgenciasGestao().venc');
+    igual(u.map((x) => [x.nome, x.itens.map((i) => i.nome)]), [[run('pelNomeIdent(__bq)'), ['Vermífugo — 2ª dose']]]);
+    const h = J630("hojeAntecipar(pelExtra(__bq), __bq, '2026-10-26', null).itens.map(function(x){ return [x.k, x.vence]; })");
+    igual(h, [['verm_dose2_p', '2026-10-25']], 'Hoje na Zêluz pergunta a 2ª atrasada');
+  });
+  await comQ(S15, '2026-10-25', async () => { igual(J630('urgenciasGestao().venc'), [], 'no dia 25 ainda pode frequentar'); });
+  await comQ(S21, '2026-10-26', async () => { igual(J630('urgenciasGestao().venc'), [], 'com 21, em 26/10 está em dia'); });
+});
+provaAsync('6.65 QA Q06 — C8: a 2ª ATRASADA (dada 29/10, série de 15) pelas três portas: o próximo conta da data real, 26/02/2027', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const esp = ['2026-10-10', '2026-10-29', '2026-10-29', '2027-02-26', 15];
+  await comQ(S15, '2026-10-29', async () => { painelQ('verm_dose2_p', 'hoje', {}, 'hoje'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'painel'); });
+  await comQ(S15, '2026-10-30', async () => { fichaQ({ verm_dose2_t: '2026-10-29' }); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'ficha'); });
+  await comQ(S15, '2026-10-30', async () => { lanceQ('verm_dose2_p', '2026-10-29'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'lance'); });
+});
+provaAsync('6.65 QA Q07 — 2ª ANTECIPADA (21 dias, dada em 20/10, antes da prevista de 31/10) pelas três portas: próximo 17/02/2027 e a 2ª sai das listas', async () => {
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  const esp = ['2026-10-10', '2026-10-20', '2026-10-20', '2027-02-17', '∅'];
+  await comQ(S21, '2026-10-20', async () => { painelQ('verm_dose2_p', 'hoje', {}, 'venc'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'painel'); });
+  await comQ(S21, '2026-10-20', async () => { fichaQ({ verm_dose2_t: '2026-10-20' }); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'ficha'); });
+  await comQ(S21, '2026-10-20', async () => { lanceQ('verm_dose2_p', '2026-10-20'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'lance');
+    igual(listaQ(dbQ(), '2026-10-26', 7, '2026-10-20'), [], 'nada mais a cobrar até fevereiro'); });
+});
+provaAsync('6.65 QA Q08 — trocar o intervalo na ficha: 21→15 e 15→21 ANTES da 2ª (refaz 2ª e próximo); DEPOIS da 2ª real grava só a escolha; a série seguinte pelo painel usa a escolha (AC1.4) e o painel a mostra marcada', async () => {
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '∅', '2026-10-25', '2027-02-22', 15]);
+    fichaQ({ verm_dose2_dias: 21 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '∅', '2026-10-31', '2027-02-28', 21], '15→21 volta a conta');
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-10-31', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, '2026-11-02', async () => {
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '2026-10-31', '2026-10-31', '2027-02-28', 15], 'depois da 2ª real: o próximo não muda');
+    // a série seguinte (fevereiro), pelo painel montado de verdade: o 15 vem marcado
+    const h = run(`prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc')`);
+    assert.ok(/id="prevCorrI15_x" checked/.test(h) && !/id="prevCorrI21_x" checked/.test(h), 'o painel marca o 15 da ficha');
+  });
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2027-02-22', async () => {
+    painelQ('verm_p', 'hoje', { e: '2' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2027-02-22', '', '2027-03-09', '2027-07-07', 15], 'a escolha passou para a série seguinte');
+    igual(escQ().map((e) => e[2].indexOf('verm_dose2_dias') >= 0), [false], 'e não foi regravada');
+  });
+});
+provaAsync('6.65 QA Q09 — dose única ↔ 2 doses (ficha e painel): o 15 da ficha fica guardado na dose única e volta a valer nas 2 doses; nada grava o campo', async () => {
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, HQ, async () => {
+    fichaQ({ verm_doses: 'Dose única' }); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '', '2027-02-07', 15, 'Dose única']);
+    assert.ok(!/2ª dose com|2ª dose prevista/.test(telaQ().html), 'a ficha em dose única não mostra a escolha');
+    fichaQ({ verm_doses: '2 doses' }); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15, '2 doses'], 'volta com 15');
+    igual(escQ().every((e) => e[2].indexOf('verm_dose2_dias') < 0), true);
+  });
+  await comQ({ verm_doses: 'Dose única', verm_dose2_dias: 15, verm_t: '2026-06-01', verm_p: '2026-09-29' }, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '2' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15, '2 doses'], 'painel: 2 doses de novo com o 15 guardado');
+    igual(escQ()[0][2].indexOf('verm_dose2_dias'), -1);
+  });
+});
+provaAsync('6.65 QA Q10 — exame de fezes MAIS RECENTE que a série antiga (D6): a ficha começa a série nova sem travar; depois dela o vermífugo volta a valer (vermOuFezes) e a 2ª de 15 dias entra na lista', async () => {
+  await comQ(Object.assign({}, ROMEUQ, { fezes_t: '2026-09-01', fezes_p: '2026-12-30' }), HQ, async () => {
+    igual(run('vermOuFezes(pelExtra(__bq))'), 'fezes');
+    fichaQ({ verm_t: '2026-10-10', verm_dose2_dias: 15 }); await espera657();
+    igual([zaQ(), ...pegaQ(dbQ(), VQ)], [[], '2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+    igual(run('vermOuFezes(pelExtra(__bq))'), 'verm');
+    igual(listaQ(dbQ(), '2026-10-19', 7, '2026-10-17').map((x) => x[0]), ['verm_dose2_p']);
+  });
+});
+provaAsync('6.65 QA Q11 — ficha LEGADA (só vermifugo_t/vermifugo_p): listas iguais às da base; «Lance aqui mesmo» diz «Registre primeiro a 1ª dose.» na 2ª e não grava; a 1ª pela ficha fica em dose única', async () => {
+  const LEG = { vermifugo_t: '2026-06-01', vermifugo_p: '2026-09-29' };
+  igual(listaQ(LEG, '2026-10-12', 7, HQ), [['verm_p', '2026-09-29', true, 'venceu em 29/09']]);
+  await comQ(LEG, HQ, async () => {
+    lanceQ('verm_dose2_p', '2026-10-05'); await espera657();
+    igual(escQ(), [], 'nada gravado');
+    igual(zaQ().map((z) => z[1][0]), ['Registre primeiro a 1ª dose.']);
+    fichaQ({ verm_t: '2026-10-10' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '', '2027-02-07', '∅']);
+  });
+});
+provaAsync('6.65 QA Q12 — ficha antiga «2 doses» SEM verm_dose2_t e sem o campo: a lista e o painel da 2ª como hoje (21), e salvar só o nome não muda as datas', async () => {
+  const OLD = { verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' };
+  igual(listaQ(OLD, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-10-22', false, 'vence em 22/10']]);
+  await comQ(OLD, HQ, async () => {
+    fichaQ({ verm_nome: 'Milbemax' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-01', '∅', '2026-10-22', '2027-02-19', '∅']);
+    igual(escQ()[0][2], ['verm_2a', 'verm_nome', 'verm_p']);
+  });
+});
+provaAsync('6.65 QA Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, prova 19): as listas NÃO mudam; o Salvar só do nome passa o próximo para (1ª + 21) + 120 e deixa a 2ª antiga no banco; a ficha diz «2ª dose prevista»', async () => {
+  const X = { verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-08-01', verm_2a: '2026-08-01', verm_p: '2026-11-29' };
+  igual(listaQ(X, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-09-22', true, 'venceu em 22/09']], 'a lista já ignorava a 2ª antiga (base)');
+  await comQ(X, HQ, async () => {
+    const h = run('blocoVerm(pbEx("verm"))');
+    assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
+    fichaQ({ verm_nome: 'Milbemax' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+  });
+});
+provaAsync('6.65 QA Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
+  for (const [dias, d2, prox] of [[15, '2027-01-04', '2027-05-04'], [21, '2027-01-10', '2027-05-10']]) {
+    await comQ({ verm_doses: '2 doses', verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      painelQ('verm_p', 'hoje', { e: '2', i: String(dias) }, 'venc'); await espera657();
+      igual(pegaQ(dbQ(), ['verm_2a', 'verm_p']), [d2, prox], 'painel ' + dias);
+    });
+    await comQ({ verm_doses: '2 doses', verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      fichaQ(dias === 15 ? { verm_t: '2026-12-20', verm_dose2_dias: 15 } : { verm_t: '2026-12-20' }); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_2a', 'verm_p']), ['', d2, prox], 'ficha ' + dias);
+    });
+    await comQ({ verm_doses: '2 doses', verm_dose2_dias: dias, verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      igual(lanceQ('verm_p', '2026-12-20'), prox, 'lance «Vale até» ' + dias); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_2a', 'verm_p']), ['', d2, prox], 'lance ' + dias);
+    });
+  }
+  igual(listaQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-12-20', verm_2a: '2027-01-04', verm_p: '2027-05-04' }, '2026-12-28', 7, '2026-12-26'),
+    [['verm_dose2_p', '2027-01-04', false, 'vence em 04/01/2027']]);
+});
+provaAsync('6.65 QA Q15 — 31 do mês e ano bissexto: 31/10 + 15 = 15/11 e + 21 = 21/11; 31/01/2027 + 15 = 15/02; 14/02/2028 + 15 = 29/02/2028 (próximo 28/06/2028)', async () => {
+  const c = (t, d) => [run(`vermDose2Prevista({verm_doses:'2 doses', verm_t:'${t}', verm_dose2_dias:${d}})`),
+    run(`pbItensParaChecagem('verm', {verm_doses:'2 doses', verm_t:'${t}', verm_dose2_dias:${d}})[0].recalc('${t}')`)];
+  igual([c('2026-10-31', 15), c('2026-10-31', 21), c('2027-01-31', 15), c('2028-02-14', 15)],
+    [['2026-11-15', '2027-03-15'], ['2026-11-21', '2027-03-21'], ['2027-02-15', '2027-06-15'], ['2028-02-29', '2028-06-28']]);
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15 }, '2026-10-31', async () => {
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), ['verm_2a', 'verm_p']), ['2026-11-15', '2027-03-15']);
+  });
+});
+provaAsync('6.65 QA Q16 — fuso: às 23h30 de 10/10 em São Paulo (02h30 de 11/10 em UTC), o «hoje» da ficha é o do aparelho; a 2ª no dia seguinte é recusada e a do dia é aceita (só confere em TZ=America/Sao_Paulo)', async () => {
+  if (process.env.TZ !== 'America/Sao_Paulo') { igual(true, true); return; }
+  run(`__RDq=Date; __hzq=zHojeISO; __hjq=hojeISO; __dq=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RDq(__RDq.UTC(2026,9,11,2,30)); return new (Function.prototype.bind.apply(__RDq,[null].concat(a)))(); };
+    __dq.now=function(){ return __RDq.UTC(2026,9,11,2,30); }; __dq.prototype=__RDq.prototype; __dq.UTC=__RDq.UTC; __dq.parse=__RDq.parse; Date=__dq;`);
+  try {
+    igual(run('__hzq()'), '2026-10-10');
+    ctx.__ex16 = { verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' };
+    await comQ(ctx.__ex16, null, async () => {
+      run('Date=__dq; zHojeISO=__hzq; hojeISO=__hjq;');
+      igual(run('hojeISO()'), '2026-10-10', 'o hoje do aparelho em São Paulo');
+      fichaQ({ verm_dose2_t: '2026-10-11' }); await espera657();
+      igual([escQ().length, zaQ().length], [0, 1], '11/10 é amanhã em São Paulo');
+      assert.ok(run('blocoVerm(pbEx("verm"))').indexOf('max="2026-10-10"') >= 0, 'o max do campo é o hoje de São Paulo');
+      run('PB_PEND={};');
+      fichaQ({ verm_dose2_t: '2026-10-10' }); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_p']), ['2026-10-10', '2027-02-07']);
+    });
+  } finally { run('Date=__RDq;'); }
+});
+provaAsync('6.65 QA Q17 — NUNCA EM MASSA: desenhar ficha, painel, «Lance aqui mesmo» e salvar os outros blocos, o nome, a mesma escolha (15 com 15; 21 sem o campo) e o carrapaticida do painel nunca escrevem verm_dose2_dias', async () => {
+  for (const base of [ROMEUQ, Object.assign({}, ROMEUQ, { verm_dose2_dias: 15 })]) {
+    await comQ(Object.assign({}, base, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01' }), HQ, async () => {
+      run(`blocoVerm(pbEx('verm')); prevEdicaoHTML({p:__bq, nome:'Bento'}); prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc'); prevCorrigeVermHTML('verm_dose2_p', pelExtra(__bq), 'x', 'x', 'venc');
+        try{ prevCorrigePainelHTML(__dcq, 'venc', '${HQ}', 'venc'); }catch(e){}`);
+      await espera657();
+      igual(escQ(), [], 'desenhar não grava');
+      fichaQ({ ecto_t: '2026-10-09' }, 'ecto'); fichaQ({ col_t: '2026-10-09' }, 'col'); fichaQ({ vac_mult_t: '2026-10-09' }, 'vac'); fichaQ({ fezes_t: '2026-10-09' }, 'fezes');
+      fichaQ({ verm_nome: 'Milbemax' });
+      fichaQ({ verm_dose2_dias: base.verm_dose2_dias || 21 });
+      painelQ('verm_p', '2026-10-09', { e: '2', i: String(base.verm_dose2_dias || 21) }, 'venc');
+      run(`__el657['prevCorrP_'+__dcq+'_ecto_p']={value:'Bravecto'};`); painelQ('ecto_p', 'hoje', {}, 'venc');
+      await espera657();
+      const w = escQ();
+      assert.ok(w.length >= 6, 'gravou ' + w.length);
+      igual(w.filter((e) => e[2].indexOf('verm_dose2_dias') >= 0), [], JSON.stringify(w));
+      igual(dbQ().verm_dose2_dias === undefined ? '∅' : dbQ().verm_dose2_dias, base.verm_dose2_dias || '∅');
+    });
+  }
+});
+provaAsync('6.65 QA Q18 — D3 em TODO item de prevenção pela FICHA (carrapaticida, coleira, vermífugo, exame de fezes, vacina): o bloco redesenhado logo depois já mostra o gravado; o banco recusando, a cópia volta e o bloco redesenha com o de antes', async () => {
+  const F = { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29',
+    fezes_t: '2025-12-01', fezes_p: '2026-03-31', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01', verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  const casos = [['ecto', { ecto_t: '2026-10-09' }, 'ecto_t'], ['col', { col_t: '2026-10-09' }, 'col_t'], ['verm', { verm_t: '2026-10-09' }, 'verm_t'],
+    ['fezes', { fezes_t: '2026-10-09' }, 'fezes_t'], ['vac', { vac_mult_t: '2026-10-09' }, 'vac_mult_t']];
+  for (const [b, pend, c] of casos) {
+    await comQ(F, HQ, async () => {
+      fichaQ(pend, b);
+      igual([telaQ().b, telaQ().ex[c]], [b, '2026-10-09'], b + ': na hora');
+      await espera657();
+      igual(dbQ()[c], '2026-10-09');
+    });
+    await comQ(F, HQ, async () => {
+      run(`__recusa657='^daycare/cadastro/';`);
+      fichaQ(pend, b);
+      const n0 = J630('__telas').length;
+      igual(telaQ().ex[c], '2026-10-09', b + ': na hora (antes da resposta)');
+      await espera657();
+      const ts = J630('__telas');
+      assert.ok(ts.length > n0, b + ': redesenhou na recusa');
+      igual([ts[ts.length - 1].ex[c], cacheQ()[c], dbQ()[c]], [F[c], F[c], F[c]], b + ': depois da recusa');
+      igual(cacheQ(), Object.assign({}, BENTOQ, F), b + ': a cópia em memória idêntica à de antes');
+    });
+  }
+});
+provaAsync('6.65 QA Q19 — D3 pelo PAINEL em todo item (vacina, coleira, carrapaticida, vermífugo, 2ª dose, exame de fezes, «Vence em» à mão, dose única): a lista redesenhada logo depois já mostra o gravado; o banco recusando, volta', async () => {
+  const F = { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29',
+    fezes_t: '2025-12-01', fezes_p: '2026-03-31', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01', verm_doses: '2 doses', verm_t: '2026-09-20', verm_2a: '2026-10-11', verm_p: '2027-02-08' };
+  const acoes = [
+    ['vacina', () => painelQ('vac_mult_p', 'hoje', {}, 'venc'), 'vac_mult_t', HQ],
+    ['coleira', () => painelQ('col_p', 'hoje', {}, 'hoje'), 'col_t', HQ],
+    ['carrapaticida', () => { run(`__el657['prevCorrP_'+__dcq+'_ecto_p']={value:'Bravecto'};`); painelQ('ecto_p', 'hoje', {}, 'prev'); }, 'ecto_t', HQ],
+    ['vermífugo', () => painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'), 'verm_dose2_dias', 15],
+    ['2ª dose', () => painelQ('verm_dose2_p', 'hoje', {}, 'venc'), 'verm_dose2_t', HQ],
+    ['exame de fezes', () => { run(`__el657['prevCorrF_'+__dcq+'_verm_p']={value:'2026-10-08'}; prevCorrigeExameFezes(__dcq, 'venc');`); }, 'fezes_t', '2026-10-08'],
+    ['«Vence em» à mão', () => { run(`__el657['prevCorrV_'+__dcq+'_col_p']={value:'2026-12-20'}; prevCorrigeVenceEm(__dcq, 'col_p', 'venc');`); }, 'col_p', '2026-12-20'],
+    ['dose única', () => run(`prevCorrigeDoseUnica(__dcq, 'venc')`), 'verm_doses', 'Dose única'],
+  ];
+  for (const [nome, faz, c, v] of acoes) {
+    await comQ(F, HQ, async () => { faz(); igual(telaQ().ex[c], v, nome + ': na hora'); await espera657(); igual(dbQ()[c], v, nome + ': banco'); });
+    await comQ(F, HQ, async () => {
+      run(`__recusa657='^daycare/cadastro/';`); faz();
+      igual(telaQ().ex[c], v, nome + ': na hora');
+      await espera657();
+      const depois = [telaQ().ex[c] === undefined ? '∅' : telaQ().ex[c], cacheQ()[c] === undefined ? '∅' : cacheQ()[c]];
+      // 2ª rodada (REL-001): também o campo que o banco não tinha (o intervalo, a 2ª dose) volta na tela, e não só na cópia em memória
+      igual(depois, [F[c] === undefined ? '∅' : F[c], F[c] === undefined ? '∅' : F[c]], nome + ': depois da recusa');
+    });
+  }
+});
+provaAsync('6.65 QA Q19b — o intervalo RECUSADO pelo banco não fica na cópia LOCAL deste aparelho (2ª rodada, REL-001): a tela, o painel e a ficha voltam ao 21; o «salve de novo» do painel e da ficha grava o intervalo no banco, e o outro aparelho cobra a 2ª em 25/10; a 2ª dose recusada não fica «dada»', async () => {
+  const r = {};
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.recusado = [run('vermIntervalo(pelExtra(__bq))'), cacheQ().verm_dose2_dias === undefined ? '∅' : cacheQ().verm_dose2_dias, dbQ().verm_dose2_dias === undefined ? '∅' : dbQ().verm_dose2_dias];
+    r.local = Object.prototype.hasOwnProperty.call(JSON.parse(run("__ls657['zeluz_pel_'+__kq]||'{}'")), 'verm_dose2_dias');
+    const h = run(`prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc')`);
+    r.painelMarca15 = /id="prevCorrI15_x" checked/.test(h);
+    r.ficha15 = /\(15 dias depois\)/.test(run('blocoVerm(pelExtra(__bq))'));
+    run(`__recusa657=null;`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.painelDeNovo = pegaQ(dbQ(), ['verm_2a', 'verm_p', 'verm_dose2_dias']);
+    r.outroAparelho = run(`vermDose2Prevista(__get657('daycare/cadastro/'+__kq))`);
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    r.fichaRecusada = [run('vermIntervalo(pelExtra(__bq))'), /\(21 dias depois\)/.test(run('blocoVerm(pelExtra(__bq))'))];
+    run(`__recusa657=null;`);
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    r.fichaDeNovo = pegaQ(dbQ(), ['verm_2a', 'verm_p', 'verm_dose2_dias']);
+  });
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_dose2_t: '2026-10-25' }); await espera657();
+    r.segundaRecusada = [run("String(pelExtra(__bq).verm_dose2_t||'∅')"), run('vermDose2Prevista(pelExtra(__bq))'), run('pelExtra(__bq).verm_p')];
+  });
+  console.log('      [Q19b] ' + JSON.stringify(r));
+  igual(r, { recusado: [21, '∅', '∅'], local: false, painelMarca15: false, ficha15: false, painelDeNovo: ['2026-10-25', '2027-02-22', 15], outroAparelho: '2026-10-25',
+    fichaRecusada: [21, true], fichaDeNovo: ['2026-10-25', '2027-02-22', 15], segundaRecusada: ['∅', '2026-10-25', '2027-02-22'] });
+});
+provaAsync('6.65 QA Q20 — D3: DUAS gravações seguidas da mesma ficha (as duas ok; a 1ª recusada e a 2ª ok; as duas recusadas) — o que a cópia em memória diz no fim, contra o banco', async () => {
+  const F = { verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  const duas = async (resp) => {
+    return comQ(F, HQ, async () => {
+      run(`__pendura657='^daycare/cadastro/';`);
+      fichaQ({ verm_t: '2026-10-08' }); fichaQ({ verm_t: '2026-10-09' });
+      igual(telaQ().ex.verm_t, '2026-10-09', 'na hora: a 2ª gravação');
+      for (let i = 0; i < 2; i++) { run(`__pend657[${i}].${resp[i]}()`); await espera657(); }
+      return [cacheQ().verm_t, dbQ().verm_t, telaQ().ex.verm_t];
+    });
+  };
+  igual(await duas(['ok', 'ok']), ['2026-10-09', '2026-10-09', '2026-10-09'], 'as duas ok');
+  ctx.__q20a = await duas(['nao', 'ok']);
+  ctx.__q20b = await duas(['nao', 'nao']);
+  ctx.__q20c = await duas(['ok', 'nao']);
+  console.log('      [Q20] 1ª recusada e 2ª ok → cópia/banco/tela: ' + JSON.stringify(ctx.__q20a) + ' · as duas recusadas: ' + JSON.stringify(ctx.__q20b) + ' · 1ª ok e 2ª recusada: ' + JSON.stringify(ctx.__q20c));
+  igual(ctx.__q20c, ['2026-10-08', '2026-10-08', '2026-10-08'], '1ª ok e 2ª recusada: a cópia volta para a 1ª, que o banco tem');
+  // 2ª rodada (REL-002): a cópia em memória termina igual ao banco nas outras duas sequências
+  igual(ctx.__q20a, ['2026-10-09', '2026-10-09', '2026-10-09'], '1ª recusada e 2ª ok: a 2ª, que o banco tem, fica');
+  igual(ctx.__q20b, ['2026-06-01', '2026-06-01', '2026-06-01'], 'as duas recusadas: o que o banco tem (a leitura da ficha corrige o «antes» da 2ª)');
+});
+provaAsync('6.65 QA Q21 — D3: a ficha que NÃO está na cópia em memória não nasce lá (nem pela ficha, nem pelo painel); e o porteiro (perfil sem editar ficha) não toca a cópia', async () => {
+  await comQ(ROMEUQ, HQ, async () => {
+    fichaQ({ verm_t: '2026-10-10' });
+    igual(J630('pelCadCache[__kq]||null'), null);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc');
+    igual(J630('pelCadCache[__kq]||null'), null);
+    await espera657();
+    igual(dbQ().verm_p, '2027-02-22', 'o banco gravou');
+  }, { semCache: true });
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`canEditPel=function(){ return false; }; podePapel=function(){ return false; };`);
+    fichaQ({ verm_t: '2026-10-10' });
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc');
+    await espera657();
+    igual([cacheQ().verm_t, cacheQ().verm_p, dbQ().verm_t], ['2026-05-20', '2026-10-08', '2026-05-20']);
+  });
+});
+provaAsync('6.65 QA Q22 — a tela depois da RECUSA do banco: o que ela ainda afirma (bloco da ficha «✓ Salvo»; verde «em dia até» do painel) — registrado para o gate', async () => {
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_t: '2026-10-10' }); await espera657();
+    ctx.__q22f = [telaQ().salvo, /✓ Salvo/.test(telaQ().html), telaQ().ex.verm_t];
+  });
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    ctx.__q22p = [Object.values(telaQ().ok).map((o) => o.texto), telaQ().ex.verm_p];
+  });
+  console.log('      [Q22] ficha recusada → PB_SALVO/«✓ Salvo» na tela/1ª na tela: ' + JSON.stringify(ctx.__q22f) + ' · painel recusado → verde/próximo na tela: ' + JSON.stringify(ctx.__q22p));
+  igual(ctx.__q22f[2], '2026-05-20'); igual(ctx.__q22p[1], '2026-10-08');
+});
+provaAsync('6.65 QA Q23 — «Lance aqui mesmo» (C9 e C10 com as bordas): 1ª nova com 2ª real da mesma série (fica), 1ª corrigida para trás (fica), 2ª no futuro e 2ª antes da 1ª (recusadas), dose única (não grava)', async () => {
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', async () => {
+    igual(lanceQ('verm_p', '2026-10-09'), '2027-02-22', 'a 1ª corrigida para trás: a 2ª real manda');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-09', '2026-10-25', '2026-10-25', '2027-02-22', 15]);
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    lanceQ('verm_dose2_p', '2026-10-11'); lanceQ('verm_dose2_p', '2026-10-09'); await espera657();
+    igual([escQ(), zaQ().map((z) => z[1][0])], [[], ['A data de aplicação está no futuro.', 'A 2ª dose (09/10/2026) ficou antes da 1ª (10/10/2026).']]);
+  });
+  await comQ({ verm_doses: 'Dose única', verm_t: '2026-10-01', verm_p: '2027-01-29' }, HQ, async () => {
+    const h = run(`prevEdicaoHTML({p:__bq, nome:'Bento'})`);
+    assert.ok(/Esta ficha está em dose única: não há 2ª dose\./.test(h) && /Como está na ficha: Dose única\./.test(h));
+    lanceQ('verm_dose2_p', '2026-10-05'); await espera657();
+    igual([escQ(), zaQ().map((z) => z[0])], [[], ['NÃO HÁ 2ª DOSE PARA LANÇAR']]);
+  });
+});
+provaAsync('6.65 QA Q24 — o que não pode mudar: dose pelo peso (6.59), exame de fezes, «Vence em» à mão, permissões, VERMIF_PROX, a mensagem verm2, o porteiro, o setPelExtra e as listas — fonte idêntica à da base, letra por letra (2ª rodada: o sha-256 da fonte da base 59f16a8)', async () => {
+  const novo = fs.readFileSync(APP, 'utf8');
+  const h = (x) => require('crypto').createHash('sha256').update(String(x)).digest('hex').slice(0, 16);
+  const fonte = (src, nome) => { const i = src.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0, j = src.indexOf('{', i); for (let k = j; k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}') { d--; if (!d) return src.slice(i, k + 1); } } return null; };
+  const BASE = {"fn": {"vermAvaliar": "dbb338c2bf7e64b5", "vermFaixaKg": "30b015b84cf0ada4", "vermMargemKg": "17d894cb494ce621", "vermNumTexto": "fcf2a669fa302195", "vermNumLer": "f3af1b973b05be92", "vermDoseDe": "ca0de65413eef7e3", "vermPertoDaVirada": "b40da171c0d5df85", "vermFrasePeso": "34a4fcbaeed5260b", "vermAvaliarFicha": "b33c7434482bf287", "vermFichaTextoHTML": "c750d8f6a0fe1eed", "vermPreMarcar": "9c3b3baca86cbcb3", "vermBlocoPainelHTML": "fa6a626a6d27de72", "dashLancar": "6267457666ad76f3", "vermPreMarcarVenc": "47968aea4c549131", "vermLinhaVencHTML": "77149b646c2ec3b8", "vencBlocoLancHTML": "60cc11bb3c70521e", "vermOuFezes": "e29f34cc2ad21b05", "prevDispensadoPorExame": "f40ec4cc6325dbf0", "prevForaDaCobranca": "0c57dfd57defbac2", "prevVenceManualSet": "4c84b3c948dc3bc1", "podeVencManual": "88f0694c49496db7", "prevAvisoRecalc": "b295e4128828037a", "prevEraManual": "567f58ccfaac2fb1", "prevChecarLogica": "d28d9aeb0429193a", "pelExtra": "e874a3d2b3b8767a", "setPelExtra": "ded4cc5f9acc60cd", "pelAplicarNoCache": "c174a71c267e339b", "pelCamposBarrados": "99703a2869112cec", "escovaCacheGravado": "452a789d84d96bb5", "vencItensDe": "9e9d1f75fb3e51f0", "prevPendencias": "c87ce87973884715", "prevValor": "c4bc834fdc1a5e09", "hojeAntecipar": "9b8fed3ad9122257", "urgenciasGestao": "c192dbd0f0779796", "vencLancarAuto": "414f3b8869277485", "alertaPrevencao": "8d52ba3995909460", "prevFaltasDe": "521dab44ee9157f1", "vencQuantoTexto": "7a4176b9d8d5c8de", "pelSalvoMostrar": "e1f4ae9d461c3055", "prevCorrigeRegistrar": "af8aac78d783fcf2", "prevCorrigeRedesenhar": "62483ddb8dd49028", "blocoFezes": "2dd50ba50fb2744e", "blocoVacinas": "816ab98cf9e52ef6", "blocoEcto": "8555e7943c933dcd", "blocoColeira": "e3dda9ffae12e570", "prevCorrigeFezesHTML": "b7cdeb888ff067bc", "canEditPel": "712f761f9d9c3b93", "podePapel": "f79e84fc5f1bd977", "zAlertao": "e30d85cfd25aab3a"}, "cache3": {"prevCorrigeExameFezes": "d7f0b5d65dab8eba", "prevCorrigeVenceEm": "8b9245b3fc770879", "prevCorrigeDoseUnica": "fa721ad2fd82ed3f"}, "prox": "913ecb0cb2823d8b", "verm2": "96dc0ff2b72b8511", "dica": "542c5c85e0c8e205", "perm": "cc8cffaa48521917", "dosePeso": 1};
+  const dif = Object.keys(BASE.fn).filter((n) => h(fonte(novo, n)) !== BASE.fn[n]);
+  igual(dif, [], 'funções que mudaram: ' + dif.join(', '));
+  // as três que só ganham o passo do cache: sem as duas linhas, idênticas
+  for (const n of Object.keys(BASE.cache3)) {
+    const b = fonte(novo, n).replace("    var _gravou=setPelExtra(p, patch);\n    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)\n", '    setPelExtra(p, patch);\n');
+    igual(h(b), BASE.cache3[n], n + ' muda só pelo passo do cache');
+  }
+  const linha = (src, re) => (src.match(re) || [''])[0];
+  igual([h(linha(novo, /const VERMIF_PROX=120;[^\n]*/)), h(linha(novo, /verm2:'Olá, \{tutor\}[\s\S]*?ainda tem o comprimido em casa\?',/)),
+    h(linha(novo, /\{k:'verm2', id:'cfgVencVerm2'[^\n]*\n[^\n]*dica:[^\n]*/).split('\n')[1])], [BASE.prox, BASE.verm2, BASE.dica], 'VERMIF_PROX, a mensagem verm2 e a dica');
+  const perm = (src) => src.slice(src.indexOf("'editar-peludinho'") - 2000, src.indexOf("'prevencao-lancar-na-tela'") + 400);
+  igual(h(perm(novo)), BASE.perm, 'a tabela de permissões');
+  igual((novo.match(/Dose pelo peso/g) || []).length, BASE.dosePeso, 'a linha «Dose pelo peso»');
+});
+
+}
+{
+// ================================================================== 6.65 — as provas do re-gate 2 do QA (Quinn), trazidas para a Fase 0 antes da publicação
+// Tudo com o setPelExtra e o pelExtra DE VERDADE sobre o banco de mentira da 6.57 (ARMA657): cada porta grava no banco,
+// a tela de quem gravou é capturada no instante do redesenho, sem o ouvinte do cadastro. Dado inventado: o FILHOt «Bento»,
+// da tutora «Ana Teste», com a ficha como a do Romeu (série antiga: 1ª 20/05, 2ª 10/06, próximo venceu 08/10).
+console.log('\nQA 6.65 — provas próprias do QA (Quinn): todas as portas, o banco de mentira e a tela logo depois de gravar');
+const HQ = '2026-10-10';
+const ROMEUQ = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+const BENTOQ = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', dias: ['seg', 'qua'] };
+const armaQ = (ficha, hoje, opc) => {
+  run(ARMA657);
+  ctx.__fq = Object.assign({}, BENTOQ, ficha || {}); ctx.__hq = hoje || HQ;
+  run(`__bkQ={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, pod:prevCorrigePode, fc:prevCorrigeFecharConversa,
+      vf:vencFecharAssuntosPelaFicha, ok:PREV_CORRIGE_OK, ce:canEditPel, pp:PB_PEND, ps:PB_SALVO, pdp:podePapel, ra:PREV_RECALC_AVISO,
+      ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM, prr:prevRedesenhar, ze:zEscolha};
+    zHojeISO=function(){ return __hq; }; hojeISO=zHojeISO;
+    __bq={n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão', dias:['seg','qua']}; PELUDINHOS=[__bq]; pelAtual=__bq;
+    PB_PEND={}; PB_SALVO={}; PREV_CORRIGE_OK={}; PREV_RECALC_AVISO={};
+    __kq=pelKey(__bq); __dcq=dcKey(__bq.n, __bq.tutor);
+    __put657('daycare/cadastro/'+__kq, __fq); pelCadCache={}; pelCadCache[__kq]=__get657('daycare/cadastro/'+__kq); __ls657={}; __esc657=[];
+    __telas=[]; __zeFn=null;
+    zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn=b; };
+    pbRender=function(b){ var e=pbEx(b); __telas.push({tela:'ficha', b:b, ex:JSON.parse(JSON.stringify(e)), html:(PB_HTML[b]?PB_HTML[b](e):''), salvo:!!PB_SALVO[b]}); };
+    var cap=function(t){ return function(){ __telas.push({tela:t, ex:JSON.parse(JSON.stringify(pelExtra(__bq))), ok:JSON.parse(JSON.stringify(PREV_CORRIGE_OK))}); }; };
+    vencRender=cap('venc'); hojeRender=cap('hoje'); renderPrevencao=cap('prev'); prevRedesenhar=cap('prevR');
+    prevCorrigePode=function(){ return true; }; prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){};`);
+  if (opc && opc.semCache) run('pelCadCache={};');
+};
+const soltaQ = () => {
+  run(`pbRender=__bkQ.pr; vencRender=__bkQ.vr; hojeRender=__bkQ.hr; renderPrevencao=__bkQ.rp; prevCorrigePode=__bkQ.pod;
+    prevCorrigeFecharConversa=__bkQ.fc; vencFecharAssuntosPelaFicha=__bkQ.vf; PREV_CORRIGE_OK=__bkQ.ok; canEditPel=__bkQ.ce;
+    PB_PEND=__bkQ.pp; PB_SALVO=__bkQ.ps; podePapel=__bkQ.pdp; PREV_RECALC_AVISO=__bkQ.ra; PREV_CORRIGE_ABERTO=__bkQ.ab;
+    PREV_CORRIGE_ORIGEM=__bkQ.ori; prevRedesenhar=__bkQ.prr; zEscolha=__bkQ.ze;`);
+  run(SOLTA657);
+};
+const comQ = async (ficha, hoje, fn, opc) => { armaQ(ficha, hoje, opc); try { const r = await fn(); await espera657(); return r; } finally { soltaQ(); } };
+const dbQ = () => J630("__get657('daycare/cadastro/'+__kq)");
+const cacheQ = () => J630('pelCadCache[__kq]||null');
+const escQ = () => J630("__esc657.filter(function(e){ return /^daycare\\/cadastro\\//.test(e[1]); })");
+const telaQ = () => { const t = J630('__telas'); return t[t.length - 1] || null; };
+const zaQ = () => J630('__za657');
+const pegaQ = (o, cs) => cs.map((c) => (o && Object.prototype.hasOwnProperty.call(o, c)) ? o[c] : '∅');
+const VQ = ['verm_t', 'verm_dose2_t', 'verm_2a', 'verm_p', 'verm_dose2_dias'];
+// PAINEL: m.e '1' dose única / '2' duas doses; m.i '15' / '21'; dt 'hoje' ou a data do «Feito em…»; tela venc|hoje|prev
+const painelQ = (k, dt, m, tela) => {
+  ctx.__mq = m || {}; ctx.__kkq = k; ctx.__dtq = dt; ctx.__tlq = tela || 'venc';
+  run(`(function(){ var id=__dcq+'_'+__kkq, m=__mq;
+    if(m.e){ __el657['prevCorrE1_'+id]={checked:m.e==='1'}; __el657['prevCorrE2_'+id]={checked:m.e==='2'}; }
+    if(m.i){ __el657['prevCorrI15_'+id]={checked:m.i==='15'}; __el657['prevCorrI21_'+id]={checked:m.i==='21'}; }
+    if(__dtq==='hoje') prevCorrigeFeitoHoje(__dcq, __kkq, __tlq); else { __el657['prevCorrT_'+id]={value:__dtq}; prevCorrigeFeitoEm(__dcq, __kkq, __tlq); } })()`);
+};
+// FICHA: cada campo pelo pbSet (como o toque), «Salvar vermífugo» pelo pbSalvar
+const fichaQ = (campos, b) => { ctx.__fcq = campos; ctx.__bbq = b || 'verm'; run(`Object.keys(__fcq).forEach(function(c){ var o={}; o[c]=__fcq[c]; pbSet(__bbq, o); }); pbSalvar(__bbq);`); };
+// «LANCE AQUI MESMO»: o «Feito em» com o onchange (prevRecalcular), o que estiver escrito no campo da validade, e o «Salvar»
+const lanceQ = (k, dt, porCima) => {
+  ctx.__lkq = k; ctx.__ldq = dt; ctx.__lvq = (porCima === undefined) ? null : porCima;
+  run(`(function(){ var ch=__kq, ex=pelExtra(__bq);
+    __el657['prevT_'+ch+'_'+__lkq]={value:__ldq}; __el657['prevQ_'+ch+'_'+__lkq]={value:'Day Care'}; __el657['prevN_'+ch+'_'+__lkq]={value:''};
+    __el657['prevP_'+ch+'_'+__lkq]={value:ex[__lkq]||''};
+    prevRecalcular(ch, __lkq);
+    if(__lvq!==null) __el657['prevP_'+ch+'_'+__lkq].value=__lvq;
+    __valeQ=__el657['prevP_'+ch+'_'+__lkq].value;
+    prevLancar(ch, __lkq); })()`);
+  return run('__valeQ');
+};
+const listaQ = (ex, alvo, margem, hoje) => J630(`vencItensDe(${JSON.stringify(ex)}, '${alvo}', ${margem}, '${hoje}', {incluirSemRegistro:true}).filter(function(x){ return !x.sem_registro; }).map(function(x){ return [x.k, x.vence, x.atrasado, vencQuantoTexto(x, '${hoje}')]; })`);
+
+provaAsync('6.65 QA2 Q01 — vermIntervalo: as bordas (espaço, zero à esquerda, decimal, booleano, objeto) caem em 21, exceto 15 exato', async () => {
+  const casos = [[' 15 ', 15], ['015', 21], ['15.0', 21], [15.0, 15], [true, 21], [{}, 21], [NaN, 21], ['21 ', 21], ['15 dias', 21], [-15, 21], [1.5e1, 15]];
+  igual(casos.map(([v]) => run(`vermIntervalo({verm_dose2_dias:${JSON.stringify(v)}})`)), casos.map((c) => c[1]));
+  igual(run("vermIntervalo({verm_dose2_dias:NaN})"), 21);
+});
+provaAsync('6.65 QA2 Q02 — C1, C2, C3 pelo PAINEL de verdade, nas três telas (Vencimentos, Hoje na Zêluz, Prevenção): o banco recebe o certo e a tela redesenhada logo depois já mostra o gravado', async () => {
+  for (const tela of ['venc', 'hoje', 'prev']) {
+    await comQ(ROMEUQ, HQ, async () => {
+      painelQ('verm_p', 'hoje', { e: '2', i: '15' }, tela);
+      const t = telaQ();
+      igual([t.tela, ...pegaQ(t.ex, VQ)], [tela, '2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'C1 tela ' + tela);
+      igual(Object.values(t.ok).map((o) => o.texto), ['Bento — Vermífugo em dia até 22/02/2027']);
+      await espera657();
+      igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'C1 banco ' + tela);
+    });
+  }
+  await comQ(ROMEUQ, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '2', i: '21' }, 'venc');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-31', '2027-02-28', '∅'], 'C2: sem o campo');
+    igual(escQ().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]);
+  });
+  await comQ(ROMEUQ, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '1', i: '15' }, 'venc');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '', '2027-02-07', '∅', 'Dose única'], 'C3: dose única, sem o campo');
+  });
+});
+provaAsync('6.65 QA2 Q03 — C4 e C5 pela FICHA de verdade (série antiga vencida e não vencida), com o 15 escolhido no mesmo Salvar: sem aviso, a 2ª antiga sai, o campo 15 é gravado e o bloco redesenhado já mostra 25/10 e 22/02/2027', async () => {
+  for (const ant of [ROMEUQ, { verm_doses: '2 doses', verm_t: '2026-05-26', verm_dose2_t: '2026-06-16', verm_2a: '2026-06-16', verm_p: '2026-10-14' }]) {
+    await comQ(ant, HQ, async () => {
+      fichaQ({ verm_t: '2026-10-10', verm_dose2_dias: 15 });
+      const t = telaQ();
+      igual([t.tela, t.salvo, ...pegaQ(t.ex, VQ)], ['ficha', true, '2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+      assert.ok(t.html.indexOf('<label>2ª dose prevista (15 dias depois)</label><div class="prev-calc">25/10/2026</div>') >= 0, 'o rótulo e a data na tela');
+      assert.ok(/value="2027-02-22"/.test(t.html) || /22\/02\/2027/.test(t.html), 'o próximo na tela');
+      assert.ok(t.html.indexOf('<label>2ª dose dada em</label><input type="date" class="cad-in" value=""') >= 0, '«2ª dose dada em» vazio logo depois');
+      igual([zaQ(), J630('__ze657')], [[], []]);
+      await espera657();
+      igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+    });
+  }
+});
+provaAsync('6.65 QA2 Q04 — C6: a 2ª dada no dia 25/10 (série de 15), registrada em 26/10 pelas TRÊS portas (painel, ficha, «Lance aqui mesmo»): próximo 22/02/2027 nas três, verm_2a 25/10, sem verm_dose2_p', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const esperado = ['2026-10-10', '2026-10-25', '2026-10-25', '2027-02-22', 15];
+  await comQ(S15, '2026-10-26', async () => { painelQ('verm_dose2_p', '2026-10-25', {}, 'venc'); await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'painel'); igual(telaQ().ex.verm_p, '2027-02-22'); });
+  await comQ(S15, '2026-10-26', async () => { fichaQ({ verm_dose2_t: '2026-10-25' }); await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'ficha'); });
+  await comQ(S15, '2026-10-26', async () => {
+    igual(lanceQ('verm_dose2_p', '2026-10-25'), '2027-02-22', 'o «Próximo vermífugo» antes do Salvar');
+    await espera657(); igual(pegaQ(dbQ(), VQ), esperado, 'lance');
+    igual('verm_dose2_p' in dbQ(), false, 'nenhum verm_dose2_p');
+    igual(dbQ().verm_dose2_por, 'Day Care', '«Quem deu» vai junto, como antes');
+  });
+});
+provaAsync('6.65 QA2 Q05 — C7: a série de 15 nas listas (Vencimentos, Hoje na Zêluz, Prevenção e a Gestão «não podem frequentar»): vence em 25/10, vencida desde 26/10; com 21 (sem o campo), nada até 31/10', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  igual(listaQ(S15, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-10-25', false, 'vence em 25/10']]);
+  igual(listaQ(S21, '2026-10-19', 7, '2026-10-17'), []);
+  igual(listaQ(S15, '2026-10-26', 0, '2026-10-26'), [['verm_dose2_p', '2026-10-25', true, 'venceu em 25/10']]);
+  await comQ(S15, '2026-10-26', async () => {
+    const u = J630('urgenciasGestao().venc');
+    igual(u.map((x) => [x.nome, x.itens.map((i) => i.nome)]), [[run('pelNomeIdent(__bq)'), ['Vermífugo — 2ª dose']]]);
+    const h = J630("hojeAntecipar(pelExtra(__bq), __bq, '2026-10-26', null).itens.map(function(x){ return [x.k, x.vence]; })");
+    igual(h, [['verm_dose2_p', '2026-10-25']], 'Hoje na Zêluz pergunta a 2ª atrasada');
+  });
+  await comQ(S15, '2026-10-25', async () => { igual(J630('urgenciasGestao().venc'), [], 'no dia 25 ainda pode frequentar'); });
+  await comQ(S21, '2026-10-26', async () => { igual(J630('urgenciasGestao().venc'), [], 'com 21, em 26/10 está em dia'); });
+});
+provaAsync('6.65 QA2 Q06 — C8: a 2ª ATRASADA (dada 29/10, série de 15) pelas três portas: o próximo conta da data real, 26/02/2027', async () => {
+  const S15 = { verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' };
+  const esp = ['2026-10-10', '2026-10-29', '2026-10-29', '2027-02-26', 15];
+  await comQ(S15, '2026-10-29', async () => { painelQ('verm_dose2_p', 'hoje', {}, 'hoje'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'painel'); });
+  await comQ(S15, '2026-10-30', async () => { fichaQ({ verm_dose2_t: '2026-10-29' }); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'ficha'); });
+  await comQ(S15, '2026-10-30', async () => { lanceQ('verm_dose2_p', '2026-10-29'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'lance'); });
+});
+provaAsync('6.65 QA2 Q07 — 2ª ANTECIPADA (21 dias, dada em 20/10, antes da prevista de 31/10) pelas três portas: próximo 17/02/2027 e a 2ª sai das listas', async () => {
+  const S21 = { verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' };
+  const esp = ['2026-10-10', '2026-10-20', '2026-10-20', '2027-02-17', '∅'];
+  await comQ(S21, '2026-10-20', async () => { painelQ('verm_dose2_p', 'hoje', {}, 'venc'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'painel'); });
+  await comQ(S21, '2026-10-20', async () => { fichaQ({ verm_dose2_t: '2026-10-20' }); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'ficha'); });
+  await comQ(S21, '2026-10-20', async () => { lanceQ('verm_dose2_p', '2026-10-20'); await espera657(); igual(pegaQ(dbQ(), VQ), esp, 'lance');
+    igual(listaQ(dbQ(), '2026-10-26', 7, '2026-10-20'), [], 'nada mais a cobrar até fevereiro'); });
+});
+provaAsync('6.65 QA2 Q08 — trocar o intervalo na ficha: 21→15 e 15→21 ANTES da 2ª (refaz 2ª e próximo); DEPOIS da 2ª real grava só a escolha; a série seguinte pelo painel usa a escolha (AC1.4) e o painel a mostra marcada', async () => {
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '∅', '2026-10-25', '2027-02-22', 15]);
+    fichaQ({ verm_dose2_dias: 21 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '∅', '2026-10-31', '2027-02-28', 21], '15→21 volta a conta');
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-10-31', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, '2026-11-02', async () => {
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '2026-10-31', '2026-10-31', '2027-02-28', 15], 'depois da 2ª real: o próximo não muda');
+    // a série seguinte (fevereiro), pelo painel montado de verdade: o 15 vem marcado
+    const h = run(`prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc')`);
+    assert.ok(/id="prevCorrI15_x" checked/.test(h) && !/id="prevCorrI21_x" checked/.test(h), 'o painel marca o 15 da ficha');
+  });
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2027-02-22', async () => {
+    painelQ('verm_p', 'hoje', { e: '2' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2027-02-22', '', '2027-03-09', '2027-07-07', 15], 'a escolha passou para a série seguinte');
+    igual(escQ().map((e) => e[2].indexOf('verm_dose2_dias') >= 0), [false], 'e não foi regravada');
+  });
+});
+provaAsync('6.65 QA2 Q09 — dose única ↔ 2 doses (ficha e painel): o 15 da ficha fica guardado na dose única e volta a valer nas 2 doses; nada grava o campo', async () => {
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, HQ, async () => {
+    fichaQ({ verm_doses: 'Dose única' }); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '', '2027-02-07', 15, 'Dose única']);
+    assert.ok(!/2ª dose com|2ª dose prevista/.test(telaQ().html), 'a ficha em dose única não mostra a escolha');
+    fichaQ({ verm_doses: '2 doses' }); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15, '2 doses'], 'volta com 15');
+    igual(escQ().every((e) => e[2].indexOf('verm_dose2_dias') < 0), true);
+  });
+  await comQ({ verm_doses: 'Dose única', verm_dose2_dias: 15, verm_t: '2026-06-01', verm_p: '2026-09-29' }, HQ, async () => {
+    painelQ('verm_p', 'hoje', { e: '2' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), VQ.concat(['verm_doses'])), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15, '2 doses'], 'painel: 2 doses de novo com o 15 guardado');
+    igual(escQ()[0][2].indexOf('verm_dose2_dias'), -1);
+  });
+});
+provaAsync('6.65 QA2 Q10 — exame de fezes MAIS RECENTE que a série antiga (D6): a ficha começa a série nova sem travar; depois dela o vermífugo volta a valer (vermOuFezes) e a 2ª de 15 dias entra na lista', async () => {
+  await comQ(Object.assign({}, ROMEUQ, { fezes_t: '2026-09-01', fezes_p: '2026-12-30' }), HQ, async () => {
+    igual(run('vermOuFezes(pelExtra(__bq))'), 'fezes');
+    fichaQ({ verm_t: '2026-10-10', verm_dose2_dias: 15 }); await espera657();
+    igual([zaQ(), ...pegaQ(dbQ(), VQ)], [[], '2026-10-10', '', '2026-10-25', '2027-02-22', 15]);
+    igual(run('vermOuFezes(pelExtra(__bq))'), 'verm');
+    igual(listaQ(dbQ(), '2026-10-19', 7, '2026-10-17').map((x) => x[0]), ['verm_dose2_p']);
+  });
+});
+provaAsync('6.65 QA2 Q11 — ficha LEGADA (só vermifugo_t/vermifugo_p): listas iguais às da base; «Lance aqui mesmo» diz «Registre primeiro a 1ª dose.» na 2ª e não grava; a 1ª pela ficha fica em dose única', async () => {
+  const LEG = { vermifugo_t: '2026-06-01', vermifugo_p: '2026-09-29' };
+  igual(listaQ(LEG, '2026-10-12', 7, HQ), [['verm_p', '2026-09-29', true, 'venceu em 29/09']]);
+  await comQ(LEG, HQ, async () => {
+    lanceQ('verm_dose2_p', '2026-10-05'); await espera657();
+    igual(escQ(), [], 'nada gravado');
+    igual(zaQ().map((z) => z[1][0]), ['Registre primeiro a 1ª dose.']);
+    fichaQ({ verm_t: '2026-10-10' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-10', '', '', '2027-02-07', '∅']);
+  });
+});
+provaAsync('6.65 QA2 Q12 — ficha antiga «2 doses» SEM verm_dose2_t e sem o campo: a lista e o painel da 2ª como hoje (21), e salvar só o nome não muda as datas', async () => {
+  const OLD = { verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' };
+  igual(listaQ(OLD, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-10-22', false, 'vence em 22/10']]);
+  await comQ(OLD, HQ, async () => {
+    fichaQ({ verm_nome: 'Milbemax' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-01', '∅', '2026-10-22', '2027-02-19', '∅']);
+    igual(escQ()[0][2], ['verm_2a', 'verm_nome', 'verm_p']);
+  });
+});
+provaAsync('6.65 QA2 Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, prova 19): as listas NÃO mudam; o Salvar só do nome passa o próximo para (1ª + 21) + 120 e deixa a 2ª antiga no banco; a ficha diz «2ª dose prevista»', async () => {
+  const X = { verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-08-01', verm_2a: '2026-08-01', verm_p: '2026-11-29' };
+  igual(listaQ(X, '2026-10-19', 7, '2026-10-17'), [['verm_dose2_p', '2026-09-22', true, 'venceu em 22/09']], 'a lista já ignorava a 2ª antiga (base)');
+  await comQ(X, HQ, async () => {
+    const h = run('blocoVerm(pbEx("verm"))');
+    assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
+    fichaQ({ verm_nome: 'Milbemax' }); await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+  });
+});
+provaAsync('6.65 QA2 Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
+  for (const [dias, d2, prox] of [[15, '2027-01-04', '2027-05-04'], [21, '2027-01-10', '2027-05-10']]) {
+    await comQ({ verm_doses: '2 doses', verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      painelQ('verm_p', 'hoje', { e: '2', i: String(dias) }, 'venc'); await espera657();
+      igual(pegaQ(dbQ(), ['verm_2a', 'verm_p']), [d2, prox], 'painel ' + dias);
+    });
+    await comQ({ verm_doses: '2 doses', verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      fichaQ(dias === 15 ? { verm_t: '2026-12-20', verm_dose2_dias: 15 } : { verm_t: '2026-12-20' }); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_2a', 'verm_p']), ['', d2, prox], 'ficha ' + dias);
+    });
+    await comQ({ verm_doses: '2 doses', verm_dose2_dias: dias, verm_t: '2026-08-01', verm_dose2_t: '2026-08-22', verm_2a: '2026-08-22', verm_p: '2026-12-20' }, '2026-12-20', async () => {
+      igual(lanceQ('verm_p', '2026-12-20'), prox, 'lance «Vale até» ' + dias); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_2a', 'verm_p']), ['', d2, prox], 'lance ' + dias);
+    });
+  }
+  igual(listaQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-12-20', verm_2a: '2027-01-04', verm_p: '2027-05-04' }, '2026-12-28', 7, '2026-12-26'),
+    [['verm_dose2_p', '2027-01-04', false, 'vence em 04/01/2027']]);
+});
+provaAsync('6.65 QA2 Q15 — 31 do mês e ano bissexto: 31/10 + 15 = 15/11 e + 21 = 21/11; 31/01/2027 + 15 = 15/02; 14/02/2028 + 15 = 29/02/2028 (próximo 28/06/2028)', async () => {
+  const c = (t, d) => [run(`vermDose2Prevista({verm_doses:'2 doses', verm_t:'${t}', verm_dose2_dias:${d}})`),
+    run(`pbItensParaChecagem('verm', {verm_doses:'2 doses', verm_t:'${t}', verm_dose2_dias:${d}})[0].recalc('${t}')`)];
+  igual([c('2026-10-31', 15), c('2026-10-31', 21), c('2027-01-31', 15), c('2028-02-14', 15)],
+    [['2026-11-15', '2027-03-15'], ['2026-11-21', '2027-03-21'], ['2027-02-15', '2027-06-15'], ['2028-02-29', '2028-06-28']]);
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15 }, '2026-10-31', async () => {
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    igual(pegaQ(dbQ(), ['verm_2a', 'verm_p']), ['2026-11-15', '2027-03-15']);
+  });
+});
+provaAsync('6.65 QA2 Q16 — fuso: às 23h30 de 10/10 em São Paulo (02h30 de 11/10 em UTC), o «hoje» da ficha é o do aparelho; a 2ª no dia seguinte é recusada e a do dia é aceita (só confere em TZ=America/Sao_Paulo)', async () => {
+  if (process.env.TZ !== 'America/Sao_Paulo') { igual(true, true); return; }
+  run(`__RDq=Date; __hzq=zHojeISO; __hjq=hojeISO; __dq=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RDq(__RDq.UTC(2026,9,11,2,30)); return new (Function.prototype.bind.apply(__RDq,[null].concat(a)))(); };
+    __dq.now=function(){ return __RDq.UTC(2026,9,11,2,30); }; __dq.prototype=__RDq.prototype; __dq.UTC=__RDq.UTC; __dq.parse=__RDq.parse; Date=__dq;`);
+  try {
+    igual(run('__hzq()'), '2026-10-10');
+    ctx.__ex16 = { verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' };
+    await comQ(ctx.__ex16, null, async () => {
+      run('Date=__dq; zHojeISO=__hzq; hojeISO=__hjq;');
+      igual(run('hojeISO()'), '2026-10-10', 'o hoje do aparelho em São Paulo');
+      fichaQ({ verm_dose2_t: '2026-10-11' }); await espera657();
+      igual([escQ().length, zaQ().length], [0, 1], '11/10 é amanhã em São Paulo');
+      assert.ok(run('blocoVerm(pbEx("verm"))').indexOf('max="2026-10-10"') >= 0, 'o max do campo é o hoje de São Paulo');
+      run('PB_PEND={};');
+      fichaQ({ verm_dose2_t: '2026-10-10' }); await espera657();
+      igual(pegaQ(dbQ(), ['verm_dose2_t', 'verm_p']), ['2026-10-10', '2027-02-07']);
+    });
+  } finally { run('Date=__RDq;'); }
+});
+provaAsync('6.65 QA2 Q17 — NUNCA EM MASSA: desenhar ficha, painel, «Lance aqui mesmo» e salvar os outros blocos, o nome, a mesma escolha (15 com 15; 21 sem o campo) e o carrapaticida do painel nunca escrevem verm_dose2_dias', async () => {
+  for (const base of [ROMEUQ, Object.assign({}, ROMEUQ, { verm_dose2_dias: 15 })]) {
+    await comQ(Object.assign({}, base, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01' }), HQ, async () => {
+      run(`blocoVerm(pbEx('verm')); prevEdicaoHTML({p:__bq, nome:'Bento'}); prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc'); prevCorrigeVermHTML('verm_dose2_p', pelExtra(__bq), 'x', 'x', 'venc');
+        try{ prevCorrigePainelHTML(__dcq, 'venc', '${HQ}', 'venc'); }catch(e){}`);
+      await espera657();
+      igual(escQ(), [], 'desenhar não grava');
+      fichaQ({ ecto_t: '2026-10-09' }, 'ecto'); fichaQ({ col_t: '2026-10-09' }, 'col'); fichaQ({ vac_mult_t: '2026-10-09' }, 'vac'); fichaQ({ fezes_t: '2026-10-09' }, 'fezes');
+      fichaQ({ verm_nome: 'Milbemax' });
+      fichaQ({ verm_dose2_dias: base.verm_dose2_dias || 21 });
+      painelQ('verm_p', '2026-10-09', { e: '2', i: String(base.verm_dose2_dias || 21) }, 'venc');
+      run(`__el657['prevCorrP_'+__dcq+'_ecto_p']={value:'Bravecto'};`); painelQ('ecto_p', 'hoje', {}, 'venc');
+      await espera657();
+      const w = escQ();
+      assert.ok(w.length >= 6, 'gravou ' + w.length);
+      igual(w.filter((e) => e[2].indexOf('verm_dose2_dias') >= 0), [], JSON.stringify(w));
+      igual(dbQ().verm_dose2_dias === undefined ? '∅' : dbQ().verm_dose2_dias, base.verm_dose2_dias || '∅');
+    });
+  }
+});
+provaAsync('6.65 QA2 Q18 — D3 em TODO item de prevenção pela FICHA (carrapaticida, coleira, vermífugo, exame de fezes, vacina): o bloco redesenhado logo depois já mostra o gravado; o banco recusando, a cópia volta e o bloco redesenha com o de antes', async () => {
+  const F = { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29',
+    fezes_t: '2025-12-01', fezes_p: '2026-03-31', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01', verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  const casos = [['ecto', { ecto_t: '2026-10-09' }, 'ecto_t'], ['col', { col_t: '2026-10-09' }, 'col_t'], ['verm', { verm_t: '2026-10-09' }, 'verm_t'],
+    ['fezes', { fezes_t: '2026-10-09' }, 'fezes_t'], ['vac', { vac_mult_t: '2026-10-09' }, 'vac_mult_t']];
+  for (const [b, pend, c] of casos) {
+    await comQ(F, HQ, async () => {
+      fichaQ(pend, b);
+      igual([telaQ().b, telaQ().ex[c]], [b, '2026-10-09'], b + ': na hora');
+      await espera657();
+      igual(dbQ()[c], '2026-10-09');
+    });
+    await comQ(F, HQ, async () => {
+      run(`__recusa657='^daycare/cadastro/';`);
+      fichaQ(pend, b);
+      const n0 = J630('__telas').length;
+      igual(telaQ().ex[c], '2026-10-09', b + ': na hora (antes da resposta)');
+      await espera657();
+      const ts = J630('__telas');
+      assert.ok(ts.length > n0, b + ': redesenhou na recusa');
+      igual([ts[ts.length - 1].ex[c], cacheQ()[c], dbQ()[c]], [F[c], F[c], F[c]], b + ': depois da recusa');
+      igual(cacheQ(), Object.assign({}, BENTOQ, F), b + ': a cópia em memória idêntica à de antes');
+    });
+  }
+});
+provaAsync('6.65 QA2 Q19 — D3 pelo PAINEL em todo item (vacina, coleira, carrapaticida, vermífugo, 2ª dose, exame de fezes, «Vence em» à mão, dose única): a lista redesenhada logo depois já mostra o gravado; o banco recusando, volta', async () => {
+  const F = { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29',
+    fezes_t: '2025-12-01', fezes_p: '2026-03-31', vac_mult_t: '2025-10-01', vac_mult_p: '2026-10-01', verm_doses: '2 doses', verm_t: '2026-09-20', verm_2a: '2026-10-11', verm_p: '2027-02-08' };
+  const acoes = [
+    ['vacina', () => painelQ('vac_mult_p', 'hoje', {}, 'venc'), 'vac_mult_t', HQ],
+    ['coleira', () => painelQ('col_p', 'hoje', {}, 'hoje'), 'col_t', HQ],
+    ['carrapaticida', () => { run(`__el657['prevCorrP_'+__dcq+'_ecto_p']={value:'Bravecto'};`); painelQ('ecto_p', 'hoje', {}, 'prev'); }, 'ecto_t', HQ],
+    ['vermífugo', () => painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'), 'verm_dose2_dias', 15],
+    ['2ª dose', () => painelQ('verm_dose2_p', 'hoje', {}, 'venc'), 'verm_dose2_t', HQ],
+    ['exame de fezes', () => { run(`__el657['prevCorrF_'+__dcq+'_verm_p']={value:'2026-10-08'}; prevCorrigeExameFezes(__dcq, 'venc');`); }, 'fezes_t', '2026-10-08'],
+    ['«Vence em» à mão', () => { run(`__el657['prevCorrV_'+__dcq+'_col_p']={value:'2026-12-20'}; prevCorrigeVenceEm(__dcq, 'col_p', 'venc');`); }, 'col_p', '2026-12-20'],
+    ['dose única', () => run(`prevCorrigeDoseUnica(__dcq, 'venc')`), 'verm_doses', 'Dose única'],
+  ];
+  for (const [nome, faz, c, v] of acoes) {
+    await comQ(F, HQ, async () => { faz(); igual(telaQ().ex[c], v, nome + ': na hora'); await espera657(); igual(dbQ()[c], v, nome + ': banco'); });
+    await comQ(F, HQ, async () => {
+      run(`__recusa657='^daycare/cadastro/';`); faz();
+      igual(telaQ().ex[c], v, nome + ': na hora');
+      await espera657();
+      const depois = [telaQ().ex[c] === undefined ? '∅' : telaQ().ex[c], cacheQ()[c] === undefined ? '∅' : cacheQ()[c]];
+      igual(depois, [F[c] === undefined ? '∅' : F[c], F[c] === undefined ? '∅' : F[c]], nome + ': depois da recusa (tela e cópia em memória)');
+      igual(Object.prototype.hasOwnProperty.call(JSON.parse(run("__ls657['zeluz_pel_'+__kq]||'{}'")), c) ? JSON.parse(run("__ls657['zeluz_pel_'+__kq]"))[c] : '∅', F[c] === undefined ? '∅' : F[c], nome + ': a cópia local também voltou');
+    });
+  }
+});
+provaAsync('6.65 QA2 Q19b (re-gate) — o intervalo RECUSADO pelo banco não fica neste aparelho: o painel volta ao 21 e o «salve de novo» do painel e da ficha grava o intervalo; o outro aparelho cobra a 2ª em 25/10', async () => {
+  const r = {};
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.recusado = [run('vermIntervalo(pelExtra(__bq))'), cacheQ().verm_dose2_dias === undefined ? '∅' : cacheQ().verm_dose2_dias, dbQ().verm_dose2_dias === undefined ? '∅' : dbQ().verm_dose2_dias];
+    const h = run(`prevCorrigeVermHTML('verm_p', pelExtra(__bq), 'x', 'x', 'venc')`);
+    r.painelMarca15 = /id="prevCorrI15_x" checked/.test(h);
+    run(`__recusa657=null;`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.painelDeNovo = pegaQ(dbQ(), ['verm_2a', 'verm_p', 'verm_dose2_dias']);
+    r.outroAparelho = run(`vermDose2Prevista(__get657('daycare/cadastro/'+__kq))`);
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    run(`__recusa657=null;`);
+    fichaQ({ verm_dose2_dias: 15 }); await espera657();
+    r.fichaDeNovo = pegaQ(dbQ(), ['verm_2a', 'verm_p', 'verm_dose2_dias']);
+    r.fichaEscritas = escQ().length;
+  });
+  console.log('      [Q19b] ' + JSON.stringify(r));
+  igual(r, { recusado: [21, '∅', '∅'], painelMarca15: false, painelDeNovo: ['2026-10-25', '2027-02-22', 15], outroAparelho: '2026-10-25',
+    fichaDeNovo: ['2026-10-25', '2027-02-22', 15], fichaEscritas: 2 });
+});
+provaAsync('6.65 QA2 Q20 — D3: DUAS gravações seguidas da mesma ficha (as duas ok; a 1ª recusada e a 2ª ok; as duas recusadas) — o que a cópia em memória diz no fim, contra o banco', async () => {
+  const F = { verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  const duas = async (resp) => {
+    return comQ(F, HQ, async () => {
+      run(`__pendura657='^daycare/cadastro/';`);
+      fichaQ({ verm_t: '2026-10-08' }); fichaQ({ verm_t: '2026-10-09' });
+      igual(telaQ().ex.verm_t, '2026-10-09', 'na hora: a 2ª gravação');
+      for (let i = 0; i < 2; i++) { run(`__pend657[${i}].${resp[i]}()`); await espera657(); }
+      return [cacheQ().verm_t, dbQ().verm_t, telaQ().ex.verm_t];
+    });
+  };
+  igual(await duas(['ok', 'ok']), ['2026-10-09', '2026-10-09', '2026-10-09'], 'as duas ok');
+  ctx.__q20a = await duas(['nao', 'ok']);
+  ctx.__q20b = await duas(['nao', 'nao']);
+  ctx.__q20c = await duas(['ok', 'nao']);
+  console.log('      [Q20] 1ª recusada e 2ª ok → cópia/banco/tela: ' + JSON.stringify(ctx.__q20a) + ' · as duas recusadas: ' + JSON.stringify(ctx.__q20b) + ' · 1ª ok e 2ª recusada: ' + JSON.stringify(ctx.__q20c));
+  igual(ctx.__q20c, ['2026-10-08', '2026-10-08', '2026-10-08'], '1ª ok e 2ª recusada: a cópia volta para a 1ª, que o banco tem');
+  igual(ctx.__q20a, ['2026-10-09', '2026-10-09', '2026-10-09'], '1ª recusada e 2ª ok (re-gate)');
+  igual(ctx.__q20b, ['2026-06-01', '2026-06-01', '2026-06-01'], 'as duas recusadas (re-gate)');
+});
+provaAsync('6.65 QA2 Q21 — D3: a ficha que NÃO está na cópia em memória não nasce lá (nem pela ficha, nem pelo painel); e o porteiro (perfil sem editar ficha) não toca a cópia', async () => {
+  await comQ(ROMEUQ, HQ, async () => {
+    fichaQ({ verm_t: '2026-10-10' });
+    igual(J630('pelCadCache[__kq]||null'), null);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc');
+    igual(J630('pelCadCache[__kq]||null'), null);
+    await espera657();
+    igual(dbQ().verm_p, '2027-02-22', 'o banco gravou');
+  }, { semCache: true });
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`canEditPel=function(){ return false; }; podePapel=function(){ return false; };`);
+    fichaQ({ verm_t: '2026-10-10' });
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc');
+    await espera657();
+    igual([cacheQ().verm_t, cacheQ().verm_p, dbQ().verm_t], ['2026-05-20', '2026-10-08', '2026-05-20']);
+  });
+});
+provaAsync('6.65 QA2 Q22 — a tela depois da RECUSA do banco: o que ela ainda afirma (bloco da ficha «✓ Salvo»; verde «em dia até» do painel) — registrado para o gate', async () => {
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_t: '2026-10-10' }); await espera657();
+    ctx.__q22f = [telaQ().salvo, /✓ Salvo/.test(telaQ().html), telaQ().ex.verm_t];
+  });
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    ctx.__q22p = [Object.values(telaQ().ok).map((o) => o.texto), telaQ().ex.verm_p];
+  });
+  console.log('      [Q22] ficha recusada → PB_SALVO/«✓ Salvo» na tela/1ª na tela: ' + JSON.stringify(ctx.__q22f) + ' · painel recusado → verde/próximo na tela: ' + JSON.stringify(ctx.__q22p));
+  igual(ctx.__q22f[2], '2026-05-20'); igual(ctx.__q22p[1], '2026-10-08');
+});
+provaAsync('6.65 QA2 Q23 — «Lance aqui mesmo» (C9 e C10 com as bordas): 1ª nova com 2ª real da mesma série (fica), 1ª corrigida para trás (fica), 2ª no futuro e 2ª antes da 1ª (recusadas), dose única (não grava)', async () => {
+  await comQ({ verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-10-10', verm_dose2_t: '2026-10-25', verm_2a: '2026-10-25', verm_p: '2027-02-22' }, '2026-10-26', async () => {
+    igual(lanceQ('verm_p', '2026-10-09'), '2027-02-22', 'a 1ª corrigida para trás: a 2ª real manda');
+    await espera657();
+    igual(pegaQ(dbQ(), VQ), ['2026-10-09', '2026-10-25', '2026-10-25', '2027-02-22', 15]);
+  });
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }, HQ, async () => {
+    lanceQ('verm_dose2_p', '2026-10-11'); lanceQ('verm_dose2_p', '2026-10-09'); await espera657();
+    igual([escQ(), zaQ().map((z) => z[1][0])], [[], ['A data de aplicação está no futuro.', 'A 2ª dose (09/10/2026) ficou antes da 1ª (10/10/2026).']]);
+  });
+  await comQ({ verm_doses: 'Dose única', verm_t: '2026-10-01', verm_p: '2027-01-29' }, HQ, async () => {
+    const h = run(`prevEdicaoHTML({p:__bq, nome:'Bento'})`);
+    assert.ok(/Esta ficha está em dose única: não há 2ª dose\./.test(h) && /Como está na ficha: Dose única\./.test(h));
+    lanceQ('verm_dose2_p', '2026-10-05'); await espera657();
+    igual([escQ(), zaQ().map((z) => z[0])], [[], ['NÃO HÁ 2ª DOSE PARA LANÇAR']]);
+  });
+});
+// (6.65 QA2 Q24 não entra: lê o app da base de um arquivo de fora; a mesma conferência está na «6.65 QA Q24», com o sha-256 de cada função)
+
+// ---------------- re-gate (2ª rodada): ataque ao prevCacheDesfaz ----------------
+const localQ = () => JSON.parse(run("__ls657['zeluz_pel_'+__kq]||'{}'"));
+const vQ = (o, c) => (o && Object.prototype.hasOwnProperty.call(o, c) && o[c] !== null && o[c] !== undefined) ? o[c] : '∅';
+// a leitura da ficha (once) fica PRESA até a prova soltar (__solta(i)) ou recusar (__nega(i))
+const prendeLeituraQ = () => run(`__onceQ=[]; __refQ=DB.ref; DB.ref=function(p){ var r=__refQ(p); var o=r.once;
+  r.once=function(){ var a=arguments; return new Promise(function(ok, nao){ __onceQ.push({p:p, ok:function(){ ok(o.apply(r, a)); }, nao:function(){ nao(new Error('sem leitura')); }}); }); }; return r; };`);
+provaAsync('6.65 QA2 Q25 (re-gate) — a RELEITURA da ficha FALHA: uma recusa só fica certa (o «antes» é o do banco); as duas recusadas ficam com o valor da 1ª, recusada (registro)', async () => {
+  const F = { verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  const r = {};
+  await comQ(F, HQ, async () => {
+    prendeLeituraQ(); run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    run('__onceQ.forEach(function(x){ x.nao(); });'); await espera657();
+    r.uma = [vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t'), vQ(cacheQ(), 'verm_dose2_dias'), vQ(localQ(), 'verm_dose2_dias'), vQ(telaQ().ex, 'verm_dose2_dias')];
+  });
+  await comQ(F, HQ, async () => {
+    prendeLeituraQ(); run(`__pendura657='^daycare/cadastro/';`);
+    fichaQ({ verm_t: '2026-10-08' }); fichaQ({ verm_t: '2026-10-09' });
+    run('__pend657[0].nao()'); await espera657(); run('__pend657[1].nao()'); await espera657();
+    run('__onceQ.forEach(function(x){ x.nao(); });'); await espera657();
+    r.duas = [vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t'), vQ(dbQ(), 'verm_t')];
+  });
+  console.log('      [Q25] ' + JSON.stringify(r));
+  igual(r.uma, ['2026-06-01', '2026-06-01', '∅', '∅', '∅'], 'uma recusa, sem a leitura: tudo volta');
+});
+provaAsync('6.65 QA2 Q26 (re-gate) — OUTRA gravação no meio: a recusa da 1ª chega, a leitura fica presa, a 2ª (aceita) grava outro valor; a leitura que chega depois NÃO desfaz a 2ª', async () => {
+  const F = { verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };
+  await comQ(F, HQ, async () => {
+    prendeLeituraQ(); run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_t: '2026-10-08' }); await espera657();
+    igual([vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t')], ['2026-06-01', '2026-06-01'], 'desfeito antes da leitura');
+    run(`__recusa657=null;`);
+    fichaQ({ verm_t: '2026-10-09' }); await espera657();
+    igual([vQ(cacheQ(), 'verm_t'), vQ(dbQ(), 'verm_t')], ['2026-10-09', '2026-10-09']);
+    run('__onceQ.forEach(function(x){ x.ok(); });'); await espera657();
+    igual([vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t'), vQ(dbQ(), 'verm_t'), vQ(telaQ().ex, 'verm_t')], ['2026-10-09', '2026-10-09', '2026-10-09', '2026-10-09']);
+  });
+});
+provaAsync('6.65 QA2 Q27 (re-gate) — a ficha FORA da cópia em memória: a recusa não tem o que desfazer no cache; o que fica neste aparelho e no «salve de novo» (registro)', async () => {
+  const r = {};
+  await comQ(ROMEUQ, HQ, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.recusado = [run('vermIntervalo(pelExtra(__bq))'), vQ(localQ(), 'verm_dose2_dias'), vQ(localQ(), 'verm_t')];
+    run(`__recusa657=null;`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    r.deNovo = pegaQ(dbQ(), ['verm_2a', 'verm_p', 'verm_dose2_dias']);
+  }, { semCache: true });
+  console.log('      [Q27] ' + JSON.stringify(r));
+  igual(true, true);
+});
+provaAsync('6.65 QA2 Q28 (re-gate) — os OUTROS itens com campo que o banco ainda não tinha (vacina de gripe, coleira, carrapaticida, exame de fezes), pela ficha e pelo painel, banco recusando: a tela, a cópia em memória e a cópia local voltam ao «sem registro»', async () => {
+  const F = { verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' };   // sem vacina de gripe, sem coleira, sem carrapaticida, sem exame
+  const casos = [
+    ['ficha vacina de gripe', () => fichaQ({ vac_gripe_t: '2026-10-09' }, 'vac'), ['vac_gripe_t', 'vac_gripe_p']],
+    ['ficha coleira', () => fichaQ({ col_nome: 'Seresto', col_t: '2026-10-09' }, 'col'), ['col_t', 'col_nome', 'col_p']],
+    ['ficha carrapaticida', () => { fichaQ({ ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-10-09' }, 'ecto'); }, ['ecto_t', 'ecto_prod', 'ecto_p']],
+    ['ficha exame de fezes', () => fichaQ({ fezes_t: '2026-10-09' }, 'fezes'), ['fezes_t', 'fezes_p']],
+    ['painel vacina de gripe', () => painelQ('vac_gripe_p', 'hoje', {}, 'venc'), ['vac_gripe_t', 'vac_gripe_p']],
+    ['painel carrapaticida', () => { run(`__el657['prevCorrP_'+__dcq+'_ecto_p']={value:'Bravecto'};`); painelQ('ecto_p', 'hoje', {}, 'hoje'); }, ['ecto_t', 'ecto_prod', 'ecto_p']],
+    ['painel exame de fezes', () => { run(`__el657['prevCorrF_'+__dcq+'_verm_p']={value:'2026-10-08'}; prevCorrigeExameFezes(__dcq, 'prev');`); }, ['fezes_t', 'fezes_p']],
+  ];
+  for (const [nome, faz, cs] of casos) {
+    await comQ(F, HQ, async () => {
+      run(`__recusa657='^daycare/cadastro/';`);
+      faz(); await espera657();
+      const t = telaQ().ex, c = cacheQ(), l = localQ();
+      igual([cs.map((x) => vQ(t, x)), cs.map((x) => vQ(c, x)), cs.map((x) => vQ(l, x))], [cs.map(() => '∅'), cs.map(() => '∅'), cs.map(() => '∅')], nome);
+      igual([vQ(t, 'verm_t'), vQ(l, 'verm_t')], ['2026-06-01', '2026-06-01'], nome + ': o resto da ficha intacto');
+    });
+  }
+});
+provaAsync('6.65 QA2 Q29 (re-gate) — a volta da cópia LOCAL mexe só nos campos do patch: um campo que só existe neste aparelho e os outros itens ficam', async () => {
+  await comQ({ verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-08-29' }, HQ, async () => {
+    run(`__ls657['zeluz_pel_'+__kq]=JSON.stringify(Object.assign({}, __get657('daycare/cadastro/'+__kq), {so_aqui:'anotação deste aparelho'}));`);
+    run(`__recusa657='^daycare/cadastro/';`);
+    painelQ('verm_p', 'hoje', { e: '2', i: '15' }, 'venc'); await espera657();
+    const l = localQ();
+    igual([vQ(l, 'so_aqui'), vQ(l, 'col_t'), vQ(l, 'col_nome'), vQ(l, 'verm_t'), vQ(l, 'verm_dose2_dias'), vQ(l, 'verm_doses')],
+      ['anotação deste aparelho', '2026-01-01', 'Seresto', '2026-06-01', '∅', 'Dose única']);
+  });
+});
+provaAsync('6.65 QA2 Q30 (re-gate) — a leitura traz o que OUTRO aparelho gravou no meio (o banco mudou e o ouvinte ainda não chegou): a cópia fica com o do banco', async () => {
+  await comQ({ verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' }, HQ, async () => {
+    prendeLeituraQ(); run(`__recusa657='^daycare/cadastro/';`);
+    fichaQ({ verm_t: '2026-10-08' }); await espera657();
+    run(`__put657('daycare/cadastro/'+__kq+'/verm_t', '2026-10-07');`);   // o outro aparelho
+    run('__onceQ.forEach(function(x){ x.ok(); });'); await espera657();
+    igual([vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t'), vQ(telaQ().ex, 'verm_t')], ['2026-10-07', '2026-10-07', '2026-10-07']);
+  });
+});
+provaAsync('6.65 QA2 Q31 (re-gate) — «banco reconectando» (sem DB): a gravação volta {ok:false} na hora; o desfazer devolve a cópia local e a em memória, sem leitura (registro do que a frase da ficha diz)', async () => {
+  const r = {};
+  await comQ({ verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' }, HQ, async () => {
+    run('__dbQ=DB; DB=null;');
+    try { fichaQ({ verm_t: '2026-10-08' }); await espera657(); } finally { run('DB=__dbQ;'); }
+    r.depois = [vQ(cacheQ(), 'verm_t'), vQ(localQ(), 'verm_t'), vQ(telaQ().ex, 'verm_t')];
+  });
+  console.log('      [Q31] ' + JSON.stringify(r));
+  igual(r.depois, ['2026-06-01', '2026-06-01', '2026-06-01']);
+});
+provaAsync('6.65 QA2 Q32 (re-gate) — vermIntervaloDoBanco: com a ficha na cópia em memória, vale o banco (a cópia local com 15 não engana); fora dela, vale a ficha da tela', async () => {
+  await comQ({ verm_doses: '2 doses', verm_t: '2026-10-10' }, HQ, async () => {
+    run(`__ls657['zeluz_pel_'+__kq]=JSON.stringify({verm_dose2_dias:15});`);
+    igual([run('vermIntervalo(pelExtra(__bq))'), run('vermIntervaloDoBanco(__bq)')], [15, 21]);
+    run('pelCadCache={};');
+    igual(run('vermIntervaloDoBanco(__bq)'), 15);
+  });
+});
+}
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

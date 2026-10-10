@@ -5184,13 +5184,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-18"></script>
+<script src="resposta-tutor.js?v=2026-10-09-19"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-18"></script>
+<script src="painel-logica.js?v=2026-10-09-19"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5202,7 +5202,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-18"></script>
+<script src="financeiro-logica.js?v=2026-10-09-19"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -23760,7 +23760,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-18';
+  const APP_VERSAO='2026-10-09-19';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -32117,7 +32117,9 @@
     ansioso:'Come em comedouro lento?', matilha:'Matilha (Enriquecimento Ambiental)', brinquedos:'Brinquedos', chip:'Microchip',
     microchip:'Microchip', inativo:'Inativo', tipoSaida:'Tipo de saída', dataSaida:'Data de saída', dataObito:'Data do falecimento',
     entrevista:'Entrevista (resposta do tutor)', escova_dc:'Escova no Day Care', ea_restr:'Restrição no Enriquecimento',
-    peso_hoje:'Peso de hoje'};   // 6.59 (AC1.6): o valor trocado no mesmo dia
+    peso_hoje:'Peso de hoje',   // 6.59 (AC1.6): o valor trocado no mesmo dia
+    // 6.65 (AC9): o vermífugo legível no rastro (a 2ª dose dada já sai «Vermífugo — 2ª dose — última», pela PREV_ITENS)
+    verm_dose2_dias:'Vermífugo — dias até a 2ª dose', verm_doses:'Vermífugo — quantas doses', verm_2a:'Vermífugo — 2ª dose (data da conta)'};
   function pelRastroRotulo(c){
     c=String(c||'');
     if(PEL_RASTRO_ROTULO[c]) return PEL_RASTRO_ROTULO[c];
@@ -33066,8 +33068,20 @@
       return v;
     }).catch(function(e){ _logLeituraFalhou('daycare/config/prevencao (prevCfgCarregar)', e); return null; });
   }
-  const VERMIF_2A_DOSE=21;   // 2 doses: repete em 21 dias
+  const VERMIF_2A_DOSE=21;   // 2 doses: a 2ª vem 15 ou 21 dias depois da 1ª (vermIntervalo); 21 é o padrão da ficha sem escolha
   const VERMIF_PROX=120;     // e a próxima 4 meses depois da última dose
+  // ===== A 2ª DOSE COM 15 OU 21 DIAS (Adriana, 10/out/2026 — o caso do Romeu) ==========
+  // "Dá a primeira dose hoje, atualiza e vai para 21 dias a segunda dose. Ou 15, depende do
+  //  que o veterinário recomendar." A escolha mora na ficha (verm_dose2_dias) e passa para a
+  // série seguinte. UMA leitura só, para todas as contas e telas: ficha sem o campo (ou com
+  // qualquer valor que não seja 15 ou 21) vale 21, como sempre valeu — nenhuma ficha antiga
+  // muda e nada é gravado nelas. O intervalo nunca é deduzido de verm_2a − verm_t: depois da
+  // 2ª dose dada, verm_2a guarda a data real.
+  function vermIntervalo(ex){
+    var v=(ex||{}).verm_dose2_dias;
+    var s=String(v==null?'':v).trim();
+    return (s==='15')?15:((s==='21')?21:VERMIF_2A_DOSE);
+  }
   const FEZES_PROX=120;      // exame de fezes renova em 4 meses
   const CIO_MESES=6;         // ciclo regular
   function hojeISO(){ return zHojeISO(); }
@@ -33112,8 +33126,8 @@
   // some no dia em que alguém escreve "2ª dose dada em" na ficha.
   //   · ficha em "Dose única" → não existe 2ª dose nenhuma, e nada é inventado;
   //   · quem fez exame de fezes não deve vermífugo (a regra do cadastro vale aqui também);
-  //   · passou dos 21 dias e ninguém registrou? Continua aparecendo, ATRASADA — sumir em
-  //     silêncio é como se perde uma dose (lista curta MENTE).
+  //   · passou dos 15 ou 21 dias (vermIntervalo) e ninguém registrou? Continua aparecendo,
+  //     ATRASADA — sumir em silêncio é como se perde uma dose (lista curta MENTE).
   function vermDose2Prevista(ex){
     ex=ex||{};
     var t=String((ex&&ex.verm_t)||'');
@@ -33121,7 +33135,7 @@
     if(String((ex&&ex.verm_doses)||'')!=='2 doses') return '';
     var dada=String((ex&&ex.verm_dose2_t)||'');
     if(/^\d{4}-\d{2}-\d{2}$/.test(dada) && dada>=t) return '';   // já foi dada: acabou
-    return addDiasISO(t, VERMIF_2A_DOSE);
+    return addDiasISO(t, vermIntervalo(ex));
   }
   // ===== "VERMÍFUGO OU EXAME DE FEZES" — UMA regra, num lugar só (Fase 0, 25/set/2026) =====
   // Adriana, 25/set: "vacinas, vermífugo ou exame de fezes, e carrapaticida são
@@ -33351,6 +33365,93 @@
   function escovaCacheGravado(p, patch){
     try{ var k=pelKey(p); if(typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k]) pelCadCache[k]=Object.assign({}, pelCadCache[k], patch); }
     catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
+  }
+  // ===== 6.65 (AC7) — A TELA JÁ MOSTRA O QUE ACABOU DE SER GRAVADO (todo item de prevenção) ====
+  // Na ficha, o banco vence a cópia local (pelExtra): o redesenho logo depois do «Salvar» da ficha
+  // (pbRender) ou do painel rápido (prevCorrigeRedesenhar) lia a cópia do cadastro em memória ainda
+  // velha — «✓ Salvo» ao lado da data antiga; o verde «em dia até …» com o chip na data de antes —
+  // até o ouvinte do cadastro trazer a nova, uns 90 ms depois. Agora o patch vai para a cópia em
+  // memória logo depois do setPelExtra, no molde do escovaCacheGravado, para carrapaticida, coleira,
+  // vermífugo, exame de fezes e vacinas:
+  //   · só quando o porteiro (pelCamposBarrados) não barrou nada: gravação barrada não grava;
+  //   · só quando a ficha já está na cópia: nunca cria ficha lá (ela apareceria nas telas que
+  //     percorrem o cadastro);
+  //   · se o banco RECUSAR, os campos voltam ao que eram e a tela redesenha com o de antes — sem
+  //     isto, uma gravação recusada pareceria feita. O aviso da falha continua o de sempre.
+  // `retorno` é o que o setPelExtra devolveu (a promessa {ok}); `redesenhar`, a tela de quem gravou.
+  function prevCacheGravado(p, patch, retorno, redesenhar){
+    var k='', antes=null, cs=[];
+    try{
+      k=pelKey(p);
+      cs=Object.keys(patch||{});
+      var cache=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache[k]:null;
+      if(cs.length && cache && !pelCamposBarrados(patch).length && !cs.some(function(c){ return c.indexOf('/')>=0; })){
+        antes={};
+        cs.forEach(function(c){ antes[c]=Object.prototype.hasOwnProperty.call(cache, c)?cache[c]:null; });
+        pelAplicarNoCache(k, patch);
+      }
+    }catch(x){ antes=null; } /* silencioso de propósito: o ouvinte do cadastro acerta a cópia em memória logo depois */
+    if(!antes) return;
+    try{
+      Promise.resolve(retorno).then(function(r){
+        if(!r || r.ok!==false) return;
+        prevCacheDesfaz(k, patch, antes, redesenhar);
+      }, function(){ /* silencioso de propósito: o setPelExtra sempre resolve {ok}; promessa recusada aqui é de um gravador trocado */ });
+    }catch(x){} /* silencioso de propósito: sem promessa não há recusa a desfazer */
+  }
+  // 6.65, 2ª rodada (gate do QA) — O DESFAZER DA RECUSA, por inteiro.
+  // REL-001: o setPelExtra escreve a cópia LOCAL deste aparelho (zeluz_pel_{k}) antes da resposta do
+  // banco, e o pelExtra junta local + banco. Voltar só a cópia do cadastro em memória deixava o campo
+  // que o banco nunca teve (o intervalo novo, a 2ª dose digitada) valendo neste aparelho: o painel e a
+  // ficha mostravam o recusado, e o «salve de novo» achava que nada tinha mudado. Agora a cópia local
+  // também volta, nos campos do patch: o valor do banco, ou nada, se o banco não tinha o campo.
+  // REL-002: com duas gravações seguidas da mesma ficha, só volta o campo que ainda tem o valor DESTA
+  // gravação (a outra, posterior, manda no resto); e os campos devolvidos são conferidos com uma
+  // leitura da ficha no banco, que corrige quando o «antes» era o de outra gravação também recusada.
+  function prevCacheDesfaz(k, patch, antes, redesenhar){
+    var volta={};
+    var igualV=function(a, b){ return JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b); };
+    try{
+      var atual=(typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k])||{};
+      Object.keys(antes||{}).forEach(function(c){ if(igualV(atual[c], (patch||{})[c])) volta[c]=antes[c]; });
+      if(Object.keys(volta).length){ pelAplicarNoCache(k, volta); prevCacheLocalVolta(k, volta); }
+    }catch(x){ volta={}; } /* silencioso de propósito: o ouvinte do cadastro traz a ficha do banco na próxima mudança */
+    try{ if(typeof redesenhar==='function') redesenhar(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não muda dado nenhum */
+    try{
+      if(!Object.keys(volta).length || !DB || typeof DB.ref!=='function') return;
+      Promise.resolve(DB.ref('daycare/cadastro/'+k).once('value')).then(function(snap){
+        var v=(snap && typeof snap.val==='function')?snap.val():null;
+        var agora=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache[k]:null;
+        if(!v || typeof v!=='object' || !agora) return;
+        var conserta={};
+        Object.keys(volta).forEach(function(c){
+          var noBanco=Object.prototype.hasOwnProperty.call(v, c)?v[c]:null;
+          // só o campo que continua como o desfazer deixou (uma gravação nova, no meio, manda)
+          if(igualV(agora[c], volta[c]) && !igualV(noBanco, volta[c])) conserta[c]=noBanco;
+        });
+        if(!Object.keys(conserta).length) return;
+        pelAplicarNoCache(k, conserta); prevCacheLocalVolta(k, conserta);
+        try{ if(typeof redesenhar==='function') redesenhar(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não muda dado nenhum */
+      }, function(){ /* silencioso de propósito: sem a leitura, fica o valor de antes desta gravação; o ouvinte corrige na próxima mudança */ });
+    }catch(x){} /* silencioso de propósito: sem o banco à mão, fica o valor de antes desta gravação */
+  }
+  // A cópia LOCAL deste aparelho (zeluz_pel_{k}) recebe os campos dados (null = o banco não tem o campo: sai).
+  function prevCacheLocalVolta(k, campos){
+    try{
+      var s=localStorage.getItem('zeluz_pel_'+k);
+      if(s===null || s===undefined) return;
+      var o=JSON.parse(s||'{}')||{};
+      Object.keys(campos||{}).forEach(function(c){ var v=campos[c]; if(v===null || v===undefined) delete o[c]; else o[c]=JSON.parse(JSON.stringify(v)); });
+      localStorage.setItem('zeluz_pel_'+k, JSON.stringify(o));
+    }catch(x){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+  }
+  // O intervalo que o BANCO tem para esta ficha (a cópia do cadastro em memória). O «mudou?» do
+  // intervalo se decide por ele (REL-001): a cópia local pode guardar uma escolha que o banco recusou.
+  // Sem a ficha na cópia em memória, vale a ficha como a tela a mostra.
+  function vermIntervaloDoBanco(p){
+    try{ var c=(typeof pelCadCache!=='undefined' && pelCadCache && p)?pelCadCache[pelKey(p)]:null; if(c) return vermIntervalo(c); }
+    catch(x){} /* silencioso de propósito: sem a cópia em memória, vale a ficha da tela */
+    return vermIntervalo((p && typeof pelExtra==='function')?(pelExtra(p)||{}):{});
   }
   // ---- a ficha (Prevenção › Check-up e escova) ------------------------------------------
   function escovaAceitaFichaHTML(ex){
@@ -33706,12 +33807,17 @@
     setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} /* silencioso de propósito: a página fica aberta para imprimir à mão */ }, 400);
   }
   // A data que a ficha MOSTRA como 2ª dose: a que foi dada, se houver; senão a prevista.
+  // 6.65 (o Romeu, 10/out/2026): "dada" é só a 2ª desta série — igual ou depois da 1ª (a mesma
+  // regra dada>=t da vermDose2Prevista). A 2ª de uma série ANTERIOR, que ficou gravada, travava
+  // a série nova: o próximo saía da dose de junho (antes da 1ª nova, e o Salvar recusava) ou
+  // caía quatro dias depois dela. Agora ela não conta, e vale a prevista da 1ª nova.
   function vermDose2Data(ex){
     ex=ex||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/;
     var dada=String((ex&&ex.verm_dose2_t)||'');
-    if(/^\d{4}-\d{2}-\d{2}$/.test(dada)) return dada;
     var t=String((ex&&ex.verm_t)||'');
-    return /^\d{4}-\d{2}-\d{2}$/.test(t)?addDiasISO(t, VERMIF_2A_DOSE):'';
+    if(iso.test(dada) && (!iso.test(t) || dada>=t)) return dada;
+    return iso.test(t)?addDiasISO(t, vermIntervalo(ex)):'';
   }
   const PREV_ITENS=[
     // nomeK = onde fica o NOME do produto/vacina usado (Adriana, 25/ago/2026: "ter o local
@@ -34777,6 +34883,13 @@
       var alvo=document.getElementById('prevP_'+chave+'_'+k);
       // A coleira não tem prazo fixo — depende da marca e da configuração (prevDiasDoItem).
       var _p=prevPetDe(chave);
+      // 6.65 (AC6.1, AC6.3): o vermífugo segue o esquema da ficha — com 2 doses, a validade sai da
+      // 2ª prevista (15 ou 21 dias); na linha da 2ª dose, o campo mostra o próximo que o Salvar vai gravar.
+      if(k==='verm_p' || k==='verm_dose2_p'){
+        var _vv=prevVermLanceConta(_p?(pelExtra(_p)||{}):{}, k, dt);
+        if(alvo && dt) alvo.value=_vv;
+        return;
+      }
       // O carrapaticida conta pelo produto escolhido na tela (o da ficha vem escolhido): QA45/QA47.
       var _dias=(k==='ecto_p')?prevCorrigeEctoDaTela('ed_'+chave+'_ecto_p', _p?(pelExtra(_p)||{}):{}).dias
         :prevCorrigeDias(it, _p?(pelExtra(_p)||{}):{});
@@ -34829,6 +34942,41 @@
     }
     return {ok:true};
   }
+  // ===== 6.65 — O VERMÍFUGO NO «LANCE AQUI MESMO» (Prevenção › toque no nome) ===========
+  // Por que esta ficha não tem 2ª dose a lançar — ou '' quando tem (AC6.4).
+  function prevVermSem2a(ex){
+    ex=ex||{};
+    var tem1=/^\d{4}-\d{2}-\d{2}$/.test(String(ex.verm_t||''));
+    if(ex.verm_doses!=='2 doses' && (ex.verm_doses==='Dose única' || tem1)) return 'Esta ficha está em dose única: não há 2ª dose.';
+    if(!tem1) return 'Registre primeiro a 1ª dose.';
+    return '';
+  }
+  // A validade que o «Feito em» `dt` dá na linha `k` (AC6.1, AC6.3): na linha do vermífugo, com 2 doses,
+  // a 2ª prevista (15 ou 21 dias; a 2ª desta série já dada, se houver) + 4 meses, e com dose única,
+  // dt + 4 meses — a mesma conta do Salvar da ficha; na linha da 2ª dose, o próximo vermífugo
+  // (dt + 4 meses), só quando há 2ª dose a lançar.
+  function prevVermLanceConta(ex, k, dt){
+    ex=ex||{};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dt||''))) return '';
+    if(k==='verm_dose2_p') return prevVermSem2a(ex)?'':addDiasISO(dt, VERMIF_PROX);
+    if(ex.verm_doses==='2 doses'){
+      var d2=vermDose2Data(Object.assign({}, ex, {verm_t:dt}))||addDiasISO(dt, vermIntervalo(ex));
+      return addDiasISO(d2, VERMIF_PROX);
+    }
+    return addDiasISO(dt, VERMIF_PROX);
+  }
+  // O que a 1ª dose lançada aqui leva junto (AC6.1): com 2 doses, a 2ª prevista em verm_2a (ou a 2ª
+  // desta série já dada) e a 2ª de uma série anterior (antes da 1ª nova) limpa; com dose única, nada
+  // de 2ª dose. O intervalo da ficha nunca é gravado aqui.
+  function prevVermLancePatch(patch, ex, dt){
+    ex=ex||{};
+    if(ex.verm_doses==='2 doses'){
+      var a2=String(ex.verm_dose2_t||'');
+      if(/^\d{4}-\d{2}-\d{2}$/.test(a2) && a2<dt) patch.verm_dose2_t='';
+      patch.verm_2a=vermDose2Data(Object.assign({}, ex, {verm_t:dt}))||addDiasISO(dt, vermIntervalo(ex));
+    } else { patch.verm_2a=''; patch.verm_dose2_t=''; }
+    return patch;
+  }
   // Lança "feito em" + quem fez, e recalcula a próxima. Um toque por item.
   function prevLancar(chave, k){
     var p=prevPetDe(chave); if(!p) return;
@@ -34837,6 +34985,28 @@
     var quem=String((document.getElementById('prevQ_'+chave+'_'+k)||{}).value||'').trim();
     var prox=String((document.getElementById('prevP_'+chave+'_'+k)||{}).value||'').trim();
     if(!dt){ alert('Escolha a data em que foi feito.'); return; }
+    // 6.65 (AC6.2 a AC6.5) — A 2ª DOSE DO VERMÍFUGO aqui é a mesma conta do painel rápido: a data
+    // dada vira a 2ª real (verm_dose2_t e verm_2a), o próximo vermífugo conta 4 meses a partir dela e
+    // o «à mão» cai. Antes, ela ia para verm_dose2_p, um campo que nada lê, e o próximo não mudava.
+    if(k==='verm_dose2_p'){
+      var exV=pelExtra(p)||{}, semV=prevVermSem2a(exV), t1V=String(exV.verm_t||'');
+      if(semV){ zAlertao('NÃO HÁ 2ª DOSE PARA LANÇAR', [semV, 'Nada foi gravado.'], {botao:'Entendi'}); return; }
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return;
+      if(dt>hojeISO()){ zAlertao('Essa data não faz sentido', ['A data de aplicação está no futuro.'], {botao:'Vou corrigir'}); return; }
+      if(dt<t1V){
+        zAlertao('Essa data não faz sentido',
+          ['A 2ª dose ('+fmtBR(dt)+') ficou antes da 1ª ('+fmtBR(t1V)+').',
+           'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.'],{botao:'Vou corrigir'});
+        return;
+      }
+      var patch2={verm_dose2_t:dt, verm_2a:dt, verm_p:addDiasISO(dt, VERMIF_PROX)};
+      if(exV.verm_p_manual) patch2.verm_p_manual='';
+      if(quem) patch2.verm_dose2_por=quem;
+      setPelExtra(p, patch2);
+      if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(it.nome||'Vermífugo — 2ª dose')+' feito em '+fmtBR(dt)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
+      setTimeout(function(){ prevRedesenhar(); }, 120);
+      return;
+    }
     // Se o "Vale até" ficou com um valor ANTERIOR à data que acabou de ser lançada, ele é
     // resto da ficha velha — recalcula. Data futura escrita à mão é respeitada.
     // A coleira não tem prazo fixo: prevDiasDoItem lê a marca e a configuração.
@@ -34849,7 +35019,9 @@
       return;
     }
     var _dias=_ecEd?_ecEd.dias:prevCorrigeDias(it, pelExtra(p)||{});
-    var calc=(_dias?addDiasISO(dt,_dias):'');
+    // 6.65 (AC6.1): o vermífugo conta pelo esquema da ficha (com 2 doses, a 2ª prevista + 4 meses)
+    var contaDe=function(d){ return (k==='verm_p')?prevVermLanceConta(pelExtra(p)||{}, k, d):(_dias?addDiasISO(d,_dias):''); };
+    var calc=contaDe(dt);
     var proxFinal=(prox && prox>dt) ? prox : (calc||prox||'');
     var nomeItem=it.nome||'este item';
     var gravar=function(dtFinal, proxDef, atrasoConfirmado){
@@ -34862,6 +35034,8 @@
       if(quem) patch[k.replace(/_p$/,'')+'_por']=quem;
       if(it.nomeK){ var nmProd=String((document.getElementById('prevN_'+chave+'_'+k)||{}).value||'').trim(); if(nmProd) patch[it.nomeK]=nmProd; }
       if(_ecEd) ectoPatchProduto(patch, _ecEd);
+      // 6.65 (AC6.1): a 1ª dose do vermífugo leva a 2ª prevista e tira a 2ª de uma série anterior
+      if(k==='verm_p') prevVermLancePatch(patch, pelExtra(p)||{}, dtFinal);
       setPelExtra(p, patch);
       if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+nomeItem+' feito em '+fmtBR(dtFinal)+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
       if(atrasoConfirmado && typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(p)||'')+': '+nomeItem+' continua em atraso, confirmado'+(quem?(' por '+quem):''), {pet:pelNome(p)||''});
@@ -34875,7 +35049,7 @@
     if(!checagem.ok && checagem.confirmar){
       zEscolha(checagem.motivo, ['Feito em '+fmtBR(dt)+' · Vale até '+(proxFinal?fmtBR(proxFinal):'—')], [
         {t:'Corrigir para '+fmtBR(checagem.sugestao), cor:'#1E8449', fn:function(){
-          var novoProx=(_dias?addDiasISO(checagem.sugestao,_dias):checagem.sugestao);
+          var novoProx=contaDe(checagem.sugestao)||checagem.sugestao;
           gravar(checagem.sugestao, novoProx, false);
         }},
         {t:'Está certo, deixar em atraso', cor:'#6b5f4b', fn:function(){ gravar(dt, proxFinal, true); }}
@@ -35158,12 +35332,21 @@
     var rot='display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--z-blue);cursor:pointer';
     if(k==='verm_p'){
       var duas=(ex.verm_doses==='2 doses');
-      return '<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px">Como é este vermífugo?</div>'
+      // 6.65 (AC2.1): «2ª dose com: 15 dias | 21 dias», marcado pelo que a ficha diz (vermIntervalo).
+      // Só aparece com «2 doses» marcado; o «Feito hoje» lê a escolha e grava o intervalo só quando
+      // ele é diferente do da ficha (nunca em massa).
+      var n=vermIntervalo(ex), rotI=rot+';min-height:44px';
+      return '<div class="prev-verm-esq" style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px">Como é este vermífugo?</div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
-        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE1_'+id+'"'+(duas?'':' checked')+'> Dose única</label>'
-        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE2_'+id+'"'+(duas?' checked':'')+'> 2 doses (repete em 21 dias)</label>'
+        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE1_'+id+'"'+(duas?'':' checked')+' onchange="prevCorrigeVermEsquema(this)"> Dose única</label>'
+        +'<label style="'+rot+'"><input type="radio" name="prevCorrE_'+id+'" id="prevCorrE2_'+id+'"'+(duas?' checked':'')+' onchange="prevCorrigeVermEsquema(this)"> 2 doses</label>'
         +'</div>'
-        +'<div class="hint" style="margin-top:4px">Dose única: o próximo vem em 4 meses. Duas doses: a 2ª vem 21 dias depois da 1ª, e o próximo, 4 meses depois da 2ª.</div></div>';
+        +'<div class="prev-verm-int" style="margin-top:6px'+(duas?'':';display:none')+'"><div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px">2ª dose com:</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+        +'<label style="'+rotI+'"><input type="radio" name="prevCorrI_'+id+'" id="prevCorrI15_'+id+'"'+(n===15?' checked':'')+'> 15 dias</label>'
+        +'<label style="'+rotI+'"><input type="radio" name="prevCorrI_'+id+'" id="prevCorrI21_'+id+'"'+(n===21?' checked':'')+'> 21 dias</label>'
+        +'</div></div>'
+        +'<div class="hint" style="margin-top:4px">Dose única: o próximo vem em 4 meses. Duas doses: a 2ª vem 15 ou 21 dias depois da 1ª, o que o veterinário indicar, e o próximo, 4 meses depois da 2ª.</div></div>';
     }
     if(k==='verm_dose2_p'){
       var t=String(ex.verm_t||''), prev=vermDose2Prevista(ex);
@@ -35173,6 +35356,15 @@
         +'<div style="margin-top:6px"><button type="button" class="btn" style="padding:4px 0;font-size:12.5px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="prevCorrigeDoseUnica(\''+ka+'\',\''+tela+'\')">Não vai ter 2ª dose — passar para dose única</button></div>';
     }
     return '';
+  }
+  // 6.65 (AC2.1): «2ª dose com» aparece quando «2 doses» é marcado e some com «Dose única» —
+  // só a tela; quem grava é o botão, que lê o que estiver marcado.
+  function prevCorrigeVermEsquema(el){
+    try{
+      var box=(el && typeof el.closest==='function')?el.closest('.prev-verm-esq'):null;
+      var w=box?box.querySelector('.prev-verm-int'):null;
+      if(w) w.style.display=(String(el.id||'').indexOf('prevCorrE2_')===0 && el.checked===true)?'':'none';
+    }catch(x){} /* silencioso de propósito: enfeite de tela — a escolha marcada continua valendo no «Feito hoje» */
   }
   // O EXAME DE FEZES no painel. No vermífugo ele entra como a outra saída da regra ("ou
   // vermífugo, ou exame de fezes"); no próprio exame, é só o campo do resultado.
@@ -35230,11 +35422,18 @@
     // O esquema escolhido no painel manda (dose única × 2 doses). Sem escolha na tela, vale
     // o que a ficha já dizia.
     var esquema=ex.verm_doses||'';
+    var intervalo=vermIntervalo(ex);
     if(k==='verm_p'){
       var e1=document.getElementById('prevCorrE1_'+id), e2=document.getElementById('prevCorrE2_'+id);
       if(e2 && e2.checked===true) esquema='2 doses';
       else if(e1 && e1.checked===true) esquema='Dose única';
       if(esquema && esquema!==ex.verm_doses) patch.verm_doses=esquema;
+      // 6.65 (AC2): o intervalo escolhido no painel manda; sem a escolha na tela, vale o da ficha.
+      // Gravado só com «2 doses» e só quando muda o que a ficha diz — nunca em massa.
+      var i15=document.getElementById('prevCorrI15_'+id), i21=document.getElementById('prevCorrI21_'+id);
+      if(i15 && i15.checked===true) intervalo=15;
+      else if(i21 && i21.checked===true) intervalo=21;
+      if(esquema==='2 doses' && intervalo!==vermIntervaloDoBanco(p)) patch.verm_dose2_dias=intervalo;   // 2ª rodada: comparado com o banco (REL-001)
     }
     if(k==='verm_dose2_p'){
       // A 2ª DOSE DADA manda sobre a prevista: o próximo vermífugo conta 4 meses a partir
@@ -35251,7 +35450,8 @@
       patch.verm_dose2_t=dt; patch.verm_2a=dt;
       patch.verm_p=addDiasISO(dt, VERMIF_PROX);
       if(ex.verm_p_manual) patch.verm_p_manual='';
-      setPelExtra(p, patch);
+      var _gravou2=setPelExtra(p, patch);
+      prevCacheGravado(p, patch, _gravou2, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)
       prevCorrigeRegistrar(p, chave, k, it, ex.verm_p||'', patch.verm_p,
         '2ª dose dada em '+fmtBR(dt), tela,
         (pelNome(p)||'')+' — 2ª dose do vermífugo gravada; o próximo vermífugo vence em '+fmtBR(patch.verm_p));
@@ -35262,9 +35462,9 @@
       if(rf) patch.fezes_res=rf;
     }
     if(k==='verm_p' && esquema==='2 doses'){
-      // Vermífugo em 2 doses: a 1ª dose é esta, e a 2ª volta a ser a PREVISTA de 21 dias —
-      // a que estava registrada era da rodada anterior (mesma regra do Salvar da ficha).
-      var d2=addDiasISO(dt, VERMIF_2A_DOSE);
+      // Vermífugo em 2 doses: a 1ª dose é esta, e a 2ª volta a ser a PREVISTA de 15 ou 21 dias
+      // (o intervalo escolhido acima) — a que estava registrada era da rodada anterior.
+      var d2=addDiasISO(dt, intervalo);
       patch.verm_dose2_t=''; patch.verm_2a=d2;
       patch[k]=addDiasISO(d2, VERMIF_PROX);
     } else if(k==='verm_p'){
@@ -35294,7 +35494,8 @@
     if(ex[k+'_manual']) patch[k+'_manual']='';
     // "A fazer na Zêluz" marcado no cadastro: foi feito, a promessa sai junto.
     if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
-    setPelExtra(p, patch);
+    var _gravou=setPelExtra(p, patch);
+    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7): a tela redesenhada já lê o gravado
     prevCorrigeRegistrar(p, chave, k, it, de, patch[k]||'',
       'feito em '+fmtBR(dt)+((k==='ecto_p' && patch.ecto_prod==='' && patch.ecto_tipo==='')?' (produto não informado — prazo mais curto)':''), tela);
   }
@@ -35316,7 +35517,8 @@
       // "Não sei" também deixa a ficha sem produto aqui (QA47 B5), como no "Feito hoje".
       if(__ecV.prod && (__ecV.prod!=='Outro' || __ecV.dias)) ectoPatchProduto(patch, __ecV);
     }
-    setPelExtra(p, patch);
+    var _gravou=setPelExtra(p, patch);
+    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)
     prevAuditManual(p, k, de, v);
     prevCorrigeRegistrar(p, chave, k, it, de, v, 'vencimento digitado à mão'
       +((k==='ecto_p' && patch.ecto_prod==='' && patch.ecto_tipo==='')?' (produto não informado)':''), tela);
@@ -35333,7 +35535,8 @@
       patch.verm_p=addDiasISO(t1, VERMIF_PROX);
       if(ex.verm_p_manual) patch.verm_p_manual='';
     }
-    setPelExtra(p, patch);
+    var _gravou=setPelExtra(p, patch);
+    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)
     prevCorrigeRegistrar(p, chave, 'verm_dose2_p', prevCorrigeItemDe('verm_dose2_p'), ex.verm_p||'', patch.verm_p||ex.verm_p||'',
       'passou para dose única', tela,
       (pelNome(p)||'')+' — vermífugo em dose única'+(patch.verm_p?('; o próximo vence em '+fmtBR(patch.verm_p)):''));
@@ -35356,7 +35559,8 @@
     if(res) patch.fezes_res=res;
     if(ex.fezes_p_manual) patch.fezes_p_manual='';
     if(ex.fezes_afazer) patch.fezes_afazer='';
-    setPelExtra(p, patch);
+    var _gravou=setPelExtra(p, patch);
+    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)
     prevCorrigeRegistrar(p, chave, 'fezes_p', prevCorrigeItemDe('fezes_p'), ex.fezes_p||'', patch.fezes_p,
       'exame de fezes feito em '+fmtBR(dt)+(res?(' — '+res):''), tela);
   }
@@ -35448,18 +35652,34 @@
       // vencimento é o que vale (prevValor). Ler as casas cruas mostrava um check-up velho como
       // vencido, e o Salvar gravava essa data velha nas três casas — apagando o check-up novo.
       if(it.k==='checkup_p'){ feito=prevCheckupData(ex)||''; prox=prevValor(ex, it)||''; }
+      // 6.65 (AC6.2 a AC6.4): a 2ª dose do vermífugo é CONTA (vermDose2Prevista), não campo — ler o
+      // campo cru mostrava sempre «sem data». O «Feito em» mostra a 2ª desta série já dada; sem 2ª
+      // dose a lançar (dose única, ou sem a 1ª), a linha diz por quê e o Salvar dela não grava.
+      var v2=(it.k==='verm_dose2_p'), semV2=v2?prevVermSem2a(ex):'', seloV2='';
+      if(v2){
+        var t1v=String(ex.verm_t||''), d2v=String(ex.verm_dose2_t||'');
+        feito=(!semV2 && /^\d{4}-\d{2}-\d{2}$/.test(d2v) && d2v>=t1v)?d2v:'';
+        prox=semV2?'':(prevValor(ex, it)||'');
+        if(feito) seloV2='<span class="vd vd-ok">dada em '+escAttr(fmtBR(feito))+'</span>';
+      }
       var por=ex[it.k.replace(/_p$/,'')+'_por']||'';
       var atrasado=venceuISO(prox);
       return '<div style="border-top:1px solid var(--line);padding:9px 0">'
-        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+seloValidade(prox)
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+(v2?(semV2?'':(seloV2||seloValidade(prox))):seloValidade(prox))
         +(por?(' <span style="font-weight:600;font-size:11.5px;color:var(--muted)">— último por '+escAttr(por)+'</span>'):'')+'</div>'
+        // 6.65 (AC6.1): o esquema e o intervalo que a ficha diz — é por eles que a validade se refaz
+        +(it.k==='verm_p'?('<div class="hint" style="margin:0 0 6px">Como está na ficha: '
+          +escAttr(ex.verm_doses==='2 doses'?('2 doses, a 2ª '+vermIntervalo(ex)+' dias depois da 1ª'):'Dose única')+'.</div>'):'')
+        +(v2?('<div class="hint" style="margin:0 0 6px">'+escAttr(semV2||'Ao salvar a 2ª dose, o próximo vermífugo passa a contar 4 meses a partir dela.')+'</div>'):'')
         +'<div class="cad-grid2">'
         // ⚠ 22/ago/2026 — Adriana: "dei hoje e cai para dar daqui a 21 dias". O "Vale até"
         // guardava o valor ANTIGO da ficha e o lançamento salvava esse valor, ignorando a data
         // nova. Agora, ao trocar a data de "Feito em", o "Vale até" se refaz na hora — e quem
         // quiser uma data diferente (o veterinário pediu antes) ainda pode escrever por cima.
         +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chId+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chJs+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
-        +'<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
+        // Na 2ª dose, o lugar do «Vale até» mostra o próximo vermífugo que o Salvar vai gravar, só de leitura (6.65, AC6.3)
+        +(v2?('<div><label class="cad-lb">Próximo vermífugo</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(feito?addDiasISO(feito, VERMIF_PROX):'')+'" readonly tabindex="-1" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" style="background:var(--z-cream-warm)"></div>')
+          :('<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'))
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
@@ -36066,7 +36286,8 @@
       recalc:function(dt){
         if(!dt) return '';
         if(ex.verm_doses==='2 doses'){
-          var d2=vermDose2Data(Object.assign({},ex,{verm_t:dt}))||addDiasISO(dt,VERMIF_2A_DOSE);
+          // 6.65 (AC3.3): a 2ª de uma série anterior à data nova não conta (vermDose2Data); o intervalo é o da ficha
+          var d2=vermDose2Data(Object.assign({},ex,{verm_t:dt}))||addDiasISO(dt,vermIntervalo(ex));
           return addDiasISO(d2,VERMIF_PROX);
         }
         return addDiasISO(dt,VERMIF_PROX);
@@ -36085,6 +36306,13 @@
   function pbSalvar(b){
     if(!pelAtual) return;
     var pend=PB_PEND[b]||{};
+    // 6.65 (AC3.8): tocar no intervalo da 2ª dose que já estava marcado não é mudança — sai do
+    // rascunho antes de tudo (nada é gravado, a conta não é refeita e o «Vence em» à mão fica).
+    if(b==='verm' && Object.prototype.hasOwnProperty.call(pend,'verm_dose2_dias')
+       && vermIntervalo({verm_dose2_dias:pend.verm_dose2_dias})===vermIntervaloDoBanco(pelAtual)){   // 2ª rodada: comparado com o banco (REL-001)
+      delete pend.verm_dose2_dias;
+      if(!Object.keys(pend).length) delete PB_PEND[b];
+    }
     if(!Object.keys(pend).length){ PB_SALVO[b]=true; pbRender(b); return; }
     var ex=pbEx(b), patch=Object.assign({},pend);
     var exAntes=Object.assign({}, (pelAtual?pelExtra(pelAtual):{})||{});   // cópia: setPelExtra muda o objeto vivo da ficha
@@ -36118,16 +36346,43 @@
       if(ex.ecto_t && d) patch.ecto_p=addDiasISO(ex.ecto_t,d); else if(!ex.ecto_t) patch.ecto_p=''; }
     if(b==='col' && pbContaManda('col_p',['col_t'])){ var dc=coleiraDur(ex); patch.col_p=(ex.col_t&&dc)?addDiasISO(ex.col_t,dc):''; }
     if(b==='verm'){
-      var vermConta=pbContaManda('verm_p',['verm_t','verm_dose2_t','verm_doses']);
+      // 6.65 (AC4) — a 2ª dose DIGITADA neste Salvar, no futuro ou antes da 1ª: nada é gravado e o
+      // rascunho fica. Quem «programava» a 2ª para o dia previsto apagava a cobrança antes de a dose
+      // ser dada. A 2ª que veio do banco nunca é recusada: é limpa ou ignorada pela conta (abaixo).
+      var _iso=/^\d{4}-\d{2}-\d{2}$/;
+      var _d2dig=String(pend.verm_dose2_t||'');
+      if(ex.verm_doses==='2 doses' && _iso.test(_d2dig)){
+        if(_d2dig>hojeISO()){
+          zAlertao('Essa data não faz sentido', ['A 2ª dose ('+fmtBR(_d2dig)+') está no futuro. Preencha «2ª dose dada em» só depois de a dose ser dada, com a data real.'], {botao:'Vou corrigir'});
+          return;
+        }
+        if(_iso.test(String(ex.verm_t||'')) && _d2dig<ex.verm_t){
+          zAlertao('Essa data não faz sentido', ['A 2ª dose ('+fmtBR(_d2dig)+') ficou antes da 1ª ('+fmtBR(ex.verm_t)+').',
+            'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija a 1ª dose aqui mesmo.'], {botao:'Vou corrigir'});
+          return;
+        }
+      }
+      // 6.65 (AC3.1, AC3.2) — a SÉRIE NOVA: a 1ª dose nova, posterior à 2ª que estava gravada, começa
+      // outra série. A 2ª antiga sai (como no painel rápido) e a conta segue sem ela. A 2ª igual ou
+      // posterior à 1ª nova é desta mesma série (a 1ª corrigida para trás) e fica (AC3.4).
+      var _d2ant=String(exAntes.verm_dose2_t||'');
+      if(Object.prototype.hasOwnProperty.call(pend,'verm_t') && String(pend.verm_t||'')!==String(exAntes.verm_t||'')
+         && !Object.prototype.hasOwnProperty.call(pend,'verm_dose2_t') && _iso.test(String(ex.verm_t||'')) && _iso.test(_d2ant) && _d2ant<ex.verm_t){
+        patch.verm_dose2_t=''; ex.verm_dose2_t='';
+      }
+      // O intervalo refaz a conta só enquanto a 2ª não foi dada (AC3.6, AC3.7): depois dela, a
+      // escolha vale para a série seguinte, e o próximo (com o «Vence em» à mão) não muda.
+      var vermConta=pbContaManda('verm_p',['verm_t','verm_dose2_t','verm_doses'].concat(vermDose2Prevista(ex)?['verm_dose2_dias']:[]));
       if(!ex.verm_t){ patch.verm_2a=''; patch.verm_dose2_t=''; if(vermConta) patch.verm_p=''; }
       else if(ex.verm_doses==='2 doses'){
-        // A data real da 2ª dose, quando houver; senão a prevista de 21 dias.
-        var d2=vermDose2Data(ex)||addDiasISO(ex.verm_t,VERMIF_2A_DOSE);
+        // A data real da 2ª dose, quando houver; senão a prevista (15 ou 21 dias, vermIntervalo).
+        var d2=vermDose2Data(ex)||addDiasISO(ex.verm_t,vermIntervalo(ex));
         patch.verm_2a=d2; if(vermConta) patch.verm_p=addDiasISO(d2,VERMIF_PROX);
       }
       // Voltou para "Dose única": não existe 2ª dose nenhuma — a data registrada sai junto,
-      // senão a ficha guardaria uma dose que o regime atual não prevê.
-      else { patch.verm_2a=''; patch.verm_dose2_t=''; if(vermConta) patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
+      // senão a ficha guardaria uma dose que o regime atual não prevê. O intervalo não entra em
+      // conta nem é gravado (6.65, AC1.5); o que já estava na ficha fica, para quando voltar a 2 doses.
+      else { patch.verm_2a=''; patch.verm_dose2_t=''; delete patch.verm_dose2_dias; if(vermConta) patch.verm_p=addDiasISO(ex.verm_t,VERMIF_PROX); }
     }
     if(b==='fezes' && pbContaManda('fezes_p',['fezes_t'])){ patch.fezes_p=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):''; }
     // ===== TRAVA DE LÓGICA DA DATA — Adriana, 29/ago/2026 (mesma regra do prevLancar) =====
@@ -36142,7 +36397,9 @@
       return;
     }
     var gravar=function(confirmados){
-      setPelExtra(pelAtual, patch);
+      var _gravou=setPelExtra(pelAtual, patch);
+      // 6.65 (AC7): o pbRender logo abaixo já lê o que acabou de ser gravado (volta atrás se o banco recusar)
+      prevCacheGravado(pelAtual, patch, _gravou, function(){ pbRender(b); });
       delete PB_PEND[b]; PB_SALVO[b]=true;
       try{ if(typeof audit==='function') audit('prevencao', (pelNome(pelAtual)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pelAtual)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
       // Vencimento digitado à mão: rastro próprio, de → para. O audit() já grava QUEM e o papel.
@@ -36166,6 +36423,13 @@
         {t:'Corrigir para '+fmtBR(r.sugestao), cor:'#1E8449', fn:function(){
           patch[it.campoFeito]=r.sugestao;
           patch[it.campoProx]=it.recalc(r.sugestao);
+          // 6.65 (AC3.3): no vermífugo em 2 doses, a data corrigida é uma 1ª dose nova — a 2ª de antes
+          // dela sai, e a 2ª prevista acompanha (a conta do recalc já ignora a 2ª antiga).
+          if(b==='verm' && ex.verm_doses==='2 doses'){
+            var _a2=String(exAntes.verm_dose2_t||'');
+            if(!Object.prototype.hasOwnProperty.call(pend,'verm_dose2_t') && /^\d{4}-\d{2}-\d{2}$/.test(_a2) && _a2<r.sugestao) patch.verm_dose2_t='';
+            patch.verm_2a=vermDose2Data(Object.assign({}, ex, patch))||addDiasISO(r.sugestao, vermIntervalo(ex));
+          }
           passo(i+1, confirmados);
         }},
         {t:'Está certo, deixar em atraso', cor:'#6b5f4b', fn:function(){ confirmados.push(c); passo(i+1, confirmados); }}
@@ -36264,11 +36528,18 @@
     // dispensa o vermífugo quando é o mais recente dos dois.
     const fez=!!ex.fezes_t && vermOuFezes(ex)==='fezes';
     const duas=(ex.verm_doses==='2 doses');
-    const d2prev=(ex.verm_t&&duas)?addDiasISO(ex.verm_t,VERMIF_2A_DOSE):'';
+    // 6.65 (o Romeu, 10/out/2026): a 2ª vem 15 ou 21 dias depois da 1ª — o que o veterinário
+    // indicou, escolhido aqui mesmo (vermIntervalo; sem escolha na ficha, 21).
+    const n=vermIntervalo(ex);
+    const d2prev=(ex.verm_t&&duas)?addDiasISO(ex.verm_t,n):'';
     // A 2ª dose DADA manda sobre a prevista (Adriana, 21/set/2026): se a repetição saiu com
-    // atraso, é da data real que sai o "próximo vermífugo" — contar dos 21 dias teóricos
+    // atraso, é da data real que sai o "próximo vermífugo" — contar dos 15 ou 21 dias teóricos
     // adiantaria a próxima vermifugação em cima de uma dose que ainda nem tinha sido dada.
     const d2=duas?(vermDose2Data(ex)||d2prev):'';
+    // A 2ª desta série já dada (igual ou depois da 1ª): a ficha diz quando foi, não a prevista (6.65, AC5).
+    // A de uma série anterior não conta: continua «2ª dose prevista».
+    const t1=String(ex.verm_t||''), dada=String(ex.verm_dose2_t||'');
+    const d2real=duas && /^\d{4}-\d{2}-\d{2}$/.test(t1) && /^\d{4}-\d{2}-\d{2}$/.test(dada) && dada>=t1;
     const prox=ex.verm_t?addDiasISO(d2||ex.verm_t,VERMIF_PROX):'';
     return '<div class="prev-bloco" id="pb-verm">'
       +'<div class="prev-tit">Vermifugação '+(ex.verm_p?seloValidade(ex.verm_p):'')+'</div>'
@@ -36280,8 +36551,15 @@
         +'</div></div>'
         +'<div class="field"><label>'+(ex.verm_doses==='2 doses'?'1ª dose em':'Deu em')+'</label><input type="date" class="cad-in" value="'+(ex.verm_t||'')+'" onchange="pbSet(\'verm\',{verm_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +(duas
-          ? '<div class="field"><label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">'+(d2prev?fmtBR(d2prev):'informe a 1ª dose')+'</div></div>'
-            +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">'
+          // «2ª dose com: 15 dias | 21 dias» (6.65, AC3.5): tocar no que já está marcado não muda nada (pbSalvar)
+          ? '<div class="field"><label>2ª dose com</label><div class="seg gold" data-single>'
+            +[15,21].map(function(d){ return '<button type="button" class="'+(n===d?'on':'')+'" style="min-height:44px" onclick="pick(this);pbSet(\'verm\',{verm_dose2_dias:'+d+'})">'+d+' dias</button>'; }).join('')
+            +'</div></div>'
+            +(d2real
+              ? '<div class="field"><label>2ª dose</label><div class="prev-calc">dada em '+escAttr(fmtBR(dada))+'</div></div>'
+              : '<div class="field"><label>2ª dose prevista ('+n+' dias depois)</label><div class="prev-calc">'+(d2prev?fmtBR(d2prev):'informe a 1ª dose')+'</div></div>')
+            // max = hoje (6.65, AC4.5): a 2ª só entra depois de dada; o Salvar recusa também quando o calendário deixa passar
+            +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+escAttr(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="'+escAttr(hojeISO())+'" onkeydown="return dataSoNoCalendario(event)">'
             +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vencimentos</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
           : '')
         +prevVenceCampoHTML(ex,'verm_p','verm_t',"prevVenceManualSet('verm_p',this.value,'verm')",
@@ -50705,7 +50983,7 @@
       +'Como está {ofilhot}?\n'
       +'💊 Passando para lembrar que {quando} vence {item} {dofilhot}.\n'
       +'{fecho}',
-    // A 2ª dose do vermífugo, 21 dias depois da 1ª.
+    // A 2ª dose do vermífugo, 15 ou 21 dias depois da 1ª (vermIntervalo). O texto é da Adriana e não muda.
     verm2:'Olá, {tutor}, como vai?\n'
       +'Como está {ofilhot}?\n'
       +'💊 Passando para lembrar que {quando} vence o vermífugo {dofilhot} ☺️\n'
@@ -60591,7 +60869,7 @@
      dica:'&ldquo;Se o peludinho está na creche não precisa perguntar horário&rdquo; — a aplicação é durante o Day Care.'},
     {k:'antip', id:'cfgVencAntip', rot:'Vermífugo, carrapaticida e coleira',
      dica:'<strong>{item}</strong> já vem com o artigo certo: &ldquo;o vermífugo&rdquo;, &ldquo;o carrapaticida&rdquo;, &ldquo;a coleira repelente&rdquo;. Escreva <strong>{fecho}</strong> onde quiser a frase da autorização.'},
-    {k:'verm2', id:'cfgVencVerm2', rot:'Vermífugo — a 2ª dose (21 dias depois da 1ª)',
+    {k:'verm2', id:'cfgVencVerm2', rot:'Vermífugo — a 2ª dose (15 ou 21 dias depois da 1ª)',
      dica:'Sai só para quem tem &ldquo;2 doses&rdquo; na ficha e ainda não teve a 2ª registrada.'},
     {k:'escova', id:'cfgVencEscova', rot:'Troca de escova de dentes',
      dica:'<strong>{valor_escova}</strong> traz o preço de Configurações › Valores do Day Care.'},
