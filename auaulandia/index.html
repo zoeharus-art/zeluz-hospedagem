@@ -5174,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-15"></script>
+<script src="resposta-tutor.js?v=2026-10-09-16"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-15"></script>
+<script src="painel-logica.js?v=2026-10-09-16"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-15"></script>
+<script src="financeiro-logica.js?v=2026-10-09-16"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -13466,6 +13466,17 @@
     if(typeof medFreqHoje==='function' && !medFreqHoje(it, refISO)) return false; // não é dia dele (dias específicos / dia sim-dia não)
     return true;
   }
+  // 6.62 (S3-P12) — PURA: o remédio ainda toca DEPOIS de hoje? (uso contínuo, sem fim, ou fim depois de hoje). Com a parada
+  // guardada (`paradoEm`), separa o remédio parado (não toca depois de hoje: é o que todo «Parou de tomar» grava) do estado
+  // duplo (a parada guardada e o remédio tocando, que nasceu pelo formulário do Plantão ou da Ficha).
+  function medTocaDepoisDeHoje(it, hoje){ it=it||{}; return it.continuo===true || !it.dataFim || String(it.dataFim)>String(hoje||''); }
+  // 6.62 — PURA: a linha do estado duplo nas telas (o cartão do Plantão, a Ficha e o Cuidado Vet): ele voltou a tocar depois
+  // do «Parou de tomar» e sai pelo «Parou de tomar» (texto puro; quem desenha escapa).
+  function medVoltouATocarTxt(it){
+    var pe=((it||{}).paradoEm && typeof it.paradoEm==='object')?it.paradoEm:{}, dia=fmtBR(String(pe.data||''));
+    return 'Voltou a tocar depois do «Parou de tomar»'+(dia?(' de '+dia):'')+(pe.quem?(' ('+String(pe.quem)+')'):'')
+      +'. Para encerrar: «Parou de tomar» na ficha (aba Medicamentos).';
+  }
   // Lê os campos extras (local da pomada + período) de uma linha .magitem compartilhada.
   function coletarExtrasMed(el){
     if(!el) return {};
@@ -13525,6 +13536,13 @@
     if(min>1439) min=1439;
     const z=function(x){ return String(x).padStart(2,'0'); };
     return z(Math.floor(min/60))+':'+z(min%60);
+  }
+  // 6.62 (2ª rodada) — PURA: a regra da refeição de um remédio («45 min antes do jantar» = 'jantar|antes|45'), ou '' quando o
+  // horário é fixo. Dois remédios com a mesma regra têm o mesmo horário de dose, mesmo que o horário da refeição tenha
+  // mudado em Configurações depois que um deles foi gravado (a recusa e a régua comparam por aqui).
+  function medQuandoRegra(it){
+    var q=(it||{}).quando;
+    return (q && q.ref && q.ref!=='fixo')?(String(q.ref)+'|'+((q.rel==='depois')?'depois':'antes')+'|'+(parseInt(q.min,10)||0)):'';
   }
   // Os horários que valem para o alarme: derivados da refeição quando há `quando`,
   // senão os digitados à mão. Uma conta só, usada no salvar da ficha e do check-in.
@@ -13967,11 +13985,16 @@
     const suspBanner=item.suspenso?'<div style="background:rgba(192,57,43,.1);border:1.5px solid var(--crm-critico);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">SUSPENSO pela Veterinária'+(item.suspensoPor?(' · '+escAttr(item.suspensoPor)):'')+(item.suspensoMotivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.suspensoMotivo)+'</span>'):'')+'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. Reativação só pela vet, no Cuidado Vet.</span></div>':'';
     const contBadge=cont?'<div style="background:var(--z-gold);color:var(--z-blue);font-weight:800;font-size:12px;letter-spacing:.4px;border-radius:8px;padding:5px 10px;margin-bottom:8px;display:inline-block">♾️ USO CONTÍNUO — sem data de término</div>':'';
     // Parou de tomar: fica na linha como registro, nunca some. Quem parou e por quê.
-    const paradoBanner=(item.continuo===false&&item.paradoEm)
+    // 6.62 (AC4.5): a faixa «PAROU DE TOMAR … Não gera alarme» só no remédio parado; o estado duplo (a parada guardada e o
+    // remédio ainda tocando depois de hoje) diz que voltou a tocar e como encerrar. Suspenso (2ª rodada, BAIXO-2 do QA): só a
+    // faixa do suspenso, que diz a verdade (ele não toca enquanto estiver suspenso).
+    const tocaDepois=!!item.paradoEm && medTocaDepoisDeHoje(item, zHojeISO()), duplo=tocaDepois && !item.suspenso;
+    const paradoBanner=(item.continuo===false&&item.paradoEm&&!tocaDepois)
       ?('<div style="background:rgba(124,139,153,.16);border:1.5px solid #7C8B99;border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:800;color:var(--z-blue)">PAROU DE TOMAR em '+escAttr(item.dataFim||item.paradoEm.data||'—')
         +(item.paradoEm.quem?(' · registrado por '+escAttr(item.paradoEm.quem)):'')
         +(item.paradoEm.motivo?('<span style="display:block;font-weight:600;margin-top:2px">Motivo: '+escAttr(item.paradoEm.motivo)+'</span>'):'')
-        +'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. O histórico do que já foi dado continua guardado.</span></div>'):'';
+        +'<span style="display:block;font-weight:600;margin-top:2px">Não gera alarme. O histórico do que já foi dado continua guardado.</span></div>')
+      :(duplo?('<div style="background:var(--z-cream);border:1.5px solid var(--z-blue);border-radius:9px;padding:8px 11px;margin-bottom:8px;font-size:12.5px;font-weight:700;color:var(--z-blue)">'+escAttr(medVoltouATocarTxt(item))+'</div>'):'');
     // Quem informou — a lei do "toda ação crítica grava QUEM fez".
     const informado=item.informado_por
       ?('<div class="hint" style="margin-top:5px">Informado por '+escAttr(item.informado_por.quem||'-')
@@ -14224,6 +14247,10 @@
       else if(!it.horarios.length) probs.push('"'+it.nome+'": escolha QUANDO dar (antes do jantar, por exemplo) ou cadastre pelo menos 1 HORÁRIO válido (ex: 07:30).');
     });
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    // 6.62 (S3-P12): o remédio parado e o suspenso não mudam por fora da régua — a mesma recusa do Cuidado Vet, contra o que
+    // esta tela leu, antes da régua e da trava (nada é gravado e o carimbo não anda); trava o salvamento inteiro e diz qual.
+    const recusa=medAgendaRecusaDaTela(itens, MED_AGENDA_ITENS, zHojeISO());
+    if(recusa){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+recusa; } return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     const key=medAgendaKey(); if(!key) return;
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
@@ -22035,7 +22062,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-15';
+  const APP_VERSAO='2026-10-09-16';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -28961,6 +28988,9 @@
       var pe=(it.paradoEm && typeof it.paradoEm==='object')?it.paradoEm:null;
       var parou=pe?('<div class="vet-med-susp" style="background:none;color:var(--crm-critico);padding:0;margin-top:6px">Parou de tomar'+((pe.data||it.dataFim)?(' em '+escAttr(fmtBR(pe.data||it.dataFim))):'')
         +(pe.quem?(' · '+escAttr(pe.quem)):'')+(pe.motivo?(' — '+escAttr(pe.motivo)):'')+'</div>'):'';
+      // 6.62 (AC4.5): o estado duplo (a parada guardada e o remédio ainda tocando depois de hoje) não diz «Parou de tomar em …»;
+      // suspenso (2ª rodada, BAIXO-2 do QA), fica só a linha «SUSPENSO» de baixo
+      if(pe && medTocaDepoisDeHoje(it, hj||zHojeISO())) parou=it.suspenso?'':('<div class="vet-med-susp" style="background:none;color:var(--z-blue);padding:0;margin-top:6px">'+escAttr(medVoltouATocarTxt(it))+'</div>');
       var j=escAttr(medJsArg(id));
       // 6.59 (AC7.6): «Lançada por engano» (o anular da 6.58, a Gestão assina); (AC9): «Ainda preciso reavaliar»
       var engano=pode?('<button type="button" style="'+VET_BT+'color:var(--crm-critico);border:2px solid var(--crm-critico)" title="Anular esta prescrição, lançada por engano (nada é apagado)" onclick="vetMedEngano(\''+j+'\')">Lançada por engano</button>'):'';
@@ -29053,18 +29083,77 @@
   // suspenso. No parado, o «Alterar» recusa tudo o que o faria voltar a tocar: o horário, o uso contínuo e o «tomar até»
   // (a volta é pelo «Voltou a tomar» da ficha, da 6.58, que tira a parada passando pela régua); a dose e o resto mudam.
   // No suspenso, recusa mudar o horário. `f` = o formulário (continuo, dataFim). '' = pode; senão, a frase da recusa.
-  function vetMedHoraRecusa(p, horarios, f){
-    p=p||{}; f=f||{};
-    var nm=String(p.nome||'sem nome'), mesmaHora=vetMedHorasIguais(p.horarios, horarios);
+  // 6.62 (S3-P12): a recusa passou a ser uma só para as três portas que gravam remédio (medAgendaRecusa, abaixo); esta função
+  // continua com o nome e o contrato de antes (o Cuidado Vet e a 6.59 P36 a chamam) e ganhou a frequência, o início e o
+  // estado duplo. `hoje` (opcional) = o dia de hoje; sem ele, o relógio.
+  function vetMedHoraRecusa(p, horarios, f, hoje){
+    return medAgendaRecusa(p, Object.assign({}, f||{}, {horarios:horarios}), hoje||zHojeISO());
+  }
+  // 6.62 (S3-P12) — PURA: a recusa única do Plantão («Salvar agenda»), da Ficha › Medicamentos («Salvar medicamentos») e do
+  // Cuidado Vet («Alterar»). O remédio não pode ser «parado» e «em uso» ao mesmo tempo, e a régua da 6.54 não vale para o
+  // suspenso. p = o remédio como a tela o leu (no Cuidado Vet, relido do banco); novo = o que a tela vai gravar (horarios,
+  // quando, continuo, dataFim, freq, dataInicio: o formulário do coletor único ou o do Cuidado Vet); hoje = 'AAAA-MM-DD';
+  // agoraMin (opcional) = os minutos de agora (sem ele, o relógio).
+  //  · remédio parado (com `paradoEm`, não toca depois de hoje): o horário, o uso contínuo e o «tomar até» não mudam (a frase
+  //    da 6.59, que vem primeiro); a frequência e o início também não (BAIXO-R3-1), com uma frase própria. A volta é pelo
+  //    «Voltou a tomar» da ficha (6.58), que passa pela régua.
+  //  · estado duplo (com `paradoEm`, ainda toca depois de hoje): o horário, o período e a frequência não mudam; a frase manda
+  //    encerrar pelo «Parou de tomar» (o «Voltou a tomar» sozinho daria duas linhas tocando no mesmo dia). Suspenso, a frase
+  //    é a do suspenso (2ª rodada, BAIXO-2 do QA): ele não toca enquanto estiver suspenso.
+  //  · suspenso (sem `paradoEm`): o horário não muda.
+  // A comparação é a do que a tela mostra: os horários e os dias da semana em qualquer ordem; o horário que vem da refeição
+  // pela regra (medQuandoRegra); a frequência diária igual a sem frequência; a data que o campo de data não mostra conta
+  // como vazia. Exceção (AC1.3): o início vazio preenchido com uma data de hoje para trás, fora do «dia sim, dia não», não
+  // muda nenhum dia do remédio de hoje em diante — grava. A data de hoje só não vale enquanto a dose de ontem dele ainda pode
+  // ser pedida pelo alarme da 6.47 (de madrugada, dentro do teto da dose: mcrOntemFaltam); a frase diz isso (2ª rodada,
+  // BAIXO-1 do QA). '' = pode gravar; senão, a frase (sem o «✋ »).
+  function medAgendaRecusa(p, novo, hoje, agoraMin){
+    p=p||{}; novo=novo||{}; hoje=String(hoje||zHojeISO());
+    var nm=String(p.nome||'sem nome');
+    var data=function(v){ v=String(v||''); return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:''; };
+    var fimDe=function(x){ return x.continuo?'contínuo':data(x.dataFim); };
+    var freqDe=function(x){ var fq=x.freq; if(!fq || !fq.tipo || fq.tipo==='diario') return 'diario';
+      if(fq.tipo==='dias'){ var d=(Array.isArray(fq.dias)?fq.dias:[]).map(String).sort(); return d.length?('dias:'+d.join(',')):'diario'; } return String(fq.tipo); };
+    var rp=medQuandoRegra(p), mesmaHora=(rp && rp===medQuandoRegra(novo)) || vetMedHorasIguais(p.horarios, novo.horarios);
     if(p.paradoEm){
-      var fimDe=function(x){ return x.continuo?'contínuo':String(x.dataFim||''); };
-      if(mesmaHora && fimDe(p)===fimDe(f)) return '';
-      var pe=(typeof p.paradoEm==='object')?p.paradoEm:{}, dia=pe.data||p.dataFim||'';
-      return 'O remédio '+nm+' parou de ser dado («Parou de tomar»'+(dia?(' em '+fmtBR(dia)):'')+(pe.quem?(', por '+String(pe.quem)):'')+'): o horário, o uso contínuo e '
+      var pe=(typeof p.paradoEm==='object')?p.paradoEm:{};
+      var iniA=data(p.dataInicio), iniB=data(novo.dataInicio), ontem=addDiasISO(hoje,-1);
+      // o início vazio preenchido com uma data de hoje para trás, fora do «dia sim, dia não» (AC1.3)
+      var iniVazio=!iniA && !!iniB && iniB<=hoje && freqDe(p)!=='alternado' && freqDe(novo)!=='alternado';
+      // ... com a data de hoje enquanto a dose de ontem ainda pode ser pedida (a dose de ontem sairia do alarme)
+      var iniOntem=iniVazio && iniB>ontem && mcrOntemFaltam(p, '', hoje, {}, (typeof agoraMin==='number')?agoraMin:mcrAgoraMin()).length>0;
+      var mesmoIni=(iniA===iniB) || (iniVazio && !iniOntem);
+      var mesmoFim=fimDe(p)===fimDe(novo), mesmaFreq=freqDe(p)===freqDe(novo);
+      var fraseIni='O início do remédio '+nm+' não pode ser hoje: a dose de ontem dele ainda pode ser pedida agora pelo alarme. '
+        +'Preencha a data em que ele começou (de ontem para trás). Nada foi salvo.';
+      if(medTocaDepoisDeHoje(p, hoje)){
+        if(mesmaHora && mesmoFim && mesmaFreq && mesmoIni) return '';
+        if(p.suspenso) return 'O remédio '+nm+' está suspenso pela Veterinária: o horário, o período e a frequência dele não mudam por aqui. '
+          +'Reative primeiro, no Cuidado Vet; depois, para encerrar, use «Parou de tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+        if(mesmaHora && mesmoFim && mesmaFreq && iniOntem) return fraseIni;
+        var dd=fmtBR(data(pe.data));
+        return 'O remédio '+nm+' voltou a tocar depois do «Parou de tomar»'+(dd?(' de '+dd):'')+(pe.quem?(' ('+String(pe.quem)+')'):'')+': o horário, o período e a frequência '
+          +'dele não mudam por aqui. Para encerrar, use «Parou de tomar» na ficha (aba Medicamentos); para mudar o horário, use «Parou de tomar» e depois «Voltou a tomar», com o horário novo. Nada foi salvo.';
+      }
+      var dia=pe.data||p.dataFim||'';
+      var cab='O remédio '+nm+' parou de ser dado («Parou de tomar»'+(dia?(' em '+fmtBR(dia)):'')+(pe.quem?(', por '+String(pe.quem)):'')+'): ';
+      if(!mesmaHora || !mesmoFim) return cab+'o horário, o uso contínuo e '
         +'o «tomar até» dele não mudam por aqui, para o alarme não pedir de novo uma dose já dada. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+      if(mesmaFreq && iniOntem) return fraseIni;
+      if(!mesmaFreq || !mesmoIni) return cab+'a frequência e o início dele não mudam por aqui, para o alarme não pedir hoje a dose de um remédio parado. '
+        +'Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+      return '';
     }
     if(mesmaHora) return '';
     if(p.suspenso) return 'O remédio '+nm+' está suspenso: o horário não muda enquanto ele estiver suspenso, para a dose de hoje não ser pedida de novo. Reative primeiro e depois mude o horário. Nada foi salvo.';
+    return '';
+  }
+  // 6.62 — PURA: a recusa do formulário inteiro do Plantão ou da Ficha, contra a cópia que a tela leu (MED_AGENDA_ITENS,
+  // FMED_ITENS): a 1ª frase, na ordem da tela, ou ''. O remédio novo (sem cópia lida) não tem o que recusar.
+  function medAgendaRecusaDaTela(itens, lidos, hoje, agoraMin){
+    itens=itens||{}; lidos=lidos||{};
+    var ids=Object.keys(itens);
+    for(var i=0;i<ids.length;i++){ var p=lidos[ids[i]]; if(!p) continue; var r=medAgendaRecusa(p, itens[ids[i]], hoje, agoraMin); if(r) return r; }
     return '';
   }
   // PURA (QA BAIXO-4): o que aconteceu com o horário pedido. 'agora' = vale já (ou o horário não mudou); 'amanha' = a troca
@@ -29137,7 +29226,7 @@
         var mudouFim=(!!p.continuo!==continuo) || (String(p.dataFim||'')!==String(form.dataFim||''));
         var tiraCiente=!!p.fimCiente && mudouFim;
         var itens={}, prev=Object.assign({}, todos||{}); itens[id]=it; prev[id]=p;
-        return mcrReguaDaAgenda(key, itens, prev, quem).then(function(rg){
+        return mcrReguaDaAgenda(key, itens, prev, quem, 'vet').then(function(rg){
           var alvo=rg.itens[id]||it;
           var hA=Array.isArray(alvo.historico)?alvo.historico.slice():it.historico.slice();
           hA.push(linha);
@@ -35765,6 +35854,10 @@
     let itens=fmedColetar();
     const probs=fmedValidar(itens);
     if(probs.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+probs[0]; } return; }
+    // 6.62 (S3-P12): a mesma recusa do «Salvar agenda» e do Cuidado Vet, contra o que a aba leu, antes da pergunta, da régua
+    // e da trava (a pergunta não abre, nada é gravado e o carimbo não anda).
+    const recusa=medAgendaRecusaDaTela(itens, FMED_ITENS, zHojeISO());
+    if(recusa){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ '+recusa; } return; }
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando — não salvei. Tente de novo em instantes.'; } return; }
     const resumo=fmedResumo(itens);
     if(!resumo.length){ if(st){ st.style.color='var(--muted)'; st.textContent='Nada mudou — não havia o que salvar.'; } return; }
@@ -35777,7 +35870,7 @@
     // 6.58 (AC4.8, MC6 da 6.54 — a parte da ficha): a régua do «Salvar agenda» (mcrReguaDaAgenda). O horário mudado
     // depois de a dose de hoje ter sido dada (ou já passado) começa amanhã, por troca de datas, com as mesmas frases.
     let rg=null;
-    try{ rg=await mcrReguaDaAgenda(keyF, itens, FMED_ITENS, quem); }catch(e){ rg=null; _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar, régua)', e); }
+    try{ rg=await mcrReguaDaAgenda(keyF, itens, FMED_ITENS, quem, 'ficha'); }catch(e){ rg=null; _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar, régua)', e); }
     if(!rg){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não consegui conferir as doses de hoje. Nada foi salvo: tente de novo.'; } return; }
     // 6.54 (conferência final): a mesma trava do «Salvar agenda» — a aba aberta antes de uma troca ou de um
     // «Parou» feitos em outro aparelho não regrava o remédio antigo.
@@ -35869,8 +35962,11 @@
   //    continuação da 6.54, `mcr_t_…`), com o estoque herdado. Começa hoje só se a régua da 6.54 deixar e a
   //    linha antiga não valer mais hoje; senão, no próximo dia dele. Nunca as duas tocam no mesmo dia.
   // O remédio ainda toca (hoje ou depois)? Suspenso, parado, anulado ou terminado: não.
+  // 6.62 (AC4.2): o estado duplo (a parada guardada e o remédio tocando depois de hoje, que nasceu pelo formulário do Plantão
+  // ou da Ficha) conta como «em uso»: o «Parou de tomar» aparece e o «Voltou a tomar» é recusado (senão as duas linhas
+  // tocariam no mesmo dia). O parado de hoje («depois de hoje», fim = hoje) continua com o «Voltou a tomar».
   function medAgendaToca(it, hoje){
-    return !!it && !it.suspenso && !it.paradoEm && !medItemAnulado(it) && (it.continuo===true || !it.dataFim || String(it.dataFim)>=String(hoje||''));
+    return !!it && !it.suspenso && !(it.paradoEm && !medTocaDepoisDeHoje(it, hoje)) && !medItemAnulado(it) && (it.continuo===true || !it.dataFim || String(it.dataFim)>=String(hoje||''));
   }
   // A parada da 6.54 só vale para quem ainda ia tocar; no que já parou (ou terminou), só a marca e o histórico:
   // o mcrParou com 'agora' num remédio terminado o faria valer até hoje.
@@ -62116,36 +62212,58 @@
   // deles (mesma assinatura: nome, dose, horários), que a tela não mostra (QA39 A2). Remédio
   // que ninguém viu — a veterinária começou enquanto a recepção fazia o check-in — continua
   // tocando (QA44 N1).
+  // 6.62 (2ª rodada, MÉDIO-2 do QA): a parada anda o carimbo da agenda pela trava da 6.54 (mcrTravaAgenda) antes de gravar.
+  // Um «Salvar agenda» do Plantão ou um «Salvar medicamentos» da Ficha abertos antes do check-in passam a ser recusados e não
+  // regravam o «uso contínuo» por cima (o remédio que o tutor disse que não usa voltaria a tocar, «parado» e «em uso» ao
+  // mesmo tempo). O carimbo é lido junto com a agenda; se outro aparelho gravou no meio, tudo é lido de novo (até 3 vezes).
+  // Sem a trava (o banco não respondeu), a parada grava como antes: o «não está em uso» do tutor não se perde.
   function ciMedMarcarParou(key, lista){
     if(!DB || !key || !(lista&&lista.length)) return Promise.resolve([]);
     var quem=(typeof quemSou==='function'?quemSou():'-'), hoje=zHojeISO(), ontem=addDiasISO(hoje,-1)||hoje;
     var motivo='no check-in da hospedagem, o tutor disse que não está em uso';
-    return DB.ref('auaulandia/medicacao-agenda/'+key+'/itens').once('value').then(function(sAll){
-      var todos=(sAll&&sAll.val&&sAll.val())||{};
-      var ids={}, sigs={};
-      lista.forEach(function(x){ if(x&&x.id){ ids[x.id]=1; if(todos[x.id]) sigs[medAssinatura(todos[x.id])]=1; } });
-      return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje) && (ids[id] || sigs[medAssinatura(todos[id])]); })
-        .map(function(id){ return {id:id, nome:String((todos[id]||{}).nome||'')}; });
-    }).catch(function(e){ _logFalhaGrav('ler a agenda para marcar "já não toma mais"', e); return lista; }).then(function(alvos){
-    return Promise.all(alvos.map(function(x){
-      var no='auaulandia/medicacao-agenda/'+key+'/itens/'+x.id;
-      return DB.ref(no).once('value').then(function(s){
-        var it=(s&&s.val&&s.val())||null; if(!it) return null;
-        if(!ciMedEmVigor(it, hoje)) return null;   // já parado ou suspenso por alguém: não sobrescreve (QA46)
-        var hist=Array.isArray(it.historico)?it.historico.slice():[];
-        hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():''), acao:'Parou de tomar — '+motivo});
-        return DB.ref(no).update({continuo:false, dataFim:ontem, historico:hist,
-          paradoEm:{quem:quem, data:hoje, quando:(typeof agoraBR==='function'?agoraBR():''), ts:Date.now(), motivo:motivo}})
-          .then(function(){ return x.nome||x.id; });
-      }).catch(function(e){ _logFalhaGrav('marcar '+(x.nome||x.id)+' como "já não toma mais" no check-in', e); return null; });
-    })).then(function(r){
-      var feitos=r.filter(Boolean);
+    var AG='auaulandia/medicacao-agenda/'+key;
+    var rodada=function(n){
+      var visto=null;
+      return DB.ref(AG+'/_ts').once('value').then(function(s){ visto=(s&&s.val)?s.val():null; }, function(){ visto=null; }).then(function(){
+        return DB.ref(AG+'/itens').once('value');
+      }).then(function(sAll){
+        var todos=(sAll&&sAll.val&&sAll.val())||{};
+        var ids={}, sigs={};
+        lista.forEach(function(x){ if(x&&x.id){ ids[x.id]=1; if(todos[x.id]) sigs[medAssinatura(todos[x.id])]=1; } });
+        return Object.keys(todos).filter(function(id){ return ciMedEmVigor(todos[id], hoje) && (ids[id] || sigs[medAssinatura(todos[id])]); })
+          .map(function(id){ return {id:id, nome:String((todos[id]||{}).nome||'')}; });
+      }).catch(function(e){ _logFalhaGrav('ler a agenda para marcar "já não toma mais"', e); return lista; }).then(function(alvos){
+        return Promise.all(alvos.map(function(x){
+          var no=AG+'/itens/'+x.id;
+          return DB.ref(no).once('value').then(function(s){
+            var it=(s&&s.val&&s.val())||null; if(!it) return null;
+            if(!ciMedEmVigor(it, hoje)) return null;   // já parado ou suspenso por alguém: não sobrescreve (QA46)
+            var hist=Array.isArray(it.historico)?it.historico.slice():[];
+            hist.push({quem:quem, quando:(typeof agoraBR==='function'?agoraBR():''), acao:'Parou de tomar — '+motivo});
+            return {x:x, no:no, up:{continuo:false, dataFim:ontem, historico:hist,
+              paradoEm:{quem:quem, data:hoje, quando:(typeof agoraBR==='function'?agoraBR():''), ts:Date.now(), motivo:motivo}}};
+          }).catch(function(e){ _logFalhaGrav('marcar '+(x.nome||x.id)+' como "já não toma mais" no check-in', e); return null; });
+        }));
+      }).then(function(pl){
+        var vai=(pl||[]).filter(Boolean); if(!vai.length) return [];
+        var trava; try{ trava=mcrTravaAgenda(AG+'/_ts', visto, Date.now()); }catch(e){ trava=Promise.reject(e); }
+        return trava.then(function(passou){ return passou?'ok':'mexeu'; }, function(e){ _logFalhaGrav('andar o carimbo da agenda no "não está em uso" do check-in', e); return 'sem'; }).then(function(t){
+          if(t==='mexeu' && n<3) return rodada(n+1);   // outro aparelho gravou a agenda no meio: lê tudo de novo
+          if(t==='mexeu') _logFalhaGrav('andar o carimbo da agenda no "não está em uso" do check-in', new Error('a agenda mudou em outro aparelho três vezes seguidas'));
+          return Promise.all(vai.map(function(v){
+            return DB.ref(v.no).update(v.up).then(function(){ return v.x.nome||v.x.id; })
+              .catch(function(e){ _logFalhaGrav('marcar '+(v.x.nome||v.x.id)+' como "já não toma mais" no check-in', e); return null; });
+          }));
+        });
+      });
+    };
+    return rodada(1).then(function(r){
+      var feitos=(r||[]).filter(Boolean);
       if(feitos.length && typeof audit==='function') audit('ficha-medicamentos',
         'PAROU DE TOMAR — '+feitos.join(', ')+' — motivo: '+motivo,
         {alvo:key, pet:((typeof ciHosp!=='undefined'&&ciHosp&&ciHosp.nome)||''), quem:quem});
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
       return feitos;
-    });
     });
   }
   function ciMedConfirmar(btn){ ciMedConfSet(btn,'ok'); }
@@ -65671,12 +65789,26 @@
     if(p.derivado_de) o.derivado_de=p.derivado_de; else delete o.derivado_de;
     return o;
   }
-  function mcrAgendaRegua(itens, prev, log, hoje, agoraMin, quem, quando, ts){
+  // 6.62 (S3-P12, AC5): de qual tela veio a mudança — o rótulo da linha do histórico da troca por datas e a frase «perto».
+  // Sem a porta (a régua de 35 cenários e as provas da 6.54 chamam assim), os textos de sempre, do «Salvar agenda».
+  var MCR_PORTA_ROTULO={plantao:'Salvar agenda do Plantão', ficha:'Ficha › Medicamentos', vet:'Cuidado Vet'};
+  function mcrAgendaRegua(itens, prev, log, hoje, agoraMin, quem, quando, ts, porta){
     var out={itens:{}, novos:{}, trocados:{}, frases:[]};
+    var rotulo=MCR_PORTA_ROTULO[porta]||MCR_PORTA_ROTULO.plantao;
     Object.keys(itens||{}).forEach(function(id){
       var it=itens[id], p=(prev||{})[id];
       out.itens[id]=it;
-      if(!it || !p || p.suspenso || p.paradoEm) return;
+      // 6.62 (S3-P12, AC2): o remédio com a parada guardada que TOCA HOJE passa pela régua como qualquer outro (o horário
+      // mudado depois da dose de hoje começa amanhã); só o parado que não toca hoje e o suspenso continuam pulados.
+      if(!it || !p) return;
+      if(p.suspenso || (p.paradoEm && !medVigenteEm(p, hoje))){
+        // 6.62 (2ª rodada, MÉDIO-1 do QA): no pulado, o horário que vem da refeição, com a mesma regra, fica o que a tela leu.
+        // O coletor recalcula o horário pelo horário da refeição de agora: se a Configuração mudou o jantar hoje, o suspenso
+        // reativado no mesmo dia pediria de novo a dose já dada. O horário novo vale quando ele voltar a passar pela régua.
+        var rgP=medQuandoRegra(p);
+        if(rgP && rgP===medQuandoRegra(it) && !vetMedHorasIguais(p.horarios, it.horarios)) out.itens[id]=mcrAgendaMantemHorario(it, p, (p.horarios||[]).slice());
+        return;
+      }
       var nm=p.nome||it.nome||'O remédio';
       var antes=(p.horarios||[]).slice(), depois=(it.horarios||[]).slice();
       var mudouH=JSON.stringify(antes.slice().sort())!==JSON.stringify(depois.slice().sort());
@@ -65716,7 +65848,9 @@
       }
       if(regra.perto){
         out.itens[id]=mcrAgendaMantemHorario(it, p, antes);
-        out.frases.push(mcrPertoTxt(nm, regra.perto, regra.inicio)+' Por isso o horário não mudou por aqui (continua '+antes.join(', ')+'): mude pela tela «Mudar comida e remédio», que pede a confirmação da veterinária.');
+        // 6.62 (AC5.2): quem muda no Cuidado Vet é a própria veterinária — a frase diz onde ela faz a troca
+        out.frases.push(mcrPertoTxt(nm, regra.perto, regra.inicio)+' Por isso o horário não mudou por aqui (continua '+antes.join(', ')+'): '
+          +((porta==='vet')?'para fazer essa troca, use «Mudar comida e remédio», no Plantão do hóspede, e confirme lá as duas doses perto.':'mude pela tela «Mudar comida e remédio», que pede a confirmação da veterinária.'));
         return;
       }
       var novoId=mcrIdTroca(id, regra.inicio);
@@ -65728,7 +65862,7 @@
       var doseMudou=(String(p.q||'')!==String(it.q||'') || (p.u||'')!==(it.u||''));
       var doseTxt=doseMudou?('dose '+medDoseTxt(p)+' → '+medDoseTxt(it)+', vale na próxima dose'):'';
       var tr=mcrTrocaPorDatas({antigoId:id, antigo:p, base:it, periodoDe:it, novoId:novoId, horarios:depois, inicio:regra.inicio, hoje:hoje,
-        quem:quem, motivo:'Salvar agenda do Plantão: '+porque, extra:doseTxt, quando:quando, ts:ts, dosesHoje:mcrDosesHojeRestantes(p, id, hoje, log),
+        quem:quem, motivo:rotulo+': '+porque, extra:doseTxt, quando:quando, ts:ts, dosesHoje:mcrDosesHojeRestantes(p, id, hoje, log),
         qHoje:((p.u||'')===(it.u||''))?it.q:null});
       // O antigo leva o que o formulário mudou além do horário (a dose vale na próxima dose, A4); o que toca hoje fica.
       var velho=Object.assign({}, it);
@@ -65746,14 +65880,14 @@
     });
     return out;
   }
-  function mcrReguaDaAgenda(key, itens, prev, quem){
+  function mcrReguaDaAgenda(key, itens, prev, quem, porta){
     var hoje=zHojeISO();
     var mudou=Object.keys(itens||{}).some(function(id){ var p=(prev||{})[id], it=itens[id]||{}; return p && JSON.stringify((p.horarios||[]).slice().sort())!==JSON.stringify((it.horarios||[]).slice().sort()); });
     // Sem horário mudado, só a arrumação da linha que já trocou (A6/A12): sem ler o registro.
-    if(!mudou||!DB) return Promise.resolve(mcrAgendaRegua(itens, prev, {}, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()));
+    if(!mudou||!DB) return Promise.resolve(mcrAgendaRegua(itens, prev, {}, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now(), porta));
     // Sem o registro de hoje, vale a régua do relógio (horário que passou ou está perto não muda hoje).
     return DB.ref('auaulandia/medicacao-log/'+hoje+'/'+key).once('value').then(function(s){ return medDosesSemAnuladas(s.val()); }, function(){ return {}; })   // 6.58: a anulada não conta
-      .then(function(log){ return mcrAgendaRegua(itens, prev, log, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now()); });
+      .then(function(log){ return mcrAgendaRegua(itens, prev, log, hoje, mcrAgoraMin(), quem, agoraBR(), Date.now(), porta); });
   }
   // ---- O PDF reemitido: a seção "ALTERAÇÕES DEPOIS DO CHECK-IN", numa página a mais (K15).
   function mcrPdfApendice(alt){

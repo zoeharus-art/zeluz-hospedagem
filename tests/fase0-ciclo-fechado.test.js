@@ -35229,6 +35229,1279 @@ prova('6.59 QA R3-B1 (O-R2-2) — pesoCorrNormal: só os vazios saem; falso, zer
   igual(iguais.map((x) => N(x[0]) === N(x[1])), iguais.map(() => true), 'só os vazios');
 });
 }
+{
+// ================================================================== 6.62 — a régua do remédio: o parado que volta a tocar hoje não é pulado; o Plantão e a Ficha recusam o que faria o parado (ou o suspenso) tocar de novo
+console.log('\n6.62 — O remédio parado: o Plantão, a Ficha e o Cuidado Vet não mudam horário, período nem frequência dele; a régua não pula o parado que toca hoje; o estado duplo sai pelo «Parou de tomar»');
+// Tudo INVENTADO: Biscoito (tutora Rita Teste), as pessoas «Teste» e os remédios. Relógio FIXO em sexta, 09/10/2026, 10:00 (o mesmo das
+// 6.54 a 6.59); o banco de mentira da 6.57 (conta gravações e transações). Apoquel de 1 vez por dia às 08:00, dado às 08:04, salvo indicação.
+// As provas marcadas com * na story falham na base b70cd17.
+const PE662 = (data, extra) => Object.assign({ quem: 'Plantonista Teste', data: data || DIA658, quando: '09/10 08:20', ts: T658(9, 8, 20), motivo: 'o tutor pediu para parar' }, extra || {});
+// o remédio parado hoje (fim = hoje, «Parou de tomar» depois da dose da manhã) e o estado duplo («uso contínuo» com a parada de 08/10 guardada)
+const PAR662 = (extra) => APQ659(Object.assign({ continuo: false, dataFim: DIA658, paradoEm: PE662() }, extra || {}));
+const DUP662 = (extra) => APQ659(Object.assign({ continuo: true, paradoEm: PE662(ONTEM658) }, extra || {}));
+const SUS662 = (extra) => APQ659(Object.assign({ suspenso: true, suspensoPor: 'Vera Veterinária Teste', suspensoMotivo: 'esperar o exame de sangue', suspensoTs: T658(9, 8, 30) }, extra || {}));
+const DADA662 = () => ({ 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) });
+const escAg662 = () => run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length;
+const pede662 = (fila, dadas) => fila.filter((x) => (dadas || []).indexOf(x) < 0);
+const FRASE_PARADO662 = '✋ O remédio Apoquel parou de ser dado («Parou de tomar» em 09/10/2026, por Plantonista Teste): o horário, o uso contínuo e o «tomar até» dele não mudam por aqui, para o alarme não pedir de novo uma dose já dada. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+const FRASE_FREQ662 = '✋ O remédio Apoquel parou de ser dado («Parou de tomar» em 09/10/2026, por Plantonista Teste): a frequência e o início dele não mudam por aqui, para o alarme não pedir hoje a dose de um remédio parado. Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+const FRASE_DUPLO662 = '✋ O remédio Apoquel voltou a tocar depois do «Parou de tomar» de 08/10/2026 (Plantonista Teste): o horário, o período e a frequência dele não mudam por aqui. Para encerrar, use «Parou de tomar» na ficha (aba Medicamentos); para mudar o horário, use «Parou de tomar» e depois «Voltou a tomar», com o horário novo. Nada foi salvo.';
+const FRASE_SUSP662 = '✋ O remédio Apoquel está suspenso: o horário não muda enquanto ele estiver suspenso, para a dose de hoje não ser pedida de novo. Reative primeiro e depois mude o horário. Nada foi salvo.';
+// O formulário do Plantão e da Ficha como o coletarMedAgendaForm devolve (o coletor único): os campos que ele monta (a frequência só quando não
+// é diária, o fim só sem «uso contínuo», o horário da refeição recalculado pela regra) e os que ele preserva do que a tela leu.
+const FORM662 = (it) => {
+  const f = { nome: it.nome, q: it.q || '', u: it.u, horarios: (it.horarios || []).slice(), tipo: it.tipo || 'medicamento', origem: it.origem || 'tutor' };
+  ['local', 'obs', 'motivo', 'dataInicio'].forEach((c) => { if (it[c]) f[c] = it[c]; });
+  if (it.quando && it.quando.ref && it.quando.ref !== 'fixo') { f.quando = JSON.parse(JSON.stringify(it.quando)); const h = run(`medQuandoHorario(${JSON.stringify(it.quando)})`); if (h) { f.horarios = [h]; f.derivado_de = 'quando'; } }
+  if (it.continuo) f.continuo = true; else if (it.dataFim) f.dataFim = it.dataFim;
+  if (it.freq && it.freq.tipo && it.freq.tipo !== 'diario' && !(it.freq.tipo === 'dias' && !(it.freq.dias || []).length)) f.freq = { tipo: it.freq.tipo, dias: (it.freq.dias || []).slice() };
+  ['estoque', 'historico', 'paradoEm', 'confirmado_em_checkin'].forEach((c) => { if (it[c]) f[c] = JSON.parse(JSON.stringify(it[c])); });
+  if (it.suspenso) { f.suspenso = true; ['suspensoPor', 'suspensoMotivo', 'suspensoTs'].forEach((c) => { if (it[c]) f[c] = it[c]; }); }
+  return f;
+};
+// o que a tela leu, com a mudança da pessoa (null = o campo sai do formulário)
+const formDe662 = (itens, muda) => {
+  const o = {};
+  Object.keys(itens || {}).forEach((id) => { if (!itens[id].anulado) o[id] = FORM662(itens[id]); });
+  Object.keys(muda || {}).forEach((id) => Object.keys(muda[id]).forEach((c) => { if (muda[id][c] === null) delete o[id][c]; else o[id][c] = JSON.parse(JSON.stringify(muda[id][c])); }));
+  return o;
+};
+// «Salvar agenda» do Plantão: a tela leu a agenda do banco (os remédios e o carimbo); o formulário devolve o que ela leu, com a mudança
+const plantao662 = async (muda, form) => {
+  ctx.__fp662 = form || formDe662(db658(AG658 + '/itens'), muda);
+  run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=__get657('${AG658}/itens')||{}; MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true};
+    __el657['mag-status']={style:{}, textContent:''}; coletarMedAgendaForm=function(){ return JSON.parse(JSON.stringify(__fp662)); }; __esc657=[];`);
+  run('salvarMedAgenda()'); await espera659();
+  return String(run("__el657['mag-status'].textContent") || '');
+};
+// «Salvar medicamentos» da Ficha › Medicamentos: a mesma coisa, pela aba (a pergunta «Salvar os medicamentos de …?» conta em __zp657)
+const ficha662 = async (muda, form, antes) => {
+  ctx.__fp662 = form || formDe662(db658(AG658 + '/itens'), muda);
+  run(`fmedPodeEditar=function(){ return true; }; medLinhaDoPel=function(){ return ''; };` + FICHA658() + `__el657['fmed-status']={style:{}, textContent:''}; fmedColetar=function(){ return JSON.parse(JSON.stringify(__fp662)); }; __esc657=[]; __zp657=[];` + (antes || ''));
+  await run('fmedSalvar()'); await espera659();
+  return { st: String(run("__el657['fmed-status'].textContent") || ''), perg: run('__zp657').filter((z) => /^Salvar os medicamentos de/.test(z[0])).length };
+};
+// a régua da 6.54 chamada direto (como a QA659R2-P17): o que ela devolve e a agenda depois
+const regua662 = async (base, horarios, porta) => {
+  ctx.__ap662 = base;
+  J658(`(function(){ var r=null; mcrReguaDaAgenda('${K658}', {apq:Object.assign({}, __ap662, {horarios:${JSON.stringify(horarios)}})}, {apq:__ap662}, 'Teste do Plantão'${porta ? (', ' + JSON.stringify(porta)) : ''}).then(function(x){ r=x; }); return __rg662=function(){ return r; }; })() && null`);
+  await espera659();
+  const r = J658('__rg662()');
+  return { r, depois: Object.assign({}, r.itens, r.novos) };
+};
+
+// ---- AC1 — Plantão e Ficha: o parado e o suspenso não mudam por fora da régua ----------------------------------------------------
+provaAsync('6.62 P1 (AC1.1, C1) — Plantão: o parado de hoje (a das 08:00 dada) com o horário mudado para 20:00 no «Salvar agenda»: recusado com a frase do Cuidado Vet; nada gravado, nem a transação do carimbo; hoje o alarme não pede 20:00', async () => {
+  let st = '', depois = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662() }, log: DADA662() });
+    st = await plantao662({ apq: { horarios: ['20:00'] } });
+    depois = db658(AG658 + '/itens');
+    igual([st, escAg662(), db658(AG658 + '/_ts'), depois.apq.horarios], [FRASE_PARADO662, 0, 500, ['08:00']]);
+  } finally { solta659(); }
+  igual(pede662(await filaQA659f0(depois, 9), ['apq@08:00']), [], 'hoje nada além da das 08:00, já dada');
+});
+provaAsync('6.62 P2 (AC1.1, C2) — Plantão: o parado com «uso contínuo» ligado ou com «tomar até» 12/10: recusados, nada gravado; amanhã o alarme não pede o remédio', async () => {
+  const res = [];
+  for (const muda of [{ continuo: true, dataFim: null }, { dataFim: '2026-10-12' }]) {
+    let st = '', depois = null, esc = -1;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: PAR662() }, log: DADA662() });
+      st = await plantao662({ apq: muda }); esc = escAg662();
+      depois = db658(AG658 + '/itens');
+    } finally { solta659(); }
+    res.push([st, esc, depois.apq.continuo, depois.apq.dataFim, await filaQA659f0(depois, 10)]);
+  }
+  igual(res, [[FRASE_PARADO662, 0, false, DIA658, []], [FRASE_PARADO662, 0, false, DIA658, []]]);
+});
+provaAsync('6.62 P3 (AC1.1, AC1.7) — Ficha › Medicamentos: horário, «uso contínuo» e «tomar até» do parado pelo «Salvar medicamentos»: recusados ANTES da pergunta «Salvar os medicamentos de …?» (ela não abre); nada gravado', async () => {
+  const res = [];
+  for (const muda of [{ horarios: ['20:00'] }, { continuo: true, dataFim: null }, { dataFim: '2026-10-12' }]) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: PAR662() }, log: DADA662() });
+      const r = await ficha662({ apq: muda });
+      res.push([r.st, r.perg, escAg662(), db658(AG658 + '/_ts'), db658(AG658 + '/itens/apq').horarios, db658(AG658 + '/itens/apq').continuo]);
+    } finally { solta659(); }
+  }
+  igual(res, [0, 1, 2].map(() => [FRASE_PARADO662, 0, 0, 500, ['08:00'], false]));
+});
+provaAsync('6.62 P4 (AC1.2, AC3) — a frequência e o início do parado: recusados nas três portas (Plantão, Ficha e Cuidado Vet), com a frase própria; nada gravado', async () => {
+  const res = [];
+  for (const muda of [{ freq: { tipo: 'alternado', dias: [] } }, { freq: { tipo: 'dias', dias: ['seg', 'sex'] } }, { dataInicio: '2026-10-05' }]) {
+    for (const porta of ['plantao', 'ficha', 'vet']) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: PAR662() }, log: DADA662() });
+        let st = '', extra = null;
+        if (porta === 'plantao') st = await plantao662({ apq: muda });
+        else if (porta === 'ficha') { const r = await ficha662({ apq: muda }); st = r.st; extra = r.perg; }
+        else { await abreVetMed659(); run('__esc657=[];'); const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda)); st = statusVet659(); extra = [!!(r && r.ok), !!(r && r.horaRecusada)]; }
+        res.push([porta, JSON.stringify(muda), st, extra, escAg662(), db658(AG658 + '/_ts')]);
+      } finally { solta659(); }
+    }
+  }
+  igual(res.map((x) => [x[2], x[4], x[5]]), res.map(() => [FRASE_FREQ662, 0, 500]), JSON.stringify(res.map((x) => [x[0], x[1], x[2].slice(0, 60)])));
+  igual(res.filter((x) => x[0] !== 'plantao').map((x) => x[3]), [0, [false, true], 0, [false, true], 0, [false, true]], 'a pergunta da Ficha não abre; o Cuidado Vet devolve {ok:false, horaRecusada:true}');
+});
+provaAsync('6.62 P5 (AC1.3, C10) — o parado antigo sem «Início»: preenchido com data de hoje para trás (todos os dias, ou dias da semana), grava nas três portas; com «dia sim, dia não», recusado; às 10:00, a data de hoje grava também no remédio que tocou ontem (2ª rodada: a margem vale só de madrugada, P23)', async () => {
+  const semIni = (extra) => { const p = PAR662(extra); delete p.dataInicio; return p; };
+  const grava = [], recusa = [];
+  const roda = async (item, muda, porta) => {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: item }, log: DADA662() });
+      let st = '';
+      if (porta === 'plantao') st = await plantao662({ apq: muda });
+      else if (porta === 'ficha') st = (await ficha662({ apq: Object.assign({ q: '2' }, muda) })).st;   // a Ficha só grava o que muda a frase do resumo: a dose junto
+      else { await abreVetMed659(); run('__esc657=[];'); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda)); st = statusVet659(); }
+      const ag = db658(AG658 + '/itens/apq');
+      return { st, ini: ag.dataInicio || '', parado: !!ag.paradoEm, horarios: ag.horarios, fim: ag.dataFim, esc: escAg662() };
+    } finally { solta659(); }
+  };
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    for (const [extra, muda] of [[{}, { dataInicio: '2026-10-01' }], [{ freq: { tipo: 'dias', dias: ['seg', 'sex'] } }, { dataInicio: '2026-10-01' }],
+      [{ dataFim: '2026-10-07', paradoEm: PE662('2026-10-07') }, { dataInicio: DIA658 }], [{}, { dataInicio: DIA658 }]]) {
+      const r = await roda(semIni(extra), Object.assign({}, muda, extra.freq ? { freq: extra.freq } : {}), porta);
+      grava.push([porta, muda.dataInicio, /^✅/.test(r.st), r.ini, r.parado, r.horarios]);
+    }
+    for (const [extra, muda] of [[{ freq: { tipo: 'alternado', dias: [] } }, { dataInicio: '2026-10-01', freq: { tipo: 'alternado', dias: [] } }]]) {
+      const r = await roda(semIni(extra), muda, porta);
+      recusa.push([porta, r.st, r.ini, r.esc]);
+    }
+  }
+  igual(grava.map((x) => x.slice(2)), grava.map((x) => [true, x[1], true, ['08:00']]), JSON.stringify(grava));
+  igual(recusa.map((x) => x.slice(1)), recusa.map(() => [FRASE_FREQ662, '', 0]), JSON.stringify(recusa.map((x) => [x[0], x[1].slice(0, 80)])));
+});
+provaAsync('6.62 P6 (AC1.4, guarda) — no parado, a dose, o nome, a medida, o local, a observação, o motivo, o tipo, a origem e o estoque gravam no Plantão e na Ficha; o remédio continua parado (o paradoEm fica) e amanhã não toca', async () => {
+  const casos = [{ nome: 'Apoquel 16 mg' }, { q: '2' }, { u: 'cápsula' }, { u: 'pomada', q: '', local: 'patinha esquerda' }, { obs: 'dar com comida' }, { motivo: 'coceira nas patas' },
+    { tipo: 'suplemento' }, { origem: 'familia' }, { estoque: { modo: 'naocontavel', nivel: 'metade' } }];
+  const res = [];
+  const confere = async (muda, st) => {
+    const ag = db658(AG658 + '/itens/apq');
+    const campos = Object.keys(muda).every((c) => JSON.stringify(ag[c] === undefined ? '' : ag[c]) === JSON.stringify(muda[c]));
+    return [/^✅/.test(st), campos, !!ag.paradoEm, ag.horarios, ag.continuo, ag.dataFim, await filaQA659f0(db658(AG658 + '/itens'), 10)];
+  };
+  for (const muda of casos) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: PAR662() }, log: DADA662() });
+      const st = await plantao662({ apq: muda });
+      res.push(['plantao', JSON.stringify(muda), st].concat(await confere(muda, st)));
+    } finally { solta659(); }
+  }
+  const mudaF = { q: '2', obs: 'dar com comida', motivo: 'coceira nas patas', tipo: 'suplemento', origem: 'familia', estoque: { modo: 'naocontavel', nivel: 'metade' } };
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662() }, log: DADA662() });
+    const r = await ficha662({ apq: mudaF });
+    res.push(['ficha', JSON.stringify(mudaF), r.st].concat(await confere(mudaF, r.st)));
+  } finally { solta659(); }
+  igual(res.map((x) => x.slice(3)), res.map(() => [true, true, true, ['08:00'], false, DIA658, []]), JSON.stringify(res.map((x) => [x[0], x[1], x[2].slice(0, 70)])));
+});
+provaAsync('6.62 P7 (AC1.5, guarda) — sem recusa falsa: outro remédio muda, e o parado igual na tela (os horários em outra ordem, os dias da semana em outra ordem, o horário da refeição com a mesma regra, a frequência diária gravada sem `freq`): grava, no Plantão e na Ficha', async () => {
+  const variantes = [
+    ['os horários em outra ordem', { horarios: ['20:00', '08:00'] }, (f) => { f.apq.horarios = ['08:00', '20:00']; }],
+    ['os dias da semana em outra ordem', { freq: { tipo: 'dias', dias: ['sex', 'seg'] } }, (f) => { f.apq.freq = { tipo: 'dias', dias: ['seg', 'sex'] }; }],
+    ['o horário da refeição com a mesma regra (o jantar mudou de horário)', { quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' }, null],
+    ['a frequência diária gravada', { freq: { tipo: 'diario', dias: [] } }, null],
+    ['«dias específicos» sem dia nenhum (vale todos os dias)', { freq: { tipo: 'dias', dias: [] } }, null],
+    ['o «tomar até» gravado num formato que o campo de data não mostra', { dataFim: '09/10/2026' }, (f) => { delete f.apq.dataFim; }],
+  ];
+  const res = [];
+  for (const [nome, extra, ajusta] of variantes) {
+    for (const porta of ['plantao', 'ficha']) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        run(`__rh662=REF_HORAS.jantar; REF_HORAS.jantar='19:00';`);
+        try {
+          semear658({ itens: { apq: PAR662(extra), ome: Object.assign(OME658(), { dataInicio: '2026-10-01' }) }, log: DADA662() });
+          const f = formDe662(db658(AG658 + '/itens'), porta === 'plantao' ? { ome: { obs: 'com comida' } } : { ome: { q: '2' } });
+          if (ajusta) ajusta(f);
+          const st = porta === 'plantao' ? await plantao662(null, f) : (await ficha662(null, f)).st;
+          const ome = db658(AG658 + '/itens/ome');
+          res.push([nome, porta, st.slice(0, 60), /^✅/.test(st), porta === 'plantao' ? ome.obs : ome.q, !!db658(AG658 + '/itens/apq').paradoEm]);
+        } finally { run('REF_HORAS.jantar=__rh662;'); }
+      } finally { solta659(); }
+    }
+  }
+  igual(res.map((x) => x.slice(3)), res.map((x) => [true, x[1] === 'plantao' ? 'com comida' : '2', true]), JSON.stringify(res.map((x) => x.slice(0, 3))));
+});
+provaAsync('6.62 P8 (AC1.6, C6) — o suspenso (a das 08:00 dada): o horário mudado no Plantão ou na Ficha é recusado com a frase do Cuidado Vet; o «tomar até» dele grava; reativado no mesmo dia, hoje o alarme não pede 20:00 (sonda S1 do @sm)', async () => {
+  let st = '', stF = null, depois = null, fimOk = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: SUS662() }, log: DADA662() });
+    st = await plantao662({ apq: { horarios: ['20:00'] } });
+    stF = await ficha662({ apq: { horarios: ['20:00'] } });
+    igual([st, stF.st, stF.perg, escAg662(), db658(AG658 + '/_ts'), db658(AG658 + '/itens/apq').horarios], [FRASE_SUSP662, FRASE_SUSP662, 0, 0, 500, ['08:00']]);
+    // o «tomar até» do suspenso não é horário: grava (como no Cuidado Vet, QA R3-A4)
+    const sF = await plantao662({ apq: { continuo: null, dataFim: '2026-10-12' } });
+    fimOk = [/^✅/.test(sF), db658(AG658 + '/itens/apq').dataFim, !!db658(AG658 + '/itens/apq').suspenso];
+    // reativado no Cuidado Vet, no mesmo dia
+    await abreVetMed659(); run(`__ztq657=['o exame de sangue veio normal'];`);
+    await run(`vetReativarMed('apq')`); await espera659();
+    depois = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  igual(fimOk, [true, '2026-10-12', true]);
+  igual([!!depois.apq.suspenso, depois.apq.horarios], [false, ['08:00']], 'reativado, com o horário de antes');
+  igual(pede662(await filaQA659f0(depois, 9), ['apq@08:00']), [], 'hoje, reativado: nada além da das 08:00, já dada');
+});
+provaAsync('6.62 P9 (AC1.7, AC6, guarda) — a recusa vem antes da trava: nas três portas, nenhuma transação no carimbo e nenhuma escrita na agenda; quando grava, a trava continua andando o carimbo numa escrita só', async () => {
+  const res = [];
+  for (const [nome, item, muda] of [['parado', PAR662(), { horarios: ['20:00'] }], ['estado duplo', DUP662(), { horarios: ['20:00'] }], ['suspenso', SUS662(), { horarios: ['20:00'] }]]) {
+    for (const porta of ['plantao', 'ficha', 'vet']) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: item }, log: DADA662() });
+        if (porta === 'plantao') await plantao662({ apq: muda });
+        else if (porta === 'ficha') await ficha662({ apq: muda });
+        else { await abreVetMed659(); run('__esc657=[];'); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda)); }
+        res.push([nome, porta, run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).map((e) => e[0] + ' ' + e[1]), db658(AG658 + '/_ts')]);
+      } finally { solta659(); }
+    }
+  }
+  igual(res.map((x) => [x[2], x[3]]), res.map(() => [[], 500]), JSON.stringify(res));
+  // o parado em 2º na lista (outro remédio antes dele): a recusa olha o formulário inteiro
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { ome: Object.assign(OME658(), { dataInicio: '2026-10-01' }), apq: PAR662() }, log: DADA662() });
+    const st = await plantao662({ ome: { obs: 'com comida' }, apq: { horarios: ['20:00'] } });
+    igual([st, escAg662(), db658(AG658 + '/itens/ome').obs || ''], [FRASE_PARADO662, 0, ''], 'nada gravado, nem o outro remédio');
+  } finally { solta659(); }
+  // a validação de sempre vem antes da recusa (o molde dos `probs`): um remédio novo sem nome é o primeiro aviso, no Plantão e na Ficha
+  const val = [];
+  for (const porta of ['plantao', 'ficha']) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: PAR662() }, log: DADA662() });
+      const f = formDe662(db658(AG658 + '/itens'), { apq: { horarios: ['20:00'] } });
+      f.fmn_1 = { nome: '', q: '1', u: 'comprimido', horarios: ['09:00'], tipo: 'medicamento', origem: 'tutor', dataInicio: DIA658, continuo: true };
+      const st = porta === 'plantao' ? await plantao662(null, f) : (await ficha662(null, f)).st;
+      val.push([porta, st, escAg662()]);
+    } finally { solta659(); }
+  }
+  igual(val.map((x) => [x[1], x[2]]), [['✋ escreva o NOME do medicamento ou suplemento por extenso.', 0], ['✋ escreva o NOME do medicamento por extenso.', 0]], JSON.stringify(val));
+  // quando a mudança passa (a dose do parado), a trava continua: a transação no carimbo, depois a escrita
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662() }, log: DADA662() });
+    await plantao662({ apq: { q: '2' } });
+    const ops = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).map((e) => e[0] + ' ' + e[1].replace(AG658, 'AG'));
+    igual([ops[0], db658(AG658 + '/itens/apq').q, db658(AG658 + '/_ts') !== 500], ['transaction AG/_ts', '2', true], JSON.stringify(ops));
+  } finally { solta659(); }
+});
+
+// ---- AC2 — a régua da 6.54 não pula o parado que toca hoje -------------------------------------------------------------------------
+provaAsync('6.62 QA659R2-P17 (a cadeia do P10) — o remédio parado que voltou a tocar pelo «Alterar» («uso contínuo») continua com `paradoEm`: a régua da 6.54 (a mesma do «Salvar agenda» do Plantão) pula ele, e o horário mudado depois da dose de hoje toca HOJE', async () => {
+  const res = {};
+  for (const comParado of [true, false]) {
+    let depois = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      const base = APQ659({ continuo: true, horarios: ['08:00'] });
+      if (comParado) base.paradoEm = { quem: 'Plantonista Teste', data: '2026-10-08', ts: 1, motivo: 'o tutor pediu para parar' };
+      semear658({ itens: { apq: base }, log: { 'apq_08-00': DOSE658('apq', 'Apoquel', '08:00', 'comprimido', T658(9, 8, 4)) } });
+      ctx.__ap659 = base;
+      const rg = J658(`(function(){ var r=null; mcrReguaDaAgenda('${K658}', {apq:Object.assign({}, __ap659, {horarios:['20:00']})}, {apq:__ap659}, 'Teste do Plantão').then(function(x){ r=x; }); return __rg659r2=function(){ return r; }; })() && null`);
+      await espera659();
+      const r = J658('__rg659r2()');
+      depois = Object.assign({}, r.itens, r.novos);
+    } finally { solta659(); }
+    res[comParado ? 'parado' : 'normal'] = await filaQA659f0(depois, 9);
+  }
+  console.log('      o alarme de hoje (a das 08:00 já dada): com paradoEm ' + JSON.stringify(res.parado) + ' | sem paradoEm ' + JSON.stringify(res.normal));
+  assert.ok(!res.parado.some((x) => /@20:00$/.test(x)), 'com paradoEm, a régua deixou o 20:00 tocar hoje: ' + JSON.stringify(res.parado));
+});
+provaAsync('6.62 P10 (AC2.1, C3) — o estado duplo («uso contínuo», parado em 08/10, a das 08:00 dada) na régua com 20:00: a troca por datas igual à do remédio sem `paradoEm` (hoje só a das 08:00; amanhã 20:00, na linha nova, sem `paradoEm`)', async () => {
+  const res = {};
+  for (const comParado of [true, false]) {
+    let x = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      const base = comParado ? DUP662() : APQ659();
+      semear658({ itens: { apq: base }, log: DADA662() });
+      x = await regua662(base, ['20:00']);
+    } finally { solta659(); }
+    const N = x.depois.mcr_t_apq_20261010 || {};
+    res[comParado ? 'duplo' : 'normal'] = [x.r.frases, Object.keys(x.depois).sort(), x.depois.apq.horarios, x.depois.apq.dataFim, x.depois.apq.trocadoPor, N.dataInicio, N.horarios, 'paradoEm' in N,
+      await filaQA659f0(x.depois, 9), await filaQA659f0(x.depois, 10)];
+  }
+  igual(res.duplo, JSON.parse(JSON.stringify(res.normal)), 'o estado duplo faz a mesma troca do remédio sem a parada');
+  igual(res.duplo.slice(1), [['apq', 'mcr_t_apq_20261010'], ['08:00'], DIA658, 'mcr_t_apq_20261010', AMANHA658, ['20:00'], false, ['apq@08:00'], ['mcr_t_apq_20261010@20:00']]);
+  igual(res.duplo[0], ['Apoquel: a dose das 08:00 de hoje já foi dada. O horário novo (20:00) começa amanhã, sábado, 10/10; hoje continua 08:00.']);
+});
+provaAsync('6.62 P11 (AC2.2) — o parado de hoje (fim = hoje, a das 08:00 dada) na régua com 20:00: o horário continua 08:00, com a frase «o tratamento termina hoje …» (sonda V4 do @sm)', async () => {
+  let x = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    const base = PAR662();
+    semear658({ itens: { apq: base }, log: DADA662() });
+    x = await regua662(base, ['20:00']);
+  } finally { solta659(); }
+  igual([x.r.frases, Object.keys(x.depois), x.depois.apq.horarios, !!x.depois.apq.paradoEm, await filaQA659f0(x.depois, 9), await filaQA659f0(x.depois, 10)],
+    [['Apoquel: o tratamento termina hoje e a dose das 08:00 de hoje já foi dada: o horário continua 08:00 (o horário novo não chegaria a valer).'], ['apq'], ['08:00'], true, ['apq@08:00'], []]);
+});
+provaAsync('6.62 P12 (AC2.3, guarda) — a régua continua pulando o parado que não toca hoje (terminou ontem; hoje não é dia dele) e o suspenso: o mesmo resultado da base (o formulário passa como veio, sem frase); 2ª rodada: com a mesma regra da refeição, fica o horário lido', async () => {
+  const casos = [
+    ['parado que terminou ontem', APQ659({ continuo: false, dataFim: ONTEM658, paradoEm: PE662(ONTEM658) })],
+    ['parado de hoje num dia que não é dele (seg e qua)', PAR662({ freq: { tipo: 'dias', dias: ['seg', 'qua'] } })],
+    ['estado duplo num dia que não é dele (seg e qua)', DUP662({ freq: { tipo: 'dias', dias: ['seg', 'qua'] } })],
+    ['suspenso', SUS662()],
+    ['suspenso e parado', PAR662({ suspenso: true, suspensoPor: 'Vera Veterinária Teste' })],
+  ];
+  const res = [];
+  for (const [nome, base] of casos) {
+    let x = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: base }, log: DADA662() });
+      x = await regua662(base, ['20:00']);
+    } finally { solta659(); }
+    res.push([nome, x.r.frases, Object.keys(x.r.novos), JSON.stringify(x.r.itens.apq) === JSON.stringify(Object.assign({}, base, { horarios: ['20:00'] }))]);
+  }
+  igual(res.map((x) => x.slice(1)), res.map(() => [[], [], true]), JSON.stringify(res));
+  // 2ª rodada (MÉDIO-1): no pulado, só a MESMA regra da refeição fica com o horário que a tela leu; a regra mudada passa como veio
+  // (o mesmo resultado da base; na tela, a recusa vem antes: P25)
+  const Q45 = { quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' };
+  ctx.__pv662 = { apq: SUS662(Q45) };
+  ctx.__fm662 = { apq: SUS662(Object.assign({}, Q45, { quando: { ref: 'jantar', rel: 'antes', min: 15 }, horarios: ['18:15'] })) };
+  const rm = J658(`mcrAgendaRegua(__fm662, __pv662, {}, '${DIA658}', 600, 'Teste', 'x', 1)`);
+  ctx.__fm662 = { apq: SUS662(Object.assign({}, Q45, { horarios: ['20:15'] })) };
+  const rs = J658(`mcrAgendaRegua(__fm662, __pv662, {}, '${DIA658}', 600, 'Teste', 'x', 1)`);
+  igual([rm.itens.apq.horarios, rm.itens.apq.quando.min, rm.frases, rs.itens.apq.horarios, rs.itens.apq.quando.min, rs.frases], [['18:15'], 15, [], ['17:45'], 45, []]);
+});
+
+// ---- AC3 — Cuidado Vet: a frequência e o início do remédio parado (BAIXO-R3-1) -------------------------------------------------------
+const PE659R3 = { quem: 'Plantonista Teste', data: '2026-10-09', quando: '09/10 09:00', ts: 1, motivo: 'o tutor pediu para parar' };
+const escAg659r3 = () => run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length;
+provaAsync('6.62 QA659R3-A1 (observação; com a asserção de hoje, 6.62 AC3.1) — remédio de seg e qua, parado hoje (sexta, «depois de hoje», fim = hoje): o «Alterar» muda a frequência para todo dia, sem mexer no horário nem no fim — grava? o alarme de hoje pede?', async () => {
+  let r = null, st = '', depois = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659({ continuo: false, dataFim: '2026-10-09', freq: { tipo: 'dias', dias: ['seg', 'qua'] }, paradoEm: PE659R3 }) }, log: {} });
+    const antes = await filaQA659f0(db658(AG658 + '/itens'), 9);
+    await abreVetMed659(); run('__esc657=[];');
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { freq: null }));
+    st = statusVet659(); depois = db658(AG658 + '/itens');
+    console.log('      antes, hoje o alarme pede ' + JSON.stringify(antes) + ' | «Alterar» (frequência todo dia): ok=' + !!(r && r.ok) + ', escritas=' + escAg659r3() + ' | ' + st.slice(0, 120));
+  } finally { solta659(); }
+  const hoje = await filaQA659f0(depois, 9), amanha = await filaQA659f0(depois, 10);
+  console.log('      depois: hoje o alarme pede ' + JSON.stringify(hoje) + ' | amanhã ' + JSON.stringify(amanha) + ' | paradoEm guardado: ' + !!depois.apq.paradoEm);
+  igual(amanha, [], 'amanhã o parado não toca');
+  igual(hoje, [], 'hoje o alarme não pede a dose de um remédio parado (6.62 AC3.1)');
+});
+provaAsync('6.62 P13 (AC3.1, AC3.2, C7) — o «Alterar» da frequência do parado de seg e qua (sexta, sem dose hoje): recusado com a frase da frequência e do início, nada gravado, {ok:false, horaRecusada:true}; hoje e amanhã nada; a frase da 6.59 P36 (horário e fim) não muda', async () => {
+  let r = null, st = '', depois = null, r2 = null, st2 = '';
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662({ freq: { tipo: 'dias', dias: ['seg', 'qua'] } }) }, log: {} });
+    await abreVetMed659(); run('__esc657=[];');
+    r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { freq: null }));
+    st = statusVet659(); depois = db658(AG658 + '/itens');
+    igual([!!(r && r.ok), !!(r && r.horaRecusada), st, escAg662(), db658(AG658 + '/_ts')], [false, true, FRASE_FREQ662, 0, 500]);
+    // horário e frequência juntos: a frase do horário (a da 6.59 P36) vem primeiro
+    r2 = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { freq: null, horarios: ['20:00'] })); st2 = statusVet659();
+    igual([!!(r2 && r2.horaRecusada), st2], [true, FRASE_PARADO662]);
+  } finally { solta659(); }
+  igual([await filaQA659f0(depois, 9), await filaQA659f0(depois, 10)], [[], []]);
+});
+
+// ---- AC4 — o estado duplo que já está no banco -----------------------------------------------------------------------------------------
+provaAsync('6.62 P14 (AC4.2, C4) — o estado duplo na Ficha: o rodapé mostra «Parou de tomar» e não «Voltou a tomar»; o medVoltouPode recusa; o «Voltou a tomar» chamado mesmo assim não grava; amanhã o alarme pede uma dose só', async () => {
+  let rod = '', pode = '', za = null, depois = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: DUP662() }, log: DADA662() });
+    run(`fmedPodeEditar=function(){ return true; };` + FICHA658());
+    rod = String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`));
+    pode = run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`);
+    run('__za657=[]; __esc657=[];'); await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+    za = J658('__za657'); depois = db658(AG658 + '/itens');
+    igual([/>Parou de tomar</.test(rod), /Voltou a tomar/.test(rod), pode, escAg662(), Object.keys(depois)], [true, false, 'Este remédio ainda está em uso: não há o que retomar.', 0, ['apq']]);
+    assert.ok(za.some((z) => z[0] === 'NÃO DÁ PARA RETOMAR AGORA' && /ainda está em uso/.test(z[1][0])), JSON.stringify(za));
+  } finally { solta659(); }
+  igual([await filaQA659f0(depois, 10), await filaQA659f0(depois, 11)], [['apq@08:00'], ['apq@08:00']], 'amanhã e depois, uma dose só');
+});
+provaAsync('6.62 P15 (AC4.3) — o estado duplo: horário, «tomar até» e frequência recusados nas três portas com a frase do estado duplo (manda «Parou de tomar»; nunca «Voltou a tomar» sozinho); a dose muda', async () => {
+  const res = [];
+  for (const muda of [{ horarios: ['20:00'] }, { continuo: false, dataFim: DIA658 }, { freq: { tipo: 'alternado', dias: [] } }, { dataInicio: '2026-10-05' }]) {
+    for (const porta of ['plantao', 'ficha', 'vet']) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: DUP662() }, log: DADA662() });
+        let st = '';
+        const m = Object.assign({}, muda); if (porta !== 'vet' && m.continuo === false) m.continuo = null;
+        if (porta === 'plantao') st = await plantao662({ apq: m });
+        else if (porta === 'ficha') st = (await ficha662({ apq: m })).st;
+        else { await abreVetMed659(); run('__esc657=[];'); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda)); st = statusVet659(); }
+        res.push([porta, JSON.stringify(muda), st, escAg662(), db658(AG658 + '/_ts')]);
+      } finally { solta659(); }
+    }
+  }
+  igual(res.map((x) => x.slice(2)), res.map(() => [FRASE_DUPLO662, 0, 500]), JSON.stringify(res.map((x) => [x[0], x[1], x[2].slice(0, 80)])));
+  assert.ok(/Para encerrar, use «Parou de tomar»/.test(FRASE_DUPLO662) && !/Para voltar a dar, use «Voltou a tomar»/.test(FRASE_DUPLO662));
+  // a dose do estado duplo muda (Plantão e Cuidado Vet); o paradoEm fica e o remédio continua tocando
+  const dose = [];
+  for (const porta of ['plantao', 'vet']) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: DUP662() }, log: DADA662() });
+      let st = '';
+      if (porta === 'plantao') st = await plantao662({ apq: { q: '2' } });
+      else { await abreVetMed659(); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { q: '2' })); st = statusVet659(); }
+      dose.push([/^✅/.test(st), db658(AG658 + '/itens/apq').q, !!db658(AG658 + '/itens/apq').paradoEm, db658(AG658 + '/itens/apq').continuo]);
+    } finally { solta659(); }
+  }
+  igual(dose, [[true, '2', true, true], [true, '2', true, true]]);
+});
+provaAsync('6.62 P16 (AC4.4, C5) — a saída do estado duplo: «Parou de tomar» (o botão aparece no rodapé) e depois «Voltou a tomar» com 20:00: a linha nova começa amanhã; hoje nada além da das 08:00; amanhã e depois de amanhã, uma dose só, às 20:00', async () => {
+  let rod = '', volta = '', p = null, depois = null;
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: DUP662() }, log: DADA662() });
+    run(`fmedPodeEditar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };` + FICHA658());
+    rod = String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`));
+    assert.ok(/onclick="fmedParou\('apq'\)">Parou de tomar</.test(rod), rod);
+    run(`__ztq657=['a veterinária encerrou o tratamento'];`); await run(`fmedParou('apq')`); await espera659();
+    igual([db658(AG658 + '/itens/apq').continuo, db658(AG658 + '/itens/apq').dataFim, db658(AG658 + '/itens/apq').paradoEm.data], [false, DIA658, DIA658]);
+    run(FICHA658()); await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+    volta = String(J658('CORR_ATUAL.op.volta[0]') || '');
+    [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje');
+    depois = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  assert.ok(/^a linha nova começa sábado, 10\/10/.test(volta), volta);
+  igual([p, Object.keys(depois).sort(), depois.mcr_t_apq_20261010.dataInicio, depois.mcr_t_apq_20261010.horarios, 'paradoEm' in depois.mcr_t_apq_20261010], ['pronto', ['apq', 'mcr_t_apq_20261010'], AMANHA658, ['20:00'], false]);
+  igual([pede662(await filaQA659f0(depois, 9), ['apq@08:00']), await filaQA659f0(depois, 10), await filaQA659f0(depois, 11)], [[], ['mcr_t_apq_20261010@20:00'], ['mcr_t_apq_20261010@20:00']]);
+});
+provaAsync('6.62 P17 (AC4.5, AC8) — as telas: o estado duplo no cartão do Plantão, na Ficha e na lista do Cuidado Vet não diz «PAROU DE TOMAR … Não gera alarme» nem «Parou de tomar em …»; diz que voltou a tocar e como encerrar (texto escapado); o parado continua com as linhas de hoje', async () => {
+  let card = '', ficha = '', vet = '', cardP = '', esc = '', cardF = '', vetEsc = '';
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    ctx.__d662 = DUP662(); ctx.__p662 = PAR662();
+    card = String(run(`medAgendaRowHTML('apq', __d662)`)); ficha = String(run(`medAgendaRowHTML('apq', __d662, {ficha:true})`));
+    cardP = String(run(`medAgendaRowHTML('apq', __p662)`));
+    ctx.__e662 = DUP662({ paradoEm: PE662(ONTEM658, { quem: 'Ana <b>Teste</b>' }) });
+    esc = String(run(`medAgendaRowHTML('apq', __e662)`));
+    ctx.__f662 = DUP662({ continuo: false, dataFim: '2026-10-20' });
+    cardF = String(run(`medAgendaRowHTML('apq', __f662)`));
+    semear658({ itens: { apq: DUP662(), par: PAR662({ nome: 'Prednisolona' }) }, log: DADA662() });
+    await abreVetMed659(); run('renderVetMedList();'); vet = html659('vetMedList');
+    semear658({ itens: { apq: DUP662({ paradoEm: PE662(ONTEM658, { quem: 'Ana <b>Teste</b>' }) }) }, log: DADA662() });
+    await abreVetMed659(); run('renderVetMedList();'); vetEsc = html659('vetMedList');
+  } finally { solta659(); }
+  const LINHA = 'Voltou a tocar depois do «Parou de tomar» de 08/10/2026 (Plantonista Teste). Para encerrar: «Parou de tomar» na ficha (aba Medicamentos).';
+  const vetDup = vet.split('Prednisolona')[0];
+  igual([card.indexOf(LINHA) >= 0, ficha.indexOf(LINHA) >= 0, vetDup.indexOf(LINHA) >= 0], [true, true, true], card.slice(0, 400));
+  igual([/PAROU DE TOMAR/.test(card), /PAROU DE TOMAR/.test(ficha), /Não gera alarme/.test(card + ficha), /Parou de tomar em/.test(card + ficha + vetDup)], [false, false, false, false]);
+  // o parado: as linhas de hoje (a faixa do cartão e a linha do Cuidado Vet)
+  assert.ok(/PAROU DE TOMAR em 2026-10-09 · registrado por Plantonista Teste/.test(cardP) && /Não gera alarme/.test(cardP), cardP.slice(0, 500));
+  assert.ok(/Parou de tomar em 09\/10\/2026 · Plantonista Teste — o tutor pediu para parar/.test(vet), vet);
+  // o nome de quem parou passa escapado
+  igual([esc.indexOf('<b>Teste</b>') < 0, esc.indexOf('Ana &lt;b>Teste&lt;/b>') >= 0], [true, true], esc.slice(0, 300));
+  igual([vetEsc.indexOf('<b>Teste</b>') < 0, vetEsc.indexOf('(Ana &lt;b>Teste&lt;/b>). Para encerrar') >= 0], [true, true], vetEsc.slice(0, 600));
+  // o estado duplo sem «uso contínuo» (fim depois de hoje): também sem a faixa «PAROU DE TOMAR … Não gera alarme»
+  igual([/PAROU DE TOMAR/.test(cardF), /Não gera alarme/.test(cardF), cardF.indexOf(LINHA) >= 0], [false, false, true], cardF.slice(0, 400));
+});
+
+// ---- AC5 — os textos da régua dizem de qual tela veio a mudança ------------------------------------------------------------------------
+provaAsync('6.62 P18 (AC5.1) — o histórico da troca por datas diz a tela: «Cuidado Vet: …» (vetSalvarMed), «Ficha › Medicamentos: …» (fmedSalvar), «Salvar agenda do Plantão: …» (salvarMedAgenda); no Cuidado Vet, o motivo aparece uma vez só', async () => {
+  const res = [];
+  let vetHTML = '';
+  for (const porta of ['vet', 'ficha', 'plantao']) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: APQ659() }, log: DADA662() });
+      if (porta === 'plantao') await plantao662({ apq: { horarios: ['20:00'] } });
+      else if (porta === 'ficha') await ficha662({ apq: { horarios: ['20:00'] } });
+      else { await abreVetMed659(); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['20:00'] })); }
+      const h = (db658(AG658 + '/itens/apq').historico || []).filter((x) => /^Horário mudou de 08:00 para 20:00/.test(x.acao || ''));
+      res.push([porta, h.length, h.map((x) => x.motivo), h.map((x) => x.acao)]);
+      if (porta === 'vet') { run('renderVetMedList();'); vetHTML = html659('vetMedList'); }
+    } finally { solta659(); }
+  }
+  const M = ' a dose das 08:00 de hoje já foi dada';
+  igual(res.map((x) => [x[1], x[2]]), [[1, ['Cuidado Vet:' + M]], [1, ['Ficha › Medicamentos:' + M]], [1, ['Salvar agenda do Plantão:' + M]]], JSON.stringify(res));
+  igual(res.map((x) => x[3][0]), ['Cuidado Vet', 'Ficha › Medicamentos', 'Salvar agenda do Plantão'].map((t) => 'Horário mudou de 08:00 para 20:00 a partir de sábado, 10/10 — ' + t + ':' + M));
+  // as duas linhas (a de hoje e a nova, de amanhã) mostram a troca no histórico de cada uma: em cada uma, o motivo uma vez só
+  const blocos = vetHTML.split('class="vet-med-item').slice(1);
+  igual(blocos.map((b) => b.split('Cuidado Vet:' + M).length - 1), [1, 1], 'no Cuidado Vet, o motivo da régua uma vez só em cada linha');
+});
+provaAsync('6.62 P19 (AC5.2) — a frase «perto» (K17: duas doses perto demais na noite da troca): no Cuidado Vet, diz onde a Veterinária faz a troca (sem «pede a confirmação da veterinária»); no Plantão e na Ficha, a de hoje', async () => {
+  const res = {};
+  for (const porta of ['vet', 'ficha', 'plantao']) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: APQ659({ horarios: ['22:00'] }) }, log: {} });
+      let st = '';
+      if (porta === 'plantao') st = await plantao662({ apq: { horarios: ['00:30'] } });
+      else if (porta === 'ficha') st = (await ficha662({ apq: { horarios: ['00:30'] } })).st;
+      else { await abreVetMed659(); await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), { horarios: ['00:30'] })); st = statusVet659(); }
+      res[porta] = [st, db658(AG658 + '/itens/apq').horarios];
+    } finally { solta659(); }
+  }
+  const VET = /Por isso o horário não mudou por aqui \(continua 22:00\): para fazer essa troca, use «Mudar comida e remédio», no Plantão do hóspede, e confirme lá as duas doses perto\./;
+  const HOJE = /Por isso o horário não mudou por aqui \(continua 22:00\): mude pela tela «Mudar comida e remédio», que pede a confirmação da veterinária\./;
+  igual([VET.test(res.vet[0]), /pede a confirmação da veterinária/.test(res.vet[0]), HOJE.test(res.ficha[0]), HOJE.test(res.plantao[0])], [true, false, true, true], JSON.stringify(res));
+  igual([res.vet[1], res.ficha[1], res.plantao[1]], [['22:00'], ['22:00'], ['22:00']]);
+  // a função pura sem a porta: o texto de hoje (a régua de 35 cenários e a prova da 6.54 chamam assim)
+  ctx.__fm662 = { apq: APQ659({ horarios: ['00:30'] }) }; ctx.__pv662 = { apq: APQ659({ horarios: ['22:00'] }) };
+  const fr = run(`mcrAgendaRegua(__fm662, __pv662, {}, '${DIA658}', 600, 'Teste', 'x', 1).frases.join(' ')`);
+  assert.ok(HOJE.test(fr), fr);
+});
+
+// ---- AC7 e AC9 — a madrugada e o que não pode mudar --------------------------------------------------------------------------------------
+provaAsync('6.62 P20 (AC7, C9, guarda) — 00:30 de sábado: o parado que terminou ontem, com a das 22:00 de ontem sem registro: o «Salvar agenda» que muda o horário é recusado, e a dose de ontem continua com o alarme de antes (6.47)', async () => {
+  let st = '', depois = null;
+  arma659();
+  try {
+    relogio658(T658(10, 0, 30));
+    semear658({ itens: { apq: APQ659({ horarios: ['22:00'], continuo: false, dataFim: DIA658, paradoEm: PE662(DIA658) }) }, log: {} });
+    st = await plantao662({ apq: { horarios: ['21:00'] } });
+    depois = db658(AG658 + '/itens');
+    igual([/^✋ O remédio Apoquel parou de ser dado/.test(st), escAg662(), depois.apq.horarios], [true, 0, ['22:00']], st);
+  } finally { solta659(); }
+  run(ARMA654);
+  try {
+    ctx.__fq = await filaE654(depois, 9); ctx.__lq = {};
+    const pend = Object.keys(run(`medOntemPendentes(__fq, __lq, {}, '2026-10-09', ${T658(10, 0, 30)})`));
+    igual(pend.map((k) => k.split('__').pop()), ['apq_22-00'], 'a dose das 22:00 de ontem continua pedida, com o teto de sempre');
+  } finally { run(SOLTA654); }
+});
+prova('6.62 P21 (AC9, AC10, guarda) — a área protegida intacta; o alarme da 6.47 e as funções fora do escopo letra por letra iguais às da base b70cd17; nenhuma função nova começa com ck ou pt', () => {
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const nomes = run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  const html = fs.readFileSync(APP, 'utf8');
+  const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
+  const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
+  igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+  const BASE = {"carregarAgendaMedTodos":"deb5deb515266386da1daa0c4f6239f8b873e8dbc4e51c832008f93914ea1bcd","medVigenteEm":"9de3a1429cb6d81ebdf3733be5efec9f6d86dcf36628309731055c54dc45fcb7","medFreqHoje":"3b4b088809eb84b5e551353d4cb91a522b464b7aa1e9e4e7ad51ea5147c2057b","medOntemTeto":"7da0747bd9e668e951d49e2875ce246844c381176f8593089f6bd47b2974fffe","medOntemPendentes":"902a27e12a259451701899c45e573cbe6edfb1c13e9c51c1a5f750970097d08c","medOntemNaJanela":"56148f99c6e25debe67d25ce2a320bbff4ee3fc79cb598ae690c15f0c62c4d0b","mcrTrocaPorDatas":"9d5434583569f7e9721f66719a7b8519a71f1b08789543d73db754460ca9258d","mcrRegraHorario":"0dcbeabf0e7106e157e5ec60086b1bd026bd3aae2367d8b262a258f119700001","mcrTravaAgenda":"64a75a2ee28d747166219568207a981836edc2cc383635dab2aee600e78708ef","medAgendaPodeParar":"1adda809ef3daf9030e8670c1f56b4fd1618544a58b327442c295833c3e6c03e","mcrRemediosDaTela":"610992b10940c8a38ea973f6c7d608206cda21e5452d4b7717f5757f4d19e317","ciMedEmVigor":"559210893b82e28014cbab120d8792a2dd236c7d3c041d5e88627cbc9ad7c901","medAnterioresDe":"ad9be873eebe756784ee9c2706873aee75464642f55e0e5b35e4f466c78e6e1c","hospRemedioQueVaiTxt":"8bc402d1c7fa9ea537f012b0658e4cb1fbdc10ec8fef9f1462b53fa961885e2e","hospPlanoDaTroca":"c9bb8f5d958fb597ad150c577896cacd602a588e7bedec6047df446d342f950c","hospDesfazerParou":"8b8bb07f7d06eb3403bc1cb9bf426a5dbd28d79966e78dfbef0d8d2a7125ca76","coletarMedAgendaForm":"684722559f8e9713f940db0291b0140669b7e68bbf1ba900a0344fe2d444f3dd","mcrParou":"8dc5df9d0dfedecc6fb3d4cf883270917177e58a4f8d95442ad6c25a0bb59b5c","fmedParou":"4480b3ad90f28fc519689e3228650746a3f46f47b6d58a2b84556401d210668a","medVoltouPlano":"6e14a4cf4731cf28ab313583a31b4d0999bdbe80c0ea3d19716aca1a2302436d","medVoltouInicio":"2b2fc26cc8905eea880721c8329bcfe7e8ba9470864798c66d6b582af1c4592e","medVoltouNovo":"45c100d77fc0e0092ea2dfad9fe21322641c2d993ac19f8e67a96c063e60c726","medAgendaVoltouGravar":"00ab980e89f106510c5bad969159606c5fe57242d2e681336025f39c7f979aa0","medAgendaVoltouAbrir":"9bab12e6d43fd33b6ae2a67d3359c36527dd3e4cef6f917674cc9840aea1e828","vetMedHorasIguais":"5430ca4d688aad38caf8548024c881f887110fd5bb9fd236157c76ef8149286b","vetReativarMed":"4a5e43c46095c12acec3d2eb71d8fa92cc69e2b07aa17acba95b57b58e6a1f2b","vetSuspenderMed":"a2ee53c1a6aac3a3d1ba1563c973e8560b34de486a66f788bdbe0f0e8e0eaf1e","medAgendaGravarItens":"25f628deb71f8375ac55b9fe5ca8cf3dc7e11a5c17bce3511daaf63139fe7dc8","medDiffAcao":"6eb8715bb91ce8e77cc71b52a0f528f734a2e98a315382ba7b4524530120860b","vetMedHistHTML":"fb424d05d7dec6f5298fdb9e5abb5258f10adc9e534ca2bca62b2bfc2c55bc67"};
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(run('__rmaReal658 && ' + n + '.toString()')); });
+  igual(agora, BASE, 'letra por letra iguais às da base');
+});
+provaAsync('6.62 P22 (AC9, guarda) — as provas da 6.47, da 6.54, da 6.57, da 6.58 e da 6.59 continuam todas (contadas no arquivo) e passaram sem mudar asserção', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const conta = {}; ['6.47', '6.54', '6.57', '6.58', '6.59'].forEach((v) => { conta[v] = (src.match(new RegExp("prova(?:Async)?\\('" + v.replace('.', '\\.') + '[ \']', 'g')) || []).length; });
+  igual(conta, { '6.47': 49, '6.54': 98, '6.57': 41, '6.58': 105, '6.59': 89 }, 'nenhuma prova antiga saiu do arquivo');
+  const caiu = falhas.filter((f) => /^6\.(47|54|57|58|59)\b/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+
+// ================================================================== 6.62 — 2ª rodada: as 15 provas do ataque do QA (Quinn, qa662/ataque.js), trazidas para a Fase 0
+// O texto do QA, com o prefixo «6.62 »; nas que só escreviam o resultado (05, 06, 10, 11, 12 e 13), as asserções da 2ª rodada vêm no fim, marcadas.
+console.log('\nQA662 — ataque independente à régua do remédio parado');
+const QA = {};
+const Q_PE = (data, extra) => Object.assign({ quem: 'Plantonista Teste', data: data || DIA658, quando: 'x', ts: 1, motivo: 'o tutor pediu para parar' }, extra || {});
+const Q_PAR = (extra) => APQ659(Object.assign({ continuo: false, dataFim: DIA658, paradoEm: Q_PE() }, extra || {}));
+const Q_DUP = (extra) => APQ659(Object.assign({ continuo: true, paradoEm: Q_PE(ONTEM658) }, extra || {}));
+const Q_SUS = (extra) => APQ659(Object.assign({ suspenso: true, suspensoPor: 'Vera Veterinária Teste', suspensoMotivo: 'esperar o exame', suspensoTs: 1 }, extra || {}));
+const Q_DADA = (hr, d, h, m) => ({ ['apq_' + (hr || '08:00').replace(':', '-')]: DOSE658('apq', 'Apoquel', hr || '08:00', 'comprimido', T658(d || 9, h == null ? 8 : h, m == null ? 4 : m)) });
+const Q_esc = () => run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).length;
+const Q_fila = async (itens, dias) => { const o = {}; for (const d of dias) o[d] = await filaQA659f0(itens, d); return o; };
+const Q_log = (nome, x) => console.log('      ' + nome + ': ' + JSON.stringify(x));
+// porta genérica: 'plantao' | 'ficha' | 'vet'; muda = mudança no formulário do apq; extra = mudança em outros remédios
+const Q_porta = async (porta, muda, extraForm) => {
+  if (porta === 'plantao') return { st: await plantao662(Object.assign({ apq: muda }, extraForm || {})) };
+  if (porta === 'ficha') { const r = await ficha662(Object.assign({ apq: muda }, extraForm || {})); return { st: r.st, perg: r.perg }; }
+  await abreVetMed659(); run('__esc657=[];');
+  const m = Object.assign({}, muda); if (m.continuo === null) m.continuo = false;
+  const r = await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), m));
+  return { st: statusVet659(), r: r ? { ok: !!r.ok, horaRecusada: !!r.horaRecusada } : null };
+};
+
+// ---------------------------------------------------------------- 1. parado de ontem
+provaAsync('6.62 QA662-01 parado de ontem (fim 08/10): horário/contínuo nas 3 portas; régua direto; «Voltou a tomar» → nenhuma dose em dobro', async () => {
+  const res = [];
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    for (const muda of [{ horarios: ['20:00'] }, { continuo: true, dataFim: null }, { q: '2' }]) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: Q_PAR({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658) }) }, log: {} });
+        const r = await Q_porta(porta, muda);
+        const it = db658(AG658 + '/itens/apq');
+        res.push([porta, JSON.stringify(muda), r.st.slice(0, 50), Q_esc(), it.horarios, it.continuo, it.q, await filaQA659f0(db658(AG658 + '/itens'), 9), await filaQA659f0(db658(AG658 + '/itens'), 10)]);
+      } finally { solta659(); }
+    }
+  }
+  res.forEach((x) => Q_log(x[0] + ' ' + x[1], x.slice(2)));
+  // nenhuma variante faz o parado de ontem tocar hoje ou amanhã
+  assert.ok(res.every((x) => x[7].length === 0 && x[8].length === 0), 'parado de ontem voltou a tocar: ' + JSON.stringify(res.filter((x) => x[7].length || x[8].length)));
+  // «Voltou a tomar» com 20:00: começa hoje (a linha antiga não toca hoje): hoje 1 dose só
+  let depois = null, volta = '';
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: Q_PAR({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658) }) }, log: {} });
+    run(`fmedPodeEditar=function(){ return true; };` + FICHA658()); await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+    volta = String(J658('CORR_ATUAL && CORR_ATUAL.op && CORR_ATUAL.op.volta && CORR_ATUAL.op.volta[0]') || '');
+    await assina658('s-bia', 'a veterinária liberou de novo hoje'); depois = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  const f = await Q_fila(depois, [9, 10, 11]);
+  Q_log('voltou', [volta.slice(0, 60), Object.keys(depois), f]);
+  assert.ok([9, 10, 11].every((d) => f[d].length === 1), JSON.stringify(f));
+});
+
+// ---------------------------------------------------------------- 2. parado hoje ANTES da dose (07:00, a das 08:00 sem registro)
+provaAsync('6.62 QA662-02 parado hoje ANTES da dose (07:00): horário recusado; régua direto; «Voltou a tomar» → hoje uma dose, amanhã uma dose', async () => {
+  const res = [];
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    arma659();
+    try {
+      relogio658(T658(9, 7, 0));
+      semear658({ itens: { apq: Q_PAR() }, log: {} });
+      const r = await Q_porta(porta, { horarios: ['20:00'] });
+      res.push([porta, r.st.slice(0, 60), Q_esc(), db658(AG658 + '/itens/apq').horarios]);
+    } finally { solta659(); }
+  }
+  res.forEach((x) => Q_log(x[0], x.slice(1)));
+  assert.ok(res.every((x) => x[2] === 0 && /parou de ser dado/.test(x[1])), JSON.stringify(res));
+  // a régua chamada direto: o parado de hoje antes da dose — 08:00 → 20:00 às 07:00 (o tratamento termina hoje, a das 08:00 ainda não veio)
+  let x = null;
+  arma659();
+  try { relogio658(T658(9, 7, 0)); const b = Q_PAR(); semear658({ itens: { apq: b }, log: {} }); x = await regua662(b, ['20:00']); } finally { solta659(); }
+  const fr = await Q_fila(x.depois, [9, 10]);
+  Q_log('régua 07:00', [x.r.frases, x.depois.apq.horarios, Object.keys(x.r.novos), fr]);
+  assert.ok(fr[9].length <= 1 && fr[10].length === 0, JSON.stringify(fr));
+  // «Voltou a tomar» às 07:00 com 08:00 (a das 08:00 de hoje ainda vai tocar pela linha antiga): começa amanhã
+  let depois = null, volta = '';
+  arma659();
+  try {
+    relogio658(T658(9, 7, 0));
+    semear658({ itens: { apq: Q_PAR() }, log: {} });
+    run(`fmedPodeEditar=function(){ return true; };` + FICHA658()); await voltou658('apq', ['1', '08:00', 'uso contínuo']);
+    volta = String(J658('CORR_ATUAL && CORR_ATUAL.op && CORR_ATUAL.op.volta && CORR_ATUAL.op.volta[0]') || '');
+    await assina658('s-bia', 'a veterinária liberou de novo hoje'); depois = db658(AG658 + '/itens');
+  } finally { solta659(); }
+  const f = await Q_fila(depois, [9, 10, 11]);
+  Q_log('voltou 07:00', [volta.slice(0, 60), f]);
+  assert.ok([9, 10, 11].every((d) => f[d].length === 1), JSON.stringify(f));
+});
+
+// ---------------------------------------------------------------- 3. «dia sim, dia não»
+provaAsync('6.62 QA662-03 dia sim, dia não: parado (início, frequência) recusado; estado duplo pela régua igual ao remédio sem paradoEm (7 dias)', async () => {
+  const ALT = { freq: { tipo: 'alternado', dias: [] }, dataInicio: '2026-10-01' };   // 09/10 é «sim» (8 dias depois)
+  const res = [];
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    for (const muda of [{ dataInicio: '2026-10-02' }, { freq: null }]) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: Q_PAR(ALT) }, log: Q_DADA() });
+        const r = await Q_porta(porta, porta === 'vet' && muda.freq === null ? { freq: null } : muda);
+        res.push([porta, JSON.stringify(muda), r.st.slice(0, 60), Q_esc()]);
+      } finally { solta659(); }
+    }
+  }
+  res.forEach((x) => Q_log(x[0] + ' ' + x[1], x.slice(2)));
+  assert.ok(res.every((x) => x[3] === 0), JSON.stringify(res));
+  const out = {};
+  for (const tipo of ['duplo', 'normal']) {
+    let x = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      const b = tipo === 'duplo' ? Q_DUP(ALT) : APQ659(ALT);
+      semear658({ itens: { apq: b }, log: Q_DADA() });
+      x = await regua662(b, ['20:00']);
+    } finally { solta659(); }
+    out[tipo] = [x.r.frases, await Q_fila(x.depois, [9, 10, 11, 12, 13, 14, 15])];
+  }
+  Q_log('duplo', out.duplo); Q_log('normal', out.normal);
+  assert.strictEqual(JSON.stringify(out.duplo), JSON.stringify(out.normal));
+});
+
+// ---------------------------------------------------------------- 4. dias da semana
+provaAsync('6.62 QA662-04 dias da semana (seg, qua, sex): estado duplo e parado na régua, comparados ao remédio sem paradoEm (7 dias)', async () => {
+  const DS = { freq: { tipo: 'dias', dias: ['seg', 'qua', 'sex'] } };
+  const out = {};
+  for (const tipo of ['duplo', 'normal', 'duploSemDia', 'normalSemDia']) {
+    let x = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      const f = /SemDia/.test(tipo) ? { freq: { tipo: 'dias', dias: ['seg', 'qua'] } } : DS;
+      const b = /^duplo/.test(tipo) ? Q_DUP(f) : APQ659(f);
+      semear658({ itens: { apq: b }, log: Q_DADA() });
+      x = await regua662(b, ['20:00']);
+    } finally { solta659(); }
+    out[tipo] = [x.r.frases, await Q_fila(x.depois, [9, 10, 11, 12, 13, 14, 15, 16])];
+  }
+  Object.keys(out).forEach((k) => Q_log(k, out[k]));
+  const sóHora = (f) => JSON.stringify(Object.keys(f).sort().map((d) => [d, f[d].map((x) => x.replace(/^.*@/, '@'))]));
+  assert.strictEqual(JSON.stringify(out.duplo), JSON.stringify(out.normal));
+  assert.strictEqual(sóHora(out.duploSemDia[1]), sóHora(out.normalSemDia[1]), 'mesmas doses (o id da linha pode mudar)');
+});
+
+// ---------------------------------------------------------------- 5. o início vazio (AC1.3) e a margem do dev
+provaAsync('6.62 QA662-05 início vazio: hoje, ontem, amanhã; parado recente e antigo; a frase que a pessoa lê', async () => {
+  const semIni = (extra) => { const p = Q_PAR(extra); delete p.dataInicio; return p; };
+  const res = [];
+  for (const [rot, item] of [['parado hoje', semIni()], ['parado ontem', semIni({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658) })], ['parado antigo (01/09)', semIni({ dataFim: '2026-09-01', paradoEm: Q_PE('2026-09-01') })], ['estado duplo', (() => { const p = Q_DUP(); delete p.dataInicio; return p; })()]]) {
+    for (const ini of [DIA658, ONTEM658, AMANHA658, '2026-09-20']) {
+      for (const [hh, mm] of [[10, 0], [0, 30]]) {
+        arma659();
+        try {
+          relogio658(T658(hh === 0 ? 10 : 9, hh, mm));
+          semear658({ itens: { apq: item }, log: {} });
+          const r = await Q_porta('ficha', { dataInicio: ini, q: '2' });
+          res.push([rot, ini, hh + ':' + mm, /^✅/.test(r.st) ? 'grava' : r.st.slice(0, 95)]);
+        } finally { solta659(); }
+      }
+    }
+  }
+  res.forEach((x) => Q_log(x[0] + ' início ' + x[1] + ' às ' + x[2], x[3]));
+  QA.ini = res;
+  // 6.62 (2ª rodada, asserção): o início vazio de ontem para trás grava; o de hoje também (as doses destas fichas são às 08:00: de
+  // madrugada, a dose de ontem já passou do teto); o de amanhã nunca
+  igual(res.map((x) => x[3] === 'grava'), res.map((x) => !(x[2] === '10:0' && x[1] === AMANHA658)), JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 6. suspenso e parado juntos; estado duplo suspenso
+provaAsync('6.62 QA662-06 suspenso e parado juntos; estado duplo suspenso: recusa, frase, faixa, rodapé, régua, alarme', async () => {
+  const res = [];
+  for (const [rot, item] of [['parado+suspenso', Q_PAR({ suspenso: true, suspensoPor: 'Vera Teste' })], ['duplo+suspenso', Q_DUP({ suspenso: true, suspensoPor: 'Vera Teste' })]]) {
+    arma659();
+    let r = null, card = '', rod = '', pode = '';
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: item }, log: Q_DADA() });
+      r = await Q_porta('plantao', { horarios: ['20:00'] });
+      ctx.__qi = item; card = String(run(`medAgendaRowHTML('apq', __qi)`));
+      run(`fmedPodeEditar=function(){ return true; };` + FICHA658()); rod = String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`)); pode = run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`);
+    } finally { solta659(); }
+    res.push([rot, r.st.slice(0, 80), /Voltou a tocar/.test(card), /SUSPENSO/.test(card), /PAROU DE TOMAR/.test(card), /Parou de tomar</.test(rod), /Voltou a tomar/.test(rod), pode, await filaQA659f0({ apq: item }, 9), r.st]);
+  }
+  res.forEach((x) => Q_log(x[0], x.slice(1)));
+  // 6.62 (2ª rodada, asserção; BAIXO-2): no suspenso, a frase e a faixa do suspenso; o estado duplo suspenso não diz «voltou a tocar»
+  igual(res.map((x) => [x[2], x[3], x[4], x[5], x[6], x[8]]), [[false, true, true, false, false, []], [false, true, false, false, false, []]], JSON.stringify(res));
+  assert.ok(/^✋ O remédio Apoquel parou de ser dado/.test(res[0][9]) && res[1][9] === '✋ O remédio Apoquel está suspenso pela Veterinária: o horário, o período e a frequência dele não mudam por aqui. Reative primeiro, no Cuidado Vet; depois, para encerrar, use «Parou de tomar» na ficha (aba Medicamentos). Nada foi salvo.', JSON.stringify(res.map((x) => x[9])));
+});
+
+// ---------------------------------------------------------------- 7. anulado (6.58) com paradoEm e estado duplo anulado
+provaAsync('6.62 QA662-07 anulado com paradoEm (parado e estado duplo): fora do formulário; «Reabrir» → uma dose por dia', async () => {
+  const res = [];
+  for (const [rot, item] of [['parado anulado', Q_PAR({ anulado: { quem: 'Gestão Teste', ts: 1, motivo: 'FILHOt errado', era: { horarios: ['08:00'], continuo: true } } })],
+    ['duplo anulado', Q_DUP({ anulado: { quem: 'Gestão Teste', ts: 1, motivo: 'FILHOt errado', era: { horarios: ['08:00'], continuo: true } } })]]) {
+    let depois = null, volta = '', st = '';
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: item }, log: Q_DADA() });
+      st = await plantao662({}, formDe662(db658(AG658 + '/itens'), {}));
+      run(`fmedPodeEditar=function(){ return true; };` + FICHA658()); await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+      volta = String(J658('CORR_ATUAL && CORR_ATUAL.op && CORR_ATUAL.op.volta && CORR_ATUAL.op.volta[0]') || J658('__za657') && JSON.stringify(J658('__za657')).slice(0, 120));
+      await assina658('s-bia', 'a veterinária liberou de novo hoje'); depois = db658(AG658 + '/itens');
+    } finally { solta659(); }
+    res.push([rot, st.slice(0, 40), volta.slice(0, 70), Object.keys(depois), await Q_fila(depois, [9, 10, 11])]);
+  }
+  res.forEach((x) => Q_log(x[0], x.slice(1)));
+  assert.ok(res.every((x) => [9, 10, 11].every((d) => x[4][d].filter((k) => !/08:00$/.test(k) || d !== 9).length <= 1)), JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 8. «Voltou a tomar» em cada estado
+provaAsync('6.62 QA662-08 «Voltou a tomar» em cada estado: pode? e o alarme de hoje, amanhã e depois', async () => {
+  const estados = [
+    ['parado hoje (fim hoje)', Q_PAR()], ['parado ontem', Q_PAR({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658) })], ['estado duplo contínuo', Q_DUP()],
+    ['estado duplo até 12/10', Q_DUP({ continuo: false, dataFim: '2026-10-12' })], ['estado duplo até amanhã', Q_DUP({ continuo: false, dataFim: AMANHA658 })],
+    ['suspenso', Q_SUS()], ['parado + suspenso', Q_PAR({ suspenso: true })], ['normal', APQ659()], ['terminado sem paradoEm (fim ontem)', APQ659({ continuo: false, dataFim: ONTEM658 })]];
+  const res = [];
+  for (const [rot, item] of estados) {
+    let pode = '', depois = null, ok = '';
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: item }, log: Q_DADA() });
+      run(`fmedPodeEditar=function(){ return true; };` + FICHA658());
+      pode = run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`);
+      run('__za657=[];'); await voltou658('apq', ['1', '08:00', 'uso contínuo']);
+      if (run('CORR_ATUAL && CORR_ATUAL.passo') === 'conferir') { const [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); ok = p; } else ok = 'recusado';
+      depois = db658(AG658 + '/itens');
+      const lg = db658(LOG658) || {}; ctx.__dadas = Object.keys(lg).map((k) => lg[k].itemId + '@' + lg[k].horario);
+    } finally { solta659(); }
+    const f = await Q_fila(depois, [9, 10, 11]); const dadas = ctx.__dadas || [];
+    f[9] = f[9].filter((x) => dadas.indexOf(x) < 0);   // hoje: o que o alarme ainda pede (a dose já dada, e a cópia dela na linha nova, não contam)
+    res.push([rot, pode, ok, Object.keys(depois).length, f]);
+  }
+  res.forEach((x) => Q_log(x[0], x.slice(1)));
+  // nenhum dia com a mesma dose duas vezes (hoje: a das 08:00 já foi dada, então o alarme não pode pedir mais nenhuma)
+  assert.ok(res.every((x) => x[4][9].length === 0 && [10, 11].every((d) => x[4][d].length <= 1)), JSON.stringify(res.filter((x) => [9, 10, 11].some((d) => x[4][d].length > 1))));
+});
+
+// ---------------------------------------------------------------- 9. continuações mcr_t_ e mcr_n_ no estado duplo
+provaAsync('6.62 QA662-09 continuações: a linha mcr_t_ (ou mcr_n_) no estado duplo e o «Voltou a tomar» pela linha antiga da corrente', async () => {
+  const res = [];
+  const cad = {
+    t: { apq: Q_PAR({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658), trocadoPor: 'mcr_t_apq_20261008' }),
+      mcr_t_apq_20261008: Q_DUP({ continuacaoDe: 'apq', dataInicio: ONTEM658, paradoEm: Q_PE(ONTEM658) }) },
+    n: { apq: Q_PAR({ dataFim: ONTEM658, paradoEm: Q_PE(ONTEM658), retomadoPor: 'mcr_n_apoquel_20261008' }),
+      mcr_n_apoquel_20261008: Q_DUP({ continuacaoDe: 'apq', dataInicio: ONTEM658, paradoEm: Q_PE(ONTEM658) }) } };
+  for (const k of ['t', 'n']) {
+    let pode = '', ok = '', depois = null, rodN = '';
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: JSON.parse(JSON.stringify(cad[k])), log: {} });
+      run(`fmedPodeEditar=function(){ return true; };` + FICHA658());
+      pode = run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`);
+      rodN = String(run(`fmedRodapeHTML('${Object.keys(cad[k])[1]}', FMED_ITENS['${Object.keys(cad[k])[1]}'])`));
+      await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+      if (run('CORR_ATUAL && CORR_ATUAL.passo') === 'conferir') { const [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); ok = p; } else ok = 'recusado';
+      depois = db658(AG658 + '/itens');
+    } finally { solta659(); }
+    res.push([k, pode, ok, />Parou de tomar</.test(rodN), /Voltou a tomar/.test(rodN), Object.keys(depois), await Q_fila(depois, [9, 10, 11])]);
+  }
+  res.forEach((x) => Q_log('mcr_' + x[0] + '_', x.slice(1)));
+  assert.ok(res.every((x) => [9, 10, 11].every((d) => x[6][d].length <= 1)), JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 10. a virada da meia-noite
+provaAsync('6.62 QA662-10 meia-noite: estado duplo com fim no sábado às 23:59 de sexta e às 00:01 de sábado; parado de hoje às 23:59 e 00:01', async () => {
+  const res = [];
+  for (const [rot, item] of [['duplo fim sáb', Q_DUP({ continuo: false, dataFim: AMANHA658, horarios: ['22:00'] })], ['parado fim sex', Q_PAR({ horarios: ['22:00'] })]]) {
+    for (const [d, hh, mm] of [[9, 23, 59], [10, 0, 1], [10, 0, 30]]) {
+      let st = '', rod = '', pode = '', card = '';
+      arma659();
+      try {
+        relogio658(T658(d, hh, mm));
+        semear658({ itens: { apq: item }, log: {} });
+        st = (await Q_porta('plantao', { horarios: ['21:00'] })).st;
+        ctx.__qi = item; card = String(run(`medAgendaRowHTML('apq', __qi)`));
+        run(`fmedPodeEditar=function(){ return true; };` + FICHA658()); rod = String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`)); pode = run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`);
+      } finally { solta659(); }
+      res.push([rot, d + ' ' + hh + ':' + mm, st.slice(0, 70), />Parou de tomar</.test(rod), /Voltou a tomar/.test(rod), pode.slice(0, 40), /Voltou a tocar/.test(card), /PAROU DE TOMAR/.test(card)]);
+    }
+  }
+  res.forEach((x) => Q_log(x[0] + ' ' + x[1], x.slice(2)));
+  // 6.62 (2ª rodada, asserção): o horário é recusado nos dois, antes e depois da meia-noite; na sexta, o estado duplo tem «Parou de
+  // tomar» e a linha «Voltou a tocar»; no sábado (fim = hoje), os dois são parados de hoje, com «Voltou a tomar» (a linha nova começa amanhã)
+  assert.ok(res.every((x) => /^✋ O remédio Apoquel /.test(x[2])), JSON.stringify(res));
+  igual(res.map((x) => [x[3], x[4], x[6], x[7]]), [[true, false, true, false], [false, true, false, true], [false, true, false, true], [false, true, false, true], [false, true, false, true], [false, true, false, true]], JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 11. dois aparelhos, formulário velho
+provaAsync('6.62 QA662-11 dois aparelhos: o aparelho A leu a agenda antes; o B registra «Parou de tomar» (Ficha) ou «não está em uso» (Check-in); o A salva', async () => {
+  const res = [];
+  for (const [rot, porta] of [['B: Ficha «Parou de tomar» → A: Plantão', 'plantao'], ['B: Ficha «Parou de tomar» → A: Ficha', 'ficha'], ['B: Check-in «não está em uso» → A: Plantão', 'plantao'], ['B: Check-in «não está em uso» → A: Ficha', 'ficha']]) {
+    let st = '', it = null;
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: APQ659(), ome: Object.assign(OME658(), { dataInicio: '2026-10-01' }) }, log: Q_DADA() });
+      // o aparelho A leu agora (o formulário: tudo como estava, o Ômega com a observação nova)
+      const formA = formDe662(db658(AG658 + '/itens'), { ome: { obs: 'com comida', q: '2' } });
+      const lidoA = J658(`__get657('${AG658}/itens')`), tsA = db658(AG658 + '/_ts');
+      // o aparelho B para o Apoquel
+      if (/Ficha/.test(rot.split('→')[0])) { run(`fmedPodeEditar=function(){ return true; };` + FICHA658() + ` __ztq657=['o tutor pediu para parar hoje'];`); await run(`fmedParou('apq')`); await espera659(); }
+      else { await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659(); }
+      // o aparelho A grava com o que tinha lido
+      ctx.__lidoA = lidoA; ctx.__fp662 = formA;
+      if (porta === 'plantao') {
+        run(`canEditMed=function(){ return true; }; renderMedAgenda=function(){}; MED_AGENDA_ITENS=__lidoA; MED_AGENDA_TS={key:'${K658}', ts:${tsA}, lido:true};
+          __el657['mag-status']={style:{}, textContent:''}; coletarMedAgendaForm=function(){ return JSON.parse(JSON.stringify(__fp662)); }; __esc657=[];`);
+        run('salvarMedAgenda()'); await espera659(); st = String(run("__el657['mag-status'].textContent") || '');
+      } else {
+        run(`fmedPodeEditar=function(){ return true; }; medLinhaDoPel=function(){ return ''; }; pelAtual={n:'Biscoito', tutor:'Rita Teste'}; FMED_KEY='${K658}'; FMED_ITENS=__lidoA; FMED_CARREGOU=true; FMED_TS_LIDO=${tsA};
+          __el657['fmed-status']={style:{}, textContent:''}; fmedColetar=function(){ return JSON.parse(JSON.stringify(__fp662)); }; __esc657=[]; __zp657=[];`);
+        await run('fmedSalvar()'); await espera659(); st = String(run("__el657['fmed-status'].textContent") || '');
+      }
+      it = db658(AG658 + '/itens/apq');
+    } finally { solta659(); }
+    const f = await Q_fila({ apq: it }, [10, 11]);
+    res.push([rot, st.slice(0, 70), it.continuo, it.dataFim, !!it.paradoEm, f]);
+  }
+  res.forEach((x) => Q_log(x[0], x.slice(1)));
+  QA.dois = res;
+  // 6.62 (2ª rodada, asserção; MÉDIO-2): pelas duas portas (a Ficha e o Check-in), o formulário de antes é recusado; o remédio continua parado
+  igual(res.map((x) => [/mudou em outro aparelho\. Nada foi salvo/.test(x[1]), x[2], x[4], x[5]]), res.map(() => [true, false, true, { 10: [], 11: [] }]), JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 12. o suspenso com o horário da refeição e a configuração das refeições mudada no dia
+provaAsync('6.62 QA662-12 suspenso «45 min antes do jantar» (a das 17:45 dada), o jantar muda de 18:30 para 21:00 na Configuração, um «Salvar agenda» qualquer, «Reativar» no mesmo dia', async () => {
+  const res = {};
+  for (const tipo of ['suspenso', 'normal', 'parado de hoje', 'estado duplo']) {
+    let st = '', depois = null, gravado = null;
+    arma659();
+    try {
+      relogio658(T658(9, 18, 10));
+      run(`__rh662q=REF_HORAS.jantar; REF_HORAS.jantar='18:30';`);
+      try {
+        const Q = { quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' };
+        const item = tipo === 'suspenso' ? Q_SUS(Q) : tipo === 'normal' ? APQ659(Q) : tipo === 'parado de hoje' ? Q_PAR(Q) : Q_DUP(Q);
+        semear658({ itens: { apq: item, ome: Object.assign(OME658(), { dataInicio: '2026-10-01' }) }, log: Q_DADA('17:45', 9, 17, 50) });
+        run(`REF_HORAS.jantar='21:00';`);   // a Gestão mudou o jantar na Configuração
+        const f = formDe662(db658(AG658 + '/itens'), { ome: { obs: 'com comida' } });   // o FORM662 recalcula a hora pela regra, como o coletor
+        st = await plantao662(null, f);
+        gravado = db658(AG658 + '/itens/apq').horarios;
+        if (tipo === 'suspenso') { await abreVetMed659(); run(`__ztq657=['o exame de sangue veio normal'];`); await run(`vetReativarMed('apq')`); await espera659(); }
+        depois = db658(AG658 + '/itens');
+      } finally { run('REF_HORAS.jantar=__rh662q;'); }
+    } finally { solta659(); }
+    res[tipo] = [st.slice(0, 120), gravado, Object.keys(depois), await Q_fila(depois, [9, 10])];
+  }
+  Object.keys(res).forEach((k) => Q_log(k, res[k]));
+  QA.refeicao = res;
+  // 6.62 (2ª rodada, asserção; MÉDIO-1): o suspenso fica com 17:45 e, reativado, hoje o alarme não pede de novo; os outros como antes
+  assert.ok(Object.keys(res).every((k) => /^✅ Agenda de medicação salva\./.test(res[k][0])), JSON.stringify(res));
+  igual([res.suspenso[1], res.suspenso[3][9], res.suspenso[3][10]], [['17:45'], ['apq@17:45', 'ome@08:00'], ['apq@17:45', 'ome@08:00']]);
+  igual([res.normal[3][10], res['parado de hoje'][3][10], res['estado duplo'][3][10]], [['mcr_t_apq_20261010@20:15', 'ome@08:00'], ['ome@08:00'], ['mcr_t_apq_20261010@20:15', 'ome@08:00']]);
+});
+
+// ---------------------------------------------------------------- 13. recusa falsa: o parado / o duplo / o suspenso iguais na tela, outro remédio muda
+provaAsync('6.62 QA662-13 sem recusa falsa (matriz): parado, estado duplo e suspenso iguais na tela, com dado antigo; o Ômega muda; Plantão e Ficha gravam', async () => {
+  const vars = [
+    ['horário antigo «8:00»', { horarios: ['8:00'] }],
+    ['horário inválido guardado junto', { horarios: ['08:00', 'manhã'] }],
+    ['dois horários fora de ordem', { horarios: ['20:00', '08:00'] }],
+    ['quando com min em texto', { quando: { ref: 'jantar', rel: 'antes', min: '45' }, horarios: ['17:45'], derivado_de: 'quando' }],
+    ['quando sem rel', { quando: { ref: 'jantar', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' }],
+    ['quando fixo', { quando: { ref: 'fixo' } }],
+    ['início no formato antigo 01/10/2026', { dataInicio: '01/10/2026' }],
+    ['freq diário explícito', { freq: { tipo: 'diario' } }],
+    ['freq dias vazios', { freq: { tipo: 'dias' } }],
+    ['freq dias fora de ordem', { freq: { tipo: 'dias', dias: ['sex', 'seg', 'qua'] } }],
+    ['freq alternado sem dias', { freq: { tipo: 'alternado' } }],
+    ['paradoEm só true', { paradoEm: true }],
+    ['continuo como texto «sim»', { continuo: 'sim' }],
+  ];
+  const res = [];
+  for (const [rot, extra] of vars) {
+    for (const base of ['parado', 'duplo', 'suspenso']) {
+      for (const porta of ['plantao', 'ficha']) {
+        arma659();
+        try {
+          relogio658(T658(9, 10, 0));
+          run(`__rh662r=REF_HORAS.jantar; REF_HORAS.jantar='18:30';`);
+          try {
+            const make = base === 'parado' ? Q_PAR : base === 'duplo' ? Q_DUP : Q_SUS;
+            const item = make(extra);
+            semear658({ itens: { apq: item, ome: Object.assign(OME658(), { dataInicio: '2026-10-01' }) }, log: Q_DADA() });
+            // o formulário: o coletor do app monta a partir do que a tela mostra; o FORM662 (dev) imita; aqui, a imitação do campo de data
+            // (o <input type=date> não mostra o que não é AAAA-MM-DD) e do campo de horário (normHora)
+            const f = formDe662(db658(AG658 + '/itens'), porta === 'plantao' ? { ome: { obs: 'com comida' } } : { ome: { q: '2' } });
+            if (f.apq.dataInicio && !/^\d{4}-\d{2}-\d{2}$/.test(f.apq.dataInicio)) delete f.apq.dataInicio;
+            if (!f.apq.quando) f.apq.horarios = (f.apq.horarios || []).map((h) => run(`normHora(${JSON.stringify(h)})`)).filter(Boolean);
+            if (porta === 'ficha' && !f.apq.dataInicio) f.apq.dataInicio = '2026-09-20';   // a Ficha pede o início: a pessoa preenche
+            const st = porta === 'plantao' ? await plantao662(null, f) : (await ficha662(null, f)).st;
+            res.push([rot, base, porta, /^✅/.test(st) ? 'grava' : st.slice(0, 80)]);
+          } finally { run('REF_HORAS.jantar=__rh662r;'); }
+        } finally { solta659(); }
+      }
+    }
+  }
+  res.filter((x) => x[3] !== 'grava').forEach((x) => Q_log('RECUSA: ' + x.slice(0, 3).join(' | '), x[3]));
+  Q_log('total', [res.length, res.filter((x) => x[3] === 'grava').length]);
+  QA.falsa = res;
+  // 6.62 (2ª rodada, asserção): nenhuma recusa falsa
+  igual(res.filter((x) => x[3] !== 'grava'), [], 'recusa falsa');
+});
+
+// ---------------------------------------------------------------- 14. o estado duplo no banco: o alarme igual ao da base, sem dose perdida
+provaAsync('6.62 QA662-14 o estado duplo no banco: a fila do alarme de 7 dias (contínuo, até 12/10, seg/qua/sex, dia sim dia não, 2 horários) — o mesmo que sem paradoEm', async () => {
+  const vars = [{}, { continuo: false, dataFim: '2026-10-12' }, { freq: { tipo: 'dias', dias: ['seg', 'qua', 'sex'] } }, { freq: { tipo: 'alternado' }, dataInicio: '2026-10-02' }, { horarios: ['08:00', '20:00'] }];
+  const res = [];
+  for (const v of vars) {
+    const com = await Q_fila({ apq: Q_DUP(v) }, [9, 10, 11, 12, 13, 14, 15]);
+    const sem = await Q_fila({ apq: APQ659(v) }, [9, 10, 11, 12, 13, 14, 15]);
+    res.push([JSON.stringify(v), JSON.stringify(com) === JSON.stringify(sem)]);
+  }
+  res.forEach((x) => Q_log(x[0], x[1]));
+  assert.ok(res.every((x) => x[1]), JSON.stringify(res));
+});
+
+// ---------------------------------------------------------------- 15. C5 com o estado duplo de «tomar até» (não contínuo): «Parou de tomar» e «Voltou a tomar» com 20:00
+provaAsync('6.62 QA662-15 C5 (estado duplo até 12/10, a das 08:00 dada): «Parou de tomar» na Ficha e «Voltou a tomar» com 20:00 → hoje nada mais; sábado a terça uma dose só', async () => {
+  let depois = null, rod = '', ok = '', dadas = [];
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: Q_DUP({ continuo: false, dataFim: '2026-10-12' }) }, log: Q_DADA() });
+    run(`fmedPodeEditar=function(){ return true; }; zPergunta=function(){ return Promise.resolve(true); };` + FICHA658());
+    rod = String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`));
+    run(`__ztq657=['a veterinária encerrou o tratamento hoje'];`); await run(`fmedParou('apq')`); await espera659();
+    run(FICHA658()); await voltou658('apq', ['1', '20:00', 'uso contínuo']);
+    if (run('CORR_ATUAL && CORR_ATUAL.passo') === 'conferir') { const [p] = await assina658('s-bia', 'a veterinária liberou de novo hoje'); ok = p; } else ok = 'recusado';
+    depois = db658(AG658 + '/itens'); const lg = db658(LOG658) || {}; dadas = Object.keys(lg).map((k) => lg[k].itemId + '@' + lg[k].horario);
+  } finally { solta659(); }
+  const f = await Q_fila(depois, [9, 10, 11, 12, 13]); f[9] = f[9].filter((x) => dadas.indexOf(x) < 0);
+  Q_log('C5 até 12/10', [/>Parou de tomar</.test(rod), /Voltou a tomar/.test(rod), ok, Object.keys(depois), f]);
+  assert.ok(/>Parou de tomar</.test(rod) && !/Voltou a tomar/.test(rod) && ok === 'pronto', rod);
+  assert.ok(f[9].length === 0 && [10, 11, 12, 13].every((d) => f[d].length === 1 && /@20:00$/.test(f[d][0])), JSON.stringify(f));
+});
+// ================================================================== 6.62 — 2ª rodada (gate do QA: CONCERNS): MÉDIO-1, MÉDIO-2, BAIXO-1, BAIXO-2 e as lacunas
+console.log('\n6.62 — 2ª rodada: o suspenso amarrado à refeição; o «não está em uso» do Check-in com o carimbo; a margem do início de hoje; o estado duplo suspenso; o coletor de verdade');
+const FRASE_INI662 = '✋ O início do remédio Apoquel não pode ser hoje: a dose de ontem dele ainda pode ser pedida agora pelo alarme. Preencha a data em que ele começou (de ontem para trás). Nada foi salvo.';
+const FRASE_DUPLO_SUSP662 = '✋ O remédio Apoquel está suspenso pela Veterinária: o horário, o período e a frequência dele não mudam por aqui. Reative primeiro, no Cuidado Vet; depois, para encerrar, use «Parou de tomar» na ficha (aba Medicamentos). Nada foi salvo.';
+const Q45_662 = { quando: { ref: 'jantar', rel: 'antes', min: 45 }, horarios: ['17:45'], derivado_de: 'quando' };
+const OMEI662 = () => Object.assign(OME658(), { dataInicio: '2026-10-01' });
+// uma porta qualquer com a mudança no apq (e em outros remédios); devolve a frase da tela
+const porta662 = async (porta, muda, extra) => {
+  if (porta === 'plantao') return plantao662(Object.assign({ apq: muda }, extra || {}));
+  if (porta === 'ficha') return (await ficha662(Object.assign({ apq: muda }, extra || {}))).st;
+  await abreVetMed659(); run('__esc657=[];');
+  await altera659('apq', FORM659(db658(AG658 + '/itens/apq'), muda));
+  return statusVet659();
+};
+
+provaAsync('6.62 P23 (2ª rodada, BAIXO-1; AC1.3) — a margem do início de hoje vale só enquanto a dose de ontem ainda pode ser pedida (de madrugada, dentro do teto da 6.47): às 00:30 de sábado, o parado de ontem (22:00, sem registro) com o início de hoje é recusado com a frase própria, nas três portas; com o início de ontem, grava; às 10:00 de sábado, o início de hoje grava; o início de amanhã, nunca', async () => {
+  const semIni = () => { const p = PAR662({ horarios: ['22:00'] }); delete p.dataInicio; return p; };
+  const res = [];
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    for (const [rot, agora, ini] of [['00:30 de sábado, início hoje', T658(10, 0, 30), AMANHA658], ['00:30 de sábado, início ontem', T658(10, 0, 30), DIA658],
+      ['10:00 de sábado, início hoje', T658(10, 10, 0), AMANHA658], ['07:00 de sexta, início amanhã', T658(9, 7, 0), AMANHA658]]) {
+      arma659();
+      try {
+        relogio658(agora);
+        semear658({ itens: { apq: semIni() }, log: {} });
+        const st = await porta662(porta, porta === 'ficha' ? { dataInicio: ini, q: '2' } : { dataInicio: ini });
+        res.push([porta, rot, st, db658(AG658 + '/itens/apq').dataInicio || '', escAg662()]);
+      } finally { solta659(); }
+    }
+  }
+  const esperado = (rot) => (/00:30 de sábado, início hoje/.test(rot) ? [FRASE_INI662, '', 0] : (/início amanhã/.test(rot) ? [FRASE_FREQ662, '', 0] : null));
+  res.forEach((x) => { const e = esperado(x[1]); if (e) igual([x[2], x[3], x[4]], e, x[0] + ' ' + x[1]); else assert.ok(/^✅/.test(x[2]) && x[3] === (/início ontem/.test(x[1]) ? DIA658 : AMANHA658), x[0] + ' ' + x[1] + ': ' + x[2] + ' | ' + x[3]); });
+  // às 00:30, a dose das 22:00 de ontem continua pedida (nada foi gravado no remédio)
+  run(ARMA654);
+  try {
+    const it = semIni();
+    ctx.__fq = await filaE654({ apq: it }, 9); ctx.__lq = {};
+    igual(Object.keys(run(`medOntemPendentes(__fq, __lq, {}, '2026-10-09', ${T658(10, 0, 30)})`)).map((k) => k.split('__').pop()), ['apq_22-00']);
+  } finally { run(SOLTA654); }
+});
+provaAsync('6.62 P24 (2ª rodada, MÉDIO-1; AC1.6, C6) — o suspenso amarrado à refeição («45 min antes do jantar», 17:45, dada às 17:50): o jantar muda para 21:00 em Configurações; o «Salvar agenda» ou o «Salvar medicamentos» de outro remédio grava sem recusa e o suspenso fica com 17:45; reativado no mesmo dia, hoje o alarme não pede mais nada. O parado de ontem e o estado duplo que não toca hoje também ficam com o horário que a tela leu', async () => {
+  const casos = [['suspenso', SUS662(Q45_662)], ['parado de ontem', APQ659(Object.assign({}, Q45_662, { continuo: false, dataFim: ONTEM658, paradoEm: PE662(ONTEM658) }))],
+    ['estado duplo de seg e qua', DUP662(Object.assign({}, Q45_662, { freq: { tipo: 'dias', dias: ['seg', 'qua'] } }))]];
+  const res = [];
+  for (const [rot, item] of casos) {
+    for (const porta of ['plantao', 'ficha']) {
+      let st = '', gravado = null, depois = null;
+      arma659();
+      try {
+        relogio658(T658(9, 18, 10));
+        run(`__rh662b=REF_HORAS.jantar; REF_HORAS.jantar='18:30';`);
+        try {
+          semear658({ itens: { apq: item, ome: OMEI662() }, log: { 'apq_17-45': DOSE658('apq', 'Apoquel', '17:45', 'comprimido', T658(9, 17, 50)) } });
+          run(`REF_HORAS.jantar='21:00';`);   // a Gestão mudou o jantar em Configurações
+          const f = formDe662(db658(AG658 + '/itens'), porta === 'plantao' ? { ome: { obs: 'com comida' } } : { ome: { q: '2' } });
+          igual(f.apq.horarios, ['20:15'], 'o coletor recalcula o horário pela refeição de agora');
+          st = porta === 'plantao' ? await plantao662(null, f) : (await ficha662(null, f)).st;
+          const a = db658(AG658 + '/itens/apq'); gravado = [a.horarios, a.quando, a.derivado_de];
+          if (rot === 'suspenso') { await abreVetMed659(); run(`__ztq657=['o exame de sangue veio normal'];`); await run(`vetReativarMed('apq')`); await espera659(); }
+          depois = db658(AG658 + '/itens');
+        } finally { run('REF_HORAS.jantar=__rh662b;'); }
+      } finally { solta659(); }
+      res.push([rot, porta, /^✅/.test(st), gravado, !!depois.apq.suspenso, pede662(await filaQA659f0(depois, 9), ['apq@17:45', 'ome@08:00'])]);
+    }
+  }
+  igual(res.map((x) => x.slice(2)), res.map(() => [true, [['17:45'], { ref: 'jantar', rel: 'antes', min: 45 }, 'quando'], false, []]), JSON.stringify(res));
+});
+provaAsync('6.62 P25 (2ª rodada, MÉDIO-1) — a regra da refeição conta inteira (a refeição, antes ou depois, os minutos): no suspenso e no parado, «45 min antes do jantar» → «15 min antes» ou → «45 min depois» é horário mudado e é recusado; com o jantar mudado e a mesma regra, não é recusa', async () => {
+  const FRASE_PARADO_ONTEM = FRASE_PARADO662.replace('em 09/10/2026', 'em 08/10/2026');
+  const casos = [['suspenso', SUS662(Q45_662), FRASE_SUSP662], ['parado de ontem', APQ659(Object.assign({}, Q45_662, { continuo: false, dataFim: ONTEM658, paradoEm: PE662(ONTEM658) })), FRASE_PARADO_ONTEM]];
+  const res = [];
+  for (const [rot, item, frase] of casos) {
+    for (const q of [{ ref: 'jantar', rel: 'antes', min: 15 }, { ref: 'jantar', rel: 'depois', min: 45 }, { ref: 'almoco', rel: 'antes', min: 45 }]) {
+      for (const porta of ['plantao', 'ficha']) {
+        arma659();
+        try {
+          relogio658(T658(9, 10, 0));
+          semear658({ itens: { apq: item }, log: {} });
+          const f = formDe662(db658(AG658 + '/itens'), {});
+          f.apq.quando = q; f.apq.horarios = [run(`medQuandoHorario(${JSON.stringify(q)})`)];
+          const st = porta === 'plantao' ? await plantao662(null, f) : (await ficha662(null, f)).st;
+          res.push([rot, JSON.stringify(q), porta, st === frase, db658(AG658 + '/itens/apq').horarios, escAg662()]);
+        } finally { solta659(); }
+      }
+    }
+  }
+  igual(res.map((x) => x.slice(3)), res.map(() => [true, ['17:45'], 0]), JSON.stringify(res));
+});
+provaAsync('6.62 P26 (2ª rodada, MÉDIO-2) — o «não está em uso» do Check-in anda o carimbo da agenda pela trava (uma transação antes da parada); se outro aparelho gravou no meio, lê tudo de novo; sem a trava, a parada grava assim mesmo (o «não está em uso» do tutor não se perde)', async () => {
+  // (a) a trava: a transação no carimbo, depois a parada; o carimbo andou
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659(), ome: OMEI662() }, log: DADA662() });
+    run('__esc657=[];');
+    const feitos = await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659();
+    const ops = run('__esc657').filter((e) => /medicacao-agenda/.test(e[1])).map((e) => e[0] + ' ' + e[1].replace(AG658, 'AG'));
+    const a = db658(AG658 + '/itens/apq');
+    igual([JSON.parse(JSON.stringify(feitos)), ops, a.continuo, a.dataFim, !!a.paradoEm, db658(AG658 + '/_ts') !== 500], [['Apoquel'], ['transaction AG/_ts', 'update AG/itens/apq'], false, ONTEM658, true, true]);
+  } finally { solta659(); }
+  // (b) outro aparelho grava a agenda entre a leitura e a trava: lê de novo e grava a parada, com o carimbo
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA662() });
+    run(`__mt662=mcrTravaAgenda; __nt662=0; mcrTravaAgenda=function(c, v, n){ __nt662++; if(__nt662===1){ __put657('${AG658}/_ts', 777); return Promise.resolve(false); } return __mt662(c, v, n); };`);
+    try {
+      await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659();
+      igual([run('__nt662'), !!db658(AG658 + '/itens/apq').paradoEm, [500, 777].indexOf(db658(AG658 + '/_ts')) < 0], [2, true, true]);
+    } finally { run('mcrTravaAgenda=__mt662;'); }
+  } finally { solta659(); }
+  // (c) a trava não responde: a parada grava como antes (o carimbo fica)
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: APQ659() }, log: DADA662() });
+    run(`__mt662=mcrTravaAgenda; mcrTravaAgenda=function(){ return Promise.reject(new Error('sem rede')); };`);
+    try {
+      await run(`ciMedMarcarParou('${K658}', [{id:'apq', nome:'Apoquel'}])`); await espera659();
+      igual([!!db658(AG658 + '/itens/apq').paradoEm, db658(AG658 + '/itens/apq').continuo, db658(AG658 + '/_ts')], [true, false, 500]);
+    } finally { run('mcrTravaAgenda=__mt662;'); }
+  } finally { solta659(); }
+});
+provaAsync('6.62 P27 (2ª rodada, BAIXO-2) — o estado duplo também suspenso: a recusa e as telas falam do suspenso (sem «voltou a tocar» nem «PAROU DE TOMAR»); o alarme não pede nada', async () => {
+  const item = DUP662({ continuo: false, dataFim: '2026-10-20', suspenso: true, suspensoPor: 'Vera Veterinária Teste', suspensoMotivo: 'esperar o exame de sangue' });
+  const res = [];
+  for (const porta of ['plantao', 'ficha', 'vet']) {
+    for (const muda of [{ horarios: ['20:00'] }, { dataFim: '2026-10-25' }]) {
+      arma659();
+      try {
+        relogio658(T658(9, 10, 0));
+        semear658({ itens: { apq: item }, log: DADA662() });
+        res.push([porta, JSON.stringify(muda), await porta662(porta, muda), escAg662()]);
+      } finally { solta659(); }
+    }
+  }
+  igual(res.map((x) => x.slice(2)), res.map(() => [FRASE_DUPLO_SUSP662, 0]), JSON.stringify(res));
+  let card = '', vet = '';
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    ctx.__s662 = item; card = String(run(`medAgendaRowHTML('apq', __s662)`));
+    semear658({ itens: { apq: item }, log: DADA662() });
+    await abreVetMed659(); run('renderVetMedList();'); vet = html659('vetMedList');
+  } finally { solta659(); }
+  igual([/SUSPENSO pela Veterinária/.test(card), /Voltou a tocar/.test(card), /PAROU DE TOMAR/.test(card), /SUSPENSO/.test(vet), /Voltou a tocar/.test(vet), /Parou de tomar em/.test(vet)],
+    [true, false, false, true, false, false], card.slice(0, 300) + ' || ' + vet.slice(0, 300));
+  igual([await filaQA659f0({ apq: item }, 9), await filaQA659f0({ apq: item }, 10)], [[], []]);
+});
+provaAsync('6.62 P28 (2ª rodada, lacunas do QA) — o estado duplo sem data de fim e o de seg e qua numa sexta são estado duplo; com dois remédios recusados, a frase é a do 1º da lista; a Ficha compara com a cópia que ela leu, não com a do Plantão', async () => {
+  // o estado duplo sem «tomar até» (continuo:false, sem fim) e o de seg e qua (numa sexta, não toca hoje nem amanhã)
+  const semFim = DUP662({ continuo: false }); delete semFim.dataFim;
+  const res = [];
+  for (const [rot, item] of [['sem fim', semFim], ['seg e qua', DUP662({ freq: { tipo: 'dias', dias: ['seg', 'qua'] } })]]) {
+    arma659();
+    try {
+      relogio658(T658(9, 10, 0));
+      semear658({ itens: { apq: item }, log: DADA662() });
+      const st = await plantao662({ apq: { horarios: ['20:00'] } });
+      run(`fmedPodeEditar=function(){ return true; };` + FICHA658());
+      res.push([rot, st, />Parou de tomar</.test(String(run(`fmedRodapeHTML('apq', FMED_ITENS.apq)`))), run(`medVoltouPode(FMED_ITENS, 'apq', zHojeISO())`)]);
+    } finally { solta659(); }
+  }
+  igual(res.map((x) => x.slice(1)), res.map(() => [FRASE_DUPLO662, true, 'Este remédio ainda está em uso: não há o que retomar.']), JSON.stringify(res));
+  // dois recusados: a frase é a do 1º da lista (a Zenrelia vem antes do Apoquel)
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { zen: PAR662({ nome: 'Zenrelia' }), apq: PAR662() }, log: DADA662() });
+    igual(await plantao662({ zen: { horarios: ['21:00'] }, apq: { horarios: ['20:00'] } }), FRASE_PARADO662.replace('Apoquel', 'Zenrelia'));
+  } finally { solta659(); }
+  // a Ficha aberta sem o Plantão (a cópia do Plantão vazia, ou de outro FILHOt): a recusa olha a cópia da Ficha
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662() }, log: DADA662() });
+    const r = await ficha662({ apq: { horarios: ['20:00'] } }, null, 'MED_AGENDA_ITENS={};');
+    igual([r.st, r.perg, escAg662(), db658(AG658 + '/itens/apq').horarios], [FRASE_PARADO662, 0, 0, ['08:00']]);
+  } finally { solta659(); }
+});
+// O coletor de verdade (coletarMedAgendaForm), lendo uma tela de mentira montada como o medAgendaRowHTML a desenha: o campo de
+// data só mostra AAAA-MM-DD, os dias da semana na ordem dos botões, o «Quando dar» com a regra e os minutos, os horários digitados.
+run(`__tela662=function(id, it){
+  it=it||{};
+  var data=function(v){ v=String(v||''); return /^\\d{4}-\\d{2}-\\d{2}$/.test(v)?v:''; };
+  var inp=function(v){ return {value:(v==null?'':String(v))}; };
+  var q=it.quando||{}, fq=it.freq||{tipo:'diario', dias:[]}, est=it.estoque||{};
+  var diasOn=['dom','seg','ter','qua','qui','sex','sab'].filter(function(d){ return (fq.dias||[]).indexOf(d)>=0; }).map(function(d){ return {dataset:{dw:d}}; });
+  var campos={'[data-c=m]':inp(it.nome), '[data-c=q]':inp(it.q), '[data-c=local]':inp(it.local), '[data-c=obs]':inp(it.obs), '[data-c=motivo]':inp(it.motivo),
+    '[data-c=ini]':inp(data(it.dataInicio)), '[data-c=fim]':inp(data(it.dataFim)),
+    '.medunits button.on':it.u?{textContent:it.u}:null, '.mag-tipo button.on':{textContent:(it.tipo==='suplemento')?'Suplemento':'Medicamento'},
+    '.mag-continuo.on':it.continuo?{}:null, '.mag-origem button.on':{dataset:{o:it.origem||'tutor'}},
+    '.mag-quando':{dataset:{ref:q.ref||'fixo', rel:(q.rel==='depois')?'depois':'antes', min:String((q.min!=null)?(parseInt(q.min,10)||0):45)}},
+    '.mag-freq':{dataset:{freqtipo:fq.tipo||'diario'}, querySelectorAll:function(s){ return s==='.mag-freq-dias .mag-diaw.on'?diasOn:[]; }},
+    '.mag-estoque':{dataset:{modo:est.modo||'contavel'}, querySelector:function(s){ return s==='[data-c=einicial]'?inp(est.inicial!=null?est.inicial:''):(s==='.mag-est-nivel button.on'?{dataset:{n:est.nivel||'cheio'}}:null); }}};
+  var hs=((it.horarios&&it.horarios.length)?it.horarios:['']).map(function(h){ return inp(h); });
+  return {dataset:{id:id}, campos:campos, querySelector:function(s){ return Object.prototype.hasOwnProperty.call(campos, s)?campos[s]:null; }, querySelectorAll:function(s){ return s==='[data-c=h]'?hs:[]; }};
+};`);
+provaAsync('6.62 P29 (2ª rodada, BAIXO-4) — o coletor de verdade (coletarMedAgendaForm) sobre a tela: com o parado, o estado duplo e o suspenso iguais na tela (dado antigo: «8:00», dias fora de ordem, a regra do jantar com o jantar mudado, o início em outro formato) e outro remédio mudado, o Plantão e a Ficha gravam; o horário digitado no parado é recusado', async () => {
+  const antigos = [['horário «8:00»', { horarios: ['8:00'] }], ['dias «sex, seg»', { freq: { tipo: 'dias', dias: ['sex', 'seg'] } }],
+    ['a regra do jantar, com o jantar mudado', Q45_662], ['início 01/10/2026', { dataInicio: '01/10/2026' }], ['«dias específicos» sem dia', { freq: { tipo: 'dias', dias: [] } }]];
+  const res = [];
+  for (const [rot, extra] of antigos) {
+    for (const [base, make] of [['parado', PAR662], ['estado duplo', DUP662], ['suspenso', SUS662]]) {
+      for (const porta of ['plantao', 'ficha']) {
+        arma659();
+        try {
+          relogio658(T658(9, 10, 0));
+          run(`__rh662c=REF_HORAS.jantar; REF_HORAS.jantar='18:30';`);
+          try {
+            semear658({ itens: { apq: make(extra), ome: OMEI662() }, log: DADA662() });
+            run(`REF_HORAS.jantar='19:00';`);
+            const sel = porta === 'plantao' ? '#magItens .magitem' : '#fmedItens .magitem';
+            run(`__els662=[]; (function(){ var it=__get657('${AG658}/itens'); Object.keys(it).forEach(function(id){ __els662.push(__tela662(id, it[id])); }); })();
+              __els662.forEach(function(e){ if(e.dataset.id==='ome') e.campos['[data-c=${porta === 'plantao' ? 'obs' : 'q'}]'].value='${porta === 'plantao' ? 'com comida' : '2'}';
+                if(e.dataset.id==='apq' && ${porta === 'ficha'} && !e.campos['[data-c=ini]'].value) e.campos['[data-c=ini]'].value='2026-09-20'; });
+              __qs658['${sel}']=__els662; coletarMedAgendaForm=__cmfReal658; fmedColetar=__bk658.fco; canEditMed=function(){ return true; }; renderMedAgenda=function(){};`);
+            let st = '';
+            if (porta === 'plantao') {
+              run(`MED_AGENDA_ITENS=__get657('${AG658}/itens')||{}; MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true}; __el657['mag-status']={style:{}, textContent:''};`);
+              run('salvarMedAgenda()'); await espera659(); st = String(run("__el657['mag-status'].textContent") || '');
+            } else {
+              run(`fmedPodeEditar=function(){ return true; }; medLinhaDoPel=function(){ return ''; };` + FICHA658() + `__el657['fmed-status']={style:{}, textContent:''};`);
+              await run('fmedSalvar()'); await espera659(); st = String(run("__el657['fmed-status'].textContent") || '');
+            }
+            res.push([rot, base, porta, st.slice(0, 90), porta === 'plantao' ? db658(AG658 + '/itens/ome').obs : db658(AG658 + '/itens/ome').q, !!db658(AG658 + '/itens/apq').paradoEm === (base !== 'suspenso')]);
+          } finally { run('REF_HORAS.jantar=__rh662c;'); }
+        } finally { solta659(); }
+      }
+    }
+  }
+  const ruins = res.filter((x) => !/^✅/.test(x[3]) || x[4] !== (x[2] === 'plantao' ? 'com comida' : '2') || !x[5]);
+  igual(ruins, [], 'recusa falsa com o coletor de verdade');
+  // o horário digitado no parado, lido pelo coletor de verdade: recusado
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    semear658({ itens: { apq: PAR662() }, log: DADA662() });
+    run(`__els662=[__tela662('apq', __get657('${AG658}/itens/apq'))]; __els662[0].querySelectorAll=function(s){ return s==='[data-c=h]'?[{value:'20:00'}]:[]; };
+      __qs658['#magItens .magitem']=__els662; coletarMedAgendaForm=__cmfReal658; canEditMed=function(){ return true; }; renderMedAgenda=function(){};
+      MED_AGENDA_ITENS=__get657('${AG658}/itens')||{}; MED_AGENDA_TS={key:'${K658}', ts:__get657('${AG658}/_ts'), lido:true}; __el657['mag-status']={style:{}, textContent:''}; __esc657=[];`);
+    run('salvarMedAgenda()'); await espera659();
+    igual([String(run("__el657['mag-status'].textContent")), escAg662()], [FRASE_PARADO662, 0]);
+  } finally { solta659(); }
+});
+}
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

@@ -2,6 +2,46 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 10/out/2026 (v 2026-10-09-16) — O remédio parado não volta a tocar por fora: nada de dose em dobro (S3-P12)
+
+> Achado do QA da 6.59: um remédio parado («Parou de tomar») podia voltar a tocar pelo «Salvar agenda» do Plantão e pela Ficha › Medicamentos, e o alarme pedia de novo a dose de hoje já dada. Esta entrega fecha essas portas e protege os remédios que já ficaram assim no banco. Ela não cria tela nova no menu nem botão novo. Regra de ouro: o remédio parado só volta a ser dado pelo «Voltou a tomar» da ficha.
+
+### (BS) Hospedagem › Plantão do hóspede › Agenda de Medicação e Cadastro de Peludinhos › aba Medicamentos
+
+| Antes | Agora |
+|---|---|
+| No remédio parado, mudar o horário, ligar o «Uso contínuo» ou mudar o «Tomar até» e tocar «Salvar agenda» (ou «Salvar medicamentos») gravava, e o alarme podia pedir hoje a mesma dose de novo | **Recusado**, com o nome do remédio e o caminho: «… Para voltar a dar, use «Voltou a tomar» na ficha (aba Medicamentos). Nada foi salvo.» A mesma frase do Cuidado Vet. Nada é gravado; na Ficha, a pergunta «Salvar os medicamentos de …?» nem abre |
+| A frequência e o início do remédio parado mudavam | Também recusados, com a frase própria («a frequência e o início dele não mudam por aqui…») |
+| O remédio parado antigo sem «Início» trancava a Ficha (ela pede o início de todos) | Preencher o início com uma data de hoje para trás **grava** (fora do «dia sim, dia não»). Só de madrugada, enquanto a dose de ontem do remédio ainda pode ser pedida pelo alarme, a data de hoje é recusada: «O início do remédio X não pode ser hoje: a dose de ontem dele ainda pode ser pedida agora pelo alarme. Preencha a data em que ele começou (de ontem para trás).» |
+| No remédio suspenso pela Veterinária, o horário mudava no Plantão e na Ficha; reativado no mesmo dia, o alarme pedia o horário novo | **Recusado**, com a frase do Cuidado Vet: «Reative primeiro e depois mude o horário.» O «Tomar até» e o resto do suspenso continuam mudando |
+| O remédio suspenso (ou parado) amarrado à refeição («45 min antes do jantar») recebia o horário novo quando o jantar mudava em Configurações e alguém salvava a agenda; reativado no mesmo dia, o alarme pedia de novo a dose já dada | Ele **fica com o horário que tinha**, sem recusa (a agenda dos outros remédios grava normalmente). O horário novo da refeição vale quando ele voltar a ser dado e a agenda for salva de novo |
+| — | **O que continua mudando no parado:** a dose, o nome, a medida, o local, a observação, o motivo, o tipo, a origem e o estoque. O remédio continua parado |
+| — | **Sem recusa falsa:** salvar outro remédio com o parado sem mudança na tela grava normalmente (os horários e os dias da semana em outra ordem, o horário que vem da refeição e a frequência «todos os dias» contam como iguais) |
+
+### (BT) O remédio que «voltou a tocar» (parado e em uso ao mesmo tempo, já gravado no banco)
+
+| Antes | Agora |
+|---|---|
+| O remédio aparecia como «PAROU DE TOMAR … Não gera alarme» (ou sem aviso nenhum) e continuava tocando | O cartão do Plantão, a Ficha e o Cuidado Vet dizem **«Voltou a tocar depois do «Parou de tomar» de {data} ({quem}). Para encerrar: «Parou de tomar» na ficha (aba Medicamentos).»** |
+| A Ficha mostrava «Voltou a tomar», que criava uma linha nova com a antiga ainda tocando: **a mesma dose duas vezes, todo dia** | A Ficha mostra **«Parou de tomar»**; o «Voltou a tomar» é recusado («Este remédio ainda está em uso: não há o que retomar.»). O alarme continua pedindo as doses dele (nenhuma dose perdida) |
+| O horário, o período e a frequência mudavam pelo Plantão ou pela Ficha | Recusados nas três telas, com o caminho certo: «Parou de tomar» e depois «Voltou a tomar», com o horário novo. A linha nova começa amanhã quando a dose de hoje já foi dada |
+| A régua do horário pulava esse remédio: o horário mudado depois da dose de hoje tocava hoje | A régua trata como qualquer remédio em uso: o horário novo começa amanhã |
+| O remédio nesse estado e também suspenso aparecia com «Voltou a tocar …» ao lado de «SUSPENSO … Não gera alarme» | Mostra só a faixa do suspenso; a recusa diz «está suspenso pela Veterinária … Reative primeiro, no Cuidado Vet; depois, para encerrar, use «Parou de tomar» …» |
+
+### (BV) Hospedagem › Check-in › medicação («não está em uso»)
+
+| Antes | Agora |
+|---|---|
+| O «não está em uso» do Check-in parava o remédio, mas um Plantão ou uma Ficha abertos antes do check-in, ao salvar, regravavam o «uso contínuo»: o remédio voltava a tocar | O «não está em uso» vale como o «Parou de tomar» da Ficha: a tela aberta antes é recusada («A agenda de … mudou em outro aparelho. Nada foi salvo: feche e abra de novo.») e o remédio continua parado |
+
+### (BU) Cuidado Vet › Medicação em vigor
+
+| Antes | Agora |
+|---|---|
+| No remédio parado, o «Alterar» da frequência fazia o alarme pedir hoje a dose de um remédio parado | **Recusado**, com a frase da frequência e do início. A frase do horário, do «uso contínuo» e do «tomar até» continua a mesma |
+| O histórico da troca de horário dizia «Salvar agenda do Plantão: …» também quando a mudança vinha do Cuidado Vet ou da Ficha | Diz de onde veio: **«Cuidado Vet: …»**, **«Ficha › Medicamentos: …»** ou «Salvar agenda do Plantão: …» |
+| Duas doses perto demais na noite da troca: a frase mandava a própria Veterinária «pedir a confirmação da veterinária» | No Cuidado Vet: «… para fazer essa troca, use «Mudar comida e remédio», no Plantão do hóspede, e confirme lá as duas doses perto.» No Plantão e na Ficha, a frase de sempre |
+
 ## O que mudou em 10/out/2026 (v 2026-10-09-15) — O peso, o recado à veterinária e o Cuidado Vet: corrigir, anular e desfazer (S3 da revisão tela por tela, parte 2)
 
 > Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) no peso, no recado à veterinária dos Vencimentos e no Cuidado Vet. Ela não cria tela nova no menu. Regra de ouro: nada é apagado (o que sai fica riscado, com quem, quando e o motivo), e a dose do vermífugo e o alarme do remédio seguem o dado corrigido.
