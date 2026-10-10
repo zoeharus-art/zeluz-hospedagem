@@ -5174,13 +5174,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-16"></script>
+<script src="resposta-tutor.js?v=2026-10-09-17"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-16"></script>
+<script src="painel-logica.js?v=2026-10-09-17"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5192,7 +5192,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-16"></script>
+<script src="financeiro-logica.js?v=2026-10-09-17"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -6891,7 +6891,7 @@
 
   // ---- Modal de lançamento ----
   var repPelSel=null, repModoAtual='dia', repMotivoAtual='', REP_LANCANDO=false, REP_LANC_GER=0;
-  function repAbrirLancar(pel){
+  function repAbrirLancar(pel, pre){
     if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão lançam reposição.'); return; }
     repPelSel=pel||null; repModoAtual='dia'; repMotivoAtual='';
     document.getElementById('repModal').classList.add('on');
@@ -6914,6 +6914,11 @@
     repAlgunsDatas=[''];
     var _ba=document.getElementById('repBlocoAlguns'); if(_ba) _ba.style.display='none';
     repAlgunsDesenhar();
+    // 6.60: «Lançar o período certo» (depois de «Estornar o lote») e a falta avisada dos Lançamentos do dia
+    // abrem a janela já preenchida; sem `pre`, como sempre (e o lote corrigido fica para trás).
+    REP_CORRIGE_LOTE='';
+    var _tt=document.getElementById('repTitulo'); if(_tt) _tt.textContent='Lançar falta avisada';
+    if(pre && typeof pre==='object') repLancarPreencher(pre);
     // O recesso da Gestão entra na conta do feriado (6.43): quando a lista chega, a prévia é refeita.
     repFeriadosBuscar(function(){
       if(repModoAtual==='periodo') repPreverDias(); else if(repModoAtual==='alguns') repPreverAlguns();
@@ -7441,6 +7446,8 @@
     if(autVaga && regs.length) regs[0].autorizacao=autVaga;
     // A REGRA DAS 24 HORAS (6.38): toda marcação nova grava o dia marcado em prazo24h.
     if(regs.length && regs[0].volta) regs[0].prazo24h=regs[0].volta;
+    // 6.60 (AC2.4): o período certo, lançado depois de «Estornar o lote», leva o lote que ele corrige.
+    if(REP_CORRIGE_LOTE) regs.forEach(function(r){ r.corrige_lote=REP_CORRIGE_LOTE; });
     // Saldo lido ANTES de gravar: o listener local do Firebase já terá somado os créditos
   // novos quando o .then rodar — somar de novo dobraria o número (auditoria, 31/ago).
   const _saldoAntes=repSaldoReposicao(p);   // 6.38: a troca não entra no saldo de reposição
@@ -7939,8 +7946,9 @@
       var zel=(escolheu==='zeluz');
       var mot=((await zTexto(zel?'A Zêluz desmarcou — por quê?':'Desmarcar sem contar — por quê?',
         [cm.troca?'A troca vira reposição: não conta como usada.':'A reposição não conta como usada: volta a ficar sem dia.', 'Fica no Extrato com o seu nome e o motivo.'],
-        {rotulo:zel?'Motivo (ex.: a casa lotou, falta de equipe)':'Motivo (ex.: o FILHOt estava doente, com receita)', botao:'Desmarcar sem contar', minimo:3, cor:'#234D67'}))||'').trim();
-      if(mot.length<3){ if(mot) alert('Escreva o motivo (pelo menos 3 letras). Nada foi mudado.'); return; }
+        {rotulo:zel?'Motivo, em pelo menos 4 palavras (ex.: a casa lotou, falta de equipe)':'Motivo, em pelo menos 4 palavras (ex.: o FILHOt estava doente, com receita)', botao:'Desmarcar sem contar', validar:repMotivoErro, cor:'#234D67'}))||'').trim();
+      var mvD=repMotivoErro(mot);   // 6.60 (AC8): conferido de novo aqui — sem motivo válido, nada é gravado
+      if(mvD){ if(mot) alert(mvD+' Nada foi mudado.'); return; }
       var marcaZ=Object.assign(zel?{zeluz:{quem:quemD, motivo:mot}}:{excecao:{quem:quemD, motivo:mot}}, cm.troca?{virou_reposicao:true}:{}, marcaAviso);
       var livZ=repLivresParaMarcar(p, -1);
       return tirarDia(marcaZ).then(function(){
@@ -8117,20 +8125,795 @@
     return ('Não consegui marcar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '
       +zErroGrav(e, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:''})).trim();
   }
+  // 6.60 (AC1, decisão 1): «Estornar» é a porta do cartaz da 6.57 — quem não lança reposição é barrado aqui,
+  // antes de qualquer pergunta (o console e a tela velha chamam esta mesma função); a assinatura é da Gestão.
   async function repEstornar(i,id){
-    const p=PELUDINHOS[i]; if(!p||!id) return;
-    if(!repPodeLancar()){ alert('Só a recepção, a Gestão ou a Supervisão estornam.'); return; }
-    const motivo=((await zTexto('Estornar este lançamento — por quê?',
-      ['O lançamento original NÃO é apagado: fica no extrato, e o estorno entra como uma linha nova explicando o erro.'],
-      {rotulo:'Motivo do estorno', botao:'Estornar', minimo:3}))||'').trim();
-    if(!motivo) return;
-    var gravou=false;
-    repGravar(p,{tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:motivo, estornaId:id}).then(function(){
-      gravou=true;
-      if(typeof audit==='function') audit('reposicao-estorno', pelNome(p), {motivo:motivo});
-      setTimeout(function(){ renderReposicao(); repAbrirExtrato(i); }, 300);
-    }).catch(function(e){ alert(('Não consegui estornar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true}))+' '
-      +zErroGrav(e, {nada:'Nada foi salvo.', unica:true, onde:'no Extrato', gravou:gravou, k1:true, hoje:''})).trim()); });
+    const p=PELUDINHOS[i]; if(!p||!id) return null;
+    if(!repPodeLancar()) return corrBarrar('estornar uma reposição', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(id)});
+    return repEstornarAbrir(i, id);
+  }
+  // =====================================================================================
+  // ===== STORY 6.60 — O LIVRO-CAIXA DE REPOSIÇÕES SEM APAGAR (S4 da revisão, parte 1) ===
+  // "O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app
+  //  possa ser excluído, modificado, alterado e etc." (Adriana, 09/out/2026)
+  // Corrigir a falta, estornar (também o lote), desfazer o estorno e desfazer a devolução, sem
+  // apagar nada: cada ação grava registros NOVOS que o livro-caixa (repSaldo e as contas da 6.38
+  // e da 6.46) já sabe contar — crédito, uso e estorno —, e nenhuma daquelas contas muda uma letra.
+  //  · o estorno de um crédito mora em est-{crédito} (dois aparelhos estornando: um estorno só);
+  //  · o crédito que volta (desfazer o estorno) e o da data corrigida moram em fa-{data}-N
+  //    (repFaltaChave), recusados quando a data já tem crédito vivo (6.46);
+  //  · o uso que volta (desfazer a devolução) mora em desfaz-{devolução};
+  //  · o que grava mais de um registro vai numa transação só no Extrato do FILHOt.
+  // O cartaz, o motivo de 4 palavras e a assinatura são os da 6.57 (corrAbrir): estornar, estornar o
+  // lote e desfazer o estorno pedem a senha da Gestão; corrigir no mesmo dia, quem lançou ou quem
+  // lança reposição. Todo registro novo leva o registro padrão da 6.57 em `corr` (nunca a senha).
+  // =====================================================================================
+  // O motivo de 4 palavras (regra 3): a régua da 6.53, chamada e nunca copiada — '' quando passa.
+  function repMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }
+  var REP_MOTIVOS_TELA=['cio', 'doente', 'viagem', 'atrasado', 'outro'];   // as 5 opções da janela «+ Falta avisada»
+  var REP_ESTORNO_USADO='Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1: o dia usado continua usado, e a casa absorve.';
+  var REP_NAO_ACHEI_EXTRATO='Não achei este lançamento no Extrato agora (a tela pode estar atrasada). Nada foi gravado: atualize a tela e tente de novo.';
+  // O livro-caixa abaixo de 0 com o número de verdade (2ª rodada, REQ-001): −1 continua a frase fixa de sempre.
+  function repNumNeg(n){ return '−'+Math.abs(Number(n)||0); }
+  function repEstornoUsadoTexto(depois){ return (depois===-1)?REP_ESTORNO_USADO:REP_ESTORNO_USADO.replace('−1', repNumNeg(depois)); }
+  function repLoteUsadoTexto(depois, usados){
+    return ((usados===1)?'Um destes créditos já foi usado':((usados>1)?(usados+' destes créditos já foram usados'):'Parte do saldo já foi usada'))
+      +'. Estornar o lote deixa o saldo de reposição em 0 e o livro-caixa em '+repNumNeg(depois)+': '
+      +((usados===1)?'o dia usado continua usado':'os dias usados continuam usados')+', e a casa absorve.';
+  }
+  function repDesfazerUsadoTexto(depois){ return 'O saldo de reposição já está em 0: desfazer a devolução deixa o livro-caixa em '+repNumNeg(depois)+'. O dia usado conta, e a casa absorve.'; }
+  function repDataCurta(iso){ return String(repBRdata(iso)).slice(0,5); }
+  function repMotivoRotulo(k){ k=String(k==null?'':k); return REP_MOTIVOS[k]||k||'—'; }
+  // O dia (no aparelho) em que um lançamento foi feito — "lançado hoje" (AC5.4, AC4.5).
+  function repDiaDoTs(ts){
+    var d=new Date(+ts||0); if(!ts || isNaN(d.getTime())) return '';
+    return d.getFullYear()+'-'+repP2(d.getMonth()+1)+'-'+repP2(d.getDate());
+  }
+  // "por Ana Teste, em 09/10/2026 às 10:15" — de quem e quando (o rastro do registro da 6.57).
+  function repPorQuando(quem, quando){ return (quem?(' por '+quem):'')+(quando?(' em '+quando):''); }
+  // Pura: o lançamento pelo id.
+  function repLancDe(L, id){ return (L||[]).filter(function(l){ return l && l._id===id; })[0]||null; }
+  // Pura: quem desfez o estorno — o crédito novo com restaura.estorno igual (AC3.5); null = ainda vale.
+  function repEstornoDesfeitoPor(L, idEst){ return (L||[]).filter(function(l){ return l && l.tipo==='credito' && l.restaura && l.restaura.estorno===idEst; })[0]||null; }
+  // Pura: quem desfez a devolução — o uso novo com restaura.devolucao igual (AC4.2); null = ainda vale.
+  function repDevolucaoDesfeitaPor(L, idDev){ return (L||[]).filter(function(l){ return l && l.tipo==='uso' && l.restaura && l.restaura.devolucao===idDev; })[0]||null; }
+  // Pura: o que a linha de estorno desfez — 'credito' (o estorno de uma falta), 'devolucao' (de um uso) ou ''
+  // (o órfão, e o estorno da hospedagem, que o próprio orçamento desfaz — S7).
+  function repEstornoTipo(L, est){
+    var alvo=(est && est.tipo==='estorno' && est.estornaId)?repLancDe(L, est.estornaId):null;
+    if(!alvo) return '';
+    if(alvo.tipo==='credito') return 'credito';
+    if(alvo.tipo==='uso' && String(alvo._id||'').indexOf('orc-')!==0) return 'devolucao';
+    return '';
+  }
+  // Pura: os créditos do mesmo lote («Um período» ou «Alguns dias»), por data; e os que ainda valem.
+  function repLoteDe(L, lote){
+    if(!lote) return [];
+    return (L||[]).filter(function(l){ return l && l.tipo==='credito' && l.lote===lote; })
+      .sort(function(a,b){ return String(a.data||'').localeCompare(String(b.data||'')) || (a.ts||0)-(b.ts||0); });
+  }
+  function repLoteVivos(L, lote){ var an=repAnulados(L); return repLoteDe(L, lote).filter(function(l){ return !an[l._id]; }); }
+  // Pura: o uso vivo ligado ao crédito (o «usado em», a troca cumprida, o desfecho).
+  function repCreditoUsoDe(L, id){
+    var an=repAnulados(L);
+    return (L||[]).filter(function(l){ return l && l.tipo==='uso' && !an[l._id] && l.credito===id; })[0]||null;
+  }
+  // Pura: outro crédito vivo de falta avisada na data (a regra do repCreditoVivoNaData, sobre a lista dada).
+  function repCreditoVivoOutro(L, iso, exceto){
+    var an=repAnulados(L);
+    return (L||[]).filter(function(l){ return l && l.tipo==='credito' && l._id!==exceto && String(l.data||'')===iso && !an[l._id] && !repSaidaAntecipada(l); })
+      .sort(function(a,b){ return (a.ts||0)-(b.ts||0); })[0]||null;
+  }
+  // O pedido de encaixe em aberto (na fila da Márcia) que usa este crédito (payload.credito_id).
+  function repPedidoQueUsa(p, credId){
+    var out=null;
+    try{
+      var ch=pelKey(p);
+      Object.keys(VAGAS_PEDIDOS||{}).sort().forEach(function(dia){
+        var o=((VAGAS_PEDIDOS||{})[dia]||{})[ch];
+        if(!out && o && (o.status==='pedido' || o.status==='autorizando') && o.payload && String(o.payload.credito_id||'')===String(credId)) out={dia:dia, pedido:o};
+      });
+    }catch(e){ out=null; } /* silencioso de propósito: sem a lista de pedidos, nenhum pedido em aberto */
+    return out;
+  }
+  // A data digitada no cartaz: DD/MM/AAAA (ou AAAA-MM-DD) → AAAA-MM-DD; '' se não for uma data de verdade.
+  function repDataDoCampo(v){
+    v=String(v==null?'':v).trim();
+    var m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v), iso='';
+    if(m) iso=m[3]+'-'+repP2(m[2])+'-'+repP2(m[1]);
+    else if(/^\d{4}-\d{2}-\d{2}$/.test(v)) iso=v;
+    if(!iso) return '';
+    var d=new Date(iso+'T12:00:00');
+    if(isNaN(d.getTime()) || (d.getFullYear()+'-'+repP2(d.getMonth()+1)+'-'+repP2(d.getDate()))!==iso) return '';
+    return iso;
+  }
+  // O motivo escolhido no cartaz (o rótulo) → a chave; o rótulo antigo (Zêluz fechada…) vale se não mudou.
+  function repMotivoDoRotulo(rot, atual){
+    var r=jsNorm(String(rot==null?'':rot).trim()), k=REP_MOTIVOS_TELA.filter(function(c){ return jsNorm(REP_MOTIVOS[c])===r; })[0]||'';
+    if(!k && atual && jsNorm(repMotivoRotulo(atual))===r) k=String(atual);
+    return k;
+  }
+  // A TRANSAÇÃO NO EXTRATO DO FILHOt (daycare/reposicao/{chave}/lancamentos): `decide(L)` lê o Extrato de
+  // agora e devolve {recusa:'texto'} (nada é gravado) ou {aplica:function(copia){…}, …}. Pura: o Firebase
+  // pode repeti-la quando outro aparelho grava no mesmo Extrato; o porquê da recusa fica fora dela, para a
+  // tela. Tudo ou nada. O nó vazio devolve null: o servidor responde com o que tem (nada é gravado).
+  function repTransacaoExtrato(p, decide){
+    if(!p) return Promise.reject(new Error('sem o peludinho'));
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var res=null;
+    return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos').transaction(function(atual){
+      res=null;
+      if(!atual || typeof atual!=='object'){ res={recusa:REP_NAO_ACHEI_EXTRATO}; return null; }
+      var L=Object.keys(atual).map(function(k){ return Object.assign({_id:k}, atual[k]); });
+      var d=decide(L)||{recusa:REP_NAO_ACHEI_EXTRATO};
+      res=d;
+      if(d.recusa) return;
+      var novo=JSON.parse(JSON.stringify(atual));
+      d.aplica(novo);
+      return novo;
+    }).then(function(r){
+      var ok=!!(r && r.committed) && !!res && !res.recusa;
+      return {ok:ok, recusa:(res && res.recusa)||'', info:res||{}};
+    });
+  }
+  // Depois de uma ação: a lista de Reposições, o Extrato aberto e a ficha aberta se redesenham.
+  function repDepoisDeMudar(i){
+    var refaz=function(){
+      try{ renderReposicao(); }catch(e){ /* silencioso de propósito: a tela de Reposições pode não estar aberta */ }
+      try{ var m=document.getElementById('repExtratoModal'); if(m && m.classList && m.classList.contains('on')) repAbrirExtrato(i); }catch(e){ /* silencioso de propósito: o Extrato pode já ter sido fechado */ }
+      try{ if(typeof pelAtual!=='undefined' && pelAtual && PELUDINHOS[i]===pelAtual && typeof renderPelFicha==='function') renderPelFicha(); }catch(e){ /* silencioso de propósito: a ficha pode já ter sido fechada */ }
+    };
+    try{ setTimeout(refaz, 300); }catch(e){ refaz(); }
+  }
+  function repBanhoSeHoje(datas){
+    // A falta de HOJE entrou, saiu ou mudou de data: o aviso do banho de quem faltou se refaz (só chamado, como em repConfirmar).
+    try{ if((datas||[]).some(function(d){ return d===dcDataKey(); }) && typeof banhoFaltaAgendar==='function') banhoFaltaAgendar(); }catch(e){} /* silencioso de propósito: o aviso volta na próxima mudança da chamada */
+  }
+  function repRastro(acao, p, txt){
+    try{ if(typeof audit==='function') audit(acao, txt, {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''), pet:pelNome(p)}); }
+    catch(e){ /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */ }
+  }
+  // A CONEXÃO CAIU DEPOIS DE ENVIAR (2ª rodada, REL-002; a regra K2 da 6.48 e o QA646C-03 da 6.46): o SDK aborta com
+  // 'disconnect' a transação que já foi enviada, e ela pode ter entrado. Nunca «nada foi gravado»: a gravação devolve
+  // {incerto:true} (o cartaz da 6.57 vai para «O BANCO AINDA NÃO CONFIRMOU») e `depois`, que espera o registro aparecer
+  // no Extrato (o ouvinte de daycare/reposicao, que se acerta sozinho quando a conexão volta) para escrever o rastro.
+  // Se ele não aparecer em 10 minutos, não entrou: o rastro não é escrito e o cartaz já mandou conferir.
+  var REP_ESPERA_MS=3000, REP_ESPERA_VEZES=200;
+  function repEsperaNoExtrato(p, achou){
+    return new Promise(function(fim){
+      var n=0, olha=function(){
+        var x=null; try{ x=achou(repLancamentos(p)||[]); }catch(e){ x=null; } /* silencioso de propósito: sem o Extrato lido, olha de novo */
+        if(x){ fim(x); return; }
+        if(++n>=REP_ESPERA_VEZES){ fim(null); return; }
+        try{ setTimeout(olha, REP_ESPERA_MS); }catch(e){ fim(null); } /* silencioso de propósito: sem relógio, não há como esperar */
+      };
+      try{ setTimeout(olha, REP_ESPERA_MS); }catch(e){ fim(null); } /* silencioso de propósito: sem relógio, não há como esperar */
+    });
+  }
+  // Pura: os lançamentos que levam ESTE registro da 6.57 (no corr, ou numa correção do próprio nó).
+  function repDoRegistro(L, reg){
+    var meu=function(c){ return !!(c && c.ts===reg.ts && c.oque===reg.oque && c.por===reg.por); };
+    return (L||[]).filter(function(l){
+      if(!l) return false;
+      if(meu(l.corr)) return true;
+      var cr=l.correcoes||{}; return Object.keys(cr).some(function(k){ return meu((cr[k]||{}).corr); });
+    });
+  }
+  function repIncerto(e, p, reg, quandoEntrou){
+    var depois=repEsperaNoExtrato(p, function(L){ var x=repDoRegistro(L, reg); return x.length?{L:L, regs:x}:null; }).then(function(v){
+      if(!v) return {ok:false, erro:e};
+      try{ quandoEntrou(v); }catch(x){ _logFalhaGrav('o rastro da reposição que entrou depois da queda da conexão', x); }
+      return {ok:true};
+    });
+    return {ok:false, erro:e, incerto:true, depois:depois};
+  }
+  function repJaEstornadaTexto(ex){
+    ex=ex||{}; var q=repQuemDe(ex), qd=repQuandoDe(ex.ts);
+    return 'Esta falta já foi estornada'+((q||qd)?(' ('+(q?('por '+q):'')+(q&&qd?', ':'')+(qd?('em '+qd):'')+')'):'')+'. Nada foi gravado de novo.';
+  }
+  // ===== AC1 — ESTORNAR: A CASCATA À VISTA ===============================================
+  function repEstornarCascata(p, cred, L){
+    var out=[], quem=repQuemDe(cred), qd=repQuandoDe(cred.ts), hoje=repHojeISO();
+    out.push('O crédito da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(quem?(', lançado por '+quem):'')+(qd?(' em '+qd):'')+'.');
+    if(repTrocaViva(cred)){
+      var de=String((cred.troca||{}).de||cred.data||''), para=String(cred.troca.para||'');
+      out.push('É uma troca ('+repDataCurta(de)+' → '+repDataCurta(para)+'): estornar tira a falta avisada de '+repDataCurta(de)+' e o dia novo '+repDataCurta(para)
+        +', cuja vaga fica livre. Se '+repDataCurta(de)+' ainda não passou, '+(repEhFemea(p)?'ela':'ele')+' volta a vir nesse dia.');
+    } else if(cred.volta && String(cred.volta)>=hoje)
+      out.push('O dia de repor '+repDataCurta(cred.volta)+' sai junto: a vaga fica livre. Estornar não é desmarcar: a regra das 24 horas não conta nada aqui.');
+    var ped=repPedidoQueUsa(p, cred._id);
+    if(ped) out.push('O pedido de encaixe de '+repDataCurta(ped.dia)+', que usa esta falta, continua na fila da Márcia: peça a ela para recusar o pedido.');
+    out.push(repPlanNaJanela(cred.data)?('A falta avisada de '+repDataCurta(cred.data)+' sai da planilha na próxima conferência (até '+DASH_AUTO_MIN+' min).')
+      :'A planilha daquele dia já é história: nada muda nela.');
+    var est={_id:'est-'+cred._id, tipo:'estorno', estornaId:cred._id};
+    var s=repSaldoReposicao(p), dep=repSaldoRepDepois(p, [est], null, s);
+    out.push('Saldo de reposição: '+s+' → '+dep+'.');
+    var livro=repSaldoDe((L||[]).concat([est]));
+    return {linhas:out, usado:livro<0, livro:livro, antes:s, depois:dep};
+  }
+  function repEstornarAbrir(i, id){
+    var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
+    var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
+    if(!cred || cred.tipo!=='credito'){ alert('Não achei esta falta avisada no Extrato. Atualize a tela.'); return Promise.resolve(null); }
+    if(an[id]){ alert(repJaEstornadaTexto(repLancDe(L, 'est-'+id)||{})); return Promise.resolve(null); }
+    var cas=repEstornarCascata(p, cred, L);
+    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar a falta de '+repDataCurta(cred.data), botao:'Estornar', tituloOk:'Estornado',
+      oque:'a falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id, id:String(id)},
+      estado:'valendo', cascata:cas.linhas, aviso:cas.usado?repEstornoUsadoTexto(cas.livro):'',
+      gravar:function(reg){ return repEstornarGravar(p, cred, reg); }}).then(function(r){
+        if(r && r.ok) repDepoisDeMudar(i);
+        return r;
+      });
+  }
+  // O estorno de sempre ({tipo:'estorno', data:hoje, motivo:'estorno', obs, estornaId}), pelo repGravar, na chave
+  // fixa est-{crédito}: dois aparelhos estornando a mesma falta gravam UM estorno. «Estornado» só com o ok.
+  function repEstornarGravar(p, cred, reg){
+    var mot=String(reg.motivo||'');
+    var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:mot, estornaId:cred._id, corr:reg};
+    var feito=function(){
+      repRastro('reposicao-estorno', p, pelNome(p)+' — estornada a falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+'), assinado por '+(reg.por||'-')+': '+mot);
+      repBanhoSeHoje([cred.data]);
+    };
+    return repGravar(p, est, 'est-'+cred._id).then(function(x){
+      if(x && x.committed===false) return {ok:false, erro:repJaEstornadaTexto(x.existente)};
+      feito();
+      return {ok:true};
+    }, function(e){ return repConexaoCaiu(e)?repIncerto(e, p, reg, feito):{ok:false, erro:e}; });
+  }
+  // ===== AC2 — ESTORNAR O LOTE ===========================================================
+  function repLoteEstornarAbrir(i, id){
+    var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
+    if(!repPodeLancar()) return Promise.resolve(corrBarrar('estornar um lote de faltas avisadas', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(id)}));
+    var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
+    var lote=(cred && cred.tipo==='credito' && !an[id])?cred.lote:'';
+    var vivos=repLoteVivos(L, lote), todos=repLoteDe(L, lote);
+    if(vivos.length<2){ alert('Este lote não tem mais de um dia valendo. Use «Estornar» na linha da falta.'); return Promise.resolve(null); }
+    var mortos=todos.filter(function(l){ return an[l._id]; });
+    var ests=vivos.map(function(l){ return {_id:'est-'+l._id, tipo:'estorno', estornaId:l._id}; });
+    var usados=0;
+    var linhas=vivos.map(function(l){ var q=repQuemDe(l), qd=repQuandoDe(l.ts), u=repCreditoUsoDe(L, l._id); if(u) usados++;
+      return 'A falta de '+repBRdata(l.data)+(q?(', lançada por '+q):'')+(qd?(' em '+qd):'')+(u?(' — já usada em '+repDataCurta(u.data)):'')+'.'; });
+    if(mortos.length) linhas.push('Já estavam estornadas (ficam como estão): '+repListaDatasE(mortos.map(function(l){ return l.data; }))+'.');
+    var prim=todos[0]||{};
+    if(prim.volta && String(prim.volta)>=repHojeISO() && !an[prim._id])
+      linhas.push('O dia de repor '+repDataCurta(prim.volta)+' sai junto: a vaga fica livre. Estornar não é desmarcar: a regra das 24 horas não conta nada aqui.');
+    var naJ=vivos.filter(function(l){ return repPlanNaJanela(l.data); }).map(function(l){ return l.data; });
+    linhas.push(naJ.length?('As faltas avisadas de '+repListaDatasE(naJ)+' saem da planilha na próxima conferência (até '+DASH_AUTO_MIN+' min).')
+      :'A planilha desses dias já é história: nada muda nela.');
+    var s=repSaldoReposicao(p), dep=repSaldoRepDepois(p, ests, null, s);
+    linhas.push('Saldo de reposição: '+s+' → '+dep+'.');
+    var livro=repSaldoDe(L.concat(ests)), usado=livro<0;
+    var info={};
+    var de=(cred.periodo&&cred.periodo.de)||vivos[0].data, ate=(cred.periodo&&cred.periodo.ate)||vivos[vivos.length-1].data;
+    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar o lote ('+vivos.length+' dias)', botao:'Estornar o lote', tituloOk:'Lote estornado',
+      oque:'o lote de faltas avisadas de '+pelNome(p)+' ('+repBRdata(de)+' a '+repBRdata(ate)+')', original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos', id:String(lote)},
+      estado:'valendo', cascata:linhas, aviso:usado?repLoteUsadoTexto(livro, usados):'',
+      gravar:function(reg){ return repLoteEstornarGravar(p, lote, reg, vivos.map(function(l){ return l._id; }), info); }}).then(function(r){
+        if(r && r.ok){ repDepoisDeMudar(i); repLoteDepois(p, cred, todos, info); }
+        return r;
+      });
+  }
+  // Numa transação só: um estorno para cada crédito do lote que o cartaz mostrou E que ainda vale NAQUELA hora, com o
+  // mesmo lote_estorno. O que outro aparelho estornou no meio fica de fora; o dia que entrou no lote depois que o cartaz
+  // abriu (corrigido ou restaurado em outro aparelho) também fica de fora, porque a Gestão não o viu ao assinar (2ª rodada,
+  // REL-003). A confirmação diz os dois.
+  function repLoteEstornarGravar(p, lote, reg, vistos, info){
+    var LE='E'+Date.now(), hoje=repHojeISO(), quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now(), mot=String(reg.motivo||'');
+    var feito=function(ids, datas){
+      repRastro('reposicao-lote-estornado', p, pelNome(p)+' — estornado o lote de '+ids.length+' faltas avisadas ('+repListaDatasE(datas)+'), assinado por '+(reg.por||'-')+': '+mot);
+      repBanhoSeHoje(datas);
+    };
+    return repTransacaoExtrato(p, function(L){
+      var daHora=repLoteVivos(L, lote), visto=function(l){ return (vistos||[]).indexOf(l._id)>=0; };
+      var vivos=daHora.filter(visto), novos=daHora.filter(function(l){ return !visto(l); });
+      if(!vivos.length) return {recusa:'Os dias deste lote já foram estornados em outro aparelho. Nada foi gravado.'};
+      if(vivos.some(function(l){ return !!repLancDe(L, 'est-'+l._id); })) return {recusa:REP_NAO_ACHEI_EXTRATO};   // nada se apaga: um est- que já existe não é regravado
+      return {ids:vivos.map(function(l){ return l._id; }), datas:vivos.map(function(l){ return l.data; }), novos:novos.map(function(l){ return l.data; }), aplica:function(o){
+        vivos.forEach(function(l){ o['est-'+l._id]={tipo:'estorno', data:hoje, motivo:'estorno', obs:mot, estornaId:l._id, lote_estorno:LE, corr:reg, quem:quem, ts:ts}; });
+      }};
+    }).then(function(r){
+      if(!r.ok) return {ok:false, erro:r.recusa||'a gravação não confirmou'};
+      info.ids=r.info.ids; info.datas=r.info.datas; info.novos=r.info.novos||[]; info.fora=(vistos||[]).filter(function(x){ return r.info.ids.indexOf(x)<0; });
+      feito(r.info.ids, r.info.datas);
+      return {ok:true};
+    }, function(e){
+      if(!repConexaoCaiu(e)) return {ok:false, erro:e};
+      return repIncerto(e, p, reg, function(v){
+        var meus=v.regs.filter(function(l){ return l.tipo==='estorno' && l.lote_estorno===LE; });
+        feito(meus.map(function(l){ return l.estornaId; }), meus.map(function(l){ return (repLancDe(v.L, l.estornaId)||{}).data||''; }).filter(Boolean));
+      });
+    });
+  }
+  // A confirmação do lote: o que entrou, o que ficou de fora e «Lançar o período certo» (AC2.4).
+  function repLoteDepois(p, cred, todos, info){
+    try{ if(typeof corrFechar==='function' && CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(e){ /* silencioso de propósito: o cartaz pode já ter sido fechado */ }
+    var foraD=(info.fora||[]).map(function(id){ return (repLancDe(todos, id)||{}).data||''; }).filter(Boolean);
+    var datas=todos.map(function(l){ return l.data; });
+    var pre={modo:cred.periodo?'periodo':'alguns', de:(cred.periodo||{}).de||'', ate:(cred.periodo||{}).ate||'', datas:datas,
+      motivoK:cred.motivo, obs:cred.obs||'', corrigeLote:cred.lote};
+    zEscolha('LOTE ESTORNADO',
+      ['Estornadas: '+repListaDatasE(info.datas||[])+'.'].concat(foraD.length?['Ficou de fora (já tinha sido estornada em outro aparelho): '+repListaDatasE(foraD)+'.']:[])
+        .concat((info.novos||[]).length?['Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): '+repListaDatasE(info.novos)+'. Se também está errada, use «Estornar» na linha dela.']:[])
+        .concat(['Para lançar as datas certas, toque em «Lançar o período certo»: a janela abre com '+pelNome(p)+', o modo, o motivo, a observação e as datas preenchidos. Nada é lançado sem o seu «Lançar reposição».']),
+      [{t:'Lançar o período certo', cor:'#234D67', fn:function(){ repAbrirLancar(p, pre); }}, {t:'Fechar', cor:'#6b5f4b', fn:function(){}}], {corTitulo:'#234D67'});
+  }
+  // ===== AC3 — DESFAZER O ESTORNO (um crédito novo; o estorno fica) ======================
+  function repEstornoDesfazerRecusa(p, cred, est, L){
+    if(cred.troca || cred.nasceu_troca) return 'Este estorno desfez uma troca. Para refazer, use «+ Marcar troca».';
+    if(est.corrigidoPara) return 'Este estorno é de uma correção de data. Para voltar a data, use «Corrigir» no crédito novo.';
+    var ja=repEstornoDesfeitoPor(L, est._id), jr=ja?(ja.corr||{}):null;
+    if(ja) return 'Este estorno já foi desfeito'+repPorQuando(jr.por||repQuemDe(ja), jr.quando||repQuandoDe(ja.ts))+'. Nada foi gravado de novo.';
+    var fer=repFeriadoNome(cred.data);
+    if(fer) return repBRdata(cred.data)+' é feriado ('+fer+'). A Zêluz não abre e o dia não é reposto: nada foi lançado.';
+    var outro=repCreditoVivoOutro(L, String(cred.data||''), cred._id);
+    if(outro) return 'A falta de '+repDataCurta(cred.data)+' já foi lançada de novo (por '+(repQuemDe(outro)||'sem nome')+', em '+(repQuandoDe(outro.ts)||'hora sem registro')+'). Desfazer este estorno daria dois créditos para o mesmo dia. Nada foi gravado.';
+    return '';
+  }
+  function repEstornoDesfazerAbrir(i, idEst){
+    var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
+    if(!repPodeLancar()) return Promise.resolve(corrBarrar('desfazer um estorno de reposição', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(idEst)}));
+    var L=repLancamentos(p)||[], est=repLancDe(L, idEst), cred=est?repLancDe(L, est.estornaId):null;
+    if(!est || !cred || cred.tipo!=='credito'){ alert('Não achei este estorno no Extrato. Atualize a tela.'); return Promise.resolve(null); }
+    if(repSaidaAntecipada(cred)){ alert('O crédito da saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
+    var rec=repEstornoDesfazerRecusa(p, cred, est, L);
+    if(rec){ if(typeof zAlertao==='function') zAlertao('NÃO DÁ PARA DESFAZER ESTE ESTORNO', [rec], {botao:'Entendi'}); return Promise.resolve({ok:false, recusa:rec}); }
+    var novo={_id:'novo-volta', tipo:'credito', data:cred.data};
+    var s=repSaldoReposicao(p), dep=repSaldoRepDepois(p, [novo], null, s);
+    var obs=String(cred.obs||'').trim();
+    var volta=['O crédito da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(obs?(', com a observação «'+obs+'»'):'')+'.']
+      .concat(cred.volta?['Não volta: o dia de repor que estava marcado ('+repDataCurta(cred.volta)+'). Marque de novo em «Marcar reposição».']:[])
+      .concat(['Saldo de reposição: '+s+' → '+dep+'.']);
+    var fim={};
+    return corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Desfazer o estorno da falta de '+repDataCurta(cred.data), botao:'Desfazer o estorno', tituloOk:'Estorno desfeito',
+      oque:'o estorno da falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+idEst, id:String(idEst)},
+      estado:'estornada', paraEstado:'valendo de novo (um crédito novo)', volta:volta,
+      gravar:function(reg){ return repEstornoDesfazerGravar(p, cred, est, reg, fim); }}).then(function(r){
+        if(r && r.ok){
+          repDepoisDeMudar(i);
+          try{ if(CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(e){ /* silencioso de propósito: o cartaz pode já ter sido fechado */ }
+          repMsgModal('Estorno desfeito', [pelNome(p)+' tem de volta o crédito da falta de '+repBRdata(cred.data)+'. Saldo agora: '+dep+'.',
+            'Assinado por '+((r.reg||{}).por||'-')+'. O estorno continua no Extrato, com quem desfez e o motivo.'],
+            repMensagem(p, 'credito', {qtd:1, data:cred.data, saldo:dep}), repTelDe(p));
+        }
+        return r;
+      });
+  }
+  // Numa transação só: o crédito novo na chave da falta (fa-{data}-N), com restaura; recusado se a data já
+  // tem crédito vivo ou se o mesmo estorno já foi desfeito (dois aparelhos: um crédito só).
+  function repEstornoDesfazerGravar(p, cred, est, reg, fim){
+    var quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now();
+    var feito=function(chave){
+      repRastro('reposicao-estorno-desfeito', p, pelNome(p)+' — desfeito o estorno da falta de '+repBRdata(cred.data)+': o crédito voltou ('+chave+'), assinado por '+(reg.por||'-')+': '+String(reg.motivo||''));
+      repBanhoSeHoje([cred.data]);
+    };
+    return repTransacaoExtrato(p, function(L){
+      var e2=repLancDe(L, est._id), c2=e2?repLancDe(L, e2.estornaId):null;
+      if(!e2 || !c2) return {recusa:REP_NAO_ACHEI_EXTRATO};
+      var rec=repEstornoDesfazerRecusa(p, c2, e2, L); if(rec) return {recusa:rec};
+      var chave=repFaltaChave(c2.data, L);
+      var novo={tipo:'credito', data:c2.data, motivo:c2.motivo||'outro', obs:c2.obs||'', restaura:{estorno:e2._id, credito:c2._id}, corr:reg, quem:quem, ts:ts};
+      ['lote', 'periodo', 'alguns'].forEach(function(k){ if(c2[k]!==undefined && c2[k]!==null && c2[k]!=='') novo[k]=c2[k]; });
+      return {chave:chave, aplica:function(o){ o[chave]=novo; }};
+    }).then(function(r){
+      if(!r.ok) return {ok:false, erro:r.recusa||'a gravação não confirmou'};
+      fim.chave=r.info.chave;
+      feito(r.info.chave);
+      return {ok:true};
+    }, function(e){ return repConexaoCaiu(e)?repIncerto(e, p, reg, function(v){ feito(v.regs[0]._id); }):{ok:false, erro:e}; });
+  }
+  // ===== AC4 — DESFAZER A DEVOLUÇÃO (um uso novo; a devolução fica) ======================
+  function repDevolucaoDesfazerRecusa(dev, uso, L){
+    var ja=repDevolucaoDesfeitaPor(L, dev._id), jr=ja?(ja.corr||{}):null;
+    if(ja) return 'Esta devolução já foi desfeita'+repPorQuando(jr.por||repQuemDe(ja), jr.quando||repQuandoDe(ja.ts))+'. Nada foi gravado de novo.';
+    if(dev.so_lancamento) return 'A vinda continua pelo dia marcado: desfazer contaria o mesmo dia duas vezes.';
+    if(dev.origem==='lancamentos' || /^Tirada dos Lançamentos do dia/.test(String(dev.obs||'')))
+      return 'Esta reposição saiu dos Lançamentos do dia. Para ela voltar, lance a Reposição de novo lá: o app desconta de novo.';
+    if(repDiaTemUso(L, uso.data)) return 'O dia '+repDataCurta(uso.data)+' já tem uma vinda registrada: desfazer contaria duas.';
+    // 2ª rodada (REL-001): depois da devolução, o crédito ficou livre — e pode ter sido usado ou marcado de novo
+    var an=repAnulados(L), c=uso.credito?repLancDe(L, uso.credito):null;
+    if(c && c.tipo==='credito' && !an[c._id]){
+      var outro=(L||[]).filter(function(l){ return l && l.tipo==='uso' && !an[l._id] && l.credito===c._id && l._id!==uso._id; })[0];
+      if(outro) return 'O crédito desta reposição já foi usado de novo em '+repDataCurta(outro.data)+': desfazer contaria duas vezes. Nada foi gravado.';
+      if(c.volta && String(c.volta)!==String(uso.data||''))
+        return 'O crédito desta reposição já foi marcado de novo para '+repDataCurta(c.volta)+': desmarque esse dia antes de desfazer a devolução. Nada foi gravado.';
+    }
+    return '';
+  }
+  // Quem assina: a Gestão; ou quem devolveu (o mesmo nome), no mesmo dia, com a própria senha. De dia
+  // anterior, a devolução da Gestão (desfecho) e a gravada pelo login de posto: só a Gestão (AC4.5).
+  function repDevolucaoQuemAssina(dev){
+    var nome=repQuemDe(dev);
+    var propria=!!(nome && repDiaDoTs(dev.ts)===repHojeISO() && !dev.devolvido_gestao && !corrEhPosto(nome));
+    return {nivel:propria?'propria':'gestao', nome:propria?nome:''};
+  }
+  function repDevolucaoDesfazerAbrir(i, idDev){
+    var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
+    if(!repPodeLancar()) return Promise.resolve(corrBarrar('desfazer uma devolução de reposição', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(idDev)}));
+    var L=repLancamentos(p)||[], dev=repLancDe(L, idDev), uso=dev?repLancDe(L, dev.estornaId):null;
+    if(!dev || !uso || uso.tipo!=='uso'){ alert('Não achei esta devolução no Extrato. Atualize a tela.'); return Promise.resolve(null); }
+    var rec=repDevolucaoDesfazerRecusa(dev, uso, L);
+    if(rec){ if(typeof zAlertao==='function') zAlertao('NÃO DÁ PARA DESFAZER ESTA DEVOLUÇÃO', [rec], {botao:'Entendi'}); return Promise.resolve({ok:false, recusa:rec}); }
+    var qa=repDevolucaoQuemAssina(dev);
+    var novo={_id:'novo-desfaz', tipo:'uso', data:uso.data, motivo:uso.motivo, credito:uso.credito||''};
+    var s=repSaldoReposicao(p), dep=repSaldoRepDepois(p, [novo], null, s);
+    var df=(uso.desfecho==='nao_veio')?', com o desfecho «não veio»':((uso.desfecho==='fora_prazo')?', com o desfecho «desmarcada fora do prazo»':'');
+    var livro=repSaldoDe(L.concat([novo]));   // a rede de segurança (REL-001): o livro-caixa abaixo de 0 é dito
+    return corrAbrir({acao:'reabrir', nivel:qa.nivel, capacidade:'gestao-role', assinaNome:qa.nome, titulo:'Desfazer a devolução de '+repDataCurta(uso.data),
+      botao:'Desfazer a devolução', tituloOk:'Devolução desfeita',
+      oque:'a devolução da reposição de '+repBRdata(uso.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+idDev, id:String(idDev)},
+      estado:'devolvida', paraEstado:'usada de novo (um uso novo)', aviso:(livro<0)?repDesfazerUsadoTexto(livro):'',
+      volta:['O uso de '+repBRdata(uso.data)+' (−1)'+df+'.', 'Saldo de reposição: '+s+' → '+dep+'.', 'Se o tutor recebeu a mensagem da devolução, avise-o: o app não manda nada sozinho.'],
+      gravar:function(reg){ return repDevolucaoDesfazerGravar(p, dev, uso, reg); }}).then(function(r){
+        if(r && r.ok) repDepoisDeMudar(i);
+        return r;
+      });
+  }
+  // Numa transação só: o uso novo em desfaz-{devolução}, com o desfecho do uso devolvido; quando a devolução
+  // foi da Gestão de um desfecho, o crédito ganha volta_desmarcada.excecao_desfeita (nenhum outro campo muda).
+  function repDevolucaoDesfazerGravar(p, dev, uso, reg){
+    var quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now();
+    // 2ª rodada (REL-004): quem assina é decidido de novo na gravação — o cartaz aberto antes da meia-noite e
+    // confirmado depois não deixa a própria senha assinar o que virou «de dia anterior»
+    if(repDevolucaoQuemAssina(dev).nivel==='gestao' && !podePapel('gestao-role', String(reg.papel||'')))
+      return Promise.resolve({ok:false, erro:'Passou da meia-noite: esta devolução agora é de dia anterior, e desfazer só a Gestão assina. Nada foi gravado.'});
+    var feito=function(desfezExcecao){
+      repRastro('reposicao-devolucao-desfeita', p, pelNome(p)+' — desfeita a devolução da reposição de '+repBRdata(uso.data)+': o uso voltou'
+        +(desfezExcecao?' (a exceção da Gestão também foi desfeita)':'')+', assinado por '+(reg.por||'-')+': '+String(reg.motivo||''));
+    };
+    return repTransacaoExtrato(p, function(L){
+      var d2=repLancDe(L, dev._id), u2=d2?repLancDe(L, d2.estornaId):null;
+      if(!d2 || !u2) return {recusa:REP_NAO_ACHEI_EXTRATO};
+      var rec=repDevolucaoDesfazerRecusa(d2, u2, L); if(rec) return {recusa:rec};
+      var chave='desfaz-'+d2._id;
+      if(repLancDe(L, chave)) return {recusa:'Esta devolução já foi desfeita. Nada foi gravado de novo.'};
+      var novo={tipo:'uso', data:u2.data, motivo:u2.motivo||'reposicao', obs:u2.obs||'', restaura:{devolucao:d2._id, uso:u2._id}, corr:reg, quem:quem, ts:ts};
+      if(u2.credito) novo.credito=u2.credito;
+      if(u2.desfecho) novo.desfecho=u2.desfecho;
+      if(u2.lanc) novo.lanc=u2.lanc;
+      var cid=(d2.devolvido_gestao && u2.desfecho && u2.credito && repLancDe(L, u2.credito))?u2.credito:'';
+      return {chave:chave, credito:cid, aplica:function(o){
+        o[chave]=novo;
+        if(cid) o[cid].volta_desmarcada=Object.assign({}, o[cid].volta_desmarcada||{}, {excecao_desfeita:reg});
+      }};
+    }).then(function(r){
+      if(!r.ok) return {ok:false, erro:r.recusa||'a gravação não confirmou'};
+      feito(!!r.info.credito);
+      return {ok:true};
+    }, function(e){
+      if(!repConexaoCaiu(e)) return {ok:false, erro:e};
+      return repIncerto(e, p, reg, function(v){
+        feito((v.L||[]).some(function(l){ var x=((l||{}).volta_desmarcada||{}).excecao_desfeita; return !!(x && x.ts===reg.ts && x.oque===reg.oque); }));
+      });
+    });
+  }
+  // ===== AC5 — CORRIGIR A FALTA AVISADA (sem perder o vínculo) ===========================
+  // Pura (com a lista de feriados e de pedidos): o porquê de a DATA não poder mudar para `iso`; '' = pode.
+  function repCorrigirDataRecusa(p, cred, iso, L){
+    if(cred.troca || cred.nasceu_troca) return 'É uma troca: desfaça a troca e marque de novo em «+ Marcar troca». O motivo e a observação podem mudar.';
+    var u=repCreditoUsoDe(L, cred._id);
+    if(u) return 'Este crédito já foi usado em '+repDataCurta(u.data)+': a data não muda. O motivo e a observação podem mudar.';
+    var ped=repPedidoQueUsa(p, cred._id);
+    if(ped) return 'O pedido de encaixe de '+repDataCurta(ped.dia)+' usa esta falta: decida ou retire o pedido antes de mudar a data.';
+    var fer=repFeriadoNome(iso);
+    if(fer) return repBRdata(iso)+' é feriado ('+fer+'). A Zêluz não abre e o dia não é reposto: nada foi lançado.';
+    var outro=repCreditoVivoOutro(L, iso, cred._id);
+    if(outro) return 'A falta avisada de '+repDataCurta(iso)+' já foi lançada (por '+(repQuemDe(outro)||'sem nome')+', em '+(repQuandoDe(outro.ts)||'hora sem registro')+'). Nada foi gravado.';
+    return '';
+  }
+  // A régua da tela (op.validar da 6.58): '' passa; o texto fica nos campos; {aviso} vai para o conferir.
+  function repCorrigirValidar(p, cred, valores, L){
+    var iso=repDataDoCampo(valores[0]);
+    if(!iso) return 'Data inválida: escreva a data da falta como DD/MM/AAAA (por exemplo, '+repBRdata(repHojeISO())+'). Nada foi gravado.';
+    if(!dataPlausivel(iso)) return 'Data inválida: '+repBRdata(iso)+' está fora do calendário do app. Nada foi gravado.';
+    if(!repMotivoDoRotulo(valores[1], cred.motivo)) return 'Escolha o motivo na lista. Nada foi gravado.';
+    if(iso===String(cred.data||'')) return {aviso:''};   // sem mudar a data, nenhum aviso (o de uma volta anterior sai)
+    var rec=repCorrigirDataRecusa(p, cred, iso, L); if(rec) return rec;
+    return {aviso:'A data muda de '+repDataCurta(cred.data)+' para '+repDataCurta(iso)+': o lançamento original fica riscado («corrigido para '+repDataCurta(iso)
+      +'») e entra um crédito na data certa, com o mesmo dia de repor. O saldo não muda.'};
+  }
+  function repCorrigirAbrir(i, id){
+    var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
+    if(!repPodeLancar()) return Promise.resolve(corrBarrar('corrigir uma falta avisada', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(id)}));
+    var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
+    if(!cred || cred.tipo!=='credito' || an[id]){ alert('Não achei esta falta avisada valendo no Extrato. Atualize a tela.'); return Promise.resolve(null); }
+    if(repSaidaAntecipada(cred)){ alert('O crédito da saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
+    var rot=repMotivoRotulo(cred.motivo), ops=REP_MOTIVOS_TELA.map(function(k){ return REP_MOTIVOS[k]; });
+    if(ops.indexOf(rot)<0) ops=[rot].concat(ops);
+    var quem=repQuemDe(cred), hoje=(repDiaDoTs(cred.ts)===repHojeISO());
+    var propria=hoje, nome=(propria && quem && !corrEhPosto(quem))?quem:'';
+    var fim={};
+    return corrAbrir({acao:'corrigir', nivel:propria?'propria':'gestao', capacidade:'lancar-reposicao', assinaNome:nome,
+      titulo:'Corrigir a falta de '+repDataCurta(cred.data), botao:'Gravar a correção',
+      oque:'a falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id, id:String(id)},
+      camposTexto:'Mude o que estiver errado e toque em «Continuar». A data muda num crédito novo, ligado a este; o dia de repor e o saldo ficam como estão.',
+      campos:[{c:'data', rotulo:'Data da falta (DD/MM/AAAA)', valor:repBRdata(cred.data)}, {c:'motivo', rotulo:'Motivo', valor:rot, opcoes:ops},
+        {c:'obs', rotulo:'Observação', valor:String(cred.obs||''), grande:true}],
+      validar:function(valores){ return repCorrigirValidar(p, cred, valores, repLancamentos(p)||[]); },
+      gravar:function(reg){ return repCorrigirGravar(p, cred, reg, fim); }}).then(function(r){
+        if(r && r.ok){
+          repDepoisDeMudar(i);
+          if(fim.data && fim.data!==cred.data){
+            try{ if(CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(e){ /* silencioso de propósito: o cartaz pode já ter sido fechado */ }
+            var s=repSaldoReposicao(p);
+            repMsgModal('Falta corrigida', [pelNome(p)+': a falta avisada passou de '+repBRdata(cred.data)+' para '+repBRdata(fim.data)+'. O saldo continua '+s+'.',
+              'Assinado por '+((r.reg||{}).por||'-')+'. Se o tutor recebeu a mensagem com a data antiga, mande esta, com a data certa.'],
+              repMensagem(p, 'credito', {qtd:1, data:fim.data, volta:cred.volta||'', saldo:s}), repTelDe(p));
+          }
+        }
+        return r;
+      });
+  }
+  // Só o motivo e a observação: o próprio nó muda, com correcoes/{id} (o antes, o depois e o registro).
+  // Com a data: numa transação só, o estorno do original (corrigidoPara) e o crédito na chave da data nova.
+  function repCorrigirGravar(p, cred, reg, fim){
+    var dep=reg.depois||{}, c0=cred;
+    var nData=('data' in dep)?repDataDoCampo(dep.data):String(c0.data||'');
+    var nMot=('motivo' in dep)?repMotivoDoRotulo(dep.motivo, c0.motivo):String(c0.motivo||'');
+    var nObs=('obs' in dep)?String(dep.obs||'').trim():String(c0.obs||'');
+    if(!nData || !nMot) return Promise.resolve({ok:false, erro:'a data ou o motivo não vieram certos do cartaz'});
+    // 2ª rodada (REL-004): «lançada hoje» é conferido de novo na gravação — o cartaz aberto antes da meia-noite e
+    // confirmado depois não deixa a própria senha assinar a correção que virou «de dia anterior»
+    if(repDiaDoTs(c0.ts)!==repHojeISO() && !podePapel('gestao-role', String(reg.papel||'')))
+      return Promise.resolve({ok:false, erro:'Passou da meia-noite: esta falta agora é de dia anterior, e a correção só a Gestão assina. Nada foi gravado.'});
+    var quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now(), hoje=repHojeISO(), idEst='est-'+c0._id;
+    var vivo=function(L){ var c=repLancDe(L, c0._id); return (c && c.tipo==='credito' && !repAnulados(L)[c._id])?c:null; };
+    var pr;
+    if(nData===String(c0.data||'')){
+      var cid='';
+      try{ cid=DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+c0._id+'/correcoes').push().key||''; }catch(e){ cid=''; } /* silencioso de propósito: sem a chave do banco, a hora faz a chave */
+      if(!cid) cid='c'+ts;
+      pr=repTransacaoExtrato(p, function(L){
+        var c=vivo(L); if(!c) return {recusa:'Esta falta foi estornada ou corrigida em outro aparelho. Nada foi gravado.'};
+        return {aplica:function(o){
+          var n=o[c0._id], antes={motivo:String(n.motivo||''), obs:String(n.obs||'')};
+          n.motivo=nMot; n.obs=nObs;
+          n.correcoes=Object.assign({}, n.correcoes||{}); n.correcoes[cid]={antes:antes, depois:{motivo:nMot, obs:nObs}, corr:reg};
+        }};
+      });
+    } else {
+      pr=repTransacaoExtrato(p, function(L){
+        var c=vivo(L); if(!c) return {recusa:'Esta falta foi estornada ou corrigida em outro aparelho. Nada foi gravado.'};
+        if(String(c.data||'')!==String(c0.data||'')) return {recusa:'A data desta falta mudou em outro aparelho. Nada foi gravado: atualize a tela.'};
+        if(repLancDe(L, idEst)) return {recusa:REP_NAO_ACHEI_EXTRATO};   // nada se apaga: um est- que já existe não é regravado
+        var rec=repCorrigirDataRecusa(p, c, nData, L); if(rec) return {recusa:rec};
+        var chave=repFaltaChave(nData, L);
+        var novo={tipo:'credito', data:nData, motivo:nMot, obs:nObs, quem:c.quem||'-', ts:c.ts||ts, corrige:{credito:c._id, estorno:idEst, de:String(c.data||'')}, corr:reg};
+        ['volta', 'prazo24h', 'volta_por', 'volta_ts', 'autorizacao', 'lote', 'periodo', 'alguns'].forEach(function(k){ if(c[k]!==undefined && c[k]!==null && c[k]!=='') novo[k]=c[k]; });
+        var est={tipo:'estorno', data:hoje, motivo:'estorno', obs:String(reg.motivo||''), estornaId:c._id, corrigidoPara:chave, corr:reg, quem:quem, ts:ts};
+        return {chave:chave, aplica:function(o){ o[idEst]=est; o[chave]=novo; }};
+      });
+    }
+    var feito=function(){
+      var mud=[];
+      if(nData!==String(c0.data||'')) mud.push('a data de '+repBRdata(c0.data)+' para '+repBRdata(nData));
+      if(nMot!==String(c0.motivo||'')) mud.push('o motivo de «'+repMotivoRotulo(c0.motivo)+'» para «'+repMotivoRotulo(nMot)+'»');
+      if(nObs!==String(c0.obs||'')) mud.push('a observação');
+      repRastro('reposicao-corrigida', p, pelNome(p)+' — corrigida a falta avisada de '+repBRdata(c0.data)+': '+(mud.join('; ')||'nada')+', assinado por '+(reg.por||'-')+': '+String(reg.motivo||''));
+      repBanhoSeHoje(nData!==String(c0.data||'')?[String(c0.data||''), nData]:[]);
+    };
+    return pr.then(function(r){
+      if(!r.ok) return {ok:false, erro:r.recusa||'a gravação não confirmou'};
+      fim.data=nData; fim.chave=r.info.chave||c0._id;
+      feito();
+      return {ok:true};
+    }, function(e){ return repConexaoCaiu(e)?repIncerto(e, p, reg, feito):{ok:false, erro:e}; });
+  }
+  // ===== O DESENHO ÚNICO DA LINHA (Extrato e Ficha › REPOSIÇÕES, AC7) =====================
+  // O contexto do desenho: o Extrato inteiro, os pares da troca, o que está anulado e as repetidas.
+  function repExtratoCtx(p, i, op){
+    op=op||{};
+    var L=repLancamentos(p)||[], pend=[];
+    try{ pend=repTrocasPendentesP(p); }catch(e){ pend=[]; } /* silencioso de propósito: sem a conta, nenhuma troca pendente */
+    var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
+    return {L:L, X:repExtratoPares(L, pend), hojeServ:repHojeServidor(), anulado:anulado, repetidas:repRepetidas(L), ehG:repEhGestao(), i:i,
+      pode:op.ficha?repPodeLancar():true};
+  }
+  var REP_BOTAO_ESTILO='border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
+  function repBotaoLinha(fn, i, id, rot, cor){
+    return '<button type="button" onclick="'+fn+'('+i+',\''+escAttr(id)+'\')" style="'+REP_BOTAO_ESTILO+'color:'+(cor||'var(--z-blue)')+'">'+esc(rot)+'</button>';
+  }
+  // O que a linha diz a mais (6.60): quem desfez, de onde voltou, o que corrigiu. Texto puro (a tela escapa).
+  function repExtratoNovidades(l, c){
+    var L=c.L, out=[], cq=function(r){ r=r||{}; return repPorQuando(r.por, r.quando)+(r.motivo?(': '+r.motivo):''); };
+    if(l.tipo==='credito'){
+      if(l.restaura){ var e0=repLancDe(L, l.restaura.estorno); out.push('volta do estorno'+(e0&&e0.data?(' de '+repDataCurta(e0.data)):'')+cq(l.corr)); }
+      if(l.corrige) out.push('corrige a falta de '+repDataCurta(l.corrige.de)+cq(l.corr));
+      var ec=c.anulado[l._id]?L.filter(function(x){ return x && x.tipo==='estorno' && x.estornaId===l._id && x.corrigidoPara; })[0]:null;
+      if(ec){ var cn=repLancDe(L, ec.corrigidoPara); out.push('corrigido para '+(cn?repDataCurta(cn.data):'outra data')+cq(ec.corr)); }
+      var cr=l.correcoes||{};
+      Object.keys(cr).sort(function(a,b){ return (((cr[a]||{}).corr||{}).ts||0)-(((cr[b]||{}).corr||{}).ts||0); }).forEach(function(k){
+        var x=cr[k]||{}, a=x.antes||{}, d=x.depois||{}, t=[];
+        if(String(a.motivo||'')!==String(d.motivo||'')) t.push('Motivo: «'+repMotivoRotulo(a.motivo)+'» → «'+repMotivoRotulo(d.motivo)+'»');
+        if(String(a.obs||'')!==String(d.obs||'')) t.push('Observação: '+corrQ(a.obs)+' → '+corrQ(d.obs));
+        if(t.length) out.push(t.join('; ')+cq(x.corr));
+      });
+      var vd=l.volta_desmarcada||{};
+      if(vd.excecao_desfeita) out.push('a exceção da Gestão foi desfeita'+cq(vd.excecao_desfeita));
+    } else if(l.tipo==='uso'){
+      if(l.restaura){ var d0=repLancDe(L, l.restaura.devolucao); out.push('volta da devolução'+(d0&&d0.data?(' de '+repDataCurta(d0.data)):'')+cq(l.corr)); }
+    } else if(l.tipo==='estorno'){
+      var tp=repEstornoTipo(L, l), alvoE=(tp==='credito')?repLancDe(L, l.estornaId):null;
+      if(alvoE) out.push('estorno da falta de '+repDataCurta(alvoE.data));   // 2ª rodada (UX-001): de qual falta é
+      if(l.lote_estorno) out.push('estorno do lote');
+      if(l.corrigidoPara) out.push('estorno da correção de data');
+      if(l.corr && l.corr.por) out.push('assinado por '+l.corr.por+(l.corr.papel?(' ('+corrPapelNome(l.corr.papel)+')'):''));
+      var df=(tp==='credito')?repEstornoDesfeitoPor(L, l._id):((tp==='devolucao')?repDevolucaoDesfeitaPor(L, l._id):null);
+      if(df) out.push(((tp==='credito')?'desfeito':'desfeita')+cq(df.corr));
+    }
+    return out;
+  }
+  function repExtratoAcoes(l, c){
+    var i=c.i, L=c.L, h='';
+    if(l.tipo==='credito' && !c.anulado[l._id]){
+      if(!repSaidaAntecipada(l)) h+=repBotaoLinha('repCorrigirAbrir', i, l._id, 'Corrigir');
+      h+=repBotaoLinha('repEstornar', i, l._id, 'Estornar', 'var(--crm-critico)');
+      var nl=l.lote?repLoteVivos(L, l.lote).length:0;
+      if(nl>=2) h+=repBotaoLinha('repLoteEstornarAbrir', i, l._id, 'Estornar o lote ('+nl+')', 'var(--crm-critico)');
+    }
+    if(l.tipo==='uso'){
+      if(repUsoDevolvivelPor(l, c.anulado, c.ehG)) h+='<button type="button" onclick="repDevolverUso('+i+',\''+escAttr(l._id)+'\')" style="'+REP_BOTAO_ESTILO+'color:var(--z-blue)">Devolver</button>';
+      else if(repUsoDevolvivel(l, c.anulado)) h+='<span style="font-size:11px;font-weight:700;color:var(--muted);max-width:110px">Só a Gestão devolve (regra das 24 horas)</span>';
+    }
+    if(l.tipo==='estorno'){
+      var tp=repEstornoTipo(L, l), alvo=tp?repLancDe(L, l.estornaId):null;
+      if(tp==='credito' && !repEstornoDesfeitoPor(L, l._id) && !repSaidaAntecipada(alvo)) h+=repBotaoLinha('repEstornoDesfazerAbrir', i, l._id, 'Desfazer o estorno');
+      if(tp==='devolucao' && !repDevolucaoDesfeitaPor(L, l._id)) h+=repBotaoLinha('repDevolucaoDesfazerAbrir', i, l._id, 'Desfazer a devolução');
+    }
+    return h;
+  }
+  function repExtratoLinhaHTML(p, i, l, c){
+    const rx=repExtratoRotulo(l, c.X, c.hojeServ);
+    const rot=rx?rx.rot:((l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'−1 ESTORNO'))));
+    // O DIA, sempre à vista (25/set/2026): para quando estava marcada, de quando foi
+    // desmarcada ou remarcada, e qual reposição a devolução trouxe de volta.
+    const diaTxt=(l.tipo==='credito')
+      ? ((l.volta?(' · marcada para '+repBRdata(l.volta)):'')
+        +((l.volta_desmarcada&&l.volta_desmarcada.dia)?repExtratoDesmarcada(l.volta_desmarcada):''))
+      : ((l.tipo==='estorno'&&l.dia_devolvido)?(' · devolveu a reposição de '+repBRdata(l.dia_devolvido)):'')
+        +((l.tipo==='uso'&&(l.lanc||l.obs===REP_OBS_LANC))?' · pelos Lançamentos do dia':'');
+    const risco=c.anulado[l._id]?'text-decoration:line-through;opacity:.6':'';
+    const grupoRep=(l.tipo==='credito')?(c.repetidas[String(l.data||'')]||[]):[];
+    const seloRep=grupoRep.some(function(x){ return x._id===l._id; })?repRepetidaSelo(grupoRep):'';
+    const nov=repExtratoNovidades(l, c), acoes=c.pode?repExtratoAcoes(l, c):'';
+    // A devolução é +1 para o saldo: a cor é a do crédito, não a do erro.
+    return '<div class="rep-lanc"><span class="lc-tipo '+(rx?rx.cls:((l.tipo==='estorno'&&l.dia_devolvido)?'credito':l.tipo))+'" style="'+risco+'">'+rot+'</span>'
+      +'<div style="flex:1;min-width:0">'
+      +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+((rx&&rx.corpo)?escAttr(rx.corpo):escAttr(repMotivoRotulo(l.motivo)))
+      +((l.obs&&!(rx&&rx.semObs))?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
+      +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')
+        +repExtratoAlguns(l)+escAttr(diaTxt)+escAttr((rx&&rx.meta)||'')+'</div>'
+      +(seloRep?('<div class="lc-meta" style="color:var(--crm-critico);font-weight:800">'+escAttr(seloRep)+'</div>'):'')+'</span>'
+      +nov.map(function(t){ return '<div class="lc-meta lc-corr" style="color:var(--z-blue);font-weight:700;overflow-wrap:anywhere">'+esc(t)+'</div>'; }).join('')
+      +(acoes?('<div class="lc-acoes" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+acoes+'</div>'):'')
+      +'</div></div>';
+  }
+  // ===== AC6 — LANÇAMENTOS DO DIA: A FALTA AVISADA QUE VIRA CRÉDITO E A REPOSIÇÃO SEM ABATER =====
+  // C09: com ficha, «Lançar» no cartão «Falta avisada» abre a janela de Reposições (o crédito nasce pelo
+  // repConfirmar de sempre, e a planilha recebe a linha pelo automático): nenhuma linha à mão por aqui.
+  // Sem ficha, ou para quem não lança reposição, a linha vai só para a planilha, como antes, e a tela diz.
+  function dashFaltaLancar(gravar, p){
+    if(p && repPodeLancar()){
+      var diaF=dashDia();
+      // 2ª rodada (REQ-002): fora da janela do automático (um dia que já passou, ou depois dos 14 dias), a planilha daquele
+      // dia só recebe a falta pela linha à mão, como antes; o crédito vem pela mesma janela de Reposições.
+      if(!repPlanNaJanela(diaF)) return Promise.resolve(gravar(false)).then(function(ok){ repAbrirLancar(p, {modo:'dia', data:diaF}); return ok; });
+      try{ var b=document.getElementById('dashB_faltas'); if(b) b.value=''; var s=document.getElementById('dashS_faltas'); if(s) s.innerHTML=''; }
+      catch(e){ /* silencioso de propósito: a busca limpa é enfeite de tela */ }
+      repAbrirLancar(p, {modo:'dia', data:diaF});
+      return Promise.resolve(false);
+    }
+    var frase=p?'Esta falta não vira reposição: quem lança reposição é a Recepção, a Supervisão ou a Gestão. Avise a Recepção.'
+      :'Sem ficha: esta falta não vira reposição. Se ele tem ficha, escolha pelo nome na busca.';
+    return Promise.resolve(gravar(false)).then(function(ok){
+      if(ok && typeof zAlertao==='function') zAlertao('A FALTA FOI SÓ PARA A PLANILHA', [frase], {botao:'Entendi'});
+      return ok;
+    });
+  }
+  // A linha à mão do cartão «Falta avisada» sem crédito no Extrato (AC6.3).
+  function dashFaltaMaoHTML(o, id, dia){
+    var r=null; try{ r=dashRepDoLancamento(o, id, dia); }catch(e){ r=null; } /* silencioso de propósito: sem a ficha casada, vale a frase sem botão */
+    if(r && r.p && repCreditoVivoNaData(r.p, dia)) return '';
+    var pode=false; try{ pode=repPodeLancar(); }catch(e){ pode=false; } /* silencioso de propósito: sem o papel, sem o botão */
+    return ' <span style="color:var(--z-gold-deep);font-weight:800;font-size:11.5px">sem reposição no Extrato</span>'
+      +((r && r.p && pode)?(' <button type="button" class="btn" style="background:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 12px;color:var(--z-blue);font-size:12.5px;font-weight:800" onclick="dashFaltaDarReposicao(\''+escAttr(id)+'\')">Dar a reposição</button>'):'');
+  }
+  function dashFaltaDarReposicao(id){
+    var dia=dashDia(), o=(DASH_DADOS.faltas||{})[id];
+    var r=null; try{ r=o?dashRepDoLancamento(o, id, dia):null; }catch(e){ r=null; } /* silencioso de propósito: sem a ficha, a frase abaixo */
+    if(!r || !r.p){ alert('Não achei a ficha deste FILHOt. Escolha pelo nome na tela de Reposições › «+ Falta».'); return; }
+    repAbrirLancar(r.p, {modo:'dia', data:dia});
+  }
+  // A linha automática da falta avisada ganha «Estornar» (AC6.4): o cartaz do AC1 para o crédito daquele dia.
+  function dashFaltaAutoBotaoHTML(dia, v){
+    var pode=false; try{ pode=repPodeLancar(); }catch(e){ pode=false; } /* silencioso de propósito: sem o papel, sem o botão */
+    if(!pode) return '';
+    var achou=null;
+    try{
+      (PELUDINHOS||[]).forEach(function(p, i){
+        if(achou || !p || pelInativo(p) || dashNomePlanilha(p)!==v) return;
+        var c=repCreditoVivoOutro(repLancamentos(p)||[], dia, '');
+        if(c) achou={i:i, id:c._id};
+      });
+    }catch(e){ achou=null; } /* silencioso de propósito: sem o Extrato lido, sem o botão */
+    if(!achou) return '';
+    return ' <button type="button" class="btn" style="background:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 12px;color:var(--crm-critico);font-size:12.5px;font-weight:800" onclick="repEstornar('+achou.i+',\''+escAttr(achou.id)+'\')">Estornar</button>';
+  }
+  // A Reposição à mão com ficha e sem uso ligado: «lançada sem abater do saldo» e «Abater agora» (AC6.6).
+  function dashRepMaoHTML(o, id, dia){
+    var r=null; try{ r=dashRepDoLancamento(o, id, dia); }catch(e){ r=null; } /* silencioso de propósito: sem a ficha casada, nada a abater */
+    if(!r || !r.p || r.uso) return '';
+    var pode=false; try{ pode=repPodeLancar(); }catch(e){ pode=false; } /* silencioso de propósito: sem o papel, sem o botão */
+    return ' <span style="color:var(--z-gold-deep);font-weight:800;font-size:11.5px">lançada sem abater do saldo</span>'
+      +(pode?(' <button type="button" class="btn" style="background:none;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 12px;color:var(--z-blue);font-size:12.5px;font-weight:800" onclick="dashRepAbaterDepois(\''+escAttr(id)+'\')">Abater agora</button>'):'');
+  }
+  // «Abater agora»: as mesmas perguntas do lançamento (o dia do plano, o dia que já tem uso, sem saldo, o
+  // saldo reservado em hospedagem), e o uso ligado ao lançamento pelo dashRepAbater de sempre.
+  function dashRepAbaterDepois(id){
+    if(!repPodeLancar()) return corrBarrar('abater uma reposição do saldo', corrQuemPode('lancar-reposicao'), {item:'reposicao', id:String(id)});
+    var dia=dashDia(), o=(DASH_DADOS.reposicao||{})[id];
+    var r=null; try{ r=o?dashRepDoLancamento(o, id, dia):null; }catch(e){ r=null; } /* silencioso de propósito: sem a ficha, a frase abaixo */
+    if(!r || !r.p){ alert('Não achei a ficha deste FILHOt: não sei de quem abater. Nada foi gravado.'); return Promise.resolve(false); }
+    if(r.uso){ alert(pelNome(r.p)+': esta Reposição já está abatida do saldo. Nada foi gravado de novo.'); return Promise.resolve(false); }
+    var p=r.p, nome=pelNome(p), L=repLancamentos(p)||[];
+    return new Promise(function(fim){
+      var abater=function(){
+        var s=0; try{ s=repSaldoParaUsarHoje(p, dia); }catch(e){ s=0; }
+        if(s<=0){
+          zEscolha(nome+' não tem saldo de reposição', ['O Banco de Reposições dele está em '+s+': não há crédito para abater.',
+            'Se ele veio mesmo assim, confira com a Gestão: pode ser falta avisada que ninguém lançou, ou um dia que será cobrado.'],
+            [{t:'Não abater', fn:function(){ fim(false); }}]);
+          return;
+        }
+        var presos=0; try{ presos=repReservado(p,''); }catch(e){ presos=0; }
+        var vai=function(){ dashRepAbater(p, s, id).then(function(ok){
+          if(ok) repRastro('reposicao-abatida-depois', p, nome+' — a Reposição de '+repBRdata(dia)+', lançada sem abater, foi abatida do saldo (era '+s+')');
+          fim(!!ok); }); };
+        if(presos>0 && (s-presos)<1){
+          zEscolha(nome+' tem saldo, mas ele está reservado', ['Saldo no Banco: '+s+'. Reservado em orçamento de hospedagem: '+presos+'. Livre: '+Math.max(0,s-presos)+'.',
+            'Se abater aqui, pode faltar dia quando o tutor fechar a hospedagem — e o valor combinado com ele muda.'],
+            [{t:'Abater mesmo assim', cor:'#B3261E', fn:vai}, {t:'Não abater', fn:function(){ fim(false); }}]);
+          return;
+        }
+        vai();
+      };
+      var usoDia=function(){
+        if(repDiaTemUso(L, dia)){
+          zEscolha(nome+' já tem um uso registrado em '+repDataCurta(dia), ['O Banco de Reposições já descontou um uso deste dia (veja o Extrato dele na tela de Reposições).',
+            'Abater agora desconta mais uma reposição.'],
+            [{t:'Abater mesmo assim', cor:'#B3261E', fn:abater}, {t:'Não abater', fn:function(){ fim(false); }}]);
+          return;
+        }
+        abater();
+      };
+      var mesRep=null;
+      try{ if(pelTemDiasPorMes(p) && repEhDiaDele(p, dia)) mesRep=renovMesNaData(renovDe(pelExtra(p)||{}), dia, pelDias(p,'rotina')||[]); }
+      catch(e){ mesRep=null; } /* silencioso de propósito: sem a ficha lida, segue o caminho de sempre da reposição */
+      if(mesRep){
+        zEscolha(repDataCurta(dia)+' já é dia '+(repEhFemea(p)?'da ':'do ')+nome+' no plano',
+          ['No Mês '+mesRep.n+' do plano, '+(repEhFemea(p)?'ela':'ele')+' vem '+renovDiasRotulo(mesRep.dias)+'.', 'Dia do plano não gasta saldo de reposição: a vinda já está paga no plano.'],
+          [{t:'Abater mesmo assim', cor:'#B3261E', fn:usoDia}, {t:'Não abater', fn:function(){ fim(false); }}]);
+        return;
+      }
+      usoDia();
+    });
+  }
+  // «Lançar o período certo» e a falta avisada dos Lançamentos (AC2.4, AC6.1): a janela «+ Falta avisada» já
+  // preenchida — o FILHOt, o modo, as datas, o motivo e a observação. Nada é lançado sem o «Lançar reposição».
+  var REP_CORRIGE_LOTE='';
+  function repLancarPreencher(pre){
+    var m=(pre.modo==='periodo' || pre.modo==='alguns')?pre.modo:'dia', ix={dia:0, periodo:1, alguns:2}[m];
+    var el=function(id){ try{ return document.getElementById(id); }catch(e){ return null; } }; /* silencioso de propósito: sem a página, nada a preencher */
+    repModoAtual=m;
+    try{ document.querySelectorAll('#repModo button').forEach(function(b, j){ b.classList.toggle('on', j===ix); }); }catch(e){ /* silencioso de propósito: enfeite de tela */ }
+    var bd=el('repBlocoDia'), bp=el('repBlocoPeriodo'), ba=el('repBlocoAlguns');
+    if(bd) bd.style.display=(m==='dia')?'block':'none'; if(bp) bp.style.display=(m==='periodo')?'block':'none'; if(ba) ba.style.display=(m==='alguns')?'block':'none';
+    if(m==='dia' && pre.data){ var rd=el('repData'); if(rd) rd.value=String(pre.data); }
+    if(m==='periodo'){ var de=el('repDe'), at=el('repAte'); if(de) de.value=String(pre.de||''); if(at) at.value=String(pre.ate||''); }
+    if(m==='alguns'){ repAlgunsDatas=(pre.datas||[]).map(String).slice(0, REP_ALGUNS_MAX); if(!repAlgunsDatas.length) repAlgunsDatas=['']; try{ repAlgunsDesenhar(); }catch(e){ /* silencioso de propósito: a prévia acerta no próximo toque */ } }
+    var k=String(pre.motivoK||''), km=REP_MOTIVOS_TELA.indexOf(k);
+    if(km>=0){ repMotivoAtual=k; try{ document.querySelectorAll('#repMotivo button').forEach(function(b, j){ b.classList.toggle('on', j===km); }); }catch(e){ /* silencioso de propósito: enfeite de tela */ } }
+    if(pre.obs){ var ob=el('repObs'); if(ob) ob.value=String(pre.obs); }
+    if(pre.corrigeLote){ REP_CORRIGE_LOTE=String(pre.corrigeLote); var tt=el('repTitulo'); if(tt) tt.textContent='Lançar o período certo'; }
   }
   // ===== DESFAZER A REPOSIÇÃO (Adriana, 25/set/2026) ===================================
   // "Uma tutora cancelou a reposição da Safira na quarta e não consigo remarcar e nem
@@ -8784,8 +9567,9 @@
     var troca=repTrocaViva(cred);
     var motivo=((await zTexto('Não contar — por quê?', [troca?('A troca de '+String(repBRdata(String(((cred.troca||{}).de)||cred.data||''))).slice(0,5)+' → '+D+' vira reposição (sem dia marcado).')
       :('A reposição de '+nome+' marcada para '+D+' não conta como usada: volta a ficar sem dia.'), 'Fica no Extrato com o seu nome e o motivo.'],
-      {rotulo:'Motivo (ex.: o tutor avisou por WhatsApp a tempo)', botao:'Não contar', minimo:3, cor:'#234D67'}))||'').trim();
-    if(motivo.length<3){ if(motivo) alert('Escreva o motivo (pelo menos 3 letras). Nada foi mudado.'); return; }
+      {rotulo:'Motivo, em pelo menos 4 palavras (ex.: o tutor avisou por WhatsApp a tempo)', botao:'Não contar', validar:repMotivoErro, cor:'#234D67'}))||'').trim();
+    var mvN=repMotivoErro(motivo);   // 6.60 (AC8): conferido de novo aqui — sem motivo válido, nada é gravado
+    if(mvN){ if(motivo) alert(mvN+' Nada foi mudado.'); return; }
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     var depois=repSaldoRepDepois(p, null, (function(){ var m={}; m[cred._id]={volta:''}; return m; })());
     var vd={dia:dia, quem:quem, ts:Date.now(), relogio:repRelogio(), excecao:{quem:quem, motivo:motivo}};
@@ -9099,6 +9883,8 @@
       dia_devolvido:String(uso.data||''), obs:String(porque||''),
       quem:(typeof quemSou==='function')?quemSou():'-', ts:Date.now()};
     if(extra && extra.so_lancamento) reg.so_lancamento=true;   // 6.25: a vinda continua (ver repVeioDevolvido)
+    // 6.60 (AC4.3): a devolução que nasce em «tirar» nos Lançamentos do dia (a observação de sempre) diz de onde veio
+    if((extra && extra.origem==='lancamentos') || /^Tirada dos Lançamentos do dia/.test(String(porque||''))) reg.origem='lancamentos';
     return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/dev-'+uso._id).set(reg);
   }
   // «Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo.
@@ -9119,8 +9905,10 @@
       ['A reposição volta para o saldo de '+pelNome(p)+': era '+s+', fica '+depoisDv+'.',
        'O uso não é apagado: fica riscado no Extrato, com o dia e o motivo.']
         .concat(doLanc?['Ela também foi lançada nos Lançamentos do dia '+repBRdata(uso.data)+': tire de lá, senão continua na planilha. (Tirar por lá já devolve a reposição sozinho.)']:[]),
-      {rotulo:'Motivo (ex.: a tutora cancelou)', botao:'Devolver', minimo:3}))||'').trim();
+      {rotulo:'Motivo, em pelo menos 4 palavras (ex.: a tutora cancelou a vinda)', botao:'Devolver', validar:repMotivoErro}))||'').trim();
     if(!porque) return;
+    var mvU=repMotivoErro(porque);   // 6.60 (AC4.1): conferido de novo aqui — sem motivo válido, nada é gravado
+    if(mvU){ alert(mvU+' Nada foi mudado.'); return; }
     var livres=repLivresParaMarcar(p, 0)+1;   // o cache só soma a devolução quando o banco responde
     var gravouD=false;
     repDevolverUsoGravar(p, uso, porque).then(function(){
@@ -9154,8 +9942,9 @@
     var motivo=((await zTexto('Devolver '+(troca?('a troca de '+de+' → '+D):('a reposição de '+D))+' — por quê?',
       [troca?'A troca vira reposição (sem dia marcado).':('A reposição volta para o saldo de '+pelNome(p)+', sem dia marcado.'),
        'O uso não é apagado: fica riscado no Extrato, com o seu nome e o motivo.'],
-      {rotulo:'Motivo (ex.: estava internado)', botao:'Devolver', minimo:3}))||'').trim();
-    if(motivo.length<3){ if(motivo) alert('Escreva o motivo (pelo menos 3 letras). Nada foi mudado.'); return; }
+      {rotulo:'Motivo, em pelo menos 4 palavras (ex.: estava internado com receita)', botao:'Devolver', validar:repMotivoErro}))||'').trim();
+    var mvG=repMotivoErro(motivo);   // 6.60 (AC4.1): conferido de novo aqui — sem motivo válido, nada é gravado
+    if(mvG){ if(motivo) alert(mvG+' Nada foi mudado.'); return; }
     var quem=(typeof quemSou==='function')?quemSou():'-';
     var s=repSaldoReposicao(p);
     var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:uso._id, dia_devolvido:String(uso.data||''), obs:motivo, devolvido_gestao:true, quem:quem, ts:Date.now()};
@@ -11884,21 +12673,16 @@
     const L=repLancamentos(p);
     const saldo=repSaldoReposicao(p), presos=repReservado(p,'');
     // 6.38: a troca fora do saldo (TROCA), o desfecho de cada dia marcado e o «Devolver» só da Gestão.
-    const hojeR=repHojeISO(), hojeServ=repHojeServidor(), ehG=repEhGestao();
     let pendR=[]; try{ pendR=repTrocasPendentesP(p); }catch(e){ pendR=[]; } /* silencioso de propósito: sem a conta, nenhuma troca pendente */
-    const X=repExtratoPares(L, pendR);
-    // O que já foi estornado aparece riscado: o extrato conta a história inteira, mas quem
-    // lê precisa ver de relance o que ainda vale e o que foi desfeito.
-    const anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
-    // A MESMA FALTA LANÇADA DUAS VEZES (6.46): as que entraram em dobro antes da chave fixa ganham
-    // o selo, com quem lançou cada uma e a hora. Só mostra: quem decide estornar é a pessoa, pelo
-    // «Estornar» de sempre (com o motivo escrito; nada é apagado).
-    const repetidas=repRepetidas(L);
+    // O que já foi estornado aparece riscado; a repetida (6.46) ganha o selo; e cada linha tem as ações dela
+    // (6.60: Corrigir, Estornar, Estornar o lote, Devolver, Desfazer o estorno, Desfazer a devolução). O desenho
+    // de cada linha mora em repExtratoLinhaHTML, o MESMO da Ficha › REPOSIÇÕES.
+    const ctx=repExtratoCtx(p, i);
     document.getElementById('repExtTit').textContent='Extrato — '+pelNome(p);
     document.getElementById('repExtSub').innerHTML='Saldo atual: <b>'+saldo+'</b> dia(s) de reposição'
       +pendR.map(function(t){ return ' · troca marcada: '+escAttr(repDiaSemanaComData(String(((t.troca||{}).de)||t.data||'')))+' → '+escAttr(repDiaSemanaComData(t.volta))+' (não entra no saldo)'; }).join('')
       +(presos?(' · <b>'+presos+'</b> reservado(s) em orçamento de hospedagem · <b>'+Math.max(0,saldo-presos)+'</b> livre(s)'):'')
-      +'. Nada aqui é apagado — um erro se corrige com estorno.';
+      +'. Nada aqui é apagado: um erro se corrige pelos botões de cada linha (corrigir, estornar, desfazer), sempre com um registro novo.';
     // As reservas de hospedagem que ainda aguardam resposta: o dia ainda é dele, mas já
     // está prometido. Fica ANTES do extrato porque é o que explica o "livre" acima.
     const R=repReservas(p);
@@ -11910,31 +12694,7 @@
           +(r.entrada?(', entrada '+repBRdata(r.entrada)):'')
           +'<span style="color:var(--muted)"> (ainda aguardando resposta do tutor)</span>'; }).join('<br>')
       +'</div>'):'';
-    document.getElementById('repExtLista').innerHTML=resHTML+(L.length?L.map(function(l){
-      const rx=repExtratoRotulo(l, X, hojeServ);
-      const rot=rx?rx.rot:((l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'−1 ESTORNO'))));
-      // O DIA, sempre à vista (25/set/2026): para quando estava marcada, de quando foi
-      // desmarcada ou remarcada, e qual reposição a devolução trouxe de volta.
-      const diaTxt=(l.tipo==='credito')
-        ? ((l.volta?(' · marcada para '+repBRdata(l.volta)):'')
-          +((l.volta_desmarcada&&l.volta_desmarcada.dia)?repExtratoDesmarcada(l.volta_desmarcada):''))
-        : ((l.tipo==='estorno'&&l.dia_devolvido)?(' · devolveu a reposição de '+repBRdata(l.dia_devolvido)):'')
-          +((l.tipo==='uso'&&(l.lanc||l.obs===REP_OBS_LANC))?' · pelos Lançamentos do dia':'');
-      const risco=anulado[l._id]?'text-decoration:line-through;opacity:.6':'';
-      const grupoRep=(l.tipo==='credito')?(repetidas[String(l.data||'')]||[]):[];
-      const seloRep=grupoRep.some(function(x){ return x._id===l._id; })?repRepetidaSelo(grupoRep):'';
-      // A devolução é +1 para o saldo: a cor é a do crédito, não a do erro.
-      return '<div class="rep-lanc"><span class="lc-tipo '+(rx?rx.cls:((l.tipo==='estorno'&&l.dia_devolvido)?'credito':l.tipo))+'" style="'+risco+'">'+rot+'</span>'
-        +'<span class="lc-corpo" style="'+risco+'">'+repBRdata(l.data)+' · '+((rx&&rx.corpo)?escAttr(rx.corpo):(REP_MOTIVOS[l.motivo]||l.motivo||'—'))
-        +((l.obs&&!(rx&&rx.semObs))?('<div style="font-weight:500;color:var(--z-blue-soft);margin-top:2px">"'+escAttr(l.obs)+'"</div>'):'')
-        +'<div class="lc-meta">'+escAttr(l.quem||'—')+(l.periodo?(' · período '+repBRdata(l.periodo.de)+' a '+repBRdata(l.periodo.ate)):'')
-          +repExtratoAlguns(l)+escAttr(diaTxt)+escAttr((rx&&rx.meta)||'')+'</div>'
-        +(seloRep?('<div class="lc-meta" style="color:var(--crm-critico);font-weight:800">'+escAttr(seloRep)+'</div>'):'')+'</span>'
-        +((l.tipo==='credito'&&!anulado[l._id])?'<button onclick="repEstornar('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--crm-critico);cursor:pointer;font-family:inherit">Estornar</button>':'')
-        +(repUsoDevolvivelPor(l, anulado, ehG)?'<button onclick="repDevolverUso('+i+',\''+l._id+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:11.5px;font-weight:700;color:var(--z-blue);cursor:pointer;font-family:inherit">Devolver</button>'
-          :(repUsoDevolvivel(l, anulado)?'<span style="font-size:11px;font-weight:700;color:var(--muted);max-width:110px">Só a Gestão devolve (regra das 24 horas)</span>':''))
-        +'</div>';
-    }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>');
+    document.getElementById('repExtLista').innerHTML=resHTML+(L.length?L.map(function(l){ return repExtratoLinhaHTML(p, i, l, ctx); }).join(''):'<div class="alm-fora">Nenhum lançamento ainda.</div>');
     document.getElementById('repExtratoModal').classList.add('on');
   }
   // O selo da repetida (6.46): "Repetida — lançada 2 vezes", com quem e quando de cada uma.
@@ -22062,7 +22822,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-16';
+  const APP_VERSAO='2026-10-09-17';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -35167,15 +35927,10 @@
     trocasP.forEach(function(t){ h+='<div class="hint" style="margin-top:3px;color:var(--z-blue);font-weight:700">troca marcada para '
       +escAttr(repDiaSemanaComData(t.volta))+' (não entra no saldo)</div>'; });
     if(ult.length){
-      h+='<div style="margin-top:7px">'+ult.map(function(l){
-        var cred=(l.tipo==='credito');
-        return '<div class="pair" style="padding:4px 0;border-top:1px solid var(--line)">'
-          +'<span class="k" style="font-size:12.5px">'
-          +'<strong style="color:'+(cred?'var(--crm-ok)':'var(--z-blue)')+'">'+(cred?'+1':'−1')+'</strong> '
-          +escAttr(l.motivo||(cred?'falta avisada':'usou'))
-          +(l.dia?(' · '+escAttr(repBRdata(l.dia))):'')+'</span>'
-          +'<span class="val" style="font-size:11.5px;color:var(--muted)">'+escAttr(l.quem||'')+'</span></div>';
-      }).join('')+'</div>';
+      // 6.60 (AC7): a mesma linha do Extrato (o rótulo, a data, riscada quando estornada ou devolvida) e os mesmos botões.
+      var iF=-1; try{ iF=PELUDINHOS.indexOf(p); }catch(e){ iF=-1; } /* silencioso de propósito: fora da lista, a linha sai sem botões */
+      var cF=repExtratoCtx(p, iF, {ficha:true}); if(iF<0) cF.pode=false;
+      h+='<div style="margin-top:7px">'+ult.map(function(l){ return repExtratoLinhaHTML(p, iF, l, cF); }).join('')+'</div>';
       if(L.length>ult.length) h+='<div class="hint" style="margin-top:3px">e mais '+(L.length-ult.length)+' no extrato.</div>';
     } else {
       h+='<div class="hint" style="margin-top:6px;color:var(--crm-atencao-text)">Nenhum lançamento ainda. '
@@ -45065,6 +45820,8 @@
         +(txt?(' <span style="color:'+cor+';font-weight:800;font-size:11.5px">'+esc(txt)+'</span>'):'')
         // 6.49: o banho de hoje diz também se está na planilha que a TV lê.
         +dashTvAutoHTML(autoK, dia, v)
+        // 6.60 (AC6.4): a falta avisada do automático se estorna aqui (o cartaz do «Estornar»); nunca «tirar»
+        +((autoK==='faltas')?dashFaltaAutoBotaoHTML(dia, v):'')
         // 6.50: o banho fixo do dia — a hora mudada só neste dia e os botões. 6.52: o banho de saída tem os dele.
         +((autoK==='banho')?(ehSaida?banhoSaidaAcoesHTML(sd, dia, e, hr):banhoDiaAcoesHTML(fixos[idDe(v)], dia, e, hr)):'')
         +'</span></div>'
@@ -47266,6 +48023,8 @@
                       :'')))
                  // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
                  +dashTvMaoHTML(it.k, o, id)
+                 // 6.60: a falta avisada à mão sem crédito («Dar a reposição») e a Reposição sem abater («Abater agora»)
+                 +((it.k==='faltas')?dashFaltaMaoHTML(o, id, __diaDash):'')+((it.k==='reposicao')?dashRepMaoHTML(o, id, __diaDash):'')
                  +'</span>'
                  +'<span class="val">'+((it.k==='medicacao')?dashMedCorrigirBotaoHTML(id):'')+'<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
              }).join('')+aut.html+'</div>')
@@ -48345,6 +49104,8 @@
         return true;
       }).catch(function(e){ alert(dashLancarFalhou(e, gravou)); return false; });
     };
+    // 6.60 (C09): a falta avisada com ficha vira crédito pela janela de Reposições (dashFaltaLancar)
+    if(k==='faltas') return dashFaltaLancar(gravar, pDoLanc);
     if(k!=='reposicao') return gravar(false);
     // ---- Reposição: casar a ficha e conferir o saldo ANTES de gravar ----------------
     // A ficha é a ESCOLHIDA na busca (idx viaja no clique); sem índice, tenta casar o
@@ -57210,9 +57971,10 @@
     var quem=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), agora=Date.now(), up={}, muda={}, novos=[], motivo='';
     if(modo==='excecao'){
       motivo=((await zTexto('Tirar sem contar — por quê?', [troca?'A troca vira reposição: não conta como usada.':'A reposição volta para o saldo, sem dia marcado.', 'Fica no Extrato com o seu nome e o motivo.'],
-        {rotulo:'Motivo (ex.: o FILHOt estava doente, com receita)', botao:'Tirar sem contar', minimo:3, cor:'#234D67'}))||'').trim();
-      if(motivo.length<3){ if(motivo) alert('Escreva o motivo (pelo menos 3 letras). Nada foi mudado.'); return; }
-      var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:uso._id, dia_devolvido:diaR, devolvido_gestao:true,
+        {rotulo:'Motivo, em pelo menos 4 palavras (ex.: o FILHOt estava doente, com receita)', botao:'Tirar sem contar', validar:repMotivoErro, cor:'#234D67'}))||'').trim();
+      var mvX=repMotivoErro(motivo);   // 6.60 (AC8): conferido de novo aqui — sem motivo válido, nada é gravado
+      if(mvX){ if(motivo) alert(mvX+' Nada foi mudado.'); return; }
+      var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', estornaId:uso._id, dia_devolvido:diaR, devolvido_gestao:true, origem:'lancamentos',
         obs:'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' sem contar (exceção da Gestão): '+motivo, quem:quem, ts:agora};
       up['dev-'+uso._id]=est; novos.push(Object.assign({_id:'dev-'+uso._id}, est));
       var vdX={dia:diaR, quem:quem, ts:agora, relogio:repRelogio(), excecao:{quem:quem, motivo:motivo}};
@@ -57301,6 +58063,16 @@
       if(escolha==='fora' || escolha==='excecao') return dashRemoverRepForaPrazo(k, id, reg, rDev, credDia, diaR, escolha);
       desmarcarTambem=(escolha==='ambos');
     } else if(!await zPergunta('Tirar '+reg.valor+' de '+it.t+'?', linhasTirar, {sim:'Tirar', nao:'Manter'})) return;
+    // 6.60 (AC6.5, C11): tirar a Reposição que devolve o dia ao saldo — ou que foi lançada sem abater — pede o motivo
+    // de 4 palavras ANTES de tirar; ele vai para a devolução e para a auditoria. O «fora do prazo» (6.38) não pede.
+    var motivoTirar='';
+    if(k==='reposicao' && !jaContou){
+      motivoTirar=((await zTexto('Tirar '+reg.valor+' — por quê?',
+        [(rDev&&rDev.uso)?'A reposição volta para o saldo, e o motivo fica na devolução, no Extrato.':'O motivo fica no rastro do dia.'],
+        {rotulo:'Motivo, em pelo menos 4 palavras (ex.: o tutor desmarcou por telefone)', botao:'Tirar', validar:repMotivoErro, cor:'#234D67'}))||'').trim();
+      var mvT=repMotivoErro(motivoTirar);
+      if(mvT){ if(motivoTirar) alert(mvT+' Nada foi tirado.'); return; }
+    }
     var tirou=false;   // 6.48 (K1): o lançamento já saiu; o erro de depois não diz "Nada foi tirado"
     DB.ref(dashNo()+'/'+k+'/'+id).remove().then(function(){
       tirou=true;
@@ -57322,9 +58094,9 @@
           volta_desmarcada:{dia:diaR, quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now(), motivo:'tirada dos Lançamentos do dia'}})
           .catch(function(e){ _logFalhaGrav('desmarcar a reposição tirada de '+pelNome(pD)+' ('+diaR+')', e);
             if(typeof zAlertao==='function') zAlertao('⚠ A MARCAÇÃO DE '+repBRdata(diaR)+' CONTINUA', ['Tela de Reposições › «desmarcar» ao lado de '+repBRdata(diaR)+' — senão a planilha a recebe de novo.'], {botao:'Vou desmarcar'}); });
-        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo',
+        repDevolverUsoGravar(pD, rDev.uso, 'Tirada dos Lançamentos do dia '+repBRdata(diaR)+' — a reposição voltou para o saldo'+(motivoTirar?(': '+motivoTirar):''),
           (credDia && !desmarcarTambem)?{so_lancamento:true}:null).then(function(){
-          if(typeof audit==='function') audit('reposicao-devolvida', pelNome(pD)+' — tirada dos Lançamentos do dia '+repBRdata(diaR)+'; a reposição voltou para o saldo',
+          if(typeof audit==='function') audit('reposicao-devolvida', pelNome(pD)+' — tirada dos Lançamentos do dia '+repBRdata(diaR)+'; a reposição voltou para o saldo'+(motivoTirar?(': '+motivoTirar):''),
             {alvo:(typeof dcKey==='function'?dcKey(pD.n,pD.tutor):''), pet:pelNome(pD)});
           if(credDia && !desmarcarTambem){
             // «Tirar só o lançamento»: a marcação (ou a troca) continua — nada muda para o tutor.
@@ -57357,7 +58129,7 @@
       }
       if(DASH_DADOS[k]) delete DASH_DADOS[k][id];
       renderDash();
-      if(typeof audit==='function') audit('dashboard-daycare','tirou '+reg.valor+' de '+it.t,{pet:reg.valor||''});
+      if(typeof audit==='function') audit('dashboard-daycare','tirou '+reg.valor+' de '+it.t+(motivoTirar?(' — motivo: '+motivoTirar):''),{pet:reg.valor||''});
       // Tirou a pernoite da lista do dia: a fila do check-in não pode continuar pedindo o
       // check-in de uma noite que ninguém vai fazer.
       if(k==='pernoite'){ try{ pernRetirarDoLancamento(reg, dashDia()); }catch(e){ _logFalhaGrav('retirar a pernoite da fila do check-in', e); } }
@@ -60842,6 +61614,12 @@
     'ocorrencia-engano-desfeito':'Desfez a «lançada por engano» da ocorrência', 'ocorrencia-reaberta':'Reabriu a ocorrência',
     'chamado-corrigido':'Corrigiu a resposta do chamado de comida', 'chamado-cancelado':'Cancelou o chamado de comida',
     'avulsa-tirada':'Tirou a diária avulsa',
+    // ===== 6.60 — Reposições: o livro-caixa sem apagar (AC9) — as ações novas e as que as funções tocadas já gravavam ==
+    'reposicao-corrigida':'Corrigiu a falta avisada (reposição)', 'reposicao-lote-estornado':'Estornou o lote de faltas avisadas',
+    'reposicao-estorno-desfeito':'Desfez o estorno da reposição', 'reposicao-devolucao-desfeita':'Desfez a devolução da reposição',
+    'reposicao-abatida-depois':'Abateu do saldo a Reposição lançada sem abater', 'reposicao-credito':'Lançou a falta avisada (crédito de reposição)',
+    'reposicao-uso':'Registrou o uso da reposição', 'reposicao-excecao':'A Gestão não contou a reposição (exceção)',
+    'reposicao-zeluz-desmarcou':'A Zêluz desmarcou a reposição (não conta)',
     // ===== 6.58 — o remédio: a dose, a agenda e a medicação do dia (AC7) ===========================
     'medicacao-dose-anulada':'Desfez uma dose de remédio (lançada por engano)', 'medicacao-dose-reaberta':'Reabriu uma dose de remédio anulada',
     'medicacao-dose-corrigida':'Corrigiu uma dose avulsa de remédio', 'medicacao-estoque-devolvido':'O estoque do remédio voltou (dose anulada)',
@@ -63236,6 +64014,10 @@
   //                     do erro (fica nos campos) ou {volta, cascata, aviso, paraEstado} para o passo de conferir;
   //   op.camposTexto  — a frase de cima dos campos; e o «Reabrir» também pode trazer campos (o «Voltou a tomar»);
   //   op.assinaNome   — além da capacidade, assina também esta pessoa (quem registrou a dose, no mesmo dia).
+  // 6.60 (Reposições, 10/out/2026) — dois acréscimos opcionais: campos[i].opcoes, a lista de escolha (os rótulos) no lugar
+  //   do campo de texto (o motivo da falta avisada no «Corrigir»; o valor é o próprio rótulo); e o gravar pode devolver
+  //   {ok:false, incerto:true, erro, depois:Promise<{ok}>} quando a conexão caiu depois de enviar: o cartaz vai para
+  //   «O BANCO AINDA NÃO CONFIRMOU» (nunca «NADA FOI GRAVADO») e o rastro só entra se o `depois` confirmar.
   // =====================================================================================
   var CORR_PRAZO=20000;
   var CORR_PRAZO_ERRO='o banco não respondeu em '+Math.round(CORR_PRAZO/1000)+' segundos';
@@ -63485,7 +64267,9 @@
         +(op.campos||[]).map(function(x, i){
           var v=String((S.valores||[])[i]==null?'':S.valores[i]);
           return '<label for="corrC_'+i+'" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+esc(x.rotulo||x.c||'')+'</label>'
-            +(x.grande?('<textarea id="corrC_'+i+'" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(v)+'</textarea>')
+            +(Array.isArray(x.opcoes)?('<select id="corrC_'+i+'" style="'+CORR_CAMPO_ESTILO+'">'+x.opcoes.map(function(o){ o=String(o==null?'':o);
+                return '<option value="'+escAttr(o)+'"'+((o===v)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>')
+            :x.grande?('<textarea id="corrC_'+i+'" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(v)+'</textarea>')
                       :('<input id="corrC_'+i+'" type="text" value="'+escAttr(v)+'" style="'+CORR_CAMPO_ESTILO+'">'));
         }).join('')+aviso;
       bts=corrBotaoHTML('continuar', 'Continuar', 'var(--z-blue)')+cancelar;
@@ -63526,7 +64310,8 @@
       bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-critico)');
     } else if(S.passo==='semResposta'){
       topo='O BANCO AINDA NÃO CONFIRMOU'; cor='var(--z-gold-deep)';
-      corpo='<div>Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.</div>'
+      corpo=((S.res && S.res.incerto)?'<div>A conexão caiu no meio da gravação: a mudança pode ter entrado.</div>'
+          :('<div>Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.</div>'))
         +'<div style="margin-top:6px">Confira na tela se a mudança entrou antes de tentar de novo.</div>';
       bts=corrBotaoHTML('fechar', 'Fechar', 'var(--z-gold-deep)');
     }
@@ -63605,13 +64390,19 @@
     var pr;
     try{ pr=(typeof op.gravar==='function')?Promise.resolve(op.gravar(JSON.parse(JSON.stringify(reg)))):Promise.resolve({ok:false, erro:'a tela não disse como gravar'}); }
     catch(e){ pr=Promise.resolve({ok:false, erro:e}); }
-    var resp=pr.then(function(r){ return (r && r.ok===true)?{ok:true}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou'}; },
+    var resp=pr.then(function(r){ return (r && r.ok===true)?{ok:true}
+        :{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', incerto:!!(r && r.incerto), depois:(r && r.incerto)?r.depois:null}; },
       function(e){ return {ok:false, erro:e}; });
+    // 6.60 (REL-002): «incerto» = a conexão caiu depois de enviar; o `depois` diz, mais tarde, se entrou
+    var confirma=function(x){
+      if(!(x && x.incerto && x.depois)) return Promise.resolve(x);
+      return Promise.resolve(x.depois).then(function(y){ return (y && y.ok===true)?{ok:true}:{ok:false, erro:(y&&y.erro)||x.erro}; }, function(e){ return {ok:false, erro:e}; });
+    };
     var r=await corrComPrazo(resp, CORR_PRAZO, CORR_PRAZO_ERRO);
-    if(r && r.semResposta){
+    if(r && (r.semResposta || r.incerto)){
       // o banco ainda pode responder: o rastro só entra se ele confirmar
-      resp.then(function(r2){ if(r2.ok) corrRastro(reg, mud); else _logFalhaGrav('correção — '+reg.oque, r2.erro); });
-      corrTerminar(S, 'semResposta', {ok:false, semResposta:true, reg:reg});
+      (r.incerto?confirma(r):resp.then(confirma)).then(function(r2){ if(r2.ok) corrRastro(reg, mud); else _logFalhaGrav('correção — '+reg.oque, r2.erro); });
+      corrTerminar(S, 'semResposta', {ok:false, semResposta:true, incerto:!!r.incerto, reg:reg});
       return S.res;
     }
     if(r && r.ok){ corrRastro(reg, mud); corrTerminar(S, 'pronto', {ok:true, reg:reg}); return S.res; }

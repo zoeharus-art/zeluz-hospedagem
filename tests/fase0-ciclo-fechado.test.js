@@ -708,7 +708,7 @@ provaAsync('remarcar guarda o dia que estava marcado (com quem e para quando)', 
 });
 provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (e a mensagem sai pronta)', async () => {
   run(`__bkR3={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, zp:zPergunta, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
-         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra};
+         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra, zt:zTexto}; zTexto=function(){ return Promise.resolve('o tutor desmarcou por telefone'); };
     __rm3=[]; __push3=[]; __msg3=null; __perg3=null;
     DB={ref:function(p){ return {
       remove:function(){ __rm3.push(p); return Promise.resolve(); },
@@ -750,7 +750,7 @@ provaAsync('tirar a Reposição dos Lançamentos do dia devolve o dia ao saldo (
     assert.strictEqual(run('__rm3.length'), 1);
     assert.strictEqual(run('__push3.length'), 0, 'nada a devolver');
     assert.ok(JSON.parse(JSON.stringify(run('__perg3'))).some((t) => /Não achei o abatimento/.test(t)));
-  } finally { run('DB=__bkR3.db; DASH_DADOS=__bkR3.dd; dashDia=__bkR3.di; dashItem=__bkR3.it; zPergunta=__bkR3.zp; renderDash=__bkR3.rd; audit=__bkR3.au; dashEspelhar=__bkR3.esp; repMsgModal=__bkR3.mm; repLancamentos=__bkR3.l; repSaldo=__bkR3.s; repLivresSemDia=__bkR3.lsd; prevCorrigePetDe=__bkR3.pc; repHojeISO=__bkR3.h; pelExtra=__bkR3.pe;'); }
+  } finally { run('DB=__bkR3.db; DASH_DADOS=__bkR3.dd; dashDia=__bkR3.di; dashItem=__bkR3.it; zPergunta=__bkR3.zp; renderDash=__bkR3.rd; audit=__bkR3.au; dashEspelhar=__bkR3.esp; repMsgModal=__bkR3.mm; repLancamentos=__bkR3.l; repSaldo=__bkR3.s; repLivresSemDia=__bkR3.lsd; prevCorrigePetDe=__bkR3.pc; repHojeISO=__bkR3.h; pelExtra=__bkR3.pe; zTexto=__bkR3.zt;'); }
 });
 prova('QA14 A1 — a marcada que já passou só "continua valendo" até o que ainda está livre no saldo', () => {
   // 6.38: o remarcar da vencida é o comportamento de antes da regra (REP_RETRO_GESTAO=false; ver P38-28).
@@ -791,7 +791,7 @@ provaAsync('QA14 M1 — desmarcar um dia que já passou não inventa reposição
 });
 provaAsync('QA14 M2 — tirar um dia que também está marcado: a recepção escolhe tirar e desmarcar, ou só o lançamento', async () => {
   run(`__bkQ3={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, ze:zEscolha, zp:zPergunta, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
-         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra};
+         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra, zt:zTexto}; zTexto=function(){ return Promise.resolve('o tutor desmarcou por telefone'); };
     __upd=[]; __set=[]; __rm=[]; __esc=null; __resp='ambos';
     DB={ref:function(p){ return {
       remove:function(){ __rm.push(p); return Promise.resolve(); },
@@ -829,7 +829,7 @@ provaAsync('QA14 M2 — tirar um dia que também está marcado: a recepção esc
     await run("dashRemover('reposicao','L1')");
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.strictEqual(run('__rm.length + __upd.length + __set.length'), 0);
-  } finally { run('DB=__bkQ3.db; DASH_DADOS=__bkQ3.dd; dashDia=__bkQ3.di; dashItem=__bkQ3.it; zEscolha=__bkQ3.ze; zPergunta=__bkQ3.zp; renderDash=__bkQ3.rd; audit=__bkQ3.au; dashEspelhar=__bkQ3.esp; repMsgModal=__bkQ3.mm; repLancamentos=__bkQ3.l; repSaldo=__bkQ3.s; repLivresSemDia=__bkQ3.lsd; prevCorrigePetDe=__bkQ3.pc; repHojeISO=__bkQ3.h; pelExtra=__bkQ3.pe;'); }
+  } finally { run('DB=__bkQ3.db; DASH_DADOS=__bkQ3.dd; dashDia=__bkQ3.di; dashItem=__bkQ3.it; zEscolha=__bkQ3.ze; zPergunta=__bkQ3.zp; renderDash=__bkQ3.rd; audit=__bkQ3.au; dashEspelhar=__bkQ3.esp; repMsgModal=__bkQ3.mm; repLancamentos=__bkQ3.l; repSaldo=__bkQ3.s; repLivresSemDia=__bkQ3.lsd; prevCorrigePetDe=__bkQ3.pc; repHojeISO=__bkQ3.h; pelExtra=__bkQ3.pe; zTexto=__bkQ3.zt;'); }
 });
 provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o motivo e o dia', async () => {
   run(`__bkR4={db:DB, p:PELUDINHOS, l:repLancamentos, s:repSaldo, pl:repPodeLancar, zt:zTexto, mm:repMsgModal, rr:renderReposicao, ae:repAbrirExtrato, au:audit, lsd:repLivresSemDia, h:repHojeISO, pe:pelExtra};
@@ -841,7 +841,7 @@ provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o m
     repLancamentos=function(){ return [{_id:'c0', tipo:'credito', data:'2026-09-05'}, {_id:'c1', tipo:'credito', data:'2026-09-10'}, {_id:'u1', tipo:'uso', data:'2026-09-23', obs:''},
       {_id:'orc-x-1', tipo:'uso', data:'2026-09-20'}]; };
     repSaldo=function(){ return 0; }; repPodeLancar=function(){ return true; }; repLivresSemDia=function(){ return 0; };
-    zTexto=function(){ return Promise.resolve('a tutora cancelou'); };
+    zTexto=function(){ return Promise.resolve('a tutora cancelou a vinda'); };
     repMsgModal=function(t, l, texto){ __msg4={t:t, l:l, texto:texto}; }; renderReposicao=function(){}; repAbrirExtrato=function(){}; audit=function(){};`);
   try {
     await run("repDevolverUso(0,'u1')");
@@ -849,7 +849,7 @@ provaAsync('«Devolver» no Extrato: o uso cancelado volta para o saldo, com o m
     const push = JSON.parse(JSON.stringify(run('__push4')));
     assert.strictEqual(push.length, 1);
     assert.strictEqual(push[0].v.estornaId, 'u1');
-    assert.strictEqual(push[0].v.obs, 'a tutora cancelou');
+    assert.strictEqual(push[0].v.obs, 'a tutora cancelou a vinda');
     assert.strictEqual(push[0].v.dia_devolvido, '2026-09-23');
     assert.ok(/\/dev-u1$/.test(push[0].p));
     assert.ok(/Saldo agora: 1/.test(JSON.stringify(run('__msg4').l)));
@@ -1218,7 +1218,7 @@ prova('QA16 — a mensagem da troca desfeita: sem reposição quando a terça vo
 });
 provaAsync('QA16 — Tirar e desfazer a troca: "era 1, ficou 1" (o crédito da troca sai junto); Tirar só o lançamento não fala com o tutor', async () => {
   run(`__bkR2={db:DB, dd:DASH_DADOS, di:dashDia, it:dashItem, ze:zEscolha, zp:zPergunta, za:zAlertao, rd:renderDash, au:audit, esp:dashEspelhar, mm:repMsgModal,
-         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra, g:repGravar};
+         l:repLancamentos, s:repSaldo, lsd:repLivresSemDia, pc:prevCorrigePetDe, h:repHojeISO, pe:pelExtra, g:repGravar, zt:zTexto}; zTexto=function(){ return Promise.resolve('o tutor desmarcou por telefone'); };
     __mm=null; __za=null; __resp='ambos'; __g=[];
     DB={ref:function(p){ return { remove:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); }, set:function(){ return Promise.resolve(); } }; }};
     repGravar=function(p, r){ __g.push(JSON.parse(JSON.stringify(r))); return Promise.resolve(); };
@@ -1247,7 +1247,7 @@ provaAsync('QA16 — Tirar e desfazer a troca: "era 1, ficou 1" (o crédito da t
     for (let i = 0; i < 30; i++) await Promise.resolve();
     assert.strictEqual(run('__mm'), null, '«só o lançamento»: nenhuma mensagem ao tutor');
     assert.ok(/LANÇAMENTO TIRADO/.test(run('__za').t) && /A troca de 30\/09\/2026 continua/.test(JSON.stringify(run('__za').l)), JSON.stringify(run('__za')));
-  } finally { run('DB=__bkR2.db; DASH_DADOS=__bkR2.dd; dashDia=__bkR2.di; dashItem=__bkR2.it; zEscolha=__bkR2.ze; zPergunta=__bkR2.zp; zAlertao=__bkR2.za; renderDash=__bkR2.rd; audit=__bkR2.au; dashEspelhar=__bkR2.esp; repMsgModal=__bkR2.mm; repLancamentos=__bkR2.l; repSaldo=__bkR2.s; repLivresSemDia=__bkR2.lsd; prevCorrigePetDe=__bkR2.pc; repHojeISO=__bkR2.h; pelExtra=__bkR2.pe; repGravar=__bkR2.g;'); }
+  } finally { run('DB=__bkR2.db; DASH_DADOS=__bkR2.dd; dashDia=__bkR2.di; dashItem=__bkR2.it; zEscolha=__bkR2.ze; zPergunta=__bkR2.zp; zAlertao=__bkR2.za; renderDash=__bkR2.rd; audit=__bkR2.au; dashEspelhar=__bkR2.esp; repMsgModal=__bkR2.mm; repLancamentos=__bkR2.l; repSaldo=__bkR2.s; repLivresSemDia=__bkR2.lsd; prevCorrigePetDe=__bkR2.pc; repHojeISO=__bkR2.h; pelExtra=__bkR2.pe; repGravar=__bkR2.g; zTexto=__bkR2.zt;'); }
 });
 prova('QA16 — o crédito da troca não é reposição: nem no dia extra, nem no orçamento da hospedagem', () => {
   run(`__bkR3={l:repLancamentos, h:repHojeISO, d:repDisponivel, s:repSaldo, dm:dcMatriculado, vd:vagasDoDia, hz:zHojeISO, da:diariaAvulsaCent, P:PELUDINHOS};
@@ -13525,16 +13525,16 @@ provaAsync('6.46 P8 — sem o Extrato (REPO_LIDO=false), os 3 caminhos esperam e
 provaAsync('6.46 P9 — estornar e relançar a mesma falta grava fa-13/10-2: saldo 1, e o estorno antigo não anula o crédito novo', async () => {
   const B = palco646(false);
   try {
-    run("document.body.dataset.role='gestao';");
+    run("document.body.dataset.role='gestao'; __srBk660=senhasRuntime; senhasRuntime=function(){ return {'gestao-palco-660':{role:'gestao', nome:'Gestora Palco Teste'}}; };");
     await falta646('2026-10-13', '');
-    await run("repEstornar(0, 'fa-2026-10-13')"); await espera639();
+    run("repEstornar(0, 'fa-2026-10-13')"); await espera639(); await run("corrToque('confirmar', {motivo:'Lançada 2 vezes por engano', senha:'gestao-palco-660'})"); await espera639(); run("corrToque('fechar');");
     const est = Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno');
     igual([est.length, B.lanc()[est[0]].estornaId], [1, 'fa-2026-10-13']);
     igual(await falta646('2026-10-13', ''), '');
     igual(Object.keys(B.lanc()).filter((k) => /^fa-/.test(k)).sort(), ['fa-2026-10-13', 'fa-2026-10-13-2']);
     igual(creditos646(B), ['2026-10-13→-']);
     igual(run('__bk639.sd(PELUDINHOS[0])'), 1, 'o saldo de verdade (repSaldo) é 1');
-  } finally { solta646(); }
+  } finally { run('senhasRuntime=__srBk660;'); solta646(); }
 });
 provaAsync('6.46 P10 — a troca recusada pela transação NÃO desmarca a reposição marcada para o dia novo; com a troca gravada, ela sai só depois', async () => {
   let B = palco646(true);
@@ -13594,7 +13594,7 @@ provaAsync('6.46 P12 — as repetidas já gravadas: repRepetidas acha o par (e i
   igual(R['2026-10-13'].map((l) => l._id), ['-Na', '-Nb'], 'do mais antigo ao mais novo');
   const B = palco646(false);
   try {
-    run("document.body.dataset.role='gestao'; ['repExtTit','repExtSub','repExtLista'].forEach(function(k){ __el639[k]={textContent:'', innerHTML:''}; }); __el639.repExtratoModal={classList:{add:function(){}, remove:function(){}}};");
+    run("document.body.dataset.role='gestao'; ['repExtTit','repExtSub','repExtLista'].forEach(function(k){ __el639[k]={textContent:'', innerHTML:''}; }); __el639.repExtratoModal={classList:{add:function(){}, remove:function(){}}}; __srBk660=senhasRuntime; senhasRuntime=function(){ return {'gestao-palco-660':{role:'gestao', nome:'Gestora Palco Teste'}}; };");
     L.forEach((l) => { const o = Object.assign({}, l); delete o._id; B.poe('daycare/reposicao/' + K646() + '/lancamentos/' + l._id, o); });
     run('repAbrirExtrato(0)');
     const h = run('__el639.repExtLista.innerHTML');
@@ -13603,13 +13603,13 @@ provaAsync('6.46 P12 — as repetidas já gravadas: repRepetidas acha o par (e i
     igual(h.split(selo).length - 1, 2, 'o selo nas duas linhas do par: ' + h.slice(0, 200));
     igual((h.match(/Repetida — lançada/g) || []).length, 2, 'e em nenhuma outra (nem no sa-)');
     // o estorno de sempre: sem o motivo, nada; com o motivo, uma linha nova — o original fica
-    run("__zt646='';"); await run("repEstornar(0, '-Nb')"); await espera639();
+    run("repEstornar(0, '-Nb')"); await espera639(); await run("corrToque('confirmar', {motivo:'', senha:'gestao-palco-660'})"); await espera639();
     igual(Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno').length, 1, 'sem o motivo, nada é gravado');
-    run("__zt646='Lançada 2 vezes (repetida da de Recepção A)';"); await run("repEstornar(0, '-Nb')"); await espera639();
+    await run("corrToque('confirmar', {motivo:'Lançada 2 vezes (repetida da de Recepção A)', senha:'gestao-palco-660'})"); await espera639(); run("corrToque('fechar');");
     const est = Object.keys(B.lanc()).filter((k) => B.lanc()[k].tipo === 'estorno' && B.lanc()[k].estornaId === '-Nb');
     igual([est.length, !!B.lanc()['-Nb'], B.lanc()[est[0]].obs], [1, true, 'Lançada 2 vezes (repetida da de Recepção A)'], 'grava o estorno; nada é apagado');
     igual(Object.keys(J630('repRepetidas(repLancamentos(PELUDINHOS[0]))')), [], 'estornada, deixa de ser repetida');
-  } finally { solta646(); }
+  } finally { run('senhasRuntime=__srBk660;'); solta646(); }
 });
 provaAsync('6.46 P13 — sem rede: o modal reaberto relança a mesma falta na MESMA chave; quando a rede volta, entra UM crédito', async () => {
   const B = palco646({ atrasado: true, pendurado: true });
@@ -19115,7 +19115,7 @@ provaAsync('6.38 P38-27 — Lançamentos do dia › Tirar fora do prazo: o uso d
     prep(B);
     try {
       B.poe('daycare/dashboard/2026-10-08/reposicao/L1', { valor: 'Totó/SRD' });
-      run("__zeR638=['Tirar e desmarcar'];");
+      run("__zeR638=['Tirar e desmarcar']; __ztR638=['o tutor desmarcou por telefone'];");
       await run("dashRemover('reposicao','L1')"); await espera638();
       igual(J630('__ze638')[0].b[0], 'Tirar e desmarcar 08/10 (o tutor não vem)');
       const x = lanc638(B);
@@ -19199,12 +19199,12 @@ provaAsync('6.38 P38-30 — «Devolver»: a recepção não vê no uso com desfe
     const ups = []; const ref0 = B.ref;
     B.ref = (c) => { const r = ref0(c); const up = r.update, st = r.set;
       r.update = (o) => { ups.push([c.split('/').pop(), Object.keys(o).sort()]); return up(o); }; r.set = (v) => { ups.push(['set ' + c.split('/').pop()]); return st(v); }; return r; };
-    run("__ztR638=['estava internado'];");
+    run("__ztR638=['estava internado com receita'];");
     await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
     igual(ups, [['lancamentos', ['dev-veio-2026-10-08', 'fa-2026-10-01/volta', 'fa-2026-10-01/volta_desmarcada']]], 'um update só');
     const x = lanc638(B);
     igual([x['dev-veio-2026-10-08'].devolvido_gestao, x['dev-veio-2026-10-08'].estornaId, x['fa-2026-10-01'].volta, x['fa-2026-10-01'].volta_desmarcada.excecao.motivo],
-      [true, 'veio-2026-10-08', '', 'estava internado']);
+      [true, 'veio-2026-10-08', '', 'estava internado com receita']);
     igual(saldos638(0)[2], 1);
     const m = J630('__mm638')[0];
     igual([m.t, m.l[0]], ['Reposição devolvida pela Gestão', 'Totó ganhou de volta a reposição de 08/10 (sem dia marcado). Saldo agora 1.']);
@@ -19647,7 +19647,7 @@ provaAsync('6.38 R2-09 (QA638-09: Q01, Q07, Q11, Q15) — só a Gestão devolve 
     await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, papel, lanc: [L1] }, async (B) => {
       tela638(); run('repAbrirExtrato(0)');
       const x = run('__el638.repExtLista.innerHTML');
-      run("__ztR638=['estava internado'];"); await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
+      run("__ztR638=['estava internado com receita'];"); await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera638();
       r1[papel] = [x.indexOf("repDevolverUso(0,'veio-2026-10-08')") >= 0, /Só a Gestão devolve/.test(x), !!lanc638(B)['dev-veio-2026-10-08'], saldos638(0)[2]];
     });
   }
@@ -26352,11 +26352,17 @@ provaAsync('6.48 P6 — «Veio repor hoje» (repUsar) e «Estornar» (repEstorna
     igual(J630('__al648'), [CAIU648('Não consegui marcar')], 'a transação pode ter entrado: sem "Nada foi salvo"');
     run(`__al648=[]; __falha648=null; __mmErro648=${JSON.stringify(TEC648E)};`); await run('repUsar(0)'); await espera648();
     igual(J630('__al648'), ['Não consegui marcar: erro inesperado do app (' + TEC648E + '). Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']);
-    run("__al648=[]; __mmErro648=''; __falha648=new Error('permission_denied');"); await run("repEstornar(0, 'c1')"); await espera648();
-    igual(J630('__al648'), ['Não consegui estornar: o sistema recusou a gravação. Nada foi salvo. Avise a Gestão.']);
-    run("__al648=[]; __falha648=new Error('sem rede');"); await run("repEstornar(0, 'c1')"); await espera648();
-    igual(J630('__al648'), ['Não consegui estornar: sem rede.']);
-  } finally { SOLTA648R(); }
+    run("__al648=[]; __mmErro648=''; __falha648=new Error('permission_denied'); __L648=[" + JSON.stringify(CRED648) + "]; __srBk660=senhasRuntime; senhasRuntime=function(){ return {'gestao-palco-660':{role:'gestao', nome:'Gestora Palco Teste'}}; };");
+    run("repEstornar(0, 'c1')"); await espera648(); await run("corrToque('confirmar', {motivo:'Lançada 2 vezes por engano', senha:'gestao-palco-660'})"); await espera648();
+    // 6.60 (AC1.3): a falha do «Estornar» aparece no cartaz da 6.57 (era o alerta): NADA FOI GRAVADO, o motivo em português, «Avise a Gestão»
+    const h1 = String(run('corrCartazHTML(CORR_ATUAL)')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    igual([J630('__al648'), run('CORR_ATUAL.passo'), /NADA FOI GRAVADO/.test(h1) && /O sistema recusou a gravação\./.test(h1) && /Avise a Gestão\./.test(h1)], [[], 'falhou', true], h1);
+    run("corrToque('fechar'); __al648=[]; __falha648=new Error('sem rede');");
+    run("repEstornar(0, 'c1')"); await espera648(); await run("corrToque('confirmar', {motivo:'Lançada 2 vezes por engano', senha:'gestao-palco-660'})"); await espera648();
+    const h2 = String(run('corrCartazHTML(CORR_ATUAL)')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    igual([J630('__al648'), run('CORR_ATUAL.passo'), /NADA FOI GRAVADO/.test(h2) && /Sem rede\./.test(h2)], [[], 'falhou', true], h2);
+    run("corrToque('fechar');");
+  } finally { run('senhasRuntime=__srBk660;'); SOLTA648R(); }
 });
 provaAsync('6.48 P6 — «ele veio» (repVeioNoDia, transação): "permission_denied" é a recusa; "maxretry" é erro do app; "disconnect" sem "Nada foi mudado"', async () => {
   PALCO648R(`repDiaTemUso=function(){ return false; }; repVeioCredito=function(){ return ${JSON.stringify(Object.assign({}, CRED648, { volta: '2026-10-07' }))}; };`);
@@ -26900,7 +26906,13 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // renderVetMedList já lia), no motivo da reavaliação que a Veterinária escreveu (vetReavalTexto), no texto da correção do peso ao
   // grupo vet (pesoVetCorrecaoTexto) e na linha da ação própria da auditoria (pesoCorrGravar). O erro do banco dessas funções vai
   // para gravacao-FALHOU e, na tela, pelo zErroMotivo.
-  vetMotivoDe: 1, vetMedHistHTML: 1, vetReavalTexto: 1, pesoVetCorrecaoTexto: 1, pesoCorrGravar: 1 };
+  vetMotivoDe: 1, vetMedHistHTML: 1, vetReavalTexto: 1, pesoVetCorrecaoTexto: 1, pesoCorrGravar: 1,
+  // 6.60 (Reposições: corrigir, estornar, desfazer — funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo da falta
+  // avisada (cio, viagem…), mostrado pelo rótulo de REP_MOTIVOS no cartaz, no Extrato, na ficha e no rastro, e copiado para o crédito
+  // que volta ou que corrige; e o motivo que a pessoa escreveu no cartaz (reg.motivo), levado ao estorno (obs), ao rastro e ao Extrato
+  // («desfeito por … : motivo»). Nenhum erro: o erro do banco vai para gravacao-FALHOU e, na tela, pelo zErroMotivo do cartaz da 6.57.
+  repEstornarCascata: 1, repEstornarGravar: 2, repLoteEstornarGravar: 2, repLoteDepois: 1, repEstornoDesfazerAbrir: 3, repEstornoDesfazerGravar: 3,
+  repDevolucaoDesfazerAbrir: 2, repDevolucaoDesfazerGravar: 2, repCorrigirAbrir: 2, repCorrigirGravar: 5, repExtratoNovidades: 2, repExtratoLinhaHTML: 1 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -27021,6 +27033,8 @@ const EXCECAO648 = [
   // 6.59 (fora das três telas): a frase da régua das 4 palavras (motivoQuatroPalavras) e a da leitura da balança (pesoLer) — nunca o cru
   "function vetMotivoFrase(t){ var mq=motivoQuatroPalavras(t); return mq.ok?'':String(mq.erro); }",   // vetMotivoFrase: o motivo do «Alterar», do «Suspender», do «Reativar» e da nova prescrição
   "if(r.erro) return r.erro+' Nada foi gravado.';",   // pesoCorrAbrir: r = pesoLer («130 kg não é peso de FILHOt…», «Só números. Ex.: 9,7»)
+  // 6.60 (fora das três telas): a régua do motivo de 4 palavras de Reposições — a frase do motivoQuatroPalavras, nunca o cru
+  "function repMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // repMotivoErro: chamada na caixa (validar) e de novo dentro de cada função que grava
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
@@ -27401,12 +27415,16 @@ provaAsync('6.48 R2 — Reposições, depois de gravar (K1): «Estornar» (repEs
     dxVeredito=function(){ return {ok:true, tipo:'avulso', valor_cent:9700, matriculado:true}; };
     dxFechar=function(){ throw new TypeError('x is not a function'); }; audit=function(){ throw new TypeError('x is not a function'); };`);
   try {
-    await run("repEstornar(0, 'c1')"); await espera648();
-    igual(J630('__al648'), ['Não consegui estornar: erro inesperado do app (x is not a function). Confira no Extrato se entrou antes de tentar de novo; avise a Gestão com um print desta tela.']);
+    run("__L648=[" + JSON.stringify(CRED648) + "]; __srBk660=senhasRuntime; senhasRuntime=function(){ return {'gestao-palco-660':{role:'gestao', nome:'Gestora Palco Teste'}}; };");
+    run("repEstornar(0, 'c1')"); await espera648(); await run("corrToque('confirmar', {motivo:'Lançada 2 vezes por engano', senha:'gestao-palco-660'})"); await espera648();
+    // 6.60 (AC1.3): gravou e o rastro de depois quebrou — o cartaz diz «Estornado» (gravado no sistema), nunca «Nada foi salvo» (era o alerta K1)
+    const h3 = String(run('corrCartazHTML(CORR_ATUAL)')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    igual([J630('__al648'), run('CORR_ATUAL.passo'), /Estornado/.test(h3) && !/Nada foi salvo|NADA FOI GRAVADO/.test(h3)], [[], 'pronto', true], h3);
+    run("corrToque('fechar');");
     run('dxPedir()'); await espera648();
     igual(run('__dx648.dxWarn.textContent'), 'Não consegui avisar a Márcia: erro inesperado do app (x is not a function). Confira nos pedidos de encaixe se entrou antes de tentar de novo; avise a Gestão com um print desta tela.');
     igual(run('__grav648'), ['repGravar', 'vagasPedir'], 'as duas gravações entraram');
-  } finally { SOLTA648R(); }
+  } finally { run('senhasRuntime=__srBk660;'); SOLTA648R(); }
 });
 provaAsync('6.48 R2 — a pernoite: o cancelamento que entrou e a tela de depois quebrou (pernCancelar, K1, Q12); a LEITURA recusada diz «recusou a leitura» (pernConferirNoite, Q17)', async () => {
   run(`__bkpDB=DB; __bkpZT=zTexto; __bkpZA=zAlertao; __bkpPH=pernHoje; __bkpPA=PERN_ATRAS; __bkpAL=alert; __bkpCR=pernCartaoRender; __al648=[]; __za648=[]; __k1648=false;
@@ -36500,6 +36518,1201 @@ provaAsync('6.62 P29 (2ª rodada, BAIXO-4) — o coletor de verdade (coletarMedA
     run('salvarMedAgenda()'); await espera659();
     igual([String(run("__el657['mag-status'].textContent")), escAg662()], [FRASE_PARADO662, 0]);
   } finally { solta659(); }
+});
+}
+{
+// ================================================================== 6.60 — Reposições: o livro-caixa sem apagar (S4 da revisão, parte 1)
+console.log('\n6.60 — Reposições: estornar (com a senha da Gestão) e o lote, desfazer o estorno e a devolução, corrigir a falta, a falta avisada dos Lançamentos e a Reposição sem abater');
+// Tudo INVENTADO: Quindim (tutora Ana Teste), Bolota (Bia Teste) e as pessoas «Teste». Relógio FIXO em sexta, 09/10/2026, 10:00 (o do
+// ARMA657). O banco de mentira é o da 6.57 (conta gravações, recusa por caminho, faz a transação em qualquer nó), e cada gravação desce
+// na hora para o REPO_CACHE, como o ouvinte de daycare/reposicao. As senhas são as de mentira do ARMA657.
+const crypto660 = require('crypto');
+const K660 = 'quindim__ana teste';
+const NO660 = 'daycare/reposicao/' + K660 + '/lancamentos';
+const MOT660 = 'a falta foi lançada no dia errado';
+const ARMA660X = `__bk660={rc:REPO_CACHE, rl:REPO_LIDO, vp:VAGAS_PEDIDOS, bfa:banhoFaltaAgendar, mm:repMsgModal, rr:renderReposicao, of:orcFeriadosGarantir,
+    pl:repPelSel, mo:repModoAtual, mt:repMotivoAtual, ad:repAlgunsDatas, cl:(typeof REP_CORRIGE_LOTE==='undefined')?undefined:REP_CORRIGE_LOTE, lanc:REP_LANCANDO, fl:REP_FER_LENDO,
+    de:dashEspelhar, pal:pendAvaliarLancamento, rpc:REP_PLAN_CACHE, ze:zEscolha, zt:zTexto, pe:pelExtra, rq:repReservado};
+  REPO_CACHE={}; REPO_LIDO=true; VAGAS_PEDIDOS={}; __bfa660=0; banhoFaltaAgendar=function(){ __bfa660++; };
+  __mm660=[]; repMsgModal=function(t,l,x){ __mm660.push({t:t, l:l, x:x}); }; renderReposicao=function(){};
+  orcFeriadosGarantir=function(){ return Promise.resolve(); }; REP_FER_LENDO=false; REP_LANCANDO=false; if(typeof REP_CORRIGE_LOTE!=='undefined') REP_CORRIGE_LOTE='';
+  repReservado=function(){ return __res660||0; }; __res660=0;
+  __resp657=(function(f){ return function(op, p, info, fazer){ return f(op, p, info, function(){ fazer(); REPO_CACHE=__get657('daycare/reposicao')||{}; }); }; })(__resp657);
+  __ze660=[]; __zeq660=[]; zEscolha=function(t,l,b){ var bs=(b||[]).map(function(x){ return x.t; }); __ze660.push({t:t, l:l, b:bs}); __ze657.push([t, l, bs]);
+    var r=__zeq660.length?__zeq660.shift():null, x=null; if(r!=null) x=(b||[]).filter(function(y){ return y.t.indexOf(r)>=0; })[0]; if(x && typeof x.fn==='function') x.fn(); };
+  __zto660=[]; zTexto=function(t,l,op){ __zt657.push([t, l]); __zto660.push({t:t, l:l, op:op||{}}); return Promise.resolve(__ztq657.length?__ztq657.shift():null); };
+  dashEspelhar=function(){ return Promise.resolve(); }; pendAvaliarLancamento=function(){}; REP_PLAN_CACHE={};
+  PELUDINHOS=[{n:'Quindim', tutor:'Ana Teste', raca:'SRD', dias:['seg','ter','qua','qui','sex']}, {n:'Bolota', tutor:'Bia Teste', raca:'Spitz', dias:['seg','qua']}];
+  pelExtra=function(){ return {sexo:'Macho'}; };
+  var __fe660=function(){ return {value:'', textContent:'', innerHTML:'', style:{}, disabled:false, focus:function(){},
+    classList:{_on:false, add:function(){ this._on=true; }, remove:function(){ this._on=false; }, toggle:function(){}, contains:function(){ return this._on; }}}; };
+  ['repModal','repPelBusca','repPelResults','repObs','repWarn','repVolta','repVagasBox','repData','repDe','repAte','repPrevia','repBlocoDia','repBlocoPeriodo',
+   'repBlocoAlguns','repAlgunsLista','repPreviaAlguns','repEscolhido','repFormulario','repTitulo','repExtTit','repExtSub','repExtLista','repExtratoModal',
+   'dashB_faltas','dashS_faltas'].forEach(function(k){ __el657[k]=__fe660(); });`;
+const SOLTA660X = `REPO_CACHE=__bk660.rc; REPO_LIDO=__bk660.rl; VAGAS_PEDIDOS=__bk660.vp; banhoFaltaAgendar=__bk660.bfa; repMsgModal=__bk660.mm; renderReposicao=__bk660.rr;
+  orcFeriadosGarantir=__bk660.of; repPelSel=__bk660.pl; repModoAtual=__bk660.mo; repMotivoAtual=__bk660.mt; repAlgunsDatas=__bk660.ad; if(__bk660.cl!==undefined) REP_CORRIGE_LOTE=__bk660.cl;
+  REP_LANCANDO=__bk660.lanc; REP_FER_LENDO=__bk660.fl; dashEspelhar=__bk660.de; pendAvaliarLancamento=__bk660.pal; REP_PLAN_CACHE=__bk660.rpc;
+  zEscolha=__bk660.ze; zTexto=__bk660.zt; pelExtra=__bk660.pe; repReservado=__bk660.rq; __recusa657=null;`;
+// o palco nunca fica armado pela metade (numa cópia sem a 6.60, a prova cai sem levar o sandbox junto)
+const arma660 = () => { run(ARMA657); try { run(ARMA660X); } catch (e) { run(SOLTA657); throw e; } };
+const solta660 = () => { try { run(SOLTA660X); } finally { run(SOLTA657); } };
+const semear660 = (lanc, i) => { ctx.__s660 = lanc; run(`__put657('daycare/reposicao/'+pelKey(PELUDINHOS[${i || 0}])+'/lancamentos', __s660); REPO_CACHE=__get657('daycare/reposicao')||{}; __esc657=[]; __au657=[];`); };
+const poe660 = (c, v) => { ctx.__v660 = v; run(`__put657(${JSON.stringify(c)}, __v660); REPO_CACHE=__get657('daycare/reposicao')||{};`); };
+// o outro aparelho gravou no servidor e o ouvinte DESTE aparelho ainda não trouxe (o Extrato daqui está atrasado)
+const poeSo660 = (c, v) => { ctx.__v660 = v; run(`__put657(${JSON.stringify(c)}, __v660);`); };
+const lanc660 = (i) => J630(`__get657('daycare/reposicao/'+pelKey(PELUDINHOS[${i || 0}])+'/lancamentos')`) || {};
+const saldos660 = (i) => J630(`[repSaldo(PELUDINHOS[${i || 0}]), repSaldoReposicao(PELUDINHOS[${i || 0}])]`);
+const txt660 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+const passo660 = () => run('CORR_ATUAL?CORR_ATUAL.passo:null');
+const aviso660 = () => String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || '');
+const cartaz660 = () => txt660(run('CORR_ATUAL?corrCartazHTML(CORR_ATUAL):""'));
+const op660 = (c) => J630('CORR_ATUAL?CORR_ATUAL.op.' + c + ':null');
+const assina660 = async (senha, motivo) => { await run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo === undefined ? MOT660 : motivo)}, senha:${JSON.stringify(senha)}})`); await espera657(); return [passo660(), aviso660()]; };
+const fecha660 = async () => { run(`if(CORR_ATUAL) corrToque('fechar');`); await espera657(); };
+const continua660 = async (valores) => { const r = J630(`(function(){ var x=null; corrToque('continuar', {valores:${JSON.stringify(valores)}}).then(function(v){ x=v; }); return 1; })()`); await espera657(); return [passo660(), aviso660()]; };
+const aud660 = (acao) => J630(`__au657.filter(function(a){ return a[0]===${JSON.stringify(acao)}; })`);
+const extrato660 = (i) => { run(`repAbrirExtrato(${i || 0})`); return String(run('__el657.repExtLista.innerHTML')); };
+const trans660 = () => J630('__esc657').filter((e) => e[0] === 'transaction' && /\/lancamentos$/.test(e[1]));
+const T660 = (d, hh, mm) => new Date(2026, 9, d, hh, mm || 0, 0).getTime();
+const CR660 = (data, extra) => Object.assign({ tipo: 'credito', data: data, motivo: 'viagem', obs: 'viagem curta', volta: '', quem: 'Recepção X', ts: T660(8, 9, 0) }, extra || {});
+const EST660 = (alvo, extra) => Object.assign({ tipo: 'estorno', data: '2026-10-08', motivo: 'estorno', obs: 'lançada por engano ontem à tarde', estornaId: alvo, quem: 'Recepção X', ts: T660(8, 15, 0) }, extra || {});
+const USO660 = (data, extra) => Object.assign({ tipo: 'uso', data: data, motivo: 'reposicao', obs: '', quem: 'Recepção X', ts: T660(8, 10, 0) }, extra || {});
+
+// ---- AC1 — Estornar: a senha da Gestão, o motivo de 4 palavras e a cascata ----------------------------------------
+provaAsync('6.60 P1 (AC1.1, AC1.2) — «Estornar» (44 px) abre o cartaz da 6.57 (anular, senha da Gestão) com a cascata: o crédito, o dia de repor marcado, o pedido de encaixe em aberto, a planilha e o saldo antes → depois; a troca viva e a falta fora da janela dizem o delas', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { volta: '2026-10-15', prazo24h: '2026-10-15' }), 'fa-2026-10-06': CR660('2026-10-06') });
+    run(`VAGAS_PEDIDOS={'2026-10-16':{}}; VAGAS_PEDIDOS['2026-10-16']['${K660}']={status:'pedido', dia:'2026-10-16', payload:{credito_id:'fa-2026-10-13', volta:'2026-10-16'}};`);
+    const x = extrato660();
+    assert.ok(/<button type="button" onclick="repEstornar\(0,'fa-2026-10-13'\)" style="[^"]*min-height:44px[^"]*">Estornar<\/button>/.test(x), 'o «Estornar» com 44 px: ' + x.slice(0, 900));
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual([op660('titulo'), op660('acao'), op660('nivel'), op660('botao')], ['Estornar a falta de 13/10', 'anular', 'gestao', 'Estornar']);
+    igual(op660('cascata'), ['O crédito da falta de 13/10/2026 (Tutor viajou), lançado por Recepção X em 08/10/2026 às 09:00.',
+      'O dia de repor 15/10 sai junto: a vaga fica livre. Estornar não é desmarcar: a regra das 24 horas não conta nada aqui.',
+      'O pedido de encaixe de 16/10, que usa esta falta, continua na fila da Márcia: peça a ela para recusar o pedido.',
+      'A falta avisada de 13/10 sai da planilha na próxima conferência (até 5 min).', 'Saldo de reposição: 2 → 1.']);
+    igual(op660('aviso'), '', 'sem a frase do crédito usado');
+    const h = cartaz660();
+    assert.ok(/Senha da Gestão/.test(h) && /Quem assina: a Gestão ou a Diretoria/.test(h) && /Motivo \(pelo menos 4 palavras\)/.test(h), h);
+    await fecha660();
+    igual(await run('__p660'), { ok: false, cancelado: true });
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { motivo: 'troca', volta: '2026-10-14', troca: { de: '2026-10-13', para: '2026-10-14' }, nasceu_troca: true }), 'fa-2026-09-01': CR660('2026-09-01') });
+    run(`VAGAS_PEDIDOS={}; __p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('cascata')[1], 'É uma troca (13/10 → 14/10): estornar tira a falta avisada de 13/10 e o dia novo 14/10, cuja vaga fica livre. Se 13/10 ainda não passou, ele volta a vir nesse dia.');
+    await fecha660();
+    run(`__p660=repEstornar(0, 'fa-2026-09-01');`); await espera657();
+    igual(op660('cascata')[1], 'A planilha daquele dia já é história: nada muda nela.');
+    await fecha660();
+    igual([trans660().length, Object.keys(lanc660()).length], [0, 2], 'cancelar não grava nada');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P2 (AC1.2, S4-P5) — o crédito que já foi usado: a frase fixa do saldo negativo no cartaz; o estorno vai adiante, o livro-caixa fica −1 e o saldo de reposição 0', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'veio-2026-10-08': USO660('2026-10-08') });
+    igual(saldos660(), [0, 0]);
+    run(`__p660=repEstornar(0, 'fa-2026-10-06');`); await espera657();
+    igual(op660('aviso'), 'Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1: o dia usado continua usado, e a casa absorve.');
+    assert.ok(cartaz660().indexOf('Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1') >= 0, cartaz660());
+    igual(await assina660(SENHA657), ['pronto', '']);
+    igual(saldos660(), [-1, 0]);
+    igual(lanc660()['est-fa-2026-10-06'].estornaId, 'fa-2026-10-06');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P3 (AC1.2, AC1.6, decisão 1) — só a Gestão assina o estorno: Consultora, Supervisão, posto e nome digitado recusados, nada gravado; o motivo de 3 palavras recusado; a Gestão assina', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    const r = {};
+    for (const s of ['s-bia', 's-amanda', 's-posto', 's-recep', 'Gestora Teste']) r[s] = await assina660(s);
+    igual(r['s-bia'], ['conferir', 'Essa senha é de Bia Consultora Teste, que não pode assinar esta anulação. Quem assina: a Gestão ou a Diretoria. Nada foi gravado.']);
+    igual(r['s-amanda'], ['conferir', 'Essa senha é de Amanda Supervisora Teste, que não pode assinar esta anulação. Quem assina: a Gestão ou a Diretoria. Nada foi gravado.']);
+    assert.ok(/senha de posto não assina/.test(r['s-posto'][1]) && /senha de posto não assina/.test(r['s-recep'][1]), JSON.stringify(r));
+    igual(r['Gestora Teste'], ['conferir', 'Essa senha não é de ninguém cadastrado. Nada foi gravado.'], 'o nome digitado não assina');
+    igual(await assina660(SENHA657, 'data errada mesmo'), ['conferir', 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).']);
+    igual(trans660().concat(J630('__esc657')).length, 0, 'nada gravado');
+    igual(await assina660(SENHA657), ['pronto', '']);
+    igual(Object.keys(lanc660()).sort(), ['est-fa-2026-10-13', 'fa-2026-10-13']);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P4 (AC1.3, AC1.4, AC1.5, AC9.2) — o estorno gravado é o de sempre (estornaId, obs = motivo) na chave est-{crédito}, com o registro da 6.57 em corr; a senha em nenhum nó; a auditoria diz a data e o motivo do crédito; o rastro da 6.57; a falta de hoje chama banhoFaltaAgendar', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { motivo: 'cio' }), 'fa-2026-10-09': CR660('2026-10-09') });
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual(await assina660(SENHA657), ['pronto', '']);
+    const e = lanc660()['est-fa-2026-10-13'];
+    igual([e.tipo, e.data, e.motivo, e.obs, e.estornaId, e.quem, e.corr.acao, e.corr.por, e.corr.papel, e.corr.motivo, e.corr.original.id],
+      ['estorno', '2026-10-09', 'estorno', MOT660, 'fa-2026-10-13', 'Gestora Teste', 'anular', 'Gestora Teste', 'gestao', MOT660, 'fa-2026-10-13']);
+    assert.ok(JSON.stringify(J630('__db657')).indexOf(SENHA657) < 0, 'a senha não está em nó nenhum');
+    const au = aud660('reposicao-estorno');
+    igual(au.length, 1);
+    assert.ok(/13\/10\/2026/.test(au[0][1]) && /\(Cio\)/.test(au[0][1]) && au[0][1].indexOf(MOT660) >= 0 && au[0][1].indexOf(SENHA657) < 0, au[0][1]);
+    igual(aud660('registro-anulado').length, 1, 'a entrada da 6.57 (corrRastro), depois do ok');
+    igual(run('__bfa660'), 0, '13/10 não é hoje');
+    igual(await run('__p660').then((x) => x.ok), true);
+    run(`__p660=repEstornar(0, 'fa-2026-10-09');`); await espera657();
+    await assina660(SENHA657);
+    igual(run('__bfa660'), 1, 'a falta de hoje: banhoFaltaAgendar uma vez');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P5 (AC1.3) — o banco recusando: «NADA FOI GRAVADO», o motivo em português, o crédito valendo e nenhuma entrada de correção nem de estorno', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    run(`__recusa657='lancamentos'; __p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual((await assina660(SENHA657))[0], 'falhou');
+    const h = cartaz660();
+    assert.ok(/NADA FOI GRAVADO/.test(h) && /O sistema recusou a gravação\./.test(h) && /O registro continua como estava/.test(h), h);
+    igual([Object.keys(lanc660()), saldos660(), aud660('reposicao-estorno').length, aud660('registro-anulado').length], [['fa-2026-10-13'], [1, 1], 0, 0]);
+    igual((await run('__p660')).ok, false);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P6 (AC1.6) — «Estornar» (e as outras portas da 6.60) chamado pelo console por quem não lança reposição (o Encãotador): «BARROU», nenhum cartaz, nada gravado', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    papel657('monitor', 'Caio Encãotador Teste');
+    const r = J630("(function(){ var o=null; repEstornar(0, 'fa-2026-10-13').then(function(v){ o=v; }); return 1; })()"); await espera657();
+    igual([run('CORR_ATUAL'), barrou657().length, J630('__esc657').length], [null, 1, 0]);
+    assert.ok(/BARROU estornar uma reposição/.test(barrou657()[0][1]), JSON.stringify(barrou657()));
+    // as outras portas da 6.60 também barram antes de abrir o cartaz
+    for (const c of ["repCorrigirAbrir(0, 'fa-2026-10-13')", "repLoteEstornarAbrir(0, 'fa-2026-10-13')", "repEstornoDesfazerAbrir(0, 'e1')", "repDevolucaoDesfazerAbrir(0, 'd1')", "dashRepAbaterDepois('L1')"]) run(c);
+    await espera657();
+    igual([run('CORR_ATUAL'), barrou657().length, J630('__esc657').length], [null, 6, 0]);
+    igual(barrou657().map((a) => a[1].replace(/ \(.*$/, '')), ['BARROU estornar uma reposição', 'BARROU corrigir uma falta avisada', 'BARROU estornar um lote de faltas avisadas',
+      'BARROU desfazer um estorno de reposição', 'BARROU desfazer uma devolução de reposição', 'BARROU abater uma reposição do saldo']);
+    papel657('gestao', 'Gestora Teste');
+  } finally { solta660(); }
+});
+// ---- AC2 — Estornar o lote ------------------------------------------------------------------------------------------
+const LOTE660 = (extra) => Object.assign({ lote: 'L77', periodo: { de: '2026-10-13', ate: '2026-10-16' } }, extra || {});
+const semeiaLote660 = () => semear660({ 'fa-2026-10-13': CR660('2026-10-13', LOTE660({ volta: '2026-10-20', prazo24h: '2026-10-20' })), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()),
+  'fa-2026-10-15': CR660('2026-10-15', LOTE660()), 'fa-2026-10-16': CR660('2026-10-16', LOTE660()), 'est-fa-2026-10-16': EST660('fa-2026-10-16'),
+  'fa-2026-10-21': CR660('2026-10-21', { lote: 'L88', alguns: { datas: ['2026-10-21', '2026-10-22'] } }), 'fa-2026-10-22': CR660('2026-10-22', { lote: 'L88', alguns: { datas: ['2026-10-21', '2026-10-22'] } }),
+  'est-fa-2026-10-22': EST660('fa-2026-10-22') });
+provaAsync('6.60 P7 (AC2.1, AC2.2, AC2.3) — «Estornar o lote (N)» só com 2 ou mais vivos; a cascata; a transação estorna os vivos daquela hora (os já estornados ficam como estão); o estornado em outro aparelho no meio fica de fora e a tela diz; o banco recusando: nada', async () => {
+  arma660();
+  try {
+    semeiaLote660();
+    const x = extrato660();
+    assert.ok(x.indexOf("repLoteEstornarAbrir(0,'fa-2026-10-13')") >= 0 && x.indexOf('Estornar o lote (3)') >= 0, x.slice(0, 900));
+    assert.ok(x.indexOf("repLoteEstornarAbrir(0,'fa-2026-10-21')") < 0, 'o lote com 1 vivo não tem o botão');
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-14');`); await espera657();
+    igual([op660('titulo'), op660('nivel'), op660('botao')], ['Estornar o lote (3 dias)', 'gestao', 'Estornar o lote']);
+    igual(op660('cascata'), ['A falta de 13/10/2026, lançada por Recepção X em 08/10/2026 às 09:00.', 'A falta de 14/10/2026, lançada por Recepção X em 08/10/2026 às 09:00.',
+      'A falta de 15/10/2026, lançada por Recepção X em 08/10/2026 às 09:00.', 'Já estavam estornadas (ficam como estão): 16/10.',
+      'O dia de repor 20/10 sai junto: a vaga fica livre. Estornar não é desmarcar: a regra das 24 horas não conta nada aqui.',
+      'As faltas avisadas de 13/10, 14/10 e 15/10 saem da planilha na próxima conferência (até 5 min).', 'Saldo de reposição: 4 → 1.']);
+    // outro aparelho estorna o 15/10 entre a leitura e a gravação
+    poeSo660(NO660 + '/est-fa-2026-10-15', EST660('fa-2026-10-15', { data: '2026-10-09', quem: 'Aparelho B Teste', ts: T660(9, 9, 59) }));
+    run('__esc657=[]; __zeq660=["Fechar"];');
+    igual(await assina660(SENHA657), [null, ''], 'o cartaz fecha e a confirmação do lote abre');
+    const L = lanc660();
+    igual([L['est-fa-2026-10-13'].lote_estorno === L['est-fa-2026-10-14'].lote_estorno, /^E\d+$/.test(L['est-fa-2026-10-13'].lote_estorno), L['est-fa-2026-10-15'].quem, L['est-fa-2026-10-13'].corr.por],
+      [true, true, 'Aparelho B Teste', 'Gestora Teste']);
+    igual(trans660().length, 1, 'uma transação só');
+    const z = J630('__ze660').filter((o) => o.t === 'LOTE ESTORNADO')[0];
+    igual(z.l.slice(0, 2), ['Estornadas: 13/10 e 14/10.', 'Ficou de fora (já tinha sido estornada em outro aparelho): 15/10.']);
+    igual(z.b, ['Lançar o período certo', 'Fechar']);
+    igual(saldos660(), [1, 1]);
+    igual(aud660('reposicao-lote-estornado').length, 1);
+    // o banco recusando: nada
+    semeiaLote660(); run(`__recusa657='lancamentos'; __p660=repLoteEstornarAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual((await assina660(SENHA657))[0], 'falhou');
+    igual([Object.keys(lanc660()).filter((k) => /^est-/.test(k)).sort(), saldos660()], [['est-fa-2026-10-16', 'est-fa-2026-10-22'], [4, 4]]);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P8 (AC2.4) — «Lançar o período certo» abre a janela «+ Falta avisada» com o FILHOt, o modo, as datas, o motivo e a observação, sem lançar nada; o lançamento novo leva corrige_lote, passa pela chave fixa (fa-…-2) e o feriado fica de fora (6.43)', async () => {
+  arma660();
+  try {
+    semeiaLote660();
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-13'); __zeq660=['Lançar o período certo'];`); await espera657();
+    await assina660(SENHA657);
+    igual([run('repModoAtual'), run('__el657.repDe.value'), run('__el657.repAte.value'), run('repMotivoAtual'), run('__el657.repObs.value'), run('REP_CORRIGE_LOTE'),
+      run('__el657.repTitulo.textContent'), run('repPelSel===PELUDINHOS[0]'), run('__el657.repModal.classList._on')],
+      ['periodo', '2026-10-13', '2026-10-16', 'viagem', 'viagem curta', 'L77', 'Lançar o período certo', true, true]);
+    const antes = Object.keys(lanc660()).sort();
+    igual(Object.keys(lanc660()).filter((k) => !/^est-/.test(k) && !lanc660()[k].corrige_lote).length, 6, 'nada é lançado sem o «Lançar reposição»');
+    run(`__el657.repDe.value='2026-10-12'; __el657.repAte.value='2026-10-14'; repConfirmar();`); await espera657();
+    const L = lanc660(), novos = Object.keys(L).filter((k) => antes.indexOf(k) < 0).sort();
+    igual(novos, ['fa-2026-10-13-2', 'fa-2026-10-14-2'], 'o 12/10 (feriado) fica de fora; a chave fixa pula o nó do lote estornado');
+    igual(novos.map((k) => [L[k].corrige_lote, L[k].motivo, L[k].obs, L[k].periodo.de]), [['L77', 'viagem', 'viagem curta', '2026-10-12'], ['L77', 'viagem', 'viagem curta', '2026-10-12']]);
+    // sem «Lançar o período certo», a janela abre limpa (o lote corrigido fica para trás)
+    run('repAbrirLancar(PELUDINHOS[0]);');
+    igual([run('REP_CORRIGE_LOTE'), run('__el657.repTitulo.textContent'), run('repModoAtual')], ['', 'Lançar falta avisada', 'dia']);
+  } finally { solta660(); }
+});
+// ---- AC3 — Desfazer o estorno -------------------------------------------------------------------------------------
+provaAsync('6.60 P9 (AC3.1, AC3.2, AC3.4, AC3.5, AC3.6) — «Desfazer o estorno»: crédito novo em fa-{data}-2 com restaura, sem dia de repor; o estorno e o crédito antigo intactos; saldo +1; o Extrato diz «desfeito por» e «volta do estorno»; a mensagem de sempre do crédito', async () => {
+  arma660();
+  try {
+    const C = CR660('2026-10-13', { volta: '2026-10-15', prazo24h: '2026-10-15', lote: 'L5', periodo: { de: '2026-10-13', ate: '2026-10-13' } }), E = EST660('fa-2026-10-13');
+    semear660({ 'fa-2026-10-13': C, 'est-fa-2026-10-13': E, 'fa-2026-10-06': CR660('2026-10-06') });
+    const x = extrato660();
+    assert.ok(x.indexOf("repEstornoDesfazerAbrir(0,'est-fa-2026-10-13')") >= 0 && x.indexOf('Desfazer o estorno') >= 0, x.slice(0, 900));
+    run(`__p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-13');`); await espera657();
+    igual([op660('acao'), op660('nivel'), op660('botao')], ['reabrir', 'gestao', 'Desfazer o estorno']);
+    igual(op660('volta'), ['O crédito da falta de 13/10/2026 (Tutor viajou), com a observação «viagem curta».',
+      'Não volta: o dia de repor que estava marcado (15/10). Marque de novo em «Marcar reposição».', 'Saldo de reposição: 1 → 2.']);
+    igual((await assina660('s-bia'))[0], 'conferir', 'a Consultora não assina');
+    igual(await assina660(SENHA657), [null, ''], 'o cartaz dá lugar à mensagem');
+    const L = lanc660(), n = L['fa-2026-10-13-2'];
+    igual([n.tipo, n.data, n.motivo, n.obs, n.lote, n.periodo, n.restaura, 'volta' in n, 'prazo24h' in n, n.corr.acao, n.corr.por],
+      ['credito', '2026-10-13', 'viagem', 'viagem curta', 'L5', { de: '2026-10-13', ate: '2026-10-13' }, { estorno: 'est-fa-2026-10-13', credito: 'fa-2026-10-13' }, false, false, 'reabrir', 'Gestora Teste']);
+    igual([L['fa-2026-10-13'], L['est-fa-2026-10-13']], [C, E], 'o estorno e o crédito antigo intactos');
+    igual(saldos660(), [2, 2]);
+    const mm = J630('__mm660')[0];
+    igual(mm.t, 'Estorno desfeito');
+    assert.ok(/está com 2 reposições, contando a do dia 13\/10\/2026\./.test(mm.x), mm.x);
+    const x2 = txt660(extrato660());
+    assert.ok(/desfeito por Gestora Teste em 09\/10\/2026 às 10:00: a falta foi lançada no dia errado/.test(x2), x2);
+    assert.ok(/volta do estorno de 08\/10 por Gestora Teste/.test(x2), x2);
+    assert.ok(extrato660().indexOf("repEstornoDesfazerAbrir(0,'est-fa-2026-10-13')") < 0, 'desfeito: sem o botão');
+    igual(aud660('reposicao-estorno-desfeito').length, 1);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P10 (AC3.3) — desfazer o estorno, recusas na própria tela, nada gravado: troca, feriado, a data relançada, o estorno já desfeito; a saída antecipada (sa-) nem tem o botão', async () => {
+  arma660();
+  try {
+    const tenta = async (L, idEst) => { semear660(L); run(`__za657=[]; __p660=repEstornoDesfazerAbrir(0, ${JSON.stringify(idEst)});`); await espera657();
+      const z = J630('__za657'); const r = [run('CORR_ATUAL'), z.length ? z[0][1][0] : '', J630('__esc657').length]; await fecha660(); return r; };
+    igual(await tenta({ 'fa-2026-10-13': CR660('2026-10-13', { motivo: 'troca', troca: { de: '2026-10-13', para: '2026-10-14' }, volta: '2026-10-14', nasceu_troca: true }), e1: EST660('fa-2026-10-13', { obs: 'Troca desfeita' }) }, 'e1'),
+      [null, 'Este estorno desfez uma troca. Para refazer, use «+ Marcar troca».', 0]);
+    igual(await tenta({ 'fa-2026-10-12': CR660('2026-10-12'), e1: EST660('fa-2026-10-12') }, 'e1'),
+      [null, '12/10/2026 é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto: nada foi lançado.', 0]);
+    igual(await tenta({ 'fa-2026-10-13': CR660('2026-10-13'), e1: EST660('fa-2026-10-13'), 'fa-2026-10-13-2': CR660('2026-10-13', { quem: 'Ana Recepção Teste', ts: T660(8, 16, 30) }) }, 'e1'),
+      [null, 'A falta de 13/10 já foi lançada de novo (por Ana Recepção Teste, em 08/10/2026 às 16:30). Desfazer este estorno daria dois créditos para o mesmo dia. Nada foi gravado.', 0]);
+    const r4 = await tenta({ 'fa-2026-10-13': CR660('2026-10-13'), e1: EST660('fa-2026-10-13'),
+      'fa-2026-10-13-2': CR660('2026-10-13', { restaura: { estorno: 'e1', credito: 'fa-2026-10-13' }, corr: { por: 'Gestora Teste', quando: '09/10/2026 às 09:30', motivo: 'x' } }) }, 'e1');
+    igual(r4, [null, 'Este estorno já foi desfeito por Gestora Teste em 09/10/2026 às 09:30. Nada foi gravado de novo.', 0]);
+    semear660({ 'sa-EST1-1': CR660('2026-10-08', { motivo: 'hospedagem-saida-antecipada', estadiaId: 'EST1' }), e9: EST660('sa-EST1-1'),
+      'sa-EST1-2': CR660('2026-10-08', { motivo: 'hospedagem-saida-antecipada', estadiaId: 'EST1' }) });
+    const xs = extrato660();
+    assert.ok(xs.indexOf('repEstornoDesfazerAbrir') < 0, 'o sa- fica sem «Desfazer o estorno» (S6)');
+    assert.ok(xs.indexOf("repEstornar(0,'sa-EST1-2')") >= 0 && xs.indexOf('repCorrigirAbrir') < 0, 'o sa- vivo: «Estornar», sem «Corrigir» (S6)');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P11 (AC3.4, risco 1) — dois aparelhos: o mesmo estorno desfeito no outro aparelho no meio → um crédito só; um «+ Falta» da mesma data no outro aparelho no meio → um crédito só; e o «+ Falta» depois, na chave fixa já ocupada, não entra', async () => {
+  arma660();
+  try {
+    const base = { 'fa-2026-10-13': CR660('2026-10-13'), 'est-fa-2026-10-13': EST660('fa-2026-10-13') };
+    semear660(base);
+    run(`__p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-13');`); await espera657();
+    poeSo660(NO660 + '/fa-2026-10-13-2', CR660('2026-10-13', { restaura: { estorno: 'est-fa-2026-10-13', credito: 'fa-2026-10-13' }, corr: { por: 'Gestão Outra Teste', quando: '09/10/2026 às 09:59', motivo: 'y' }, quem: 'Aparelho B' }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/Este estorno já foi desfeito por Gestão Outra Teste/.test(cartaz660()), cartaz660());
+    const Ls = lanc660();
+    igual(Object.keys(Ls).filter((k) => Ls[k].tipo === 'credito' && !Object.keys(Ls).some((e) => Ls[e].estornaId === k)).length, 1, 'um crédito só, no servidor');
+    await fecha660();
+    semear660(base);
+    run(`__p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-13');`); await espera657();
+    poeSo660(NO660 + '/fa-2026-10-13-2', CR660('2026-10-13', { quem: 'Aparelho B Teste', ts: T660(9, 9, 59) }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/A falta de 13\/10 já foi lançada de novo \(por Aparelho B Teste/.test(cartaz660()), cartaz660());
+    igual(Object.keys(lanc660()).sort(), ['est-fa-2026-10-13', 'fa-2026-10-13', 'fa-2026-10-13-2']);
+    await fecha660();
+    // ao contrário: o desfazer entra primeiro; o «+ Falta» do outro aparelho, com o Extrato atrasado, cai no mesmo nó fixo e é recusado
+    semear660(base);
+    run(`__p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-13');`); await espera657();
+    await assina660(SENHA657);
+    const x = J630(`(function(){ var o=null; repGravar(PELUDINHOS[0], {tipo:'credito', data:'2026-10-13', motivo:'cio', obs:'', volta:''}, 'fa-2026-10-13-2').then(function(v){ o=v; }); return 1; })()`);
+    await espera657();
+    igual([Object.keys(lanc660()).sort(), lanc660()['fa-2026-10-13-2'].motivo, saldos660()], [['est-fa-2026-10-13', 'fa-2026-10-13', 'fa-2026-10-13-2'], 'viagem', [1, 1]]);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P12 (AC3.3) — desfazer o estorno de uma correção de data: recusado; o estorno do lote, um por um: aceito (o crédito volta com o lote)', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13'), 'est-fa-2026-10-13': EST660('fa-2026-10-13', { corrigidoPara: 'fa-2026-10-14' }), 'fa-2026-10-14': CR660('2026-10-14', { corrige: { credito: 'fa-2026-10-13', estorno: 'est-fa-2026-10-13', de: '2026-10-13' } }) });
+    run(`__za657=[]; __p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-13');`); await espera657();
+    igual([run('CORR_ATUAL'), J630('__za657')[0][1][0], J630('__esc657').length], [null, 'Este estorno é de uma correção de data. Para voltar a data, use «Corrigir» no crédito novo.', 0]);
+    semeiaLote660();
+    poe660(NO660 + '/est-fa-2026-10-14', EST660('fa-2026-10-14', { lote_estorno: 'E1' }));
+    run(`__p660=repEstornoDesfazerAbrir(0, 'est-fa-2026-10-14');`); await espera657();
+    await assina660(SENHA657);
+    const n = lanc660()['fa-2026-10-14-2'];
+    igual([n.lote, n.restaura.estorno, n.periodo.de], ['L77', 'est-fa-2026-10-14', '2026-10-13']);
+  } finally { solta660(); }
+});
+// ---- AC4 — Devolver com 4 palavras e «Desfazer a devolução» -----------------------------------------------------
+provaAsync('6.60 P13 (AC4.1, AC8) — «Devolver» com o motivo de 3 palavras: a caixa diz quantas faltam e a função, chamada direto, não grava; com 4, tudo como hoje (dev-{uso}, a mensagem)', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'), u1: USO660('2026-10-08') });
+    run(`__ztq657=['a tutora cancelou']; __al657=[];`);
+    await run("repDevolverUso(0, 'u1')"); await espera657();
+    const op = run('__zto660[0].op');
+    igual([op.validar('a tutora cancelou'), op.validar('a tutora cancelou a vinda'), /4 palavras/.test(op.rotulo)],
+      ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).', '', true], 'a régua na própria caixa');
+    igual([J630('__esc657').length, J630('__al657')], [0, ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1). Nada foi mudado.']], 'conferido de novo na função');
+    run(`__ztq657=['a tutora cancelou a vinda'];`);
+    await run("repDevolverUso(0, 'u1')"); await espera657();
+    const d = lanc660()['dev-u1'];
+    igual([d.tipo, d.estornaId, d.dia_devolvido, d.obs, 'origem' in d], ['estorno', 'u1', '2026-10-08', 'a tutora cancelou a vinda', false]);
+    igual(J630('__mm660')[0].t, '✅ Reposição devolvida');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P14 (AC4.2, AC4.4, AC4.6) — «Desfazer a devolução»: uso novo em desfaz-{devolução} com restaura; a devolução e o uso antigo intactos; saldo −1; o cartaz diz o que volta e que o app não manda nada ao tutor', async () => {
+  arma660();
+  try {
+    const U = USO660('2026-10-08', { obs: 'veio repor' }), D = { tipo: 'estorno', data: '2026-10-08', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-08', obs: 'a tutora cancelou a vinda', quem: 'Gestora Teste', ts: T660(8, 11, 0) };
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'), u1: U, 'dev-u1': D });
+    igual(saldos660(), [2, 2]);
+    const x = extrato660();
+    assert.ok(x.indexOf("repDevolucaoDesfazerAbrir(0,'dev-u1')") >= 0 && x.indexOf('Desfazer a devolução') >= 0, x.slice(0, 900));
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+    igual([op660('acao'), op660('nivel'), op660('botao')], ['reabrir', 'gestao', 'Desfazer a devolução'], 'devolução de ontem: só a Gestão');
+    igual(op660('volta'), ['O uso de 08/10/2026 (−1).', 'Saldo de reposição: 2 → 1.', 'Se o tutor recebeu a mensagem da devolução, avise-o: o app não manda nada sozinho.']);
+    igual(await assina660(SENHA657), ['pronto', '']);
+    const L = lanc660(), n = L['desfaz-dev-u1'];
+    igual([n.tipo, n.data, n.motivo, n.obs, n.restaura, n.corr.acao, 'desfecho' in n], ['uso', '2026-10-08', 'reposicao', 'veio repor', { devolucao: 'dev-u1', uso: 'u1' }, 'reabrir', false]);
+    igual([L.u1, L['dev-u1']], [U, D], 'nada apagado');
+    igual(saldos660(), [1, 1]);
+    const x2 = extrato660();
+    assert.ok(x2.indexOf("repDevolucaoDesfazerAbrir(0,'dev-u1')") < 0 && /desfeita por Gestora Teste em 09\/10\/2026 às 10:00/.test(txt660(x2)), txt660(x2));
+    assert.ok(/volta da devolução de 08\/10/.test(txt660(x2)), txt660(x2));
+    igual(aud660('reposicao-devolucao-desfeita').length, 1);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P15 (AC4.3) — desfazer a devolução, recusas: «Tirar só o lançamento» (so_lancamento), a devolução de «tirar» nos Lançamentos (pela observação e por origem), o dia com outra vinda viva, a já desfeita; a devolução feita pelo Extrato de um uso dos Lançamentos: aceita', async () => {
+  arma660();
+  try {
+    const tenta = async (L, idDev) => { semear660(L); run(`__za657=[]; __p660=repDevolucaoDesfazerAbrir(0, ${JSON.stringify(idDev)});`); await espera657();
+      const z = J630('__za657'); const r = [run('CORR_ATUAL') === null, z.length ? z[0][1][0] : '', J630('__esc657').length]; await fecha660(); return r; };
+    const C = { 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'), u1: USO660('2026-10-08', { obs: 'Reposição lançada nos Lançamentos do dia', lanc: { dia: '2026-10-08', id: 'L1' } }) };
+    const D = (extra) => Object.assign({ tipo: 'estorno', data: '2026-10-08', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-08', obs: 'a tutora cancelou a vinda', quem: 'Gestora Teste', ts: T660(8, 11, 0) }, extra || {});
+    igual(await tenta(Object.assign({}, C, { 'dev-u1': D({ so_lancamento: true, obs: 'Tirada dos Lançamentos do dia 08/10/2026 — a reposição voltou para o saldo' }) }), 'dev-u1'),
+      [true, 'A vinda continua pelo dia marcado: desfazer contaria o mesmo dia duas vezes.', 0]);
+    igual(await tenta(Object.assign({}, C, { 'dev-u1': D({ obs: 'Tirada dos Lançamentos do dia 08/10/2026 — a reposição voltou para o saldo' }) }), 'dev-u1'),
+      [true, 'Esta reposição saiu dos Lançamentos do dia. Para ela voltar, lance a Reposição de novo lá: o app desconta de novo.', 0]);
+    igual(await tenta(Object.assign({}, C, { 'dev-u1': D({ origem: 'lancamentos' }) }), 'dev-u1'),
+      [true, 'Esta reposição saiu dos Lançamentos do dia. Para ela voltar, lance a Reposição de novo lá: o app desconta de novo.', 0]);
+    igual(await tenta(Object.assign({}, C, { 'dev-u1': D(), 'veio-2026-10-08': USO660('2026-10-08') }), 'dev-u1'),
+      [true, 'O dia 08/10 já tem uma vinda registrada: desfazer contaria duas.', 0]);
+    igual(await tenta(Object.assign({}, C, { 'dev-u1': D(), 'desfaz-dev-u1': USO660('2026-10-08', { restaura: { devolucao: 'dev-u1', uso: 'u1' }, corr: { por: 'Gestora Teste', quando: '09/10/2026 às 09:00', motivo: 'm' } }) }), 'dev-u1'),
+      [true, 'Esta devolução já foi desfeita por Gestora Teste em 09/10/2026 às 09:00. Nada foi gravado de novo.', 0]);
+    // a devolução feita pelo Extrato (o lançamento continua nos Lançamentos do dia): pode ser desfeita, e o uso volta ligado ao lançamento
+    semear660(Object.assign({}, C, { 'dev-u1': D() }));
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+    igual(await assina660(SENHA657), ['pronto', '']);
+    igual(lanc660()['desfaz-dev-u1'].lanc, { dia: '2026-10-08', id: 'L1' });
+  } finally { solta660(); }
+});
+provaAsync('6.60 P16 (AC4.5) — quem assina o desfazer da devolução: quem devolveu, no mesmo dia, com a própria senha (outra Consultora não); de outro dia, só a Gestão; a devolução da Gestão de um desfecho e a do login de posto, só a Gestão', async () => {
+  arma660();
+  try {
+    const caso = async (dev, senha) => {
+      semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'), u1: USO660('2026-10-08'),
+        'dev-u1': Object.assign({ tipo: 'estorno', data: '2026-10-09', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-08', obs: 'a tutora cancelou a vinda' }, dev) });
+      run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+      const nv = [op660('nivel'), op660('assinaNome') || ''];
+      const r = await assina660(senha); await fecha660();
+      return nv.concat([r[0], !!lanc660()['desfaz-dev-u1']]);
+    };
+    const HOJE_BIA = { quem: 'Bia Consultora Teste', ts: T660(9, 9, 0) };
+    igual(await caso(HOJE_BIA, 's-bia'), ['propria', 'Bia Consultora Teste', 'pronto', true], 'quem devolveu, hoje, com a própria senha');
+    igual(await caso(HOJE_BIA, 's-amanda'), ['propria', 'Bia Consultora Teste', 'conferir', false], 'outra pessoa da casa (sem ser a Gestão) não');
+    igual(await caso(HOJE_BIA, SENHA657), ['propria', 'Bia Consultora Teste', 'pronto', true], 'a Gestão sempre');
+    const ONTEM_BIA = { quem: 'Bia Consultora Teste', ts: T660(8, 17, 0) };
+    igual(await caso(ONTEM_BIA, 's-bia'), ['gestao', '', 'conferir', false], 'de ontem: só a Gestão');
+    igual(await caso(Object.assign({ devolvido_gestao: true }, HOJE_BIA), 's-bia'), ['gestao', '', 'conferir', false], 'a devolução da Gestão: só a Gestão');
+    igual(await caso({ quem: 'Recepção', ts: T660(9, 9, 0) }, 's-recep'), ['gestao', '', 'conferir', false], 'o login de posto: só a Gestão');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P17 (AC4.4, AC4.6) — desfazer a devolução da Gestão de um «não veio»: o uso novo volta com o desfecho; o crédito ganha só volta_desmarcada.excecao_desfeita; o Extrato diz que a exceção foi desfeita e a lista da Gestão não acusa nada', async () => {
+  arma660();
+  try {
+    const CRED = CR660('2026-10-01', { volta: '', volta_desmarcada: { dia: '2026-10-08', quem: 'Gestora Teste', ts: T660(9, 8, 0), excecao: { quem: 'Gestora Teste', motivo: 'estava internado com receita' } } });
+    const USO = USO660('2026-10-08', { credito: 'fa-2026-10-01', desfecho: 'nao_veio', veio_auto: true, quem: 'sistema', obs: 'Marcada para 08/10 — não veio (não desmarcou até as 24h do dia anterior)' });
+    const DEV = { tipo: 'estorno', data: '2026-10-09', motivo: 'estorno', estornaId: 'veio-2026-10-08', dia_devolvido: '2026-10-08', obs: 'estava internado com receita', devolvido_gestao: true, quem: 'Gestora Teste', ts: T660(9, 8, 0) };
+    semear660({ 'fa-2026-10-01': CRED, 'veio-2026-10-08': USO, 'dev-veio-2026-10-08': DEV });
+    igual(saldos660(), [1, 1]);
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-08');`); await espera657();
+    igual(op660('nivel'), 'gestao');
+    igual(op660('volta')[0], 'O uso de 08/10/2026 (−1), com o desfecho «não veio».');
+    igual(await assina660(SENHA657, 'a Gestão devolveu o dia errado'), ['pronto', '']);
+    const L = lanc660(), n = L['desfaz-dev-veio-2026-10-08'];
+    igual([n.tipo, n.data, n.desfecho, n.credito, n.motivo, n.obs], ['uso', '2026-10-08', 'nao_veio', 'fa-2026-10-01', 'reposicao', USO.obs]);
+    const c = JSON.parse(JSON.stringify(L['fa-2026-10-01'])), ed = c.volta_desmarcada.excecao_desfeita; delete c.volta_desmarcada.excecao_desfeita;
+    igual(c, CRED, 'nenhum outro campo do crédito muda');
+    igual([ed.acao, ed.por, ed.motivo], ['reabrir', 'Gestora Teste', 'a Gestão devolveu o dia errado']);
+    igual([L['veio-2026-10-08'], L['dev-veio-2026-10-08']], [USO, DEV]);
+    igual(saldos660(), [0, 0]);
+    const x = txt660(extrato660());
+    assert.ok(/−1 NÃO VEIO/.test(x) && /a exceção da Gestão foi desfeita por Gestora Teste/.test(x), x);
+    igual(J630("repConferirLista().filter(function(o){ return o.p===PELUDINHOS[0]; }).length"), 0, 'a lista da Gestão não acusa nada');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P18 (AC4.7) — a baixa automática depois do desfazer: nada gravado no dia (o dia tem o uso de volta; a devolução continua)', async () => {
+  // 1) o desfazer, pela tela (o banco da 6.57)
+  arma660();
+  let L;
+  try {
+    semear660({ 'fa-2026-10-01': CR660('2026-10-01', { volta: '2026-10-08', prazo24h: '2026-10-08' }), 'fa-2026-09-20': CR660('2026-09-20'),
+      'veio-2026-10-08': USO660('2026-10-08', { credito: 'fa-2026-10-01', veio_auto: true, quem: 'sistema', obs: 'Baixa automática pelo check-in de 08/10' }),
+      'dev-veio-2026-10-08': { tipo: 'estorno', data: '2026-10-08', motivo: 'estorno', estornaId: 'veio-2026-10-08', dia_devolvido: '2026-10-08', obs: 'ele não veio de verdade, foi engano', quem: 'Gestora Teste', ts: T660(8, 18, 0) } });
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-08');`); await espera657();
+    igual(await assina660(SENHA657, 'ele veio sim, foi engano'), ['pronto', '']);
+    L = lanc660();
+  } finally { solta660(); }
+  // 2) a baixa de verdade (o palco da 6.38): a chamada diz «veio», o dia foi fechado — e ela não grava nada
+  await comPalco638({ hora: '2026-10-09T10:00:00-03:00', srv: 0, fichas: [{ n: 'Quindim', tutor: 'Ana Teste', raca: 'SRD', dias: ['seg', 'ter', 'qua', 'qui', 'sex'], sexo: 'Macho' }], lanc: [L] }, async (B) => {
+    B.poe('daycare/chamada/2026-10-08/' + dk638(0), 'veio');
+    B.poe('daycare/falta-automatica/2026-10-08', TRAVA638);
+    const antes = Object.keys(lanc638(B)).sort();
+    await baixa638();
+    igual(Object.keys(lanc638(B)).sort(), antes, 'a baixa não grava nada');
+    igual(J630("[repDiaTemUso(repLancamentos(PELUDINHOS[0]), '2026-10-08'), repVeioDevolvido(repLancamentos(PELUDINHOS[0]), '2026-10-08')]"), [true, true]);
+  });
+});
+provaAsync('6.60 P19 (AC4.8, D07) — a troca cumprida devolvida por engano e desfeita: o uso volta com motivo troca e o crédito da troca; o Extrato mostra «TROCA CUMPRIDA» pelo par de sempre; o saldo de reposição não muda', async () => {
+  arma660();
+  try {
+    const T = CR660('2026-10-07', { motivo: 'troca', volta: '2026-10-08', prazo24h: '2026-10-08', troca: { de: '2026-10-07', para: '2026-10-08' }, nasceu_troca: true });
+    const U = USO660('2026-10-08', { motivo: 'troca', credito: 'fa-2026-10-07', obs: 'Veio pela troca de 07/10/2026' });
+    semear660({ 'fa-2026-10-07': T, 'veio-2026-10-08': U, 'fa-2026-09-20': CR660('2026-09-20') });
+    const antes = saldos660();
+    assert.ok(/TROCA CUMPRIDA/.test(extrato660()));
+    run(`__ztq657=['ele não veio pela troca'];`); await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera657();
+    assert.ok(lanc660()['dev-veio-2026-10-08'], 'devolvida por engano');
+    assert.ok(!/TROCA CUMPRIDA/.test(extrato660()), 'devolvida, o par sai');
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-08');`); await espera657();
+    igual(await assina660(SENHA657, 'a troca foi cumprida sim'), ['pronto', '']);
+    const n = lanc660()['desfaz-dev-veio-2026-10-08'];
+    igual([n.motivo, n.credito], ['troca', 'fa-2026-10-07']);
+    const x = extrato660();
+    assert.ok(/>TROCA CUMPRIDA</.test(x), x.slice(0, 900));
+    igual(saldos660(), antes, 'o saldo de reposição (e o livro-caixa) como antes da devolução');
+    igual(lanc660()['fa-2026-10-07'], T, 'o crédito da troca não muda (a exceção desfeita é só da devolução da Gestão de um desfecho)');
+  } finally { solta660(); }
+});
+// ---- AC5 — Corrigir a falta avisada sem perder o vínculo --------------------------------------------------------
+const corrigir660 = async (id, valores) => { run(`__p660=repCorrigirAbrir(0, ${JSON.stringify(id)});`); await espera657(); return continua660(valores); };
+provaAsync('6.60 P20 (AC5.1, AC5.2, AC5.5, AC5.8) — «Corrigir» (44 px) traz a data, o motivo (as 5 opções; o antigo com o rótulo) e a observação; sem mudança, «Nada mudou»; só o motivo e a observação: o mesmo nó, com correcoes — data, chave, dia de repor e saldo iguais; o Extrato mostra o antes → depois', async () => {
+  arma660();
+  try {
+    const C = CR660('2026-10-13', { volta: '2026-10-20', prazo24h: '2026-10-20', ts: T660(9, 9, 0), quem: 'Gestora Teste' });
+    semear660({ 'fa-2026-10-13': C, 'fa-2026-10-02': CR660('2026-10-02', { motivo: 'zeluz' }) });
+    const x = extrato660();
+    assert.ok(/<button type="button" onclick="repCorrigirAbrir\(0,'fa-2026-10-13'\)" style="[^"]*min-height:44px[^"]*">Corrigir<\/button>/.test(x), x.slice(0, 900));
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual([op660('acao'), op660('titulo'), op660('campos').map((c) => [c.c, c.valor])], ['corrigir', 'Corrigir a falta de 13/10',
+      [['data', '13/10/2026'], ['motivo', 'Tutor viajou'], ['obs', 'viagem curta']]]);
+    igual(op660('campos')[1].opcoes, ['Cio', 'Doente / internado', 'Tutor viajou', 'Tutor não conseguiu trazer', 'Outro']);
+    assert.ok(/<select id="corrC_1"[^>]*>.*<option value="Tutor viajou" selected>Tutor viajou<\/option>/.test(run('corrCartazHTML(CORR_ATUAL)')), 'a lista de escolha, com o valor de agora');
+    igual(await continua660(['13/10/2026', 'Tutor viajou', 'viagem curta']), ['campos', 'Nada mudou: nenhum campo foi alterado. Nada será gravado.']);
+    igual(await continua660(['13/10/2026', 'Cio', 'cio começou ontem <b>']), ['conferir', '']);
+    igual(await assina660(SENHA657), ['pronto', '']);
+    const n = lanc660()['fa-2026-10-13'], ks = Object.keys(n.correcoes || {});
+    igual([n.data, n.motivo, n.obs, n.volta, n.prazo24h, n.ts, ks.length, Object.keys(lanc660()).sort()], ['2026-10-13', 'cio', 'cio começou ontem <b>', '2026-10-20', '2026-10-20', C.ts, 1, ['fa-2026-10-02', 'fa-2026-10-13']]);
+    const cr = n.correcoes[ks[0]];
+    igual([cr.antes, cr.depois, cr.corr.acao, cr.corr.por], [{ motivo: 'viagem', obs: 'viagem curta' }, { motivo: 'cio', obs: 'cio começou ontem <b>' }, 'corrigir', 'Gestora Teste']);
+    igual(saldos660(), [2, 2]);
+    const xe = extrato660(), t = txt660(xe);
+    assert.ok(/Motivo: «Tutor viajou» → «Cio»; Observação: «viagem curta» → «cio começou ontem <b>» por Gestora Teste/.test(t), t);
+    assert.ok(xe.indexOf('cio começou ontem &lt;b&gt;') >= 0 && xe.indexOf('ontem <b>') < 0, 'todo texto novo escapado');
+    // o motivo antigo aparece com o rótulo de REP_MOTIVOS
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-02');`); await espera657();
+    igual([op660('campos')[1].valor, op660('campos')[1].opcoes[0]], ['Zêluz fechada', 'Zêluz fechada']);
+    await fecha660();
+    igual(aud660('reposicao-corrigida').length, 1);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P21 (AC5.6, AC5.8) — corrigir a data: numa transação só, o estorno do original (corrigidoPara) e o crédito em fa-{nova} com corrige, o quem e o ts do original e o mesmo dia de repor; o saldo igual; o banco recusando: nada', async () => {
+  arma660();
+  try {
+    const C = CR660('2026-10-13', { volta: '2026-10-20', prazo24h: '2026-10-20', volta_ts: T660(8, 9, 5), autorizacao: { quem: 'Márcia Teste', ts: 3 }, lote: 'L9', periodo: { de: '2026-10-13', ate: '2026-10-13' }, ts: T660(9, 9, 0), quem: 'Gestora Teste' });
+    semear660({ 'fa-2026-10-13': C });
+    igual(await corrigir660('fa-2026-10-13', ['14/10/2026', 'Tutor viajou', 'viagem curta']), ['conferir', '']);
+    assert.ok(/A data muda de 13\/10 para 14\/10/.test(op660('aviso')), op660('aviso'));
+    run('__esc657=[];');
+    igual(await assina660(SENHA657), [null, ''], 'o cartaz dá lugar à mensagem com a data certa');
+    igual(trans660().length, 1, 'uma transação só');
+    const L = lanc660(), e = L['est-fa-2026-10-13'], n = L['fa-2026-10-14'];
+    igual([e.tipo, e.estornaId, e.corrigidoPara, e.obs, e.corr.acao], ['estorno', 'fa-2026-10-13', 'fa-2026-10-14', MOT660, 'corrigir']);
+    igual([n.tipo, n.data, n.motivo, n.obs, n.quem, n.ts, n.volta, n.prazo24h, n.volta_ts, n.autorizacao, n.lote, n.periodo, n.corrige],
+      ['credito', '2026-10-14', 'viagem', 'viagem curta', 'Gestora Teste', C.ts, '2026-10-20', '2026-10-20', C.volta_ts, C.autorizacao, 'L9', C.periodo, { credito: 'fa-2026-10-13', estorno: 'est-fa-2026-10-13', de: '2026-10-13' }]);
+    igual(L['fa-2026-10-13'], C, 'o original fica, riscado pelo estorno');
+    igual([saldos660(), J630('repAgendaDe(PELUDINHOS[0])')], [[1, 1], ['2026-10-20']]);
+    const mm = J630('__mm660')[0];
+    igual(mm.t, 'Falta corrigida');
+    assert.ok(/contando a do dia 14\/10\/2026/.test(mm.x) && /O dia de repor já ficou combinado: 20\/10\/2026/.test(mm.x), mm.x);
+    const t = txt660(extrato660());
+    assert.ok(/corrigido para 14\/10 por Gestora Teste em 09\/10\/2026 às 10:00: a falta foi lançada no dia errado/.test(t) && /corrige a falta de 13\/10/.test(t), t);
+    semear660({ 'fa-2026-10-13': C }); run(`__recusa657='lancamentos';`);
+    await corrigir660('fa-2026-10-13', ['14/10/2026', 'Tutor viajou', 'viagem curta']);
+    igual((await assina660(SENHA657))[0], 'falhou');
+    igual(Object.keys(lanc660()), ['fa-2026-10-13'], 'nada gravado');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P22 (AC5.3, AC5.6) — corrigir a data, recusas na própria tela (nada gravado): feriado, a data com crédito vivo, troca, crédito usado, com desfecho, com pedido de encaixe em aberto, data inválida; as mesmas conferidas de novo na transação (o outro aparelho no meio); o motivo e a observação desses mudam', async () => {
+  arma660();
+  try {
+    const caso = async (L, valores, extra) => { semear660(L); if (extra) run(extra); const r = await corrigir660('fa-2026-10-13', valores); await fecha660(); run('VAGAS_PEDIDOS={};'); return r[0] === 'campos' ? r[1] : r; };
+    const C = (x) => CR660('2026-10-13', x);
+    igual(await caso({ 'fa-2026-10-13': C() }, ['12/10/2026', 'Tutor viajou', 'viagem curta']), '12/10/2026 é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto: nada foi lançado.');
+    igual(await caso({ 'fa-2026-10-13': C(), 'fa-2026-10-14': CR660('2026-10-14', { quem: 'Ana Recepção Teste', ts: T660(8, 16, 30) }) }, ['14/10/2026', 'Tutor viajou', 'viagem curta']),
+      'A falta avisada de 14/10 já foi lançada (por Ana Recepção Teste, em 08/10/2026 às 16:30). Nada foi gravado.');
+    igual(await caso({ 'fa-2026-10-13': C({ motivo: 'troca', volta: '2026-10-15', troca: { de: '2026-10-13', para: '2026-10-15' }, nasceu_troca: true }) }, ['14/10/2026', 'Troca de dia', 'viagem curta']),
+      'É uma troca: desfaça a troca e marque de novo em «+ Marcar troca». O motivo e a observação podem mudar.');
+    igual(await caso({ 'fa-2026-10-13': C({ volta: '2026-10-08' }), 'veio-2026-10-08': USO660('2026-10-08', { credito: 'fa-2026-10-13' }) }, ['14/10/2026', 'Tutor viajou', 'viagem curta']),
+      'Este crédito já foi usado em 08/10: a data não muda. O motivo e a observação podem mudar.');
+    igual(await caso({ 'fa-2026-10-13': C({ volta: '' }), 'veio-2026-10-08': USO660('2026-10-08', { credito: 'fa-2026-10-13', desfecho: 'nao_veio' }) }, ['14/10/2026', 'Tutor viajou', 'viagem curta']),
+      'Este crédito já foi usado em 08/10: a data não muda. O motivo e a observação podem mudar.', 'o desfecho também segura a data');
+    igual(await caso({ 'fa-2026-10-13': C() }, ['14/10/2026', 'Tutor viajou', 'viagem curta'], `VAGAS_PEDIDOS={'2026-10-16':{}}; VAGAS_PEDIDOS['2026-10-16']['${K660}']={status:'autorizando', payload:{credito_id:'fa-2026-10-13'}};`),
+      'O pedido de encaixe de 16/10 usa esta falta: decida ou retire o pedido antes de mudar a data.');
+    igual(await caso({ 'fa-2026-10-13': C() }, ['31/02/2026', 'Tutor viajou', 'viagem curta']), 'Data inválida: escreva a data da falta como DD/MM/AAAA (por exemplo, 09/10/2026). Nada foi gravado.');
+    igual(J630('__esc657').length, 0, 'nada gravado');
+    // a régua conferida de novo NA HORA da gravação (a transação): o outro aparelho usou o crédito, ou lançou a data nova, no meio
+    semear660({ 'fa-2026-10-13': C({ volta: '2026-10-08' }) });
+    igual(await corrigir660('fa-2026-10-13', ['14/10/2026', 'Tutor viajou', 'viagem curta']), ['conferir', '']);
+    poeSo660(NO660 + '/veio-2026-10-08', USO660('2026-10-08', { credito: 'fa-2026-10-13', quem: 'Aparelho B Teste' }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/Este crédito já foi usado em 08\/10: a data não muda/.test(cartaz660()), cartaz660());
+    igual(Object.keys(lanc660()).sort(), ['fa-2026-10-13', 'veio-2026-10-08'], 'nada gravado');
+    await fecha660();
+    semear660({ 'fa-2026-10-13': C() });
+    await corrigir660('fa-2026-10-13', ['14/10/2026', 'Tutor viajou', 'viagem curta']);
+    poeSo660(NO660 + '/fa-2026-10-14', CR660('2026-10-14', { quem: 'Aparelho B Teste', ts: T660(9, 9, 59) }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/A falta avisada de 14\/10 já foi lançada \(por Aparelho B Teste/.test(cartaz660()), cartaz660());
+    igual(Object.keys(lanc660()).sort(), ['fa-2026-10-13', 'fa-2026-10-14'], 'um crédito só para 14/10');
+    await fecha660();
+    // a troca com o motivo e a observação: mudam
+    semear660({ 'fa-2026-10-13': C({ motivo: 'troca', volta: '2026-10-15', troca: { de: '2026-10-13', para: '2026-10-15' }, nasceu_troca: true }) });
+    igual(await corrigir660('fa-2026-10-13', ['13/10/2026', 'Troca de dia', 'a tutora pediu a troca']), ['conferir', '']);
+    igual(await assina660(SENHA657), ['pronto', '']);
+    igual([lanc660()['fa-2026-10-13'].obs, lanc660()['fa-2026-10-13'].data], ['a tutora pediu a troca', '2026-10-13']);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P23 (AC5.4, S4-P1) — quem assina a correção: lançado hoje, quem lançou e quem lança reposição, com a própria senha (posto não); lançado em dia anterior, só a Gestão', async () => {
+  arma660();
+  try {
+    const caso = async (cred, senha) => { semear660({ 'fa-2026-10-13': cred }); await corrigir660('fa-2026-10-13', ['13/10/2026', 'Cio', 'viagem curta']);
+      const nv = [op660('nivel'), op660('assinaNome') || '']; const r = await assina660(senha); await fecha660(); return nv.concat([r[0]]); };
+    const HOJE = CR660('2026-10-13', { quem: 'Bia Consultora Teste', ts: T660(9, 8, 0) });
+    igual(await caso(HOJE, 's-bia'), ['propria', 'Bia Consultora Teste', 'pronto'], 'quem lançou');
+    igual(await caso(HOJE, 's-amanda'), ['propria', 'Bia Consultora Teste', 'pronto'], 'quem lança reposição (Supervisão)');
+    igual(await caso(HOJE, 's-recep'), ['propria', 'Bia Consultora Teste', 'conferir'], 'senha de posto não assina');
+    igual(await caso(HOJE, 's-caio'), ['propria', 'Bia Consultora Teste', 'conferir'], 'quem não lança reposição não assina');
+    const ONTEM = CR660('2026-10-13', { quem: 'Bia Consultora Teste', ts: T660(8, 8, 0) });
+    igual(await caso(ONTEM, 's-bia'), ['gestao', '', 'conferir'], 'de ontem: a Consultora não');
+    igual(await caso(ONTEM, SENHA657), ['gestao', '', 'pronto'], 'de ontem: a Gestão');
+    igual(await caso(CR660('2026-10-13', { quem: 'Recepção', ts: T660(9, 8, 0) }), 's-bia'), ['propria', '', 'pronto'], 'lançado hoje pelo posto: quem lança reposição, com a própria senha');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P24 (AC5.7) — corrigir a data com a falta de hoje (a antiga ou a nova) chama banhoFaltaAgendar uma vez; sem hoje, não chama', async () => {
+  arma660();
+  try {
+    const caso = async (de, para) => { semear660({ [`fa-${de}`]: CR660(de) }); run('__bfa660=0;'); await corrigir660(`fa-${de}`, [para, 'Tutor viajou', 'viagem curta']); await assina660(SENHA657); await fecha660(); return run('__bfa660'); };
+    igual(await caso('2026-10-09', '13/10/2026'), 1, 'a antiga é hoje');
+    igual(await caso('2026-10-13', '09/10/2026'), 1, 'a nova é hoje');
+    igual(await caso('2026-10-13', '14/10/2026'), 0, 'nenhuma é hoje');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P25 (AC5.7, risco 6) — a planilha depois da correção: dashAutoCalcular da data antiga sem o nome, o da nova com o nome', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    const nome = run('dashNomePlanilha(PELUDINHOS[0])');
+    igual(J630("dashAutoCalcular('2026-10-13').faltas"), [nome]);
+    await corrigir660('fa-2026-10-13', ['14/10/2026', 'Tutor viajou', 'viagem curta']); await assina660(SENHA657); await fecha660();
+    igual([J630("dashAutoCalcular('2026-10-13').faltas"), J630("dashAutoCalcular('2026-10-14').faltas")], [[], [nome]]);
+  } finally { solta660(); }
+});
+// ---- AC6 — Lançamentos do dia: a falta avisada que vira crédito; tirar a Reposição com motivo; «Abater agora» -----
+const DIA660 = '2026-10-13';
+const dash660 = () => run(`DASH_DIA_SEL='${DIA660}'; DASH_DADOS={faltas:{}, reposicao:{}};`);
+provaAsync('6.60 P26 (AC6.1) — Falta avisada com ficha: «Lançar» abre a janela de Reposições com o FILHOt, «Um dia só» e o dia dos Lançamentos; nada vai para daycare/dashboard; o crédito nasce pelo repConfirmar de sempre (chave fixa, 6.46; feriado, 6.43)', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06') }); dash660();
+    const r = await run("dashLancar('faltas', 'Quindim/SRD', 0)"); await espera657();
+    igual([r, run('repPelSel===PELUDINHOS[0]'), run('repModoAtual'), run('__el657.repData.value'), run('__el657.repModal.classList._on')], [false, true, 'dia', DIA660, true]);
+    igual(J630('__esc657').filter((e) => /daycare\/dashboard\//.test(e[1])).length, 0, 'nenhuma linha à mão');
+    run(`repMotivoAtual='doente'; __el657.repObs.value='internado na clínica'; repConfirmar();`); await espera657();
+    const c = lanc660()['fa-2026-10-13'];
+    igual([c.tipo, c.data, c.motivo, c.obs], ['credito', DIA660, 'doente', 'internado na clínica']);
+    igual(saldos660(), [2, 2]);
+    // o mesmo gesto num feriado: a frase da 6.43, nada lançado
+    run(`DASH_DIA_SEL='2026-10-12';`); await run("dashLancar('faltas', 'Quindim/SRD', 0)"); await espera657();
+    run(`repMotivoAtual='doente'; repConfirmar();`); await espera657();
+    igual(run('__el657.repWarn.textContent'), '12/10/2026 é feriado (Nossa Senhora Aparecida). A Zêluz não abre e o dia não é reposto: nada foi lançado.');
+    igual(Object.keys(lanc660()).sort(), ['fa-2026-10-06', 'fa-2026-10-13']);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P27 (AC6.2) — sem ficha, a linha vai só para a planilha, com a frase «Sem ficha…»; quem vê os Lançamentos sem lançar reposição (a tela concedida): a linha e a frase «Avise a Recepção»', async () => {
+  arma660();
+  try {
+    semear660({}); dash660();
+    await run("dashLancar('faltas', 'Fulano Sem Ficha', -1)"); await espera657();
+    const w = J630('__esc657').filter((e) => /^daycare\/dashboard\/2026-10-13\/faltas\//.test(e[1]));
+    igual([w.length, J630('__za657').map((z) => z[1][0])], [1, ['Sem ficha: esta falta não vira reposição. Se ele tem ficha, escolha pelo nome na busca.']]);
+    igual(run("repAbrirLancar.length"), 2);
+    papel657('monitor', 'Caio Encãotador Teste', ['dashdc']); dash660();
+    await run("dashLancar('faltas', 'Quindim/SRD', 0)"); await espera657();
+    igual([J630('__esc657').filter((e) => /^daycare\/dashboard\/2026-10-13\/faltas\//.test(e[1])).length, J630('__za657').map((z) => z[1][0])],
+      [1, ['Esta falta não vira reposição: quem lança reposição é a Recepção, a Supervisão ou a Gestão. Avise a Recepção.']]);
+    igual(Object.keys(lanc660()), [], 'nenhum crédito');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P28 (AC6.3, risco 7) — a linha antiga do cartão «Falta avisada» diz «sem reposição no Extrato» e, com ficha casada, oferece «Dar a reposição» (a mesma janela); com o crédito, a frase sai; a planilha não ganha o nome em dobro', async () => {
+  arma660();
+  try {
+    semear660({}); dash660();
+    const o = { valor: 'Quindim/SRD', chave: 'quindim__ana-teste', quem: 'Recepção X', ts: 1 };
+    run(`DASH_DADOS.faltas={F1:${JSON.stringify(o)}, F2:{valor:'Ninguém Teste', quem:'R', ts:2}};`);
+    const h1 = run(`dashFaltaMaoHTML(DASH_DADOS.faltas.F1, 'F1', '${DIA660}')`), h2 = run(`dashFaltaMaoHTML(DASH_DADOS.faltas.F2, 'F2', '${DIA660}')`);
+    assert.ok(/sem reposição no Extrato/.test(h1) && /dashFaltaDarReposicao\('F1'\)/.test(h1) && /min-height:44px/.test(h1), h1);
+    assert.ok(/sem reposição no Extrato/.test(h2) && !/dashFaltaDarReposicao/.test(h2), 'sem ficha casada, só a frase: ' + h2);
+    run(`dashFaltaDarReposicao('F1');`); await espera657();   // a lista de feriados chega (repFeriadosBuscar)
+    igual([run('repPelSel===PELUDINHOS[0]'), run('__el657.repData.value'), run('repModoAtual')], [true, DIA660, 'dia']);
+    run(`repMotivoAtual='viagem'; repConfirmar();`); await espera657();
+    igual(run(`dashFaltaMaoHTML(DASH_DADOS.faltas.F1, 'F1', '${DIA660}')`), '', 'com o crédito, a linha não diz mais nada');
+    // a planilha: o automático escreve o mesmo nome; com a linha à mão, a tela mostra uma só, e a conferência o reconhece
+    const auto = J630(`dashAutoCalcular('${DIA660}').faltas`);
+    igual(auto, ['Quindim/SRD']);
+    run(`REP_PLAN_CACHE['${DIA660}']={auto:{faltas:['Quindim/SRD']}};`);
+    igual([run(`dashAutoLinhas('faltas', '${DIA660}', dashChavesDaMao(DASH_DADOS.faltas)).n`), run(`dashAutoNomeChave('Quindim/SRD')===dashAutoNomeChave(DASH_DADOS.faltas.F1.valor)`)], [0, true]);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P29 (AC6.4) — a linha automática da falta avisada ganha «Estornar» (o cartaz do AC1 para o crédito daquele dia), sem «tirar» nem dashRemover; a linha automática da Reposição continua sem «tirar»', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') }); dash660();
+    run(`REP_PLAN_CACHE['${DIA660}']={auto:{faltas:['Quindim/SRD'], reposicao:['Quindim/SRD']}};`);
+    const h = String(run(`dashAutoLinhas('faltas', '${DIA660}', {}).html`));
+    assert.ok(/onclick="repEstornar\(0,'fa-2026-10-13'\)"[^>]*>Estornar<\/button>/.test(h) && !/tirar/i.test(h) && !/dashRemover/.test(h), h);
+    const hr = String(run(`dashAutoLinhas('reposicao', '${DIA660}', {}).html`));
+    assert.ok(!/tirar/i.test(hr) && !/dashRemover/.test(hr) && !/Estornar/.test(hr), hr);
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('titulo'), 'Estornar a falta de 13/10');
+    await fecha660();
+    papel657('monitor', 'Caio Encãotador Teste', ['dashdc']);
+    assert.ok(!/Estornar/.test(String(run(`dashAutoLinhas('faltas', '${DIA660}', {}).html`))), 'quem não lança reposição não vê o botão');
+  } finally { solta660(); }
+});
+provaAsync('6.60 P30 (AC6.5) — tirar a Reposição que devolve o dia: o motivo de 4 palavras é pedido antes de tirar; vai para a devolução (com origem) e para a auditoria; sem motivo válido, nada sai', async () => {
+  arma660();
+  try {
+    const sem = () => { semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'),
+      u1: USO660(DIA660, { obs: 'Reposição lançada nos Lançamentos do dia', lanc: { dia: DIA660, id: 'L1' } }) }); dash660();
+      run(`DASH_DADOS.reposicao={L1:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}}; __put657('daycare/dashboard/${DIA660}/reposicao/L1', DASH_DADOS.reposicao.L1); __esc657=[];`); };
+    sem(); run(`__zpq657=[true]; __ztq657=['desmarcou']; __al657=[];`);
+    await run("dashRemover('reposicao', 'L1')"); await espera657();
+    igual([J630('__zto660').length, /4 palavras/.test(J630('__zto660')[0].op.rotulo), J630('__esc657').length, J630('__al657')],
+      [1, true, 0, ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 3). Nada foi tirado.']]);
+    sem(); run(`__zpq657=[true]; __ztq657=['o tutor desmarcou por telefone'];`);
+    await run("dashRemover('reposicao', 'L1')"); await espera657();
+    const d = lanc660()['dev-u1'];
+    igual([d.estornaId, d.obs, d.origem], ['u1', 'Tirada dos Lançamentos do dia 13/10/2026 — a reposição voltou para o saldo: o tutor desmarcou por telefone', 'lancamentos']);
+    assert.ok(aud660('reposicao-devolvida')[0][1].indexOf('o tutor desmarcou por telefone') >= 0 && aud660('dashboard-daycare')[0][1].indexOf('o tutor desmarcou por telefone') >= 0, JSON.stringify(J630('__au657')));
+    igual(J630(`__get657('daycare/dashboard/${DIA660}/reposicao/L1')`), null, 'saiu dos Lançamentos do dia');
+    // a Reposição sem abatimento também pede o motivo (vai para o rastro)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06') }); dash660();
+    run(`DASH_DADOS.reposicao={L2:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}}; __zpq657=[true]; __ztq657=['lançada no dia errado hoje']; __zto660=[];`);
+    await run("dashRemover('reposicao', 'L2')"); await espera657();
+    igual([J630('__zto660').length, aud660('dashboard-daycare')[0][1]], [1, 'tirou Quindim/SRD de Reposição — motivo: lançada no dia errado hoje']);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P31 (AC6.5, guarda) — o «fora do prazo» da 6.38 (dashRemoverRepForaPrazo, modo fora) continua sem pedir motivo, idêntico', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: DIA660, prazo24h: DIA660 }), u1: USO660(DIA660, { lanc: { dia: DIA660, id: 'L1' } }) }); dash660();
+    run(`DASH_DADOS.reposicao={L1:{valor:'Quindim/SRD'}};`);
+    await run(`dashRemoverRepForaPrazo('reposicao', 'L1', {valor:'Quindim/SRD'}, {p:PELUDINHOS[0], uso:{_id:'u1'}, saldo:0}, {_id:'fa-2026-10-06', volta:'${DIA660}'}, '${DIA660}', 'fora')`); await espera657();
+    igual([J630('__zt657').length, lanc660().u1.desfecho, lanc660()['fa-2026-10-06'].volta], [0, 'fora_prazo', '']);
+  } finally { solta660(); }
+});
+provaAsync('6.60 P32 (AC6.6) — «Abater agora»: só na Reposição com ficha e sem uso ligado; as mesmas perguntas (sem saldo; o dia que já tem uso); o uso ligado ao lançamento', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06') }); dash660();
+    run(`DASH_DADOS.reposicao={L1:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}, L2:{valor:'Ninguém Teste'}};`);
+    const h = run(`dashRepMaoHTML(DASH_DADOS.reposicao.L1, 'L1', '${DIA660}')`);
+    assert.ok(/lançada sem abater do saldo/.test(h) && /dashRepAbaterDepois\('L1'\)/.test(h) && /min-height:44px/.test(h), h);
+    igual(run(`dashRepMaoHTML(DASH_DADOS.reposicao.L2, 'L2', '${DIA660}')`), '', 'sem ficha: nada');
+    await run("dashRepAbaterDepois('L1')"); await espera657();
+    const u = Object.keys(lanc660()).filter((k) => lanc660()[k].tipo === 'uso').map((k) => lanc660()[k]);
+    igual(u.map((x) => [x.data, x.lanc, x.obs]), [[DIA660, { dia: DIA660, id: 'L1' }, 'Reposição lançada nos Lançamentos do dia']]);
+    igual([saldos660(), aud660('reposicao-abatida-depois').length, J630('__mm660')[0].t], [[0, 0], 1, '✅ Reposição lançada e abatida']);
+    igual(run(`dashRepMaoHTML(DASH_DADOS.reposicao.L1, 'L1', '${DIA660}')`), '', 'abatida: a frase sai');
+    // sem saldo: só «Não abater»
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'veio-2026-10-08': USO660('2026-10-08') }); dash660();
+    run(`DASH_DADOS.reposicao={L3:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}}; __zeq660=['Não abater'];`);
+    igual(await run("dashRepAbaterDepois('L3')"), false);
+    igual([J630('__ze660').slice(-1)[0].t, J630('__ze660').slice(-1)[0].b, Object.keys(lanc660()).length], ['Quindim não tem saldo de reposição', ['Não abater'], 2]);
+    // o dia que já tem uso: pergunta antes
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-07': CR660('2026-10-07'), 'veio-2026-10-13': USO660(DIA660) }); dash660();
+    run(`DASH_DADOS.reposicao={L4:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}}; __zeq660=['Não abater'];`);
+    igual(await run("dashRepAbaterDepois('L4')"), false);
+    igual([J630('__ze660').slice(-1)[0].t, J630('__ze660').slice(-1)[0].b], ['Quindim já tem um uso registrado em 13/10', ['Abater mesmo assim', 'Não abater']]);
+  } finally { solta660(); }
+});
+// ---- AC7 — Ficha › REPOSIÇÕES: o desenho único -----------------------------------------------------------------------
+prova('6.60 P33 (AC7) — Ficha › REPOSIÇÕES: as 4 últimas linhas com o rótulo do Extrato (riscada quando estornada ou devolvida), a data e os mesmos botões; os três botões de sempre continuam', () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { ts: 50 }), u1: USO660('2026-10-08', { ts: 60 }), 'dev-u1': { tipo: 'estorno', data: '2026-10-09', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-08', obs: 'a tutora cancelou a vinda', quem: 'Gestora Teste', ts: 70 },
+      'fa-2026-10-14': CR660('2026-10-14', { ts: 80 }), 'est-fa-2026-10-14': EST660('fa-2026-10-14', { ts: 90 }), 'fa-2026-10-01': CR660('2026-10-01', { ts: 1 }) });
+    const f = run('blocoReposicaoFicha(PELUDINHOS[0])');
+    const rots = (f.match(/<span class="lc-tipo[^"]*"[^>]*>([^<]*)<\/span>/g) || []).map((s) => s.replace(/<[^>]+>/g, ''));
+    igual(rots, ['ESTORNO', '+1 CRÉDITO', '+1 DEVOLVIDA', '−1 USO'], 'as 4 últimas, com o rótulo do Extrato');
+    assert.ok(/<span class="lc-tipo credito" style="text-decoration:line-through;opacity:.6">\+1 CRÉDITO<\/span>/.test(f), 'o crédito estornado riscado');
+    assert.ok(/14\/10\/2026 · /.test(f) && /08\/10\/2026 · /.test(f) && /09\/10\/2026 · /.test(f), 'a data do lançamento');
+    ["repEstornoDesfazerAbrir(0,'est-fa-2026-10-14')", "repDevolucaoDesfazerAbrir(0,'dev-u1')"].forEach((b) => assert.ok(f.indexOf(b) >= 0, b + ' ' + f.slice(0, 1500)));
+    assert.ok(/repFichaCreditar\(\)/.test(f) && /repFichaExtrato\(\)/.test(f) && /e mais 2 no extrato/.test(f), 'os botões de sempre');
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { ts: 50 }), u2: USO660('2026-10-02', { ts: 40 }) });
+    const g = run('blocoReposicaoFicha(PELUDINHOS[0])');
+    ["repCorrigirAbrir(0,'fa-2026-10-13')", "repEstornar(0,'fa-2026-10-13')", "repDevolverUso(0,'u2')"].forEach((b) => assert.ok(g.indexOf(b) >= 0, b));
+    papel657('monitor', 'Caio Encãotador Teste');
+    assert.ok(run('blocoReposicaoFicha(PELUDINHOS[0])').indexOf('repEstornar(') < 0, 'quem não lança reposição: as linhas, sem os botões');
+  } finally { solta660(); }
+});
+// ---- AC8 — o motivo de 4 palavras em Reposições ----------------------------------------------------------------------
+provaAsync('6.60 P34 (AC8) — os motivos de Reposições recusam 3 palavras na caixa (que diz quantas faltam) e de novo na função: «A Zêluz desmarcou», «Não contar» da Gestão, «Devolver», «Devolver» da Gestão, «Tirar sem contar» e o «tirar» da Reposição', async () => {
+  arma660();
+  try {
+    const regua = () => { const o = J630('__zto660').slice(-1)[0] || {}; const v = run(`__zto660[__zto660.length-1].op.validar`); return [typeof v === 'function' ? v('só três palavras') : 'SEM RÉGUA', typeof v === 'function' ? v('agora são quatro palavras') : 'SEM RÉGUA']; };
+    const FALTA1 = 'Escreva o que aconteceu em pelo menos 4 palavras (faltam 1).';
+    const res = {};
+    // «A Zêluz desmarcou» (repDesmarcar, fora do prazo: hoje é o dia marcado)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: '2026-10-09', prazo24h: '2026-10-09', volta_ts: T660(6, 9, 0) }) });
+    run(`__ztq657=['2026-10-09T06:00', 'casa muito lotada']; __zeq660=['A Zêluz desmarcou']; __al657=[]; __zto660=[];`);
+    await run("repDesmarcar(0, '2026-10-09')"); await espera657();
+    res.zeluz = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    // «Não contar» da Gestão (repConferirNaoContar)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: '2026-10-08', prazo24h: '2026-10-08' }) });
+    run(`__ztq657=['avisou a tempo']; __al657=[]; __zto660=[];`);
+    await run("repConferirNaoContar(0, '2026-10-08')"); await espera657();
+    res.naoContar = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    // «Devolver» (repDevolverUso) e «Devolver» da Gestão (repDevolverDesfecho)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), 'fa-2026-10-01': CR660('2026-10-01', { volta: '2026-10-08', prazo24h: '2026-10-08' }), u1: USO660('2026-10-07'),
+      'veio-2026-10-08': USO660('2026-10-08', { credito: 'fa-2026-10-01', desfecho: 'nao_veio' }) });
+    run(`__ztq657=['a tutora cancelou']; __al657=[]; __zto660=[];`); await run("repDevolverUso(0, 'u1')"); await espera657();
+    res.devolver = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    run(`__ztq657=['estava internado mesmo']; __al657=[]; __zto660=[];`); await run("repDevolverUso(0, 'veio-2026-10-08')"); await espera657();
+    res.devolverGestao = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    // «Tirar sem contar» (dashRemoverRepForaPrazo, exceção da Gestão)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06', { volta: DIA660 }), u2: USO660(DIA660) }); dash660();
+    run(`__ztq657=['doente com receita']; __al657=[]; __zto660=[];`);
+    await run(`dashRemoverRepForaPrazo('reposicao', 'L9', {valor:'Quindim/SRD'}, {p:PELUDINHOS[0], uso:{_id:'u2'}, saldo:0}, {_id:'fa-2026-10-06', volta:'${DIA660}'}, '${DIA660}', 'excecao')`); await espera657();
+    res.semContar = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    // o «tirar» da Reposição (dashRemover)
+    semear660({ 'fa-2026-10-06': CR660('2026-10-06'), u3: USO660(DIA660, { obs: 'Reposição lançada nos Lançamentos do dia', lanc: { dia: DIA660, id: 'L1' } }) }); dash660();
+    run(`DASH_DADOS.reposicao={L1:{valor:'Quindim/SRD', chave:'quindim__ana-teste'}}; __zpq657=[true]; __ztq657=['o tutor desmarcou']; __al657=[]; __zto660=[];`);
+    await run("dashRemover('reposicao', 'L1')"); await espera657();
+    res.tirar = regua().concat([J630('__esc657').length, J630('__al657')[0] || '']);
+    const esperado = (nada) => [FALTA1, '', 0, FALTA1 + ' ' + nada];
+    igual(res, { zeluz: esperado('Nada foi mudado.'), naoContar: esperado('Nada foi mudado.'), devolver: esperado('Nada foi mudado.'), devolverGestao: esperado('Nada foi mudado.'),
+      semContar: esperado('Nada foi mudado.'), tirar: esperado('Nada foi tirado.') });
+  } finally { solta660(); }
+});
+// ---- AC9 — a Linha do tempo em português ------------------------------------------------------------------------------
+prova('6.60 P35 (AC9) — as ações novas e as que as funções tocadas já gravavam aparecem em português na Linha do tempo e no resumo por pessoa (nunca o código técnico)', () => {
+  const acoes = ['reposicao-corrigida', 'reposicao-lote-estornado', 'reposicao-estorno-desfeito', 'reposicao-devolucao-desfeita', 'reposicao-abatida-depois',
+    'reposicao-credito', 'reposicao-uso', 'reposicao-excecao', 'reposicao-zeluz-desmarcou', 'reposicao-estorno', 'reposicao-devolvida', 'reposicao-desmarcada',
+    'registro-corrigido', 'registro-anulado', 'registro-reaberto'];
+  const r = J630(`${JSON.stringify(acoes)}.map(function(a){ return [a, acaoNome(a), acaoRotulo({acao:a, detalhe:'Quindim — x'})]; })`);
+  const tecnico = r.filter((x) => x[1] === x[0] || x[2].indexOf(x[0]) >= 0);
+  igual(tecnico, [], 'nenhuma em código técnico');
+  igual(r.filter((x) => x[0] === 'reposicao-estorno-desfeito')[0][2], 'Desfez o estorno da reposição — Quindim — x');
+});
+// ---- AC11 e AC12 — o que não muda --------------------------------------------------------------------------------------
+const FUN660 = (nome) => { const src = fs.readFileSync(APP, 'utf8'); const m = new RegExp('\\n  (async )?function ' + nome + '\\(').exec(src); if (!m) return null;
+  const i = m.index + 1, j = src.indexOf('\n  }\n', i); return crypto660.createHash('sha256').update(src.slice(i, j + 4)).digest('hex').slice(0, 16); };
+prova('6.60 P36 (AC12.1) — o livro-caixa idêntico, letra por letra, ao da base 0a49f93: as 26 funções (sha-256 de cada uma)', () => {
+  const BASE = { repSaldo: 'ccae75f2b0ea24be', repAnulados: '96571b413b03ff5f', repAgendaDe: 'bc6ddae488aed1fa', repAgendaDeL: 'f5f462734b9dd99c', repSaldoDe: '414f41589e16252d',
+    repSaldoReposicao: '9e1a7a69694d37ac', repSaldoReposicaoDe: 'ea1698c302bd8068', repSaldoRepDepois: '58e68af7a5eed790', repTetosDe: '64e76e8908000f30', repTetoVencidas: '39f9d8ed56897a17',
+    repTrocasPendentesLista: '570d8a948e5af0f6', repVoltasVencidas: '5c598edfb975a6a0', repVoltasVencidasValendo: 'a46351b656c1b4aa', repVencidasSemDesfecho: '9cec973227bd77ec',
+    repLivresParaMarcar: 'c539442d0e122d40', repCreditoLivre: '5ef3445cbf8e78cd', repRepetidas: '9fbcebbe2119cea5', repCreditoVivoNaData: '65fe8bc66805afac', repFaltaChave: '1bd9765205d8365d',
+    repVeioChave: '2548f483fd6e20f4', repDiaTemUso: 'b10dfdff95f795bf', repVeioDevolvido: '2efadc44a9bbd102', repExtratoPares: 'b4f323b043af5a05', repDesfechoRegistro: 'c0c0090f357da47c',
+    repDesfechoGravar: 'acd6d9c4080ab558', repBaixaPelaPresenca: '23f9786b47bf5f37' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = FUN660(n); });
+  igual(agora, BASE);
+});
+// O diferencial: 3.000 Extratos sorteados (semente fixa) com os registros da 6.60 enfeitados (restaura, corrige, correcoes, corr,
+// lote_estorno, corrigidoPara, origem, excecao_desfeita, lanc) dão os MESMOS números do mesmo Extrato sem os enfeites (o registro
+// novo como um crédito, um uso ou um estorno comum); e, sem enfeite nenhum, o retrato dos números é o mesmo da base (o hash).
+const DIF660 = (enfeitar) => run(`(function(){
+    var seed=660, rnd=function(){ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    var dia=function(k){ var d=new Date(Date.UTC(2026, 9, 10+k)); return d.toISOString().slice(0,10); }, hoje='2026-10-10';
+    var bk={rl:repLancamentos, rr:repReservado, rg:REP_RETRO_GESTAO, hz:zHojeISO};
+    var out=[], dif=0, novos=0, Lx=null;
+    try{
+      zHojeISO=function(){ return hoje; }; repLancamentos=function(){ return Lx; };
+      for(var i=0;i<3000;i++){
+        var L=[], nc=1+Math.floor(rnd()*5);
+        for(var c=0;c<nc;c++){
+          var v=rnd()<0.6?dia(Math.floor(rnd()*9)-5):'';
+          var cr={_id:(rnd()<0.5?'fa-':'c')+c, tipo:'credito', data:dia(-10-Math.floor(rnd()*4)), volta:v, motivo:['cio','viagem','troca','hospedagem-saida'][Math.floor(rnd()*4)], ts:1000+c};
+          if(v && rnd()<0.5) cr.prazo24h=v;
+          if(v && rnd()<0.2){ cr.troca={de:cr.data, para:v}; if(rnd()<0.5) cr.nasceu_troca=true; }
+          if(cr.motivo==='hospedagem-saida' && rnd()<0.5) cr.estadiaId='E'+c;
+          if(rnd()<0.3) cr.lote='L1';
+          L.push(cr);
+        }
+        var nu=Math.floor(rnd()*4);
+        for(var u=0;u<nu;u++){ var uo={_id:(rnd()<0.15?'orc-':'u')+u, tipo:'uso', data:dia(Math.floor(rnd()*9)-5), ts:2000+u};
+          if(rnd()<0.3) uo.credito=L[Math.floor(rnd()*L.length)]._id; if(rnd()<0.2) uo.desfecho=rnd()<0.5?'nao_veio':'fora_prazo'; if(rnd()<0.1) uo.orcId='O'; L.push(uo); }
+        var ne=Math.floor(rnd()*3);
+        for(var e=0;e<ne;e++){ var alvo=L[Math.floor(rnd()*L.length)]; var eo={_id:'e'+e, tipo:'estorno', estornaId:(rnd()<0.1?'nada':alvo._id), ts:3000+e}; if(alvo.tipo==='uso' && rnd()<0.5) eo.dia_devolvido=alvo.data; L.push(eo); }
+        // os registros da 6.60, como a tela grava
+        if(${enfeitar ? 'true' : 'false'}){
+          L.forEach(function(l){
+            if(l.tipo==='credito' && rnd()<0.3){ l.restaura={estorno:'e0', credito:'c0'}; l.corr={acao:'reabrir', por:'G', motivo:'m m m m'}; novos++; }
+            if(l.tipo==='credito' && rnd()<0.2){ l.corrige={credito:'c1', estorno:'est-c1', de:dia(-12)}; novos++; }
+            if(l.tipo==='credito' && rnd()<0.2){ l.correcoes={k1:{antes:{motivo:'cio', obs:''}, depois:{motivo:'viagem', obs:'x'}, corr:{acao:'corrigir'}}}; novos++; }
+            if(l.tipo==='credito' && rnd()<0.1){ l.volta_desmarcada={dia:dia(-3), excecao:{quem:'G', motivo:'x'}, excecao_desfeita:{acao:'reabrir'}}; novos++; }
+            if(l.tipo==='uso' && rnd()<0.3){ l.restaura={devolucao:'dev-u0', uso:'u0'}; l.corr={acao:'reabrir'}; l.lanc={dia:l.data, id:'L1'}; novos++; }
+            if(l.tipo==='estorno' && rnd()<0.4){ l.corr={acao:'anular'}; l.lote_estorno='E1'; l.origem='lancamentos'; if(rnd()<0.3) l.corrigidoPara='fa-x'; novos++; }
+          });
+        }
+        var res=Math.floor(rnd()*2); REP_RETRO_GESTAO=rnd()<0.5; repReservado=function(){ return res; };
+        var p={n:'X', tutor:'Y'}, dd=dia(-11);
+        var numeros=function(Lz){ Lx=Lz; return JSON.stringify([repSaldo(p), repSaldoDe(Lz), repSaldoReposicao(p), repSaldoReposicaoDe(Lz, hoje, res), repAgendaDe(p), repAgendaDeL(Lz, hoje).map(function(l){ return l._id; }),
+          repVoltasVencidas(Lz, hoje).map(function(l){ return l._id; }), repVoltasVencidasValendo(p, Lz, hoje).map(function(l){ return l._id; }), repVencidasSemDesfecho(p, Lz, hoje).map(function(l){ return l._id; }),
+          repTrocasPendentesDe(Lz, hoje, res).map(function(l){ return l._id; }), Object.keys(repRepetidas(Lz)), repTetosDe(Lz, hoje, res), repCreditoVivoNaData(p, dd), repDiaTemUso(Lz, dia(-2)),
+          repVeioDevolvido(Lz, dia(-2)), repFaltaChave(dd, Lz), repLivresParaMarcar(p, 0)]); };
+        var a=numeros(L);
+        var limpo=L.map(function(l){ var o=JSON.parse(JSON.stringify(l)); ['restaura','corrige','correcoes','corr','lote_estorno','origem','corrigidoPara','lanc'].forEach(function(k){ delete o[k]; });
+          if(o.volta_desmarcada) delete o.volta_desmarcada.excecao_desfeita; return o; });
+        var b=numeros(limpo);
+        if(a!==b) dif++;
+        out.push(a);
+      }
+    } finally { repLancamentos=bk.rl; repReservado=bk.rr; REP_RETRO_GESTAO=bk.rg; zHojeISO=bk.hz; }
+    return {dif:dif, novos:novos, retrato:out.join('|')};
+  })()`);
+prova('6.60 P37 (AC12.2) — o diferencial de 3.000 Extratos: com os registros da 6.60, os números (saldo, saldo de reposição, agenda, vencidas, trocas pendentes, repetidas, crédito vivo na data, chave da falta, livres) são os de um Extrato comum; sem eles, o retrato é o da base', () => {
+  const com = DIF660(true), sem = DIF660(false);
+  igual([com.dif, com.novos > 1500, sem.dif], [0, true, 0]);
+  const h = crypto660.createHash('sha256').update(sem.retrato).digest('hex').slice(0, 16);
+  console.log('      diferencial 6.60: 3000 Extratos, ' + com.novos + ' registros enfeitados, 0 diferenças; retrato sem enfeite ' + h);
+  igual(h, 'f0c8a9863442a215', 'o mesmo retrato dos números da base 0a49f93');
+});
+prova('6.60 P38 (AC11) — a área protegida e as pontes: banhoFaltaAgendar, ckRedesenharDeFora, pendAvisarChegada e as 5 pontes idênticas; nenhuma função nova começa com ck ou pt; o #v-daycare idêntico', () => {
+  const BASE = { banhoFaltaAgendar: 'b1b5389d48d87a59', ckRedesenharDeFora: 'c90b931912e9b863', pendAvisarChegada: 'fe2bf78d579085f7', tgAvisar: '43b8ccf7bf832745',
+    tgAvisarAlteracao: 'd24246f114e705f2', dashPonteChamarJa: '777b048c9f2cc12e', dashEspelhar: 'e40266eff5854105', dashAutoSincronizar: 'a8b827aa4708f438' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = FUN660(n); });
+  igual(agora, BASE);
+  const src = fs.readFileSync(APP, 'utf8');
+  const ckpt = [...src.matchAll(/\n  (?:async )?function ((?:ck|pt)[A-Za-z0-9_$]*)\(/g)].map((m) => m[1]).sort();
+  igual([ckpt.length, crypto660.createHash('sha256').update(ckpt.join(',')).digest('hex').slice(0, 16)], [154, 'ae3e07aa24d16046'], 'as mesmas funções ck*/pt* (nenhuma nova)');
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual(crypto660.createHash('sha256').update(src.slice(i, j)).digest('hex').slice(0, 16), 'd350ca846ae9d05e');
+});
+provaAsync('6.60 P39 (AC12.3) — as provas da 6.38, da 6.43 e da 6.46 passam (contadas); só as da lista do @sm ganharam palco', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const nomes = [...src.matchAll(/\bprova(?:Async)?\('(6\.(?:38|43|46)\b[^']*)'/g)].map((m) => m[1]);
+  const caidas = falhas.filter((f) => /^6\.(38|43|46)\b/.test(f));
+  console.log('      provas da 6.38, 6.43 e 6.46 no arquivo: ' + nomes.length + '; caídas: ' + caidas.length);
+  igual([nomes.length >= 111, caidas], [true, []]);
+});
+// ---- 2ª rodada (gate do QA, 10/out/2026): REL-001 a REL-004, REQ-001, REQ-002, TXT-001, TXT-002, UX-001 e os 9 defeitos do QA que
+// passavam pela Fase 0 (q03, q04, q16, q17, q19, q22, q43, q48, q51). Os cenários são os dos ataques do QA (scratchpad/qa660/ataque*.js).
+const relogio660 = async (ms, vezes) => {
+  for (let i = 0; i < (vezes || 1); i++) {
+    const n = run(`(function(){ var t=__tm657.filter(function(x){ return x.ms===${ms}; }); __tm657=__tm657.filter(function(x){ return x.ms!==${ms}; });
+      t.forEach(function(x){ x.fn(); }); return t.length; })()`);
+    await espera657();
+    if (!n) break;
+  }
+};
+// a conexão cai: 'depois' = a transação entrou no servidor e a resposta não chegou; 'antes' = não entrou
+const conexao660 = (modo) => run(`__disc660=${JSON.stringify(modo || '')}; if(!DB.__r660){ DB.__r660=DB.ref; DB.ref=function(p){ var r=DB.__r660(p), t=r.transaction;
+    r.transaction=function(fn){ if(__disc660==='antes') return Promise.reject(new Error('disconnect'));
+      return t.call(r, fn).then(function(x){ if(__disc660==='depois' && x && x.committed) return Promise.reject(new Error('disconnect')); return x; }); }; return r; }; }`);
+const registros660 = () => J630('__au657.filter(function(a){ return /^registro-/.test(a[0]); })').length;
+
+provaAsync('6.60 QA REL-001 — «Desfazer a devolução» depois que o crédito devolvido foi marcado de novo ou usado de novo: recusado na tela e dentro da transação, nada gravado; a agenda e o livro-caixa ficam como estavam', async () => {
+  arma660();
+  try {
+    const VD = { dia: '2026-10-06', quem: 'Gestora Teste', ts: T660(7, 9, 0), excecao: { quem: 'Gestora Teste', motivo: 'estava internado com receita' } };
+    const base = (cred, extra) => Object.assign({ 'fa-2026-10-01': CR660('2026-10-01', Object.assign({ volta: '', volta_desmarcada: VD }, cred || {})),
+      'veio-2026-10-06': USO660('2026-10-06', { credito: 'fa-2026-10-01', desfecho: 'nao_veio' }),
+      'dev-veio-2026-10-06': { tipo: 'estorno', data: '2026-10-07', motivo: 'estorno', estornaId: 'veio-2026-10-06', dia_devolvido: '2026-10-06', devolvido_gestao: true,
+        obs: 'estava internado com receita', quem: 'Gestora Teste', ts: T660(7, 9, 5) } }, extra || {});
+    // (ii) a Recepção marcou 20/10 no crédito que voltou: a tela recusa, sem cartaz
+    semear660(base({ volta: '2026-10-20', prazo24h: '2026-10-20' }));
+    const s0 = saldos660();
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-06');`); await espera657();
+    igual([run('CORR_ATUAL'), J630('__za657').slice(-1)[0].slice(0, 2)], [null, ['NÃO DÁ PARA DESFAZER ESTA DEVOLUÇÃO',
+      ['O crédito desta reposição já foi marcado de novo para 20/10: desmarque esse dia antes de desfazer a devolução. Nada foi gravado.']]]);
+    // a mesma marcação feita em OUTRO aparelho depois que o cartaz abriu: a transação recusa
+    semear660(base());
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-06');`); await espera657();
+    igual(op660('estado'), 'devolvida');
+    poeSo660(NO660 + '/fa-2026-10-01/volta', '2026-10-20');
+    const r1 = await assina660(SENHA657);
+    igual(r1[0], 'falhou');
+    assert.ok(/O crédito desta reposição já foi marcado de novo para 20\/10/.test(cartaz660()) && /NADA FOI GRAVADO/.test(cartaz660()), cartaz660());
+    igual([Object.keys(lanc660()).filter((k) => /^desfaz-/.test(k)), aud660('reposicao-devolucao-desfeita').length, registros660()], [[], 0, 0]);
+    await fecha660();
+    // (i) o crédito devolvido foi marcado para hoje e USADO hoje (A13b): recusado, nada de dois usos vivos no mesmo crédito
+    semear660(base({ volta: '2026-10-09', prazo24h: '2026-10-09' }, { 'veio-2026-10-09': USO660('2026-10-09', { credito: 'fa-2026-10-01', ts: T660(9, 9, 0) }) }));
+    const s1 = saldos660();
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-06');`); await espera657();
+    igual([run('CORR_ATUAL'), J630('__za657').slice(-1)[0][1]], [null, ['O crédito desta reposição já foi usado de novo em 09/10: desfazer contaria duas vezes. Nada foi gravado.']]);
+    igual(saldos660(), s1, 'o livro-caixa não vai a −1');
+    // o uso de hoje registrado em OUTRO aparelho depois que o cartaz abriu: a transação recusa
+    semear660(base());
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-06');`); await espera657();
+    poeSo660(NO660 + '/veio-2026-10-09', USO660('2026-10-09', { credito: 'fa-2026-10-01' }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/já foi usado de novo em 09\/10/.test(cartaz660()), cartaz660());
+    igual(Object.keys(lanc660()).filter((k) => /^desfaz-/.test(k)), []);
+    await fecha660();
+    // sem marcação nova e sem outro uso, o desfazer continua valendo (P17)
+    semear660(base());
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-veio-2026-10-06');`); await espera657();
+    igual((await assina660(SENHA657))[0], 'pronto');
+    igual(lanc660()['desfaz-dev-veio-2026-10-06'].restaura, { devolucao: 'dev-veio-2026-10-06', uso: 'veio-2026-10-06' });
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REL-001b — a rede de segurança: o desfazer da devolução que deixa o livro-caixa abaixo de 0 diz o número no cartaz (o uso sem crédito ligado)', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-01': CR660('2026-10-01'), u1: USO660('2026-10-06'), 'dev-u1': { tipo: 'estorno', data: '2026-10-07', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-06',
+      obs: 'a tutora cancelou a vinda', quem: 'Recepção X', ts: T660(7, 9, 0) }, u2: USO660('2026-10-07') });
+    igual(saldos660(), [0, 0]);
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+    igual(op660('aviso'), 'O saldo de reposição já está em 0: desfazer a devolução deixa o livro-caixa em −1. O dia usado conta, e a casa absorve.');
+    assert.ok(cartaz660().indexOf('desfazer a devolução deixa o livro-caixa em −1') >= 0, cartaz660());
+    await fecha660();
+    semear660({ 'fa-2026-10-01': CR660('2026-10-01'), 'fa-2026-10-02': CR660('2026-10-02'), u1: USO660('2026-10-06'), 'dev-u1': { tipo: 'estorno', data: '2026-10-07', motivo: 'estorno',
+      estornaId: 'u1', dia_devolvido: '2026-10-06', obs: 'a tutora cancelou a vinda', quem: 'Recepção X', ts: T660(7, 9, 0) } });
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+    igual(op660('aviso'), '', 'com saldo, nenhuma frase');
+    await fecha660();
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REL-002 — a conexão cai depois que a gravação entrou (disconnect), em cada ação nova: o cartaz diz «O BANCO AINDA NÃO CONFIRMOU» (nunca «NADA FOI GRAVADO»); o registro está no banco; o rastro entra quando o Extrato mostra o registro', async () => {
+  arma660();
+  try {
+    const casos = [
+      ['Estornar', { 'fa-2026-10-13': CR660('2026-10-13') }, "repEstornar(0, 'fa-2026-10-13')", null, SENHA657, 'reposicao-estorno', ['est-fa-2026-10-13']],
+      ['Estornar o lote', { 'fa-2026-10-13': CR660('2026-10-13', LOTE660()), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()) }, "repLoteEstornarAbrir(0, 'fa-2026-10-13')", null, SENHA657,
+        'reposicao-lote-estornado', ['est-fa-2026-10-13', 'est-fa-2026-10-14']],
+      ['Desfazer o estorno', { 'fa-2026-10-14': CR660('2026-10-14'), 'est-fa-2026-10-14': EST660('fa-2026-10-14') }, "repEstornoDesfazerAbrir(0, 'est-fa-2026-10-14')", null, SENHA657,
+        'reposicao-estorno-desfeito', ['fa-2026-10-14-2']],
+      ['Desfazer a devolução', { 'fa-2026-10-01': CR660('2026-10-01'), u1: USO660('2026-10-06'), 'dev-u1': { tipo: 'estorno', data: '2026-10-07', motivo: 'estorno', estornaId: 'u1',
+        dia_devolvido: '2026-10-06', obs: 'a tutora cancelou a vinda', quem: 'Recepção X', ts: T660(7, 9, 0) } }, "repDevolucaoDesfazerAbrir(0, 'dev-u1')", null, SENHA657,
+        'reposicao-devolucao-desfeita', ['desfaz-dev-u1']],
+      ['Corrigir a data', { 'fa-2026-10-15': CR660('2026-10-15') }, "repCorrigirAbrir(0, 'fa-2026-10-15')", ['16/10/2026', 'Tutor viajou', 'viagem curta'], SENHA657,
+        'reposicao-corrigida', ['est-fa-2026-10-15', 'fa-2026-10-16']],
+      ['Corrigir só o motivo', { 'fa-2026-10-17': CR660('2026-10-17') }, "repCorrigirAbrir(0, 'fa-2026-10-17')", ['17/10/2026', 'Cio', 'viagem curta'], SENHA657, 'reposicao-corrigida', []],
+    ];
+    for (const [nome, ext, abre, valores, senha, acao, novos] of casos) {
+      semear660(ext); run('__tm657=[];'); conexao660('depois');
+      const antes = Object.keys(lanc660());
+      run(`__p660=${abre};`); await espera657();
+      if (valores) await continua660(valores);
+      const reg0 = registros660();
+      igual((await assina660(senha))[0], 'semResposta', nome);
+      const h = cartaz660();
+      assert.ok(/O BANCO AINDA NÃO CONFIRMOU/.test(h) && /A conexão caiu no meio da gravação: a mudança pode ter entrado\./.test(h)
+        && /Confira na tela se a mudança entrou antes de tentar de novo\./.test(h) && !/NADA FOI GRAVADO|Nada foi gravado|O registro continua como estava/.test(h), nome + ': ' + h);
+      const L = lanc660(), entrou = Object.keys(L).filter((k) => antes.indexOf(k) < 0).sort();
+      igual(entrou, novos.slice().sort(), nome + ': o que entrou no banco');
+      if (nome === 'Corrigir só o motivo') igual([L['fa-2026-10-17'].motivo, Object.keys(L['fa-2026-10-17'].correcoes || {}).length], ['cio', 1]);
+      igual([aud660(acao).length, registros660() - reg0], [0, 0], nome + ': o rastro espera o Extrato');
+      const r = await run('__p660');
+      igual([r.ok, r.semResposta, r.incerto], [false, true, true], nome);
+      await relogio660(3000, 3);
+      igual([aud660(acao).length, registros660() - reg0], [1, 1], nome + ': o Extrato mostrou o registro → o rastro da tela e o da 6.57');
+      const tx = aud660(acao)[0][1];
+      if (nome === 'Estornar o lote') assert.ok(/estornado o lote de 2 faltas avisadas \(13\/10 e 14\/10\)/.test(tx), tx);
+      if (nome === 'Desfazer o estorno') assert.ok(/o crédito voltou \(fa-2026-10-14-2\)/.test(tx), tx);
+      if (nome === 'Corrigir a data') assert.ok(/a data de 15\/10\/2026 para 16\/10\/2026/.test(tx), tx);
+      conexao660(''); await fecha660();
+    }
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REL-002b — a conexão cai antes de a gravação entrar: o cartaz também não afirma nada («O BANCO AINDA NÃO CONFIRMOU»); sem o registro no Extrato em 10 minutos, nenhum rastro é escrito', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') }); run('__tm657=[];'); conexao660('antes');
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual((await assina660(SENHA657))[0], 'semResposta');
+    assert.ok(/A conexão caiu no meio da gravação/.test(cartaz660()) && !/NADA FOI GRAVADO/.test(cartaz660()), cartaz660());
+    await relogio660(3000, 250);
+    igual([Object.keys(lanc660()), aud660('reposicao-estorno').length, registros660(), J630('__tm657').filter((t) => t.ms === 3000).length], [['fa-2026-10-13'], 0, 0, 0]);
+    igual(aud660('gravacao-FALHOU').length, 1, 'a falha fica anotada (sem cartaz)');
+    // o «Corrigir» com a conexão caindo antes: a mesma coisa (nada de «Nada foi gravado» na tela)
+    run('__tm657=[];'); await fecha660();
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    await continua660(['14/10/2026', 'Tutor viajou', 'viagem curta']);
+    igual((await assina660(SENHA657))[0], 'semResposta');
+    conexao660('');
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REL-003 — o lote estorna só os dias que o cartaz mostrou: o dia que entrou no lote em outro aparelho no meio (a correção, com o mesmo lote) continua valendo, e a confirmação diz qual', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', LOTE660()), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()), 'fa-2026-10-15': CR660('2026-10-15', LOTE660()) });
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-13');`); await espera657();
+    poeSo660(NO660 + '/est-fa-2026-10-14', EST660('fa-2026-10-14', { data: '2026-10-09', corrigidoPara: 'fa-2026-10-20', quem: 'Gestora Outra Teste' }));
+    poeSo660(NO660 + '/fa-2026-10-20', CR660('2026-10-20', LOTE660({ corrige: { credito: 'fa-2026-10-14', estorno: 'est-fa-2026-10-14', de: '2026-10-14' } })));
+    await assina660(SENHA657);
+    igual((await run('__p660')).ok, true);
+    const L = lanc660();
+    igual([!!L['est-fa-2026-10-13'], !!L['est-fa-2026-10-15'], !!L['est-fa-2026-10-20'], L['est-fa-2026-10-14'].quem], [true, true, false, 'Gestora Outra Teste']);
+    const m = J630('__ze660').filter((z) => z.t === 'LOTE ESTORNADO').slice(-1)[0];
+    igual(m.l.slice(0, 3), ['Estornadas: 13/10 e 15/10.', 'Ficou de fora (já tinha sido estornada em outro aparelho): 14/10.',
+      'Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): 20/10. Se também está errada, use «Estornar» na linha dela.']);
+    igual(saldos660(), [1, 1], 'o 20/10 vale');
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REQ-001 e q51 — o cartaz do lote diz qual dia já foi usado e a conta de verdade do livro-caixa (um usado: −1; dois: −2); o «Estornar» com o livro-caixa já em −1 diz −2', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', LOTE660()), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()), u1: USO660('2026-10-05', { credito: 'fa-2026-10-13' }),
+      u2: USO660('2026-10-06', { credito: 'fa-2026-10-14' }) });
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-13');`); await espera657();
+    const c = op660('cascata');
+    igual(c.slice(0, 2), ['A falta de 13/10/2026, lançada por Recepção X em 08/10/2026 às 09:00 — já usada em 05/10.',
+      'A falta de 14/10/2026, lançada por Recepção X em 08/10/2026 às 09:00 — já usada em 06/10.']);
+    igual(op660('aviso'), '2 destes créditos já foram usados. Estornar o lote deixa o saldo de reposição em 0 e o livro-caixa em −2: os dias usados continuam usados, e a casa absorve.');
+    await fecha660();
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', LOTE660()), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()), 'fa-2026-10-15': CR660('2026-10-15', LOTE660()),
+      u1: USO660('2026-10-05', { credito: 'fa-2026-10-13' }), u2: USO660('2026-10-06'), u3: USO660('2026-10-07') });
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('aviso'), 'Um destes créditos já foi usado. Estornar o lote deixa o saldo de reposição em 0 e o livro-caixa em −3: o dia usado continua usado, e a casa absorve.');
+    assert.ok(cartaz660().indexOf('Um destes créditos já foi usado.') >= 0, cartaz660());
+    await fecha660();
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', LOTE660()), 'fa-2026-10-14': CR660('2026-10-14', LOTE660()), 'fa-2026-10-15': CR660('2026-10-15') });
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('aviso'), '', 'sem crédito usado, nenhuma frase');
+    await fecha660();
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13'), u1: USO660('2026-10-05', { credito: 'fa-2026-10-13' }), u2: USO660('2026-10-06') });
+    igual(saldos660(), [-1, 0]);
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('aviso'), 'Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −2: o dia usado continua usado, e a casa absorve.');
+    await fecha660();
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REL-004 — o cartaz aberto antes da meia-noite e confirmado depois: a correção e o desfazer da devolução, com a senha da Consultora, são recusados («Passou da meia-noite»), nada gravado; reabertos, só a Gestão assina', async () => {
+  arma660();
+  try {
+    run(`document.body.dataset.role='consultora'; __login657={nome:'Bia Consultora Teste', role:'consultora'};`);
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { quem: 'Bia Consultora Teste', ts: T660(9, 23, 50) }), 'fa-2026-10-01': CR660('2026-10-01'),
+      u1: USO660('2026-10-09', { credito: 'fa-2026-10-01', quem: 'Bia Consultora Teste' }),
+      'dev-u1': { tipo: 'estorno', data: '2026-10-09', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-09', obs: 'o tutor cancelou a vinda', quem: 'Bia Consultora Teste', ts: T660(9, 23, 55) } });
+    const antes = JSON.stringify(lanc660());
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('nivel'), 'propria');
+    await continua660(['13/10/2026', 'Tutor viajou', 'obs nova depois da meia-noite']);
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;`);
+    igual((await assina660('s-bia'))[0], 'falhou');
+    assert.ok(/Passou da meia-noite: esta falta agora é de dia anterior, e a correção só a Gestão assina\. Nada foi gravado\./.test(cartaz660()), cartaz660());
+    await fecha660();
+    run(`zHojeISO=function(){ return '2026-10-09'; }; hojeISO=zHojeISO;`);
+    run(`__p660=repDevolucaoDesfazerAbrir(0, 'dev-u1');`); await espera657();
+    igual(op660('nivel'), 'propria');
+    run(`zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;`);
+    igual((await assina660('s-bia'))[0], 'falhou');
+    assert.ok(/Passou da meia-noite: esta devolução agora é de dia anterior, e desfazer só a Gestão assina\. Nada foi gravado\./.test(cartaz660()), cartaz660());
+    await fecha660();
+    igual([JSON.stringify(lanc660()) === antes, registros660()], [true, 0], 'nada gravado');
+    // reaberto no dia seguinte: o cartaz já pede a Gestão, e ela assina
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(op660('nivel'), 'gestao');
+    await continua660(['13/10/2026', 'Tutor viajou', 'obs nova depois da meia-noite']);
+    igual((await assina660(SENHA657))[0], 'pronto');
+    // a confirmação no mesmo dia continua com a própria senha (P23)
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA TXT-002 e UX-001 — a observação vazia aparece como (vazio); a linha de estorno de uma falta diz de qual falta é, no Extrato e na ficha', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { ts: 50 }), 'est-fa-2026-10-13': EST660('fa-2026-10-13', { ts: 90 }),
+      'fa-2026-10-15': CR660('2026-10-15', { obs: 'nova', ts: 60, correcoes: { c1: { antes: { motivo: 'viagem', obs: '' }, depois: { motivo: 'viagem', obs: 'nova' }, corr: { por: 'Gestora Teste', quando: '09/10/2026 às 10:00', motivo: 'faltou escrever a observação', ts: 7 } } } }) });
+    const x = txt660(extrato660());
+    assert.ok(/estorno da falta de 13\/10/.test(x), x);
+    assert.ok(/Observação: \(vazio\) → «nova» por Gestora Teste/.test(x) && x.indexOf('«»') < 0, x);
+    const f = txt660(run('blocoReposicaoFicha(PELUDINHOS[0])'));
+    assert.ok(/estorno da falta de 13\/10/.test(f), f);
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA REQ-002 — a falta avisada nos Lançamentos de um dia fora da janela do automático (um dia que já passou): a linha à mão vai para a planilha daquele dia, como antes, e a janela de Reposições abre para o crédito; dentro da janela, nenhuma linha à mão', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-01': CR660('2026-10-01') }); dash660();
+    run(`DASH_DIA_SEL='2026-10-07';`);
+    const r = await run("dashLancar('faltas', 'Quindim/SRD', 0)"); await espera657();
+    const linhas = J630('__esc657').filter((e) => /^daycare\/dashboard\/2026-10-07\/faltas\//.test(e[1]));
+    igual([r, linhas.length, run('repPelSel===PELUDINHOS[0]'), run('repModoAtual'), run('__el657.repData.value'), run('__el657.repModal.classList._on')],
+      [true, 1, true, 'dia', '2026-10-07', true]);
+    run(`repMotivoAtual='doente'; repConfirmar();`); await espera657();
+    igual(lanc660()['fa-2026-10-07'].data, '2026-10-07');
+    run(`__esc657=[]; DASH_DIA_SEL='${DIA660}';`);
+    await run("dashLancar('faltas', 'Quindim/SRD', 0)"); await espera657();
+    igual(J630('__esc657').filter((e) => /daycare\/dashboard\//.test(e[1])).length, 0, 'dentro da janela, o automático põe a linha');
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA q03 e q04 — dois aparelhos no «Estornar»: o segundo, com o Extrato atrasado, recebe «NADA FOI GRAVADO — Esta falta já foi estornada (por …)», sem rastro; a tela que já sabe do estorno nem abre o cartaz', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    run(`__p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    poeSo660(NO660 + '/est-fa-2026-10-13', EST660('fa-2026-10-13', { data: '2026-10-09', quem: 'Gestora Outra Teste', ts: T660(9, 9, 30) }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/NADA FOI GRAVADO/.test(cartaz660()) && /Esta falta já foi estornada \(por Gestora Outra Teste, em 09\/10\/2026 às 09:30\)\. Nada foi gravado de novo\./.test(cartaz660()), cartaz660());
+    igual([lanc660()['est-fa-2026-10-13'].quem, aud660('reposicao-estorno').length, registros660()], ['Gestora Outra Teste', 0, 0]);
+    igual((await run('__p660')).ok, false);
+    await fecha660();
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13'), 'est-fa-2026-10-13': EST660('fa-2026-10-13') });
+    run(`__al657=[]; __p660=repEstornar(0, 'fa-2026-10-13');`); await espera657();
+    igual(run('CORR_ATUAL'), null, 'nenhum cartaz');
+    assert.ok(/^Esta falta já foi estornada \(por Recepção X, em 08\/10\/2026 às 15:00\)\. Nada foi gravado de novo\.$/.test(J630('__al657').slice(-1)[0]), JSON.stringify(J630('__al657')));
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA q16, q17, q19 e q22 — corrigir: a data não muda no crédito que nasceu de troca; o uso DEVOLVIDO não trava a data; data fora do calendário do app recusada; só o motivo, com o crédito estornado no outro aparelho no meio: recusado, nada gravado', async () => {
+  arma660();
+  try {
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13', { nasceu_troca: true, motivo: 'troca' }) });
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(await continua660(['15/10/2026', 'Tutor viajou', 'viagem curta']), ['campos', 'É uma troca: desfaça a troca e marque de novo em «+ Marcar troca». O motivo e a observação podem mudar.']);
+    await fecha660();
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13'), u1: USO660('2026-10-05', { credito: 'fa-2026-10-13' }), 'dev-u1': { tipo: 'estorno', data: '2026-10-07', motivo: 'estorno', estornaId: 'u1',
+      dia_devolvido: '2026-10-05', obs: 'a tutora cancelou a vinda', quem: 'Recepção X', ts: T660(7, 9, 0) } });
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual((await continua660(['15/10/2026', 'Tutor viajou', 'viagem curta']))[0], 'conferir', 'o uso devolvido não trava');
+    await assina660(SENHA657);
+    igual((await run('__p660')).ok, true);
+    igual([lanc660()['fa-2026-10-15'].corrige.credito, !!lanc660()['est-fa-2026-10-13']], ['fa-2026-10-13', true]);
+    semear660({ 'fa-2026-10-13': CR660('2026-10-13') });
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual(await continua660(['15/01/2036', 'Tutor viajou', 'viagem curta']), ['campos', 'Data inválida: 15/01/2036 está fora do calendário do app. Nada foi gravado.']);
+    await fecha660();
+    run(`__p660=repCorrigirAbrir(0, 'fa-2026-10-13');`); await espera657();
+    igual((await continua660(['13/10/2026', 'Cio', 'viagem curta']))[0], 'conferir');
+    poeSo660(NO660 + '/est-fa-2026-10-13', EST660('fa-2026-10-13', { data: '2026-10-09', quem: 'Gestora Outra Teste' }));
+    igual((await assina660(SENHA657))[0], 'falhou');
+    assert.ok(/Esta falta foi estornada ou corrigida em outro aparelho\. Nada foi gravado\./.test(cartaz660()), cartaz660());
+    igual([lanc660()['fa-2026-10-13'].motivo, lanc660()['fa-2026-10-13'].correcoes, aud660('reposicao-corrigida').length], ['viagem', null, 0]);
+  } finally { solta660(); }
+});
+provaAsync('6.60 QA q43 e q48 — «Lançar o período certo» de um lote de «Alguns dias» abre no modo «Alguns dias», com as datas; o estorno da hospedagem (orc-) fica sem «Desfazer a devolução» (S7)', async () => {
+  arma660();
+  try {
+    const AL = { lote: 'L88', alguns: { datas: ['2026-10-21', '2026-10-23'] } };
+    semear660({ 'fa-2026-10-21': CR660('2026-10-21', AL), 'fa-2026-10-23': CR660('2026-10-23', AL) });
+    run(`__p660=repLoteEstornarAbrir(0, 'fa-2026-10-21'); __zeq660=['Lançar o período certo'];`); await espera657();
+    await assina660(SENHA657);
+    igual((await run('__p660')).ok, true);
+    igual([run('repModoAtual'), J630('repAlgunsDatas'), run('REP_CORRIGE_LOTE'), run('__el657.repTitulo.textContent')], ['alguns', ['2026-10-21', '2026-10-23'], 'L88', 'Lançar o período certo']);
+    semear660({ 'fa-2026-10-01': CR660('2026-10-01'), 'orc-x1': USO660('2026-10-07', { estadiaId: 'e1', motivo: 'hospedagem' }),
+      'est-orc-x1': { tipo: 'estorno', data: '2026-10-08', motivo: 'estorno', estornaId: 'orc-x1', obs: 'orçamento cancelado', quem: 'Gestora Teste', ts: T660(8, 11, 0) },
+      u1: USO660('2026-10-05'), 'dev-u1': { tipo: 'estorno', data: '2026-10-06', motivo: 'estorno', estornaId: 'u1', dia_devolvido: '2026-10-05', obs: 'a tutora cancelou a vinda', quem: 'Recepção X', ts: T660(6, 9, 0) } });
+    const x = extrato660();
+    igual([x.indexOf("repDevolucaoDesfazerAbrir(0,'est-orc-x1')"), x.indexOf("repDevolucaoDesfazerAbrir(0,'dev-u1')") >= 0], [-1, true]);
+    igual(run("repEstornoTipo(repLancamentos(PELUDINHOS[0]), repLancDe(repLancamentos(PELUDINHOS[0]), 'est-orc-x1'))"), '');
+  } finally { solta660(); }
 });
 }
 // ------------------------------------------------ o fim
