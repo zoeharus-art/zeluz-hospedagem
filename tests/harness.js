@@ -278,8 +278,9 @@ async function main() {
   console.log('  reposicao: ' + (reposicao ? Object.keys(reposicao).length : 0) + ' FILHOt(s)');
   console.log('  irmaos: ' + (irmaos ? Object.keys(irmaos).length : 0) + ' vínculo(s)\n');
 
-  // injeta no cache real do app
-  if (reposicao) ctx.REPO_CACHE = reposicao;
+  // injeta no cache real do app — é o que o ouvinte de daycare/reposicao faz, e ele marca que o
+  // Extrato chegou (6.46: sem a marca, os caminhos que criam crédito esperam)
+  if (reposicao) { ctx.REPO_CACHE = reposicao; ctx.REPO_LIDO = true; }
 
   // ---- v05: reposição — invariantes do saldo/agenda ----
   console.log('v05 — Reposição (saldo e agendamento):');
@@ -1586,6 +1587,7 @@ async function main() {
         __bkp2.quemSou=quemSou; __bkp2.renderHosp=renderHosp; __bkp2.fecharPlantao=fecharPlantao;
         __bkp2.currentHosp=currentHosp; __bkp2.CF_ESTADIAS=CF_ESTADIAS; __bkp2.medAgendaKey=medAgendaKey;
         __bkp2.PELUDINHOS=PELUDINHOS; __bkp2.achaPorIdNR=achaPorIdNR; __bkp2.ciEscolher=ciEscolher;
+        __bkp2.hospCorrigirAbrir=(typeof hospCorrigirAbrir!=='undefined')?hospCorrigirAbrir:undefined;
         (function(){
           var mkRef=function(p){ return {
             set:function(v){ __p2.escritas.push({op:'set',path:p}); return Promise.resolve(); },
@@ -1653,22 +1655,28 @@ async function main() {
           removerHospedeCard(0, __p2b.remCurto);
           __p2.res.remCurto={ n:__p2.escritas.length, alerta:__p2.alertas.join(' | ') };
 
-          // --- 5) DUPLO: cancelarPernoiteFicha, par "cancelar a estadia" ---
+          // --- 5) cancelarPernoiteFicha com ESTADIA (6.53, 09/out/2026): era o par "cancelar a
+          // estadia" — o 2º toque gravava 'cancelada' sem motivo e sem assinatura, e o texto
+          // "(hoje)" cancelava a estadia inteira. Agora os dois toques abrem o cartaz "Corrigir
+          // esta hospedagem" (trocar a ficha ou excluir, com motivo e senha) e NADA é gravado aqui.
           currentHosp={ nome:'Toddy', tutor:'Ana', refKey:'toddy__ana', manualKey:'mk1', manualDia:'2026-08-25' };
           medAgendaKey=function(){ return 'toddy__ana'; };
           fecharPlantao=function(){};
+          __p2.res.corr=[]; hospCorrigirAbrir=function(id, op){ __p2.res.corr.push(id+'|'+((op&&op.origem)||'')); };
           CF_ESTADIAS={ 'toddy__ana':{ id:'est9', e:{ status:'ativa' } } };
           __p2.escritas.length=0;
           cancelarPernoiteFicha(__p2b.fichaEst);
-          __p2.res.est1={ n:__p2.escritas.length, txt:__p2b.fichaEst.textContent, armed:__p2b.fichaEst.dataset.armed };
+          __p2.res.est1={ n:__p2.escritas.length, txt:__p2b.fichaEst.textContent, armed:__p2b.fichaEst.dataset.armed, corr:__p2.res.corr.slice() };
           cancelarPernoiteFicha(__p2b.fichaEst);
-          __p2.res.est2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
+          __p2.res.est2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'', corr:__p2.res.corr.slice() };
 
           // --- 6) DUPLO: cancelarPernoiteFicha, par "deletar do Hotel de hoje" ---
           CF_ESTADIAS={};
           __p2.escritas.length=0;
           cancelarPernoiteFicha(__p2b.fichaMan);
           __p2.res.man1={ n:__p2.escritas.length, txt:__p2b.fichaMan.textContent, armed:__p2b.fichaMan.dataset.armed };
+          // 6.53: o 2º toque leva o motivo escrito no cartão da Zona de risco (4 palavras).
+          __p2b.fichaMan.dataset.motivo='lancei o Toddy no dia errado';
           cancelarPernoiteFicha(__p2b.fichaMan);
           __p2.res.man2={ n:__p2.escritas.length, path:(__p2.escritas[0]||{}).path||'' };
 
@@ -1726,11 +1734,11 @@ async function main() {
       check('removerHospedeCard: motivo curto NÃO grava e avisa na tela',
         R2.remCurto.n === 0 && /NÃO TIREI/.test(R2.remCurto.alerta), JSON.stringify(R2.remCurto));
       // DUPLO 2 — cancelarPernoiteFicha (estadia)
-      check('cancelarPernoiteFicha (duplo "cancelar estadia"): 1º toque NÃO grava (só arma)',
-        R2.est1.n === 0 && R2.est1.armed === '1' && /^Confirmar — cancelar a estadia de Toddy/.test(R2.est1.txt),
+      check('cancelarPernoiteFicha (com estadia, 6.53): o 1º toque NÃO grava — abre o cartaz da correção da estadia',
+        R2.est1.n === 0 && R2.est1.armed !== '1' && R2.est1.corr.join(',') === 'est9|plantao',
         JSON.stringify(R2.est1));
-      check('cancelarPernoiteFicha (duplo "cancelar estadia"): 2º toque grava',
-        R2.est2.n > 0 && /estadias\/est9/.test(R2.est2.path), JSON.stringify(R2.est2));
+      check('cancelarPernoiteFicha (com estadia, 6.53): o 2º toque também NÃO grava "cancelada" sozinho (motivo e senha no cartaz)',
+        R2.est2.n === 0 && R2.est2.corr.join(',') === 'est9|plantao,est9|plantao', JSON.stringify(R2.est2));
       // DUPLO 3 — cancelarPernoiteFicha (deletar do Hotel de hoje)
       check('cancelarPernoiteFicha (duplo "deletar do Hotel"): 1º toque NÃO grava (só arma)',
         R2.man1.n === 0 && R2.man1.armed === '1' && /^Confirmar — deletar Toddy/.test(R2.man1.txt),
@@ -1759,6 +1767,7 @@ async function main() {
         quemSou=__bkp2.quemSou; renderHosp=__bkp2.renderHosp; fecharPlantao=__bkp2.fecharPlantao;
         currentHosp=__bkp2.currentHosp; CF_ESTADIAS=__bkp2.CF_ESTADIAS; medAgendaKey=__bkp2.medAgendaKey;
         PELUDINHOS=__bkp2.PELUDINHOS; achaPorIdNR=__bkp2.achaPorIdNR; ciEscolher=__bkp2.ciEscolher;
+        hospCorrigirAbrir=__bkp2.hospCorrigirAbrir;
       `, ctx);
       ctx.document.getElementById = gebP2;
       ctx.__ROLE__.role = papelAntes;
@@ -3756,8 +3765,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -4053,8 +4062,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -4279,7 +4288,7 @@ async function main() {
           check('v-27 · o dashLancar devolve a promessa do lançamento (é ela que autoriza o fecho)',
             /if\(k!=='reposicao'\) return gravar\(false\);/.test(html)
             && /return ref\.set\(reg\)\.then\(function\(\)\{/.test(html)
-            && /\}\)\.catch\(function\(e\)\{ alert\('Não salvou: '\+\(\(e&&e\.message\)\|\|e\)\); return false; \}\);/.test(html));
+            && /\}\)\.catch\(function\(e\)\{ alert\(dashLancarFalhou\(e, gravou\)\); return false; \}\);/.test(html));   // 6.48: o motivo em português (ajuste previsto)
 
           // ---- (g) cancelar EXIGE motivo ------------------------------------------
           ctx.PEND_ABERTAS = { caco__ana: { coleira: JSON.parse(JSON.stringify(doCaco.coleira)) } };
@@ -4437,8 +4446,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -5083,8 +5092,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -7996,8 +8005,10 @@ async function main() {
     // ---- correcoes da auditoria adversarial (31/ago) ----
     check('AUDIT-4: xara ambiguo NAO e casado sozinho',
       /if\(casado && casado\.p && !casado\.ambiguo\)/.test(html));
+    // 6.38: o saldo lido antes é o de REPOSIÇÃO (repSaldoReposicao — a troca de dia fica fora do número);
+    // a regra do AUDIT-5 (ler ANTES de gravar, para nunca dobrar) é a mesma.
     check('AUDIT-5: saldo lido ANTES de gravar (nunca dobra na mensagem)',
-      /const _saldoAntes=repSaldo\(p\);/.test(html) && /saldo:_saldoAntes\+regs\.length/.test(html));
+      /const _saldoAntes=repSaldo(Reposicao)?\(p\);/.test(html) && /saldo:_saldoAntes\+regs\.length/.test(html));
     if (typeof ctx.medTgEsc === 'function' && typeof ctx.medTgTexto === 'function') {
       check('AUDIT-2: "febre > 39" nao derruba a mensagem',
         ctx.medTgEsc('febre > 39') === 'febre &gt; 39');
@@ -14719,7 +14730,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-10-07-09';/.test(html));
+        /const APP_VERSAO='2026-10-09-20';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14781,10 +14792,19 @@ async function main() {
                  PELUDINHOS:PELUDINHOS, cad:pelCadCache, pelAtual:pelAtual, pelAtualIdx:pelAtualIdx};
         var grav=[], empurrou=[], apagou=[], rastro=[], faltas=[], cartazes=[], perguntas=[], respostas=[];
         function _p(){ return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; }
+        // 6.57 (palco): o plano e a linha do histórico agora vão numa gravação só, no nó da ficha ('renov_hist/{id}': a linha
+        // nova; 'renov_hist/{id}': null, a antiga que sai). O banco de mentira registra cada linha como antes a via (o registro
+        // empurrado para renov_hist e o nó apagado); push() sem valor só gera a chave (não grava, como no Firebase); e o rastro
+        // do antes e do depois (daycare/ficha-rastro, nó novo, fora do cadastro) fica numa lista própria.
+        var rastroFicha=[], nChave=0;
         DB={ ref:function(p){ return {
-          update:function(v){ grav.push({metodo:'update', caminho:p, valor:v}); return _p(); },
+          update:function(v){ grav.push({metodo:'update', caminho:p, valor:v});
+            Object.keys(v||{}).forEach(function(x){ var ps=x.split('/'); if(ps.length!==2) return;
+              if(v[x]===null) apagou.push(p+'/'+x); else empurrou.push({caminho:p+'/'+ps[0], valor:v[x]}); });
+            return _p(); },
           set:function(v){ grav.push({metodo:'set', caminho:p, valor:v}); return _p(); },
-          push:function(v){ empurrou.push({caminho:p, valor:v}); return _p(); },
+          push:function(v){ if(v===undefined) return {key:'k657_'+(++nChave)}; if(String(p).indexOf('daycare/ficha-rastro/')===0){ rastroFicha.push({caminho:p, valor:v}); return _p(); }
+            empurrou.push({caminho:p, valor:v}); return _p(); },
           remove:function(){ apagou.push(p); return _p(); }
         }; } };
         audit=function(a,d,m){ rastro.push({acao:a, detalhe:String(d==null?'':d), alvo:(m&&m.alvo)||''}); };
@@ -15549,8 +15569,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15804,8 +15824,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -16107,8 +16127,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -16306,7 +16326,7 @@ async function main() {
       check('v-31 · a ficha ganhou o campo "2ª dose dada em", ao lado do vermífugo',
         html.indexOf('<label>2ª dose dada em</label>') > 0
         && html.indexOf("pbSet(\\'verm\\',{verm_dose2_t:this.value})") > 0
-        && html.indexOf('<label>2ª dose prevista (21 dias depois)</label>') > 0);
+        && html.indexOf('<label>2ª dose prevista (') > 0);
     } else { check('v-31 · vermDose2Prevista existe', false, 'função não encontrada'); }
 
     // ---- (f) a escova: prevenção, lançamento do dia e pendência ---------------------
@@ -16376,8 +16396,8 @@ async function main() {
       && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
       && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16850,8 +16870,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -16925,7 +16945,10 @@ async function main() {
     if (typeof ctx.vagasDoDia === 'function') {
       const bkp33 = {};
       ['PELUDINHOS', 'REPO_CACHE', 'TROCA_CACHE', 'REP_PLAN_CACHE',
-        'DASH_DADOS', 'DASH_DIA_SEL', 'dcValoresCfg', 'VAGAS_PEDIDOS'].forEach((k) => { bkp33[k] = ctx[k]; });
+        'DASH_DADOS', 'DASH_DIA_SEL', 'dcValoresCfg', 'VAGAS_PEDIDOS', 'REPO_LIDO'].forEach((k) => { bkp33[k] = ctx[k]; });
+      // 6.46: o Extrato de reposições já chegou neste aparelho de mentira (o ouvinte respondeu) —
+      // sem isto, o «Marcar reposição» e a autorização da Márcia esperam o Extrato e nada lançam.
+      ctx.REPO_LIDO = true;
       // pelCadCache e zHojeISO vivem na lexical scope do contexto (o mesmo motivo do DB):
       // só se trocam por DENTRO, com runInContext.
       vm.runInContext('__bkp33s = { cad: pelCadCache, hoje: zHojeISO, dv: appDiaVelho };'
@@ -16979,10 +17002,19 @@ async function main() {
         // ---- (c) O VEREDITO: tem crédito é reposição; não tem é avulso, com preço ----
         const tablito = ctx.PELUDINHOS[0], toshi = ctx.PELUDINHOS[2];
         ctx.REP_PLAN_CACHE[AMANHA33] = { ts: Date.now(), auto: {}, avulso: {} };
+        // 6.38 (seção 2.1 e crítica C03): a única reposição do Tablito está marcada para 25/09. Antes, o veredito de
+        // 24/09 dizia REPOSIÇÃO e o «Marcar reposição» parava em "Não achei um crédito sem dia marcado"; agora o
+        // veredito já diz que ela está marcada para 25/09 e como usá-la em 24/09 — sem cobrar avulso. Com o crédito
+        // livre (sem dia), continua REPOSIÇÃO, sem cobrar nada.
+        const vd1m = ctx.dxVeredito(tablito, AMANHA33);
+        const c1v = ctx.REPO_CACHE['tablito__duda'].lancamentos.c1.volta;
+        ctx.REPO_CACHE['tablito__duda'].lancamentos.c1.volta = '';
         const vd1 = ctx.dxVeredito(tablito, AMANHA33);
+        ctx.REPO_CACHE['tablito__duda'].lancamentos.c1.volta = c1v;
         check('v-33 · Duda avisou antes e o Tablito TEM crédito: o dia é REPOSIÇÃO, sem cobrar nada',
-          vd1.ok === true && vd1.tipo === 'reposicao' && vd1.valor_cent === 0 && vd1.saldo === 1,
-          JSON.stringify(vd1));
+          vd1.ok === true && vd1.tipo === 'reposicao' && vd1.valor_cent === 0 && vd1.saldo === 1
+          && vd1m.ok === false && vd1m.tipo !== 'avulso' && /marcada para 25\/09/.test(vd1m.motivo || ''),
+          JSON.stringify([vd1, vd1m]));
         const vd2 = ctx.dxVeredito(toshi, AMANHA33);
         check('v-33 · o Toshi NÃO tem crédito: o dia é AVULSO de R$ 170,00 (ele não é matriculado)',
           vd2.ok === true && vd2.tipo === 'avulso' && vd2.valor_cent === 17000 && vd2.matriculado === false,
@@ -17014,9 +17046,9 @@ async function main() {
           { planilha_ok: false, planilha_msg: 'a planilha não tem a coluna Faltas Avisadas', ts: 1790000000000 };
         const e2 = ctx.repPlanEstado(AMANHA33, tablito, 'faltas');
         const l2 = ctx.repPlanLinhaHTML(tablito, AMANHA33, 'faltas');
-        check('v-33 · o que a ponte RECUSOU diz "NÃO foi para a planilha", com o motivo e o botão de tentar de novo',
+        check('v-33 · o que a ponte RECUSOU diz "NÃO foi para a planilha", com o motivo e o botão «Mandar agora» (6.48, REQ-002)',
           e2.estado === 'falhou' && l2.indexOf('NÃO foi para a planilha — a planilha não tem a coluna') > 0
-          && l2.indexOf('tentar de novo') > 0 && l2.indexOf("repMandarAgora('" + AMANHA33 + "'") > 0,
+          && l2.indexOf('>Mandar agora<') > 0 && l2.indexOf("repMandarAgora('" + AMANHA33 + "'") > 0,
           l2);
         delete ctx.REP_PLAN_CACHE[AMANHA33].auto._estado.faltas.tablito;
         check('v-33 · o que ainda não foi promete "vai para a planilha em até 5 min" e dá o "Mandar agora"',
@@ -17075,12 +17107,14 @@ async function main() {
             check('v-33 · o automático escreve as duas faltas avisadas de amanhã na planilha',
               r33.ok === true && chamadas.filter((c) => c.acao === 'lancar' && c.coluna === 'Faltas Avisadas').length === 2,
               JSON.stringify(chamadas.map((c) => c.acao + ':' + (c.valor || ''))));
+            // 6.49: o registro novo é o v2 — a chave de cada nome é a identidade pela ficha (dashAutoIdent).
+            const kT33 = ctx.dashAutoIdent(ctx.dashNomePlanilha(ctx.PELUDINHOS[0])), kB33 = ctx.dashAutoIdent(ctx.dashNomePlanilha(ctx.PELUDINHOS[1]));
             check('v-33 · e GRAVA a confirmação nome por nome: o Tablito entrou, o Biscoito foi recusado com o motivo',
-              noAuto._estado_v === 1
+              noAuto._estado_v === 2
               && !!(noAuto._estado && noAuto._estado.faltas)
-              && noAuto._estado.faltas.tablito.planilha_ok === true
-              && noAuto._estado.faltas.biscoito.planilha_ok === false
-              && noAuto._estado.faltas.biscoito.planilha_msg.indexOf('não tem a coluna') >= 0,
+              && noAuto._estado.faltas[kT33].planilha_ok === true
+              && noAuto._estado.faltas[kB33].planilha_ok === false
+              && noAuto._estado.faltas[kB33].planilha_msg.indexOf('não tem a coluna') >= 0,
               JSON.stringify(noAuto._estado));
             // e a tela lê exatamente isso
             ctx.REP_PLAN_CACHE[AMANHA33] = { ts: Date.now(), auto: noAuto, avulso: {} };
@@ -17259,12 +17293,14 @@ async function main() {
       html.indexOf('id="poCardEncaixes"') > 0
       && html.indexOf('A única exceção é <strong>Pedidos de encaixe</strong>') > 0);
     check('v-33 · o pedido de encaixe mora em daycare/vagas-pedidos e tem ouvinte próprio',
-      /DB\.ref\('daycare\/vagas-pedidos\/'\+dia\+'\/'\+ch\)\.set\(reg\)/.test(html)
+      // 6.46 (3ª rodada): o pedido é gravado por TRANSAÇÃO no mesmo nó — o «Avisar a Márcia» de novo não
+      // apaga o pedido que a Márcia está autorizando (ATK2-15)
+      /DB\.ref\('daycare\/vagas-pedidos\/'\+dia\+'\/'\+ch\)\.(set\(reg\)|transaction\(function\(atual\)\{)/.test(html)
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -17580,8 +17616,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -17938,8 +17974,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -18195,8 +18231,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -18413,8 +18449,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -18787,8 +18823,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -19035,8 +19071,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -19485,8 +19521,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -19689,8 +19725,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -20011,8 +20047,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -20297,8 +20333,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -20821,8 +20857,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -21178,8 +21214,8 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -21524,8 +21560,8 @@ async function main() {
         ctx.prevCorrigePetDe(chave47) === pel47
         && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
 
-      check('v-47 · a versão carimbada desta entrega é a 2026-10-07-09',
-        /const APP_VERSAO='2026-10-07-09';/.test(html));
+      check('v-47 · a versão carimbada desta entrega é a 2026-10-09-20',
+        /const APP_VERSAO='2026-10-09-20';/.test(html));
     } finally {
       ctx.document.getElementById = geOrig47;
       ctx.document.body.dataset.role = papelAntes47;
@@ -21666,7 +21702,10 @@ async function main() {
     check('v-48 · ligar o banho de trinta FILHOts não vira trinta conferências: uma fila de 20 s',
       /var BANHO_AUTO_T=null;/.test(html)
       && /function banhoAutoPedirConferencia\(\)\{[\s\S]{0,40}?if\(BANHO_AUTO_T\) return;/.test(html)
-      && (html.match(/banhoAutoPedirConferencia\(\);/g) || []).length === 2);
+      // 4 chamadores, todos pela MESMA fila de 20 s: o Salvar, a exceção de um dia em Banhos recorrentes,
+      // desde a 6.50, a exceção de um dia gravada nos Lançamentos do dia (banhoDiaGravar) e, desde a 6.52, o
+      // banho de saída do hospedado mexido nos Lançamentos do dia ou no Hoje na Zêluz (banhoSaidaGravar).
+      && (html.match(/banhoAutoPedirConferencia\(\);/g) || []).length === 4);
     {
       const lista48 = ctx.ciMedsToLista({
         a: Object.assign({}, vitaC), b: Object.assign({}, vitaC), c: Object.assign({}, vitaC),
@@ -21768,7 +21807,7 @@ async function main() {
           JSON.stringify(b01.banho) === JSON.stringify(['Lana/Spitz (SHAMPOO · NA RECEPÇÃO)']),
           JSON.stringify(b01.banho));
         check('v-48 · e a HORA vai junto, para a coluna "Hora Banho" (é ela que toca o alarme na TV)',
-          b01._horas.banho[ctx.dashAutoNomeChave('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '10:00',
+          b01._horas.banho[ctx.dashAutoIdent('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '10:00',   // 6.49: a hora é da ficha
           JSON.stringify(b01._horas.banho));
         check('v-48 · o Nick não entra em 01/10: ele vem às segundas, e quem não vem não toma banho',
           b01.banho.length === 1, JSON.stringify(b01.banho));
@@ -21802,8 +21841,8 @@ async function main() {
           doDia('2026-10-15').banho.length === 0 && doDia('2026-10-29').banho.length === 1);
         ex48[ctx.pelKey(pLana)].banho_rec = lanaHora;
         check('v-48 · "mudar só o dia" leva a hora nova para a planilha naquele dia',
-          doDia('2026-10-29')._horas.banho[ctx.dashAutoNomeChave('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '14:30'
-          && doDia('2026-10-15')._horas.banho[ctx.dashAutoNomeChave('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '10:00');
+          doDia('2026-10-29')._horas.banho[ctx.dashAutoIdent('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '14:30'
+          && doDia('2026-10-15')._horas.banho[ctx.dashAutoIdent('Lana/Spitz (SHAMPOO · NA RECEPÇÃO)')] === '10:00');
         ex48[ctx.pelKey(pLana)].banho_rec = lana;
 
         // HOJE: a chamada tem a última palavra
@@ -21988,8 +22027,8 @@ async function main() {
       && /delete BANHO_RASC\[chave\]; banhoRascGuardar\(\);/.test(html)
       && html.indexOf('Há uma alteração nesta linha que ainda não foi gravada') > 0);
 
-    check('v-48 · a versão carimbada desta entrega é a 2026-10-07-09',
-      /const APP_VERSAO='2026-10-07-09';/.test(html));
+    check('v-48 · a versão carimbada desta entrega é a 2026-10-09-20',
+      /const APP_VERSAO='2026-10-09-20';/.test(html));
   }
   console.log('');
 
@@ -22302,10 +22341,19 @@ async function main() {
                hz:zHojeISO, hj:hojeISO, mm:mmBlocoHTML};
       var grav=[], empurrou=[], apagou=[], rastro=[], faltas=[], perguntas=[], respostas=[];
       function _p(){ return { then:function(f){ if(f) f(); return this; }, catch:function(){ return this; } }; }
+      // 6.57 (palco): o plano e a linha do histórico agora vão numa gravação só, no nó da ficha ('renov_hist/{id}': a linha
+      // nova; 'renov_hist/{id}': null, a antiga que sai). O banco de mentira registra cada linha como antes a via (o registro
+      // empurrado para renov_hist e o nó apagado); push() sem valor só gera a chave (não grava, como no Firebase); e o rastro
+      // do antes e do depois (daycare/ficha-rastro, nó novo, fora do cadastro) fica numa lista própria.
+      var rastroFicha=[], nChave=0;
       DB={ ref:function(p){ return {
-        update:function(v){ grav.push({caminho:p, valor:JSON.parse(JSON.stringify(v))}); Object.assign(pelCadCache['tâmara__viajante teste'], JSON.parse(JSON.stringify(v))); return _p(); },
+        update:function(v){ grav.push({caminho:p, valor:JSON.parse(JSON.stringify(v))}); Object.assign(pelCadCache['tâmara__viajante teste'], JSON.parse(JSON.stringify(v)));
+          Object.keys(v||{}).forEach(function(x){ var ps=x.split('/'); if(ps.length!==2) return;
+            if(v[x]===null) apagou.push(p+'/'+x); else empurrou.push({caminho:p+'/'+ps[0], valor:v[x]}); });
+          return _p(); },
         set:function(v){ grav.push({caminho:p, valor:v}); return _p(); },
-        push:function(v){ empurrou.push({caminho:p, valor:v}); return _p(); },
+        push:function(v){ if(v===undefined) return {key:'k657_'+(++nChave)}; if(String(p).indexOf('daycare/ficha-rastro/')===0){ rastroFicha.push({caminho:p, valor:v}); return _p(); }
+          empurrou.push({caminho:p, valor:v}); return _p(); },
         remove:function(){ apagou.push(p); return _p(); }
       }; } };
       audit=function(a,d,m){ rastro.push({acao:a, detalhe:String(d==null?'':d)}); };
@@ -22589,6 +22637,8 @@ async function main() {
     // O cadastro em memória pode ter ficado vazio por um bloco anterior: aqui vale a lista do app
     // com o que houver no cache (sem cache, a ficha é a da lista) — e volta como estava no fim.
     vm.runInContext("__bk51c = pelCadCache; if(!pelCadCache || typeof pelCadCache!=='object') pelCadCache = {};", ctx);
+    // 6.46: com o Extrato lido (o ouvinte respondeu) — a "já lançada" das duas portas lê o Extrato.
+    const lido51 = ctx.REPO_LIDO; ctx.REPO_LIDO = true;
     const lista51 = [], difs51 = [], semPorque51 = [], fds51 = [], fer51 = [];
     let n51 = 0;
     try {
@@ -22605,7 +22655,7 @@ async function main() {
         if (a.entram.length + a.fora.length !== 7) difs51.push(p.n + ' ' + de + ': ' + (a.entram.length + a.fora.length) + ' de 7');
       });
     });
-    } finally { vm.runInContext('pelCadCache = __bk51c;', ctx); }
+    } finally { vm.runInContext('pelCadCache = __bk51c;', ctx); ctx.REPO_LIDO = lido51; }
     console.log('  ' + lista51.length + ' FILHOts ativos da lista do app · ' + n51 + ' semanas conferidas');
     check('v-51 · A1 — "Alguns dias" com a semana inteira = o período da mesma semana, FILHOt por FILHOt (a mesma regra, por duas portas)',
       lista51.length >= 10 && difs51.length === 0, difs51.slice(0, 4).join(' · ') || (lista51.length + ' FILHOts'));

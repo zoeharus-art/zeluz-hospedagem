@@ -603,6 +603,10 @@ function vigiaFalta12h_TESTE() {
 }
 
 
+/** 6.58 (10/out/2026): a dose ANULADA no app («Desfazer esta dose», a marca `anulada`) conta como sem registro.
+ *  O registro não some (nada é apagado): só não vale como dose dada. */
+function _vigiaDoseValendo(reg) { return !!reg && !reg.anulada; }
+
 /* ================================================================================
  * VIGIA DE MEDICAÇÃO — Adriana, 31/ago/2026 (caso Toshi: dose das 18h sem alerta)
  *
@@ -677,7 +681,7 @@ function vigiaMedicacao() {
     if (!/^\d\d:\d\d$/.test(h)) continue;
     var alvoMin = Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
     if (agoraMin - alvoMin < 30) continue;                      // ainda dentro da meia hora
-    var deu = log[d.key] && log[d.key][d.doseId];
+    var deu = _vigiaDoseValendo(log[d.key] && log[d.key][d.doseId]);   // 6.58: a anulada não vale
     if (deu) continue;                                          // registrada: tudo certo
     var txt = [
       '<b>💊 MEDICAÇÃO SEM REGISTRO — agir AGORA</b>', '',
@@ -707,7 +711,7 @@ function _vigiaMedNoiteDeOntem(agora, token) {
     var d = retrato.esperadas[id] || {};
     var h = String(d.horario || '');
     if (!/^\d\d:\d\d$/.test(h) || h < '21:00') continue;      // o dia normal já cobriu o resto
-    var deu = log[d.key] && log[d.key][d.doseId];
+    var deu = _vigiaDoseValendo(log[d.key] && log[d.key][d.doseId]);   // 6.58: a anulada não vale
     if (deu) continue;
     var txt = [
       '<b>💊 DOSE DE ONTEM SEM REGISTRO</b>', '',
@@ -732,7 +736,7 @@ function vigiaMedicacao_TESTE() {
   if (retrato && retrato.esperadas) {
     for (var id in retrato.esperadas) {
       var d = retrato.esperadas[id];
-      var deu = log[d.key] && log[d.key][d.doseId];
+      var deu = _vigiaDoseValendo(log[d.key] && log[d.key][d.doseId]);   // 6.58: a anulada não vale
       Logger.log((deu ? 'OK   ' : 'FALTA') + ' ' + d.hospNome + ' - ' + d.nome + ' as ' + d.horario);
     }
   }
