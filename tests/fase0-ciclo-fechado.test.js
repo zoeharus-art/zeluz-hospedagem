@@ -26945,7 +26945,18 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // antecipada desfeita (obs, o rastro e o registro guardado para o «Terminar agora»). O erro do banco vai para gravacao-FALHOU e, na
   // tela, pelo zErroMotivo do cartaz da 6.57.
   avisoRetirarGravar: 1, avisoTrilhaHTML: 1, avisoReabrirGravar: 2, avisoRacaoReabrirGravar: 2, ciMedTiradoParado: 2, ciCorrecoesHTML: 1,
-  hospLinha666: 3, hospReabriuRastro: 1, hospAntecipadaDesfazerGravar: 3 };
+  hospLinha666: 3, hospReabriuRastro: 1, hospAntecipadaDesfazerGravar: 3,
+  // 6.63 (pendências, «Atualizados hoje», escova, Pesquisa e revisão da IA: funções novas, fora das três telas da 6.48): o .motivo
+  // de DADO — o motivo que a pessoa escreveu no cartaz da 6.57 (reg.motivo / desfeito.motivo / desfeita.motivo), mostrado no
+  // riscado do «Atualizados hoje» (prevCorrQuadroHTML), na marca da pendência fechada e no histórico dela (pendMarcasHTML,
+  // pendHistTexto, pendComoFechou: o motivo da retirada, que é o rótulo de PEND_MOTIVOS ou o «Outro» escrito), levado ao «Tirar»
+  // da medicação pelo cartaz (pendTirarMedAbrir), à auditoria da ação própria (pendDesfazerResolucaoGravar, algFichaDesfazerGravar,
+  // iaRevRestaurarGravar), ao texto da correção ao grupo de Urgências (algUrgCorrecaoTexto), à linha «Desfeito por…» da escova
+  // (escovaUltDesfazerHTML) e ao cartão da Pesquisa (algFichaEntradaHTML; algHistLinhas: a resposta apagada, a passada, a entrada
+  // desfeita, a marca desmarcada e a que veio de outro FILHOt). Nenhum erro: o erro do banco vai para gravacao-FALHOU e, na tela,
+  // pelo zErroMotivo (o cartaz da 6.57, o «NÃO FOI SALVO» e o «NÃO FOI MARCADO» desta story).
+  prevCorrQuadroHTML: 1, pendMarcasHTML: 1, pendHistTexto: 1, pendComoFechou: 1, pendTirarMedAbrir: 1, pendDesfazerResolucaoGravar: 1,
+  algFichaDesfazerGravar: 1, iaRevRestaurarGravar: 1, algUrgCorrecaoTexto: 1, escovaUltDesfazerHTML: 1, algFichaEntradaHTML: 1, algHistLinhas: 6 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -30393,7 +30404,11 @@ provaAsync('6.57 P25 (AC4) — «Tirar pendência» de prevenção: o Encãotado
     igual([escritas657().length, barrou657().length], [0, 1]);
     seed(); papel657('vet', 'Vera Veterinária Teste', ['pendencias']);
     run(`pendTirarConfirmado('${K657}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa')`); await espera657();
-    igual([escritas657().map((e) => e[0] + ' ' + e[1]), barrou657().length], [['update daycare/pendencias/' + K657 + '/vermifugo'], 0]);
+    // 6.63 (AC3, AC4.6): o «Tirar» passa a ser UMA escrita a partir de daycare — o nó da pendência e o histórico dela
+    // (pendencias-hist), juntos; nada fora dos dois
+    const w25 = escritas657();
+    igual([w25.map((e) => e[0] + ' ' + e[1]), barrou657().length], [['update daycare'], 0]);
+    igual((w25[0][2] || []).filter((k) => k.indexOf('pendencias/' + K657 + '/vermifugo') !== 0 && k.indexOf('pendencias-hist/' + K657 + '/vermifugo/') !== 0), [], 'só o nó da pendência e o histórico dela');
   } finally { run(SOLTA657); }
 });
 provaAsync('6.57 P26 (AC4) — «Tirar» nos Lançamentos do dia (dashRemover e o caminho fora do prazo): o Encãotador é barrado antes de qualquer pergunta; com a tela concedida, tira', async () => {
@@ -30534,7 +30549,8 @@ provaAsync('6.57 P31 (AC2.7, AC8, guarda) — nenhuma gravação nova dentro de 
       DASH_DIA_SEL='${DIA657}'; DASH_DADOS={saicedo:{id1:{valor:'Tonico/SRD'}}}; __zpq657=[true];`);
     await run(`dashRemover('saicedo', 'id1')`); await espera657();
     igual([escritas657().map((e) => e[0] + ' ' + e[1].split('/').slice(0, 2).join('/')).sort(), barrou657().length],
-      [['remove daycare/dashboard', 'set daycare/entrevista-atencao', 'set daycare/foto-confirmada', 'set daycare/hospede-mesmo', 'update daycare/pendencias'], 0]);
+      // 6.63 (AC3, AC4.6): o «Tirar» da pendência é UMA escrita a partir de daycare (o nó e o pendencias-hist), não mais em daycare/pendencias
+      [['remove daycare/dashboard', 'set daycare/entrevista-atencao', 'set daycare/foto-confirmada', 'set daycare/hospede-mesmo', 'update daycare'], 0]);
   } finally { run(SOLTA657); }
 });
 // ---- 2ª rodada do QA (FAIL) — H-1, M-1 a M-4 e L-1 a L-5 ------------------------------------------------------------
@@ -31819,8 +31835,9 @@ provaAsync('6.58 P29 (AC5.3, AC6) — tirar a medicação: a Gestão assina; a V
     run(`__p658=dashRemover('medicacao', 'm1');`); await espera658();
     igual([J658('CORR_ATUAL.op.acao'), J658('CORR_ATUAL.op.nivel')], ['anular', 'gestao'], 'o porteiro da 6.57 deixa abrir (a tela no Time); quem assina é a Gestão');
     const cas = J658('CORR_ATUAL.op.cascata');
-    igual(cas, ['sai do alarme (a dose das 14:00)', 'sai da planilha e da TV', 'a dose já dada hoje continua no registro, com o nome de quem deu: Caio Encãotador Teste às 09:50',
-      'se este lançamento resolveu uma pendência de prevenção, ela não é reaberta aqui']);
+    // 6.63 (AC4.5): a frase «se este lançamento resolveu uma pendência de prevenção, ela não é reaberta aqui» sai — a pendência
+    // ligada a este lançamento volta a abrir na mesma escrita, e a cascata diz isso só quando há pendência ligada (aqui não há)
+    igual(cas, ['sai do alarme (a dose das 14:00)', 'sai da planilha e da TV', 'a dose já dada hoje continua no registro, com o nome de quem deu: Caio Encãotador Teste às 09:50']);
     let [p] = await assina658('s-vera-dash', 'a medicação foi lançada no FILHOt errado'); igual(p, 'conferir', 'a Veterinária, mesmo com a tela concedida, não tira');
     run('__esc657=[];');
     [p] = await assina658(SENHA657, 'a medicação foi lançada no FILHOt errado'); igual(p, 'pronto');
@@ -39619,6 +39636,12 @@ provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões,
     pelExtra: 'e874a3d2b3b8767a', setPelExtra: 'ded4cc5f9acc60cd', pelAplicarNoCache: 'c174a71c267e339b', pelCamposBarrados: '99703a2869112cec',
     prevValor: 'c4bc834fdc1a5e09', addDiasISO: 'c3bc279a55f02afe', addMesesISO: '34de1566f1fe775c', podePapel: 'f79e84fc5f1bd977',
     canEditPel: '712f761f9d9c3b93', prevCorrigePode: '9ee0f6648c608570' };
+  // 6.63 (AC8.4, guarda refeita): o «Vence em» digitado na ficha só deixa o rastro do «à mão» com o ok do banco e volta ao gravado
+  // na recusa — a função muda de propósito; a guarda continua, agora contra o texto da 6.63 (o resto, contra a base 59f16a8).
+  Object.assign(BASE, { prevVenceManualSet: 'e583a6c8523f2e36' });
+  // 6.63, 2ª rodada (REL-004 do gate do QA): no ok com o soDepoisDoOk, o setPelExtra grava na cópia deste aparelho só o patch, por
+  // cima da cópia de agora (não o retrato tirado na chamada) — muda de propósito; a guarda continua, contra o texto da 6.63.
+  Object.assign(BASE, { setPelExtra: 'c37367acebfa2701' });
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
@@ -39689,7 +39712,9 @@ provaAsync('6.65 R2 P25 (REL-001) — o banco recusou: a cópia LOCAL deste apar
     // a ficha: a série nova com 15 (o campo novo e os que o banco já tinha)
     semeia();
     run(`pbSet('verm',{verm_t:'2026-10-10'}); pbSet('verm',{verm_dose2_dias:15}); pbSalvar('verm');`);
-    igual(so(local(), CS), ['2026-10-10', '', '2026-10-25', '2027-02-22', 15], 'antes da resposta: a cópia local como o setPelExtra escreveu');
+    // 6.63 (AC8, REL-001 e R2-L3 pela raiz): com o soDepoisDoOk, a cópia LOCAL nem chega a receber o que o banco ainda não
+    // confirmou — antes da resposta ela já é a do banco (na 6.65 era «como o setPelExtra escreveu», e voltava depois da recusa)
+    igual(so(local(), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'antes da resposta: a cópia local ainda é a do banco');
     await espera657();
     igual(so(local(), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'depois da recusa: a cópia local igual ao banco');
     igual(so(J630('pelExtra(__bento)'), CS), ['2026-05-20', '2026-06-10', '2026-06-10', '2026-10-08', '∅'], 'a ficha que a tela lê');
@@ -40262,10 +40287,17 @@ provaAsync('6.65 QA Q24 — o que não pode mudar: dose pelo peso (6.59), exame 
   const h = (x) => require('crypto').createHash('sha256').update(String(x)).digest('hex').slice(0, 16);
   const fonte = (src, nome) => { const i = src.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0, j = src.indexOf('{', i); for (let k = j; k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}') { d--; if (!d) return src.slice(i, k + 1); } } return null; };
   const BASE = {"fn": {"vermAvaliar": "dbb338c2bf7e64b5", "vermFaixaKg": "30b015b84cf0ada4", "vermMargemKg": "17d894cb494ce621", "vermNumTexto": "fcf2a669fa302195", "vermNumLer": "f3af1b973b05be92", "vermDoseDe": "ca0de65413eef7e3", "vermPertoDaVirada": "b40da171c0d5df85", "vermFrasePeso": "34a4fcbaeed5260b", "vermAvaliarFicha": "b33c7434482bf287", "vermFichaTextoHTML": "c750d8f6a0fe1eed", "vermPreMarcar": "9c3b3baca86cbcb3", "vermBlocoPainelHTML": "fa6a626a6d27de72", "dashLancar": "6267457666ad76f3", "vermPreMarcarVenc": "47968aea4c549131", "vermLinhaVencHTML": "77149b646c2ec3b8", "vencBlocoLancHTML": "60cc11bb3c70521e", "vermOuFezes": "e29f34cc2ad21b05", "prevDispensadoPorExame": "f40ec4cc6325dbf0", "prevForaDaCobranca": "0c57dfd57defbac2", "prevVenceManualSet": "4c84b3c948dc3bc1", "podeVencManual": "88f0694c49496db7", "prevAvisoRecalc": "b295e4128828037a", "prevEraManual": "567f58ccfaac2fb1", "prevChecarLogica": "d28d9aeb0429193a", "pelExtra": "e874a3d2b3b8767a", "setPelExtra": "ded4cc5f9acc60cd", "pelAplicarNoCache": "c174a71c267e339b", "pelCamposBarrados": "99703a2869112cec", "escovaCacheGravado": "452a789d84d96bb5", "vencItensDe": "9e9d1f75fb3e51f0", "prevPendencias": "c87ce87973884715", "prevValor": "c4bc834fdc1a5e09", "hojeAntecipar": "9b8fed3ad9122257", "urgenciasGestao": "c192dbd0f0779796", "vencLancarAuto": "414f3b8869277485", "alertaPrevencao": "8d52ba3995909460", "prevFaltasDe": "521dab44ee9157f1", "vencQuantoTexto": "7a4176b9d8d5c8de", "pelSalvoMostrar": "e1f4ae9d461c3055", "prevCorrigeRegistrar": "af8aac78d783fcf2", "prevCorrigeRedesenhar": "62483ddb8dd49028", "blocoFezes": "2dd50ba50fb2744e", "blocoVacinas": "816ab98cf9e52ef6", "blocoEcto": "8555e7943c933dcd", "blocoColeira": "e3dda9ffae12e570", "prevCorrigeFezesHTML": "b7cdeb888ff067bc", "canEditPel": "712f761f9d9c3b93", "podePapel": "f79e84fc5f1bd977", "zAlertao": "e30d85cfd25aab3a"}, "cache3": {"prevCorrigeExameFezes": "d7f0b5d65dab8eba", "prevCorrigeVenceEm": "8b9245b3fc770879", "prevCorrigeDoseUnica": "fa721ad2fd82ed3f"}, "prox": "913ecb0cb2823d8b", "verm2": "96dc0ff2b72b8511", "dica": "542c5c85e0c8e205", "perm": "cc8cffaa48521917", "dosePeso": 1};
-  const dif = Object.keys(BASE.fn).filter((n) => h(fonte(novo, n)) !== BASE.fn[n]);
+  // 6.63 (AC5.1, AC8.4, guarda refeita): estas mudam de propósito — o verde, o rastro e o «à mão» só com o ok do banco, e a porta da
+  // prevenção no painel (prevCorrGravar no lugar do passo do cache). A guarda continua, contra o texto da 6.63; o resto, contra a base 59f16a8.
+  // 6.63, 2ª rodada (REL-004 do gate do QA): o setPelExtra, no ok com o soDepoisDoOk, grava na cópia deste aparelho só o patch
+  // (por cima da cópia de agora) — muda de propósito; a guarda continua, contra o texto da 6.63.
+  const MUDOU663 = { fn: { prevVenceManualSet: 'e583a6c8523f2e36', prevCorrigeRegistrar: 'f1360a1fdbf2da9f', setPelExtra: 'c37367acebfa2701' }, cache3: { prevCorrigeExameFezes: 'd6b8e673ee37db29', prevCorrigeVenceEm: '8723e245ae6a9237', prevCorrigeDoseUnica: 'b5129f66aa4d2f76' } };
+  const BASEF663 = Object.assign({}, BASE.fn, MUDOU663.fn);
+  const dif = Object.keys(BASEF663).filter((n) => h(fonte(novo, n)) !== BASEF663[n]);
   igual(dif, [], 'funções que mudaram: ' + dif.join(', '));
   // as três que só ganham o passo do cache: sem as duas linhas, idênticas
   for (const n of Object.keys(BASE.cache3)) {
+    if (MUDOU663.cache3[n]) { igual(h(fonte(novo, n)), MUDOU663.cache3[n], n + ' (6.63: a porta da prevenção)'); continue; }
     const b = fonte(novo, n).replace("    var _gravou=setPelExtra(p, patch);\n    prevCacheGravado(p, patch, _gravou, function(){ prevCorrigeRedesenhar(tela); });   // 6.65 (AC7)\n", '    setPelExtra(p, patch);\n');
     igual(h(b), BASE.cache3[n], n + ' muda só pelo passo do cache');
   }
@@ -44085,6 +44117,3761 @@ provaAsync('6.70 P64 (AC7.2, LOW-R1, r10 do QA) — «Trocar» "carpl" levando a
 });
 }
 }
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 6.63 (início)
+{
+// ================================================================== 6.63 — S5, parte 1 (as provas da Fase 0, escritas antes do código)
+// Pendências que reabrem, se corrigem e desfazem a resolução; o «Atualizados hoje» e o «Limpar a data»; a escova; o «Salvo» só
+// com o banco e os rascunhos; a Pesquisa com a Família Multiespécie; a revisão da IA. Tudo INVENTADO: Tonico (Rita Teste),
+// Quindim (Lia Teste), Cocada (Duda Teste), Bento (Ana Teste); as pessoas «Teste». O palco é o da 6.57 (ARMA657): o banco de
+// mentira que conta gravações, recusa (PERMISSION_DENIED) e fica sem responder; relógio fixo em sexta, 09/10/2026, 10:00.
+console.log('\n6.63 — S5, parte 1: pendências que reabrem e se corrigem, «Atualizados hoje», «Limpar a data», a escova, o «Salvo» só com o banco, os rascunhos, a Pesquisa e a revisão da IA');
+const MOT663 = 'o lançamento foi feito errado';
+const passo663 = () => run('CORR_ATUAL?CORR_ATUAL.passo:null');
+const aviso663 = () => String(run('CORR_ATUAL?(CORR_ATUAL.aviso||""):""') || '');
+const erro663 = () => String(run('CORR_ATUAL?String((CORR_ATUAL.erro&&(CORR_ATUAL.erro.message||CORR_ATUAL.erro))||""):""') || '');
+const op663 = (c) => J630('CORR_ATUAL?(CORR_ATUAL.op.' + c + '===undefined?null:CORR_ATUAL.op.' + c + '):null');
+const assina663 = async (senha, motivo) => {
+  await run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo === undefined ? MOT663 : motivo)}, senha:${JSON.stringify(senha)}})`);
+  await espera657(); return [passo663(), aviso663()];
+};
+const continua663 = async (valores) => { await run(`corrToque('continuar', {valores:${JSON.stringify(valores)}})`); await espera657(); return [passo663(), aviso663()]; };
+const fecha663 = async () => { run('if(CORR_ATUAL) corrToque(\'fechar\');'); await espera657(); };
+const za663 = () => J630('__za657').map((z) => z[0]);
+// o banco de mentira também conta as LEITURAS (para «nenhuma leitura nova de daycare»)
+const contaLeituras663 = () => run(`__lid663=[]; (function(){ var r0=DB.ref; DB.ref=function(p){ var r=r0(p), o=r.once; r.once=function(){ __lid663.push(String(p)); return o.apply(r, arguments); }; return r; }; })();`);
+const semSenha663 = (n) => { const tudo = JSON.stringify(run('__db657')) + JSON.stringify(run('__au657')); return ['senhaSecreta657', 's-bia', 's-amanda', 's-vera', 's-caio'].filter((s) => tudo.indexOf('"' + s + '"') >= 0 || tudo.indexOf(s + '"') >= 0).length === 0 ? true : n; };
+
+// ---- o palco das pendências: as listas, o «Resolvido hoje» (dashLancar de mentira) e a planilha de mentira ----
+const KP663 = 'tonico__rita teste';
+const armaPend663 = () => {
+  run(ARMA657);
+  run(`__bkP663={dl:dashLancar, ca:carregarAgendaMedTodos, det:DASH_DET, sel:DASH_SEL, seli:DASH_SEL_I, dma:(typeof DASH_MED_ANULADOS!=='undefined'?DASH_MED_ANULADOS:{}),
+      dmad:(typeof DASH_MED_ANULADOS_DIA!=='undefined'?DASH_MED_ANULADOS_DIA:''), ph:PEND_HIST, pha:PEND_HIST_ABERTO, phe:PEND_HIST_ERRO};
+    PEND_ABERTAS={}; DASH_DADOS={}; DASH_DIA_SEL=''; DASH_DET={}; DASH_SEL={}; DASH_SEL_I={}; PEND_HIST={}; PEND_HIST_ABERTO=''; PEND_HIST_ERRO={};
+    __ca663=0; carregarAgendaMedTodos=function(){ __ca663++; };
+    __dpl663=[]; dashRemoverDaPlanilha=function(item, id){ __dpl663.push([item, id]); return Promise.resolve(); };
+    __nl663=0; __dlArgs663=[];
+    dashLancar=function(item, base, i, hora){ __dlArgs663.push([item, base, hora]); var id='L663_'+(++__nl663); DASH_DADOS[item]=DASH_DADOS[item]||{};
+      var reg={valor:base, hora:hora||'', quem:'Gestora Teste', ts:Date.now()}; DASH_DADOS[item][id]=reg;
+      __put657('daycare/dashboard/${DIA657}/'+item+'/'+id, reg); return Promise.resolve(true); };`);
+};
+const soltaPend663 = () => {
+  run(`dashLancar=__bkP663.dl; carregarAgendaMedTodos=__bkP663.ca; DASH_DET=__bkP663.det; DASH_SEL=__bkP663.sel; DASH_SEL_I=__bkP663.seli;
+    if(typeof DASH_MED_ANULADOS!=='undefined') DASH_MED_ANULADOS=__bkP663.dma; if(typeof DASH_MED_ANULADOS_DIA!=='undefined') DASH_MED_ANULADOS_DIA=__bkP663.dmad;
+    PEND_HIST=__bkP663.ph; PEND_HIST_ABERTO=__bkP663.pha; PEND_HIST_ERRO=__bkP663.phe;`);
+  run(SOLTA657);
+};
+const comPend663 = async (fn) => { armaPend663(); try { await fn(); await espera657(); } finally { soltaPend663(); } };
+// uma pendência no banco e na cópia da tela (como o pendCarregar deixaria)
+const pend663 = (item, campos, chave) => {
+  chave = chave || KP663;
+  ctx.__pd663 = Object.assign({ status: 'aberta', dia: '2026-10-07', dias: ['2026-10-07'], valor: 'Tonico/SRD', base: 'Tonico/SRD', hora: '', nome: 'Tonico', tutor: 'Rita Teste' }, campos || {});
+  run(`__put657('daycare/pendencias/${chave}/${item}', __pd663); PEND_ABERTAS=PEND_ABERTAS||{}; PEND_ABERTAS['${chave}']=PEND_ABERTAS['${chave}']||{};
+    PEND_ABERTAS['${chave}']['${item}']=__get657('daycare/pendencias/${chave}/${item}'); __esc657=[]; __au657=[];`);
+};
+const no663 = (item, chave) => db657('daycare/pendencias/' + (chave || KP663) + '/' + item);
+const hist663 = (item, chave) => { const h = db657('daycare/pendencias-hist/' + (chave || KP663) + '/' + item) || {}; return Object.keys(h).sort().map((k) => h[k]); };
+const T663 = (d, hh) => T657(d, hh || 9);
+
+provaAsync('6.63 P01 (AC1.1) — «Resolvidas e tiradas (N)»: as fechadas dos últimos 30 dias, da mais nova para a mais velha, com como fechou, quem e quando; da MESMA leitura (nenhuma leitura de daycare ao desenhar)', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo');
+    pend663('coleira', { status: 'resolvida', resolvido_ts: T663(8, 15), resolvido_dia: '2026-10-08', resolvido_por: 'Bia Consultora Teste' });
+    pend663('escova', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(9, 9), cancelado_por: 'Amanda Supervisora Teste' });
+    pend663('hidratacao', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'velha', cancelado_ts: T657(1, 9) - 40 * 86400000, cancelado_por: 'Antiga Teste' });
+    igual(J630('pendFechadasLista().map(function(x){ return x.item; })'), ['escova', 'coleira'], 'só as dos últimos 30 dias, a mais nova primeiro');
+    contaLeituras663();
+    run(`__el657['pendRoot']={innerHTML:''}; __bk657.pr();`);
+    const h = String(run("__el657['pendRoot'].innerHTML"));
+    igual(J630('__lid663'), [], 'desenhar não lê nada do banco');
+    assert.ok(/Resolvidas e tiradas \(2\)/.test(h), 'o título com a conta');
+    assert.ok(h.indexOf('Tirada em 09/10 às 09:00 por Amanda Supervisora Teste — motivo: O tutor vai fazer em casa') >= 0, 'tirada com o motivo, quem e quando');
+    assert.ok(h.indexOf('Resolvida em 08/10 às 15:00 por Bia Consultora Teste') >= 0, 'resolvida em dia anterior');
+    assert.ok(h.indexOf('>Reabrir</button>') >= 0 && h.indexOf('Antiga Teste') < 0, 'com «Reabrir»; a de mais de 30 dias fica fora');
+    assert.ok(h.indexOf('>Corrigir</button>') >= 0 && /min-height:44px[^>]*onclick="pendCorrigirAbrir/.test(h), 'a aberta ganha «Corrigir», com 44 px');
+  });
+});
+provaAsync('6.63 P02 (AC1.2, AC1.3) — «Reabrir» a tirada: volta aberta com os mesmos dias, texto, horário e respostas, «reaberta» com o registro 6.57, o antes inteiro no pendencias-hist (uma escrita); o nó mudado em outro aparelho é recusado', async () => {
+  await comPend663(async () => {
+    const T = { status: 'cancelada', dias: ['2026-10-06', '2026-10-07'], hora: '09:00', det: { produto: 'Drontal' }, motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' };
+    pend663('vermifugo', T);
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=pendReabrirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    igual([passo663(), op663('acao'), op663('paraEstado')], ['conferir', 'reabrir', 'aberta, para a próxima vinda']);
+    assert.ok(op663('volta').some((t) => /Quando ele chegar, quem estiver no check-in recebe o aviso da pendência/.test(t)), 'a cascata do check-in');
+    igual(await assina663('s-bia'), ['pronto', '']);
+    const n = no663('vermifugo');
+    igual([n.status, n.dias, n.valor, n.hora, n.det, n.reaberta.por, n.reaberta.motivo, n.motivo_texto], ['aberta', ['2026-10-06', '2026-10-07'], 'Tonico/SRD', '09:00', { produto: 'Drontal' }, 'Bia Consultora Teste', MOT663, 'O tutor vai fazer em casa']);
+    const h = hist663('vermifugo');
+    igual([h.length, h[0].acao, h[0].antes.status, h[0].antes.motivo_texto, h[0].depois.status, h[0].registro.por], [1, 'reaberta', 'cancelada', 'O tutor vai fazer em casa', 'aberta', 'Bia Consultora Teste']);
+    const w = escritas657().filter((e) => !/auditoria/.test(e[1]));
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update daycare'], 'uma escrita só, a partir de daycare');
+    igual(aud657('pendencia-reaberta').length, 1);
+    await fecha663();
+    // outro aparelho mexeu no nó enquanto o cartaz estava aberto
+    pend663('carrapaticida', T);
+    run(`__p663=pendReabrirAbrir('${KP663}', 'carrapaticida');`); await espera657();
+    run(`__put657('daycare/pendencias/${KP663}/carrapaticida/motivo_texto', 'outro aparelho mudou');`);
+    const [p] = await assina663('s-bia');
+    igual([p, /Esta pendência mudou em outro aparelho\. Nada foi gravado: feche e abra de novo\./.test(erro663()), no663('carrapaticida').status], ['falhou', true, 'cancelada']);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P03 (AC1.2) — «Reabrir» a resolvida em dia anterior: a cascata diz que o lançamento daquele dia continua; nada sai dos Lançamentos daquele dia', async () => {
+  await comPend663(async () => {
+    run(`__put657('daycare/dashboard/2026-10-08/vermifugo/L1', {valor:'Tonico/SRD', quem:'Bia Consultora Teste'});`);
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(8, 11), resolvido_dia: '2026-10-08', resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: '2026-10-08', item: 'vermifugo', id: 'L1' } });
+    papel657('supervisor', 'Amanda Supervisora Teste');
+    run(`__p663=pendReabrirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    assert.ok(op663('volta').some((t) => t === 'O lançamento de 08/10 continua nos Lançamentos daquele dia: a planilha daquele dia já é história.'), JSON.stringify(op663('volta')));
+    igual(await assina663('s-amanda'), ['pronto', '']);
+    igual([no663('vermifugo').status, db657('daycare/dashboard/2026-10-08/vermifugo/L1').valor, J630('__dpl663')], ['aberta', 'Tonico/SRD', []]);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P04 (AC1.4) — a tirada cujo item já ganhou outra aberta no mesmo nó: o «Reabrir» não aparece (o nó é um só) e a gravação vinda de uma tela velha recusa «Já há uma pendência aberta deste item»', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=pendReabrirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    // enquanto isso, o pendGravar recriou a pendência no mesmo nó (outra falta)
+    run(`__put657('daycare/pendencias/${KP663}/vermifugo', {status:'aberta', dia:'2026-10-09', dias:['2026-10-09'], valor:'Tonico/SRD', base:'Tonico/SRD', nome:'Tonico'});`);
+    const [p] = await assina663('s-bia');
+    igual([p, /Já há uma pendência aberta deste item\. Nada foi gravado\./.test(erro663())], ['falhou', true]);
+    await fecha663();
+    run(`PEND_ABERTAS['${KP663}']['vermifugo']=__get657('daycare/pendencias/${KP663}/vermifugo'); __el657['pendRoot']={innerHTML:''}; __bk657.pr();`);
+    const h = String(run("__el657['pendRoot'].innerHTML"));
+    igual([/Resolvidas e tiradas \(0\)/.test(h), h.indexOf('pendReabrirAbrir(') < 0], [true, true]);
+  });
+});
+provaAsync('6.63 P05 (AC1.5, AC2.4, AC3.2, AC4.3; S5-P1) — medicação: Reabrir, Corrigir, Tirar e Desfazer a resolução só com a Gestão (Consultora e Supervisão recusadas no cartaz); vermífugo com a própria senha', async () => {
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    const casos = [
+      ['reabrir', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai dar em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' }, `pendReabrirAbrir('${KP663}', 'medicacao')`],
+      ['corrigir', {}, `pendCorrigirAbrir('${KP663}', 'medicacao')`],
+      ['tirar', {}, `pendTirarMedAbrir('${KP663}', 'medicacao', 'tutor', 'O tutor vai dar em casa')`],
+    ];
+    for (const [nome, campos, abre] of casos) {
+      pend663('medicacao', Object.assign({ valor: 'Tonico/SRD (Apoquel)' }, campos));
+      run(`__p663=${abre};`); await espera657();
+      igual(op663('nivel'), 'gestao', nome + ': nível Gestão');
+      if (nome === 'corrigir') await continua663(['07/10/2026', '', 'Tonico/SRD (Apoquel 16 mg)', '', 'Tonico/SRD', run("pendRotulo('medicacao')")]);
+      const [p1, a1] = await assina663('s-bia'); const [p2] = await assina663('s-amanda');
+      igual([p1, /não pode assinar|Quem assina/.test(a1), p2], ['conferir', true, 'conferir'], nome + ': Consultora e Supervisão recusadas');
+      const [p3] = await assina663(SENHA657);
+      igual(p3, 'pronto', nome + ': a Gestão assina');
+      await fecha663();
+    }
+    // chamada direta (console, tela velha): tirar a de remédio sem a assinatura da Gestão barra
+    pend663('medicacao', { valor: 'Tonico/SRD (Apoquel)' });
+    run(`__r663=pendTirarConfirmado('${KP663}', 'medicacao', 'tutor', 'O tutor vai dar em casa');`); await espera657();
+    igual([no663('medicacao').status, barrou657().length >= 1], ['aberta', true], 'sem a Gestão, nada');
+    // o vermífugo: a própria senha (a Consultora assina o «Reabrir»)
+    pend663('vermifugo', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' });
+    run(`__p663=pendReabrirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    igual([op663('nivel'), op663('capacidade'), op663('telaConcedida')], ['propria', 'pendencias-prevencao', 'pendencias']);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    await fecha663();
+  });
+});
+provaAsync('6.63 P06 (AC2.2) — «Corrigir» no lugar: dia, outros dias, texto e horário, com o antes e o depois no histórico; «Nada mudou»; dia no futuro e fora do calendário recusados na própria tela', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo', { dias: ['2026-10-07'], hora: '' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=pendCorrigirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    igual(J630("CORR_ATUAL.op.campos.map(function(c){ return [c.c, c.valor]; })"), [['dia', '07/10/2026'], ['dias', ''], ['valor', 'Tonico/SRD'], ['hora', ''], ['filhot', 'Tonico/SRD'], ['item', run("pendRotulo('vermifugo')")]]);
+    const rot = run("pendRotulo('vermifugo')");
+    let [p, a] = await continua663(['07/10/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]);
+    igual([p, /Nada mudou/.test(a)], ['campos', true]);
+    [p, a] = await continua663(['12/10/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]);
+    igual([p, a], ['campos', 'O dia da falta está no futuro. Nada foi gravado.']);
+    [p, a] = await continua663(['31/02/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]);
+    igual([p, /data do calendário/.test(a)], ['campos', true]);
+    [p] = await continua663(['08/10/2026', '06/10/2026', 'Tonico/SRD (Drontal)', '9:00', 'Tonico/SRD', rot]);
+    igual(p, 'conferir');
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const n = no663('vermifugo'), h = hist663('vermifugo');
+    igual([n.status, n.dia, n.dias, n.valor, n.hora, n.corrigida.por], ['aberta', '2026-10-08', ['2026-10-06', '2026-10-08'], 'Tonico/SRD (Drontal)', '09:00', 'Bia Consultora Teste']);
+    igual([h[0].acao, h[0].antes.dia, h[0].depois.dia, h[0].antes.valor, h[0].depois.valor], ['corrigida', '2026-10-07', '2026-10-08', 'Tonico/SRD', 'Tonico/SRD (Drontal)']);
+    igual(aud657('pendencia-corrigida').length, 1);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P07 (AC2.3) — «Corrigir» para outro FILHOt e outro item: a nova pelo pendGravar (junta os dias com a aberta que já existe), DEPOIS a antiga cancelada com corrigidaPara; a segunda parte falhando: o aviso e as duas abertas', async () => {
+  await comPend663(async () => {
+    run(`PELUDINHOS.push({n:'Quindim', tutor:'Lia Teste', raca:'Spitz Alemão', dias:['ter']});`);
+    const KQ = run("dcKey('Quindim','Lia Teste')");
+    pend663('carrapaticida', { status: 'aberta', dia: '2026-10-05', dias: ['2026-10-05'], valor: 'Quindim/Spitz Alemão', base: 'Quindim/Spitz Alemão', nome: 'Quindim', tutor: 'Lia Teste' }, KQ);
+    pend663('vermifugo', { dias: ['2026-10-07'] });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=pendCorrigirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    const [p0] = await continua663(['07/10/2026', '', 'Tonico/SRD', '', 'Quindim', run("pendRotulo('carrapaticida')")]);
+    igual(p0, 'conferir');
+    assert.ok(op663('info').some((t) => /sai \(fica riscada, com o motivo\) e entra a de .* de Quindim; se ele já tem uma aberta desse item, os dias se juntam\./.test(t)), JSON.stringify(op663('info')));
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const nova = no663('carrapaticida', KQ), velha = no663('vermifugo');
+    igual([nova.status, nova.dias, nova.movidaDe.chave, velha.status, velha.motivo, velha.corrigidaPara.chave, velha.corrigidaPara.item],
+      ['aberta', ['2026-10-05', '2026-10-07'], KP663, 'cancelada', 'corrigida', KQ, 'carrapaticida']);
+    const ordem = escritas657().filter((e) => /^daycare(\/pendencias|$)/.test(e[1]) && !/RECUSADO/.test(e[0])).map((e) => e[0] + ' ' + e[1]);
+    assert.ok(ordem.indexOf('update daycare') > 0 && ordem.slice(0, ordem.indexOf('update daycare')).some((x) => x.indexOf('pendencias/' + KQ + '/carrapaticida') >= 0), 'a nova antes da antiga: ' + JSON.stringify(ordem));
+    igual([hist663('vermifugo').map((e) => e.acao), aud657('pendencia-movida').length], [['movida'], 1]);
+    await fecha663();
+    // a segunda parte falhando
+    pend663('coleira', { dias: ['2026-10-07'] });
+    run(`__p663=pendCorrigirAbrir('${KP663}', 'coleira');`); await espera657();
+    await continua663(['07/10/2026', '', 'Tonico/SRD', '', 'Quindim', run("pendRotulo('coleira')")]);
+    run(`__recusa657='^daycare$';`);
+    igual((await assina663('s-bia'))[0], 'pronto', 'a nova entrou: o cartaz não diz «nada foi gravado»');
+    igual([no663('coleira', KQ).status, no663('coleira').status], ['aberta', 'aberta'], 'sobra uma a mais, nunca uma a menos');
+    assert.ok(za663().indexOf('A PENDÊNCIA ANTIGA CONTINUA ABERTA') >= 0 && JSON.stringify(run('__za657')).indexOf('A pendência nova foi aberta, mas a antiga continua aberta: tire-a com «Lançado por engano».') >= 0);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P08 (AC3.1) — «Outro»: 3 palavras recusadas na caixa e na função (chamada direta); com 4, o motivo_texto e a auditoria', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo');
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`pendTirar('${KP663}', 'vermifugo');`);
+    igual(J630('__ze657[0][2]').indexOf('Outro') >= 0, true, 'o botão «Outro»');
+    run(`__ztq657=['tutor levou embora']; pendTirarOutro('${KP663}', 'vermifugo');`); await espera657();
+    run(`__r663=null; pendTirarConfirmado('${KP663}', 'vermifugo', 'outro', 'tutor levou embora').then(function(r){ __r663=r; });`); await espera657();
+    igual([no663('vermifugo').status, J630('__al657').some((t) => /palavras/.test(t))], ['aberta', true], 'a função recusa as 3 palavras');
+    run(`__al657=[]; __ztq657=['o tutor levou ao veterinário']; pendTirarOutro('${KP663}', 'vermifugo');`); await espera657();
+    const n = no663('vermifugo');
+    igual([n.status, n.motivo, n.motivo_texto], ['cancelada', 'outro', 'o tutor levou ao veterinário']);
+    assert.ok(aud657('pendencia-prevencao').some((a) => /motivo: o tutor levou ao veterinário/.test(a[1])));
+  });
+});
+provaAsync('6.63 P09 (AC3.3, AC4.6) — o «Tirar» grava o estado de antes no pendencias-hist na MESMA escrita do cancelado; o histórico sob demanda, só daquele FILHOt e item', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo', { det: { produto: 'Drontal' } });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`pendTirarConfirmado('${KP663}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa');`); await espera657();
+    const w = escritas657().filter((e) => !/auditoria/.test(e[1]));
+    igual(w.length, 1, 'uma escrita só');
+    igual((w[0][2] || []).map((k) => k.replace(/\/r657_\d+$/, '/ID')).sort(), ['pendencias-hist/' + KP663 + '/vermifugo/ID', 'pendencias/' + KP663 + '/vermifugo/cancelado_por',
+      'pendencias/' + KP663 + '/vermifugo/cancelado_ts', 'pendencias/' + KP663 + '/vermifugo/hist_n', 'pendencias/' + KP663 + '/vermifugo/motivo', 'pendencias/' + KP663 + '/vermifugo/motivo_texto', 'pendencias/' + KP663 + '/vermifugo/status']);
+    const h = hist663('vermifugo');
+    igual([h[0].acao, h[0].antes.status, h[0].antes.det, h[0].depois.status], ['tirada', 'aberta', { produto: 'Drontal' }, 'cancelada']);
+    contaLeituras663();
+    await run(`pendHistAbrir('${KP663}', 'vermifugo')`); await espera657();
+    igual(J630('__lid663'), ['daycare/pendencias-hist/' + KP663 + '/vermifugo'], 'a leitura é só daquele FILHOt e item, sob demanda');
+    assert.ok(/^Tirada por /.test(run(`pendHistTexto(PEND_HIST['${KP663}||vermifugo'][0])`)));
+  });
+});
+provaAsync('6.63 P10 (AC4.1) — «Resolvido hoje»: o lançamento leva de_pendencia e a pendência resolvido_lanc (o id do lançamento novo), numa escrita com o histórico; o «já estava lançado» leva jaEstava com o id do que já estava', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo');
+    run(`__put657('daycare/dashboard/${DIA657}', {});`);
+    run(`pendResolverConfirmado('${KP663}', 'vermifugo');`); await espera657();
+    const n = no663('vermifugo'), id = n.resolvido_lanc && n.resolvido_lanc.id;
+    igual([n.status, n.resolvido_lanc, db657('daycare/dashboard/' + DIA657 + '/vermifugo/' + id).de_pendencia.chave], ['resolvida', { dia: DIA657, item: 'vermifugo', id: 'L663_1' }, KP663]);
+    igual(hist663('vermifugo').map((e) => [e.acao, e.lancamento.id]), [['resolvida', 'L663_1']]);
+    // já estava lançado hoje
+    pend663('coleira');
+    run(`__put657('daycare/dashboard/${DIA657}/coleira/LJA', {valor:'Tonico/SRD', quem:'Bia Consultora Teste'});`);
+    run(`pendResolverConfirmado('${KP663}', 'coleira');`); await espera657();
+    igual([no663('coleira').resolvido_lanc, db657('daycare/dashboard/' + DIA657 + '/coleira/LJA').de_pendencia || null, run('__nl663')],
+      [{ dia: DIA657, item: 'coleira', id: 'LJA', jaEstava: true }, null, 1], 'o que já estava não ganha a marca e nada é lançado de novo');
+  });
+});
+provaAsync('6.63 P11 (AC4.2 a AC4.4) — «Desfazer a resolução» de hoje: o lançamento sai da lista viva e fica guardado no histórico (a medicação em dashboard-anulados), a pendência aberta, numa escrita só; a planilha pelo dashRemoverDaPlanilha; o alarme rearmado; banco recusando: nada', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo');
+    run(`pendResolverConfirmado('${KP663}', 'vermifugo');`); await espera657();
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__el657['pendRoot']={innerHTML:''}; __bk657.pr();`);
+    assert.ok(String(run("__el657['pendRoot'].innerHTML")).indexOf('>Desfazer a resolução</button>') >= 0, 'a resolvida hoje tem «Desfazer a resolução»');
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'vermifugo');`); await espera657();
+    igual(op663('info'), ['O lançamento de ' + run("pendRotulo('vermifugo')") + ' de hoje (Tonico/SRD) sai dos Lançamentos do dia, da planilha e da TV.']);
+    igual(op663('volta'), ['A pendência volta a ficar aberta, para a próxima vinda.']);
+    run('__esc657=[];');
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const w = escritas657().filter((e) => !/auditoria/.test(e[1]));
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update daycare'], 'uma escrita só');
+    const h = hist663('vermifugo');
+    igual([no663('vermifugo').status, no663('vermifugo').resolucao_desfeita.por, db657('daycare/dashboard/' + DIA657 + '/vermifugo/L663_1'), h[1].acao, h[1].lancamento.copia.valor, J630('__dpl663')],
+      ['aberta', 'Bia Consultora Teste', null, 'resolucao-desfeita', 'Tonico/SRD', [['vermifugo', 'L663_1']]]);
+    await fecha663();
+    // a medicação: guardada pelo caminho da 6.58 e o alarme relê
+    pend663('medicacao', { valor: 'Tonico/SRD (Apoquel)', base: 'Tonico/SRD' });
+    run(`pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    const idM = no663('medicacao').resolvido_lanc.id;
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+    igual(op663('nivel'), 'gestao');
+    igual((await assina663(SENHA657))[0], 'pronto');
+    const an = db657('daycare/dashboard-anulados/' + DIA657 + '/medicacao/' + idM);
+    igual([no663('medicacao').status, !!an, an.anulado.por, an.pendencia_reaberta.chave, run('__ca663') >= 1], ['aberta', true, 'Gestora Teste', KP663, true]);
+    await fecha663();
+    // banco recusando: nada muda
+    pend663('coleira');
+    run(`pendResolverConfirmado('${KP663}', 'coleira');`); await espera657();
+    const antes = JSON.stringify(run('__db657'));
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'coleira');`); await espera657();
+    run(`__recusa657='^daycare$';`);
+    igual((await assina663('s-bia'))[0], 'falhou');
+    igual(JSON.stringify(run('__db657')), antes, 'nada mudou');
+    await fecha663();
+  });
+});
+provaAsync('6.63 P12 (AC4.3, AC4.4) — «Desfazer a resolução» com jaEstava: o lançamento que já existia continua; só a pendência reabre', async () => {
+  await comPend663(async () => {
+    pend663('coleira');
+    run(`__put657('daycare/dashboard/${DIA657}/coleira/LJA', {valor:'Tonico/SRD', quem:'Bia Consultora Teste'});`);
+    run(`pendResolverConfirmado('${KP663}', 'coleira');`); await espera657();
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'coleira');`); await espera657();
+    igual(op663('info'), ['O lançamento de hoje já existia antes da resolução: ele continua.']);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    igual([no663('coleira').status, db657('daycare/dashboard/' + DIA657 + '/coleira/LJA').valor, J630('__dpl663')], ['aberta', 'Tonico/SRD', []]);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P13 (AC4.5) — o «tirar» nos Lançamentos de um lançamento com de_pendencia reabre a pendência e a pergunta diz; a reabertura falhando: o aviso', async () => {
+  await comPend663(async () => {
+    pend663('vermifugo');
+    run(`pendResolverConfirmado('${KP663}', 'vermifugo');`); await espera657();
+    run(`DASH_DIA_SEL='${DIA657}'; DASH_DADOS={vermifugo:__get657('daycare/dashboard/${DIA657}/vermifugo')}; __zpq657=[true]; __zp657=[];`);
+    await run(`dashRemover('vermifugo', 'L663_1')`); await espera657();
+    const frase = 'A pendência de ' + run("pendRotulo('vermifugo')") + ' de Tonico, resolvida por este lançamento, volta a ficar aberta.';
+    assert.ok(J630('__zp657')[0][1].indexOf(frase) >= 0, JSON.stringify(J630('__zp657')));
+    const n = no663('vermifugo');
+    igual([db657('daycare/dashboard/' + DIA657 + '/vermifugo/L663_1'), n.status, n.reaberta_pelo_tirar.lancamento.id, hist663('vermifugo').map((e) => e.acao)],
+      [null, 'aberta', 'L663_1', ['resolvida', 'reaberta-pelo-tirar']]);
+    // a reabertura falha (o banco recusa a escrita da pendência)
+    pend663('coleira');
+    run(`pendResolverConfirmado('${KP663}', 'coleira');`); await espera657();
+    run(`DASH_DADOS={coleira:__get657('daycare/dashboard/${DIA657}/coleira')}; __zpq657=[true]; __recusa657='^daycare$'; __za657=[];`);
+    await run(`dashRemover('coleira', 'L663_2')`); await espera657();
+    igual([db657('daycare/dashboard/' + DIA657 + '/coleira/L663_2'), no663('coleira').status, za663()], [null, 'resolvida', ['A PENDÊNCIA NÃO VOLTOU A ABRIR']]);
+    assert.ok(JSON.stringify(run('__za657')).indexOf('O lançamento saiu, mas a pendência NÃO voltou a abrir: abra Pendências de prevenção e toque em «Reabrir».') >= 0);
+  });
+});
+provaAsync('6.63 P14 (AC4.5, AC4.7) — a anulação da medicação (6.58) reabre a pendência na MESMA escrita, com a frase nova na cascata; o «Reabrir» da 6.58 ganha a frase da pendência', async () => {
+  await comPend663(async () => {
+    pend663('medicacao', { valor: 'Tonico/SRD (Apoquel)', base: 'Tonico/SRD' });
+    run(`pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    const idM = no663('medicacao').resolvido_lanc.id;
+    run(`DASH_DIA_SEL='${DIA657}'; DASH_DADOS={medicacao:__get657('daycare/dashboard/${DIA657}/medicacao')};`);
+    run(`__p663=dashMedAnularAbrir('${idM}');`); await espera657();
+    const cas = op663('cascata');
+    assert.ok(cas.indexOf('A pendência de ' + run("pendRotulo('medicacao')") + ' de Tonico, resolvida por este lançamento, volta a ficar aberta.') >= 0 && !cas.some((t) => /não é reaberta aqui/.test(t)), JSON.stringify(cas));
+    run('__esc657=[];');
+    igual((await assina663(SENHA657))[0], 'pronto');
+    const w = escritas657().filter((e) => !/auditoria/.test(e[1]));
+    igual(w.length, 1, 'uma escrita só');
+    assert.ok((w[0][2] || []).some((k) => k.indexOf('pendencias/' + KP663 + '/medicacao/status') === 0) && (w[0][2] || []).some((k) => /^dashboard-anulados\//.test(k)), JSON.stringify(w[0][2]));
+    igual([no663('medicacao').status, db657('daycare/dashboard-anulados/' + DIA657 + '/medicacao/' + idM).pendencia_reaberta.chave], ['aberta', KP663]);
+    await fecha663();
+    run(`DASH_MED_ANULADOS=__get657('daycare/dashboard-anulados/${DIA657}/medicacao')||{}; DASH_MED_ANULADOS_DIA='${DIA657}';`);
+    run(`__p663=dashMedReabrirAbrir('${idM}');`); await espera657();
+    assert.ok((op663('volta') || []).some((t) => t === 'A pendência de medicação de Tonico continua aberta: em Pendências de prevenção, «Resolvido hoje» vê que já está lançada e fecha.'), JSON.stringify(op663('volta')));
+    await fecha663();
+  });
+});
+provaAsync('6.63 P15 (AC4.5, Risco 3) — o lançamento antigo sem a marca: casa pelo item, o dia e o FILHOt (pendBase); com o FILHOt de outra pendência ou outro dia, nada reabre e a pergunta não promete', async () => {
+  await comPend663(async () => {
+    igual(run(`pendLigadaConfere({status:'resolvida', resolvido_dia:'${DIA657}', base:'Tonico/SRD'}, 'vermifugo', 'X1', {valor:'Tonico/SRD'}, '${DIA657}')`), true, 'o mesmo item, dia e FILHOt');
+    igual(run(`pendLigadaConfere({status:'resolvida', resolvido_dia:'${DIA657}', base:'Tonico/SRD'}, 'vermifugo', 'X1', {valor:'Cocada/SRD'}, '${DIA657}')`), false, 'outro FILHOt');
+    igual(run(`pendLigadaConfere({status:'resolvida', resolvido_dia:'2026-10-08', base:'Tonico/SRD'}, 'vermifugo', 'X1', {valor:'Tonico/SRD'}, '${DIA657}')`), false, 'outro dia');
+    igual(run(`pendLigadaConfere({status:'resolvida', resolvido_dia:'${DIA657}', resolvido_lanc:{id:'OUTRO', item:'vermifugo'}}, 'vermifugo', 'X1', {valor:'Tonico/SRD'}, '${DIA657}')`), false, 'com a marca, vale o id');
+    // ambíguo: dois Tonico no cadastro — a chave não sai (pendChaveDoLancamento) e nada reabre
+    run(`PELUDINHOS.push({n:'Tonico', tutor:'Outra Teste', raca:'SRD', dias:['qua']});`);
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 8), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste' });
+    run(`DASH_DIA_SEL='${DIA657}'; DASH_DADOS={vermifugo:{OLD1:{valor:'Tonico'}}}; __put657('daycare/dashboard/${DIA657}/vermifugo/OLD1', {valor:'Tonico'}); __zpq657=[true]; __zp657=[];`);
+    await run(`dashRemover('vermifugo', 'OLD1')`); await espera657();
+    igual([J630('__zp657')[0][1].some((t) => /volta a ficar aberta/.test(t)), no663('vermifugo').status], [false, 'resolvida']);
+  });
+});
+// ---- o palco da prevenção: o Bento (Ana Teste) no banco de mentira, as telas capturadas no redesenho ----
+const BENTO663 = { n: 'Bento', tutor: 'Ana Teste', raca: 'Spitz Alemão', dias: ['seg', 'qua'] };
+const armaPrev663 = (ficha) => {
+  run(ARMA657);
+  ctx.__fp663 = Object.assign({}, BENTO663, ficha || {});
+  run(`__bkV663={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, fc:prevCorrigeFecharConversa, vf:vencFecharAssuntosPelaFicha,
+      ok:PREV_CORRIGE_OK, ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM, prr:prevRedesenhar, pp:PB_PEND, ps:PB_SALVO, ra:PREV_RECALC_AVISO,
+      pc:PREV_CORR, pcd:PREV_CORR_DIA, pcl:PREV_CORR_LIDO, pce:PREV_CORR_ESTADO, ple:PREV_LANCE_ESTADO, pev:PREV_ED_VISTO, pab:PREV_ABERTO,
+      pr2:PB_RASC, pra:PB_RASC_AVISO, puk:PB_ULT_K, pee:PREV_ED_ESCOVA};
+    PELUDINHOS=[{n:'Bento', tutor:'Ana Teste', raca:'Spitz Alemão', dias:['seg','qua']}]; __bp=PELUDINHOS[0]; pelAtual=__bp;
+    __kp=pelKey(__bp); __dcp=dcKey(__bp.n, __bp.tutor);
+    __put657('daycare/cadastro/'+__kp, __fp663); pelCadCache={}; pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp); __ls657={}; __esc657=[];
+    PB_PEND={}; PB_SALVO={}; PREV_CORRIGE_OK={}; PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM=''; PREV_RECALC_AVISO={};
+    PREV_CORR={}; PREV_CORR_DIA=''; PREV_CORR_LIDO=false; PREV_CORR_ESTADO={}; PREV_LANCE_ESTADO={}; PREV_ED_VISTO={}; PREV_ABERTO=''; PB_RASC={}; PB_RASC_AVISO=null; PB_ULT_K=''; PREV_ED_ESCOVA='';
+    __rd663=[]; __fecha663=0; __vfa663=0;
+    pbRender=function(b){ __rd663.push(['ficha', b]); }; vencRender=function(){ __rd663.push(['venc']); }; hojeRender=function(){ __rd663.push(['hoje']); };
+    renderPrevencao=function(){ __rd663.push(['prev']); }; prevRedesenhar=function(){ __rd663.push(['prevR']); };
+    prevCorrigeFecharConversa=function(){ __fecha663++; }; vencFecharAssuntosPelaFicha=function(){ __vfa663++; };`);
+};
+const soltaPrev663 = () => {
+  run(`pbRender=__bkV663.pr; vencRender=__bkV663.vr; hojeRender=__bkV663.hr; renderPrevencao=__bkV663.rp; prevCorrigeFecharConversa=__bkV663.fc;
+    vencFecharAssuntosPelaFicha=__bkV663.vf; PREV_CORRIGE_OK=__bkV663.ok; PREV_CORRIGE_ABERTO=__bkV663.ab; PREV_CORRIGE_ORIGEM=__bkV663.ori; prevRedesenhar=__bkV663.prr;
+    PB_PEND=__bkV663.pp; PB_SALVO=__bkV663.ps; PREV_RECALC_AVISO=__bkV663.ra; PREV_CORR=__bkV663.pc; PREV_CORR_DIA=__bkV663.pcd; PREV_CORR_LIDO=__bkV663.pcl;
+    PREV_CORR_ESTADO=__bkV663.pce; PREV_LANCE_ESTADO=__bkV663.ple; PREV_ED_VISTO=__bkV663.pev; PREV_ABERTO=__bkV663.pab; PB_RASC=__bkV663.pr2;
+    PB_RASC_AVISO=__bkV663.pra; PB_ULT_K=__bkV663.puk; PREV_ED_ESCOVA=__bkV663.pee;`);
+  run(SOLTA657);
+};
+const comPrev663 = async (ficha, fn) => { armaPrev663(ficha); try { await fn(); await espera657(); } finally { soltaPrev663(); } };
+const fichaDb663 = () => J630("__get657('daycare/cadastro/'+__kp)");
+const corrHoje663 = () => { const o = db657('daycare/prevencao-correcoes/' + DIA657) || {}; return Object.keys(o).sort().map((k) => Object.assign({ id: k }, o[k])); };
+const solta663 = (ok) => run(`__pend657.splice(0).forEach(function(x){ x.${ok ? 'ok' : 'nao'}(); });`);
+const VAC663 = { vac_mult_t: '2025-09-01', vac_mult_p: '2026-09-01', vac_mult_nome: 'V10 Teste' };
+
+provaAsync('6.63 P16 (AC5.1; REL-003 da 6.65 pela raiz) — painel: «Gravando…»; o verde, o rastro e o fechamento da conversa só com o ok; banco recusando: o painel aberto, «NÃO FOI GRAVADO», o digitado de volta, sem rastro e sem «à mão»', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__pendura657='^daycare/cadastro/'; PREV_CORRIGE_ABERTO=__dcp+'|vac_mult_p'; prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`);
+    const alvo = run("__dcp+'|vac_mult_p'");
+    igual([J630(`PREV_CORR_ESTADO[${JSON.stringify(alvo)}].passo`), J630(`PREV_CORRIGE_OK[${JSON.stringify(alvo)}].gravando`), run('__fecha663'), aud657('prevencao-atualizada-na-tela').length],
+      ['gravando', true, 0, 0], 'na hora: gravando, sem verde, sem fechar, sem rastro');
+    assert.ok(/Gravando… espere a confirmação do banco:/.test(run('prevCorrigeOkCaixaHTML()')) && !/em dia até[^<]*<\/div><div class="hint"/.test(run('prevCorrigeOkCaixaHTML()')));
+    solta663(true); await espera657();
+    igual([J630(`PREV_CORR_ESTADO[${JSON.stringify(alvo)}]||null`), J630(`PREV_CORRIGE_OK[${JSON.stringify(alvo)}].gravando||false`), run('__fecha663'), aud657('prevencao-atualizada-na-tela').length, run('PREV_CORRIGE_ABERTO')],
+      [null, false, 1, 1, ''], 'com o ok: o verde, o rastro, a conversa fechada e o painel fechado');
+    assert.ok(/✓ Bento — Vacina Múltipla em dia até 09\/10\/2027/.test(run('prevCorrigeOkCaixaHTML()')));
+    // recusado — o «Vence em» à mão (com o rastro do «à mão»)
+    run(`__pendura657=null; __recusa657='^daycare/cadastro/'; __au657=[]; __fecha663=0; PREV_CORRIGE_OK={}; PREV_CORRIGE_ABERTO=__dcp+'|vac_mult_p';
+      __el657['prevCorrV_'+__dcp+'_vac_mult_p']={value:'2026-12-20'}; prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'venc');`);
+    await espera657();
+    const est = J630(`PREV_CORR_ESTADO[${JSON.stringify(alvo)}]`);
+    igual([est.passo, run('PREV_CORRIGE_ABERTO'), J630('PREV_CORRIGE_OK'), run('__fecha663'), aud657('prevencao-atualizada-na-tela').length, aud657('prevencao-proxima-manual').length,
+      run(`__el657['prevCorrV_'+__dcp+'_vac_mult_p'].value`), fichaDb663().vac_mult_p], ['falhou', alvo, {}, 0, 0, 0, '2026-12-20', '2027-10-09']);
+    assert.ok(/NÃO FOI GRAVADO: .*O que você digitou continua aqui: toque de novo\./.test(run(`prevCorrEstadoHTML(${JSON.stringify(alvo)})`)));
+    run(`__recusa657=null; prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'venc');`); await espera657();
+    igual([aud657('prevencao-atualizada-na-tela').length, aud657('prevencao-proxima-manual').length, fichaDb663().vac_mult_p_manual], [1, 1, true], 'com o ok, os dois rastros');
+  });
+});
+provaAsync('6.63 P17 (AC5.2) — o registro do dia em prevencao-correcoes/{dia}: as duas chaves, o item, como, a tela, o antes e o depois de CADA campo do patch (vermífugo em 2 doses, carrapaticida com produto, «Vence em» com _manual), quem, papel e hora', async () => {
+  await comPrev663({ verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08', ecto_t: '2026-09-01', ecto_p: '2026-10-01', ecto_prod: 'Pipeta (30 dias)', vac_mult_p: '2026-09-01' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__el657['prevCorrE2_'+__dcp+'_verm_p']={checked:true}; prevCorrigeFeitoHoje(__dcp, 'verm_p', 'venc');`); await espera657();
+    let L = corrHoje663();
+    igual([L.length, L[0].chave, L[0].dcKey, L[0].k, L[0].como, L[0].quem, L[0].papel], [1, run('__kp'), run('__dcp'), 'verm_p', 'feito', 'Bia Consultora Teste', 'consultora']);
+    igual([L[0].antes.verm_t, L[0].depois.verm_t, L[0].antes.verm_dose2_t, L[0].depois.verm_dose2_t, L[0].antes.verm_p, L[0].depois.verm_2a], ['2026-05-20', DIA657, '2026-06-10', '', '2026-10-08', '2026-10-30']);
+    assert.ok(Array.isArray(L[0].campos) && L[0].campos.indexOf('verm_2a') >= 0 && /Vencimentos/.test(L[0].tela), JSON.stringify(L[0]));
+    papel657('gestao', 'Gestora Teste');
+    run(`__el657['prevCorrV_'+__dcp+'_vac_mult_p']={value:'2027-01-15'}; prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    L = corrHoje663();
+    const v = L.filter((x) => x.k === 'vac_mult_p')[0];
+    igual([v.como, v.antes.vac_mult_p, v.depois.vac_mult_p, v.antes.vac_mult_p_manual == null, v.depois.vac_mult_p_manual], ['vence', '2026-09-01', '2027-01-15', true, true]);
+  });
+});
+provaAsync('6.63 P18 (AC5.3) — «Atualizados hoje» nas três telas, lido do banco (recarregar não some): as 5 mais recentes e «ver todas (N)», as dos últimos 10 minutos em destaque; a leitura sai ao abrir a tela', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__put657('daycare/prevencao-correcoes/${DIA657}', (function(){ var o={}; for(var i=1;i<=7;i++) o['c'+i]={chave:__kp, dcKey:__dcp, pet:'Bento', k:'vac_mult_p', como:'feito',
+      antes:{vac_mult_p:'2026-09-01'}, depois:{vac_mult_p:'2027-10-0'+i}, campos:['vac_mult_p'], quem:'Bia Consultora Teste', papel:'consultora', ts:Date.now()-(i===1?60000:3600000*i)}; return o; })());`);
+    contaLeituras663();
+    await run('prevCorrCarregar(true)'); await espera657();
+    igual(J630('__lid663'), ['daycare/prevencao-correcoes/' + DIA657], 'uma leitura, só do dia');
+    for (const t of ['hoje', 'venc', 'prev']) {
+      const h = String(run(`prevCorrQuadroHTML('${t}')`));
+      assert.ok(/Atualizados hoje \(7\)/.test(h) && /ver todas \(7\)/.test(h), t + ': a conta e o «ver todas»');
+      igual((h.match(/>Desfazer<\/button>/g) || []).length, 5, t + ': as 5 mais recentes');
+      assert.ok(h.indexOf('Bento — Vacina Múltipla: 01/09/2026 → 01/10/2027') >= 0 && h.indexOf('border:1.5px solid var(--z-gold)') >= 0, t + ': antes → depois e o destaque');
+    }
+    run('prevCorrVerTodas(\'hoje\')');
+    igual((String(run("prevCorrQuadroHTML('hoje')")).match(/>Desfazer<\/button>/g) || []).length, 7, 'ver todas');
+    // a tela que abre lê o dia (aoAbrirView)
+    assert.ok(/if\(v==='vacinas'\|\|v==='vencimentos'\|\|v==='hoje'\)\{ try\{ if\(typeof prevCorrCarregar==='function'\) prevCorrCarregar\(true\);/.test(fs.readFileSync(APP, 'utf8')));
+  });
+});
+provaAsync('6.63 P19 (AC5.4) — «Desfazer»: o antes volta (inclusive «sem data»), a linha riscada com desfeito; a conversa reabre pelo vencFecharAssuntosPelaFicha de sempre (chamado de dentro do setPelExtra)', async () => {
+  await comPrev663({ vac_mult_nome: 'V10 Teste' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run('prevCorrigeFeitoHoje(__dcp, \'vac_mult_p\', \'hoje\');'); await espera657();
+    const L = corrHoje663()[0];
+    igual([L.antes.vac_mult_t === undefined || L.antes.vac_mult_t === null, L.depois.vac_mult_t], [true, DIA657]);
+    run('__vfa663=0;');
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    igual([op663('acao'), op663('volta')], ['reabrir', ['Se esta data fechou a conversa com o tutor em Vencimentos, a conversa reabre sozinha.']]);
+    assert.ok(op663('info').some((t) => /«09\/10\/2027» → «sem data»/.test(t)), JSON.stringify(op663('info')));
+    // só os campos que mudam de verdade (o produto que fica igual não entra no cartaz)
+    assert.ok(op663('info').every((t) => { const m = /«(.*)» → «(.*)»/.exec(t); return m && m[1] !== m[2]; }) && !op663('info').some((t) => /V10 Teste/.test(t)), JSON.stringify(op663('info')));
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const f = fichaDb663();
+    igual([f.vac_mult_t || null, f.vac_mult_p || null, f.vac_mult_nome, corrHoje663()[0].desfeito.por, run('__vfa663') >= 1], [null, null, 'V10 Teste', 'Bia Consultora Teste', true]);
+    const h = String(run("prevCorrQuadroHTML('hoje')"));
+    assert.ok(/text-decoration:line-through/.test(h) && /Desfeito por Bia Consultora Teste/.test(h) && h.indexOf('Motivo: ' + MOT663) >= 0);
+    igual(aud657('prevencao-desfeita').length, 1);
+    await fecha663();
+  });
+  // o vermífugo (Chromium, 10/out): o produto que fica igual e a 2ª dose que continua «sem data» não entram no cartaz
+  await comPrev663({ verm_doses: 'Dose única', verm_nome: 'Drontal Teste', verm_t: '2026-05-01', verm_p: '2026-08-29' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__el657['prevCorrN_'+__dcp+'_verm_p']={value:'Drontal Teste'}; prevCorrigeFeitoHoje(__dcp, 'verm_p', 'hoje');`); await espera657();
+    const L = corrHoje663()[0];
+    igual([L.depois.verm_nome, (L.campos || []).indexOf('verm_nome') >= 0], ['Drontal Teste', true], 'a linha leva o produto, igual');
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    const info = op663('info');
+    assert.ok(info.length >= 2 && info.every((t) => { const m = /«(.*)» → «(.*)»/.exec(t); return m && m[1] !== m[2]; }) && !info.some((t) => /Drontal Teste/.test(t)), JSON.stringify(info));
+    await fecha663();
+  });
+});
+provaAsync('6.63 P20 (AC5.5) — «Desfazer» depois de outra mudança no mesmo campo: recusado com a frase, nada gravado', async () => {
+  await comPrev663(VAC663, async () => {
+    run('prevCorrigeFeitoHoje(__dcp, \'vac_mult_p\', \'hoje\');'); await espera657();
+    const L = corrHoje663()[0];
+    run(`__put657('daycare/cadastro/'+__kp+'/vac_mult_p', '2027-12-31'); pelCadCache[__kp].vac_mult_p='2027-12-31'; __esc657=[]; __za657=[];`);
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    igual([passo663(), za663()], [null, ['A FICHA MUDOU DEPOIS']]);
+    assert.ok(JSON.stringify(run('__za657')).indexOf('A ficha de Bento mudou depois desta gravação (') >= 0 && JSON.stringify(run('__za657')).indexOf('Nada foi gravado: corrija pela ficha ou pelo painel.') >= 0);
+    igual(escritas657().filter((e) => /cadastro/.test(e[1])).length, 0);
+    // e se mudar entre abrir e assinar (outro aparelho), a gravação relê e recusa
+    run(`__put657('daycare/cadastro/'+__kp+'/vac_mult_p', '2027-10-09'); pelCadCache[__kp].vac_mult_p='2027-10-09';`);
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    run(`__put657('daycare/cadastro/'+__kp+'/vac_mult_t', '2026-10-08');`);
+    const [p] = await assina663(SENHA657);
+    igual([p, /mudou depois desta gravação/.test(erro663())], ['falhou', true]);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P21 (AC5.6) — «Corrigir» no quadro abre o painel rápido daquele FILHOt e item DENTRO do quadro (origem «atualizados»), também para o item em dia', async () => {
+  await comPrev663(VAC663, async () => {
+    run('prevCorrigeFeitoHoje(__dcp, \'vac_mult_p\', \'hoje\');'); await espera657();
+    const L = corrHoje663()[0];
+    run(`prevCorrCorrigirAbrir(${JSON.stringify(L.id)}, 'hoje');`);
+    igual([run('PREV_CORRIGE_ABERTO'), run('PREV_CORRIGE_ORIGEM')], [run("__dcp+'|vac_mult_p'"), 'atualizados']);
+    const h = String(run("prevCorrQuadroHTML('hoje')"));
+    assert.ok(h.indexOf('id="prevCorrige_' + run('__dcp') + '_vac_mult_p"') >= 0 || /Feito hoje/.test(h), 'o painel dentro do quadro');
+  });
+});
+provaAsync('6.63 P22 (AC6) — «Limpar a data (fica sem data)»: os campos (k, base, alt, altBase, _manual; no vermífugo a 2ª dose) vazios, o produto e o resultado ficam; a cascata item a item pelas contas da tela; data à mão: só prevencao-vencimento-manual; entra no «Atualizados hoje»', async () => {
+  await comPrev663({ verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-09-22', verm_2a: '2026-09-22', verm_p: '2027-01-20', vermifugo_t: '2026-01-01', vermifugo_p: '2026-05-01', verm_nome: 'Drontal', fezes_res: 'negativo',
+    ecto_t: '2026-09-15', ecto_p: '2026-10-15', ecto_p_manual: true, ecto_prod: 'Pipeta (30 dias)' }, async () => {
+    igual(J630("prevCorrLimparCampos(prevCorrigeItemDe('verm_p'), pelExtra(__bp))"), { verm_p: '', verm_t: '', vermifugo_p: '', vermifugo_t: '', verm_2a: '', verm_dose2_t: '' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run('__p663=prevCorrLimparAbrir(__dcp, \'verm_p\', \'prev\');'); await espera657();
+    const cas = op663('cascata');
+    assert.ok(cas.some((t) => /^sai a data: /.test(t)) && cas.some((t) => /fica em aberto \(nunca registrado\)/.test(t)), JSON.stringify(cas));
+    igual([op663('capacidade'), op663('botao')], ['prevencao-lancar-na-tela', 'Limpar a data']);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const f = fichaDb663();
+    igual([f.verm_p, f.verm_t, f.vermifugo_p, f.vermifugo_t, f.verm_2a, f.verm_dose2_t, f.verm_nome, f.fezes_res, f.verm_doses], ['', '', '', '', '', '', 'Drontal', 'negativo', '2 doses']);
+    igual([corrHoje663()[0].como, aud657('prevencao-limpa').length], ['limpar', 1]);
+    await fecha663();
+    // data à mão: a Consultora é recusada
+    run('__p663=prevCorrLimparAbrir(__dcp, \'ecto_p\', \'prev\');'); await espera657();
+    igual(op663('capacidade'), 'prevencao-vencimento-manual');
+    const [p] = await assina663('s-bia');
+    igual([p, fichaDb663().ecto_p], ['conferir', '2026-10-15']);
+    igual((await assina663('s-amanda'))[0], 'pronto');
+    igual([fichaDb663().ecto_p, fichaDb663().ecto_p_manual, fichaDb663().ecto_prod], ['', '', 'Pipeta (30 dias)']);
+    await fecha663();
+    // e o botão no «Lance aqui mesmo» (44 px)
+    run(`PREV_ED_VISTO={}; pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp); pelCadCache[__kp].vac_mult_t='2026-01-10'; pelCadCache[__kp].vac_mult_p='2027-01-10';`);
+    assert.ok(/min-height:44px[^>]*onclick="prevCorrLimparAbrir\([^)]*vac_mult_p[^)]*\)">Limpar a data \(fica sem data\)</.test(run("prevEdicaoHTML({p:__bp, nome:'Bento'})")));
+  });
+});
+provaAsync('6.63 P23 (AC7.1) — escova: «mudar a resposta» na linha «não escova» da Prevenção abre a pergunta do painel; a resposta grava pelo prevCorrigeEscovaDc, o verde só com o ok e a entrada no «Atualizados hoje»', async () => {
+  await comPrev663({ escova_dc: 'Não', escova_dc_motivo: 'Não deixa', atividades: [] }, async () => {
+    const ch = run('__kp');
+    let h = String(run("prevEdicaoHTML({p:__bp, nome:'Bento'})"));
+    assert.ok(/não escova no Day Care — fora da cobrança\. <button[^>]*min-height:44px[^>]*onclick="prevEdEscovaMudar\(/.test(h) && />mudar a resposta</.test(h));
+    run(`prevEdEscovaMudar(${JSON.stringify(ch)});`);
+    h = String(run("prevEdicaoHTML({p:__bp, nome:'Bento'})"));
+    assert.ok(/prevCorrigeEscovaDc\(/.test(h), 'a mesma pergunta do painel rápido');
+    run(`__recusa657='^daycare/cadastro/'; __za657=[];`);
+    await run(`prevCorrigeEscovaDc(${JSON.stringify(ch)}, 'Sim', '', 'prev')`); await espera657();
+    igual([fichaDb663().escova_dc, corrHoje663().length, za663()], ['Não', 0, ['A FICHA NÃO FOI ATUALIZADA']]);
+    run('__recusa657=null;');
+    await run(`prevCorrigeEscovaDc(${JSON.stringify(ch)}, 'Sim', '', 'prev')`); await espera657();
+    igual([fichaDb663().escova_dc, fichaDb663().atividades, corrHoje663().map((x) => x.como)], ['Sim', ['escova'], ['escova-dc']]);
+  });
+});
+provaAsync('6.63 P24 (AC7.2, AC7.3) — «Tinha em casa» e «não autorizou» guardam o antes (e o registro anterior); «Desfazer» devolve os três campos e marca desfeito; não desfaz duas vezes; registro antigo sem o antes: sem botão, com a frase', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'], escova_t: '2026-06-01', escova_p: '2026-08-30', escova_p_manual: '' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    await run('escovaTresMeses(\'casa\', __bp)'); await espera657();
+    let u = fichaDb663().escova_ult;
+    igual([fichaDb663().escova_t, fichaDb663().escova_p, u.como, u.antes], [DIA657, '2027-01-07', 'casa', { escova_t: '2026-06-01', escova_p: '2026-08-30', escova_p_manual: '' }]);
+    run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+    await run('escovaTresMeses(\'nao\', __bp)'); await espera657();
+    u = fichaDb663().escova_ult;
+    igual([u.como, u.antes.escova_p, u.anterior.como, u.anterior.anterior === undefined], ['nao', '2027-01-07', 'casa', true], 'o registro anterior, um nível');
+    run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+    assert.ok(/onclick="escovaDesfazerTresMesesAbrir\(\)">Desfazer<\/button>/.test(run('escovaFichaHTML(pelExtra(__bp))')));
+    run('__p663=escovaDesfazerTresMesesAbrir(__bp);'); await espera657();
+    igual([op663('acao'), op663('assinaNome')], ['reabrir', 'Bia Consultora Teste']);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const f = fichaDb663();
+    igual([f.escova_t, f.escova_p, f.escova_p_manual, f.escova_ult.desfeito.por], [DIA657, '2027-01-07', '', 'Bia Consultora Teste']);
+    igual(aud657('escova-desfeita').length, 1);
+    await fecha663();
+    // não desfaz duas vezes (a gravação chamada direto, como a 6.64 fará)
+    const r2 = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', ts:Date.now()})`); await espera657();
+    igual([r2.ok, /já foi desfeita/.test(String(r2.erro))], [false, true]);
+    run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+    assert.ok(/Desfeito por Bia Consultora Teste/.test(run('escovaFichaHTML(pelExtra(__bp))')));
+    // registro antigo, sem o antes
+    run(`pelCadCache[__kp].escova_ult={como:'casa', data:'2026-08-01', quem:'Antiga Teste', ts:1};`);
+    const h = String(run('escovaFichaHTML(pelExtra(__bp))'));
+    igual([/escovaDesfazerTresMesesAbrir/.test(h), /registro antigo: corrija a data da troca acima/.test(h)], [false, true]);
+  });
+});
+provaAsync('6.63 P25 (AC7.4; S5-P3) — tirar o chip «Escova» com a ficha em «Sim»: a pergunta com os motivos e «Cancelar»; com o motivo, «Não», o motivo e as atividades numa gravação só; «Cancelar» mantém; pôr o chip continua gravando «Sim»', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova', 'piscina'] }, async () => {
+    run('__zeFn663=null; zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn663=b; };');
+    run('toggleAtivPel(\'escova\');');
+    igual(J630('__ze657[0]').slice(0, 1).concat([J630('__ze657[0][2]')]), ['Tirar da escovação também tira a troca de escova da cobrança. Por quê?', ['Não deixa', 'O tutor não compra a pasta', 'Outro', 'Cancelar']]);
+    run("__zeFn663.filter(function(b){ return b.t==='Cancelar'; })[0].fn();"); await espera657();
+    igual([fichaDb663().atividades, escritas657().filter((e) => /cadastro/.test(e[1])).length], [['escova', 'piscina'], 0], '«Cancelar» mantém o chip');
+    run('toggleAtivPel(\'escova\');');
+    run("__zeFn663.filter(function(b){ return b.t==='O tutor não compra a pasta'; })[0].fn();"); await espera657();
+    const w = escritas657().filter((e) => /cadastro/.test(e[1]) && !/RECUSADO/.test(e[0]));
+    igual(w.length, 1, 'uma gravação só');
+    igual([fichaDb663().escova_dc, fichaDb663().escova_dc_motivo, fichaDb663().atividades], ['Não', 'O tutor não compra a pasta', ['piscina']]);
+    igual(aud657('escova-chip-tirado').length, 1);
+    run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp); toggleAtivPel('escova');`); await espera657();
+    igual([fichaDb663().escova_dc, fichaDb663().atividades], ['Sim', ['piscina', 'escova']], 'pôr o chip grava «Sim», como hoje');
+  });
+});
+provaAsync('6.63 P26 (AC7.5, guarda) — as datas da escova, do check-up e do cio deixam ficha-campo com de/para (6.57)', async () => {
+  run(ARMA657);
+  try {
+    fichaTonico657({ escova_t: '2026-06-01', checkup_t: '2025-10-01', cio_t: '2026-03-01' });
+    await run(`setPelExtra(${P657}, {escova_t:'2026-10-09', checkup_t:'2026-10-09', cio_t:'2026-09-20'})`); await espera657();
+    const a = aud657('ficha-campo').map((x) => [x[2].campo, x[2].de, x[2].para]).sort();
+    igual(a, [['checkup_t', '2025-10-01', '2026-10-09'], ['cio_t', '2026-03-01', '2026-09-20'], ['escova_t', '2026-06-01', '2026-10-09']]);
+  } finally { run(SOLTA657); }
+});
+provaAsync('6.63 P27 (AC8.1) — «Lance aqui mesmo»: «Gravando…», «Salvo às HH:MM» só com o ok; recusado: «NÃO FOI SALVO» e os campos ficam; o rastro prevencao com antes → depois; a entrada no «Atualizados hoje»', async () => {
+  await comPrev663(VAC663, async () => {
+    const ch = run('__kp');
+    const lance = (dt) => run(`(function(){ var c=__kp; __el657['prevT_'+c+'_vac_mult_p']={value:'${dt}'}; __el657['prevQ_'+c+'_vac_mult_p']={value:'Zêluz'}; __el657['prevN_'+c+'_vac_mult_p']={value:''};
+      __el657['prevP_'+c+'_vac_mult_p']={value:''}; prevRecalcular(c, 'vac_mult_p'); return prevLancar(c, 'vac_mult_p'); })()`);
+    run(`__pendura657='^daycare/cadastro/';`);
+    lance('2026-10-08');
+    igual(J630(`PREV_LANCE_ESTADO[${JSON.stringify(ch + '|vac_mult_p')}].passo`), 'gravando');
+    assert.ok(/>Gravando…</.test(run("prevEdicaoHTML({p:__bp, nome:'Bento'})")), 'o botão diz «Gravando…»');
+    igual([aud657('prevencao').length, corrHoje663().length], [0, 0]);
+    solta663(false); await espera657();
+    igual([J630(`PREV_LANCE_ESTADO[${JSON.stringify(ch + '|vac_mult_p')}].passo`), run(`__el657['prevT_'+__kp+'_vac_mult_p'].value`), fichaDb663().vac_mult_t, aud657('prevencao').length], ['falhou', '2026-10-08', '2025-09-01', 0]);
+    assert.ok(/NÃO FOI SALVO: .*Os campos continuam como você digitou: toque em Salvar de novo\./.test(run(`prevLanceEstadoHTML(${JSON.stringify(ch)}, 'vac_mult_p')`)));
+    run('__pendura657=null;');
+    lance('2026-10-08'); await espera657();
+    igual([J630(`PREV_LANCE_ESTADO[${JSON.stringify(ch + '|vac_mult_p')}].passo`), fichaDb663().vac_mult_t, corrHoje663().map((x) => x.como)], ['salvo', '2026-10-08', ['lance-aqui']]);
+    assert.ok(/Salvo às 10:00/.test(run(`prevLanceEstadoHTML(${JSON.stringify(ch)}, 'vac_mult_p')`)));
+    assert.ok(aud657('prevencao').some((a) => /vence em: 01\/09\/2026 → 08\/10\/2027/.test(a[1])), JSON.stringify(aud657('prevencao')));
+  });
+});
+provaAsync('6.63 P28 (AC8.2) — «Quem deu»: marcado só com o ok; recusado: continua como era e a linha diz; guarda: ficha-campo do _ondefoi com quem e quando (E08)', async () => {
+  await comPrev663(VAC663, async () => {
+    const ch = run('__kp');
+    run(`__recusa657='^daycare/cadastro/';`);
+    await run(`prevOndeFoi(${JSON.stringify(ch)}, 'vac_mult_p', 'Day Care')`); await espera657();
+    igual([J630('pelExtra(__bp).vac_mult_ondefoi||""'), J630(`PREV_LANCE_ESTADO[${JSON.stringify(ch + '|vac_mult_p')}].passo`)], ['', 'falhou']);
+    assert.ok(/«Quem deu» continua como era\./.test(run(`prevLanceEstadoHTML(${JSON.stringify(ch)}, 'vac_mult_p')`)));
+    assert.ok(!/background:var\(--z-gold\);color:var\(--z-blue\)" onclick="prevOndeFoi\([^)]*Day Care/.test(run("prevEdicaoHTML({p:__bp, nome:'Bento'})")), 'o botão não fica marcado');
+    run('__recusa657=null; __au657=[];');
+    await run(`prevOndeFoi(${JSON.stringify(ch)}, 'vac_mult_p', 'Day Care')`); await espera657();
+    igual(fichaDb663().vac_mult_ondefoi, 'Day Care');
+    const fc = aud657('ficha-campo').filter((a) => a[2].campo === 'vac_mult_ondefoi');
+    igual([fc.length, fc[0][2].de, fc[0][2].para, fc[0][2].quem, !!fc[0][2].hora], [1, '', 'Day Care', 'Gestora Teste', true]);
+  });
+});
+provaAsync('6.63 P29 (AC8.3; R2-L1 da 6.65 pela raiz) — pbSalvar: «Salvando…»; «✓ Salvo» e o «à mão» só com o ok; recusado: o rascunho fica (rodapé «NÃO FOI SALVO» com o que não foi) e «Salvar» manda de novo', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__pendura657='^daycare/cadastro/'; pbSet('vac', {vac_mult_p:'2027-03-01', vac_mult_p_manual:true}); pbSalvar('vac');`);
+    let rod = String(run("pbRodape('vac', 'vacinas')"));
+    igual([/Salvando…/.test(rod), /✓ Salvo/.test(rod), aud657('prevencao-proxima-manual').length], [true, false, 0]);
+    solta663(false); await espera657();
+    rod = String(run("pbRodape('vac', 'vacinas')"));
+    igual([/✓ Salvo/.test(rod), /NÃO FOI SALVO: .*As alterações continuam aqui: toque em Salvar de novo\./.test(rod), /Não salvo: .*01\/03\/2027/.test(rod), aud657('prevencao-proxima-manual').length, fichaDb663().vac_mult_p],
+      [false, true, true, 0, '2026-09-01']);
+    run('__pendura657=null; pbSalvar(\'vac\');'); await espera657();
+    rod = String(run("pbRodape('vac', 'vacinas')"));
+    igual([/✓ Salvo/.test(rod), /NÃO FOI SALVO/.test(rod), fichaDb663().vac_mult_p, fichaDb663().vac_mult_p_manual, aud657('prevencao-proxima-manual').length, aud657('prevencao').length], [true, false, '2027-03-01', true, 1, 1]);
+  });
+});
+provaAsync('6.63 P30 (AC8.4; R2-L2 da 6.65) — prevUltimaDireta e prevVenceManualSet com o banco recusando: o campo (e o «Vence em» ao lado) volta ao gravado; o rastro do «à mão» não sai', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__recusa657='^daycare/cadastro/'; __el657['prevVence_vac_mult_p']={value:'2026-12-25', tagName:'INPUT'};`);
+    await run(`prevVenceManualSet('vac_mult_p', '2026-12-25')`); await espera657();
+    igual([run(`__el657['prevVence_vac_mult_p'].value`), J630('pelExtra(__bp).vac_mult_p'), aud657('prevencao-proxima-manual').length], ['2026-09-01', '2026-09-01', 0]);
+    run(`__el657['prevVence_vac_mult_p']={value:'2026-09-01', tagName:'INPUT'};`);
+    await run(`prevUltimaDireta('vac_mult_t', 'vac_mult_p', 365, '2026-10-01')`); await espera657();
+    igual([J630('pelExtra(__bp).vac_mult_t'), run(`__el657['prevVence_vac_mult_p'].value`)], ['2025-09-01', '2026-09-01']);
+    run('__recusa657=null;');
+    await run(`prevVenceManualSet('vac_mult_p', '2026-12-25')`); await espera657();
+    igual([fichaDb663().vac_mult_p, aud657('prevencao-proxima-manual').length], ['2026-12-25', 1]);
+  });
+});
+provaAsync('6.63 P31 (AC8.5) — rascunho da Prevenção: abrir outro FILHOt com uma data digitada e não salva pergunta «Há uma data não salva em {item} de {FILHOt}.», com Salvar, Descartar e Voltar', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`PELUDINHOS.push({n:'Cocada', tutor:'Duda Teste', raca:'SRD', dias:['seg']}); __kc663=pelKey(PELUDINHOS[1]);
+      __zeFn663=null; zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn663=b; };`);
+    run(`prevAbrir(__kp); prevEdicaoHTML({p:__bp, nome:'Bento'}); __el657['prevT_'+__kp+'_vac_mult_p']={value:'2026-10-08'}; __el657['prevP_'+__kp+'_vac_mult_p']={value:'2027-10-08'};`);
+    run('prevAbrir(__kc663);');
+    igual([J630('__ze657[0][0]'), J630('__ze657[0][2]'), run('PREV_ABERTO')], ['Há uma data não salva em Vacina Múltipla de Bento.', ['Salvar', 'Descartar', 'Voltar'], run('__kp')]);
+    run("__zeFn663.filter(function(b){ return b.t==='Voltar'; })[0].fn();");
+    igual(run('PREV_ABERTO'), run('__kp'), '«Voltar» fica');
+    run("prevAbrir(__kc663); __zeFn663.filter(function(b){ return b.t==='Descartar'; })[0].fn();");
+    igual([run('PREV_ABERTO'), fichaDb663().vac_mult_t], [run('__kc663'), '2025-09-01'], '«Descartar» abre o outro sem gravar');
+  });
+});
+provaAsync('6.63 P32 (AC8.6) — rascunho da ficha: abrir outro FILHOt guarda o rascunho por FILHOt e avisa no alto («Voltar e salvar»); voltar traz o rascunho; nada é gravado sem o «Salvar»', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`PELUDINHOS.push({n:'Cocada', tutor:'Duda Teste', raca:'SRD', dias:['seg']}); pbRascTrocar(__bp); pbSet('vac', {vac_mult_t:'2026-10-01'});`);
+    run('pbRascTrocar(PELUDINHOS[1]);');
+    igual([J630('PB_PEND'), J630('PB_RASC_AVISO.blocos'), run('PB_RASC_AVISO.nome')], [{}, ['vac'], 'Bento']);
+    const h = String(run('pbRascAvisoHTML()'));
+    assert.ok(h.indexOf('Bento ficou com alteração não salva em vacinas.') >= 0 && /min-height:44px[^>]*onclick="pbRascVoltar\(\)">Voltar e salvar</.test(h), h);
+    run('pbRascTrocar(__bp);');
+    igual([J630('PB_PEND.vac'), escritas657().filter((e) => /cadastro/.test(e[1])).length], [{ vac_mult_t: '2026-10-01', vac_mult_p: '2027-10-01' }, 0], 'o rascunho volta (com a próxima que o pbSet preencheu)');
+    assert.ok(/pbRascTrocar\(p\)/.test(fs.readFileSync(APP, 'utf8').split('function abrirPeludinho(')[1].slice(0, 1500)), 'o abrirPeludinho guarda (não zera o PB_PEND)');
+  });
+});
+// As contas da base c71e55d (fixas, não calculadas do arquivo de agora): as funções ck*/ckt*/pt* e as provas das stories vizinhas.
+const CK_PT_BASE663 = 154;
+const CONTA_BASE663 = { '6.16': 0, '6.27': 7, '6.45': 29, '6.55': 59, '6.57': 41, '6.58': 105, '6.59': 89, '6.60': 51, '6.61': 55, '6.65': 86 };
+// ---- o palco da Pesquisa: o Tonico (Rita Teste) e o Quindim (Lia Teste); a ponte de mentira do grupo de Urgências ----
+const armaAlg663 = () => {
+  run(ARMA657);
+  run(`__bkA663={rd:algRender, cfg:ALG_CFG, pe:ALG_PESQ_ESTADO, ce:ALG_CAMP_ESTADO, ca:ALG_CARTAO, ln:ALG_LEVAR_DE_NOVO, cp:window.__ALG_CAMPANHA, ua:urgAvisar,
+      ir:IA_REV, il:IA_REV_LIDO, cur:ALG_CUR, ab:ALG_ABERTO, pv:ALG_PESQ_VER, rp:(typeof refreshPills==='function'?refreshPills:null), ta:algTratarAuto, rt:(typeof rtLerResposta==='function'?rtLerResposta:null),
+      ivr:IA_REV_VER_REVISADOS, cfe:ALG_CFG_ESTADO};
+    ALG_RESP={}; ALG_CFG={}; ALG_PESQ_ESTADO={}; ALG_CAMP_ESTADO=null; ALG_CARTAO=''; ALG_LEVAR_DE_NOVO=''; window.__ALG_CAMPANHA={}; IA_REV={}; IA_REV_LIDO=true;
+    ALG_CUR={}; ALG_ABERTO=''; ALG_PESQ_VER=''; ALG_CFG_ESTADO=null; __rdA663=0; algRender=function(){ __rdA663++; }; if(typeof refreshPills==='function') refreshPills=function(){};
+    __urg663=[]; __urgOk663=true; urgAvisar=function(c, t){ __urg663.push([c, t]); return Promise.resolve(__urgOk663); };
+    PELUDINHOS.push({n:'Quindim', tutor:'Lia Teste', raca:'Spitz Alemão', dias:['ter']}); __kq663=pelKey(PELUDINHOS[1]);`);
+};
+const soltaAlg663 = () => {
+  run(`algRender=__bkA663.rd; ALG_CFG=__bkA663.cfg; ALG_PESQ_ESTADO=__bkA663.pe; ALG_CAMP_ESTADO=__bkA663.ce; ALG_CARTAO=__bkA663.ca; ALG_LEVAR_DE_NOVO=__bkA663.ln;
+    window.__ALG_CAMPANHA=__bkA663.cp; urgAvisar=__bkA663.ua; IA_REV=__bkA663.ir; IA_REV_LIDO=__bkA663.il; ALG_CUR=__bkA663.cur; ALG_ABERTO=__bkA663.ab; ALG_PESQ_VER=__bkA663.pv;
+    if(__bkA663.rp) refreshPills=__bkA663.rp; algTratarAuto=__bkA663.ta; if(__bkA663.rt) rtLerResposta=__bkA663.rt; IA_REV_VER_REVISADOS=__bkA663.ivr; ALG_CFG_ESTADO=__bkA663.cfe;`);
+  run(SOLTA657);
+};
+const comAlg663 = async (fn) => { armaAlg663(); try { await fn(); await espera657(); } finally { soltaAlg663(); } };
+const alg663 = (k, no) => { ctx.__ag663 = no; run(`__put657('daycare/alergia-confirmada/${k}', __ag663); ALG_RESP['${k}']=__get657('daycare/alergia-confirmada/${k}'); __esc657=[]; __au657=[];`); };
+const noA663 = (k) => db657('daycare/alergia-confirmada/' + (k || K657)) || {};
+const ENV663 = { ts: T657(7, 11), quem: 'Bia Consultora Teste', quando: '2026-10-07' };
+// uma entrada na ficha COM o antes (o formato novo)
+const ENTRADA663 = (extra) => Object.assign({ quando: '2026-10-08', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia', 'restricao', 'manias'], ts: T657(8, 12), guardouAntes: true,
+  antes: { alergia: '', restricao: '', manias: '' }, depois: { alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta' }, entrevista_antes: '',
+  entrevista_marca: { quando: '2026-10-08', tratadaEm: '2026-10-08', quem: 'automático (resposta do tutor)', n: 3 } }, extra || {});
+const ENTREV663 = { quando: '2026-10-08', tratadaEm: '2026-10-08', quem: 'automático (resposta do tutor)', itens: [{ p: 'Alergia?', r: 'frango' }, { p: 'Restrição?', r: 'sem glúten' }, { p: 'Manias?', r: 'late para a porta' }] };
+
+provaAsync('6.63 P33 (AC9.1, AC9.2) — «Pesquisa enviada» só com o ok, com o rastro (a falha fica na linha); «Desmarcar» manda a marca inteira para enviada_desfeita/{id} e o FILHOt volta para NUNCA PERGUNTAMOS', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__pendura657='alergia-confirmada'; algPesqEnviada('${K657}');`);
+    igual([J630(`ALG_PESQ_ESTADO['${K657}']`), J630(`(ALG_RESP['${K657}']||{}).enviada||null`), aud657('alergia-pesquisa-enviada').length], [{ gravando: true }, null, 0], 'na hora: gravando, sem mudar de lista');
+    run(`ALG_PESQ_VER='nunca';`);
+    assert.ok(/disabled onclick="algPesqEnviada\([^"]*\)">Gravando…</.test(run('algPesqBoxHtml()')), 'o botão diz «Gravando…»');
+    solta663(false); await espera657();
+    assert.ok(/NÃO FOI MARCADO: .*Tonico continua aqui: toque de novo\./.test(run('algPesqBoxHtml()')), 'a falha na linha');
+    igual([J630(`(ALG_RESP['${K657}']||{}).enviada||null`), aud657('alergia-pesquisa-enviada').length], [null, 0]);
+    run('__pendura657=null;');
+    await run(`algPesqEnviada('${K657}')`); await espera657();
+    igual([noA663().enviada.quem, aud657('alergia-pesquisa-enviada').length, J630(`algPesqContagemDe(ALG_RESP).aguardando.map(function(x){ return x.k; })`)], ['Bia Consultora Teste', 1, [K657]]);
+    run(`ALG_PESQ_VER='aguar';`);
+    const h = String(run('algPesqBoxHtml()'));
+    assert.ok(/enviada em 09\/10\/2026 por Bia Consultora Teste/.test(h) && /min-height:44px[^>]*onclick="algPesqDesmarcarAbrir\(/.test(h) && />Desmarcar</.test(h), 'quando, quem e «Desmarcar»');
+    run(`__p663=algPesqDesmarcarAbrir('${K657}');`); await espera657();
+    igual([op663('acao'), op663('cascata')], ['anular', ['Ele volta para NUNCA PERGUNTAMOS: alguém manda a pesquisa de novo.']]);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const n = noA663(), ids = Object.keys(n.enviada_desfeita || {});
+    igual([n.enviada || null, ids.length, n.enviada_desfeita[ids[0]].quem, n.enviada_desfeita[ids[0]].desfeita.por, J630(`algPesqContagemDe(ALG_RESP).nunca.map(function(x){ return x.k; })`).indexOf(K657) >= 0],
+      [null, 1, 'Bia Consultora Teste', 'Bia Consultora Teste', true]);
+    await fecha663();
+    // a régua dentro da função (uma tela velha, o console): o Encãotador barra
+    papel657('monitor', 'Caio Encãotador Teste');
+    await run(`algPesqEnviada('${K657}')`); await espera657();
+    igual([noA663().enviada || null, barrou657().length], [null, 1]);
+  });
+});
+provaAsync('6.63 P34 (AC9.3; S5-P5) — campanha: Consultora e Supervisão barradas («BARROU») e os campos só para leitura; a Gestão grava com update, a anterior guardada em anteriores/{id}, o rastro antes → depois, a tela confirma só com o ok', async () => {
+  await comAlg663(async () => {
+    run(`__put657('daycare/pesquisa-campanha', {nome:'Pesquisa ago/26', inicio:'2026-08-01', fim:'2026-08-31', quem:'Gestora Teste', ts:1}); window.__ALG_CAMPANHA=__get657('daycare/pesquisa-campanha');
+      __el657['algCampNome']={value:'Pesquisa out/26'}; __el657['algCampIni']={value:'2026-10-01'}; __el657['algCampFim']={value:'2026-10-31'};`);
+    for (const [r, n] of [['consultora', 'Bia Consultora Teste'], ['supervisor', 'Amanda Supervisora Teste']]) {
+      papel657(r, n);
+      run('algPesqSalvarCampanha();'); await espera657();
+      igual([db657('daycare/pesquisa-campanha').nome, barrou657().length], ['Pesquisa ago/26', 1], r + ' barrada');
+      const h = String(run('algPesqCampanhaHTML(window.__ALG_CAMPANHA)'));
+      igual([/Quem muda a campanha é a Gestão\./.test(h), /<input/.test(h)], [true, false], r + ': só leitura');
+    }
+    papel657('gestao', 'Gestora Teste');
+    run(`__pendura657='pesquisa-campanha'; algPesqSalvarCampanha();`);
+    igual([J630('ALG_CAMP_ESTADO.gravando'), window_nome663()], [true, 'Pesquisa ago/26'], 'gravando: a tela ainda não confirma');
+    solta663(true); await espera657();
+    const c = db657('daycare/pesquisa-campanha'), an = Object.keys(c.anteriores || {});
+    igual([c.nome, c.inicio, c.fim, an.length, c.anteriores[an[0]].nome, J630('ALG_CAMP_ESTADO')], ['Pesquisa out/26', '2026-10-01', '2026-10-31', 1, 'Pesquisa ago/26', { ok: true }]);
+    igual(escritas657().filter((e) => /pesquisa-campanha/.test(e[1])).map((e) => e[0]), ['update'], 'update, nunca set');
+    assert.ok(aud657('alergia-campanha')[0][1].indexOf('nome: «Pesquisa ago/26» → «Pesquisa out/26»') >= 0 && aud657('alergia-campanha')[0][1].indexOf('início: «01/08/2026» → «01/10/2026»') >= 0);
+  });
+});
+function window_nome663() { return run('(window.__ALG_CAMPANHA||{}).nome'); }
+// 3ª rodada (decisão do @po de 10/out, REQ-002/REQ-003 do re-gate): a 1ª parte volta à da 1ª rodada — a resposta de antes COM a
+// entrada na ficha: a entrada vai junto para respostas_anteriores e a ficha sai do nó (a resposta nova vai para o automático). A 2ª
+// rodada tinha trocado por uma resposta sem entrada porque a resposta diferente com a entrada viva era recusada (não é mais).
+provaAsync('6.63 P35 (AC10.1) — «O tutor respondeu» e «Colar resposta do tutor» gravam por update: a marca de envio fica; a resposta anterior vai para respostas_anteriores/{id} na mesma escrita; nada é apagado', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    papel657('consultora', 'Bia Consultora Teste');
+    const F = { quando: '2026-04-01', quem: 'Bia Consultora Teste', campos: ['alergia'], ts: T657(1, 9) - 180 * 86400000 };
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tinha alergia a frango', quando: '2026-04-01', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 180 * 86400000, ficha: F });
+    run(`__el657['algResp_${K657}']={value:'Agora também a carne de porco'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {});
+    igual([n.enviada, n.resposta, ra.length, n.respostas_anteriores[ra[0]].resposta, n.respostas_anteriores[ra[0]].ficha || null, !!n.respostas_anteriores[ra[0]].substituida, n.ficha || null],
+      [ENV663, 'Agora também a carne de porco', 1, 'Ele tinha alergia a frango', F, true, null], 'a resposta de antes vai para o histórico com a entrada dela; a nova vai para a ficha como hoje');
+    const w = escritas657().filter((e) => /alergia-confirmada/.test(e[1]));
+    // 3ª rodada (REL-009b, a conferência do ajuste): a gravação inteira é uma transação no nó da resposta (ler, conferir o ts, montar o
+    // nó com a anterior em respostas_anteriores e gravar): continua uma escrita só, e nada é apagado (a marca de envio fica)
+    igual(w.map((e) => e[0] + ' ' + e[1].replace(/^daycare\/alergia-confirmada\/[^/]+/, '…')), ['transaction …'], 'uma escrita só, numa transação no nó');
+    // o mesmo texto de novo: nada vai para o histórico e a entrada na ficha fica
+    alg663(K657, { enviada: ENV663, resposta: 'Igual', quando: '2026-10-01', quem: 'Bia Consultora Teste', ts: 5, ficha: F });
+    run(`__el657['algResp_${K657}']={value:'Igual'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual([noA663().ficha, noA663().respostas_anteriores || null], [F, null]);
+    // o «Colar»: guarda a anterior do mesmo jeito
+    alg663(K657, { enviada: ENV663, resposta: 'Resposta velha colada', quando: '2026-10-01', quem: 'Bia Consultora Teste', ts: 7 });
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    run(`algColarConfirmar('${K657}', 'Resposta nova colada inteira');`); await espera657();
+    const n2 = noA663(), ra2 = Object.keys(n2.respostas_anteriores || {});
+    igual([n2.resposta, n2.enviada, n2.respostas_anteriores[ra2[0]].resposta, aud657('alergia-colou-resposta').length], ['Resposta nova colada inteira', ENV663, 'Resposta velha colada', 1]);
+    // a régua dentro das funções (o console): o Encãotador barra
+    papel657('monitor', 'Caio Encãotador Teste');
+    await run(`algResponder('${K657}')`); run(`algColarConfirmar('${K657}', 'outra')`); await espera657();
+    igual([noA663().resposta, barrou657().length], ['Resposta nova colada inteira', 2]);
+  });
+});
+provaAsync('6.63 P36 (AC10.2) — os nomes de «Responderam» abrem o cartão: a resposta, quem colou e quando, o que foi para a ficha (antes → depois) e o histórico (respostas anteriores, entradas desfeitas, marcas desmarcadas)', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: T657(8, 12), ficha: ENTRADA663({ desfeita: { por: 'Gestora Teste', papel: 'gestao', quando: '09/10/2026 às 09:30', motivo: 'a resposta era de outro FILHOt', ts: T657(9, 9) } }),
+      respostas_anteriores: { a1: { resposta: 'Resposta de abril', quando: '2026-04-01', quem: 'Bia Consultora Teste', ts: 3, substituida: { quem: 'Bia Consultora Teste', ts: T657(8, 12) } } },
+      enviada_desfeita: { d1: Object.assign({}, ENV663, { desfeita: { por: 'Amanda Supervisora Teste', quando: '07/10/2026 às 12:00', motivo: 'marquei no FILHOt errado', ts: T657(7, 12) } }) } });
+    run(`ALG_PESQ_VER='resp';`);
+    let h = String(run('algPesqBoxHtml()'));
+    assert.ok(/min-height:44px[^>]*onclick="algPesqCartao\(/.test(h) && h.indexOf('alg-cartao') < 0, 'o nome é um botão; o cartão fechado');
+    run(`algPesqCartao('${K657}');`);
+    h = String(run('algPesqBoxHtml()'));
+    for (const t of ['A RESPOSTA DO TUTOR', 'Ele tem alergia a frango', 'colada por Bia Consultora Teste', 'O QUE FOI PARA A FICHA', 'Alergia', '«frango»', 'Desfeita por Gestora Teste (Gestão)', 'Motivo: a resposta era de outro FILHOt',
+      '>Levar para a ficha de novo<', '>Apagar esta resposta<', '>Passar para outro FILHOt<', 'HISTÓRICO', 'Resposta de 01/04/2026', 'Resposta de abril', 'substituída por uma resposta nova',
+      'desmarcada por Amanda Supervisora Teste', 'marquei no FILHOt errado']) assert.ok(h.indexOf(t) >= 0, 'falta no cartão: ' + t);
+  });
+});
+provaAsync('6.63 P37 (AC10.3) — «Apagar esta resposta»: recusado com a entrada na ficha viva (o botão para desfazer); sem ela, a resposta vai para respostas_anteriores com o registro 6.57 e o FILHOt volta para a lista certa', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 11, ficha: ENTRADA663() });
+    run(`__r663=null; algRespApagarAbrir('${K657}').then(function(r){ __r663=r; });`); await espera657();
+    const r1 = J630('__r663') || {};
+    igual([r1.ok, r1.recusa, J630('__ze657[0][1]'), J630('__ze657[0][2]'), passo663()],
+      [false, 'O que esta resposta levou para a ficha continua lá. Desfaça antes em «Desfazer a entrada na ficha».', ['O que esta resposta levou para a ficha continua lá. Desfaça antes em «Desfazer a entrada na ficha».'], ['Desfazer a entrada na ficha', 'Fechar'], null]);
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 11, ficha: ENTRADA663({ desfeita: { por: 'Gestora Teste' } }) });
+    run(`__p663=algRespApagarAbrir('${K657}');`); await espera657();
+    igual([op663('acao'), op663('cascata')[0]], ['anular', 'Tonico volta para «Enviadas, aguardando».']);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {});
+    igual([n.resposta || null, n.ficha || null, n.enviada, n.respostas_anteriores[ra[0]].resposta, n.respostas_anteriores[ra[0]].apagada.por, !!n.respostas_anteriores[ra[0]].ficha.desfeita],
+      [null, null, ENV663, 'Ele tem alergia a frango', 'Bia Consultora Teste', true]);
+    igual(J630(`algPesqContagemDe(ALG_RESP).aguardando.map(function(x){ return x.k; })`), [K657]);
+    igual(aud657('alergia-resposta-apagada').length, 1);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P38 (AC10.4) — «Passar para outro FILHOt»: recusas (a entrada viva; o certo já respondeu); a escrita única com movidaPara e movidaDe; a cascata do automático', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    papel657('consultora', 'Bia Consultora Teste');
+    const KQ = run('__kq663');
+    alg663(K657, { resposta: 'Resposta da Lia, colada no lugar errado', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 21, ficha: ENTRADA663() });
+    run(`__r663=null; algRespPassarAbrir('${K657}').then(function(r){ __r663=r; });`); await espera657();
+    const r1 = J630('__r663') || {}, p0 = passo663();
+    await fecha663();
+    igual([r1.recusa, p0], ['O que esta resposta levou para a ficha continua lá. Desfaça antes em «Desfazer a entrada na ficha».', null]);
+    alg663(K657, { resposta: 'Resposta da Lia, colada no lugar errado', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 21 });
+    alg663(KQ, { resposta: 'O Quindim já respondeu', quando: '2026-10-02', quem: 'Bia Consultora Teste', ts: 9 });
+    run(`__p663=algRespPassarAbrir('${K657}');`); await espera657();
+    let [p, a] = await continua663(['Quindim']);
+    igual([p, a], ['campos', 'Quindim já tem resposta, de 02/10/2026. Apague-a antes ou escolha outro.']);
+    await fecha663();
+    run(`__put657('daycare/alergia-confirmada/${KQ}', {enviada:${JSON.stringify(ENV663)}}); ALG_RESP['${KQ}']=__get657('daycare/alergia-confirmada/${KQ}'); __esc657=[];`);
+    run(`__p663=algRespPassarAbrir('${K657}');`); await espera657();
+    [p] = await continua663(['Quindim']);
+    igual(p, 'conferir');
+    assert.ok(op663('cascata')[0] === 'Com o tratamento automático ligado, a resposta vai para a ficha de Quindim na próxima abertura da tela.', JSON.stringify(op663('cascata')));
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const w = escritas657().filter((e) => /alergia-confirmada/.test(e[1]));
+    igual(w.map((e) => e[0] + ' ' + e[1]), ['update daycare/alergia-confirmada'], 'uma escrita só');
+    const nT = noA663(), nQ = noA663(KQ), ra = Object.keys(nT.respostas_anteriores || {});
+    igual([nT.resposta || null, nT.respostas_anteriores[ra[0]].movidaPara.chave, nQ.resposta, nQ.quando, nQ.quem, nQ.movidaDe.chave, nQ.movidaDe.registro.por, nQ.enviada],
+      [null, KQ, 'Resposta da Lia, colada no lugar errado', '2026-10-08', 'Bia Consultora Teste', K657, 'Bia Consultora Teste', ENV663]);
+    igual(aud657('alergia-resposta-movida').length, 1);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P39 (AC11.1) — a entrada na ficha guarda o antes e o depois de cada campo, a entrevista de antes e avisou {ts, chave}; o «Levar para a ficha» só marca (e só sai da lista) com o ok da ficha; o automático também', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: '', manias: 'come rápido', entrevista: { quando: '2026-03-01', tratadaEm: '2026-03-01', quem: 'Antiga Teste', itens: [{ p: 'Alergia?', r: 'Não' }] } });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { resposta: 'Ele tem alergia a frango e come rápido demais', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 31 });
+    run(`algCur=function(){ return {campos:{q1:{txt:'frango', campo:'alergia', atual:'', grava:true}, q2:{txt:'come rápido demais', campo:'manias', atual:'come rápido', grava:true}}, sobras:[], total:9}; };
+      algEntrevistaReg=function(){ return ${JSON.stringify(ENTREV663)}; }; algAvisarGestao=function(k){ return {ts:${T657(9, 10)}, chave:'entrevista-'+k}; };`);
+    run(`__recusa657='^daycare/cadastro/';`);
+    await run(`algCurGravar('${K657}')`); await espera657();
+    igual([noA663().ficha || null, za663().indexOf('NÃO consegui gravar na ficha') >= 0, aud657('alergia-ficha').length], [null, true, 0], 'a ficha recusou: nada marcado');
+    run('__recusa657=null;');
+    await run(`algCurGravar('${K657}')`); await espera657();
+    const f = noA663().ficha;
+    igual([f.guardouAntes, f.antes, f.depois, f.entrevista_antes.quem, f.entrevista_marca.n, f.avisou, f.quem],
+      [true, { alergia: '', manias: 'come rápido' }, { alergia: 'frango', manias: 'come rápido demais' }, 'Antiga Teste', 3, { ts: T657(9, 10), chave: 'entrevista-' + K657 }, 'Bia Consultora Teste']);
+    igual(J630('algPendentesFicha().map(function(x){ return x.k; })'), []);
+    // o automático: só com o ok, com o antes e o depois
+    fichaTonico657({ restricao: '' });
+    alg663(K657, { resposta: 'Sem glúten, por favor', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 32 });
+    run(`algCur=function(){ return {campos:{q1:{txt:'sem glúten', campo:'restricao', atual:''}}, sobras:[]}; }; algAvisarGestao=function(){ return null; };`);
+    await run(`algTratarAuto('${K657}')`); await espera657();
+    const f2 = noA663().ficha;
+    igual([f2.auto, f2.antes, f2.depois, f2.avisou || null], [true, { restricao: '' }, { restricao: 'sem glúten' }, null]);
+  });
+});
+provaAsync('6.63 P40 (AC11.2 a AC11.4) — «Desfazer a entrada na ficha»: o antes volta nos campos que ainda têm o depois; os mudados depois ficam e o cartaz diz; a alergia esvaziada (em vermelho) vai para {campo}_original; desfeita; o algTratarFila não trata de novo', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'mudou depois, pela ficha', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 41, ficha: ENTRADA663() });
+    run(`ALG_PESQ_VER='resp'; ALG_CARTAO='${K657}';`);
+    assert.ok(/min-height:44px[^>]*onclick="algFichaDesfazerAbrir\([^"]*\)">Desfazer a entrada na ficha</.test(run('algPesqBoxHtml()')));
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    const cas = op663('cascata');
+    igual([op663('acao'), op663('nivel'), op663('capacidade')], ['anular', 'propria', 'editar-peludinho']);
+    assert.ok(cas.indexOf('Alergia: «frango» → (vazio)') >= 0 || cas.some((t) => /: «frango» → \(vazio\)$/.test(t)), JSON.stringify(cas));
+    assert.ok(cas.some((t) => /^Ficam como estão, porque mudaram depois desta entrada: /.test(t)) && cas.indexOf('A entrevista da ficha volta a ser a de antes desta resposta.') >= 0, JSON.stringify(cas));
+    assert.ok(/fica vazia\. O texto fica guardado em alergia_original e na entrevista: nada se perde\./.test(op663('aviso')) && /restricao_original/.test(op663('aviso')), op663('aviso'));
+    igual((await assina663('s-bia'))[0], 'pronto');
+    const c = db657('daycare/cadastro/' + K657), f = noA663().ficha;
+    igual([c.alergia || null, c.alergia_original, c.restricao || null, c.restricao_original, c.manias, c.entrevista || null, f.desfeita.por, f.desfeita.voltaram.sort(), f.desfeita.ficaram, f.desfeita.entrevista_retirada.quem],
+      [null, 'frango', null, 'sem glúten', 'mudou depois, pela ficha', null, 'Bia Consultora Teste', ['alergia', 'restricao'], ['manias'], 'automático (resposta do tutor)']);
+    igual(aud657('alergia-ficha-desfeita').length, 1);
+    await fecha663();
+    run(`__ta663=0; algTratarAuto=function(){ __ta663++; return Promise.resolve(false); }; ALG_CFG={}; algTratarFila();`);
+    igual(run('__ta663'), 0, 'a entrada desfeita não é tratada de novo');
+    run(`ALG_PESQ_VER='resp'; ALG_CARTAO='${K657}';`);
+    assert.ok(/>Levar para a ficha de novo</.test(run('algPesqBoxHtml()')));
+    // a entrada antiga, sem o antes: sem botão, com a frase
+    alg663(K657, { resposta: 'x', quando: '2026-09-01', quem: 'Bia Consultora Teste', ts: 42, ficha: { quando: '2026-09-01', quem: 'Bia', campos: ['alergia'], ts: 1 } });
+    const h = String(run('algPesqBoxHtml()'));
+    igual([/algFichaDesfazerAbrir\(/.test(h), /registro antigo: corrija na revisão «O que a IA entendeu» ou na ficha/.test(h)], [false, true]);
+  });
+});
+provaAsync('6.63 P41 (AC11.5, AC11.7) — a entrada que avisou o grupo de Urgências: só a Gestão desfaz; a correção sai pelo urgAvisar com chave própria; a atenção sai da mesa (tratado com retirada); sem o grupo: o aviso e o texto para mandar à mão', async () => {
+  await comAlg663(async () => {
+    const AV = { ts: T657(8, 12), chave: 'entrevista-' + K657 };
+    const prepara = () => {
+      fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+      alg663(K657, { resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 51, ficha: ENTRADA663({ avisou: AV }) });
+      run(`__put657('daycare/entrevista-atencao/${K657}', {nome:'Tonico', itens:['frango'], ts:${AV.ts}}); MESA_ATENCAO={}; MESA_ATENCAO['${K657}']=__get657('daycare/entrevista-atencao/${K657}'); __urg663=[]; __za657=[];`);
+    };
+    prepara();
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    igual(op663('nivel'), 'gestao');
+    assert.ok(op663('cascata').indexOf('O grupo de Urgências recebe a correção e a atenção sai da mesa da Gestão.') >= 0);
+    igual((await assina663('s-bia'))[0], 'conferir', 'a Consultora não assina');
+    igual((await assina663(SENHA657, 'a resposta era de outro FILHOt'))[0], 'pronto');
+    await espera657();
+    const u = J630('__urg663');
+    igual([u.length, u[0][0].indexOf('entrevista-correcao-' + K657 + '-') === 0, run('mesaAtencaoLista().length')], [1, true, 0]);
+    assert.ok(u[0][1].indexOf('CORREÇÃO — ENTREVISTA de Tonico: o aviso de 08/10 às 12:00 foi retirado por Gestora Teste. Motivo: a resposta era de outro FILHOt. A ficha voltou ao que era antes da resposta do tutor.') >= 0, u[0][1]);
+    igual([db657('daycare/entrevista-atencao/' + K657 + '/tratado').retirada, db657('daycare/entrevista-atencao/' + K657 + '/tratado').registro.por], [true, 'Gestora Teste']);
+    await fecha663();
+    // sem o grupo na ponte
+    prepara(); run('__urgOk663=false;');
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    igual((await assina663(SENHA657, 'a resposta era de outro FILHOt'))[0], 'pronto');
+    await espera657();
+    const za = J630('__za657').filter((z) => z[0] === 'O GRUPO DE URGÊNCIAS NÃO FOI AVISADO DA CORREÇÃO');
+    igual([za.length, za[0][1][0], /^CORREÇÃO — ENTREVISTA de Tonico/.test(za[0][1][1])], [1, 'Mande este texto ao grupo, à mão:', true]);
+    await fecha663();
+  });
+});
+provaAsync('6.63 P42 (AC11.6; S5-P4) — a chave do automático: sem registro, ligada; desligada, o algTratarFila não roda; sem leitura, espera; só a Gestão e a Diretoria trocam, com a confirmação e o rastro config-pesquisa', async () => {
+  await comAlg663(async () => {
+    alg663(K657, { resposta: 'Sem restrição nenhuma', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 61 });
+    run('__ta663=0; algTratarAuto=function(){ __ta663++; return Promise.resolve(false); };');
+    run('ALG_CFG={auto:false}; ALG_AUTO_RODANDO=false; algTratarFila();'); igual(run('__ta663'), 0, 'desligada');
+    run('ALG_CFG=null; ALG_AUTO_RODANDO=false; algTratarFila();'); igual(run('__ta663'), 0, 'sem leitura, espera');
+    run('ALG_CFG={}; ALG_AUTO_RODANDO=false; algTratarFila();'); igual(run('__ta663'), 1, 'sem registro, ligada');
+    run('ALG_AUTO_RODANDO=false;');
+    await run('algCfgCarregar()'); await espera657();
+    igual([J630('ALG_CFG'), run('algAutoLigado()')], [{}, true], 'o banco sem registro');
+    papel657('consultora', 'Bia Consultora Teste');
+    run('__zp657=[]; __zpq657=[true];');
+    await run('algAutoTrocar()'); await espera657();
+    igual([db657('daycare/config/pesquisa'), barrou657().length, J630('__zp657').length], [null, 1, 0], 'barra antes de perguntar');
+    await run('algAutoGravar(false)'); await espera657();
+    igual([db657('daycare/config/pesquisa'), barrou657().length], [null, 2], 'a gravação chamada direto (o console) também barra');
+    igual(run('algAutoHTML()'), '', 'para os outros papéis, nada (ligado)');
+    papel657('gestao', 'Gestora Teste');
+    assert.ok(/Levar a resposta para a ficha sozinho: ligado/.test(run('algAutoHTML()')) && /min-height:44px[^>]*onclick="algAutoTrocar\(\)">Desligar</.test(run('algAutoHTML()')));
+    run('__zp657=[]; __zpq657=[true];');
+    await run('algAutoTrocar()'); await espera657();
+    igual([J630('__zp657').length, db657('daycare/config/pesquisa').auto, db657('daycare/config/pesquisa').quem, run('algAutoLigado()')], [1, false, 'Gestora Teste', false]);
+    igual(aud657('config-pesquisa').map((a) => a[1]), ['Levar a resposta para a ficha sozinho: ligado → desligado']);
+    papel657('consultora', 'Bia Consultora Teste');
+    assert.ok(/A Gestão desligou o tratamento automático/.test(run('algAutoHTML()')));
+  });
+});
+provaAsync('6.63 P43 (AC12) — «Restaurar o texto de antes»: no limpo, no corrigido e no movido; o registro de antes no historico/{id}; a tarja volta a acender; o campo mudado depois mostra os dois textos e pede a confirmação', async () => {
+  await comAlg663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    const REVL = { estado: 'limpo', campo: 'alergia', quem: 'Amanda Supervisora Teste', quando: '2026-10-05', ts: T657(5, 9), antes: 'Não, nada disso até agora', depois: '', texto_tutor: 'Não, nada disso até agora' };
+    fichaTonico657({ alergia: '', alergia_original: 'Não, nada disso até agora' });
+    run(`__put657('daycare/ia-revisao/${K657}/alergia', ${JSON.stringify(REVL)}); IA_REV=__get657('daycare/ia-revisao'); iaRevEsquecerCache(); __esc657=[];`);
+    assert.ok(/min-height:44px[^>]*onclick="iaRevRestaurarAbrir\([^"]*\)">Restaurar o texto de antes</.test(run(`iaRevCartaoHtml(iaRevAchar('${K657}', 'alergia'))`)));
+    run(`__p663=iaRevRestaurarAbrir('${K657}', 'alergia');`); await espera657();
+    igual([op663('acao'), op663('capacidade'), op663('info'), op663('volta')], ['reabrir', 'revisar-ia', ['Volta: «Não, nada disso até agora»', 'Está gravado hoje: (vazio)'], ['a tarja vermelha da restrição volta a acender']]);
+    igual((await assina663('s-bia'))[0], 'pronto');
+    await espera657();
+    const r = db657('daycare/ia-revisao/' + K657 + '/alergia'), hs = Object.keys(r.historico || {});
+    igual([db657('daycare/cadastro/' + K657).alergia, r.estado, r.registro.por, hs.length, r.historico[hs[0]].estado, r.historico[hs[0]].quem, J630(`pelExtra(${P657}).alergia`)],
+      ['Não, nada disso até agora', 'restaurado', 'Bia Consultora Teste', 1, 'limpo', 'Amanda Supervisora Teste', 'Não, nada disso até agora']);
+    igual(aud657('ia-revisao-restaurada').length, 1);
+    await fecha663();
+    // o movido: o campo novo fica vazio se ainda tiver o texto movido
+    fichaTonico657({ alergia: '', manias: 'frango cru' });
+    run(`__put657('daycare/ia-revisao/${K657}', {alergia:{estado:'corrigido', campo:'alergia', campoNovo:'manias', antes:'frango cru', depois:'', quem:'Gestora Teste', quando:'2026-10-05', ts:5},
+      manias:{estado:'corrigido', campo:'manias', veioDe:'alergia', antes:'', depois:'frango cru', quem:'Gestora Teste', quando:'2026-10-05', ts:5}}); IA_REV=__get657('daycare/ia-revisao'); iaRevEsquecerCache();`);
+    igual(/iaRevRestaurarAbrir/.test(run(`iaRevCartaoHtml(iaRevAchar('${K657}', 'manias'))`)), false, 'o destino do movido não tem o botão');
+    run(`__p663=iaRevRestaurarAbrir('${K657}', 'alergia');`); await espera657();
+    assert.ok(op663('info').indexOf('«Manias» fica vazio: ainda tem o texto movido.') >= 0 || op663('info').some((t) => /fica vazio: ainda tem o texto movido\./.test(t)), JSON.stringify(op663('info')));
+    igual((await assina663('s-bia'))[0], 'pronto');
+    await espera657();
+    const c = db657('daycare/cadastro/' + K657);
+    igual([c.alergia, c.manias || null, db657('daycare/ia-revisao/' + K657 + '/manias').estado], ['frango cru', null, 'restaurado']);
+    await fecha663();
+    // o campo mudado depois por outra pessoa: os dois textos e a confirmação de substituir
+    fichaTonico657({ alergia: 'escrito depois por outra pessoa' });
+    run(`__put657('daycare/ia-revisao/${K657}', {alergia:${JSON.stringify(REVL)}}); IA_REV=__get657('daycare/ia-revisao'); iaRevEsquecerCache(); __zp657=[]; __zpq657=[false];`);
+    await run(`iaRevRestaurarAbrir('${K657}', 'alergia')`); await espera657();
+    const zp = J630('__zp657');
+    igual([zp.length, zp[0][1][0], zp[0][1][1], passo663()], [1, 'Está gravado hoje: «escrito depois por outra pessoa».', 'Se continuar, volta a ser: «Não, nada disso até agora».', null]);
+  });
+});
+provaAsync('6.63 P44 (AC14.1, AC14.2) — a Linha do tempo e o resumo por pessoa dizem em português as ações novas e as tocadas', async () => {
+  const acoes = ['pendencia-reaberta', 'pendencia-corrigida', 'pendencia-movida', 'pendencia-resolucao-desfeita', 'pendencia-reaberta-pelo-tirar', 'prevencao-desfeita', 'prevencao-limpa',
+    'escova-desfeita', 'escova-chip-tirado', 'alergia-pesquisa-enviada', 'alergia-pesquisa-desmarcada', 'alergia-resposta-apagada', 'alergia-resposta-movida', 'alergia-ficha-desfeita',
+    'alergia-campanha', 'config-pesquisa', 'ia-revisao-restaurada', 'prevencao', 'prevencao-atualizada-na-tela', 'prevencao-atraso-confirmado', 'ficha-escova', 'alergia-confirmada',
+    'alergia-colou-resposta', 'ia-revisao'];
+  const sem = acoes.filter((a) => run(`acaoNome(${JSON.stringify(a)})`) === a || /[a-z]-[a-z]/.test(run(`acaoNome(${JSON.stringify(a)})`)));
+  igual(sem, [], 'sem tradução: ' + sem.join(', '));
+  igual(run(`acaoRotulo({acao:'pendencia-reaberta', detalhe:'reabriu a pendência de Vermífugo de Tonico'})`), 'Reabriu a pendência de prevenção — reabriu a pendência de Vermífugo de Tonico');
+  // nenhum código novo de auditoria sem tradução (as ações que o código desta story grava)
+  const src = fs.readFileSync(APP, 'utf8');
+  const usadas = Array.from(new Set((src.match(/audit\('(pendencia|prevencao|escova|alergia|config-pesquisa|ia-revisao)[a-z-]*'/g) || []).map((x) => x.slice(7, -1))));
+  igual(usadas.filter((a) => run(`acaoNome(${JSON.stringify(a)})`) === a), [], 'ação gravada sem tradução');
+});
+provaAsync('6.63 P45 (AC13, AC14.3) — a senha não fica em nenhum nó gravado nem na auditoria (o banco de mentira varrido depois das ações com cartaz desta story)', async () => {
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    pend663('vermifugo', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' });
+    run(`__p663=pendReabrirAbrir('${KP663}', 'vermifugo');`); await espera657(); await assina663('s-bia'); await fecha663();
+    pend663('medicacao', { valor: 'Tonico/SRD (Apoquel)' });
+    run(`__p663=pendTirarMedAbrir('${KP663}', 'medicacao', 'tutor', 'O tutor vai dar em casa');`); await espera657(); await assina663('s-amanda'); await assina663(SENHA657); await fecha663();
+    const tudo = JSON.stringify(run('__db657')) + JSON.stringify(run('__au657')) + JSON.stringify(run('__esc657'));
+    igual(['senhaSecreta657', 's-bia', 's-amanda'].filter((s) => tudo.indexOf(s) >= 0), [], 'a senha não aparece');
+    igual(no663('medicacao').status, 'cancelada');
+  });
+});
+provaAsync('6.63 P46 (AC16, guarda) — pendGravar, pendVarrerDia e pendAvisarChegada idênticas à base c71e55d, letra por letra (sha-256); pendChaveDoLancamento, pendAvaliarLancamento e dashLancar também; nenhuma função nova ck*/pt*', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const h = (x) => require('crypto').createHash('sha256').update(String(x)).digest('hex').slice(0, 16);
+  const fonte = (s, nome) => { const i = s.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0; const j = s.indexOf('{', i); for (let k = j; k < s.length; k++) { if (s[k] === '{') d++; else if (s[k] === '}') { d--; if (!d) return s.slice(i, k + 1); } } return null; };
+  const BASE663 = { pendGravar: 'b81a630854fe4ad4', pendVarrerDia: 'e3f4d6e0ab06dd96', pendAvisarChegada: 'afd47e11d9a89fed', pendChaveDoLancamento: 'ebe51fe34399f5ef',
+    pendAvaliarLancamento: '5edc5134c3b6a869', dashLancar: '6267457666ad76f3' };
+  const agora = {}; Object.keys(BASE663).forEach((n) => { agora[n] = h(fonte(src, n)); });
+  igual(agora, BASE663);
+  const novas = (src.match(/function (ck|ckt|pt)[A-Z]\w*\(/g) || []).length;
+  igual(novas, CK_PT_BASE663, 'as funções ck*/ckt*/pt* da base');
+});
+provaAsync('6.63 P47 (AC17, guarda) — as provas da 6.16, 6.27, 6.45, 6.55, 6.57, 6.58, 6.59, 6.60, 6.61 e 6.65 continuam todas no arquivo e passaram (só as da lista do Dev Agent Record ganharam palco)', async () => {
+  const src = fs.readFileSync(__filename, 'utf8');
+  const conta = {}; ['6.16', '6.27', '6.45', '6.55', '6.57', '6.58', '6.59', '6.60', '6.61', '6.65'].forEach((v) => { conta[v] = (src.match(new RegExp("prova(?:Async)?\\('" + v.replace('.', '\\.') + '[ \']', 'g')) || []).length; });
+  igual(conta, CONTA_BASE663, 'nenhuma prova antiga saiu do arquivo');
+  const caiu = falhas.filter((f) => /^6\.(16|27|45|55|57|58|59|60|61|65)\b/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+provaAsync('6.63 P48 (AC10.5, AC12.4, guarda) — quem assina na Pesquisa: a lista do revisar-ia é a mesma da tela da Pesquisa pelo papel (Consultora, Supervisão, Gestão, Diretoria); o editar-peludinho também', async () => {
+  const papeis = ['consultora', 'supervisor', 'gestao', 'diretoria', 'vet', 'monitor', 'plantonista', 'aprendiz', 'conferencia'];
+  igual(papeis.filter((r) => run(`telaVemDoPapel('alergia', '${r}')`)).sort(), J630("PERM['revisar-ia']").slice().sort());
+  igual(J630("PERM['revisar-ia']").slice().sort(), J630("PERM['editar-peludinho']").slice().sort());
+});
+provaAsync('6.63 P49 (contrato para a 6.64) — escovaDesfazerTresMesesGravar(p, reg) devolve {ok, erro} sem cartaz; o «Desfazer» do «Atualizados hoje» (prevCorrDesfazerGravar) também', async () => {
+  await comPrev663({ escova_dc: 'Sim', escova_t: '2026-06-01', escova_p: '2026-08-30' }, async () => {
+    await run('escovaTresMeses(\'nao\', __bp)'); await espera657();
+    const r = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Gestora Teste', papel:'gestao', motivo:'a resposta do tutor mudou', ts:Date.now()})`); await espera657();
+    igual([r, fichaDb663().escova_p, fichaDb663().escova_ult.desfeito.motivo, passo663()], [{ ok: true }, '2026-08-30', 'a resposta do tutor mudou', null]);
+    igual(typeof run('prevCorrDesfazerGravar'), 'function');
+  });
+});
+provaAsync('6.63 P50 (AC5.3; Chromium 10/out) — a linha nova entra no «Atualizados hoje» quando o banco confirma o registro do dia, sem esperar outro desenho da tela; o que estiver digitado num painel aberto nesse meio-tempo continua lá', async () => {
+  await comPrev663(VAC663, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__bkTA663=prevCorrTelaAtiva; prevCorrTelaAtiva=function(){ return 'hoje'; }; PREV_CORR_LIDO=true; PREV_CORR_DIA=${JSON.stringify(DIA657)};
+      hojeRender=function(){ __rd663.push(['hoje', prevCorrLinhas().length]); var e=__el657['prevCorrT_'+__dcp+'_ecto_p']; if(e) e.value=''; };`);
+    try {
+      run(`__pendura657='^daycare/prevencao-correcoes/'; PREV_CORRIGE_ABERTO=__dcp+'|vac_mult_p'; prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`);
+      await espera657();
+      const antes = J630("__rd663.filter(function(x){ return x[0]==='hoje'; }).length");
+      igual([J630('prevCorrLinhas().length'), fichaDb663().vac_mult_p], [0, '2027-10-09'], 'a ficha gravou; o registro do dia ainda não voltou do banco');
+      // nesse meio-tempo, a pessoa abriu o painel do carrapaticida e digitou a data
+      run(`PREV_CORRIGE_ABERTO=__dcp+'|ecto_p'; __el657['prevCorrT_'+__dcp+'_ecto_p']={value:'2026-10-08'};`);
+      run('__pendura657=null;'); solta663(true); await espera657();
+      const hj = J630("__rd663.filter(function(x){ return x[0]==='hoje'; })");
+      igual([J630('prevCorrLinhas().length'), hj.length > antes, hj[hj.length - 1][1], run(`__el657['prevCorrT_'+__dcp+'_ecto_p'].value`)], [1, true, 1, '2026-10-08'],
+        'o banco confirmou o registro: a tela é redesenhada com a linha nova, e a data digitada no painel aberto continua');
+    } finally { run('prevCorrTelaAtiva=__bkTA663;'); }
+  });
+});
+provaAsync('6.63 P51 (as pendências da 6.65 pela raiz, com o soDepoisDoOk) — REL-003: com a recusa, nem verde nem «✓ Salvo»; R2-L1: o FILHOt fora da cópia em memória fica sem o recusado e o «Salvar» de novo grava o 15; R2-L2: duas gravações recusadas, com a releitura também falhando, voltam ao valor do banco (não ao da 1ª recusada); R2-L3: a barra da ficha diz «NÃO salvou no sistema … Nada mudou.»', async () => {
+  const VERM = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+  const local = () => JSON.parse(run("__ls657['zeluz_pel_'+__kp]||'{}'"));
+  const so = (o, cs) => cs.map((c) => (Object.prototype.hasOwnProperty.call(o, c) ? o[c] : '∅'));
+  // REL-003 e R2-L3: o bloco da ficha com a recusa (o painel é a P16; o rascunho que fica, a P29)
+  await comPrev663(VERM, async () => {
+    run(`__el657['pel-saved']={textContent:'', style:{}}; __el657['v-ficha']={classList:{contains:function(c){ return c==='active'; }}};
+      __el657['pel-ficha']={style:{display:'block'}, appendChild:function(){}}; __el657['pelSalvoBarra']={textContent:'', style:{}};
+      __ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); __recusa657='^daycare/cadastro/';`);
+    run(`pbSet('verm',{verm_t:'${DIA657}'}); pbSalvar('verm');`); await espera657();
+    const barra = String(run(`__el657['pel-saved'].textContent`)), rod = String(run("pbRodape('verm', 'vermífugo')"));
+    igual([/NÃO salvou no sistema/.test(barra), /Nada mudou\./.test(barra), /Anotado NESTE aparelho/.test(barra), run('__el657.pelSalvoBarra.textContent') === barra,
+      /✓ Salvo/.test(rod), /NÃO FOI SALVO/.test(rod), so(local(), ['verm_t'])[0], J630('pelExtra(__bp).verm_t')],
+      [true, true, false, true, false, true, '2026-05-20', '2026-05-20'], 'R2-L3 e REL-003: «Nada mudou», sem verde, e nada deste aparelho mudou: ' + barra);
+  });
+  // R2-L1: o FILHOt sem a ficha na cópia em memória (só a cópia local)
+  await comPrev663(VERM, async () => {
+    run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); delete pelCadCache[__kp]; __recusa657='^daycare/cadastro/';`);
+    run(`pbSet('verm',{verm_t:'${DIA657}'}); pbSet('verm',{verm_dose2_dias:15}); pbSalvar('verm');`); await espera657();
+    igual([so(local(), ['verm_t', 'verm_dose2_dias']), so(J630('pelExtra(__bp)'), ['verm_t', 'verm_dose2_dias'])], [['2026-05-20', '∅'], ['2026-05-20', '∅']], 'R2-L1: o recusado não ficou neste aparelho');
+    run("__recusa657=null; pbSalvar('verm');"); await espera657();
+    igual(so(fichaDb663(), ['verm_t', 'verm_dose2_dias']), [DIA657, 15], 'R2-L1: o «Salvar» de novo grava o 15');
+  });
+  // R2-L2: duas gravações da mesma ficha saindo, as duas recusadas, e a releitura da ficha no banco também falhando
+  await comPrev663(VAC663, async () => {
+    run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); __pendura657='^daycare/cadastro/';
+      __ref663=DB.ref; DB.ref=function(c){ var r=__ref663(c); if(String(c).indexOf('daycare/cadastro/')===0) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`);
+    try {
+      run(`prevGravar(__bp, {vac_mult_p:'2026-12-20'}, {tela:'Prevenção'}); prevGravar(__bp, {vac_mult_p:'2026-12-25'}, {tela:'Prevenção'});`);
+      igual(J630('pelCadCache[__kp].vac_mult_p'), '2026-12-25', 'as duas saindo');
+      run('__pendura657=null;'); solta663(false); await espera657();
+      igual([J630('pelCadCache[__kp].vac_mult_p'), J630('pelExtra(__bp).vac_mult_p'), so(local(), ['vac_mult_p'])[0], fichaDb663().vac_mult_p],
+        ['2026-09-01', '2026-09-01', '2026-09-01', '2026-09-01'], 'R2-L2: o valor do banco, não o da 1ª recusada');
+    } finally { run('DB.ref=__ref663;'); }
+  });
+});
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 6.63, 2ª rodada (início)
+// ================================================================== 6.63, 2ª rodada — as provas do QA (Quinn) na Fase 0
+// TEST-001 do gate: as 50 provas do QA (QA663-01 a 47, com 01b, 01c e 03b) entram aqui com o nome «6.63 QA …», como o QA as
+// escreveu (s663r2/tools/qabloco.py; mudanças: o nome, o banco fiel ao Firebase por invólucro e a QA663-18 sem o arquivo de fora;
+// a QA663-27 passou de registro a asserção). Tudo inventado; o palco é o da 6.57 e o da 6.63.
+{
+// ================================================================== QA 6.63 (Quinn) — bloco A: ataques e hipóteses
+// Tudo inventado (Bento/Ana Teste, Tonico/Rita Teste, Quindim/Lia Teste; pessoas «Teste»). Palco: o da 6.57 e os ajudantes da 6.63.
+// fbLiga663() liga o banco fiel ao Firebase (o null dentro de um objeto não é guardado, e o objeto que fica vazio some), sem mudar o palco
+// da 6.57: o __put657 ganha um invólucro, e fbDesliga663() devolve o de sempre (o ARMA657 também o refaz a cada prova).
+const fbLiga663 = () => run(`if(!__put657.__fb663){ var __o663=__put657; __put657=function(p, v){ return __o663(p, (v===null||v===undefined)?v:__semNull663(JSON.parse(JSON.stringify(v)))); };
+    __put657.__fb663=__o663; }
+  __semNull663=function(x){ if(x===null||x===undefined) return null; if(Array.isArray(x)){ var a2=x.map(__semNull663).filter(function(y){ return y!==null; }); return a2.length?a2:null; }
+    if(typeof x==='object'){ var r={}, n=0; Object.keys(x).forEach(function(k){ var y=__semNull663(x[k]); if(y!==null){ r[k]=y; n++; } }); return n?r:null; } return x; };`);
+const fbDesliga663 = () => run('if(__put657.__fb663) __put657=__put657.__fb663;');
+const recarrega663 = () => run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+const local663 = () => { const s = run(`__ls657['zeluz_pel_'+__kp]`); return s ? JSON.parse(s) : null; };
+
+// ---- H1: o «antes» da escova num FILHOt que nunca teve troca registrada (o Firebase não guarda null) ----
+provaAsync('6.63 QA 01 (AC7.2, AC7.3) — «Tinha em casa» num FILHOt sem nenhuma data de escova, com o banco fiel ao Firebase: o «Desfazer» aparece e desfaz', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'] }, async () => {
+    fbLiga663();
+    try {
+      papel657('consultora', 'Bia Consultora Teste');
+      await run('escovaTresMeses(\'casa\', __bp)'); await espera657();
+      const u = fichaDb663().escova_ult;
+      recarrega663();
+      const h = String(run('escovaFichaHTML(pelExtra(__bp))'));
+      const r = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', papel:'consultora', motivo:'o tutor não tinha em casa', ts:Date.now()})`); await espera657();
+      igual([!!(u && u.antes), /escovaDesfazerTresMesesAbrir\(\)">Desfazer</.test(h), /registro antigo/.test(h), r && r.ok, fichaDb663().escova_t || null, fichaDb663().escova_p || null],
+        [true, true, false, true, null, null], 'o antes guardado no banco, o botão e a gravação do desfazer (a 6.64 chama esta mesma gravação)');
+    } finally { fbDesliga663(); }
+  });
+});
+provaAsync('6.63 QA 01b (AC7.3) — «Não autorizou» num FILHOt sem nenhuma data de escova, banco fiel ao Firebase: o «Desfazer» devolve a ficha sem datas', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'] }, async () => {
+    fbLiga663();
+    try {
+      papel657('consultora', 'Bia Consultora Teste');
+      await run('escovaTresMeses(\'nao\', __bp)'); await espera657();
+      recarrega663();
+      const r = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', papel:'consultora', motivo:'o tutor autorizou a troca hoje', ts:Date.now()})`); await espera657();
+      igual([r && r.ok, String((r && r.erro) || ''), fichaDb663().escova_p || null], [true, '', null]);
+    } finally { fbDesliga663(); }
+  });
+});
+// controle: com uma data antes (o caso da P24 da 6.63), o banco fiel ao Firebase não muda nada
+provaAsync('6.63 QA 01c (controle) — com data de escova antes, o banco fiel ao Firebase não muda o desfazer', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'], escova_t: '2026-06-01', escova_p: '2026-08-30' }, async () => {
+    fbLiga663();
+    try {
+      papel657('consultora', 'Bia Consultora Teste');
+      await run('escovaTresMeses(\'casa\', __bp)'); await espera657();
+      recarrega663();
+      const r = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', papel:'consultora', motivo:'o tutor não tinha em casa', ts:Date.now()})`); await espera657();
+      igual([r && r.ok, fichaDb663().escova_t, fichaDb663().escova_p, fichaDb663().escova_p_manual === undefined], [true, '2026-06-01', '2026-08-30', true]);
+    } finally { fbDesliga663(); }
+  });
+});
+
+// ---- H3: a resposta nova do tutor tira a entrada VIVA da ficha (AC10.1: «enviada e ficha continuam») ----
+// 3ª rodada (decisão do @po de 10/out, REQ-002/REQ-003 do re-gate): o QA exigia a entrada viva NO NÓ da resposta («enviada e ficha
+// continuam»). A decisão nova manda gravar a resposta nova e levar a entrada da anterior junto para respostas_anteriores, onde ela
+// continua valendo na ficha, com o «Desfazer» pelo histórico do cartão. A prova agora exige isso: a ficha não perde nada e o
+// «Desfazer» continua alcançável.
+provaAsync('6.63 QA 02 (AC10.1, AC10.3, AC11.2) — «O tutor respondeu» com um texto novo num FILHOt cuja entrada na ficha está viva: a entrada continua com o «Desfazer»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 71, ficha: ENTRADA663() });
+    run(`__el657['algResp_${K657}']={value:'Ele não tem alergia nenhuma, era o Quindim'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), A = (n.respostas_anteriores || {})[ra[0]] || {};
+    const h = String(run(`algPesqCartaoHTML('${K657}')`));
+    // registra o efeito (para o gate), e depois exige o que a decisão do @po diz
+    ctx.__qa02 = { ficha: !!n.ficha, desfazer: /algFichaDesfazerAbrir\(/.test(h), alergia: db657('daycare/cadastro/' + K657).alergia, foiJunto: /a entrada na ficha dela foi junto/.test(h) };
+    console.log('      6.63 QA 02 efeito: ' + JSON.stringify(ctx.__qa02));
+    igual([n.resposta, !!n.ficha, !!(A.ficha && !A.ficha.desfeita), h.indexOf(`algFichaDesfazerAbrir('${K657}','${ra[0]}')`) >= 0, db657('daycare/cadastro/' + K657).alergia],
+      ['Ele não tem alergia nenhuma, era o Quindim', false, true, true, 'frango'], 'a entrada viva continua valendo (no histórico) e com o «Desfazer»');
+  });
+});
+// ---- duas gravações da mesma ficha ao mesmo tempo: a 1ª recusada, a 2ª aceita; campo que o banco não tinha ----
+provaAsync('6.63 QA 03 (AC8, R2-L1/R2-L2 da 6.65) — duas gravações saindo (a 1ª recusada, a 2ª aceita): a cópia LOCAL deste aparelho não fica com o campo recusado', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); __pendura657='^daycare/cadastro/';`);
+    run(`__gA=prevGravar(__bp, {ecto_t:'2026-10-09', ecto_p:'2026-11-08', ecto_prod:'Pipeta (30 dias)'}, {tela:'Prevenção'}); __gB=prevGravar(__bp, {vac_mult_p:'2027-01-15', vac_mult_p_manual:true}, {tela:'Prevenção'});`);
+    // a 1ª é recusada, a 2ª aceita (na ordem)
+    run(`__pend657[0].nao(); __pend657[1].ok(); __pend657.splice(0);`); __noop = 0; await espera657();
+    const L = local663(), ex = J630('pelExtra(__bp)'), db = fichaDb663();
+    igual([db.ecto_t || null, db.vac_mult_p], [null, '2027-01-15'], 'o banco: só a 2ª');
+    igual([L.ecto_t || null, L.ecto_prod || null, ex.ecto_t || null, ex.ecto_prod || null, L.vac_mult_p], [null, null, null, null, '2027-01-15'], 'a cópia local e a ficha da tela sem o que o banco recusou');
+  });
+});
+provaAsync('6.63 QA 03b (AC8, R2-L1 da 6.65) — a 1ª recusada (e o desfazer dela já terminado), DEPOIS a 2ª aceita: a cópia LOCAL não traz de volta o campo recusado', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); __pendura657='^daycare/cadastro/';`);
+    run(`prevGravar(__bp, {ecto_t:'2026-10-09', ecto_p:'2027-01-07', ecto_prod:'Bravecto'}, {tela:'Prevenção'}); prevGravar(__bp, {vac_mult_p:'2027-01-15', vac_mult_p_manual:true}, {tela:'Prevenção'});`);
+    run(`__pA=__pend657.shift(); __pB=__pend657.shift(); __pendura657=null; __pA.nao();`); await espera657();
+    run(`__pB.ok();`); await espera657();
+    const L = local663(), ex = J630('pelExtra(__bp)'), db = fichaDb663();
+    igual([db.ecto_t || null, db.vac_mult_p], [null, '2027-01-15'], 'o banco: só a 2ª');
+    igual([L.ecto_t || null, L.ecto_prod || null, ex.ecto_t || null, ex.ecto_prod || null], [null, null, null, null], 'a cópia local e a ficha da tela sem o que o banco recusou');
+  });
+});
+var __noop = 0;
+
+// ---- «Desfazer» do «Atualizados hoje»: ida e volta exata, com o banco fiel ao Firebase ----
+const IDA663 = [
+  ['vacina, feito hoje, sem data antes', {}, `prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje')`],
+  ['vacina com data à mão, feito hoje', { vac_mult_t: '2025-09-01', vac_mult_p: '2026-12-01', vac_mult_p_manual: true }, `prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'venc')`],
+  ['carrapaticida com produto, feito em', { ecto_t: '2026-08-01', ecto_p: '2026-08-31', ecto_prod: 'Bravecto', ecto_afazer: true }, `(__el657['prevCorrT_'+__dcp+'_ecto_p']={value:'2026-10-05'}, prevCorrigeFeitoEm(__dcp, 'ecto_p', 'prev'))`],
+  ['vermífugo 2 doses, feito hoje', { verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' }, `(__el657['prevCorrE2_'+__dcp+'_verm_p']={checked:true}, prevCorrigeFeitoHoje(__dcp, 'verm_p', 'hoje'))`],
+  ['coleira sem data (opcional), feito hoje', { col_nome: 'Seresto' }, `prevCorrigeFeitoHoje(__dcp, 'col_p', 'hoje')`],
+  ['vence em à mão (Gestão)', { vac_mult_t: '2025-09-01', vac_mult_p: '2026-09-01' }, `(__el657['prevCorrV_'+__dcp+'_vac_mult_p']={value:'2027-02-01'}, prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'venc'))`],
+  ['escova: resposta «Não» depois «Sim»', { escova_dc: 'Sim', atividades: ['escova', 'piscina'] }, `prevCorrigeEscovaDc(__dcp, 'Não', 'Não deixa', 'hoje')`],
+];
+provaAsync('6.63 QA 04 (AC5.4) — «Desfazer» devolve EXATAMENTE a ficha de antes (todos os campos do patch, inclusive o que não existia), com o banco fiel ao Firebase', async () => {
+  for (const [nome, ficha, acao] of IDA663) {
+    await comPrev663(Object.assign({ vac_mult_nome: 'V10 Teste' }, ficha), async () => {
+      fbLiga663();
+      try {
+        papel657('gestao', 'Gestora Teste');
+        run(`__put657('daycare/cadastro/'+__kp, __get657('daycare/cadastro/'+__kp)); pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+        const antes = fichaDb663();
+        await run(acao); await espera657();
+        const L = corrHoje663();
+        igual(L.length, 1, nome + ': uma linha no «Atualizados hoje»');
+        run('PREV_CORR_LIDO=false;'); await run('prevCorrCarregar(true)'); await espera657();
+        recarrega663();
+        run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L[0].id)}, 'hoje');`); await espera657();
+        const [p] = await assina663(SENHA657, 'gravei no FILHOt errado');
+        igual(p, 'pronto', nome + ': o cartaz assina');
+        await fecha663();
+        const depois = fichaDb663();
+        const cs = Object.keys(Object.assign({}, antes, depois)).filter((c) => c !== 'escova_ult');
+        const dif = cs.filter((c) => JSON.stringify(antes[c] === undefined || antes[c] === '' ? null : antes[c]) !== JSON.stringify(depois[c] === undefined || depois[c] === '' ? null : depois[c]));
+        igual(dif, [], nome + ': os campos que não voltaram ao que eram');
+        igual(!!corrHoje663()[0].desfeito, true, nome + ': a linha riscada');
+      } finally { fbDesliga663(); }
+    });
+  }
+});
+// ---- «Limpar a data» e o «Desfazer» dele: ida e volta exata em todo item da Prevenção, banco fiel ao Firebase ----
+provaAsync('6.63 QA 05 (AC6.3, AC5.4) — «Limpar a data» em cada item com data e o «Desfazer» da linha: a ficha volta exatamente (k, base, alt, altBase, _manual, 2ª dose)', async () => {
+  const FICHA = { vac_mult_t: '2025-09-01', vac_mult_p: '2026-09-01', vac_mult_nome: 'V10 Teste', vac_raiva_t: '2025-08-01', vac_raiva_p: '2026-08-01',
+    ecto_t: '2026-08-01', ecto_p: '2026-10-30', ecto_prod: 'Bravecto', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-09-01', col_p_manual: true,
+    verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08', verm_dose2_por: 'Bia Consultora Teste',
+    fezes_t: '2026-05-01', fezes_p: '2026-09-01', fezes_res: 'negativo', escova_dc: 'Sim', escova_t: '2026-06-01', escova_p: '2026-08-30',
+    vacina_t: '2024-01-01', vacina_p: '2025-01-01' };
+  const ks = J630("(function(){ return PREV_ITENS.map(function(i){ return i.k; }); })()");
+  const vistos = [];
+  for (const k of ks) {
+    await comPrev663(FICHA, async () => {
+      fbLiga663();
+      try {
+        papel657('gestao', 'Gestora Teste');
+        run(`__put657('daycare/cadastro/'+__kp, __get657('daycare/cadastro/'+__kp)); pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+        const patch = J630(`prevCorrLimparCampos(prevCorrigeItemDe('${k}'), pelExtra(__bp))`);
+        if (!Object.keys(patch).length) return;
+        vistos.push(k);
+        const antes = fichaDb663();
+        run(`__p663=prevCorrLimparAbrir(__dcp, '${k}', 'hoje');`); await espera657();
+        const [p1] = await assina663(SENHA657, 'a data foi digitada errada');
+        igual(p1, 'pronto', k + ': limpar');
+        await fecha663();
+        const limpo = fichaDb663();
+        const ficaram = Object.keys(patch).filter((c) => limpo[c] !== undefined && limpo[c] !== '' && limpo[c] !== null && limpo[c] !== false);
+        igual(ficaram, [], k + ': os campos que deviam sair');
+        const L = corrHoje663().filter((x) => x.como === 'limpar');
+        run('PREV_CORR_LIDO=false;'); await run('prevCorrCarregar(true)'); await espera657(); recarrega663();
+        run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L[0].id)}, 'hoje');`); await espera657();
+        const [p2] = await assina663(SENHA657, 'limpei a data errada sem querer');
+        igual(p2, 'pronto', k + ': desfazer');
+        await fecha663();
+        const volta = fichaDb663();
+        const dif = Object.keys(Object.assign({}, antes, volta)).filter((c) => JSON.stringify(antes[c] === undefined ? null : antes[c]) !== JSON.stringify(volta[c] === undefined ? null : volta[c]));
+        igual(dif, [], k + ': a ficha não voltou exatamente');
+      } finally { fbDesliga663(); }
+    });
+  }
+  console.log('      6.63 QA 05 itens com data testados: ' + vistos.join(', '));
+  assert.ok(vistos.length >= 6, vistos.join(','));
+});
+// ================================================================== QA 6.63 (Quinn) — bloco B: a recusa do banco em TODAS as portas
+// O banco recusa toda escrita em daycare/ (PERMISSION_DENIED). Em cada porta: nada verde, nenhum «Salvo»/«Salvo às», nenhum
+// rastro de sucesso, nenhuma linha no «Atualizados hoje», o banco igual, a ficha da tela igual e a cópia LOCAL igual à de antes.
+const FICHA_B663 = { vac_mult_t: '2025-09-01', vac_mult_p: '2026-09-01', vac_mult_nome: 'V10 Teste', vac_raiva_t: '2025-08-01', vac_raiva_p: '2026-08-01',
+  col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-09-01', verm_doses: '2 doses', verm_t: '2026-09-20', verm_2a: '2026-10-11', verm_p: '2027-01-18',
+  fezes_t: '2026-05-01', fezes_p: '2026-09-01', fezes_res: 'negativo', escova_dc: 'Sim', atividades: ['escova', 'piscina'], escova_t: '2026-06-01', escova_p: '2026-08-30' };
+const SUCESSO_B663 = ['prevencao', 'prevencao-atualizada-na-tela', 'prevencao-proxima-manual', 'prevencao-desfeita', 'prevencao-limpa', 'escova-desfeita',
+  'escova-chip-tirado', 'ficha-escova', 'ficha-campo', 'prevencao-atraso-confirmado'];
+const PORTAS_B663 = [
+  ['painel: Feito hoje', `prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje')`],
+  ['painel: Gravar esta data', `(__el657['prevCorrT_'+__dcp+'_vac_raiva_p']={value:'2026-10-05'}, prevCorrigeFeitoEm(__dcp, 'vac_raiva_p', 'prev'))`],
+  ['painel: Gravar o vencimento', `(__el657['prevCorrV_'+__dcp+'_vac_mult_p']={value:'2027-02-01'}, prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'venc'))`],
+  ['painel: 2ª dose', `prevCorrigeFeitoHoje(__dcp, 'verm_dose2_p', 'hoje')`],
+  ['painel: Não vai ter 2ª dose', `prevCorrigeDoseUnica(__dcp, 'hoje')`],
+  ['painel: resposta da escova', `prevCorrigeEscovaDc(__dcp, 'Não', 'Não deixa', 'hoje')`],
+  ['Lance aqui mesmo', `(function(){ var c=__kp; __el657['prevT_'+c+'_vac_mult_p']={value:'2026-10-08'}; __el657['prevQ_'+c+'_vac_mult_p']={value:'Zêluz'}; __el657['prevN_'+c+'_vac_mult_p']={value:''};
+      __el657['prevP_'+c+'_vac_mult_p']={value:''}; prevRecalcular(c, 'vac_mult_p'); return prevLancar(c, 'vac_mult_p'); })()`],
+  ['Quem deu', `prevOndeFoi(__kp, 'vac_mult_p', 'Day Care')`],
+  ['ficha: Salvar o bloco', `(pbSet('vac', {vac_mult_t:'2026-10-01'}), pbSalvar('vac'))`],
+  ['ficha: Fez em direto', `prevUltimaDireta('vac_mult_t', 'vac_mult_p', 365, '2026-10-01')`],
+  ['ficha: Vence em direto', `prevVenceManualSet('vac_mult_p', '2026-12-25')`],
+  ['ficha: tinha em casa', `escovaTresMeses('casa', __bp)`],
+  ['ficha: não autorizou', `escovaTresMeses('nao', __bp)`],
+  ['ficha: tirar o chip «Escova»', `escovaChipTirarGravar(__bp, 'Não deixa')`],
+];
+provaAsync('6.63 QA 06 (AC5.1, AC7, AC8; REL-003, R2-L1/L3 da 6.65) — a recusa do banco em cada porta da prevenção: nada verde, nenhum «Salvo», nenhum rastro de sucesso, o banco, a ficha da tela e a cópia local iguais', async () => {
+  const quebras = [];
+  for (const [nome, acao] of PORTAS_B663) {
+    await comPrev663(FICHA_B663, async () => {
+      papel657('gestao', 'Gestora Teste');
+      run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp));`);
+      const db0 = fichaDb663(), ex0 = J630('pelExtra(__bp)'), loc0 = local663();
+      run(`__recusa657='^daycare(/|$)'; __au657=[];`);
+      await run(acao); await espera657(); await espera657();
+      const ex1 = J630('pelExtra(__bp)'), loc1 = local663();
+      const prob = [];
+      if (JSON.stringify(fichaDb663()) !== JSON.stringify(db0)) prob.push('o banco mudou');
+      const cs = Object.keys(Object.assign({}, ex0, ex1)).filter((c) => c !== 'foto');
+      const difEx = cs.filter((c) => JSON.stringify(ex0[c] === undefined ? null : ex0[c]) !== JSON.stringify(ex1[c] === undefined ? null : ex1[c]));
+      if (difEx.length) prob.push('a ficha da tela: ' + difEx.join(','));
+      const difL = Object.keys(Object.assign({}, loc0, loc1)).filter((c) => JSON.stringify((loc0 || {})[c] === undefined ? null : loc0[c]) !== JSON.stringify((loc1 || {})[c] === undefined ? null : loc1[c]));
+      if (difL.length) prob.push('a cópia local: ' + difL.join(','));
+      if (/✓/.test(String(run('prevCorrigeOkCaixaHTML()')))) prob.push('verde no painel');
+      if (J630('Object.keys(PREV_LANCE_ESTADO).filter(function(k){ return PREV_LANCE_ESTADO[k].passo==="salvo"; })').length) prob.push('«Salvo às» no Lance');
+      if (/✓ Salvo/.test(String(run("pbRodape('vac', 'vacinas')")))) prob.push('«✓ Salvo» na ficha');
+      const suc = J630('__au657').map((a) => a[0]).filter((a) => SUCESSO_B663.indexOf(a) >= 0);
+      if (suc.length) prob.push('rastro de sucesso: ' + suc.join(','));
+      if (corrHoje663().length) prob.push('linha no «Atualizados hoje»');
+      if (run('__fecha663')) prob.push('fechou a conversa com o tutor');
+      if (prob.length) quebras.push(nome + ' → ' + prob.join('; '));
+    });
+  }
+  igual(quebras, []);
+});
+// as portas com cartaz: «Limpar a data», «Desfazer» do «Atualizados hoje», «Desfazer» da escova
+provaAsync('6.63 QA 07 (AC5.4, AC6, AC7.3) — a recusa do banco nas portas com cartaz (Limpar, Desfazer, Desfazer da escova): o cartaz diz que falhou, nada muda, nenhuma linha riscada', async () => {
+  const quebras = [];
+  // Limpar
+  await comPrev663(FICHA_B663, async () => {
+    papel657('gestao', 'Gestora Teste');
+    const db0 = fichaDb663();
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'col_p', 'hoje');`); await espera657();
+    run(`__recusa657='^daycare(/|$)';`);
+    const [p] = await assina663(SENHA657, 'a data foi digitada errada');
+    if (p === 'pronto') quebras.push('Limpar: o cartaz disse pronto');
+    if (JSON.stringify(fichaDb663()) !== JSON.stringify(db0)) quebras.push('Limpar: o banco mudou');
+    if (J630('pelExtra(__bp).col_p') !== '2026-09-01') quebras.push('Limpar: a tela ficou sem a data');
+    if (corrHoje663().length) quebras.push('Limpar: linha no «Atualizados hoje»');
+    await fecha663();
+  });
+  // Desfazer do «Atualizados hoje»
+  await comPrev663(FICHA_B663, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    const L = corrHoje663()[0]; recarrega663();
+    const db0 = fichaDb663();
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    run(`__recusa657='^daycare(/|$)';`);
+    const [p] = await assina663(SENHA657, 'gravei no FILHOt errado');
+    if (p === 'pronto') quebras.push('Desfazer: o cartaz disse pronto');
+    if (JSON.stringify(fichaDb663()) !== JSON.stringify(db0)) quebras.push('Desfazer: o banco mudou');
+    if (corrHoje663()[0].desfeito) quebras.push('Desfazer: a linha riscada');
+    if (J630('pelExtra(__bp).vac_mult_t') !== DIA657) quebras.push('Desfazer: a tela voltou sem o banco');
+    await fecha663();
+  });
+  // Desfazer da escova
+  await comPrev663(FICHA_B663, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    await run('escovaTresMeses(\'casa\', __bp)'); await espera657(); recarrega663();
+    const db0 = fichaDb663();
+    run('__p663=escovaDesfazerTresMesesAbrir(__bp);'); await espera657();
+    run(`__recusa657='^daycare(/|$)';`);
+    const [p] = await assina663('s-bia', 'o tutor não tinha em casa');
+    if (p === 'pronto') quebras.push('Desfazer da escova: o cartaz disse pronto');
+    if (JSON.stringify(fichaDb663()) !== JSON.stringify(db0)) quebras.push('Desfazer da escova: o banco mudou');
+    if (J630('pelExtra(__bp).escova_t') !== DIA657) quebras.push('Desfazer da escova: a tela voltou sem o banco');
+    await fecha663();
+  });
+  igual(quebras, []);
+});
+// ---- a Pesquisa e a revisão da IA com o banco recusando ----
+provaAsync('6.63 QA 08 (AC9 a AC12) — a recusa do banco na Pesquisa e na revisão da IA: nada muda de lista, nada diz salvo, nada sai para o grupo, o banco igual', async () => {
+  const quebras = [];
+  const casos = [
+    ['Pesquisa enviada', () => { alg663(K657, {}); }, `algPesqEnviada('${K657}')`, null],
+    ['Desmarcar', () => { alg663(K657, { enviada: ENV663 }); }, `(__p663=algPesqDesmarcarAbrir('${K657}'))`, 's-bia'],
+    ['campanha', () => { run(`window.__ALG_CAMPANHA={nome:'Pesquisa set/26', inicio:'2026-09-01', fim:'2026-09-30'}; __el657['algCampNome']={value:'Pesquisa out/26'}; __el657['algCampIni']={value:'2026-10-01'}; __el657['algCampFim']={value:'2026-10-31'};`); }, `algPesqSalvarCampanha()`, null],
+    ['O tutor respondeu', () => { alg663(K657, { enviada: ENV663, resposta: 'antiga', quando: '2026-10-01', quem: 'Bia Consultora Teste', ts: 81 }); run(`__el657['algResp_${K657}']={value:'nova resposta do tutor'}; __el657['algData_${K657}']={value:'2026-10-09'};`); }, `algResponder('${K657}')`, null],
+    ['Apagar esta resposta', () => { alg663(K657, { enviada: ENV663, resposta: 'antiga', quando: '2026-10-01', quem: 'Bia Consultora Teste', ts: 82 }); }, `(__p663=algRespApagarAbrir('${K657}'))`, 's-bia'],
+    ['Desfazer a entrada', () => { fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 }); alg663(K657, { resposta: 'x', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 83, ficha: ENTRADA663() }); }, `(__p663=algFichaDesfazerAbrir('${K657}'))`, 's-bia'],
+    ['chave do automático', () => { run('ALG_CFG={}; __zpq657=[true];'); }, `algAutoTrocar()`, null],
+  ];
+  for (const [nome, prepara, acao, senha] of casos) {
+    await comAlg663(async () => {
+      fichaTonico657();
+      papel657(nome === 'campanha' || nome === 'chave do automático' ? 'gestao' : 'consultora', nome === 'campanha' || nome === 'chave do automático' ? 'Gestora Teste' : 'Bia Consultora Teste');
+      prepara();
+      const tudo0 = JSON.stringify(run('__db657'));
+      const resp0 = JSON.stringify(run('ALG_RESP'));
+      run(`__recusa657='^daycare(/|$)'; __urg663=[];`);
+      if (senha) run(acao); else await run(acao);
+      await espera657();
+      if (senha) { const [p] = await assina663(senha, 'marquei no FILHOt errado'); if (p === 'pronto') quebras.push(nome + ': o cartaz disse pronto'); await fecha663(); }
+      if (JSON.stringify(run('__db657')) !== tudo0) quebras.push(nome + ': o banco mudou');
+      if (nome !== 'campanha' && nome !== 'chave do automático' && JSON.stringify(run('ALG_RESP')) !== resp0) quebras.push(nome + ': a cópia da tela mudou');
+      if (J630('__urg663').length) quebras.push(nome + ': saiu para o grupo');
+      if (nome === 'campanha' && (run('ALG_CAMP_ESTADO&&ALG_CAMP_ESTADO.ok') || J630('window.__ALG_CAMPANHA').nome !== 'Pesquisa set/26')) quebras.push('campanha: disse salva ou trocou a campanha da tela');
+      if (nome === 'chave do automático' && !run('algAutoLigado()')) quebras.push('chave: desligou só na tela');
+      if (nome === 'Pesquisa enviada' && !/NÃO FOI MARCADO/.test(String(run(`(ALG_PESQ_ESTADO['${K657}']||{}).falhou?'NÃO FOI MARCADO':''`)))) quebras.push('enviada: sem a falha na linha');
+    });
+  }
+  igual(quebras, []);
+});
+// ---- as pendências com o banco recusando ----
+provaAsync('6.63 QA 09 (AC1 a AC4) — a recusa do banco nas pendências (Reabrir, Corrigir, Corrigir para outro FILHOt, Tirar, «Outro», Desfazer a resolução, «tirar» dos Lançamentos): nada muda, nada diz pronto', async () => {
+  const quebras = [];
+  const FECH = { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' };
+  const casos = [
+    ['Reabrir', () => pend663('vermifugo', FECH), `(__p663=pendReabrirAbrir('${KP663}', 'vermifugo'))`, null],
+    ['Corrigir no lugar', () => pend663('vermifugo'), `(__p663=pendCorrigirAbrir('${KP663}', 'vermifugo'))`, ['08/10/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', 'vermífugo']],
+    ['Tirar', () => pend663('vermifugo'), `pendTirarConfirmado('${KP663}', 'vermifugo', 'tutor', 'O tutor vai fazer em casa')`, 'sem-cartaz'],
+    ['Outro', () => pend663('vermifugo'), `pendTirarConfirmado('${KP663}', 'vermifugo', 'outro', 'o tutor levou ao veterinário')`, 'sem-cartaz'],
+    ['Desfazer a resolução', () => { run(`__put657('daycare/dashboard/${DIA657}/vermifugo/L9', {valor:'Tonico/SRD', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KP663}', item:'vermifugo', ts:1}}); DASH_DADOS={vermifugo:{L9:__get657('daycare/dashboard/${DIA657}/vermifugo/L9')}};`);
+      pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'L9' } }); }, `(__p663=pendDesfazerResolucaoAbrir('${KP663}', 'vermifugo'))`, null],
+  ];
+  for (const [nome, prepara, acao, extra] of casos) {
+    await comPend663(async () => {
+      papel657('consultora', 'Bia Consultora Teste');
+      prepara();
+      const tudo0 = JSON.stringify(run('__db657')), mem0 = JSON.stringify(run('PEND_ABERTAS'));
+      run(`__recusa657='^daycare(/|$)';`);
+      if (extra === 'sem-cartaz') await run(acao); else run(acao);
+      await espera657();
+      if (Array.isArray(extra)) { const v = extra.slice(); v[5] = run("pendRotulo('vermifugo')"); await continua663(v); }
+      if (extra !== 'sem-cartaz') { const [p] = await assina663('s-bia', 'reabri no FILHOt errado'); if (p === 'pronto') quebras.push(nome + ': o cartaz disse pronto'); await fecha663(); }
+      if (JSON.stringify(run('__db657')) !== tudo0) quebras.push(nome + ': o banco mudou');
+      if (JSON.stringify(run('PEND_ABERTAS')) !== mem0) quebras.push(nome + ': a cópia da tela mudou');
+      if (J630('__dpl663').length) quebras.push(nome + ': mexeu na planilha');
+      const suc = J630('__au657').map((a) => a[0]).filter((a) => /^pendencia-/.test(a));
+      if (suc.length) quebras.push(nome + ': rastro de sucesso ' + suc.join(','));
+    });
+  }
+  igual(quebras, []);
+});
+// ================================================================== QA 6.63 (Quinn) — bloco C: o remédio (dose em dobro / dose perdida)
+// O alarme é o de verdade (carregarAgendaMedTodos, checarDespertadorMed, dosesMedDoDia), lido do banco de mentira — os mesmos
+// pontos de leitura do qa658-alarme.js (QA da 6.58).
+const QM_DC = 'tonico__rita-teste';
+const QM_T = (hh, mm) => new Date(2026, 9, 9, hh, mm || 0, 0).getTime();
+const qmEspera = async (n) => { for (let i = 0; i < (n || 800); i++) await Promise.resolve(); };
+const qmJ = (c) => { const v = run(c); return JSON.parse(JSON.stringify(v === undefined ? null : v)); };
+const qmRelogio = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;`);
+const QM_ARMA = `__qmbk={hs:hospedes, sd:selectedDate, zm:zMapaUma, cm:carregarMedAtrasadaGestora, mdn:mostrarDespertadorMed, prm:papelRecebeAlarmeMed, dmt:despMedNaTela,
+    qsa:document.querySelectorAll, td:MED_AGENDA_TODOS, av:AVISOS_ESTOQUE_CACHE};
+  zMapaUma=function(p){ return Promise.resolve(__get657(p)||{}); }; carregarMedAtrasadaGestora=function(){};
+  __qmabre=[]; mostrarDespertadorMed=function(it, doseId, dia){ __qmabre.push([it.key, doseId, it.horario||'']); }; papelRecebeAlarmeMed=function(){ return true; }; despMedNaTela=null;
+  document.querySelectorAll=function(s){ return []; }; AVISOS_ESTOQUE_CACHE={}; hospedes=[];`;
+const QM_SOLTA = `hospedes=__qmbk.hs; selectedDate=__qmbk.sd; zMapaUma=__qmbk.zm; carregarMedAtrasadaGestora=__qmbk.cm; mostrarDespertadorMed=__qmbk.mdn;
+  papelRecebeAlarmeMed=__qmbk.prm; despMedNaTela=__qmbk.dmt; document.querySelectorAll=__qmbk.qsa; MED_AGENDA_TODOS=__qmbk.td; AVISOS_ESTOQUE_CACHE=__qmbk.av;`;
+// o alarme às hh:mm: a fila do Day Care do Tonico (o que ainda vai tocar) e o despertador aberto
+const qmAlarme = async (hh, mm) => {
+  qmRelogio(QM_T(hh, mm));
+  run(`selectedDate=new Date(${QM_T(10, 0)}); despMedNaTela=null; __qmabre=[];`);
+  run('carregarAgendaMedTodos()'); await qmEspera();
+  const fila = qmJ(`(MED_AGENDA_TODOS||[]).filter(function(e){ return e.key==='dc__${QM_DC}'; }).map(function(e){ return e.itemId+'@'+e.horario; })`);
+  run('checarDespertadorMed()'); await qmEspera();
+  const desp = qmJ('__qmabre').filter((x) => x[0] === 'dc__' + QM_DC).map((x) => x[1]);
+  const painel = JSON.parse(JSON.stringify(await run('dosesMedDoDia()') || [])).filter((d) => JSON.stringify(d).indexOf(QM_DC) >= 0);
+  const dadas = qmJ(`Object.keys(__get657('auaulandia/medicacao-log/${DIA657}/dc__${QM_DC}')||{})`);
+  return { fila, desp, dadas, painelPendentes: painel.filter((d) => !d.dado && !d.dadoPor && !d.quem).length, painel };
+};
+// o «Resolvido hoje» de verdade, com o dashLancar de mentira que grava como o de verdade (a chave da ficha e a hora)
+const qmArmaLanc = () => run(`dashLancar=function(item, base, i, hora){ var id='L663_'+(++__nl663); DASH_DADOS[item]=DASH_DADOS[item]||{};
+    var reg={valor:'Tonico (Apoquel · bolsa)', hora:hora||'', chave:'${QM_DC}', det:{qual:'Apoquel', onde:'bolsa'}, quem:'Bia Consultora Teste', ts:Date.now()};
+    DASH_DADOS[item][id]=reg; __put657('daycare/dashboard/${DIA657}/'+item+'/'+id, reg); return Promise.resolve(true); };
+  carregarAgendaMedTodos=__bkP663.ca;`);
+const qmPend = () => pend663('medicacao', { valor: 'Tonico (Apoquel · bolsa)', base: 'Tonico', hora: '14:00', det: { qual: 'Apoquel', onde: 'bolsa' }, nome: 'Tonico', tutor: 'Rita Teste' });
+const qmDeu = (id) => run(`__put657('auaulandia/medicacao-log/${DIA657}/dc__${QM_DC}/lanc_${id}_14-00', {nome:'Apoquel', horario:'14:00', quem:'Caio Encãotador Teste', ts:${QM_T(14, 5)}});`);
+
+provaAsync('6.63 QA 10 (AC4.4; remédio) — medicação: «Resolvido hoje», a dose das 14:00 dada, «Desfazer a resolução» e «Resolvido hoje» de novo: o alarme NÃO pede a dose das 14:00 outra vez', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      qmPend();
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      qmDeu(L1);
+      const a1 = await qmAlarme(14, 10);
+      // desfaz a resolução (Gestão, é remédio)
+      run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao');`);
+      qmRelogio(QM_T(14, 12));
+      run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+      const casc = op663('info') || [];
+      const [p] = await assina663(SENHA657, 'resolvi a pendência errada hoje');
+      await fecha663();
+      const a2 = await qmAlarme(14, 13);
+      // alguém vê a pendência aberta de novo e toca «Resolvido hoje»
+      run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao');`);
+      qmRelogio(QM_T(14, 15));
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const L2 = (no663('medicacao').resolvido_lanc || {}).id;
+      const a3 = await qmAlarme(14, 20);
+      console.log('      6.63 QA 10: L1=' + L1 + ' L2=' + L2 + ' desfazer=' + p + ' cascata=' + JSON.stringify(casc));
+      console.log('      14:10 ' + JSON.stringify({ fila: a1.fila, desp: a1.desp, dadas: a1.dadas }));
+      console.log('      14:13 ' + JSON.stringify({ fila: a2.fila, desp: a2.desp }));
+      console.log('      14:20 ' + JSON.stringify({ fila: a3.fila, desp: a3.desp, dadas: a3.dadas, lancs: Object.keys(db657('daycare/dashboard/' + DIA657 + '/medicacao') || {}) }));
+      igual([p, a1.desp, a3.desp], ['pronto', [], []], 'a dose das 14:00 já foi dada: o despertador não pode abrir de novo');
+    } finally { run(QM_SOLTA); }
+  });
+});
+provaAsync('6.63 QA 11 (AC4.5; remédio) — medicação: «Resolvido hoje», a dose das 14:00 dada, a Gestão tira a medicação nos Lançamentos (6.58, que agora reabre a pendência) e «Resolvido hoje» de novo: o alarme NÃO pede a dose outra vez', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      qmPend();
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      qmDeu(L1);
+      qmRelogio(QM_T(14, 12));
+      run(`DASH_DIA_SEL=''; DASH_DADOS={medicacao:{}}; DASH_DADOS.medicacao['${L1}']=__get657('daycare/dashboard/${DIA657}/medicacao/${L1}');`);
+      run(`__p663=dashMedAnularAbrir('${L1}');`); await espera657();
+      const casc = op663('cascata') || [];
+      const [p] = await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado');
+      await fecha663();
+      const st = no663('medicacao').status;
+      run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao');`);
+      qmRelogio(QM_T(14, 15));
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const a3 = await qmAlarme(14, 20);
+      console.log('      6.63 QA 11: anulação=' + p + ' pendência depois=' + st + ' cascata=' + JSON.stringify(casc));
+      console.log('      14:20 ' + JSON.stringify({ fila: a3.fila, desp: a3.desp, dadas: a3.dadas, lancs: Object.keys(db657('daycare/dashboard/' + DIA657 + '/medicacao') || {}) }));
+      igual([p, st, a3.desp], ['pronto', 'aberta', []], 'a dose das 14:00 já foi dada: o despertador não pode abrir de novo');
+    } finally { run(QM_SOLTA); }
+  });
+});
+// controle: a 6.58 «Reabrir a medicação tirada» RECUSA lançar de novo quando a dose já foi dada (o caminho protegido)
+provaAsync('6.63 QA 12 (controle 6.58) — o «Reabrir» da medicação tirada, com a dose das 14:00 dada, recusa lançar de novo', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      qmPend();
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      qmDeu(L1);
+      qmRelogio(QM_T(14, 12));
+      run(`DASH_DIA_SEL=''; DASH_DADOS={medicacao:{}}; DASH_DADOS.medicacao['${L1}']=__get657('daycare/dashboard/${DIA657}/medicacao/${L1}');`);
+      run(`__p663=dashMedAnularAbrir('${L1}');`); await espera657();
+      await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado'); await fecha663();
+      run(`DASH_MED_ANULADOS_DIA='${DIA657}'; DASH_MED_ANULADOS={}; DASH_MED_ANULADOS['${L1}']=__get657('daycare/dashboard-anulados/${DIA657}/medicacao/${L1}');`);
+      run(`__p663=dashMedReabrirAbrir('${L1}');`); await espera657();
+      const [p] = await assina663(SENHA657, 'a medicação foi tirada sem querer');
+      const e = erro663();
+      await fecha663();
+      igual([p, /já foi dada/.test(e)], ['falhou', true], e);
+    } finally { run(QM_SOLTA); }
+  });
+});
+// o horário da pendência de remédio corrigido para uma hora que não existe (25:00): o «Resolvido hoje» lança com ela, e o alarme
+provaAsync('6.63 QA 22 (AC2.2; remédio) — «Corrigir» a pendência de medicação com o horário «25:00» (hora que não existe): recusado na tela, como o dia fora do calendário', async () => {
+  const r = { base: 'Tonico', nome: 'Tonico', dia: '2026-10-07', valor: 'Tonico (Apoquel · bolsa)', hora: '14:00' };
+  const rot = run("pendRotulo('medicacao')");
+  const x = J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'medicacao', ${JSON.stringify(['07/10/2026', '', 'Tonico (Apoquel · bolsa)', '25:00', 'Tonico', rot])})`);
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      pend663('medicacao', { valor: 'Tonico (Apoquel · bolsa)', base: 'Tonico', hora: '25:00', det: { qual: 'Apoquel', onde: 'bolsa' }, nome: 'Tonico', tutor: 'Rita Teste' });
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const a = await qmAlarme(23, 59);
+      console.log('      6.63 QA 22: corrigir aceitou=' + JSON.stringify(x) + ' · alarme às 23:59 ' + JSON.stringify({ fila: a.fila, desp: a.desp }));
+    } finally { run(QM_SOLTA); }
+  });
+  igual(!!x.recusa, true, 'a hora 25:00 passou: ' + JSON.stringify(x));
+});
+// ================================================================== QA 6.63 (Quinn) — bloco D: as outras portas, com prova própria
+// ---- AC4.5: o «tirar» reabre a pendência LIGADA, nunca a errada ----
+provaAsync('6.63 QA 13 (AC4.5, Risco 3) — o «tirar» dos Lançamentos reabre só a pendência que aquele lançamento resolveu: outro FILHOt, outro item, resolvida de novo em outro dia e o xará sem a marca ficam como estão', async () => {
+  await comPend663(async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__zpq657=[]; dashPodeTirar=(typeof dashPodeTirar==='function')?dashPodeTirar:function(){ return true; };`);
+    const KQ = 'quindim__lia teste';
+    // a) de_pendencia aponta o Tonico: o Quindim (mesmo item, resolvido hoje por outro lançamento) não reabre
+    run(`__put657('daycare/dashboard/${DIA657}/vermifugo/LT', {valor:'Tonico/SRD', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KP663}', item:'vermifugo', ts:1}});
+      __put657('daycare/dashboard/${DIA657}/vermifugo/LQ', {valor:'Quindim/Spitz', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KQ}', item:'vermifugo', ts:2}});
+      DASH_DIA_SEL=''; DASH_DADOS={vermifugo:__get657('daycare/dashboard/${DIA657}/vermifugo')};`);
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'LT' } });
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'LQ' }, valor: 'Quindim/Spitz', base: 'Quindim/Spitz', nome: 'Quindim', tutor: 'Lia Teste' }, KQ);
+    pend663('coleira', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste' });
+    run(`__zpq657=[true];`);
+    await run(`dashRemover('vermifugo', 'LT')`); await espera657();
+    igual([no663('vermifugo').status, no663('vermifugo', KQ).status, no663('coleira').status], ['aberta', 'resolvida', 'resolvida'], 'só a do Tonico, só o vermífugo');
+    // b) resolvida ONTEM por L1, reaberta e resolvida HOJE por L2: tirar o L1 (ontem) não reabre
+    run(`__put657('daycare/dashboard/2026-10-08/carrapaticida/L1', {valor:'Tonico/SRD', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KP663}', item:'carrapaticida', ts:1}});
+      DASH_DIA_SEL='2026-10-08'; DASH_DADOS={carrapaticida:__get657('daycare/dashboard/2026-10-08/carrapaticida')};`);
+    pend663('carrapaticida', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'carrapaticida', id: 'L2' } });
+    run(`__zpq657=[true];`);
+    const perg0 = J630('__zp657').length;
+    await run(`dashRemover('carrapaticida', 'L1')`); await espera657();
+    const perg = J630('__zp657').slice(perg0);
+    igual([no663('carrapaticida').status, JSON.stringify(perg).indexOf('volta a ficar aberta') < 0], ['resolvida', true], 'a de hoje fica; a pergunta não promete');
+    // c) sem a marca, com um xará (Tonico de outra tutora): ambíguo, nada reabre e a pergunta não promete
+    run(`PELUDINHOS=[{n:'Tonico', tutor:'Rita Teste', raca:'SRD', dias:['seg']}, {n:'Tonico', tutor:'Gabi Teste', raca:'SRD', dias:['ter']}];
+      __put657('daycare/dashboard/${DIA657}/escova/LX', {valor:'Tonico/SRD', quem:'Bia Consultora Teste'});
+      DASH_DIA_SEL=''; DASH_DADOS={escova:__get657('daycare/dashboard/${DIA657}/escova')};`);
+    pend663('escova', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste' });
+    run(`__zpq657=[true];`);
+    const p1 = J630('__zp657').length;
+    await run(`dashRemover('escova', 'LX')`); await espera657();
+    const pergX = J630('__zp657').slice(p1);
+    console.log('      6.63 QA 13c: ' + JSON.stringify({ st: no663('escova').status, chave: run(`pendChaveDoLancamento({valor:'Tonico/SRD'})`) }));
+    igual([no663('escova').status, JSON.stringify(pergX).indexOf('volta a ficar aberta') < 0], ['resolvida', true], 'o xará sem a marca: nada reabre, nada prometido');
+  });
+});
+// ---- AC5.4/AC5.5: o «Desfazer» com dois aparelhos (o banco relido na assinatura) ----
+provaAsync('6.63 QA 14 (AC5.4, AC5.5) — dois aparelhos: o outro mudou um campo da linha (o produto) ou já desfez a linha; o «Desfazer» deste aparelho, com a cópia velha, recusa ao assinar e nada muda', async () => {
+  await comPrev663({ ecto_t: '2026-08-01', ecto_p: '2026-10-30', ecto_prod: 'Bravecto' }, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__el657['prevCorrP_'+__dcp+'_ecto_p']={value:'Simparic'}; prevCorrigeFeitoHoje(__dcp, 'ecto_p', 'hoje');`); await espera657();
+    const L = corrHoje663()[0];
+    // o OUTRO aparelho troca só o produto (a data fica): este aparelho não fica sabendo (sem ouvinte)
+    run(`__put657('daycare/cadastro/'+__kp+'/ecto_prod', 'Credelli');`);
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    const [p] = await assina663(SENHA657, 'gravei no FILHOt errado');
+    const e = erro663();
+    await fecha663();
+    igual([p, /mudou depois desta gravação/.test(e), fichaDb663().ecto_t, fichaDb663().ecto_prod], ['falhou', true, DIA657, 'Credelli'], e);
+    // o outro aparelho já desfez esta linha
+    run(`__put657('daycare/cadastro/'+__kp+'/ecto_prod', 'Simparic'); __put657('daycare/prevencao-correcoes/${DIA657}/'+${JSON.stringify(L.id)}+'/desfeito', {por:'Amanda Supervisora Teste', motivo:'gravei no FILHOt errado', ts:1});`);
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    const [p2] = await assina663(SENHA657, 'gravei no FILHOt errado');
+    const e2 = erro663();
+    await fecha663();
+    igual([p2, /já foi desfeita por Amanda Supervisora Teste/.test(e2), fichaDb663().ecto_t], ['falhou', true, DIA657], e2);
+  });
+});
+// ---- AC13: quem assina o «Desfazer» e o «Limpar» (régua S5-P2) ----
+provaAsync('6.63 QA 15 (AC6.4, AC13; S5-P2) — quem assina: «Desfazer» da linha com «Vence em» à mão e «Limpar» da data à mão só com Supervisão, Gestão ou Diretoria (a Consultora não); sem «à mão», a Consultora assina; senha de posto nunca', async () => {
+  await comPrev663({ vac_mult_t: '2025-09-01', vac_mult_p: '2026-12-01', vac_mult_p_manual: true, col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-09-01' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    // Limpar a data à mão: a Consultora abre (tem a tela) mas não assina; a Supervisão assina
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    igual(op663('capacidade'), 'prevencao-vencimento-manual');
+    igual((await assina663('s-bia', 'a data foi digitada errada'))[0], 'conferir', 'a Consultora não limpa a data à mão');
+    igual((await assina663('s-posto', 'a data foi digitada errada'))[0], 'conferir', 'senha de posto');
+    igual((await assina663('s-amanda', 'a data foi digitada errada'))[0], 'pronto', 'a Supervisão limpa');
+    await fecha663();
+    // Limpar sem «à mão» (a coleira): a Consultora assina
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'col_p', 'hoje');`); await espera657();
+    igual([op663('capacidade'), (await assina663('s-bia', 'a coleira foi tirada pelo tutor'))[0]], ['prevencao-lancar-na-tela', 'pronto']);
+    await fecha663();
+    // a linha do «Vence em» à mão gravada pela Gestão: a Consultora não desfaz; a Supervisão desfaz
+    papel657('gestao', 'Gestora Teste');
+    run(`__el657['prevCorrV_'+__dcp+'_vac_mult_p']={value:'2027-03-01'}; prevCorrigeVenceEm(__dcp, 'vac_mult_p', 'venc');`); await espera657();
+    const L = corrHoje663().filter((x) => x.como === 'vence')[0];
+    recarrega663();
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    igual([op663('capacidade'), op663('assinaNome')], ['prevencao-vencimento-manual', 'Gestora Teste']);
+    igual((await assina663('s-bia', 'a data da carteira estava errada'))[0], 'conferir', 'a Consultora não desfaz o «à mão» da Gestão');
+    igual((await assina663('s-amanda', 'a data da carteira estava errada'))[0], 'pronto', 'a Supervisão desfaz');
+    await fecha663();
+    igual([fichaDb663().vac_mult_p, semSenha663(1)], ['', true]);
+  });
+});
+// ---- AC9.3 e AC11.6: a Diretoria também ----
+provaAsync('6.63 QA 16 (AC9.3, AC11.6, AC13) — a Diretoria muda a campanha e liga/desliga o automático; a Supervisão não', async () => {
+  await comAlg663(async () => {
+    run(`window.__ALG_CAMPANHA={nome:'Pesquisa set/26', inicio:'2026-09-01', fim:'2026-09-30'}; __el657['algCampNome']={value:'Pesquisa out/26'}; __el657['algCampIni']={value:'2026-10-01'}; __el657['algCampFim']={value:'2026-10-31'};`);
+    papel657('supervisor', 'Amanda Supervisora Teste');
+    await run('algPesqSalvarCampanha()'); await espera657();
+    run('ALG_CFG={}; __zpq657=[true];'); await run('algAutoTrocar()'); await espera657();
+    igual([db657('daycare/pesquisa-campanha'), db657('daycare/config/pesquisa'), barrou657().length], [null, null, 2]);
+    papel657('diretoria', 'Diretora Teste');
+    await run('algPesqSalvarCampanha()'); await espera657();
+    run('__zpq657=[true];'); await run('algAutoTrocar()'); await espera657();
+    igual([(db657('daycare/pesquisa-campanha') || {}).nome, (db657('daycare/config/pesquisa') || {}).auto], ['Pesquisa out/26', false]);
+  });
+});
+// ---- AC10.4: «Passar para outro FILHOt» — as listas e o automático no FILHOt certo ----
+provaAsync('6.63 QA 17 (AC10.4, AC11.6) — «Passar»: o errado volta para «Enviadas, aguardando» (tinha a marca), o certo vai para «Quem respondeu e ainda não virou ficha» e o automático trata o certo (não o errado)', async () => {
+  await comAlg663(async () => {
+    fichaTonico657();
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'O Quindim não tem alergia', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 91 });
+    run(`__p663=algRespPassarAbrir('${K657}');`); await espera657();
+    await continua663(['Quindim (Lia Teste)']);
+    const [p] = await assina663('s-bia', 'colei a resposta no FILHOt errado');
+    await fecha663();
+    const nT = noA663(), nQ = noA663(run('__kq663'));
+    igual([p, !!nT.enviada, nT.resposta || null, nQ.resposta, (nQ.movidaDe || {}).chave], ['pronto', true, null, 'O Quindim não tem alergia', K657]);
+    const pend = J630('algPendentesFicha().map(function(x){ return x.k; })');
+    igual([pend.indexOf(run('__kq663')) >= 0, pend.indexOf(K657) < 0], [true, true], 'só o certo espera virar ficha');
+    run('__ta663=[]; algTratarAuto=function(k){ __ta663.push(k); return Promise.resolve(false); }; ALG_CFG={}; ALG_AUTO_RODANDO=false; algTratarFila();');
+    igual(J630('__ta663'), [run('__kq663')], 'o automático trata o certo');
+  });
+});
+// ---- AC14.1: toda ação nova da auditoria tem tradução (varredura do código) ----
+prova('6.63 QA 18 (AC14.1, AC14.2) — varredura: toda ação gravada com audit(\'…\') no código novo (e as tocadas da lista) tem tradução no ACAO_LABEL', () => {
+  // (na Fase 0, sem o arquivo da base: as 17 ações que a 6.63 criou, e toda ação da mesma família que aparecer no código)
+  const novo = fs.readFileSync(APP, 'utf8');
+  const acoes = (s) => { const o = {}; (s.match(/audit\('([a-z0-9-]+)'/g) || []).forEach((m) => { o[m.slice(7, -1)] = 1; }); return o; };
+  const A = acoes(novo);
+  const NOVAS663 = ['alergia-campanha', 'alergia-ficha-desfeita', 'alergia-pesquisa-desmarcada', 'alergia-pesquisa-enviada', 'alergia-resposta-apagada', 'alergia-resposta-movida', 'config-pesquisa',
+    'escova-chip-tirado', 'escova-desfeita', 'ia-revisao-restaurada', 'pendencia-corrigida', 'pendencia-movida', 'pendencia-reaberta', 'pendencia-reaberta-pelo-tirar', 'pendencia-resolucao-desfeita',
+    'prevencao-desfeita', 'prevencao-limpa'];
+  igual(NOVAS663.filter((a) => !A[a]), [], 'as ações da 6.63 continuam no código');
+  const novas = NOVAS663.concat(Object.keys(A).filter((a) => /^(pendencia-|prevencao-|escova-|alergia-|config-pesquisa|ia-revisao)/.test(a) && NOVAS663.indexOf(a) < 0));
+  const tocadas = ['prevencao', 'prevencao-atualizada-na-tela', 'prevencao-atraso-confirmado', 'ficha-escova', 'alergia-confirmada', 'alergia-colou-resposta', 'ia-revisao'];
+  const sem = novas.concat(tocadas).filter((a) => !run(`ACAO_LABEL[${JSON.stringify(a)}]`));
+  console.log('      6.63 QA 18 ações conferidas: ' + novas.join(', '));
+  igual(sem, []);
+});
+// ---- AC8.5 e AC8.6 com a recusa ----
+provaAsync('6.63 QA 19 (AC8.5, AC8.6) — o «Salvar» da pergunta do rascunho com o banco recusando não troca de FILHOt e não perde o digitado; o bloco da ficha recusado DEPOIS de trocar de FILHOt fica guardado no FILHOt dele, com «NÃO FOI SALVO»', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`PELUDINHOS.push({n:'Cocada', tutor:'Duda Teste', raca:'SRD', dias:['seg']}); __kc663=pelKey(PELUDINHOS[1]);
+      __zeFn663=null; zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn663=b; };`);
+    run(`prevAbrir(__kp); prevEdicaoHTML({p:__bp, nome:'Bento'}); __el657['prevT_'+__kp+'_vac_mult_p']={value:'2026-10-08'}; __el657['prevQ_'+__kp+'_vac_mult_p']={value:'Zêluz'}; __el657['prevN_'+__kp+'_vac_mult_p']={value:''}; __el657['prevP_'+__kp+'_vac_mult_p']={value:''};`);
+    run(`__recusa657='^daycare/cadastro/'; prevAbrir(__kc663);`);
+    run("__zeFn663.filter(function(b){ return b.t==='Salvar'; })[0].fn();"); await espera657();
+    igual([run('PREV_ABERTO'), run(`__el657['prevT_'+__kp+'_vac_mult_p'].value`), fichaDb663().vac_mult_t], [run('__kp'), '2026-10-08', '2025-09-01'], 'recusado: fica no Bento, com a data digitada');
+    // a ficha: «Salvar» saindo, troca de FILHOt, e o banco recusa depois
+    run(`__recusa657=null; __pendura657='^daycare/cadastro/'; pbRascTrocar(__bp); pbSet('vac', {vac_mult_t:'2026-10-02'}); pbSalvar('vac'); pbRascTrocar(PELUDINHOS[1]);`);
+    solta663(false); await espera657();
+    run('pbRascTrocar(__bp);');
+    const rod = String(run("pbRodape('vac', 'vacinas')"));
+    igual([/NÃO FOI SALVO/.test(rod), /02\/10\/2026/.test(rod), fichaDb663().vac_mult_t], [true, true, '2025-09-01'], rod);
+  });
+});
+// ---- AC5.3: o «Atualizados hoje» lê o banco UMA vez ao abrir, e diz quando não conseguiu ----
+provaAsync('6.63 QA 20 (AC5.3, AC17) — o «Atualizados hoje»: redesenhar a tela não lê de novo; a leitura que falha mostra «Não consegui ler» com «Tentar de novo» (nunca «ninguém atualizou»)', async () => {
+  await comPrev663(VAC663, async () => {
+    contaLeituras663();
+    run('PREV_CORR_LIDO=false; PREV_CORR_ERRO="";');
+    await run('prevCorrCarregar(true)'); await espera657();
+    for (let i = 0; i < 3; i++) run("prevCorrQuadroHTML('hoje')");
+    run('__tm657.splice(0).forEach(function(t){ try{ t.fn(); }catch(e){} });'); await espera657();
+    igual(J630('__lid663').filter((p) => /prevencao-correcoes/.test(p)).length, 1, 'uma leitura só');
+    run(`__ref663=DB.ref; DB.ref=function(c){ var r=__ref663(c); if(/prevencao-correcoes/.test(String(c))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`);
+    try {
+      run('PREV_CORR_LIDO=false; PREV_CORR_ERRO=""; PREV_CORR={};');
+      await run('prevCorrCarregar(true)'); await espera657();
+      const h = String(run("prevCorrQuadroHTML('hoje')"));
+      igual([/Não consegui ler os «Atualizados hoje»/.test(h), /Isto não quer dizer que ninguém atualizou nada hoje\./.test(h), /Tentar de novo/.test(h)], [true, true, true], h.slice(0, 300));
+    } finally { run('DB.ref=__ref663;'); }
+  });
+});
+// ---- AC2.2: o dia da falta só do calendário e até hoje ----
+prova('6.63 QA 21 (AC2.2) — «Corrigir»: 31/02, 2026-13-01, «ontem», dia no futuro, «outros dias» inválidos e o horário por extenso recusados na tela; 1/9/2026 aceito como 01/09/2026', () => {
+  const r = { base: 'Tonico/SRD', nome: 'Tonico', dia: '2026-10-07' };
+  const ler = (v) => J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'vermifugo', ${JSON.stringify(v)})`);
+  const rot = run("pendRotulo('vermifugo')");
+  igual([!!ler(['31/02/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['2026-13-01', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa,
+    !!ler(['ontem', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['11/10/2027', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa,
+    !!ler(['07/10/2026', '30/02/2026', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['07/10/2026', '', 'Tonico/SRD', 'nove horas', 'Tonico/SRD', rot]).recusa],
+    [true, true, true, true, true, true]);
+  const ok = ler(['1/9/2026', '', 'Tonico/SRD', '9:00', 'Tonico/SRD', rot]);
+  igual([ok.recusa || null, ok.dia, ok.move], [null, '2026-09-01', false]);
+});
+// ================================================================== QA 6.63 (Quinn) — bloco E: efeitos colaterais e contratos
+// ---- H3 (efeito): a entrada automática viva, ainda não revisada, some da mesa «O que a IA entendeu» quando chega outra resposta ----
+provaAsync('6.63 QA 23 (AC10.1, AC12; efeito do 6.63 QA 02) — a resposta nova tira a entrada automática viva do nó: a alergia que a IA pôs e ninguém revisou deixa de aparecer em «O que a IA entendeu»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: '', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 101,
+      ficha: ENTRADA663({ campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' } }) });
+    run('IA_REV={}; IA_REV_LIDO=true;');
+    const antes = J630(`iaRevMontar().filter(function(x){ return x.k==='${K657}'; }).map(function(x){ return x.campo+':'+x.estado; })`);
+    run(`__el657['algResp_${K657}']={value:'Na verdade ele não tem alergia, era o Quindim'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const depois = J630(`iaRevMontar().filter(function(x){ return x.k==='${K657}'; }).map(function(x){ return x.campo+':'+x.estado; })`);
+    console.log('      6.63 QA 23 mesa antes ' + JSON.stringify(antes) + ' · depois ' + JSON.stringify(depois) + ' · ficha alergia=' + db657('daycare/cadastro/' + K657).alergia);
+    igual(depois, antes, 'a alergia automática continua na mesa para alguém revisar');
+  });
+});
+// ---- AC11.1: o automático com a ficha recusando: nada marcado, nada avisado, e tenta de novo na próxima abertura ----
+provaAsync('6.63 QA 24 (AC11.1, AC11.5) — o automático com o banco recusando a ficha: a entrada não é gravada, o grupo de Urgências não é avisado, e a resposta continua na fila para a próxima abertura', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: '' });
+    alg663(K657, { resposta: 'Ele tem alergia grave a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 111 });
+    run(`algCur=function(){ return {campos:{q1:{txt:'frango', campo:'alergia', atual:''}}, sobras:[]}; };
+      __av663=0; algAvisarGestao=function(k){ __av663++; return {ts:${T657(9, 10)}, chave:'entrevista-'+k}; }; __recusa657='^daycare/cadastro/';`);
+    const r = await run(`algTratarAuto('${K657}')`); await espera657();
+    igual([r, noA663().ficha || null, run('__av663'), J630('algPendentesFicha().map(function(x){ return x.k; })').indexOf(K657) >= 0], [false, null, 0, true]);
+    run('__recusa657=null;');
+    const r2 = await run(`algTratarAuto('${K657}')`); await espera657();
+    igual([r2, !!noA663().ficha, run('__av663'), db657('daycare/cadastro/' + K657).alergia], [true, true, 1, 'frango']);
+  });
+});
+// ---- contrato para a 6.64 (P49): o «Desfazer» do «Atualizados hoje» chamado de outra tela, com o quadro ainda não lido ----
+// 3ª rodada (TEST-002 do re-gate, o s11): a prova aceitava «não achei» como resposta, e por isso o defeito que procura a linha no dia
+// da memória (vazio) vivia. O contrato da 6.64 é desfazer pelo banco: a prova exige o ok e a data de antes de volta.
+provaAsync('6.63 QA 25 (contrato 6.64) — prevCorrDesfazerGravar(id, reg) chamado de uma tela que ainda não leu o «Atualizados hoje» (o PREV_CORR vazio): desfaz pelo banco — o ok e a data de antes de volta (nem «banco reconectando», nem «não achei»)', async () => {
+  await comPrev663(VAC663, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    const L = corrHoje663()[0];
+    recarrega663();
+    run('PREV_CORR={}; PREV_CORR_LIDO=false; PREV_CORR_DIA="";');   // a tela de Vencimentos (6.64) ainda não leu o quadro
+    const r = await run(`prevCorrDesfazerGravar(${JSON.stringify(L.id)}, {por:'Gestora Teste', papel:'gestao', motivo:'a resposta do tutor mudou', ts:Date.now()}, 'venc')`); await espera657();
+    console.log('      6.63 QA 25: ' + JSON.stringify(r));
+    igual([r && r.ok, fichaDb663().vac_mult_p], [true, '2026-09-01']);
+  });
+});
+// ---- marcas velhas que ficam no nó: a resolução «já estava lançado» desfeita e resolvida de novo com lançamento novo ----
+provaAsync('6.63 QA 26 (AC1.1, AC4.1) — resolvida «já estava lançado», desfeita, e resolvida de novo com um lançamento novo: a linha de «Resolvidas e tiradas» não diz mais «já estava lançado»', async () => {
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__put657('daycare/dashboard/${DIA657}/vermifugo/LJ', {valor:'Tonico/SRD', quem:'Bia Consultora Teste'});`);
+    pend663('vermifugo');
+    await run(`pendResolverConfirmado('${KP663}', 'vermifugo')`); await espera657();
+    igual([no663('vermifugo').resolvido_lanc.jaEstava, no663('vermifugo').resolvido_obs], [true, 'o item já estava lançado hoje']);
+    run(`PEND_ABERTAS['${KP663}']['vermifugo']=__get657('daycare/pendencias/${KP663}/vermifugo');`);
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'vermifugo');`); await espera657();
+    igual((await assina663('s-bia', 'resolvi a pendência do FILHOt errado'))[0], 'pronto');
+    await fecha663();
+    // o lançamento que já estava sai pelo «tirar» de sempre (sem a marca, não reabre nada: a pendência já está aberta)
+    run(`__put657('daycare/dashboard/${DIA657}/vermifugo/LJ', null); PEND_ABERTAS['${KP663}']['vermifugo']=__get657('daycare/pendencias/${KP663}/vermifugo');`);
+    await run(`pendResolverConfirmado('${KP663}', 'vermifugo')`); await espera657();
+    const n = no663('vermifugo');
+    const txt = run(`pendComoFechou(__get657('daycare/pendencias/${KP663}/vermifugo'))`);
+    console.log('      6.63 QA 26: ' + JSON.stringify({ status: n.status, resolvido_obs: n.resolvido_obs || null, lanc: n.resolvido_lanc, txt }));
+    igual([n.status, /já estava lançado/.test(txt), !!(n.resolvido_lanc && !n.resolvido_lanc.jaEstava)], ['resolvida', false, true]);
+  });
+});
+// ---- o «Limpar a data»: a cascata de cada item (2ª rodada, UX-001: de registro passou a asserção) ----
+provaAsync('6.63 QA 27 (AC6.2; UX-001 da 2ª rodada) — a cascata do «Limpar a data» em cada item: «em aberto» nos itens que a casa cobra; o vermífugo com exame de fezes não é «item opcional» (o exame passa a valer, e a cascata diz como ele fica); sem «2ª dose» na dose única', async () => {
+  const FICHA = { vac_mult_t: '2025-09-01', vac_mult_p: '2026-09-01', vac_raiva_t: '2025-08-01', vac_raiva_p: '2026-08-01', vac_gripe_t: '2025-08-01', vac_gripe_p: '2026-08-01',
+    vac_giardia_t: '2025-08-01', vac_giardia_p: '2026-08-01', ecto_t: '2026-08-01', ecto_p: '2026-10-30', ecto_prod: 'Bravecto', col_nome: 'Seresto', col_t: '2026-01-01', col_p: '2026-09-01',
+    verm_doses: 'Dose única', verm_t: '2026-05-20', verm_p: '2026-09-17', fezes_t: '2026-05-01', fezes_p: '2026-09-01', fezes_res: 'negativo', escova_dc: 'Sim', escova_t: '2026-06-01', escova_p: '2026-08-30',
+    checkup_t: '2025-10-01', checkup_p: '2026-10-01' };
+  const linhas = [];
+  await comPrev663(FICHA, async () => {
+    papel657('gestao', 'Gestora Teste');
+    const ks = J630('PREV_ITENS.map(function(i){ return i.k; })');
+    for (const k of ks) {
+      const patch = J630(`prevCorrLimparCampos(prevCorrigeItemDe('${k}'), pelExtra(__bp))`);
+      if (!Object.keys(patch).length) continue;
+      run(`__p663=prevCorrLimparAbrir(__dcp, '${k}', 'hoje');`); await espera657();
+      linhas.push(k + ': ' + JSON.stringify(op663('cascata')));
+      await fecha663();
+    }
+  });
+  linhas.forEach((l) => console.log('      ' + l));
+  assert.ok(linhas.length >= 8);
+  const de = (k) => JSON.parse(linhas.filter((l) => l.indexOf(k + ': ') === 0)[0].slice(k.length + 2));
+  const vm = de('verm_p'), fz = de('fezes_p');
+  igual([vm.some((l) => /Vermífugo: fica fora da cobrança/.test(l)), vm.some((l) => /2ª dose/.test(l)),
+    vm.indexOf('Vermífugo: sai da cobrança — o exame de fezes passa a valer no lugar dele (a regra «vermífugo ou exame»).') >= 0,
+    vm.indexOf('Exame de fezes: fica vencido desde 01/09/2026.') >= 0], [false, false, true, true], 'o vermífugo com exame de fezes: ' + JSON.stringify(vm));
+  igual([fz.indexOf('Exame de fezes: sai da cobrança — vale o vermífugo (a regra «vermífugo ou exame»).') >= 0, fz.indexOf('Vermífugo: fica vencido desde 17/09/2026.') >= 0],
+    [true, true], 'o exame de fezes limpo com o vermífugo: ' + JSON.stringify(fz));
+  igual(['vac_mult_p', 'vac_gripe_p', 'vac_raiva_p', 'ecto_p'].filter((k) => !de(k).some((l) => /fica em aberto \(nunca registrado\)/.test(l))), [], 'os itens que a casa cobra ficam em aberto');
+});
+// ================================================================== QA 6.63 (Quinn) — bloco F: as lacunas que os defeitos plantados do QA acharam
+prova('6.63 QA 28 (AC2.2) — «Corrigir»: «outros dias» no futuro recusados na tela', () => {
+  const r = { base: 'Tonico/SRD', nome: 'Tonico', dia: '2026-10-07' };
+  const x = J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'vermifugo', ${JSON.stringify(['07/10/2026', '06/10/2026, 11/10/2027', 'Tonico/SRD', '', 'Tonico/SRD', run("pendRotulo('vermifugo')")])})`);
+  igual(!!x.recusa, true, JSON.stringify(x));
+});
+provaAsync('6.63 QA 29 (AC2.3) — «Corrigir» para outro ITEM com perguntas diferentes: as respostas do item antigo não vão junto', async () => {
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    const cs = (k) => J630(`((dashItem('${k}')||{}).campos||[]).map(function(c){ return c.c; }).sort().join(',')`);
+    igual(cs('vermifugo') !== cs('coleira'), true, 'vermífugo e coleira perguntam coisas diferentes');
+    pend663('vermifugo', { det: { qtd: '1 COMPRIMIDO', onde: 'NA BOLSA' } });
+    run(`__p663=pendCorrigirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    await continua663(['07/10/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', run("pendRotulo('coleira')")]);
+    igual((await assina663('s-bia', 'a falta era da coleira mesmo'))[0], 'pronto');
+    await fecha663();
+    igual([no663('coleira').status, no663('coleira').det || null, no663('vermifugo').status], ['aberta', null, 'cancelada']);
+  });
+});
+provaAsync('6.63 QA 30 (AC3.2, AC13) — a pendência de remédio pela tela: o «Tirar» com qualquer motivo abre o cartaz da Gestão; com a assinatura, o nó guarda quem assinou (o registro 6.57, papel Gestão)', async () => {
+  await comPend663(async () => {
+    papel657('gestao', 'Gestora Teste');
+    pend663('medicacao', { valor: 'Tonico (Apoquel)', base: 'Tonico' });
+    run(`__zeFn663=null; zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn663=b; };`);
+    run(`pendTirar('${KP663}', 'medicacao');`);
+    const linhas = J630('__ze657[0][1]');
+    run("__zeFn663.filter(function(b){ return b.t!=='Outro' && b.t!=='Deixar como está'; })[0].fn();"); await espera657();
+    igual([linhas.some((t) => /quem tira é a Gestão/.test(t)), op663('nivel'), op663('acao')], [true, 'gestao', 'anular']);
+    igual((await assina663(SENHA657, 'o tutor vai dar o remédio em casa'))[0], 'pronto');
+    await fecha663();
+    const n = no663('medicacao');
+    igual([n.status, (n.cancelado_reg || {}).por, (n.cancelado_reg || {}).papel], ['cancelada', 'Gestora Teste', 'gestao']);
+  });
+});
+prova('6.63 QA 31 (AC4.2, Risco 3) — «Desfazer a resolução» de uma resolução antiga (sem a marca) com dois lançamentos do mesmo FILHOt no dia: ambíguo, nada sai', () => {
+  const r = { base: 'Tonico/SRD', valor: 'Tonico/SRD', status: 'resolvida', resolvido_dia: '2026-10-09' };
+  const lista = { L1: { valor: 'Tonico/SRD' }, L2: { valor: 'Tonico/SRD (outro)' }, L3: { valor: 'Quindim/Spitz' } };
+  igual(J630(`pendLancDaResolucao(${JSON.stringify(r)}, 'vermifugo', ${JSON.stringify(lista)})`), null);
+});
+provaAsync('6.63 QA 32 (AC4.5) — a anulação da medicação com a pendência mudada em outro aparelho entre o cartaz e a assinatura (resolvida de novo por outro lançamento): a anulação vale, a pendência fica como o outro aparelho deixou', async () => {
+  await comPend663(async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__put657('daycare/dashboard/${DIA657}/medicacao/M1', {valor:'Tonico (Apoquel)', hora:'14:00', quem:'Bia Consultora Teste', ts:5, de_pendencia:{chave:'${KP663}', item:'medicacao', ts:1}});
+      DASH_DIA_SEL=''; DASH_DADOS={medicacao:{M1:__get657('daycare/dashboard/${DIA657}/medicacao/M1')}};`);
+    pend663('medicacao', { valor: 'Tonico (Apoquel)', base: 'Tonico', status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'medicacao', id: 'M1' } });
+    run(`__p663=dashMedAnularAbrir('M1');`); await espera657();
+    igual(op663('cascata').some((t) => /volta a ficar aberta/.test(t)), true, 'a cascata promete (no cartaz)');
+    // o outro aparelho: a pendência foi reaberta e resolvida de novo por outro lançamento
+    run(`__put657('daycare/pendencias/${KP663}/medicacao/resolvido_lanc', {dia:'${DIA657}', item:'medicacao', id:'M2'}); __put657('daycare/pendencias/${KP663}/medicacao/resolvido_ts', ${T663(9, 9) + 60000});`);
+    const [pA] = await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado');
+    const eA = erro663();
+    await fecha663();
+    console.log('      6.63 QA 32: ' + JSON.stringify({ pA, eA, lanc: db657('daycare/dashboard/' + DIA657 + '/medicacao/M1'), pend: no663('medicacao').status }));
+    igual([pA, db657('daycare/dashboard/' + DIA657 + '/medicacao/M1'), no663('medicacao').status, no663('medicacao').resolvido_lanc.id], ['pronto', null, 'resolvida', 'M2']);
+  });
+});
+provaAsync('6.63 QA 33 (AC4.5) — o «tirar» de um lançamento comum com a pendência mudada em outro aparelho enquanto a pergunta estava aberta: o lançamento sai, a pendência fica e a tela diz que ela NÃO voltou a abrir', async () => {
+  await comPend663(async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__put657('daycare/dashboard/${DIA657}/vermifugo/LT', {valor:'Tonico/SRD', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KP663}', item:'vermifugo', ts:1}});
+      DASH_DIA_SEL=''; DASH_DADOS={vermifugo:__get657('daycare/dashboard/${DIA657}/vermifugo')};`);
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'LT' } });
+    // a pergunta do «tirar»: enquanto ela está aberta, o outro aparelho corrige o texto da pendência
+    run(`__zpBk663=zPergunta; zPergunta=function(t, l, op){ __zp657.push([t, l]); __put657('daycare/pendencias/${KP663}/vermifugo/valor', 'Tonico/SRD (outro aparelho)'); return Promise.resolve(true); };`);
+    try { await run(`dashRemover('vermifugo', 'LT')`); await espera657(); } finally { run('zPergunta=__zpBk663;'); }
+    igual([db657('daycare/dashboard/' + DIA657 + '/vermifugo/LT'), no663('vermifugo').status, za663().indexOf('A PENDÊNCIA NÃO VOLTOU A ABRIR') >= 0], [null, 'resolvida', true]);
+  });
+});
+// ================================================================== QA 6.63 (Quinn) — bloco G: mais lacunas achadas pelos defeitos plantados do QA
+provaAsync('6.63 QA 34 (AC5.2) — o painel que grava o que a ficha já tinha (nada mudou) não deixa linha no «Atualizados hoje» (nada a desfazer)', async () => {
+  await comPrev663({ vac_mult_t: DIA657, vac_mult_p: '2027-10-09', vac_mult_nome: 'V10 Teste' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    igual(corrHoje663().length, 0);
+  });
+});
+provaAsync('6.63 QA 35 (AC5.4) — a linha desfeita fica riscada SEM «Desfazer» nem «Corrigir»', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__put657('daycare/prevencao-correcoes/${DIA657}/cD', {chave:__kp, dcKey:__dcp, pet:'Bento', k:'vac_mult_p', como:'feito', antes:{vac_mult_p:'2026-09-01'}, depois:{vac_mult_p:'2027-10-09'},
+      campos:['vac_mult_p'], quem:'Bia Consultora Teste', papel:'consultora', ts:Date.now(), desfeito:{por:'Gestora Teste', motivo:'gravei no FILHOt errado', quando:'09/10/2026 às 10:00'}});`);
+    await run('prevCorrCarregar(true)'); await espera657();
+    const h = String(run("prevCorrQuadroHTML('hoje')"));
+    igual([/Desfeito por Gestora Teste/.test(h), /prevCorrDesfazerAbrir\('cD'/.test(h), /prevCorrCorrigirAbrir\('cD'/.test(h)], [true, false, false]);
+  });
+});
+provaAsync('6.63 QA 36 (AC6.3) — «Limpar a data» do check-up esvazia as três casas da data (checkup_t, checkup_data, checkup) e o vencimento; o «Desfazer» devolve as três', async () => {
+  await comPrev663({ checkup_t: '2025-10-01', checkup_data: '2025-10-01', checkup: '2025-10-01', checkup_p: '2026-10-01' }, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'checkup_p', 'hoje');`); await espera657();
+    igual((await assina663(SENHA657, 'a data do check-up estava errada'))[0], 'pronto');
+    await fecha663();
+    const f = fichaDb663();
+    igual([f.checkup_t || '', f.checkup_data || '', f.checkup || '', f.checkup_p || ''], ['', '', '', '']);
+    const L = corrHoje663()[0]; recarrega663();
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    igual((await assina663(SENHA657, 'limpei a data errada sem querer'))[0], 'pronto');
+    await fecha663();
+    const g = fichaDb663();
+    igual([g.checkup_t, g.checkup_data, g.checkup, g.checkup_p], ['2025-10-01', '2025-10-01', '2025-10-01', '2026-10-01']);
+  });
+});
+provaAsync('6.63 QA 37 (AC7.3) — escova: o «Desfazer» recusa quando a próxima troca mudou depois (outra troca registrada ou a data mexida na ficha) e quando o registro foi trocado em outro aparelho (o ts)', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'], escova_t: '2026-06-01', escova_p: '2026-08-30' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    await run('escovaTresMeses(\'casa\', __bp)'); await espera657(); recarrega663();
+    const ts0 = fichaDb663().escova_ult.ts;
+    // a data da próxima mexida na ficha (outro aparelho)
+    run(`__put657('daycare/cadastro/'+__kp+'/escova_p', '2027-02-01');`);
+    const r1 = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', ts:Date.now()})`); await espera657();
+    igual([r1.ok, /mudou depois deste registro/.test(String(r1.erro)), fichaDb663().escova_p], [false, true, '2027-02-01']);
+    // o registro trocado em outro aparelho (outro «tinha em casa», com outro ts)
+    run(`__put657('daycare/cadastro/'+__kp+'/escova_p', '2027-01-07'); __put657('daycare/cadastro/'+__kp+'/escova_ult/ts', ${'ts0'} + 1);`.replace('ts0', String(ts0)));
+    const r2 = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', ts:Date.now()}, ${ts0})`); await espera657();
+    igual([r2.ok, /mudou em outro aparelho/.test(String(r2.erro))], [false, true]);
+  });
+});
+provaAsync('6.63 QA 38 (AC7.4; S5-P3) — tirar o chip «Escova» de quem NÃO respondeu a pergunta (nem Sim nem Não): sem pergunta, só o chip sai', async () => {
+  await comPrev663({ atividades: ['escova', 'piscina'] }, async () => {
+    run('__ze657=[];'); run("toggleAtivPel('escova');"); await espera657();
+    igual([J630('__ze657').length, fichaDb663().atividades, fichaDb663().escova_dc || ''], [0, ['piscina'], '']);
+  });
+});
+provaAsync('6.63 QA 39 (AC10.3, AC10.5) — «Apagar esta resposta» chamada direto (uma tela velha) com a entrada na ficha viva: a gravação recusa e nada some', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    alg663(K657, { resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 121, ficha: ENTRADA663() });
+    const r = await run(`algRespApagarGravar('${K657}', {por:'Bia Consultora Teste', motivo:'colei a resposta errada', ts:Date.now()}, 121)`); await espera657();
+    igual([r.ok, noA663().resposta, !!noA663().ficha], [false, 'Ele tem alergia a frango', true]);
+  });
+});
+provaAsync('6.63 QA 40 (AC11.4) — «Desfazer a entrada»: a alergia que a resposta MUDOU (não estava vazia) volta ao texto de antes, e o texto que sai vai para alergia_original', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango e soja', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { resposta: 'frango e soja', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 131,
+      ficha: ENTRADA663({ campos: ['alergia'], antes: { alergia: 'frango' }, depois: { alergia: 'frango e soja' } }) });
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    igual((await assina663('s-bia', 'a resposta era de outro FILHOt'))[0], 'pronto');
+    await fecha663();
+    const c = db657('daycare/cadastro/' + K657);
+    igual([c.alergia, c.alergia_original], ['frango', 'frango e soja']);
+  });
+});
+provaAsync('6.63 QA 41 (AC11.5) — a correção a Urgências só tira da mesa a atenção DESTE aviso (a do aviso novo, de outro dia, fica)', async () => {
+  await comAlg663(async () => {
+    const AV = { ts: T657(8, 12), chave: 'entrevista-' + K657 };
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+    alg663(K657, { resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 141, ficha: ENTRADA663({ avisou: AV }) });
+    run(`__put657('daycare/entrevista-atencao/${K657}', {nome:'Tonico', itens:['outra coisa'], ts:${T657(9, 9)}}); __urg663=[];`);
+    papel657('gestao', 'Gestora Teste');
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    igual((await assina663(SENHA657, 'a resposta era de outro FILHOt'))[0], 'pronto');
+    await espera657(); await fecha663();
+    igual([db657('daycare/entrevista-atencao/' + K657 + '/tratado'), J630('__urg663').length], [null, 1]);
+  });
+});
+provaAsync('6.63 QA 42 (AC9.2) — «Desmarcar» com a marca refeita em outro aparelho enquanto o cartaz estava aberto: recusa, a marca nova fica', async () => {
+  await comAlg663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663 });
+    run(`__p663=algPesqDesmarcarAbrir('${K657}');`); await espera657();
+    run(`__put657('daycare/alergia-confirmada/${K657}/enviada', {ts:${T657(9, 9)}, quem:'Amanda Supervisora Teste', quando:'2026-10-09'});`);
+    const [p] = await assina663('s-bia', 'marquei no FILHOt errado');
+    await fecha663();
+    igual([p, noA663().enviada.quem, noA663().enviada_desfeita || null], ['falhou', 'Amanda Supervisora Teste', null]);
+  });
+});
+// ================================================================== QA 6.63 (Quinn) — bloco H: as últimas lacunas dos defeitos plantados do QA
+provaAsync('6.63 QA 43 (AC12.2) — «Restaurar»: o campo mudado em outro aparelho DEPOIS de o cartaz abrir recusa na assinatura; e o «Confirmado» não tem o botão', async () => {
+  await comAlg663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    const REVL = { estado: 'limpo', campo: 'alergia', quem: 'Amanda Supervisora Teste', quando: '2026-10-05', ts: T657(5, 9), antes: 'frango', depois: '', texto_tutor: 'frango' };
+    fichaTonico657({ alergia: '', alergia_original: 'frango' });
+    run(`__put657('daycare/ia-revisao/${K657}/alergia', ${JSON.stringify(REVL)}); IA_REV=__get657('daycare/ia-revisao'); iaRevEsquecerCache(); __esc657=[];`);
+    run(`__p663=iaRevRestaurarAbrir('${K657}', 'alergia');`); await espera657();
+    run(`__put657('daycare/cadastro/${K657}/alergia', 'soja (outro aparelho)');`);
+    const [p] = await assina663('s-bia', 'era uma restrição de verdade');
+    await fecha663();
+    igual([p, db657('daycare/cadastro/' + K657).alergia, db657('daycare/ia-revisao/' + K657 + '/alergia').estado], ['falhou', 'soja (outro aparelho)', 'limpo']);
+    run(`__put657('daycare/ia-revisao/${K657}/alergia', {estado:'confirmado', campo:'alergia', quem:'Gestora Teste', quando:'2026-10-05', ts:7, antes:'frango', depois:'frango'}); IA_REV=__get657('daycare/ia-revisao'); iaRevEsquecerCache();
+      __put657('daycare/cadastro/${K657}/alergia', 'frango'); pelCadCache['${K657}']=__get657('daycare/cadastro/${K657}');`);
+    igual(/iaRevRestaurarAbrir/.test(String(run(`iaRevCartaoHtml(iaRevAchar('${K657}', 'alergia'))`))), false, 'o «Confirmado» não restaura');
+  });
+});
+provaAsync('6.63 QA 44 (AC8.5) — o rascunho da Prevenção também com SÓ o «Vence em» digitado: trocar de FILHOt pergunta', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`PELUDINHOS.push({n:'Cocada', tutor:'Duda Teste', raca:'SRD', dias:['seg']}); __kc663=pelKey(PELUDINHOS[1]);`);
+    run(`prevAbrir(__kp); prevEdicaoHTML({p:__bp, nome:'Bento'}); __el657['prevT_'+__kp+'_vac_mult_p']={value:'2025-09-01'}; __el657['prevP_'+__kp+'_vac_mult_p']={value:'2027-12-01'};`);
+    run('__ze657=[]; prevAbrir(__kc663);');
+    igual([J630('__ze657').length, run('PREV_ABERTO')], [1, run('__kp')]);
+  });
+});
+provaAsync('6.63 QA 45 (AC8.4; R2-L2 da 6.65) — duas gravações saindo da mesma ficha, a 1ª aceita e a 2ª recusada, com a releitura do banco também falhando: a tela fica com o valor da 1ª (o que o banco confirmou), não com o de antes', async () => {
+  await comPrev663(VAC663, async () => {
+    run(`__ls657['zeluz_pel_'+__kp]=JSON.stringify(__get657('daycare/cadastro/'+__kp)); __pendura657='^daycare/cadastro/';
+      __ref663=DB.ref; DB.ref=function(c){ var r=__ref663(c); if(String(c).indexOf('daycare/cadastro/')===0) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`);
+    try {
+      run(`prevGravar(__bp, {vac_mult_p:'2026-12-20'}, {tela:'Prevenção'}); prevGravar(__bp, {vac_mult_p:'2026-12-25'}, {tela:'Prevenção'});`);
+      run(`__pA=__pend657.shift(); __pB=__pend657.shift(); __pendura657=null; __pA.ok();`); await espera657();
+      run(`__pB.nao();`); await espera657();
+      igual([fichaDb663().vac_mult_p, J630('pelCadCache[__kp].vac_mult_p'), J630('pelExtra(__bp).vac_mult_p')], ['2026-12-20', '2026-12-20', '2026-12-20']);
+    } finally { run('DB.ref=__ref663;'); }
+  });
+});
+provaAsync('6.63 QA 46 (AC11.4) — «Levar para a ficha de novo» depois de desfeita: a entrada desfeita vai para fichas_anteriores (nada se perde) e a nova entra', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: '', restricao: '', manias: '' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const DESF = ENTRADA663({ desfeita: { por: 'Bia Consultora Teste', motivo: 'a resposta era de outro FILHOt', ts: 3 } });
+    alg663(K657, { resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 151, ficha: DESF });
+    run(`algCur=function(){ return {campos:{q1:{txt:'frango', campo:'alergia', atual:'', grava:true}}, sobras:[], total:9}; }; algEntrevistaReg=function(){ return null; }; algAvisarGestao=function(){ return null; };`);
+    await run(`algCurGravar('${K657}')`); await espera657();
+    const n = noA663(), fa = Object.values(n.fichas_anteriores || {});
+    igual([!!n.ficha && !n.ficha.desfeita, fa.length, (fa[0] || {}).desfeita && fa[0].desfeita.motivo], [true, 1, 'a resposta era de outro FILHOt']);
+  });
+});
+// ================================================================== QA 6.63 (Quinn) — bloco I: «nada é perguntado a quem não pode» (o x06 do @dev, em todas as portas novas)
+provaAsync('6.63 QA 47 (AC13; x06) — o Encãotador (sem nenhuma das capacidades) toca cada porta nova: nenhuma pergunta e nenhum cartaz abre; o «BARROU» fica', async () => {
+  const abriu = [];
+  // pendências
+  await comPend663(async () => {
+    papel657('monitor', 'Caio Encãotador Teste');
+    pend663('vermifugo', { status: 'cancelada', motivo: 'tutor', motivo_texto: 'O tutor vai fazer em casa', cancelado_ts: T663(8), cancelado_por: 'Bia Consultora Teste' });
+    pend663('coleira');
+    pend663('escova', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste' });
+    for (const [nome, chamada] of [['pendReabrirAbrir', `pendReabrirAbrir('${KP663}', 'vermifugo')`], ['pendCorrigirAbrir', `pendCorrigirAbrir('${KP663}', 'coleira')`],
+      ['pendDesfazerResolucaoAbrir', `pendDesfazerResolucaoAbrir('${KP663}', 'escova')`], ['pendTirar', `pendTirar('${KP663}', 'coleira')`], ['pendTirarOutro', `pendTirarOutro('${KP663}', 'coleira')`]]) {
+      run('__ze657=[]; __zp657=[]; __zt657=[]; if(typeof CORR_ATUAL!=="undefined") CORR_ATUAL=null;');
+      run(`__p663=${chamada};`); await espera657();
+      if (J630('__ze657').length || J630('__zp657').length || J630('__zt657').length || run('typeof CORR_ATUAL!=="undefined" && !!CORR_ATUAL')) abriu.push(nome);
+      await fecha663();
+    }
+  });
+  // prevenção e escova
+  await comPrev663(Object.assign({ escova_dc: 'Sim', atividades: ['escova'], escova_t: '2026-06-01', escova_p: '2026-08-30' }, VAC663), async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    await run('escovaTresMeses(\'casa\', __bp)'); await espera657(); recarrega663();
+    const L = corrHoje663()[0];
+    papel657('monitor', 'Caio Encãotador Teste');
+    for (const [nome, chamada] of [['prevCorrDesfazerAbrir', `prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje')`], ['prevCorrLimparAbrir', `prevCorrLimparAbrir(__dcp, 'vac_mult_p', 'hoje')`],
+      ['escovaDesfazerTresMesesAbrir', 'escovaDesfazerTresMesesAbrir(__bp)']]) {
+      run('__ze657=[]; __zp657=[]; if(typeof CORR_ATUAL!=="undefined") CORR_ATUAL=null;');
+      run(`__p663=${chamada};`); await espera657();
+      if (J630('__ze657').length || J630('__zp657').length || run('typeof CORR_ATUAL!=="undefined" && !!CORR_ATUAL')) abriu.push(nome);
+      await fecha663();
+    }
+  });
+  // Pesquisa e revisão da IA
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('monitor', 'Caio Encãotador Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 161, ficha: ENTRADA663() });
+    for (const [nome, chamada] of [['algPesqDesmarcarAbrir', `algPesqDesmarcarAbrir('${K657}')`], ['algRespApagarAbrir', `algRespApagarAbrir('${K657}')`],
+      ['algRespPassarAbrir', `algRespPassarAbrir('${K657}')`], ['algFichaDesfazerAbrir', `algFichaDesfazerAbrir('${K657}')`], ['algAutoTrocar', 'algAutoTrocar()']]) {
+      run('__ze657=[]; __zp657=[]; if(typeof CORR_ATUAL!=="undefined") CORR_ATUAL=null;');
+      run(`__p663=${chamada};`); await espera657();
+      if (J630('__ze657').length || J630('__zp657').length || run('typeof CORR_ATUAL!=="undefined" && !!CORR_ATUAL')) abriu.push(nome);
+      await fecha663();
+    }
+  });
+  console.log('      6.63 QA 47 abriram para o Encãotador: ' + JSON.stringify(abriu));
+  igual(abriu, []);
+});
+// ================================================================== 6.63, 2ª rodada — as provas das correções do gate (Dex)
+// REL-001 (a hora passada sem registro; a mesma dose sem a marca da pendência), REQ-001 (a decisão do @po: a resposta diferente
+// com a entrada viva é recusada), REL-003 (a hora 00:00 a 23:59), UX-001 (os botões dos cartazes, o «Limpa», a 2ª dose) e a
+// gravação do «Desfazer» da escova sem o quadro. Tudo inventado; usa o palco do QA logo acima (QM_*) e o da 6.63.
+console.log('\n6.63, 2ª rodada — as correções do gate do QA');
+// a medicação da Pendência resolvida (09:50), desfeita (hDesf) e resolvida de novo (hRes), sem nenhuma dose registrada
+const r2DesfazEResolve = async (hDesf, hRes) => {
+  papel657('gestao', 'Gestora Teste');
+  qmPend();
+  qmRelogio(QM_T(9, 50));
+  await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+  run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao');`);
+  qmRelogio(QM_T(hDesf[0], hDesf[1]));
+  run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+  const p = (await assina663(SENHA657, 'resolvi a pendência errada hoje'))[0];
+  await fecha663();
+  run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao'); __za657=[];`);
+  qmRelogio(QM_T(hRes[0], hRes[1]));
+  await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+  return { p, n: no663('medicacao'), lancs: Object.keys(db657('daycare/dashboard/' + DIA657 + '/medicacao') || {}), lancou: run('__nl663'),
+    za: J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' ')) };
+};
+provaAsync('6.63 R2 01 (REL-001; remédio) — «Desfazer a resolução» da medicação das 14:00 sem a dose registrada: às 14:15 o «Resolvido hoje» recusa lançar de novo (o alarme dela pode estar aberto no celular) e o alarme não pede a dose; com a hora ainda à frente (10:05), lança de novo', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      const r = await r2DesfazEResolve([14, 12], [14, 15]);
+      igual([r.p, r.n.status, r.lancs, r.lancou], ['pronto', 'aberta', [], 1], 'nada lançado de novo, a pendência continua aberta');
+      assert.ok(r.za.some((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z) && /14:00/.test(z) && /já passou/.test(z) && /Tirar pendência/.test(z)), JSON.stringify(r.za));
+      const a = await qmAlarme(14, 20);
+      igual([a.fila, a.desp], [[], []], 'o alarme não pede a dose das 14:00 de novo');
+    } finally { run(QM_SOLTA); }
+  });
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      const r = await r2DesfazEResolve([10, 0], [10, 5]);
+      igual([r.p, r.n.status, r.lancs.length, r.lancou, r.za.filter((z) => /NÃO FOI LANÇADA/.test(z))], ['pronto', 'resolvida', 1, 2, []], 'a hora à frente: lança de novo, sem recusa');
+    } finally { run(QM_SOLTA); }
+  });
+});
+provaAsync('6.63 R2 02 (REL-001; remédio) — sem a marca da pendência: a medicação do mesmo FILHOt, com a mesma dose (Apoquel 14:00), lançada à parte, dada às 14:05 e tirada pela Gestão (6.58): o «Resolvido hoje» recusa; outro remédio (Otomax) do mesmo FILHOt lança', async () => {
+  for (const [qual, espera] of [['Apoquel', 'recusa'], ['Otomax', 'lança']]) {
+    await comPend663(async () => {
+      run(QM_ARMA); qmArmaLanc();
+      try {
+        papel657('gestao', 'Gestora Teste');
+        // o lançamento comum (não veio da pendência), a dose dada e a anulação da 6.58 (a pendência estava aberta: não é reaberta)
+        run(`__put657('daycare/dashboard/${DIA657}/medicacao/M1', {valor:'Tonico (Apoquel · bolsa)', hora:'14:00', chave:'${QM_DC}', det:{qual:'Apoquel', onde:'bolsa'}, quem:'Bia Consultora Teste', ts:${QM_T(9, 0)}});`);
+        run(`__put657('auaulandia/medicacao-log/${DIA657}/dc__${QM_DC}/lanc_M1_14-00', {nome:'Apoquel', horario:'14:00', quem:'Caio Encãotador Teste', ts:${QM_T(14, 5)}});`);
+        pend663('medicacao', { valor: 'Tonico (' + qual + ' · bolsa)', base: 'Tonico', hora: '14:00', det: { qual: qual, onde: 'bolsa' }, nome: 'Tonico', tutor: 'Rita Teste' });
+        qmRelogio(QM_T(14, 12));
+        run(`DASH_DIA_SEL=''; DASH_DADOS={medicacao:{}}; DASH_DADOS.medicacao['M1']=__get657('daycare/dashboard/${DIA657}/medicacao/M1');`);
+        run(`__p663=dashMedAnularAbrir('M1');`); await espera657();
+        igual((await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado'))[0], 'pronto', qual + ': a anulação');
+        await fecha663();
+        const an = db657('daycare/dashboard-anulados/' + DIA657 + '/medicacao/M1');
+        igual([!!an, !!(an && an.pendencia_reaberta), no663('medicacao').status], [true, false, 'aberta'], qual + ': tirada sem pendência ligada');
+        run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao'); __za657=[];`);
+        qmRelogio(QM_T(14, 15));
+        await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+        const za = J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' ')), n = no663('medicacao');
+        if (espera === 'recusa') {
+          igual([n.status, run('__nl663')], ['aberta', 0], qual + ': nada lançado');
+          assert.ok(za.some((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z) && /já foi dada hoje por Caio Encãotador Teste às 14:05/.test(z)), JSON.stringify(za));
+        } else {
+          igual([n.status, run('__nl663'), za.filter((z) => /NÃO FOI LANÇADA/.test(z))], ['resolvida', 1, []], qual + ': outro remédio lança');
+        }
+      } finally { run(QM_SOLTA); }
+    });
+  }
+});
+provaAsync('6.63 R2 03 (REL-001; remédio) — a leitura das medicações tiradas hoje falha: o «Resolvido hoje» da medicação não lança (na dúvida, remédio não se lança de novo) e diz por quê; o vermífugo não passa por essa conferência', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      qmPend();
+      run(`__r0663=DB.ref; DB.ref=function(p){ var r=__r0663(p); if(/dashboard-anulados/.test(String(p))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; }; __za657=[];`);
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const za = J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' '));
+      igual([no663('medicacao').status, run('__nl663')], ['aberta', 0]);
+      assert.ok(za.some((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z) && /Não consegui conferir a medicação tirada hoje/.test(z)), JSON.stringify(za));
+      pend663('vermifugo');
+      await run(`pendResolverConfirmado('${KP663}', 'vermifugo')`); await espera657();
+      igual([no663('vermifugo').status, run('__nl663')], ['resolvida', 1], 'o vermífugo lança como sempre');
+    } finally { run('if(typeof __r0663!=="undefined") DB.ref=__r0663;'); run(QM_SOLTA); }
+  });
+});
+// 3ª rodada (decisão do @po de 10/out, REQ-002/REQ-003 do re-gate): a 2ª rodada recusava a resposta diferente com a entrada viva; a
+// decisão nova manda gravar sempre. A prova agora exige a gravação nas duas portas (a tela e o banco), a anterior com a entrada dela
+// em respostas_anteriores, o «Desfazer» dela pelo histórico e nenhum cartaz de recusa; a mesma resposta: só a data e quem; a entrada
+// desfeita vai junto para o histórico e a ficha sai do nó (o automático trata a resposta nova).
+provaAsync('6.63 R2 04 (REQ-002/REQ-003, decisão do @po de 10/out; AC10.1) — com a entrada na ficha viva, a resposta diferente é gravada em «O tutor respondeu» e em «Colar» (a tela e o banco): a anterior vai com a entrada para o histórico, com o «Desfazer»; a mesma resposta: só a data e quem; a entrada desfeita vai junto para o histórico', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const NO = { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 171, ficha: ENTRADA663() };
+    const confere = () => { const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), a = (n.respostas_anteriores || {})[ra[0]] || {};
+      return [n.resposta, n.ficha || null, n.enviada, ra.length, a.resposta, a.ficha, !!a.substituida]; };
+    const ESP = (txt) => [txt, null, ENV663, 1, NO.resposta, NO.ficha, true];
+    // «O tutor respondeu» com outro texto
+    alg663(K657, NO);
+    run(`__el657['algResp_${K657}']={value:'Ele não tem alergia nenhuma, era o Quindim'}; __el657['algData_${K657}']={value:'2026-10-09'}; __ze657=[]; __za657=[];`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual(confere(), ESP('Ele não tem alergia nenhuma, era o Quindim'), '«O tutor respondeu»');
+    igual([J630(`ALG_RESP['${K657}'].ficha||null`), J630('__ze657').length + J630('__za657').length, db657('daycare/cadastro/' + K657).alergia], [null, 0, 'frango'], 'a tela com o banco; nenhum cartaz de recusa; a ficha igual');
+    const id1 = Object.keys(noA663().respostas_anteriores)[0];
+    run(`__p663=algFichaDesfazerAbrir('${K657}', '${id1}');`); await espera657();
+    igual([run('!!CORR_ATUAL'), op663('titulo')], [true, 'Desfazer a entrada na ficha'], 'o «Desfazer» da entrada anterior abre pelo histórico'); await fecha663();
+    // «Colar» com outro texto
+    alg663(K657, NO); run('__ze657=[]; __za657=[];');
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    run(`algColarConfirmar('${K657}', 'Resposta nova colada inteira');`); await espera657();
+    igual(confere(), ESP('Resposta nova colada inteira'), '«Colar»');
+    igual([J630(`ALG_RESP['${K657}'].resposta`), J630(`ALG_RESP['${K657}'].ficha||null`), J630('__ze657').length + J630('__za657').length], ['Resposta nova colada inteira', null, 0]);
+    // a tela velha (sem a entrada) e o banco com ela (outro aparelho levou para a ficha): o banco manda — a entrada vai junto
+    alg663(K657, NO);
+    run(`ALG_RESP['${K657}']={enviada:${JSON.stringify(ENV663)}, resposta:'Ele tem alergia a frango', quando:'2026-10-08', quem:'Bia Consultora Teste', ts:171};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual(confere(), ESP('Ele não tem alergia nenhuma, era o Quindim'), 'a tela velha: o banco manda (a entrada vai junto para o histórico)');
+    // a mesma resposta: só a data e quem (a entrada e a marca de envio ficam)
+    alg663(K657, NO);
+    run(`__el657['algResp_${K657}']={value:'Ele tem alergia a frango'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual([noA663().ficha, noA663().enviada, noA663().quando, noA663().respostas_anteriores || null], [NO.ficha, ENV663, '2026-10-09', null]);
+    // a entrada desfeita: a resposta nova entra, a desfeita vai junto para o histórico e a ficha sai do nó (o automático trata a nova)
+    const DESF = ENTRADA663({ desfeita: { por: 'Bia Consultora Teste', motivo: 'a resposta era de outro FILHOt', ts: 3 } });
+    alg663(K657, Object.assign({}, NO, { ficha: DESF }));
+    run(`__el657['algResp_${K657}']={value:'Agora sim: alergia a carne de porco'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {});
+    igual([n.resposta, n.ficha || null, n.enviada, ra.length, (n.respostas_anteriores[ra[0]] || {}).resposta, (n.respostas_anteriores[ra[0]] || {}).ficha],
+      ['Agora sim: alergia a carne de porco', null, ENV663, 1, 'Ele tem alergia a frango', DESF]);
+    igual(J630('algPendentesFicha().map(function(x){ return x.k; })').indexOf(K657) >= 0, true, 'a resposta nova vai para «Quem respondeu e ainda não virou ficha»');
+  });
+});
+// 3ª rodada (decisão do @po de 10/out, REQ-003 do re-gate): a entrada ANTIGA (sem o antes) não prende mais a resposta. A nova é
+// gravada, a anterior vai com a entrada antiga para o histórico (sem «Desfazer»: ela não guardou o antes) e o histórico diz onde corrigir.
+provaAsync('6.63 R2 05 (REQ-003; AC11.2) — a entrada ANTIGA (sem o antes): a resposta diferente é gravada; a anterior vai com a entrada antiga para o histórico, sem «Desfazer» (o histórico diz para corrigir na revisão da IA ou na ficha); a ficha não muda', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const F = { quando: '2026-04-01', quem: 'Bia Consultora Teste', campos: ['alergia'], ts: T657(1, 9) - 180 * 86400000 };
+    const NO = { enviada: ENV663, resposta: 'Ele tinha alergia a frango', quando: '2026-04-01', quem: 'Bia Consultora Teste', ts: 9, ficha: F };
+    alg663(K657, NO);
+    run(`__el657['algResp_${K657}']={value:'Agora também a carne de porco'}; __el657['algData_${K657}']={value:'2026-10-09'}; __za657=[]; __ze657=[];`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), id = ra[0];
+    igual([n.resposta, n.ficha || null, ra.length, (n.respostas_anteriores[id] || {}).ficha, db657('daycare/cadastro/' + K657).alergia, J630('__za657').length + J630('__ze657').length],
+      ['Agora também a carne de porco', null, 1, F, 'frango', 0]);
+    const h = String(run(`algPesqCartaoHTML('${K657}')`));
+    assert.ok(h.indexOf('continua valendo na ficha (registro antigo: corrija na revisão «O que a IA entendeu» ou na ficha)') >= 0, 'o histórico diz onde corrigir');
+    igual(h.indexOf(`algFichaDesfazerAbrir('${K657}','${id}')`) >= 0, false, 'sem «Desfazer» para a entrada antiga');
+    run(`__p663=algFichaDesfazerAbrir('${K657}', '${id}');`); await espera657();
+    igual(run('typeof CORR_ATUAL!=="undefined" && !!CORR_ATUAL'), false, 'a entrada antiga não abre o cartaz do «Desfazer» (não guardou o antes)');
+  });
+});
+prova('6.63 R2 06 (REL-003) — «Corrigir» a pendência: a hora tem de existir no relógio — 24:00, 25:00, 23:60 e 7:5 recusadas; 23:59, 00:00 e 9:00 aceitas (9:00 vira 09:00)', () => {
+  const r = { base: 'Tonico', nome: 'Tonico', dia: '2026-10-07', valor: 'Tonico (Apoquel · bolsa)', hora: '14:00' };
+  const rot = run("pendRotulo('medicacao')");
+  const ler = (h) => J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'medicacao', ${JSON.stringify(['07/10/2026', '', 'Tonico (Apoquel · bolsa)', h, 'Tonico', rot])})`);
+  igual(['24:00', '25:00', '23:60', '7:5'].map((h) => !!ler(h).recusa), [true, true, true, true]);
+  igual(['23:59', '00:00', '9:00'].map((h) => [ler(h).recusa || null, ler(h).hora]), [[null, '23:59'], [null, '00:00'], [null, '09:00']]);
+  assert.ok(/entre 00:00 e 23:59/.test(ler('25:00').recusa));
+});
+provaAsync('6.63 R2 07 (UX-001) — os cartazes de «Desfazer» e «Restaurar» confirmam com o próprio nome (não «Reabrir»); o «Limpar a data» termina em «Limpa (ficou sem data)»; no vermífugo de 2 doses, a cascata do «Limpar» traz a 2ª dose', async () => {
+  const botoes = {};
+  await comPrev663(Object.assign({ escova_dc: 'Sim', atividades: ['escova'], escova_t: '2026-06-01', escova_p: '2026-08-30' }, VAC663), async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`prevCorrigeFeitoHoje(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    run('PREV_CORR_LIDO=false;'); await run('prevCorrCarregar(true)'); await espera657();
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(corrHoje663()[0].id)}, 'hoje');`); await espera657();
+    botoes.desfazerData = op663('botao'); await fecha663();
+    await run('escovaTresMeses(\'casa\', __bp)'); await espera657();
+    run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+    run('__p663=escovaDesfazerTresMesesAbrir(__bp);'); await espera657();
+    botoes.desfazerEscova = op663('botao'); await fecha663();
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'vac_mult_p', 'hoje');`); await espera657();
+    botoes.limpar = [op663('botao'), op663('tituloOk')]; await fecha663();
+  });
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__put657('daycare/dashboard/${DIA657}/vermifugo/L9', {valor:'Tonico/SRD', quem:'Bia Consultora Teste', de_pendencia:{chave:'${KP663}', item:'vermifugo', ts:1}}); DASH_DADOS={vermifugo:{L9:__get657('daycare/dashboard/${DIA657}/vermifugo/L9')}};`);
+    pend663('vermifugo', { status: 'resolvida', resolvido_ts: T663(9, 9), resolvido_dia: DIA657, resolvido_por: 'Bia Consultora Teste', resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'L9' } });
+    run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'vermifugo');`); await espera657();
+    botoes.desfazerResolucao = op663('botao'); await fecha663();
+  });
+  igual(botoes, { desfazerData: 'Desfazer', desfazerEscova: 'Desfazer', limpar: ['Limpar a data', 'Limpa (ficou sem data)'], desfazerResolucao: 'Desfazer a resolução' });
+  igual(/titulo:'Restaurar o texto de antes', tituloOk:'Restaurado', botao:'Restaurar'/.test(fs.readFileSync(APP, 'utf8')), true, 'o «Restaurar» da revisão da IA');
+  await comPrev663({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08' }, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__p663=prevCorrLimparAbrir(__dcp, 'verm_p', 'hoje');`); await espera657();
+    const c = op663('cascata') || [];
+    await fecha663();
+    assert.ok(c.some((l) => /^Vermífugo — 2ª dose:/.test(l)) && c.some((l) => /^Vermífugo: fica em aberto/.test(l)), JSON.stringify(c));
+  });
+});
+provaAsync('6.63 R2 08 (REL-002; contrato da 6.64) — «Tinha em casa» com só a próxima troca à mão antes (sem a última): o antes guarda a próxima e marca a última como vazia; a gravação do «Desfazer», com o banco fiel ao Firebase, devolve a próxima e a marca de «à mão» e a última volta a não existir', async () => {
+  await comPrev663({ escova_dc: 'Sim', atividades: ['escova'], escova_p: '2026-11-20', escova_p_manual: true }, async () => {
+    fbLiga663();
+    try {
+      papel657('consultora', 'Bia Consultora Teste');
+      await run('escovaTresMeses(\'casa\', __bp)'); await espera657();
+      const u = fichaDb663().escova_ult;
+      igual([u.antes, u.antes_vazios, fichaDb663().escova_t], [{ escova_t: '', escova_p: '2026-11-20', escova_p_manual: true }, ['escova_t'], DIA657]);
+      recarrega663();
+      const r = await run(`escovaDesfazerTresMesesGravar(__bp, {por:'Bia Consultora Teste', papel:'consultora', motivo:'o tutor autorizou a troca hoje', ts:Date.now()})`); await espera657();
+      const f = fichaDb663();
+      igual([r, f.escova_p, f.escova_p_manual, f.escova_t === undefined, !!f.escova_ult.desfeito], [{ ok: true }, '2026-11-20', true, true, true]);
+    } finally { fbDesliga663(); }
+  });
+});
+provaAsync('6.63 R2 09 (UX-001) — resolvida de novo sem saber qual lançamento entrou (o id não aparece na lista do dia): as marcas da resolução desfeita (resolvido_lanc, resolvido_obs) saem, e o «Desfazer a resolução» não aponta para o lançamento antigo', async () => {
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    pend663('vermifugo', { resolvido_lanc: { dia: DIA657, item: 'vermifugo', id: 'VELHO', jaEstava: true }, resolvido_obs: 'o item já estava lançado hoje', resolucao_desfeita: { por: 'Bia Consultora Teste', ts: 1 } });
+    run('dashLancar=function(){ __nl663++; return Promise.resolve(true); };');   // entrou, mas o id não aparece na lista do dia
+    await run(`pendResolverConfirmado('${KP663}', 'vermifugo')`); await espera657();
+    const n = no663('vermifugo');
+    igual([n.status, run('__nl663'), n.resolvido_lanc || null, n.resolvido_obs || null, !!n.resolucao_desfeita], ['resolvida', 1, null, null, true]);
+    igual(run(`pendComoFechou(__get657('daycare/pendencias/${KP663}/vermifugo'))`).indexOf('já estava lançado') < 0, true);
+  });
+});
+provaAsync('6.63 R2 10 (REL-001; remédio) — a pendência reaberta pelo «Desfazer a resolução» com o horário corrigido para 18:00 (a dose das 14:00 já dada): o «Resolvido hoje» recusa pela marca da pendência reaberta, mesmo sem a mesma hora', async () => {
+  await comPend663(async () => {
+    run(QM_ARMA); qmArmaLanc();
+    try {
+      papel657('gestao', 'Gestora Teste');
+      qmPend();
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      qmDeu(L1);
+      run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao');`);
+      qmRelogio(QM_T(14, 12));
+      run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+      igual((await assina663(SENHA657, 'resolvi a pendência errada hoje'))[0], 'pronto');
+      await fecha663();
+      // o horário corrigido (como o «Corrigir» deixaria): 18:00
+      run(`__put657('daycare/pendencias/${KP663}/medicacao/hora', '18:00'); PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao'); __za657=[];`);
+      qmRelogio(QM_T(14, 15));
+      await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657();
+      const za = J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' '));
+      igual([no663('medicacao').status, run('__nl663')], ['aberta', 1], 'nada lançado de novo');
+      assert.ok(za.some((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z) && /A dose das 14:00 de Tonico já foi dada hoje/.test(z)), JSON.stringify(za));
+    } finally { run(QM_SOLTA); }
+  });
+});
+provaAsync('6.63 R2 11 (R2-L2 da 6.65; o q46 do QA) — três gravações da mesma data saindo, com a releitura do banco falhando: a 1ª aceita, a 3ª e a 2ª recusadas — a tela fica com o valor que o banco confirmou (o da 1ª), e não com o de antes de todas', async () => {
+  await comPrev663(VAC663, async () => {
+    papel657('gestao', 'Gestora Teste');
+    run(`__pendura657='^daycare/cadastro/';`);
+    run(`prevGravar(__bp, {vac_mult_p:'2026-11-01'}, {tela:'Prevenção'}); prevGravar(__bp, {vac_mult_p:'2026-11-02'}, {tela:'Prevenção'});`);
+    run('__q1=__pend657.shift(); __q2=__pend657.shift(); __q1.ok();'); await espera657();
+    run(`prevGravar(__bp, {vac_mult_p:'2026-11-03'}, {tela:'Prevenção'}); __q3=__pend657.shift(); __pendura657=null;`);
+    run(`__r1663=DB.ref; DB.ref=function(p){ var r=__r1663(p); if(/^daycare\\/cadastro\\//.test(String(p))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`);
+    try {
+      run('__q3.nao();'); await espera657();
+      run('__q2.nao();'); await espera657();
+    } finally { run('DB.ref=__r1663;'); }
+    igual([fichaDb663().vac_mult_p, J630('pelExtra(__bp)').vac_mult_p, J630("pelCadCache[__kp].vac_mult_p")], ['2026-11-01', '2026-11-01', '2026-11-01']);
+  });
+});
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.63, 2ª rodada (fim)
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 6.63, 3ª rodada (início)
+// ================================================================== 6.63, 3ª rodada — as provas do re-gate do QA e as da 3ª rodada
+// TEST-002 do re-gate: as 13 provas do QA (QR663-01 a 13) com o nome «6.63 QA re-gate …» (s663r3/tools/qrbloco.py; a 02, a 09
+// e a 12 mudaram pela 3ª rodada, com o motivo em cada uma) e as provas «6.63 R3 …», no mesmo bloco.
+// ================================================================== QA 6.63 (Quinn) — RE-GATE da 2ª rodada: ataques novos
+// Tudo inventado (Tonico/Rita Teste; pessoas «Teste»). O alarme é o de verdade (carregarAgendaMedTodos, checarDespertadorMed),
+// lido do banco de mentira; o dashLancar de mentira grava como o de verdade (a ficha, a hora, o detalhe) e tem a trava de
+// repetido do de verdade (o mesmo texto e a mesma ficha na lista do dia EM MEMÓRIA — DASH_DADOS).
+{
+const QR_DC = 'tonico__rita-teste';
+const qrFbLiga = () => run(`if(!__put657.__fbqr){ var __oqr=__put657; __put657=function(p, v){ return __oqr(p, (v===null||v===undefined)?v:__semNullQr(JSON.parse(JSON.stringify(v)))); };
+__put657.__fbqr=__oqr; }
+__semNullQr=function(x){ if(x===null||x===undefined) return null; if(Array.isArray(x)){ var a2=x.map(__semNullQr).filter(function(y){ return y!==null; }); return a2.length?a2:null; }
+if(typeof x==='object'){ var r={}, n=0; Object.keys(x).forEach(function(k){ var y=__semNullQr(x[k]); if(y!==null){ r[k]=y; n++; } }); return n?r:null; } return x; };`);
+const qrFbDesliga = () => run('if(__put657.__fbqr) __put657=__put657.__fbqr;');
+const qrRecarrega = () => run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+const QR_T = (hh, mm) => new Date(2026, 9, 9, hh, mm || 0, 0).getTime();
+const qrEspera = async (n) => { for (let i = 0; i < (n || 800); i++) await Promise.resolve(); };
+const qrJ = (c) => { const v = run(c); return JSON.parse(JSON.stringify(v === undefined ? null : v)); };
+const qrRelogio = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;`);
+const QR_ARMA = `__qrbk={hs:hospedes, sd:selectedDate, zm:zMapaUma, cm:carregarMedAtrasadaGestora, mdn:mostrarDespertadorMed, prm:papelRecebeAlarmeMed, dmt:despMedNaTela,
+    qsa:document.querySelectorAll, td:MED_AGENDA_TODOS, av:AVISOS_ESTOQUE_CACHE, ref:DB.ref};
+  zMapaUma=function(p){ return Promise.resolve(__get657(p)||{}); }; carregarMedAtrasadaGestora=function(){};
+  __qrabre=[]; mostrarDespertadorMed=function(it, doseId, dia){ __qrabre.push([it.key, doseId, it.horario||'']); }; papelRecebeAlarmeMed=function(){ return true; }; despMedNaTela=null;
+  document.querySelectorAll=function(s){ return []; }; AVISOS_ESTOQUE_CACHE={}; hospedes=[];`;
+const QR_SOLTA = `hospedes=__qrbk.hs; selectedDate=__qrbk.sd; zMapaUma=__qrbk.zm; carregarMedAtrasadaGestora=__qrbk.cm; mostrarDespertadorMed=__qrbk.mdn;
+  papelRecebeAlarmeMed=__qrbk.prm; despMedNaTela=__qrbk.dmt; document.querySelectorAll=__qrbk.qsa; MED_AGENDA_TODOS=__qrbk.td; AVISOS_ESTOQUE_CACHE=__qrbk.av;`;
+const qrAlarme = async (hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`selectedDate=new Date(${QR_T(10, 0)}); despMedNaTela=null; __qrabre=[];`);
+  run('carregarAgendaMedTodos()'); await qrEspera();
+  const fila = qrJ(`(MED_AGENDA_TODOS||[]).filter(function(e){ return e.key==='dc__${QR_DC}'; }).map(function(e){ return e.itemId+'@'+e.horario; })`);
+  run('checarDespertadorMed()'); await qrEspera();
+  const desp = qrJ('__qrabre').filter((x) => x[0] === 'dc__' + QR_DC).map((x) => x[1]);
+  return { fila, desp };
+};
+// o dashLancar de mentira: o remédio é o do detalhe da pendência (DASH_DET), e a trava de repetido é a do de verdade
+const qrLanc = () => run(`dashLancar=function(item, base, i, hora){
+    var det=JSON.parse(JSON.stringify(DASH_DET[item]||{})), qual=String(det.qual||'Apoquel');
+    var valor='Tonico ('+qual+' · bolsa)', ch='${QR_DC}', lista=DASH_DADOS[item]||{};
+    if(Object.keys(lista).some(function(id){ var r=lista[id]||{}; if(jsNorm(r.valor||'')!==jsNorm(valor)) return false; return r.chave?String(r.chave)===ch:true; })){ alert(valor+' já está lançado em Medicação hoje.'); return; }
+    var id='L663_'+(++__nl663); DASH_DADOS[item]=lista;
+    var reg={valor:valor, hora:hora||'', chave:ch, det:det, quem:'Bia Consultora Teste', ts:Date.now()};
+    lista[id]=reg; __put657('daycare/dashboard/${DIA657}/'+item+'/'+id, reg); return Promise.resolve(true); };
+  carregarAgendaMedTodos=__bkP663.ca;`);
+const qrPend = (hora, qual) => pend663('medicacao', { valor: 'Tonico (' + (qual || 'Apoquel') + ' · bolsa)', base: 'Tonico', hora: hora, det: { qual: qual || 'Apoquel', onde: 'bolsa' }, nome: 'Tonico', tutor: 'Rita Teste' });
+const qrDeu = (id, hora, hh, mm) => run(`__put657('auaulandia/medicacao-log/${DIA657}/dc__${QR_DC}/lanc_${id}_${hora.replace(':', '-')}', {nome:'Apoquel', horario:'${hora}', quem:'Caio Encãotador Teste', ts:${QR_T(hh, mm)}});`);
+const qrRefresca = () => run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao'); __za657=[]; __al657=[];`);
+const qrResolve = async (hh, mm) => { qrRefresca(); qrRelogio(QR_T(hh, mm)); await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657(); };
+const qrDesfaz = async (hh, mm) => {
+  qrRefresca(); qrRelogio(QR_T(hh, mm));
+  run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+  const p = (await assina663(SENHA657, 'resolvi a pendência errada hoje'))[0]; await fecha663(); return p;
+};
+const qrTira = async (id, hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`DASH_DIA_SEL=''; DASH_DADOS={medicacao:{}}; DASH_DADOS.medicacao['${id}']=__get657('daycare/dashboard/${DIA657}/medicacao/${id}');`);
+  run(`__p663=dashMedAnularAbrir('${id}');`); await espera657();
+  const p = (await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado'))[0]; await fecha663(); return p;
+};
+const qrReabre = async (id, hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`DASH_DIA_SEL=''; DASH_MED_ANULADOS_DIA='${DIA657}'; DASH_MED_ANULADOS={}; DASH_MED_ANULADOS['${id}']=__get657('daycare/dashboard-anulados/${DIA657}/medicacao/${id}');
+    DASH_DADOS={medicacao:__get657('daycare/dashboard/${DIA657}/medicacao')||{}};`);
+  run(`__p663=dashMedReabrirAbrir('${id}');`); await espera657();
+  const p = (await assina663(SENHA657, 'a medicação foi tirada sem querer'))[0]; const e = erro663(); await fecha663(); return [p, e];
+};
+const qrAtivos = () => Object.keys(db657('daycare/dashboard/' + DIA657 + '/medicacao') || {});
+const qrZa = () => J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' '));
+const qrRecusou = () => qrZa().filter((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z));
+const qrCom = async (fn) => comPend663(async () => { run(QR_ARMA); qrLanc(); try { papel657('gestao', 'Gestora Teste'); await fn(); } finally { run('DB.ref=__qrbk.ref;'); run(QR_SOLTA); } });
+
+// ---- REL-001: a hora à frente — relançada (uma dose só), dada, tirada (reabre) e «Resolvido hoje» de novo ----
+provaAsync('6.63 QA re-gate 01 (REL-001; remédio) — 18:00: desfeita às 10:00 e relançada às 10:05 (o alarme das 18:01 tem UMA dose); dada às 18:05, tirada nos Lançamentos às 18:10 (reabre) e «Resolvido hoje» às 18:12: recusa, e o alarme das 18:20 fica quieto', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    igual(await qrDesfaz(10, 0), 'pronto', 'o desfazer');
+    await qrResolve(10, 5);
+    const n2 = no663('medicacao'), L2 = (n2.resolvido_lanc || {}).id;
+    igual([n2.status, qrAtivos(), qrRecusou()], ['resolvida', [L2], []], 'a hora à frente relança (a dose das 18:00 nunca tocou)');
+    const a1 = await qrAlarme(18, 1);
+    igual([a1.fila, a1.desp.length], [['lanc_' + L2 + '@18:00'], 1], 'uma dose só no alarme (o lançamento tirado não toca)');
+    qrDeu(L2, '18:00', 18, 5);
+    igual(await qrTira(L2, 18, 10), 'pronto', 'a anulação');
+    const st = no663('medicacao').status;
+    await qrResolve(18, 12);
+    const za = qrRecusou();
+    const a2 = await qrAlarme(18, 20);
+    console.log('      6.63 QA re-gate 01: L1=' + L1 + ' L2=' + L2 + ' pendência depois do tirar=' + st + ' recusa=' + JSON.stringify(za));
+    igual([st, no663('medicacao').status, qrAtivos(), za.length, a2.fila, a2.desp], ['aberta', 'aberta', [], 1, [], []], 'a dose das 18:00 já foi dada: nada lança, nada toca');
+  });
+});
+// ---- REL-001: a régua de 15 minutos nos dois lados ----
+// 3ª rodada (REL-008 do re-gate): a régua da hora vale só para a tirada a partir de 15 minutos antes da hora (o alarme daquela
+// dose pode ter tocado). A versão do QA tirava às 13:00 e esperava a recusa às 13:46 e às 14:30 — o caso do REL-008 (o alarme
+// nunca tocou). Agora: tirada às 13:00, lança nos três horários; tirada às 13:50, recusa às 13:52 e às 14:30.
+provaAsync('6.63 QA re-gate 02 (REL-001, REL-008; remédio) — a régua da hora da medicação tirada: 14:00 desfeita às 13:00 (o alarme nunca tocou) — «Resolvido hoje» às 13:44, 13:46 e 14:30 lança; desfeita às 13:50 (o alarme pode tocar) — às 13:52 recusa (faltam 8 min) e às 14:30 recusa (passou)', async () => {
+  const caso = async (hd, md, hh, mm) => {
+    let r = null;
+    await qrCom(async () => {
+      qrPend('14:00');
+      await qrResolve(9, 50);
+      await qrDesfaz(hd, md);
+      await qrResolve(hh, mm);
+      r = { st: no663('medicacao').status, n: qrAtivos().length, recusa: qrRecusou().length };
+    });
+    return r;
+  };
+  const a = await caso(13, 0, 13, 44), b = await caso(13, 0, 13, 46), c = await caso(13, 0, 14, 30), d = await caso(13, 50, 13, 52), e = await caso(13, 50, 14, 30);
+  console.log('      6.63 QA re-gate 02: ' + JSON.stringify({ a, b, c, d, e }));
+  const lanca = { st: 'resolvida', n: 1, recusa: 0 }, recusa = { st: 'aberta', n: 0, recusa: 1 };
+  igual([a, b, c, d, e], [lanca, lanca, lanca, recusa, recusa]);
+});
+// ---- REL-001: outro aparelho registra a dose (o celular da plantonista com a tela velha) depois do desfazer ----
+provaAsync('6.63 QA re-gate 03 (REL-001; outro aparelho) — 18:00 desfeita às 10:00; às 10:02 outro aparelho registra a dose (dada antes da hora); «Resolvido hoje» às 10:05: recusa com quem deu', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    await qrDesfaz(10, 0);
+    qrDeu(L1, '18:00', 10, 2);
+    await qrResolve(10, 5);
+    const za = qrRecusou();
+    igual([no663('medicacao').status, qrAtivos(), za.length], ['aberta', [], 1]);
+    assert.ok(/já foi dada hoje por Caio Encãotador Teste às 10:02/.test(za[0]), JSON.stringify(za));
+  });
+});
+// ---- REL-001: outro aparelho faz o «Reabrir» da 6.58 enquanto este confere (a conferência nova espera o banco) ----
+provaAsync('6.63 QA re-gate 04 (REL-001; outro aparelho no meio) — 18:00 desfeita; este aparelho toca «Resolvido hoje» e, enquanto a conferência lê o banco, outro aparelho faz o «Reabrir» da 6.58 (lança de novo): quantas doses o alarme pede às 18:01?', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    await qrDesfaz(10, 0);
+    qrRefresca(); qrRelogio(QR_T(10, 5));
+    // a leitura das medicações tiradas fica no ar (devolve o que o banco tiver quando responder, como o Firebase)
+    run(`__h4=[]; DB.ref=function(p){ var r=__qrbk.ref(p); if(/dashboard-anulados/.test(String(p))){ r.once=function(){ return new Promise(function(ok){ __h4.push(function(){ var v=__get657(p); ok({val:function(){ return v; }, exists:function(){ return v!==null; }}); }); }); }; } return r; };`);
+    run(`__pr4=pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    const noAr = run('__h4.length');
+    // o outro aparelho: o «Reabrir» da 6.58 (o que o dashMedReabrirGravar grava)
+    run(`var __a1=__get657('daycare/dashboard-anulados/${DIA657}/medicacao/${L1}');
+      __put657('daycare/dashboard/${DIA657}/medicacao/OUTRO1', {valor:__a1.valor, hora:__a1.hora, chave:__a1.chave, det:__a1.det, quem:'Amanda Supervisora Teste', ts:${QR_T(10, 6)}, reaberto_de:{id:'${L1}', por:'Gestora Teste', ts:${QR_T(10, 6)}}});
+      __put657('daycare/dashboard-anulados/${DIA657}/medicacao/${L1}/reaberto', {novoId:'OUTRO1', registro:{por:'Gestora Teste', ts:${QR_T(10, 6)}}});`);
+    run('DB.ref=__qrbk.ref; __h4.forEach(function(f){ f(); });'); await espera657(); await espera657();
+    const ativos = qrAtivos();
+    const a = await qrAlarme(18, 1);
+    console.log('      6.63 QA re-gate 04: leituras no ar=' + noAr + ' · lançamentos ativos=' + JSON.stringify(ativos) + ' · pendência=' + no663('medicacao').status + ' · alarme 18:01 ' + JSON.stringify(a) + ' · alertas ' + JSON.stringify(J630('__al657')));
+    igual([noAr, a.fila.length], [1, 1], 'uma dose só às 18:00');
+  });
+});
+// ---- REL-001: o «Reabrir» da 6.58 no meio da cadeia, com o horário corrigido (a marca da pendência se perde no «reaberto») ----
+provaAsync('6.63 QA re-gate 05 (REL-001; dose relançada já + horário mudado) — 14:00: tirada às 10:00 (reabre), «Reabrir» da 6.58 às 10:05, dada às 14:05, tirada de novo às 14:10, o horário da pendência corrigido para 20:00 e «Resolvido hoje» às 14:15: o alarme pede o Apoquel de novo às 20:00?', async () => {
+  await qrCom(async () => {
+    qrPend('14:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    const p1 = await qrTira(L1, 10, 0);
+    const st1 = no663('medicacao').status;
+    const [p2, e2] = await qrReabre(L1, 10, 5);
+    const L2 = qrAtivos()[0];
+    qrDeu(L2, '14:00', 14, 5);
+    const p3 = await qrTira(L2, 14, 10);
+    run(`__put657('daycare/pendencias/${KP663}/medicacao/hora', '20:00');`);
+    await qrResolve(14, 15);
+    const za = qrRecusou(), ativos = qrAtivos();
+    const a = await qrAlarme(20, 1);
+    console.log('      6.63 QA re-gate 05: tirar=' + p1 + ' (pendência ' + st1 + ') · reabrir=' + p2 + (e2 ? ' (' + e2 + ')' : '') + ' L2=' + L2 + ' · tirar de novo=' + p3 + ' · resolvido: ' + no663('medicacao').status + ' ativos=' + JSON.stringify(ativos) + ' recusa=' + JSON.stringify(za) + ' · alarme 20:01 ' + JSON.stringify(a));
+    // a mesma régua da 6.63 R2 10 (a medicação que reabriu a pendência conta com outro horário): a dose de hoje já foi dada
+    igual([no663('medicacao').status, ativos.length, a.fila], ['aberta', 0, []], 'a dose de hoje já foi dada (às 14:05): o «Resolvido hoje» não pode pôr outra às 20:00');
+  });
+});
+// ---- REL-001: a leitura do registro de doses falha (não a das tiradas) ----
+provaAsync('6.63 QA re-gate 06 (REL-001; leitura) — 18:00 desfeita; a leitura do registro de doses do dia falha: o «Resolvido hoje» recusa (na dúvida, não lança)', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    await qrDesfaz(10, 0);
+    run(`DB.ref=function(p){ var r=__qrbk.ref(p); if(/medicacao-log/.test(String(p))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`);
+    await qrResolve(10, 5);
+    run('DB.ref=__qrbk.ref;');
+    const za = qrRecusou();
+    igual([no663('medicacao').status, qrAtivos(), za.length], ['aberta', [], 1], JSON.stringify(qrZa()));
+    assert.ok(/Não consegui conferir/.test(za[0]), za[0]);
+  });
+});
+// ---- REL-001: dois remédios — o outro (Otomax) foi dado e tirado; a pendência do Apoquel desfeita com a hora à frente lança ----
+provaAsync('6.63 QA re-gate 07 (REL-001; dois remédios) — Otomax 16:00 lançado à parte, dado e tirado; a pendência do Apoquel 18:00 desfeita e resolvida às 16:30: lança (o Otomax não trava o Apoquel), e o alarme das 18:01 tem só o Apoquel', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    await qrDesfaz(10, 0);
+    run(`__put657('daycare/dashboard/${DIA657}/medicacao/OTO1', {valor:'Tonico (Otomax · bolsa)', hora:'16:00', chave:'${QR_DC}', det:{qual:'Otomax', onde:'bolsa'}, quem:'Bia Consultora Teste', ts:${QR_T(9, 0)}});`);
+    run(`__put657('auaulandia/medicacao-log/${DIA657}/dc__${QR_DC}/lanc_OTO1_16-00', {nome:'Otomax', horario:'16:00', quem:'Caio Encãotador Teste', ts:${QR_T(16, 5)}});`);
+    await qrTira('OTO1', 16, 10);
+    await qrResolve(16, 30);
+    const a = await qrAlarme(18, 1);
+    igual([no663('medicacao').status, qrAtivos().length, qrRecusou(), a.fila.length], ['resolvida', 1, [], 1], JSON.stringify(a));
+  });
+});
+// ---- REL-001: a medicação tirada MUITO antes da hora (o alarme dela nunca tocou) e o «Resolvido hoje» depois da hora ----
+// 3ª rodada (REL-008): de registro passou a asserção — tirada muito antes da hora (o alarme nunca tocou) e sem dose: lança, e o
+// alarme pede a dose uma vez (a dose de hoje não se perde)
+provaAsync('6.63 QA re-gate 12 (REL-001, REL-008; dose perdida) — 18:00 desfeita às 10:00 (o alarme das 18:00 nunca tocou para ela); o FILHOt não tomou; «Resolvido hoje» às 18:30: lança, e às 18:31 o alarme pede a dose uma vez', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    await qrDesfaz(10, 0);
+    const an = db657('daycare/dashboard-anulados/' + DIA657 + '/medicacao/' + L1) || {};
+    await qrResolve(18, 30);
+    const za = qrRecusou(), L2 = (no663('medicacao').resolvido_lanc || {}).id;
+    const a = await qrAlarme(18, 31);
+    console.log('      6.63 QA re-gate 12: tirada às ' + new Date((an.anulado || {}).ts || 0).toTimeString().slice(0, 5) + ' · pendência=' + no663('medicacao').status + ' · lançou=' + qrAtivos().length + ' · ' + JSON.stringify(za) + ' · alarme ' + JSON.stringify(a));
+    igual([no663('medicacao').status, qrAtivos(), za, a.fila], ['resolvida', [L2], [], ['lanc_' + L2 + '@18:00']]);
+  });
+});
+// ---- REQ-001 x a pergunta refeita a cada 6 meses (ALG_MESES): a resposta de agora é DIFERENTE da de 7 meses atrás ----
+provaAsync('6.63 QA re-gate 13 (REQ-001; AC10.1; a pergunta refeita a cada 6 meses) — o tutor respondeu em 02/03 e a resposta foi para a ficha; refeita a pergunta, «O tutor respondeu» e «Colar» com a resposta de agora: ela é gravada (a de 02/03 vai para respostas_anteriores)?', async () => {
+  const caso = async (entrada) => {
+    let r = null;
+    await comAlg663(async () => {
+      fichaTonico657({ alergia: 'frango', restricao: '', manias: '', entrevista: ENTREV663 });
+      papel657('consultora', 'Bia Consultora Teste');
+      const NO = { enviada: ENV663, resposta: 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000, ficha: entrada };
+      alg663(K657, NO);
+      const lista = J630("(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='" + K657 + "'; }).map(function(x){ return {vencido:x.vencido, meses:x.meses}; }); })()");
+      run(`__el657['algResp_${K657}']={value:'Não tem mais alergia a frango. Agora tem alergia a carne de porco.'}; __el657['algData_${K657}']={value:'2026-10-09'}; __za657=[]; __ze657=[];`);
+      await run(`algResponder('${K657}')`); await espera657();
+      const gravouR = noA663().resposta !== NO.resposta;
+      alg663(K657, NO);
+      run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+      run(`algColarConfirmar('${K657}', 'Não tem mais alergia a frango. Agora tem alergia a carne de porco.');`); await espera657();
+      const gravouC = noA663().resposta !== NO.resposta;
+      const avisos = J630('__za657').map((z) => z[0]).concat(J630('__ze657').map((z) => z[0] + ' [' + (z[2] || []).join(', ') + ']'));
+      // o caminho que a recusa manda, na entrada com o antes: o cartaz do «Desfazer a entrada na ficha»
+      let casc = null;
+      if (entrada && entrada.guardouAntes) { alg663(K657, NO); run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657(); casc = (op663('cascata') || []).concat(op663('info') || []).join(' / ').slice(0, 600); await fecha663(); }
+      r = { lista, gravouR, gravouC, avisos, casc };
+    });
+    return r;
+  };
+  const antiga = await caso({ quando: '2026-03-02', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia'], ts: T657(1, 9) - 220 * 86400000 });
+  const nova = await caso(ENTRADA663({ quando: '2026-03-02', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' } }));
+  console.log('      6.63 QA re-gate 13 entrada antiga: ' + JSON.stringify(antiga));
+  console.log('      6.63 QA re-gate 13 entrada com o antes: ' + JSON.stringify(nova));
+  igual([antiga.lista[0].vencido, antiga.gravouR, antiga.gravouC, nova.gravouR, nova.gravouC], [true, true, true, true, true], 'a resposta da pergunta refeita tem de ser gravada');
+});
+// ---- REQ-001: a entrada DESFEITA e a resposta nova — ela vai para a ficha sozinha (o automático) ou fica na fila do trabalho parado? ----
+provaAsync('6.63 QA re-gate 08 (REQ-001; AC10.1, AC11.4, AC11.6) — a entrada desfeita (era de outro FILHOt) e o tutor manda a resposta certa: «O tutor respondeu» grava; o automático (ligado) trata a resposta nova, ou ela aparece em «Quem respondeu e ainda não virou ficha»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: '', restricao: '', manias: '' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const DESF = ENTRADA663({ desfeita: { por: 'Bia Consultora Teste', motivo: 'a resposta era de outro FILHOt', ts: 3 } });
+    alg663(K657, { enviada: ENV663, resposta: 'O Quindim não tem alergia nenhuma', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 171, ficha: DESF });
+    run(`__el657['algResp_${K657}']={value:'Tem alergia a carne de porco'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663();
+    const pend = J630('algPendentesFicha().map(function(x){ return x.k; })');
+    run('__ta663=[]; algTratarAuto=function(k){ __ta663.push(k); return Promise.resolve(false); }; ALG_CFG={}; ALG_AUTO_RODANDO=false; algTratarFila();');
+    const auto = J630('__ta663');
+    console.log('      6.63 QA re-gate 08: resposta=' + n.resposta + ' · ficha no nó=' + JSON.stringify(n.ficha ? { desfeita: !!n.ficha.desfeita } : null) + ' · na fila do trabalho parado=' + (pend.indexOf(K657) >= 0) + ' · o automático tratou=' + (auto.indexOf(K657) >= 0));
+    igual(n.resposta, 'Tem alergia a carne de porco', 'a resposta nova foi gravada');
+    igual([pend.indexOf(K657) >= 0 || auto.indexOf(K657) >= 0], [true], 'a resposta nova não pode ficar fora do automático E fora da fila do trabalho parado');
+  });
+});
+// ---- REQ-001: a entrada ANTIGA (sem o antes) — o que acontece com a resposta nova (o desvio registrado pelo @dev) ----
+// 3ª rodada (decisão do @po de 10/out, REQ-003): a versão do QA registrava o desvio da 2ª rodada (a entrada antiga prendia a
+// resposta e nada era gravado). Agora a resposta nova é gravada nas duas portas, a anterior vai com a entrada antiga para
+// respostas_anteriores, e o «Apagar» da resposta nova abre (ela não tem entrada viva).
+provaAsync('6.63 QA re-gate 09 (REQ-003; a entrada antiga) — a entrada antiga não prende mais a resposta: «O tutor respondeu» e «Colar» gravam o texto novo (a anterior vai com a entrada para o histórico) e o «Apagar» da resposta nova abre', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const F = { quando: '2026-04-01', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia'], ts: T657(1, 9) - 180 * 86400000 };
+    const NO = { enviada: ENV663, resposta: 'Ele tinha alergia a frango', quando: '2026-04-01', quem: 'Bia Consultora Teste', ts: 9, ficha: F };
+    const confere = () => { const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}); const a = (n.respostas_anteriores || {})[ra[0]] || {};
+      return [n.resposta, n.ficha || null, n.enviada, ra.length, a.resposta, a.ficha]; };
+    const ESP = ['Agora também a carne de porco', null, ENV663, 1, 'Ele tinha alergia a frango', F];
+    alg663(K657, NO);
+    run(`__el657['algResp_${K657}']={value:'Agora também a carne de porco'}; __el657['algData_${K657}']={value:'2026-10-09'}; __za657=[]; __ze657=[];`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual(confere(), ESP, '«O tutor respondeu»');
+    alg663(K657, NO);
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    run(`algColarConfirmar('${K657}', 'Agora também a carne de porco');`); await espera657();
+    igual(confere(), ESP, '«Colar»');
+    run(`__p663=algRespApagarAbrir('${K657}');`); await espera657();
+    const ap = run('!!CORR_ATUAL'); await fecha663();
+    const avisos = J630('__za657').map((z) => z[0]).concat(J630('__ze657').map((z) => z[0]));
+    igual([ap, avisos.filter((t) => /CONTINUA NA FICHA/.test(t)), db657('daycare/cadastro/' + K657).alergia], [true, [], 'frango'], 'a alergia continua na ficha; nenhuma recusa');
+  });
+});
+// ---- REL-002: o «antes» da escova com o banco fiel ao Firebase, em mais formatos ----
+provaAsync('6.63 QA re-gate 10 (REL-002) — escova, banco fiel ao Firebase: só a última troca antes («Tinha em casa»); «Não autorizou» com a próxima à mão; e a lista antes_vazios que volta como objeto numerado ou com buraco', async () => {
+  const lista = [J630("escovaAntesVazios({antes_vazios:{0:'escova_p', 1:'escova_p_manual'}})"), J630("escovaAntesVazios({antes_vazios:{0:'escova_t', 2:'escova_p_manual'}})"),
+    J630("escovaAntesVazios({antes_vazios:['escova_t',,'escova_p_manual']})"), J630('escovaAntesVazios({})'), J630("escovaAntesVazios({antes_vazios:'x'})")];
+  console.log('      6.63 QA re-gate 10 antes_vazios: ' + JSON.stringify(lista));
+  igual([lista[0], lista[1], lista[3], lista[4]], [['escova_p', 'escova_p_manual'], ['escova_t', 'escova_p_manual'], [], []]);
+  const caso = async (ficha, como) => {
+    let out = null;
+    await comPrev663(Object.assign({ escova_dc: 'Sim' }, ficha), async () => {
+      qrFbLiga();
+      try {
+        papel657('gestao', 'Gestora Teste');
+        const patch = run(`escovaPatchTresMeses('${como}', '2026-10-09', 'Gestora Teste', pelExtra(__bp))`);
+        const r = await run(`prevGravar(__bp, ${JSON.stringify(patch)}, {tela:'Ficha › Prevenção'})`); await espera657();
+        qrRecarrega();
+        const depois = fichaDb663();
+        const sit = run(`escovaUltSituacao(pelExtra(__bp).escova_ult, pelExtra(__bp))`);
+        const d = await run(`escovaDesfazerTresMesesGravar(__bp, {quem:'Gestora Teste', ts:5}, pelExtra(__bp).escova_ult.ts)`); await espera657();
+        const f = fichaDb663();
+        out = { ok: !!(r && r.ok), sit, desfez: !!(d && d.ok), t: f.escova_t === undefined ? 'sem' : f.escova_t, p: f.escova_p === undefined ? 'sem' : f.escova_p, m: f.escova_p_manual === undefined ? 'sem' : f.escova_p_manual, vazios: (depois.escova_ult || {}).antes_vazios || null };
+      } finally { qrFbDesliga(); }
+    });
+    return out;
+  };
+  const a = await caso({ escova_t: '2026-07-01' }, 'casa');
+  const b = await caso({ escova_p: '2026-12-01', escova_p_manual: true }, 'nao');
+  console.log('      6.63 QA re-gate 10: ' + JSON.stringify({ a, b }));
+  igual([a.sit, a.desfez, a.t, a.p, a.m], ['pode', true, '2026-07-01', 'sem', 'sem'], 'só a última troca antes: volta a última e a próxima some');
+  igual([b.sit, b.desfez, b.t, b.p, b.m], ['pode', true, 'sem', '2026-12-01', true], '«Não autorizou» com a próxima à mão: volta a próxima e o «à mão»');
+});
+// ---- REL-003: as horas do «Corrigir» em mais formatos ----
+prova('6.63 QA re-gate 11 (REL-003) — «Corrigir» a pendência: toda hora aceita existe no relógio (registro dos formatos)', () => {
+  const r = { base: 'Tonico', nome: 'Tonico', dia: '2026-10-07', valor: 'Tonico (Apoquel · bolsa)', hora: '14:00' };
+  const rot = run("pendRotulo('medicacao')");
+  const horas = [' 14:00 ', '14h', '14h30', '1400', '14.00', '-1:00', '24:00', '23:59', '0:00', '12:60', '9:5'];
+  const out = horas.map((h) => { const x = J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'medicacao', ${JSON.stringify(['07/10/2026', '', 'Tonico (Apoquel · bolsa)', h, 'Tonico', rot])})`) || {};
+    return [h, x.recusa ? 'recusa' : ((x.novo || x).hora || JSON.stringify(Object.keys(x)))]; });
+  console.log('      6.63 QA re-gate 11: ' + JSON.stringify(out));
+  igual(out.filter((o) => o[1] !== 'recusa' && !run(`horaOk(${JSON.stringify(o[1])})`)), [], 'nenhuma hora aceita fora do relógio');
+});
+// ================================================================== 6.63, 3ª rodada — as provas das correções do re-gate (Dex)
+// REL-006/007/008 e UX-003 (a medicação tirada hoje), os defeitos que viveram no re-gate (s01, s02, s04 e s14; o s11 é a QA 25,
+// que agora exige o ok) e a decisão do @po de 10/out (REQ-002/REQ-003: a resposta nova é sempre gravada; a anterior vai com a
+// entrada dela para o histórico, com o «Desfazer»; a resposta que contradiz a ficha fica à vista em «O que a IA entendeu»).
+// Tudo inventado; usa o palco do re-gate logo acima (qr*) e o da 6.63.
+console.log('\n6.63, 3ª rodada — as correções do re-gate do QA');
+// uma medicação tirada hoje gravada direto (o formato que o «Desfazer a resolução» e a anulação da 6.58 gravam), para as cadeias
+const qr3Tirada = (id, campos) => {
+  ctx.__qr3t = Object.assign({ valor: 'Tonico (Apoquel · bolsa)', hora: '18:00', chave: QR_DC, det: { qual: 'Apoquel', onde: 'bolsa' }, quem: 'Bia Consultora Teste', ts: QR_T(9, 0),
+    anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'resolvi a pendência errada hoje', ts: QR_T(10, 0) }, pendencia_reaberta: { chave: KP663, item: 'medicacao', nome: 'Tonico' } }, campos || {});
+  run(`__put657('daycare/dashboard-anulados/${DIA657}/medicacao/${id}', __qr3t);`);
+};
+// a leitura das medicações tiradas fica no ar até qr3Solta (devolve o que o banco tiver quando responder, como o Firebase)
+const qr3Segura = () => run(`__h3=[]; DB.ref=function(p){ var r=__qrbk.ref(p); if(/dashboard-anulados/.test(String(p))){ r.once=function(){ return new Promise(function(ok){ __h3.push(function(){ var v=__get657(p); ok({val:function(){ return v; }, exists:function(){ return v!==null; }}); }); }); }; } return r; };`);
+const qr3Solta = async () => { run('DB.ref=__qrbk.ref; __h3.forEach(function(f){ f(); });'); await espera657(); await espera657(); };
+const qr3Item = (campo) => J630(`(function(){ iaRevEsquecerCache(); return iaRevMontar().filter(function(x){ return x.k==='${K657}' && x.campo==='${campo}'; }).map(function(x){ return {estado:x.estado, auto:x.auto, valor:x.valor, diverge:x.diverge||null, entrada:x.entrada||null}; }); })()`);
+
+// ---- UX-003 e o s01 do re-gate: duas tiradas — a 1ª passa, a 2ª tem a dose dada ----
+provaAsync('6.63 R3 01 (UX-003, s01 do re-gate; remédio) — duas medicações tiradas hoje: a 1ª passa (tirada às 10:00, o alarme dela nunca tocou) e a 2ª tem a dose dada às 18:05; o «Resolvido hoje» das 18:12 olha as duas e recusa com a frase da dose dada — também com uma 3ª tirada perto da hora e sem registro', async () => {
+  const caso = async (comTerceira) => {
+    let out = null;
+    await qrCom(async () => {
+      qrPend('18:00');
+      await qrResolve(9, 50);
+      await qrDesfaz(10, 0);
+      await qrResolve(10, 5);
+      const L2 = no663('medicacao').resolvido_lanc.id;
+      qrDeu(L2, '18:00', 18, 5);
+      await qrTira(L2, 18, 10);
+      if (comTerceira) qr3Tirada('X1', { anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'a medicação foi lançada no FILHOt errado', ts: QR_T(17, 50) } });
+      await qrResolve(18, 12);
+      out = { st: no663('medicacao').status, n: qrAtivos().length, za: qrRecusou() };
+    });
+    return out;
+  };
+  const a = await caso(false), b = await caso(true);
+  console.log('      6.63 R3 01: ' + JSON.stringify({ a: a.za, b: b.za }));
+  for (const x of [a, b]) {
+    igual([x.st, x.n, x.za.length], ['aberta', 0, 1]);
+    assert.ok(/já foi dada hoje por Caio Encãotador Teste às 18:05/.test(x.za[0]) && !/confira com a plantonista se a dose/.test(x.za[0]), x.za[0]);
+  }
+});
+// ---- s02 do re-gate: a tirada sem hora (ou sem a ficha) não encerra a conferência ----
+provaAsync('6.63 R3 02 (s02 do re-gate; remédio) — uma medicação tirada hoje sem a hora (ou sem a ficha), ligada à pendência e gravada antes da tirada cuja dose já foi dada: a conferência não para nela — recusa com quem deu', async () => {
+  for (const sem of [{ hora: '' }, { chave: '' }]) {
+    await qrCom(async () => {
+      qrPend('18:00');
+      qr3Tirada('A0', sem);
+      await qrResolve(9, 50);
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      await qrDesfaz(10, 0);
+      qrDeu(L1, '18:00', 10, 2);
+      await qrResolve(10, 5);
+      const za = qrRecusou();
+      igual([no663('medicacao').status, qrAtivos(), za.length], ['aberta', [], 1], JSON.stringify(sem));
+      assert.ok(/já foi dada hoje por Caio Encãotador Teste às 10:02/.test(za[0]), za[0]);
+    });
+  }
+});
+// ---- REL-008: a régua da hora só para a tirada perto da hora (a borda de 15 minutos) ----
+provaAsync('6.63 R3 03 (REL-008; remédio) — a régua da hora só para a medicação tirada a partir de 15 minutos antes da hora: 14:00 tirada às 13:45 recusa às 13:52, e a frase diz o caminho (conferir com a plantonista e lançar em Lançamentos do dia); tirada às 13:44 lança às 13:52; a conta pura (sem a hora em que foi tirada, a régua vale)', async () => {
+  igual([run(`pendMedAlarmePodeTerTocado({anulado:{ts:${QR_T(13, 45)}}}, '14:00')`), run(`pendMedAlarmePodeTerTocado({anulado:{ts:${QR_T(13, 44)}}}, '14:00')`),
+    run(`pendMedAlarmePodeTerTocado({}, '14:00')`), run(`pendMedAlarmePodeTerTocado({anulado:{}}, '14:00')`), run(`pendMedAlarmePodeTerTocado({anulado:{ts:${QR_T(13, 0)}}}, '')`),
+    run(`pendMedAlarmePodeTerTocado({anulado:{ts:${QR_T(15, 0)}}}, '14:00')`)], [true, false, true, true, true, true]);
+  const caso = async (hd, md) => {
+    let r = null;
+    await qrCom(async () => {
+      qrPend('14:00');
+      await qrResolve(9, 50);
+      await qrDesfaz(hd, md);
+      await qrResolve(13, 52);
+      r = { st: no663('medicacao').status, n: qrAtivos().length, za: qrRecusou() };
+    });
+    return r;
+  };
+  const a = await caso(13, 45), b = await caso(13, 44);
+  console.log('      6.63 R3 03: ' + JSON.stringify({ a, b }));
+  igual([a.st, a.n, a.za.length, b.st, b.n, b.za.length], ['aberta', 0, 1, 'resolvida', 1, 0]);
+  assert.ok(/confira com a plantonista se a dose das 14:00 foi dada/.test(a.za[0]) && /Se ainda não foi dado e precisa ser hoje, confira com a plantonista e lance em Lançamentos do dia\./.test(a.za[0]), a.za[0]);
+});
+// ---- REL-007: a marca da pendência passa à sucessora do «Reabrir» da 6.58 (a conta pura) ----
+prova('6.63 R3 04 (REL-007) — as tiradas ligadas à pendência seguem o «Reabrir» da 6.58 (reaberto.novoId): a que reabriu, a sucessora tirada e a sucessora dela; outra pendência, outro item e a sucessora que não foi tirada ficam de fora; o laço não trava', () => {
+  ctx.__an3 = {
+    A: { pendencia_reaberta: { chave: KP663, item: 'medicacao' }, reaberto: { novoId: 'B' } }, B: { reaberto: { novoId: 'C' } }, C: {},
+    D: { pendencia_reaberta: { chave: 'outro__teste', item: 'medicacao' }, reaberto: { novoId: 'E' } }, E: {},
+    F: { pendencia_reaberta: { chave: KP663, item: 'vermifugo' } },
+    G: { pendencia_reaberta: { chave: KP663, item: 'medicacao' }, reaberto: { novoId: 'NAO_TIRADA' } },
+    H: { pendencia_reaberta: { chave: KP663 }, reaberto: { novoId: 'I' } }, I: { reaberto: { novoId: 'H' } },
+  };
+  igual(Object.keys(J630(`pendMedTiradasLigadas(__an3, '${KP663}')`)).sort(), ['A', 'B', 'C', 'G', 'H', 'I']);
+  igual([J630(`pendMedTiradasLigadas(null, '${KP663}')`), J630(`pendMedTiradasLigadas({}, '${KP663}')`)], [{}, {}]);
+});
+// ---- REL-006: o «Reabrir» da 6.58 em outro aparelho enquanto a conferência espera ----
+provaAsync('6.63 R3 05 (REL-006; remédio) — o «Reabrir» da 6.58 em outro aparelho enquanto a conferência espera o banco: a lista do dia é relida logo antes de lançar — nada é lançado de novo, a pendência fecha com «já estava lançado» apontando o lançamento do outro aparelho, e o alarme das 18:01 pede uma dose só', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    await qrDesfaz(10, 0);
+    qrRefresca(); qrRelogio(QR_T(10, 5));
+    qr3Segura();
+    run(`__pr3=pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    const noAr = run('__h3.length');
+    run(`var __a3=__get657('daycare/dashboard-anulados/${DIA657}/medicacao/${L1}');
+      __put657('daycare/dashboard/${DIA657}/medicacao/OUTRO1', {valor:__a3.valor, hora:__a3.hora, chave:__a3.chave, det:__a3.det, quem:'Amanda Supervisora Teste', ts:${QR_T(10, 6)}, reaberto_de:{id:'${L1}', por:'Gestora Teste', ts:${QR_T(10, 6)}}});
+      __put657('daycare/dashboard-anulados/${DIA657}/medicacao/${L1}/reaberto', {novoId:'OUTRO1', registro:{por:'Gestora Teste', ts:${QR_T(10, 6)}}});`);
+    await qr3Solta();
+    const n = no663('medicacao'), lancou = run('__nl663'), a = await qrAlarme(18, 1);
+    console.log('      6.63 R3 05: ' + JSON.stringify({ noAr, st: n.status, lanc: n.resolvido_lanc, obs: n.resolvido_obs, ativos: qrAtivos(), lancou, fila: a.fila }));
+    igual([noAr, n.status, n.resolvido_lanc, n.resolvido_obs, qrAtivos(), lancou, qrRecusou(), a.fila], [1, 'resolvida', { dia: DIA657, item: 'medicacao', id: 'OUTRO1', jaEstava: true },
+      'o item já estava lançado hoje', ['OUTRO1'], 1, [], ['lanc_OUTRO1@18:00']]);
+  });
+});
+// ---- s04 do re-gate: depois da espera, as respostas, a ficha e o dia desta pendência são postos de novo ----
+provaAsync('6.63 R3 06 (s04 do re-gate; remédio) — enquanto a conferência espera o banco, outra tela mexe no detalhe, na ficha escolhida e no dia de Lançamentos do dia: o lançamento sai com as respostas e o dia desta pendência', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    await qrDesfaz(10, 0);
+    qrRefresca(); qrRelogio(QR_T(10, 5));
+    run(`__vis3=null; var __dl3=dashLancar; dashLancar=function(item, b, i, h){ __vis3=[DASH_DIA_SEL, DASH_SEL[item]===undefined, DASH_SEL_I[item]===undefined, JSON.parse(JSON.stringify(DASH_DET[item]||null))]; return __dl3(item, b, i, h); };`);
+    qr3Segura();
+    run(`__pr3=pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    run(`DASH_DET.medicacao={qual:'Otomax', onde:'geladeira'}; DASH_SEL.medicacao={n:'Quindim'}; DASH_SEL_I.medicacao=2; DASH_DIA_SEL='2026-10-08';`);
+    await qr3Solta();
+    const n = no663('medicacao'), L2 = (n.resolvido_lanc || {}).id, reg = db657('daycare/dashboard/' + DIA657 + '/medicacao/' + L2) || {};
+    igual([n.status, J630('__vis3'), reg.valor, reg.det], ['resolvida', ['', true, true, { qual: 'Apoquel', onde: 'bolsa' }], 'Tonico (Apoquel · bolsa)', { qual: 'Apoquel', onde: 'bolsa' }]);
+  });
+});
+// ---- s14 do re-gate: o «Desfazer» da escova para quem registrou a troca — só no mesmo dia ----
+provaAsync('6.63 R3 07 (UX-002, s14 do re-gate) — o «Desfazer» da troca de escova sem «editar-peludinho»: quem registrou a troca HOJE abre o cartaz (com o nome dele); quem registrou em outro dia é barrado, sem cartaz', async () => {
+  const caso = async (dia) => {
+    let r = null;
+    const prox = run(`addDiasISO('${dia}', 90)`);
+    await comPrev663({ escova_dc: 'Sim', atividades: ['escova'], escova_t: dia, escova_p: prox,
+      escova_ult: { como: 'casa', data: dia, quem: 'Caio Encãotador Teste', ts: T657(8, 9), antes: { escova_t: '2026-06-01', escova_p: '2026-08-30', escova_p_manual: '' } } }, async () => {
+      papel657('monitor', 'Caio Encãotador Teste');
+      run('__ze657=[]; __zp657=[]; if(typeof CORR_ATUAL!=="undefined") CORR_ATUAL=null;');
+      run('__p663=escovaDesfazerTresMesesAbrir(__bp);'); await espera657();
+      r = { sit: run('escovaUltSituacao(pelExtra(__bp).escova_ult, pelExtra(__bp))'), pode: !!run('canEditPel()'), abriu: !!run('typeof CORR_ATUAL!=="undefined" && !!CORR_ATUAL'), nome: op663('assinaNome'), barrou: barrou657().length };
+      await fecha663();
+    });
+    return r;
+  };
+  const hoje = await caso(DIA657), outro = await caso('2026-10-08');
+  console.log('      6.63 R3 07: ' + JSON.stringify({ hoje, outro }));
+  igual([hoje.sit, hoje.pode, hoje.abriu, hoje.nome, hoje.barrou, outro.sit, outro.abriu, outro.barrou], ['pode', false, true, 'Caio Encãotador Teste', 0, 'pode', false, 1]);
+});
+// ---- REQ-003: a pergunta refeita — a resposta de agora é gravada; a ficha e o «Desfazer» da anterior ficam ----
+provaAsync('6.63 R3 08 (REQ-003, decisão do @po; AC10.1, AC11.2) — a pergunta refeita: «O tutor respondeu» grava a resposta de agora, sem cartaz de recusa; a de 02/03 vai com a entrada dela para o histórico (a ficha não perde a alergia); o histórico diz que ela continua valendo e tem o «Desfazer»; «O que a IA entendeu» e a marca na ficha continuam mostrando o campo; a resposta nova vai para «Quem respondeu e ainda não virou ficha»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const E = ENTRADA663({ quando: '2026-03-02', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, ts: T657(1, 9) - 220 * 86400000 });
+    alg663(K657, { enviada: ENV663, resposta: 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000, ficha: E });
+    run(`__el657['algResp_${K657}']={value:'Agora tem alergia a carne de porco.'}; __el657['algData_${K657}']={value:'2026-10-09'}; __za657=[]; __ze657=[];`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), A = (n.respostas_anteriores || {})[ra[0]] || {};
+    igual([n.resposta, n.ficha || null, n.enviada, ra.length, A.resposta, A.ficha, !!A.substituida, db657('daycare/cadastro/' + K657).alergia, J630('__za657').length + J630('__ze657').length],
+      ['Agora tem alergia a carne de porco.', null, ENV663, 1, 'Tem alergia a frango.', E, true, 'frango', 0]);
+    igual(J630('algPendentesFicha().map(function(x){ return x.k; })').indexOf(K657) >= 0, true, 'a resposta nova vai para «Quem respondeu e ainda não virou ficha» (e para o automático)');
+    const h = String(run(`algPesqCartaoHTML('${K657}')`));
+    assert.ok(h.indexOf('a entrada na ficha dela foi junto e continua valendo na ficha') >= 0, 'o histórico diz que a entrada continua valendo');
+    assert.ok(h.indexOf(`algFichaDesfazerAbrir('${K657}','${ra[0]}')`) >= 0 && /Ainda não foi para a ficha/.test(h), 'o «Desfazer» da entrada anterior, pelo histórico');
+    run('IA_REV={}; IA_REV_LIDO=true;');
+    igual(qr3Item('alergia'), [{ estado: 'revisar', auto: true, valor: 'frango', diverge: null, entrada: { id: ra[0], ts: E.ts } }], '«O que a IA entendeu» continua com o campo');
+    assert.ok(String(run(`iaRevMarcaFicha(${P657}, 'alergia')`)).length > 0, 'a marca na ficha continua');
+  });
+});
+// ---- a resposta nova que contradiz a ficha: a ficha fica, a diferença vai para a revisão humana ----
+provaAsync('6.63 R3 09 (decisão do @po; AC11.1) — a resposta nova contradiz a ficha («não tem mais alergia a frango»): o automático não muda nem esvazia a alergia; a diferença fica na entrada e aparece em «O que a IA entendeu» (o que o tutor disse, o que a ficha diz, e o «Desfazer» da entrada anterior); «Está certo» resolve; nenhuma «CORREÇÃO» sai para Urgências sem alguém pedir', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const E = ENTRADA663({ quando: '2026-03-02', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, ts: T657(1, 9) - 220 * 86400000 });
+    alg663(K657, { enviada: ENV663, resposta: 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000, ficha: E });
+    run(`__el657['algResp_${K657}']={value:'Não tem mais alergia a frango.'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const idAnt = Object.keys(noA663().respostas_anteriores || {})[0];
+    run(`algCur=function(){ return {campos:{q1:{txt:'Não tem mais alergia a frango.', campo:'alergia', atual:'frango'}}, sobras:[]}; }; algEntrevistaReg=function(){ return null; };`);
+    const r = await run(`algTratarAuto('${K657}')`); await espera657();
+    const n = noA663();
+    igual([r, db657('daycare/cadastro/' + K657).alergia, (n.ficha || {}).campos || [], (n.ficha || {}).divergencias || null],
+      [true, 'frango', [], [{ c: 'alergia', campo: run("algCampoNome('alergia')"), tutor: 'Não tem mais alergia a frango.', ficha: 'frango' }]], 'a ficha não perde a alergia sozinha; a diferença fica na entrada');
+    run('IA_REV={}; IA_REV_LIDO=true;');
+    const it = qr3Item('alergia');
+    igual(it, [{ estado: 'revisar', auto: true, valor: 'frango', diverge: { c: 'alergia', campo: run("algCampoNome('alergia')"), tutor: 'Não tem mais alergia a frango.', ficha: 'frango' }, entrada: { id: idAnt, ts: E.ts } }]);
+    const h = String(run(`(function(){ iaRevEsquecerCache(); return iaRevCartaoHtml(iaRevMontar().filter(function(x){ return x.k==='${K657}' && x.campo==='alergia'; })[0]); })()`));
+    for (const t of ['A RESPOSTA NOVA DIZ OUTRA COISA — A FICHA NÃO FOI MUDADA', 'O tutor disse: «Não tem mais alergia a frango.»', 'A ficha diz: «frango»', 'NA FICHA HOJE: ',
+      `algFichaDesfazerAbrir('${K657}','${idAnt}')`, '>Está certo</button>']) assert.ok(h.indexOf(t) >= 0, 'falta no cartão: ' + t);
+    // «Está certo»: a ficha fica como está e o campo sai de «a revisar»
+    run(`iaRevEsquecerCache(); iaRevOk('${K657}', 'alergia');`); await espera657();
+    igual([qr3Item('alergia').map((x) => [x.estado, x.diverge]), db657('daycare/cadastro/' + K657).alergia], [[['confirmado', null]], 'frango']);
+    console.log('      6.63 R3 09 Urgências (só o aviso da base, «DIVERGE DA FICHA»): ' + JSON.stringify(J630('__urg663').map((u) => u[0] + ' ' + (/DIVERGE DA FICHA/.test(u[1]) ? 'DIVERGE' : '-'))));
+    igual(J630('__urg663').filter((u) => /CORREÇÃO/.test(u[1])), [], 'nenhuma correção a Urgências sem alguém pedir');
+  });
+});
+// ---- o «Desfazer a entrada na ficha» de uma resposta anterior, pelo histórico do cartão ----
+provaAsync('6.63 R3 10 (decisão do @po; AC11.2 a AC11.4) — «Desfazer a entrada na ficha» de uma resposta anterior, pelo histórico: o cartaz diz de qual resposta é; a ficha volta (a alergia vai para alergia_original); a marca «desfeita» fica na entrada guardada em respostas_anteriores; o histórico perde o botão; não desfaz duas vezes; a entrada desfeita sai de «O que a IA entendeu»; sem aviso a Urgências (ela não avisou)', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'O Quindim tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 181, ficha: ENTRADA663() });
+    run(`__el657['algResp_${K657}']={value:'Tonico não tem restrição nenhuma'}; __el657['algData_${K657}']={value:'2026-10-09'};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    const id = Object.keys(noA663().respostas_anteriores || {})[0];
+    run(`__p663=algFichaDesfazerAbrir('${K657}', '${id}');`); await espera657();
+    const oque = String(op663('oque') || ''), orig = op663('original') || {};
+    assert.ok(/ — da resposta de 08\/10\/2026, no histórico$/.test(oque), oque);
+    igual(orig.caminho, 'daycare/alergia-confirmada/' + K657 + '/respostas_anteriores/' + id + '/ficha');
+    igual((await assina663('s-bia'))[0], 'pronto');
+    await fecha663();
+    const c = db657('daycare/cadastro/' + K657), n = noA663(), f = ((n.respostas_anteriores || {})[id] || {}).ficha || {};
+    igual([c.alergia || null, c.alergia_original, c.restricao || null, (f.desfeita || {}).por, ((f.desfeita || {}).voltaram || []).sort(), n.ficha || null, n.resposta, J630('__urg663')],
+      [null, 'frango', null, 'Bia Consultora Teste', ['alergia', 'manias', 'restricao'], null, 'Tonico não tem restrição nenhuma', []]);
+    const h = String(run(`algPesqCartaoHTML('${K657}')`));
+    igual([h.indexOf(`algFichaDesfazerAbrir('${K657}','${id}')`) >= 0, /a entrada na ficha dela \(desfeita\) foi junto/.test(h)], [false, true]);
+    const r2 = await run(`algFichaDesfazerGravar('${K657}', {por:'Bia Consultora Teste', ts:Date.now()}, null, '${id}')`); await espera657();
+    igual([r2.ok, /já foi desfeita/.test(String(r2.erro))], [false, true]);
+    igual(aud657('alergia-ficha-desfeita').length, 1);
+    // a entrada desfeita (guardada no histórico) não conta mais: sai de «O que a IA entendeu» e da marca na ficha
+    run('IA_REV={}; IA_REV_LIDO=true;');
+    igual([qr3Item('alergia'), qr3Item('restricao'), String(run(`iaRevMarcaFicha(${P657}, 'alergia')`))], [[], [], ''], 'a entrada desfeita sai da revisão e da marca na ficha');
+  });
+});
+// ---- REQ-002: desfazer e colar a resposta certa — ela chega à ficha pelo automático ----
+provaAsync('6.63 R3 11 (REQ-002; AC11.4, AC11.6) — a entrada desfeita (a resposta era de outro FILHOt) e a resposta certa colada depois: a desfeita vai junto para o histórico, a resposta nova aparece em «Quem respondeu e ainda não virou ficha», o automático a trata e a alergia nova chega à ficha', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, { enviada: ENV663, resposta: 'O Quindim tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 191,
+      ficha: ENTRADA663({ campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, entrevista_marca: null }) });
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    igual((await assina663('s-bia', 'a resposta era de outro FILHOt'))[0], 'pronto'); await fecha663();
+    igual(db657('daycare/cadastro/' + K657).alergia || null, null, 'desfeita: a alergia saiu');
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    run(`algColarConfirmar('${K657}', 'Tem alergia a carne de porco');`); await espera657();
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), A = (n.respostas_anteriores || {})[ra[0]] || {};
+    igual([n.resposta, n.ficha || null, A.resposta, !!(A.ficha && A.ficha.desfeita)], ['Tem alergia a carne de porco', null, 'O Quindim tem alergia a frango', true]);
+    igual(J630('algPendentesFicha().map(function(x){ return x.k; })').indexOf(K657) >= 0, true, 'em «Quem respondeu e ainda não virou ficha»');
+    run(`algCur=function(){ return {campos:{q1:{txt:'carne de porco', campo:'alergia', atual:''}}, sobras:[]}; }; algEntrevistaReg=function(){ return null; }; algAvisarGestao=function(){ return null; };
+      __ta3=[]; var __taO3=algTratarAuto; algTratarAuto=function(k){ __ta3.push(k); return __taO3(k); }; ALG_CFG={}; ALG_AUTO_RODANDO=false; algTratarFila();`);
+    await espera657(); await espera657();
+    const n2 = noA663();
+    igual([J630('__ta3'), db657('daycare/cadastro/' + K657).alergia, (n2.ficha || {}).campos || null, ((n2.ficha || {}).depois || {}).alergia || null], [[K657], 'carne de porco', ['alergia'], 'carne de porco']);
+  });
+});
+// ---- REQ-003 na prática (acréscimo do @po): a data da resposta na pergunta refeita ----
+provaAsync('6.63 R3 12 (REQ-003, acréscimo do @po) — a pergunta refeita: no «O tutor respondeu», a data vem com a de hoje (não a da resposta anterior); respondendo sem trocar a data, a resposta fica com a data de hoje e o FILHOt sai de «perguntar de novo»; o controle: na 1ª resposta, a data continua como era', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const dataNaTela = () => { const h = String(run(`(function(){ ALG_ABERTO='${K657}'; var L=algLista(); return algBlocoHTML('x', [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; })); })()`));
+      const m = new RegExp('id="algData_' + K657 + '" value="([^"]*)"').exec(h); return m ? m[1] : null; };
+    const naLista = () => J630(`(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; }).map(function(x){ return {vencido:x.vencido, esperando:x.esperando, meses:x.meses}; }); })()`);
+    // a pergunta refeita: a resposta de 02/03 (há 7 meses), que foi para a ficha
+    alg663(K657, { enviada: ENV663, resposta: 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000,
+      ficha: { quando: '2026-03-02', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia'], ts: T657(1, 9) - 220 * 86400000 } });
+    const antes = naLista(), d = dataNaTela();
+    console.log('      6.63 R3 12: na lista ' + JSON.stringify(antes) + ' · a data no campo: ' + d + ' · hoje (zHojeISO): ' + run('zHojeISO()'));
+    igual([antes.map((x) => x.vencido), d, run('zHojeISO()')], [[true], DIA657, DIA657], 'a data vem com a de hoje');
+    // respondendo sem trocar a data (o campo com o que a tela mostrou)
+    run(`__el657['algResp_${K657}']={value:'Não tem mais alergia a frango.'}; __el657['algData_${K657}']={value:${JSON.stringify(d)}};`);
+    await run(`algResponder('${K657}')`); await espera657();
+    igual([noA663().resposta, noA663().quando, naLista()], ['Não tem mais alergia a frango.', DIA657, []], 'a resposta fica com a data de hoje; o FILHOt sai de «perguntar de novo»');
+    // o controle — a 1ª resposta: perguntamos em 05/10 e o tutor ainda não respondeu: a data de quando perguntamos, como antes
+    alg663(K657, { quando: '2026-10-05', quem: 'Bia Consultora Teste', ts: 5 });
+    igual([naLista().map((x) => x.esperando), dataNaTela()], [[true], '2026-10-05'], 'a 1ª resposta: a data como antes');
+    // e só com a marca de envio: a data de hoje do campo, como antes
+    alg663(K657, { enviada: ENV663 });
+    igual(dataNaTela(), run('(new Date()).toISOString().slice(0,10)'), 'só a marca de envio: como antes');
+  });
+});
+}
+// ================================================================== 6.63, 3ª rodada — as provas do re-gate da 3ª rodada e as do ajuste
+// As 11 provas do QA (QS663-01 a 11) com o nome «6.63 QA re-gate 3 · QS663-xx» (s663r3/tools/qsbloco.py; a 07 e a 11 passaram de
+// registro a asserção, com o motivo em cada uma) e as provas «6.63 R3 13» a «15», no mesmo bloco.
+// ================================================================== QA 6.63 (Quinn) — RE-GATE da 3ª rodada: ataques novos (QS663)
+// Tudo inventado (Tonico/Rita Teste; pessoas «Teste»). O alarme é o de verdade (carregarAgendaMedTodos, checarDespertadorMed),
+// lido do banco de mentira; o dashLancar de mentira grava como o de verdade (a ficha, a hora, o detalhe) e tem a trava de
+// repetido do de verdade (o mesmo texto e a mesma ficha na lista do dia EM MEMÓRIA — DASH_DADOS).
+{
+const QR_DC = 'tonico__rita-teste';
+const qrFbLiga = () => run(`if(!__put657.__fbqr){ var __oqr=__put657; __put657=function(p, v){ return __oqr(p, (v===null||v===undefined)?v:__semNullQr(JSON.parse(JSON.stringify(v)))); };
+__put657.__fbqr=__oqr; }
+__semNullQr=function(x){ if(x===null||x===undefined) return null; if(Array.isArray(x)){ var a2=x.map(__semNullQr).filter(function(y){ return y!==null; }); return a2.length?a2:null; }
+if(typeof x==='object'){ var r={}, n=0; Object.keys(x).forEach(function(k){ var y=__semNullQr(x[k]); if(y!==null){ r[k]=y; n++; } }); return n?r:null; } return x; };`);
+const qrFbDesliga = () => run('if(__put657.__fbqr) __put657=__put657.__fbqr;');
+const qrRecarrega = () => run(`pelCadCache[__kp]=__get657('daycare/cadastro/'+__kp);`);
+const QR_T = (hh, mm) => new Date(2026, 9, 9, hh, mm || 0, 0).getTime();
+const qrEspera = async (n) => { for (let i = 0; i < (n || 800); i++) await Promise.resolve(); };
+const qrJ = (c) => { const v = run(c); return JSON.parse(JSON.stringify(v === undefined ? null : v)); };
+const qrRelogio = (ms) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;`);
+const QR_ARMA = `__qrbk={hs:hospedes, sd:selectedDate, zm:zMapaUma, cm:carregarMedAtrasadaGestora, mdn:mostrarDespertadorMed, prm:papelRecebeAlarmeMed, dmt:despMedNaTela,
+    qsa:document.querySelectorAll, td:MED_AGENDA_TODOS, av:AVISOS_ESTOQUE_CACHE, ref:DB.ref};
+  zMapaUma=function(p){ return Promise.resolve(__get657(p)||{}); }; carregarMedAtrasadaGestora=function(){};
+  __qrabre=[]; mostrarDespertadorMed=function(it, doseId, dia){ __qrabre.push([it.key, doseId, it.horario||'']); }; papelRecebeAlarmeMed=function(){ return true; }; despMedNaTela=null;
+  document.querySelectorAll=function(s){ return []; }; AVISOS_ESTOQUE_CACHE={}; hospedes=[];`;
+const QR_SOLTA = `hospedes=__qrbk.hs; selectedDate=__qrbk.sd; zMapaUma=__qrbk.zm; carregarMedAtrasadaGestora=__qrbk.cm; mostrarDespertadorMed=__qrbk.mdn;
+  papelRecebeAlarmeMed=__qrbk.prm; despMedNaTela=__qrbk.dmt; document.querySelectorAll=__qrbk.qsa; MED_AGENDA_TODOS=__qrbk.td; AVISOS_ESTOQUE_CACHE=__qrbk.av;`;
+const qrAlarme = async (hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`selectedDate=new Date(${QR_T(10, 0)}); despMedNaTela=null; __qrabre=[];`);
+  run('carregarAgendaMedTodos()'); await qrEspera();
+  const fila = qrJ(`(MED_AGENDA_TODOS||[]).filter(function(e){ return e.key==='dc__${QR_DC}'; }).map(function(e){ return e.itemId+'@'+e.horario; })`);
+  run('checarDespertadorMed()'); await qrEspera();
+  const desp = qrJ('__qrabre').filter((x) => x[0] === 'dc__' + QR_DC).map((x) => x[1]);
+  return { fila, desp };
+};
+// o dashLancar de mentira: o remédio é o do detalhe da pendência (DASH_DET), e a trava de repetido é a do de verdade
+const qrLanc = () => run(`dashLancar=function(item, base, i, hora){
+    var det=JSON.parse(JSON.stringify(DASH_DET[item]||{})), qual=String(det.qual||'Apoquel');
+    var valor='Tonico ('+qual+' · bolsa)', ch='${QR_DC}', lista=DASH_DADOS[item]||{};
+    if(Object.keys(lista).some(function(id){ var r=lista[id]||{}; if(jsNorm(r.valor||'')!==jsNorm(valor)) return false; return r.chave?String(r.chave)===ch:true; })){ alert(valor+' já está lançado em Medicação hoje.'); return; }
+    var id='L663_'+(++__nl663); DASH_DADOS[item]=lista;
+    var reg={valor:valor, hora:hora||'', chave:ch, det:det, quem:'Bia Consultora Teste', ts:Date.now()};
+    lista[id]=reg; __put657('daycare/dashboard/${DIA657}/'+item+'/'+id, reg); return Promise.resolve(true); };
+  carregarAgendaMedTodos=__bkP663.ca;`);
+const qrPend = (hora, qual) => pend663('medicacao', { valor: 'Tonico (' + (qual || 'Apoquel') + ' · bolsa)', base: 'Tonico', hora: hora, det: { qual: qual || 'Apoquel', onde: 'bolsa' }, nome: 'Tonico', tutor: 'Rita Teste' });
+const qrDeu = (id, hora, hh, mm) => run(`__put657('auaulandia/medicacao-log/${DIA657}/dc__${QR_DC}/lanc_${id}_${hora.replace(':', '-')}', {nome:'Apoquel', horario:'${hora}', quem:'Caio Encãotador Teste', ts:${QR_T(hh, mm)}});`);
+const qrRefresca = () => run(`PEND_ABERTAS['${KP663}']['medicacao']=__get657('daycare/pendencias/${KP663}/medicacao'); __za657=[]; __al657=[];`);
+const qrResolve = async (hh, mm) => { qrRefresca(); qrRelogio(QR_T(hh, mm)); await run(`pendResolverConfirmado('${KP663}', 'medicacao')`); await espera657(); };
+const qrDesfaz = async (hh, mm) => {
+  qrRefresca(); qrRelogio(QR_T(hh, mm));
+  run(`__p663=pendDesfazerResolucaoAbrir('${KP663}', 'medicacao');`); await espera657();
+  const p = (await assina663(SENHA657, 'resolvi a pendência errada hoje'))[0]; await fecha663(); return p;
+};
+const qrTira = async (id, hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`DASH_DIA_SEL=''; DASH_DADOS={medicacao:{}}; DASH_DADOS.medicacao['${id}']=__get657('daycare/dashboard/${DIA657}/medicacao/${id}');`);
+  run(`__p663=dashMedAnularAbrir('${id}');`); await espera657();
+  const p = (await assina663(SENHA657, 'a medicação foi lançada no FILHOt errado'))[0]; await fecha663(); return p;
+};
+const qrReabre = async (id, hh, mm) => {
+  qrRelogio(QR_T(hh, mm));
+  run(`DASH_DIA_SEL=''; DASH_MED_ANULADOS_DIA='${DIA657}'; DASH_MED_ANULADOS={}; DASH_MED_ANULADOS['${id}']=__get657('daycare/dashboard-anulados/${DIA657}/medicacao/${id}');
+    DASH_DADOS={medicacao:__get657('daycare/dashboard/${DIA657}/medicacao')||{}};`);
+  run(`__p663=dashMedReabrirAbrir('${id}');`); await espera657();
+  const p = (await assina663(SENHA657, 'a medicação foi tirada sem querer'))[0]; const e = erro663(); await fecha663(); return [p, e];
+};
+const qrAtivos = () => Object.keys(db657('daycare/dashboard/' + DIA657 + '/medicacao') || {});
+const qrZa = () => J630('__za657').map((z) => z[0] + ' | ' + (z[1] || []).join(' '));
+const qrRecusou = () => qrZa().filter((z) => /^A MEDICAÇÃO NÃO FOI LANÇADA DE NOVO/.test(z));
+const qrCom = async (fn) => comPend663(async () => { run(QR_ARMA); qrLanc(); try { papel657('gestao', 'Gestora Teste'); await fn(); } finally { run('DB.ref=__qrbk.ref;'); run(QR_SOLTA); } });
+
+const qsItem = (campo) => J630(`(function(){ iaRevEsquecerCache(); return iaRevMontar().filter(function(x){ return x.k==='${K657}' && x.campo==='${campo}'; }).map(function(x){ return {estado:x.estado, auto:x.auto, valor:x.valor, diverge:x.diverge?{c:x.diverge.c, tutor:x.diverge.tutor, ficha:x.diverge.ficha}:null, entrada:x.entrada?x.entrada.id:null}; }); })()`);
+const qsPend = () => J630('algPendentesFicha().map(function(x){ return x.k; })').indexOf(K657) >= 0;
+const qsResp = async (txt, data) => { run(`__el657['algResp_${K657}']={value:${JSON.stringify(txt)}}; __el657['algData_${K657}']={value:'${data || '2026-10-09'}'};`); await run(`algResponder('${K657}')`); await espera657(); };
+// o automático de verdade (algTratarFila → algTratarAuto), com a leitura da resposta trocada (a separação pergunta a pergunta é da base)
+const qsAuto = async (campos) => { ctx.__qsc = campos; run(`algCur=function(){ return {campos:JSON.parse(JSON.stringify(__qsc)), sobras:[]}; }; algEntrevistaReg=function(){ return null; };
+    __qsT=[]; if(!algTratarAuto.__qs){ var __o=algTratarAuto; algTratarAuto=function(k){ __qsT.push(k); return __o(k); }; algTratarAuto.__qs=1; } ALG_RESP['${K657}']=__get657('daycare/alergia-confirmada/${K657}'); ALG_AUTO_RODANDO=false; algTratarFila();`);
+  await espera657(); await espera657(); return J630('__qsT'); };
+const ENTA = (extra) => ENTRADA663(Object.assign({ quando: '2026-03-02', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, ts: T657(1, 9) - 220 * 86400000, entrevista_marca: null }, extra || {}));
+const ANTIGA = { quando: '2026-03-02', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia'], ts: T657(1, 9) - 220 * 86400000 };
+const NO0 = (ficha) => ({ enviada: ENV663, resposta: 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000, ficha: ficha });
+
+// ---- REQ-003: a pergunta refeita, entrada ANTIGA, automático ligado, a resposta diz que não tem ----
+provaAsync('6.63 QA re-gate 3 · QS663-01 (REQ-003; decisão do @po) — pergunta refeita, entrada antiga, automático ligado: «Não tem alergia nenhuma.» é gravada; a anterior vai com a entrada para o histórico; o automático não tira «frango»; a diferença aparece em «O que a IA entendeu»; nenhuma «CORREÇÃO» a Urgências', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, NO0(ANTIGA));
+    await qsResp('Não tem alergia nenhuma.');
+    const n = noA663(), ra = Object.keys(n.respostas_anteriores || {}), A = (n.respostas_anteriores || {})[ra[0]] || {};
+    const p1 = qsPend();
+    run('ALG_CFG={}; IA_REV={}; IA_REV_LIDO=true;');
+    const t = await qsAuto({ q1: { txt: 'Não tem alergia nenhuma.', campo: 'alergia', atual: 'frango' } });
+    const n2 = noA663(), it = qsItem('alergia');
+    console.log('      QS663-01: ' + JSON.stringify({ resposta: n.resposta, hist: ra.length, fichaAnt: A.ficha, naFila: p1, auto: t, alergia: db657('daycare/cadastro/' + K657).alergia, div: (n2.ficha || {}).divergencias, it, urg: J630('__urg663').map((u) => String(u[1]).slice(0, 60)) }));
+    igual([n.resposta, n.ficha || null, ra.length, A.ficha, p1, t, db657('daycare/cadastro/' + K657).alergia, ((n2.ficha || {}).divergencias || []).map((d) => d.c), it.map((x) => [x.estado, !!x.diverge]), J630('__urg663').filter((u) => /CORREÇÃO/.test(u[1])).length],
+      ['Não tem alergia nenhuma.', null, 1, ANTIGA, true, [K657], 'frango', ['alergia'], [['revisar', true]], 0]);
+  });
+});
+// ---- a ficha nunca perde a alergia nem a restrição sozinha: varredura de respostas negativas e vazias ----
+provaAsync('6.63 QA re-gate 3 · QS663-02 (decisão do @po; «a ficha nunca perde alergia sozinha») — o automático com «não», «Não tem», «Nenhuma», «nada», «não tem mais alergia», « » e «frango não, agora porco» na alergia e na restrição: a ficha continua com «frango» e «sem glúten»', async () => {
+  const out = [];
+  for (const txt of ['não', 'Não tem', 'Nenhuma', 'nada', 'não tem mais alergia', ' ', 'frango não, agora porco']) {
+    await comAlg663(async () => {
+      fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', entrevista: ENTREV663 });
+      papel657('consultora', 'Bia Consultora Teste');
+      alg663(K657, NO0(ENTA({ campos: ['alergia', 'restricao'], antes: { alergia: '', restricao: '' }, depois: { alergia: 'frango', restricao: 'sem glúten' } })));
+      await qsResp('Resposta de agora: ' + txt);
+      run('ALG_CFG={};');
+      await qsAuto({ q1: { txt: txt, campo: 'alergia', atual: 'frango' }, q2: { txt: txt, campo: 'restricao', atual: 'sem glúten' } });
+      const c = db657('daycare/cadastro/' + K657);
+      out.push([txt, c.alergia, c.restricao]);
+    });
+  }
+  console.log('      QS663-02: ' + JSON.stringify(out));
+  igual(out.filter((o) => o[1] !== 'frango' || o[2] !== 'sem glúten'), [], 'nenhuma resposta tira a alergia ou a restrição');
+});
+// ---- REQ-003 com a entrada COM o antes, automático DESLIGADO ----
+provaAsync('6.63 QA re-gate 3 · QS663-03 (REQ-003; AC11.6) — pergunta refeita, entrada com o antes, automático desligado: gravada; o automático não roda; a resposta fica em «Quem respondeu e ainda não virou ficha»; o «Desfazer» da entrada anterior está no cartão (histórico) e em «O que a IA entendeu»; a alergia fica', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const E = ENTA();
+    alg663(K657, NO0(E));
+    await qsResp('Continua com alergia a frango e agora também a corante.');
+    const id = Object.keys(noA663().respostas_anteriores || {})[0];
+    run('ALG_CFG={auto:false}; IA_REV={}; IA_REV_LIDO=true;');
+    const t = await qsAuto({ q1: { txt: 'frango e corante', campo: 'alergia', atual: 'frango' } });
+    const h = String(run(`algPesqCartaoHTML('${K657}')`)), it = qsItem('alergia');
+    const hr = String(run(`(function(){ iaRevEsquecerCache(); return iaRevCartaoHtml(iaRevMontar().filter(function(x){ return x.k==='${K657}' && x.campo==='alergia'; })[0]); })()`));
+    igual([t, qsPend(), h.indexOf(`algFichaDesfazerAbrir('${K657}','${id}')`) >= 0, it.map((x) => [x.estado, x.entrada]), hr.indexOf(`algFichaDesfazerAbrir('${K657}','${id}')`) >= 0, db657('daycare/cadastro/' + K657).alergia],
+      [[], true, true, [['revisar', id]], true, 'frango']);
+  });
+});
+// ---- desfazer pelo histórico e depois colar a resposta nova ----
+provaAsync('6.63 QA re-gate 3 · QS663-04 (REQ-002/003) — a entrada anterior desfeita pelo histórico (assinado), depois «Colar» uma resposta nova: gravada, a desfeita continua no histórico (desfeita), nada se perde, e o automático leva a alergia nova ao campo que ficou vazio', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, NO0(ENTA()));
+    await qsResp('O Quindim tem alergia a frango.');
+    const id = Object.keys(noA663().respostas_anteriores || {})[0];
+    run(`__p663=algFichaDesfazerAbrir('${K657}', '${id}');`); await espera657();
+    const p = (await assina663('s-bia', 'a resposta de março era de outro FILHOt'))[0]; await fecha663();
+    const c1 = db657('daycare/cadastro/' + K657);
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    run(`algColarConfirmar('${K657}', 'Tem alergia a carne de porco.');`); await espera657();
+    const n = noA663(), ras = n.respostas_anteriores || {}, L = Object.keys(ras).map((k) => [ras[k].resposta, !!ras[k].ficha, !!(ras[k].ficha && ras[k].ficha.desfeita)]).sort();
+    run('ALG_CFG={};');
+    const t = await qsAuto({ q1: { txt: 'carne de porco', campo: 'alergia', atual: '' } });
+    const c2 = db657('daycare/cadastro/' + K657);
+    console.log('      QS663-04: ' + JSON.stringify({ p, alergia1: c1.alergia || null, original: c1.alergia_original, hist: L, auto: t, alergia2: c2.alergia }));
+    igual([p, c1.alergia || null, c1.alergia_original, n.resposta, L, t, c2.alergia],
+      ['pronto', null, 'frango', 'Tem alergia a carne de porco.', [['O Quindim tem alergia a frango.', false, false], ['Tem alergia a frango.', true, true]], [K657], 'carne de porco']);
+  });
+});
+// ---- duas respostas seguidas (A → B → C): nada se perde e o «Desfazer» certo continua à mão ----
+provaAsync('6.63 QA re-gate 3 · QS663-05 (REQ-003) — três respostas seguidas (A com entrada que pôs «frango», B e C que contradizem): as duas anteriores no histórico com as entradas delas; a alergia fica; «O que a IA entendeu» mostra a diferença de C e oferece o «Desfazer» da entrada de A', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    run('ALG_CFG={}; IA_REV={}; IA_REV_LIDO=true;');
+    alg663(K657, NO0(ENTA()));
+    await qsResp('Tem alergia a frango e a corante.');
+    await qsAuto({ q1: { txt: 'frango e corante', campo: 'alergia', atual: 'frango' } });
+    await qsResp('Não tem mais alergia.');
+    await qsAuto({ q1: { txt: 'Não tem mais alergia.', campo: 'alergia', atual: 'frango' } });
+    const n = noA663(), ras = n.respostas_anteriores || {};
+    const idA = Object.keys(ras).filter((k) => ras[k].resposta === 'Tem alergia a frango.')[0];
+    const hist = Object.keys(ras).map((k) => [ras[k].resposta, !!ras[k].ficha, ((ras[k].ficha || {}).divergencias || []).length]).sort();
+    const it = qsItem('alergia');
+    console.log('      QS663-05: ' + JSON.stringify({ atual: n.resposta, div: ((n.ficha || {}).divergencias || []).map((d) => d.tutor), hist, it, vivas: J630(`algEntradasVivas(__get657('daycare/alergia-confirmada/${K657}')).map(function(e){ return e.id||'atual'; })`) }));
+    igual([n.resposta, hist, db657('daycare/cadastro/' + K657).alergia, it.map((x) => [x.estado, x.diverge && x.diverge.tutor, x.entrada])],
+      ['Não tem mais alergia.', [['Tem alergia a frango e a corante.', true, 1], ['Tem alergia a frango.', true, 0]], 'frango', [['revisar', 'Não tem mais alergia.', idA]]]);
+  });
+});
+// ---- dois aparelhos: a tela velha grava depois de outro aparelho ter gravado; e o «Desfazer» da tela velha ----
+provaAsync('6.63 QA re-gate 3 · QS663-06 (REQ-003; dois aparelhos) — o outro aparelho já gravou a resposta Y (a entrada viva foi para o histórico); este, com a tela velha, grava Z: Y vai para o histórico, nada se perde; o «Desfazer» da tela velha (a entrada que já não está no nó) recusa sem mexer na ficha', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const E = ENTA();
+    alg663(K657, NO0(E));                       // a tela deste aparelho fica com isto
+    run(`__put657('daycare/alergia-confirmada/${K657}/respostas_anteriores/OUTRO1', __get657('daycare/alergia-confirmada/${K657}'));
+      __put657('daycare/alergia-confirmada/${K657}/respostas_anteriores/OUTRO1/respostas_anteriores', null);
+      __put657('daycare/alergia-confirmada/${K657}/resposta', 'Y: só frango mesmo.'); __put657('daycare/alergia-confirmada/${K657}/quando', '2026-10-09'); __put657('daycare/alergia-confirmada/${K657}/ficha', null);`);
+    await qsResp('Z: frango e corante.');
+    const n = noA663(), ras = n.respostas_anteriores || {};
+    const hist = Object.keys(ras).map((k) => [ras[k].resposta, !!(ras[k].ficha && !ras[k].ficha.desfeita)]).sort();
+    run(`ALG_RESP['${K657}']=${JSON.stringify(NO0(E))};`);   // a tela velha de novo
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    const p = (await assina663('s-bia', 'a resposta de março estava errada'))[0], e = erro663(); await fecha663();
+    console.log('      QS663-06: ' + JSON.stringify({ atual: n.resposta, hist, desfazer: p, erro: e, alergia: db657('daycare/cadastro/' + K657).alergia }));
+    igual([n.resposta, hist, p, db657('daycare/cadastro/' + K657).alergia], ['Z: frango e corante.', [['Tem alergia a frango.', true], ['Y: só frango mesmo.', false]], 'falhou', 'frango']);
+  });
+});
+// ---- dois aparelhos ao mesmo tempo: duas respostas diferentes gravadas no mesmo instante (registro) ----
+// 3ª rodada (REL-009): de registro passou a asserção — a resposta lida é reservada por transação no ts dela antes da escrita: a do 1º
+// fica, a do 2º é recusada («mudou em outro aparelho», o texto continua no campo), e a anterior vai para o histórico uma vez só
+provaAsync('6.63 QA re-gate 3 · QS663-07 (REL-009; dois aparelhos no mesmo instante) — duas respostas diferentes gravadas ao mesmo tempo, as duas lendo o nó antes da outra gravar: a do 1º fica, a do 2º é recusada («mudou em outro aparelho»; o texto continua no campo) e a anterior vai para o histórico uma vez só', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, NO0(ENTA()));
+    run(`__al657=[]; __el657['algResp_${K657}']={value:'X: frango e corante.'}; __el657['algData_${K657}']={value:'2026-10-09'}; __pX=algResponder('${K657}');
+      __el657['algResp_${K657}']={value:'Y: só frango.'}; __pY=algResponder('${K657}');`);
+    await espera657(); await espera657();
+    const n = noA663(), ras = n.respostas_anteriores || {}, al = J630('__al657');
+    console.log('      QS663-07: atual=' + n.resposta + ' · histórico=' + JSON.stringify(Object.keys(ras).map((k) => ras[k].resposta).sort()) + ' · avisos=' + JSON.stringify(al.map((t) => t.slice(0, 80))));
+    igual([n.resposta, Object.keys(ras).map((k) => ras[k].resposta), al.filter((t) => /mudou em outro aparelho/.test(t)).length, run(`__el657['algResp_${K657}'].value`)],
+      ['X: frango e corante.', ['Tem alergia a frango.'], 1, 'Y: só frango.']);
+  });
+});
+// ---- o acréscimo da data: a pergunta refeita com o campo ainda com o texto de 7 meses atrás (registro para o gate) ----
+// 3ª rodada (REQ-004, decisão do @po): de registro passou a asserção — na pergunta refeita o campo vem vazio, com a resposta anterior
+// acima; o toque sem colar a resposta de agora é recusado com a frase de sempre, nada é gravado e o FILHOt continua em «perguntar de novo»
+provaAsync('6.63 QA re-gate 3 · QS663-11 (REQ-004, decisão do @po) — pergunta refeita: o campo vem vazio e a resposta anterior aparece acima («Resposta anterior (02/03/2026): …»); «O tutor respondeu» sem colar a resposta de agora é recusado com a frase de sempre, nada é gravado e o FILHOt continua em «perguntar de novo»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, NO0(ANTIGA));
+    const h = String(run(`(function(){ ALG_ABERTO='${K657}'; var L=algLista(); return algBlocoHTML('x', [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; })); })()`));
+    const txt = (new RegExp('id="algResp_' + K657 + '"[^>]*>([^<]*)<').exec(h) || [])[1], data = (new RegExp('id="algData_' + K657 + '" value="([^"]*)"').exec(h) || [])[1];
+    run('__al657=[];');
+    await qsResp(txt, data);
+    const n = noA663(), naLista = J630(`(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; }).length; })()`);
+    console.log('      QS663-11: campo=' + JSON.stringify(txt) + ' data=' + data + ' → resposta=' + JSON.stringify(n.resposta) + ' quando=' + n.quando + ' histórico=' + Object.keys(n.respostas_anteriores || {}).length + ' em «perguntar de novo»=' + naLista);
+    const iAnt = h.indexOf('Resposta anterior (02/03/2026): Tem alergia a frango.'), iCampo = h.indexOf('id="algResp_' + K657 + '"');
+    igual([txt, iAnt >= 0 && iAnt < iCampo, n.resposta, n.quando, Object.keys(n.respostas_anteriores || {}).length, naLista, J630('__al657').filter((t) => /^Cole aqui o que o tutor respondeu/.test(t)).length, escritas657().filter((e) => /alergia-confirmada/.test(e[1])).length],
+      ['', true, 'Tem alergia a frango.', '2026-03-02', 0, 1, 1, 0]);
+  });
+});
+// ---- REL-008 na borda dos 15 minutos, com o alarme de verdade, sem reabrir o REL-001 ----
+provaAsync('6.63 QA re-gate 3 · QS663-08 (REL-008, REL-001; remédio) — 14:00: tirada às 13:44 → «Resolvido hoje» às 14:30 lança e o alarme das 14:31 tem uma dose; tirada às 13:45 → recusa; tirada às 13:00 com a dose dada às 13:40 → recusa; tirada às 14:05 (o alarme já tocou, sem registro) → às 14:10 recusa', async () => {
+  const caso = async (hd, md, hr, mr, deu) => {
+    let r = null;
+    await qrCom(async () => {
+      qrPend('14:00');
+      await qrResolve(9, 50);
+      const L1 = no663('medicacao').resolvido_lanc.id;
+      if (deu) qrDeu(L1, '14:00', deu[0], deu[1]);
+      await qrDesfaz(hd, md);
+      await qrResolve(hr, mr);
+      const a = await qrAlarme(hr, mr + 1);
+      r = { st: no663('medicacao').status, n: qrAtivos().length, recusa: qrRecusou().length, fila: a.fila.length };
+    });
+    return r;
+  };
+  const a = await caso(13, 44, 14, 30), b = await caso(13, 45, 14, 30), c = await caso(13, 0, 14, 30, [13, 40]), d = await caso(14, 5, 14, 10);
+  console.log('      QS663-08: ' + JSON.stringify({ a, b, c, d }));
+  igual([a, b, c, d], [{ st: 'resolvida', n: 1, recusa: 0, fila: 1 }, { st: 'aberta', n: 0, recusa: 1, fila: 0 }, { st: 'aberta', n: 0, recusa: 1, fila: 0 }, { st: 'aberta', n: 0, recusa: 1, fila: 0 }]);
+});
+// ---- REL-007 com dois «Reabrir» na cadeia ----
+provaAsync('6.63 QA re-gate 3 · QS663-09 (REL-007; remédio) — 14:00: tirada às 10:00, «Reabrir», tirada às 10:10, «Reabrir» de novo, a dose dada às 14:05, tirada às 14:10, o horário da pendência corrigido para 20:00 e «Resolvido hoje» às 14:15: recusa (a marca segue os dois «Reabrir»)', async () => {
+  await qrCom(async () => {
+    qrPend('14:00');
+    await qrResolve(9, 50);
+    const L1 = no663('medicacao').resolvido_lanc.id;
+    await qrTira(L1, 10, 0);
+    const [r1] = await qrReabre(L1, 10, 5); const L2 = qrAtivos()[0];
+    await qrTira(L2, 10, 10);
+    const [r2] = await qrReabre(L2, 10, 15); const L3 = qrAtivos()[0];
+    qrDeu(L3, '14:00', 14, 5);
+    await qrTira(L3, 14, 10);
+    run(`__put657('daycare/pendencias/${KP663}/medicacao/hora', '20:00');`);
+    await qrResolve(14, 15);
+    const a = await qrAlarme(20, 1);
+    console.log('      QS663-09: ' + JSON.stringify({ r1, r2, L1, L2, L3, st: no663('medicacao').status, ativos: qrAtivos(), recusa: qrRecusou(), fila: a.fila }));
+    igual([r1, r2, no663('medicacao').status, qrAtivos().length, a.fila], ['pronto', 'pronto', 'aberta', 0, []]);
+  });
+});
+// ---- REL-006 com outro texto: o outro aparelho lança à mão a mesma medicação (outro texto) enquanto a conferência espera ----
+provaAsync('6.63 QA re-gate 3 · QS663-10 (REL-006; remédio) — 18:00 desfeita; enquanto a conferência espera, outro aparelho lança à mão «Tonico (Apoquel 16 mg · bolsa)» às 18:00 (texto diferente): quantas doses o alarme das 18:01 pede?', async () => {
+  await qrCom(async () => {
+    qrPend('18:00');
+    await qrResolve(9, 50);
+    await qrDesfaz(10, 0);
+    qrRefresca(); qrRelogio(QR_T(10, 5));
+    run(`__h5=[]; DB.ref=function(p){ var r=__qrbk.ref(p); if(/dashboard-anulados/.test(String(p))){ r.once=function(){ return new Promise(function(ok){ __h5.push(function(){ var v=__get657(p); ok({val:function(){ return v; }, exists:function(){ return v!==null; }}); }); }); }; } return r; };`);
+    run(`__pr5=pendResolverConfirmado('${KP663}', 'medicacao');`); await espera657();
+    run(`__put657('daycare/dashboard/${DIA657}/medicacao/MAO1', {valor:'Tonico (Apoquel 16 mg · bolsa)', hora:'18:00', chave:'${QR_DC}', det:{qual:'Apoquel 16 mg', onde:'bolsa'}, quem:'Amanda Supervisora Teste', ts:${QR_T(10, 6)}});`);
+    run('DB.ref=__qrbk.ref; __h5.forEach(function(f){ f(); });'); await espera657(); await espera657();
+    const a = await qrAlarme(18, 1);
+    console.log('      QS663-10: ' + JSON.stringify({ ativos: qrAtivos(), pend: no663('medicacao').status, obs: no663('medicacao').resolvido_obs || null, fila: a.fila }));
+    igual(a.fila.length, 1, 'uma dose só às 18:00');
+  });
+});
+// ================================================================== 6.63, 3ª rodada — o ajuste depois do re-gate da 3ª rodada (Dex)
+// REQ-004 (decisão do @po: a pergunta refeita com o campo vazio e a resposta anterior acima), UX-004 (o botão do cartaz «Desfazer a
+// entrada na ficha») e REL-009 (duas respostas no mesmo instante). Usa os ajudantes do re-gate da 3ª rodada logo acima (qs*, NO0, ENTA).
+console.log('\n6.63, 3ª rodada — o ajuste do re-gate da 3ª rodada');
+const r3bBloco = () => String(run(`(function(){ ALG_ABERTO='${K657}'; var L=algLista(); return algBlocoHTML('x', [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; })); })()`));
+const r3bCampo = (h) => (new RegExp('id="algResp_' + K657 + '"[^>]*>([^<]*)<').exec(h) || [])[1];
+provaAsync('6.63 R3 13 (REQ-004, decisão do @po) — a pergunta refeita: o campo vem vazio e a resposta anterior aparece acima, inteira e escapada, com a data; colando a resposta de agora, ela é gravada com a data de hoje; o controle da 1ª resposta: nenhuma «Resposta anterior» e o campo como era', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const longa = 'Tem alergia a frango <b>e</b> a corante & conservante. ' + 'Come ração natural. '.repeat(12);
+    alg663(K657, Object.assign(NO0(ANTIGA), { resposta: longa }));
+    let h = r3bBloco();
+    const iAnt = h.indexOf('Resposta anterior (02/03/2026): '), iCampo = h.indexOf('id="algResp_' + K657 + '"');
+    igual([r3bCampo(h), iAnt >= 0 && iAnt < iCampo, h.indexOf(run(`escAttr(${JSON.stringify(longa)})`)) > iAnt, h.indexOf('<b>e</b>') < 0], ['', true, true, true], 'o campo vazio; a resposta anterior acima, inteira e escapada');
+    // colando a resposta de agora: gravada, com a data que a tela mostra (a de hoje)
+    const data = (new RegExp('id="algData_' + K657 + '" value="([^"]*)"').exec(h) || [])[1];
+    await qsResp('Agora tem alergia a carne de porco.', data);
+    igual([noA663().resposta, noA663().quando, Object.values(noA663().respostas_anteriores || {}).map((a) => a.resposta)], ['Agora tem alergia a carne de porco.', DIA657, [longa]]);
+    // o controle — a 1ª resposta: perguntamos em 05/10 e o tutor ainda não respondeu; e nunca perguntamos
+    for (const no of [{ quando: '2026-10-05', quem: 'Bia Consultora Teste', ts: 5 }, { enviada: ENV663 }]) {
+      alg663(K657, no);
+      h = r3bBloco();
+      igual([h.indexOf('Resposta anterior') < 0, r3bCampo(h)], [true, ''], JSON.stringify(no));
+    }
+  });
+});
+provaAsync('6.63 R3 14 (UX-004) — o cartaz «Desfazer a entrada na ficha» confirma com «Desfazer a entrada» (não «Anular (lançada por engano)») nas três portas: o cartão (a entrada atual), o histórico (a entrada de uma resposta anterior) e «O que a IA entendeu»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango', restricao: 'sem glúten', manias: 'late para a porta', entrevista: ENTREV663 });
+    papel657('consultora', 'Bia Consultora Teste');
+    const botao = () => { const h = String(run('corrCartazHTML(CORR_ATUAL)')); return [op663('titulo'), op663('botao'), h.indexOf('>Desfazer a entrada</button>') >= 0, h.indexOf('Anular (lançada por engano)') < 0]; };
+    const ESP = ['Desfazer a entrada na ficha', 'Desfazer a entrada', true, true];
+    // o cartão: a entrada atual
+    alg663(K657, { enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 201, ficha: ENTRADA663() });
+    run(`__p663=algFichaDesfazerAbrir('${K657}');`); await espera657();
+    const b1 = botao(); await fecha663();
+    // o histórico: a resposta nova grava, e a entrada anterior vai para respostas_anteriores
+    await qsResp('Tonico não tem restrição nenhuma');
+    const id = Object.keys(noA663().respostas_anteriores || {})[0];
+    const hc = String(run(`algPesqCartaoHTML('${K657}')`)), oc = (new RegExp(`onclick="(algFichaDesfazerAbrir\\('${K657}','${id}'\\))"`).exec(hc) || [])[1];
+    run(`__p663=${oc};`); await espera657();
+    const b2 = botao(); await fecha663();
+    // «O que a IA entendeu»: o botão do cartão da revisão
+    run('IA_REV={}; IA_REV_LIDO=true;');
+    const hr = String(run(`(function(){ iaRevEsquecerCache(); var it=iaRevMontar().filter(function(x){ return x.k==='${K657}' && x.campo==='alergia'; })[0]; return it?iaRevCartaoHtml(it):''; })()`));
+    const orv = (new RegExp(`onclick="(algFichaDesfazerAbrir\\(\\\\?'${K657}\\\\?',\\\\?'${id}\\\\?'\\))"`).exec(hr) || [])[1];
+    run(`__p663=${String(orv || '').replace(/\\'/g, "'")};`); await espera657();
+    const b3 = botao(); await fecha663();
+    console.log('      6.63 R3 14: ' + JSON.stringify({ b1, b2, b3, oc, orv }));
+    igual([b1, b2, b3], [ESP, ESP, ESP]);
+  });
+});
+provaAsync('6.63 R3 15 (REL-009) — duas respostas no mesmo instante, nas duas portas: a do 1º fica, a do 2º é recusada («mudou em outro aparelho»: no «O tutor respondeu» o texto continua no campo; no «Colar» a tela volta ao banco e o cartaz mostra o texto colado), e a anterior vai para o histórico uma vez só; com a transação como a do Firebase (a 1ª chamada com null), a gravação sozinha passa e a do 2º continua recusada', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const hist = () => Object.values(noA663().respostas_anteriores || {}).map((a) => a.resposta).sort();
+    // «O tutor respondeu» nos dois aparelhos
+    alg663(K657, NO0(ENTA()));
+    run(`__al657=[]; __el657['algResp_${K657}']={value:'X: frango e corante.'}; __el657['algData_${K657}']={value:'2026-10-09'}; algResponder('${K657}');
+      __el657['algResp_${K657}']={value:'Y: só frango.'}; algResponder('${K657}');`);
+    await espera657(); await espera657();
+    const al = J630('__al657');
+    igual([noA663().resposta, hist(), al.length, /mudou em outro aparelho/.test(al[0] || '') && /continua no campo/.test(al[0] || ''), run(`__el657['algResp_${K657}'].value`)],
+      ['X: frango e corante.', ['Tem alergia a frango.'], 1, true, 'Y: só frango.'], '«O tutor respondeu»');
+    // tocando de novo, a do 2º grava, e a do 1º vai para o histórico (nada se perde)
+    await run(`algResponder('${K657}')`); await espera657();
+    igual([noA663().resposta, hist()], ['Y: só frango.', ['Tem alergia a frango.', 'X: frango e corante.']], 'o 2º grava de novo');
+    // «Colar» nos dois aparelhos
+    alg663(K657, NO0(ENTA()));
+    run(`__za657=[]; if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };
+      algColarConfirmar('${K657}', 'X colado.'); algColarConfirmar('${K657}', 'Y colado.');`);
+    await espera657(); await espera657();
+    const za = J630('__za657').filter((z) => z[0] === 'A RESPOSTA MUDOU EM OUTRO APARELHO');
+    igual([noA663().resposta, hist(), J630(`ALG_RESP['${K657}'].resposta`), J630(`ALG_CUR['${K657}']||null`), za.length, za.length && za[0][1].indexOf('O texto que você colou: «Y colado.»') >= 0],
+      ['X colado.', ['Tem alergia a frango.'], 'X colado.', null, 1, true], '«Colar»');
+    // a transação como a do Firebase: a 1ª chamada vem com null (o aparelho sem o valor em memória), depois com o valor do banco
+    // (REL-009b: a transação é no nó da resposta, não mais no ts dele)
+    run(`__tx3=[]; var __ref3=DB.ref; DB.ref=function(p){ var r=__ref3(p); if(/^daycare\\/alergia-confirmada\\/[^\\/]+$/.test(String(p))){ var t0=r.transaction; r.transaction=function(fn){ __tx3.push(fn(null)===undefined?'desistiu':'propôs'); return t0.call(r, fn); }; } return r; };`);
+    alg663(K657, NO0(ENTA()));
+    await qsResp('Z: sozinha.');
+    igual([noA663().resposta, J630('__tx3')], ['Z: sozinha.', ['propôs']], 'a gravação sozinha passa com a 1ª chamada em null');
+    alg663(K657, NO0(ENTA()));
+    run(`__al657=[]; __tx3=[]; __el657['algResp_${K657}']={value:'X2.'}; algResponder('${K657}'); __el657['algResp_${K657}']={value:'Y2.'}; algResponder('${K657}');`);
+    await espera657(); await espera657();
+    igual([noA663().resposta, hist(), J630('__tx3'), J630('__al657').filter((t) => /mudou em outro aparelho/.test(t)).length], ['X2.', ['Tem alergia a frango.'], ['propôs', 'propôs'], 1], 'e a do 2º continua recusada');
+  });
+});
+}
+// ================================================================== 6.63, 3ª rodada — as provas da conferência do ajuste e as do fechamento
+// As 7 provas do QA (QT663-01 a 07) com o nome «6.63 QA conferência · QT663-xx» (s663r3/tools/qtbloco.py; o ajudante qtTx no nó da
+// resposta; a 02 e a 07 passaram de registro a asserção; a 04 e a 05 no caminho do nó, com o motivo em cada uma) e as «6.63 R3 16» e «17».
+// ================================================================== QA 6.63 (Quinn) — conferência do ajuste (REQ-004, UX-004, REL-009)
+// Tudo inventado (Tonico/Rita Teste). qtTx() troca a transação de daycare/alergia-confirmada/{k}/ts pela do Firebase: a 1ª chamada
+// com o valor em memória (null: cache frio); se ela propõe, a conferência acontece no «servidor», na hora em que a escrita chega
+// (com o __pendura657, só quando a prova solta), e a função roda de novo com o valor do banco; undefined = desiste (committed:false).
+{
+const ANTQ = { quando: '2026-03-02', quem: 'automático (resposta do tutor)', auto: true, campos: ['alergia'], ts: T657(1, 9) - 220 * 86400000 };
+const NOQ = (resp, ficha) => ({ enviada: ENV663, resposta: resp || 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000, ficha: ficha || ANTQ });
+const qtHist = () => Object.values(noA663().respostas_anteriores || {}).map((a) => a.resposta).sort();
+// 3ª rodada (REL-009b): a transação da gravação é no nó da resposta (não mais no ts dele); o ajudante passa a valer no nó, e a
+// comparação na hora da escrita é pelo conteúdo (o banco compara o nó, não a referência)
+const qtTx = () => run(`__qtx=[]; __qtRef=DB.ref; DB.ref=function(p){ var r=__qtRef(p); if(/^daycare\\/alergia-confirmada\\/[^\\/]+$/.test(String(p))){
+    r.transaction=function(fn){ var loc=null, r1=fn(loc), ab=false; __qtx.push(r1===undefined?'desistiu-local':'propôs');
+      if(r1===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __get657(p); }}});
+      return __resp657('transaction', p, null, function(){ var cur=__get657(p), rr=r1; if(JSON.stringify(cur)!==JSON.stringify(loc)){ rr=fn(cur); __qtx.push(rr===undefined?'desistiu-servidor':'propôs-servidor'); } if(rr===undefined){ ab=true; return; } __put657(p, rr); })
+        .then(function(){ return {committed:!ab, snapshot:{val:function(){ return __get657(p); }}}; }); }; } return r; };`);
+const qtSolta = () => run('if(typeof __qtRef!=="undefined") DB.ref=__qtRef;');
+const qtResp = (txt) => run(`__el657['algResp_${K657}']={value:${JSON.stringify(txt)}}; __el657['algData_${K657}']={value:'2026-10-09'}; __qtP=algResponder('${K657}');`);
+
+provaAsync('6.63 QA conferência · QT663-01 (REL-009) — a transação como a do Firebase (1ª chamada null): sozinha, grava; dois aparelhos ao mesmo tempo («O tutor respondeu» × «Colar»): o 1º fica, o 2º recusa, a anterior vai para o histórico uma vez', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    qtTx();
+    try {
+      alg663(K657, NOQ());
+      qtResp('Sozinha.'); await espera657();
+      const a = [noA663().resposta, qtHist(), J630('__qtx')];
+      alg663(K657, NOQ());
+      run(`__qtx=[]; __al657=[]; __za657=[]; if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+      qtResp('X: pelo «O tutor respondeu».'); run(`algColarConfirmar('${K657}', 'Y: pelo «Colar».');`);
+      await espera657(); await espera657();
+      const b = [noA663().resposta, qtHist(), J630('__qtx'), J630('__za657').map((z) => z[0]), J630('__al657').length];
+      console.log('      QT663-01: sozinha ' + JSON.stringify(a) + ' · duas portas ' + JSON.stringify(b));
+      igual([a[0], a[1], b[0], b[1], b[3].indexOf('A RESPOSTA MUDOU EM OUTRO APARELHO') >= 0], ['Sozinha.', ['Tem alergia a frango.'], 'X: pelo «O tutor respondeu».', ['Tem alergia a frango.'], true]);
+    } finally { qtSolta(); }
+  });
+});
+// 3ª rodada (REL-009b): de registro passou a asserção — com a gravação inteira numa transação só, não há mais «entre a reserva e a
+// escrita»: o 2º aparelho que lê o nó enquanto a gravação do 1º está no ar é conferido na hora da escrita dele (o nó já mudou: recusa)
+provaAsync('6.63 QA conferência · QT663-02 (REL-009b) — o 2º aparelho lê o nó enquanto a gravação do 1º está no ar: a do 1º fica, a do 2º é recusada («mudou em outro aparelho»), e a anterior vai para o histórico uma vez só', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    qtTx();
+    try {
+      alg663(K657, NOQ());
+      run(`__pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[]; __al657=[];`);
+      qtResp('X: o 1º.'); await espera657();              // a gravação do 1º está no ar
+      const noAr1 = run('__pend657.length');
+      qtResp('Y: o 2º.'); await espera657();              // o 2º lê agora (o nó de antes) e grava
+      const noAr2 = run('__pend657.length');
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      const n = noA663();
+      console.log('      QT663-02: escritas no ar ' + noAr1 + '→' + noAr2 + ' · ficou: ' + n.resposta + ' · histórico ' + JSON.stringify(qtHist()) + ' · tx ' + JSON.stringify(J630('__qtx')) + ' · avisos ' + JSON.stringify(J630('__al657').map((t) => t.slice(0, 60))));
+      igual([noAr1, noAr2, n.resposta, qtHist(), J630('__al657').filter((t) => /mudou em outro aparelho/.test(t)).length], [1, 2, 'X: o 1º.', ['Tem alergia a frango.'], 1]);
+    } finally { run('__pendura657=null;'); qtSolta(); }
+  });
+});
+provaAsync('6.63 QA conferência · QT663-03 (REL-009; o limite declarado) — a reserva passa e o update falha: nada é gravado além do ts, o aviso diz que não gravou, o texto continua no campo; tocando de novo, grava e nada se perde (a anterior uma vez no histórico)', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    qtTx();
+    try {
+      alg663(K657, NOQ());
+      const cartao0 = String(run(`algPesqCartaoHTML('${K657}')`)).replace(/<[^>]+>/g, ' ').match(/gravada em [^)]*/);
+      run(`__recusa657='^daycare/alergia-confirmada/[^/]+$'; __al657=[];`);
+      qtResp('X: a do update que falha.'); await espera657();
+      const n1 = noA663(), al1 = J630('__al657'), campo = run(`__el657['algResp_${K657}'].value`);
+      const cartao1 = String(run(`algPesqCartaoHTML('${K657}')`)).replace(/<[^>]+>/g, ' ').match(/gravada em [^)]*/);
+      run('__recusa657=null;');
+      await run(`algResponder('${K657}')`); await espera657();
+      const n2 = noA663();
+      console.log('      QT663-03: depois da falha ' + JSON.stringify({ resposta: n1.resposta, tsMudou: n1.ts !== NOQ().ts, hist: Object.keys(n1.respostas_anteriores || {}).length, aviso: al1, campo, cartao0, cartao1 }) + ' · de novo ' + JSON.stringify({ resposta: n2.resposta, hist: qtHist() }));
+      igual([n1.resposta, Object.keys(n1.respostas_anteriores || {}).length, /Não consegui gravar/.test(al1[0] || ''), campo, n2.resposta, qtHist()],
+        ['Tem alergia a frango.', 0, true, 'X: a do update que falha.', 'X: a do update que falha.', ['Tem alergia a frango.']]);
+    } finally { run('__recusa657=null;'); qtSolta(); }
+  });
+});
+// 3ª rodada (REL-009b): a gravação é a transação no nó (não há mais transação no ts). Dois casos: o banco recusa o nó inteiro, e o banco
+// recusa só a transação (o update passaria) — nos dois, nada é gravado e as duas portas avisam. O 2º caso pega a recusa da transação
+// engolida (o u03 da conferência, na âncora nova).
+provaAsync('6.63 QA conferência · QT663-04 (REL-009, REL-009b) — a transação recusada pelo banco (PERMISSION_DENIED), com o nó inteiro recusado e com só a transação recusada: nada é gravado; as duas portas avisam que não gravou', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    const caso = async (prepara) => {
+      alg663(K657, NOQ());
+      run('__al657=[]; __za657=[];'); prepara();
+      qtResp('X.'); await espera657();
+      run(`algColarConfirmar('${K657}', 'Y colado.');`); await espera657();
+      return [JSON.stringify(noA663()) === JSON.stringify(NOQ()), /Não consegui gravar/.test(J630('__al657')[0] || ''), J630('__za657').map((z) => z[0]).filter((t) => /NÃO ficou guardada/.test(t)).length];
+    };
+    try {
+      const a = await caso(() => run(`__recusa657='^daycare/alergia-confirmada/[^/]+$';`));
+      run('__recusa657=null;');
+      const b = await caso(() => run(`__qtRef4=DB.ref; DB.ref=function(p){ var r=__qtRef4(p); if(/^daycare\\/alergia-confirmada\\/[^\\/]+$/.test(String(p))) r.transaction=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; };`));
+      igual([a, b], [[true, true, 1], [true, true, 1]]);
+    } finally { run('__recusa657=null; if(typeof __qtRef4!=="undefined") DB.ref=__qtRef4;'); }
+  });
+});
+provaAsync('6.63 QA conferência · QT663-05 (REL-009; sem internet) — a reserva fica no ar: nenhuma escrita da resposta sai; tocar de novo no mesmo aparelho enquanto isso; a internet volta: o que fica? (registro)', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    qtTx();
+    try {
+      alg663(K657, NOQ());
+      run(`__pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[]; __al657=[]; __esc657=[];`);   // 3ª rodada (REL-009b): a gravação do nó fica no ar
+      qtResp('X: sem internet.'); await espera657();
+      const noAr = run('__pend657.length'), escR = escritas657().filter((e) => /alergia-confirmada\/[^/]+$/.test(e[1])).length;
+      run(`__qtP2=algResponder('${K657}');`); await espera657();   // o toque de novo, no mesmo aparelho (sem esperar: a reserva dele também fica no ar)
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      const n = noA663();
+      console.log('      QT663-05: reservas no ar=' + noAr + ' · escritas da resposta enquanto sem internet=' + escR + ' · ficou: ' + n.resposta + ' · histórico ' + JSON.stringify(qtHist()) + ' · avisos ' + JSON.stringify(J630('__al657')));
+      igual([noAr >= 1, escR, n.resposta, qtHist()], [true, 0, 'X: sem internet.', ['Tem alergia a frango.']]);
+    } finally { run('__pendura657=null;'); qtSolta(); }
+  });
+});
+provaAsync('6.63 QA conferência · QT663-06 (REQ-004) — a pergunta refeita: o campo vazio; a resposta anterior acima, escapada (aspas, <, apóstrofo, &); com o campo vazio, «O tutor respondeu» recusa e nada muda; o FILHOt continua em «perguntar de novo»; a alergia fica', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    const VELHA = 'Tem alergia a "frango" <script>alert(1)</script> & d\'água <b>negrito</b>';
+    alg663(K657, NOQ(VELHA));
+    const h = String(run(`(function(){ ALG_ABERTO='${K657}'; var L=algLista(); return algBlocoHTML('x', [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; })); })()`));
+    const campo = (new RegExp('id="algResp_' + K657 + '"[^>]*>([^<]*)<').exec(h) || [])[1], ant = (/Resposta anterior[^<]*/.exec(h) || [])[0];
+    run(`__al657=[]; __esc657=[];`);
+    await (async () => { run(`__el657['algResp_${K657}']={value:''}; __el657['algData_${K657}']={value:'2026-10-09'};`); await run(`algResponder('${K657}')`); await espera657(); })();
+    const naLista = J630(`(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; }).length; })()`);
+    console.log('      QT663-06: campo=' + JSON.stringify(campo) + ' · acima: ' + ant);
+    igual([campo, h.indexOf('<script>') < 0 && h.indexOf('<b>negrito') < 0, ant.indexOf('Resposta anterior (02/03/2026): ') === 0, /&lt;script/.test(ant) && ant.indexOf('<script') < 0 && /&quot;frango&quot;|&#34;frango&#34;/.test(ant) && /&amp;/.test(ant),
+      /Cole aqui o que o tutor respondeu/.test(J630('__al657')[0] || ''), escritas657().length, noA663().resposta, naLista, db657('daycare/cadastro/' + K657).alergia],
+      ['', true, true, true, true, 0, VELHA, 1, 'frango']);
+  });
+});
+// 3ª rodada (REQ-004b, decisão do @po): de registro passou a asserção — na pergunta refeita a caixa do «Colar» vem vazia (a resposta
+// anterior já aparece acima); «Ler a resposta» com a caixa vazia é recusado (a caixa tem mínimo, e a função confere de novo), nada é
+// gravado e o FILHOt continua em «perguntar de novo»; com a resposta de agora, grava, a anterior vai para o histórico e ele sai da lista
+provaAsync('6.63 QA conferência · QT663-07 (REQ-004b, decisão do @po) — a pergunta refeita pelo «Colar resposta do tutor»: a caixa vem vazia; «Ler a resposta» com a caixa vazia é recusado, nada é gravado e o FILHOt continua em «perguntar de novo»; com a resposta de agora, grava, a anterior vai para o histórico e ele sai da lista', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    alg663(K657, NOQ());
+    run(`__zcBk7=zCampo; __zc=[]; zCampo=function(t, l, op){ __zc.push({t:t, valor:(op||{}).valor, minimo:(op||{}).minimo}); }; if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    try {
+      run(`algColarBotao('${K657}');`);
+      const caixa = J630('__zc')[0] || {};
+      run('__al657=[]; __esc657=[];');
+      run(`algColarConfirmar('${K657}', ${JSON.stringify(String(caixa.valor || ''))});`); await espera657();
+      const lista = () => J630(`(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; }).length; })()`);
+      const vazia = { resposta: noA663().resposta, quando: noA663().quando, hist: qtHist().length, naLista: lista(), escritas: escritas657().length, aviso: J630('__al657') };
+      alg663(K657, NOQ());
+      run(`algColarConfirmar('${K657}', 'Agora também a corante.');`); await espera657();
+      const nova = { resposta: noA663().resposta, quando: noA663().quando, hist: qtHist(), naLista: lista() };
+      console.log('      QT663-07: a caixa do «Colar» vem com ' + JSON.stringify(caixa.valor) + ' · «Ler a resposta» com a caixa vazia → ' + JSON.stringify(vazia) + ' · com resposta nova → ' + JSON.stringify(nova));
+      igual([caixa.valor, caixa.minimo >= 1, vazia.resposta, vazia.quando, vazia.hist, vazia.naLista, vazia.escritas, /^Cole a resposta do tutor/.test(vazia.aviso[0] || '')],
+        ['', true, 'Tem alergia a frango.', '2026-03-02', 0, 1, 0, true], 'a caixa vazia e a recusa');
+      igual([nova.resposta, nova.hist, nova.naLista], ['Agora também a corante.', ['Tem alergia a frango.'], 0], 'com a resposta de agora');
+    } finally { run('zCampo=__zcBk7;'); }
+  });
+});
+// ================================================================== 6.63, 3ª rodada — o fechamento da conferência do ajuste (Dex)
+// REQ-004b (decisão do @po: a caixa do «Colar» vazia na pergunta refeita) e REL-009b (a gravação inteira numa transação só, no nó da
+// resposta). Usa os ajudantes da conferência logo acima (qtTx, NOQ, qtHist, qtResp).
+console.log('\n6.63, 3ª rodada — o fechamento da conferência do ajuste');
+provaAsync('6.63 R3 16 (REQ-004b, decisão do @po) — a caixa do «Colar»: na pergunta refeita vem vazia, com o mínimo e a frase da recusa; «Ler a resposta» com texto em branco é recusado também dentro da função, e nada é gravado; o controle: na 1ª resposta e no «cole o texto de novo» de uma resposta que ainda vale, a caixa como era', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__zcBk=zCampo; __zc=[]; zCampo=function(t, l, op){ __zc.push({valor:(op||{}).valor, minimo:(op||{}).minimo, erro:(op||{}).erro}); };
+      if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    try {
+      const caixa = (no) => { alg663(K657, no); run(`__zc=[]; algColarBotao('${K657}');`); return J630('__zc')[0] || {}; };
+      const refeita = caixa(NOQ());
+      igual([refeita.valor, refeita.minimo, refeita.erro], ['', 3, 'Cole a resposta do tutor — sem o texto não há o que ler.'], 'a pergunta refeita: a caixa vazia');
+      run('__al657=[];'); run(`algColarConfirmar('${K657}', '   ');`); await espera657();
+      igual([noA663().resposta, escritas657().length, J630('__al657')], ['Tem alergia a frango.', 0, ['Cole a resposta do tutor — sem o texto não há o que ler.']], 'em branco: recusa na função');
+      // o controle: a resposta que ainda vale (respondeu em 08/10) — «cole o texto de novo» traz o texto dela; a 1ª resposta, como era
+      const vale = caixa({ enviada: ENV663, resposta: 'Ele tem alergia a frango', quando: '2026-10-08', quem: 'Bia Consultora Teste', ts: 211 });
+      const esperando = caixa({ quando: '2026-10-05', quem: 'Bia Consultora Teste', ts: 5 }), nunca = caixa({ enviada: ENV663 });
+      igual([vale.valor, esperando.valor, nunca.valor], ['Ele tem alergia a frango', '', ''], 'o controle');
+    } finally { run('zCampo=__zcBk;'); }
+  });
+});
+provaAsync('6.63 R3 17 (REL-009b) — a gravação inteira é uma transação no nó: o que outro aparelho mudou em outra parte do nó enquanto a gravação estava no ar (a entrada na ficha da resposta anterior, a marca de envio) entra junto, e nada se perde; uma escrita só, sem «update»', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    qtTx();
+    try {
+      const N0 = NOQ(); delete N0.ficha;
+      alg663(K657, N0);
+      run(`__pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[]; __esc657=[]; __qtx=[];`);
+      qtResp('Agora tem alergia a carne de porco.'); await espera657();
+      const noAr = run('__pend657.length');
+      // outro aparelho, enquanto a gravação está no ar: o automático grava a entrada na ficha da resposta anterior, e a marca de envio é refeita
+      ctx.__ent17 = ENTRADA663({ quando: '2026-10-09', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, ts: T657(9, 9), entrevista_marca: null });
+      run(`__put657('daycare/alergia-confirmada/${K657}/ficha', __ent17); __put657('daycare/alergia-confirmada/${K657}/enviada', {ts:${T657(9, 9)}, quem:'Amanda Supervisora Teste', quando:'2026-10-09'});`);
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      const n = noA663(), A = Object.values(n.respostas_anteriores || {})[0] || {};
+      const w = escritas657().filter((e) => /alergia-confirmada/.test(e[1])).map((e) => e[0] + ' ' + e[1].replace(/^daycare\/alergia-confirmada\/[^/]+/, '…'));
+      console.log('      6.63 R3 17: ' + JSON.stringify({ noAr, resposta: n.resposta, anterior: A.resposta, entradaFoiJunto: !!A.ficha, enviada: (n.enviada || {}).quem, w, tx: J630('__qtx') }));
+      igual([noAr, n.resposta, n.ficha || null, A.resposta, A.ficha, (n.enviada || {}).quem, w, J630('__qtx')],
+        [1, 'Agora tem alergia a carne de porco.', null, 'Tem alergia a frango.', ctx.__ent17, 'Amanda Supervisora Teste', ['transaction …'], ['propôs', 'propôs-servidor']]);
+    } finally { run('__pendura657=null;'); qtSolta(); }
+  });
+});
+{ // 6.63 QA micro-conferência do fechamento (Quinn): levada à Fase 0 na publicação
+// ================================================================== QA 6.63 (Quinn) — micro-conferência do fechamento (REL-009b, REQ-004b)
+// Tudo inventado. quTx() troca a transação do nó daycare/alergia-confirmada/{k} pela do Firebase: a 1ª chamada com o valor em memória
+// (null: cache frio); se ela propõe, a conferência acontece no «servidor», na hora em que a escrita chega (com o __pendura657, quando a
+// prova solta): se o nó do banco não é o que a função viu, ela roda de novo com o nó do banco; undefined = desiste. Como o Firebase, a
+// escrita do nó recusa chave com «/ . # $ [ ]» e não guarda null.
+{
+const quRaiz = (resp, extra) => Object.assign({ enviada: ENV663, resposta: resp || 'Tem alergia a frango.', quando: '2026-03-02', quem: 'Bia Consultora Teste', ts: T657(1, 9) - 220 * 86400000,
+  ficha: ENTRADA663({ quando: '2026-03-02', campos: ['alergia'], antes: { alergia: '' }, depois: { alergia: 'frango' }, ts: T657(1, 9) - 220 * 86400000, entrevista_marca: null }) }, extra || {});
+const quHist = () => Object.values(noA663().respostas_anteriores || {}).map((a) => a.resposta).sort();
+const quTx = () => run(`__qux=[]; __quBad=[]; __quRef=DB.ref; DB.ref=function(p){ var r=__quRef(p); if(/^daycare\\/alergia-confirmada\\/[^\\/]+$/.test(String(p))){
+    var chk=function(o, cam){ if(o===null||typeof o!=='object') return; Object.keys(o).forEach(function(k){ if(/[\\/.#$\\[\\]]/.test(k)) __quBad.push(cam+'/'+k); chk(o[k], cam+'/'+k); }); };
+    var semNull=function(x){ if(x===null||x===undefined) return null; if(typeof x!=='object') return x; var o=Array.isArray(x)?[]:{}, n=0; Object.keys(x).forEach(function(k){ var y=semNull(x[k]); if(y!==null){ o[k]=y; n++; } }); return n?o:null; };
+    r.transaction=function(fn){ var loc=null, r1=fn(loc), ab=false, erro=null; __qux.push(r1===undefined?'desistiu-local':'propôs');
+      if(r1===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __get657(p); }}});
+      return __resp657('transaction', p, null, function(){ var cur=__get657(p), rr=r1; if(JSON.stringify(cur)!==JSON.stringify(loc)){ rr=fn(cur); __qux.push(rr===undefined?'desistiu-servidor':'propôs-servidor'); }
+          if(rr===undefined){ ab=true; return; } chk(rr, ''); if(__quBad.length){ erro=new Error('Invalid key: '+__quBad[0]); ab=true; return; } __put657(p, semNull(JSON.parse(JSON.stringify(rr)))); })
+        .then(function(){ if(erro) throw erro; return {committed:!ab, snapshot:{val:function(){ return __get657(p); }}}; }); }; } return r; };`);
+const quSolta = () => run('if(typeof __quRef!=="undefined") DB.ref=__quRef;');
+const quResp = (txt) => run(`__el657['algResp_${K657}']={value:${JSON.stringify(txt)}}; __el657['algData_${K657}']={value:'2026-10-09'}; __quP=algResponder('${K657}');`);
+const quEsc = () => escritas657().filter((e) => /alergia-confirmada/.test(e[1])).map((e) => e[0] + ' ' + e[1].replace(/^daycare\/alergia-confirmada\/[^/]+/, '{k}'));
+
+provaAsync('6.63 QA micro · QU663-01 (REL-009b) — a transação no nó como a do Firebase: sozinha (cache frio) grava o nó inteiro sem perder nada (a marca de envio, as respostas e fichas anteriores, a entrada desfeita guardada); só a transação escreve no nó (nenhum update fora); as chaves são válidas para o Firebase', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    quTx();
+    try {
+      const ant = {}; for (let i = 0; i < 30; i++) ant['ANT' + String(i).padStart(2, '0')] = { resposta: 'Resposta antiga ' + i + ' ' + 'x'.repeat(300), quando: '2025-01-01', quem: 'Teste', ts: i + 1, substituida: { quem: 'Teste', ts: i + 2 } };
+      const R0 = quRaiz(null, { respostas_anteriores: ant, fichas_anteriores: { FA1: { quando: '2025-02-01', desfeita: { por: 'Teste', ts: 3 } } }, enviada_desfeita: { ED1: { ts: 4, quem: 'Teste' } } });
+      alg663(K657, R0);
+      run('__esc657=[];');
+      quResp('Agora tem alergia a carne de porco.'); await espera657();
+      const n = noA663(), ra = n.respostas_anteriores || {}, nova = Object.keys(ra).filter((k) => !/^ANT/.test(k));
+      console.log('      QU663-01: ficha guardada ' + JSON.stringify((ra[nova[0]] || {}).ficha).slice(0, 160) + ' · tx ' + JSON.stringify(J630('__qux')) + ' · escritas ' + JSON.stringify(quEsc()) + ' · chaves ruins ' + JSON.stringify(J630('__quBad')) + ' · histórico ' + Object.keys(ra).length);
+      igual([n.resposta, n.ficha || null, JSON.stringify(n.enviada) === JSON.stringify(ENV663), Object.keys(ra).length, nova.length, (ra[nova[0]] || {}).resposta, JSON.stringify((ra[nova[0]] || {}).ficha) === JSON.stringify(JSON.parse(JSON.stringify(R0.ficha, (k, v) => (v === null ? undefined : v)))),
+        Object.keys(ra).filter((k) => /^ANT/.test(k)).every((k) => JSON.stringify(ra[k]) === JSON.stringify(ant[k])), !!(n.fichas_anteriores || {}).FA1, !!(n.enviada_desfeita || {}).ED1, quEsc(), J630('__quBad'), db657('daycare/cadastro/' + K657).alergia],
+        ['Agora tem alergia a carne de porco.', null, true, 31, 1, 'Tem alergia a frango.', true, true, true, true, ['transaction {k}'], [], 'frango']);
+    } finally { quSolta(); }
+  });
+});
+provaAsync('6.63 QA micro · QU663-02 (REL-009b) — o ts mudou entre a leitura e a gravação (outro aparelho gravou): a transação desiste no servidor, nada é gravado, e o aviso é o de «mudou em outro aparelho»; a outra parte do nó gravada no meio por outro aparelho (a entrada na ficha e a marca de envio) entra junto, sem se perder', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    quTx();
+    try {
+      // (a) o ts mudou no meio: desiste
+      alg663(K657, quRaiz());
+      run(`__pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[]; __al657=[];`);
+      quResp('X: deste aparelho.'); await espera657();
+      run(`__put657('daycare/alergia-confirmada/${K657}/resposta', 'Y: do outro aparelho.'); __put657('daycare/alergia-confirmada/${K657}/ts', 999);`);
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      const a = { resposta: noA663().resposta, hist: quHist(), tx: J630('__qux'), aviso: J630('__al657').map((t) => t.slice(0, 70)) };
+      // (b) outra parte do nó gravada no meio (a entrada que o automático de outro aparelho pôs e uma marca de envio nova): entra junto
+      alg663(K657, quRaiz(null, { ficha: null }));
+      run(`__qux=[]; __pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[];`);
+      quResp('Z: deste aparelho.'); await espera657();
+      run(`__put657('daycare/alergia-confirmada/${K657}/ficha', {quando:'2026-10-09', quem:'automático (resposta do tutor)', auto:true, campos:['alergia'], ts:77, guardouAntes:true});
+        __put657('daycare/alergia-confirmada/${K657}/enviada', {ts:88, quem:'Outra Consultora Teste', quando:'2026-10-09'});`);
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      const n = noA663(), ra = n.respostas_anteriores || {}, A = ra[Object.keys(ra)[0]] || {};
+      const b = { resposta: n.resposta, enviada: n.enviada, ficha: n.ficha || null, ant: A.resposta, fichaAnt: (A.ficha || {}).ts, tx: J630('__qux') };
+      console.log('      QU663-02: (a) ' + JSON.stringify(a) + ' · (b) ' + JSON.stringify(b));
+      igual([a.resposta, a.hist, a.aviso.length === 1 && /mudou em outro aparelho/.test(a.aviso[0]), b.resposta, (b.enviada || {}).ts, b.ficha, b.ant, b.fichaAnt],
+        ['Y: do outro aparelho.', [], true, 'Z: deste aparelho.', 88, null, 'Tem alergia a frango.', 77]);
+    } finally { run('__pendura657=null;'); quSolta(); }
+  });
+});
+provaAsync('6.63 QA micro · QU663-03 (REL-009b) — a recusa do banco (PERMISSION_DENIED) nas duas portas: nada é gravado e o aviso diz que não gravou; sem internet: nada sai até a rede voltar, e então grava uma vez', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    quTx();
+    try {
+      alg663(K657, quRaiz());
+      run(`__recusa657='^daycare/alergia-confirmada/[^/]+$'; __al657=[]; __za657=[]; if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+      quResp('X.'); await espera657();
+      run(`algColarConfirmar('${K657}', 'Y colado.');`); await espera657();
+      const rec = [JSON.stringify(noA663()) === JSON.stringify(quRaiz()), /Não consegui gravar/.test(J630('__al657')[0] || ''), J630('__za657').map((z) => z[0]).filter((t) => /NÃO ficou guardada/.test(t)).length];
+      run('__recusa657=null;');
+      alg663(K657, quRaiz());
+      run(`__qux=[]; __pendura657='^daycare/alergia-confirmada/[^/]+$'; __pend657=[]; __esc657=[];`);
+      quResp('Z: sem internet.'); await espera657();
+      const noAr = run('__pend657.length'), escNoAr = escritas657().filter((e) => /alergia-confirmada/.test(e[1])).length, igualAntes = JSON.stringify(noA663()) === JSON.stringify(quRaiz());
+      run('__pendura657=null; __pend657.splice(0).forEach(function(x){ x.ok(); });'); await espera657(); await espera657();
+      console.log('      QU663-03: recusa ' + JSON.stringify(rec) + ' · sem internet: no ar=' + noAr + ', escritas aplicadas=' + escNoAr + ', nó igual=' + igualAntes + ' → ' + noA663().resposta + ' · histórico ' + JSON.stringify(quHist()));
+      igual([rec, noAr, escNoAr, igualAntes, noA663().resposta, quHist()], [[true, true, 1], 1, 0, true, 'Z: sem internet.', ['Tem alergia a frango.']]);
+    } finally { run('__recusa657=null; __pendura657=null;'); quSolta(); }
+  });
+});
+provaAsync('6.63 QA micro · QU663-04 (REQ-004b) — o «Colar»: na pergunta refeita a caixa vem vazia; na resposta que ainda vale, vem com o texto (o «cole de novo»); na 1ª resposta, vazia; com a caixa vazia ou só espaços, nada é gravado; o FILHOt sai de «perguntar de novo» só com resposta nova', async () => {
+  await comAlg663(async () => {
+    fichaTonico657({ alergia: 'frango' });
+    papel657('consultora', 'Bia Consultora Teste');
+    run(`__zc=[]; zCampo=function(t, l, op){ __zc.push((op||{}).valor); }; if(typeof rtLerResposta!=='function') rtLerResposta=function(){ return {respostas:{}, naoEntendi:[], avisos:[], perguntasSemResposta:[]}; };`);
+    const caixa = () => { run(`__zc=[]; algColarBotao('${K657}');`); return J630('__zc')[0]; };
+    const naLista = () => J630(`(function(){ var L=algLista(); return [].concat(L.hospede, L.auluno).filter(function(x){ return x.k==='${K657}'; }).length; })()`);
+    alg663(K657, quRaiz());
+    const refeita = caixa();
+    run(`__al657=[]; __esc657=[]; algColarConfirmar('${K657}', ''); algColarConfirmar('${K657}', '   ');`); await espera657();
+    const vazio = [J630('__al657').length, escritas657().length, noA663().quando, naLista()];
+    run(`algColarConfirmar('${K657}', 'Agora também a corante.');`); await espera657();
+    const nova = [noA663().resposta, noA663().quando, quHist(), naLista()];
+    alg663(K657, quRaiz(null, { quando: '2026-09-20' }));
+    const valendo = caixa();
+    alg663(K657, { enviada: ENV663 });
+    const primeira = caixa();
+    console.log('      QU663-04: caixa refeita=' + JSON.stringify(refeita) + ' · vazio ' + JSON.stringify(vazio) + ' · nova ' + JSON.stringify(nova) + ' · caixa valendo=' + JSON.stringify(valendo) + ' · 1ª=' + JSON.stringify(primeira));
+    igual([refeita, vazio, nova, valendo, primeira], ['', [2, 0, '2026-03-02', 1], ['Agora também a corante.', '2026-10-09', ['Tem alergia a frango.'], 0], 'Tem alergia a frango.', '']);
+  });
+});
+}
+}
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.63, 3ª rodada (fim)
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.63 (fim)
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
