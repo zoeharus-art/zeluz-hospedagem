@@ -27075,6 +27075,11 @@ const EXCECAO648 = [
   "function avisoMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // avisoMotivoErro: chamada no Encerrar, no Retirar e no Reabrir
 ];
 const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'utf8')), EXCECAO648);
+// 6.70 (o acerto das plantonistas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a Gestão escreveu no cartaz do valor à
+// mão e da correção da noite, mostrado no cartão (acertoCartaoHTML), e o motivo da troca de tabela em «Tabelas anteriores» (acertoTabHistHTML).
+// Os erros do banco vão para a tela pelo zErroMotivo (acertoErroTela e o cartaz da 6.57). Num acréscimo, para a junção com as outras
+// stories não pisar no fim da lista.
+Object.assign(DADO648, { acertoCartaoHTML: 2, acertoTabHistHTML: 1 });
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
   const { a, onde } = VARRE648();
   const cruNoLoteA = LOTE_A648.filter((f) => a[f]);
@@ -42291,6 +42296,1792 @@ provaAsync('6.66 QA re-gate · QA666S-02 — a hospedagem nunca excluída: a bai
   });
   console.log('      ' + JSON.stringify([r.e.encerradaEm, r.e.saida_combinada, r.za]));
   igual([r.e.encerradaEm, r.e.encerradaPor, r.e.saida_combinada], ['2026-10-09', 'Bia Consultora Teste', '2026-10-12']);
+});
+}
+}
+{
+// ================================================================== 6.70 — o acerto das plantonistas (S10): pagar, desfazer, lote, a noite antiga, o valor à mão, a tabela, os nomes e a noite
+console.log('\n6.70 — O acerto das plantonistas: «Paguei» com pergunta e sem refazer o valor, desfazer o pagamento, pagar várias, a noite antiga, o valor à mão, a tabela, os nomes já ensinados, corrigir a noite e o plantão de dia');
+// Tudo INVENTADO: as plantonistas «Teste» (Carol, Júlia, Ana), a assinatura «Carpl» e os FILHOts Biscoito, Pipoca, Quindim, Tâmara e
+// Nelson. Relógio FIXO em sábado, 10/10/2026, 10:00 (a lista vai de 10/09 a 09/10). Feriado de mentira: segunda, 28/09/2026. O banco
+// de mentira da 6.57 (conta gravações e transações, sabe recusar), com as consultas por chave (limitToLast, orderByKey, startAt, endAt).
+// As provas marcadas com * na story falham na base c71e55d (v 2026-10-09-19); as guardas (P4, P12, P22 e P36) passam também nela.
+const DIA670 = '2026-10-10';
+const T670 = (mes, d, hh, mm) => new Date(2026, mes - 1, d, hh, mm || 0, 0).getTime();
+const AGORA670 = T670(10, 10, 10, 0);
+const MOT670 = 'a Gestão conferiu o caderno da noite';
+const semAcento670 = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const EP670 = (nome, ent, sai) => ({ nome, refKey: semAcento670(nome) + '__teste', entrada: ent, saida: sai, status: 'ativa' });
+// 02 e 03/10: Tâmara (1); 04/10 (domingo): Biscoito e Pipoca (2); 05/10: mais Quindim (3); 06/10: 2; 08/10: Nelson (1); as outras: 0
+const EST670 = () => ({ a: EP670('Biscoito', '2026-10-04', '2026-10-07'), b: EP670('Pipoca', '2026-10-04', '2026-10-07'), c: EP670('Quindim', '2026-10-05', '2026-10-06'),
+  d: EP670('Tâmara', '2026-10-02', '2026-10-04'), e: EP670('Nelson', '2026-10-08', '2026-10-09') });
+const ASS670 = (nome, extra) => Object.assign({ nome, fonte: 'assinatura', momentos: ['recebeu o plantão', 'jantar', 'manhã seguinte'], completa: true, acoes: 3,
+  variantes: [], duasPessoas: false, equipe: [nome], quantas: 1, outros: [] }, extra || {});
+// a Ana assina 03 e 04/10: a dobra do domingo 04/10 fica na noite de 03/10 (acertoMarcarDobras, que não muda)
+const QUEM670 = () => ({ '2026-10-03': ASS670('Ana Teste'), '2026-10-04': ASS670('Ana Teste'), '2026-10-05': ASS670('Carol Teste'), '2026-10-06': ASS670('Júlia Teste'),
+  '2026-10-08': ASS670('Carpl') });
+const LIVRO670 = () => ({ oficiais: ['Ana Teste', 'Carol Teste', 'Júlia Teste'], apelidos: { 'ana teste': 'Ana Teste', 'carol teste': 'Carol Teste', 'julia teste': 'Júlia Teste', carpl: 'Júlia Teste' }, naoSao: {} });
+// um registro de noite (o formato que o «Paguei» e o «Guardar» de sempre gravam)
+const REG670 = (extra) => Object.assign({ status: 'acumulado', quem: 'Carol Teste', hospedes: 3, pets: ['Biscoito', 'Pipoca', 'Quindim'], valor_base_cent: 10000, ajuda_cent: 1300,
+  valor_total_cent: 11300, quantas: 1, pets_por_pessoa: 3, dobrou: false, dobra_de: '', marcado_por: 'Gestora Teste', marcado_em: T670(10, 6, 9, 0) }, extra || {});
+const ARMA670 = `__bk670={reg:ACERTO_REG, quem:ACERTO_QUEM, cfg:acertoCfg, livro:PLANT_LIVRO, est:EST_TODAS, man:ACERTO_MANUAIS, rem:ACERTO_REMOVIDOS, pr:ACERTO_PRONTO,
+    cg:ACERTO_CARGA, fer:orcFeriados, dq:acertoDeduzirQuem, qa:acertoQuemPelaAssinatura, cp:acertoCarregarPernoites, hz:zHojeISO, hj:hojeISO, D:Date,
+    dia:(typeof ACERTO_DIA!=='undefined'?ACERTO_DIA:undefined), lotes:(typeof ACERTO_LOTES!=='undefined'?ACERTO_LOTES:undefined),
+    ab:(typeof ACERTO_ABERTAS!=='undefined'?ACERTO_ABERTAS:undefined), th:(typeof ACERTO_TAB_HIST!=='undefined'?ACERTO_TAB_HIST:undefined),
+    me:(typeof ACERTO_MESES!=='undefined'?ACERTO_MESES:undefined), mp:(typeof ACERTO_MES_PROX!=='undefined'?ACERTO_MES_PROX:undefined),
+    lt:(typeof ACERTO_LOTE!=='undefined'?ACERTO_LOTE:undefined), gr:(typeof ACERTO_GRAVANDO!=='undefined'?ACERTO_GRAVANDO:undefined)};
+  ACERTO_REG={}; ACERTO_QUEM={}; acertoCfg=null; PLANT_LIVRO={oficiais:[], apelidos:{}, naoSao:{}}; ACERTO_MANUAIS={}; ACERTO_REMOVIDOS={}; ACERTO_PRONTO=false; ACERTO_CARGA=null;
+  if(typeof ACERTO_DIA!=='undefined'){ ACERTO_DIA={}; ACERTO_LOTES={}; ACERTO_ABERTAS={}; ACERTO_TAB_HIST={}; ACERTO_MESES={}; ACERTO_MES_PROX=''; ACERTO_LOTE=null; ACERTO_GRAVANDO={}; }
+  __quem670={}; __lei670=[]; __fer670={}; __recusaLer670=null;
+  orcFeriados=function(){ return Object.assign({'2026-09-28':'Feriado Teste'}, __fer670||{}); };
+  acertoDeduzirQuem=function(){ return Promise.resolve({}); };
+  acertoQuemPelaAssinatura=function(){ return Promise.resolve(JSON.parse(JSON.stringify(__quem670))); };
+  acertoCarregarPernoites=function(){ return Promise.resolve(); };
+  zHojeISO=function(){ return '${DIA670}'; }; hojeISO=zHojeISO;
+  Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${AGORA670}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${AGORA670}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;
+  __el657['acertoLista']={innerHTML:''}; __el657['acertoTotais']={innerHTML:''}; __el657['acertoTabela']={innerHTML:''};
+  __el657['acertoNomes']={innerHTML:'', style:{}}; __el657['acTabStatus']={style:{}, textContent:''}; __view657={id:'v-acerto'};
+  __ref670=DB.ref;
+  DB={ref:function(p){ p=String(p||''); var r=__ref670(p);
+    var nega=function(){ return __recusaLer670 && new RegExp(__recusaLer670).test(p); };
+    var consulta=function(op){ var q={op:op};
+      q.orderByKey=function(){ return q; }; q.startAt=function(k){ q.op.ini=String(k); return q; }; q.endAt=function(k){ q.op.fim=String(k); return q; }; q.limitToLast=function(n){ q.op.ult=n; return q; };
+      q.once=function(){ __lei670.push({p:p, q:JSON.parse(JSON.stringify(q.op))}); if(nega()) return Promise.reject(new Error('PERMISSION_DENIED: Permission denied'));
+        var v=__get657(p)||{}, o=null;
+        Object.keys(v).sort().forEach(function(k){ if(q.op.ini!=null && k<q.op.ini) return; if(q.op.fim!=null && k>q.op.fim) return; o=o||{}; o[k]=v[k]; });
+        if(o && q.op.ult){ var o2={}; Object.keys(o).slice(-q.op.ult).forEach(function(k){ o2[k]=o[k]; }); o=o2; }
+        return Promise.resolve({val:function(){ return o; }, exists:function(){ return !!o; }}); };
+      return q; };
+    r.orderByKey=function(){ return consulta({}); }; r.limitToLast=function(n){ return consulta({ult:n}); };
+    var o0=r.once; r.once=function(){ __lei670.push({p:p}); if(nega()) return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); return o0.apply(r, arguments); };
+    return r; }};`;
+const SOLTA670 = `ACERTO_REG=__bk670.reg; ACERTO_QUEM=__bk670.quem; acertoCfg=__bk670.cfg; PLANT_LIVRO=__bk670.livro; EST_TODAS=__bk670.est; ACERTO_MANUAIS=__bk670.man;
+  ACERTO_REMOVIDOS=__bk670.rem; ACERTO_PRONTO=__bk670.pr; ACERTO_CARGA=__bk670.cg; orcFeriados=__bk670.fer; acertoDeduzirQuem=__bk670.dq;
+  acertoQuemPelaAssinatura=__bk670.qa; acertoCarregarPernoites=__bk670.cp; zHojeISO=__bk670.hz; hojeISO=__bk670.hj; Date=__bk670.D;
+  if(typeof ACERTO_DIA!=='undefined'){ ACERTO_DIA=__bk670.dia; ACERTO_LOTES=__bk670.lotes; ACERTO_ABERTAS=__bk670.ab; ACERTO_TAB_HIST=__bk670.th; ACERTO_MESES=__bk670.me;
+    ACERTO_MES_PROX=__bk670.mp; ACERTO_LOTE=__bk670.lt; ACERTO_GRAVANDO=__bk670.gr; }`;
+const cena670 = (o) => {
+  o = o || {};
+  ctx.__c670 = { est: o.est || EST670(), quem: o.quem || QUEM670(), livro: o.livro || LIVRO670(), reg: o.reg || {}, dia: o.dia || null, cfg: o.cfg || null,
+    ab: o.ab || null, lotes: o.lotes || null, th: o.th || null, fer: o.fer || {} };
+  run(`EST_TODAS=JSON.parse(JSON.stringify(__c670.est)); __quem670=__c670.quem; __fer670=__c670.fer;
+    __put657('auaulandia/config/plantonistas', __c670.livro);
+    Object.keys(__c670.reg).forEach(function(k){ __put657('auaulandia/acerto-plantao/'+k, __c670.reg[k]); });
+    if(__c670.dia) __put657('auaulandia/acerto-plantao-dia', __c670.dia);
+    if(__c670.cfg) __put657('auaulandia/config/acerto-plantao', __c670.cfg);
+    if(__c670.ab) __put657('auaulandia/acerto-abertas', __c670.ab);
+    if(__c670.lotes) __put657('auaulandia/acerto-lotes', __c670.lotes);
+    if(__c670.th) __put657('auaulandia/acerto-tabela-historico', __c670.th);`);
+};
+const limpa670 = () => run('__esc657=[]; __au657=[]; __za657=[]; __zp657=[]; __zpq657=[]; __lei670=[];');
+const carrega670 = async (sem) => { await run('acertoCarregar()'); await espera657(); if (!sem) limpa670(); };
+const com670 = async (cena, fn, op) => {
+  run(ARMA657);
+  try { run(ARMA670); cena670(cena); if (op && op.antes) run(op.antes); await carrega670(op && op.semLimpar); await fn(); }
+  finally { try { run(SOLTA670); } finally { run(SOLTA657); } }
+};
+const db670 = (p) => db657('auaulandia/' + p);
+const J670 = (c) => J630(c);
+const esc670 = () => J670('__esc657');
+const grav670 = () => esc670().filter((e) => /^(update|set|transaction|remove)/.test(e[0]));
+const za670 = () => J670('__za657');
+const zaT670 = (re) => za670().filter((z) => re.test(String(z[0] || '')));
+const aud670 = (a) => J670(`__au657.filter(function(x){ return x[0]===${JSON.stringify(a)}; })`);
+const barrou670 = () => J670(`__au657.filter(function(x){ return x[0]==='sem-permissao' && /^BARROU/.test(x[1]); })`).length;
+const lista670 = () => { run('renderAcerto();'); return String(run('__el657.acertoLista.innerHTML') || ''); };
+const totais670 = () => J670('acertoTotaisPor(acertoNoites().filter(function(o){ return (o.reg.status||"")!=="pago"; })).por');
+const cartaz670 = () => String(run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?corrCartazHTML(CORR_ATUAL):""') || '');
+const passo670 = () => run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?CORR_ATUAL.passo:null');
+const continua670 = (vals) => run(`corrToque('continuar', {valores:${JSON.stringify(vals)}})`);
+const assina670 = async (senha, motivo) => { await run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo || MOT670)}, senha:${JSON.stringify(senha || SENHA657)}})`); await espera657(); };
+const fecha670 = async () => { run(`if(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL) corrToque('fechar')`); await espera657(); };
+const nome670 = (id, nome) => run(`__el657['acq_${id}']={value:${JSON.stringify(nome)}}`);
+const pergunta670 = (sim) => run(`__zpq657.push(${sim ? 'true' : 'false'})`);
+const marca670 = async (id, st, sim) => { pergunta670(sim !== false); const r = await run(`acertoMarcar(${JSON.stringify(id)}, ${JSON.stringify(st)})`); await espera657(); return JSON.parse(JSON.stringify(r === undefined ? null : r)); };
+const RS670 = /^R\$ \d{1,3}(\.\d{3})*,\d{2}$/;
+const reais670 = (h) => (String(h).replace(/<[^>]*>/g, ' ').match(/R\$\s?[\d.,]+/g) || []).map((x) => x.trim().replace(/(,\d{2})[.,]+$/, '$1'));
+
+// ---- AC1 — «Paguei», «Guardar» e «Voltar para a pagar» --------------------------------------------------------------------------------------
+provaAsync('6.70 P1 (AC1.1) — «Paguei esta noite» pergunta antes, na própria tela («Pagar a noite de 05/10/2026 a Carol Teste: R$ 113,00?»), com «Pagar» e «Cancelar»; cancelado, nada é gravado; «Pagar» grava. Base: grava no primeiro toque', async () => {
+  await com670({}, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', false);
+    igual(grav670(), [], 'cancelado: nada gravado');
+    igual(J670('__zp657.map(function(z){ return z[0]; })'), ['Pagar a noite de 05/10/2026 a Carol Teste: R$ 113,00?'], 'a pergunta antes');
+    igual(J670('__zp657.length'), 1);
+    const h = lista670();
+    assert.ok(/min-height:44px" onclick="acertoMarcar\('2026-10-05','pago'\)">Paguei esta noite<\/button>/.test(h), 'o botão de sempre, com 44 px');
+    await marca670('2026-10-05', 'pago', true);
+    igual([db670('acerto-plantao/2026-10-05/status'), db670('acerto-plantao/2026-10-05/valor_total_cent')], ['pago', 11300]);
+    igual(grav670().map((e) => e[0] + ' ' + e[1]), ['transaction auaulandia/acerto-plantao/2026-10-05', 'update auaulandia'], 'a noite numa transação (2ª rodada, LOW-2), e o índice das abertas logo depois');
+  });
+});
+provaAsync('6.70 P2 (AC1.2) — guardada com R$ 113,00 e a faixa de 2 a 3 FILHOts mudada para R$ 120,00: «Paguei» grava R$ 113,00 (o valor do cartão) e a pergunta diz «daria R$ 133,00». Base: grava R$ 133,00 (SONDA670-C2)', async () => {
+  await com670({ reg: { '2026-10-05': REG670() }, cfg: { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 12000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300 } }, async () => {
+    const h = lista670();
+    const cartao = (h.split('avr-card ').filter((x) => x.indexOf('05/10/2026') >= 0)[0] || '');
+    assert.ok(/margin-top:3px">R\$ 113,00/.test(cartao), 'o cartão mostra R$ 113,00');
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', true);
+    igual(db670('acerto-plantao/2026-10-05/valor_total_cent'), 11300, 'grava o valor do cartão');
+    const zp = J670('__zp657')[0] || [];
+    igual(zp[0], 'Pagar a noite de 05/10/2026 a Carol Teste: R$ 113,00?');
+    assert.ok((zp[1] || []).indexOf('Pela tabela de hoje, esta noite daria R$ 133,00. Você vai pagar R$ 113,00, o valor que está no cartão. Para pagar R$ 133,00, toque antes em «Atualizar para R$ 133,00».') >= 0, JSON.stringify(zp));
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.valor_total_cent, r.valor_base_cent, r.hospedes], ['pago', 11300, 10000, 3]);
+    igual(Object.keys(r.pagamentos || {}).map((k) => r.pagamentos[k].valor_cent), [11300]);
+  });
+});
+provaAsync('6.70 P3 (AC1.3) — «Guardar» numa noite com 5 FILHOts gravados (e 3 deduzidos): fica 5 e o valor gravado não muda; «Voltar para a pagar» também não refaz. Base: hospedes 3 (SONDA670-C7)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar', hospedes: 5, valor_base_cent: 13000, valor_total_cent: 14300, pets_por_pessoa: 5 }) } }, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'acumulado', true);
+    let r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.hospedes, r.valor_total_cent, r.valor_base_cent, r.quantas, r.dobrou, r.pets_por_pessoa], ['acumulado', 5, 14300, 13000, 1, false, 5]);
+    igual([(db670('acerto-abertas/2026-10-05') || {}).status, grav670().map((e) => e[0] + ' ' + e[1])], ['acumulado', ['transaction auaulandia/acerto-plantao/2026-10-05', 'update auaulandia']], 'o índice das noites em aberto logo depois da noite (AC4.5)');
+    await marca670('2026-10-05', 'apagar', true);
+    r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.hospedes, r.valor_total_cent, r.quem], ['apagar', 5, 14300, 'Carol Teste']);
+    igual((db670('acerto-abertas/2026-10-05') || {}).status, 'apagar');
+    await marca670('2026-10-05', 'pago', true);
+    igual(db670('acerto-abertas/2026-10-05'), null, 'paga: sai do índice');
+  });
+});
+provaAsync('6.70 P4 (AC1.3, guarda) — a primeira marca de uma noite sem registro congela o valor da tabela daquele momento (como sempre): mudar a tabela depois não muda a noite', async () => {
+  await com670({}, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    pergunta670(true);
+    await run(`acertoMarcar('2026-10-05','acumulado')`); await espera657();
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.quem, r.hospedes, r.valor_base_cent, r.ajuda_cent, r.valor_total_cent, r.quantas, r.dobrou, r.assinou], ['acumulado', 'Carol Teste', 3, 10000, 1300, 11300, 1, false, 'recebeu o plantão · jantar · manhã seguinte']);
+    run(`acertoCfg={faixas:[{ate:1,v:6000},{ate:3,v:12000},{ate:6,v:13000},{ate:10,v:15000},{ate:999,v:18000}], ajuda:1300};`);
+    const o = J670(`acertoNoites().filter(function(x){ return x.iso==='2026-10-05'; }).map(function(x){ return x.reg.valor_total_cent; })`);
+    igual(o, [11300], 'o valor congelado continua');
+  });
+});
+provaAsync('6.70 P5 (AC1.4) — sem nome: o aviso NA TELA («Escreva o nome de quem passou a noite: pagamento sem nome não fecha conta.»), nenhum alert; o banco recusa: «NÃO FOI GRAVADO», o motivo em português e «Nada foi gravado.», o cartão como estava. Base: alert e «Não salvou: PERMISSION_DENIED…»', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    nome670('2026-10-05', '');
+    await marca670('2026-10-05', 'pago', true);
+    igual(J670('__al657'), [], 'nenhuma janela nativa');
+    igual(zaT670(/FALTA O NOME/).map((z) => z[1]), [['Escreva o nome de quem passou a noite: pagamento sem nome não fecha conta.']]);
+    igual(grav670(), []);
+    limpa670();
+    nome670('2026-10-05', 'Carol Teste');
+    run(`__recusa657='^auaulandia(/acerto-plantao/2026-10-05)?$';`);
+    await marca670('2026-10-05', 'pago', true);
+    const z = zaT670(/NÃO FOI GRAVADO/)[0] || [];
+    assert.ok(z.length && (z[1] || []).indexOf('Motivo: o sistema recusou a gravação.') >= 0 && (z[1] || []).some((l) => /^Nada foi gravado\./.test(l)), JSON.stringify(za670()));
+    igual(J670('__al657'), []);
+    igual([db670('acerto-plantao/2026-10-05/status'), run(`ACERTO_REG['2026-10-05'].status`)], ['acumulado', 'acumulado'], 'nada mudou, no banco e na tela');
+  });
+});
+provaAsync('6.70 P6 (AC1.5 a AC1.7) — o pagamento guarda status_antes e uma entrada em pagamentos {em, por, papel, valor_cent, quem}; o Encãotador e a Consultora são barrados na função («BARROU»); a Supervisão passa; a noite paga em outro aparelho depois que a tela abriu: recusa, nada gravado, nenhuma segunda entrada', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-06': REG670({ status: 'apagar', quem: 'Júlia Teste', hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2 }) } }, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', true);
+    const r = db670('acerto-plantao/2026-10-05');
+    const ps = Object.keys(r.pagamentos || {}).map((k) => r.pagamentos[k]);
+    igual([r.status_antes, ps.length, ps[0] && ps[0].por, ps[0] && ps[0].papel, ps[0] && ps[0].valor_cent, ps[0] && ps[0].quem, typeof (ps[0] || {}).em, r.marcado_por], ['acumulado', 1, 'Gestora Teste', 'gestao', 11300, 'Carol Teste', 'number', 'Gestora Teste']);
+    for (const papel of ['monitor', 'consultora']) {
+      limpa670(); run(`document.body.dataset.role='${papel}';`);
+      nome670('2026-10-06', 'Júlia Teste');
+      await marca670('2026-10-06', 'pago', true);
+      igual([barrou670(), grav670().length, J670('__zp657').length], [1, 0, 0], papel + ': barrado antes da pergunta');
+    }
+    run(`document.body.dataset.role='supervisor';`); limpa670();
+    nome670('2026-10-06', 'Júlia Teste');
+    await marca670('2026-10-06', 'acumulado', true);
+    igual(db670('acerto-plantao/2026-10-06/status'), 'acumulado', 'a Supervisão guarda (até a S10-P4)');
+    run(`document.body.dataset.role='gestao';`); limpa670();
+    // outro aparelho paga a 06/10 depois que esta tela abriu
+    run(`__put657('auaulandia/acerto-plantao/2026-10-06/status', 'pago'); __put657('auaulandia/acerto-plantao/2026-10-06/pagamentos/pX', {em:${T670(10, 10, 9, 30)}, por:'Outra Gestora Teste', papel:'gestao', valor_cent:11300, quem:'Júlia Teste'});`);
+    nome670('2026-10-06', 'Júlia Teste');
+    await marca670('2026-10-06', 'pago', true);
+    igual(grav670(), [], 'nada gravado');
+    igual(Object.keys(db670('acerto-plantao/2026-10-06/pagamentos') || {}), ['pX'], 'nenhuma segunda entrada');
+    const z = zaT670(/NADA FOI GRAVADO/)[0] || [];
+    igual(z[1], ['A noite de 06/10/2026 já foi paga por Outra Gestora Teste em 10/10/2026 às 09:30. Nada foi gravado.']);
+    assert.ok(/Já pagas \(2\)/.test(lista670()), 'a tela se redesenha com a noite em «Já pagas»');
+  });
+});
+
+// ---- AC2 — «Desfazer o pagamento» ---------------------------------------------------------------------------------------------------------
+provaAsync('6.70 P7 (AC2.1, AC2.3, AC2.4) — «Desfazer o pagamento» (44 px) em «Já pagas»: a senha da Supervisão é recusada, a da Gestão assina; volta a guardada com o nome e o valor da época (a lista e a tabela mudaram); o pagamento desfeito fica no histórico; pagar de novo cria outra entrada. Base: quem vazio e o valor refeito (SONDA670-C1)', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', true);
+    // o «desfazer» de antes (acertoMarcar com 'apagar' na noite paga) não desfaz mais: nem apaga o nome, nem refaz o valor
+    limpa670(); nome670('2026-10-05', '');
+    await marca670('2026-10-05', 'apagar', true);
+    igual([db670('acerto-plantao/2026-10-05/status'), db670('acerto-plantao/2026-10-05/quem'), db670('acerto-plantao/2026-10-05/valor_total_cent'), grav670().length], ['pago', 'Carol Teste', 11300, 0]);
+    assert.ok(zaT670(/JÁ FOI PAGA/).length === 1, 'diz que já foi paga e como desfazer');
+    // depois do pagamento, a noite ganha dois FILHOts e a tabela muda
+    run(`EST_TODAS.f={nome:'Tâmara', refKey:'tamara2__teste', entrada:'2026-10-05', saida:'2026-10-06', status:'ativa'}; EST_TODAS.g={nome:'Nelson', refKey:'nelson2__teste', entrada:'2026-10-05', saida:'2026-10-06', status:'ativa'};
+      acertoCfg={faixas:[{ate:1,v:6000},{ate:3,v:10000},{ate:6,v:14000},{ate:10,v:15000},{ate:999,v:18000}], ajuda:1300};`);
+    const h = lista670();
+    assert.ok(/<button type="button" class="btn" style="min-height:44px;[^"]*" onclick="acertoDesfazerPagamentoAbrir\('2026-10-05'\)">Desfazer o pagamento<\/button>/.test(h), 'o botão, com 44 px');
+    assert.ok(h.indexOf('>desfazer</button>') < 0, 'o «desfazer» de 11,5 px saiu');
+    limpa670();
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-05');`);
+    await assina670('s-amanda');
+    assert.ok(/não pode assinar esta reabertura/.test(cartaz670()) && passo670() === 'conferir', 'a Supervisão é recusada no cartaz');
+    igual(grav670(), []);
+    await assina670(SENHA657);
+    igual(passo670(), 'pronto');
+    const r = db670('acerto-plantao/2026-10-05');
+    const ps = Object.keys(r.pagamentos || {}).map((k) => r.pagamentos[k]);
+    igual([r.status, r.quem, r.valor_total_cent, r.hospedes], ['acumulado', 'Carol Teste', 11300, 3], 'o nome e o valor da época');
+    igual([ps.length, !!(ps[0].desfeito && ps[0].desfeito.registro), ps[0].desfeito.registro.por, ps[0].desfeito.registro.motivo], [1, true, 'Gestora Teste', MOT670]);
+    await fecha670(); limpa670(); nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', true);
+    const r2 = db670('acerto-plantao/2026-10-05');
+    igual([r2.status, Object.keys(r2.pagamentos).length, Object.keys(r2.pagamentos).filter((k) => r2.pagamentos[k].desfeito).length], ['pago', 2, 1], 'pagar de novo: uma entrada nova, a desfeita continua');
+  });
+});
+provaAsync('6.70 P8 (AC2.2, AC2.5) — o cartaz diz para onde volta e o que volta junto (o nome e o valor da época, o «A pagar por pessoa» + R$ X, o Dashboard da Márcia; «só esta sai do lote»); outro aparelho já desfez: recusa, nada gravado', async () => {
+  const regs = { '2026-10-05': REG670(), '2026-10-06': REG670({ status: 'apagar', hospedes: 2, pets_por_pessoa: 2 }), '2026-10-07': REG670({ status: 'apagar', hospedes: 0, pets: [], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 0 }) };
+  await com670({ reg: regs }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657(); limpa670();
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-05');`);
+    const h = cartaz670();
+    assert.ok(/Volta a ficar:<\/strong> guardada/.test(h), h);
+    ['Fica com o nome Carol Teste e o valor R$ 113,00, os de quando foi paga.', 'Volta para a lista e para o «A pagar por pessoa» de Carol Teste (+ R$ 113,00), e para o Dashboard da Márcia.',
+      'Só esta noite sai do lote de 10/10; as outras 2 continuam pagas.'].forEach((t) => assert.ok(h.indexOf(run('esc(' + JSON.stringify(t) + ')')) >= 0, t + ' — ' + h));
+    assert.ok(/Senha da Gestão/.test(h));
+    // outro aparelho desfaz antes da assinatura
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/status', 'acumulado');`);
+    await assina670(SENHA657);
+    igual(passo670(), 'falhou');
+    assert.ok(cartaz670().indexOf('Esta noite já não está paga: outro aparelho mudou. Nada foi gravado.') >= 0, cartaz670());
+    igual(grav670(), [], 'nada gravado');
+  });
+});
+
+// ---- AC3 — «Pagar várias» e «Desfazer este lote» ------------------------------------------------------------------------------------------
+const LOTE670 = () => ({ '2026-08-31': REG670({ hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2, marcado_em: T670(9, 1, 9, 0) }), '2026-10-05': REG670(),
+  '2026-10-06': REG670({ status: 'apagar', quem: 'Carol Teste e Júlia Teste', quantas: 2, hospedes: 2, pets_por_pessoa: 1, valor_base_cent: 6000, valor_total_cent: 7300 }),
+  '2026-10-07': REG670({ status: 'apagar', hospedes: 0, pets: [], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 0 }) });
+provaAsync('6.70 P9 (AC3.1 a AC3.3) — «Pagar várias de Carol Teste» (44 px): a guardada de 40 dias atrás, a guardada e a a pagar marcadas, a dupla desmarcada com a frase; o total refeito a cada toque; uma escrita só, com o lote; um item mudado em outro aparelho: nada pago', async () => {
+  await com670({ reg: LOTE670() }, async () => {
+    lista670();
+    const ht = String(run('__el657.acertoTotais.innerHTML'));
+    assert.ok(/min-height:44px[^"]*" onclick="acertoLoteAbrir\('Carol Teste'\)">Pagar várias de Carol Teste<\/button>/.test(ht), ht);
+    assert.ok(ht.indexOf("acertoLoteAbrir('(sem nome)')") < 0, 'a noite sem nome não se paga');
+    run(`acertoLoteAbrir('Carol Teste');`);
+    const L = J670('ACERTO_LOTE');
+    igual(L.itens.map((x) => [x.iso, x.status, x.valor, x.marcado, x.dupla, !!x.antiga]),
+      [['2026-08-31', 'acumulado', 11300, true, false, true], ['2026-10-05', 'acumulado', 11300, true, false, false], ['2026-10-06', 'apagar', 7300, false, true, false], ['2026-10-07', 'apagar', 7300, true, false, false]]);
+    let h = String(run('acertoLoteHTML(ACERTO_LOTE)'));
+    assert.ok(h.indexOf('Noite de dupla (Carol Teste e Júlia Teste): marcar aqui dá esta noite como paga para as duas.') >= 0, h);
+    assert.ok(/Total das marcadas: R\$ 299,00/.test(h) && />Pagar 3 noites: R\$ 299,00</.test(h) && /de agosto: ainda não paga/.test(h), h);
+    run('acertoLoteToque(2)');
+    assert.ok(/Total das marcadas: R\$ 372,00/.test(String(run('acertoLoteHTML(ACERTO_LOTE)'))), 'o total refeito');
+    run('acertoLoteToque(2)');
+    const lid = run('ACERTO_LOTE.id');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual(J670('__zp657.map(function(z){ return z[0]; })'), ['Pagar 3 noites a Carol Teste: R$ 299,00?']);
+    const g = grav670();
+    igual([g.length, g[0][0], g[0][1]], [1, 'update', 'auaulandia'], 'uma escrita só');
+    ['2026-08-31', '2026-10-05', '2026-10-07'].forEach((d) => {
+      const r = db670('acerto-plantao/' + d);
+      igual([r.status, Object.keys(r.pagamentos), r.pagamentos['lote_' + lid].lote], ['pago', ['lote_' + lid], lid], d);
+    });
+    igual(db670('acerto-plantao/2026-10-06/status'), 'apagar', 'a dupla desmarcada não foi paga');
+    const lr = db670('acerto-lotes/' + lid);
+    igual([lr.quem, lr.itens, lr.total_cent, lr.por, lr.papel], ['Carol Teste', [{ tipo: 'noite', iso: '2026-08-31' }, { tipo: 'noite', iso: '2026-10-05' }, { tipo: 'noite', iso: '2026-10-07' }], 29900, 'Gestora Teste', 'gestao']);
+    igual(J670('ACERTO_LOTE'), null, 'o cartaz do lote fechou');
+  });
+  // um item mudado em outro aparelho depois de abrir o cartaz
+  await com670({ reg: LOTE670() }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/valor_total_cent', 15000);`);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual(grav670(), [], 'nada pago');
+    igual(run('ACERTO_LOTE.aviso'), 'A noite de 05/10 mudou em outro aparelho. Nada foi pago: confira e escolha de novo.');
+    igual(J670(`ACERTO_LOTE.itens.filter(function(x){ return x.iso==='2026-10-05'; }).map(function(x){ return x.valor; })`), [15000], 'a lista refeita com o valor do banco');
+  });
+});
+provaAsync('6.70 P10 (AC3.4, AC3.5) — dois toques não pagam duas vezes; «Já pagas» mostra o lote numa linha; «Desfazer este lote» (Gestão) numa escrita só; a noite que já tinha voltado sozinha não é mexida', async () => {
+  await com670({ reg: LOTE670() }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    const lid = run('ACERTO_LOTE.id');
+    pergunta670(true); pergunta670(true);
+    await run('Promise.all([acertoLotePagar(), acertoLotePagar()])'); await espera657();
+    igual(grav670().length, 1, 'o segundo toque não grava');
+    // e a mesma escrita de novo (uma rede lenta que repete): o item já pago por este lote não ganha 2º pagamento
+    const de = await run(`acertoGravarMarcas([{id:'2026-10-05', quem:'Carol Teste', esperado:{}}], 'pago', {lote:'${lid}', nome:'Carol Teste'})`); await espera657();
+    igual([JSON.parse(JSON.stringify(de)).jaPago, Object.keys(db670('acerto-plantao/2026-10-05/pagamentos')).length], [true, 1]);
+    const h = lista670();
+    assert.ok(h.indexOf('Lote de 10/10 — Carol Teste — 3 noites — R$ 299,00') >= 0, h);
+    assert.ok(new RegExp("onclick=\"acertoLoteDesfazerAbrir\\('" + lid + "'\\)\">Desfazer este lote</button>").test(h));
+    // a 05/10 volta sozinha (AC2)
+    limpa670();
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-05');`); await assina670(SENHA657); await fecha670();
+    const antes0510 = db670('acerto-plantao/2026-10-05');
+    limpa670();
+    run(`__p670=acertoLoteDesfazerAbrir('${lid}');`);
+    const c = cartaz670();
+    assert.ok(c.indexOf('05/10: já tinha voltado (não é mexida)') >= 0 && c.indexOf('31/08 volta guardada — R$ 113,00') >= 0 && c.indexOf('07/10 volta a pagar — R$ 73,00') >= 0, c);
+    await assina670('s-amanda');
+    igual([passo670(), grav670().length], ['conferir', 0], 'a Supervisão não desfaz o lote');
+    await assina670(SENHA657);
+    igual(passo670(), 'pronto');
+    const g = grav670();
+    igual([g.length, g[0][1]], [1, 'auaulandia'], 'uma escrita só');
+    igual([db670('acerto-plantao/2026-08-31/status'), db670('acerto-plantao/2026-10-07/status')], ['acumulado', 'apagar']);
+    igual(db670('acerto-plantao/2026-10-05'), antes0510, 'a que já tinha voltado ficou como estava');
+    const d = db670('acerto-lotes/' + lid + '/desfeito');
+    igual([d.itens, d.ja_tinham_voltado, d.registro.por], [['2026-08-31', '2026-10-07'], ['2026-10-05'], 'Gestora Teste']);
+  });
+});
+
+// ---- AC4 — a noite em aberto não some depois de 30 dias -------------------------------------------------------------------------------------
+provaAsync('6.70 P11 (AC4.1, AC4.2, AC4.5) — a guardada de 40 dias atrás (nas 60 noites lidas) e a de junho (só pelo índice) na lista, no «A pagar por pessoa» e no Dashboard da Márcia; o «Guardado para pagar junto» igual ao «A pagar por pessoa», no centavo; o índice se acerta na leitura. Base: some do total (SONDA670-C3)', async () => {
+  const regs = { '2026-06-15': REG670({ hospedes: 1, pets: ['Nelson'], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 1 }), '2026-08-31': REG670(), '2026-10-05': REG670() };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); if (!regs[d] && d !== '2026-08-31' && d !== '2026-10-05') regs[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs, ab: { '2026-06-15': { status: 'acumulado', em: 1 } } }, async () => {
+    const p = totais670();
+    igual([p['Carol Teste'].total, p['Carol Teste'].noites, p['Carol Teste'].acum, p['Carol Teste'].acumN], [29900, 3, 29900, 3]);
+    igual(J670(`Object.keys(ACERTO_REG).indexOf('2026-06-15')>=0`), true, 'a noite de junho veio pelo índice (fora das 60 lidas)');
+    const its = J670(`acertoNoites().filter(function(o){ return o.antiga; }).map(function(o){ return o.iso; })`);
+    igual(its, ['2026-08-31', '2026-06-15']);
+    const h = lista670();
+    assert.ok(/de agosto: ainda não paga/.test(h) && /de junho: ainda não paga/.test(h), 'a marca nos cartões');
+    assert.ok(/Guardado para pagar junto: <strong>R\$ 299,00<\/strong> em 3 noites/.test(h), 'o cartão pela mesma conta');
+    const dash = String(run('poCardAcerto()'));
+    assert.ok(dash.indexOf('R$ 299,00') >= 0, 'o Dashboard da Márcia');
+    // o índice: as guardadas lidas (sem entrada) ganham a entrada dela; as pagas não
+  }, { semLimpar: true });
+  await com670({ reg: { '2026-08-31': REG670(), '2026-09-20': REG670({ status: 'pago' }) }, ab: { '2026-09-20': { status: 'acumulado', em: 1 }, '2026-07-01': { status: 'acumulado', em: 1 } } }, async () => {
+    const up = esc670().filter((e) => e[0] === 'update' && e[1] === 'auaulandia/acerto-abertas');
+    igual(up.map((e) => e[2]), [['2026-07-01', '2026-08-31', '2026-09-20']], 'uma escrita do índice');
+    igual([!!db670('acerto-abertas/2026-08-31'), db670('acerto-abertas/2026-09-20'), db670('acerto-abertas/2026-07-01')], [true, null, null]);
+  }, { semLimpar: true });
+  // a leitura da noite de julho (fora das 60 lidas, só pelo índice) falha: a noite continua no índice; a de julho que não existe sai
+  const regs3 = { '2026-07-02': REG670() };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); regs3[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs3, ab: { '2026-07-02': { status: 'acumulado', em: 1 }, '2026-07-03': { status: 'acumulado', em: 1 } } }, async () => {
+    igual(J670('__lei670').filter((l) => /^auaulandia\/acerto-plantao\/2026-07-0[23]$/.test(l.p)).map((l) => l.p), ['auaulandia/acerto-plantao/2026-07-02', 'auaulandia/acerto-plantao/2026-07-03'], 'as duas lidas uma a uma');
+    igual([!!db670('acerto-abertas/2026-07-02'), db670('acerto-abertas/2026-07-03')], [true, null], 'a leitura que falhou não tira a noite do índice');
+    igual(esc670().filter((e) => e[0] === 'update' && e[1] === 'auaulandia/acerto-abertas').map((e) => e[2]), [['2026-07-03']], 'só a que não existe sai');
+  }, { semLimpar: true, antes: `__recusaLer670='^auaulandia/acerto-plantao/2026-07-02$';` });
+});
+provaAsync('6.70 P12 (AC4.4, guarda) — a noite sem registro de antes dos 30 dias continua fora da lista (S10-P8)', async () => {
+  await com670({ est: Object.assign(EST670(), { z: EP670('Quindim', '2026-09-04', '2026-09-06') }) }, async () => {
+    igual(J670(`acertoNoites().filter(function(o){ return o.iso<'2026-09-10'; }).length`), 0);
+  });
+});
+provaAsync('6.70 P13 (AC4.3) — «Já pagas» com os últimos 30 dias e «Ver o mês anterior»: uma leitura por toque, só daquele mês, pela chave da data; mostra as pagas dele (com «Desfazer o pagamento»)', async () => {
+  // e um plantão de dia pago em 23/08 (domingo): aparece só no mês dele
+  const dia = { '2026-08-23': { quem: 'Ana Teste', quantas: 1, equipe: ['Ana Teste'], hospedes: 1, valor_base_cent: 6000, ajuda_cent: 1300, valor_total_cent: 7300, status: 'pago', motivo: MOT670,
+    registro: { por: 'Gestora Teste', papel: 'gestao', motivo: MOT670, ts: T670(8, 23, 20, 0) }, pagamentos: { p1: { em: T670(8, 24, 9, 0), por: 'Gestora Teste', papel: 'gestao', valor_cent: 7300, quem: 'Ana Teste' } } } };
+  await com670({ reg: { '2026-09-03': REG670({ status: 'pago', quem: 'Ana Teste' }), '2026-08-20': REG670({ status: 'pago', quem: 'Júlia Teste', valor_total_cent: 7300 }), '2026-09-15': REG670({ status: 'pago' }) }, dia }, async () => {
+    let h = lista670();
+    assert.ok(/Já pagas \(1\) — R\$ 113,00/.test(h) && h.indexOf('>Ver o mês anterior (setembro de 2026)</button>') >= 0, h.slice(-800));
+    await run('acertoMesAnterior()'); await espera657();
+    igual(J670('__lei670'), [{ p: 'auaulandia/acerto-plantao', q: { ini: '2026-09-01', fim: '2026-09-31' } }], 'uma leitura, só setembro');
+    h = lista670();
+    assert.ok(h.indexOf('Pagas em setembro de 2026, antes dos últimos 30 dias (1) — R$ 113,00') >= 0 && /03\/09\/2026 · Ana Teste/.test(h), h.slice(-1500));
+    assert.ok(/onclick="acertoDesfazerPagamentoAbrir\('2026-09-03'\)"/.test(h) && h.indexOf('>Ver o mês anterior (agosto de 2026)</button>') >= 0);
+    limpa670();
+    await run('acertoMesAnterior()'); await espera657();
+    igual(J670('__lei670'), [{ p: 'auaulandia/acerto-plantao', q: { ini: '2026-08-01', fim: '2026-08-31' } }]);
+    h = lista670();
+    assert.ok(h.indexOf('Pagas em agosto de 2026, antes dos últimos 30 dias (2) — R$ 146,00') >= 0 && h.indexOf('Pagas em setembro de 2026, antes dos últimos 30 dias (1) — R$ 113,00') >= 0, h.slice(-2500));
+    assert.ok(/onclick="acertoDesfazerPagamentoAbrir\('dia_2026-08-23'\)"/.test(h), 'o plantão de dia pago em agosto, com «Desfazer o pagamento»');
+  });
+});
+
+// ---- AC5 — o valor à mão -------------------------------------------------------------------------------------------------------------------
+provaAsync('6.70 P14 (AC5.1 a AC5.4) — «Corrigir o valor desta noite» (44 px): R$ 113,00 → R$ 150,00, «Bônus», a Gestão; vazio, letra, negativo e o mesmo valor recusados; o cartão, o «A pagar por pessoa», o Dashboard, «Paguei» e o lote com R$ 150,00; «Voltar ao valor de antes» volta a R$ 113,00 com registro novo', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) } }, async () => {
+    assert.ok(/min-height:44px[^"]*" onclick="acertoValorAbrir\('2026-10-05'\)">Corrigir o valor desta noite<\/button>/.test(lista670()));
+    igual(J670("['150','150,00','1.234,56','R$ 1.234,56','abc','-5','','12,345','1.23'].map(acertoLerReal)"), [15000, 15000, 123456, 123456, null, null, null, null, null]);
+    run(`__p670=acertoValorAbrir('2026-10-05');`);
+    igual(passo670(), 'campos');
+    for (const [v, re] of [['', /Escreva o valor em reais/], ['abc', /Escreva o valor em reais/], ['-5', /negativo não valem/], ['113,00', /Nada mudou/]]) {
+      continua670([v, 'Bônus']);
+      assert.ok(re.test(cartaz670()) && passo670() === 'campos', v + ': ' + cartaz670().slice(0, 300));
+    }
+    continua670(['150', 'Bônus']);
+    assert.ok(cartaz670().indexOf('Antes → Depois: R$ 113,00 → R$ 150,00') >= 0, cartaz670());
+    await assina670('s-amanda');
+    igual(grav670(), [], 'a Supervisão não assina o valor à mão');
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    const vs = Object.keys(r.valores || {}).map((k) => r.valores[k]);
+    igual([r.valor_total_cent, r.valor_manual.cent, r.valor_manual.tipo, r.valor_manual.antes_cent, r.valor_manual.registro.por, r.valor_manual.registro.motivo], [15000, 15000, 'Bônus', 11300, 'Gestora Teste', MOT670]);
+    igual(vs.map((x) => [x.de, x.para, x.origem, x.tipo]), [[11300, 15000, 'mao', 'Bônus']]);
+    await fecha670();
+    const h = lista670();
+    assert.ok(h.indexOf('Valor à mão: <strong>R$ 150,00</strong> (era R$ 113,00) — Bônus: ' + MOT670 + ', por Gestora Teste, em 10/10/2026 às 10:00') >= 0, h);
+    igual(totais670()['Carol Teste'].total, 15000);
+    assert.ok(String(run('poCardAcerto()')).indexOf('R$ 150,00') >= 0);
+    nome670('2026-10-05', 'Carol Teste'); limpa670();
+    await marca670('2026-10-05', 'pago', false);
+    igual(J670('__zp657')[0][0], 'Pagar a noite de 05/10/2026 a Carol Teste: R$ 150,00?');
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670(`ACERTO_LOTE.itens.map(function(x){ return x.valor; })`), [15000]); run('acertoLoteFechar()');
+    limpa670();
+    run(`__p670=acertoValorVoltarAbrir('2026-10-05');`);
+    assert.ok(/Volta a ficar:<\/strong> o valor de antes, R\$ 113,00/.test(cartaz670()), cartaz670());
+    await assina670(SENHA657);
+    const r2 = db670('acerto-plantao/2026-10-05');
+    const vs2 = Object.keys(r2.valores || {}).map((k) => r2.valores[k]);
+    igual([r2.valor_total_cent, r2.valor_manual || null, vs2.length, vs2.map((x) => x.origem)], [11300, null, 2, ['mao', 'voltou']]);
+    igual(vs2[1].valor_manual_anterior.cent, 15000, 'o valor à mão fica no histórico');
+  });
+});
+provaAsync('6.70 P15 (AC5.5) — «Atualizar para R$ 213,00» com a dobra reconhecida depois: o 1º toque só arma; o 2º grava dobrou, dobra_de, o valor e a entrada em valores (origem «atualizar»). Base: dobrou fica false (SONDA670-C4)', async () => {
+  const est = { a: EP670('Biscoito', '2026-10-03', '2026-10-05'), b: EP670('Pipoca', '2026-10-03', '2026-10-05') };
+  await com670({ est, quem: { '2026-10-03': ASS670('Carol Teste'), '2026-10-04': ASS670('Carol Teste') }, reg: { '2026-10-03': REG670({ status: 'apagar', hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2 }) } }, async () => {
+    const h = lista670();
+    assert.ok(/onclick="acertoRecalcular\('2026-10-03',this\)">Atualizar para R\$ 213,00<\/button>/.test(h), h);
+    run(`__bt670={textContent:'Atualizar para R$ 213,00', style:{}, dataset:{}};`);
+    run(`acertoRecalcular('2026-10-03', __bt670)`); await espera657();
+    igual([grav670().length, run('__bt670.dataset.armed')], [0, '1'], 'o 1º toque só arma');
+    run(`acertoRecalcular('2026-10-03', __bt670)`); await espera657();
+    const r = db670('acerto-plantao/2026-10-03');
+    const vs = Object.keys(r.valores || {}).map((k) => r.valores[k]);
+    igual([r.valor_total_cent, r.valor_base_cent, r.dobrou, r.dobra_de, r.valor_anterior_cent], [21300, 20000, true, '2026-10-04', 11300]);
+    igual(vs.map((x) => [x.de, x.para, x.origem, x.registro.quem]), [[11300, 21300, 'atualizar', 'Gestora Teste']]);
+    assert.ok(/DOBRA · 24h/.test(lista670().split('acc_2026-10-03')[1] || ''), 'o cartão com a marca da dobra');
+  });
+});
+provaAsync('6.70 P16 (AC5.5) — com valor à mão, o aviso «outra lista» não oferece «Atualizar»: diz o valor à mão e o da tabela e oferece «Trocar pelo valor da tabela» (o cartaz já preenchido, a Gestão); «Atualizar» chamado mesmo assim recusa', async () => {
+  const vm0 = { cent: 15000, tipo: 'Bônus', antes_cent: 11300, registro: { por: 'Gestora Teste', papel: 'gestao', motivo: MOT670, quando: '09/10/2026 às 10:00', ts: T670(10, 9, 10, 0) } };
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar', valor_total_cent: 15000, valor_manual: vm0, valores: { v1: { de: 11300, para: 15000, origem: 'mao', tipo: 'Bônus', registro: vm0.registro } } }) },
+    est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    const h = lista670().split('acc_2026-10-05')[1] || '';
+    assert.ok(h.indexOf('Esta noite tem valor à mão (R$ 150,00). Pela tabela de hoje seria <strong>R$ 143,00</strong>.') >= 0 && /onclick="acertoValorAbrir\('2026-10-05',true\)">Trocar pelo valor da tabela</.test(h), h);
+    assert.ok(h.split('acc_')[0].indexOf('acertoRecalcular(') < 0, 'sem «Atualizar»');
+    run(`__bt670={textContent:'x', style:{}, dataset:{armed:'1'}}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    igual([grav670().length, zaT670(/VALOR À MÃO/).length], [0, 1]);
+    limpa670();
+    run(`__p670=acertoValorAbrir('2026-10-05', true);`);
+    igual(run('CORR_ATUAL.valores[0]'), '143,00', 'já preenchido com o valor da tabela');
+    continua670(['143,00', 'Bônus']);
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    const vs = Object.keys(r.valores).map((k) => r.valores[k]);
+    igual([r.valor_total_cent, r.valor_manual || null, vs.slice(-1)[0].origem, vs.slice(-1)[0].valor_manual_anterior.cent, r.hospedes], [14300, null, 'tabela', 15000, 4]);
+  });
+});
+provaAsync('6.70 P17 (AC5.6) — noite paga: «Corrigir o valor» não aparece em «Já pagas»; a função recusa com a frase (a tela e a gravação direta)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'pago' }) } }, async () => {
+    const h = lista670();
+    assert.ok(h.indexOf("acertoValorAbrir('2026-10-05')") < 0);
+    run(`acertoValorAbrir('2026-10-05');`); await espera657();
+    igual(zaT670(/JÁ FOI PAGA/).map((z) => z[1]), [['Esta noite já foi paga. Para mudar o valor, desfaça o pagamento primeiro (senha da Gestão).']]);
+    igual(run('typeof CORR_ATUAL!=="undefined" && CORR_ATUAL ? 1 : 0'), 0, 'nenhum cartaz');
+    const r = JSON.parse(JSON.stringify(await run(`acertoValorGravar('2026-10-05', {papel:'gestao', por:'Gestora Teste', ts:1, motivo:'${MOT670}'}, {cent:20000, tipo:'Bônus'})`)));
+    igual([r.ok, r.erro], [false, 'Esta noite já foi paga. Para mudar o valor, desfaça o pagamento primeiro (senha da Gestão). Nada foi gravado.']);
+    igual(grav670(), []);
+  });
+});
+
+// ---- AC6 — a tabela ---------------------------------------------------------------------------------------------------------------------------
+const TELA_TAB670 = (vals, o) => {
+  o = o || {};
+  ctx.__tv670 = { vals: vals || ['60,00', '100,00', '130,00', '150,00', '180,00'], ates: o.ates || ['1', '3', '6', '10'], aj: o.aj || '13,00', ext: o.ext || {} };
+  run(`__tv670.vals.forEach(function(v,i){ __el657['acf_'+i]={value:v}; }); __tv670.ates.forEach(function(v,i){ __el657['acfAte_'+i]={value:v}; }); __el657['acAjuda']={value:__tv670.aj};
+    ['domingo','feriado','dobra','dia'].forEach(function(k){ var x=__tv670.ext[k]; __el657['acxO_'+k]={checked:!!x}; __el657['acxH_'+k]={checked:!x}; __el657['acxV_'+k]={value:x||''}; });`);
+};
+provaAsync('6.70 P18 (AC6.1) — «Salvar tabela» abre o cartaz com cada linha mudada (2 a 3 FILHOts: R$ 100,00 → R$ 110,00), o motivo e a senha da Gestão; a Supervisão é barrada na função; sem mudança, «Nada mudou»; em branco, recusado na tela. Base: a Supervisão grava (SONDA670-C5)', async () => {
+  await com670({}, async () => {
+    run(`document.body.dataset.role='supervisor';`);
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+    run('acertoSalvarTabela()'); await espera657();
+    igual([barrou670(), grav670().length, run('typeof CORR_ATUAL!=="undefined" && CORR_ATUAL ? 1 : 0')], [1, 0, 0], 'a Supervisão barrada');
+    run(`document.body.dataset.role='gestao';`); limpa670();
+    TELA_TAB670();
+    run('acertoSalvarTabela()'); await espera657();
+    igual([run('__el657.acTabStatus.textContent'), grav670().length], ['Nada mudou: a tabela é a mesma de agora. Nada foi salvo.', 0]);
+    TELA_TAB670(['60,00', '', '130,00', '150,00', '180,00']);
+    run('acertoSalvarTabela()'); await espera657();
+    igual(run('__el657.acTabStatus.textContent'), 'Algum valor está em branco ou inválido. Nada foi salvo.');
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()');
+    igual(passo670(), 'conferir');
+    const c = cartaz670();
+    assert.ok(/<strong>2 a 3 FILHOts<\/strong>: <span style="text-decoration:line-through">«R\$ 100,00»<\/span> → «R\$ 110,00»/.test(c) && /Senha da Gestão/.test(c), c);
+    igual(grav670(), [], 'nada antes da senha');
+    await assina670('s-amanda');
+    igual(grav670(), []);
+    await assina670(SENHA657);
+    igual([passo670(), db670('config/acerto-plantao/faixas/1/v')], ['pronto', 11000]);
+    // outro aparelho muda a tabela enquanto o cartaz está aberto: recusa, nada gravado por cima
+    await fecha670(); limpa670();
+    TELA_TAB670(['60,00', '120,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()');
+    igual(passo670(), 'conferir');
+    run(`__put657('auaulandia/config/acerto-plantao/faixas/1/v', 11500);`);
+    await assina670(SENHA657);
+    igual(passo670(), 'falhou');
+    assert.ok(cartaz670().indexOf('A tabela mudou em outro aparelho depois que esta tela abriu. Nada foi gravado: abra de novo e confira.') >= 0, cartaz670());
+    igual([grav670(), db670('config/acerto-plantao/faixas/1/v')], [[], 11500], 'o valor do outro aparelho fica');
+  });
+});
+provaAsync('6.70 P19 (AC6.2) — o cartaz lista as noites da tela SEM valor gravado que mudam («05/10 — Carol Teste: R$ 113,00 → R$ 123,00»); as guardadas e as pagas não; e o texto da tela diz que a tabela vale para toda noite ainda sem valor gravado', async () => {
+  await com670({ reg: { '2026-10-06': REG670({ quem: 'Júlia Teste', hospedes: 2, pets_por_pessoa: 2 }), '2026-10-04': REG670({ status: 'pago', quem: 'Ana Teste', hospedes: 2 }) } }, async () => {
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()');
+    const c = cartaz670();
+    ['Mudam de valor (1 noite ainda sem valor gravado):', '05/10 — Carol Teste: R$ 113,00 → R$ 123,00', 'As noites guardadas, a pagar com valor gravado e as pagas guardam o valor da época: não mudam.']
+      .forEach((t) => assert.ok(c.indexOf(t) >= 0, t + ' — ' + c));
+    assert.ok(c.indexOf('06/10 —') < 0 && c.indexOf('04/10 —') < 0, 'a guardada e a paga não mudam');
+    await fecha670();
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(src.indexOf('Só a Gestão altera, com a senha. A tabela vale para toda noite ainda sem valor gravado (o cartaz mostra quais mudam antes de salvar); as guardadas e as pagas guardam o valor da época.') >= 0);
+    assert.ok(src.indexOf('vale para as noites novas') < 0, 'a promessa antiga saiu');
+  });
+});
+provaAsync('6.70 P20 (AC6.3, AC6.4) — o rastro com os valores de antes e de depois; a tabela de antes vai inteira para o histórico na MESMA escrita; «Tabelas anteriores (1)» com «Voltar a esta tabela» (Gestão), que grava a versão escolhida como tabela nova e um registro novo. Base: o rastro sem valores (SONDA670-C5)', async () => {
+  await com670({}, async () => {
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()'); await assina670(SENHA657); await fecha670();
+    const g = grav670();
+    igual([g.length, g[0][0], g[0][1], g[0][2].length], [1, 'update', 'auaulandia', 2], 'uma escrita só, com a tabela e o histórico');
+    assert.ok(g[0][2].indexOf('config/acerto-plantao') >= 0 && g[0][2].some((k) => /^acerto-tabela-historico\/t\d+$/.test(k)), JSON.stringify(g));
+    const a = aud670('acerto-tabela')[0] || [];
+    assert.ok(/2 a 3 FILHOts: R\$ 100,00 → R\$ 110,00/.test(a[1]) && a[1].indexOf(MOT670) >= 0, JSON.stringify(a));
+    const hist = db670('acerto-tabela-historico');
+    const hk = Object.keys(hist);
+    igual([hk.length, hist[hk[0]].antes.faixas[1].v, hist[hk[0]].depois.faixas[1].v, hist[hk[0]].motivo, hist[hk[0]].registro.por], [1, 10000, 11000, MOT670, 'Gestora Teste']);
+    lista670();
+    const ht = String(run('__el657.acertoTabela.innerHTML'));
+    assert.ok(/Tabelas anteriores \(1\)/.test(ht) && new RegExp("onclick=\"acertoTabelaVoltarAbrir\\('" + hk[0] + "'\\)\">Voltar a esta tabela</button>").test(ht), ht);
+    limpa670();
+    run(`__p670=acertoTabelaVoltarAbrir('${hk[0]}');`);
+    assert.ok(cartaz670().indexOf('2 a 3 FILHOts: R$ 110,00 → R$ 100,00') >= 0, cartaz670());
+    await assina670(SENHA657);
+    igual(db670('config/acerto-plantao/faixas/1/v'), 10000);
+    const h2 = db670('acerto-tabela-historico');
+    igual([Object.keys(h2).length, Object.keys(h2).map((k) => h2[k].voltou_de || '').filter(Boolean)], [2, [hk[0]]]);
+  });
+});
+provaAsync('6.70 P21 (AC6.5) — os limites: o nome de cada faixa sai do limite e muda no cartaz («Limite da 2ª faixa»: 3 → 4; «2 a 4 FILHOts», «5 a 6 FILHOts»); fora de ordem, recusado na tela; 9 FILHOts com duas plantonistas (4,5 por pessoa) caem na faixa que vai até 6', async () => {
+  await com670({}, async () => {
+    lista670();
+    const ht0 = String(run('__el657.acertoTabela.innerHTML'));
+    assert.ok(/id="acfAte_1" inputmode="numeric" value="3"/.test(ht0) && /<label class="cad-lb">2 a 3 FILHOts<\/label>/.test(ht0) && /<label class="cad-lb">11 ou mais<\/label>/.test(ht0), ht0.slice(0, 600));
+    TELA_TAB670(null, { ates: ['1', '3', '2', '10'] });
+    run('acertoSalvarTabela()'); await espera657();
+    igual(run('__el657.acTabStatus.textContent'), 'O limite de «4 a 6 FILHOts» tem de ser maior que o de «2 a 3 FILHOts». Nada foi salvo.');
+    TELA_TAB670(null, { ates: ['1', '4', '6', '10'] });
+    run('__p670=acertoSalvarTabela()');
+    assert.ok(/<strong>Limite da 2ª faixa \(até quantos FILHOts\)<\/strong>: <span style="text-decoration:line-through">«3»<\/span> → «4»/.test(cartaz670()), cartaz670());
+    await assina670(SENHA657); await fecha670();
+    igual(J670('[0,1,2,3,4].map(function(i){ return acertoFaixaNome(acertoTab(), i); })'), ['0 a 1 FILHOt', '2 a 4 FILHOts', '5 a 6 FILHOts', '7 a 10 FILHOts', '11 ou mais']);
+    igual([run('acertoValorPara(9,false,2).base12'), run('acertoValorPara(9,false,2).porCabeca')], [13000, 4.5]);
+  });
+});
+// a régua da base (c71e55d), letra por letra, para comparar
+const BASE_VALOR670 = function (T, n, dobrou, quantas) {
+  var q = Math.max(1, parseInt(quantas, 10) || 1);
+  var porCabeca = n / q;
+  var f = T.faixas.find(function (x) { return porCabeca <= x.ate; }) || T.faixas[T.faixas.length - 1];
+  var base = dobrou ? (f.v * 2) : f.v;
+  return { base: base, ajuda: T.ajuda, total: base + T.ajuda, dobrou: !!dobrou, base12: f.v, quantas: q, porCabeca: porCabeca };
+};
+provaAsync('6.70 P22 (AC6.6, AC6.7, guarda) — com a tabela de hoje e «Como hoje» nas quatro linhas, acertoValorPara dá o resultado da base para 0 a 30 FILHOts, com e sem dobra, com 1 e 2 plantonistas, em dia comum, domingo e feriado, com três argumentos e com a data', async () => {
+  await com670({}, async () => {
+    for (const cfg of [null, { faixas: [{ ate: 1, v: 6100 }, { ate: 3, v: 10100 }, { ate: 6, v: 13100 }, { ate: 10, v: 15100 }, { ate: 999, v: 18100 }], ajuda: 1500 },
+      { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 10000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300, extras: { domingo: { modo: 'hoje', cent: 0 }, feriado: { modo: 'hoje', cent: 0 }, dobra: { modo: 'hoje', cent: 0 }, dia: { modo: 'hoje', cent: 0 } } }]) {
+      ctx.__cf670 = cfg; run('acertoCfg=__cf670?JSON.parse(JSON.stringify(__cf670)):null;');
+      const T = cfg || { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 10000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300 };
+      const casos = [];
+      for (let n = 0; n <= 30; n++) for (const d of [false, true]) for (const q of [1, 2]) casos.push([n, d, q]);
+      const r = J670(`${JSON.stringify(casos)}.map(function(c){ return [acertoValorPara(c[0],c[1],c[2]), acertoValorPara(c[0],c[1],c[2],'2026-10-07'), acertoValorPara(c[0],c[1],c[2],'2026-10-04'), acertoValorPara(c[0],c[1],c[2],'2026-09-28')]; })`);
+      const esperado = casos.map((c) => { const b = BASE_VALOR670(T, c[0], c[1], c[2]); return [b, b, b, b]; });
+      igual(r, JSON.parse(JSON.stringify(esperado)), 'cfg ' + JSON.stringify(cfg));
+    }
+  });
+});
+provaAsync('6.70 P23 (AC6.6) — «Outro valor» em cada linha: domingo + R$ 20,00, feriado + R$ 30,00 (domingo que é feriado: só o do feriado), dobra = a faixa + R$ 90,00, plantão de dia = R$ 110,00 + a ajuda; duas plantonistas recebem a linha cada uma; a tela lê «Outro valor»', async () => {
+  await com670({ fer: { '2026-09-20': 'Feriado Domingo Teste' } }, async () => {
+    run(`acertoCfg={faixas:[{ate:1,v:6000},{ate:3,v:10000},{ate:6,v:13000},{ate:10,v:15000},{ate:999,v:18000}], ajuda:1300, extras:{domingo:{modo:'mais',cent:2000}, feriado:{modo:'mais',cent:3000}, dobra:{modo:'mais',cent:9000}, dia:{modo:'fixo',cent:11000}}};`);
+    igual(J670(`[acertoValorPara(3,false,1,'2026-10-04').total, acertoValorPara(3,false,1,'2026-09-28').total, acertoValorPara(3,false,1,'2026-09-20').total, acertoValorPara(3,false,1,'2026-10-07').total,
+      acertoValorPara(3,true,1,'2026-10-07').total, acertoValorPara(3,true,1,'2026-10-07').base, acertoValorDia(3,1).total, acertoValorDia(3,2).total, acertoValorPara(5,false,2,'2026-10-04').total, acertoValorPara(3,false,1).total]`),
+      [13300, 14300, 14300, 11300, 20300, 19000, 12300, 12300, 13300, 11300]);
+    assert.ok(/R\$ 100,00 \+ R\$ 20,00 de domingo \+ R\$ 13,00 de ajuda/.test(String(run(`acertoValorDescricao(acertoValorPara(3,false,1,'2026-10-04'))`))));
+    TELA_TAB670(null, { ext: { domingo: '20,00', dia: '110,00' } });
+    igual(J670('acertoTabelaLer().T.extras'), { domingo: { modo: 'mais', cent: 2000 }, feriado: { modo: 'hoje', cent: 0 }, dobra: { modo: 'hoje', cent: 0 }, dia: { modo: 'fixo', cent: 11000 } });
+  });
+});
+provaAsync('6.70 P24 (AC6.7) — a tabela gravada continua com faixas e ajuda numérica (a validação da regra v2) e ganha extras', async () => {
+  await com670({}, async () => {
+    TELA_TAB670(null, { ext: { feriado: '30,00' } });
+    run('__p670=acertoSalvarTabela()'); await assina670(SENHA657);
+    const t = db670('config/acerto-plantao');
+    igual([Array.isArray(t.faixas), t.faixas.length, typeof t.ajuda, t.ajuda, t.extras.feriado, t.extras.domingo], [true, 5, 'number', 1300, { modo: 'mais', cent: 3000 }, { modo: 'hoje', cent: 0 }]);
+    const v2 = fs.readFileSync(path.join(__dirname, '..', 'database.rules.v2.json'), 'utf8');
+    assert.ok(v2.indexOf("\".validate\": \"newData.hasChildren(['faixas','ajuda']) && newData.child('ajuda').isNumber()\"") >= 0, 'a regra v2 que a tabela atende');
+  });
+});
+
+// ---- AC7 — os nomes já ensinados --------------------------------------------------------------------------------------------------------------
+const NOMES670 = () => ({ quem: Object.assign(QUEM670(), { '2026-10-07': ASS670('Carpl'), '2026-10-09': ASS670('Carpl') }),
+  reg: { '2026-10-07': REG670({ status: 'pago', quem: 'Júlia Teste', hospedes: 0, pets: [], valor_base_cent: 6000, valor_total_cent: 7300 }),
+    '2026-10-09': REG670({ quem: 'Júlia Teste', hospedes: 0, pets: [], valor_base_cent: 6000, valor_total_cent: 7300 }) } });
+provaAsync('6.70 P25 (AC7.1) — «Nomes que já ensinei (N)», abaixo de «Nomes a confirmar»: cada apelido com o nome, as noites dos últimos 30 dias e «Trocar» e «Tirar» (44 px). Base: não existe (SONDA670-C6)', async () => {
+  await com670(NOMES670(), async () => {
+    lista670();
+    const h = String(run('__el657.acertoNomes.innerHTML'));
+    assert.ok(/Nomes que já ensinei \(4\)/.test(h) && h.indexOf('assinou &ldquo;carpl&rdquo; → Júlia Teste') >= 0 && /3 noites dos últimos 30 dias assinadas assim/.test(h), h);
+    assert.ok(/min-height:44px[^"]*" onclick="plantTrocarAbrir\('carpl'\)">Trocar<\/button>/.test(h) && /min-height:44px[^"]*" onclick="plantTirarAbrir\('carpl'\)">Tirar<\/button>/.test(h), h);
+    igual(run(`__el657.acertoNomes.style.display`), 'block');
+  });
+});
+provaAsync('6.70 P26 (AC7.2) — «Trocar» "carpl" de Júlia Teste para Carol Teste (a Gestão): a noite sem nome gravado muda; a guardada com «Júlia Teste» é levada (com registro nela); a paga não muda (a frase); o «A pagar por pessoa» antes → depois; a transação no livro; o histórico', async () => {
+  await com670(NOMES670(), async () => {
+    run(`__p670=plantTrocarAbrir('carpl');`);
+    continua670(['Carol Teste', 'Sim']);
+    const c = cartaz670();
+    ['A noite ainda sem nome gravado assinada "carpl" passa de Júlia Teste para Carol Teste.', 'A pagar por pessoa — Júlia Teste: R$ 259,00 → R$ 113,00; Carol Teste: R$ 113,00 → R$ 259,00.',
+      'Levar também esta noite guardada ou a pagar para Carol Teste: 09/10 (guardada, R$ 73,00).', 'As noites já pagas continuam no nome de quem recebeu (1). Se o pagamento foi para a pessoa errada, desfaça o pagamento (senha da Gestão).']
+      .forEach((t) => assert.ok(c.indexOf(run('esc(' + JSON.stringify(t) + ')')) >= 0, t + ' — ' + c));
+    await assina670('s-amanda');
+    igual(grav670(), [], 'a Supervisão não troca');
+    await assina670(SENHA657);
+    igual(passo670(), 'pronto');
+    igual(db670('config/plantonistas/apelidos/carpl'), 'Carol Teste');
+    igual(esc670().filter((e) => e[0] === 'transaction').map((e) => e[1]), ['auaulandia/config/plantonistas']);
+    const r9 = db670('acerto-plantao/2026-10-09');
+    igual([r9.quem, Object.keys(r9.quem_correcoes || {}).map((k) => [r9.quem_correcoes[k].de, r9.quem_correcoes[k].para])], ['Carol Teste', [['Júlia Teste', 'Carol Teste']]]);
+    igual(db670('acerto-plantao/2026-10-07/quem'), 'Júlia Teste', 'a paga não muda');
+    const hs = db670('plantonistas-historico'); const h = hs[Object.keys(hs)[0]];
+    igual([h.acao, h.apelido, h.de, h.para, h.noitesLevadas, h.motivo], ['trocou', 'carpl', 'Júlia Teste', 'Carol Teste', ['2026-10-09'], MOT670]);
+    assert.ok((aud670('plantonista-nome')[0] || [])[1].indexOf('"carpl": Júlia Teste → Carol Teste') === 0, JSON.stringify(aud670('plantonista-nome')));
+    await fecha670();
+    igual(totais670()['Carol Teste'].total, 25900, 'o «A pagar por pessoa» com a troca');
+  });
+});
+provaAsync('6.70 P27 (AC7.3) — «Tirar»: o apelido volta para «Nomes a confirmar»; sem outro apelido para o nome, o nome sai também da lista de oficiais; com outro apelido, fica', async () => {
+  const semJulia = () => { const l = LIVRO670(); delete l.apelidos['julia teste']; return l; };
+  await com670(Object.assign(NOMES670(), { livro: semJulia() }), async () => {
+    run(`__p670=plantTirarAbrir('carpl');`);
+    igual(passo670(), 'campos', 'há uma guardada com o nome gravado: a pergunta de levar');
+    continua670(['Não']);
+    const c = cartaz670();
+    assert.ok(/Volta a ficar:<\/strong> em «Nomes a confirmar»/.test(c) && c.indexOf('passa de Júlia Teste para sem nome') >= 0, c);
+    await assina670(SENHA657);
+    const l = db670('config/plantonistas');
+    igual([Object.prototype.hasOwnProperty.call(l.apelidos, 'carpl'), l.oficiais.indexOf('Júlia Teste')], [false, -1]);
+    await fecha670();
+    await carrega670();
+    lista670();
+    igual(J670('PLANT_ACONFIRMAR').Carpl, 3, '«Carpl» volta a ser perguntado');
+    assert.ok(/Nomes a confirmar \(/.test(String(run('__el657.acertoNomes.innerHTML'))));
+  });
+  await com670(NOMES670(), async () => {
+    run(`__p670=plantTirarAbrir('carpl');`); continua670(['Não']); await assina670(SENHA657);
+    igual(db670('config/plantonistas/oficiais').indexOf('Júlia Teste') >= 0, true, 'com «julia teste» no livro, a Júlia fica');
+  });
+});
+provaAsync('6.70 P28 (AC7.4, AC7.5) — a transação na chave (dois aparelhos ensinando ao mesmo tempo, os dois nomes ficam); recusado, a tela diz e o livro volta; o histórico nas respostas de hoje; o relatório do Plantão (o posto) ensina a grafia de um apelido novo e não troca um que já existe. Base: o set() apaga o do outro aparelho', async () => {
+  await com670({ quem: Object.assign(QUEM670(), { '2026-10-01': ASS670('Bea Teste'), '2026-10-02': ASS670('Zeca') }) }, async () => {
+    // o outro aparelho ensina «zeca» depois que esta tela leu o livro
+    run(`__put657('auaulandia/config/plantonistas/apelidos/zeca', 'Zeca Teste');`);
+    pergunta670(true); await run(`plantConfirmar('Bea Teste','Bea Teste')`); await espera657();
+    const ap = db670('config/plantonistas/apelidos');
+    igual([ap.zeca, ap['bea teste']], ['Zeca Teste', 'Bea Teste'], 'os dois ficam');
+    const hs = db670('plantonistas-historico') || {};
+    igual(Object.keys(hs).map((k) => [hs[k].acao, hs[k].apelido, hs[k].para]), [['ensinou', 'bea teste', 'Bea Teste']]);
+    // recusado
+    limpa670(); run(`__recusa657='^auaulandia/config/plantonistas$';`);
+    pergunta670(true); await run(`plantConfirmar('Teca','Teca Teste')`); await espera657();
+    const z = zaT670(/NÃO FOI GRAVADO/)[0] || [];
+    assert.ok((z[1] || []).indexOf('Motivo: o sistema recusou a gravação.') >= 0, JSON.stringify(za670()));
+    igual([run(`PLANT_LIVRO.apelidos.zeca`), run(`PLANT_LIVRO.apelidos.teca===undefined`)], ['Zeca Teste', true], 'o livro da memória com o que o banco tem');
+    run(`__recusa657=null;`); limpa670();
+    pergunta670(true); await run(`plantNaoEhPlantonista('Bea Teste')`); await espera657();
+    const hs2 = db670('plantonistas-historico');
+    assert.ok(Object.keys(hs2).some((k) => hs2[k].acao === 'nunca-fez' && hs2[k].apelido === 'bea teste'), JSON.stringify(hs2));
+    assert.ok((aud670('plantonista-nome')[0] || [])[1].indexOf('faz plantão → nunca fez plantão') >= 0);
+    // o relatório do Plantão: o posto Plantonista
+    limpa670(); run(`document.body.dataset.role='plantonista';`);
+    await run(`plantAprender('Wandela Nova Teste','Wandela Nova Teste')`); await espera657();
+    igual([barrou670(), db670('config/plantonistas/apelidos/wandela nova teste')], [0, 'Wandela Nova Teste'], 'a grafia do próprio nome, apelido novo: não é barrado');
+    await run(`plantAprender('carpl','carpl')`); await espera657();
+    igual(db670('config/plantonistas/apelidos/carpl'), 'Júlia Teste', 'não troca um apelido que já existe');
+    await run(`plantAprender('Xavier','Carol Teste')`); await espera657();
+    igual([barrou670(), db670('config/plantonistas/apelidos/xavier')], [1, null], 'o nome de outra pessoa: barrado');
+    // recusado no relatório do Plantão (sem a tela do acerto para reler): o livro da memória continua com o que o banco tem
+    limpa670(); run(`__recusa657='^auaulandia/config/plantonistas$';`);
+    await run(`plantAprender('Yara Teste','Yara Teste')`); await espera657();
+    igual([run(`PLANT_LIVRO.apelidos['yara teste']===undefined`), run(`(PLANT_LIVRO.oficiais||[]).indexOf('Yara Teste')`), db670('config/plantonistas/apelidos/yara teste')],
+      [true, -1, null], 'recusado no Plantão: o livro da memória com o que o banco tem');
+    run(`__recusa657=null;`);
+  });
+});
+
+// ---- AC8 — corrigir a noite e «Não houve plantão» -------------------------------------------------------------------------------------------
+provaAsync('6.70 P29 (AC8.1 a AC8.4) — «Corrigir esta noite» (44 px): 3 → 5 FILHOts e a dobra, a Gestão; a noite sem registro ganha o registro «a pagar»; o valor refeito; «Guardar» e o aviso «outra lista» usam o corrigido; o cartão diz; «Voltar ao que o app contou». Base: o próximo toque volta ao deduzido (SONDA670-C7)', async () => {
+  await com670({}, async () => {
+    assert.ok(/min-height:44px[^"]*" onclick="acertoNoiteCorrigirAbrir\('2026-10-05'\)">Corrigir esta noite<\/button>/.test(lista670()));
+    run(`__p670=acertoNoiteCorrigirAbrir('2026-10-05');`);
+    assert.ok(cartaz670().indexOf('O app contou 3: Biscoito, Pipoca, Quindim.') >= 0, cartaz670());
+    continua670(['5', 'Sim', '1', 'Carol Teste', '']);
+    const c = cartaz670();
+    assert.ok(c.indexOf('Valor: R$ 113,00 → R$ 273,00') >= 0 && /Quantos FILHOts dormiram<\/strong>: <span style="text-decoration:line-through">«3»<\/span> → «5»/.test(c), c);
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.quem, r.hospedes, r.dobrou, r.valor_total_cent, r.correcao.hospedes, r.correcao.dobrou, r.correcao.deduzido.hospedes, r.correcao.motivo, r.correcao.registro.por],
+      ['apagar', 'Carol Teste', 5, true, 27300, 5, true, 3, MOT670, 'Gestora Teste']);
+    igual(Object.keys(r.valores).map((k) => [r.valores[k].de, r.valores[k].para, r.valores[k].origem]), [[11300, 27300, 'correcao']]);
+    await fecha670();
+    const h = lista670().split('acc_2026-10-05')[1].split('acc_')[0];
+    assert.ok(h.indexOf('Corrigido por Gestora Teste em 10/10/2026 às 10:00: 5 FILHOts (o app contou 3) · com dobra — ' + MOT670) >= 0 && h.indexOf('outra lista') < 0, h);
+    nome670('2026-10-05', 'Carol Teste'); limpa670();
+    await marca670('2026-10-05', 'acumulado', true);
+    igual([db670('acerto-plantao/2026-10-05/hospedes'), db670('acerto-plantao/2026-10-05/valor_total_cent'), db670('acerto-plantao/2026-10-05/status')], [5, 27300, 'acumulado'], 'Guardar com o corrigido');
+    limpa670();
+    run(`__p670=acertoNoiteVoltarAbrir('2026-10-05');`); await assina670(SENHA657);
+    const r2 = db670('acerto-plantao/2026-10-05');
+    igual([r2.correcao || null, r2.hospedes, r2.dobrou, r2.valor_total_cent, Object.keys(r2.correcoes).length, !!r2.correcoes[Object.keys(r2.correcoes)[0]].desfeita], [null, 3, false, 11300, 1, true]);
+  });
+});
+provaAsync('6.70 P30 (AC8.5) — duas plantonistas: o valor de cada uma (a faixa dos FILHOts divididos por 2), o nome «Carol Teste e Júlia Teste» (em ordem alfabética) e o «A pagar por pessoa» com as duas; recusados: um nome só, nome curto, número fora de 0 a 99', async () => {
+  await com670({}, async () => {
+    run(`__p670=acertoNoiteCorrigirAbrir('2026-10-05');`);
+    for (const [v, re] of [[['5', 'Não', '2', 'Carol Teste', 'carol teste'], /um nome só/], [['5', 'Não', '2', 'Carol Teste', 'J'], /pelo menos 2 letras/], [['100', 'Não', '1', 'Carol Teste', ''], /de 0 a 99/]]) {
+      continua670(v); assert.ok(re.test(cartaz670()) && passo670() === 'campos', JSON.stringify(v));
+    }
+    continua670(['5', 'Não', '2', 'Júlia Teste', 'Carol Teste']);
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.quem, r.quantas, r.valor_total_cent, r.correcao.equipe], ['Carol Teste e Júlia Teste', 2, 11300, ['Carol Teste', 'Júlia Teste']]);
+    await fecha670();
+    const p = totais670();
+    igual([p['Carol Teste'].total, p['Júlia Teste'].total >= 11300], [11300, true]);
+  });
+});
+provaAsync('6.70 P31 (AC8.6) — «Não houve plantão nesta noite» (cartaz «anular», a Gestão): sai do «A pagar por pessoa» e do Dashboard; riscada em «Noites sem plantão», com «Reabrir», que a devolve', async () => {
+  await com670({}, async () => {
+    const antes = totais670()['(sem nome)'].total;
+    run(`__p670=acertoSemPlantaoAbrir('2026-10-01');`);
+    const c = cartaz670();
+    ['A noite de 01/10 sai da lista de a pagar, do «A pagar por pessoa» e do Dashboard da Márcia.', 'Fica em «Noites sem plantão», riscada, com Reabrir. Nada é apagado.']
+      .forEach((t) => assert.ok(c.indexOf(run('esc(' + JSON.stringify(t) + ')')) >= 0, t));
+    await assina670(SENHA657); await fecha670();
+    const r = db670('acerto-plantao/2026-10-01');
+    igual([!!r.sem_plantao, r.sem_plantao.por, r.status || 'apagar'], [true, 'Gestora Teste', 'apagar'], 'não vira «pago»');
+    igual(totais670()['(sem nome)'].total, antes - 7300);
+    const h = lista670();
+    assert.ok(/Noites sem plantão \(1\)/.test(h) && /Não houve plantão por Gestora Teste/.test(h) && /onclick="acertoSemPlantaoReabrirAbrir\(&#39;2026-10-01&#39;\)|onclick="acertoSemPlantaoReabrirAbrir\('2026-10-01'\)"/.test(h), h.slice(h.indexOf('Noites sem plantão'), h.indexOf('Noites sem plantão') + 900));
+    limpa670();
+    run(`__p670=acertoSemPlantaoReabrirAbrir('2026-10-01');`); await assina670(SENHA657);
+    const r2 = db670('acerto-plantao/2026-10-01');
+    igual([r2.sem_plantao || null, Object.keys(r2.sem_plantao_historico || {}).length], [null, 1]);
+    await fecha670();
+    igual(totais670()['(sem nome)'].total, antes, 'volta para a conta');
+  });
+});
+provaAsync('6.70 P32 (AC8.7) — a noite vazia avisa «Nenhum FILHOt e ninguém assinou: houve plantão?», com «Não houve plantão nesta noite» ao lado; nada sai da conta sozinho (S10-P9)', async () => {
+  await com670({}, async () => {
+    const pedaco = (iso) => lista670().split('avr-card ').filter((x) => x.indexOf(iso.split('-').reverse().join('/')) >= 0)[0] || '';
+    const h = pedaco('2026-10-01');
+    assert.ok(h.indexOf('Nenhum FILHOt e ninguém assinou: houve plantão?') >= 0 && /onclick="acertoSemPlantaoAbrir\('2026-10-01'\)">Não houve plantão nesta noite</.test(h), h);
+    assert.ok(pedaco('2026-10-05').indexOf('houve plantão?') < 0, 'a noite com FILHOt e assinatura não pergunta');
+    const h2 = pedaco('2026-10-02');
+    assert.ok(h2 !== '' && h2.indexOf('houve plantão?') < 0, 'a noite com FILHOt e sem assinatura também não pergunta (houve FILHOt)');
+    igual(J670(`acertoTotaisPor(acertoNoites()).por['(sem nome)'].noites>=20`), true, 'continua na conta');
+  });
+});
+
+// ---- AC9 — o plantão de dia -----------------------------------------------------------------------------------------------------------------
+provaAsync('6.70 P33 (AC9.1, AC9.2, AC9.4) — «Lançar o plantão de dia de 04/10» (44 px, a Gestão): o valor pela linha da tabela; o cartão próprio; o «A pagar por pessoa» e o Dashboard; «Paguei» e o lote pelo id (pagar o dia não paga a noite de 04/10); «Corrigir este plantão de dia» com o antes e o depois; «Lançado por engano». Base: só a frase (SONDA670-C8)', async () => {
+  await com670({ reg: { '2026-10-04': REG670({ status: 'apagar', quem: 'Ana Teste', hospedes: 2 }) } }, async () => {
+    const h = lista670().split('avr-card ').filter((x) => x.indexOf('04/10/2026') >= 0)[0] || '';
+    assert.ok(h.indexOf('lance como uma noite à parte') < 0 && /min-height:44px[^"]*" onclick="acertoDiaLancarAbrir\('2026-10-04'\)">Lançar o plantão de dia de 04\/10<\/button>/.test(h), h);
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`);
+    igual(J670('CORR_ATUAL.valores'), ['', '', '2'], 'os FILHOts começam com os da noite');
+    continua670(['Carol Teste', '', '2']);
+    assert.ok(cartaz670().indexOf('Valor pela linha «Plantão de dia» da tabela: R$ 113,00 (R$ 100,00 + R$ 13,00 de ajuda).') >= 0, cartaz670());
+    await assina670(SENHA657); await fecha670();
+    const d = db670('acerto-plantao-dia/2026-10-04');
+    igual([d.tipo, d.quem, d.quantas, d.hospedes, d.valor_total_cent, d.status, d.motivo, d.registro.por], ['dia', 'Carol Teste', 1, 2, 11300, 'apagar', MOT670, 'Gestora Teste']);
+    const L = lista670();
+    assert.ok(/<strong>Plantão de dia — domingo, 04\/10\/2026<\/strong>/.test(L) && /onclick="acertoMarcar\('dia_2026-10-04','pago'\)">Paguei este plantão<\/button>/.test(L), 'o cartão próprio');
+    igual(totais670()['Carol Teste'].total, 22600, 'a noite de 05/10 e o plantão de dia');
+    assert.ok(String(run('poCardAcerto()')).indexOf('R$ 226,00') >= 0);
+    limpa670(); nome670('dia_2026-10-04', 'Carol Teste');
+    await marca670('dia_2026-10-04', 'pago', true);
+    igual([db670('acerto-plantao-dia/2026-10-04/status'), db670('acerto-plantao/2026-10-04/status')], ['pago', 'apagar'], 'pelo id: a noite de 04/10 não foi paga');
+    limpa670();
+    run(`__p670=acertoDesfazerPagamentoAbrir('dia_2026-10-04');`); await assina670(SENHA657); await fecha670();
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return x.id; })'), ['dia_2026-10-04', '2026-10-05'], 'o lote pelo id');
+    run('acertoLoteFechar()'); limpa670();
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04', true);`);
+    continua670(['Carol Teste', '', '5']);
+    await assina670(SENHA657); await fecha670();
+    const d2 = db670('acerto-plantao-dia/2026-10-04');
+    const cs = Object.keys(d2.correcoes || {}).map((k) => d2.correcoes[k]);
+    igual([d2.hospedes, d2.valor_total_cent, cs.length, cs[0].antes.hospedes, cs[0].depois.hospedes, cs[0].antes.valor_total_cent, cs[0].depois.valor_total_cent], [5, 14300, 1, 2, 5, 11300, 14300]);
+    limpa670();
+    run(`__p670=acertoSemPlantaoAbrir('dia_2026-10-04');`); await assina670(SENHA657); await fecha670();
+    igual(!!db670('acerto-plantao-dia/2026-10-04/anulado'), true);
+    igual(totais670()['Carol Teste'].total, 11300, 'fora da conta');
+    assert.ok(/Plantões de dia lançados por engano \(1\)/.test(lista670()));
+  });
+});
+provaAsync('6.70 P34 (AC9.3) — recusas, nada gravado: a dobra da mesma pessoa na noite anterior já paga o dia; um segundo plantão de dia no mesmo dia', async () => {
+  await com670({}, async () => {
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`);
+    continua670(['Ana Teste', '', '2']);
+    assert.ok(cartaz670().indexOf(run('esc(' + JSON.stringify('A dobra de Ana Teste na noite de 03/10 já paga este dia. Para lançar o plantão de dia, corrija a noite e tire a dobra.') + ')')) >= 0 && passo670() === 'campos', cartaz670());
+    const r = JSON.parse(JSON.stringify(await run(`acertoDiaGravar('2026-10-04', {papel:'gestao', por:'Gestora Teste', ts:1, motivo:'${MOT670}'}, {n:2, quantas:1, equipe:['Ana Teste'], nome:'Ana Teste'}, false)`)));
+    igual([r.ok, grav670().length], [false, 0]);
+    continua670(['Carol Teste', '', '2']); await assina670(SENHA657); await fecha670(); limpa670();
+    run(`acertoDiaLancarAbrir('2026-10-04');`); await espera657();
+    igual(zaT670(/JÁ HÁ UM PLANTÃO DE DIA/).map((z) => z[1]), [['Já há um plantão de dia lançado em 04/10: corrija o que existe.']]);
+    const r2 = JSON.parse(JSON.stringify(await run(`acertoDiaGravar('2026-10-04', {papel:'gestao', por:'Gestora Teste', ts:2, motivo:'${MOT670}'}, {n:2, quantas:1, equipe:['Júlia Teste'], nome:'Júlia Teste'}, false)`)));
+    igual([r2.ok, r2.erro, grav670().length], [false, 'Já há um plantão de dia lançado em 04/10: corrija o que existe. Nada foi gravado.', 0]);
+  });
+});
+
+// ---- AC10 e AC11 — quem assina e a Linha do tempo --------------------------------------------------------------------------------------------
+provaAsync('6.70 P35 (AC10, AC11) — a matriz de quem assina: a senha de posto e o nome digitado não assinam; toda função que grava barra quem não vê a tela («BARROU»); a Linha do tempo traduz as ações; todo R$ no formato completo; a senha em nenhum registro', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-06': REG670({ status: 'pago', quem: 'Júlia Teste' }) } }, async () => {
+    run(`__p670=acertoValorAbrir('2026-10-05');`); continua670(['150', 'Bônus']);
+    await assina670('s-posto'); assert.ok(/senha de posto não assina/.test(cartaz670()), cartaz670());
+    await assina670('Gestora Teste'); assert.ok(/Essa senha não é de ninguém cadastrado/.test(cartaz670()));
+    igual(grav670(), []);
+    await assina670(SENHA657); await fecha670();
+    run(`document.body.dataset.role='monitor';`); limpa670();
+    const chamadas = [`acertoMarcar('2026-10-05','acumulado')`, `acertoLoteAbrir('Carol Teste')`, `acertoDesfazerPagamentoAbrir('2026-10-06')`, `acertoValorAbrir('2026-10-05')`,
+      `acertoValorVoltarAbrir('2026-10-05')`, `acertoNoiteCorrigirAbrir('2026-10-05')`, `acertoNoiteVoltarAbrir('2026-10-05')`, `acertoSemPlantaoAbrir('2026-10-01')`,
+      `acertoSemPlantaoReabrirAbrir('2026-10-01')`, `acertoDiaLancarAbrir('2026-10-04')`, `acertoSalvarTabela()`, `acertoTabelaVoltarAbrir('t1')`, `plantTrocarAbrir('carpl')`,
+      `plantTirarAbrir('carpl')`, `acertoRecalcular('2026-10-05', null)`, `plantConfirmar('Carpl','Carol Teste')`, `plantNaoEhPlantonista('Carpl')`, `plantVoltarAContar('Carpl')`,
+      `acertoGravarMarcas([{id:'2026-10-05', quem:'Carol Teste', esperado:{}}], 'pago', {})`, `acertoValorGravar('2026-10-05', {papel:'gestao'}, {cent:1})`,
+      `acertoDesfazerPagamentoGravar('2026-10-06', {papel:'gestao'})`, `acertoLoteDesfazerGravar('l1', {papel:'gestao'})`, `acertoNoiteCorrigirGravar('2026-10-05', {papel:'gestao'}, {n:1})`,
+      `acertoSemPlantaoGravar('2026-10-01', {papel:'gestao'})`, `acertoDiaGravar('2026-10-04', {papel:'gestao'}, {n:1, equipe:['X']}, false)`, `acertoTabelaGravar({}, {papel:'gestao'})`,
+      `plantTrocarGravar('carpl', 'Júlia Teste', {novo:'Carol Teste'}, {papel:'gestao'})`, `acertoValorVoltarGravar('2026-10-05', {papel:'gestao'})`, `acertoNoiteVoltarGravar('2026-10-05', {papel:'gestao'})`,
+      `acertoSemPlantaoReabrirGravar('2026-10-01', {papel:'gestao'})`];
+    for (const ch of chamadas) {
+      limpa670(); pergunta670(true);
+      await run(ch); await espera657();
+      igual([barrou670(), grav670().length], [1, 0], ch);
+    }
+    run(`document.body.dataset.role='gestao';`);
+    const acoes = ['acerto-plantao', 'acerto-tabela', 'plantonista-nome', 'acerto-pago', 'acerto-pagamento-desfeito', 'acerto-lote-pago', 'acerto-lote-desfeito', 'acerto-valor', 'acerto-noite-corrigida', 'acerto-sem-plantao', 'acerto-plantao-dia'];
+    const tr = J670(`${JSON.stringify(acoes)}.map(function(a){ return [a, acaoNome(a), acaoRotulo({acao:a, detalhe:'x'})]; })`);
+    igual(tr.filter((x) => x[1] === x[0] || /^[a-z]+-[a-z]/.test(x[1])), [], 'todas em português');
+    const html = lista670() + String(run('__el657.acertoTotais.innerHTML'));
+    const rs = reais670(html);
+    igual([rs.length > 10, rs.filter((x) => !RS670.test(x))], [true, []], 'todo R$ no formato completo');
+    const tudo = JSON.stringify(J670('__db657')) + JSON.stringify(J670('__au657'));
+    igual(tudo.indexOf(SENHA657), -1, 'a senha em nenhum registro');
+  });
+});
+
+// ---- AC13 e AC14 — o que fica idêntico ----------------------------------------------------------------------------------------------------
+provaAsync('6.70 P36 (AC13, AC14, guarda) — a área protegida e o #v-daycare idênticos; a PERM com o hash da 6.65 P22; as funções da dedução e o poCardAcerto com o texto da base; a soma por plantonista uma vez só no código', async () => {
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+  const BASE = { acertoHospedesNaNoite: '3ae93e994c46ac7a', acertoPernoitesNaNoite: '9be7a595bdba90cd', acertoCarregarPernoites: '6cfa53a0c43961b5', acertoQuemPelaAssinatura: '21994d0474f36070',
+    acertoAgruparNomes: 'd683509dddcd1fa2', acertoDeduzirQuem: 'a519d2015c5b21cd', acertoMarcarDobras: '67d82dcec9a47b77', plantOficial: '50a122f535002174', plantChave: 'a09ff8cb1da82b18',
+    plantEhDuplo: 'e4192bc3a2b37243', plantPartes: 'dc2819ea9c684a47', acertoPessoasDa: '0fd80154d09d5f28', plantEquipe: '1c42bacc68c8a740', poCardAcerto: '84480709fff49824' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
+  igual(agora, BASE, 'as funções que não mudam');
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
+  const src = fs.readFileSync(APP, 'utf8');
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual([h(src.slice(i, j)), (src.match(/por\[p\]\.total\+=v; por\[p\]\.noites\+\+;/g) || []).length], ['d350ca846ae9d05e', 1]);
+});
+provaAsync('6.70 P37 (AC2.3, achado da implementação) — a noite paga antes desta versão (sem a lista de pagamentos): «Desfazer o pagamento» guarda o pagamento antigo no histórico, já desfeito, com quem e quando ele foi marcado', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'pago' }) } }, async () => {
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-05');`);
+    assert.ok(/Volta a ficar:<\/strong> a pagar/.test(cartaz670()), 'sem o status_antes: «a pagar»');
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    const ps = Object.keys(r.pagamentos || {}).map((k) => r.pagamentos[k]);
+    igual([r.status, r.quem, r.valor_total_cent, ps.length, ps[0].por, ps[0].em, ps[0].antes_desta_versao, !!ps[0].desfeito.registro], ['apagar', 'Carol Teste', 11300, 1, 'Gestora Teste', T670(10, 6, 9, 0), true, true]);
+  });
+});
+provaAsync('6.70 P38 (AC4.2, AC10) — tolerância zero: o total do lote, o «A pagar por pessoa» e o Dashboard da Márcia batem no centavo com a soma dos cartões; o «Atualizar» sem valor gravado não aparece', async () => {
+  await com670({ reg: LOTE670() }, async () => {
+    const its = J670(`acertoNoites().filter(function(o){ return (o.reg.status||'apagar')!=='pago' && !o.reg.sem_plantao; }).map(function(o){ return [o.iso, acertoValorDoCartao(o).total, acertoPessoasDoItem(o)]; })`);
+    const soma = {}; its.forEach(([, v, ps]) => ps.forEach((p) => { soma[p] = (soma[p] || 0) + v; }));
+    const p = totais670();
+    Object.keys(soma).forEach((n) => igual(p[n].total, soma[n], n));
+    run(`acertoLoteAbrir('Carol Teste'); acertoLoteToque(2);`);
+    igual(J670('acertoLoteTotal(ACERTO_LOTE).total'), soma['Carol Teste'], 'o lote com tudo marcado = o «A pagar por pessoa»');
+    run('acertoLoteFechar()');
+    const dash = String(run('poCardAcerto()'));
+    assert.ok(dash.indexOf(run(`fmtCent(${soma['Carol Teste']})`)) >= 0, 'o Dashboard');
+  });
+});
+provaAsync('6.70 P39 (AC10, achado dos defeitos plantados) — a Supervisão vê a tela, mas o que é da Gestão continua da Gestão: os 15 cartazes pedem a senha da Gestão e as 11 funções de gravar recusam a assinatura da Supervisão, com a frase, nada gravado', async () => {
+  const rg = { por: 'Gestora Teste', papel: 'gestao', motivo: MOT670, quando: '09/10/2026 às 10:00', ts: T670(10, 9, 10, 0) };
+  const lid = 'l' + T670(10, 7, 9, 0);
+  const pg = {}; pg['lote_' + lid] = { em: T670(10, 7, 9, 0), por: 'Gestora Teste', papel: 'gestao', valor_cent: 11300, quem: 'Júlia Teste', lote: lid };
+  const lotes = {}; lotes[lid] = { em: T670(10, 7, 9, 0), por: 'Gestora Teste', papel: 'gestao', quem: 'Júlia Teste', itens: [{ tipo: 'noite', iso: '2026-10-06' }], total_cent: 11300 };
+  const cena = {
+    reg: { '2026-10-01': REG670({ status: 'apagar', hospedes: 0, pets: [], pets_por_pessoa: 0, valor_base_cent: 6000, valor_total_cent: 7300, sem_plantao: rg }),
+      '2026-10-02': REG670({ status: 'apagar', hospedes: 5, valor_total_cent: 15000, valor_manual: { cent: 15000, tipo: 'Bônus', antes_cent: 11300, registro: rg },
+        correcao: { hospedes: 5, dobrou: false, quantas: 1, equipe: ['Carol Teste'], motivo: MOT670, registro: rg, deduzido: { hospedes: 1, pets: ['Tâmara'], dobrou: false, quantas: 1, quem: '' } } }),
+      '2026-10-05': REG670(),
+      '2026-10-06': REG670({ status: 'pago', quem: 'Júlia Teste', status_antes: 'acumulado', pagamentos: pg }) },
+    dia: { '2026-09-27': { quem: 'Ana Teste', quantas: 1, equipe: ['Ana Teste'], hospedes: 1, valor_base_cent: 6000, ajuda_cent: 1300, valor_total_cent: 7300, status: 'apagar', motivo: MOT670, registro: rg } },
+    th: { t1: { antes: { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 9000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300 }, depois: null, motivo: MOT670, registro: rg } },
+    lotes };
+  await com670(cena, async () => {
+    run(`document.body.dataset.role='gestao'; __ops670=[]; __ca670=corrAbrir; corrAbrir=function(op){ __ops670.push([op.acao||'', op.nivel||'', op.capacidade||'', op.botao||'']); return Promise.resolve(null); };`);
+    try {
+      const abrir = [`acertoDesfazerPagamentoAbrir('2026-10-06')`, `acertoLoteDesfazerAbrir('${lid}')`, `acertoValorAbrir('2026-10-05')`, `acertoValorVoltarAbrir('2026-10-02')`,
+        `acertoNoiteCorrigirAbrir('2026-10-05')`, `acertoNoiteVoltarAbrir('2026-10-02')`, `acertoSemPlantaoAbrir('2026-10-05')`, `acertoSemPlantaoReabrirAbrir('2026-10-01')`,
+        `acertoDiaLancarAbrir('2026-10-04')`, `acertoDiaLancarAbrir('2026-09-27', true)`, `acertoSemPlantaoAbrir('dia_2026-09-27')`, `acertoSalvarTabela()`,
+        `acertoTabelaVoltarAbrir('t1')`, `plantTrocarAbrir('carpl')`, `plantTirarAbrir('carpl')`];
+      const naoAbriu = [];
+      for (const ch of abrir) {
+        if (ch === 'acertoSalvarTabela()') TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+        const n0 = Number(run('__ops670.length'));
+        await run(ch); await espera657();
+        if (Number(run('__ops670.length')) !== n0 + 1) naoAbriu.push(ch);
+      }
+      igual(naoAbriu, [], 'cada um abre o cartaz');
+      igual(J670('__ops670').filter((o) => o[1] !== 'gestao' || o[2] !== 'gestao-role'), [], 'todo cartaz pede a senha da Gestão');
+    } finally { run('corrAbrir=__ca670;'); }
+    limpa670();
+    const R = { por: 'Amanda Supervisora Teste', papel: 'supervisor', motivo: MOT670, quando: '10/10/2026 às 10:00', ts: AGORA670 };
+    const gravar = [`acertoDesfazerPagamentoGravar('2026-10-06', R)`, `acertoLoteDesfazerGravar('${lid}', R)`, `acertoValorGravar('2026-10-05', R, {cent:15000, tipo:'Bônus'})`,
+      `acertoValorVoltarGravar('2026-10-02', R)`, `acertoNoiteCorrigirGravar('2026-10-05', R, {n:5, dobrou:false, quantas:1, equipe:['Carol Teste']})`, `acertoNoiteVoltarGravar('2026-10-02', R)`,
+      `acertoSemPlantaoGravar('2026-10-05', R)`, `acertoSemPlantaoReabrirGravar('2026-10-01', R)`, `acertoDiaGravar('2026-10-04', R, {n:2, equipe:['Ana Teste']}, false)`,
+      `acertoTabelaGravar({faixas:[{ate:1,v:6000},{ate:3,v:11000},{ate:6,v:13000},{ate:10,v:15000},{ate:999,v:18000}], ajuda:1300}, R)`,
+      `plantTrocarGravar('carpl', 'Júlia Teste', {novo:'Carol Teste', levar:true}, R)`];
+    const frase = String(run('ACERTO_SO_GESTAO'));
+    igual(frase, 'Isto pede a senha da Gestão (a Gestão ou a Diretoria). Nada foi gravado.');
+    for (const ch of gravar) {
+      const r = await run(`(function(){ var R=${JSON.stringify(R)}; return ${ch}; })()`); await espera657();
+      igual([r && r.ok, r && r.erro], [false, frase], ch);
+    }
+    igual([grav670(), barrou670()], [[], 0], 'nada gravado; a Supervisão vê a tela (não é barrada), só não assina');
+  });
+});
+provaAsync('6.70 P40 (AC7.2, AC7.3, achado do Chromium) — com a noite como o app a guarda (o nome do livro, e a grafia assinada nas variantes), o cartaz de «Trocar» e o de «Tirar» dizem o «A pagar por pessoa» de depois certo, no centavo', async () => {
+  const cena = () => ({ quem: Object.assign(QUEM670(), { '2026-10-07': ASS670('Ana Teste', { variantes: ['Teca'] }) }),
+    livro: (() => { const l = LIVRO670(); l.apelidos.teca = 'Ana Teste'; return l; })() });
+  const tem = (c, t) => assert.ok(c.indexOf(String(run('esc(' + JSON.stringify(t) + ')'))) >= 0, t + ' — ' + c);
+  await com670(cena(), async () => {
+    igual([totais670()['Ana Teste'].total, totais670()['Ana Teste'].noites], [31900, 3], 'antes: 03/10 (com a dobra), 04/10 e 07/10');
+    run(`__p670=plantTirarAbrir('teca');`);
+    const c = cartaz670();
+    ['A noite ainda sem nome gravado assinada "teca" passa de Ana Teste para sem nome.', 'A pagar por pessoa — Ana Teste: R$ 319,00 → R$ 246,00; Teca: R$ 0,00 → R$ 73,00.',
+      'Sem nome confirmado, a noite aparece como foi assinada ("Teca") e volta para «Nomes a confirmar».'].forEach((t) => tem(c, t));
+    await fecha670();
+    run(`__p670=plantTrocarAbrir('teca');`); continua670(['Carol Teste']);
+    tem(cartaz670(), 'A pagar por pessoa — Ana Teste: R$ 319,00 → R$ 246,00; Carol Teste: R$ 113,00 → R$ 186,00.');
+    await assina670(SENHA657);
+    igual(passo670(), 'pronto');
+  });
+  // depois da troca, a próxima leitura agrupa a assinatura com o nome novo: o «A pagar por pessoa» bate com o que o cartaz disse
+  await com670(Object.assign(cena(), { quem: Object.assign(QUEM670(), { '2026-10-07': ASS670('Carol Teste', { variantes: ['Teca'] }) }),
+    livro: (() => { const l = LIVRO670(); l.apelidos.teca = 'Carol Teste'; return l; })() }), async () => {
+    igual([totais670()['Ana Teste'].total, totais670()['Carol Teste'].total], [24600, 18600]);
+  });
+});
+// ---- 2ª rodada: uma prova para cada defeito plantado do QA que a Fase 0 deixava vivo (q01 a q39) e para o prazo e os textos -----------------
+provaAsync('6.70 P41 (AC1.7, q01 do QA) — outro aparelho grava outro nome na noite depois que a tela abriu: o «Paguei» recusa («mudou em outro aparelho») e não troca o nome por cima', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    lista670();
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/quem', 'Júlia Teste');`);
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.quem, Object.keys(r.pagamentos || {}).length], ['acumulado', 'Júlia Teste', 0]);
+    assert.ok(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []).join(' ').indexOf('Esta noite mudou em outro aparelho depois que a tela abriu.') >= 0, JSON.stringify(za670()));
+  });
+});
+provaAsync('6.70 P42 (AC2.3, AC4.5, q04 do QA) — «Desfazer o pagamento» põe a noite de volta no índice das abertas (sem isso, a guardada de antes das 60 noites lidas sumiria ao reabrir)', async () => {
+  await com670({ reg: { '2026-10-06': REG670({ status: 'pago', status_antes: 'acumulado' }) } }, async () => {
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-06');`); await assina670(SENHA657);
+    igual([passo670(), db670('acerto-plantao/2026-10-06/status'), (db670('acerto-abertas/2026-10-06') || {}).status], ['pronto', 'acumulado', 'acumulado']);
+  });
+});
+provaAsync('6.70 P43 (AC3.2, q07 do QA) — «Pagar várias» não lista a noite já paga da mesma pessoa; a guardada dela é paga', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-06': REG670({ status: 'pago', hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2 }) } }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return x.id; })'), ['2026-10-05']);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual([db670('acerto-plantao/2026-10-05/status'), Object.keys(db670('acerto-lotes') || {}).length], ['pago', 1]);
+  });
+});
+provaAsync('6.70 P44 (AC8.4, AC8.5, q10 do QA) — a noite corrigida para duas plantonistas («Carol Teste e Júlia Teste»): «Voltar ao que o app contou» devolve também o nome e uma plantonista só', async () => {
+  await com670({}, async () => {
+    run(`__p670=acertoNoiteCorrigirAbrir('2026-10-05');`); continua670(['3', 'Não', '2', 'Carol Teste', 'Júlia Teste']); await assina670(SENHA657);
+    igual([passo670(), db670('acerto-plantao/2026-10-05/quem'), db670('acerto-plantao/2026-10-05/quantas')], ['pronto', 'Carol Teste e Júlia Teste', 2]);
+    await fecha670();
+    run(`__p670=acertoNoiteVoltarAbrir('2026-10-05');`); await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([passo670(), r.quem, r.quantas, r.valor_total_cent], ['pronto', 'Carol Teste', 1, 11300]);
+  });
+});
+provaAsync('6.70 P45 (AC6.6, AC9.2, q14 do QA) — com «Plantão de dia: R$ 110,00» na tabela, «Lançar o plantão de dia» grava R$ 123,00 (R$ 110,00 + R$ 13,00 de ajuda), e não o valor da faixa', async () => {
+  const hoje = { modo: 'hoje', cent: 0 };
+  const cfg = { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 10000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300, extras: { domingo: hoje, feriado: hoje, dobra: hoje, dia: { modo: 'fixo', cent: 11000 } } };
+  await com670({ cfg }, async () => {
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`); continua670(['Carol Teste', '', '2']);
+    assert.ok(cartaz670().indexOf('R$ 123,00') >= 0, cartaz670());
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao-dia/2026-10-04');
+    igual([passo670(), r.valor_total_cent, r.ajuda_cent], ['pronto', 12300, 1300]);
+  });
+});
+provaAsync('6.70 P46 (AC6.4, q16 do QA) — «Tabelas anteriores» mostra a tabela de ANTES (2 a 3 FILHOts: R$ 100,00), e não a nova', async () => {
+  await com670({}, async () => {
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()'); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    run('renderAcertoTabela()');
+    const h = String(run('__el657.acertoTabela.innerHTML')).split('Tabelas anteriores (1)')[1] || '';
+    assert.ok(h.indexOf('2 a 3 FILHOts: R$ 100,00') >= 0 && h.indexOf('2 a 3 FILHOts: R$ 110,00') < 0, h.slice(0, 700));
+  });
+});
+provaAsync('6.70 P47 (AC7.2, q19 do QA) — a noite assinada "carpl" que está em «Noites sem plantão» não entra na cascata do «Trocar»', async () => {
+  const sp = { por: 'Gestora Teste', papel: 'gestao', motivo: MOT670, ts: T670(10, 9, 10, 0) };
+  await com670({ quem: Object.assign(QUEM670(), { '2026-10-07': ASS670('Carpl') }),
+    reg: { '2026-10-07': REG670({ status: 'apagar', quem: '', hospedes: 0, pets: [], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 0, sem_plantao: sp }) } }, async () => {
+    run(`__p670=plantTrocarAbrir('carpl');`); continua670(['Carol Teste']);
+    const c = cartaz670();
+    assert.ok(c.indexOf(String(run('esc(' + JSON.stringify('A noite ainda sem nome gravado assinada "carpl" passa de Júlia Teste para Carol Teste.') + ')'))) >= 0, c);
+  });
+});
+provaAsync('6.70 P48 (AC3.5, q21 do QA) — um lote de 2 noites, e uma delas volta pelo «Desfazer o pagamento»: «Já pagas» soma só a que continua paga', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-08': REG670({ hospedes: 1, pets: ['Nelson'], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 1 }) } }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`); pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual(Object.keys(db670('acerto-lotes') || {}).length, 1);
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-08');`); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    const h = lista670(), i = h.indexOf('Já pagas');
+    assert.ok(/Já pagas \(1\) — R\$ 113,00/.test(h), h.slice(i, i + 300));
+  });
+});
+provaAsync('6.70 P49 (AC3.3, AC8.5, q23 do QA) — no lote, a noite de dupla marcada continua no nome das duas («Carol Teste e Júlia Teste»)', async () => {
+  await com670({ reg: { '2026-10-06': REG670({ status: 'apagar', quem: 'Carol Teste e Júlia Teste', quantas: 2, hospedes: 2, pets_por_pessoa: 1, valor_base_cent: 6000, valor_total_cent: 7300 }) } }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    const i = J670(`ACERTO_LOTE.itens.map(function(x){ return x.id; })`).indexOf('2026-10-06');
+    run(`acertoLoteToque(${i});`);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    const r = db670('acerto-plantao/2026-10-06');
+    igual([r.status, r.quem], ['pago', 'Carol Teste e Júlia Teste']);
+  });
+});
+provaAsync('6.70 P50 (AC4.2, q25 do QA) — o «Guardado para pagar junto» do cartão é só o guardado (R$ 113,00 em 1 noite), e não o total em aberto da pessoa (R$ 186,00)', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-02': REG670({ status: 'apagar', hospedes: 1, pets: ['Tâmara'], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 1 }) } }, async () => {
+    const h = lista670();
+    assert.ok(h.indexOf('Guardado para pagar junto: <strong>R$ 113,00</strong> em 1 noite') >= 0 && h.indexOf('Guardado para pagar junto: <strong>R$ 186,00</strong>') < 0,
+      (h.match(/Guardado para pagar junto[^<]*<strong>[^<]*<\/strong>[^<]*/g) || []).join(' | '));
+  });
+});
+provaAsync('6.70 P51 (AC8.7, q26 do QA) — a noite sem FILHOt, mas assinada (Carol Teste em 07/10), não pergunta «houve plantão?»', async () => {
+  await com670({ quem: Object.assign(QUEM670(), { '2026-10-07': ASS670('Carol Teste') }) }, async () => {
+    const h = lista670().split('avr-card ').filter((x) => x.indexOf('07/10/2026') >= 0)[0] || '';
+    assert.ok(h !== '' && h.indexOf('houve plantão?') < 0, h.slice(0, 800));
+  });
+});
+provaAsync('6.70 P52 (AC6.5, q28 do QA) — o limite da 4ª faixa igual ao da última (999, «ou mais») é recusado na tela; nada é salvo', async () => {
+  await com670({}, async () => {
+    TELA_TAB670(['60,00', '100,00', '130,00', '150,00', '180,00'], { ates: ['1', '3', '6', '999'] });
+    run('acertoSalvarTabela()'); await espera657();
+    const t = String(run('__el657.acTabStatus.textContent'));
+    igual([t.indexOf('tem de ser menor que 999') >= 0, grav670().length, run('typeof CORR_ATUAL!=="undefined" && CORR_ATUAL ? 1 : 0')], [true, 0, 0], t);
+  });
+});
+provaAsync('6.70 P53 (AC5.3, q30 do QA) — outro aparelho muda a noite com o cartaz do valor à mão aberto: a gravação recusa («mudou em outro aparelho»), nada gravado', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) } }, async () => {
+    run(`__p670=acertoValorAbrir('2026-10-05');`); continua670(['150', 'Bônus']);
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/quem', 'Júlia Teste');`);
+    await assina670(SENHA657);
+    igual(passo670(), 'falhou');
+    assert.ok(cartaz670().indexOf('Esta noite mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e corrija de novo.') >= 0, cartaz670());
+    igual([grav670(), db670('acerto-plantao/2026-10-05/valor_total_cent')], [[], 11300]);
+  });
+});
+provaAsync('6.70 P54 (AC8.3, q31 do QA) — outro aparelho muda a noite com o cartaz «Corrigir esta noite» aberto: a gravação recusa («mudou em outro aparelho»), nada gravado', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) } }, async () => {
+    run(`__p670=acertoNoiteCorrigirAbrir('2026-10-05');`); continua670(['5', 'Não', '1', 'Carol Teste', '']);
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/quem', 'Júlia Teste');`);
+    await assina670(SENHA657);
+    igual(passo670(), 'falhou');
+    assert.ok(cartaz670().indexOf('Esta noite mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e corrija de novo.') >= 0, cartaz670());
+    igual([grav670(), db670('acerto-plantao/2026-10-05/hospedes')], [[], 3]);
+  });
+});
+provaAsync('6.70 P55 (AC6.2, q36 do QA) — a lista do que muda leva a dobra: a noite de 03/10 (Ana Teste, com a dobra do domingo, sem valor gravado) passa de R$ 133,00 para R$ 153,00 com a 1ª faixa a R$ 70,00', async () => {
+  await com670({}, async () => {
+    TELA_TAB670(['70,00', '100,00', '130,00', '150,00', '180,00']);
+    run('__p670=acertoSalvarTabela()');
+    const c = cartaz670().replace(/<[^>]*>/g, ' ').replace(/&mdash;|—/g, '—');
+    assert.ok(c.indexOf('03/10 — Ana Teste: R$ 133,00 → R$ 153,00') >= 0, c);
+  });
+});
+provaAsync('6.70 P56 (AC1.1, q37 do QA) — «Guardar para pagar junto» pergunta antes («Guardar a noite de 05/10/2026 para pagar junto a Carol Teste: R$ 113,00?»); cancelado, nada é gravado', async () => {
+  await com670({}, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'acumulado', false);
+    igual([J670('__zp657.map(function(z){ return z[0]; })'), grav670()], [['Guardar a noite de 05/10/2026 para pagar junto a Carol Teste: R$ 113,00?'], []]);
+  });
+});
+provaAsync('6.70 P57 (AC4.3, q39 do QA) — em janeiro, «Ver o mês anterior» abre dezembro do ano anterior (nunca o mês 00)', async () => {
+  await com670({}, async () => {
+    run(`zHojeISO=function(){ return '2027-01-20'; }; hojeISO=zHojeISO; ACERTO_MES_PROX='';`);
+    igual([run('acertoMesProximo()'), run('acertoMesNome(acertoMesProximo())')], ['2026-12', 'dezembro de 2026']);
+  });
+});
+provaAsync('6.70 P58 (AC1.4, LOW-3 do QA) — sem internet: passados os 20 segundos (o prazo da 6.57), o «Paguei» diz que o sistema ainda não respondeu e que pode ter gravado; nenhum «Pago»; o 2º toque diz que ainda está gravando', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(`__ref670q=DB.ref; DB={ref:function(p){ var r=__ref670q(p); if(/^auaulandia\\/acerto-plantao\\/2026-10-05$/.test(p)) r.once=function(){ return new Promise(function(){}); }; return r; }}; setTimeout=function(fn){ try{ fn(); }catch(e){} return 1; };`);
+    nome670('2026-10-05', 'Carol Teste'); pergunta670(true);
+    // sem esperar a promessa: se o prazo sumir, ela nunca resolve, e a prova cai sem travar a fila da Fase 0 (LOW-R1, r12 do QA)
+    run(`__p58=null; acertoMarcar('2026-10-05','pago').then(function(r){ __p58=r; });`); await espera657();
+    const r1 = J670('__p58');
+    igual([!!(r1 && r1.semResposta), zaT670(/^PAGO/).length], [true, 0], 'o «Paguei» volta com o prazo: ' + JSON.stringify(r1));
+    igual((zaT670(/AINDA NÃO RESPONDEU/)[0] || [])[1], ['Passaram 20 segundos e o sistema ainda não confirmou a noite de 05/10/2026.',
+      'Pode ter gravado: confira em «Já pagas» (ou na lista) antes de tocar de novo. Quando o sistema responder, a tela avisa.']);
+    limpa670();
+    const r2 = await marca670('2026-10-05', 'pago', true);
+    igual([!!(r2 && r2.ocupado), (zaT670(/AINDA ESTOU GRAVANDO/)[0] || [])[1]], [true, ['Ainda estou gravando a noite de 05/10/2026. Espere a resposta do sistema antes de tocar de novo. Nada foi gravado agora.']]);
+  });
+});
+provaAsync('6.70 P59 (AC9.4, AC7.2, LOW-7 do QA) — concordância: o plantão de dia é «pago» («Ele vai para «Já pagas»», «O plantão de dia de 04/10/2026 já foi pago por…», «Valor deste plantão»); «(1 FILHOt)» no singular; a cascata sem noite diz «Nenhuma noite…»', async () => {
+  const livro = LIVRO670(); livro.apelidos.zeca = 'Ana Teste';
+  await com670({ livro, reg: { '2026-10-08': REG670({ status: 'pago', hospedes: 1, pets: ['Nelson'], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 1 }) } }, async () => {
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`); continua670(['Carol Teste', '', '2']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670(); limpa670();
+    run(`__p670=acertoValorAbrir('dia_2026-10-04');`);
+    assert.ok(cartaz670().indexOf('Valor deste plantão') >= 0, 'o rótulo do campo: ' + cartaz670().slice(0, 600));
+    await fecha670(); limpa670();
+    nome670('dia_2026-10-04', 'Carol Teste'); await marca670('dia_2026-10-04', 'pago', true);
+    igual(((J670('__zp657')[0] || [])[1] || []).slice(-1), ['Ele vai para «Já pagas». Se for engano, «Desfazer o pagamento» pede a senha da Gestão.']);
+    limpa670(); await marca670('dia_2026-10-04', 'pago', true);
+    const z = za670()[0] || [];
+    igual([z[0], (z[1] || [])[0]], ['ESTE PLANTÃO JÁ FOI PAGO', 'O plantão de dia de 04/10/2026 já foi pago por Gestora Teste em 10/10/2026 às 10:00.']);
+    assert.ok(/08\/10\/2026 · Carol Teste <span[^>]*>\(1 FILHOt\)/.test(lista670()), '(1 FILHOt) no singular');
+    run(`__p670=plantTrocarAbrir('zeca');`); continua670(['Carol Teste']);
+    assert.ok(cartaz670().indexOf(String(run('esc(' + JSON.stringify('Nenhuma noite ainda sem nome gravado foi assinada "zeca" nos últimos 30 dias.') + ')'))) >= 0, cartaz670());
+  });
+});
+provaAsync('6.70 P60 (AC1.2, REL-001 do QA) — a noite vazia de 10/09 (R$ 73,00) com a pergunta aberta às 23:59 e respondida à 00:01: ela saiu da lista, e o «Paguei» recusa com a frase, mesmo com o valor igual; nada gravado', async () => {
+  await com670({}, async () => {
+    run(`Date.now=function(){ return ${T670(10, 10, 23, 59)}; };`);
+    assert.ok(/10\/09\/2026/.test(lista670()), 'a noite de 10/09 está na lista');
+    nome670('2026-09-10', 'Carol Teste');
+    run(`zPergunta=function(t, l){ __zp657.push([t, l]); Date.now=function(){ return ${T670(10, 11, 0, 1)}; }; zHojeISO=function(){ return '2026-10-11'; }; hojeISO=zHojeISO; return Promise.resolve(true); };`);
+    await run(`acertoMarcar('2026-09-10','pago')`); await espera657();
+    igual([(J670('__zp657')[0] || [])[0], db670('acerto-plantao/2026-09-10'), grav670()], ['Pagar a noite de 10/09/2026 a Carol Teste: R$ 73,00?', null, []]);
+    igual(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []), ['A noite de 10/09/2026 saiu da lista enquanto a pergunta estava aberta (o dia virou). Nada foi gravado: confira e toque de novo.']);
+  });
+});
+provaAsync('6.70 P61 (AC1.7, AC5.5, REL-002 do QA) — o «Atualizar» da tela velha numa noite paga em outro aparelho diz por quê («já foi paga por … o valor dela fica o de quando foi paga»), e numa noite com valor à mão posto em outro aparelho também', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    lista670();
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/status','pago'); __put657('auaulandia/acerto-plantao/2026-10-05/pagamentos/pX',{em:${T670(10, 10, 9, 30)},por:'Outra Gestora Teste',papel:'gestao',valor_cent:11300,quem:'Carol Teste'});`);
+    run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar para R$ 143,00'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    igual(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []), ['A noite de 05/10/2026 já foi paga por Outra Gestora Teste em 10/10/2026 às 09:30: o valor dela fica o de quando foi paga. Nada foi gravado.']);
+    igual([run('__bt670.textContent'), db670('acerto-plantao/2026-10-05/valor_total_cent')], ['Atualizar para R$ 143,00', 11300], 'o botão volta ao rótulo');
+  });
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    lista670();
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/valor_total_cent', 15000); __put657('auaulandia/acerto-plantao/2026-10-05/valor_manual', {cent:15000, tipo:'Bônus', antes_cent:11300, registro:{por:'Outra Gestora Teste', papel:'gestao', motivo:'${MOT670}', ts:${T670(10, 10, 9, 30)}, quando:'10/10/2026 às 09:30'}});`);
+    run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    igual(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []), ['A noite de 05/10/2026 ganhou valor à mão em outro aparelho (R$ 150,00): «Atualizar» não troca por cima. Nada foi gravado.']);
+  });
+});
+{
+// ================================================================== 6.70, 2ª rodada — as 22 provas de ataque do QA (Quinn, gate de 10/out/2026)
+// Trazidas de scratchpad/qa670/ataque670.js para a Fase 0, com o prefixo «6.70». A QA670-18 foi ajustada: com o REL-003 corrigido, o cartão
+// do desfazer já sai certo; ela passou a conferir que a noite continua na lista ao reabrir (pelo índice) e que o «Paguei» grava R$ 113,00.
+// A QA670-19 confere a frase concordada do plantão de dia («Só este plantão sai do lote…», LOW-7) no lugar de «Só esta noite».
+// Cada prova afirma o comportamento CERTO (o que a story e a regra do dinheiro pedem). Prova que cai = achado.
+// Dado inventado (pessoas «Teste»), relógio fixo; o banco de mentira da 6.57/6.70.
+console.log('\n6.70 — 2ª rodada: as provas de ataque do QA (Quinn)');
+const relogioQ670 = (ms, iso) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;` + (iso ? ` zHojeISO=function(){ return '${iso}'; }; hojeISO=zHojeISO;` : ''));
+const pagoOutroQ670 = (iso, valor) => run(`__put657('auaulandia/acerto-plantao/${iso}/status','pago'); __put657('auaulandia/acerto-plantao/${iso}/pagamentos/pX',{em:${T670(10, 10, 9, 30)},por:'Outra Gestora Teste',papel:'gestao',valor_cent:${valor},quem:'Carol Teste'});`);
+const valorMaoQ670 = async (id, v, tipo) => { run(`__p670=acertoValorAbrir(${JSON.stringify(id)});`); continua670([v, tipo || 'Bônus']); await assina670(SENHA657); const p = passo670(); await fecha670(); return p; };
+const voltarValorQ670 = async (id) => { run(`__p670=acertoValorVoltarAbrir(${JSON.stringify(id)});`); const c = cartaz670(); await assina670(SENHA657); const p = passo670(); await fecha670(); return [p, c]; };
+
+// ---- 1. «Atualizar para R$ x» não relê: grava por cima de uma noite paga em outro aparelho --------------------------------------------------
+provaAsync('6.70 QA670-01 (AC1.7, regra do dinheiro) — a tela abriu com «Atualizar para R$ 143,00»; outro aparelho PAGA a noite (R$ 113,00); os dois toques do «Atualizar» não podem mudar o valor de uma noite paga', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    assert.ok(lista670().indexOf('Atualizar para R$ 143,00') >= 0, 'o aviso «outra lista» na tela');
+    pagoOutroQ670('2026-10-05', 11300);
+    run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar para R$ 143,00'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.valor_total_cent, r.pagamentos.pX.valor_cent, Object.keys(r.valores || {}).length], ['pago', 11300, 11300, 0], 'a noite paga continua com o valor pago (R$ 113,00); gravado: ' + JSON.stringify([r.valor_total_cent, r.hospedes]));
+  });
+});
+provaAsync('6.70 QA670-02 (AC5.5, regra do dinheiro) — outro aparelho pôs valor à mão (R$ 150,00) depois que a tela abriu; o «Atualizar» desta tela não pode trocar por cima (o cartão ficaria «Valor à mão: R$ 150,00» com R$ 143,00 no topo)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    lista670();
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/valor_total_cent', 15000); __put657('auaulandia/acerto-plantao/2026-10-05/valor_manual', {cent:15000, tipo:'Bônus', antes_cent:11300, registro:{por:'Outra Gestora Teste', papel:'gestao', motivo:'${MOT670}', ts:${T670(10, 10, 9, 30)}, quando:'10/10/2026 às 09:30'}});`);
+    run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.valor_total_cent, (r.valor_manual || {}).cent], [15000, 15000], 'o valor à mão de outro aparelho continua; gravado: ' + r.valor_total_cent);
+  });
+});
+
+// ---- 2. «Voltar ao valor de antes» duas vezes -------------------------------------------------------------------------------------------------
+provaAsync('6.70 QA670-03 (AC5.4) — R$ 113,00 → à mão R$ 150,00 → à mão R$ 180,00; «Voltar ao valor de antes» volta a R$ 150,00 e o 2º «Voltar» volta a R$ 113,00 (não fica preso em R$ 150,00)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) } }, async () => {
+    relogioQ670(T670(10, 10, 10, 1)); igual(await valorMaoQ670('2026-10-05', '150,00'), 'pronto');
+    relogioQ670(T670(10, 10, 10, 2)); igual(await valorMaoQ670('2026-10-05', '180,00'), 'pronto');
+    relogioQ670(T670(10, 10, 10, 3)); const [p1] = await voltarValorQ670('2026-10-05');
+    igual([p1, db670('acerto-plantao/2026-10-05/valor_total_cent')], ['pronto', 15000], '1º voltar: R$ 150,00');
+    relogioQ670(T670(10, 10, 10, 4)); const [p2, c2] = await voltarValorQ670('2026-10-05');
+    const txt = c2.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    igual(db670('acerto-plantao/2026-10-05/valor_total_cent'), 11300, '2º voltar: R$ 113,00 — o cartaz dizia: ' + (txt.match(/Volta a ficar:[^.]*\./) || [''])[0]);
+  });
+});
+
+// ---- 3. a pergunta (ou o cartaz do lote) aberta na virada da meia-noite -----------------------------------------------------------------------
+const MEIA670 = () => ({ est: Object.assign(EST670(), { m1: EP670('Bolota', '2026-09-09', '2026-09-12'), m2: EP670('Farofa', '2026-09-09', '2026-09-12'), m3: EP670('Paçoca', '2026-09-09', '2026-09-12') }),
+  quem: Object.assign(QUEM670(), { '2026-09-10': ASS670('Carol Teste') }) });
+provaAsync('6.70 QA670-04 (AC1.2) — «Paguei» na noite mais antiga da lista (10/09, sem registro, 3 FILHOts, R$ 113,00): a pergunta abre às 23:59 e é respondida à 00:01; o valor gravado tem de ser o da pergunta (ou recusar), nunca outro', async () => {
+  await com670(MEIA670(), async () => {
+    relogioQ670(T670(10, 10, 23, 59));
+    assert.ok(/10\/09\/2026/.test(lista670()), 'a noite de 10/09 está na lista');
+    nome670('2026-09-10', 'Carol Teste');
+    run(`zPergunta=function(t, l){ __zp657.push([t, l]); Date.now=function(){ return ${T670(10, 11, 0, 1)}; }; zHojeISO=function(){ return '2026-10-11'; }; hojeISO=zHojeISO; return Promise.resolve(true); };`);
+    await run(`acertoMarcar('2026-09-10','pago')`); await espera657();
+    const perg = (J670('__zp657')[0] || [])[0];
+    const r = db670('acerto-plantao/2026-09-10');
+    igual([perg, r ? r.valor_total_cent : 11300], ['Pagar a noite de 10/09/2026 a Carol Teste: R$ 113,00?', 11300], 'gravou ' + JSON.stringify(r && [r.valor_total_cent, r.hospedes, r.pets]));
+  });
+});
+provaAsync('6.70 QA670-05 (AC3.3) — «Pagar várias de Carol Teste» aberto às 23:59 (10/09 sem registro R$ 113,00 e 05/10 R$ 113,00 = R$ 226,00) e pago à 00:01: o lote gravado tem de somar o que o cartaz e a pergunta disseram (ou recusar)', async () => {
+  await com670(MEIA670(), async () => {
+    relogioQ670(T670(10, 10, 23, 59));
+    run(`acertoLoteAbrir('Carol Teste');`);
+    const L = J670('ACERTO_LOTE');
+    igual(L.itens.map((x) => [x.iso, x.valor]), [['2026-09-10', 11300], ['2026-10-05', 11300]]);
+    relogioQ670(T670(10, 11, 0, 1), '2026-10-11');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    const perg = (J670('__zp657')[0] || [])[0];
+    const lotes = db670('acerto-lotes') || {};
+    const tot = Object.keys(lotes).map((k) => lotes[k].total_cent);
+    const r = db670('acerto-plantao/2026-09-10');
+    igual([perg, tot.length ? tot[0] : 22600], ['Pagar 2 noites a Carol Teste: R$ 226,00?', 22600], 'lote gravado: ' + JSON.stringify(tot) + ' — 10/09: ' + JSON.stringify(r && [r.valor_total_cent, r.hospedes]));
+  });
+});
+
+// ---- 4. a estadia muda (o ouvinte de EST_TODAS) enquanto a pergunta está aberta ---------------------------------------------------------------
+provaAsync('6.70 QA670-06 (AC1.1, AC1.2) — noite sem registro (3 FILHOts, R$ 113,00): enquanto a pergunta «Pagar … R$ 113,00?» está aberta, outro aparelho corrige uma estadia (a noite passa a 4 FILHOts); o «Pagar» tem de gravar R$ 113,00 ou recusar, nunca R$ 143,00 sem perguntar', async () => {
+  await com670({}, async () => {
+    lista670(); nome670('2026-10-05', 'Carol Teste');
+    run(`zPergunta=function(t, l){ __zp657.push([t, l]); EST_TODAS.qz={nome:'Tâmara', refKey:'tamara-q__teste', entrada:'2026-10-05', saida:'2026-10-06', status:'ativa'}; return Promise.resolve(true); };`);
+    await run(`acertoMarcar('2026-10-05','pago')`); await espera657();
+    const perg = (J670('__zp657')[0] || [])[0];
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([perg, r ? r.valor_total_cent : 11300], ['Pagar a noite de 05/10/2026 a Carol Teste: R$ 113,00?', 11300], 'gravou ' + JSON.stringify(r && [r.valor_total_cent, r.hospedes]));
+  });
+});
+provaAsync('6.70 QA670-07 (AC3.2, AC3.3) — o cartaz do lote aberto (05/10 sem registro, R$ 113,00); a estadia muda antes do «Pagar»; o lote não pode gravar R$ 143,00 depois de perguntar «R$ 113,00»', async () => {
+  await com670({}, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor]; })'), [['2026-10-05', 11300]]);
+    run(`EST_TODAS.qz={nome:'Tâmara', refKey:'tamara-q__teste', entrada:'2026-10-05', saida:'2026-10-06', status:'ativa'};`);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    const perg = (J670('__zp657')[0] || [])[0];
+    const lotes = db670('acerto-lotes') || {};
+    const tot = Object.keys(lotes).map((k) => lotes[k].total_cent);
+    igual([perg, tot.length ? tot[0] : 11300, (db670('acerto-plantao/2026-10-05') || {}).valor_total_cent || 11300], ['Pagar 1 noite a Carol Teste: R$ 113,00?', 11300, 11300], 'lote ' + JSON.stringify(tot));
+  });
+});
+
+// ---- 5. «Desfazer o pagamento» de uma noite de um mês anterior (fora das 60 noites lidas) -----------------------------------------------------
+provaAsync('6.70 QA670-08 (AC2.3, AC4.3) — «Ver o mês anterior» (agosto) → «Desfazer o pagamento» de 05/08 (Carol Teste, R$ 113,00, fora das 60 noites lidas): a noite volta com o nome e o valor da época NA TELA, no «A pagar por pessoa» e no Dashboard', async () => {
+  const regs = { '2026-08-05': REG670({ status: 'pago', status_antes: 'acumulado' }) };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); regs[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs }, async () => {
+    igual(J670(`!!ACERTO_REG['2026-08-05']`), false, '05/08 fora das 60 lidas');
+    await run('acertoMesAnterior()'); await espera657(); await run('acertoMesAnterior()'); await espera657();
+    assert.ok(/onclick="acertoDesfazerPagamentoAbrir\('2026-08-05'\)"/.test(lista670()), 'a paga de agosto com «Desfazer o pagamento»');
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-08-05');`); await assina670(SENHA657);
+    igual(passo670(), 'pronto'); await fecha670();
+    igual([db670('acerto-plantao/2026-08-05/status'), db670('acerto-plantao/2026-08-05/quem'), db670('acerto-plantao/2026-08-05/valor_total_cent')], ['acumulado', 'Carol Teste', 11300], 'no banco');
+    const tela = J670(`acertoNoites().filter(function(o){ return o.iso==='2026-08-05'; }).map(function(o){ return [acertoQuemDoItem(o).nome, acertoValorDoCartao(o).total]; })`);
+    const tot = totais670();
+    const dash = String(run('poCardAcerto()'));
+    igual([tela, (tot['Carol Teste'] || {}).total || 0, tot['(sem nome)'] ? tot['(sem nome)'].total : 0, dash.indexOf('R$ 113,00') >= 0],
+      [[['Carol Teste', 11300]], 11300, 0, true], 'na tela depois do desfazer: ' + JSON.stringify(tela) + ' ' + JSON.stringify(tot));
+  });
+});
+
+// ---- 6. «Trocar» com «Levar também» não relê as noites levadas ------------------------------------------------------------------------------
+provaAsync('6.70 QA670-09 (AC7.2) — «Trocar» "carpl" (Júlia Teste → Carol Teste) com «Levar também» a guardada de 09/10; antes da senha, outro aparelho PAGA 09/10 a Júlia; a noite paga continua no nome de quem recebeu', async () => {
+  await com670(NOMES670(), async () => {
+    run(`__p670=plantTrocarAbrir('carpl');`);
+    continua670(['Carol Teste', 'Sim']);
+    run(`__put657('auaulandia/acerto-plantao/2026-10-09/status','pago'); __put657('auaulandia/acerto-plantao/2026-10-09/pagamentos/pX',{em:${T670(10, 10, 9, 30)},por:'Outra Gestora Teste',papel:'gestao',valor_cent:7300,quem:'Júlia Teste'});`);
+    await assina670(SENHA657);
+    const r = db670('acerto-plantao/2026-10-09');
+    igual([r.status, r.quem, r.pagamentos.pX.quem], ['pago', 'Júlia Teste', 'Júlia Teste'], 'a paga ficou com quem recebeu; gravado: ' + r.quem);
+  });
+});
+
+// ---- 7. dois aparelhos no mesmo instante (a janela entre reler e gravar) -----------------------------------------------------------------------
+provaAsync('6.70 QA670-10 (AC1.7, risco 1) — o outro aparelho paga 05/10 entre a releitura e a gravação deste: a noite não pode ficar com dois pagamentos valendo', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    // a releitura deste aparelho volta «guardada»; logo depois, o outro aparelho grava o pagamento dele
+    run(`__ref670q=DB.ref; DB={ref:function(p){ var r=__ref670q(p); if(p==='auaulandia/acerto-plantao/2026-10-05'){ var o=r.once; r.once=function(){ return o.apply(r, arguments).then(function(s){
+      __put657('auaulandia/acerto-plantao/2026-10-05/status','pago'); __put657('auaulandia/acerto-plantao/2026-10-05/pagamentos/pX',{em:${T670(10, 10, 9, 59)},por:'Outra Gestora Teste',papel:'gestao',valor_cent:11300,quem:'Carol Teste'}); return s; }); }; } return r; }};`);
+    await marca670('2026-10-05', 'pago', true);
+    const ps = db670('acerto-plantao/2026-10-05/pagamentos') || {};
+    const valendo = Object.keys(ps).filter((k) => !ps[k].desfeito);
+    igual(valendo.length, 1, 'pagamentos valendo: ' + JSON.stringify(valendo));
+  });
+});
+
+// ---- 8. a conta única, no centavo, num cenário com tudo junto ----------------------------------------------------------------------------------
+provaAsync('6.70 QA670-11 (AC4.2, AC6.6, AC8.5, AC9.4, tolerância zero) — domingo com «Outro valor» (+ R$ 20,00), dobra, feriado (+ R$ 30,00), dupla corrigida, valor à mão, plantão de dia, noite antiga, noite sem plantão: o cartão, o «A pagar por pessoa», o «Guardado para pagar junto», o lote e o Dashboard batem no centavo, e o que o lote grava é a soma dos cartões', async () => {
+  const cfg = { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 10000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300,
+    extras: { domingo: { modo: 'mais', cent: 2000 }, feriado: { modo: 'mais', cent: 3000 }, dobra: { modo: 'hoje', cent: 0 }, dia: { modo: 'hoje', cent: 0 } } };
+  const est = Object.assign(EST670(), { f1: EP670('Farofa', '2026-09-27', '2026-09-30'), f2: EP670('Bolota', '2026-09-28', '2026-09-29') });
+  const quem = Object.assign(QUEM670(), { '2026-09-27': ASS670('Carol Teste'), '2026-09-28': ASS670('Carol Teste'), '2026-10-04': ASS670('Carol Teste') });
+  const reg = { '2026-08-31': REG670(), '2026-10-06': REG670({ status: 'apagar', quem: 'Júlia Teste', hospedes: 2, pets: ['Biscoito', 'Pipoca'], valor_base_cent: 10000, valor_total_cent: 11300, pets_por_pessoa: 2 }),
+    '2026-10-02': REG670({ status: 'apagar', quem: 'Carol Teste', hospedes: 1, pets: ['Tâmara'], valor_base_cent: 6000, valor_total_cent: 7300, pets_por_pessoa: 1 }) };
+  await com670({ cfg, est, quem, reg }, async () => {
+    // 06/10 vira dupla (Carol e Júlia, 2 FILHOts → 1 por pessoa); 02/10 com valor à mão; 01/10 sem plantão; plantão de dia 04/10 da Júlia
+    run(`__p670=acertoNoiteCorrigirAbrir('2026-10-06');`); continua670(['2', 'Não', '2', 'Carol Teste', 'Júlia Teste']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    igual(await valorMaoQ670('2026-10-02', '95,50', 'Adiantamento'), 'pronto');
+    run(`__p670=acertoSemPlantaoAbrir('2026-10-01');`); await assina670(SENHA657); await fecha670();
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`); continua670(['Júlia Teste', '', '2']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'acumulado', true);
+    nome670('2026-09-27', 'Carol Teste'); await marca670('2026-09-27', 'acumulado', true);
+    limpa670();
+    // a soma dos cartões de cada pessoa (o valor do cartão de cada item em aberto, a dupla para as duas)
+    const soma = J670(`(function(){ var s={}; acertoNoites().forEach(function(o){ var r=o.reg||{}; if((r.status||'apagar')==='pago'||r.sem_plantao||r.anulado) return;
+      var v=acertoValorDoCartao(o, r).total; acertoPessoasDoItem(o).forEach(function(p){ s[p]=(s[p]||0)+v; }); }); return s; })()`);
+    const R = totais670();
+    const por = {}; Object.keys(R).forEach((k) => { por[k] = R[k].total; });
+    igual(por, soma, 'o «A pagar por pessoa» = a soma dos cartões');
+    // os valores esperados, à mão: Carol
+    //  31/08 guardada 113,00 · 27/09 domingo 1 FILHOt (60,00+20,00+13,00)=93,00 (com dobra? a Carol assina 27 e 28: dobra só em domingo/feriado seguinte — conferido abaixo)
+    const cartoes = J670(`acertoNoites().filter(function(o){ return acertoPessoasDoItem(o).indexOf('Carol Teste')>=0 && (o.reg.status||'apagar')!=='pago' && !o.reg.sem_plantao && !o.reg.anulado; })
+      .map(function(o){ return [o.id, acertoValorDoCartao(o).total]; })`);
+    const somaCarol = cartoes.reduce((a, x) => a + x[1], 0);
+    igual(por['Carol Teste'], somaCarol, 'Carol: ' + JSON.stringify(cartoes));
+    // o «Guardado para pagar junto» do cartão = o acumulado do «A pagar por pessoa»
+    const h = lista670();
+    const acumCarol = R['Carol Teste'].acum;
+    assert.ok(h.indexOf('Guardado para pagar junto: <strong>' + run(`fmtCent(${acumCarol})`) + '</strong> em ' + R['Carol Teste'].acumN + ' noites') >= 0, 'o guardado no cartão ' + acumCarol);
+    // o Dashboard da Márcia
+    const dash = String(run('poCardAcerto()'));
+    ['Carol Teste', 'Júlia Teste'].forEach((p) => assert.ok(dash.indexOf(run(`fmtCent(${por[p]})`)) >= 0, 'Dashboard ' + p + ' ' + por[p]));
+    // o lote da Carol com tudo marcado (a dupla também): o total = o «A pagar por pessoa» dela; o que grava = o total
+    run(`acertoLoteAbrir('Carol Teste'); ACERTO_LOTE.itens.forEach(function(x){ x.marcado=true; });`);
+    const tl = J670('acertoLoteTotal(ACERTO_LOTE)');
+    igual(tl.total, por['Carol Teste'], 'o total do lote');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    const lotes = db670('acerto-lotes'); const lr = lotes[Object.keys(lotes)[0]];
+    const gravados = lr.itens.map((it) => (db670((it.tipo === 'dia' ? 'acerto-plantao-dia/' : 'acerto-plantao/') + it.iso) || {}).valor_total_cent);
+    igual([lr.total_cent, gravados.reduce((a, x) => a + x, 0)], [por['Carol Teste'], por['Carol Teste']], 'o lote gravado: ' + JSON.stringify(gravados));
+    const ps = lr.itens.map((it) => { const r = db670((it.tipo === 'dia' ? 'acerto-plantao-dia/' : 'acerto-plantao/') + it.iso) || {}; const p = (r.pagamentos || {})['lote_' + Object.keys(lotes)[0]] || {}; return p.valor_cent === r.valor_total_cent; });
+    igual(ps.every(Boolean), true, 'cada pagamento com o valor do cartão');
+    // nada de senha em lugar nenhum
+    igual((JSON.stringify(J670('__db657')) + JSON.stringify(J670('__au657'))).indexOf(SENHA657), -1);
+    // e todo R$ no formato completo, na lista, no «A pagar por pessoa» e no Dashboard
+    const rs = reais670(lista670() + String(run('__el657.acertoTotais.innerHTML')) + String(run('poCardAcerto()')));
+    igual(rs.filter((x) => !RS670.test(x)), []);
+  });
+});
+
+// ---- 9. domingo com «Outro valor»: o valor congelado leva o a mais, e o desfazer não perde ---------------------------------------------------
+provaAsync('6.70 QA670-12 (AC1.3, AC6.6) — noite de domingo 04/10 sem registro com «Noite de domingo: a faixa + R$ 20,00»: a pergunta, o pagamento e o «Já pagas» dizem R$ 133,00; desfazer volta com R$ 133,00; a tabela volta a «Como hoje» e a noite (com valor gravado) continua R$ 133,00', async () => {
+  const cfg = { faixas: [{ ate: 1, v: 6000 }, { ate: 3, v: 10000 }, { ate: 6, v: 13000 }, { ate: 10, v: 15000 }, { ate: 999, v: 18000 }], ajuda: 1300,
+    extras: { domingo: { modo: 'mais', cent: 2000 }, feriado: { modo: 'hoje', cent: 0 }, dobra: { modo: 'hoje', cent: 0 }, dia: { modo: 'hoje', cent: 0 } } };
+  await com670({ cfg, quem: Object.assign(QUEM670(), { '2026-10-04': ASS670('Carol Teste') }) }, async () => {
+    const card = (lista670().split('avr-card ').filter((x) => x.indexOf('acc_2026-10-04"') >= 0)[0] || '');
+    assert.ok(/R\$ 133,00/.test(card) && card.indexOf('R$ 100,00 + R$ 20,00 de domingo + R$ 13,00 de ajuda') >= 0, card.slice(0, 900));
+    nome670('2026-10-04', 'Carol Teste'); await marca670('2026-10-04', 'pago', true);
+    igual([(J670('__zp657')[0] || [])[0], db670('acerto-plantao/2026-10-04/valor_total_cent'), db670('acerto-plantao/2026-10-04/extra_cent')], ['Pagar a noite de 04/10/2026 a Carol Teste: R$ 133,00?', 13300, 2000]);
+    assert.ok(/04\/10\/2026 · Carol Teste[\s\S]{0,200}R\$ 133,00/.test(lista670()), '«Já pagas»');
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-04');`); await assina670(SENHA657); await fecha670();
+    igual([db670('acerto-plantao/2026-10-04/status'), db670('acerto-plantao/2026-10-04/valor_total_cent')], ['apagar', 13300]);
+    run(`acertoCfg=${JSON.stringify(Object.assign({}, cfg, { extras: {} }))};`);
+    const v = J670(`acertoNoites().filter(function(o){ return o.id==='2026-10-04'; }).map(function(o){ return acertoValorDoCartao(o).total; })`);
+    igual(v, [13300], 'o valor gravado continua');
+  });
+});
+
+// ---- 10. sem internet: a leitura do banco não volta -------------------------------------------------------------------------------------------
+provaAsync('6.70 QA670-13 (AC1.4, «sem internet») — a releitura não volta (sem internet): «Pagar várias» não diz «Pago» nem pinta verde, e a pessoa consegue fechar o cartaz do lote (não fica preso em «Gravando…»)', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(`__ref670q=DB.ref; DB={ref:function(p){ var r=__ref670q(p); if(/^auaulandia\\/acerto-plantao\\/2026-10-05$/.test(p)) r.once=function(){ return new Promise(function(){}); }; return r; }};`);
+    run(`acertoLoteAbrir('Carol Teste');`);
+    pergunta670(true); run('__lp670=acertoLotePagar();'); await espera657();
+    igual([zaT670(/^PAGO/).length, grav670().length], [0, 0], 'nenhum «Pago», nada gravado');
+    run('acertoLoteFechar();');
+    igual(J670('ACERTO_LOTE===null'), true, 'a pessoa consegue fechar o cartaz do lote (estado: ' + JSON.stringify(J670('ACERTO_LOTE && {gravando:ACERTO_LOTE.gravando}')) + ')');
+  });
+});
+provaAsync('6.70 QA670-14 (AC1.4, «sem internet») — «Paguei» sem internet: a tela diz alguma coisa (o banco não respondeu), e o 2º toque não some em silêncio', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(`__ref670q=DB.ref; DB={ref:function(p){ var r=__ref670q(p); if(/^auaulandia\\/acerto-plantao\\/2026-10-05$/.test(p)) r.once=function(){ return new Promise(function(){}); }; return r; }};`);
+    nome670('2026-10-05', 'Carol Teste');
+    pergunta670(true); run(`acertoMarcar('2026-10-05','pago')`); await espera657();
+    run(`setTimeout=function(fn){ try{ fn(); }catch(e){} return 1; };`);
+    pergunta670(true); const r2 = await run(`acertoMarcar('2026-10-05','pago')`); await espera657();
+    const ditos = za670().map((z) => z[0]);
+    igual([ditos.filter((t) => /^PAGO/.test(t)).length, ditos.length > 0], [0, true], 'o que a tela disse: ' + JSON.stringify(ditos) + ' — 2º toque: ' + JSON.stringify(r2));
+  });
+});
+
+// ---- 11. a recusa do banco pelos cartazes ---------------------------------------------------------------------------------------------------
+provaAsync('6.70 QA670-15 (AC5.3, AC8.3, AC9.4) — o banco recusa: o cartaz termina em «falhou» (nunca «pronto»), a memória da tela não muda e nada fica gravado (valor à mão, corrigir a noite, sem plantão, plantão de dia, tabela, trocar nome)', async () => {
+  await com670(Object.assign(NOMES670(), { reg: Object.assign(NOMES670().reg, { '2026-10-05': REG670({ status: 'apagar' }) }) }), async () => {
+    run(`__recusa657='^auaulandia(/|$)';`);
+    const antes = JSON.stringify(J670('ACERTO_REG'));
+    const casos = [
+      ['valor', async () => { run(`__p670=acertoValorAbrir('2026-10-05');`); continua670(['150', 'Bônus']); }],
+      ['noite', async () => { run(`__p670=acertoNoiteCorrigirAbrir('2026-10-05');`); continua670(['5', 'Não', '1', 'Carol Teste', '']); }],
+      ['sem', async () => { run(`__p670=acertoSemPlantaoAbrir('2026-10-01');`); }],
+      ['dia', async () => { run(`__p670=acertoDiaLancarAbrir('2026-10-04');`); continua670(['Carol Teste', '', '2']); }],
+      ['trocar', async () => { run(`__p670=plantTrocarAbrir('carpl');`); continua670(['Carol Teste', 'Sim']); }]];
+    const res = [];
+    for (const [n, abre] of casos) { limpa670(); await abre(); await assina670(SENHA657); res.push([n, passo670(), /pronto|salv|gravad[oa] /i.test(String(run('CORR_ATUAL && CORR_ATUAL.passo'))) ? 'verde?' : '']); await fecha670(); }
+    igual(res.map((x) => x[1]), ['falhou', 'falhou', 'falhou', 'falhou', 'falhou'], JSON.stringify(res));
+    igual([JSON.stringify(J670('ACERTO_REG')), J670('Object.keys(ACERTO_DIA).length'), J670('PLANT_LIVRO.apelidos.carpl')], [antes, 0, 'Júlia Teste'], 'a memória da tela não mudou');
+    igual(esc670().filter((e) => !/RECUSADO/.test(e[0])), [], 'nada gravado');
+  });
+});
+
+// ---- 12. a Linha do tempo: o rótulo das entradas antigas «acerto-plantao» -----------------------------------------------------------------
+provaAsync('6.70 QA670-16 (AC11.1) — a entrada antiga «acerto-plantao» de um pagamento («pago — 05/10/2026 · Carol Teste · R$ 113,00») não pode ser rotulada como «guardou, voltou para a pagar ou atualizou o valor»', async () => {
+  const t = String(run(`acaoRotulo({acao:'acerto-plantao', detalhe:'pago — 05/10/2026 · Carol Teste · R$ 113,00'})`));
+  assert.ok(!/guardou, voltou para a pagar ou atualizou o valor/.test(t) || /pag(ou|o)/.test(t.split(' — ')[0]), t);
+});
+
+// ---- 13. o posto Plantonista no relatório do Plantão ------------------------------------------------------------------------------------------
+provaAsync('6.70 QA670-17 (AC7.5, AC10) — o posto Plantonista: ensina a grafia de um apelido NOVO do próprio nome (sem barrar); não troca um que existe; não ensina o nome de outra pessoa; não usa «Trocar», «Tirar», «Nunca fez plantão» nem «Voltar a contar»', async () => {
+  await com670({}, async () => {
+    run(`document.body.dataset.role='plantonista';`);
+    await run(`plantAprender('Rosa Nova Teste','Rosa Nova Teste')`); await espera657();
+    await run(`plantAprender('ana teste','Ana Teste da Silva')`); await espera657();
+    await run(`plantAprender('Carpl','Carpl')`); await espera657();
+    pergunta670(true); await run(`plantNaoEhPlantonista('Carpl')`); await espera657();
+    pergunta670(true); await run(`plantVoltarAContar('Carpl')`); await espera657();
+    await run(`plantTrocarAbrir('carpl')`); await run(`plantTirarAbrir('carpl')`); await espera657();
+    const l = db670('config/plantonistas');
+    igual([l.apelidos['rosa nova teste'], l.apelidos['ana teste'], l.apelidos.carpl, Object.keys(l.naoSao || {}).length, run('typeof CORR_ATUAL!=="undefined" && CORR_ATUAL ? 1 : 0')],
+      ['Rosa Nova Teste', 'Ana Teste', 'Júlia Teste', 0, 0]);
+  });
+});
+
+// ---- 14. depois do QA670-08: o «Paguei» no cartão errado é recusado? e depois de reabrir a tela? ------------------------------------------
+provaAsync('6.70 QA670-18 (AC2.3, AC4.5, continuação do QA670-08; ajustada na 2ª rodada) — depois do desfazer de 05/08 (fora das 60 noites lidas): ao reabrir a tela, a noite continua na lista pelo índice (Carol Teste, R$ 113,00); o «Paguei» grava R$ 113,00 para a Carol Teste', async () => {
+  const regs = { '2026-08-05': REG670({ status: 'pago', status_antes: 'acumulado' }) };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); regs[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs }, async () => {
+    await run('acertoMesAnterior()'); await espera657(); await run('acertoMesAnterior()'); await espera657();
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-08-05');`); await assina670(SENHA657); await fecha670(); limpa670();
+    igual(!!db670('acerto-abertas/2026-08-05'), true, 'o desfazer põe a noite de volta no índice das abertas');
+    await carrega670();
+    const tela = J670(`acertoNoites().filter(function(o){ return o.iso==='2026-08-05'; }).map(function(o){ return [acertoQuemDoItem(o).nome, acertoValorDoCartao(o).total, !!o.antiga]; })`);
+    igual(tela, [['Carol Teste', 11300, true]], 'depois de reabrir a tela: a noite volta pelo índice, com o nome e o valor da época');
+    nome670('2026-08-05', 'Carol Teste'); await marca670('2026-08-05', 'pago', true);
+    const perg = (J670('__zp657')[0] || [])[0];
+    const r = db670('acerto-plantao/2026-08-05');
+    igual([perg, r.status, r.valor_total_cent, r.quem], ['Pagar a noite de 05/08/2026 a Carol Teste: R$ 113,00?', 'pago', 11300, 'Carol Teste'], 'aviso: ' + JSON.stringify(za670().map((z) => z[1])));
+  });
+});
+
+// ---- 15. o lote com o plantão de dia e a noite da mesma data, da mesma pessoa ----------------------------------------------------------------
+provaAsync('6.70 QA670-19 (AC3, AC9.4) — Carol tem a noite de 04/10 e o plantão de dia de 04/10: o lote paga os dois pelo id; desfazer só o plantão de dia não mexe na noite; «Desfazer este lote» volta só a noite (o dia já tinha voltado)', async () => {
+  await com670({ quem: Object.assign(QUEM670(), { '2026-10-04': ASS670('Carol Teste'), '2026-10-03': ASS670('Júlia Teste') }) }, async () => {
+    run(`__p670=acertoDiaLancarAbrir('2026-10-04');`); continua670(['Carol Teste', '', '2']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670(); limpa670();
+    run(`acertoLoteAbrir('Carol Teste');`);
+    const its = J670('ACERTO_LOTE.itens.map(function(x){ return [x.id, x.valor]; })');
+    const lid = run('ACERTO_LOTE.id');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual([db670('acerto-plantao/2026-10-04/status'), db670('acerto-plantao-dia/2026-10-04/status')], ['pago', 'pago'], JSON.stringify(its));
+    limpa670(); run(`__p670=acertoDesfazerPagamentoAbrir('dia_2026-10-04');`);
+    const c = cartaz670().replace(/<[^>]*>/g, ' ');
+    await assina670(SENHA657); await fecha670();
+    igual([db670('acerto-plantao/2026-10-04/status'), db670('acerto-plantao-dia/2026-10-04/status')], ['pago', 'apagar'], 'só o plantão de dia voltou');
+    assert.ok(/Só este plantão sai do lote de 10\/10; as outras 2 continuam pagas\./.test(c), 'o cartaz conta as outras certo (2ª rodada, LOW-7: «Só este plantão»): ' + (c.match(/Só est[^.]*\.[^.]*\./) || [''])[0]);
+    limpa670(); run(`__p670=acertoLoteDesfazerAbrir('${lid}');`); await assina670(SENHA657); await fecha670();
+    igual([db670('acerto-plantao/2026-10-04/status'), db670('acerto-plantao-dia/2026-10-04/status'), Object.keys(db670('acerto-plantao-dia/2026-10-04/pagamentos')).length], ['apagar', 'apagar', 1]);
+  });
+});
+
+// ---- 16. a lista do que muda com a tabela nova = o que muda de verdade ------------------------------------------------------------------------
+provaAsync('6.70 QA670-20 (AC6.2) — a tabela nova (2 a 3 FILHOts R$ 110,00, domingo + R$ 20,00, o limite da 1ª faixa 1 → 0): as noites que o cartaz diz que mudam são exatamente as que mudam no cartão depois de salvar; as com valor gravado não mudam', async () => {
+  await com670({ reg: { '2026-10-05': REG670(), '2026-10-06': REG670({ status: 'apagar', quem: 'Júlia Teste', hospedes: 2, pets: ['Biscoito', 'Pipoca'], valor_base_cent: 10000, valor_total_cent: 11300, pets_por_pessoa: 2 }) } }, async () => {
+    const antes = J670(`acertoNoites().map(function(o){ return [o.id, acertoValorDoCartao(o).total]; })`);
+    TELA_TAB670(['60,00', '110,00', '130,00', '150,00', '180,00'], { ates: ['0', '3', '6', '10'], ext: { domingo: '20,00' } });
+    run('acertoSalvarTabela()'); await espera657();
+    const c = cartaz670().replace(/<[^>]*>/g, ' ').replace(/&mdash;|—/g, '—');
+    const ditas = (c.match(/\d{2}\/\d{2} — [^:]+: R\$ [\d.,]+ → R\$ [\d.,]+/g) || []).map((x) => x.slice(0, 5));
+    await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    const depois = J670(`acertoNoites().map(function(o){ return [o.id, acertoValorDoCartao(o).total]; })`);
+    const mudaram = antes.filter((a) => { const d = depois.find((x) => x[0] === a[0]); return d && d[1] !== a[1]; }).map((a) => a[0].slice(8, 10) + '/' + a[0].slice(5, 7));
+    igual(ditas.slice().sort(), mudaram.slice().sort(), 'o cartaz: ' + JSON.stringify(ditas) + ' — mudaram: ' + JSON.stringify(mudaram));
+    igual([depois.find((x) => x[0] === '2026-10-05')[1], depois.find((x) => x[0] === '2026-10-06')[1]], [11300, 11300], 'as com valor gravado não mudam');
+  });
+});
+
+// ---- 17. «Pagar várias» × «A pagar por pessoa» com o nome escrito sem acento numa noite ---------------------------------------------------
+provaAsync('6.70 QA670-21 (AC3.2, tolerância zero) — uma noite com «Julia Teste» (escrito sem acento) e outra com «Júlia Teste»: o total do «Pagar várias de Júlia Teste» bate com a linha dela no «A pagar por pessoa»', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar', quem: 'Julia Teste' }), '2026-10-06': REG670({ status: 'apagar', quem: 'Júlia Teste', hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2 }) } }, async () => {
+    const R = totais670();
+    run(`acertoLoteAbrir('Júlia Teste');`);
+    const tl = J670('acertoLoteTotal(ACERTO_LOTE)');
+    igual(tl.total, (R['Júlia Teste'] || {}).total, 'lote ' + tl.total + ' × linha ' + JSON.stringify(Object.keys(R).map((k) => [k, R[k].total])));
+  });
+});
+
+// ---- 18. desfazer um item de um lote antigo (fora dos 62 dias lidos) ----------------------------------------------------------------------
+provaAsync('6.70 QA670-22 (AC2.2) — a noite paga num lote de 70 dias atrás (o lote não vem na leitura de 62 dias): o cartaz do desfazer não pode afirmar «nenhuma outra continuava paga por ele» sem saber', async () => {
+  const lid = 'l' + T670(8, 1, 9, 0);
+  const pg = {}; pg['lote_' + lid] = { em: T670(8, 1, 9, 0), por: 'Gestora Teste', papel: 'gestao', valor_cent: 11300, quem: 'Carol Teste', lote: lid };
+  const lotes = {}; lotes[lid] = { em: T670(8, 1, 9, 0), por: 'Gestora Teste', papel: 'gestao', quem: 'Carol Teste', itens: [{ tipo: 'noite', iso: '2026-07-30' }, { tipo: 'noite', iso: '2026-07-31' }], total_cent: 22600 };
+  await com670({ reg: { '2026-07-30': REG670({ status: 'pago', pagamentos: pg }), '2026-07-31': REG670({ status: 'pago', pagamentos: pg }) }, lotes }, async () => {
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-07-30');`);
+    const c = cartaz670().replace(/<[^>]*>/g, ' ');
+    assert.ok(!/nenhuma outra continuava paga por ele/.test(c), (c.match(/Só esta[^.]*\.[^.]*\./) || [''])[0]);
+  });
+});
+}
+{
+// ================================================================== 6.70, LOW-R1 do re-gate — as 11 provas de ataque do re-gate do QA (Quinn, 10–11/out/2026)
+// Trazidas de scratchpad/qa670r2/ataque670r2.js sem mudança, só com o prefixo «6.70 QA re-gate ·». Mais as três provas do @dev para os defeitos r04,
+// r08 e r10 do QA (corridas estreitas entre dois aparelhos), no fim do bloco.
+console.log('\n6.70 — LOW-R1: as provas do re-gate do QA (Quinn) e as das corridas r04, r08 e r10');
+const relQR = (ms, iso) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;` + (iso ? ` zHojeISO=function(){ return '${iso}'; }; hojeISO=zHojeISO;` : ''));
+// A transação como no Firebase de verdade (cache frio): a 1ª chamada recebe null (o que o aparelho tem guardado); se o servidor tem outro
+// valor, a função roda de novo com o valor do servidor; undefined = aborta. Conta as transações em __txQR.
+const TXQR = (re) => `__txQR=[]; __refQR=DB.ref; DB={ref:function(p){ var r=__refQR(p); if(new RegExp(${JSON.stringify(re)}).test(p)){ r.transaction=function(fn){ __txQR.push(p);
+    var g=fn(null); if(g===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}});
+    var srv=__get657(p); var v=(srv===null)?g:fn(srv);
+    if(v===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return __get657(p); }}});
+    return __resp657('transaction', p, null, function(){ __put657(p, v); }).then(function(){ return {committed:true, snapshot:{val:function(){ return __get657(p); }}}; }); }; } return r; }};`;
+const outroPagaQR = (iso, valor, quem) => `__put657('auaulandia/acerto-plantao/${iso}/status','pago'); __put657('auaulandia/acerto-plantao/${iso}/pagamentos/pX',{em:${T670(10, 10, 9, 30)},por:'Outra Gestora Teste',papel:'gestao',valor_cent:${valor},quem:'${quem || 'Carol Teste'}'});`;
+const QUEMQR = () => Object.assign(QUEM670(), { '2026-10-02': ASS670('Carol Teste'), '2026-10-06': ASS670('Carol Teste') });
+
+// ---- REL-001: o lote com um item mudado no meio --------------------------------------------------------------------------------------------
+provaAsync('6.70 QA re-gate · QA670R-01 (REL-001) — lote de 3 noites sem registro da Carol (02/10 R$ 73,00, 05/10 R$ 113,00, 06/10 R$ 113,00); a estadia da do meio muda com o cartaz aberto: nada é pago (nenhuma das 3), a frase diz o antes → depois, a lista é refeita; o 2º «Pagar» paga exatamente o que perguntou', async () => {
+  await com670({ quem: QUEMQR() }, async () => {
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor]; })'), [['2026-10-02', 7300], ['2026-10-05', 11300], ['2026-10-06', 11300]]);
+    run(`EST_TODAS.qz={nome:'Farofa', refKey:'farofa-q__teste', entrada:'2026-10-05', saida:'2026-10-06', status:'ativa'};`);
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual([grav670().length, db670('acerto-lotes'), db670('acerto-plantao/2026-10-02'), db670('acerto-plantao/2026-10-06')], [0, null, null, null], 'nada pago, nenhuma das três');
+    igual(run('ACERTO_LOTE.aviso'), 'O valor da noite de 05/10 mudou enquanto o cartaz estava aberto (R$ 113,00 → R$ 143,00). Nada foi pago: confira e escolha de novo.');
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor]; })'), [['2026-10-02', 7300], ['2026-10-05', 14300], ['2026-10-06', 11300]], 'a lista refeita');
+    limpa670(); pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual((J670('__zp657')[0] || [])[0], 'Pagar 3 noites a Carol Teste: R$ 329,00?');
+    const ls = db670('acerto-lotes'); const lr = ls[Object.keys(ls)[0]];
+    const its = lr.itens.map((it) => db670('acerto-plantao/' + it.iso));
+    igual([lr.total_cent, its.map((r) => r.valor_total_cent), its.map((r) => { const p = r.pagamentos[Object.keys(r.pagamentos)[0]]; return p.valor_cent; })], [32900, [7300, 14300, 11300], [7300, 14300, 11300]]);
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-02 (REL-001) — lote aberto às 23:59 com a guardada antiga de 31/08 (com valor) e a noite de 10/09 sem registro (a mais antiga da lista); pago à 00:01: nada é pago, a frase diz que a noite saiu da lista; refeita a lista, paga só a de 31/08 com R$ 113,00', async () => {
+  const est = Object.assign(EST670(), { m1: EP670('Bolota', '2026-09-09', '2026-09-12'), m2: EP670('Farofa', '2026-09-09', '2026-09-12'), m3: EP670('Paçoca', '2026-09-09', '2026-09-12') });
+  await com670({ est, quem: Object.assign(QUEM670(), { '2026-09-10': ASS670('Carol Teste'), '2026-10-05': ASS670('Ana Teste') }), reg: { '2026-08-31': REG670() } }, async () => {
+    relQR(T670(10, 10, 23, 59));
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor]; })'), [['2026-08-31', 11300], ['2026-09-10', 11300]]);
+    relQR(T670(10, 11, 0, 1), '2026-10-11');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual([grav670().length, run('ACERTO_LOTE.aviso')], [0, 'A noite de 10/09 saiu da lista enquanto o cartaz estava aberto (o dia virou). Nada foi pago: confira e escolha de novo.']);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return x.iso; })'), ['2026-08-31'], 'a lista refeita, sem a noite que saiu');
+    pergunta670(true); await run('acertoLotePagar()'); await espera657();
+    igual([db670('acerto-plantao/2026-08-31/status'), db670('acerto-plantao/2026-08-31/valor_total_cent'), db670('acerto-plantao/2026-09-10')], ['pago', 11300, null]);
+  });
+});
+
+// ---- a transação do «Paguei» recusada pelo banco; o índice que falha depois da transação ---------------------------------------------------
+provaAsync('6.70 QA re-gate · QA670R-03 (LOW-2, AC1.4) — o banco recusa a transação do «Paguei»: «NÃO FOI GRAVADO», o cartão e o banco como estavam, nenhum «PAGO»; depois, sem a recusa, o «Paguei» funciona (a trava foi solta)', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(`__recusa657='^auaulandia/acerto-plantao/2026-10-05$';`);
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    const z = zaT670(/NÃO FOI GRAVADO/)[0] || [];
+    igual([!!z.length, zaT670(/^PAGO/).length, db670('acerto-plantao/2026-10-05/status'), run(`ACERTO_REG['2026-10-05'].status`), J670('Object.keys(ACERTO_GRAVANDO).length')], [true, 0, 'acumulado', 'acumulado', 0], JSON.stringify(za670()));
+    assert.ok((z[1] || []).some((l) => /continua como estava/.test(l)) && (z[1] || []).some((l) => /^Nada foi gravado\./.test(l)), JSON.stringify(z));
+    run(`__recusa657=null;`); limpa670();
+    await marca670('2026-10-05', 'pago', true);
+    igual([db670('acerto-plantao/2026-10-05/status'), Object.keys(db670('acerto-plantao/2026-10-05/pagamentos')).length], ['pago', 1]);
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-04 (LOW-2) — a transação do «Paguei» grava e o índice das abertas, gravado depois, é recusado: diz «PAGO» (o pagamento entrou), e a próxima leitura acerta o índice (a paga sai dele); a guardada antiga (só pelo índice) que volta «a pagar» com o índice recusado continua na lista ao reabrir', async () => {
+  const regs = { '2026-07-02': REG670({ quem: 'Ana Teste' }), '2026-10-05': REG670() };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); if (!regs[d]) regs[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs, ab: { '2026-07-02': { status: 'acumulado', em: 1 }, '2026-10-05': { status: 'acumulado', em: 1 } } }, async () => {
+    run(`__recusa657='^auaulandia$';`);
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    igual([db670('acerto-plantao/2026-10-05/status'), zaT670(/^PAGO/).length, zaT670(/NÃO FOI GRAVADO/).length, !!db670('acerto-abertas/2026-10-05')], ['pago', 1, 0, true], 'pago; o índice ficou velho');
+    limpa670(); nome670('2026-07-02', 'Ana Teste'); await marca670('2026-07-02', 'apagar', true);
+    igual(db670('acerto-plantao/2026-07-02/status'), 'apagar');
+    run(`__recusa657=null;`);
+    await carrega670();
+    igual([db670('acerto-abertas/2026-10-05'), J670(`acertoNoites().filter(function(o){ return o.iso==='2026-07-02' && o.antiga; }).length`)], [null, 1], 'a leitura acerta o índice; a de julho continua na lista');
+  });
+});
+
+// ---- dois aparelhos com a transação como no Firebase de verdade ---------------------------------------------------------------------------
+provaAsync('6.70 QA re-gate · QA670R-05 (LOW-2, AC1.7) — transação de verdade (cache frio, o servidor confere): o outro aparelho paga 05/10 entre a releitura e a transação deste; a transação vê a noite paga no servidor e aborta: um pagamento só (o do outro), «já foi paga por Outra Gestora Teste»', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(TXQR('^auaulandia/acerto-plantao/2026-10-05$'));
+    run(`__refQR2=DB.ref; DB={ref:function(p){ var r=__refQR2(p); if(p==='auaulandia/acerto-plantao/2026-10-05'){ var o=r.once; r.once=function(){ return o.apply(r, arguments).then(function(s){ ${outroPagaQR('2026-10-05', 11300)} return s; }); }; } return r; }};`);
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    const ps = db670('acerto-plantao/2026-10-05/pagamentos') || {};
+    const z = zaT670(/NADA FOI GRAVADO/)[0] || [];
+    igual([Object.keys(ps), J670('__txQR').length, zaT670(/^PAGO/).length, run(`ACERTO_REG['2026-10-05'].status`)], [['pX'], 1, 0, 'pago']);
+    assert.ok(/já foi paga por Outra Gestora Teste/.test((z[1] || []).join(' ')), JSON.stringify(za670()));
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-06 (REL-002) — «Atualizar para R$ 143,00» com a transação de verdade (cache frio): (a) o outro aparelho pagou: aborta, diz por quê, o valor pago fica; (b) o outro pôs valor à mão: aborta; (c) nada mudou: grava R$ 143,00 com a dobra e a entrada em valores', async () => {
+  const cena = () => ({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) });
+  const toques = async () => { run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar para R$ 143,00'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657(); run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657(); };
+  await com670(cena(), async () => {
+    run(TXQR('^auaulandia/acerto-plantao/2026-10-05$')); run(outroPagaQR('2026-10-05', 11300));
+    await toques();
+    const z = zaT670(/NADA FOI GRAVADO/)[0] || [];
+    igual([db670('acerto-plantao/2026-10-05/valor_total_cent'), db670('acerto-plantao/2026-10-05/status'), J670('__txQR').length, run(`ACERTO_REG['2026-10-05'].status`)], [11300, 'pago', 1, 'pago']);
+    assert.ok(/já foi paga por Outra Gestora Teste .*o valor dela fica o de quando foi paga\. Nada foi gravado\./.test((z[1] || []).join(' ')), JSON.stringify(z));
+  });
+  await com670(cena(), async () => {
+    run(TXQR('^auaulandia/acerto-plantao/2026-10-05$'));
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/valor_total_cent', 15000); __put657('auaulandia/acerto-plantao/2026-10-05/valor_manual', {cent:15000, tipo:'Bônus', antes_cent:11300, registro:{por:'Outra Gestora Teste', papel:'gestao', ts:1}});`);
+    await toques();
+    igual([db670('acerto-plantao/2026-10-05/valor_total_cent'), (db670('acerto-plantao/2026-10-05/valor_manual') || {}).cent, zaT670(/NADA FOI GRAVADO/).length], [15000, 15000, 1]);
+  });
+  await com670(cena(), async () => {
+    run(TXQR('^auaulandia/acerto-plantao/2026-10-05$'));
+    await toques();
+    const r = db670('acerto-plantao/2026-10-05');
+    const vs = Object.keys(r.valores || {}).map((k) => r.valores[k]);
+    igual([r.valor_total_cent, r.hospedes, r.status, r.quem, vs.map((x) => [x.de, x.para, x.origem]), J670('__txQR').length], [14300, 4, 'apagar', 'Carol Teste', [[11300, 14300, 'atualizar']], 1]);
+  });
+});
+
+// ---- o prazo de 20 segundos com a gravação ainda acontecendo ------------------------------------------------------------------------------
+provaAsync('6.70 QA re-gate · QA670R-07 (LOW-3) — «Paguei» com o banco demorando: aos 20 s, «O SISTEMA AINDA NÃO RESPONDEU» (sem «PAGO»); o 2º toque diz «AINDA ESTOU GRAVANDO» e não abre outra gravação; o banco responde: «PAGO», um pagamento só; o 3º toque recusa (já paga)', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    run(`__pendura657='^auaulandia/acerto-plantao/2026-10-05$';`);
+    nome670('2026-10-05', 'Carol Teste'); pergunta670(true);
+    run(`__pq1=acertoMarcar('2026-10-05','pago');`); await espera657();
+    igual([J670('__pend657.length'), za670().length], [1, 0], 'a transação saiu e ainda não voltou');
+    run(`__tm657.filter(function(t){ return t.ms===CORR_PRAZO; }).forEach(function(t){ t.fn(); });`); await espera657();
+    igual([zaT670(/O SISTEMA AINDA NÃO RESPONDEU/).length, zaT670(/^PAGO/).length], [1, 0]);
+    pergunta670(true); await run(`acertoMarcar('2026-10-05','pago')`); await espera657();
+    igual([zaT670(/AINDA ESTOU GRAVANDO/).length, J670('__pend657.length')], [1, 1], 'o 2º toque não abre outra gravação');
+    run('__pend657[0].ok();'); await espera657();
+    igual([zaT670(/^PAGO/).length, db670('acerto-plantao/2026-10-05/status'), Object.keys(db670('acerto-plantao/2026-10-05/pagamentos')).length, J670('Object.keys(ACERTO_GRAVANDO).length')], [1, 'pago', 1, 0]);
+    limpa670(); pergunta670(true); await run(`acertoMarcar('2026-10-05','pago')`); await espera657();
+    igual([zaT670(/JÁ FOI PAGA/).length, grav670().length], [1, 0]);
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-08 (LOW-3, AC3.4) — «Pagar várias» com o banco demorando: aos 20 s o cartaz do lote fecha e diz que pode ter gravado; o banco responde: «PAGO» e um lote só; reaberto, o lote não tem as noites pagas; e «Fechar» com a gravação saindo não perde a resposta', async () => {
+  await com670({ reg: LOTE670() }, async () => {
+    run(`__pendura657='^auaulandia$';`);
+    run(`acertoLoteAbrir('Carol Teste');`); pergunta670(true);
+    run('__pl1=acertoLotePagar();'); await espera657();
+    igual([J670('__pend657.length'), J670('!!(ACERTO_LOTE && ACERTO_LOTE.gravando)')], [1, true]);
+    assert.ok(/Fechar \(a gravação continua/.test(String(run('acertoLoteHTML(ACERTO_LOTE)'))), 'o botão de fechar enquanto grava');
+    run(`__tm657.filter(function(t){ return t.ms===CORR_PRAZO; }).forEach(function(t){ t.fn(); });`); await espera657();
+    igual([zaT670(/O SISTEMA AINDA NÃO RESPONDEU/).length, J670('ACERTO_LOTE===null')], [1, true]);
+    run('__pend657[0].ok();'); await espera657();
+    const ls = db670('acerto-lotes') || {};
+    igual([Object.keys(ls).length, zaT670(/^PAGO/).length, db670('acerto-plantao/2026-10-05/status')], [1, 1, 'pago']);
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(J670('ACERTO_LOTE.itens.map(function(x){ return x.iso; })'), ['2026-10-06'], 'só a dupla, que não foi marcada');
+    run('acertoLoteFechar();');
+  });
+  await com670({ reg: LOTE670() }, async () => {
+    run(`__pendura657='^auaulandia$';`);
+    run(`acertoLoteAbrir('Carol Teste');`); pergunta670(true);
+    run('__pl1=acertoLotePagar();'); await espera657();
+    run('acertoLoteFechar();'); igual(J670('ACERTO_LOTE===null'), true, 'fecha com a gravação saindo');
+    run('__pend657[0].ok();'); await espera657();
+    igual([zaT670(/^PAGO/).length, Object.keys(db670('acerto-lotes') || {}).length], [1, 1], 'a resposta aparece na tela');
+  });
+});
+
+// ---- LOW-1 em cadeia; REL-002 com a releitura das levadas falhando; REL-003 continuando o trabalho --------------------------------------------
+provaAsync('6.70 QA re-gate · QA670R-09 (LOW-1) — R$ 113,00 → à mão 150 → 180 → 200; «Voltar ao valor de antes» três vezes: 180, 150, 113 (e sem valor à mão no fim)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) } }, async () => {
+    const mao = async (v, t) => { relQR(t); run(`__p670=acertoValorAbrir('2026-10-05');`); continua670([v, 'Bônus']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670(); };
+    const volta = async (t) => { relQR(t); run(`__p670=acertoValorVoltarAbrir('2026-10-05');`); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670(); return db670('acerto-plantao/2026-10-05/valor_total_cent'); };
+    await mao('150', T670(10, 10, 10, 1)); await mao('180', T670(10, 10, 10, 2)); await mao('200', T670(10, 10, 10, 3));
+    const r = [await volta(T670(10, 10, 10, 4)), await volta(T670(10, 10, 10, 5)), await volta(T670(10, 10, 10, 6))];
+    igual([r, db670('acerto-plantao/2026-10-05/valor_manual')], [[18000, 15000, 11300], null]);
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-10 (REL-002) — «Trocar» com «Levar também» e a releitura da noite levada falhando: o livro troca, a noite fica com o nome que tinha, a tela diz quais ficaram e o histórico registra', async () => {
+  await com670(NOMES670(), async () => {
+    run(`__p670=plantTrocarAbrir('carpl');`); continua670(['Carol Teste', 'Sim']);
+    run(`__recusaLer670='^auaulandia/acerto-plantao/2026-10-09$';`);
+    await assina670(SENHA657);
+    const hs = db670('plantonistas-historico'); const h = hs[Object.keys(hs)[0]];
+    igual([db670('config/plantonistas/apelidos/carpl'), db670('acerto-plantao/2026-10-09/quem'), h.noitesLevadas || [], h.noitesNaoLevadas], ['Carol Teste', 'Júlia Teste', [], ['09/10 (não consegui conferir no sistema)']]);
+    assert.ok(zaT670(/NEM TODAS AS NOITES FORAM LEVADAS/).length === 1, JSON.stringify(za670()));
+  });
+});
+provaAsync('6.70 QA re-gate · QA670R-11 (REL-003) — depois do desfazer de 05/08 (fora das 60 lidas), sem reabrir a tela: «Corrigir o valor» (R$ 150,00) e «Paguei» nela usam o nome e o valor da época; o «A pagar por pessoa» nunca mostra «(sem nome)» por ela', async () => {
+  const regs = { '2026-08-05': REG670({ status: 'pago', status_antes: 'acumulado' }) };
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.UTC(2026, 7, 11 + i)).toISOString().slice(0, 10); regs[d] = REG670({ status: 'pago', quem: 'Ana Teste' }); }
+  await com670({ reg: regs }, async () => {
+    await run('acertoMesAnterior()'); await espera657(); await run('acertoMesAnterior()'); await espera657();
+    const semNome0 = (totais670()['(sem nome)'] || {}).total || 0;
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-08-05');`); await assina670(SENHA657); await fecha670();
+    igual([(totais670()['Carol Teste'] || {}).total, (totais670()['(sem nome)'] || {}).total || 0], [11300, semNome0]);
+    run(`__p670=acertoValorAbrir('2026-08-05');`); continua670(['150', 'Bônus']); await assina670(SENHA657); igual(passo670(), 'pronto'); await fecha670();
+    igual((totais670()['Carol Teste'] || {}).total, 15000);
+    limpa670(); nome670('2026-08-05', 'Carol Teste'); await marca670('2026-08-05', 'pago', true);
+    igual([(J670('__zp657')[0] || [])[0], db670('acerto-plantao/2026-08-05/status'), db670('acerto-plantao/2026-08-05/valor_total_cent'), db670('acerto-plantao/2026-08-05/quem')],
+      ['Pagar a noite de 05/08/2026 a Carol Teste: R$ 150,00?', 'pago', 15000, 'Carol Teste']);
+  });
+});
+
+// ---- as três corridas estreitas que nenhuma prova via (r04, r08 e r10 do re-gate): o outro aparelho muda a noite SEM pagá-la -----------------
+provaAsync('6.70 P62 (AC1.7, LOW-R1, r04 do QA) — o outro aparelho grava outro nome na noite entre a releitura deste e a transação do «Paguei»: a transação vê a noite mudada no servidor e aborta («mudou em outro aparelho»); o nome do outro fica, nada pago', async () => {
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    // a releitura deste aparelho volta a noite como estava; logo depois, o outro aparelho grava «Júlia Teste» nela (sem pagar)
+    run(`__refP62=DB.ref; DB={ref:function(p){ var r=__refP62(p); if(p==='auaulandia/acerto-plantao/2026-10-05'){ var o=r.once; r.once=function(){ return o.apply(r, arguments).then(function(s){
+      __put657('auaulandia/acerto-plantao/2026-10-05/quem', 'Júlia Teste'); return s; }); }; } return r; }};`);
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.status, r.quem, Object.keys(r.pagamentos || {}).length, zaT670(/^PAGO/).length, run(`ACERTO_REG['2026-10-05'].quem`)], ['acumulado', 'Júlia Teste', 0, 0, 'Júlia Teste']);
+    igual(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []), ['Esta noite mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e toque de novo.']);
+  });
+});
+provaAsync('6.70 P63 (AC5.5, LOW-R1, r08 do QA) — o outro aparelho corrige a noite (7 FILHOts, R$ 163,00) depois que a tela abriu com «Atualizar para R$ 143,00»: os dois toques não gravam por cima da correção («mudou em outro aparelho»)', async () => {
+  await com670({ reg: { '2026-10-05': REG670({ status: 'apagar' }) }, est: Object.assign(EST670(), { f: EP670('Tâmara', '2026-10-05', '2026-10-06') }) }, async () => {
+    assert.ok(lista670().indexOf('Atualizar para R$ 143,00') >= 0, 'o aviso «outra lista» na tela');
+    run(`__put657('auaulandia/acerto-plantao/2026-10-05/hospedes', 7); __put657('auaulandia/acerto-plantao/2026-10-05/valor_base_cent', 15000); __put657('auaulandia/acerto-plantao/2026-10-05/valor_total_cent', 16300);
+      __put657('auaulandia/acerto-plantao/2026-10-05/correcao', {hospedes:7, dobrou:false, quantas:1, equipe:['Carol Teste'], motivo:'${MOT670}', registro:{por:'Outra Gestora Teste', papel:'gestao', ts:${T670(10, 10, 9, 30)}}, deduzido:{hospedes:3, pets:[], dobrou:false, quantas:1, quem:'Carol Teste'}});`);
+    run(`__bt670={dataset:{}, style:{}, textContent:'Atualizar para R$ 143,00'}; acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    run(`acertoRecalcular('2026-10-05', __bt670);`); await espera657();
+    const r = db670('acerto-plantao/2026-10-05');
+    igual([r.hospedes, r.valor_total_cent, Object.keys(r.valores || {}).length, (r.correcao || {}).hospedes], [7, 16300, 0, 7], 'a correção do outro aparelho fica');
+    igual(((zaT670(/NADA FOI GRAVADO/)[0] || [])[1] || []), ['A noite de 05/10/2026 mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e toque de novo.']);
+  });
+});
+provaAsync('6.70 P64 (AC7.2, LOW-R1, r10 do QA) — «Trocar» "carpl" levando a guardada de 09/10 (Júlia Teste); antes da senha, o outro aparelho grava outro nome nela (Ana Teste): ela não é levada, fica com o nome do outro, e a tela diz', async () => {
+  await com670(NOMES670(), async () => {
+    run(`__p670=plantTrocarAbrir('carpl');`); continua670(['Carol Teste', 'Sim']);
+    run(`__put657('auaulandia/acerto-plantao/2026-10-09/quem', 'Ana Teste');`);
+    await assina670(SENHA657);
+    igual(passo670(), 'pronto');
+    const hs = db670('plantonistas-historico'); const h = hs[Object.keys(hs)[0]];
+    igual([db670('config/plantonistas/apelidos/carpl'), db670('acerto-plantao/2026-10-09/quem'), Object.keys(db670('acerto-plantao/2026-10-09/quem_correcoes') || {}).length, h.noitesLevadas || [], h.noitesNaoLevadas],
+      ['Carol Teste', 'Ana Teste', 0, [], ['09/10 (ganhou outro nome em outro aparelho: Ana Teste)']]);
+    assert.ok(((zaT670(/NEM TODAS AS NOITES FORAM LEVADAS/)[0] || [])[1] || []).join(' ').indexOf('09/10 (ganhou outro nome em outro aparelho: Ana Teste)') >= 0, JSON.stringify(za670()));
+  });
 });
 }
 }

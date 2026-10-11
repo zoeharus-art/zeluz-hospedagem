@@ -4524,7 +4524,7 @@
     <div class="role-note so-master"><span data-icon="dollar"></span><span><strong>O acerto é por noite.</strong> O sistema conta quantos FILHOts dormiram aqui em cada noite e calcula o valor pela tabela. A Repolho nunca entra na conta — ela mora aqui. Kako e Stopa contam quando estão hospedados.</span></div>
     <div class="card">
       <h2 style="font-size:19px">Noites</h2>
-      <div class="hint">Últimos 30 dias. Escreva quem passou a noite e marque como <strong>pago</strong> ou <strong>acumulado</strong> (quando ela prefere receber depois).</div>
+      <div class="hint">Últimos 30 dias, e as noites guardadas ou a pagar de antes, até serem pagas. Escreva quem passou a noite e toque em <strong>Paguei esta noite</strong> ou em <strong>Guardar para pagar junto</strong> (quando ela prefere receber depois).</div>
       <!-- A Gestão ensina o sistema quem é quem, uma vez (Adriana, 17/ago/2026). -->
       <div id="acertoNomes" style="margin-top:10px;display:none"></div>
       <div id="acertoLista" style="margin-top:10px"></div>
@@ -4535,7 +4535,7 @@
     </div>
     <div class="card">
       <h2 style="font-size:19px">Tabela de valores</h2>
-      <div class="hint">Só a Gestão altera. O que estiver aqui vale para as noites novas — as já acertadas guardam o valor da época.</div>
+      <div class="hint">Só a Gestão altera, com a senha. A tabela vale para toda noite ainda sem valor gravado (o cartaz mostra quais mudam antes de salvar); as guardadas e as pagas guardam o valor da época.</div>
       <div id="acertoTabela"></div>
     </div>
   </section>
@@ -5184,13 +5184,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-20"></script>
+<script src="resposta-tutor.js?v=2026-10-09-21"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-20"></script>
+<script src="painel-logica.js?v=2026-10-09-21"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5202,7 +5202,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-20"></script>
+<script src="financeiro-logica.js?v=2026-10-09-21"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -23193,14 +23193,28 @@
   // "dividimos por 2 o número de cães. De 4 a 5 é um valor; se tivemos 9 cães e duas
   //  plantonistas, 4,5 cães para cada, entra dentro do valor de 4 a 5 cães."
   // Cada uma recebe a SUA ajuda de custo — as duas passaram a noite aqui.
-  function acertoValorPara(n, dobrou, quantas){
-    var T=acertoTab();
+  // 6.70 (AC6.6, AC6.7): a régua de sempre, agora pela tabela que se passa (a da tela, ou a que o cartaz da tabela está
+  // para gravar) e com a data da noite como 4º argumento opcional — sem a data, sem domingo nem feriado. Com as quatro
+  // linhas novas em «Como hoje», dá o mesmo resultado de sempre, com três argumentos ou com a data (prova 6.70 P22).
+  function acertoValorPara(n, dobrou, quantas, iso){ return acertoValorPelaTabela(acertoTab(), n, dobrou, quantas, iso); }
+  function acertoValorPelaTabela(T, n, dobrou, quantas, iso){
+    T=T||ACERTO_PADRAO;
     var q=Math.max(1, parseInt(quantas,10)||1);
     var porCabeca=n/q;                            // 9 FILHOts / 2 = 4,5
     var f=T.faixas.find(function(x){ return porCabeca<=x.ate; })||T.faixas[T.faixas.length-1];
-    var base=dobrou?(f.v*2):f.v;                  // dobra = dois turnos de 12h
-    return {base:base, ajuda:T.ajuda, total:base+T.ajuda, dobrou:!!dobrou,
-            base12:f.v, quantas:q, porCabeca:porCabeca};
+    var X=acertoExtrasDe(T);
+    // dobra = dois turnos de 12h («Como hoje»); «Outro valor» = a faixa + o valor pelo dia coberto
+    var dm=(dobrou && X.dobra.modo==='mais')?X.dobra.cent:null;
+    var base=dobrou?((dm!=null)?(f.v+dm):(f.v*2)):f.v;
+    var r={base:base, ajuda:T.ajuda, total:base+T.ajuda, dobrou:!!dobrou,
+           base12:f.v, quantas:q, porCabeca:porCabeca};
+    if(dm!=null) r.dobraMais=dm;
+    if(iso){
+      // a noite que COMEÇA no domingo (a do cartão que diz «Domingo») ou num feriado; domingo que é feriado: só o feriado
+      var fer=orcEhFeriado(iso), lin=fer?X.feriado:((orcDiaSemana(iso)==='dom')?X.domingo:null);
+      if(lin && lin.modo==='mais' && lin.cent>0){ r.extra=lin.cent; r.extraRot=fer?'feriado':'domingo'; r.base+=lin.cent; r.total+=lin.cent; }
+    }
+    return r;
   }
   // Quantos FILHOts dormiram na noite que COMEÇA em `iso` (ele está aqui se a estadia já
   // começou e ainda não terminou naquele dia). Morador da casa fora da conta.
@@ -23376,18 +23390,49 @@
     return plantOficial(d.nome)||d.nome;
   }
   // Ensina o sistema: este apelido é esta pessoa. Vale para trás e para a frente.
-  function plantAprender(apelido, oficial){
+  // Ensina o sistema: este apelido é esta pessoa. Vale para trás e para a frente.
+  // 6.70 (AC7.4, AC7.5): grava SÓ a chave do apelido (e a lista de oficiais, quando muda), numa transação no livro — dois
+  // aparelhos ensinando ao mesmo tempo, os dois nomes ficam —, e o livro da memória só muda com o ok do banco (recusado,
+  // ele volta ao que o banco tem). Nunca troca um apelido que já existe: trocar e tirar é em «Nomes que já ensinei», com
+  // a senha da Gestão. Quem vê a tela responde «Nomes a confirmar»; fora dela (o posto Plantonista no relatório do
+  // Plantão, «Não — o nome certo é…»), só a grafia do próprio nome, e só apelido novo. op.tela: a tela da Gestão (diz o erro).
+  function plantAprender(apelido, oficial, op){
+    op=op||{};
     var k=plantChave(apelido), of=String(oficial||'').trim();
-    if(!k||!of) return Promise.resolve();
-    PLANT_LIVRO.apelidos=PLANT_LIVRO.apelidos||{};
-    PLANT_LIVRO.apelidos[k]=of;
-    if(!(PLANT_LIVRO.oficiais||[]).some(function(o){ return plantChave(o)===plantChave(of); })){
-      PLANT_LIVRO.oficiais=(PLANT_LIVRO.oficiais||[]).concat([of]);
+    if(!k||!of) return Promise.resolve({ok:false, erro:'nome em branco'});
+    if(!acertoPodeVer() && plantChave(of)!==k) return Promise.resolve(acertoBarrar('ensinar ao livro de nomes o nome de outra pessoa', {apelido:k}));
+    if(!DB){
+      PLANT_LIVRO.apelidos=PLANT_LIVRO.apelidos||{};
+      if(!PLANT_LIVRO.apelidos[k]) PLANT_LIVRO.apelidos[k]=of;
+      if(!(PLANT_LIVRO.oficiais||[]).some(function(o){ return plantChave(o)===plantChave(of); })) PLANT_LIVRO.oficiais=(PLANT_LIVRO.oficiais||[]).concat([of]);
+      return Promise.resolve({ok:true});
     }
-    if(!DB) return Promise.resolve();
-    return DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
-      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" é '+of,{});
-    }).catch(function(e){ _logFalhaGrav('auaulandia/config/plantonistas (plantAprender)', e); });
+    var erroTx='', jaEra=false;
+    return plantLivroMudar(function(cur){
+      cur=cur||{};
+      var ap=Object.assign({}, cur.apelidos||{});
+      if(ap[k]){
+        if(plantChave(ap[k])===plantChave(of)){ jaEra=true; return; }
+        erroTx='Outro aparelho já respondeu: "'+apelido+'" é '+ap[k]+'. Nada foi gravado. Para mudar, use «Trocar» em «Nomes que já ensinei» (senha da Gestão).';
+        return;
+      }
+      ap[k]=of;
+      var ofs=Array.isArray(cur.oficiais)?cur.oficiais.slice():[];
+      if(!ofs.some(function(o){ return plantChave(o)===plantChave(of); })) ofs.push(of);
+      return Object.assign({}, cur, {apelidos:ap, oficiais:ofs});
+    }, op.tela?['O nome "'+apelido+'" não entrou no livro de nomes.']:null).then(function(r){
+      if(r.ok && r.v && (r.v.apelidos||{})[k]){
+        plantHistoricoGravar({acao:'ensinou', apelido:k, de:'', para:of});
+        try{ if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'": a confirmar → '+of,{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        return {ok:true};
+      }
+      if(jaEra) return {ok:true, jaEra:true};
+      if(r.falhou) return {ok:false};   // a recusa do banco já foi dita na tela (op.tela) e foi para o log
+      var frase=erroTx||'O livro de nomes não foi gravado. Nada foi gravado.';
+      _logFalhaGrav('auaulandia/config/plantonistas (plantAprender)', frase);
+      if(op.tela) zAlertao('NÃO FOI GRAVADO', ['O nome "'+apelido+'" não entrou no livro de nomes.', frase], {botao:'Entendi'});
+      return {ok:false, erro:frase};
+    });
   }
   // ===== JUNTAR OS NOMES DA MESMA PESSOA — Adriana, 17/ago/2026 ===================
   // O nome é digitado à mão, três vezes por plantão, muitas vezes de madrugada. A mesma
@@ -23572,7 +23617,13 @@
       DB.ref('auaulandia/config/acerto-plantao').once('value').then(function(s){ return s.val(); }).catch(function(){ return null; }),
       DB.ref('auaulandia/acerto-plantao').limitToLast(60).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
       acertoDeduzirQuem(),
-      acertoQuemPelaAssinatura()
+      acertoQuemPelaAssinatura(),
+      // 6.70: o índice das noites em aberto (AC4), os plantões de dia (AC9), os lotes dos últimos 62 dias (AC3) e as
+      // tabelas anteriores (AC6.4) — coleções pequenas
+      acertoLer('auaulandia/acerto-abertas', null),
+      acertoLer('auaulandia/acerto-plantao-dia', null),
+      acertoLer('auaulandia/acerto-lotes', function(ref){ return ref.orderByKey().startAt('l'+String(Date.now()-62*86400000)); }),
+      acertoLer('auaulandia/acerto-tabela-historico', null)
     ]).then(function(r){
       if(r[0]) acertoCfg=r[0];
       ACERTO_REG=r[1];
@@ -23583,8 +23634,11 @@
       Object.keys(porAudit).forEach(function(k){ ACERTO_QUEM[k]=porAudit[k]; });
       Object.keys(porAssin).forEach(function(k){ ACERTO_QUEM[k]=porAssin[k]; });
       try{ acertoMarcarDobras(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-      ACERTO_PRONTO=true;   // agora sim: o que está em ACERTO_REG/ACERTO_QUEM é leitura, não vazio de carga
-      renderAcerto();
+      ACERTO_DIA=r[5]||{}; ACERTO_LOTES=r[6]||{}; ACERTO_TAB_HIST=r[7]||{};
+      return acertoAbertasCompletar(r[4]).then(function(){
+        ACERTO_PRONTO=true;   // agora sim: o que está em ACERTO_REG/ACERTO_QUEM é leitura, não vazio de carga
+        renderAcerto();
+      });
     });
     }).catch(function(){ renderAcerto(); });
   }
@@ -23612,8 +23666,23 @@
     for(var i=1;i<=30;i++){
       var d=orcMaisDias(hoje,-i);
       var pets=acertoHospedesNaNoite(d);
-      out.push({iso:d, dw:orcDiaSemana(d), pets:pets, n:pets.length, reg:(ACERTO_REG[d]||{})});
+      out.push({iso:d, dw:orcDiaSemana(d), pets:pets, n:pets.length, reg:(ACERTO_REG[d]||{}), id:d, tipo:'noite'});
     }
+    // 6.70 (AC4.1): a noite guardada, ou a pagar com valor gravado, de antes dos 30 dias continua até ser paga (a noite
+    // sem registro de antes dos 30 dias continua fora, S10-P8). FILHOts e dobra: os gravados nela.
+    var ini=orcMaisDias(hoje,-30), regs=acertoRegsConhecidos();
+    Object.keys(regs).sort().reverse().forEach(function(d){
+      if(!(d<ini) || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+      var r=regs[d]||{}; if(!acertoAberta(r)) return;
+      out.push({iso:d, dw:orcDiaSemana(d), pets:(Array.isArray(r.pets)?r.pets:[]), n:(r.hospedes!=null)?(Number(r.hospedes)||0):0, reg:r, id:d, tipo:'noite', antiga:true});
+    });
+    // 6.70 (AC9.4): os plantões de dia lançados — os em aberto (de qualquer data) e os dos últimos 30 dias (pagos e
+    // lançados por engano). Achados pelo id («dia_» + a data), nunca só pela data.
+    Object.keys(ACERTO_DIA||{}).sort().reverse().forEach(function(d){
+      var r=ACERTO_DIA[d]||{};
+      if(d<ini && !acertoAberta(r)) return;
+      out.push({iso:d, dw:orcDiaSemana(d), pets:[], n:Number(r.hospedes)||0, reg:r, id:acertoIdDia(d), tipo:'dia'});
+    });
     return out;
   }
   // ===== NOMES A CONFIRMAR — a Gestão ensina o sistema uma vez ====================
@@ -23636,7 +23705,8 @@
            }).join('')
          +'</div></div>')
       : '';
-    if(!ks.length){ el.innerHTML=htmlFora; el.style.display=htmlFora?'block':'none'; return; }
+    var htmlEns=plantEnsinadosHtml();   // 6.70 (AC7.1): «Nomes que já ensinei», com «Trocar» e «Tirar»
+    if(!ks.length){ el.innerHTML=htmlEns+htmlFora; el.style.display=(htmlEns||htmlFora)?'block':'none'; return; }
     el.style.display='block';
     // Adriana, 17/ago/2026: "como irei confirmar se a única opção é 'é alguém novo'?"
     // Erro meu: no PRIMEIRO uso o livro está vazio, então não havia nome nenhum para oferecer
@@ -23701,23 +23771,25 @@
           // responder algo errado só para a pergunta sumir da tela.
           +'<button class="btn" style="padding:6px 13px;background:var(--crm-critico);color:#fff" onclick="plantNaoEhPlantonista(\''+escAttr(ap).replace(/'/g,"\\'")+'\')">nunca fez plantão</button>'
           +'</div></div>';
-      }).join('')+'</div>'+htmlFora;
+      }).join('')+'</div>'+htmlEns+htmlFora;
   }
   async function plantConfirmar(apelido, oficial){
+    if(!acertoPodeVer()) return acertoBarrar('responder «Nomes a confirmar»', {apelido:plantChave(apelido)});
     var mesmo=(plantChave(apelido)===plantChave(oficial));
     var titulo=mesmo ? ('Confirmar que "'+apelido+'" é o nome dela, escrito certo?')
                      : ('"'+apelido+'" é a '+oficial+'?');
     var linha=mesmo ? 'Não pergunto mais sobre ele.'
                     : ('Vou juntar todas as noites assinadas assim com as da '+oficial+'.');
     if(!await zPergunta(titulo, [linha], {sim:'Confirmar o nome', nao:'Agora não', cor:'#234D67'})) return;
-    plantAprender(apelido, oficial).then(function(){ acertoCarregar(); });
+    return plantAprender(apelido, oficial, {tela:true}).then(function(r){ acertoCarregar(); return r; });
   }
   async function plantConfirmarNova(apelido){
+    if(!acertoPodeVer()) return acertoBarrar('responder «Nomes a confirmar»', {apelido:plantChave(apelido)});
     var nome=((await zTexto('Como se escreve o nome dela, certo?',
       ['Ela assinou como "'+apelido+'".'],
       {rotulo:'Nome certo', valor:apelido, botao:'Confirmar o nome', cor:'#234D67', minimo:2}))||'').trim();
     if(!nome) return;
-    plantAprender(apelido, nome).then(function(){ acertoCarregar(); });
+    return plantAprender(apelido, nome, {tela:true}).then(function(r){ acertoCarregar(); return r; });
   }
   // Adriana, 18/ago/2026: "o Otávio fez plantão; a Wandela é monitora E faz plantão, isso
   // existe. Mas a Giulia nunca fez, nem a Letícia, AINDA."
@@ -23726,28 +23798,37 @@
   // palavra que importa: quem nunca fez pode começar amanhã. Então isto não é um veredito
   // permanente — é "nunca fez até hoje", e se desfaz num toque na primeira noite dela.
   async function plantNaoEhPlantonista(apelido){
+    if(!acertoPodeVer()) return acertoBarrar('marcar quem nunca fez plantão', {apelido:plantChave(apelido)});
     if(!await zPergunta('"'+apelido+'" nunca fez plantão?',
       ['Ela some da lista e as noites dela deixam de contar no acerto.',
        'Se um dia ela começar a fazer plantão, é só trazer de volta — o botão fica logo abaixo desta lista.'],
       {sim:'Nunca fez plantão', nao:'Deixar na lista'})) return;
-    PLANT_LIVRO.naoSao=PLANT_LIVRO.naoSao||{};
-    PLANT_LIVRO.naoSao[plantChave(apelido)]=apelido;
-    if(!DB){ acertoCarregar(); return; }
-    DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
-      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" marcada como quem nunca fez plantão',{});
-      acertoCarregar();
-    }).catch(function(){ acertoCarregar(); });
+    var k=plantChave(apelido);
+    if(!DB){ PLANT_LIVRO.naoSao=PLANT_LIVRO.naoSao||{}; PLANT_LIVRO.naoSao[k]=apelido; acertoCarregar(); return; }
+    // 6.70 (AC7.5): só a chave, numa transação no livro; o histórico fora dele; o erro na tela
+    var r=await plantLivroMudar(function(cur){ cur=cur||{}; var ns=Object.assign({}, cur.naoSao||{}); ns[k]=apelido; return Object.assign({}, cur, {naoSao:ns}); }, ['"'+apelido+'" continua contando no acerto.']);
+    if(r.ok && r.v && (r.v.naoSao||{})[k]){
+      plantHistoricoGravar({acao:'nunca-fez', apelido:k, de:'faz plantão', para:'nunca fez plantão'});
+      try{ if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'": faz plantão → nunca fez plantão',{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    } else if(!r.falhou) zAlertao('NÃO FOI GRAVADO', ['"'+apelido+'" continua contando no acerto.', 'Nada foi gravado.'], {botao:'Entendi'});
+    acertoCarregar();
+    return r;
   }
   async function plantVoltarAContar(apelido){
+    if(!acertoPodeVer()) return acertoBarrar('trazer de volta quem não fazia plantão', {apelido:plantChave(apelido)});
     if(!await zPergunta('"'+apelido+'" passou a fazer plantão?',
       ['As noites assinadas por ela voltam a contar no acerto, inclusive as que já passaram.'],
       {sim:'Passou a fazer', nao:'Agora não', cor:'#234D67'})) return;
-    try{ delete (PLANT_LIVRO.naoSao||{})[plantChave(apelido)]; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    if(!DB){ acertoCarregar(); return; }
-    DB.ref('auaulandia/config/plantonistas').set(PLANT_LIVRO).then(function(){
-      if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'" voltou a contar como plantonista',{});
-      acertoCarregar();
-    }).catch(function(){ acertoCarregar(); });
+    var k=plantChave(apelido);
+    if(!DB){ try{ delete (PLANT_LIVRO.naoSao||{})[k]; }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ acertoCarregar(); return; }
+    // 6.70 (AC7.5): só a chave, numa transação no livro; o histórico fora dele; o erro na tela
+    var r=await plantLivroMudar(function(cur){ cur=cur||{}; var ns=Object.assign({}, cur.naoSao||{}); delete ns[k]; return Object.assign({}, cur, {naoSao:ns}); }, ['"'+apelido+'" continua fora do acerto.']);
+    if(r.ok && !((r.v||{}).naoSao||{})[k]){
+      plantHistoricoGravar({acao:'voltou', apelido:k, de:'nunca fez plantão', para:'faz plantão'});
+      try{ if(typeof audit==='function') audit('plantonista-nome','"'+apelido+'": nunca fez plantão → faz plantão (voltou a contar)',{}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    } else if(!r.falhou) zAlertao('NÃO FOI GRAVADO', ['"'+apelido+'" continua fora do acerto.', 'Nada foi gravado.'], {botao:'Entendi'});
+    acertoCarregar();
+    return r;
   }
   function plantEhExcluida(n){ try{ return !!(PLANT_LIVRO.naoSao||{})[plantChave(n)]; }catch(e){ return false; } }
   function renderAcerto(){
@@ -23764,133 +23845,23 @@
       });
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     try{ renderNomesAConfirmar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
-    var noites=acertoNoites();
-    var lbSt={pago:['PAGO','resolvido'], acumulado:['GUARDADO','processo']};
+    var todos=acertoNoites();
     // ===== O QUE JÁ FOI PAGO SAI DA LISTA — Adriana, 18/ago/2026 ==================
     // "tudo que for pago tem que sair da lista e aparecer em alguma outra fonte, pequeno,
     //  como pago... assim fica bagunçado sem saber como se faz."
-    // A lista é uma lista de TAREFAS: o que ainda precisa de decisão. Noite paga já não pede
-    // nada de ninguém — ficar ali só faz a Gestão reler trinta cartões para achar os cinco
-    // que importam. O pago vira uma linha pequena no fim, com quanto e quem.
-    var pagas=noites.filter(function(o){ return (o.reg.status||'')==='pago'; });
-    noites=noites.filter(function(o){ return (o.reg.status||'')!=='pago'; });
-    el.innerHTML=noites.map(function(o){
-      var _q=ACERTO_QUEM[o.iso]||{};
-      var _dob=!!_q.dobrou, _qtas=Math.max(1,_q.quantas||1);
-      var v=o.reg.valor_total_cent!=null?{total:o.reg.valor_total_cent, base:o.reg.valor_base_cent||0, ajuda:o.reg.ajuda_cent||0, dobrou:!!o.reg.dobrou, quantas:o.reg.quantas||1, porCabeca:(o.reg.pets_por_pessoa!=null?o.reg.pets_por_pessoa:o.n)}
-                                        :acertoValorPara(o.n, _dob, _qtas);
-      // ===== VALOR CONGELADO QUE FICOU PARA TRÁS — 18/ago/2026 ====================
-      // O valor é congelado no lançamento, de propósito: mexer na tabela depois não pode
-      // reescrever o que já foi acertado. Mas se a LISTA da noite mudou (um pernoite que
-      // faltava, um FILHOt que voltou), o número congelado passa a estar errado — e nada
-      // na tela dizia isso. Agora diz, com o botão para acertar.
-      var _vAgora=acertoValorPara(o.n, _dob, _qtas);
-      var _desatualizado=(o.reg.valor_total_cent!=null && _vAgora.total!==o.reg.valor_total_cent);
-      var st=o.reg.status||'apagar';
-      var L=lbSt[st]||['A PAGAR','pendente'];
-      // Quanto esta pessoa já tem guardado para pagar junto — inclusive esta noite.
-      // Adriana, 17/ago/2026: "cliquei em acumular e infelizmente não acumulou, e continuou o
-      // valor". Acumulava sim, mas a tela não mostrava NADA mudando: o card seguia com o
-      // valor da noite e o somatório vivia longe, no fim da página. Ela clicou quatro vezes
-      // testando. Ação sem retorno visível é ação que a pessoa acha que não funcionou.
-      var _acumDela=0, _acumN=0;
-      if(st==='acumulado'){
-        var _nomeDela=(o.reg.quem||'').trim()||acertoNomeSugerido(ACERTO_QUEM[o.iso])||'';
-        Object.keys(ACERTO_REG||{}).forEach(function(k){
-          var rr=ACERTO_REG[k]||{};
-          if(rr.status!=='acumulado') return;
-          if(plantChave(rr.quem||'')!==plantChave(_nomeDela)) return;
-          _acumDela+=(rr.valor_total_cent||0); _acumN++;
-        });
-      }
-      var feriado=orcEhFeriado(o.iso), dom=(o.dw==='dom');
-      return '<div class="avr-card '+L[1]+'"><div class="avr-head"><div class="avr-info">'
-        +'<strong>'+orcBR(o.iso)+'</strong> <span style="color:var(--muted);font-size:12px">'+(ORC_DIAW_LB[o.dw]||'')
-        +(feriado?(' · '+escAttr(feriado)):'')+(dom&&!feriado?' · domingo':'')+'</span>'
-        +'<div style="font-size:13px;color:var(--z-blue)">'+o.n+' FILHOt'+(o.n===1?'':'s')+' dormindo'
-        +(o.pets.length?(' — '+escAttr(o.pets.join(', '))):'')+'</div>'
-        +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(v.total)
-        +' <span style="font-weight:600;font-size:12px;color:var(--muted)">('
-        +(v.dobrou?('2 &times; '+fmtCent(v.base12||Math.round(v.base/2))+' = '+fmtCent(v.base)):fmtCent(v.base))
-        +' + '+fmtCent(v.ajuda)+' de ajuda)</span>'
-        +(v.dobrou?'<span style="display:inline-block;margin-left:6px;background:var(--crm-critico);color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">DOBRA · 24h</span>':'')
-        +((v.quantas>1)?('<span style="display:inline-block;margin-left:6px;background:var(--z-blue);color:var(--z-cream);border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">'+v.quantas+' PLANTONISTAS</span>'):'')
-        +'</div>'
-        +((v.quantas>1)?('<div style="font-size:12.5px;color:var(--z-blue-soft);font-weight:600">'+o.n+' FILHOts &divide; '+v.quantas+' = <strong>'+String(v.porCabeca).replace('.',',')+' por pessoa</strong> — este valor é o de CADA UMA (a ajuda de custo também é de cada uma).</div>'):'')
-        +((st==='acumulado'&&_acumDela)
-            ? ('<div style="margin-top:5px;background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
-               +'Guardado para pagar junto: <strong>'+fmtCent(_acumDela)+'</strong> em '+_acumN+' noite'+(_acumN>1?'s':'')
-               +' — quando pagar tudo, toque em <em>Paguei esta noite</em> em cada uma.</div>')
-            : '')
-        +(_desatualizado
-            ? ('<div style="margin-top:5px;background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)">'
-               +'Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem <strong>'+o.n+' FILHOt'+(o.n===1?'':'s')+'</strong>,'
-               +' e o valor certo é <strong>'+fmtCent(_vAgora.total)+'</strong> (está gravado '+fmtCent(o.reg.valor_total_cent||0)+').'
-               +' <button class="btn" style="background:var(--z-gold);color:var(--z-blue);border:none;padding:4px 12px;font-size:12px;margin-left:4px" onclick="acertoRecalcular(\''+o.iso+'\',this)">Atualizar para '+fmtCent(_vAgora.total)+'</button></div>')
-            : '')
-        +((feriado||dom)?'<div style="font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h). Se alguém cobriu, lance como uma noite à parte.</div>':'')
-        +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'
-        // O nome já vem do sistema — a Gestão confere, não digita.
-        +'<div class="avr-form"><div class="ff-tit">Quem passou esta noite</div>'
-        +(function(){
-            var d=ACERTO_QUEM[o.iso];
-            if(o.reg.quem) return '';
-            if(!d) return '<div class="hint" style="margin-bottom:5px">Ninguém assinou nada nesta noite — escreva o nome à mão.</div>';
-            // Pela ASSINATURA: dizer QUAIS momentos ela assinou é o que sustenta o pagamento.
-            if(d.fonte==='assinatura'){
-              return '<div class="hint" style="margin-bottom:5px">'
-                +'Assinou como <strong>'+escAttr(d.nome)+'</strong>'
-                +(d.momentos&&d.momentos.length?(': '+escAttr(d.momentos.join(' · '))):'')
-                +(d.completa?' <span style="color:var(--crm-ok);font-weight:700">— plantão inteiro</span>'
-                            :' <span style="color:var(--crm-atencao-text);font-weight:700">— faltou assinar '+(3-(d.momentos||[]).length)+' momento(s)</span>')
-                +(d.dobrou?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DOBROU: ficou também o dia de '+orcBR(d.dobraDe)+' ('+(orcEhFeriado(d.dobraDe)||'domingo')+'), quando a casa não abre. Confira se há um plantão de dia a pagar.</div>'
-                          :(d.emenda?'<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">Emendou com a noite seguinte.</div>':''))
-                +(function(){
-                    if(!d.duasPessoas) return '';
-                    var eq=plantEquipe(d);
-                    // As duas já estão no livro: não é dúvida, é informação. Sem vermelho.
-                    if(eq.todas) return '<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">'
-                      +'Duas plantonistas nesta noite: <strong>'+escAttr(eq.oficiais.join(' e '))+'</strong>'
-                      +' — o valor abaixo é o de <strong>cada uma</strong>.</div>';
-                    // Alguma parte é nome novo: aí sim a Gestão precisa olhar.
-                    return '<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DUAS PESSOAS numa assinatura só, e '
-                      +(eq.faltam.length===1
-                          ? ('&ldquo;'+escAttr(eq.faltam[0])+'&rdquo; é um nome que eu ainda não conheço')
-                          : ('estes eu ainda não conheço: '+escAttr(eq.faltam.join(', '))))
-                      +'. Confira quem passou de verdade antes de pagar.</div>';
-                  })()
-                +(d.variantes&&d.variantes.length?('<div style="margin-top:2px;color:var(--muted)">Também assinou como: '+escAttr(d.variantes.join(', '))+'</div>'):'')
-                +(d.outros&&d.outros.length?('<div style="margin-top:2px">Também assinaram: '+escAttr(d.outros.join(', '))+'</div>'):'')
-                +'</div>';
-            }
-            return '<div class="hint" style="margin-bottom:5px">O sistema reconheceu <strong>'+escAttr(d.nome)+'</strong> ('+d.acoes+' registros na madrugada)'
-              +(d.outros&&d.outros.length?(' · também apareceram: '+escAttr(d.outros.join(', '))):'')+'. Confira antes de marcar.</div>';
-          })()
-        +'<input id="acq_'+o.iso+'" placeholder="Nome da plantonista" value="'+escAttr(o.reg.quem||acertoNomeSugerido(ACERTO_QUEM[o.iso])||'')+'">'
-        +'<div class="avr-form-btns">'
-        +'<button class="btn btn-primary" onclick="acertoMarcar(\''+o.iso+'\',\'pago\')">Paguei esta noite</button>'
-        +'<button class="btn btn-gold" onclick="acertoMarcar(\''+o.iso+'\',\'acumulado\')">Guardar para pagar junto</button>'
-        +(st!=='apagar'?'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="acertoMarcar(\''+o.iso+'\',\'apagar\')">Voltar para a pagar</button>':'')
-        +'</div></div></div>';
-    }).join('');
+    // A lista é uma lista de TAREFAS: o que ainda precisa de decisão. O pago vira uma linha pequena no fim, com quanto
+    // e quem (6.70: com «Desfazer o pagamento», e o lote como uma linha). A noite sem plantão e o plantão de dia
+    // lançado por engano saem da lista e da conta, riscados, com «Reabrir» (AC8.6, AC9.4).
+    var pagas=todos.filter(function(o){ return (o.reg.status||'')==='pago'; });
+    var fora=todos.filter(function(o){ return (o.reg.status||'')!=='pago' && (o.reg.sem_plantao||o.reg.anulado); });
+    var noites=todos.filter(function(o){ return (o.reg.status||'')!=='pago' && !o.reg.sem_plantao && !o.reg.anulado; })
+      .sort(function(a,b){ return (a.iso<b.iso)?1:((a.iso>b.iso)?-1:((a.tipo==='dia')?1:0)-((b.tipo==='dia')?1:0)); });
+    var R=acertoTotaisPor(noites);
+    el.innerHTML=noites.map(function(o){ return acertoCartaoHTML(o, R); }).join('');
     if(!noites.length){
       el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700;padding:12px 2px">Todas as noites dos últimos 30 dias estão acertadas. Nada esperando decisão.</div>';
     }
-    // As pagas, no fim, pequenas — cada uma numa linha, com quanto e quem.
-    if(pagas.length){
-      el.innerHTML+='<details style="margin-top:16px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0">'
-        +'Já pagas ('+pagas.length+') — '+fmtCent(pagas.reduce(function(a,o){ return a+(o.reg.valor_total_cent||0); },0))+'</summary>'
-        +'<div style="margin-top:6px">'
-        +pagas.map(function(o){
-            return '<div class="pair" style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)">'
-              +'<span class="k">'+orcBR(o.iso)+' · '+escAttr(o.reg.quem||'-')
-              +' <span style="color:var(--muted);font-size:11.5px">('+(o.reg.hospedes!=null?o.reg.hospedes:o.n)+' FILHOts'
-              +(o.reg.dobrou?' · dobra':'')+')</span></span>'
-              +'<span class="val" style="font-weight:700">'+fmtCent(o.reg.valor_total_cent||0)
-              +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 0 0 6px" onclick="acertoMarcar(\''+o.iso+'\',\'apagar\')">desfazer</button></span></div>';
-          }).join('')
-        +'</div></details>';
-    }
+    el.innerHTML+=acertoForaHTML(fora)+acertoPagasHTML(pagas);
     renderAcertoTotais(noites);
     renderAcertoTabela();
   }
@@ -23905,18 +23876,18 @@
     (noites||[]).forEach(function(o){
       var st=(o.reg||{}).status||'apagar';
       if(st==='pago') return;
-      var _q=ACERTO_QUEM[o.iso]||{};
-      var nome=((o.reg||{}).quem||'').trim()||acertoNomeSugerido(_q)||'(sem nome)';
-      var _qtas=Math.max(1, (o.reg||{}).quantas||_q.quantas||1);
-      var v=(o.reg||{}).valor_total_cent!=null?o.reg.valor_total_cent:acertoValorPara(o.n,!!_q.dobrou,_qtas).total;
+      if((o.reg||{}).sem_plantao || (o.reg||{}).anulado) return;   // 6.70: «Não houve plantão» e o plantão de dia lançado por engano saem da conta
+      var Q=acertoQuemDoItem(o), nome=Q.nome, _qtas=Q.quantas;
+      // 6.70: o valor do cartão — o valor à mão, senão o gravado, senão o da tabela pelos dados que valem (a correção da noite)
+      var v=acertoValorDoCartao(o, o.reg||{}).total;
       // NOITE DE DUPLA CONTA POR PESSOA. O valor é o de CADA UMA, então uma linha só,
       // somando uma vez, esconderia metade do que sai do caixa — e não diria à Gestão
       // quanto ela deve à Carol e quanto deve à Júlia, que é a pergunta de verdade.
       var quemNessaNoite=(_qtas>1&&plantEhDuplo(nome))?plantPartes(nome):[nome];
       quemNessaNoite.forEach(function(p){
-        por[p]=por[p]||{total:0, noites:0, acum:0};
+        por[p]=por[p]||{total:0, noites:0, acum:0, acumN:0};
         por[p].total+=v; por[p].noites++;
-        if(st==='acumulado') por[p].acum+=v;
+        if(st==='acumulado'){ por[p].acum+=v; por[p].acumN++; }
       });
     });
     var nomes=Object.keys(por).sort();
@@ -23931,7 +23902,9 @@
       var o=por[n];
       return '<div class="pair"><span class="k">'+escAttr(n)+' <span style="color:var(--muted);font-size:12px">('+o.noites+' noite'+(o.noites>1?'s':'')
         +(o.acum?(' · '+fmtCent(o.acum)+' acumulado'):'')+')</span></span>'
-        +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+fmtCent(o.total)+'</span></div>';
+        +'<span class="val" style="font-weight:800;color:var(--z-blue)">'+fmtCent(o.total)+'</span></div>'
+        // 6.70 (AC3.1): pagar as noites em aberto desta pessoa de uma vez (a noite sem nome não se paga)
+        +((n!=='(sem nome)')?('<div style="margin:2px 0 10px"><button type="button" class="btn btn-primary" style="'+ACERTO_BT44+'" onclick="acertoLoteAbrir(\''+jsAspas(n)+'\')">Pagar várias de '+esc(n)+'</button></div>'):'');
     }).join('')+'<div class="orc-total" style="margin-top:8px"><span>Total em aberto</span><span>'+fmtCent(geral)+'</span></div>';
   }
   // Regrava o valor de uma noite já lançada com a lista de HOJE. Só a Gestão usa, e só
@@ -23941,15 +23914,23 @@
   // acha que atualizou o valor quando nada foi gravado. O 1º toque só arma e mostra o novo
   // valor no botão; o 2º grava. Sozinho, o botão desarma em alguns segundos.
   function acertoRecalcular(iso, btn){
-    var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
+    var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso && (x.tipo||'noite')!=='dia'; });
     if(!o||!DB) return;
-    var _q=ACERTO_QUEM[iso]||{}, _qtas=Math.max(1,_q.quantas||1);
-    var v=acertoValorPara(o.n, !!_q.dobrou, _qtas);
-    var antes=(ACERTO_REG[iso]||{}).valor_total_cent||0;
+    // 6.70 (AC10): o papel conferido na função (quem vê a tela), não só a tela
+    if(!acertoPodeVer()){ acertoBarrar('atualizar o valor de uma noite do acerto', {noite:iso}); return; }
+    var reg=ACERTO_REG[iso]||o.reg||{};
+    // 6.70: noite paga e valor à mão não se atualizam por aqui (desfazer o pagamento e trocar o valor à mão pedem a Gestão)
+    if((reg.status||'')==='pago'){ zAlertao('ESTA NOITE JÁ FOI PAGA', [ACERTO_JA_PAGA_VALOR], {botao:'Entendi'}); return; }
+    if(reg.valor_manual){ zAlertao('ESTA NOITE TEM VALOR À MÃO', ['Esta noite tem valor à mão ('+fmtCent(Number(reg.valor_manual.cent)||0)+'): «Atualizar» não troca por cima.',
+      'Para usar o valor da tabela, toque em «Trocar pelo valor da tabela» (senha da Gestão).'], {botao:'Entendi'}); return; }
+    // 6.70 (AC5.5): os dados que valem (a correção da noite, senão o que o app contou) e a dobra junto com o valor
+    var e=acertoNoiteEfetiva(o, reg), _qtas=e.quantas;
+    var v=acertoValorPara(e.n, e.dobrou, _qtas, iso);
+    var antes=reg.valor_total_cent||0;
     if(btn && btn.dataset.armed!=='1'){
       btn.dataset.armed='1';
       if(!btn.dataset.label) btn.dataset.label=btn.textContent;
-      btn.textContent='Confirmar — '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+o.n+' FILHOt'+(o.n===1?'':'s')+')';
+      btn.textContent='Confirmar — '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+e.n+' FILHOt'+(e.n===1?'':'s')+')';
       btn.style.background='var(--crm-atencao-text)';
       btn.style.color='#FFFDF6';
       clearTimeout(btn._armT);
@@ -23957,97 +23938,1727 @@
       return;
     }
     if(btn){ clearTimeout(btn._armT); btn.dataset.armed=''; btn.style.background=''; btn.style.color=''; btn.textContent='Atualizando…'; }
-    DB.ref('auaulandia/acerto-plantao/'+iso).update({
+    var q=corrQuemAgora(), up={
       valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
-      quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n, pets:o.pets,
+      quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:e.n, pets:(o.pets||[]),
+      dobrou:!!e.dobrou, dobra_de:(e.dobrou?(e.dobraDe||''):''),
       valor_anterior_cent:antes,
       recalculado_por:(typeof quemSou==='function'?quemSou():'-'), recalculado_em:Date.now()
-    }).then(function(){
-      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{valor_total_cent:v.total,
-        valor_base_cent:v.base, ajuda_cent:v.ajuda, quantas:_qtas, pets_por_pessoa:v.porCabeca, hospedes:o.n});
-      if(typeof audit==='function') audit('acerto-plantao','recalculou '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+o.n+' FILHOts)',{});
+    }, cv=acertoValorCampos(v), vid=acertoChaveNova(reg.valores, 'v', q.ts);
+    ['valor_faixa_cent','dobra_mais_cent','extra_cent','extra_rot','valor_fixo'].forEach(function(k){ up[k]=cv[k]; });
+    var ent={de:antes, para:v.total, origem:'atualizar', registro:{quem:q.login, papel:q.papel, ts:q.ts, quando:renovQuandoBR(q.ts)}};
+    var feito=function(){
+      if(typeof audit==='function') audit('acerto-plantao','recalculou '+orcBR(iso)+': '+fmtCent(antes)+' → '+fmtCent(v.total)+' ('+e.n+' FILHOt'+(e.n===1?'':'s')+(e.dobrou?', com dobra':'')+')',{});
       renderAcerto();
-    }).catch(function(e){
+    };
+    var falhou=function(err){
       // O botão não pode ficar preso em "Atualizando…": devolve o rótulo e diz o que houve.
       if(btn){ btn.textContent=btn.dataset.label||'Atualizar'; }
-      if(typeof zAlertao==='function') zAlertao('NÃO ATUALIZEI O VALOR',
-        ['O acerto de '+orcBR(iso)+' continua como estava: '+fmtCent(antes)+'.',
-         'Motivo: '+((e&&e.message)||e),
-         'Nada foi gravado. Confira a internet e toque de novo.'],{botao:'Entendi'});
-    });
+      acertoErroTela('NÃO ATUALIZEI O VALOR', ['O acerto de '+orcBR(iso)+' continua como estava: '+fmtCent(antes)+'.'], err);
+    };
+    var ref=DB.ref('auaulandia/acerto-plantao/'+iso);
+    if(typeof ref.transaction==='function'){
+      // 2ª rodada (REL-002): numa transação no nó da noite, relida no próprio servidor — a noite paga, com valor à mão ou
+      // mudada em outro aparelho depois que a tela abriu não é mexida (nada refeito por baixo), e a tela diz por quê
+      var motivo='', visto=null, regTela=JSON.parse(JSON.stringify(reg));
+      Promise.resolve(ref.transaction(function(atual){
+        motivo='';
+        var b=(atual===null || atual===undefined)?regTela:atual;   // cache frio: o palpite é o que a tela tinha, e o servidor confere
+        visto=b;
+        if((b.status||'')==='pago'){ motivo='pago'; return; }
+        if(b.valor_manual){ motivo='mao'; return; }
+        if(acertoMudouOutro(b, regTela)){ motivo='mudou'; return; }
+        var n=JSON.parse(JSON.stringify(b));
+        Object.keys(up).forEach(function(k){ n[k]=JSON.parse(JSON.stringify(up[k])); });
+        n.valores=Object.assign({}, n.valores||{}); n.valores[vid]=ent;
+        return n;
+      })).then(function(res){
+        var vs=visto;
+        try{ if(res && res.snapshot && typeof res.snapshot.val==='function') vs=res.snapshot.val(); }
+        catch(x){ vs=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+        if(vs) ACERTO_REG[iso]=vs;
+        if(!(res && res.committed)){
+          if(btn){ btn.textContent=btn.dataset.label||'Atualizar'; }
+          var pg=acertoPagamentoAtual(vs||{})||{};
+          zAlertao('NADA FOI GRAVADO', [(motivo==='pago')?('A noite de '+orcBR(iso)+' já foi paga por '+String(pg.por||(vs||{}).marcado_por||'-')+' em '+renovQuandoBR(Number(pg.em||(vs||{}).marcado_em)||0)+': o valor dela fica o de quando foi paga. Nada foi gravado.')
+            :((motivo==='mao')?('A noite de '+orcBR(iso)+' ganhou valor à mão em outro aparelho ('+fmtCent(Number(((vs||{}).valor_manual||{}).cent)||0)+'): «Atualizar» não troca por cima. Nada foi gravado.')
+              :('A noite de '+orcBR(iso)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e toque de novo.'))], {botao:'Entendi'});
+          renderAcerto();
+          return;
+        }
+        feito();
+      }).catch(falhou);
+      return;
+    }
+    // Sem transação no banco (só nos bancos de mentira mais simples): o update de sempre, com a noite conferida na tela.
+    up['valores/'+vid]=ent;
+    ref.update(up).then(function(){
+      var loc={}; Object.keys(up).forEach(function(k){ loc['acerto-plantao/'+iso+'/'+k]=up[k]; });
+      acertoAplicarLocal(loc);
+      feito();
+    }).catch(falhou);
   }
-  function acertoMarcar(iso,status){
-    var q=((document.getElementById('acq_'+iso)||{}).value||'').trim();
-    if(status!=='apagar'&&!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ alert('Escreva o nome de quem passou a noite. Pagamento sem nome não fecha conta.'); return; }
-    var noites=acertoNoites(), o=noites.find(function(x){ return x.iso===iso; });
-    var _d=ACERTO_QUEM[iso]||{};
-    // ERRO DE DINHEIRO CORRIGIDO EM 18/ago/2026: o cartão dividia os FILHOts pelas duas
-    // plantonistas ("9 ÷ 2 = 4,5 por pessoa") e mostrava o valor da faixa certa — mas na
-    // hora de PAGAR o valor era recalculado sem o "quantas", caindo na faixa dos 9. A tela
-    // dizia um número e o pagamento gravava outro. Agora é o mesmo cálculo dos dois lados.
-    var _qtas=Math.max(1,_d.quantas||1);
-    var v=acertoValorPara(o?o.n:0, !!_d.dobrou, _qtas);
-    if(!DB) return;
-    DB.ref('auaulandia/acerto-plantao/'+iso).update({
-      status:status, quem:nomeProprio(q), hospedes:(o?o.n:0), pets:(o?o.pets:[]),
-      // Congela o valor da época: mexer na tabela depois não pode reescrever o que já foi acertado.
-      valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total,
-      // Quantas ficaram e quantos FILHOts couberam a cada uma — sem isso o cartão relê a
-      // noite como se fosse de uma pessoa só e o valor "muda sozinho" depois de pago.
-      quantas:_qtas, pets_por_pessoa:v.porCabeca,
-      dobrou:!!_d.dobrou, dobra_de:_d.dobraDe||'',
-      // Como se soube quem foi — a assinatura é a prova do pagamento.
-      assinou:(_d.momentos||[]).join(' · '), assinatura_completa:!!_d.completa,
-      variantes_do_nome:(_d.variantes||[]).join(', '),
-      marcado_por:(typeof quemSou==='function'?quemSou():'-'), marcado_em:Date.now()
-    }).then(function(){
-      ACERTO_REG[iso]=Object.assign({},ACERTO_REG[iso]||{},{status:status, quem:nomeProprio(q), valor_total_cent:v.total, valor_base_cent:v.base, ajuda_cent:v.ajuda, dobrou:!!_d.dobrou, quantas:_qtas, pets_por_pessoa:v.porCabeca});
-      renderAcerto();
-      if(typeof audit==='function') audit('acerto-plantao',status+' — '+orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total)+(_d.dobrou?' (DOBRA 24h)':''),{});
-      // Diz o que aconteceu, na hora. Sem isso a pessoa clica de novo achando que falhou.
-      if(status==='acumulado'){
-        var _tot=0,_qtd=0, _nm=plantChave(nomeProprio(q));
-        Object.keys(ACERTO_REG).forEach(function(k){
-          var rr=ACERTO_REG[k]||{};
-          if(rr.status==='acumulado'&&plantChave(rr.quem||'')===_nm){ _tot+=(rr.valor_total_cent||0); _qtd++; }
-        });
-        if(typeof zAlertao==='function') zAlertao('GUARDADO PARA PAGAR JUNTO',
-          [orcBR(iso)+' · '+nomeProprio(q)+' · '+fmtCent(v.total),
-           _qtd>1 ? ('Ela já tem '+fmtCent(_tot)+' guardado em '+_qtd+' noites.')
-                  : 'Esta é a primeira noite guardada dela.',
-           'Quando pagar tudo de uma vez, toque em "Paguei esta noite" em cada uma delas.'],
-          {ok:true, botao:'Certo'});
-      }
-    }).catch(function(e){ alert('Não salvou: '+((e&&e.message)||e)); });
+  // 6.70 (AC1): «Paguei esta noite», «Guardar para pagar junto» e «Voltar para a pagar» perguntam antes, na própria tela,
+  // e gravam o valor que o cartão mostra — nunca refazem por baixo o valor, a quantidade, a dobra nem as plantonistas já
+  // gravados (só o estado, o nome e o registro do toque). `iso` é o id do item: a data (noite) ou «dia_» + a data.
+  // ERRO DE DINHEIRO CORRIGIDO EM 18/ago/2026 (o cartão mostrava um número e o pagamento gravava outro): o valor é um só,
+  // o do cartão (acertoValorDoCartao), dos dois lados.
+  async function acertoMarcar(iso,status){
+    var id=String(iso==null?'':iso), P=acertoIdParte(id);
+    var oque=(status==='pago')?'pagar a plantonista':((status==='acumulado')?'guardar a noite para pagar junto':'voltar a noite para a pagar');
+    if(!acertoPodeVer()) return acertoBarrar(oque, {noite:P.iso});
+    var o=acertoItemDe(id); if(!o) return {ok:false};
+    var reg=o.reg||{}, txt=acertoOQueTxt(o);
+    if((reg.status||'')==='pago'){
+      var pg=acertoPagamentoAtual(reg)||{};
+      zAlertao(acertoJaPagaTitulo(o), [txt.charAt(0).toUpperCase()+txt.slice(1)+' já foi '+acertoPaga(o)+' por '+String(pg.por||reg.marcado_por||'-')+' em '+renovQuandoBR(Number(pg.em||reg.marcado_em)||0)+'.',
+        'Para desfazer, use «Desfazer o pagamento» em «Já pagas» (senha da Gestão). Nada foi gravado.'], {botao:'Entendi'});
+      return {ok:false, pago:true};
+    }
+    if(reg.sem_plantao || reg.anulado){ zAlertao('FORA DA CONTA', [((o.tipo==='dia')?'Ele':'Ela')+' está fora da conta («Noites sem plantão» ou «lançado por engano»). Para voltar, toque em «Reabrir» lá (senha da Gestão). Nada foi gravado.'], {botao:'Entendi'}); return {ok:false}; }
+    var q=((document.getElementById('acq_'+id)||{}).value||'').trim();
+    if(status!=='apagar'&&!/[a-zA-ZÀ-ÿ]{2,}/.test(q)){ zAlertao('FALTA O NOME', ['Escreva o nome de quem passou a noite: pagamento sem nome não fecha conta.'], {botao:'Entendi'}); return {ok:false, semNome:true}; }
+    var nome=q?nomeProprio(q):String(reg.quem||'');
+    var v=acertoValorDoCartao(o, reg), titulo, linhas=[], sim;
+    if(status==='pago'){
+      var vt=acertoValorTabelaHoje(o, reg);
+      titulo='Pagar '+txt+' a '+nome+': '+fmtCent(v.total)+'?';
+      if(reg.valor_manual) linhas.push(acertoEsta(o)+' tem valor à mão ('+fmtCent(v.total)+'): é ele que você vai pagar.');
+      else if(reg.valor_total_cent!=null && vt.total!==v.total) linhas.push((o.tipo==='dia')
+        ?('Pela tabela de hoje, este plantão daria '+fmtCent(vt.total)+'. Você vai pagar '+fmtCent(v.total)+', o valor que está no cartão. Para pagar outro valor, toque antes em «Corrigir o valor deste plantão» (senha da Gestão).')
+        :('Pela tabela de hoje, esta noite daria '+fmtCent(vt.total)+'. Você vai pagar '+fmtCent(v.total)+', o valor que está no cartão. Para pagar '+fmtCent(vt.total)+', toque antes em «Atualizar para '+fmtCent(vt.total)+'».'));
+      if(v.quantas>1) linhas.push('Noite de dupla: o valor é o de cada uma, e «Paguei» dá a noite como paga para as duas.');
+      linhas.push(((o.tipo==='dia')?'Ele':'Ela')+' vai para «Já pagas». Se for engano, «Desfazer o pagamento» pede a senha da Gestão.');
+      sim='Pagar';
+    } else if(status==='acumulado'){
+      titulo='Guardar '+txt+' para pagar junto a '+nome+': '+fmtCent(v.total)+'?';
+      linhas=[((o.tipo==='dia')?'Ele continua na lista e no «A pagar por pessoa» até ser pago.':'Ela continua na lista e no «A pagar por pessoa» até ser paga.')]; sim='Guardar';
+    } else {
+      titulo='Voltar '+txt+' para a pagar?';
+      linhas=[((o.tipo==='dia')?'Ele':'Ela')+' sai de «Guardado para pagar junto» e continua na lista, com o valor de '+fmtCent(v.total)+'.']; sim='Voltar para a pagar';
+    }
+    if(!await zPergunta(titulo, linhas, {sim:sim, nao:'Cancelar', cor:'#234D67'})) return {ok:false, cancelado:true};
+    // 2ª rodada (REL-001): leva o valor que a pergunta mostrou; se a conta mudar até gravar, a gravação recusa
+    return acertoGravarMarcas([{id:id, quem:nome, esperado:JSON.parse(JSON.stringify(reg)), valor:v.total}], status, {});
   }
   function renderAcertoTabela(){
     var el=document.getElementById('acertoTabela'); if(!el) return;
-    var T=acertoTab();
-    var rot=['0 a 1 FILHOt','2 a 3 FILHOts','4 a 6 FILHOts','7 a 10 FILHOts','11 ou mais'];
+    var T=acertoTabNorm(acertoTab()), n=T.faixas.length;
+    // 6.70 (AC6.5, AC6.6): o nome de cada faixa sai do limite, e o limite aparece e muda; as quatro linhas novas,
+    // cada uma com «Como hoje» (de início) ou «Outro valor»
     el.innerHTML='<div class="cad-grid2">'+T.faixas.map(function(f,i){
-      return '<div><label class="cad-lb">'+rot[i]+'</label><input class="cad-in" id="acf_'+i+'" inputmode="decimal" value="'+(f.v/100).toFixed(2).replace('.',',')+'"></div>';
+      return '<div><label class="cad-lb">'+esc(acertoFaixaNome(T, i))+'</label><input class="cad-in" id="acf_'+i+'" inputmode="decimal" value="'+(f.v/100).toFixed(2).replace('.',',')+'">'
+        +((i<n-1)?('<label class="cad-lb" for="acfAte_'+i+'" style="font-weight:600;margin-top:4px">até quantos FILHOts</label><input class="cad-in" id="acfAte_'+i+'" inputmode="numeric" value="'+f.ate+'">'):'')
+        +'</div>';
     }).join('')+'<div><label class="cad-lb">Ajuda de custo (sempre soma)</label><input class="cad-in" id="acAjuda" inputmode="decimal" value="'+(T.ajuda/100).toFixed(2).replace('.',',')+'"></div></div>'
-      +'<button class="btn btn-gold" style="margin-top:10px" onclick="acertoSalvarTabela()">Salvar tabela</button>'
+      +'<div style="margin-top:12px;font-weight:800;color:var(--z-blue);font-size:14.5px">Domingo, feriado, dobra e plantão de dia</div>'
+      +ACERTO_EXTRAS_K.map(function(k){
+        var x=T.extras[k], outro=(x.modo!=='hoje');
+        var lab='display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;color:var(--z-blue);cursor:pointer';
+        return '<div style="border-top:1px solid var(--line);padding:8px 0"><div class="cad-lb" style="margin:0">'+esc(ACERTO_EXTRAS_ROT[k])+'</div>'
+          +'<label style="'+lab+'"><input type="radio" name="acx_'+k+'" id="acxH_'+k+'"'+(outro?'':' checked')+' style="width:22px;height:22px"> '+esc(acertoExtraTexto(k, null))+'</label>'
+          +'<label style="'+lab+';flex-wrap:wrap"><input type="radio" name="acx_'+k+'" id="acxO_'+k+'"'+(outro?' checked':'')+' style="width:22px;height:22px"> Outro valor: '
+          +((k==='dia')?'R$':((k==='dobra')?'a faixa + R$':'a faixa + R$'))
+          +' <input class="cad-in" id="acxV_'+k+'" inputmode="decimal" style="width:110px;min-height:40px" value="'+(outro?(x.cent/100).toFixed(2).replace('.',','):'')+'"> '
+          +((k==='dia')?'(valor fixo)':((k==='dobra')?'pelo dia coberto':'a mais'))+'</label></div>';
+      }).join('')
+      +'<button class="btn btn-gold" style="margin-top:10px;min-height:44px" onclick="acertoSalvarTabela()">Salvar tabela</button>'
       +'<div id="acTabStatus" class="hint" style="margin-top:6px"></div>'
+      +acertoTabHistHTML()
       +'<div class="hint" style="margin-top:10px"><strong>Horários combinados:</strong> de segunda a sexta, 18h50 às 07h. Domingos e feriados têm dois plantões: 06h50 às 19h e 18h50 às 07h. Em feriado não há time trabalhando — só quem fizer pernoite extra.</div>';
   }
-  function acertoSalvarTabela(){
-    var T=acertoTab(), novas=[], erro=false;
-    T.faixas.forEach(function(f,i){
-      var v=orcLerReal('acf_'+i); if(v==null){ erro=true; return; }
-      novas.push({ate:f.ate, v:v});
+  // =====================================================================================
+  // ===== STORY 6.70 — O ACERTO DAS PLANTONISTAS SEM APAGAR NADA (S10 da revisão, 10/out/2026) =====
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026)
+  // O que esta parte resolve no Financeiro do plantão, tudo pelo cartaz da 6.57 (corrAbrir), sem tela nova:
+  //   «Paguei», «Guardar» e «Voltar para a pagar» perguntam antes e gravam o valor que o cartão mostra — nunca refazem por
+  //   baixo o valor, a quantidade, a dobra nem as plantonistas já gravados; «Desfazer o pagamento» (senha da Gestão) volta
+  //   ao estado de antes com o nome e o valor da época; «Pagar várias» paga numa escrita só, com o id do lote; a noite em
+  //   aberto não some depois de 30 dias; o valor à mão, a correção da noite, «Não houve plantão» e o plantão de dia; a
+  //   tabela pelo cartaz, com o antes e o depois e as tabelas anteriores; os nomes já ensinados, com «Trocar» e «Tirar».
+  // Regra de ouro (seção 4 da revisão): nada é apagado — o pagamento desfeito, o valor de antes, a correção antiga, a
+  // tabela de antes e o apelido de antes ficam no histórico, com quem, quando e o motivo.
+  // Quem assina (AC10): a rotina de quem paga é de quem vê a tela, sem senha; desfazer e corrigir dinheiro, a tabela e
+  // os nomes já ensinados pedem o motivo e a senha da Gestão (S10-P1, S10-P2 e S10-P7, pela recomendação).
+  // =====================================================================================
+  // Quem vê a tela: a mesma regra do .so-master no CSS (Gestão, Diretoria e Supervisão). Sem capacidade nova na tabela
+  // PERM (a 6.65 P22 confere o hash dela): é uma régua local, conferida dentro de cada função que grava. Dívida
+  // registrada: virar uma capacidade da PERM quando ela for revista. Fechar a tela para a Supervisão é a S10-P4.
+  var ACERTO_PAPEIS_TELA=['gestao','diretoria','supervisor'];
+  function acertoPodeVer(papel){ return ACERTO_PAPEIS_TELA.indexOf(String((papel==null)?papelDoCorpo():papel))>=0; }
+  function acertoBarrar(oque, meta){ return corrBarrar(oque, corrPapeisTexto(ACERTO_PAPEIS_TELA), Object.assign({tela:'acerto'}, meta||{})); }
+  var ACERTO_TELA='Financeiro do plantão';
+  var ACERTO_SO_GESTAO='Isto pede a senha da Gestão (a Gestão ou a Diretoria). Nada foi gravado.';
+  var ACERTO_BT44='min-height:44px;padding:10px 16px;font-size:14px';
+  var ACERTO_BT44_CLARO=ACERTO_BT44+';background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)';
+  var ACERTO_DIA={}, ACERTO_LOTES={}, ACERTO_ABERTAS={}, ACERTO_TAB_HIST={}, ACERTO_MESES={}, ACERTO_MES_PROX='', ACERTO_GRAVANDO={};
+  var ACERTO_LOTE=null;
+  // ---- os itens: uma noite (id = a data) ou um plantão de dia (id = «dia_» + a data, AC9) ------------------------------
+  function acertoIdDia(iso){ return 'dia_'+iso; }
+  function acertoIdParte(id){ id=String(id==null?'':id); var m=/^dia_(\d{4}-\d{2}-\d{2})$/.exec(id); return m?{tipo:'dia', iso:m[1]}:{tipo:'noite', iso:id}; }
+  function acertoCaminho(tipo, iso){ return ((tipo==='dia')?'acerto-plantao-dia/':'acerto-plantao/')+iso; }
+  function acertoDdMm(iso){ var x=String(iso||'').split('-'); return (x.length===3)?(x[2]+'/'+x[1]):String(iso||''); }
+  function acertoOQueTxt(o){ return ((o&&o.tipo==='dia')?'o plantão de dia de ':'a noite de ')+orcBR((o||{}).iso); }
+  var ACERTO_MES_NOME=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function acertoMesNome(ym){ var y=String(ym||'').slice(0,4), m=parseInt(String(ym||'').slice(5,7),10); return (ACERTO_MES_NOME[m-1]||'')+' de '+y; }
+  // «de setembro: ainda não paga» (o ano só aparece quando não é o de hoje)
+  function acertoMesCurto(iso){ var ym=String(iso||'').slice(0,7), t=acertoMesNome(ym), h=String((typeof hojeISO==='function')?hojeISO():'').slice(0,4); return (ym.slice(0,4)===h)?t.replace(/ de \d{4}$/,''):t; }
+  function acertoTsDe(iso){ try{ return new Date(String(iso)+'T00:00:00').getTime(); }catch(e){ return 0; } } /* silencioso de propósito: data ilegível conta como o começo dos tempos */
+  // Nunca sobrescrever um histórico: a chave é o instante, com _2, _3 se já existir.
+  function acertoChaveNova(o, pre, ts){ var k=pre+ts, n=1; while(o && Object.prototype.hasOwnProperty.call(o, k)){ n++; k=pre+ts+'_'+n; } return k; }
+  // A noite em aberto (AC4): guardada, ou a pagar com valor gravado — e não «sem plantão» nem lançada por engano.
+  function acertoAberta(reg){
+    reg=reg||{};
+    if(reg.sem_plantao || reg.anulado) return false;
+    var st=reg.status||'apagar';
+    if(st==='pago') return false;
+    return st==='acumulado' || reg.valor_total_cent!=null;
+  }
+  // O índice pequeno das noites em aberto (auaulandia/acerto-abertas/{data}), gravado na MESMA escrita que muda o estado:
+  // é por ele que a noite guardada de antes das 60 noites lidas continua na lista. Só uma pista: quem manda é a noite.
+  function acertoIndiceDe(reg, ts){ return acertoAberta(reg)?{status:String((reg||{}).status||'apagar'), em:Number(ts)||Date.now()}:null; }
+  // Os registros que a tela conhece: as 60 noites lidas, as de antes trazidas pelo índice e os meses abertos à mão.
+  function acertoRegsConhecidos(){
+    var out={};
+    Object.keys(ACERTO_MESES||{}).forEach(function(ym){ var m=ACERTO_MESES[ym]||{}; Object.keys(m).forEach(function(k){ out[k]=m[k]; }); });
+    Object.keys(ACERTO_REG||{}).forEach(function(k){ out[k]=ACERTO_REG[k]; });
+    return out;
+  }
+  function acertoRegDe(tipo, iso){
+    if(tipo==='dia') return (ACERTO_DIA||{})[iso]||null;
+    if((ACERTO_REG||{})[iso]) return ACERTO_REG[iso];
+    var achou=null; Object.keys(ACERTO_MESES||{}).forEach(function(ym){ var m=ACERTO_MESES[ym]||{}; if(m[iso]) achou=m[iso]; });
+    return achou;
+  }
+  function acertoRegLocal(P, cur){
+    var alvo=(P.tipo==='dia')?ACERTO_DIA:ACERTO_REG;
+    if(cur) alvo[P.iso]=cur; else delete alvo[P.iso];
+  }
+  // O item da tela pelo id (a noite e o plantão de dia podem ter a mesma data: nunca só pela data).
+  function acertoItemDe(id){
+    var P=acertoIdParte(id);
+    var o=acertoNoites().filter(function(x){ return String(x.id||x.iso)===String(id) && (x.tipo||'noite')===P.tipo; })[0];
+    if(o) return o;
+    var reg=acertoRegDe(P.tipo, P.iso); if(!reg) return null;
+    return {iso:P.iso, dw:orcDiaSemana(P.iso), pets:(Array.isArray(reg.pets)?reg.pets:[]), n:Number(reg.hospedes)||0, reg:reg, id:String(id), tipo:P.tipo, antiga:true};
+  }
+  // O que a tela tinha (para saber se outro aparelho mudou a noite depois que ela abriu).
+  function acertoAssinatura(r){
+    r=r||{};
+    return JSON.stringify([r.status||'apagar', (r.valor_total_cent==null)?null:Number(r.valor_total_cent), String(r.quem||''), !!r.sem_plantao, !!r.anulado,
+      ((r.correcao||{}).registro||{}).ts||0, ((r.valor_manual||{}).registro||{}).ts||0, Number(r.hospedes==null?-1:r.hospedes)]);
+  }
+  function acertoMudouOutro(cur, tela){ return acertoAssinatura(cur)!==acertoAssinatura(tela); }
+  // 2ª rodada (LOW-7): o texto concordado com o item — a noite (ela, paga) ou o plantão de dia (ele, pago).
+  function acertoEsta(o){ return ((o||{}).tipo==='dia')?'Este plantão de dia':'Esta noite'; }
+  function acertoPaga(o){ return ((o||{}).tipo==='dia')?'pago':'paga'; }
+  function acertoJaPagaTitulo(o){ return ((o||{}).tipo==='dia')?'ESTE PLANTÃO JÁ FOI PAGO':'ESTA NOITE JÁ FOI PAGA'; }
+  function acertoJaPagaValor(o){ return ((o||{}).tipo==='dia')?'Este plantão de dia já foi pago. Para mudar o valor, desfaça o pagamento primeiro (senha da Gestão).':ACERTO_JA_PAGA_VALOR; }
+  // ---- as quatro linhas novas da tabela (AC6.6): «Como hoje» de início, nenhum valor inventado (S10-P3) --------------
+  var ACERTO_EXTRAS_K=['domingo','feriado','dobra','dia'];
+  var ACERTO_EXTRAS_ROT={domingo:'Noite de domingo', feriado:'Noite de feriado', dobra:'Dobra (24 h)', dia:'Plantão de dia (06h50 às 19h)'};
+  function acertoExtrasDe(T){
+    var x=(T && T.extras && typeof T.extras==='object')?T.extras:{}, out={};
+    ACERTO_EXTRAS_K.forEach(function(k){
+      var e=x[k]||{}, outro=(k==='dia')?'fixo':'mais', c=Math.round(Number(e.cent)||0);
+      out[k]=(e.modo===outro && c>=0)?{modo:outro, cent:c}:{modo:'hoje', cent:0};
     });
-    var aj=orcLerReal('acAjuda');
-    var st=document.getElementById('acTabStatus');
-    if(erro||aj==null){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Algum valor está em branco ou inválido. Nada foi salvo.'; } return; }
-    var novo={faixas:novas, ajuda:aj};
-    if(!DB){ acertoCfg=novo; renderAcerto(); return; }
-    DB.ref('auaulandia/config/acerto-plantao').set(novo).then(function(){
-      acertoCfg=novo;
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Tabela salva — vale para as noites novas.'; }
-      if(typeof audit==='function') audit('acerto-tabela','alterou a tabela de acerto das plantonistas',{});
+    return out;
+  }
+  // A tabela sempre no mesmo formato: faixas e ajuda numéricas (a regra v2 valida) e as quatro linhas a mais (extras).
+  function acertoTabNorm(T){
+    T=T||ACERTO_PADRAO;
+    return {faixas:(T.faixas||ACERTO_PADRAO.faixas).map(function(f){ return {ate:Number(f.ate), v:Number(f.v)}; }), ajuda:Number(T.ajuda), extras:acertoExtrasDe(T)};
+  }
+  // O nome de cada faixa sai do limite (AC6.5): «0 a 1 FILHOt», «2 a 3 FILHOts», …, a última sempre «ou mais».
+  function acertoFaixaNome(T, i){
+    var F=(T&&T.faixas)||[], ate=F[i]?Number(F[i].ate):0, de=(i>0&&F[i-1])?(Number(F[i-1].ate)+1):0;
+    var pl=function(x){ return (x===1)?'FILHOt':'FILHOts'; };
+    if(i===F.length-1) return de+' ou mais';
+    if(de===ate) return ate+' '+pl(ate);
+    return de+' a '+ate+' '+pl(ate);
+  }
+  // O plantão de dia (AC9): «Como hoje» = uma noite pela faixa, mais a ajuda de custo (o que o cartão mandava fazer);
+  // «Outro valor» = o valor fixo, mais a ajuda. Com duas plantonistas, cada uma recebe a linha inteira.
+  function acertoValorDiaPelaTabela(T, n, quantas){
+    T=T||ACERTO_PADRAO;
+    var X=acertoExtrasDe(T);
+    if(X.dia.modo!=='fixo') return acertoValorPelaTabela(T, n, false, quantas, null);
+    var q=Math.max(1, parseInt(quantas,10)||1);
+    return {base:X.dia.cent, ajuda:T.ajuda, total:X.dia.cent+T.ajuda, dobrou:false, base12:X.dia.cent, quantas:q, porCabeca:n/q, fixo:true};
+  }
+  function acertoValorDia(n, quantas){ return acertoValorDiaPelaTabela(acertoTab(), n, quantas); }
+  // Os campos do valor gravados na noite (o detalhe da faixa, da dobra e do domingo ou feriado entra só quando existe;
+  // null apaga o detalhe que ficou de antes).
+  function acertoValorCampos(v){
+    v=v||{};
+    return {valor_base_cent:v.base, ajuda_cent:v.ajuda, valor_total_cent:v.total, pets_por_pessoa:v.porCabeca,
+      valor_faixa_cent:(v.base12!=null)?v.base12:null, dobra_mais_cent:(v.dobraMais!=null)?v.dobraMais:null,
+      extra_cent:v.extra?v.extra:null, extra_rot:v.extra?String(v.extraRot||''):null, valor_fixo:v.fixo?true:null};
+  }
+  // ---- o que vale para a conta ---------------------------------------------------------------------------------------
+  // PURA: os dados da noite que valem — a correção da Gestão (AC8), senão o que o app deduziu (a lista de quem dormiu e
+  // as assinaturas); a noite de antes dos 30 dias (sem a dedução) usa o que ficou gravado nela. O plantão de dia: o
+  // que foi lançado.
+  function acertoNoiteEfetiva(o, reg){
+    o=o||{}; reg=reg||o.reg||{};
+    if(o.tipo==='dia') return {n:Number(reg.hospedes)||0, pets:[], dobrou:false, dobraDe:'', quantas:Math.max(1, parseInt(reg.quantas,10)||1),
+      equipe:(Array.isArray(reg.equipe)?reg.equipe.slice():[]), corrigida:false};
+    var c=reg.correcao;
+    if(c && typeof c==='object') return {n:Number(c.hospedes)||0, pets:(o.pets||[]), dobrou:!!c.dobrou, dobraDe:(c.dobrou?String(c.dobra_de||''):''),
+      quantas:Math.max(1, parseInt(c.quantas,10)||1), equipe:(Array.isArray(c.equipe)?c.equipe.slice():[]), corrigida:true};
+    if(o.antiga) return {n:(reg.hospedes!=null)?(Number(reg.hospedes)||0):(Number(o.n)||0), pets:(o.pets||[]), dobrou:!!reg.dobrou, dobraDe:String(reg.dobra_de||''),
+      quantas:Math.max(1, parseInt(reg.quantas,10)||1), equipe:[], corrigida:false};
+    var q=(ACERTO_QUEM||{})[o.iso]||{};
+    return {n:Number(o.n)||0, pets:(o.pets||[]), dobrou:!!q.dobrou, dobraDe:String(q.dobraDe||''), quantas:Math.max(1, q.quantas||1),
+      equipe:(Array.isArray(q.equipe)?q.equipe.slice():[]), corrigida:false};
+  }
+  // PURA: o valor do cartão, que é o que se paga — o valor à mão (AC5), senão o gravado na noite, senão o da tabela pelos
+  // dados que valem. Com duas plantonistas, é o de CADA UMA (a régua de hoje).
+  function acertoValorDoCartao(o, reg){
+    o=o||{}; reg=reg||o.reg||{};
+    if(reg.valor_total_cent!=null){
+      var v={total:Number(reg.valor_total_cent)||0, base:Number(reg.valor_base_cent)||0, ajuda:Number(reg.ajuda_cent)||0, dobrou:!!reg.dobrou,
+        quantas:Math.max(1, parseInt(reg.quantas,10)||1), porCabeca:(reg.pets_por_pessoa!=null?reg.pets_por_pessoa:o.n), gravado:true};
+      if(reg.valor_faixa_cent!=null) v.base12=Number(reg.valor_faixa_cent);
+      if(reg.dobra_mais_cent!=null) v.dobraMais=Number(reg.dobra_mais_cent);
+      if(reg.extra_cent){ v.extra=Number(reg.extra_cent); v.extraRot=String(reg.extra_rot||''); }
+      if(reg.valor_fixo) v.fixo=true;
+      if(reg.valor_manual) v.manual=reg.valor_manual;
+      return v;
+    }
+    var e=acertoNoiteEfetiva(o, reg);
+    return (o.tipo==='dia')?acertoValorDia(e.n, e.quantas):acertoValorPara(e.n, e.dobrou, e.quantas, o.iso);
+  }
+  // O valor pela tabela de HOJE, com os dados que valem (o «Atualizar para», o aviso «outra lista» e a pergunta do «Paguei»).
+  function acertoValorTabelaHoje(o, reg){
+    var e=acertoNoiteEfetiva(o, reg);
+    return ((o||{}).tipo==='dia')?acertoValorDia(e.n, e.quantas):acertoValorPara(e.n, e.dobrou, e.quantas, (o||{}).iso);
+  }
+  // PURA: de quem é o item na conta — o nome gravado, senão o que a assinatura sugere (como sempre); e quantas.
+  function acertoQuemDoItem(o){
+    o=o||{};
+    var reg=o.reg||{}, dia=(o.tipo==='dia'), _q=dia?{}:((ACERTO_QUEM||{})[o.iso]||{});
+    var nome=(reg.quem||'').trim()||(dia?'':acertoNomeSugerido(_q))||'(sem nome)';
+    return {nome:nome, quantas:Math.max(1, reg.quantas||_q.quantas||1)};
+  }
+  function acertoPessoasDoItem(o){ var Q=acertoQuemDoItem(o); return (Q.quantas>1&&plantEhDuplo(Q.nome))?plantPartes(Q.nome):[Q.nome]; }
+  // O texto «(R$ 100,00 + R$ 13,00 de ajuda)» do cartão; sem as linhas novas, o mesmo de sempre.
+  function acertoValorDescricao(v){
+    v=v||{};
+    var b;
+    if(v.dobraMais!=null || v.extra){
+      var f=(v.base12!=null)?Number(v.base12):((v.dobrou && v.dobraMais==null)?Math.round((v.base-(v.extra||0))/2):(v.base-(v.extra||0)-(v.dobraMais||0)));
+      b=(v.dobrou?((v.dobraMais!=null)?(fmtCent(f)+' + '+fmtCent(v.dobraMais)+' pelo dia coberto'):('2 &times; '+fmtCent(f))):fmtCent(f))
+        +(v.extra?(' + '+fmtCent(v.extra)+' de '+esc(v.extraRot||'')):'');
+    } else if(v.fixo) b=fmtCent(v.base)+' do plantão de dia';
+    else b=(v.dobrou?('2 &times; '+fmtCent(v.base12||Math.round(v.base/2))+' = '+fmtCent(v.base)):fmtCent(v.base));
+    return b+' + '+fmtCent(v.ajuda)+' de ajuda';
+  }
+  // O pagamento que vale agora (a entrada mais nova de pagamentos/ sem «desfeito»).
+  function acertoPagamentoAtualId(reg){
+    var P=(reg&&reg.pagamentos)||{}, melhor=null, em=-1;
+    Object.keys(P).forEach(function(k){ var p=P[k]||{}; if(p.desfeito) return; var t=Number(p.em)||0; if(t>=em){ em=t; melhor=k; } });
+    return melhor;
+  }
+  function acertoPagamentoAtual(reg){ var k=acertoPagamentoAtualId(reg); return k?(reg.pagamentos[k]||{}):null; }
+  // Aplica na memória da tela uma escrita que o banco confirmou (as mesmas chaves, a partir de auaulandia/).
+  function acertoAplicarLocal(up){
+    Object.keys(up||{}).forEach(function(p){
+      var v=up[p];
+      if(p==='config/acerto-plantao'){ acertoCfg=(v==null)?null:JSON.parse(JSON.stringify(v)); return; }
+      var ps=p.split('/'), raiz=ps.shift(), alvo=null;
+      if(raiz==='acerto-plantao') alvo=ACERTO_REG; else if(raiz==='acerto-plantao-dia') alvo=ACERTO_DIA; else if(raiz==='acerto-lotes') alvo=ACERTO_LOTES;
+      else if(raiz==='acerto-abertas') alvo=ACERTO_ABERTAS; else if(raiz==='acerto-tabela-historico') alvo=ACERTO_TAB_HIST;
+      if(!alvo || !ps.length) return;
+      // 2ª rodada (REL-003): a noite fora das 60 lidas (aberta por «Ver o mês anterior») não está em ACERTO_REG; parte do
+      // registro já conhecido (acertoRegDe), nunca de um registro só com as chaves gravadas
+      if(alvo===ACERTO_REG && ps.length>1 && !ACERTO_REG[ps[0]]){ var conhecido=acertoRegDe('noite', ps[0]); if(conhecido) ACERTO_REG[ps[0]]=JSON.parse(JSON.stringify(conhecido)); }
+      var o=alvo;
+      for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]] || typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+      if(v===null || v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    });
+  }
+  // O erro do banco NA TELA, em português (6.48: o motivo pelo zErroMotivo; nunca janela nativa).
+  function acertoErroTela(titulo, linhas, e, leitura){
+    var ctx={agora:true}; if(leitura) ctx.leitura=true;
+    var L=(linhas||[]).slice();
+    L.push('Motivo: '+zErroFrase(zErroMotivo(e, 'banco', '', ctx)));
+    L.push((leitura?'Nada mudou na tela.':'Nada foi gravado.')+zErroAcao(e, {alvo:'banco', agora:true}));
+    try{ zAlertao(titulo||'NÃO FOI GRAVADO', L, {botao:'Entendi'}); }
+    catch(x){ _logFalhaGrav(String(titulo||'acerto das plantonistas'), e); }
+  }
+  // ---- a leitura (AC4) ------------------------------------------------------------------------------------------------
+  function acertoLer(caminho, consulta){
+    try{
+      var ref=DB.ref(caminho), q=consulta?consulta(ref):ref;
+      return Promise.resolve(q.once('value')).then(function(s){ return (s&&s.val&&s.val())||{}; }, function(e){ _logLeituraFalhou(caminho, e); return {}; });
+    }catch(e){ _logLeituraFalhou(caminho, e); return Promise.resolve({}); }
+  }
+  // As noites em aberto de antes das 60 lidas (pelo índice) entram na memória; e o índice se acerta com o que foi lido
+  // (a noite guardada por uma versão antiga do app, ou antes desta versão, ganha a entrada dela — sem isso, ela sumiria
+  // da lista quando saísse das 60 noites lidas). Só quem vê a tela grava o índice; a falha vai para o log.
+  function acertoAbertasCompletar(indice){
+    ACERTO_ABERTAS=(indice && typeof indice==='object')?indice:{};
+    var falhou={};
+    var faltam=Object.keys(ACERTO_ABERTAS).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k) && !(ACERTO_REG||{})[k]; });
+    return Promise.all(faltam.map(function(k){
+      var cam='auaulandia/acerto-plantao/'+k;
+      try{
+        return Promise.resolve(DB.ref(cam).once('value')).then(function(s){ var v=(s&&s.val)?s.val():null; if(v) ACERTO_REG[k]=v; },
+          function(e){ falhou[k]=1; _logLeituraFalhou(cam, e); });
+      }catch(e){ falhou[k]=1; _logLeituraFalhou(cam, e); return Promise.resolve(); }
+    })).then(function(){ acertoIndiceAcertar(falhou); });
+  }
+  function acertoIndiceAcertar(falhou){
+    falhou=falhou||{};
+    if(!DB || !acertoPodeVer()) return;
+    var up={}, n=0;
+    Object.keys(ACERTO_REG||{}).forEach(function(k){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      var ab=acertoAberta(ACERTO_REG[k]), tem=!!(ACERTO_ABERTAS||{})[k];
+      if(ab && !tem){ up[k]=acertoIndiceDe(ACERTO_REG[k]); n++; }
+      else if(!ab && tem){ up[k]=null; n++; }
+    });
+    // o índice que aponta para uma noite que não existe sai
+    Object.keys(ACERTO_ABERTAS||{}).forEach(function(k){ if(!(ACERTO_REG||{})[k] && !falhou[k] && !(k in up)){ up[k]=null; n++; } });
+    if(!n) return;
+    Promise.resolve(DB.ref('auaulandia/acerto-abertas').update(up)).then(function(){
+      Object.keys(up).forEach(function(k){ if(up[k]) ACERTO_ABERTAS[k]=up[k]; else delete ACERTO_ABERTAS[k]; });
+    }, function(e){ _logFalhaGrav('auaulandia/acerto-abertas (o índice das noites em aberto)', e); });
+  }
+  // «Ver o mês anterior» (AC4.3): lê só aquele mês, pela chave da data, uma leitura por toque.
+  function acertoMesProximo(){
+    if(ACERTO_MES_PROX) return ACERTO_MES_PROX;
+    var h=String((typeof hojeISO==='function')?hojeISO():''), y=parseInt(h.slice(0,4),10), m=parseInt(h.slice(5,7),10)-1;
+    if(m<1){ m=12; y--; }
+    return y+'-'+String(m).padStart(2,'0');
+  }
+  function acertoMesAnterior(){
+    if(!DB) return Promise.resolve(null);
+    var ym=acertoMesProximo();
+    return Promise.resolve(DB.ref('auaulandia/acerto-plantao').orderByKey().startAt(ym+'-01').endAt(ym+'-31').once('value')).then(function(s){
+      ACERTO_MESES[ym]=(s&&s.val&&s.val())||{};
+      var y=parseInt(ym.slice(0,4),10), m=parseInt(ym.slice(5,7),10)-1; if(m<1){ m=12; y--; }
+      ACERTO_MES_PROX=y+'-'+String(m).padStart(2,'0');
       renderAcerto();
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Não salvou: '+((e&&e.message)||e); } });
+      return ACERTO_MESES[ym];
+    }, function(e){ acertoErroTela('NÃO CONSEGUI LER O MÊS', ['As noites pagas de '+acertoMesNome(ym)+' não vieram.'], e, true); return null; });
+  }
+  // ---- o cartão (AC1 a AC9) -------------------------------------------------------------------------------------------
+  // Quem passou a noite, pela assinatura (o texto de sempre, saído de dentro do renderAcerto).
+  function acertoQuemHintHTML(o){
+    var d=ACERTO_QUEM[o.iso];
+    if((o.reg||{}).quem) return '';
+    if(!d) return '<div class="hint" style="margin-bottom:5px">Ninguém assinou nada nesta noite — escreva o nome à mão.</div>';
+    // Pela ASSINATURA: dizer QUAIS momentos ela assinou é o que sustenta o pagamento.
+    if(d.fonte==='assinatura'){
+      return '<div class="hint" style="margin-bottom:5px">'
+        +'Assinou como <strong>'+escAttr(d.nome)+'</strong>'
+        +(d.momentos&&d.momentos.length?(': '+escAttr(d.momentos.join(' · '))):'')
+        +(d.completa?' <span style="color:var(--crm-ok);font-weight:700">— plantão inteiro</span>'
+                    :' <span style="color:var(--crm-atencao-text);font-weight:700">— faltou assinar '+(3-(d.momentos||[]).length)+' momento(s)</span>')
+        +(d.dobrou?'<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DOBROU: ficou também o dia de '+orcBR(d.dobraDe)+' ('+(orcEhFeriado(d.dobraDe)||'domingo')+'), quando a casa não abre. Confira se há um plantão de dia a pagar.</div>'
+                  :(d.emenda?'<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">Emendou com a noite seguinte.</div>':''))
+        +(function(){
+            if(!d.duasPessoas) return '';
+            var eq=plantEquipe(d);
+            // As duas já estão no livro: não é dúvida, é informação. Sem vermelho.
+            if(eq.todas) return '<div style="color:var(--z-blue-soft);font-weight:700;margin-top:3px">'
+              +'Duas plantonistas nesta noite: <strong>'+escAttr(eq.oficiais.join(' e '))+'</strong>'
+              +' — o valor abaixo é o de <strong>cada uma</strong>.</div>';
+            // Alguma parte é nome novo: aí sim a Gestão precisa olhar.
+            return '<div style="color:var(--crm-critico);font-weight:800;margin-top:3px">DUAS PESSOAS numa assinatura só, e '
+              +(eq.faltam.length===1
+                  ? ('&ldquo;'+escAttr(eq.faltam[0])+'&rdquo; é um nome que eu ainda não conheço')
+                  : ('estes eu ainda não conheço: '+escAttr(eq.faltam.join(', '))))
+              +'. Confira quem passou de verdade antes de pagar.</div>';
+          })()
+        +(d.variantes&&d.variantes.length?('<div style="margin-top:2px;color:var(--muted)">Também assinou como: '+escAttr(d.variantes.join(', '))+'</div>'):'')
+        +(d.outros&&d.outros.length?('<div style="margin-top:2px">Também assinaram: '+escAttr(d.outros.join(', '))+'</div>'):'')
+        +'</div>';
+    }
+    return '<div class="hint" style="margin-bottom:5px">O sistema reconheceu <strong>'+escAttr(d.nome)+'</strong> ('+d.acoes+' registros na madrugada)'
+      +(d.outros&&d.outros.length?(' · também apareceram: '+escAttr(d.outros.join(', '))):'')+'. Confira antes de marcar.</div>';
+  }
+  // A noite sem nenhum FILHOt e sem nenhuma assinatura (AC8.7): pergunta «houve plantão?» — nada sai da conta sozinho.
+  function acertoNoiteVazia(o){
+    var reg=(o||{}).reg||{};
+    return (o||{}).tipo!=='dia' && !(o||{}).antiga && (Number((o||{}).n)||0)===0 && !(ACERTO_QUEM||{})[o.iso] && !String(reg.quem||'').trim() && !reg.correcao;
+  }
+  var ACERTO_CAIXA='margin-top:5px;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:700;color:var(--z-blue)';
+  function acertoCartaoHTML(o, R){
+    var reg=o.reg||{}, dia=(o.tipo==='dia'), id=String(o.id||o.iso), idA=jsAspas(id);
+    var e=acertoNoiteEfetiva(o, reg), v=acertoValorDoCartao(o, reg), st=reg.status||'apagar';
+    var L=(st==='acumulado')?['GUARDADO','processo']:['A PAGAR','pendente'];
+    var vAgora=acertoValorTabelaHoje(o, reg);
+    // ===== VALOR CONGELADO QUE FICOU PARA TRÁS — 18/ago/2026 ====================
+    // O valor é congelado no lançamento, de propósito: mexer na tabela depois não pode reescrever o que já foi acertado.
+    // Mas se a LISTA da noite mudou, o número congelado passa a estar errado — e a tela diz, com o botão para acertar.
+    var desat=(!dia && reg.valor_total_cent!=null && vAgora.total!==Number(reg.valor_total_cent));
+    var feriado=orcEhFeriado(o.iso), dom=(o.dw==='dom'), vazia=acertoNoiteVazia(o), Q=acertoQuemDoItem(o);
+    var h='<div class="avr-card '+L[1]+'" id="acc_'+escAttr(id)+'"><div class="avr-head"><div class="avr-info">';
+    if(dia) h+='<strong>Plantão de dia — '+(ORC_DIAW_LB[o.dw]||'')+', '+orcBR(o.iso)+'</strong> <span style="color:var(--muted);font-size:12px">06h50 às 19h'
+      +(feriado?(' · '+escAttr(feriado)):'')+'</span>'
+      +'<div style="font-size:13px;color:var(--z-blue)">'+e.n+' FILHOt'+(e.n===1?'':'s')+' no dia'+(e.quantas>1?' — duas plantonistas':'')+'</div>';
+    else h+='<strong>'+orcBR(o.iso)+'</strong> <span style="color:var(--muted);font-size:12px">'+(ORC_DIAW_LB[o.dw]||'')
+      +(feriado?(' · '+escAttr(feriado)):'')+(dom&&!feriado?' · domingo':'')+'</span>'
+      +'<div style="font-size:13px;color:var(--z-blue)">'+o.n+' FILHOt'+(o.n===1?'':'s')+' dormindo'
+      +(o.pets&&o.pets.length?(' — '+escAttr(o.pets.join(', '))):'')+'</div>';
+    // AC4.1: a noite de antes dos 30 dias, ainda não paga
+    if(o.antiga) h+='<div style="font-size:12.5px;font-weight:800;color:var(--crm-critico)">de '+esc(acertoMesCurto(o.iso))+': ainda não paga</div>';
+    h+='<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(v.total)
+      +(v.manual?'':(' <span style="font-weight:600;font-size:12px;color:var(--muted)">('+acertoValorDescricao(v)+')</span>'))
+      +(v.dobrou?'<span style="display:inline-block;margin-left:6px;background:var(--crm-critico);color:#fff;border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">DOBRA · 24h</span>':'')
+      +((v.quantas>1)?('<span style="display:inline-block;margin-left:6px;background:var(--z-blue);color:var(--z-cream);border-radius:999px;padding:1px 9px;font-size:11px;font-weight:800">'+v.quantas+' PLANTONISTAS</span>'):'')
+      +'</div>';
+    if(v.quantas>1) h+='<div style="font-size:12.5px;color:var(--z-blue-soft);font-weight:600">'+e.n+' FILHOts &divide; '+v.quantas+' = <strong>'+String(v.porCabeca).replace('.',',')
+      +' por pessoa</strong> — este valor é o de CADA UMA (a ajuda de custo também é de cada uma).</div>';
+    // AC5.4: o valor à mão, com o de antes, o tipo, o motivo e quem; e a volta
+    if(v.manual){
+      var vm=v.manual, rm=vm.registro||{};
+      h+='<div style="'+ACERTO_CAIXA+';background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue)">Valor à mão: <strong>'+fmtCent(vm.cent)+'</strong> (era '+fmtCent(vm.antes_cent)+') — '
+        +esc(vm.tipo||'Outro')+': '+esc(rm.motivo||'')+', por '+esc(rm.por||'-')+', em '+esc(rm.quando||'')
+        +'<div style="margin-top:6px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoValorVoltarAbrir(\''+idA+'\')">Voltar ao valor de antes</button></div></div>';
+    }
+    // AC8.4: a correção da noite, com o que o app contou; e a volta
+    if(reg.correcao && !dia){
+      var c=reg.correcao, rc=c.registro||{}, dd=c.deduzido||{};
+      h+='<div style="'+ACERTO_CAIXA+';background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue)">Corrigido por '+esc(rc.por||'-')+' em '+esc(rc.quando||'')+': '
+        +c.hospedes+' FILHOt'+(Number(c.hospedes)===1?'':'s')+' (o app contou '+(Number(dd.hospedes)||0)+')'
+        +(c.dobrou?' · com dobra':'')+((Number(c.quantas)||1)>1?(' · duas plantonistas: '+esc((c.equipe||[]).join(' e '))):'')+' — '+esc(c.motivo||rc.motivo||'')
+        +'<div style="margin-top:6px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoNoiteVoltarAbrir(\''+idA+'\')">Voltar ao que o app contou</button></div></div>';
+    }
+    // AC4.2: o «Guardado para pagar junto» pela MESMA conta do «A pagar por pessoa» (acertoTotaisPor)
+    if(st==='acumulado' && R){
+      var pes=acertoPessoasDoItem(o), partes=pes.filter(function(p){ return R.por[p] && R.por[p].acumN; }).map(function(p){
+        var x=R.por[p]; return ((pes.length>1)?(esc(p)+': '):'')+'<strong>'+fmtCent(x.acum)+'</strong> em '+x.acumN+' noite'+(x.acumN>1?'s':''); });
+      if(partes.length) h+='<div style="'+ACERTO_CAIXA+';background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold)">Guardado para pagar junto: '+partes.join('; ')
+        +' — quando pagar tudo, toque em <em>Paguei esta noite</em> em cada uma, ou em <em>Pagar várias</em>, em «A pagar por pessoa».</div>';
+    }
+    if(desat && !v.manual) h+='<div style="'+ACERTO_CAIXA+';background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico)">'
+      +'Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem <strong>'+e.n+' FILHOt'+(e.n===1?'':'s')+'</strong>,'
+      +' e o valor certo é <strong>'+fmtCent(vAgora.total)+'</strong> (está gravado '+fmtCent(reg.valor_total_cent||0)+').'
+      +' <button class="btn" style="background:var(--z-gold);color:var(--z-blue);border:none;min-height:44px;padding:8px 14px;font-size:13px;margin-left:4px" onclick="acertoRecalcular(\''+o.iso+'\',this)">Atualizar para '+fmtCent(vAgora.total)+'</button></div>';
+    else if(desat && v.manual) h+='<div style="'+ACERTO_CAIXA+';background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico)">'
+      +'Esta noite tem valor à mão ('+fmtCent(v.total)+'). Pela tabela de hoje seria <strong>'+fmtCent(vAgora.total)+'</strong>.'
+      +' <button type="button" class="btn" style="'+ACERTO_BT44+';background:var(--z-gold);color:var(--z-blue);border:none;margin-left:4px" onclick="acertoValorAbrir(\''+idA+'\',true)">Trocar pelo valor da tabela</button></div>';
+    // AC9.1: domingo e feriado — o plantão de dia tem botão próprio
+    if(!dia && (feriado||dom)){
+      var jd=(ACERTO_DIA||{})[o.iso];
+      if(jd) h+='<div style="font-size:12.5px;color:var(--z-blue-soft);font-weight:700">'+(feriado?'Feriado':'Domingo')+': o plantão de dia de '+acertoDdMm(o.iso)+' já foi lançado'
+        +(jd.anulado?' e está em «Plantões de dia lançados por engano».':' (no cartão «Plantão de dia»).')+'</div>';
+      else h+='<div style="margin-top:6px;font-size:12px;color:var(--z-blue-soft)">'+(feriado?'Feriado':'Domingo')+': há também o plantão de dia (06h50 às 19h).'
+        +'<div style="margin-top:4px"><button type="button" class="btn" style="'+ACERTO_BT44+';background:var(--z-blue);color:var(--z-cream)" onclick="acertoDiaLancarAbrir(\''+o.iso+'\')">Lançar o plantão de dia de '+acertoDdMm(o.iso)+'</button></div></div>';
+    }
+    if(vazia) h+='<div style="'+ACERTO_CAIXA+';background:rgba(197,49,37,.10);border-left:4px solid var(--crm-critico)">Nenhum FILHOt e ninguém assinou: houve plantão?'
+      +'<div style="margin-top:6px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoSemPlantaoAbrir(\''+idA+'\')">Não houve plantão nesta noite</button></div></div>';
+    h+='</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>';
+    // O nome já vem do sistema — a Gestão confere, não digita.
+    h+='<div class="avr-form"><div class="ff-tit">'+(dia?'Quem cobriu o dia':'Quem passou esta noite')+'</div>'
+      +(dia?'':acertoQuemHintHTML(o))
+      +'<input id="acq_'+escAttr(id)+'" placeholder="Nome da plantonista" value="'+escAttr(reg.quem||(dia?'':acertoNomeSugerido(ACERTO_QUEM[o.iso]))||'')+'">'
+      +'<div class="avr-form-btns">'
+      +'<button class="btn btn-primary" style="min-height:44px" onclick="acertoMarcar(\''+idA+'\',\'pago\')">'+(dia?'Paguei este plantão':'Paguei esta noite')+'</button>'
+      +'<button class="btn btn-gold" style="min-height:44px" onclick="acertoMarcar(\''+idA+'\',\'acumulado\')">Guardar para pagar junto</button>'
+      +(st==='acumulado'?'<button class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoMarcar(\''+idA+'\',\'apagar\')">Voltar para a pagar</button>':'')
+      +'</div><div class="avr-form-btns" style="margin-top:8px">'
+      +'<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoValorAbrir(\''+idA+'\')">'+(dia?'Corrigir o valor deste plantão':'Corrigir o valor desta noite')+'</button>'
+      +(dia?('<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoDiaLancarAbrir(\''+o.iso+'\',true)">Corrigir este plantão de dia</button>'
+             +'<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoSemPlantaoAbrir(\''+idA+'\')">Lançado por engano</button>')
+           :('<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoNoiteCorrigirAbrir(\''+idA+'\')">Corrigir esta noite</button>'
+             +(vazia?'':('<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoSemPlantaoAbrir(\''+idA+'\')">Não houve plantão nesta noite</button>'))))
+      +'</div></div></div>';
+    return h;
+  }
+  // «Noites sem plantão» e «Plantões de dia lançados por engano» (AC8.6, AC9.4): riscados, com «Reabrir».
+  function acertoForaHTML(fora){
+    var noites=(fora||[]).filter(function(o){ return o.tipo!=='dia'; }), dias=(fora||[]).filter(function(o){ return o.tipo==='dia'; });
+    var bloco=function(lista, titulo, campo){
+      if(!lista.length) return '';
+      return '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0;min-height:44px">'+titulo+' ('+lista.length+')</summary>'
+        +lista.map(function(o){ var reg=o.reg||{};
+          return '<div style="margin-top:6px"><div style="font-weight:800;color:var(--z-blue);font-size:13.5px">'+((o.tipo==='dia')?'Plantão de dia — ':'')+orcBR(o.iso)+'</div>'
+            +corrRiscadoHTML(reg[campo]||{}, "acertoSemPlantaoReabrirAbrir('"+String(o.id||o.iso).replace(/[^\w-]/g,'')+"')")+'</div>'; }).join('')
+        +'</details>';
+    };
+    return bloco(noites, 'Noites sem plantão', 'sem_plantao')+bloco(dias, 'Plantões de dia lançados por engano', 'anulado');
+  }
+  // «Já pagas» (AC2.1, AC3.5, AC4.3): os lotes como uma linha, cada noite paga com «Desfazer o pagamento»; «Ver o mês anterior».
+  function acertoPagaLinhaHTML(o, comDesfazer){
+    var reg=o.reg||{}, id=String(o.id||o.iso);
+    return '<div class="pair" style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:6px">'
+      +'<span class="k">'+((o.tipo==='dia')?'Plantão de dia — ':'')+orcBR(o.iso)+' · '+escAttr(reg.quem||'-')
+      +' <span style="color:var(--muted);font-size:11.5px">('+(function(n){ return n+((Number(n)===1)?' FILHOt':' FILHOts'); })(reg.hospedes!=null?reg.hospedes:o.n)
+      +(reg.dobrou?' · dobra':'')+')</span></span>'
+      +'<span class="val" style="font-weight:700">'+fmtCent(reg.valor_total_cent||0)
+      +(comDesfazer?(' <button type="button" class="btn" style="'+ACERTO_BT44_CLARO+';margin-left:6px" onclick="acertoDesfazerPagamentoAbrir(\''+jsAspas(id)+'\')">Desfazer o pagamento</button>'):'')
+      +'</span></div>';
+  }
+  function acertoPagoPeloLote(reg, loteId){ var p=((reg||{}).pagamentos||{})['lote_'+loteId]; return !!(reg && (reg.status||'')==='pago' && p && !p.desfeito); }
+  function acertoPagasHTML(pagas){
+    var hoje=String((typeof hojeISO==='function')?hojeISO():''), ini=orcMaisDias(hoje,-30), lim=acertoTsDe(ini);
+    var noLote={}, cont=0, soma=0, hl='';
+    Object.keys(ACERTO_LOTES||{}).map(function(k){ return Object.assign({id:k}, ACERTO_LOTES[k]||{}); })
+      .filter(function(L){ return !L.desfeito && (Number(L.em)||0)>=lim; })
+      .sort(function(a,b){ return (Number(b.em)||0)-(Number(a.em)||0); })
+      .forEach(function(L){
+        var linhas='', aindaPagas=0;
+        (L.itens||[]).forEach(function(it){
+          var iid=(it.tipo==='dia')?acertoIdDia(it.iso):String(it.iso), reg=acertoRegDe(it.tipo, it.iso)||{};
+          var o={iso:it.iso, tipo:it.tipo||'noite', id:iid, reg:reg, n:Number(reg.hospedes)||0};
+          if(acertoPagoPeloLote(reg, L.id)){ noLote[iid]=1; aindaPagas++; cont++; soma+=Number(reg.valor_total_cent)||0; linhas+=acertoPagaLinhaHTML(o, true); }
+          else linhas+='<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);color:var(--muted)">'+((it.tipo==='dia')?'Plantão de dia — ':'')+orcBR(it.iso)+': já tinha voltado para a lista</div>';
+        });
+        var n=(L.itens||[]).length, dataL=(function(){ try{ var d=new Date(Number(L.em)||0); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }catch(x){ return ''; } })(); /* silencioso de propósito: sem a data, a linha sai sem ela */
+        hl+='<details style="margin:8px 0;border:1.5px solid var(--line);border-radius:12px;padding:6px 10px"><summary style="cursor:pointer;font-weight:800;color:var(--z-blue);font-size:13.5px;min-height:44px;display:flex;align-items:center">'
+          +'Lote de '+esc(dataL)+' — '+esc(L.quem||'-')+' — '+n+' noite'+(n===1?'':'s')+' — '+fmtCent(Number(L.total_cent)||0)+'</summary>'
+          +linhas
+          +(aindaPagas?('<div style="margin-top:8px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoLoteDesfazerAbrir(\''+jsAspas(L.id)+'\')">Desfazer este lote</button></div>'):'')
+          +'</details>';
+      });
+    var soltas=(pagas||[]).filter(function(o){ return !noLote[String(o.id||o.iso)]; });
+    soltas.forEach(function(o){ cont++; soma+=Number((o.reg||{}).valor_total_cent)||0; });
+    var hm='';
+    Object.keys(ACERTO_MESES||{}).sort().reverse().forEach(function(ym){
+      var regs=acertoRegsConhecidos(), its=[];
+      Object.keys(ACERTO_MESES[ym]||{}).forEach(function(k){ var r=regs[k]||{}; if(k.slice(0,7)===ym && k<ini && (r.status||'')==='pago') its.push({iso:k, tipo:'noite', id:k, reg:r, n:Number(r.hospedes)||0}); });
+      Object.keys(ACERTO_DIA||{}).forEach(function(k){ var r=ACERTO_DIA[k]||{}; if(k.slice(0,7)===ym && k<ini && (r.status||'')==='pago') its.push({iso:k, tipo:'dia', id:acertoIdDia(k), reg:r, n:Number(r.hospedes)||0}); });
+      its.sort(function(a,b){ return a.iso<b.iso?1:(a.iso>b.iso?-1:0); });
+      var sm=its.reduce(function(a,o){ return a+(Number(o.reg.valor_total_cent)||0); },0);
+      hm+='<div style="margin-top:12px;font-weight:800;color:var(--z-blue);font-size:13.5px">Pagas em '+esc(acertoMesNome(ym))+', antes dos últimos 30 dias ('+its.length+') — '+fmtCent(sm)+'</div>'
+        +(its.length?its.map(function(o){ return acertoPagaLinhaHTML(o, true); }).join(''):'<div class="hint">Nenhuma noite paga neste mês, fora as que já estão acima.</div>');
+    });
+    var prox=acertoMesProximo();
+    return '<details style="margin-top:16px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0;min-height:44px">'
+      +'Já pagas ('+cont+') — '+fmtCent(soma)+'</summary>'
+      +'<div style="margin-top:6px">'+hl+soltas.map(function(o){ return acertoPagaLinhaHTML(o, true); }).join('')+hm
+      +'<div style="margin-top:12px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoMesAnterior()">Ver o mês anterior ('+esc(acertoMesNome(prox))+')</button></div>'
+      +'</div></details>';
+  }
+  // ---- AC1: «Paguei», «Guardar» e «Voltar para a pagar» — a gravação (uma noite, ou várias pelo lote) ----------------
+  // A primeira marca de uma noite sem valor gravado congela o valor da tabela daquele momento (como sempre).
+  function acertoCongelar(o, up, cam){
+    var e=acertoNoiteEfetiva(o, (o||{}).reg), _d=((o||{}).tipo==='dia')?{}:((ACERTO_QUEM||{})[o.iso]||{});
+    var v=((o||{}).tipo==='dia')?acertoValorDia(e.n, e.quantas):acertoValorPara(e.n, e.dobrou, e.quantas, o.iso);
+    var c=acertoValorCampos(v);
+    Object.keys(c).forEach(function(k){ up[cam+'/'+k]=c[k]; });
+    up[cam+'/hospedes']=e.n; up[cam+'/pets']=(o.pets||[]); up[cam+'/quantas']=e.quantas;
+    up[cam+'/dobrou']=!!e.dobrou; up[cam+'/dobra_de']=e.dobraDe||'';
+    // Como se soube quem foi — a assinatura é a prova do pagamento.
+    up[cam+'/assinou']=(_d.momentos||[]).join(' · '); up[cam+'/assinatura_completa']=!!_d.completa;
+    up[cam+'/variantes_do_nome']=(_d.variantes||[]).join(', ');
+    return v;
+  }
+  // lista = [{id, quem, esperado (o registro que a tela tinha), valor (o que a pergunta ou o cartaz do lote mostrou)}];
+  // status = 'pago' | 'acumulado' | 'apagar'. Antes de gravar, relê cada item (dois aparelhos, AC1.7 e AC3.3): o que mudou
+  // recusa, e nada é gravado. 2ª rodada (REL-001): o valor que vai para o banco é o que a pessoa confirmou — se a conta de
+  // agora der outro (a estadia mudou com a pergunta aberta) ou a noite saiu da lista (o dia virou), recusa; nunca refaz por
+  // baixo. Um item só (o «Paguei», o «Guardar» e o «Voltar» de um cartão): uma transação no nó do item (LOW-2: dois aparelhos
+  // no mesmo instante não deixam dois pagamentos valendo) e, depois, o índice das abertas (só uma pista: a leitura o acerta).
+  // O lote: uma escrita só (um update a partir de auaulandia/), ou entram todos, ou nenhum — uma transação por item
+  // quebraria o «todos ou nenhum», e uma na coleção desceria a coleção inteira; o pagamento tem a chave fixa «lote_{id}»
+  // (o segundo toque não paga de novo, AC3.4). LOW-3: o prazo da 6.57 (CORR_PRAZO); o segundo toque diz que ainda grava.
+  async function acertoGravarMarcas(lista, status, op){
+    op=op||{};
+    if(!acertoPodeVer()) return acertoBarrar((status==='pago')?'pagar a plantonista':'guardar ou voltar a noite do acerto', {});
+    if(!DB){ zAlertao('NÃO FOI GRAVADO', ['Este aparelho abriu o app sem ligação com o sistema.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, erro:'sem conexão com o banco'}; }
+    var ids=(lista||[]).map(function(x){ return String(x.id); });
+    var oqueTxt=function(){ return (ids.length>1)?('as '+ids.length+' noites'):acertoOQueTxt(acertoItemDe(ids[0])||acertoIdParte(ids[0])); };
+    if(ids.some(function(k){ return ACERTO_GRAVANDO[k]; })){
+      var oc='Ainda estou gravando '+((ids.length>1)?'uma destas noites':oqueTxt())+'. Espere a resposta do sistema antes de tocar de novo. Nada foi gravado agora.';
+      if(!op.lote) zAlertao('AINDA ESTOU GRAVANDO', [oc], {botao:'Entendi'});
+      else if(ACERTO_LOTE && ACERTO_LOTE.id===op.lote) ACERTO_LOTE.avisoRecusa=oc;
+      return {ok:false, ocupado:true, recusado:!!op.lote, erro:oc};
+    }
+    ids.forEach(function(k){ ACERTO_GRAVANDO[k]=1; });
+    var solta=function(){ ids.forEach(function(k){ delete ACERTO_GRAVANDO[k]; }); };
+    var job=Promise.resolve().then(function(){ return acertoGravarMarcasJob(lista, status, op); })
+      .then(function(r){ solta(); return r; }, function(x){ solta(); _logFalhaGrav('acerto das plantonistas — '+oqueTxt(), x); return {ok:false, erro:'a gravação parou no meio'}; });
+    var r=await corrComPrazo(job, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      zAlertao('O SISTEMA AINDA NÃO RESPONDEU', ['Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o sistema ainda não confirmou '+oqueTxt()+'.',
+        'Pode ter gravado: confira em «Já pagas» (ou na lista) antes de tocar de novo. Quando o sistema responder, a tela avisa.'], {botao:'Entendi'});
+      return {ok:false, semResposta:true, erro:CORR_PRAZO_ERRO};
+    }
+    return r;
+  }
+  async function acertoGravarMarcasJob(lista, status, op){
+    var q=corrQuemAgora(), ts=q.ts, up={}, total=0, feitos=[], jaPeloLote=0, curs, so=(!op.lote && lista.length===1);
+    try{
+      curs=await Promise.all(lista.map(function(x){ var P=acertoIdParte(x.id); return Promise.resolve(DB.ref('auaulandia/'+acertoCaminho(P.tipo, P.iso)).once('value')).then(function(s){ return (s&&s.val)?s.val():null; }); }));
+    }catch(e){
+      acertoErroTela('NÃO FOI GRAVADO', ['Não consegui conferir '+((lista.length>1)?'as noites':'a noite')+' no sistema antes de gravar.'], e);
+      return {ok:false, erro:e};
+    }
+    for(var i=0;i<lista.length;i++){
+      var x=lista[i], P=acertoIdParte(x.id), cam=acertoCaminho(P.tipo, P.iso), cur=curs[i], o=acertoItemDe(x.id), dd=acertoDdMm(P.iso);
+      if(!o){   // a noite saiu da lista (o dia virou com a pergunta aberta): sem ela, não há valor confirmado — nunca o de reserva
+        return acertoRecusou(op.lote?('A noite de '+dd+' saiu da lista enquanto o cartaz estava aberto (o dia virou). Nada foi pago: confira e escolha de novo.')
+          :('A noite de '+orcBR(P.iso)+' saiu da lista enquanto a pergunta estava aberta (o dia virou). Nada foi gravado: confira e toque de novo.'), op);
+      }
+      var stc=(cur&&cur.status)||'apagar', txt=acertoOQueTxt(o), curto=((o.tipo==='dia')?'O plantão de dia de ':'A noite de ')+dd;
+      if(stc==='pago'){
+        if(status==='pago' && op.lote && acertoPagoPeloLote(cur, op.lote)){ jaPeloLote++; continue; }
+        acertoRegLocal(P, cur);
+        return acertoRecusou(acertoJaPagaTexto(o, cur, status, op), op);
+      }
+      if(acertoMudouOutro(cur, x.esperado)){
+        acertoRegLocal(P, cur);
+        return acertoRecusou(op.lote?(curto+' mudou em outro aparelho. Nada foi pago: confira e escolha de novo.')
+          :(acertoEsta(o)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e toque de novo.'), op);
+      }
+      var base=cur||{}, quem=String(x.quem||base.quem||'').trim(), mud={}, vv=null, valor;
+      mud.status=status;
+      if(quem) mud.quem=quem;
+      mud.marcado_por=q.login; mud.marcado_em=ts;
+      if(base.valor_total_cent==null){ var cg={}; vv=acertoCongelar(o, cg, '#'); Object.keys(cg).forEach(function(k){ mud[k.slice(2)]=cg[k]; }); valor=vv.total; }
+      else valor=Number(base.valor_total_cent);
+      if(x.valor!=null && Number(x.valor)!==valor){
+        acertoRegLocal(P, cur);
+        return acertoRecusou(op.lote?('O valor d'+curto.charAt(0).toLowerCase()+curto.slice(1)+' mudou enquanto o cartaz estava aberto ('+fmtCent(Number(x.valor))+' → '+fmtCent(valor)+'). Nada foi pago: confira e escolha de novo.')
+          :('O valor d'+txt+' mudou enquanto a pergunta estava aberta ('+fmtCent(Number(x.valor))+' → '+fmtCent(valor)+'). Nada foi gravado: confira e toque de novo.'), op);
+      }
+      if(status==='pago'){
+        mud.status_antes=(stc==='acumulado')?'acumulado':'apagar';
+        var pid=op.lote?('lote_'+op.lote):acertoChaveNova(base.pagamentos, 'p', ts);
+        var pgo={em:ts, por:q.login, papel:q.papel, valor_cent:valor, quem:quem};
+        if(op.lote) pgo.lote=op.lote;
+        mud['pagamentos/'+pid]=pgo;
+      }
+      Object.keys(mud).forEach(function(k){ up[cam+'/'+k]=mud[k]; });
+      if(P.tipo==='noite') up['acerto-abertas/'+P.iso]=acertoIndiceDe(Object.assign({}, base, {status:status, valor_total_cent:valor}), ts);
+      total+=valor; feitos.push({id:x.id, P:P, cam:cam, quem:quem, valor:valor, o:o, mud:mud, esperado:x.esperado, lido:cur, dobrou:(vv?!!vv.dobrou:!!base.dobrou)});
+    }
+    if(!feitos.length) return jaPeloLote?{ok:true, jaPago:true}:{ok:false};
+    if(so){
+      var f=feitos[0], motivo='', visto=null, res=null;
+      try{
+        res=await DB.ref('auaulandia/'+f.cam).transaction(function(atual){
+          motivo='';
+          var b=(atual===null || atual===undefined)?f.lido:atual;   // cache frio: o palpite é o que a releitura viu, e o servidor confere
+          visto=b||null;
+          if(b && (b.status||'')==='pago'){ motivo='pago'; return; }
+          if(acertoMudouOutro(b, f.esperado)){ motivo='mudou'; return; }
+          var n=JSON.parse(JSON.stringify(b||{}));
+          Object.keys(f.mud).forEach(function(k){
+            var ps=k.split('/'), o2=n;
+            for(var j=0;j<ps.length-1;j++){ if(!o2[ps[j]] || typeof o2[ps[j]]!=='object') o2[ps[j]]={}; o2=o2[ps[j]]; }
+            o2[ps[ps.length-1]]=JSON.parse(JSON.stringify(f.mud[k]));
+          });
+          return n;
+        });
+      }catch(e){
+        acertoErroTela('NÃO FOI GRAVADO', [acertoOQueTxt(f.o).replace(/^./, function(c){ return c.toUpperCase(); })+' continua como estava.'], e);
+        return {ok:false, erro:e};
+      }
+      var vs=visto;
+      try{ if(res && res.snapshot && typeof res.snapshot.val==='function') vs=res.snapshot.val(); }
+      catch(x){ vs=visto; } /* silencioso de propósito: sem o retrato do servidor, vale o que a transação viu */
+      if(!(res && res.committed)){
+        acertoRegLocal(f.P, vs);
+        return acertoRecusou((motivo==='pago')?acertoJaPagaTexto(f.o, vs||{}, status, op)
+          :(acertoEsta(f.o)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e toque de novo.'), op);
+      }
+      acertoRegLocal(f.P, vs);
+      if(f.P.tipo==='noite'){
+        var ix={}; ix['acerto-abertas/'+f.P.iso]=up['acerto-abertas/'+f.P.iso];
+        try{ await DB.ref('auaulandia').update(ix); acertoAplicarLocal(ix); }
+        catch(e){ _logFalhaGrav('auaulandia/acerto-abertas (o índice das noites em aberto; a próxima leitura acerta)', e); }
+      }
+    } else {
+      if(op.lote) up['acerto-lotes/'+op.lote]={em:ts, por:q.login, papel:q.papel, quem:String(op.nome||''), itens:feitos.map(function(f){ return {tipo:f.P.tipo, iso:f.P.iso}; }), total_cent:total};
+      try{ await DB.ref('auaulandia').update(up); }
+      catch(e){
+        acertoErroTela('NÃO FOI GRAVADO', [(feitos.length>1)?('Nenhuma das '+feitos.length+' noites foi paga.'):(acertoOQueTxt(feitos[0].o).replace(/^./, function(c){ return c.toUpperCase(); })+' continua como estava.')], e);
+        return {ok:false, erro:e};
+      }
+      acertoAplicarLocal(up);
+    }
+    var meta=corrQuemMeta(q);
+    try{
+      if(op.lote) audit('acerto-lote-pago', 'pagou '+feitos.length+' noite'+(feitos.length>1?'s':'')+' de '+String(op.nome||'')+' de uma vez (lote de '+acertoDdMm(hojeISO())+'): '+fmtCent(total)
+        +' — '+feitos.map(function(f){ return ((f.P.tipo==='dia')?'dia ':'')+acertoDdMm(f.P.iso)+' '+fmtCent(f.valor); }).join(', '), Object.assign({lote:op.lote}, meta));
+      else feitos.forEach(function(f){
+        var t=(status==='pago')?('pagou '+acertoOQueTxt(f.o)+' a '+f.quem+' · '+fmtCent(f.valor)+(f.dobrou?' (DOBRA 24h)':''))
+          :(((status==='acumulado')?'guardou para pagar junto — ':'voltou para a pagar — ')+orcBR(f.P.iso)+((f.P.tipo==='dia')?' (plantão de dia)':'')+' · '+f.quem+' · '+fmtCent(f.valor));
+        audit((status==='pago')?'acerto-pago':'acerto-plantao', t, Object.assign({noite:f.P.iso}, meta));
+      });
+    }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    renderAcerto();
+    // Diz o que aconteceu, na hora. Sem isso a pessoa toca de novo achando que falhou.
+    if(op.lote) zAlertao('PAGO', [feitos.length+' noite'+(feitos.length>1?'s':'')+' de '+String(op.nome||'')+': '+fmtCent(total),
+      'Ficam em «Já pagas», no lote de '+acertoDdMm(hojeISO())+'. Se for engano, «Desfazer este lote» pede a senha da Gestão.'], {ok:true, botao:'Certo'});
+    else if(status==='pago') zAlertao('PAGO', [orcBR(feitos[0].P.iso)+((feitos[0].P.tipo==='dia')?' (plantão de dia)':'')+' · '+feitos[0].quem+' · '+fmtCent(feitos[0].valor),
+      'Foi para «Já pagas». Se for engano, «Desfazer o pagamento» pede a senha da Gestão.'], {ok:true, botao:'Certo'});
+    else if(status==='acumulado'){
+      var R=acertoTotaisPor(acertoNoites()), ps=acertoPessoasDoItem(acertoItemDe(feitos[0].id)||feitos[0].o);
+      zAlertao('GUARDADO PARA PAGAR JUNTO', [orcBR(feitos[0].P.iso)+((feitos[0].P.tipo==='dia')?' (plantão de dia)':'')+' · '+feitos[0].quem+' · '+fmtCent(feitos[0].valor)].concat(ps.map(function(p){
+        var x=(R.por||{})[p]||{acum:0, acumN:0};
+        return (x.acumN>1)?(p+' já tem '+fmtCent(x.acum)+' guardado em '+x.acumN+' noites.'):(p+': esta é a primeira noite guardada dela.'); }))
+        .concat(['Quando pagar tudo de uma vez, toque em «Pagar várias», em «A pagar por pessoa», ou em «Paguei esta noite» em cada uma delas.']), {ok:true, botao:'Certo'});
+    }
+    return {ok:true, feitos:feitos.length, total:total};
+  }
+  // A frase de «já foi paga» (ou «já foi pago», no plantão de dia), com quem e quando (do registro relido).
+  function acertoJaPagaTexto(o, cur, status, op){
+    var pg=acertoPagamentoAtual(cur||{})||{}, quemPg=String(pg.por||(cur||{}).marcado_por||'-'), quando=renovQuandoBR(Number(pg.em||(cur||{}).marcado_em)||0);
+    var txt=acertoOQueTxt(o), Txt=txt.charAt(0).toUpperCase()+txt.slice(1), pp=acertoPaga(o);
+    if((op||{}).lote) return (((o||{}).tipo==='dia')?'O plantão de dia de ':'A noite de ')+acertoDdMm((o||{}).iso)+' já foi '+pp+' por '+quemPg+' em '+quando+'. Nada foi pago: confira e escolha de novo.';
+    if(status==='pago') return Txt+' já foi '+pp+' por '+quemPg+' em '+quando+'. Nada foi gravado.';
+    return acertoEsta(o)+' já foi '+pp+' por '+quemPg+' em '+quando+'. Para desfazer, use «Desfazer o pagamento» em «Já pagas» (senha da Gestão). Nada foi gravado.';
+  }
+  function acertoRecusou(msg, op){
+    if(!(op||{}).lote){ zAlertao('NADA FOI GRAVADO', [msg], {botao:'Entendi'}); try{ renderAcerto(); }catch(e){} } /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    else if(ACERTO_LOTE && ACERTO_LOTE.id===op.lote) ACERTO_LOTE.avisoRecusa=msg;
+    return {ok:false, recusado:true, erro:msg};
+  }
+  // ---- AC2: «Desfazer o pagamento» (cartaz «reabrir», a senha da Gestão, S10-P1) ---------------------------------------
+  function acertoDesfazerPagamentoAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('desfazer o pagamento de uma plantonista', {noite:String(id)}));
+    var P=acertoIdParte(id), reg=acertoRegDe(P.tipo, P.iso)||{}, o={iso:P.iso, tipo:P.tipo};
+    if((reg.status||'')!=='pago'){ zAlertao((P.tipo==='dia')?'JÁ NÃO ESTÁ PAGO':'JÁ NÃO ESTÁ PAGA', ['Atualize a tela: outro aparelho pode ter desfeito o pagamento.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var pg=acertoPagamentoAtual(reg)||{}, quem=String(reg.quem||pg.quem||'(sem nome)'), V=Number(reg.valor_total_cent!=null?reg.valor_total_cent:pg.valor_cent)||0;
+    var volta=['Fica com o nome '+quem+' e o valor '+fmtCent(V)+', os de quando foi paga.',
+      'Volta para a lista e para o «A pagar por pessoa» de '+quem+' (+ '+fmtCent(V)+'), e para o Dashboard da Márcia.'];
+    if(pg.lote && !(ACERTO_LOTES||{})[pg.lote]){   // o lote de mais de 62 dias não vem na leitura: não afirmar o que não se sabe
+      var dl0=(function(){ try{ var d=new Date(Number(pg.em)||0); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }catch(x){ return ''; } })(); /* silencioso de propósito: sem a data, a frase sai sem ela */
+      volta.push(((P.tipo==='dia')?'Só este plantão sai do lote de ':'Só esta noite sai do lote de ')+dl0+'; as outras do lote ficam como estão.');
+    } else if(pg.lote){
+      var L=ACERTO_LOTES[pg.lote]||{}, outras=(L.itens||[]).filter(function(it){ return !((it.tipo||'noite')===P.tipo && it.iso===P.iso) && acertoPagoPeloLote(acertoRegDe(it.tipo||'noite', it.iso), pg.lote); }).length;
+      var dl=(function(){ try{ var d=new Date(Number(L.em||pg.em)||0); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }catch(x){ return ''; } })(); /* silencioso de propósito: sem a data, a frase sai sem ela */
+      volta.push(((P.tipo==='dia')?'Só este plantão sai do lote de ':'Só esta noite sai do lote de ')+dl+'; '+((outras===1)?'a outra continua paga.':((outras>1)?('as outras '+outras+' continuam pagas.'):'nenhuma outra continuava paga por ele.')));
+    }
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Desfazer o pagamento — '+acertoOQueTxt(o), oque:'o pagamento d'+acertoOQueTxt(o)+' a '+quem+' ('+fmtCent(V)+')',
+      original:{caminho:'auaulandia/'+acertoCaminho(P.tipo, P.iso), id:String(id)}, estado:'paga', paraEstado:(reg.status_antes==='acumulado')?'guardada':'a pagar', volta:volta,
+      nivel:'gestao', capacidade:'gestao-role', botao:'Desfazer o pagamento', tituloOk:'Pagamento desfeito',
+      gravar:function(r){ return acertoDesfazerPagamentoGravar(id, r); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoDesfazerPagamentoGravar(id, reg){
+    if(!acertoPodeVer()) return acertoBarrar('desfazer o pagamento de uma plantonista', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var P=acertoIdParte(id), cam=acertoCaminho(P.tipo, P.iso), ts=Number(reg.ts)||Date.now();
+    var cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(!cur || (cur.status||'')!=='pago') return {ok:false, erro:((P.tipo==='dia')?'Este plantão de dia já não está pago':'Esta noite já não está paga')+': outro aparelho mudou. Nada foi gravado.'};
+    var up={}, pid=acertoPagamentoAtualId(cur), volta=(cur.status_antes==='acumulado')?'acumulado':'apagar';
+    up[cam+'/status']=volta;
+    if(pid) up[cam+'/pagamentos/'+pid+'/desfeito']={registro:reg};
+    else up[cam+'/pagamentos/'+acertoChaveNova(cur.pagamentos, 'p', Number(cur.marcado_em)||ts)]={em:Number(cur.marcado_em)||0, por:String(cur.marcado_por||''), papel:'',
+      valor_cent:Number(cur.valor_total_cent)||0, quem:String(cur.quem||''), antes_desta_versao:true, desfeito:{registro:reg}};   // o pagamento de antes da 6.70 entra no histórico, já desfeito
+    if(P.tipo==='noite') up['acerto-abertas/'+P.iso]=acertoIndiceDe(Object.assign({}, cur, {status:volta}), ts);
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-pagamento-desfeito', 'desfez o pagamento d'+acertoOQueTxt({iso:P.iso, tipo:P.tipo})+' a '+String(cur.quem||'')+' ('+fmtCent(Number(cur.valor_total_cent)||0)+') — volta '+((volta==='acumulado')?'guardada':'a pagar')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:P.iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // ---- AC3: «Pagar várias de {nome}» e «Desfazer este lote» -----------------------------------------------------------
+  // PURA: os itens em aberto da pessoa, de qualquer data, cada um com o valor do cartão; a noite de dupla desmarcada (S10-P6).
+  function acertoLoteItensDe(nome){
+    var k=String(nome||''), out=[];   // 2ª rodada (LOW-6): a mesma chave do «A pagar por pessoa» (o nome como está escrito)
+    acertoNoites().forEach(function(o){
+      var reg=o.reg||{};
+      if((reg.status||'apagar')==='pago' || reg.sem_plantao || reg.anulado) return;
+      var Q=acertoQuemDoItem(o), pes=acertoPessoasDoItem(o);
+      if(pes.indexOf(k)<0) return;
+      var dupla=pes.length>1;
+      out.push({id:String(o.id||o.iso), tipo:o.tipo||'noite', iso:o.iso, nomeItem:Q.nome, pessoas:pes, dupla:dupla, marcado:!dupla, antiga:!!o.antiga,
+        status:(reg.status||'apagar'), valor:acertoValorDoCartao(o, reg).total, esperado:JSON.parse(JSON.stringify(reg))});
+    });
+    return out.sort(function(a,b){ return (a.iso<b.iso)?-1:((a.iso>b.iso)?1:((a.tipo==='dia')?-1:1)); });
+  }
+  function acertoLoteTotal(L){ var t=0, n=0; ((L||{}).itens||[]).forEach(function(x){ if(x.marcado){ t+=Number(x.valor)||0; n++; } }); return {total:t, n:n}; }
+  function acertoLoteLinhaTexto(x){ return ((x.tipo==='dia')?'Plantão de dia de ':'Noite de ')+orcBR(x.iso)+' — '+((x.status==='acumulado')?'guardada':'a pagar')+' — '+fmtCent(x.valor); }
+  function acertoLoteAbrir(nome){
+    if(!acertoPodeVer()) return acertoBarrar('pagar várias noites de uma vez', {quem:String(nome||'')});
+    var itens=acertoLoteItensDe(nome);
+    if(!itens.length){ zAlertao('NADA EM ABERTO', ['Não há noite em aberto de '+String(nome||'')+'.'], {botao:'Entendi'}); return null; }
+    ACERTO_LOTE={id:acertoChaveNova(ACERTO_LOTES, 'l', Date.now()), nome:String(nome), itens:itens, gravando:false, perguntando:false, aviso:''};
+    acertoLoteDesenhar();
+    return ACERTO_LOTE;
+  }
+  function acertoLoteHTML(L){
+    L=L||ACERTO_LOTE; if(!L) return '';
+    var T=acertoLoteTotal(L);
+    var corpo='<div style="font-size:15px">Marque o que você está pagando agora. O valor de cada noite é o do cartão.</div>'
+      +L.itens.map(function(x, i){
+        return '<label for="aclC_'+i+'" style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:10px;padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;box-sizing:border-box">'
+          +'<input type="checkbox" id="aclC_'+i+'"'+(x.marcado?' checked':'')+(L.gravando?' disabled':'')+' onchange="acertoLoteToque('+i+')" style="width:24px;height:24px;flex:0 0 24px;margin-top:2px">'
+          +'<span style="flex:1;min-width:0;overflow-wrap:anywhere"><strong>'+esc(acertoLoteLinhaTexto(x))+'</strong>'
+          +(x.antiga?('<br><span style="color:var(--crm-critico);font-size:13px;font-weight:700">de '+esc(acertoMesCurto(x.iso))+': ainda não paga</span>'):'')
+          +(x.dupla?('<br><span style="color:var(--crm-critico);font-size:13px;font-weight:700">Noite de dupla ('+esc(x.pessoas.join(' e '))+'): marcar aqui dá esta noite como paga para as duas.</span>'):'')
+          +'</span></label>';
+      }).join('')
+      +'<div style="margin-top:12px;font-size:17px;font-weight:800">Total das marcadas: '+fmtCent(T.total)+'</div>'
+      +(L.aviso?('<div role="alert" style="margin-top:10px;color:var(--crm-critico);font-weight:800">'+esc(L.aviso)+'</div>'):'');
+    var bt=function(onclick, txt, fundo){ return '<button type="button" style="width:100%;min-height:48px;'+(fundo?('background:'+fundo+';color:var(--z-cream);border:0'):'background:var(--z-white);color:var(--z-blue);border:2px solid var(--z-blue)')
+      +';border-radius:14px;font-family:inherit;font-weight:800;font-size:16px;padding:12px;cursor:pointer;white-space:normal" onclick="'+onclick+'">'+esc(txt)+'</button>'; };
+    var bts=L.gravando?('<div style="font-weight:700">Gravando… espere a confirmação do sistema.</div>'+bt('acertoLoteFechar()', 'Fechar (a gravação continua; a resposta aparece na tela)', ''))
+      :(bt('acertoLotePagar()', T.n?('Pagar '+T.n+' noite'+(T.n>1?'s':'')+': '+fmtCent(T.total)):'Marque pelo menos uma noite', 'var(--z-blue)')+bt('acertoLoteFechar()', 'Cancelar — não pagar nada', ''));
+    return '<div style="background:var(--z-cream);border-radius:20px;max-width:580px;width:100%;box-sizing:border-box;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:var(--z-blue);color:var(--z-cream);padding:16px 20px;font-weight:800;font-size:21px;line-height:1.2;overflow-wrap:anywhere">Pagar várias de '+esc(L.nome)+'</div>'
+      +'<div style="padding:16px 20px;overflow:auto;color:var(--z-blue);font-size:16px;line-height:1.5;font-weight:600;overflow-wrap:anywhere">'+corpo+'</div>'
+      +'<div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:9px">'+bts+'</div></div>';
+  }
+  function acertoLoteDesenhar(){
+    var d=null;
+    try{ d=document.getElementById('acertoLoteBox'); }catch(e){ d=null; } /* silencioso de propósito: sem a página, não há o que desenhar */
+    if(!ACERTO_LOTE){ try{ if(d && typeof d.remove==='function') d.remove(); }catch(e){} /* silencioso de propósito: o cartaz já saiu da página */ return; }
+    try{
+      if(!d){
+        d=document.createElement('div'); d.id='acertoLoteBox';
+        d.style.cssText='position:fixed;inset:0;z-index:99997;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:Poppins,system-ui,-apple-system,sans-serif';
+        document.body.appendChild(d);
+      }
+      d.innerHTML=acertoLoteHTML(ACERTO_LOTE);
+    }catch(e){} /* silencioso de propósito: enfeite de tela — o estado do lote (ACERTO_LOTE) continua certo */
+  }
+  function acertoLoteToque(i){
+    var L=ACERTO_LOTE; if(!L || L.gravando) return;
+    var x=L.itens[i]; if(!x) return;
+    x.marcado=!x.marcado; L.aviso=''; acertoLoteDesenhar();
+  }
+  // Fecha sempre, também com a gravação saindo (LOW-3): a gravação não é cancelada, e a resposta do sistema aparece na tela.
+  function acertoLoteFechar(){ var L=ACERTO_LOTE; if(L) L.fechado=true; ACERTO_LOTE=null; acertoLoteDesenhar(); }
+  async function acertoLotePagar(){
+    var L=ACERTO_LOTE; if(!L || L.gravando || L.perguntando) return {ok:false, ocupado:true};
+    if(!acertoPodeVer()) return acertoBarrar('pagar várias noites de uma vez', {quem:L.nome});
+    var T=acertoLoteTotal(L), marc=L.itens.filter(function(x){ return x.marcado; });
+    if(!T.n){ L.aviso='Marque pelo menos uma noite.'; acertoLoteDesenhar(); return {ok:false}; }
+    L.perguntando=true;
+    var sim=false;
+    try{
+      sim=await zPergunta('Pagar '+T.n+' noite'+(T.n>1?'s':'')+' a '+L.nome+': '+fmtCent(T.total)+'?',
+        marc.map(acertoLoteLinhaTexto).concat(marc.some(function(x){ return x.dupla; })?['Noite de dupla marcada: ela fica paga para as duas plantonistas.']:[]),
+        {sim:'Pagar', nao:'Cancelar', cor:'#234D67'});
+    } finally { L.perguntando=false; }
+    if(!sim || ACERTO_LOTE!==L) return {ok:false, cancelado:true};
+    L.gravando=true; L.aviso=''; acertoLoteDesenhar();
+    var r=null;
+    try{ r=await acertoGravarMarcas(marc.map(function(x){ return {id:x.id, quem:x.nomeItem, esperado:x.esperado, valor:x.valor}; }), 'pago', {lote:L.id, nome:L.nome}); }
+    finally { L.gravando=false; }
+    if(r && (r.ok || r.semResposta)){ if(ACERTO_LOTE===L) ACERTO_LOTE=null; acertoLoteDesenhar(); return r; }
+    if(ACERTO_LOTE!==L) return r||{ok:false};   // a pessoa fechou o cartaz enquanto gravava
+    if(r && r.recusado){ var av=String(L.avisoRecusa||''); L.avisoRecusa=''; L.itens=acertoLoteItensDe(L.nome); L.aviso=av; }
+    acertoLoteDesenhar();
+    return r||{ok:false};
+  }
+  // «Desfazer este lote» (cartaz «reabrir», a senha da Gestão): volta pelo AC2, numa escrita só, os itens ainda pagos
+  // por ele; o que já tinha voltado sozinho não é mexido.
+  function acertoLoteDesfazerAbrir(loteId){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('desfazer um lote de pagamento', {lote:String(loteId)}));
+    var L=(ACERTO_LOTES||{})[loteId];
+    if(!L || L.desfeito){ zAlertao('LOTE NÃO ENCONTRADO', ['Atualize a tela: este lote pode ter sido desfeito em outro aparelho.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var voltam=[], ja=[], soma=0;
+    (L.itens||[]).forEach(function(it){
+      var reg=acertoRegDe(it.tipo||'noite', it.iso)||{}, t=((it.tipo==='dia')?'plantão de dia de ':'')+acertoDdMm(it.iso);
+      if(acertoPagoPeloLote(reg, loteId)){ soma+=Number(reg.valor_total_cent)||0; voltam.push(t+' volta '+((reg.status_antes==='acumulado')?'guardada':'a pagar')+' — '+fmtCent(Number(reg.valor_total_cent)||0)); }
+      else ja.push(t+': já tinha voltado (não é mexida)');
+    });
+    if(!voltam.length){ zAlertao('NADA PARA DESFAZER', ['Todas as noites deste lote já voltaram para a lista.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var volta=voltam.concat(['O «A pagar por pessoa» de '+String(L.quem||'')+' ganha '+fmtCent(soma)+', e o Dashboard da Márcia também.'], ja, ['Cada noite fica com o nome e o valor de quando foi paga.']);
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Desfazer o lote de '+String(L.quem||''), oque:'o lote de pagamento de '+String(L.quem||'')+' ('+(L.itens||[]).length+' noites, '+fmtCent(Number(L.total_cent)||0)+')',
+      original:{caminho:'auaulandia/acerto-lotes/'+loteId, id:String(loteId)}, estado:'pago', paraEstado:'em aberto, na lista', volta:volta,
+      nivel:'gestao', capacidade:'gestao-role', botao:'Desfazer este lote', tituloOk:'Lote desfeito',
+      gravar:function(r){ return acertoLoteDesfazerGravar(loteId, r); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoLoteDesfazerGravar(loteId, reg){
+    if(!acertoPodeVer()) return acertoBarrar('desfazer um lote de pagamento', {lote:String(loteId)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var L=(await DB.ref('auaulandia/acerto-lotes/'+loteId).once('value')).val();
+    if(!L) return {ok:false, erro:'O lote não está no sistema. Nada foi gravado.'};
+    if(L.desfeito) return {ok:false, erro:'Este lote já foi desfeito em outro aparelho. Nada foi gravado.'};
+    var its=L.itens||[], curs=await Promise.all(its.map(function(it){ return Promise.resolve(DB.ref('auaulandia/'+acertoCaminho(it.tipo||'noite', it.iso)).once('value')).then(function(s){ return s.val(); }); }));
+    var up={}, ts=Number(reg.ts)||Date.now(), feitos=[], ja=[];
+    its.forEach(function(it, i){
+      var cur=curs[i], tipo=it.tipo||'noite', cam=acertoCaminho(tipo, it.iso), iid=(tipo==='dia')?acertoIdDia(it.iso):String(it.iso);
+      if(!acertoPagoPeloLote(cur, loteId)){ ja.push(iid); return; }
+      var volta=(cur.status_antes==='acumulado')?'acumulado':'apagar';
+      up[cam+'/status']=volta; up[cam+'/pagamentos/lote_'+loteId+'/desfeito']={registro:reg};
+      if(tipo==='noite') up['acerto-abertas/'+it.iso]=acertoIndiceDe(Object.assign({}, cur, {status:volta}), ts);
+      feitos.push(iid);
+    });
+    if(!feitos.length) return {ok:false, erro:'Nenhuma noite deste lote continua paga por ele: nada para desfazer. Nada foi gravado.'};
+    up['acerto-lotes/'+loteId+'/desfeito']={registro:reg, itens:feitos, ja_tinham_voltado:ja};
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-lote-desfeito', 'desfez o lote de pagamento de '+String(L.quem||'')+': '+feitos.length+' noite'+(feitos.length>1?'s':'')+' voltaram'+(ja.length?(' ('+ja.length+' já tinham voltado)'):'')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {lote:String(loteId), assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // ---- AC5: o valor à mão, com tipo e motivo, e «Voltar ao valor de antes» (cartaz, a senha da Gestão, S10-P2) --------
+  var ACERTO_TIPOS_VALOR=['Adiantamento','Desconto','Bônus','Dobra fora da regra','Outro'];
+  var ACERTO_JA_PAGA_VALOR='Esta noite já foi paga. Para mudar o valor, desfaça o pagamento primeiro (senha da Gestão).';
+  // «150», «150,00», «1.234,56» (a mesma leitura do orcLerReal); letra, vazio e negativo: null.
+  function acertoLerReal(t){
+    var s=String(t==null?'':t).replace(/^\s*R\$\s*/,'').trim();
+    if(!/^\d{1,3}(\.\d{3})+(,\d{1,2})?$|^\d+(,\d{1,2})?$/.test(s)) return null;
+    var n=parseFloat(s.replace(/\./g,'').replace(',','.'));
+    return isNaN(n)?null:Math.round(n*100);
+  }
+  function acertoReaisTexto(c){ return fmtCent(Number(c)||0).replace(/^R\$\s*/,''); }
+  function acertoValorAbrir(id, tabela){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('corrigir o valor de uma noite do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o) return Promise.resolve(null);
+    var reg=o.reg||{};
+    if((reg.status||'')==='pago'){ zAlertao(acertoJaPagaTitulo(o), [acertoJaPagaValor(o)], {botao:'Entendi'}); return Promise.resolve({ok:false, pago:true}); }
+    var atual=acertoValorDoCartao(o, reg).total, vTab=acertoValorTabelaHoje(o, reg).total, alvo=null;
+    var p=corrAbrir({acao:'corrigir', tela:ACERTO_TELA, titulo:(tabela?'Trocar pelo valor da tabela — ':'Corrigir o valor — ')+acertoOQueTxt(o),
+      oque:'o valor d'+acertoOQueTxt(o)+' ('+acertoQuemDoItem(o).nome+')', original:{caminho:'auaulandia/'+acertoCaminho(o.tipo, o.iso), id:String(id)},
+      nivel:'gestao', capacidade:'gestao-role', botao:'Gravar o valor', tituloOk:'Valor gravado',
+      campos:[{c:'valor', rotulo:(o.tipo==='dia')?'Valor deste plantão':'Valor desta noite', valor:acertoReaisTexto(atual)}, {c:'tipo', rotulo:'Tipo', valor:String((reg.valor_manual&&reg.valor_manual.tipo)||'Outro'), opcoes:ACERTO_TIPOS_VALOR}],
+      camposTexto:'Valor de agora: '+fmtCent(atual)+'. Pela tabela de hoje: '+fmtCent(vTab)+'. Escreva o valor novo (150, 150,00 ou 1.234,56) e o tipo; o motivo vem depois.',
+      validar:function(v){
+        var c=acertoLerReal(v[0]);
+        if(c==null) return 'Escreva o valor em reais, só com números: 150, 150,00 ou 1.234,56. Vazio, letra e valor negativo não valem.';
+        if(c===atual) return 'Nada mudou: o valor é o mesmo de agora ('+fmtCent(atual)+'). Nada será gravado.';
+        alvo={cent:c, tipo:ACERTO_TIPOS_VALOR.indexOf(String(v[1]))>=0?String(v[1]):'Outro', tabela:!!(tabela && c===vTab)};
+        return {info:['Antes → Depois: '+fmtCent(atual)+' → '+fmtCent(c)+(alvo.tabela?' (o valor da tabela de hoje: o valor à mão sai do topo e fica no histórico)':''),
+          'É este valor que vai para o cartão, o «A pagar por pessoa», o Dashboard da Márcia, o «Paguei» e o «Pagar várias».']};
+      },
+      gravar:function(r){ return acertoValorGravar(id, r, alvo); }});
+    // «Trocar pelo valor da tabela»: o mesmo cartaz, já preenchido com o valor da tabela de hoje
+    try{ if(tabela && CORR_ATUAL && CORR_ATUAL.passo==='campos'){ CORR_ATUAL.valores[0]=acertoReaisTexto(vTab); corrDesenhar(); } }
+    catch(e){} /* silencioso de propósito: sem o preenchimento, o campo fica com o valor de agora (a pessoa escreve) */
+    return p.then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoValorGravar(id, reg, alvo){
+    if(!acertoPodeVer()) return acertoBarrar('corrigir o valor de uma noite do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!alvo || !(alvo.cent>=0)) return {ok:false, erro:'o valor novo não chegou'};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var o=acertoItemDe(id); if(!o) return {ok:false, erro:'a noite não está mais na lista'};
+    var cam=acertoCaminho(o.tipo, o.iso), cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(cur && (cur.status||'')==='pago') return {ok:false, erro:acertoJaPagaValor(o)+' Nada foi gravado.'};
+    if(acertoMudouOutro(cur, o.reg)) return {ok:false, erro:acertoEsta(o)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e corrija de novo.'};
+    var base=cur||{}, ts=Number(reg.ts)||Date.now(), antes=acertoValorDoCartao(o, base).total, up={}, vid=acertoChaveNova(base.valores, 'v', ts);
+    if(!cur && o.tipo!=='dia'){ acertoCongelar(o, up, cam); up[cam+'/status']='apagar'; var qn=acertoQuemDoItem(o).nome; if(qn!=='(sem nome)') up[cam+'/quem']=qn; }
+    if(alvo.tabela){
+      // como o «Atualizar para»: o valor e os dados que valem (a quantidade, a dobra e as plantonistas) andam juntos
+      var v=acertoValorTabelaHoje(o, base), cv=acertoValorCampos(v), ev=acertoNoiteEfetiva(o, base);
+      Object.keys(cv).forEach(function(k){ up[cam+'/'+k]=cv[k]; });
+      if(o.tipo!=='dia'){ up[cam+'/hospedes']=ev.n; up[cam+'/pets']=(o.pets||[]); up[cam+'/quantas']=ev.quantas; up[cam+'/dobrou']=!!ev.dobrou; up[cam+'/dobra_de']=ev.dobrou?(ev.dobraDe||''):''; }
+      up[cam+'/valor_manual']=null;
+      up[cam+'/valores/'+vid]={de:antes, para:v.total, origem:'tabela', registro:reg, valor_manual_anterior:base.valor_manual||null};
+    } else {
+      up[cam+'/valor_manual']={cent:alvo.cent, tipo:alvo.tipo, antes_cent:antes, registro:reg};
+      up[cam+'/valor_total_cent']=alvo.cent;
+      up[cam+'/valores/'+vid]={de:antes, para:alvo.cent, origem:'mao', tipo:alvo.tipo, registro:reg, manual_antes:base.valor_manual||null};
+    }
+    if(o.tipo!=='dia') up['acerto-abertas/'+o.iso]=acertoIndiceDe(Object.assign({}, base, {status:base.status||'apagar', valor_total_cent:1}), ts);
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-valor', (alvo.tabela?'trocou pelo valor da tabela ':'valor à mão ')+acertoOQueTxt(o)+': '+fmtCent(antes)+' → '+fmtCent(alvo.tabela?up[cam+'/valor_total_cent']:alvo.cent)+(alvo.tabela?'':(' ('+alvo.tipo+')'))+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:o.iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // A entrada «à mão» do histórico que criou o valor à mão de agora (o mesmo registro): o «de» dela é o valor de antes, e o
+  // «manual_antes», o valor à mão que estava antes dela. 2ª rodada (LOW-1): a última entrada «à mão» prendia o 2º «Voltar».
+  function acertoUltimaMao(reg){
+    var V=(reg&&reg.valores)||{}, vm=(reg&&reg.valor_manual)||null, alvo=Number(((vm||{}).registro||{}).ts)||0, best=null;
+    if(!vm) return null;
+    Object.keys(V).forEach(function(k){ var x=V[k]||{}; if(x.origem!=='mao') return; if(alvo && Number((x.registro||{}).ts)===alvo && Number(x.para)===Number(vm.cent)) best=x; });
+    return best;
+  }
+  function acertoValorVoltarAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('voltar ao valor de antes de uma noite do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o) return Promise.resolve(null);
+    var reg=o.reg||{};
+    if((reg.status||'')==='pago'){ zAlertao(acertoJaPagaTitulo(o), [acertoJaPagaValor(o)], {botao:'Entendi'}); return Promise.resolve({ok:false, pago:true}); }
+    if(!reg.valor_manual){ zAlertao('NÃO HÁ VALOR À MÃO', ['Atualize a tela: outro aparelho pode ter mudado o valor.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var u=acertoUltimaMao(reg), de=Number(u?u.de:reg.valor_manual.antes_cent)||0;
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Voltar ao valor de antes — '+acertoOQueTxt(o), oque:'o valor à mão d'+acertoOQueTxt(o)+' ('+fmtCent(reg.valor_manual.cent)+')',
+      original:{caminho:'auaulandia/'+acertoCaminho(o.tipo, o.iso), id:String(id)}, estado:'valor à mão de '+fmtCent(reg.valor_manual.cent), paraEstado:'o valor de antes, '+fmtCent(de),
+      volta:['O valor volta para '+fmtCent(de)+' no cartão, no «A pagar por pessoa» e no Dashboard da Márcia.', 'O valor à mão sai do topo e fica no histórico da noite, com quem, quando e o motivo.'],
+      nivel:'gestao', capacidade:'gestao-role', botao:'Voltar ao valor de antes', tituloOk:'Valor de antes de volta',
+      gravar:function(r){ return acertoValorVoltarGravar(id, r); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoValorVoltarGravar(id, reg){
+    if(!acertoPodeVer()) return acertoBarrar('voltar ao valor de antes de uma noite do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var o=acertoItemDe(id); if(!o) return {ok:false, erro:'a noite não está mais na lista'};
+    var cam=acertoCaminho(o.tipo, o.iso), cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(!cur || !cur.valor_manual) return {ok:false, erro:'O valor à mão já não está '+((o.tipo==='dia')?'neste plantão de dia':'nesta noite')+': outro aparelho mudou. Nada foi gravado.'};
+    if((cur.status||'')==='pago') return {ok:false, erro:acertoJaPagaValor(o)+' Nada foi gravado.'};
+    if(acertoMudouOutro(cur, o.reg)) return {ok:false, erro:acertoEsta(o)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado.'};
+    var u=acertoUltimaMao(cur), de=Number(u?u.de:cur.valor_manual.antes_cent)||0, ts=Number(reg.ts)||Date.now(), up={};
+    up[cam+'/valor_total_cent']=de;
+    up[cam+'/valor_manual']=(u && u.manual_antes)?u.manual_antes:null;
+    up[cam+'/valores/'+acertoChaveNova(cur.valores, 'v', ts)]={de:Number(cur.valor_total_cent)||0, para:de, origem:'voltou', registro:reg, valor_manual_anterior:cur.valor_manual};
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-valor', 'voltou ao valor de antes '+acertoOQueTxt(o)+': '+fmtCent(Number(cur.valor_total_cent)||0)+' → '+fmtCent(de)+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:o.iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // ---- AC8: «Corrigir esta noite», «Voltar ao que o app contou» e «Não houve plantão nesta noite» --------------------
+  // PURA: lê o cartaz da correção (quantos FILHOts, a dobra, uma ou duas plantonistas e quem): a frase do que falta (texto) ou os dados.
+  function acertoNoiteLerCampos(v){
+    v=v||[];
+    var sn=String(v[0]==null?'':v[0]).trim();
+    if(!/^\d{1,2}$/.test(sn)) return 'Escreva quantos FILHOts dormiram, um número de 0 a 99.';
+    var n=parseInt(sn,10), dobrou=(String(v[1])==='Sim'), quantas=(String(v[2])==='2')?2:1;
+    var n1=String(v[3]==null?'':v[3]).trim(), n2=String(v[4]==null?'':v[4]).trim();
+    var letras=function(x){ return /[a-zA-ZÀ-ÿ]{2,}/.test(x); };
+    if(!letras(n1)) return 'Escreva o nome da plantonista (pelo menos 2 letras).';
+    var equipe=[nomeProprio(n1)];
+    if(quantas===2){
+      if(!letras(n2)) return 'Com duas plantonistas, escreva o nome da 2ª (pelo menos 2 letras).';
+      if(plantChave(n1)===plantChave(n2)) return 'Duas plantonistas com um nome só: escreva o nome de cada uma.';
+      equipe=[nomeProprio(n1), nomeProprio(n2)].sort(function(a,b){ return a.localeCompare(b,'pt'); });
+    }
+    return {n:n, dobrou:dobrou, quantas:quantas, equipe:equipe, nome:equipe.join(' e ')};
+  }
+  // O que o app contou (fica guardado na correção, para «Voltar ao que o app contou» e para o cartão dizer).
+  function acertoDeduzido(o, base){
+    base=base||{};
+    if(base.correcao && base.correcao.deduzido) return base.correcao.deduzido;
+    if(o.antiga) return {hospedes:Number(base.hospedes)||0, pets:(base.pets||[]), dobrou:!!base.dobrou, dobra_de:String(base.dobra_de||''), quantas:Math.max(1, parseInt(base.quantas,10)||1), quem:String(base.quem||'')};
+    var q=(ACERTO_QUEM||{})[o.iso]||{};
+    return {hospedes:Number(o.n)||0, pets:(o.pets||[]), dobrou:!!q.dobrou, dobra_de:String(q.dobraDe||''), quantas:Math.max(1, q.quantas||1),
+      quem:String(base.quem||acertoNomeSugerido(q)||'')};
+  }
+  function acertoNoiteCorrigirAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('corrigir a noite do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o || o.tipo==='dia') return Promise.resolve(null);
+    var reg=o.reg||{};
+    if((reg.status||'')==='pago'){ zAlertao('ESTA NOITE JÁ FOI PAGA', ['Esta noite já foi paga. Para corrigir, desfaça o pagamento primeiro (senha da Gestão).'], {botao:'Entendi'}); return Promise.resolve({ok:false, pago:true}); }
+    var e=acertoNoiteEfetiva(o, reg), Q=acertoQuemDoItem(o), ded=acertoDeduzido(o, reg);
+    var nomes=(e.equipe && e.equipe.length>1)?e.equipe.slice(0,2):((Q.quantas>1&&plantEhDuplo(Q.nome))?plantPartes(Q.nome).slice(0,2):[(Q.nome==='(sem nome)')?'':Q.nome]);
+    var antes=acertoValorDoCartao(o, reg).total, d=null;
+    return corrAbrir({acao:'corrigir', tela:ACERTO_TELA, titulo:'Corrigir a noite de '+orcBR(o.iso), oque:'a noite de '+orcBR(o.iso)+' no acerto das plantonistas',
+      original:{caminho:'auaulandia/acerto-plantao/'+o.iso, id:o.iso}, nivel:'gestao', capacidade:'gestao-role', botao:'Gravar a correção', tituloOk:'Noite corrigida',
+      campos:[{c:'hospedes', rotulo:'Quantos FILHOts dormiram', valor:String(e.n)}, {c:'dobrou', rotulo:'Dobra (24 h)', valor:(e.dobrou?'Sim':'Não'), opcoes:['Não','Sim']},
+        {c:'quantas', rotulo:'Quantas plantonistas', valor:String(e.quantas>1?2:1), opcoes:['1','2']},
+        {c:'nome1', rotulo:'Nome da plantonista (a 1ª, se foram duas)', valor:nomes[0]||''}, {c:'nome2', rotulo:'Nome da 2ª plantonista (só se foram duas)', valor:nomes[1]||''}],
+      camposTexto:'O app contou '+(Number(ded.hospedes)||0)+((ded.pets||[]).length?(': '+(ded.pets||[]).join(', ')):'')+'. Mude o que estiver errado e toque em «Continuar».',
+      validar:function(v){
+        var x=acertoNoiteLerCampos(v); if(typeof x==='string') return x;
+        d=x;
+        var vn=reg.valor_manual?antes:acertoValorPara(x.n, x.dobrou, x.quantas, o.iso).total;
+        var info=['Valor: '+fmtCent(antes)+' → '+fmtCent(vn)+((x.quantas>1)?' (de cada uma)':'')];
+        if(reg.valor_manual) info.push('Esta noite tem valor à mão ('+fmtCent(antes)+'): ele continua. Para usar o da tabela, toque em «Voltar ao valor de antes» ou «Trocar pelo valor da tabela».');
+        return {info:info};
+      },
+      gravar:function(r){ return acertoNoiteCorrigirGravar(id, r, d); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoNoiteCorrigirGravar(id, reg, d){
+    if(!acertoPodeVer()) return acertoBarrar('corrigir a noite do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!d) return {ok:false, erro:'a correção não chegou'};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var o=acertoItemDe(id); if(!o || o.tipo==='dia') return {ok:false, erro:'a noite não está mais na lista'};
+    var iso=o.iso, cam='acerto-plantao/'+iso, cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(cur && (cur.status||'')==='pago') return {ok:false, erro:'Esta noite já foi paga. Para corrigir, desfaça o pagamento primeiro (senha da Gestão). Nada foi gravado.'};
+    if(acertoMudouOutro(cur, o.reg)) return {ok:false, erro:'Esta noite mudou em outro aparelho depois que a tela abriu. Nada foi gravado: confira e corrija de novo.'};
+    var base=cur||{}, ts=Number(reg.ts)||Date.now(), up={}, ded=acertoDeduzido(o, base), antesV=acertoValorDoCartao(o, base).total;
+    if(base.correcao) up[cam+'/correcoes/'+acertoChaveNova(base.correcoes, 'c', ts)]=Object.assign({}, base.correcao, {substituida:{registro:reg}});
+    var dobraDe=d.dobrou?(String(ded.dobra_de||'')||orcMaisDias(iso,1)):'';
+    up[cam+'/correcao']={hospedes:d.n, dobrou:d.dobrou, dobra_de:dobraDe, quantas:d.quantas, equipe:d.equipe, motivo:String(reg.motivo||''), registro:reg, deduzido:ded};
+    up[cam+'/hospedes']=d.n; up[cam+'/quantas']=d.quantas; up[cam+'/dobrou']=d.dobrou; up[cam+'/dobra_de']=dobraDe; up[cam+'/quem']=d.nome;
+    var novoV=antesV;
+    if(!base.valor_manual){
+      var v=acertoValorPara(d.n, d.dobrou, d.quantas, iso), cv=acertoValorCampos(v);
+      Object.keys(cv).forEach(function(k){ up[cam+'/'+k]=cv[k]; });
+      novoV=v.total;
+      if(novoV!==antesV || base.valor_total_cent==null) up[cam+'/valores/'+acertoChaveNova(base.valores, 'v', ts)]={de:antesV, para:novoV, origem:'correcao', registro:reg};
+    } else up[cam+'/pets_por_pessoa']=d.n/d.quantas;
+    if(!cur){   // a noite ainda sem registro: a correção cria o registro dela, «a pagar»
+      up[cam+'/status']='apagar'; up[cam+'/pets']=o.pets||[];
+      var _d=(ACERTO_QUEM||{})[iso]||{};
+      up[cam+'/assinou']=(_d.momentos||[]).join(' · '); up[cam+'/assinatura_completa']=!!_d.completa; up[cam+'/variantes_do_nome']=(_d.variantes||[]).join(', ');
+    }
+    up['acerto-abertas/'+iso]=acertoIndiceDe(Object.assign({}, base, {status:base.status||'apagar', valor_total_cent:novoV}), ts);
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-noite-corrigida', 'corrigiu a noite de '+orcBR(iso)+': '+d.n+' FILHOts (o app contou '+(Number(ded.hospedes)||0)+')'+(d.dobrou?', com dobra':', sem dobra')+', '+d.quantas+' plantonista'+(d.quantas>1?'s':'')+' ('+d.nome+') — valor '+fmtCent(antesV)+' → '+fmtCent(novoV)+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  function acertoNoiteVoltarAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('desfazer a correção da noite do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o || o.tipo==='dia') return Promise.resolve(null);
+    var reg=o.reg||{}, c=reg.correcao;
+    if((reg.status||'')==='pago'){ zAlertao('ESTA NOITE JÁ FOI PAGA', ['Esta noite já foi paga. Para corrigir, desfaça o pagamento primeiro (senha da Gestão).'], {botao:'Entendi'}); return Promise.resolve({ok:false, pago:true}); }
+    if(!c){ zAlertao('NÃO HÁ CORREÇÃO', ['Atualize a tela: outro aparelho pode ter desfeito a correção.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var ded=c.deduzido||{}, vn=reg.valor_manual?Number(reg.valor_total_cent):acertoNoiteVoltarValor(o, reg).total;
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Voltar ao que o app contou — noite de '+orcBR(o.iso), oque:'a correção da noite de '+orcBR(o.iso)+' ('+c.hospedes+' FILHOts)',
+      original:{caminho:'auaulandia/acerto-plantao/'+o.iso, id:o.iso}, estado:'corrigida pela Gestão', paraEstado:'o que o app contou',
+      volta:[(Number(ded.hospedes)||0)+' FILHOts, '+(ded.dobrou?'com dobra':'sem dobra')+', '+(Number(ded.quantas)||1)+' plantonista'+((Number(ded.quantas)||1)>1?'s':'')+(ded.quem?(' ('+ded.quem+')'):''),
+        reg.valor_manual?('O valor à mão ('+fmtCent(vn)+') continua.'):('O valor é refeito pela tabela: '+fmtCent(Number(reg.valor_total_cent)||0)+' → '+fmtCent(vn)+'.'),
+        'A correção sai do topo e fica no histórico da noite.'],
+      nivel:'gestao', capacidade:'gestao-role', botao:'Voltar ao que o app contou', tituloOk:'Correção desfeita',
+      gravar:function(r){ return acertoNoiteVoltarGravar(id, r); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  // O valor pela tabela com o que o app contou (sem a correção).
+  function acertoNoiteVoltarValor(o, reg){
+    var ded=((reg||{}).correcao||{}).deduzido||{}, q=(ACERTO_QUEM||{})[o.iso];
+    if(!o.antiga && q) return acertoValorPara(Number(o.n)||0, !!q.dobrou, Math.max(1, q.quantas||1), o.iso);
+    return acertoValorPara(Number(ded.hospedes)||0, !!ded.dobrou, Math.max(1, parseInt(ded.quantas,10)||1), o.iso);
+  }
+  async function acertoNoiteVoltarGravar(id, reg){
+    if(!acertoPodeVer()) return acertoBarrar('desfazer a correção da noite do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var o=acertoItemDe(id); if(!o || o.tipo==='dia') return {ok:false, erro:'a noite não está mais na lista'};
+    var iso=o.iso, cam='acerto-plantao/'+iso, cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(!cur || !cur.correcao) return {ok:false, erro:'A correção já não está nesta noite: outro aparelho mudou. Nada foi gravado.'};
+    if((cur.status||'')==='pago') return {ok:false, erro:'Esta noite já foi paga. Para corrigir, desfaça o pagamento primeiro (senha da Gestão). Nada foi gravado.'};
+    if(acertoMudouOutro(cur, o.reg)) return {ok:false, erro:'Esta noite mudou em outro aparelho depois que a tela abriu. Nada foi gravado.'};
+    var ts=Number(reg.ts)||Date.now(), up={}, ded=cur.correcao.deduzido||{}, q=(ACERTO_QUEM||{})[iso];
+    var n=(!o.antiga && q)?(Number(o.n)||0):(Number(ded.hospedes)||0), dob=(!o.antiga && q)?!!q.dobrou:!!ded.dobrou;
+    var qt=(!o.antiga && q)?Math.max(1, q.quantas||1):Math.max(1, parseInt(ded.quantas,10)||1), dde=(!o.antiga && q)?String(q.dobraDe||''):String(ded.dobra_de||'');
+    up[cam+'/correcoes/'+acertoChaveNova(cur.correcoes, 'c', ts)]=Object.assign({}, cur.correcao, {desfeita:{registro:reg}});
+    up[cam+'/correcao']=null;
+    up[cam+'/hospedes']=n; up[cam+'/dobrou']=dob; up[cam+'/dobra_de']=dob?dde:''; up[cam+'/quantas']=qt; up[cam+'/quem']=String(ded.quem||'');
+    var antesV=Number(cur.valor_total_cent)||0, novoV=antesV;
+    if(!cur.valor_manual){
+      var v=acertoValorPara(n, dob, qt, iso), cv=acertoValorCampos(v);
+      Object.keys(cv).forEach(function(k){ up[cam+'/'+k]=cv[k]; });
+      novoV=v.total;
+      if(novoV!==antesV) up[cam+'/valores/'+acertoChaveNova(cur.valores, 'v', ts)]={de:antesV, para:novoV, origem:'correcao', registro:reg, voltou_ao_app:true};
+    } else up[cam+'/pets_por_pessoa']=n/qt;
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-noite-corrigida', 'voltou ao que o app contou na noite de '+orcBR(iso)+': '+n+' FILHOts'+(dob?', com dobra':', sem dobra')+' — valor '+fmtCent(antesV)+' → '+fmtCent(novoV)+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // «Não houve plantão nesta noite» (a noite) e «Lançado por engano» (o plantão de dia): cartaz «anular», a senha da Gestão.
+  // Nada é apagado: grava o registro da 6.57 (sem_plantao ou anulado), sem mudar o estado para «pago».
+  function acertoSemPlantaoAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('tirar uma noite da conta do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o) return Promise.resolve(null);
+    var reg=o.reg||{}, dia=(o.tipo==='dia'), dd=acertoDdMm(o.iso);
+    if((reg.status||'')==='pago'){ zAlertao(acertoJaPagaTitulo(o), [acertoEsta(o)+' já foi '+acertoPaga(o)+'. Para tirar da conta, desfaça o pagamento primeiro (senha da Gestão).'], {botao:'Entendi'}); return Promise.resolve({ok:false, pago:true}); }
+    if(reg.sem_plantao || reg.anulado){ zAlertao('JÁ ESTÁ FORA DA CONTA', ['Atualize a tela: outro aparelho pode ter mudado.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var cascata=dia?['O plantão de dia de '+dd+' sai da lista de a pagar, do «A pagar por pessoa» e do Dashboard da Márcia.', 'Fica em «Plantões de dia lançados por engano», riscado, com Reabrir. Nada é apagado.']
+      :['A noite de '+dd+' sai da lista de a pagar, do «A pagar por pessoa» e do Dashboard da Márcia.', 'Fica em «Noites sem plantão», riscada, com Reabrir. Nada é apagado.'];
+    var op={acao:'anular', tela:ACERTO_TELA, titulo:dia?('Lançado por engano — plantão de dia de '+orcBR(o.iso)):('Não houve plantão na noite de '+orcBR(o.iso)),
+      oque:dia?('o plantão de dia de '+orcBR(o.iso)+' ('+acertoQuemDoItem(o).nome+')'):('a noite de '+orcBR(o.iso)+' no acerto das plantonistas'),
+      original:{caminho:'auaulandia/'+acertoCaminho(o.tipo, o.iso), id:String(id)}, estado:'na conta do acerto', cascata:cascata, nivel:'gestao', capacidade:'gestao-role',
+      botao:dia?'Lançado por engano':'Não houve plantão nesta noite', tituloOk:dia?'Tirado da conta':'Noite fora da conta',
+      gravar:function(r){ return acertoSemPlantaoGravar(id, r); }};
+    if(!dia){ op.genero='f'; op.rotulo='Não houve plantão'; op.rotuloAcao='Marcou que não houve plantão'; }
+    return corrAbrir(op).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoSemPlantaoGravar(id, reg){
+    if(!acertoPodeVer()) return acertoBarrar('tirar uma noite da conta do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var o=acertoItemDe(id); if(!o) return {ok:false, erro:'a noite não está mais na lista'};
+    var dia=(o.tipo==='dia'), cam=acertoCaminho(o.tipo, o.iso), cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(dia && !cur) return {ok:false, erro:'O plantão de dia não está no sistema. Nada foi gravado.'};
+    if(cur && (cur.status||'')==='pago') return {ok:false, erro:acertoEsta(o)+' já foi '+acertoPaga(o)+'. Para tirar da conta, desfaça o pagamento primeiro (senha da Gestão). Nada foi gravado.'};
+    if(acertoMudouOutro(cur, o.reg)) return {ok:false, erro:acertoEsta(o)+' mudou em outro aparelho depois que a tela abriu. Nada foi gravado.'};
+    var up={};
+    up[cam+'/'+(dia?'anulado':'sem_plantao')]=reg;
+    if(!dia) up['acerto-abertas/'+o.iso]=null;
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit(dia?'acerto-plantao-dia':'acerto-sem-plantao', (dia?('tirou da conta o plantão de dia de '+orcBR(o.iso)+' (lançado por engano)'):('marcou que não houve plantão na noite de '+orcBR(o.iso)))+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:o.iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  function acertoSemPlantaoReabrirAbrir(id){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('reabrir uma noite tirada da conta do acerto', {noite:String(id)}));
+    var o=acertoItemDe(id); if(!o) return Promise.resolve(null);
+    var reg=o.reg||{}, dia=(o.tipo==='dia'), dd=acertoDdMm(o.iso), an=dia?reg.anulado:reg.sem_plantao;
+    if(!an){ zAlertao('JÁ ESTÁ NA CONTA', ['Atualize a tela: outro aparelho pode ter reaberto.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var vv=(reg.valor_total_cent!=null)?(' (+ '+fmtCent(Number(reg.valor_total_cent)||0)+')'):'';
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Reabrir — '+acertoOQueTxt(o), oque:dia?('o plantão de dia de '+orcBR(o.iso)):('a noite de '+orcBR(o.iso)+' no acerto das plantonistas'),
+      original:{caminho:'auaulandia/'+acertoCaminho(o.tipo, o.iso), id:String(id)}, estado:dia?'lançado por engano':'sem plantão', paraEstado:'na lista de a pagar',
+      volta:[(dia?('O plantão de dia de '+dd):('A noite de '+dd))+' volta para a lista e para o «A pagar por pessoa»'+vv+', e para o Dashboard da Márcia.'],
+      nivel:'gestao', capacidade:'gestao-role', botao:'Reabrir', tituloOk:'Reaberta',
+      gravar:function(r){ return acertoSemPlantaoReabrirGravar(id, r); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoSemPlantaoReabrirGravar(id, reg){
+    if(!acertoPodeVer()) return acertoBarrar('reabrir uma noite tirada da conta do acerto', {noite:String(id)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var P=acertoIdParte(id), dia=(P.tipo==='dia'), cam=acertoCaminho(P.tipo, P.iso), campo=dia?'anulado':'sem_plantao';
+    var cur=(await DB.ref('auaulandia/'+cam).once('value')).val();
+    if(!cur || !cur[campo]) return {ok:false, erro:'Já foi reaberta em outro aparelho. Nada foi gravado.'};
+    var ts=Number(reg.ts)||Date.now(), up={};
+    up[cam+'/'+campo]=null;
+    up[cam+'/'+campo+'_historico/'+acertoChaveNova(cur[campo+'_historico'], 'r', ts)]={anulacao:cur[campo], reabertura:reg};
+    if(!dia){ var depois=Object.assign({}, cur); delete depois.sem_plantao; up['acerto-abertas/'+P.iso]=acertoIndiceDe(depois, ts); }
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit(dia?'acerto-plantao-dia':'acerto-sem-plantao', 'reabriu '+acertoOQueTxt({iso:P.iso, tipo:P.tipo})+' (volta para a conta) — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {noite:P.iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // ---- AC9: «Lançar o plantão de dia» (domingo e feriado) e «Corrigir este plantão de dia» ----------------------------
+  function acertoDiaLerCampos(v){
+    v=v||[];
+    var n1=String(v[0]==null?'':v[0]).trim(), n2=String(v[1]==null?'':v[1]).trim(), sn=String(v[2]==null?'':v[2]).trim();
+    var letras=function(x){ return /[a-zA-ZÀ-ÿ]{2,}/.test(x); };
+    if(!letras(n1)) return 'Escreva quem cobriu o dia (pelo menos 2 letras).';
+    if(n2 && !letras(n2)) return 'O nome da 2ª plantonista precisa de pelo menos 2 letras (ou deixe em branco, se foi uma só).';
+    if(n2 && plantChave(n1)===plantChave(n2)) return 'Duas plantonistas com um nome só: escreva o nome de cada uma.';
+    if(!/^\d{1,2}$/.test(sn)) return 'Escreva quantos FILHOts ficaram no dia, um número de 0 a 99.';
+    var equipe=n2?[nomeProprio(n1), nomeProprio(n2)].sort(function(a,b){ return a.localeCompare(b,'pt'); }):[nomeProprio(n1)];
+    return {n:parseInt(sn,10), quantas:equipe.length, equipe:equipe, nome:equipe.join(' e ')};
+  }
+  // As recusas (AC9.3): a dobra da mesma pessoa na noite anterior já paga este dia; um segundo plantão de dia no mesmo dia.
+  function acertoDiaRecusa(iso, equipe, corrigir){
+    var ex=(ACERTO_DIA||{})[iso];
+    if(!corrigir && ex) return 'Já há um plantão de dia lançado em '+acertoDdMm(iso)+': corrija o que existe.';
+    var ant=orcMaisDias(iso,-1), on=acertoItemDe(ant);
+    if(on && on.tipo!=='dia' && !(on.reg||{}).sem_plantao){
+      var e=acertoNoiteEfetiva(on, on.reg||{});
+      if(e.dobrou && String(e.dobraDe||orcMaisDias(ant,1))===iso){
+        var pes=acertoPessoasDoItem(on);
+        var dup=(equipe||[]).filter(function(n){ return pes.some(function(p){ return plantChave(p)===plantChave(n); }); })[0];
+        if(dup) return 'A dobra de '+dup+' na noite de '+acertoDdMm(ant)+' já paga este dia. Para lançar o plantão de dia, corrija a noite e tire a dobra.';
+      }
+    }
+    return '';
+  }
+  function acertoDiaLancarAbrir(iso, corrigir){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar(corrigir?'corrigir o plantão de dia':'lançar o plantão de dia', {dia:String(iso)}));
+    var reg=(ACERTO_DIA||{})[iso]||null, dd=acertoDdMm(iso);
+    if(!corrigir && reg){ zAlertao('JÁ HÁ UM PLANTÃO DE DIA', ['Já há um plantão de dia lançado em '+dd+': corrija o que existe.'], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    if(corrigir && (!reg || (reg.status||'')==='pago' || reg.anulado)){ zAlertao('NÃO DÁ PARA CORRIGIR AGORA', [!reg?'Este plantão de dia não está no sistema.':((reg.status||'')==='pago'?'Ele já foi pago: desfaça o pagamento primeiro (senha da Gestão).':'Ele está em «Plantões de dia lançados por engano»: reabra primeiro.')], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    var noite=acertoNoites().filter(function(x){ return x.iso===iso && x.tipo!=='dia'; })[0];
+    var n0=corrigir?(Number(reg.hospedes)||0):(noite?acertoNoiteEfetiva(noite, noite.reg).n:acertoHospedesNaNoite(iso).length);
+    var eq0=corrigir?((Array.isArray(reg.equipe)&&reg.equipe.length)?reg.equipe:plantPartes(reg.quem||'')):[];
+    var d=null;
+    return corrAbrir({acao:'corrigir', tela:ACERTO_TELA, titulo:(corrigir?'Corrigir o plantão de dia de ':'Lançar o plantão de dia de ')+orcBR(iso),
+      oque:'o plantão de dia de '+orcBR(iso)+' (06h50 às 19h)', original:{caminho:'auaulandia/acerto-plantao-dia/'+iso, id:acertoIdDia(iso)},
+      nivel:'gestao', capacidade:'gestao-role', botao:corrigir?'Gravar a correção':'Lançar o plantão de dia', tituloOk:corrigir?'Plantão de dia corrigido':'Plantão de dia lançado',
+      campos:[{c:'nome1', rotulo:'Quem cobriu o dia (a 1ª, se foram duas)', valor:eq0[0]||''}, {c:'nome2', rotulo:'A 2ª plantonista (só se foram duas)', valor:eq0[1]||''},
+        {c:'hospedes', rotulo:'Quantos FILHOts no dia', valor:String(n0)}],
+      camposTexto:corrigir?'Mude o que estiver errado e toque em «Continuar».':('Escreva quem cobriu o dia e confira quantos FILHOts (começa com os da noite de '+dd+').'),
+      validar:function(v){
+        var x=acertoDiaLerCampos(v); if(typeof x==='string') return x;
+        var rec=acertoDiaRecusa(iso, x.equipe, corrigir); if(rec) return rec;
+        d=x;
+        var vv=acertoValorDia(x.n, x.quantas);
+        var info=['Valor pela linha «Plantão de dia» da tabela: '+fmtCent(vv.total)+((x.quantas>1)?' para cada uma':'')+' ('+acertoValorDescricao(vv).replace(/&times;/g,'×')+').'];
+        if(corrigir && reg.valor_manual) info=['Este plantão de dia tem valor à mão ('+fmtCent(Number(reg.valor_total_cent)||0)+'): ele continua.'];
+        return {info:info};
+      },
+      gravar:function(r){ return acertoDiaGravar(iso, r, d, !!corrigir); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoDiaGravar(iso, reg, d, corrigir){
+    if(!acertoPodeVer()) return acertoBarrar(corrigir?'corrigir o plantão de dia':'lançar o plantão de dia', {dia:String(iso)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!d) return {ok:false, erro:'o plantão de dia não chegou'};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var cam='acerto-plantao-dia/'+iso, cur=(await DB.ref('auaulandia/'+cam).once('value')).val(), dd=acertoDdMm(iso);
+    if(!corrigir && cur) return {ok:false, erro:'Já há um plantão de dia lançado em '+dd+': corrija o que existe. Nada foi gravado.'};
+    if(corrigir){
+      if(!cur) return {ok:false, erro:'Este plantão de dia não está no sistema. Nada foi gravado.'};
+      if((cur.status||'')==='pago') return {ok:false, erro:'Este plantão de dia já foi pago: desfaça o pagamento primeiro (senha da Gestão). Nada foi gravado.'};
+      if(cur.anulado || acertoMudouOutro(cur, (ACERTO_DIA||{})[iso])) return {ok:false, erro:'Este plantão de dia mudou em outro aparelho depois que a tela abriu. Nada foi gravado.'};
+    }
+    var rec=acertoDiaRecusa(iso, d.equipe, corrigir); if(rec) return {ok:false, erro:rec+' Nada foi gravado.'};
+    var v=acertoValorDia(d.n, d.quantas), cv=acertoValorCampos(v), ts=Number(reg.ts)||Date.now(), up={};
+    if(!corrigir){
+      var novo={tipo:'dia', quem:d.nome, quantas:d.quantas, equipe:d.equipe, hospedes:d.n, registro:reg, status:'apagar'};
+      novo.motivo=String(reg.motivo||'');
+      Object.keys(cv).forEach(function(k){ if(cv[k]!=null) novo[k]=cv[k]; });
+      up[cam]=novo;
+    } else {
+      var antes={quem:String(cur.quem||''), quantas:Number(cur.quantas)||1, equipe:(cur.equipe||[]), hospedes:Number(cur.hospedes)||0, valor_total_cent:Number(cur.valor_total_cent)||0};
+      var depois={quem:d.nome, quantas:d.quantas, equipe:d.equipe, hospedes:d.n, valor_total_cent:cur.valor_manual?antes.valor_total_cent:v.total};
+      up[cam+'/correcoes/'+acertoChaveNova(cur.correcoes, 'c', ts)]={antes:antes, depois:depois, motivo:String(reg.motivo||''), registro:reg};
+      up[cam+'/quem']=d.nome; up[cam+'/quantas']=d.quantas; up[cam+'/equipe']=d.equipe; up[cam+'/hospedes']=d.n;
+      if(!cur.valor_manual){
+        Object.keys(cv).forEach(function(k){ up[cam+'/'+k]=cv[k]; });
+        if(v.total!==antes.valor_total_cent) up[cam+'/valores/'+acertoChaveNova(cur.valores, 'v', ts)]={de:antes.valor_total_cent, para:v.total, origem:'correcao', registro:reg};
+      } else up[cam+'/pets_por_pessoa']=d.n/d.quantas;
+    }
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    try{ audit('acerto-plantao-dia', (corrigir?'corrigiu o plantão de dia de ':'lançou o plantão de dia de ')+orcBR(iso)+': '+d.nome+', '+d.n+' FILHOts, '+fmtCent(v.total)+((d.quantas>1)?' para cada uma':'')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {dia:iso, assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
+  }
+  // ---- AC6: a tabela de valores pelo cartaz (a senha da Gestão), a lista do que muda e as tabelas anteriores ----------
+  function acertoExtraTexto(k, e){
+    if(!e || e.modo==='hoje') return {domingo:'Como hoje (igual à noite comum)', feriado:'Como hoje (igual à noite comum)', dobra:'Como hoje (2 × a faixa)', dia:'Como hoje (uma noite pela faixa)'}[k];
+    if(k==='dobra') return 'A faixa + '+fmtCent(e.cent)+' pelo dia coberto';
+    if(k==='dia') return fmtCent(e.cent)+' (valor fixo)';
+    return 'A faixa + '+fmtCent(e.cent)+' a mais';
+  }
+  function acertoExtraLer(k, t){
+    t=String(t==null?'':t).trim();
+    if(/^como hoje/i.test(t)) return {modo:'hoje', cent:0};
+    var m=/R\$\s*([\d.]+(?:,\d{1,2})?)/.exec(t), c=m?acertoLerReal(m[1]):acertoLerReal(t);
+    return (c==null)?null:{modo:(k==='dia')?'fixo':'mais', cent:c};
+  }
+  // PURA: as linhas da tabela, cada uma com o texto que o cartaz e o rastro mostram.
+  function acertoTabelaLinhas(T){
+    T=acertoTabNorm(T);
+    var out=[], n=T.faixas.length;
+    T.faixas.forEach(function(f, i){ out.push({c:'f'+i, rotulo:acertoFaixaNome(T, i), texto:fmtCent(f.v)}); });
+    T.faixas.forEach(function(f, i){ if(i<n-1) out.push({c:'a'+i, rotulo:'Limite da '+(i+1)+'ª faixa (até quantos FILHOts)', texto:String(f.ate)}); });
+    out.push({c:'ajuda', rotulo:'Ajuda de custo (sempre soma)', texto:fmtCent(T.ajuda)});
+    ACERTO_EXTRAS_K.forEach(function(k){ out.push({c:'x_'+k, rotulo:ACERTO_EXTRAS_ROT[k], texto:acertoExtraTexto(k, T.extras[k])}); });
+    return out;
+  }
+  function acertoTabelaResumo(T){ return acertoTabelaLinhas(T).filter(function(l){ return !/^a\d/.test(l.c); }).map(function(l){ return l.rotulo+': '+l.texto; }).join(' · '); }
+  function acertoTabelaOrdem(T, nomesDe){
+    var F=T.faixas, N=acertoTabNorm(nomesDe||T);
+    for(var i=0;i<F.length-1;i++){
+      if(!(F[i].ate>=0) || Math.round(F[i].ate)!==F[i].ate) return 'O limite de «'+acertoFaixaNome(N, i)+'» tem de ser um número inteiro.';
+      if(i>0 && !(F[i].ate>F[i-1].ate)) return 'O limite de «'+acertoFaixaNome(N, i)+'» tem de ser maior que o de «'+acertoFaixaNome(N, i-1)+'».';
+    }
+    if(F.length>1 && !(F[F.length-1].ate>F[F.length-2].ate)) return 'O limite de «'+acertoFaixaNome(N, F.length-2)+'» tem de ser menor que '+F[F.length-1].ate+'.';
+    return '';
+  }
+  // Lê a tabela da tela (os valores, os limites, a ajuda e as quatro linhas); o erro sai na própria tela, como sempre.
+  function acertoTabelaLer(){
+    var T=acertoTabNorm(acertoTab()), n=T.faixas.length, faixas=[];
+    var val=function(id){ var el=document.getElementById(id); return (el && typeof el.value==='string')?el.value:''; };
+    for(var i=0;i<n;i++){
+      var v=acertoLerReal(val('acf_'+i));
+      if(v==null) return {erro:'Algum valor está em branco ou inválido. Nada foi salvo.'};
+      var ate=T.faixas[i].ate, el=document.getElementById('acfAte_'+i);
+      if(i<n-1 && el && typeof el.value==='string'){
+        var s=el.value.trim();
+        if(!/^\d{1,3}$/.test(s)) return {erro:'O limite de «'+acertoFaixaNome(T, i)+'» tem de ser um número inteiro. Nada foi salvo.'};
+        ate=parseInt(s,10);
+      }
+      faixas.push({ate:ate, v:v});
+    }
+    var aj=acertoLerReal(val('acAjuda'));
+    if(aj==null) return {erro:'Algum valor está em branco ou inválido. Nada foi salvo.'};
+    var nova={faixas:faixas, ajuda:aj, extras:{}}, erro='';
+    ACERTO_EXTRAS_K.forEach(function(k){
+      var o=document.getElementById('acxO_'+k);
+      if(o && o.checked){
+        var c=acertoLerReal(val('acxV_'+k));
+        if(c==null && !erro) erro='Escreva o valor de «'+ACERTO_EXTRAS_ROT[k]+'» em reais (ou marque «Como hoje»). Nada foi salvo.';
+        else nova.extras[k]={modo:(k==='dia')?'fixo':'mais', cent:c};
+      } else nova.extras[k]={modo:'hoje', cent:0};
+    });
+    if(erro) return {erro:erro};
+    var eo=acertoTabelaOrdem(nova, T); if(eo) return {erro:eo+' Nada foi salvo.'};
+    return {T:acertoTabNorm(nova)};
+  }
+  // PURA: as noites da tela SEM valor gravado que mudam de valor com a tabela nova (AC6.2, S10-P5).
+  function acertoTabelaMudam(nova){
+    var A=acertoTabNorm(acertoTab()), B=acertoTabNorm(nova), out=[];
+    acertoNoites().forEach(function(o){
+      var reg=o.reg||{};
+      if(o.tipo==='dia' || reg.valor_total_cent!=null || reg.sem_plantao || (reg.status||'apagar')==='pago') return;
+      var e=acertoNoiteEfetiva(o, reg), a=acertoValorPelaTabela(A, e.n, e.dobrou, e.quantas, o.iso).total, b=acertoValorPelaTabela(B, e.n, e.dobrou, e.quantas, o.iso).total;
+      if(a!==b) out.push({iso:o.iso, nome:acertoQuemDoItem(o).nome, de:a, para:b});
+    });
+    return out;
+  }
+  function acertoTabelaMudamInfo(nova){
+    var M=acertoTabelaMudam(nova);
+    return (M.length?(['Mudam de valor ('+M.length+' noite'+(M.length>1?'s':'')+' ainda sem valor gravado):'].concat(M.map(function(m){
+      return acertoDdMm(m.iso)+' — '+((m.nome==='(sem nome)')?'sem nome':m.nome)+': '+fmtCent(m.de)+' → '+fmtCent(m.para); }))):['Nenhuma noite da tela muda de valor.'])
+      .concat(['As noites guardadas, a pagar com valor gravado e as pagas guardam o valor da época: não mudam.']);
+  }
+  function acertoSalvarTabela(){
+    var st=document.getElementById('acTabStatus');
+    var diz=function(t, cor){ if(st){ st.style.color=cor; st.textContent=t; } };
+    // AC6.1: «Só a Gestão altera» — conferido na função (a Supervisão vê a tela, mas não salva a tabela)
+    if(!podePapel('gestao-role', papelDoCorpo())) return corrBarrar('mudar a tabela de valores das plantonistas', corrQuemPode('gestao-role'), {tela:'acerto'});
+    var L=acertoTabelaLer();
+    if(L.erro){ diz(L.erro, 'var(--crm-critico)'); return {ok:false, erro:L.erro}; }
+    var A=acertoTabelaLinhas(acertoTab()), B=acertoTabelaLinhas(L.T);
+    if(!B.some(function(b, i){ return b.texto!==A[i].texto; })){ diz('Nada mudou: a tabela é a mesma de agora. Nada foi salvo.', 'var(--z-blue)'); return {ok:false, nada:true}; }
+    diz('', 'var(--z-blue)');
+    return acertoTabelaAbrir(L.T);
+  }
+  // O cartaz «corrigir» com cada linha mudada (antes → depois), a lista do que muda, o motivo e a senha da Gestão.
+  function acertoTabelaAbrir(nova){
+    var atual=acertoTabNorm(acertoTab()), A=acertoTabelaLinhas(atual), B=acertoTabelaLinhas(nova), campos=[], novos=[], alvo=acertoTabNorm(nova);
+    B.forEach(function(b, i){ if(b.texto!==A[i].texto){ campos.push({c:b.c, rotulo:b.rotulo, valor:A[i].texto}); novos.push(b.texto); } });
+    var p=corrAbrir({acao:'corrigir', tela:ACERTO_TELA, titulo:'Mudar a tabela de valores das plantonistas', oque:'a tabela de valores das plantonistas',
+      original:{caminho:'auaulandia/config/acerto-plantao', id:'acerto-plantao'}, nivel:'gestao', capacidade:'gestao-role', campos:campos,
+      camposTexto:'As linhas que você mudou. Os valores em reais (150,00); os limites, em número inteiro.', botao:'Salvar a tabela', tituloOk:'Tabela salva',
+      validar:function(v){
+        var t=JSON.parse(JSON.stringify(alvo)), erro='';
+        campos.forEach(function(c, i){
+          if(erro) return;
+          var x=String(v[i]==null?'':v[i]).trim(), m;
+          if((m=/^f(\d+)$/.exec(c.c))){ var cv=acertoLerReal(x); if(cv==null) erro='O valor de «'+c.rotulo+'» está em branco ou inválido.'; else t.faixas[+m[1]].v=cv; }
+          else if((m=/^a(\d+)$/.exec(c.c))){ if(!/^\d{1,3}$/.test(x)) erro='O limite da '+(+m[1]+1)+'ª faixa tem de ser um número inteiro.'; else t.faixas[+m[1]].ate=parseInt(x,10); }
+          else if(c.c==='ajuda'){ var ca=acertoLerReal(x); if(ca==null) erro='A ajuda de custo está em branco ou inválida.'; else t.ajuda=ca; }
+          else if((m=/^x_(\w+)$/.exec(c.c))){ var ex=acertoExtraLer(m[1], x); if(!ex) erro='Escreva «Como hoje» ou o valor em reais de «'+c.rotulo+'».'; else t.extras[m[1]]=ex; }
+        });
+        if(erro) return erro;
+        var eo=acertoTabelaOrdem(t, atual); if(eo) return eo;
+        alvo=acertoTabNorm(t);
+        return {info:acertoTabelaMudamInfo(alvo)};
+      },
+      gravar:function(r){ return acertoTabelaGravar(alvo, r, null); }});
+    // vai direto ao «Antes → Depois» com o que a tela tem (a pessoa pode voltar e mudar os campos no próprio cartaz)
+    try{ corrToque('continuar', {valores:novos}); }catch(e){} /* silencioso de propósito: sem o passo direto, o cartaz abre nos campos */
+    return p.then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  async function acertoTabelaGravar(nova, reg, voltouDe){
+    if(!podePapel('gestao-role', papelDoCorpo())) return corrBarrar('mudar a tabela de valores das plantonistas', corrQuemPode('gestao-role'), {tela:'acerto'});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!nova) return {ok:false, erro:'a tabela nova não chegou'};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var antes=acertoTabNorm(acertoTab());
+    var noBanco=(await DB.ref('auaulandia/config/acerto-plantao').once('value')).val();
+    if(JSON.stringify(acertoTabNorm(noBanco||ACERTO_PADRAO))!==JSON.stringify(antes)) return {ok:false, erro:'A tabela mudou em outro aparelho depois que esta tela abriu. Nada foi gravado: abra de novo e confira.'};
+    var novo=acertoTabNorm(nova), ts=Number(reg.ts)||Date.now(), hid=acertoChaveNova(ACERTO_TAB_HIST, 't', ts), up={};
+    up['config/acerto-plantao']={faixas:novo.faixas, ajuda:novo.ajuda, extras:novo.extras};
+    var h={antes:antes, depois:novo, registro:reg};
+    h.motivo=String(reg.motivo||'');
+    if(voltouDe) h.voltou_de=String(voltouDe);
+    up['acerto-tabela-historico/'+hid]=h;
+    await DB.ref('auaulandia').update(up);
+    acertoAplicarLocal(up);
+    var A=acertoTabelaLinhas(antes), B=acertoTabelaLinhas(novo);
+    var mud=B.filter(function(b, i){ return b.texto!==A[i].texto; }).map(function(b){ var a=A.filter(function(x){ return x.c===b.c; })[0]||{}; return b.rotulo+': '+a.texto+' → '+b.texto; });
+    try{ audit('acerto-tabela', (voltouDe?'voltou a uma tabela anterior das plantonistas: ':'mudou a tabela de valores das plantonistas: ')+mud.join('; ')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'),{antes:acertoTabelaResumo(antes), depois:acertoTabelaResumo(novo), assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    try{ var st=document.getElementById('acTabStatus'); if(st){ st.style.color='var(--crm-ok)'; st.textContent='Tabela salva: vale para toda noite ainda sem valor gravado.'; } }
+    catch(e){} /* silencioso de propósito: enfeite de tela — a tabela já foi gravada */
+    return {ok:true};
+  }
+  function acertoTabHistHTML(){
+    var ks=Object.keys(ACERTO_TAB_HIST||{}).sort(function(a,b){ return (Number(((ACERTO_TAB_HIST[b]||{}).registro||{}).ts)||0)-(Number(((ACERTO_TAB_HIST[a]||{}).registro||{}).ts)||0); });
+    if(!ks.length) return '';
+    return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0;min-height:44px">Tabelas anteriores ('+ks.length+')</summary>'
+      +ks.map(function(k){
+        var h=ACERTO_TAB_HIST[k]||{}, r=h.registro||{};
+        return '<div style="border-top:1px solid var(--line);padding:10px 0;font-size:13px;color:var(--z-blue);overflow-wrap:anywhere">'
+          +'<div style="font-weight:800">Usada até '+esc(r.quando||'')+' — trocada por '+esc(r.por||'-')+(r.papel?(' ('+esc(corrPapelNome(r.papel))+')'):'')+(h.voltou_de?' (voltando a uma tabela anterior)':'')+'</div>'
+          +'<div>Motivo: '+esc(h.motivo||r.motivo||'')+'</div>'
+          +'<div style="margin-top:3px">'+esc(acertoTabelaResumo(h.antes))+'</div>'
+          +'<div style="margin-top:6px"><button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="acertoTabelaVoltarAbrir(\''+jsAspas(k)+'\')">Voltar a esta tabela</button></div></div>';
+      }).join('')+'</details>';
+  }
+  function acertoTabelaVoltarAbrir(hid){
+    if(!podePapel('gestao-role', papelDoCorpo())) return Promise.resolve(corrBarrar('voltar a uma tabela anterior das plantonistas', corrQuemPode('gestao-role'), {tela:'acerto'}));
+    var h=(ACERTO_TAB_HIST||{})[hid];
+    if(!h || !h.antes){ zAlertao('TABELA NÃO ENCONTRADA', ['Atualize a tela e tente de novo.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var atual=acertoTabNorm(acertoTab()), alvo=acertoTabNorm(h.antes), A=acertoTabelaLinhas(atual), B=acertoTabelaLinhas(alvo);
+    var mud=B.filter(function(b, i){ return b.texto!==A[i].texto; }).map(function(b){ var a=A.filter(function(x){ return x.c===b.c; })[0]||{}; return b.rotulo+': '+a.texto+' → '+b.texto; });
+    if(!mud.length){ zAlertao('ESTA JÁ É A TABELA DE AGORA', ['Nada para voltar.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var r0=h.registro||{};
+    return corrAbrir({acao:'reabrir', tela:ACERTO_TELA, titulo:'Voltar a uma tabela anterior', oque:'a tabela de valores das plantonistas (a usada até '+String(r0.quando||'')+')',
+      original:{caminho:'auaulandia/acerto-tabela-historico/'+hid, id:String(hid)}, estado:'a tabela de agora', paraEstado:'a tabela usada até '+String(r0.quando||''),
+      volta:mud.concat(acertoTabelaMudamInfo(alvo)), nivel:'gestao', capacidade:'gestao-role', botao:'Voltar a esta tabela', tituloOk:'Tabela de volta',
+      gravar:function(r){ return acertoTabelaGravar(alvo, r, hid); }}).then(function(r){ if(r && r.ok) renderAcerto(); return r; });
+  }
+  // ---- AC7: o livro de nomes — a gravação por transação, o histórico, «Nomes que já ensinei», «Trocar» e «Tirar» -------
+  function plantLivroDe(v){ v=v||{}; return {oficiais:Array.isArray(v.oficiais)?v.oficiais.slice():[], apelidos:Object.assign({}, v.apelidos||{}), naoSao:Object.assign({}, v.naoSao||{})}; }
+  // A transação no livro (auaulandia/config/plantonistas): só muda o que `mudar` muda, em cima do que o banco tem agora.
+  // O livro da memória só muda com o ok; recusado, volta ao que o banco tem.
+  // aviso: as linhas da tela se o banco recusar (o motivo vem do zErroMotivo); propaga: devolve a recusa a quem chamou (o cartaz).
+  function plantLivroMudar(mudar, aviso, propaga){
+    return Promise.resolve(DB.ref('auaulandia/config/plantonistas').transaction(function(cur){ return mudar((cur && typeof cur==='object')?cur:null); })).then(function(res){
+      var v=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null;
+      if(v && typeof v==='object') PLANT_LIVRO=plantLivroDe(v);
+      return (res && res.committed)?{ok:true, v:v}:{ok:false, abortou:true};
+    }, function(e){
+      _logFalhaGrav('auaulandia/config/plantonistas (o livro de nomes)', e);
+      if(aviso) acertoErroTela('NÃO FOI GRAVADO', aviso, e);
+      return plantCarregarLivro().then(function(){ if(propaga) throw e; return {ok:false, falhou:true}; });
+    });
+  }
+  var PLANT_HIST_N=0;
+  // O antes e o depois de cada mudança do livro, fora do config/plantonistas (o livro não carrega o histórico).
+  function plantHistoricoGravar(h, reg){
+    if(!DB) return Promise.resolve();
+    var q=corrQuemAgora(), ts=Number((reg||{}).ts)||q.ts;
+    var o=Object.assign({}, h, {registro:reg||{quem:q.login, papel:q.papel, ts:ts, quando:renovQuandoBR(ts)}});
+    return Promise.resolve(DB.ref('auaulandia/plantonistas-historico/h'+ts+'_'+(++PLANT_HIST_N)).set(o)).catch(function(e){ _logFalhaGrav('auaulandia/plantonistas-historico', e); });
+  }
+  // PURA: as noites dos últimos 30 dias assinadas com o apelido: sem nome gravado, com o nome `antigo` gravado (em aberto) e pagas.
+  function plantNoitesDoApelido(chave, antigo){
+    var out={semNome:[], comNome:[], pagas:[]};
+    acertoNoites().forEach(function(o){
+      if(o.tipo==='dia' || o.antiga) return;
+      var d=(ACERTO_QUEM||{})[o.iso]; if(!d || !d.nome) return;
+      var nomes=acertoPessoasDa(d).concat([d.nome], d.variantes||[]);
+      if(!nomes.some(function(n){ return plantChave(n)===chave; })) return;
+      var reg=o.reg||{}, st=reg.status||'apagar';
+      if(st==='pago'){ out.pagas.push(o); return; }
+      if(reg.sem_plantao) return;
+      var q=String(reg.quem||'').trim();
+      if(!q) out.semNome.push(o);
+      else if(antigo && plantChave(q)===plantChave(antigo)) out.comNome.push(o);
+    });
+    return out;
+  }
+  function plantNoitesPorApelido(){
+    var cont={};
+    Object.keys(ACERTO_QUEM||{}).forEach(function(noite){
+      var d=ACERTO_QUEM[noite]; if(!d || !d.nome) return;
+      var ks={}; acertoPessoasDa(d).concat([d.nome], d.variantes||[]).forEach(function(n){ var k=plantChave(n); if(k) ks[k]=1; });
+      Object.keys(ks).forEach(function(k){ cont[k]=(cont[k]||0)+1; });
+    });
+    return cont;
+  }
+  function plantEnsinadosHtml(){
+    var ap=PLANT_LIVRO.apelidos||{}, ks=Object.keys(ap).sort(function(a,b){ return a.localeCompare(b,'pt'); });
+    if(!ks.length) return '';
+    var cont=plantNoitesPorApelido();
+    return '<details class="card" style="margin-top:10px"><summary style="cursor:pointer;font-weight:800;color:var(--z-blue);font-size:16px;min-height:44px;display:flex;align-items:center">Nomes que já ensinei ('+ks.length+')</summary>'
+      +'<div class="hint">Como cada assinatura foi ensinada. Se algum estiver errado, troque ou tire: a mudança vale para as noites ainda sem nome gravado (senha da Gestão).</div>'
+      +ks.map(function(k){
+        var n=cont[k]||0;
+        return '<div style="border-top:1px solid var(--line);padding:10px 0;overflow-wrap:anywhere">'
+          +'<div style="font-weight:800;color:var(--z-blue);font-size:14.5px">assinou &ldquo;'+esc(k)+'&rdquo; → '+esc(ap[k])+'</div>'
+          +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+n+' noite'+(n===1?'':'s')+' dos últimos 30 dias assinada'+(n===1?'':'s')+' assim</div>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'
+          +'<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="plantTrocarAbrir(\''+jsAspas(k)+'\')">Trocar</button>'
+          +'<button type="button" class="btn" style="'+ACERTO_BT44_CLARO+'" onclick="plantTirarAbrir(\''+jsAspas(k)+'\')">Tirar</button></div></div>';
+      }).join('')+'</details>';
+  }
+  // O «A pagar por pessoa» com o livro mudado e as noites levadas (para o cartaz mostrar o antes → depois).
+  function plantSimularTotais(livro, levar){
+    var bk=PLANT_LIVRO;
+    try{
+      PLANT_LIVRO=livro;
+      return acertoTotaisPor(acertoNoites().map(function(o){
+        if(o.tipo!=='dia' && Object.prototype.hasOwnProperty.call(levar||{}, o.iso)) return Object.assign({}, o, {reg:Object.assign({}, o.reg||{}, {quem:levar[o.iso]})});
+        return o;
+      }));
+    } finally { PLANT_LIVRO=bk; }
+  }
+  function plantCascata(chave, antigo, novo, levar){
+    var N=plantNoitesDoApelido(chave, antigo), livro=plantLivroDe(PLANT_LIVRO), lv={};
+    if(novo) livro.apelidos[chave]=novo; else delete livro.apelidos[chave];
+    if(novo && !livro.oficiais.some(function(o){ return plantChave(o)===plantChave(novo); })) livro.oficiais.push(novo);
+    if(!novo && !Object.keys(livro.apelidos).some(function(k){ return plantChave(livro.apelidos[k])===plantChave(antigo); })) livro.oficiais=livro.oficiais.filter(function(o){ return plantChave(o)!==plantChave(antigo); });
+    // A noite de uma pessoa só já traz o nome do livro (a grafia assinada fica nas variantes, acertoAgruparNomes): trocar o
+    // livro não a muda até a próxima leitura. Por isso a conta de depois põe o nome à mão: o novo ou, ao tirar, a assinatura
+    // como foi escrita (é assim que ela aparece depois, até a resposta em «Nomes a confirmar»). A noite de dupla segue o livro.
+    var duplo=function(o){ var d=(ACERTO_QUEM||{})[o.iso]||{}; return !!(d.duasPessoas||plantEhDuplo(d.nome)); };
+    var grafia=function(o){ var d=(ACERTO_QUEM||{})[o.iso]||{}; return acertoPessoasDa(d).concat([d.nome||''], d.variantes||[]).filter(function(n){ return plantChave(n)===chave; })[0]||chave; };
+    var graf=[];
+    N.semNome.forEach(function(o){ if(duplo(o)) return; lv[o.iso]=novo||grafia(o); if(!novo && graf.indexOf(lv[o.iso])<0) graf.push(lv[o.iso]); });
+    if(levar) N.comNome.forEach(function(o){ lv[o.iso]=novo||(duplo(o)?'':grafia(o)); if(!novo && lv[o.iso] && graf.indexOf(lv[o.iso])<0) graf.push(lv[o.iso]); });
+    var A=acertoTotaisPor(acertoNoites()), B=plantSimularTotais(livro, lv), para=novo||'sem nome';
+    var linha=function(nm){ var a=((A.por||{})[nm]||{}).total||0, b=((B.por||{})[nm]||{}).total||0; return nm+': '+fmtCent(a)+' → '+fmtCent(b); };
+    // 2ª rodada (LOW-7): «Nenhuma noite…» e «A noite…», no lugar de «As 0 noites» e «A 1 noite»
+    var ns=N.semNome.length, nG=Object.keys(lv).filter(function(k){ return !novo && lv[k]; }).length;
+    var L=[(ns===0)?('Nenhuma noite ainda sem nome gravado foi assinada "'+chave+'" nos últimos 30 dias.')
+        :(((ns===1)?('A noite ainda sem nome gravado assinada "'+chave+'" passa'):('As '+ns+' noites ainda sem nome gravado assinadas "'+chave+'" passam'))+' de '+antigo+' para '+para+'.'),
+      'A pagar por pessoa — '+linha(antigo)+(novo?('; '+linha(novo)):graf.map(function(g){ return '; '+linha(g); }).join(''))+'.'];
+    if(graf.length) L.push((nG>1)?('Sem nome confirmado, as '+nG+' noites aparecem como foram assinadas ("'+graf.join('", "')+'") e o nome volta para «Nomes a confirmar».')
+      :('Sem nome confirmado, a noite aparece como foi assinada ("'+graf.join('", "')+'") e volta para «Nomes a confirmar».'));
+    var nc=N.comNome.length;
+    if(nc) L.push((levar?('Levar também '+((nc===1)?'esta noite guardada ou a pagar':('estas '+nc+' noites guardadas ou a pagar'))+' para '+para+': ')
+        :('Fica'+((nc===1)?'':'m')+' com o nome gravado ('+antigo+') '+((nc===1)?'esta noite guardada ou a pagar: ':('estas '+nc+' noites guardadas ou a pagar: '))))
+      +N.comNome.map(function(o){ return acertoDdMm(o.iso)+' ('+((o.reg.status==='acumulado')?'guardada':'a pagar')+', '+fmtCent(acertoValorDoCartao(o, o.reg).total)+')'; }).join(', ')+'.');
+    L.push('As noites já pagas continuam no nome de quem recebeu'+(N.pagas.length?(' ('+N.pagas.length+')'):'')+'. Se o pagamento foi para a pessoa errada, desfaça o pagamento (senha da Gestão).');
+    return {linhas:L, noites:N, livro:livro};
+  }
+  function plantTrocarAbrir(chave){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('trocar um nome do livro de nomes', {apelido:String(chave)}));
+    var antigo=(PLANT_LIVRO.apelidos||{})[chave];
+    if(!antigo){ zAlertao('NOME NÃO ENCONTRADO', ['Atualize a tela: outro aparelho pode ter mudado o livro de nomes.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var N=plantNoitesDoApelido(chave, antigo), alvo=null;
+    var campos=[{c:'oficial', rotulo:'Quem assina "'+chave+'"', valor:antigo}];
+    if(N.comNome.length) campos.push({c:'levar', rotulo:'Levar também as '+N.comNome.length+' noites guardadas ou a pagar com o nome '+antigo+' gravado', valor:'Sim', opcoes:['Sim','Não']});
+    return corrAbrir({acao:'corrigir', tela:ACERTO_TELA, titulo:'Trocar o nome de "'+chave+'"', oque:'o nome ensinado para a assinatura "'+chave+'"',
+      original:{caminho:'auaulandia/config/plantonistas/apelidos/'+chave, id:String(chave)}, nivel:'gestao', capacidade:'gestao-role', campos:campos, botao:'Trocar o nome', tituloOk:'Nome trocado',
+      camposTexto:'Escolha outro nome do livro ou escreva um novo. Nomes do livro: '+((PLANT_LIVRO.oficiais||[]).join(', ')||'nenhum')+'.',
+      validar:function(v){
+        var nv=String(v[0]==null?'':v[0]).trim();
+        if(!/[a-zA-ZÀ-ÿ]{2,}/.test(nv)) return 'Escreva o nome certo (pelo menos 2 letras).';
+        var of=(PLANT_LIVRO.oficiais||[]).filter(function(o){ return plantChave(o)===plantChave(nv); })[0];
+        nv=of||nomeProprio(nv);
+        if(plantChave(nv)===plantChave(antigo)) return 'Nada mudou: o nome é o mesmo ('+antigo+'). Nada será gravado.';
+        var levar=N.comNome.length?(String(v[1])!=='Não'):false;
+        alvo={novo:nv, levar:levar};
+        return {info:plantCascata(chave, antigo, nv, levar).linhas};
+      },
+      gravar:function(r){ return plantTrocarGravar(chave, antigo, alvo, r); }}).then(function(r){ if(r && r.ok) acertoCarregar(); return r; });
+  }
+  function plantTirarAbrir(chave){
+    if(!acertoPodeVer()) return Promise.resolve(acertoBarrar('tirar um nome do livro de nomes', {apelido:String(chave)}));
+    var antigo=(PLANT_LIVRO.apelidos||{})[chave];
+    if(!antigo){ zAlertao('NOME NÃO ENCONTRADO', ['Atualize a tela: outro aparelho pode ter mudado o livro de nomes.'], {botao:'Entendi'}); return Promise.resolve(null); }
+    var N=plantNoitesDoApelido(chave, antigo), alvo={novo:'', levar:false};
+    var op={acao:'reabrir', tela:ACERTO_TELA, titulo:'Tirar o nome de "'+chave+'"', oque:'o nome ensinado para a assinatura "'+chave+'" ('+antigo+')',
+      original:{caminho:'auaulandia/config/plantonistas/apelidos/'+chave, id:String(chave)}, estado:'ensinado: "'+chave+'" é '+antigo, paraEstado:'em «Nomes a confirmar»',
+      volta:plantCascata(chave, antigo, '', false).linhas.concat(['"'+chave+'" volta para «Nomes a confirmar»; se nenhum outro apelido aponta para '+antigo+', o nome sai também da lista de nomes do livro (e das sugestões «Você é a …?» do relatório do Plantão).']),
+      nivel:'gestao', capacidade:'gestao-role', botao:'Tirar o nome', tituloOk:'Nome tirado',
+      gravar:function(r){ return plantTrocarGravar(chave, antigo, alvo, r); }};
+    if(N.comNome.length){
+      op.campos=[{c:'levar', rotulo:'Levar também as '+N.comNome.length+' noites guardadas ou a pagar com o nome '+antigo+' gravado para «sem nome»', valor:'Não', opcoes:['Não','Sim']}];
+      op.validar=function(v){ alvo.levar=(String(v[0])==='Sim'); return {volta:plantCascata(chave, antigo, '', alvo.levar).linhas}; };
+    }
+    return corrAbrir(op).then(function(r){ if(r && r.ok) acertoCarregar(); return r; });
+  }
+  // Trocar (alvo.novo) ou tirar (alvo.novo vazio) um apelido: a transação no livro (o apelido tem de ser ainda o que a tela
+  // mostrou), e depois, numa escrita só, o histórico e as noites levadas (cada uma com um registro no histórico dela).
+  async function plantTrocarGravar(chave, antigo, alvo, reg){
+    if(!acertoPodeVer()) return acertoBarrar('mudar o livro de nomes', {apelido:String(chave)});
+    reg=reg||{};
+    if(!podePapel('gestao-role', String(reg.papel||''))) return {ok:false, erro:ACERTO_SO_GESTAO};
+    if(!alvo) return {ok:false, erro:'a troca não chegou'};
+    if(!DB) return {ok:false, erro:'sem conexão com o banco'};
+    var novo=String(alvo.novo||''), erroTx='';
+    var r=await plantLivroMudar(function(cur){
+      if(cur===null) return null;   // o banco manda: sem o livro em mãos, a transação pede o de lá
+      var ap=Object.assign({}, cur.apelidos||{});
+      if(String(ap[chave]||'')!==String(antigo)){ erroTx='O nome de "'+chave+'" mudou em outro aparelho. Nada foi gravado: abra de novo e confira.'; return; }
+      var of=Array.isArray(cur.oficiais)?cur.oficiais.slice():[];
+      if(novo){ ap[chave]=novo; if(!of.some(function(o){ return plantChave(o)===plantChave(novo); })) of.push(novo); }
+      else {
+        delete ap[chave];
+        if(!Object.keys(ap).some(function(k){ return plantChave(ap[k])===plantChave(antigo); })) of=of.filter(function(o){ return plantChave(o)!==plantChave(antigo); });
+      }
+      return Object.assign({}, cur, {apelidos:ap, oficiais:of});
+    }, null, true);
+    var ficou=r.ok && r.v && (novo?(String((r.v.apelidos||{})[chave]||'')===novo):!Object.prototype.hasOwnProperty.call(r.v.apelidos||{}, chave));
+    if(!ficou) return {ok:false, erro:erroTx||('O nome de "'+chave+'" mudou em outro aparelho. Nada foi gravado: abra de novo e confira.')};
+    var N=plantNoitesDoApelido(chave, antigo), quer=alvo.levar?N.comNome.map(function(o){ return o.iso; }):[], ts=Number(reg.ts)||Date.now(), up={};
+    // 2ª rodada (REL-002): relê cada noite levada antes de gravar — a que foi paga, tirada da conta ou ganhou outro nome em
+    // outro aparelho não é mexida (a paga continua no nome de quem recebeu), e a tela diz quais
+    var lidas=[];
+    try{ lidas=await Promise.all(quer.map(function(iso){ return Promise.resolve(DB.ref('auaulandia/acerto-plantao/'+iso).once('value')).then(function(s){ return (s&&s.val)?s.val():null; }); })); }
+    catch(e){ _logLeituraFalhou('auaulandia/acerto-plantao (as noites levadas pelo «Trocar»)', e); lidas=quer.map(function(){ return undefined; }); }
+    var levadas=[], puladas=[];
+    quer.forEach(function(iso, i){
+      var rr=lidas[i];
+      if(rr===undefined){ puladas.push(acertoDdMm(iso)+' (não consegui conferir no sistema)'); return; }
+      if(!rr || (rr.status||'')==='pago'){ puladas.push(acertoDdMm(iso)+' (já foi paga: continua no nome de quem recebeu)'); return; }
+      if(rr.sem_plantao){ puladas.push(acertoDdMm(iso)+' (está em «Noites sem plantão»)'); return; }
+      if(plantChave(rr.quem||'')!==plantChave(antigo)){ puladas.push(acertoDdMm(iso)+' (ganhou outro nome em outro aparelho: '+String(rr.quem||'sem nome')+')'); return; }
+      levadas.push(iso); ACERTO_REG[iso]=rr;
+    });
+    up['plantonistas-historico/h'+ts+'_'+(++PLANT_HIST_N)]={acao:novo?'trocou':'tirou', apelido:String(chave), de:String(antigo), para:novo, motivo:String(reg.motivo||''), registro:reg, noitesLevadas:levadas};
+    if(puladas.length) up['plantonistas-historico/h'+ts+'_'+PLANT_HIST_N].noitesNaoLevadas=puladas;
+    levadas.forEach(function(iso){
+      var rr=(ACERTO_REG||{})[iso]||{}, cam='acerto-plantao/'+iso;
+      up[cam+'/quem']=novo;
+      up[cam+'/quem_correcoes/'+acertoChaveNova(rr.quem_correcoes, 'q', ts)]={de:String(rr.quem||''), para:novo, motivo:String(reg.motivo||''), registro:reg, apelido:String(chave)};
+    });
+    try{ await DB.ref('auaulandia').update(up); acertoAplicarLocal(up); }
+    catch(e){
+      _logFalhaGrav('auaulandia/plantonistas-historico (trocar o nome de "'+chave+'")', e);
+      if(levadas.length) acertoErroTela('O NOME MUDOU, MAS AS NOITES NÃO', ['O livro de nomes foi gravado: "'+chave+'" é '+(novo||'«a confirmar»')+'.',
+        'As noites com o nome '+antigo+' gravado não foram levadas: '+levadas.map(acertoDdMm).join(', ')+'. Para levar cada uma, use «Corrigir esta noite» nela (senha da Gestão).'], e);
+    }
+    if(puladas.length) zAlertao('NEM TODAS AS NOITES FORAM LEVADAS', ['O livro de nomes foi gravado: "'+chave+'" é '+(novo||'«a confirmar»')+'.',
+      'Ficaram como estavam, porque mudaram em outro aparelho: '+puladas.join('; ')+'.'], {botao:'Entendi'});
+    try{ audit('plantonista-nome', '"'+chave+'": '+antigo+' → '+(novo||'a confirmar (tirado do livro)')+(levadas.length?(' — levou '+levadas.length+' noite'+(levadas.length>1?'s':'')+' guardada'+(levadas.length>1?'s':'')+' ou a pagar'):'')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'), {apelido:String(chave), assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    return {ok:true};
   }
 
   // ================= VERSÃO DO APP ====================================================
@@ -24064,7 +25675,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-20';
+  const APP_VERSAO='2026-10-09-21';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -63192,6 +64803,18 @@
       return acaoNome(acao)+' — '+(a.med||'medicamento')+(a.horario?(' às '+a.horario):'')+(a.pet?(' ('+a.pet+')'):'');
     return acaoNome(acao)+(det?(' — '+det):'');
   }
+  // ===== 6.70 — o acerto das plantonistas na Linha do tempo (AC11) ======================================================
+  // As ações novas e as três que apareciam em código técnico (acerto-plantao, acerto-tabela e plantonista-nome). Ficam
+  // num acréscimo à tabela, e não dentro dela, para a junção com as outras stories não pisar no fim do objeto. Vale para
+  // as duas telas que leem a tabela (acaoRotulo e acaoNome). 2ª rodada (LOW-4): «acerto-plantao» com rótulo neutro — as entradas
+  // antigas dela também registravam pagamentos.
+  Object.assign(ACAO_LABEL, {
+    'acerto-plantao':'Acerto das plantonistas', 'acerto-tabela':'Mudou a tabela de valores das plantonistas',
+    'plantonista-nome':'Livro de nomes das plantonistas', 'acerto-pago':'Pagou a plantonista', 'acerto-pagamento-desfeito':'Desfez o pagamento da plantonista',
+    'acerto-lote-pago':'Pagou várias noites de uma vez (lote)', 'acerto-lote-desfeito':'Desfez o lote de pagamento das plantonistas',
+    'acerto-valor':'Valor à mão de uma noite (acerto das plantonistas)', 'acerto-noite-corrigida':'Corrigiu a noite do acerto (FILHOts, dobra ou plantonistas)',
+    'acerto-sem-plantao':'Noite sem plantão (acerto das plantonistas)', 'acerto-plantao-dia':'Plantão de dia (acerto das plantonistas)'
+  });
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
     if(el.style.display==='block'){ el.style.display='none'; return; }
