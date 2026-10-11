@@ -203,6 +203,26 @@
         }
       },
 
+      // O HISTÓRICO DO CONTATO COM O TUTOR (Story 6.55, 09/out/2026). Cada mensagem que sai, cada
+      // cobrança, cada «não respondeu», cada resposta, o que o tutor disse, o «Finalizar» e o desfazer
+      // são uma entrada nova (push, ou a chave nascida do push no «Finalizar», gravada junto com os
+      // fechados numa atualização só). O app nunca edita nem apaga uma entrada: cria, nunca edita,
+      // nunca apaga — nem a entrada, nem o histórico inteiro de um FILHOt. Desfazer o «Finalizar» é
+      // OUTRA entrada (acao 'reabriu'). Com a v1 no ar, esta promessa é só do app (C29).
+      // Tamanho (QA B7): o texto da mensagem até 4.000 letras; o que o tutor disse e o motivo do desfazer,
+      // até 1.000 — os mesmos limites que o app corta antes de gravar.
+      "contatos-log": {
+        ".read": "auth != null",
+        ".write": false,
+        "$chave": {
+          ".write": false,
+          "$evId": {
+            ".write": "auth != null && !data.exists() && newData.exists()",
+            ".validate": "newData.hasChildren(['ts','quem','acao']) && newData.child('ts').isNumber() && newData.child('quem').isString() && newData.child('acao').isString() && (!newData.child('texto').exists() || (newData.child('texto').isString() && newData.child('texto').val().length <= 4000)) && (!newData.child('nota').exists() || (newData.child('nota').isString() && newData.child('nota').val().length <= 1000)) && (!newData.child('motivo').exists() || (newData.child('motivo').isString() && newData.child('motivo').val().length <= 1000))"
+          }
+        }
+      },
+
       // Check-in de pertences com dose a registrar no dia. O item de cada FILHOt
       // ($item) segue como na v1 DE PROPÓSITO: o app grava null ali quando não há
       // dose nenhuma para aquele check-in (linha 17464-17465) — travar quebraria isso.
