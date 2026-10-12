@@ -19,6 +19,8 @@
  *     Gestão — e a Gestão entra em aparelho novo para poder liberá-lo.
  */
 
+const crypto = require('crypto');
+
 const PIN_RE = /^[0-9]{4,6}$/;
 const APARELHO_RE = /^[A-Za-z0-9_-]{6,80}$/;
 
@@ -28,19 +30,54 @@ function normalizarPin(pin) {
 }
 function idAparelhoValido(id) { return APARELHO_RE.test(String(id || '')); }
 
+// ---- as senhas fixas TROCADAS no app (Story 6.76, AC5.8) --------------------------------
+// A Adriana, a Márcia e a Gestão (pelo posto Plantonista) trocam a senha fixa no próprio app. O app guarda em
+// daycare/config/senhas-fixas/{id} só {hash, sal}: hash = SHA-256(pin + sal) em hexadecimal — o mesmo formato do PIN
+// de gestao.html. O arquivo do servidor (senhas-fixas.json) diz o `id` de cada entrada ('adriana', 'marcia',
+// 'plantonista'); com a senha guardada para aquele id, o PIN do arquivo DEIXA de valer e só o novo entra.
+// 2ª rodada (SEC-006): o registro tem o formato que o app grava — hash com 64 e sal com 32 letras hexadecimais. Fora desse
+// formato (lixo gravado por fora no nó, que qualquer sessão grava até a etapa 4), não conta como troca: o PIN do arquivo
+// continua valendo, como no app (senhaFixaFormaOk), e ninguém tranca a dona do lado de fora com um registro que não abre.
+function trocadaValida(g) {
+  return !!g && typeof g === 'object' && /^[0-9a-f]{64}$/.test(String(g.hash || '')) && /^[0-9a-f]{32}$/.test(String(g.sal || ''));
+}
+function trocadaConfere(pin, guardada) {
+  const p = normalizarPin(pin);
+  if (!p || !trocadaValida(guardada)) return false;
+  const calc = Buffer.from(crypto.createHash('sha256').update(p + String(guardada.sal)).digest('hex'), 'utf8');
+  const certo = Buffer.from(String(guardada.hash), 'utf8');
+  return calc.length === certo.length && crypto.timingSafeEqual(calc, certo);   // 2ª rodada (SEC-007): em tempo constante
+}
+// O celular está liberado? Uma régua só, a MESMA do app (auaulandia/index.html, aparelhoLiberado): tem nome ou a hora
+// da autorização, e não tem a autorização retirada. O registro que só tem o batimento (`visto`) não está liberado.
+function aparelhoLiberado(no) {
+  return !!no && typeof no === 'object' && (!!no.nome || !!no.ts) && !no.revogado;
+}
+
 // A tabela de senhas: as FIXAS (arquivo do servidor, fora do repositório) e a EQUIPE
 // (daycare/config/monitores). Devolve {pin: perfil}.
-function montarTabela(fixas, equipe) {
-  const mapa = {};
+// 6.76: `trocadas` = daycare/config/senhas-fixas; `pinPedido` = o PIN que chegou (a senha trocada só se confere pelo
+// hash, e por isso entra na tabela só quando é ela que foi digitada). A pessoa desativada no Time (ativo:false) fica
+// de fora, como no app.
+function montarTabela(fixas, equipe, trocadas, pinPedido) {
+  const mapa = {}, T = (trocadas && typeof trocadas === 'object') ? trocadas : {};
+  const trocou = (f) => { const id = String((f && f.id) || ''); return !!(id && trocadaValida(T[id])); };
+  const reservado = {};   // o PIN do arquivo continua reservado mesmo depois da troca: a equipe nunca o toma (como SENHAS no app)
   Object.keys(fixas || {}).forEach((pin) => {
     const p = normalizarPin(pin);
-    if (p) mapa[p] = Object.assign({}, fixas[pin], { fonte: 'fixa' });
+    if (p) reservado[p] = true;
+    if (p && !trocou(fixas[pin])) mapa[p] = Object.assign({}, fixas[pin], { fonte: 'fixa' });
+  });
+  const pp = normalizarPin(pinPedido);
+  if (pp) Object.keys(fixas || {}).forEach((pin) => {
+    const f = fixas[pin];
+    if (trocou(f) && !mapa[pp] && trocadaConfere(pp, T[String(f.id)])) mapa[pp] = Object.assign({}, f, { fonte: 'fixa' });
   });
   const lista = Array.isArray(equipe) ? equipe : Object.values(equipe || {});
   lista.forEach((m) => {
-    if (!m) return;
+    if (!m || m.ativo === false) return;
     const p = normalizarPin(m.senha);
-    if (!p || mapa[p]) return;                       // a equipe nunca sobrescreve uma senha fixa
+    if (!p || mapa[p] || reservado[p]) return;       // a equipe nunca sobrescreve uma senha fixa (nem a do arquivo de quem trocou)
     mapa[p] = {
       role: String(m.role || 'monitor').trim() || 'monitor',
       nome: String(m.nome || '').trim(),
@@ -146,7 +183,7 @@ async function decidir(pedido, dep) {
   if (!pin || !idAparelhoValido(aparelho)) {
     return { status: 400, corpo: { ok: false, erro: 'pedido' } };
   }
-  const tabela = await dep.tabela();
+  const tabela = await dep.tabela(pin);
   const perfil = tabela[pin];
   if (!perfil) {
     dep.porAparelho.falhou(chaveAp, agora);
@@ -166,4 +203,5 @@ async function decidir(pedido, dep) {
 module.exports = {
   normalizarPin, idAparelhoValido, montarTabela, ehGestao, slug,
   uidDoPerfil, claimsDoPerfil, perfilPublico, criarLimitador, decidir,
+  trocadaConfere, trocadaValida, aparelhoLiberado,
 };

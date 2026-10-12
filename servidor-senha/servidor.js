@@ -9,7 +9,8 @@
  * NADA SECRETO FICA AQUI. O repositório é público. Os segredos moram em arquivos do próprio
  * servidor, fora do repositório, legíveis só pelo usuário do serviço (chmod 600):
  *   CONTA_SERVICO  — a chave da conta de serviço do Firebase (JSON baixado do Console)
- *   SENHAS_FIXAS   — as senhas fixas da Gestão e do plantão ({"pin": {role, nome, ...}})
+ *   SENHAS_FIXAS   — as senhas fixas da Gestão e do plantão ({"pin": {id, role, nome, ...}}; o `id` liga a entrada à
+ *                    senha trocada no app, em daycare/config/senhas-fixas/{id} — 6.76)
  * O passo a passo está no LEIA-ME.md desta pasta.
  *
  * Rotas:
@@ -46,6 +47,14 @@ async function equipe() {
   cacheEquipe = { ts: Date.now(), v: s.val() || [] };
   return cacheEquipe.v;
 }
+// 6.76: as senhas fixas trocadas no app (só {hash, sal}), com o mesmo minuto de cache da equipe.
+let cacheTrocadas = { ts: 0, v: null };
+async function trocadas() {
+  if (cacheTrocadas.v && Date.now() - cacheTrocadas.ts < 60 * 1000) return cacheTrocadas.v;
+  const s = await db.ref('daycare/config/senhas-fixas').once('value');
+  cacheTrocadas = { ts: Date.now(), v: s.val() || {} };
+  return cacheTrocadas.v;
+}
 let cacheFixas = { ts: 0, v: null };
 function fixas() {
   if (cacheFixas.v && Date.now() - cacheFixas.ts < 60 * 1000) return cacheFixas.v;
@@ -55,7 +64,7 @@ function fixas() {
 async function aparelhoLiberado(id) {
   if (!L.idAparelhoValido(id)) return false;
   const s = await db.ref('auaulandia/aparelhos/' + id).once('value');
-  return !!s.val();
+  return L.aparelhoLiberado(s.val());   // 6.76: a régua do app — o registro só com o batimento, ou retirado, não abre
 }
 
 const porAparelho = L.criarLimitador({ max: 5, janelaMs: 10 * 60 * 1000, bloqueioMs: 15 * 60 * 1000 });
@@ -125,7 +134,7 @@ const servidor = http.createServer((req, res) => {
     try {
       const r = await L.decidir(pedido, {
         agora: () => Date.now(),
-        tabela: async () => L.montarTabela(fixas(), await equipe()),
+        tabela: async (pin) => L.montarTabela(fixas(), await equipe(), await trocadas(), pin),
         aparelhoLiberado, porAparelho, porIp, geral,
       });
       if (r.status === 200) {
