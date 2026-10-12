@@ -4820,6 +4820,12 @@
     <div class="card">
       <h2 style="font-size:19px">Orçamentos feitos</h2>
       <div class="hint">Quatro seções, todas recolhidas: toque no título para abrir a que você precisa. Quem já fez check-in sai daqui e passa a viver em <strong>Hóspedes de hoje</strong> — é lá que se faz a saída antecipada e o check-out.</div>
+      <!-- 6.68 (AC11.2): a busca na lista inteira — um orçamento de fora dos 60 mais recentes, com os botões da seção dele -->
+      <div style="margin:10px 0 12px">
+        <label for="orcProcBusca" class="cad-lb">Procurar um orçamento antigo (FILHOt ou tutor)</label>
+        <input id="orcProcBusca" class="cad-in" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Digite 2 letras ou mais" oninput="orcProcurar(this.value)" style="min-height:44px;box-sizing:border-box">
+        <div id="orcBuscaRes"></div>
+      </div>
       <div id="orcLista"></div>
     </div>
 
@@ -5184,13 +5190,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-23"></script>
+<script src="resposta-tutor.js?v=2026-10-09-24"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-23"></script>
+<script src="painel-logica.js?v=2026-10-09-24"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5202,7 +5208,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-23"></script>
+<script src="financeiro-logica.js?v=2026-10-09-24"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -10080,7 +10086,7 @@
   // Recebe o orçamento COMO ELE VAI FICAR e devolve o pedaço de update que põe o Banco
   // de Reposições em dia com ele. Função pura: não grava nada, não lê a tela, só monta o
   // patch — é por isso que o harness consegue prová-la sem banco nenhum.
-  //   o.status: 'aguardando' | 'fechado' | 'nao_fechou' | 'cancelado' | 'apagado'
+  //   o.status: 'aguardando' | 'fechado' | 'nao_fechou' | 'cancelado' | 'anulado' (6.68) | 'apagado'
   // Devolve {patch, baixadas, estornadas, reservadas, linhas:[texto]}.
   function repOrcAcerto(orcId, o){
     var patch={}, baixadas=0, estornadas=0, reservadas=0, linhas=[];
@@ -10130,7 +10136,7 @@
           // um dia do FILHOt em silêncio.
           patch[kEst]={ tipo:'estorno', data:hoje, motivo:'estorno',
             obs:'Devolvida — o orçamento de hospedagem '+repOrcCurto(orcId)+' '
-                +(st==='cancelado'?'foi cancelado':(st==='apagado'?'foi apagado':(st==='nao_fechou'?'não fechou':'voltou a aguardar resposta'))),
+                +(st==='cancelado'?'foi cancelado':(st==='anulado'?'foi anulado (lançado por engano)':(st==='apagado'?'foi apagado':(st==='nao_fechou'?'não fechou':'voltou a aguardar resposta')))),
             estornaId:repChaveBaixa(orcId,n), orcId:orcId, orcSeq:n, quem:quem, ts:agora };
           estornadas++;
         }
@@ -21510,8 +21516,11 @@
     ORC_REP={};
     (o.pets||[]).forEach(function(sp){ if(sp&&sp.key&&+sp.reposicoes>0) ORC_REP[sp.key]=+sp.reposicoes; });
     ORC_EDIT_ANTES={entrada:o.entrada||'', saida:o.saida||'', total_cent:o.total_cent||0,
-                    status:o.status||'aguardando',
-                    pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; })};
+                    status:o.status||'aguardando', status_em:Number(o.status_em)||0,
+                    pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; }),
+                    // 6.68, 3ª rodada (REL-004): a foto do orçamento de onde este formulário nasceu — o irParaView logo abaixo relê
+                    // a lista, e a memória da tela deixa de ser o que a pessoa viu; o «Salvar» compara o banco com ESTA foto
+                    vista:orcVistaDe(o)};
     ORC_AULUNO=!!o.auluno;
     // A temporada da reserva é a que ela foi feita — reabrir para mudar as datas não pode
     // reescrever essa decisão sozinho. Por isso entra como escolha À MÃO.
@@ -21560,7 +21569,10 @@
     el.innerHTML='<div style="background:rgba(222,180,40,.20);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:13.5px;color:var(--z-blue);font-weight:700">'
       +'Você está <strong>mudando as datas</strong> da reserva de '+escAttr((a.pets||[]).map(function(p){ return p.nome; }).join(' e '))+'.'
       +'<div style="font-weight:600;margin-top:3px">Era de <strong>'+orcBR(a.entrada||'')+'</strong> a <strong>'+orcBR(a.saida||'')+'</strong>'
-      +(a.total_cent?(' · '+fmtCent(a.total_cent)):'')+'. Troque as datas acima e toque em <strong>Salvar</strong> — eu acerto a planilha sozinho.</div>'
+      +(a.total_cent?(' · '+fmtCent(a.total_cent)):'')+'. Troque as datas acima e toque em <strong>Salvar</strong>'
+      // 6.68 (AC4.1): a proposta que aguarda o tutor não vai à planilha; a reserva fechada leva a planilha junto
+      +((String(a.status||'aguardando')==='fechado')?' — eu acerto a planilha sozinho.':'. A planilha não muda enquanto a reserva aguarda o tutor.')
+      +' Tirou um FILHOt (×)? A reposição dele volta à ficha.</div>'
       +'<button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:5px 12px;font-size:12.5px;margin-top:7px" onclick="orcCancelarEdicao()">Desistir da alteração</button>'
       +'</div>';
   }
@@ -21612,9 +21624,15 @@
       mensagem:(document.getElementById('orcMsg')||{}).value||''
     };
     var st=document.getElementById('orcSalvoStatus');
+    // 6.68 (AC11.3): a trava olha a lista INTEIRA (relida se tiver mais de 3 minutos); sem a leitura, os 60 e a frase.
+    return orcListaDuplicidade().then(function(LD){ return orcSalvarGravar(reg, st, LD); });
+  }
+  function orcSalvarGravar(reg, st, LD){
+    LD=LD||{lista:orcListaArray(), fora:[], aviso:''};
     // TRAVA DE DUPLICIDADE (16/set/2026) — antes de gravar, nunca depois. Se já existe
     // orçamento do mesmo FILHOt (ou de um irmão) com datas que se sobrepõem, NADA é gravado.
     var dups=orcDuplicados(orcListaArray(), reg, null);
+    if((LD.fora||[]).length) dups=dups.concat(orcDuplicados(LD.fora, reg, null));   // 6.68: e os de fora dos 60
     if(dups.length && !ORC_DUP_OK){
       if(st){ st.style.color='var(--crm-critico)'; st.textContent='NÃO foi salvo: já existe orçamento deste FILHOt para estas datas. Veja o cartaz.'; }
       orcCartazDuplicado(dups, reg, function(){ ORC_DUP_OK={quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}; orcSalvar(); });
@@ -21640,7 +21658,7 @@
     DB.ref().update(patch).then(function(){
       gravou=true;
       var extra=repOrcResumo(acerto);
-      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'+(extra?(' '+extra):''); }
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Orçamento salvo. Está na lista abaixo como "aguardando" — marque lá quando o tutor fechar ou desistir.'+(extra?(' '+extra):'')+(LD.aviso?(' '+LD.aviso):''); }
       if(typeof audit==='function') audit('orcamento-criado','orçamento de '+reg.pets.map(function(p){return p.nome;}).join(' e ')+' — '+fmtCent(reg.total_cent),{pet:(reg.pets[0]||{}).nome||''});
       if(acerto.reservadas&&typeof audit==='function') audit('reposicao-reserva-orcamento',
         'reservou '+acerto.reservadas+' dia(s) de reposição no orçamento '+repOrcCurto(id)+' — '+acerto.linhas.join(' · '),
@@ -21659,7 +21677,9 @@
     });
   }
   // Grava a alteração no MESMO registro (o histórico da reserva não se parte em dois) e
-  // acerta a planilha: primeiro libera as noites antigas, depois lança as novas.
+  // acerta a planilha — 6.68: só a reserva FECHADA vai à planilha (a proposta que aguarda o tutor não, AC4.1); o
+  // histórico entra na MESMA escrita da mudança (AC4.3); o FILHOt tirado pelo × devolve a reposição (AC4.5); e a linha
+  // do dinheiro acompanha a reserva, um FILHOt de cada vez (orcPlanilhaSincronizar, AC5).
   async function orcSalvarEdicao(){
     var id=ORC_EDITANDO, antes=ORC_EDIT_ANTES||{}, C=ORC_CALC;
     var st=document.getElementById('orcSalvoStatus');
@@ -21669,19 +21689,36 @@
       alert('As datas continuam as mesmas ('+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+').\n\nMude a entrada ou a saída antes de salvar.');
       return;
     }
-    var o=ORC_LISTA_CACHE[id]||{};
+    var o=orcDoId(id)||{};
+    // O antes vem do orçamento SALVO (com a chave de cada FILHOt e os subtotais), não do ORC_EDIT_ANTES (AC5.1).
+    var oAntes=JSON.parse(JSON.stringify(Object.assign({}, o, {entrada:o.entrada||antes.entrada||'', saida:o.saida||antes.saida||'',
+      pets:(o.pets&&o.pets.length)?o.pets:(antes.pets||[])})));
+    var stOrc=String(o.status||antes.status||'aguardando');
+    var fechado=(stOrc==='fechado');
+    var aindaNaPlanilha=!fechado && orcFoiAPlanilha(o);
     var nomes=(C.pets||[]).map(function(p){ return p.sel.nome; }).join(' e ');
     var dif=(C.total-(antes.total_cent||0));
-    if(!await zPergunta('Mudar a reserva de '+nomes+'?',
-      ['DE: '+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+' · '+fmtCent(antes.total_cent||0),
+    // quem sai pelo × da tela (AC4.5): a reposição dele neste orçamento volta à ficha, na mesma escrita
+    var saem=orcPlanilhaDiff(oAntes, {tutor:o.tutor||'', pets:(C.pets||[]).map(function(p){ return {key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||''}; })}).sai;
+    var perg=['DE: '+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+' · '+fmtCent(antes.total_cent||0),
        'PARA: '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' · '+fmtCent(C.total),
-       (dif===0?'O valor não muda.':(dif>0?('São '+fmtCent(dif)+' A MAIS.'):('São '+fmtCent(-dif)+' A MENOS.'))),
-       'Eu libero as noites antigas na planilha e lanço as novas.'],
-      {sim:'Mudar a reserva', nao:'Manter como está'})) return;
+       (dif===0?'O valor não muda.':(dif>0?('São '+fmtCent(dif)+' A MAIS.'):('São '+fmtCent(-dif)+' A MENOS.')))];
+    if(fechado) perg.push('Eu libero as noites antigas na planilha e lanço as novas.');
+    else {
+      perg.push('A planilha não muda: a reserva ainda aguarda o tutor. Ela entra na planilha quando alguém tocar «Fechou».');
+      if(aindaNaPlanilha) perg.push(orcAvisoPlanilhaTexto(o)+' Eu tiro da planilha as linhas antigas dela, sem lançar as novas.');
+    }
+    saem.forEach(function(sp){
+      var n=Math.max(0, +sp.reposicoes||0);
+      perg.push((sp.nome||'?')+' sai desta reserva'+((n>0 && sp.key && !sp.sem_cadastro)?(': '+n+' dia(s) de reposição voltam à ficha.'):'.')+(fechado?(' A linha de '+(sp.nome||'?')+' sai da planilha.'):''));
+    });
+    if(!await zPergunta('Mudar a reserva de '+nomes+'?', perg, {sim:'Mudar a reserva', nao:'Manter como está'})) return;
     var motivo=((await zTexto('Por que as datas mudaram?',
       ['Por exemplo: a tutora antecipou a viagem.'],
       {rotulo:'Motivo da mudança', botao:'Continuar', cor:'#234D67'}))||'').trim();
-    if(!motivo){ alert('Escreva o motivo — é ele que explica a mudança quando alguém for conferir depois.'); return; }
+    // 6.68 (AC4.2): a régua das 4 palavras (a motivoQuatroPalavras, chamada e nunca copiada) — antes era 1 letra
+    var emM=orcMotivoErro(motivo);
+    if(emM){ alert(emM+' A reserva NÃO foi alterada.'); return; }
     var senha=((await zTexto('Digite a SUA senha para confirmar',
       ['É o seu nome que vai ficar registrado.'],
       {rotulo:'Sua senha', tipo:'password', botao:'Confirmar a mudança'}))||'').trim();
@@ -21690,6 +21727,22 @@
     // 6.57 (AC4): a senha tem de ser de uma PESSOA que trabalha no Orçamento (não de posto).
     var barraE=orcAssinaturaRecusa(quem, senha);
     if(barraE){ corrBarrar('assinar o Orçamento', corrQuemPode('assinar-orcamento','orcamento'), {orcamento:id}, {calado:true}); alert(barraE+' A reserva NÃO foi alterada.'); return; }
+    // 2ª rodada (REL-001): relê antes de gravar — outro aparelho pode ter mudado a situação, as datas ou o valor desde que esta
+    // tela abriu; o antes da sincronização e a decisão da planilha saem do RELIDO. 3ª rodada (REL-004): a comparação é com o
+    // ORC_EDIT_ANTES (a foto de onde o formulário nasceu, com o status_em), e não com a memória da tela: abrir a edição relê a
+    // lista (irParaView → orcInit), e a memória já seria a relida. Sem a foto (um ORC_EDIT_ANTES montado sem ela), a memória.
+    var R=await orcRelerParaGravar(id, antes.vista||o);
+    if(!R.ok){
+      if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ A reserva NÃO foi alterada. '+zErroFrase(R.erro); }
+      // este formulário nasceu da reserva de antes: salvar de novo daqui seria recusado de novo
+      zAlertao('A RESERVA NÃO FOI ALTERADA', [zErroFrase(R.erro)].concat(R.mudou?['Toque em «Desistir da alteração» e abra de novo «Mudar as datas» no card, que já mostra a reserva como ela está agora.']:[]), {botao:'Entendi'});
+      return;
+    }
+    o=R.o;
+    oAntes=JSON.parse(JSON.stringify(Object.assign({}, o, {entrada:o.entrada||antes.entrada||'', saida:o.saida||antes.saida||'',
+      pets:(o.pets&&o.pets.length)?o.pets:(antes.pets||[])})));
+    stOrc=String(o.status||antes.status||'aguardando'); fechado=(stOrc==='fechado'); aindaNaPlanilha=!fechado && orcFoiAPlanilha(o);
+    saem=orcPlanilhaDiff(oAntes, {tutor:o.tutor||'', pets:(C.pets||[]).map(function(p){ return {key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||''}; })}).sai;
     var agora=new Date(), pp=function(x){ return String(x).padStart(2,'0'); };
     var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando a alteração…'; }
@@ -21708,48 +21761,62 @@
       reposicoes_total:C.pets.reduce(function(a,p){ return a+(p.repUsa||0); },0),
       mensagem:(document.getElementById('orcMsg')||{}).value||'',
       alterado_por:quem.nome, alterado_role:quem.role||'', alterado_ts:Date.now(),
-      alterado_em_br:brDataHora, alterado_motivo:motivo,
-      planilha_ok:false, planilha_msg:'aguardando o acerto das datas'
+      alterado_em_br:brDataHora, alterado_motivo:motivo
     };
-    // O que era antes fica guardado — reserva alterada não apaga o passado dela.
-    DB.ref('auaulandia/orcamentos/'+id+'/historico').push({
+    // Só a reserva fechada espera o acerto da planilha; a proposta que aguarda não ganha «NÃO entrou na planilha» (AC4.1).
+    if(fechado){ patch.planilha_ok=false; patch.planilha_msg='aguardando o acerto das datas'; }
+    // O que era antes fica guardado — reserva alterada não apaga o passado dela. 6.68 (AC4.3): NA MESMA escrita da mudança
+    // (a chave nasce do push(), que não grava nada sozinho); o banco recusando, nenhuma entrada fica. Guarda também os
+    // FILHOts de antes e de depois, o status, o papel de quem assinou e quem estava logado.
+    var resumoPets=function(L){ return (L||[]).map(function(p){ return {key:String(p.key||''), nome:String(p.nome||''), raca:String(p.raca||''), tutor:String(p.tutor||''), subtotal_cent:Number(p.subtotal_cent)||0}; }); };
+    var kHist=orcNovaChave('auaulandia/orcamentos/'+id+'/historico');
+    var entradaHist={
       de_entrada:antes.entrada, de_saida:antes.saida, de_total_cent:antes.total_cent||0,
       para_entrada:C.entrada, para_saida:C.saida, para_total_cent:C.total,
-      motivo:motivo, por:quem.nome, em_br:brDataHora, ts:Date.now()
-    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcSalvarEdicao)', e); });
+      motivo:motivo, por:quem.nome, em_br:brDataHora, ts:Date.now(),
+      de_pets:resumoPets(oAntes.pets), para_pets:resumoPets(patch.pets), status:stOrc, papel:quem.role||'', login:corrQuemAgora().login
+    };
     // Datas novas, contas novas — e o Banco de Reposições acompanha no MESMO update: se a
     // estadia encolheu e sobrou reposição, o dia volta; se cresceu, o dia desce. Idempotente:
     // as baixas têm chave fixa por orçamento, então re-salvar não abate duas vezes.
     var novoO=Object.assign({}, o, patch);
     var acertoEd=repOrcAcerto(id, novoO);
-    var raizEd=Object.assign({}, acertoEd.patch);
+    // quem saiu pelo ×: o acerto do orçamento de antes só com ele, como «cancelado» (a reserva e a baixa dele voltam)
+    var acertoSai=saem.length?repOrcAcerto(id, Object.assign({}, oAntes, {status:'cancelado', pets:saem})):null;
+    var raizEd=Object.assign({}, acertoSai?acertoSai.patch:{}, acertoEd.patch);
     Object.keys(patch).forEach(function(campo){ raizEd['auaulandia/orcamentos/'+id+'/'+campo]=patch[campo]; });
+    raizEd['auaulandia/orcamentos/'+id+'/historico/'+kHist]=entradaHist;
     var gravouEd=false;   // 6.48 (K1)
     DB.ref().update(raizEd).then(function(){
       gravouEd=true;
-      ORC_LISTA_CACHE[id]=novoO;
-      if(acertoEd.baixadas||acertoEd.estornadas||acertoEd.reservadas){
+      novoO.historico=Object.assign({}, o.historico||{}); novoO.historico[kHist]=entradaHist;
+      orcCacheTrocar(id, novoO);
+      var rDev=acertoSai?acertoSai.estornadas+acertoSai.linhas.length:0;
+      if(acertoEd.baixadas||acertoEd.estornadas||acertoEd.reservadas||rDev){
         if(typeof audit==='function') audit('reposicao-baixa-orcamento',
-          'acerto do Banco após mudar as datas do orçamento '+repOrcCurto(id)+' — '+repOrcResumo(acertoEd)+' ('+acertoEd.linhas.join(' · ')+')',
+          'acerto do Banco após mudar as datas do orçamento '+repOrcCurto(id)+' — '+repOrcResumo(acertoEd)+' ('+acertoEd.linhas.join(' · ')+')'
+          +(acertoSai&&acertoSai.linhas.length?(' · saiu da reserva: '+acertoSai.linhas.join(' · ')):''),
           {pet:(C.pets[0]&&C.pets[0].sel.nome)||'', quem:quem.nome});
       }
       if(typeof audit==='function') audit('orcamento-datas-alteradas',
         'mudou a reserva de '+nomes+': '+orcBR(antes.entrada)+'–'+orcBR(antes.saida)+' → '+orcBR(C.entrada)+'–'+orcBR(C.saida)+' ('+motivo+')',
         {pet:(C.pets[0]&&C.pets[0].sel.nome)||'', quem:quem.nome});
-      // 1) tira as noites ANTIGAS do calendário  2) lança as novas
-      orcLiberarNaPlanilha(antes, quem.nome, brDataHora).then(function(){
-        orcEnviarPlanilha(id);
-      });
+      // A planilha (6.68): a reserva fechada acompanha (atualizada no lugar pela ponte nova; riscada e lançada de novo pela de
+      // hoje); a proposta que ainda está na planilha só tem as linhas antigas tiradas; a que aguarda, nada.
+      if(fechado) orcPlanilhaSincronizar(id, oAntes, novoO, {porque:'mudar-datas', quem:quem.nome, quando:brDataHora, motivo:motivo, mudanca:kHist});
+      else if(aindaNaPlanilha) orcTirarDaPlanilha(id, quem.nome, brDataHora, {porque:'mudar-datas', marca:'VOLTOU PARA PENDENTE', o:oAntes});
       var _id=id;
       ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_SEL=[]; ORC_REP={}; ORC_RESERVA_IGNORAR='';
       try{ orcRenderSel(); orcCalcular(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       orcRenderAvisoEdicao();
       orcCarregarLista();
       var _rep=repOrcResumo(acertoEd);
+      var _pl=fechado?'Estou acertando a planilha: espere o aviso com o resultado.'
+        :(aindaNaPlanilha?'Estou tirando da planilha as linhas antigas desta proposta: espere o aviso.'
+          :'A planilha não muda: a reserva ainda aguarda o tutor. Ela entra na planilha quando alguém tocar «Fechou».');
       if(typeof zAlertao==='function') zAlertao('RESERVA ALTERADA',
-        ['Agora é de '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' — '+fmtCent(C.total)+'.',
-         'Liberei as noites antigas na planilha e lancei as novas.'].concat(_rep?[_rep]:[]).concat(
-         ['Confira na lista abaixo se apareceu "Lançado na planilha". Se disser que NÃO entrou, toque em "reenviar".']),
+        ['Agora é de '+orcBR(C.entrada)+' a '+orcBR(C.saida)+' — '+fmtCent(C.total)+'.', _pl].concat(_rep?[_rep]:[])
+          .concat(acertoSai&&acertoSai.linhas.length?['Saiu da reserva: '+acertoSai.linhas.join(' · ')+'.']:[]),
         {ok:true, botao:'Certo'});
       else if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Reserva alterada.'+(_rep?(' '+_rep):''); }
       return _id;
@@ -21764,35 +21831,70 @@
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcSalvarEdicao)', e);
     });
   }
-  // Libera na planilha as noites de um período (usado quando a data muda). Não risca o
-  // financeiro — a linha continua viva, só muda de datas.
-  function orcLiberarNaPlanilha(antes, quem, quando){
+  // Libera na planilha as noites de um período (a data mudou). Não risca o financeiro — a linha continua viva, só muda
+  // de datas (com op.riscar, risca: a ponte de hoje não sabe atualizar a linha no lugar).
+  // 6.68 (AC5.5, AC9.2): com a trava da Maya (o FILHOt cujas noites também são de outra reserva viva dele fica FORA do
+  // pedido — senão o calendário perde a noite da reserva boa, B5) e sem silêncio: cada resposta volta para quem chamou, vai
+  // para o planilha_hist e a falha aparece na tela. op (opcional) = {id, riscar, marca, silencioso, semHist, porque}.
+  // Devolve Promise<{ok, pets:[{nome, acao, ok, financeiro, calendario}], presas}>.
+  function orcLiberarNaPlanilha(antes, quem, quando, op){
+    op=op||{};
     var cfg=(orcSheetsCfg||{});
-    var pets=(antes&&antes.pets)||[];
-    if(!cfg.url||!pets.length) return Promise.resolve();
-    var nomes=pets.map(function(p){
+    var pets=((antes&&antes.pets)||[]).slice();
+    if(!cfg.url||!pets.length) return Promise.resolve({ok:true, pets:[], presas:[]});
+    var id=String(op.id||(antes&&antes.id)||'');
+    // 6.68, 2ª rodada (LOW-4): a trava conferida na lista INTEIRA, esperando a leitura; sem ela, nada é liberado
+    return orcPresasConferidas(id, antes).then(function(PC){
+      return orcLiberarComPresas(antes, quem, quando, op, cfg, pets, id, PC);
+    });
+  }
+  function orcLiberarComPresas(antes, quem, quando, op, cfg, pets, id, PC){
+    var presas=(PC&&PC.presas)||[];
+    var presa={}; presas.forEach(function(x){ presa[String(x.key||x.nome||'').toLowerCase()]=x; });
+    var res=[];
+    var vao=pets.filter(function(p){
+      if(!(PC && PC.ok)){ res.push({nome:String(p.nome||''), acao:'preservada', semConferir:true, ok:false, financeiro:'', calendario:'',
+        falha:ORC_SEM_CONFERIR+': as noites ficaram e a linha antiga não foi riscada'}); return false; }
+      var x=presa[String((p&&(p.key||p.nome))||'').toLowerCase()];
+      if(x) res.push({nome:String(p.nome||''), acao:'preservada', ok:false, financeiro:'', calendario:'',
+        falha:'as noites são também da reserva de '+orcBR(x.entrada)+' a '+orcBR(x.saida)+': risque à mão a linha antiga'});
+      return !x;
+    });
+    var nomeDe=function(p){
       var partes=[String(p.nome||'').trim()];
       var r=String(p.raca||'').trim(); if(r) partes.push(r);
-      var t=String(p.tutor||'').trim(); if(t) partes.push(t);
+      var t=String(p.tutor||(antes&&antes.tutor)||'').trim(); if(t) partes.push(t);
       return partes.join('/');
+    };
+    return Promise.all(vao.map(function(p){
+      var corpo={ token:cfg.token||'', acao:'cancelar', peludoTutor:nomeDe(p), soCalendario:!op.riscar,
+          entrada:antes.entrada||'', saida:antes.saida||'', canceladoPor:quem||'', canceladoEm:quando||'' };
+      if(op.marca) corpo.marca=op.marca;
+      return orcPontePost(cfg, corpo).catch(function(e){ return {ok:false, erro:zErroMotivo(e, 'planilha', cfg.token, {origem:'app'})}; });
+    })).then(function(js){
+      js.forEach(function(j, i){ res.push(orcPetRes(vao[i].nome, op.riscar?'riscar':'liberar', j, cfg)); });
+      var ok=res.every(function(x){ return x.ok; });
+      if(id && !op.semHist) orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(op.porque||'mudar-datas', Number((js[0]||{}).versao)||0, res, quem), {}, 'auaulandia/orcamentos/ (orcLiberarNaPlanilha)');
+      if(!op.silencioso && !ok){
+        var L=res.filter(function(x){ return !x.ok; }).map(function(x){
+          return (x.acao==='preservada' && !x.semConferir)
+            ? ('Risque à mão a linha antiga de '+x.nome+' ('+orcBR(antes.entrada||'')+' a '+orcBR(antes.saida||'')+') na aba Hospedagem: as noites de '+x.nome+' continuam com a outra reserva.')
+            : (x.nome+': '+String(x.falha||'a planilha não confirmou')); });
+        zAlertao('AS NOITES ANTIGAS NÃO SAÍRAM DA PLANILHA', L.concat(['Confira as linhas de '+orcBR(antes.entrada||'')+' a '+orcBR(antes.saida||'')+' no calendário e acerte à mão o que faltar.']), {botao:'Entendi'});
+      }
+      return {ok:ok, pets:res, presas:presas};
     });
-    return Promise.all(nomes.map(function(n){
-      return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:n, soCalendario:true,
-          entrada:antes.entrada||'', saida:antes.saida||'',
-          canceladoPor:quem||'', canceladoEm:quando||'' })})
-        .then(function(r){ return r.text().catch(function(){ return ''; }); })
-        .catch(function(){ return ''; });
-    })).catch(function(){}) /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */;
   }
   var ORC_LISTA_CACHE={};
   function orcCarregarLista(){
     if(!DB) return;
     DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
-      ORC_LISTA_CACHE=s.val()||{}; orcRenderLista();
+      ORC_LISTA_CACHE=s.val()||{}; orcJuntarVivos(); orcRenderLista();
       // Quem já fez check-in (para o botão virar "Já fez check-in"). Vem do retrato
       // compartilhado que o app já mantém — não baixa o nó de novo.
       try{ orcCarregarEstadias(); }catch(e){} /* silencioso de propósito: o estado do botão é informação extra — falhar não pode derrubar a lista */
+      // 6.68 (AC11.1): logo depois, a coleção inteira (uma vez; guardada 3 minutos) acrescenta os vivos de fora dos 60
+      orcLerVivos().then(function(r){ if(r && r.ok && orcJuntarVivos()) orcRenderLista(); if(ORC_BUSCA_TERMO) orcProcurarRender(); });
     }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (orcCarregarLista)', e); });
   }
   /* ===== QUEM CHEGA HOJE PELOS ORÇAMENTOS FECHADOS (Adriana, 25/set/2026) ============
@@ -21828,10 +21930,15 @@
     // de novo os 60 orçamentos, com preço e mensagem dentro (QA B2). Lida há menos de 3 min,
     // vale a que está em mão; quem fecha um orçamento continua vendo o cartão logo depois.
     if(__ciOrcLido && (Date.now()-__ciOrcQuando)<3*60*1000){ ciOrcHojeRender(); return; }
-    DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
-      ORC_LISTA_CACHE=s.val()||{}; __ciOrcLido=true; __ciOrcQuando=Date.now();
-      ciOrcHojeRender();
-    }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (ciOrcHojeCarregar)', e); });
+    // 6.68 (AC11.4): a mesma leitura inteira do Orçamento — uma reserva fechada meses antes, com entrada hoje, aparece.
+    // Sem ela (falhou), os 60 mais recentes, como antes.
+    orcLerVivos().then(function(r){
+      if(r && r.ok){ ORC_LISTA_CACHE=Object.assign({}, r.todos||{}); __ciOrcLido=true; __ciOrcQuando=Date.now(); ciOrcHojeRender(); return; }
+      DB.ref('auaulandia/orcamentos').limitToLast(60).once('value').then(function(s){
+        ORC_LISTA_CACHE=s.val()||{}; __ciOrcLido=true; __ciOrcQuando=Date.now();
+        ciOrcHojeRender();
+      }).catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (ciOrcHojeCarregar)', e); });
+    });
   }
   function ciOrcHojeRender(){
     var el=document.getElementById('ciOrcHoje'); if(!el) return;
@@ -21903,7 +22010,7 @@
   function orcGrupoDe(o, hoje, feito){
     o=o||{};
     var st=o.status||'aguardando';
-    if(st==='nao_fechou'||st==='cancelado') return 2;
+    if(st==='nao_fechou'||st==='cancelado'||st==='anulado') return 2;   // 6.68: o anulado (lançado por engano) fica em Cancelados, riscado
     if(st!=='fechado') return 0;                   // aguardando — e qualquer status desconhecido
     if(feito) return 3;                            // já está na casa: saiu da lista de orçamentos
     return orcHospedagemPassada(o,hoje)?3:1;
@@ -22265,15 +22372,22 @@
   // orçamentos das duas seções de trabalho — as de histórico são UMA LINHA.
   function orcCardHtml(id, o, HOJE, DUP, podeCi, g){
     var stt=o.status||'aguardando';
-    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo']};
+    var lb={aguardando:['PENDENTE','pendente'], fechado:['FECHOU','resolvido'], nao_fechou:['NÃO FECHOU','processo'], cancelado:['CANCELADO','processo'], anulado:['ANULADO','processo']};
     var L=lb[stt]||lb.aguardando;
     var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
     var dt=orcDataBR(o.criado_em);
-    var apagar=(document.body.dataset.role==='gestao'||document.body.dataset.role==='diretoria'||document.body.dataset.role==='supervisor')
-      ? '<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:700;padding:0 4px" onclick="orcApagar(\'' + id + '\')">apagar</button>' : '';
+    // 6.68 (AC7.1): o «apagar» (que zerava o nó) virou «Anular (lançado por engano)», à vista de quem trabalha no
+    // Orçamento; o cartaz pede a senha da Gestão e nada é apagado (fica riscado em Cancelados, com «Reabrir»).
+    var apagar='<button class="btn" style="background:none;border:1.5px solid var(--crm-critico);color:var(--crm-critico);font-weight:700;min-height:44px;padding:6px 12px" onclick="orcApagar(\'' + id + '\')">Anular (lançado por engano)</button>';
     // Fechou mas a planilha não recebeu: a falha aparece e dá para reenviar. Nunca some.
     var planilha='';
     if(stt==='fechado') planilha=orcPlanilhaHtml(id, o);
+    // 6.68 (AC8): a proposta que voltou a aguardar antes desta story e ainda está na planilha — o aviso e «Tirar da planilha»
+    if(stt==='aguardando' && orcFoiAPlanilha(o)) planilha='<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:4px">'+esc(orcAvisoPlanilhaTexto(o))+'</div>'
+      +'<button class="btn" style="margin-top:6px;min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="orcTirarDaPlanilhaAbrir(\'' + id + '\')">Tirar da planilha</button>';
+    // 6.68 (AC1.3): quem fechou, à vista, em Estadias fechadas
+    var fechouLinha='';
+    if(g===1){ var fp=orcFechouPor(o); if(fp && fp.quem) fechouLinha='<div style="font-size:12.5px;color:var(--z-blue-soft);margin-top:2px">'+esc('Fechou: '+fp.quem+(fp.ts?(', '+orcQuandoBR(fp.ts)):''))+'</div>'; }
     // O tutor desistiu da viagem: CANCELAR libera a vaga na planilha e risca a linha do
     // financeiro. Diferente de "não fechou" (nunca virou reserva) e de "apagar" (some o
     // registro). Cancelar guarda o histórico e desfaz o que a reserva ocupou.
@@ -22328,7 +22442,7 @@
       +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(orcTempCurto(o)?(' · '+orcTempCurto(o)):'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
       +semData
       +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
-      +planilha
+      +fechouLinha+planilha+orcMudancasHTML(o)
       +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
   }
   // "Lançado na planilha" / "NÃO entrou na planilha" + reenviar. Um lugar só, usado pelo
@@ -22368,6 +22482,7 @@
   function orcLinhaVer(id){
     ORC_LINHA_ABERTA[id]=!ORC_LINHA_ABERTA[id];
     orcRenderLista();
+    if(typeof ORC_BUSCA_TERMO!=='undefined' && ORC_BUSCA_TERMO) orcProcurarRender();   // 6.68: a linha achada na busca também abre
   }
   function orcLinhaHistoricoHtml(id, o, g){
     var nomes=(o.pets||[]).map(function(pp){ return pp.nome; }).join(' e ')||'—';
@@ -22379,7 +22494,11 @@
       // não houver, a linha DIZ que não houve — nunca fica em branco fingindo que não
       // existe motivo nenhum.
       var motivo=String(o.cancelado_motivo||'').trim();
-      fim=motivo
+      // 6.68: o «Não fechou» com o que o tutor disse (AC2.3) e o anulado, riscado (AC7.5)
+      var stL=String(o.status||''), nfTexto=String(((o.nao_fechou||{}).texto)||'').trim();
+      if(stL==='anulado') fim='<span style="color:var(--crm-critico);font-weight:800;text-decoration:line-through">ANULADO</span> <span style="color:var(--muted)">(lançado por engano)</span>';
+      else if(stL==='nao_fechou' && nfTexto) fim='<span style="color:var(--muted)">'+escAttr('Não fechou: '+nfTexto)+'</span>';
+      else fim=motivo
         ? '<span style="color:var(--muted)">'+escAttr(motivo)+'</span>'
         : '<span style="color:var(--crm-critico);font-weight:700">sem motivo registrado</span>';
     } else {
@@ -22390,19 +22509,32 @@
           +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:700;text-decoration:underline;padding:0 2px" onclick="orcEnviarPlanilha(\'' + id + '\')">reenviar</button>';
     }
     var detalhe='';
+    // 6.68: a volta de cada um (44 px) — «Reativar reserva» do cancelado (AC6.4), «Reabrir» do «Não fechou» (AC2.4) e do
+    // anulado (AC7.6; aberta a linha, o «Reabrir» do anulado mora no riscado)
+    var stV=String(o.status||''), volta='';
+    var btV=function(fn, txt){ return '<button class="btn" style="grid-column:1/-1;justify-self:start;min-height:44px;padding:8px 14px;margin:4px 0;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800" onclick="'+fn+'(\'' + id + '\')">'+escAttr(txt)+'</button>'; };
+    if(g===2 && stV==='cancelado') volta=btV('orcReativarAbrir', 'Reativar reserva');
+    else if(g===2 && stV==='nao_fechou') volta=btV('orcNaoFechouReabrirAbrir', 'Reabrir');
+    else if(g===2 && stV==='anulado' && !aberta) volta=btV('orcAnulacaoDesfazerAbrir', 'Reabrir');
     if(aberta){
-      var L=[];
+      var L=[], riscado='';
       L.push('Valor: '+fmtCent(o.total_cent||0)+' · '+(o.noites||0)+' noites'+(orcTempCurto(o)?(' · '+orcTempCurto(o)):''));
       L.push('Orçamento feito em '+orcDataBR(o.criado_em)+' por '+(o.criado_por||'-'));
       if(g===2){
+        if(stV==='anulado' && o.anulado) riscado=corrRiscadoHTML(o.anulado, 'orcAnulacaoDesfazerAbrir(\''+jsAspas(id)+'\')');
+        if(o.nao_fechou && o.nao_fechou.por) L.push('«Não fechou» marcado por '+o.nao_fechou.por+(o.nao_fechou.ts?(', em '+orcQuandoBR(o.nao_fechou.ts)):''));
         if(o.cancelado_por) L.push('Cancelado por '+o.cancelado_por+(o.cancelado_em_br?(' em '+o.cancelado_em_br):''));
+        if(String(o.cancelado_origem||'')==='hospedagem-excluida') L.push('Cancelado junto com a exclusão da hospedagem.');
         if(o.cancelado_planilha_msg) L.push('Planilha: '+orcPlanilhaMotivo(o, o.cancelado_planilha_msg));
         if((o.status||'')==='nao_fechou') L.push('O tutor não fechou esta reserva — ela nunca ocupou vaga.');
       } else {
         if(o.planilha_msg) L.push('Planilha: '+orcPlanilhaMotivo(o, o.planilha_msg));
       }
+      // 6.68 (AC4.4): as mudanças de datas, à vista também no «ver» (com o resultado da planilha de cada uma)
+      var mudL=orcMudancaLinhas(o);
+      if(mudL.length){ L.push('Mudanças desta reserva ('+mudL.length+'):'); L=L.concat(mudL); }
       detalhe='<div style="grid-column:1/-1;font-size:12.5px;color:var(--z-blue-soft);line-height:1.5;padding:6px 0 2px">'
-        +L.map(function(t){ return escAttr(t); }).join('<br>')+'</div>';
+        +L.map(function(t){ return escAttr(t); }).join('<br>')+riscado+'</div>';
     }
     return '<div class="orc-linha'+(aberta?' aberta':'')+'" id="orc-card-'+id+'">'
       +'<span class="orc-l-data">'+escAttr(datas||'sem data')+'</span>'
@@ -22410,7 +22542,7 @@
       +'<span class="orc-l-tutor">'+escAttr(o.tutor||'tutor a confirmar')+'</span>'
       +'<span class="orc-l-fim">'+fim+'</span>'
       +'<button class="orc-l-ver" onclick="orcLinhaVer(\'' + id + '\')">'+(aberta?'fechar':'ver')+'</button>'
-      +detalhe+'</div>';
+      +volta+detalhe+'</div>';
   }
   function orcRenderLista(){
     var el=document.getElementById('orcLista'); if(!el) return;
@@ -22466,26 +22598,12 @@
       orcRenderLista();
     }
   }
-  // Apagar orçamento (teste, duplicado, erro). A trava de verdade são as regras do Firebase —
-  // esconder o botão por papel é só para não tentar quem não deve.
+  // Apagar orçamento — 6.68 (AC7): não apaga mais. O «apagar» virou «Anular (lançado por engano)»: o cartaz da 6.57 pede
+  // o motivo e a senha da Gestão (decisão 1, S7-P2), o orçamento vai para Cancelados riscado, com «Reabrir», a reserva de
+  // reposição volta à ficha e a planilha sai junto. O nó nunca vai a null. Esta continua sendo a porta (tela velha, console):
+  // a gravação é a orcAnularGravar.
   async function orcApagar(id){
-    var o=ORC_LISTA_CACHE[id]||{};
-    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ');
-    if(!await zPergunta('Apagar de vez o orçamento de '+(nomes||'—')+'?',
-      ['Valor: '+fmtCent(o.total_cent||0)+'.', 'Não dá para desfazer.'],
-      {sim:'Apagar', nao:'Manter'})) return;
-    if(!DB) return;
-    // Apagar o orçamento SEM devolver os dias deixaria crédito preso numa reserva que não
-    // existe mais — dia comido por um registro fantasma. Some o orçamento, voltam os dias,
-    // no mesmo update.
-    var acertoAp=repOrcAcerto(id, Object.assign({}, o, {status:'apagado'}));
-    var patchAp=Object.assign({}, acertoAp.patch);
-    patchAp['auaulandia/orcamentos/'+id]=null;
-    DB.ref().update(patchAp).then(function(){
-      delete ORC_LISTA_CACHE[id]; orcRenderLista();
-      if(typeof audit==='function') audit('orcamento-apagado','apagou o orçamento de '+nomes
-        +(acertoAp.estornadas?(' — '+repOrcResumo(acertoAp)):''),{});
-    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcApagar)', e); });
+    return orcAnularAbrir(id);
   }
   // ===== CANCELAR RESERVA — Adriana, 14/ago/2026 ===================================
   // "tem situação que o tutor faz reserva, está tudo preparado, mas algo acontece que impede
@@ -22509,13 +22627,16 @@
     var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
     if(!await zPergunta('CANCELAR a reserva de '+nomes+'?',
       [orcBR(o.entrada||'')+' a '+orcBR(o.saida||''),
-       'As noites dele saem do calendário e a linha do financeiro é riscada como CANCELADA.',
+       // 6.68 (AC6.3): a planilha só onde ela esteve
+       orcFoiAPlanilha(o)?'As noites dele saem do calendário e a linha do financeiro é riscada como CANCELADA.':'Ela não estava na planilha: nada a tirar.',
        'A vaga volta a ficar livre para outro FILHOt.'],
       {sim:'Cancelar a reserva', nao:'Manter a reserva'})) return;
     var motivo=((await zTexto('Por que a reserva foi cancelada?',
       ['Por exemplo: a viagem foi desmarcada, o tutor adiou.'],
       {rotulo:'Motivo do cancelamento', botao:'Continuar', cor:'#234D67'}))||'').trim();
-    if(!motivo){ alert('Escreva o motivo — é ele que explica o cancelamento quando alguém for conferir depois.'); return; }
+    // 6.68 (AC6.1): a régua das 4 palavras (antes bastava 1 letra); o orcCancelarGravar confere de novo
+    var emC=orcMotivoErro(motivo);
+    if(emC){ alert(emC+' A reserva NÃO foi cancelada.'); return; }
     var senha=((await zTexto('Digite a SUA senha para confirmar o cancelamento',
       ['É o seu nome que vai ficar registrado.'],
       {rotulo:'Sua senha', tipo:'password', botao:'Confirmar o cancelamento'}))||'').trim();
@@ -22528,8 +22649,12 @@
     // as telas de quem assinou vão junto: a conferência do orcCancelarGravar é a mesma, sem a senha (L-4)
     quem=Object.assign({}, quem, {paginas:corrPaginasDaPessoa(quem.nome, senha)});
     if(!DB){ alert('Sem conexão com o banco agora — a reserva não foi cancelada. Tente de novo em instantes.'); return; }
-    orcCancelarGravar(id, motivo, quem).then(function(r){
+    // 6.68, fechamento dos CONCERNS (REL-006): a releitura compara com o que a PERGUNTA mostrou (como nas outras portas) — a
+    // lista pode ser relida enquanto a pergunta, o motivo ou a senha estão na tela
+    orcCancelarGravar(id, motivo, quem, {vista:Object.keys(o).length?o:null}).then(function(r){
       if(r&&r.ok) return;
+      // outro aparelho mudou o orçamento: a frase já diz como ele está agora e que nada foi gravado (sem o «confira se cancelou»)
+      if(r && r.mudou){ alert('NÃO consegui cancelar: '+zErroFrase(r.erro)); return; }
       // 6.48: o motivo em português e a regra G. A gravação é um update só (atômico): a recusa diz "Nada
       // foi alterado"; o .catch do orcCancelarGravar também pega o erro de depois (K1): aí, conferir a lista.
       alert(zErroAviso('NÃO consegui cancelar', (r&&r.erro)||'', {sep:'\n\n', nada:'Nada foi alterado.', verbo:'a reserva foi cancelada', unica:true, onde:'na lista de Orçamentos', k1:true, hoje:'Nada foi alterado. Tente de novo.'}));
@@ -22567,14 +22692,37 @@
     if(xaras>1) return 'Há '+xaras+' pessoas com o nome '+nome+' no Time: sem a senha, não dá para saber quem assinou. Assine de novo com a senha da própria pessoa.';
     return 'Essa senha é de '+nome+', que não trabalha no Orçamento. Quem assina: '+corrQuemPode('assinar-orcamento','orcamento')+'.';
   }
-  function orcCancelarGravar(id, motivo, quem){
-    var o=ORC_LISTA_CACHE[id]||{};
-    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
+  // 6.68 (AC6.1 a AC6.3): o 4º parâmetro, opcional, {origem} (o Excluir da 6.53 passa 'hospedagem-excluida', gravado em
+  // cancelado_origem); a régua das 4 palavras conferida também aqui; o status de antes guardado (cancelado_de, para o
+  // «Reativar reserva» saber para onde voltar) e o status_hist; a planilha só onde ela esteve. O contrato ({ok, erro,
+  // barrou}) e as frases não mudam. No mesmo objeto, {vista} (fechamento dos CONCERNS, REL-006): o orçamento que a pergunta do
+  // «Cancelar reserva» mostrou; na recusa por mudança de outro aparelho, a volta traz também mudou:true.
+  function orcCancelarGravar(id, motivo, quem, op){
+    op=op||{};
     quem=quem||{};
     // 6.57 (AC4): conferido também aqui, na função que grava (tela velha, console, o Excluir da 6.53).
     var barraG=orcAssinaturaRecusa(quem);
     if(barraG){ corrBarrar('assinar o Orçamento', corrQuemPode('assinar-orcamento','orcamento'), {orcamento:id}, {calado:true}); return Promise.resolve({ok:false, barrou:true, erro:barraG}); }
+    var emG=orcMotivoErro(motivo);
+    if(emG) return Promise.resolve({ok:false, erro:emG});
     if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    // 6.68, 2ª rodada (REL-001): relê o orçamento antes de gravar. A tela do Orçamento compara com o que mostrou; o Excluir
+    // da 6.53 vem de outra tela e só relê. O cancelado_de, a reposição e a planilha saem do RELIDO.
+    // fechamento dos CONCERNS (REL-006): a vista é a da pergunta do «Cancelar reserva» (op.vista); sem ela, a memória da tela.
+    var vista=(String(op.origem||'')==='hospedagem-excluida')?null:(op.vista||orcDoId(id)||null);
+    return orcRelerParaGravar(id, vista).then(function(R){
+      if(!R.ok) return {ok:false, erro:R.erro, mudou:!!R.mudou};
+      var stR=String(R.o.status||'aguardando');
+      if(stR!=='aguardando' && stR!=='fechado') return {ok:false, erro:orcJaForaFrase(stR)};
+      return orcCancelarRelido(id, motivo, quem, op, R.o);
+    });
+  }
+  // 3ª rodada (OBS-R2): a recusa do orçamento que já saiu (cancelado, anulado, não fechou) numa frase só — o Excluir da 6.53
+  // a reconhece (orcJaForaDe) e não manda «cancele em Orçamentos» o que já está cancelado. O contrato {ok, erro, barrou} é o mesmo.
+  function orcJaForaFrase(st){ return 'Este orçamento já está «'+orcStatusRotulo(st)+'». Nada foi gravado.'; }
+  function orcJaForaDe(r){ var fora=''; ['cancelado', 'anulado', 'nao_fechou'].forEach(function(st){ if(r && r.erro===orcJaForaFrase(st)) fora=st; }); return fora; }
+  function orcCancelarRelido(id, motivo, quem, op, o){
+    var nomes=(o.pets||[]).map(function(p){ return p.nome; }).join(' e ')||'esta reserva';
     var agora=new Date();
     var pp=function(x){ return String(x).padStart(2,'0'); };
     var brDataHora=pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
@@ -22590,16 +22738,34 @@
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_ts']=Date.now();
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_em_br']=brDataHora;
     patchCan['auaulandia/orcamentos/'+id+'/cancelado_motivo']=motivo;
+    // 6.68 (AC6.2): o que o orçamento era antes do cancelamento, e de onde veio o cancelamento
+    var deCan=String(o.status||'aguardando');
+    var canDe={status:deCan, status_em:Number(o.status_em)||0, status_por:String(o.status_por||'')};
+    patchCan['auaulandia/orcamentos/'+id+'/cancelado_de']=canDe;
+    if(op.origem) patchCan['auaulandia/orcamentos/'+id+'/cancelado_origem']=String(op.origem);
+    var kHc=orcNovaChave('auaulandia/orcamentos/'+id+'/status_hist');
+    var histC=orcStatusHist(deCan, 'cancelado', {nome:quem.nome, papel:quem.role||''}, {ts:patchCan['auaulandia/orcamentos/'+id+'/status_em'], motivo:String(motivo||''), origem:op.origem?String(op.origem):undefined});
+    patchCan['auaulandia/orcamentos/'+id+'/status_hist/'+kHc]=histC;
+    var foiCan=orcFoiAPlanilha(o);
     return DB.ref().update(patchCan).then(function(){
-      if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status='cancelado';
+      // a memória da tela fica com o relido e o que acabou de ser gravado (o status_em também: a próxima gravação compara com ele)
+      var cc=Object.assign({}, o, {status:'cancelado', status_em:patchCan['auaulandia/orcamentos/'+id+'/status_em'], status_por:quem.nome, cancelado_de:canDe,
+        cancelado_motivo:motivo, cancelado_por:quem.nome, cancelado_role:quem.role||'', cancelado_ts:patchCan['auaulandia/orcamentos/'+id+'/cancelado_ts'], cancelado_em_br:brDataHora});
+      if(op.origem) cc.cancelado_origem=String(op.origem);
+      cc.status_hist=Object.assign({}, o.status_hist||{}); cc.status_hist[kHc]=histC;
+      if(orcDoId(id)) orcCacheTrocar(id, cc);
       if(typeof audit==='function') audit('orcamento-cancelado','cancelou a reserva de '+nomes+' ('+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+') — '+motivo,{pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'',quem:quem.nome});
       if(acertoCan.estornadas&&typeof audit==='function') audit('reposicao-baixa-orcamento',
         'cancelamento do orçamento '+repOrcCurto(id)+' — '+repOrcResumo(acertoCan)+' ('+acertoCan.linhas.join(' · ')+')',
         {pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'', quem:quem.nome});
+      if(typeof audit==='function') audit('orcamento-status', orcIdentidade(id, o)+': '+orcStatusRotulo(deCan)+' → '+orcStatusRotulo('cancelado'), {pet:(o.pets&&o.pets[0]&&o.pets[0].nome)||'', orcamento:id, quem:quem.nome});
       orcCarregarLista();
-      orcTirarDaPlanilha(id, quem.nome, brDataHora);
+      // 6.68 (AC6.3): a ponte só onde a reserva esteve — a proposta que nunca foi à planilha não chama a ponte (antes a
+      // resposta «NAO ACHEI», que vem com ok, fazia a tela dizer que riscou)
+      if(foiCan) orcTirarDaPlanilha(id, quem.nome, brDataHora, {porque:'cancelar', marca:'CANCELADO', o:o});
       if(acertoCan.estornadas&&typeof zAlertao==='function') zAlertao('RESERVAS DEVOLVIDAS À FICHA',
-        [repOrcResumo(acertoCan), acertoCan.linhas.join(' · ')], {ok:true, botao:'Certo'});
+        [repOrcResumo(acertoCan), acertoCan.linhas.join(' · ')].concat(foiCan?[]:['Ela não estava na planilha: nada a tirar.']), {ok:true, botao:'Certo'});
+      else if(!foiCan && typeof zAlertao==='function') zAlertao('✅ RESERVA CANCELADA', ['Ela não estava na planilha: nada a tirar.', 'O motivo e quem cancelou ficam em Cancelados, com «Reativar reserva».'], {ok:true, botao:'Fechar'});
       return {ok:true};
     }).catch(function(e){
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcCancelar)', e);
@@ -22673,35 +22839,99 @@
   }
   // Desfaz na planilha o que a reserva escreveu: libera as noites do calendário e risca a
   // linha do financeiro. Se a ponte falhar, a tela DIZ o que precisa ser feito à mão.
-  function orcTirarDaPlanilha(id, quem, quando){
-    var o=ORC_LISTA_CACHE[id]||{}, cfg=(orcSheetsCfg||{});
+  // 6.68 (AC3.2, AC7.3, AC8, AC9): op (opcional) = {porque:'cancelar'|'voltar-pendente'|'anular'|'tirar'|'mudar-datas'|
+  // 'nao-fechou', marca, o (o orçamento como estava, quando a memória da tela já mudou), registro (o da 6.57)}. A marca vai
+  // no pedido: a ponte de hoje a ignora e escreve «CANCELADO por …» (é o que ela sabe fazer); a versão 6 escreve a palavra
+  // certa. O resultado vai para o planilha_hist e, com a ponte confirmando, para o planilha_tirada (o «Tirar da planilha»
+  // some). Devolve Promise<{ok, pets, presas}> — quem chamava sem esperar continua igual.
+  var ORC_TIRAR_TXT={
+    'cancelar':{feito:'Esta reserva foi cancelada no sistema.', verbo:'cancelou', okT:'✅ RESERVA CANCELADA', maoT:'RESERVA CANCELADA — TIRE DA PLANILHA À MÃO',
+      recT:'CANCELADA NO SISTEMA — MAS A PLANILHA RECUSOU', confT:'CANCELADA NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU', falT:'CANCELADA NO SISTEMA — MAS NÃO FALEI COM A PLANILHA'},
+    'voltar-pendente':{feito:'Esta reserva voltou para pendente no sistema.', verbo:'voltou para pendente', okT:'✅ VOLTOU PARA PENDENTE E SAIU DA PLANILHA', maoT:'VOLTOU PARA PENDENTE — TIRE DA PLANILHA À MÃO',
+      recT:'VOLTOU PARA PENDENTE — MAS A PLANILHA RECUSOU', confT:'VOLTOU PARA PENDENTE — MAS A PLANILHA NÃO CONFIRMOU', falT:'VOLTOU PARA PENDENTE — MAS NÃO FALEI COM A PLANILHA'},
+    'anular':{feito:'Este orçamento foi anulado no sistema.', verbo:'anulou', okT:'✅ ANULADO E TIRADO DA PLANILHA', maoT:'ANULADO — TIRE DA PLANILHA À MÃO',
+      recT:'ANULADO NO SISTEMA — MAS A PLANILHA RECUSOU', confT:'ANULADO NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU', falT:'ANULADO NO SISTEMA — MAS NÃO FALEI COM A PLANILHA'},
+    'tirar':{feito:'A proposta continua aguardando o tutor no sistema.', verbo:'tirou da planilha', okT:'✅ A PROPOSTA SAIU DA PLANILHA', maoT:'TIRE A PROPOSTA DA PLANILHA À MÃO',
+      recT:'A PROPOSTA NÃO SAIU — A PLANILHA RECUSOU', confT:'A PLANILHA NÃO CONFIRMOU A RETIRADA', falT:'NÃO CONSEGUI FALAR COM A PLANILHA'},
+    'mudar-datas':{feito:'A reserva foi alterada no sistema.', verbo:'alterou', okT:'✅ AS LINHAS ANTIGAS SAÍRAM DA PLANILHA', maoT:'RESERVA ALTERADA — TIRE AS LINHAS ANTIGAS À MÃO',
+      recT:'RESERVA ALTERADA — MAS A PLANILHA RECUSOU', confT:'RESERVA ALTERADA — MAS A PLANILHA NÃO CONFIRMOU', falT:'RESERVA ALTERADA — MAS NÃO FALEI COM A PLANILHA'},
+    'nao-fechou':{feito:'O tutor não fechou esta reserva.', verbo:'marcou «Não fechou» em', okT:'✅ A PROPOSTA SAIU DA PLANILHA', maoT:'NÃO FECHOU — TIRE DA PLANILHA À MÃO',
+      recT:'NÃO FECHOU — MAS A PLANILHA RECUSOU', confT:'NÃO FECHOU — MAS A PLANILHA NÃO CONFIRMOU', falT:'NÃO FECHOU — MAS NÃO FALEI COM A PLANILHA'}
+  };
+  function orcTirarDaPlanilha(id, quem, quando, op){
+    op=op||{};
+    var porque=String(op.porque||'cancelar');
+    var T=ORC_TIRAR_TXT[porque]||ORC_TIRAR_TXT['cancelar'];
+    var o=op.o||orcDoId(id)||{}, cfg=(orcSheetsCfg||{});
+    // 6.68, 2ª rodada (REL-002): as linhas antigas de uma alteração que ficou pela metade (planilha_pendente) saem junto
+    var P=o.planilha_pendente||null;
+    var oPend=(P && (P.pets||[]).length)?{entrada:P.entrada||'', saida:P.saida||'', tutor:P.tutor||o.tutor||'', pets:P.pets}:null;
+    // 6.68, 2ª rodada (LOW-4): a trava da Maya na lista INTEIRA, esperando a leitura; sem ela, nada sai da planilha
+    return Promise.all([orcPresasConferidas(id, o), oPend?orcPresasConferidas(id, oPend):Promise.resolve({ok:true, presas:[]})]).then(function(PP){
+      if(!PP[0].ok || !PP[1].ok) return orcTirarSemConferir(id, quem, porque, T, o);
+      return orcTirarComPresas(id, quem, quando, op, porque, T, o, cfg, PP[0].presas, oPend, PP[1].presas);
+    });
+  }
+  function orcTirarSemConferir(id, quem, porque, T, o){
+    var falha=ORC_SEM_CONFERIR+': nada saiu da planilha';
+    var pets=(o.pets||[]).map(function(p){ return {nome:String(p.nome||''), acao:'riscar', ok:false, financeiro:'', calendario:'', falha:falha}; });
+    var campos={};
+    if(porque==='cancelar'){ campos.cancelado_planilha_ok=false; campos.cancelado_planilha_msg=falha; }
+    zAlertao('NÃO CONSEGUI CONFERIR AS OUTRAS RESERVAS',
+      [T.feito,
+       'Mas não consegui ler a lista inteira de orçamentos para conferir se outra reserva de '+orcNomesDe(o)+' usa as mesmas noites. Por isso nada saiu da planilha: apagar as noites agora poderia tirar do dashboard um FILHOt que está hospedado.',
+       'Quando a internet voltar, confira na aba Hospedagem a linha de '+orcNomesDe(o)+' ('+orcDatasDe(o)+'): risque à mão e apague as noites dela no calendário, se nenhuma outra reserva dela estiver nessas datas.'],
+      {botao:'Entendi'});
+    return orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, pets, quem), campos, 'auaulandia/orcamentos/ (orcTirarDaPlanilha)')
+      .then(function(){ return {ok:false, pets:pets, presas:[], semConferir:true}; });
+  }
+  function orcTirarComPresas(id, quem, quando, op, porque, T, o, cfg, presas, oPend, presasPend){
     var pets=(o.pets||[]);
+    var preservadas=[];
     // TRAVA DE 17/set/2026: FILHOt cujas noites continuam sendo de outra reserva viva não
     // entra no pedido de apagar — senão o calendário perde a noite da reserva BOA (caso Maya).
-    var presas=[];
-    try{ presas=orcNoitesDeOutraReserva(orcListaArray(), id, o)||[]; }catch(e){ presas=[]; } /* sem a lista em mão, o comportamento antigo continua valendo */
+    var petsPend=oPend?(oPend.pets||[]):[];
+    if(presasPend.length){
+      var chP={}; presasPend.forEach(function(x){ chP[String(x.key||x.nome||'').toLowerCase()]=x; });
+      petsPend=petsPend.filter(function(p){ return !chP[String(p.key||p.nome||'').toLowerCase()]; });
+    }
     if(presas.length){
       var chavesPresas={}; presas.forEach(function(x){ chavesPresas[String(x.key||x.nome||'').toLowerCase()]=x; });
       pets=pets.filter(function(p){ return !chavesPresas[String(p.key||p.nome||'').toLowerCase()]; });
       var _lin=presas.map(function(x){ return x.nome+' — '+orcBR(x.entrada)+' a '+orcBR(x.saida); })
         .filter(function(v,i,a){ return a.indexOf(v)===i; });
       zAlertao('AS NOITES CONTINUAM OCUPADAS POR OUTRA RESERVA',
-        ['Esta reserva foi cancelada no sistema.',
+        [T.feito,
          'Mas as MESMAS noites já pertencem a outra reserva fechada: '+_lin.join(' · ')+'.',
          'Por isso eu NÃO apaguei o calendário — apagar tiraria o FILHOt do dashboard mesmo estando hospedado.',
          'Risque à mão só a linha DESTA reserva na aba Hospedagem. O calendário está certo como está.'],
         {botao:'Entendi'});
-      if(typeof audit==='function') audit('orcamento-cancelado-calendario-preservado',
-        'cancelou '+repOrcCurto(id)+' sem liberar o calendário — as noites são de outra reserva viva ('+_lin.join(' · ')+')', {});
-      if(!pets.length){ orcCarregarLista(); return; }
+      if(porque==='cancelar'){
+        if(typeof audit==='function') audit('orcamento-cancelado-calendario-preservado',
+          'cancelou '+repOrcCurto(id)+' sem liberar o calendário — as noites são de outra reserva viva ('+_lin.join(' · ')+')', {});
+      } else if(typeof audit==='function') audit('orcamento-calendario-preservado',
+          T.verbo+' '+repOrcCurto(id)+' sem liberar o calendário — as noites são de outra reserva viva ('+_lin.join(' · ')+')', {porque:porque});
+      presas.forEach(function(x){ if(preservadas.some(function(y){ return y.nome===x.nome; })) return;
+        preservadas.push({nome:String(x.nome||''), acao:'preservada', ok:false, financeiro:'', calendario:'',
+          falha:'as noites são também da reserva de '+orcBR(x.entrada)+' a '+orcBR(x.saida)+': risque à mão a linha desta reserva'}); });
+      if(!pets.length && !petsPend.length){
+        orcCarregarLista();
+        // nada foi à ponte: a linha desta reserva é para riscar à mão (a tela acabou de dizer); a retirada fica registrada
+        // como feita à mão, para o «Tirar da planilha» não voltar a pedir o que a ponte não pode fazer
+        var camposP={planilha_tirada:orcTiradaReg(porque, quem, op.registro, 'risque à mão', preservadas.map(function(x){ return x.nome; }))};
+        if(oPend) camposP.planilha_pendente=null;
+        return orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, preservadas, quem), camposP, 'auaulandia/orcamentos/ (orcTirarDaPlanilha)')
+          .then(function(){ return {ok:true, pets:preservadas, presas:presas, aMao:true}; });
+      }
     }
     // Cada FILHOt tem a SUA coluna no calendário — então cada um precisa ser apagado.
-    var nomes=pets.map(function(p){
+    var nomeDe=function(p){
       var partes=[String(p.nome||'').trim()];
       var r=String(p.raca||'').trim(); if(r) partes.push(r);
       var t=String(p.tutor||o.tutor||'').trim(); if(t) partes.push(t);
       return partes.join('/');
-    });
+    };
+    var nomes=pets.map(nomeDe);
     // Orçamento antigo (antes de 17/ago) foi escrito com os dois juntos numa célula: para
     // esses, o nome combinado ainda precisa ser tentado, senão a vaga não se libera.
     var combinado=pets.map(function(p){
@@ -22711,22 +22941,28 @@
     }).join(' e ')+'/'+(o.tutor||'');
     if(pets.length>1 && nomes.indexOf(combinado)<0) nomes.push(combinado);
     var peludoTutor=nomes.join(' e ');
+    var nomePet=function(i){ return (pets[i]&&pets[i].nome)?String(pets[i].nome):'nome antigo combinado'; };
+    // os pedidos: os desta reserva (o período dela) e, depois, as linhas antigas da alteração pela metade (o período antigo)
+    var pedidos=nomes.map(function(n, i){ return {n:n, entrada:o.entrada||'', saida:o.saida||'', nome:nomePet(i)}; })
+      .concat(petsPend.map(function(p){ return {n:nomeDe(p), entrada:oPend.entrada, saida:oPend.saida, nome:String(p.nome||'')+' (linha antiga, '+orcBR(oPend.entrada)+' a '+orcBR(oPend.saida)+')'}; }));
     if(!cfg.url){
-      zAlertao('RESERVA CANCELADA — TIRE DA PLANILHA À MÃO',
+      zAlertao(T.maoT,
         ['A ponte com a planilha não está configurada neste sistema.',
          'Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' na aba do calendário, e risque a linha na aba Hospedagem.'],
         {botao:'Entendi'});
-      return;
+      return Promise.resolve({ok:false, semPonte:true, pets:preservadas, presas:presas});
     }
     // Um cancelamento por FILHOt: cada um tem a SUA coluna no calendário e, desde 11/set/2026,
     // a SUA linha no financeiro — então TODAS são riscadas (soCalendario nunca mais liga).
     // Reserva antiga, feita quando o dinheiro ia numa linha só, responde "NAO ACHEI a linha
     // desta reserva no financeiro" para os demais: é a verdade, e fica dita na tela.
-    Promise.all(nomes.map(function(n,i){
+    return Promise.all(pedidos.map(function(q){
+      var corpo={ token:cfg.token||'', acao:'cancelar', peludoTutor:q.n,
+          soCalendario:false, entrada:q.entrada, saida:q.saida,
+          canceladoPor:quem||'', canceladoEm:quando||'' };
+      if(op.marca) corpo.marca=String(op.marca);
       return fetch(cfg.url,{method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({ token:cfg.token||'', acao:'cancelar', peludoTutor:n,
-          soCalendario:false, entrada:o.entrada||'', saida:o.saida||'',
-          canceladoPor:quem||'', canceladoEm:quando||'' })})
+        body:JSON.stringify(corpo)})
         .then(function(r){ return r.text().catch(function(){ return ''; }); })
         .then(function(txt){ try{ return JSON.parse(txt); }catch(e){ return {ok:false, erro:String(txt).slice(0,120)}; } });
     }))
@@ -22734,29 +22970,39 @@
         var ok=js.every(function(j){ return j && j.ok; });
         // O cancelamento recusado diz o motivo, como o fechamento (QA38 F1): a palavra-chave
         // errada que travou a Frida travaria o próximo cancelamento com a linha vazia.
-        var msg=js.map(function(j,i){ return nomes[i]+': '+((j&&j.ok)?[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '):orcPonteMotivo(j, cfg.token)); }).join(' | ');
-        DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:ok, cancelado_planilha_msg:msg}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcTirarDaPlanilha)', e); });
+        var msg=js.map(function(j,i){ return pedidos[i].n+': '+((j&&j.ok)?[(j&&j.calendario)||'',(j&&j.financeiro)||''].filter(Boolean).join(' · '):orcPonteMotivo(j, cfg.token)); }).join(' | ');
+        var petsH=js.map(function(j,i){ return orcPetRes(pedidos[i].nome, 'riscar', j, cfg); }).concat(preservadas);
+        var campos={};
+        if(porque==='cancelar'){ campos.cancelado_planilha_ok=ok; campos.cancelado_planilha_msg=msg; }
+        if(ok) campos.planilha_tirada=orcTiradaReg(porque, quem, op.registro, msg, preservadas.map(function(x){ return x.nome; }));
+        if(ok && oPend) campos.planilha_pendente=null;
+        var gr=orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, Number((js[0]||{}).versao)||0, petsH, quem), campos, 'auaulandia/orcamentos/ (orcTirarDaPlanilha)');
         orcCarregarLista();
-        if(ok) zAlertao('✅ RESERVA CANCELADA',
+        if(ok) zAlertao(T.okT,
           [peludoTutor+' saiu do calendário e a linha do financeiro foi riscada.','A vaga está livre para outro FILHOt.'],
           {ok:true, botao:'Fechar', rodape:msg||''});
-        else zAlertao('CANCELADA NO SISTEMA — MAS A PLANILHA RECUSOU',
+        else zAlertao(T.recT,
           [msg||'A ponte respondeu com erro.','Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
           {botao:'Entendi'});
+        return gr.then(function(){ return {ok:ok, pets:petsH, presas:presas}; });
       })
       .catch(function(e){
-        DB.ref('auaulandia/orcamentos/'+id).update({cancelado_planilha_ok:false, cancelado_planilha_msg:String((e&&e.message)||e)}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcTirarDaPlanilha)', e); });
+        var petsQ=pedidos.map(function(q){ return {nome:q.nome, acao:'riscar', ok:false, financeiro:'', calendario:'', falha:zErroMotivo(e, 'planilha', cfg.token, {origem:'app'})}; }).concat(preservadas);
+        var camposQ={};
+        if(porque==='cancelar'){ camposQ.cancelado_planilha_ok=false; camposQ.cancelado_planilha_msg=String((e&&e.message)||e); }
+        var grQ=orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, petsQ, quem), camposQ, 'auaulandia/orcamentos/ (orcTirarDaPlanilha)');
         orcCarregarLista();
         // 6.48: na queda, a planilha pode ter tirado ou não — "A vaga continua ocupada" afirmava o que a
         // queda não prova. A frase manda conferir as linhas do calendário.
         var _tT=zErroTipo(e);
-        if(_tT==='queda' || _tT==='prazo') zAlertao('CANCELADA NO SISTEMA — MAS A PLANILHA NÃO CONFIRMOU',
+        if(_tT==='queda' || _tT==='prazo') zAlertao(T.confT,
           ['A conexão com a planilha caiu antes da resposta: não sei se '+peludoTutor+' saiu da planilha.',
            'Confira as linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' na aba do calendário: se ainda estiver lá, apague à mão e risque a linha na aba Hospedagem.'],
           {botao:'Entendi'});
-        else zAlertao('CANCELADA NO SISTEMA — MAS NÃO FALEI COM A PLANILHA',
+        else zAlertao(T.falT,
           ['Motivo: '+zErroFrase(zErroMotivo(e, 'planilha', cfg.token, {origem:'app'})),'A vaga continua ocupada na planilha. Apague '+peludoTutor+' das linhas de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' à mão.'],
           {botao:'Entendi'});
+        return grQ.then(function(){ return {ok:false, pets:petsQ, presas:presas}; });
       });
   }
   // ===== "FECHOU" É O MOMENTO DA BAIXA (Adriana, 10/set/2026) =======================
@@ -22767,47 +23013,32 @@
   // A decisão de passar por cima da duplicidade. Vive fora das funções porque elas são
   // chamadas de novo depois da confirmação — e nada pode ficar preso no meio do caminho.
   var ORC_DUP_OK=null, ORC_DUP_OK_STATUS={};
-  function orcStatus(id,novo){
-    if(!DB) return;
-    var quem=(typeof quemSou==='function')?quemSou():'-';
-    // "Fechou" é o momento em que a reserva vira compromisso: é aqui que a duplicidade
-    // custa dinheiro. Foi exatamente por aqui que o segundo Tônico passou (16/set/2026).
+  // 6.68 (AC1 a AC3): os botões do card (e uma tela velha, ou o console) continuam chamando orcStatus — que agora é a
+  // porta: «Fechou» e «Não fechou» perguntam antes (o «Não fechou» com o motivo), «Voltar para pendente» abre o cartaz
+  // com o motivo e a senha. A gravação de todas é a orcStatusGravar (no bloco da 6.68).
+  function orcStatus(id, novo){
+    if(novo==='fechado' && !orcPodeRotina()) return orcBarrarRotina('marcar «Fechou» no Orçamento', id);
+    // 2ª rodada (LOW-6): o 2º toque com a 1ª gravação ainda no ar
+    if((novo==='fechado' || novo==='nao_fechou') && ORC_GRAVANDO[id]) return Promise.resolve(orcJaGravando(id, true));
+    // A trava de duplicidade de sempre (16/set) — agora sobre a lista inteira (AC11.3). Só a Gestão e a Diretoria passam por cima.
     if(novo==='fechado' && !ORC_DUP_OK_STATUS[id]){
-      var atual=Object.assign({id:id}, ORC_LISTA_CACHE[id]||{});
-      var dupsS=orcDuplicados(orcListaArray(), atual, id);
-      if(dupsS.length){
-        orcCartazDuplicado(dupsS, atual, function(){ ORC_DUP_OK_STATUS[id]={quem:quem, ts:Date.now()}; orcStatus(id,novo); });
-        return;
-      }
+      var atual=Object.assign({id:id}, orcDoId(id)||{}), quemD=(typeof quemSou==='function'?quemSou():'-');
+      return orcListaDuplicidade().then(function(LD){
+        var dupsS=orcDuplicados(LD.lista, atual, id);
+        if(dupsS.length){
+          orcCartazDuplicado(dupsS, atual, function(){ ORC_DUP_OK_STATUS[id]={quem:quemD, ts:Date.now()}; orcStatus(id,novo); });
+          return;
+        }
+        return orcFechouPerguntar(id, LD.aviso);
+      });
     }
-    var o=Object.assign({}, ORC_LISTA_CACHE[id]||{}, {status:novo});
-    var acerto=repOrcAcerto(id, o);
-    var patch=Object.assign({}, acerto.patch);
-    patch['auaulandia/orcamentos/'+id+'/status']=novo;
-    patch['auaulandia/orcamentos/'+id+'/status_em']=Date.now();
-    patch['auaulandia/orcamentos/'+id+'/status_por']=quem;
-    var forcado=ORC_DUP_OK_STATUS[id]||null;
-    if(forcado) patch['auaulandia/orcamentos/'+id+'/duplicado_confirmado']=forcado;
-    DB.ref().update(patch).then(function(){
-      if(forcado){
-        delete ORC_DUP_OK_STATUS[id];
-        if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].duplicado_confirmado=forcado;
-        if(typeof audit==='function') audit('orcamento-duplicado-confirmado',
-          forcado.quem+' confirmou que é OUTRA hospedagem e fechou mesmo assim — '+((o.pets||[]).map(function(p){return p.nome;}).join(' e '))+' · '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||''),
-          {pet:((o.pets||[])[0]||{}).nome||'', quem:forcado.quem});
-      }
-      if(ORC_LISTA_CACHE[id]) ORC_LISTA_CACHE[id].status=novo;
-      orcRenderLista();
-      if(typeof audit==='function') audit('orcamento-status','orçamento marcado como '+novo,{});
-      if(acerto.baixadas||acerto.estornadas){
-        if(typeof audit==='function') audit('reposicao-baixa-orcamento',
-          'orçamento '+repOrcCurto(id)+' marcado como '+novo+' — '+repOrcResumo(acerto)+' ('+acerto.linhas.join(' · ')+')',
-          {pet:((o.pets||[])[0]||{}).nome||'', quem:quem});
-        if(typeof zAlertao==='function') zAlertao(acerto.baixadas?'RESERVAS ABATIDAS NA FICHA':'RESERVAS DEVOLVIDAS À FICHA',
-          [repOrcResumo(acerto), acerto.linhas.join(' · ')], {ok:true, botao:'Certo'});
-      }
-      if(novo==='fechado') orcEnviarPlanilha(id);
-    }).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcStatus)', e); });
+    if(novo==='fechado') return orcFechouPerguntar(id, '');
+    if(novo==='nao_fechou') return orcNaoFechouPerguntar(id);
+    if(novo==='aguardando'){
+      var oS=orcDoId(id)||{};
+      return (String(oS.status||'')==='nao_fechou')?orcNaoFechouReabrirAbrir(id):orcVoltarPendenteAbrir(id);
+    }
+    return Promise.resolve({ok:false, erro:'situação desconhecida'});
   }
   // ===== A PLANILHA SE PREENCHE SOZINHA (Adriana, 12/ago/2026) =======================
   // "Duas abas precisam ser preenchidas e temos diversos erros humanos de esquecimento."
@@ -22888,14 +23119,20 @@
     var det=[j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ');
     return det || 'a ponte respondeu com erro, sem dizer o motivo.';
   }
-  function orcEnviarPlanilha(id){
-    var o=ORC_LISTA_CACHE[id]||{};
+  // 6.68 (AC9): op (opcional) = {porque:'fechou'|'reenviar'|'reativar', dataReserva} — cada envio deixa o rastro (planilha_hist
+  // e a auditoria em português). O botão «reenviar» chama sem op (porque = 'reenviar'): «ja estava la» continua valendo como ok
+  // (o que já entrou não se repete, 6.48). A reativação manda a «Data reserva» do fechamento original (S7-P9); sem
+  // dataReserva, a reserva fechada vai com a data do fechamento (3ª rodada, REL-005). Devolve Promise<{ok, msg, pets}>.
+  function orcEnviarPlanilha(id, op){
+    op=op||{};
+    var porque=String(op.porque||'reenviar');
+    var o=orcDoId(id)||{};
     var cfg=(orcSheetsCfg||{});
     if(!cfg.url){
       zAlertao('FECHADO — MAS A PLANILHA NÃO FOI PREENCHIDA',
         ['A ponte com a planilha ainda não foi configurada neste sistema.'],
         {botao:'Entendi', rodape:'Enquanto isso, lance à mão nas abas Hospedagem e Calendario Hospedagem para Dash. Para ligar de vez: Configurações › Valores da hospedagem › Ponte com a planilha.'});
-      return;
+      return Promise.resolve({ok:false, semPonte:true, pets:[]});
     }
     // ===== CADA FILHOt, UMA LINHA (Adriana, 11/set/2026) ==========================
     // "Duas irmãs entraram para a hospedagem, a Nala e a Irma, e você simplesmente mandou
@@ -22914,7 +23151,10 @@
     // dinheiro dele — e o mesmo pedido grava o calendário dele, na coluna dele. Os envios
     // vão UM DE CADA VEZ: a ponte escolhe a coluna livre lendo o calendário, e dois pedidos
     // ao mesmo tempo escolheriam a mesma.
-    var linhas=orcLinhasPlanilha(o, (typeof hojeISO==='function')?hojeISO():'');
+    // 6.68, 3ª rodada (REL-005): a «Data reserva» de uma reserva FECHADA é a do fechamento (S7-P8, AC5.2) — o «reenviar» da
+    // alteração que ficou pela metade não muda o mês do sinal; sem fechamento conhecido (ou sem estar fechada), hoje.
+    var dataFech=(String(o.status||'')==='fechado')?orcDiaDoTs((orcFechouPor(o)||{}).ts):'';
+    var linhas=orcLinhasPlanilha(o, op.dataReserva||dataFech||((typeof hojeISO==='function')?hojeISO():''));
     var nomes=linhas.map(function(L){ return L.peludoTutor; });
     var peludoTutor=nomes.join(' e ');
     var mandar=function(corpo){
@@ -22925,7 +23165,22 @@
     // no-cors não deixa ler a resposta; por isso a confirmação é o registro no Firebase
     // e o aviso na tela. Falha de rede NUNCA vira silêncio.
     var respostas=[];
-    linhas.reduce(function(fila, L){
+    var nomePet=function(i){ return ((o.pets||[])[i]&&(o.pets||[])[i].nome)?String(o.pets[i].nome):(nomes[i]||''); };
+    // 6.68, 2ª rodada (REL-002): a alteração que ficou pela metade risca PRIMEIRO as linhas antigas; só com todas riscadas
+    // (ou já fora da planilha) a linha nova entra — senão a reserva ficaria duas vezes na planilha
+    var quemE=(typeof quemSou==='function'?quemSou():'-'), PR={ok:true, nada:true, pets:[]};
+    return orcPendenteRiscar(id, o, quemE, orcAgoraBR()).then(function(R){
+      PR=R;
+      if(!R.ok){
+        orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, R.pets, quemE),
+          {planilha_em:Date.now(), planilha_ok:false, planilha_msg:'a linha antiga ainda não foi riscada: nada novo foi lançado'}, 'auaulandia/orcamentos/ (orcEnviarPlanilha)');
+        zAlertao('A LINHA ANTIGA AINDA NÃO FOI RISCADA', orcPendenteAviso(R), {botao:'Entendi'});
+        return {ok:false, pendente:true, pets:R.pets};
+      }
+      return orcEnviarLinhas();
+    });
+    function orcEnviarLinhas(){
+    return linhas.reduce(function(fila, L){
       return fila.then(function(){
         return mandar(Object.assign({token:cfg.token||''}, L))
           .then(function(j){ respostas.push(j); });
@@ -22937,16 +23192,32 @@
         var msg=js.map(function(j,i){
           return (nomes[i]||'')+': '+((j && j.ok) ? [j.calendario||'', j.financeiro||''].filter(Boolean).join(' · ') : orcPonteMotivo(j, cfg.token));
         }).join(' | ');
-        DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
-        if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
+        var petsH=PR.pets.concat(js.map(function(j,i){ return orcPetRes(nomePet(i), 'lançar', j, cfg); }));
+        var camposE={planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg};
+        if(!PR.nada) camposE.planilha_pendente=null;   // as linhas antigas saíram: a alteração pela metade está resolvida
+        orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, Number((js[0]||{}).versao)||0, petsH, quemE), camposE, 'auaulandia/orcamentos/ (orcEnviarPlanilha)');
+        // fechamento dos CONCERNS (OBS-R3-1): a linha do dinheiro entrou, mas o calendário não marcou as noites — a primeira linha diz
+        // isso e por quê (antes: «✅ … Entrou nas duas abas», com o «SEM COLUNA LIVRE» só no rodapé)
+        var semNoites=js.map(function(j, i){ return (j && j.ok)?orcNoitesNaoMarcadas(j.calendario, o):''; })
+          .map(function(fr, i){ return fr?(nomePet(i)+': a linha do dinheiro entrou na aba Hospedagem, mas '+fr+'.'):''; }).filter(Boolean);
+        if(ok && semNoites.length) zAlertao('FECHADO — MAS AS NOITES NÃO FORAM MARCADAS NO CALENDÁRIO',
+              semNoites.concat(['Acrescente uma coluna de hóspede na aba Calendario Hospedagem para Dash e marque as noites à mão, ou avise a Gestão. A linha do dinheiro já entrou: não lance de novo.']),
+              {botao:'Entendi', rodape:'Entrou na aba Hospedagem.'+(msg?(' ('+msg+')'):'')});
+        else if(ok) zAlertao('✅ FECHADO E LANÇADO NA PLANILHA',
               [peludoTutor+' — '+orcBR(o.entrada)+' a '+orcBR(o.saida)+' · '+fmtCent(o.total_cent||0)],
               {ok:true, botao:'Fechar', rodape:'Entrou nas duas abas: Hospedagem e Calendario Hospedagem para Dash. O dashboard da Gestão já mostra.'+(msg?(' ('+msg+')'):'')});
         else zAlertao('FECHADO — MAS A PLANILHA RECUSOU',[msg||'A ponte respondeu com erro.',
                'O orçamento está salvo como FECHADO. Mostre este motivo à Gestão: acertada a ponte, toque em «reenviar» na lista de Orçamentos.'],
               {botao:'Entendi', rodape:'Se lançar à mão nas duas abas, não toque em «reenviar»: a reserva entraria duas vezes.'});
+        return {ok:ok, msg:msg, pets:petsH};
       })
       .catch(function(e){
-        DB.ref('auaulandia/orcamentos/'+id).update({planilha_em:Date.now(), planilha_ok:false, planilha_msg:String((e&&e.message)||e)}).catch(function(e){ _logFalhaGrav('auaulandia/orcamentos/ (orcEnviarPlanilha)', e); });
+        var petsQ=PR.pets.concat(linhas.map(function(L, i){ return (i<respostas.length)?orcPetRes(nomePet(i), 'lançar', respostas[i], cfg)
+          :{nome:nomePet(i), acao:'lançar', ok:false, financeiro:'', calendario:'', falha:zErroMotivo(e, 'planilha', cfg.token, {origem:'app'})}; }));
+        var camposQ={planilha_em:Date.now(), planilha_ok:false};
+        camposQ.planilha_msg=String((e&&e.message)||e);
+        if(!PR.nada) camposQ.planilha_pendente=null;
+        orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, petsQ, quemE), camposQ, 'auaulandia/orcamentos/ (orcEnviarPlanilha)');
         // 6.48: a queda de qualquer FILHOt derruba a corrente aqui — pode ter entrado tudo, uma parte ou
         // nada. O «reenviar» não repete o que já entrou ("ja estava la"), mas dois envios ao mesmo tempo
         // duplicam (K11): espere 1 minuto e toque UMA vez. Lançar à mão faria a reserva entrar duas vezes.
@@ -22958,7 +23229,1101 @@
         else zAlertao('FECHADO — MAS NÃO CONSEGUI FALAR COM A PLANILHA',
           ['Motivo: '+zErroFrase(zErroMotivo(e, 'planilha', cfg.token, {origem:'app'}))],
           {botao:'Entendi', rodape:'O orçamento está salvo como FECHADO. Lance à mão nas duas abas — ou tente de novo pelo botão "reenviar" na lista.'});
+        return {ok:false, pets:petsQ};
       });
+    }
+  }
+  // =====================================================================================
+  // ===== STORY 6.68 — A RESERVA E A PLANILHA DE ESTADIAS (S7 da revisão tela por tela, parte 1, 10/out/2026)
+  // "O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app possa ser
+  //  excluído, modificado, alterado e etc." (Adriana, 09/out/2026)
+  // A planilha de estadias é a fonte do dashboard da Gestão (vagas por noite, plantonistas e o dinheiro da
+  // AuAulândia): ela nunca pode mostrar uma reserva que não existe, nem esconder uma que existe. Aqui moram:
+  //   · as perguntas do «Fechou» e do «Não fechou» (a rotina da Recepção: o login, sem senha) e o histórico das
+  //     decisões (status_hist), gravado na MESMA escrita da mudança;
+  //   · «Voltar para pendente», «Reabrir», «Reativar reserva», «Anular (lançado por engano)» e «Tirar da planilha»,
+  //     pelo cartaz da 6.57 (motivo de 4 palavras, a senha, o registro), cada um levando a planilha junto;
+  //   · a linha do dinheiro que acompanha a reserva fechada quando as datas mudam: a ponte nova (versão 6) a
+  //     atualiza no lugar; a ponte de hoje a risca e lança uma nova (S7-P6). A versão é perguntada por GET — só na
+  //     URL do Apps Script — ANTES de qualquer ação nova: a ponte de hoje trataria uma ação que não conhece como
+  //     «gravar» (B4);
+  //   · o rastro de cada pedido à ponte (planilha_hist e a auditoria em português);
+  //   · a lista inteira (os vivos de fora dos 60 mais recentes, a busca e a trava de duplicidade).
+  // =====================================================================================
+  var ORC_STATUS_ROTULO={aguardando:'aguardando o tutor', fechado:'fechou', nao_fechou:'não fechou', cancelado:'cancelado', anulado:'anulado (lançado por engano)'};
+  function orcStatusRotulo(st){ st=String(st||'aguardando'); return ORC_STATUS_ROTULO[st]||st; }
+  function orcNomesDe(o){ return (((o||{}).pets)||[]).map(function(p){ return (p&&p.nome)||''; }).filter(Boolean).join(' e ')||'—'; }
+  function orcDatasDe(o){ o=o||{}; return orcBR(o.entrada||'')+' a '+orcBR(o.saida||''); }
+  // «Thor e Nala (10/10/2026 a 14/10/2026, orçamento X1Y2Z3)» — quem, quando e qual, na auditoria (AC1.4)
+  function orcIdentidade(id, o){ return orcNomesDe(o)+' ('+orcDatasDe(o)+', orçamento '+repOrcCurto(id)+')'; }
+  function orcHojeISO(){ return (typeof zHojeISO==='function')?zHojeISO():((typeof hojeISO==='function')?hojeISO():''); }
+  function orcDiaDoTs(ts){
+    ts=Number(ts)||0; if(!ts) return '';
+    try{ var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+    catch(e){ return ''; } /* silencioso de propósito: sem a data, a régua trata como «não é de hoje» */
+  }
+  // «09/10 às 10:00»
+  function orcQuandoBR(ts){
+    ts=Number(ts)||0; if(!ts) return '';
+    try{ var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); }; return p(d.getDate())+'/'+p(d.getMonth()+1)+' às '+p(d.getHours())+':'+p(d.getMinutes()); }
+    catch(e){ return ''; } /* silencioso de propósito: sem a hora, a linha fica só com o nome */
+  }
+  function orcAgoraBR(){
+    var agora=new Date(), pp=function(x){ return String(x).padStart(2,'0'); };
+    return pp(agora.getDate())+'/'+pp(agora.getMonth()+1)+'/'+agora.getFullYear()+' às '+pp(agora.getHours())+':'+pp(agora.getMinutes());
+  }
+  // A régua do motivo (a mesma motivoQuatroPalavras da 6.53, chamada e nunca copiada): '' passa; senão a frase dela.
+  function orcMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }
+  // A chave nova de um registro dentro do orçamento (o push() do banco não grava nada sozinho; sem ele, a hora faz a chave).
+  function orcNovaChave(caminho){
+    var k='';
+    try{ var r=DB.ref(caminho); if(r && typeof r.push==='function') k=String(r.push().key||''); }
+    catch(e){ k=''; } /* silencioso de propósito: sem a chave do banco, a do carimbo da hora abaixo serve */
+    return k || ('h'+Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+  }
+  // A entrada do histórico das decisões (função pura): de onde, para onde, quem assinou (ou tocou), o papel, quem estava
+  // logado no aparelho e quando. O histórico nunca é sobrescrito: cada mudança é uma entrada nova (status_hist/{chave}).
+  function orcStatusHist(de, para, quem, extra){
+    quem=quem||{}; extra=extra||{};
+    var q=corrQuemAgora();
+    var h={de:String(de||'aguardando'), para:String(para||''), quem:String(quem.nome||q.login||'-'), papel:String(quem.papel||quem.role||q.papel||''),
+      login:String(q.login||'-'), ts:Number(extra.ts)||Date.now()};
+    Object.keys(extra).forEach(function(k){ if(k!=='ts' && extra[k]!==undefined && extra[k]!==null) h[k]=extra[k]; });
+    return h;
+  }
+  // «Foi à planilha» = algum envio foi tentado (planilha_em) ou a reserva está fechada, e a retirada não foi confirmada.
+  // «Está na planilha com certeza» = além disso, o último envio confirmou (planilha_ok). Sem a confirmação: «pode ter ficado».
+  function orcTirada(o){ var t=(o&&o.planilha_tirada)||null; return !!(t && t.resultado && t.resultado.ok===true); }
+  function orcFoiAPlanilha(o){ o=o||{}; return !!(o.planilha_em || String(o.status||'')==='fechado') && !orcTirada(o); }
+  function orcNaPlanilhaComCerteza(o){ return orcFoiAPlanilha(o) && (o||{}).planilha_ok===true; }
+  // A proposta aguardando que ainda está na planilha (voltou para pendente antes da 6.68): a frase do aviso (AC8.1).
+  function orcAvisoPlanilhaTexto(o){
+    o=o||{};
+    var em=orcQuandoBR(o.planilha_em).split(' às ')[0];
+    return (o.planilha_ok===true)
+      ? ('Esta proposta ainda está na planilha'+(em?(' (lançada em '+em+')'):'')+', mas o tutor ainda não fechou.')
+      : ('Esta proposta pode ter ficado na planilha: o último envio'+(em?(', em '+em+','):'')+' não confirmou tudo.');
+  }
+  // Quem fechou (AC1.3): a última entrada do status_hist que foi para «fechado» (a reativação que devolveu o fechamento
+  // original diz quem fechou de verdade); orçamento antigo, sem histórico: o status_por e o status_em.
+  function orcFechouPor(o){
+    o=o||{};
+    var H=o.status_hist||{}, ult=null;
+    Object.keys(H).forEach(function(k){ var h=H[k]||{}; if(h.para==='fechado' && (!ult || (Number(h.ts)||0)>=(Number(ult.ts)||0))) ult=h; });
+    if(ult){ var fo=ult.fechou_original; if(fo && fo.quem) return {quem:String(fo.quem), ts:Number(fo.ts)||0}; return {quem:String(ult.quem||''), ts:Number(ult.ts)||0}; }
+    if(String(o.status||'')==='fechado' && o.status_por) return {quem:String(o.status_por), ts:Number(o.status_em)||0};
+    return null;
+  }
+  // A reposição que o orçamento usa: [{nome, n, key}] (só quem tem ficha — o mesmo corte do repOrcAcerto).
+  function orcRepUsada(o){
+    return (((o||{}).pets)||[]).filter(function(p){ return p && p.key && !p.sem_cadastro && (+p.reposicoes||0)>0; })
+      .map(function(p){ return {nome:String(p.nome||''), n:Math.max(0, Math.min(REP_ORC_MAX, +p.reposicoes||0)), key:String(p.key)}; });
+  }
+  function orcRepFrases(o, fim){ return orcRepUsada(o).map(function(r){ return r.n+' dia(s) de reposição de '+r.nome+' '+fim; }); }
+  // O saldo de reposição que já não cobre o orçamento (AC2.4): a frase, ou ''. Refazer a conta com menos reposição
+  // mudaria o preço combinado com o tutor (dinheiro, decisão da Adriana): um orçamento novo mostra o preço novo.
+  function orcRepNaoCobre(id, o){
+    var fr='';
+    orcRepUsada(o).some(function(r){
+      var p=repPelaChave(r.key); if(!p) return false;
+      var livres=repDisponivel(p, id);
+      if(livres<r.n){ fr='O saldo de reposição de '+r.nome+' já não cobre os '+r.n+' dias deste orçamento (livres hoje: '+livres+'). Faça um orçamento novo.'; return true; }
+      return false;
+    });
+    return fr;
+  }
+  // A trava da Maya (17/set), dita em frases (AC3.1): o FILHOt cujas noites também são de outra reserva viva dele.
+  function orcMayaFrases(id, o){
+    var presas=[];
+    try{ var T=(ORC_VIVOS.lido && ORC_VIVOS.todos)||{};   // 2ª rodada (LOW-4): a lista inteira já lida vale junto da memória da tela
+      presas=(orcNoitesDeOutraReserva(orcListaArray(), id, o)||[]).concat(orcNoitesDeOutraReserva(Object.keys(T).map(function(k){ return Object.assign({id:k}, T[k]||{}); }), id, o)||[]); }
+    catch(e){ presas=[]; } /* silencioso de propósito: sem a lista em mão, nada a avisar */
+    return presas.map(function(x){ return 'As noites de '+x.nome+' continuam com a outra reserva ('+orcBR(x.entrada)+' a '+orcBR(x.saida)+'): o calendário não é mexido. Risque à mão só a linha desta reserva na aba Hospedagem.'; })
+      .filter(function(v, i, a){ return a.indexOf(v)===i; });
+  }
+  // O que sai da planilha junto (AC3.1, AC8.2), lido na hora.
+  function orcPlanilhaCascata(id, o){
+    o=o||{};
+    var L=[];
+    if(!orcFoiAPlanilha(o)) L.push('Ela não estava na planilha.');
+    else L.push((orcNaPlanilhaComCerteza(o) || String(o.status||'')==='fechado' ? '' : 'Ela pode ter ficado na planilha: o último envio não confirmou tudo. ')
+      +'As linhas de '+orcNomesDe(o)+' saem da planilha: a linha do dinheiro fica riscada e as noites de '+orcDatasDe(o)+' são liberadas no calendário.');
+    return orcFoiAPlanilha(o)?L.concat(orcMayaFrases(id, o)):L;
+  }
+  // ---- 2ª RODADA (gate do QA, 11/out/2026) -----------------------------------------------------------------------
+  // LOW-2/LOW-3: os achados de «Procurar um orçamento antigo» que não estão na lista moram num mapa próprio (os botões
+  // deles leem de lá, pelo orcDoId) e são desenhados com ids próprios (orc-busca-{id}): a lista de trabalho continua com
+  // os 60 mais recentes e os vivos (AC11.1), e a busca não repete o id de um card que já está na tela.
+  var ORC_BUSCA_MAPA={};
+  function orcDoId(id){ return ORC_LISTA_CACHE[id]||ORC_BUSCA_MAPA[id]||null; }
+  // A memória da tela: o orçamento trocado aqui vale também na lista inteira (senão, a próxima abertura o traria de volta como era).
+  // O achado da busca que não está na lista só entra nela se ficou vivo (aguardando ou fechado: a juntada o traria de todo jeito).
+  function orcCacheTrocar(id, novo){
+    var st=String((novo||{}).status||'aguardando'), naBusca=Object.prototype.hasOwnProperty.call(ORC_BUSCA_MAPA, id);
+    if(!naBusca || Object.prototype.hasOwnProperty.call(ORC_LISTA_CACHE, id) || st==='aguardando' || st==='fechado') ORC_LISTA_CACHE[id]=novo;
+    if(naBusca) ORC_BUSCA_MAPA[id]=novo;
+    try{ if(ORC_VIVOS.todos && Object.prototype.hasOwnProperty.call(ORC_VIVOS.todos, id)) ORC_VIVOS.todos[id]=novo; }
+    catch(e){} /* silencioso de propósito: a lista inteira é relida em 3 minutos */
+  }
+  // 3ª rodada (REL-004): o que a tela mostra de um orçamento — e que outro aparelho pode mudar sem mexer na situação — numa
+  // forma só (função pura): o status e o status_em, as datas, o valor e os FILHOts (a chave, o nome e o subtotal de cada um).
+  // A releitura compara a vista de quem confirmou com a do banco por esta forma. Aplicada à própria forma, devolve a mesma.
+  function orcVistaDe(x){
+    x=x||{};
+    var P=x.pets||[]; if(!Array.isArray(P)) P=Object.keys(P).map(function(k){ return P[k]; });
+    return {status:String(x.status||'aguardando'), status_em:Number(x.status_em)||0, entrada:String(x.entrada||''), saida:String(x.saida||''),
+      total_cent:Number(x.total_cent)||0,
+      pets:P.map(function(p){ p=p||{}; return {key:String(p.key||''), nome:String(p.nome||''), subtotal_cent:Number(p.subtotal_cent)||0}; })};
+  }
+  // REL-001 (dois aparelhos): toda mudança de situação relê o orçamento NO BANCO logo antes de gravar. A tela decide pelo
+  // que viu; se outro aparelho mudou o orçamento nesse meio-tempo (a situação, as datas, o valor ou os FILHOts), nada é
+  // gravado: a memória da tela passa a ser o relido, a lista é redesenhada e a frase diz como ele está agora. O que vai
+  // para a planilha, o anulado_de, o cancelado_de e a reposição saem do RELIDO, nunca da memória.
+  // vista = o orçamento como a pessoa o viu na pergunta ou no cartaz que confirmou (no «Mudar as datas», o ORC_EDIT_ANTES,
+  // de onde o formulário nasceu); sem vista — o Excluir da 6.53, que vem de outra tela —, só a leitura.
+  // Volta Promise<{ok, o (o relido), erro, mudou}>; com a leitura falhando, nada é gravado.
+  // 3ª rodada (REL-004): toda releitura compara também o que as perguntas e os cartazes mostram — as datas, o valor e os
+  // FILHOts (orcVistaDe) —: uma mudança de datas feita em outro aparelho não mexe no status nem no status_em. A frase diz
+  // como ele está agora (os FILHOts, as datas e o valor).
+  function orcRelerParaGravar(id, vista){
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var pr;
+    try{ pr=DB.ref('auaulandia/orcamentos/'+id).once('value'); }catch(e){ pr=Promise.reject(e); }
+    return Promise.resolve(pr).then(function(snap){
+      var v=(snap && typeof snap.val==='function')?snap.val():null;
+      if(!v || typeof v!=='object') return {ok:false, o:null, erro:'Este orçamento não está mais no sistema. Nada foi gravado.'};
+      if(vista){
+        var mesmoSt=String(vista.status||'aguardando')===String(v.status||'aguardando');
+        var difere=!mesmoSt || JSON.stringify(orcVistaDe(vista))!==JSON.stringify(orcVistaDe(v));
+        if(difere){
+          orcCacheTrocar(id, v);
+          try{ orcRenderLista(); if(ORC_BUSCA_TERMO) orcProcurarRender(); }catch(x){} /* silencioso de propósito: redesenho de tela — a frase já diz o que houve */
+          return {ok:false, mudou:true, o:v, erro:'Este orçamento mudou em outro aparelho (agora está «'+orcStatusRotulo(v.status)+'»'
+            +(mesmoSt?', com outra mudança gravada depois que esta tela abriu':'')+'): '+orcNomesDe(v)+', '+orcDatasDe(v)+' · '+fmtCent(Number(v.total_cent)||0)
+            +'. Nada foi gravado: a lista já mostra como ele está agora.'};
+        }
+      }
+      return {ok:true, o:v};
+    }, function(e){
+      return {ok:false, leitura:true, erro:'Não consegui conferir o orçamento no banco antes de gravar: '+zErroFrase(zErroMotivo(e, 'banco', '', {agora:true, leitura:true}))+' Nada foi gravado.'};
+    });
+  }
+  // LOW-6: o 2º toque com a 1ª gravação ainda no ar (banco lento) não grava de novo nem manda outro pedido à planilha.
+  var ORC_GRAVANDO={};
+  var ORC_JA_GRAVANDO='O toque anterior ainda está gravando este orçamento. Espere o aviso dele: nada foi gravado de novo.';
+  function orcJaGravando(id, naTela){
+    if(!ORC_GRAVANDO[id]) return null;
+    if(naTela) zAlertao('JÁ ESTOU GRAVANDO', [ORC_JA_GRAVANDO], {botao:'Entendi'});
+    return {ok:false, gravando:true, erro:ORC_JA_GRAVANDO};
+  }
+  // LOW-4: a trava da Maya conferida na lista INTEIRA (a outra reserva viva do FILHOt pode estar fora dos 60 da tela),
+  // esperando a leitura; a memória da tela vale junto (uma reserva viva em qualquer das duas segura as noites: o lado
+  // seguro). Sem a leitura: {ok:false} — quem chama não libera nada.
+  function orcPresasConferidas(id, o){
+    return orcLerVivos().then(function(r){
+      if(!(r && r.ok)) return {ok:false, presas:[]};
+      var T=r.todos||{};
+      var inteira=Object.keys(T).map(function(k){ return Object.assign({id:k}, T[k]||{}); });
+      var visto={}, presas=[];
+      (orcNoitesDeOutraReserva(orcListaArray(), id, o)||[]).concat(orcNoitesDeOutraReserva(inteira, id, o)||[]).forEach(function(x){
+        var k=String(x.outroId||'')+'|'+String(x.key||x.nome||'').toLowerCase();
+        if(!visto[k]){ visto[k]=true; presas.push(x); }
+      });
+      return {ok:true, presas:presas};
+    }, function(){ return {ok:false, presas:[]}; });
+  }
+  var ORC_SEM_CONFERIR='não consegui ler a lista inteira de orçamentos para conferir se outra reserva deste FILHOt usa as mesmas noites';
+  // ---- QUEM PODE (AC12) -----------------------------------------------------------------
+  // «Fechou» e «Não fechou» são a rotina da Recepção: o login de quem toca, sem senha (S7-P4, S7-P5). O papel é conferido
+  // na função: quem trabalha no Orçamento ('assinar-orcamento') ou recebeu a tela Orçamento no Time.
+  function orcPodeRotina(){
+    if(podePapel('assinar-orcamento')) return true;
+    var u={}; try{ u=_sessao()||{}; }catch(e){ u={}; } /* silencioso de propósito: sem sessão, vale só o papel */
+    return Array.isArray(u.paginas) && u.paginas.indexOf('orcamento')>=0;
+  }
+  function orcBarrarRotina(oque, id){
+    corrBarrar(oque, corrQuemPode('assinar-orcamento', 'orcamento'), {orcamento:id});
+    return Promise.resolve({ok:false, barrou:true, erro:'sem permissão para '+oque});
+  }
+  // A assinatura do cartaz, conferida de novo na função que grava (tela velha, console): '' pode, senão a frase.
+  function orcAssinaturaDoRegistro(reg, nivel){
+    reg=reg||{};
+    if(!String(reg.por||'').trim()) return 'Esta mudança pede a assinatura no cartaz. Nada foi gravado.';
+    if(nivel==='gestao') return podePapel('gestao-role', String(reg.papel||''))?'':('Esta mudança é da Gestão: quem assina é '+corrQuemPode('gestao-role')+'. Nada foi gravado.');
+    if(podePapel('assinar-orcamento', String(reg.papel||''))) return '';
+    var r=orcAssinaturaRecusa({nome:reg.por, role:reg.papel});
+    return r?(r+' Nada foi gravado.'):'';
+  }
+  // «Voltar para pendente» de uma reserva fechada HOJE: a própria senha; em dia anterior: a Gestão (regra 2, S7-P3).
+  function orcFechadoHoje(o){ return orcDiaDoTs((o||{}).status_em)===orcHojeISO(); }
+  var ORC_JA_ESTADIA_VOLTAR='Esta reserva já virou estadia. Para corrigir, use «Corrigir esta hospedagem» em Hóspedes de hoje.';
+  var ORC_JA_ESTADIA_ANULAR='Esta reserva já virou estadia. Corrija primeiro a hospedagem («Corrigir esta hospedagem › Excluir», em Hóspedes de hoje).';
+  // ---- A LISTA INTEIRA (AC11) ------------------------------------------------------------
+  // Os 60 mais recentes desenham primeiro (como sempre); logo depois, a coleção inteira (uma vez; guardada 3 minutos, como
+  // o cartão do Check-in) acrescenta os orçamentos VIVOS de fora da janela — aguardando, e fechado sem check-in com saída de
+  // hoje em diante. Cancelados e Já hospedados continuam com o que está nos 60. O Recebimentos do mês e o Painel da
+  // Diretoria já descem a coleção inteira; um índice no banco é mudança de regras (do @devops).
+  var ORC_VIVOS={lido:false, quando:0, todos:null, lendo:null, falhou:false};
+  var ORC_VIVOS_PRAZO=3*60*1000;
+  function orcLerVivos(forcar){
+    var V=ORC_VIVOS;
+    if(!DB) return Promise.resolve({ok:false});
+    if(!forcar && V.lido && (Date.now()-V.quando)<ORC_VIVOS_PRAZO) return Promise.resolve({ok:true, todos:V.todos});
+    if(V.lendo) return V.lendo;
+    var pr;
+    try{ pr=DB.ref('auaulandia/orcamentos').once('value'); }catch(e){ pr=Promise.reject(e); }
+    V.lendo=Promise.resolve(pr).then(function(s){
+      var v=(s && typeof s.val==='function')?s.val():null;
+      V.todos=(v && typeof v==='object')?v:{}; V.lido=true; V.quando=Date.now(); V.falhou=false; V.lendo=null;
+      // 6.68, 3ª rodada (REL-004): os achados da busca acompanham a leitura nova — senão a busca mostraria o de antes, e a
+      // releitura de uma ação tocada pela busca recusaria («mudou em outro aparelho») uma mudança que é só antiga
+      Object.keys(ORC_BUSCA_MAPA).forEach(function(k){ if(V.todos[k]) ORC_BUSCA_MAPA[k]=V.todos[k]; });
+      return {ok:true, todos:V.todos};
+    }).catch(function(e){ V.lendo=null; V.falhou=true; _logLeituraFalhou('auaulandia/orcamentos (a lista inteira do Orçamento)', e); return {ok:false}; });
+    return V.lendo;
+  }
+  // Acrescenta à memória da tela os vivos de fora dos 60. Devolve quantos entraram.
+  function orcJuntarVivos(){
+    var T=ORC_VIVOS.todos||{}, hoje=orcHojeISO(), n=0;
+    Object.keys(T).forEach(function(id){
+      if(Object.prototype.hasOwnProperty.call(ORC_LISTA_CACHE, id)) return;
+      var o=T[id]||{};
+      var g=orcGrupoDe(o, hoje, orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE));
+      if(g===0 || g===1){ ORC_LISTA_CACHE[id]=o; n++; }
+    });
+    return n;
+  }
+  // A lista da trava de duplicidade (AC11.3): a inteira (relida se tiver mais de 3 minutos), com a memória da tela por
+  // cima (o que acabou de mudar aqui). Sem a leitura: os 60 de antes, e a frase.
+  var ORC_DUP_SEM_LISTA='Não consegui conferir os orçamentos antigos: confira se já existe reserva deste FILHOt para estas datas.';
+  function orcListaDuplicidade(){
+    return orcLerVivos().then(function(r){
+      if(!(r && r.ok)) return {lista:orcListaArray(), fora:[], aviso:ORC_DUP_SEM_LISTA};
+      var m=Object.assign({}, r.todos||{}, ORC_LISTA_CACHE||{});
+      var fora=Object.keys(r.todos||{}).filter(function(id){ return !(ORC_LISTA_CACHE||{})[id]; })
+        .map(function(id){ return Object.assign({id:id}, r.todos[id]||{}); });   // os de fora dos 60 da tela
+      return {lista:Object.keys(m).map(function(id){ return Object.assign({id:id}, m[id]||{}); }), fora:fora, aviso:''};
+    });
+  }
+  // «Procurar um orçamento antigo (FILHOt ou tutor)» (AC11.2): na leitura inteira, sem acento e sem caixa.
+  var ORC_BUSCA_TERMO='';
+  function orcProcurarAchar(todos, termo){
+    var t=(typeof jsNorm==='function')?jsNorm(termo):String(termo||'').toLowerCase();
+    t=String(t||'').trim();
+    if(t.length<2) return [];
+    var nrm=function(x){ return (typeof jsNorm==='function')?jsNorm(x):String(x||'').toLowerCase(); };
+    return Object.keys(todos||{}).filter(function(id){
+      var o=todos[id]||{};
+      if(nrm(o.tutor||'').indexOf(t)>=0) return true;
+      return (o.pets||[]).some(function(p){ return p && (nrm(p.nome||'').indexOf(t)>=0 || nrm(p.tutor||'').indexOf(t)>=0); });
+    }).map(function(id){ return Object.assign({id:id}, todos[id]||{}); })
+      .sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
+  }
+  function orcProcurarHTML(termo){
+    var base=Object.assign({}, ORC_VIVOS.todos||{}, ORC_BUSCA_MAPA, ORC_LISTA_CACHE||{});
+    var achados=orcProcurarAchar(base, termo);
+    if(String(termo||'').trim().length<2) return '';
+    if(!ORC_VIVOS.lido && ORC_VIVOS.falhou) return '<div class="hint" style="color:var(--crm-critico)">'+esc('Não consegui ler os orçamentos antigos agora. Confira a internet e digite de novo.')+'</div>';
+    if(!achados.length) return '<div class="hint">'+esc('Nenhum orçamento com «'+String(termo).trim()+'».')+'</div>';
+    var HOJE=orcHojeISO(), DUP=orcDuplicadosNaLista(orcListaArray()), podeCi=orcPodeCheckin();
+    return '<div class="hint" style="margin:6px 0">'+esc(achados.length+' orçamento(s) com «'+String(termo).trim()+'»:')+'</div>'+achados.slice(0, 30).map(function(o){
+      // 2ª rodada (LOW-2/LOW-3): o achado que não está na lista vai para o mapa da busca (os botões dele leem de lá, pelo
+      // orcDoId) — a lista de trabalho não muda; e o desenho tem ids próprios (orc-busca-{id}), para não repetir o card da lista
+      if(!Object.prototype.hasOwnProperty.call(ORC_LISTA_CACHE, o.id)){ var c=Object.assign({}, o); delete c.id; ORC_BUSCA_MAPA[o.id]=c; }
+      var g=orcGrupoDe(o, HOJE, orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE));
+      return ('<div style="font-size:11.5px;font-weight:800;color:var(--muted);margin-top:8px">'+esc(ORC_GRUPO_ROTULO[g]||'')+'</div>'
+        +(ORC_GRUPO_LINHA[g]?orcLinhaHistoricoHtml(o.id, o, g):orcCardHtml(o.id, o, HOJE, DUP, podeCi, g))).replace(/id="orc-card-/g, 'id="orc-busca-');
+    }).join('')+(achados.length>30?('<div class="hint">'+esc('Mais '+(achados.length-30)+' — digite mais letras para achar.')+'</div>'):'');
+  }
+  function orcProcurarRender(){
+    var el=document.getElementById('orcBuscaRes'); if(!el) return;
+    el.innerHTML=orcProcurarHTML(ORC_BUSCA_TERMO);
+  }
+  function orcProcurar(termo){
+    ORC_BUSCA_TERMO=String(termo||'');
+    if(ORC_BUSCA_TERMO.trim().length<2){ orcProcurarRender(); return Promise.resolve([]); }
+    return orcLerVivos().then(function(){ orcProcurarRender(); return orcProcurarAchar(Object.assign({}, ORC_VIVOS.todos||{}, ORC_BUSCA_MAPA, ORC_LISTA_CACHE||{}), ORC_BUSCA_TERMO); });
+  }
+  // ---- A PONTE: A VERSÃO, O PEDIDO E O RASTRO (AC5, AC9, AC10) -----------------------------------
+  // A versão da ponte, por GET — só na URL do Apps Script (a mesma régua do «Testar a ponte»), com o prazo de 20 segundos
+  // e guardada 10 minutos. Sem resposta, 0: o caminho da ponte de hoje, que vale nas duas.
+  var ORC_PONTE_URL_RE=/^https:\/\/script\.google\.com\/[\w\-\/]*\/exec$/;
+  var ORC_PONTE_VER={url:'', v:0, quando:0, lendo:null};
+  var ORC_PONTE_VER_PRAZO=10*60*1000;
+  function orcPonteVersao(forcar){
+    var url=String(((orcSheetsCfg||{}).url)||'').trim(), C=ORC_PONTE_VER;
+    if(!url || !ORC_PONTE_URL_RE.test(url) || typeof fetch!=='function') return Promise.resolve(0);
+    if(!forcar && C.url===url && C.quando && (Date.now()-C.quando)<ORC_PONTE_VER_PRAZO) return Promise.resolve(C.v);
+    if(C.lendo && C.url===url) return C.lendo;
+    C.url=url;
+    var pr;
+    try{ pr=fetch(url).then(function(r){ return r.text(); }).then(function(t){ var j=null; try{ j=JSON.parse(t); }catch(x){ j=null; } /* silencioso de propósito: resposta que não é dado = ponte antiga */ return (j && Number(j.versao))||0; }); }
+    catch(e){ pr=Promise.resolve(0); }
+    C.lendo=corrComPrazo(pr, CORR_PRAZO, 'a ponte não respondeu').then(function(v){
+      C.v=(typeof v==='number')?v:0; C.quando=Date.now(); C.lendo=null; return C.v;
+    });
+    return C.lendo;
+  }
+  function orcPontePost(cfg, corpo){
+    return fetch(cfg.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(corpo)})
+      .then(function(r){ return r.text().catch(function(){ return ''; }); })
+      .then(function(txt){ try{ return JSON.parse(txt); }catch(e){ return {ok:false, erro:String(txt).slice(0,120)}; } });
+  }
+  // A resposta da ponte em português (o rastro e a tela).
+  function orcPontePt(t){
+    t=String(t==null?'':t).trim();
+    if(!t || /^\(nao mexe/.test(t)) return '';
+    var m;
+    if(/^ok \(\d+ campos\)/.test(t)) return 'linha lançada';
+    if(/^ja estava la/.test(t)) return 'a linha já estava lá';
+    if((m=/^linha \d+ atualizada(?: \(havia (\d+) linhas iguais)?/.exec(t))) return 'linha atualizada'+(m[1]?(' (havia '+m[1]+' linhas iguais: confira a aba Hospedagem)'):'');
+    if((m=/^linha \d+ marcada como (.+)$/.exec(t))) return 'linha riscada'+(/^CANCELAD/.test(m[1])?'':(' («'+m[1]+'»)'));
+    if(/^ja estava cancelada/.test(t)) return 'a linha já estava riscada';
+    if(/^NAO ACHEI a linha/.test(t)) return 'linha não encontrada na planilha';
+    if(/^CALENDARIO SEM COLUNA LIVRE/.test(t)) return 'o calendário não tem coluna livre para as datas novas (acrescente uma coluna de hóspede): nada foi mudado';
+    if(/^ABA NAO ENCONTRADA/.test(t)) return 'a aba Hospedagem não foi encontrada na planilha';
+    if(/^ABA DO CALENDARIO NAO ENCONTRADA/.test(t)) return 'a aba do calendário não foi encontrada na planilha: nada foi mudado';
+    if(/^NENHUMA das datas/.test(t)) return 'as datas novas não existem no calendário: nada foi mudado';
+    return t.split(/;\s*/).map(function(p){
+      if((m=/^(\d+) noite\(s\) marcada\(s\) na coluna Hospede \d+(?:, (\d+) ja estavam)?/.exec(p))) return m[1]+' noite(s) marcada(s)'+(m[2]?(' ('+m[2]+' já estavam)'):'');
+      if((m=/^(\d+) noite\(s\) liberada\(s\)/.exec(p))) return m[1]+' noite(s) liberada(s)';
+      if(/^noites antigas mantidas/.test(p)) return 'noites antigas mantidas (outra reserva viva)';
+      if(/^ERRO - /.test(p)) return 'a planilha respondeu com erro ('+p.slice(7)+')';
+      return p;
+    }).join(', ');
+  }
+  // 6.68, fechamento dos CONCERNS (OBS-R3-1): o lançamento (o pedido de sempre, «gravar») em que a linha do dinheiro entrou (ok)
+  // mas o calendário não marcou as noites — sem coluna de hóspede livre na estadia inteira, as datas fora do calendário, a aba —:
+  // a frase do porquê, ou '' (as noites foram marcadas). Com a ponte nova, quem tinha outra reserva viva vai para uma coluna
+  // livre; sem nenhuma, cai aqui. Vale nas duas pontes (os pedidos de hoje respondem igual).
+  function orcNoitesNaoMarcadas(cal, o){
+    var t=String(cal==null?'':cal), m;
+    var datas='as noites de '+orcDatasDe(o||{});
+    if(/CALENDARIO SEM COLUNA LIVRE/.test(t)) return datas+' não foram marcadas no calendário: não há coluna de hóspede livre na estadia inteira';
+    if(/NENHUMA das datas/.test(t)) return datas+' não foram marcadas no calendário: essas datas não existem na aba do calendário';
+    if(/ABA (DO CALENDARIO )?NAO ENCONTRADA/.test(t)) return datas+' não foram marcadas no calendário: a aba do calendário não foi encontrada na planilha';
+    if(/NAO ACHEI (a linha "Hospede 1"|as datas na coluna A)/.test(t)) return datas+' não foram marcadas no calendário: a aba do calendário não tem a linha «Hospede 1» ou as datas na coluna A';
+    if(/datas invalidas/.test(t)) return datas+' não foram marcadas no calendário: a planilha não entendeu as datas da reserva';
+    if((m=/ERRO - (.*)$/.exec(t))) return datas+' podem não ter sido marcadas no calendário: a planilha respondeu com erro ('+m[1]+')';
+    if((m=/SEM LINHA NO CALENDARIO: ([\d\/, ]+)/.exec(t))) return 'as noites de '+m[1].trim()+' não foram marcadas no calendário: essas datas não existem na aba do calendário';
+    return '';
+  }
+  // «Planilha — Thor: linha atualizada, 2 noite(s) marcada(s); Nala: linha riscada, 4 noite(s) liberada(s)»
+  function orcPlanilhaResumo(pets){
+    return 'Planilha — '+((pets||[]).map(function(x){
+      var partes;
+      if(x.acao==='preservada') partes=['as noites ficaram (são também de outra reserva viva) e a linha é para riscar à mão'];
+      else if(!x.ok) partes=[String(x.falha||'a planilha não confirmou')];
+      else partes=[orcPontePt(x.financeiro), orcPontePt(x.calendario)].filter(Boolean);
+      return (x.nome||'?')+': '+(partes.join(', ')||'sem resposta');
+    }).join('; ')||'nada foi pedido');
+  }
+  function orcPetRes(nome, acao, j, cfg, alteracao){
+    var x={nome:String(nome||''), acao:String(acao||''), ok:!!(j && j.ok), financeiro:String((j&&j.financeiro)||''), calendario:String((j&&j.calendario)||'')};
+    if(!x.ok) x.falha=orcPonteMotivo(j, (cfg||{}).token);
+    else if(alteracao && /^ja estava la/.test(x.financeiro)){ x.ok=false; x.jaEstava=true; x.falha='a planilha já tinha esta linha: o valor e a saída dela não foram atualizados'; }
+    return x;
+  }
+  // A entrada do planilha_hist: por que, com que versão da ponte, o que foi pedido de cada FILHOt e o que ela respondeu.
+  function orcPlanilhaHistEntrada(porque, versao, pets, quem, extra){
+    var h={porque:String(porque||''), versaoPonte:Number(versao)||0, pets:(pets||[]).map(function(x){
+      var p={nome:String(x.nome||''), acao:String(x.acao||''), ok:!!x.ok, financeiro:String(x.financeiro||''), calendario:String(x.calendario||'')};
+      if(x.falha) p.falha=String(x.falha);
+      return p; }), quem:String(quem||'-'), ts:Date.now()};
+    Object.keys(extra||{}).forEach(function(k){ if(extra[k]!==undefined && extra[k]!==null) h[k]=extra[k]; });
+    return h;
+  }
+  // Grava a entrada do planilha_hist (com os campos que vão junto, na MESMA escrita) e a linha da auditoria em português.
+  function orcPlanilhaHistGravar(id, entrada, campos, rotuloLog){
+    var up=Object.assign({}, campos||{});
+    var k=orcNovaChave('auaulandia/orcamentos/'+id+'/planilha_hist');
+    up['planilha_hist/'+k]=entrada;
+    try{
+      var c=orcDoId(id);
+      if(c){ c.planilha_hist=Object.assign({}, c.planilha_hist||{}); c.planilha_hist[k]=entrada; Object.keys(campos||{}).forEach(function(x){ if(campos[x]===null) delete c[x]; else c[x]=campos[x]; }); }
+      orcRenderLista();   // o card diz na hora o que a planilha respondeu
+      if(ORC_BUSCA_TERMO) orcProcurarRender();
+    }catch(e){} /* silencioso de propósito: a memória da tela é conveniência — o banco é a verdade */
+    try{ if(typeof audit==='function') audit('orcamento-planilha', orcPlanilhaResumo(entrada.pets), {orcamento:id, porque:entrada.porque, versaoPonte:entrada.versaoPonte}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    if(!DB) return Promise.resolve(false);
+    return DB.ref('auaulandia/orcamentos/'+id).update(up).then(function(){ return true; })
+      .catch(function(e){ _logFalhaGrav(rotuloLog||'auaulandia/orcamentos/ (planilha_hist)', e); return false; });
+  }
+  function orcTiradaReg(porque, quem, registro, msg, aMao){
+    var t={porque:String(porque||''), por:String(quem||'-'), ts:Date.now(), resultado:{ok:true, msg:String(msg||'')}};
+    if(aMao && aMao.length) t.resultado.aMao=aMao.slice();
+    if(registro) t.registro=registro;
+    return t;
+  }
+  // ---- A LINHA DO DINHEIRO ACOMPANHA A RESERVA FECHADA (AC5) --------------------------------
+  // O nome que a planilha conhece: «Thor/Spitz/Renata» (o mesmo do orcLinhasPlanilha).
+  function orcPlanilhaNome(p, o){
+    p=p||{};
+    var partes=[String(p.nome||'').trim()];
+    var r=String(p.raca||'').trim(); if(r) partes.push(r);
+    var t=String(p.tutor||((o||{}).tutor)||'').trim(); if(t) partes.push(t);
+    return partes.join('/');
+  }
+  // Quem fica, quem sai e quem entra (função pura). A chave do FILHOt (orcChavePet) decide; sem ela, o par nome + tutor.
+  // O antes vem do orçamento SALVO (com a chave e os subtotais), nunca do ORC_EDIT_ANTES (só nome, raça e tutor: sem a
+  // chave, todo FILHOt «sairia e entraria»).
+  function orcPlanilhaDiff(oAntes, oDepois){
+    var A=((oAntes||{}).pets)||[], D=((oDepois||{}).pets)||[];
+    var usados={}, fica=[], entra=[];
+    var par=function(p, o){ var nrm=(typeof jsNorm==='function')?jsNorm:function(x){ return String(x||'').toLowerCase(); };
+      return nrm((p&&p.nome)||'')+'__'+nrm((p&&p.tutor)||((o||{}).tutor)||''); };
+    D.forEach(function(pd){
+      var kd=orcChavePet(pd, oDepois), idx=-1, i;
+      for(i=0;i<A.length && idx<0;i++){ if(!usados[i] && kd && orcChavePet(A[i], oAntes)===kd) idx=i; }
+      for(i=0;i<A.length && idx<0;i++){ if(!usados[i] && par(A[i], oAntes)===par(pd, oDepois)) idx=i; }
+      if(idx<0){ entra.push(pd); return; }
+      usados[idx]=true;
+      var nA=orcPlanilhaNome(A[idx], oAntes), nD=orcPlanilhaNome(pd, oDepois);
+      fica.push({antes:A[idx], depois:pd, nomeAntes:nA, nomeDepois:nD, mudouNome:nA!==nD});
+    });
+    return {fica:fica, sai:A.filter(function(p, i){ return !usados[i]; }), entra:entra};
+  }
+  // 2ª rodada (REL-002, REL-003): o que conta como feito na planilha.
+  //   riscar: a linha antiga riscada de verdade (ou já fora da planilha: «NAO ACHEI», «ja estava cancelada», aba vazia) e as
+  //           noites liberadas sem erro;
+  //   atualizar (ponte nova): «linha N atualizada» e o calendário acertado (sem erro, sem «SEM COLUNA», sem «NENHUMA das datas»).
+  function orcRiscouDeVerdade(x){
+    var f=String((x&&x.financeiro)||''), c=String((x&&x.calendario)||'');
+    return !!(x && x.ok && (/^linha \d+ marcada/.test(f) || /^NAO ACHEI a linha/.test(f) || /^ja estava cancelada/.test(f) || /^aba vazia/.test(f)) && !/ERRO/.test(c));
+  }
+  function orcAtualizouDeVerdade(x){
+    return !!(x && x.ok && /^linha \d+ atualizada/.test(String(x.financeiro||'')) && !/ERRO|SEM COLUNA|NENHUMA das datas|NAO ACHEI|ABA NAO ENCONTRADA/.test(String(x.calendario||'')));
+  }
+  // REL-002: a alteração que ficou pela metade (a linha antiga não foi riscada, ou não foi atualizada pela ponte nova, e a
+  // nova não entrou) fica no orçamento como planilha_pendente = {porque, entrada, saida, tutor, pets:[{key, nome, raca, tutor}],
+  // mudanca, ts}. O «reenviar» (e a próxima alteração) risca PRIMEIRO essas linhas antigas; só com todas riscadas (ou já fora da
+  // planilha) a linha nova entra. Volta {ok, nada, pets (para o rastro), falta}.
+  function orcPendenteRiscar(id, o, quem, quando){
+    var P=(o||{}).planilha_pendente;
+    if(!P || !(P.pets||[]).length) return Promise.resolve({ok:true, nada:true, pets:[], falta:[]});
+    var rotulo=' (linha antiga, '+orcBR(P.entrada||'')+' a '+orcBR(P.saida||'')+')';
+    return orcLiberarNaPlanilha({id:id, entrada:P.entrada||'', saida:P.saida||'', tutor:P.tutor||(o||{}).tutor||'', pets:P.pets}, quem||'', quando||'',
+      {id:id, riscar:true, marca:'ALTERADA', silencioso:true, semHist:true}).then(function(r){
+        var res=(r&&r.pets)||[];
+        var falta=res.filter(function(x){ return !(orcRiscouDeVerdade(x) || (x.acao==='preservada' && !x.semConferir)); });
+        var avisos=res.filter(function(x){ return x.acao==='preservada' && !x.semConferir; })
+          .map(function(x){ return 'Risque à mão a linha antiga de '+x.nome+rotulo+' na aba Hospedagem: as noites dela continuam com outra reserva viva.'; });
+        return {ok:!falta.length, P:P, falta:falta, avisos:avisos, pets:res.map(function(x){ return Object.assign({}, x, {nome:x.nome+rotulo}); })};
+      });
+  }
+  function orcPendenteAviso(R){
+    var P=R.P||{};
+    return (R.falta||[]).map(function(x){ return 'A linha antiga de '+x.nome+' ('+orcBR(P.entrada||'')+' a '+orcBR(P.saida||'')+') ainda não foi riscada. Motivo: '+zErroFrase(x.falha||'a planilha não confirmou'); })
+      .concat(['Nada novo foi lançado: com a antiga viva, a reserva ficaria duas vezes na planilha. Espere 1 minuto e toque em «reenviar» na lista (primeiro a linha antiga sai, depois a nova entra), ou risque à mão a linha antiga e toque em «reenviar».']);
+  }
+  // A sincronização da reserva fechada com a planilha, um FILHOt de cada vez (a ponte escolhe a coluna lendo o calendário):
+  //   ponte nova (versão ≥ 6): um 'atualizar' por FILHOt que fica (a linha muda no lugar, com a nota, e o calendário acompanha);
+  //   ponte de hoje (ou o GET sem resposta): 'cancelar' do período antigo com a marca ALTERADA e, depois, o envio de sempre;
+  //   quem sai: a linha riscada e as noites liberadas; quem entra: o envio de sempre.
+  // A trava da Maya: o FILHOt cujas noites antigas também são de outra reserva viva dele não tem as noites liberadas
+  // (naoLiberar na nova; na de hoje, o 'cancelar' dele não vai — apagaria as noites da outra reserva, B5) e a tela manda
+  // riscar à mão. op = {porque, quem, quando, motivo, mudanca (a chave do historico)}.
+  // 2ª rodada: a trava conferida na lista INTEIRA (sem a leitura, nada vai à planilha e a alteração inteira fica pendente,
+  // LOW-4); na ponte de hoje, a linha nova só entra com a antiga riscada (REL-002); na nova, «atualizada» só com a linha
+  // atualizada de verdade e o calendário acertado (REL-003); o que não deu fica em planilha_pendente, para o «reenviar».
+  function orcPlanilhaSincronizar(id, oAntes, oDepois, op){
+    op=op||{}; oAntes=oAntes||{}; oDepois=oDepois||{};
+    var cfg=(orcSheetsCfg||{}), porque=String(op.porque||'mudar-datas');
+    if(!cfg.url){
+      zAlertao('RESERVA ALTERADA — ACERTE A PLANILHA À MÃO',
+        ['A ponte com a planilha não está configurada neste sistema.',
+         'Na aba Hospedagem, mude a linha de '+orcNomesDe(oDepois)+' de '+orcDatasDe(oAntes)+' para '+orcDatasDe(oDepois)+', e acerte as noites no calendário.'],
+        {botao:'Entendi'});
+      return Promise.resolve({ok:false, semPonte:true, pets:[]});
+    }
+    var dif=orcPlanilhaDiff(oAntes, oDepois);
+    var dataRes=orcDiaDoTs((orcFechouPor(oDepois)||{}).ts)||orcHojeISO();
+    var linhasNovas=orcLinhasPlanilha(oDepois, dataRes);
+    var linhaDe=function(pd){ var i=(oDepois.pets||[]).indexOf(pd); return (i>=0)?(linhasNovas[i]||null):null; };
+    var presa={};
+    var presaDe=function(p){ return presa[String((p&&(p.key||p.nome))||'').toLowerCase()]||null; };
+    var pets=[], avisos=[], velhaFica=[], jaEstava=[], pendentes=[], naoLancou=[], naoAtualizou=[], naoSaiu=[];
+    var tok=cfg.token||'', ent0=oAntes.entrada||'', sai0=oAntes.saida||'';
+    var preservada=function(p, pr, pt){
+      pets.push({nome:String((p&&p.nome)||''), acao:'preservada', ok:false, financeiro:'', calendario:'', __pt:pt,
+        falha:'as noites são também da reserva de '+orcBR(pr.entrada)+' a '+orcBR(pr.saida)+': risque à mão a linha antiga'});
+      avisos.push('Risque à mão a linha antiga de '+((p&&p.nome)||'?')+' ('+orcDatasDe(oAntes)+') na aba Hospedagem: as noites de '+((p&&p.nome)||'?')+' continuam com a outra reserva ('+orcBR(pr.entrada)+' a '+orcBR(pr.saida)+').');
+    };
+    var guarda=function(x, pt){ x.__pt=pt; pets.push(x); if(x.jaEstava) jaEstava.push(x); return x; };
+    var pendDe=function(p){ pendentes.push({key:String((p&&p.key)||''), nome:String((p&&p.nome)||''), raca:String((p&&p.raca)||''), tutor:String((p&&p.tutor)||oAntes.tutor||'')}); };
+    var caiu=function(e){ return {ok:false, erro:zErroMotivo(e, 'planilha', tok, {origem:'app'})}; };
+    var versaoUsada=0, semConferir=false, pendAntiga=null;
+    // a alteração anterior que ficou pela metade: as linhas antigas dela saem PRIMEIRO
+    return orcPendenteRiscar(id, oAntes, op.quem||'', op.quando||'').then(function(PR){
+      if(!PR.ok){ pendAntiga=PR; return; }
+      PR.pets.forEach(function(x){ guarda(x, x.nome); }); avisos=avisos.concat(PR.avisos||[]);
+      return orcPresasConferidas(id, oAntes).then(function(PC){
+        if(!PC.ok){ semConferir=true; return; }
+        PC.presas.forEach(function(x){ presa[String(x.key||x.nome||'').toLowerCase()]=x; });
+        return orcPonteVersao().then(function(versao){
+          versaoUsada=Number(versao)||0;
+          var fila=Promise.resolve();
+          var passo=function(fn){ fila=fila.then(fn); };
+          dif.fica.forEach(function(f){
+            var L=linhaDe(f.depois); if(!L) return;
+            var pr=presaDe(f.antes);
+            var lanca=function(){ return orcPontePost(cfg, Object.assign({token:tok}, L)).catch(caiu).then(function(j){
+              var y=guarda(orcPetRes(f.depois.nome, 'lançar', j, cfg, true), L.peludoTutor); return y; }); };
+            if(versaoUsada>=6){
+              passo(function(){
+                var corpo=Object.assign({token:tok, acao:'atualizar'}, L, {entradaAntes:ent0, saidaAntes:sai0, alteradoPor:op.quem||'', alteradoEm:op.quando||''});
+                corpo.motivo=String(op.motivo||'');   // a nota da linha na planilha: o motivo que a pessoa escreveu
+                if(f.mudouNome) corpo.peludoTutorAntes=f.nomeAntes;
+                if(pr){ corpo.naoLiberar=true; avisos.push('As noites antigas de '+(f.depois.nome||'?')+' ficaram no calendário: são também da outra reserva ('+orcBR(pr.entrada)+' a '+orcBR(pr.saida)+').'); }
+                return orcPontePost(cfg, corpo).catch(caiu).then(function(j){
+                  var x=guarda(orcPetRes(f.depois.nome, 'atualizar', j, cfg), L.peludoTutor);
+                  // a linha antiga não estava lá: a ponte não cria linha no 'atualizar' — quem decide lançar é o app (a reserva está fechada)
+                  if(/^NAO ACHEI a linha/.test(x.financeiro)) return lanca().then(function(y){ if(y.ok) x.substituida=true; });
+                  // 2ª rodada (REL-003): «atualizada» só de verdade; senão a linha antiga fica pendente para o «reenviar»
+                  if(!orcAtualizouDeVerdade(x)){
+                    x.ok=false; x.falha='a linha não foi atualizada: '+(orcPontePt(x.calendario)||orcPontePt(x.financeiro)||String(x.falha||'a planilha não confirmou'));
+                    x.__dito=true; pendDe(f.antes); naoAtualizou.push(x); return;
+                  }
+                  if(/havia \d+ linhas iguais/.test(x.financeiro)) avisos.push('A planilha tinha mais de uma linha igual de '+(f.depois.nome||'?')+': confira a aba Hospedagem.');
+                });
+              });
+            } else {
+              // a ponte de hoje: risca a linha antiga pelo orcLiberarNaPlanilha (que tem a trava da Maya) e, SÓ COM ELA RISCADA,
+              // lança a nova (REL-002: senão, duas linhas vivas — o dinheiro em dobro)
+              passo(function(){
+                return orcLiberarNaPlanilha({id:id, entrada:ent0, saida:sai0, tutor:oAntes.tutor||'', pets:[f.antes]}, op.quem||'', op.quando||'',
+                  {id:id, riscar:true, marca:'ALTERADA', silencioso:true, semHist:true}).then(function(r){
+                    var x=((r&&r.pets)||[])[0]; if(!x) return;
+                    if(x.acao==='preservada' && !x.semConferir){ preservada(f.antes, ((r&&r.presas)||[])[0]||{}, f.nomeAntes); return lanca(); }
+                    guarda(x, f.nomeAntes);
+                    if(!orcRiscouDeVerdade(x)){ x.__dito=true; pendDe(f.antes); naoLancou.push({nome:f.depois.nome||'?', falha:x.falha||orcPontePt(x.financeiro)||orcPontePt(x.calendario)}); return; }
+                    return lanca().then(function(y){ if(y.ok) velhaFica.push(f.depois.nome||'?'); });
+                  });
+              });
+            }
+          });
+          dif.entra.forEach(function(pd){
+            var L=linhaDe(pd); if(!L) return;
+            passo(function(){ return orcPontePost(cfg, Object.assign({token:tok}, L)).catch(caiu).then(function(j){ guarda(orcPetRes(pd.nome, 'lançar', j, cfg, true), L.peludoTutor); }); });
+          });
+          dif.sai.forEach(function(ps){
+            var pt=orcPlanilhaNome(ps, oAntes);
+            passo(function(){
+              return orcLiberarNaPlanilha({id:id, entrada:ent0, saida:sai0, tutor:oAntes.tutor||'', pets:[ps]}, op.quem||'', op.quando||'',
+                {id:id, riscar:true, marca:'CANCELADO', silencioso:true, semHist:true}).then(function(r){
+                  var x=((r&&r.pets)||[])[0]; if(!x) return;
+                  if(x.acao==='preservada' && !x.semConferir){ preservada(ps, ((r&&r.presas)||[])[0]||{}, pt); return; }
+                  guarda(x, pt);
+                  if(!orcRiscouDeVerdade(x)){ x.__dito=true; pendDe(ps); naoSaiu.push({nome:ps.nome||'?', falha:x.falha||orcPontePt(x.financeiro)||orcPontePt(x.calendario)}); }
+                });
+            });
+          });
+          return fila;
+        });
+      });
+    }).then(function(){
+      // sem a leitura da lista inteira, ou com a alteração anterior ainda pela metade: NADA foi à planilha nesta vez
+      if(pendAntiga || semConferir){
+        var P0=pendAntiga?pendAntiga.P:null;
+        var petsS=pendAntiga?pendAntiga.pets:(dif.fica.map(function(f){ return f.antes; }).concat(dif.sai)).map(function(p){
+          return {nome:String((p&&p.nome)||''), acao:'parou', ok:false, financeiro:'', calendario:'', falha:ORC_SEM_CONFERIR+': nada foi mudado na planilha'}; });
+        var campos0={planilha_em:Date.now(), planilha_ok:false, planilha_msg:pendAntiga?'a linha antiga da alteração anterior ainda não foi riscada: nada foi mudado na planilha':(ORC_SEM_CONFERIR+': nada foi mudado na planilha')};
+        if(semConferir){ dif.fica.forEach(function(f){ pendDe(f.antes); }); dif.sai.forEach(function(ps){ pendDe(ps); });
+          campos0.planilha_pendente={porque:porque, entrada:ent0, saida:sai0, tutor:oAntes.tutor||'', pets:pendentes, mudanca:op.mudanca||'', ts:Date.now()}; }
+        orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, 0, petsS, op.quem, {mudanca:op.mudanca}), campos0, 'auaulandia/orcamentos/ (orcPlanilhaSincronizar)');
+        try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        zAlertao('RESERVA ALTERADA — A PLANILHA NÃO FOI MEXIDA', pendAntiga?orcPendenteAviso(pendAntiga)
+          :['Não consegui ler a lista inteira de orçamentos para conferir se outra reserva de '+orcNomesDe(oAntes)+' usa as mesmas noites: nada foi mudado na planilha.',
+            'Quando a internet voltar, espere 1 minuto e toque em «reenviar» na lista: as linhas antigas ('+orcDatasDe(oAntes)+') saem e as novas ('+orcDatasDe(oDepois)+') entram.'],
+          {botao:'Entendi', rodape:'A reserva está salva com as datas novas.'});
+        return {ok:false, pets:petsS, pendente:true, P:P0};
+      }
+      var ok=pets.every(function(x){ return x.ok || x.substituida; }) && !pendentes.length;
+      var nomesDepois=linhasNovas.map(function(L){ return L.peludoTutor; });
+      var ord=pets.filter(function(x){ return nomesDepois.indexOf(x.__pt)>=0; }).concat(pets.filter(function(x){ return nomesDepois.indexOf(x.__pt)<0; }));
+      var msg=ord.map(function(x){ return x.__pt+': '+(x.ok?[x.calendario, x.financeiro].filter(Boolean).join(' · '):String(x.falha||'')); }).join(' | ');
+      var campos={planilha_em:Date.now(), planilha_ok:ok, planilha_msg:msg,
+        planilha_pendente:pendentes.length?{porque:porque, entrada:ent0, saida:sai0, tutor:oAntes.tutor||'', pets:pendentes, mudanca:op.mudanca||'', ts:Date.now()}:null};
+      orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, versaoUsada, pets, op.quem, {mudanca:op.mudanca}), campos, 'auaulandia/orcamentos/ (orcPlanilhaSincronizar)');
+      try{ orcRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      var L=[];
+      if(versaoUsada>=6){
+        var atu=pets.filter(function(x){ return x.acao==='atualizar' && orcAtualizouDeVerdade(x); }).map(function(x){ return x.nome; });
+        if(atu.length) L.push('A linha de '+atu.join(' e ')+' foi atualizada no lugar, com as datas e os valores novos.');
+      } else if(velhaFica.length){
+        L.push(velhaFica.length===1
+          ? ('A planilha está com a ponte antiga: a linha antiga de '+velhaFica[0]+' foi riscada e uma linha nova entrou com as datas novas. Para a linha ser atualizada no lugar, a ponte nova precisa ser publicada.')
+          : ('A planilha está com a ponte antiga: as linhas antigas de '+velhaFica.join(' e ')+' foram riscadas e linhas novas entraram com as datas novas. Para as linhas serem atualizadas no lugar, a ponte nova precisa ser publicada.'));
+      }
+      naoLancou.forEach(function(x){ L.push('A linha antiga de '+x.nome+' ('+orcDatasDe(oAntes)+') não foi riscada. Motivo: '+zErroFrase(x.falha||'a planilha não confirmou')+' Nada novo foi lançado: com a antiga viva, a reserva ficaria duas vezes na planilha. Espere 1 minuto e toque em «reenviar» na lista (primeiro a linha antiga sai, depois a nova entra), ou risque à mão a linha antiga e toque em «reenviar».'); });
+      naoSaiu.forEach(function(x){ L.push('A linha de '+x.nome+', que saiu desta reserva ('+orcDatasDe(oAntes)+'), não foi riscada. Motivo: '+zErroFrase(x.falha||'a planilha não confirmou')+' Espere 1 minuto e toque em «reenviar» na lista: ela sai.'); });
+      naoAtualizou.forEach(function(x){ L.push('A linha de '+x.nome+' não foi atualizada na planilha. Motivo: '+zErroFrase(x.falha.replace(/^a linha não foi atualizada: /, ''))+' Espere 1 minuto e toque em «reenviar» na lista: a linha antiga sai e a nova entra.'); });
+      jaEstava.forEach(function(x){ L.push('A planilha já tinha uma linha de '+x.nome+' com entrada '+orcBR(oDepois.entrada||'')+': o valor e a saída dela NÃO foram atualizados. Confira a aba Hospedagem e corrija à mão.'); });
+      L=L.concat(avisos);
+      pets.forEach(function(x){ if(!x.ok && !x.jaEstava && !x.substituida && !x.__dito && x.acao!=='preservada') L.push(x.nome+': '+String(x.falha||'a planilha não confirmou')); });
+      // fechamento dos CONCERNS (OBS-R3-1): a linha nova entrou, mas as noites dela não foram marcadas no calendário — não é verde
+      var semNoitesS=pets.filter(function(x){ return x.ok && x.acao==='lançar' && orcNoitesNaoMarcadas(x.calendario, oDepois); })
+        .map(function(x){ return x.nome+': a linha do dinheiro entrou na aba Hospedagem, mas '+orcNoitesNaoMarcadas(x.calendario, oDepois)+'. Acrescente uma coluna de hóspede no calendário e marque à mão, ou avise a Gestão.'; });
+      L=semNoitesS.concat(L);
+      var verde=ok && !semNoitesS.length;
+      zAlertao(verde?'✅ RESERVA ALTERADA NA PLANILHA':'RESERVA ALTERADA — CONFIRA A PLANILHA', L.length?L:[orcPlanilhaResumo(pets)],
+        {ok:verde, botao:'Entendi', rodape:orcPlanilhaResumo(pets)});
+      return {ok:ok, versao:versaoUsada, pets:pets, msg:msg};
+    }).catch(function(e){
+      var petsQ=pets.concat([{nome:orcNomesDe(oDepois), acao:'parou', ok:false, falha:zErroMotivo(e, 'planilha', tok, {origem:'app'})}]);
+      orcPlanilhaHistGravar(id, orcPlanilhaHistEntrada(porque, versaoUsada, petsQ, op.quem, {mudanca:op.mudanca}),
+        {planilha_em:Date.now(), planilha_ok:false, planilha_msg:String((e&&e.message)||e)}, 'auaulandia/orcamentos/ (orcPlanilhaSincronizar)');
+      try{ orcRenderLista(); }catch(x){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      var _t=zErroTipo(e);
+      if(_t==='queda' || _t==='prazo') zAlertao('RESERVA ALTERADA — MAS A PLANILHA NÃO CONFIRMOU',
+        ['A conexão com a planilha caiu antes da resposta: pode ter mudado tudo, uma parte ou nada.',
+         'Confira na aba Hospedagem a linha de '+orcNomesDe(oDepois)+' ('+orcDatasDe(oAntes)+' → '+orcDatasDe(oDepois)+') e as noites no calendário, e acerte à mão o que faltar.'],
+        {botao:'Entendi', rodape:'A reserva está salva com as datas novas.'});
+      else zAlertao('RESERVA ALTERADA — MAS NÃO CONSEGUI FALAR COM A PLANILHA',
+        ['Motivo: '+zErroFrase(zErroMotivo(e, 'planilha', tok, {origem:'app'})),
+         'Na aba Hospedagem, mude à mão a linha de '+orcNomesDe(oDepois)+' de '+orcDatasDe(oAntes)+' para '+orcDatasDe(oDepois)+', e acerte as noites no calendário.'],
+        {botao:'Entendi', rodape:'A reserva está salva com as datas novas.'});
+      return {ok:false, pets:petsQ};
+    });
+  }
+  // ---- «FECHOU» E «NÃO FECHOU» (AC1, AC2) ---------------------------------------------------
+  // A pergunta do «Fechou» (AC1.1). Chamada pelo orcStatus, depois da trava de duplicidade; avisoLista = a frase de quando
+  // a lista inteira não pôde ser lida (a trava conferiu só os 60).
+  async function orcFechouPerguntar(id, avisoLista){
+    if(!orcPodeRotina()) return orcBarrarRotina('marcar «Fechou» no Orçamento', id);
+    var o=orcDoId(id)||{};
+    var L=[orcDatasDe(o)+' · '+fmtCent(o.total_cent||0),
+      'Ela entra na planilha de estadias: uma linha de dinheiro por FILHOt e as noites no calendário.']
+      .concat(orcRepFrases(o, 'deixam de ficar reservados e viram baixa na ficha.'));
+    if(avisoLista) L.push(avisoLista);
+    if(!await zPergunta('Fechou a reserva de '+orcNomesDe(o)+'?', L, {sim:'Fechou', nao:'Ainda não'})){
+      delete ORC_DUP_OK_STATUS[id];
+      return {ok:false, cancelado:true};
+    }
+    return orcStatusGravar(id, 'fechado', {de:'aguardando', vista:o});   // 3ª rodada (REL-004): o que a pergunta mostrou
+  }
+  async function orcNaoFechouPerguntar(id){
+    if(!orcPodeRotina()) return orcBarrarRotina('marcar «Não fechou» no Orçamento', id);
+    var o=orcDoId(id)||{};
+    var L=['Ela sai de Orçamentos a confirmar e vai para Cancelados.'].concat(orcRepFrases(o, 'voltam a ficar livres na ficha.'));
+    if(orcFoiAPlanilha(o)) L.push(orcAvisoPlanilhaTexto(o)+' As linhas dela saem da planilha.');
+    L.push('Escreva o que o tutor disse, em pelo menos 4 palavras (por exemplo: achou o valor acima do esperado).');
+    var texto=await zTexto('O tutor não fechou a reserva de '+orcNomesDe(o)+'?', L,
+      {rotulo:'Por que não fechou?', botao:'Não fechou', botaoNao:'Voltar', cor:'#234D67', validar:orcMotivoErro, valor:ORC_NF_RASCUNHO[id]||''});
+    if(texto===null || texto===undefined) return {ok:false, cancelado:true};
+    texto=String(texto).trim();
+    var em=orcMotivoErro(texto);
+    if(em){ alert(em+' Nada foi gravado.'); return {ok:false, onde:'motivo'}; }
+    return orcStatusGravar(id, 'nao_fechou', {texto:texto, de:'aguardando', vista:o});   // 3ª rodada (REL-004): o que a pergunta mostrou
+  }
+  // A gravação de toda mudança de status do Orçamento que não tem gravação própria (AC1.2, AC2.2, AC2.5, AC3.2): o status, o
+  // status_em e o status_por (o Financeiro e os painéis leem), a entrada nova do status_hist e o acerto da reposição — NUM
+  // update de raiz. A planilha só depois do ok. op = {de (o status esperado), reg (o registro do cartaz), texto (o «Não fechou»),
+  // vista (3ª rodada: o orçamento como a pergunta ou o cartaz o mostrou; sem ela, a memória da tela)}.
+  function orcStatusBarra(novo, de, reg, o){
+    if((novo==='fechado' || novo==='nao_fechou') && de==='aguardando') return orcPodeRotina()?'':'rotina';
+    if(novo==='aguardando' && de==='fechado') return orcAssinaturaDoRegistro(reg, orcFechadoHoje(o)?'propria':'gestao');
+    if(novo==='aguardando' && de==='nao_fechou') return orcAssinaturaDoRegistro(reg, 'propria');
+    return 'Esta mudança de situação não existe no Orçamento («'+orcStatusRotulo(de)+'» → «'+orcStatusRotulo(novo)+'»). Nada foi gravado.';
+  }
+  // As três mudanças de situação que o orcStatusGravar faz (as mesmas do orcStatusBarra): fora delas, a barreira não é de permissão.
+  function orcStatusTransicao(novo, de){
+    return ((novo==='fechado' || novo==='nao_fechou') && de==='aguardando') || (novo==='aguardando' && (de==='fechado' || de==='nao_fechou'));
+  }
+  // 6.68, fechamento dos CONCERNS (LOW-R3-2): a mudança que não existe a partir do que a pergunta ou o cartaz mostrou NÃO é falta
+  // de permissão — é a tela velha (outro aparelho mudou a situação) ou o console. Nada de «BARROU» na Linha do tempo: relê o
+  // orçamento e diz como ele está agora (a frase do REL-004); se o banco é o que a tela viu, a frase de sempre. Nada é gravado.
+  function orcStatusNaoExiste(id, vista, frase, reg){
+    if(!DB) return Promise.resolve({ok:false, erro:frase});
+    var rel=orcRelerParaGravar(id, vista);
+    if(!reg) rel=corrComPrazo(rel, CORR_PRAZO, zErroInicial(CORR_PRAZO_ERRO)+': nada foi gravado. Confira na lista antes de tocar de novo.');
+    return rel.then(function(R){
+      var e=(R && R.ok)?frase:String((R && R.erro)||frase);
+      if(!reg) zAlertao((R && R.mudou)?'ESTE ORÇAMENTO MUDOU':'NÃO FOI GRAVADO', [zErroFrase(e)], {botao:'Entendi'});
+      return {ok:false, erro:e, mudou:!!(R && R.mudou)};
+    });
+  }
+  // 2ª rodada: a situação é decidida pelo RELIDO (REL-001); o 2º toque com a 1ª gravação no ar não grava (LOW-6); o banco
+  // recusando, a tela diz «NÃO FOI GRAVADO» com a frase da 6.48 e o texto do tutor não se perde (LOW-1).
+  var ORC_NF_RASCUNHO={};
+  function orcStatusGravar(id, novo, op){
+    op=op||{};
+    // fechamento dos CONCERNS (LOW-R3-2): a barreira decide pelo que a pergunta ou o cartaz mostrou (op.vista), como a releitura
+    // (REL-004); sem a vista (o console, uma chamada de antes), a memória da tela. A lista relida com a pergunta aberta não vira
+    // um «BARROU … sem permissão» falso.
+    var vista=op.vista||orcDoId(id)||{};
+    var deV=String(vista.status||'aguardando');
+    var reg=op.reg||null;
+    var barra=orcStatusBarra(novo, deV, reg, vista);
+    if(barra==='rotina') return orcBarrarRotina('mudar a situação do orçamento', id);
+    if(barra && !orcStatusTransicao(novo, deV)) return orcStatusNaoExiste(id, vista, barra, reg);
+    if(barra){ corrBarrar('mudar a situação do orçamento', corrQuemPode((novo==='aguardando' && deV==='fechado' && !orcFechadoHoje(vista))?'gestao-role':'assinar-orcamento', 'orcamento'), {orcamento:id}, {calado:true});
+      return Promise.resolve({ok:false, barrou:true, erro:barra}); }
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    if(novo==='nao_fechou'){ var em=orcMotivoErro(op.texto); if(em) return Promise.resolve({ok:false, onde:'motivo', erro:em}); }
+    var ja=orcJaGravando(id, !reg); if(ja) return Promise.resolve(ja);
+    ORC_GRAVANDO[id]=true;
+    var solta=function(r){ delete ORC_GRAVANDO[id]; return r; };
+    var rel=orcRelerParaGravar(id, vista);
+    // 3ª rodada (LOW-R2): sem internet, a releitura da rotina («Fechou», «Não fechou», sem cartaz) não fica calada: passados
+    // 20 segundos (o prazo da 6.57), nada é gravado, a trava solta e a tela diz; a leitura que chegar depois não grava nada.
+    if(!reg) rel=corrComPrazo(rel, CORR_PRAZO, zErroInicial(CORR_PRAZO_ERRO)+': nada foi gravado. Confira na lista antes de tocar de novo.');
+    return rel.then(function(R){
+      if(!R.ok){
+        // sem resposta (ou sem a leitura), o que a pessoa escreveu no «Não fechou» volta no próximo toque (como no LOW-1)
+        var guarda=(!reg && novo==='nao_fechou' && (R.semResposta || R.leitura) && String(op.texto||'').trim())?String(op.texto).trim():'';
+        if(guarda) ORC_NF_RASCUNHO[id]=guarda;
+        if(!reg) zAlertao(R.mudou?'ESTE ORÇAMENTO MUDOU':'NÃO FOI GRAVADO', [zErroFrase(R.erro)].concat(guarda?['O que você escreveu ficou guardado e volta no «Não fechou»: «'+guarda+'».']:[]), {botao:'Entendi'});
+        return {ok:false, erro:R.erro, mudou:!!R.mudou};
+      }
+      return orcStatusGravarRelido(id, novo, op, R.o);
+    }).then(solta, function(e){ solta(); throw e; });
+  }
+  function orcStatusGravarRelido(id, novo, op, o0){
+    var reg=op.reg||null;
+    var de=String(o0.status||'aguardando');
+    // a situação de antes é a do RELIDO: se não é a que a ação espera (outro aparelho, uma tela velha, o console), nada é gravado
+    if(op.de && de!==op.de){ var fr='Este orçamento mudou em outro aparelho (agora está «'+orcStatusRotulo(de)+'»). Nada foi gravado.';
+      if(!reg) zAlertao('ESTE ORÇAMENTO MUDOU', [fr], {botao:'Entendi'}); return Promise.resolve({ok:false, erro:fr}); }
+    if(novo==='aguardando' && de==='fechado' && orcCheckinFeitoNoOrcamento(o0, ORC_ESTADIAS_CACHE)) return Promise.resolve({ok:false, erro:ORC_JA_ESTADIA_VOLTAR});
+    var ts=Date.now(), base='auaulandia/orcamentos/'+id+'/';
+    var quem=reg?{nome:String(reg.por||''), papel:String(reg.papel||'')}:{nome:(typeof quemSou==='function'?quemSou():'-'), papel:papelDoCorpo()};
+    var o=Object.assign({}, o0, {status:novo});
+    var extra={ts:ts}, nf=null;
+    if(reg){ extra.motivo=String(reg.motivo||''); extra.registro=reg; }
+    if(novo==='nao_fechou'){
+      // o formato da seção 4 da especificação linha 81 (sem categoria: a lista de motivos é da 81-C)
+      nf={motivo:'', texto:String(op.texto||'').trim(), estado:'respondido', por:quem.nome, papel:quem.papel, ts:ts};
+      o.nao_fechou=nf; extra.texto=nf.texto;
+    }
+    if(de==='nao_fechou' && novo==='aguardando'){ extra.antes={nao_fechou:o0.nao_fechou||null}; delete o.nao_fechou; }
+    var acerto=repOrcAcerto(id, o);
+    var patch=Object.assign({}, acerto.patch);
+    patch[base+'status']=novo; patch[base+'status_em']=ts; patch[base+'status_por']=quem.nome;
+    if(nf) patch[base+'nao_fechou']=nf;
+    if(de==='nao_fechou' && novo==='aguardando') patch[base+'nao_fechou']=null;
+    if(novo==='fechado'){ patch[base+'planilha_tirada']=null; delete o.planilha_tirada; }   // o «Fechou» limpa a retirada (ela fica no planilha_hist)
+    var forcado=ORC_DUP_OK_STATUS[id]||null;
+    if(forcado) patch[base+'duplicado_confirmado']=forcado;
+    var kH=orcNovaChave(base+'status_hist');
+    var hist=orcStatusHist(de, novo, quem, extra);
+    patch[base+'status_hist/'+kH]=hist;
+    var foiPlanilha=orcFoiAPlanilha(o0), quando=orcAgoraBR();
+    return DB.ref().update(patch).then(function(){
+      try{
+        if(forcado){ delete ORC_DUP_OK_STATUS[id]; o.duplicado_confirmado=forcado;
+          if(typeof audit==='function') audit('orcamento-duplicado-confirmado', forcado.quem+' confirmou que é OUTRA hospedagem e '+(novo==='fechado'?'fechou':'reabriu')+' mesmo assim — '+orcNomesDe(o0)+' · '+orcDatasDe(o0), {pet:((o0.pets||[])[0]||{}).nome||'', quem:forcado.quem}); }
+        o.status_em=ts; o.status_por=quem.nome; o.status_hist=Object.assign({}, o0.status_hist||{}); o.status_hist[kH]=hist;
+        orcCacheTrocar(id, o);
+        if(typeof audit==='function') audit('orcamento-status', orcIdentidade(id, o0)+': '+orcStatusRotulo(de)+' → '+orcStatusRotulo(novo), {pet:((o0.pets||[])[0]||{}).nome||'', orcamento:id, quem:quem.nome});
+        if(novo==='nao_fechou' && typeof audit==='function') audit('orcamento-nao-fechou', orcIdentidade(id, o0)+' — '+nf.texto, {orcamento:id, quem:quem.nome});
+        if(de==='nao_fechou' && typeof audit==='function') audit('orcamento-reaberto', orcIdentidade(id, o0)+' volta a aguardar o tutor — motivo: '+String(reg.motivo||''), {orcamento:id, quem:quem.nome});
+        if(de==='fechado' && novo==='aguardando' && typeof audit==='function') audit('orcamento-voltou-pendente', orcIdentidade(id, o0)+' — motivo: '+String(reg.motivo||''), {orcamento:id, quem:quem.nome});
+        if(acerto.baixadas||acerto.estornadas||acerto.reservadas){
+          if(typeof audit==='function') audit('reposicao-baixa-orcamento',
+            'orçamento '+repOrcCurto(id)+' marcado como '+novo+' — '+repOrcResumo(acerto)+' ('+acerto.linhas.join(' · ')+')',
+            {pet:((o0.pets||[])[0]||{}).nome||'', quem:quem.nome});
+          if((acerto.baixadas||acerto.estornadas) && typeof zAlertao==='function') zAlertao(acerto.baixadas?'RESERVAS ABATIDAS NA FICHA':'RESERVAS DEVOLVIDAS À FICHA',
+            [repOrcResumo(acerto), acerto.linhas.join(' · ')], {ok:true, botao:'Certo'});
+        }
+        orcRenderLista();
+        // a planilha, só depois do ok do banco
+        if(novo==='fechado') orcEnviarPlanilha(id, {porque:'fechou'});
+        else if(foiPlanilha && de==='fechado') orcTirarDaPlanilha(id, quem.nome, quando, {porque:'voltar-pendente', marca:'VOLTOU PARA PENDENTE', registro:reg, o:o0});
+        else if(foiPlanilha && novo==='nao_fechou') orcTirarDaPlanilha(id, quem.nome, quando, {porque:'nao-fechou', marca:'CANCELADO', o:o0});
+        if(novo==='nao_fechou') delete ORC_NF_RASCUNHO[id];
+      }catch(x){ _logFalhaGrav('auaulandia/orcamentos (depois da mudança de situação)', x); }
+      return {ok:true};
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcStatus)', e);
+      // LOW-1: a rotina («Fechou», «Não fechou») não tem cartaz: a tela diz que NÃO foi gravado, com a frase da 6.48, e o
+      // texto do tutor volta na próxima vez que alguém tocar «Não fechou» (o cartaz da volta mostra o erro sozinho)
+      if(!reg){
+        var Lf=[zErroFrase(zErroInicial(zErroMotivo(e, 'banco', '', {agora:true}))), 'A situação continua «'+orcStatusRotulo(de)+'».'+zErroAcao(e, {alvo:'banco', agora:true})];
+        if(nf && nf.texto){ ORC_NF_RASCUNHO[id]=nf.texto; Lf.push('O que você escreveu ficou guardado e volta no «Não fechou»: «'+nf.texto+'».'); }
+        zAlertao('NÃO FOI GRAVADO', Lf, {botao:'Entendi'});
+      }
+      return {ok:false, erro:String((e&&e.message)||e)};
+    });
+  }
+  // ---- «VOLTAR PARA PENDENTE» (AC3) ---------------------------------------------------------
+  async function orcVoltarPendenteAbrir(id){
+    await orcLerVivos();   // 2ª rodada (LOW-4): a frase da trava da Maya vê também as reservas de fora dos 60
+    var o=orcDoId(id)||{};
+    if(String(o.status||'')!=='fechado'){ zAlertao('ESTE ORÇAMENTO NÃO ESTÁ FECHADO', ['Ele está «'+orcStatusRotulo(o.status)+'». Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    if(orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE)){ zAlertao('NÃO DÁ PARA VOLTAR PARA PENDENTE', [ORC_JA_ESTADIA_VOLTAR], {botao:'Entendi'}); return Promise.resolve({ok:false, erro:ORC_JA_ESTADIA_VOLTAR}); }
+    var hoje=orcFechadoHoje(o);
+    var volta=orcPlanilhaCascata(id, o).concat(orcRepFrases(o, 'voltam de baixa para reservados.')).concat(['O botão Check-in sai de Estadias fechadas.']);
+    if(!hoje) volta.push('Ela foi fechada em dia anterior: quem assina é a Gestão.');
+    return corrAbrir({acao:'reabrir', titulo:'Voltar para pendente: '+orcNomesDe(o), oque:'a reserva de '+orcNomesDe(o)+' ('+orcDatasDe(o)+')',
+      tela:'Orçamento de hospedagem', original:{caminho:'auaulandia/orcamentos/'+id, id:id},
+      estado:'fechou', paraEstado:'aguardando o tutor', volta:volta, nivel:hoje?'propria':'gestao',
+      capacidade:'assinar-orcamento', telaConcedida:'orcamento', botao:'Voltar para pendente',
+      gravar:function(reg){ return orcStatusGravar(id, 'aguardando', {de:'fechado', reg:reg, vista:o}); }});   // 3ª rodada (REL-004): o que o cartaz mostrou
+  }
+  // ---- «REABRIR» O «NÃO FECHOU», «REATIVAR RESERVA» E «REABRIR» O ANULADO (AC2.4, AC2.5, AC6.4, AC6.5, AC7.6) --------
+  function orcNaoFechouReabrirAbrir(id){ return orcVoltaAbrir(id, 'nao_fechou'); }
+  function orcReativarAbrir(id){ return orcVoltaAbrir(id, 'cancelado'); }
+  function orcAnulacaoDesfazerAbrir(id){ return orcVoltaAbrir(id, 'anulado'); }
+  async function orcVoltaAbrir(id, tipo){
+    var o=orcDoId(id)||{};
+    var st=String(o.status||'');
+    var verbo=(tipo==='cancelado')?'REATIVAR':'REABRIR';
+    if(st!==tipo){ zAlertao('ESTE ORÇAMENTO MUDOU', ['Ele agora está «'+orcStatusRotulo(st)+'». Nada foi gravado.'], {botao:'Entendi'}); return {ok:false}; }
+    var semSaldo=orcRepNaoCobre(id, o);
+    if(semSaldo){ zAlertao('NÃO DÁ PARA '+verbo, [semSaldo], {botao:'Entendi'}); return {ok:false, erro:semSaldo}; }
+    var LD=await orcListaDuplicidade();
+    var dups=orcDuplicados(LD.lista, Object.assign({id:id}, o), id);
+    if(dups.length && !ORC_DUP_OK_STATUS[id]){
+      orcCartazDuplicado(dups, Object.assign({id:id}, o), function(){ ORC_DUP_OK_STATUS[id]={quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()}; orcVoltaAbrir(id, tipo); });
+      return {ok:false, duplicado:true};
+    }
+    var nomes=orcNomesDe(o);
+    var de=(tipo==='anulado')?(o.anulado_de||null):((tipo==='cancelado')?(o.cancelado_de||null):null);
+    var padrao=(tipo==='nao_fechou')?'Aguardando o tutor':(de?((de.status==='fechado')?'Fechou':'Aguardando o tutor'):(orcFoiAPlanilha(o)?'Fechou':'Aguardando o tutor'));
+    var escolha=padrao;
+    var cascataDe=function(esc){
+      var L=[];
+      if(esc==='Fechou'){
+        L.push('As linhas de '+nomes+' entram de novo na planilha (a linha riscada continua riscada, como registro).');
+        L=L.concat(orcRepUsada(o).map(function(r){ return r.n+' dia(s) de reposição de '+r.nome+' viram baixa de novo.'; }));
+        if(de && de.status==='fechado' && de.status_em) L.push('A data do fechamento continua a de '+orcQuandoBR(de.status_em).split(' às ')[0]+': a parcela da reserva fica no mês em que o tutor fechou.');
+      } else {
+        L.push((tipo==='nao_fechou')?'Volta para Orçamentos a confirmar, aguardando o tutor.':'Ela volta para Orçamentos a confirmar, aguardando o tutor.');
+        L=L.concat(orcRepUsada(o).map(function(r){ return r.n+' dia(s) de reposição de '+r.nome+' voltam a ficar reservados.'; }));
+      }
+      if(String(o.cancelado_origem||'')==='hospedagem-excluida') L.push('A hospedagem que foi excluída continua excluída: só o orçamento volta.');
+      if(LD.aviso) L.push(LD.aviso);
+      if(dups.length) L.push('Há outro orçamento deste FILHOt nestas datas: fica registrado quem confirmou que é outra hospedagem.');
+      return L;
+    };
+    var op={acao:'reabrir', tela:'Orçamento de hospedagem', original:{caminho:'auaulandia/orcamentos/'+id, id:id},
+      titulo:((tipo==='cancelado')?'Reativar a reserva de ':((tipo==='anulado')?'Reabrir o orçamento anulado de ':'Reabrir o «Não fechou» de '))+nomes,
+      oque:((tipo==='cancelado')?'a reserva cancelada de ':((tipo==='anulado')?'o orçamento anulado de ':'o «Não fechou» de '))+nomes+' ('+orcDatasDe(o)+')',
+      estado:orcStatusRotulo(tipo), paraEstado:(escolha==='Fechou')?'fechou':'aguardando o tutor', volta:cascataDe(escolha),
+      nivel:(tipo==='anulado')?'gestao':'propria', capacidade:'assinar-orcamento', telaConcedida:'orcamento',
+      botao:(tipo==='cancelado')?'Reativar reserva':'Reabrir',
+      gravar:function(reg){ return orcVoltarAoStatusDeAntes(id, tipo, (escolha==='Fechou')?'fechado':'aguardando', reg, o); }};   // 3ª rodada (REL-004)
+    if(tipo!=='nao_fechou'){
+      op.campos=[{c:'volta_como', rotulo:'Volta como', valor:padrao, opcoes:['Fechou', 'Aguardando o tutor']}];
+      op.camposTexto='Escolha como a reserva volta e toque em «Continuar».'+(de?'':' Este registro é antigo e não guardou a situação de antes: a opção marcada vem de a reserva ter ido ou não à planilha. Confira antes de continuar.');
+      op.validar=function(vals){
+        escolha=(String((vals||[])[0]||'')==='Fechou')?'Fechou':'Aguardando o tutor';
+        return {volta:cascataDe(escolha), paraEstado:(escolha==='Fechou')?'fechou':'aguardando o tutor'};
+      };
+    }
+    return corrAbrir(op);
+  }
+  // A gravação comum do «Reativar» e do «Reabrir» o anulado (o «Não fechou» volta pelo orcStatusGravar). O status volta
+  // (como «Fechou», com o status_em e o status_por do fechamento original: a parcela da reserva continua no mês em que o
+  // tutor fechou — S7-P9); os campos do cancelamento (ou da anulação) vão inteiros para cancelamentos_desfeitos (ou
+  // anulacoes_desfeitas), com o registro da 6.57, e saem do topo; o status_hist; o acerto da reposição. NUMA escrita.
+  // vistaTela (3ª rodada, opcional): o orçamento como o cartaz o mostrou; sem ela, a memória da tela.
+  function orcVoltarAoStatusDeAntes(id, tipo, para, reg, vistaTela){
+    if(tipo==='nao_fechou') return orcStatusGravar(id, 'aguardando', {de:'nao_fechou', reg:reg, vista:vistaTela||null});
+    reg=reg||{};
+    var vista=vistaTela||orcDoId(id)||{};
+    var barra=orcAssinaturaDoRegistro(reg, (tipo==='anulado')?'gestao':'propria');
+    if(barra){ corrBarrar((tipo==='anulado')?'reabrir o orçamento anulado':'reativar a reserva', corrQuemPode((tipo==='anulado')?'gestao-role':'assinar-orcamento', (tipo==='anulado')?'':'orcamento'), {orcamento:id}, {calado:true});
+      return Promise.resolve({ok:false, barrou:true, erro:barra}); }
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var ja=orcJaGravando(id, false); if(ja) return Promise.resolve(ja);
+    ORC_GRAVANDO[id]=true;
+    var solta=function(r){ delete ORC_GRAVANDO[id]; return r; };
+    // 2ª rodada (REL-001): o anulado_de, o cancelado_de, os campos guardados e a reposição saem do RELIDO
+    return orcRelerParaGravar(id, vista).then(function(R){
+      if(!R.ok) return {ok:false, erro:R.erro, mudou:!!R.mudou};
+      return orcVoltarRelido(id, tipo, para, reg, R.o);
+    }).then(solta, function(e){ solta(); throw e; });
+  }
+  function orcVoltarRelido(id, tipo, para, reg, o0){
+    // a situação de antes é a do RELIDO: só volta o que ainda está cancelado (ou anulado)
+    if(String(o0.status||'')!==tipo) return Promise.resolve({ok:false, erro:'Este orçamento mudou em outro aparelho (agora está «'+orcStatusRotulo(o0.status)+'»). Nada foi gravado.'});
+    para=(para==='fechado')?'fechado':'aguardando';
+    var antesDe=(tipo==='anulado')?(o0.anulado_de||null):(o0.cancelado_de||null);
+    var ts=Date.now(), base='auaulandia/orcamentos/'+id+'/';
+    var stEm=ts, stPor=String(reg.por||''), fechouOrig=null;
+    if(para==='fechado' && antesDe && antesDe.status==='fechado' && Number(antesDe.status_em)){
+      stEm=Number(antesDe.status_em); stPor=String(antesDe.status_por||reg.por||''); fechouOrig={quem:stPor, ts:stEm};
+    }
+    var o=Object.assign({}, o0, {status:para, status_em:stEm, status_por:stPor});
+    var guardado={}, patch;
+    var acerto=repOrcAcerto(id, o);
+    patch=Object.assign({}, acerto.patch);
+    var CAMPOS=(tipo==='anulado')?['anulado', 'anulado_de']
+      :['cancelado_por', 'cancelado_role', 'cancelado_ts', 'cancelado_em_br', 'cancelado_motivo', 'cancelado_planilha_ok', 'cancelado_planilha_msg', 'cancelado_de', 'cancelado_origem'];
+    CAMPOS.forEach(function(c){ if(o0[c]!==undefined && o0[c]!==null) guardado[c]=o0[c]; patch[base+c]=null; delete o[c]; });
+    var kD=orcNovaChave(base+((tipo==='anulado')?'anulacoes_desfeitas':'cancelamentos_desfeitos'));
+    patch[base+((tipo==='anulado')?'anulacoes_desfeitas/':'cancelamentos_desfeitos/')+kD]=Object.assign({}, guardado, {registro:reg});
+    patch[base+'status']=para; patch[base+'status_em']=stEm; patch[base+'status_por']=stPor;
+    if(para==='fechado'){ patch[base+'planilha_tirada']=null; delete o.planilha_tirada; }
+    var forcado=ORC_DUP_OK_STATUS[id]||null;
+    if(forcado){ patch[base+'duplicado_confirmado']=forcado; o.duplicado_confirmado=forcado; }
+    var kH=orcNovaChave(base+'status_hist');
+    var extraH={ts:ts, registro:reg, antes:guardado, fechou_original:fechouOrig||undefined};
+    extraH.motivo=String(reg.motivo||'');
+    var hist=orcStatusHist(tipo, para, {nome:reg.por, papel:reg.papel}, extraH);
+    patch[base+'status_hist/'+kH]=hist;
+    return DB.ref().update(patch).then(function(){
+      try{
+        if(forcado) delete ORC_DUP_OK_STATUS[id];
+        o.status_hist=Object.assign({}, o0.status_hist||{}); o.status_hist[kH]=hist;
+        var cd=(tipo==='anulado')?'anulacoes_desfeitas':'cancelamentos_desfeitos';
+        o[cd]=Object.assign({}, o0[cd]||{}); o[cd][kD]=Object.assign({}, guardado, {registro:reg});
+        orcCacheTrocar(id, o);
+        if(typeof audit==='function'){
+          audit('orcamento-status', orcIdentidade(id, o0)+': '+orcStatusRotulo(tipo)+' → '+orcStatusRotulo(para), {pet:((o0.pets||[])[0]||{}).nome||'', orcamento:id, quem:stPor});
+          audit((tipo==='anulado')?'orcamento-anulacao-desfeita':'orcamento-reativado', orcIdentidade(id, o0)+' volta como «'+orcStatusRotulo(para)+'» — motivo: '+String(reg.motivo||''), {orcamento:id, quem:String(reg.por||'')});
+          if(acerto.baixadas||acerto.estornadas||acerto.reservadas) audit('reposicao-baixa-orcamento',
+            'orçamento '+repOrcCurto(id)+' '+((tipo==='anulado')?'reaberto':'reativado')+' como '+para+' — '+repOrcResumo(acerto)+' ('+acerto.linhas.join(' · ')+')', {pet:((o0.pets||[])[0]||{}).nome||'', quem:String(reg.por||'')});
+        }
+        orcRenderLista();
+        // como «Fechou»: o envio de sempre, depois do ok (nas duas pontes a linha nova entra; a riscada não é achada como a mesma)
+        if(para==='fechado') orcEnviarPlanilha(id, {porque:'reativar', dataReserva:fechouOrig?orcDiaDoTs(stEm):''});
+      }catch(x){ _logFalhaGrav('auaulandia/orcamentos (depois de reativar)', x); }
+      return {ok:true};
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao ('+((tipo==='anulado')?'reabrir o anulado':'reativar')+')', e);
+      return {ok:false, erro:String((e&&e.message)||e)};
+    });
+  }
+  // ---- «ANULAR (LANÇADO POR ENGANO)» NO LUGAR DO «APAGAR» (AC7) ------------------------------
+  // O orçamento nunca vai a null: fica em Cancelados, riscado, com quem, quando e o motivo — e com «Reabrir». A senha é a
+  // da Gestão (decisão 1: dinheiro, S7-P2).
+  async function orcAnularAbrir(id){
+    await orcLerVivos();   // 2ª rodada (LOW-4): a frase da trava da Maya vê também as reservas de fora dos 60
+    var o=orcDoId(id)||null;
+    if(!o){ zAlertao('ORÇAMENTO NÃO ENCONTRADO', ['Abra a lista de novo e tente outra vez. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    if(String(o.status||'')==='anulado'){ zAlertao('ESTE ORÇAMENTO JÁ ESTÁ ANULADO', ['Ele está em Cancelados, riscado, com «Reabrir». Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    if(!orcAnulavel(o)){ zAlertao('NÃO DÁ PARA ANULAR', [orcNaoAnulavelTexto(o)], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    if(orcCheckinFeitoNoOrcamento(o, ORC_ESTADIAS_CACHE)){ zAlertao('NÃO DÁ PARA ANULAR', [ORC_JA_ESTADIA_ANULAR], {botao:'Entendi'}); return Promise.resolve({ok:false, erro:ORC_JA_ESTADIA_ANULAR}); }
+    var nomes=orcNomesDe(o);
+    var cascata=['Sai das contas: Orçamentos a confirmar, Estadias fechadas, a trava de duplicidade e o Financeiro.'];
+    if(orcFoiAPlanilha(o)){
+      cascata.push((orcNaPlanilhaComCerteza(o) || String(o.status||'')==='fechado' ? '' : 'Ela pode ter ficado na planilha: o último envio não confirmou tudo. ')
+        +'As linhas de '+nomes+' ficam riscadas na planilha («ANULADO» com a ponte nova; «CANCELADO» com a de hoje) e as noites de '+orcDatasDe(o)+' são liberadas no calendário.');
+      cascata=cascata.concat(orcMayaFrases(id, o));
+    }
+    cascata=cascata.concat(orcRepUsada(o).map(function(r){ return r.n+' dia(s) de reposição de '+r.nome+' voltam à ficha.'; }));
+    cascata.push('Fica guardado em Cancelados, riscado, com quem, quando e o motivo.');   // o «Nada é apagado.» é a frase do cartaz (6.57)
+    return corrAbrir({acao:'anular', titulo:'Anular (lançado por engano): '+nomes, oque:'o orçamento de '+nomes+' ('+orcDatasDe(o)+')',
+      tela:'Orçamento de hospedagem', original:{caminho:'auaulandia/orcamentos/'+id, id:id}, estado:orcStatusRotulo(o.status),
+      cascata:cascata, nivel:'gestao', capacidade:'assinar-orcamento',
+      gravar:function(reg){ return orcAnularGravar(id, reg, o); }});   // 3ª rodada (REL-004): o que o cartaz mostrou
+  }
+  // LOW-5: só se anula o que aguarda o tutor ou está fechado (o botão só existe nessas duas seções; o console também).
+  function orcAnulavel(o){ var st=String((o||{}).status||'aguardando'); return st==='aguardando' || st==='fechado'; }
+  function orcNaoAnulavelTexto(o){
+    var st=String((o||{}).status||'aguardando');
+    return (st==='anulado')?'Este orçamento já está anulado. Nada foi gravado.'
+      :('Só dá para anular um orçamento que aguarda o tutor ou está fechado: este está «'+orcStatusRotulo(st)+'». Nada foi gravado.');
+  }
+  function orcAnularGravar(id, reg, vistaTela){
+    reg=reg||{};
+    var vista=vistaTela||orcDoId(id)||{};   // 3ª rodada (REL-004): o que o cartaz mostrou; sem ela, a memória da tela
+    var barra=orcAssinaturaDoRegistro(reg, 'gestao');
+    if(barra){ corrBarrar('anular o orçamento (lançado por engano)', corrQuemPode('gestao-role'), {orcamento:id}, {calado:true}); return Promise.resolve({ok:false, barrou:true, erro:barra}); }
+    if(!DB) return Promise.resolve({ok:false, erro:'sem conexão com o banco'});
+    var ja=orcJaGravando(id, false); if(ja) return Promise.resolve(ja);
+    ORC_GRAVANDO[id]=true;
+    var solta=function(r){ delete ORC_GRAVANDO[id]; return r; };
+    // 2ª rodada (REL-001): o anulado_de, a planilha e a reposição saem do RELIDO
+    return orcRelerParaGravar(id, vista).then(function(R){
+      if(!R.ok) return {ok:false, erro:R.erro, mudou:!!R.mudou};
+      return orcAnularRelido(id, reg, R.o);
+    }).then(solta, function(e){ solta(); throw e; });
+  }
+  function orcAnularRelido(id, reg, o0){
+    if(orcCheckinFeitoNoOrcamento(o0, ORC_ESTADIAS_CACHE)) return Promise.resolve({ok:false, erro:ORC_JA_ESTADIA_ANULAR});
+    if(!orcAnulavel(o0)) return Promise.resolve({ok:false, erro:orcNaoAnulavelTexto(o0)});
+    var de=String(o0.status||'aguardando');
+    var ts=Date.now(), base='auaulandia/orcamentos/'+id+'/';
+    var anuladoDe={status:de, status_em:Number(o0.status_em)||0, status_por:String(o0.status_por||'')};
+    var o=Object.assign({}, o0, {status:'anulado', status_em:ts, status_por:String(reg.por||''), anulado:reg, anulado_de:anuladoDe});
+    var acerto=repOrcAcerto(id, o);
+    var patch=Object.assign({}, acerto.patch);
+    patch[base+'status']='anulado'; patch[base+'status_em']=ts; patch[base+'status_por']=String(reg.por||'');
+    patch[base+'anulado']=reg; patch[base+'anulado_de']=anuladoDe;
+    var kH=orcNovaChave(base+'status_hist');
+    var extraA={ts:ts, registro:reg};
+    extraA.motivo=String(reg.motivo||'');
+    var hist=orcStatusHist(de, 'anulado', {nome:reg.por, papel:reg.papel}, extraA);
+    patch[base+'status_hist/'+kH]=hist;
+    var foi=orcFoiAPlanilha(o0), quando=orcAgoraBR();
+    return DB.ref().update(patch).then(function(){
+      try{
+        o.status_hist=Object.assign({}, o0.status_hist||{}); o.status_hist[kH]=hist;
+        orcCacheTrocar(id, o);
+        if(typeof audit==='function'){
+          audit('orcamento-status', orcIdentidade(id, o0)+': '+orcStatusRotulo(de)+' → '+orcStatusRotulo('anulado'), {pet:((o0.pets||[])[0]||{}).nome||'', orcamento:id, quem:String(reg.por||'')});
+          audit('orcamento-anulado', orcIdentidade(id, o0)+' — motivo: '+String(reg.motivo||'')+(acerto.estornadas?(' — '+repOrcResumo(acerto)):''), {orcamento:id, quem:String(reg.por||'')});
+        }
+        orcRenderLista();
+        if(foi) orcTirarDaPlanilha(id, String(reg.por||''), quando, {porque:'anular', marca:'ANULADO', registro:reg, o:o0});
+      }catch(x){ _logFalhaGrav('auaulandia/orcamentos (depois de anular)', x); }
+      return {ok:true};
+    }).catch(function(e){
+      _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcApagar)', e);
+      return {ok:false, erro:String((e&&e.message)||e)};
+    });
+  }
+  // ---- «TIRAR DA PLANILHA» (AC8): a proposta que voltou a aguardar antes desta story e ainda está na planilha -------
+  async function orcTirarDaPlanilhaAbrir(id){
+    await orcLerVivos();   // 2ª rodada (LOW-4): a frase da trava da Maya vê também as reservas de fora dos 60
+    var o=orcDoId(id)||{};
+    if(String(o.status||'aguardando')!=='aguardando' || !orcFoiAPlanilha(o)){ zAlertao('NADA A TIRAR', ['Esta proposta não está na planilha. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false}); }
+    return corrAbrir({acao:'anular', rotulo:'Tirada da planilha', rotuloAcao:'Tirou da planilha', titulo:'Tirar da planilha: '+orcNomesDe(o),
+      oque:'a proposta de '+orcNomesDe(o)+' na planilha ('+orcDatasDe(o)+')', tela:'Orçamento de hospedagem', original:{caminho:'auaulandia/orcamentos/'+id, id:id},
+      estado:'na planilha', cascata:[orcAvisoPlanilhaTexto(o)].concat(orcPlanilhaCascata(id, o)).concat(['A proposta continua aguardando o tutor; a reposição não muda.']),
+      nivel:'propria', capacidade:'assinar-orcamento', telaConcedida:'orcamento', botao:'Tirar da planilha',
+      gravar:function(reg){ return orcTirarDaPlanilhaGravar(id, reg, o); }});   // 3ª rodada (REL-004): o que o cartaz mostrou
+  }
+  function orcTirarDaPlanilhaGravar(id, reg, vistaTela){
+    reg=reg||{};
+    var vista=vistaTela||orcDoId(id)||{};   // 3ª rodada (REL-004): o que o cartaz mostrou; sem ela, a memória da tela
+    var barra=orcAssinaturaDoRegistro(reg, 'propria');
+    if(barra){ corrBarrar('tirar a proposta da planilha', corrQuemPode('assinar-orcamento', 'orcamento'), {orcamento:id}, {calado:true}); return Promise.resolve({ok:false, barrou:true, erro:barra}); }
+    if(!(orcSheetsCfg||{}).url) return Promise.resolve({ok:false, erro:'a ponte com a planilha não está configurada neste sistema: tire à mão as linhas de '+orcNomesDe(vista)+' de '+orcDatasDe(vista)});
+    var ja=orcJaGravando(id, false); if(ja) return Promise.resolve(ja);
+    ORC_GRAVANDO[id]=true;
+    var solta=function(r){ delete ORC_GRAVANDO[id]; return r; };
+    // 2ª rodada (REL-001): relê antes de pedir à planilha — e a retirada usa o RELIDO
+    return orcRelerParaGravar(id, vista).then(function(R){
+      if(!R.ok) return {ok:false, erro:R.erro, mudou:!!R.mudou};
+      if(String(R.o.status||'aguardando')!=='aguardando') return {ok:false, erro:'Este orçamento mudou em outro aparelho (agora está «'+orcStatusRotulo(R.o.status)+'»). Nada foi gravado.'};
+      if(!orcFoiAPlanilha(R.o)) return {ok:false, erro:'Esta proposta não está mais na planilha. Nada foi gravado.'};
+      return orcTirarDaPlanilhaRelido(id, reg, R.o);
+    }).then(solta, function(e){ solta(); throw e; });
+  }
+  function orcTirarDaPlanilhaRelido(id, reg, o){
+    return orcTirarDaPlanilha(id, String(reg.por||''), orcAgoraBR(), {porque:'tirar', marca:'VOLTOU PARA PENDENTE', registro:reg, o:o}).then(function(r){
+      if(r && r.ok){ try{ if(typeof audit==='function') audit('orcamento-planilha-tirada', orcIdentidade(id, o)+' — motivo: '+String(reg.motivo||''), {orcamento:id, quem:String(reg.por||'')}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+        return {ok:true}; }
+      return {ok:false, erro:'a planilha não confirmou a retirada: '+(((r&&r.pets)||[]).filter(function(x){ return !x.ok; }).map(function(x){ return x.nome+' ('+String(x.falha||'sem resposta')+')'; }).join(', ')||'sem resposta')};
+    });
+  }
+  // ---- «MUDANÇAS DESTA RESERVA» (AC4.4): o historico à vista, com o resultado da planilha daquela mudança ---------------
+  function orcMudancaLinhas(o){
+    o=o||{};
+    var H=o.historico||{}, PH=o.planilha_hist||{};
+    return Object.keys(H).map(function(k){ return {k:k, h:H[k]||{}}; })
+      .sort(function(a,b){ return (Number(a.h.ts)||0)-(Number(b.h.ts)||0); })
+      .map(function(x){
+        var h=x.h;
+        var de=orcBR(h.de_entrada||'')+' a '+orcBR(h.de_saida||'')+' · '+fmtCent(+h.de_total_cent||0);
+        var para=orcBR(h.para_entrada||'')+' a '+orcBR(h.para_saida||'')+' · '+fmtCent(+h.para_total_cent||0);
+        var pl=Object.keys(PH).map(function(k){ return PH[k]; }).filter(function(p){ return p && p.mudanca===x.k; });
+        var plTxt=pl.length?(orcPlanilhaResumo(pl[pl.length-1].pets)+'.'):((h.status && h.status!=='fechado')?'A planilha não mudou: a reserva aguardava o tutor.':'');
+        return (h.em_br||orcQuandoBR(h.ts))+' — '+(h.por||'-')+': de '+de+' para '+para+'. Motivo: '+String(h.motivo||'').replace(/[.\s]+$/,'')+'.'+(plTxt?(' '+plTxt):'');
+      });
+  }
+  function orcMudancasHTML(o){
+    var L=orcMudancaLinhas(o);
+    if(!L.length) return '';
+    return '<details class="orc-mud" style="margin-top:6px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:13px;font-weight:700;color:var(--z-blue)">'
+      +esc('Mudanças desta reserva ('+L.length+')')+'</summary><div style="font-size:12.5px;color:var(--z-blue-soft);line-height:1.5;padding-bottom:4px">'
+      +L.map(function(t){ return '<div style="margin:4px 0;overflow-wrap:anywhere">'+esc(t)+'</div>'; }).join('')+'</div></details>';
   }
   // ---- Tabela de preços e feriados (só Gestão) ----
   function orcRenderConfig(){
@@ -25677,7 +27042,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-23';
+  const APP_VERSAO='2026-10-09-24';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -65374,7 +66739,7 @@
     var ids=Object.keys(ORC_LISTA_CACHE||{});
     if(!ids.length){ alert('Nenhum orçamento salvo ainda. Abra "Orçamento de hospedagem" primeiro para carregar a lista.'); return; }
     ids.sort(function(a,b){ return (ORC_LISTA_CACHE[b].criado_em||0)-(ORC_LISTA_CACHE[a].criado_em||0); });
-    var stt={aguardando:'Aguardando', fechado:'FECHOU', nao_fechou:'Não fechou', cancelado:'Cancelado'};
+    var stt={aguardando:'Aguardando', fechado:'FECHOU', nao_fechou:'Não fechou', cancelado:'Cancelado', anulado:'Anulado (lançado por engano)'};   // 6.68: o anulado
     var linhas=[];
     ids.forEach(function(id){
       var o=ORC_LISTA_CACHE[id]||{};
@@ -67798,6 +69163,17 @@
     'troca-confirmada':'Abriu vaga para a troca (lista de troca)', 'troca-recusada':'Recusou a troca (lista de troca)', 'troca-pedido':'Pediu troca acima das vagas (lista de troca antiga)',
     'troca-cancelada':'Cancelou a troca (lista de troca)', 'troca-reaberta':'Reabriu a troca (lista de troca)',
     'reposicao-agendada':'Marcou o dia de repor', 'reposicao-remarcada':'Mudou o dia de repor (sem desmarcar antes)',
+    // ===== 6.68 — Orçamento: a reserva e a planilha de estadias (AC13) — as ações novas e as do Orçamento que apareciam em código técnico
+    'orcamento-nao-fechou':'Marcou «Não fechou» no orçamento', 'orcamento-reaberto':'Reabriu o orçamento «Não fechou»',
+    'orcamento-voltou-pendente':'Voltou a reserva para pendente (orçamento)', 'orcamento-reativado':'Reativou a reserva cancelada (orçamento)',
+    'orcamento-anulado':'Anulou o orçamento (lançado por engano)', 'orcamento-anulacao-desfeita':'Reabriu o orçamento anulado',
+    'orcamento-planilha':'Planilha de estadias (o pedido do orçamento à ponte)', 'orcamento-planilha-tirada':'Tirou a proposta da planilha de estadias',
+    'orcamento-calendario-preservado':'Tirou da planilha sem liberar o calendário (as noites são de outra reserva viva)',
+    'orcamento-criado':'Fez um orçamento de hospedagem', 'orcamento-status':'Mudou a situação do orçamento', 'orcamento-datas-alteradas':'Mudou as datas da reserva (orçamento)',
+    'orcamento-apagado':'Apagou um orçamento (antes da 6.68)', 'orcamento-duplicado-confirmado':'Confirmou que é outra hospedagem (orçamento nas mesmas datas)',
+    'orcamento-ponte-planilha':'Ligou ou desligou a ponte com a planilha de estadias', 'orcamento-precos':'Mudou os valores da hospedagem',
+    'orcamento-atalho-checkin':'Abriu o check-in pelo orçamento fechado', 'reposicao-baixa-orcamento':'Acerto da reposição pelo orçamento de hospedagem',
+    'reposicao-reserva-orcamento':'Reservou dias de reposição num orçamento de hospedagem',
     // ===== 6.58 — o remédio: a dose, a agenda e a medicação do dia (AC7) ===========================
     'medicacao-dose-anulada':'Desfez uma dose de remédio (lançada por engano)', 'medicacao-dose-reaberta':'Reabriu uma dose de remédio anulada',
     'medicacao-dose-corrigida':'Corrigiu uma dose avulsa de remédio', 'medicacao-estoque-devolvido':'O estoque do remédio voltou (dose anulada)',
@@ -76294,8 +77670,11 @@
       // o orçamento: cancelado com o mesmo motivo e a mesma assinatura
       var orcR=null;
       if(oc==='cancelar' && S.orcId){
-        orcR=await orcCancelarGravar(S.orcId, mot, {nome:ass.nome, role:ass.papel});
-        if(!orcR||!orcR.ok) ext.push('o orçamento NÃO foi cancelado ('+((orcR&&orcR.erro)||'sem resposta')+'): cancele em Orçamentos');
+        orcR=await orcCancelarGravar(S.orcId, mot, {nome:ass.nome, role:ass.papel}, {origem:'hospedagem-excluida'});   // 6.68 (AC6.2): de onde veio o cancelamento
+        // 6.68, 3ª rodada (OBS-R2): o orçamento que já estava fora (cancelado ou anulado em outro aparelho) não é mandado cancelar de novo
+        var foraO=(orcR && !orcR.ok && typeof orcJaForaDe==='function')?orcJaForaDe(orcR):'';
+        if(foraO) ext.push('o orçamento já estava «'+orcStatusRotulo(foraO)+'»: nada mudou nele, e não é preciso cancelar em Orçamentos');
+        else if(!orcR||!orcR.ok) ext.push('o orçamento NÃO foi cancelado ('+((orcR&&orcR.erro)||'sem resposta')+'): cancele em Orçamentos');
       }
       var tg=await tgP;
       S.resultado={acao:'excluir', tg:!!tg.ok, tgErro:tg.erro||'', extras:ext, planilha:pl, orcamento:oc};
@@ -81871,7 +83250,7 @@
   var PA_DIA='';                                      // o relógio único desta abertura
   var PA_CACHE={quando:0, dia:'', dados:null};
   var PA_TOM={critico:'pm-b-critico', ouro:'pm-b-ouro', info:'pm-b-info', atencao:'pm-b-atencao', ok:'pm-b-ok'};
-  var PA_ORC_ROTULO={fechado:'fechou', nao_fechou:'não fechou', cancelado:'cancelado'};
+  var PA_ORC_ROTULO={fechado:'fechou', nao_fechou:'não fechou', cancelado:'cancelado', anulado:'anulado'};   // 6.68: o anulado (lançado por engano)
 
   // ------------------------------------------------------------- as contas (puras)
   function paHora(ts){ if(!ts) return ''; var d=new Date(ts), p=function(x){ return String(x).padStart(2,'0'); }; return p(d.getHours())+':'+p(d.getMinutes()); }
