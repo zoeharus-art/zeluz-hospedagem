@@ -238,6 +238,25 @@ function plFimDoDiaMS(iso) {
   return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 23, 59, 59, 999).getTime();
 }
 
+/* plBolsasDoMes — as bolsas que valem no nó de um mês de pontos-checkout (Story 6.67, 2ª rodada). O placar mistura origens no
+   mesmo nó; aqui vale a MESMA régua do app (pontoEhBolsa e coBolsasValendo no index.html): conta a bolsa do check-out (sem
+   origem) e a correção dela ('correcao-bolsa'), menos a que foi estornada (um registro 'estorno-bolsa' com estornaId = a
+   chave dela). O «Seu dia», o Início do protocolo, o próprio estorno e qualquer origem nova ficam fora. */
+function plBolsasDoMes(o) {
+  var v = plObj(o), ks = Object.keys(v), est = {}, out = [], i, r, og;
+  for (i = 0; i < ks.length; i++) {
+    r = v[ks[i]];
+    if (r && typeof r === 'object' && r.origem === 'estorno-bolsa' && r.estornaId) est[String(r.estornaId)] = true;
+  }
+  for (i = 0; i < ks.length; i++) {
+    r = v[ks[i]];
+    if (!r || typeof r !== 'object') continue;
+    og = r.origem || '';
+    if ((og === '' || og === 'correcao-bolsa') && !est[ks[i]]) out.push(r);
+  }
+  return out;
+}
+
 /* plEvolucao — a série semana a semana de UMA pessoa (o pedido da Márcia:
    "ver a evolução de cada colaborador").
    dados = { auditoriaPorDia:{dia:obj}, pontosPorMes:{mes:obj}, tempoPorDia:{dia:obj} }
@@ -248,7 +267,8 @@ function plFimDoDiaMS(iso) {
    - `etapas[slug].minutos` só soma quando a atividade tem começo E fim; sem fim
      (atividade que ficou aberta) conta como 1 vez e 0 minuto;
    - `pontos`/`bolsas` vêm de pontos-checkout, filtrando `quem` e o `ts` dentro
-     da semana — o nó é por mês, e uma semana pode cair em dois meses. */
+     da semana — o nó é por mês, e uma semana pode cair em dois meses. Só as
+     bolsas que valem (plBolsasDoMes, Story 6.67). */
 function plEvolucao(nome, dados, nSemanas, hojeISO) {
   var d = plObj(dados);
   var aud = plObj(d.auditoriaPorDia), pts = plObj(d.pontosPorMes), tmp = plObj(d.tempoPorDia);
@@ -311,7 +331,7 @@ function plEvolucao(nome, dados, nSemanas, hojeISO) {
       for (j = 0; j < dias.length; j++) meses[dias[j].slice(0, 7)] = true;
       lm = Object.keys(meses);
       for (j = 0; j < lm.length; j++) {
-        regs = plValores(pts[lm[j]]);
+        regs = plBolsasDoMes(pts[lm[j]]);
         for (k = 0; k < regs.length; k++) {
           r = regs[k];
           if (!r || plNorm(r.quem) !== alvo) continue;
