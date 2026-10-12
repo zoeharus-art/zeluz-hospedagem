@@ -5190,13 +5190,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-24"></script>
+<script src="resposta-tutor.js?v=2026-10-09-25"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-24"></script>
+<script src="painel-logica.js?v=2026-10-09-25"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5208,7 +5208,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-24"></script>
+<script src="financeiro-logica.js?v=2026-10-09-25"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5396,6 +5396,8 @@
         // padrão de guarda das outras telas aqui embaixo: só redesenha quem está com a
         // tela aberta agora.
         try{ const v=document.getElementById('v-vacinas'); if(v&&v.classList.contains('active')){ if(typeof renderPrevencao==='function') renderPrevencao(); if(typeof renderPrevCheckup==='function') renderPrevCheckup(); } }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        // 6.80 (AC8.1, AC8.4): a ficha aberta (os blocos de Prevenção) e a Hoje na Zêluz aberta acompanham o cadastro que mudou
+        try{ pelFichaPrevOuvinte(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ hojeOuvinteCadastro(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         // Check-in aberto na ficha de alguém (item D, 17/set/2026): o cartão "Cadastro
         // incompleto" fica calado até o cadastro chegar — se ninguém o redesenhasse aqui,
         // ele ficaria calado para sempre e o que falta de verdade nunca seria cobrado.
@@ -27042,7 +27044,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-24';
+  const APP_VERSAO='2026-10-09-25';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -37867,6 +37869,50 @@
     if(iso.test(dada) && (!iso.test(t) || dada>=t)) return dada;
     return iso.test(t)?addDiasISO(t, vermIntervalo(ex)):'';
   }
+  // ===== 6.80 — A SÉRIE NOVA DE VERDADE (o Romeo, Adriana, 11/out/2026) =====================
+  // "Fui atualizar o vermífugo do Romeo que vence a primeira dose hoje. Ele lança a segunda dose
+  //  automático. Mas a segunda dose (embaixo) e a dose do próximo vencimento (para 4 meses) não
+  //  atualizam." Quando a 2ª dose da série anterior nunca foi lançada e o próximo vermífugo já
+  //  venceu, a dose dada agora é a 1ª da série NOVA — nunca a 2ª atrasada da série vencida (a regra
+  //  dela: o próximo vence 4 meses depois da última dose). Uma regra só, nas três portas: o painel
+  //  rápido, o «Lance aqui mesmo» e o aviso da ficha.
+  // A série já venceu para a dose de `dt`? «2 doses», 1ª e próximo válidos, a 2ª desta série ainda NÃO
+  // registrada (vermDose2Prevista: a que seria cobrada), o próximo NÃO digitado à mão (a data da carteira
+  // não prova que a série acabou) e `dt` no dia do próximo ou depois — o >= é o caso do Romeo: 23/05 +
+  // 21 dias + 120 dias cai exatamente em 11/10 — e depois da 1ª (a ficha com o próximo no dia da 1ª não
+  // tem série vencida: é a ficha que a versão antiga gravou, e quem a conserta é o Salvar da ficha).
+  function vermSerieVenceu(ex, dt){
+    ex=ex||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/, t=String(ex.verm_t||''), p=String(ex.verm_p||'');
+    dt=String(dt||'');
+    return ex.verm_doses==='2 doses' && iso.test(t) && iso.test(p) && iso.test(dt) && !ex.verm_p_manual
+      && !!vermDose2Prevista(ex) && dt>=p && dt>t;
+  }
+  // O que a dose de `dt` grava como 1ª dose da série nova: a mesma conta do «Feito hoje» do vermífugo
+  // (a 2ª prevista com o intervalo da ficha e o próximo 4 meses depois dela). O intervalo não é gravado.
+  function vermSerieNovaPatch(ex, dt){
+    ex=ex||{};
+    var d2=addDiasISO(dt, vermIntervalo(ex));
+    var o={verm_t:dt, verm_dose2_t:'', verm_2a:d2, verm_p:addDiasISO(d2, VERMIF_PROX)};
+    if(ex.verm_p_manual) o.verm_p_manual='';
+    return o;
+  }
+  // A ficha em «2 doses» com a 2ª fora da série da 1ª: 'antes' (a 2ª anterior à 1ª, como a versão
+  // antiga deixava), 'depois' (a 2ª dada no dia em que a série já tinha vencido, ou depois: o D1) ou ''.
+  function vermFichaForaDaSerie(ex){
+    ex=ex||{};
+    var iso=/^\d{4}-\d{2}-\d{2}$/, t=String(ex.verm_t||''), d=String(ex.verm_dose2_t||'');
+    if(ex.verm_doses!=='2 doses' || !iso.test(t) || !iso.test(d)) return '';
+    if(d<t) return 'antes';
+    return (d>=addDiasISO(addDiasISO(t, vermIntervalo(ex)), VERMIF_PROX))?'depois':'';
+  }
+  // A frase da série nova: o verde do painel, o rastro e a linha do «Lance aqui mesmo».
+  function vermSerieNovaFrase(ex, dt, hoje){
+    var pa=vermSerieNovaPatch(ex, dt);
+    return 'A série da 1ª dose de '+fmtBR(String((ex||{}).verm_t||''))+' já tinha vencido: a dose de '
+      +((dt===(hoje||hojeISO()))?'hoje':fmtBR(dt))+' entrou como 1ª dose da série nova; 2ª dose em '
+      +fmtBR(pa.verm_2a)+' e próximo vermífugo em '+fmtBR(pa.verm_p)+'.';
+  }
   const PREV_ITENS=[
     // nomeK = onde fica o NOME do produto/vacina usado (Adriana, 25/ago/2026: "ter o local
     // para colocar o nome — igual o vermífugo tem"). Mesmo campo na ficha e na Prevenção.
@@ -38977,8 +39023,11 @@
       // 6.65 (AC6.1, AC6.3): o vermífugo segue o esquema da ficha — com 2 doses, a validade sai da
       // 2ª prevista (15 ou 21 dias); na linha da 2ª dose, o campo mostra o próximo que o Salvar vai gravar.
       if(k==='verm_p' || k==='verm_dose2_p'){
-        var _vv=prevVermLanceConta(_p?(pelExtra(_p)||{}):{}, k, dt);
-        if(alvo && dt) alvo.value=_vv;
+        var _exV=_p?(pelExtra(_p)||{}):{};
+        var _vv=prevVermLanceConta(_exV, k, dt);
+        if(alvo && dt){ alvo.value=_vv; PREV_VALE_CONTA[chave+'|'+k]=_vv; }
+        // 6.80 (AC6.1, AC6.2): a linha da 2ª dose acompanha a 1ª nova já na tela, antes do Salvar
+        if(k==='verm_p' && dt && _exV.verm_doses==='2 doses') prevVermLinha2Acompanha(chave, _exV, dt, _vv);
         return;
       }
       // O carrapaticida conta pelo produto escolhido na tela (o da ficha vem escolhido): QA45/QA47.
@@ -38987,6 +39036,30 @@
       if(!alvo||!dt||!_dias) return;
       alvo.value=addDiasISO(dt,_dias);
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+  }
+  // 6.80 (AC6.1, AC6.2) — «a segunda dose (embaixo) e a dose do próximo vencimento não atualizam»: a 1ª dose mudou na
+  // linha do vermífugo, e a linha da 2ª mostra o que o Salvar vai gravar. A 2ª de uma série anterior (antes da 1ª nova)
+  // sai do «Feito em»; sem 2ª dada, o «Próximo vermífugo» (só de leitura) e o selo passam aos da série nova. A 2ª igual ou
+  // posterior à 1ª nova é desta série e fica como está. Nada vai para o banco aqui.
+  function prevVermLinha2Acompanha(chave, ex, dt, prox){
+    var t2=document.getElementById('prevT_'+chave+'_verm_dose2_p'), p2=document.getElementById('prevP_'+chave+'_verm_dose2_p');
+    var s2=document.getElementById('prevS_'+chave+'_verm_dose2_p');
+    if(t2 && t2.value && t2.value<dt) t2.value='';
+    if(t2 && t2.value) return;
+    if(p2) p2.value=prox||'';
+    if(s2) s2.innerHTML=seloValidade(vermDose2Data(Object.assign({}, ex, {verm_t:dt})));
+  }
+  // 6.80 (AC6.3, D5): o «Vale até» do vermífugo só vale como DIGITADO quando a pessoa o escreveu. O que a própria tela pôs
+  // no campo — o do banco, desenhado ao abrir (PREV_ED_VISTO), e o último que a conta escreveu (PREV_VALE_CONTA) — não é
+  // decisão de ninguém: a conta refaz. Reconhecido pelo valor do campo, não por evento de teclado (a data pode ser escrita
+  // por cima direto no campo). O «Vence em» à mão da ficha continua respeitado.
+  var PREV_VALE_CONTA={};   // {chave|k: o último «Vale até» que a conta escreveu no campo}
+  function prevValeDigitado(chave, k, prox, p){
+    var ex=(p?pelExtra(p):null)||{};
+    if(ex[k+'_manual']) return true;
+    var V=(PREV_ED_VISTO[chave]||{})[k], desenhado=V?String(V.p||''):String(ex[k]||'');
+    prox=String(prox||'');
+    return !!prox && prox!==desenhado && prox!==String(ex[k]||'') && prox!==String(PREV_VALE_CONTA[chave+'|'+k]||'');
   }
   // Onde foi dado: Day Care ou Tutor em casa. Fica na ficha, junto da data.
   // 6.63 (AC8.2): o botão só fica marcado com o ok do banco (sem o passo do cache); com a recusa, continua como era e a
@@ -39091,6 +39164,13 @@
       if(semV){ zAlertao('NÃO HÁ 2ª DOSE PARA LANÇAR', [semV, 'Nada foi gravado.'], {botao:'Entendi'}); return; }
       if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return;
       if(dt>hojeISO()){ zAlertao('Essa data não faz sentido', ['A data de aplicação está no futuro.'], {botao:'Vou corrigir'}); return; }
+      // 6.80 (AC1.7): a série anterior já venceu (vermSerieVenceu, a mesma regra do painel): esta dose é a 1ª da série nova,
+      // nunca a 2ª atrasada; a frase vai para a linha e para o rastro
+      if(vermSerieVenceu(exV, dt)){
+        var pSN=vermSerieNovaPatch(exV, dt);
+        if(quem) pSN.verm_por=quem;
+        return prevLanceGravar(p, chave, k, it, pSN, {dt:dt, quem:quem, nome:'Vermífugo (1ª dose da série nova)', campo:'verm_p', kReg:'verm_p', frase:vermSerieNovaFrase(exV, dt)});
+      }
       if(dt<t1V){
         zAlertao('Essa data não faz sentido',
           ['A 2ª dose ('+fmtBR(dt)+') ficou antes da 1ª ('+fmtBR(t1V)+').',
@@ -39118,7 +39198,8 @@
     // 6.65 (AC6.1): o vermífugo conta pelo esquema da ficha (com 2 doses, a 2ª prevista + 4 meses)
     var contaDe=function(d){ return (k==='verm_p')?prevVermLanceConta(pelExtra(p)||{}, k, d):(_dias?addDiasISO(d,_dias):''); };
     var calc=contaDe(dt);
-    var proxFinal=(prox && prox>dt) ? prox : (calc||prox||'');
+    // 6.80 (AC6.3, D5): no vermífugo, o «Vale até» que a própria tela pôs no campo não é digitado — a conta refaz
+    var proxFinal=(prox && prox>dt && (k!=='verm_p' || prevValeDigitado(chave, k, prox, p))) ? prox : (calc||prox||'');
     var nomeItem=it.nome||'este item';
     var gravar=function(dtFinal, proxDef, atrasoConfirmado){
       var patch={};
@@ -39174,13 +39255,13 @@
     volta();
     return prevGravar(p, patch, {tela:'Prevenção (Lance aqui mesmo)'}, volta).then(function(r){
       if(!(r && r.ok===true)){ PREV_LANCE_ESTADO[alvo]={passo:'falhou', erro:(r&&r.erro)||'', ts:Date.now()}; volta(); return r; }
-      PREV_LANCE_ESTADO[alvo]={passo:'salvo', ts:Date.now()};
+      PREV_LANCE_ESTADO[alvo]={passo:'salvo', ts:Date.now(), frase:String(o.frase||'')};   // 6.80 (AC1.7): a frase da série nova, na linha
       try{ if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(o.nome||it.nome||k)+' feito em '+fmtBR(o.dt)+(o.quem?(' por '+o.quem):'')
-        +' — vence em: '+prevCorrValorTexto(antes[c])+' → '+prevCorrValorTexto(patch[c]), {pet:pelNome(p)||'', item:k, de:antes[c]||'', para:patch[c]||''}); }
+        +' — vence em: '+prevCorrValorTexto(antes[c])+' → '+prevCorrValorTexto(patch[c])+(o.frase?(' — '+o.frase):''), {pet:pelNome(p)||'', item:(o.kReg||k), de:antes[c]||'', para:patch[c]||''}); }
       catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
       if(o.atraso){ try{ if(typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(p)||'')+': '+(o.nome||it.nome||k)+' continua em atraso, confirmado'+(o.quem?(' por '+o.quem):''), {pet:pelNome(p)||''}); }
         catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */ }
-      prevCorrRegistrarDia(p, k, 'lance-aqui', 'prev', antes, patch, q);
+      prevCorrRegistrarDia(p, o.kReg||k, 'lance-aqui', 'prev', antes, patch, q);
       try{ prevRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
       return r;
     });
@@ -39189,7 +39270,8 @@
   function prevLanceEstadoHTML(chave, k){
     var E=PREV_LANCE_ESTADO[chave+'|'+k]; if(!E) return '';
     if(E.passo==='gravando') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Gravando…</span>';
-    if(E.passo==='salvo') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--crm-ok)">'+(E.onde?'«Quem deu» salvo':'Salvo')+' às '+esc(corrHora(E.ts))+'</span>';
+    if(E.passo==='salvo') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--crm-ok)">'+(E.onde?'«Quem deu» salvo':'Salvo')+' às '+esc(corrHora(E.ts))+'</span>'
+      +(E.frase?('<div role="status" style="margin-top:6px;font-size:12.5px;font-weight:800;color:var(--z-blue);overflow-wrap:anywhere">'+esc(E.frase)+'</div>'):'');
     return '<div role="alert" style="margin-top:6px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">NÃO FOI SALVO: '+esc(zErroFrase(zErroMotivo(E.erro, 'banco', '', {agora:true})))
       +(E.onde?' «Quem deu» continua como era.':' Os campos continuam como você digitou: toque em Salvar de novo.')+'</div>';
   }
@@ -39571,6 +39653,12 @@
         {botao:'Vou corrigir'});
       return;
     }
+    // 6.80 (AC1.1, AC1.2) — A 2ª DOSE DE UMA SÉRIE QUE JÁ VENCEU NÃO EXISTE MAIS (o Romeo, 11/out/2026): a dose de agora é a
+    // 1ª da série nova. A trava mora aqui, no gravador: vale para as quatro entradas (o nome no resumo de Vencimentos, o
+    // cartão, a Hoje na Zêluz e a tabela da Prevenção) e para a tela velha com o chip antigo. Segue pelo ramo da 1ª dose,
+    // com a ficha (sem os rádios deste painel: o esquema e o intervalo da ficha; o intervalo não é regravado).
+    var serieNova='', k0=k;
+    if(k==='verm_dose2_p' && vermSerieVenceu(pelExtra(p)||{}, dt)){ serieNova=vermSerieNovaFrase(pelExtra(p)||{}, dt, hoje); k='verm_p'; }
     var it=prevCorrigeItemDe(k);
     var ex=pelExtra(p)||{};
     var de=ex[k]||'';
@@ -39585,7 +39673,7 @@
     // o que a ficha já dizia.
     var esquema=ex.verm_doses||'';
     var intervalo=vermIntervalo(ex);
-    if(k==='verm_p'){
+    if(k==='verm_p' && !serieNova){
       var e1=document.getElementById('prevCorrE1_'+id), e2=document.getElementById('prevCorrE2_'+id);
       if(e2 && e2.checked===true) esquema='2 doses';
       else if(e1 && e1.checked===true) esquema='Dose única';
@@ -39606,6 +39694,14 @@
         if(typeof zAlertao==='function') zAlertao('Essa data não faz sentido',
           ['A 2ª dose ('+fmtBR(dt)+') ficou antes da 1ª ('+fmtBR(t1)+').',
            'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.'],{botao:'Vou corrigir'});
+        return;
+      }
+      // 6.80 (AC1.4): a 2ª no MESMO DIA da 1ª é recusada aqui, no painel — é o chip «2ª dose» que ficou velho na tela de
+      // outro aparelho depois de a 1ª de hoje ser gravada. (A ficha e o «Lance aqui mesmo» continuam aceitando: 6.65 R2 P26.)
+      if(/^\d{4}-\d{2}-\d{2}$/.test(t1) && dt===t1){
+        if(typeof zAlertao==='function') zAlertao('Essa data não faz sentido',
+          ['A 2ª dose ('+fmtBR(dt)+') cairia no mesmo dia da 1ª.',
+           'Se a dose de hoje foi a 1ª dose, ela já está registrada: toque em «fechar» e atualize a tela.'],{botao:'Entendi'});
         return;
       }
       delete patch[it.base];
@@ -39658,6 +39754,12 @@
     if(it.base && ex[String(it.base).replace(/_t$/,'')+'_afazer']) patch[String(it.base).replace(/_t$/,'')+'_afazer']='';
     // 6.63 (AC5.1): a porta da prevenção (só com o banco); o verde e o rastro esperam o ok (a tela já lê o gravado, 6.65)
     var _g=prevCorrGravar(p, chave, k, patch, (dt===hoje)?'feito':'feito-em', tela, (dt===hoje)?'feito':'feito-em');
+    if(serieNova){   // 6.80 (AC1.3): a frase no verde e no rastro; o que foi digitado no painel da 2ª volta se o banco recusar
+      Object.assign(_g.dig, prevCorrDigitado(chave, k0));
+      prevCorrigeRegistrar(p, chave, k, it, de, patch[k]||'', 'a série anterior já tinha vencido: 1ª dose da série nova feita em '+fmtBR(dt)
+        +'; 2ª dose em '+fmtBR(patch.verm_2a), tela, (pelNome(p)||'')+' — '+serieNova, _g);
+      return;
+    }
     prevCorrigeRegistrar(p, chave, k, it, de, patch[k]||'',
       'feito em '+fmtBR(dt)+((k==='ecto_p' && patch.ecto_prod==='' && patch.ecto_tipo==='')?' (produto não informado — prazo mais curto)':''), tela, undefined, _g);
   }
@@ -39859,6 +39961,10 @@
         return x;
       });
     if(!op.semCache) prevCacheGravado(p, patch, r2, redesenhar);
+    // 6.80 (AC8.3): a memória de 20 s de Vencimentos esquece a lista de antes — agora (o passo do cache) e de novo depois
+    // da resposta do banco (com o ok, e depois da volta atrás da recusa)
+    vencMemoLimpar();
+    r2.then(function(){ vencMemoLimpar(); });
     return r2;
   }
   // A resposta da gravação, sempre {ok:true} ou {ok:false, erro} (o gravador trocado que devolve nada é recusa).
@@ -40209,6 +40315,7 @@
     // crua, e as funções procuram o campo com ela).
     var chJs=jsAspas(chave), chId=escAttr(chave);
     var visto=PREV_ED_VISTO[chave]={};   // 6.63 (AC8.5): o que esta tela mostrou — é por ele que o «não salvo» é conferido
+    delete PREV_VALE_CONTA[chave+'|verm_p'];   // 6.80 (AC6.3): o campo volta a mostrar o do banco
     var linha=function(it){
       // Quem não escova no Day Care: a troca de escova não é cobrada aqui também (QA40 L6).
       // 6.63 (AC7.1): «mudar a resposta» abre a MESMA pergunta do painel rápido (prevCorrigeEscovaDc)
@@ -40236,7 +40343,8 @@
       visto[it.k]={t:feito, p:(v2?(feito?addDiasISO(feito, VERMIF_PROX):''):prox), ro:v2};
       var estLance=PREV_LANCE_ESTADO[chave+'|'+it.k];
       return '<div style="border-top:1px solid var(--line);padding:9px 0">'
-        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+(v2?(semV2?'':(seloV2||seloValidade(prox))):seloValidade(prox))
+        // 6.80 (AC6.1): o selo da 2ª com id — acompanha a 1ª nova na tela (prevVermLinha2Acompanha)
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:13.5px;margin-bottom:5px">'+escAttr(it.nome)+' '+(v2?('<span id="prevS_'+chId+'_'+it.k+'">'+(semV2?'':(seloV2||seloValidade(prox)))+'</span>'):seloValidade(prox))
         +(por?(' <span style="font-weight:600;font-size:11.5px;color:var(--muted)">— último por '+escAttr(por)+'</span>'):'')+'</div>'
         // 6.65 (AC6.1): o esquema e o intervalo que a ficha diz — é por eles que a validade se refaz
         +(it.k==='verm_p'?('<div class="hint" style="margin:0 0 6px">Como está na ficha: '
@@ -40248,8 +40356,9 @@
         // nova. Agora, ao trocar a data de "Feito em", o "Vale até" se refaz na hora — e quem
         // quiser uma data diferente (o veterinário pediu antes) ainda pode escrever por cima.
         +'<div><label class="cad-lb">Feito em</label><input type="date" class="cad-in" id="prevT_'+chId+'_'+it.k+'" value="'+escAttr(feito)+'" max="'+hojeISO()+'" onchange="prevRecalcular(\''+chJs+'\',\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></div>'
-        // Na 2ª dose, o lugar do «Vale até» mostra o próximo vermífugo que o Salvar vai gravar, só de leitura (6.65, AC6.3)
-        +(v2?('<div><label class="cad-lb">Próximo vermífugo</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(feito?addDiasISO(feito, VERMIF_PROX):'')+'" readonly tabindex="-1" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" style="background:var(--z-cream-warm)"></div>')
+        // Na 2ª dose, o lugar do «Vale até» mostra o próximo vermífugo que o Salvar vai gravar, só de leitura (6.65, AC6.3).
+        // 6.80 (AC6.2): sem a 2ª dada, o próximo pela conta da 1ª da ficha (a 2ª prevista + 4 meses), e não mais vazio
+        +(v2?('<div><label class="cad-lb">Próximo vermífugo</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(feito?addDiasISO(feito, VERMIF_PROX):(semV2?'':prevVermLanceConta(ex, 'verm_p', String(ex.verm_t||''))))+'" readonly tabindex="-1" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" style="background:var(--z-cream-warm)"></div>')
           :('<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'))
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
@@ -40846,24 +40955,94 @@
       if(prevEraManual(b, m[1]+'_p')){ PB_PEND[b][m[1]+'_p_manual']=''; prevAvisoRecalc(m[1]+'_p'); }
     }); }
     pbRender(b);
+    pbToqueSalvarAgora();   // 6.80 (AC7): o «Salvar» tocado no mesmo toque que soltou este change
   }
   function pbRender(b){
     var el=document.getElementById('pb-'+b); if(!el||!PB_HTML[b]) return;
     var y=(window.pageYOffset||document.documentElement.scrollTop||0);
     var tmp=document.createElement('div'); tmp.innerHTML=PB_HTML[b](pbEx(b));
     var novo=tmp.firstElementChild; if(novo) el.replaceWith(novo);
+    pelAlertasPrevRedesenhar();   // 6.80 (AC8.2): os avisos «Vacinas», «Antiparasitários» e «Escova e check-up» com o gravado
     try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
   }
   function pbRodape(b, rotulo){
     var pend=!!(PB_PEND[b]&&Object.keys(PB_PEND[b]).length), indo=!!pbGravando()[b], rec=pbRecusa()[b];
     return '<div style="display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap">'
-      +'<button type="button" class="btn btn-gold" style="padding:7px 16px;font-size:13px" onclick="pbSalvar(\''+b+'\')">Salvar '+escAttr(rotulo)+'</button>'
+      +'<button type="button" class="btn btn-gold" style="min-height:44px;padding:7px 16px;font-size:13px" onclick="pbSalvar(\''+b+'\')">Salvar '+escAttr(rotulo)+'</button>'
       // 6.63 (AC8.3): «Salvando…» enquanto o banco não responde; «✓ Salvo» só com o ok
       +(indo?'<span role="status" style="font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Salvando…</span>'
         :(pend?'<span style="font-size:12.5px;font-weight:800;color:var(--crm-atencao-text)">alterações ainda não salvas</span>'
             :(PB_SALVO[b]?'<span style="font-size:12.5px;font-weight:800;color:var(--crm-ok)">✓ Salvo</span>':'')))
       +'</div>'
       +((rec && !indo)?pbRecusaHTML(rec):'');
+  }
+  // ===== 6.80 (AC7) — O TOQUE NO «SALVAR» NUNCA SE PERDE NEM GRAVA DUAS VEZES ==========================================
+  // O toque no «Salvar …» solta o change do campo que estava sendo digitado (texto; data, no celular que só solta o change
+  // ao fechar o calendário). O pbSet daquele change redesenha o bloco no meio do toque: o botão muda de lugar, o dedo sobe
+  // em outro ponto e o clique não sai — nada era gravado, e só o 2º toque gravava. Agora o pointerdown no «Salvar» fica
+  // anotado; o pbSet daquele change salva logo depois de redesenhar, e o clique que ainda chegar (até 1,5 s) é ignorado.
+  // A anotação vale só para aquele toque: cai com qualquer outro toque, com o «Salvar» feito e depois de 1,5 s — um
+  // change sem um toque novo no «Salvar» nunca grava nada sozinho.
+  var PB_TOQUE_SALVAR=null, PB_SALVOU_EM={}, PB_TOQUE_JANELA=1500;
+  function pbToqueAnotar(e){
+    var bt=null, m=null;
+    try{ bt=(e && e.target && typeof e.target.closest==='function')?e.target.closest('button[onclick^="pbSalvar("]'):null; }
+    catch(x){ bt=null; } /* silencioso de propósito: sem o botão, não há toque a anotar */
+    if(bt) m=String(bt.getAttribute('onclick')||'').match(/^pbSalvar\('(\w+)'\)/);
+    // 6.80 (UX-002 do QA): um toque NOVO no «Salvar» é um «Salvar» deliberado — a marca «já salvou» daquele bloco cai. O clique
+    // do toque anterior (o que o change já salvou) chega antes deste pointerdown; depois dele, não há clique velho a engolir.
+    if(m) PB_SALVOU_EM[m[1]]=0;
+    PB_TOQUE_SALVAR=m?{b:m[1], t:Date.now()}:null;
+  }
+  try{ document.addEventListener('pointerdown', pbToqueAnotar, true); }
+  catch(e){} /* silencioso de propósito: sem o pointerdown (o sandbox das provas), o Salvar funciona como sempre */
+  function pbToqueSalvarAgora(){
+    var T=PB_TOQUE_SALVAR;
+    if(!T || (Date.now()-T.t)>=PB_TOQUE_JANELA) return;
+    PB_TOQUE_SALVAR=null; PB_SALVOU_EM[T.b]=0;
+    pbSalvar(T.b);
+    PB_SALVOU_EM[T.b]=Date.now();
+  }
+  function pbToqueJaSalvou(b){
+    PB_TOQUE_SALVAR=null;
+    if(PB_SALVOU_EM[b] && (Date.now()-PB_SALVOU_EM[b])<PB_TOQUE_JANELA){ PB_SALVOU_EM[b]=0; return true; }
+    PB_SALVOU_EM[b]=0;
+    return false;
+  }
+  // 6.80 (AC4.2): o bloco do vermífugo com a 2ª gravada antes da 1ª (a ficha da versão antiga), sem rascunho na 2ª.
+  function pbVermIncoerente(b){
+    if(b!=='verm') return false;
+    return vermFichaForaDaSerie(pbEx(b))==='antes' && !Object.prototype.hasOwnProperty.call(PB_PEND[b]||{}, 'verm_dose2_t');
+  }
+  // ===== 6.80 (AC3) — O CONSERTO DA FICHA QUE JÁ CAIU, COM UM TOQUE ======================================================
+  // A 2ª dada depois de a série ter vencido (o D1) ou antes da 1ª (a versão antiga): a mesma data pode ser uma 2ª atrasada
+  // de verdade, e só quem tem a carteira sabe. Por isso a ficha avisa e espera: NADA é corrigido sozinho. O toque passa
+  // pelo «Salvar» do bloco (a conta, a trava de data, o «Salvando…», o rastro de → para da ficha e a recusa da 6.63);
+  // com o ok, sai a linha própria de auditoria.
+  var PB_SERIE_NOVA=null;
+  function vermSerieNovaCorrigir(){
+    if(!pelAtual || !canEditPel()) return;
+    var ex=pbEx('verm'), caso=vermFichaForaDaSerie(ex);
+    if(!caso) return;
+    var pend={verm_dose2_t:''};
+    if(caso==='depois') pend.verm_t=String(ex.verm_dose2_t);
+    PB_SERIE_NOVA={k:pelKey(pelAtual), caso:caso, t:String(ex.verm_t||''), d2:String(ex.verm_dose2_t||'')};
+    PB_PEND.verm=Object.assign({}, PB_PEND.verm||{}, pend); PB_SALVO.verm=false;
+    PB_SALVOU_EM.verm=0;
+    pbSalvar('verm');
+  }
+  // O pbSalvar pega (e apaga) a marca acima: ela vale só para o Salvar que o toque no botão chamou.
+  function vermSerieNovaToque(b){
+    var o=PB_SERIE_NOVA; PB_SERIE_NOVA=null;
+    return (o && b==='verm' && pelAtual && o.k===pelKey(pelAtual))?o:null;
+  }
+  function vermSerieNovaAudit(p, o, patch){
+    patch=patch||{};
+    try{ if(typeof audit==='function') audit('prevencao-serie-nova-corrigida', (pelNome(p)||'')+': vermífugo, série nova corrigida na ficha — '
+      +((o.caso==='antes')?('a 2ª dose de '+fmtBR(o.d2)+' era da série anterior e saiu'):('a 2ª dose de '+fmtBR(o.d2)+' passou a ser a 1ª dose da série nova'))
+      +'; 1ª dose em '+fmtBR(String(patch.verm_t||o.t))+', 2ª dose prevista para '+fmtBR(String(patch.verm_2a||''))+', próximo vermífugo em '+fmtBR(String(patch.verm_p||'')),
+      {pet:pelNome(p)||'', caso:o.caso, de:o.d2, para:String(patch.verm_p||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
   }
   // ---- 6.63 (AC8.6): o rascunho de cada FILHOt, neste aparelho, enquanto a página estiver aberta ----
   var PB_RASC={}, PB_RASC_AVISO=null, PB_ULT_K='';
@@ -40943,6 +41122,8 @@
   }
   function pbSalvar(b){
     if(!pelAtual) return;
+    if(pbToqueJaSalvou(b)) return;   // 6.80 (AC7.2): o clique que chega depois do Salvar feito pelo pbSet do mesmo toque
+    var _serieNova=vermSerieNovaToque(b);   // 6.80 (AC3.4): este Salvar veio do «Corrigir: é a 1ª dose da série nova»?
     // 6.63 (AC8.3): o rascunho que o banco recusou volta para ser mandado de novo
     var _rec=pbRecusa();
     if(_rec[b]){ PB_PEND[b]=Object.assign({}, _rec[b].pend||{}, PB_PEND[b]||{}); delete _rec[b]; }   // o digitado depois vale por cima
@@ -40954,7 +41135,8 @@
       delete pend.verm_dose2_dias;
       if(!Object.keys(pend).length) delete PB_PEND[b];
     }
-    if(!Object.keys(pend).length){ PB_SALVO[b]=true; pbRender(b); return; }
+    // 6.80 (AC4.2): a ficha que a versão antiga gravou (a 2ª antes da 1ª) se corrige no Salvar, mesmo sem mexer em nada
+    if(!Object.keys(pend).length && !pbVermIncoerente(b)){ PB_SALVO[b]=true; pbRender(b); return; }
     var ex=pbEx(b), patch=Object.assign({},pend);
     var exAntes=Object.assign({}, (pelAtual?pelExtra(pelAtual):{})||{});   // cópia: setPelExtra muda o objeto vivo da ficha
     // ===== O "VENCE EM" DIGITADO À MÃO NÃO É SOBRESCRITO (Adriana, 24/set/2026) =======
@@ -41006,9 +41188,11 @@
       // 6.65 (AC3.1, AC3.2) — a SÉRIE NOVA: a 1ª dose nova, posterior à 2ª que estava gravada, começa
       // outra série. A 2ª antiga sai (como no painel rápido) e a conta segue sem ela. A 2ª igual ou
       // posterior à 1ª nova é desta mesma série (a 1ª corrigida para trás) e fica (AC3.4).
+      // 6.80 (AC4.1, AC4.3): a 2ª antiga (anterior à 1ª como vai ficar) sai SEMPRE — também quando a 1ª não mudou neste
+      // Salvar (a ficha que a versão antiga gravou, salva sem mexer ou só pelo nome). Pelo patch, nunca pelo rascunho: a
+      // limpeza não é toque, e o «Vence em» à mão continua valendo (o pbContaManda olha o rascunho, AC4.4).
       var _d2ant=String(exAntes.verm_dose2_t||'');
-      if(Object.prototype.hasOwnProperty.call(pend,'verm_t') && String(pend.verm_t||'')!==String(exAntes.verm_t||'')
-         && !Object.prototype.hasOwnProperty.call(pend,'verm_dose2_t') && _iso.test(String(ex.verm_t||'')) && _iso.test(_d2ant) && _d2ant<ex.verm_t){
+      if(!Object.prototype.hasOwnProperty.call(pend,'verm_dose2_t') && _iso.test(String(ex.verm_t||'')) && _iso.test(_d2ant) && _d2ant<ex.verm_t){
         patch.verm_dose2_t=''; ex.verm_dose2_t='';
       }
       // O intervalo refaz a conta só enquanto a 2ª não foi dada (AC3.6, AC3.7): depois dela, a
@@ -41058,6 +41242,7 @@
         if(!(r && r.ok===true)){ if(pelAtual===pAt) pbRender(b); return; }
         delete GRAV[b];
         try{ if(typeof audit==='function') audit('prevencao', (pelNome(pAt)||'')+': bloco '+b+' salvo na ficha', {pet:pelNome(pAt)||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+        if(_serieNova) vermSerieNovaAudit(pAt, _serieNova, patch);   // 6.80 (AC3.4): a linha própria do conserto
         // Vencimento digitado à mão: rastro próprio, de → para. O audit() já grava QUEM e o papel.
         Object.keys(patch).forEach(function(c){
           var mm=c.match(/^(\w+_p)_manual$/);
@@ -41180,6 +41365,46 @@
     return '<strong>'+escAttr(a.dose.texto)+'</strong> ('+escAttr(pesoBuscaKg(a.kg))+' kg em '
       +escAttr(dataCurtaBusca(a.data))+')';
   }
+  // 6.80 (AC5): o que o rascunho do bloco faz o Salvar gravar. `refaz` = o Salvar refaz o «Vence em» pela conta (a mesma
+  // regra do pbSalvar: a última dose mexida derruba o «à mão»; fora disso, o «à mão» manda; o intervalo tocado igual ao do
+  // banco não é mudança); `d2ant` = a 2ª gravada antes da 1ª, que o Salvar limpa (não a digitada: essa o Salvar recusa).
+  function vermBlocoRascunho(ex, duas, t1, dada){
+    var pv=(typeof PB_PEND!=='undefined' && PB_PEND && PB_PEND.verm)||{}, iso=/^\d{4}-\d{2}-\d{2}$/;
+    var tem=function(c){ return Object.prototype.hasOwnProperty.call(pv, c); };
+    var ks=Object.keys(pv).filter(function(c){ return !(c==='verm_dose2_dias' && vermIntervalo({verm_dose2_dias:pv[c]})===vermIntervaloDoBanco(pelAtual)); });
+    var d2ant=!!(duas && iso.test(t1) && iso.test(dada) && dada<t1 && !tem('verm_dose2_t'));
+    var mexeu=ks.some(function(c){ return c==='verm_t' || c==='verm_doses' || c==='verm_dose2_t'; }) || (ks.indexOf('verm_dose2_dias')>=0 && !!vermDose2Prevista(ex));
+    return {d2ant:d2ant, fora:vermFichaForaDaSerie(ex), refaz:!tem('verm_p') && (mexeu || (!ex.verm_p_manual && (ks.length>0 || d2ant)))};
+  }
+  // 6.80 (AC5.1, AC3.1 caso «antes»): um aviso só — a frase e, logo abaixo, o botão do conserto (quem edita a ficha).
+  // REQ-001 do QA (decisão de 12/out/2026): o botão grava a série pela conta (AC3.2) — então, antes do toque, o aviso diz o
+  // próximo que ele grava e, com o «Vence em» digitado à mão, que essa data sai (o «Salvar» do bloco a respeita, AC4.4).
+  function vermSerieAntesHTML(dada, prox, ex){
+    return '<div class="hint vm-serie-antes" role="status" style="margin-top:3px;font-weight:700;color:var(--z-blue);overflow-wrap:anywhere">A 2ª dose de '+escAttr(fmtBR(dada))+' é da série anterior: sai quando você salvar.'
+      +(canEditPel()?vermSerieAntesContaHTML(prox, ex):'')
+      +(canEditPel()?('<div><button type="button" class="btn btn-gold" style="min-height:44px;margin-top:6px;padding:8px 14px;font-size:13px;font-weight:800" onclick="vermSerieNovaCorrigir()">Corrigir: é a 1ª dose da série nova</button></div>'):'')
+      +'</div>';
+  }
+  function vermSerieAntesContaHTML(prox, ex){
+    ex=ex||{};
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(prox||''))) return '';
+    var mao=!!ex.verm_p_manual && /^\d{4}-\d{2}-\d{2}$/.test(String(ex.verm_p||''));
+    return '<div style="margin-top:4px">Com o botão, o próximo vermífugo passa a ser '+escAttr(fmtBR(prox))+', pela conta'
+      +(mao?('; a data digitada à mão ('+escAttr(fmtBR(String(ex.verm_p)))+') sai.'):'.')+'</div>';
+  }
+  // 6.80 (AC3.1 caso «depois»): a 2ª dada quando a série já tinha vencido — pode ser a 1ª de uma série nova. Diz a data, o
+  // que fica gravado com o toque e que nada muda sem ele.
+  function vermSerieDepoisHTML(ex){
+    ex=ex||{};
+    var d=String(ex.verm_dose2_t||''), t=String(ex.verm_t||''), venceu=addDiasISO(addDiasISO(t, vermIntervalo(ex)), VERMIF_PROX);
+    var pa=vermSerieNovaPatch(ex, d), pode=canEditPel();
+    return '<div class="field vm-serie-depois" style="grid-column:1/-1"><div role="status" style="padding:9px 11px;border-radius:10px;border:2px solid var(--z-gold);background:var(--z-cream-warm);color:var(--z-blue);font-size:13px;font-weight:700;overflow-wrap:anywhere">'
+      +'A 2ª dose de '+escAttr(fmtBR(d))+' foi dada quando a série da 1ª dose de '+escAttr(fmtBR(t))+' já tinha vencido (em '+escAttr(fmtBR(venceu))+'): pode ser a 1ª dose de uma série nova. '
+      +(pode?'Se for, toque no botão abaixo e fica: ':'Se for, quem edita a ficha corrige, e fica: ')
+      +'1ª dose em '+escAttr(fmtBR(pa.verm_t))+', 2ª dose prevista para '+escAttr(fmtBR(pa.verm_2a))+' e próximo vermífugo em '+escAttr(fmtBR(pa.verm_p))+'.'+(pode?' Nada muda enquanto você não tocar.':' Nada muda sozinho.')
+      +(pode?('<div><button type="button" class="btn btn-gold" style="min-height:44px;margin-top:8px;padding:8px 14px;font-size:13px;font-weight:800" onclick="vermSerieNovaCorrigir()">Corrigir: é a 1ª dose da série nova</button></div>'):'')
+      +'</div></div>';
+  }
   function blocoVerm(ex){
     // A nota segue a MESMA regra das listas (vermOuFezes, 25/set/2026): o exame só
     // dispensa o vermífugo quando é o mais recente dos dois.
@@ -41198,8 +41423,15 @@
     const t1=String(ex.verm_t||''), dada=String(ex.verm_dose2_t||'');
     const d2real=duas && /^\d{4}-\d{2}-\d{2}$/.test(t1) && /^\d{4}-\d{2}-\d{2}$/.test(dada) && dada>=t1;
     const prox=ex.verm_t?addDiasISO(d2||ex.verm_t,VERMIF_PROX):'';
+    // 6.80 (AC5) — A TELA MOSTRA, ANTES DO SALVAR, O QUE O SALVAR VAI GRAVAR (o Romeo: "a segunda dose e o próximo
+    // vencimento não atualizam"). A 2ª gravada antes da 1ª (como vai ficar) é da série anterior: aparece vazia, com a frase,
+    // e sai no Salvar (AC4.1). O selo e o «Vence em» mostram a conta quando o Salvar a refaz — a 1ª, as doses, a 2ª ou o
+    // intervalo mexidos (a mesma regra do pbContaManda), ou qualquer mudança no bloco e a ficha da versão antiga, sem o
+    // «à mão». Com o «Vence em» digitado no rascunho, o digitado; com o «à mão» gravado, ele. O banco só muda no Salvar.
+    const vr=vermBlocoRascunho(ex, duas, t1, dada);
+    const d2ant=vr.d2ant, exV=vr.refaz?Object.assign({}, ex, {verm_p:prox, verm_p_manual:''}):ex;
     return '<div class="prev-bloco" id="pb-verm">'
-      +'<div class="prev-tit">Vermifugação '+(ex.verm_p?seloValidade(ex.verm_p):'')+'</div>'
+      +'<div class="prev-tit">Vermifugação '+(exV.verm_p?seloValidade(exV.verm_p):'')+'</div>'
       +(fez?'<div class="prev-nota">Fez exame de fezes em '+fmtBR(ex.fezes_t)+' — não precisa de vermífugo.</div>':'')
       +'<div class="cad-grid">'
         +'<div class="field"><label>Nome do vermífugo</label><input class="cad-in" value="'+escAttr(ex.verm_nome||'')+'" placeholder="Ex: Drontal" onchange="pbSet(\'verm\',{verm_nome:this.value})"></div>'
@@ -41216,10 +41448,12 @@
               ? '<div class="field"><label>2ª dose</label><div class="prev-calc">dada em '+escAttr(fmtBR(dada))+'</div></div>'
               : '<div class="field"><label>2ª dose prevista ('+n+' dias depois)</label><div class="prev-calc">'+(d2prev?fmtBR(d2prev):'informe a 1ª dose')+'</div></div>')
             // max = hoje (6.65, AC4.5): a 2ª só entra depois de dada; o Salvar recusa também quando o calendário deixa passar
-            +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+escAttr(ex.verm_dose2_t||'')+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="'+escAttr(hojeISO())+'" onkeydown="return dataSoNoCalendario(event)">'
+            +'<div class="field"><label>2ª dose dada em</label><input type="date" class="cad-in" value="'+escAttr(d2ant?'':(ex.verm_dose2_t||''))+'" onchange="pbSet(\'verm\',{verm_dose2_t:this.value})" min="2015-01-01" max="'+escAttr(hojeISO())+'" onkeydown="return dataSoNoCalendario(event)">'
+            +(d2ant?vermSerieAntesHTML(dada, prox, ex):'')
             +'<div class="hint" style="margin-top:3px">Enquanto esta data estiver em branco, a 2ª dose continua sendo cobrada na Prevenção e em <strong>Vencimentos</strong>. Preencheu, ela some — e o próximo vermífugo passa a contar desta data.</div></div>'
+            +((vr.fora==='depois')?vermSerieDepoisHTML(ex):'')
           : '')
-        +prevVenceCampoHTML(ex,'verm_p','verm_t',"prevVenceManualSet('verm_p',this.value,'verm')",
+        +prevVenceCampoHTML(exV,'verm_p','verm_t',"prevVenceManualSet('verm_p',this.value,'verm')",
           {rot:'Vence em (próximo vermífugo)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':'')+' — é o que vale ao salvar.'):'Informe a última dose, ou digite aqui o vencimento.')})
         +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
       +'</div>'+pbRodape('verm','vermífugo')+'</div>';
@@ -42041,6 +42275,79 @@
       try{ window.scrollTo(0,y); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
+  // ===== 6.80 (AC8.1, AC8.2, AC8.4) — A FICHA ABERTA E A HOJE NA ZÊLUZ ACOMPANHAM O CADASTRO ==========================
+  // A ficha aberta em Cadastro antes de um «Feito hoje» pelo painel (ou de outro aparelho gravar) continuava com a data
+  // velha ao voltar, e o aviso «Antiparasitários» ficava «URGENTE — vencido» até reabrir. O ouvinte do cadastro (que
+  // dispara a cada mudança de QUALQUER ficha) agora redesenha os blocos de Prevenção da ficha aberta — só quando os dados
+  // DAQUELE FILHOt mudaram, sem perder o rascunho (o pbRender lê o pbEx) e nunca com um campo da ficha em foco (o
+  // redesenho fica para quando o campo solta o foco). Nada é lido nem gravado no banco aqui.
+  var PEL_PREV_VISTO={k:'', j:''}, PEL_PREV_ESPERA=false;
+  function pelPrevAssinatura(k){
+    try{ var c=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache[k]:null; return JSON.stringify((c===undefined)?null:c); }
+    catch(e){ return ''; } /* silencioso de propósito: sem a assinatura, a próxima mudança redesenha */
+  }
+  function pelPrevVistoMarcar(p){ var k=p?pelKey(p):''; PEL_PREV_VISTO={k:k, j:k?pelPrevAssinatura(k):''}; }
+  // Os avisos da aba Prevenção (os recipientes do modelo da ficha) com o que está gravado — o alertaPrevencao não muda.
+  function pelAlertasPrevRedesenhar(){
+    if(!pelAtual) return;
+    var ex=pelExtra(pelAtual)||{};
+    [['saude','Escova e check-up'],['vacina','Vacinas'],['antip','Antiparasitários']].forEach(function(g){
+      try{ var el=document.getElementById('pelAlertaPrev_'+g[0]); if(el) el.innerHTML=alertaPrevencao(ex, g[0], g[1]); }
+      catch(e){} /* silencioso de propósito: redesenho de tela — falhar não muda dado nenhum */
+    });
+  }
+  function pelFichaPrevOuvinte(){
+    var k=pelAtual?pelKey(pelAtual):'', f=document.getElementById('pel-ficha');
+    if(!k || !f || !f.style || f.style.display==='none'){ PEL_PREV_VISTO={k:'', j:''}; return; }
+    var j=pelPrevAssinatura(k);
+    if(PEL_PREV_VISTO.k!==k){ PEL_PREV_VISTO={k:k, j:j}; return; }
+    if(j===PEL_PREV_VISTO.j) return;
+    var a=document.activeElement;
+    if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(String(a.tagName||'')) && typeof f.contains==='function' && f.contains(a)){
+      if(!PEL_PREV_ESPERA){
+        PEL_PREV_ESPERA=true;
+        try{ a.addEventListener('blur', function(){ PEL_PREV_ESPERA=false; setTimeout(pelFichaPrevOuvinte, 0); }, {once:true}); }
+        catch(e){ PEL_PREV_ESPERA=false; } /* silencioso de propósito: sem o aviso do foco, a próxima mudança do cadastro redesenha */
+      }
+      return;
+    }
+    PEL_PREV_VISTO.j=j;
+    Object.keys(PB_HTML).forEach(function(b){ try{ pbRender(b); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não muda dado nenhum */ });
+    pelAlertasPrevRedesenhar();
+  }
+  // A Hoje na Zêluz aberta em outro aparelho: o chip velho («vermífugo vence…», «2ª dose…») saía só ao reabrir. Uma vez
+  // por mudança (com atraso curto, sem redesenhos em cascata), nunca com um painel rápido aberto nem com um campo da tela
+  // em foco. O hojeRedesenhar só desenha a Hoje na Zêluz e os Contatos.
+  var HOJE_OUVINTE_ESPERA=0;
+  function hojeOuvinteCadastro(){
+    var sec=document.getElementById('v-hoje');
+    if(!sec || !sec.classList || !sec.classList.contains('active') || HOJE_OUVINTE_ESPERA) return;
+    HOJE_OUVINTE_ESPERA=setTimeout(function(){
+      HOJE_OUVINTE_ESPERA=0;
+      if(PREV_CORRIGE_ABERTO) return;
+      var a=document.activeElement;
+      if(hojeTextoMexido(sec)) return;   // 6.80 (UX-001): a mensagem que a Consultora mexeu não volta ao texto de fábrica
+      if(a && /^(INPUT|SELECT|TEXTAREA)$/.test(String(a.tagName||'')) && typeof sec.contains==='function' && sec.contains(a)) return;
+      hojeRedesenhar();
+    }, 400);
+  }
+  // 6.80 (UX-001 do QA): uma mensagem pronta da Hoje na Zêluz (textarea.gest-txt) com o texto diferente do de fábrica é texto que
+  // a Consultora está mexendo — redesenhar a tela por uma mudança de OUTRO aparelho o devolveria ao de fábrica, e «Mandar no
+  // WhatsApp» e «Copiar» levariam o de fábrica. A tela espera: tenta de novo quando ela sai do campo e a cada mudança do
+  // cadastro, e só redesenha quando nenhum texto está mexido (mandar ou fechar a mensagem já redesenha a tela, como sempre).
+  function hojeTextoMexido(sec){
+    var tas=[];
+    try{ tas=Array.prototype.slice.call(sec.querySelectorAll('textarea.gest-txt')); }
+    catch(e){ tas=[]; } /* silencioso de propósito: sem a lista dos campos, a tela segue o redesenho de sempre */
+    var mexidos=tas.filter(function(t){ return t && String(t.value)!==String(t.defaultValue); });
+    mexidos.forEach(function(t){
+      if(t.__hoje680Espera) return;
+      t.__hoje680Espera=true;
+      try{ t.addEventListener('blur', function(){ t.__hoje680Espera=false; hojeOuvinteCadastro(); }, {once:true}); }
+      catch(e){ t.__hoje680Espera=false; } /* silencioso de propósito: sem o aviso da saída do campo, a próxima mudança do cadastro tenta de novo */
+    });
+    return mexidos.length>0;
+  }
   // ===== CATEGORIA DO PELUDINHO (Adriana, 03/ago/2026) ===============================
   // "Já nessa primeira parte poderíamos escolher entre Auluno · Hóspede (AuAulândia) ·
   //  Auluno Avulso — para marcarmos no primeiro momento da ficha em qual categoria ele
@@ -42170,6 +42477,7 @@
     // 6.63 (AC8.6): o rascunho dos blocos de prevenção fica guardado POR FILHOt neste aparelho (pbRascTrocar) — abrir outro
     // FILHOt não o apaga mais; a ficha nova avisa e «Voltar e salvar» traz o rascunho de volta. Nada é gravado sem o «Salvar».
     if(PB_ULT!==i){ pbRascTrocar(p); PB_SALVO={}; PREV_RECALC_AVISO={}; PB_ULT=i; renovRascLimpar(); mmRascLimpar(); }   // blocos de prevenção e rascunhos do plano: pendente é por FILHOt
+    pelPrevVistoMarcar(p);   // 6.80 (AC8.1): a ficha que esta tela desenhou, para o ouvinte do cadastro saber se ela mudou
     const idade=calcIdade(pelNasc(p)); const can=canEditPel();
     document.getElementById('pel-lista').style.display='none';
     const f=document.getElementById('pel-ficha'); f.style.display='block';
@@ -42282,7 +42590,7 @@
              A escova, que ficava no fim da aba, sobe para o lado dele. -->
         <h3 class="cad-sub">Check-up e escova</h3>
         ${prevAjudaVenceHTML()}
-        ${alertaPrevencao(ex,'saude','Escova e check-up')}
+        <div id="pelAlertaPrev_saude">${alertaPrevencao(ex,'saude','Escova e check-up')}</div>
         <div class="cad-grid">
           <div class="field" style="grid-column:1/-1"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
           <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:1,checkup:1})" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)">
@@ -42311,13 +42619,13 @@
 
         <h3 class="cad-sub">Vacinas</h3>
         ${prevAjudaVenceHTML()}
-        ${alertaPrevencao(ex,'vacina','Vacinas')}
+        <div id="pelAlertaPrev_vacina">${alertaPrevencao(ex,'vacina','Vacinas')}</div>
         ${blocoVacinas(pbEx('vac'))}
 
         <h3 class="cad-sub">Antiparasitários</h3>
         <div class="hint" style="margin-top:-2px">Pipeta, comprimido, coleira, vermífugo e exame de fezes. <strong>Nada aqui é vacina</strong> — o que vencer neste bloco não é dose de vacina atrasada.</div>
         ${prevAjudaVenceHTML()}
-        ${alertaPrevencao(ex,'antip','Antiparasitários')}
+        <div id="pelAlertaPrev_antip">${alertaPrevencao(ex,'antip','Antiparasitários')}</div>
         ${blocoEcto(pbEx('ecto'))}
         ${blocoColeira(pbEx('col'))}
         ${blocoVerm(pbEx('verm'))}
@@ -57743,6 +58051,8 @@
                 atrasado:(v<hoje), vacina:(it.grupo==='vacina')});
     });
     out.sort(function(a,b){ return (a.vence<b.vence)?-1:((a.vence>b.vence)?1:0); });
+    // 6.80 (AC2.1): com o próximo vermífugo vencendo ou vencido, a 2ª dose da série anterior não é cobrada
+    if(out.some(function(x){ return x.k==='verm_p'; })) out=out.filter(function(x){ return x.k!=='verm_dose2_p'; });
     // O que tem data vem primeiro (tem prazo e tem urgência); o que está em aberto vem
     // depois, na ordem da própria ficha. Misturar os dois pela data ordenaria o vazio.
     return out.concat(abertos);
@@ -60110,11 +60420,11 @@
   // Função PURA: recebe a lista do dia e devolve as linhas com os nomes, sem repetir nome
   // dentro de uma linha. É ela que o harness morde.
   function vencResumoGrupos(L){
-    var por={}, alvo={}, visto={};
+    var por={}, alvo={}, visto={}, onde={};
     (L||[]).forEach(function(o){
       (((o&&o.itens))||[]).forEach(function(x){
         var f=vencResumoFamilia(x);
-        por[f]=por[f]||[]; alvo[f]=alvo[f]||[]; visto[f]=visto[f]||{};
+        por[f]=por[f]||[]; alvo[f]=alvo[f]||[]; visto[f]=visto[f]||{}; onde[f]=onde[f]||{};
         // Um nome por FILHOt em cada linha. A conferência é pela CHAVE (nome + tutor), não
         // pelo nome: dois Thor de tutores diferentes com o vermífugo vencido são dois, e o
         // segundo sumia do resumo (Fase 0, 25/set/2026).
@@ -60125,7 +60435,12 @@
           // `alvos` anda ao lado de `nomes`, na MESMA ordem: é o que deixa o nome desta
           // linha virar botão de atualizar a data (24/set/2026). `nomes` fica como estava
           // — é dele que sai o texto do "Copiar resumo".
+          onde[f][qual]=alvo[f].length;
           alvo[f].push({nome:o.nome, chave:(o&&o.chave)||'', k:(x&&x.k)||''});
+        } else if(f==='verm' && x && x.k==='verm_p'){
+          // 6.80 (AC2.3): com os dois itens do vermífugo, o nome abre o do próximo (a série nova), nunca o da 2ª dose
+          var a=alvo[f][onde[f][qual]];
+          if(a && a.k==='verm_dose2_p') a.k='verm_p';
         }
       });
     });
@@ -69206,6 +69521,7 @@
     'pendencia-movida':'Passou a pendência para outro FILHOt ou item', 'pendencia-resolucao-desfeita':'Desfez a resolução da pendência (o lançamento saiu)',
     'pendencia-reaberta-pelo-tirar':'A pendência voltou a abrir (o lançamento foi tirado)',
     'prevencao':'Prevenção lançada na ficha', 'prevencao-atualizada-na-tela':'Atualizou a prevenção no painel rápido',
+    'prevencao-serie-nova-corrigida':'Corrigiu o vermífugo na ficha: 1ª dose da série nova',   // 6.80 (AC9.3)
     'prevencao-atraso-confirmado':'Confirmou a prevenção em atraso', 'prevencao-desfeita':'Desfez a atualização da prevenção («Atualizados hoje»)',
     'prevencao-limpa':'Limpou a data da prevenção (fica sem data)', 'ficha-escova':'Escovação na ficha',
     'escova-desfeita':'Desfez a troca de escova («tinha em casa» ou «não autorizou»)', 'escova-chip-tirado':'Tirou o FILHOt da escovação (chip e pergunta)',

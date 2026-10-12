@@ -1,6 +1,44 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08, 09 e 10/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08, 09, 10 e 12/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 12/out/2026 (v 2026-10-09-25) — Vermífugo: a dose numa série vencida é a 1ª da série nova, a ficha que a versão antiga deixou, a tela que mostra antes de gravar e o primeiro toque no «Salvar» (caso Romeo, Story 6.80)
+
+> Adriana, 11/out/2026 (quadro de pedidos, linha 89): *"Fui atualizar o vermifugo do Romeo que vence a primeira dose hoje. Ele lança a segunda dose automático. Mas a segunda dose (embaixo) e a dose do próximo vencimento (para 4 meses) não atualizam."* A regra dela não muda: a 2ª dose vem 15 ou 21 dias depois da 1ª; o próximo vermífugo vence 4 meses (120 dias) depois da última dose; dose única, 4 meses. Nenhuma tela nova no menu, nenhum campo novo no banco, nenhuma mensagem nova ao tutor. **Nada é corrigido sozinho:** as fichas que já ficaram erradas se acertam com um toque, na própria ficha.
+
+### (CY) Vencimentos, Hoje na Zêluz e Prevenção › chip do vermífugo (o painel rápido)
+
+| Antes | Agora |
+|---|---|
+| Quando a 2ª dose da série anterior nunca foi lançada e o próximo já tinha vencido, o cartão mostrava «Vermífugo — 2ª dose — venceu em 13/06» antes de «Vermífugo — vence em 11/10», e o nome do FILHOt no resumo «Vermífugo (n)» abria o painel da 2ª dose | O cartão, o resumo, a Hoje na Zêluz e a mensagem pronta **não oferecem a 2ª dose da série vencida**: fica só «Vermífugo — vence em …», e o nome do FILHOt no resumo abre o painel do vermífugo (com «2 doses» e «2ª dose com: 15 dias \| 21 dias»). A mensagem «É dia da segunda dose» não nasce para a série vencida |
+| «Feito hoje» no chip da 2ª dose gravava a dose de hoje como a 2ª atrasada de maio: a 2ª da série nova nunca era cobrada e o próximo saía 3 semanas antes (08/02/2027) | A dose de hoje entra como **1ª dose da série nova**, por qualquer chip (também numa tela que ficou velha): 1ª em 11/10/2026, 2ª prevista para 01/11/2026 e próximo em 01/03/2027 (com 15 dias: 26/10/2026 e 23/02/2027). O verde diz: «A série da 1ª dose de 23/05/2026 já tinha vencido: a dose de hoje entrou como 1ª dose da série nova; 2ª dose em 01/11/2026 e próximo vermífugo em 01/03/2027.» |
+| — | A 2ª dose **no mesmo dia da 1ª** é recusada no painel (é o chip «2ª dose» que ficou na tela de outro aparelho depois de a 1ª ser gravada): «A 2ª dose (11/10/2026) cairia no mesmo dia da 1ª. Se a dose de hoje foi a 1ª dose, ela já está registrada: toque em «fechar» e atualize a tela.» Nada é gravado |
+| A Hoje na Zêluz aberta em outro aparelho continuava com o chip antigo até ser reaberta | **Ela se redesenha sozinha** quando a ficha muda (uma vez, logo depois), menos com um painel aberto, com um campo da tela sendo digitado ou com uma mensagem pronta que você mexeu: o seu texto não volta ao de fábrica. A tela se atualiza quando o texto volta ao original (ao sair do campo ou na mudança seguinte), ao mandar ou ao fechar a mensagem |
+| — | **Não mudou:** a 2ª dose legítima e atrasada, com o próximo ainda no futuro, continua aceita (dada em 05/11: próximo em 05/03/2027); com o próximo digitado à mão, o painel grava como antes. A tabela da Prevenção e os avisos da Gestão continuam mostrando a 2ª da série vencida (a Gestão precisa ver o FILHOt); tocar nesse chip grava a série nova |
+
+### (CZ) Prevenção › toque no nome › «Lance aqui mesmo»
+
+| Antes | Agora |
+|---|---|
+| Ao mudar o «Feito em» da linha «Vermífugo», a linha de baixo («Vermífugo — 2ª dose») continuava com a 2ª antiga e o «Próximo vermífugo» vazio até o Salvar | **A linha de baixo acompanha na hora:** a 2ª dose anterior à 1ª nova sai do «Feito em», o selo passa a ser o da 2ª prevista da série nova e o «Próximo vermífugo» (só de leitura) mostra o próximo pela conta (01/03/2027). Sem 2ª dada, o «Próximo vermífugo» já abre com a conta, em vez de vazio. Nada é gravado antes do «Salvar» |
+| Na ficha que o «Lance» antigo deixou com o próximo adiantado (08/02/2027), tocar só em «Salvar Vermífugo» mantinha 08/02/2027 | **A conta refaz** (01/03/2027). O «Vale até» que você escrever nesta abertura continua valendo, e o próximo digitado à mão na ficha também |
+| A linha «Vermífugo — 2ª dose» gravava a 2ª atrasada numa série vencida | Grava a **série nova** (como no painel), com a frase na própria linha, junto do «Salvo às HH:MM» |
+
+### (DM) Cadastro de Peludinhos › FILHOt › Prevenção › Vermifugação (a ficha)
+
+| Antes | Agora |
+|---|---|
+| Trocando «1ª dose em» para 11/10, só a «2ª dose prevista» mudava: «2ª dose dada em» continuava 13/06/2026, «Vence em» continuava 11/10/2026 e o selo dizia «vence HOJE» | **Antes de salvar**, a tela já mostra o que vai ficar gravado: «2ª dose dada em» aparece vazio, com «A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar.», e o «Vence em» e o selo mostram 01/03/2027 (23/02/2027 com 15 dias). O «Vence em» digitado continua mandando; o digitado à mão aparece enquanto a última dose não for mexida |
+| A ficha gravada pela versão antiga (1ª 11/10, 2ª de junho, próximo 11/10): «Salvar vermífugo» sem mexer dizia «✓ Salvo» e **não gravava nada**; trocando só o nome, a 2ª de junho ficava | Abre já mostrando a 2ª vazia com a frase e o «Vence em» pela conta. **«Salvar vermífugo» sem mexer corrige** (a 2ª sai, a 2ª prevista e o próximo pela conta). «✓ Salvo» só depois de o banco confirmar; recusado, «NÃO FOI SALVO». O «Vence em» digitado à mão é respeitado. Para quem edita a ficha, a frase vem com o botão **«Corrigir: é a 1ª dose da série nova»**, que grava o próximo pela conta, e diz isso antes do toque: «Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta; a data digitada à mão (15/01/2027) sai.» Para manter a data digitada à mão, use «Salvar vermífugo» |
+| A ficha que caiu no defeito do painel (1ª em maio, «2ª» em 11/10, próximo 08/02/2027) não dizia nada | Um aviso: «A 2ª dose de 11/10/2026 foi dada quando a série da 1ª dose de 23/05/2026 já tinha vencido (em 11/10/2026): pode ser a 1ª dose de uma série nova. Se for, toque no botão abaixo e fica: 1ª dose em 11/10/2026, 2ª dose prevista para 01/11/2026 e próximo vermífugo em 01/03/2027. Nada muda enquanto você não tocar.», com **«Corrigir: é a 1ª dose da série nova»** (44 px), só para quem edita a ficha. O toque passa pelo mesmo «Salvar» (trava de data, «Salvando…», rastro) e deixa a linha «Corrigiu o vermífugo na ficha: 1ª dose da série nova» na Linha do tempo |
+| O 1º toque em «Salvar vermífugo», logo depois de digitar um campo, às vezes **não gravava** (o bloco se redesenhava no meio do toque e o botão mudava de lugar); só o 2º toque gravava | **Um toque grava, uma vez só**, nunca duas; um novo «Salvar», tocado de propósito logo depois, também grava. O botão «Salvar» dos cinco blocos (carrapaticida, coleira, vermífugo, exame de fezes e vacinas) passa a ter 44 px |
+| A ficha aberta em Cadastro antes de um «Feito hoje» pelo painel continuava mostrando a data velha ao voltar, e o aviso «Antiparasitários» ficava «URGENTE — vencido» até reabrir | A ficha aberta **acompanha** quando a ficha daquele FILHOt muda (sem perder o que você estava digitando), e os avisos «Vacinas», «Antiparasitários» e «Escova e check-up» passam a «em dia» logo depois de salvar |
+
+### (DN) O que continua igual e o que a equipe faz
+
+- **Não mudou:** a dose pelo peso, o exame de fezes («vale o mais recente»), as permissões (a Veterinária continua só vendo), a mensagem «É dia da segunda dose» (o texto é da Adriana), os 4 meses (120 dias), as regras do banco e a área protegida do check-in.
+- **A-P3, decidida pela Adriana em 12/10/2026: sim, 1ª dose da série nova.** A dose dada numa série que já venceu, pelo chip da 2ª dose, é gravada como 1ª dose da série nova (e não recusada).
+- **Para a equipe, depois da publicação:** as fichas que já ficaram erradas se acertam uma a uma, abrindo a ficha (o aviso diz o que fazer). A ficha com a 2ª dose ainda vazia e o próximo adiantado pelo «Lance» antigo (08/02/2027) se acerta sozinha quando a 2ª dose for lançada.
 
 ## O que mudou em 10/out/2026 (v 2026-10-09-24) — Orçamento, parte 1: «Fechou», «Não fechou», «Voltar para pendente», «Mudar as datas», «Cancelar» e «Reativar», «Anular», a planilha de estadias que acompanha a reserva e a lista além dos 60 (S7 da revisão tela por tela, parte 1; Story 6.68)
 

@@ -39629,7 +39629,8 @@ provaAsync('6.65 P19 (AC3.9) — a ficha antiga com a 2ª gravada antes da 1ª (
   com665({ verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-08-01', verm_p: '2026-11-29' }, HOJE665, () => {
     ficha665({ verm_nome: 'Drontal' });
     igual(ZA665(), []);
-    igual(G665(), [{ verm_nome: 'Drontal', verm_2a: '2026-09-22', verm_p: '2027-01-20' }]);
+    // 6.80 (AC4.1, AC4.3): a 2ª antiga (antes da 1ª) sai também no Salvar só do nome — o patch leva verm_dose2_t vazio
+    igual(G665(), [{ verm_nome: 'Drontal', verm_dose2_t: '', verm_2a: '2026-09-22', verm_p: '2027-01-20' }]);
   });
 });
 provaAsync('6.65 P20 (AC5, D7) — depois da 2ª real (1ª 10/10, 2ª 25/10), o bloco diz «2ª dose dada em 25/10/2026» e não «2ª dose prevista»; o campo «2ª dose dada em» e o onchange continuam; «Pela conta» diz o próximo depois da 2ª', async () => {
@@ -39679,6 +39680,9 @@ provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões,
   // 6.63, 2ª rodada (REL-004 do gate do QA): no ok com o soDepoisDoOk, o setPelExtra grava na cópia deste aparelho só o patch, por
   // cima da cópia de agora (não o retrato tirado na chamada) — muda de propósito; a guarda continua, contra o texto da 6.63.
   Object.assign(BASE, { setPelExtra: 'c37367acebfa2701' });
+  // 6.80 (AC2.1): vencItensDe não oferece a 2ª dose da série vencida quando o próximo também está na lista — muda de propósito;
+  // a guarda continua, contra o texto da 6.80 (as outras funções, contra a base).
+  Object.assign(BASE, { vencItensDe: 'c019895dacb7d9b8' });
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
@@ -39868,7 +39872,8 @@ provaAsync('6.65 R2 P29 (TEST-001: Q22, Q24, Q25, Q27, Q28) — «Lance aqui mes
   com665(Object.assign({}, ROMEU665, { verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }), HOJE665, () => {
     const K = K665(), l2 = linha665(run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`), 'verm_dose2_p');
     assert.ok(l2.indexOf('id="prevT_' + K + '_verm_dose2_p" value=""') >= 0 && !/dada em/.test(txt665(l2)) && l2.indexOf(run("seloValidade('2026-10-31')")) >= 0, txt665(l2));
-    assert.ok(/id="prevP_[^"]*_verm_dose2_p" value=""/.test(l2), 'o «Próximo vermífugo» vazio');
+    // 6.80 (AC6.2): sem a 2ª dada, o «Próximo vermífugo» mostra o próximo pela conta da 1ª da ficha ((10/10 + 21) + 120), e não mais vazio
+    assert.ok(/id="prevP_[^"]*_verm_dose2_p" value="2027-02-28"/.test(l2), 'o «Próximo vermífugo» pela conta');
   });
 });
 }
@@ -40098,7 +40103,8 @@ provaAsync('6.65 QA Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, p
     const h = run('blocoVerm(pbEx("verm"))');
     assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
     fichaQ({ verm_nome: 'Milbemax' }); await espera657();
-    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+    // 6.80 (AC4.1, AC4.3): o Salvar só do nome agora tira a 2ª antiga do banco (verm_dose2_t vazio); a lista e a 2ª prevista não mudam
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '', '2026-09-22', '2027-01-20', '∅']);
   });
 });
 provaAsync('6.65 QA Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
@@ -40330,6 +40336,8 @@ provaAsync('6.65 QA Q24 — o que não pode mudar: dose pelo peso (6.59), exame 
   // (por cima da cópia de agora) — muda de propósito; a guarda continua, contra o texto da 6.63.
   const MUDOU663 = { fn: { prevVenceManualSet: 'e583a6c8523f2e36', prevCorrigeRegistrar: 'f1360a1fdbf2da9f', setPelExtra: 'c37367acebfa2701' }, cache3: { prevCorrigeExameFezes: 'd6b8e673ee37db29', prevCorrigeVenceEm: '8723e245ae6a9237', prevCorrigeDoseUnica: 'b5129f66aa4d2f76' } };
   const BASEF663 = Object.assign({}, BASE.fn, MUDOU663.fn);
+  // 6.80 (AC2.1): vencItensDe muda de propósito (a 2ª da série vencida fora da lista); a guarda continua, contra o texto da 6.80
+  Object.assign(BASEF663, { vencItensDe: 'c019895dacb7d9b8' });
   const dif = Object.keys(BASEF663).filter((n) => h(fonte(novo, n)) !== BASEF663[n]);
   igual(dif, [], 'funções que mudaram: ' + dif.join(', '));
   // as três que só ganham o passo do cache: sem as duas linhas, idênticas
@@ -40570,7 +40578,8 @@ provaAsync('6.65 QA2 Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, 
     const h = run('blocoVerm(pbEx("verm"))');
     assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
     fichaQ({ verm_nome: 'Milbemax' }); await espera657();
-    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+    // 6.80 (AC4.1, AC4.3): o Salvar só do nome agora tira a 2ª antiga do banco (verm_dose2_t vazio); a lista e a 2ª prevista não mudam
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '', '2026-09-22', '2027-01-20', '∅']);
   });
 });
 provaAsync('6.65 QA2 Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
@@ -52611,6 +52620,1102 @@ provaAsync('6.68 R4 OBS-R3-1 — sem coluna livre no calendário: o «Fechou» e
     igual([zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA'), /^Thor: a linha do dinheiro entrou na aba Hospedagem, mas as noites de 11\/10\/2026 a 16\/10\/2026 não foram marcadas no calendário: não há coluna de hóspede livre na estadia inteira\./.test(L[0] || '')],
       [false, true], JSON.stringify([zaTitulos668(), L]));
   } finally { solta668(); }
+});
+}
+{
+// ================================================================== 6.80 — vermífugo: a série nova de verdade (caso Romeo)
+console.log('\n6.80 — vermífugo: a dose numa série vencida é a 1ª da série nova, a ficha da versão antiga, a tela antes de gravar e o toque no «Salvar» (Adriana, 11/out/2026)');
+// Tudo inventado: o FILHOt «Romeo», da tutora «Lia Teste», com a ficha como a do relato (1ª 23/05/2026, a 2ª de 13/06 nunca
+// lançada, o próximo vencendo em 11/10/2026). O setPelExtra e o pelExtra DE VERDADE sobre o banco de mentira da 6.57 (ARMA657):
+// cada porta grava no banco, a tela de quem gravou é capturada no redesenho, sem o ouvinte do cadastro. O relógio: domingo,
+// 11/10/2026, às 19:30 e às 21:30 de Brasília (os instantes em UTC), com o «hoje» pela hora local do processo (AC10): em
+// São Paulo, as duas horas são o dia 11/10; no processo em UTC, as 21:30 de Brasília já são 12/10 — cada prova confere o
+// resultado do dia local do seu fuso, nunca um dia misturado. Gestão e Consultora de Bem-Estar onde a tela muda.
+const I1930_680 = Date.UTC(2026, 9, 11, 22, 30), I2130_680 = Date.UTC(2026, 9, 12, 0, 30);
+const INST680 = [['19:30', I1930_680], ['21:30', I2130_680]];
+const PAPEIS680 = [['gestao', 'Gestora Teste'], ['consultora', 'Bia Consultora Teste']];
+const iso680 = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dia680 = (ms) => iso680(new Date(ms));                 // o dia local deste processo (UTC ou São Paulo) — o do aparelho
+const mais680 = (iso, n) => { const a = iso.split('-').map(Number); return iso680(new Date(a[0], a[1] - 1, a[2] + n)); };
+const br680 = (iso) => iso.split('-').reverse().join('/');
+// a série nova que a dose de `dia` grava (a conta feita aqui, de forma independente do app)
+const nova680 = (dia, n) => ({ verm_t: dia, verm_dose2_t: '', verm_2a: mais680(dia, n || 21), verm_p: mais680(mais680(dia, n || 21), 120) });
+// D1: a 2ª de maio nunca lançada e o próximo vencendo hoje (23/05 + 21 + 120 = 11/10)
+const ROMEO680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+// a ficha que a versão antiga (-07-09) gravou: a 1ª nova, a 2ª de junho e o próximo velho
+const ROMEOH680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+// a ficha que já caiu no D1: a dose de 11/10 gravada como a 2ª atrasada de maio
+const ROMEOD1680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-10-11', verm_2a: '2026-10-11', verm_p: '2027-02-08' };
+// a ficha que o «Lance aqui mesmo» da -22 deixou com o próximo adiantado (S12)
+const ROMEOS12680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-11', verm_2a: '2026-11-01', verm_p: '2027-02-08' };
+const arma680 = (ficha, ms, papel) => {
+  run(ARMA657);
+  relogio658(ms || I1930_680);
+  const pp = papel || PAPEIS680[0];
+  ctx.__f680 = Object.assign({ n: 'Romeo', tutor: 'Lia Teste', raca: 'Spitz Alemão', dias: ['seg', 'qua'] }, ficha || {});
+  run(`__bk680={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, fc:prevCorrigeFecharConversa, vf:vencFecharAssuntosPelaFicha,
+      ok:PREV_CORRIGE_OK, pp:PB_PEND, ps:PB_SALVO, ra:PREV_RECALC_AVISO, ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM, prr:prevRedesenhar,
+      ze:zEscolha, vm:VENC_MEMO, pev:PREV_ED_VISTO, ple:PREV_LANCE_ESTADO, pce:PREV_CORR_ESTADO, hrd:hojeRedesenhar, vcfg:VENC_CFG};
+    // as caixas novas da 6.80 (na base elas não existem: a prova roda igual contra a base, e as guardas valem lá)
+    __bk680n={}; ['PREV_VALE_CONTA','PB_TOQUE_SALVAR','PB_SALVOU_EM','PB_SERIE_NOVA','PEL_PREV_VISTO','PEL_PREV_ESPERA','HOJE_OUVINTE_ESPERA'].forEach(function(n){
+      __bk680n[n]=(typeof globalThis[n]!=='undefined')?globalThis[n]:undefined; });
+    document.body.dataset.role='${pp[0]}'; __login657={nome:${JSON.stringify(pp[1])}, role:'${pp[0]}'};
+    __r680={n:'Romeo', tutor:'Lia Teste', raca:'Spitz Alemão', dias:['seg','qua']}; PELUDINHOS=[__r680]; pelAtual=__r680;
+    PB_PEND={}; PB_SALVO={}; PREV_CORRIGE_OK={}; PREV_RECALC_AVISO={}; PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
+    PREV_ED_VISTO={}; PREV_VALE_CONTA={}; PREV_LANCE_ESTADO={}; PB_TOQUE_SALVAR=null; PB_SALVOU_EM={}; PB_SERIE_NOVA=null;
+    PEL_PREV_VISTO={k:'', j:''}; PEL_PREV_ESPERA=false; HOJE_OUVINTE_ESPERA=0; PREV_CORR_ESTADO={};
+    __k680=pelKey(__r680); __dc680=dcKey(__r680.n, __r680.tutor);
+    __put657('daycare/cadastro/'+__k680, __f680); pelCadCache={}; pelCadCache[__k680]=__get657('daycare/cadastro/'+__k680); __ls657={}; __esc657=[]; __au657=[];
+    __telas680=[]; __zeFn680=null;
+    zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn680=b; };
+    pbRender=function(b){ var e=pbEx(b); __telas680.push({tela:'ficha', b:b, ex:JSON.parse(JSON.stringify(e)), html:(PB_HTML[b]?PB_HTML[b](e):''), salvo:!!PB_SALVO[b]}); };
+    var cap=function(t){ return function(){ __telas680.push({tela:t, ex:JSON.parse(JSON.stringify(pelExtra(__r680))), ok:JSON.parse(JSON.stringify(PREV_CORRIGE_OK))}); }; };
+    vencRender=cap('venc'); hojeRender=cap('hoje'); renderPrevencao=cap('prev'); prevRedesenhar=cap('prevR');
+    prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){};`);
+};
+const solta680 = () => {
+  try {
+    run(`pbRender=__bk680.pr; vencRender=__bk680.vr; hojeRender=__bk680.hr; renderPrevencao=__bk680.rp; prevCorrigeFecharConversa=__bk680.fc;
+      vencFecharAssuntosPelaFicha=__bk680.vf; PREV_CORRIGE_OK=__bk680.ok; PB_PEND=__bk680.pp; PB_SALVO=__bk680.ps; PREV_RECALC_AVISO=__bk680.ra;
+      PREV_CORRIGE_ABERTO=__bk680.ab; PREV_CORRIGE_ORIGEM=__bk680.ori; prevRedesenhar=__bk680.prr; zEscolha=__bk680.ze; VENC_MEMO=__bk680.vm;
+      PREV_ED_VISTO=__bk680.pev; PREV_LANCE_ESTADO=__bk680.ple; PREV_CORR_ESTADO=__bk680.pce; hojeRedesenhar=__bk680.hrd; VENC_CFG=__bk680.vcfg;
+      Object.keys(__bk680n).forEach(function(n){ if(__bk680n[n]===undefined){ try{ delete globalThis[n]; }catch(e){} } else globalThis[n]=__bk680n[n]; });
+      delete document.activeElement;`);
+  } finally { run(SOLTA657); }
+};
+const com680 = async (ficha, ms, papel, fn) => { arma680(ficha, ms, papel); try { const r = await fn(); await espera657(); return r; } finally { solta680(); } };
+const db680 = () => J630("__get657('daycare/cadastro/'+__k680)");
+const V680 = ['verm_t', 'verm_dose2_t', 'verm_2a', 'verm_p'];
+const pega680 = (o, cs) => (cs || V680).map((c) => ((o && Object.prototype.hasOwnProperty.call(o, c)) ? o[c] : '∅'));
+const quer680 = (o, cs) => (cs || V680).map((c) => o[c]);
+const esc680 = () => J630("__esc657.filter(function(e){ return /^daycare\\/cadastro\\//.test(e[1]); })");
+const za680 = () => J630('__za657');
+const aud680 = (a) => J630(`__au657.filter(function(x){ return x[0]===${JSON.stringify(a)}; })`);
+const telas680 = () => J630('__telas680');
+const ultFicha680 = () => { const t = telas680().filter((x) => x.tela === 'ficha' && x.b === 'verm'); return t[t.length - 1] || null; };
+const bloco680 = () => String(run("blocoVerm(pbEx('verm'))") || '');
+// PAINEL RÁPIDO: o chip `k` tocado na tela `tela` (venc|hoje|prev; origem 'resumo' para o nome do resumo), depois «Feito hoje»
+// (dt 'hoje') ou «Feito em…» + «Gravar esta data». A Prevenção fala na pelKey; Vencimentos e Hoje na Zêluz, na dcKey.
+const painel680 = (k, dt, tela, origem) => {
+  ctx.__pk680 = k; ctx.__pd680 = dt; ctx.__pt680 = tela || 'venc'; ctx.__po680 = origem || '';
+  run(`(function(){ var ch=(__pt680==='prev')?__k680:__dc680;
+    prevCorrigeAbrir(ch, __pk680, __pt680, __po680);
+    if(__pd680==='hoje') prevCorrigeFeitoHoje(ch, __pk680, __pt680);
+    else { __el657['prevCorrT_'+ch+'_'+__pk680]={value:__pd680}; prevCorrigeFeitoEm(ch, __pk680, __pt680); } })()`);
+};
+// «LANCE AQUI MESMO»: o «Feito em» com o onchange (prevRecalcular), o que estiver escrito por cima no campo da validade, e o «Salvar»
+const lance680 = (k, dt, porCima, quem) => {
+  ctx.__lk680 = k; ctx.__ld680 = dt; ctx.__lv680 = (porCima === undefined) ? null : porCima; ctx.__lq680 = quem || '';
+  run(`(function(){ var ch=__k680, ex=pelExtra(__r680);
+    __el657['prevT_'+ch+'_'+__lk680]={value:__ld680}; __el657['prevQ_'+ch+'_'+__lk680]={value:__lq680}; __el657['prevN_'+ch+'_'+__lk680]={value:''};
+    if(!__el657['prevP_'+ch+'_'+__lk680]) __el657['prevP_'+ch+'_'+__lk680]={value:ex[__lk680]||''};
+    prevRecalcular(ch, __lk680);
+    if(__lv680!==null) __el657['prevP_'+ch+'_'+__lk680].value=__lv680;
+    __vale680=__el657['prevP_'+ch+'_'+__lk680].value;
+    prevLancar(ch, __lk680); })()`);
+  return run('__vale680');
+};
+// O «Lance aqui mesmo» desenhado (prevEdicaoHTML) e os campos da tela com o que ele desenhou — sem nenhum toque
+const lanceAbre680 = () => {
+  const h = String(run("prevEdicaoHTML({p:__r680, nome:'Romeo'})") || '');
+  run(`(function(){ var ch=__k680, V=PREV_ED_VISTO[ch]||{};
+    Object.keys(V).forEach(function(k){ __el657['prevT_'+ch+'_'+k]={value:String(V[k].t||'')}; __el657['prevQ_'+ch+'_'+k]={value:''}; __el657['prevN_'+ch+'_'+k]={value:''}; });
+    __el657['prevP_'+ch+'_verm_p']={value:String((V.verm_p||{}).p||'')}; })()`);
+  return h;
+};
+const linha680 = (h, k) => h.split('<div style="border-top:1px solid var(--line);padding:9px 0').filter((s) => s.indexOf('id="prevT_') >= 0 && s.indexOf('_' + k + '" value') >= 0)[0] || '';
+const txt680 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»').replace(/\s+/g, ' ').trim();
+// O toque de verdade no «Salvar …» do bloco `b` (o pointerdown que o app escuta na captura)
+const toque680 = (b) => run(`pbToqueAnotar({target:{closest:function(s){ return ${b ? `{getAttribute:function(){ return "pbSalvar('${b}')"; }}` : 'null'}; }}})`);
+// para cada fuso do processo: as duas horas e os dois papéis
+const todos680 = async (fn) => { for (const [hora, ms] of INST680) for (const pp of PAPEIS680) await fn(hora, ms, pp, dia680(ms)); };
+
+// ---------------------------------------------------------------- D1 (AC1, AC2)
+provaAsync('6.80 P01 (AC1.2a, AC2.3, C14) — o nome do Romeo no resumo «Vermífugo (n)» de Vencimentos aponta para o próximo (verm_p), e o painel tem «2 doses» e «15 | 21»; «Feito hoje» grava a série nova: 11/10, 2ª vazia, 01/11/2026 e 01/03/2027 (no dia local de cada fuso, às 19:30 e às 21:30, Gestão e Consultora)', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      const alvos = J630(`(function(){ var ex=pelExtra(__r680), h=zHojeISO();
+        return vencResumoGrupos([{chave:__dc680, nome:'Romeo', itens:vencItensDe(ex, h, 7, h, {incluirSemRegistro:true})}]).filter(function(g){ return g.v==='verm'; }).map(function(g){ return g.alvos; }); })()`);
+      igual(alvos, [[{ nome: 'Romeo', chave: run('__dc680'), k: 'verm_p' }]], hora + ' ' + pp[0]);
+      run(`prevCorrigeAbrir(__dc680, 'verm_p', 'venc', 'resumo');`);
+      const ph = String(run(`prevCorrigePainelHTML(__dc680, 'venc', zHojeISO(), 'resumo')`) || '');
+      assert.ok(/id="prevCorrE2_[^"]*" checked/.test(ph) && /id="prevCorrI21_[^"]*" checked/.test(ph) && /id="prevCorrI15_/.test(ph), 'o painel do próximo: «2 doses» e «15 | 21»');
+      run(`prevCorrigeFeitoHoje(__dc680, 'verm_p', 'venc');`); await espera657();
+      igual(pega680(db680()), quer680(nova680(dia)), hora + ' ' + pp[0] + ' (dia ' + dia + ')');
+      igual(run('zHojeISO()'), dia, 'o «hoje» é o do aparelho');
+      if (dia === '2026-10-11') igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'o caso do Romeo');
+    });
+  });
+});
+provaAsync('6.80 P02 (AC1.2, AC2.1, C15, H3) — o cartão de Vencimentos e a Hoje na Zêluz NÃO listam a 2ª da série vencida; o chip da 2ª dose que ficou numa tela velha (Vencimentos, resumo, Hoje na Zêluz e a tabela da Prevenção) grava a série nova, nunca a 2ª no dia de hoje', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const [tela, origem] of [['venc', ''], ['venc', 'resumo'], ['hoje', ''], ['prev', '']]) {
+      await com680(ROMEO680, ms, pp, async () => {
+        const ks = J630("(function(){ var h=zHojeISO(); return vencItensDe(pelExtra(__r680), h, 7, h, {incluirSemRegistro:true}).filter(function(x){ return !x.sem_registro; }).map(function(x){ return x.k; }); })()");
+        igual(ks, ['verm_p'], 'o cartão e a Hoje na Zêluz: só o vermífugo');
+        painel680('verm_dose2_p', 'hoje', tela, origem); await espera657();
+        const d = db680();
+        igual(pega680(d), quer680(nova680(dia)), [hora, pp[0], tela, origem].join(' '));
+        assert.ok(d.verm_dose2_t !== dia && d.verm_t === dia, 'a dose de hoje é a 1ª, nunca a 2ª');
+        igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']], 'sem o intervalo, sem o esquema');
+        igual(za680(), []);
+      });
+    }
+  });
+});
+provaAsync('6.80 P03 (AC1.3) — a frase: o verde e o rastro dizem que a série anterior já tinha vencido, que a dose entrou como 1ª da série nova e quando vence a 2ª; o painel fecha e o chip sai da lista; pelo «Feito em…» diz a data', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+      const n = nova680(dia), ok = J630('PREV_CORRIGE_OK');
+      igual(Object.keys(ok), [run("__dc680+'|verm_p'")]);
+      igual(ok[Object.keys(ok)[0]].texto, 'Romeo — A série da 1ª dose de 23/05/2026 já tinha vencido: a dose de hoje entrou como 1ª dose da série nova; 2ª dose em '
+        + br680(n.verm_2a) + ' e próximo vermífugo em ' + br680(n.verm_p) + '.', hora + ' ' + pp[0]);
+      const a = aud680('prevencao-atualizada-na-tela');
+      igual(a.length, 1);
+      assert.ok(a[0][1].indexOf('a série anterior já tinha vencido: 1ª dose da série nova feita em ' + br680(dia) + '; 2ª dose em ' + br680(n.verm_2a)) >= 0, a[0][1]);
+      igual([a[0][2].item, a[0][2].de, a[0][2].para], ['verm_p', '2026-10-11', n.verm_p]);
+      igual(run('PREV_CORRIGE_ABERTO'), '', 'o painel fechou');
+      igual(J630("(function(){ var h=zHojeISO(); return vencItensDe(pelExtra(__r680), h, 7, h).filter(function(x){ return /^verm/.test(x.k); }).length; })()"), 0, 'o chip saiu');
+    });
+    await com680(ROMEO680, ms, pp, async () => {
+      painel680('verm_dose2_p', '2026-10-11', 'hoje'); await espera657();
+      const ok = J630('PREV_CORRIGE_OK'), t = ok[Object.keys(ok)[0]].texto;
+      assert.ok(t.indexOf(dia === '2026-10-11' ? 'a dose de hoje' : 'a dose de 11/10/2026') >= 0 && t.indexOf('2ª dose em 01/11/2026 e próximo vermífugo em 01/03/2027') >= 0, t);
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']);
+    });
+  });
+});
+provaAsync('6.80 P04 (AC1.1) — com «15 dias» na ficha: 2ª em 26/10/2026 e próximo em 23/02/2027, sem regravar o campo (pelo chip da 2ª e pelo chip do próximo)', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const k of ['verm_dose2_p', 'verm_p']) {
+      await com680(Object.assign({}, ROMEO680, { verm_dose2_dias: 15 }), ms, pp, async () => {
+        painel680(k, 'hoje', 'venc'); await espera657();
+        igual(pega680(db680(), V680.concat(['verm_dose2_dias'])), quer680(nova680(dia, 15)).concat([15]), [hora, pp[0], k].join(' '));
+        if (dia === '2026-10-11') igual(pega680(db680()), ['2026-10-11', '', '2026-10-26', '2027-02-23']);
+        assert.ok(esc680().every((e) => e[2].indexOf('verm_dose2_dias') < 0), 'o intervalo não é regravado');
+      });
+    }
+  });
+});
+provaAsync('6.80 P05 (AC1.1, C8, C11) — a 1ª em 20/05 e o próximo vencido em 08/10: «Feito hoje» e «Feito em 09/10» no chip da 2ª gravam a série nova a partir da data da dose', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(F, ms, pp, async () => { painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657(); igual(pega680(db680()), quer680(nova680(dia)), hora + ' ' + pp[0]); });
+    await com680(F, ms, pp, async () => { painel680('verm_dose2_p', '2026-10-09', 'venc'); await espera657(); igual(pega680(db680()), ['2026-10-09', '', '2026-10-30', '2027-02-27']); });
+  });
+});
+provaAsync('6.80 P06 (AC1.4) — a 2ª no mesmo dia da 1ª é recusada no painel (o chip «2ª dose» que ficou velho no 2º aparelho depois de a 1ª ser gravada): nada é gravado e o aviso diz por quê; a 2ª antes da 1ª continua com o texto de antes', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(Object.assign({}, ROMEO680, nova680(dia)), ms, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657();
+      igual([esc680(), za680()], [[], [['Essa data não faz sentido', ['A 2ª dose (' + br680(dia) + ') cairia no mesmo dia da 1ª.',
+        'Se a dose de hoje foi a 1ª dose, ela já está registrada: toque em «fechar» e atualize a tela.'], { botao: 'Entendi' }]]], hora + ' ' + pp[0]);
+      run('__za657=[];');
+      painel680('verm_dose2_p', mais680(dia, -1), 'venc'); await espera657();
+      igual([esc680(), za680().map((z) => z[1])], [[], [['A 2ª dose (' + br680(mais680(dia, -1)) + ') ficou antes da 1ª (' + br680(dia) + ').',
+        'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.']]]);
+    });
+  });
+});
+provaAsync('6.80 P07 (AC1.5, guarda) — a 2ª legítima e atrasada, com o próximo no futuro (1ª 11/10, 2ª em 05/11), continua aceita (05/03/2027); com o próximo «à mão» a trava não age; a série que já tinha a 2ª registrada continua gravando a 2ª pelo painel (a decisão registrada no Dev Agent Record)', async () => {
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), Date.UTC(2026, 10, 5, 15, 0), null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+    igual(pega680(db680()), ['2026-10-11', '2026-11-05', '2026-11-05', '2027-03-05']);
+  });
+  await com680(Object.assign({}, ROMEO680, { verm_p_manual: true }), I1930_680, null, async () => {
+    painel680('verm_dose2_p', '2026-10-11', 'venc'); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-05-23', '2026-10-11', '2026-10-11', '2027-02-08', ''], 'como hoje');
+  });
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' }, I1930_680, null, async () => {
+    painel680('verm_dose2_p', '2026-10-09', 'venc'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-09', '2026-10-09', '2027-02-06'], 'como a 6.65 P15');
+  });
+});
+provaAsync('6.80 P08 (AC1.6, guarda) — o caso-base: o chip «Vermífugo — vence em 11/10» grava como na base (11/10, vazio, 01/11, 01/03/2027; com 15, 26/10 e 23/02/2027, sem gravar o campo), também com a 2ª anterior registrada (C1, C2, C16)', async () => {
+  for (const F of [ROMEO680, Object.assign({}, ROMEO680, { verm_dose2_t: '2026-06-13' })]) {
+    await com680(F, I1930_680, null, async () => { painel680('verm_p', 'hoje', 'venc'); await espera657(); igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']); igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]); });
+    await com680(Object.assign({}, F, { verm_dose2_dias: 15 }), I1930_680, PAPEIS680[1], async () => { painel680('verm_p', 'hoje', 'hoje'); await espera657(); igual(pega680(db680()), ['2026-10-11', '', '2026-10-26', '2027-02-23']); igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]); });
+  }
+});
+provaAsync('6.80 P09 (AC2.1, AC2.2, AC2.4) — vencItensDe: sem a 2ª quando o próximo está na lista; com a 2ª legítima quando não está (27/10: «vence em 01/11»; com 15, em 20/10: «vence em 26/10»); a mensagem pronta da série vencida não nasce «É dia da segunda dose»; pura (sem DB.ref, até 2.800 caracteres)', async () => {
+  const lista = (ex, alvo, hoje) => J630(`vencItensDe(${JSON.stringify(ex)}, '${alvo}', 7, '${hoje}').map(function(x){ return [x.k, x.vence, vencQuantoTexto(x, '${hoje}')]; })`);
+  igual(lista(ROMEO680, '2026-10-13', '2026-10-11').map((x) => x[0]), ['verm_p']);
+  igual(lista({ verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' }, '2026-10-13', '2026-10-11').map((x) => x[0]), ['verm_p']);
+  igual(lista(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11')), '2026-10-27', '2026-10-27').map((x) => x.slice(0, 2)), [['verm_dose2_p', '2026-11-01']]);
+  igual(lista(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11')), '2026-10-27', '2026-10-27').map((x) => [x[0], x[2]]), [['verm_dose2_p', 'vence em ' + run("vencData('2026-11-01', '2026-10-27')")]]);
+  igual(lista(Object.assign({ verm_doses: '2 doses', verm_dose2_dias: 15 }, nova680('2026-10-11', 15)), '2026-10-20', '2026-10-20').map((x) => x.slice(0, 2)), [['verm_dose2_p', '2026-10-26']]);
+  // o próximo «à mão» antes da 2ª prevista: a 2ª sai da lista até o próximo ser gravado (Risco 2, registrado)
+  igual(lista({ verm_doses: '2 doses', verm_t: '2026-10-01', verm_p: '2026-10-20', verm_p_manual: true }, '2026-10-19', '2026-10-17').map((x) => x[0]), ['verm_p']);
+  run('__bkVC680=VENC_CFG; VENC_CFG={};');
+  try {
+    const m = J630(`vencMensagens({nome:'Romeo', tutor:'Lia Teste', sexo:'M', itens:vencItensDe(${JSON.stringify(ROMEO680)}, '2026-10-13', 7, '2026-10-11')}, '2026-10-13', '2026-10-11').map(function(x){ return [x.tipo, x.texto]; })`);
+    assert.ok(m.length >= 1 && m.every((x) => x[0] !== 'verm2' && x[1].indexOf('segunda dose') < 0) && m.some((x) => /vermífugo/.test(x[1])), JSON.stringify(m));
+  } finally { run('VENC_CFG=__bkVC680;'); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/function vencItensDe\(ex, diaAlvo, margem, hoje, opc\)\{[\s\S]{0,2800}?\n  \}/.test(src) && !/function vencItensDe\([\s\S]{0,2800}?DB\.ref/.test(src), 'a régua do harness v-28');
+});
+provaAsync('6.80 P10 (AC2.3) — vencResumoGrupos: com os dois itens do vermífugo do mesmo FILHOt, o nome abre o do próximo (verm_p), em qualquer ordem; dois Thor de tutores diferentes continuam sendo dois; o texto do «Copiar resumo» não muda', async () => {
+  const G = (L) => J630(`vencResumoGrupos(${JSON.stringify(L)}).filter(function(g){ return g.v==='verm'; }).map(function(g){ return [g.nomes, g.alvos]; })`);
+  const d2 = { k: 'verm_dose2_p', vence: '2026-06-13' }, vp = { k: 'verm_p', vence: '2026-10-11' };
+  igual(G([{ chave: 'romeo__lia', nome: 'Romeo', itens: [d2, vp] }]), [[['Romeo'], [{ nome: 'Romeo', chave: 'romeo__lia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'romeo__lia', nome: 'Romeo', itens: [vp, d2] }]), [[['Romeo'], [{ nome: 'Romeo', chave: 'romeo__lia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'thor__ana', nome: 'Thor', itens: [d2] }, { chave: 'thor__bia', nome: 'Thor', itens: [d2, vp] }]),
+    [[['Thor', 'Thor'], [{ nome: 'Thor', chave: 'thor__ana', k: 'verm_dose2_p' }, { nome: 'Thor', chave: 'thor__bia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'luna__ana', nome: 'Luna', itens: [d2] }]), [[['Luna'], [{ nome: 'Luna', chave: 'luna__ana', k: 'verm_dose2_p' }]]], 'a 2ª sozinha continua abrindo a 2ª');
+  igual(run(`vencResumoTexto([{chave:'romeo__lia', nome:'Romeo', itens:[{k:'verm_dose2_p'},{k:'verm_p'}]}], '2026-10-13', '2026-10-11').split('\\n').slice(-1)[0]`), 'Vermífugo: Romeo');
+});
+provaAsync('6.80 P11 (AC1.7) — «Lance aqui mesmo», a linha da 2ª dose numa série vencida: grava a série nova (11/10, vazio, 01/11, 01/03/2027), o «Quem fez» vai para a 1ª; a frase aparece na linha, junto do «Salvo às HH:MM», e vai para o rastro; o banco recusando: «NÃO FOI SALVO» e nada gravado', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      lance680('verm_dose2_p', '2026-10-11', undefined, 'Day Care'); await espera657();
+      igual(pega680(db680(), V680.concat(['verm_por', 'verm_dose2_por'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', 'Day Care', '∅'], hora + ' ' + pp[0]);
+      const E = J630("PREV_LANCE_ESTADO[__k680+'|verm_dose2_p']"), fr = 'A série da 1ª dose de 23/05/2026 já tinha vencido: a dose de '
+        + (dia === '2026-10-11' ? 'hoje' : '11/10/2026') + ' entrou como 1ª dose da série nova; 2ª dose em 01/11/2026 e próximo vermífugo em 01/03/2027.';
+      igual([E.passo, E.frase], ['salvo', fr]);
+      const hl = txt680(run("prevLanceEstadoHTML(__k680, 'verm_dose2_p')"));
+      assert.ok(/^Salvo às \d\d:\d\d /.test(hl) && hl.indexOf(fr) > 0, hl);
+      const a = aud680('prevencao');
+      igual(a.length, 1);
+      assert.ok(a[0][1].indexOf(fr) > 0 && a[0][2].item === 'verm_p' && a[0][2].para === '2027-03-01', JSON.stringify(a));
+    });
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    lance680('verm_dose2_p', '2026-10-11'); await espera657();
+    igual([pega680(db680()), J630("PREV_LANCE_ESTADO[__k680+'|verm_dose2_p'].passo")], [['2026-05-23', '∅', '2026-06-13', '2026-10-11'], 'falhou']);
+    assert.ok(/NÃO FOI SALVO/.test(txt680(run("prevLanceEstadoHTML(__k680, 'verm_dose2_p')"))));
+    run(`__recusa657=null;`);
+  });
+});
+
+// ---------------------------------------------------------------- o conserto (AC3)
+provaAsync('6.80 P12 (AC3.1, AC3.5, AC3.6) — o aviso: na ficha do D1 (a «2ª» em 11/10, igual ao vencimento da série) e na da versão antiga (a 2ª antes da 1ª: um aviso só, a frase e o botão); não aparece em dose única, sem a 1ª, com a 2ª legítima nem um dia antes do vencimento; aparece logo depois de alguém digitar a 2ª fora da série; o botão só para quem edita a ficha, com 44 px', async () => {
+  const BT = '>Corrigir: é a 1ª dose da série nova</button>';
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOD1680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(t.indexOf('A 2ª dose de 11/10/2026 foi dada quando a série da 1ª dose de 23/05/2026 já tinha vencido (em 11/10/2026): pode ser a 1ª dose de uma série nova. '
+        + 'Se for, toque no botão abaixo e fica: 1ª dose em 11/10/2026, 2ª dose prevista para 01/11/2026 e próximo vermífugo em 01/03/2027. Nada muda enquanto você não tocar.') >= 0, t);
+      igual((h.match(new RegExp(BT, 'g')) || []).length, 1);
+      assert.ok(/<button type="button" class="btn btn-gold" style="min-height:44px[^"]*" onclick="vermSerieNovaCorrigir\(\)">Corrigir/.test(h), '44 px');
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta. Corrigir: é a 1ª dose da série nova') >= 0, t);
+      igual([(h.match(new RegExp(BT, 'g')) || []).length, (h.match(/série anterior/g) || []).length, /vm-serie-depois/.test(h), /2ª dose dada em 13\/06/.test(t)], [1, 1, false, false], 'um aviso só');
+    });
+  }
+  await com680(ROMEOD1680, I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const h = bloco680();
+    assert.ok(h.indexOf(BT) < 0 && txt680(h).indexOf('Se for, quem edita a ficha corrige, e fica: 1ª dose em 11/10/2026') >= 0 && txt680(h).indexOf('Nada muda sozinho.') >= 0, txt680(h));
+  });
+  const sem = [{ verm_doses: 'Dose única', verm_t: '2026-05-23', verm_dose2_t: '2026-10-11', verm_p: '2026-09-20' }, { verm_doses: '2 doses', verm_dose2_t: '2026-10-11' },
+    { verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-11-05', verm_p: '2027-03-05' }, { verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-10-11' },
+    Object.assign({}, ROMEOD1680, { verm_dose2_t: '2026-10-10' })];
+  for (const F of sem) await com680(F, Date.UTC(2026, 10, 6, 15, 0), null, async () => { const h = bloco680(); assert.ok(h.indexOf(BT) < 0 && !/vm-serie-/.test(h), JSON.stringify(F)); });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    igual(/vm-serie-depois/.test(bloco680()), false);
+    run(`PB_PEND={verm:{verm_dose2_t:'2026-10-11'}};`);
+    const h = bloco680();
+    assert.ok(/vm-serie-depois/.test(h) && h.indexOf(BT) > 0, 'a 2ª digitada fora da série avisa');
+  });
+  igual([run("vermFichaForaDaSerie(" + JSON.stringify(ROMEOD1680) + ")"), run("vermFichaForaDaSerie(" + JSON.stringify(ROMEOH680) + ")"), run("vermFichaForaDaSerie({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-05-23', verm_dose2_t:'2026-10-05'})"),
+    run("vermFichaForaDaSerie({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-05-23', verm_dose2_t:'2026-10-04'})"),
+    run("vermFichaForaDaSerie({verm_doses:'Dose única', verm_t:'2026-10-11', verm_dose2_t:'2026-06-13'})"), run("vermFichaForaDaSerie({verm_doses:'Dose única', verm_t:'2026-05-23', verm_dose2_t:'2026-10-11'})")],
+    ['depois', 'antes', 'depois', '', '', '']);
+});
+provaAsync('6.80 P13 (AC3.2, AC3.4) — o toque grava a série nova pela conta: no caso «depois» a 1ª passa a ser a data da «2ª», no caso «antes» a 1ª fica; 21 e 15 dias; o «à mão» cai com o aviso; a trava de data pergunta; «Salvando…» até o ok; o rastro de → para da ficha e a linha de auditoria própria', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [F, n, quer] of [[ROMEOD1680, 21, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOD1680, { verm_dose2_dias: 15 }), 15, ['2026-10-11', '', '2026-10-26', '2027-02-23']],
+      [ROMEOH680, 21, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), 15, ['2026-10-11', '', '2026-10-26', '2027-02-23']]]) {
+      await com680(F, I1930_680, pp, async () => {
+        run('vermSerieNovaCorrigir();');
+        const t0 = ultFicha680();
+        assert.ok(/Salvando…/.test(t0.html) && !/✓ Salvo/.test(t0.html), 'Salvando… até o ok');
+        await espera657();
+        igual(pega680(db680()), quer, pp[0] + ' ' + JSON.stringify(F));
+        assert.ok(/✓ Salvo/.test(ultFicha680().html) && !/vm-serie-/.test(ultFicha680().html), 'o aviso saiu');
+        const a = aud680('prevencao-serie-nova-corrigida');
+        igual(a.length, 1);
+        assert.ok(a[0][1].indexOf('Romeo: vermífugo, série nova corrigida na ficha — ') === 0 && a[0][1].indexOf('1ª dose em 11/10/2026, 2ª dose prevista para ' + br680(quer[2]) + ', próximo vermífugo em ' + br680(quer[3])) > 0, a[0][1]);
+        const r = J630("__get657('daycare/ficha-rastro/'+__k680)") || {}, rs = {};
+        Object.keys(r).forEach((id) => { rs[r[id].campo] = [r[id].de, r[id].para]; });
+        igual(rs.verm_dose2_t, [F.verm_dose2_t, ''], 'o rastro de → para');
+        igual(rs.verm_p, [F.verm_p, quer[3]]);
+      });
+    }
+  }
+  await com680(Object.assign({}, ROMEOD1680, { verm_p_manual: true }), I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'o «à mão» cai');
+    igual(run('!!PREV_RECALC_AVISO.verm_p'), true, 'com o aviso «A próxima foi recalculada pela última dose.»');
+  });
+  // a 1ª antiga (caso «antes» com a 1ª de 2025): a trava de data pergunta antes de gravar
+  await com680({ verm_doses: '2 doses', verm_t: '2025-03-01', verm_dose2_t: '2025-02-01', verm_p: '2025-07-20' }, I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    igual([esc680(), J630('__ze657.map(function(z){ return z[0]; })')], [[], ['Vermífugo continua em atraso — confira a data.']]);
+  });
+});
+provaAsync('6.80 P14 (AC3.2) — o banco recusa o conserto: «NÃO FOI SALVO», nada de «✓ Salvo», a cópia em memória volta, o aviso continua e não sai a linha de auditoria', async () => {
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    run('vermSerieNovaCorrigir();'); await espera657();
+    const t = ultFicha680();
+    igual([pega680(db680()), pega680(J630('pelCadCache[__k680]')), aud680('prevencao-serie-nova-corrigida').length, t.salvo], [pega680(ROMEOD1680), pega680(ROMEOD1680), 0, false]);
+    assert.ok(/NÃO FOI SALVO/.test(t.html) && !/✓ Salvo/.test(t.html) && /vm-serie-depois/.test(t.html), txt680(t.html));
+    run(`__recusa657=null;`);
+  });
+});
+provaAsync('6.80 P15 (AC3.3, guarda) — nada é corrigido sozinho: desenhar a ficha e o «Lance», salvar outro bloco e o ouvinte do cadastro chegar não gravam a série nova', async () => {
+  await com680(Object.assign({}, ROMEOD1680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    bloco680(); lanceAbre680(); run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(){ return false; }}; if(typeof pelPrevVistoMarcar==='function'){ pelPrevVistoMarcar(__r680); pelFichaPrevOuvinte(); }`);
+    igual(esc680(), [], 'abrir não grava');
+    run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20 kg'}); pbSalvar('ecto');`); await espera657();
+    igual(esc680().map((e) => e[2]), [['ecto_nome', 'ecto_p']], 'salvar outro bloco não toca o vermífugo');
+    run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__k680]=Object.assign({}, pelCadCache[__k680], {verm_nome:'Drontal Plus'}); if(typeof pelFichaPrevOuvinte==='function') pelFichaPrevOuvinte();`); await espera657();
+    igual(pega680(db680()), pega680(ROMEOD1680), 'o ouvinte redesenha, não grava');
+  });
+});
+
+// ---------------------------------------------------------------- D2 (AC4)
+provaAsync('6.80 P16 (AC4.2) — a ficha da versão antiga, «Salvar vermífugo» sem mexer: grava a 2ª vazia, 01/11/2026 e 01/03/2027 (15 dias: 26/10 e 23/02/2027); «Salvando…» até o ok, nunca «✓ Salvo» sem gravar; com o banco recusando, «NÃO FOI SALVO»', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [F, quer] of [[ROMEOH680, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), ['2026-10-11', '', '2026-10-26', '2027-02-23']]]) {
+      await com680(F, I1930_680, pp, async () => {
+        run(`pbSalvar('verm');`);
+        assert.ok(/Salvando…/.test(ultFicha680().html) && !/✓ Salvo/.test(ultFicha680().html));
+        await espera657();
+        igual([pega680(db680()), esc680().map((e) => e[2])], [quer, [['verm_2a', 'verm_dose2_t', 'verm_p']]], pp[0]);
+        assert.ok(/✓ Salvo/.test(ultFicha680().html));
+      });
+    }
+  }
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/'; pbSalvar('verm');`); await espera657();
+    const t = ultFicha680();
+    assert.ok(/NÃO FOI SALVO/.test(t.html) && !/✓ Salvo/.test(t.html), txt680(t.html));
+    igual(pega680(db680()), pega680(ROMEOH680));
+    run(`__recusa657=null;`);
+  });
+});
+provaAsync('6.80 P17 (AC4.1, AC4.3) — a mesma ficha, com só o nome trocado: a 2ª antiga sai e o próximo vai a 01/03/2027', async () => {
+  await com680(ROMEOH680, I1930_680, PAPEIS680[1], async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_nome'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', 'Milbemax']);
+    igual(za680(), []);
+  });
+});
+provaAsync('6.80 P18 (AC4.4) — o «Vence em» à mão é respeitado no Salvar sem mexer: o próximo e a marca não mudam; a 2ª sai e a 2ª prevista vem da conta', async () => {
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-03-15', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-15', true]);
+    igual([esc680().map((e) => e[2]), run('!!PREV_RECALC_AVISO.verm_p')], [[['verm_2a', 'verm_dose2_t']], false]);
+  });
+});
+provaAsync('6.80 P19 (AC4.1, AC4.5, guarda) — a 2ª igual ou posterior à 1ª fica (6.65 AC3.4); a ficha coerente sem mudança diz «✓ Salvo» sem gravar, como hoje; a 2ª digitada antes da 1ª continua recusada', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_nome', 'verm_p']]);
+    igual(db680().verm_dose2_t, '2026-10-10');
+  });
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual([esc680(), ultFicha680().salvo, /✓ Salvo/.test(ultFicha680().html)], [[], true, true]);
+  });
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_dose2_t:'2026-10-05'}); pbSalvar('verm');`); await espera657();
+    igual([esc680(), za680().map((z) => z[1][0])], [[], ['A 2ª dose (05/10/2026) ficou antes da 1ª (11/10/2026).']]);
+  });
+  // a ficha que caiu no D1 (a «2ª» depois do vencimento) só muda pelo botão do conserto (AC3), nunca pelo Salvar sem mexer;
+  // e em «Dose única» (com uma 2ª antiga que sobrou antes da 1ª) o Salvar sem mexer também não grava nada (AC4.5)
+  for (const F of [ROMEOD1680, { verm_doses: 'Dose única', verm_t: '2026-10-11', verm_dose2_t: '2026-06-13', verm_p: '2027-02-08' }]) {
+    await com680(F, I1930_680, null, async () => {
+      run(`pbSalvar('verm');`); await espera657();
+      igual([esc680(), ultFicha680().salvo], [[], true], JSON.stringify(F));
+    });
+  }
+});
+
+// ---------------------------------------------------------------- D3 (AC5, AC6)
+provaAsync('6.80 P20 (AC5.1, AC5.2) — a ficha, a 1ª trocada para 11/10: antes do Salvar, a «2ª dose dada em» vazia com «sai quando você salvar», o «Vence em» e o selo com 01/03/2027 (23/02/2027 com 15), para a Gestão (campo) e a Consultora (texto); o banco intacto', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [n, prox] of [[21, '2027-03-01'], [15, '2027-02-23']]) {
+      const F = { verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+      if (n === 15) F.verm_dose2_dias = 15;
+      await com680(F, I1930_680, pp, async () => {
+        run(`pbSet('verm',{verm_t:'2026-10-11'});`);
+        const h = ultFicha680().html, t = txt680(h);
+        assert.ok(h.indexOf(`<label>2ª dose dada em</label><input type="date" class="cad-in" value="" onchange="pbSet('verm',{verm_dose2_t:this.value})" min="2015-01-01" max="2026-10-11"`) >= 0, t);
+        assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar.') >= 0, t);
+        assert.ok(h.indexOf('<div class="prev-tit">Vermifugação ' + run(`seloValidade('${prox}')`) + '</div>') >= 0, 'o selo');
+        if (pp[0] === 'gestao') assert.ok(h.indexOf('id="prevVence_verm_p" value="' + prox + '"') >= 0, 'o campo da Gestão');
+        else assert.ok(h.indexOf('id="prevVence_verm_p">vence em ' + br680(prox) + '</div>') >= 0, 'o texto da Consultora');
+        await espera657();
+        igual(esc680(), [], 'nada gravado antes do Salvar');
+      });
+    }
+  }
+});
+provaAsync('6.80 P21 (AC5.3) — a ficha da versão antiga aberta, sem rascunho: a 2ª vazia com a frase e o «Vence em» com a conta que o Salvar vai gravar (01/03/2027)', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(h.indexOf('<label>2ª dose dada em</label><input type="date" class="cad-in" value=""') >= 0 && t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar.') >= 0, t);
+      assert.ok(pp[0] === 'gestao' ? h.indexOf('id="prevVence_verm_p" value="2027-03-01"') >= 0 : h.indexOf('id="prevVence_verm_p">vence em 01/03/2027</div>') >= 0, t);
+      assert.ok(h.indexOf(run(`seloValidade('2027-03-01')`)) >= 0);
+    });
+  }
+});
+provaAsync('6.80 P22 (AC5.2, guarda) — o «Vence em» digitado no rascunho manda; o «à mão» gravado aparece quando a última dose não foi mexida (também na ficha da versão antiga); o 21 tocado que já estava marcado não muda a tela', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_t:'2026-10-11'}); prevVenceManualSet('verm_p','2027-04-01','verm');`);
+    assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-04-01"') >= 0);
+  });
+  for (const F of [Object.assign({}, nova680('2026-10-11'), { verm_doses: '2 doses', verm_p: '2027-03-15', verm_p_manual: true }), Object.assign({}, ROMEOH680, { verm_p: '2027-03-15', verm_p_manual: true })]) {
+    await com680(F, I1930_680, null, async () => {
+      run(`pbSet('verm',{verm_nome:'Milbemax'});`);
+      assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-03-15"') >= 0 && /Data digitada à mão\./.test(ultFicha680().html), JSON.stringify(F));
+    });
+  }
+  await com680(Object.assign({}, ROMEO680, { verm_t: '2026-10-11', verm_2a: '2026-11-01', verm_p: '2027-03-20', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_dose2_dias:21});`);
+    assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-03-20"') >= 0);
+  });
+});
+provaAsync('6.80 P23 (AC6.1) — «Lance aqui mesmo»: a 1ª muda e a linha de baixo acompanha na hora — a 2ª antes da 1ª nova sai do «Feito em», o «Próximo vermífugo» e o selo passam aos da série nova; a 2ª igual ou posterior à 1ª nova fica; o selo tem id', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, I1930_680, null, async () => {
+    const h = lanceAbre680(), K = run('__k680'), l2 = linha680(h, 'verm_dose2_p');
+    assert.ok(l2.indexOf('<span id="prevS_' + K + '_verm_dose2_p"><span class="vd vd-ok">dada em 13/06/2026</span></span>') >= 0, txt680(l2));
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:'2026-10-11'}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:'dada em'};`);
+    run(`__el657['prevT_'+__k680+'_verm_p'].value='2026-10-11'; prevRecalcular(__k680, 'verm_p');`);
+    igual(J630(`[__el657['prevP_'+__k680+'_verm_p'].value, __el657['prevT_'+__k680+'_verm_dose2_p'].value, __el657['prevP_'+__k680+'_verm_dose2_p'].value, __el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML]`),
+      ['2027-03-01', '', '2027-03-01', run(`seloValidade('2026-11-01')`)]);
+    igual(esc680(), [], 'nada gravado');
+  });
+  // a 1ª corrigida para trás (11/10 → 09/10) com a 2ª dada em 01/11: a 2ª é desta série e fica
+  await com680(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11'), { verm_dose2_t: '2026-11-01', verm_p: '2027-03-01' }), Date.UTC(2026, 10, 2, 15, 0), null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:'2027-03-01'}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:'x'};`);
+    run(`__el657['prevT_'+__k680+'_verm_p'].value='2026-10-09'; prevRecalcular(__k680, 'verm_p');`);
+    igual(J630(`[__el657['prevT_'+__k680+'_verm_dose2_p'].value, __el657['prevP_'+__k680+'_verm_dose2_p'].value, __el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML]`), ['2026-11-01', '2027-03-01', 'x']);
+  });
+});
+provaAsync('6.80 P24 (AC6.2) — «Lance aqui mesmo»: o «Próximo vermífugo» da linha da 2ª, só de leitura e com o mesmo id, mostra o próximo pela conta da 1ª (01/03/2027; 23/02/2027 com 15); com a 2ª dada, 2ª + 120; dose única e sem a 1ª: vazio', async () => {
+  const P = (F, quando) => com680(F, quando || I1930_680, null, async () => { const l2 = linha680(String(run("prevEdicaoHTML({p:__r680, nome:'Romeo'})")), 'verm_dose2_p'); return [(l2.match(/id="prevP_[^"]*_verm_dose2_p" value="([^"]*)" readonly/) || [])[1], l2]; });
+  igual((await P(ROMEOS12680))[0], '2027-03-01');
+  igual((await P(Object.assign({}, ROMEOS12680, { verm_dose2_dias: 15 })))[0], '2027-02-23');
+  igual((await P(Object.assign({}, ROMEOS12680, { verm_dose2_t: '2026-11-01' }), Date.UTC(2026, 10, 2, 15, 0)))[0], '2027-03-01');
+  igual((await P({ verm_doses: 'Dose única', verm_t: '2026-10-11', verm_p: '2027-02-08' }))[0], '');
+  igual((await P({ verm_doses: '2 doses' }))[0], '');
+});
+provaAsync('6.80 P25 (AC6.3, D5) — «Lance aqui mesmo»: a ficha do «Lance» antigo (próximo 08/02/2027) e só «Salvar» → 01/03/2027; o «Vale até» digitado nesta abertura (também escrito direto no campo, sem evento) continua valendo; o próximo «à mão» da ficha também; a conta que reescreve o campo derruba o digitado', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOS12680, I1930_680, pp, async () => {
+      lanceAbre680(); run(`prevLancar(__k680, 'verm_p');`); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '∅', '2026-11-01', '2027-03-01'], pp[0]);
+    });
+  }
+  await com680(ROMEOS12680, I1930_680, null, async () => {
+    lanceAbre680(); run(`__el657['prevP_'+__k680+'_verm_p'].value='2027-03-20'; prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-03-20', 'escrito por cima, sem evento');
+  });
+  await com680(Object.assign({}, ROMEOS12680, { verm_p_manual: true }), I1930_680, null, async () => {
+    lanceAbre680(); run(`prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-02-08', 'o «à mão» da ficha');
+  });
+  await com680(ROMEOS12680, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_p'].value='2027-03-20'; __el657['prevT_'+__k680+'_verm_p'].value='2026-10-10'; prevRecalcular(__k680, 'verm_p'); prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(pega680(db680()), ['2026-10-10', '∅', '2026-10-31', '2027-02-28'], 'a conta que reescreveu manda');
+  });
+  await com680(ROMEOS12680, I1930_680, null, async () => {   // sem a tela desenhada (o campo com o valor do banco): a conta refaz
+    run(`__el657['prevT_'+__k680+'_verm_p']={value:'2026-10-11'}; __el657['prevP_'+__k680+'_verm_p']={value:'2027-02-08'}; __el657['prevQ_'+__k680+'_verm_p']={value:''}; prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-03-01');
+  });
+});
+
+// ---------------------------------------------------------------- D4 (AC7)
+provaAsync('6.80 P26 (AC7.1) — um toque: o change do campo e o «Salvar» no mesmo toque (campo de texto e campo de data) gravam UMA vez, com tudo o que estava no rascunho; o clique que chega depois não grava de novo', async () => {
+  for (const [campo, valor] of [['verm_nome', 'Milbemax'], ['verm_t', '2026-10-11']]) {
+    await com680(Object.assign({}, ROMEO680, { verm_dose2_t: '2026-06-13' }), I1930_680, null, async () => {
+      run(`pbSet('verm',{verm_doses:'2 doses'});`);
+      toque680('verm');
+      ctx.__c680 = campo; ctx.__v680 = valor;
+      run(`(function(){ var o={}; o[__c680]=__v680; pbSet('verm', o); })()`);
+      await espera657();
+      igual(esc680().length, 1, campo + ': gravou com o change');
+      assert.ok(esc680()[0][2].indexOf(campo) >= 0, 'com o que estava no rascunho');
+      run(`pbSalvar('verm');`); await espera657();
+      igual(esc680().length, 1, campo + ': o clique que chegou depois não grava de novo');
+    });
+  }
+  // o Salvar que pergunta (a data em atraso): o clique que chega depois não abre uma 2ª pergunta (que gravaria de novo)
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_t:'2026-01-10'}); pbSalvar('verm');`); await espera657();
+    igual([esc680(), J630('__ze657.length')], [[], 1], 'uma pergunta só');
+  });
+});
+provaAsync('6.80 P27 (AC7.2, AC7.2a) — o duplo toque não grava duas vezes; passada a janela de 1,5 s, um novo «Salvar» grava; um change sem toque novo no «Salvar» (depois da janela, depois de tocar em outro lugar ou depois do Salvar feito) não grava nada', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'duplo toque');
+    relogio658(I1930_680 + 1600);
+    run(`pbSet('verm',{verm_nome:'Drontal'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 2, 'depois da janela, o Salvar grava');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); relogio658(I1930_680 + 1600); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680(), [], 'o change depois de 1,5 s não grava sozinho');
+    toque680('verm'); toque680(null); run(`pbSet('verm',{verm_nome:'Drontal'});`); await espera657();
+    igual(esc680(), [], 'o toque em outro lugar derruba a anotação');
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1);
+    run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm')], [1, { verm_nome: 'Milbemax' }], 'depois do Salvar feito, o change fica no rascunho');
+  });
+  // o clique que se perdeu (só o pbSet gravou): passada a janela, o Salvar seguinte grava normalmente
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    relogio658(I1930_680 + 1600);
+    run(`pbSet('verm',{verm_nome:'Drontal'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 2, 'a janela expira mesmo sem o clique');
+  });
+});
+provaAsync('6.80 P28 (AC7.3) — o botão «Salvar» do rodapé mede pelo menos 44 px nos cinco blocos (carrapaticida, coleira, vermífugo, exame de fezes e vacinas)', async () => {
+  for (const [b, f] of [['ecto', 'blocoEcto'], ['col', 'blocoColeira'], ['verm', 'blocoVerm'], ['fezes', 'blocoFezes'], ['vac', 'blocoVacinas']]) {
+    const h = String(run(f + '({})'));
+    assert.ok(h.indexOf(`style="min-height:44px;padding:7px 16px;font-size:13px" onclick="pbSalvar('${b}')"`) >= 0, b);
+  }
+});
+provaAsync('6.80 P29 (AC7.4, guarda) — sem o pointerdown (este sandbox), o «Salvar» funciona como sempre (uma gravação, «Salvando…» e «✓ Salvo» com o ok); nenhuma anotação de toque; a instalação dentro de try com «silencioso de propósito»', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`);
+    assert.ok(/Salvando…/.test(ultFicha680().html));
+    await espera657();
+    igual([esc680().length, /✓ Salvo/.test(ultFicha680().html)], [1, true]);
+  });
+  if (run('typeof pbToqueAnotar') === 'function') {   // na base não existe: a guarda acima é a que vale lá
+    igual(run('PB_TOQUE_SALVAR'), null);
+    assert.ok(/try\{ document\.addEventListener\('pointerdown', pbToqueAnotar, true\); \}\n\s*catch\(e\)\{\} \/\* silencioso de propósito/.test(fs.readFileSync(APP, 'utf8')));
+  }
+});
+
+// ---------------------------------------------------------------- secundários (AC8)
+provaAsync('6.80 P30 (AC8.1) — a ficha aberta se redesenha quando o cadastro DAQUELE FILHOt muda, sem perder o rascunho; não redesenha com um campo da ficha em foco (redesenha quando ele solta o foco), nem quando muda outra ficha, nem com a ficha fechada', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(a){ return !!a && a===document.activeElement && !!a.dentro; }}; pelPrevVistoMarcar(__r680); PB_PEND={ecto:{ecto_nome:'rascunho'}};`);
+    const muda = (k, o) => { ctx.__mk680 = k; ctx.__mo680 = o; run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__mk680]=Object.assign({}, pelCadCache[__mk680]||{}, __mo680); __telas680=[]; pelFichaPrevOuvinte();`); return telas680(); };
+    igual(muda('outro__x', { verm_t: '2026-10-11' }).length, 0, 'outra ficha');
+    run(`pelFichaPrevOuvinte();`); igual(telas680().length, 0, 'nada mudou');
+    const t = muda(run('__k680'), Object.assign({ verm_dose2_t: '' }, nova680('2026-10-11')));
+    igual(t.map((x) => x.b), ['ecto', 'col', 'verm', 'fezes', 'vac']);
+    igual([t[0].ex.ecto_nome, t[2].ex.verm_p], ['rascunho', '2027-03-01'], 'o rascunho fica e o bloco mostra o gravado');
+    run(`__blur680=null; document.activeElement={tagName:'INPUT', dentro:true, addEventListener:function(ev, fn){ if(ev==='blur') __blur680=fn; }};`);
+    igual(muda(run('__k680'), { verm_nome: 'Milbemax' }).length, 0, 'com o foco num campo da ficha, não redesenha');
+    run(`delete document.activeElement; __tm657=[]; __blur680();`);
+    run(`__tm657.forEach(function(t){ t.fn(); });`);
+    igual(telas680().map((x) => x.b), ['ecto', 'col', 'verm', 'fezes', 'vac'], 'redesenhou quando o campo soltou o foco');
+    run(`__el657['pel-ficha'].style.display='none'; __telas680=[];`);
+    igual(muda(run('__k680'), { verm_nome: 'Drontal' }).length, 0, 'a ficha fechada não é redesenhada');
+  });
+  const src = fs.readFileSync(APP, 'utf8'), z = src.indexOf("zMapaVivo('daycare/cadastro','_pelcad'"), v = src.indexOf("getElementById('v-vacinas')", z);
+  assert.ok(v - z <= 2000 && src.indexOf('try{ pelFichaPrevOuvinte(); }', v) > v && src.indexOf('try{ pelFichaPrevOuvinte(); }', v) - v < 600, 'no ouvinte do cadastro, depois da linha da Prevenção (a janela do harness)');
+});
+provaAsync('6.80 P31 (AC8.2) — o aviso «Antiparasitários» da ficha passa de «URGENTE — vencido» a «em dia» logo depois de salvar o vermífugo vencido (o recipiente com id no modelo; o alertaPrevencao igual)', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' };
+  await com680(F, I1930_680, null, async () => {
+    run(`pbRender=__bk680.pr; __rw680=0; __el657['pb-verm']={replaceWith:function(){ __rw680++; }}; __el657['pelAlertaPrev_antip']={innerHTML:''}; __el657['pelAlertaPrev_vacina']={innerHTML:''};`);
+    run(`pbSet('verm',{verm_t:'2026-10-11'});`);
+    assert.ok(/URGENTE/.test(run("__el657['pelAlertaPrev_antip'].innerHTML")), 'antes de salvar');
+    run(`pbSalvar('verm');`);
+    igual(txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")), 'Antiparasitários em dia.', 'na hora');
+    await espera657();
+    igual([txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")), run('__rw680') > 0], ['Antiparasitários em dia.', true], 'com o ok');
+  });
+  const src = fs.readFileSync(APP, 'utf8');
+  igual(['saude', 'vacina', 'antip'].map((g) => src.indexOf('<div id="pelAlertaPrev_' + g + '">${alertaPrevencao(ex,\'' + g + '\',') >= 0), [true, true, true]);
+});
+provaAsync('6.80 P32 (AC8.3) — a memória de 20 s de Vencimentos esquece a lista de antes ao gravar prevenção: na hora, com o ok e na volta atrás da recusa', async () => {
+  for (const recusa of [false, true]) {
+    await com680(ROMEO680, I1930_680, null, async () => {
+      if (recusa) run(`__recusa657='^daycare/cadastro/';`);
+      run(`VENC_MEMO={'2026-10-13':{quando:Date.now(), L:[{nome:'velho'}]}}; __pg680=prevGravar(__r680, {verm_nome:'Milbemax'}, {tela:'Prova'});`);
+      igual(J630('Object.keys(VENC_MEMO)'), [], 'na hora');
+      run(`VENC_MEMO={'2026-10-13':{quando:Date.now(), L:[{nome:'velho'}]}};`);
+      await espera657();
+      igual(J630('Object.keys(VENC_MEMO)'), [], recusa ? 'na volta atrás da recusa' : 'com o ok');
+      run(`__recusa657=null;`);
+    });
+  }
+});
+provaAsync('6.80 P33 (AC8.4) — a Hoje na Zêluz aberta se redesenha quando o cadastro muda (outro aparelho gravou): uma vez por mudança, com atraso curto; nunca com um painel rápido aberto nem com um campo da tela em foco; o redesenho não chama a área protegida', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; }}; __tm657=[];`);
+    run(`hojeOuvinteCadastro(); hojeOuvinteCadastro(); hojeOuvinteCadastro();`);
+    igual([J630('__tm657.length'), run('__tm657[0].ms')], [1, 400], 'um redesenho só, com atraso curto');
+    run(`__tm657[0].fn();`); igual(run('__hj680'), 1);
+    run(`__tm657=[]; hojeOuvinteCadastro(); PREV_CORRIGE_ABERTO=__dc680+'|verm_p'; __tm657[0].fn();`); igual(run('__hj680'), 1, 'com o painel aberto, não');
+    run(`PREV_CORRIGE_ABERTO=''; __tm657=[]; hojeOuvinteCadastro(); document.activeElement={tagName:'TEXTAREA'}; __el657['v-hoje'].contains=function(){ return true; }; __tm657[0].fn();`); igual(run('__hj680'), 1, 'com o foco num campo da tela, não');
+    run(`delete document.activeElement; __el657['v-hoje']={classList:{contains:function(){ return false; }}}; __tm657=[]; hojeOuvinteCadastro();`); igual(J630('__tm657.length'), 0, 'a tela fechada não agenda nada');
+  });
+  const fonte = (n) => String(run('String(' + n + ')'));
+  igual(['hojeOuvinteCadastro', 'hojeRedesenhar', 'pelFichaPrevOuvinte'].filter((n) => /\b(ck|ckt|pt)[A-Z]\w*\(|pendAvisarChegada/.test(fonte(n))), [], 'nenhuma chamada à área protegida');
+  const src = fs.readFileSync(APP, 'utf8'), z = src.indexOf("zMapaVivo('daycare/cadastro','_pelcad'"), v = src.indexOf("getElementById('v-vacinas')", z), w = src.indexOf('try{ hojeOuvinteCadastro(); }', v);
+  assert.ok(w > v && w - v < 900, 'o ouvinte do cadastro chama a Hoje na Zêluz, depois da linha da Prevenção');
+});
+
+// ---------------------------------------------------------------- guardas (AC9, AC10, AC12, AC13)
+provaAsync('6.80 P34 (AC12) — a área protegida (155 funções, as declarações e o #v-daycare) sem mudança; nenhuma função nova começa com ck ou pt; as funções fixadas idênticas às da base ca69bc8, letra por letra, menos vencItensDe (a única que muda de propósito, AC2.1)', async () => {
+  const h = (s) => require('crypto').createHash('sha256').update(String(s)).digest('hex').slice(0, 16);
+  const novo = fs.readFileSync(APP, 'utf8');
+  const fonte = (nome) => { const i = novo.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0, j = novo.indexOf('{', i); for (let k = j; k < novo.length; k++) { if (novo[k] === '{') d++; else if (novo[k] === '}') { d--; if (!d) return novo.slice(i, k + 1); } } return null; };
+  const BASE680 = {"vermAvaliar":"dbb338c2bf7e64b5","vermFaixaKg":"30b015b84cf0ada4","vermMargemKg":"17d894cb494ce621","vermNumTexto":"fcf2a669fa302195","vermNumLer":"f3af1b973b05be92","vermDoseDe":"ca0de65413eef7e3","vermPertoDaVirada":"b40da171c0d5df85","vermFrasePeso":"34a4fcbaeed5260b","vermAvaliarFicha":"b33c7434482bf287","vermFichaTextoHTML":"c750d8f6a0fe1eed","vermPreMarcar":"9c3b3baca86cbcb3","vermBlocoPainelHTML":"fa6a626a6d27de72","dashLancar":"6267457666ad76f3","vermPreMarcarVenc":"47968aea4c549131","vermLinhaVencHTML":"77149b646c2ec3b8","vencBlocoLancHTML":"60cc11bb3c70521e","vermOuFezes":"e29f34cc2ad21b05","prevDispensadoPorExame":"f40ec4cc6325dbf0","prevForaDaCobranca":"0c57dfd57defbac2","podeVencManual":"88f0694c49496db7","prevVenceManualSet":"e583a6c8523f2e36","prevPendencias":"c87ce87973884715","alertaPrevencao":"8d52ba3995909460","prevFaltasDe":"521dab44ee9157f1","hojeAntecipar":"9b8fed3ad9122257","urgenciasGestao":"c192dbd0f0779796","vencLancarAuto":"414f3b8869277485","pelExtra":"e874a3d2b3b8767a","setPelExtra":"c37367acebfa2701","pelAplicarNoCache":"c174a71c267e339b","pelCamposBarrados":"99703a2869112cec","prevValor":"c4bc834fdc1a5e09","addDiasISO":"c3bc279a55f02afe","addMesesISO":"34de1566f1fe775c","podePapel":"f79e84fc5f1bd977","canEditPel":"712f761f9d9c3b93","prevCorrigePode":"9ee0f6648c608570","prevAvisoRecalc":"b295e4128828037a","prevEraManual":"567f58ccfaac2fb1","prevChecarLogica":"d28d9aeb0429193a","escovaCacheGravado":"452a789d84d96bb5","vencQuantoTexto":"7a4176b9d8d5c8de","pelSalvoMostrar":"e1f4ae9d461c3055","prevCorrigeRegistrar":"f1360a1fdbf2da9f","prevCorrigeRedesenhar":"62483ddb8dd49028","blocoFezes":"2dd50ba50fb2744e","blocoVacinas":"816ab98cf9e52ef6","blocoEcto":"8555e7943c933dcd","blocoColeira":"e3dda9ffae12e570","prevCorrigeFezesHTML":"b7cdeb888ff067bc","zAlertao":"e30d85cfd25aab3a","prevCorrigeExameFezes":"d6b8e673ee37db29","prevCorrigeVenceEm":"8723e245ae6a9237","prevCorrigeDoseUnica":"b5129f66aa4d2f76","vermDose2Prevista":"17903cb1b6ec99f1","vermDose2Data":"99382de94ed74724","vermIntervalo":"99e606e26e410fda","vermIntervaloDoBanco":"b1a418260fbf2957","prevVermSem2a":"96d814450d45b1ec","prevVermLanceConta":"a823a6ca65f06aa7","prevVermLancePatch":"0b1240967d2c86c2","prevCacheGravado":"d8cd714eef80f2c8","prevCacheDesfaz":"368e5997851b9bb9","prevCorrGravar":"25eb132824804e80","prevVenceCampoHTML":"bec046a7000553a2","vencMensagens":"57b62eedd274dde1","prevCorrigeVermHTML":"29384788522f231d","prevCorrigePainelHTML":"bb67d7fabe2794a0","prevCorrigeChip":"7b89aaf6facb0b35","hojeRedesenhar":"3ccefa2442100a84","hojeRender":"3c41edfd834bc0cb","vencMemoLimpar":"40345f0732ac5ac3","vencListaMemo":"c34c67b10788690d","prevCorrRegistrarDia":"4e731447be2cbc86","vencResumoHTML":"b1e9753b24613f93","vencResumoTexto":"955e50fa3eb77a88","pbItensParaChecagem":"2a0c88cefbce9c0b","prevLanceNaoSalvo":"5f751397ca0245cd"};
+  igual(Object.keys(BASE680).filter((n) => h(fonte(n)) !== BASE680[n]), [], 'as funções que não mudam');
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(novo), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n'))], [155, '5bac486c669007ec'], 'a área protegida (nomes e texto), num sandbox novo');
+  const i = novo.indexOf('id="v-daycare"'), j = novo.indexOf('id="v-', i + 10);
+  igual([h(novo.slice(i, j)), h(novo.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+});
+provaAsync('6.80 P35 (AC13) — nenhuma prova antiga saiu do arquivo nem mudou de nome (os 2.328 títulos do 788fb9e, conferidos um por um); a 6.80 tem 67 provas com títulos únicos (38 do @dev, 3 do fechamento dos CONCERNS e as 26 do QA, «6.80 QA …»); as seis provas que a story nomeia mudaram só a asserção, com o comentário «6.80 (AC…)» (a 6.66 P38 e a 6.63 P47 conferem, cada uma, que as da 6.65 passaram)', async () => {
+  const me = fs.readFileSync(__filename, 'utf8');
+  const re = /\bprova(?:Async)?\(\s*(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g; let m; const tit = [];
+  const t680 = [];
+  while ((m = re.exec(me)) !== null) (/^6\.80 /.test(m[2]) ? t680 : tit).push(m[2]);
+  tit.sort();
+  igual([t680.length, new Set(t680).size, t680.filter((x) => /^6\.80 QA /.test(x)).length, t680.filter((x) => /^6\.80 P\d\d /.test(x)).length], [67, 67, 26, 41], 'os títulos da 6.80');
+  // 6.80 P35 — publicação no pull request #13 (12/out/2026, autorizada pela Adriana): a guarda deixava de valer a cada story publicada depois da 6.80,
+  // porque contava TODOS os títulos de fora da 6.80. Agora confere, um por um, os 2.328 títulos do 788fb9e (os 2.118 da ca69bc8, os 89 da 6.71 e os 121
+  // da 6.68), cada um pelos 8 primeiros caracteres do sha-256 do título: nenhum pode sair nem mudar de nome; provas novas de outras stories podem entrar.
+  const h8_680 = (x) => require('crypto').createHash('sha256').update(x).digest('hex').slice(0, 8);
+  const BASE680 = '000efdc4001027ad00369a91004e11870066d212007861e100a0450000ea1627011ba6a5014e9ff401773c2f017ae093017fcffd01a3dc9301c6876301d83416020dede30225d24d0234934b02379146025478c5025a9b24026a254902c9248d02daff5503256970032b4e9003437788039a2772039df2cb03a6d5e303adae2e03e9477003ffd03c0408bf68043583480436c65a046d7d3c048629ea049e108304a27f2704addb6604b8066904d397e904fc5509053515d905544e7205896171058beb5d0592bede05cd099405e2d7e405e7c0f805edcb6e061ed89a0621098b06299885063d59510641f99d066ac2e70694eeb506bb1f6e06bca7a406c05c8006d26caf06f259cb06f6c823071383a8072acd3507588ec10760d05e07642d410764a73f076b07e8078088a907a06b2c07a396e207b0eab007f6a47807f9780d0843aabe084fc348086a442f087871540882c57808972cf708c02c770911935e092dd1ff09455daa097b554109e15ac20a04adae0a251ac10a555e5c0a5dba950a74a2d80ac3ad9c0ae528b30afee9170b08bae90b0af8530b0bf6dd0b1c43970ba526de0bc650270bcdd6d10bce853e0bf434f00c129d960c15fd610c1f235a0c2b2ecb0c38e3820c3984420c63f7400c644c620cd5d7550d0b44b00d0c020d0d5eef310d8dcee00d9820280ddd8b690df673100e2109a40e2f41bb0e425fe70e5ea9d90e7e20ec0e8415c70ea012800eb94be80eb9c20a0f2fae8c0f71439a0fa32f6d0fac4cd50fb3c776103bd2e610415e6b104402a0106b65781090c35810ae7f1a10d30aa310d8ccf810eb6f0210fb093d10ff8fbb113d6246115b507d115fd7121175300711a6828211aefff811b5fbaf11bfe93411d323ba12494925128d713912950d3312ad14d212fcc0251304ec301343d00613670f16138f6506139707b0139854f51398f86013da024f14249aea14a2115a14a9afe314c60d6114eb916a14f846c01514a053152cceff154a94181574fb611596e5eb159b3b6b15ae14db15b0c5d015ba768d15bc08e915c4e08915cb98fc15e8b3c215e8f9bd15f02c4515f0728116181758161905ee1619f19c161c0ffa161e9e0c162705801660170c16801a8f1695ab5b16b6f0f716c8207117350d83173680f1173bce751742f3a11751135d1797629f17c3488f17c6efe8180e67c9187a4bea1884e022189f755018e21ef419153b1b193952621953f4f019937a1d19e3e1d619edd7ae1a5659e11a68b1451a7204671abd0be91abe0ff91acd38741ae745c11af338ff1b2373831b35bb861b61698f1b6e62e91bafcc4f1c01d7821c0346cb1c1ba9581c3388a41c448b401ca5ad7e1ca7ed8c1ceab5ba1ced1a6f1d0622971d06940b1d0c843b1d2568cf1d32d3e91d549b861d724ee61d9b91e31dcb146c1dd343bf1defb74b1dfa62341e35cf5a1e5720e11e5b6ab51e6d0cbd1e9cf83c1eba15691ecbfafb1edfff611f0b550b1f130c551f156b861f63770b1f9b34f51fa140a41fa952201fd04a37201071c820256309203cdd392043dd5e2054adcf20bcb7c620c65dc720df244520e6501b20f30f0220f37a3b214b439e2153ea2a2153f70a216376b821861bd92196bac521b884c321c19d7821d1ce1821f895842226fdd0223a4391228069bf22988b6d22a68aa422b1403d22cf5903230b9fc3231d2ea9235994b72372913023787351239b5a2123beeb7223d8aa5423e71ccf23fa91aa2413d6a1243945d8245ab306246298b72467681e24accd7324b2c05c24c4d73524e64fde24f9be9424ffe4292518c7f02535a51f2548e175256134d625c2377225e840d8262da2c32634dc5e2638b7e9264280ad264c853726524c98267215b7267debee2698b71a26a06d0726bd424926e84e7a26f5e4972721e2d12747c017275d52de276ffaf9277b43a0277b880e27e5e1b527ea3d4128061208280dd3d42817cd77285f184228608da028aa7eaa28e2456228ea319f2917612d2959fce42960294129ca9c2f29f50fac29fa631d2a09789c2a0ad2fd2a2ce5332a6fc45b2a79d48c2a7fb3ce2a8585ea2af066792afc9c5e2b2071582b27b7da2b39f9272b43d7982b6988032bccc0e62c1fde982c229ea82c521d9d2c81db9c2cc844f22cdab6de2cf01f452cf557322cf63fc92d07af332d17816a2d2e506e2d4ec87a2d9dcf672dadbd932dc901ef2dcf7cfc2e0d08602e11caca2e1b8b492e1d7ab32e3ddbbf2e442e352e5ac28d2eb98eb02eca66652edaedf02f03c15d2f0b22df2f0ed3802f227e7e2f276fff2f49d0bc2f4affd52f9bebcb2fed444d2feef4c8303eb2ba3041e6543045d0ea30554b353070c93a309e3c7330af2f4430c91f6830ce813730d32d553132b6043161693131bed32831d42a6331eac090326bd7d0326fd658328ab964328db367328f48ad328f5e9832a762ff32bdf06b32bed1e032cbd5d132d6c0ab32dbe3b0330444453308c5a6330e244f332e42223330af76335e007c33618c583362b46a336882c43373c05f3387b2433388ad1133b677b133b7b6d133dc48e733f08bde3405534b3417e90a343da5473446cd97346520bf346536b8346eca2134b7e01e351f049a3562a1493565a3f13565f428356ef738358001cc358dbf5d3595165935a9361f35ab5faa35b9438435bd46e435c24e4e35e88ff335f0f34435f1ad573607ad323615a3cf36271352363e5a023645d65f3648c438366d41b036ad8d2b36b9a88d36cc1cca36cee58f36e94cd03700c65f370cb0f53719f5e33743aa26374bb4d53757cc3837780080378150e43784d4a337a1471537b221c837c0fbb637cdbcf737f349283800bd88380614e3380ec6f1387ec7a43888ce5d38bc8be238da841b38dcf61b38f4b5d43904d8063932a42e3959cfac39686d75397449f83978ccd639acdbb839adc58939c43af039da344d3a14a8543a657ec43a973fc93a983a933a9bf6883a9cf0f63ab6f3663ab965693abd11a53add535b3aecf1c43b0925cd3b1a900a3b31e5a03b481e403b5064c23b6705763bfa449f3bfcd92b3c0f08e23c2c2e473c31e5533c4d022b3c52a62a3c6b10893ca59cc33cb9f7513d0d365f3d340e283d3e497d3d41864b3d4272893d6d2f6f3d902e793d9192ce3d9b2b9a3daec1ad3db302d93dc72ffe3dce200c3de304623e0bbc643e1dc8303e53be363eae49433ec8afb53edffceb3efe2e753f1cb9c93f2f8a2f3f33551b3f551c5c3f6a988a3f938a1d3f98af6e3ff2d9bb401b51a0402908b5403afc30403edcf44053e93a407e44b640807818408a80924099f1b7409a034f409ee78440abffae40b31d4d41005e054168f2c0417eac6041878f7941b4908441c1117641cb153b41ea6fa742044fe842052be0428b921842c93d9f42e551eb42fd72be4355037b437c13e8438b263b43aaa94a43af438543d08a9843d9823e43da9b2e440e4de14429fd9d448fdea244930a3144b05ce044bb34f844f999a14528789a45593fbe455f0d3a456b098c456b10a9458cae5345c130ac45daa7f44615c8134658903f465a122546888dde46abdb4b46bc290346daf22b46f8ff89470a5ffb470f70234718e3ff4749b259478731b94795a04b4799d26147b3eee347bfe62647c050074802489e480fd83748146e72482d14c7482fcbc24848c3df4866f1b14899bbc548dadb0948e1381248e9086149012d6f49b0121a49c47f074a1e7e7d4a29427e4a37092d4a3b288b4a3c06ce4a5c5b194a5e8cfd4a8189424a8561404a9759ea4aa9dbaf4ac76e9e4ac8bea64acdc2724ae734fe4b0de2974b2d00df4b5984c14b6400044b6587904b73df654b8340c24b85b9e54baaac9e4bb6727b4bde78164beca56a4c01b04e4c2c066c4c3c978a4c6f75ff4c850b594c9c58204cb7fcda4cc208134ce455504cf2aeb54d33210f4d3a2fd94d5bc8174d679b614d96f4a94dea9f754df0409c4e0ad4ad4e2e9f614e2fbd144e52a8c24e8c8f8a4ec2740e4ec6ae804ed803d04ede5b0b4efad9964f0363184f11f1524f1a76714f443b4d4fa1e9924fb4eb064fc3f3db4fe4fd1e4ffef29850406a70504820be50604ab950d20ba050eda48250f0075a5118233751188e8a51d40f7b5213408d52171562521d1a7d5224ccf3526417245279f34752805c19529a4ddd52bbb3bf52c4ce5c5327e62a5364b8e85376f4685378d8d253aa70ec53b390b953d3380c53f6ec73541122ad54474c4c5448911254603c17546f6d6a5483049f549e2dd154af35d054bd3e9654c9150d54cbf9a854db2b9a5508619c55119edd5521df715529b0985539781c554f0a1555526da4558d8c6b561c4620562b7cba5678d4e5570a6cdc574452bd5747988957484df6575b7a40577b74cb578f0df457a809c857b32d6757c695bf57d5583857d98cf257f42707580149565804769758195d12582b5f32583321595869fedf5874668a58769b9658b8592a58c8792458cf9aeb592dd3825961fc4c5963734b59838fbc5993c44559a1eddd59bde71959ccf0ed59f904e65a0ed48a5a1012b05a1b04025ab981975abad1765b3c48dd5b4cb9ca5b64036a5b6723285bd4afce5c0ae64c5c1476ca5c6122755c686b725c70709d5c8eacc65cb0b3005cb68ec65cd9d6475ce138965d99891c5db112f95dd1d1bd5dee3d5c5df6e9b85df8d23a5dfaa6305e06e6505e1221675e26c59a5e670c9d5e88d51c5ea47e985eb11fba5ece78405eecd0145ef6ade15f07d6ae5f1c6d335f219e605f315bb65f466c035f4f44b55f6ad08b5f852ad95f9f87715fa913e55fc90ec15fce857a5fceecee5ff5304c603a880f6052011e6072a8b56084e33360ac5aa860b0cf1d60b3f29960c373d360cb864b60e4ddc660e71a6a60e88d4460f99f6c61301eec616bccc56185f49761866f5861895bb26196042961a2eec761ac55b061b8649a61ca9dc261db919e61f4509f61fbbeb06221465c624c0c63625ed7e1626697a7627cbf8862a701f262b1c8fc62c64c3a62d26bed62e38a5d62e5b99262f99db9630229866322aebe63423bc5636a9586636ae10c6374738c638ee52a63b6b7e963ccb30463d9de47640aaf326449611d644a1d7e6455738a645b849364d079fc64e15e1064e9e27464f748a364fc2a2a650157c965399e8165545bcf6557f151656a13bd659f45f16630f2a6663325fe665148b3665c63d0665f465066630dec667d592066a2333a66a5134666a892d166a8f18f66ecc66b66f0102266fdab73672c3264673bd5d36742a3346759673267638c57678c85ad679dda2c67a9c1ea67c945d667daf41167dcb53767ee87a867fa2e0e681d20f1684c07fc686a35fd68739a3c68a4506c68f95b236916c494691a754e692f117f693689896979b5cf69b9084669ead4df69f753326a34e0456a45f9dc6a5279386a76ad4a6a79c1b46a97124a6ab24c536ab69af86abb50ad6afece266b0374a16b0e2bc56b48ec466b98e07b6bb300c66bc00df56bdb60c86bddc9776bdf70af6c140c006c1564086c4e3cc56c57a4186c63e53a6c7c60146c91c2296c953c716c9a12496ce5af7e6cff26366d10249a6d218e346d2d670f6d5e7e2f6d68f4c36d91d27f6da2b03d6dff52a86e0599506e0a79746e0d01746e34f9c66e5e5e9a6e6ca32d6e77f62a6e8f9a656ee1389d6ee655516efbb20e6f016c516f15c96d6f540cf46f578b5f6fcbdf65701529f970683dab70772666707f4240709bf7eb70aa7dd770b6a27e70caea8070d3c7c470ef551c70f5d0da71159451714e2052718c5d5371a233d471b0f76971b74d3371c1705571caa6e071d77b6d71f3c98272080d197230c881723ae3a47255f456729d749c72ea4e7372f6dba97303e01a7316a3be7335f621734459e77379d2327381668e7382de927386f0ee738f7208739f9b3973b580f573bda83073df88937466230774c5de3074c929e374efb71e74fc08dc752e6169754beef4757a85e27591a10175b3584b75b587357667afe976714ae376a5824c76c3084176d41a6076dbfabe77313d0b774af68a775d4a3a77878c81779f1f7877dccf8178350c24787811fa78fa41367909144a790cb5eb790d446b79346b5b7936876c7940aeac79705672797ae1d0797debcb79a8fd307a2114f97a449fb27a4ef25f7a5e80007a6850d77a6c7adf7a74e9a17a7901917aa466c47aab52bf7acd81c87ae496187ae855ab7afc7ae47b363c9e7b50d2a87b69ea827b7b81837b9b33407bac21777bc3e16f7bd86ad87bff0e597c2657e07ca1df2c7ca25bc97cb5e7857ce4016a7d22926d7d362dfd7d468fd17d4a3b907d7b36457da323bd7da5da5b7dbfa1aa7dcc2c037dcc9b857de6cf5b7dfeb4647e1811fb7e33d7d47e449f447e48ac967e65bb3a7e67e5477e68fb147e78c63d7e88937a7e96897f7eb8efdb7eb998d67f146fde7f1563fc7f18c3457f5273aa7f7297a97fa7085b7fd50e267ff19f457ff8fd3d8003f6628018aff8801f69e38021440a8044c18d804799d18092269280acf31880c3908180c8e56580dc5917813e4aa08183781d819a293381d2f3e1821101a082129e4382347cfa824f5c54825160bf826f9900829399ce82a9073d82c0285582e0545282f75834835cf62b835f352d83721d3c83764e2c83796887838b41cb83908ef683a435b883b0a76283da6d468403783c841398e1842f9e1f844ba2af8450e3de84546a258463a40984b30f3084b3429e84c5252984eadc3d853a7bd4854b38808561b7338572886c8574b4ba8594c3ba85d149b085d474a385d7f5888641f203864c705086688d02868d900b869dfbb986c5544d8742c866874bc1d687561e538769bda287a3094487ae6d3a87ccd52c8819ce40884980ee886453a388648b9e8896345788a7fbc488be8dbc88fed7be893fc31b894da7f38951456a89e4a6d28a1eb8008a48383a8a6f9cf78a79debc8a81fe6f8a8349438a83bfa78ac2e11e8b0056ab8b1d62868b5b79d78b66aae78b74aac48b9241098bb3d78a8bb8f1488bb9e4c38bbf6ad18bc81ee08be9c4778c18a2258c3310ac8c38faa38c6c295b8cd4f0598cdeae488cfa3d328cfcb6948d0161528d07f70c8d1663538d2fab308d3d003e8d5be7458d6353c58d6db5b98d7260fe8d82cca48db2b2a48de361968dfceef48e0e32238e6273088e68c6148e8a4a598e8c9eab8e8d64878e95510e8ec2d9218ecbe0fe8ed5b01a8edf04438ef73dd18f5f8d9e8f7971958f7aa0418f99e15b8fa0e7958fa18dd99025b2299039ffd99042bfb8904f82bc905c236f906e3b7e908ca77c9093dcc790a0518090a25f2390a92be390d4da6590d5728d90f1a2fb91385ef7913a6ecc917d46419188196691933bf591abfd2491f8ffbc91fda001921a5bd592255ab492339b04927368ce9274291d92742cbb929ad43e92ab3e1992bcd3d592fd0cf19346a40f934e1433935a031c9391337a939eef9493ab9a2793abce3093e32e8093f1fb2c943f90cd9467f3f2947ec4c994814c1294893676949476f494e657da95765ec8957fcf299595ab3d95b0b91995c7b8e59616e737965255f1968a02219695a5e796c9284a96cbbe9697038069972640ad975bf9ce97616f0d976397b997838da197adf8c197d0897097fda2e7980831b9981e9fa198415bff9848026e984e45ac9879ea0d9883328a9891bf9a9938c7499957ac25997f2579998a8b4a999bf09499afcd4299b2ec059a04367f9a1008509a3c96fd9a9a42b49a9d64fe9aa392e49aa84c429ad44db69aef5ba89b2468299b75f8129b86cb819bb9a7139bce9d739befd9919c486fe39c5118589c641d8e9ca56c099cabadc09cae9ffc9cc9ed279ccc43e59ce8b6a59cfcc0d49cfd42709d1beb6b9d23484e9d33c6049d48687c9d7066fd9da0ce6e9daa50c59df03ba99e0bfd989e304fe59e4c31169e8a15c89e8a3f649ebc4ef99ee79d0b9ee9086d9efc68499f4692809f79d3229fc47ddd9fd42219a02646c4a044c991a05d2a92a05de458a08b9167a0a4e4d4a0a7bf1ea0ba3a1da0bb1282a0be1ddea0c82071a0e6537fa1188257a16c2c96a16cafb1a187d991a1a62fdca1a651fda1b27834a1da5de3a1ece5e5a1f0534ea21ab982a2233549a2276d3ca24660a1a2543160a2587940a26fa144a281b84ba2ab1cf4a2c46766a2c5d864a2d26f2ea2f943d9a3084420a32b8fa5a38230b7a38fc572a3b2e683a3b5ee5da3fe2b88a41a3091a4237b30a4388be8a44f41eca4697268a4ac6b9da4dd8728a4e0f543a4e11edba4f6560ea50e00f8a52b15a5a546a099a5751f31a57c1e1ea59c4bafa5d68113a5e5e63ba5f84f75a60a9617a63f091fa656953fa66579eca6763e85a6a8376ba6af4907a6c0e460a6da4f8ca6e17528a6fa89bca6fb948ba707b5a7a7248c8ea7347e60a73c82eda7579cd1a761384ba770989aa7cf2abaa7d98752a7e05c16a8087a69a809fa8aa8555b01a85f533fa861cca8a86ee955a87039b6a87438caa8a89d5fa8dd4346a8f6bfa5a91f6a5ba929076da9778d12a97aae3ba98e2d4ba99e9b66a9aa9e77a9b1be05a9b2e513a9d486c3a9ee3bb8a9f1cd81a9f38854a9f84ee5aa7b6eb6aa9c40ebaab1039caad49493ab07ba3cab14564aab2c8ae4ab591c29ab5df748ab93c2b1abac98a6abfb3fc7abff6ed2ac2c8846ac545448ac5b1182ac5cfe7fac6efa47ac72cbc5ac73f1c4accb2ffbacea2063acf459a9acf6beeeacfef1a4ad19b63aad1b452ead641455ad88e1ddadd00db4addecff7ae14f48bae2be5c6ae6afc72aeb24c95af1e4e2baf479b34af75ea94af971f3eafa8a30cafceed34afe99dfbafea0954b00fa7dbb02b62bab045b1f6b05f0240b0b47ccab0d8abf4b0e78e74b0ea9b25b0ef6f88b0f169bab0ff05a9b1097590b1216987b1654180b1738f8fb17ac81fb18d2fa8b1b347eab1bbdb62b1c80c56b1e1729db24a4cc6b24f92c7b25fe132b26be0d8b26ce4aeb29183e4b2de3c06b2f5a4c6b3191d89b327c669b33e7e54b34d6e8eb37252e0b3df5f16b409fbb9b4136c77b4387159b43fd89bb442e86eb4a2cf13b4b51cf0b55f2a16b55fcd31b56aa132b575a8b1b5984e5db59b3cccb5a69e50b5b04daeb5e0183eb5f80430b60cff51b61283a7b622471eb62983e9b6352100b66e5554b67d8246b6809a53b6d94eafb6ec5233b6ed86abb70b7c28b71504f5b721b6cbb74253fab7532d31b75c515eb7625dfeb77b8f5bb7c50611b7da93d7b80231a1b81b0338b820f8aab8a1a9bbb8ae39d5b8f85077b92291b0b936d49fb94c7204b960cd92b98f230bb9e4f3a2ba463102ba5453c8ba58e2adba6b3d03ba7b39cdba8912f6baab8255bacd64e0bad60ecebb186d00bb2e2bb5bb8aabe4bb9038c6bbdd00fabbdd4553bbfde432bc0b7f0cbc17918dbc2cee35bc3881c0bc4f3747bc60f0d6bc73b3b9bc82f035bcb4f46bbcca6c6bbce7b207bd0b0af4bd189bbfbd3e935cbd46f053bd6163c4bd969d75bdbf54c8bdf0e14dbdf7827abe14b14bbe370977be6e957fbeacdde2bed5df9fbedd5235bedf9e2ebef3abb2befa8652bf07cdf1bf0c530bbf12db94bf20f306bf23d431bf360091bf3cf1d3bfd4592cbfdc5b2bbfe26e76c009552bc0256070c03e41d5c0a3786cc0af67a2c0daff0fc0eb5f14c116643dc139e82bc13e7a4dc14be551c1b83333c1d3cbe5c1e554b5c1f847a8c21de44dc22d617ac24095adc2632793c2664173c26729e6c28dc2a9c2c20f4bc366adbbc383b275c3e96519c4094ae8c4116156c418e9cbc459e9d2c478be68c4958bd4c4b91ee9c4c7d076c4d1a436c4e6968bc4fcaccbc514021cc5178523c51e39aec52f99f1c5322905c54360c3c55e93ccc57d7aacc586b173c58b11b4c5b7d181c5bdfd2fc5cf1f6ec5cfe4b0c5d28f65c5dbd5eac5e1d78bc5fc95afc6126ae9c61d2c5fc64dc930c64fe051c66b1fe8c67be3c1c6ac78bcc6adeaa2c6f745b0c6f8d58fc736841ec745bd7bc759fe76c75de556c77d719ec79b793cc7c30ba2c7ce3775c80d4563c83651b9c8378025c85ea149c86b96f5c86df1abc87e02b7c87f161ec8af33f4c8cdc919c8f545a4c8ffaae0c9060fc6c9131e26c929e5aac9309a23c96336cec990096ec996104ec997b0dec9b7a93cc9bf28f0c9ff6ee5ca50644bca74de74ca764d7eca785a10ca911be4ca941436cac2aa58cac80900cb1bdad0cb2e4f10cb30f387cb3f0b23cb6603e0cb6ce308cb705cf2cb7ab82ccb895b27cbbd708dcbc60286cbcc60edcc174c6acc1b2cc8cc2d96cbcc3e665dcc47a567cc535d18cc787088cc9fc9feccb75d69ccb9b434cce262f3cd1e7660cd2179bdcd2219b9cd43df6fcd530cf7cd7f1124cd987ff6cd9f64fccdbec7dfcde41e25ce25b35bce27b415ce2990fdce2a7728ce317604ce38bb4ace4cecacce4cfdbbce510151ce7e77c2ce7e7c38ce84d9ecce8b5500cee03c28cf0d5a45cf271573cf534b92cf5c9c04cf5dad61cf60526dcfc94f0dcfd0ff32cfdc47d3cfeb8498d0267504d0451b1dd058abe2d0a2d2a1d0b0c1c2d0de46b2d0e06196d0e26c2ed0eeda24d0fdb49bd12a7ea7d13d8d05d1629231d1755b04d19b7191d19ea0fcd1b6e1ded1bff6cad1c1c0cbd1dd335cd1fddba6d210901ed216b720d23e5ef0d25ab069d27e650fd281b193d2ab04a8d2b27991d2d1b365d2dd5b96d2e4d208d30ed06cd30f5093d32b91b3d33191ded357277cd375d174d37fd2b6d3907e3ed3a09b35d3a2c13bd3a90e04d3b383cdd3c3f3a9d3d422dbd3d9b85fd3e55479d3ea4635d40945f3d4108a50d4673344d47c95b4d4883f32d4b2c2b9d4cb0b1ad50bc982d510dae4d5137c6ed5154f5fd54d30f0d565338bd5ab2e39d5bb2769d5c59886d5d48735d60a40ebd624918cd62a4ae4d632fd95d6719abdd675d8b8d68ce48ad692f5e7d6f33319d743b0c4d74a94dad7609c16d76734bdd76c8ffed771a7ffd778765bd7d11f5ad8143819d84ea1aad852f4d3d8c4445cd8cfc52ad8e89381d8e9b30bd943e96ad977712fd97e358bd97ee5a7d9d104afd9e0e457d9f9a132da0b9eb1da13bdefda163aafda1daabfda21c7ddda27c34eda452435da56af3fda80f3b0dab0640bdad36006dad72cbcdb02e7b6db343e92db36c0fbdb42dfb6db4bc70edb67a66bdb697179db7f1b18db863ae9db87f4ecdbae0753dbb39ad2dbd12307dbf0d12ddc67a95fdc6b9c8ddc919f8cdc98cd69dcae8496dcdb0c9ddcfc6d91dd0796b6dd0c96fddd1b492ddd29e42cdd4d9c95ddf5553fddfbf2c1de058439de0d5519de1dee1bde254aa6de2a2fbcde2ea1acde30b2bade65006fde7aece7dea73c96dea784b0deaa5360deb12cc2ded7bbd9deed555fdef2d5c4def515a0df48e19adf5832bddf5bc1e9df5f1e72df64b81ddfa47a67dfdb50cce001e6fbe02514cbe02febe3e0489f34e0537ef6e072f073e07b0304e0ae3b2ce0c3988de10a9570e11d6d82e128b596e13b47f3e1525006e1b31197e1b393d4e1d3aa77e1d7aecae1d81379e237d413e242d13ce27b57d7e2920835e2a49f63e2c2598de2e62914e2e98cade2f11a6be3308b00e33ece24e38953cfe39afc66e3d192eee40c9bb3e40e5b4de4236a3be42b0a6ae43506c3e43759bae44dde01e49544c5e4c6623de4d19861e4d7833ee4e1c68be4e2651fe4f4cbaee518aea6e51ca01ee546d4cfe555b2b7e56d6e3fe58836c8e59509e3e5cec756e5d5d07ee61f3fa3e63077dbe633295be6465406e66271fee689c821e697d119e6a1b01de6a59faee6b48516e6daf854e7039055e72d4f34e753cbf5e76f2cdde76f8498e781bf92e7c6ec6ae7d3c58ce7dbdb6de7ebb24be7eed183e815da0ce81baa0ee820a361e8b24d35e8c10407e8c57e13e915e1dee91b21f4e952c363e957878ce999e092e9b820bae9d4d588ea29a6c3ea8c8adfeaa91142eb18a893eb378e8deb4d9c7deb5626eceb8497e1eb87de5aeb8af4c0ec058572ec3e290dec55df28ec561223ec619549ec7a77a8ec89fd5feccb4983ed3153aeed325cb9ed495351ed667c04ed6f6943ed752ccbed8fdf21ed94944ceda85a3dedd223d9ede0f224ee09b325ee268ce8ee276465ee4b7b97ee93c2d1eeac87a7eeb80919eebb0275eed4984beee1a442ef08e2bdef135851ef181fb1ef1c67bbef3ca025ef4db6b4ef68a56def74c102ef8bd936ef96b1f3efac9032efd3f704eff72278f0289d44f029556df03489f5f04b2babf04daa37f0a2464af0ab88bcf0ce5569f0f97433f120e985f12ad58cf14353adf14cfd54f1507f94f19ffb42f1a4263ef1c61cc7f1d0c0e4f1ee0c00f2075c51f23590e8f27557d4f2a5cbb0f2aa1a05f2ad61fcf2d9fdb0f2dd2d67f2e9468ef362ed89f39c88d5f3bf6eedf3d8b5e3f3e339e0f4b7bc3df4cda861f4d8b977f4de64a6f5009915f506d17ff535300bf55a482cf56dd5f6f57638e1f57c108ff5a3c65cf5d9712ff5e25843f5ee9ab8f61f29a6f6326060f6446adff649f29ff6555cd5f65dcf32f67d359ff6855fd1f68b6c9df6b21ab4f6f00b58f710ad9df7176c4ef71ecfa7f7741acdf79e7a66f79fdfd6f7a5df56f7a77aa0f7e4d00ff7f8ad44f80fbccaf8135c73f8422189f86a5804f86e332ff8731387f87dbf69f8ba074df92c6de8f94aaaedf94e541cf976073df97911edf9929325f9b653f6f9c8ff11f9e5916ffa091197fa2fb0b3fa6a2e43fa6e7013fa9323a4fab6202dfabb3339fabe96b0fac9b658faece505fb042e4cfb16cc38fb3b0286fb81464bfb81d512fbe572cefbfb3d76fc09bb91fc11a7aefc13b56bfc2604e9fc274e98fc38ae89fc502017fc54f4eefc58d892fc6154d3fc6fa40ffc8b54b9fca84b3ffcb92252fcec5ca3fd20b76ffd30b1fbfd505066fd609794fd66e068fd71288bfdd81ad4fe1e8794fe3252f2fe5f9d0ffea78e8efec2eb66fec3c5c8fed49c5afedecde3ff1a5274ff3e4597ff499fbbff4e72f7ff8c6d17ff950b73ff9a14a0ffb1abc1ffd9d656';
+  const tem680 = new Set(tit.map(h8_680)); const base680 = BASE680.match(/.{8}/g);
+  igual([base680.length, new Set(base680).size, base680.filter((h) => !tem680.has(h)).length, tit.length >= 2328], [2328, 2328, 0, true], 'os 2.328 títulos do 788fb9e, um por um');
+  igual((me.match(/\/\/ 6\.80 \(AC[0-9.]+(?:, AC[0-9.]+)*\): /g) || []).length, 6, 'os seis comentários');
+});
+provaAsync('6.80 P36 (AC9) — a Linha do tempo traduz «prevencao-serie-nova-corrigida»; os textos novos escapados, sem emoji e sem as palavras proibidas; nenhuma permissão muda', async () => {
+  igual(run("acaoNome('prevencao-serie-nova-corrigida')"), 'Corrigiu o vermífugo na ficha: 1ª dose da série nova');
+  run(`__ple680=PREV_LANCE_ESTADO; PREV_LANCE_ESTADO={'x|verm_dose2_p':{passo:'salvo', ts:Date.now(), frase:'<b>A & B</b>'}};`);
+  try { assert.ok(run("prevLanceEstadoHTML('x', 'verm_dose2_p')").indexOf('&lt;b&gt;A &amp; B&lt;/b&gt;') > 0); } finally { run('PREV_LANCE_ESTADO=__ple680;'); }
+  const NOVAS = ['vermSerieVenceu', 'vermSerieNovaPatch', 'vermFichaForaDaSerie', 'vermSerieNovaFrase', 'prevVermLinha2Acompanha', 'prevValeDigitado', 'pbToqueAnotar', 'pbToqueSalvarAgora',
+    'pbToqueJaSalvou', 'pbVermIncoerente', 'vermSerieNovaCorrigir', 'vermSerieNovaToque', 'vermSerieNovaAudit', 'vermBlocoRascunho', 'vermSerieAntesHTML', 'vermSerieDepoisHTML',
+    'pelPrevAssinatura', 'pelPrevVistoMarcar', 'pelAlertasPrevRedesenhar', 'pelFichaPrevOuvinte', 'hojeOuvinteCadastro', 'hojeTextoMexido', 'vermSerieAntesContaHTML'];
+  const txt = NOVAS.map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual([/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(txt), /\b(cachorro|cão|cães|bicho|dono|donos|funcionári[oa]s?)\b|\banimal/i.test(txt), /Zeluz|Zéluz/.test(txt)], [false, false, false]);
+  igual([run("JSON.stringify(PERM['editar-peludinho'])"), run("JSON.stringify(PERM['prevencao-lancar-na-tela'])")], ['["gestao","supervisor","diretoria","consultora"]', '["gestao","diretoria","supervisor","consultora"]']);
+  igual(NOVAS.filter((n) => /^(ck|pt)/.test(n)), []);
+});
+provaAsync('6.80 P37 (AC10) — as contas do vermífugo usam o dia do aparelho (zHojeISO): em cada fuso do processo, às 19:30 e às 21:30 de Brasília, o «hoje» é o dia local e o «Feito hoje» grava esse dia; nenhuma função nova lê o UTC por conta própria', async () => {
+  for (const [hora, ms] of INST680) {
+    await com680(ROMEO680, ms, null, async () => {
+      igual(run('zHojeISO()'), dia680(ms), hora);
+      painel680('verm_p', 'hoje', 'venc'); await espera657();
+      igual(db680().verm_t, dia680(ms));
+    });
+  }
+  igual([dia680(I1930_680) === '2026-10-11', ['2026-10-11', '2026-10-12'].indexOf(dia680(I2130_680)) >= 0], [true, true]);
+  const txt = ['vermSerieVenceu', 'vermSerieNovaPatch', 'vermFichaForaDaSerie', 'vermSerieNovaFrase', 'prevValeDigitado', 'vermBlocoRascunho', 'vermSerieDepoisHTML', 'vermSerieAntesContaHTML']
+    .filter((n) => run('typeof ' + n) === 'function').map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual(/getUTC|toISOString|Date\.UTC/.test(txt), false);
+});
+provaAsync('6.80 P38 (AC2.5, AC12) — vermDose2Prevista, vermDose2Data e as telas da Fora (prevFaltasDe, prevPendencias, alertaPrevencao, urgenciasGestao) continuam listando a 2ª da série vencida, como a base; a 6.65 R2 P26 (a 2ª no mesmo dia da 1ª na ficha e no «Lance») passa como está', async () => {
+  igual([run(`vermDose2Prevista(${JSON.stringify(ROMEO680)})`), run(`vermDose2Data(${JSON.stringify(ROMEO680)})`)], ['2026-06-13', '2026-06-13']);
+  await com680(ROMEO680, I1930_680, null, async () => {
+    igual(J630(`prevPendencias(pelExtra(__r680), 'antip').venc.map(function(x){ return x.nome; })`), ['Vermífugo — 2ª dose']);
+  });
+  igual(falhas.filter((f) => /^6\.65 R2 P26 /.test(f)), []);
+});
+// ---------------------------------------------------------------- o fechamento dos CONCERNS do QA (12/out/2026)
+provaAsync('6.80 P39 (UX-001 do QA) — a Hoje na Zêluz de outro aparelho não redesenha com uma mensagem mexida (textarea.gest-txt com o texto diferente do de fábrica): espera; tenta de novo quando a Consultora sai do campo e na próxima mudança do cadastro, e redesenha quando nenhum texto está mexido', async () => {
+  await com680(ROMEO680, I1930_680, PAPEIS680[1], async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __blur680=null;
+      __ta680={value:'Olá (a Bia mexeu)', defaultValue:'Olá', addEventListener:function(ev, fn){ if(ev==='blur') __blur680=fn; }};
+      __ta680b={value:'Oi', defaultValue:'Oi'};
+      __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; },
+        querySelectorAll:function(s){ return s==='textarea.gest-txt'?[__ta680b, __ta680]:[]; }}; __tm657=[];`);
+    run(`hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual([run('__hj680'), run('typeof __blur680')], [0, 'function'], 'com o texto mexido, não redesenha (e espera a saída do campo)');
+    run(`__tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual(run('__hj680'), 0, 'a mudança seguinte, com o texto ainda mexido, também não');
+    run(`__tm657=[]; __blur680(); __tm657[0].fn();`);
+    igual(run('__hj680'), 0, 'saiu do campo com o texto ainda mexido: continua esperando');
+    run(`__ta680.value=__ta680.defaultValue; __tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual(run('__hj680'), 1, 'sem texto mexido, a próxima mudança redesenha');
+    run(`__ta680.value='mexeu de novo'; __ta680.__hoje680Espera=false; __blur680=null; __tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();
+      __ta680.value=__ta680.defaultValue; __tm657=[]; __blur680(); __tm657[0].fn();`);
+    igual(run('__hj680'), 2, 'saiu do campo com o texto de volta ao de fábrica: redesenha');
+  });
+  const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('  function hojeOuvinteCadastro('), j = src.indexOf('\n  }\n', i);
+  assert.ok(/if\(hojeTextoMexido\(sec\)\) return;/.test(src.slice(i, j)), 'o ouvinte da Hoje na Zêluz confere o texto mexido');
+});
+provaAsync('6.80 P40 (REQ-001 do QA) — o aviso do caso «antes» diz, antes do toque, o próximo que o botão grava (pela conta) e, com o «Vence em» digitado à mão, que essa data sai; o «Salvar» continua respeitando o à mão e o botão continua gravando a conta (AC3.2, AC4.4)', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, pp, async () => {
+      const t = txt680(bloco680());
+      assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta; a data digitada à mão (15/01/2027) sai. Corrigir: é a 1ª dose da série nova') >= 0, t);
+      run('vermSerieNovaCorrigir();'); await espera657();
+      igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'o botão grava o que o aviso disse');
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const t = txt680(bloco680());
+      assert.ok(t.indexOf('sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta. Corrigir') >= 0 && t.indexOf('digitada à mão') < 0, t);
+    });
+    await com680(Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), I1930_680, pp, async () => {
+      assert.ok(txt680(bloco680()).indexOf('o próximo vermífugo passa a ser 23/02/2027, pela conta.') >= 0, '15 dias');
+    });
+  }
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const t = txt680(bloco680());
+    assert.ok(t.indexOf('sai quando você salvar.') >= 0 && t.indexOf('Com o botão') < 0 && t.indexOf('Corrigir: é a 1ª dose') < 0, 'quem só vê: a frase, sem o botão e sem a frase do botão');
+  });
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-01-15', true], 'o «Salvar» mantém o à mão');
+  });
+});
+provaAsync('6.80 P41 (UX-002 do QA) — um toque NOVO no «Salvar» zera a marca «já salvou» daquele bloco: depois de o change ter salvado (o clique perdido), o «Salvar» deliberado logo em seguida grava; o clique do MESMO toque continua ignorado; o duplo toque não grava duas vezes', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1, 'o change salvou (o clique do toque se perdeu)');
+    toque680(null); run(`pbSet('verm',{verm_nome:'Drontal Plus'});`);
+    relogio658(I1930_680 + 900); toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm || null'), db680().verm_nome], [2, null, 'Drontal Plus'], 'o «Salvar» deliberado, 0,9 s depois, grava');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o clique do mesmo toque (antes de qualquer toque novo) é ignorado');
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o 2º toque (duplo toque) acha o rascunho já gravado: não grava de novo');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__pendura657='^daycare/cadastro/'; __pend657=[];`);
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(J630('__pend657.length'), 1, 'com a 1ª gravação ainda no ar, o 2º toque não abre outra');
+    run(`__pend657.forEach(function(x){ x.ok(); }); __pend657=[]; __pendura657=null;`); await espera657();
+    igual([esc680().length, db680().verm_nome], [1, 'Milbemax'], 'uma gravação só');
+  });
+});
+// ---------------------------------------------------------------- 6.80 QA — as provas do QA independente (Quinn, 12/out/2026), trazidas no fechamento dos CONCERNS
+// Os títulos «QA680-nn» viraram «6.80 QA nn»; três mudaram com os CONCERNS fechados: a 06 (UX-002: o «Salvar» novo depois do salvar
+// pelo change grava), a 08 (REQ-001: a tela diz, antes do toque, o que o botão grava) e a 10 (o texto de fábrica conferido pelo sha da base).
+console.log('\n6.80 QA — as provas do QA independente (Quinn, 12/out/2026)');
+const norm680 = (a) => a.map((v) => (v === '∅' ? '' : v));
+const fichasQA680 = {
+  A: ROMEO680,                                                                                       // vence hoje (11/10)
+  B: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' },   // vencida em 08/10
+  C: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-05-23', verm_2a: '2026-06-07', verm_p: '2026-10-05' },  // 15 dias, vencida em 05/10
+  D: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-01-10', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, // 2ª de outra série antes da 1ª, vencida
+};
+const nQA680 = (F) => (F.verm_dose2_dias === 15 ? 15 : 21);
+// as entradas: [nome, função(dia)] — cada uma grava a dose do dia
+const entradasQA680 = [
+  ['painel-2a-venc-feito-hoje', () => painel680('verm_dose2_p', 'hoje', 'venc')],
+  ['painel-2a-hoje-feito-em', (dia) => painel680('verm_dose2_p', dia, 'hoje')],
+  ['painel-2a-prev-feito-hoje', () => painel680('verm_dose2_p', 'hoje', 'prev')],
+  ['painel-2a-resumo', () => painel680('verm_dose2_p', 'hoje', 'venc', 'resumo')],
+  ['painel-proximo-venc', () => painel680('verm_p', 'hoje', 'venc')],
+  ['painel-proximo-hoje', () => painel680('verm_p', 'hoje', 'hoje')],
+  ['lance-linha-2a', (dia) => lance680('verm_dose2_p', dia)],
+  ['lance-linha-1a', (dia) => lance680('verm_p', dia)],
+  ['ficha-1a-dose', (dia) => run(`pbSet('verm',{verm_t:'${dia}'}); pbSalvar('verm');`)],
+];
+provaAsync('6.80 QA 01 — matriz: 4 fichas de série vencida (vence hoje, vencida 08/10, 15 dias vencida 05/10, 2ª de outra série antes da 1ª) × 9 entradas (4 do chip da 2ª, 2 do chip do próximo, as 2 linhas do «Lance» e a ficha) × 19:30/21:30 × Gestão/Consultora: sempre a série nova pelo dia local, 1 gravação só, sem o intervalo, e em dia+16 o cartão traz só a 2ª da série nova', async () => {
+  let casos = 0;
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const [fk, F] of Object.entries(fichasQA680)) {
+      for (const [en, fn] of entradasQA680) {
+        await com680(F, ms, pp, async () => {
+          fn(dia); await espera657();
+          const d = db680(), n = nQA680(F), quer = quer680(nova680(dia, n));
+          igual(norm680(pega680(d)), quer, [hora, pp[0], fk, en, dia].join(' '));
+          const e = esc680();
+          igual(e.length, 1, 'uma gravação só ' + [fk, en].join(' '));
+          assert.ok(e[0][2].indexOf('verm_dose2_dias') < 0 && e[0][2].indexOf('verm_doses') < 0, 'sem o intervalo e sem o esquema: ' + JSON.stringify(e[0][2]));
+          igual(za680(), [], 'nenhum aviso de recusa ' + [fk, en].join(' '));
+          // AC2.4: no dia-alvo dia+16, o cartão traz «2ª dose — vence em» a 2ª da série nova e nada da série velha
+          const alvo = mais680(dia, 16);
+          igual(J630(`vencItensDe(pelExtra(__r680), '${alvo}', 7, '${alvo}').map(function(x){ return [x.k, x.vence]; })`), [['verm_dose2_p', quer[2]]], 'dia+16 ' + [fk, en].join(' '));
+          casos++;
+        });
+      }
+    }
+  });
+  igual(casos, 2 * 2 * 4 * 9);
+});
+provaAsync('6.80 QA 02 — o «Desfazer» do «Atualizados hoje» volta a série vencida inteira (os 4 campos, a 2ª que não existia continua não existindo), pelo painel e pelo «Lance»', async () => {
+  for (const en of ['painel', 'lance']) {
+    await com680(ROMEO680, I1930_680, null, async () => {
+      run(`PREV_CORR={}; PREV_CORR_DIA='';`);   // o «Atualizados hoje» das provas anteriores (mesmo dia) não entra na conta
+      if (en === 'painel') painel680('verm_dose2_p', 'hoje', 'venc'); else lance680('verm_dose2_p', run('zHojeISO()'));
+      await espera657();
+      const ids = J630('Object.keys(PREV_CORR||{})');
+      igual(ids.length, 1, en + ': uma linha no «Atualizados hoje»');
+      igual(J630(`PREV_CORR[${JSON.stringify(ids[0])}].k`), 'verm_p', 'a linha é do vermífugo (o próximo)');
+      ctx.__qid680 = ids[0];
+      run(`__qd680=null; prevCorrDesfazerGravar(__qid680, {por:'Gestora Teste', motivo:'teste do QA', ts:Date.now()}, 'venc').then(function(r){ __qd680=r; });`);
+      await espera657();
+      igual(J630('__qd680'), { ok: true }, en);
+      igual(pega680(db680()), ['2026-05-23', '∅', '2026-06-13', '2026-10-11'], en + ': a ficha volta como era');
+      igual(aud680('prevencao-desfeita').length, 1);
+    });
+  }
+});
+provaAsync('6.80 QA 03 — a ficha «H» (a versão antiga: 1ª 11/10, 2ª 13/06, próximo 11/10) nas portas: a lista traz só o próximo; o chip do próximo e o «Salvar» da linha do vermífugo no «Lance» (sem mexer) gravam a série certa; a linha da 2ª mostra o próximo pela conta; o chip velho da 2ª no mesmo dia é recusado', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      igual(J630("vencItensDe(pelExtra(__r680), '2026-10-13', 7, '2026-10-11').map(function(x){ return x.k; })"), ['verm_p']);
+      painel680('verm_p', 'hoje', 'hoje'); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'chip do próximo ' + pp[0]);
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = lanceAbre680(), l2 = linha680(h, 'verm_dose2_p');
+      assert.ok(l2.indexOf('value=""') > 0 && /id="prevP_[^"]*_verm_dose2_p" value="2027-03-01"/.test(l2), 'a linha da 2ª: «Feito em» vazio e o próximo pela conta');
+      run(`prevLancar(__k680, 'verm_p');`); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'Lance, «Salvar» sem mexer ' + pp[0]);
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+      igual(esc680(), [], 'o chip velho da 2ª no dia da 1ª: nada gravado');
+      igual(za680().map((z) => z[1][0]), ['A 2ª dose (11/10/2026) cairia no mesmo dia da 1ª.']);
+    });
+  }
+});
+provaAsync('6.80 QA 04 — a ficha que caiu no D1 (1ª 23/05, «2ª» 11/10, próximo 08/02/2027): nenhuma lista cobra; o «Salvar» sem mexer não grava (a ficha é coerente); o «Lance» mostra a 2ª dada; o conserto pela Consultora grava a série nova uma vez, e um 2º toque não grava de novo', async () => {
+  await com680(ROMEOD1680, I1930_680, PAPEIS680[1], async () => {
+    igual(J630("vencItensDe(pelExtra(__r680), '2026-10-13', 7, '2026-10-11').length"), 0);
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680(), [], 'Salvar sem mexer');
+    const l2 = linha680(lanceAbre680(), 'verm_dose2_p');
+    assert.ok(/dada em 11\/10\/2026/.test(txt680(l2)), txt680(l2));
+    run('vermSerieNovaCorrigir();'); run('vermSerieNovaCorrigir();'); await espera657();
+    igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']);
+    igual([esc680().length, aud680('prevencao-serie-nova-corrigida').length], [1, 1], 'um toque, uma gravação (o 2º toque não acha mais o aviso)');
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o Salvar logo depois não grava de novo');
+  });
+});
+provaAsync('6.80 QA 05 — a série COMPLETA (2ª registrada) e vencida: a «2ª» lançada por uma tela velha ou pela linha da 2ª do «Lance» segue a 6.65 P15 (grava a 2ª nova, mudança declarada pelo @dev); o aviso do conserto aparece quando a 2ª real foi no prazo; com a 2ª real adiantada, há uma janela sem aviso (registro)', async () => {
+  const COMPL = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' };
+  await com680(COMPL, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-11', '2026-10-11', '2027-02-08'], 'P15: a 2ª nova por cima da real');
+    igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), 'depois', 'o aviso do conserto aparece');
+  });
+  await com680(COMPL, I1930_680, null, async () => {
+    lance680('verm_dose2_p', run('zHojeISO()')); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-11', '2026-10-11', '2027-02-08'], 'Lance: idem');
+  });
+  // 2ª real adiantada (20/05, prevista 29/05): a série venceu em 17/09; a «2ª» de 20/09 não cai no aviso (20/09 < 08/05+21+120 = 26/09)
+  const ADI = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-20', verm_2a: '2026-05-20', verm_p: '2026-09-17' };
+  await com680(ADI, Date.UTC(2026, 8, 20, 15, 0), null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-09-20', '2026-09-20', '2027-01-18']);
+    igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), '', 'REGISTRO: sem aviso nesta janela');
+  });
+});
+provaAsync('6.80 QA 06 — a guarda do toque: o change de OUTRO bloco no mesmo toque salva só o bloco do «Salvar» tocado (o outro fica no rascunho); o «Salvar» que pergunta (atraso) abre UMA pergunta e grava só com a escolha; o toque no botão do conserto derruba a anotação; UX-002: depois do salvar pelo change, um «Salvar» novo (outro toque) dentro de 1,5 s grava', async () => {
+  await com680(Object.assign({}, ROMEO680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'});`);
+    toque680('verm');
+    run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20'});`); await espera657();
+    const e = esc680();
+    igual(e.length, 1, 'uma gravação');
+    assert.ok(e[0][2].indexOf('verm_nome') >= 0 && e[0][2].indexOf('ecto_nome') < 0, JSON.stringify(e));
+    igual(J630('PB_PEND.ecto'), { ecto_nome: 'Bravecto 10-20' }, 'o carrapaticida continua no rascunho');
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o clique do mesmo toque não grava de novo');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_t:'2026-01-10'});`); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('__ze657.length')], [0, 1], 'uma pergunta, nada gravado');
+    run(`__zeFn680[1].fn();`); await espera657();
+    igual(esc680().length, 1, 'gravou com a escolha');
+  });
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    toque680('verm');
+    run(`pbToqueAnotar({target:{closest:function(){ return null; }}});`);   // o pointerdown no «Corrigir: é a 1ª dose da série nova» (onclick não é pbSalvar)
+    igual(run('PB_TOQUE_SALVAR'), null);
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1, 'o change salvou (o clique se perdeu)');
+    toque680(null); run(`pbSet('verm',{verm_dose2_dias:15});`);
+    relogio658(I1930_680 + 900); toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('__ze657.map(function(z){ return z[0]; })')], [1, ['Vermífugo continua em atraso — confira a data.']], 'UX-002: o «Salvar» novo, 0,9 s depois, não é engolido (com 15 dias a série fica em atraso: ele pergunta)');
+    run(`__zeFn680[1].fn();`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm || null')], [2, null], 'UX-002: grava com a escolha');
+  });
+});
+provaAsync('6.80 QA 07 — duplo toque no «Salvar vermífugo» da ficha «H» sem mexer: uma gravação só (a cópia já é a coerente); e com o banco sem responder, o 2º toque também não grava de novo', async () => {
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1);
+  });
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`__pendura657='^daycare/cadastro/';`);
+    run(`pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(J630('__pend657.length'), 1, 'uma gravação pendurada');
+    run(`__pend657.forEach(function(p){ p.ok(); }); __pendura657=null;`); await espera657();
+    igual(esc680().length, 1);
+  });
+});
+provaAsync('6.80 QA 08 — caso «antes» com o «Vence em» à mão: o «Salvar» respeita o à mão (AC4.4), o botão do conserto o derruba (AC3.2) — REQ-001: a tela, antes do toque, diz o que o botão grava (01/03/2027, pela conta) e que a data digitada à mão sai', async () => {
+  const F = Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true });
+  let salvar, botao, tela;
+  await com680(F, I1930_680, null, async () => {
+    tela = txt680(bloco680());
+    run(`pbSalvar('verm');`); await espera657();
+    salvar = pega680(db680(), V680.concat(['verm_p_manual']));
+  });
+  await com680(F, I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    botao = pega680(db680(), V680.concat(['verm_p_manual']));
+  });
+  igual(salvar, ['2026-10-11', '', '2026-11-01', '2027-01-15', true], 'Salvar: o à mão fica');
+  igual(botao, ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'botão: o à mão cai');
+  assert.ok(tela.indexOf('sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta; a data digitada à mão (15/01/2027) sai. Corrigir: é a 1ª dose da série nova') >= 0, 'REQ-001: ' + tela);
+});
+provaAsync('6.80 QA 09 — a 2ª legítima atrasada (depois da prevista, antes do próximo) continua 2ª em todas as portas e não acende o aviso do conserto; o próximo 4 meses depois dela', async () => {
+  const F = Object.assign({ verm_nome: 'Drontal', verm_doses: '2 doses' }, { verm_t: '2026-09-01', verm_2a: '2026-09-22', verm_p: '2027-01-20' });
+  for (const en of ['painel', 'lance', 'ficha']) {
+    await com680(F, I1930_680, null, async () => {
+      const dia = run('zHojeISO()');
+      if (en === 'painel') painel680('verm_dose2_p', 'hoje', 'prev'); else if (en === 'lance') lance680('verm_dose2_p', dia); else run(`pbSet('verm',{verm_dose2_t:'${dia}'}); pbSalvar('verm');`);
+      await espera657();
+      igual(pega680(db680()), ['2026-09-01', dia, dia, mais680(dia, 120)], en);
+      igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), '', en + ': sem aviso');
+    });
+  }
+});
+provaAsync('6.80 QA 10 — a mensagem pronta da Hoje na Zêluz (antecipar) e de Vencimentos para o Romeo: nenhuma fala da segunda dose; o texto de fábrica do vermífugo e o da 2ª dose (verm2) iguais aos da base', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run('__bkVC680q=VENC_CFG; VENC_CFG={};');
+    try {
+      const m = J630(`vencMensagens({nome:'Romeo', tutor:'Lia Teste', sexo:'M', itens:vencItensDe(pelExtra(__r680), '2026-10-11', 7, '2026-10-11')}, '2026-10-11', '2026-10-11').map(function(x){ return x.tipo+'|'+x.texto; })`);
+      assert.ok(m.length >= 1 && m.every((x) => !/segunda dose|2ª dose/i.test(x)), JSON.stringify(m));
+    } finally { run('VENC_CFG=__bkVC680q;'); }
+  });
+  const novo = fs.readFileSync(APP, 'utf8');
+  const tx = (s) => { const i = s.indexOf('var VENC_TXT_PADRAO='); return (i < 0) ? '' : s.slice(i, s.indexOf('\n  };', i)); };
+  // na base ca69bc8: 6765 caracteres, sha-256 3bffcf8dad829b2c (16 hex)
+  igual([tx(novo).length, require('crypto').createHash('sha256').update(tx(novo)).digest('hex').slice(0, 16)], [6765, '3bffcf8dad829b2c'], 'VENC_TXT_PADRAO letra por letra');
+});
+// ---------------------------------------------------------------- 6.80 QA C — do QA: o efeito dos defeitos plantados que a Fase 0 deixava passar
+console.log('\n6.80 QA C — o efeito dos defeitos que a Fase 0 deixava passar');
+provaAsync('6.80 QA C-q01 — a ficha «H» (próximo no dia da 1ª), chip velho da 2ª no dia da 1ª: recusado (AC1.4), nada gravado', async () => {
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657();
+    igual(esc680(), []);
+  });
+});
+provaAsync('6.80 QA C-q03 — «2 doses» com a 1ª e SEM o próximo gravado: a 2ª no prazo é a 2ª (não vira série nova)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-09-20' }, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-09-20', '2026-10-11', '2026-10-11', '2027-02-08']);
+  });
+});
+provaAsync('6.80 QA C-q09 — a 2ª no MESMO dia da 1ª (aceita na ficha, 6.65 R2 P26): «Salvar» sem mexer não grava nada', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-01', verm_dose2_t: '2026-10-01', verm_2a: '2026-10-01', verm_p: '2027-01-29' }, I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680(), []);
+  });
+});
+provaAsync('6.80 QA C-q15 — «Lance»: a 1ª muda para o dia da 2ª já dada: a 2ª (igual à 1ª nova) continua na linha de baixo (AC6.1)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-09-20', verm_dose2_t: '2026-10-09', verm_2a: '2026-10-09', verm_p: '2027-02-06' }, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:''}; __el657['prevT_'+__k680+'_verm_p'].value='2026-10-09'; prevRecalcular(__k680, 'verm_p');`);
+    igual(run(`__el657['prevT_'+__k680+'_verm_dose2_p'].value`), '2026-10-09');
+  });
+});
+provaAsync('6.80 QA C-q17 — «Lance» em DOSE ÚNICA: mudar a 1ª não põe «Próximo vermífugo» nem selo na linha da 2ª', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' }, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:''}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:''}; __el657['prevT_'+__k680+'_verm_p'].value=zHojeISO(); prevRecalcular(__k680, 'verm_p');`);
+    igual([run(`__el657['prevP_'+__k680+'_verm_dose2_p'].value`), run(`__el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML`)], ['', '']);
+  });
+});
+provaAsync('6.80 QA C-q25 — «Lance», carrapaticida: o «Vale até» escrito à mão (depois do «Feito em») continua valendo (a mudança do D5 é só do vermífugo)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: 'Dose única', verm_t: '2026-09-01', verm_p: '2026-12-30', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29' }, I1930_680, null, async () => {
+    run(`__el657['prevCorrP_ed_'+__k680+'_ecto_p']={value:'Bravecto'};`);
+    lance680('ecto_p', run('zHojeISO()'), '2027-01-15'); await espera657();
+    igual(J630('__za657').length + J630('__ze657').length, 0, 'sem pergunta');
+    igual(db680().ecto_p, '2027-01-15');
+  });
+});
+provaAsync('6.80 QA C-q40 — ficha: a 2ª DIGITADA antes da 1ª fica à vista (o Salvar a recusa) e não vira «da série anterior»', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' }, I1930_680, null, async () => {
+    run(`PB_PEND={verm:{verm_dose2_t:'2026-09-20'}};`);
+    const h = bloco680();
+    assert.ok(!/vm-serie-antes/.test(h) && /value="2026-09-20" onchange="pbSet\('verm',\{verm_dose2_t:this\.value\}\)"/.test(h), txt680(h).slice(0, 400));
+  });
+});
+provaAsync('6.80 QA C-q44 — a Veterinária (só vê) na ficha da versão antiga: a frase aparece, o botão do conserto não', async () => {
+  await com680(ROMEOH680, I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const h = bloco680();
+    assert.ok(/vm-serie-antes/.test(h) && h.indexOf('>Corrigir: é a 1ª dose da série nova</button>') < 0, txt680(h).slice(0, 300));
+  });
+});
+provaAsync('6.80 QA C-q50 — o conserto logo depois (0,5 s) de um «Salvar» feito pelo change no mesmo toque: o conserto grava', async () => {
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1);
+    relogio658(I1930_680 + 500); run('vermSerieNovaCorrigir();'); await espera657();
+    igual([esc680().length, pega680(db680())], [2, ['2026-10-11', '', '2026-11-01', '2027-03-01']]);
+  });
+});
+provaAsync('6.80 QA C-q56 — a guarda do toque no «Salvar antiparasitário»: o change do carrapaticida no mesmo toque grava o carrapaticida (não o vermífugo)', async () => {
+  await com680(Object.assign({}, ROMEO680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    toque680('ecto'); run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20'});`); await espera657();
+    const e = esc680();
+    assert.ok(e.length === 1 && e[0][2].indexOf('ecto_nome') >= 0, JSON.stringify(e));
+  });
+});
+provaAsync('6.80 QA C-q58 — o aviso «Antiparasitários» lê o GRAVADO: um «Vence em» digitado no rascunho do vermífugo (sem salvar) não o põe «em dia»', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' };
+  await com680(F, I1930_680, null, async () => {
+    run(`pbRender=__bk680.pr; __el657['pb-verm']={replaceWith:function(){}}; __el657['pelAlertaPrev_antip']={innerHTML:''};`);
+    run(`PB_PEND={verm:{verm_p:'2027-03-01', verm_p_manual:true}}; pbRender('verm');`);
+    assert.ok(/URGENTE/.test(run("__el657['pelAlertaPrev_antip'].innerHTML")), txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")));
+  });
+});
+provaAsync('6.80 QA C-q60 — a ficha aberta: depois de um redesenho, a mudança de OUTRA ficha não redesenha de novo', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(){ return false; }}; pelPrevVistoMarcar(__r680);`);
+    const muda = (k, o) => { ctx.__mk680 = k; ctx.__mo680 = o; run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__mk680]=Object.assign({}, pelCadCache[__mk680]||{}, __mo680); __telas680=[]; pelFichaPrevOuvinte();`); return telas680().length; };
+    assert.ok(muda(run('__k680'), { verm_nome: 'Milbemax' }) > 0, 'a própria ficha redesenha');
+    igual(muda('outro__x', { verm_nome: 'X' }), 0, 'a outra não');
+  });
+});
+provaAsync('6.80 QA C-q65 — a Hoje na Zêluz se redesenha com o foco num campo FORA dela', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; }}; __tm657=[];
+      document.activeElement={tagName:'INPUT'}; hojeOuvinteCadastro(); __tm657[0].fn(); delete document.activeElement;`);
+    igual(run('__hj680'), 1);
+  });
+});
+provaAsync('6.80 QA C-q67 — abrir a ficha marca o que foi desenhado (senão a 1ª mudança vinda de outro aparelho se perde)', async () => {
+  const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('  function abrirPeludinho('), j = src.indexOf('\n  function ', i + 10);
+  assert.ok(i > 0 && /pelPrevVistoMarcar\(p\);/.test(src.slice(i, j)), 'abrirPeludinho chama pelPrevVistoMarcar(p)');
+});
+provaAsync('6.80 QA C-q76/q77 — a série vencida é medida pelo dia DA DOSE: a 2ª dada em 05/10 (antes do vencimento de 08/10), lançada hoje (11/10), é a 2ª — no painel e no «Lance»', async () => {
+  const F = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+  for (const en of ['painel', 'lance']) {
+    await com680(F, I1930_680, null, async () => {
+      if (en === 'painel') painel680('verm_dose2_p', '2026-10-05', 'prev'); else lance680('verm_dose2_p', '2026-10-05');
+      await espera657();
+      igual(pega680(db680()), ['2026-05-20', '2026-10-05', '2026-10-05', '2027-02-02'], en);
+    });
+  }
+});
+provaAsync('6.80 QA C-q81 — na ficha da versão antiga, o «Salvar antiparasitário» sem mexer não grava nada (o conserto do Salvar sem mexer é só do vermífugo)', async () => {
+  await com680(Object.assign({}, ROMEOH680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    run(`pbSalvar('ecto');`); await espera657();
+    igual(esc680(), []);
+  });
 });
 }
 // ------------------------------------------------ o fim
