@@ -2,6 +2,68 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 10/out/2026 (v 2026-10-09-23) — Planos na ficha do FILHOt, parte 1: anular o pagamento lançado por engano, desfazer a renovação com motivo e sem perder o histórico, o meio do mês, a categoria com pergunta e volta, os dias e a saída do Day Care (S8 da revisão tela por tela, parte 1; Story 6.71)
+
+> Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app possa ser excluído, modificado, alterado e etc."* Nenhuma tela nova no menu: tudo acontece na ficha do FILHOt (aba Plano, Categoria, dias da semana e «Saiu do Day Care?»). Regra de ouro: antes de qualquer confirmação que mexe no dinheiro, a tela mostra o efeito no Recebimentos, mês a mês, pela mesma conta do quadro do Dashboard, e todo número tem nome: «Total de outubro de 2026 no Recebimentos» é o mesmo «Total de outubro de 2026» do quadro (com a hospedagem e as diárias avulsas), quando o aparelho leu o mês no Dashboard no último minuto (a mesma janela em que o quadro não relê); lido há mais tempo, ou nunca, «Total dos planos do Day Care em outubro de 2026». Sem a carteira inteira no aparelho, a tela mostra só o valor do FILHOt («Biscoito em outubro de 2026: …»).
+
+### (DA) Ficha do FILHOt › Plano — «Anular este pagamento (lançado por engano)» no plano atual
+
+| Antes | Agora |
+|---|---|
+| O plano lançado no FILHOt errado (ou o pagamento que não existiu) só saía pelo banco; sem plano anterior, nem o «Desfazer» aparecia | Junto do plano gravado, **«Anular este pagamento (lançado por engano)»** (44 px; quem mexe no plano vê: Recepção, Consultora de Bem-Estar, Supervisão, Gestão). O cartaz diz o efeito, com o nome do número («O pagamento de 05/10/2026 (Gold · trimestral · 1x, R$ 1.077,00) sai da conta — Total de outubro de 2026 no Recebimentos: R$ 9.576,61 → R$ 8.499,61», o mesmo do quadro) e o que sai junto (o registro do meio do mês, e o do irmão que continua); assina **só a Gestão** (ou a Diretoria), com o motivo |
+| — | O plano fica em «Renovações anteriores», **riscado**, com quem anulou, quando e o motivo, e **«Reabrir»** (a Gestão): o plano volta a ser o atual, igual ao que era (com o valor gravado), e a reabertura fica em «Voltaram a valer». Com outro plano já gravado, «Reabrir» recusa: «Já há outro plano gravado (…). Para voltar este, desfaça ou anule o atual primeiro.» |
+| — | O FILHOt fica **sem plano lançado**: aparece em «sem plano» na Renovação de planos e em «fora do total» no Recebimentos. O plano mudou em outro aparelho depois que o cartaz abriu: «O plano mudou em outro aparelho. Nada foi anulado: confira e tente de novo.» |
+
+### (DB) Ficha do FILHOt › Plano — «Renovações anteriores» e «Desfazer a última renovação»
+
+| Antes | Agora |
+|---|---|
+| A linha de uma renovação anterior não tinha nenhum botão | Cada linha que conta como pagamento ganha **«Anular este pagamento»** (44 px; a Gestão assina), com a frase do mês («Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00»); as linhas além das 6 mais novas ficam em **«Ver as outras N»**, cada uma com o seu botão; a correção e a desfeita dizem por que não contam («Não conta no Recebimentos: foi correção do plano seguinte.»). A linha anulada fica riscada, com **«Reabrir»**; anular e reabrir de novo guarda cada registro (nada é apagado nem sobrescrito) |
+| «Desfazer a última renovação» era uma pergunta de um toque, de qualquer pessoa da recepção | É o **cartaz** com «SAI», «VOLTA», o efeito no Recebimentos (com o nome do total; «o mês do plano que volta não muda» só quando é verdade) e o motivo; assina **só a Gestão** (S8-P1). A linha que volta fica guardada inteira em **«Voltaram a valer (N)»**, com quem, quando e o motivo |
+| O Desfazer podia trazer de volta um pagamento anulado | Volta sempre a linha **mais nova que não está anulada**; o pagamento anulado nunca volta a valer |
+| Com a ficha «Morador(a) Zêluz», o Desfazer gravava o plano e deixava a categoria | Recusa: «{FILHOt} é Morador(a) Zêluz: para voltar o plano, toque em «Auluno» na Categoria.» |
+
+### (DC) Ficha do FILHOt › Plano — «Começou no meio do mês»
+
+| Antes | Agora |
+|---|---|
+| «Desfazer este registro» era uma pergunta de um toque, e o registro sumia | O **cartaz**, com o motivo e a **própria senha** de quem mexe no plano (Consultora de Bem-Estar, Supervisão, Gestão, Diretoria) (S8-P6). O registro que sai fica guardado na ficha, com quem desfez e o motivo |
+| «REGISTRO DESFEITO» e «ESCOLHA REGISTRADA» apareciam mesmo com o banco recusando | Só com o ok do banco, ficha por ficha. Com dois FILHOts e um recusado: «O REGISTRO FOI DESFEITO SÓ EM PARTE» (ou «A ESCOLHA FICOU SÓ EM PARTE»), dizendo qual ficou como estava |
+
+### (DD) Ficha do FILHOt — Categoria (Auluno, Hóspede, Auluno Avulso, Morador(a) Zêluz)
+
+| Antes | Agora |
+|---|---|
+| Trocar para Morador(a), Avulso ou Hóspede apagava a vigência com um toque | **Pergunta antes**: a vigência que sai, «O pagamento de 05/10/2026 (R$ 1.077,00) continua contando no Recebimentos de outubro de 2026: o tutor pagou» (S8-P4), o efeito no Recebimentos (com o desconto do irmão, quando muda) e como voltar. A linha «virou …», a categoria e o plano numa gravação só; «A CATEGORIA NÃO FOI TROCADA» quando o banco recusa ou o plano mudou em outro aparelho |
+| Para o morador, o avulso e o hóspede, «Renovações anteriores» sumia da aba Plano | Fica **à vista**, com os valores e o «Anular este pagamento», sem o Desfazer |
+| Voltar a «Auluno» deixava o FILHOt sem plano | Logo depois da troca, tocar «Auluno» oferece **«Voltar o plano que saiu»** (com o efeito no Recebimentos, quando a volta devolve o desconto de um irmão): a categoria e o plano voltam como eram, e o pagamento continua contando uma vez só; «Auluno sem plano» segue o caminho de sempre |
+
+### (DE) Ficha do FILHOt — dias da semana (os chips do alto)
+
+| Antes | Agora |
+|---|---|
+| Tirar o último dia: no outro aparelho, a ficha voltava aos dias de fábrica | O app grava a marca «nenhum dia»: em todo aparelho, inclusive no que já tinha mexido na ficha antes, o FILHOt fica **sem dia** (no rastro, «Nenhum dia marcado»). Marcar um dia de novo tira a marca |
+| O aviso «os dias não batem com o plano» só aparecia na aba Plano | Também **junto dos dias do alto da ficha**, com «Ir para a aba Plano» (44 px). Só avisa: nenhuma pergunta antes de tocar um dia |
+
+### (DF) Ficha do FILHOt — «Saiu do Day Care?» e «↩ Reativar (voltou)»
+
+| Antes | Agora |
+|---|---|
+| O seletor «Saiu do Day Care? Sim / Não» gravava direto, sem motivo nem data | «Sim» abre o **mesmo caminho do botão** (pausa ou saída definitiva, o motivo, a data, o tipo); «Não» abre o reativar |
+| A pergunta de inativar não falava do dinheiro | A pergunta diz: «Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em outubro de 2026: R$ 5.385,00 → R$ 4.308,00 (pagamento de 05/10/2026).» (S8-P2 continua com a Adriana) |
+| «Foi inativado» e «Voltou» apareciam em janela do navegador, mesmo com o banco recusando | Na tela, **só com o ok do banco**; com a recusa, «NÃO FOI INATIVADO» ou «A VOLTA NÃO FOI GRAVADA», e a ficha continua como estava |
+| Reativar não pedia motivo e deixava o tipo da saída | O reativar (pelo botão, pelo seletor ou por Relatórios › Inativos › «Voltou») pede **o motivo da volta**, limpa a saída e a guarda no histórico da ficha. No mesmo dia, a ficha mostra «Voltou em … às …» com **«Desfazer a volta»** (44 px; motivo de 4 palavras): volta a inativo com a saída de antes, e a volta fica no histórico. Quem faleceu não é reativado por nenhum caminho |
+
+### (DG) Dashboard da Adriana e da Márcia — «Recebimentos do mês» (FILHOt por FILHOt e o Excel)
+
+| Antes | Agora |
+|---|---|
+| — | O pagamento anulado aparece **fora do total**, sem valor, com quem anulou, quando e o motivo («Pipoca — pagamento de 05/07/2026 anulado (lançado por engano) por Gestora Teste, em 10/10/2026 às 10:00: …»); no Excel, a linha «ANULADO — FORA DO TOTAL». O «Total da lista» continua igual ao total do quadro |
+
+- **Linha do tempo:** as ações novas (pagamento anulado, pagamento reaberto, volta desfeita) e as seis que apareciam com o nome técnico (troca de categoria, FILHOt inativado, FILHOt reativado, meio do mês, fim do plano pelo meio do mês, dias da semana) aparecem em português.
+- **Não mudou:** a conta do dinheiro para tudo o que não foi anulado (o Recebimentos dá o mesmo número, no centavo), a regra de quem saiu (inativo não entra no mês), a tabela de permissões, a área protegida do check-in do Day Care e as mensagens ao tutor.
+- **Decisões aplicadas pela recomendação (podem mudar):** S8-P1 (o Desfazer da renovação com a senha da Gestão), S8-P3 (trocar a categoria, inativar e reativar continuam sem senha, com a pergunta antes e o rastro), S8-P4 (trocar a categoria não tira o pagamento do mês: para tirar, anular), S8-P6 (o desfazer do meio do mês com a própria senha). **Continuam com a Adriana:** S8-P2 (o FILHOt inativado continua no Recebimentos do mês em que pagou? Hoje ele sai de todos os meses, e a pergunta de inativar diz isso) e S8-P5 (voltar mais de uma renovação para trás ou corrigir uma renovação antiga: fica para uma story própria, se aparecer um caso real).
+
 ## O que mudou em 10/out/2026 (v 2026-10-09-22) — Prevenção e a ficha de saúde: pendências, datas, painel rápido, escova e a Pesquisa com a Família Multiespécie, com corrigir, anular e desfazer (S5 da revisão tela por tela, parte 1; Story 6.63)
 
 > Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app possa ser excluído, modificado, alterado e etc."* Esta entrega usa o cartaz único da S0 (Corrigir / Anular / Reabrir) nas Pendências de prevenção, no painel rápido das datas, na Prevenção, na ficha › Prevenção e na Pesquisa. Nenhuma tela nova no menu. Regra de ouro: nada é apagado (o que sai fica guardado, com quem, quando e o motivo), o verde e o «Salvo» só aparecem depois de o banco confirmar, e nenhuma mensagem nova vai ao tutor.

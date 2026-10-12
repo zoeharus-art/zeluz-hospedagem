@@ -804,6 +804,21 @@ function finMesmoComecoDoPeriodo(a, b) {
   return finEhISO(ix) && ix === iy;
 }
 
+/* A LINHA DO HISTÓRICO ESTÁ ANULADA? (Story 6.71 — S8, G01: «Anular este pagamento (lançado por engano)».)
+   Anular não apaga nem reescreve a linha: cada «Anular» e cada «Reabrir» é um registro novo em
+   renov_hist/{id}/anulacoes/{id} (o registro da 6.57, com acao 'anular' ou 'reabrir'). A linha está anulada
+   quando o registro MAIS NOVO (pelo ts; no mesmo ts, pela chave, que nasce em ordem) é «anular». A mesma
+   função decide a tela (o riscado, o «Reabrir», o Desfazer que nunca traz de volta um pagamento anulado) e a
+   conta abaixo. Sem registro: não está anulada (todas as linhas de antes desta versão). */
+function finLinhaAnulada(o) {
+  var an = finObj(finObj(o).anulacoes), ks = Object.keys(an), i, r, t, mais = null, maisTs = 0, maisK = '';
+  for (i = 0; i < ks.length; i++) {
+    r = finObj(an[ks[i]]); t = Number(r.ts) || 0;
+    if (mais === null || t > maisTs || (t === maisTs && ks[i] > maisK)) { mais = r; maisTs = t; maisK = ks[i]; }
+  }
+  return mais !== null && String(mais.acao || '') === 'anular';
+}
+
 /* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44). Renovar manda o plano anterior para
    renov_hist, e o Financeiro lia só o atual: o pagamento anterior sumia do mês em que entrou.
    Aqui entram as que foram renovação de verdade, na ordem em que saíram. Ficam de fora a
@@ -815,6 +830,8 @@ function finRenovHistContados(c) {
   for (i = 0; i < ids.length; i++) {
     o = finObj(h[ids[i]]);
     if (!o.plano && !o.inicio) continue;
+    /* 6.71 (AC3.1): o pagamento anulado (lançado por engano) é lido como se a linha nunca tivesse existido. */
+    if (finLinhaAnulada(o)) continue;
     todos.push(o);
   }
   todos.sort(function (a, b) { return (Number(a.substituidoEm) || 0) - (Number(b.substituidoEm) || 0); });

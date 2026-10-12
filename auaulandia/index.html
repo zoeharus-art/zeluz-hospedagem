@@ -5184,13 +5184,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-22"></script>
+<script src="resposta-tutor.js?v=2026-10-09-23"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-22"></script>
+<script src="painel-logica.js?v=2026-10-09-23"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5202,7 +5202,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-22"></script>
+<script src="financeiro-logica.js?v=2026-10-09-23"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -25677,7 +25677,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-22';
+  const APP_VERSAO='2026-10-09-23';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -29302,7 +29302,7 @@
   function renovBaseDoRelancamento(ex, r){
     const iso=/^\d{4}-\d{2}-\d{2}$/, g=renovDe(ex)||{};
     if(iso.test(g.inicio||'')) return r;
-    const hv=renovHistDe(ex)[0];
+    const hv=renovHistValidos(ex)[0];   // 6.71 (2ª rodada, REL-005): a linha anulada nunca volta a valer
     if(!(hv && /^virou /.test(String(hv.motivo||'')) && iso.test(hv.inicio||'') && String(hv.inicio)===String((r||{}).inicio||''))) return r;
     const b=Object.assign({}, r, {fim:hv.fim||''});
     if(hv.vig_inicio) b.vig_inicio=hv.vig_inicio; else delete b.vig_inicio;
@@ -29740,18 +29740,23 @@
   // Gestão. Nada de permissão nova — a tabela PERM continua sendo o lugar único.
   function renovPodeDesfazer(){ try{ return canEditPel() && podePapel('ver-plano'); }catch(e){ return false; } }
   function renovHistHTML(ex){
-    var hist=renovHistDe(ex); if(!hist.length) return '';
+    var hist=renovHistDe(ex); if(!hist.length) return renovVoltasHTML(ex)?('<div id="renovHist" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm)">'+renovVoltasHTML(ex)+'</div>'):'';
     // TENTATIVAS IGUAIS, UMA LINHA SÓ (Adriana, 30/set/2026 — "quatro renovações que não deram
     // certo"). O Confirmar repetido gravava a mesma vigência de novo e cada vez empurrava uma
     // cópia para cá. As linhas seguidas que dizem a mesma coisa viram uma, com quantas vezes;
     // nada é apagado do banco (o rastro fica), só a leitura fica limpa.
+    // 6.71: a linha anulada não se junta com a que vale (cada uma tem o seu botão); o «Anular» e o
+    // «Reabrir» de uma linha juntada valem para todas as tentativas iguais dela (o mesmo pagamento).
     var grupos=[];
     hist.forEach(function(o){
       var ult=grupos[grupos.length-1];
-      if(ult && renovMesmoPlano(ult.o, o) && String(ult.o.motivo||'')===String(o.motivo||'')){ ult.n++; return; }
-      grupos.push({o:o, n:1});
+      if(ult && renovMesmoPlano(ult.o, o) && String(ult.o.motivo||'')===String(o.motivo||'') && renovLinhaAnulada(ult.o)===renovLinhaAnulada(o)){ ult.n++; ult.ids.push(o._id); return; }
+      grupos.push({o:o, n:1, ids:[o._id]});
     });
-    var linhas=grupos.slice(0,6).map(function(gr){
+    // 6.71 (AC2.1, AC6.3): o que conta como pagamento (a mesma conta do Recebimentos) e quem mexe no plano
+    var conta=renovHistContaIds(ex), atualH=renovDe(ex), podeH=renovPodeDesfazer();
+    var catH=String((ex&&ex.categoria)||'')||({auaulandia:'hospede', avulso:'avulso', morador:'morador'}[String(atualH.plano||'')]||'auluno');
+    var linhaHTML=function(gr){
       var o=gr.o, pl=planos()[o.plano]||{};
       var rot=pl.rotulo?(pl.rotulo+' · '+(pl.compromisso||'')):(o.plano||'—');
       var ini=o.vig_inicio||o.inicio;
@@ -29763,28 +29768,47 @@
         +(function(){ const vh=renovValorDoHist(o); return vh.v?(' · <span class="renov-hist-valor" style="font-weight:800">'+fmtCent(vh.v)+(vh.pelaTabela?' <span style="font-weight:600;color:var(--muted)">(pela tabela)</span>':'')+'</span>'):''; })()
         +'<div style="font-size:11.5px;font-weight:600;color:var(--muted)">saiu em '+esc(renovQuandoBR(o.substituidoEm))
         +' · por '+esc(o.por||'—')+(o.motivo?' · '+esc(renovMotivoRotulo(o.motivo)):'')
-        +(o.motivo_antes?' ('+esc(renovMotivoRotulo(o.motivo_antes))+' por engano)':'')+'</div></div>';
-    }).join('');
+        +(o.motivo_antes?' ('+esc(renovMotivoRotulo(o.motivo_antes))+' por engano)':'')+'</div>'
+        +renovHistLinhaExtraHTML(gr, conta, atualH, podeH)+'</div>';
+    };
+    // 6.71 (2ª rodada, REQ-002): as 6 mais novas à vista e as outras em «Ver as outras N», cada uma com o seu botão (antes, as
+    // mais antigas não apareciam nem tinham «Anular»).
+    var linhas=grupos.slice(0,6).map(linhaHTML).join('')
+      +(grupos.length>6?('<details class="renov-hist-mais" style="margin-top:4px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12.5px;font-weight:800;color:var(--z-blue)">Ver as outras '+(grupos.length-6)+'</summary>'
+        +grupos.slice(6).map(linhaHTML).join('')+'</details>'):'');
+    // 6.71 (AC4.4, AC6.3): para morador, avulso e hóspede, as linhas ficam à vista, sem o Desfazer (o plano
+    // volta pelo «Auluno» da Categoria); e o Desfazer só aparece quando há uma linha que pode voltar.
+    var desfaz=(catH==='auluno' && renovHistValidos(ex).length);
     return '<div id="renovHist" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm)">'
       +'<div style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Renovações anteriores ('+hist.length+')</div>'
       +linhas
-      +(renovPodeDesfazer()
+      +(!desfaz ? ''
+        : renovPodeDesfazer()
         ? '<div class="alm-next" style="margin-top:9px"><button class="btn" id="renovDesfazer" style="background:var(--crm-critico);color:var(--z-cream)" onclick="desfazerRenovacao()">Desfazer a última renovação</button></div>'
         : '<div class="hint" style="margin-top:6px;font-size:11.5px">Só a recepção, a Supervisão ou a Gestão desfazem uma renovação.</div>')
+      +renovVoltasHTML(ex)
       +'</div>';
   }
   async function desfazerRenovacao(){
     if(!pelAtual) return;
-    if(!renovPodeDesfazer()){
-      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
-        ['Desfazer uma renovação mexe em cobrança.',
-         'Só a recepção (consultoras), a Supervisão ou a Gestão fazem isso.'], {botao:'Entendi'});
-      return;
+    // 6.71 (AC9): quem não mexe no plano é barrado na função, com «BARROU» na auditoria (e a frase de quem pode)
+    if(!renovPodeDesfazer()) return corrBarrar('desfazer uma renovação (mexe em cobrança)', corrQuemPode('ver-plano'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)});
+    const ex=pelExtra(pelAtual), atual=renovDe(ex);
+    // 6.71 (AC4.4): o plano de quem não é Auluno volta pela Categoria — o Desfazer daqui gravaria o plano
+    // e deixaria a categoria (o caso C8 da 6.44: «morador» com o plano Gold).
+    const catD=pelCategoria(pelAtual);
+    if(catD!=='auluno'){
+      const catNome=((CATEGORIAS.find(function(c){ return c.k===catD; })||{}).t||catD);
+      zAlertao('O PLANO NÃO VOLTA POR AQUI',
+        [pelNome(pelAtual)+' é '+catNome+': para voltar o plano, toque em «Auluno» na Categoria.', 'Nada foi gravado.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
     }
-    const ex=pelExtra(pelAtual), hist=renovHistDe(ex), atual=renovDe(ex);
+    // 6.71 (AC4.2): a linha que volta é a mais nova que NÃO está anulada — um pagamento anulado nunca volta.
+    const hist=renovHistValidos(ex);
     if(!hist.length){
       if(typeof zAlertao==='function') zAlertao('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA',
-        ['Este FILHOt não tem nenhuma renovação anterior no histórico.',
+        [renovHistDe(ex).length?'As renovações anteriores deste FILHOt estão anuladas (lançadas por engano): elas não voltam a valer.'
+           :'Este FILHOt não tem nenhuma renovação anterior no histórico.',
          'O histórico começa a ser guardado a partir da primeira renovação confirmada nesta versão do app.',
          'Para corrigir o plano atual, ajuste os dias (em «Quais dias?», na aba Plano), o plano e a data, e toque em Confirmar.'],
         {botao:'Entendi'});
@@ -29792,15 +29816,6 @@
     }
     const ant=hist[0];
     const plAnt=planos()[ant.plano]||{}, plAtu=planos()[atual.plano]||{};
-    const ok=await zPergunta('DESFAZER A ÚLTIMA RENOVAÇÃO',
-      [pelNome(pelAtual)+' · '+(pelGet(pelAtual,'tutor')||'tutor a confirmar'),
-       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+renovAulasRotulo(atual)+' · '
-         +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
-       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+renovAulasRotulo(ant)+' · '
-         +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—'),
-       'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.'],
-      {sim:'Desfazer e voltar o plano anterior', nao:'Voltar', corTitulo:'#234D67'});
-    if(!ok) return;
     const k=pelKey(pelAtual);
     // DESFAZER DUAS VEZES (QA da 6.44). Desfazer o desfeito traz a renovação de volta: o plano que
     // sai agora foi PAGO e volta ao histórico com o motivo que tinha (guardado no desfeito), e não
@@ -29837,33 +29852,69 @@
     if(ant.valor_plano_cent) volta.valor_plano_cent=ant.valor_plano_cent;
     if(ant.mensalidade_cent) volta.mensalidade_cent=ant.mensalidade_cent;
     loteD['renov_hist/'+ant._id]=null;
+    // 6.71 (AC4.3): a linha que volta sai de renov_hist como sempre, e a cópia inteira dela (com o _id)
+    // fica em renov_voltas, na MESMA gravação — nada se perde. O registro do cartaz entra no gravar.
+    const vidD=planoIdNovo(k, 'renov_voltas'), tsD=Date.now();
+    Object.assign(loteD, planoVoltaCampos(vidD, ant, tsD, 'desfazer', null));
     const pD=pelAtual, nomeD=pelNome(pD), alvoD=dcKey(pD.n,pD.tutor);
-    const quemD=corrQuemAgora();   // 2ª rodada (M-2): o rastro leva quem desfez, mesmo se o banco responder depois
-    const grD=setPelExtra(pD, Object.assign({renov:volta}, loteD), {soDepoisDoOk:true});
-    const rD=await corrComPrazo(grD, CORR_PRAZO, CORR_PRAZO_ERRO);
-    const feitoD=function(){
+    let quemD=corrQuemAgora();   // 2ª rodada (M-2): o rastro leva quem desfez, mesmo se o banco responder depois
+    // 6.71 (AC4.1): o efeito no Recebimentos, pela mesma conta do quadro, antes de confirmar.
+    const efD=planoEfeitoNoRecebimento(pD, planoFichaDepois(pelCadCache[k]||ex, Object.assign({renov:volta}, loteD)));
+    const linhasD=[nomeD+' · '+(pelGet(pD,'tutor')||'tutor a confirmar'),
+       'SAI: '+(plAtu.rotulo||atual.plano||'—')+' · '+renovAulasRotulo(atual)+' · '
+         +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
+       'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+renovAulasRotulo(ant)+' · '
+         +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—')];
+    if(pelInativo(pD)) linhasD.push(nomeD+' está '+(planoEhFemea(pD)?'inativa':'inativo')+': pela regra de hoje, o Recebimentos não muda (quem saiu não entra na conta).');
+    // 2ª rodada (REL-004): «o mês do plano que volta não muda» só quando o mês dele não está no efeito (a correção que volta muda).
+    else if(efD){
+      const mesVolta=/^\d{4}-\d{2}-\d{2}$/.test(String(ant.inicio||''))?String(ant.inicio).slice(0,7):'';
+      const naoMuda=!!mesVolta && !efD.some(function(m){ return m.mes===mesVolta; });
+      linhasD.push(efD.length?(planoEfeitoLinha(efD, k)+(naoMuda?'. O mês do plano que volta não muda: ele já contava como renovação anterior e passa a contar como o plano atual.':'.')):'No Recebimentos: nenhum mês muda de valor.');
+    }
+    linhasD.push('Use quando a renovação foi lançada por engano: no FILHOt errado, ou com o plano, os dias ou a data errados.',
+       'O que sai vai para o histórico — nada se perde, e o rastro fica na Linha do tempo do dia.');
+    let recusaD='';
+    const feitoD=function(reg){
       renovRascLimpar();
-      if(typeof audit==='function') audit('renovacao-desfeita',
-        'voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')
-        +' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—'),
-        Object.assign({alvo:alvoD}, corrQuemMeta(quemD)));
+      const detD='voltou o plano de '+(atual.plano||'—')+' ('+renovAulasRotulo(atual)+') para '+(volta.plano||'—')+' ('+renovAulasRotulo(volta)+') · '+((volta.vig_inicio||volta.inicio)?fmtBR(volta.vig_inicio||volta.inicio):'—')+' → '+(volta.fim?fmtBR(volta.fim):'—')+' · assinado por '+String((reg||{}).por||'-')+': '+String((reg||{}).motivo||'');
+      if(typeof audit==='function') audit('renovacao-desfeita', detD, Object.assign({alvo:alvoD}, corrQuemMeta(quemD)));
       renderPelFicha();
     };
+    // 6.71 (AC4.1, S8-P1): o cartaz «reabrir», com o motivo e a senha da Gestão, no lugar da pergunta.
+    const rD=await corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'DESFAZER A ÚLTIMA RENOVAÇÃO', botao:'Desfazer e voltar o plano anterior', tituloOk:'Renovação desfeita',
+      oque:'a última renovação de '+nomeD+' ('+(plAtu.rotulo||atual.plano||'—')+(atual.inicio?(', pago em '+fmtBR(atual.inicio)):'')+')',
+      original:{caminho:'daycare/cadastro/'+k+'/renov', id:'renov'}, estado:'renovado', paraEstado:'o plano anterior valendo de novo', info:linhasD,
+      gravar:function(reg){
+        quemD=corrQuemAgora();
+        return planoReler(pD).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          const vb=renovHistValidos(rl.ficha||{})[0];
+          if(!vb || vb._id!==ant._id || planoCanon(renovDe(rl.ficha))!==planoCanon(atual) || !planoLinhasIguais(rl.ficha, [ant])){
+            recusaD='O histórico mudou em outro aparelho. Nada foi desfeito: confira e tente de novo.'; return {ok:false, erro:recusaD};
+          }
+          const loteG=Object.assign({}, loteD, planoVoltaCampos(vidD, ant, tsD, 'desfazer', reg));
+          const grD=setPelExtra(pD, Object.assign({renov:volta}, loteG), {soDepoisDoOk:true});
+          grD.then(function(r2){ if(r2 && r2.ok) feitoD(reg); });
+          return grD;
+        });
+      }});
     if(rD && rD.semResposta){
-      // o banco ainda pode responder: o rastro e a ficha só mudam quando ele confirmar
-      grD.then(function(r2){ if(r2 && r2.ok) feitoD(); });
+      planoFecharCartaz();
       if(typeof zAlertao==='function') zAlertao('O BANCO AINDA NÃO CONFIRMOU',
         [nomeD+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
          'Confira em «Renovações anteriores» se o plano voltou antes de tocar em Desfazer de novo.'], {botao:'Entendi'});
       return;
     }
-    if(rD && rD.ok===false){
+    if(!rD || rD.cancelado || rD.ocupado) return;
+    if(rD.ok===false){
+      planoFecharCartaz();
       if(typeof zAlertao==='function') zAlertao('A RENOVAÇÃO NÃO FOI DESFEITA',
-        [nomeD+': '+zErroFrase(zErroMotivo(rD.erro, 'banco', '', {agora:true})),
+        [recusaD || (nomeD+': '+zErroFrase(zErroMotivo(rD.erro, 'banco', '', {agora:true}))),
          'O plano e as «Renovações anteriores» continuam como estavam. Nada mudou.'], {botao:'Entendi'});
       return;
     }
-    feitoD();
+    planoFecharCartaz();
     if(typeof zAlertao==='function') zAlertao('RENOVAÇÃO DESFEITA',
       [(volta.dias_mes&&renovDiasMesValido(volta))
         ? ('O plano voltou a ser '+(plAnt.rotulo||volta.plano||'—')+', com os dias mudando por mês ('+renovAulasRotulo(volta)+').')
@@ -30047,9 +30098,10 @@
               +(fimTela&&fimTela<hojeISO()?'<div class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Esta vigência já nasce vencida.</strong> Confira a data do pagamento — provavelmente é de um mês anterior. O Confirmar vai perguntar antes de gravar.</div>':'')
               +'</div>')
       +'</div>'
-      + (semPlanoMensal ? '' :
+      + (semPlanoMensal ? renovHistHTML(ex) :   // 6.71 (AC6.3): as linhas, os valores e o «Anular» à vista, sem o Desfazer
           '<div class="alm-next" style="margin-top:8px"><button class="btn btn-gold" id="planoConfirmar" onclick="confirmarRenovacao()">Confirmar / renovar plano</button></div>'
           +(sujo?'<div id="planoNaoGravado" class="dc-faltas" style="margin-top:6px;border-color:#B3261E;color:#B3261E"><strong>Nada foi gravado ainda.</strong> Confira o resumo e toque em Confirmar / renovar plano.</div>':avisoContaDiferente)
+          +planoAnularAtualHTML(ex,p)
           +mmBlocoHTML(ex,p)
           +renovHistHTML(ex))
       +'</div>';
@@ -30250,7 +30302,7 @@
     // rodada). A MESMA data é o mesmo pagamento (o fechamento do mês conta um só).
     let virouC=null, virouNovoC=false;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(gravado.inicio||'')){
-      const h0=renovHistDe(ex)[0], isoV=/^\d{4}-\d{2}-\d{2}$/;
+      const h0=renovHistValidos(ex)[0], isoV=/^\d{4}-\d{2}-\d{2}$/;   // 6.71 (AC4.2): a linha anulada não conta
       if(h0 && /^virou /.test(String(h0.motivo||'')) && isoV.test(h0.inicio||'') && isoV.test(h0.fim||'')
          && String(h0.inicio)!==String(calc.inicio)
          && (String(calc.inicio)<=String(h0.fim) || (isoV.test(h0.quando||'') && String(calc.inicio)<=String(h0.quando)))){
@@ -30661,10 +30713,7 @@
   async function mmConfirmar(opcao){
     if(!pelAtual) return;
     if(typeof canEditPel==='function' && !canEditPel()){
-      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
-        ['Registrar como o tutor vai pagar mexe em cobrança.',
-         'Só a recepção (consultoras), a Supervisão ou a Gestão fazem isso.'], {botao:'Entendi'});
-      return;
+      return corrBarrar('registrar como o tutor vai pagar o meio do mês (mexe em cobrança)', corrQuemPode('editar-peludinho'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)});
     }
     const ex=pelExtra(pelAtual);
     const D=mmDados(pelAtual);
@@ -30709,6 +30758,9 @@
        rodape:'Grava na ficha de cada FILHOt da conta. Errou? O botão "Desfazer este registro" tira tudo, com rastro.'});
     if(!ok) return;
     const quem=renovQuemAgora(), ts=Date.now();
+    // 6.71 (AC5.3): «ESCOLHA REGISTRADA» e os rastros só com o ok do banco, ficha por ficha; a que o banco
+    // recusou fica como estava, e a tela diz qual.
+    const certos=[], falhas=[];
     for(let i=0;i<ms.length;i++){
       const m=ms[i], q=m.pet;
       const exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
@@ -30728,7 +30780,9 @@
         rQ.mesRenov=nf.mesRenov;
         rQ.mes_cobranca_1=nf.mes_cobranca_1;
       }
-      await setPelExtra(q, {renov:rQ});
+      const rG=await setPelExtra(q, {renov:rQ});
+      if(!rG || rG.ok!==true){ falhas.push({nome:m.nome, erro:(rG||{}).erro}); continue; }
+      certos.push(m.nome);
       if(typeof audit==='function') audit('plano-meio-mes',
         m.nome+' — começou em '+fmtBR(D.inicio)+' pela opção '+opcao+' · '+m.diarias+' diária'+(m.diarias===1?'':'s')
         +' · total '+fmtCent(rQ.meio_mes.total_cent),
@@ -30738,8 +30792,15 @@
         +' pela opção '+opcao+' do meio do mês · 1º mês fechado '+(nf.mes_cobranca_1||'—'),
         {alvo:dcKey(q.n, q.tutor), antes:{fim:nf.de}});
     }
-    mmRascLimpar();
+    if(certos.length) mmRascLimpar();
     renderPelFicha();
+    if(falhas.length){
+      if(typeof zAlertao==='function') zAlertao(certos.length?'A ESCOLHA FICOU SÓ EM PARTE':'A ESCOLHA NÃO FOI REGISTRADA',
+        (certos.length?[mmJuntar(certos)+': a escolha foi registrada.']:[])
+          .concat(falhas.map(function(f){ return f.nome+': NÃO FOI REGISTRADA ('+zErroMotivo(f.erro, 'banco', '', {agora:true})+'); confira e tente de novo para '+(falhas.length>1?'cada um':'ele')+'.'; })),
+        {botao:'Entendi'});
+      return;
+    }
     if(typeof zAlertao==='function') zAlertao('ESCOLHA REGISTRADA',
       ['Opção '+opcao+' · total '+fmtCent(total)+'.',
        'Ficou na ficha de '+mmJuntar(ms.map(function(m){ return m.nome; }))+'.',
@@ -30748,9 +30809,7 @@
   async function mmDesfazer(){
     if(!pelAtual) return;
     if(typeof canEditPel==='function' && !canEditPel()){
-      if(typeof zAlertao==='function') zAlertao('ESTA AÇÃO NÃO É SUA',
-        ['Desfazer um registro de cobrança é da recepção, da Supervisão ou da Gestão.'], {botao:'Entendi'});
-      return;
+      return corrBarrar('desfazer o registro do meio do mês (mexe em cobrança)', corrQuemPode('editar-peludinho'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)});
     }
     const reg=mmRegistroDe(pelExtra(pelAtual));
     if(!reg){
@@ -30768,11 +30827,15 @@
     if(voltas.length) linhasD.push('O plano volta a valer até '
       +mmJuntar(voltas.map(function(x){ return (x.para?fmtBR(x.para):'—')+' ('+x.nome+')'; }))+'.');
     linhasD.push('A conta na tela continua igual — só o registro sai. O rastro fica na Linha do tempo do dia.');
-    const ok=await zPergunta('DESFAZER O REGISTRO DE MEIO DE MÊS', linhasD,
-      {sim:'Desfazer o registro', nao:'Voltar', corTitulo:'#234D67'});
-    if(!ok) return;
-    for(let i=0;i<pets.length;i++){
-      const q=pets[i], exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
+    // 6.71 (AC5.1, S8-P6): o cartaz «reabrir», com o motivo e a senha da própria pessoa que mexe no plano,
+    // no lugar da pergunta. (AC5.2) O registro que sai fica guardado em meio_mes_hist, na mesma gravação de
+    // cada ficha. (AC5.3) «REGISTRO DESFEITO» e os rastros só com o ok de cada ficha.
+    const certos=[], falhas=[], quemM=corrQuemAgora();
+    let regM=null;   // 2ª rodada (REL-006): o registro do cartaz, para a entrada da 6.57 de cada ficha que gravou
+    let grM=null;    // 3ª rodada (REL-006b): a promessa do gravar, para o caso de o banco responder depois do prazo
+    let cartazM=null; // 4ª passada (QA671S-A1): o cartaz deste desfazer — a resposta atrasada fecha só ele, nunca outro aberto depois
+    const um=function(q, regC){
+      const exQ=pelExtra(q)||{}, rQ=Object.assign({}, renovDe(exQ));
       const antes=mmRegistroDe(exQ);
       delete rQ.meio_mes;
       // DESFAZER DESFAZ INTEIRO. Tirar só o registro e deixar o plano esticado seria
@@ -30785,20 +30848,575 @@
       // O "para onde voltar" e o 1º mês fechado são desta escolha: saindo ela, saem eles.
       rQ.mes_cobranca_1='';
       delete rQ.fim_anterior;
-      await setPelExtra(q, {renov:rQ});
-      if(typeof audit==='function') audit('plano-meio-mes-desfeito',
-        pelNome(q)+' — tirou o registro de meio de mês (opção '+((antes&&antes.opcao)||'—')
-        +' · '+fmtCent((antes&&antes.total_cent)||0)+')',
-        {alvo:dcKey(q.n, q.tutor), antes:antes});
-      if(volta && typeof audit==='function') audit('plano-fim-meio-mes',
-        pelNome(q)+' — plano voltou a valer até '+fmtBR(volta.para)
-        +' (estava '+(volta.de?fmtBR(volta.de):'—')+'), porque o meio do mês foi desfeito',
-        {alvo:dcKey(q.n, q.tutor), antes:{fim:volta.de}});
+      const patchQ={renov:rQ}; patchQ['meio_mes_hist/'+planoIdNovo(pelKey(q), 'meio_mes_hist')]={registro:antes, desfeito:regC};
+      return setPelExtra(q, patchQ, {soDepoisDoOk:true}).then(function(rG){
+        if(!rG || rG.ok!==true){ falhas.push({nome:pelNome(q), erro:(rG||{}).erro}); return rG; }
+        certos.push(pelNome(q));
+        const detM=pelNome(q)+' — tirou o registro de meio de mês (opção '+((antes&&antes.opcao)||'—')+' · '+fmtCent((antes&&antes.total_cent)||0)+') · motivo: '+String(regC.motivo||'');
+        if(typeof audit==='function') audit('plano-meio-mes-desfeito', detM,
+          Object.assign({alvo:dcKey(q.n, q.tutor), antes:antes}, corrQuemMeta(quemM)));
+        if(volta && typeof audit==='function') audit('plano-fim-meio-mes',
+          pelNome(q)+' — plano voltou a valer até '+fmtBR(volta.para)
+          +' (estava '+(volta.de?fmtBR(volta.de):'—')+'), porque o meio do mês foi desfeito',
+          Object.assign({alvo:dcKey(q.n, q.tutor), antes:{fim:volta.de}}, corrQuemMeta(quemM)));
+        return rG;
+      });
+    };
+    const rM=await corrAbrir({acao:'reabrir', nivel:'propria', capacidade:'ver-plano', titulo:'Desfazer o registro do meio do mês', botao:'Desfazer o registro', tituloOk:'Registro desfeito',
+      oque:'o registro do «Começou no meio do mês» de '+mmJuntar(pets.map(function(q){ return pelNome(q); }))+' (opção '+(reg.opcao||'—')+', '+fmtCent(reg.total_cent||0)+')',
+      original:{caminho:'daycare/cadastro/'+pelKey(pelAtual)+'/renov/meio_mes', id:'meio_mes'}, estado:'registrado (opção '+(reg.opcao||'—')+')', paraEstado:'sem o registro do meio do mês', info:linhasD,
+      gravar:function(regC){
+        regM=regC; cartazM=(typeof CORR_ATUAL!=='undefined')?CORR_ATUAL:null;
+        grM=Promise.all(pets.map(function(q){ return um(q, regC); })).then(function(rs){
+          return rs.every(function(x){ return x && x.ok===true; })?{ok:true}:{ok:false, erro:((rs.filter(function(x){ return !x || x.ok!==true; })[0])||{}).erro};
+        });
+        return grM;
+      }});
+    if(!rM || rM.cancelado || rM.ocupado) return;
+    // O resultado de cada ficha quando o cartaz termina em falha (sem a entrada da 6.57): cada ficha que gravou ganha a dela, com o ok
+    // do banco (AC10.1), e a tela diz qual ficou como estava.
+    const falhouEmParte=function(){
+      if(regM) certos.forEach(function(n){ corrRastro(Object.assign({}, regM, {oque:'o registro do «Começou no meio do mês» de '+n+' (opção '+(reg.opcao||'—')+', '+fmtCent(reg.total_cent||0)+')'})); });
+      if(typeof zAlertao==='function') zAlertao(certos.length?'O REGISTRO FOI DESFEITO SÓ EM PARTE':'O REGISTRO NÃO FOI DESFEITO',
+        certos.map(function(n){ return n+': o registro foi desfeito.'; })
+          .concat(falhas.map(function(f){ return f.nome+': NÃO FOI DESFEITO ('+zErroMotivo(f.erro, 'banco', '', {agora:true})+'); confira e tente de novo para '+(planoEhFemea((pets.filter(function(q){ return pelNome(q)===f.nome; })[0])||{})?'ela':'ele')+'.'; }))
+          .concat(certos.length?[]:['O registro continua na ficha, como estava.']),
+        {botao:'Entendi'});
+    };
+    // 3ª rodada (REL-006b): sem resposta em 20 s, o cartaz diz que o banco ainda não confirmou; quando o banco responder, se alguma
+    // ficha foi recusada, o resultado de cada uma (com todas gravadas, o cartaz da 6.57 já grava a entrada única dele).
+    if(rM.semResposta){
+      renderPelFicha();
+      if(grM) grM.then(function(r){ if(r && r.ok===true) return; if(cartazM && typeof CORR_ATUAL!=='undefined' && CORR_ATUAL===cartazM) planoFecharCartaz(); renderPelFicha(); falhouEmParte(); });
+      return;
     }
+    planoFecharCartaz();
     renderPelFicha();
+    if(falhas.length){ falhouEmParte(); return; }
     if(typeof zAlertao==='function') zAlertao('REGISTRO DESFEITO',
-      ['O registro de meio de mês saiu da ficha de '+mmJuntar(pets.map(function(q){ return pelNome(q); }))+'.'],
+      ['O registro de meio de mês saiu da ficha de '+mmJuntar(pets.map(function(q){ return pelNome(q); }))+'.', 'O que saiu fica guardado na ficha, com quem desfez e o motivo.'],
       {ok:true, botao:'Fechar'});
+  }
+
+  // =====================================================================================
+  // ===== STORY 6.71 — PLANOS NA FICHA DO FILHOt (S8 da revisão tela por tela, parte 1) =====
+  // "O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app
+  //  possa ser excluído, modificado, alterado e etc." (Adriana, 09/out/2026)
+  // O dinheiro dos planos é o que a Adriana usa para fechar o mês (6.44). Aqui ficam as peças da
+  // ficha que mexem nele, todas pelo cartaz da 6.57 (corrAbrir) ou por uma pergunta antes:
+  //   · «Anular este pagamento (lançado por engano)» no plano atual (também sem plano anterior) e
+  //     na linha de cada renovação anterior que conta; «Reabrir» volta a contar (AC1, AC2);
+  //   · o efeito no Recebimentos, mês a mês, pela MESMA conta do quadro (finResumoMes, o cadastro
+  //     inteiro e os vínculos de irmãos), antes de qualquer confirmação (regra 7 da seção 4);
+  //   · o que volta a valer (Desfazer, «Voltar o plano que saiu», Reabrir do plano anulado) sai de
+  //     renov_hist como sempre e fica guardado em renov_voltas, que a conta não lê (AC4.3, AC6.4);
+  //   · nada se apaga: a anulação é uma lista de registros dentro da linha (anulacoes), e a linha
+  //     está anulada quando o registro mais novo é «anular» (finLinhaAnulada, financeiro-logica.js).
+  // Toda função que grava confere o papel de novo (renovPodeDesfazer / corrBarrar) e relê a ficha
+  // no banco antes de gravar; «Anulado», «Desfeito» e «Reaberto» só com o ok do banco.
+  // =====================================================================================
+  // As chaves de controle de uma linha do histórico (o que sai quando a linha volta a ser o plano).
+  var PLANO_META_HIST=['_id', 'substituidoEm', 'por', 'motivo', 'motivo_conferido', 'anulacoes'];
+  // A linha está anulada? A decisão é da função pura do módulo do dinheiro (a mesma da conta). Linha
+  // sem registro de anulação nunca está anulada (todas as de antes desta versão).
+  function renovLinhaAnulada(o){
+    var an=(o && o.anulacoes && typeof o.anulacoes==='object')?o.anulacoes:null;
+    if(!an || !Object.keys(an).length) return false;
+    if(typeof finLinhaAnulada==='function') return finLinhaAnulada(o);
+    return true;   // sem o módulo do dinheiro: a linha com anulação registrada não volta a valer
+  }
+  // O histórico sem as linhas anuladas: é dele que o Desfazer, a pergunta «virou» do Confirmar e o
+  // «Voltar o plano que saiu» tiram a linha (AC4.2) — um pagamento anulado nunca volta a valer.
+  function renovHistValidos(ex){ return renovHistDe(ex).filter(function(o){ return !renovLinhaAnulada(o); }); }
+  // O registro mais novo da lista de anulações de uma linha (o do riscado), na ordem da finLinhaAnulada.
+  function renovUltimaAnulacao(o){
+    var an=(o && o.anulacoes)||{}, mais=null, mt=0, mk='';
+    Object.keys(an).forEach(function(k){ var r=an[k]||{}, t=Number(r.ts)||0; if(mais===null || t>mt || (t===mt && k>mk)){ mais=r; mt=t; mk=k; } });
+    return mais;
+  }
+  // A linha do histórico como plano (o que volta a ser o renov): sem as chaves de controle.
+  function planoSemMeta(o){ var r=Object.assign({}, o||{}); PLANO_META_HIST.forEach(function(c){ delete r[c]; }); return r; }
+  // Texto canônico (chaves em ordem; vazio, lista vazia e objeto vazio contam como ausente, como no
+  // banco) para conferir se a ficha relida é a mesma que a tela mostrou.
+  function planoCanon(v){
+    if(v===null || v===undefined) return 'null';
+    if(Array.isArray(v)) return v.length?('['+v.map(planoCanon).join(',')+']'):'null';
+    if(typeof v==='object'){
+      var ks=Object.keys(v).filter(function(k){ var c=planoCanon(v[k]); return c!=='null'; }).sort();
+      return ks.length?('{'+ks.map(function(k){ return JSON.stringify(k)+':'+planoCanon(v[k]); }).join(',')+'}'):'null';
+    }
+    return JSON.stringify(v);
+  }
+  // Uma chave nova debaixo da ficha, sem gravar nada (push() sem valor só gera a chave).
+  function planoIdNovo(k, caminho){
+    var local='x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    try{ var r=DB?DB.ref('daycare/cadastro/'+k+'/'+caminho).push():null; return (r && r.key)?String(r.key):local; }
+    catch(e){ return local; } /* silencioso de propósito: sem o banco, a chave nasce aqui (a gravação vai falhar e dizer) */
+  }
+  // A ficha como está NO BANCO agora (a releitura antes de gravar): {ok, ficha} ou {ok:false, erro}.
+  function planoReler(p){
+    var k=pelKey(p), pr;
+    if(!DB) return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
+    try{ pr=Promise.resolve(DB.ref('daycare/cadastro/'+k).once('value')); }catch(e){ pr=Promise.reject(e); }
+    return corrComPrazo(pr.then(function(s){ return {ok:true, ficha:(s && typeof s.val==='function')?(s.val()||{}):{}}; },
+      function(e){ return {ok:false, erro:e}; }), CORR_PRAZO, CORR_PRAZO_ERRO);
+  }
+  // A ficha de DEPOIS: uma cópia com o patch aplicado (os caminhos «renov_hist/{id}/…» no lugar), sem
+  // tocar no cadastro em memória — é ela que entra na conta do efeito.
+  function planoFichaDepois(base, patch){
+    var c=JSON.parse(JSON.stringify(base||{}));
+    Object.keys(patch||{}).forEach(function(x){
+      var ps=x.split('/'), v=patch[x], o=c;
+      for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]] || typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+      if(v===null || v===undefined) delete o[ps[ps.length-1]]; else o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    });
+    return c;
+  }
+  // Os vínculos de irmãos que o app já tem na memória (o ouvinte de daycare/irmaos); sem eles, os que
+  // o quadro do Recebimentos leu. Nenhuma leitura nova de banco.
+  function planoIrmaosNo(){
+    if(typeof IRMAOS_CACHE!=='undefined' && IRMAOS_CACHE && Object.keys(IRMAOS_CACHE).length) return IRMAOS_CACHE;
+    return (typeof REC_FONTES!=='undefined' && REC_FONTES && REC_FONTES.irm)?REC_FONTES.irm:{};
+  }
+  function planoNomeDaChave(c, f){
+    if(f && f.n) return String(f.n);
+    var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===c; });
+    return p?pelNome(p):String(c||'').split('__')[0];
+  }
+  // «virou morador» (o motivo do histórico que a troca de categoria gravou), como se lê.
+  function planoVirouRotulo(o){ return renovMotivoRotulo(String((o||{}).motivo||'')); }
+  // O que voltou a valer, guardado inteiro (AC4.3, AC6.4): a linha (com o _id original), quando, como, o motivo e
+  // o registro de quem fez — em caminhos separados, na mesma gravação de quem chamou.
+  function planoVoltaCampos(vid, linha, ts, como, reg){
+    var o={}, b='renov_voltas/'+vid+'/';
+    o[b+'linha']=Object.assign({}, linha||{}); o[b+'voltou_em']=ts; o[b+'como']=como;
+    o[b+'motivo']=String((reg||{}).motivo||''); o[b+'registro']=reg||null;
+    return o;
+  }
+  function planoEhFemea(p){ return (typeof repEhFemea==='function')?repEhFemea(p):false; }
+  // 2ª rodada (REL-003): o registro novo na lista de anulações de uma linha nunca fica com o carimbo atrás do mais novo que já
+  // está lá — um aparelho com o relógio atrasado reabriria «antes» da anulação, e a linha continuaria anulada depois do
+  // «Pagamento reaberto». O carimbo do aparelho fica guardado em ts_aparelho.
+  function planoRegDepois(reg, an){
+    var mx=0; Object.keys(an||{}).forEach(function(x){ var t=Number((an[x]||{}).ts)||0; if(t>mx) mx=t; });
+    var t=Number((reg||{}).ts)||Date.now();
+    return (t>mx)?reg:Object.assign({}, reg, {ts:mx+1, ts_aparelho:t});
+  }
+  // O EFEITO NO RECEBIMENTOS (regra 7 da seção 4): para cada mês que muda, o total do mês antes → depois, pela MESMA
+  // conta do quadro «Recebimentos do mês» (finResumoMes, com o cadastro inteiro e os vínculos de irmãos; a ficha trocada pela
+  // de depois), e cada FILHOt cujo valor muda. Os meses olhados são os dos pagamentos deste FILHOt e da família inteira dele,
+  // antes e depois. `outras` (opcional): {chave: ficha de depois} das outras fichas que mudam junto. Sem o módulo do dinheiro:
+  // null. Só roda quando a pergunta ou o cartaz abre — nunca ao desenhar.
+  // 2ª rodada (REL-002): a família é a da conta (finGruposFamilia, que junta em cadeia: Ana–Bia e Bia–Cacau são uma família),
+  // não só os vínculos diretos deste FILHOt. (REQ-001, decisão do @po) O total de cada mês tem NOME (rotulo):
+  //   'quadro' — o «Total de {mês}» do quadro e o TOTAL do Excel (os planos, a hospedagem dos orçamentos e as diárias avulsas
+  //              do mês), quando as fontes do quadro já estão na memória deste aparelho (os orçamentos, os irmãos e as diárias
+  //              avulsas daquele mês);
+  //   'planos' — senão, o «Total dos planos do Day Care» do mês (sem a hospedagem e sem as diárias avulsas, que não mudam aqui);
+  //   null     — sem a carteira inteira no aparelho, nenhum total: só o valor de cada FILHOt que muda (nunca um número sem nome).
+  function planoEfeitoNoRecebimento(p, depois, outras){
+    if(typeof finResumoMes!=='function') return null;
+    var k=pelKey(p), cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{};
+    var cadD=Object.assign({}, cad); cadD[k]=depois;
+    Object.keys(outras||{}).forEach(function(x){ cadD[x]=outras[x]; });
+    // 3ª rodada (REQ-003): as fontes do quadro só valem dentro da janela em que ele não relê (60 s); lidas há mais tempo, o quadro,
+    // aberto agora, mostraria outro número. (OBS-001) Os irmãos: com as fontes do quadro valendo, os do quadro (REC_FONTES.irm — o
+    // «no Recebimentos» é o número dele); sem elas, os do ouvinte do app (IRMAOS_CACHE, o mais novo), que o quadro vai reler.
+    var janela=planoJanelaQuadro();
+    var fontes=!!(typeof REC_FONTES!=='undefined' && REC_FONTES && planoFonteFresca(REC_FONTES.quando, janela));
+    var irm=fontes?(REC_FONTES.irm||{}):planoIrmaosNo(), fam=[k];
+    var grupos=(typeof finGruposFamilia==='function')?finGruposFamilia(irm||{}):{};
+    Object.keys(grupos).forEach(function(r){ if((grupos[r]||[]).indexOf(k)>=0) grupos[r].forEach(function(x){ if(fam.indexOf(x)<0) fam.push(x); }); });
+    Object.keys(outras||{}).forEach(function(x){ if(fam.indexOf(x)<0) fam.push(x); });
+    var meses={}, iso=/^\d{4}-\d{2}-\d{2}$/;
+    var olha=function(f){ f=f||{}; var r=f.renov||{}, h=f.renov_hist||{};
+      if(iso.test(r.inicio||'')) meses[String(r.inicio).slice(0,7)]=1;
+      Object.keys(h).forEach(function(id){ var o=h[id]||{}; if(iso.test(o.inicio||'')) meses[String(o.inicio).slice(0,7)]=1; }); };
+    fam.forEach(function(x){ olha(cad[x]); olha(cadD[x]); });
+    var carteira=!(typeof CARTEIRA_CARREGADA!=='undefined' && CARTEIRA_CARREGADA===false);
+    var base={peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[], irmaos:irm, orcamentos:fontes?(REC_FONTES.orc||{}):{}, pagamentos:null,
+      planos:(typeof planos==='function')?planos():null, descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null};
+    var hoje=(typeof hojeISO==='function')?hojeISO():'';
+    var avulsas=function(mes){ return (typeof REC_AVULSO!=='undefined' && REC_AVULSO && REC_AVULSO.ok===true && REC_AVULSO.mes===mes && planoFonteFresca(REC_AVULSO.quando, janela))?(Number(REC_AVULSO.total_cent)||0):null; };
+    var rotuloDe=function(mes){ return !carteira?null:((fontes && avulsas(mes)!==null && typeof recQuebra==='function')?'quadro':'planos'); };
+    var soma=function(R, rot, mes){ var t=0, por={};
+      ((R||{}).porFILHOt||[]).forEach(function(o){ if(o.servico==='auaulandia') return; t+=(o.valor||0); por[o.chave]=(por[o.chave]||0)+(o.valor||0); });
+      if(rot==='quadro') t=recQuebra(R).total+avulsas(mes);
+      return {t:(rot?t:null), por:por}; };
+    var out=[];
+    Object.keys(meses).sort().forEach(function(mes){
+      var rot=rotuloDe(mes);
+      var a=soma(finResumoMes(Object.assign({cadastro:cad}, base), mes, {hoje:hoje}), rot, mes);
+      var d=soma(finResumoMes(Object.assign({cadastro:cadD}, base), mes, {hoje:hoje}), rot, mes);
+      var quem=[];
+      Object.keys(Object.assign({}, a.por, d.por)).sort().forEach(function(c){
+        var de=a.por[c]||0, para=d.por[c]||0;
+        if(de!==para) quem.push({chave:c, nome:planoNomeDaChave(c, cadD[c]||cad[c]), de:de, para:para});
+      });
+      if(a.t!==d.t || quem.length) out.push({mes:mes, rotulo:rot, antes:a.t, depois:d.t, quem:quem});
+    });
+    return out;
+  }
+  // 3ª rodada (REQ-003, decisão do @po que completa a REQ-001): a janela em que o quadro «Recebimentos do mês» NÃO relê as fontes —
+  // a MESMA régua de recFontesLer e recAvulsoLer («(Date.now()-….quando)<…»), lida do próprio texto das duas, sem uma constante
+  // própria que pudesse ficar diferente. A menor das duas vale. Se o texto delas mudar de um jeito que não dê para ler, a janela é 0:
+  // o nome «no Recebimentos» não sai (fica o «Total dos planos do Day Care», que é sempre verdade). A prova 6.71 P38 confere.
+  function planoJanelaQuadro(){
+    var le=function(f, re){ try{ var m=(typeof f==='function')?re.exec(String(f)):null; return m?(Number(m[1])||0):0; }catch(e){ return 0; } /* silencioso de propósito: sem ler a régua, janela 0 (o nome seguro) */ };
+    return Math.min(le((typeof recFontesLer==='function')?recFontesLer:null, /\(Date\.now\(\)-REC_FONTES\.quando\)<(\d+)/),
+      le((typeof recAvulsoLer==='function')?recAvulsoLer:null, /\(Date\.now\(\)-REC_AVULSO\.quando\)<(\d+)/));
+  }
+  // A fonte do quadro ainda vale (o quadro, aberto agora, não a releria)?
+  function planoFonteFresca(quando, janela){ return !!quando && janela>0 && (Date.now()-Number(quando))<janela; }
+  // O nome do total do mês (REQ-001): o do quadro, ou o dos planos do Day Care.
+  function planoEfeitoRotulo(m){
+    var mes=mesAnoDe(m.mes+'-01');
+    return (m.rotulo==='quadro')?('Total de '+mes+' no Recebimentos'):('Total dos planos do Day Care em '+mes);
+  }
+  // As frases do efeito, sempre com o nome do número: «Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00»
+  // (ou «Total de outubro de 2026 no Recebimentos: …», o mesmo número do quadro); quando muda o valor de outro FILHOt (o
+  // desconto do irmão), o nome e o valor de cada um entre parênteses. Sem total (a carteira ainda chegando): só os FILHOts.
+  function planoEfeitoTexto(ef, k){
+    return (ef||[]).map(function(m){
+      var mes=mesAnoDe(m.mes+'-01');
+      var outros=m.quem.filter(function(q){ return q.chave!==k; }), eu=m.quem.filter(function(q){ return q.chave===k; })[0];
+      var cada=function(q, comMes){ return q.nome+(comMes?(' em '+mes):'')+': '+recBRL(q.de)+' → '+recBRL(q.para); };
+      if(!m.rotulo) return m.quem.map(function(q){ return cada(q, true); }).join('; ');
+      return planoEfeitoRotulo(m)+': '+recBRL(m.antes)+' → '+recBRL(m.depois)
+        +(outros.length?(' ('+outros.concat(eu?[eu]:[]).map(function(q){ return cada(q, false); }).join('; ')+')'):'');
+    }).join('; ');
+  }
+  // 4ª passada (OBS-R3-02): a frase do efeito para a pergunta ou o cartaz. O total já tem nome («Total de {mês} no Recebimentos» ou
+  // «Total dos planos do Day Care em {mês}»), então a frase não leva «No Recebimentos:» na frente — a palavra sairia duas vezes. Sem
+  // total (a carteira ainda chegando: só os FILHOts), leva, para dizer de onde é o número.
+  function planoEfeitoLinha(ef, k){ var t=planoEfeitoTexto(ef, k); return (ef||[]).every(function(m){ return !!m.rotulo; })?t:('No Recebimentos: '+t); }
+  // «Gold · trimestral · 1x» e «05/10/2026 → 31/12/2026».
+  function planoRotuloCurto(o){
+    o=o||{}; var pl=planos()[o.plano]||{};
+    return (pl.rotulo||o.plano||'—')+(pl.compromisso?(' · '+pl.compromisso):'')+' · '+renovAulasRotulo(o);
+  }
+  function planoPeriodo(o){ o=o||{}; var ini=o.vig_inicio||o.inicio; return (ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—'); }
+  // O FILHOt inativo (a regra de hoje, S8-P2): o pagamento dele já não entra em mês nenhum.
+  function planoFraseInativo(p, oQue){
+    return pelNome(p)+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, '+oQue+' já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.';
+  }
+  // Depois do cartaz: o «pronto» fecha (quem chamou mostra o resultado); a recusa e a falha trocam o
+  // «NADA FOI GRAVADO» genérico pela frase da tela.
+  function planoFecharCartaz(){
+    try{ if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL && CORR_ATUAL.passo!=='gravando') corrFechar(); }
+    catch(e){} /* silencioso de propósito: o cartaz pode já ter sido fechado */
+  }
+  function planoFalhaTela(titulo, recusa, r, comoEstava){
+    planoFecharCartaz();
+    var linhas=recusa?[recusa]:[zErroFrase(zErroMotivo((r||{}).erro, 'banco', '', {agora:true}))];
+    linhas.push(comoEstava);
+    zAlertao(titulo, linhas, {botao:'Entendi'});
+  }
+
+  // ===== AC1 — «ANULAR ESTE PAGAMENTO» NO PLANO ATUAL (também sem plano anterior) ========
+  function planoAnularAtualHTML(ex, p){
+    var g=renovDe(ex);
+    if(!renovPodeDesfazer() || !planos()[g.plano] || !/^\d{4}-\d{2}-\d{2}$/.test(g.inicio||'')) return '';
+    var v=renovValorDoHist(g).v;
+    return '<div id="planoAnularAtual" style="margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--z-cream-warm);color:var(--z-blue);overflow-wrap:anywhere">'
+      +'<div style="font-size:12.5px;font-weight:800">Plano gravado: '+esc(planoRotuloCurto(g))+' · '+esc(planoPeriodo(g))+' · pago em '+esc(fmtBR(g.inicio))+(v?(' · '+esc(recBRL(v))):'')+'</div>'
+      +'<div class="hint" style="font-size:11.5px;margin-top:2px">Lançado no FILHOt errado, ou o pagamento não existiu? Anule: o plano sai do Recebimentos e fica em «Renovações anteriores», riscado, com «Reabrir».</div>'
+      +'<button type="button" class="btn" id="planoAnularAtualBtn" style="margin-top:8px;min-height:44px;padding:10px 16px;font-size:14px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px;white-space:normal" onclick="planoAnularAtualAbrir()">Anular este pagamento (lançado por engano)</button>'
+      +'</div>';
+  }
+  async function planoAnularAtualAbrir(){
+    if(!pelAtual) return null;
+    var p=pelAtual, nome=pelNome(p), k=pelKey(p);
+    if(!renovPodeDesfazer()) return corrBarrar('anular o pagamento de um plano', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), g=Object.assign({}, renovDe(ex));
+    if(!planos()[g.plano] || !/^\d{4}-\d{2}-\d{2}$/.test(g.inicio||'')){
+      zAlertao('NÃO HÁ PAGAMENTO DE PLANO PARA ANULAR', [nome+' não tem plano com data de pagamento gravado.', 'Nada foi gravado.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    var ts=Date.now(), hid=renovHistNovoId(k), aid=planoIdNovo(k, 'renov_hist/'+hid+'/anulacoes');
+    var v=renovValorDoHist(g).v, rot=planoRotuloCurto(g), data=fmtBR(g.inicio);
+    // O plano atual sai inteiro: o renov fica sem plano e sem datas (o nº na família fica, quando foi gravado).
+    var novo={plano:'', inicio:'', fim:'', mesRenov:'', aulas:''};
+    if(g.ordemPet!==undefined && g.ordemPet!==null && g.ordemPet!=='') novo.ordemPet=g.ordemPet;
+    var linha=Object.assign({}, g, {substituidoEm:ts, por:renovQuemAgora(), motivo:'anulado', motivo_conferido:true});
+    var patch={renov:novo};
+    patch['renov_hist/'+hid]=Object.assign({}, linha, {anulacoes:{}}); patch['renov_hist/'+hid].anulacoes[aid]={acao:'anular', ts:ts};
+    var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
+    var paga='O pagamento de '+data+' ('+rot+(v?(', '+recBRL(v)):'')+')';
+    var cas=[pelInativo(p)?planoFraseInativo(p, 'este pagamento')
+      :(ef===null?(paga+' sai do Recebimentos do mês dele.')
+      :(ef.length?(paga+' sai da conta — '+planoEfeitoTexto(ef, k)+'.'):(paga+' não muda o Recebimentos: nenhum mês muda de valor.')))];
+    cas.push(nome+' fica sem plano lançado: aparece em «sem plano» na Renovação de planos e em «fora do total» no Recebimentos.');
+    var h0=renovHistValidos(ex)[0];
+    if(h0) cas.push('Se o certo é voltar ao plano anterior ('+((planos()[h0.plano]||{}).rotulo||h0.plano||'—')+' até '+(h0.fim?fmtBR(h0.fim):'—')+'), use «Desfazer a última renovação».');
+    if(g.meio_mes && typeof g.meio_mes==='object'){
+      var irmMM=mmFamiliaPets(p).filter(function(q){ return pelKey(q)!==k && !!mmRegistroDe(pelExtra(q)); });
+      cas.push('O registro do meio do mês de '+nome+' sai junto.'+(irmMM.length===1
+        ?(' O de '+pelNome(irmMM[0])+' continua: se ele também foi engano, desfaça na ficha '+(planoEhFemea(irmMM[0])?'dela':'dele')+'.')
+        :(irmMM.length?(' Os de '+mmJuntar(irmMM.map(function(q){ return pelNome(q); }))+' continuam: se também foram engano, desfaça na ficha de cada um.'):'')));
+    }
+    cas.push('O plano fica no histórico, riscado, com quem anulou e por quê.');
+    var recusa='', quem=corrQuemAgora();
+    var feito=function(reg){
+      renovRascLimpar(); mmRascLimpar();
+      var det=nome+' — anulado o pagamento de '+data+' do plano '+rot+(v?(' ('+recBRL(v)+')'):'')+' (lançado por engano; '+nome+' ficou sem plano lançado), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||'');
+      if(typeof audit==='function') audit('pagamento-anulado', det, Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+    };
+    var r=await corrAbrir({acao:'anular', nivel:'gestao', titulo:'Anular o pagamento do plano de '+nome, botao:'Anular este pagamento', tituloOk:'Pagamento anulado',
+      oque:'o pagamento de '+data+' do plano de '+nome+' ('+rot+(v?(', '+recBRL(v)):'')+')', original:{caminho:'daycare/cadastro/'+k+'/renov', id:'renov'},
+      estado:'valendo', cascata:cas,
+      gravar:function(reg){
+        quem=corrQuemAgora();
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          if(planoCanon(renovDe(rl.ficha))!==planoCanon(g)){ recusa='O plano mudou em outro aparelho. Nada foi anulado: confira e tente de novo.'; return {ok:false, erro:recusa}; }
+          var pt=Object.assign({}, patch); pt['renov_hist/'+hid]=Object.assign({}, linha, {anulacoes:{}}); pt['renov_hist/'+hid].anulacoes[aid]=reg;
+          var gr=setPelExtra(p, pt, {soDepoisDoOk:true});
+          gr.then(function(x){ if(x && x.ok) feito(reg); });
+          return gr;
+        });
+      }});
+    if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta) planoFalhaTela('NÃO FOI ANULADO', recusa, r, 'O plano continua como estava.');
+    return r;
+  }
+
+  // ===== AC2 — «ANULAR ESTE PAGAMENTO» NA LINHA DA RENOVAÇÃO ANTERIOR, E «REABRIR» ======
+  // As linhas pedidas (uma, ou as tentativas iguais juntadas numa linha só da tela), achadas pelo id.
+  function planoLinhasPedidas(ex, ids){
+    var hist=renovHistDe(ex), lista=String(ids==null?'':ids).split(',').filter(Boolean);
+    var linhas=lista.map(function(id){ return hist.filter(function(o){ return o._id===id; })[0]||null; });
+    return (lista.length && linhas.every(Boolean))?linhas:null;
+  }
+  // As linhas na ficha relida continuam como a tela mostrou?
+  function planoLinhasIguais(fichaBanco, linhas){
+    var h=(fichaBanco && fichaBanco.renov_hist)||{};
+    return linhas.every(function(o){ var copia=Object.assign({}, o); delete copia._id; return planoCanon(h[o._id])===planoCanon(copia); });
+  }
+  async function planoAnularLinhaAbrir(ids){
+    if(!pelAtual) return null;
+    var p=pelAtual, nome=pelNome(p), k=pelKey(p);
+    if(!renovPodeDesfazer()) return corrBarrar('anular o pagamento de um plano', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), linhas=planoLinhasPedidas(ex, ids);
+    if(!linhas){ zAlertao('NÃO ACHEI ESTA RENOVAÇÃO', ['Ela não está mais em «Renovações anteriores»: atualize a tela.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var vivas=linhas.filter(function(o){ return !renovLinhaAnulada(o); });
+    if(!vivas.length){ zAlertao('ESTE PAGAMENTO JÁ ESTÁ ANULADO', ['A linha já está riscada em «Renovações anteriores». Para voltar a contar, use «Reabrir».', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var o=vivas[0], v=renovValorDoHist(o).v, data=fmtBR(o.inicio), ts=Date.now(), aids={}, patch={};
+    vivas.forEach(function(x){ aids[x._id]=planoIdNovo(k, 'renov_hist/'+x._id+'/anulacoes'); patch['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]={acao:'anular', ts:ts}; });
+    var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
+    var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
+    var f1=pelInativo(p)?planoFraseInativo(p, 'este pagamento')
+      :(ef===null?(paga+' sai do Recebimentos do mês dele.')
+      :(ef.length?(paga+' sai da conta — '+planoEfeitoTexto(ef, k)+'.'):(paga+' não muda o Recebimentos: nenhum mês muda de valor.')));
+    var virou=planoVirouRotulo(o);
+    if(/^virou /.test(virou)) f1+=' É o plano que saiu quando a ficha '+virou+': o tutor pagou por ele. Anule só se o pagamento não existiu.';
+    var cas=[f1];
+    if(vivas.length>1) cas.push('São '+vivas.length+' linhas iguais (tentativas repetidas do mesmo pagamento): as '+vivas.length+' ficam riscadas.');
+    cas.push('O plano atual não muda.', 'A linha fica riscada, com «Reabrir».');
+    var recusa='', quem=corrQuemAgora();
+    var feito=function(reg){
+      var det=nome+' — anulado o pagamento de '+data+' ('+planoRotuloCurto(o)+(v?(', '+recBRL(v)):'')+'), uma renovação anterior (lançada por engano), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||'');
+      if(typeof audit==='function') audit('pagamento-anulado', det, Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+    };
+    var r=await corrAbrir({acao:'anular', nivel:'gestao', titulo:'Anular o pagamento de '+data, botao:'Anular este pagamento', tituloOk:'Pagamento anulado',
+      oque:'o pagamento de '+data+' do plano de '+nome+' ('+planoRotuloCurto(o)+(v?(', '+recBRL(v)):'')+')', original:{caminho:'daycare/cadastro/'+k+'/renov_hist/'+o._id, id:String(o._id)},
+      estado:'valendo', cascata:cas,
+      gravar:function(reg){
+        quem=corrQuemAgora();
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          if(!planoLinhasIguais(rl.ficha, vivas)){ recusa='Esta renovação mudou em outro aparelho. Nada foi anulado: confira e tente de novo.'; return {ok:false, erro:recusa}; }
+          var hb=(rl.ficha||{}).renov_hist||{}, pt={}; vivas.forEach(function(x){ pt['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]=planoRegDepois(reg, (hb[x._id]||{}).anulacoes); });
+          var gr=setPelExtra(p, pt, {soDepoisDoOk:true});
+          gr.then(function(x){ if(x && x.ok) feito(reg); });
+          return gr;
+        });
+      }});
+    if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta) planoFalhaTela('NÃO FOI ANULADO', recusa, r, 'A renovação continua como estava.');
+    return r;
+  }
+  async function planoReabrirLinhaAbrir(ids){
+    if(!pelAtual) return null;
+    var p=pelAtual, nome=pelNome(p), k=pelKey(p);
+    if(!renovPodeDesfazer()) return corrBarrar('reabrir o pagamento de um plano', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), linhas=planoLinhasPedidas(ex, ids);
+    if(!linhas){ zAlertao('NÃO ACHEI ESTA RENOVAÇÃO', ['Ela não está mais em «Renovações anteriores»: atualize a tela.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var mortas=linhas.filter(renovLinhaAnulada);
+    if(!mortas.length){ zAlertao('ESTE PAGAMENTO NÃO ESTÁ ANULADO', ['A linha já conta no Recebimentos: não há o que reabrir.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    if(String(mortas[0].motivo||'')==='anulado') return planoReabrirAtual(p, mortas[0]);
+    var o=mortas[0], v=renovValorDoHist(o).v, data=fmtBR(o.inicio), ts=Date.now(), aids={}, patch={};
+    mortas.forEach(function(x){ aids[x._id]=planoIdNovo(k, 'renov_hist/'+x._id+'/anulacoes'); patch['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]={acao:'reabrir', ts:ts}; });
+    var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
+    var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
+    var volta=[pelInativo(p)?(pelNome(p)+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, este pagamento continua fora do Recebimentos. A reabertura fica registrada.')
+      :(ef===null?(paga+' volta a contar no Recebimentos do mês dele.')
+      :(ef.length?(paga+' volta a contar — '+planoEfeitoTexto(ef, k)+'.'):(paga+' volta a contar, sem mudar o valor de nenhum mês.'))),
+      'A anulação continua guardada, com quem anulou e por quê.'];
+    var recusa='', quem=corrQuemAgora();
+    var feito=function(reg){
+      var det=nome+' — reaberto o pagamento de '+data+' ('+planoRotuloCurto(o)+(v?(', '+recBRL(v)):'')+'): volta a contar no Recebimentos, assinado por '+String(reg.por||'-')+': '+String(reg.motivo||'');
+      if(typeof audit==='function') audit('pagamento-reaberto', det, Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+    };
+    var r=await corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Reabrir o pagamento de '+data, botao:'Reabrir o pagamento', tituloOk:'Pagamento reaberto',
+      oque:'o pagamento de '+data+' do plano de '+nome+' ('+planoRotuloCurto(o)+(v?(', '+recBRL(v)):'')+')', original:{caminho:'daycare/cadastro/'+k+'/renov_hist/'+o._id, id:String(o._id)},
+      estado:'anulado', paraEstado:'valendo (conta no Recebimentos)', volta:volta,
+      gravar:function(reg){
+        quem=corrQuemAgora();
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          if(!planoLinhasIguais(rl.ficha, mortas)){ recusa='Esta renovação mudou em outro aparelho. Nada foi reaberto: confira e tente de novo.'; return {ok:false, erro:recusa}; }
+          var hb=(rl.ficha||{}).renov_hist||{}, pt={}; mortas.forEach(function(x){ pt['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]=planoRegDepois(reg, (hb[x._id]||{}).anulacoes); });
+          var gr=setPelExtra(p, pt, {soDepoisDoOk:true});
+          gr.then(function(x){ if(x && x.ok) feito(reg); });
+          return gr;
+        });
+      }});
+    if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta) planoFalhaTela('NÃO FOI REABERTO', recusa, r, 'A renovação continua anulada, como estava.');
+    return r;
+  }
+  // O plano atual anulado (AC1.4): «Reabrir» faz dele o plano atual de novo, igual ao que era (com o valor
+  // gravado). A linha sai de «Renovações anteriores» (é o plano atual outra vez) e fica guardada inteira em
+  // renov_voltas, com a anulação e esta reabertura. Outro plano já gravado: recusa (AC1.6).
+  async function planoReabrirAtual(p, o){
+    var nome=pelNome(p), k=pelKey(p), ex=pelExtra(p), g=renovDe(ex);
+    var outro=function(r){ return !!(planos()[r.plano] || /^\d{4}-\d{2}-\d{2}$/.test(r.inicio||'')); };
+    var fraseOutro=function(r){ return 'Já há outro plano gravado ('+((planos()[r.plano]||{}).rotulo||r.plano||'—')+(r.inicio?(', pago em '+fmtBR(r.inicio).slice(0,5)):'')+'). Para voltar este, desfaça ou anule o atual primeiro.'; };
+    if(outro(g)){ zAlertao('NÃO DÁ PARA REABRIR ESTE PLANO', [fraseOutro(g), 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    if(pelCategoria(p)!=='auluno'){ zAlertao('NÃO DÁ PARA REABRIR ESTE PLANO', [nome+' não é Auluno agora: toque em «Auluno» na Categoria antes de reabrir o plano.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var v=renovValorDoHist(o).v, data=fmtBR(o.inicio), rot=planoRotuloCurto(o), ts=Date.now();
+    var volta=planoSemMeta(o), vid=planoIdNovo(k, 'renov_voltas'), aid=planoIdNovo(k, 'renov_voltas/'+vid+'/linha/anulacoes');
+    var patch={renov:volta}; patch['renov_hist/'+o._id]=null;
+    var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
+    var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
+    var linhasVolta=['O plano volta a ser o atual: '+rot+' · '+planoPeriodo(o)+' · pago em '+data+(v?(' · '+recBRL(v)):'')+'.',
+      pelInativo(p)?(nome+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, este pagamento continua fora do Recebimentos.')
+        :(ef===null?(paga+' volta a contar no Recebimentos do mês dele.'):(ef.length?(paga+' volta a contar — '+planoEfeitoTexto(ef, k)+'.'):(paga+' volta a contar, sem mudar o valor de nenhum mês.'))),
+      'A anulação e esta reabertura ficam guardadas em «Voltaram a valer», na aba Plano.'];
+    var recusa='', quem=corrQuemAgora();
+    var feito=function(reg){
+      renovRascLimpar();
+      var det=nome+' — reaberto o plano anulado ('+rot+', pago em '+data+(v?(', '+recBRL(v)):'')+'): volta a ser o plano atual, assinado por '+String(reg.por||'-')+': '+String(reg.motivo||'');
+      if(typeof audit==='function') audit('pagamento-reaberto', det, Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+    };
+    var r=await corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Reabrir o plano anulado de '+nome, botao:'Reabrir o plano', tituloOk:'Plano reaberto',
+      oque:'o pagamento de '+data+' do plano de '+nome+' ('+rot+(v?(', '+recBRL(v)):'')+')', original:{caminho:'daycare/cadastro/'+k+'/renov_hist/'+o._id, id:String(o._id)},
+      estado:'anulado', paraEstado:'o plano atual de novo, igual ao que era', volta:linhasVolta,
+      gravar:function(reg){
+        quem=corrQuemAgora();
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          var gb=renovDe(rl.ficha);
+          if(outro(gb)){ recusa=fraseOutro(gb); return {ok:false, erro:recusa}; }
+          if(!planoLinhasIguais(rl.ficha, [o])){ recusa='O histórico mudou em outro aparelho. Nada foi reaberto: confira e tente de novo.'; return {ok:false, erro:recusa}; }
+          var copia=Object.assign({}, o, {anulacoes:Object.assign({}, o.anulacoes||{})}); copia.anulacoes[aid]=planoRegDepois(reg, o.anulacoes);
+          var pt=Object.assign({}, patch, planoVoltaCampos(vid, copia, ts, 'reabrir', reg));
+          var gr=setPelExtra(p, pt, {soDepoisDoOk:true});
+          gr.then(function(x){ if(x && x.ok) feito(reg); });
+          return gr;
+        });
+      }});
+    if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta) planoFalhaTela('NÃO FOI REABERTO', recusa, r, 'O plano continua anulado, como estava.');
+    return r;
+  }
+
+  // ===== AC2.1 e AC4.3 — AS LINHAS DE «RENOVAÇÕES ANTERIORES» E O QUE VOLTOU A VALER =====
+  // Quais linhas contam como pagamento (a mesma conta do Recebimentos: finRenovHistContados), pelo id.
+  // Sem o módulo do dinheiro: null (a tela não oferece anular nem diz por que não conta).
+  function renovHistContaIds(ex){
+    if(typeof finRenovHistContados!=='function') return null;
+    var h=(ex&&ex.renov_hist)||{}, comId={}, out={};
+    Object.keys(h).forEach(function(id){ comId[id]=Object.assign({}, h[id]||{}, {_id:id}); });
+    try{ finRenovHistContados(Object.assign({}, ex, {renov_hist:comId})).forEach(function(o){ if(o && o._id) out[o._id]=true; }); }
+    catch(e){ _logFalhaGrav('as renovações que contam (Renovações anteriores)', e); return null; }
+    return out;
+  }
+  // Embaixo de cada linha: o riscado com «Reabrir» (anulada), «Anular este pagamento» (conta) ou a frase do
+  // porquê de não contar. ids = a linha, ou as tentativas iguais juntadas numa só (todas juntas).
+  function renovHistLinhaExtraHTML(gr, conta, atual, podeMexer){
+    var o=gr.o, ids=gr.ids.join(','), anul=renovLinhaAnulada(o);
+    if(anul){
+      var reg=renovUltimaAnulacao(o)||{};
+      // (o corrRiscadoHTML passa o onclick pelo escAttr: aqui só as aspas do JavaScript)
+      return corrRiscadoHTML(reg, podeMexer?('planoReabrirLinhaAbrir(\''+String(ids).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')'):'')
+        +(String(o.motivo||'')==='anulado'?'<div class="hint" style="font-size:11.5px">Era o plano atual: «Reabrir» faz dele o plano atual de novo.</div>':'');
+    }
+    if(!conta) return '';
+    var vale=gr.ids.some(function(id){ return conta[id]; });
+    if(vale) return podeMexer
+      ? ('<button type="button" class="btn renov-hist-anular" style="margin-top:6px;min-height:44px;padding:9px 14px;font-size:13px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px;white-space:normal" onclick="planoAnularLinhaAbrir(\''+jsAspas(ids)+'\')">Anular este pagamento</button>')
+      : '';
+    var m=String(o.motivo||''), porque;
+    if(m==='desfeita') porque='foi desfeita';
+    else if(atual && atual.inicio && String(atual.inicio)===String(o.inicio||'')) porque='é o mesmo pagamento do plano atual (a mesma data)';
+    else porque='foi correção do plano seguinte';
+    return '<div class="renov-hist-nao-conta" style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:3px">Não conta no Recebimentos: '+esc(porque)+'.</div>';
+  }
+  // «Voltaram a valer (N)», fechado: o plano que voltou pelo Desfazer, pela volta da categoria ou pelo
+  // Reabrir do plano anulado — guardado inteiro, com quem, quando e o motivo.
+  function renovVoltasHTML(ex){
+    var vs=(ex&&ex.renov_voltas)||{}, ks=Object.keys(vs).sort(function(a,b){ return (Number((vs[b]||{}).voltou_em)||0)-(Number((vs[a]||{}).voltou_em)||0); });
+    if(!ks.length) return '';
+    var como={desfazer:'pelo «Desfazer a última renovação»', categoria:'pela volta a Auluno («Voltar o plano que saiu»)', reabrir:'pelo «Reabrir» do plano anulado'};
+    return '<details id="renovVoltas" style="margin-top:9px"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12.5px;font-weight:800;color:var(--z-blue)">Voltaram a valer ('+ks.length+')</summary>'
+      +ks.map(function(id){
+        var x=vs[id]||{}, o=x.linha||{}, rg=x.registro||{}, val=renovValorDoHist(o).v;
+        return '<div style="padding:7px 0;border-top:1px dashed var(--line);font-size:12.5px;font-weight:600;color:var(--z-blue);overflow-wrap:anywhere">'
+          +'<strong>'+esc(planoRotuloCurto(o))+'</strong> · '+esc(planoPeriodo(o))+(o.inicio?(' · pago em '+esc(fmtBR(o.inicio))):'')+(val?(' · '+esc(recBRL(val))):'')
+          +'<div style="font-size:11.5px;color:var(--muted)">voltou a valer em '+esc(renovQuandoBR(Number(x.voltou_em)||0))+', '+esc(como[x.como]||'')
+          +' · por '+esc(rg.por||rg.login||'—')+((rg.motivo||x.motivo)?(': '+esc(rg.motivo||x.motivo)):'')+'</div></div>';
+      }).join('')+'</details>';
+  }
+
+  // ===== AC6.4 — «VOLTAR O PLANO QUE SAIU» (a troca de categoria foi engano) ==============
+  // A linha que volta: a mais nova do histórico (sem as anuladas), quando é «virou {a categoria de agora}»
+  // e a ficha está sem vigência. Em qualquer outro caso, null (fica o caminho de hoje).
+  function planoVoltaDaCategoria(ex, catAgora){
+    var r=renovDe(ex);
+    if(r.inicio || r.fim || r.aulas || r.mesRenov) return null;
+    var h0=renovHistValidos(ex)[0];
+    return (h0 && String(h0.motivo||'')==='virou '+catAgora && (h0.plano||h0.inicio))?h0:null;
+  }
+  async function planoVoltarDaCategoria(p, h0, catAntes){
+    var nome=pelNome(p), k=pelKey(p), ex=pelExtra(p), ts=Date.now();
+    var volta=planoSemMeta(h0), vid=planoIdNovo(k, 'renov_voltas');
+    var patch={categoria:'auluno', renov:volta}; patch['renov_hist/'+h0._id]=null;
+    var quem=corrQuemAgora();
+    var rl=await planoReler(p);
+    if(!rl.ok){ zAlertao('A CATEGORIA NÃO FOI TROCADA', [nome+': '+zErroFrase(zErroMotivo(rl.erro, 'banco', '', {agora:true, leitura:true})), 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false}; }
+    var exB=rl.ficha||{}, catB=String(exB.categoria||'')||({auaulandia:'hospede', avulso:'avulso', morador:'morador'}[String((exB.renov||{}).plano||'')]||'auluno');
+    if(catB!==catAntes || planoCanon(renovDe(exB))!==planoCanon(renovDe(ex)) || !planoLinhasIguais(exB, [h0])){
+      zAlertao('A CATEGORIA NÃO FOI TROCADA', ['O plano mudou em outro aparelho. A categoria não foi trocada: confira e tente de novo.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    // o registro da 6.57 (quem estava no aparelho; sem senha, como a troca de categoria: S8-P3), guardado com o que voltou
+    var reg=corrRegistro({acao:'reabrir', tela:'Ficha do FILHOt', oque:'o plano que saiu quando a ficha '+planoVirouRotulo(h0)+' ('+planoRotuloCurto(h0)+')',
+      original:{caminho:'daycare/cadastro/'+k+'/renov_hist/'+h0._id, id:String(h0._id)}, estado:planoVirouRotulo(h0), paraEstado:'Auluno, com o plano que saiu'},
+      [], {nome:String(quem.login||'-'), papel:String(quem.papel||'')}, 'a troca de categoria foi engano: voltou o plano que saiu', ts);
+    Object.assign(patch, planoVoltaCampos(vid, h0, ts, 'categoria', reg));
+    var gr=setPelExtra(p, patch, {soDepoisDoOk:true});
+    var feito=function(){
+      renovRascLimpar();
+      corrRastro(reg);   // AC10.1: a entrada da 6.57 («Reabriu …»), só com o ok
+      if(typeof audit==='function') audit('categoria-peludinho', catAntes+' → auluno — voltou o plano que saiu ('+planoRotuloCurto(h0)+' · '+planoPeriodo(h0)+(h0.inicio?(', pago em '+fmtBR(h0.inicio)):'')+')',
+        Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+    };
+    var r=await corrComPrazo(gr, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      gr.then(function(x){ if(x && x.ok) feito(); });
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.', 'Confira a categoria e o plano na ficha antes de tocar de novo.'], {botao:'Entendi'});
+      return r;
+    }
+    if(!r || r.ok!==true){
+      zAlertao('A CATEGORIA NÃO FOI TROCADA', [nome+': '+zErroFrase(zErroMotivo((r||{}).erro, 'banco', '', {agora:true})), 'Nem a categoria nem o plano mudaram.'], {botao:'Entendi'});
+      return r;
+    }
+    feito();
+    zAlertao('O PLANO VOLTOU', [nome+' é Auluno de novo, com o plano '+planoRotuloCurto(h0)+' ('+planoPeriodo(h0)+').', 'O pagamento continua contando uma vez só, no mês em que foi pago.'], {ok:true, botao:'Fechar'});
+    return r;
   }
 
   // ---- TELA "Renovação de Planos" (sidebar) ----
@@ -34395,7 +35013,12 @@
   // Ficha sem dias por mês (todas as de hoje): a resposta é a de sempre, em qualquer data.
   // Na sobreposição de um plano novo com os meses que faltam do anterior, valem os dias dos
   // dois juntos (a rotina entra como os dias do plano novo sem dias por mês) — QA da 6.30.
-  function pelDias(p, quando){ const ex=pelExtra(p); const base=Array.isArray(ex.dias)?ex.dias:(Array.isArray(p.dias)?p.dias:[]);
+  // 6.71 (AC7.1): o banco não guarda lista vazia — a ficha com a marca «nenhum dia» (dias_nenhum) não cai nos
+  // dias de fábrica do código. Sem a marca, a mesma resposta de sempre. (2ª rodada, REL-001) A marca da ficha do BANCO
+  // (pelCadCache) manda quando ele não tem os dias: a cópia local deste aparelho, que o pelExtra põe por baixo do banco,
+  // traria os dias velhos. A marca velha da cópia local nunca esconde os dias que o banco tem.
+  function pelDias(p, quando){ const ex=pelExtra(p); const _bD=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache[pelKey(p)]:null;
+    const base=(_bD && _bD.dias_nenhum===true && !(Array.isArray(_bD.dias) && _bD.dias.length))?[]:(Array.isArray(ex.dias)?ex.dias:(ex.dias_nenhum===true?[]:(Array.isArray(p.dias)?p.dias:[])));
     if(quando==='rotina' || !ex.renov || !(ex.renov.dias_mes || ex.renov.dias_mes_anterior)) return base;
     const iso=/^\d{4}-\d{2}-\d{2}$/.test(quando||'')?quando:zHojeISO();
     const achou=renovDiasNaData(ex.renov, iso, base);
@@ -34564,7 +35187,24 @@
     const chips=ORDEM_DIAS.map(d=>`<span class="dia${dias.indexOf(d)>=0?' on':''}${can?' clic':''}"${can?` onclick="toggleDiaPel('${d}')"`:''}>${DIA_LBL[d]}</span>`).join('');
     // O rótulo conta a ROTINA (os chips): para ficha sem dias por mês, é o pelFreq de sempre.
     const freq=dias.length?(dias.length+'x'):pelFreq(p);
-    return pelDiasPlanoAvisoHTML(p)+chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${freq}/semana</span>`;
+    return pelDiasPlanoAvisoHTML(p)+chips+` <span class="pel-freq" id="pelFreqLabel" style="margin-left:6px">${freq}/semana</span>`+diasAvisoPlanoHTML(p);
+  }
+  // 6.71 (AC7.2): os dias marcados e o plano gravado não batem — o aviso também junto dos dias do alto da
+  // ficha (a mesma condição da faixa «planoIncoerente» da aba Plano), com «Ir para a aba Plano». Só avisa:
+  // nenhuma pergunta antes de tocar um dia.
+  function diasAvisoPlanoHTML(p){
+    var ex=pelExtra(p)||{}, g=renovDe(ex);
+    if(pelCategoria(p)!=='auluno') return '';
+    var n=(pelDias(p,'rotina')||[]).length, temDiasMes=!!g.dias_mes;
+    var incoerente=temDiasMes?!renovDiasMesValido(g):!!(g.aulas && Number(g.aulas)!==n);
+    if(!incoerente) return '';
+    var v=renovValorDoHist(g).v;
+    var txt=temDiasMes
+      ?('Os dias de cada mês gravados não fecham com o plano ('+renovAulasRotulo(g)+(v?(', '+recBRL(v)):'')+').')
+      :('Os dias marcados ('+(n?(n+'x: '+renovDiasNomes(p)):'nenhum dia')+') não batem com o plano gravado ('+String(g.aulas)+'x'+(v?(', '+recBRL(v)):'')+').');
+    return '<div id="pelDiasAvisoPlano" class="hint" style="background:rgba(222,180,40,.22);border-left:4px solid var(--z-gold);border-radius:10px;padding:9px 11px;margin-top:7px;font-size:12px;font-weight:700;color:var(--z-blue);overflow-wrap:anywhere">'
+      +esc(txt)+' Confira na aba Plano e toque em Confirmar para acertar.'
+      +'<div><button type="button" class="btn" style="margin-top:6px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue);border-radius:10px" onclick="irParaAbaPlano()">Ir para a aba Plano</button></div></div>';
   }
   function toggleDiaPel(d, jaPerguntou, origem){
     if(!canEditPel()||!pelAtual) return;
@@ -34601,12 +35241,18 @@
     const dias=antes.slice(); const i=dias.indexOf(d);
     if(i>=0) dias.splice(i,1); else dias.push(d);
     dias.sort((a,b)=>ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b));
-    setPelExtra(pelAtual,{dias:dias, freq:(dias.length?dias.length+'x':'')});
+    // 6.71 (AC7.1): o banco não guarda lista vazia — sem a marca, o outro aparelho voltaria aos dias de
+    // fábrica do código. Tirar o último dia grava a marca «nenhum dia»; marcar um dia de novo a tira.
+    const patchD={dias:dias, freq:(dias.length?dias.length+'x':'')};
+    if(!dias.length) patchD.dias_nenhum=true;
+    else if((pelExtra(pelAtual)||{}).dias_nenhum===true) patchD.dias_nenhum=null;
+    setPelExtra(pelAtual,patchD);
     // O cadastro em memória acompanha NA HORA (QA da 6.37, F1): a ficha lê o pelCadCache antes da
     // cópia local, e o ouvinte do cadastro só o troca ~90 ms depois. Sem isto, o redesenho logo
     // abaixo mostraria os dias antigos, e um segundo toque rápido partiria da lista velha.
     // (Mesmo molde das outras gravações da ficha que já atualizam o cache.)
-    try{ const _kd=pelKey(pelAtual); if(typeof pelCadCache!=='undefined' && pelCadCache[_kd]) pelCadCache[_kd]=Object.assign({},pelCadCache[_kd],{dias:dias.slice(), freq:(dias.length?dias.length+'x':'')}); }catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
+    try{ const _kd=pelKey(pelAtual); if(typeof pelCadCache!=='undefined' && pelCadCache[_kd]){ pelCadCache[_kd]=Object.assign({},pelCadCache[_kd],{dias:dias.slice(), freq:(dias.length?dias.length+'x':'')});
+      if('dias_nenhum' in patchD){ if(patchD.dias_nenhum) pelCadCache[_kd].dias_nenhum=true; else delete pelCadCache[_kd].dias_nenhum; } } }catch(e){} /* silencioso de propósito: o ouvinte do cadastro corrige em 90 ms */
     // RASTRO EM TODA PORTA (Adriana, 15/set/2026): mexer nos dias muda as aulas por semana
     // e, com elas, a mensalidade. Mudança de dinheiro sem rastro era porta sem fechadura —
     // ninguém sabia quem tinha trocado o dia da Cookie nem quando.
@@ -39371,48 +40017,12 @@
     voltarPel();
   }
   async function inativarPeludinhoRapido(){
+    // 6.71 (AC8): o botão do alto da ficha — inativar ou reativar pelas funções únicas da saída e da volta
+    // (as mesmas do seletor «Saiu do Day Care?» e do «Voltou» de Relatórios › Inativos).
     if(!pelAtual) return;
-    if(!canEditPel()){ alert('Só a Gestão, a Supervisão ou a Diretoria podem inativar um FILHOt.'); return; }
-    const ex=pelExtra(pelAtual)||{}; const nome=pelNome(pelAtual)||pelAtual.n||'este FILHOt';
-    // Quem faleceu não é "reativado" por um toque errado no botão de inativar.
-    if(ehObito(ex)){
-      alert(nome+' está registrado como falecido'+(ex.dataObito?(' em '+ex.dataObito):'')+'.\n\n'
-        +'Se isto foi um engano, chame a Diretoria — não se desfaz por aqui.');
-      return;
-    }
-    if(ex.inativo==='Sim'){
-      if(!await zPergunta(nome+' está inativo. Reativar?',
-        ['Ele volta para as listas do dia e para a chamada.'],
-        {sim:'Reativar', nao:'Deixar inativo', cor:'#234D67'})) return;
-      const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
-      setPelExtra(pelAtual,{inativo:'Nao'});
-      if(typeof audit==='function') audit('peludinho-reativado', nome);
-      alert('✅ '+nome+' voltou. Ele já aparece de novo nas listas do dia.');
-      renderPelFicha(); if(typeof renderPel==='function') renderPel(); return;
-    }
-    // Pausa x saida definitiva (Adriana, 11/ago/2026): "quem suspendeu conta como saiu".
-    // Conta como saida nas duas, mas o dashboard precisa saber qual e qual — quem pausou
-    // volta, e e quem a consultora liga para trazer de volta. Perguntar e melhor do que
-    // adivinhar pelo texto do motivo.
-    const ehPausaResp=await zPergunta(nome+' — este é um caso de PAUSA?',
-      ['PAUSA / SUSPENSÃO: viagem, dinheiro, tratamento, cio — ele volta.',
-       'SAÍDA DEFINITIVA: mudou de cidade, brigas, faleceu, parou de vir.',
-       'Nos dois casos ele sai das listas do dia e conta como saída do mês.'],
-      {sim:'PAUSA / SUSPENSÃO', nao:'SAÍDA DEFINITIVA', cor:'#234D67'});
-    const motivo=((await zTexto('Inativar '+nome+' — '+(ehPausaResp?'por que ele vai PAUSAR?':'por que ele saiu do Day Care?'),
-      ['O motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.',
-       (ehPausaResp?'Por exemplo: viagem da família — volta em setembro · tratamento · cio'
-                   :'Por exemplo: mudou de cidade · brigas · faleceu · parou de vir')],
-      {rotulo:'Motivo', botao:'Inativar', minimo:3}))||'').trim();
-    if(!motivo){ alert('Sem o motivo eu não inativo. Se não souber ainda, pergunte antes — o cadastro continua ativo.'); return; }
-    const hoje=new Date(), p2=x=>String(x).padStart(2,'0');
-    const data=p2(hoje.getDate())+'/'+p2(hoje.getMonth()+1)+'/'+hoje.getFullYear();
-    setPelExtra(pelAtual,{inativo:'Sim', motivoSaida:motivo, dataSaida:data, tipoSaida:(ehPausaResp?'pausa':'definitiva')});
-    if(typeof audit==='function') audit('peludinho-inativado', nome, {motivo:motivo});
-    alert('✅ '+nome+' foi inativado.\n\nMotivo: '+motivo+'\nData: '+data+'\n\nEle sai das listas do dia e da chamada. O cadastro e todo o histórico continuam guardados em Relatórios › Inativos — nada foi apagado.');
-    if(typeof renderPel==='function') renderPel();
-    if(typeof renderKPIs==='function') renderKPIs();
-    voltarPel();
+    const ex=pelExtra(pelAtual)||{};
+    if(ex.inativo==='Sim' && !ehObito(ex)) return saidaReativar(pelAtualIdx, 'botao');
+    return saidaInativar('botao');
   }
   // Saída do Day Care — inativa sem apagar nada.
   function camposSaidaFicha(){
@@ -39426,7 +40036,7 @@
           <div style="font-weight:600;margin-top:3px">Registrado por ${escAttr(ex.obitoPor||'-')}. Ele não aparece nas listas do dia nem na lista de quem a recepção liga para trazer de volta.</div>
         </div></div>
       <div class="field" style="grid-column:1/-1"><label>Data do falecimento</label><input class="cad-in" value="${escAttr(ex.dataObito||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataObito:this.value,dataSaida:this.value})"></div>`:''}
-      <div class="field"><label>Saiu do Day Care?</label><div class="seg gold" data-single>${segBtnsPel('inativo',ex.inativo||'',['Sim','Nao'])}</div></div>
+      <div class="field"><label>Saiu do Day Care?</label><div class="seg gold" data-single>${saidaSeletorHTML(ex)}</div></div>
       <div class="field"><label>Data da saída</label><input class="cad-in" value="${escAttr(ex.dataSaida||'')}" placeholder="dd/mm/aaaa" onchange="setPelExtra(pelAtual,{dataSaida:this.value})"></div>
       <div class="field" style="grid-column:1/-1"><label>Motivo da saída${on?' <span style="color:var(--crm-critico)">— obrigatório</span>':''}</label><input class="cad-in" value="${escAttr(ex.motivoSaida||'')}" placeholder="Ex: brigas — Stella ciumenta com o Bud · falecido · mudança" onchange="setPelExtra(pelAtual,{motivoSaida:this.value});refreshPills()"></div>
       ${on?`<div class="field" style="grid-column:1/-1"><div class="dc-faltas" style="margin:0">Inativo: sai das listas do dia, mas o cadastro e o histórico ficam guardados. Aparece para a Márcia no painel da Gestão como contato a fazer.</div></div>`:''}
@@ -39434,6 +40044,228 @@
         <div class="dc-faltas" style="margin:0;border-color:var(--crm-critico);color:var(--crm-critico)"><strong>Zona de risco — só a Diretoria vê isto.</strong> Excluir apaga o cadastro de verdade: some das listas, da busca e da chamada, em todos os aparelhos. É diferente de "Saiu do Day Care" — se o FILHOt pode voltar ou a família continua tutora, cancele e use "Saiu do Day Care? Sim" acima. Na dúvida, INATIVE, não exclua.</div>
         <button class="btn" style="background:var(--crm-critico);color:#fff;margin-top:8px" onclick="excluirCadastroPel()">🗑️ Excluir cadastro definitivamente</button>
       </div>`:''}`;
+  }
+  // ===== STORY 6.71 (AC8) — A SAÍDA E A VOLTA DO DAY CARE, UMA FUNÇÃO CADA ==================
+  // O botão «Saiu do Day Care — inativar» / «↩ Reativar (voltou)», o seletor antigo «Saiu do Day Care?»
+  // e o «Voltou» de Relatórios › Inativos passam pelas mesmas duas funções: a pergunta, o motivo, a data
+  // e o tipo; a linha do dinheiro na pergunta de inativar (a regra de hoje, S8-P2, à vista); as mensagens
+  // na tela (zAlertao), nunca em janela nativa; «foi inativado» e «Voltou» só com o ok do banco. A volta
+  // limpa a saída e a guarda em saidas, com o motivo da volta; no mesmo dia, «Desfazer a volta».
+  function saidaHojeBR(){ var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); }; return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear(); }
+  function saidaIsoDeTs(ts){
+    var d=new Date(Number(ts)||0), p2=function(x){ return String(x).padStart(2,'0'); };
+    return isNaN(d.getTime())?'':(d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()));
+  }
+  // A linha do dinheiro na pergunta de inativar (AC8.2): o efeito no Recebimentos pela mesma conta do quadro.
+  // Sem pagamento no período olhado, nenhuma linha.
+  function saidaEfeitoLinha(p){
+    var k=pelKey(p), base=(typeof pelCadCache!=='undefined' && pelCadCache[k])||pelExtra(p)||{};
+    var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(base, {inativo:'Sim'}));
+    if(!ef || !ef.length) return '';
+    var conta=renovHistContaIds(base)||{}, r=base.renov||{}, h=base.renov_hist||{};
+    var datas=function(mes){
+      var ds=[]; if(String(r.inicio||'').slice(0,7)===mes) ds.push(String(r.inicio));
+      Object.keys(h).forEach(function(id){ var o=h[id]||{}; if(conta[id] && String(o.inicio||'').slice(0,7)===mes && ds.indexOf(String(o.inicio))<0) ds.push(String(o.inicio)); });
+      return ds.sort().map(fmtBR);
+    };
+    // 2ª rodada (REQ-001): o total com nome, o mesmo da pergunta do anular (planoEfeitoTexto), e a data de cada pagamento
+    return 'Pela regra de hoje, quem sai não entra na conta do mês: '+ef.map(function(m){
+      var ds=datas(m.mes);
+      return planoEfeitoTexto([m], k)+(ds.length?(' ('+(ds.length>1?'pagamentos de ':'pagamento de ')+mmJuntar(ds)+')'):'');
+    }).join('; ')+'.';
+  }
+  async function saidaInativar(origem){
+    if(!pelAtual) return null;
+    var p=pelAtual, nome=pelNome(p)||p.n||'este FILHOt', k=pelKey(p), fem=planoEhFemea(p);
+    if(!canEditPel()) return corrBarrar('inativar um FILHOt', corrQuemPode('editar-peludinho'), {alvo:k, pet:nome});
+    var ex=pelExtra(p)||{};
+    // Quem faleceu não é "reativado" nem "inativado de novo" por um toque errado.
+    if(ehObito(ex)){
+      zAlertao('REGISTRADO COMO FALECIDO', [nome+' está registrado como falecido'+(ex.dataObito?(' em '+ex.dataObito):'')+'.',
+        'Se isto foi um engano, chame a Diretoria — não se desfaz por aqui.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    if(ex.inativo==='Sim'){
+      zAlertao('JÁ ESTÁ FORA DO DAY CARE', [nome+' já está '+(fem?'inativa':'inativo')+(ex.dataSaida?(' desde '+ex.dataSaida):'')+'.',
+        'Se '+(fem?'ela':'ele')+' voltou, use «Não» em «Saiu do Day Care?» ou o «↩ Reativar (voltou)».'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    // Pausa x saida definitiva (Adriana, 11/ago/2026): "quem suspendeu conta como saiu".
+    // Conta como saida nas duas, mas o dashboard precisa saber qual e qual — quem pausou
+    // volta, e e quem a consultora liga para trazer de volta. Perguntar e melhor do que
+    // adivinhar pelo texto do motivo.
+    var efeito=saidaEfeitoLinha(p);
+    var ehPausaResp=await zPergunta(nome+' — este é um caso de PAUSA?',
+      ['PAUSA / SUSPENSÃO: viagem, dinheiro, tratamento, cio — '+(fem?'ela volta.':'ele volta.'),
+       'SAÍDA DEFINITIVA: mudou de cidade, brigas, faleceu, parou de vir.',
+       'Nos dois casos '+(fem?'ela':'ele')+' sai das listas do dia e conta como saída do mês.'].concat(efeito?[efeito]:[]),
+      {sim:'PAUSA / SUSPENSÃO', nao:'SAÍDA DEFINITIVA', cor:'#234D67'});
+    var motivo=((await zTexto('Inativar '+nome+' — '+(ehPausaResp?('por que '+(fem?'ela':'ele')+' vai PAUSAR?'):'por que '+(fem?'ela':'ele')+' saiu do Day Care?'),
+      ['O motivo é obrigatório: é ele que a Márcia lê no painel da Gestão para saber quem contatar.',
+       (ehPausaResp?'Por exemplo: viagem da família — volta em setembro · tratamento · cio'
+                   :'Por exemplo: mudou de cidade · brigas · faleceu · parou de vir')],
+      {rotulo:'Motivo', botao:'Inativar', minimo:3}))||'').trim();
+    if(!motivo){
+      zAlertao('NADA FOI INATIVADO', ['Sem o motivo eu não inativo. Se não souber ainda, pergunte antes — o cadastro continua ativo.'], {botao:'Entendi'});
+      return {ok:false, cancelado:true};
+    }
+    var data=saidaHojeBR(), tipo=ehPausaResp?'pausa':'definitiva', quem=corrQuemAgora();
+    var gr=setPelExtra(p, {inativo:'Sim', motivoSaida:motivo, dataSaida:data, tipoSaida:tipo}, {soDepoisDoOk:true});
+    var feito=function(){
+      if(typeof audit==='function') audit('peludinho-inativado', nome+' — '+(tipo==='pausa'?'pausa':'saída definitiva')+' em '+data+': '+motivo,
+        Object.assign({motivo:motivo, alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ if(typeof renderPel==='function') renderPel(); if(typeof renderKPIs==='function') renderKPIs(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    };
+    var r=await corrComPrazo(gr, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      gr.then(function(x){ if(x && x.ok) feito(); });
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
+        'Confira em Relatórios › Inativos se a saída entrou antes de tocar de novo.'], {botao:'Entendi'});
+      return r;
+    }
+    if(!r || r.ok!==true){
+      zAlertao('NÃO FOI INATIVADO', [nome+': '+zErroFrase(zErroMotivo((r||{}).erro, 'banco', '', {agora:true})), 'A ficha continua como estava.'], {botao:'Entendi'});
+      return r;
+    }
+    feito();
+    zAlertao(fem?'INATIVADA':'INATIVADO', [nome+(fem?' foi inativada.':' foi inativado.'), 'Motivo: '+motivo, 'Data: '+data,
+      (fem?'Ela':'Ele')+' sai das listas do dia e da chamada. O cadastro e todo o histórico continuam guardados em Relatórios › Inativos — nada foi apagado.'], {ok:true, botao:'Fechar'});
+    try{ voltarPel(); }catch(e){} /* silencioso de propósito: voltar à lista é enfeite de tela — a saída já foi gravada */
+    return r;
+  }
+  // REATIVAR, UMA FUNÇÃO SÓ (AC8.3): a pergunta de hoje, o motivo da volta (a mesma régua do motivo da saída),
+  // a saída limpa ({inativo:'Nao', dataSaida:'', motivoSaida:'', tipoSaida:''}) e guardada em saidas.
+  async function saidaReativar(i, origem){
+    var p=(i!==undefined && i!==null && typeof PELUDINHOS!=='undefined' && PELUDINHOS[i])?PELUDINHOS[i]:pelAtual;
+    if(!p) return null;
+    var nome=pelNome(p)||'este FILHOt', k=pelKey(p), fem=planoEhFemea(p);
+    if(!canEditPel()) return corrBarrar('reativar um FILHOt (voltou)', corrQuemPode('editar-peludinho'), {alvo:k, pet:nome});
+    var _ex=pelExtra(p)||{}, ex=_ex;
+    // Trava de verdade, não só o botão escondido (AC8.5): se a saída foi por óbito, não reativa por
+    // caminho nenhum — nem pelo seletor, nem pelo botão, nem pelo «Voltou» (Adriana, 28/ago).
+    if(ehObito(ex)){
+      zAlertao('NÃO DÁ PARA REATIVAR', [nome+' está registrado como falecido'+(ex.dataObito?(' em '+ex.dataObito):'')+'.',
+        'Se isto foi um engano, chame a Diretoria — não se desfaz por aqui.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    if(saidaPorObito(_ex.motivoSaida||'')){
+      zAlertao('NÃO DÁ PARA REATIVAR', [nome+' consta como tendo partido ('+(_ex.motivoSaida||'')+').',
+        'Não dá para reativar por aqui. Se houve engano no registro, corrija o motivo da saída na ficha primeiro.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    if(ex.inativo!=='Sim'){
+      zAlertao('JÁ ESTÁ NO DAY CARE', [nome+' já está '+(fem?'ativa':'ativo')+': aparece nas listas do dia e na chamada.', 'Nada foi gravado.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    if(!await zPergunta(nome+' voltou para o Day Care?',
+      [(fem?'Ela volta':'Ele volta')+' para a lista de Peludinhos frequentes e para as chamadas do dia.',
+       'A saída anterior ('+(ex.dataSaida||'sem data')+(ex.motivoSaida?(': '+ex.motivoSaida):'')+') fica guardada no histórico da ficha.'],
+      {sim:'Voltou — reativar', nao:'Agora não', cor:'#234D67'})) return {ok:false, cancelado:true};
+    var motivoVolta=((await zTexto('Por que '+nome+' voltou?',
+      ['O motivo da volta fica no histórico da ficha, junto com a saída.',
+       'Por exemplo: voltou da viagem · terminou o tratamento · a família voltou a fechar o plano'],
+      {rotulo:'Motivo da volta', botao:'Reativar', minimo:3}))||'').trim();
+    if(!motivoVolta){
+      zAlertao('NADA FOI GRAVADO', ['Sem o motivo da volta eu não reativo. '+nome+' continua '+(fem?'inativa.':'inativo.')], {botao:'Entendi'});
+      return {ok:false, cancelado:true};
+    }
+    var ts=Date.now(), quem=corrQuemAgora(), hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
+    hist.push({quando:ex.dataSaida||'', motivo:ex.motivoSaida||'', tipo:ex.tipoSaida||'', retornoEm:agoraBR(),
+      retornoPor:(typeof quemSou==='function'?quemSou():'-'), retornoMotivo:motivoVolta, retornoTs:ts});
+    var gr=setPelExtra(p, {inativo:'Nao', dataSaida:'', motivoSaida:'', tipoSaida:'', saidas:hist}, {soDepoisDoOk:true});
+    var feito=function(){
+      if(typeof audit==='function') audit('peludinho-reativado', nome+' voltou para o Day Care — motivo da volta: '+motivoVolta,
+        Object.assign({pet:nome, alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderInativos(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      try{ if(typeof renderPel==='function') renderPel(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      try{ if(pelAtual && pelKey(pelAtual)===k) renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    };
+    var r=await corrComPrazo(gr, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      gr.then(function(x){ if(x && x.ok) feito(); });
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.',
+        'Confira na ficha se a volta entrou antes de tocar de novo.'], {botao:'Entendi'});
+      return r;
+    }
+    if(!r || r.ok!==true){
+      zAlertao('A VOLTA NÃO FOI GRAVADA', [nome+': '+zErroFrase(zErroMotivo((r||{}).erro, 'banco', '', {agora:true})), 'A ficha continua como estava.'], {botao:'Entendi'});
+      return r;
+    }
+    feito();
+    zAlertao('VOLTOU', [nome+' voltou para a ativa. Já aparece em Peludinhos e nas chamadas do dia.', 'Motivo da volta: '+motivoVolta,
+      'Se foi engano, hoje mesmo a ficha tem «Desfazer a volta».'], {ok:true, botao:'Fechar'});
+    return r;
+  }
+  // A volta de HOJE que ainda pode ser desfeita (AC8.4): a última entrada de saidas, com o carimbo da volta
+  // do dia de hoje, não desfeita, com o FILHOt ativo. Sai do banco, não da memória do aparelho.
+  function saidaUltimaVolta(ex){
+    ex=ex||{}; var L=Array.isArray(ex.saidas)?ex.saidas:[];
+    if(ex.inativo==='Sim' || !L.length) return null;
+    var i=L.length-1, sv=L[i]||{};
+    if(!sv.retornoTs || sv.desfeita) return null;
+    if(saidaIsoDeTs(sv.retornoTs)!==((typeof zHojeISO==='function')?zHojeISO():hojeISO())) return null;
+    return {i:i, sv:sv};
+  }
+  function saidaVoltaHTML(p){
+    var v=saidaUltimaVolta(pelExtra(p)||{}); if(!v) return '';
+    var sv=v.sv;
+    return '<div id="saidaVolta" style="margin-top:9px;padding:9px 11px;border-radius:12px;background:rgba(35,77,103,.08);border-left:4px solid var(--z-blue);color:var(--z-blue);font-size:12.5px;font-weight:700;overflow-wrap:anywhere">'
+      +'Voltou em '+esc(fmtBR(saidaIsoDeTs(sv.retornoTs)).slice(0,5))+' às '+esc(corrHora(sv.retornoTs))+', por '+esc(sv.retornoPor||'—')+': '+esc(sv.retornoMotivo||'')
+      +(canEditPel()?('<div><button type="button" class="btn" id="saidaDesfazerVoltaBtn" style="margin-top:7px;min-height:44px;padding:9px 14px;font-size:13px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:2px solid var(--z-blue);border-radius:12px" onclick="saidaDesfazerVolta()">Desfazer a volta</button></div>'):'')
+      +'</div>';
+  }
+  // A saída de antes, de volta nos campos da ficha (o «Desfazer a volta»): a data, o motivo e o tipo guardados
+  // na entrada de saidas.
+  function saidaDeAntes(sv){ sv=sv||{}; return {inativo:'Sim', dataSaida:String(sv.quando||''), motivoSaida:String(sv.motivo||''), tipoSaida:String(sv.tipo||'')}; }
+  async function saidaDesfazerVolta(){
+    if(!pelAtual) return null;
+    var p=pelAtual, nome=pelNome(p), k=pelKey(p), fem=planoEhFemea(p);
+    if(!canEditPel()) return corrBarrar('desfazer a volta de um FILHOt', corrQuemPode('editar-peludinho'), {alvo:k, pet:nome});
+    var ex=pelExtra(p)||{}, v=saidaUltimaVolta(ex);
+    if(!v){
+      zAlertao('NÃO HÁ VOLTA PARA DESFAZER', ['O «Desfazer a volta» existe só no dia da volta, enquanto '+nome+' estiver '+(fem?'ativa.':'ativo.'), 'Nada foi gravado.'], {botao:'Entendi'});
+      return {ok:false, recusa:true};
+    }
+    var sv=v.sv, antes=saidaDeAntes(sv), tipoRot={pausa:'pausa', definitiva:'saída definitiva'}[antes.tipoSaida]||antes.tipoSaida, motivoSv=antes.motivoSaida;
+    var mot=await zTexto('Desfazer a volta de '+nome+'?',
+      [(fem?'Ela':'Ele')+' volta a ficar '+(fem?'inativa':'inativo')+', com a saída de antes: '+(sv.quando||'sem data')+(tipoRot?(' ('+tipoRot+')'):'')+(motivoSv?(' — '+motivoSv):'')+'.',
+       'A volta não é apagada: fica no histórico da ficha, com quem desfez e o motivo.'],
+      {rotulo:'Motivo (pelo menos 4 palavras)', botao:'Desfazer a volta', validar:function(v){ var mq=motivoQuatroPalavras(v); return mq.ok?'':mq.erro; }});
+    if(mot===null || mot===undefined) return {ok:false, cancelado:true};
+    var mv=motivoQuatroPalavras(mot); if(!mv.ok){ zAlertao('FALTA O MOTIVO', [mv.erro], {botao:'Entendi'}); return; }
+    var ts=Date.now(), quem=corrQuemAgora();
+    var reg=corrRegistro({acao:'reabrir', tela:'Ficha do FILHOt', oque:'a volta de '+nome+' ao Day Care ('+String(sv.retornoEm||'')+')',
+      original:{caminho:'daycare/cadastro/'+k+'/saidas/'+v.i, id:String(v.i)}, estado:'ativo (voltou)', paraEstado:'inativo, com a saída de antes'},
+      [], {nome:String(quem.login||'-'), papel:String(quem.papel||'')}, String(mot).trim(), ts);
+    var hist=ex.saidas.slice(); hist[v.i]=Object.assign({}, sv, {desfeita:reg});
+    var gr=setPelExtra(p, Object.assign({}, antes, {saidas:hist}), {soDepoisDoOk:true});
+    var feito=function(){
+      corrRastro(reg);   // AC10.1: a entrada da 6.57 («Reabriu …»), só com o ok
+      var det=nome+' — desfeita a volta de '+String(sv.retornoEm||'')+': '+(fem?'inativa':'inativo')+' de novo, com a saída de '+(sv.quando||'sem data')+', motivo: '+String(reg.motivo||'');
+      if(typeof audit==='function') audit('peludinho-volta-desfeita', det, Object.assign({alvo:dcKey(p.n, p.tutor)}, corrQuemMeta(quem)));
+      try{ renderPelFicha(); if(typeof renderPel==='function') renderPel(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    };
+    var r=await corrComPrazo(gr, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      gr.then(function(x){ if(x && x.ok) feito(); });
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.', 'Confira na ficha antes de tocar de novo.'], {botao:'Entendi'});
+      return r;
+    }
+    if(!r || r.ok!==true){
+      zAlertao('A VOLTA NÃO FOI DESFEITA', [nome+': '+zErroFrase(zErroMotivo((r||{}).erro, 'banco', '', {agora:true})), 'A ficha continua como estava.'], {botao:'Entendi'});
+      return r;
+    }
+    feito();
+    zAlertao('VOLTA DESFEITA', [nome+' voltou a ficar '+(fem?'inativa':'inativo')+', com a saída de antes ('+(sv.quando||'sem data')+').',
+      'A volta continua no histórico da ficha, com quem desfez e o motivo.'], {ok:true, botao:'Fechar'});
+    return r;
+  }
+  // O seletor antigo «Saiu do Day Care?» (AC8.1): nenhum dos dois grava direto — «Sim» abre o inativar e
+  // «Não» abre o reativar, as mesmas funções do botão.
+  function saidaSeletorHTML(ex){
+    ex=ex||{}; var on=(ex.inativo==='Sim');
+    return '<button type="button" class="'+(on?'on':'')+'" onclick="saidaInativar(\'seletor\')">Sim</button>'
+      +'<button type="button" class="'+((!on && ex.inativo==='Nao')?'on':'')+'" onclick="saidaReativar(pelAtualIdx, \'seletor\')">Não</button>';
   }
   function renderAlmSeFor(){ try{ if(dcAtiv==='almoco'&&typeof renderAlmStep==='function') renderAlmStep(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
   // ===== A BUSCA DO CADASTRO PRECISA CONTAR O PESO (Adriana, 21/set/2026) ============
@@ -39711,31 +40543,9 @@
   // abrir a ficha e caçar o campo "Saiu do Day Care?". A saída anterior NÃO se perde:
   // vira uma linha do histórico (ex.saidas), porque "quero todo o banco de dados sempre".
   async function reativarPeludinho(i){
-    if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem reativar um peludinho.'); return; }
-    // Trava de verdade, não só o botão escondido: se a saída foi por óbito, não reativa
-    // por caminho nenhum. Um clique errado aqui traz de volta à chamada um FILHOt que
-    // partiu — e a família dele pode receber uma mensagem do sistema (Adriana, 28/ago).
-    try{
-      var _p=PELUDINHOS[i], _ex=_p?(pelExtra(_p)||{}):{};
-      if(saidaPorObito(_ex.motivoSaida||'')){
-        alert(pelNome(_p)+' consta como tendo partido ('+(_ex.motivoSaida||'')+').\n\nNão dá para reativar por aqui. Se houve engano no registro, corrija o motivo da saída na ficha primeiro.');
-        return;
-      }
-    }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    const p=PELUDINHOS[i]; if(!p) return;
-    const nome=pelNome(p)||'este FILHOt';
-    if(!await zPergunta(nome+' voltou para o Day Care?',
-      ['Ele volta para a lista de Peludinhos frequentes e para as chamadas do dia.',
-       'A saída anterior fica guardada no histórico da ficha.'],
-      {sim:'Voltou — reativar', nao:'Agora não', cor:'#234D67'})) return;
-    const ex=pelExtra(p)||{};
-    const hist=Array.isArray(ex.saidas)?ex.saidas.slice():[];
-    if(ex.dataSaida||ex.motivoSaida) hist.push({quando:ex.dataSaida||'', motivo:ex.motivoSaida||'', retornoEm:agoraBR(), retornoPor:(typeof quemSou==='function'?quemSou():'-')});
-    setPelExtra(p,{inativo:'Nao', dataSaida:'', motivoSaida:'', saidas:hist});
-    if(typeof audit==='function') audit('peludinho-reativado','FILHOt voltou para o Day Care',{pet:nome});
-    renderInativos();
-    if(typeof renderPel==='function'){ try{ renderPel(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
-    alert(nome+' voltou para a ativa. Já aparece em Peludinhos e nas chamadas do dia.');
+    // 6.71 (AC8.3): Relatórios › Inativos › «Voltou» é a mesma função do botão da ficha e do seletor:
+    // a pergunta, o motivo da volta, a saída limpa e guardada em saidas, «Voltou» só com o ok.
+    return saidaReativar(i, 'inativos');
   }
 
   let pelAtual=null, pelAtualIdx=null, pelOrigem='peludinhos';
@@ -39899,8 +40709,29 @@
       +'<div class="hint" style="margin-top:4px;font-size:11px">'+esc(info)+'</div>';
   }
   async function setPelCategoria(cat){
-    if(!pelAtual||!canEditPel()) return;
-    const ex=pelExtra(pelAtual)||{}; const antigo=renovDe(ex); const r=Object.assign({}, antigo);
+    if(!pelAtual) return;
+    // 6.71 (AC6.5): quem mexe no plano, conferido na própria função (a tela esconder não é impedir).
+    if(!renovPodeDesfazer()) return corrBarrar('trocar a categoria do FILHOt', corrQuemPode('ver-plano'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)});
+    const p=pelAtual, nome=pelNome(p), k=pelKey(p);
+    const ex=pelExtra(p)||{}; const antigo=renovDe(ex); const r=Object.assign({}, antigo);
+    const catAntes=pelCategoria(p);
+    // 6.71 (AC6.4): de volta a Auluno, logo depois da troca, o app oferece voltar o plano que saiu.
+    if(cat==='auluno' && catAntes!=='auluno'){
+      const h0=planoVoltaDaCategoria(ex, catAntes);
+      if(h0){
+        const vh=renovValorDoHist(h0).v;
+        // 3ª rodada (REL-007): o efeito da volta no Recebimentos (com um irmão, o desconto dele pode voltar), pela mesma conta
+        const pvV={categoria:'auluno', renov:planoSemMeta(h0)}; pvV['renov_hist/'+h0._id]=null;
+        const efV=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, pvV));
+        const pergV=['Voltar o plano que saiu ('+planoRotuloCurto(h0)+' · '+planoPeriodo(h0)+(vh?(', '+recBRL(vh)):'')+')?',
+           'Quando a ficha '+planoVirouRotulo(h0)+', este plano foi para «Renovações anteriores». Voltando, '+nome+' é Auluno de novo com ele, e o pagamento continua contando uma vez só, no mês em que foi pago.'];
+        if(efV && efV.length) pergV.push(planoEfeitoLinha(efV, k)+'.');
+        pergV.push('Se o tutor vai fechar um plano novo, escolha «Auluno sem plano» e toque em Confirmar na aba Plano.');
+        const volta=await zPergunta('VOLTAR O PLANO QUE SAIU?', pergV,
+          {sim:'Voltar o plano que saiu', nao:'Auluno sem plano (vou confirmar um plano novo)', cor:'#234D67', corTitulo:'#234D67'});
+        if(volta) return planoVoltarDaCategoria(p, h0, catAntes);
+      }
+    }
     // A categoria manda no plano: hóspede e avulso não têm mensalidade nem vencimento.
     if(cat==='hospede') r.plano='auaulandia';
     else if(cat==='avulso') r.plano='avulso';
@@ -39913,18 +40744,58 @@
     const semPlano=(cat==='hospede'||cat==='avulso'||cat==='morador');
     const tinhaVigencia=!!(antigo.inicio||antigo.fim||antigo.aulas||antigo.mesRenov);
     if(semPlano && tinhaVigencia){
-      await renovHistGravar(pelKey(pelAtual), antigo, 'virou '+cat);
       r.inicio=''; r.fim=''; r.mesRenov=''; r.aulas=''; delete r.vig_inicio;
       delete r.dias_mes; delete r.dias_mes_anterior;   // 6.30: os dias de cada mês vão junto para o histórico
       delete r.valor_plano_cent; delete r.mensalidade_cent;   // 6.44: o valor fechado também (fica no histórico)
+      // 6.71 (AC6.1): a pergunta ANTES, com o que sai junto, o pagamento que continua contando (S8-P4) e o
+      // efeito no Recebimentos (com o irmão, o desconto dele pode mudar: AC6.6).
+      const catNome=((CATEGORIAS.find(function(c){ return c.k===cat; })||{}).t||cat);
+      const vA=renovValorDoHist(antigo).v;
+      const linhaV=Object.assign({}, antigo, {substituidoEm:Date.now(), por:renovQuemAgora(), motivo:'virou '+cat, motivo_conferido:true});
+      const pvD={categoria:cat, renov:r}; pvD['renov_hist/'+planoIdNovo(k, 'renov_hist')]=linhaV;
+      const efC=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, pvD));
+      const perg=['A vigência ('+planoRotuloCurto(antigo)+' · '+planoPeriodo(antigo)+') sai do plano e vai para «Renovações anteriores».'];
+      if(/^\d{4}-\d{2}-\d{2}$/.test(antigo.inicio||'')) perg.push('O pagamento de '+fmtBR(antigo.inicio)+(vA?(' ('+recBRL(vA)+')'):'')+' continua contando no Recebimentos de '+mesAnoDe(antigo.inicio)
+        +': o tutor pagou. Se o plano foi lançado por engano, anule o pagamento na aba Plano antes de trocar a categoria.');
+      if(efC) perg.push(efC.length?(planoEfeitoLinha(efC, k)+'.'):'No Recebimentos: não muda.');
+      perg.push('Para voltar, toque em «Auluno» de novo: o app oferece voltar este plano.');
+      const segue=await zPergunta('TROCAR '+nome+' PARA '+catNome.toUpperCase()+'?', perg,
+        {sim:'Trocar para '+catNome, nao:'Voltar (não trocar)', cor:'#234D67', corTitulo:'#234D67'});
+      if(!segue) return {ok:false, cancelado:true};
+      // 6.71 (AC6.2): relê a ficha e recusa se o plano mudou em outro aparelho depois que a pergunta abriu.
+      const rl=await planoReler(p);
+      if(!rl.ok){ zAlertao('A CATEGORIA NÃO FOI TROCADA', [nome+': '+zErroFrase(zErroMotivo(rl.erro, 'banco', '', {agora:true, leitura:true})), 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false}; }
+      if(planoCanon(renovDe(rl.ficha))!==planoCanon(antigo)){
+        zAlertao('A CATEGORIA NÃO FOI TROCADA', ['O plano mudou em outro aparelho. A categoria não foi trocada: confira e tente de novo.'], {botao:'Entendi'});
+        return {ok:false, recusa:true};
+      }
     }
+    // 6.71 (AC6.2): a linha «virou …», a categoria e o plano numa gravação só (o lote do renovHistGravar,
+    // como o Confirmar da 6.57); «Salvo» e o rastro só com o ok.
+    const loteC={};
+    if(semPlano && tinhaVigencia) await renovHistGravar(k, antigo, 'virou '+cat, undefined, loteC);
     renovRascLimpar();
-    setPelExtra(pelAtual,{categoria:cat, renov:r});
-    if(typeof audit==='function') audit('categoria-peludinho',
-      cat+((semPlano&&tinhaVigencia)?' — apagou a vigência '+((antigo.vig_inicio||antigo.inicio)?fmtBR(antigo.vig_inicio||antigo.inicio):'—')+' → '+(antigo.fim?fmtBR(antigo.fim):'—')+' ('+(antigo.aulas||'—')+'x), guardada no histórico':''),
-      {alvo:dcKey(pelAtual.n,pelAtual.tutor)});
-    renderPelFicha();
-    setTimeout(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, 400);
+    const quemC=corrQuemAgora();
+    const grC=setPelExtra(p, Object.assign({categoria:cat, renov:r}, loteC), {soDepoisDoOk:true});
+    const feitoC=function(){
+      if(typeof audit==='function') audit('categoria-peludinho',
+        catAntes+' → '+cat+((semPlano&&tinhaVigencia)?' — apagou a vigência '+((antigo.vig_inicio||antigo.inicio)?fmtBR(antigo.vig_inicio||antigo.inicio):'—')+' → '+(antigo.fim?fmtBR(antigo.fim):'—')+' ('+(antigo.aulas||'—')+'x), guardada no histórico':''),
+        Object.assign({alvo:dcKey(p.n,p.tutor)}, corrQuemMeta(quemC)));
+      renderPelFicha();
+      setTimeout(function(){ try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }, 400);
+    };
+    const rC=await corrComPrazo(grC, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(rC && rC.semResposta){
+      grC.then(function(x){ if(x && x.ok) feitoC(); });
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', [nome+': passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.', 'Confira a categoria na ficha antes de tocar de novo.'], {botao:'Entendi'});
+      return rC;
+    }
+    if(!rC || rC.ok!==true){
+      zAlertao('A CATEGORIA NÃO FOI TROCADA', [nome+': '+zErroFrase(zErroMotivo((rC||{}).erro, 'banco', '', {agora:true})), 'Nem a categoria nem o plano mudaram.'], {botao:'Entendi'});
+      return rC;
+    }
+    feitoC();
+    return rC;
   }
   function abrirPeludinho(i){
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
@@ -39970,6 +40841,7 @@
               : `<button class="btn-foto-mini" style="background:var(--crm-critico);color:#fff" onclick="inativarPeludinhoRapido()">${pelExtra(p).inativo==='Sim'?'↩ Reativar (voltou)':'Saiu do Day Care — inativar'}</button>
                  <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="registrarObito()">Registrar falecimento</button>`}
           </div>
+          ${saidaVoltaHTML(p)}
           <div id="pelFotoSt" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
         </div>
         <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
@@ -66968,6 +67840,17 @@
     'config-pesquisa':'Ligou ou desligou o tratamento automático da Pesquisa', 'ia-revisao':'Revisão do que a IA entendeu',
     'ia-revisao-restaurada':'Restaurou o texto de antes (revisão da IA)' };
   function acaoNome(acao){ return ACAO_LABEL[acao]||String(acao||''); }
+  // 6.71 (AC10) — planos na ficha do FILHOt: as ações novas e as seis que apareciam em código técnico na Linha do
+  // tempo e no resumo por pessoa. Num acréscimo, fora do objeto ACAO_LABEL (as outras stories mexem no fim dele).
+  Object.assign(ACAO_LABEL, {
+    'pagamento-anulado':'Anulou o pagamento de um plano (lançado por engano)', 'pagamento-reaberto':'Reabriu o pagamento de um plano anulado',
+    'categoria-peludinho':'Trocou a categoria do FILHOt', 'peludinho-inativado':'Inativou um FILHOt (saiu do Day Care)',
+    'peludinho-reativado':'Reativou um FILHOt (voltou para o Day Care)', 'peludinho-volta-desfeita':'Desfez a volta de um FILHOt ao Day Care',
+    'plano-meio-mes':'Registrou o «Começou no meio do mês»', 'plano-fim-meio-mes':'Mudou o fim do plano pelo «Começou no meio do mês»',
+    'dias-da-semana':'Mudou os dias da semana do FILHOt'
+  });
+  // 6.71 (2ª rodada, DOC-001): a marca «nenhum dia» com nome no rastro da ficha (era a chave técnica «dias_nenhum»).
+  Object.assign(PEL_RASTRO_ROTULO, {dias_nenhum:'Nenhum dia marcado'});
   // A linha inteira de um registro da auditoria, em português. Ação sem tradução continua como hoje
   // (o nome técnico e o detalhe), sem quebrar a tela.
   function acaoRotulo(a){
@@ -81819,6 +82702,24 @@
   function recForaDoMes(resumo){
     return ((resumo||{}).semComoCalcular||[]).map(function(o){ return {nome:String(o.nome||o.chave||''), motivo:String(o.motivo||'')}; });
   }
+  // 6.71 (AC2.5): os pagamentos de plano ANULADOS (lançados por engano) de um mês — a data do pagamento no mês —,
+  // lidos do cadastro em memória (pelCadCache), fora do finResumoMes (o formato dele não muda: a prova da 6.36
+  // compara o JSON inteiro) e fora do total. As tentativas iguais anuladas juntas aparecem uma vez.
+  function recAnuladosDoMes(mes){
+    var out=[], visto={}, cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{};
+    Object.keys(cad).forEach(function(k){
+      var c=cad[k]||{}, h=c.renov_hist||{};
+      Object.keys(h).forEach(function(id){
+        var o=h[id]||{};
+        if(String(o.inicio||'').slice(0,7)!==String(mes||'') || !renovLinhaAnulada(o) || visto[k+'|'+o.inicio]) return;
+        visto[k+'|'+o.inicio]=true;
+        var rg=renovUltimaAnulacao(o)||{};
+        out.push({nome:planoNomeDaChave(k, c), data:String(o.inicio), por:String(rg.por||'-'), quando:String(rg.quando||''), motivo:String(rg.motivo||'')});
+      });
+    });
+    return out.sort(function(a,b){ return (a.data<b.data)?-1:((a.data>b.data)?1:a.nome.localeCompare(b.nome, 'pt', {sensitivity:'base'})); });
+  }
+  function recAnuladoTexto(x){ return x.nome+' — pagamento de '+fmtBR(x.data)+' anulado (lançado por engano) por '+x.por+(x.quando?(', em '+x.quando):'')+': '+x.motivo; }
   function recPluralLinhas(n){ return n+(n===1?' linha':' linhas'); }
   // O mesmo formatador do quadro (finBRL não depende do idioma do aparelho — o tablet antigo).
   function recBRL(c){ return (typeof finBRL==='function')?finBRL(c):fmtCent(c); }
@@ -81840,6 +82741,10 @@
       +'<span class="pm-li-fim rec-val rec-lista-total">'+esc(recBRL(soma))+'</span></div>';
     F.forEach(function(x){
       h+='<div class="pm-li rec-li-fora"><div class="pm-li-txt"><b>'+esc(x.nome)+' — fora do total</b><span>'+esc(x.motivo)+'</span></div></div>';
+    });
+    // 6.71 (AC2.5): o pagamento anulado (lançado por engano) aparece, sem valor, fora do total
+    recAnuladosDoMes(mes).forEach(function(x){
+      h+='<div class="pm-li rec-li-anulado"><div class="pm-li-txt"><b>'+esc(recAnuladoTexto(x))+'</b><span>fora do total: não soma no Recebimentos</span></div></div>';
     });
     h+='</div>'
       +'<div class="pm-acao" style="margin-top:8px"><button type="button" class="pm-bt rec-baixar" onclick="recBaixarExcel(this)">Baixar Excel de '+esc(rot)+'</button></div>'
@@ -81872,6 +82777,7 @@
     if(!avLidos) linhas.push(['Diárias avulsas', '', 'ainda não lidas — fora do total', rot, '', 'abra o quadro de novo em instantes e baixe outra vez']);
     linhas.push(['TOTAL', '', '', '', recBRL(soma), 'igual ao total do quadro Recebimentos de '+rot]);
     F.forEach(function(x){ linhas.push([x.nome, '', 'FORA DO TOTAL', '', '', x.motivo]); });
+    recAnuladosDoMes(mes).forEach(function(x){ linhas.push([x.nome, '', 'ANULADO — FORA DO TOTAL', fmtBR(x.data), '', recAnuladoTexto(x)]); });   // 6.71 (AC2.5)
     var html=relTabelaHTML('Recebimentos de '+rot,
       recPluralLinhas(L.length)+' (planos e reservas) · regime de caixa: o plano inteiro no mês da data do pagamento · gerado em '+new Date().toLocaleString('pt-BR'),
       ['FILHOt','Tutor','O quê','Data','Valor','Observação'], linhas);

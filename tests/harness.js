@@ -3765,8 +3765,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -4062,8 +4062,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -4446,8 +4446,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -5092,8 +5092,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -13656,7 +13656,14 @@ async function main() {
     check('inativos — reativar passa por confirmação (zPergunta), grava na ficha (setPelExtra) e deixa rastro (audit)',
       /function reativarPeludinho/.test(html) &&
       /await zPergunta\(nome\+' voltou para o Day Care\?'/.test(html) &&
-      /setPelExtra\(p,\{inativo:'Nao', dataSaida:'', motivoSaida:'', saidas:hist\}\);\n    if\(typeof audit==='function'\) audit\('peludinho-reativado'/.test(html));
+      // 6.71 (AC8.3): o reativar é uma função só (saidaReativar), chamada pelo «Voltou» de Relatórios › Inativos
+      // (reativarPeludinho); as três promessas lidas DENTRO do corpo dela: a pergunta, a gravação na ficha com o histórico
+      // de saídas (uma só, com o tipoSaida limpo, só com o ok do banco) e o rastro peludinho-reativado.
+      (function(){ var corpo=function(ini){ var i=html.indexOf(ini), j=(i>=0)?html.indexOf('\n  }\n', i):-1; return (i>=0 && j>i)?html.slice(i, j):''; };
+        var cR=corpo('  async function saidaReativar(i, origem){'), cV=corpo('  async function reativarPeludinho(i){');
+        return /await zPergunta\(nome\+' voltou para o Day Care\?'/.test(cR) &&
+          /setPelExtra\(p, \{inativo:'Nao', dataSaida:'', motivoSaida:'', tipoSaida:'', saidas:hist\}, \{soDepoisDoOk:true\}\);/.test(cR) &&
+          /if\(typeof audit==='function'\) audit\('peludinho-reativado'/.test(cR) && /return saidaReativar\(i, 'inativos'\);/.test(cV); })());
 
     // (2/3) A data do check-up mora em TRÊS campos; a contagem lê os três — era só
     // checkup_data, e a tela NEGAVA 30 fichas que têm a data (Becca: checkup=2024-11-27).
@@ -14734,7 +14741,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-10-09-22';/.test(html));
+        /const APP_VERSAO='2026-10-09-23';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -14809,7 +14816,9 @@ async function main() {
           set:function(v){ grav.push({metodo:'set', caminho:p, valor:v}); return _p(); },
           push:function(v){ if(v===undefined) return {key:'k657_'+(++nChave)}; if(String(p).indexOf('daycare/ficha-rastro/')===0){ rastroFicha.push({caminho:p, valor:v}); return _p(); }
             empurrou.push({caminho:p, valor:v}); return _p(); },
-          remove:function(){ apagou.push(p); return _p(); }
+          remove:function(){ apagou.push(p); return _p(); },
+          // 6.71 (palco): a releitura da ficha antes de gravar (a ficha que este banco de mentira guarda)
+          once:function(){ var c=pelCadCache[String(p).split('/')[2]]; return Promise.resolve({val:function(){ return (c===undefined)?null:JSON.parse(JSON.stringify(c)); }}); }
         }; } };
         audit=function(a,d,m){ rastro.push({acao:a, detalhe:String(d==null?'':d), alvo:(m&&m.alvo)||''}); };
         zFalta=function(l,o){ faltas.push({msgs:(l||[]).map(function(f){ return {el:String(f.el), msg:f.msg}; }),
@@ -14820,6 +14829,11 @@ async function main() {
           return Promise.resolve(respostas.length?respostas.shift():false); };
         renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){};
         canEditPel=function(){ return true; }; podePapel=function(){ return true; };
+        // 6.71 (palco): o Desfazer agora é pelo cartaz da 6.57 (o motivo e a senha): aqui ele é respondido como a Gestão e
+        // anotado onde a pergunta de antes era anotada, com as mesmas linhas («SAI», «VOLTA»).
+        var corrAbrirBkp=corrAbrir;
+        corrAbrir=function(op){ perguntas.push({titulo:op.titulo, linhas:(op.info||op.volta||op.cascata||[]), op:{}}); var reg={acao:op.acao, oque:String(op.oque||''), motivo:'palco 6.71: lançada por engano no FILHOt errado', por:'Gestora Teste', papel:'gestao', ts:Date.now()};
+          return Promise.resolve(op.gravar(reg)).then(function(r){ return (r&&r.ok)?{ok:true, reg:reg}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', reg:reg}; }); };
         PELUDINHOS=[{ n:'Cookie', tutor:'Yara', raca:'SRD', dias:['ter'] }];
         pelCadCache={ 'cookie__yara':{ n:'Cookie', tutor:'Yara', dias:['ter'], freq:'1x',
           renov:{plano:'Gold', aulas:2, inicio:'2026-09-11', fim:'2026-11-30',
@@ -14836,7 +14850,7 @@ async function main() {
           zPergunta=bkp.zPergunta; zAlertao=bkp.zAlertao; renderPelFicha=bkp.renderPelFicha;
           renderPel=bkp.renderPel; renderDaycare=bkp.renderDaycare; canEditPel=bkp.canEditPel;
           podePapel=bkp.podePapel; PELUDINHOS=bkp.PELUDINHOS; pelCadCache=bkp.cad;
-          pelAtual=bkp.pelAtual; pelAtualIdx=bkp.pelAtualIdx; renovRascLimpar();
+          pelAtual=bkp.pelAtual; pelAtualIdx=bkp.pelAtualIdx; renovRascLimpar(); corrAbrir=corrAbrirBkp;
         }
         return JSON.stringify(out);
       })()`, ctx));
@@ -14995,6 +15009,7 @@ async function main() {
 
       // 9) VIRAR AVULSO APAGA A VIGÊNCIA — com histórico, nunca calado.
       const avulso = await monta15(`async function(t){
+        t.respostas.push(true);            // 6.71 (palco): a troca com plano gravado pergunta antes — «sim»
         await setPelCategoria('avulso');
         var up=t.grav.filter(function(g){ return g.metodo==='update'; });
         return {renov:up[0]?up[0].valor.renov:null, cat:up[0]?up[0].valor.categoria:'',
@@ -15573,8 +15588,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15828,8 +15843,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -16131,8 +16146,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -16400,8 +16415,8 @@ async function main() {
       && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
       && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16874,8 +16889,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -17303,8 +17318,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -17620,8 +17635,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -17978,8 +17993,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -18109,7 +18124,10 @@ async function main() {
         + 'setPelExtra = function(p, patch){ __esc36.push({k: pelKey(p), patch: patch});'
         + ' pelCadCache[pelKey(p)] = Object.assign({}, pelCadCache[pelKey(p)] || {}, patch);'
         + ' return Promise.resolve({ok:true}); };'
-        + 'DB = null;', ctx);
+        + 'DB = null;'
+        // 6.71 (palco): o Desfazer do meio do mês é pelo cartaz da 6.57 (o motivo e a senha da própria pessoa) — respondido aqui
+        + '__bkp36.ca = corrAbrir; corrAbrir = function(op){ var reg={acao:op.acao, motivo:"palco 6.71: o tutor desistiu da opção", por:"Sarah", papel:"consultora", ts:Date.now()};'
+        + ' return Promise.resolve(op.gravar(reg)).then(function(r){ return (r&&r.ok)?{ok:true, reg:reg}:{ok:false, erro:(r&&r.erro)||"falhou", reg:reg}; }); };', ctx);
       try {
         ctx.document.getElementById = function () { return null; };
         await ctx.mmConfirmar(2);
@@ -18206,7 +18224,7 @@ async function main() {
           + 'mmRascunho = __bkp36.rasc; renovRascunho = __bkp36.ren; setPelExtra = __bkp36.set;'
           + 'renderPelFicha = __bkp36.red; renovPlanoRedesenhar = __bkp36.rpr; audit = __bkp36.aud;'
           + 'canEditPel = __bkp36.pode; zPergunta = __bkp36.perg; zAlertao = __bkp36.alt;'
-          + 'renovQuemAgora = __bkp36.quem; DB = __bkp36.db;', ctx);
+          + 'renovQuemAgora = __bkp36.quem; DB = __bkp36.db; corrAbrir = __bkp36.ca;', ctx);
       }
     } else { check('v-36 · mmConfirmar e blocoPlano existem', false, 'função não encontrada'); }
 
@@ -18235,8 +18253,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -18453,8 +18471,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -18827,8 +18845,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -19075,8 +19093,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -19525,8 +19543,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -19729,8 +19747,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -20051,8 +20069,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -20337,8 +20355,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -20861,8 +20879,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -21220,8 +21238,8 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -21569,8 +21587,8 @@ async function main() {
         ctx.prevCorrigePetDe(chave47) === pel47
         && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
 
-      check('v-47 · a versão carimbada desta entrega é a 2026-10-09-22',
-        /const APP_VERSAO='2026-10-09-22';/.test(html));
+      check('v-47 · a versão carimbada desta entrega é a 2026-10-09-23',
+        /const APP_VERSAO='2026-10-09-23';/.test(html));
     } finally {
       ctx.document.getElementById = geOrig47;
       ctx.document.body.dataset.role = papelAntes47;
@@ -22036,8 +22054,8 @@ async function main() {
       && /delete BANHO_RASC\[chave\]; banhoRascGuardar\(\);/.test(html)
       && html.indexOf('Há uma alteração nesta linha que ainda não foi gravada') > 0);
 
-    check('v-48 · a versão carimbada desta entrega é a 2026-10-09-22',
-      /const APP_VERSAO='2026-10-09-22';/.test(html));
+    check('v-48 · a versão carimbada desta entrega é a 2026-10-09-23',
+      /const APP_VERSAO='2026-10-09-23';/.test(html));
   }
   console.log('');
 
@@ -22364,13 +22382,20 @@ async function main() {
         set:function(v){ grav.push({caminho:p, valor:v}); return _p(); },
         push:function(v){ if(v===undefined) return {key:'k657_'+(++nChave)}; if(String(p).indexOf('daycare/ficha-rastro/')===0){ rastroFicha.push({caminho:p, valor:v}); return _p(); }
           empurrou.push({caminho:p, valor:v}); return _p(); },
-        remove:function(){ apagou.push(p); return _p(); }
+        remove:function(){ apagou.push(p); return _p(); },
+        // 6.71 (palco): a releitura da ficha antes de gravar (a ficha que este banco de mentira guarda)
+        once:function(){ var c=pelCadCache[String(p).split('/')[2]]; return Promise.resolve({val:function(){ return (c===undefined)?null:JSON.parse(JSON.stringify(c)); }}); }
       }; } };
       audit=function(a,d,m){ rastro.push({acao:a, detalhe:String(d==null?'':d)}); };
       zFalta=function(l){ faltas.push(String(l[0].el)); return true; }; zLimparFalta=function(){};
       zAlertao=function(){}; zPergunta=function(t,l,o){ perguntas.push({titulo:t, linhas:l}); return Promise.resolve(respostas.length?respostas.shift():false); };
       renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){}; mmBlocoHTML=function(){ return ''; };
       canEditPel=function(){ return true; }; podePapel=function(){ return true; };
+      // 6.71 (palco): o Desfazer agora é pelo cartaz da 6.57 (o motivo e a senha): aqui ele é respondido como a Gestão e
+      // anotado onde a pergunta de antes era anotada, com as mesmas linhas («SAI», «VOLTA»).
+      var corrAbrirBkp=corrAbrir;
+      corrAbrir=function(op){ perguntas.push({titulo:op.titulo, linhas:(op.info||op.volta||op.cascata||[]), op:{}}); var reg={acao:op.acao, oque:String(op.oque||''), motivo:'palco 6.71: lançada por engano no FILHOt errado', por:'Gestora Teste', papel:'gestao', ts:Date.now()};
+        return Promise.resolve(op.gravar(reg)).then(function(r){ return (r&&r.ok)?{ok:true, reg:reg}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', reg:reg}; }); };
       zHojeISO=function(){ return '${hoje}'; }; hojeISO=function(){ return '${hoje}'; };
       pelCadCache=Object.assign({}, pelCadCache);
       pelCadCache['tâmara__viajante teste']={ n:'Tâmara', tutor:'Viajante Teste', dias:['seg'], sexo:'Fêmea', renov:${JSON.stringify(renov)} };
@@ -22383,7 +22408,7 @@ async function main() {
         DB=bkp.DB; audit=bkp.audit; zFalta=bkp.zFalta; zLimparFalta=bkp.zLimparFalta; zPergunta=bkp.zPergunta; zAlertao=bkp.zAlertao;
         renderPelFicha=bkp.renderPelFicha; renderPel=bkp.renderPel; renderDaycare=bkp.renderDaycare; canEditPel=bkp.canEditPel;
         podePapel=bkp.podePapel; PELUDINHOS=bkp.PELUDINHOS; pelCadCache=bkp.cad; pelAtual=bkp.pelAtual; pelAtualIdx=bkp.pelAtualIdx;
-        zHojeISO=bkp.hz; hojeISO=bkp.hj; mmBlocoHTML=bkp.mm; renovRascLimpar();
+        zHojeISO=bkp.hz; hojeISO=bkp.hj; mmBlocoHTML=bkp.mm; renovRascLimpar(); corrAbrir=corrAbrirBkp;
       }
       return JSON.stringify(out);
     })()`, ctx));
